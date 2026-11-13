@@ -11,7 +11,7 @@
  * A thread allocates from its heap (vkCurrentHeap). An allocation is returned
  * in the window the caller asks for.
  */
-#include "kernel.h"
+#include "api.h"
 
 #define VK_POOLS		2
 #define VK_HEAP_POOL		1	/* the system heap's */
@@ -30,15 +30,6 @@ VkHeap g_vkSystemHeap VK_SHARED;
 VkHeap *g_vkHeapTree VK_SHARED;
 
 static volatile uint32_t *const heapSemaphore = vkSemaphore(VK_SEMAPHORE_HEAPS);
-
-/* the pool's lock: nothing (the callers lock) */
-static void poolLock(void)
-{
-}
-
-static void poolUnlock(void)
-{
-}
 
 /* Insert the free range [start, start + size), merging it with its neighbours. */
 static void poolInsert(VkPool *pool, uint32_t start, uint32_t size)
@@ -83,10 +74,10 @@ int32_t vkPoolInitialize(VkPool *pool, uint32_t start, uint32_t end)
 	last = vkToPublic((end & ~0x3f) - 1);
 	if (last < first)
 		return -1;
-	poolLock();
+	vnzMemoryResume();
 	pool->head = NULL;
 	poolInsert(pool, first, last - first + 1);
-	poolUnlock();
+	vnzMemorySuspend();
 	return 0;
 }
 
@@ -105,7 +96,7 @@ uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
 	else
 		return 0;
 
-	poolLock();
+	vnzMemoryResume();
 	for (link = &pool->head; (block = *link) != NULL; link = &block->next) {
 		start = blockStart(block);
 		if (mode == 0) {
@@ -121,7 +112,7 @@ uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
 		}
 	}
 	if (block == NULL) {
-		poolUnlock();
+		vnzMemorySuspend();
 		return 0;
 	}
 
@@ -138,7 +129,7 @@ uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
 		block->size -= size;
 	else
 		*link = block->next;
-	poolUnlock();
+	vnzMemorySuspend();
 	return result;
 }
 
@@ -157,9 +148,9 @@ void vkPoolGive(VkPool *pool, uint32_t address, uint32_t size, uint32_t mode)
 		return;
 	start = (address >> shift) << shift;
 	end = ((address + size + (1 << shift) - 1) >> shift) << shift;
-	poolLock();
+	vnzMemoryResume();
 	poolInsert(pool, start, end - start);
-	poolUnlock();
+	vnzMemorySuspend();
 }
 
 /* the kernel's pools, under their semaphores */
@@ -213,16 +204,17 @@ static uint32_t toWindow(uint32_t physical, uint32_t size, int32_t window)
 {
 	switch (window) {
 	case VK_WINDOW_RAW:
+		return vnzMemoryLeave(physical, size);
 	case VK_WINDOW_PHYSICAL:
-		return physical;
+		return vnzMemoryPhysicalToStack(physical, size);
 	case VK_WINDOW_PUBLIC:
-		return vkPhysicalToPublic(physical);
+		return vnzMemoryPhysicalToPublic(physical, size);
 	case VK_WINDOW_UNCACHED:
 		if (size <= VK_L2_LINE_LIMIT)
 			vkL2LineOperation(physical, size, VK_L2_INVALIDATE);
 		else
 			vkL2Operation(physical, size, VK_L2_INVALIDATE);
-		return vkPhysicalToUncached(physical);
+		return vnzMemoryPhysicalToUncached(physical, size);
 	}
 	return 0;
 }
@@ -232,14 +224,14 @@ static uint32_t fromWindow(uint32_t address, uint32_t size, int32_t window)
 {
 	switch (window) {
 	case VK_WINDOW_RAW:
-		return address;
+		return vnzMemoryEnter(address, size);
 	case VK_WINDOW_PHYSICAL:
 		vkCachePurge(address, size);
-		return address;
+		return vnzMemoryStackToPhysical(address, size);
 	case VK_WINDOW_PUBLIC:
-		return vkPublicToPhysical(address);
+		return vnzMemoryPublicToPhysical(address, size);
 	case VK_WINDOW_UNCACHED:
-		return vkUncachedToPhysical(address);
+		return vnzMemoryUncachedToPhysical(address, size);
 	}
 	return (uint32_t)-1;
 }
@@ -298,7 +290,7 @@ static void systemHeapFree(void *context, void *memory, uint32_t size, uint32_t 
 /*
  * A heap of its own (vkHeapCreatePool): a pool under a lock page.
  */
-static int32_t poolHeapCreate(void *context, uint32_t base, uint32_t size)
+int32_t vkPoolHeapCreate(void *context, uint32_t base, uint32_t size)
 {
 	VkPoolHeap *heap = context;
 
@@ -312,7 +304,7 @@ static int32_t poolHeapCreate(void *context, uint32_t base, uint32_t size)
 	return 0;
 }
 
-static void poolHeapDelete(void *context, uint32_t base, uint32_t size)
+void vkPoolHeapDelete(void *context, uint32_t base, uint32_t size)
 {
 	VkPoolHeap *heap = context;
 
@@ -320,7 +312,7 @@ static void poolHeapDelete(void *context, uint32_t base, uint32_t size)
 	vkLockPageFree(heap->lock);
 }
 
-static void *poolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
+void *vkPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
 {
 	VkPoolHeap *heap = context;
 	uint32_t mode, block, address;
@@ -343,7 +335,7 @@ static void *poolHeapAllocate(void *context, uint32_t size, uint32_t alignment, 
 	return (void *)address;
 }
 
-static void poolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment,
+void vkPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment,
 	int32_t window)
 {
 	VkPoolHeap *heap = context;
@@ -521,11 +513,21 @@ void vkHeapDelete(VkHeap *heap)
 	heapHeaderFree(heap);
 }
 
+void *vkHeapContext(VkHeap *heap)
+{
+	return heap->context;
+}
+
 /* A heap on [base, base + size) of the kernel's own kind. */
 VkHeap *vkHeapCreatePool(uint32_t base, uint32_t size)
 {
-	return vkHeapCreate(base, size, poolHeapCreate, poolHeapDelete, poolHeapAllocate,
-		poolHeapFree);
+	return vkHeapCreate(base, size, vkPoolHeapCreate, vkPoolHeapDelete, vkPoolHeapAllocate,
+		vkPoolHeapFree);
+}
+
+void vkHeapDeletePool(VkHeap *heap)
+{
+	vkHeapDelete(heap);
 }
 
 void *vkHeapAllocateStack(VkHeap *heap, uint32_t size)

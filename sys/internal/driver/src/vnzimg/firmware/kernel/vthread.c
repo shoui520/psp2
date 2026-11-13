@@ -11,7 +11,7 @@
  * (VVNZRunner's names: vnzVThreadCreateContext is vkVThreadContextCreate,
  * vnzVThreadDeleteContext vkVThreadContextDelete.)
  */
-#include "kernel.h"
+#include "api.h"
 
 #define VK_VTHREAD_WORKER_PRIORITY	1
 #define VK_VTHREAD_WORKER_STACK		0x200
@@ -209,15 +209,15 @@ static void contextCancel(uint32_t argument, uint32_t argument2)
 	VkJob *job;
 	uint32_t first, removed;
 
-	vkLockPageLock(context->lock);
+	vnzSpinLock(context->lock);
 	first = context->users < 1;
 	context->users++;
-	vkLockPageUnlock(context->lock);
+	vnzSpinUnlock(context->lock);
 
 	if (first) {
 		kept.head = NULL;
 		kept.tail = NULL;
-		vkLockPageLock(space->lock);
+		vnzSpinLock(space->lock);
 		removed = 0;
 		while ((job = (VkJob *)listTake(&space->ready)) != NULL) {
 			if (job->context == context)
@@ -226,12 +226,12 @@ static void contextCancel(uint32_t argument, uint32_t argument2)
 				listAppend(&kept, (VkListNode *)job);
 		}
 		listMove(&kept, &space->ready);
-		vkLockPageUnlock(space->lock);
+		vnzSpinUnlock(space->lock);
 
 		system = context->resource->system;
-		vkLockPageLock(system->lock);
+		vnzSpinLock(system->lock);
 		system->jobsGiven -= removed;
-		vkLockPageUnlock(system->lock);
+		vnzSpinUnlock(system->lock);
 	}
 
 	if (*slot && (*slot)->context == context)
@@ -266,9 +266,9 @@ void vkVThreadContextDelete(VkVThreadContext *context)
 	volatile int32_t i;
 
 	vkDisableDispatch();
-	vkLockPageLock(context->lock);
+	vnzSpinLock(context->lock);
 	context->deleting = 1;
-	vkLockPageUnlock(context->lock);
+	vnzSpinUnlock(context->lock);
 	context->deferredFree = 0;
 	context->users = 0;
 	if (vkVThreadBroadcastTo(context->resource, contextCancel, (uint32_t)context, 0,
@@ -278,14 +278,14 @@ void vkVThreadContextDelete(VkVThreadContext *context)
 	}
 
 	space = context->space;
-	vkLockPageLock(space->lock);
+	vnzSpinLock(space->lock);
 	for (core = 0; core < VNZ_CORES; core++) {
 		if (space->current[core] && space->current[core]->context == context) {
 			running = 1;
 			break;
 		}
 	}
-	vkLockPageUnlock(space->lock);
+	vnzSpinUnlock(space->lock);
 	vkEnableDispatch();
 
 	if (running == 1) {
@@ -308,7 +308,7 @@ void vkVThreadContextDelete(VkVThreadContext *context)
 VkVThreadContext *vkVThreadContextLock(VkVThreadContext *context)
 {
 	vkDisableDispatch();
-	vkLockPageLock(context->lock);
+	vnzSpinLock(context->lock);
 	return (VkVThreadContext *)vkPublicToPhysical((uint32_t)context);
 }
 
@@ -331,14 +331,14 @@ static int32_t contextFlush(VkVThreadContext *context, VkJobList *ready)
 		return 0;
 
 	system = context->resource->system;
-	vkLockPageLock(space->lock);
+	vnzSpinLock(space->lock);
 	listMove(&ready->list, &space->ready);
-	vkLockPageLock(system->lock);
+	vnzSpinLock(system->lock);
 	count = takeWaiting(system, waiting);
 	system->jobsGiven += ready->count;
 	ready->count = 0;
-	vkLockPageUnlock(system->lock);
-	vkLockPageUnlock(space->lock);
+	vnzSpinUnlock(system->lock);
+	vnzSpinUnlock(space->lock);
 	wakeAll(count, waiting);
 	return 0;
 }
@@ -353,7 +353,7 @@ int32_t vkVThreadContextUnlock(VkVThreadContext *context)
 		result = contextFlush(context, context->ready);
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, context->ready);
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, context);
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 	return result;
 }
@@ -501,8 +501,8 @@ static void broadcastQueue(VkVThreadResource *resource, VkVThreadSpace *space,
 	uint32_t core, eligible, count = 0, woken;
 
 	vkDisableDispatch();
-	vkLockPageLock(spaceLock);
-	vkLockPageLock(systemLock);
+	vnzSpinLock(spaceLock);
+	vnzSpinLock(systemLock);
 	for (core = 0; core < VNZ_CORES; core++) {
 		if (mode == VK_BROADCAST_ENABLED)
 			eligible = system->enabledCores & (1 << core);
@@ -520,12 +520,12 @@ static void broadcastQueue(VkVThreadResource *resource, VkVThreadSpace *space,
 
 	if ((int32_t)count >= 1) {
 		woken = takeWaiting(resource->system, waiting);
-		vkLockPageUnlock(systemLock);
-		vkLockPageUnlock(spaceLock);
+		vnzSpinUnlock(systemLock);
+		vnzSpinUnlock(spaceLock);
 		wakeAll(woken, waiting);
 	} else {
-		vkLockPageUnlock(systemLock);
-		vkLockPageUnlock(spaceLock);
+		vnzSpinUnlock(systemLock);
+		vnzSpinUnlock(spaceLock);
 		if (broadcast->done)
 			broadcast->done(broadcast->doneArgument, broadcast->doneArgument2);
 		broadcastFree(broadcast);
@@ -581,16 +581,16 @@ static void runBroadcasts(uint32_t argument, uint32_t argument2, uint32_t argume
 	(void)argument3;
 	(void)argument4;
 	for (;;) {
-		vkLockPageLock(lock);
+		vnzSpinLock(lock);
 		broadcast = (VkBroadcast *)((uint32_t)listTake(list) & ~0x3f);
-		vkLockPageUnlock(lock);
+		vnzSpinUnlock(lock);
 		if (broadcast == NULL)
 			break;
 		broadcast->function(broadcast->argument, broadcast->argument2);
 
-		vkLockPageLock(lock);
+		vnzSpinLock(lock);
 		completed = ++broadcast->completed;
-		vkLockPageUnlock(lock);
+		vnzSpinUnlock(lock);
 		if (broadcast->total == completed) {
 			if (broadcast->done)
 				broadcast->done(broadcast->doneArgument, broadcast->doneArgument2);
@@ -599,9 +599,9 @@ static void runBroadcasts(uint32_t argument, uint32_t argument2, uint32_t argume
 		ran++;
 	}
 
-	vkLockPageLock(system->lock);
+	vnzSpinLock(system->lock);
 	system->broadcastsRun[index] += ran;
-	vkLockPageUnlock(system->lock);
+	vnzSpinUnlock(system->lock);
 }
 
 /*
@@ -749,7 +749,7 @@ VkVThreadResource *vkVThreadResourceCreate(uint32_t stackSize)
 	}
 
 	vkDisableDispatch();
-	vkLockPageLock(system->lock);
+	vnzSpinLock(system->lock);
 	if (system->head) {
 		resource->next = system->head;
 		system->tail->next = resource;
@@ -758,7 +758,7 @@ VkVThreadResource *vkVThreadResourceCreate(uint32_t stackSize)
 		resource->next = resource;
 	}
 	system->tail = resource;
-	vkLockPageUnlock(system->lock);
+	vnzSpinUnlock(system->lock);
 	vkEnableDispatch();
 	return resource;
 
@@ -783,20 +783,20 @@ void vkVThreadResourceDelete(VkVThreadResource *resource)
 	lock = system->lock;
 	vkDisableDispatch();
 	for (;;) {
-		vkLockPageLock(lock);
+		vnzSpinLock(lock);
 		busy = resource->users != 0;
 		for (core = 0; !busy && core < VNZ_CORES; core++)
 			busy = resource->space->broadcasts[core].head != NULL;
 		if (!busy)
 			break;
 		resource->owner = vkThreadCurrent();
-		vkLockPageUnlock(lock);
+		vnzSpinUnlock(lock);
 		vkThreadSleep();
 	}
 	resourceRemove(system, resource);
 	if (system->head == NULL)
 		count = takeWaiting(system, waiting);
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 	if (count)
 		wakeAll(count, waiting);
@@ -827,7 +827,7 @@ static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob
 	uint32_t core;
 
 	vkDisableDispatch();
-	vkLockPageLock(spaceLock);
+	vnzSpinLock(spaceLock);
 	if (space->broadcasts[index].head) {
 		job = &space->jobs[index];
 	} else if (*slot) {
@@ -836,7 +836,7 @@ static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob
 	} else {
 		job = (VkJob *)listTake(queue);
 		systemLock = system->lock;
-		vkLockPageLock(systemLock);
+		vnzSpinLock(systemLock);
 		if (job) {
 			system->jobsTaken++;
 		} else {
@@ -857,10 +857,10 @@ static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob
 			}
 			addWaiting(system, vkThreadCurrent());
 		}
-		vkLockPageUnlock(systemLock);
+		vnzSpinUnlock(systemLock);
 	}
 	space->current[index] = job;
-	vkLockPageUnlock(spaceLock);
+	vnzSpinUnlock(spaceLock);
 	vkEnableDispatch();
 	return job;
 }
@@ -978,7 +978,7 @@ static void workerThread(uint32_t argument)
 	system->workerStart(system);
 
 	vkDisableDispatch();
-	vkLockPageLock(lock);
+	vnzSpinLock(lock);
 	resource = system->head;
 	if (!(system->enabledCores & bit) && resource == NULL)
 		goto leave;
@@ -995,11 +995,11 @@ static void workerThread(uint32_t argument)
 				resource->space->slot[index] =
 					(VkJob **)&resource->space->slot[index];
 			}
-			vkLockPageUnlock(lock);
+			vnzSpinUnlock(lock);
 			vkEnableDispatch();
 			serveResource(system, resource);
 			vkDisableDispatch();
-			vkLockPageLock(lock);
+			vnzSpinLock(lock);
 
 			idle = system->jobsGiven == system->jobsTaken;
 			mine = system->broadcastsQueued[index] == system->broadcastsRun[index];
@@ -1029,9 +1029,9 @@ static void workerThread(uint32_t argument)
 			while (system->enabledCores & bit) {
 				if (!idle)
 					goto restart;
-				vkLockPageUnlock(lock);
+				vnzSpinUnlock(lock);
 				vkThreadWaitFlags(VK_VTHREAD_WAKE);
-				vkLockPageLock(lock);
+				vnzSpinLock(lock);
 				mine = system->broadcastsQueued[index] == system->broadcastsRun[index];
 				idle = 0;
 			}
@@ -1042,14 +1042,14 @@ static void workerThread(uint32_t argument)
 
 		/* nothing to serve: wait */
 		addWaiting(system, vkThreadCurrent());
-		vkLockPageUnlock(lock);
+		vnzSpinUnlock(lock);
 		if (stack->base) {
 			vkHeapFreeStack(vkCurrentHeap(), stack->base, stack->size);
 			stack->size = 0;
 			stack->base = NULL;
 		}
 		vkThreadWaitFlags(VK_VTHREAD_WAKE);
-		vkLockPageLock(lock);
+		vnzSpinLock(lock);
 restart:
 		resource = system->head;
 		if (!(system->enabledCores & bit) && resource == NULL)
@@ -1058,7 +1058,7 @@ restart:
 
 leave:
 	workerExit(index, system);
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 	heap = vkCurrentHeap();
 	if (stack->base) {
@@ -1145,14 +1145,14 @@ void vkVThreadStartWorker(void)
 		return;
 	lock = system->lock;
 	vkDisableDispatch();
-	vkLockPageLock(lock);
+	vnzSpinLock(lock);
 	if (workerCreate(system, coreId) == 0)
 		system->runningCores |= bit;
 	if (system->enabledCores == system->runningCores) {
 		system->settled = 1;
 		notifyCoreEvents(system);
 	}
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 }
 
@@ -1169,7 +1169,7 @@ int32_t vkVThreadSetCores(uint32_t expected, uint32_t cores)
 	int32_t result;
 
 	vkDisableDispatch();
-	vkLockPageLock(lock);
+	vnzSpinLock(lock);
 	if (system->enabledCores != expected || system->settled != 1) {
 		result = -1;
 		goto out;
@@ -1205,7 +1205,7 @@ int32_t vkVThreadSetCores(uint32_t expected, uint32_t cores)
 	}
 	result = 0;
 out:
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 	return result;
 }
@@ -1216,9 +1216,9 @@ uint32_t vkVThreadCores(void)
 	uint32_t cores;
 
 	vkDisableDispatch();
-	vkLockPageLock(system->lock);
+	vnzSpinLock(system->lock);
 	cores = system->runningCores;
-	vkLockPageUnlock(system->lock);
+	vnzSpinUnlock(system->lock);
 	vkEnableDispatch();
 	return cores;
 }
@@ -1251,7 +1251,7 @@ void vkVThreadCoreEventRegister(VkCoreEvent *event)
 	VkCoreEventList *list = &system->coreEvents;
 
 	vkDisableDispatch();
-	vkLockPageLock(lock);
+	vnzSpinLock(lock);
 	if (!coreEventListed(list, event)) {
 		if (list->head) {
 			list->tail->next = event;
@@ -1261,7 +1261,7 @@ void vkVThreadCoreEventRegister(VkCoreEvent *event)
 		}
 		list->tail = event;
 	}
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 }
 
@@ -1272,7 +1272,7 @@ void vkVThreadCoreEventUnregister(VkCoreEvent *event)
 	VkCoreEventList *list = &system->coreEvents;
 
 	vkDisableDispatch();
-	vkLockPageLock(lock);
+	vnzSpinLock(lock);
 	if (coreEventListed(list, event)) {
 		if (event->previous)
 			event->previous->next = event->next;
@@ -1285,7 +1285,7 @@ void vkVThreadCoreEventUnregister(VkCoreEvent *event)
 		event->next = NULL;
 		event->previous = NULL;
 	}
-	vkLockPageUnlock(lock);
+	vnzSpinUnlock(lock);
 	vkEnableDispatch();
 }
 

@@ -70,6 +70,11 @@ uint32_t vnzThreadPriority(VkThread *thread)
 	return vkThreadPriority(thread);
 }
 
+void vnzThreadInformation(VkThread *thread, VkThreadInformation *information)
+{
+	vkThreadInformation(thread, information);
+}
+
 void vnzDisableDispatch(void)
 {
 	vkDisableDispatch();
@@ -83,6 +88,16 @@ void vnzEnableDispatch(void)
 uint32_t vnzThreadWaitChildren(void)
 {
 	return vkThreadWaitChildren();
+}
+
+uint32_t vnzThreadJoining(void)
+{
+	return vkThreadJoining();
+}
+
+void vnzThreadDetach(VkThread *thread)
+{
+	vkThreadDetach(thread);
 }
 
 uint32_t vnzThreadIsAlive(VkThread *thread)
@@ -137,17 +152,17 @@ uint32_t vnzThreadClearFlags(uint32_t flags)
 
 uint32_t *vnzThreadLocal0(void)
 {
-	return vkThreadLocal(0);
+	return vkThreadLocal0();
 }
 
 uint32_t *vnzThreadLocal1(void)
 {
-	return vkThreadLocal(1);
+	return vkThreadLocal1();
 }
 
 uint32_t *vnzThreadLocal2(void)
 {
-	return vkThreadLocal(2);
+	return vkThreadLocal2();
 }
 
 int32_t vnzThreadMove(VkThread *thread, uint32_t coreId)
@@ -176,9 +191,9 @@ VkHeap *vnzHeapCreatePool(uint32_t base, uint32_t size)
 	return vkHeapCreatePool(base, size);
 }
 
-void vnzHeapDelete(VkHeap *heap)
+void vnzHeapDeletePool(VkHeap *heap)
 {
-	vkHeapDelete(heap);
+	vkHeapDeletePool(heap);
 }
 
 VkHeap *vnzHeapFind(uint32_t address, uint32_t size)
@@ -190,6 +205,16 @@ VkHeap *vnzHeapCreate(uint32_t base, uint32_t size, VkHeapCreate create, VkHeapD
 	VkHeapAllocate allocate, VkHeapFree free)
 {
 	return vkHeapCreate(base, size, create, delete, allocate, free);
+}
+
+void vnzHeapDelete(VkHeap *heap)
+{
+	vkHeapDelete(heap);
+}
+
+void *vnzHeapContext(VkHeap *heap)
+{
+	return vkHeapContext(heap);
 }
 
 void *vnzHeapAllocateStack(VkHeap *heap, uint32_t size)
@@ -240,6 +265,27 @@ VkHeap *vnzSystemHeap(void)
 VkHeap *vnzCurrentHeap(void)
 {
 	return vkCurrentHeap();
+}
+
+/* the functions of the kernel's kind of heap, for heaps of a caller's own */
+int32_t vnzPoolHeapCreate(void *context, uint32_t base, uint32_t size)
+{
+	return vkPoolHeapCreate(context, base, size);
+}
+
+void vnzPoolHeapDelete(void *context, uint32_t base, uint32_t size)
+{
+	vkPoolHeapDelete(context, base, size);
+}
+
+void *vnzPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
+{
+	return vkPoolHeapAllocate(context, size, alignment, window);
+}
+
+void vnzPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment, int32_t window)
+{
+	vkPoolHeapFree(context, memory, size, alignment, window);
 }
 
 /* the data cache */
@@ -317,6 +363,21 @@ void vnzL2Flush(uint32_t address, uint32_t size)
 	vkL2LineOperation(address, size, VK_L2_FLUSH);
 }
 
+void vnzL2SetMode(uint32_t mode)
+{
+	vkL2SetMode(mode);
+}
+
+void vnzL2Disable(void)
+{
+	vkL2Disable();
+}
+
+void vnzL2Enable(void)
+{
+	vkL2Enable();
+}
+
 /* spinlocks */
 uint32_t vnzSpinTry(volatile uint8_t *lock)
 {
@@ -383,7 +444,8 @@ uint32_t vnzMemoryUncachedToPhysical(uint32_t address, uint32_t size)
 	return vkUncachedToPhysical(address);
 }
 
-void vnzMemorySync(void)
+/* a thread's stack changes hands (vkThreadStart, and before it is freed) */
+void vnzMemorySync(uint32_t address, uint32_t size, VkThread *owner)
 {
 }
 
@@ -437,7 +499,7 @@ uint32_t vnzPublicClosePrivate(uint32_t address, uint32_t size)
 
 uint32_t vnzPublicOpenProtected(uint32_t address, uint32_t size)
 {
-	if (address >= 0xc0000000 && address < 0xd8000000)
+	if (address >= 0xc0000000 && address < 0xe0000000)
 		return vkPublicToPhysical(address);
 	return address;
 }
@@ -535,6 +597,31 @@ void vnzL2SyncInside(uint32_t address, uint32_t size)
 		vkL2LineOperation(start, end - start, VK_L2_SYNC);
 }
 
+/* three more copies of vnzCachePrefetchInside in Sony's kernel; nothing calls them */
+void vnzCachePrefetchInsideCopy1(uint32_t address, uint32_t size)
+{
+	uint32_t start, end;
+
+	if (WHOLE_LINES(address, size, 0x40, start, end))
+		vkCachePrefetch(start, end - start);
+}
+
+void vnzCachePrefetchInsideCopy2(uint32_t address, uint32_t size)
+{
+	uint32_t start, end;
+
+	if (WHOLE_LINES(address, size, 0x40, start, end))
+		vkCachePrefetch(start, end - start);
+}
+
+void vnzCachePrefetchInsideCopy3(uint32_t address, uint32_t size)
+{
+	uint32_t start, end;
+
+	if (WHOLE_LINES(address, size, 0x40, start, end))
+		vkCachePrefetch(start, end - start);
+}
+
 /* address windows */
 uint32_t vnzUncachedToPhysical(uint32_t address)
 {
@@ -547,6 +634,12 @@ uint32_t vnzPhysicalToUncached(uint32_t address)
 }
 
 uint32_t vnzDramAddress(uint32_t address)
+{
+	return vkDramAddress(address);
+}
+
+/* a second copy in Sony's kernel; nothing calls it */
+uint32_t vnzDramAddressCopy(uint32_t address)
 {
 	return vkDramAddress(address);
 }

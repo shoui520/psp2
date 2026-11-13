@@ -7,7 +7,7 @@
  * the first is the VK_MEMORY_LOCAL_RAM region's, the others 0x1000 bytes of
  * the system heap, given back when their last lock is freed.
  */
-#include "kernel.h"
+#include "api.h"
 
 #define VK_LOCK_PAGE		0x100
 #define VK_LOCK_PAGES_END	0xff	/* a page's list: no lock left */
@@ -235,21 +235,6 @@ void vkLockPageFree(volatile uint8_t *lock)
 	vkEnableDispatch();
 }
 
-uint32_t vkLockPageTry(volatile uint8_t *lock)
-{
-	return vkTestAndSet(lock);
-}
-
-void vkLockPageUnlock(volatile uint8_t *lock)
-{
-	vkSpinUnlock(lock);
-}
-
-void vkLockPageLock(volatile uint8_t *lock)
-{
-	vkSpinLock(lock);
-}
-
 /*
  * Message queues: a ring of (message, argument) pairs one thread receives,
  * told of each by its event flags.
@@ -311,7 +296,7 @@ static void queueRelease(VkMessageQueue *cached)
 
 	vkCacheWriteback((uint32_t)cached, 0x40);
 	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)cached);
-	vkLockPageUnlock(queue->lock);
+	vnzSpinUnlock(queue->lock);
 	vkEnableDispatch();
 }
 
@@ -324,7 +309,7 @@ uint32_t vkMessageSend(VkMessageQueue *queue, VkMessage *message, uint32_t argum
 	uint32_t write, flags;
 
 	vkDisableDispatch();
-	vkLockPageLock(queue->lock);
+	vnzSpinLock(queue->lock);
 	cached = (VkMessageQueue *)vkPublicToPhysical((uint32_t)queue);
 	write = cached->write;
 	if (cached->mask < write - cached->read) {
@@ -341,7 +326,7 @@ uint32_t vkMessageSend(VkMessageQueue *queue, VkMessage *message, uint32_t argum
 	queue->write = write + 1;
 	if (flags)
 		vkThreadSetFlags(thread, flags);
-	vkLockPageUnlock(queue->lock);
+	vnzSpinUnlock(queue->lock);
 	vkEnableDispatch();
 	return 1;
 }
@@ -355,7 +340,7 @@ uint32_t vkMessageReceive(VkMessageQueue *queue, uint32_t argument)
 	uint32_t read, messageArgument;
 
 	vkDisableDispatch();
-	vkLockPageLock(queue->lock);
+	vnzSpinLock(queue->lock);
 	cached = (VkMessageQueue *)vkPublicToPhysical((uint32_t)queue);
 	read = cached->read;
 	if ((int32_t)(cached->write - read) < 1) {
@@ -368,7 +353,7 @@ uint32_t vkMessageReceive(VkMessageQueue *queue, uint32_t argument)
 	vkCacheWriteback((uint32_t)cached, 0x40);
 	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)cached);
 	queue->read = read + 1;
-	vkLockPageUnlock(queue->lock);
+	vnzSpinUnlock(queue->lock);
 	vkEnableDispatch();
 	message(argument, messageArgument);
 	return 1;

@@ -446,58 +446,16 @@ VkPowerHook *vkPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t arg
 	return hookCreate(NULL, 0, function, argument);
 }
 
-static void hookAppend(VkPowerList *list, VkPowerHook *hook)
-{
-	if (list->head) {
-		hook->next = NULL;
-		hook->previous = list->tail;
-		list->tail->next = hook;
-	} else {
-		hook->next = NULL;
-		hook->previous = NULL;
-		list->head = hook;
-	}
-	list->tail = hook;
-}
-
-void vkPowerHookPrepend(VkPowerList *list, VkPowerHook *hook)
-{
-	if (list->head) {
-		hook->previous = NULL;
-		hook->next = list->head;
-		list->head->previous = hook;
-		list->head = hook;
-	} else {
-		hook->next = NULL;
-		hook->previous = NULL;
-		list->tail = hook;
-		list->head = hook;
-	}
-}
-
-static void hookRemove(VkPowerList *list, VkPowerHook *hook)
-{
-	if (hook->next == NULL && hook->previous == NULL) {
-		list->head = NULL;
-		list->tail = NULL;
-	} else if (hook->previous == NULL) {
-		list->head = hook->next;
-		hook->next->previous = NULL;
-	} else if (hook->next == NULL) {
-		hook->previous->next = NULL;
-		list->tail = hook->previous;
-	} else {
-		hook->previous->next = hook->next;
-		hook->next->previous = hook->previous;
-	}
-}
-
+/*
+ * A hook list is linked like a run queue (next and previous first, then head and
+ * tail), and Sony's kernel links it with the run queues' functions.
+ */
 static void hookRegister(VkPowerList *list, VkPowerHook *hook)
 {
 	vkDisableDispatch();
 	vkTakeSemaphore(powerSemaphore);
 	if (!hook->registered) {
-		hookAppend(list, hook);
+		vkQueueAppend((VkQueue *)list, (VkThread *)hook);
 		hook->registered = 1;
 	}
 	vkGiveSemaphore(powerSemaphore);
@@ -509,7 +467,7 @@ static void hookUnregister(VkPowerList *list, VkPowerHook *hook)
 	vkDisableDispatch();
 	vkTakeSemaphore(powerSemaphore);
 	if (hook->registered == 1) {
-		hookRemove(list, hook);
+		vkQueueRemove((VkQueue *)list, (VkThread *)hook);
 		hook->registered = 0;
 	}
 	vkGiveSemaphore(powerSemaphore);

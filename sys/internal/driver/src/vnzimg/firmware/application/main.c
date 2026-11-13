@@ -275,9 +275,9 @@ exit:
 	if (doorbells)
 		vnzFreeStack(doorbells, sizeof(Doorbells));
 	base = vnzMemoryRegion(VK_MEMORY_WORK, &size);
-	vnzHeapDelete(vnzHeapFind(base, size));
+	vnzHeapDeletePool(vnzHeapFind(base, size));
 	base = vnzMemoryRegion(VK_MEMORY_HEAP, &size);
-	vnzHeapDelete(vnzHeapFind(base, size));
+	vnzHeapDeletePool(vnzHeapFind(base, size));
 	if (power) {
 		vnzPowerCallbackUnregister(power);
 		vnzPowerCallbackDelete(power);

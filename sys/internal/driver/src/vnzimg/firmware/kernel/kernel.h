@@ -83,7 +83,7 @@ struct VkThread {
 	void *stack;
 	uint32_t stackSize;
 	uint32_t reserved48[4];
-	uint32_t local[3];		/* the thread's own words (vkThreadLocal) */
+	uint32_t local[3];		/* the thread's own words (vkThreadLocal0..2) */
 	VkThread *exitNotify;		/* told of its end */
 	uint32_t exitNotifyFlags;
 	uint32_t exitStatus[2];
@@ -599,7 +599,6 @@ VkCore *vkCurrentCore(uint32_t *index);
 void vkTakeSemaphore(volatile uint32_t *semaphore);
 int32_t vkTrySemaphore(volatile uint32_t *semaphore);
 void vkGiveSemaphore(volatile uint32_t *semaphore);
-uint32_t vkTestAndSet(volatile uint8_t *lock);
 void vkSpinLock(volatile uint8_t *lock);
 uint32_t vkSpinTry(volatile uint8_t *lock);
 void vkSpinUnlock(volatile uint8_t *lock);
@@ -637,7 +636,9 @@ uint32_t vkExitedThreads(void);
 void vkThreadInformation(VkThread *thread, VkThreadInformation *information);
 uint32_t vkThreadJoining(void);
 void vkThreadSetUserWord(uint32_t word);
-uint32_t *vkThreadLocal(uint32_t index);
+uint32_t *vkThreadLocal0(void);
+uint32_t *vkThreadLocal1(void);
+uint32_t *vkThreadLocal2(void);
 uint32_t vkThreadAttributes(VkThread *thread);
 void vkThreadResume(VkThread *thread);
 uint32_t vkThreadSetInterrupts(uint32_t interrupts);
@@ -773,7 +774,13 @@ VkHeap *vkHeapFind(uint32_t address, uint32_t size);
 VkHeap *vkHeapCreate(uint32_t base, uint32_t size, VkHeapCreate create, VkHeapDelete delete,
 	VkHeapAllocate allocate, VkHeapFree free);
 void vkHeapDelete(VkHeap *heap);
+void *vkHeapContext(VkHeap *heap);
 VkHeap *vkHeapCreatePool(uint32_t base, uint32_t size);
+void vkHeapDeletePool(VkHeap *heap);
+int32_t vkPoolHeapCreate(void *context, uint32_t base, uint32_t size);
+void vkPoolHeapDelete(void *context, uint32_t base, uint32_t size);
+void *vkPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window);
+void vkPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment, int32_t window);
 void *vkHeapAllocateStack(VkHeap *heap, uint32_t size);
 void *vkHeapAllocatePublic(VkHeap *heap, uint32_t size);
 void *vkHeapAllocateUncached(VkHeap *heap, uint32_t size);
@@ -792,9 +799,6 @@ uint32_t vkMemoryRegion(uint32_t id, uint32_t *size);
 void vkLockPagesInitialize(uint32_t primary);
 volatile uint8_t *vkLockPageAllocate(void);
 void vkLockPageFree(volatile uint8_t *lock);
-uint32_t vkLockPageTry(volatile uint8_t *lock);
-void vkLockPageUnlock(volatile uint8_t *lock);
-void vkLockPageLock(volatile uint8_t *lock);
 VkMessageQueue *vkMessageQueueCreate(VkThread *thread, uint32_t flags, uint32_t count);
 void vkMessageQueueDelete(VkMessageQueue *queue);
 uint32_t vkMessageSend(VkMessageQueue *queue, VkMessage *message, uint32_t argument);
@@ -856,7 +860,6 @@ uint32_t vkPowerActiveCores(void);
 VkPowerHook *vkPowerNotifyCreate(VkThread *thread, uint32_t flags);
 VkPowerHook *vkPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t argument),
 	uint32_t argument);
-void vkPowerHookPrepend(VkPowerList *list, VkPowerHook *hook);
 void vkPowerNotifyRegister(VkPowerHook *hook);
 void vkPowerCallbackRegister(VkPowerHook *hook);
 void vkPowerNotifyUnregister(VkPowerHook *hook);

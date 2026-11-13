@@ -10,7 +10,7 @@
  * A higher number is a higher priority; the idle thread, 0, runs when no other
  * can.
  */
-#include "kernel.h"
+#include "api.h"
 
 /* the frame vkSwitchContext saves (kernel/switch.S) */
 typedef struct VkSwitchFrame {
@@ -189,11 +189,13 @@ int32_t vkThreadStart(VkThread *thread, uint32_t argument, uint32_t argument2)
 		return -1;
 	}
 
+	vnzMemorySync((uint32_t)thread->stack, thread->stackSize, self->current);
 	top = (uint32_t)thread->stack + thread->stackSize - 0x40;
 	vnzCacheLine(VNZ_CACHE_INVALIDATE, top);
 	thread->savedSp = vkInitialFrame(top, thread->entry, argument, argument2);
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, top);
 	thread->state = (thread->state & ~VK_STATE_MASK) | VK_STATE_READY;
+	vnzMemorySync((uint32_t)thread->stack, thread->stackSize, thread);
 	if (core != index)
 		mep_syncm();
 
@@ -284,6 +286,7 @@ void vkThreadRelease(VkThread *thread)
 	void *stack = thread->stack;
 	uint32_t size = thread->stackSize;
 
+	vnzMemorySync((uint32_t)stack, size, vkThreadCurrent());
 	vkHeapFreeStack(thread->heap, stack, size);
 	vkThreadFree(thread);
 }
@@ -321,8 +324,10 @@ void vkThreadFinish(VkThread *thread, VkCore *core)
 
 	if (notify)
 		vkThreadSetFlags(thread->exitNotify, thread->exitNotifyFlags);
-	if (freeStack)
+	if (freeStack) {
+		vnzMemorySync((uint32_t)thread->stack, thread->stackSize, vkThreadCurrent());
 		vkHeapFreeStack(thread->heap, thread->stack, thread->stackSize);
+	}
 	if (freeThread)
 		vkThreadFree(thread);
 
@@ -908,8 +913,8 @@ void vkThreadSetUserWord(uint32_t word)
 	g_vkCores[vnzCoreIndex()].current->userWord = word;
 }
 
-/* the calling thread's own words */
-uint32_t *vkThreadLocal(uint32_t index)
+/* the calling thread's own words: Sony's kernel has one function per word */
+static inline __attribute__((always_inline)) VkThread *currentThread(void)
 {
 	uint32_t core;
 	VkThread *thread;
@@ -918,7 +923,22 @@ uint32_t *vkThreadLocal(uint32_t index)
 	vkCurrentCore(&core);
 	thread = g_vkCores[core].current;
 	vkEnableDispatch();
-	return &thread->local[index];
+	return thread;
+}
+
+uint32_t *vkThreadLocal0(void)
+{
+	return &currentThread()->local[0];
+}
+
+uint32_t *vkThreadLocal1(void)
+{
+	return &currentThread()->local[1];
+}
+
+uint32_t *vkThreadLocal2(void)
+{
+	return &currentThread()->local[2];
 }
 
 uint32_t vkThreadAttributes(VkThread *thread)
