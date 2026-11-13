@@ -236,4 +236,64 @@ uint8_t avcencChromaChoose(const AvcencIntraRow *row);
 uint8_t avcencChromaChooseTop(const AvcencIntraRow *row);
 uint8_t avcencChromaChooseLeft(const AvcencIntraRow *row);
 
+/*
+ * the sub-pel refinement's, as its kernels keep it: an 8x8 block of the
+ * source, the reference around its whole pixel position (from two pixels
+ * left of and above it, its edges repeated outside the picture) and the half
+ * pixels the candidates are made of
+ */
+typedef struct AvcencRefine {
+	uint8_t window[12][16];
+	uint8_t source[8][8];
+	uint8_t half[9][9];		/* a row of half pixels, the left of the block's first */
+	uint8_t vertical[9][12];	/* the half pixels above the window's lines 2-10 */
+	uint16_t candidates[9][4];	/* the candidates' SADs, by block or partition */
+} AvcencRefine;
+
+/*
+ * the candidates, around each block's whole pixel position: below left,
+ * left, above left, above, above right, right, below right, below, and the
+ * position itself. One out of the reference's reach costs REFINE_UNAVAILABLE
+ */
+#define REFINE_BELOW_LEFT	0
+#define REFINE_LEFT		1
+#define REFINE_ABOVE_LEFT	2
+#define REFINE_ABOVE		3
+#define REFINE_ABOVE_RIGHT	4
+#define REFINE_RIGHT		5
+#define REFINE_BELOW_RIGHT	6
+#define REFINE_BELOW		7
+#define REFINE_WHOLE		8
+#define REFINE_CANDIDATES	9
+#define REFINE_UNAVAILABLE	32767
+
+/* the refinement's kernels (avcenckernel.c) */
+void avcencRefineHorizontalRight(AvcencRefine *refine);
+void avcencRefineDiagonalRight(AvcencRefine *refine);
+void avcencRefineDiagonal(AvcencRefine *refine);
+uint16_t avcencRefineDiagonalSadAbove(const AvcencRefine *refine);
+uint16_t avcencRefineDiagonalSadBelow(const AvcencRefine *refine);
+void avcencRefineVertical(AvcencRefine *refine, const uint8_t *saved);
+uint16_t avcencRefineVerticalSadAbove(const AvcencRefine *refine);
+uint16_t avcencRefineVerticalSadBelow(const AvcencRefine *refine);
+void avcencRefineHorizontal(AvcencRefine *refine);
+uint16_t avcencRefineHorizontalSad(const AvcencRefine *refine);
+void avcencRefineEdgeLeft(AvcencRefine *refine, uint32_t count);
+void avcencRefineEdgeLeftFar(AvcencRefine *refine, uint32_t count);
+void avcencRefineEdgeRight(AvcencRefine *refine, uint32_t count);
+void avcencRefineEdgeRightFar(AvcencRefine *refine, uint32_t count);
+void avcencRefineEdgeTop(AvcencRefine *refine, int32_t line);
+void avcencRefineEdgeBottom(AvcencRefine *refine, int32_t count);
+void avcencRefineLoad(AvcencRefine *refine, const uint8_t *first, const uint8_t *second,
+	const uint8_t *third, uint32_t offset, uint32_t line, int32_t nextRow);
+void avcencRefineStore(const AvcencRefine *refine, uint8_t *saved);
+void avcencRefineLoadSource(AvcencRefine *refine, const uint8_t *source);
+uint16_t avcencRefineSad(const AvcencRefine *refine);
+uint16_t avcencRefineSatd(const AvcencRefine *refine);
+void avcencRefineMerge16x16(AvcencRefine *refine);
+void avcencRefineMerge16x8(AvcencRefine *refine);
+void avcencRefineMerge8x16(AvcencRefine *refine);
+void avcencRefineChoose(const AvcencRefine *refine, const int8_t (*deltas)[2],
+	int16_t (*vectors)[2]);
+
 #endif

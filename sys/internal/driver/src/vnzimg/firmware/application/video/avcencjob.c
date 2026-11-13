@@ -1173,3 +1173,259 @@ static void avcencDecideChroma(AvcencDecideInfo *info)
 	}
 	((AvcencMacroblock *)info->record)->chromaMode = mode;
 }
+
+/*
+ * 0x83a92c: the sub-pel refinement of a group's macroblocks, each one the
+ * inter decision did not skip or keep at whole pixels; the group's job in
+ * the wavefront is signalled
+ */
+static void refineMacroblock(AvcencRefineInfo *info);
+
+void avcencJobRefine(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t position,
+	uint32_t unused)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	uint32_t core = ((int32_t)vnzReadControl(VNZ_CR_ID) >> 16) & 7;
+	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
+	uint32_t column = position & 0xff, row = (position >> 8) & 0xff, job, step;
+	int32_t r, m, rows, columns, size, y;
+	VkVThreadContext *context;
+	AvcencRefineInfo *info;
+	AvcencInterRecord *record;
+	uint32_t records;
+
+	info = (AvcencRefineInfo *)vnzPublicOpenPrivate(slices->streamInfo +
+		core * CORE_INFO_SIZE, REFINE_INFO_SIZE);
+	vnzCacheInvalidateInside((uint32_t)info, REFINE_INFO_SIZE);
+	info->columns = groupSize(column, picture->widthInMbs);
+	info->rows = groupSize(row, picture->heightInMbs);
+	info->row = row;
+	info->column = column;
+	columns = info->columns;
+	info->height = picture->heightInMbs * 16;
+	info->width = picture->widthInMbs * 16;
+	rows = info->rows;
+	info->pitch = picture->width;
+	info->reference = picture->luma;
+	for (r = 0; r < rows; r++) {
+		info->mbX = info->column;
+		info->mbY = y = info->row + r;
+		info->luma = picture->nextLuma + (uint16_t)picture->nextPitch * y * 16 +
+			info->mbX * 256;
+		info->interRecord = picture->interRecords + picture->widthInMbs * y * 64 +
+			info->mbX * 64;
+		size = columns * 64;
+		records = vnzPublicOpenPrivate(info->interRecord, size);
+		info->interRecord = records;
+		for (m = 0; m < columns; m++) {
+			record = (AvcencInterRecord *)info->interRecord;
+			if (!record->skip && !record->wholePixel)
+				refineMacroblock(info);
+			info->luma += 256;
+			info->mbX++;
+			info->interRecord += 64;
+		}
+		vnzPublicClosePrivate(records, size);
+	}
+
+	/* the group's job: by the wavefront's order, in pairs of groups */
+	column = info->column >> 2;
+	step = (info->row >> 2) * 2;
+	if (picture->widthInMbs < 9)
+		job = picture->index * 8 + picture->jobArgument + picture->jobGroups * (step & 7) +
+			((step & 3) >> 2);
+	else
+		job = picture->index * 8 + picture->jobArgument + picture->jobGroups * (step & 7) +
+			((column * 2 + (step & 3)) >> 2);
+	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
+	vkVThreadJobSignal(context, job + 8);
+	vkVThreadContextUnlock(context);
+	vnzCachePurge((uint32_t)info, REFINE_INFO_SIZE);
+	vnzPublicClosePrivate((uint32_t)info, REFINE_INFO_SIZE);
+	vnzPublicCloseProtected((uint32_t)slices, 64);
+}
+
+/*
+ * 0x83acda: a block's reference window, from two pixels left of and above
+ * its position: the tiles' lines, the picture's edges repeated outside it.
+ * Past the left or right edge the position is kept within ten pixels of it
+ */
+static void refineWindow(AvcencRefineInfo *info, AvcencRefine *refine, int32_t x, int32_t y,
+	uint32_t block)
+{
+	uint32_t reference = info->reference, offset, first, second, third;
+	int32_t height = info->height, width = info->width, left = 0, top = 0, line;
+
+	if (x >= 2)
+		left = x - 2;
+	if (left > width - 16)
+		left = width - 16;
+	if (y >= 2)
+		top = y - 2;
+	if (top > height - 12)
+		top = height - 12;
+	line = top & 15;
+	first = reference + (left & ~15) * 16 + (left & 8) + (top & ~15) * info->pitch +
+		line * 16;
+	if (left & 8) {
+		second = first + 248;
+		third = first + 256;
+	} else {
+		second = first + 8;
+		third = first + 256;
+	}
+	if ((left & 7) == 0) {
+		third = second;
+		second = first;
+	} else if ((left & 7) < 5) {
+		third = second;
+	}
+	offset = (left & 7) ? left & 7 : 8;
+	avcencRefineLoad(refine, (const uint8_t *)first, (const uint8_t *)second,
+		(const uint8_t *)third, offset, line, info->pitch * 16 - 256);
+
+	if (x < 2) {
+		if (x < -10)
+			x = -10;
+		if (x < -5)
+			avcencRefineEdgeLeftFar(refine, 2 - x);
+		else
+			avcencRefineEdgeLeft(refine, 2 - x);
+	} else if (x > width - 14) {
+		if (x > width + 1)
+			x = width + 1;
+		if (x < width - 5)
+			avcencRefineEdgeRight(refine, x - 2 - (width - 16));
+		else
+			avcencRefineEdgeRightFar(refine, x - 2 - (width - 16));
+	}
+	if (y < 2)
+		avcencRefineEdgeTop(refine, y - 2);
+	else if (y > height - 10)
+		avcencRefineEdgeBottom(refine, y - height + 10);
+	avcencRefineStore(refine, info->windows[block]);
+}
+
+/*
+ * 0x83abe4: a block's half pixel candidates, the whole pixel one first.
+ * Those above are out of reach when the block is more than three pixels
+ * above the macroblock's vector, those below when it is four below
+ */
+static void refineCandidates(AvcencRefineInfo *info, AvcencRefine *refine,
+	const uint8_t *saved, uint32_t block, int32_t deltaY)
+{
+	uint16_t (*costs)[4] = info->candidates;
+
+	costs[REFINE_WHOLE][block] = avcencRefineSad(refine);
+	avcencRefineHorizontal(refine);
+	costs[REFINE_LEFT][block] = avcencRefineHorizontalSad(refine);
+	avcencRefineHorizontalRight(refine);
+	costs[REFINE_RIGHT][block] = avcencRefineHorizontalSad(refine);
+	avcencRefineVertical(refine, saved);
+	if (deltaY < -3) {
+		costs[REFINE_ABOVE][block] = REFINE_UNAVAILABLE;
+		costs[REFINE_BELOW][block] = avcencRefineVerticalSadBelow(refine);
+		avcencRefineDiagonal(refine);
+		costs[REFINE_ABOVE_LEFT][block] = REFINE_UNAVAILABLE;
+		costs[REFINE_BELOW_LEFT][block] = avcencRefineDiagonalSadBelow(refine);
+		avcencRefineDiagonalRight(refine);
+		costs[REFINE_ABOVE_RIGHT][block] = REFINE_UNAVAILABLE;
+		costs[REFINE_BELOW_RIGHT][block] = avcencRefineDiagonalSadBelow(refine);
+		return;
+	}
+	costs[REFINE_ABOVE][block] = avcencRefineVerticalSadAbove(refine);
+	if (deltaY >= 4) {
+		costs[REFINE_BELOW][block] = REFINE_UNAVAILABLE;
+		avcencRefineDiagonal(refine);
+		costs[REFINE_ABOVE_LEFT][block] = avcencRefineDiagonalSadAbove(refine);
+		costs[REFINE_BELOW_LEFT][block] = REFINE_UNAVAILABLE;
+		avcencRefineDiagonalRight(refine);
+		costs[REFINE_ABOVE_RIGHT][block] = avcencRefineDiagonalSadAbove(refine);
+		costs[REFINE_BELOW_RIGHT][block] = REFINE_UNAVAILABLE;
+		return;
+	}
+	costs[REFINE_BELOW][block] = avcencRefineVerticalSadBelow(refine);
+	avcencRefineDiagonal(refine);
+	costs[REFINE_ABOVE_LEFT][block] = avcencRefineDiagonalSadAbove(refine);
+	costs[REFINE_BELOW_LEFT][block] = avcencRefineDiagonalSadBelow(refine);
+	avcencRefineDiagonalRight(refine);
+	costs[REFINE_ABOVE_RIGHT][block] = avcencRefineDiagonalSadAbove(refine);
+	costs[REFINE_BELOW_RIGHT][block] = avcencRefineDiagonalSadBelow(refine);
+}
+
+/*
+ * 0x83ae14: the candidates' costs merged by the macroblock's partitions;
+ * the 16x8 partitions' second takes the third block's offset
+ */
+static void refineMerge(AvcencRefineInfo *info, AvcencRefine *refine)
+{
+	AvcencInterRecord *record = (AvcencInterRecord *)info->interRecord;
+	uint32_t i, block;
+
+	for (i = 0; i < REFINE_CANDIDATES; i++)
+		for (block = 0; block < 4; block++)
+			refine->candidates[i][block] = info->candidates[i][block];
+	if (record->partition == 2) {
+		avcencRefineMerge8x16(refine);
+	} else if (record->partition == 1) {
+		avcencRefineMerge16x8(refine);
+		record->deltas[1][0] = record->deltas[2][0];
+		record->deltas[1][1] = record->deltas[2][1];
+	} else if (record->partition == 0) {
+		avcencRefineMerge16x16(refine);
+	}
+}
+
+/* 0x83ae64: the whole pixel SATDs summed by the partitions */
+static void refineCosts(AvcencRefineInfo *info)
+{
+	AvcencInterRecord *record = (AvcencInterRecord *)info->interRecord;
+	uint16_t *costs = record->costs;
+
+	switch (record->partition) {
+	case 0:
+		costs[0] = costs[0] + costs[1] + costs[2] + costs[3];
+		costs[3] = 0;
+		costs[2] = 0;
+		costs[1] = 0;
+		break;
+	case 1:
+		costs[0] = costs[0] + costs[1];
+		costs[1] = costs[2] + costs[3];
+		costs[2] = 0;
+		costs[3] = 0;
+		break;
+	case 2:
+		costs[0] = costs[0] + costs[2];
+		costs[1] = costs[1] + costs[3];
+		costs[2] = 0;
+		costs[3] = 0;
+		break;
+	}
+}
+
+/*
+ * 0x83ab18: a macroblock's refinement: each 8x8 block's window around its
+ * whole pixel position, its SATD there and its candidates; then each
+ * partition's best and its vector
+ */
+static void refineMacroblock(AvcencRefineInfo *info)
+{
+	AvcencInterRecord *record = (AvcencInterRecord *)info->interRecord;
+	AvcencRefine refine;
+	int32_t x = info->mbX * 16 + record->vector[0], y = info->mbY * 16 + record->vector[1];
+	uint32_t block;
+
+	for (block = 0; block < 4; block++) {
+		refineWindow(info, &refine, x + (block & 1) * 8 + record->deltas[block][0],
+			y + (block & 2) * 4 + record->deltas[block][1], block);
+		avcencRefineLoadSource(&refine, (const uint8_t *)info->luma + (block & 1) * 8 +
+			(block & 2) * 64);
+		record->costs[block] = avcencRefineSatd(&refine);
+		refineCandidates(info, &refine, info->windows[block], block,
+			record->deltas[block][1]);
+	}
+	refineMerge(info, &refine);
+	avcencRefineChoose(&refine, (const int8_t (*)[2])record->deltas, record->vectors);
+	refineCosts(info);
+}

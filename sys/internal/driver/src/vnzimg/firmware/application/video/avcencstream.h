@@ -460,6 +460,47 @@ typedef struct AvcencSearchInfo {
 	uint8_t reserved4[42];
 } AvcencSearchInfo;
 
+/*
+ * a macroblock's inter decision (64 bytes): its vector, each 8x8 block's
+ * offset from it and the sub-pel refinement's result
+ */
+typedef struct AvcencInterRecord {
+	int8_t deltas[4][2];		/* each 8x8 block's, in whole pixels, x and y */
+	int16_t vectors[4][2];		/* the refined ones, by partition, in quarter pixels */
+	uint8_t reserved[16];
+	uint16_t costs[4];		/* the SATDs at the whole pixels, by partition */
+	int16_t vector[2];		/* the macroblock's, in pixels */
+	uint8_t reserved2[4];
+	uint8_t partition;		/* 0 16x16, 1 16x8, 2 8x16, 3 8x8 */
+	int8_t skip;			/* the macroblock is skipped */
+	int8_t wholePixel;		/* its vector is not refined */
+	uint8_t reserved3[5];
+} AvcencInterRecord;
+
+/*
+ * the refinement job's per core info (896 bytes of CORE_INFO_SIZE): each
+ * macroblock's 8x8 blocks' reference windows and candidates
+ */
+#define REFINE_INFO_SIZE	896
+typedef struct AvcencRefineInfo {
+	uint8_t windows[4][192];	/* the left halves' twelve lines, then the right's */
+	uint16_t candidates[REFINE_CANDIDATES][4];
+	uint32_t luma;			/* the macroblock's, in the source */
+	uint32_t reference;		/* the reference picture's luma */
+	uint8_t columns;		/* of macroblocks in the group, up to four */
+	uint8_t rows;
+	uint8_t column;			/* the group's first macroblock */
+	uint8_t row;
+	uint16_t mbX;			/* the macroblock's */
+	uint16_t mbY;
+	uint16_t width;			/* in pixels */
+	uint16_t height;
+	uint16_t pitch;			/* the reference's width */
+	uint16_t reserved;
+	uint32_t interRecord;		/* the macroblock's */
+	uint8_t reserved2[28];
+} AvcencRefineInfo;
+
 /* a macroblock's decisions (64 bytes), as the next jobs read them */
 typedef struct AvcencMacroblock {
 	uint8_t lumaMode;		/* the 16x16 prediction's, 4 for 4x4 blocks */
@@ -541,6 +582,8 @@ typedef char searchInfoSizeCheck[sizeof(AvcencSearchInfo) == CORE_INFO_SIZE ? 1 
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
+typedef char interRecordSizeCheck[sizeof(AvcencInterRecord) == 64 ? 1 : -1];
+typedef char refineInfoSizeCheck[sizeof(AvcencRefineInfo) == REFINE_INFO_SIZE ? 1 : -1];
 typedef char macroblockSizeCheck[sizeof(AvcencMacroblock) == 64 ? 1 : -1];
 typedef char recordSizeCheck[sizeof(AvcencRecord) == RECORD_SIZE ? 1 : -1];
 typedef char streamSizeCheck[sizeof(AvcencStream) == STREAM_HEADER_SIZE ? 1 : -1];

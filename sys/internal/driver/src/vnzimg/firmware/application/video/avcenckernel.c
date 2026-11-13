@@ -1289,3 +1289,376 @@ uint8_t avcencChromaChooseLeft(const AvcencIntraRow *row)
 {
 	return chromaCost(row, CHROMA_HORIZONTAL) < chromaCost(row, CHROMA_DC) ? 1 : 0;
 }
+
+/*
+ * The sub-pel refinement's kernels (0x89f818-0x8a1480). A half pixel is the
+ * four tap filter (-1, 5, 5, -1) / 8 of the pixels around it, rounded and
+ * clamped; a diagonal one is the filter across the vertical half pixels.
+ */
+static inline void copyPixels(uint8_t *to, const uint8_t *from, uint32_t count)
+{
+	uint32_t i;
+
+	for (i = 0; i < count; i++)
+		to[i] = from[i];
+}
+
+static inline uint8_t halfPixel(int32_t a, int32_t b, int32_t c, int32_t d)
+{
+	return clampByte((-a + 5 * b + 5 * c - d + 4) >> 3);
+}
+
+/* the next half pixels across: the plane's right of the block's pixels */
+static void halfShift(AvcencRefine *refine, uint32_t lines)
+{
+	uint32_t line, i;
+
+	for (line = 0; line < lines; line++)
+		for (i = 0; i < 8; i++)
+			refine->half[line][i] = refine->half[line][i + 1];
+}
+
+/* 0x89f818: the horizontal half pixels right of the block's */
+void avcencRefineHorizontalRight(AvcencRefine *refine)
+{
+	halfShift(refine, 8);
+}
+
+/* 0x89f858: the diagonal ones */
+void avcencRefineDiagonalRight(AvcencRefine *refine)
+{
+	halfShift(refine, 9);
+}
+
+/* 0x89f8a0: the diagonal half pixels, across the vertical ones, left of the block's */
+void avcencRefineDiagonal(AvcencRefine *refine)
+{
+	uint32_t line, i;
+
+	for (line = 0; line < 9; line++)
+		for (i = 0; i < 9; i++)
+			refine->half[line][i] = halfPixel(refine->vertical[line][i],
+				refine->vertical[line][i + 1], refine->vertical[line][i + 2],
+				refine->vertical[line][i + 3]);
+}
+
+/* the block's SAD against eight lines of the half pixels, from a line */
+static uint16_t halfSad(const AvcencRefine *refine, uint32_t first)
+{
+	uint32_t line, i, sum = 0;
+
+	for (line = 0; line < 8; line++)
+		for (i = 0; i < 8; i++)
+			sum += abs32(refine->source[line][i] - refine->half[first + line][i]);
+	return sum;
+}
+
+/* 0x89fa68: above the block's lines */
+uint16_t avcencRefineDiagonalSadAbove(const AvcencRefine *refine)
+{
+	return halfSad(refine, 0);
+}
+
+/* 0x89fb48: below them */
+uint16_t avcencRefineDiagonalSadBelow(const AvcencRefine *refine)
+{
+	return halfSad(refine, 1);
+}
+
+/* 0x89fc28: the vertical half pixels, from the window as it was stored */
+void avcencRefineVertical(AvcencRefine *refine, const uint8_t *saved)
+{
+	uint32_t line, i;
+	const uint8_t *left = saved, *right = saved + 96;
+	uint8_t pixels[12][12];
+
+	for (line = 0; line < 12; line++)
+		for (i = 0; i < 12; i++)
+			pixels[line][i] = i < 8 ? left[line * 8 + i] : right[line * 8 + i - 8];
+	for (line = 0; line < 9; line++)
+		for (i = 0; i < 12; i++)
+			refine->vertical[line][i] = halfPixel(pixels[line][i], pixels[line + 1][i],
+				pixels[line + 2][i], pixels[line + 3][i]);
+}
+
+/* the block's SAD against the vertical half pixels, from a line */
+static uint16_t verticalSad(const AvcencRefine *refine, uint32_t first)
+{
+	uint32_t line, i, sum = 0;
+
+	for (line = 0; line < 8; line++)
+		for (i = 0; i < 8; i++)
+			sum += abs32(refine->source[line][i] - refine->vertical[first + line][2 + i]);
+	return sum;
+}
+
+/* 0x89fee8 */
+uint16_t avcencRefineVerticalSadAbove(const AvcencRefine *refine)
+{
+	return verticalSad(refine, 0);
+}
+
+/* 0x8a0040 */
+uint16_t avcencRefineVerticalSadBelow(const AvcencRefine *refine)
+{
+	return verticalSad(refine, 1);
+}
+
+/* 0x8a01a0: the horizontal half pixels of the block's lines, left of its pixels */
+void avcencRefineHorizontal(AvcencRefine *refine)
+{
+	uint32_t line, i;
+	const uint8_t *pixels;
+
+	for (line = 0; line < 8; line++) {
+		pixels = refine->window[2 + line];
+		for (i = 0; i < 9; i++)
+			refine->half[line][i] = halfPixel(pixels[i], pixels[i + 1], pixels[i + 2],
+				pixels[i + 3]);
+	}
+}
+
+/* 0x8a0328 */
+uint16_t avcencRefineHorizontalSad(const AvcencRefine *refine)
+{
+	return halfSad(refine, 0);
+}
+
+/* the window moved right by a count of pixels, the first repeated */
+static void windowRight(AvcencRefine *refine, uint32_t count)
+{
+	uint32_t line;
+	int32_t i;
+
+	for (line = 0; line < 12; line++)
+		for (i = 15; i >= 0; i--)
+			refine->window[line][i] = refine->window[line][i < (int32_t)count ? 0 :
+				i - count];
+}
+
+/* 0x8a0408: the block left of the picture by less than eight */
+void avcencRefineEdgeLeft(AvcencRefine *refine, uint32_t count)
+{
+	windowRight(refine, count);
+}
+
+/* 0x8a0498: by eight to twelve */
+void avcencRefineEdgeLeftFar(AvcencRefine *refine, uint32_t count)
+{
+	windowRight(refine, count);
+}
+
+/* the window moved left, the last pixel repeated */
+static void windowLeft(AvcencRefine *refine, uint32_t count)
+{
+	uint32_t line, i;
+
+	for (line = 0; line < 12; line++)
+		for (i = 0; i < 16; i++)
+			refine->window[line][i] = refine->window[line][i + count > 15 ? 15 :
+				i + count];
+}
+
+/* 0x8a0528: right of it by up to eight */
+void avcencRefineEdgeRight(AvcencRefine *refine, uint32_t count)
+{
+	windowLeft(refine, count);
+}
+
+/* 0x8a05b8: by nine to fifteen */
+void avcencRefineEdgeRightFar(AvcencRefine *refine, uint32_t count)
+{
+	windowLeft(refine, count);
+}
+
+/* 0x8a0648: above the picture: the lines moved down, the first repeated, until the line is 0 */
+void avcencRefineEdgeTop(AvcencRefine *refine, int32_t line)
+{
+	int32_t i;
+
+	for (; line < 0; line++)
+		for (i = 11; i > 0; i--)
+			copyPixels(refine->window[i], refine->window[i - 1], 16);
+}
+
+/* 0x8a06b8: below it: moved up a count of lines, the last repeated */
+void avcencRefineEdgeBottom(AvcencRefine *refine, int32_t count)
+{
+	int32_t i;
+
+	for (; count > 0; count--)
+		for (i = 0; i < 11; i++)
+			copyPixels(refine->window[i], refine->window[i + 1], 16);
+}
+
+/*
+ * 0x8a0728: the window's twelve lines from the reference's tiles: sixteen
+ * pixels of each from the three eight pixel columns given, from an offset
+ * (1 to 8) into the first. The lines go down the tile from a line of it and
+ * on into the tile below
+ */
+void avcencRefineLoad(AvcencRefine *refine, const uint8_t *first, const uint8_t *second,
+	const uint8_t *third, uint32_t offset, uint32_t line, int32_t nextRow)
+{
+	uint32_t i, j, n;
+	uint8_t pixels[24];
+
+	for (i = 0; i < 12; i++) {
+		if (line + i == 16) {
+			first += nextRow;
+			second += nextRow;
+			third += nextRow;
+		}
+		for (j = 0; j < 8; j++) {
+			pixels[j] = first[j];
+			pixels[8 + j] = second[j];
+			pixels[16 + j] = third[j];
+		}
+		for (n = 0; n < 16; n++)
+			refine->window[i][n] = pixels[offset + n];
+		first += 16;
+		second += 16;
+		third += 16;
+	}
+}
+
+/* 0x8a0f20: the window's left halves, then its right halves */
+void avcencRefineStore(const AvcencRefine *refine, uint8_t *saved)
+{
+	uint32_t line;
+
+	for (line = 0; line < 12; line++) {
+		copyPixels(saved + line * 8, refine->window[line], 8);
+		copyPixels(saved + 96 + line * 8, refine->window[line] + 8, 8);
+	}
+}
+
+/* 0x8a0ff0: the source's block, from its macroblock's lines */
+void avcencRefineLoadSource(AvcencRefine *refine, const uint8_t *source)
+{
+	uint32_t line;
+
+	for (line = 0; line < 8; line++)
+		copyPixels(refine->source[line], source + line * 16, 8);
+}
+
+/* 0x8a1040: the SAD at the whole pixel position */
+uint16_t avcencRefineSad(const AvcencRefine *refine)
+{
+	uint32_t line, i, sum = 0;
+
+	for (line = 0; line < 8; line++)
+		for (i = 0; i < 8; i++)
+			sum += abs32(refine->source[line][i] - refine->window[2 + line][2 + i]);
+	return sum;
+}
+
+/* 0x8a10b0: its SATD: the 4x4 blocks' Hadamard sums, saturated, halved */
+uint16_t avcencRefineSatd(const AvcencRefine *refine)
+{
+	int32_t residual[4][4], sum, block, line, i, a, b, c, d;
+
+	sum = 0;
+	for (block = 0; block < 4; block++) {
+		for (line = 0; line < 4; line++)
+			for (i = 0; i < 4; i++)
+				residual[line][i] = refine->source[(block & 2) * 2 + line]
+					[(block & 1) * 4 + i] -
+					refine->window[2 + (block & 2) * 2 + line]
+					[2 + (block & 1) * 4 + i];
+		for (i = 0; i < 4; i++) {
+			a = residual[0][i] + residual[2][i];
+			b = residual[1][i] + residual[3][i];
+			c = residual[0][i] - residual[2][i];
+			d = residual[1][i] - residual[3][i];
+			residual[0][i] = a + b;
+			residual[1][i] = c + d;
+			residual[2][i] = c - d;
+			residual[3][i] = a - b;
+		}
+		for (line = 0; line < 4; line++) {
+			a = residual[line][0] + residual[line][2];
+			b = residual[line][1] + residual[line][3];
+			c = residual[line][0] - residual[line][2];
+			d = residual[line][1] - residual[line][3];
+			sum += abs32(a + b) + abs32(a - b) + abs32(c + d) + abs32(c - d);
+		}
+	}
+	if (sum > 32767)
+		sum = 32767;
+	return sum >> 1;
+}
+
+/* two costs added, saturating */
+static inline uint16_t addCosts(uint32_t a, uint32_t b)
+{
+	return a + b > REFINE_UNAVAILABLE ? REFINE_UNAVAILABLE : a + b;
+}
+
+/* each candidate's costs merged into the partitions': the two blocks of each into the first */
+static void mergeCandidates(AvcencRefine *refine, uint32_t first0, uint32_t second0,
+	uint32_t first1, uint32_t second1)
+{
+	uint32_t i;
+	uint16_t *costs;
+
+	for (i = 0; i < REFINE_CANDIDATES; i++) {
+		costs = refine->candidates[i];
+		costs[0] = addCosts(costs[first0], costs[second0]);
+		costs[1] = addCosts(costs[first1], costs[second1]);
+		costs[2] = 0;
+		costs[3] = 0;
+	}
+}
+
+/* 0x8a1188: one 16x16 partition: each candidate's four blocks' costs */
+void avcencRefineMerge16x16(AvcencRefine *refine)
+{
+	uint32_t i;
+	uint16_t *costs;
+
+	for (i = 0; i < REFINE_CANDIDATES; i++) {
+		costs = refine->candidates[i];
+		costs[0] = addCosts(addCosts(costs[0], costs[1]), addCosts(costs[2], costs[3]));
+		costs[1] = 0;
+		costs[2] = 0;
+		costs[3] = 0;
+	}
+}
+
+/* 0x8a1248: two 16x8, the top blocks and the bottom ones */
+void avcencRefineMerge16x8(AvcencRefine *refine)
+{
+	mergeCandidates(refine, 0, 1, 2, 3);
+}
+
+/* 0x8a1320: two 8x16, the left blocks and the right ones */
+void avcencRefineMerge8x16(AvcencRefine *refine)
+{
+	mergeCandidates(refine, 0, 2, 1, 3);
+}
+
+/* the candidates' offsets, in quarter pixels */
+static const int8_t refineOffsets[REFINE_CANDIDATES][2] = {
+	{ -2, 2 }, { -2, 0 }, { -2, -2 }, { 0, -2 }, { 2, -2 }, { 2, 0 }, { 2, 2 }, { 0, 2 },
+	{ 0, 0 },
+};
+
+/*
+ * 0x8a13f8: each partition's cheapest candidate, the later on a tie, and
+ * its vector: its whole pixel offset in quarter pixels and the candidate's
+ */
+void avcencRefineChoose(const AvcencRefine *refine, const int8_t (*deltas)[2],
+	int16_t (*vectors)[2])
+{
+	uint32_t part, i, best;
+
+	for (part = 0; part < 4; part++) {
+		best = 0;
+		for (i = 1; i < REFINE_CANDIDATES; i++)
+			if (refine->candidates[best][part] >= refine->candidates[i][part])
+				best = i;
+		vectors[part][0] = deltas[part][0] * 4 + refineOffsets[best][0];
+		vectors[part][1] = deltas[part][1] * 4 + refineOffsets[best][1];
+	}
+}

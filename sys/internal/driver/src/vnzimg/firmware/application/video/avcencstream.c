@@ -494,7 +494,7 @@ void avcencJobScene(uint32_t picture, uint32_t slices, uint32_t rate, uint32_t u
 void avcencJobLoad(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
 
 void avcencJobMotion(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
-void avcencJobIntra(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
+void avcencJobRefine(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
 void avcencJobDecide(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
 void avcencJobRate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
 void avcencJobRateUpdate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
@@ -776,7 +776,7 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 			position = row << 10 | column << 2;
 			if (!idrNext) {
 				context = jobSet(context, picture, index * 8 + jobs * 4 +
-					(row & 3) * jobs + column + 8, 1, avcencJobIntra, slices,
+					(row & 3) * jobs + column + 8, 1, avcencJobRefine, slices,
 					position, 0, JOB_FLAG_ROWS);
 				jobs = picture->jobs;
 			}
@@ -905,7 +905,7 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 			position = row << 10 | column << 2;
 			if (!idr) {
 				context = jobSet(context, picture, index * 8 + jobs * 4 +
-					(row & 3) * jobs + column + 8, 1, avcencJobIntra, slices,
+					(row & 3) * jobs + column + 8, 1, avcencJobRefine, slices,
 					position, 0, JOB_FLAG_ROWS);
 				jobs = picture->jobs;
 			}
