@@ -9,6 +9,7 @@
 #include <libssl.h>
 #include <libssl/sslinternal.h>
 #include <libssl/object.h>
+#include <kernel/modulemgr.h>
 
 #include "http_internal.h"
 
@@ -28,6 +29,41 @@
 #define HTTPS_SSL_AVA_TYPE		1		/* SceSslInternal_B5A099D2's */
 #define HTTPS_SSL_AVA_VALUE		2
 #define HTTPS_SSL_OID_NAME_SIZE		24
+
+/* SceSslInternal_64BDF1BB's items of a certificate */
+#define HTTPS_SSL_ITEM_SERIAL_NUMBER	2
+#define HTTPS_SSL_ITEM_BASIC_CONSTRAINTS	0x4005
+#define HTTPS_SSL_ITEM_SIGNATURE_ALGORITHM	0x8007
+#define HTTPS_SSL_ITEM_PUBLIC_KEY	0x8009
+/* SceSslInternal_93EAE08A's items of basicConstraints */
+#define HTTPS_SSL_ITEM_CRITICAL		0x8001
+#define HTTPS_SSL_ITEM_CA		0x8007
+#define HTTPS_SSL_ITEM_PATH_LEN		0x8008
+#define HTTPS_SSL_PATH_LEN_DEFAULT	10
+/* the signature algorithms refused */
+#define HTTPS_SSL_SIG_MD2_RSA		7
+#define HTTPS_SSL_SIG_MD5_RSA		8
+#define HTTPS_SSL_NAME_DN		1		/* SceSslInternal_81FA5DBE's and 08179EBD's */
+#define HTTPS_SSL_KEY_PUBLIC		1		/* SceSslInternal_170D595D's */
+#define HTTPS_SSL_DIGEST		4		/* SceSslInternal_08ED1B25's */
+#define HTTPS_SSL_DATE_SECONDS		3		/* the date formats */
+#define HTTPS_SSL_DATE_TEXT		6
+
+/* what _sceHttpsSslCallback tells the SSL layer */
+#define HTTPS_SSL_VERIFY_OK		0
+#define HTTPS_SSL_VERIFY_ISSUER		1		/* the issuer's name unreadable */
+#define HTTPS_SSL_VERIFY_INVALID_CERT	2		/* a weak signature, a CA without a key */
+#define HTTPS_SSL_VERIFY_NOT_BEFORE	3
+#define HTTPS_SSL_VERIFY_NOT_AFTER	4
+#define HTTPS_SSL_VERIFY_REVOKED	8
+#define HTTPS_SSL_VERIFY_FAILED		10
+#define HTTPS_SSL_VERIFY_INTERNAL	11
+
+/*
+ * An SSL call failed: out of memory to the connection's sslError, anything else to
+ * verifyError's bit.
+ */
+#define HTTPS_SSL_FAILED(ret, bit) do {							(ret) = SceSslInternal_461C5990(SSL_INTERNAL_LIBRARY_SSL, (ret));			if ((ret) == SCE_SSL_ERROR_OUT_OF_MEMORY) {							if (context != NULL)										*context->sslError = HTTPS_SSL_ERROR_OUT_OF_MEMORY;			} else {											verifyError |= (bit);								}										} while (0)
 
 #define HTTPS_CA_SLACK			15000		/* added to a CA's size for its PEM text */
 #define HTTPS_FLAG_SYSTEM_CA_ONLY	0x100		/* only the system's first store */
@@ -320,13 +356,15 @@ common_name:
 			goto done;
 		}
 		r = SceSslInternal_4D80D3F7(oid, 1, type.data, type.len);
-		if (r != 0)
-			goto ava_error;
+		if (r != 0) {
+			SceSslInternal_17BF2367(entry.ava);
+			r = _sceHttpsSslCertError(SSL_INTERNAL_LIBRARY_SSL, r, HTTPS_SSL_ERROR_CERT);
+			goto done;
+		}
 		if (SceSslInternal_3DE4F3DB(oid, 0, sizeof(typeName), typeName) != 0)
 			sceClibStrncpy(typeName, "<UNKNOWN>", sizeof(typeName));
 		r = SceSslInternal_B5A099D2(entry.ava, HTTPS_SSL_AVA_VALUE, &value);
 		if (r != 0) {
-ava_error:
 			SceSslInternal_17BF2367(entry.ava);
 			r = _sceHttpsSslCertError(SSL_INTERNAL_LIBRARY_SSL, r, HTTPS_SSL_ERROR_CERT);
 			goto done;
@@ -565,6 +603,589 @@ free_der:
 	if (der != NULL)
 		_sceHttpsSslContextFree(context, der);
 	return ret;
+}
+
+/*
+ * The server certificate check the SSL layer calls back with the server's chain, certNum
+ * long: each certificate's dates (with the NOT_AFTER and NOT_BEFORE flags), the server's
+ * name (_sceHttpsSslCheckName), the chain put in issuer order, the issuer of its last
+ * certificate looked up in the CA lists (with HTTPS_FLAG_CA_SEARCH), the system's revoked
+ * serials, MD2 and MD5 signatures refused, then each certificate verified with the key of
+ * the next and its basicConstraints. The errors go to the connection's sslErrorDetail as
+ * SCE_HTTPS_ERROR_SSL_*, then to the user's callback, which may accept the chain when the
+ * system allows it. Whether the chain is accepted.
+ */
+int _sceHttpsSslCallback(void *ssl, void **certs, int certNum, void *arg, int *verifyResult)
+{
+	HttpsSslContext *context = arg;
+	int ret = 0;
+	void *issuer = NULL, *caSubject = NULL, *subject = NULL;
+	void *keyLib = NULL, *key = NULL, *certLib = NULL;
+	SceUInt32 textLen = 0;
+	void *ext = NULL;
+	int critical = 0, pathLen = HTTPS_SSL_PATH_LEN_DEFAULT, isCa = 0;
+	HttpsSslData serial = { 0, NULL };
+	void *lib = NULL, *dateContext = NULL, *now = NULL, *date = NULL;
+	int compare = 0;
+	SceUInt32 digestLen = 0;
+	void *ca = NULL;
+	int verified, value, revokedCount, sigAlg;
+	const HttpsSslData *revoked;
+	HttpsSslData certSerial;
+	HttpsSslCaIterator it;
+	SceUChar8 nowData[8];
+	SslTime time;
+	char text[20];
+	SceUInt32 sslFlags, verifyError, n;
+	SceBool result = 0, locked = 0, cnResult;
+	int *order = NULL;
+	void **chain = NULL;
+	void *digest = NULL, *cert;
+	int chainLen = 0, i, j, k, idx, depth;
+
+	verifyError = 0;
+	sceClibMemset(text, 0, sizeof(text));
+	sslFlags = HTTPS_FLAGS_SERVER_CHECKS | HTTPS_FLAG_CA_SEARCH;
+	if (context != NULL && context->sslFlags != 0)
+		sslFlags = context->sslFlags;
+	if ((sslFlags & SCE_HTTPS_FLAG_SERVER_VERIFY) == 0) {
+		cnResult = 1;
+		goto report;
+	}
+	if (context == NULL) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	if ((context->sslFlags & HTTPS_SSL_CONTEXT_LOCKED) != 0) {
+		ret = context->lock(context->userArg);
+		if (ret < 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			*context->sslError = ret;
+			goto out;
+		}
+		locked = 1;
+	}
+
+	ret = SceSslInternal_24C6257F(ssl, SSL_INTERNAL_VALUE_KEY_LIBRARY, &keyLib);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	ret = SceSslInternal_24C6257F(ssl, SSL_INTERNAL_VALUE_CERT_LIBRARY, &certLib);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	ret = SceSslInternal_24C6257F(ssl, SSL_INTERNAL_VALUE_LIBRARY, &lib);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	ret = SceSslInternal_D3C049B9(lib, 0, &dateContext);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	ret = SceSslInternal_BF99D664(lib, -1, &ext);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+	if (certNum == 0)
+		goto out;
+
+	/* each certificate: its serial, names, dates and digest */
+	for (i = 0; i < certNum; i++) {
+		ret = SceSslInternal_64BDF1BB(certs[i], HTTPS_SSL_ITEM_SERIAL_NUMBER, &serial);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+			goto out;
+		}
+		for (n = 0; n < serial.len; n++)
+			;	/* the serial's bytes, printed by the debug build */
+		ret = SceSslInternal_08179EBD(certs[i], HTTPS_SSL_NAME_DN, &subject);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+			goto out;
+		}
+		if (subject != NULL) {
+			SceSslInternal_CE37B69E(subject);
+			subject = NULL;
+		}
+		ret = SceSslInternal_81FA5DBE(certs[i], HTTPS_SSL_NAME_DN, &issuer);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_ISSUER;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+			goto out;
+		}
+		if (issuer != NULL) {
+			SceSslInternal_CE37B69E(issuer);
+			issuer = NULL;
+		}
+		if (now != NULL) {
+			SceSslInternal_6CDB4EE8(now);
+			now = NULL;
+		}
+		ret = SceSslInternal_5E50CB55(dateContext, &now);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+			goto out;
+		}
+		if (date != NULL) {
+			SceSslInternal_6CDB4EE8(date);
+			date = NULL;
+		}
+		ret = SceSslInternal_5E50CB55(dateContext, &date);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+			goto out;
+		}
+		if ((sslFlags & SCE_HTTPS_FLAG_NOT_AFTER_CHECK) != 0 ||
+		    (sslFlags & SCE_HTTPS_FLAG_NOT_BEFORE_CHECK) != 0) {
+			SceSslInternal_4AAF0D45(&time);
+			ret = SceSslInternal_6D2A86F0(&time, HTTPS_SSL_DATE_SECONDS, nowData,
+						      sizeof(nowData));
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			ret = SceSslInternal_88391E03(now, HTTPS_SSL_DATE_SECONDS, nowData,
+						      sizeof(nowData));
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+		}
+		if ((sslFlags & SCE_HTTPS_FLAG_NOT_AFTER_CHECK) != 0) {
+			ret = SceSslInternal_2074A6EB(certs[i], date);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			ret = SceSslInternal_D1A82B1A(date, HTTPS_SSL_DATE_TEXT, text, &textLen,
+						      sizeof(text));
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			ret = SceSslInternal_04BAED82(date, now, &compare);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			if (compare != 1) {
+				verifyError |= SCE_HTTPS_ERROR_SSL_NOT_AFTER_CHECK;
+				*verifyResult = HTTPS_SSL_VERIFY_NOT_AFTER;
+			}
+		}
+		if ((sslFlags & SCE_HTTPS_FLAG_NOT_BEFORE_CHECK) != 0) {
+			ret = SceSslInternal_2464F9D0(certs[i], date);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			ret = SceSslInternal_D1A82B1A(date, HTTPS_SSL_DATE_TEXT, text, &textLen,
+						      sizeof(text));
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			ret = SceSslInternal_04BAED82(date, now, &compare);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+				goto out;
+			}
+			if (compare != -1) {
+				verifyError |= SCE_HTTPS_ERROR_SSL_NOT_BEFORE_CHECK;
+				*verifyResult = HTTPS_SSL_VERIFY_NOT_BEFORE;
+			}
+		}
+		ret = SceSslInternal_08ED1B25(certs[i], HTTPS_SSL_DIGEST, 0, NULL, &digestLen);
+		if (ret != 0) {
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+			goto out;
+		}
+		digest = _sceHttpsSslContextMalloc(context, digestLen);
+		if (digest == NULL) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			if (context != NULL)
+				*context->sslError = HTTPS_SSL_ERROR_OUT_OF_MEMORY;
+			goto out;
+		}
+		ret = SceSslInternal_08ED1B25(certs[i], HTTPS_SSL_DIGEST, digestLen, digest,
+					      &digestLen);
+		if (ret != 0) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+			goto out;
+		}
+		if (digest != NULL) {
+			_sceHttpsSslContextFree(context, digest);
+			digest = NULL;
+		}
+	}
+
+	if (_sceHttpsSslGetSdkVersion() >= 0x1650000) {
+		order = _sceHttpsSslContextMalloc(context, certNum * sizeof(int));
+		if (order == NULL) {
+			*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+			if (context != NULL)
+				*context->sslError = HTTPS_SSL_ERROR_OUT_OF_MEMORY;
+			goto out;
+		}
+		for (i = 0; i < certNum; i++)
+			order[i] = -1;
+	}
+	cnResult = _sceHttpsSslCheckName(lib, certs, context->hostname, sslFlags, &ret);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		goto out;
+	}
+
+	/* the chain in issuer order, until a CA issued its last certificate */
+	if (order != NULL)
+		order[0] = 0;
+	for (i = 0; ; i++) {
+		idx = order != NULL ? order[i] : i;
+		ret = SceSslInternal_81FA5DBE(certs[idx], HTTPS_SSL_NAME_DN, &issuer);
+		if (ret != 0) {
+			HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+			goto out;
+		}
+		if ((sslFlags & HTTPS_FLAG_CA_SEARCH) != 0) {
+			sceClibMemset(&it, 0, sizeof(it));
+			it.certLib = certLib;
+			it.end = 0;
+			for (;;) {
+				verified = 0;
+				ret = _sceHttpsSslNextCa(&it, &ca, context, issuer);
+				if (ret < 0) {
+					*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+					*context->sslError = ret;
+					goto out;
+				}
+				if (ca == NULL)
+					break;
+				ret = SceSslInternal_08179EBD(ca, HTTPS_SSL_NAME_DN, &caSubject);
+				if (ret != 0) {
+					*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+					HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+					goto out;
+				}
+				if (issuer != NULL && caSubject != NULL &&
+				    SceSslInternal_568F0E80(caSubject, issuer) == 1) {
+					ret = SceSslInternal_64BDF1BB(ca, HTTPS_SSL_ITEM_PUBLIC_KEY,
+								      &key);
+					if (ret != 0) {
+						HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+						goto out;
+					}
+					if (key == NULL) {
+						*context->sslError = HTTPS_SSL_ERROR_OUT_OF_MEMORY;
+						*verifyResult = HTTPS_SSL_VERIFY_INVALID_CERT;
+						goto out;
+					}
+					ret = SceSslInternal_306E2A22(certs[idx], key, &verified);
+					if (ret != 0) {
+						*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+						HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+						goto out;
+					}
+					if (key != NULL) {
+						SceSslInternal_46358909(key);
+						key = NULL;
+					}
+					if (verified != 0)
+						goto found;
+				}
+				SceSslInternal_144FA354(ca);
+				ca = NULL;
+				if (caSubject != NULL) {
+					SceSslInternal_CE37B69E(caSubject);
+					caSubject = NULL;
+				}
+			}
+		}
+		if (i + 1 >= certNum) {
+			if ((sslFlags & SCE_HTTPS_FLAG_KNOWN_CA_CHECK) != 0)
+				verifyError |= SCE_HTTPS_ERROR_SSL_UNKNOWN_CA;
+			goto report;
+		}
+		if (order != NULL) {
+			for (j = 1; j < certNum; j++) {
+				for (k = 1; k < i; k++)
+					if (order[k] == j)
+						break;
+				if (k < i)
+					continue;
+				ret = SceSslInternal_08179EBD(certs[j], HTTPS_SSL_NAME_DN, &subject);
+				if (ret != 0) {
+					*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+					HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+					goto report;
+				}
+				if (SceSslInternal_568F0E80(issuer, subject) != 0) {
+					order[i + 1] = j;
+					break;
+				}
+			}
+			if (order[i + 1] < 0)
+				goto broken;
+		} else {
+			ret = SceSslInternal_08179EBD(certs[i + 1], HTTPS_SSL_NAME_DN, &subject);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+				goto report;
+			}
+			if (SceSslInternal_568F0E80(issuer, subject) == 0)
+				goto broken;
+		}
+		if (subject != NULL) {
+			SceSslInternal_CE37B69E(subject);
+			subject = NULL;
+		}
+		if (issuer != NULL) {
+			SceSslInternal_CE37B69E(issuer);
+			issuer = NULL;
+		}
+	}
+
+found:
+	/* the CA's revoked serials */
+	cert = certs[idx];
+	if (SceSslInternal_349B0E73(it.store, it.index, (const void **)&revoked,
+				    &revokedCount) < 0)
+		goto revoked;
+	if (revokedCount != 0) {
+		if (SceSslInternal_64BDF1BB(cert, HTTPS_SSL_ITEM_SERIAL_NUMBER, &certSerial) != 0)
+			goto revoked;
+		for (n = 0; n < (SceUInt32)revokedCount; n++)
+			if (revoked[n].len == certSerial.len &&
+			    sceClibMemcmp(revoked[n].data, certSerial.data, certSerial.len) == 0)
+				goto revoked;
+	}
+
+	/* no MD2 or MD5 signature */
+	if (order != NULL) {
+		for (k = 0; k <= i; k++)
+			if (SceSslInternal_64BDF1BB(certs[order[k]], HTTPS_SSL_ITEM_SIGNATURE_ALGORITHM,
+						    &sigAlg) != 0 ||
+			    sigAlg == HTTPS_SSL_SIG_MD5_RSA || sigAlg == HTTPS_SSL_SIG_MD2_RSA)
+				goto weak;
+	} else {
+		for (j = 0; j <= idx; j++)
+			if (SceSslInternal_64BDF1BB(certs[j], HTTPS_SSL_ITEM_SIGNATURE_ALGORITHM,
+						    &sigAlg) != 0 ||
+			    sigAlg == HTTPS_SSL_SIG_MD5_RSA || sigAlg == HTTPS_SSL_SIG_MD2_RSA)
+				goto weak;
+	}
+	if (issuer != NULL) {
+		SceSslInternal_CE37B69E(issuer);
+		issuer = NULL;
+	}
+	if (caSubject != NULL) {
+		SceSslInternal_CE37B69E(caSubject);
+		caSubject = NULL;
+	}
+
+	/* the ordered chain and its CA */
+	chain = _sceHttpsSslContextMalloc(context, (i + 2) * sizeof(void *));
+	chainLen = i + 2;
+	if (chain == NULL) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		if (context != NULL)
+			*context->sslError = HTTPS_SSL_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+	if (order != NULL) {
+		for (k = 0; k <= i; k++)
+			sceClibMemcpy_safe(&chain[k], &certs[order[k]], sizeof(void *));
+	} else {
+		sceClibMemcpy_safe(chain, certs, (i + 1) * sizeof(void *));
+	}
+	certs = chain;
+	sceClibMemcpy_safe(&chain[i + 1], &ca, sizeof(void *));
+	ret = SceSslInternal_24C6257F(ssl, SSL_INTERNAL_VALUE_LIBRARY, &lib);
+	if (ret != 0) {
+		*verifyResult = HTTPS_SSL_VERIFY_INTERNAL;
+		HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INTERNAL);
+		goto out;
+	}
+
+	/* each certificate signed by the next, which is a CA within its path length */
+	for (depth = i; depth >= 0; depth--) {
+		if (depth > 0) {
+			if (SceSslInternal_64BDF1BB(certs[depth], HTTPS_SSL_ITEM_BASIC_CONSTRAINTS,
+						    ext) == 0 &&
+			    SceSslInternal_93EAE08A(ext, HTTPS_SSL_ITEM_CRITICAL, &critical) == 0 &&
+			    SceSslInternal_93EAE08A(ext, HTTPS_SSL_ITEM_PATH_LEN, &pathLen) == 0 &&
+			    SceSslInternal_93EAE08A(ext, HTTPS_SSL_ITEM_CA, &isCa) == 0) {
+				if (isCa != 0) {
+					if ((SceUInt32)(pathLen + 1) < (SceUInt32)depth) {
+						verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+						*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+						goto out;
+					}
+				} else {
+					verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+				}
+			}
+			ret = SceSslInternal_170D595D(certs[depth], HTTPS_SSL_KEY_PUBLIC, &key);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+				goto out;
+			}
+			ret = SceSslInternal_306E2A22(certs[depth - 1], key, &compare);
+			if (ret != 0) {
+				*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+				HTTPS_SSL_FAILED(ret, SCE_HTTPS_ERROR_SSL_INVALID_CERT);
+				goto out;
+			}
+			if (compare == 0)
+				goto unverified;
+		}
+		if (key != NULL) {
+			SceSslInternal_46358909(key);
+			key = NULL;
+		}
+	}
+	goto report;
+
+unverified:
+	/* the two serials, printed by the debug build */
+	ret = SceSslInternal_64BDF1BB(certs[depth], HTTPS_SSL_ITEM_SERIAL_NUMBER, &serial);
+	if (ret == 0)
+		for (n = 0; n < serial.len; n++)
+			;
+	ret = SceSslInternal_64BDF1BB(certs[depth - 1], HTTPS_SSL_ITEM_SERIAL_NUMBER, &serial);
+	if (ret == 0)
+		for (n = 0; n < serial.len; n++)
+			;
+	verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+	*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+	goto out;
+
+revoked:
+	verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+	*verifyResult = HTTPS_SSL_VERIFY_REVOKED;
+	goto out;
+
+weak:
+	verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+	*verifyResult = HTTPS_SSL_VERIFY_INVALID_CERT;
+	goto out;
+
+broken:
+	verifyError |= SCE_HTTPS_ERROR_SSL_INVALID_CERT;
+	*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+
+report:
+	if ((sslFlags & SCE_HTTPS_FLAG_CN_CHECK) != 0 && cnResult != 1)
+		verifyError |= SCE_HTTPS_ERROR_SSL_CN_CHECK;
+	if (context != NULL) {
+		*context->sslErrorDetail = verifyError;
+		*context->sslError = verifyError != 0 ? HTTPS_SSL_ERROR_CERT : 0;
+	}
+	*verifyResult = verifyError != 0 ? HTTPS_SSL_VERIFY_FAILED : HTTPS_SSL_VERIFY_OK;
+	result = verifyError == 0;
+	if (context != NULL && context->callback != NULL) {
+		if (locked && (context->sslFlags & HTTPS_SSL_CONTEXT_LOCKED) != 0) {
+			context->unlock(context->userArg);
+			locked = 0;
+		}
+		ret = context->callback(verifyError,
+					(SceSslCert * const *)(chain != NULL ? chain : certs),
+					chain != NULL ? chainLen : certNum, context->userArg);
+		if (ret < 0) {
+			result = 0;
+			*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+			goto out;
+		}
+		/* the user accepts a failed chain only where the system allows it */
+		if (verifyError != 0 &&
+		    (sceAppMgrIsGameProgram() == 0 ||
+		     sceKernelIsCalledFromSysModule(context->callback) != 0) &&
+		    _sceHttpsSslGetSdkVersion() >= 0x2100000) {
+			ret = sceRegMgrSystemParamGetInt(HTTP_REGMGR_SSL_VERIFY_DISABLE, &value);
+			if (ret != 0)
+				value = 0;
+			if (value == 0) {
+				result = 0;
+				*verifyResult = HTTPS_SSL_VERIFY_FAILED;
+				goto out;
+			}
+		}
+		result = 1;
+		*verifyResult = HTTPS_SSL_VERIFY_OK;
+	}
+
+out:
+	if (*verifyResult != HTTPS_SSL_VERIFY_OK) {
+		SceSslInternal_B0E4CB2F(ssl, *verifyResult);
+		if (verifyError != 0) {
+			*context->sslError = HTTPS_SSL_ERROR_CERT;
+			*context->sslErrorDetail = verifyError;
+		}
+	}
+	if (date != NULL) {
+		SceSslInternal_6CDB4EE8(date);
+		date = NULL;
+	}
+	if (now != NULL) {
+		SceSslInternal_6CDB4EE8(now);
+		now = NULL;
+	}
+	if (digest != NULL)
+		_sceHttpsSslContextFree(context, digest);
+	if (ext != NULL)
+		SceSslInternal_F030A0DE(ext);
+	if (key != NULL) {
+		SceSslInternal_46358909(key);
+		key = NULL;
+	}
+	if (subject != NULL) {
+		SceSslInternal_CE37B69E(subject);
+		subject = NULL;
+	}
+	if (issuer != NULL) {
+		SceSslInternal_CE37B69E(issuer);
+		issuer = NULL;
+	}
+	if (caSubject != NULL) {
+		SceSslInternal_CE37B69E(caSubject);
+		caSubject = NULL;
+	}
+	if (dateContext != NULL)
+		SceSslInternal_D4ADF069(dateContext);
+	if (ca != NULL)
+		SceSslInternal_144FA354(ca);
+	if (chain != NULL)
+		_sceHttpsSslContextFree(context, chain);
+	if (order != NULL)
+		_sceHttpsSslContextFree(context, order);
+	if (locked && (context->sslFlags & HTTPS_SSL_CONTEXT_LOCKED) != 0)
+		context->unlock(context->userArg);
+	return result;
 }
 
 int _sceHttpsSslGetCaList(SceSslCert ***caCerts, SceInt32 *caNum, HttpsSslContext *context)

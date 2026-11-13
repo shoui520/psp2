@@ -3,12 +3,8 @@
 #define LIBSSL_TIME_H
 
 #include <scetypes.h>
+#include <libssl/time.h>
 
-typedef struct SslTime {
-	SceInt32 secondsHigh;
-	SceUInt32 secondsLow;
-	SceUInt32 milliseconds;
-} SslTime;
 
 typedef SslTime *(*SslTimeAddCallback)(SslTime *result, const SslTime *source,
 				     int seconds, int milliseconds);

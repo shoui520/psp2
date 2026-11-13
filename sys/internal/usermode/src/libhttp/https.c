@@ -47,7 +47,7 @@
 #define HTTPS_DEBUG_ALERT_RECEIVED	0x50
 
 /* the default SSL flags of templates that set none (sceHttpsEnableOption's) */
-SceUInt32 g_httpsSslFlags = HTTPS_FLAGS_SERVER_CHECKS | 0x40;
+SceUInt32 g_httpsSslFlags = HTTPS_FLAGS_SERVER_CHECKS | HTTPS_FLAG_CA_SEARCH;
 
 /* the message callback: nothing */
 static void _sceHttpsSslMessageCallback(void)

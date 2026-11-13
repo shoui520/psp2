@@ -1,6 +1,6 @@
 # SceLibHttp (vs0:sys/external/libhttp.suprx), built by Sony with SNC 3.57.
 set(libhttp_zlib ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/zlib-1.2.5)
-psp2_module(vs0_sys_external_libhttp KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libhttp KIND user COMPILER snc SOURCES
 	auth.c
 	authcache.c
 	conn.c
@@ -23,3 +23,6 @@ set_source_files_properties(${libhttp_zlib}/inflate.c ${libhttp_zlib}/inffast.c
 set_source_files_properties(../../../../sdk/target/src/base64/base64.c
 	../../../../sdk/target/src/md5/libmd5.c PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48 COMPILE_OPTIONS -fno-stack-protector)
+# Sony's psp2ld --strip-unused dropped the zlib functions nothing calls (inflateCopy, ...)
+target_compile_definitions(vs0_sys_external_libhttp PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(vs0_sys_external_libhttp PRIVATE -Wl,--gc-sections)

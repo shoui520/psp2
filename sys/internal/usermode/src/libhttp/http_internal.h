@@ -756,6 +756,7 @@ int _sceHttpUriElementCopy(SceHttpUriElement *dst, const SceHttpUriElement *src,
 #define HTTPS_FLAGS_PRIVATE	0x1ff		/* and the system's own */
 #define HTTPS_FLAGS_SERVER_CHECKS	(SCE_HTTPS_FLAG_SERVER_VERIFY | SCE_HTTPS_FLAG_CN_CHECK | \
 					 SCE_HTTPS_FLAG_KNOWN_CA_CHECK)
+#define HTTPS_FLAG_CA_SEARCH	0x40		/* look the chain's issuer up in the CA lists */
 #define HTTPS_FLAGS_SET		0x80000000	/* a template's flags were set */
 #define HTTPS_ERROR_DISABLE_OPTION_NOT_ALLOWED	-2143072149	/* 0x8043506B */
 #define HTTP_REGMGR_SSL_VERIFY_DISABLE	0x563bfe	/* the system parameter DisableOption needs */

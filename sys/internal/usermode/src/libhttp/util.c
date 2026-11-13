@@ -40,7 +40,6 @@ int _sceHttpSchemeGetType(const char *scheme)
 }
 
 /* what an ID names, by its top four bits */
-__attribute__((always_inline))
 int _sceHttpGetObjectType(int id)
 {
 	switch (id & 0xf0000000) {

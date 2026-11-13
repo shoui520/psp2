@@ -11,6 +11,7 @@
 #include <scetypes.h>
 #include <libssl/name.h>
 #include <libssl/object.h>
+#include <libssl/time.h>
 
 /* what SceSslInternal_2F0FC3CD makes of an I/O call's result */
 #define SSL_INTERNAL_ERROR_NONE		0
@@ -88,6 +89,7 @@ int SceSslInternal_2F0FC3CD(struct ssl_st *ssl, int ret);
 int SceSslInternal_4F781BB6(struct ssl_st *ssl, void *buf, int len);
 int SceSslInternal_24C6257F(void *ssl, int what, void **value);
 int SceSslInternal_A4EA9DE0(void *ssl);
+void SceSslInternal_B0E4CB2F(void *ssl, long arg);	/* SSL_set_verify_result */
 int SceSslInternal_243DE290(void *ssl, int index, void **name);
 
 /* BIOs, certificates, keys and names */
@@ -107,15 +109,36 @@ int SceSslInternal_B5A099D2(void *ava, int what, void *part);
 int SceSslInternal_17BF2367(void *ava);
 int SceSslInternal_4D80D3F7(void *oid, int arg1, const void *data, SceSize len);
 int SceSslInternal_3DE4F3DB(void *oid, int arg1, SceSize size, char *buf);
+int SceSslInternal_CE37B69E(void *name);
+int SceSslInternal_144FA354(void *certificate);
+int SceSslInternal_08ED1B25(void *certificate, int algorithm, SceUInt32 capacity, void *digest,
+			    SceUInt32 *digestLength);
+int SceSslInternal_170D595D(void *certificate, int mode, void **result);
+int SceSslInternal_306E2A22(void *certificate, void *key, void *cryptoContext);
+int SceSslInternal_46358909(void *key);
 
 /* certificate extensions and the system's CA store */
 int SceSslInternal_BF99D664(void *lib, int arg1, void **ext);
 int SceSslInternal_64BDF1BB(void *cert, int item, void *ext);
 int SceSslInternal_93EAE08A(void *ext, int item, void *data);
+int SceSslInternal_F030A0DE(void *object);
 int SceSslInternal_2464F9D0(void *cert, void *date);
 int SceSslInternal_2074A6EB(void *cert, void *date);
 int SceSslInternal_349B0E73(int store, int mask, const void **serials, int *count);
 int SceSslInternal_3746501F(void *store, const char ***pem, void *buf, SceSize size,
 			    SceSize *outSize, SceBool systemOnly);
+
+/* times and dates */
+struct SslLibrary;
+SslTime *SceSslInternal_4AAF0D45(SslTime *time);
+int SceSslInternal_6D2A86F0(const SslTime *time, int format, void *data, int capacity);
+int SceSslInternal_D3C049B9(struct SslLibrary *library, int parameter, void **result);
+int SceSslInternal_D4ADF069(void *context);
+int SceSslInternal_5E50CB55(void *context, void **result);
+int SceSslInternal_6CDB4EE8(void *date);
+int SceSslInternal_04BAED82(const void *left, const void *right, int *result);
+int SceSslInternal_D1A82B1A(void *date, int format, void *data, SceUInt32 *length,
+			    SceUInt32 capacity);
+int SceSslInternal_88391E03(void *date, int format, const void *data, SceUInt32 length);
 
 #endif /* _LIBSSL_SSLINTERNAL_H */
