@@ -5,6 +5,7 @@
  * stream's VThread context.
  */
 #include "application.h"
+#include "SKP_Silk_SDK_API.h"
 
 /* Sony's SDK, audiodec.h */
 #define SCE_AUDIODEC_ERROR_OUT_OF_MEMORY		((int32_t)0x807f0004)
@@ -28,6 +29,8 @@ typedef struct SilkDecoder {
 	int32_t result;			/* the last job's */
 	int32_t sampleRate;
 	int32_t lostFlag;
+	int32_t lostOffset;		/* packets after the lost one, for the LBRR search */
+	int32_t lbrrBytes;		/* the LBRR payload's bytes; SILK writes the low half */
 } SilkDecoder;
 
 /* the ARM's control block */
@@ -47,21 +50,6 @@ typedef struct SilkCtrl {
 	int32_t sampleRate;
 	uint32_t reserved4[18];
 } SilkCtrl;
-
-/* the SILK SDK's decoder (0x857932-) */
-typedef struct SKP_SILK_SDK_DecControlStruct {
-	int32_t API_sampleRate;
-	int32_t frameSize;
-	int32_t framesPerPacket;
-	int32_t moreInternalDecoderFrames;
-	int32_t inBandFECOffset;
-} SKP_SILK_SDK_DecControlStruct;
-
-int32_t SKP_Silk_SDK_Get_Decoder_Size(int32_t *decSizeBytes);
-int32_t SKP_Silk_SDK_InitDecoder(void *decState);
-int32_t SKP_Silk_SDK_Decode(void *decState, SKP_SILK_SDK_DecControlStruct *decControl,
-	int32_t lostFlag, const uint8_t *inData, int32_t nBytesIn, int16_t *samplesOut,
-	int32_t *nSamplesOut);
 
 static uint32_t timerRead(void)
 {
@@ -160,9 +148,10 @@ static void silkDecodeFrame(uint32_t decoderAddress, uint32_t esAddress, uint32_
 	frames = 0;
 	do {
 		samples = 0;
+		/* the count is a word here, of which SILK reads and writes the low half */
 		result = SKP_Silk_SDK_Decode(decoder->engine, &control, decoder->lostFlag,
 			(const uint8_t *)esAddress, decoder->esSize, (int16_t *)pcmAddress + total,
-			&samples);
+			(SKP_int16 *)&samples);
 		if (result < 0) {
 			decoder->esSize = 0;
 			decoder->pcmSize = 0;
@@ -186,6 +175,44 @@ out:
 static void silkDecodeJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t argument4)
 {
 	silkDecodeFrame(decoder, es, pcm);
+}
+
+/*
+ * 0x81ca9e: the in-band FEC (LBRR) payload of the lost packet `lostOffset` before
+ * this one, from the packet at es into lbrr; nothing in the image runs this job,
+ * which the image keeps.
+ */
+static void __attribute__((used)) silkSearchLbrrJob(uint32_t decoderAddress, uint32_t esAddress, uint32_t lbrrAddress,
+	uint32_t argument4)
+{
+	VnzExtMemory decoderMemory, esMemory, lbrrMemory;
+	SilkDecoder *decoder;
+	int32_t result;
+
+	vnzExtMemoryCreate(&decoderMemory);
+	vnzExtMemoryCreate(&esMemory);
+	vnzExtMemoryCreate(&lbrrMemory);
+	result = vnzExtMemoryOpen(&decoderMemory, 1, VNZ_MEMORY_MODE_PRIVATE, &decoderAddress,
+		sizeof(SilkDecoder));
+	decoder = (SilkDecoder *)decoderAddress;
+	if (result < 0)
+		goto out;
+	result = vnzExtMemoryOpen(&esMemory, 1, VNZ_MEMORY_MODE_PRIVATE, &esAddress,
+		decoder->esSize);
+	if (result < 0)
+		goto out;
+	result = vnzExtMemoryOpen(&lbrrMemory, 1, VNZ_MEMORY_MODE_PRIVATE, &lbrrAddress,
+		decoder->esSize);
+	if (result < 0)
+		goto out;
+	SKP_Silk_SDK_search_for_LBRR(decoder->engine, (const uint8_t *)esAddress,
+		decoder->esSize, decoder->lostOffset, (uint8_t *)lbrrAddress,
+		(SKP_int16 *)&decoder->lbrrBytes);
+out:
+	decoder->result = result;
+	vnzExtMemoryClose(&lbrrMemory, &lbrrAddress);
+	vnzExtMemoryClose(&esMemory, &esAddress);
+	vnzExtMemoryClose(&decoderMemory, &decoderAddress);
 }
 
 /* a job on the context, waited for */

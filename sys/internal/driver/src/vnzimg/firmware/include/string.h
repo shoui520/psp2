@@ -1,0 +1,10 @@
+/*
+ * The string functions the firmware carries (lib/string.c).
+ */
+#pragma once
+
+#include <stddef.h>
+
+void *memcpy(void *destination, const void *source, size_t size);
+void *memmove(void *destination, const void *source, size_t size);
+void *memset(void *destination, int value, size_t size);

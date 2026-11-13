@@ -5,6 +5,7 @@
  * on the stream's VThread context.
  */
 #include "application.h"
+#include "SKP_Silk_SDK_API.h"
 
 /* Sony's SDK, audioenc.h */
 #define SCE_AUDIOENC_ERROR_OUT_OF_MEMORY		((int32_t)0x80860004)
@@ -59,23 +60,6 @@ typedef struct SilkEncCtrl {
 	SilkEncInfo info;
 	uint32_t reserved4[29];
 } SilkEncCtrl;
-
-/* the SILK SDK's encoder (0x858f22-) */
-typedef struct SKP_SILK_SDK_EncControlStruct {
-	int32_t API_sampleRate;
-	int32_t maxInternalSampleRate;
-	int32_t packetSize;
-	int32_t bitRate;
-	int32_t packetLossPercentage;
-	int32_t complexity;
-	int32_t useInBandFEC;
-	int32_t useDTX;
-} SKP_SILK_SDK_EncControlStruct;
-
-int32_t SKP_Silk_SDK_Get_Encoder_Size(int32_t *encSizeBytes);
-int32_t SKP_Silk_SDK_InitEncoder(void *encState, SKP_SILK_SDK_EncControlStruct *encStatus);
-int32_t SKP_Silk_SDK_Encode(void *encState, const SKP_SILK_SDK_EncControlStruct *encControl,
-	const int16_t *samplesIn, int32_t nSamplesIn, uint8_t *outData, uint32_t *nBytesOut);
 
 static uint32_t timerRead(void)
 {
@@ -176,8 +160,9 @@ static void silkEncodeJob(uint32_t encoderAddress, uint32_t pcmAddress, uint32_t
 	control.packetLossPercentage = encoder->packetLossPercentage;
 	control.complexity = encoder->complexity;
 	control.useInBandFEC = encoder->useInBandFEC;
+	/* esSize is a word, of which SILK reads and writes the low half */
 	result = SKP_Silk_SDK_Encode(encoder->engine, &control, (const int16_t *)pcmAddress,
-		control.packetSize, (uint8_t *)esAddress, &encoder->esSize);
+		control.packetSize, (uint8_t *)esAddress, (SKP_int16 *)&encoder->esSize);
 	if (result < 0) {
 		encoder->pcmSize = 0;
 		encoder->esSize = 0;

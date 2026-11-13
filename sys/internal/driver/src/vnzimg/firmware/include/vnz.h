@@ -87,6 +87,8 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 #include <intrinsics.h>
 
 /* the control-bus address and the control-register number must be constants */
@@ -147,10 +149,5 @@ static inline void vnzEnableInterrupts(void)
 	mep_ei();
 }
 
-/* the C library's pieces (lib/string.c) */
-void *memcpy(void *destination, const void *source, size_t size);
-void *memmove(void *destination, const void *source, size_t size);
-void *memset(void *destination, int value, size_t size);
-int abs(int value);
 
 #endif /* !__ASSEMBLER__ */

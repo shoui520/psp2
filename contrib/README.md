@@ -29,6 +29,7 @@ upstream. When a build needs another file, add it from the same release.
 | rt2860-7bc30c23 | Linux staging rt2860 `cmm_wpa.c` | the file | bootimage wlanbt |
 | stm32f10x-fwlib-2.0.3 | ST's STM32F10x Firmware Library V2.0.3 | the drivers motionC uses | barkley (`src/STM32/EWARMv5`, with `src/STM32/Libraries/fwlib.patch`) |
 | sce-dtrace-cddl-2015.01 | Sony's CDDL DTrace sources (the Vita SDK's libdtrace source package, 2015/01) | the kernel driver files and their headers | deci4p_dtracep |
+| silk-1.0.8 | Skype's fixed-point SILK SDK 1.0.8, as FreeSWITCH v1.2.0 carries it | the library sources, interface headers, COPYING, readme.txt (`PROVENANCE.md`) | vnzimg (Venezia's SILK codec, with Sony's files in `firmware/application/silk`) |
 | sqlite-3.6.23.1 | SQLite 3.6.23.1 amalgamation | `sqlite3.c`, `sqlite3.h` | libSceSqlite |
 | sqlite-3.7.6.3 | SQLite 3.7.6.3 source archive | what configure and the amalgamation build read | sqlite |
 | squish-1.11 | Simon Brown's libsquish 1.11 | the library sources and headers (`PROVENANCE.md`) | libpaf (`squish.h` for the DXT filters, and the library itself with Sony's NEON Vec4: `vsh/paf/src/misc/image/squish`) |
