@@ -637,8 +637,8 @@ static const uint32_t intraWeights[52] = {
 
 /* the decisions of a macroblock (avcencdecide.c, and below) */
 void avcencDecideInter(AvcencDecideInfo *info);
-void avcencDecideLuma(AvcencDecideInfo *info);
-void avcencDecideChroma(AvcencDecideInfo *info);
+static void avcencDecideLuma(AvcencDecideInfo *info);
+static void avcencDecideChroma(AvcencDecideInfo *info);
 
 /* a group's macroblocks: up to four, fewer at the picture's edge */
 static inline uint8_t groupSize(uint32_t first, uint32_t size)
@@ -794,7 +794,7 @@ static void decideRows(AvcencPicture *picture, AvcencSlices *slices, AvcencDecid
 				avcencDecideLuma(info);
 				avcencDecideChroma(info);
 			} else {
-				*(uint16_t *)(info->record + 48) = 0xffff;
+				((AvcencMacroblock *)info->record)->intraCost = 0xffff;
 			}
 			info->luma += 256;
 			info->chroma += 128;
@@ -864,4 +864,312 @@ void avcencJobDecide(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	vnzCachePurge((uint32_t)info, DECIDE_INFO_SIZE);
 	vnzPublicClosePrivate((uint32_t)info, DECIDE_INFO_SIZE);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
+}
+
+/* a pair's SADs into the row's candidates */
+static inline void storeCosts(AvcencIntraRow *row, uint32_t candidate, uint32_t block,
+	const uint16_t *sads)
+{
+	row->costs[candidate][block] = sads[0];
+	row->costs[candidate][block + 1] = sads[1];
+}
+
+static inline void keepDc(const AvcencIntra *intra, AvcencIntraPredictions *predictions)
+{
+	uint32_t i;
+
+	for (i = 0; i < 8; i++)
+		predictions->dc[i] = intra->prediction[0][i];
+}
+
+/* 0x83a184: the first pair's candidates, all five */
+static void intraCostsFirst(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	AvcencIntraPredictions *predictions = &row[1].predictions;
+	uint16_t sads[2];
+
+	avcencIntraDcFirst(intra);
+	keepDc(intra, predictions);
+	avcencIntraSadDcFirst(intra, sads);
+	storeCosts(row, INTRA_DC, 0, sads);
+	avcencIntraHorizontalFirst(intra);
+	avcencIntraSadHorizontalFirst(intra, sads);
+	storeCosts(row, INTRA_HORIZONTAL, 0, sads);
+	avcencIntraDownLeftFirst(intra, predictions);
+	avcencIntraSadDownLeftFirst(intra, sads);
+	storeCosts(row, INTRA_DOWN_LEFT, 0, sads);
+	avcencIntraVerticalFirst(intra);
+	avcencIntraSadVerticalFirst(intra, sads);
+	storeCosts(row, INTRA_VERTICAL, 0, sads);
+	avcencIntraDownRightFirst(intra, predictions);
+	avcencIntraSadDownRightFirst(intra, sads);
+	storeCosts(row, INTRA_DOWN_RIGHT, 0, sads);
+}
+
+/* 0x83a204: the second pair's, all five */
+static void intraCostsSecond(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	AvcencIntraPredictions *predictions = &row[2].predictions;
+	uint16_t sads[2];
+
+	avcencIntraDcSecond(intra);
+	keepDc(intra, predictions);
+	avcencIntraSadDcSecond(intra, sads);
+	storeCosts(row, INTRA_DC, 2, sads);
+	avcencIntraHorizontalSecond(intra);
+	avcencIntraSadHorizontalSecond(intra, sads);
+	storeCosts(row, INTRA_HORIZONTAL, 2, sads);
+	avcencIntraDownLeftSecond(intra, predictions);
+	avcencIntraSadDownLeftSecond(intra, sads);
+	storeCosts(row, INTRA_DOWN_LEFT, 2, sads);
+	avcencIntraVerticalSecond(intra);
+	avcencIntraSadVerticalSecond(intra, sads);
+	storeCosts(row, INTRA_VERTICAL, 2, sads);
+	avcencIntraDownRightSecond(intra, predictions);
+	avcencIntraSadDownRightSecond(intra, sads);
+	storeCosts(row, INTRA_DOWN_RIGHT, 2, sads);
+}
+
+/* 0x83a286: the first pair's, without a left macroblock: block 0 has no horizontal or down right */
+static void intraCostsFirstTop(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	AvcencIntraPredictions *predictions = &row[1].predictions;
+	uint16_t sads[2];
+
+	avcencIntraDcFirstTop(intra);
+	keepDc(intra, predictions);
+	avcencIntraSadDcFirst(intra, sads);
+	storeCosts(row, INTRA_DC, 0, sads);
+	avcencIntraHorizontalFirst(intra);
+	avcencIntraSadHorizontalFirst(intra, sads);
+	sads[0] = INTRA_UNAVAILABLE;
+	storeCosts(row, INTRA_HORIZONTAL, 0, sads);
+	avcencIntraDownLeftFirst(intra, predictions);
+	avcencIntraSadDownLeftFirst(intra, sads);
+	storeCosts(row, INTRA_DOWN_LEFT, 0, sads);
+	avcencIntraVerticalFirst(intra);
+	avcencIntraSadVerticalFirst(intra, sads);
+	storeCosts(row, INTRA_VERTICAL, 0, sads);
+	avcencIntraDownRightFirst(intra, predictions);
+	avcencIntraSadDownRightFirst(intra, sads);
+	sads[0] = INTRA_UNAVAILABLE;
+	storeCosts(row, INTRA_DOWN_RIGHT, 0, sads);
+}
+
+/* 0x83a316: the first pair's, with nothing above: DC and horizontal */
+static void intraCostsFirstLeft(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	uint16_t sads[2];
+
+	avcencIntraDcFirstLeft(intra);
+	keepDc(intra, &row[1].predictions);
+	avcencIntraSadDcFirst(intra, sads);
+	storeCosts(row, INTRA_DC, 0, sads);
+	avcencIntraHorizontalFirst(intra);
+	avcencIntraSadHorizontalFirst(intra, sads);
+	storeCosts(row, INTRA_HORIZONTAL, 0, sads);
+}
+
+/* 0x83a35e: the first pair's, with nothing above or to the left */
+static void intraCostsFirstAlone(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	uint16_t sads[2];
+
+	avcencIntraDcFirstAlone(intra);
+	keepDc(intra, &row[1].predictions);
+	avcencIntraSadDcFirst(intra, sads);
+	storeCosts(row, INTRA_DC, 0, sads);
+	avcencIntraHorizontalFirst(intra);
+	avcencIntraSadHorizontalFirst(intra, sads);
+	sads[0] = INTRA_UNAVAILABLE;
+	storeCosts(row, INTRA_HORIZONTAL, 0, sads);
+}
+
+/* 0x83a3ae: the second pair's, with nothing above */
+static void intraCostsSecondLeft(AvcencIntra *intra, AvcencIntraRow *row)
+{
+	uint16_t sads[2];
+
+	avcencIntraDcSecondLeft(intra);
+	keepDc(intra, &row[2].predictions);
+	avcencIntraSadDcSecond(intra, sads);
+	storeCosts(row, INTRA_DC, 2, sads);
+	avcencIntraHorizontalSecond(intra);
+	avcencIntraSadHorizontalSecond(intra, sads);
+	storeCosts(row, INTRA_HORIZONTAL, 2, sads);
+}
+
+/*
+ * the 16x16 prediction, for a macroblock flat enough (its variance under
+ * the QP's weight); 4x4 blocks otherwise
+ */
+static inline int32_t intraFlat(const AvcencDecideInfo *info)
+{
+	return (int32_t)avcencIntraVariance((const uint8_t *)info->luma) < info->intraWeight;
+}
+
+/* 0x83a3f8 */
+static void intraLuma(AvcencDecideInfo *info)
+{
+	((AvcencMacroblock *)info->record)->lumaMode =
+		intraFlat(info) ? avcencIntraLuma(info->intraRows) : 4;
+}
+
+/* 0x83a430 */
+static void intraLumaTop(AvcencDecideInfo *info)
+{
+	((AvcencMacroblock *)info->record)->lumaMode =
+		intraFlat(info) ? avcencIntraLumaTop(info->intraRows) : 4;
+}
+
+/* 0x83a468 */
+static void intraLumaLeft(AvcencDecideInfo *info)
+{
+	((AvcencMacroblock *)info->record)->lumaMode =
+		intraFlat(info) ? avcencIntraLumaLeft(info->intraRows) : 4;
+}
+
+/* 0x83a4a0: DC, with nothing above or to the left */
+static void intraLumaAlone(AvcencDecideInfo *info)
+{
+	((AvcencMacroblock *)info->record)->lumaMode = intraFlat(info) ? 2 : 4;
+}
+
+/* the places of a row's modes in the record */
+static const uint8_t rowModes[4] = { 0, 2, 8, 10 };
+
+/*
+ * 0x83a4d0: the macroblock's luma intra decision: each 4x4 block's mode,
+ * by the SAD of the five predictions from the source's own pixels (those
+ * it has), the blocks' SATD with them, and the 16x16 prediction's
+ */
+static void avcencDecideLuma(AvcencDecideInfo *info)
+{
+	AvcencMacroblock *record = (AvcencMacroblock *)info->record;
+	const uint8_t *luma = (const uint8_t *)info->luma;
+	AvcencIntraRow *rows = info->intraRows;
+	AvcencIntra intra;
+	uint32_t cost;
+	int32_t row, left;
+
+	left = info->mbX >= 1;
+	if (!info->sliceStart) {
+		if (left)
+			avcencIntraLoad(&intra, luma, luma - (uint16_t)info->pitch * 16 + 240,
+				info->mbX != info->widthInMbs - 1);
+		else
+			avcencIntraLoadTop(&intra, luma, luma - (uint16_t)info->pitch * 16 + 240);
+		cost = 0;
+		for (row = 0; row < 4; row++) {
+			if (left) {
+				if (row)
+					avcencIntraLoadRow(&intra, luma + row * 64, row == 2);
+				intraCostsFirst(&intra, &rows[row]);
+			} else {
+				if (row)
+					avcencIntraLoadRowAlone(&intra, luma + row * 64, row == 2);
+				intraCostsFirstTop(&intra, &rows[row]);
+			}
+			intraCostsSecond(&intra, &rows[row]);
+			cost += avcencIntraChoose(&intra, &rows[row], record->blockModes + rowModes[row]);
+		}
+		record->intraCost = cost;
+		if (left)
+			intraLuma(info);
+		else
+			intraLumaTop(info);
+		return;
+	}
+	if (left) {
+		avcencIntraLoadRow(&intra, luma, 1);
+		intraCostsFirstLeft(&intra, rows);
+	} else {
+		avcencIntraLoadRowAlone(&intra, luma, 1);
+		intraCostsFirstAlone(&intra, rows);
+	}
+	intraCostsSecondLeft(&intra, rows);
+	cost = avcencIntraChooseTwo(&intra, rows, record->blockModes);
+	for (row = 1; row < 4; row++) {
+		if (left) {
+			avcencIntraLoadRow(&intra, luma + row * 64, row == 2);
+			intraCostsFirst(&intra, &rows[row]);
+		} else {
+			avcencIntraLoadRowAlone(&intra, luma + row * 64, row == 2);
+			intraCostsFirstTop(&intra, &rows[row]);
+		}
+		intraCostsSecond(&intra, &rows[row]);
+		cost += avcencIntraChoose(&intra, &rows[row], record->blockModes + rowModes[row]);
+	}
+	record->intraCost = cost;
+	if (left)
+		intraLumaLeft(info);
+	else
+		intraLumaAlone(info);
+}
+
+/* 0x83a7d8: a part's four candidates */
+static void chromaCosts(AvcencChroma *chroma, AvcencIntraRow *row, uint32_t part)
+{
+	row->chromaCosts[CHROMA_HORIZONTAL][part] = avcencChromaSad(chroma);
+	avcencChromaDc(chroma);
+	row->chromaCosts[CHROMA_DC][part] = avcencChromaSadHalves(chroma);
+	avcencChromaPlane(chroma);
+	row->chromaCosts[CHROMA_PLANE][part] = avcencChromaSad(chroma);
+	avcencChromaVertical(chroma);
+	row->chromaCosts[CHROMA_VERTICAL][part] = avcencChromaSadHalves(chroma);
+}
+
+/* 0x83a816: without a left macroblock: DC and vertical */
+static void chromaCostsTop(AvcencChroma *chroma, AvcencIntraRow *row, uint32_t part)
+{
+	avcencChromaDcTop(chroma);
+	row->chromaCosts[CHROMA_DC][part] = avcencChromaSadHalves(chroma);
+	avcencChromaVertical(chroma);
+	row->chromaCosts[CHROMA_VERTICAL][part] = avcencChromaSadHalves(chroma);
+}
+
+/* 0x83a842: with nothing above: horizontal and DC */
+static void chromaCostsLeft(AvcencChroma *chroma, AvcencIntraRow *row, uint32_t part)
+{
+	row->chromaCosts[CHROMA_HORIZONTAL][part] = avcencChromaSad(chroma);
+	avcencChromaDcLeft(chroma);
+	row->chromaCosts[CHROMA_DC][part] = avcencChromaSadHalves(chroma);
+}
+
+/*
+ * 0x83a868: the macroblock's chroma intra decision: the prediction (of
+ * those it has neighbours for) with the lowest SAD over U and V
+ */
+static void avcencDecideChroma(AvcencDecideInfo *info)
+{
+	const uint8_t *chroma = (const uint8_t *)info->chroma, *top;
+	AvcencIntraRow *row = info->intraRows;
+	AvcencChroma part;
+	uint8_t mode;
+
+	if (!info->sliceStart) {
+		top = chroma - (uint16_t)info->chromaPitch * 8 + 56;
+		if (info->mbX >= 1) {
+			avcencChromaLoad(&part, chroma, top);
+			chromaCosts(&part, row, 0);
+			avcencChromaLoad(&part, chroma + 64, top + 64);
+			chromaCosts(&part, row, 1);
+			mode = avcencChromaChoose(row);
+		} else {
+			avcencChromaLoadTop(&part, chroma, top);
+			chromaCostsTop(&part, row, 0);
+			avcencChromaLoadTop(&part, chroma + 64, top + 64);
+			chromaCostsTop(&part, row, 1);
+			mode = avcencChromaChooseTop(row);
+		}
+	} else if (info->mbX >= 1) {
+		avcencChromaLoadLeft(&part, chroma);
+		chromaCostsLeft(&part, row, 0);
+		avcencChromaLoadLeft(&part, chroma + 64);
+		chromaCostsLeft(&part, row, 1);
+		mode = avcencChromaChooseLeft(row);
+	} else {
+		mode = 0;
+	}
+	((AvcencMacroblock *)info->record)->chromaMode = mode;
 }

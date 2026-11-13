@@ -460,6 +460,17 @@ typedef struct AvcencSearchInfo {
 	uint8_t reserved4[42];
 } AvcencSearchInfo;
 
+/* a macroblock's decisions (64 bytes), as the next jobs read them */
+typedef struct AvcencMacroblock {
+	uint8_t lumaMode;		/* the 16x16 prediction's, 4 for 4x4 blocks */
+	uint8_t chromaMode;
+	uint8_t reserved[6];
+	uint8_t blockModes[16];		/* the 4x4 blocks', two of a row, by 8x8 block */
+	uint8_t reserved2[24];
+	uint16_t intraCost;		/* the 4x4 blocks' SATD; all ones when inter is taken */
+	uint8_t reserved3[14];
+} AvcencMacroblock;
+
 /*
  * the decide job's per core info (1344 bytes): each macroblock of a group,
  * a row at a time, the inter decision (around the coarse search's vector)
@@ -468,7 +479,7 @@ typedef struct AvcencSearchInfo {
  */
 #define DECIDE_INFO_SIZE	1344
 typedef struct AvcencDecideInfo {
-	uint8_t reserved[240];
+	AvcencIntraRow intraRows[6];	/* the 4x4 candidates, by row, and the predictions kept */
 	/* the intra decision's */
 	uint8_t columns;		/* of macroblocks in the group, up to four */
 	uint8_t rows;
@@ -530,6 +541,7 @@ typedef char searchInfoSizeCheck[sizeof(AvcencSearchInfo) == CORE_INFO_SIZE ? 1 
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
+typedef char macroblockSizeCheck[sizeof(AvcencMacroblock) == 64 ? 1 : -1];
 typedef char recordSizeCheck[sizeof(AvcencRecord) == RECORD_SIZE ? 1 : -1];
 typedef char streamSizeCheck[sizeof(AvcencStream) == STREAM_HEADER_SIZE ? 1 : -1];
 

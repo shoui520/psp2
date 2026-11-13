@@ -113,4 +113,127 @@ void avcencSearchLast(AvcencSearch *search, uint16_t *sads, int32_t offsets);
 void avcencSearchPair(AvcencSearch *search, uint16_t *sads, int32_t offsets);
 void avcencSearchChoose(AvcencChoice *choice, const int16_t *top, const int16_t *bottom);
 
+/*
+ * the intra decision's 4x4 candidates, as its kernels keep them: a row of
+ * four blocks of the macroblock's source and its neighbours, two blocks
+ * (a pair, the first or the second) at a time. Its predictions are the
+ * standard's: vertical (0), horizontal (1), DC (2), diagonal down left (3)
+ * and down right (4), all from the source's pixels
+ */
+typedef struct AvcencIntra {
+	uint8_t lines[4][16];		/* the row's */
+	uint8_t left[4][8];		/* the left macroblock's, their right halves */
+	uint8_t top[16];		/* the line above the row */
+	uint8_t topRight[8];		/* the line above, right of the macroblock */
+	uint8_t edge[8];		/* block 1's top right in the first four, block 0's top left last */
+	uint8_t columns[8];		/* a pair's left columns, bottom up, four each */
+	uint8_t prediction[4][8];	/* a pair's, a line each */
+} AvcencIntra;
+
+/*
+ * a pair's predictions the choice builds again: the DC and the diagonals'
+ * filtered edges, by block, the down right one's corner at its fourth place
+ */
+typedef struct AvcencIntraPredictions {
+	uint8_t dc[8];			/* four of each block's */
+	uint8_t downLeft[2][8];
+	uint8_t downRight[2][8];
+} AvcencIntraPredictions;
+
+/*
+ * a row's candidates: the SADs by prediction (DC, horizontal, down left,
+ * vertical, down right) and block; the predictions of the row above go
+ * in the rows below, until those take their SADs
+ */
+typedef union AvcencIntraRow {
+	uint16_t costs[5][4];
+	AvcencIntraPredictions predictions;
+	uint16_t chromaCosts[4][2];	/* the chroma decision's, the first row's place: by prediction, U and V */
+} AvcencIntraRow;
+
+#define INTRA_DC		0
+#define INTRA_HORIZONTAL	1
+#define INTRA_DOWN_LEFT		2
+#define INTRA_VERTICAL		3
+#define INTRA_DOWN_RIGHT	4
+
+/* a cost no SAD reaches: the prediction has no neighbours */
+#define INTRA_UNAVAILABLE	16383
+
+/* the intra decision's kernels (avcenckernel.c) */
+void avcencIntraLoad(AvcencIntra *intra, const uint8_t *lines, const uint8_t *top,
+	int32_t topRight);
+void avcencIntraLoadTop(AvcencIntra *intra, const uint8_t *lines, const uint8_t *top);
+void avcencIntraLoadRow(AvcencIntra *intra, const uint8_t *lines, int32_t topRight);
+void avcencIntraLoadRowAlone(AvcencIntra *intra, const uint8_t *lines, int32_t topRight);
+void avcencIntraSatdFirst(const AvcencIntra *intra, uint16_t *satds);
+void avcencIntraSatdSecond(const AvcencIntra *intra, uint16_t *satds);
+void avcencIntraSadDcFirst(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadDcSecond(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadHorizontalFirst(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadHorizontalSecond(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadDownLeftFirst(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadDownLeftSecond(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadVerticalFirst(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadVerticalSecond(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadDownRightFirst(const AvcencIntra *intra, uint16_t *sads);
+void avcencIntraSadDownRightSecond(const AvcencIntra *intra, uint16_t *sads);
+uint32_t avcencIntraChosenCost(AvcencIntra *intra, const AvcencIntraRow *predictions,
+	const uint8_t *modes);
+void avcencIntraDcFirst(AvcencIntra *intra);
+void avcencIntraDcFirstTop(AvcencIntra *intra);
+void avcencIntraDcFirstLeft(AvcencIntra *intra);
+void avcencIntraDcFirstAlone(AvcencIntra *intra);
+void avcencIntraDcSecond(AvcencIntra *intra);
+void avcencIntraDcSecondLeft(AvcencIntra *intra);
+void avcencIntraHorizontalFirst(AvcencIntra *intra);
+void avcencIntraHorizontalSecond(AvcencIntra *intra);
+void avcencIntraVerticalFirst(AvcencIntra *intra);
+void avcencIntraVerticalSecond(AvcencIntra *intra);
+void avcencIntraDownLeftFirst(AvcencIntra *intra, AvcencIntraPredictions *predictions);
+void avcencIntraDownLeftSecond(AvcencIntra *intra, AvcencIntraPredictions *predictions);
+void avcencIntraDownRightFirst(AvcencIntra *intra, AvcencIntraPredictions *predictions);
+void avcencIntraDownRightSecond(AvcencIntra *intra, AvcencIntraPredictions *predictions);
+uint32_t avcencIntraChoose(AvcencIntra *intra, AvcencIntraRow *row, uint8_t *modes);
+uint32_t avcencIntraChooseTwo(AvcencIntra *intra, AvcencIntraRow *row, uint8_t *modes);
+uint8_t avcencIntraLuma(const AvcencIntraRow *rows);
+uint8_t avcencIntraLumaTop(const AvcencIntraRow *rows);
+uint8_t avcencIntraLumaLeft(const AvcencIntraRow *rows);
+uint32_t avcencIntraVariance(const uint8_t *luma);
+
+/*
+ * the chroma intra decision's, as its kernels keep it: one 8x8 part (U or
+ * V) of the macroblock's source and its neighbours. The DC and vertical
+ * predictions are two lines, one for each half of the part, in the first
+ * and fifth lines
+ */
+typedef struct AvcencChroma {
+	uint8_t lines[8][8];
+	uint8_t left[8];		/* the left macroblock's last column */
+	uint8_t top[8];			/* the line above */
+	uint8_t topLeft[8];		/* the line above to the left, its last the corner */
+	uint8_t prediction[8][8];
+} AvcencChroma;
+
+/* the chroma candidates: the chroma modes are DC (0), horizontal (1), vertical (2) and plane (3) */
+#define CHROMA_HORIZONTAL	0
+#define CHROMA_DC		1
+#define CHROMA_PLANE		2
+#define CHROMA_VERTICAL		3
+
+/* the chroma decision's kernels (avcenckernel.c) */
+void avcencChromaLoad(AvcencChroma *chroma, const uint8_t *lines, const uint8_t *top);
+void avcencChromaLoadTop(AvcencChroma *chroma, const uint8_t *lines, const uint8_t *top);
+void avcencChromaLoadLeft(AvcencChroma *chroma, const uint8_t *lines);
+uint16_t avcencChromaSad(const AvcencChroma *chroma);
+uint16_t avcencChromaSadHalves(const AvcencChroma *chroma);
+void avcencChromaDc(AvcencChroma *chroma);
+void avcencChromaDcTop(AvcencChroma *chroma);
+void avcencChromaDcLeft(AvcencChroma *chroma);
+void avcencChromaVertical(AvcencChroma *chroma);
+void avcencChromaPlane(AvcencChroma *chroma);
+uint8_t avcencChromaChoose(const AvcencIntraRow *row);
+uint8_t avcencChromaChooseTop(const AvcencIntraRow *row);
+uint8_t avcencChromaChooseLeft(const AvcencIntraRow *row);
+
 #endif
