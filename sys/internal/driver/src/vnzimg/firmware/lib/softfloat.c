@@ -965,3 +965,316 @@ zero:
 	result->low = 0;
 	result->high = 0;
 }
+
+/* 0x925c04: a / b, unsigned; the shortcuts of divide64 */
+void divideUnsignedWords64(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	Words64 below, shifted, quotient;
+	uint32_t zeros, shift;
+
+	if ((b->low | b->high) == 0)
+		trap();
+	if ((a->low | a->high) == 0 || lessUnsigned64(a, b)) {
+		result->high = 0;
+		result->low = 0;
+		return;
+	}
+	if (a->low == b->low && a->high == b->high) {
+		quotient.low = 1;
+		quotient.high = 0;
+		*result = quotient;
+		return;
+	}
+	subtract64(&below, b, &(const Words64){ 1, 0 });
+	if ((below.low & b->low) | (below.high & b->high)) {
+		divideUnsigned64(&quotient.low, a->high, a->low, b->high, b->low, 0);
+	} else {
+		zeros = 0;
+		for (shift = 63; ; ) {
+			if (shift >= 32) {
+				shifted.low = (int32_t)b->high >> (shift - 32);
+				shifted.high = (int32_t)b->high >> 31;
+			} else {
+				shifted.low = (b->low >> shift) | (b->high << (32 - shift));
+				shifted.high = (int32_t)b->high >> shift;
+			}
+			if ((shifted.low | shifted.high) != 0)
+				break;
+			zeros++;
+			if (--shift == 0)
+				break;
+		}
+		quotient = *a;
+		shiftRightUnsigned64(&quotient, 63 - zeros);
+	}
+	*result = quotient;
+}
+
+/*
+ * 0x925d82: a % b, signed: the sign of a. The magnitudes' remainder, by a
+ * mask when the divisor's is a power of two.
+ */
+void remainder64(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	Words64 magnitudeA, magnitudeB, mask, value;
+	uint32_t bNegative, aNegative;
+
+	if ((b->low | b->high) == 0)
+		trap();
+	if ((a->low | a->high) == 0)
+		goto zero;
+	bNegative = b->high >> 31;
+	aNegative = a->high >> 31;
+	if (bNegative)
+		negate64(&magnitudeB, b);
+	else
+		magnitudeB = *b;
+	if (aNegative)
+		negate64(&magnitudeA, a);
+	else
+		magnitudeA = *a;
+	if (lessUnsigned64(&magnitudeA, &magnitudeB)) {
+		*result = *a;
+		return;
+	}
+	if (magnitudeA.low == magnitudeB.low && magnitudeA.high == magnitudeB.high)
+		goto zero;
+
+	subtract64(&mask, &magnitudeB, &(const Words64){ 1, 0 });
+	if ((mask.low & magnitudeB.low) | (mask.high & magnitudeB.high)) {
+		divideUnsigned64(&value.low, magnitudeA.high, magnitudeA.low, magnitudeB.high,
+			magnitudeB.low, 1);
+		if (aNegative && (value.low | value.high) != 0)
+			negate64(&value, &value);
+	} else {
+		value.low = magnitudeA.low & mask.low;
+		value.high = magnitudeA.high & mask.high;
+		if (aNegative && (value.low | value.high) != 0 && !(value.high >> 31))
+			negate64(&value, &value);
+	}
+	*result = value;
+	return;
+
+zero:
+	result->low = 0;
+	result->high = 0;
+}
+
+/* 0x925f14: a % b, unsigned */
+void remainderUnsigned64(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	Words64 mask, value;
+
+	if ((b->low | b->high) == 0)
+		trap();
+	if ((a->low | a->high) == 0)
+		goto zero;
+	if (lessUnsigned64(a, b)) {
+		*result = *a;
+		return;
+	}
+	if (a->low == b->low && a->high == b->high)
+		goto zero;
+	subtract64(&mask, b, &(const Words64){ 1, 0 });
+	if ((mask.low & b->low) | (mask.high & b->high)) {
+		divideUnsigned64(&value.low, a->high, a->low, b->high, b->low, 1);
+	} else {
+		value.low = a->low & mask.low;
+		value.high = a->high & mask.high;
+	}
+	*result = value;
+	return;
+
+zero:
+	result->low = 0;
+	result->high = 0;
+}
+
+/*
+ * The double-precision routines: values by address as Words64 (sign,
+ * 11-bit exponent and the mantissa's top 20 bits in the high word).
+ */
+#define D_SIGN		0x80000000
+#define D_EXPONENT	0x7ff00000
+#define D_MANTISSA	0xfffff
+#define D_HIDDEN	0x100000
+
+/*
+ * 0x926034: a + b. The operand with the larger exponent field first; the
+ * mantissas three bits up, the smaller one aligned with a sticky bit, added
+ * as two's complement, normalized and rounded to nearest, ties to even. A
+ * zero b gives a as it is.
+ */
+void addDouble(Words64 *result, const Words64 *a, const Words64 *b)
+{
+	const Words64 *swap;
+	uint32_t aHigh, aLow, bHigh, bLow, signA, signB, high, sticky, round, t;
+	int32_t exponentA, exponentB, difference, left;
+	uint32_t sign;
+
+	if ((a->high & D_EXPONENT) < (b->high & D_EXPONENT)) {
+		swap = a;
+		a = b;
+		b = swap;
+	}
+	bHigh = b->high & D_MANTISSA;
+	bLow = b->low;
+	aLow = a->low;
+	aHigh = a->high & D_MANTISSA;
+	signA = a->high & D_SIGN;
+	signB = b->high & D_SIGN;
+	exponentA = (a->high & D_EXPONENT) >> 20;
+	exponentB = (b->high & D_EXPONENT) >> 20;
+	sign = signA != 0;
+
+	if (exponentA == 2047) {
+		if (aHigh || aLow)
+			goto nan;
+		if (exponentB != 2047)
+			goto infinity;
+		if (bHigh || bLow)
+			goto nan;
+		if (signA ^ signB)
+			goto nan;
+		goto infinity;
+	}
+	if (exponentB == 2047) {
+		if (bHigh || bLow)
+			goto nan;
+		goto infinity;
+	}
+	if (exponentB == 0 && bHigh == 0 && bLow == 0)
+		goto store;
+
+	if (exponentA != 0)
+		aHigh |= D_HIDDEN;
+	else
+		exponentA++;
+	if (exponentB != 0)
+		bHigh |= D_HIDDEN;
+	else
+		exponentB++;
+
+	difference = exponentA - exponentB - 3;
+	if (difference >= 1) {
+		left = 0;
+		if (difference < 32) {
+			sticky = bLow << ((32 - difference) & 31);
+			bLow >>= difference;
+			if (difference < 21) {
+				bLow |= bHigh << (32 - difference);
+				bHigh >>= difference;
+			} else {
+				bLow |= (bHigh << 11) >> (difference - 21);
+				bHigh = 0;
+			}
+		} else if (difference < 53) {
+			sticky = 0;
+			if (bLow != 0 || (bHigh << ((64 - difference) & 31)) != 0)
+				sticky = 1;
+			bLow = (bHigh << 11) >> (difference - 21);
+			bHigh = 0;
+		} else {
+			/* b only rounds: a is the result */
+			sticky = 1;
+			round = 0;
+			goto rounded;
+		}
+	} else {
+		sticky = 0;
+		left = -difference;
+	}
+
+	aHigh = (aHigh << 3) | (aLow >> 29);
+	aLow <<= 3;
+	if (left != 0) {
+		bHigh = (bHigh << left) | (bLow >> (32 - left));
+		bLow <<= left;
+	}
+
+	sign = signA && signB;
+	if (signA ^ signB) {
+		if (signA) {
+			t = aHigh;
+			aHigh = bHigh;
+			bHigh = t;
+			t = aLow;
+			aLow = bLow;
+			bLow = t;
+		}
+		bHigh = ~bHigh;
+		bLow = ~bLow + 1;
+		bHigh += bLow < 1;
+	}
+	aHigh += bHigh;
+	aLow += bLow;
+	aHigh += aLow < bLow;
+	if (aHigh == 0 && aLow == 0) {
+		high = 0;
+		result->high = high | (sign ? D_SIGN : 0);
+		result->low = 0;
+		return;
+	}
+	if (aHigh >> 31) {
+		sign = 1;
+		aHigh = ~aHigh;
+		t = ~aLow;
+		aLow = t + 1;
+		aHigh += aLow < t;
+	}
+
+	if (aHigh >= 0x1000000) {
+		if (sticky == 0)
+			sticky = aLow & 1;
+		aLow = (aHigh << 31) | (aLow >> 1);
+		aHigh >>= 1;
+		exponentA++;
+	} else {
+		while (!(aHigh & 0x800000)) {
+			if (exponentA < 2)
+				break;
+			aHigh = (aHigh << 1) | (aLow >> 31);
+			aLow <<= 1;
+			exponentA--;
+		}
+	}
+	if (sticky == 0)
+		sticky = aLow & 3;
+	round = (aLow & 4) >> 2;
+	aLow = (aLow >> 3) | (aHigh << 29);
+	aHigh >>= 3;
+
+rounded:
+	if (exponentA == 1 && !(aHigh & D_HIDDEN))
+		exponentA = 0;
+	if (round && (sticky || (aLow & 1))) {
+		aLow++;
+		if (aLow == 0) {
+			aHigh++;
+			if (aHigh == 0x200000) {
+				aHigh >>= 1;
+				exponentA++;
+			} else if (aHigh == D_HIDDEN && exponentA == 0) {
+				exponentA++;
+			}
+		}
+	}
+	if (exponentA >= 2047)
+		goto infinity;
+
+store:
+	result->low = aLow;
+	high = ((exponentA << 20) & D_EXPONENT) | (aHigh & D_MANTISSA);
+	result->high = high;
+	if (sign)
+		result->high = high | D_SIGN;
+	return;
+
+nan:
+	result->high = D_EXPONENT | D_MANTISSA | (sign ? D_SIGN : 0);
+	result->low = 0xffffffff;
+	return;
+infinity:
+	result->high = D_EXPONENT | (sign ? D_SIGN : 0);
+	result->low = 0;
+}
