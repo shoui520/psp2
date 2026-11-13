@@ -1874,19 +1874,19 @@ void avcdecSliceHeader(const VideoStream *stream, VideoSliceJob *job)
 	if (nal->startPending) {
 		width = sps->widthInMbs;
 		height = sps->heightInMbs;
-		nal->widthInMbs = width;
+		nal->chromaModeRowSize = width;
 		nal->widthInMacroblocks = width;
 		nal->rowsPerRun = sps->rowsPerRun;
 		nal->heightInMacroblocks = height;
 		nal->macroblocks = width * height;
-		nal->lumaWidth = width * 16;
-		nal->lumaPitch = width * 16;
-		nal->chromaWidth = width * 8;
-		nal->chromaRowSize = width * 128;
-		nal->commandRowSize = ALIGN64(width * 544);
-		nal->sliceRowSize = ALIGN64(width * 136);
-		nal->lumaRowSize = width * 256;
-		nal->motionRowSize = width * 64;
+		nal->mbRowSize = width * 16;
+		nal->intraRowSize = width * 16;
+		nal->refIdxRowSize = width * 8;
+		nal->mvdRowSize = width * 128;
+		nal->coefRowSize = ALIGN64(width * 544);
+		nal->chromaCoefRowSize = ALIGN64(width * 136);
+		nal->pcmRowSize = width * 256;
+		nal->pcmChromaRowSize = width * 64;
 		nal->numRefFrames = sps->numRefFrames;
 		nal->maxFrameNum = sps->maxFrameNum;
 		nal->gapsInFrameNumAllowed = sps->gapsInFrameNumAllowed;
@@ -2087,15 +2087,15 @@ void avcdecSliceLoad(const VideoStream *stream, VideoSliceJob *job)
 		command->widthInMacroblocks = sps->widthInMbs;
 		command->heightInMacroblocks = sps->heightInMbs;
 		command->mode = sps->widthInMbs < 40 ? 6 : 8;
-		command->lumaWidth = nal->lumaWidth;
-		command->lumaPitch = nal->lumaPitch;
-		command->widthInMbs = nal->widthInMbs;
-		command->chromaWidth = nal->chromaWidth;
-		command->chromaRowSize = nal->chromaRowSize;
-		command->commandRowSize = nal->commandRowSize;
-		command->sliceRowSize = nal->sliceRowSize;
-		command->lumaRowSize = nal->lumaRowSize;
-		command->motionRowSize = nal->motionRowSize;
+		command->mbRowSize = nal->mbRowSize;
+		command->intraRowSize = nal->intraRowSize;
+		command->chromaModeRowSize = nal->chromaModeRowSize;
+		command->refIdxRowSize = nal->refIdxRowSize;
+		command->mvdRowSize = nal->mvdRowSize;
+		command->coefRowSize = nal->coefRowSize;
+		command->chromaCoefRowSize = nal->chromaCoefRowSize;
+		command->pcmRowSize = nal->pcmRowSize;
+		command->pcmChromaRowSize = nal->pcmChromaRowSize;
 		command->type = nal->type;
 		command->refIdc = nal->refIdc;
 		vnzPublicClosePrivate((uint32_t)command, sizeof(VideoAvcDecodeCommand));
@@ -2136,13 +2136,6 @@ void avcdecSliceLoad(const VideoStream *stream, VideoSliceJob *job)
 	vnzPublicCloseProtected(block, PARAMETER_SET2_SIZE);
 }
 
-/* the CABAC slices: decoded here, not on the unit */
-static void cabacStart(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
-static int32_t cabacSliceI(VideoSliceJob *job, VideoHelperJob *run);
-static int32_t cabacSliceP(VideoSliceJob *job, VideoHelperJob *run);
-static int32_t cabacSliceB(VideoSliceJob *job, VideoHelperJob *run);
-static void cabacFinish(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
-
 /*
  * A run of the slice: up to the row's end, or whole rows from a row's start,
  * never past the next slice. The unit is set up for the picture on its
@@ -2173,20 +2166,20 @@ void avcdecSlicePrepare(const VideoHelperShared *shared, const VideoStream *stre
 	nal->runColumn = column;
 	run = (VideoHelperJob *)vnzPublicOpenPrivate(shared->request, sizeof(VideoHelperJob));
 	if (header & AVC_SLICE_CABAC) {
-		cabacStart(shared, job, run);
+		avcdecCabacStart(shared, job, run);
 		if ((header & AVC_SLICE_TYPE) == AVC_SLICE_I) {
-			count = cabacSliceI(job, run);
+			count = avcdecCabacSliceI(job, run);
 		} else {
 			job->numRefIdxActive[0] = nal->numRefIdxActive[0];
 			if ((header & AVC_SLICE_TYPE) == AVC_SLICE_B) {
 				job->numRefIdxActive[1] = nal->numRefIdxActive[1];
-				count = cabacSliceB(job, run);
+				count = avcdecCabacSliceB(job, run);
 			} else {
-				count = cabacSliceP(job, run);
+				count = avcdecCabacSliceP(job, run);
 			}
 		}
 		nal->doneMacroblocks = count;
-		cabacFinish(shared, job, run);
+		avcdecCabacFinish(shared, job, run);
 		goto close;
 	}
 	if (first == 0 || nal->state.ended) {
@@ -2201,17 +2194,17 @@ void avcdecSlicePrepare(const VideoHelperShared *shared, const VideoStream *stre
 		VIDEO_UNIT[UNIT_PICTURE] = picture;
 		picture2 = (header & AVC_SLICE_TRANSFORM_8X8) ? UNIT_PICTURE2_TRANSFORM_8X8 : 0;
 		VIDEO_UNIT[UNIT_PICTURE2] = picture2;
-		VIDEO_UNIT[UNIT_PARAMETER(0)] = nal->lumaWidth;
-		VIDEO_UNIT[UNIT_PARAMETER(1)] = nal->lumaPitch;
-		VIDEO_UNIT[UNIT_PARAMETER(2)] = nal->widthInMbs;
-		VIDEO_UNIT[UNIT_PARAMETER(3)] = nal->chromaWidth;
-		VIDEO_UNIT[UNIT_PARAMETER(4)] = nal->chromaRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(5)] = nal->commandRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(6)] = nal->sliceRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(7)] = nal->sliceRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(8)] = nal->lumaRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(9)] = nal->motionRowSize;
-		VIDEO_UNIT[UNIT_PARAMETER(10)] = nal->motionRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(0)] = nal->mbRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(1)] = nal->intraRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(2)] = nal->chromaModeRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(3)] = nal->refIdxRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(4)] = nal->mvdRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(5)] = nal->coefRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(6)] = nal->chromaCoefRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(7)] = nal->chromaCoefRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(8)] = nal->pcmRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(9)] = nal->pcmChromaRowSize;
+		VIDEO_UNIT[UNIT_PARAMETER(10)] = nal->pcmChromaRowSize;
 		nal->state.ended = 0;
 	}
 	VIDEO_UNIT[UNIT_WIDTH] = width - column;

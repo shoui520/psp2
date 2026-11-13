@@ -507,6 +507,59 @@ typedef struct VideoAvcWeights {
 #define AVC_SLICE_B			1
 #define AVC_SLICE_I			2
 
+/*
+ * The CABAC decoder of a slice (9.3): the engine's range and offset, read
+ * from the bitstream unit, and the 400 context variables (pStateIdx << 1 |
+ * valMPS) of the slice's cabac_init_idc and QP.
+ */
+#define AVC_CABAC_CONTEXTS		400
+#define AVC_CABAC_END_OF_SLICE		276	/* ctxIdx of end_of_slice_flag */
+
+typedef struct VideoAvcCabac {
+	VideoBitstream *bits;
+	uint32_t range;			/* codIRange */
+	uint32_t offset;		/* codIOffset */
+	uint8_t contexts[AVC_CABAC_CONTEXTS];
+} VideoAvcCabac;
+
+/*
+ * A macroblock as the CABAC decoder's neighbours see it (32 bytes): the
+ * entries of a row buffer, one per column (the entry above a macroblock
+ * keeps the row above's until the macroblock replaces it), after a left
+ * one; the row buffer's first entry holds only the left macroblock's
+ * absMvd column.
+ */
+typedef struct VideoAvcCabacMb {
+	uint16_t absMvd[2][4];		/* by list: Min(|mvd x|, 33) | Min(|mvd y|, 33) << 8,
+					   by 4x4 column (the row below's) or row (the left's) */
+	uint8_t unavailable;		/* outside the slice, or intra */
+	uint8_t coded;			/* not skipped */
+	uint8_t mbTypeBin;		/* mb_type's first bin: not I_NxN, not B_Direct_16x16 */
+	uint8_t chromaPredMode;		/* intra_chroma_pred_mode is not 0 */
+	uint8_t refIdxNonZero;		/* a bit per 8x8 block, list 1 from bit 4 */
+	uint8_t cbp;			/* the luma bits inverted: an 8x8 block not coded */
+	uint8_t qpDeltaNonZero;
+	uint8_t lumaDcCbf;
+	uint16_t lumaCbf;		/* coded_block_flag of the 4x4 blocks */
+	uint8_t chromaDcCbf[2];
+	uint8_t chromaAcCbf[2];		/* a bit per 4x4 block */
+	uint8_t reserved[2];		/* written with the cbf words, never read */
+} VideoAvcCabacMb;
+
+/* a macroblock of the run's first buffer, as the unit reads it (16 bytes) */
+typedef struct VideoAvcMbInfo {
+	uint8_t skipped;
+	uint8_t mbType;			/* of the slice type, I types after the P or B ones */
+	uint8_t cbp;			/* coded_block_pattern */
+	uint8_t reserved;		/* written 0 */
+	uint8_t subMbType[4];
+	int8_t qpDelta;			/* mb_qp_delta */
+	uint8_t reserved2;		/* written 0 */
+	uint8_t reserved3[2];
+	uint32_t cbf;			/* coded_block_flag: luma 4x4 by bit, Cb and Cr AC
+					   by 4 bits from bit 16, luma, Cb and Cr DC at 24 */
+} VideoAvcMbInfo;
+
 typedef struct VideoNal {
 	VideoBitstream bits;
 	uint32_t reserved[2];
@@ -610,15 +663,15 @@ typedef struct VideoNal {
 	uint8_t startPending;		/* the unit's first slice is still to be read */
 	int8_t nextType;		/* of the unit after the slice, -1 none */
 	VideoBitsState state;
-	uint16_t lumaWidth;		/* the sequence's sizes of a macroblock row */
-	uint16_t lumaPitch;
-	uint16_t widthInMbs;
-	uint16_t chromaWidth;
-	uint16_t chromaRowSize;		/* 128 bytes a macroblock */
-	uint16_t commandRowSize;		/* 544 bytes a macroblock, aligned */
-	uint16_t sliceRowSize;		/* 136 bytes a macroblock, aligned */
-	uint16_t lumaRowSize;		/* 256 bytes a macroblock */
-	uint16_t motionRowSize;		/* 64 bytes a macroblock */
+	uint16_t mbRowSize;		/* the run buffers' row sizes: mb info, 16 bytes a macroblock */
+	uint16_t intraRowSize;		/* intra prediction modes, 16 */
+	uint16_t chromaModeRowSize;	/* chroma prediction modes, 1 */
+	uint16_t refIdxRowSize;		/* reference indices, 8 */
+	uint16_t mvdRowSize;		/* motion vector differences, 128 */
+	uint16_t coefRowSize;		/* luma coefficients, 544, aligned */
+	uint16_t chromaCoefRowSize;	/* Cb and Cr coefficients, 136, aligned */
+	uint16_t pcmRowSize;		/* PCM luma samples, 256 */
+	uint16_t pcmChromaRowSize;	/* PCM chroma samples, 64 */
 	uint16_t nextFirstMacroblock;	/* of the slice after this one */
 	VideoTime firstPts;		/* the decoder's, doubled: the first picture's */
 	VideoTime firstDts;
@@ -628,7 +681,8 @@ typedef struct VideoNal {
 	int32_t fieldCount;		/* the last picture's */
 	int32_t frameDuration;		/* of a frame, in 180 kHz ticks; -1 unknown */
 	uint8_t timeWrap;		/* toggled when the decode time wraps */
-	uint8_t reserved18[415];
+	uint8_t reserved18[3];
+	VideoAvcCabac cabac;		/* the slice's, when it is CABAC */
 	uint8_t sliceQp;			/* pic_init_qp plus slice_qp_delta */
 	uint8_t reserved20[27];
 	VideoAvcWeights weights[2];	/* pred_weight_table(), by list */
@@ -1021,7 +1075,22 @@ typedef struct VideoSliceJob {
 	int8_t refListWork[18];		/* a list as it is reordered */
 	uint8_t reserved3[16];
 	uint32_t jump[8];		/* videoSetJump's, for the parser's errors */
-	uint32_t reserved4[18];
+	VideoAvcMbInfo *mbInfo;		/* CABAC: the run buffers at the row */
+	int8_t *intraModes;		/* prev_intra4x4_pred_mode, -1, or rem_intra4x4_pred_mode */
+	uint8_t *chromaModes;
+	int8_t *refIdx;			/* by list, four 8x8 blocks */
+	uint32_t *mvd;			/* x | y << 16, in the order read */
+	int16_t *lumaCoef;
+	int16_t *cbCoef;
+	int16_t *crCoef;
+	uint8_t *pcmLuma;
+	uint8_t *pcmCb;
+	uint8_t *pcmCr;
+	uint32_t reserved4[2];
+	VideoAvcCabacMb *rowBuffer;	/* CABAC: the neighbours */
+	VideoAvcCabacMb *mb;		/* the macroblock's entry */
+	VideoAvcCabac *cabac;
+	uint32_t reserved7[2];
 } VideoSliceJob;
 
 /* the helper's memory (after the codecs' slots) */
@@ -1287,15 +1356,15 @@ typedef struct VideoHelperSlice {
 
 /* the decoder's picture command: its row sizes, as the NAL's */
 typedef struct VideoAvcDecodeCommand {
-	uint16_t lumaWidth;
-	uint16_t lumaPitch;
-	uint16_t widthInMbs;
-	uint16_t chromaWidth;
-	uint16_t chromaRowSize;
-	uint16_t commandRowSize;
-	uint16_t sliceRowSize;
-	uint16_t lumaRowSize;
-	uint16_t motionRowSize;
+	uint16_t mbRowSize;
+	uint16_t intraRowSize;
+	uint16_t chromaModeRowSize;
+	uint16_t refIdxRowSize;
+	uint16_t mvdRowSize;
+	uint16_t coefRowSize;
+	uint16_t chromaCoefRowSize;
+	uint16_t pcmRowSize;
+	uint16_t pcmChromaRowSize;
 	uint8_t widthInMacroblocks;
 	uint8_t heightInMacroblocks;
 	uint8_t mode;			/* 6 below 40 macroblocks across, else 8 */
@@ -1370,6 +1439,13 @@ void videoServicePicturesDone(uint32_t service, uint32_t request);
 /* video/jump.S: a return to a point saved, out of a bitstream error */
 int32_t videoSetJump(uint32_t *buffer);
 void videoLongJump(uint32_t *buffer, int32_t value);
+
+/* application/video/avcdeccabac.c: the CABAC slices, decoded here, not on the unit */
+void avcdecCabacStart(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
+int32_t avcdecCabacSliceI(VideoSliceJob *job, VideoHelperJob *run);
+int32_t avcdecCabacSliceP(VideoSliceJob *job, VideoHelperJob *run);
+int32_t avcdecCabacSliceB(VideoSliceJob *job, VideoHelperJob *run);
+void avcdecCabacFinish(const VideoHelperShared *shared, VideoSliceJob *job, VideoHelperJob *run);
 
 /* application/video/avcenccabac.c */
 void avcencSliceData(VideoAvcEncodeJob *job, const VideoHelperJob *run);
