@@ -3504,3 +3504,35 @@ static void mmcoCurrentLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_
 	picture->longTermFrameIdx = longTermFrameIdx;
 	picture->referenceInfo = 2;
 }
+
+/* 8.4.2.3.1: implicit bi-prediction's weights, from the order count distances */
+static void implicitWeights(VideoSliceJob *job)
+{
+	const VideoAvcPicture *pictures = job->pictures, *ref0, *ref1;
+	const VideoNal *nal = job->parser.nal;
+	VideoHelperSlice *slice = (VideoHelperSlice *)job->slice;
+	int32_t current = nal->picture, l0 = nal->numRefIdxActive[0], l1 = nal->numRefIdxActive[1];
+	int32_t i, j, index0, index1, tb, td, tx, scale, weight;
+
+	for (i = 0; i < l0; i++) {
+		index0 = slice->refList[0][1 + i];
+		for (j = 0; j < l1; j++) {
+			index1 = slice->refList[1][1 + j];
+			weight = 32;
+			if (index0 >= 0 && index1 >= 0) {
+				ref0 = &pictures[index0];
+				ref1 = &pictures[index1];
+				if (ref0->referenceInfo != 2 && ref1->referenceInfo != 2 &&
+				    ref1->picOrderCnt - ref0->picOrderCnt) {
+					td = clip3(-128, 127, ref1->picOrderCnt - ref0->picOrderCnt);
+					tx = (16384 + abs(td / 2)) / td;
+					tb = clip3(-128, 127, pictures[current].picOrderCnt - ref0->picOrderCnt);
+					scale = clip3(-1024, 1023, (tb * tx + 32) >> 6) >> 2;
+					if (!(scale < -64) && scale < 129)
+						weight = 64 - scale;
+				}
+			}
+			slice->implicitWeight[i * l1 + j] = weight;
+		}
+	}
+}

@@ -1278,7 +1278,10 @@ typedef struct VideoHelperSlice {
 	int16_t distScaleFactor[16];	/* temporal direct, by list 0's index */
 	int8_t refIdxOfPicture[18];	/* list 0's index of each picture */
 	uint8_t reserved2[274];
-	VideoAvcSliceWeight weights[2][16];
+	union {
+		VideoAvcSliceWeight weights[2][16];	/* explicit: by list and index */
+		int16_t implicitWeight[192];	/* implicit: list 0's weight, by l0 * L1 count + l1 */
+	};
 	uint8_t reserved3[128];
 } VideoHelperSlice;
 
