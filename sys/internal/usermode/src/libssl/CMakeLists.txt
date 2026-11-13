@@ -151,7 +151,7 @@ configure_file(${libssl_ssleay}/crypto/des/sk.h
 	${CMAKE_CURRENT_BINARY_DIR}/sk.h COPYONLY)
 configure_file(${libssl_ssleay}/crypto/des/spr.h
 	${CMAKE_CURRENT_BINARY_DIR}/spr.h COPYONLY)
-psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libssl KIND user COMPILER snc SOURCES
 	asn1.c
 	objects/obj_dat.c
 	bio/bio_lib.c
@@ -242,6 +242,18 @@ psp2_module(vs0_sys_external_libssl KIND user COMPILER snc PARTIAL SOURCES
 	CRYPTOCME/common/module/crypto/ll_dgst.c
 	CRYPTOCME/common/module/crypto/ll_bn.c
 	CRYPTOCME/common/module/crypto/ll_bnrecp.c
+	CRYPTOCME/common/module/crypto/ll_rsaraw.c
+	CRYPTOCME/common/module/crypto/ll_md5.c
+	CRYPTOCME/common/module/crypto/ll_sha1.c
+	CRYPTOCME/common/module/crypto/ll_sha2.c
+	CRYPTOCME/common/module/crypto/ll_cbuf.c
+	CRYPTOCME/common/module/crypto/ll_hashdf.c
+	CRYPTOCME/common/module/crypto/ll_entropy.c
+	CRYPTOCME/common/module/crypto/ll_prng.c
+	CRYPTOCME/common/module/crypto/ll_sdkdgst.c
+	CRYPTOCME/common/module/crypto/ll_entsrc.c
+	CRYPTOCME/common/module/crypto/ll_fips186.c
+	CRYPTOCME/common/module/crypto/ll_lprng.c
 	CRYPTOCME/common/module/crypto/ll_bnkara.c
 	CRYPTOCME/common/module/crypto/ll_bnarith.c
 	CRYPTOCME/common/module/crypto/ll_bncomba.c

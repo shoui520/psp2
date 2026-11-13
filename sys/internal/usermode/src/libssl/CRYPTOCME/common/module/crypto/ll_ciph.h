@@ -144,11 +144,70 @@ int sslSaveCipherCoreState(SslCipherCore *core, void *buffer,
 			   SceUInt32 *length, SceUInt32 max);
 int sslRestoreCipherCoreState(SslCipherCore *core, const void *buffer,
 			      SceUInt32 length);
-int sslEncodeCipherCoreState(SslCipherCore *core, void *buffer,
-			     SceUInt32 *length, SceUInt32 max);
-int sslDecodeCipherCoreState(SslCipherCore *core, const SceUInt32 *schema,
-			     const void *buffer, SceUInt32 length, int flags,
-			     SslDirectMemoryContext *dmem);
+
+/* The buffering of a cipher: whole blocks to the cipher, the rest kept for
+ * the next call; at the end, the last blocks to a padding function
+ */
+typedef int (*SslCipherPadFunction)(SslCipherCore *core,
+				    unsigned char *output,
+				    SceUInt32 *outputLength, SceUInt32 max,
+				    const unsigned char *input,
+				    SceUInt32 inputLength, void *parameter,
+				    SceUInt32 flags);
+
+/* SslCipherBuffer.flags */
+#define SSL_CIPHER_BUFFER_ALLOCATED 0x1
+#define SSL_CIPHER_BUFFER_PADDING 0x4
+
+typedef struct SslCipherBuffer {
+	SslCipherCore *core;
+	int encrypt;
+	SceUInt32 flags;
+	SslDirectMemoryContext *dmem;
+	unsigned char *buffer;
+	SceUInt32 blockSize;
+	SceUInt32 count;
+	SceUInt32 limit;
+	SceUInt32 reserve;
+	SslCipherPadFunction Pad;
+	void *padParameter;
+} SslCipherBuffer;
+
+_Static_assert(sizeof(SslCipherBuffer) == 44, "SslCipherBuffer");
+
+/* SslCipherBuffer info selectors */
+#define SSL_CIPHER_BUFFER_INFO_BUFFERING 32
+#define SSL_CIPHER_BUFFER_INFO_PAD_FUNCTION 33
+#define SSL_CIPHER_BUFFER_INFO_RESERVE 34
+#define SSL_CIPHER_BUFFER_INFO_PADDING 35
+#define SSL_CIPHER_BUFFER_INFO_PAD_PARAMETER 36
+
+/* sslProcessLowLevelCipher options: the last call */
+#define SSL_CIPHER_BUFFER_FINAL 0x2
+
+int sslFreeLowLevelCipher(SslCipherBuffer *buffer);
+int sslCreateLowLevelCipher(SslCipherBuffer **result,
+			    const SslCipherDescriptor *descriptor,
+			    SslDirectMemoryContext *dmem);
+int sslControlLowLevelCipher(SslCipherBuffer *buffer, const void *key,
+			     SceUInt32 keyLength, const unsigned char *iv,
+			     int encrypt, int flags);
+int sslInitLowLevelCipher(SslCipherBuffer *buffer, const void *key,
+			  SceUInt32 keyLength, const unsigned char *iv,
+			  int encrypt);
+int sslProcessLowLevelCipher(SslCipherBuffer *buffer, unsigned char *output,
+			     SceUInt32 *outputLength, SceUInt32 max,
+			     const unsigned char *input, SceUInt32 length,
+			     int options);
+int sslSetLowLevelCipherInfo(SslCipherBuffer *buffer, int selector,
+			     SceUInt32 value, void *pointer);
+int sslGetLowLevelCipherInfo(SslCipherBuffer *buffer, int selector,
+			     SceUInt32 *value, void **pointer);
+int sslSaveLowLevelCipherState(SslCipherBuffer *buffer, unsigned char *data,
+			       SceUInt32 *length, SceUInt32 max);
+int sslRestoreLowLevelCipherState(SslCipherBuffer *buffer,
+				  const unsigned char *data,
+				  SceUInt32 length);
 
 extern SslCipherDescriptor sslAes128CbcCipherDescriptor;
 extern SslCipherDescriptor sslAes256CbcCipherDescriptor;

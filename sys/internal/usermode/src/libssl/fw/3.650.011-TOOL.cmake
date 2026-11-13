@@ -1,8 +1,10 @@
 # 3.650.011-TOOL: vs0:sys/external/libssl.suprx (generated)
 set(MODULE_NID 0x29273020)
+set(MODULE_AUTH_ID 0x2800000000028051)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0xCAF5F2E9 0x68D6C3FF 0x00000000)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0xF2FF276E:1:0x0
@@ -12,49 +14,47 @@ set(MODULE_IMPORT_LIBS
 	0x6704D3C6:1:0x0
 	0xA6605D6F:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceKernelGetThreadId
-	sceKernelDeleteLwMutex
-	sceClibMemcpy_safe
-	__stack_chk_fail
-	sceClibMspaceCreate
-	sceKernelLockLwMutex
-	sceClibMemset
-	sceClibStrncmp
-	sceIoOpen
-	sceClibMemmove
-	sceClibMspaceRealloc
-	sceClibMspaceMalloc
-	sceClibMspaceMallocStats
-	sceKernelUnlockLwMutex
-	sceIoLseek
-	sceClibMspaceFree
-	sceClibMemcmp
-	SceLibKernel_9F793F84
-	sceClibStrncat
-	sceClibMspaceDestroy
-	sceClibToupper
-	sceClibStrncpy
-	sceClibMspaceIsHeapEmpty
-	sceKernelCreateLwMutex
-	sceClibVsnprintf
-	sceIoClose
-	sceIoRead
-	sceKernelFreeMemBlock
-	sceKernelGetMemBlockBase
-	sceKernelAllocMemBlock
-	sceKernelGetSystemTimeWide
-	sceNetRecv
-	sceNetSocketClose
-	sceNetShutdown
-	sceNetErrnoLoc
-	sceNetSend
-	sceRtcGetCurrentClock
-	sceRtcSetTime64_t
-	sceRtcGetTime64_t
-	sceRtcGetTick
-	sceAppMgrConvertVs0UserDrivePath
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x2E3B02A1
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3B9E301A
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x632980D7
+	0xCAE9ACE6:F:0x660D1F6D
+	0xCAE9ACE6:F:0x6C60AC61
+	0xCAE9ACE6:F:0x736753C8
+	0xCAE9ACE6:F:0x774891D6
+	0xCAE9ACE6:F:0x86EF7680
+	0xCAE9ACE6:F:0x8CC1D38E
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x99BA173E
+	0xCAE9ACE6:F:0x9C56B4D1
+	0xCAE9ACE6:F:0x9CC2BFDF
+	0xCAE9ACE6:F:0x9F793F84
+	0xCAE9ACE6:F:0xA37E6383
+	0xCAE9ACE6:F:0xAE1A21EC
+	0xCAE9ACE6:F:0xB0335388
+	0xCAE9ACE6:F:0xC458D60A
+	0xCAE9ACE6:F:0xD1D59701
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xFA6BE467
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0xC70B8886
+	0xF2FF276E:F:0xFDB32293
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0xF4EE4FA9
+	0x6BF8B2A2:F:0x023643B7
+	0x6BF8B2A2:F:0x29822B4D
+	0x6BF8B2A2:F:0x69E50BB5
+	0x6BF8B2A2:F:0xE37F34AA
+	0x6BF8B2A2:F:0xE3DD8CD9
+	0x6704D3C6:F:0x70FDE8F1
+	0x6704D3C6:F:0xA6C36B6A
+	0x6704D3C6:F:0xC995DE02
+	0x6704D3C6:F:0xF2B238E2
+	0xA6605D6F:F:0xADAA658E
 )

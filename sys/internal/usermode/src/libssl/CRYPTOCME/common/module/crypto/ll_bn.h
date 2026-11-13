@@ -337,10 +337,6 @@ int sslSubtractBigNumWordsAbsolute(SslBigNumWord *r, SslBigNumWord *a,
 SslBigNumWord sslDivideBigNumWord(SslBigNumWord h, SslBigNumWord l,
 				  SslBigNumWord d);
 
-/* The low-level random number generator (cry_prng.c's backend) */
-int sslGenerateLowLevelPrng(void *prng, void *buffer,
-			    SceUInt32 *generatedLength, SceUInt32 length);
-
 int sslNewBigNumModExpState(SslBigNumModExpState **result,
 			    SslBigNumModulus *m, SslBigNum *r,
 			    const SslBigNum *a, const SslBigNum *p,

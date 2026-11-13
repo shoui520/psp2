@@ -139,8 +139,8 @@ _Static_assert(sizeof(SslDigestImplementation) == 28,
  */
 typedef struct SslDigestCore {
 	int (*Init)(void *state);
-	void (*Compress)(void *state, const void *data, SceUInt32 length);
-	void (*Output)(void *state, unsigned char *digest);
+	int (*Compress)(void *state, const void *data, SceUInt32 length);
+	int (*Output)(void *state, unsigned char *digest);
 	int (*Free)(struct SslDigestContext *context);
 	SceUInt32 reserved;
 	SceUInt32 stateSize;
@@ -148,8 +148,9 @@ typedef struct SslDigestCore {
 	unsigned char valueCount;
 	unsigned char valueSize;
 	unsigned char reserved2;
-	SceUInt32 (*TransferValues)(struct SslDigestContext *context,
-				    unsigned char *buffer, int save);
+	/* Unprototyped: the callers pass (context, buffer, save), the SHA-2
+	 * cores' functions take (context, buffer, length, save) */
+	SceUInt32 (*TransferValues)();
 	SceUInt32 reserved3;
 } SslDigestCore;
 
@@ -226,6 +227,8 @@ int sslLowLevelVerify(SslLowLevelObject *object, int *result,
 		      SceUInt32 options);
 const SslLowLevelMethod *sslGetPkcs1SignMethod(void);
 const SslLowLevelMethod *sslGetPkcs1VerifyMethod(void);
+int sslLowLevelNullControl(SslLowLevelObject *object, int command, int arg,
+			   void *value);
 int sslForwardLowLevelSetInfo(SslLowLevelObject *object, int type, int id,
 			      const void *value);
 int sslForwardLowLevelGetInfo(SslLowLevelObject *object, int type, int id,
@@ -237,6 +240,38 @@ int sslSetLowLevelObjectNext(SslLowLevelObject *object,
 int sslInitLowLevelBigNumParams(SslLowLevelBigNumParams *params,
 				const unsigned char *data, SceUInt32 length,
 				SslBigNumContext *ctx, SceUInt32 options);
+
+/* The saved state of an object, described by a schema: one word per
+ * member, ended by 0. Bits 0-2 the kind (SSL_STATE_*), 3-5 the size of
+ * one value in the saved data less one, 6-8 its size in the object less
+ * one, 9 the offset is from the base an SSL_STATE_BASE member set (else
+ * from the object), 10-21 the offset, 22-31 the count (0: the value of
+ * the integer before it). Each member is saved as a 16-bit big-endian
+ * length and the values, integers big-endian.
+ */
+#define SSL_STATE_END 0
+#define SSL_STATE_BYTES 1
+#define SSL_STATE_INTEGERS 2
+#define SSL_STATE_POINTER 3
+#define SSL_STATE_ALLOCATED 4
+#define SSL_STATE_BASE 5
+#define SSL_STATE_INTEGERS_SHIFT2 6
+#define SSL_STATE_INTEGERS_SHIFT3 7
+
+#define SSL_STATE_KIND(entry) ((entry) & 7)
+#define SSL_STATE_WIDTH(entry) (((entry) >> 3) & 7)
+#define SSL_STATE_SIZE(entry) (((entry) >> 6) & 7)
+#define SSL_STATE_FROM_BASE 0x200
+#define SSL_STATE_OFFSET(entry) (((entry) >> 10) & 0xfff)
+#define SSL_STATE_COUNT_MASK 0xffc00000
+#define SSL_STATE_COUNT(entry) ((entry) >> 22)
+
+int sslEncodeObjectState(const void *object, const SceUInt32 *schema,
+			 unsigned char *buffer, SceUInt32 *length,
+			 SceUInt32 max);
+int sslDecodeObjectState(void *object, const SceUInt32 *schema,
+			 const unsigned char *buffer, SceUInt32 length,
+			 SceUInt32 *used, SslDirectMemoryContext *dmem);
 
 /* The low-level digest layer below the digest and HMAC backends */
 /* SslDigestContext.flags */
@@ -285,5 +320,27 @@ int sslGetLowLevelDigestInfo(const SslDigestDescriptor *descriptor,
 			     struct SslDigestContext *context, int selector,
 			     SceUInt32 *value, const void **pointer);
 const SslDigestDescriptor *sslGetHmacDigestDescriptor(void);
+
+/* The MD block buffering of the 64-byte block hashes */
+extern const SslDigestImplementation sslMdBigEndianImplementation;
+extern const SslDigestImplementation sslMdLittleEndianImplementation;
+
+/* The hashes */
+const SslDigestDescriptor *sslGetMd5SmallDigestDescriptor(void);
+const SslDigestDescriptor *sslGetSha1SmallDigestDescriptor(void);
+const SslDigestDescriptor *sslGetSha1Small16DigestDescriptor(void);
+int sslGetSha1DigestValues(SslDigestContext *context, unsigned char *output);
+const SslDigestDescriptor *sslGetSha256SdkDigestDescriptor(void);
+const SslDigestDescriptor *sslGetSha224SdkDigestDescriptor(void);
+const SslDigestDescriptor *sslGetSha512SdkDigestDescriptor(void);
+const SslDigestDescriptor *sslGetSha384SdkDigestDescriptor(void);
+SceUInt32 sslTransferSha256State(SslDigestContext *context,
+				 unsigned char *buffer, SceUInt32 length,
+				 int save);
+SceUInt32 sslTransferSha512State(SslDigestContext *context,
+				 unsigned char *buffer, SceUInt32 length,
+				 int save);
+extern const SslDigestImplementation sslSha256SdkImplementation;
+extern const SslDigestImplementation sslSha512SdkImplementation;
 
 #endif

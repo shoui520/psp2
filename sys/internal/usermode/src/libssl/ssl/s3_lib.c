@@ -13,6 +13,8 @@
 #define memcpy sslCopyMemory
 #define Free sslFree
 #define qsort sslSort
+/* SSLv3_data puts ciphers with ssl_lib.c's function, like TLSv1_data */
+#define ssl3_put_cipher_by_char ssl_put_cipher_by_char
 #define ERR_get_error sslGetError
 #define clear_sys_error() (*sceNetErrnoLoc() = 0)
 #define BIO_flush(b) (int)BIO_ctrl(b, BIO_CTRL_FLUSH, 0, NULL)
@@ -39,7 +41,6 @@ int sslClonePublicKey(void *key, int flags, void **out);
 int ssl_undefined_function(SSL *s);
 SSL_METHOD *ssl_bad_method(int ver);
 int ssl_cipher_ptr_id_cmp(SSL_CIPHER **ap, SSL_CIPHER **bp);
-int ssl3_put_cipher_by_char(SSL_CIPHER *c, unsigned char *p);
 int ssl3_send_alert(SSL *s, int level, int desc);
 int ssl3_dispatch_alert(SSL *s);
 int ssl3_read_bytes(SSL *s, int type, char *buf, int len);

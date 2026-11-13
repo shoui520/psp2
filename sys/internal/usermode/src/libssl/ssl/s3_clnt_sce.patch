@@ -1,5 +1,5 @@
---- contrib/ssleay-0.9.1b/ssl/s3_clnt.c	2026-11-08 17:15:34.009704000 +0000
-+++ /Users/user/.gemini/antigravity/brain/596d6759-23be-462a-9f25-0e3f883c9e8b/scratch/s3_clnt_adapted.c	2026-11-08 21:07:35.902172570 +0000
+--- a/s3_clnt.c
++++ b/s3_clnt.c
 @@ -56,28 +56,11 @@
   * [including the GNU Public Licence.]
   */

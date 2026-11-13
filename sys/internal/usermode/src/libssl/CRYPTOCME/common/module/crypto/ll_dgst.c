@@ -447,7 +447,7 @@ int sslFinalMdBufferBigEndian(SslDigestContext *context,
 			      unsigned char *digest)
 {
 	SslMdBuffer *buffer = context->state;
-	void (*compress)(void *state, const void *data, SceUInt32 length) =
+	int (*compress)(void *state, const void *data, SceUInt32 length) =
 		context->descriptor->innerImplementation->Compress;
 	SceUInt32 count = buffer->count;
 	SceUInt32 next = count + 1;
@@ -490,7 +490,7 @@ int sslFinalMdBufferLittleEndian(SslDigestContext *context,
 				 unsigned char *digest)
 {
 	SslMdBuffer *buffer = context->state;
-	void (*compress)(void *state, const void *data, SceUInt32 length) =
+	int (*compress)(void *state, const void *data, SceUInt32 length) =
 		context->descriptor->innerImplementation->Compress;
 	SceUInt32 count = buffer->count;
 	SceUInt32 next = count + 1;
@@ -576,7 +576,7 @@ int sslUpdateMdBuffer(SslDigestContext *context, const void *data,
 {
 	const unsigned char *input = data;
 	SslMdBuffer *buffer;
-	void (*compress)(void *state, const void *data, SceUInt32 length);
+	int (*compress)(void *state, const void *data, SceUInt32 length);
 	SceUInt32 low;
 	SceUInt32 count;
 	SceUInt32 rest;

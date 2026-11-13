@@ -1,5 +1,5 @@
---- contrib/ssleay-0.9.1b/ssl/s3_srvr.c	2026-11-08 17:15:34.001370000 +0000
-+++ /Users/user/.gemini/antigravity/brain/596d6759-23be-462a-9f25-0e3f883c9e8b/scratch/s3_srvr_adapted.c	2026-11-08 21:07:33.736623171 +0000
+--- a/s3_srvr.c
++++ b/s3_srvr.c
 @@ -56,51 +56,54 @@
   * [including the GNU Public Licence.]
   */
@@ -85,7 +85,7 @@
  
 -static SSL_METHOD *ssl3_get_server_method(ver)
 -int ver;
-+static SSL_METHOD *ssl3_get_server_method(int ver)
++SSL_METHOD *ssl3_get_server_method(int ver)
  	{
  	if (ver == SSL3_VERSION)
  		return(SSLv3_server_method());

@@ -33,7 +33,6 @@ typedef struct SslDigestImplementationMethods {
 extern int sslCreateDigestBackendContext(void **context, const void *descriptor,
 					 void *directMemory);
 extern int sslDestroyDigestBackendContext(void *context);
-extern int sslInitDigestBackendContext(void *context);
 extern int sslUpdateDigestBackendContext(void *context, const void *data,
 					 SceUInt32 length);
 extern int sslFinalizeDigestBackendContext(void *context, void *digest);

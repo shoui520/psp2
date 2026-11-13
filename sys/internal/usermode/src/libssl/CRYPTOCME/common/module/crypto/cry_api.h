@@ -209,7 +209,8 @@ int sslSeedRandom(SslCryptoAlgorithm *algorithm, const void *buffer,
 int sslGenerateRandom(SslCryptoAlgorithm *algorithm, SceUInt32 length,
 		      void *buffer, SceUInt32 *generatedLength);
 int sslUnavailableCryptoOperation(void);
-int sslCryptoBackendDigestInit(void *context);
+struct SslDigestContext;
+int sslInitDigestBackendContext(struct SslDigestContext *context);
 int sslCreateCryptoContext(SslLibrary *library, int mode, void **result);
 int sslDestroyCryptoContext(void *context);
 int sslFreeAlgorithm(SslCryptoAlgorithm *algorithm);

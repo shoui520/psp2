@@ -310,7 +310,8 @@ int sslSaveCipherCoreState(SslCipherCore *core, void *buffer,
 	    !(descriptor->flags & SSL_CIPHER_SAVABLE))
 		return SSL_CRYPTO_ERROR_UNHANDLED;
 	if (core->flags & SSL_CIPHER_CORE_KEY_SAVED)
-		return sslEncodeCipherCoreState(core, buffer, length, max);
+		return sslEncodeObjectState(core, descriptor->stateSchema,
+					    buffer, length, max);
 	return SSL_CRYPTO_ERROR_NO_IMPLEMENTATION;
 }
 
@@ -330,9 +331,8 @@ int sslRestoreCipherCoreState(SslCipherCore *core, const void *buffer,
 				     SSL_CIPHER_ENCRYPT | SSL_CIPHER_KEEP_IV);
 	if (status != 0)
 		return status;
-	status = sslDecodeCipherCoreState(core,
-					  core->descriptor->stateSchema,
-					  buffer, length, 0, core->dmem);
+	status = sslDecodeObjectState(core, core->descriptor->stateSchema,
+				      buffer, length, NULL, core->dmem);
 	if (core->savedKeyLength == 0 && core->savedKey != NULL)
 		core->savedKeyLength = core->keyLength;
 	if (status == 0 && core->keyLength != 0)

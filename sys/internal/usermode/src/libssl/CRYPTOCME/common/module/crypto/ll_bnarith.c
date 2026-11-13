@@ -4,6 +4,7 @@
  * 0.9.1b function it was forked from.
  */
 #include "ll_bn.h"
+#include "ll_rand.h"
 
 /* The window table of sslModExpBigNumReciprocal, kept in a context number */
 #define SSL_BIGNUM_RECP_TABLE 16

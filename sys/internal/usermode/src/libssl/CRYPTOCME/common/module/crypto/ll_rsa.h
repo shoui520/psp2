@@ -164,4 +164,8 @@ int sslRsaPkcs1DecodeOperate(SslLowLevelObject *object, void *params,
 int sslRsaPkcs1EncodeOperate(SslLowLevelObject *object, void *params,
 			     int command);
 
+const SslLowLevelMethodGetter *sslGetRsaRawPrivateDecryptMethods(void);
+const SslLowLevelMethodGetter *sslGetRsaRawPublicEncryptMethods(void);
+const SslLowLevelMethod *sslGetRsaRawMethod(void);
+
 #endif

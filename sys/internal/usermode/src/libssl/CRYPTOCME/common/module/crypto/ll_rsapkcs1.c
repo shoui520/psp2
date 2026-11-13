@@ -4,6 +4,7 @@
  */
 #include "cry_api.h"
 #include "ll_rsa.h"
+#include "ll_rand.h"
 #include "../dmem/dmem.h"
 #include "../../../../memory.h"
 

@@ -4,6 +4,7 @@
 #include "cry_api.h"
 #include "ctx.h"
 #include "ll_obj.h"
+#include "ll_rsa.h"
 #include "../dmem/dmem.h"
 #include "../../key/pkey_ctx.h"
 #include "../../../../memory.h"
@@ -21,13 +22,6 @@ static void *sslAllocateInline(SceUInt32 size)
 #define sslFree sslFreeInline
 #define sslAllocate sslAllocateInline
 
-/* Method getters of the low-level RSA layer */
-const SslLowLevelMethodGetter *sslGetRsaSignPrivateMethods(void);
-const SslLowLevelMethodGetter *sslGetRsaSignPublicMethods(void);
-const SslLowLevelMethodGetter *sslGetRsaRawPublicEncryptMethods(void);
-const SslLowLevelMethodGetter *sslGetRsaRawPrivateDecryptMethods(void);
-const SslLowLevelMethodGetter *sslGetRsaPkcs1PublicMethods(void);
-const SslLowLevelMethodGetter *sslGetRsaPkcs1PrivateMethods(void);
 
 typedef const SslLowLevelMethodGetter *(*SslRsaMethodList)(void);
 
@@ -1135,8 +1129,8 @@ static const void *sslRsaCipherBackendMethods[11] = {
 };
 
 const SslRsaSignBackendData sslRsaSignBackendData = {
-	sslGetRsaSignPrivateMethods,
-	sslGetRsaSignPublicMethods,
+	sslGetRsaPkcs1SignChain,
+	sslGetRsaPkcs1VerifyChain,
 	sslSelectBigNumMethod,
 	sslRegisterRsaSignPropertyHandlers,
 	NULL,
@@ -1145,10 +1139,10 @@ const SslRsaSignBackendData sslRsaSignBackendData = {
 };
 
 const SslRsaCipherBackendData sslRsaPkcs1BackendData = {
-	sslGetRsaPkcs1PublicMethods,
-	sslGetRsaPkcs1PublicMethods,
-	sslGetRsaPkcs1PrivateMethods,
-	sslGetRsaPkcs1PrivateMethods,
+	sslGetRsaRawPublicEncryptMethods,
+	sslGetRsaRawPublicEncryptMethods,
+	sslGetRsaRawPrivateDecryptMethods,
+	sslGetRsaRawPrivateDecryptMethods,
 	sslSelectBigNumMethod,
 	0x10,
 	sslRegisterRsaCipherPropertyHandlers,
@@ -1157,10 +1151,10 @@ const SslRsaCipherBackendData sslRsaPkcs1BackendData = {
 };
 
 const SslRsaCipherBackendData sslRsaRawBackendData = {
-	sslGetRsaRawPublicEncryptMethods,
+	sslGetRsaPkcs1EncryptChain,
 	(SslRsaMethodList)sslGetRsaPublicKeyMethodList,
 	(SslRsaMethodList)sslGetRsaPrivateKeyMethodList,
-	sslGetRsaRawPrivateDecryptMethods,
+	sslGetRsaPkcs1DecryptChain,
 	sslSelectDefaultBigNumMethod,
 	0,
 	sslRegisterRsaCipherPropertyHandlers,
