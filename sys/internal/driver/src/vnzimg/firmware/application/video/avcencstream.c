@@ -26,6 +26,7 @@
 #define SLICES_OFFSET		1152
 #define STREAM_INFO_OFFSET	1216
 #define RECORD_SIZE		128
+#define OUTPUTS_SIZE		2048	/* the client's 32 outputs */
 #define RECORDS			16
 
 /* the thread's states */
@@ -50,10 +51,11 @@ typedef struct AvcencPicture {
 	int32_t id;			/* the codec's */
 	uint32_t pictureCount;
 	VkVThreadContext *context;
-	uint16_t reserved;
+	uint16_t chunkSteps;		/* four per chunk of the rows, one more for the row's end */
 	int8_t index;			/* the slot's */
 	uint8_t jobsDone;
-	uint8_t reserved2[2];
+	uint8_t chunkHeight;		/* in lines */
+	uint8_t chunkWidth;		/* in macroblocks, 6 or 8 */
 	uint8_t widthInMbs;
 	uint8_t heightInMbs;
 	uint8_t widthInGroups;		/* of four macroblocks */
@@ -240,7 +242,7 @@ typedef struct AvcencBuffers {
 	int8_t idrNext;			/* the next picture is an IDR */
 	int8_t idrPending;
 	int8_t flushing;
-	uint8_t frameNum;
+	int8_t frameNum;
 	int8_t refFrames[4];		/* the reference list's frames, -4 to -1 before any */
 	uint8_t reserved2[16];
 } AvcencBuffers;
@@ -269,8 +271,9 @@ typedef struct AvcencStream {
 	int8_t ended;			/* the client's frames ended */
 	int8_t waitWake;		/* the engine's wake to take */
 	uint8_t output;			/* the client's output being filled */
-	uint8_t reserved[2];
-	int8_t firstPicture;
+	uint8_t chunksDone;
+	uint8_t chunksSent;
+	int8_t chunks;			/* of a row, one more for the row's end */
 	int8_t newSequence;		/* the picture starts a sequence */
 	uint8_t recordIndex;		/* of the next picture record, 0 to 15 */
 	uint8_t reserved2;
@@ -282,10 +285,12 @@ typedef struct AvcencStream {
 	uint8_t source;			/* the source frame of the next picture, 0 or 1 */
 	uint8_t reconstructed;		/* its reconstructed frame */
 	int8_t option;			/* the frame's */
-	uint8_t reserved4[4];
+	uint8_t chunkPending;
+	uint8_t reserved4[3];
 	uint32_t work;			/* the slot's frame memory */
 	AvcencSequence *settings;	/* the sequence's, from the client */
-	uint8_t reserved5[20];
+	uint32_t chunkBits;
+	uint8_t reserved5[16];
 } AvcencStream;
 
 /* the layouts' sizes */
@@ -772,12 +777,23 @@ const int16_t avcencChromaThreshold[10][8] = {			/* 0x91b518 */
 
 /* the preparing jobs, on the other cores (avcencjob.c) */
 void avcencJobScene(uint32_t picture, uint32_t slices, uint32_t rate, uint32_t unused);
-void avcencJobLoad(uint32_t picture, uint32_t slices, uint32_t unused, uint32_t unused2);
+void avcencJobLoad(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
+
+void avcencJobMotion(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
+void avcencJobIntra(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
+void avcencJobDecide(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);
+void avcencJobRate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
+void avcencJobRateUpdate(uint32_t picture, uint32_t rate, uint32_t unused, uint32_t unused2);
+void avcencJobLoadReference(uint32_t picture, uint32_t slices, uint32_t position,
+	uint32_t unused);
 
 #define JOB_SCENE(index)	((index) * 8 + 24)
 #define JOB_LOAD(index)		((index) * 8 + 8)
 #define JOB_FLAG_SCENE		0x01000000
 #define JOB_FLAG_LOAD		0x08000000
+#define JOB_FLAG_ROWS		0x08000000
+#define JOB_FLAG_RATE		0x02000000
+#define JOB_FLAG_UPDATE		0x04000000
 
 /* a job set on the encoders' context, the context let go and taken again while it is busy */
 static VkVThreadContext *jobSet(VkVThreadContext *context, const AvcencPicture *picture,
@@ -790,6 +806,22 @@ static VkVThreadContext *jobSet(VkVThreadContext *context, const AvcencPicture *
 		context = vkVThreadContextLock(picture->context);
 	}
 	return context;
+}
+
+/* a job set with the context taken and let go for each attempt, until it is not busy */
+static void jobPost(const AvcencPicture *picture, uint32_t index, uint32_t count,
+	VkJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
+	uint32_t flags)
+{
+	VkVThreadContext *context;
+	int32_t busy;
+
+	do {
+		context = vkVThreadContextLock(picture->context);
+		busy = vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture,
+			argument, argument2, argument3, picture->thread, flags);
+		vkVThreadContextUnlock(context);
+	} while (busy);
 }
 
 /*
@@ -900,4 +932,357 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 			JOB_FLAG_LOAD);
 	}
 	vkVThreadContextUnlock(context);
+}
+
+/*
+ * 0x836924: the jobs a group's job waits for in the wavefront: the one to
+ * its left, the one above, and the one above to the right (from three
+ * groups across, by the rows' parity)
+ */
+static int32_t jobWaits(int32_t column, int32_t row, int32_t groups, int32_t columns)
+{
+	int32_t odd = row & 1, waits;
+
+	if (groups < 3) {
+		waits = odd ? 0 : groups;
+		if (row >= 1)
+			waits++;
+		return waits;
+	}
+	if (odd) {
+		waits = 0;
+	} else if (column / 2 == groups - 1 && (groups & 1) != ((row / 2) & 1)) {
+		waits = 1;
+	} else if (column < 1 && ((row / 2) & 1)) {
+		waits = 1;
+	} else {
+		waits = 2;
+	}
+	if (column >= 1)
+		waits++;
+	if (row >= 1 && columns - 1 != column)
+		waits++;
+	return waits;
+}
+
+/*
+ * 0x836c90: a picture's jobs. A skipped picture has only the rate control's;
+ * the others have the motion jobs, a wavefront over pairs of macroblocks in
+ * steps of four (each step's count kept in the frame record), then the
+ * intra and decision jobs over groups of four, and the rate control's last
+ */
+static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t rateJobs)
+{
+	uint32_t slices = stream->slices, rate = stream->rate;
+	uint8_t *frameRecord = (uint8_t *)picture->frameRecord;
+	int32_t index = picture->index, widthInMbs = picture->widthInMbs;
+	int32_t heightInMbs = picture->heightInMbs, columns, rows, groups, groupRows;
+	int32_t step, steps, row, column, waits, jobs, position, started;
+	uint32_t idrNext = stream->buffers->idrNext;
+	VkVThreadContext *context;
+	VkThread *thread;
+
+	((AvcencSlices *)slices)->idr = idrNext;
+	((AvcencSlices *)slices)->sliceType = (0 < idrNext) << 1;
+	thread = picture->thread;
+	if (picture->predicted) {
+		context = vkVThreadContextLock(picture->context);
+		context = jobSet(context, picture, index * 8 + picture->jobs * 8 + 9,
+			0 < rateJobs, avcencJobRate, rate, 0, 0, JOB_FLAG_RATE);
+		vkVThreadContextUnlock(context);
+		return;
+	}
+	for (step = 0; step < 8; step++)
+		frameRecord[28 + step] = 0;
+	groups = (widthInMbs + 3) >> 2;
+	columns = (widthInMbs + 1) >> 1;
+	groupRows = (heightInMbs + 3) >> 2;
+	rows = (heightInMbs + 1) >> 1;
+	context = vkVThreadContextLock(picture->context);
+
+	/* the motion jobs */
+	step = 0;
+	steps = rows * 5 + columns - 5;
+	if (steps > 20)
+		steps = 20;
+	if (steps >= 1) {
+		do {
+			row = step < columns ? 0 : (step - columns + 5) / 5;
+			started = 0;
+			for (; row < rows; row++) {
+				column = step - row * 5;
+				if (column < -3)
+					break;
+				if (columns < 5 && column >= 1)
+					continue;
+				if (column >= columns)
+					continue;
+				waits = jobWaits(column, row, groups, columns);
+				if (!waits)
+					continue;
+				started++;
+				if (column < 0)
+					column = 0;
+				position = column << 1 | row << 9;
+				context = jobSet(context, picture, index * 8 + picture->jobArgument +
+					picture->jobGroups * (row & 7) + (((row & 3) + column) >> 2) + 8,
+					waits, avcencJobMotion, slices, position, 0, JOB_FLAG_ROWS);
+			}
+			frameRecord[28 + ((step >> 2) & 7)] = started;
+			step += 4;
+		} while (step < steps);
+	}
+	*(uint16_t *)(frameRecord + 26) = step;
+
+	/* the intra and decision jobs */
+	if (groups < 3) {
+		steps = 4;
+	} else {
+		steps = groupRows * 5 + groups - 5;
+		if (steps > 8)
+			steps = 8;
+	}
+	for (step = 0; step < steps; step++) {
+		row = step < groups ? 0 : (step - groups + 5) / 5;
+		for (; row < groupRows; row++) {
+			column = step - row * 5;
+			if (column < 0)
+				break;
+			if (column >= groups)
+				continue;
+			jobs = picture->jobs;
+			position = row << 10 | column << 2;
+			if (!idrNext) {
+				context = jobSet(context, picture, index * 8 + jobs * 4 +
+					(row & 3) * jobs + column + 8, 1, avcencJobIntra, slices,
+					position, 0, JOB_FLAG_ROWS);
+				jobs = picture->jobs;
+			}
+			context = jobSet(context, picture, index * 8 + jobs * (row & 3) + column + 8,
+				0, avcencJobDecide, slices, position, 0, JOB_FLAG_ROWS);
+		}
+	}
+	frameRecord[25] = step;
+	context = jobSet(context, picture, index * 8 + picture->jobs * 8 + 9,
+		(0 < rateJobs) + 1, avcencJobRate, rate, 0, 0, JOB_FLAG_RATE);
+	vkVThreadContextUnlock(context);
+	(void)thread;
+}
+
+/* 0x836ffe: the rate control's update after the picture, its last job */
+static void pictureRateUpdate(AvcencStream *stream, AvcencPicture *picture)
+{
+	jobPost(picture, picture->index * 8 + picture->jobs * 8 + 10, 0, avcencJobRateUpdate,
+		stream->rate, 0, 0, JOB_FLAG_UPDATE);
+}
+
+/*
+ * 0x83706c: the loads that follow the picture's progress: the next source
+ * rows once the last load's step is reached, and (in a picture that is not
+ * an IDR) each reference frame's next rows once the step passed them
+ */
+static void pictureLoads(AvcencStream *stream, AvcencPicture *picture)
+{
+	uint32_t slices = stream->slices;
+	AvcencBuffers *buffers = stream->buffers;
+	int8_t *frameRecord = (int8_t *)picture->frameRecord;
+	int32_t index = picture->index, step = frameRecord[24], reference, i;
+
+	if (buffers->frameNum == step) {
+		if (step + 1 < (picture->heightInMbs + 3) >> 2)
+			jobPost(picture, index * 8 + ((step + 1) & 7) + 8, 0, avcencJobLoad,
+				slices, step * 4 + 4, 0, JOB_FLAG_LOAD);
+		buffers->frameNum++;
+	}
+	if (((AvcencSlices *)slices)->idr)
+		return;
+	for (i = 0; i < 4; i++) {
+		reference = frameRecord[20 + i];
+		if (step < reference + 4 || buffers->refFrames[i] != reference)
+			continue;
+		if (reference + 4 < picture->heightInGroups)
+			jobPost(picture, index * 8 + ((reference + 4) & 7) + 16, 0,
+				avcencJobLoadReference, slices, reference * 4 + 16, 0, JOB_FLAG_LOAD);
+		buffers->refFrames[i] += 4;
+	}
+}
+
+/*
+ * 0x8371b0: the picture's next jobs, once the motion jobs of the step four
+ * back are done: the next motion steps (one, or the rest of the picture's
+ * steps in a picture under three groups wide), then the intra and decision
+ * jobs of the groups the new steps open
+ */
+static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
+{
+	int8_t *frameRecord = (int8_t *)picture->frameRecord;
+	int32_t index = picture->index, widthInMbs = picture->widthInMbs;
+	int32_t heightInMbs = picture->heightInMbs, columns, rows, groups, groupRows;
+	int32_t step = *(int16_t *)(frameRecord + 26), end, row, column, waits, jobs;
+	int32_t position, started;
+	uint32_t slices, idr;
+	VkVThreadContext *context;
+
+	if (frameRecord[28 + (((step - 20) >> 2) & 7)])
+		return;
+	slices = stream->slices;
+	idr = (uint8_t)((AvcencSlices *)slices)->idr;
+	columns = (widthInMbs + 1) >> 1;
+	groups = (widthInMbs + 3) >> 2;
+	groupRows = (heightInMbs + 3) >> 2;
+	rows = (heightInMbs + 1) >> 1;
+	context = vkVThreadContextLock(picture->context);
+
+	/* the motion jobs */
+	if (groups >= 3)
+		end = step + 4;
+	else
+		end = step % 5 == 1 ? step + 12 : step + 8;
+	while (step < end) {
+		row = step < columns ? 0 : (step - columns + 5) / 5;
+		started = 0;
+		for (; row < rows; row++) {
+			column = step - row * 5;
+			if (column < -3)
+				break;
+			if (columns < 5 && column >= 1)
+				continue;
+			if (column >= columns)
+				continue;
+			waits = jobWaits(column, row, groups, columns);
+			if (!waits)
+				continue;
+			started++;
+			if (column < 0)
+				column = 0;
+			position = column << 1 | row << 9;
+			context = jobSet(context, picture, index * 8 + picture->jobArgument +
+				picture->jobGroups * (row & 7) + (((row & 3) + column) >> 2) + 8,
+				waits, avcencJobMotion, slices, position, 0, JOB_FLAG_ROWS);
+		}
+		frameRecord[28 + ((step >> 2) & 7)] = started;
+		step += 4;
+	}
+	*(int16_t *)(frameRecord + 26) = step;
+
+	/* the intra and decision jobs */
+	step = frameRecord[25];
+	if (groups >= 3)
+		end = step + 2;
+	else
+		end = step % 5 == 4 ? step + 6 : step + 4;
+	for (; step < end; step++) {
+		row = step < groups ? 0 : (step - groups + 5) / 5;
+		for (; row < groupRows; row++) {
+			column = step - row * 5;
+			if (column < 0)
+				break;
+			if (column >= groups)
+				continue;
+			jobs = picture->jobs;
+			position = row << 10 | column << 2;
+			if (!idr) {
+				context = jobSet(context, picture, index * 8 + jobs * 4 +
+					(row & 3) * jobs + column + 8, 1, avcencJobIntra, slices,
+					position, 0, JOB_FLAG_ROWS);
+				jobs = picture->jobs;
+			}
+			context = jobSet(context, picture, index * 8 + jobs * (row & 3) + column + 8,
+				0, avcencJobDecide, slices, position, 0, JOB_FLAG_ROWS);
+		}
+	}
+	frameRecord[25] = step;
+	vkVThreadContextUnlock(context);
+}
+
+#define ROW_FIRST	0x20		/* the row's flags in the outputs: its first chunk */
+#define ROW_LAST	0x40
+#define ROW_SPLIT	0xa0
+#define ROW_CHUNK	0x10
+#define ROW_MIDDLE	0x08
+#define ROW_WRAP	0x01
+#define ROW_END		0x02
+
+/*
+ * 0x83746c: a sequence's row layout. A row is cut into chunks of six
+ * macroblocks (eight from 40 across), the remainder deciding where the
+ * last ones split; each row's flags go to the outputs (eight rows to an
+ * output, from byte 56), and the picture's progress is cleared
+ */
+static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
+{
+	uint32_t heightInMbs = picture->heightInMbs, widthInMbs = picture->widthInMbs;
+	uint32_t width = widthInMbs < 40 ? 6 : 8, remainder, chunks, row, chunk;
+	uint8_t flags[8], *outputs, *end, *split, value;
+	uint32_t *progress;
+
+	remainder = widthInMbs % width;
+	picture->chunkWidth = width;
+	picture->chunkHeight = 16;
+	if (widthInMbs <= width) {
+		stream->sliceMode = 0;
+		stream->chunks = 1;
+		picture->chunkSteps = 4;
+	} else {
+		chunks = (widthInMbs + width - 1) / width;
+		stream->sliceMode = (remainder == 2) + 1;
+		stream->chunks = chunks + 1;
+		picture->chunkSteps = (chunks + 1) * 4;
+	}
+	stream->output = 0;
+	stream->chunksSent = 0;
+	stream->chunkPending = 1;
+	outputs = (uint8_t *)vnzPublicOpenPrivate(stream->outputs, OUTPUTS_SIZE);
+
+	for (chunk = 0; chunk < width - 1; chunk++)
+		flags[chunk] = ROW_CHUNK;
+	end = flags + width;
+	switch (remainder) {
+	case 0:
+		flags[0] |= ROW_FIRST;
+		end[-2] |= ROW_LAST;
+		end[-3] &= ~ROW_CHUNK;
+		break;
+	case 1:
+	case 2:
+		end[-3] |= ROW_LAST;
+		break;
+	case 3:
+		end[-4] |= ROW_SPLIT;
+		end[-2] &= ~ROW_CHUNK;
+		break;
+	default:
+		split = flags + (width - remainder);
+		split[0] |= ROW_FIRST;
+		split[-1] |= ROW_SPLIT;
+		end[-2] &= ~ROW_CHUNK;
+		end[-3] &= ~ROW_CHUNK;
+		break;
+	}
+
+	for (row = 0, chunk = 0; row < heightInMbs; row++) {
+		((uint8_t *)stream->record)[row] = 0;
+		if (row == heightInMbs - 1)
+			value = ROW_END;
+		else if (row < heightInMbs - 2)
+			value = flags[chunk] | ROW_MIDDLE;
+		else
+			value = 0;
+		if (chunk == width - 2) {
+			value |= ROW_WRAP;
+			chunk = 0;
+		} else {
+			chunk++;
+		}
+		outputs[(row & 31) * 64 + 56 + (row >> 5)] = value;
+	}
+	stream->chunksDone = 0;
+	stream->chunkBits = 0;
+	vnzPublicClosePrivate((uint32_t)outputs, OUTPUTS_SIZE);
+
+	progress = (uint32_t *)picture->frameRecord;
+	progress[4] = 0;
+	progress[1] = 0;
+	progress[3] = 0;
+	progress[2] = 0;
 }
