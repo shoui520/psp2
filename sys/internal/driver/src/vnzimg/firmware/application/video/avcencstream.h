@@ -212,6 +212,18 @@ typedef struct AvcencRate {
 	uint8_t reserved14[204];
 } AvcencRate;
 
+/* the picture's progress, which its jobs share (at PICTURE_FRAME_OFFSET) */
+typedef struct AvcencFrameRecord {
+	uint32_t reserved;
+	uint32_t progress[3];		/* cleared with the rows' slots */
+	uint32_t rowsEncoded;		/* by row & 31: encoded, not yet answered */
+	int8_t references[4];		/* the reference loads' group, by reference */
+	int8_t loaded;			/* the last group of rows loaded, -1 for none */
+	int8_t chunkStep;		/* the chunk stages' next step */
+	int16_t step;			/* the motion wavefront's next step */
+	int8_t started[8];		/* the jobs started, by step of four */
+} AvcencFrameRecord;
+
 /* a picture record, as the helper's jobs and the engine read it (128 bytes) */
 typedef struct AvcencRecord {
 	uint32_t luma;
@@ -393,7 +405,54 @@ typedef struct AvcencJobInfo {
 	uint8_t reserved5[32];
 } AvcencJobInfo;
 
+/* the slices' stream info: a part per core */
+#define CORE_INFO_SIZE		2112
+
+/* a core's load of the next source's motion plane, at the start of its part (64 bytes) */
+typedef struct AvcencLoad {
+	uint8_t *motion;		/* the band's first line of the plane */
+	uint32_t source;		/* the rows' first line */
+	uint8_t rows;			/* of macroblocks, up to four */
+	uint8_t firstRow;
+	uint16_t y;			/* the band's first line */
+	uint16_t width;			/* in pixels */
+	uint16_t height;
+	uint16_t motionWidth;		/* the plane's pitch */
+	uint16_t pitch;			/* the source's, of a row of tiles over 16 */
+	uint8_t *lines;			/* the vertical pass's last three lines, 24 bytes a block */
+	uint32_t linesOpened;
+	uint32_t motionOpened;
+	uint8_t reserved[32];
+} AvcencLoad;
+
+/*
+ * the motion plane's downscale, as its kernels keep it in the IVC2 registers.
+ * The source's luma is in tiles 16 pixels wide; a band of eight of its lines
+ * goes through a 15-tap horizontal filter (every fourth pixel) and a 7-tap
+ * vertical one, into two lines of the plane: line 0's every eighth column
+ * and line 4's, four columns to the right
+ */
+typedef struct AvcencDownscale {
+	uint8_t pixels[8][24];		/* by line: the last three groups of eight loaded */
+	uint8_t columns[8][8];		/* by line: the horizontal pass's, of the block of 32 */
+	uint8_t samples[8];		/* line 0's columns 0, 2, 4 and 6, line 4's 1, 3, 5 and 7 */
+} AvcencDownscale;
+
+/* the downscale's kernels (avcenckernel.c) */
+void avcencDownscaleLoadLeft(AvcencDownscale *downscale, const uint8_t *source);
+void avcencDownscaleLoadRight(AvcencDownscale *downscale, const uint8_t *source);
+void avcencDownscaleEdgeLeft(AvcencDownscale *downscale);
+void avcencDownscaleColumns0(AvcencDownscale *downscale);
+void avcencDownscaleColumns2(AvcencDownscale *downscale);
+void avcencDownscaleColumns4(AvcencDownscale *downscale);
+void avcencDownscaleColumns6(AvcencDownscale *downscale);
+void avcencDownscaleEdgeRight(AvcencDownscale *downscale);
+void avcencDownscaleEdgeRightTail(AvcencDownscale *downscale);
+void avcencDownscaleVertical(AvcencDownscale *downscale, uint8_t *lines, uint32_t y);
+void avcencDownscaleVerticalTail(AvcencDownscale *downscale, uint8_t *lines, uint32_t y);
+
 typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
+typedef char loadSizeCheck[sizeof(AvcencLoad) == 64 ? 1 : -1];
 typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];

@@ -556,7 +556,7 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 {
 	AvcencRate *rate = (AvcencRate *)stream->rate;
 	AvcencBuffers *buffers = stream->buffers;
-	uint8_t *frameRecord = (uint8_t *)picture->frameRecord;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	int32_t index = picture->index, idr, last, countdown, qp, chroma, quotient, i;
 	uint32_t previousIdr, request, scene, load;
 	VkVThreadContext *context;
@@ -596,10 +596,10 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 	buffers->idrNext = idr;
 	buffers->idrCountdown = countdown;
 	buffers->frameNum = 0;
-	frameRecord[24] = -1;
+	frameRecord->loaded = -1;
 	for (i = 0; i < 4; i++) {
 		buffers->refFrames[i] = i - 4;
-		frameRecord[20 + i] = i - 4;
+		frameRecord->references[i] = i - 4;
 	}
 
 	previousIdr = 0;
@@ -696,7 +696,7 @@ static int32_t jobWaits(int32_t column, int32_t row, int32_t groups, int32_t col
 static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t rateJobs)
 {
 	uint32_t slices = stream->slices, rate = stream->rate;
-	uint8_t *frameRecord = (uint8_t *)picture->frameRecord;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	int32_t index = picture->index, widthInMbs = picture->widthInMbs;
 	int32_t heightInMbs = picture->heightInMbs, columns, rows, groups, groupRows;
 	int32_t step, steps, row, column, waits, jobs, position, started;
@@ -715,7 +715,7 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 		return;
 	}
 	for (step = 0; step < 8; step++)
-		frameRecord[28 + step] = 0;
+		frameRecord->started[step] = 0;
 	groups = (widthInMbs + 3) >> 2;
 	columns = (widthInMbs + 1) >> 1;
 	groupRows = (heightInMbs + 3) >> 2;
@@ -750,11 +750,11 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 					picture->jobGroups * (row & 7) + (((row & 3) + column) >> 2) + 8,
 					waits, avcencJobMotion, slices, position, 0, JOB_FLAG_ROWS);
 			}
-			frameRecord[28 + ((step >> 2) & 7)] = started;
+			frameRecord->started[((step >> 2) & 7)] = started;
 			step += 4;
 		} while (step < steps);
 	}
-	*(uint16_t *)(frameRecord + 26) = step;
+	frameRecord->step = step;
 
 	/* the intra and decision jobs */
 	if (groups < 3) {
@@ -784,7 +784,7 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 				0, avcencJobDecide, slices, position, 0, JOB_FLAG_ROWS);
 		}
 	}
-	frameRecord[25] = step;
+	frameRecord->chunkStep = step;
 	context = jobSet(context, picture, index * 8 + picture->jobs * 8 + 9,
 		(0 < rateJobs) + 1, avcencJobRate, rate, 0, 0, JOB_FLAG_RATE);
 	vkVThreadContextUnlock(context);
@@ -807,8 +807,8 @@ static void pictureLoads(AvcencStream *stream, AvcencPicture *picture)
 {
 	uint32_t slices = stream->slices;
 	AvcencBuffers *buffers = stream->buffers;
-	int8_t *frameRecord = (int8_t *)picture->frameRecord;
-	int32_t index = picture->index, step = frameRecord[24], reference, i;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
+	int32_t index = picture->index, step = frameRecord->loaded, reference, i;
 
 	if (buffers->frameNum == step) {
 		if (step + 1 < (picture->heightInMbs + 3) >> 2)
@@ -819,7 +819,7 @@ static void pictureLoads(AvcencStream *stream, AvcencPicture *picture)
 	if (((AvcencSlices *)slices)->idr)
 		return;
 	for (i = 0; i < 4; i++) {
-		reference = frameRecord[20 + i];
+		reference = frameRecord->references[i];
 		if (step < reference + 4 || buffers->refFrames[i] != reference)
 			continue;
 		if (reference + 4 < picture->heightInGroups)
@@ -837,15 +837,15 @@ static void pictureLoads(AvcencStream *stream, AvcencPicture *picture)
  */
 static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 {
-	int8_t *frameRecord = (int8_t *)picture->frameRecord;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	int32_t index = picture->index, widthInMbs = picture->widthInMbs;
 	int32_t heightInMbs = picture->heightInMbs, columns, rows, groups, groupRows;
-	int32_t step = *(int16_t *)(frameRecord + 26), end, row, column, waits, jobs;
+	int32_t step = frameRecord->step, end, row, column, waits, jobs;
 	int32_t position, started;
 	uint32_t slices, idr;
 	VkVThreadContext *context;
 
-	if (frameRecord[28 + (((step - 20) >> 2) & 7)])
+	if (frameRecord->started[((step - 20) >> 2) & 7])
 		return;
 	slices = stream->slices;
 	idr = (uint8_t)((AvcencSlices *)slices)->idr;
@@ -882,13 +882,13 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 				picture->jobGroups * (row & 7) + (((row & 3) + column) >> 2) + 8,
 				waits, avcencJobMotion, slices, position, 0, JOB_FLAG_ROWS);
 		}
-		frameRecord[28 + ((step >> 2) & 7)] = started;
+		frameRecord->started[((step >> 2) & 7)] = started;
 		step += 4;
 	}
-	*(int16_t *)(frameRecord + 26) = step;
+	frameRecord->step = step;
 
 	/* the intra and decision jobs */
-	step = frameRecord[25];
+	step = frameRecord->chunkStep;
 	if (groups >= 3)
 		end = step + 2;
 	else
@@ -913,7 +913,7 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 				0, avcencJobDecide, slices, position, 0, JOB_FLAG_ROWS);
 		}
 	}
-	frameRecord[25] = step;
+	frameRecord->chunkStep = step;
 	vkVThreadContextUnlock(context);
 }
 
@@ -938,7 +938,7 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 	uint32_t width = widthInMbs < 40 ? 6 : 8, remainder, chunks, row, chunk;
 	uint8_t flags[8], *end, *split, value;
 	AvcencOutputSlot *slots;
-	uint32_t *progress;
+	AvcencFrameRecord *frameRecord;
 
 	remainder = widthInMbs % width;
 	picture->chunkWidth = width;
@@ -1004,11 +1004,11 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 	stream->chunkBits = 0;
 	vnzPublicClosePrivate((uint32_t)slots, OUTPUTS_SIZE);
 
-	progress = (uint32_t *)picture->frameRecord;
-	progress[4] = 0;
-	progress[1] = 0;
-	progress[3] = 0;
-	progress[2] = 0;
+	frameRecord = (AvcencFrameRecord *)picture->frameRecord;
+	frameRecord->rowsEncoded = 0;
+	frameRecord->progress[0] = 0;
+	frameRecord->progress[2] = 0;
+	frameRecord->progress[1] = 0;
 }
 
 static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo);
@@ -1145,18 +1145,19 @@ static void streamChunkDone(AvcencStream *stream)
 {
 	AvcencPicture *picture = stream->picture;
 	uint32_t row = stream->chunksSent, outputs = stream->outputs, heightInMbs, bit;
-	uint32_t *progress = (uint32_t *)picture->frameRecord, end, next, phase, slot;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
+	uint32_t end, next, phase, slot;
 	VkVThreadContext *context, *current;
 
 	heightInMbs = picture->heightInMbs;
 	if (row >= heightInMbs)
 		return;
 	bit = 1 << (row & 31);
-	if (!(bit & progress[4]))
+	if (!(bit & frameRecord->rowsEncoded))
 		return;
 	end = (uint8_t)((AvcencOutput *)((AvcencOutputSlot *)(outputs + (row & 31) * 64))->output)->next;
 	vnzSpinLock(picture->lock);
-	progress[4] &= ~bit;
+	frameRecord->rowsEncoded &= ~bit;
 	vnzSpinUnlock(picture->lock);
 	stream->chunksSent++;
 	((int8_t *)stream->record)[row]++;
@@ -1402,7 +1403,7 @@ static void streamChunksDone(AvcencStream *stream)
 {
 	AvcencPicture *picture = stream->picture;
 	uint32_t chunks = (uint8_t)stream->chunks, row, end, bit, progress;
-	uint32_t *frameProgress = (uint32_t *)picture->frameRecord;
+	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	int32_t last, count;
 
 	if (picture->chunkWidth >= picture->widthInMbs) {
@@ -1410,7 +1411,7 @@ static void streamChunksDone(AvcencStream *stream)
 		return;
 	}
 	row = stream->chunksSent;
-	progress = frameProgress[4];
+	progress = frameRecord->rowsEncoded;
 	end = row + 15;
 	if (end > picture->heightInMbs)
 		end = picture->heightInMbs;
@@ -1423,7 +1424,7 @@ static void streamChunksDone(AvcencStream *stream)
 		bit = 1 << (row & 31);
 		if (bit & progress) {
 			vnzSpinLock(picture->lock);
-			frameProgress[4] &= ~bit;
+			frameRecord->rowsEncoded &= ~bit;
 			vnzSpinUnlock(picture->lock);
 			if (streamChunkNext(stream, (row & 3) * chunks + count, row))
 				return;
