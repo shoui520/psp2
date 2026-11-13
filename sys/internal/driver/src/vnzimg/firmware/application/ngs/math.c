@@ -2,6 +2,7 @@
  * NGS fixed-point helpers: values are signed 8.24 (1.0 = 1 << 24), levels
  * in decibels too.
  */
+#include <stdlib.h>
 #include "ngs.h"
 
 #define SILENCE_DECIBELS	(-100 * NGS_ONE)
@@ -74,6 +75,16 @@ const int32_t ngsWindow[NGS_WINDOW_SIZE] = {
 	0x0a8fc4, 0x0a620a, 0x0a4697, 0x0a3d71,
 };
 
+/* a 64-bit value, as two words, shifted left by one */
+static __attribute__((noinline)) void shiftLeft64(uint32_t *high, uint32_t *low)
+{
+	uint32_t carry = *low;
+
+	*high <<= 1;
+	*low <<= 1;
+	*high |= carry >> 31;
+}
+
 /*
  * a / b in 8.24: the integer quotient, then the remainder divided by b with
  * 8 and 16 bits dropped, for two more bytes of fraction.
@@ -94,6 +105,42 @@ int32_t ngsDivide(int32_t a, int32_t b)
 		return (quotient << 24) + (fraction << 16);
 	fraction2 = remainder / b;
 	return (fraction2 << 8) + (quotient << 24) + (fraction << 16);
+}
+
+/*
+ * a / b in 8.24 by long division (nothing in the image calls it): |a| << 24
+ * as 64 bits, a quotient word at a time, the divisor doubled while the
+ * remainder is below it. The shifts take the shift unit's five bits.
+ */
+int32_t ngsDivideLong(int32_t a, int32_t b)
+{
+	uint32_t magnitudeA = abs(a), magnitudeB = abs(b);
+	uint32_t negative = (a < 0) ^ (b < 0);
+	uint32_t numerator[2], divisor[2], quotientLow, quotientHigh;
+	int32_t result = 0, shift = 0, i;
+
+	numerator[0] = magnitudeA << 24;
+	numerator[1] = (int32_t)magnitudeA >> 8;
+	divisor[0] = magnitudeB;
+	divisor[1] = 0;
+	for (i = 0; i < 64; i++) {
+		quotientLow = numerator[0] / magnitudeB;
+		quotientHigh = numerator[1] / magnitudeB;
+		if ((quotientLow | quotientHigh) == 0) {
+			shiftLeft64(&numerator[1], &numerator[0]);
+			shiftLeft64(&divisor[1], &divisor[0]);
+			shift++;
+		} else {
+			result += (int32_t)quotientLow >> (shift & 31);
+			numerator[0] -= magnitudeB * quotientLow;
+			numerator[1] -= magnitudeB * quotientHigh;
+			result += quotientHigh << ((32 - shift) & 31);
+		}
+		if (numerator[1] < divisor[1] ||
+			(numerator[1] == divisor[1] && numerator[0] < divisor[0]))
+			break;
+	}
+	return negative ? -result : result;
 }
 
 /* log2(x): the exponent, then a bit of fraction from each squaring */

@@ -537,6 +537,34 @@ uint32_t ngsCursorAllocate(uint32_t *cursor, uint32_t size, uint32_t alignment)
 	return address;
 }
 
+/* Sony's further cursor helpers: nothing in the image calls them */
+uint32_t ngsCursorAllocateCopy(uint32_t *cursor, uint32_t size, uint32_t alignment)
+{
+	uint32_t copy = *cursor;
+	uint32_t address = ngsCursorAllocate(&copy, size, alignment);
+
+	*cursor = copy;
+	return address;
+}
+
+uint32_t ngsAlign256(uint32_t address)
+{
+	return address + ((256 - (address & 0xff)) & 0xff);
+}
+
+uint32_t ngsRoundUpCopy(uint32_t size, uint32_t alignment)
+{
+	return (size + alignment - 1) & -alignment;
+}
+
+uint32_t ngsCursorAdvance(uint32_t *cursor, uint32_t size)
+{
+	uint32_t address = *cursor;
+
+	*cursor = address + size;
+	return address;
+}
+
 /*
  * A run of work buffers for count bytes, each buffer's lock taken: under the
  * table's lock, until a run of free buffers is found.
