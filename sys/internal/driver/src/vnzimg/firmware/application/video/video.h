@@ -456,9 +456,64 @@ int32_t avcencTerminate(uint32_t handle);
 uint32_t avcencVersion(void);
 void avcencReceive(uint32_t argument, uint32_t address);
 
+/* a sequence's settings, two of them used in turn */
+typedef struct AvcencSequence {
+	uint16_t horizontal;
+	uint16_t vertical;
+	uint8_t profile;
+	uint8_t level;
+	uint8_t option;
+	uint8_t numOfSlices;
+	uint32_t bitRate;
+	uint32_t maxBitRate;
+	uint32_t cpbSize;
+	uint32_t maxCpbSize;
+	uint8_t reserved;
+	uint8_t reserved2;
+	uint8_t reserved3;
+	uint8_t entropyCoding;
+	uint8_t mode;
+	uint8_t vuiFlag;
+	uint8_t option2;
+	uint8_t reserved4;
+	uint16_t vui[2];
+	uint32_t option4;
+	uint8_t fixed;
+	uint8_t option3Present;
+	uint8_t option3[6];
+	uint32_t pictureBitRate;
+	uint32_t pictureMaxBitRate;
+	uint32_t pictureInterval;
+	uint32_t pictureIdrInterval;
+	uint32_t numUnitsInTick;
+	uint32_t timeScale;
+	uint32_t luma;
+	uint32_t chroma;
+	uint16_t width;
+	uint16_t height;
+	uint16_t pitch;
+	uint16_t chromaPitch;
+	uint8_t idr;
+	uint8_t intra;
+	uint8_t predicted;
+	uint8_t constantQuantizer;
+	uint8_t quantizer;
+	uint8_t quantizer2;
+	uint8_t reserved5[2];
+	uint32_t nalTable;
+	uint32_t streamTable;
+	uint32_t work;
+	uint32_t sliceBits;		/* answered: what the last picture took */
+	uint32_t headerBits;
+	uint16_t skipSliceBits;		/* and what a skipped one takes */
+	uint16_t skipHeaderBits;
+	uint8_t overflow;
+	uint8_t reserved6[7];
+} AvcencSequence;
+
 /* the AVC encoder's core (0x834de0-) */
 uint32_t avcencQueryContextMemory(void);
-uint32_t avcencQueryStreamMemory(uint32_t count);
+uint32_t avcencQueryStreamMemory(uint32_t count, uint32_t horizontal, uint32_t vertical);
 uint32_t avcencQueryFrameMemory(uint32_t numOfRefFrames, uint32_t horizontal,
 	uint32_t vertical);
 uint32_t avcencQueryFrames(uint32_t numOfRefFrames, uint32_t horizontal, uint32_t vertical);

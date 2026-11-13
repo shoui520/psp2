@@ -19,8 +19,6 @@ void avcencJobEncode(uint32_t shared, uint32_t info, uint32_t job, uint32_t requ
 void avcencJobStep(uint32_t shared, uint32_t info, uint32_t job, uint32_t unused);
 
 /* the AVC encoder's parts the jobs run */
-void avcencStreamBegin(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);	/* 0x8354f2 */
-void avcencStreamEnd(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);	/* 0x835546 */
 void avcencCabacLoad(VideoAvcEncodeJob *job, VideoAvcWriter *writer);		/* 0x874448 */
 void avcencCabacStart(VideoAvcWriter *writer);					/* 0x8744d2 */
 void avcencCabacSave(VideoAvcWriter *writer);					/* 0x874498 */

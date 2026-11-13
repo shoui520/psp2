@@ -104,56 +104,6 @@ typedef struct AvcencEncodeParam {
 	uint32_t timeScale;
 } AvcencEncodeParam;
 
-/* a sequence's settings, two of them used in turn */
-typedef struct AvcencSequence {
-	uint16_t horizontal;
-	uint16_t vertical;
-	uint8_t profile;
-	uint8_t level;
-	uint8_t option;
-	uint8_t numOfSlices;
-	uint32_t bitRate;
-	uint32_t maxBitRate;
-	uint32_t cpbSize;
-	uint32_t maxCpbSize;
-	uint8_t reserved;
-	uint8_t reserved2;
-	uint8_t reserved3;
-	uint8_t entropyCoding;
-	uint8_t mode;
-	uint8_t vuiFlag;
-	uint8_t option2;
-	uint8_t reserved4;
-	uint16_t vui[2];
-	uint32_t option4;
-	uint8_t fixed;
-	uint8_t option3Present;
-	uint8_t option3[6];
-	uint32_t pictureBitRate;
-	uint32_t pictureMaxBitRate;
-	uint32_t pictureInterval;
-	uint32_t pictureIdrInterval;
-	uint32_t numUnitsInTick;
-	uint32_t timeScale;
-	uint32_t luma;
-	uint32_t chroma;
-	uint16_t width;
-	uint16_t height;
-	uint16_t pitch;
-	uint16_t chromaPitch;
-	uint8_t idr;
-	uint8_t intra;
-	uint8_t predicted;
-	uint8_t constantQuantizer;
-	uint8_t quantizer;
-	uint8_t quantizer2;
-	uint8_t reserved5[2];
-	uint32_t nalTable;
-	uint32_t streamTable;
-	uint32_t work;
-	uint32_t reserved6[5];
-} AvcencSequence;
-
 /* the NAL units a picture made: in the stream buffer, each with a 4-byte start */
 typedef struct AvcencNalTable {
 	uint8_t count;
@@ -727,7 +677,7 @@ uint32_t avcencQueryMemory2(const uint32_t *param)
 		return 0;
 	if (p->vertical < 64 || p->vertical > 1088)
 		return 0;
-	return avcencQueryStreamMemory(1);
+	return avcencQueryStreamMemory(1, p->horizontal, p->vertical);
 }
 
 uint32_t avcencQueryMemory3(const uint32_t *param)

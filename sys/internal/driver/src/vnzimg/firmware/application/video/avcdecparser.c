@@ -290,7 +290,7 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 	stream->pictures = info->pictures;
 	stream->pictureExtras = info->pictureExtras;
 	stream->nal = parser->nal;
-	request->reserved = info->id;
+	request->id = info->id;
 	request->thread = info->thread;
 	request->queue = parser->decoderQueue;
 	request->stream = parser->stream;

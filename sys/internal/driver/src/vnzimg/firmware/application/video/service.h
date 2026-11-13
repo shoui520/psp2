@@ -105,7 +105,7 @@ typedef struct VideoService {
 
 /* what the engine is asked, and answers, about an access unit or a decode */
 typedef struct VideoEngineRequest {
-	uint32_t reserved;
+	int32_t id;			/* asked: the codec's */
 	uint32_t buffer;
 	uint32_t bufferSize;
 	uint32_t esOffset;		/* answered: the frame released, with esSize */
@@ -1152,7 +1152,7 @@ typedef struct VideoAvcWriter {
 	uint32_t buffer;
 	uint32_t bufferSize;
 	uint32_t sliceType;		/* 2 I, 0 P */
-	uint32_t reserved2;
+	uint32_t pictures;		/* encoded since the stream's start */
 	uint32_t noUnit;		/* the unit does not run */
 	uint32_t reserved6;
 	uint16_t macroblocks;
@@ -1172,17 +1172,30 @@ typedef struct VideoAvcWriter {
 	int16_t unitParameters[VIDEO_AVC_UNIT_PARAMETERS];
 	uint16_t idrPicId;
 	uint16_t frameNum;
-	uint16_t reserved4;
+	uint16_t previousFrameNum;	/* the last picture's */
 	uint8_t log2MaxFrameNum;
 	uint8_t initialCpbRemovalDelayLength;
 	uint8_t cpbRemovalDelayLength;
 	uint8_t dpbOutputDelayLength;
 	uint8_t pendingBits;		/* the unit's partial byte */
 	uint8_t picStructPresent;
-	uint8_t reserved8[26];
-	uint32_t commandResult;
+	uint8_t reserved8[2];
+	uint32_t picOrderCntStart;	/* the stream's first */
+	uint32_t picOrderCnt;		/* the picture's: twice its number */
+	uint32_t picOrderCntOutput;
+	uint32_t gopByteLimit;		/* the bytes a second the pictures since the IDR may take */
+	uint32_t gopBytes;		/* the bytes they took */
+	uint16_t gopPictures;
+	uint16_t frameRate;		/* pictures a second */
+	uint32_t commandResult;		/* the picture's VideoAvcEncodeResult */
 	uint8_t cabacState[52];		/* the job's, while the helper holds the unit */
 } VideoAvcWriter;
+
+/* what the client is told of a picture encoded (its command's result) */
+typedef struct VideoAvcEncodeResult {
+	uint32_t reserved[5];
+	uint32_t picOrderCnt;		/* twice its frame number */
+} VideoAvcEncodeResult;
 
 /* a writer's noUnit, and the error its job jumps back with: the buffer is full, the stream ended */
 #define WRITER_OVERFLOW		4096
@@ -1193,23 +1206,36 @@ typedef struct VideoAvcWriter {
 #define VIDEO_AVC_NALS		12
 typedef struct VideoAvcNalList {
 	uint8_t count;
-	uint8_t reserved[11];
+	uint8_t pictureType;		/* 4 an IDR picture, 1 not */
+	uint8_t reserved;
+	uint8_t pictureFlags;		/* VIDEO_AVC_PICTURE_* */
+	uint32_t picOrderCnt;
+	uint32_t picOrderCntOutput;
 	uint8_t type[VIDEO_AVC_NALS];
 	uint8_t refIdc[VIDEO_AVC_NALS];
 	uint32_t start[VIDEO_AVC_NALS];
 	uint32_t size[VIDEO_AVC_NALS];
 } VideoAvcNalList;
 
-/* the sequence's parameters, as the client set them */
+/*
+ * The sequence's parameters, as the client set them, after the encoder
+ * engine's own (the engine's memory's second 64 bytes)
+ */
 typedef struct VideoAvcSequence {
-	uint8_t reserved[20];
+	VkThread *thread;		/* the encoder engine's */
+	VkThread *thread2;		/* its stream thread */
+	int32_t id;			/* the codec's */
+	int16_t index;			/* the slot's */
+	uint16_t commandSize;		/* the helper's */
+	uint16_t width;			/* in whole macroblocks */
+	uint16_t height;
 	uint8_t profileIdc;
 	uint8_t levelIdc;
-	uint8_t reserved2;
+	uint8_t parameterSets;		/* 1 before the first picture, 2 before each IDR */
 	uint8_t aspectRatioIdc;		/* 0: no aspect ratio information */
 	uint16_t sarWidth;
 	uint16_t sarHeight;
-	uint8_t reserved3;
+	uint8_t idrAfterFailure;	/* a picture that failed is followed by an IDR */
 	uint8_t frameCropping;
 	uint8_t cropRight;
 	uint8_t cropBottom;
@@ -1219,7 +1245,7 @@ typedef struct VideoAvcSequence {
 	uint32_t nalBitRate;
 	uint32_t vclCpbSize;
 	uint32_t nalCpbSize;
-	uint8_t reserved4;
+	uint8_t initialized;		/* the parameter sets written */
 	uint8_t videoSignalPresent;
 	uint8_t videoFormat;
 	uint8_t videoFullRange;
@@ -1298,11 +1324,15 @@ typedef struct VideoAvcEncodeJob {
 
 /* the encoder's stream as the helper's jobs get it (64 bytes) */
 typedef struct VideoAvcStreamInfo {
-	uint32_t reserved;
+	uint32_t buffer;		/* the stream's, used a half at a time */
 	int32_t size;			/* twice the bytes the unit may write */
 	uint32_t writer;		/* a VideoAvcWriter, 192 bytes */
 	uint32_t nals;			/* a VideoAvcNalList, 192 bytes */
-	uint32_t reserved2[4];
+	uint32_t settings;		/* the sequence's AvcencSequence, 128 bytes */
+	uint32_t interval;		/* the settings' */
+	uint32_t bitRate;
+	uint16_t skipSliceBytes;	/* a skipped picture's: its slices' */
+	uint16_t skipHeaderBytes;	/* and the rest */
 	int8_t groupRows[8];		/* the rows of each group of jobs */
 	uint8_t groups;
 	uint8_t idr;
@@ -1313,6 +1343,13 @@ typedef struct VideoAvcStreamInfo {
 } VideoAvcStreamInfo;
 
 typedef VideoAvcStreamInfo VideoAvcOptions;
+
+/* the picture's flags in its NAL list */
+#define VIDEO_AVC_PICTURE_SKIPPED	0x01	/* replaced by a skipped picture */
+#define VIDEO_AVC_PICTURE_FAILED	0x02	/* and an IDR follows */
+#define VIDEO_AVC_PICTURE_OVER_RATE	0x04	/* the IDR period's pictures took more than the bit rate */
+#define VIDEO_AVC_PICTURE_REPLACED	0x08	/* an IDR follows a skipped picture */
+#define VIDEO_AVC_PICTURE_FIRST		0x10	/* the stream's first picture replaced */
 
 /* a command of the helper's, as the encoder fills it (64 bytes) */
 typedef struct VideoAvcCommand {
@@ -1430,6 +1467,7 @@ void avcdecDecoderInitialize(uint32_t memory, VideoService *service, int32_t ind
 void avcencEncoderThread(uint32_t memory, uint32_t codec);		/* 0x834588 */
 void avcencEncoderEncode(uint32_t memory, uint32_t request);		/* 0x834904 */
 void avcencEncoderInitialize(uint32_t memory, VideoService *service, int32_t index);
+void avcencEncoderSequence(uint32_t memory, uint32_t settings);		/* 0x83482a */
 void avcencStreamThread(uint32_t memory, uint32_t codec);		/* 0x8356b0 */
 void avcencStreamAu(uint32_t memory, uint32_t request);		/* 0x835b8c */
 void avcencStreamInitialize(uint32_t memory, VideoService *service, int32_t index);
@@ -1482,7 +1520,19 @@ void avcencCabacReset(VideoAvcEncodeJob *job, uint32_t value);
 void avcencCabacInit(VideoAvcEncodeJob *job, uint32_t sliceType);
 void avcencCabacSkipped(VideoAvcEncodeJob *job, uint32_t sliceType);
 
+/* application/video/avcencencoder.c: the stream opened for a job and closed after it */
+void avcencStreamOpenEnd(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);
+void avcencStreamBegin(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);
+void avcencStreamEnd(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);
+
 /* application/video/avcencheader.c */
+void avcencWriteSps(const VideoAvcSequence *sequence, const VideoAvcOptions *options,
+	VideoAvcEncodeJob *job);
+void avcencWritePps(const VideoAvcSequence *sequence, const VideoAvcOptions *options,
+	VideoAvcEncodeJob *job);
+void avcencWriteAud(const VideoAvcOptions *options, VideoAvcEncodeJob *job, uint32_t force);
+void avcencWriteSkipSlice(const VideoAvcOptions *options, VideoAvcEncodeJob *job,
+	uint32_t firstMb);
 void avcencWriterBegin(const VideoAvcOptions *options, VideoAvcEncodeJob *job, uint32_t keepBits);
 void avcencCabacZeroWords(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job2);
 void avcencUnitLoad(VideoHelperShared *shared, const VideoAvcStreamInfo *info,
