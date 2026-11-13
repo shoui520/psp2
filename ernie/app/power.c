@@ -275,8 +275,10 @@ unsigned char powerResume(union PowerRequest *request)
 		P1.5 = 0;
 		dly_tsk(1);
 		P1.7 = 1;
+#if FW_SINCE(0x01000306)
 		if (request->bits.notify)
 			set_flg(4, 0x08);
+#endif
 		dly_tsk(1);
 		result = 0;
 		break;
@@ -298,6 +300,7 @@ unsigned char powerOff(void)
 	case 1:
 		setHardwareInfoFlags(0x80);
 		break;
+#if FW_SINCE(0x01000306)
 	case 3:
 		setHardwareInfoFlags(0x40);
 		break;
@@ -306,6 +309,13 @@ unsigned char powerOff(void)
 	default:
 		clearHardwareInfoFlags(0xc0);
 		break;
+#else
+	case 0:
+	case 2:
+	default:
+		clearHardwareInfoFlags(0x80);
+		break;
+#endif
 	}
 	if (configTakeChanged() != 0)
 		powerParamLoad();

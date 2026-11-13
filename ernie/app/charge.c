@@ -25,6 +25,13 @@
 extern void inputChanged(void);
 extern unsigned char input1Bit7Active(void);
 
+/* chargeUpdate's tests of the int helpers: before 0x01000306 they read only the low byte */
+#if FW_SINCE(0x01000306)
+#define CHARGE_TEST(call)	(call)
+#else
+#define CHARGE_TEST(call)	((unsigned char)(call))
+#endif
+
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
 __sreg union PowerStatus powerStatus;
@@ -226,20 +233,20 @@ void chargeUpdate(void)
 		if (state & 0x000c) {
 #if BOARD_CHARGE_TIMER1F
 			if (((configGet()->state.bits.offWakeUnmask22 && chargeFactors.0) ||
-			     chargeControl.0) && chargeMayStart() && !chargeAlarm0On()) {
+			     chargeControl.0) && CHARGE_TEST(chargeMayStart()) && !CHARGE_TEST(chargeAlarm0On())) {
 				chargeTransition(0x16);
 				chargeControl.0 = 0;
 				chargeTimer1fStop();
 			}
 #else
-			if (chargeControl.0 && chargeMayStart() && !chargeAlarm0On()) {
+			if (chargeControl.0 && CHARGE_TEST(chargeMayStart()) && !CHARGE_TEST(chargeAlarm0On())) {
 				chargeTransition(0x16);
 				chargeControl.0 = 0;
 			}
 #endif
 			if (!configGet()->state.bits.chargeHold && (cookieStatus2.byte[1] & 0x0c) == 0x04 &&
 			    !(stateGetWakeMask() & 0x8000) && chargeUsbHold == 0 &&
-			    (!(charge.flags & 0x0004) || chargeMayStart()) &&
+			    (!(charge.flags & 0x0004) || CHARGE_TEST(chargeMayStart())) &&
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 				chargeTransition(0x0f);
 		} else if (state & 0x0020) {
@@ -252,7 +259,7 @@ void chargeUpdate(void)
 			}
 #endif
 		}
-		if (chargeBbmcChanged())
+		if (CHARGE_TEST(chargeBbmcChanged()))
 			chargeSetCurrent();
 		charge.batteryTempC = charge.batteryTemp - 0x0aac;
 		charge.batteryBicTempC = charge.batteryBicTemp - 0x0aac;
@@ -286,12 +293,17 @@ void chargeSetPowerStatus(void)
 	sleepFactorSetStatus3(chargeFactors.0);
 	if (ac != chargeFactors.0) {
 		if (chargeFactors.0) {
+#if !FW_SINCE(0x01000306)
+			charge.acDelay = 10;
+#endif
 			if (!(stateGetWakeMask() & 0x00400000))
 				chargeControl.0 = 1;
 		} else {
 			chargeControl.0 = 0;
 		}
+#if FW_SINCE(0x01000306)
 		chargeSetAcDelay();
+#endif
 		timerStart(TIMER_RTC(0x17), charge.acDelay);
 	}
 	if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && (cookieStatus1.byte[1] & 0xc0) == 0x80)
@@ -691,6 +703,7 @@ void chargeTimer1fStop(void)
 #endif
 }
 
+#if FW_SINCE(0x01000306)
 /* the update's period while the power status's AC is set, or in system states 4, 8 and 0x20 */
 void chargeSetAcDelay(void)
 {
@@ -712,6 +725,7 @@ void chargeSetAcDelay(void)
 		break;
 	}
 }
+#endif
 
 int chargeUsbIs1(void)
 {

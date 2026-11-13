@@ -87,9 +87,8 @@ static const struct UartRegisters uartRegisters[5] = {
 };
 
 static const struct UartConfig uart2Config = { 4, 0x0c, 0x0097 };
-#if !FW_SINCE(0x01000306)
+/* kept from 0x01000306, when nothing reads it any more */
 static const struct UartConfig uart3Config = { 1, 0x11, 0x0097 };
-#endif
 
 static const struct UartBaud uartBauds[4] = {
 	{ 0, 4, 0x19 },

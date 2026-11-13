@@ -75,7 +75,6 @@ static int handshakeLockHandler15(void);
 
 static const unsigned char mode11Check[16];
 static const unsigned char mode11Key1[16];
-static const unsigned char mode11Key2[16];
 static const unsigned char mode15Check1[16];
 static const unsigned char mode15Check2[16];
 static const unsigned char mode15Key1[16];
@@ -84,7 +83,7 @@ static const unsigned char mode15Key3[16];
 
 /* (a mode not found reads past the table, as Sony's does) */
 static const struct HandshakeCrypto handshakeCrypto[HANDSHAKE_MODES] = {
-	{ 0x0b, mode11Key1, mode11Key2, NULL, mode11Check, NULL },
+	{ 0x0b, mode11Key1, (const unsigned char *)randomKey, NULL, mode11Check, NULL },
 	{ 0x0f, mode15Key1, mode15Key2, mode15Key3, mode15Check1, mode15Check2 },
 };
 
@@ -108,8 +107,9 @@ static const unsigned char mode11Check[16] = {
 static const unsigned char mode11Key1[16] = {
 	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
 };
-static const unsigned char mode11Key2[16] = {
-	0xdc, 0x6b, 0x6e, 0xe0, 0xf4, 0x57, 0xdf, 0x0e, 0x7b, 0xad, 0x1c, 0x5e, 0xa3, 0x38, 0x02, 0x7f
+/* mode 0x0b's second key, also the random generator's key */
+const unsigned long randomKey[4] = {
+	0xe06e6bdcUL, 0x0edf57f4UL, 0x5e1cad7bUL, 0x7f0238a3UL
 };
 static const unsigned char mode15Check1[16] = {
 	0xc8, 0x6b, 0x51, 0xfb, 0x01, 0x9a, 0x20, 0x7f, 0x32, 0x11, 0x8e, 0x55, 0x46, 0x2d, 0x50, 0x08

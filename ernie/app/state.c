@@ -466,7 +466,9 @@ static int stateResumeHandle(struct StateEvent *event)
 	case 0x50:
 	case 0x52: case 0x53:
 	case 0x56: case 0x57: case 0x58:
+#if FW_SINCE(0x01000306)
 	case 0x5b:
+#endif
 		stateNext = STATE_OFF;
 		break;
 	case 0x51:

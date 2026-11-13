@@ -14,7 +14,8 @@ a comment; paths are relative to the link file's folder:
   DROP name		every object's segment of that name is left out
   AT address		the location the next segments go to
   SEG name [ALIGN n] [path...]
-			every object's segment of that name not placed yet, in link order
+			every object's segment of that name (or of any of the names joined by |:
+			@@CNSTL|@@FSLCNS) not placed yet, in link order
 			(or only those of the objects named, in that order), one after the other from the
 			location on, each at a multiple of n (default: 2 for a segment the
 			assembler aligns, a P attribute, else 1); the location moves past them
@@ -327,7 +328,7 @@ class Linker:
 				named = {obj.name: obj for obj in self.objects}
 				for obj in [named[n] for n in only] if only else self.objects:
 					for seg in obj.segments():
-						if seg.name.upper() != name or (obj.name, id(seg)) not in pending:
+						if seg.name.upper() not in name.split('|') or (obj.name, id(seg)) not in pending:
 							continue
 						step_align = align or aligned(seg)
 						size = obj.size[id(seg)]

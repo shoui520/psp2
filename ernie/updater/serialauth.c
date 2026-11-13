@@ -17,28 +17,6 @@
 
 #define SERIAL_AUTH_MODES	3
 
-/* An unknown mode falls past the reference updater's table into these ROM pointers. */
-#if ERNIE_HW == 0x00415000 && ERNIE_FW == 0x01000306
-static const unsigned char *serialInvalidPointer(unsigned long value)
-{
-	union {
-		unsigned long value;
-		const unsigned char *pointer;
-	} address;
-
-	address.value = value;
-	return address.pointer;
-}
-
-#define SERIAL_FIRST_KEY(index) ((index) == 0xff ? serialInvalidPointer(0x52a117UL) : firstKeys[index])
-#define SERIAL_SECOND_KEY(index) ((index) == 0xff ? serialInvalidPointer(0xe6c1c3UL) : secondKeys[index])
-#define SERIAL_CHECK(index) ((index) == 0xff ? serialInvalidPointer(0xfc1150UL) : checks[index])
-#else
-#define SERIAL_FIRST_KEY(index) (firstKeys[index])
-#define SERIAL_SECOND_KEY(index) (secondKeys[index])
-#define SERIAL_CHECK(index) (checks[index])
-#endif
-
 /* a mode: its number, its word, and what unlocking and locking it do */
 struct SerialAuthMode {
 	unsigned char	mode;
@@ -186,13 +164,13 @@ unsigned char serialAuthCommand(unsigned char *data)
 		memcpy(serialAuthPacket.header, serialHeader, 4);
 		memcpy(serialAuthPacket.challenge, serialAuth.nonce, 8);
 		memcpy(serialAuthPacket.response, serialAuth.challenge, 8);
-		memcpy(serialAuthPacket.key, SERIAL_CHECK(index), 16);
+		memcpy(serialAuthPacket.key, checks[index], 16);
 		keyResult = serialAuthGetRoundKeys(&roundKeys);
 		if (keyResult == 0) {
 			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)SERIAL_FIRST_KEY(index), (struct AesKey __near *)&key);
+			aesKeyExpansion((const unsigned long *)firstKeys[index], (struct AesKey __near *)&key);
 			aesCbcEncrypt(serialAuthPacket.challenge, serialAuthPacket.challenge,
 				      (struct AesKey __near *)&key, serialIv, 0x20);
 		} else {
@@ -216,7 +194,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)SERIAL_SECOND_KEY(index), (struct AesKey __near *)&key);
+			aesKeyExpansion((const unsigned long *)secondKeys[index], (struct AesKey __near *)&key);
 			aesCbcDecrypt(serialAuthPacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, serialIv, 0x20);
 		} else {

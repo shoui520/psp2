@@ -13,7 +13,6 @@ OBJECT	rtc.c
 OBJECT	task3.c
 OBJECT	input.c
 OBJECT	aes.c
-OBJECT	authkeys.c
 OBJECT	host.c
 OBJECT	request.c
 OBJECT	csi.c
@@ -40,9 +39,14 @@ OBJECT	updatereq.c
 OBJECT	sha1.c
 OBJECT	powerreq.c
 OBJECT	task5.c
+# the serial authentication's keys: their own object, before serialauth.c's tables
+OBJECT	authkeys.c
 OBJECT	serialauth.c
 OBJECT	nvs.c
 OBJECT	power.c
+# the flash library's settings come here in Sony's link: in the constants' page, after
+# power.c's and before uart4.c's (fslConfig fills the page's end before uart4Bauds)
+OBJECT	../lib/fsl.asm
 OBJECT	timer.c
 OBJECT	iica.c
 OBJECT	powerjob.c
@@ -63,13 +67,14 @@ OBJECT	powerwait.c
 OBJECT	state.c
 OBJECT	handshake.c
 OBJECT	serial1op.c
-OBJECT	param.c
 OBJECT	task.c
 OBJECT	config.c
 OBJECT	configreq.c
 OBJECT	watchdog.c
 OBJECT	sysinfo.c
 OBJECT	log.c
+# param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
+OBJECT	param.c
 OBJECT	led.c
 OBJECT	serialreq.c
 OBJECT	snvs.c
@@ -95,7 +100,6 @@ OBJECT	../lib/luband.asm
 OBJECT	../lib/lubor.asm
 OBJECT	../lib/lubxor.asm
 OBJECT	../lib/divuw.asm
-OBJECT	../lib/fsl.asm
 OBJECT	../lib/fslinfo.asm
 OBJECT	../lib/fslwrite.asm
 OBJECT	../lib/fslsecurity.asm
@@ -164,16 +168,22 @@ SEG	@@BASE
 SEG	@@FSLCOD
 SEG	@@LCODE
 SEG	@@FSLOPN
+# the constants start where Sony's do: the code before them is a few bytes shorter than
+# Sony's (handlers that are proven or reviewed, not exact), and the constants' page breaks
+# must fall as Sony's do
+AT	0x0f6f6		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000306
+AT	0x0f692		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x0100010B
+AT	0x0f592		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x01000306
+AT	0x0f6f6		IF ERNIE_HW==0x00414000&&ERNIE_FW==0x01000306
 SEG	@@R_INIT
 SEG	@@R_INIS
-SEG	@@CNSTL
-SEG	@@FSLCNS
+SEG	@@CNSTL|@@FSLCNS
 # the initialised data's values
 SEG	@@RLINIT	cstart.asm
 SEG	@@RLINIT
 # the code, to 0x353ff (the updater's from 0x35400)
 SEG	@@CODEL		IF ERNIE_FW!=0x01000306
-SEG	@@CODEL		main.c tau.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c authkeys.c
+SEG	@@CODEL		main.c tau.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c
 SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c clockout.c csi10.c dma.c
 SEG	@@CODEL		touch.c inputreq.c csi01.c motion.c util.c inputbits.c serial.c adc.c analog.c scratchpad.c
 SEG	@@CODEL		nvsreq.c serial1.c updatereq.c sha1.c powerreq.c task5.c serialauth.c nvs.c power.c timer.c
@@ -185,6 +195,7 @@ SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c trace.c board.c powerseq.c bat
 AT	0x2b48d		IF ERNIE_HW==0x00415000
 AT	0x29ced		IF ERNIE_HW==0x00406000
 SEG	@@CODEL		handshake.c
+SEG	@@CODEL		serial1op.c param.c
 SEG	@@CODEL
 
 # the RAM: kept over a warm start, then the heap, the near data, the flash library's

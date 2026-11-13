@@ -1,6 +1,11 @@
-/* The factory handshake AES-256 round keys, shared by the SPI device and updater. */
+/*
+ * The keys: the serial authentication's (the packet header, the IV and each mode's keys), in
+ * both programs; the updater's own copies of the factory handshake key, the random generator's
+ * key and the handshake's IV (the application keeps those in spidev.c and handshake.c)
+ */
 #include "authkeys.h"
 
+#ifdef ERNIE_UPDATER
 const unsigned long factoryRoundKeys[60] = {
 	0xe61677f4UL, 0xd69f64c5UL, 0xd98f5348UL, 0xd1123d77UL,
 	0x87119e22UL, 0x82d7b137UL, 0xdb0ca8d6UL, 0xc3b9e472UL,
@@ -23,8 +28,6 @@ const unsigned long randomKey[4] = {
 	0xe06e6bdcUL, 0x0edf57f4UL, 0x5e1cad7bUL, 0x7f0238a3UL
 };
 
-/* the application keeps its own copy in handshake.c */
-#ifdef ERNIE_UPDATER
 const unsigned char handshakeIv[16] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };

@@ -242,7 +242,9 @@ unsigned char powerSeqOff(void)
 	sleepFactorSet0(0);
 	sleepFactorSet2(0);
 	sleepFactorSet1(0);
+#if FW_SINCE(0x01000306)
 	sleepFactorSet10(0);
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -274,8 +276,10 @@ unsigned char powerSeqSuspend(void)
 	if (!(elmoStatusMask.reg[0] & 0x10))
 		P95 = 0;
 	sleepFactorSet2(0);
+#if FW_SINCE(0x01000306)
 	sleepFactorSet1(0);
 	sleepFactorSet10(0);
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -494,7 +498,9 @@ unsigned char powerRmrOff(void)
 	unsigned char result;
 	unsigned int mask;
 
+#if FW_SINCE(0x01000306)
 	if (elmoRegAA & 0x8000) {
+#endif
 		mask = elmoRegAA & 0x7fff;
 		elmoCommand[0] = 0xaa;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
@@ -504,9 +510,11 @@ unsigned char powerRmrOff(void)
 			elmoRegAA = mask;
 			powerStartTimer(0x1000, 0x0d, 0x4b);
 		}
+#if FW_SINCE(0x01000306)
 	} else {
 		result = 0;
 	}
+#endif
 	return result;
 }
 

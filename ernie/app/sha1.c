@@ -19,7 +19,7 @@
  */
 #include "ernie.h"
 #include "sha1.h"
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
 #include "util.h"
 #endif
 
@@ -38,7 +38,7 @@ static const unsigned long K[] = {
 /* Local Function Prototypes */
 void SHA1PadMessage(SHA1Context __near *context);
 void SHA1ProcessMessageBlock(SHA1Context __near *context);
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
 void SHA1DebugDump(unsigned long a, unsigned long b, unsigned long c, unsigned long d,
 		   unsigned long e);
 #endif
@@ -180,7 +180,7 @@ void SHA1ProcessMessageBlock(SHA1Context __near *context)
 	context->Message_Block_Index = 0;
 }
 
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
 /* a word as big-endian hex, then a pause */
 #define SHA1DumpWord(word) \
 	do { \
@@ -192,9 +192,9 @@ void SHA1ProcessMessageBlock(SHA1Context __near *context)
 	} while (0)
 
 /*
- * the updater's: the five words of the state as hex lines (crlf and hex, one after the other
- * in the frame), each followed by a pause; nothing sends them (the debug output it was
- * written for is not built), and nothing calls it
+ * the updater's (and the application's before 0x01000306): the five words of the state as hex
+ * lines (crlf and hex, one after the other in the frame), each followed by a pause; nothing
+ * sends them (the debug output it was written for is not built), and nothing calls it
  */
 void SHA1DebugDump(unsigned long a, unsigned long b, unsigned long c, unsigned long d,
 		   unsigned long e)

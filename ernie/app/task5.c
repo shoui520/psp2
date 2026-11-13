@@ -34,7 +34,11 @@ void task5(VP_INT exinf)
 
 	powerDeviceInit();
 	for (;;) {
+#if FW_SINCE(0x01000306)
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
+#else
+		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
+#endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
 				clr_flg(4, ~0x0002);
