@@ -555,7 +555,8 @@ typedef struct VideoAvcMbInfo {
 	uint8_t subMbType[4];
 	int8_t qpDelta;			/* mb_qp_delta */
 	uint8_t reserved2;		/* written 0 */
-	uint8_t reserved3[2];
+	uint8_t qp;			/* the run's first: its QP */
+	uint8_t reserved3;
 	uint32_t cbf;			/* coded_block_flag: luma 4x4 by bit, Cb and Cr AC
 					   by 4 bits from bit 16, luma, Cb and Cr DC at 24 */
 } VideoAvcMbInfo;
@@ -1346,7 +1347,10 @@ typedef struct VideoHelperSlice {
 	int8_t refList[2][18];		/* -1, the pictures' indexes, -1 after */
 	int16_t distScaleFactor[16];	/* temporal direct, by list 0's index */
 	int8_t refIdxOfPicture[18];	/* list 0's index of each picture */
-	uint8_t reserved2[274];
+	uint8_t reserved2[14];
+	uint32_t colocated;		/* the decoder's: RefPicList1[0]'s motion */
+	uint32_t refLuma[2][16];	/* the decoder's: the references' frames */
+	uint32_t refChroma[2][16];
 	union {
 		VideoAvcSliceWeight weights[2][16];	/* explicit: by list and index */
 		int16_t implicitWeight[192];	/* implicit: list 0's weight, by l0 * L1 count + l1 */
@@ -1399,6 +1403,13 @@ void avcencHelperEncode(uint32_t helper, uint32_t argument);		/* 0x86454e */
 #define VIDEO_HELPER_COMMON		9856
 #define VIDEO_HELPER_FIXED		11392
 #define VIDEO_HELPER_SLICE_SIZE		896
+
+/* what the AVC parser engine tells the decoder engine of a picture parsed (a message's word) */
+typedef struct AvcdecParsed {
+	uint8_t valid;
+	uint8_t flush;			/* the stream was flushed */
+	uint8_t pictureInfo[2];		/* the unit's, swapped */
+} AvcdecParsed;
 
 /* the engines: two threads per codec, each entered with its memory and the codec */
 void avcdecParserThread(uint32_t memory, uint32_t codec);		/* 0x824ca0 */

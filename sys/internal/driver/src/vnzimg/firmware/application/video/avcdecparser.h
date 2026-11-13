@@ -252,13 +252,6 @@ typedef struct AvcdecParserInfo {
 	uint32_t reserved2[12];
 } AvcdecParserInfo;
 
-/* what the engine tells the decoder engine of a picture parsed (a message's word) */
-typedef struct AvcdecParsed {
-	uint8_t valid;
-	uint8_t flush;			/* the stream was flushed */
-	uint8_t pictureInfo[2];		/* the unit's, swapped */
-} AvcdecParsed;
-
 /* the engine's header (64 bytes) */
 typedef struct AvcdecParser {
 	int32_t state;			/* PARSER_* */
