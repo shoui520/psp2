@@ -118,15 +118,15 @@ void nvsRequestEvent(FLGPTN ptn)
 			case NVS_JOB_SERVICE:
 				status = nvsGetState();
 				switch (status) {
-				case 0xf0:
+				case NVS_STATE_FAILED:
 					result = nvsFormat();
 					break;
-				case 0x03:
+				case NVS_STATE_FULL:
 					result = nvsMove();
 					if (result == 0x0a)
 						;
 					break;
-				case 0x12:
+				case NVS_STATE_MOVED:
 					result = nvsClean(2);
 					if (result == 0x20)
 						;

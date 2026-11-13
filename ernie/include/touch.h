@@ -6,6 +6,8 @@
 #ifndef ERNIE_TOUCH_H
 #define ERNIE_TOUCH_H
 
+#include "ernie.h"
+
 #define TOUCH_FRAMES		2
 
 /* a panel's part of a frame: its controller's report, then bytes of the touch module's */
@@ -124,7 +126,7 @@ struct TouchBuffer {
 	unsigned char	*data;
 };
 
-/* the link's delays, in NOPs (from the settings block) */
+/* the link's delays, in NOPs (from the settings block; since 0x01000306) */
 struct TouchDelays {
 	unsigned char	select;			/* after a chip select */
 	unsigned char	byte;			/* after each byte */
@@ -146,7 +148,19 @@ extern struct TouchPacket touchCommand;
 extern struct TouchPacket touchReply;
 extern struct Touch touch;
 extern struct TouchBuffer touchBuffer;
+#if FW_SINCE(0x01000306)
 extern struct TouchDelays touchDelays;
+#endif
+
+/* the link's delays, in NOPs: the settings block's since 0x01000306, fixed before, with no
+   delay before a deselect */
+#if FW_SINCE(0x01000306)
+#define TOUCH_DELAY_SELECT	touchDelays.select
+#define TOUCH_DELAY_BYTE	touchDelays.byte
+#else
+#define TOUCH_DELAY_SELECT	40
+#define TOUCH_DELAY_BYTE	3
+#endif
 
 extern void touchClearPanels(void);
 extern void touchOpen(void);
@@ -159,12 +173,14 @@ extern void touchEnable0(void);
 extern void touchDisable0(void);
 extern void touchEnable1(void);
 extern void touchDisable1(void);
+#if FW_SINCE(0x01000306)
 extern unsigned char touchSpiWrite(unsigned int address, unsigned char *data,
 				   unsigned int length, unsigned char panel);
 extern unsigned char touchSpiRead(unsigned int address, unsigned char *data,
 				  unsigned int length, unsigned char panel);
 extern unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
 					unsigned int length, unsigned char panel);
+#endif
 extern unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
 				unsigned char panel);
 extern unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int length,
@@ -204,7 +220,15 @@ extern unsigned char touchStatusOn1(void);
 extern unsigned char touchStatusOff1(void);
 extern unsigned char touchSetGrip0(unsigned char *data);
 extern unsigned char touchSetGrip1(unsigned char *data);
+#if FW_SINCE(0x01000306)
 extern void touchSetFlags(unsigned char flags);
 extern void touchClearFlags(unsigned char flags);
+#else
+/* before 0x01000306 a command does not take the link from the frames (no TOUCH_BUSY), the
+   flags change in place, and a write is not read back */
+#define touchSetFlags(bits)		(touch.flags |= (bits))
+#define touchClearFlags(bits)		(touch.flags &= ~(bits))
+#define touchWriteVerified		touchWrite
+#endif
 
 #endif

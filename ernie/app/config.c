@@ -424,7 +424,9 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.state.value = kept->block.state.value;
 	if (kept->block.start.bits.chargeLedOff)
 		copy->block.state.bits.chargeLedOff = kept->block.start.bits.chargeLedOff;
+#if FW_SINCE(0x01000306)
 	copy->block.offTransitionBlock = kept->block.offTransitionBlock;
+#endif
 	config.bank = to;
 	result = configCommit();
 	return result;

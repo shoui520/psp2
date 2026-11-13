@@ -5,6 +5,8 @@
 #ifndef ERNIE_INPUT_H
 #define ERNIE_INPUT_H
 
+#include "ernie.h"
+
 struct InputKeys {
 	unsigned int	state;		/* the keys held */
 	unsigned int	events;		/* the keys the last scan tick latched for task 3 */
@@ -83,15 +85,19 @@ extern struct InputGroup inputGroup1;
 extern struct PinMonitors pinMonitors;
 extern unsigned char intp11Level;
 extern __sreg unsigned char inputState1;
+#if FW_SINCE(0x01000306)
 extern __near unsigned char holdTicks;
 extern __near unsigned char holdReached;
+#endif
 
 extern void inputProcess(void);
 extern unsigned char button2Keys(void);
 extern void levelMonitor1Poll(void);
 extern void input1Bit7Poll(void);
+#if FW_SINCE(0x01000306)
 extern unsigned char button2HoldReached(unsigned char ticks);
 extern void button2HoldReset(void);
+#endif
 extern void inputScanHold(unsigned int ticks);
 extern void pinMonitor0Enable(unsigned char enable);
 extern void pinMonitor1Enable(unsigned char enable);

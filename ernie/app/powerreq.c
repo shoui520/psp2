@@ -647,7 +647,9 @@ static void powerRequestCtrlLedPwmBlink(void)
 	if (powerRequest.length == 2) {
 		switch (powerRequestData[0]) {
 		case 1:
+#if FW_SINCE(0x01000306)
 			ledSetOff(0);
+#endif
 			switch (powerRequestData[1] & 0x0f) {
 			case 0:
 				if (powerRequestData[1] & 0x80) {
@@ -834,7 +836,9 @@ static void powerRequestCtrlLED(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] & 0x40) {
+#if FW_SINCE(0x01000306)
 			ledSetOff(0);
+#endif
 			if (powerRequestData[0] & 0x80) {
 				powerLedSetMode(POWER_LED_SET_OFF);
 				result = 0;

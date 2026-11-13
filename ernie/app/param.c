@@ -17,11 +17,13 @@ static const unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 0x0c, 0x12,
 };
 
+#if FW_SINCE(0x01000306)
 static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x00, 0x0c, 0x12,
 };
+#endif
 
 struct Param param;
 
@@ -36,7 +38,9 @@ int paramInit(void)
 	param.base = 7;
 	param.adjust = 0;
 	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
+#if FW_SINCE(0x01000306)
 	memcpy(param.pattern2, paramPattern2Default, PARAM_PATTERN_SIZE);
+#endif
 	paramLoad();
 	ena_dsp();
 	return 0;
@@ -95,6 +99,7 @@ void paramGetChargeLevels(struct ChargeLevel *levels)
 	ena_dsp();
 }
 
+#if FW_SINCE(0x01000306)
 void paramGetBase(unsigned char *base)
 {
 	dis_dsp();
@@ -122,3 +127,40 @@ void paramGetPattern2(unsigned char *pattern)
 	memcpy(pattern, param.pattern2, PARAM_PATTERN_SIZE);
 	ena_dsp();
 }
+#else
+/* the Elmo's regulators 0x81-0x84's levels */
+void paramGetLevel0(unsigned char *level)
+{
+	*level = param.levels[0] & 0x3f;
+}
+
+void paramGetLevel1(unsigned char *level)
+{
+	*level = param.levels[1] & 0x3f;
+}
+
+void paramGetLevel2(unsigned char *level)
+{
+	*level = param.levels[2] & 0x3f;
+}
+
+void paramGetLevel3(unsigned char *level)
+{
+	*level = param.levels[3] & 0x3f;
+}
+
+void paramGetBase(unsigned char *base)
+{
+	*base = param.base & 0x3f;
+}
+
+void paramGetAdjust(unsigned char *adjust)
+{
+	*adjust = param.adjust & 0xf0;
+}
+
+void paramGetPattern1(unsigned char *pattern)
+{
+	memcpy(pattern, param.pattern1, PARAM_PATTERN_SIZE);
+}
+#endif

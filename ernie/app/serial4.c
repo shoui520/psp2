@@ -268,6 +268,7 @@ unsigned char serial4Open2(int baud)
 		serial4Close2();
 	uart4Open(baud);
 	serial4Start(2);
+	serial2SetLink(1);
 	serial2SetP71(0);
 	serial4.link = 2;
 	return 0;

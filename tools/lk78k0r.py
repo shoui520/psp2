@@ -24,7 +24,9 @@ a comment; paths are relative to the link file's folder:
 
 Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only when the -D
 definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
-objects and places. An assembly source's `$_IF (NAME==VALUE)` and `$_IF (NAME!=VALUE)` blocks,
+objects and places. `<`, `<=`, `>` and `>=` compare numbers (a firmware version's own places),
+and several conditions joined by `&&` must all hold (`IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306`).
+An assembly source's `$_IF (NAME==VALUE)` and `$_IF (NAME!=VALUE)` blocks,
 each with an optional `$ELSE`, to their `$ENDIF`, are decided the same way (RA78K0R's own
 conditional assembly cannot see a -D definition).
 
@@ -68,6 +70,20 @@ def same(value, text):
 		return value == text
 
 
+def holds(values, name, op, text):
+	"""a condition NAME op VALUE on the -D definitions: == and != as same(), the orderings on
+	numbers"""
+	value = values.get(name)
+	if op == '==':
+		return same(value, text)
+	if op == '!=':
+		return not same(value, text)
+	if value is None:
+		return False
+	a, b = number(value), number(text)
+	return {'<': a < b, '<=': a <= b, '>': a > b, '>=': a >= b}[op]
+
+
 CONDITION = re.compile(r'\s*\$_IF\s*\(\s*(\w+)\s*(==|!=)\s*([^\s)]+)\s*\)\s*(;.*)?$', re.I)
 ELSE = re.compile(r'\s*\$ELSE\s*(;.*)?$', re.I)
 ENDIF = re.compile(r'\s*\$ENDIF\s*(;.*)?$', re.I)
@@ -104,10 +120,11 @@ class LinkFile:
 		for no, line in enumerate(Path(path).read_text().splitlines(), 1):
 			words = line.split('#', 1)[0].split()
 			if len(words) > 2 and words[-2].upper() == 'IF':
-				m = re.fullmatch(r'(\w+)(==|!=)(\S+)', words[-1])
-				if not m:
+				tests = [re.fullmatch(r'(\w+)(==|!=|<=|>=|<|>)(\S+)', t)
+					 for t in words[-1].split('&&')]
+				if not all(tests):
 					raise LinkError(f'{path}:{no}: {line.strip()}')
-				if (same(values.get(m.group(1)), m.group(3))) != (m.group(2) == '=='):
+				if not all(holds(values, *m.groups()) for m in tests):
 					continue
 				words = words[:-2]
 			if not words:

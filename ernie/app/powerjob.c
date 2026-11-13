@@ -36,6 +36,13 @@ unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of elmoRead's device, read at
 unsigned int powerCutReg1;		/* power cut and cleared at a power on */
 unsigned int powerCutReg2;
 
+/* the charge update's period: chargeSetAcDelay's since 0x01000306, 10 before */
+#if FW_SINCE(0x01000306)
+#define POWER_JOB_AC_DELAY()	chargeSetAcDelay()
+#else
+#define POWER_JOB_AC_DELAY()	(charge.acDelay = 10)
+#endif
+
 static void powerJobOn(void);
 static void powerJobResume(void);
 static void powerJobOff(void);
@@ -44,7 +51,9 @@ static void powerJobSuspend(void);
 static void powerJobCut(void);
 static void powerJobOffEnd(void);
 static void powerJobUpdate(void);
+#if FW_SINCE(0x01000306)
 static void powerJobReset(void);
+#endif
 
 /* task 5, event 0x0002 of flag 4: runs the job posted */
 void powerJob(void)
@@ -74,9 +83,11 @@ void powerJob(void)
 	case POWER_JOB_UPDATE:
 		powerJobUpdate();
 		return;
+#if FW_SINCE(0x01000306)
 	case POWER_JOB_RESET:
 		powerJobReset();
 		return;
+#endif
 	}
 }
 
@@ -96,7 +107,7 @@ static void powerJobOn(void)
 	powerSeqInit();
 	powerLedInit();
 	chargeLedInit();
-	timerStart(0x17, 1);
+	timerStart(TIMER_RTC(0x17), 1);
 	powerResumed = 0;
 	powerReady(POWER_JOB_PART);
 }
@@ -120,7 +131,7 @@ static void powerJobResume(void)
 	inputFlag80Later();
 #endif
 	powerRequestInit();
-	chargeSetAcDelay();
+	POWER_JOB_AC_DELAY();
 	task5SetFlag(4, 0x20);
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
@@ -156,20 +167,24 @@ static void powerJobOff(void)
 		powerCookieHold();
 		POWER_JOB_MODE();
 	}
-	chargeSetAcDelay();
+	POWER_JOB_AC_DELAY();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	powerLedSetMode(POWER_LED_SET_ON);
+#if FW_SINCE(0x01000306)
 	ledSetOff(0);
+#endif
 	if (configGet()->state.bits.chargeLedOff)
 		chargeLedSetOff(1);
 	else
 		chargeLedSetOff(0);
+#if FW_SINCE(0x01000306)
 	if (configGet()->state.bits.chargeLedStateOff)
 		chargeLedSetStateOff(1);
 	else
 		chargeLedSetStateOff(0);
+#endif
 	chargeLedSetHost(0);
 	chargeLedSetHostOff(0);
 	chargeLedSetCharging(0);
@@ -185,7 +200,9 @@ static void powerJobShutdown(void)
 	iicaClose();
 	chargeTimerStop();
 	powerLedSetMode(POWER_LED_SET_ON);
+#if FW_SINCE(0x01000306)
 	ledSetOff(0);
+#endif
 	chargeLedSetHost(0);
 	chargeLedSetHostOff(0);
 	chargeLedSetCharging(0);
@@ -203,13 +220,15 @@ static void powerJobSuspend(void)
 	POWER_JOB_MODE();
 	if (!powerLedGetKeep())
 		powerLedSetMode(POWER_LED_SET_ON);
-	chargeSetAcDelay();
+	POWER_JOB_AC_DELAY();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
 	powerCookieHold();
 	chargeLedSetCharging(0);
+#if FW_SINCE(0x01000306)
 	ledSetOff(0);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -249,8 +268,10 @@ static void powerJobUpdate(void)
 	powerReady(POWER_JOB_PART);
 }
 
+#if FW_SINCE(0x01000306)
 static void powerJobReset(void)
 {
 	chargeLedSetCharging(0);
 	powerReady(POWER_JOB_PART);
 }
+#endif

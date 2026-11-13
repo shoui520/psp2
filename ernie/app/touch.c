@@ -38,7 +38,9 @@ struct TouchPacket touchCommand;
 struct TouchPacket touchReply;
 struct Touch touch;
 struct TouchBuffer touchBuffer;
+#if FW_SINCE(0x01000306)
 struct TouchDelays touchDelays;
+#endif
 
 /* forgets both controllers */
 void touchClearPanels(void)
@@ -78,9 +80,11 @@ void touchOpen(void)
 	touchBuffer.end = 0;
 	touchBuffer.data = touchBufferData;
 	memset(&touchCommand, 0, sizeof(touchCommand));
+#if FW_SINCE(0x01000306)
 	touchDelays.select = configGet()->touchDelaySelect;
 	touchDelays.byte = configGet()->touchDelayByte;
 	touchDelays.deselect = configGet()->touchDelayDeselect;
+#endif
 }
 
 void touchClose(void)
@@ -122,7 +126,11 @@ void touchStartFrame(void)
 	unsigned char next;
 	struct Csi10Transfer transfer;
 
+#if FW_SINCE(0x01000306)
 	if (csi10GetState() == CSI10_OPEN && !(touch.flags & TOUCH_BUSY)) {
+#else
+	if (csi10GetState() == CSI10_OPEN) {
+#endif
 		if (touch.flags & TOUCH_PANEL1) {
 			P0.0 = 0;
 			transfer.state = CSI10_COMMAND1;
@@ -159,7 +167,11 @@ void touchStartFrameNoLock(void)
 	unsigned char next;
 	struct Csi10Transfer transfer;
 
+#if FW_SINCE(0x01000306)
 	if (csi10GetState() == CSI10_OPEN && !(touch.flags & TOUCH_BUSY)) {
+#else
+	if (csi10GetState() == CSI10_OPEN) {
+#endif
 		if (touch.flags & TOUCH_PANEL1) {
 			P0.0 = 0;
 			transfer.state = CSI10_COMMAND1;
@@ -222,6 +234,7 @@ void touchDisable1(void)
 	touchClearFrames1();
 }
 
+#if FW_SINCE(0x01000306)
 /* writes length bytes at a controller's address, on the link the caller has taken: 0, 1 for
    no such panel, 2 if the transfer does not end */
 unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned int length,
@@ -387,6 +400,93 @@ unlock:
 	touchClearFlags(TOUCH_BUSY);
 	return result;
 }
+#else
+/* takes the link and writes: 0, 1 for no such panel, 2 if the link stays busy or the transfer
+   does not end */
+unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
+			 unsigned char panel)
+{
+	struct Csi10Transfer transfer;
+	unsigned char retry;
+
+	retry = 10;
+	while (csi10GetState() != CSI10_OPEN) {
+		if (retry-- == 0)
+			goto busy;
+		dly_tsk(1);
+	}
+	touchCommand.address = address * 2;
+	memcpy(touchCommand.data, data, length);
+	if (panel == 0)
+		P0.1 = 0;
+	else if (panel == 1)
+		P0.0 = 0;
+	else
+		return 1;
+	touchDelaySelect();
+	transfer.receive = (unsigned char *)&touchReply;
+	transfer.receiveCount = 0;
+	transfer.send = (unsigned char *)&touchCommand;
+	transfer.sendCount = length + 2;
+	transfer.state = CSI10_TRANSFER;
+	csi10Transfer(&transfer);
+	retry = 0xff;
+	do {
+		if (csi10GetState() == CSI10_DONE) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			csi10Release();
+			return 0;
+		}
+	} while (retry-- != 0);
+busy:
+	return 2;
+}
+
+unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int length,
+			unsigned char panel)
+{
+	struct Csi10Transfer transfer;
+	unsigned char retry;
+
+	retry = 10;
+	while (csi10GetState() != CSI10_OPEN) {
+		if (retry-- == 0)
+			goto busy;
+		dly_tsk(1);
+	}
+	touchCommand.address = address * 2 | TOUCH_READ;
+	if (panel == 0)
+		P0.1 = 0;
+	else if (panel == 1)
+		P0.0 = 0;
+	else
+		return 1;
+	touchDelaySelect();
+	transfer.receive = (unsigned char *)&touchReply;
+	transfer.receiveCount = length + 2;
+	transfer.send = (unsigned char *)&touchCommand;
+	transfer.sendCount = 2;
+	transfer.state = CSI10_TRANSFER;
+	csi10Transfer(&transfer);
+	retry = 0xff;
+	do {
+		if (csi10GetState() == CSI10_DONE) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			memcpy(data, touchReply.data, length);
+			csi10Release();
+			return 0;
+		}
+	} while (retry-- != 0);
+busy:
+	return 2;
+}
+#endif
 
 /* reads panel 0's information block, and its object table when its firmware changed */
 void touchIdentify0(void)
@@ -672,7 +772,7 @@ void touchDelaySelect(void)
 {
 	unsigned char i;
 
-	for (i = 0; i < touchDelays.select; i++)
+	for (i = 0; i < TOUCH_DELAY_SELECT; i++)
 		NOP();
 }
 
@@ -985,6 +1085,7 @@ unsigned char touchSetGrip1(unsigned char *data)
 	return result;
 }
 
+#if FW_SINCE(0x01000306)
 void touchSetFlags(unsigned char flags)
 {
 	DI();
@@ -998,3 +1099,4 @@ void touchClearFlags(unsigned char flags)
 	touch.flags &= ~flags;
 	EI();
 }
+#endif

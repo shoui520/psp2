@@ -66,11 +66,24 @@ static struct {
 	unsigned int	frameEnd;	/* TCR02 at the end of the last frame */
 	unsigned int	frameStart;	/* TCR02 at the start of this one */
 	unsigned int	busyTime;	/* the frames' time since the link was last idle */
+#if FW_SINCE(0x01000306)
 	unsigned int	busyLimit;	/* the busy time before a pause */
 	unsigned int	idleLimit;	/* the idle time that clears the busy time */
 	unsigned int	pause;		/* the pause, in ticks */
+#endif
 	unsigned char	streaming;	/* a stream's answer goes on in the next frame */
 } hostThrottle;
+
+/* before 0x01000306 the limits are fixed (later the configuration's, with these defaults) */
+#if FW_SINCE(0x01000306)
+#define HOST_BUSY_LIMIT		hostThrottle.busyLimit
+#define HOST_IDLE_LIMIT		hostThrottle.idleLimit
+#define HOST_PAUSE		hostThrottle.pause
+#else
+#define HOST_BUSY_LIMIT		1250L
+#define HOST_IDLE_LIMIT		62
+#define HOST_PAUSE		1
+#endif
 
 unsigned char hostCommandNull(unsigned char *out, unsigned char *length);
 unsigned char hostCommandSleepFactor(unsigned char *out, unsigned char *length);
@@ -195,9 +208,11 @@ int hostInit(void)
 	hostThrottle.frameStart = 0;
 	hostThrottle.busyTime = 0;
 	hostThrottle.streaming = 0;
+#if FW_SINCE(0x01000306)
 	hostThrottle.busyLimit = configGet()->hostBusyLimit;
 	hostThrottle.idleLimit = configGet()->hostIdleLimit;
 	hostThrottle.pause = configGet()->hostPause;
+#endif
 	tau0PowerOn();
 	TMR02 = 0x8000;
 	TDR02 = 0xffff;
@@ -268,11 +283,15 @@ int hostStep(FLGPTN flgptn)
 		clr_flg(1, ~0x0001);
 		hostThrottle.frameStart = TCR02;
 		idle = hostThrottle.frameEnd - hostThrottle.frameStart;
-		if (hostThrottle.idleLimit < idle)
+		if (HOST_IDLE_LIMIT < idle)
 			hostThrottle.busyTime = 0;
-		if (hostThrottle.busyLimit < hostThrottle.busyTime) {
+#if FW_SINCE(0x01000306)
+		if (HOST_BUSY_LIMIT < hostThrottle.busyTime) {
+#else
+		if (hostThrottle.busyTime > HOST_BUSY_LIMIT) {
+#endif
 			if (hostThrottle.streaming == 0) {
-				dly_tsk(hostThrottle.pause);
+				dly_tsk(HOST_PAUSE);
 				hostThrottle.frameStart = TCR02;
 				hostThrottle.busyTime = 0;
 			}

@@ -96,9 +96,9 @@ void bbmcInit(void)
 	handler.handler = bbmcPostLinkTimeout;
 	result = timerSetHandler(0x13, &handler);
 	handler.handler = bbmcPostStart;
-	result = timerSetHandler(0x15, &handler);
+	result = timerSetHandler(TIMER_RTC(0x15), &handler);
 	handler.handler = bbmcPostMode;
-	result = timerSetHandler(0x19, &handler);
+	result = timerSetHandler(TIMER_RTC(0x19), &handler);
 	bbmc.lastSequence = 0;
 	bbmc.repeats = 0;
 	bbmc.rxLength = 0;
@@ -138,7 +138,7 @@ unsigned char bbmcPowerOn(void)
 		break;
 	default:
 		timerStart(0x13, 5000);
-		timerStart(0x15, 0xa0);
+		timerStart(TIMER_RTC(0x15), 0xa0);
 		break;
 	}
 	bbmc.repeats = 0;
@@ -158,7 +158,7 @@ unsigned char bbmcPowerOff(void)
 	bbmc.state = 1;
 	bbmc.transition = 0;
 	timerStop(0x13);
-	timerStop(0x15);
+	timerStop(TIMER_RTC(0x15));
 	bbmcWriteRegs(3, 1, bbmcZero12, BBMC_WRITE_RESET);
 	bbmcWriteRegs(6, 0x10, bbmcZero16, BBMC_WRITE_RESET);
 	bbmcWriteRegs(0x18, 0x0c, bbmcZero12, BBMC_WRITE_RESET);
@@ -195,7 +195,7 @@ unsigned char bbmcStart(void)
 		P125 = 1;
 		bbmc.state = 3;
 		powerSleep(100);
-		timerStart(0x19, 0x14);
+		timerStart(TIMER_RTC(0x19), 0x14);
 		break;
 	case 6:
 	case 7:

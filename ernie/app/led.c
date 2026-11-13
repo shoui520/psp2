@@ -24,11 +24,26 @@ static void chargeLedBlinkStop(void);
 static void chargeLedBlinkStart(unsigned char onTime, unsigned char offTime,
 				unsigned char count);
 
+#if FW_SINCE(0x01000306)
 static const struct LedPattern ledPatternDefault = {
 	{ 0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0x01 },
 	{ 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 0x00 },
 	0x0c, 0x12,
 };
+#else
+/* before 0x01000306 pattern 2 is this one, not the parameter block's */
+static const struct LedPattern ledPattern2Default = {
+	{ 0x00, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 0x01 },
+	{ 0x01, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 0x00 },
+	0x04, 0x0a,
+};
+
+static const struct LedPattern ledPatternDefault = {
+	{ 0x00, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 0x01 },
+	{ 0x01, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 0x00 },
+	0x08, 0x0a,
+};
+#endif
 
 static struct LedPattern powerLedPattern;	/* a pattern of the parameter block */
 static struct LedBlink chargeLedBlink;
@@ -87,8 +102,10 @@ void chargeLedInit(void)
 	leds.charge.mode = CHARGE_LED_AUTO;
 	if (configGet()->state.bits.chargeLedOff)
 		chargeLedSetOff(1);
+#if FW_SINCE(0x01000306)
 	if (configGet()->state.bits.chargeLedStateOff)
 		chargeLedSetStateOff(1);
+#endif
 	chargeLedUpdate();
 }
 
@@ -101,6 +118,7 @@ void chargeLedSetOff(unsigned char on)
 	task5SetFlag(4, 0x0800);
 }
 
+#if FW_SINCE(0x01000306)
 void chargeLedSetStateOff(unsigned char on)
 {
 	if (on == 1)
@@ -109,6 +127,7 @@ void chargeLedSetStateOff(unsigned char on)
 		leds.charge.request.bits.stateOff = 0;
 	task5SetFlag(4, 0x0800);
 }
+#endif
 
 void chargeLedSetBlink(unsigned char on)
 {
@@ -167,13 +186,21 @@ void powerLedSetAlarm(unsigned char on)
 /* one fade, then off */
 void powerLedFadeOff(void)
 {
+#if FW_SINCE(0x01000306)
 	leds.power.request.value = (leds.power.request.value & 0xfd) | 0x41;
+#else
+	leds.power.request.value = (leds.power.request.value & 0xa0) | 0x41;
+#endif
 }
 
 /* one fade, then on */
 void powerLedFadeOn(void)
 {
+#if FW_SINCE(0x01000306)
 	leds.power.request.value = (leds.power.request.value & 0xfe) | 0x42;
+#else
+	leds.power.request.value = (leds.power.request.value & 0xa0) | 0x42;
+#endif
 }
 
 void powerLedSetKeep(unsigned char keep)
@@ -217,6 +244,7 @@ void powerLedSetMode(unsigned char mode)
 	task5SetFlag(4, 0x0800);
 }
 
+#if FW_SINCE(0x01000306)
 /* both LEDs off */
 void ledSetOff(unsigned char on)
 {
@@ -229,6 +257,7 @@ void ledSetOff(unsigned char on)
 	}
 	task5SetFlag(4, 0x0800);
 }
+#endif
 
 static void chargeLedBlinkStop(void)
 {
@@ -254,6 +283,7 @@ void chargeLedUpdate(void)
 	unsigned char onTime;
 	unsigned char offTime;
 	unsigned char charging;
+#if FW_SINCE(0x01000306)
 	unsigned int state;
 
 	state = stateGet();
@@ -265,6 +295,15 @@ void chargeLedUpdate(void)
 	if ((leds.charge.request.value & CHARGE_LED_REQUEST_OFF) ||
 	    ((leds.charge.request.value & CHARGE_LED_REQUEST_STATE_OFF) && (state & 0x0020)))
 		mode = CHARGE_LED_OFF;
+#else
+	if ((cookieStatus2.byte[1] & 0x0c) == 0x04 &&
+	    ((leds.charge.request.value & CHARGE_LED_REQUEST_CHARGING) || (stateGet() & 0x0004)))
+		charging = 1;
+	else
+		charging = 0;
+	if (leds.charge.request.value & CHARGE_LED_REQUEST_OFF)
+		mode = CHARGE_LED_OFF;
+#endif
 	else {
 		switch (leds.charge.mode) {
 		case CHARGE_LED_AUTO:
@@ -347,8 +386,10 @@ void powerLedUpdate(void)
 	mode = leds.power.mode;
 	if (leds.power.request.value & POWER_LED_REQUEST_ALARM)
 		mode = POWER_LED_ON;
+#if FW_SINCE(0x01000306)
 	else if (leds.power.request.value & POWER_LED_REQUEST_ALL_OFF)
 		mode = POWER_LED_OFF;
+#endif
 	else if (leds.power.request.value & POWER_LED_REQUEST_PATTERN1)
 		mode = POWER_LED_PATTERN1;
 	else if (leds.power.request.value & POWER_LED_REQUEST_PATTERN2)
@@ -400,10 +441,12 @@ static void powerLedFadeHoldExpire(void)
 	task5SetFlag(4, 0x0200);
 }
 
+#if FW_SINCE(0x01000306)
 static void powerLedFadeStepExpire(void)
 {
 	task5SetFlag(4, 0x0200);
 }
+#endif
 
 void powerLedInit(void)
 {
@@ -415,17 +458,22 @@ void powerLedInit(void)
 	powerLedFade.steps = &powerLedPattern;
 	powerLedFade.status = 0;
 	powerLedFade.keep = 0;
+#if FW_SINCE(0x01000306)
 	powerLedFade.step = 0;
+#endif
 	handler.handler = powerLedFadeHoldExpire;
 	timerSetHandler(POWER_LED_HOLD_TIMER, &handler);
+#if FW_SINCE(0x01000306)
 	handler.handler = powerLedFadeStepExpire;
 	timerSetHandler(POWER_LED_STEP_TIMER, &handler);
+#endif
 	leds.power.request.value = 0;
 	leds.power.shown.value = 0;
 	leds.power.mode = POWER_LED_NONE;
 	powerLedUpdate();
 }
 
+#if FW_SINCE(0x01000306)
 /* task 5's (flag 0x0200): the fade's next step, or a hold */
 void powerLedFadeStep(void)
 {
@@ -492,6 +540,51 @@ void powerLedFadeStep(void)
 		}
 	}
 }
+#else
+/* task 5's (flag 0x0200): a whole fade, out or in, then the hold */
+void powerLedFadeStep(void)
+{
+	unsigned char step;
+
+	if (powerLedFade.active != 0) {
+		if (powerLedFade.phase == LED_FADE_IN_NEXT) {
+			step = 16;
+			do {
+				step--;
+				if (powerLedFade.steps->fadeIn[step] != 0) {
+					powerLedSetBrightness(15 - step);
+					dly_tsk(LED_STEP_TICKS(powerLedFade.steps->fadeIn[step]));
+				}
+			} while (step != 0);
+			powerLedFade.phase = LED_FADE_START;
+			if ((leds.power.request.value & POWER_LED_REQUEST_ONCE) &&
+			    (leds.power.request.value & POWER_LED_REQUEST_ON)) {
+				leds.power.request.value &= ~POWER_LED_REQUEST_ONCE;
+				task5SetFlag(4, 0x0800);
+				powerRequestLedDone();
+				return;
+			}
+			timerStart(POWER_LED_HOLD_TIMER, powerLedFade.steps->holdOn);
+		} else {
+			for (step = 0; step < 16; step++) {
+				if (powerLedFade.steps->fadeOut[step] != 0) {
+					powerLedSetBrightness(15 - step);
+					dly_tsk(LED_STEP_TICKS(powerLedFade.steps->fadeOut[step]));
+				}
+			}
+			powerLedFade.phase = LED_FADE_IN_NEXT;
+			if ((leds.power.request.value & POWER_LED_REQUEST_ONCE) &&
+			    (leds.power.request.value & POWER_LED_REQUEST_OFF)) {
+				leds.power.request.value &= ~POWER_LED_REQUEST_ONCE;
+				task5SetFlag(4, 0x0800);
+				powerRequestLedDone();
+				return;
+			}
+			timerStart(POWER_LED_HOLD_TIMER, powerLedFade.steps->holdOff);
+		}
+	}
+}
+#endif
 
 /* 0: no fade, 1 and 2: the parameter block's patterns, 3: ledPatternDefault */
 void powerLedFadeStart(unsigned char pattern)
@@ -504,8 +597,12 @@ void powerLedFadeStart(unsigned char pattern)
 			powerLedFade.steps = &powerLedPattern;
 			break;
 		case 2:
+#if FW_SINCE(0x01000306)
 			paramGetPattern2((unsigned char *)&powerLedPattern);
 			powerLedFade.steps = &powerLedPattern;
+#else
+			powerLedFade.steps = (struct LedPattern *)&ledPattern2Default;
+#endif
 			break;
 		case 3:
 			powerLedFade.steps = (struct LedPattern *)&ledPatternDefault;
@@ -517,7 +614,9 @@ void powerLedFadeStart(unsigned char pattern)
 		task5SetFlag(4, 0x0200);
 	} else {
 		timerStop(POWER_LED_HOLD_TIMER);
+#if FW_SINCE(0x01000306)
 		timerStop(POWER_LED_STEP_TIMER);
+#endif
 		powerLedSetPwm(0);
 		powerLedSetBrightness(0);
 		powerLedFade.active = 0;

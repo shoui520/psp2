@@ -128,7 +128,9 @@ void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
 void input1Bit7Changed(void);
 void inputNone(void);
+#if FW_SINCE(0x01000306)
 unsigned char button2HoldDone(void);
+#endif
 
 unsigned int inputReserved;
 unsigned char scanCount;			/* the scan's ticks */
@@ -167,8 +169,10 @@ __sreg unsigned char inputState3;
 
 __near struct ButtonPress buttonPress1;		/* pin monitor 0 (P11.5) */
 __near struct ButtonPress buttonPress2;		/* pin monitor 1 (P4.6) */
+#if FW_SINCE(0x01000306)
 __near unsigned char holdTicks;			/* RTC ticks P4.6 held with P11.5 */
 __near unsigned char holdReached;		/* holdTicks reached buttonPress2.time2 + 1 */
+#endif
 
 void inputInit(void)
 {
@@ -316,7 +320,7 @@ void inputInit(void)
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
 	timerSetHandler(3, &timer);
-	timerSetHandler(0x16, &timer);
+	timerSetHandler(TIMER_RTC(0x16), &timer);
 }
 
 void inputResumePrepare(void)
@@ -406,7 +410,7 @@ void inputStateShutdown(void)
 	levelMonitor1Start();
 	inputShutdownMark();
 	timerStop(3);
-	timerStop(0x16);
+	timerStop(TIMER_RTC(0x16));
 }
 
 void inputCut(void)
@@ -821,7 +825,9 @@ void button2Held(void)
 {
 	unsigned int state;
 	unsigned char value;
+#if FW_SINCE(0x01000306)
 	union PowerRequest mode;
+#endif
 
 	buttonPress2.count++;
 	state = stateGet();
@@ -840,19 +846,30 @@ void button2Held(void)
 		switch (buttonPress2.keys) {
 		case 1:
 		case 2:
+#if FW_SINCE(0x01000306)
 			mode = *stateGetWakeupFactor();
 			if (buttonPress2.count == buttonPress2.time1) {
 				if (state != button2State() && !mode.bits.notify &&
 				    !configGet()->pressAnyState) {
+#else
+			if (buttonPress2.count == buttonPress2.time1) {
+				if (state != button2State() && !configGet()->pressAnyState) {
+#endif
 					button2SetState(0);
 					return;
 				}
 				buttonPress2.result = buttonPress2.keys;
 				stateTransition(0x14);
 				pinMonitor1Enable(1);
+#if FW_SINCE(0x01000306)
 			} else if (buttonPress2.count == buttonPress2.time2 || button2HoldDone()) {
 				if (state != button2State() && state != 0x0008 && !mode.bits.notify &&
 				    !configGet()->pressAnyState) {
+#else
+			} else if (buttonPress2.count == buttonPress2.time2) {
+				if (state != button2State() && state != 0x0008 &&
+				    !configGet()->pressAnyState) {
+#endif
 					button2SetState(0);
 					return;
 				}
@@ -1256,7 +1273,7 @@ void inputScanHold(unsigned int ticks)
 {
 	DI();
 	if (inputScan.hold < ticks) {
-		timerStop(0x16);
+		timerStop(TIMER_RTC(0x16));
 		inputScan.hold = ticks;
 		timerStart(3, 1);
 	}
@@ -1281,7 +1298,7 @@ void inputScanTimer(void)
 		inputScan.hold--;
 		timerStart(3, 1);
 	} else if (inputScan.mode == 2) {
-		timerStart(0x16, inputScan.interval);
+		timerStart(TIMER_RTC(0x16), inputScan.interval);
 	} else {
 		timerStart(3, inputScan.interval);
 	}
@@ -1409,7 +1426,7 @@ void inputScanMode1(unsigned int interval)
 {
 	DI();
 	if (inputScan.mode != 1) {
-		timerStop(0x16);
+		timerStop(TIMER_RTC(0x16));
 		inputScan.mode = 1;
 		inputScan.interval = interval;
 		inputScan.hold = 0;
@@ -1427,7 +1444,7 @@ void inputScanMode2(unsigned int interval)
 		timerStop(3);
 		inputScan.mode = 2;
 		inputScan.interval = interval;
-		timerStart(0x16, interval);
+		timerStart(TIMER_RTC(0x16), interval);
 	}
 	EI();
 	return;
@@ -1445,6 +1462,7 @@ void inputChanged(void)
 	return;
 }
 
+#if FW_SINCE(0x01000306)
 unsigned char button2HoldReached(unsigned char ticks)
 {
 	return ticks == buttonPress2.time2 + 1;
@@ -1464,3 +1482,4 @@ void button2HoldReset(void)
 	paramRead(0x2f, 1, &value);
 	buttonPress2.time2 = value >= 4 ? value : 3;
 }
+#endif

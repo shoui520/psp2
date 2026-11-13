@@ -7,9 +7,13 @@
 #ifndef ERNIE_LED_H
 #define ERNIE_LED_H
 
-#define CHARGE_LED_TIMER	0x18	/* the charge LED's blink */
+#include "ernie.h"
+
+#define CHARGE_LED_TIMER	TIMER_RTC(0x18)	/* the charge LED's blink */
+#if FW_SINCE(0x01000306)
 #define POWER_LED_STEP_TIMER	0x14	/* a fade's step */
-#define POWER_LED_HOLD_TIMER	0x1c	/* the hold between two fades */
+#endif
+#define POWER_LED_HOLD_TIMER	TIMER_RTC(0x1c)	/* the hold between two fades */
 
 /* the charge LED's modes */
 #define CHARGE_LED_AUTO		0	/* the Cookie lights it while charging */
@@ -17,9 +21,13 @@
 #define CHARGE_LED_HOST		2	/* the Cookie's register 3 bit 0: the host's setting */
 #define CHARGE_LED_BLINK	3
 
-/* the charge LED's requests that put it off */
+/* the charge LED's requests that put it off (before 0x01000306 there is no ledSetOff) */
+#if FW_SINCE(0x01000306)
 #define CHARGE_LED_OFFS		(CHARGE_LED_REQUEST_ALL_OFF | CHARGE_LED_REQUEST_HOST_OFF | \
 				 CHARGE_LED_REQUEST_RELEASED)
+#else
+#define CHARGE_LED_OFFS		(CHARGE_LED_REQUEST_HOST_OFF | CHARGE_LED_REQUEST_RELEASED)
+#endif
 
 /* the power LED's modes */
 #define POWER_LED_ON		0
@@ -62,7 +70,9 @@ struct LedFade {
 	unsigned char	status;			/* read by powerLedGetStatus only */
 	struct LedPattern *steps;
 	unsigned char	keep;			/* the host's: the mode kept at a resume */
+#if FW_SINCE(0x01000306)
 	unsigned char	step;			/* the step in the fade */
+#endif
 };
 
 /* a fade's phases */
@@ -72,6 +82,9 @@ struct LedFade {
 #define LED_FADE_IN_START	3
 #define LED_FADE_IN		4
 #define LED_FADE_IN_DONE	5	/* then the hold on */
+/* before 0x01000306 task 5 runs a fade whole, waiting between its steps: out at
+   LED_FADE_START, then in at LED_FADE_IN_NEXT */
+#define LED_FADE_IN_NEXT	1
 
 /* the charge LED's requests */
 union ChargeLedRequest {
@@ -148,7 +161,9 @@ struct Leds {
 extern void chargeLedBlinkUpdate(void);
 extern void chargeLedInit(void);
 extern void chargeLedSetOff(unsigned char on);
+#if FW_SINCE(0x01000306)
 extern void chargeLedSetStateOff(unsigned char on);
+#endif
 extern void chargeLedSetBlink(unsigned char on);
 extern void chargeLedSetHost(unsigned char on);
 extern void chargeLedSetHostOff(unsigned char on);
@@ -160,7 +175,9 @@ extern void powerLedFadeOn(void);
 extern void powerLedSetKeep(unsigned char keep);
 extern unsigned char powerLedGetKeep(void);
 extern void powerLedSetMode(unsigned char mode);
+#if FW_SINCE(0x01000306)
 extern void ledSetOff(unsigned char on);
+#endif
 extern void chargeLedUpdate(void);
 extern void powerLedUpdate(void);
 extern void ledUpdate(void);

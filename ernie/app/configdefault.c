@@ -80,9 +80,15 @@ const struct ConfigBank configDefault = {
 		0x0b, 0x08,	/* reserved22, voltageTrim */
 		{ 0x05, 0x07, 0x00, 0x00 },	/* reserved7 */
 #endif
+#if FW_SINCE(0x01000306)
 		{ 0x03127e01, 0xfc2001fc, 0x001c6201, 0xfc221890 },	/* wakeMasks0-2: off, on, */
 		{ 0x03125e01, 0xfc2021fc, 0x001c4201, 0xfc223890 },	/* suspendOff, suspendOn */
 		{ 0x03121e00, 0xfc2061fc, 0x001c0201, 0xfc227890 },
+#else
+		{ 0x00127e01, 0xff2001fc, 0x001c6201, 0xff221890 },	/* wakeMasks0-2: off, on, */
+		{ 0x00125e01, 0xff2021fc, 0x001c4201, 0xff223890 },	/* suspendOff, suspendOn */
+		{ 0x00121e00, 0xff2061fc, 0x001c0201, 0xff227890 },
+#endif
 		0x01,		/* wlanLine */
 		{ 0x00, 0x00, 0x00 },	/* reserved31 */
 		{	/* chargeAlarmLimits: high, low, holdOn, holdOff, bicTemp */
@@ -117,12 +123,14 @@ const struct ConfigBank configDefault = {
 		{ 0x0000 },	/* state */
 		0x0258,	/* chargeTimer1fDelay */
 		0x60, 0x60,	/* batterySetting4x, batterySetting5x */
+#if FW_SINCE(0x01000306)
 		0x28, 0x08, 0x00,	/* touchDelaySelect, touchDelayByte, touchDelayDeselect */
 		0x03, 0x02, 0x00,	/* touchWriteTries, touchWriteReads, reserved6 */
 		0x04e2, 0x003e, 0x0001,	/* hostBusyLimit, hostIdleLimit, hostPause */
 		{ 0x5f, 0x5f, 0x5f, 0x5f, 0x08, 0x05 },	/* reserved28 */
 		0x5aa5,	/* offTransitionBlock */
 		1, 0,	/* offTransition18, reserved29 */
+#endif
 		{ 0 }	/* reserved30 */
 	}
 };

@@ -74,7 +74,7 @@ void systemInit(void)
 	taskClearPending(-1);
 	taskSetPending(1);
 	timer.handler = stateCheck;
-	timerSetHandler(0x1a, &timer);
+	timerSetHandler(TIMER_RTC(0x1a), &timer);
 	versionInit();
 	cause = getResetCause() & 0xf0;
 #if BOARD_DL_SCRATCHPAD

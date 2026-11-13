@@ -67,15 +67,15 @@ int snvsRead(unsigned char *data, unsigned char *answer)
 		key.nk = 4;
 		key.nb = 4;
 		aesKeyExpansion((const unsigned long *)handshakeKey, (struct AesKey __near *)&key);
-		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)snvsBuffer,
+		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)packet,
 			      (struct AesKey __near *)&key, handshakeIv, 0x10);
 		result = snvsCheck(packet, 0x10);
 		if (result == 0) {
-			result = nvsRead(packet->offset, packet->size, snvsBuffer + 0x0e, 0);
-			checksum = snvsChecksum(snvsBuffer, 0x2e);
-			snvsBuffer[0x2e] = checksum;
-			snvsBuffer[0x2f] = checksum >> 8;
-			aesCbcEncrypt((const unsigned char __near *)snvsBuffer, (unsigned char __near *)answer,
+			result = nvsRead(packet->offset, packet->size, (unsigned char *)packet + 0x0e, 0);
+			checksum = snvsChecksum((unsigned char *)packet, 0x2e);
+			((unsigned char *)packet)[0x2e] = checksum;
+			((unsigned char *)packet)[0x2f] = *((unsigned char *)&checksum + 1);
+			aesCbcEncrypt((const unsigned char __near *)packet, (unsigned char __near *)answer,
 				      (struct AesKey __near *)&key, handshakeIv, 0x30);
 		}
 	}
@@ -101,15 +101,15 @@ int snvsWrite(unsigned char *data, unsigned char *answer)
 		key.nk = 4;
 		key.nb = 4;
 		aesKeyExpansion((const unsigned long *)handshakeKey, (struct AesKey __near *)&key);
-		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)snvsBuffer,
+		aesCbcDecrypt((const unsigned char __near *)data, (unsigned char __near *)packet,
 			      (struct AesKey __near *)&key, handshakeIv, 0x30);
 		result = snvsCheck(packet, 0x30);
 		if (result == 0) {
-			result = nvsWrite(packet->offset, packet->size, snvsBuffer + 0x0e, 0);
-			checksum = snvsChecksum(snvsBuffer, 0x0e);
-			snvsBuffer[0x0e] = checksum;
-			snvsBuffer[0x0f] = checksum >> 8;
-			aesCbcEncrypt((const unsigned char __near *)snvsBuffer, (unsigned char __near *)answer,
+			result = nvsWrite(packet->offset, packet->size, (unsigned char *)packet + 0x0e, 0);
+			checksum = snvsChecksum((unsigned char *)packet, 0x0e);
+			((unsigned char *)packet)[0x0e] = checksum;
+			((unsigned char *)packet)[0x0f] = *((unsigned char *)&checksum + 1);
+			aesCbcEncrypt((const unsigned char __near *)packet, (unsigned char __near *)answer,
 				      (struct AesKey __near *)&key, handshakeIv, 0x10);
 		}
 	}

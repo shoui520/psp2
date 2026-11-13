@@ -22,40 +22,14 @@
 
 #define SERIAL_AUTH_MODES	3
 
-/* On DEM-3000L, the original table's out-of-range entry reads zero pointers from ROM. */
-#if ERNIE_HW == 0x00415000 && ERNIE_FW == 0x01000306
-/* A zero check pointer reads the reference image's first sixteen vector bytes. */
-static const unsigned char serialInvalidVector[16] = {
-	0x00, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x19, 0xf2, 0x00, 0xf0, 0x37, 0xf0, 0x4f, 0xf0
+/* a mode's keys: the first and second AES keys of the exchange, and the check its packet carries
+   (a mode not found reads past the table, as Sony's does) */
+struct SerialAuthKeys {
+	unsigned char		mode;
+	const unsigned char	*first;
+	const unsigned char	*second;
+	const unsigned char	*check;
 };
-#define SERIAL_AUTH_FIRST_KEY(index) ((index) == 0xff ? NULL : firstKeys[index])
-#define SERIAL_AUTH_SECOND_KEY(index) ((index) == 0xff ? NULL : secondKeys[index])
-#define SERIAL_AUTH_CHECK(index) ((index) == 0xff ? serialInvalidVector : checks[index])
-#elif ERNIE_HW == 0x00406000 && ERNIE_FW == 0x01000306
-/* The overrun's check pointer reads these instruction bytes as data in the reference ROM. */
-static const unsigned char serialInvalidCheck[16] = {
-	0x11, 0x99, 0xac, 0x0a, 0x14, 0x8c, 0x0c, 0x9e, 0xfd, 0x11, 0xca, 0x00, 0x02, 0xf7, 0x10, 0x04
-};
-
-static const unsigned char *serialInvalidPointer(unsigned long value)
-{
-	union {
-		unsigned long value;
-		const unsigned char *pointer;
-	} address;
-
-	address.value = value;
-	return address.pointer;
-}
-
-#define SERIAL_AUTH_FIRST_KEY(index) ((index) == 0xff ? serialInvalidPointer(0x0c4211UL) : firstKeys[index])
-#define SERIAL_AUTH_SECOND_KEY(index) ((index) == 0xff ? serialInvalidPointer(0x06df13UL) : secondKeys[index])
-#define SERIAL_AUTH_CHECK(index) ((index) == 0xff ? serialInvalidCheck : checks[index])
-#else
-#define SERIAL_AUTH_FIRST_KEY(index) (firstKeys[index])
-#define SERIAL_AUTH_SECOND_KEY(index) (secondKeys[index])
-#define SERIAL_AUTH_CHECK(index) (checks[index])
-#endif
 
 /* a mode: its number, its word, and what unlocking and locking it do */
 struct SerialAuthMode {
@@ -97,6 +71,12 @@ static unsigned char serialAuthLock1(void);
 static unsigned char serialAuthUnlock14(void);
 static unsigned char serialAuthLock14(void);
 
+
+static const struct SerialAuthKeys serialAuthKeys[SERIAL_AUTH_MODES] = {
+	{ 0x00, serialKey0First, serialKey0Second, serialKey0Check },
+	{ 0x01, serialKey1First, serialKey1Second, serialKey1Check },
+	{ 0x0e, serialKey2First, serialKey2Second, serialKey2Check },
+};
 
 static const struct SerialAuthMode serialAuthModes[SERIAL_AUTH_MODES] = {
 	{ 0x00, &serialAuthUnlocked[0], serialAuthUnlock0, serialAuthLock0 },
@@ -147,9 +127,6 @@ unsigned char serialAuthSetMode(unsigned char state, unsigned char mode)
 /* Process serial mode 1's authenticated exchange. */
 unsigned char serialAuthCommand(unsigned char *data)
 {
-	static const unsigned char * const firstKeys[] = { serialKey0First, serialKey1First, serialKey2First };
-	static const unsigned char * const secondKeys[] = { serialKey0Second, serialKey1Second, serialKey2Second };
-	static const unsigned char * const checks[] = { serialKey0Check, serialKey1Check, serialKey2Check };
 	struct AesKey key;
 	unsigned long seed;
 	VP block;
@@ -171,7 +148,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		/* fall through */
 	case 1:
 		getIdRecordsLength();
-		seed = (unsigned long)TCR10;
+		seed = TCR10;
 		randomGenerate(seed, serialAuth.nonce, 8);
 		serialAuthPacket.magic = 0x30;
 		serialAuthPacket.step = 0;
@@ -191,7 +168,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
-			if (serialAuthModes[index].mode == serialAuth.mode)
+			if (serialAuthKeys[index].mode == serialAuth.mode)
 				break;
 		}
 		memcpy(serialAuth.challenge, serialAuthPacket.challenge, 8);
@@ -201,13 +178,13 @@ unsigned char serialAuthCommand(unsigned char *data)
 		memcpy(serialAuthPacket.header, serialHeader, 4);
 		memcpy(serialAuthPacket.challenge, serialAuth.nonce, 8);
 		memcpy(serialAuthPacket.response, serialAuth.challenge, 8);
-		memcpy(serialAuthPacket.key, SERIAL_AUTH_CHECK(index), 16);
+		memcpy(serialAuthPacket.key, serialAuthKeys[index].check, 16);
 		poolResult = pget_mpf(2, &block);
 		if (poolResult == E_OK) {
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)SERIAL_AUTH_FIRST_KEY(index),
+			aesKeyExpansion((const unsigned long *)serialAuthKeys[index].first,
 					(struct AesKey __near *)&key);
 			aesCbcEncrypt(serialAuthPacket.challenge, serialAuthPacket.challenge,
 				      (struct AesKey __near *)&key, serialIv, 0x20);
@@ -225,7 +202,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
-			if (serialAuthModes[index].mode == serialAuth.mode)
+			if (serialAuthKeys[index].mode == serialAuth.mode)
 				break;
 		}
 		poolResult = pget_mpf(2, &block);
@@ -233,7 +210,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)SERIAL_AUTH_SECOND_KEY(index),
+			aesKeyExpansion((const unsigned long *)serialAuthKeys[index].second,
 					(struct AesKey __near *)&key);
 			aesCbcDecrypt(serialAuthPacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, serialIv, 0x20);
@@ -261,8 +238,13 @@ unsigned char serialAuthCommand(unsigned char *data)
 	default:
 		break;
 	}
-	if (serialAuth.state == 0xff || serialAuth.state == 0)
+	if (serialAuth.state == 0xff) {
 		result = serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return result;
+	} else if (serialAuth.state == 0) {
+		result = serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return result;
+	}
 	return result;
 }
 

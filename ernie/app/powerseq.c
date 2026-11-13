@@ -622,7 +622,7 @@ void powerCookieHold(void)
 	if ((cookieStatus1.byte[0] & 0xe0) == 0x80 && !(cookieRegs[0].byte[0] & 0x80)) {
 		cookieCtrlCharge(0);
 		chargeCookieHeld = 1;
-		timerStart(0x1e, 2);
+		timerStart(TIMER_RTC(0x1e), 2);
 		return;
 	}
 	chargeCookieHeld = 0;

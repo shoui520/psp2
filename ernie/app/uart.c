@@ -18,6 +18,7 @@
 
 #include <stddef.h>
 
+#include "ernie.h"
 #include "chip.h"
 #include "kernel.h"
 #include "serial.h"
@@ -86,6 +87,9 @@ static const struct UartRegisters uartRegisters[5] = {
 };
 
 static const struct UartConfig uart2Config = { 4, 0x0c, 0x0097 };
+#if !FW_SINCE(0x01000306)
+static const struct UartConfig uart3Config = { 1, 0x11, 0x0097 };
+#endif
 
 static const struct UartBaud uartBauds[4] = {
 	{ 0, 4, 0x19 },
@@ -93,6 +97,57 @@ static const struct UartBaud uartBauds[4] = {
 	{ 2, 3, 0x0c },
 	{ 3, 1, 0x11 },
 };
+
+#if !FW_SINCE(0x01000306)
+/* both ports' buffers, and UART3 at uart3Config's speed (before 0x01000306 nothing calls it;
+   the updater's is the same) */
+int uartInit(void)
+{
+	SAU1EN = 1;
+	uart2.txBuffer = uart2Tx;
+	uart2.rxBuffer = uart2Rx;
+	uart2.txMask = sizeof(uart2Tx) - 1;
+	uart2.rxMask = sizeof(uart2Rx) - 1;
+	uart2.rxWrite = 0;
+	uart2.rxRead = 0;
+	uart2.txWrite = 0;
+	uart2.txRead = 0;
+	uart3.txBuffer = uart3Tx;
+	uart3.rxBuffer = uart3Rx;
+	uart3.txMask = sizeof(uart3Tx) - 1;
+	uart3.rxMask = sizeof(uart3Rx) - 1;
+	uart3.rxWrite = 0;
+	uart3.rxRead = 0;
+	uart3.txWrite = 0;
+	uart3.txRead = 0;
+	SPS1 = uart3Config.prescaler << 4 | uart2Config.prescaler;
+	SMR12 = 0x8023;
+	SMR13 = 0x8122;
+	SCR12 = uart3Config.scr | 0x8000;
+	SCR13 = uart3Config.scr | 0x4400;
+	SDR12 = (unsigned int)uart3Config.divisor << 9;
+	SDR13 = (unsigned int)uart3Config.divisor << 9;
+	SOL1 = 0;
+	SO1 = 0x0f0f;
+	SOE1L.2 = 1;
+	SIR11L = 0x07;
+	SIR13L = 0x07;
+	PU1.4 = 1;
+	PM1.4 = 1;
+	PM1.3 = 0;
+	P1.3 = 1;
+	NFEN0.6 = 1;
+	SS1L.2 = 1;
+	SS1L.3 = 1;
+	STIF3 = 0;
+	SRIF3 = 0;
+	SREIF3 = 0;
+	STMK3 = 0;
+	SRMK3 = 0;
+	SREMK3 = 0;
+	return 0;
+}
+#endif
 
 /* stops a port's sending channel and its output */
 void uartStopTx(unsigned char port)

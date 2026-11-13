@@ -48,7 +48,9 @@ void rtcStart(void)
 {
 	RTCMK = 1;
 	rtcInit();
+#if FW_SINCE(0x01000306)
 	button2HoldReset();
+#endif
 	RTCIF = 0;
 	RTCMK = 0;
 	switch (getResetCause()) {
@@ -169,6 +171,7 @@ void rtcInterrupt(void)
 			hangState = HANG_NONE;
 		}
 	}
+#if FW_SINCE(0x01000306)
 	if (!P4.6) {
 		if (button2Keys() == 1) {
 			holdTicks++;
@@ -179,6 +182,7 @@ void rtcInterrupt(void)
 		holdTicks = 0;
 		holdReached = 0;
 	}
+#endif
 	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
 		if (timers[i].state == 1 && timers[i].time == timerRtcTicks) {
 			timers[i].state = 0;

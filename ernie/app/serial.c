@@ -363,6 +363,7 @@ unsigned char serialReopen(int baud)
 
 unsigned char serialOpen1(int baud)
 {
+	serial2SetLink(0);
 	uart3Open(baud);
 	serialStart(1);
 	serial.link = 1;
@@ -380,6 +381,7 @@ unsigned char serialOpen2(int baud)
 {
 	uart3Open(baud);
 	serialStart(2);
+	serial2SetLink(1);
 	serial2SetP71(0);
 	serial.link = 2;
 	return 0;

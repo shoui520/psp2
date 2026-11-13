@@ -33,6 +33,7 @@
 #define FLASH_WRITE_ERROR	0x1c
 #define FLASH_BUSY		0x1f
 
+
 /* a block's header */
 struct NvsHeader {
 	unsigned char	mark;			/* 2 */
@@ -89,8 +90,12 @@ extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buf
 
 
 static unsigned char nvsErase(unsigned char block);
+#if FW_SINCE(0x01000306)
 static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words,
 				   unsigned char verify);
+#else
+static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words);
+#endif
 static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
 				    unsigned char count);
 static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
@@ -100,7 +105,9 @@ unsigned char nvsClean(unsigned char count);
 unsigned char nvsMount(unsigned char mode);
 unsigned char nvsMarkData(unsigned char block, unsigned char first);
 unsigned char nvsMarkSpare(unsigned char block, unsigned char first);
+#if FW_SINCE(0x01000306)
 unsigned char nvsSetMark(unsigned char block, unsigned long extra);
+#endif
 unsigned char nvsMarkBad(unsigned char block);
 unsigned char nvsAssignBlocks(void);
 unsigned char nvsBlockRole(unsigned char block);
@@ -182,6 +189,7 @@ unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *da
 }
 
 /* erases a block of the NVS: tried 5 more times while the erase fails */
+#if FW_SINCE(0x01000306)
 static unsigned char nvsErase(unsigned char block)
 {
 	unsigned char result;
@@ -219,8 +227,41 @@ static unsigned char nvsErase(unsigned char block)
 	EI();
 	return result;
 }
+#else
+static unsigned char nvsErase(unsigned char block)
+{
+	unsigned char result;
+	unsigned char retry;
+
+	retry = 3;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	if (result == FLASH_OK) {
+		do {
+			result = FSL_ModeCheck();
+			if (result == FLASH_OK) {
+				do
+					result = FSL_BlankCheck(block);
+				while (result == FLASH_BUSY);
+				if (result == FLASH_NOT_BLANK) {
+					do
+						result = FSL_Erase(block);
+					while (result == FLASH_BUSY);
+				}
+			}
+		} while (retry-- != 0 && result == FLASH_ERASE_ERROR);
+	}
+	DI();
+	FSL_Close();
+	EI();
+	return result;
+}
+#endif
 
 /* writes words of 4 bytes at an address of the NVS, verifying the block if asked */
+#if FW_SINCE(0x01000306)
 static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words,
 				   unsigned char verify)
 {
@@ -253,6 +294,35 @@ static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned 
 	FSL_Close();
 	return result;
 }
+#else
+static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words)
+{
+	unsigned char result;
+	unsigned char retry;
+
+	retry = 3;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	if (result == FLASH_OK) {
+		memcpy(fslDataBuffer, data, words << 2);
+		do {
+			result = FSL_ModeCheck();
+			if (result == FLASH_OK) {
+				do
+					result = FSL_EEPROMWrite((unsigned long)address, words);
+				while (result == FLASH_BUSY);
+			}
+		} while (retry-- != 0 && result == FLASH_WRITE_ERROR);
+	}
+	FSL_Close();
+	return result;
+}
+
+/* no verifying before 0x01000306 */
+#define nvsFlashWrite(address, data, words, verify)	nvsFlashWrite(address, data, words)
+#endif
 
 unsigned char nvsInit(void)
 {
@@ -271,6 +341,7 @@ unsigned char nvsInit(void)
 	return result;
 }
 
+#if FW_SINCE(0x01000306)
 static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
 				    unsigned char count)
 {
@@ -303,7 +374,41 @@ static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
 	}
 	return result;
 }
+#else
+static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
+				    unsigned char count)
+{
+	unsigned char result;
 
+	result = 0;
+	switch (nvsState) {
+	case 0x80:
+		return 8;
+	case 2:
+	case 3:
+	case 0x82:
+		return 0x22;
+	case 0:
+		return 9;
+	default:
+		return 9;
+	case 1:
+	case 0x81:
+	case 0x83:
+		break;
+	}
+	while (count-- != 0) {
+		result = nvsGetRecord(buffer, index);
+		if (result != 0)
+			break;
+		buffer += NVS_RECORD_SIZE;
+		index++;
+	}
+	return result;
+}
+#endif
+
+#if FW_SINCE(0x01000306)
 static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
 				     unsigned char count)
 {
@@ -338,6 +443,41 @@ static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
 	}
 	return result;
 }
+#else
+static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
+				     unsigned char count)
+{
+	unsigned char result;
+
+	result = 0;
+	switch (nvsState) {
+	case 3:
+	case 0x81:
+	case 0x82:
+		return 7;
+	case 0x83:
+		return 0x21;
+	case 0x80:
+		return 8;
+	case 2:
+		return 0x22;
+	case 0:
+		return 9;
+	case 1:
+		break;
+	default:
+		return 9;
+	}
+	while (count-- != 0) {
+		result = nvsPutRecord(buffer, index);
+		if (result != 0)
+			break;
+		buffer += NVS_RECORD_SIZE;
+		index++;
+	}
+	return result;
+}
+#endif
 
 unsigned char nvsGetState(void)
 {
@@ -349,6 +489,7 @@ unsigned char nvsGetState(void)
 }
 
 /* erases the NVS's blocks and gives them their places */
+#if FW_SINCE(0x01000306)
 unsigned char nvsFormat(void)
 {
 	unsigned char result;
@@ -401,8 +542,56 @@ unsigned char nvsFormat(void)
 		nvsState = 0xf0;
 	return 0;
 }
+#else
+unsigned char nvsFormat(void)
+{
+	unsigned char result;
+	unsigned char i;
+	unsigned char block;
+	unsigned char used;
+
+	nvsState = 0;
+	memset(nvsDataBlocks, 0, sizeof(nvsDataBlocks));
+	memset(nvsCopyBlocks, 0, sizeof(nvsCopyBlocks));
+	memset(nvsSpareBlocks, 0, sizeof(nvsSpareBlocks));
+	block = NVS_FIRST_BLOCK;
+	i = 0;
+	used = 0;
+	while (i < NVS_BLOCKS) {
+		result = nvsErase(block);
+		switch (result) {
+		case FLASH_OK:
+			if (used < NVS_DATA_BLOCKS) {
+				nvsDataBlocks[used] = block;
+				result = nvsMarkData(block, i == 0);
+				if (result != 0)
+					return result;
+			} else if (used < 2 * NVS_DATA_BLOCKS) {
+				nvsCopyBlocks[used - NVS_DATA_BLOCKS] = block;
+			} else {
+				nvsSpareBlocks[used - 2 * NVS_DATA_BLOCKS] = block;
+				result = nvsMarkSpare(block, i == 0);
+				if (result != 0)
+					return result;
+			}
+			used++;
+			break;
+		case FLASH_ERASE_ERROR:
+			nvsMarkBad(block);
+			break;
+		default:
+			return result;
+		}
+		block++;
+		i++;
+	}
+	nvsState = 1;
+	return 0;
+}
+#endif
 
 /* moves the data to the copy blocks, which take the data blocks' places */
+#if FW_SINCE(0x01000306)
 unsigned char nvsMove(void)
 {
 	unsigned char result;
@@ -476,8 +665,87 @@ done:
 	}
 	return result;
 }
+#else
+unsigned char nvsMove(void)
+{
+	unsigned char result;
+	unsigned char record;
+	unsigned char block;
+	unsigned char i;
+	unsigned char j;
+	struct NvsBlock *flashBlock;
+	struct NvsMark *mark;
+	unsigned long value;
+	struct NvsHeader header;
+
+	result = 0;
+	if (nvsState != 1 && nvsState != 0x81)
+		return 0x0a;
+	nvsState = 3;
+	record = 0;
+	header = ((struct NvsBlock *)((unsigned long)nvsDataBlocks[0] << 10))->header;
+	header.mark = 1;
+	if (header.generation != 0)
+		header.generation--;
+	for (i = 0; i < NVS_DATA_BLOCKS; i++) {
+		block = nvsCopyBlocks[i];
+		if (block == 0) {
+			result = 8;
+			goto done;
+		}
+		result = nvsErase(block);
+		if (result != 0)
+			goto done;
+		for (j = 0; j < NVS_RECORDS; j++) {
+			nvsGetRecord(nvsRecord, record);
+			nvsWriteBlockRecord(nvsRecord, record % NVS_RECORDS, block);
+			record++;
+		}
+		flashBlock = (struct NvsBlock *)((unsigned long)block << 10);
+		header.index = i;
+		result = nvsFlashWrite((unsigned char *)&flashBlock->header, &header, 1, 0);
+		if (result != 0)
+			goto done;
+		mark = (struct NvsMark *)((unsigned long)nvsDataBlocks[i] << 10);
+		nvsDataBlocks[i] = block;
+		value = 0xaaaaaaaa;
+		result = nvsFlashWrite((unsigned char *)&mark->extra, &value, 1, 0);
+	}
+	for (i = 0; i < NVS_DATA_BLOCKS; i++) {
+		flashBlock = (struct NvsBlock *)((unsigned long)nvsDataBlocks[i] << 10);
+		value = (i == 0) ? 0x55555500 : 0x55555555;
+		result = nvsFlashWrite((unsigned char *)&flashBlock->mark, &value, 1, 0);
+		if (result != 0)
+			goto done;
+	}
+	value = 0xaaaaaaaa;
+	for (i = 0; i < NVS_SPARE_BLOCKS; i++) {
+		block = nvsSpareBlocks[i];
+		if (block != 0) {
+			flashBlock = (struct NvsBlock *)((unsigned long)block << 10);
+			result = nvsFlashWrite((unsigned char *)&((struct NvsMark *)flashBlock)->extra,
+					       &value, 1, 0);
+		}
+	}
+	result = nvsAssignBlocks();
+done:
+	switch (result) {
+	case 0:
+		nvsState = 0x82;
+		break;
+	case 0x21:
+		nvsState = 0x83;
+		break;
+	default:
+		nvsState = 0x81;
+		break;
+	}
+	return result;
+}
+#endif
 
 /* erases up to count of the copy and spare blocks that are not blank */
+#if FW_SINCE(0x01000306)
 unsigned char nvsClean(unsigned char count)
 {
 	unsigned char result;
@@ -569,12 +837,70 @@ unsigned char nvsClean(unsigned char count)
 		nvsState = 1;
 	return result;
 }
+#else
+unsigned char nvsClean(unsigned char count)
+{
+	unsigned char result;
+	unsigned char i;
+	unsigned char block;
+	unsigned char n;
+	struct NvsMark *mark;
+
+	result = 0x20;
+	for (i = 0, n = 0; i < NVS_DATA_BLOCKS + NVS_SPARE_BLOCKS && count != 0; i++) {
+		if (n < NVS_DATA_BLOCKS) {
+			block = nvsCopyBlocks[n];
+			mark = (struct NvsMark *)((unsigned long)block << 10);
+			if (mark->extra == 0xffffffff && mark->status == 0xffffffff) {
+				n++;
+				continue;
+			}
+		} else {
+			block = nvsSpareBlocks[n - NVS_DATA_BLOCKS];
+			if (block == 0) {
+				n++;
+				continue;
+			}
+			mark = (struct NvsMark *)((unsigned long)block << 10);
+			if (mark->extra == 0xffffffff &&
+			    (mark->status == 0xaaaaaaaa || mark->status == 0xaaaaaa00)) {
+				n++;
+				continue;
+			}
+		}
+		result = nvsErase(block);
+		switch (result) {
+		case FLASH_OK:
+			if (n >= NVS_DATA_BLOCKS) {
+				nvsMarkSpare(block, i == 0);
+				if (nvsState == 0x82)
+					nvsState = 1;
+			}
+			break;
+		case FLASH_ERASE_ERROR:
+			nvsMarkBad(block);
+			result = nvsAssignBlocks();
+			if (result != 0) {
+				nvsState = 0x83;
+				return result;
+			}
+			continue;
+		default:
+			return result;
+		}
+		count--;
+		n++;
+	}
+	return result;
+}
+#endif
 
 /*
  * finds the NVS's blocks from their marks: the first data block (status 0x55555500), the
  * blocks after it in turn as the other data blocks, the copy blocks and the spares. Mode 0
  * takes only data blocks still erased after their mark, mode 1 any not cleared.
  */
+#if FW_SINCE(0x01000306)
 unsigned char nvsMount(unsigned char mode)
 {
 	unsigned char j;
@@ -685,6 +1011,106 @@ unsigned char nvsMount(unsigned char mode)
 	}
 	return 0;
 }
+#else
+unsigned char nvsMount(unsigned char mode)
+{
+	unsigned char j;
+	unsigned char block;
+	unsigned char i;
+	unsigned char count;
+	unsigned char flags;
+	struct NvsMark *mark;
+
+	memset(nvsDataBlocks, 0, sizeof(nvsDataBlocks));
+	memset(nvsCopyBlocks, 0, sizeof(nvsCopyBlocks));
+	memset(nvsSpareBlocks, 0, sizeof(nvsSpareBlocks));
+	j = 0;
+	flags = 0;
+	count = 0;
+	for (i = 0; i < NVS_BLOCKS && count == 0; j++, i++) {
+		block = (j & 0x0f) + NVS_FIRST_BLOCK;
+		mark = (struct NvsMark *)((unsigned long)block << 10);
+		if (mark->status == 0x55555500) {
+			switch (mode) {
+			case 0:
+				if (mark->extra == 0xffffffff)
+					nvsDataBlocks[count++] = block;
+				else
+					flags |= 0x08;
+				break;
+			case 1:
+				if (mark->extra != 0 && mark->extra != 0xffffffff) {
+					nvsDataBlocks[count++] = block;
+					flags |= 0x08;
+				}
+				break;
+			}
+		}
+	}
+	for (i = 0; i < NVS_BLOCKS && count < NVS_DATA_BLOCKS; j++, i++) {
+		block = (j & 0x0f) + NVS_FIRST_BLOCK;
+		mark = (struct NvsMark *)((unsigned long)block << 10);
+		if (mark->status == 0x55555555) {
+			switch (mode) {
+			case 0:
+				if (mark->extra == 0xffffffff)
+					nvsDataBlocks[count++] = block;
+				break;
+			case 1:
+				if (mark->extra != 0)
+					nvsDataBlocks[count++] = block;
+				break;
+			}
+		}
+	}
+	if (count != NVS_DATA_BLOCKS)
+		flags |= 0x01;
+	for (i = 0, count = 0; i < NVS_BLOCKS - NVS_DATA_BLOCKS; j++, i++) {
+		block = (j & 0x0f) + NVS_FIRST_BLOCK;
+		mark = (struct NvsMark *)((unsigned long)block << 10);
+		if (mark->extra == 0)
+			continue;
+		if (count < NVS_DATA_BLOCKS) {
+			if (mark->status != 0xaaaaaaaa) {
+				nvsCopyBlocks[count++] = block;
+				if (mark->status != 0xffffffff || mark->extra != 0xffffffff)
+					flags |= 0x02;
+			}
+		} else {
+			if (mark->status == 0xaaaaaaaa) {
+				nvsSpareBlocks[count++ - NVS_DATA_BLOCKS] = block;
+				if (mark->extra != 0xffffffff)
+					flags |= 0x04;
+			}
+		}
+	}
+	if (count < NVS_DATA_BLOCKS + 1)
+		flags |= 0x10;
+	if (flags == 0) {
+		nvsState = 1;
+	} else if ((flags & 0x01) != 0) {
+		nvsState = 0x80;
+		return 8;
+	} else if ((flags & 0x10) != 0) {
+		nvsState = 0x83;
+		return 0;
+	} else if ((flags & 0x08) != 0) {
+		nvsState = 0x81;
+		return 0;
+	} else if ((flags & 0x08) != 0) {
+		nvsState = 0x82;
+		nvsClean(0x10);
+		return 0;
+	} else if ((flags & 0x06) == 0x06) {
+		nvsState = 0x81;
+		nvsClean(0x10);
+		return 0;
+	} else {
+		nvsState = 1;
+	}
+	return 0;
+}
+#endif
 
 /* the data's header mark, the spares missing and the moves made */
 unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned int *moves)
@@ -693,7 +1119,7 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned i
 	unsigned char i;
 
 	switch (nvsState) {
-	case 0xf0:
+	case NVS_STATE_FAILED:
 		return 8;
 	case 0:
 		return 9;
@@ -714,6 +1140,7 @@ void nvsNone(void)
 }
 
 /* marks a block as data (the first block of the data, or another) and writes its header */
+#if FW_SINCE(0x01000306)
 unsigned char nvsMarkData(unsigned char block, unsigned char first)
 {
 	unsigned char result;
@@ -733,6 +1160,25 @@ unsigned char nvsMarkData(unsigned char block, unsigned char first)
 	}
 	return result;
 }
+#else
+unsigned char nvsMarkData(unsigned char block, unsigned char first)
+{
+	unsigned char result;
+	union {
+		unsigned long	status;
+		struct NvsHeader header;
+	} value;
+	struct NvsBlock *flashBlock;
+
+	flashBlock = (struct NvsBlock *)((unsigned long)block << 10);
+	value.status = first ? 0x55555500 : 0x55555555;
+	result = nvsFlashWrite((unsigned char *)&flashBlock->mark, &value, 1, 0);
+	value.status = 0xffffffff;
+	value.header.mark = 1;
+	nvsFlashWrite((unsigned char *)&flashBlock->header, &value, 1, 0);
+	return result;
+}
+#endif
 
 /* marks an erased block as a spare */
 unsigned char nvsMarkSpare(unsigned char block, unsigned char first)
@@ -747,6 +1193,7 @@ unsigned char nvsMarkSpare(unsigned char block, unsigned char first)
 	return result;
 }
 
+#if FW_SINCE(0x01000306)
 /* writes the second word of a block's mark */
 unsigned char nvsSetMark(unsigned char block, unsigned long extra)
 {
@@ -759,6 +1206,7 @@ unsigned char nvsSetMark(unsigned char block, unsigned long extra)
 	result = nvsFlashWrite((unsigned char *)&mark->extra, &extra, 1, 0);
 	return result;
 }
+#endif
 
 /* clears a block's mark: the block is bad */
 unsigned char nvsMarkBad(unsigned char block)
@@ -889,7 +1337,9 @@ unsigned char nvsPutRecord(unsigned char *record, unsigned int index)
 	result = 0;
 	if (index > NVS_DATA_BLOCKS * NVS_RECORDS)
 		return 2;
+#if FW_SINCE(0x01000306)
 	nvsState = 2;
+#endif
 	for (i = 0; i < NVS_SPARE_BLOCKS; i++) {
 		block = nvsSpareBlocks[i];
 		if (block == 0)
@@ -914,10 +1364,12 @@ unsigned char nvsPutRecord(unsigned char *record, unsigned int index)
 			result = nvsFlashWrite((unsigned char *)&entry->status, &value, 1, 0);
 			if (result != 0)
 				continue;
+#if FW_SINCE(0x01000306)
 			nvsState = 1;
+#endif
 			return 0;
 		}
 	}
-	nvsState = 3;
+	nvsState = NVS_STATE_FULL;
 	return 7;
 }

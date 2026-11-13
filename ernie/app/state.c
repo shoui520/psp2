@@ -134,7 +134,7 @@ void stateEvent(struct StateEvent *event)
 				if (status & 0x10)
 					task5SetFlag(4, 0x8000);
 				if (status & 0x38)
-					timerStart(0x1a, 0x14);
+					timerStart(TIMER_RTC(0x1a), 0x14);
 				return;
 			}
 			if (stateTable[i].events & stateEvents) {
@@ -302,11 +302,13 @@ static int stateOffEnter(void)
 	setResetCause(cause & 0xfe);
 	if (stateCause == 0x58)
 		stateTransition(0x0a);
+#if FW_SINCE(0x01000306)
 	else if (stateCause == 0x31) {
 		if (configGet()->offTransition18 && configGet()->offTransitionBlock == 0)
 			stateTransition(0x18);
 	} else if (stateCause == 0x5b)
 		stateTransition(0x19);
+#endif
 	logReadData(1, (unsigned char *)&idRecord1, &length);
 	logReadData(0x0f, &size, &length);
 	idRecordsLength = size;

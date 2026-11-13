@@ -73,14 +73,49 @@ static int handshakeLockHandler11(void);
 static int handshakeUnlock15(void);
 static int handshakeLockHandler15(void);
 
+static const unsigned char mode11Check[16];
+static const unsigned char mode11Key1[16];
+static const unsigned char mode11Key2[16];
+static const unsigned char mode15Check1[16];
+static const unsigned char mode15Check2[16];
+static const unsigned char mode15Key1[16];
+static const unsigned char mode15Key2[16];
+static const unsigned char mode15Key3[16];
+
+/* (a mode not found reads past the table, as Sony's does) */
+static const struct HandshakeCrypto handshakeCrypto[HANDSHAKE_MODES] = {
+	{ 0x0b, mode11Key1, mode11Key2, NULL, mode11Check, NULL },
+	{ 0x0f, mode15Key1, mode15Key2, mode15Key3, mode15Check1, mode15Check2 },
+};
+
+static const struct HandshakeMode handshakeModes[HANDSHAKE_MODES] = {
+	{ 0x0b, (unsigned int *)&handshakeUnlocked[0], handshakeUnlock11, handshakeLockHandler11 },
+	{ 0x0f, (unsigned int *)&handshakeUnlocked[1], handshakeUnlock15, handshakeLockHandler15 },
+};
+
+/* the packet header the serial side sends (unused here), then the IV and the keys */
+static const unsigned char handshakeHeader[4] = {
+	0x01, 0x00, 0x00, 0x00
+};
+
+const unsigned char handshakeIv[16] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char mode11Check[16] = {
+	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
+};
 static const unsigned char mode11Key1[16] = {
 	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
 };
 static const unsigned char mode11Key2[16] = {
 	0xdc, 0x6b, 0x6e, 0xe0, 0xf4, 0x57, 0xdf, 0x0e, 0x7b, 0xad, 0x1c, 0x5e, 0xa3, 0x38, 0x02, 0x7f
 };
-static const unsigned char mode11Check[16] = {
-	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
+static const unsigned char mode15Check1[16] = {
+	0xc8, 0x6b, 0x51, 0xfb, 0x01, 0x9a, 0x20, 0x7f, 0x32, 0x11, 0x8e, 0x55, 0x46, 0x2d, 0x50, 0x08
+};
+static const unsigned char mode15Check2[16] = {
+	0xb0, 0x11, 0x03, 0xb0, 0x62, 0x38, 0x32, 0xd6, 0x25, 0x40, 0xb5, 0x63, 0x33, 0xd6, 0xe1, 0x1d
 };
 static const unsigned char mode15Key1[16] = {
 	0x50, 0xe4, 0xc3, 0xa7, 0x72, 0x64, 0x16, 0x7c, 0x40, 0x9c, 0x72, 0xa9, 0xb5, 0x7a, 0x86, 0x09
@@ -90,61 +125,6 @@ static const unsigned char mode15Key2[16] = {
 };
 static const unsigned char mode15Key3[16] = {
 	0xeb, 0xe3, 0x46, 0x0d, 0x84, 0xa4, 0x17, 0x54, 0xac, 0x44, 0x13, 0x68, 0xcf, 0x02, 0x00, 0xd8
-};
-static const unsigned char mode15Check1[16] = {
-	0xc8, 0x6b, 0x51, 0xfb, 0x01, 0x9a, 0x20, 0x7f, 0x32, 0x11, 0x8e, 0x55, 0x46, 0x2d, 0x50, 0x08
-};
-static const unsigned char mode15Check2[16] = {
-	0xb0, 0x11, 0x03, 0xb0, 0x62, 0x38, 0x32, 0xd6, 0x25, 0x40, 0xb5, 0x63, 0x33, 0xd6, 0xe1, 0x1d
-};
-
-static const struct HandshakeCrypto handshakeCrypto[HANDSHAKE_MODES] = {
-	{ 0x0b, mode11Key1, mode11Key2, NULL, mode11Check, NULL },
-	{ 0x0f, mode15Key1, mode15Key2, mode15Key3, mode15Check1, mode15Check2 },
-};
-
-/* An unknown mode indexes beyond the reference table into ROM pointer values. */
-#if ERNIE_FW == 0x01000306 && (ERNIE_HW == 0x00415000 || ERNIE_HW == 0x00406000)
-static const unsigned char *handshakeInvalidPointer(unsigned long value)
-{
-	union {
-		unsigned long value;
-		const unsigned char *pointer;
-	} address;
-
-	address.value = value;
-	return address.pointer;
-}
-
-#if ERNIE_HW == 0x00415000
-/* The first key pointer happens to read these instruction bytes as key data. */
-static const unsigned char handshakeInvalidKey[16] = {
-	0xfd, 0x11, 0x49, 0xcc, 0x00, 0x4f, 0x2d, 0xdd, 0xe6, 0x61, 0xe8, 0xf6, 0x12, 0xd7, 0xf7, 0xd7
-};
-#define INVALID_FIRST_KEY handshakeInvalidKey
-#define INVALID_SECOND_KEY handshakeInvalidPointer(0x9d068aUL)
-#define INVALID_SESSION_KEY handshakeInvalidPointer(0x04aa11UL)
-#define INVALID_FIRST_CHECK handshakeInvalidPointer(0xd48d14UL)
-#define INVALID_SECOND_CHECK handshakeInvalidPointer(0x078cd6UL)
-#else
-/* Both pointers below address these instruction bytes in the reference ROM. */
-static const unsigned char handshakeInvalidBytes[16] = {
-	0x01, 0x31, 0x8e, 0xfc, 0xcb, 0xe1, 0x01, 0x62, 0x9c, 0x01, 0xd1, 0xdf, 0x0f, 0xac, 0x0c, 0x14
-};
-#define INVALID_FIRST_KEY handshakeInvalidPointer(0x61e217UL)
-#define INVALID_SECOND_KEY handshakeInvalidPointer(0x1120dfUL)
-#define INVALID_SESSION_KEY handshakeInvalidBytes
-#define INVALID_FIRST_CHECK handshakeInvalidBytes
-#define INVALID_SECOND_CHECK handshakeInvalidPointer(0xfcf61aUL)
-#endif
-#define HANDSHAKE_CRYPTO(index, field, invalid) ((index) == 0xff ? (invalid) : handshakeCrypto[index].field)
-#else
-#define HANDSHAKE_CRYPTO(index, field, invalid) (handshakeCrypto[index].field)
-#endif
-
-static const struct HandshakeMode handshakeModes[HANDSHAKE_MODES] = {
-	{ 0x0b, (unsigned int *)&handshakeUnlocked[0], handshakeUnlock11, handshakeLockHandler11 },
-	{ 0x0f, (unsigned int *)&handshakeUnlocked[1], handshakeUnlock15, handshakeLockHandler15 },
 };
 
 /* keepKey 0 (a wakeup without the factor's notify bit) also clears mode 0x0f's key */
@@ -202,7 +182,7 @@ unsigned char handshakeCommand(unsigned char *data)
 	case 0:
 		handshake.mode = handshakePacket.mode;
 		getIdRecordsLength();
-		seed = (unsigned long)TCR10;
+		seed = TCR10;
 		randomGenerate(seed, (unsigned char *)handshake.challenge, 8);
 		if (handshake.mode == 0x0f) {
 			handshakeLock15();
@@ -228,7 +208,7 @@ unsigned char handshakeCommand(unsigned char *data)
 	case 2:
 		handshakePacket.error = 0;
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 2 ||
-		    handshakePacket.mode != handshake.mode) {
+		    handshakePacket.error != 0 || handshakePacket.mode != handshake.mode) {
 			handshake.state = 0xff;
 			handshakePacket.error = 1;
 		}
@@ -242,20 +222,20 @@ unsigned char handshakeCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)HANDSHAKE_CRYPTO(modeIndex, firstKey, INVALID_FIRST_KEY),
+			aesKeyExpansion((const unsigned long *)handshakeCrypto[modeIndex].firstKey,
 					(struct AesKey __near *)&key);
 			aesCbcDecrypt(handshakePacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
 		} else {
 			handshake.state = 0xff;
 		}
-		memcpy(handshakePacket.challenge, data + 8, 0x20);
+		memcpy(handshakePacket.challenge, (unsigned char __near *)(data + 8), 0x20);
 		if (memcmp(handshakePacket.response, handshake.challenge, 8) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
 			handshakePacket.error = 2;
 		}
-		if (memcmp(handshakePacket.key, HANDSHAKE_CRYPTO(modeIndex, firstCheck, INVALID_FIRST_CHECK), 0x10) != 0 &&
+		if (memcmp(handshakePacket.key, handshakeCrypto[modeIndex].firstCheck, 0x10) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
 			handshakePacket.error = 3;
@@ -269,7 +249,10 @@ unsigned char handshakeCommand(unsigned char *data)
 		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memset(handshakePacket.key, 0, 0x10);
 		if (poolResult == E_OK) {
-			aesKeyExpansion((const unsigned long *)HANDSHAKE_CRYPTO(modeIndex, secondKey, INVALID_SECOND_KEY),
+			key.w = (unsigned long *)(unsigned long __near *)block;
+			key.nk = 4;
+			key.nb = 4;
+			aesKeyExpansion((const unsigned long *)handshakeCrypto[modeIndex].secondKey,
 					(struct AesKey __near *)&key);
 			aesCbcEncrypt(handshakePacket.challenge, handshakePacket.challenge,
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
@@ -278,13 +261,17 @@ unsigned char handshakeCommand(unsigned char *data)
 		}
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
 		rel_mpf(2, block);
-		if (handshakePacket.error == 0)
-			handshake.state = handshake.mode == 0x0f ? 3 : 0;
+		if (handshakePacket.error == 0) {
+			if (handshake.mode == 0x0f)
+				handshake.state = 3;
+			else
+				handshake.state = 0;
+		}
 		break;
 	case 3:
 		handshakePacket.error = 0;
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 4 ||
-		    handshakePacket.mode != handshake.mode) {
+		    handshakePacket.error != 0 || handshakePacket.mode != handshake.mode) {
 			handshake.state = 0xff;
 			handshakePacket.error = 1;
 		}
@@ -300,19 +287,26 @@ unsigned char handshakeCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)HANDSHAKE_CRYPTO(modeIndex, sessionKey, INVALID_SESSION_KEY),
+			aesKeyExpansion((const unsigned long *)handshakeCrypto[modeIndex].sessionKey,
 					(struct AesKey __near *)&key);
 			aesCbcEncrypt(handshake.session, handshake.session, (struct AesKey __near *)&key,
 				      handshakeIv, 0x10);
 			memcpy(handshakeKey, handshake.session, 0x10);
+		} else {
+			handshake.state = 0xff;
+		}
+		if (poolResult == E_OK) {
+			key.w = (unsigned long *)(unsigned long __near *)block;
+			key.nk = 4;
+			key.nb = 4;
 			aesKeyExpansion((const unsigned long *)handshakeKey, (struct AesKey __near *)&key);
 			aesCbcDecrypt(handshakePacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
 		} else {
 			handshake.state = 0xff;
 		}
-		memcpy(handshakePacket.challenge, data + 8, 0x20);
-		if (memcmp(handshakePacket.challenge, HANDSHAKE_CRYPTO(modeIndex, secondCheck, INVALID_SECOND_CHECK), 0x10) != 0 &&
+		memcpy(handshakePacket.challenge, (unsigned char __near *)(data + 8), 0x20);
+		if (memcmp(handshakePacket.challenge, handshakeCrypto[modeIndex].secondCheck, 0x10) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
 			handshakePacket.error = 3;
@@ -321,7 +315,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshakePacket.step = 5;
 		handshakePacket.mode = handshake.mode;
 		memset(handshakePacket.header, 0, 0x24);
-		memcpy(handshakePacket.challenge, HANDSHAKE_CRYPTO(modeIndex, secondCheck, INVALID_SECOND_CHECK), 0x10);
+		memcpy(handshakePacket.challenge, handshakeCrypto[modeIndex].secondCheck, 0x10);
 		if (poolResult == E_OK)
 			aesCbcEncrypt(handshakePacket.challenge, handshakePacket.challenge,
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
@@ -333,8 +327,13 @@ unsigned char handshakeCommand(unsigned char *data)
 	default:
 		break;
 	}
-	if (handshake.state == 0xff || handshake.state == 0)
+	if (handshake.state == 0xff) {
 		handshakeSetMode(handshake.state, handshake.mode);
+		return 0;
+	} else if (handshake.state == 0) {
+		handshakeSetMode(handshake.state, handshake.mode);
+		return 0;
+	}
 	return 0;
 }
 

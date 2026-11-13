@@ -23,7 +23,9 @@ unsigned int powerDevicePending;
 extern unsigned char input1Bit7Active(void);
 
 static void task5ChargeLed(void);
+#if FW_SINCE(0x01000306)
 static void task5LedOff(void);
+#endif
 
 void task5(VP_INT exinf)
 {
@@ -60,10 +62,12 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x0400);
 				powerCookieRelease();
 			}
+#if FW_SINCE(0x01000306)
 			if (ptn & 0x0008) {
 				clr_flg(4, ~0x0008);
 				task5LedOff();
 			}
+#endif
 			if (ptn & 0x1000) {
 				clr_flg(4, ~0x1000);
 				task5ChargeLed();
@@ -140,11 +144,16 @@ void powerJobPostOffEnd(void)
 	return;
 }
 
+/* before 0x01000306 the reset job is not posted: powerReset puts the charge LED off itself */
 void powerJobPostReset(void)
 {
+#if FW_SINCE(0x01000306)
 	powerJobState.id = POWER_JOB_RESET;
 	task5SetFlag(4, 0x0002);
 	return;
+#else
+	chargeLedSetCharging(0);
+#endif
 }
 
 void powerJobPostUpdate(void)
@@ -183,7 +192,9 @@ static void task5ChargeLed(void)
 	return;
 }
 
+#if FW_SINCE(0x01000306)
 static void task5LedOff(void)
 {
 	ledSetOff(1);
 }
+#endif

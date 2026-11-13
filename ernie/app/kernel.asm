@@ -25,6 +25,7 @@
 	PUBLIC	_serviceExit, _taskStart, _kernelUnused
 	PUBLIC	_traceServiceEnter, _traceServiceExit, _traceInterruptEnter
 	PUBLIC	_traceInterruptExit, _traceTaskStart, _traceDispatch
+	PUBLIC	kHooks, kMpfBlocks1, kMpfBlocks2
 	EXTRN	_kernelInitHook, _standby, _kernelConfig
 	EXTRN	@SEGDE, @RTARG0, @RTARG2, @RTARG4, @RTARG6
 
@@ -51,46 +52,51 @@ MPF_COUNT	EQU	0D687H
 CYC_COUNT	EQU	0D688H
 PRI_COUNT	EQU	0D689H
 
-; the kernel's RAM (page 0xf)
-kTimerHead	EQU	0DD46H		; the timeout queue's first task (and at +1 the next tick's)
-kTick		EQU	0DD48H		; isig_tim's ticks not handled yet, bit 7 while it runs
-kFlags		EQU	0DD49H		; 1 dispatching disabled, 8 a dispatch pending, 0x20 a
-					; tick queueing, 0x80 outside the kernel
-kRunTask	EQU	0DD4AH		; the running task, 0xff none
-kTopPri		EQU	0DD4BH		; the highest priority ready
-kNest		EQU	0DD4CH		; service calls running
-kIntNest	EQU	0DD4DH		; interrupts being handled
-kReadyMap	EQU	0DD4EH		; a bit for each priority with a ready task
-kTrace		EQU	0DD50H		; the trace hooks' output
-kReadyHead	EQU	0DD52H		; each priority's first ready task (from 1)
-kHooks		EQU	0DD56H		; the trace hooks (six far pointers)
-taskTmo		EQU	0DD6EH		; each task's timeout, 32 bits
-taskWaitPkt	EQU	0DD8AH		; where a waiting task gets its result (a far pointer)
-taskSp		EQU	0DDA4H		; a task's stack while it does not run, 0 not started
-taskWaitPtn	EQU	0DDB0H		; the flag pattern it waits for
-taskWaitObj	EQU	0DDBCH		; the object it waits on, then its result
-taskState	EQU	0DDC9H		; its wait state (bits 0-4), 0x20 preempted by an interrupt
-taskWait	EQU	0DDD0H		; TWF_ORW 1, 0x10 timed, 0x20 queued, 0x40 released
-taskTmoNext	EQU	0DDD7H
-taskTmoPrev	EQU	0DDDEH
-taskPri		EQU	0DDE5H
-taskWupCnt	EQU	0DDEBH
-taskSusCnt	EQU	0DDF1H
-taskActCnt	EQU	0DDF7H		; activations queued
-taskNext	EQU	0DDFDH		; the queue the task is on, 0xff dormant
-taskPrev	EQU	0DE03H
-flgPattern	EQU	0DE08H
-semWait		EQU	0DE09H		; (no semaphores are configured)
-flgWaitTask	EQU	0DE15H		; the task waiting on a flag, 0xff none
-mbxHead		EQU	0DE18H		; a mailbox's first message (a far pointer, CS 0xff none)
-mbxHeadSeg	EQU	0DE1AH
-mbxWait		EQU	0DE1BH		; its waiting tasks
-mbxTail		EQU	0DE1CH
-mbxTailSeg	EQU	0DE1EH
-mpfFree		EQU	0DE20H		; a pool's first free block (a far pointer)
-mpfFreeSeg	EQU	0DE22H
-mpfWait		EQU	0DE23H
-mbxMsgCount	EQU	0DE23H		; a prioritised mailbox's count of messages
+; the kernel's RAM (page 0xf), where the link puts @@KRAM: its state, then the tables the
+; configurator lays out (each label one entry before its table, the tables being indexed
+; by ID from 1), then the fixed-size pools' blocks
+@@KRAM	DSEG	UNIT
+kTimerHead:	DS	2	; the timeout queue's first task (and at +1 the next tick's)
+kTick:		DS	1	; isig_tim's ticks not handled yet, bit 7 while it runs
+kFlags:		DS	1	; 1 dispatching disabled, 8 a dispatch pending, 0x20 a
+				; tick queueing, 0x80 outside the kernel
+kRunTask:	DS	1	; the running task, 0xff none
+kTopPri:	DS	1	; the highest priority ready
+kNest:		DS	1	; service calls running
+kIntNest:	DS	1	; interrupts being handled
+kReadyMap:	DS	2	; a bit for each priority with a ready task
+kTrace:		DS	2	; the trace hooks' output
+kReadyHead:	DS	4	; each priority's first ready task (from 1)
+kHooks:		DS	24	; the trace hooks (six far pointers)
+taskTmo:	DS	28	; each task's timeout, 32 bits
+taskWaitPkt:	DS	26	; where a waiting task gets its result (a far pointer)
+taskSp:		DS	12	; a task's stack while it does not run, 0 not started
+taskWaitPtn:	DS	12	; the flag pattern it waits for
+taskWaitObj:	DS	13	; the object it waits on, then its result
+taskState:	DS	7	; its wait state (bits 0-4), 0x20 preempted by an interrupt
+taskWait:	DS	7	; TWF_ORW 1, 0x10 timed, 0x20 queued, 0x40 released
+taskTmoNext:	DS	7
+taskTmoPrev:	DS	7
+taskPri:	DS	6
+taskWupCnt:	DS	6
+taskSusCnt:	DS	6
+taskActCnt:	DS	6	; activations queued
+taskNext:	DS	6	; the queue the task is on, 0xff dormant
+taskPrev:	DS	5
+flgPattern:	DS	1
+semWait:	DS	12	; (no semaphores are configured)
+flgWaitTask:	DS	3	; the task waiting on a flag, 0xff none
+mbxHead:	DS	2	; a mailbox's first message (a far pointer, CS 0xff none)
+mbxHeadSeg:	DS	1
+mbxWait:	DS	1	; its waiting tasks
+mbxTail:	DS	2
+mbxTailSeg:	DS	2
+mpfFree:	DS	2	; a pool's first free block (a far pointer)
+mpfFreeSeg:	DS	1
+mbxMsgCount:			; a prioritised mailbox's count of messages
+mpfWait:	DS	9
+kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
+kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
 kResult		EQU	0FFE74H		; a service's result, or an index it keeps
@@ -366,7 +372,7 @@ _tget_mpf:
 	CALL	$!_readyRemove
 	MOVW	AX, kResult
 	SHLW	AX, 2
-	ADDW	AX, #mpfWait
+	ADDW	AX, #LOWW(mpfWait)
 	MOVW	DE, AX
 	POP	BC
 	MOVW	kResult, #0FFFFH
@@ -508,7 +514,7 @@ _mpfInit:
 	XCH	A, X
 	SHLW	AX, 2
 	MOVW	DE, AX
-	ADDW	AX, #mpfFree
+	ADDW	AX, #LOWW(mpfFree)
 	MOVW	HL, AX
 	MOVW	AX, DE
 	ADDW	AX, #MPF_AREA
@@ -614,7 +620,7 @@ __kernel_int_entry:
 ?intNested:
 	PUSH	HL
 	PUSH	DE
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+0AH]
 	MOV	CS, A
@@ -647,7 +653,7 @@ _makeReady:
 	MOV	A, ES:taskPri[C]
 	XCH	A, X
 	MOVW	HL, #1
-	ADDW	AX, #kReadyHead
+	ADDW	AX, #LOWW(kReadyHead)
 	MOVW	DE, AX
 
 ; C on the queue whose first task DE points to, at its end; HL 1: a ready queue
@@ -823,7 +829,7 @@ _trcv_mbx:
 	CALL	$!_readyRemove
 	MOVW	AX, kResult
 	SHLW	AX, 2
-	ADDW	AX, #mbxWait
+	ADDW	AX, #LOWW(mbxWait)
 	MOVW	DE, AX
 	POP	BC
 	MOVW	kResult, #0FFFFH
@@ -965,7 +971,7 @@ _rel_mpf:
 	MOV	X, A
 	CLRB	A
 	XCHW	AX, BC
-	ADDW	AX, #mpfWait
+	ADDW	AX, #LOWW(mpfWait)
 	MOVW	DE, AX
 	PUSH	BC
 	CALL	$!_queueRemove
@@ -1041,7 +1047,7 @@ _ret_int:
 	POP	AX
 	MOVW	SP, AX
 ?retIntExit:
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+0EH]
 	MOV	CS, A
@@ -1119,7 +1125,7 @@ _retIntDispatch:
 	MOV	ES:!kFlags, A
 	BR	$!?schedule
 _retIntIdle:
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+0EH]
 	MOV	CS, A
@@ -1371,7 +1377,7 @@ _dispatch:
 	CMP	A, #0FFH
 	SKNZ
 	BR	$!?noTask
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+16H]
 	MOV	CS, A
@@ -1470,7 +1476,7 @@ _dispatch:
 	BR	$!_restoreRegs
 ; nothing ready: the idle loop, standby between interrupts
 ?noTask:
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+16H]
 	MOV	CS, A
@@ -1631,7 +1637,7 @@ _snd_mbx:
 	MOV	X, A
 	CLRB	A
 	XCHW	AX, BC
-	ADDW	AX, #mbxWait
+	ADDW	AX, #LOWW(mbxWait)
 	MOVW	DE, AX
 	PUSH	BC
 	CALL	$!_queueRemove
@@ -1698,7 +1704,7 @@ _snd_mbx:
 	MOV	ES, A
 	MOV	A, ES:[DE+4]
 	XCHW	AX, BC
-	ADDW	AX, #mbxHead
+	ADDW	AX, #LOWW(mbxHead)
 	MOVW	DE, AX
 	MOV	ES, #0FH
 	MOV	A, ES
@@ -1708,7 +1714,7 @@ _snd_mbx:
 	MOVW	AX, BC
 	CLRB	A
 	SHLW	AX, 2
-	ADDW	AX, #mbxHead
+	ADDW	AX, #LOWW(mbxHead)
 	MOVW	DE, AX
 	MOV	ES, #0FH
 	MOV	A, ES
@@ -1866,7 +1872,7 @@ _serviceEnter:
 ?serviceEnter1:
 	PUSH	DE
 	INC	ES:!kNest
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+2]
 	MOV	CS, A
@@ -1882,7 +1888,7 @@ _serviceEnter:
 
 ; a service's end: HL the error code, back to the caller's stack
 _serviceExit:
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+6]
 	MOV	CS, A
@@ -1930,7 +1936,7 @@ _taskActivate:
 ; task C's first run: its stack from the configuration, its exinf in AX:BC, interrupts
 ; enabled unless its attributes say so
 _taskStart:
-	MOVW	AX, #kHooks
+	MOVW	AX, #LOWW(kHooks)
 	MOVW	DE, AX
 	MOV	A, ES:[DE+12H]
 	MOV	CS, A
@@ -2003,7 +2009,7 @@ _taskInit:
 	SHL	A, 1
 	SHR	A, 3
 	XCHW	AX, HL
-	ADDW	AX, #taskPri
+	ADDW	AX, #LOWW(taskPri)
 	XCHW	AX, HL
 	MOV	ES, #0FH
 	MOV	ES:[HL], A
@@ -2534,7 +2540,7 @@ _flgWaitCancel:
 	SHL	C, 1
 	MOVW	AX, ES:taskWaitObj[C]
 	CLRB	A
-	ADDW	AX, #flgWaitTask
+	ADDW	AX, #LOWW(flgWaitTask)
 	MOVW	DE, AX
 	MOV	A, #0FFH
 	MOV	ES:[DE+0], A
@@ -2546,7 +2552,7 @@ _mbxWaitCancel:
 	MOVW	AX, ES:taskWaitObj[C]
 	CLRB	A
 	SHLW	AX, 2
-	ADDW	AX, #mbxWait
+	ADDW	AX, #LOWW(mbxWait)
 	MOVW	DE, AX
 	POP	BC
 	BR	$!_queueRemove
@@ -2557,7 +2563,7 @@ _mpfWaitCancel:
 	MOVW	AX, ES:taskWaitObj[C]
 	CLRB	A
 	SHLW	AX, 2
-	ADDW	AX, #mpfWait
+	ADDW	AX, #LOWW(mpfWait)
 	MOVW	DE, AX
 	POP	BC
 	BR	$!_queueRemove
@@ -2567,7 +2573,7 @@ _readyRemove:
 	CLRW	AX
 	MOV	A, ES:taskPri[C]
 	XCH	A, X
-	ADDW	AX, #kReadyHead
+	ADDW	AX, #LOWW(kReadyHead)
 	MOVW	DE, AX
 	PUSH	BC
 	CALL	$!_queueRemove
@@ -2634,7 +2640,7 @@ _semWaitCancel:
 	SHL	C, 1
 	MOVW	AX, ES:taskWaitObj[C]
 	CLRB	A
-	ADDW	AX, #semWait
+	ADDW	AX, #LOWW(semWait)
 	MOVW	DE, AX
 	POP	BC
 	BR	$!_queueRemove
@@ -2674,7 +2680,7 @@ _timerRemove:
 	XCHW	AX, BC
 	SHLW	AX, 2
 	SHLW	BC, 2
-	ADDW	AX, #taskTmo
+	ADDW	AX, #LOWW(taskTmo)
 	MOVW	HL, AX
 	MOVW	AX, ES:taskTmo[BC]
 	ADDW	AX, ES:[HL+0]

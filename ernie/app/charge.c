@@ -97,11 +97,11 @@ void chargeInit(void)
 	charge.timer1fPending = 0;
 #endif
 	handler.handler = chargeTimer;
-	timerSetHandler(0x17, &handler);
+	timerSetHandler(TIMER_RTC(0x17), &handler);
 	handler.handler = chargeCookieTimer;
-	timerSetHandler(0x1e, &handler);
+	timerSetHandler(TIMER_RTC(0x1e), &handler);
 	handler.handler = chargeTimer1f;
-	timerSetHandler(0x1f, &handler);
+	timerSetHandler(TIMER_RTC(0x1f), &handler);
 }
 
 void chargeTransition(int transition)
@@ -292,7 +292,7 @@ void chargeSetPowerStatus(void)
 			chargeControl.0 = 0;
 		}
 		chargeSetAcDelay();
-		timerStart(0x17, charge.acDelay);
+		timerStart(TIMER_RTC(0x17), charge.acDelay);
 	}
 	if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && (cookieStatus1.byte[1] & 0xc0) == 0x80)
 		chargeFactors.1 = 1;
@@ -432,7 +432,7 @@ static void chargeAlarm0(void)
 {
 	if (charge.alarms[0].flags.bits.on) {
 		charge.alarmsOn.bits.alarm0 = 1;
-		timerStart(0x1d, configGet()->chargeAlarm0Delay);
+		timerStart(TIMER_RTC(0x1d), configGet()->chargeAlarm0Delay);
 	} else {
 		charge.alarmsOn.bits.alarm0 = 0;
 	}
@@ -495,16 +495,16 @@ void chargeAlarmInit(void)
 	charge.alarms[3].since = 0;
 	charge.alarms[3].handler = chargeAlarm3;
 	handler.handler = chargeAlarm0Timer;
-	timerSetHandler(0x1d, &handler);
+	timerSetHandler(TIMER_RTC(0x1d), &handler);
 }
 
 /* timer 0x17: the next update, at once while the battery's flag 15 is set */
 void chargeTimer(void)
 {
 	if (charge.flags & 0x8000)
-		timerStart(0x17, 1);
+		timerStart(TIMER_RTC(0x17), 1);
 	else
-		timerStart(0x17, charge.acDelay);
+		timerStart(TIMER_RTC(0x17), charge.acDelay);
 	task5SetFlag(4, 0x0020);
 }
 
@@ -650,13 +650,13 @@ void chargeResetBattery(void)
 void chargeTimerStart(unsigned int ticks)
 {
 	clr_flg(4, ~0x0020);
-	timerStart(0x17, ticks);
+	timerStart(TIMER_RTC(0x17), ticks);
 }
 
 void chargeTimerStop(void)
 {
 	clr_flg(4, ~0x0020);
-	timerStop(0x17);
+	timerStop(TIMER_RTC(0x17));
 }
 
 unsigned char chargeGetAc(void)
@@ -678,7 +678,7 @@ void chargeReadTempVolt(unsigned int *value)
 void chargeTimer1fStart(void)
 {
 #if BOARD_CHARGE_TIMER1F
-	timerStart(0x1f, configGet()->chargeTimer1fDelay + 120);
+	timerStart(TIMER_RTC(0x1f), configGet()->chargeTimer1fDelay + 120);
 	charge.timer1fPending = 1;
 #endif
 }
@@ -687,7 +687,7 @@ void chargeTimer1fStop(void)
 {
 #if BOARD_CHARGE_TIMER1F
 	charge.timer1fPending = 0;
-	timerStop(0x1f);
+	timerStop(TIMER_RTC(0x1f));
 #endif
 }
 

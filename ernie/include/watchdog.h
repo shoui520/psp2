@@ -9,7 +9,7 @@
 #ifdef ERNIE_UPDATER
 #define WATCHDOG_TIMER		0x1c
 #else
-#define WATCHDOG_TIMER		0x1b
+#define WATCHDOG_TIMER		TIMER_RTC(0x1b)
 #endif
 
 /* the watchdog's setting, as the host sends it */

@@ -472,7 +472,9 @@ unsigned char powerReset(void)
 	powerPendingClear(4);
 	powerPendingClear(1);
 	powerJobPostReset();
+#if FW_SINCE(0x01000306)
 	powerWait(0x19);
+#endif
 	powerPendingClear(5);
 	powerPendingClear(6);
 	task2SetFlag(3, 0x1000);

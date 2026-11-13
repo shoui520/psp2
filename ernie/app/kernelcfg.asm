@@ -8,6 +8,7 @@
 	PUBLIC	_kernelConfig, _rtos_task_table, _rtos_init_table, _rtos_task_count
 	EXTRN	_task1, _task2, _task3, _hostTask, _task5, _task6, _timerTick
 	EXTRN	_cycInit, _flgInit, _mbxInit, _mpfInit
+	EXTRN	kHooks, kMpfBlocks1, kMpfBlocks2
 
 @@KCFG	CSEG	BASE
 _kernelConfig:
@@ -17,7 +18,10 @@ _kernelConfig:
 	DW	LOWW(_timerTick), HIGHW(_timerTick)
 	DW	1, 0
 ; the fixed-size pools: their memory (far pointers), block sizes and block counts
-	DW	0DE2CH, 0FH, 0DE8CH, 0FH
+	DW	LOWW(kMpfBlocks1)
+	DW	HIGHW(kMpfBlocks1)
+	DW	LOWW(kMpfBlocks2)
+	DW	HIGHW(kMpfBlocks2)
 	DW	0CH, 0F0H
 	DW	8, 2
 ; the tasks: entry, then CS (bits 0-3), priority (bits 10-14), bit 15 not activated at start
@@ -31,7 +35,8 @@ _rtos_task_table:
 	DW	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; their extended information
 	DW	0D3DCH, 0D4F8H, 0D59CH, 0D678H, 0D74CH, 0D828H	; their stacks' tops
 	DW	0D8EAH			; the kernel's stack
-	DW	0DD56H, 0FH		; the trace hooks (kHooks)
+	DW	LOWW(kHooks)		; the trace hooks
+	DW	HIGHW(kHooks)
 _rtos_init_table:
 	DW	LOWW(_cycInit), 0
 	DW	LOWW(_flgInit), 0

@@ -271,6 +271,14 @@ unsigned char serial2SetP71(unsigned char level)
 	return level & 1;
 }
 
+#if !FW_SINCE(0x01000306)
+/* told which link opens (1 link 2, 0 link 1): does nothing */
+unsigned char serial2SetLink(int link2)
+{
+	return 0;
+}
+#endif
+
 /* 1 when a byte of the test area is not 0 */
 int serial2TestAreaUsed(void)
 {

@@ -6,6 +6,8 @@
 #ifndef ERNIE_PARAM_H
 #define ERNIE_PARAM_H
 
+#include "ernie.h"
+
 #include "charge.h"
 
 #define PARAM_ACCESS_MAX	0x20	/* the most bytes one read or write moves */
@@ -34,7 +36,7 @@ extern int paramLoad(void);
 extern unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char paramWrite(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void paramGetChargeLevels(struct ChargeLevel *levels);
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
 extern void paramGetLevel0(unsigned char *level);
 extern void paramGetLevel1(unsigned char *level);
 extern void paramGetLevel2(unsigned char *level);

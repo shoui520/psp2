@@ -5,6 +5,8 @@
 #ifndef ERNIE_UART_H
 #define ERNIE_UART_H
 
+#include "ernie.h"
+
 /* after each byte received, timer runs for timeout ticks, then sets pattern in event flag flgid */
 struct UartTimeout {
 	unsigned char	timer;
@@ -33,7 +35,7 @@ struct UartPort {
 
 extern struct UartPort uart4;
 
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000306)
 extern int uartInit(void);
 #endif
 extern void uartStopTx(unsigned char port);

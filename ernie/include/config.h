@@ -6,12 +6,17 @@
 #ifndef ERNIE_CONFIG_H
 #define ERNIE_CONFIG_H
 
+#include "ernie.h"
 #include "analog.h"
 #include "charge.h"
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
+#if FW_SINCE(0x01000306)
 #define CONFIG_VERSION		0x31	/* this build's layout */
+#else
+#define CONFIG_VERSION		0x29	/* (no touch delays, host link limits or off transition 0x18) */
+#endif
 #define CONFIG_WRITTEN		0x5a5a
 
 /* the wake factors unmasked, and masked, at the start and in the off state (stateInit,
@@ -168,6 +173,7 @@ struct ConfigBlock {
 	unsigned int	chargeTimer1fDelay;	/* PCH-1000: timer 0x1f's, less 120 ticks */
 	unsigned char	batterySetting4x;	/* cookieCtrlReg7's for a battery version[2] 0x40-0x4f */
 	unsigned char	batterySetting5x;	/* and 0x50 or above */
+#if FW_SINCE(0x01000306)
 	unsigned char	touchDelaySelect;	/* Touch's delays, in NOPs */
 	unsigned char	touchDelayByte;
 	unsigned char	touchDelayDeselect;
@@ -183,6 +189,9 @@ struct ConfigBlock {
 						   runs transition 0x18 */
 	unsigned char	reserved29:7;
 	unsigned char	reserved30[CONFIG_SIZE - 0x1c5];
+#else
+	unsigned char	reserved30[CONFIG_SIZE - 0x1b0];
+#endif
 };
 
 /* a bank */

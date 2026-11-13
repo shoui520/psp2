@@ -822,7 +822,9 @@ static void touchRequestStart(void)
 				TMMK04 = 1;
 				TMIF04 = 0;
 				touchSetMode(0);
+#if FW_SINCE(0x01000306)
 				touchClearFlags(TOUCH_FRAME);
+#endif
 			}
 			touchRequest.answerLength = 1;
 			inputRequests.touchPending = 0;

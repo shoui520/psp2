@@ -90,6 +90,7 @@ OBJECT	../lib/luadd.asm
 OBJECT	../lib/lulsh.asm
 OBJECT	../lib/lursh.asm
 OBJECT	../lib/iscmp.asm
+OBJECT	../lib/lscmp.asm	IF ERNIE_FW<0x01000306
 OBJECT	../lib/luband.asm
 OBJECT	../lib/lubor.asm
 OBJECT	../lib/lubxor.asm
@@ -135,10 +136,6 @@ SYMBOL	@RTARG6		0xffede
 RESERVE	0xffed4		12
 # the settings' two banks in the flash, which neither program's image holds
 SYMBOL	_configBanks	0x3b800
-
-# the kernel's own RAM (kernel.asm's and kernelcfg.asm's addresses): its state and trace
-# hooks from 0xfdd46, the fixed-size pools' blocks 0xfde2c-0xfe06b
-RESERVE	0xfdd46		0x326
 
 # the interrupts' vectors are vectors.asm's table, not the compiler's
 DROP	@@VECT??
@@ -200,15 +197,22 @@ SEG	@@DATA		handshake.c cstartend.asm IF ERNIE_FW!=0x01000306
 SEG	@@FSLDAT	IF ERNIE_FW!=0x01000306
 SEG	@@INIS		IF ERNIE_FW!=0x01000306
 # The original handshake packet and state start here on these boards.
-AT	0xfdcde		IF ERNIE_HW==0x00415000
+AT	0xfdcde		IF ERNIE_HW==0x00415000&&ERNIE_FW>=0x01000306
+AT	0xfdcd4		IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306
 AT	0xfdcde		IF ERNIE_HW==0x00406000
 SEG	@@DATA		handshake.c cstartend.asm
 SEG	@@FSLDAT
 # the startup's (empty) saddr initialised data, where Sony's link has it
 SEG	@@INIS
+# the kernel's own RAM (kernel.asm's @@KRAM): its state, its tables, the fixed-size pools'
+# blocks
+AT	0xfdd46		IF ERNIE_FW>=0x01000306
+AT	0xfdd3c		IF ERNIE_FW<0x01000306
+SEG	@@KRAM
 # after the kernel's: the flash library's buffer, the initialised data, then what cstart
 # clears, from its start label to cstartend's
-AT	0xfe06c
+AT	0xfe06c		IF ERNIE_FW>=0x01000306
+AT	0xfe062		IF ERNIE_FW<0x01000306
 SEG	@@DATA		main.c
 SEG	@@INITL
 SEG	@@DATAL		cstart.asm

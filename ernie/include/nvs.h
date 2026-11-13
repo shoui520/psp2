@@ -5,6 +5,20 @@
 #ifndef ERNIE_NVS_H
 #define ERNIE_NVS_H
 
+#include "ernie.h"
+
+/* nvsGetState: the NVS has failed (no data blocks found), its spares are full (a move is due),
+   the data was moved (the old blocks are still to be erased) */
+#if FW_SINCE(0x01000306)
+#define NVS_STATE_FAILED	0xf0
+#define NVS_STATE_FULL		0x03
+#define NVS_STATE_MOVED		0x12
+#else
+#define NVS_STATE_FAILED	0x80
+#define NVS_STATE_FULL		0x81
+#define NVS_STATE_MOVED		0x82
+#endif
+
 extern unsigned char nvsRead(unsigned int offset, unsigned int size, unsigned char *data,
 			     unsigned char area);
 extern unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *data,
