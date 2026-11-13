@@ -590,6 +590,22 @@ static void enableScannerInterrupt(void)
 	mep_ei();
 }
 
+/* the library's resetScanner without the state; uncalled */
+VIP_UNCALLED static void restartScanner(void)
+{
+	uint32_t psw = vipReadControl(VIP_CR_PSW), enable;
+
+	mep_di();
+	enable = vipReadControlBus(VIP_CB_CLOCK_ENABLE);
+	vipWriteControlBus(VIP_CB_CLOCK_ENABLE, enable | VIP_CLOCK_DEMUX);
+	vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 0);
+	vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 1);
+	vipWriteControlBus(VIP_CB_CLOCK_ENABLE, enable & ~VIP_CLOCK_DEMUX);
+	__asm__ volatile ("nop\n\tnop");
+	if (psw & VIP_PSW_IEC)
+		mep_ei();
+}
+
 /*
  * Open the scanner's rings: the input, read through the given cursor, and the
  * elementary stream and NAL record rings, which it writes. -3: a ring is not

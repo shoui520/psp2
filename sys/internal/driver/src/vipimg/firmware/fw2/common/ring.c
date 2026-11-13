@@ -163,6 +163,66 @@ int ringSkipToWriter(VipRingHandle *handle)
 }
 
 /*
+ * Read up to size bytes the writer has written into local RAM, by DMA, and advance
+ * the reader; the number of bytes read. fw1's, uncalled in FW2.
+ */
+VIP_UNCALLED int readRing(VipRingHandle *handle, uint32_t local, uint32_t size)
+{
+	volatile uint32_t done = 0;
+	const VipRing *ring = handle->ring;
+	VipRingCursor *cursor = getCursor(handle, 1);
+	uint32_t start, ringSize, readOffset, writeOffset, control;
+	uint32_t transferred = 0, last = 0;
+
+	if (!cursor)
+		return -1;
+	writeOffset = ring->cursors[0].open ? ring->cursors[0].position : cursor->position;
+	start = ring->start;
+	ringSize = ring->size;
+	writeOffset -= start;
+	readOffset = cursor->position - start;
+	control = VIP_DMA_READ;
+	if (local & VIP_LOCAL_BANK1)
+		control |= VIP_DMA_BANK1;
+	for (;;) {
+		uint32_t end = readOffset + size;
+		uint32_t external = start + readOffset;
+		uint32_t length, localLength;
+
+		if (writeOffset < readOffset && end > ringSize) {
+			length = ringSize - readOffset;
+			size = end - ringSize;
+			readOffset = 0;
+		} else if (writeOffset < readOffset || end < writeOffset) {
+			length = size;
+			size = 0;
+			readOffset = end;
+			last = 1;
+		} else {
+			length = writeOffset - readOffset;
+			size = end - writeOffset;
+			readOffset = writeOffset;
+			last = 1;
+		}
+		if ((int32_t)length < 1)
+			break;
+		localLength = (local + transferred) << 16 | length;
+		transferred += length;
+		if (last) {
+			queueDma(control, external, localLength, &done);
+			break;
+		}
+		queueDma(control, external, localLength, NULL);
+	}
+	if (readOffset == ringSize)
+		readOffset = 0;
+	while (done == 1)
+		;
+	cursor->position = start + readOffset;
+	return transferred;
+}
+
+/*
  * Write up to size bytes from local RAM into the ring, by DMA, as far as the
  * first reader allows, and advance the writer; the number of bytes written.
  */
@@ -448,6 +508,21 @@ int getRingDistance(VipRingHandle *handle, uint32_t from, uint32_t to)
 	return to - from;
 }
 
+/* the handle's ring, and setting it: fw1's, uncalled in FW2 */
+VIP_UNCALLED int getRing(VipRingHandle *handle, VipRing **ring)
+{
+	if (!handle->ring)
+		return -1;
+	*ring = handle->ring;
+	return 0;
+}
+
+VIP_UNCALLED int setRing(VipRingHandle *handle, VipRing *ring)
+{
+	handle->ring = ring;
+	return 0;
+}
+
 /* the states the processors keep in the ring, a byte each */
 uint32_t getRingReaderState0(VipRingHandle *handle)
 {
@@ -457,6 +532,11 @@ uint32_t getRingReaderState0(VipRingHandle *handle)
 void setRingReaderState0(VipRingHandle *handle, uint32_t state)
 {
 	handle->ring->readerState[0] = state;
+}
+
+VIP_UNCALLED uint32_t getRingReaderState1(VipRingHandle *handle)
+{
+	return handle->ring->readerState[1];
 }
 
 void setRingReaderState1(VipRingHandle *handle, uint32_t state)

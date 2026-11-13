@@ -1444,6 +1444,12 @@ static void parsePanScan(void)
 	writeParsed((uint32_t)buffer, 0x40, panScanWritten);
 }
 
+/* a written message's records as VIP_PARSED_SEI_OTHER, 0x98 bytes; uncalled */
+VIP_UNCALLED static void seiOtherWritten(void)
+{
+	seiMessageWritten(VIP_PARSED_SEI_OTHER, 0x98);
+}
+
 static void recoveryPointWritten(void)
 {
 	seiMessageWritten(VIP_PARSED_RECOVERY_POINT, 8);

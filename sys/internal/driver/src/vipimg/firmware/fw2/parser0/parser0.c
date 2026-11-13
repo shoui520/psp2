@@ -87,6 +87,19 @@ VIP_PROGRAM_LOADER void readStreamInterrupt(void);
 
 /* ---- in DRAM ---- */
 
+/* parser1ResetHardware, which parser0 carries too; uncalled, no reset hook names it */
+VIP_UNCALLED static void parser0ResetHardware(void)
+{
+	if (vipReadControlBus(VIP_CB_CLOCK_REQUEST) & VIP_CLOCK_REQUEST_DECODER) {
+		vipWriteControlBus(VIP_CB_BITSTREAM_ENABLE, 0);
+		vipWriteControlBus(VIP_CB_BITSTREAM_ENABLE, 1);
+	}
+	if (vipReadControlBus(VIP_CB_CLOCK_ENABLE) & VIP_CLOCK_DEMUX) {
+		vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 0);
+		vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 1);
+	}
+}
+
 /* VIP_PARSER_SET_OPTION: option 0 is the option byte, at the top of the value */
 static int setOption(const uint32_t *arguments)
 {
@@ -393,6 +406,22 @@ static void enableScannerInterrupt(void)
 		vipReadControlBus(VIP_CB_INTERRUPT_ENABLE) | 1u << VIP_INTERRUPT_SCANNER);
 	__asm__ volatile ("nop\n\tnop\n\tnop");
 	mep_ei();
+}
+
+/* the library's resetScanner without the state; uncalled */
+VIP_UNCALLED static void restartScanner(void)
+{
+	uint32_t psw = vipReadControl(VIP_CR_PSW), enable;
+
+	mep_di();
+	enable = vipReadControlBus(VIP_CB_CLOCK_ENABLE);
+	vipWriteControlBus(VIP_CB_CLOCK_ENABLE, enable | VIP_CLOCK_DEMUX);
+	vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 0);
+	vipWriteControlBus(VIP_CB_SCANNER_CONTROL, 1);
+	vipWriteControlBus(VIP_CB_CLOCK_ENABLE, enable & ~VIP_CLOCK_DEMUX);
+	__asm__ volatile ("nop\n\tnop");
+	if (psw & VIP_PSW_IEC)
+		mep_ei();
 }
 
 /* ---- in the program's code overlay ---- */
