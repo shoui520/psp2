@@ -392,8 +392,8 @@
 +				if ((meth != NULL) && (meth->idx == item->idx))
 +					{
 +					if (meth->free_func != NULL)
-+						meth->free_func(obj,item->ptr,ex_data,
-+							item->idx,meth->argl,meth->argp);
++						meth->free_func(obj,item->ptr,item->idx,
++							meth->argl,meth->argp);
 +					break;
 +					}
 +				}
@@ -1151,7 +1151,18 @@
  	}
  
  int ssl_cipher_id_cmp(a,b)
-@@ -690,85 +1001,156 @@
+@@ -661,7 +972,9 @@
+ STACK *SSL_get_ciphers(s)
+ SSL *s;
+ 	{
+-	if ((s != NULL) && (s->cipher_list != NULL))
++	if (s == NULL)
++		return(NULL);
++	if (s->cipher_list != NULL)
+ 		{
+ 		return(s->cipher_list);
+ 		}
+@@ -690,85 +1003,156 @@
  	return(NULL);
  	}
  
@@ -1160,13 +1171,13 @@
 -SSL *s;
 -int n;
 +int sslTestWeakCipherFlags(int mask)
- 	{
++	{
 +	return(mask & ssl_weak_cipher_flags);
 +	}
 +
 +STACK *sslCreateCipherList(SSL_CTX *ctx, SSL_METHOD *meth, STACK **cipher_list,
 +	STACK **cipher_list_by_id, const char *rule_str)
-+	{
+ 	{
 +	int num_of_ciphers,i,j;
 +	unsigned long disabled_mkey_mask,disabled_mask;
 +	const char *l,*buf_start;
@@ -1368,7 +1379,7 @@
  	}
  
  int ssl_cipher_list_to_bytes(s,sk,p)
-@@ -786,8 +1168,12 @@
+@@ -786,8 +1170,12 @@
  	for (i=0; i<sk_num(sk); i++)
  		{
  		c=(SSL_CIPHER *)sk_value(sk,i);
@@ -1383,7 +1394,7 @@
  		}
  	return(p-q);
  	}
-@@ -799,17 +1185,24 @@
+@@ -799,17 +1187,24 @@
  STACK **skp;
  	{
  	SSL_CIPHER *c;
@@ -1412,7 +1423,7 @@
  	else
  		{
  		sk= *skp;
-@@ -818,7 +1211,7 @@
+@@ -818,7 +1213,7 @@
  
  	for (i=0; i<num; i+=n)
  		{
@@ -1421,7 +1432,7 @@
  		p+=n;
  		if (c != NULL)
  			{
-@@ -830,17 +1223,18 @@
+@@ -830,17 +1225,18 @@
  			}
  		}
  
@@ -1443,7 +1454,7 @@
  	{
  	unsigned long l;
  
-@@ -852,339 +1246,529 @@
+@@ -852,339 +1248,529 @@
  	return(l);
  	}
  
@@ -1839,10 +1850,10 @@
 +	unsigned long options, int type, SslExtensionList *val)
  	{
 -	int i;
--
--	if (a == NULL) return;
 +	int status=0;
  
+-	if (a == NULL) return;
+-
 -	i=CRYPTO_add(&a->references,-1,CRYPTO_LOCK_SSL_CTX);
 -#ifdef REF_PRINT
 -	REF_PRINT("SSL_CTX",a);
@@ -2203,7 +2214,7 @@
  SSL *s;
  SSL_CIPHER *cipher;
  	{
-@@ -1213,73 +1797,25 @@
+@@ -1213,73 +1799,25 @@
  		}
  	}
  
@@ -2288,7 +2299,7 @@
  	}
  
  int SSL_get_error(s,i)
-@@ -1287,66 +1823,99 @@
+@@ -1287,66 +1825,99 @@
  int i;
  	{
  	int reason;
@@ -2297,11 +2308,11 @@
  	BIO *bio;
  
 -	if (i > 0) return(SSL_ERROR_NONE);
-+	if (i > 0) goto end;
- 
+-
 -	if (ERR_peek_error() != 0)
 -		return(SSL_ERROR_SSL);
--
++	if (i > 0) goto end;
+ 
 -	if ((i < 0) && SSL_want_read(s))
 +	error=ERR_peek_error();
 +	if (error != 0)
@@ -2407,14 +2418,14 @@
  	if (i == 0)
  		{
 -		if (s->version == SSL2_VERSION)
--			{
++		if ((s->shutdown & SSL_RECEIVED_SHUTDOWN) &&
++			(s->s3->warn_alert == SSL3_AD_CLOSE_NOTIFY))
+ 			{
 -			/* assume it is the socket being closed */
 -			return(SSL_ERROR_ZERO_RETURN);
 -			}
 -		else
-+		if ((s->shutdown & SSL_RECEIVED_SHUTDOWN) &&
-+			(s->s3->warn_alert == SSL3_AD_CLOSE_NOTIFY))
- 			{
+-			{
 -			if ((s->shutdown & SSL_RECEIVED_SHUTDOWN) &&
 -				(s->s3->warn_alert == SSL_AD_CLOSE_NOTIFY))
 -				return(SSL_ERROR_ZERO_RETURN);
@@ -2429,7 +2440,7 @@
  	}
  
  int SSL_do_handshake(s)
-@@ -1371,29 +1940,33 @@
+@@ -1371,29 +1942,33 @@
  
  /* For the next 2 functions, SSL_clear() sets shutdown and so
   * one of these calls will reset it */
@@ -2475,7 +2486,7 @@
  	SSLerr(SSL_F_SSL_UNDEFINED_FUNCTION,ERR_R_SHOULD_NOT_HAVE_BEEN_CALLED);
  	return(0);
  	}
-@@ -1401,149 +1974,62 @@
+@@ -1401,149 +1976,62 @@
  SSL_METHOD *ssl_bad_method(ver)
  int ver;
  	{
@@ -2655,7 +2666,7 @@
  	}
  
  int ssl_init_wbio_buffer(s,push)
-@@ -1565,10 +2051,10 @@
+@@ -1565,10 +2053,10 @@
  			s->wbio=BIO_pop(s->wbio);
  		}
  	BIO_reset(bbio);
@@ -2669,7 +2680,7 @@
  		return(0);
  		}
  	if (push)
-@@ -1583,31 +2069,26 @@
+@@ -1583,31 +2071,26 @@
  		}
  	return(1);
  	}
@@ -2714,7 +2725,7 @@
  	}
  
  void SSL_set_shutdown(s,mode)
-@@ -1623,127 +2104,140 @@
+@@ -1623,127 +2106,140 @@
  	return(s->shutdown);
  	}
  

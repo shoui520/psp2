@@ -119,11 +119,6 @@ SslCipherBackendData sslCamelliaCbcBackendData = {
 	NULL
 };
 
-SslDirectMemoryContext *sslGetOrCreateDefaultDirectMemoryContext(void)
-{
-	return sslGetDefaultDirectMemoryContextInline();
-}
-
 int sslCipherBackendDestroy(SslCryptoAlgorithm *algorithm)
 {
 	if (algorithm->backendState != NULL) {
@@ -292,7 +287,7 @@ int sslCipherBackendSetInfo(SslCryptoAlgorithm *algorithm, int selector,
 			int index = *(int *)value;
 			SceUInt32 stateLen = 0;
 			SslDirectMemoryContext *dmem =
-				sslGetOrCreateDefaultDirectMemoryContext();
+				sslGetDefaultDirectMemoryContextInline();
 			int switchStatus;
 
 			if (algorithm->backendState == NULL) {

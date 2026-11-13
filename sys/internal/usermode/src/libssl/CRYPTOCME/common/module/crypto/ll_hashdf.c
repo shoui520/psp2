@@ -77,6 +77,7 @@ int sslCreateHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
 {
 	SslHashDf *df = *result;
 	SslHashDf *allocated;
+	SceUInt32 flags;
 	int size = 0;
 	int status;
 
@@ -91,8 +92,9 @@ int sslCreateHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
 						 dmem, SSL_DMEM_ALLOCATE_ZERO);
 		if (status == 0) {
 			sslFreeHashDf(*result);
+			flags = allocated->flags | SSL_RAND_OBJECT_ALLOCATED;
 			*result = allocated;
-			allocated->flags |= SSL_RAND_OBJECT_ALLOCATED;
+			allocated->flags = flags;
 			status = sslLayOutHashDf(result, descriptor, allocated,
 						 &size, dmem);
 		}
@@ -100,11 +102,10 @@ int sslCreateHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
 	return status;
 }
 
-int sslNewHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
-		 SslDirectMemoryContext *dmem)
+int sslNewHashDf(SslHashDf **result, SslDirectMemoryContext *dmem)
 {
 	*result = NULL;
-	return sslCreateHashDf(result, descriptor, dmem);
+	return sslCreateHashDf(result, NULL, dmem);
 }
 
 /* The input, and an extra input: each kept in a buffer of the object */
@@ -115,7 +116,7 @@ int sslSetHashDfInputs(SslHashDf *df, const void *input, SceUInt32 length,
 	SslHashDfInput *slot;
 	SslDirectMemoryContext *dmem;
 	int status;
-	int i;
+	SceUInt32 i;
 
 	if (df == NULL)
 		return SSL_CRYPTO_ERROR_INVALID_STATE;

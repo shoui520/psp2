@@ -326,8 +326,8 @@ int sslDuplicateDigestBackendContext(SslDigestContext **result,
 	int copied = 0;
 	SslDigestContext *copy = NULL;
 	unsigned char *buffer = NULL;
-	void *memory;
 	SceUInt32 length;
+	void *memory;
 	int ret = 0;
 	int status;
 	int init;

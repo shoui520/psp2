@@ -16,11 +16,13 @@ static const SceUInt32 sslCipherBufferStateSchema[] = {
 
 int sslFreeLowLevelCipher(SslCipherBuffer *buffer)
 {
+	SslDirectMemoryContext *dmem;
+
 	if (buffer != NULL) {
 		sslFreeCipherCore(buffer->core);
+		dmem = buffer->dmem;
 		if (buffer->buffer != NULL)
-			buffer->dmem->methods->Free(buffer->buffer,
-						    buffer->dmem);
+			dmem->methods->Free(buffer->buffer, dmem);
 		if (buffer->flags & SSL_CIPHER_BUFFER_ALLOCATED)
 			buffer->dmem->methods->Free(buffer, buffer->dmem);
 	}

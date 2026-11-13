@@ -234,6 +234,7 @@ int sslGetPublicKeyProperty(SslPublicKey *key, int selector, SceUInt32 *result)
 		case 12339:
 		case 12340:
 		case 12341:
+		case 12342:
 		case 12343:
 			type = 32;
 			id -= 12288;

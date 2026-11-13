@@ -169,6 +169,7 @@ int sslRetainSmallCertificateStore(SslSmallCertificateStore *store)
 	return 0;
 }
 
+__attribute__((noinline))
 int sslFreeSmallCertificateStore(SslSmallCertificateStore *store)
 {
 	SslCertificate *certificate;
@@ -464,15 +465,15 @@ int sslSetCertificateStoreCursorCertificate(void *cursor, void *certificate,
 }
 
 int sslGetCertificateStoreCursorCertificate(void *cursor, void **certificate,
-					    SceUInt32 *keyId)
+					    SslCertificateExtensionData **keyId)
 {
 	SslSmallCertificateStoreCursor *object = cursor;
 	int status = SSL_CRYPTO_ERROR_NULL_ARGUMENT;
 
 	if (object != NULL && certificate != NULL) {
 		status = object->methods->GetCursorInfo(object, 4, certificate);
-		if (status == 0 && keyId != NULL && *keyId != 0)
-			status = object->methods->GetCursorInfo(object, 5, keyId);
+		if (status == 0 && keyId != NULL && *keyId != NULL)
+			status = object->methods->GetCursorInfo(object, 5, *keyId);
 	}
 	return status;
 }

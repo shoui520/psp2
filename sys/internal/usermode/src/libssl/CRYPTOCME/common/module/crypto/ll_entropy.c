@@ -186,8 +186,8 @@ int sslCreateLowLevelEntropySource(SslEntropySource **result,
 				   const SslEntropyDescriptor *descriptor,
 				   SslDirectMemoryContext *dmem)
 {
-	SslEntropySource *memory;
 	int size;
+	SslEntropySource *memory;
 	int status;
 
 	if (dmem == NULL) {

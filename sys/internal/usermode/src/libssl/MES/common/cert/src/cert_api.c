@@ -73,6 +73,7 @@ int sslAllocateAndSerializeCertificate(SslCertificate *certificate, void **data,
 	return status;
 }
 
+__attribute__((noinline))
 int sslGetCertificateName(SslCertificate *certificate, int selector, int mode,
 			  void **result)
 {
@@ -185,6 +186,7 @@ int sslAreCertificatesEqual(SslCertificate *left, SslCertificate *right)
 	return equal;
 }
 
+__attribute__((noinline))
 int sslCompareCertificateNames(SslCertificateName *left,
 			       SslCertificateName *right)
 {

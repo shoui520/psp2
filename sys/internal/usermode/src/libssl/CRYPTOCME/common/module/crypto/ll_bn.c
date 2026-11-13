@@ -221,7 +221,8 @@ int sslSubtractBigNumUnsigned(SslBigNum *r, const SslBigNum *a,
 			      const SslBigNum *b, SslBigNumContext *ctx)
 {
 	SslBigNumWord *ap, *rp, t1, t2;
-	int i, max, min;
+	SceUInt32 max, min, n;
+	int i;
 
 	if (ctx->error != 0)
 		return ctx->error;
@@ -238,21 +239,19 @@ int sslSubtractBigNumUnsigned(SslBigNum *r, const SslBigNum *a,
 	i = bn_sub_words(rp, ap, b->d, min);
 	ap += min;
 	rp += min;
+	n = min;
 	if (i != 0) {
-		i = min;
-		while (i < max) {
-			i++;
+		while (n < max) {
+			n++;
 			t1 = *ap++;
 			t2 = t1 - 1;
 			*rp++ = t2;
 			if (t1 > t2)
 				break;
 		}
-	} else {
-		i = min;
 	}
 	if (rp != ap)
-		sslCopyMemory(rp, ap, (max - i) * 4);
+		sslCopyMemory(rp, ap, (max - n) * 4);
 	for (i = max - 1; i >= 0; i--)
 		if (r->d[i] != 0)
 			break;

@@ -69,7 +69,7 @@ int sslMultiplyBigNum(SslBigNum *r, const SslBigNum *a, const SslBigNum *b,
 	    sslExpandBigNum(rr, top, 1, ctx) != 0)
 		return ctx->error;
 	rr->top = top;
-	if (na < nb)
+	if ((SceUInt32)na < (SceUInt32)nb)
 		sslMultiplyBigNumWords(rr->d, b->d, nb, a->d, na);
 	else
 		sslMultiplyBigNumWords(rr->d, a->d, na, b->d, nb);

@@ -53,7 +53,9 @@ static int sslCreateDefaultDirectMemoryContext(
 	if (parent != NULL) {
 		err = parent->methods->Allocate((void **)&ctx, sizeof(*ctx),
 						parent, 0x100);
-		if (err != 0)
+		/* Sony's test is inverted: a successful allocation returns at
+		 * once and leaves *outCtx unset */
+		if (err == 0)
 			return err;
 		ctx->parent = parent;
 	} else {

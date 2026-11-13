@@ -67,8 +67,7 @@ int sslLayOutHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
 int sslFreeHashDf(SslHashDf *df);
 int sslCreateHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
 		    SslDirectMemoryContext *dmem);
-int sslNewHashDf(SslHashDf **result, const SslHashDfDescriptor *descriptor,
-		 SslDirectMemoryContext *dmem);
+int sslNewHashDf(SslHashDf **result, SslDirectMemoryContext *dmem);
 int sslSetHashDfInputs(SslHashDf *df, const void *input, SceUInt32 length,
 		       const void *extra, SceUInt32 extraLength, int arg);
 int sslGenerateHashDf(SslHashDf *df, SslHashDfOutput *outputs, int count);

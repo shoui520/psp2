@@ -140,8 +140,8 @@ static int sslGatherEntropy(SslEntropySource *whiten, SceUInt32 bits,
 	SceUInt32 previous = 0;
 	SceUInt32 written = 0;
 	int space = SSL_ENTROPY_POOL_SIZE;
-	int used;
 	SceUInt32 got;
+	int used;
 	int status;
 
 	do {

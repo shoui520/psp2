@@ -20,7 +20,7 @@ typedef struct SslPrngImplementationMethods {
 
 typedef struct SslPrngUserCallback {
 	int (*read)(void *userCallback, void *buf, SceUInt32 maxLen);
-	int (*init)(void);
+	int (*init)(void *userCallback);
 } SslPrngUserCallback;
 
 typedef struct SslPrngBackendState SslPrngBackendState;
@@ -328,7 +328,7 @@ int sslInvokePrngUserInitCallback(const SslPrngUserCallback *userCallback)
 
 	if (userCallback == NULL || userCallback->init == NULL)
 		status = 10021;
-	else if (userCallback->init() == -1)
+	else if (userCallback->init((void *)userCallback) == -1)
 		status = 10001;
 	return status;
 }
@@ -357,6 +357,7 @@ int sslPrngReturnOne(void)
 	return 1;
 }
 
+__attribute__((noinline))
 int sslAttachPrngUserEntropyCallback(SslPrngBackendState *state,
 				     SslPrngUserCallback *userCallback)
 {
@@ -541,6 +542,7 @@ int sslFips186PrngBackendGetInfo(SslCryptoAlgorithm *algorithm, int selector,
 	}
 }
 
+__attribute__((noinline))
 int sslFeedFips186PrngEntropy(SslCryptoAlgorithm *algorithm, const void *buffer,
 			      SceUInt32 length)
 {

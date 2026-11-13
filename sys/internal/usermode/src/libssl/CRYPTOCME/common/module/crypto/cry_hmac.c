@@ -42,7 +42,7 @@ _Static_assert(sizeof(SslHmacBackendState) == 8, "SslHmacBackendState");
 
 int sslHmacBackendInitialize(SslCryptoAlgorithm *algorithm)
 {
-	const SslHmacBackendData *data = algorithm->implementationData;
+	const SslHmacBackendData *data;
 	SslDigestContext *context = NULL;
 	SslHmacBackendState *state = NULL;
 	const SslDigestDescriptor *hmac = sslGetHmacDigestDescriptor();
@@ -51,6 +51,7 @@ int sslHmacBackendInitialize(SslCryptoAlgorithm *algorithm)
 
 	status = sslCreateDigestBackendContext(&context, hmac, dmem);
 	if (status == 0) {
+		data = algorithm->implementationData;
 		status = sslGetDigestBackendContextInfo(
 			context, 16, NULL,
 			(const void **)data->GetDigestDescriptor());

@@ -154,8 +154,8 @@ typedef struct SslExDataMethod {
 	long argl;
 	char *argp;
 	int (*new_func)(void *obj, STACK *ex_data, int idx, long argl, char *argp);
-	void (*free_func)(void *obj, char *ptr, STACK *ex_data, int idx,
-			  long argl, char *argp);
+	void (*free_func)(void *obj, char *ptr, int idx, long argl,
+			  char *argp);
 	int (*dup_func)(void);
 	int idx;
 } SslExDataMethod;

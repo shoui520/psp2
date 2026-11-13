@@ -326,6 +326,8 @@ set_source_files_properties(
 set_source_files_properties(
 	CRYPTOCME/common/module/crypto/ll_rsamont.c
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=48)
+# The SDK's hash and AES libraries, a section per function: libssl links
+# sceSha256Digest's object but not the function
 set_source_files_properties(
 	../../../../sdk/target/src/sha224/libsha224.c
 	../../../../sdk/target/src/sha256/libsha256.c
@@ -333,10 +335,15 @@ set_source_files_properties(
 	../../../../sdk/target/src/sha512/libsha512.c
 	../../../../sdk/target/src/aes/libaes.c
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
-	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder")
+	COMPILE_OPTIONS "-fno-stack-protector;-fno-toplevel-reorder;-ffunction-sections")
 set_source_files_properties(
 	../../../../../toolchains/libgcc/div64.c
 	../../../../../toolchains/libgcc/mod64.c
 	../../../../../toolchains/libgcc/udiv64.c
 	PROPERTIES COMPILE_DEFINITIONS "PSP2_COMPILER_GCC48;IN_LIBGCC2"
 	COMPILE_OPTIONS "-fno-stack-protector;-fbuilding-libgcc")
+# Sony linked with psp2ld --strip-unused, which drops the functions nothing references
+# (OpenSSL's BIO_find_type, BIO_get_retry_BIO, BIO_ptr_ctrl, BIO_puts and the BIO ex_data
+# accessors): a section per SNC function, and --gc-sections
+target_compile_definitions(vs0_sys_external_libssl PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(vs0_sys_external_libssl PRIVATE -Wl,--gc-sections)

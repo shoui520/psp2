@@ -392,17 +392,18 @@ int sslRsaKeyOperate(SslLowLevelObject *object, void *params, int command)
 {
 	SslLowLevelBigNumParams *numbers = params;
 	SslRsaKeyState *state;
+	SslBigNum *input;
 	int status;
 
 	if ((command & (SSL_LL_OPERATE_ENCRYPT | SSL_LL_OPERATE_DECRYPT)) == 0 ||
 	    (command & SSL_LL_OPERATE_CLASS_MASK) != SSL_LL_OPERATE_BIG_NUMBERS)
 		return SSL_CRYPTO_ERROR_BAD_COMMAND;
 	state = object->state;
-	if (sslCompareBigNum(numbers->input, &state->number[0],
-			     numbers->ctx) >= 0)
+	input = numbers->input;
+	if (sslCompareBigNum(input, &state->number[0], numbers->ctx) >= 0)
 		return SSL_CRYPTO_ERROR_NOT_INITIALIZED;
-	status = object->method->extension.ModExp(numbers->output,
-						  numbers->input, state);
+	status = object->method->extension.ModExp(numbers->output, input,
+						  state);
 	if (status == 0 && state->Complete != NULL)
 		state->Complete(state);
 	return status;

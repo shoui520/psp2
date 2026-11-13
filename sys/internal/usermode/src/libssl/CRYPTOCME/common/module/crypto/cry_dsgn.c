@@ -610,6 +610,11 @@ int sslRegisterRsaPublicKeyPropertyHandlers(SslCryptoPropertyNode **head,
 	return status;
 }
 
+SslDirectMemoryContext *sslGetDefaultDirectMemoryContext(void)
+{
+	return sslGetDefaultDirectMemoryContextInline();
+}
+
 int sslGetRsaKeyModulusByteLength(SslCryptoAlgorithm *algorithm, void *backend,
 				  int type, int id, int cached, void *result)
 {

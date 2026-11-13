@@ -167,8 +167,8 @@
 +		sk_free(app_locks);
 +		app_locks=NULL;
 +		}
-+	CRYPTO_lock(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,
-+		"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",286);
++	if (locking_callback != NULL)
++		return(locking_callback(SSL_UNLOCK_REFERENCE,CRYPTO_LOCK_APP,"S:\\work\\CRYPTOCME\\common\\os/lock/r_lock.c",286));
 +	return(0);
 +	}
 +

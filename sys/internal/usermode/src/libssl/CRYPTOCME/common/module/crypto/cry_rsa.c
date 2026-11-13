@@ -346,9 +346,9 @@ int sslImportRsaKeyProperties(SslCryptoAlgorithm *algorithm, void *key,
 int sslRsaSignBackendInit(SslCryptoAlgorithm *algorithm, void *key,
 			  int privateKey)
 {
-	SslDirectMemoryContext *dmem = sslGetDefaultDirectMemoryContextInline();
 	const SslRsaSignBackendData *data = algorithm->implementationData;
 	SslRsaSignBackendState *state = algorithm->backendState;
+	SslDirectMemoryContext *dmem = sslGetDefaultDirectMemoryContextInline();
 	const SslLowLevelMethodGetter *methods;
 	SslCryptoPropertyNode *node;
 	int algorithmId;
@@ -635,8 +635,8 @@ __attribute__((noinline)) int sslRsaCipherBackendDestroy(SslCryptoAlgorithm *alg
 
 int sslRsaCipherBackendInitialize(SslCryptoAlgorithm *algorithm)
 {
-	SslDirectMemoryContext *dmem = sslGetDefaultDirectMemoryContextInline();
 	const SslRsaCipherBackendData *data = algorithm->implementationData;
+	SslDirectMemoryContext *dmem = sslGetDefaultDirectMemoryContextInline();
 	SslRsaCipherBackendState *state;
 	SceUInt32 modes;
 	int status;

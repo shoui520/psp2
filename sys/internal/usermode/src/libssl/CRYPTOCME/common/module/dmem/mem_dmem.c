@@ -17,16 +17,6 @@ static int sslLockDirectMemory(int mode, int type, const char *file, int line)
 	return 1;
 }
 
-SslDirectMemoryContext *sslGetDefaultDirectMemoryContext(void)
-{
-	if (sslDefaultDirectMemoryContext == NULL) {
-		sslNewDirectMemoryContext(&sslDefaultDirectMemoryContext,
-					  sslGetDefaultDirectMemoryMethod(),
-					  NULL, NULL);
-	}
-	return sslDefaultDirectMemoryContext;
-}
-
 void sslResetDirectMemoryState(void)
 {
 	sslDefaultDirectMemoryContext = NULL;

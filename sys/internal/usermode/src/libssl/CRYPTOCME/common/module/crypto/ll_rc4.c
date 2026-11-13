@@ -64,8 +64,10 @@ static SslCipherDescriptor sslRc4CipherDescriptor = {
 	{								\
 		tmp = d[(n)];						\
 		id2 = (data[id1] + tmp + id2) & 0xff;			\
-		if (++id1 == length)					\
+		if (id1 == (unsigned char)(length - 1))			\
 			id1 = 0;					\
+		else						\
+			id1++;						\
 		d[(n)] = d[id2];					\
 		d[id2] = tmp;						\
 	}
@@ -74,7 +76,8 @@ int sslSetRc4Key(SslRc4Key *key, int length, const unsigned char *data)
 {
 	unsigned char *d = key->data;
 	unsigned int tmp;
-	int id1, id2;
+	int id1;
+	int id2;
 	int i;
 
 	key->x = 0;

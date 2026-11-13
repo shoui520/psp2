@@ -299,9 +299,9 @@ int sslPkcs1SignOperate(SslLowLevelObject *object,
 			SslLowLevelCipherParams *params, int command)
 {
 	const SslDigestDescriptor *digest;
+	SceUInt32 encodedLength;
 	const SslDerBuffer *oid;
 	SceUInt32 digestLength;
-	SceUInt32 encodedLength;
 	const void *input;
 	SceUInt32 inputLength;
 	int status;

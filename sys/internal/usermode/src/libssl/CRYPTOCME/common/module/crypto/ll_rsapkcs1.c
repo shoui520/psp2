@@ -103,7 +103,7 @@ int sslSetRsaPaddingInfo(SslLowLevelObject *object, int type, int id,
 	SslRsaPaddingState *state = object->state;
 	const SslLowLevelBuffer *buffer;
 	const unsigned char *data;
-	SceUInt32 i;
+	int i;
 	SslLowLevelObject *next;
 
 	switch (type) {
@@ -116,7 +116,7 @@ int sslSetRsaPaddingInfo(SslLowLevelObject *object, int type, int id,
 			buffer = value;
 			state->modulusLength = buffer->length;
 			data = buffer->data;
-			for (i = 0; i < buffer->length; i++, data++) {
+			for (i = 0; i < (int)buffer->length; i++, data++) {
 				if (*data != 0)
 					break;
 			}

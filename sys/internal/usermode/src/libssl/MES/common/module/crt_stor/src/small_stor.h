@@ -109,7 +109,7 @@ int sslSetSmallCertificateStoreCursorInfo(SslSmallCertificateStoreCursor *cursor
 int sslSetCertificateStoreCursorCertificate(void *cursor, void *certificate,
 					    void *keyId);
 int sslGetCertificateStoreCursorCertificate(void *cursor, void **certificate,
-					    SceUInt32 *keyId);
+					    SslCertificateExtensionData **keyId);
 int sslSetCertificateStoreCursorFlags(void *cursor, int flags);
 int sslGetCertificateStoreCursorFlags(void *cursor, int *flags);
 int sslFindCertificateStoreEntryByName(void *cursor, void *name, int mask);

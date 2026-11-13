@@ -68,7 +68,7 @@ typedef struct SceSslNameEntry {
 } SceSslNameEntry;
 
 static SceUID s_sslMemBlockId = -1;
-static int s_sslInitialized;
+static volatile int s_sslInitialized;
 static void *s_sslMspace;
 static SceKernelLwMutexWork s_sslMutex;
 static SslLibrary *s_sslLibrary;

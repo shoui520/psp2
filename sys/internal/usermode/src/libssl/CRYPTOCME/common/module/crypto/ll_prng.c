@@ -113,7 +113,8 @@ const SslPrngDescriptor *sslGetSha1PrngDescriptor(void)
 	return &sslLockedPrngDescriptor;
 }
 
-__attribute__((noinline)) int sslFreeLowLevelPrng(SslPrng *prng)
+__attribute__((noinline))
+int sslFreeLowLevelPrng(SslPrng *prng)
 {
 	SslDirectMemoryContext *dmem;
 
@@ -187,8 +188,8 @@ int sslCreateLowLevelPrng(SslPrng **result,
 			  const SslPrngDescriptor *descriptor,
 			  SslDirectMemoryContext *dmem)
 {
-	SslPrng *memory;
 	int size;
+	SslPrng *memory;
 	int status;
 
 	if (dmem == NULL) {
