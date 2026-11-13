@@ -1257,7 +1257,7 @@ typedef struct VideoAvcSequence {
 
 /* the picture being encoded */
 typedef struct VideoAvcPictureInfo {
-	uint32_t reserved;
+	uint32_t encoder;		/* the encoder's memory as the stream thread takes it, 64 bytes */
 	uint32_t reference;		/* 64 bytes */
 	uint32_t reserved2;
 	int8_t qp;

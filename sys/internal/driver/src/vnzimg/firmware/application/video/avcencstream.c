@@ -42,6 +42,17 @@
 #define STREAM_FLAG_LOOP	0x00000001
 #define STREAM_FLAG_AU		0x00000004
 #define STREAM_FLAG_EXIT	0x00008000
+#define STREAM_FLAG_CHUNKS_SET	0x00004000	/* the picture's chunk jobs are set */
+#define STREAM_FLAG_OUTPUT_DONE	0x00020000	/* the output's last row is encoded */
+#define STREAM_FLAG_PICTURE_DONE 0x00040000	/* the picture's */
+#define STREAM_FLAG_CHUNK	0x00100000	/* a chunk's last stage is done */
+#define STREAM_FLAG_OUTPUT	0x00200000	/* an output's rate job is done: its rows start */
+#define STREAM_FLAG_SCENE	0x01000000	/* the jobs' flags as they finish */
+#define STREAM_FLAG_RATE	0x02000000
+#define STREAM_FLAG_UPDATED	0x04000000
+#define STREAM_FLAG_LOADED	0x08000000
+#define STREAM_FLAG_ENCODED	0x10000000	/* the encoder engine's */
+#define STREAM_FLAG_ANSWERED	0x20000000
 #define STREAM_FLAGS		(0x0b360000 | STREAM_FLAG_EXIT | STREAM_FLAG_AU | STREAM_FLAG_LOOP)
 
 /* the picture's state, as the preparing jobs get it (256 bytes) */
@@ -109,7 +120,7 @@ typedef struct AvcencPicture {
 	int8_t constantQuantizer;
 	int8_t quantizer;
 	int8_t quantizer2;
-	int8_t rateIdr;			/* the rate control's */
+	int8_t rateQp;			/* the rate control's */
 	int8_t rateIntra;
 	int8_t rateDone;
 	int8_t cropped;			/* the frame is not whole macroblocks */
@@ -164,15 +175,15 @@ typedef struct AvcencRate {
 	uint8_t reserved2[2];
 	int8_t idrCounted;
 	uint8_t reserved3[5];
-	int8_t idr;
+	int8_t qp;			/* the picture's, to its info */
 	int8_t intra;
 	uint8_t reserved4[116];
 	int8_t forceIdr;
 	uint8_t reserved5[5];
-	uint32_t vclInitialDelay;
-	uint32_t vclInitialDelayOffset;
-	uint32_t initialDelay;
-	uint32_t initialDelayOffset;
+	uint32_t initialCpbRemovalDelay;
+	uint32_t vclInitialCpbRemovalDelay;
+	uint32_t initialCpbRemovalDelayOffset;
+	uint32_t vclInitialCpbRemovalDelayOffset;
 	uint8_t reserved6[52];
 	int8_t sceneIdr;
 	uint8_t reserved7;
@@ -201,12 +212,18 @@ typedef struct AvcencRecord {
 
 /* a client's output: the record of its picture */
 typedef struct AvcencOutput {
-	uint8_t reserved[11];
-	int8_t next;			/* the output after it */
-	uint8_t reserved2[2];
+	uint16_t reserved;
+	uint16_t mbs;			/* the macroblocks it holds */
+	uint16_t reserved0;
+	uint16_t firstMb;		/* 0 for the picture's first output */
+	int8_t flags[2];		/* to the job record */
+	uint8_t reserved1;
+	int8_t next;			/* the row after its last (the output after it) */
+	uint8_t withInfo;		/* the picture's info comes with it */
+	uint8_t reserved2;
 	int8_t hasPicture;
 	uint8_t reserved3;
-	uint32_t holder;		/* where the picture record goes, at its +44 */
+	uint32_t info;			/* the picture's VideoAvcPictureInfo */
 	uint8_t reserved4[108];
 } AvcencOutput;
 
@@ -315,11 +332,33 @@ typedef struct AvcencStream {
 
 /* the layouts' sizes */
 typedef char pictureSizeCheck[sizeof(AvcencPicture) == PICTURE_SIZE ? 1 : -1];
+/* the encoder's memory, as the client lays it out (64 bytes) */
+typedef struct AvcencClientMemory {
+	VkVThreadContext *outputContext;
+	uint32_t record;		/* the rows' chunk counts, 128 bytes */
+	uint32_t reserved;
+	uint32_t outputs;
+	uint32_t jobInfo;
+	uint32_t outputInfo;
+	uint32_t command0;		/* the job record's, in this order */
+	uint32_t command3;
+	uint32_t command1;
+	uint32_t command2;
+	uint32_t command4;
+	uint32_t command5;
+	uint32_t reserved2;
+	uint32_t commandBuffer;		/* 2048 bytes */
+	uint32_t commandBuffer2;
+	uint32_t reserved3;
+} AvcencClientMemory;
+
+typedef char clientMemorySizeCheck[sizeof(AvcencClientMemory) == 64 ? 1 : -1];
+
 /* the picture's job record, for the output's jobs */
 typedef struct AvcencJobInfo {
-	uint32_t request;		/* the parsed request it answers */
-	int8_t requestFlags[2];		/* the request's */
-	uint8_t requestIndex;
+	uint32_t output;		/* the AvcencOutput it fills */
+	int8_t outputFlags[2];		/* the output's */
+	uint8_t mbs;
 	uint8_t reserved;
 	uint32_t reserved2;
 	uint32_t sliceType;
@@ -628,12 +667,12 @@ static void pictureFrame(AvcencStream *stream, AvcencPicture *picture)
 	}
 }
 
-/* the flags the stream thread and the encoder engine wait on */
-#define ENGINE_FLAG_OUTPUT_DONE	0x00020000	/* the output's last row is encoded */
-#define ENGINE_FLAG_PICTURE_DONE 0x00040000	/* the picture's */
+/* the picture's kind, to the encoder engine */
 #define ENGINE_FLAG_IDR		0x00080000
 #define ENGINE_FLAG_KIND	0x00100000
 #define ENGINE_FLAG_SKIP	0x00200000
+#define ENGINE_FLAG_HELPER	0x00800000	/* the helper may take it */
+#define ENGINE_FLAG_ENDED	0x00000020	/* the stream ended: encodes are answered empty */
 
 /*
  * 0x83608e: the next of the client's outputs; one that has a picture gets
@@ -646,7 +685,7 @@ static AvcencOutput *outputNext(AvcencStream *stream)
 	AvcencBuffers *buffers;
 	AvcencOutput *output;
 	AvcencRecord *record;
-	uint32_t holder;
+	uint32_t reference;
 	int8_t index;
 
 	output = (AvcencOutput *)vnzPublicCloseRaw(
@@ -654,7 +693,7 @@ static AvcencOutput *outputNext(AvcencStream *stream)
 	if (output->hasPicture) {
 		buffers = stream->buffers;
 		index = stream->recordIndex;
-		holder = *(uint32_t *)(output->holder + 4);
+		reference = ((VideoAvcPictureInfo *)output->info)->reference;
 		record = (AvcencRecord *)vnzPublicOpenPrivate(picture->records + index * RECORD_SIZE,
 			RECORD_SIZE);
 		record->width = picture->widthInMbs << 4;
@@ -669,7 +708,8 @@ static AvcencOutput *outputNext(AvcencStream *stream)
 		record->reserved4 = 0;
 		record->reserved5 = 0;
 		record->cropLeft = picture->cropLeft;
-		*(uint32_t *)(holder + 44) = vnzPublicClosePrivate((uint32_t)record, RECORD_SIZE);
+		*(uint32_t *)(reference + 44) = vnzPublicClosePrivate((uint32_t)record,
+			RECORD_SIZE);
 		stream->recordIndex = (index + 1) & 15;
 		vnzPublicCloseRaw(picture->clientLuma, picture->clientHeight * picture->clientPitch);
 		vnzPublicCloseRaw(picture->clientChroma,
@@ -733,7 +773,7 @@ static void pictureNext(AvcencStream *stream)
 	picture->clientPitch = picture->nextPitch;
 	picture->clientHeight = picture->nextHeight;
 	picture->settings = stream->settings;
-	picture->rateIdr = rate->idr;
+	picture->rateQp = rate->qp;
 	picture->rateIntra = rate->intra;
 	picture->qpLimit = rate->qpLimit;
 	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
@@ -938,9 +978,9 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 	slices->idr = idr;
 	slices->sliceType = (0 < (uint32_t)idr) << 1;
 	if (!idr) {
-		qp = (uint8_t)picture->rateIdr - (previousIdr ? 2 : 1);
-		if ((int32_t)rate->vclInitialDelay >= 1)
-			qp = (uint8_t)picture->rateIdr;
+		qp = (uint8_t)picture->rateQp - (previousIdr ? 2 : 1);
+		if ((int32_t)rate->initialCpbRemovalDelay >= 1)
+			qp = (uint8_t)picture->rateQp;
 		chroma = avcChromaQp[qp];
 		if (qp < 42) {
 			for (quotient = 0, i = qp; i >= 6; i -= 6)
@@ -1435,7 +1475,7 @@ static void streamChunksStart(AvcencStream *stream)
 	AvcencOutputSlot *slot;
 	VkVThreadContext *context;
 
-	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->request, RECORD_SIZE);
+	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->output, RECORD_SIZE);
 	end = (uint8_t)((AvcencOutput *)request)->next;
 	for (; row < end; row++) {
 		phase = row & 3;
@@ -1488,7 +1528,7 @@ static void streamChunkDone(AvcencStream *stream)
 	stream->chunksSent++;
 	((int8_t *)stream->record)[row]++;
 	if (row == heightInMbs - 1) {
-		vnzThreadSetFlags(picture->thread, ENGINE_FLAG_PICTURE_DONE);
+		vnzThreadSetFlags(picture->thread, STREAM_FLAG_PICTURE_DONE);
 		return;
 	}
 	if (row < heightInMbs - 2) {
@@ -1514,7 +1554,7 @@ static void streamChunkDone(AvcencStream *stream)
 	vkVThreadJobSignal(context, picture->chunkSteps + phase);
 	vkVThreadContextUnlock(context);
 	if (end - 1 == row)
-		vnzThreadSetFlags(picture->thread, ENGINE_FLAG_OUTPUT_DONE);
+		vnzThreadSetFlags(picture->thread, STREAM_FLAG_OUTPUT_DONE);
 }
 
 /* 0x838312: a slot's next chunk: its first macroblock, width (to the row's end) and parity */
@@ -1557,10 +1597,10 @@ static int32_t streamChunkNext(AvcencStream *stream, uint32_t chunk, uint32_t ro
 	end = first + slot->mbs;
 	if (end >= widthInMbs) {
 		if (flags & ROW_END) {
-			vnzThreadSetFlags(picture->thread, ENGINE_FLAG_PICTURE_DONE);
+			vnzThreadSetFlags(picture->thread, STREAM_FLAG_PICTURE_DONE);
 			done = 1;
 		} else if (outputEnd - 1 == row) {
-			vnzThreadSetFlags(picture->thread, ENGINE_FLAG_KIND | ENGINE_FLAG_OUTPUT_DONE);
+			vnzThreadSetFlags(picture->thread, STREAM_FLAG_CHUNK | STREAM_FLAG_OUTPUT_DONE);
 			done = 1;
 		}
 		stream->chunksSent++;
@@ -1693,7 +1733,7 @@ static void streamOutputsStart(AvcencStream *stream)
 		streamChunksStart(stream);
 		return;
 	}
-	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->request, RECORD_SIZE);
+	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->output, RECORD_SIZE);
 	end = (uint8_t)((AvcencOutput *)request)->next;
 	for (; row < end; row++) {
 		chunk = (row & 3) * chunks;
@@ -1757,4 +1797,398 @@ static void streamChunksDone(AvcencStream *stream)
 		}
 		last = count;
 	}
+}
+
+/*
+ * 0x8356b0: the encoder stream's thread. A frame taken while idle starts
+ * the picture's jobs (or waits, while the last picture's start is still
+ * owed); the engine's flags then carry the picture through the rate
+ * control, the loads, the wavefront and the chunks to the outputs, each
+ * finished picture answered to the service with its access unit.
+ */
+void avcencStreamThread(uint32_t memory, uint32_t codec)
+{
+	AvcencStream *stream = streamBegin(memory);
+	VkMessageQueue *innerQueue = stream->innerQueue, *engineQueue = stream->engineQueue;
+	VkMessageQueue *auQueue = stream->auQueue;
+	AvcencBuffers *buffers = stream->buffers;
+	AvcencPicture *picture = stream->picture;
+	VkThread *thread = picture->thread;
+	int32_t waiting = 0, answer = 0, outputDone = 0, kindDone = 0, idr = 0;
+	uint32_t flags;
+
+	vnzThreadSetPriority(thread, vnzThreadPriority(thread) + 1);
+	do {
+		flags = streamWait(stream);
+		if (stream->state == STREAM_IDLE && vkMessageReceive(auQueue, (uint32_t)stream)) {
+			picture = stream->picture;
+			if (!stream->ended) {
+				if (waiting) {
+					stream->state = STREAM_ENDING;
+				} else {
+					picturesStart(stream, picture);
+					stream->state = STREAM_STARTED;
+				}
+			} else if (!waiting) {
+				vkMessageSend(engineQueue, videoServiceAuDone, stream->request);
+				streamRestart(stream);
+			}
+		}
+		if (stream->state == STREAM_IDLE) {
+			if (vkMessageReceive(innerQueue, (uint32_t)stream)) {
+				picture = stream->picture;
+				stream->state = STREAM_FLUSHING;
+			} else if (answer) {
+				vkMessageSend(engineQueue, videoServiceAuDone, stream->previousRequest);
+				vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
+				pictureRateUpdate(stream, picture);
+				clientRelease(stream);
+				vnzThreadWaitFlags(STREAM_FLAG_UPDATED);
+				vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
+				stream->state = STREAM_IDLE;
+				vnzThreadWaitFlags(STREAM_FLAG_ANSWERED);
+				answer = 0;
+			}
+		}
+		if (stream->state == STREAM_ENDING &&
+		    vkMessageReceive(innerQueue, (uint32_t)stream)) {
+			picture = stream->picture;
+			picturesStart(stream, picture);
+			stream->state = STREAM_ENDED;
+		}
+
+		if (stream->state == STREAM_STARTED) {
+			if (flags & STREAM_FLAG_LOADED)
+				pictureLoads(stream, picture);
+			if (flags & STREAM_FLAG_SCENE) {
+				pictureKind(stream);
+				if (answer) {
+					vkMessageSend(engineQueue, videoServiceAuDone,
+						stream->previousRequest);
+					picturesRun(stream, picture, 1);
+					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
+					pictureRateUpdate(stream, picture);
+					clientRelease(stream);
+					vnzThreadWaitFlags(STREAM_FLAG_UPDATED);
+					answer = 0;
+					vnzThreadYield();
+					vnzThreadWaitFlags(STREAM_FLAG_ANSWERED);
+				} else {
+					picturesRun(stream, picture, 0);
+				}
+				stream->state = STREAM_ENCODING;
+			}
+		}
+
+		if (stream->state == STREAM_ENDED) {
+			if (flags & STREAM_FLAG_CHUNK)
+				streamChunksDone(stream);
+			if (flags & STREAM_FLAG_LOADED)
+				pictureLoads(stream, picture);
+			if (flags & ~(STREAM_FLAG_LOADED | STREAM_FLAG_CHUNK)) {
+				if (stream->waitWake && vkMessageReceive(innerQueue, (uint32_t)stream))
+					picture = stream->picture;
+				if (flags & STREAM_FLAG_OUTPUT) {
+					vnzThreadWaitFlags(STREAM_FLAG_CHUNKS_SET);
+					streamOutputsStart(stream);
+					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
+				}
+				if (flags & (STREAM_FLAG_PICTURE_DONE | STREAM_FLAG_OUTPUT_DONE)) {
+					vkMessageSend(stream->helperQueue, avcencHelperEncode,
+						(uint32_t)outputNext(stream));
+					if (flags & STREAM_FLAG_PICTURE_DONE)
+						outputDone = 1;
+				}
+				if (flags & STREAM_FLAG_SCENE) {
+					pictureKind(stream);
+					kindDone = 1;
+				}
+				if (outputDone & kindDone) {
+					sourceSwap(stream);
+					picture = stream->picture;
+					vkMessageSend(engineQueue, videoServiceAuDone,
+						stream->previousRequest);
+					picturesRun(stream, picture, 1);
+					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
+					pictureRateUpdate(stream, picture);
+					vnzThreadWaitFlags(STREAM_FLAG_UPDATED);
+					idr = pictureIdr(stream);
+					kindDone = 0;
+					outputDone = 0;
+					buffers->flushing = 0;
+					stream->state = STREAM_ENCODING;
+					vnzThreadWaitFlags(STREAM_FLAG_ANSWERED);
+				}
+			}
+		}
+
+		if (stream->state == STREAM_FLUSHING) {
+			if (flags & STREAM_FLAG_CHUNK)
+				streamChunksDone(stream);
+			if (flags & ~(STREAM_FLAG_LOADED | STREAM_FLAG_CHUNK)) {
+				if (stream->waitWake && vkMessageReceive(innerQueue, (uint32_t)stream))
+					picture = stream->picture;
+				if (flags & STREAM_FLAG_OUTPUT) {
+					vnzThreadWaitFlags(STREAM_FLAG_CHUNKS_SET);
+					streamOutputsStart(stream);
+					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
+				}
+				if (flags & (STREAM_FLAG_PICTURE_DONE | STREAM_FLAG_OUTPUT_DONE))
+					vkMessageSend(stream->helperQueue, avcencHelperEncode,
+						(uint32_t)outputNext(stream));
+				if (flags & STREAM_FLAG_PICTURE_DONE) {
+					sourceSwap(stream);
+					picture = stream->picture;
+					vkMessageSend(engineQueue, videoServiceAuDone,
+						stream->previousRequest);
+					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
+					pictureRateUpdate(stream, picture);
+					vnzThreadWaitFlags(STREAM_FLAG_UPDATED);
+					idr = pictureIdr(stream);
+					buffers->flushing = 1;
+					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
+					waiting = 0;
+					stream->state = STREAM_IDLE;
+					vnzThreadWaitFlags(STREAM_FLAG_ANSWERED);
+				}
+			}
+		}
+
+		if (stream->state == STREAM_ENCODING) {
+			if (flags & STREAM_FLAG_LOADED)
+				picturesStep(stream, picture);
+			if (flags & STREAM_FLAG_RATE) {
+				if (!idr) {
+					pictureNext(stream);
+					picture = stream->picture;
+					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
+					vnzThreadSetFlags(picture->engine, ENGINE_FLAG_HELPER);
+					stream->state = STREAM_IDLE;
+					stream->previousRequest = stream->request;
+					if (picture->predicted) {
+						waiting = 0;
+						answer = 1;
+					} else {
+						waiting = 1;
+						answer = 0;
+					}
+				} else {
+					picturesRun(stream, picture, 0);
+					idr = 0;
+				}
+			}
+		}
+	} while (stream->state != STREAM_STOPPED);
+	streamEnd(stream);
+}
+
+/* the rate control's start, with the stream's first frame (avcencrate.c) */
+void avcencRateInitialize(AvcencPicture *picture, uint32_t rate);
+
+/*
+ * 0x835b8c: a frame from the client (or the stream's end, told to the
+ * engine). The first frame's size, rounded to whole macroblocks with the
+ * crop that centres it, lays out the buffers and the picture; each frame's
+ * planes are opened, its settings passed to the engine's sequence.
+ */
+void avcencStreamAu(uint32_t memory, uint32_t request)
+{
+	AvcencStream *stream = (AvcencStream *)memory;
+	AvcencBuffers *buffers = stream->buffers;
+	AvcencPicture *picture = stream->picture;
+	VideoEngineRequest *frame;
+	AvcencSequence *settings;
+	uint32_t width, height;
+
+	stream->request = request;
+	frame = (VideoEngineRequest *)vnzPublicOpenPrivate(request, REQUEST_SIZE);
+	if (frame->flags & VIDEO_ENGINE_DRAIN) {
+		vnzPublicClosePrivate((uint32_t)frame, REQUEST_SIZE);
+		stream->ended = 1;
+		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_ENDED);
+		return;
+	}
+	buffers->frames++;
+	settings = (AvcencSequence *)frame->buffer;	/* the encoder's: the frame's settings */
+	stream->settings = settings;
+	stream->option = frame->numOfPictures;		/* and its option */
+	vnzPublicClosePrivate((uint32_t)frame, REQUEST_SIZE);
+	picture = (AvcencPicture *)vnzPublicOpenPrivate(
+		vnzPublicCloseRaw((uint32_t)stream->picture, PICTURE_SIZE), PICTURE_SIZE);
+
+	if (!stream->started) {
+		width = (settings->horizontal + 15) & ~15;
+		height = (settings->vertical + 15) & ~15;
+		picture->cropTop = 0;
+		picture->cropLeft = 0;
+		picture->cropped = 0;
+		if (settings->horizontal != width) {
+			picture->cropped = 1;
+			picture->cropLeft = (16 - (settings->horizontal & 15)) >> 1;
+		}
+		if (settings->vertical != height) {
+			picture->cropped = 1;
+			picture->cropTop = (16 - (settings->vertical & 15)) >> 1;
+		}
+		buffers->width = width;
+		buffers->height = height;
+		buffersLayout(stream);
+		pictureSetup(stream, picture);
+		stream->started = 1;
+	}
+	buffers->clientLuma = vnzPublicOpenRaw(settings->luma, settings->height * settings->pitch);
+	buffers->clientChroma = vnzPublicOpenRaw(settings->chroma,
+		(settings->height >> 1) * settings->chromaPitch);
+	buffers->clientWidth = settings->width;
+	buffers->clientHeight = settings->height;
+	buffers->clientPitch = settings->pitch;
+	buffers->clientChromaPitch = settings->chromaPitch;
+	pictureFrame(stream, picture);
+	if (!buffers->frames)
+		avcencRateInitialize(picture, stream->rate);
+	vkMessageSend(stream->wakeQueue, avcencEncoderSequence, (uint32_t)settings);
+	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
+		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
+}
+
+/* the rate control's jobs after the stream thread's picture (avcencrate.c) */
+void avcencJobRateFirst(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
+void avcencJobRateOutput(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
+
+#define PICTURE_INFO_SIZE	896
+
+/*
+ * 0x835d0c: an output the helper parsed. The picture's first one brings the
+ * picture's info (the rate control's QP and delays go into it) and the
+ * client's memory: the picture takes its outputs, job record and command
+ * buffers, its source frame and macroblocks, and the row layout. Every
+ * output sets its job record and the jobs that fill it.
+ */
+void avcencStreamParsed(uint32_t memory, uint32_t job)
+{
+	AvcencStream *stream = (AvcencStream *)memory;
+	uint32_t rate = stream->rate, jobInfo, index;
+	AvcencPicture *picture = stream->picture;
+	AvcencBuffers *buffers = stream->buffers;
+	AvcencOutput *output;
+	AvcencJobInfo *info;
+	AvcencClientMemory *client;
+	VideoAvcPictureInfo *pictureInfo;
+	AvcencRate *rateState;
+	uint32_t mbs, firstMb, reference, *sourceChroma, source;
+	VkVThreadContext *context;
+
+	output = (AvcencOutput *)vnzPublicOpenPrivate(job, RECORD_SIZE);
+	pictureInfo = (VideoAvcPictureInfo *)output->info;
+	mbs = output->mbs;
+	client = (AvcencClientMemory *)pictureInfo->encoder;
+	reference = pictureInfo->reference;
+	firstMb = output->firstMb;
+	if (output->withInfo) {
+		stream->pictureFrame = (uint32_t)pictureInfo;
+		if (!firstMb) {
+			rateState = (AvcencRate *)vnzPublicOpenProtected(rate, RATE_STATE_SIZE);
+			pictureInfo = (VideoAvcPictureInfo *)vnzPublicOpenPrivate(
+				(uint32_t)pictureInfo, PICTURE_INFO_SIZE);
+			pictureInfo->qp = rateState->qp;
+			pictureInfo->initialCpbRemovalDelay = rateState->initialCpbRemovalDelay;
+			pictureInfo->vclInitialCpbRemovalDelay = rateState->vclInitialCpbRemovalDelay;
+			pictureInfo->initialCpbRemovalDelayOffset =
+				rateState->initialCpbRemovalDelayOffset;
+			pictureInfo->vclInitialCpbRemovalDelayOffset =
+				rateState->vclInitialCpbRemovalDelayOffset;
+			pictureInfo->reserved3[0] = 0;
+			pictureInfo->alphaOffset = 0;
+			pictureInfo->betaOffset = 0;
+			vnzPublicClosePrivate((uint32_t)pictureInfo, PICTURE_INFO_SIZE);
+			vnzPublicCloseProtected((uint32_t)rateState, RATE_STATE_SIZE);
+		}
+		client = (AvcencClientMemory *)vnzPublicOpenProtected((uint32_t)client, 64);
+		if (firstMb) {
+			stream->newSequence = 0;
+		} else {
+			picture = (AvcencPicture *)vnzPublicOpenPrivate(
+				vnzPublicCloseRaw((uint32_t)stream->picture, PICTURE_SIZE),
+				PICTURE_SIZE);
+			picture->output = reference;
+			stream->outputs = client->outputs;
+			stream->jobInfo = client->jobInfo;
+			stream->outputInfo = client->outputInfo;
+			picture->outputContext = client->outputContext;
+			picture->command[0] = client->command0;
+			picture->command[3] = client->command3;
+			picture->command[1] = client->command1;
+			picture->command[2] = client->command2;
+			picture->command[4] = client->command4;
+			picture->command[5] = client->command5;
+			picture->commandBuffer = client->commandBuffer;
+			picture->commandBufferEnd = client->commandBuffer + 2048;
+			picture->commandBuffer2 = client->commandBuffer2;
+			stream->record = client->record;
+			stream->record = vnzPublicOpenPrivate(client->record, RECORD_SIZE);
+			picture->macroblocks = buffers->rowsLeft;
+			picture->widthInMbs = buffers->width >> 4;
+			picture->heightInMbs = buffers->height >> 4;
+			stream->sliceType = buffers->idrNext ? 2 : 0;
+			stream->newSequence = 1;
+			source = stream->source;
+			picture->previousChroma = picture->chroma;
+			picture->previousLuma = picture->luma;
+			picture->luma = buffers->luma[source];
+			sourceChroma = &buffers->chroma[source];
+			picture->chroma = *sourceChroma;
+			picture->width = buffers->frameWidth;
+			picture->chromaWidth = buffers->chromaWidth;
+			picture->luma = vnzPublicCloseRaw(picture->luma, buffers->lumaSize);
+			buffers->luma[source] = 0;
+			picture->chroma = vnzPublicCloseRaw(picture->chroma, buffers->chromaSize);
+			*sourceChroma = 0;
+			picture->macroblocks = vnzPublicOpenRaw(picture->macroblocks,
+				(buffers->width * buffers->height >> 8) << 6);
+			streamRowsLayout(stream, picture);
+			picture = (AvcencPicture *)vnzPublicOpenRaw(
+				vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE),
+				PICTURE_SIZE);
+		}
+		vnzPublicCloseProtected((uint32_t)client, 64);
+		stream->picture = picture;
+	}
+
+	output->next = (firstMb + mbs) / picture->widthInMbs;
+	stream->waitWake = 0;
+	info = (AvcencJobInfo *)vnzPublicOpenPrivate(stream->jobInfo, 64);
+	info->outputFlags[0] = output->flags[0];
+	info->outputFlags[1] = output->flags[1];
+	info->skipLevel = stream->skipLevel;
+	info->sliceType = stream->sliceType;
+	info->mbs = output->mbs;
+	info->output = vnzPublicClosePrivate((uint32_t)output, RECORD_SIZE);
+	info->chunks = stream->chunks;
+	info->sliceMode = stream->sliceMode;
+	info->outputs = stream->outputs;
+	info->outputInfo = stream->outputInfo;
+	jobInfo = vnzPublicClosePrivate((uint32_t)info, 64);
+
+	index = picture->index * 8;
+	context = vkVThreadContextLock(stream->context);
+	if (!firstMb) {
+		while (vkVThreadJobSetNotify(context, index + 4, 0, avcencJobChunks,
+		    (uint32_t)picture, jobInfo, 0, 0, picture->thread, STREAM_FLAG_CHUNKS_SET)) {
+			vkVThreadContextUnlock(context);
+			context = vkVThreadContextLock(stream->context);
+		}
+		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobRateFirst,
+		    (uint32_t)picture, jobInfo, rate, 0, picture->thread, STREAM_FLAG_OUTPUT)) {
+			vkVThreadContextUnlock(context);
+			context = vkVThreadContextLock(stream->context);
+		}
+	} else {
+		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobRateOutput,
+		    (uint32_t)picture, jobInfo, rate, 0, picture->thread,
+		    STREAM_FLAG_OUTPUT | STREAM_FLAG_CHUNKS_SET)) {
+			vkVThreadContextUnlock(context);
+			context = vkVThreadContextLock(stream->context);
+		}
+	}
+	vkVThreadContextUnlock(context);
 }
