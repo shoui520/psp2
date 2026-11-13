@@ -12,8 +12,6 @@
 #if !defined(__ASSEMBLER__) && !defined(VIP_FW2)
 
 void dmaComplete(void);
-#if defined(VIP_PROGRAM_fw1_pu1)
 void dmaCallbackReturned(void);
-#endif
 
 #endif

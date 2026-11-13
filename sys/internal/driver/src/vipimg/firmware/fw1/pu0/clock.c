@@ -41,6 +41,12 @@ void gateDecoderClocks(void)
 		mep_ei();
 }
 
+/* what PU0's dmaCallbackReturned calls */
+void gateClocksAfterDma(void)
+{
+	gateDecoderClocks();
+}
+
 void enableDemuxClocks(void)
 {
 	uint32_t psw = vipReadControl(VIP_CR_PSW);

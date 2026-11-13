@@ -207,9 +207,14 @@ int getDebugArea(uint32_t kind, uint32_t *address)
 
 /*
  * Empty in this build, a debug build's hook (provisional name); the decode calls
- * it first. An uncalled empty function follows it in the firmware.
+ * it first.
  */
 void debugHook(void)
+{
+}
+
+/* another such hook, which nothing calls */
+void unusedDebugHook(void)
 {
 }
 

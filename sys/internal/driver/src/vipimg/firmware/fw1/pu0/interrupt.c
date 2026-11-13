@@ -3,6 +3,7 @@
  */
 #include "interrupt.h"
 #include "stream.h"
+#include "decoder.h"
 
 /* the interrupt vectors in local RAM of interrupts 5 to 11 */
 #define VIP_DECODER_VECTORS	(VIP_LOCAL_RAM + 0x30 + 4 * VIP_INTERRUPT_DECODER)
@@ -30,6 +31,12 @@ void acknowledgeMailbox(uint32_t argument)
 {
 	(void)argument;
 	VIP_MAILBOX->debugSend[1] = VIP_MAILBOX->debugSend[1];
+}
+
+/* PU1's dmaComplete calls its own after a callback; PU0's is uncalled */
+void dmaCallbackReturned(void)
+{
+	gateClocksAfterDma();
 }
 
 void (*g_interruptHandlers[INTERRUPT_SLOTS])(uint32_t argument) VIP_LRAM_DATA = {

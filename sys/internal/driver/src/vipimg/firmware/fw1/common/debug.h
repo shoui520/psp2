@@ -76,6 +76,7 @@ int readDebugRegister(uint32_t offset, uint32_t *value);
 int writeDebugRegister(uint32_t offset, uint32_t value);
 int getDebugArea(uint32_t kind, uint32_t *address);
 void debugHook(void);
+void unusedDebugHook(void);
 void stopForDebugger(uint32_t result, uint32_t state);
 void setPauseFlag(uint32_t flag, uint32_t set);
 int notifyDebugger(uint32_t mode, uint32_t events);

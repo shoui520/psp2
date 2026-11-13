@@ -1225,6 +1225,39 @@ static void parsePanScan(void)
 	writeParsed((uint32_t)buffer, 0x40, panScanWritten);
 }
 
+/*
+ * Caption data in an SEI payload, which nothing dispatches here: after 20 bytes
+ * (a UUID and a word), a header byte, then from payload byte 21 on 3-byte
+ * entries. Written as a VIP_PARSED_SEI_OTHER record of 152 bytes: the header's
+ * count (its low six bits, and bit 7 as bit 6) at bit 25 of the first word, then
+ * per entry the first byte's low bit at bit 31, the second byte at bit 23 and
+ * the third at bit 15. The names are ours.
+ */
+static void captionDataWritten(void)
+{
+	seiMessageWritten(VIP_PARSED_SEI_OTHER, 152);
+}
+
+VIP_UNCALLED static void parseCaptionData(void)
+{
+	uint32_t *buffer = g_parseBuffer, *entry;
+	uint32_t header, offset, i;
+
+	for (i = 0; i < 152 / 4; i++)
+		buffer[i] = 0;
+	for (i = 0; i < 5; i++)
+		readBits(0);
+	header = readBits(8);
+	buffer[0] = ((header & 0x3f) | (header & 0x80) >> 1) << 25;
+	for (i = 1, offset = 21; offset < g_nalLength; i++, offset += 3) {
+		entry = &buffer[i];
+		*entry = readBits(8) << 31;
+		*entry |= readBits(8) << 23;
+		*entry |= readBits(8) << 15;
+	}
+	writeParsed((uint32_t)buffer, 152, captionDataWritten);
+}
+
 static void recoveryPointWritten(void)
 {
 	seiMessageWritten(VIP_PARSED_RECOVERY_POINT, 8);
@@ -1241,6 +1274,39 @@ static void parseRecoveryPoint(void)
 	buffer[1] = 0;
 	buffer[0] |= readBits(4) << 12;
 	writeParsed((uint32_t)buffer, 8, recoveryPointWritten);
+}
+
+/*
+ * An SEI payload read through and dropped, which nothing dispatches here: a flag;
+ * if it is clear, 3 bits (with 31 more if the lowest is set), 9 bits whose low
+ * three select up to three lists of 11-bit headers (an 8-bit count and a 3-bit
+ * count) over entries of 16 bits and Exp-Golomb values, then an Exp-Golomb
+ * value. The name is ours.
+ */
+VIP_UNCALLED static void skipLayerSei(void)
+{
+	uint8_t lists, values;
+	uint32_t header, count, i, j, k;
+
+	if (!readBits(1)) {
+		if (readBits(3) & 1)
+			readBits(31);
+		lists = readBits(9) & 7;
+		for (i = 0; i < 3; i++) {
+			if (!(lists >> (2 - i)))
+				continue;
+			header = readBits(11);
+			values = header & 7;
+			count = (header >> 3) & 0xff;
+			for (j = 0; j <= count; j++) {
+				readBits(16);
+				for (k = 0; k <= values; k++)
+					readGolomb(1);
+			}
+		}
+		readGolomb(0);
+	}
+	nextSeiMessage();
 }
 
 /*
@@ -1465,6 +1531,12 @@ static void continueSliceData(void)
 	vipWriteControlBus(VIP_CB_BITSTREAM_COMMAND, VIP_BITSTREAM_CONTINUE);
 }
 
+/* flushSliceData's callback, once the part is out */
+static void sliceDataWritten(void)
+{
+	continueSliceData();
+}
+
 /* Have the unit write its CABAC state for the next part out, then go on. */
 static void flushSliceData(void)
 {
@@ -1473,7 +1545,7 @@ static void flushSliceData(void)
 	vipWriteControlBus(VIP_CB_BITSTREAM_COMMAND, VIP_BITSTREAM_FLUSH);
 	size = g_currentSps->chroma ? CABAC_ROW_SIZE_CHROMA : CABAC_ROW_SIZE;
 	waitBitstream();
-	writeParsed(VIP_SLICE_BUFFER, size, continueSliceData);
+	writeParsed(VIP_SLICE_BUFFER, size, sliceDataWritten);
 }
 
 /*
@@ -2269,16 +2341,33 @@ uint32_t vipResetHardware(void)
 	return remaining;
 }
 
+/* commandTask's actions: set up the decoder, open and close channel 0 */
+static void initializeCommand(void)
+{
+	initializeDecoder();
+}
+
+static int openCommand(VipRingHandle *handles, uint32_t channel)
+{
+	return openDecoder(handles, channel);
+}
+
 /* One frame's decoding, and the counters for the debugger. */
 static void decodeFrame(void)
 {
 	volatile VipDecoderCounters *counters = VIP_DECODER_COUNTERS;
 
+	debugHook();
 	decodeRecords();
 	gateDecoderClocks();
 	counters->pictures = g_pictures[0];
 	counters->starved = g_starved[0];
 	counters->overflows = g_overflows[0];
+}
+
+static int closeCommand(VipRingHandle *handles, uint32_t channel)
+{
+	return closeDecoder(handles, channel);
 }
 
 /*
@@ -2293,7 +2382,7 @@ void commandTask(uint32_t point)
 	uint32_t state = DECODER_CLOSED;
 	uint32_t pu1Frames = 0, i;
 
-	initializeDecoder();
+	initializeCommand();
 	for (;;) {
 		result = 0;
 		if (checkDebugPoint(point, &action, &argument, &count) >= 0) {
@@ -2326,7 +2415,7 @@ void commandTask(uint32_t point)
 					getDebugPointValue(point, i, &value);
 					setRing(&g_rings[i], (VipRing *)value);
 				}
-				if (openDecoder(g_rings, 0) < 0)
+				if (openCommand(g_rings, 0) < 0)
 					break;
 				holdSchedule(point);
 				result = RESULT_DONE;
@@ -2347,7 +2436,7 @@ void commandTask(uint32_t point)
 					decodeFrame();
 				break;
 			case DECODER_CLOSING:
-				if (closeDecoder(g_rings, 0) < 0)
+				if (closeCommand(g_rings, 0) < 0)
 					break;
 				releaseSchedule(point);
 				state = DECODER_CLOSED;

@@ -221,6 +221,9 @@
 #define vipAcknowledgeInterrupt(interrupt) \
 	vipWriteControlBus(VIP_CB_INTERRUPT_CLEAR, ~(1u << (interrupt)))
 
+/* code the firmware carries though nothing calls it (static, it would be dropped) */
+#define VIP_UNCALLED		__attribute__((used))
+
 /* code and data the core runs from its local RAM (its runtime copies them in) */
 #define VIP_LRAM_TEXT		__attribute__((section(".lram.text")))
 #define VIP_LRAM_DATA		__attribute__((section(".lram.data")))

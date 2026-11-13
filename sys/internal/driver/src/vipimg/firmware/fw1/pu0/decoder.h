@@ -41,6 +41,7 @@ extern volatile uint32_t g_decoderState;
 /* clock.c */
 void enableDecoderClocks(void);
 void gateDecoderClocks(void);
+void gateClocksAfterDma(void);
 
 /* decoder.c */
 void commandTask(uint32_t point);
