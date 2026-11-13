@@ -405,9 +405,11 @@ int uart2Open(void)
 int uart2Close(unsigned char keep)
 {
 	if (uart2.flags & UART_OPEN) {
+#if FW_SINCE(0x0100010B)
 		STMK2 = 1;
 		SRMK2 = 1;
 		SREMK2 = 1;
+#endif
 		uartStopTx(2);
 		uartStopRx(2);
 		SS1L.0 = 0;
@@ -425,7 +427,11 @@ int uart2Close(unsigned char keep)
 		SOE1L.0 = 0;
 		if (!SOE1L.2)
 			SAU1EN = 0;
+#if FW_SINCE(0x0100010B)
 		uart2.flags = UART_CLOSED;
+#else
+		uart2.flags = (uart2.flags & ~UART_OPEN) | UART_CLOSED;
+#endif
 	} else if (!keep) {
 		P14.3 = 0;
 		PM14.3 = 0;

@@ -46,7 +46,11 @@ int paramInit(void)
 	return 0;
 }
 
+#if FW_SINCE(0x0100010B)
 int paramLoad(void)
+#else
+void paramLoad(void)
+#endif
 {
 	if (configGet()->board.bits.bbmcDetect)
 		memcpy(param.chargeLevels, configGet()->chargeLevels, sizeof(param.chargeLevels));
@@ -57,7 +61,9 @@ int paramLoad(void)
 	param.pressTime2 = configGet()->pressTime2;
 	param.setting1 = configGet()->paramSetting1;
 	param.setting2 = configGet()->paramSetting2;
+#if FW_SINCE(0x0100010B)
 	return 0;
+#endif
 }
 
 /* host command 0x0092: 1 when the range is past the block or longer than PARAM_ACCESS_MAX */

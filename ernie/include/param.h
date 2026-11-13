@@ -32,7 +32,11 @@ struct Param {
 extern struct Param param;
 
 extern int paramInit(void);
+#if FW_SINCE(0x0100010B)
 extern int paramLoad(void);
+#else
+extern void paramLoad(void);	/* returns nothing before 0x0100010B */
+#endif
 extern unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char paramWrite(unsigned int offset, unsigned int size, unsigned char *buf);
 extern void paramGetChargeLevels(struct ChargeLevel *levels);

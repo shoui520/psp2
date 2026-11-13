@@ -345,7 +345,9 @@ void inputResumeOpen(void)
 	mode = *stateGetWakeupFactor();
 	if (!mode.bits.notify)
 		analogCalibrationLoad();
+#if FW_SINCE(0x0100010B)
 	analogInit();
+#endif
 	adcOpenForBoard();
 	inputGroup1.pending |= 0x08;
 	if (elmoVersion0() == 0xff)
@@ -372,9 +374,14 @@ void inputPowerOff(void)
 	}
 	touchClose();
 	motionClose();
+#if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#else
+	adcCloseForBoard();
+	inputKeysClose();
+#endif
 	analogLatchInit();
 	return;
 }
@@ -400,9 +407,14 @@ void inputShutdown(void)
 {
 	touchClose();
 	motionClose();
+#if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#else
+	adcCloseForBoard();
+	inputKeysClose();
+#endif
 }
 
 void inputStateShutdown(void)
@@ -417,9 +429,14 @@ void inputCut(void)
 {
 	touchClose();
 	motionClose();
+#if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#else
+	adcCloseForBoard();
+	inputKeysClose();
+#endif
 }
 
 void inputStateCut(void)
@@ -454,9 +471,14 @@ void inputSuspend(void)
 	}
 	touchClose();
 	motionClose();
+#if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#else
+	adcCloseForBoard();
+	inputKeysClose();
+#endif
 	return;
 }
 
@@ -472,7 +494,11 @@ void inputReset(void)
 	touchDisable0();
 	touchDisable1();
 	motionStop();
+#if FW_SINCE(0x0100010B)
 	analogStop();
+#else
+	analogSetMode(0);
+#endif
 	analogLatchOff();
 }
 
@@ -1247,9 +1273,17 @@ void input1Bit2High(void)
 void inputMultiCnChanged(void)
 {
 	if (input1Bit5Active() == 1) {
+#if !FW_SINCE(0x0100010B)
+		if (stateGet() != 0x0020) {
+			adcOpenForBoard();
+			inputScanHold(0x1a);
+		}
+#endif
 		analogMultiCnStart();
 	} else {
+#if FW_SINCE(0x0100010B)
 		analogMultiCnStop();
+#endif
 		powerDeviceSetPending(0x20);
 		sleepFactorSet5(0);
 		analogMultiCnInit();

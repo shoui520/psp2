@@ -14,6 +14,7 @@
 
 #include <string.h>
 
+#include "ernie.h"
 #include "adc.h"
 #include "analog.h"
 #include "chip.h"
@@ -342,7 +343,11 @@ unsigned char analogStart(unsigned int inputs)
    connector's level reported when two readings agree on a new one */
 void analogEvent(unsigned int inputs)
 {
+#if FW_SINCE(0x0100010B)
 	if ((inputs & 0x0002) && analogSuspend != 0xff && (inputKeys.state & 0x0002)) {
+#else
+	if ((inputs & 0x0002) && analogSuspend != 0xff) {
+#endif
 		P97 = 0;
 		analogAxes[0].samples[analogSample] = adcResults[0];
 		analogAxes[1].samples[analogSample] = adcResults[1];
@@ -356,13 +361,21 @@ void analogEvent(unsigned int inputs)
 		analogFilter3();
 		analogReport();
 	}
+#if FW_SINCE(0x0100010B)
 	if ((inputs & 0x0020) && (inputKeys.state & 0x0020)) {
+#else
+	if (inputs & 0x0020) {
+#endif
 		analogMultiCnInput = ANALOG_HIGH(adcResults[4]);
 		analogMultiCn = analogLevelFind(analogMultiCnInput, analogMultiCnLevels,
 						LENGTH(analogMultiCnLevels));
 		if (analogMultiCn == analogMultiCnPrevious && analogMultiCn != analogMultiCnReported) {
 			analogMultiCnReported = analogMultiCn;
 			analogMultiCnStop();
+#if !FW_SINCE(0x0100010B)
+			if (stateGet() != 0x0020)
+				adcClose();
+#endif
 			sleepFactorSet6(1);
 			sleepFactorSet5(1);
 			task2SetFlag(3, 0x0001);
@@ -947,6 +960,13 @@ void analogSetMode(unsigned char mode)
 {
 	dis_dsp();
 	switch (mode) {
+#if !FW_SINCE(0x0100010B)
+	case 0:		/* analogStop's, before it */
+		inputKeys.state &= ~0x0002;
+		analogFlags = 0;
+		analogInit();
+		break;
+#endif
 	case 1:
 		inputKeys.state |= 0x0002;
 		analogFlags = ANALOG_SET0;
@@ -967,12 +987,14 @@ void analogSetMode(unsigned char mode)
 	ena_dsp();
 }
 
+#if FW_SINCE(0x0100010B)
 void analogStop(void)
 {
 	inputKeys.state &= ~0x0002;
 	analogFlags = 0;
 	analogInit();
 }
+#endif
 
 void analogStart80(void)
 {
@@ -989,13 +1011,17 @@ void analogMultiCnStart(void)
 {
 	inputKeys.state |= 0x0020;
 	analogMultiCnInit();
+#if FW_SINCE(0x0100010B)
 	adcOpenForBoard();
+#endif
 }
 
 void analogMultiCnStop(void)
 {
 	inputKeys.state &= ~0x0020;
+#if FW_SINCE(0x0100010B)
 	adcCloseForBoard();
+#endif
 }
 
 /* the multi connector's level (command 0x0103) */

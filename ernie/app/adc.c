@@ -6,7 +6,9 @@
 #pragma rtos_interrupt INTAD adcInterrupt
 #pragma sfr
 
+#include "ernie.h"
 #include "adc.h"
+#include "analog.h"
 #include "input.h"
 #include "kernel.h"
 #include "state.h"
@@ -20,10 +22,13 @@ static __near unsigned char adcSkip;		/* conversions still to throw away */
 static __near unsigned char adcChannel;	/* the channel being converted */
 __near unsigned int adcResults[ADC_CHANNELS];
 
-/* powers the converter on (if it is off): ANI11-ANI15 analog, INTAD enabled */
+/* powers the converter on (if it is off; before 0x0100010B, always): ANI11-ANI15 analog, INTAD
+   enabled */
 void adcOpen(void)
 {
+#if FW_SINCE(0x0100010B)
 	if (!ADCEN) {
+#endif
 		adcMask = 0;
 		adcBit = 0;
 		adcDone = 0;
@@ -35,7 +40,9 @@ void adcOpen(void)
 		ADM = 0x03;
 		ADIF = 0;
 		ADMK = 0;
+#if FW_SINCE(0x0100010B)
 	}
+#endif
 }
 
 void adcClose(void)
@@ -66,6 +73,21 @@ unsigned char adcStart(unsigned char mask, int skip)
 	return 0;
 }
 
+#if !FW_SINCE(0x0100010B)
+/* before 0x0100010B: the sticks' state reset and the converter opened */
+void adcOpenForBoard(void)
+{
+	analogInit();
+	adcOpen();
+}
+
+/* and the sticks stopped and the converter closed */
+void adcCloseForBoard(void)
+{
+	analogSetMode(0);
+	adcClose();
+}
+#else
 /* opens the converter on the boards that have the channels */
 void adcOpenForBoard(void)
 {
@@ -113,6 +135,7 @@ void adcCloseForBoard(void)
 	inputKeys.state &= ~0x00e3;
 	adcClose();
 }
+#endif
 
 /* a conversion ended: its result kept, the next channel of the mask started, or at the last
    the converter stopped and event flag 2's bit 0x0004 set */

@@ -541,10 +541,14 @@ unsigned char hostCommand0102(unsigned char *out, unsigned char *length)
 static void controlsRequest0180(void)
 {
 	if (controlsRequest.length == 1) {
+#if FW_SINCE(0x0100010B)
 		if (controlsRequest.data[0] != 0)
 			analogSetMode(controlsRequest.data[0]);
 		else
 			analogStop();
+#else
+		analogSetMode(controlsRequest.data[0]);
+#endif
 		controlsRequest.status = 0;
 	} else
 		controlsRequest.status = 0x3b;
