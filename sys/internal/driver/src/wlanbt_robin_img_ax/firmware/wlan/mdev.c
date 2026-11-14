@@ -3,6 +3,12 @@
  * the original driver's callback family; no source filename survives.
  */
 #include "robin/wlan.h"
+#include "robin/btrom.h"
+#include "robin/conn.h"
+#include "robin/esa.h"
+#include "robin/mef.h"
+#include "robin/task.h"
+#include "robin/txring.h"
 #include "robin/rom.h"
 #include "robin/sys.h"
 
@@ -27,7 +33,7 @@ int wlanHandleSecurityFrame(OsaBuffer *buffer)
 	int packetOffset;
 	uint16_t dataOffset;
 
-	if (!wlanBufferNeedsSecurity(buffer) && !wlanSecurityOverrideEnabled())
+	if (!wlanBufferNeedsSecurity(buffer) && !supplicantIsEnabled())
 		return -1;
 	header = (WlanPacketHeader *)((uint8_t *)buffer + buffer->dataOffset);
 	packetOffset = (int16_t)(header->wire.packetOffset[0] |
@@ -227,6 +233,54 @@ void *wlanOpenSdioDevice(unsigned int flags)
 int wlanBufferNeedsSecurity(OsaBuffer *buffer)
 {
 	return wlanInterfaceNeedsSecurity(buffer->context);
+}
+
+/* Not converted yet; provisional names */
+unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
+OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags,
+			     unsigned int queue);				/* 0x188b2 */
+
+/*
+ * A buffer for an EAPOL frame the firmware sends itself (keyMgmtSta.c's
+ * GetTxEAPOLBuffer): from the reply pool, tried twice, unless the connection
+ * is an AP's; else from the data pool. *ppTxEapol is the frame after the
+ * transmit descriptor.
+ */
+OsaBuffer *GetTxEAPOLBuffer(struct WlanConnection *connPtr, EAPOL_KeyMsg_Tx_t **ppTxEapol)
+{
+	WlanTxDescriptor *descriptor;
+	OsaBuffer *buffer = NULL;
+	unsigned int attempt = 0;
+	uint16_t headroom;
+
+	if (connPtr != NULL && connPtr->mode != 2) {
+		while (attempt++ < 2) {
+			buffer = osa_BufferAlloc(&wlanReplyFramePool, 0, 0);
+			if (buffer != NULL)
+				goto found;
+			osaTaskSleep(1);
+		}
+	}
+	buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);
+	if (buffer == NULL)
+		return NULL;
+
+found:
+	buffer->context = connPtr;
+	headroom = (uint16_t)wlanPacketHeadroom();
+	buffer->dataOffset = headroom;
+	descriptor = (WlanTxDescriptor *)((uint8_t *)buffer + headroom);
+	buffer->packetClass = 8;
+	__aeabi_memclr(descriptor, 15);
+	descriptor->priority = cbProcNullPriority();
+	descriptor->header.wire.packetOffset[0] = 15;
+	descriptor->header.wire.packetOffset[1] = 0;
+	descriptor->header.wire.packetType[0] = 8;
+	descriptor->header.wire.packetType[1] = 8 >> 8;
+	descriptor->header.bssType = connPtr->bssType;
+	descriptor->header.bssNumber = connPtr->bssNumber;
+	*ppTxEapol = (EAPOL_KeyMsg_Tx_t *)((uint8_t *)descriptor + 15);
+	return buffer;
 }
 
 void wlanSetEventPacketLength(OsaBuffer *buffer, uint32_t length)

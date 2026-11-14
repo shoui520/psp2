@@ -3,6 +3,7 @@
  * ping offload helpers. See robin/mef.h. The filename is inferred.
  */
 #include <stddef.h>
+#include "robin/esa.h"
 #include "robin/conn.h"
 #include "robin/mef.h"
 #include "robin/wlan.h"
@@ -560,7 +561,7 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 		*securityDrop = 0;
 		protocol = (const uint16_t *)(payload + 6);
 		connection = buffer->context;
-		if (wlanSecurityOverrideEnabled() && connection != NULL && (connection->flags & 4) &&
+		if (supplicantIsEnabled() && connection != NULL && (connection->flags & 4) &&
 		    wlanIsSecurityProtocol(*protocol)) {
 			*securityDrop = 1;
 			return 0;

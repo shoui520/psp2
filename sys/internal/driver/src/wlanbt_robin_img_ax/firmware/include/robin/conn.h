@@ -235,7 +235,6 @@ int wlanPostConnectionEvent(struct WlanConnection *connection, uint32_t event);
 int wlanConnectEventTryWait(void);
 int wlanReleaseStateSemaphore(void);
 int wlanPsCancelPendingTimer(void);
-int wlanConnectionMarkReady(void);
 unsigned int wlanRaiseEvent(unsigned int bit);
 int wlanRoleOtherOnly(void);
 int wlanRoleIbssOnly(void);

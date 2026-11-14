@@ -23,7 +23,6 @@ uint8_t wlanConnectionPhase __attribute__((section(".itcm.rw")));	/* 0x54b70 */
 uint8_t wlanConnectionStage __attribute__((section(".itcm.rw")));	/* 0x54b71 */
 uint32_t wlanPendingEvents[2] __attribute__((section(".itcm.bss")));
 uint32_t wlanPendingTimer __attribute__((section(".itcm.bss")));
-uint8_t wlanBssFlags __attribute__((section(".itcm.bss")));
 uint32_t wlanPsOverride __attribute__((section(".itcm.bss")));
 struct OsaBufferPool wlanEventPool __attribute__((section(".dtcm.bss")));
 
@@ -140,13 +139,6 @@ int wlanPsCancelPendingTimer(void)
 		return 0;
 	}
 	return result;
-}
-
-/* Marks the BSS data as ready. */
-int wlanConnectionMarkReady(void)
-{
-	wlanBssFlags |= 1;
-	return wlanBssFlags;
 }
 
 /*

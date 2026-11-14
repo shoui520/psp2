@@ -85,7 +85,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 int macTxApplyQueue(void *slot, int value, int flag);	/* 0x10096 */
 int macTxReleaseTimer(int which);			/* 0x10ce0 */
 int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
-int wlanBuildRsnElement(uint8_t *out);			/* 0x2094, security element builder */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
 extern uint8_t wlanConnectionPhase;			/* 0x54b70 */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
@@ -207,7 +206,7 @@ void ampPalStartLink(struct WlanConnection *connection)
 	next[20] = (4 * (next[20] >> 2)) & 0xf3;
 	tlv = next + 27;
 	size = ssidLength + 57;
-	if (wlanBuildRsnElement(tlv + 2) != 0) {
+	if (btampAddRsnIe((IEEEtypes_RSNElement_t *)(tlv + 2)) != 0) {
 		/* Turn the element header (id, length) into a TLV header. */
 		unsigned int length = tlv[3];
 
@@ -321,7 +320,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 			connection->localName.length = strlen((const char *)ampPalLocalName);
 			connection->localName.name = (const char *)ampPalLocalName;
 			ampPalFormatSsid(connection->ssid, connection->peerAddress);
-			wlanConnectionMarkReady();
+			supplicantEnable();
 			pmkCacheAddPMK((IEEEtypes_MacAddr_t *)connection->peerAddress, (uint8_t *)request + 8);
 			ampPalPrepareTxHeader(connection);
 			if (isNew)

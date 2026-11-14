@@ -65,7 +65,6 @@ int wlanReceiveDeviceEvent(void *device, OsaBuffer *buffer,
 			   uintptr_t argument, unsigned int event);
 int wlanHandleSecurityFrame(OsaBuffer *buffer);
 int wlanBufferNeedsSecurity(OsaBuffer *buffer);
-int wlanSecurityOverrideEnabled(void);
 int wlanBufferUsesEthernetFrames(OsaBuffer *buffer);
 int wlanContextUsesEthernetFrames(const void *context);
 int wlanInterfaceNeedsSecurity(const void *context);

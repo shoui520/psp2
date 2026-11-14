@@ -282,7 +282,26 @@ typedef struct MIC_Error_t {
 	uint32_t disableStaAsso;
 } MIC_Error_t;
 
-struct cipher_key_t;
+/* keyCommonDef.h: the header of a key the MAC installed */
+typedef struct cipher_key_hdr_t {
+	IEEEtypes_MacAddr_t macAddr;
+	uint8_t keyDirection;
+	uint8_t keyType : 4;
+	uint8_t version : 4;
+	uint16_t keyLen;
+	uint8_t keyState;
+	uint8_t keyInfo;
+} cipher_key_hdr_t;
+
+_Static_assert(sizeof(cipher_key_hdr_t) == 12, "cipher key header");
+
+/* keyApiStaTypes.h: cipher_key_hdr_t.keyState */
+#define KEY_STATE_FORCE_EAPOL_UNENCRYPTED	0x02
+
+/* The key data union (ckd) follows the header; nothing here reads it. */
+typedef struct cipher_key_t {
+	cipher_key_hdr_t hdr;
+} cipher_key_t;
 
 typedef struct keyMgmtInfoSta_t {
 	uint8_t ANonce[NONCE_SIZE];
@@ -313,6 +332,36 @@ _Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, GRKey) == 172, "group key");
 _Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, sta_MIC_Error) == 252, "MIC error");
 _Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, psapriv) == 276, "supplicant context");
 _Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, apCounterZeroDone) == 104, "replay counters");
+_Static_assert(sizeof(keyMgmtInfoSta_t) == 320, "station key management");
+
+/* IEEE_types.h */
+typedef struct __attribute__((packed)) IEEEtypes_SsIdElement_t {
+	uint8_t ElementId;
+	uint8_t Len;
+	uint8_t SsId[32];
+} IEEEtypes_SsIdElement_t;
+
+/* authenticator.h */
+typedef struct customMIB_RSNStats_t {
+	uint8_t TKIPICVErrors;
+	uint8_t TKIPLocalMICFailures;
+	uint8_t TKIPCounterMeasuresInvoked;
+} customMIB_RSNStats_t;
+
+/*
+ * The one station supplicant (authenticator.h's supplicantData). This build
+ * keeps no inUse or suppInitialized, and holds the statistics, the profile and
+ * the addresses apart in initialised data (keyMgmtSta.c).
+ */
+typedef struct supplicantData_t {
+	IEEEtypes_SsIdElement_t hashSsId;
+	RSNConfig_t customMIB_RSNConfig;
+	keyMgmtInfoSta_t keyMgmtInfoSta;
+} supplicantData_t;
+
+_Static_assert(__builtin_offsetof(supplicantData_t, customMIB_RSNConfig) == 0x22, "RSN configuration");
+_Static_assert(__builtin_offsetof(supplicantData_t, keyMgmtInfoSta) == 0x40, "key management");
+_Static_assert(sizeof(supplicantData_t) == 0x180, "supplicant");
 
 #define EAPOL_MIC_SIZE				16
 #define IEEE_8021X_PACKET_TYPE_EAPOL_KEY	3
@@ -536,5 +585,69 @@ int Mrvl_PasswordHash(char *password, uint8_t *ssid, int ssidlength,
 
 /* the MAC's TSF timer (Mask ROM) */
 void msi_wl_GetMCUCoreTimerTxTSF(uint32_t *pValueHi, uint32_t *pValueLo);
+
+/* keyMgmtSta.c: the station supplicant around the ROM's key management */
+struct WlanConnection;
+
+extern customMIB_RSNStats_t customMIB_RSNStats;
+extern SecurityParams_t currParams;
+extern IEEEtypes_MacAddr_t localBssid;
+extern IEEEtypes_MacAddr_t localStaAddr;
+extern supplicantData_t suppData;
+
+/* keyMgmtSta_rom.c's RAM hooks, set by keyMgmtSta_RomInit() */
+extern int (*ramHook_keyMgmtProcessMsgExt)();
+extern int (*ramHook_keyMgmtSendDeauth)();
+
+OsaBuffer *GetTxEAPOLBuffer(struct WlanConnection *connPtr, EAPOL_KeyMsg_Tx_t **ppTxEapol);
+void keyMgmtSendDeauth2Peer(struct WlanConnection *connPtr, uint16_t reason);
+BOOLEAN keyMgmtProcessMsgExt(EAPOL_KeyMsg_t *pKeyMsg);
+uint16_t keyMgmtFormatWpaRsnIe(uint8_t *pos, IEEEtypes_MacAddr_t *pBssid,
+			       IEEEtypes_MacAddr_t *pStaAddr, uint8_t *pPmkid, BOOLEAN addPmkid);
+int GeneratePWKMsg2(OsaBuffer *pmbuf, uint8_t *pSNonce, uint8_t *pEAPOLMICKey,
+		    uint8_t forceKeyDescVersion);
+uint16_t keyMgmtGetKeySize(uint8_t isPairwise);
+void FillKeyMaterialStruct(struct WlanConnection *connPtr, uint16_t key_len, uint8_t isPairwise,
+			   KeyData_t *pKey);
+void keyMgmtPlumbPairwiseKey(struct WlanConnection *connPtr);
+int keyMgmtKeyPairwiseTxDone(OsaBuffer *pBufDesc);
+int keyMgmtKeyGroupTxDone(OsaBuffer *pBufDesc);
+int GeneratePWKMsg4(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta, BOOLEAN groupKeyReceived);
+int GenerateGrpMsg2(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+BOOLEAN KeyMgmtStaHsk_Recvd_PWKMsg1(OsaBuffer *pmbuf, IEEEtypes_MacAddr_t *sa,
+				    IEEEtypes_MacAddr_t *da);
+EAPOL_KeyMsg_t *KeyMgmtStaHsk_Recvd_PWKMsg3(OsaBuffer *pmbuf);
+int KeyMgmtStaHsk_Recvd_GrpMsg1(OsaBuffer *pmbuf);
+void ProcessKeyMgmtDataSta(OsaBuffer *pmbuf, IEEEtypes_MacAddr_t *sa, IEEEtypes_MacAddr_t *da);
+void supplicantMICCounterMeasureInvoke(struct WlanConnection *connPtr, BOOLEAN isUnicast);
+void keyMgmtSta_StartSession(struct WlanConnection *connPtr, IEEEtypes_MacAddr_t *pBssid,
+			     IEEEtypes_MacAddr_t *pStaAddr);
+void supplicantInitSession(struct WlanConnection *connPtr, uint8_t *pSsid, uint16_t len,
+			   IEEEtypes_MacAddr_t *pBssid, IEEEtypes_MacAddr_t *pStaAddr);
+uint8_t supplicantIsCounterMeasuresActive(void);
+void init_customApp_mibs(void);
+SecurityMode_t supplicantCurrentSecurityMode(void);
+int supplicantIsEnabled(void);
+void supplicantDisable(void);
+void supplicantEnable(void);
+void supplicantSetAssocRsn(SecurityMode_t wpaType, Cipher_t *pMcstCipher, Cipher_t *pUcstCipher,
+			   AkmSuite_t *pAkm, IEEEtypes_RSNCapability_t *pRsnCap,
+			   Cipher_t *pGrpMgmtCipher);
+void install_wpa_none_keys(struct WlanConnection *connPtr, uint8_t type, uint8_t unicast);
+void supplicantInstallWpaNoneKeys(struct WlanConnection *connPtr);
+void supplicantSetProfile(SecurityMode_t wpaType, Cipher_t mcstCipher, Cipher_t ucstCipher);
+void supplicantGetProfile(SecurityMode_t *pWpaType, Cipher_t *pMcstCipher, Cipher_t *pUcstCipher);
+void supplicantGetProfileCurrent(SecurityMode_t *pWpaType, Cipher_t *pMcstCipher,
+				 Cipher_t *pUcstCipher);
+void supplicantInit(void);
+void supplicantStopSessionTimer(void);
+void supplicantSmeResetNotification(void);
+void keyMgmtSuccessfulDecryptNotify(cipher_key_t *pRxCipherKey);
+void keyMgmtSta_RomInit(void);
+uint8_t *parseKeyDataField(uint8_t *pKey, uint16_t len);
+uint16_t btampAddRsnIe(IEEEtypes_RSNElement_t *pRsnIe);
+int keyMgmtKeyPairAndGroupTxDone(OsaBuffer *pBufDesc);
+void SendMICFailReport_sta(struct WlanConnection *connPtr, keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+			   BOOLEAN isUnicast);
 
 #endif /* ROBIN_ESA_H */
