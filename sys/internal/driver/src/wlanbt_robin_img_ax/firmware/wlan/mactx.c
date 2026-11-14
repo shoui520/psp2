@@ -746,7 +746,7 @@ int macTxEnqueue(struct WlanConnection *connection, unsigned int window, uint32_
 	unsigned int next;
 
 	if (connection->mode == 2 && wlanTxPeerHolding(connection) == 1 &&
-	    wlanTxHoldFrame(macTxEntryBuffer(entry), 2) == 1)
+	    wlanTxBufferRecharge(macTxEntryBuffer(entry), 2) == 1)
 		return 1;
 	queue = &wlanTxWindowQueues[window];
 	next = (queue->tail + 1) & 0x1f;

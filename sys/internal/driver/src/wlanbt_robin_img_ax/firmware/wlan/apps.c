@@ -616,7 +616,7 @@ int wlanTxHoldForPeer(OsaBuffer *buffer, struct WlanConnection *connection)
 			if (kept == NULL)
 				goto fail;
 		}
-		if (wlanTxHoldFrame(kept, 1) != 0 || wlanApPsQueueFrame(connection, kept) != 0)
+		if (wlanTxBufferRecharge(kept, 1) != 0 || wlanApPsQueueFrame(connection, kept) != 0)
 			goto fail;
 		goto queued;
 	}
@@ -629,7 +629,7 @@ int wlanTxHoldForPeer(OsaBuffer *buffer, struct WlanConnection *connection)
 		if (kept == NULL)
 			goto fail;
 	}
-	if (wlanTxHoldFrame(kept, 1) != 0)
+	if (wlanTxBufferRecharge(kept, 1) != 0)
 		goto fail;
 	if (wlanApPsQueueFrame(connection, kept) == 0)
 		goto queued;

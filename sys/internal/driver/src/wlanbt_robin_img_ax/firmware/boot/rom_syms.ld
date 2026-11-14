@@ -78,6 +78,7 @@ PROVIDE(osa_MsgQueueCount     = 0x03f063c7);
 PROVIDE(osa_BlockPoolCreate   = 0x03f0562b);
 PROVIDE(osa_BufferClone       = 0x03f0575d);
 PROVIDE(osa_PoolQuery         = 0x03f055ef);
+PROVIDE(osa_PoolCapacity      = 0x03f05783);
 PROVIDE(mdevRegisterDriver    = 0x03f061d9);
 PROVIDE(mdevReceiveMessage    = 0x03f06813);
 

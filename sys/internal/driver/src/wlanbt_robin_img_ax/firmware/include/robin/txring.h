@@ -121,11 +121,18 @@ void wlanTxRingComplete(struct WlanMacTxRequest *request);
 int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *request, unsigned int ring);
 int wlanTxResubmit(OsaBuffer *buffer);
 
-/* Not converted yet; provisional names. */
+/* wlan/txquota.c: the transmit queues' shares of wlanBlockPool28. */
+#define WLAN_TX_QUOTA_QUEUES	4
+#define WLAN_TX_QUOTA_BLOCKS	28	/* the blocks of wlanBlockPool28 */
+
 struct OsaBufferPool;
+int wlanTxQuotaSet(unsigned int queue, uint32_t reserved, uint32_t limit);
 OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags,
-			     unsigned int queue);				/* 0x188b2 */
-int wlanTxHoldFrame(OsaBuffer *buffer, int reason);		/* 0x18924 */
+			     unsigned int queue);
+unsigned int wlanTxBufferQueue(const OsaBuffer *buffer);
+int wlanTxBufferRecharge(OsaBuffer *buffer, unsigned int queue);
+
+/* Not converted yet; provisional names. */
 int wlanTxSubmit(OsaBuffer *buffer);
 unsigned int wlanTxInFlightIndex(OsaBuffer *buffer);
 int wlanTxInFlightAdd(OsaBuffer *buffer);
