@@ -30,6 +30,40 @@ struct WlanRxStatus {
 
 _Static_assert(sizeof(struct WlanRxStatus) == 68, "receive status");
 
+/*
+ * A receive key as the decryption checks read it (partial: the key table
+ * that owns it is not converted yet).
+ */
+struct WlanRxKey {
+	uint8_t reserved0[7];
+	uint8_t cipher;			/* WLAN_RX_KEY_* */
+	uint8_t reserved8[28];
+	uint8_t rxMicKey[8];
+	uint32_t rscHigh;		/* receive sequence counter of the last frame; ~0: none yet */
+	uint16_t rscLow;
+};
+
+_Static_assert(__builtin_offsetof(struct WlanRxKey, rxMicKey) == 0x24, "MIC key");
+_Static_assert(__builtin_offsetof(struct WlanRxKey, rscLow) == 0x30, "sequence counter");
+
+#define WLAN_RX_KEY_TKIP	1
+
+int wlanRxTkipTrailer(unsigned int status, uint8_t *frame, const uint8_t *end, OsaBuffer *buffer,
+		      int *tkip, void *mic);
+int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
+		       const struct WlanRxKey *key, const uint32_t *expected);
+void wlanRxKeySetReplayCounter(struct WlanRxKey *key, uint16_t low, uint32_t high);
+int wlanRxReplayCheck(const uint8_t *iv, const struct WlanRxKey *key, uint16_t *low, uint32_t *high);
+/* Not converted yet. */
+void wlanMichaelMic(const uint8_t *frame, const uint8_t *key, const uint8_t *data,
+		    uint32_t *mic);	/* 0x2e8d4 */
+
+struct WlanMacTxRequest;
+struct WlanReplyFrame;
+void wlanTxSetQosControl(struct WlanMacTxRequest *request, struct WlanReplyFrame *data,
+			 uint32_t control, unsigned int tid, int amsdu);
+uint32_t wlanTxControlSetRetryLimit(uint32_t control, unsigned int limit);
+int wlanTxSetProtection(struct WlanMacTxRequest *request, int protect, int preferRts);
 WlanWirelessFrame *wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter,
 				   const uint8_t *bssid, int powerSave, uint16_t aid);
 void wlanSetHeaderAddresses(WlanWirelessFrame *frame, const uint8_t *address1,

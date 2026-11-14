@@ -527,8 +527,8 @@ int ampPalSetSupervisionInterval(void)
 
 /* ---- The "AmphciTask" thread and the lamphci driver -------------------------- */
 
-struct OsaBufferPool ampTransmitPool __attribute__((section(".itcm.rw"))) = { { 1, 0, 0 } };
-struct OsaBufferPool ampHciPool __attribute__((section(".itcm.rw"))) = { { 1, 0, 0 } };
+struct OsaBufferPool ampTransmitPool __attribute__((section(".itcm.rw"))) = { { { 1, 0, 0 } } };
+struct OsaBufferPool ampHciPool __attribute__((section(".itcm.rw"))) = { { { 1, 0, 0 } } };
 void *ampSdioDev __attribute__((section(".itcm.rw")));
 void *ampPalDevice __attribute__((section(".itcm.rw")));
 void *ampHciDev __attribute__((section(".itcm.rw")));

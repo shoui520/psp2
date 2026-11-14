@@ -52,6 +52,7 @@ typedef int (*WlanHostCallback)(void *device, OsaBuffer *buffer, uintptr_t argum
 extern WlanHostCallback wlanHostCallback;
 extern void *wlanDevice;
 extern void *wlanSdioDev;
+extern void (*wlanReceiveErrorHandler)(void *context);
 
 int wlanInitializationHook(void);
 int wlanDriverInit(void);

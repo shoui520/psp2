@@ -7,6 +7,56 @@
 #include "robin/ieee80211.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/mef.h"
+
+/*
+ * Fills the QoS control byte of a data frame's transmit data: the TID, the
+ * no-acknowledgement policy when the host asked for it (control bits 13 and
+ * 14, which also tell the MAC not to wait for an ACK), and the A-MSDU bit
+ * for frames the host built itself.
+ */
+void wlanTxSetQosControl(struct WlanMacTxRequest *request, struct WlanReplyFrame *data,
+			 uint32_t control, unsigned int tid, int amsdu)
+{
+	uint8_t *qos = &data->descriptor.header.bssType;
+
+	*qos = ((*qos >> 3 << 3) | (tid & 7)) & 0x9f;
+	if ((control & 0x4000) && (control & 0x2000)) {
+		__aeabi_uwrite4((int)(__aeabi_uread4(request->flags) | MAC_TX_FLAG_NO_ACK),
+				request->flags);
+		*qos = (*qos & 0x9f) + 0x20;
+	}
+	if (amsdu)
+		*qos |= 0x80;
+}
+
+/* Sets the retry limit (bits 8-11) of a transmit control word and enables it. */
+uint32_t wlanTxControlSetRetryLimit(uint32_t control, unsigned int limit)
+{
+	return ((control | 0x1000) & ~0xf00u) | limit << 8;
+}
+
+/*
+ * Chooses the protection of a frame sent above the lowest rates: RTS/CTS
+ * when the connection prefers it and the frame is not group-addressed,
+ * CTS-to-self otherwise. Returns 0 at rate indexes 0-3, which need none.
+ */
+int wlanTxSetProtection(struct WlanMacTxRequest *request, int protect, int preferRts)
+{
+	uint32_t flags;
+
+	if (((request->rate << 22) >> 25) <= 3)
+		return 0;
+	if (protect) {
+		flags = __aeabi_uread4(request->flags);
+		if (preferRts && !(flags & MAC_TX_FLAG_NO_ACK))
+			flags = (flags | MAC_TX_FLAG_RTS) & ~MAC_TX_FLAG_CTS_TO_SELF;
+		else
+			flags = (flags | MAC_TX_FLAG_CTS_TO_SELF) & ~MAC_TX_FLAG_RTS;
+		__aeabi_uwrite4((int)flags, request->flags);
+	}
+	return 1;
+}
 
 /* Builds a PS-Poll control frame at the data offset of buffer and returns it. */
 WlanWirelessFrame *wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter, const uint8_t *bssid,
@@ -56,6 +106,87 @@ unsigned int wlanDataFrameControl(int qos, int nullData, int moreData)
 	if (moreData)
 		control |= IEEE80211_FC1_MORE_DATA << 8;
 	return control;
+}
+
+/*
+ * Strips the 12-byte security trailer the MAC leaves on a decrypted frame.
+ * A status with bits 2-3 set is a decryption error, reported and dropped
+ * (returns 0); bit 1 says the frame was TKIP-decrypted, so the last fragment
+ * carries the 8-byte Michael MIC, copied to mic. *tkip tells which.
+ */
+int wlanRxTkipTrailer(unsigned int status, uint8_t *frame, const uint8_t *end, OsaBuffer *buffer,
+		      int *tkip, void *mic)
+{
+	int checked = 0;
+	unsigned int length;
+
+	if (status != 0) {
+		if ((status >> 2) & 3) {
+			wlanReceiveErrorHandler(buffer->context);
+			return 0;
+		}
+		if (!(status & 2))
+			return 0;
+		checked = 1;
+	}
+	length = (frame[1] << 8 | frame[0]) - 12;
+	frame[0] = (uint8_t)length;
+	frame[1] = (uint8_t)(length >> 8);
+	buffer->length = (uint16_t)(length - 64);
+	if (!(frame[3] & 4) && (frame[24] & 0xf)) {
+		if (checked)
+			__aeabi_memcpy(mic, end + (frame[1] << 8 | frame[0]) - 104, 8);
+		else
+			buffer->length = (uint16_t)(length - 64) - 8;
+	}
+	*tkip = checked;
+	return 1;
+}
+
+/* Removes the Michael MIC from a TKIP frame and checks it; returns 1 when it matches. */
+int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
+		       const struct WlanRxKey *key, const uint32_t *expected)
+{
+	unsigned int length = (frame[1] << 8 | frame[0]) - 8;
+	uint32_t mic[2];
+
+	frame[0] = (uint8_t)length;
+	frame[1] = (uint8_t)(length >> 8);
+	buffer->length -= 8;
+	wlanMichaelMic(frame, key->rxMicKey, data, mic);
+	return mic[0] == expected[0] && mic[1] == expected[1];
+}
+
+/* Stores the receive sequence counter of the last frame accepted with a key. */
+void wlanRxKeySetReplayCounter(struct WlanRxKey *key, uint16_t low, uint32_t high)
+{
+	key->rscLow = low;
+	key->rscHigh = high;
+}
+
+/*
+ * Reads the packet number from the TKIP or CCMP header of a received frame
+ * and returns 1 if it is not newer than the key's last one (a replay).
+ * Otherwise returns 0 with the number in *low and *high.
+ */
+int wlanRxReplayCheck(const uint8_t *iv, const struct WlanRxKey *key, uint16_t *low, uint32_t *high)
+{
+	uint16_t counterLow;
+	uint32_t counterHigh;
+
+	if (key->cipher == WLAN_RX_KEY_TKIP)
+		counterLow = (uint16_t)((iv[0] << 8) + iv[2]);
+	else
+		counterLow = (uint16_t)((iv[1] << 8) + iv[0]);
+	counterHigh = ((((iv[7] << 8) + iv[6]) << 8) + iv[5]) << 8;
+	counterHigh += iv[4];
+	if (key->rscHigh == counterHigh && key->rscLow >= counterLow)
+		return 1;
+	if (key->rscHigh != 0xffffffff && key->rscHigh > counterHigh)
+		return 1;
+	*low = counterLow;
+	*high = counterHigh;
+	return 0;
 }
 
 /* Keeps only frames sent to the distribution system; drops the others. */

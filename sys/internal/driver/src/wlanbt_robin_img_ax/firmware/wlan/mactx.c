@@ -575,14 +575,10 @@ void wlanPsHostFrameSeen(void);						/* 0x15c60 */
 int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer); /* 0x1e234 */
 unsigned int wlanRateSelect(uint8_t *rateControl);			/* 0x2be18 */
 unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
-void wlanTxSetProtection(struct WlanMacTxRequest *request, int lowRate, int option); /* 0x04b52 */
 int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
 uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int *drop, int *eapol,
 			  int reserved, unsigned int packetType, int ampdu,
 			  const uint8_t **loopback, int qos);		/* 0x2ed44 */
-void wlanTxSetQosControl(struct WlanMacTxRequest *request, struct WlanReplyFrame *data,
-			 uint32_t control, unsigned int tid, int raw);	/* 0x04af6 */
-uint32_t wlanTxControlAddLifetime(uint32_t control, unsigned int shift);	/* 0x04b40 */
 int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
 void wlanTxPrepareRequest(struct WlanReplyFrame *data, struct WlanMacTxRequest *request); /* 0x31ab0 */
 void wlanTxSetSecurity(struct WlanConnection *connection, struct WlanReplyFrame *data,
@@ -900,7 +896,7 @@ found:
 					macTxSetFlags(request, 0x1000, 0);
 			}
 			if (((WlanWirelessFrame *)__aeabi_uread4(request->frame))->address1[0] & 1) {
-				macTxSetFlags(request, 0x100, 0x20);
+				macTxSetFlags(request, MAC_TX_FLAG_NO_ACK, MAC_TX_FLAG_RTS);
 				if (connection->mode == 2) {
 					if (info->txRate != 0)
 						rate = romRateIndex(info->txRate);
@@ -957,7 +953,7 @@ protected:
 				goto complete;
 			if (eapol != 0 && lowRate != 0 && MAC_TX_RATE_INDEX(request->rate) > 3) {
 				request->rate = (request->rate & ~MAC_TX_RATE_MASK) + MAC_TX_RATE(3);
-				macTxSetFlags(request, 0, 0xa0);
+				macTxSetFlags(request, 0, MAC_TX_FLAG_RTS | MAC_TX_FLAG_CTS_TO_SELF);
 			}
 			control = macTxDescriptor.control;
 			rate = MAC_TX_RATE_INDEX(request->rate);
@@ -1000,7 +996,7 @@ queued:
 					   wlanPsLifetimeWanted())) {
 				tx.descriptor.header.packetOffset = 0x7fff;
 				if (ampdu != 1)
-					__aeabi_uwrite4((int)wlanTxControlAddLifetime(
+					__aeabi_uwrite4((int)wlanTxControlSetRetryLimit(
 								__aeabi_uread4(&tx.descriptor.priority), 14),
 							&tx.descriptor.priority);
 			}

@@ -10,6 +10,7 @@
 #include "robin/buffer.h"
 #include "robin/icverr.h"
 #include "robin/wlan.h"
+#include "robin/wep.h"
 
 #define WLAN_FC1_MORE_FRAGMENTS		0x04
 
@@ -46,10 +47,6 @@ typedef struct __attribute__((packed)) HostCmd_DS_802_11_GET_LOG {
 	uint32_t bcn_rcv_cnt;
 	uint32_t bcn_miss_cnt;
 } HostCmd_DS_802_11_GET_LOG;
-
-/* the WEP engine (0x4fb0..0x5614, not converted) */
-int wlanWepDecrypt(uint8_t *output, const uint8_t *input, uint32_t length,
-		   const uint8_t *seed, uint8_t isWep104, WlanWirelessFrame *frame);
 
 void wlanDefragReset(WlanDefragContext *context);
 OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,

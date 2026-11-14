@@ -45,6 +45,11 @@ struct WlanMacTxRequest {
 	uint8_t next[4];	/* unaligned word, cleared */
 };
 
+/* Bits of WlanMacTxRequest.flags. */
+#define MAC_TX_FLAG_RTS			0x00000020u
+#define MAC_TX_FLAG_CTS_TO_SELF		0x00000080u
+#define MAC_TX_FLAG_NO_ACK		0x00000100u	/* group-addressed or no-ack policy */
+
 _Static_assert(sizeof(struct WlanMacTxRequest) == 76, "transmit request");
 _Static_assert(offsetof(struct WlanMacTxRequest, rate) == 40, "request rate");
 _Static_assert(offsetof(struct WlanMacTxRequest, host) == 64, "request host descriptor");

@@ -7,7 +7,13 @@
 
 /* Pool control block created by osa_BlockPoolCreate(); layout is the ROM's. */
 struct OsaBufferPool {
-	uint32_t words[3];
+	union {
+		uint32_t words[3];
+		struct {
+			uint16_t reserved0;
+			uint16_t blockCount;	/* the blocks the pool was created with */
+		};
+	};
 };
 typedef struct OsaBuffer OsaBuffer;
 
