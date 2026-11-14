@@ -169,8 +169,8 @@ static void packSamples(int32_t *samples, uint32_t count)
 		packed[i] = ivc2Clip(samples[i] >> 9, 16);
 }
 
-/* 0x8ae418 */
-void ngsReverbRun(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_t samples,
+/* 0x8ae418: Run's kernel, the dry signal and the wet output of the last block */
+static void reverbRun(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_t samples,
 	NgsReverbEngine *engine)
 {
 	int32_t channel;
@@ -191,9 +191,9 @@ void ngsReverbRun(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_
 	}
 }
 
-/* 0x8ae5e8 */
-void ngsReverbBypass(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_t samples,
-	NgsReverbEngine *engine, int32_t reset)
+/* 0x8ae5e8: Bypass's kernel, the dry signal (and the last wet block faded out on a reset) */
+static void reverbBypass(int32_t **inputs, int32_t **outputs, int32_t channels,
+	uint32_t samples, NgsReverbEngine *engine, int32_t reset)
 {
 	int32_t channel, line, block, step, k;
 	uint32_t i;
@@ -234,6 +234,20 @@ void ngsReverbBypass(int32_t **inputs, int32_t **outputs, int32_t channels, uint
 		memset(engine->buffers[channel], 0, 2048);
 		memset(engine->path[channel].ring, 0, 29824);
 	}
+}
+
+/* 0x84be00 */
+void ngsReverbRun(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_t samples,
+	NgsReverbEngine *engine)
+{
+	reverbRun(inputs, outputs, channels, samples, engine);
+}
+
+/* 0x84be14 */
+void ngsReverbBypass(int32_t **inputs, int32_t **outputs, int32_t channels, uint32_t samples,
+	NgsReverbEngine *engine, int32_t reset)
+{
+	reverbBypass(inputs, outputs, channels, samples, engine, reset);
 }
 
 /*
@@ -360,11 +374,11 @@ static void lateFilter(int32_t *samples, uint32_t count, NgsReverbFilters *filte
 }
 
 /*
- * 0x8af748 and 0x8af890: the DC blocker on the wet output,
- * y = x - x1 + (1 - 1677 / 2^24) y1, with a 64-bit accumulator whose
- * fraction is kept between the blocks.
+ * The DC blocker on the wet output, y = x - x1 + (1 - 1677 / 2^24) y1, with a
+ * 64-bit accumulator whose fraction is kept between the blocks.
  */
-static void dcBlock(NgsReverbEngine *engine, uint32_t channel, int32_t *samples, uint32_t count)
+static inline void dcFilter(NgsReverbEngine *engine, uint32_t channel, int32_t *samples,
+	uint32_t count)
 {
 	uint64_t accumulator = ((uint64_t)engine->dcAccumulatorHigh[channel] << 32) |
 		engine->dcAccumulatorLow[channel];
@@ -388,13 +402,26 @@ static void dcBlock(NgsReverbEngine *engine, uint32_t channel, int32_t *samples,
 	engine->dcOutput[channel] = previousOutput;
 }
 
+/* 0x8af748: one path's */
+static void dcBlock(int32_t *samples, uint32_t count, NgsReverbEngine *engine, uint32_t channel)
+{
+	dcFilter(engine, channel, samples, count);
+}
+
+/* 0x8af890: both paths', sample by sample together */
+static void dcBlockStereo(int32_t *left, int32_t *right, uint32_t count, NgsReverbEngine *engine)
+{
+	dcFilter(engine, 0, left, count);
+	dcFilter(engine, 1, right, count);
+}
+
 /*
- * 0x8b2110 and 0x8b1e88: the input of the lines, row k of the 128-wide rows
- * (the rows are cleared from the caches first): the sum over the paths of the
- * path's samples times the line's gain for it. The products double the
- * operands' product on 64 bits and keep the high word, with the gain << 7.
+ * The input of the lines, row k of the 128-wide rows (the rows are cleared
+ * from the caches first): the sum over the paths of the path's samples times
+ * the line's gain for it. The products double the operands' product on 64
+ * bits and keep the high word, with the gain << 7.
  */
-static void injectInput(int32_t *rows, int32_t **inputs, int32_t gains[][NGS_REVERB_PATHS],
+static inline void inputSum(int32_t *rows, int32_t **inputs, int32_t gains[][NGS_REVERB_PATHS],
 	uint32_t count, int32_t paths)
 {
 	int32_t line, path;
@@ -414,6 +441,20 @@ static void injectInput(int32_t *rows, int32_t **inputs, int32_t gains[][NGS_REV
 			row[i] = sum;
 		}
 	}
+}
+
+/* 0x8b1e88: two paths' */
+static void injectInputStereo(int32_t *rows, int32_t **inputs, int32_t gains[][NGS_REVERB_PATHS],
+	uint32_t count)
+{
+	inputSum(rows, inputs, gains, count, 2);
+}
+
+/* 0x8b2110: one path's */
+static void injectInput(int32_t *rows, int32_t **inputs, int32_t gains[][NGS_REVERB_PATHS],
+	uint32_t count)
+{
+	inputSum(rows, inputs, gains, count, 1);
 }
 
 /*
@@ -482,6 +523,18 @@ static void chorus(int32_t *rows, NgsReverbEngine *engine, uint32_t count)
 	norm = (RENORMALISE - (ngsMultiply(sine, sine) + ngsMultiply(cosine, cosine))) / 2;
 	engine->lfoCosine = ngsMultiply(cosine, norm);
 	engine->lfoSine = ngsMultiply(sine, norm);
+}
+
+/* 0x8b0e30: a block times a gain in 8.24, eight samples at a time; nothing calls it */
+static void __attribute__((used)) scaleBlock(const int32_t *input, int32_t *output, int32_t gain,
+	uint32_t count)
+{
+	uint32_t i, k;
+
+	cacheInvalidateFlush((uint32_t)output, count * 4);
+	for (i = 0; i < count; i += 8)
+		for (k = 0; k < 8; k++)
+			output[i + k] = ngsMultiply(input[i + k], gain);
 }
 
 /*
@@ -585,8 +638,10 @@ static void reverbPath(const int32_t *early, int32_t *buffer, uint32_t count, ui
 		for (block = 0; block < blocks; block++) {
 			for (other = 0; other < engine->paths; other++)
 				inputs[other] = engine->buffers[other] + block * chunk;
-			if (engine->paths == 1 || engine->paths == 2)
-				injectInput(wet, inputs, engine->inputGain, chunk, engine->paths);
+			if (engine->paths == 1)
+				injectInput(wet, inputs, engine->inputGain, chunk);
+			else if (engine->paths == 2)
+				injectInputStereo(wet, inputs, engine->inputGain, chunk);
 			loadLines(rows, engine, chunk + 16);
 			chorus(rows, engine, chunk);
 			absorb(rows, wet, engine, chunk, sum);
@@ -645,10 +700,9 @@ void ngsReverbEngine(NgsReverbSettings *settings, void *buffers, uint8_t *scratc
 			(int32_t *)scratch);
 	if (engine->parameterId != NGS_REVERB_PARAMS_ID_V1) {
 		if (paths == 1)
-			dcBlock(engine, 0, inputs[0], count);
-		else
-			for (path = 0; path < 2; path++)
-				dcBlock(engine, path, inputs[path], count);
+			dcBlock(inputs[0], count, engine, 0);
+		else if (paths == 2)
+			dcBlockStereo(inputs[0], inputs[1], count, engine);
 	}
 }
 
