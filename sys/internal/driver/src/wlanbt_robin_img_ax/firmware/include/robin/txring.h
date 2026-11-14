@@ -65,12 +65,13 @@ _Static_assert(offsetof(struct WlanMacTxRequest, host) == 64, "request host desc
 
 /*
  * The buffer data starts with the transmit descriptor; the transmit request
- * is at 20, the pointer to the frame at 96, the ring number at 108 and the
- * transmissions left at 110.
+ * is at 20, the pointer to the frame at 96, the ring number at 108, its
+ * tag at 109 and the transmissions left at 110.
  */
 #define TX_DATA_REQUEST(data)	((struct WlanMacTxRequest *)((data) + 20))
 #define TX_DATA_FRAME(data)	__aeabi_uread4((data) + 96)
 #define TX_DATA_RING(data)	((data)[108])
+#define TX_DATA_TAG(data)	((data)[109])	/* what the transmit-done task does with it */
 #define TX_DATA_RETRIES(data)	((data)[110])
 
 /* What the transmit-done task learns of a finished frame (partial). */

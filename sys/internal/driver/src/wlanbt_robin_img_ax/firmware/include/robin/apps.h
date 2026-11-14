@@ -73,4 +73,10 @@ int wlanApPsMayBuffer(struct WlanConnection *connection, OsaBuffer *buffer);
 int wlanTxHoldForPeer(OsaBuffer *buffer, struct WlanConnection *connection);
 int wlanTxPeerHolding(struct WlanConnection *connection);
 
+struct WlanRxStatus;
+int wlanApPsPsPoll(struct WlanConnection *connection);
+void wlanApPsStartServicePeriod(struct WlanConnection *connection, unsigned int tid);
+void wlanApPsTrigger(struct WlanConnection *connection, const struct WlanRxStatus *status);
+void wlanApPsTxDone(struct WlanConnection *connection, const uint8_t *data);
+
 #endif /* ROBIN_APPS_H */

@@ -133,7 +133,11 @@ struct WlanConnectionRole {
 	struct WlanApPsQueue uapsdQueue;	/* frames of delivery-enabled access categories */
 	uint8_t reserved108[4];
 	struct {
-		uint8_t reserved[5];
+		uint8_t inServicePeriod;	/* a trigger frame started a service period */
+		uint8_t spRemaining;		/* frames of the service period not yet sent */
+		uint8_t spSent;			/* frames sent in the service period so far */
+		uint8_t qosInfo;		/* the peer's QoS Info: bits 5-6 Max SP Length */
+		uint8_t triggerEnabled;		/* bits 3..0: AC 0..3 is trigger-enabled */
 		uint8_t deliveryEnabled;	/* bits 3..0: AC 0..3 is delivery-enabled */
 	} uapsd;
 	uint8_t fullReported;		/* the host was told the peer's buffers are full */

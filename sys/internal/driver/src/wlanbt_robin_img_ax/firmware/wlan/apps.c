@@ -20,6 +20,7 @@
 #include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
+#include "robin/wlanrx.h"
 #include "robin/wlan.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
@@ -33,7 +34,17 @@
 
 /* The rings that send group frames after the DTIM beacon, and their flag. */
 #define WLAN_TX_RING_GROUP		12
-#define WLAN_TX_FLAG_LAST_GROUP		20
+
+/* TX_DATA_TAG: the last group frame after a DTIM beacon; a service period's frames. */
+#define WLAN_TX_TAG_LAST_GROUP		20
+#define WLAN_TX_TAG_SP_LAST		49
+#define WLAN_TX_TAG_SP			50
+
+/* QoS Control: end of service period. */
+#define WLAN_QOS_EOSP			0x10
+#define WLAN_FC1_POWER_MGMT		0x10
+#define WLAN_FC_SUBTYPE_QOS		0x80
+#define WLAN_TYPE_DATA			2
 
 /* The host event that reports a peer whose buffers are full. */
 #define WLAN_EVENT_PS_BUFFER_FULL	85
@@ -69,6 +80,8 @@ int macTxNotifyComputeTable(OsaBuffer *buffer);				/* 0x31952 */
 void macTxApplyConfig(struct WlanConnection *connection);		/* 0x13978 */
 void macTxQueryConfig(struct WlanConnection *connection);		/* 0x1365a */
 int wpaSuppPrepareDescriptor(OsaBuffer *buffer);			/* 0x1891a */
+void cbProcPrepareFrame(struct WlanConnection *connection, unsigned int more,
+			unsigned int tid);				/* 0x1ea6c */
 
 static inline __attribute__((always_inline)) uint8_t *wlanApPsData(OsaBuffer *buffer)
 {
@@ -366,7 +379,7 @@ void wlanApPsSendGroup(struct WlanConnection *connection, int dtim)
 		TX_DATA_RING(data) = ring;
 		if (dtim) {
 			if ((queue->count == 1 || room == 1) && markLast)
-				data[109] = WLAN_TX_FLAG_LAST_GROUP;
+				TX_DATA_TAG(data) = WLAN_TX_TAG_LAST_GROUP;
 			more = 0;
 			if ((queue->count > 1 || dataFollows) && room > 1)
 				more = 1;
@@ -658,4 +671,127 @@ int wlanTxPeerHolding(struct WlanConnection *connection)
 	if (role->peerPowerSave != 1)
 		return 0;
 	return role->peerPowerSave;
+}
+
+/* 0x131d4: a PS-Poll from the peer; send one kept frame, or a null frame when none is kept. */
+int wlanApPsPsPoll(struct WlanConnection *connection)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	UINT posture;
+
+	posture = sysIrqDisable();
+	if (role->psQueue.count != 0)
+		wlanApPsSendNext(connection, &role->psQueue, 0);
+	else
+		cbProcPrepareFrame(connection, 0, 0);
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/*
+ * 0x1321c: send the frames of a service period (at most twice the peer's Max
+ * SP Length), the last one with EOSP set; when the last is a management
+ * frame, a QoS null frame of the trigger's TID ends the period.
+ */
+void wlanApPsStartServicePeriod(struct WlanConnection *connection, unsigned int tid)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	struct WlanApPsQueue *queue = &role->uapsdQueue;
+	unsigned int maxSpLength;
+	unsigned int frames;
+	uint8_t sent = 0;
+	int sameRing = 1;
+	int endWithNull = 0;
+	unsigned int ring;
+	uint8_t *data;
+	UINT posture;
+
+	posture = sysIrqDisable();
+	maxSpLength = (role->uapsd.qosInfo >> 5) & 3;
+	if (maxSpLength != 0) {
+		frames = 2 * maxSpLength;
+		if (frames >= queue->count)
+			frames = queue->count;
+		frames = (uint8_t)(frames - role->uapsd.spSent);
+	} else {
+		frames = (uint8_t)queue->count;
+	}
+	if (frames == 0)
+		goto null;
+	ring = TX_DATA_RING(wlanApPsData(queue->head->buffer));
+	for (; frames > 1; frames = (uint8_t)(frames - 1)) {
+		if (queue->head == NULL)
+			continue;
+		data = wlanApPsData(queue->head->buffer);
+		TX_DATA_TAG(data) = WLAN_TX_TAG_SP;
+		sent++;
+		if (TX_DATA_RING(data) != ring)
+			sameRing = 0;
+		ring = TX_DATA_RING(data);
+		wlanApPsSendNext(connection, queue, 0);
+	}
+	data = wlanApPsData(queue->head->buffer);
+	if (sameRing == 1 && TX_DATA_RING(data) == ring) {
+		sent++;
+		if (WLAN_FC_TYPE(wlanApPsFrame(data)->frameControl[0]) != 0) {
+			TX_DATA_TAG(data) = WLAN_TX_TAG_SP_LAST;
+			data[0] |= WLAN_QOS_EOSP;
+			TX_DATA_REQUEST(data)->type = data[0];
+			TX_DATA_REQUEST(data)->info = data[1];
+		} else {
+			endWithNull = 1;
+			tid = data[0] & 7;
+		}
+		wlanApPsSendNext(connection, queue, 0);
+	}
+	role->uapsd.spRemaining = sent;
+	if ((role->uapsd.qosInfo >> 5) & 3)
+		role->uapsd.spSent += sent;
+	if (endWithNull != 1)
+		goto out;
+null:
+	cbProcPrepareFrame(connection, queue->count, tid);
+out:
+	sysIrqRestore(posture);
+}
+
+/* 0x13334: a QoS data frame with Power Management set on a trigger-enabled AC starts a service period. */
+void wlanApPsTrigger(struct WlanConnection *connection, const struct WlanRxStatus *status)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	unsigned int tid = status->qosControl[0] & 7;
+	unsigned int category = wlanTidToAccessCategory(tid);
+	const WlanWirelessFrame *frame;
+
+	if (connection == NULL || connection->qosPeer == 0 || role->uapsd.inServicePeriod == 1)
+		return;
+	if (!wlanApPsAcDeliveryEnabled(role->uapsd.triggerEnabled, category) || role->peerPowerSave != 1)
+		return;
+	frame = (const WlanWirelessFrame *)__aeabi_uread4(status->frame);
+	if ((frame->frameControl[1] & WLAN_FC1_POWER_MGMT) &&
+	    WLAN_FC_TYPE(frame->frameControl[0]) == WLAN_TYPE_DATA &&
+	    (frame->frameControl[0] & WLAN_FC_SUBTYPE_QOS)) {
+		role->uapsd.inServicePeriod = 1;
+		wlanApPsStartServicePeriod(connection, tid);
+	}
+}
+
+/* 0x133b0: a frame of a service period was sent; send the next ones, or end the period. */
+void wlanApPsTxDone(struct WlanConnection *connection, const uint8_t *data)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	UINT posture;
+
+	if (connection == NULL || role == NULL)
+		return;
+	posture = sysIrqDisable();
+	if (TX_DATA_TAG(data) == WLAN_TX_TAG_SP_LAST) {
+		role->uapsd.inServicePeriod = 0;
+		role->uapsd.spRemaining = 0;
+		role->uapsd.spSent = 0;
+	} else if (TX_DATA_TAG(data) == WLAN_TX_TAG_SP && role->uapsd.inServicePeriod == 1) {
+		if (role->uapsd.spRemaining == 0 || --role->uapsd.spRemaining == 0)
+			wlanApPsStartServicePeriod(connection, data[0] & 7);
+	}
+	sysIrqRestore(posture);
 }

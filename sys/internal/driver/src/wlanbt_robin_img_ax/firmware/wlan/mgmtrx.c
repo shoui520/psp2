@@ -78,7 +78,6 @@ void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */
 void macMgmtConvertHeader(void);						/* 0x3b8fc */
-void macTxProcessConfig(struct WlanConnection *connection);			/* 0x131d4 */
 void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
 struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
@@ -221,7 +220,7 @@ int wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 		return 0;
 	}
 	if (subtype == WLAN_SUBTYPE_PS_POLL)
-		macTxProcessConfig(connection);
+		wlanApPsPsPoll(connection);
 	return osa_BufferFree(buffer);
 }
 
