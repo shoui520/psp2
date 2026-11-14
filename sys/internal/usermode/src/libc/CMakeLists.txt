@@ -1,6 +1,13 @@
 # SceLibc (vs0:sys/external/libc.suprx), built by Sony with SNC 3.57: Dinkumware's C and C++
 # libraries (SceLibc, SceLibm, SceLibstdcxx) over Sony's psp2 system interface. One
-# Dinkumware function per file, in the original's link order.
+# Dinkumware function per file, in the original's link order. The heap is Doug Lea's
+# dlmalloc 2.8.3 with Sony's changes (dlmalloc_sce.patch).
+include(../libkernel/heap.cmake)
+set(libc_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
+libkernel_prepare_heap(
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/dlmalloc-2.8.3/malloc.c"
+	"${CMAKE_CURRENT_SOURCE_DIR}/dlmalloc_sce.patch"
+	"${libc_dlmalloc_source}")
 psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	psp2io.c
 	psp2time.c
@@ -322,6 +329,7 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xwstoull.c
 	xwstoxflt.c
 	malloc.c
+	"${libc_dlmalloc_source}"
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces

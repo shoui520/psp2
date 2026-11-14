@@ -8185,7 +8185,7 @@ modules:
         kernel: false
         nid: 0x5AD9C136
         variables:
-          SceLibcParam_DF084DFA: 0xDF084DFA
+          __sce_libcparam: 0xDF084DFA
   SceLibft2:
     nid: 0x00000000
     libraries:

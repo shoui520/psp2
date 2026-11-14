@@ -77,5 +77,5 @@ set(MODULE_IMPORT_FUNCS
 )
 set(MODULE_IMPORT_VARS
 	__stack_chk_guard
-	SceLibcParam_DF084DFA
+	__sce_libcparam
 )
