@@ -284,11 +284,24 @@ unsigned char cookieCtrlReg3Mode(unsigned char mode)
 	unsigned char result;
 	unsigned char value;
 
+#if FW_SINCE(0x01000104)
 	cookieReadReg3();
 	if (mode == 1)
 		value = cookieRegs[0].byte[0] & 0xfb;
 	else
 		value = cookieRegs[0].byte[0] | 0x04;
+#else
+	/* before 0x01000104 the register is not read first, and chargeLedOff keeps bit 2 */
+	if (mode == 1)
+		value = cookieRegs[0].byte[0] & 0xfb;
+	else {
+		if (configGet()->start.bits.chargeLedOff) {
+			result = 0;
+			goto done;
+		}
+		value = cookieRegs[0].byte[0] | 0x04;
+	}
+#endif
 	if (value != cookieRegs[0].byte[0]) {
 		elmoCommand[0] = COOKIE_REG(3);
 		elmoCommand[1] = value;
@@ -298,6 +311,9 @@ unsigned char cookieCtrlReg3Mode(unsigned char mode)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
+#if !FW_SINCE(0x01000104)
+done:
+#endif
 	return result;
 }
 
@@ -307,11 +323,23 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 	unsigned char result;
 	unsigned char value;
 
+#if FW_SINCE(0x01000104)
 	cookieReadReg3();
 	if (on)
 		value = cookieRegs[0].byte[0] | 0x04;
 	else
 		value = cookieRegs[0].byte[0] & 0xfa;
+#else
+	/* before 0x01000104 bit 0, not read first, and kept clear by chargeLedOff */
+	if (on) {
+		if (configGet()->start.bits.chargeLedOff) {
+			result = 0;
+			goto done;
+		}
+		value = cookieRegs[0].byte[0] | 0x01;
+	} else
+		value = cookieRegs[0].byte[0] & 0xfe;
+#endif
 	if (value != cookieRegs[0].byte[0]) {
 		elmoCommand[0] = COOKIE_REG(3);
 		elmoCommand[1] = value;
@@ -321,6 +349,9 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
+#if !FW_SINCE(0x01000104)
+done:
+#endif
 	return result;
 }
 

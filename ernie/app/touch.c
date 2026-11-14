@@ -25,6 +25,7 @@
 extern unsigned char input1Bit5Active(void);
 extern unsigned char input1Bit0Active(void);
 extern unsigned char input1Bit3Active(void);
+extern unsigned char input1Bit7Active(void);
 
 /* the frame after i */
 #define TOUCH_NEXT_FRAME(i)	((i) + 1 < TOUCH_FRAMES ? (i) + 1 : 0)
@@ -49,14 +50,18 @@ void touchClearPanels(void)
 	touch.panel[0].variant = 0;
 	touch.panel[0].version = 0;
 	touch.panel[0].build = 0;
+#if FW_SINCE(0x01000104)
 	touch.panel[0].configVersion = 0;
+#endif
 	memset(&touch.panel[0].objects, 0, sizeof(touch.panel[0].objects));
 	memset(touch.panel[0].modes, 0, sizeof(touch.panel[0].modes));
 	touch.panel[1].family = 0;
 	touch.panel[1].variant = 0;
 	touch.panel[1].version = 0;
 	touch.panel[1].build = 0;
+#if FW_SINCE(0x01000104)
 	touch.panel[1].configVersion = 0;
+#endif
 	memset(&touch.panel[1].objects, 0, sizeof(touch.panel[1].objects));
 	memset(touch.panel[1].modes, 0, sizeof(touch.panel[1].modes));
 	touch.state.value = 0;
@@ -649,13 +654,16 @@ unsigned char touchSetPower1(unsigned char interval)
    changed (before 0x01000109 task3 reads them after touchIdentify) */
 unsigned char touchReadConfigVersion0(unsigned char *data)
 {
+#if FW_SINCE(0x01000104)
 	unsigned char result;
 	unsigned int version;
+#endif
 
 	if (touch.panel[0].version < 0x24) {
 		memset(data, 0, 2);
 		return 0;
 	}
+#if FW_SINCE(0x01000104)
 	result = touchRead(touch.panel[0].objects.userData, data, 2, 0);
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[0].configVersion != version) {
@@ -665,17 +673,24 @@ unsigned char touchReadConfigVersion0(unsigned char *data)
 #endif
 	}
 	return result;
+#else
+	/* before 0x01000104 the version is not kept */
+	return touchRead(touch.panel[0].objects.userData, data, 2, 0);
+#endif
 }
 
 unsigned char touchReadConfigVersion1(unsigned char *data)
 {
+#if FW_SINCE(0x01000104)
 	unsigned char result;
 	unsigned int version;
+#endif
 
 	if (touch.panel[1].version < 0x24) {
 		memset(data, 0, 2);
 		return 0;
 	}
+#if FW_SINCE(0x01000104)
 	result = touchRead(touch.panel[1].objects.userData, data, 2, 1);
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[1].configVersion != version) {
@@ -685,6 +700,10 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 #endif
 	}
 	return result;
+#else
+	/* before 0x01000104 the version is not kept */
+	return touchRead(touch.panel[1].objects.userData, data, 2, 1);
+#endif
 }
 
 /* the user data's bytes 12-19 */
@@ -1009,8 +1028,10 @@ void touchUpdateState(void)
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
 #if BOARD_TOUCH_CHARGE
 		touch.state.bits.power = chargeGetAc() | chargeGetCharging();
-#else
+#elif FW_SINCE(0x01000104)
 		touch.state.bits.power = 1;
+#else
+		touch.state.bits.power = input1Bit7Active();	/* before 0x01000104 input 1.7 */
 #endif
 		touch.state.bits.input3 = input1Bit3Active();
 		touch.state.bits.input5 = input1Bit5Active();

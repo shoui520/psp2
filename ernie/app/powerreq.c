@@ -78,7 +78,9 @@ static void powerRequest088D(void);
 static void powerRequestCtrlRMRPower(void);
 static void powerRequestCtrlMultiCnPower(void);
 static void powerRequestCtrlLedPwmBlink(void);
+#if LED_REQUESTS
 static void powerRequestSetChargeLedCtrl(void);
+#endif
 static void powerRequestCtrlVoltage(void);
 static void powerRequestCtrlDeviceReset(void);
 static void powerRequest0890(void);
@@ -159,7 +161,9 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x089b, powerRequestCtrlRMRPower },
 	{ 0x089c, powerRequestCtrlMultiCnPower },
 	{ 0x089d, powerRequestCtrlLedPwmBlink },
+#if LED_REQUESTS
 	{ 0x089e, powerRequestSetChargeLedCtrl },
+#endif
 	{ 0x08b0, powerRequestBatteryStartBLMode },
 	{ 0x08c0, powerRequestCtrlManualChargeMode },
 	{ 0x08c1, powerRequestCtrlBatteryCharge },
@@ -302,7 +306,8 @@ unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 /* 0x0801: the system mode's transition 0x54 */
 unsigned char hostCommand0801(unsigned char *out, unsigned char *length)
 {
-	stateTransition(0x54);
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(0x54);
 	*length = 0;
 	return 0;
 }
@@ -544,7 +549,11 @@ static void powerRequestCtrlHpremote(void)
 static void powerRequestCtrlUsbStatus(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x01000104)
 	unsigned char status[3];
+#else
+	unsigned char reg;
+#endif
 
 	if (powerRequest.length < 3) {
 		chargeUsbMode = powerRequestData[0];
@@ -558,19 +567,36 @@ static void powerRequestCtrlUsbStatus(void)
 		case 4:
 			break;
 		case 5:
+#if FW_SINCE(0x01000104)
 			if (chargeGetCharging() != 0)
+#endif
 				chargeUsbHold = 0xff;
 			break;
 		}
+#if FW_SINCE(0x01000104)
 		cookieReadStatus2(status);
 		dis_dsp();
 		powerStatus.bits.usb = status[1] >> 2;
 		ena_dsp();
+#else
+		reg = COOKIE_REG(2);
+		cookieRead(&reg, cookieStatus2.byte);
+		dis_dsp();
+		powerStatus.bits.usb = cookieStatus2.bits.usb;
+		ena_dsp();
+#endif
 		result = powerResult(chargeSetCurrent());
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
 }
+
+/* the 3G modem's P3.3 pulse: powerBbmcPulse since 0x01000104, written out before */
+#if FW_SINCE(0x01000104)
+#define POWER_BBMC_PULSE()	powerBbmcPulse()
+#else
+#define POWER_BBMC_PULSE()	(P33 = 1, powerSleep(0x0e74), P33 = 0)
+#endif
 
 /* 0x088d (SceSysconForDriver_DD16ABD9) */
 static void powerRequest088D(void)
@@ -584,7 +610,7 @@ static void powerRequest088D(void)
 			if (powerRequestData[0] & 0x01) {
 				if (powerRequestData[0] & 0x80) {
 					if (input2Bit0Get() == 1) {
-						powerBbmcPulse();
+						POWER_BBMC_PULSE();
 						powerSleep(500);
 					}
 				}
@@ -593,7 +619,7 @@ static void powerRequest088D(void)
 				result = powerBbmcCycle();
 				if (powerRequestData[0] & 0x80) {
 					if (input2Bit0Get() == 1)
-						powerBbmcPulse();
+						POWER_BBMC_PULSE();
 					if (result != 0 && input2Bit1Get() == 0)
 						result = 0;
 				}
@@ -640,6 +666,7 @@ static void powerRequestCtrlMultiCnPower(void)
  * 0x089d (sceSysconCtrlLedPwmBlink). With data[1] 0x80 and the LED module busy, the LED
  * module answers when it is done (powerRequestLedDone).
  */
+#if LED_REQUESTS
 static void powerRequestCtrlLedPwmBlink(void)
 {
 	unsigned char result = 0;
@@ -694,6 +721,29 @@ static void powerRequestCtrlLedPwmBlink(void)
 	powerRequestDone(result);
 }
 
+#else
+/* before the LED requests, data[1] is powerLedFadeStart's pattern */
+static void powerRequestCtrlLedPwmBlink(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 2) {
+		if (powerRequestData[0] == 1) {
+			if (powerRequestData[1] >= 4) {
+				result = 3;
+			} else {
+				powerLedFadeStart(powerRequestData[1]);
+				result = 0;
+			}
+		} else
+			result = 3;
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#endif
+
+#if LED_REQUESTS
 /* the LED module is done: answers 0x089d */
 void powerRequestLedDone(void)
 {
@@ -730,6 +780,7 @@ static void powerRequestSetChargeLedCtrl(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x088e (sceSysconCtrlVoltage): data[0] the regulator 1-4, data[1] its level */
 static void powerRequestCtrlVoltage(void)
@@ -839,6 +890,7 @@ static void powerRequestCtrlLED(void)
 #if FW_SINCE(0x01000306)
 			ledSetOff(0);
 #endif
+#if LED_REQUESTS
 			if (powerRequestData[0] & 0x80) {
 				powerLedSetMode(POWER_LED_SET_OFF);
 				result = 0;
@@ -846,6 +898,15 @@ static void powerRequestCtrlLED(void)
 				powerLedSetMode(POWER_LED_SET_ON);
 				result = 0;
 			}
+#else
+			if (powerRequestData[0] & 0x80) {
+				powerLedSetBrightness(0);
+				result = powerResult(powerLedSetPwm(1));
+			} else {
+				powerLedSetBrightness(0x0f);
+				result = powerResult(powerLedSetPwm(0));
+			}
+#endif
 		} else {
 			if (powerRequestData[0] & 0x20) {
 				if (powerRequestData[0] & 0x80)

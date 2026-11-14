@@ -186,7 +186,9 @@ unsigned char task2On(void)
 	unsigned char ret;
 
 	ret = 0;
+#if FW_SINCE(0x01000104)
 	if (stateGetCause() == 0x60)
+#endif
 		rtcStart();
 	serialReset(3);
 	serial4Reopen(2);
@@ -220,8 +222,10 @@ unsigned char task2Off(void)
 	watchdogStop();
 	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);
+#if FW_SINCE(0x01000104)
 	if (getAlarmMode() == 1)
 		setAlarm(RTC_ALARM_NONE);
+#endif
 	return ret;
 }
 
@@ -230,10 +234,13 @@ unsigned char task2Off(void)
 unsigned char task2Resume(void)
 {
 	unsigned char ret;
+#if FW_SINCE(0x01000104)
 	unsigned char keepKey;
 	union PowerRequest *factor;
+#endif
 
 	ret = 0;
+#if FW_SINCE(0x01000104)
 	factor = stateGetWakeupFactor();
 	if (factor->bits.notify)
 		keepKey = 1;
@@ -242,9 +249,15 @@ unsigned char task2Resume(void)
 		snvsReset();
 	}
 	handshakeInit(keepKey);
+#else
+	handshakeInit();
+#endif
 	commandRequestReceive();
 	serialRequestReset();
 	watchdogSetup();
+#if !FW_SINCE(0x01000104)
+	snvsReset();
+#endif
 	return ret;
 }
 
@@ -301,9 +314,16 @@ unsigned char task2Reset(void)
 /* every second (the RTC's interrupt sets flag 0x8000): the alarm checked against the clock */
 unsigned char task2Tick(void)
 {
+#if FW_SINCE(0x01000104)
 	unsigned char ret;
 	unsigned char clock;
 	unsigned int state;
+#else
+	unsigned char ret;
+	STATE_TRANSITION_EVENT
+	unsigned int state;
+	unsigned char clock;
+#endif
 
 	ret = 0;
 	state = stateGet();
@@ -314,8 +334,12 @@ unsigned char task2Tick(void)
 	if (isAlarmReached()) {
 		sleepFactorSet3(1);
 		if ((stateGetWakeMask() & 2) == 0) {
+#if FW_SINCE(0x01000104)
 			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
-				ret = stateTransition(1);
+#else
+			if (state == 0x0004 || state == 0x0008)
+#endif
+				ret = STATE_TRANSITION(1);
 		}
 	} else {
 		sleepFactorSet3(0);

@@ -28,9 +28,18 @@ extern SYSINFO_NEAR unsigned long idRecord1;
 #endif
 
 extern int hangLimitReached(void);
+#if FW_SINCE(0x01000104)
 extern int hangDetected(void);
+#define HANG_DETECTED()		(hangDetected() != 0)
+#else
+/* before 0x01000104 a hang is P11.5 and P4.6 low, tested in place */
+#include "chip.h"
+#define HANG_DETECTED()		(!P11.5 && !P4.6)
+#endif
 extern int hangStarted(void);
+#if FW_SINCE(0x01000104)
 extern int hangTimerRunning(void);
+#endif
 extern unsigned char getResetFlags(void);
 #if FW_SINCE(0x01000107)
 extern unsigned long getIdRecord1(void);

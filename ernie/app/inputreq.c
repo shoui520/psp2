@@ -510,10 +510,14 @@ unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned char *l
 /* 0x0103 (sceSysconGetMultiCnInfo) */
 unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length)
 {
+#if FW_SINCE(0x01000104)
 	if (input1Bit5Active())
 		out[0] = 0x80;
 	else
 		out[0] = 0;
+#else
+	out[0] = input1Bit5Active() ? 0x80 : 0;
+#endif
 	out[1] = analogGetMultiCn();
 	out[2] = boardGetMultiCnOutput();
 	out[3] = 0;
@@ -944,7 +948,9 @@ static void touchRequestSetPower(void)
 {
 	unsigned char result;
 
-	result = 0;
+#if FW_SINCE(0x01000104)
+	result = 0;	/* never set before 104: the answer is then whatever was left in L */
+#endif
 	if (touchRequest.length == 8) {
 		touchRequest.status = 0;
 		if (inputRequests.touchData[0] != 0) {
@@ -1002,7 +1008,9 @@ static void touchRequestSetGrip(void)
 {
 	unsigned char result;
 
-	result = 0;
+#if FW_SINCE(0x01000104)
+	result = 0;	/* never set before 104: the answer is then whatever was left in L */
+#endif
 	if (touchRequest.length == 0x10) {
 		if (inputRequests.touchData[0] != 0) {
 			result = touchSetGrip0(&inputRequests.touchData[1]);
@@ -1828,8 +1836,10 @@ static void motionRequest0488(void)
 	}
 }
 
+#if FW_SINCE(0x01000104)
 /* the buttons, for a module that is not here (unused) */
 void controlsGetButtons(unsigned char *out)
 {
 	controlsReadButtons(out);
 }
+#endif

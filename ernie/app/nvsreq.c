@@ -17,8 +17,10 @@
 static struct NvsJob *nvsJobAlloc(void);
 static struct NvsJob *nvsJobNext(void);
 
+#if FW_SINCE(0x01000104)
 /* the lowest offset the host may read or write */
 const unsigned int nvsHostOffsetMin = 0;
+#endif
 
 unsigned char nvsRequestAnswer[0x20];
 unsigned char nvsRequestData[3 + 0x20];	/* the offset, the size, the data written */
@@ -66,11 +68,15 @@ void nvsRequestEvent(FLGPTN ptn)
 				if (nvsRequest.length == 3) {
 					offset = nvsRequestData[0] | (unsigned int)nvsRequestData[1] << 8;
 					size = nvsRequestData[2];
+#if FW_SINCE(0x01000104)
 					if (offset >= nvsHostOffsetMin)
 						result = nvsRead(offset, size, nvsRequestAnswer,
 								   NVS_AREA_HOST);
 					else
 						result = 0x3c;
+#else
+					result = nvsRead(offset, size, nvsRequestAnswer, NVS_AREA_HOST);
+#endif
 					if (result == 0)
 						hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, 0,
 								  size);
@@ -85,11 +91,15 @@ void nvsRequestEvent(FLGPTN ptn)
 				if (nvsRequest.length >= 4) {
 					offset = nvsRequestData[0] | (unsigned int)nvsRequestData[1] << 8;
 					size = nvsRequestData[2];
+#if FW_SINCE(0x01000104)
 					if (offset >= nvsHostOffsetMin)
 						result = nvsWrite(offset, size, &nvsRequestData[3],
 								   NVS_AREA_HOST);
 					else
 						result = 0x3c;
+#else
+					result = nvsWrite(offset, size, &nvsRequestData[3], NVS_AREA_HOST);
+#endif
 					hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, result, 0);
 				} else {
 					hostRequestAnswer(&nvsRequest, HOST_REQUEST_ANSWER, 0x3b, 0);

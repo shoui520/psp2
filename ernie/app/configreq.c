@@ -20,7 +20,11 @@ union ConfigRequestOffset {
 };
 
 unsigned char configRequestAnswer[0x20];
+#if FW_SINCE(0x01000104)
 unsigned char configRequestData[3 + 0x40];	/* the offset, the size, the data or records */
+#else
+unsigned char configRequestData[0x40];
+#endif
 struct HostRequest configRequest;
 
 void configRequestInit(void)

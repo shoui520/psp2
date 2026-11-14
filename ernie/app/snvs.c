@@ -3,6 +3,7 @@
  * (0x00d2) and writes (0x00d3) the NVS with packets encrypted under its session key; 0x00d1
  * locks it again. snvsCheck keeps the packets in sequence and checks their sums.
  */
+#include "ernie.h"
 #include "aes.h"
 #include "authkeys.h"
 #include "handshake.h"
@@ -18,7 +19,9 @@ static int snvsCheck(struct SnvsPacket *packet, unsigned int length);
 
 void snvsReset(void)
 {
+#if FW_SINCE(0x01000104)
 	snvs.sequence = 0;
+#endif
 	snvs.started = 0;
 }
 

@@ -33,6 +33,9 @@ unsigned int elmoRegA7;
 unsigned int elmoRegAA;
 unsigned int elmoRegAB;
 unsigned int elmoReg60;
+#if !FW_SINCE(0x01000104)
+unsigned char elmoPowerOnStage;
+#endif
 
 static const struct ElmoRegInit elmoRegInit[] = {
 	{ 0xa0, &elmoStatusMask.reg[0], 0 },

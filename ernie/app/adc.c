@@ -48,9 +48,15 @@ void adcOpen(void)
 void adcClose(void)
 {
 	ADMK = 1;
+#if FW_SINCE(0x01000104)
 	ADCS = 0;
 	ADCE = 0;
 	ADIF = 0;
+#else
+	ADIF = 0;
+	ADCS = 0;
+	ADCE = 0;
+#endif
 	ADCEN = 0;
 }
 

@@ -56,12 +56,18 @@ extern unsigned char powerMultiCnOff(void);
 extern void powerAccTimer(void);
 extern void powerSdTimer(void);
 extern void powerSeqInit(void);
+#if FW_SINCE(0x01000104)
 extern void powerCookieHold(void);
 extern void powerCookieRelease(void);
 extern unsigned char powerBbmcCycle(void);
 extern unsigned char powerBbmcOff(void);
 extern unsigned char powerBbmcOn(void);
 extern void powerBbmcPulse(void);
+#else
+extern unsigned char powerBbmcCycle(void);
+extern unsigned char powerBbmcRestart(void);
+extern void powerCookieCycle(void);
+#endif
 extern unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13);
 extern unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13);
 extern unsigned char powerElmoA0Set2(unsigned char bit12, unsigned char unused1, unsigned char unused0);

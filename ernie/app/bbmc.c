@@ -68,9 +68,14 @@ static const unsigned char bbmcRegModes[BBMC_REGS + 1] = {
 	0x3c, 0x3c, 0x3c, 0x3c, 0x0f,
 };
 static const unsigned char bbmcZero12[12] = { 0 };
+#if FW_SINCE(0x01000104)
 static const unsigned char bbmcZero16[16] = { 0 };
 static const unsigned char bbmcZero2[2] = { 0 };
 static const unsigned char bbmcZero4[4] = { 0 };
+#else
+/* before 0x01000104 the mode registers are 0x0e bytes, and bbmcStart's zeros its own */
+static const unsigned char bbmcZero16[14] = { 0 };
+#endif
 
 /* the link's timeouts and handlers, the registers, request 0x0a and the inputs; the hardware
    info's flag 0x02 when P3.2 stays low */
@@ -94,7 +99,7 @@ void bbmcInit(void)
 	handler.handler = bbmcPostRxTimeout;
 	result = timerSetHandler(2, &handler);
 	handler.handler = bbmcPostLinkTimeout;
-	result = timerSetHandler(0x13, &handler);
+	result = timerSetHandler(TIMER(0x13), &handler);
 	handler.handler = bbmcPostStart;
 	result = timerSetHandler(TIMER_RTC(0x15), &handler);
 	handler.handler = bbmcPostMode;
@@ -137,12 +142,18 @@ unsigned char bbmcPowerOn(void)
 		task6SetFlag(6, BBMC_EVENT_MODE);
 		break;
 	default:
-		timerStart(0x13, 5000);
+#if FW_SINCE(0x01000104)
+		timerStart(TIMER(0x13), 5000);
+#else
+		timerStart(TIMER(0x13), 0x28);
+#endif
 		timerStart(TIMER_RTC(0x15), 0xa0);
 		break;
 	}
+#if FW_SINCE(0x01000104)
 	bbmc.repeats = 0;
 	bbmc.lastSequence = 0xff;
+#endif
 	return 0;
 }
 
@@ -155,13 +166,22 @@ unsigned char bbmcPowerOff(void)
 	P36 = 0;
 	PM36 = 0;
 	uart2Close(0);
+#if FW_SINCE(0x01000104)
 	bbmc.state = 1;
 	bbmc.transition = 0;
-	timerStop(0x13);
+#endif
+	timerStop(TIMER(0x13));
 	timerStop(TIMER_RTC(0x15));
 	bbmcWriteRegs(3, 1, bbmcZero12, BBMC_WRITE_RESET);
+#if FW_SINCE(0x01000104)
 	bbmcWriteRegs(6, 0x10, bbmcZero16, BBMC_WRITE_RESET);
+#else
+	bbmcWriteRegs(6, 0x0e, bbmcZero16, BBMC_WRITE_RESET);
+#endif
 	bbmcWriteRegs(0x18, 0x0c, bbmcZero12, BBMC_WRITE_RESET);
+#if !FW_SINCE(0x01000104)
+	bbmcSetStatus(0x22);
+#else
 	switch (stateGet()) {
 	case 0x0004:
 	case 0x8004:
@@ -180,20 +200,33 @@ unsigned char bbmcPowerOff(void)
 		bbmcSetStatus(0x22);
 		break;
 	}
+#endif
 	return 0;
 }
 
 /* the lines as inputs, and the state for the mode set */
 unsigned char bbmcStart(void)
 {
+#if FW_SINCE(0x01000104)
 	PM34 = 1;
 	PM36 = 1;
 	bbmcWriteRegs(6, 2, bbmcZero2, BBMC_WRITE_SET);
 	bbmcWriteRegs(8, 4, bbmcZero4, BBMC_WRITE_RESET);
+#else
+	unsigned char zero2[2] = { 0 };
+	unsigned char zero4[4] = { 0 };
+
+	PM34 = 1;
+	PM36 = 1;
+	bbmcWriteRegs(6, 2, zero2, BBMC_WRITE_SET);
+	bbmcWriteRegs(8, 4, zero4, BBMC_WRITE_RESET);
+#endif
 	switch (bbmcRegs.r.mode) {
 	case 1:
 		P125 = 1;
+#if FW_SINCE(0x01000104)
 		bbmc.state = 3;
+#endif
 		powerSleep(100);
 		timerStart(TIMER_RTC(0x19), 0x14);
 		break;
@@ -265,18 +298,24 @@ unsigned char bbmcIsOn(void)
 	return 0;
 }
 
+#if FW_SINCE(0x01000104)
 unsigned char bbmcModeIsNone(void)
 {
 	return bbmcRegs.r.modeActive == 0;
 }
+#endif
 
 /* event flag 6's events */
 unsigned char bbmcEvent(FLGPTN ptn)
 {
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
+#endif
 	if (ptn & BBMC_EVENT_POWER) {
 		unsigned char level;
 
 		level = input2Bit0Get();
+#if FW_SINCE(0x01000104)
 		if (level != 0) {
 			if (bbmc.state == 1 || stateGet() == 0x0004)
 				powerDeviceSetPending(0x0200);
@@ -287,6 +326,23 @@ unsigned char bbmcEvent(FLGPTN ptn)
 				;
 			bbmcPowerOff();
 		}
+#else
+		/* before 0x01000104 the modem's power line powers the link on and off itself */
+		if (level != 0) {
+			if (bbmc.state == 1) {
+				PM34 = 1;
+				PM36 = 1;
+				bbmc.state = 2;
+			}
+			bbmcPowerOn();
+		} else {
+			if (bbmc.state == 1)
+				;
+			else
+				bbmc.state = 1;
+			bbmcPowerOff();
+		}
+#endif
 	}
 	if (ptn & BBMC_EVENT_MODE) {
 		unsigned int mode;
@@ -320,8 +376,46 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	if (ptn & BBMC_EVENT_RESUME) {
 		intp8Enable(0);
 		uart2Open();
-		timerStart(0x13, 5000);
+#if FW_SINCE(0x01000104)
+		timerStart(TIMER(0x13), 5000);
+#else
+		timerStart(TIMER(0x13), 0x28);
+#endif
 	}
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 the states and their transitions are handled alike, and the mode's
+	   status and events cleared off */
+	if (ptn & BBMC_EVENT_STATE) {
+		unsigned long zero;
+		unsigned int state;
+
+		zero = 0;
+		state = stateGet();
+		switch (state) {
+		case 0x0020:
+		case 0x8020:
+			if (bbmcIsOn())
+				uart2Open();
+			bbmc.transition = 0;
+			break;
+		case 0x0008:
+		case 0x8008:
+			if (bbmcIsOn()) {
+				uart2Close(1);
+				intp8Enable(1);
+				if (P7.4)
+					task6SetFlag(6, BBMC_EVENT_RESUME);
+				bbmc.transition = 0;
+			}
+			break;
+		case 0x0004:
+		case 0x8004:
+			bbmcWriteRegs(8, 4, (unsigned char *)&zero, BBMC_WRITE_RESET);
+			bbmc.transition = 0;
+			break;
+		}
+	}
+#else
 	if (ptn & BBMC_EVENT_STATE) {
 		unsigned int state;
 
@@ -336,7 +430,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		case 0x0008:
 			if (bbmcRegs.r.events != 0) {
-				stateTransition(8);
+				STATE_TRANSITION(8);
 				bbmc.transition = 1;
 			}
 			break;
@@ -356,6 +450,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		}
 	}
+#endif
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
 	return 0;
@@ -403,7 +498,8 @@ void bbmcReceive(void)
 		}
 		if (bbmc.rxLength >= 5 && bbmc.rx.length + 2 == bbmc.rxLength) {
 			timerStop(2);
-			timerStart(0x13, 5000);
+#if FW_SINCE(0x01000104)
+			timerStart(TIMER(0x13), 5000);
 			bbmcTrace("RX", (unsigned char *)&bbmc.rx);
 			if (bbmc.rx.data[bbmc.rx.length - 3] == bbmcChecksum((unsigned char *)&bbmc.rx)) {
 				if (bbmc.rx.sequence == bbmc.lastSequence) {
@@ -415,6 +511,22 @@ void bbmcReceive(void)
 					bbmc.lastSequence = bbmc.rx.sequence;
 					bbmc.repeats = 0;
 				}
+#else
+			/* before 0x01000104 a packet is answered whatever its checksum and its
+			   repeats */
+			timerStart(TIMER(0x13), 0x28);
+			bbmcTrace("RX", (unsigned char *)&bbmc.rx);
+			if (bbmc.rx.data[bbmc.rx.length - 3] == bbmcChecksum((unsigned char *)&bbmc.rx))
+				;
+			if (bbmc.rx.sequence == bbmc.lastSequence) {
+				if (++bbmc.repeats >= 4)
+					;
+			} else {
+				bbmc.lastSequence = bbmc.rx.sequence;
+				bbmc.repeats = 0;
+			}
+			{
+#endif
 				bbmc.tx.start = BBMC_ANSWER_START;
 				bbmc.tx.command = bbmc.rx.command;
 				bbmc.tx.sequence = bbmc.rx.sequence;
@@ -570,7 +682,11 @@ void bbmcRegsInit(void)
 	unsigned char result;
 
 	memset(&bbmcRegs, 0, BBMC_REGS);
+#if FW_SINCE(0x01000104)
 	bbmcRegs.r.id = 5;
+#else
+	bbmcRegs.r.id = 3;
+#endif
 	bbmcRegs.r.reserved1 = 0;
 	bbmcRegs.r.size = BBMC_REGS;
 	result = nvsJobRead(BBMC_NVS_MODE, 2, (unsigned char *)&bbmcRegs.r.mode, 1, BBMC_NVS_LOAD,
@@ -585,6 +701,7 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 {
 	unsigned char result;
 	unsigned char changed;
+	STATE_TRANSITION_EVENT
 
 	changed = 0;
 	if (reg + count >= BBMC_REGS + 1) {
@@ -614,11 +731,13 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 	bbmc.pending = (bbmcRegs.r.status != 0 || bbmcRegs.r.events != 0) ? (unsigned char)1 :
 									     (unsigned char)0;
 	sleepFactorSet8(bbmc.pending);
+#if FW_SINCE(0x01000104)
 	if (bbmcRegs.r.events & 8)
 		sleepFactorSet20(1);
+#endif
 	if (bbmcRegs.r.events != 0 && !bbmc.transition && stateGet() == 0x0008) {
 		bbmc.transition = 1;
-		stateTransition(8);
+		STATE_TRANSITION(8);
 	}
 	if (changed) {
 		result = nvsJobRead(BBMC_NVS_MODE, 2, (unsigned char *)&bbmcSavedMode, 1,
@@ -659,11 +778,13 @@ unsigned char bbmcReadRegs(unsigned char reg, unsigned char count, unsigned char
 	return result;
 }
 
+#if FW_SINCE(0x01000104)
 void bbmcAddStatus(unsigned long bits)
 {
 	bits |= bbmcRegs.r.status;
 	bbmcWriteRegs(8, 4, (unsigned char *)&bits, BBMC_WRITE_SET);
 }
+#endif
 
 void bbmcSetStatus(unsigned long bits)
 {

@@ -358,8 +358,10 @@ int uart2Open(void)
 {
 	if (!SAU1EN)
 		SAU1EN = 1;
+#if FW_SINCE(0x01000104)
 	if (uart2.flags & UART_OPEN)
 		return 1;
+#endif
 	if (uart2.flags & UART_CLOSED) {
 		uartStopTx(2);
 		uartStopRx(2);
@@ -432,13 +434,16 @@ int uart2Close(unsigned char keep)
 #else
 		uart2.flags = (uart2.flags & ~UART_OPEN) | UART_CLOSED;
 #endif
-	} else if (!keep) {
+	}
+#if FW_SINCE(0x01000104)
+	else if (!keep) {
 		P14.3 = 0;
 		PM14.3 = 0;
 		P14.4 = 0;
 		P36 = 0;
 		PM36 = 0;
 	}
+#endif
 	return 0;
 }
 
@@ -470,7 +475,7 @@ void uart3ReceiveInterrupt(void)
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 		} else
-			timerStart(0x10, 2);
+			timerStart(TIMER(0x10), 2);
 	}
 }
 

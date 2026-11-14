@@ -92,9 +92,10 @@ static void watchdogExpire(void)
 #else
 static void watchdogExpire(void)
 {
+	STATE_TRANSITION_EVENT
 	switch (watchdog.bytes.mode) {
 	case 0:
-		stateTransition(0x35);
+		STATE_TRANSITION_NOMASK(0x35);
 		break;
 	}
 }

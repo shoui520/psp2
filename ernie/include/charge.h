@@ -122,7 +122,9 @@ struct Charge {
 };
 #else
 struct Charge {
+#if FW_SINCE(0x01000104)
 	unsigned char	timer1fPending;		/* cleared when timer 0x1f runs */
+#endif
 	unsigned int	flags;			/* the battery's levels (chargeReadFlags), each
 						   taken when two reads agree; 15: no battery */
 	unsigned int	flagsRead;		/* this update's read */
@@ -163,6 +165,10 @@ union PowerStatus {
 };
 
 
+#if !FW_SINCE(0x01000104)
+extern __sreg unsigned char chargeLedBlinking;	/* the charge LED's blink runs (chargeLedSetBlink) */
+extern __sreg unsigned char chargeLedBlinkOn;	/* and is lit */
+#endif
 extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
 extern __sreg union PowerStatus powerStatus;

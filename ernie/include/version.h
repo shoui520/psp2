@@ -7,6 +7,8 @@
 #ifndef VERSION_H
 #define VERSION_H
 
+#include "ernie.h"
+
 struct AppVersionInfo {
 	unsigned char	hardwareInfo[4];	/* the hardware ID, ERNIE_HW */
 	unsigned char	version[4];		/* ERNIE_FW */
@@ -31,7 +33,9 @@ extern void		getErnieVersion(unsigned char *buf);
 extern void		getHardwareInfo(unsigned char *buf);
 extern unsigned char	getHardwareInfoFlags(void);
 extern void		setHardwareInfoFlags(unsigned char flags);
+#if FW_SINCE(0x01000104)
 extern void		clearHardwareInfoFlags(unsigned char flags);
+#endif
 extern void		setDlFlags(unsigned char flags);
 extern void		getErnieDlVersion(unsigned char *buf);
 

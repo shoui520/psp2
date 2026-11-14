@@ -45,9 +45,11 @@ extern unsigned char serial4Notify(void);
 extern void serial4SetAnswer(unsigned char state);
 extern void serial4PostAnswer(void);
 extern unsigned char serial4Answer0205(void);
+#if FW_SINCE(0x01000104)
 extern unsigned int serial4GetCommand(void);
 extern unsigned char serial4GetStatus(void);
 extern unsigned char serial4GetP71(void);
+#endif
 extern void serial4Trace(unsigned char *buffer);
 #else
 /* no UART4 link: nothing to open, close or answer, its state read as 0 */

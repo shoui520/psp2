@@ -86,6 +86,16 @@ void systemInit(void)
 #endif
 	logQueueInit();
 	logInit();
+#if !FW_SINCE(0x01000104)
+	if (cause == 0x10)
+		logEvent(4);
+	if (cause == 0) {
+		if (resetFlags & RESF_TRAP)
+			logEvent(6);
+		if (resetFlags & RESF_WDRF)
+			logEvent(7);
+	}
+#else
 	if (cause == 0) {
 		if (resetFlags & RESF_TRAP)
 			scratchPadClear();
@@ -99,6 +109,7 @@ void systemInit(void)
 			logEvent(6);
 		}
 	}
+#endif
 	stateEnter();
 	return;
 }

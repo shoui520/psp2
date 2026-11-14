@@ -191,7 +191,7 @@ void uart4ReceiveInterrupt(void)
 	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
 		uart4.rxBuffer[uart4.rxWrite] = data;
 		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
-		timerStart(0x0f, 2);
+		timerStart(TIMER(0x0f), 2);
 	}
 }
 

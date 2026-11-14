@@ -5,6 +5,7 @@
 #ifndef ERNIE_SERIAL1_H
 #define ERNIE_SERIAL1_H
 
+#include "ernie.h"
 #include "serial.h"
 
 /* a command's flags: what it needs */

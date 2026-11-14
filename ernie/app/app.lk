@@ -68,6 +68,8 @@ OBJECT	state.c
 OBJECT	handshake.c
 OBJECT	serial1op.c
 OBJECT	task.c
+# before 0x01000104 the configuration's defaults are among the constants, before config.c's
+OBJECT	configdefault.c	IF ERNIE_FW<0x01000104
 OBJECT	config.c
 OBJECT	configreq.c
 OBJECT	watchdog.c
@@ -79,7 +81,7 @@ OBJECT	led.c
 OBJECT	serialreq.c
 OBJECT	snvs.c
 OBJECT	gf.c
-OBJECT	configdefault.c
+OBJECT	configdefault.c	IF ERNIE_FW>=0x01000104
 OBJECT	kernel.asm
 OBJECT	kernelcfg.asm
 OBJECT	cstart.asm
@@ -148,8 +150,8 @@ DROP	@@VECT??
 # defaults ("ConfZZ"), the version block
 AT	0x00000
 SEG	@@VECT
-AT	0x00800
-SEG	@@CNSTL		configdefault.c
+AT	0x00800	IF ERNIE_FW>=0x01000104
+SEG	@@CNSTL		configdefault.c IF ERNIE_FW>=0x01000104
 AT	0x00f00
 SEG	@@CNSTL		version.c
 
@@ -177,6 +179,8 @@ AT	0x0f692		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x0100010A
 AT	0x0f692		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000109
 AT	0x0f692		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000107
 AT	0x0f67a		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000104
+AT	0x0f6e0		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090903
+AT	0x0f57a		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090804
 AT	0x0f592		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x01000306
 AT	0x0f6f6		IF ERNIE_HW==0x00414000&&ERNIE_FW==0x01000306
 SEG	@@R_INIT

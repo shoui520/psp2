@@ -116,14 +116,20 @@ void analogInit(void)
 	analogAxes[3].calibrated = 0;
 	analogFlags = 0;
 	analogMinRange = configGet()->analogMinRange;
+#if FW_SINCE(0x01000104)
 	if (analogMinRange < 0x32)
 		analogMinRange = 0x32;
+#endif
 	analogScales[0] = configGet()->analogScale0;
+#if FW_SINCE(0x01000104)
 	if (analogScales[0] > 400)
 		analogScales[0] = 400;
+#endif
 	analogScales[1] = configGet()->analogScale1;
+#if FW_SINCE(0x01000104)
 	if (analogScales[1] > 400)
 		analogScales[1] = 400;
+#endif
 	analogResetSet0();
 	analogResetSet1();
 }

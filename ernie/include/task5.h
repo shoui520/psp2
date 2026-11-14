@@ -22,7 +22,9 @@ extern void powerJobPostOffEnd(void);
 #if FW_SINCE(0x01000107)
 extern void powerJobPostReset(void);
 #endif
+#if FW_SINCE(0x01000104)
 extern void powerJobPostUpdate(void);
+#endif
 extern unsigned char elmoVersion0(void);
 extern void powerDeviceSetPending(unsigned int bits);
 

@@ -29,6 +29,8 @@ extern unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *l
 extern unsigned char hostCommand0112(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommand0102(unsigned char *out, unsigned char *length);
 extern void touchRequestCancel(void);
+#if FW_SINCE(0x01000104)
 extern void controlsGetButtons(unsigned char *out);
+#endif
 
 #endif

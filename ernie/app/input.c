@@ -186,12 +186,29 @@ void inputInit(void)
 	struct PinConfig config;
 
 	inputReserved = 0;
+#if FW_SINCE(0x01000104)
 	if ((getResetCause() & 0xf0) == 0)
 		coldStart = 1;
 	PM3.0 = 1;
 	PM3.1 = 0;
 	P3.1 = 0;
 	PM6.7 = 1;
+#else
+	/* before 0x01000104 every start is cold, and the settings' wlanLine picks the WLAN's
+	   line: P3.1 driven low, or P6.7 */
+	coldStart = 1;
+	if (configGet()->wlanLine) {
+		PM3.0 = 1;
+		PM3.1 = 0;
+		P3.1 = 0;
+		PM6.7 = 1;
+	} else {
+		PM3.0 = 1;
+		PM3.1 = 1;
+		PM6.7 = 0;
+		P6.7 = 0;
+	}
+#endif
 	intp1Enable(0);
 	intp2Enable(0);
 	intp13Enable(0);
@@ -242,7 +259,11 @@ void inputInit(void)
 	inputHandler1Bit2High.handler = input1Bit2High;
 #if BOARD_SERIAL2
 	inputHandlerSerial2Request.type = 1;
+#if FW_SINCE(0x01000104)
 	inputHandlerSerial2Request.edges = INPUT_EDGE_HIGH;
+#else
+	inputHandlerSerial2Request.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+#endif
 	inputHandlerSerial2Request.handler = serial2InputRequest;
 	inputHandlerSerial2Link.type = 1;
 	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
@@ -465,6 +486,17 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 P3.1 wakes too, unless it drives the WLAN's line */
+	if ((flags & 0x00000020) == 0 && configGet()->wlanLine == 0) {
+		intp4Enable(1);
+		if (!P3.1) {
+			pinMonitor3Enable(1);
+			pinMonitors.pin[3].last = 0;
+			inputScanHold(0x1a);
+		}
+	}
+#endif
 	if ((flags & 0x00000008) == 0) {
 	}
 	if ((flags & 0x00010000) == 0) {
@@ -683,6 +715,20 @@ void pinMonitorPoll(void)
 		if (pinMonitors.mask & 0x04) {
 		}
 		if (pinMonitors.mask & 0x08) {
+#if !FW_SINCE(0x01000104)
+			if (configGet()->wlanLine == 0) {
+				level = P3.1;
+				if (pinMonitors.pin[3].last == level) {
+					if (pinMonitors.pin[3].count-- == 0) {
+						pinMonitor3Enable(0);
+						pinMonitors.pin[3].config.handler();
+					}
+				} else {
+					pinMonitor3Enable(0);
+				}
+				pinMonitors.pin[3].last = level;
+			}
+#endif
 		}
 		if (pinMonitors.mask & 0x10) {
 			level = P3.0;
@@ -858,6 +904,7 @@ void pinMonitor1Enable(unsigned char enable)
 void button2Held(void)
 {
 	unsigned char value;
+	STATE_TRANSITION_EVENT
 
 	buttonPress2.count++;
 	if (stateGet() != button2State()) {
@@ -879,11 +926,11 @@ void button2Held(void)
 		case 2:
 			if (buttonPress2.count == buttonPress2.time1) {
 				buttonPress2.result = buttonPress2.keys;
-				stateTransition(0x14);
+				STATE_TRANSITION(0x14);
 				pinMonitor1Enable(1);
 			} else if (buttonPress2.count == buttonPress2.time2) {
 				buttonPress2.result = 2;
-				stateTransition(0x31);
+				STATE_TRANSITION(0x31);
 			} else {
 				pinMonitor1Enable(1);
 			}
@@ -892,12 +939,13 @@ void button2Held(void)
 	} else if (buttonPress2.count >= buttonPress2.time1) {
 		buttonPress1.keys = 1;
 		buttonPress2.result = buttonPress2.keys;
-		stateTransition(0x14);
+		STATE_TRANSITION(0x14);
 	}
 }
 #else
 void button2Held(void)
 {
+	STATE_TRANSITION_EVENT
 	unsigned int state;
 	unsigned char value;
 #if FW_SINCE(0x01000306)
@@ -934,7 +982,7 @@ void button2Held(void)
 					return;
 				}
 				buttonPress2.result = buttonPress2.keys;
-				stateTransition(0x14);
+				STATE_TRANSITION(0x14);
 				pinMonitor1Enable(1);
 #if FW_SINCE(0x01000306)
 			} else if (buttonPress2.count == buttonPress2.time2 || button2HoldDone()) {
@@ -949,7 +997,7 @@ void button2Held(void)
 					return;
 				}
 				buttonPress2.result = 2;
-				stateTransition(0x31);
+				STATE_TRANSITION(0x31);
 			} else {
 				pinMonitor1Enable(1);
 			}
@@ -962,7 +1010,7 @@ void button2Held(void)
 		}
 		buttonPress1.keys = 1;
 		buttonPress2.result = buttonPress2.keys;
-		stateTransition(0x14);
+		STATE_TRANSITION(0x14);
 	}
 }
 #endif
@@ -1118,6 +1166,10 @@ unsigned char button1Keys(void)
 void button1Held(void)
 {
 	unsigned char value;
+	STATE_TRANSITION_EVENT
+#if !FW_SINCE(0x01000104)
+	unsigned int state;	/* before 0x01000104 kept, never used */
+#endif
 
 	buttonPress1.count++;
 #if FW_SINCE(0x01000107)
@@ -1142,7 +1194,7 @@ void button1Held(void)
 		case 3:
 			if (buttonPress1.count == buttonPress1.time1) {
 				buttonPress1.result = buttonPress1.keys;
-				stateTransition(0x0b);
+				STATE_TRANSITION(0x0b);
 			} else {
 				pinMonitor0Enable(1);
 			}
@@ -1185,6 +1237,15 @@ void intp4Enable(unsigned char enable)
 		PMK4 = 1;
 		PIF4 = 0;
 	}
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 P3.1's falling edge, unless P3.1 drives the WLAN's line */
+	else if (configGet()->wlanLine == 0) {
+		EGP0.4 = 0;
+		EGN0.4 = 1;
+		PIF4 = 0;
+		PMK4 = 0;
+	}
+#endif
 }
 
 void pinMonitor3Set(struct PinConfig *config)
@@ -1197,11 +1258,19 @@ void pinMonitor3Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x08;
+#if !FW_SINCE(0x01000104)
+	else if (configGet()->wlanLine == 0) {
+		pinMonitors.pin[3].last = P3.1;
+		pinMonitors.pin[3].count = pinMonitors.pin[3].config.reload;
+		pinMonitors.mask |= 0x08;
+	}
+#endif
 }
 
 void pinMonitor3Expired(void)
 {
-	stateTransition(5);
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(5);
 }
 
 void intp3Enable(unsigned char enable)
@@ -1238,7 +1307,8 @@ void pinMonitor4Enable(unsigned char enable)
 
 void pinMonitor4Expired(void)
 {
-	stateTransition(2);
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(2);
 }
 
 void intp10Enable(unsigned char enable)
@@ -1275,7 +1345,8 @@ void pinMonitor5Enable(unsigned char enable)
 
 void pinMonitor5Expired(void)
 {
-	stateTransition(0x10);
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(0x10);
 	return;
 }
 
@@ -1413,12 +1484,13 @@ void inputScanTimer(void)
 /* the RTC's interrupt (state 0x0010 or 0x0800): P11.4 */
 void levelMonitor1Poll(void)
 {
+	STATE_TRANSITION_EVENT
 	if (levelMonitor1.enable != 0) {
 		levelMonitor1.now = P11.4;
 		if (levelMonitor1.state != levelMonitor1.now && levelMonitor1.last == levelMonitor1.now) {
 			levelMonitor1.state = levelMonitor1.now;
 			if (levelMonitor1.state != 0)
-				stateTransition(0x61);
+				STATE_TRANSITION(0x61);
 		}
 		levelMonitor1.last = levelMonitor1.now;
 	}
@@ -1427,12 +1499,13 @@ void levelMonitor1Poll(void)
 /* task 3 in state 0x0800: P12.0 */
 void levelMonitor2Poll(void)
 {
+	STATE_TRANSITION_EVENT
 	if (levelMonitor2.enable != 0) {
 		levelMonitor2.now = P12.0;
 		if (levelMonitor2.state != levelMonitor2.now && levelMonitor2.last == levelMonitor2.now) {
 			levelMonitor2.state = levelMonitor2.now;
 			if (levelMonitor2.state != 0)
-				stateTransition(0x42);
+				STATE_TRANSITION(0x42);
 		}
 		levelMonitor2.last = levelMonitor2.now;
 	}
@@ -1442,12 +1515,14 @@ void levelMonitor2Poll(void)
 void input1Bit7Poll(void)
 {
 #if BOARD_INPUT1_BIT7_POLL
+	STATE_TRANSITION_EVENT
+
 	if (inputShutdownMarked != 0) {
 		inputRaw1.7 = P14.5;
 		if (inputState1.7 != inputRaw1.7 && (inputGroup1.prev & 0x80) == (inputRaw1 & 0x80)) {
 			inputState1.7 = inputRaw1.7;
 			if (!inputState1.7)
-				stateTransition(0x62);
+				STATE_TRANSITION(0x62);
 		}
 		if (inputRaw1.7)
 			inputGroup1.prev |= 0x80;
@@ -1544,11 +1619,13 @@ void input1Bit7Changed(void)
 	return;
 }
 
+#if FW_SINCE(0x01000104)
 void inputChanged(void)
 {
 	set_flg(2, 0x0100);
 	return;
 }
+#endif
 
 #if FW_SINCE(0x01000306)
 unsigned char button2HoldReached(unsigned char ticks)

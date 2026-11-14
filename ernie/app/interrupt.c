@@ -21,6 +21,7 @@
 #pragma DI
 
 #include "board.h"
+#include "config.h"
 #include "ernie.h"
 #include "input.h"
 #include "keepram.h"
@@ -60,9 +61,25 @@ void intp7Interrupt(void)
 {
 }
 
+#if FW_SINCE(0x01000104)
 void intp4Interrupt(void)
 {
 }
+#else
+/* before 0x01000104 INTP4 (P3.1 falling, with no WLAN line) runs pin monitor 3, or its
+   handler at once when it has no ticks */
+void intp4Interrupt(void)
+{
+	if (configGet()->wlanLine == 0 && !P3.1) {
+		if (pinMonitors.pin[3].config.reload != 0) {
+			pinMonitor3Enable(1);
+			pinMonitors.pin[3].last = 0;
+			inputScanHold(0x1a);
+		} else
+			pinMonitors.pin[3].config.handler();
+	}
+}
+#endif
 
 /* P3.0 low: pin monitor 4 */
 void intp3Interrupt(void)
@@ -133,21 +150,28 @@ void sre0Interrupt(void)
 /* P12.0 low: transition 0x41 */
 void intp0Interrupt(void)
 {
+	STATE_TRANSITION_EVENT
 	if (!P12.0)
-		stateTransition(0x41);
+		STATE_TRANSITION(0x41);
 }
 
 /* the hang timer: as the RTC's interrupt counts, the system reset (cause 0x30) at the
    eighth tick that hangLimitReached allows; with no hang, the timer stopped */
 void tm11Interrupt(void)
 {
-	if (hangDetected() != 0) {
+	if (HANG_DETECTED()) {
 		hangCount++;
 		if (hangCount >= 8 && hangLimitReached() != 0) {
+#if FW_SINCE(0x01000104)
 			DI();
 			hangState = HANG_RESET;
 			setResetCause(0x30);
 			resetSystem();
+#else
+			/* before 0x01000104 the chip reset as it is, no cause kept */
+			hangState = HANG_RESET;
+			resetChip();
+#endif
 		}
 	} else {
 		tm11Stop();

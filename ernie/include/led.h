@@ -9,6 +9,10 @@
 
 #include "ernie.h"
 
+/* the LEDs' requests and modes, the charge LED's blink: since 0x01000104; before, the power
+   LED's fade only */
+#define LED_REQUESTS		FW_SINCE(0x01000104)
+
 #define CHARGE_LED_TIMER	TIMER_RTC(0x18)	/* the charge LED's blink */
 #if FW_SINCE(0x01000306)
 #define POWER_LED_STEP_TIMER	0x14	/* a fade's step */
@@ -78,7 +82,9 @@ struct LedFade {
 	unsigned char	pattern;		/* powerLedFadeStart's */
 	unsigned char	status;			/* read by powerLedGetStatus only */
 	struct LedPattern *steps;
+#if LED_REQUESTS
 	unsigned char	keep;			/* the host's: the mode kept at a resume */
+#endif
 #if FW_SINCE(0x01000306)
 	unsigned char	step;			/* the step in the fade */
 #endif
@@ -177,6 +183,7 @@ struct Leds {
 	struct PowerLed	power;
 };
 
+#if LED_REQUESTS
 extern void chargeLedBlinkUpdate(void);
 extern void chargeLedInit(void);
 extern void chargeLedSetOff(unsigned char on);
@@ -206,13 +213,19 @@ extern void ledSetOff(unsigned char on);
 extern void chargeLedUpdate(void);
 extern void powerLedUpdate(void);
 extern void ledUpdate(void);
+#else
+extern void chargeLedInit(void);		/* powerjob.c's before 0x01000104 */
+extern void chargeLedSetBlink(unsigned char on);	/* powerseq.c's */
+#endif
 extern void powerLedInit(void);
 extern void powerLedFadeStep(void);
 extern void powerLedFadeStart(unsigned char pattern);
 extern int powerLedSetBrightness(unsigned char level);
 extern int powerLedSetPwm(unsigned char on);
 extern unsigned char powerLedGetStatus(void);
+#if LED_REQUESTS
 extern unsigned char powerLedGetState(void);
 extern unsigned char chargeLedGetState(void);
+#endif
 
 #endif

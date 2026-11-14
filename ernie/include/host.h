@@ -5,11 +5,20 @@
 #ifndef ERNIE_HOST_H
 #define ERNIE_HOST_H
 
+#include "ernie.h"
+
 /* the link's settings, set by the host */
+#if FW_SINCE(0x01000104)
 struct HostLinkConfig {
 	unsigned int	size:4;		/* the frame's size: 0 32 bytes, 1 64, 2 128 */
 	unsigned int	level:12;	/* 0 or 1: at 1 some answers carry more */
 };
+#else
+/* before 0x01000104 the word is the size, and the link has no level */
+struct HostLinkConfig {
+	unsigned int	size;
+};
+#endif
 
 /* a request's states */
 #define HOST_REQUEST_IDLE	0	/* no command expected */
@@ -102,9 +111,11 @@ extern void hostIntDisable(void);
 extern void hostIntCancel(void);
 extern int hostInit(void);
 extern unsigned char hostSetLinkConfig(struct HostLinkConfig config);
+#if FW_SINCE(0x01000104)
 extern int hostGetLinkConfig(struct HostLinkConfig *config);
 extern int hostGetLinkSize(unsigned char *size);
 extern int hostGetLinkLevel(unsigned int *level);
+#endif
 extern void hostRequestSetState(struct HostRequest *request, unsigned char state);
 extern void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 			      unsigned char status, unsigned char length);

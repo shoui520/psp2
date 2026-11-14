@@ -27,6 +27,7 @@ static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 
 struct Param param;
 
+#if FW_SINCE(0x01000104)
 int paramInit(void)
 {
 	dis_dsp();
@@ -45,7 +46,32 @@ int paramInit(void)
 	ena_dsp();
 	return 0;
 }
+#else
+/* before 0x01000104 the block has no press times, and the settings come before pattern 1 */
+int paramInit(void)
+{
+	dis_dsp();
+	memset(&param, 0, sizeof(param));
+	if (configGet()->board.bits.bbmcDetect)
+		memcpy(param.chargeLevels, configGet()->chargeLevels, sizeof(param.chargeLevels));
+	else
+		memcpy(param.chargeLevels, configGet()->chargeLevelsNoDetect,
+		       sizeof(param.chargeLevels));
+	param.levels[0] = 0x23;
+	param.levels[1] = 0x23;
+	param.levels[2] = 0x23;
+	param.levels[3] = 0x23;
+	param.base = 7;
+	param.adjust = 0;
+	param.setting1 = configGet()->paramSetting1;
+	param.setting2 = configGet()->paramSetting2;
+	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
+	ena_dsp();
+	return 0;
+}
+#endif
 
+#if FW_SINCE(0x01000104)
 #if FW_SINCE(0x0100010B)
 int paramLoad(void)
 #else
@@ -65,6 +91,7 @@ void paramLoad(void)
 	return 0;
 #endif
 }
+#endif
 
 /* host command 0x0092: 1 when the range is past the block or longer than PARAM_ACCESS_MAX */
 unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf)

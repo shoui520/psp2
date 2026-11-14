@@ -96,7 +96,9 @@ extern void bbmcSignal4(void);
 extern void bbmcSignal8(void);
 extern unsigned char bbmcGetMode(void);
 extern unsigned char bbmcIsOn(void);
+#if FW_SINCE(0x01000104)
 extern unsigned char bbmcModeIsNone(void);
+#endif
 extern unsigned char bbmcEvent(FLGPTN ptn);
 extern void bbmcTrace(const char *name, unsigned char *packet);
 extern void bbmcReceive(void);
@@ -114,7 +116,9 @@ extern unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsig
 				   unsigned char mode);
 extern unsigned char bbmcReadRegs(unsigned char reg, unsigned char count, unsigned char *values,
 				  unsigned char keep);
+#if FW_SINCE(0x01000104)
 extern void bbmcAddStatus(unsigned long bits);
+#endif
 extern void bbmcSetStatus(unsigned long bits);
 extern void bbmcSetEvents(unsigned long bits);
 extern void bbmcSetModeActive(unsigned int mode);

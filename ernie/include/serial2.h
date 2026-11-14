@@ -17,12 +17,19 @@ extern unsigned char serial2SetP71(unsigned char level);
 #if !FW_SINCE(0x01000306)
 extern unsigned char serial2SetLink(int link2);
 #endif
+#endif
+
+/* since 0x01000104 mode 2 keeps the test area's arming for notification 0x0211 */
+#define SERIAL2_ARM	(BOARD_SERIAL2 && FW_SINCE(0x01000104))
+
+#if SERIAL2_ARM
 extern int serial2TestAreaUsed(void);
 extern int serial2GetArmed(void);
 extern unsigned char serial2Disarm(void);
 extern unsigned char serial2Arm(void);
 extern int serial2InTime(void);
-#else
+#endif
+#if !BOARD_SERIAL2
 /* no mode 2: the test area taken as used, never armed or in time */
 #define serial2Init()
 #define serial2SetP71(level)

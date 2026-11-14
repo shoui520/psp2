@@ -19,8 +19,10 @@
 #include "tau.h"
 #include "timer.h"
 
+#if FW_SINCE(0x01000104)
 /* the alarm's mode, the fifth byte of commands 0x0012 and 0x0082 */
 unsigned char alarmMode;
+#endif
 
 /* the clock's low word at the last interrupt: odd every other one, once a second */
 static __sreg unsigned int rtcClockLow;
@@ -54,6 +56,20 @@ void rtcStart(void)
 #endif
 	RTCIF = 0;
 	RTCMK = 0;
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 a warm reset keeps the clock and the alarm, which has no mode */
+	switch (getResetCause()) {
+	case 0xf1:
+	case 0x10:
+	case 0x11:
+		break;
+	default:
+		setClock(0);
+		setAlarm(RTC_ALARM_NONE);
+		sleepFactorSet3(0);
+		break;
+	}
+#else
 	switch (getResetCause()) {
 	case 0xf1:
 	case 0x10:
@@ -71,6 +87,7 @@ void rtcStart(void)
 		setAlarmMode(0);
 		break;
 	}
+#endif
 	RTCE = 1;
 }
 
@@ -125,6 +142,7 @@ unsigned int sleepFactorBit3Get(void)
 	return sleepFactorGet() & 8;
 }
 
+#if FW_SINCE(0x01000104)
 void setAlarmMode(unsigned char mode)
 {
 	alarmMode = mode;
@@ -134,6 +152,7 @@ unsigned char getAlarmMode(void)
 {
 	return alarmMode;
 }
+#endif
 
 /*
  * Every 0.5 s: the clock and the RTC timers' ticks counted, the input's hold checks, once a
@@ -200,7 +219,11 @@ void rtcInterrupt(void)
 	}
 #if !FW_SINCE(0x01000107)
 	/* before 0x01000107 a hang starts timer 11, whose interrupt counts it (tm11Interrupt) */
+#if FW_SINCE(0x01000104)
 	if (hangDetected() != 0 && (hangState != HANG_COUNTING || !hangTimerRunning())) {
+#else
+	if (HANG_DETECTED() && hangState != HANG_COUNTING) {
+#endif
 		hangState = HANG_COUNTING;
 		hangCount = 0;
 		tau1PowerOn();

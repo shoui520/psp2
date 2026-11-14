@@ -6,6 +6,7 @@
  * is cleared once nothing changed since (sleepFactorAcknowledge). The flags change with the
  * dispatcher disabled, so no task sees half a change.
  */
+#include "ernie.h"
 #include "chip.h"
 #include "kernel.h"
 #include "sleepfactor.h"
@@ -173,8 +174,8 @@ void sleepFactorSet10(unsigned char on)
 	}
 }
 
-#ifdef ERNIE_UPDATER
-/* the updater's only */
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000104)
+/* the updater's, and before 0x01000104 the application's, which nothing calls */
 void sleepFactorSet24(unsigned char on)
 {
 	if (sleepFactor.bits[3].b0 ^ on) {
@@ -264,6 +265,7 @@ void sleepFactorSet23(unsigned char on)
 	}
 }
 
+#if FW_SINCE(0x01000104)
 void sleepFactorSet20(unsigned char on)
 {
 	if (sleepFactor.bits[2].b4 ^ on) {
@@ -274,4 +276,5 @@ void sleepFactorSet20(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif
 #endif

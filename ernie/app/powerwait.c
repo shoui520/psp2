@@ -1,7 +1,7 @@
 /*
  * The power sequences' waits: the device jobs posted to task 5, the waits on TM03 (31.25 kHz)
  * and on the kernel's ticks (4 ms), the wait for an edge of the power input, and the timers
- * 4-0xe, each of which clears its bit of powerTimers when it runs out.
+ * 4-0xe (4-0x10 before 0x01000104), each of which clears its bit of powerTimers when it runs out.
  */
 #pragma sfr
 
@@ -155,7 +155,7 @@ static void powerTimerEnd7(void)
 	powerTimers &= ~0x0080;
 }
 
-/* bits 9 and 10's have no timer */
+/* bits 9 and 10's have no timer since 0x01000104 */
 static void powerTimerEnd9(void)
 {
 	powerTimers &= ~0x0200;
@@ -202,10 +202,16 @@ void powerTimersInit(void)
 	timerSetHandler(0x0a, &handler);
 	handler.handler = powerTimerEnd7;
 	timerSetHandler(0x0b, &handler);
-	handler.handler = powerTimerEnd11;
+#if !FW_SINCE(0x01000104)
+	handler.handler = powerTimerEnd9;
 	timerSetHandler(0x0c, &handler);
-	handler.handler = powerTimerEnd12;
+	handler.handler = powerTimerEnd10;
 	timerSetHandler(0x0d, &handler);
+#endif
+	handler.handler = powerTimerEnd11;
+	timerSetHandler(TIMER(0x0c), &handler);
+	handler.handler = powerTimerEnd12;
+	timerSetHandler(TIMER(0x0d), &handler);
 	handler.handler = powerTimerEnd13;
-	timerSetHandler(0x0e, &handler);
+	timerSetHandler(TIMER(0x0e), &handler);
 }

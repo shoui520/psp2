@@ -23,7 +23,8 @@ int hangLimitReached(void)
 	return hangCount == (configGet()->hangLimit < 8 ? 8 : configGet()->hangLimit);
 }
 
-#if BOARD_HANG_PINS
+#if !FW_SINCE(0x01000104)
+#elif BOARD_HANG_PINS
 /* a hang: P11.5, P4.6, P5.0 and P5.3 all low */
 int hangDetected(void)
 {
@@ -41,11 +42,13 @@ int hangStarted(void)
 	return hangCount == 1;
 }
 
+#if FW_SINCE(0x01000104)
 /* timer 11 running (TE11) */
 int hangTimerRunning(void)
 {
 	return (int)TE1L.1;
 }
+#endif
 
 unsigned char getResetFlags(void)
 {

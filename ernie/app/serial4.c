@@ -264,11 +264,16 @@ unsigned char serial4Reopen(int baud)
 
 unsigned char serial4Open2(int baud)
 {
+#if FW_SINCE(0x01000104)
 	if (serial4GetMode())
 		serial4Close2();
+#endif
 	uart4Open(baud);
 	serial4Start(2);
 	serial2SetLink(1);
+#if !FW_SINCE(0x01000104)
+	dly_tsk(13);
+#endif
 	serial2SetP71(0);
 	serial4.link = 2;
 	return 0;
@@ -356,6 +361,8 @@ unsigned char serial4Answer0205(void)
 	return 0;
 }
 
+/* for serial1's command 0x0190 (since 0x01000104) */
+#if FW_SINCE(0x01000104)
 unsigned int serial4GetCommand(void)
 {
 	return serial4.command;
@@ -370,6 +377,7 @@ unsigned char serial4GetP71(void)
 {
 	return (unsigned char)P7.1;
 }
+#endif
 
 /* a frame received or sent (does nothing) */
 void serial4Trace(unsigned char *buffer)
@@ -401,7 +409,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x0f);
+			timerStop(TIMER(0x0f));
 			serial4.status = serial4Receive();
 			serial4Dispatch();
 			break;
@@ -437,7 +445,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x10);
+			timerStop(TIMER(0x10));
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -475,7 +483,7 @@ void serial4StartTimers(void)
 	struct TimerHandler handler;
 
 	handler.handler = serial4PostTimeout;
-	timerSetHandler(0x0f, &handler);
+	timerSetHandler(TIMER(0x0f), &handler);
 	handler.handler = serial4PostTimeout3;
-	timerSetHandler(0x10, &handler);
+	timerSetHandler(TIMER(0x10), &handler);
 }

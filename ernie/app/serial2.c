@@ -12,6 +12,7 @@
 #include "board.h"
 #include "charge.h"
 #include "config.h"
+#include "input.h"
 #include "kernel.h"
 #include "rtc.h"
 #include "scratchpad.h"
@@ -40,15 +41,19 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 
 #if BOARD_SERIAL2
 static unsigned char serial2Data[0x20];
+#if SERIAL2_ARM
 static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
+#endif
 
 
 void serial2Init(void)
 {
 	serial2SetP71(1);
 	memset(serial2Data, 0, sizeof(serial2Data));
+#if SERIAL2_ARM
 	serial2Disarm();
 	return;
+#endif
 }
 
 unsigned int serialCommands2Count(void)
@@ -58,13 +63,24 @@ unsigned int serialCommands2Count(void)
 
 unsigned char serialNotifies2Count(void)
 {
+#if SERIAL2_ARM
 	return 2;
+#else
+	return 1;
+#endif
 }
 
 /* an input's rising edge: transition 0x57 */
 void serial2InputRequest(void)
 {
-	stateTransition(0x57);
+	STATE_TRANSITION_EVENT
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION(0x57);
+#else
+	/* before 0x01000104 the request's rise starts transition 0x52 */
+	if (input3Bit0High())
+		STATE_TRANSITION(0x52);
+#endif
 	return;
 }
 
@@ -72,8 +88,10 @@ void serial2InputRequest(void)
 void serial2InputLink(void)
 {
 	task2SetFlag(3, 0x0100);
+#if FW_SINCE(0x01000104)
 	if (!intp11Low())
 		serial2SetP71(1);
+#endif
 }
 
 /* 0x0200: nothing */
@@ -163,6 +181,7 @@ static unsigned char serial2Command0204(struct SerialBuffer *request, struct Ser
    4 or 8 */
 static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
 {
+	STATE_TRANSITION_EVENT
 	unsigned char mode;
 	unsigned char result;
 	unsigned int state;
@@ -172,22 +191,31 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 	mode = request->data[0];
 	response->length = 0;
 	if (mode == 0) {
+#if SERIAL2_ARM
 		serial2Disarm();
 		if (state != 0x0020 && state != 0x0008) {
+#else
+		if (state != 0x0020) {
+#endif
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		result = stateTransition(0x52);
+		result = STATE_TRANSITION(0x52);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
+#if FW_SINCE(0x01000104)
 		if (!chargeMayStart()) {
+#else
+		if (!(unsigned char)chargeMayStart()) {
+#endif
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
+#if SERIAL2_ARM
 		if (chargeAlarm0On()) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x53;
@@ -196,7 +224,8 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
-		result = stateTransition(0x0e);
+#endif
+		result = STATE_TRANSITION(0x0e);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serial4SetAnswer(SERIAL_ANSWER);
@@ -234,18 +263,21 @@ static unsigned char serial2Command0211(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if SERIAL2_ARM
 /* runs transition 0 once when armed and the config allows it */
 static unsigned char serial2Notify0211(void)
 {
+	STATE_TRANSITION_EVENT
 	unsigned char result;
 
 	result = 0;
 	if (serial2GetArmed() != 0 && configGet()->testDisarm) {
 		serial2Disarm();
-		result = stateTransition(0);
+		result = STATE_TRANSITION(0);
 	}
 	return result;
 }
+#endif
 
 /* 0x0210: reads the test area */
 static unsigned char serial2Command0210(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -279,6 +311,7 @@ unsigned char serial2SetLink(int link2)
 }
 #endif
 
+#if SERIAL2_ARM
 /* 1 when a byte of the test area is not 0 */
 int serial2TestAreaUsed(void)
 {
@@ -327,6 +360,7 @@ int serial2InTime(void)
 {
 	return getClock().byte[0] <= configGet()->startClockLimit;
 }
+#endif
 
 const struct SerialCommand serialCommands2[] = {
 	{ 0x0200, serial2Command0200 },
@@ -342,6 +376,8 @@ const struct SerialCommand serialCommands2[] = {
 
 const struct SerialNotify serialNotifies2[] = {
 	{ 0x0202, serial2Notify0202 },
+#if SERIAL2_ARM
 	{ 0x0211, serial2Notify0211 },
+#endif
 };
 #endif

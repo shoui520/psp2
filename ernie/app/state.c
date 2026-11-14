@@ -91,6 +91,15 @@ union PowerRequest stateWakeupFactor;
 union PowerRequest stateRequest;
 static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume */
 
+#if FW_SINCE(0x01000104)
+#define STATE_TRANSITION_WAKE(t)	stateTransition(t)
+#else
+/* the input wakes put the mask in their event themselves */
+#define STATE_TRANSITION_WAKE(t)	(transitionEvent.transition = (t), \
+					 transitionEvent.wakeMask = stateWakeMask, \
+					 stateTransition(&transitionEvent))
+#endif
+
 void stateHostStop(void)
 {
 	hostIntDisable();
@@ -173,8 +182,10 @@ void stateInit(void)
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
+#if FW_SINCE(0x01000104)
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
+#endif
 	stateSetWakeMask(mask);
 }
 
@@ -195,6 +206,7 @@ unsigned int stateGet(void)
 }
 
 /* 0 sent; 1 no block free; 2 an error */
+#if FW_SINCE(0x01000104)
 int stateTransition(unsigned char transition)
 {
 	struct StateMsg *msg;
@@ -213,6 +225,24 @@ int stateTransition(unsigned char transition)
 		return 2;
 	return 0;
 }
+#else
+int stateTransition(struct StateEvent *event)
+{
+	struct StateMsg *msg;
+	ER ercd;
+
+	ercd = pget_mpf(1, (VP *)&msg);
+	if (ercd == E_OK) {
+		event->type = STATE_EVENT_TRANSITION;
+		memcpy(&msg->event, event, sizeof(*event));
+		task1SendMessage(1, (T_MSG *)msg);
+	} else if (ercd == E_TMOUT)
+		return 1;
+	else
+		return 2;
+	return 0;
+}
+#endif
 
 int stateEnter(void)
 {
@@ -253,26 +283,31 @@ int stateCheck(void)
 
 static int stateStartEnter(void)
 {
+	STATE_TRANSITION_EVENT
 	act_tsk(2);
 	act_tsk(4);
 	act_tsk(3);
 	act_tsk(5);
 	act_tsk(6);
 	chg_pri(TSK_SELF, 3);
-	stateTransition(0x60);
+	STATE_TRANSITION_NOMASK(0x60);
 	return 0;
 }
 
 static int stateOnEnter(void)
 {
+	STATE_TRANSITION_EVENT
 	stateInit();
-	stateTransition(0x32);
+	STATE_TRANSITION_NOMASK(0x32);
 	return 0;
 }
 
 static int stateOffEnter(void)
 {
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
 	unsigned char cause;
+#endif
 #if FW_SINCE(0x01000107)
 	unsigned char length;
 	unsigned char size;
@@ -294,22 +329,24 @@ static int stateOffEnter(void)
 		logEvent(0x18);
 		break;
 	}
+#if FW_SINCE(0x01000104)
 	cause = getResetCause();
 	switch (cause) {
 	case 0xf1:
 	case 0x11:
-		stateTransition(0x0a);
+		STATE_TRANSITION(0x0a);
 		break;
 	}
 	setResetCause(cause & 0xfe);
 	if (stateCause == 0x58)
-		stateTransition(0x0a);
+		STATE_TRANSITION(0x0a);
 #if FW_SINCE(0x01000306)
 	else if (stateCause == 0x31) {
 		if (configGet()->offTransition18 && configGet()->offTransitionBlock == 0)
-			stateTransition(0x18);
+			STATE_TRANSITION(0x18);
 	} else if (stateCause == 0x5b)
-		stateTransition(0x19);
+		STATE_TRANSITION(0x19);
+#endif
 #endif
 #if FW_SINCE(0x01000107)
 	logReadData(1, (unsigned char *)&idRecord1, &length);
@@ -341,15 +378,20 @@ static int stateResumeEnter(void)
 
 static int stateSuspendEnter(void)
 {
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
+#endif
 	inputStateSuspend();
 	tau0PowerOff();
 	stateCheck();
 	if (sleepFactorGet() & 0x00800000)
 		logEvent(0x0b);
+#if FW_SINCE(0x01000104)
 	if (stateCause == 0x59)
-		stateTransition(0x0a);
+		STATE_TRANSITION(0x0a);
 	else if (stateCause == 0x5a)
-		stateTransition(0x17);
+		STATE_TRANSITION(0x17);
+#endif
 	return 0;
 }
 
@@ -373,7 +415,17 @@ static int stateCutEnter(void)
 
 static int stateResetEnter(void)
 {
-	stateTransition(4);
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(4);
+#else
+	/* before 0x01000104 the event goes with no wake mask */
+	struct StateEvent event;
+
+	event.type = STATE_EVENT_TRANSITION;
+	event.transition = 4;
+	stateTransition(&event);
+#endif
 	return 0;
 }
 
@@ -442,15 +494,22 @@ static int stateOffHandle(struct StateEvent *event)
 		stateRequest.bits.notify = 0;
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.on;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
+#if FW_SINCE(0x01000104)
 		if (configGet()->state.bits.offWakeUnmask22)
 			stateWakeMask &= ~0x00400000UL;
+#endif
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
+#if FW_SINCE(0x01000104)
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On() ||
 		    (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff &&
 		     serial2InTime() != 0))
 			stateNext = 0;
+#else
+		if (!(unsigned char)chargeMayStart())
+			stateNext = 0;
+#endif
 		break;
 	}
 	return 0;
@@ -466,17 +525,25 @@ static int stateResumeHandle(struct StateEvent *event)
 		stateNext = STATE_SHUTDOWN;
 		break;
 	case 0x31:
-	case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: case 0x38: case 0x39: case 0x3a:
+	case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: case 0x38: case 0x39:
+#if FW_SINCE(0x01000104)
+	case 0x3a:
+#endif
 	case 0x50:
 	case 0x52: case 0x53:
-	case 0x56: case 0x57: case 0x58:
+	case 0x56:
+#if FW_SINCE(0x01000104)
+	case 0x57: case 0x58:
+#endif
 #if FW_SINCE(0x01000306)
 	case 0x5b:
 #endif
 		stateNext = STATE_OFF;
 		break;
 	case 0x51:
+#if FW_SINCE(0x01000104)
 	case 0x59: case 0x5a:
+#endif
 		stateNext = STATE_SUSPEND;
 		break;
 	case 0x54:
@@ -503,9 +570,12 @@ static int stateSuspendHandle(struct StateEvent *event)
 		break;
 	case 0x31:
 	case 0x34:
-	case 0x37: case 0x38: case 0x39: case 0x3a:
+	case 0x37: case 0x38: case 0x39:
+#if FW_SINCE(0x01000104)
+	case 0x3a:
 	case 0x52:
 	case 0x57:
+#endif
 		stateNext = STATE_OFF;
 		break;
 	}
@@ -518,7 +588,11 @@ static int stateSuspendHandle(struct StateEvent *event)
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
+#if FW_SINCE(0x01000104)
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On())
+#else
+		if (!(unsigned char)chargeMayStart())
+#endif
 			stateNext = 0;
 	}
 	return 0;
@@ -583,10 +657,16 @@ static int stateUpdateAnswerHandle(struct StateEvent *event)
 		break;
 	case 0x31:
 	case 0x33: case 0x34: case 0x35:
-	case 0x37: case 0x38: case 0x39: case 0x3a:
+	case 0x37: case 0x38: case 0x39:
+#if FW_SINCE(0x01000104)
+	case 0x3a:
+#endif
 	case 0x50:
 	case 0x52: case 0x53:
-	case 0x56: case 0x57: case 0x58:
+	case 0x56:
+#if FW_SINCE(0x01000104)
+	case 0x57: case 0x58:
+#endif
 		stateNext = STATE_OFF;
 		break;
 	case 0x72:
@@ -654,19 +734,22 @@ static unsigned int stateNextOf(void)
    not pressed and input 1.6 up starts an off one */
 void stateInputWake2(void)
 {
+	STATE_TRANSITION_EVENT
 	unsigned int state;
 
 	state = stateGet();
 	if (input1Bit4Active()) {
 		if (state == STATE_SUSPEND)
-			stateTransition(0);
+			STATE_TRANSITION_WAKE(0);
 		button2Reset();
 		pinMonitor1Enable(1);
 	} else {
 		if (!(unsigned char)button2Result() && !input1Bit6Active() && state == STATE_OFF) {
 #if BOARD_SERIAL2
-			stateTransition(0);
+			STATE_TRANSITION_WAKE(0);
+#if SERIAL2_ARM
 			serial2Arm();
+#endif
 #endif
 		}
 		button2Reset();
@@ -676,12 +759,13 @@ void stateInputWake2(void)
 /* input handler: input 1.6 (input1Bit6Active) wakes a suspended system by transition 0x12 */
 void stateInputWake1(void)
 {
+	STATE_TRANSITION_EVENT
 	unsigned int state;
 
 	state = stateGet();
 	if (input1Bit6Active()) {
 		if (state == STATE_SUSPEND)
-			stateTransition(0x12);
+			STATE_TRANSITION_WAKE(0x12);
 		button1Reset();
 		pinMonitor0Enable(1);
 	} else {
@@ -694,13 +778,15 @@ void stateInputWake1(void)
 /* serial mode 0's unlock (serialAuthUnlock0): an off system starts by transition 0x0c */
 unsigned char stateSerialUnlock(void)
 {
+	STATE_TRANSITION_EVENT
 	if (stateGet() != STATE_OFF)
 		return 1;
-	return (unsigned char)stateTransition(0x0c);
+	return (unsigned char)STATE_TRANSITION_NOMASK(0x0c);
 }
 
 /* and its lock: transition 0x34 */
 int stateSerialLock(void)
 {
-	return (unsigned char)stateTransition(0x34);
+	STATE_TRANSITION_EVENT
+	return (unsigned char)STATE_TRANSITION_NOMASK(0x34);
 }

@@ -78,7 +78,23 @@ extern void stateInit(void);
 extern union PowerRequest *stateGetWakeupFactor(void);
 extern unsigned char stateGetCause(void);
 extern unsigned int stateGet(void);
+#if FW_SINCE(0x01000104)
 extern int stateTransition(unsigned char transition);
+#define STATE_TRANSITION_EVENT
+#define STATE_TRANSITION(t)	stateTransition(t)
+#define STATE_TRANSITION_NOMASK(t)	stateTransition(t)
+#else
+/* before 0x01000104 a transition is the caller's event, with the wake mask, as the updater's:
+   STATE_TRANSITION_EVENT declares it among the caller's locals */
+extern int stateTransition(struct StateEvent *event);
+#define STATE_TRANSITION_EVENT	struct StateEvent transitionEvent;
+#define STATE_TRANSITION(t)	(transitionEvent.transition = (t), \
+				 transitionEvent.wakeMask = stateGetWakeMask(), \
+				 stateTransition(&transitionEvent))
+/* some callers leave the event's wake mask unset */
+#define STATE_TRANSITION_NOMASK(t)	(transitionEvent.transition = (t), \
+					 stateTransition(&transitionEvent))
+#endif
 extern int stateEnter(void);
 extern int stateCheck(void);
 extern void stateInputWake2(void);

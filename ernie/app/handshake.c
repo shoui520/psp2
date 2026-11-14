@@ -92,50 +92,21 @@ static const struct HandshakeMode handshakeModes[HANDSHAKE_MODES] = {
 	{ 0x0f, (unsigned int *)&handshakeUnlocked[1], handshakeUnlock15, handshakeLockHandler15 },
 };
 
-/* the packet header the serial side sends (unused here), then the IV and the keys */
-static const unsigned char handshakeHeader[4] = {
-	0x01, 0x00, 0x00, 0x00
-};
-
-const unsigned char handshakeIv[16] = {
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-static const unsigned char mode11Check[16] = {
-	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
-};
-static const unsigned char mode11Key1[16] = {
-	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
-};
-/* mode 0x0b's second key, also the random generator's key */
-const unsigned long randomKey[4] = {
-	0xe06e6bdcUL, 0x0edf57f4UL, 0x5e1cad7bUL, 0x7f0238a3UL
-};
-static const unsigned char mode15Check1[16] = {
-	0xc8, 0x6b, 0x51, 0xfb, 0x01, 0x9a, 0x20, 0x7f, 0x32, 0x11, 0x8e, 0x55, 0x46, 0x2d, 0x50, 0x08
-};
-static const unsigned char mode15Check2[16] = {
-	0xb0, 0x11, 0x03, 0xb0, 0x62, 0x38, 0x32, 0xd6, 0x25, 0x40, 0xb5, 0x63, 0x33, 0xd6, 0xe1, 0x1d
-};
-static const unsigned char mode15Key1[16] = {
-	0x50, 0xe4, 0xc3, 0xa7, 0x72, 0x64, 0x16, 0x7c, 0x40, 0x9c, 0x72, 0xa9, 0xb5, 0x7a, 0x86, 0x09
-};
-static const unsigned char mode15Key2[16] = {
-	0x9e, 0x34, 0x08, 0x7c, 0x48, 0x98, 0x5b, 0x4b, 0x35, 0x1a, 0x63, 0x57, 0x2d, 0x9b, 0x48, 0x1b
-};
-static const unsigned char mode15Key3[16] = {
-	0xeb, 0xe3, 0x46, 0x0d, 0x84, 0xa4, 0x17, 0x54, 0xac, 0x44, 0x13, 0x68, 0xcf, 0x02, 0x00, 0xd8
-};
-
 /* keepKey 0 (a wakeup without the factor's notify bit) also clears mode 0x0f's key */
+#if FW_SINCE(0x01000104)
 int handshakeInit(unsigned char keepKey)
+#else
+int handshakeInit(void)		/* before 0x01000104 the session key never kept */
+#endif
 {
 	memset_n(&handshakePacket, 0, sizeof(handshakePacket));
 	memset_n(&handshake, 0, sizeof(handshake));
 	handshake.state = 0;
 	handshake.mode = 0xff;
 	handshakeLock11();
+#if FW_SINCE(0x01000104)
 	if (!keepKey)
+#endif
 		handshakeLock15();
 	return 0;
 }
@@ -168,6 +139,13 @@ unsigned char handshakeSetMode(unsigned char state, unsigned char mode)
 	return result;
 }
 
+#if FW_SINCE(0x01000104)
+#define HANDSHAKE_DUMP(tag)
+#else
+void handshakeUnused(const char *tag, unsigned char *data);
+#define HANDSHAKE_DUMP(tag)	handshakeUnused(tag, data)
+#endif
+
 /* Process the host's challenge and response and unlock the selected mode. */
 unsigned char handshakeCommand(unsigned char *data)
 {
@@ -199,6 +177,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshakeLock15();
 			snvsReset();
 		}
+		HANDSHAKE_DUMP("reqhello");
 		/* fall through */
 	case 1:
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 0 ||
@@ -215,8 +194,10 @@ unsigned char handshakeCommand(unsigned char *data)
 		memset(handshakePacket.header, 0, 0x24);
 		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
+		HANDSHAKE_DUMP("hello");
 		break;
 	case 2:
+		HANDSHAKE_DUMP("challenge");
 		handshakePacket.error = 0;
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 2 ||
 		    handshakePacket.error != 0 || handshakePacket.mode != handshake.mode) {
@@ -241,6 +222,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshake.state = 0xff;
 		}
 		memcpy(handshakePacket.challenge, (unsigned char __near *)(data + 8), 0x20);
+		HANDSHAKE_DUMP("challenge_d");
 		if (memcmp(handshakePacket.response, handshake.challenge, 8) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
@@ -271,6 +253,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshake.state = 0xff;
 		}
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
+		HANDSHAKE_DUMP("response");
 		rel_mpf(2, block);
 		if (handshakePacket.error == 0) {
 			if (handshake.mode == 0x0f)
@@ -280,6 +263,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		}
 		break;
 	case 3:
+		HANDSHAKE_DUMP("reqResult");
 		handshakePacket.error = 0;
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 4 ||
 		    handshakePacket.error != 0 || handshakePacket.mode != handshake.mode) {
@@ -317,6 +301,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshake.state = 0xff;
 		}
 		memcpy(handshakePacket.challenge, (unsigned char __near *)(data + 8), 0x20);
+		HANDSHAKE_DUMP("reqResult_d");
 		if (memcmp(handshakePacket.challenge, handshakeCrypto[modeIndex].secondCheck, 0x10) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
@@ -327,11 +312,13 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshakePacket.mode = handshake.mode;
 		memset(handshakePacket.header, 0, 0x24);
 		memcpy(handshakePacket.challenge, handshakeCrypto[modeIndex].secondCheck, 0x10);
+		HANDSHAKE_DUMP("result");
 		if (poolResult == E_OK)
 			aesCbcEncrypt(handshakePacket.challenge, handshakePacket.challenge,
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
 		rel_mpf(2, block);
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
+		HANDSHAKE_DUMP("result_e");
 		if (handshakePacket.error == 0)
 			handshake.state = 0;
 		break;
@@ -397,12 +384,55 @@ static int handshakeLockHandler15(void)
 	return 0;
 }
 
+#if FW_SINCE(0x01000104)
 void handshakeUnused(unsigned long unused)
 {
 }
+#else
+/* before 0x01000104 handshakeCommand passes each step's packet with a tag, which nothing reads */
+void handshakeUnused(const char *tag, unsigned char *data)
+{
+}
+#endif
 
 /* a host request refused while mode 0x0b is locked: transition 0x36 */
 unsigned char handshakeRefuse(void)
 {
-	return (unsigned char)stateTransition(0x36);
+	STATE_TRANSITION_EVENT
+	return (unsigned char)STATE_TRANSITION_NOMASK(0x36);
 }
+
+/* the packet header the serial side sends (unused here), then the IV and the keys */
+static const unsigned char handshakeHeader[4] = {
+	0x01, 0x00, 0x00, 0x00
+};
+
+const unsigned char handshakeIv[16] = {
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const unsigned char mode11Check[16] = {
+	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
+};
+static const unsigned char mode11Key1[16] = {
+	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
+};
+/* mode 0x0b's second key, also the random generator's key */
+const unsigned long randomKey[4] = {
+	0xe06e6bdcUL, 0x0edf57f4UL, 0x5e1cad7bUL, 0x7f0238a3UL
+};
+static const unsigned char mode15Check1[16] = {
+	0xc8, 0x6b, 0x51, 0xfb, 0x01, 0x9a, 0x20, 0x7f, 0x32, 0x11, 0x8e, 0x55, 0x46, 0x2d, 0x50, 0x08
+};
+static const unsigned char mode15Check2[16] = {
+	0xb0, 0x11, 0x03, 0xb0, 0x62, 0x38, 0x32, 0xd6, 0x25, 0x40, 0xb5, 0x63, 0x33, 0xd6, 0xe1, 0x1d
+};
+static const unsigned char mode15Key1[16] = {
+	0x50, 0xe4, 0xc3, 0xa7, 0x72, 0x64, 0x16, 0x7c, 0x40, 0x9c, 0x72, 0xa9, 0xb5, 0x7a, 0x86, 0x09
+};
+static const unsigned char mode15Key2[16] = {
+	0x9e, 0x34, 0x08, 0x7c, 0x48, 0x98, 0x5b, 0x4b, 0x35, 0x1a, 0x63, 0x57, 0x2d, 0x9b, 0x48, 0x1b
+};
+static const unsigned char mode15Key3[16] = {
+	0xeb, 0xe3, 0x46, 0x0d, 0x84, 0xa4, 0x17, 0x54, 0xac, 0x44, 0x13, 0x68, 0xcf, 0x02, 0x00, 0xd8
+};

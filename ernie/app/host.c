@@ -196,7 +196,9 @@ int hostInit(void)
 {
 	hostLink.frameSize = 0x20;
 	hostLink.config.size = 0;
+#if FW_SINCE(0x01000104)
 	hostLink.config.level = 0;
+#endif
 	hostLink.position = 0;
 	hostLink.requestActive = 0;
 	hostLink.tx = hostLink.txBuffer;
@@ -226,9 +228,12 @@ unsigned char hostSetLinkConfig(struct HostLinkConfig config)
 	unsigned char ret;
 
 	ret = 1;
+#if FW_SINCE(0x01000104)
 	if (config.level >= 2) {
 		ret = 1;
-	} else {
+	} else
+#endif
+	{
 		switch (config.size) {
 		case 0:
 			hostLink.config = config;
@@ -253,6 +258,7 @@ unsigned char hostSetLinkConfig(struct HostLinkConfig config)
 	return ret;
 }
 
+#if FW_SINCE(0x01000104)
 int hostGetLinkConfig(struct HostLinkConfig *config)
 {
 	memcpy(config, &hostLink.config, sizeof(hostLink.config));
@@ -270,6 +276,7 @@ int hostGetLinkLevel(unsigned int *level)
 	*level = hostLink.config.level;
 	return 0;
 }
+#endif
 
 /* a step of the frames: flgptn's bits 0x0001 a frame starts, 0x0002 a transfer ended,
    0x0004 the host aborted the frame */

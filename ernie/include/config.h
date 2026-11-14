@@ -18,8 +18,10 @@
 #define CONFIG_VERSION		0x29	/* (no touch delays, host link limits or off transition 0x18) */
 #elif FW_SINCE(0x01000107)
 #define CONFIG_VERSION		0x28	/* (the charge timer's delay 0x168) */
-#else
+#elif FW_SINCE(0x01000104)
 #define CONFIG_VERSION		0x26	/* (the charge LED's counted blinks) */
+#else
+#define CONFIG_VERSION		0x12	/* (nothing after chargeAlarm2Setting) */
 #endif
 #define CONFIG_WRITTEN		0x5a5a
 
@@ -44,9 +46,14 @@ struct ConfigBlock {
 							   (stateInit) */
 			unsigned int	batteryNoRetry:1;	/* set: the battery is read once at the
 								   power-on (powerSeqOn) */
-			unsigned int	reserved20:1;
+			unsigned int	chargeLedOffReleased:1;	/* before 0x01000104: the
+								   charge LED off while
+								   input1Bit7Active does not hold
+								   (task5ChargeLed) */
 			unsigned int	chargeLedOff:1;	/* where layouts before 0x31 kept
-							   chargeLedOff (configMerge) */
+							   chargeLedOff (configMerge); before
+							   0x01000104 the charge LED's off while
+							   input1Bit7Active holds */
 			unsigned int	wakeUnmask15:1;	/* set: wake factor 15 unmasked */
 			unsigned int	reserved26:11;
 		} bits;
@@ -125,12 +132,18 @@ struct ConfigBlock {
 	struct ConfigWakeMasks wakeMasks1;	/* DEM-3000L's */
 	struct ConfigWakeMasks wakeMasks2;	/* PCH-1000's */
 	unsigned char	wlanLine;		/* the updater's: P3.1, the WLAN's line, driven */
-	unsigned char	reserved31[0x12c - 0x129];
+	unsigned char	wlanLineExtra;		/* before 0x01000104 kept with wlanLine at a merge */
+	unsigned char	suspendLedKeep:1;	/* before 0x01000104 set: powerSeqSuspend leaves
+						   the power LED's pattern as it is */
+	unsigned char	reserved40:7;
+	unsigned char	suspendLedMask;		/* before 0x01000104: the LED status bits that
+						   make powerSeqSuspend start pattern 1 */
 	struct ChargeAlarmLimit chargeAlarmLimits[4];	/* the battery temperature's alarms */
 	unsigned int	chargeAlarm0Delay;	/* timer 0x1d's, when alarm 0 comes on */
 	unsigned int	chargeTempInterval;	/* the ticks between two chargeAlarmUpdate */
 	unsigned char	chargeAlarm2Setting;	/* cookieCtrlSupplyCurrentAc's while alarm 2 is on (else 0xc0) */
 	unsigned char	reserved24;
+#if FW_SINCE(0x01000104)
 	unsigned int	bbmcPowerDelay;		/* the 3G modem's power line's hold at a power-on
 						   when its power input is up (powerBbmcOn) */
 	struct ChargeAlarmLimit chargeAlarmLimits3G[4];	/* the alarms with a 3G modem (bbmcDetect) */
@@ -201,6 +214,9 @@ struct ConfigBlock {
 	unsigned char	reserved30[CONFIG_SIZE - 0x1c5];
 #else
 	unsigned char	reserved30[CONFIG_SIZE - 0x1b0];
+#endif
+#else
+	unsigned char	reserved32[CONFIG_SIZE - 0x15a];
 #endif
 };
 

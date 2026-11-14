@@ -13,9 +13,15 @@ const struct ConfigBank configDefault = {
 	0x0001,				/* count */
 	0xffffffff,				/* checksum */
 	{
+#if FW_SINCE(0x01000104)
 		{ { { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 } } },	/* analogCalibration */
 		0xaa, 0x60,	/* analogScale0, analogScale1 */
 		{ 0x0010 },	/* start: wakeUnmask15 */
+#else
+		{ { { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 } } },	/* analogCalibration */
+		0xaa, 0x60,	/* analogScale0, analogScale1 */
+		{ 0x0000 },	/* start */
+#endif
 		{ 0x0001 },	/* board: bbmcDetect */
 		{ 0x0000 },	/* watchdog: off */
 		{ 0x0000 },	/* watchdogKeep */
@@ -63,15 +69,25 @@ const struct ConfigBank configDefault = {
 			{ 0x0000, 0x0000 },
 			{ 0x0115, 0x0dac },
 		},
+#if FW_SINCE(0x01000104)
 		0x03, 0x26, 0x0e,	/* pressTime1, pressTime2, hangLimit */
 		0, 0,	/* pressAnyState, reserved2 */
 		0x8000, 0x8000, 0x64, 0x00,	/* analogMin, analogMax, analogMinRange, reserved3 */
+#else
+		0x04, 0x14, 0x0f,	/* pressTime1, pressTime2, hangLimit */
+		0, 0,	/* pressAnyState, reserved2 */
+		0xffc0, 0x0000, 0x64, 0x00,	/* analogMin, analogMax, analogMinRange, reserved3 */
+#endif
 		0x0001,	/* cookieRegHigh */
 		0x0fa0, 0x07d0, 0x005a,	/* batteryVolt, batteryRemainCap, batteryLifePercent */
 		0x0bd8, 0x0bd8, 0x08a2, 0x0064,	/* batteryTemp, batteryBicTemp, batteryFullCap, batteryElec */
 		0x2710, 0x0064, 0x0906,	/* batteryTte, batterySoh, batteryFullCap2 */
 		{ 0x0000 },	/* keep */
+#if FW_SINCE(0x01000104)
 		0x05, 0x01,	/* paramSetting1, paramSetting2 */
+#else
+		0x04, 0x01,	/* paramSetting1, paramSetting2: the charge LED's blink */
+#endif
 		0x23, 0x23, 0x23, 0x23,	/* voltage81-84 */
 #if ERNIE_HW == 0x00406000
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
@@ -84,21 +100,33 @@ const struct ConfigBank configDefault = {
 		{ 0x03127e01, 0xfc2001fc, 0x001c6201, 0xfc221890 },	/* wakeMasks0-2: off, on, */
 		{ 0x03125e01, 0xfc2021fc, 0x001c4201, 0xfc223890 },	/* suspendOff, suspendOn */
 		{ 0x03121e00, 0xfc2061fc, 0x001c0201, 0xfc227890 },
-#else
+#elif FW_SINCE(0x01000104)
 		{ 0x00127e01, 0xff2001fc, 0x001c6201, 0xff221890 },	/* wakeMasks0-2: off, on, */
 		{ 0x00125e01, 0xff2021fc, 0x001c4201, 0xff223890 },	/* suspendOff, suspendOn */
 		{ 0x00121e00, 0xff2061fc, 0x001c0201, 0xff227890 },
+#else
+		{ 0x00127a01, 0xffa005fc, 0x001c6201, 0xffa21c90 },	/* wakeMasks0-2: off, on, */
+		{ 0x00125a01, 0xffa025fc, 0x001c4201, 0xffa23c90 },	/* suspendOff, suspendOn */
+		{ 0x00121a00, 0xffa065fc, 0x001c0201, 0xffa27c90 },
 #endif
 		0x01,		/* wlanLine */
-		{ 0x00, 0x00, 0x00 },	/* reserved31 */
+		0x00,		/* wlanLineExtra */
+		0, 0,		/* suspendLedKeep */
+		0x00,		/* suspendLedMask */
 		{	/* chargeAlarmLimits: high, low, holdOn, holdOff, bicTemp */
 			{ 0x0d7c, 0x0d04, 0x0000, 0x0078, 0x01 },
+#if FW_SINCE(0x01000104)
 			{ 0x0c6e, 0x0c5a, 0x0078, 0x0078, 0x00 },
 			{ 0x0c64, 0x0c50, 0x0078, 0x0078, 0x00 },
+#else
+			{ 0x0c82, 0x0c64, 0x0078, 0x0078, 0x00 },
+			{ 0x0c6e, 0x0c5a, 0x0078, 0x0078, 0x00 },
+#endif
 			{ 0xffff, 0xffff, 0xffff, 0xffff, 0xff },
 		},
 		0x0078, 0x0028,	/* chargeAlarm0Delay, chargeTempInterval */
 		0x50, 0x00,	/* chargeAlarm2Setting, reserved24 */
+#if FW_SINCE(0x01000104)
 		0x04e2,	/* bbmcPowerDelay */
 		{	/* chargeAlarmLimits3G: high, low, holdOn, holdOff, bicTemp */
 			{ 0x0d7c, 0x0d04, 0x0000, 0x0078, 0x01 },
@@ -137,5 +165,8 @@ const struct ConfigBank configDefault = {
 		1, 0,	/* offTransition18, reserved29 */
 #endif
 		{ 0 }	/* reserved30 */
+#else
+		{ 0 }	/* reserved32 */
+#endif
 	}
 };

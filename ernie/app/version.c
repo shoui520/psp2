@@ -167,6 +167,7 @@ void setHardwareInfoFlags(unsigned char flags)
 	return;
 }
 
+#if FW_SINCE(0x01000104)
 void clearHardwareInfoFlags(unsigned char flags)
 {
 	dis_dsp();
@@ -174,6 +175,7 @@ void clearHardwareInfoFlags(unsigned char flags)
 	ena_dsp();
 	return;
 }
+#endif
 
 void setDlFlags(unsigned char flags)
 {

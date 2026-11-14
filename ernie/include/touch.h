@@ -93,7 +93,9 @@ struct TouchPanel {
 	unsigned char	variant;
 	unsigned char	version;
 	unsigned char	build;
+#if FW_SINCE(0x01000104)
 	unsigned int	configVersion;	/* T38's first two bytes, big-endian */
+#endif
 	struct TouchObjects objects;
 	struct TouchMode modes[TOUCH_MODES];
 };

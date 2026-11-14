@@ -13,6 +13,7 @@
 #include "config.h"
 #include "csi.h"
 #include "host.h"
+#include "keepram.h"
 #include "kernel.h"
 #include "param.h"
 #include "power.h"
@@ -65,7 +66,9 @@ unsigned char powerCut(void);
 unsigned char powerReset(void);
 unsigned char powerUpdateAnswer(void);
 unsigned char powerUpdate(void);
+#if FW_SINCE(0x01000104)
 void powerParamLoad(void);
+#endif
 
 /* runs the sequence powerState asks for, and ends its phase */
 void powerSequence(void)
@@ -109,7 +112,9 @@ void powerSequence(void)
 		statePhase = 2;
 		stateEnter();
 		task2SetFlag(3, 0x1000);
+#if FW_SINCE(0x01000104)
 		task6SetFlag(6, 0x80);
+#endif
 	} else {
 		powerState &= 0x7fff;
 		statePhase = 3;
@@ -233,9 +238,11 @@ unsigned char powerResume(union PowerRequest *request)
 		return result;
 	}
 	powerPendingReset();
+#if FW_SINCE(0x01000104)
 	if (configTakeChanged() != 0)
 		powerParamLoad();
 	sleepFactorSet20(0);
+#endif
 	stateWakeupFactor.word = request->word;
 	inputResumePrepare();
 	task2SetFlag(3, 0x1000);
@@ -293,9 +300,14 @@ unsigned char powerResume(union PowerRequest *request)
 unsigned char powerOff(void)
 {
 	unsigned char result;
+#if !FW_SINCE(0x01000104)
+	unsigned char cause;
+	STATE_TRANSITION_EVENT
+#endif
 
 	result = 0;
 	powerPendingReset();
+#if FW_SINCE(0x01000104)
 	switch (configGet()->hardwareInfoSelect) {
 	case 1:
 		setHardwareInfoFlags(0x80);
@@ -319,6 +331,7 @@ unsigned char powerOff(void)
 	}
 	if (configTakeChanged() != 0)
 		powerParamLoad();
+#endif
 	inputPowerOff();
 	powerPendingClear(3);
 	hostIntDisable();
@@ -334,20 +347,40 @@ unsigned char powerOff(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
+#if FW_SINCE(0x01000104)
 	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
+#endif
 	powerJobPostOff();
 	powerWait(0x8ca);
 	powerPendingClear(5);
 	task6SetFlag(6, 0x80);
 	powerWait(5);
 	powerPendingClear(6);
+#if !FW_SINCE(0x01000104)
+	task2SetFlag(3, 0x1000);
+	powerWait(0x19);
+	powerPendingClear(2);
+#endif
 	PER0.2 = 0;
 	if (stateCause == 0x56)
 		powerJobPostOffEnd();
 	if (powerPendingGet() != 0)
 		result = 1;
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 a warm reset's cause is taken here: transition 0x14 after one */
+	if (result == 0) {
+		cause = getResetCause();
+		switch (cause) {
+		case 0xf1:
+		case 0x11:
+			STATE_TRANSITION_NOMASK(0x14);
+			break;
+		}
+		setResetCause(0);
+	}
+#endif
 	return result;
 }
 
@@ -358,7 +391,9 @@ unsigned char powerSuspend(void)
 
 	result = 0;
 	powerPendingReset();
+#if FW_SINCE(0x01000104)
 	sleepFactorSet20(0);
+#endif
 	inputSuspend();
 	powerPendingClear(3);
 	hostIntDisable();
@@ -374,15 +409,23 @@ unsigned char powerSuspend(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
+#if FW_SINCE(0x01000104)
 	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
+#endif
 	powerJobPostSuspend();
 	powerWait(0xfa);
 	powerPendingClear(5);
 	task6SetFlag(6, 0x80);
 	powerWait(5);
 	powerPendingClear(6);
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 the host link stops last */
+	task2SetFlag(3, 0x1000);
+	powerWait(0x19);
+	powerPendingClear(2);
+#endif
 	PER0.2 = 0;
 	if (powerPendingGet() != 0)
 		result = 1;
@@ -411,13 +454,21 @@ unsigned char powerShutdown(void)
 	P1.7 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
+#if FW_SINCE(0x01000104)
 	task2SetFlag(3, 0x1000);
 	powerWait(0x19);
 	powerPendingClear(2);
+#endif
 	powerJobPostShutdown();
 	powerWait(0x8ca);
 	powerPendingClear(5);
 	powerPendingClear(6);
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 the host link stops last */
+	task2SetFlag(3, 0x1000);
+	powerWait(0x19);
+	powerPendingClear(2);
+#endif
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;
@@ -519,8 +570,10 @@ unsigned char powerUpdate(void)
 	powerPendingReset();
 	powerPendingClear(3);
 	powerPendingClear(1);
+#if FW_SINCE(0x01000104)
 	powerJobPostUpdate();
 	powerWait(0xfa);
+#endif
 	powerPendingClear(5);
 	powerPendingClear(6);
 	powerPendingClear(2);
@@ -532,7 +585,9 @@ unsigned char powerUpdate(void)
 	return result;
 }
 
+#if FW_SINCE(0x01000104)
 void powerParamLoad(void)
 {
 	paramLoad();
 }
+#endif

@@ -17,6 +17,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "clockout.h"
+#include "config.h"
 #include "command.h"
 #include "handshake.h"
 #include "host.h"
@@ -146,6 +147,7 @@ unsigned char hostCommandClock(unsigned char *out, unsigned char *length)
 /* 0x0012: the alarm, and at link level 1 its mode */
 unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length)
 {
+#if FW_SINCE(0x01000104)
 	unsigned int level;
 
 	hostGetLinkLevel(&level);
@@ -155,6 +157,11 @@ unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length)
 		*length = 5;
 	} else
 		*length = 4;
+#else
+	/* before 0x01000104 the alarm has no mode */
+	memcpy(out, getAlarm().byte, 4);
+	*length = 4;
+#endif
 	return 0;
 }
 
@@ -197,15 +204,23 @@ void commandRequestReceive(void)
 	commandRequest.state = HOST_REQUEST_RECEIVE;
 }
 
-/* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 */
+/* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 (0xff000000 before
+   0x01000104) */
+#if FW_SINCE(0x01000104)
+#define COMMAND_PARAMETER_WINDOW	0xfc000000
+#else
+#define COMMAND_PARAMETER_WINDOW	0xff000000
+#endif
 #define COMMAND_PARAMETER(data)	(((unsigned long)(data)[1] & 0xff) |			\
 				 ((unsigned long)(data)[2] << 8 & 0xff00) |		\
 				 ((unsigned long)(data)[3] << 16 & 0xff0000) |		\
-				 0xfc000000)
+				 COMMAND_PARAMETER_WINDOW)
 
 /* request 0's command came in, or its answer went out */
 void commandRequestNotify(void)
 {
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
 	unsigned char i;
 	union RtcTick tick;
 	unsigned int offset;
@@ -215,6 +230,18 @@ void commandRequestNotify(void)
 	unsigned char linkSize;
 	unsigned long parameter;
 	union CommandWord word;
+#else
+	/* before 0x01000104 the event carries the transition and its parameter itself */
+	unsigned char i;
+	unsigned char reserved;		/* never used */
+	union RtcTick tick;
+	unsigned int offset;
+	unsigned char size;
+	unsigned char transition;	/* never used */
+	STATE_TRANSITION_EVENT
+	unsigned char result;
+	union CommandWord word;
+#endif
 
 	if (!handshakeUnlocked11()) {
 		for (i = 0; i < 6; i++) {
@@ -264,8 +291,11 @@ allowed:
 				tick.byte[2] = commandRequestData[2];
 				tick.byte[3] = commandRequestData[3];
 				setAlarm(tick.value);
+#if FW_SINCE(0x01000104)
 				setAlarmMode(0);
+#endif
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+#if FW_SINCE(0x01000104)
 			} else if (commandRequest.length == 5 && commandRequestData[4] < 2) {
 				tick.byte[0] = commandRequestData[0];
 				tick.byte[1] = commandRequestData[1];
@@ -274,6 +304,7 @@ allowed:
 				setAlarm(tick.value);
 				setAlarmMode(commandRequestData[4]);
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+#endif
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
@@ -350,8 +381,12 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
 			break;
 		case 0x00a0:		/* the handshake */
+#if FW_SINCE(0x01000104)
 			hostGetLinkSize(&linkSize);
 			if (linkSize == 0) {
+#else
+			if (hostLink.config.size == 0) {
+#endif
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x20, 0);
 				break;
 			}
@@ -395,11 +430,36 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x00b3:		/* P6.7 */
+#if FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = P6.7;
+#else
+			if (configGet()->wlanLine)
+				commandRequestAnswer[0] = P6.7;
+			else
+				commandRequestAnswer[0] = 0;
+#endif
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 1);
 			break;
 		case 0x00c0:		/* a transition with its parameter */
 			if (commandRequest.length == 4) {
+#if !FW_SINCE(0x01000104)
+				if (commandRequestData[0] == 0x00) {
+					transitionEvent.transition = 0x50;
+					transitionEvent.wakeMask = COMMAND_PARAMETER(commandRequestData);
+					stateSetWakeMask(transitionEvent.wakeMask);
+				} else if (commandRequestData[0] == 0x01) {
+					transitionEvent.transition = 0x51;
+					transitionEvent.wakeMask = COMMAND_PARAMETER(commandRequestData);
+					stateSetWakeMask(transitionEvent.wakeMask);
+				} else {
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
+					break;
+				}
+				if ((unsigned char)stateTransition(&transitionEvent) == 0)
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+#else
 				if (commandRequestData[0] == 0x00) {
 					transition = 0x50;
 					parameter = COMMAND_PARAMETER(commandRequestData);
@@ -432,10 +492,11 @@ allowed:
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 					break;
 				}
-				if (stateTransition(transition) == 0)
+				if (STATE_TRANSITION_NOMASK(transition) == 0)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+#endif
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
@@ -445,8 +506,15 @@ allowed:
 		case 0x00c2:
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 0x5a) {
+#if FW_SINCE(0x01000104)
 					transition = 0x56;
-					if (stateTransition(transition) == 0)
+					if (STATE_TRANSITION(transition) == 0)
+#else
+					transitionEvent.transition = 0x56;
+					transitionEvent.wakeMask = stateGetWakeMask();
+					stateSetWakeMask(transitionEvent.wakeMask);
+					if ((unsigned char)stateTransition(&transitionEvent) == 0)
+#endif
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 					else
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);

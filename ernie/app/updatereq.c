@@ -162,8 +162,10 @@ void updaterStartDownloader(void)
 	sleepFactor = sleepFactorGet();
 	getErnieDlVersion((unsigned char *)&version);
 	version &= 0xffffff00;
+#if FW_SINCE(0x01000104)
 	version = ((version << 24) & 0xff000000) | ((version << 8) & 0x00ff0000) |
 		  ((version >> 8) & 0x0000ff00) | ((version >> 24) & 0x000000ff);
+#endif
 #if FW_SINCE(0x01000109)
 	getHardwareInfo((unsigned char *)&hardware);
 	board = (unsigned char)((hardware >> 16) & 0xff);
@@ -174,12 +176,19 @@ void updaterStartDownloader(void)
 		DOWNLOADER_START->snapshot = snapshot;
 		memcpy(DOWNLOADER_START->sleepFactor, &sleepFactor, 4);
 		DOWNLOADER_START->frameSize = hostLink.frameSize;
+#if FW_SINCE(0x01000104)
 		if (version <= 0x000102ff)
 			DOWNLOADER_START->link.size = hostLink.config.size;
 		else
 			DOWNLOADER_START->link.config = hostLink.config;
 		if (version >= 0x00002000 && version <= 0x00002600)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
+#else
+		/* before 0x01000104 the version is compared as read, low byte first */
+		DOWNLOADER_START->link.size = hostLink.config.size;
+		if (version >= 0x00200000 && version <= 0x00260000)
+			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
+#endif
 #if FW_SINCE(0x01000109)
 		if (board == 0x40 && (version == 0x00010000 || version == 0x00010800)) {
 			memset(DOWNLOADER_RAM_40_BYTE, 0, 1);
@@ -388,8 +397,15 @@ static unsigned char updaterCheckSignature(unsigned char *data)
  */
 static unsigned char updaterSetRunMode(unsigned int mode)
 {
+#if FW_SINCE(0x01000104)
+	STATE_TRANSITION_EVENT
 	unsigned char result;
 	unsigned char flags;
+#else
+	unsigned char result;
+	unsigned char flags;
+	STATE_TRANSITION_EVENT
+#endif
 
 	result = nvsRead(UPDATER_NVS_DL_FLAGS, 1, &flags, UPDATER_NVS_AREA);
 	if (result != 0)
@@ -403,7 +419,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 		if (result != 0)
 			return 1;
 		updater.state = 0x13;
-		stateTransition(0x70);
+		STATE_TRANSITION_NOMASK(0x70);
 		return 0x80;
 	case 0xc5e7:
 		switch (updater.state) {
@@ -414,7 +430,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			result = updaterWriteDlFlags(flags & 0xfe);
 			if (result == 0) {
 				updater.state = 0x10;
-				stateTransition(0x71);
+				STATE_TRANSITION_NOMASK(0x71);
 				return 0x80;
 			}
 			return 0x22;
@@ -440,7 +456,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			break;
 		}
 		updater.state = 0;
-		stateTransition(0x72);
+		STATE_TRANSITION_NOMASK(0x72);
 		return 0x80;
 	case 0x152e:
 		if (updater.state == 1) {
@@ -449,7 +465,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			result = updaterWriteDlFlags(flags & 0xfd);
 			if (result == 0) {
 				updater.state = 0x13;
-				stateTransition(0x70);
+				STATE_TRANSITION_NOMASK(0x70);
 				return 0x80;
 			}
 			return 0x22;
@@ -463,7 +479,7 @@ static unsigned char updaterSetRunMode(unsigned int mode)
 			if (result == 0) {
 				updater.state = 0x20;
 				configClose();
-				stateTransition(0x71);
+				STATE_TRANSITION_NOMASK(0x71);
 				return 0x80;
 			}
 			return 1;

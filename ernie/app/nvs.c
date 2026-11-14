@@ -227,7 +227,7 @@ static unsigned char nvsErase(unsigned char block)
 	EI();
 	return result;
 }
-#else
+#elif FW_SINCE(0x01000104)
 static unsigned char nvsErase(unsigned char block)
 {
 	unsigned char result;
@@ -252,6 +252,32 @@ static unsigned char nvsErase(unsigned char block)
 				}
 			}
 		} while (retry-- != 0 && result == FLASH_ERASE_ERROR);
+	}
+	DI();
+	FSL_Close();
+	EI();
+	return result;
+}
+#else
+/* before 0x01000104 nothing is retried */
+static unsigned char nvsErase(unsigned char block)
+{
+	unsigned char result;
+
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	result = FSL_ModeCheck();
+	if (result == FLASH_OK) {
+		do
+			result = FSL_BlankCheck(block);
+		while (result == FLASH_BUSY);
+		if (result == FLASH_NOT_BLANK) {
+			do
+				result = FSL_Erase(block);
+			while (result == FLASH_BUSY);
+		}
 	}
 	DI();
 	FSL_Close();
@@ -298,6 +324,7 @@ static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned 
 static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words)
 {
 	unsigned char result;
+#if FW_SINCE(0x01000104)
 	unsigned char retry;
 
 	retry = 3;
@@ -316,6 +343,20 @@ static unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned 
 			}
 		} while (retry-- != 0 && result == FLASH_WRITE_ERROR);
 	}
+#else
+	/* before 0x01000104 nothing is retried */
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	result = FSL_ModeCheck();
+	if (result == FLASH_OK) {
+		memcpy(fslDataBuffer, data, words << 2);
+		do
+			result = FSL_EEPROMWrite((unsigned long)address, words);
+		while (result == FLASH_BUSY);
+	}
+#endif
 	FSL_Close();
 	return result;
 }

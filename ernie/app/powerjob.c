@@ -28,9 +28,12 @@
 
 extern void inputFlag40Later(void);
 extern void inputFlag80Later(void);
+extern unsigned char input2Bit0Get(void);
 
+#if FW_SINCE(0x01000104)
 unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
+#endif
 struct PowerJobState powerJobState;
 unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of elmoRead's device, read at a */
 unsigned int powerCutReg1;		/* power cut and cleared at a power on */
@@ -50,7 +53,11 @@ static void powerJobShutdown(void);
 static void powerJobSuspend(void);
 static void powerJobCut(void);
 static void powerJobOffEnd(void);
+#if FW_SINCE(0x01000104)
 static void powerJobUpdate(void);
+#else
+static void chargeLedBlinkExpire(void);
+#endif
 #if FW_SINCE(0x01000306)
 static void powerJobReset(void);
 #endif
@@ -80,9 +87,11 @@ void powerJob(void)
 	case POWER_JOB_OFF_END:
 		powerJobOffEnd();
 		return;
+#if FW_SINCE(0x01000104)
 	case POWER_JOB_UPDATE:
 		powerJobUpdate();
 		return;
+#endif
 #if FW_SINCE(0x01000306)
 	case POWER_JOB_RESET:
 		powerJobReset();
@@ -93,9 +102,10 @@ void powerJob(void)
 
 static void powerJobOn(void)
 {
+	STATE_TRANSITION_EVENT
 	if (!P12.0) {
 		P6.2 = 0;
-		stateTransition(0x41);
+		STATE_TRANSITION(0x41);
 	}
 	EGP0.0 = 0;
 	EGN0.0 = 1;
@@ -105,10 +115,20 @@ static void powerJobOn(void)
 	powerCutReg0 = powerCutReg1 = powerCutReg2 = 0;
 	powerTimersInit();
 	powerSeqInit();
+#if FW_SINCE(0x01000104)
 	powerLedInit();
 	chargeLedInit();
 	timerStart(TIMER_RTC(0x17), 1);
 	powerResumed = 0;
+#else
+	if (configGet()->start.bits.chargeLedOff) {
+		cookieCtrlReg3Bit2(0);
+		cookieCtrlReg3Mode(1);
+	}
+	chargeLedInit();
+	powerLedInit();
+	timerStart(TIMER_RTC(0x17), 1);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -119,12 +139,17 @@ static void powerJobResume(void)
 #endif
 
 	batteryBLLineOff();
+#if FW_SINCE(0x01000104)
 	powerResumed = 1;
 	if (elmoRegA6 & 0x8000) {
 		powerLedSetPwm(0);
 		powerSleep(4);
 		powerLedSetPwm(1);
 	}
+#else
+	powerLedFadeStart(0);
+	powerSleep(4);
+#endif
 	powerSeqResume();
 #if BOARD_TOUCH_RESET
 	P0.6 = 1;
@@ -161,6 +186,7 @@ static void powerJobResume(void)
 		break;							\
 	}
 
+#if FW_SINCE(0x01000104)
 static void powerJobOff(void)
 {
 	powerBbmcOff();
@@ -199,7 +225,24 @@ static void powerJobOff(void)
 #endif
 	powerReady(POWER_JOB_PART);
 }
+#else
+static void powerJobOff(void)
+{
+	if ((signed char)bbmc.state >= 2 || input2Bit0Get() == 1)
+		powerBbmcRestart();
+	powerSeqOff();
+	cookieCtrlBatteryCharge(1);
+	charge.acDelay = 0x3c;
+	task5SetFlag(4, 0x20);
+	task5SetFlag(4, 0x400);
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
+	powerLedFadeStart(0);
+	powerReady(POWER_JOB_PART);
+}
+#endif
 
+#if FW_SINCE(0x01000104)
 static void powerJobShutdown(void)
 {
 	powerSeqOff();
@@ -216,7 +259,18 @@ static void powerJobShutdown(void)
 #endif
 	powerReady(POWER_JOB_PART);
 }
+#else
+static void powerJobShutdown(void)
+{
+	powerSeqOff();
+	iicaClose();
+	chargeTimerStop();
+	powerLedFadeStart(0);
+	powerReady(POWER_JOB_PART);
+}
+#endif
 
+#if FW_SINCE(0x01000104)
 static void powerJobSuspend(void)
 {
 	powerSeqSuspend();
@@ -241,6 +295,18 @@ static void powerJobSuspend(void)
 #endif
 	powerReady(POWER_JOB_PART);
 }
+#else
+static void powerJobSuspend(void)
+{
+	powerSeqSuspend();
+	charge.acDelay = 0x3c;
+	task5SetFlag(4, 0x20);
+	task5SetFlag(4, 0x400);
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
+	powerReady(POWER_JOB_PART);
+}
+#endif
 
 static void powerJobCut(void)
 {
@@ -257,7 +323,9 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutReg1);
 	reg = 0xb2;
 	result = elmoRead(&reg, (unsigned char *)&powerCutReg2);
+#if FW_SINCE(0x01000104)
 	chargeLedInit();
+#endif
 	iicaClose();
 	chargeTimerStop();
 	powerReady(POWER_JOB_PART);
@@ -269,6 +337,7 @@ static void powerJobOffEnd(void)
 	chargeTimerStop();
 }
 
+#if FW_SINCE(0x01000104)
 static void powerJobUpdate(void)
 {
 	chargeLedInit();
@@ -277,6 +346,31 @@ static void powerJobUpdate(void)
 	ledUpdate();
 	powerReady(POWER_JOB_PART);
 }
+#else
+/* before 0x01000104 the charge LED's blink is here: timer 0x18's, its on and off times
+   paramSetting1 and 2 */
+static void chargeLedBlinkExpire(void)
+{
+	if (chargeLedBlinkOn == 1) {
+		chargeLedBlinkOn = 0;
+		timerStart(CHARGE_LED_TIMER, configGet()->paramSetting2 - 1);
+	} else {
+		chargeLedBlinkOn = 1;
+		timerStart(CHARGE_LED_TIMER, configGet()->paramSetting1 - 1);
+	}
+	task5SetFlag(4, 0x2000);
+}
+
+void chargeLedInit(void)
+{
+	struct TimerHandler handler;
+
+	chargeLedBlinking = 0;
+	chargeLedBlinkOn = 0;
+	handler.handler = chargeLedBlinkExpire;
+	timerSetHandler(CHARGE_LED_TIMER, &handler);
+}
+#endif
 
 #if FW_SINCE(0x01000306)
 static void powerJobReset(void)

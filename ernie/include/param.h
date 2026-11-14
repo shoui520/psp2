@@ -19,12 +19,21 @@ struct Param {
 						   (serial1Command0950, 0951) */
 	unsigned char	base;			/* bits 0-5 serial1Command0950's base step */
 	unsigned char	adjust;			/* bits 4-7 chargeSetCurrent's adjust */
+#if FW_SINCE(0x01000104)
 	unsigned char	pressTime1;		/* the buttons' press times (input.c) */
 	unsigned char	pressTime2;
-	unsigned char	reserved2[2];
-	unsigned char	pattern1[PARAM_PATTERN_SIZE];	/* blink pattern 1 (powerLedFadeStart) */
+#else
 	unsigned char	setting1;		/* the settings block's, for the host */
 	unsigned char	setting2;
+#endif
+	unsigned char	reserved2[2];
+	unsigned char	pattern1[PARAM_PATTERN_SIZE];	/* blink pattern 1 (powerLedFadeStart) */
+#if FW_SINCE(0x01000104)
+	unsigned char	setting1;		/* the settings block's, for the host */
+	unsigned char	setting2;
+#else
+	unsigned char	reserved4[2];
+#endif
 	unsigned char	pattern2[PARAM_PATTERN_SIZE];	/* blink pattern 2 */
 	unsigned char	reserved3[8];
 };
@@ -32,7 +41,9 @@ struct Param {
 extern struct Param param;
 
 extern int paramInit(void);
-#if FW_SINCE(0x0100010B)
+#if !FW_SINCE(0x01000104)
+/* none: before 0x01000104 paramInit loads the block itself */
+#elif FW_SINCE(0x0100010B)
 extern int paramLoad(void);
 #else
 extern void paramLoad(void);	/* returns nothing before 0x0100010B */

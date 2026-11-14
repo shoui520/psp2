@@ -7,6 +7,8 @@
 #ifndef RTC_H
 #define RTC_H
 
+#include "ernie.h"
+
 /* a clock value as the commands carry it, least significant byte first */
 union RtcTick {
 	unsigned long	value;
@@ -23,7 +25,9 @@ extern union RtcTick	getAlarm(void);
 extern void		setAlarm(unsigned long alarm);
 extern int		isAlarmReached(void);
 extern unsigned int	sleepFactorBit3Get(void);
+#if FW_SINCE(0x01000104)
 extern void		setAlarmMode(unsigned char mode);
 extern unsigned char	getAlarmMode(void);
+#endif
 
 #endif

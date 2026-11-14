@@ -28,7 +28,9 @@ struct Config {
 	unsigned char	ready;
 	unsigned char	bank;			/* the bank used */
 	unsigned char	state;			/* CONFIG_* */
+#if FW_SINCE(0x01000104)
 	unsigned char	changed;		/* set: a commit changed the bank used */
+#endif
 };
 
 /* the records' digest, in the updater's buffers */
@@ -123,7 +125,9 @@ int configInit(void)
 		}
 	}
 	config.ready = 1;
+#if FW_SINCE(0x01000104)
 	config.changed = 0;
+#endif
 	return 0;
 }
 
@@ -222,7 +226,9 @@ unsigned char configCommit(void)
 	result = configFlashWrite(i);
 	if (result == 0) {
 		config.bank = config.bank == 0 ? 1 : 0;
+#if FW_SINCE(0x01000104)
 		config.changed = 1;
+#endif
 	}
 	config.state = CONFIG_OPEN;
 	return result;
@@ -377,6 +383,7 @@ unsigned char configMergeUpdate(void)
 	return result;
 }
 
+#if FW_SINCE(0x01000104)
 unsigned char configTakeChanged(void)
 {
 	unsigned char changed;
@@ -385,6 +392,7 @@ unsigned char configTakeChanged(void)
 	config.changed = 0;
 	return changed;
 }
+#endif
 
 /* the banks, then the defaults */
 static const struct ConfigBank *const configTable[3] = {
@@ -415,13 +423,20 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.analogCalibration = kept->block.analogCalibration;
 	copy->block.board.value = kept->block.board.value;
 	copy->block.start.value = kept->block.start.value;
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 the WLAN's line and the byte after it are kept too */
+	copy->block.wlanLine = kept->block.wlanLine;
+	copy->block.wlanLineExtra = kept->block.wlanLineExtra;
+#endif
 	copy->block.keep.value = kept->block.keep.value;
 	if (copy->block.keep.bits.pressTimesSet) {
 		copy->block.pressTime1 = kept->block.pressTime1;
 		copy->block.pressTime2 = kept->block.pressTime2;
 	}
+#if FW_SINCE(0x01000104)
 	copy->block.hardwareInfoSelect = kept->block.hardwareInfoSelect;
 	copy->block.state.value = kept->block.state.value;
+#endif
 #if FW_SINCE(0x01000107)
 	if (kept->block.start.bits.chargeLedOff)
 		copy->block.state.bits.chargeLedOff = kept->block.start.bits.chargeLedOff;
@@ -441,6 +456,44 @@ unsigned char configFlashWrite(unsigned long address)
 	unsigned char tries;
 	unsigned char result;
 
+#if !FW_SINCE(0x01000104)
+	/* before 0x01000104 one retry, which erases again when the verify finds the block not
+	   blank, and a failed write ends the attempt */
+	tries = 1;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == 0x1f)
+		result = FSL_Init(fslDataBuffer);
+	result = FSL_ModeCheck();
+	if (result == 0) {
+		result = FSL_BlankCheck((unsigned int)(address >> 10));
+		if (result == 0x1b) {
+			do
+				result = FSL_Erase((unsigned int)(address >> 10));
+			while (result == 0x1f);
+		}
+		do {
+			if (result == 0) {
+				for (i = 0; i < 0x100; i += 0x40) {
+					memcpy(fslDataBuffer, (unsigned char *)&configBuffer + i * 4, 0x100);
+					do
+						result = FSL_Write(address + i * 4, 0x40);
+					while (result == 0x1f);
+					if (result != 0)
+						goto close;
+				}
+				do
+					result = FSL_IVerify((unsigned int)(address >> 10));
+				while (result == 0x1f);
+				if (tries != 0 && result == 0x1b)
+					result = FSL_Erase((unsigned int)(address >> 10));
+			}
+		} while (tries-- & (result != 0));
+	}
+close:
+	FSL_Close();
+	return result;
+#else
 	tries = 3;
 	FSL_Open();
 	result = FSL_Init(fslDataBuffer);
@@ -481,6 +534,7 @@ unsigned char configFlashWrite(unsigned long address)
 	}
 	FSL_Close();
 	return result;
+#endif
 }
 
 /* the open copy set to the defaults and committed */

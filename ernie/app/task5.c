@@ -7,6 +7,7 @@
 #include "ernie.h"
 #include "charge.h"
 #include "config.h"
+#include "cookie.h"
 #include "kernel.h"
 #include "led.h"
 #include "powerjob.h"
@@ -23,6 +24,9 @@ unsigned int powerDevicePending;
 extern unsigned char input1Bit7Active(void);
 
 static void task5ChargeLed(void);
+#if !LED_REQUESTS
+static void chargeLedBlinkUpdate(void);
+#endif
 #if FW_SINCE(0x01000306)
 static void task5LedOff(void);
 #endif
@@ -36,8 +40,10 @@ void task5(VP_INT exinf)
 	for (;;) {
 #if FW_SINCE(0x01000306)
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
-#else
+#elif LED_REQUESTS
 		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
+#else
+		ercd = wai_flg(4, 0xf7a3, TWF_ORW, &ptn);
 #endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
@@ -66,7 +72,11 @@ void task5(VP_INT exinf)
 			}
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
+#if FW_SINCE(0x01000104)
 				powerCookieRelease();
+#else
+				powerCookieCycle();
+#endif
 			}
 #if FW_SINCE(0x01000306)
 			if (ptn & 0x0008) {
@@ -78,10 +88,12 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x1000);
 				task5ChargeLed();
 			}
+#if LED_REQUESTS
 			if (ptn & 0x0800) {
 				clr_flg(4, ~0x0800);
 				ledUpdate();
 			}
+#endif
 			if (ptn & 0x2000) {
 				clr_flg(4, ~0x2000);
 				chargeLedBlinkUpdate();
@@ -165,12 +177,14 @@ void powerJobPostReset(void)
 }
 #endif
 
+#if FW_SINCE(0x01000104)
 void powerJobPostUpdate(void)
 {
 	powerJobState.id = POWER_JOB_UPDATE;
 	task5SetFlag(4, 0x0002);
 	return;
 }
+#endif
 
 unsigned char elmoVersion0(void)
 {
@@ -184,6 +198,7 @@ void powerDeviceSetPending(unsigned int bits)
 	return;
 }
 
+#if LED_REQUESTS
 static void task5ChargeLed(void)
 {
 	if (input1Bit7Active()) {
@@ -200,6 +215,35 @@ static void task5ChargeLed(void)
 	}
 	return;
 }
+#else
+/* before 0x01000104 the charge LED is the Cookie's register 3 here: off (bits 2 and 0), blinking
+   (chargeLedSetBlink) or the Cookie's */
+static void task5ChargeLed(void)
+{
+	if (input1Bit7Active()) {
+		if (configGet()->start.bits.chargeLedOff) {
+			cookieCtrlReg3Bit2(0);
+			cookieCtrlReg3Mode(1);
+			return;
+		}
+		if (chargeBatteryLevel9())
+			chargeLedSetBlink(1);
+		else
+			cookieCtrlReg3Mode(0);
+	} else {
+		if (configGet()->start.bits.chargeLedOffReleased)
+			cookieCtrlReg3Mode(1);
+		else
+			chargeLedSetBlink(0);
+	}
+}
+
+/* task 5's (flag 0x2000): the blink's state to the Cookie */
+static void chargeLedBlinkUpdate(void)
+{
+	cookieCtrlReg3Bit2(chargeLedBlinkOn);
+}
+#endif
 
 #if FW_SINCE(0x01000306)
 static void task5LedOff(void)
