@@ -4,6 +4,8 @@
 #ifndef _XMATH
 #define _XMATH
 
+#include <stddef.h>
+
 /* what _Stopfx finds before a floating-point field */
 #define FL_ERR		0	/* not a number */
 #define FL_DEC		1	/* decimal digits */
@@ -94,5 +96,13 @@ _Xfloat _Xtento(_Xfloat x, int n);
 int _Stopfx(const char **ps, char **endptr);
 int _Stoflt(const char *s0, const char *s, char **endptr, long lo[], int maxsig);
 int _Stoxflt(const char *s0, const char *s, char **endptr, long lo[], int maxsig);
+
+/* the wide forms */
+int _WStopfx(const wchar_t **ps, wchar_t **endptr);
+int _WStoflt(const wchar_t *s0, const wchar_t *s, wchar_t **endptr, long lo[], int maxsig);
+int _WStoxflt(const wchar_t *s0, const wchar_t *s, wchar_t **endptr, long lo[], int maxsig);
+double _WStodx(const wchar_t *s, wchar_t **endptr, long pten, int *perr);
+float _WStofx(const wchar_t *s, wchar_t **endptr, long pten, int *perr);
+long double _WStoldx(const wchar_t *s, wchar_t **endptr, long pten, int *perr);
 
 #endif /* _XMATH */
