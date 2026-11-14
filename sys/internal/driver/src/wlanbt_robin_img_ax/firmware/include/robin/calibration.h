@@ -16,7 +16,8 @@
 struct WlanRadioConfig {
 	uint8_t reserved0[24];
 	uint32_t regionPowerTable;	/* nonzero: the region's power table limits transmit power */
-	uint8_t reserved28[0xda - 28];
+	uint8_t params[15];		/* a connection's SNMP values; cleared when one is configured */
+	uint8_t reserved43[0xda - 43];
 	uint8_t secondaryAntenna;
 	uint8_t primaryAntenna;
 	uint8_t secondaryDiversity;

@@ -111,6 +111,8 @@ void wlanMacClear868Enable(void);
 unsigned int wlanFindSetBitDown(uint32_t mask, unsigned int start, unsigned int high, unsigned int low);
 
 #define MAC_2D4_FLAGS		MAC_REG(0x2d4)
+#define MAC_2E8_RING		MAC_REG(0x2e8)	/* the entry (ring) the MAC is at */
+#define MAC_2F4_RINGS		MAC_REG(0x2f4)	/* bit n: ring n has frames; bit 8: the group ring */
 #define MAC_824_CONTROL		MAC_REG(0x824)
 #define MAC_828_CONTROL		MAC_REG(0x828)
 

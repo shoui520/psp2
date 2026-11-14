@@ -154,7 +154,8 @@ _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 
 /* Per-association information of a station or access point connection (partial). */
 struct WlanConnectionInfo {
-	uint8_t reserved0[31];
+	uint8_t reserved0[30];
+	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
 	uint8_t reserved33[3];
@@ -162,13 +163,16 @@ struct WlanConnectionInfo {
 	uint8_t reserved40[28];
 	uint32_t securityEnabled;	/* nonzero: securityParams apply */
 	uint8_t securityParams[28];
-	uint8_t securityState[256];
+	uint8_t securityState[24];
+	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
+	uint8_t securityStateRest[228];
 	uint8_t ready;
 	uint8_t reserved357[184];
 	uint8_t protectionFlags;	/* bit 0: protection forced on */
 	uint8_t reserved542[10];
 	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
-	uint8_t reserved556[24];
+	uint8_t reserved556[20];
+	struct WlanConnection *connection;	/* the connection that owns this block */
 	uint8_t capability[2];		/* bit 5: short preamble; bit 10: short slot time */
 	uint8_t reserved582[2];
 	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
@@ -196,6 +200,7 @@ struct WlanConnectionInfo {
 };
 
 struct WlanSubscribeEvents;
+struct WlanUapContext;
 
 /*
  * The block of a station (at stationInfo) or access point (at apInfo)
@@ -203,7 +208,7 @@ struct WlanSubscribeEvents;
  */
 struct WlanConnectionRole {
 	struct WlanConnectionInfo *info;
-	uint8_t reserved4[4];
+	OsaBuffer *infoBuffer;		/* the buffer the information block is in */
 	uint8_t securityFlags;		/* bits 0-1: a key handshake is under way */
 	uint8_t reserved9[3];
 	uint32_t listenInterval;
@@ -280,6 +285,14 @@ struct WlanLinkMonitor {
 _Static_assert(sizeof(struct WlanSignalFilter) == 20, "signal filter");
 _Static_assert(sizeof(struct WlanLinkMonitor) == 24, "link monitor");
 
+/* The pointers a station, IBSS or AMP link keeps to its SQRAM state (at its own place in the connection). */
+struct WlanSqramState {
+	const void *erpPending;
+	const void *dataPendingStatus;
+	const void *reserved8;
+	const void *currentState;
+};
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;
@@ -294,9 +307,10 @@ struct WlanConnection {
 	const uint8_t *smState;		/* the current state's entry in smStates */
 	uint32_t reserved20;
 	const uint8_t *smStates;
-	uint8_t reserved1a[16];
+	uint8_t reserved1a[12];
+	struct WlanConnection *owner;	/* itself: the connection's state machine is handed this */
 	int (*rxManagement)(OsaBuffer *buffer, uintptr_t argument);	/* management frames for this connection */
-	uint8_t reserved1f[4];
+	int (*rxControl)(OsaBuffer *buffer, uintptr_t argument);	/* control frames for this connection */
 	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
 	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
@@ -355,7 +369,8 @@ struct WlanConnection {
 	struct WlanSignalAverage dataRssiAverage;	/* over 1 << dataRssiShift frames */
 	uint16_t beaconRssiShift;
 	uint16_t dataRssiShift;
-	uint8_t reserved376[4];
+	uint16_t lastSequence;		/* 0xffff: none seen yet */
+	uint16_t reserved378;
 	uint8_t state;
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
@@ -368,9 +383,12 @@ struct WlanConnection {
 			uint8_t rateControl[228];	/* rate adaptation state (not converted yet) */
 		};
 	};
-	uint8_t reserved636[36];
+	uint8_t reserved636[28];
+	uint32_t reserved664;		/* cleared when the connection is configured */
+	uint32_t reserved668;
 	uint8_t *snmpBssParams[2];	/* [0]: HostCmd 0x37's, [1]: 0x36's and 0x5e's; each +28 is its block */
-	uint8_t reserved680[8];
+	uint8_t *radioParams;		/* the radio configuration's block this connection's SNMP values use */
+	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
 	uint8_t reserved4c[30];
@@ -501,15 +519,50 @@ extern struct WlanConnection *wlanConnectionPrimary;
 extern uint32_t wlanConnectionCount;
 extern uint8_t wlanChannelInUse[1];
 extern uint8_t wlanConnectionSlotMask;
-extern uint32_t wlanConnectionTable;
+extern uint32_t wlanConnectionDtimHolds;
 extern struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS];
 
 int wlanConnectionGetCount(void);						/* 0x1cb00 */
 int wlanConnectionIncrement(void);						/* 0x1cb06 */
-uint32_t wlanConnectionGetTable(void);						/* 0x1cb1a */
+uint32_t wlanConnectionDtimHoldCount(void);					/* 0x1cb1a */
 int wlanConnectionSlotAcquire(struct WlanConnection *connection);		/* 0x1cb20 */
 int wlanConnectionSlotAttach(struct WlanConnection *connection);		/* 0x1cbce */
 int wlanConnectionSlotDetach(struct WlanConnection *connection);		/* 0x1cc26 */
+int wlanConnectionTeardownBss(struct WlanConnection *connection);		/* 0x1cc8e */
+int wlanConnectionAnyStarted(unsigned int interfaceType);			/* 0x1cd74 */
+int wlanConnectionCommandPrepare(unsigned int command, uintptr_t argument);	/* 0x1cdc8 */
+int wlanConnectionCommandCheck(unsigned int command, uintptr_t argument);	/* 0x1ce46 */
+int wlanConnectionIndexRelease(struct WlanConnection *connection);		/* 0x1ceb6 */
+int wlanConnectionInfoAttach(struct WlanConnection *connection);		/* 0x1cf54 */
+int wlanConnectionIndexAcquire(struct WlanConnection *connection);		/* 0x1cfb2 */
+void wlanConnectionReset(struct WlanConnection *connection);			/* 0x1d052 */
+void wlanConnectionClearSecurity(struct WlanConnection *connection);		/* 0x1d098 */
+void wlanConnectionTxPowerUpdate(struct WlanConnection *connection, int enable);	/* 0x1d0ba */
+void wlanConnectionTeardownIbss(struct WlanConnection *connection);		/* 0x1d0ea */
+int wlanConnectionTeardownWds(struct WlanConnection *connection);		/* 0x1d146 */
+void wlanConnectionSetupType3Info(struct WlanConnection *connection);			/* 0x1d20e */
+void wlanConnectionSetupType2(struct WlanConnection *connection);			/* 0x1d2fc */
+void wlanConnectionDtimHold(struct WlanConnection *connection);		/* 0x1d39c */
+void wlanConnectionDtimRelease(struct WlanConnection *connection);		/* 0x1d3d2 */
+struct WlanSqramState *wlanConnectionTypeBlock(struct WlanConnection *connection);	/* 0x1d3f2 */
+void wlanConnectionSetupType3(struct WlanConnection *connection);		/* 0x1d412 */
+void wlanConnectionSetupType0(struct WlanConnection *connection);		/* 0x1d452 */
+void wlanConnectionSetupType1(struct WlanConnection *connection);		/* 0x1d486 */
+int wlanConnectionIdle(struct WlanConnection *connection);			/* 0x1d4d0 */
+int wlanConnectionFreeListClean(void);						/* 0x1d4e2 */
+int wlanConnectionsInit(void);							/* 0x1d52e */
+int wlanConnectionBssCount(struct WlanConnection *connection);		/* 0x1d5ba */
+struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
+					       const uint8_t *local, const uint8_t *peer,
+					       int channel, void *driver);		/* 0x1d604 */
+int wlanConnectionReconfigure(struct WlanConnection *connection, int interfaceType,
+			      const uint8_t *local, const uint8_t *peer);			/* 0x1d934 */
+struct WlanConnection *wlanConnectionDuplicateAp(const uint8_t *peer,
+						 const struct WlanConnection *source);	/* 0x1da20 */
+struct WlanConnection *wlanConnectionDuplicateType2(const uint8_t *peer,
+						    const struct WlanConnection *source);	/* 0x1da78 */
+void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source);		/* 0x1daba */
+void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source);		/* 0x1dc8c */
 
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber);
 int wlanConnectionExists(unsigned int interfaceType);

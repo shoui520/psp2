@@ -41,8 +41,6 @@
 #define MAC_510_EVENTS		MAC_REG(0x510)	/* pending events; a bit is acknowledged by writing 0 to it */
 #define MAC_540_STATUS		MAC_REG(0x540)	/* bit 31: an operation timed out */
 #define MAC_544_CONTROL		MAC_REG(0x544)
-#define MAC_2E8_RING		MAC_REG(0x2e8)	/* the entry (ring) the MAC is at */
-#define MAC_2F4_RINGS		MAC_REG(0x2f4)	/* bit n: ring n has frames; bit 8: the group ring */
 #define MAC_610_CIPHER		MAC_REG(0x610)
 #define MAC_61C_PROFILE		MAC_REG(0x61c)
 #define MAC_620_EVENT		MAC_REG(0x620)

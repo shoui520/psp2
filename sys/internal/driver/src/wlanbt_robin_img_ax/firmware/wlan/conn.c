@@ -3,8 +3,16 @@
  * inferred; no source filename survives.
  */
 #include "robin/btrom.h"
+#include "robin/calibration.h"
 #include "robin/conn.h"
+#include "robin/hostps.h"
+#include "robin/mac.h"
 #include "robin/mactx.h"
+#include "robin/mgmt.h"
+#include "robin/osa.h"
+#include "robin/signal.h"
+#include "robin/subscribe.h"
+#include "robin/txring.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
@@ -17,23 +25,83 @@ struct WlanConnection *wlanConnectionPrimary __attribute__((section(".sqram1.rw"
 uint8_t wlanChannelInUse[1] __attribute__((section(".dtcm.bss")));				/* 0x040088dc */
 uint8_t wlanConnectionSlotMask __attribute__((section(".dtcm.bss")));				/* 0x040088dd */
 uint32_t wlanConnectionCount __attribute__((section(".dtcm.bss")));				/* 0x040088e4 */
-uint32_t wlanConnectionTable __attribute__((section(".dtcm.bss")));				/* 0x040088e8 */
+uint32_t wlanConnectionIndexMask __attribute__((section(".dtcm.bss")));			/* 0x040088e0: interface indices taken */
+uint32_t wlanConnectionDtimHolds __attribute__((section(".dtcm.bss")));			/* 0x040088e8: connections holding the DTIM */
 struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x040088f0 */
 
 /* The beacon and the probe response of each slot: their buffers, pools and the requests the MAC reads. */
-extern struct OsaBufferPool wlanBlockPool0;							/* 0x04000ec0 */
-extern struct OsaBufferPool wlanBlockPool1;							/* 0x04000ed4 */
 extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc0031d64 */
 extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
 void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
+void macMgmtFilterState(const uint8_t **machine);						/* 0x354cc */
 void macTxNotifyReleaseBuffer(void);								/* 0x3239c */
 void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, unsigned int beaconPeriodA,
 			    unsigned int beaconPeriodB);						/* 0x323f8 */
 
-/* Type-specific teardown, not converted yet. */
-int wlanConnectionTeardownWds(struct WlanConnection *connection);	/* 0x1d146 */
-void wlanConnectionTeardownIbss(struct WlanConnection *connection);	/* 0x1d0ea */
-void wlanConnectionTeardownBss(struct WlanConnection *connection);	/* 0x1cc8e */
+/* Not converted yet; provisional names. */
+void cbProcInspectPacket(struct WlanConnection *connection);					/* 0x1e53c */
+void cbProcFormatPacket(struct WlanConnection *connection);					/* 0x1e51a */
+struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
+int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
+void macTxNotifyConfigureFrame(struct WlanConnection *connection);				/* 0x333ce */
+void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
+void wpaSuppConvertDescriptor(void *descriptor);						/* 0x2c17c */
+int macMgmtApplyEntry(void);									/* 0x36a2a */
+void btLmpLcHandleState(int state);								/* 0x42488 */
+void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
+/* The pools: of connections, of beacon and probe response templates, of information blocks. */
+#define POOL(name, size, count)									\
+	struct OsaBufferPool name __attribute__((section(".dtcm.rw"))) = { { { 1, 0, 0 } } };	\
+	static struct OsaPoolConfig name##Config __attribute__((section(".dtcm.rw"))) = { 0, size, count }
+
+POOL(wlanConnectionPool, 0x3cc, 12);								/* 0x04000e98 */
+POOL(wlanBlockPool0, 0x41c, 4);									/* 0x04000ec0 */
+POOL(wlanBlockPool1, 0x41c, 4);									/* 0x04000ed4 */
+POOL(wlanBlockPool2, 0x4fc, 2);									/* 0x04000ee8 */
+extern uint8_t wlanConnectionPoolControl[], wlanConnectionPoolMemory[];				/* 0x04004f88, 0x04005000 */
+extern uint8_t wlanBlockPool0Control[], wlanBlockPool0Memory[];					/* 0x04004fe0, SQRAM 0xc002fa40 */
+extern uint8_t wlanBlockPool1Control[], wlanBlockPool1Memory[];					/* 0x04004ff0, SQRAM 0xc0030ac0 */
+extern uint8_t wlanBlockPool2Control[], wlanBlockPool2Memory[];					/* 0x04000f08, 0x04007dc0 */
+uint32_t wlanConnectionSlotsFree __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
+struct OsaIdleHook wlanConnectionIdleHook __attribute__((section(".sqram1.rw")));		/* 0xc0011b00 */
+extern uint8_t wlanIbssErpPending[];								/* SQRAM 0xc0031f00 */
+extern uint8_t wlanDataPendingStatus;								/* SQRAM 0xc0011bc5 */
+extern uint8_t wlanBssCurrentState[];								/* SQRAM 0xc0031f18 */
+/* The device's address and the SNMP defaults a connection starts with (the pointer is at 0x54a7c). */
+struct WlanDeviceConfig {
+	uint8_t address[6];
+	uint8_t rtsThreshold[2];
+	uint8_t shortRetryLimit;
+	uint8_t longRetryLimit;
+	uint8_t fragThreshold[2];
+};
+extern const struct WlanDeviceConfig *wlanDeviceAddress;					/* 0x54a7c */
+extern uint32_t wlanBssTargetCounter;								/* 0x59718 */
+int wlanPsDispatchPacket(struct WlanConnection *connection, int enable, int state);		/* 0x3cfb2 */
+int macTxNotifySelectState(struct WlanConnection *connection);				/* 0x302fc */
+void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a */
+int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
+int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */
+int wlanStaRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfdb2 */
+void macMgmtSetupContext(struct WlanConnection *connection);					/* 0x35da6 */
+int macTxNotifyDispatchState(struct WlanConnection *connection);				/* 0x2fb7e */
+int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb70 */
+int wlanApRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb1c */
+struct WlanUapContext *uapSqramUpdateContext(int unused);					/* SQRAM 0xc000824c */
+
+/* The access point's association context: its first block is set up with the connection. */
+struct WlanUapContext {
+	uint8_t reserved0[28];
+	struct {
+		uint8_t reserved0[6];
+		uint8_t mode;
+		uint8_t options;
+		uint8_t reserved8[2];
+		uint8_t control;
+		uint8_t reserved11[73];
+	} params;
+};
+_Static_assert(sizeof(((struct WlanUapContext *)0)->params) == 84, "access point context parameters");
 
 /* Finds the connection of a BSS type and number. */
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber)
@@ -192,9 +260,9 @@ int wlanConnectionDecrement(void)
 	return --wlanConnectionCount;
 }
 
-uint32_t wlanConnectionGetTable(void)
+uint32_t wlanConnectionDtimHoldCount(void)
 {
-	return wlanConnectionTable;
+	return wlanConnectionDtimHolds;
 }
 
 /*
@@ -553,4 +621,832 @@ struct WlanConnection *wlanConnectionFindFlaggedByLocal(const void *address)
 	}
 	sysIrqRestore(posture);
 	return found;
+}
+
+/* Releases the information buffer of an access point or station connection that owns one. */
+int wlanConnectionTeardownBss(struct WlanConnection *connection)
+{
+	struct WlanConnectionRole *role;
+
+	if (connection == NULL)
+		return 1;
+	role = wlanConnectionInfoSlot(connection);
+	if (connection->flags2 & 4) {
+		if (role->infoBuffer != NULL) {
+			osa_BufferFree(role->infoBuffer);
+			role->infoBuffer = NULL;
+			role->info = NULL;
+		}
+	}
+	return 0;
+}
+
+/* 1: a connection of the type has its BSS up (an access point; a station: one acting as one). */
+int wlanConnectionAnyStarted(unsigned int interfaceType)
+{
+	int started = 0;
+	UINT posture = sysIrqDisable();
+	struct WlanConnection *connection = wlanConnectionFirst(interfaceType);
+
+	do {
+		if (connection == NULL)
+			break;
+		if ((interfaceType == WLAN_IF_STATION ||
+		     (interfaceType == WLAN_IF_AP && connection->mode == 2)) &&
+		    wlanConnectionInfo(connection)->bssStarted == 1)
+			started = 1;
+		connection = wlanConnectionNextFlagged(connection, interfaceType);
+	} while (started == 0);
+	sysIrqRestore(posture);
+	return started;
+}
+
+/*
+ * Whether the radio may take the command (a host command, an event code): not
+ * while an access point and a station run together, and not with an AMP link.
+ * If it may, the ROM's library is told.
+ */
+int wlanConnectionCommandPrepare(unsigned int command, uintptr_t argument)
+{
+	int allowed = 1;
+	UINT posture = sysIrqDisable();
+
+	switch (command) {
+	case 1: case 5: case 6: case 13:
+		allowed = wlanConnectionAnyStarted(WLAN_IF_AP) != 1;
+		if (wlanConnectionAnyStarted(WLAN_IF_STATION) == 1)
+			allowed = 0;
+		if (command == 13)
+			break;
+		if (wlanConnectionExists(WLAN_IF_AMP) != 0) {
+			allowed = 0;
+			goto done;
+		}
+		break;
+	case 3: {
+		struct WlanConnection *connection = p2pDirectProcessEntry(3);
+
+		if ((connection != NULL || (connection = wlanConnectionFirst(0)) != NULL) &&
+		    (connection->flags2 & 0x10))
+			allowed = 0;
+		if (wlanConnectionExists(WLAN_IF_AMP) != 0) {
+			allowed = 0;
+			goto done;
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	if (allowed == 1)
+		romLibDispatchContext(argument);
+done:
+	sysIrqRestore(posture);
+	return allowed;
+}
+
+/* The same decision for a command the ROM's library only checks. */
+int wlanConnectionCommandCheck(unsigned int command, uintptr_t argument)
+{
+	int allowed = 1;
+	UINT posture = sysIrqDisable();
+
+	switch (command) {
+	case 1: case 4: case 5: case 6: case 7: case 8: case 9: case 13: case 14: case 15:
+		allowed = wlanConnectionAnyStarted(WLAN_IF_AP) != 1;
+		if (wlanConnectionAnyStarted(WLAN_IF_STATION) == 1)
+			allowed = 0;
+		if (command != 13 && wlanConnectionExists(WLAN_IF_AMP) != 0) {
+			allowed = 0;
+			goto done;
+		}
+		if (allowed != 1)
+			goto done;
+		break;
+	case 2: case 12:
+		if (allowed != 1)
+			goto done;
+		break;
+	case 3:
+		if (wlanConnectionExists(WLAN_IF_AMP) != 0) {
+			allowed = 0;
+			goto done;
+		}
+		break;
+	default:
+		for (;;)
+			;
+	}
+	romLibCheckContext(argument);
+done:
+	sysIrqRestore(posture);
+	return allowed;
+}
+
+/* Gives the interface index back when the last connection of the BSS goes. */
+int wlanConnectionIndexRelease(struct WlanConnection *connection)
+{
+	int result = 0;
+
+	if (connection->interfaceType == WLAN_IF_AMP) {
+		wlanConnectionCommandCheck(13, 1);
+		wlanConnectionCommandPrepare(13, 0);
+	}
+	if (connection->flags2 & 4) {
+		result = macTxNotifyAcquireBuffer(0, connection->interfaceAddress, connection->interfaceIndex, 0);
+		if (result == 0) {
+			wlanConnectionIndexMask &= ~(1 << connection->interfaceIndex);
+			connection->interfaceIndex = 0xff;
+		}
+	}
+	return result;
+}
+
+/* A connection that has an information block of its own takes a buffer for it; the others share the BSS's. */
+int wlanConnectionInfoAttach(struct WlanConnection *connection)
+{
+	if (connection->flags2 & 4) {
+		struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+		if (role->infoBuffer == NULL) {
+			OsaBuffer *buffer = osa_BufferAlloc(&wlanBlockPool2, 0, 0);
+
+			if (buffer == NULL)
+				return 1;
+			role->infoBuffer = buffer;
+			role->info = (struct WlanConnectionInfo *)((uint8_t *)buffer + buffer->dataOffset);
+			uapSqramUpdateBuffer(connection);
+		}
+	} else {
+		struct WlanConnection *first = wlanConnectionFind(connection->bssType, connection->bssNumber);
+		struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+		struct WlanConnectionRole *shared;
+
+		(void)first;
+		shared = wlanConnectionInfoSlot(first);
+		role->infoBuffer = shared->infoBuffer;
+		role->info = shared->info;
+	}
+	return 0;
+}
+
+/* Takes an interface index (a transmit notification slot) for each address of the connection. */
+int wlanConnectionIndexAcquire(struct WlanConnection *connection)
+{
+	int result = 0;
+
+	if (connection->flags2 & 4) {
+		unsigned int index;
+		int fresh = connection->interfaceType != WLAN_IF_STATION;
+
+		result = 1;
+		for (index = 0; index < 4 && result != 0; ++index) {
+			if (!((1 << index) & wlanConnectionIndexMask)) {
+				result = macTxNotifyAcquireBuffer(1, connection->interfaceAddress, index, fresh);
+				if (result == 0) {
+					connection->interfaceIndex = index;
+					wlanConnectionIndexMask |= 1 << index;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+/* Returns a connection to its state before the host configured it. */
+void wlanConnectionReset(struct WlanConnection *connection)
+{
+	__aeabi_memclr4(&connection->bssCapability, 60);
+	connection->networkSsidLength = 0;
+	__aeabi_memclr4(connection->networkSsid, 32);
+	__aeabi_memclr4(connection->localAddress, 6);
+	connection->flags2 &= ~0x10;
+	connection->state = 0;
+	connection->dataRate = 254;
+	connection->groupRate = 254;
+	macTxNotifyConfigureFrame(connection);
+}
+
+/* Forgets what was heard of the peer's security. */
+void wlanConnectionClearSecurity(struct WlanConnection *connection)
+{
+	wpaSuppConvertDescriptor((uint8_t *)connection + 636);
+	macTxNotifyParseFrame(connection);
+	__aeabi_memclr(connection->peerAddress, 6);
+}
+
+/* Sets the connection's transmit power limit (255: none) when the BSS has spectrum management. */
+void wlanConnectionTxPowerUpdate(struct WlanConnection *connection, int enable)
+{
+	int32_t limit;
+
+	if (!(connection->bssCapability[1] & 1))
+		return;
+	if (enable) {
+		if (connection->interfaceType != WLAN_IF_IBSS)
+			return;
+		limit = macMgmtApplyEntry();
+	} else {
+		limit = 255;
+	}
+	wlanTxPowerSetConnectionLimit(&connection->txPowerLimit, limit, 1);
+}
+
+/* An IBSS connection goes. */
+void wlanConnectionTeardownIbss(struct WlanConnection *connection)
+{
+	wlanConnectionTxPowerUpdate(connection, 0);
+	wlanConnectionClearSecurity(connection);
+	wlanConnectionReset(connection);
+}
+
+/*
+ * A connection goes: what its type holds is given back, and for the last
+ * connection of the BSS its interface index and slot as well. 1: it was the last.
+ */
+int wlanConnectionTeardownWds(struct WlanConnection *connection)
+{
+	struct WlanConnection *first = wlanConnectionFind(connection->bssType, connection->bssNumber);
+	int last = wlanConnectionNextByBss(first, connection->bssType, connection->bssNumber) == NULL;
+
+	switch (connection->interfaceType) {
+	case 0:
+		cbProcInspectPacket(connection);
+		goto finish;
+	case 1:
+		wlanConnectionTeardownIbss(connection);
+		if (last)
+			wlanConnectionIndexRelease(connection);
+		return 0;
+	case 2:
+		wlanConnectionTeardownBss(connection);
+		goto finish;
+	case 3:
+		if (connection->mode == 3)
+			cbProcFormatPacket(connection);
+		else if (connection->mode == 2)
+			wlanConnectionTeardownBss(connection);
+finish:
+		if (last)
+			wlanConnectionIndexRelease(connection);
+		return last;
+	case 4:
+		if (last) {
+			connection->probeResponseBuffer->allocatorTag = 0;
+			wlanConnectionSlotDetach(connection);
+			wlanConnectionIndexRelease(connection);
+		}
+		connection->state = 0;
+		if (wlanConnectionsIdle() != 0) {
+			unsigned int role = 0;
+
+			btLmpLcHandleState(0);
+			if (wlanHasApRole())
+				role = 2;
+			wlanPsPhaseResume(wlanConnectionByRole(role));
+		}
+		return last;
+	default:
+		return last;
+	}
+}
+
+/* Sets up an access point connection: the info block's back pointers, its handlers, its rate and association context. */
+void wlanConnectionSetupType3Info(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info;
+	struct WlanUapContext *context;
+
+	wlanConnectionInfoSlot(connection);
+	info = wlanConnectionInfo(connection);
+	if (connection->flags2 & 4) {
+		info->psMachine.connection = connection;
+		info->connection = connection;
+	}
+	connection->rxManagement = wlanApRxManagement;
+	connection->rxControl = wlanApRxControl;
+	connection->dataRate = info->unicastRate != 0 ? romRateIndex(info->unicastRate) : 254;
+	if (info->uapContext == NULL) {
+		context = uapSqramUpdateContext(0);
+		info->uapContext = context;
+		if (context == NULL)
+			for (;;)
+				;
+		__aeabi_memclr4(&context->params, 84);
+		context->params.mode = 3;
+		context->params.options = 0;
+		context->params.control = context->params.control >> 1 << 1;
+	}
+}
+
+/* The connection becomes an access point's: its mode is 2, and the first of them is activated. */
+void wlanConnectionSetupType2(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info;
+	struct WlanUapContext *context;
+
+	connection->mode = 2;
+	wlanConnectionInfoSlot(connection);
+	info = wlanConnectionInfo(connection);
+	if (connection->flags2 & 4) {
+		info->psMachine.connection = connection;
+		info->connection = connection;
+		if ((connection->flags2 & 4) && wlanRoleOtherOnly() == 0)
+			wlanConnectionActivate(connection);
+	}
+	connection->rxManagement = wlanApRxManagement;
+	connection->rxControl = wlanApRxControl;
+	connection->dataRate = info->unicastRate != 0 ? romRateIndex(info->unicastRate) : 254;
+	if (info->uapContext == NULL) {
+		context = uapSqramUpdateContext(0);
+		info->uapContext = context;
+		if (context == NULL)
+			for (;;)
+				;
+		__aeabi_memclr4(&context->params, 84);
+		context->params.mode = 3;
+		context->params.options = 0;
+		context->params.control = context->params.control >> 1 << 1;
+	}
+}
+
+/* A connection holds the DTIM: its group frames wait. */
+void wlanConnectionDtimHold(struct WlanConnection *connection)
+{
+	UINT posture;
+
+	wlanConnectionInfo(connection);
+	posture = sysIrqDisable();
+	++wlanConnectionDtimHolds;
+	connection->dtimHold = 1;
+	if (connection->groupRing == MAC_2E8_RING)
+		MAC_2F4_RINGS = (MAC_2F4_RINGS & ~(1u << connection->groupRing)) | 0x100;
+	sysIrqRestore(posture);
+}
+
+void wlanConnectionDtimRelease(struct WlanConnection *connection)
+{
+	UINT posture;
+
+	wlanConnectionInfo(connection);
+	posture = sysIrqDisable();
+	connection->dtimHold = 0;
+	--wlanConnectionDtimHolds;
+	sysIrqRestore(posture);
+}
+
+/* The block a connection of the type keeps its link in (type 0: the local name's; type 3: the second timer's). */
+struct WlanSqramState *wlanConnectionTypeBlock(struct WlanConnection *connection)
+{
+	if (connection != NULL) {
+		if (connection->interfaceType == 0)
+			return (struct WlanSqramState *)&connection->localName;
+		if (connection->interfaceType == 3)
+			return (struct WlanSqramState *)&connection->secondTimerHandle;
+	}
+	return NULL;
+}
+
+/* A station connection takes its handlers and the pointers to its SQRAM state. */
+void wlanConnectionSetupType3(struct WlanConnection *connection)
+{
+	struct WlanSqramState *state;
+
+	if (connection == NULL)
+		return;
+	if (connection->interfaceType == 3) {
+		state = wlanConnectionTypeBlock(connection);
+		if (state != NULL) {
+			connection->owner = connection;
+			macMgmtSetupContext(connection);
+			wlanConnectionActivate(connection);
+			connection->rxManagement = wlanStaRxManagement;
+			connection->rxControl = wlanStaRxControl;
+			state->erpPending = wlanIbssErpPending;
+			state->dataPendingStatus = &wlanDataPendingStatus;
+			state->currentState = wlanBssCurrentState;
+			wlanSubscribeApplyThresholds(connection);
+		}
+	}
+}
+
+/* The same for a connection that becomes a station's (mode 3). */
+void wlanConnectionSetupType0(struct WlanConnection *connection)
+{
+	struct WlanSqramState *state = wlanConnectionTypeBlock(connection);
+
+	if (state != NULL) {
+		connection->mode = 3;
+		connection->owner = connection;
+		wlanConnectionActivate(connection);
+		connection->rxManagement = wlanStaRxManagement;
+		connection->rxControl = wlanStaRxControl;
+		state->erpPending = wlanIbssErpPending;
+		state->dataPendingStatus = &wlanDataPendingStatus;
+		state->currentState = wlanBssCurrentState;
+		wlanSubscribeApplyThresholds(connection);
+	}
+}
+
+/* A connection becomes an IBSS's (mode 4): it keeps the SQRAM state's pointers and merges with other networks. */
+void wlanConnectionSetupType1(struct WlanConnection *connection)
+{
+	struct WlanSqramState *state = (struct WlanSqramState *)&connection->localName;
+
+	connection->mode = 4;
+	if (connection->flags2 & 4)
+		wlanConnectionActivate(connection);
+	state->erpPending = wlanIbssErpPending;
+	state->dataPendingStatus = &wlanDataPendingStatus;
+	state->currentState = wlanBssCurrentState;
+	connection->stationFlags = (connection->stationFlags & 0xffffff3c) | 1;
+	wlanSubscribeApplyThresholds(connection);
+}
+
+int wlanConnectionIdle(struct WlanConnection *connection)
+{
+	return macTxNotifyDispatchState(connection) == 0;
+}
+
+/* The idle hook: connections that were released are freed once the transmit side is done with them. */
+int wlanConnectionFreeListClean(void)
+{
+	struct WlanConnection *previous = NULL;
+	struct WlanConnection *connection;
+	UINT posture;
+
+	if (wlanConnectionFreeList == NULL)
+		return 0;
+	posture = sysIrqDisable();
+	connection = wlanConnectionFreeList;
+	while (connection != NULL) {
+		if (wlanConnectionIdle(connection)) {
+			struct WlanConnection *freed = connection;
+
+			if (connection == wlanConnectionFreeList)
+				wlanConnectionFreeList = wlanConnectionFreeList->next;
+			else
+				previous->next = connection->next;
+			connection = connection->next;
+			osa_BufferFree((OsaBuffer *)freed - 1);
+		} else {
+			previous = connection;
+			connection = connection->next;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/* The connections' state, their buffer pools and the idle hook that frees released connections. */
+int wlanConnectionsInit(void)
+{
+	unsigned int slot;
+
+	wlanChannelInUse[0] = 0;
+	wlanConnectionSlotMask = 0;
+	wlanConnectionIndexMask = 0;
+	wlanConnectionSlotsFree = 0;
+	for (slot = 0; slot < WLAN_CONNECTION_SLOTS; slot = (uint8_t)(slot + 1))
+		wlanConnectionSlots[slot] = NULL;
+	if (osa_BlockPoolCreate(&wlanConnectionPool, &wlanConnectionPoolConfig, wlanConnectionPoolControl,
+				wlanConnectionPoolMemory) != 0)
+		for (;;)
+			;
+	if (osa_BlockPoolCreate(&wlanBlockPool0, &wlanBlockPool0Config, wlanBlockPool0Control,
+				wlanBlockPool0Memory) != 0)
+		for (;;)
+			;
+	if (osa_BlockPoolCreate(&wlanBlockPool1, &wlanBlockPool1Config, wlanBlockPool1Control,
+				wlanBlockPool1Memory) != 0)
+		for (;;)
+			;
+	if (osa_BlockPoolCreate(&wlanBlockPool2, &wlanBlockPool2Config, wlanBlockPool2Control,
+				wlanBlockPool2Memory) != 0)
+		for (;;)
+			;
+	wlanConnectionIdleHook.function = wlanConnectionFreeListClean;
+	osaAddIdleHook(&wlanConnectionIdleHook);
+	return 0;
+}
+
+/* The connections of the BSS, this one included, counting the one that is not set up yet. */
+int wlanConnectionBssCount(struct WlanConnection *connection)
+{
+	int count = 0;
+
+	if (connection->peerAddress[0] != 0 || connection->peerAddress[1] != 0 ||
+	    connection->peerAddress[2] != 0 || connection->peerAddress[3] != 0 ||
+	    connection->peerAddress[4] != 0 || connection->peerAddress[5] != 0)
+		count = 1;
+	while ((connection = wlanConnectionNextByBss(connection, connection->bssType, connection->bssNumber)) != NULL)
+		++count;
+	return count;
+}
+
+/*
+ * Makes a connection of the interface type for a BSS: it comes from the
+ * connection pool (the BSS's access point role may take a transmit buffer
+ * instead), is cleared and set up for its type, and is put at the end of the
+ * list. NULL: nothing was free, or no index or buffer could be had.
+ */
+struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
+					       const uint8_t *local, const uint8_t *peer,
+					       int channel, void *driver)
+{
+	struct WlanConnection *first = wlanConnectionFind(bssType, bssNumber);
+	OsaBuffer *buffer = osa_BufferAlloc(&wlanConnectionPool, 0, 0);
+	struct WlanConnection *connection;
+	struct WlanConnection **tail;
+	UINT posture;
+
+	if (buffer == NULL) {
+		if (interfaceType != 5)
+			return NULL;
+		if (first == NULL)
+			return NULL;
+		if ((unsigned int)wlanConnectionBssCount(first) >= 17)
+			return NULL;
+		buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);
+		if (buffer == NULL)
+			return NULL;
+	}
+	connection = (struct WlanConnection *)((uint8_t *)buffer + buffer->dataOffset);
+	__aeabi_memclr4(connection, 944);
+	connection->interfaceType = interfaceType;
+	connection->bssType = bssType;
+	connection->bssNumber = bssNumber;
+	connection->device = driver;
+	connection->channel = channel;
+	connection->flags2 = (connection->flags2 & ~4) | (4 * (first == NULL));
+	connection->beaconRssiLast = -98;
+	connection->noiseLast = -98;
+	connection->txPowerLimit = 255;
+	if (interfaceType != 5) {
+		if ((interfaceType == 2 || interfaceType == 3) && wlanConnectionInfoAttach(connection) != 0)
+			goto fail;
+		if (first != NULL)
+			__aeabi_memcpy4(connection->interfaceAddress, first->interfaceAddress, 6);
+		else if (connection->interfaceType != 4)
+			__aeabi_memcpy4(connection->interfaceAddress, wlanDeviceAddress->address, 6);
+		else
+			__aeabi_memcpy(connection->interfaceAddress, local, 6);
+		if (wlanConnectionIndexAcquire(connection) != 0) {
+			if (connection->interfaceType == 2 || connection->interfaceType == 3)
+				wlanConnectionTeardownBss(connection);
+			goto fail;
+		}
+		if (peer != NULL)
+			__aeabi_memcpy(connection->peerAddress, peer, 6);
+		connection->radioParams = wlanRadioConfig->params;
+		__aeabi_memclr(wlanRadioConfig->params, 15);
+		connection->subscribeTriggered = 0;
+		connection->lastSequence = 0xffff;
+		connection->reserved378 = 0;
+		connection->state = 0;
+		connection->dataRate = 254;
+		connection->groupRate = 254;
+		connection->flags2 &= ~0x10;
+		connection->snmpBssParams[1] = NULL;
+		connection->reserved664 = 0;
+		connection->reserved668 = 0;
+		connection->snmpBssParams[0] = NULL;
+		__aeabi_memclr4(&connection->bssCapability, 60);
+		__aeabi_memclr4(connection->localAddress, 6);
+		__aeabi_memclr4(connection->networkSsid, 32);
+		connection->networkSsidLength = 0;
+		connection->dtimPeriod = 0;
+		connection->beaconPeriod = 0;
+		if (local != NULL)
+			__aeabi_memcpy(connection->localAddress, local, 6);
+		connection->flags &= 0x3f;
+		wlanSignalInit(connection);
+		wlanPsDispatchPacket(connection, 1, macTxNotifySelectState(connection));
+	}
+	connection->rtsThreshold[0] = wlanDeviceAddress->rtsThreshold[0];
+	connection->rtsThreshold[1] = wlanDeviceAddress->rtsThreshold[1];
+	connection->fragThreshold[0] = wlanDeviceAddress->fragThreshold[0];
+	connection->fragThreshold[1] = wlanDeviceAddress->fragThreshold[1];
+	connection->shortRetryLimit = wlanDeviceAddress->shortRetryLimit;
+	connection->longRetryLimit = wlanDeviceAddress->longRetryLimit;
+	connection->beaconPeriod = 100;
+	connection->dtimPeriod = 0;
+	switch (interfaceType) {
+	case 0:
+		connection->owner = connection;
+		macMgmtSetupContext(connection);
+		wlanConnectionSetupType0(connection);
+		break;
+	case 1:
+		wlanConnectionSetupType1(connection);
+		break;
+	case 2:
+		wlanConnectionSetupType2(connection);
+		break;
+	case 3:
+		((struct WlanSqramState *)&connection->localName)->dataPendingStatus = &wlanBssTargetCounter;
+		wlanConnectionSetupType3(connection);
+		wlanConnectionSetupType3Info(connection);
+		connection->rxManagement = wlanStaRxManagement;
+		connection->rxControl = wlanStaRxControl;
+		break;
+	case 4: {
+		struct WlanSqramState *state;
+
+		if (wlanConnectionSlotAttach(connection) != 0) {
+			wlanConnectionIndexRelease(connection);
+			goto fail;
+		}
+		connection->probeResponseBuffer->allocatorTag = 1;
+		connection->state = 2;
+		connection->owner = connection;
+		macMgmtSetupContext(connection);
+		connection->mode = 4;
+		wlanConnectionActivate(connection);
+		connection->rxManagement = wlanAmpRxManagement;
+		connection->flags |= 4;
+		wlanConnectionSetActiveFlag(connection, 1);
+		state = (struct WlanSqramState *)&connection->rsnElement[47];
+		state->erpPending = wlanIbssErpPending;
+		state->dataPendingStatus = &wlanDataPendingStatus;
+		state->currentState = wlanBssCurrentState;
+		connection->transmitBusy = 0;
+		ampPalCopySupportedRates(connection);
+		break;
+	}
+	default:
+		break;
+	}
+	posture = sysIrqDisable();
+	tail = &wlanConnectionList;
+	if (wlanConnectionList != NULL) {
+		struct WlanConnection *last = wlanConnectionList;
+
+		while (last->next != NULL)
+			last = last->next;
+		tail = &last->next;
+	}
+	*tail = connection;
+	sysIrqRestore(posture);
+	return connection;
+fail:
+	osa_BufferFree(buffer);
+	return NULL;
+}
+
+/*
+ * A connection takes another interface type (or, for a station, another
+ * mode) and starts over: the radio parameters, the counters, the state and
+ * the signal measurements are reset, the addresses replaced.
+ */
+int wlanConnectionReconfigure(struct WlanConnection *connection, int interfaceType,
+			      const uint8_t *local, const uint8_t *peer)
+{
+	int mode = 0;
+
+	if (connection->interfaceType == 3)
+		mode = interfaceType;
+	else
+		connection->interfaceType = interfaceType;
+	if (peer != NULL)
+		__aeabi_memcpy(connection->peerAddress, peer, 6);
+	connection->radioParams = wlanRadioConfig->params;
+	__aeabi_memclr(wlanRadioConfig->params, 15);
+	connection->subscribeTriggered = 0;
+	connection->lastSequence = 0xffff;
+	connection->reserved378 = 0;
+	connection->state = 0;
+	connection->dataRate = 254;
+	connection->groupRate = 254;
+	connection->flags2 &= ~0x10;
+	__aeabi_memclr4(&connection->bssCapability, 60);
+	if (local != NULL)
+		__aeabi_memcpy(connection->localAddress, local, 6);
+	wlanSignalInit(connection);
+	wlanPsDispatchPacket(connection, 1, macTxNotifySelectState(connection));
+	switch (connection->interfaceType) {
+	case 0:
+		wlanConnectionSetupType0(connection);
+		break;
+	case 1:
+		wlanConnectionSetupType1(connection);
+		break;
+	case 3:
+		if (mode == 0) {
+			struct WlanSqramState *state = (struct WlanSqramState *)&connection->secondTimerHandle;
+
+			wlanConnectionActivate(connection);
+			state->erpPending = wlanIbssErpPending;
+			state->dataPendingStatus = &wlanDataPendingStatus;
+			state->currentState = wlanBssCurrentState;
+			connection->rxManagement = wlanStaRxManagement;
+			connection->rxControl = wlanStaRxControl;
+			wlanSubscribeApplyThresholds(connection);
+		} else if (mode == 2) {
+			wlanConnectionSetupType3Info(connection);
+		}
+		break;
+	default:
+		break;
+	}
+	return 0;
+}
+
+/* The access point (a station's connection in mode 2) is copied into a new connection. */
+struct WlanConnection *wlanConnectionDuplicateAp(const uint8_t *peer, const struct WlanConnection *source)
+{
+	struct WlanConnection *copy = wlanConnectionConfigure(source->interfaceType, source->bssType,
+							     source->bssNumber, NULL, NULL, 0, source->device);
+
+	__aeabi_memcpy4(copy->networkSsid, source->networkSsid, 32);
+	copy->networkSsidLength = source->networkSsidLength;
+	copy->dtimPeriod = source->dtimPeriod;
+	copy->beaconPeriod = source->beaconPeriod;
+	copy->mode = source->mode;
+	copy->localName.length = source->localName.length;
+	copy->rxManagement = wlanApRxManagement;
+	copy->rxControl = wlanApRxControl;
+	return copy;
+}
+
+/* The same for a connection of interface type 2. */
+struct WlanConnection *wlanConnectionDuplicateType2(const uint8_t *peer, const struct WlanConnection *source)
+{
+	struct WlanConnection *copy = wlanConnectionConfigure(source->interfaceType, source->bssType,
+							     source->bssNumber, NULL, NULL, 0, source->device);
+
+	__aeabi_memcpy4(copy->networkSsid, source->networkSsid, 32);
+	copy->mode = source->mode;
+	copy->networkSsidLength = source->networkSsidLength;
+	copy->dtimPeriod = source->dtimPeriod;
+	copy->beaconPeriod = source->beaconPeriod;
+	return copy;
+}
+
+#define COPY_BITS(dst, src, mask)	((dst) = ((dst) & ~(mask)) | ((src) & (mask)))
+
+/*
+ * An IBSS's connection is copied into a connection of interface type 5
+ * (one more member of the network) that then takes its interface type, state
+ * machine, addresses, rates and flags; the peer is the one of the copy.
+ */
+void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source)
+{
+	struct WlanConnection *copy;
+
+	if (source->interfaceType == 1 && (source->stationFlags & 0x80))
+		return;
+	copy = wlanConnectionConfigure(5, source->bssType, source->bssNumber, NULL, NULL, 0, source->device);
+	if (copy == NULL)
+		return;
+	copy->mode = source->mode;
+	copy->interfaceType = source->interfaceType;
+	macMgmtFilterState(&copy->smState);
+	copy->owner = copy;
+	copy->smState = copy->smStates + 36;
+	__aeabi_memcpy4(&copy->bssCapability, &source->bssCapability, 60);
+	__aeabi_memcpy4(copy->localAddress, source->localAddress, 6);
+	__aeabi_memcpy4(copy->networkSsid, source->networkSsid, 32);
+	copy->networkSsidLength = source->networkSsidLength;
+	copy->dtimPeriod = source->dtimPeriod;
+	copy->beaconPeriod = source->beaconPeriod;
+	copy->rtsThreshold[0] = source->rtsThreshold[0];
+	copy->rtsThreshold[1] = source->rtsThreshold[1];
+	copy->fragThreshold[0] = source->fragThreshold[0];
+	copy->fragThreshold[1] = source->fragThreshold[1];
+	copy->shortRetryLimit = source->shortRetryLimit;
+	copy->longRetryLimit = source->longRetryLimit;
+	__aeabi_memcpy(copy->peerAddress, peer, 6);
+	__aeabi_memcpy4(copy->interfaceAddress, wlanDeviceAddress->address, 6);
+	__aeabi_memclr4(copy->peerLinkState, 240);
+	copy->rxManagement = source->rxManagement;
+	COPY_BITS(copy->txOptions, source->txOptions, 0x10);
+	COPY_BITS(copy->hostFlags, source->hostFlags, 0x08);
+	COPY_BITS(copy->hostFlags, source->hostFlags, 0x10);
+	copy->beaconBuffer = source->beaconBuffer;
+	copy->probeResponseBuffer = source->probeResponseBuffer;
+	copy->dataRate = source->dataRate;
+	copy->groupRate = source->groupRate;
+	COPY_BITS(copy->flags, source->flags, 0x40);
+	COPY_BITS(copy->flags, source->flags, 0x80);
+	COPY_BITS(copy->flags2, source->flags2, 0x01);
+	COPY_BITS(copy->flags, source->flags, 0x04);
+	copy->stationFlags = (copy->stationFlags & ~0x41u) | (source->stationFlags & 1);
+	if (!(source->flags & 4)) {
+		copy->reserved664 = source->reserved664;
+		copy->reserved668 = source->reserved668;
+		copy->snmpBssParams[0] = source->snmpBssParams[0];
+		copy->snmpBssParams[1] = source->snmpBssParams[1];
+	}
+}
+
+/* A connection is copied by its interface type. */
+void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source)
+{
+	if (source->interfaceType == 1)
+		wlanConnectionDuplicateIbss(peer, source);
+	else if (source->interfaceType == 2)
+		wlanConnectionDuplicateType2(peer, source);
+	else if (source->interfaceType == 3 && source->mode == 2)
+		wlanConnectionDuplicateAp(peer, source);
 }

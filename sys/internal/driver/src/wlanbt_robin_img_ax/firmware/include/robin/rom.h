@@ -35,6 +35,8 @@ int romLibScheduleState(void);			/* 0x03f3a52d: after the host changes the conne
 int romLibApplyState(void);			/* 0x03f3a515: after it */
 void romLibScheduleContext(void);		/* 0x03f3a96b */
 void romLibAcquireContext(void);		/* 0x03f3aa10: every time the MAC's events are read */
+int romLibCheckContext(uintptr_t argument);	/* 0x03f3a878 */
+int romLibDispatchContext(uintptr_t argument);	/* 0x03f3a8ba */
 void romLibResolveContext(unsigned int slotTime);	/* 0x03f3a963: microseconds */
 void romLibFormatContext(void);			/* 0x03f3a9c5 */
 void romLibInspectContext(int value);		/* 0x03f3a9d5 */
