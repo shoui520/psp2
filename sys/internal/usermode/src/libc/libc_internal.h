@@ -133,6 +133,8 @@ extern unsigned long long _Randseed;
 #define SCE_LIBC__EXIT_SUCCESS_CODE	0x104	/* _Exit(0) */
 #define SCE_LIBC__EXIT_FAILURE_CODE	0x105	/* _Exit(nonzero) */
 #define SCE_LIBC_ASSERT_CODE		0x107	/* a failed assertion */
+#define SCE_LIBC_QUICK_EXIT_SUCCESS_CODE	0x10b	/* quick_exit(0) */
+#define SCE_LIBC_QUICK_EXIT_FAILURE_CODE	0x10c	/* quick_exit(nonzero) */
 void *_Gettlsbuf(size_t size);
 
 /* exit's DSO: __cxa_finalize's argument (__cxa_set_dso_handle_main) */
