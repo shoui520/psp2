@@ -1,5 +1,5 @@
 /*
- * The AVC encoder's kernels (0x89cfe0-0x8a0000): VLIW code its jobs call,
+ * The AVC encoder's kernels (0x89cfe0-0x8a2208): VLIW code its jobs call,
  * keeping their state in the IVC2 coprocessor's registers (here an
  * AvcencDownscale). Each one is written as what it does to its lanes; the
  * downscale's kernels pass sums from one to the next in the accumulators,
@@ -1661,4 +1661,481 @@ void avcencRefineChoose(const AvcencRefine *refine, const int8_t (*deltas)[2],
 		vectors[part][0] = deltas[part][0] * 4 + refineOffsets[best][0];
 		vectors[part][1] = deltas[part][1] * 4 + refineOffsets[best][1];
 	}
+}
+
+/*
+ * the 4x4 blocks' neighbours, in decoding order: the block above each and
+ * the one left of it, by its index in the macroblock, less 16 for the
+ * macroblock above's or the left one's
+ */
+static const int8_t aboveBlocks[16] = {
+	-6, -5, 0, 1, -2, -1, 4, 5, 2, 3, 8, 9, 6, 7, 12, 13,
+};
+static const int8_t leftBlocks[16] = {
+	-11, 0, -9, 2, 1, 4, 3, 6, -3, 8, -1, 10, 9, 12, 11, 14,
+};
+
+/*
+ * 0x8a14b8: the 4x4 blocks' modes coded: each one's prediction is the
+ * smaller of its neighbours', DC (2) for one whose bit is set in the masks
+ * (the first eight blocks', the last eight's). A mode equal to it is coded
+ * -128, one above it less one. The modes predicted are counted
+ */
+uint32_t avcencMotionModes(const uint8_t *above, const uint8_t *left, const uint8_t *modes,
+	uint32_t first, uint32_t second, int8_t *codes)
+{
+	uint32_t block, matches = 0, mask, upper, beside, predicted, mode;
+
+	for (block = 0; block < 16; block++) {
+		mask = block < 8 ? first >> block : second >> (block - 8);
+		upper = aboveBlocks[block] < 0 ? above[16 + aboveBlocks[block]] :
+			modes[aboveBlocks[block]];
+		beside = leftBlocks[block] < 0 ? left[16 + leftBlocks[block]] :
+			modes[leftBlocks[block]];
+		predicted = mask & 1 ? 2 : upper < beside ? upper : beside;
+		mode = modes[block];
+		if (mode == predicted) {
+			matches++;
+			codes[block] = -128;
+		} else {
+			codes[block] = mode > predicted ? mode - 1 : mode;
+		}
+	}
+	return matches;
+}
+
+/* the leading zeros of a half */
+static inline uint32_t leadingZeros(uint16_t value)
+{
+	uint32_t zeros = 0;
+
+	while (zeros < 16 && !(value & 0x8000 >> zeros))
+		zeros++;
+	return zeros;
+}
+
+/* a vector difference's bits, roughly: 1 for none, then its size plus 2, past 8 its log's */
+static inline int16_t vectorBits(int16_t difference)
+{
+	uint16_t size = difference < 0 ? -difference : difference;
+
+	if (size == 0)
+		return 1;
+	if ((int16_t)size > 8)
+		return (15 - leadingZeros(size - 1)) * 2 + 8;
+	return size + 2;
+}
+
+/* a vector difference's Exp-Golomb code: se(v)'s length */
+static inline int16_t codeBits(int16_t difference)
+{
+	int16_t twice = difference * 2;
+	uint16_t number = twice > 0 ? twice - 1 : -twice;
+
+	return (15 - leadingZeros(number + 1)) * 2 + 1;
+}
+
+/* the lanes' bits, by pair */
+static void sumBits(AvcencMotion *motion, const int16_t *lanes)
+{
+	motion->bits[0] = lanes[0] + lanes[1];
+	motion->bits[1] = lanes[2] + lanes[3];
+}
+
+/* 0x8a1588: the first differences' bits, roughly, the inter decision's weight */
+void avcencMotionBits(AvcencMotion *motion)
+{
+	int16_t lanes[4];
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		lanes[i] = vectorBits(motion->differences[0][i]);
+	sumBits(motion, lanes);
+}
+
+/* 0x8a15c8: both differences' */
+void avcencMotionBits8x8(AvcencMotion *motion)
+{
+	int16_t lanes[4];
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		lanes[i] = vectorBits(motion->differences[1][i]) +
+			vectorBits(motion->differences[0][i]);
+	sumBits(motion, lanes);
+}
+
+/* 0x8a1638: the first differences' bits as coded */
+void avcencMotionCodeBits(AvcencMotion *motion)
+{
+	int16_t lanes[4];
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		lanes[i] = codeBits(motion->differences[0][i]);
+	sumBits(motion, lanes);
+}
+
+/* 0x8a1688: both differences' */
+void avcencMotionCodeBits8x8(AvcencMotion *motion)
+{
+	int16_t lanes[4];
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		lanes[i] = codeBits(motion->differences[0][i]) +
+			codeBits(motion->differences[1][i]);
+	sumBits(motion, lanes);
+}
+
+/*
+ * 0x8a16f0: the blocks' vectors whole: the inter decision's offsets from
+ * the macroblock's vector (in whole pixels) added to it, and its costs summed
+ */
+void avcencMotionVectors(AvcencMotion *motion, const int16_t *vector, const int16_t (*vectors)[2],
+	const uint16_t *costs)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		motion->vectors[0][i] = vectors[i >> 1][i & 1] + vector[i & 1] * 4;
+		motion->vectors[1][i] = vectors[2 + (i >> 1)][i & 1] + vector[i & 1] * 4;
+	}
+	motion->satd = (uint16_t)(costs[0] + costs[1]) + (uint16_t)(costs[2] + costs[3]);
+}
+
+/* the median of three, lane by lane */
+static inline int16_t median3(int16_t a, int16_t b, int16_t c)
+{
+	int16_t low = a < b ? a : b, high = a < b ? b : a;
+
+	if (high > c)
+		high = c;
+	return low > high ? low : high;
+}
+
+/*
+ * 0x8a1730: the first block's prediction, the median of its neighbours,
+ * those unavailable zero; one alone available is taken
+ */
+void avcencMotionMedian(AvcencMotion *motion)
+{
+	int16_t (*neighbours)[4] = motion->neighbours[0];
+	uint32_t i, n, available = 0;
+
+	for (n = 0; n < 3; n++) {
+		if (motion->unavailable & 1 << n)
+			for (i = 0; i < 4; i++)
+				neighbours[n][i] = 0;
+		else
+			available++;
+	}
+	for (i = 0; i < 4; i++) {
+		if (available != 1)
+			motion->predictions[0][i] = median3(neighbours[MOTION_LEFT][i],
+				neighbours[MOTION_ABOVE][i], neighbours[MOTION_CORNER][i]);
+		else if (!(motion->unavailable & 1 << MOTION_CORNER))
+			motion->predictions[0][i] = neighbours[MOTION_CORNER][i];
+		else if (!(motion->unavailable & 1 << MOTION_ABOVE))
+			motion->predictions[0][i] = neighbours[MOTION_ABOVE][i];
+		else
+			motion->predictions[0][i] = neighbours[MOTION_LEFT][i];
+	}
+}
+
+/* the medians of two blocks' neighbours, their vectors in the lanes' two halves */
+static void medianPairs(int16_t *prediction, const int16_t *left0, const int16_t *left1,
+	const int16_t *above0, const int16_t *above1, const int16_t *corner0,
+	const int16_t *corner1)
+{
+	uint32_t i;
+
+	for (i = 0; i < 2; i++) {
+		prediction[i] = median3(left0[i], above0[i], corner0[i]);
+		prediction[2 + i] = median3(left1[i], above1[i], corner1[i]);
+	}
+}
+
+/* 0x8a1790: the first two blocks' predictions, the medians of their neighbours */
+void avcencMotionMedianPairs(AvcencMotion *motion)
+{
+	int16_t (*first)[4] = motion->neighbours[0], (*second)[4] = motion->neighbours[1];
+
+	medianPairs(motion->predictions[0], first[MOTION_LEFT], second[MOTION_LEFT],
+		first[MOTION_ABOVE], second[MOTION_ABOVE], first[MOTION_CORNER],
+		second[MOTION_CORNER]);
+}
+
+/*
+ * 0x8a17b0: the last two blocks' (8x8): block 2's are the left macroblock's
+ * block 3 (zero when it is unavailable) and blocks 0 and 1, block 3's
+ * blocks 2, 1 and 0
+ */
+void avcencMotionMedianLower(AvcencMotion *motion)
+{
+	static const int16_t none[4];
+	const int16_t *left = motion->unavailable & 1 << MOTION_LEFT ? none : motion->leftBelow;
+
+	medianPairs(motion->predictions[1], left, motion->vectors[1], motion->vectors[0],
+		&motion->vectors[0][2], &motion->vectors[0][2], motion->vectors[0]);
+}
+
+/*
+ * 0x8a17e0: P_Skip's prediction, the median of the neighbours (each
+ * unavailable one already zero); one alone available is taken
+ */
+void avcencMotionSkipMedian(AvcencMotion *motion, int16_t *vector)
+{
+	int16_t (*neighbours)[4] = motion->neighbours[0];
+	uint32_t i, n, available = 0;
+
+	for (n = 0; n < 3; n++)
+		if (!(motion->unavailable & 1 << n))
+			available++;
+	for (i = 0; i < 2; i++) {
+		if (available != 1)
+			vector[i] = median3(neighbours[MOTION_LEFT][i], neighbours[MOTION_ABOVE][i],
+				neighbours[MOTION_CORNER][i]);
+		else if (!(motion->unavailable & 1 << MOTION_CORNER))
+			vector[i] = neighbours[MOTION_CORNER][i];
+		else if (!(motion->unavailable & 1 << MOTION_ABOVE))
+			vector[i] = neighbours[MOTION_ABOVE][i];
+		else
+			vector[i] = neighbours[MOTION_LEFT][i];
+	}
+}
+
+/* one pass of the 4x4 forward transform, over the rows' lanes */
+static void transformPass(int32_t (*block)[4])
+{
+	int32_t sum0, sum1, difference0, difference1;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		sum0 = block[0][i] + block[3][i];
+		sum1 = block[1][i] + block[2][i];
+		difference0 = block[0][i] - block[3][i];
+		difference1 = block[1][i] - block[2][i];
+		block[0][i] = sum0 + sum1;
+		block[2][i] = sum0 - sum1;
+		block[1][i] = difference1 + difference0 * 2;
+		block[3][i] = difference0 - difference1 * 2;
+	}
+}
+
+/*
+ * 0x8a1828: a 4x4 block's forward integer transform, its coefficients'
+ * sizes; whether rows 0 and 2 are below their thresholds
+ */
+uint32_t avcencMotionTransform(const AvcencMotion *motion, int32_t (*block)[4])
+{
+	int32_t column[4][4];
+	uint32_t i, j, below = 1;
+
+	transformPass(block);
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			column[j][i] = block[i][j];
+	transformPass(column);
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 4; j++)
+			block[i][j] = abs32(column[i][j]);
+		if (i == 0 || i == 2)
+			for (j = 0; j < 4; j++)
+				if (motion->thresholds[0][j] <= block[i][j])
+					below = 0;
+	}
+	return below;
+}
+
+/*
+ * 0x8a18a8: a band of the prediction, four lines of the reference: their
+ * left eight pixels from one column of a tile, the right ones from the next
+ */
+void avcencMotionLoadLuma(AvcencMotion *motion, const uint8_t *first, const uint8_t *second,
+	int32_t pitch, uint32_t line)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 8; j++) {
+			motion->luma[i][j] = first[j];
+			motion->luma[i][8 + j] = second[j];
+		}
+		first += 16;
+		second += 16;
+		if (line + i == 15) {
+			first += pitch * 16 - 256;
+			second += pitch * 16 - 256;
+		}
+	}
+}
+
+/* 0x8a1950: from three columns, the pixels from the offset into the first */
+void avcencMotionLoadLumaShifted(AvcencMotion *motion, const uint8_t *first,
+	const uint8_t *second, int32_t pitch, uint32_t line, uint32_t offset)
+{
+	const uint8_t *third = first + 256;
+	uint8_t pixels[24];
+	uint32_t i, j;
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 8; j++) {
+			pixels[j] = first[j];
+			pixels[8 + j] = second[j];
+			pixels[16 + j] = third[j];
+		}
+		for (j = 0; j < 16; j++)
+			motion->luma[i][j] = pixels[offset + j];
+		first += 16;
+		second += 16;
+		third += 16;
+		if (line + i == 15) {
+			first += pitch * 16 - 256;
+			second += pitch * 16 - 256;
+			third += pitch * 16 - 256;
+		}
+	}
+}
+
+/*
+ * a band's lines, loaded within the picture, moved to where the vector
+ * puts them: past the left or the right edge, its pixel is repeated, past
+ * the top or the bottom, its line
+ */
+static void moveBand(uint8_t *band, uint32_t pitch, uint32_t size, int32_t x, int32_t y,
+	int32_t width, int32_t height)
+{
+	int32_t shift, line, i, from;
+	uint8_t pixels[16], fill;
+
+	shift = x < 0 ? x : x > width - (int32_t)size ? x - (width - (int32_t)size) : 0;
+	if (shift != 0) {
+		for (line = 0; line < 4; line++) {
+			fill = band[line * pitch + (shift < 0 ? 0 : size - 1)];
+			for (i = 0; i < (int32_t)size; i++) {
+				from = i + shift;
+				pixels[i] = from < 0 || from >= (int32_t)size ? fill :
+					band[line * pitch + from];
+			}
+			for (i = 0; i < (int32_t)size; i++)
+				band[line * pitch + i] = pixels[i];
+		}
+	}
+	for (; y < 0; y++)
+		for (line = 3; line > 0; line--)
+			for (i = 0; i < (int32_t)size; i++)
+				band[line * pitch + i] = band[(line - 1) * pitch + i];
+	for (; y > height - 4; y--)
+		for (line = 0; line < 3; line++)
+			for (i = 0; i < (int32_t)size; i++)
+				band[line * pitch + i] = band[(line + 1) * pitch + i];
+}
+
+/* 0x8a1a38: the luma band moved to the vector's position */
+void avcencMotionEdgeLuma(AvcencMotion *motion, int32_t x, int32_t y, int32_t width,
+	int32_t height)
+{
+	moveBand(motion->luma[0], 16, 16, x, y, width, height);
+}
+
+/* whether a 4x4 block of the source, less the prediction, is below the thresholds once transformed */
+static uint32_t blockBelow(const AvcencMotion *motion, const uint8_t *prediction,
+	uint32_t predictionPitch, const uint8_t *source, uint32_t sourcePitch)
+{
+	int32_t block[4][4];
+	uint32_t i, j;
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			block[i][j] = prediction[i * predictionPitch + j] - source[i * sourcePitch + j];
+	if (!avcencMotionTransform(motion, block))
+		return 0;
+	for (j = 0; j < 4; j++)
+		if (motion->thresholds[1][j] <= block[1][j] || motion->thresholds[1][j] <= block[3][j])
+			return 0;
+	return 1;
+}
+
+/*
+ * 0x8a1c08: P_Skip's check of a band of the luma: each 4x4 block of the
+ * source's four lines less the prediction, transformed, below the thresholds
+ */
+uint32_t avcencMotionSkipLuma(const AvcencMotion *motion, const uint8_t *source)
+{
+	uint32_t block;
+
+	for (block = 0; block < 4; block++)
+		if (!blockBelow(motion, &motion->luma[0][block * 4], 16, source + block * 4, 16))
+			return 0;
+	return 1;
+}
+
+/* 0x8a1d80: a band of the chroma, U's eight pixels of each line and V's, from one column of a tile */
+void avcencMotionLoadChroma(AvcencMotion *motion, const uint8_t *first, int32_t pitch,
+	uint32_t line)
+{
+	const uint8_t *second = first + 64;
+	uint32_t i, j;
+
+	for (i = 0; i < 4; i++) {
+		for (j = 0; j < 8; j++) {
+			motion->chroma[0][i][j] = first[j];
+			motion->chroma[1][i][j] = second[j];
+		}
+		first += 8;
+		second += 8;
+		if (line + i == 7) {
+			first += pitch * 8 - 64;
+			second += pitch * 8 - 64;
+		}
+	}
+}
+
+/* 0x8a1e30: from two columns, the pixels from the offset into the first */
+void avcencMotionLoadChromaShifted(AvcencMotion *motion, const uint8_t *first,
+	const uint8_t *second, int32_t pitch, uint32_t line, uint32_t offset)
+{
+	const uint8_t *columns[4] = { first, second, first + 64, second + 64 };
+	uint8_t pixels[16];
+	uint32_t i, j, plane;
+
+	for (i = 0; i < 4; i++) {
+		for (plane = 0; plane < 2; plane++) {
+			for (j = 0; j < 8; j++) {
+				pixels[j] = columns[plane * 2][j];
+				pixels[8 + j] = columns[plane * 2 + 1][j];
+			}
+			for (j = 0; j < 8; j++)
+				motion->chroma[plane][i][j] = pixels[offset + j];
+		}
+		for (j = 0; j < 4; j++) {
+			columns[j] += 8;
+			if (line + i == 7)
+				columns[j] += pitch * 8 - 64;
+		}
+	}
+}
+
+/* 0x8a1f58: the chroma band moved to the vector's position */
+void avcencMotionEdgeChroma(AvcencMotion *motion, int32_t x, int32_t y, int32_t width,
+	int32_t height)
+{
+	moveBand(motion->chroma[0][0], 8, 8, x, y, width, height);
+	moveBand(motion->chroma[1][0], 8, 8, x, y, width, height);
+}
+
+/*
+ * 0x8a2090: P_Skip's check of a band of the chroma: one 4x4 block of U and
+ * one of V, the first band U's left one and V's right one, the second the
+ * others
+ */
+uint32_t avcencMotionSkipChroma(const AvcencMotion *motion, const uint8_t *source,
+	uint32_t first)
+{
+	uint32_t u = first ? 0 : 4, v = first ? 4 : 0;
+
+	if (!blockBelow(motion, &motion->chroma[0][0][u], 8, source + u, 8))
+		return 0;
+	return blockBelow(motion, &motion->chroma[1][0][v], 8, source + 64 + v, 8);
 }

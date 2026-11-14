@@ -467,15 +467,90 @@ typedef struct AvcencSearchInfo {
 typedef struct AvcencInterRecord {
 	int8_t deltas[4][2];		/* each 8x8 block's, in whole pixels, x and y */
 	int16_t vectors[4][2];		/* the refined ones, by partition, in quarter pixels */
-	uint8_t reserved[16];
+	int16_t differences[4][2];	/* the vectors' differences from their predictions */
 	uint16_t costs[4];		/* the SATDs at the whole pixels, by partition */
 	int16_t vector[2];		/* the macroblock's, in pixels */
 	uint8_t reserved2[4];
 	uint8_t partition;		/* 0 16x16, 1 16x8, 2 8x16, 3 8x8 */
-	int8_t skip;			/* the macroblock is skipped */
-	int8_t wholePixel;		/* its vector is not refined */
+	int8_t skip;			/* the decision takes P_Skip */
+	int8_t intra;			/* it takes intra, the vector is not refined */
 	uint8_t reserved3[5];
 } AvcencInterRecord;
+
+/*
+ * a row of groups' motion statistics (64 bytes, sixteen of them), summed
+ * into the first at the picture's end for the rate control
+ */
+typedef struct AvcencMotionStats {
+	uint32_t cost;			/* the macroblocks' SATDs, intra ones weighted */
+	uint32_t bits;			/* their modes' and vectors' bits */
+	uint32_t average;		/* divided by the macroblocks at the end */
+	uint16_t intraCount;
+	uint16_t intra16x16Count;
+	uint16_t interCount;
+	uint16_t reserved;
+	uint16_t skipCount;
+	uint16_t skipDecidedCount;	/* skipped as the inter decision had it */
+	uint16_t skipFoundCount;	/* skipped by the check alone */
+	uint8_t reserved2[38];
+} AvcencMotionStats;
+
+/*
+ * the motion job's per core info (1280 bytes of CORE_INFO_SIZE): each
+ * macroblock's final mode, its vectors' coding and the P_Skip check, with
+ * the records of its neighbours (left, above, above right and above left)
+ */
+#define MOTION_INFO_SIZE	1280
+typedef struct AvcencMotionInfo {
+	uint8_t reserved[840];
+	uint8_t firstColumn;		/* the row's */
+	uint8_t row;
+	uint8_t mbX;
+	uint8_t mbY;
+	uint32_t sliceType;
+	uint32_t reserved2;
+	uint32_t reference;		/* the reference picture's luma */
+	uint32_t referenceChroma;
+	uint32_t luma;			/* the macroblock's, in the source */
+	uint32_t chroma;
+	uint16_t pitch;			/* the reference's width */
+	uint16_t chromaPitch;
+	uint16_t width;			/* in pixels */
+	uint16_t height;
+	int16_t skipVector[2];		/* P_Skip's prediction, in quarter pixels */
+	uint16_t interCost;		/* the SATD and the weighted vector bits */
+	uint16_t interSatd;
+	uint8_t interBits;
+	uint8_t columns;		/* in the row */
+	int8_t sliceStart;		/* the row starts a slice */
+	uint8_t interWeight;		/* by QP */
+	int8_t qp;
+	uint8_t lumaShift2;
+	uint8_t lumaShift;
+	uint8_t chromaShift;
+	const int16_t *lumaThreshold2;
+	const int16_t *lumaThreshold;
+	const int16_t *chromaThreshold;
+	uint32_t macroblock;		/* the macroblock's record, as the decisions left it */
+	uint32_t macroblockAbove;
+	uint32_t macroblockLeft;
+	uint32_t interRecord;		/* the inter decision's records */
+	uint32_t interLeft;
+	uint32_t interAbove;
+	uint32_t interAboveRight;
+	uint32_t interAboveLeft;
+	uint32_t record;		/* the macroblock records */
+	uint32_t recordLeft;
+	uint32_t recordAbove;
+	uint32_t recordAboveRight;
+	uint32_t recordAboveLeft;
+	AvcencMotionStats *stats;	/* the row of groups' */
+	uint8_t reserved3[304];
+	int16_t sourcePitch;		/* the next picture's */
+	int16_t sourceChromaPitch;
+	uint16_t intraWeight;		/* by QP */
+	uint8_t reserved4[10];
+} AvcencMotionInfo;
 
 /*
  * the refinement job's per core info (896 bytes of CORE_INFO_SIZE): each
@@ -501,15 +576,33 @@ typedef struct AvcencRefineInfo {
 	uint8_t reserved2[28];
 } AvcencRefineInfo;
 
-/* a macroblock's decisions (64 bytes), as the next jobs read them */
+/*
+ * a macroblock's decisions (64 bytes), as the next jobs read them; the
+ * motion job writes its type over the modes and, for an inter macroblock,
+ * its vectors over the 4x4 blocks' modes
+ */
 typedef struct AvcencMacroblock {
-	uint8_t lumaMode;		/* the 16x16 prediction's, 4 for 4x4 blocks */
-	uint8_t chromaMode;
-	uint8_t reserved[6];
-	uint8_t blockModes[16];		/* the 4x4 blocks', two of a row, by 8x8 block */
-	uint8_t reserved2[24];
+	union {
+		struct {
+			uint8_t lumaMode;	/* the 16x16 prediction's, 4 for 4x4 blocks */
+			uint8_t chromaMode;
+		};
+		uint32_t type;		/* the macroblock's type and coding, from the motion job */
+	};
+	uint8_t reserved[4];
+	union {
+		uint8_t blockModes[16];	/* the 4x4 blocks', in decoding order */
+		int16_t vectors[4][2];	/* each 8x8 block's, in quarter pixels */
+	};
+	union {
+		int8_t modeCodes[16];	/* -128 for the predicted mode, else rem_intra4x4_pred_mode */
+		int16_t differences[4][2];	/* the vectors' from their predictions */
+	};
+	uint8_t reserved2[8];
 	uint16_t intraCost;		/* the 4x4 blocks' SATD; all ones when inter is taken */
-	uint8_t reserved3[14];
+	uint16_t reserved3;
+	uint16_t intraBits;		/* the modes' bits, less one a 4x4 block */
+	uint8_t reserved4[10];
 } AvcencMacroblock;
 
 /*
@@ -583,6 +676,8 @@ typedef char buffersSizeCheck[sizeof(AvcencBuffers) == BUFFERS_SIZE ? 1 : -1];
 typedef char slicesSizeCheck[sizeof(AvcencSlices) == SLICES_SIZE ? 1 : -1];
 typedef char rateSizeCheck[sizeof(AvcencRate) == RATE_STATE_SIZE ? 1 : -1];
 typedef char interRecordSizeCheck[sizeof(AvcencInterRecord) == 64 ? 1 : -1];
+typedef char motionInfoSizeCheck[sizeof(AvcencMotionInfo) == MOTION_INFO_SIZE ? 1 : -1];
+typedef char motionStatsSizeCheck[sizeof(AvcencMotionStats) == 64 ? 1 : -1];
 typedef char refineInfoSizeCheck[sizeof(AvcencRefineInfo) == REFINE_INFO_SIZE ? 1 : -1];
 typedef char macroblockSizeCheck[sizeof(AvcencMacroblock) == 64 ? 1 : -1];
 typedef char recordSizeCheck[sizeof(AvcencRecord) == RECORD_SIZE ? 1 : -1];

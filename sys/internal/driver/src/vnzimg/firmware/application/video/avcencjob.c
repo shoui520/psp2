@@ -1176,7 +1176,7 @@ static void avcencDecideChroma(AvcencDecideInfo *info)
 
 /*
  * 0x83a92c: the sub-pel refinement of a group's macroblocks, each one the
- * inter decision did not skip or keep at whole pixels; the group's job in
+ * inter decision did not skip or take as intra; the group's job in
  * the wavefront is signalled
  */
 static void refineMacroblock(AvcencRefineInfo *info);
@@ -1219,7 +1219,7 @@ void avcencJobRefine(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 		info->interRecord = records;
 		for (m = 0; m < columns; m++) {
 			record = (AvcencInterRecord *)info->interRecord;
-			if (!record->skip && !record->wholePixel)
+			if (!record->skip && !record->intra)
 				refineMacroblock(info);
 			info->luma += 256;
 			info->mbX++;
@@ -1428,4 +1428,952 @@ static void refineMacroblock(AvcencRefineInfo *info)
 	refineMerge(info, &refine);
 	avcencRefineChoose(&refine, (const int8_t (*)[2])record->deltas, record->vectors);
 	refineCosts(info);
+}
+
+/*
+ * the macroblock types the motion job leaves in a record, from bit 24 its
+ * coding (3, 0x13 for P_Skip's checks): an intra one's by its 16x16 mode
+ * (4 for 4x4 blocks) and its chroma mode, an inter one's by its partition
+ */
+static const uint32_t intraTypes[5][4] = {
+	{ 0x0243, 0x4243, 0x8243, 0xc243 }, { 0x1243, 0x5243, 0x9243, 0xd243 },
+	{ 0x2243, 0x6243, 0xa243, 0xe243 }, { 0x3243, 0x7243, 0xb243, 0xf243 },
+	{ 0x0203, 0x4203, 0x8203, 0xc203 },
+};
+static const uint32_t interTypes[4] = { 0x53, 0x56, 0x55, 0x58 };
+
+/* an intra macroblock's SATD scaled up by QP (in Q16, added), into the statistics' cost */
+static const uint16_t intraScales[52] = {
+	10354, 10354, 10158, 10616, 10747, 9568, 10551, 11468, 12320, 12255, 12713, 13369,
+	16252, 17235, 17563, 18153, 20447, 20905, 24510, 26279, 28639, 29818, 31522, 32833,
+	36110, 37421, 39190, 39976, 42270, 42991, 44630, 45154, 45875, 45481, 45809, 45350,
+	44957, 44761, 43909, 43712, 42991, 42926, 42336, 42532, 42860, 42139, 42270, 43122,
+	42598, 43122, 44433, 44957,
+};
+
+/* P_Skip's checks: the inter types again, then P_Skip's */
+#define SKIP_PARTITION		4
+static const uint32_t skipTypes[5] = { 0x53, 0x56, 0x55, 0x58, 0x843 };
+
+#define MACROBLOCK_CODED	0x03000000
+#define MACROBLOCK_CHECKED	0x13000000
+
+/* a neighbour's record: whether it is intra */
+static inline int32_t recordIntra(uint32_t record)
+{
+	return (((AvcencMacroblock *)record)->type & 0x300) == 0x200;
+}
+
+/* a neighbour's vector, from its inter record, as four lanes: its sign in the upper two */
+static inline void loadVector(int16_t *lanes, uint32_t interRecord, uint32_t block)
+{
+	const int16_t *vector = ((AvcencInterRecord *)interRecord)->vectors[block];
+
+	lanes[0] = vector[0];
+	lanes[1] = vector[1];
+	lanes[2] = vector[1] < 0 ? -1 : 0;
+	lanes[3] = lanes[2];
+}
+
+static inline void copyLanes(int16_t *to, const int16_t *from)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		to[i] = from[i];
+}
+
+static inline void clearLanes(int16_t *lanes)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		lanes[i] = 0;
+}
+
+/* the macroblock is the row's last */
+static inline int32_t lastColumn(const AvcencMotionInfo *info)
+{
+	return info->mbX == ((int32_t)info->width >> 4) - 1;
+}
+
+/*
+ * 0x83aed4: the motion job's settings: the reference's planes, the
+ * picture's size, the weights and the thresholds of its QP, and the row of
+ * groups' statistics
+ */
+static void motionSetup(AvcencPicture *picture, AvcencSlices *slices, AvcencMotionInfo *info,
+	int32_t row)
+{
+	info->sliceType = slices->sliceType;
+	info->reference = picture->luma;
+	info->referenceChroma = picture->chroma;
+	info->width = picture->widthInMbs * 16;
+	info->height = picture->heightInMbs * 16;
+	info->pitch = picture->width;
+	info->chromaPitch = picture->chromaWidth;
+	info->sourcePitch = picture->nextPitch;
+	info->sourceChromaPitch = picture->nextChromaPitch;
+	info->interWeight = interWeights[(uint8_t)picture->rateQp];
+	info->intraWeight = intraWeights[(uint8_t)picture->rateQp];
+	info->qp = picture->rateQp;
+	info->lumaThreshold2 = slices->lumaThreshold2;
+	info->lumaShift2 = slices->lumaShift2;
+	info->lumaThreshold = slices->lumaThreshold;
+	info->lumaShift = slices->lumaShift;
+	info->chromaThreshold = slices->chromaThreshold;
+	info->chromaShift = slices->chromaShift;
+	info->stats = (AvcencMotionStats *)vnzPublicOpenPrivate(picture->rowsMotion +
+		((row >> 1) % 16) * 64, 64);
+}
+
+/* 0x83afae: the statistics closed */
+static void motionStatsClose(AvcencPicture *picture, AvcencSlices *slices,
+	AvcencMotionInfo *info)
+{
+	vnzPublicClosePrivate((uint32_t)info->stats, 64);
+}
+
+/*
+ * 0x83afb8: a row's macroblocks from a column: the source's, their records
+ * and those of their neighbours: left of the first, and above (from above
+ * left of the first to above right of the last, those in the picture)
+ */
+static void motionRow(AvcencPicture *picture, AvcencSlices *slices, AvcencMotionInfo *info,
+	int32_t column, int32_t row, int32_t columns)
+{
+	int32_t width = picture->widthInMbs, count, i;
+	uint32_t records, interRecords, current;
+	int8_t sliceStart = 0;
+
+	for (i = 0; i < slices->count; i++) {
+		if (slices->firstRow[i] == row) {
+			sliceStart = 1;
+			break;
+		}
+	}
+	info->mbY = row;
+	info->mbX = column;
+	info->row = row;
+	info->firstColumn = column;
+	info->sliceStart = sliceStart;
+	info->columns = columns;
+	info->luma = picture->nextLuma + (uint16_t)picture->nextPitch * row * 16 + column * 256;
+	info->chroma = picture->nextChroma + (uint16_t)picture->nextChromaPitch * row * 8 +
+		column * 128;
+	records = picture->macroblockRecords + row * width * 64 + column * 64;
+	interRecords = picture->interRecords + row * width * 64 + column * 64;
+	current = vnzPublicOpenPrivate(records, columns * 64);
+	info->interRecord = vnzPublicOpenPrivate(interRecords, columns * 64);
+	info->record = current;
+	if (column >= 1) {
+		current = vnzPublicOpenProtected(records - 64, 64);
+		info->interLeft = vnzPublicOpenProtected(interRecords - 64, 64);
+		info->recordLeft = current;
+	}
+	if (row >= 1) {
+		count = column + columns < width ? columns + 2 : columns + 1;
+		records = picture->macroblockRecords + (row - 1) * width * 64 + column * 64;
+		interRecords = picture->interRecords + (row - 1) * width * 64 + column * 64;
+		if (column >= 1) {
+			current = vnzPublicOpenProtected(records - 64, count * 64);
+			info->interAboveLeft = vnzPublicOpenProtected(interRecords - 64, count * 64);
+			info->recordAboveLeft = current;
+			info->interAbove = info->interAboveLeft + 64;
+			info->recordAbove = current + 64;
+		} else {
+			count--;
+			current = vnzPublicOpenProtected(records, count * 64);
+			info->interAbove = vnzPublicOpenProtected(interRecords, count * 64);
+			info->recordAbove = current;
+		}
+		if (column < width - 1) {
+			info->interAboveRight = info->interAbove + 64;
+			info->recordAboveRight = info->recordAbove + 64;
+		}
+	}
+	info->macroblockAbove = info->recordAbove;
+	info->macroblockLeft = info->recordLeft;
+	info->macroblock = info->record;
+}
+
+/*
+ * 0x83b180: the next macroblock: its records and its neighbours'. The
+ * first's left ones are closed, the left ones are then the last
+ */
+static void motionNext(AvcencPicture *picture, AvcencMotionInfo *info)
+{
+	uint32_t mbX = info->mbX;
+
+	info->interRecord += 64;
+	info->record += 64;
+	if (info->firstColumn == mbX) {
+		if (mbX >= 1) {
+			vnzPublicCloseProtected(info->recordLeft, 64);
+			vnzPublicCloseProtected(info->interLeft, 64);
+		}
+		info->recordLeft = info->record - 64;
+		info->interLeft = info->interRecord - 64;
+	} else {
+		info->interLeft += 64;
+		info->recordLeft += 64;
+	}
+	if (info->row >= 1) {
+		info->interAbove += 64;
+		info->recordAbove += 64;
+		if ((int32_t)mbX < picture->widthInMbs - 1) {
+			info->interAboveRight += 64;
+			info->recordAboveRight += 64;
+		}
+		if (mbX == 0) {
+			info->recordAboveLeft = info->recordAbove - 64;
+			info->interAboveLeft = info->interAbove - 64;
+		} else {
+			info->interAboveLeft += 64;
+			info->recordAboveLeft += 64;
+		}
+	}
+	info->mbX = mbX + 1;
+	info->macroblockAbove = info->recordAbove;
+	info->macroblock = info->record;
+	info->macroblockLeft = info->recordLeft;
+	info->chroma += 128;
+	info->luma += 256;
+}
+
+/* 0x83b2b6: the row's records closed, and those above it */
+static void motionRowClose(AvcencPicture *picture, AvcencSlices *slices, AvcencMotionInfo *info)
+{
+	uint32_t row = info->row, first = info->firstColumn, columns = info->columns, count;
+
+	vnzPublicClosePrivate(info->record - columns * 64, columns * 64);
+	vnzPublicClosePrivate(info->interRecord - columns * 64, columns * 64);
+	if (row == 0)
+		return;
+	count = columns;
+	if (first != 0)
+		count++;
+	if (first + columns != picture->widthInMbs) {
+		count++;
+		vnzPublicCloseProtected(info->recordAboveRight - count * 64, count * 64);
+		vnzPublicCloseProtected(info->interAboveRight - count * 64, count * 64);
+	} else {
+		vnzPublicCloseProtected(info->recordAbove - count * 64, count * 64);
+		vnzPublicCloseProtected(info->interAbove - count * 64, count * 64);
+	}
+}
+
+/*
+ * 0x83b798: the macroblock's final choice between the intra decision and
+ * the inter one, each its SATD and its weighted bits; the record's type,
+ * the inter one's vectors, and the row of groups' statistics. An intra
+ * slice's has no inter choice and weighs its bits less
+ */
+static void motionChoose(AvcencMotionInfo *info, uint32_t intraSlice)
+{
+	AvcencInterRecord *interRecord = (AvcencInterRecord *)info->interRecord;
+	AvcencMacroblock *record = (AvcencMacroblock *)info->record;
+	AvcencMacroblock *macroblock = (AvcencMacroblock *)info->macroblock;
+	AvcencMotionStats *stats;
+	uint32_t weight = info->interWeight, interCost = info->interCost, intraCost, extra, type;
+
+	if (intraSlice) {
+		intraCost = (uint16_t)(macroblock->intraCost + (macroblock->intraBits + 32) * weight);
+		interCost = 0xffff;
+		extra = 0;
+	} else {
+		if (macroblock->intraCost == 0xffff) {
+			intraCost = 0xffff;
+		} else {
+			intraCost = (uint16_t)(macroblock->intraCost +
+				weight * (macroblock->intraBits + 50));
+			if (interRecord->intra)
+				interCost = 0xffff;
+		}
+		extra = 18;
+	}
+	if ((int32_t)intraCost < (int32_t)interCost) {
+		stats = info->stats;
+		type = intraTypes[macroblock->lumaMode][macroblock->chromaMode];
+		if ((int8_t)macroblock->lumaMode != 4)
+			stats->intra16x16Count++;
+		stats->cost += ((intraScales[(uint8_t)info->qp] * (uint32_t)macroblock->intraCost) >>
+			16) + macroblock->intraCost;
+		stats->bits += macroblock->intraBits + extra;
+		stats->intraCount++;
+	} else {
+		copyLanes(record->vectors[0], interRecord->vectors[0]);
+		copyLanes(record->vectors[2], interRecord->vectors[2]);
+		copyLanes(record->differences[0], interRecord->differences[0]);
+		copyLanes(record->differences[2], interRecord->differences[2]);
+		type = interTypes[interRecord->partition];
+		stats = info->stats;
+		stats->cost += info->interSatd;
+		stats->bits += info->interBits;
+	}
+	record->type = type | MACROBLOCK_CODED;
+}
+
+/* modes of a macroblock that is not 4x4 blocks: DC */
+static const uint8_t dcModes[16] = {
+	2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+};
+
+/* a neighbour's record: its luma is 4x4 blocks */
+static inline int32_t recordBlocks(uint32_t record)
+{
+	return ((((AvcencMacroblock *)record)->type >> 6) & 0xb) == 8;
+}
+
+/*
+ * 0x83b8b0: the 4x4 blocks' modes coded (predicted from the neighbours'
+ * modes, DC from a neighbour out of the picture or the slice) and the
+ * intra decision's bits: three for a mode not predicted, the chroma mode's
+ */
+static void motionModes(AvcencMotionInfo *info)
+{
+	AvcencMacroblock *record = (AvcencMacroblock *)info->record, *macroblock;
+	const uint8_t *above = dcModes, *left = dcModes;
+	uint32_t noLeft, sliceStart = info->sliceStart, matches, bits, chromaBits;
+
+	if (info->mbY >= 1 && recordBlocks(info->recordAbove))
+		above = ((AvcencMacroblock *)info->macroblockAbove)->blockModes;
+	if (info->mbX >= 1 && recordBlocks(info->recordLeft))
+		left = ((AvcencMacroblock *)info->macroblockLeft)->blockModes;
+	noLeft = info->mbX < 1;
+	matches = avcencMotionModes(above, left, record->blockModes,
+		noLeft | sliceStart | noLeft << 2 | sliceStart << 1 | sliceStart << 4 |
+		sliceStart << 5, noLeft | noLeft << 2, record->modeCodes);
+	macroblock = (AvcencMacroblock *)info->macroblock;
+	bits = (int8_t)macroblock->lumaMode == 4 ? (16 - matches) * 3 : 0;
+	switch (macroblock->chromaMode) {
+	case 0:
+		chromaBits = 1;
+		break;
+	case 1:
+		chromaBits = 2;
+		break;
+	case 2:
+	case 3:
+		chromaBits = 3;
+		break;
+	default:
+		chromaBits = 0;
+		break;
+	}
+	macroblock->intraBits = bits + chromaBits;
+}
+
+static void motionPredict16x16(AvcencMotionInfo *info, AvcencMotion *motion);
+static void motionPredict16x8(AvcencMotionInfo *info, AvcencMotion *motion);
+static void motionPredict8x16(AvcencMotionInfo *info, AvcencMotion *motion);
+static void motionPredict8x8(AvcencMotionInfo *info, AvcencMotion *motion);
+
+/*
+ * 0x83b9a0: the inter decision's coding: its blocks' vectors whole (each
+ * partition's in all its blocks' lanes), their differences from their
+ * predictions, their bits and its cost
+ */
+static void motionInter(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	AvcencInterRecord *interRecord = (AvcencInterRecord *)info->interRecord;
+	uint32_t weight, satd, approximate, bits, i;
+
+	avcencMotionVectors(motion, interRecord->vector,
+		(const int16_t (*)[2])interRecord->vectors, interRecord->costs);
+	weight = info->interWeight;
+	satd = motion->satd;
+	switch (interRecord->partition) {
+	case 0:
+		motionPredict16x16(info, motion);
+		avcencMotionBits(motion);
+		approximate = motion->bits[0] + 4;
+		avcencMotionCodeBits(motion);
+		bits = motion->bits[0] + 4;
+		for (i = 0; i < 2; i++) {
+			motion->vectors[0][2 + i] = motion->vectors[0][i];
+			motion->vectors[1][i] = motion->vectors[0][i];
+			motion->vectors[1][2 + i] = motion->vectors[0][i];
+		}
+		break;
+	case 1:
+		motionPredict16x8(info, motion);
+		avcencMotionBits(motion);
+		approximate = (uint16_t)(motion->bits[0] + motion->bits[1]) + 5;
+		avcencMotionCodeBits(motion);
+		bits = (uint16_t)(motion->bits[0] + motion->bits[1]) + 5;
+		for (i = 0; i < 2; i++) {
+			motion->vectors[1][i] = motion->vectors[0][2 + i];
+			motion->vectors[1][2 + i] = motion->vectors[0][2 + i];
+			motion->vectors[0][2 + i] = motion->vectors[0][i];
+		}
+		break;
+	case 2:
+		motionPredict8x16(info, motion);
+		avcencMotionBits(motion);
+		approximate = (uint16_t)(motion->bits[0] + motion->bits[1]) + 5;
+		avcencMotionCodeBits(motion);
+		bits = (uint16_t)(motion->bits[0] + motion->bits[1]) + 5;
+		copyLanes(motion->vectors[1], motion->vectors[0]);
+		break;
+	default:
+		motionPredict8x8(info, motion);
+		avcencMotionBits8x8(motion);
+		approximate = (uint16_t)(motion->bits[0] + motion->bits[1]) + 11;
+		avcencMotionCodeBits8x8(motion);
+		bits = (uint16_t)(motion->bits[0] + motion->bits[1]) + 11;
+		break;
+	}
+	info->interBits = bits;
+	info->interSatd = satd;
+	info->interCost = satd + weight * approximate;
+	copyLanes(interRecord->vectors[0], motion->vectors[0]);
+	copyLanes(interRecord->vectors[2], motion->vectors[1]);
+	copyLanes(interRecord->differences[0], motion->differences[0]);
+	copyLanes(interRecord->differences[2], motion->differences[1]);
+}
+
+/* the differences of the first two blocks' vectors from their predictions */
+static inline void motionDifferences(AvcencMotion *motion, uint32_t pair)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		motion->differences[pair][i] = motion->vectors[pair][i] -
+			motion->predictions[pair][i];
+}
+
+/*
+ * the corner neighbour, available or not: above right (its block 2), at
+ * the row's end the block of the macroblock given (above left's 3, or
+ * above's 2)
+ */
+static void motionCorner(AvcencMotionInfo *info, AvcencMotion *motion, int16_t *lanes,
+	uint32_t record, uint32_t interRecord, uint32_t block)
+{
+	motion->unavailable |= 1 << MOTION_CORNER;
+	if (!lastColumn(info)) {
+		if (recordIntra(info->recordAboveRight))
+			return;
+		loadVector(lanes, info->interAboveRight, 2);
+	} else {
+		if (recordIntra(record))
+			return;
+		loadVector(lanes, interRecord, block);
+	}
+	motion->unavailable &= ~(1 << MOTION_CORNER);
+}
+
+/* the left neighbour, its blocks 1 and 3 */
+static uint32_t motionLeft(AvcencMotionInfo *info, AvcencMotion *motion, int16_t *right,
+	int16_t *rightBelow)
+{
+	motion->unavailable = 1 << MOTION_LEFT;
+	if (info->mbX < 1 || recordIntra(info->recordLeft))
+		return 0;
+	loadVector(right, info->interLeft, 1);
+	if (rightBelow != 0)
+		loadVector(rightBelow, info->interLeft, 3);
+	motion->unavailable = 0;
+	return 1;
+}
+
+/*
+ * 0x83baa8: a 16x16 partition's prediction: the median of the left
+ * neighbour, the one above and the corner; on a slice's first row the left
+ * one's (or none)
+ */
+static void motionPredict16x16(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int16_t (*neighbours)[4] = motion->neighbours[0];
+
+	motionLeft(info, motion, neighbours[MOTION_LEFT], 0);
+	if (info->sliceStart) {
+		if (motion->unavailable & 1 << MOTION_LEFT)
+			clearLanes(motion->predictions[0]);
+		else
+			copyLanes(motion->predictions[0], neighbours[MOTION_LEFT]);
+	} else {
+		motion->unavailable |= 1 << MOTION_ABOVE;
+		if (!recordIntra(info->recordAbove)) {
+			loadVector(neighbours[MOTION_ABOVE], info->interAbove, 2);
+			motion->unavailable &= ~(1 << MOTION_ABOVE);
+		}
+		motionCorner(info, motion, neighbours[MOTION_CORNER], info->recordAboveLeft,
+			info->interAboveLeft, 3);
+		avcencMotionMedian(motion);
+	}
+	motionDifferences(motion, 0);
+}
+
+/*
+ * 0x83bb6c: two 16x8 partitions': the top one's is the one above's
+ * (without it the median), the bottom one's the left one's block 3, without
+ * it the top partition's vector
+ */
+static void motionPredict16x8(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int16_t (*neighbours)[4] = motion->neighbours[0], *lower = motion->neighbours[1][MOTION_LEFT];
+	uint32_t i;
+
+	motionLeft(info, motion, neighbours[MOTION_LEFT], lower);
+	if (info->sliceStart) {
+		if (motion->unavailable & 1 << MOTION_LEFT)
+			clearLanes(motion->predictions[0]);
+		else
+			copyLanes(motion->predictions[0], neighbours[MOTION_LEFT]);
+	} else if (!recordIntra(info->recordAbove)) {
+		loadVector(motion->predictions[0], info->interAbove, 2);
+	} else {
+		motion->unavailable |= 1 << MOTION_ABOVE;
+		motionCorner(info, motion, neighbours[MOTION_CORNER], info->recordAboveLeft,
+			info->interAboveLeft, 3);
+		avcencMotionMedian(motion);
+	}
+	if (motion->unavailable & 1 << MOTION_LEFT)
+		copyLanes(lower, motion->vectors[0]);
+	for (i = 0; i < 2; i++)
+		motion->predictions[0][2 + i] = lower[i];
+	motionDifferences(motion, 0);
+}
+
+/*
+ * 0x83bc42: two 8x16 partitions': the left one's is the left neighbour's
+ * (without it the median of the above's blocks 2 and 3), the right one's
+ * the corner's (without it the median of the left partition's vector, the
+ * above's block 3 and none)
+ */
+static void motionPredict8x16(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int16_t (*first)[4] = motion->neighbours[0], (*second)[4] = motion->neighbours[1];
+	uint32_t aboveIntra = 1;
+
+	if (!info->sliceStart && !recordIntra(info->recordAbove)) {
+		loadVector(first[MOTION_ABOVE], info->interAbove, 2);
+		loadVector(first[MOTION_CORNER], info->interAbove, 3);
+		aboveIntra = 0;
+	}
+	if (aboveIntra) {
+		clearLanes(first[MOTION_ABOVE]);
+		clearLanes(first[MOTION_CORNER]);
+	}
+	if (!motionLeft(info, motion, first[MOTION_LEFT], 0))
+		clearLanes(first[MOTION_LEFT]);
+	else
+		copyLanes(first[MOTION_CORNER], first[MOTION_LEFT]);
+	copyLanes(second[MOTION_LEFT], motion->vectors[0]);
+	if (!info->sliceStart) {
+		if (!recordIntra(info->recordAbove))
+			loadVector(second[MOTION_ABOVE], info->interAbove, 3);
+		if (aboveIntra)
+			copyLanes(second[MOTION_ABOVE], motion->vectors[0]);
+		motionCorner(info, motion, second[MOTION_CORNER], info->recordAbove,
+			info->interAbove, 2);
+		if (motion->unavailable & 1 << MOTION_CORNER)
+			clearLanes(second[MOTION_CORNER]);
+		else
+			copyLanes(second[MOTION_ABOVE], second[MOTION_CORNER]);
+	} else {
+		copyLanes(second[MOTION_ABOVE], motion->vectors[0]);
+	}
+	avcencMotionMedianPairs(motion);
+	motionDifferences(motion, 0);
+}
+
+/*
+ * 0x83bd58: four 8x8 blocks': each the median of its neighbours; without
+ * the macroblock above, blocks 0's are the left one's, block 1's corner
+ * its left block's vector without the above right one too
+ */
+static void motionPredict8x8(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int16_t (*first)[4] = motion->neighbours[0], (*second)[4] = motion->neighbours[1];
+	uint32_t aboveIntra = 1;
+
+	if (!motionLeft(info, motion, first[MOTION_LEFT], motion->leftBelow))
+		clearLanes(first[MOTION_LEFT]);
+	if (!info->sliceStart && !recordIntra(info->recordAbove)) {
+		loadVector(first[MOTION_ABOVE], info->interAbove, 2);
+		loadVector(first[MOTION_CORNER], info->interAbove, 3);
+		aboveIntra = 0;
+	}
+	copyLanes(second[MOTION_LEFT], motion->vectors[0]);
+	if (aboveIntra) {
+		copyLanes(first[MOTION_ABOVE], first[MOTION_LEFT]);
+		copyLanes(first[MOTION_CORNER], first[MOTION_LEFT]);
+	}
+	if (!info->sliceStart) {
+		if (!recordIntra(info->recordAbove))
+			loadVector(second[MOTION_ABOVE], info->interAbove, 3);
+		if (aboveIntra)
+			clearLanes(second[MOTION_ABOVE]);
+		motionCorner(info, motion, second[MOTION_CORNER], info->recordAbove,
+			info->interAbove, 2);
+		if (motion->unavailable & 1 << MOTION_CORNER)
+			clearLanes(second[MOTION_CORNER]);
+		if (aboveIntra && motion->unavailable & 1 << MOTION_CORNER)
+			copyLanes(second[MOTION_CORNER], motion->vectors[0]);
+	} else {
+		copyLanes(second[MOTION_ABOVE], motion->vectors[0]);
+	}
+	avcencMotionMedianPairs(motion);
+	avcencMotionMedianLower(motion);
+	motionDifferences(motion, 1);
+	motionDifferences(motion, 0);
+}
+
+/*
+ * 0x83be80: P_Skip's vector, the median of the neighbours (an intra one
+ * zero); zero without the left one or the one above, or when either's is
+ * zero
+ */
+static void motionSkipVector(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int16_t (*neighbours)[4] = motion->neighbours[0];
+	int32_t vector = 1;
+
+	if (info->mbX < 1 || info->sliceStart) {
+		info->skipVector[0] = 0;
+		info->skipVector[1] = 0;
+		return;
+	}
+	motion->unavailable = 0;
+	if (recordIntra(info->recordLeft)) {
+		motion->unavailable |= 1 << MOTION_LEFT;
+		clearLanes(neighbours[MOTION_LEFT]);
+	} else {
+		vector = *(const int32_t *)((AvcencInterRecord *)info->interLeft)->vectors[1];
+		loadVector(neighbours[MOTION_LEFT], info->interLeft, 1);
+		if (vector == 0)
+			goto zero;
+	}
+	if (recordIntra(info->recordAbove)) {
+		clearLanes(neighbours[MOTION_ABOVE]);
+		motion->unavailable |= 1 << MOTION_ABOVE;
+	} else {
+		vector = *(const int32_t *)((AvcencInterRecord *)info->interAbove)->vectors[2];
+		loadVector(neighbours[MOTION_ABOVE], info->interAbove, 2);
+	}
+	if (vector == 0)
+		goto zero;
+	motionCorner(info, motion, neighbours[MOTION_CORNER], info->recordAboveLeft,
+		info->interAboveLeft, 3);
+	if (motion->unavailable & 1 << MOTION_CORNER)
+		clearLanes(neighbours[MOTION_CORNER]);
+	avcencMotionSkipMedian(motion, info->skipVector);
+	return;
+zero:
+	info->skipVector[0] = 0;
+	info->skipVector[1] = 0;
+}
+
+/* 0x83bf66: a band of the reference's luma, 16 pixels from a column */
+static void motionLoadLuma(AvcencMotion *motion, uint32_t reference, int32_t pitch, int32_t x,
+	int32_t y)
+{
+	uint32_t first = reference + (y >> 4) * pitch * 16 + (x >> 4) * 256 + (y & 15) * 16 +
+		(x & 8), second = x & 8 ? first + 248 : first + 8;
+
+	if (x & 7)
+		avcencMotionLoadLumaShifted(motion, (const uint8_t *)first, (const uint8_t *)second,
+			pitch, y & 15, x & 7);
+	else
+		avcencMotionLoadLuma(motion, (const uint8_t *)first, (const uint8_t *)second, pitch,
+			y & 15);
+}
+
+/* 0x83bfb4: a band of its chroma, eight pixels of U and V from a column */
+static void motionLoadChroma(AvcencMotion *motion, uint32_t reference, int32_t pitch,
+	int32_t x, int32_t y)
+{
+	uint32_t first = reference + (y >> 3) * pitch * 8 + (x >> 3) * 128 + (y & 7) * 8;
+
+	if (x & 7)
+		avcencMotionLoadChromaShifted(motion, (const uint8_t *)first,
+			(const uint8_t *)first + 128, pitch, y & 7, x & 7);
+	else
+		avcencMotionLoadChroma(motion, (const uint8_t *)first, pitch, y & 7);
+}
+
+/* the band's top line: in the picture, its last four lines at most */
+static inline int32_t bandTop(int32_t y, int32_t height)
+{
+	if (y < 0)
+		return 0;
+	return y < height - 4 ? y : height - 4;
+}
+
+/*
+ * 0x83bff8: P_Skip's check: the source less the reference at the skip
+ * vector (its whole pixels), each 4x4 block transformed, below the
+ * thresholds of the QP: the luma's and two of the chroma's eight. Not on
+ * the picture's first row or column
+ */
+static uint32_t motionSkipCheck(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	int32_t x, y, width, height, left, band, i, shift;
+
+	if ((int8_t)info->mbX == 0 || (int8_t)info->mbY == 0)
+		return 0;
+	shift = (int8_t)info->lumaShift2 & 15;
+	for (i = 0; i < 4; i++) {
+		motion->thresholds[0][i] = (uint16_t)info->lumaThreshold2[i] >> shift;
+		motion->thresholds[1][i] = (uint16_t)info->lumaThreshold2[4 + i] >> shift;
+	}
+	width = info->width;
+	height = info->height;
+	x = info->mbX * 16 + (info->skipVector[0] >> 2);
+	y = info->mbY * 16 + (info->skipVector[1] >> 2);
+	left = 0;
+	if (x >= 0)
+		left = x < width - 16 ? x : width - 16;
+	for (band = 0; band < 4; band++) {
+		motionLoadLuma(motion, info->reference, info->pitch, left,
+			bandTop(y + band * 4, height));
+		avcencMotionEdgeLuma(motion, x, y + band * 4, width, height);
+		if (!avcencMotionSkipLuma(motion, (const uint8_t *)info->luma + band * 64))
+			return 0;
+	}
+
+	height >>= 1;
+	x >>= 1;
+	width >>= 1;
+	y >>= 1;
+	shift = (int8_t)info->chromaShift & 15;
+	for (i = 0; i < 4; i++) {
+		motion->thresholds[0][i] = (uint16_t)info->chromaThreshold[i] >> shift;
+		motion->thresholds[1][i] = (uint16_t)info->chromaThreshold[4 + i] >> shift;
+	}
+	left = 0;
+	if (x >= 0)
+		left = x < width - 8 ? x : width - 8;
+	for (band = 0; band < 2; band++) {
+		motionLoadChroma(motion, info->referenceChroma, info->chromaPitch, left,
+			bandTop(y + band * 4, height));
+		avcencMotionEdgeChroma(motion, x, y + band * 4, width, height);
+		if (!avcencMotionSkipChroma(motion, (const uint8_t *)info->chroma + band * 32,
+				band == 0))
+			return 0;
+	}
+	return 1;
+}
+
+/* P_Skip taken: its vector in each block's, no differences */
+static void motionSkip(AvcencMotionInfo *info, uint32_t type)
+{
+	AvcencInterRecord *interRecord = (AvcencInterRecord *)info->interRecord;
+	AvcencMacroblock *record = (AvcencMacroblock *)info->record;
+	uint32_t block;
+
+	for (block = 0; block < 4; block++) {
+		interRecord->vectors[block][0] = info->skipVector[0];
+		interRecord->vectors[block][1] = info->skipVector[1];
+		record->differences[block][0] = 0;
+		record->differences[block][1] = 0;
+		record->vectors[block][0] = info->skipVector[0];
+		record->vectors[block][1] = info->skipVector[1];
+	}
+	interRecord->partition = SKIP_PARTITION;
+	record->type = type | MACROBLOCK_CHECKED;
+}
+
+/* 0x83c210: P_Skip, when its check passes; whether it does */
+static uint32_t motionSkipFound(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	AvcencMotionStats *stats;
+
+	if (!motionSkipCheck(info, motion))
+		return 0;
+	stats = info->stats;
+	stats->skipCount++;
+	stats->skipFoundCount++;
+	motionSkip(info, skipTypes[SKIP_PARTITION]);
+	return 1;
+}
+
+/*
+ * 0x83c27e: a macroblock the inter decision skips: P_Skip when its vector
+ * is the skip vector (in whole pixels) or the check passes, else a 16x16
+ * partition
+ */
+static void motionSkipDecided(AvcencMotionInfo *info, AvcencMotion *motion)
+{
+	AvcencInterRecord *interRecord = (AvcencInterRecord *)info->interRecord;
+	AvcencMacroblock *record = (AvcencMacroblock *)info->record;
+	AvcencMotionStats *stats = info->stats;
+	int16_t vector[2];
+	uint32_t block;
+
+	vector[0] = interRecord->vector[0] * 4 + interRecord->vectors[0][0];
+	vector[1] = interRecord->vector[1] * 4 + interRecord->vectors[0][1];
+	if ((info->skipVector[0] & ~3) == vector[0] && (info->skipVector[1] & ~3) == vector[1]) {
+		stats->skipCount++;
+	} else if (motionSkipCheck(info, motion)) {
+		stats->skipCount++;
+		stats->skipDecidedCount++;
+	} else {
+		motionInter(info, motion);
+		stats->interCount++;
+		stats->bits += info->interBits;
+		for (block = 0; block < 4; block++) {
+			record->differences[block][0] = interRecord->differences[block & 1][0];
+			record->differences[block][1] = interRecord->differences[block & 1][1];
+			record->vectors[block][0] = interRecord->vectors[block & 1][0];
+			record->vectors[block][1] = interRecord->vectors[block & 1][1];
+		}
+		interRecord->partition = 0;
+		record->type = skipTypes[0] | MACROBLOCK_CHECKED;
+		return;
+	}
+	motionSkip(info, skipTypes[SKIP_PARTITION]);
+}
+
+/*
+ * 0x83b34c: the motion job: the final choice of a band of a row of groups'
+ * macroblocks, on the wavefront (rows of up to eight, each one a column
+ * left of the last). The first job clears the statistics, the last sums
+ * them; the jobs it lets start are signalled, the step's count of jobs
+ * running taken down
+ */
+void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t position,
+	uint32_t unused)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	uint32_t core = ((int32_t)vnzReadControl(VNZ_CR_ID) >> 16) & 7;
+	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
+	int32_t column = position & 0xff, row = (position >> 8) & 0xff, width, height, last;
+	int32_t lastRow, endRow, first, x, y, i, job, step;
+	AvcencFrameRecord *frameRecord;
+	AvcencInterRecord *interRecord;
+	AvcencMotionStats *stats;
+	AvcencMotionInfo *info;
+	AvcencMotion motion;
+	VkVThreadContext *context;
+	uint32_t total;
+
+	info = (AvcencMotionInfo *)vnzPublicOpenPrivate(slices->streamInfo +
+		core * CORE_INFO_SIZE, MOTION_INFO_SIZE);
+	vnzCacheInvalidateInside((uint32_t)info, MOTION_INFO_SIZE);
+	clearLanes(motion.differences[1]);
+	height = picture->heightInMbs;
+	width = picture->widthInMbs;
+	if (column + 7 >= width - 1)
+		last = width - 1;
+	else if (column != 0)
+		last = column + 7;
+	else if ((row & 7) == 6)
+		last = 1;
+	else if ((row & 7) == 4)
+		last = 3;
+	else if ((row & 7) == 2)
+		last = 5;
+	else
+		last = 7;
+	lastRow = height - 1;
+	endRow = row + 1 < lastRow ? row + 1 : lastRow;
+	first = column;
+	if (column == 0 && row == 0) {
+		stats = (AvcencMotionStats *)vnzPublicOpenPrivate(picture->rowsMotion, 1024);
+		for (i = 0; i < 16; i++) {
+			stats[i].cost = 0;
+			stats[i].bits = 0;
+			stats[i].average = 0;
+			stats[i].intraCount = 0;
+			stats[i].intra16x16Count = 0;
+			stats[i].interCount = 0;
+			stats[i].reserved = 0;
+			stats[i].skipCount = 0;
+			stats[i].skipDecidedCount = 0;
+			stats[i].skipFoundCount = 0;
+		}
+		vnzPublicClosePrivate((uint32_t)stats, 1024);
+	}
+	motionSetup(picture, slices, info, row);
+	for (y = row; y <= endRow; y++) {
+		motionRow(picture, slices, info, first, y, last - first + 1);
+		for (x = first; x <= last; x++) {
+			if ((slices->sliceType & 7) == 2) {
+				motionModes(info);
+				motionChoose(info, 1);
+			} else {
+				interRecord = (AvcencInterRecord *)info->interRecord;
+				if (interRecord->skip) {
+					motionSkipVector(info, &motion);
+					motionSkipDecided(info, &motion);
+				} else if (interRecord->intra) {
+					motionModes(info);
+					motionChoose(info, 0);
+				} else {
+					motionSkipVector(info, &motion);
+					if (!motionSkipFound(info, &motion)) {
+						if (((AvcencMacroblock *)info->macroblock)->intraCost !=
+								0xffff)
+							motionModes(info);
+						motionInter(info, &motion);
+						motionChoose(info, 0);
+					}
+				}
+			}
+			motionNext(picture, info);
+		}
+		motionRowClose(picture, slices, info);
+		if (first >= 1)
+			first--;
+		if (last != width - 1)
+			last--;
+	}
+	motionStatsClose(picture, slices, info);
+
+	if (last == width - 1 && endRow == lastRow) {
+		stats = (AvcencMotionStats *)vnzPublicOpenPrivate(picture->rowsMotion, 1024);
+		for (i = 1; i < 16; i++) {
+			stats[0].cost += stats[i].cost;
+			stats[0].bits += stats[i].bits;
+			stats[0].average += stats[i].average;
+			stats[0].intraCount += stats[i].intraCount;
+			stats[0].intra16x16Count += stats[i].intra16x16Count;
+			stats[0].interCount += stats[i].interCount;
+			stats[0].reserved += stats[i].reserved;
+			stats[0].skipCount += stats[i].skipCount;
+			stats[0].skipDecidedCount += stats[i].skipDecidedCount;
+			stats[0].skipFoundCount += stats[i].skipFoundCount;
+		}
+		total = picture->widthInMbs * picture->heightInMbs;
+		stats[0].average /= total;
+		vnzPublicClosePrivate((uint32_t)stats, 1024);
+	}
+
+	/* the jobs it lets start: the rows of groups below's, the next band's */
+	frameRecord = (AvcencFrameRecord *)picture->frameRecord;
+	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
+	step = (row + 2) >> 1;
+	if (width < 9) {
+		if (row + 2 < height)
+			job = picture->index * 8 + picture->jobArgument +
+				picture->jobGroups * (step & 7) + (((column >> 1) + (step & 3)) >> 2) + 8;
+		else
+			job = picture->jobs * 8 + picture->index * 8 + 9;
+		vkVThreadJobSignal(context, job);
+	} else {
+		if (row + 2 < height && ((row & 6) != 6 || column >= 1))
+			vkVThreadJobSignal(context, picture->index * 8 + picture->jobArgument +
+				picture->jobGroups * (step & 7) + ((((column - 2) >> 1) + (step & 3)) >> 2) +
+				8);
+		if (column + 8 < width) {
+			step = row >> 1;
+			vkVThreadJobSignal(context, picture->index * 8 + picture->jobArgument +
+				picture->jobGroups * (step & 7) + ((((column + 8) >> 1) + (step & 3)) >> 2) +
+				8);
+		} else if (row + 2 >= height) {
+			vkVThreadJobSignal(context, picture->jobs * 8 + picture->index * 8 + 9);
+		}
+	}
+	vkVThreadContextUnlock(context);
+	i = ((column >> 1) + (row >> 1) * 5) >> 2;
+	vnzSpinLock(picture->lock);
+	frameRecord->started[i & 7]--;
+	vnzSpinUnlock(picture->lock);
+	vnzCachePurge((uint32_t)info, MOTION_INFO_SIZE);
+	vnzPublicClosePrivate((uint32_t)info, MOTION_INFO_SIZE);
+	vnzPublicCloseProtected((uint32_t)slices, 64);
 }

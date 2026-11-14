@@ -296,4 +296,59 @@ void avcencRefineMerge8x16(AvcencRefine *refine);
 void avcencRefineChoose(const AvcencRefine *refine, const int8_t (*deltas)[2],
 	int16_t (*vectors)[2]);
 
+/*
+ * the motion job's, as its kernels keep it: a macroblock's vectors, their
+ * predictions and differences, each as four lanes (two blocks' x and y), the
+ * neighbours the predictions are made of, and for the P_Skip check a band of
+ * the reference's prediction and the transform's thresholds. A neighbour
+ * loaded from a record has its vector's sign in its upper lanes
+ */
+typedef struct AvcencMotion {
+	int16_t vectors[2][4];		/* blocks 0 and 1, 2 and 3, in quarter pixels */
+	int16_t predictions[2][4];
+	int16_t differences[2][4];	/* the second the last 8x8 macroblock's but for 8x8 */
+	int16_t neighbours[2][3][4];	/* the first and the second block's left, above and corner */
+	int16_t leftBelow[4];		/* the left macroblock's block 3, for block 2 */
+	uint8_t unavailable;		/* by MOTION_LEFT, MOTION_ABOVE, MOTION_CORNER */
+	uint16_t satd;			/* the blocks' costs */
+	uint16_t bits[2];		/* the vectors' bits, of lanes 0 and 1, of lanes 2 and 3 */
+	uint8_t luma[4][16];		/* a band of the prediction */
+	uint8_t chroma[2][4][8];	/* U's and V's */
+	int16_t thresholds[2][4];	/* the coefficients': rows 0 and 2, rows 1 and 3 */
+} AvcencMotion;
+
+#define MOTION_LEFT		0
+#define MOTION_ABOVE		1
+#define MOTION_CORNER		2
+
+/* the motion job's kernels (avcenckernel.c) */
+uint32_t avcencMotionModes(const uint8_t *above, const uint8_t *left, const uint8_t *modes,
+	uint32_t first, uint32_t second, int8_t *codes);
+void avcencMotionBits(AvcencMotion *motion);
+void avcencMotionBits8x8(AvcencMotion *motion);
+void avcencMotionCodeBits(AvcencMotion *motion);
+void avcencMotionCodeBits8x8(AvcencMotion *motion);
+void avcencMotionVectors(AvcencMotion *motion, const int16_t *vector, const int16_t (*vectors)[2],
+	const uint16_t *costs);
+void avcencMotionMedian(AvcencMotion *motion);
+void avcencMotionMedianPairs(AvcencMotion *motion);
+void avcencMotionMedianLower(AvcencMotion *motion);
+void avcencMotionSkipMedian(AvcencMotion *motion, int16_t *vector);
+uint32_t avcencMotionTransform(const AvcencMotion *motion, int32_t (*block)[4]);
+void avcencMotionLoadLuma(AvcencMotion *motion, const uint8_t *first, const uint8_t *second,
+	int32_t pitch, uint32_t line);
+void avcencMotionLoadLumaShifted(AvcencMotion *motion, const uint8_t *first,
+	const uint8_t *second, int32_t pitch, uint32_t line, uint32_t offset);
+void avcencMotionEdgeLuma(AvcencMotion *motion, int32_t x, int32_t y, int32_t width,
+	int32_t height);
+uint32_t avcencMotionSkipLuma(const AvcencMotion *motion, const uint8_t *source);
+void avcencMotionLoadChroma(AvcencMotion *motion, const uint8_t *first, int32_t pitch,
+	uint32_t line);
+void avcencMotionLoadChromaShifted(AvcencMotion *motion, const uint8_t *first,
+	const uint8_t *second, int32_t pitch, uint32_t line, uint32_t offset);
+void avcencMotionEdgeChroma(AvcencMotion *motion, int32_t x, int32_t y, int32_t width,
+	int32_t height);
+uint32_t avcencMotionSkipChroma(const AvcencMotion *motion, const uint8_t *source,
+	uint32_t first);
+
 #endif
