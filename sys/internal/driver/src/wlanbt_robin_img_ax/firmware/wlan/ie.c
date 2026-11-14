@@ -25,7 +25,9 @@ static ROBIN_PATCH_SLOT(wlanRemoveIeOverride);
 static ROBIN_PATCH_SLOT(wlanRemoveIeListOverride);
 static ROBIN_PATCH_SLOT(wlanClearBodyOverride);
 static ROBIN_PATCH_SLOT(wlanRateBitmapBasicOverride);
+static ROBIN_PATCH_SLOT(wlanHtRateBitmapOverride);
 static ROBIN_PATCH_SLOT(wlanRateBitmapOverride);
+static ROBIN_PATCH_SLOT(wlanRateBitmapAllOverride);
 static ROBIN_PATCH_SLOT(wlanTimeDeltaOverride);
 
 static unsigned int bodyLengthOf(const WlanWirelessFrame *frame)
@@ -392,6 +394,25 @@ unsigned int wlanRateBitmapBasic(const uint8_t *rates, unsigned int count)
 }
 
 /* Bit mask of the rate indices of all listed rates. */
+/*
+ * Rate-index bits of an HT Capabilities element: MCS 0-7 at bit 14, again at
+ * bit 23 when 40 MHz is supported, with MCS 32 at bit 22.
+ */
+unsigned int wlanHtRateBitmap(const WlanHtCapabilityIe *ht)
+{
+	unsigned int bitmap = 0;
+
+	if (wlanHtRateBitmapOverride((uintptr_t)ht, (uintptr_t)&bitmap))
+		return bitmap;
+	bitmap = ht->mcsSet[0] << 14;
+	if (ht->capabilities & WLAN_HT_CAP_40MHZ) {
+		bitmap |= ht->mcsSet[0] << 23;
+		if (ht->mcsSet[4] & 1)
+			bitmap |= 1 << 22;
+	}
+	return bitmap;
+}
+
 unsigned int wlanRateBitmap(const uint8_t *rates, unsigned int count)
 {
 	unsigned int i = 0;
@@ -404,6 +425,25 @@ unsigned int wlanRateBitmap(const uint8_t *rates, unsigned int count)
 			bitmap |= 1 << romRateIndex(rates[i] & 0x7f);
 		i = (uint8_t)(i + 1);
 	}
+	return bitmap;
+}
+
+/* Rate-index bits of the supported, extended and HT rates of a station. */
+unsigned int wlanRateBitmapAll(const uint8_t *rates, unsigned int count,
+			       const uint8_t *extendedRates, unsigned int extendedCount,
+			       const WlanHtCapabilityIe *ht)
+{
+	unsigned int bitmap = 0;
+
+	if (wlanRateBitmapAllOverride((uintptr_t)rates, count, (uintptr_t)extendedRates,
+				      extendedCount, (uintptr_t)ht, (uintptr_t)&bitmap))
+		return bitmap;
+	if (rates)
+		bitmap |= wlanRateBitmap(rates, count);
+	if (extendedRates)
+		bitmap |= wlanRateBitmap(extendedRates, extendedCount);
+	if (ht)
+		bitmap |= wlanHtRateBitmap(ht);
 	return bitmap;
 }
 

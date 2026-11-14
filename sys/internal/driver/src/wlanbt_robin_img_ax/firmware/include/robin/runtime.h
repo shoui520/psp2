@@ -13,4 +13,8 @@ int memcmp(const void *left, const void *right, size_t size);
 /* RVCT library routine in ITCM (0x00052420); not converted. */
 int strcmp(const char *left, const char *right);
 
+/* RVCT library routines in ITCM (0x000521bc, 0x000521ea); not converted. */
+void srand(unsigned int seed);
+int rand(void);
+
 #endif /* ROBIN_RUNTIME_H */

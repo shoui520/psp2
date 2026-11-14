@@ -36,8 +36,9 @@ BT_SRCS := $(wildcard bt/*.c)
 AMP_SRCS := $(wildcard amp/*.c)
 RUNTIME_SRCS := $(wildcard runtime/*.c)
 SQRAM_SRCS := $(wildcard sqram/*.c)
+ESA_SRCS := $(wildcard esa/*.c)
 
-SRCS := $(BOOT_SRCS) $(SYS_SRCS) $(OSA_SRCS) $(WLAN_SRCS) $(BT_SRCS) $(AMP_SRCS) $(RUNTIME_SRCS) $(SQRAM_SRCS)
+SRCS := $(BOOT_SRCS) $(SYS_SRCS) $(OSA_SRCS) $(WLAN_SRCS) $(BT_SRCS) $(AMP_SRCS) $(RUNTIME_SRCS) $(SQRAM_SRCS) $(ESA_SRCS)
 HEADERS := $(wildcard include/*.h include/robin/*.h)
 SCRIPTS := robin.ld boot/rom_syms.ld
 OBJS := $(patsubst %,$(O)/%.o,$(basename $(SRCS)))

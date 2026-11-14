@@ -11,8 +11,8 @@
 
 #include <stdint.h>
 
-typedef int (*RobinPatchHook)(uintptr_t a0, uintptr_t a1, uintptr_t a2,
-			      uintptr_t a3);
+/* Unprototyped: each slot is called with its own function's arguments. */
+typedef int (*RobinPatchHook)();
 
 int robinNoOverride(void);
 

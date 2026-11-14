@@ -154,3 +154,6 @@ PROVIDE(__aeabi_uldivmod   = 0x03f3ec30);
 PROVIDE(romMacEntryCheck   = 0x03f3ac3d);
 PROVIDE(romMacEntryWrite   = 0x03f3ac8b);
 PROVIDE(romMacConfigureEntry = 0x03f3a865);
+
+/* Marvell's MAC timer read (msi_wl_GetMCUCoreTimerTxTSF, named in Marvell's esa sources) */
+PROVIDE(msi_wl_GetMCUCoreTimerTxTSF = 0x03f3a6b9);

@@ -3,6 +3,7 @@
  * stack calls, its link-control messages, the access-window timers and the
  * association request sent for a link. The filename is inferred.
  */
+#include "robin/esa.h"
 #include <stddef.h>
 #include "robin/amp.h"
 #include "robin/btrom.h"
@@ -86,8 +87,6 @@ int macTxReleaseTimer(int which);			/* 0x10ce0 */
 int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
 int wlanBuildRsnElement(uint8_t *out);			/* 0x2094, security element builder */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
-int wlanKeyCacheStore(const uint8_t *peer, const uint8_t *key);
-int wlanKeyCacheRemove(const uint8_t *peer);
 extern uint8_t wlanConnectionPhase;			/* 0x54b70 */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
 extern uint32_t wlanSlot181[];				/* connection tail used by macTxApplyQueue */
@@ -323,7 +322,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 			connection->localName.name = (const char *)ampPalLocalName;
 			ampPalFormatSsid(connection->ssid, connection->peerAddress);
 			wlanConnectionMarkReady();
-			wlanKeyCacheStore(connection->peerAddress, (const uint8_t *)request + 8);
+			pmkCacheAddPMK((IEEEtypes_MacAddr_t *)connection->peerAddress, (uint8_t *)request + 8);
 			ampPalPrepareTxHeader(connection);
 			if (isNew)
 				mdevIoctl(wlanDevice, 0x58, (uintptr_t)connection);
@@ -348,7 +347,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 				connection->state = 0;
 				osaCancelTimer(connection->timerHandle);
 				connection->retryCount = 0;
-				wlanKeyCacheRemove(connection->peerAddress);
+				pmkCacheDeletePMK(connection->peerAddress);
 				while (connection->transmitBusy)
 					osaTaskSleep(1);
 				wlanConnectionDecrement();
