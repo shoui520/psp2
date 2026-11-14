@@ -6,10 +6,23 @@
 #include "robin/rom.h"
 #include "robin/soc.h"
 #include "robin/sys.h"
+#include "robin/task.h"
+#include "robin/wlan.h"
 
 /* Hardware pointer of a ring, read through the ROM. */
 uint32_t romDmaRingHardwarePointer(unsigned int ring, unsigned int offset,
 				   struct WlanDmaRing *rings);	/* 0x03f3abd1 */
+/* Hands the ring's new software pointer to the MAC, through the ROM. */
+void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);	/* 0x03f3abf7 */
+
+/* Not converted yet; provisional name. */
+int cbProcVerifyContext(void);					/* 0x1b5ac */
+
+/* The MAC's read pointer of the receive data ring (bits 3-12, as WlanDmaRing.pointer). */
+#define MAC_390_RX_DATA_POINTER	MAC_REG(0x390)
+
+/* mdevIoctl() of the SDIO device: kicks the host to take the frames still queued. */
+#define SDIO_IOCTL_KICK_HOST	0x62
 
 struct WlanDmaRing wlanDmaRings[WLAN_DMA_RING_COUNT] __attribute__((section(".sqram1.bss")));
 uint8_t wlanDmaRingPending[128] __attribute__((section(".sqram1.bss")));
@@ -66,6 +79,22 @@ int wlanDmaRingHasPending(unsigned int ring)
 		0x1fff);
 }
 
+/* Waits until the receive rings are empty, nudging the host while data frames wait. */
+void wlanDmaRingsDrain(void)
+{
+	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_A))
+		osaTaskSleep(1);
+	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_B))
+		osaTaskSleep(1);
+	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_C))
+		osaTaskSleep(1);
+	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_DATA)) {
+		if (cbProcVerifyContext())
+			mdevIoctl(wlanSdioDev, SDIO_IOCTL_KICK_HOST, 0);
+		osaTaskSleep(1);
+	}
+}
+
 void wlanDmaRingClearPending(void)
 {
 	__aeabi_memclr4(wlanDmaRingPending, sizeof(wlanDmaRingPending));
@@ -85,6 +114,38 @@ void wlanDmaRingMarkPending(uint32_t from, uint32_t to, unsigned int ring)
 		else
 			index = (uint16_t)(index + 1);
 	}
+}
+
+/*
+ * Marks the descriptors from one pointer up to another as released, then
+ * re-arms every released descriptor from the MAC's receive pointer on and
+ * hands the new pointer to the MAC. Returns sysIrqRestore()'s result.
+ */
+int wlanReleaseDmaSpan(uint32_t from, uint32_t to, unsigned int ring)
+{
+	struct WlanDmaRing *r = &wlanDmaRings[ring];
+	UINT posture = sysIrqDisable();
+	uint32_t pointer = MAC_390_RX_DATA_POINTER;
+	uint32_t index = RING_INDEX(pointer);
+
+	wlanDmaRingMarkPending(from, to, ring);
+	while (wlanDmaRingPending[index]) {
+		struct WlanDmaDescriptor *descriptor = &r->descriptors[index];
+
+		*(uint32_t *)descriptor->buffer = 0;
+		wlanDmaRingPending[index] = 0;
+		if (r->size - 1 == index) {
+			descriptor->control = (r->controlLast << 4) | WLAN_DMA_DESCRIPTOR_ARMED;
+			pointer = ~pointer & 0x1000;
+			index = 0;
+		} else {
+			pointer = (pointer + 8) & 0x1fff;
+			index = (uint16_t)(index + 1);
+			descriptor->control = (r->controlNext << 4) | WLAN_DMA_DESCRIPTOR_ARMED;
+		}
+	}
+	romDmaRingSetPointer(pointer, ring);
+	return sysIrqRestore(posture);
 }
 
 /*

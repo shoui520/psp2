@@ -1,4 +1,5 @@
 /* WLAN packet methods; the filename is inferred, not a surviving source name. */
+#include "robin/dmaring.h"
 #include "robin/wlan.h"
 #include "robin/rom.h"
 

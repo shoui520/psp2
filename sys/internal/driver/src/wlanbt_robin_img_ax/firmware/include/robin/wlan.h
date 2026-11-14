@@ -88,7 +88,6 @@ struct OsaBufferPool *wlanInitializeReceiveErrorHandler(void);
 void wlanForwardEventPacket(OsaBuffer *buffer);
 void wlanSetEventPacketLength(OsaBuffer *buffer, uint32_t length);
 int wlanReleasePacket(OsaBuffer *buffer);
-int wlanReleaseDmaSpan(uint32_t start, uint32_t end, unsigned int queue);
 int wlanIsSecurityProtocol(uint32_t protocol);
 uint32_t wlanPacketHeadroom(void);
 int wlanConvertWirelessToEthernet(OsaBuffer *buffer, struct ether_header **output,
