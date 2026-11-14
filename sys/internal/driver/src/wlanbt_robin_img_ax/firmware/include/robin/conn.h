@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include "robin/btrom.h"
 #include "robin/buffer.h"
+#include "robin/esatypes.h"
 #include "robin/threadx.h"
 
 /*
@@ -167,7 +168,8 @@ struct WlanConnectionInfo {
 	uint8_t securityParams[28];
 	uint8_t securityState[24];
 	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
-	uint8_t securityStateRest[228];
+	uint8_t reserved128[104];
+	apRsnConfig_t apRsn;		/* the access point's RSN settings */
 	uint8_t ready;
 	uint8_t reserved357[184];
 	uint8_t protectionFlags;	/* bit 0: protection forced on */
@@ -194,9 +196,14 @@ struct WlanConnectionInfo {
 	uint8_t reserved761[3];
 	uint32_t dozingStations;	/* peers in power save */
 	struct WlanApPsQueue groupQueue;	/* group-addressed frames kept for the DTIM beacon */
-	uint8_t reserved780[70];
-	uint16_t groupKeyIndex;		/* the key group-addressed frames are sent with (inferred from the CCMP send path) */
-	uint8_t reserved852[32];
+	uint8_t reserved780[4];
+	uint32_t updatePassPhrase;	/* the PSK is to be derived again from the pass phrase */
+	uint32_t grpRekeyTimer;		/* osaCreateTimer() handle of the group rekey timer */
+	uint32_t grpRekeyCntRemaining;	/* group rekey timer ticks left; 0: no periodic rekey */
+	MIC_Error_t apMicError;		/* the TKIP countermeasures */
+	uint32_t apMicTimer;		/* osaCreateTimer() handle of their 60 s timer */
+	KeyData_t grpKeyData;		/* the group key; its index is what group-addressed frames are sent with */
+	uint8_t GNonce[NONCE_SIZE];
 	uint32_t listenInterval;	/* the peer is in power save */
 	uint32_t listenIntervalPs;	/* the same with WMM power save */
 	struct WlanPsMachine psMachine;
@@ -220,7 +227,8 @@ struct WlanConnectionRole {
 	struct WlanApPsQueue psQueue;	/* the peer's frames while it dozes */
 	uint8_t peerPowerSave;		/* 1: the peer is in power save */
 	uint8_t psCounted;		/* counted in the stations sharing the buffers */
-	uint8_t reserved34[54];
+	uint8_t reserved34[2];
+	apKeyMgmtInfoSta_t keyMgmt;	/* an access point's handshake with the peer */
 	uint8_t state;			/* 802.11 state: 1 unauthenticated, 2 authenticated, 3 associated */
 	uint8_t reserved89[7];
 	struct WlanApPsQueue uapsdQueue;	/* frames of delivery-enabled access categories */
@@ -237,6 +245,7 @@ struct WlanConnectionRole {
 };
 
 _Static_assert(offsetof(struct WlanConnectionRole, state) == 88, "role state");
+_Static_assert(offsetof(struct WlanConnectionRole, keyMgmt) == 36, "role key management");
 _Static_assert(offsetof(struct WlanConnectionRole, psQueue) == 20, "role power-save queue");
 _Static_assert(offsetof(struct WlanConnectionRole, uapsdQueue) == 96, "role U-APSD queue");
 _Static_assert(offsetof(struct WlanConnectionRole, fullReported) == 118, "role buffers full");
@@ -391,7 +400,10 @@ struct WlanConnection {
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
 	uint8_t *snmpBssParams[2];	/* [0]: HostCmd 0x37's, [1]: 0x36's and 0x5e's; each +28 is its block */
-	uint8_t *radioParams;		/* the radio configuration's block this connection's SNMP values use */
+	union {
+		uint8_t *radioParams;	/* the radio configuration's block this connection's SNMP values use */
+		eapolHskData_t *hskData;	/* an access point's peer: the handshake's nonce and key */
+	};
 	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
@@ -473,7 +485,9 @@ _Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OL
 _Static_assert(offsetof(struct WlanConnectionInfo, bssStarted) == 760, "info BSS started");
 _Static_assert(offsetof(struct WlanConnectionInfo, listenInterval) == 884, "info listen interval");
 _Static_assert(offsetof(struct WlanConnectionInfo, groupQueue) == 768, "info group queue");
-_Static_assert(offsetof(struct WlanConnectionInfo, groupKeyIndex) == 850, "info group key index");
+_Static_assert(offsetof(struct WlanConnectionInfo, grpKeyData.KeyIndex) == 850, "info group key index");
+_Static_assert(offsetof(struct WlanConnectionInfo, apRsn) == 232, "info RSN configuration");
+_Static_assert(offsetof(struct WlanConnectionInfo, GNonce) == 852, "info group nonce");
 _Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS machine");
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
 _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");

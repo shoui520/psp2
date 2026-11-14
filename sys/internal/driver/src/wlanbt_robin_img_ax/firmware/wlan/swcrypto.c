@@ -383,7 +383,7 @@ int wlanCryptoSendTable(OsaBuffer *buffer)
 		uint8_t keyId = 0;
 
 		if (connection->mode == 2 && (frame[6] & 1))
-			keyId = wlanConnectionInfo(connection)->groupKeyIndex;
+			keyId = wlanConnectionInfo(connection)->grpKeyData.KeyIndex;
 		wlanCcmpSend(frame, 0, data[0], key, keyId);
 	} else if (type == KEY_TYPE_WAPI) {
 		wlanWapiSend(frame, 0, data[0], key);
@@ -506,7 +506,7 @@ int sysServiceWlanPackets(void)
 				uint8_t keyId = 0;
 
 				if (connection->mode == 2 && (wlanCryptoTxHeader[6] & 1))
-					keyId = wlanConnectionInfo(connection)->groupKeyIndex;
+					keyId = wlanConnectionInfo(connection)->grpKeyData.KeyIndex;
 				*(uint16_t *)next = ((next[1] << 8) | next[0]) - 16;
 				wlanCcmpSend(next, 0, data[0], key, keyId);
 				if (wlanCryptoCounters[WLAN_CRYPTO_BUSY] != 0)

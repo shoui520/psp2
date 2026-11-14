@@ -12,44 +12,17 @@
 #include <stdint.h>
 
 #include "robin/buffer.h"
+#include "robin/esatypes.h"
 
 #define MAX_PMK_SIZE		32
 #define BSSID_FLAG		0xff	/* pmkElement_t.length of a PMK keyed by BSSID */
-#define PSK_PASS_PHRASE_LEN_MAX	64
 
 typedef uint8_t IEEEtypes_MacAddr_t[6];
 
-#define NONCE_SIZE		32
-#define EAPOL_MIC_KEY_SIZE	16
 #define EAPOL_MIC_SIZE		16
-#define EAPOL_ENCR_KEY_SIZE	16
 #define IEEE_8021X_PACKET_TYPE_EAPOL_KEY 3
 
-/* keyMgmtStaTypes.h */
-typedef struct Cipher_t {
-	uint8_t wep40 : 1;
-	uint8_t wep104 : 1;
-	uint8_t tkip : 1;
-	uint8_t ccmp : 1;
-	uint8_t rsvd : 4;
-} Cipher_t;
 
-typedef struct __attribute__((packed)) SecurityMode_t {
-	uint16_t noRsn : 1;
-	uint16_t wepStatic : 1;
-	uint16_t wepDynamic : 1;
-	uint16_t wpa : 1;
-	uint16_t wpaNone : 1;
-	uint16_t wpa2 : 1;
-	uint16_t cckm : 1;
-	uint16_t wapi : 1;
-	uint16_t rsvd : 8;
-} SecurityMode_t;
-
-typedef struct AkmSuite_t {
-	uint8_t akmOui[3];
-	uint8_t akmType;
-} AkmSuite_t;
 
 /* IEEE_types.h */
 typedef struct __attribute__((packed)) ether_hdr_t {
@@ -251,36 +224,7 @@ typedef struct __attribute__((packed)) key_MgtMaterial_t {
 
 _Static_assert(sizeof(key_MgtMaterial_t) == 56, "key material");
 
-/* keyCommonDef.h */
-#define TK_SIZE			16
 
-typedef struct KeyData_t {
-	uint8_t Key[TK_SIZE];
-	uint8_t RxMICKey[8];
-	uint8_t TxMICKey[8];
-	uint32_t TxIV32;
-	uint16_t TxIV16;
-	uint16_t KeyIndex;
-} KeyData_t;
-
-/* authenticator.h */
-typedef enum MIC_Fail_State_e {
-	NO_MIC_FAILURE,
-	FIRST_MIC_FAIL_IN_60_SEC,
-	SECOND_MIC_FAIL_IN_60_SEC
-} MIC_Fail_State_e;
-
-/*
- * This build's BOOLEAN is 32 bits and its enums take the smallest type that
- * holds them (armcc), so the layout differs from the 8977's.
- */
-typedef uint32_t BOOLEAN;
-
-typedef struct MIC_Error_t {
-	uint8_t status;			/* MIC_Fail_State_e */
-	BOOLEAN MICCounterMeasureEnabled;
-	uint32_t disableStaAsso;
-} MIC_Error_t;
 
 /* keyCommonDef.h: the header of a key the MAC installed */
 typedef struct cipher_key_hdr_t {
@@ -450,7 +394,6 @@ typedef struct TkipPtk_t {
 	uint8_t txMicKey[8];
 } TkipPtk_t;
 
-#define PMK_LEN_MAX	32
 
 /* sha1.c (0x2dc5c), mrvl_sha256_crypto.c (0x2e7c8) */
 void Mrvl_PRF(unsigned char *key, int key_len, unsigned char *prefix, int prefix_len,
