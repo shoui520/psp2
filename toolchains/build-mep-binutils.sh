@@ -2,7 +2,8 @@
 # binutils for Toshiba MeP (mep-elf): assembler, linker and objdump for the Venezia and VIP
 # firmware images (os0:kd/vnzimg.skprx, os0:kd/vipimg.skprx). 2.27 is the version
 # TeamMolecule's mepsdk uses; its CGEN-generated MeP tables include the C5 core and the
-# IVC2 coprocessor. Run on Linux (see common.sh). Installs to <toolchains>/mep-binutils-<v>.
+# IVC2 coprocessor, with complex symbols' constants read as 32-bit on 64-bit hosts
+# (mep-binutils-complex-constants.diff). Run on Linux (see common.sh). Installs to <toolchains>/mep-binutils-<v>.
 set -e
 . "$(dirname "$0")/common.sh"
 V=${V:-2.27}
@@ -12,7 +13,9 @@ W=$HOME/mep-binutils
 mkdir -p $W && cd $W
 [ -f binutils-$V.tar.bz2 ] || wget -q https://ftp.gnu.org/gnu/binutils/binutils-$V.tar.bz2
 echo "$SHA  binutils-$V.tar.bz2" | sha256sum -c -
-rm -rf binutils-$V build && tar xjf binutils-$V.tar.bz2 && mkdir build && cd build
+rm -rf binutils-$V build && tar xjf binutils-$V.tar.bz2 && mkdir build
+(cd binutils-$V && patch -p1) < "$R/toolchains/mep-binutils-complex-constants.diff"
+cd build
 ../binutils-$V/configure --target=mep-elf --prefix=$P --disable-nls --disable-werror \
 	--disable-gdb --disable-sim > configure.log 2>&1
 make -j8 MAKEINFO=true CFLAGS="-O2 -g0 -fcommon -Wno-implicit-function-declaration" > make.log 2>&1

@@ -1,0 +1,13 @@
+--- a/bfd/elflink.c
++++ b/bfd/elflink.c
+@@ -7934,6 +7934,10 @@
+     case '#':
+       ++sym;
+       *result = strtoul (sym, (char **) symp, 16);
++      /* A 32-bit target's constant is 32 bits wide: on a 64-bit host
++	 #ffffffff is -1, so that sym-1 does not overflow its field.  */
++      if (bfd_arch_bits_per_address (input_bfd) == 32)
++	*result = ((*result & 0xffffffff) ^ 0x80000000) - 0x80000000;
+       return TRUE;
+ 
+     case 'S':
