@@ -39,9 +39,9 @@ _Static_assert(sizeof(struct WlanMacTxRequest) == 76, "transmit request");
 
 extern volatile uint32_t *wlanTxRingReadIndex[WLAN_TX_RING_COUNT];
 extern volatile uint32_t *wlanTxRingWriteIndex[WLAN_TX_RING_COUNT];
-extern uint8_t wlanTxRingPending[28];
-extern uint8_t wlanTxRingPublished[28];
-extern uint8_t wlanTxRingFilled[28];
+extern uint32_t wlanTxRingPending[WLAN_TX_RING_SHADOWED];
+extern uint32_t wlanTxRingPublished[WLAN_TX_RING_SHADOWED];
+extern uint32_t wlanTxRingFilled[WLAN_TX_RING_SHADOWED];
 extern uint32_t wlanTxRingPublishLimit;
 extern uint32_t wlanTxRingMaskFill;
 extern uint32_t wlanTxRingMaskPush;

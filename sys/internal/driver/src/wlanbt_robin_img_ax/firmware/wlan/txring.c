@@ -29,9 +29,9 @@ volatile uint32_t *wlanTxRingWriteIndex[WLAN_TX_RING_COUNT] __attribute__((secti
 	RING_READ(0x028), RING_READ(0x010),
 };
 
-uint8_t wlanTxRingPending[28] __attribute__((section(".sqram1.bss")));
-uint8_t wlanTxRingPublished[28] __attribute__((section(".sqram1.bss")));
-uint8_t wlanTxRingFilled[28] __attribute__((section(".sqram1.bss")));
+uint32_t wlanTxRingPending[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.bss")));
+uint32_t wlanTxRingPublished[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.bss")));
+uint32_t wlanTxRingFilled[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.bss")));
 /* Entries published at once. */
 uint32_t wlanTxRingPublishLimit __attribute__((section(".sqram1.bss")));
 /* Policy bits cleared when a ring is filled (one per ring) and set or cleared when a frame is pushed. */

@@ -86,7 +86,6 @@ int osaCreateTimer(OsaTimerCallback callback, uint32_t argument, uint32_t delay,
 		   uint32_t *timer, uint32_t flags);
 uint32_t sysPendingEventPolicyIsEnabled(void);
 int sysCompletePendingEvent(void);
-int sysEventGateIsSet(void);
 int sysPendingEventIsArmed(void);
 int sysDispatchPendingEventMode(uint32_t mode);
 int osaCancelTimer(uint32_t timer);

@@ -7,6 +7,7 @@
  * implementations are converted in original address order.
  */
 #include <stddef.h>
+#include "robin/coex.h"
 #include "robin/rom.h"
 #include "robin/soc.h"
 #include "robin/sys.h"
@@ -599,7 +600,7 @@ int sysPendingEventIsArmed(void)
 
 int sysProcessPendingEvent(void)
 {
-	int result = sysEventGateIsSet();
+	int result = wlanCoexActive();
 
 	if (result != 0) {
 		result = sysPendingEventIsArmed();
