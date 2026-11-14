@@ -937,6 +937,14 @@ EAPOL_KeyMsg_t *ProcessRxEAPOL_GrpMsg1(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyM
 	return pKeyMsg;
 }
 
+void KeyMgmtResetCounter(keyMgmtInfoSta_t *pKeyMgmtInfo)
+{
+	if (pKeyMgmtInfo) {
+		pKeyMgmtInfo->staCounterHi = 0;
+		pKeyMgmtInfo->staCounterLo = 0;
+	}
+}
+
 /* The MIC failure timer expired. */
 void MicErrTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfo)
 {

@@ -492,6 +492,7 @@ void SetEAPOLKeyDescTypeVersion(EAPOL_KeyMsg_Tx_t *pTxEapol, BOOLEAN isWPA2,
 EAPOL_KeyMsg_t *GetKeyMsgNonceFromEAPOL(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
 EAPOL_KeyMsg_t *ProcessRxEAPOL_PwkMsg3(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
 EAPOL_KeyMsg_t *ProcessRxEAPOL_GrpMsg1(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+void KeyMgmtResetCounter(keyMgmtInfoSta_t *pKeyMgmtInfo);
 void MicErrTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfo);
 void DeauthDelayTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
 void keyMgmtStaRsnSecuredTimeoutHandler(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
