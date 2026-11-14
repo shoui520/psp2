@@ -49,6 +49,7 @@ int _FiosErrorToErrno(int err);
 int _Read(int fd, void *buf, size_t nbyte);
 int _Write(int fd, const void *buf, size_t nbyte);
 int _Open(const char *path, int flags, ...);
+int _Fopen(const char *path, unsigned int smode, int share);
 int _Close(int fd);
 long long _Lseek(int fd, long long offset, int whence);
 int _Isatty(int fd);
