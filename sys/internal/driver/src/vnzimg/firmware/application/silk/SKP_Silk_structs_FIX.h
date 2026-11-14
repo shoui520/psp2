@@ -131,6 +131,7 @@ typedef struct {
     SKP_DWORD_ALIGN SKP_int16   PredCoef_Q12[ 2 ][ MAX_LPC_ORDER ];
     SKP_int16                   LTPCoef_Q14[ LTP_ORDER * NB_SUBFR ];
     SKP_int                     LTP_scale_Q14;
+    SKP_int32                   shaping_reserved;               /* SCE: never read or written (AR1_Q13 at 256) */
 
     /* Noise shaping parameters */
     /* Testing */

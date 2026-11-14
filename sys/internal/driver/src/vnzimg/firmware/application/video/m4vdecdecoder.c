@@ -22,7 +22,7 @@ static void runDone(M4vdecDecoder *decoder);
 static void stripesDone(M4vdecDecoder *decoder);
 static uint32_t stripeDone(M4vdecDecoder *decoder, uint32_t jobIndex, uint32_t row);
 static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
-	uint32_t mode, uint32_t width);
+	int32_t mode, int32_t width);
 static void rowsStartSingle(M4vdecDecoder *decoder, M4vdecDecoderInfo *info, int32_t lastRow);
 static void runReadSingle(M4vdecDecoder *decoder);
 static void stripesDoneSingle(M4vdecDecoder *decoder);
@@ -805,7 +805,7 @@ static uint32_t stripeDone(M4vdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 
 /* 0x8488e4: a row's entry moved on to its next stripe */
 static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
-	uint32_t mode, uint32_t width)
+	int32_t mode, int32_t width)
 {
 	const VideoHelperJob *job = (const VideoHelperJob *)entry->job;
 	uint32_t endY = job->endY, endX = job->endX;
