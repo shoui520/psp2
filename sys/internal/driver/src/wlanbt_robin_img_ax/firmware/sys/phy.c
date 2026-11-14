@@ -4,6 +4,7 @@
  * signal levels. The filename is inferred.
  */
 #include <stddef.h>
+#include "robin/calibration.h"
 #include "robin/coex.h"
 #include "robin/event.h"
 #include "robin/mac.h"
@@ -81,18 +82,7 @@ static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.
 #define MAC_2D0_BAND_MASK	0xe000u		/* MAC_2D0_FLAGS */
 #define MAC_2D0_ENABLE		0x0008u
 
-/* The key of a calibration lookup, passed by value. */
-struct WlanCalibrationKey {
-	uint8_t band;
-	uint8_t channel;
-	uint8_t reserved[2];
-};
-
 /* Not converted yet; provisional names. */
-int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec38 */
-int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec10 */
-int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec60 */
-int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values);	/* 0xecb4 */
 uint32_t bbpReadVersionRegister(uint32_t index);
 void rfTunePrepare(unsigned int band, uint32_t channel);			/* 0x32b82 */
 void bbpLoadBandwidthTables(unsigned int band, unsigned int bandwidth, uint8_t channel); /* 0x325ec */

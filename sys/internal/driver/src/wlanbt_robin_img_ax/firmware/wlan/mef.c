@@ -334,7 +334,7 @@ void wlanMefLoad(void *destination, const uint8_t *source)
 }
 
 /* Address classes (see wlanAddressClass) the filter expression applies to. */
-uint32_t wlanMefClassMask __attribute__((section(".itcm.bss")));
+uint32_t wlanMefClassMask __attribute__((section(".itcm.rw"))) = 0;
 
 int wlanMefClassEnabled(uint32_t mask)
 {
@@ -591,8 +591,8 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 }
 
 /* The connection the offload uses when no buffer names one, and the number of entries in use. */
-struct WlanConnection *wlanMefConnection __attribute__((section(".itcm.bss")));
-uint32_t wlanMefEntryCount __attribute__((section(".itcm.bss")));
+struct WlanConnection *wlanMefConnection __attribute__((section(".itcm.rw"))) = NULL;
+uint16_t wlanMefEntryCount __attribute__((section(".itcm.rw"))) = 0;
 
 int macTxNotifyFormatTable(OsaBuffer *buffer);		/* 0x31c0a, not converted yet */
 
@@ -671,7 +671,7 @@ int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
 
 	if (buffer != NULL)
 		connection = buffer->context;
-	for (i = 0; i < (uint16_t)wlanMefEntryCount; ++i) {
+	for (i = 0; i < wlanMefEntryCount; ++i) {
 		struct WlanMefEntry *entry = &wlanMefEntries[i];
 		uint8_t flags;
 
@@ -729,6 +729,43 @@ int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
 		return 1;
 	}
 	return 0;
+}
+
+/*
+ * Takes the host's filter configuration: the address classes (4 bytes,
+ * unaligned), the number of entries (at most 2) and the entries, each a mode
+ * byte, a flags byte and a length-prefixed filter stack. An entry of mode 4
+ * with flags 0x10 instead runs the filters once now for the connection.
+ * Returns 0 when there are too many entries.
+ */
+int wlanMefConfigure(struct WlanConnection *connection, const uint8_t *config)
+{
+	unsigned int posture = sysIrqDisable();
+	const uint8_t *entry;
+	uint32_t wake;
+	int i;
+
+	__aeabi_uwrite4((int)__aeabi_uread4(config), &wlanMefClassMask);
+	wlanMefEntryCount = (config[5] << 8) | config[4];
+	if (wlanMefEntryCount > 2) {
+		sysIrqRestore(posture);
+		return 0;
+	}
+	entry = config + 6;
+	if (entry[0] == WLAN_MEF_MODE_PATTERN && entry[1] == 0x10) {
+		sysIrqRestore(posture);
+		wlanMefConnection = connection;
+		wlanMefProcessFrame(NULL, &wake, 4);
+		return 1;
+	}
+	for (i = 0; i < wlanMefEntryCount; ++i) {
+		wlanMefEntries[i].modes = entry[0];
+		wlanMefEntries[i].flags = entry[1];
+		wlanMefLoad(&wlanMefEntries[i].stack, entry + 2);
+		entry += ((entry[3] << 8) | entry[2]) + 4;
+	}
+	sysIrqRestore(posture);
+	return 1;
 }
 
 /*

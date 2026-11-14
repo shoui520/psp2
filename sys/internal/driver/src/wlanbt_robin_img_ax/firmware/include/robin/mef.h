@@ -133,6 +133,7 @@ int wlanMefMatchFrame(OsaBuffer *buffer);
 void wlanMefConfigClear(void);
 void wlanMefConfigParse(const uint8_t *tlvs, int length);
 int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop);
+int wlanMefConfigure(struct WlanConnection *connection, const uint8_t *config);
 #define WLAN_MEF_FLAG_WAKE	0x01	/* the host sees the frame too */
 #define WLAN_MEF_FLAG_KEEP	0x02	/* the frame is not discarded */
 #define WLAN_MEF_ACTION_SHIFT	4
@@ -165,7 +166,7 @@ _Static_assert(offsetof(struct WlanReplyFrame, frameLength) == 116, "transmit da
 
 extern struct OsaBufferPool wlanReplyFramePool;
 extern struct WlanConnection *wlanMefConnection;
-extern uint32_t wlanMefEntryCount;
+extern uint16_t wlanMefEntryCount;
 OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection);
 uint8_t *wlanReplyFramePayload(OsaBuffer *buffer);
 int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, int length);
