@@ -18,6 +18,18 @@ extern "C" {
 #ifndef SCE_KERNEL_MAX_CPU
 #define SCE_KERNEL_MAX_CPU			(4)	/* SDK kernel/cpu.h */
 #endif
+#ifndef SCE_KERNEL_CPU_MASK_SHIFT
+/* the user processors of a CPU affinity mask (SDK kernel/cpu.h) */
+#define SCE_KERNEL_CPU_MASK_SHIFT		(16)
+#define SCE_KERNEL_CPU_MASK_USER_0		(0x01 << SCE_KERNEL_CPU_MASK_SHIFT)
+#define SCE_KERNEL_CPU_MASK_USER_1		(0x02 << SCE_KERNEL_CPU_MASK_SHIFT)
+#define SCE_KERNEL_CPU_MASK_USER_2		(0x04 << SCE_KERNEL_CPU_MASK_SHIFT)
+#define SCE_KERNEL_CPU_MASK_USER_ALL	\
+			(SCE_KERNEL_CPU_MASK_USER_0 | SCE_KERNEL_CPU_MASK_USER_1 | SCE_KERNEL_CPU_MASK_USER_2)
+#endif
+
+/* the smallest thread stack */
+#define SCE_KERNEL_THREAD_STACK_SIZE_MIN	0x00001000
 
 /* thread priorities; the default may be offset (SCE_KERNEL_DEFAULT_PRIORITY_USER + 10) */
 #define SCE_KERNEL_HIGHEST_PRIORITY_USER	(64)

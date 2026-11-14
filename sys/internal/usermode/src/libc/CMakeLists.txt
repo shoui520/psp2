@@ -2,6 +2,7 @@
 # libraries (SceLibc, SceLibm, SceLibstdcxx) over Sony's psp2 system interface. One
 # Dinkumware function per file, in the original's link order. The heap is Doug Lea's
 # dlmalloc 2.8.3 with Sony's changes (dlmalloc_sce.patch).
+enable_language(CXX)
 include(../libkernel/heap.cmake)
 set(libc_dlmalloc_source "${CMAKE_CURRENT_BINARY_DIR}/dlmalloc-sce.c")
 libkernel_prepare_heap(
@@ -594,11 +595,54 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	feraiseexcept.c
 	fesetenv.c
 	fegetenv.c
+	statics.cpp
+	xstring.cpp
+	delaop.cpp
+	delaopnt.cpp
+	delaopv.cpp
+	delop.cpp
+	delopnt.cpp
+	delopv.cpp
+	cond.c
+	cthread.c
+	mutex.c
+	xthread.cpp
+	exceptions.cpp
+	xnotify.c
+	xtime.c
+	terminate.cpp
+	fiopen.cpp
+	functional.cpp
+	iomanip.cpp
+	ios.cpp
+	iostream.cpp
+	memory.cpp
+	badalloc.cpp
+	newhandler.cpp
+	newrep.cpp
+	newaop.cpp
+	newaopnt.cpp
+	new.cpp
+	newopnt.cpp
+	nothrow.cpp
+	nested_exception.cpp
+	exception.cpp
+	typeinfo.cpp
+	stdexcept.cpp
+	debug.cpp
+	strstream.cpp
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
 	target_compile_definitions(vs0_sys_external_libc PRIVATE __STDC_WANT_LIB_EXT1__=1)
-	target_include_directories(vs0_sys_external_libc BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+	# the C headers of libc/include serve the C sources; the C++ library is compiled with the
+	# SDK's headers, which its templates need whole
+	target_include_directories(vs0_sys_external_libc BEFORE PRIVATE
+		$<$<COMPILE_LANGUAGE:C>:${CMAKE_CURRENT_SOURCE_DIR}/include>
+		$<$<COMPILE_LANGUAGE:CXX>:$ENV{PSP2_SDK}/target/include>)
+	# Sony's C++ library: exceptions on, C++11
+	target_compile_options(vs0_sys_external_libc PRIVATE
+		$<$<COMPILE_LANGUAGE:CXX>:-Xc+=exceptions -Xstd=cpp11>)
 endif()
 # the kernel's memset and memcmp cores under their standard names
 set_source_files_properties(../../../kernel/src/sysmem/fill_core.S PROPERTIES
