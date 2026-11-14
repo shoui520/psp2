@@ -48,7 +48,7 @@ double _Sinh(double x, double y)
 			const double w = x * x;
 
 			x = y * ((x + x * w * ((p[0] * w + p[1]) * w + p[2])) / (1.0 + w * (q[0] * w + q[1])));
-		} else if (x < _Xbig._Double) {	/* y (e^x - e^-x) / 2 */
+		} else if (x < _Xbig) {	/* y (e^x - e^-x) / 2 */
 			_Exp(&x, 1.0, -1);
 			x = y * (x - 0.25 / x);
 		} else {	/* y e^x / 2 */

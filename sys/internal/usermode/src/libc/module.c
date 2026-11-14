@@ -36,17 +36,17 @@ int module_start(SceSize argc, const void *argp)
 	res = _MallocInit();
 	if (res != 0) {
 		sceClibPrintf("Initialize malloc : Failed (err=0x%08x)\n", res);
-		sceKernelExitThread(2);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(2);
 	}
 	res = _InitLocks();
 	if (res < 0) {
 		sceClibPrintf("Initialize lock : Failed (err=0x%08x)\n", res);
-		sceKernelExitThread(2);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(2);
 	}
 	res = _InitTlsMutex();
 	if (res < 0) {
 		sceClibPrintf("Initialize tls mutex : Failed (err=0x%08x)\n", res);
-		sceKernelExitThread(2);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(2);
 	}
 	_InitStdFiles();
 
@@ -71,21 +71,21 @@ int module_start(SceSize argc, const void *argp)
 		if (*init != NULL)
 			(*init)();
 	}
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return SCE_KERNEL_START_SUCCESS;
 }
 
 int module_exit(SceSize argc, const void *argp)
 {
-	if (_ExitInProgress != 0) {
-		_Fcloseall(1);
-		return SCE_KERNEL_STOP_SUCCESS;
+	if (_ExitInProgress == 0) {
+		__cxa_finalize(&__dso_handle);
+		_Fcloseall(0);
+		_TermTlsMutex();
+		_TermLocks();
+		return _MallocTerm();
 	}
-	__cxa_finalize(&__dso_handle);
-	_Fcloseall(0);
-	_TermTlsMutex();
-	_TermLocks();
-	return _MallocTerm();
+	/* SCE: exit() is unloading the module: no status, r0 is what _Fcloseall leaves */
+	_Fcloseall(1);
 }
 
 int atexit(void (*func)(void))

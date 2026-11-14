@@ -14,7 +14,7 @@
 static unsigned int heapInitError;	/* what the heap's initializer reports */
 
 /* the default heap's state (dlmalloc's, laid out by _HeapInit) */
-static unsigned long long heap[0x238 / sizeof(unsigned long long)];
+unsigned long long libc_heap_mspace[0x238 / sizeof(unsigned long long)];	/* exported */
 
 /* the TLS blocks' allocator (ldtls.c) and the replacement's initializer and finalizer */
 void (*_FreeForTls)(void *ptr);
@@ -215,7 +215,7 @@ size_t malloc_usable_size(void *ptr)
 
 static void defaultMallocInit(void)
 {
-	heapInitError = _HeapInit(heap);
+	heapInitError = _HeapInit(libc_heap_mspace);
 }
 
 static void defaultMallocFinalize(void)
@@ -225,42 +225,42 @@ static void defaultMallocFinalize(void)
 
 static void *defaultMalloc(size_t size)
 {
-	return mspace_malloc(heap, size);
+	return mspace_malloc(libc_heap_mspace, size);
 }
 
 static void defaultFree(void *ptr)
 {
-	mspace_free(heap, ptr);
+	mspace_free(libc_heap_mspace, ptr);
 }
 
 static void *defaultCalloc(size_t nelem, size_t size)
 {
-	return mspace_calloc(heap, nelem, size);
+	return mspace_calloc(libc_heap_mspace, nelem, size);
 }
 
 static void *defaultRealloc(void *ptr, size_t size)
 {
-	return mspace_realloc(heap, ptr, size);
+	return mspace_realloc(libc_heap_mspace, ptr, size);
 }
 
 static void *defaultMemalign(size_t boundary, size_t size)
 {
-	return mspace_memalign(heap, boundary, size);
+	return mspace_memalign(libc_heap_mspace, boundary, size);
 }
 
 static void *defaultReallocalign(void *ptr, size_t size, size_t boundary)
 {
-	return mspace_reallocalign(heap, ptr, size, boundary);
+	return mspace_reallocalign(libc_heap_mspace, ptr, size, boundary);
 }
 
 static int defaultMallocStats(struct malloc_managed_size *mmsize)
 {
-	return mspace_malloc_stats(heap, mmsize);
+	return mspace_malloc_stats(libc_heap_mspace, mmsize);
 }
 
 static int defaultMallocStatsFast(struct malloc_managed_size *mmsize)
 {
-	return mspace_malloc_stats_fast(heap, mmsize);
+	return mspace_malloc_stats_fast(libc_heap_mspace, mmsize);
 }
 
 static size_t defaultMallocUsableSize(void *ptr)

@@ -12,10 +12,17 @@ extern const streamoff _BADOFF = -1;
 static ios_base *stdstr[NSTDSTR + 2] = {0};	/* the standard streams */
 static signed char stdopens[NSTDSTR + 2] = {0};	/* their open counts */
 
-char _PJP_CPP_Copyright[] =
+_STD_END
+
+char _PJP_CPP_Copyright[] =	/* global: the stub library names it unmangled */
 	"Copyright (c) 1992-2012 by P.J. Plauger,"
 	" licensed by Dinkumware, Ltd."
 	" ALL RIGHTS RESERVED.";
+
+_STD_BEGIN
+
+template const _Iosb<int>::_Iostate _Iosb<int>::goodbit;	/* exported */
+template const _Iosb<int>::_Seekdir _Iosb<int>::beg;
 
 int ios_base::_Index = 0;
 bool ios_base::_Sync = true;

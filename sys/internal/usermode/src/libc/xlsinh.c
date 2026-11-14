@@ -48,7 +48,7 @@ long double _LSinh(long double x, long double y)
 			const long double w = x * x;
 
 			x = y * ((x + x * w * ((p[0] * w + p[1]) * w + p[2])) / (1.0L + w * (q[0] * w + q[1])));
-		} else if (x < _LXbig._Long_double) {	/* y (e^x - e^-x) / 2 */
+		} else if (x < _LXbig) {	/* y (e^x - e^-x) / 2 */
 			_LExp(&x, 1.0L, -1);
 			x = y * (x - 0.25L / x);
 		} else {	/* y e^x / 2 */

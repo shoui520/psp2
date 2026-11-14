@@ -6,6 +6,11 @@
 #define _LIBC_INTERNAL_H
 
 #include <stddef.h>
+#include <wchar.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* module.c */
 extern void *__dso_handle;
@@ -110,7 +115,6 @@ int __cxa_atexit(void (*func)(void *), void *arg, void *dso);
 void __cxa_finalize(void *dso);
 
 /* the thread-local data of the C library (sceKernelGetTLSAddr slots) */
-#include <wchar.h>
 mbstate_t *_Getmbrlenstate(void);
 mbstate_t *_Getmbrtowcstate(void);
 mbstate_t *_Getmbsrtowcsstate(void);
@@ -151,5 +155,15 @@ int _Cndinit(struct _SceKernelLwCondWork *cnd, const char *name, struct _SceLibc
 int _Cnddst(struct _SceKernelLwCondWork *cnd);
 int _Cndwait(struct _SceKernelLwCondWork *cnd);
 int _Cndbroadcast(struct _SceKernelLwCondWork *cnd);
+
+/*
+ * SceThreadmgrCoredumpTime's sceKernelExitThread, the one libc imports (its link name has the
+ * library prefix: SceLibKernel exports the name too)
+ */
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int exitStatus);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _LIBC_INTERNAL_H */

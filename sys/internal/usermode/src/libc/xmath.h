@@ -119,10 +119,12 @@ void _Feraise(int except);
 extern const _Dconst _Eps, _Rteps;
 extern const _Dconst _FEps, _FRteps;
 extern const _Dconst _LEps, _LRteps;
-extern const _Dconst _Xbig, _FXbig, _LXbig;	/* where e^-x stops mattering beside e^x */
-extern double _Zero;	/* a zero the compiler cannot fold, for -0.0 */
-extern float _FZero;
-extern long double _LZero;
+extern const double _Xbig;	/* where e^-x stops mattering beside e^x */
+extern const float _FXbig;
+extern const long double _LXbig;
+extern const double _Zero;	/* a zero the compiler cannot fold, for -0.0 */
+extern const float _FZero;
+extern const long double _LZero;
 
 /* erf's ranges: its rational approximation below _Erf_small, 1 - erfc above */
 extern double _Erf_big, _Erf_small;

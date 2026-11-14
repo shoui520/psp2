@@ -27,7 +27,7 @@ float _FCosh(float x, float y)
 	} else {	/* finite */
 		if (x < 0.0F)
 			x = -x;
-		if (x < _FXbig._Float) {	/* y * (e^x + e^-x) / 2 */
+		if (x < _FXbig) {	/* y * (e^x + e^-x) / 2 */
 			_FExp(&x, 1.0F, -1);
 			return y * (x + 0.25F / x);
 		} else {	/* y * e^x / 2 */

@@ -1,8 +1,10 @@
 # 3.630.011-DEBUGGER: vs0:sys/external/libc.suprx (generated)
 set(MODULE_NID 0x178642AC)
+set(MODULE_AUTH_ID 0x280000000002800E)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03630011)
+set(MODULE_EXPORT_ORDER 0xBE43BB07 0xCDAE3C7D 0xF7629240 0x00000000)
 set(MODULE_IMPORT_LIBS
 	0xCAE9ACE6:5:0x0
 	0xF2FF276E:1:0x0
@@ -13,69 +15,68 @@ set(MODULE_IMPORT_LIBS
 	0x3AD4D630:1:0x0
 	0x5AD9C136:1:0x8
 )
-set(MODULE_IMPORT_FUNCS
-	sceKernelGetThreadId
-	sceKernelCallModuleExit
-	sceKernelDeleteLwMutex
-	sceIoChstat
-	__stack_chk_fail
-	sceKernelSignalLwCond
-	sceKernelLockLwMutex
-	sceKernelCreateLwCond
-	sceKernelRegisterThreadEventHandler
-	sceKernelDeleteLwCond
-	sceKernelExitProcess
-	sceClibSnprintf
-	sceKernelUnlockLwMutex
-	sceIoLseek
-	sceKernelTryLockLwMutex
-	sceKernelGetTLSAddr
-	sceIoGetstat
-	sceKernelCreateThread
-	sceKernelGetModuleInfoByAddr
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelWaitLwCond
-	sceKernelSignalLwCondAll
-	sceKernelStartThread
-	sceClibPrintf
-	sceIoWrite
-	sceIoRead
-	sceKernelLibcTime
-	sceKernelGetProcessParam
-	sceKernelLibcGettimeofday
-	sceKernelLibcMktime
-	sceKernelLibcLocaltime_r
-	sceKernelLibcClock
-	sceKernelLibcGmtime_r
-	sceKernelGetStdin
-	sceKernelGetStdout
-	sceKernelCallAbortHandler
-	sceKernelGetStderr
-	sceKernelFindMemBlockByAddr
-	sceKernelFreeMemBlock
-	sceKernelGetMemBlockBase
-	sceKernelAllocMemBlock
-	sceKernelDeleteThread
-	sceKernelUnregisterThreadEventHandler
-	sceKernelDelayThread
-	SceThreadmgrCoredumpTime_sceKernelExitThread
-	sceFiosFHToFileno
-	sceFiosRenameSync
-	sceFiosFHCloseSync
-	sceFiosFileTruncateSync
-	sceFiosFHReadSync
-	sceFiosFHWriteSync
-	sceFiosFHSeek
-	sceFiosDeleteSync
-	sceFiosIsValidHandle
-	sceFiosDirectoryDeleteSync
-	sceFiosDirectoryCreateSync
-	sceFiosFilenoToFH
-	sceFiosFHOpenWithModeSync
-	sceFiosDeallocatePassthruFH
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
-	__sce_libcparam
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x15E2A45D
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x29482F7F
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3AC63B9A
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x48C7EAE6
+	0xCAE9ACE6:F:0x6D8C0F13
+	0xCAE9ACE6:F:0x721F6CB3
+	0xCAE9ACE6:F:0x7595D9AA
+	0xCAE9ACE6:F:0x8CBA03D5
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x99BA173E
+	0xCAE9ACE6:F:0xA6A2C915
+	0xCAE9ACE6:F:0xB295EB61
+	0xCAE9ACE6:F:0xBCA5B623
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xD11A5103
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE1878282
+	0xCAE9ACE6:F:0xE5241A0C
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0x34EFD876
+	0xF2FF276E:F:0xFDB32293
+	0x2DD91812:F:0x0039BE45
+	0x2DD91812:F:0x2BE3E066
+	0x2DD91812:F:0x4B879059
+	0x2DD91812:F:0x890BDC39
+	0x2DD91812:F:0x94F041ED
+	0x2DD91812:F:0x9E45DA09
+	0x2DD91812:F:0xBCA437CD
+	0x2DD91812:F:0xC1727F59
+	0x2DD91812:F:0xE5AA625C
+	0x2DD91812:F:0xEB6E50BB
+	0x2DD91812:F:0xFA5E3ADA
+	0x37FE725A:F:0xA33B99D1
+	0x37FE725A:F:0xA91E15EE
+	0x37FE725A:F:0xB8EF5818
+	0x37FE725A:F:0xB9D5EBDE
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x2C8ED6F0
+	0x859A24B1:F:0x4B675D05
+	0x5E8D0E22:F:0x0C8A38E1
+	0x3AD4D630:F:0x0009910A
+	0x3AD4D630:F:0x030306F4
+	0x3AD4D630:F:0x45182328
+	0x3AD4D630:F:0x6E1252B8
+	0x3AD4D630:F:0x76945919
+	0x3AD4D630:F:0x984024E5
+	0x3AD4D630:F:0xA75F3C4A
+	0x3AD4D630:F:0xAAC54B44
+	0x3AD4D630:F:0xB309E327
+	0x3AD4D630:F:0xB9573146
+	0x3AD4D630:F:0xE037B076
+	0x3AD4D630:F:0xEE3CEBB8
+	0x3AD4D630:F:0xEE681E1D
+	0x3AD4D630:F:0xFF0876EA
+	0x5AD9C136:V:0xDF084DFA
 )

@@ -32,6 +32,30 @@ FILE _Stderr = {
 
 FILE *_Files[FOPEN_MAX] = {&_Stdin, &_Stdout, &_Stderr};
 
+char _PJP_C_Copyright[] =
+	"Copyright (c) 1992-2012 by P.J. Plauger, licensed by Dinkumware, Ltd. ALL RIGHTS RESERVED.";
+
+/*
+ * the parameters of each floating-point type (<float.h> of other targets; the psp2 headers
+ * give them as constants, the library still exports them)
+ */
+typedef struct {
+	int _Ddig, _Dmdig, _Dmax10e, _Dmaxe, _Dmin10e, _Dmine;
+	union {	/* union of short array and all floats */
+		unsigned short _Us[8];
+		float _Float;
+		double _Double;
+		long double _Long_double;
+	} _Deps, _Dmax, _Dmin;
+} _Dvals;
+
+_Dvals _Flt = {6, 24, 38, 128, -37, -125,
+	{{0, 0x3400}}, {{0xffff, 0x7f7f}}, {{0, 0x0080}}};
+_Dvals _Dbl = {15, 53, 308, 1024, -307, -1021,
+	{{0, 0, 0, 0x3cb0}}, {{0xffff, 0xffff, 0xffff, 0x7fef}}, {{0, 0, 0, 0x0010}}};
+_Dvals _Ldbl = {15, 53, 308, 1024, -307, -1021,
+	{{0, 0, 0, 0x3cb0}}, {{0xffff, 0xffff, 0xffff, 0x7fef}}, {{0, 0, 0, 0x0010}}};
+
 /* SCE: the standard streams' read cache starts at their buffers */
 void _InitStdFiles(void)
 {

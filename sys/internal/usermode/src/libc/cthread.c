@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "libc_internal.h"
 #include "xthrpsp2.h"
 
 typedef struct {	/* the thread function, and the handshake with its creator */
@@ -57,7 +58,7 @@ int _Thrd_detach(_Thrd_t thr)
 
 void _Thrd_exit(int code)
 {
-	sceKernelExitThread(code);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(code);
 }
 
 void _Thrd_sleep(const xtime *xt)

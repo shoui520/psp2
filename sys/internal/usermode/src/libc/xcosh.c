@@ -27,7 +27,7 @@ double _Cosh(double x, double y)
 	} else {	/* finite */
 		if (x < 0.0)
 			x = -x;
-		if (x < _Xbig._Double) {	/* y * (e^x + e^-x) / 2 */
+		if (x < _Xbig) {	/* y * (e^x + e^-x) / 2 */
 			_Exp(&x, 1.0, -1);
 			return y * (x + 0.25 / x);
 		} else {	/* y * e^x / 2 */

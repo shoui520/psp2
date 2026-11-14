@@ -1,9 +1,37 @@
 // thread0.cpp: the system_error exceptions the thread library throws, and the trampoline
-// call_once calls its target through.
+// call_once calls its target through, the lock tags and bind's placeholders.
+#include <functional>
 #include <system_error>
 #include <mutex>
 
 _STD_BEGIN
+namespace placeholders {	// placeholders
+_Ph<1> _1;
+_Ph<2> _2;
+_Ph<3> _3;
+_Ph<4> _4;
+_Ph<5> _5;
+_Ph<6> _6;
+_Ph<7> _7;
+_Ph<8> _8;
+_Ph<9> _9;
+_Ph<10> _10;
+_Ph<11> _11;
+_Ph<12> _12;
+_Ph<13> _13;
+_Ph<14> _14;
+_Ph<15> _15;
+_Ph<16> _16;
+_Ph<17> _17;
+_Ph<18> _18;
+_Ph<19> _19;
+_Ph<20> _20;
+}	// namespace placeholders
+
+const adopt_lock_t adopt_lock = adopt_lock_t();
+const try_to_lock_t try_to_lock = try_to_lock_t();
+const defer_lock_t defer_lock = defer_lock_t();
+
 static const char *const msgs[] =
 	{	// error messages
 	"device or resource busy",

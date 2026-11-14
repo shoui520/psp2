@@ -27,7 +27,7 @@ long double _LCosh(long double x, long double y)
 	} else {	/* finite */
 		if (x < 0.0L)
 			x = -x;
-		if (x < _LXbig._Long_double) {	/* y * (e^x + e^-x) / 2 */
+		if (x < _LXbig) {	/* y * (e^x + e^-x) / 2 */
 			_LExp(&x, 1.0L, -1);
 			return y * (x + 0.25L / x);
 		} else {	/* y * e^x / 2 */

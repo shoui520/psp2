@@ -48,7 +48,7 @@ float _FSinh(float x, float y)
 			const float w = x * x;
 
 			x = y * ((x + x * w * p[0]) / (1.0F + w * (q[0] * w + q[1])));
-		} else if (x < _FXbig._Float) {	/* y (e^x - e^-x) / 2 */
+		} else if (x < _FXbig) {	/* y (e^x - e^-x) / 2 */
 			_FExp(&x, 1.0F, -1);
 			x = y * (x - 0.25F / x);
 		} else {	/* y e^x / 2 */

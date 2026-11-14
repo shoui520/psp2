@@ -9,7 +9,7 @@ libkernel_prepare_heap(
 	"${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/dlmalloc-2.8.3/malloc.c"
 	"${CMAKE_CURRENT_SOURCE_DIR}/dlmalloc_sce.patch"
 	"${libc_dlmalloc_source}")
-psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libc KIND user COMPILER snc SOURCES
 	psp2io.c
 	psp2time.c
 	module.c
@@ -274,6 +274,7 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	wscanf.c
 	assert.c
 	xbtowc.c
+	xctype.c
 	_exit.c
 	xfgpos.c
 	xfiles.c
@@ -281,8 +282,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xfrprep.c
 	xfspos.c
 	xfwprep.c
+	xfvalues.c
 	ldtls.c
 	xmbtowc.c
+	xlvalues.c
 	xprintf.c
 	xscanf.c
 	xstoflt.c
@@ -306,7 +309,12 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xldscale.c
 	xldtento.c
 	xlock.c
+	xtolower.c
+	xtoupper.c
 	xtowctrans.c
+	xvalues.c
+	xwctrtab.c
+	xwctytab.c
 	xwctomb.c
 	xiswctype.c
 	xstrerror.c
@@ -617,6 +625,7 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	ios.cpp
 	iostream.cpp
 	memory.cpp
+	limits.cpp
 	badalloc.cpp
 	newhandler.cpp
 	newrep.cpp
