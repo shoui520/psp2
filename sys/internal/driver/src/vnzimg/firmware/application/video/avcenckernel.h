@@ -5,6 +5,7 @@
 #define AVCENC_KERNEL_H
 
 #include <stdint.h>
+#include "service.h"
 
 /*
  * the motion plane's downscale, as its kernels keep it in the IVC2 registers.
@@ -350,5 +351,56 @@ void avcencMotionEdgeChroma(AvcencMotion *motion, int32_t x, int32_t y, int32_t 
 	int32_t height);
 uint32_t avcencMotionSkipChroma(const AvcencMotion *motion, const uint8_t *source,
 	uint32_t first);
+
+/*
+ * the deblocking's kernels (0x8a2208-0x8a3c00): the decoder's built again,
+ * the same code (avcdeckernel.c) but the luma's last columns kept
+ */
+void avcencDeblockLoad(AvcDeblock *deblock, const uint8_t *samples);
+void avcencDeblockStore(const AvcDeblock *deblock, uint8_t *samples);
+void avcencDeblockStoreLeft(const AvcDeblock *deblock, uint8_t *samples);
+void avcencDeblockKeepLeft(const AvcDeblock *deblock, const uint8_t *luma,
+	uint8_t (*columns)[4][8]);
+void avcencDeblockTurnLeft(AvcDeblock *deblock);
+void avcencDeblockTurnRight(AvcDeblock *deblock);
+uint32_t avcencDeblockEdge(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+uint32_t avcencDeblockEdgeRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcencDeblockInner(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcencDeblockInnerRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcencDeblockMiddle(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcencDeblockInnerLast(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcencChromaDeblockLoad(AvcChromaDeblock *deblock, const uint8_t *samples);
+void avcencChromaDeblockStore(const AvcChromaDeblock *deblock, uint8_t *samples);
+void avcencChromaDeblockStoreLeft(const AvcChromaDeblock *deblock, uint8_t *samples);
+void avcencChromaDeblockKeepLeft(const AvcChromaDeblock *deblock, uint8_t (*columns)[2][8]);
+uint32_t avcencChromaDeblockTurn(AvcChromaDeblock *deblock);
+uint32_t avcencChromaDeblockMask(const AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths, uint32_t inner);
+uint32_t avcencChromaDeblockEdge(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths);
+uint32_t avcencChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths);
+
+/*
+ * a macroblock's bS as its kernels hand them on, by register: two edges of
+ * four 4-sample groups each, the vertical edges 0-1 and 2-3, then the
+ * horizontal ones
+ */
+typedef struct AvcencStrengthLanes {
+	uint8_t coded[4][8];		/* where coefficients are, and next to intra (c16-c19) */
+	uint8_t edges[4][8];		/* and where the vectors differ (c12-c15) */
+} AvcencStrengthLanes;
+
+/* the strengths' kernels (0x8df4d0-0x8df640) */
+void avcencStrengthsCoded(AvcencStrengthLanes *lanes, uint32_t vertical, uint32_t horizontal,
+	uint32_t leftIntra, uint32_t topIntra);
+void avcencStrengthsVectors(AvcencStrengthLanes *lanes, const int16_t (*current)[2],
+	const int16_t (*left)[2], const int16_t (*above)[2]);
 
 #endif

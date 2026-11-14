@@ -3902,7 +3902,7 @@ static inline uint32_t strengthPair(const uint8_t *strengths)
 }
 
 /* the neighbour's four rows of eight above an edge, and back after it is filtered */
-static inline void deblockAbove(AvcdecDeblock *deblock, const uint8_t *samples)
+static inline void deblockAbove(AvcDeblock *deblock, const uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -3911,7 +3911,7 @@ static inline void deblockAbove(AvcdecDeblock *deblock, const uint8_t *samples)
 			deblock->p[row][column] = samples[row * 16 + column];
 }
 
-static inline void deblockAboveBack(const AvcdecDeblock *deblock, uint8_t *samples)
+static inline void deblockAboveBack(const AvcDeblock *deblock, uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -3931,7 +3931,7 @@ static void deblockHalf(AvcdecStripe *stripe, uint32_t half)
 	const uint8_t *vertical = filter->strength.edges[1] + half * 2;
 	const uint8_t *horizontal = filter->strength.edges[0];
 	uint8_t *samples = stripe->luma + half * 128, *above;
-	AvcdecDeblock deblock;
+	AvcDeblock deblock;
 	uint32_t strengths;
 
 	avcdecDeblockLoad(&deblock, samples);
@@ -4968,7 +4968,7 @@ static void chromaDeblock(AvcdecStripe *stripe)
 	const AvcdecMbFilter *filter = stripe->filter;
 	AvcdecChromaRowData *rowData = stripe->chromaRowData;
 	uint8_t *samples = stripe->chroma, *above;
-	AvcdecChromaDeblock deblock;
+	AvcChromaDeblock deblock;
 	uint32_t strengths, turned = 0, component, column;
 
 	avcdecChromaDeblockLoad(&deblock, samples);

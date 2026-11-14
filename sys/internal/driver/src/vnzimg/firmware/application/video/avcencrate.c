@@ -332,13 +332,13 @@ static void rateRestart(AvcencPicture *picture, AvcencRate *rate)
 static void modesPack(AvcencPicture *picture, AvcencJobInfo *jobInfo, AvcencModesInfo *info)
 {
 	const AvcencOutput *output = (const AvcencOutput *)info->output;
-	const AvcencModesLayout *layout;
+	const AvcencLayout *layout;
 	const AvcencMacroblock *record;
 	uint32_t width = picture->widthInMbs, end, row, line, x, count, type, i;
 	uint32_t *differences;
 	uint8_t *modes, *chroma;
 
-	layout = (const AvcencModesLayout *)((const VideoAvcPictureInfo *)output->info)->reference;
+	layout = (const AvcencLayout *)((const VideoAvcPictureInfo *)output->info)->reference;
 	end = (uint8_t)output->next;
 	row = output->firstRow;
 	record = (const AvcencMacroblock *)(picture->macroblocks + width * row * 64);

@@ -85,7 +85,7 @@ typedef struct AvcencPicture {
 	uint32_t reference;
 	AvcencSequence *settings;
 	uint32_t frameRecord;
-	uint32_t output;
+	uint32_t layout;		/* the output's arrays' pitches (AvcencLayout) */
 	volatile uint8_t *lock;		/* the service's encoder lock */
 	int16_t width;
 	int16_t chromaWidth;
@@ -132,9 +132,9 @@ typedef struct AvcencPicture {
 	uint32_t records;		/* the sixteen picture records */
 	uint32_t command[6];		/* the job record's */
 	uint32_t reserved5[2];
-	uint32_t commandBuffer;
-	uint32_t commandBufferEnd;
-	uint32_t commandBuffer2;
+	uint32_t lumaCoded;		/* the rows' coded blocks (AvcencLumaCoded), 64 bytes a row, two sets */
+	uint32_t chromaCoded;		/* (AvcencChromaCoded) */
+	uint32_t strengths;		/* the rows' bS (AvcencStrengths), 64 bytes a macroblock */
 	uint32_t macroblocks;		/* 64 bytes per macroblock */
 	uint32_t reserved6[2];
 } AvcencPicture;
@@ -309,7 +309,7 @@ typedef struct AvcencOutput {
 	int8_t hasPicture;
 	uint8_t reserved3;
 	uint32_t info;			/* the picture's VideoAvcPictureInfo */
-	uint32_t reserved4;
+	uint32_t macroblocks;		/* its VideoAvcMacroblock records */
 	uint32_t modes;			/* the 4x4 blocks' modes of each Intra4x4 macroblock */
 	uint32_t chromaModes;		/* each intra macroblock's chroma mode */
 	uint32_t reserved5;
@@ -317,14 +317,14 @@ typedef struct AvcencOutput {
 	uint8_t reserved6[88];
 } AvcencOutput;
 
-/* the output's mode arrays: the bytes a row of macroblocks takes in each */
-typedef struct AvcencModesLayout {
-	uint16_t reserved;
+/* the output's arrays: the bytes a row of macroblocks takes in each */
+typedef struct AvcencLayout {
+	uint16_t macroblocksPitch;
 	uint16_t modesPitch;
 	uint16_t chromaModesPitch;
 	uint16_t reserved2;
 	uint16_t differencesPitch;
-} AvcencModesLayout;
+} AvcencLayout;
 
 /* the modes job's per core info (64 bytes of 192 a core, in the output info) */
 typedef struct AvcencModesInfo {
@@ -456,8 +456,8 @@ typedef struct AvcencClientMemory {
 	uint32_t command4;
 	uint32_t command5;
 	uint32_t reserved2;
-	uint32_t commandBuffer;		/* 2048 bytes */
-	uint32_t commandBuffer2;
+	uint32_t coded;			/* the coded blocks' rows, luma's then chroma's: 2048 bytes each */
+	uint32_t strengths;
 	uint32_t reserved3;
 } AvcencClientMemory;
 
@@ -746,6 +746,88 @@ typedef struct AvcencDecideInfo {
 } AvcencDecideInfo;
 
 
+/*
+ * a macroblock's bS (32 bytes, 64 apart in the picture's strengths): by
+ * direction (the horizontal edges, then the vertical ones), edge (0 the
+ * macroblock's own) and 4-sample group along it. The luma reads an 8x8
+ * block's two groups at a time, the chroma an edge's four
+ */
+typedef union AvcencStrengths {
+	uint8_t edges[2][4][4];
+	uint16_t pairs[2][4][2];
+	uint32_t words[2][4];
+} AvcencStrengths;
+#define STRENGTHS_HORIZONTAL	0
+#define STRENGTHS_VERTICAL	1
+
+/* a macroblock's coded blocks, as the deblocking reads them (8 bytes, a row's 64) */
+typedef struct AvcencLumaCoded {
+	uint16_t blocks;		/* the 4x4 blocks with coefficients, by bit (z order) */
+	uint8_t dc;			/* Intra16x16's DC */
+	uint8_t cbp;			/* coded_block_pattern's luma bits */
+	uint16_t leftBlocks;		/* the left and top neighbours', as the strengths read them */
+	uint16_t topBlocks;
+} AvcencLumaCoded;
+
+typedef struct AvcencChromaCoded {
+	uint16_t ac;			/* the 4x4 blocks with AC coefficients: Cb's four, Cr's four */
+	uint8_t dc;			/* Cb's, Cr's */
+	uint8_t cbp;			/* coded_block_pattern's chroma */
+	uint32_t reserved;
+} AvcencChromaCoded;
+
+/* the deblocking's record of a row (128 bytes, at the job record's command[4]) */
+typedef struct AvcencDeblockRow {
+	uint8_t lumaColumns[2][4][8];	/* the last macroblock's right four columns, by half, turned */
+	uint8_t chromaColumns[2][2][8];	/* its columns 6 and 7, by component */
+	uint8_t firstMb;		/* the chunk the next deblocking takes: the one encoded last */
+	uint8_t mbs;
+	int8_t parity;			/* of its coded blocks' set */
+	uint8_t reserved[29];
+} AvcencDeblockRow;
+
+/* the deblocking stage's per core info (192 bytes, in the output info) */
+#define DEBLOCK_INFO_SIZE	192
+typedef struct AvcencDeblockInfo {
+	uint8_t column;			/* the macroblock's */
+	uint8_t row;
+	uint8_t qp;			/* the picture's */
+	uint8_t chromaQp;
+	uint32_t type;			/* the macroblock's (AvcencMacroblock) */
+	uint16_t leftBlocks;		/* its AvcencLumaCoded's */
+	uint16_t topBlocks;
+	uint32_t sliceType;
+	uint32_t strengths;		/* the macroblock's AvcencStrengths */
+	uint32_t lumaCoded;		/* its AvcencLumaCoded */
+	uint32_t chromaCoded;
+	uint32_t current;		/* the macroblocks' records (AvcencMacroblock) */
+	uint32_t left;
+	uint32_t above;
+	uint32_t macroblock;		/* its VideoAvcMacroblock in the output */
+	uint8_t reserved[18];
+	uint8_t firstMb;		/* the chunk's */
+	uint8_t mbs;
+	uint8_t reserved2[12];
+	uint32_t deblockRow;		/* the row's AvcencDeblockRow */
+	uint8_t reserved3[28];
+	uint32_t macroblocks;		/* the output's VideoAvcMacroblock records, the row's */
+	uint8_t reserved4[16];
+	uint32_t coded;			/* the macroblock's coded blocks (VideoAvcMacroblock's) */
+	uint32_t luma;			/* the macroblock's samples */
+	uint32_t chroma;
+	uint32_t lumaAbove;		/* the macroblock's above */
+	uint32_t chromaAbove;
+	uint16_t width;			/* the picture's, in samples */
+	uint16_t reserved5;
+	uint16_t height;
+	uint8_t reserved6[38];
+} AvcencDeblockInfo;
+
+/* the macroblocks' bS (avcencmacroblock.c) */
+void avcencStrengthsIntra(AvcencDeblockInfo *info);
+void avcencStrengthsInter(AvcencDeblockInfo *info);
+
+
 typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
 typedef char loadSizeCheck[sizeof(AvcencLoad) == 64 ? 1 : -1];
 typedef char decideInfoSizeCheck[sizeof(AvcencDecideInfo) == DECIDE_INFO_SIZE ? 1 : -1];
@@ -759,6 +841,11 @@ typedef char motionStatsSizeCheck[sizeof(AvcencMotionStats) == 64 ? 1 : -1];
 typedef char refineInfoSizeCheck[sizeof(AvcencRefineInfo) == REFINE_INFO_SIZE ? 1 : -1];
 typedef char macroblockSizeCheck[sizeof(AvcencMacroblock) == 64 ? 1 : -1];
 typedef char recordSizeCheck[sizeof(AvcencRecord) == RECORD_SIZE ? 1 : -1];
+typedef char strengthsSizeCheck[sizeof(AvcencStrengths) == 32 ? 1 : -1];
+typedef char lumaCodedSizeCheck[sizeof(AvcencLumaCoded) == 8 ? 1 : -1];
+typedef char chromaCodedSizeCheck[sizeof(AvcencChromaCoded) == 8 ? 1 : -1];
+typedef char deblockRowSizeCheck[sizeof(AvcencDeblockRow) == 128 ? 1 : -1];
+typedef char deblockInfoSizeCheck[sizeof(AvcencDeblockInfo) == DEBLOCK_INFO_SIZE ? 1 : -1];
 typedef char streamSizeCheck[sizeof(AvcencStream) == STREAM_HEADER_SIZE ? 1 : -1];
 
 #endif

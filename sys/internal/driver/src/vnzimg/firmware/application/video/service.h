@@ -1284,6 +1284,54 @@ typedef struct VideoAvcMacroblock {
 					 * 24 Intra16x16 DC, 25 Cb DC, 26 Cr DC */
 } VideoAvcMacroblock;
 
+/*
+ * The deblocking's kernels (avcdeckernel.c): the decoder's, whose copies the
+ * encoder's deblocking calls too (avcenckernel.c)
+ */
+/* the luma's deblocking in the coprocessor: half the macroblock, the samples across an edge */
+typedef struct AvcDeblock {
+	uint8_t rows[8][16];		/* each 8x8 half turned for the vertical edges */
+	uint8_t p[4][8];		/* p3 to p0: rows above, or the columns left turned */
+} AvcDeblock;
+
+/* the chroma's deblocking in the coprocessor: the macroblock, the samples across an edge */
+typedef struct AvcChromaDeblock {
+	uint8_t rows[2][8][8];		/* by component: rows, or turned for the vertical edges */
+	uint8_t p[2][2][8];		/* by component: p1, p0 */
+} AvcChromaDeblock;
+
+/* the luma's (0x897dd8-0x898f80) */
+void avcdecDeblockLoad(AvcDeblock *deblock, const uint8_t *samples);
+void avcdecDeblockStore(const AvcDeblock *deblock, uint8_t *samples);
+void avcdecDeblockStoreLeft(const AvcDeblock *deblock, uint8_t *samples);
+void avcdecDeblockTurnLeft(AvcDeblock *deblock);
+void avcdecDeblockTurnRight(AvcDeblock *deblock);
+uint32_t avcdecDeblockEdge(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+uint32_t avcdecDeblockEdgeRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcdecDeblockInner(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcdecDeblockInnerRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcdecDeblockMiddle(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+void avcdecDeblockInnerLast(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths);
+
+/* the chroma's (0x89b650-0x89bed8) */
+void avcdecChromaDeblockLoad(AvcChromaDeblock *deblock, const uint8_t *samples);
+void avcdecChromaDeblockStore(const AvcChromaDeblock *deblock, uint8_t *samples);
+void avcdecChromaDeblockStoreLeft(const AvcChromaDeblock *deblock, uint8_t *samples);
+void avcdecChromaDeblockKeepLeft(const AvcChromaDeblock *deblock, uint8_t (*columns)[2][8]);
+uint32_t avcdecChromaDeblockTurn(AvcChromaDeblock *deblock);
+uint32_t avcdecChromaDeblockMask(const AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths, uint32_t inner);
+uint32_t avcdecChromaDeblockEdge(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths);
+uint32_t avcdecChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths);
+
 /* an encoding job's state */
 #define VIDEO_AVC_SEIS		4	/* buffering period, picture timing, pan-scan, recovery point */
 /* the encoder's own CABAC coder, for skipped pictures (H.264 9.3.4) */

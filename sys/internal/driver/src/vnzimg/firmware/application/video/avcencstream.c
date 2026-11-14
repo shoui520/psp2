@@ -1744,7 +1744,7 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 			picture = (AvcencPicture *)vnzPublicOpenPrivate(
 				vnzPublicCloseRaw((uint32_t)stream->picture, PICTURE_SIZE),
 				PICTURE_SIZE);
-			picture->output = reference;
+			picture->layout = reference;
 			stream->outputs = client->outputs;
 			stream->jobInfo = client->jobInfo;
 			stream->outputInfo = client->outputInfo;
@@ -1755,9 +1755,9 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 			picture->command[2] = client->command2;
 			picture->command[4] = client->command4;
 			picture->command[5] = client->command5;
-			picture->commandBuffer = client->commandBuffer;
-			picture->commandBufferEnd = client->commandBuffer + 2048;
-			picture->commandBuffer2 = client->commandBuffer2;
+			picture->lumaCoded = client->coded;
+			picture->chromaCoded = client->coded + 2048;
+			picture->strengths = client->strengths;
 			stream->record = client->record;
 			stream->record = vnzPublicOpenPrivate(client->record, RECORD_SIZE);
 			picture->macroblocks = buffers->macroblockRecords;

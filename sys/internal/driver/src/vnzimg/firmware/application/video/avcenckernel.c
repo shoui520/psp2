@@ -2139,3 +2139,228 @@ uint32_t avcencMotionSkipChroma(const AvcencMotion *motion, const uint8_t *sourc
 		return 0;
 	return blockBelow(motion, &motion->chroma[1][0][v], 8, source + 64 + v, 8);
 }
+
+/*
+ * The deblocking's kernels (0x8a2208-0x8a3c00): the decoder's (0x897dd8-
+ * 0x898f80, 0x89b650-0x89bed8) built again for the encoder, the same code
+ * but for the luma's last columns: each calls the decoder's. An edge's
+ * thresholds and lanes (0x8a2510, as the decoder's 0x8980e8) are part of
+ * the edges'.
+ */
+
+/* 0x8a2208 */
+void avcencDeblockLoad(AvcDeblock *deblock, const uint8_t *samples)
+{
+	avcdecDeblockLoad(deblock, samples);
+}
+
+/* 0x8a2290 */
+void avcencDeblockStore(const AvcDeblock *deblock, uint8_t *samples)
+{
+	avcdecDeblockStore(deblock, samples);
+}
+
+/* 0x8a2320 */
+void avcencDeblockStoreLeft(const AvcDeblock *deblock, uint8_t *samples)
+{
+	avcdecDeblockStoreLeft(deblock, samples);
+}
+
+/*
+ * 0x8a2380: the macroblock's right four columns, turned, for the next one's
+ * left edge: the upper half's from its samples stored, the lower half's as
+ * they are still in the coprocessor
+ */
+void avcencDeblockKeepLeft(const AvcDeblock *deblock, const uint8_t *luma,
+	uint8_t (*columns)[4][8])
+{
+	uint32_t column, row;
+
+	for (column = 0; column < 4; column++)
+		for (row = 0; row < 8; row++) {
+			columns[0][column][row] = luma[row * 16 + 12 + column];
+			columns[1][column][row] = deblock->rows[row][12 + column];
+		}
+}
+
+/* 0x8a2450 */
+void avcencDeblockTurnLeft(AvcDeblock *deblock)
+{
+	avcdecDeblockTurnLeft(deblock);
+}
+
+/* 0x8a24b0 */
+void avcencDeblockTurnRight(AvcDeblock *deblock)
+{
+	avcdecDeblockTurnRight(deblock);
+}
+
+/* 0x8a2628 */
+uint32_t avcencDeblockEdge(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	return avcdecDeblockEdge(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a2948 */
+uint32_t avcencDeblockEdgeRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	return avcdecDeblockEdgeRight(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a2c68 */
+void avcencDeblockInner(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	avcdecDeblockInner(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a2e38 */
+void avcencDeblockInnerRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	avcdecDeblockInnerRight(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a3008 */
+void avcencDeblockMiddle(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	avcdecDeblockMiddle(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a31d8 */
+void avcencDeblockInnerLast(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
+	uint32_t strengths)
+{
+	avcdecDeblockInnerLast(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a33a8 */
+void avcencChromaDeblockLoad(AvcChromaDeblock *deblock, const uint8_t *samples)
+{
+	avcdecChromaDeblockLoad(deblock, samples);
+}
+
+/* 0x8a3430 */
+void avcencChromaDeblockStore(const AvcChromaDeblock *deblock, uint8_t *samples)
+{
+	avcdecChromaDeblockStore(deblock, samples);
+}
+
+/* 0x8a34c0 */
+void avcencChromaDeblockStoreLeft(const AvcChromaDeblock *deblock, uint8_t *samples)
+{
+	avcdecChromaDeblockStoreLeft(deblock, samples);
+}
+
+/* 0x8a3550 */
+void avcencChromaDeblockKeepLeft(const AvcChromaDeblock *deblock, uint8_t (*columns)[2][8])
+{
+	avcdecChromaDeblockKeepLeft(deblock, columns);
+}
+
+/* 0x8a35b0 */
+uint32_t avcencChromaDeblockTurn(AvcChromaDeblock *deblock)
+{
+	return avcdecChromaDeblockTurn(deblock);
+}
+
+/* 0x8a3670 */
+uint32_t avcencChromaDeblockMask(const AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths, uint32_t inner)
+{
+	return avcdecChromaDeblockMask(deblock, indexA, indexB, strengths, inner);
+}
+
+/* 0x8a3770 */
+uint32_t avcencChromaDeblockEdge(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths)
+{
+	return avcdecChromaDeblockEdge(deblock, indexA, indexB, strengths);
+}
+
+/* 0x8a39f0 */
+uint32_t avcencChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
+	uint32_t indexB, uint32_t strengths)
+{
+	return avcdecChromaDeblockInner(deblock, indexA, indexB, strengths);
+}
+
+/*
+ * The strengths' kernels (0x8df4d0-0x8df640): a P macroblock's bS, two edges
+ * a register: 2 where either 4x4 block has coefficients, 4 next to an intra
+ * macroblock, 1 where the 8x8 blocks' vectors are a sample apart
+ */
+
+/* the edges' groups: by edge pair, the 4x4 blocks (z order) either side of each */
+static const uint8_t verticalGroups[16] = {
+	0, 2, 8, 10, 1, 3, 9, 11, 4, 6, 12, 14, 5, 7, 13, 15,
+};
+
+static const uint8_t horizontalGroups[16] = {
+	0, 1, 4, 5, 2, 3, 6, 7, 8, 9, 12, 13, 10, 11, 14, 15,
+};
+
+/*
+ * 0x8df4d0: 2 where the blocks have coefficients, by the edges' masks; 4 on
+ * the macroblock's edges next to an intra one (by group)
+ */
+void avcencStrengthsCoded(AvcencStrengthLanes *lanes, uint32_t vertical, uint32_t horizontal,
+	uint32_t leftIntra, uint32_t topIntra)
+{
+	uint32_t i;
+
+	for (i = 0; i < 16; i++) {
+		lanes->coded[i / 8][i % 8] = (vertical >> verticalGroups[i]) & 1 ? 2 : 0;
+		lanes->coded[2 + i / 8][i % 8] = (horizontal >> horizontalGroups[i]) & 1 ? 2 : 0;
+	}
+	for (i = 0; i < 8; i++) {
+		if (leftIntra & (1 << i))
+			lanes->coded[0][i] = 4;
+		if (topIntra & (1 << i))
+			lanes->coded[2][i] = 4;
+	}
+}
+
+/* a component four quarter samples apart or more, the difference in 16 bits */
+static inline uint32_t componentFar(int16_t a, int16_t b)
+{
+	int32_t difference = a - b;
+
+	return (int16_t)(difference < 0 ? -difference : difference) >= 4;
+}
+
+static inline uint32_t vectorsFar(const int16_t *a, const int16_t *b)
+{
+	return componentFar(a[0], b[0]) || componentFar(a[1], b[1]);
+}
+
+/*
+ * 0x8df578: and 1 where the vectors differ, over the coded ones: on the
+ * left and top edges against the neighbours' 8x8 blocks there, in the
+ * middle between the macroblock's own; none inside an 8x8 block
+ */
+void avcencStrengthsVectors(AvcencStrengthLanes *lanes, const int16_t (*current)[2],
+	const int16_t (*left)[2], const int16_t (*above)[2])
+{
+	uint8_t far[4][8];
+	uint32_t edge, i, half;
+
+	for (i = 0; i < 4; i++) {
+		half = i >> 1;
+		far[0][i] = vectorsFar(current[2 * half], left[2 * half + 1]);
+		far[0][4 + i] = 0;
+		far[1][i] = vectorsFar(current[2 * half + 1], current[2 * half]);
+		far[1][4 + i] = 0;
+		far[2][i] = vectorsFar(current[half], above[2 + half]);
+		far[2][4 + i] = 0;
+		far[3][i] = vectorsFar(current[2 + half], current[half]);
+		far[3][4 + i] = 0;
+	}
+	for (edge = 0; edge < 4; edge++)
+		for (i = 0; i < 8; i++)
+			lanes->edges[edge][i] = (int8_t)lanes->coded[edge][i] > (int8_t)far[edge][i] ?
+				lanes->coded[edge][i] : far[edge][i];
+}

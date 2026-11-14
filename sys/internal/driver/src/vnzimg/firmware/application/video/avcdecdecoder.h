@@ -363,17 +363,6 @@ typedef struct AvcdecChromaRecon {
 	uint8_t rows[2][8][8];		/* by component */
 } AvcdecChromaRecon;
 
-/* the chroma's deblocking in the coprocessor: the macroblock, the samples across an edge */
-typedef struct AvcdecChromaDeblock {
-	uint8_t rows[2][8][8];		/* by component: rows, or turned for the vertical edges */
-	uint8_t p[2][2][8];		/* by component: p1, p0 */
-} AvcdecChromaDeblock;
-
-/* the luma's deblocking in the coprocessor: half the macroblock, the samples across an edge */
-typedef struct AvcdecDeblock {
-	uint8_t rows[8][16];		/* each 8x8 half turned for the vertical edges */
-	uint8_t p[4][8];		/* p3 to p0: rows above, or the columns left turned */
-} AvcdecDeblock;
 
 /*
  * The luma prediction in the coprocessor, as its fetches and kernels hand
@@ -688,25 +677,8 @@ void avcdecWeightBi(AvcdecInter *inter, int32_t weight0, int32_t weight1, int32_
 void avcdecAverage(AvcdecInter *inter);
 void avcdecPlace4(AvcdecInter *inter, uint32_t block);
 
-/* the luma deblocking's kernels (0x897dd8-0x898f80) */
-void avcdecDeblockLoad(AvcdecDeblock *deblock, const uint8_t *samples);
-void avcdecDeblockStore(const AvcdecDeblock *deblock, uint8_t *samples);
-void avcdecDeblockStoreLeft(const AvcdecDeblock *deblock, uint8_t *samples);
+/* the luma deblocking's kernel that is the decoder's own (the others: service.h) */
 void avcdecDeblockKeepLeft(AvcdecStripe *stripe);
-void avcdecDeblockTurnLeft(AvcdecDeblock *deblock);
-void avcdecDeblockTurnRight(AvcdecDeblock *deblock);
-uint32_t avcdecDeblockEdge(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
-uint32_t avcdecDeblockEdgeRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
-void avcdecDeblockInner(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
-void avcdecDeblockInnerRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
-void avcdecDeblockMiddle(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
-void avcdecDeblockInnerLast(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
-	uint32_t strengths);
 
 /* the residual's tables (0x91b1f8-0x91b346) */
 extern const int16_t avcdecLevelScale[6][16];
@@ -785,17 +757,6 @@ void avcdecChromaWeightList1(AvcdecChromaInter *inter, const AvcdecChromaWeights
 	uint8_t *cb, uint8_t *cr);
 void avcdecChromaWeightBi(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
 	uint8_t *cb, uint8_t *cr);
-void avcdecChromaDeblockLoad(AvcdecChromaDeblock *deblock, const uint8_t *samples);
-void avcdecChromaDeblockStore(const AvcdecChromaDeblock *deblock, uint8_t *samples);
-void avcdecChromaDeblockStoreLeft(const AvcdecChromaDeblock *deblock, uint8_t *samples);
-void avcdecChromaDeblockKeepLeft(const AvcdecChromaDeblock *deblock, uint8_t (*columns)[2][8]);
-uint32_t avcdecChromaDeblockTurn(AvcdecChromaDeblock *deblock);
-uint32_t avcdecChromaDeblockMask(const AvcdecChromaDeblock *deblock, uint32_t indexA,
-	uint32_t indexB, uint32_t strengths, uint32_t inner);
-uint32_t avcdecChromaDeblockEdge(AvcdecChromaDeblock *deblock, uint32_t indexA,
-	uint32_t indexB, uint32_t strengths);
-uint32_t avcdecChromaDeblockInner(AvcdecChromaDeblock *deblock, uint32_t indexA,
-	uint32_t indexB, uint32_t strengths);
 void avcdecChromaLoadRows(AvcdecChromaRecon *recon, const uint8_t *samples);
 void avcdecChromaLoadBottom(AvcdecChromaRecon *recon, const uint8_t *samples);
 void avcdecChromaDc(AvcdecChromaRecon *recon, const int16_t *coef, uint32_t qp);

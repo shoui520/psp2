@@ -2265,7 +2265,7 @@ static uint32_t filterEdge(uint8_t *const p[4], uint8_t *const q[4], uint32_t in
 }
 
 /* 0x897dd8: half the macroblock's samples */
-void avcdecDeblockLoad(AvcdecDeblock *deblock, const uint8_t *samples)
+void avcdecDeblockLoad(AvcDeblock *deblock, const uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -2275,7 +2275,7 @@ void avcdecDeblockLoad(AvcdecDeblock *deblock, const uint8_t *samples)
 }
 
 /* 0x897e60 */
-void avcdecDeblockStore(const AvcdecDeblock *deblock, uint8_t *samples)
+void avcdecDeblockStore(const AvcDeblock *deblock, uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -2285,7 +2285,7 @@ void avcdecDeblockStore(const AvcdecDeblock *deblock, uint8_t *samples)
 }
 
 /* 0x897ef0: the left macroblock's columns filtered, turned back into its rows */
-void avcdecDeblockStoreLeft(const AvcdecDeblock *deblock, uint8_t *samples)
+void avcdecDeblockStoreLeft(const AvcDeblock *deblock, uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -2308,7 +2308,7 @@ void avcdecDeblockKeepLeft(AvcdecStripe *stripe)
 }
 
 /* an 8x8 half turned over its diagonal */
-static void turn(AvcdecDeblock *deblock, uint32_t left)
+static void turn(AvcDeblock *deblock, uint32_t left)
 {
 	uint32_t row, column;
 	uint8_t sample;
@@ -2322,19 +2322,19 @@ static void turn(AvcdecDeblock *deblock, uint32_t left)
 }
 
 /* 0x898028 */
-void avcdecDeblockTurnLeft(AvcdecDeblock *deblock)
+void avcdecDeblockTurnLeft(AvcDeblock *deblock)
 {
 	turn(deblock, 0);
 }
 
 /* 0x898088 */
-void avcdecDeblockTurnRight(AvcdecDeblock *deblock)
+void avcdecDeblockTurnRight(AvcDeblock *deblock)
 {
 	turn(deblock, 8);
 }
 
 /* four rows of the half from `row`, from `column` */
-static inline void edgeRows(AvcdecDeblock *deblock, uint8_t *rows[4], uint32_t row,
+static inline void edgeRows(AvcDeblock *deblock, uint8_t *rows[4], uint32_t row,
 	uint32_t column)
 {
 	uint32_t i;
@@ -2344,7 +2344,7 @@ static inline void edgeRows(AvcdecDeblock *deblock, uint8_t *rows[4], uint32_t r
 }
 
 /* 0x898200: a macroblock edge: p the neighbour's, q the half's left 8x8 (bS 4 too) */
-uint32_t avcdecDeblockEdge(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+uint32_t avcdecDeblockEdge(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4] = { deblock->p[0], deblock->p[1], deblock->p[2], deblock->p[3] }, *q[4];
@@ -2354,7 +2354,7 @@ uint32_t avcdecDeblockEdge(AvcdecDeblock *deblock, uint32_t indexA, uint32_t ind
 }
 
 /* 0x898520: q the right 8x8 */
-uint32_t avcdecDeblockEdgeRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+uint32_t avcdecDeblockEdgeRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4] = { deblock->p[0], deblock->p[1], deblock->p[2], deblock->p[3] }, *q[4];
@@ -2364,7 +2364,7 @@ uint32_t avcdecDeblockEdgeRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_
 }
 
 /* 0x898840: the edge inside the left 8x8 */
-void avcdecDeblockInner(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+void avcdecDeblockInner(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4], *q[4];
@@ -2375,7 +2375,7 @@ void avcdecDeblockInner(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB
 }
 
 /* 0x898a10: inside the right 8x8 */
-void avcdecDeblockInnerRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+void avcdecDeblockInnerRight(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4], *q[4];
@@ -2386,7 +2386,7 @@ void avcdecDeblockInnerRight(AvcdecDeblock *deblock, uint32_t indexA, uint32_t i
 }
 
 /* 0x898be0: between the turned 8x8 halves (the vertical edge in the middle) */
-void avcdecDeblockMiddle(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+void avcdecDeblockMiddle(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4], *q[4];
@@ -2397,7 +2397,7 @@ void avcdecDeblockMiddle(AvcdecDeblock *deblock, uint32_t indexA, uint32_t index
 }
 
 /* 0x898db0: inside the turned right 8x8 (the last vertical edge) */
-void avcdecDeblockInnerLast(AvcdecDeblock *deblock, uint32_t indexA, uint32_t indexB,
+void avcdecDeblockInnerLast(AvcDeblock *deblock, uint32_t indexA, uint32_t indexB,
 	uint32_t strengths)
 {
 	uint8_t *p[4], *q[4];
@@ -2765,7 +2765,7 @@ void avcdecChromaWeightBi(AvcdecChromaInter *inter, const AvcdecChromaWeights *w
 }
 
 /* 0x89b650: the macroblock's samples */
-void avcdecChromaDeblockLoad(AvcdecChromaDeblock *deblock, const uint8_t *samples)
+void avcdecChromaDeblockLoad(AvcChromaDeblock *deblock, const uint8_t *samples)
 {
 	uint32_t component, row, column;
 
@@ -2777,7 +2777,7 @@ void avcdecChromaDeblockLoad(AvcdecChromaDeblock *deblock, const uint8_t *sample
 }
 
 /* 0x89b6d8 */
-void avcdecChromaDeblockStore(const AvcdecChromaDeblock *deblock, uint8_t *samples)
+void avcdecChromaDeblockStore(const AvcChromaDeblock *deblock, uint8_t *samples)
 {
 	uint32_t component, row, column;
 
@@ -2789,7 +2789,7 @@ void avcdecChromaDeblockStore(const AvcdecChromaDeblock *deblock, uint8_t *sampl
 }
 
 /* 0x89b768: the left macroblock's last columns' p0 filtered, back in its rows */
-void avcdecChromaDeblockStoreLeft(const AvcdecChromaDeblock *deblock, uint8_t *samples)
+void avcdecChromaDeblockStoreLeft(const AvcChromaDeblock *deblock, uint8_t *samples)
 {
 	uint32_t component, row;
 
@@ -2799,7 +2799,7 @@ void avcdecChromaDeblockStoreLeft(const AvcdecChromaDeblock *deblock, uint8_t *s
 }
 
 /* 0x89b7f8: the macroblock's columns 6 and 7, turned, for the next one's left edge */
-void avcdecChromaDeblockKeepLeft(const AvcdecChromaDeblock *deblock, uint8_t (*columns)[2][8])
+void avcdecChromaDeblockKeepLeft(const AvcChromaDeblock *deblock, uint8_t (*columns)[2][8])
 {
 	uint32_t component, row;
 
@@ -2811,7 +2811,7 @@ void avcdecChromaDeblockKeepLeft(const AvcdecChromaDeblock *deblock, uint8_t (*c
 }
 
 /* 0x89b858: each component turned over its diagonal; 1 */
-uint32_t avcdecChromaDeblockTurn(AvcdecChromaDeblock *deblock)
+uint32_t avcdecChromaDeblockTurn(AvcChromaDeblock *deblock)
 {
 	uint32_t component, row, column;
 	uint8_t sample;
@@ -2828,7 +2828,7 @@ uint32_t avcdecChromaDeblockTurn(AvcdecChromaDeblock *deblock)
 }
 
 /* an edge's four lines of samples, by component: p1, p0, q0, q1 */
-static inline void chromaEdgeLines(AvcdecChromaDeblock *deblock, uint32_t component,
+static inline void chromaEdgeLines(AvcChromaDeblock *deblock, uint32_t component,
 	uint32_t inner, uint8_t *lines[4])
 {
 	if (inner) {
@@ -2849,7 +2849,7 @@ static inline void chromaEdgeLines(AvcdecChromaDeblock *deblock, uint32_t compon
  * not 0, |p0 - q0| < alpha, |p1 - p0| and |q1 - q0| < beta; Cb's by bit,
  * Cr's eight bits up.
  */
-uint32_t avcdecChromaDeblockMask(const AvcdecChromaDeblock *deblock, uint32_t indexA,
+uint32_t avcdecChromaDeblockMask(const AvcChromaDeblock *deblock, uint32_t indexA,
 	uint32_t indexB, uint32_t strengths, uint32_t inner)
 {
 	int32_t alpha = deblockTables[DEBLOCK_ALPHA][indexA];
@@ -2858,7 +2858,7 @@ uint32_t avcdecChromaDeblockMask(const AvcdecChromaDeblock *deblock, uint32_t in
 	uint8_t *lines[4];
 
 	for (component = 0; component < 2; component++) {
-		chromaEdgeLines((AvcdecChromaDeblock *)deblock, component, inner, lines);
+		chromaEdgeLines((AvcChromaDeblock *)deblock, component, inner, lines);
 		for (lane = 0; lane < 8; lane++)
 			if (((strengths >> (lane >> 1) * 8) & 0xff) &&
 			    absolute(lines[1][lane] - lines[2][lane]) < alpha &&
@@ -2870,7 +2870,7 @@ uint32_t avcdecChromaDeblockMask(const AvcdecChromaDeblock *deblock, uint32_t in
 }
 
 /* the edge's p0 and q0 filtered where the mask says, bS below 4 (8.7.2.3) */
-static void chromaFilterNormal(AvcdecChromaDeblock *deblock, uint32_t indexA,
+static void chromaFilterNormal(AvcChromaDeblock *deblock, uint32_t indexA,
 	uint32_t strengths, uint32_t inner, uint32_t mask)
 {
 	uint32_t component, lane;
@@ -2899,7 +2899,7 @@ static void chromaFilterNormal(AvcdecChromaDeblock *deblock, uint32_t indexA,
  * pair's) with the strong filter, p0' = (2 p1 + p0 + q1 + 2) >> 2; the
  * lanes filtered
  */
-uint32_t avcdecChromaDeblockEdge(AvcdecChromaDeblock *deblock, uint32_t indexA,
+uint32_t avcdecChromaDeblockEdge(AvcChromaDeblock *deblock, uint32_t indexA,
 	uint32_t indexB, uint32_t strengths)
 {
 	uint32_t mask = avcdecChromaDeblockMask(deblock, indexA, indexB, strengths, 0);
@@ -2927,7 +2927,7 @@ uint32_t avcdecChromaDeblockEdge(AvcdecChromaDeblock *deblock, uint32_t indexA,
 }
 
 /* 0x89bc98: the edge inside the macroblock (bS below 4) */
-uint32_t avcdecChromaDeblockInner(AvcdecChromaDeblock *deblock, uint32_t indexA,
+uint32_t avcdecChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
 	uint32_t indexB, uint32_t strengths)
 {
 	uint32_t mask = avcdecChromaDeblockMask(deblock, indexA, indexB, strengths, 1);
