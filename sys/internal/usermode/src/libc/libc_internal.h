@@ -18,6 +18,8 @@ int _MallocTerm(void);
 /* the library's locks */
 int _InitLocks(void);
 int _TermLocks(void);
+int _Guardbroadcast(int num);
+int _Guardwait(int num);
 
 /* the thread-local storage lock */
 int _InitTlsMutex(void);
