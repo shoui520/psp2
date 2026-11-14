@@ -8,6 +8,7 @@
  * Written from Marvell's source (Copyright (C) 2014-2017, Marvell International
  * Ltd., GPL-2.0) as this firmware has it.
  */
+#include "robin/assocAp.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
@@ -402,7 +403,8 @@ int ProcessPWKMsg2(OsaBuffer *pmbuf)
 	if (assocSrvAp_checkRsnWpa(connPtr, pKeyMgmtInfo, info->apRsn.wpaUcstCipher,
 				   info->apRsn.wpa2UcstCipher, info->apRsn.mcstCipher,
 				   info->apRsn.AuthKey, &pKeyMgmtInfo->staSecType,
-				   iePointers.pRsn, iePointers.pWpa, 1) == 1) {
+				   (IEEEtypes_RSNElement_t *)iePointers.pRsn,
+				   (IEEEtypes_WPAElement_t *)iePointers.pWpa, 1) == 1) {
 		handleFailedHSK(connPtr, IEEEtypes_REASON_IE_4WAY_DIFF);
 		return 1;
 	}

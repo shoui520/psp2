@@ -40,6 +40,7 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 #include "robin/apps.h"
+#include "robin/assocAp.h"
 #include "robin/hostcmd.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
@@ -166,7 +167,6 @@ void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void macMgmtSyncEntry(void);								/* 0x36a1c */
 void wlanPsApplyPacket(void);								/* 0x3d06c */
-void macMgmtValidatePacket(void);							/* 0x398b2 */
 void macMgmtHandleHeader(void);								/* 0x3b120 */
 void macMgmtValidateHeader(void);							/* 0x3b1e2 */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
@@ -475,7 +475,7 @@ int wlanInit(void)
 	macMgmtSyncEntry();
 	wlanTxHooksInit();
 	wlanPsApplyPacket();
-	macMgmtValidatePacket();
+	AssocSrvAp_InstallHooks();
 	macMgmtHandleHeader();
 	macMgmtValidateHeader();
 	wlanApInstallHooks();

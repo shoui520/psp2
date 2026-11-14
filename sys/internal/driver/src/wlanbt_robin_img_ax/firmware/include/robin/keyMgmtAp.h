@@ -113,10 +113,6 @@ KEYMGMT_CALL void incrementReplayCounter(apKeyMgmtInfoSta_t *pKeyMgmtInfo);				/
 int isValidReplayCount(apKeyMgmtInfoSta_t *pKeyMgmtInfo, uint8_t *pRxReplayCount);	/* 0x1fd5c */
 
 /* not converted */
-int assocSrvAp_checkRsnWpa(struct WlanConnection *connPtr, apKeyMgmtInfoSta_t *pKeyMgmtInfo,
-			   Cipher_t wpaUcastCipher, Cipher_t wpa2UcastCipher,
-			   Cipher_t mcstCipher, uint16_t authKey, SecurityMode_t *pStaSecType,
-			   const uint8_t *pRsn, const uint8_t *pWpa, int isHandshake);	/* 0x2b516 */
 uint32_t keyApi_ApUpdateKeyMaterial(struct WlanConnection *connPtr, int updateGrpKey);	/* SQRAM, veneer 0x52f54 */
 void uapSqramPskUpdated(struct WlanConnection *connPtr, const uint8_t *localAddress,
 			const uint8_t *ssid, unsigned int ssidLength);			/* SQRAM, veneer 0x52f5c (inferred) */
