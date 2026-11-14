@@ -20,18 +20,6 @@
 #define WLAN_SECONDARY_ABOVE		2
 #define WLAN_SECONDARY_BELOW		3
 
-/*
- * The radio configuration (0x040089c8 points to it). Only the antenna
- * fields read here are named; the rest is used by files not converted yet.
- */
-struct WlanRadioConfig {
-	uint8_t reserved[0xda];
-	uint8_t secondaryAntenna;
-	uint8_t primaryAntenna;
-	uint8_t secondaryDiversity;
-	uint8_t primaryDiversity;
-};
-
 /* Not converted yet; provisional names. */
 unsigned int uapSqramBuildEntry(unsigned int band, unsigned int channel);	/* 0xc0008f81 */
 int uapSqramValidateEntry(int low, int high, int lowPoint, int highPoint, int point); /* 0xc0008ef3 */
@@ -59,7 +47,6 @@ void macMgmtQueryHeader(int kind, int count, void *value);			/* 0x3b384 */
 void wlanPsConvertHeader(void);							/* 0x3e32e */
 void rfCalibComputeContext(unsigned int value);					/* 0x26984 */
 extern uint8_t *wlanAntennaProfile;	/* 0x040088ca, unaligned; byte 3: bits 0-1 primary, 2-3 secondary */
-extern struct WlanRadioConfig *wlanRadioConfig;					/* 0x040089c8 */
 
 struct MacEventState macEventState __attribute__((section(".dtcm.bss")));
 uint8_t macEventProfileActive __attribute__((section(".dtcm.rw")));

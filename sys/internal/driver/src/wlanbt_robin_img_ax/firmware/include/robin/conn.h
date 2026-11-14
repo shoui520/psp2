@@ -64,13 +64,26 @@ struct WlanConnectionInfo {
 	uint8_t maxStations;		/* stations an access point admits */
 	uint8_t reserved33[323];
 	uint8_t ready;
-	uint8_t reserved357[227];
+	uint8_t reserved357[195];
+	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
+	uint8_t reserved556[28];
 	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
 	uint8_t reserved588[4];
 	uint8_t rateFlags;		/* bit 3: send null frames at a low rate */
 };
 
 struct WlanSubscribeEvents;
+
+/*
+ * The record an event is posted to a connection's state machine with
+ * (mdevRomQueryState): a received frame, a host command or a message.
+ */
+struct WlanSmRecord {
+	uintptr_t argument;
+	const void *frame;
+	const uint8_t *command;		/* the host command's parameters */
+	const void *message;
+};
 
 struct WlanConnection {
 	struct WlanConnection *next;
@@ -125,7 +138,9 @@ struct WlanConnection {
 	uint8_t reserved636[52];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
-	uint8_t reserved4c[38];
+	uint8_t reserved4c[30];
+	int32_t txPowerLimit;		/* dBm from the channel power table; 255: none */
+	uint8_t reserved728[4];
 	uint8_t interfaceAddress[6];
 	uint8_t interfaceIndex;
 	uint8_t reserved4b[5];
@@ -180,6 +195,8 @@ _Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beac
 _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
+_Static_assert(offsetof(struct WlanConnectionInfo, smState) == 552, "info state machine");
+_Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");

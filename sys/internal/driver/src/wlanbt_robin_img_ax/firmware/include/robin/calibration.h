@@ -6,7 +6,26 @@
 #ifndef ROBIN_CALIBRATION_H
 #define ROBIN_CALIBRATION_H
 
+#include <stddef.h>
 #include <stdint.h>
+
+/*
+ * The radio configuration (0x040089c8 points to it). Only the fields
+ * converted code reads are named; the rest is used by files not converted yet.
+ */
+struct WlanRadioConfig {
+	uint8_t reserved0[24];
+	uint32_t regionPowerTable;	/* nonzero: the region's power table limits transmit power */
+	uint8_t reserved28[0xda - 28];
+	uint8_t secondaryAntenna;
+	uint8_t primaryAntenna;
+	uint8_t secondaryDiversity;
+	uint8_t primaryDiversity;
+};
+
+_Static_assert(offsetof(struct WlanRadioConfig, primaryDiversity) == 0xdd, "radio configuration");
+
+extern struct WlanRadioConfig *wlanRadioConfig;			/* 0x040089c8 */
 
 /* The key of a calibration lookup, passed by value. */
 struct WlanCalibrationKey {

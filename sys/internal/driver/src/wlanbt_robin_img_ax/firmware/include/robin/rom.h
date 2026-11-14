@@ -25,6 +25,18 @@ int romEdcaSetCwMin(unsigned int queue, unsigned int value);	/* 0x03f3a62f */
 int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
 int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
 int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
+/*
+ * MAC timing entry points around a channel change and a calibration
+ * (wlan/mgmt.c); their ROM bodies are not available, so the names are
+ * provisional.
+ */
+void romLibResolveState(void);			/* 0x03f3a521: before the radio is retuned */
+int romLibApplyState(void);			/* 0x03f3a515: after it */
+void romLibScheduleContext(void);		/* 0x03f3a96b */
+void romLibResolveContext(unsigned int slotTime);	/* 0x03f3a963: microseconds */
+void romLibFormatContext(void);			/* 0x03f3a9c5 */
+void romLibInspectContext(int value);		/* 0x03f3a9d5 */
+void romLibTrackContext(void);			/* 0x03f3a9e5 */
 unsigned int romRateIndex(unsigned int rate);	/* 0x03f3ab4f */
 unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order rates */
 unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the link rate threshold */

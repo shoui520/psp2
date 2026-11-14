@@ -3,6 +3,7 @@
  * stack calls, its link-control messages, the access-window timers and the
  * association request sent for a link. The filename is inferred.
  */
+#include "robin/mgmt.h"
 #include "robin/esa.h"
 #include <stddef.h>
 #include "robin/amp.h"
@@ -82,13 +83,11 @@ OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
-int macTxApplyQueue(void *slot, int value, int flag);	/* 0x10096 */
 int macTxReleaseTimer(int which);			/* 0x10ce0 */
 int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
 extern uint8_t wlanConnectionPhase;			/* 0x54b70 */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
-extern uint32_t wlanSlot181[];				/* connection tail used by macTxApplyQueue */
 
 uint8_t ampLocalFrameAddress[6] __attribute__((section(".itcm.rw")));
 const char *ampPalDriverName __attribute__((section(".itcm.rw"))) = "btamp_pal";
@@ -372,7 +371,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 		case AMP_WLAN_SHORT_RANGE:
 			request = (struct AmpLinkRequest *)(uintptr_t)__aeabi_uread4(message->first);
 			connection = wlanConnectionFirst(WLAN_IF_AMP);
-			macTxApplyQueue((uint32_t *)connection + 181, request->state ? 0 : 255, 1);
+			wlanTxPowerSetConnectionLimit(&connection->txPowerLimit, request->state ? 0 : 255, 1);
 			ampPalNotifyCode10(ampPhysicalLinkFind(request->physicalHandle), request->state);
 			break;
 		case AMP_WLAN_STATUS: {

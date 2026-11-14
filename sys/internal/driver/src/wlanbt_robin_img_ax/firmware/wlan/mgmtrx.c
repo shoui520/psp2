@@ -43,13 +43,6 @@
 #define WLAN_FRAME(buffer) \
 	((const WlanWirelessFrame *)((const uint8_t *)(buffer) + (buffer)->dataOffset))
 
-/* The record a frame is posted to the state machine with. */
-struct WlanSmFrameRecord {
-	uintptr_t argument;
-	const WlanWirelessFrame *frame;
-	uint32_t reserved[2];
-};
-
 /* A Block Ack Request forwarded to the host (at buffer offset 32). */
 struct __attribute__((packed)) WlanBarHostEvent {
 	uint8_t bssType;
@@ -106,15 +99,15 @@ int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument)
 {
 	struct WlanConnection *connection = buffer->context;
 	const WlanWirelessFrame *frame = WLAN_FRAME(buffer);
-	struct WlanSmFrameRecord record;
+	struct WlanSmRecord record;
 	uint32_t channel;
 	int result = 1;
 	void *machine = &connection->smState;
 
 	record.argument = argument;
 	record.frame = frame;
-	record.reserved[0] = 0;
-	record.reserved[1] = 0;
+	record.command = NULL;
+	record.message = NULL;
 	switch (WLAN_FC0_SUBTYPE(frame->frameControl[0])) {
 	case WLAN_SUBTYPE_DEAUTH:
 		if (connection != NULL)

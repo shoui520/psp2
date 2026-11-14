@@ -3,6 +3,7 @@
  * and the 802.11 data header. The filename is inferred; no source filename
  * survives.
  */
+#include "robin/mgmt.h"
 #include "robin/btrom.h"
 #include "robin/coex.h"
 #include "robin/mac.h"
@@ -597,7 +598,6 @@ int wlanTxHoldFrame(OsaBuffer *buffer, int reason);		/* 0x18924 */
 void wlanTxCountDropped(OsaBuffer *buffer);			/* 0x41f2e */
 void cbProcLoopbackFrame(OsaBuffer *buffer);			/* 0x1eea6 */
 void cbProcFlushConnection(struct WlanConnection *connection);	/* 0x1ecde */
-OsaBuffer *wlanMgmtAllocFrame(struct WlanConnection *connection, uint32_t size); /* 0x1024c */
 int wlanWmmEnabled(void);					/* 0x41cb8 */
 unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
 unsigned int wlanNextSequence(struct WlanConnection *connection, unsigned int tid); /* 0x42068 */
