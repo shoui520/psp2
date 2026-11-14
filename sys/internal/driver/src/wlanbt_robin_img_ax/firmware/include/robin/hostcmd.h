@@ -13,6 +13,7 @@ int hostCmdRespond(struct WlanConnection *connection, int (*release)(OsaBuffer *
 void hostCmdUnlock(void);
 int hostCmdIsNodeSet(const uint8_t *command);
 uint16_t hostCmdNodeGet(void);
+uint16_t hostCmdNode(const uint8_t *body);
 unsigned int hostCmdCurrentCode(void);
 
 #endif /* ROBIN_HOSTCMD_H */

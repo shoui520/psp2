@@ -131,6 +131,7 @@ int wlanTxQuotaSet(unsigned int queue, uint32_t reserved, uint32_t limit);
 OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags,
 			     unsigned int queue);
 unsigned int wlanTxBufferQueue(const OsaBuffer *buffer);
+int wlanTxQuotaRelease(OsaBuffer *buffer);		/* OsaBuffer.release of a charged buffer; 0x18894 */
 int wlanTxBufferRecharge(OsaBuffer *buffer, unsigned int queue);
 
 /* Not converted yet; provisional names. */

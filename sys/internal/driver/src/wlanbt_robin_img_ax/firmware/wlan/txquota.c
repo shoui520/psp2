@@ -73,7 +73,7 @@ static uint16_t wlanTxQuotaAvailable(struct OsaBufferPool *pool, unsigned int qu
 }
 
 /* OsaBuffer.release of a charged buffer. */
-static int wlanTxQuotaRelease(OsaBuffer *buffer)
+int wlanTxQuotaRelease(OsaBuffer *buffer)
 {
 	if (buffer->pool == &wlanBlockPool28)
 		wlanTxQuota.used[wlanTxQuota.blockQueue[buffer->blockIndex]]--;

@@ -17,6 +17,7 @@
 #include "robin/psctl.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sdiodev.h"
 #include "robin/stapssm.h"
 #include "robin/swcrypto.h"
 #include "robin/sys.h"
@@ -526,7 +527,6 @@ extern uint8_t *wlanAntennaProfile;						/* 0x040088ca, unaligned */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanRssiInfoMarks[8];						/* 0x040088d2 */
 extern struct WlanConnection *wlanIbssConnection;				/* 0x000596d0 */
-extern uint8_t wlanTxBufferCount;						/* 0x04000c9c */
 extern uint16_t wlanAmsduSize;							/* 0x04001004 */
 extern uint16_t wlanAmsduEnabled;						/* 0x04000ff8 */
 extern uint32_t wlanTxRateDefault;						/* 0x0400100c */
