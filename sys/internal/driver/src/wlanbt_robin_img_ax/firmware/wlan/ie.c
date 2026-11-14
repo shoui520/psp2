@@ -2,6 +2,7 @@
  * 802.11 information element (TLV) helpers for management frame bodies.
  * The filename is inferred; no source filename survives.
  */
+#include "robin/ibss.h"
 #include "robin/dma.h"
 #include "robin/ie.h"
 #include "robin/patch.h"
@@ -466,7 +467,6 @@ int wlanTimeDelta(unsigned int now, unsigned int last)
 
 /* Hooks the overlay code calls; the destinations are not converted yet. */
 int cbProcRecordBuffer(int first, int argument);		/* 0x1e12a */
-int wlanChannelValidate(void);					/* 0x117d2 */
 
 int (*wlanFrameRecordHook)(int argument) __attribute__((section(".itcm.rw")));
 int (*wlanChannelValidateHook)(void) __attribute__((section(".itcm.rw")));

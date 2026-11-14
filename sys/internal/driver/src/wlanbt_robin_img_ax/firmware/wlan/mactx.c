@@ -3,6 +3,7 @@
  * and the 802.11 data header. The filename is inferred; no source filename
  * survives.
  */
+#include "robin/ibss.h"
 #include "robin/mgmt.h"
 #include "robin/btrom.h"
 #include "robin/coex.h"
@@ -871,7 +872,6 @@ void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /
 OsaBuffer *macTxNotifyNextFrame(void);					/* 0x2fe92 */
 struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *connection,
 						    const uint8_t *peer);	/* 0x0fbf2 */
-void wlanConnectionTouch(struct WlanConnection *connection);		/* 0x1175c */
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */

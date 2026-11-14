@@ -208,7 +208,13 @@ struct WlanConnection {
 		struct WlanConnectionInfo *apInfo;	/* access point */
 		struct {
 			uint8_t reserved752[8];
-			uint32_t stationFlags;	/* station; bit 7: host frames are not routed by destination */
+			uint32_t stationFlags;	/* station; bit 7: host frames are not routed by destination;
+						   IBSS: bit 0 merges with other networks, bit 1 the
+						   beacon timing changed, bit 6 a peer was heard */
+			uint8_t reserved764[4];
+			uint32_t lastBeaconTime[2];	/* IBSS: when a beacon of ours was last matched */
+			uint8_t reserved776[6];
+			uint8_t securitySuites[2];	/* IBSS: compared with macMgmtDispatchEntry()'s fourth, third results */
 		};
 	};
 	uint8_t initiator;
@@ -269,6 +275,8 @@ _Static_assert(offsetof(struct WlanConnection, bssCapability) == 56, "BSS capabi
 _Static_assert(offsetof(struct WlanConnection, networkSsid) == 116, "network SSID");
 _Static_assert(offsetof(struct WlanConnection, beaconPeriod) == 150, "beacon period");
 _Static_assert(offsetof(struct WlanConnection, beaconRequest) == 176, "beacon request");
+_Static_assert(offsetof(struct WlanConnection, lastBeaconTime) == 768, "last beacon time");
+_Static_assert(offsetof(struct WlanConnection, securitySuites) == 782, "security suites");
 _Static_assert(offsetof(struct WlanConnection, associationId) == 388, "association ID");
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");

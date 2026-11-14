@@ -42,4 +42,22 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *frame,
 		   const uint8_t *ibssParameters, const uint8_t *erp, const uint8_t *htInformation);
 
+struct WlanIePointers;
+void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWirelessFrame *frame,
+			    const void *unused, const struct WlanIePointers *ies,
+			    unsigned int peerRates);
+int wlanIbssSmActive(const struct WlanConnection *connection);
+void wlanConnectionTouch(struct WlanConnection *connection);
+struct WlanIbssInfo *wlanIbssGetInfo(void);
+void wlanIbssRefreshBeacons(struct WlanConnection *connection);
+int wlanChannelValidate(void);
+void wlanIbssReset(void);
+struct WlanConnection *wlanIbssMatchBeacon(const WlanWirelessFrame *frame, const uint8_t *body);
+void wlanIbssBeaconMatched(const WlanWirelessFrame *frame, const uint8_t *body);
+struct WlanConnection *wlanIbssFindMerge(const WlanWirelessFrame *frame);
+void wlanIbssJoinDone(struct WlanConnection *connection, int status);
+void wlanIbssStartDone(struct WlanConnection *connection, int status);
+void wlanIbssJoinSetup(struct WlanConnection *connection, const WlanAdHocBssDesc *join);
+void wlanIbssRefreshBeacon(WlanBeaconDescriptor *const *beacon);
+
 #endif /* ROBIN_IBSS_H */

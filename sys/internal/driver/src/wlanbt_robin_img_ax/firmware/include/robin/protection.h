@@ -13,6 +13,9 @@
 #include "robin/wlan.h"
 
 /* WlanProtection.flags */
+/* bits 0-3: the kind of the slowest IBSS peer heard (8: DSSS/CCK only) */
+#define WLAN_PROTECTION_PEER_MASK	0x0f
+#define WLAN_PROTECTION_PEER_DSSS	0x08
 #define WLAN_PROTECTION_USE_PROTECTION	0x10	/* RTS/CTS or CTS-to-self before OFDM frames */
 #define WLAN_PROTECTION_LONG_PREAMBLE	0x20	/* no short preamble */
 #define WLAN_PROTECTION_DSSS_BSS	0x40	/* the IBSS's own rates are DSSS/CCK only */
@@ -22,15 +25,15 @@ enum {
 	WLAN_PROTECTION_NON_ERP,	/* an ERP element said Non-ERP Present */
 	WLAN_PROTECTION_USE_ERP,	/* an ERP element said Use Protection */
 	WLAN_PROTECTION_BARKER,		/* an ERP element said Barker Preamble Mode */
-	WLAN_PROTECTION_TIMER3,		/* set by code not converted yet */
+	WLAN_PROTECTION_DSSS_PEER,	/* an IBSS peer with DSSS/CCK rates only */
 	WLAN_PROTECTION_DSSS_ONLY,	/* a station with DSSS/CCK rates only */
 	WLAN_PROTECTION_NO_SHORT_PREAMBLE, /* a station without the Short Preamble capability */
 	WLAN_PROTECTION_NON_GREENFIELD,	/* an HT element said Non-Greenfield STAs Present */
-	WLAN_PROTECTION_TIMER7,		/* timers 7-11: set by code not converted yet */
+	WLAN_PROTECTION_TIMER7,		/* timers 7-9: set by code not converted yet */
 	WLAN_PROTECTION_TIMER8,
 	WLAN_PROTECTION_TIMER9,
-	WLAN_PROTECTION_TIMER10,
-	WLAN_PROTECTION_TIMER11,	/* never runs out by reaching 0 exactly */
+	WLAN_PROTECTION_NON_WMM_PEER,	/* an IBSS peer without WMM */
+	WLAN_PROTECTION_DSSS_PEER_LINK,	/* the same, for a peer link; never runs out by reaching 0 exactly */
 	WLAN_PROTECTION_TIMERS
 };
 

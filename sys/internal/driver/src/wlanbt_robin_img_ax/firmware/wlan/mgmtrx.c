@@ -4,6 +4,7 @@
  * buffer's data offset, with the firmware's fixed header (WlanWirelessFrame).
  */
 #include <stddef.h>
+#include "robin/ibss.h"
 #include "robin/amp.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
@@ -86,7 +87,6 @@ struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConn
 void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
 unsigned int cbProcComputePacket(unsigned int mode);				/* 0x1e3cc */
 unsigned int cbProcUpdateBuffer(struct WlanConnection *connection);		/* 0x1d5ba */
-struct WlanConnection *macTxComputeChannel(const WlanWirelessFrame *frame);	/* 0x11870 */
 int macMgmtCheckHeader(struct WlanConnection *connection, const uint8_t *address); /* 0x3b18c */
 void macMgmtDispatchBuffer(struct WlanConnection *connection, const uint8_t *address,
 			   unsigned int reason);				/* 0x3854e */
@@ -325,7 +325,7 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 	case WLAN_SUBTYPE_BEACON:
 		connection = wlanConnectionFindByLocal(WLAN_IF_IBSS, frame->address3);
 		if (connection == NULL)
-			connection = macTxComputeChannel(frame);
+			connection = wlanIbssFindMerge(frame);
 		if (connection == NULL)
 			break;
 		peer = wlanConnectionFindDirectPeer(connection, frame->address2);

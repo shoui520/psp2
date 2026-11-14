@@ -67,14 +67,14 @@ void wlanProtectionUpdateFlags(WlanProtection *protection)
  */
 void wlanProtectionAgeMode1(WlanProtection *protection, unsigned int now)
 {
-	WlanProtectionTimer *last = &protection->timers[WLAN_PROTECTION_TIMER11];
+	WlanProtectionTimer *last = &protection->timers[WLAN_PROTECTION_DSSS_PEER_LINK];
 
 	timerAgeRunning(protection, WLAN_PROTECTION_NON_GREENFIELD, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER7, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER8, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER9, now);
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER3, now);
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER10, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_DSSS_PEER, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_NON_WMM_PEER, now);
 	if (timerRemaining(last) > 0 && timerAge(last, now) == 0)
 		__aeabi_uwrite4(-1, last->remaining);
 }
@@ -96,10 +96,10 @@ void wlanProtectionClear(WlanProtection *protection)
 	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_NON_ERP].remaining);
 	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_USE_ERP].remaining);
 	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_BARKER].remaining);
-	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_TIMER3].remaining);
+	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_DSSS_PEER].remaining);
 	protection->flags &= ~(WLAN_PROTECTION_USE_PROTECTION | WLAN_PROTECTION_LONG_PREAMBLE);
-	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_TIMER10].remaining);
-	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_TIMER11].remaining);
+	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_NON_WMM_PEER].remaining);
+	__aeabi_uwrite4(0, protection->timers[WLAN_PROTECTION_DSSS_PEER_LINK].remaining);
 }
 
 /*

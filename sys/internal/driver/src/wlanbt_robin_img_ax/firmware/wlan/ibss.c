@@ -1,8 +1,8 @@
 /*
- * IBSS (ad-hoc) networks (0x10d48..0x11550): the beacon and probe response
+ * IBSS (ad-hoc) networks (0x10d48..0x11a34): the beacon and probe response
  * templates the MAC sends, starting an IBSS from the host's AD_HOC_START,
- * joining one from AD_HOC_JOIN, and adopting the BSSID and beacon timing of
- * a network that merges with ours. The filename is inferred; no source
+ * joining one from AD_HOC_JOIN, the beacons of the IBSS's peers, and
+ * adopting the BSSID and beacon timing of a network that merges with ours. The filename is inferred; no source
  * filename survives.
  */
 #include <stdint.h>
@@ -10,6 +10,7 @@
 #include "robin/conn.h"
 #include "robin/esa.h"
 #include "robin/ibss.h"
+#include "robin/icverr.h"
 #include "robin/ie.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
@@ -63,7 +64,6 @@ int macMgmtRecordTable(const uint8_t *address, uint8_t *buffer);	/* 0x37d02 */
 uint32_t rfCalibInspectTimer(unsigned int rate);			/* 0x2bc6c */
 void wlanPsVerifyFrame(int reason);					/* 0x3dac6 */
 void wlanPsFilterFrame(uint16_t beaconPeriod);				/* 0x3dc4e */
-void macTxSyncChannel(struct WlanConnection *connection, const WlanAdHocBssDesc *join); /* 0x11960 */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
 void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
@@ -74,8 +74,6 @@ void macMgmtResolveEntry(struct WlanConnection *connection, unsigned int channel
 int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
 void btLmpLcHandleState(int state);					/* 0x42488 */
-void wlanIbssJoinDone(struct WlanConnection *connection, int status);	/* 0x11944 */
-void wlanIbssStartDone(struct WlanConnection *connection, int status);	/* 0x11952 */
 void cbProcSelectBuffer(int kind, const uint8_t *bssid);		/* 0x1e064 */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);			/* 0x3bc5a */
 uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
@@ -83,6 +81,22 @@ void wlanPsClearTable(struct WlanConnection *connection, int value);	/* 0x3c03c 
 void wlanPsUpdateTable(struct WlanConnection *connection);		/* 0x17206 */
 void wlanPsAdjustTable(struct WlanConnection *connection);		/* 0x3c0aa */
 void wpaSuppNotifyDescriptor(void);					/* 0x18c16 */
+void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
+void macTxNotifyQueryFrame(struct WlanConnection *connection);		/* 0x33570 */
+void macTxNotifyDispatchFrame(struct WlanConnection *connection);	/* 0x3351c */
+void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
+void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
+struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
+const uint8_t *wpaSuppHandleQueue(int ieId, const uint8_t *ies, unsigned int length); /* 0x2c3d8 */
+int wpaSuppAdjustDescriptor(const uint8_t *oui);			/* 0x2c276 */
+void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *third,
+			  uint8_t *fourth, uint32_t a, uint32_t b, uint32_t c);	/* 0x364be */
+void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
+			  uint8_t *ssidLength);				/* 0x35558 */
+void wlanPsQueryPacket(void);						/* 0x3d006 */
+extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
+extern WepIcvErrList wlanIbssIcvErrList;				/* 0x5f124 */
+extern uint8_t wlanPsHostMode;						/* 0x55130 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */
 void wlanIbssTemplateSetProtection(WlanWirelessFrame *frame, int protection)
@@ -259,7 +273,7 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 		wlanPsVerifyFrame(3);
 		macMgmtUpdateContext(channelFlags, channel);
 		macMgmtCheckContext();
-		macTxSyncChannel(connection, join);
+		wlanIbssJoinSetup(connection, join);
 		wlanAdHocJoinToStart(&start, join);
 		connection->beaconPeriod = start.beaconPeriod;
 		if (start.capability & WLAN_CAPABILITY_SPECTRUM_MANAGEMENT)
@@ -400,4 +414,245 @@ void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *f
 		wlanPsAdjustTable(connection);
 		wpaSuppNotifyDescriptor();
 	}
+}
+
+/*
+ * A beacon of a peer in our IBSS (from the management task): the peer's
+ * rates, WMM and DSSS-only state, and a merge with the peer's network when
+ * its BSSID differs.
+ */
+void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWirelessFrame *frame,
+			    const void *unused, const WlanIePointers *ies, unsigned int peerRates)
+{
+	WlanProtectionTimer *link = &wlanProtection.timers[WLAN_PROTECTION_DSSS_PEER_LINK];
+	WlanProtectionTimer *noWmm = &wlanProtection.timers[WLAN_PROTECTION_NON_WMM_PEER];
+	const uint8_t *bssid = frame->address3;
+	struct WlanConnection *peer;
+	uint8_t previous[6];
+	unsigned int rates;
+	uint32_t flags;
+	int changed = 0;
+
+	rates = wlanRateBitmapAll(connection->supportedRates, connection->supportedRatesLength, NULL,
+				  0, (const WlanHtCapabilityIe *)connection->htCapability);
+	flags = connection->stationFlags;
+	if (!(flags & 0x40) || ((flags & 0x80) && !(connection->flags2 & 0x10))) {
+		connection->stationFlags = flags | 0x40;
+		connection->flags2 |= 0x10;
+		cbProcUpdatePacket(connection, peerRates & rates);
+		macTxNotifyQueryFrame(connection);
+		macTxNotifyDispatchFrame(connection);
+		wlanConnectionSetActiveFlag(connection, ies->pWmmParam != NULL);
+		connection->flags |= 3;
+		if (!(connection->stationFlags & 0x80))
+			wlanHostEventSendAddress(connection, 32, connection->peerAddress);
+		if ((connection->stationFlags & 1) &&
+		    !wlanConnectionHasLocalAddress(connection, bssid)) {
+			__aeabi_memcpy(previous, connection->localAddress, sizeof(previous));
+			wlanIbssAdopt(connection, frame, ies->pIbssParam, ies->pErpInfo, ies->pHtInfo);
+			while ((peer = wlanConnectionFindByLocal(WLAN_IF_IBSS, previous)) != NULL)
+				__aeabi_memcpy(peer->localAddress, bssid, 6);
+			wlanPostConnectionEvent(connection, 0x80000000u);
+		}
+		cbProcParsePacket(connection);
+	} else if (!(flags & 1) || wlanConnectionHasLocalAddress(connection, bssid)) {
+		cbProcParsePacket(connection);
+	}
+	if (wlanPsEnabled())
+		wlanPsFilterTable(connection);
+	if (peerRates <= 0xf) {
+		wlanProtection.flags = (wlanProtection.flags & ~WLAN_PROTECTION_PEER_MASK) |
+				       WLAN_PROTECTION_PEER_DSSS;
+		__aeabi_uwrite4(WLAN_PROTECTION_TIMEOUT,
+				wlanProtection.timers[WLAN_PROTECTION_DSSS_PEER].remaining);
+		if (connection->stationFlags & 0x80) {
+			if ((int32_t)__aeabi_uread4(link->remaining) <= 0)
+				changed = 1;
+			__aeabi_uwrite4(WLAN_PROTECTION_TIMEOUT, link->remaining);
+		}
+	} else if ((connection->stationFlags & 0x80) && (int32_t)__aeabi_uread4(link->remaining) < 0) {
+		changed = 1;
+		__aeabi_uwrite4(0, link->remaining);
+	}
+	if (connection->stationFlags & 0x80) {
+		if (!ies->pWmmParam && !ies->pWmmInfo)
+			__aeabi_uwrite4(WLAN_PROTECTION_TIMEOUT, noWmm->remaining);
+		wlanConnectionSetActiveFlag(connection, (int32_t)__aeabi_uread4(noWmm->remaining) <= 0);
+		if (changed) {
+			cbProcUpdatePacket(connection, peerRates & rates);
+			macTxNotifyQueryFrame(connection);
+			macTxNotifyDispatchFrame(connection);
+		}
+	}
+	wlanWepIcvErrRefresh(frame->address2, &wlanIbssIcvErrList);
+}
+
+/* Whether the station state machine is in one of its IBSS states. */
+int wlanIbssSmActive(const struct WlanConnection *connection)
+{
+	return connection->smState == connection->smStates + 36 ||
+	       connection->smState == connection->smStates + 60;
+}
+
+/* A peer was heard: its DSSS rates and state go to the rate and power-save code. */
+void wlanConnectionTouch(struct WlanConnection *connection)
+{
+	unsigned int rates;
+
+	connection->flags2 |= 0x10;
+	rates = wlanRateBitmapAll(connection->supportedRates, connection->supportedRatesLength, NULL,
+				  0, (const WlanHtCapabilityIe *)connection->htCapability);
+	cbProcUpdatePacket(connection, rates & 0xf);
+	macTxNotifyQueryFrame(connection);
+	macTxNotifyDispatchFrame(connection);
+	connection->flags |= 3;
+	cbProcParsePacket(connection);
+}
+
+struct WlanIbssInfo *wlanIbssGetInfo(void)
+{
+	return &wlanIbssInfo;
+}
+
+/* After a merge, the MAC's kept beacons take the new ATIM window and beacon period. */
+void wlanIbssRefreshBeacons(struct WlanConnection *connection)
+{
+	if (connection->interfaceType != WLAN_IF_IBSS)
+		return;
+	if (connection->stationFlags & 2) {
+		wlanIbssRefreshBeacon((WlanBeaconDescriptor *const *)&MAC_004_REGION_B);
+		wlanIbssRefreshBeacon((WlanBeaconDescriptor *const *)&MAC_008_REGION_C);
+	}
+	connection->stationFlags &= ~2u;
+}
+
+int wlanChannelValidate(void)
+{
+	cbProcDispatchTable(7, 2);
+	SOC_MAC_EVENT_CONTROL |= 0x20;
+	return cbProcPrepareTable(7, 1);
+}
+
+void wlanIbssReset(void)
+{
+	wlanBeaconRatesEnd = NULL;
+	wlanProbeRatesEnd = NULL;
+	__aeabi_memclr(&wlanIbssInfo, sizeof(wlanIbssInfo));
+}
+
+/* The IBSS of ours a received beacon names, on our channel. */
+struct WlanConnection *wlanIbssMatchBeacon(const WlanWirelessFrame *frame, const uint8_t *body)
+{
+	struct WlanConnection *connection;
+	const uint8_t *ds;
+
+	if (!(body[10] & 2))		/* capability: IBSS */
+		return NULL;
+	connection = cbProcResetBuffer(body + WLAN_BEACON_FIXED_LENGTH);
+	if (connection == NULL || !(connection->stationFlags & 1))
+		return NULL;
+	ds = wpaSuppHandleQueue(IE_DS_PARAMETER, body + WLAN_BEACON_FIXED_LENGTH,
+				LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH);
+	if (ds == NULL || wlanOperatingChannel() != ds[2])
+		return NULL;
+	return connection;
+}
+
+void wlanIbssBeaconMatched(const WlanWirelessFrame *frame, const uint8_t *body)
+{
+	struct WlanConnection *connection = wlanIbssMatchBeacon(frame, body);
+	uint64_t now;
+
+	if (connection == NULL)
+		return;
+	now = romGetTimerTimestamp();
+	connection->lastBeaconTime[0] = (uint32_t)now;
+	connection->lastBeaconTime[1] = (uint32_t)(now >> 32);
+}
+
+/*
+ * The IBSS a beacon from another network asks us to merge with: one of ours
+ * by SSID and channel, with a timestamp not behind ours, the same privacy
+ * and, with privacy, the same security suites.
+ */
+struct WlanConnection *wlanIbssFindMerge(const WlanWirelessFrame *frame)
+{
+	const uint8_t *body = frame->body;
+	struct WlanConnection *connection;
+	const uint8_t *rsn;
+	const uint8_t *wpa;
+	uint64_t timestamp;
+	uint64_t local;
+	unsigned int length;
+	uint8_t third[4];
+	uint8_t fourth[4];
+
+	connection = wlanIbssMatchBeacon(frame, body);
+	if (connection == NULL)
+		return NULL;
+	__aeabi_memcpy(&timestamp, body, 8);
+	local = (uint64_t)wlanIbssTsfOffset +
+		((uint64_t)connection->lastBeaconTime[1] << 32 | connection->lastBeaconTime[0]);
+	if (timestamp + 5000 < local)
+		return NULL;
+	if (((body[10] >> 4) & 1) != ((connection->bssCapability[0] >> 4) & 1))
+		return NULL;
+	if (!(connection->bssCapability[0] & 0x10))	/* capability: Privacy */
+		return connection;
+	length = (uint16_t)(LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH);
+	rsn = wpaSuppHandleQueue(IE_RSN, body + WLAN_BEACON_FIXED_LENGTH, length);
+	wpa = wpaSuppHandleQueue(IE_VENDOR, body + WLAN_BEACON_FIXED_LENGTH, length);
+	if (wpaSuppAdjustDescriptor(wpa + 4) != 3)
+		wpa = NULL;
+	macMgmtDispatchEntry(rsn, wpa, third, fourth, 0, 0, 0);
+	if (memcmp(fourth, &connection->securitySuites[0], 1) ||
+	    memcmp(third, &connection->securitySuites[1], 1))
+		return NULL;
+	return connection;
+}
+
+void wlanIbssJoinDone(struct WlanConnection *connection, int status)
+{
+	wlanReportEvent(connection, &status, 10);
+}
+
+void wlanIbssStartDone(struct WlanConnection *connection, int status)
+{
+	wlanReportEvent(connection, &status, 12);
+}
+
+/* Takes the rates, capability, BSSID and SSID of the IBSS to join. */
+void wlanIbssJoinSetup(struct WlanConnection *connection, const WlanAdHocBssDesc *join)
+{
+	unsigned int rates;
+
+	wlanAdHocJoinRates((WlanAdHocBssDesc *)join, connection->supportedRates,
+			   &connection->supportedRatesLength);
+	wlanPsQueryPacket();
+	rates = wlanRateBitmapAll(connection->supportedRates, connection->supportedRatesLength, NULL,
+				  0, (const WlanHtCapabilityIe *)connection->htCapability);
+	macMgmtQueryContext(connection, connection->supportedRates,
+			    connection->supportedRatesLength, rates);
+	wlanProtection.flags = (wlanProtection.flags & ~WLAN_PROTECTION_DSSS_BSS) |
+			       ((wlanRatesDsssOnly(rates) & 1) << 6);
+	macTxNotifyApplyFrame(connection);
+	connection->bssCapability[0] = join->capability;
+	connection->bssCapability[1] = join->capability >> 8;
+	macMgmtHandleContext(join, connection->localAddress, connection->networkSsid,
+			     &connection->networkSsidLength);
+	if (supplicantIsEnabled() && (connection->flags & 4))
+		supplicantInitSession(connection, connection->networkSsid,
+				      connection->networkSsidLength,
+				      (IEEEtypes_MacAddr_t *)connection->localAddress,
+				      (IEEEtypes_MacAddr_t *)connection->interfaceAddress);
+	wlanPsHostMode = 0;
+	connection->interfaceType = WLAN_IF_IBSS;
+	wlanMacReleaseHold();
+}
+
+/* A kept beacon takes the ATIM window and beacon period of wlanIbssInfo. */
+void wlanIbssRefreshBeacon(WlanBeaconDescriptor *const *beacon)
+{
+	wlanSetAtimWindow(beacon, wlanIbssInfo.atimWindow);
+	wlanSetBeaconPeriod(beacon, wlanIbssInfo.beaconPeriod);
 }
