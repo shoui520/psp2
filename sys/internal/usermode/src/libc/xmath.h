@@ -66,7 +66,28 @@ short _Dscale(double *px, long lexp);
 double _Dtento(double x, long n, int *perr);
 short _FDnorm(_Fval *ps);
 short _FDscale(float *px, long lexp);
-float _FDtento(float x, long n, int *perr);
+float _FDtento(double x, long n, int *perr);
+
+/*
+ * The library's own extended format: a 64-bit fraction with its leading bit
+ * at bit 63 and a 15-bit biased exponent, value 1.f * 2^(_Exp - 0x3fff).
+ * strtod and _Dtento compute in it.
+ */
+typedef struct {
+	int _Exp;
+	unsigned long long _Frac;
+} _Xfloat;
+
+_Xfloat _Xfromf(float x);
+float _Xtof(_Xfloat x, int *perr);
+_Xfloat _Xfromld(long double x);
+double _Xtod(_Xfloat x, int *perr);
+_Xfloat _Xfromd(double x);
+long double _Xtold(_Xfloat x, int *perr);
+_Xfloat _Xmul(_Xfloat x, _Xfloat y);
+_Xfloat _Xsub(_Xfloat x, _Xfloat y);
+_Xfloat _Xadd(_Xfloat x, _Xfloat y);
+_Xfloat _Xtento(_Xfloat x, int n);
 
 int _Stopfx(const char **ps, char **endptr);
 int _Stoflt(const char *s0, const char *s, char **endptr, long lo[], int maxsig);
