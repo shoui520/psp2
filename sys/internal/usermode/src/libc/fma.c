@@ -15,11 +15,11 @@ double (fma)(double x, double y, double z)
 	double xu = x;
 	double yu = y;
 	double zu = z;
-	const short errx = _Dunscale(&xexp, &xu);
+	short errx;
 	short erry;
 	short errz;
 
-	if (errx == _NANCODE)
+	if ((errx = _Dunscale(&xexp, &xu)) == _NANCODE)
 		return x;
 	if ((erry = _Dunscale(&yexp, &yu)) == _NANCODE)
 		return y;
@@ -36,7 +36,7 @@ double (fma)(double x, double y, double z)
 	} else if (errx == 0 || erry == 0 || errz == 0) {
 		return x * y + z;
 	} else {
-		const short xyexp = xexp + yexp;
+		const long xyexp = xexp + yexp;
 		const short n = zexp - xyexp;
 		double xp[4];
 		double yp[2];

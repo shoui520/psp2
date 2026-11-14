@@ -18,7 +18,7 @@ float (cbrtf)(float x)
 		float z;
 		int i;
 		int neg;
-		short n;
+		long n;
 
 		for (i = 0; xexp / 3 * 3 != xexp; ++xexp, --i)
 			;

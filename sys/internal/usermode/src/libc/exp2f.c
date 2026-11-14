@@ -18,7 +18,7 @@ float (exp2f)(float x)
 	case 0:
 		return 1.0F;
 	default: {
-		short n;
+		long n;	/* SCE: (short)y, but the rounding step is not truncated again */
 
 		if (x <= -2147483648.0F || 2147483648.0F <= x) {	/* _Exp overflows or underflows */
 			n = 0;

@@ -15,11 +15,11 @@ float (fmaf)(float x, float y, float z)
 	float xu = x;
 	float yu = y;
 	float zu = z;
-	const short errx = _FDunscale(&xexp, &xu);
+	short errx;
 	short erry;
 	short errz;
 
-	if (errx == _NANCODE)
+	if ((errx = _FDunscale(&xexp, &xu)) == _NANCODE)
 		return x;
 	if ((erry = _FDunscale(&yexp, &yu)) == _NANCODE)
 		return y;
@@ -36,7 +36,7 @@ float (fmaf)(float x, float y, float z)
 	} else if (errx == 0 || erry == 0 || errz == 0) {
 		return x * y + z;
 	} else {
-		const short xyexp = xexp + yexp;
+		const long xyexp = xexp + yexp;
 		const short n = zexp - xyexp;
 		float xp[4];
 		float yp[2];

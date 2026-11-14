@@ -15,11 +15,11 @@ long double (fmal)(long double x, long double y, long double z)
 	long double xu = x;
 	long double yu = y;
 	long double zu = z;
-	const short errx = _LDunscale(&xexp, &xu);
+	short errx;
 	short erry;
 	short errz;
 
-	if (errx == _NANCODE)
+	if ((errx = _LDunscale(&xexp, &xu)) == _NANCODE)
 		return x;
 	if ((erry = _LDunscale(&yexp, &yu)) == _NANCODE)
 		return y;
@@ -36,7 +36,7 @@ long double (fmal)(long double x, long double y, long double z)
 	} else if (errx == 0 || erry == 0 || errz == 0) {
 		return x * y + z;
 	} else {
-		const short xyexp = xexp + yexp;
+		const long xyexp = xexp + yexp;
 		const short n = zexp - xyexp;
 		long double xp[4];
 		long double yp[2];

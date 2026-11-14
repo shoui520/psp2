@@ -24,6 +24,7 @@ const char *_Future_error_map(int _Errcode)
 		}
 	}
 
+__attribute__((noinline))	/* SCE: future_error::what calls it */
 const char *_Get_future_error_what(int _Errcode) _THROW0()
 	{	// get what string for future error
 	switch (_Errcode)

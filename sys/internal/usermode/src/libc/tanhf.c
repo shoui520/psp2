@@ -28,6 +28,7 @@ float (tanhf)(float x)
 		return x;
 	default: {	/* finite */
 		float g;
+		float y;
 		int neg = 0;
 
 		if (x < 0.0F) {
@@ -38,11 +39,13 @@ float (tanhf)(float x)
 			;
 		} else if (x < ln2by2) {
 			g = x * x;
-			x = (x + x * g * num[0]) / (g * den[0] + 1.0F);
+			y = g * den[0] + 1.0F;
+			x = (x + x * g * num[0]) / y;
 		} else if (x < ln2) {	/* tanh(x) = 2 tanh(x/2) / (1 + tanh(x/2)^2) */
 			x *= 0.5F;
 			g = x * x;
-			x = (x + x * g * num[0]) / (g * den[0] + 1.0F);
+			y = g * den[0] + 1.0F;
+			x = (x + x * g * num[0]) / y;
 			x = x * 2.0F / (x * x + 1.0F);
 		} else if (x < xbig) {
 			x = 1.0F - 2.0F / (expf(x + x) + 1.0F);

@@ -8,7 +8,7 @@ size_t fread(void *__restrict ptr, size_t size, size_t nelem, FILE *__restrict s
 	size_t ns = size * nelem;
 	size_t n = ns;
 
-	if (n == 0)
+	if (ns == 0)
 		return 0;
 	_Lockfilelock(str);
 	if (str->_Mode & _MBYTE)	/* deliver the pushed-back characters */

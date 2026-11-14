@@ -19,30 +19,33 @@ wchar_t *wcstok_s(wchar_t *__restrict s1, rsize_t *__restrict s1max,
 	/* skip the leading delimiters */
 	sbegin = s1 != NULL ? s1 : *ptr;
 	for (send = sbegin, m = max; m != 0 && *send != L'\0'; --m, ++send) {
-		for (p = s2; *p != L'\0' && *p != *send; ++p)
-			;
-		if (*p == L'\0')
-			break;
+		for (p = s2; ; ++p) {
+			if (*p == L'\0')
+				goto token;	/* not a delimiter */
+			if (*p == *send)
+				break;
+		}
 	}
 	if (m == 0) {
 		_EXT1_FAIL("wcstok_s: missing token");
 		return NULL;
 	}
+token:
 	*s1max = max -= send - sbegin;
 	if (*send == L'\0')
 		return NULL;
 
 	/* find the end of the token */
 	for (sbegin = send, m = max; m != 0 && *send != L'\0'; --m, ++send) {
-		for (p = s2; *p != L'\0' && *p != *send; ++p)
-			;
-		if (*p != L'\0')
-			break;
+		for (p = s2; *p != L'\0'; ++p)
+			if (*p == *send)
+				goto delimiter;
 	}
 	if (m == 0) {
 		_EXT1_FAIL("wcstok_s: missing delimiter");
 		return NULL;
 	}
+delimiter:
 	*s1max = max - (send - sbegin);
 	if (*send != L'\0') {
 		*send++ = L'\0';

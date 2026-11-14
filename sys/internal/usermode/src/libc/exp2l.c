@@ -18,7 +18,7 @@ long double (exp2l)(long double x)
 	case 0:
 		return 1.0L;
 	default: {
-		short n;
+		long n;	/* SCE: (short)y, but the rounding step is not truncated again */
 
 		if (x <= -2147483648.0L || 2147483647.0L <= x) {	/* _Exp overflows or underflows */
 			n = 0;

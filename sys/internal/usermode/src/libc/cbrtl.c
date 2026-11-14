@@ -20,7 +20,7 @@ long double (cbrtl)(long double x)
 		long double z;
 		int i;
 		int neg;
-		short n;
+		long n;
 
 		for (i = 0; xexp / 3 * 3 != xexp; ++xexp, --i)
 			;

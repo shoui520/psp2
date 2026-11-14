@@ -16,7 +16,7 @@ static const float q[] = {
 	0.035618942F, -0.19255313F, 0.01774013F, 1.0240692F,
 };
 static const float stirnum[] = {	/* sqrt(2pi) times Stirling's series, in 1/x - xoff */
-	-0.001481641F, 0.0003563276F, 0.0018985819F, -0.0018186223F,
+	-0.00148164108F, 0.0003563276F, 0.0018985819F, -0.0018186223F,
 	-0.004966273F, 0.05404323F, 0.75926095F, 2.5116735F,
 };
 static const float stirden[] = {

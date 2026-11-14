@@ -26,7 +26,7 @@ wint_t fgetwc(FILE *str)
 		nused = nback;
 		wc = 0;
 		if (nback != 0 && (str->_Mode & _MWIDE)) {	/* from the pushed-back bytes */
-			s = (const char *)str->_Rback;
+			s = (const char *)(bufend - nback);	/* str->_Rback */
 			n = nback;
 		} else {	/* from the buffer */
 			if (str->_WRend <= str->_Next && _WFrprep(str) <= 0) {
