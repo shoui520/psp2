@@ -70,4 +70,13 @@ extern void *_Dso_handle_main;
 /* the message for an error code, in buf or a static buffer when buf is NULL */
 char *_Strerror(int errcode, char *buf);
 
+
+/* the lightweight conditions of the C++ static guards (xmtx.c) */
+struct _SceKernelLwCondWork;
+struct _SceLibcMutexType;
+int _Cndinit(struct _SceKernelLwCondWork *cnd, const char *name, struct _SceLibcMutexType *mtx);
+int _Cnddst(struct _SceKernelLwCondWork *cnd);
+int _Cndwait(struct _SceKernelLwCondWork *cnd);
+int _Cndbroadcast(struct _SceKernelLwCondWork *cnd);
+
 #endif /* _LIBC_INTERNAL_H */
