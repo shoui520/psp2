@@ -75,7 +75,6 @@ void macMgmtPrepareDescriptor(uint16_t atimWindow);			/* 0x3bc5a */
 uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
 void wlanPsClearTable(struct WlanConnection *connection, int value);	/* 0x3c03c */
 void wlanPsAdjustTable(struct WlanConnection *connection);		/* 0x3c0aa */
-void wpaSuppNotifyDescriptor(void);					/* 0x18c16 */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);		/* 0x33570 */
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);	/* 0x3351c */
@@ -405,7 +404,7 @@ void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *f
 			wlanPsStartHostModeTimer(connection);
 	} else {
 		wlanPsAdjustTable(connection);
-		wpaSuppNotifyDescriptor();
+		wlanPsHostModeExit();
 	}
 }
 

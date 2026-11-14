@@ -1847,6 +1847,6 @@ int ampHciProcessCommands(void)
 		}
 		osa_BufferFree(command);
 		mdevIoctl(ampSdioDev, 0x14, 0);
-	} while (osa_MsgQueueCount(&ampCommandQueue) != 0);
+	} while (osa_MsgQueuePeek(&ampCommandQueue) != 0);
 	return 1;
 }

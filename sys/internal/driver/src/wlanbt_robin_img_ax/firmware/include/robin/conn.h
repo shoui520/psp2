@@ -316,7 +316,12 @@ struct WlanConnection {
 	uint8_t dtimPeriod;		/* beacons per DTIM; an unauthenticated peer is held to 2n + 1 */
 	uint16_t beaconPeriod;		/* TU, of the IBSS started or joined */
 	uint8_t localAddress[6];
-	uint8_t reserved2[14];
+	/* HostCmd_CMD_802_11_SNMP_MIB's values (Marvell: RTS and fragmentation thresholds, retry limits). */
+	uint8_t rtsThreshold[2];
+	uint8_t fragThreshold[2];
+	uint8_t shortRetryLimit;
+	uint8_t longRetryLimit;
+	uint8_t reserved164[8];
 	uint8_t channel;
 	uint8_t groupRing;		/* the transmit ring of the BSS's group frames */
 	uint8_t reserved174[2];
@@ -332,7 +337,8 @@ struct WlanConnection {
 	int16_t noise;			/* the last beacon's noise floor */
 	int16_t beaconRssi;
 	int16_t snr;			/* the last beacon's SNR */
-	uint8_t reserved212[4];
+	int16_t beaconRssiLast;		/* HostCmd_CMD_RSSI_INFO's value while beaconRssi is -98 */
+	int16_t noiseLast;		/* ... and the noise floor's */
 	struct WlanLinkMonitor link;
 	struct WlanSignalFilter signalFilters[WLAN_SIGNAL_FILTERS];
 	struct WlanSignalAverage noiseFloorAverage;	/* the beacons' noise floor */
@@ -359,7 +365,9 @@ struct WlanConnection {
 			uint8_t rateControl[228];	/* rate adaptation state (not converted yet) */
 		};
 	};
-	uint8_t reserved636[52];
+	uint8_t reserved636[36];
+	uint8_t *snmpBssParams[2];	/* [0]: HostCmd 0x37's, [1]: 0x36's and 0x5e's; each +28 is its block */
+	uint8_t reserved680[8];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
 	uint8_t reserved4c[30];
@@ -421,6 +429,9 @@ _Static_assert(offsetof(struct WlanConnection, stationFlags) == 760, "station fl
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
 _Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
+_Static_assert(offsetof(struct WlanConnection, rtsThreshold) == 158, "SNMP MIB values");
+_Static_assert(offsetof(struct WlanConnection, localName) == 744, "AMP link name");
+_Static_assert(offsetof(struct WlanConnection, snmpBssParams) == 672, "SNMP BSS parameters");
 _Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beacon miss threshold");
 _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");

@@ -67,7 +67,10 @@ struct WlanLocalState {
 	uint8_t reserved0[4];
 	uint8_t powerSave;
 	uint8_t reserved1[3];
+	uint8_t reserved8[16];
+	uint32_t mibOid17;		/* HostCmd_CMD_802_11_SNMP_MIB's object 17: its value; non-zero starts macMgmtScheduleHeader() */
 };
+_Static_assert(offsetof(struct WlanLocalState, mibOid17) == 24, "SNMP MIB object 17");
 
 /* Bits of wlanTxWindowFlags, one set per window (shifted by the window number). */
 #define WLAN_TX_WINDOW_OPEN		0x001u

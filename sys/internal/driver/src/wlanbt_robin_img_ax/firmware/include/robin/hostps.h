@@ -25,6 +25,8 @@ void wlanPsPhaseSuspend(void);
 void wlanPsPhaseArm(struct WlanConnection *connection);
 void wlanPsPhaseResume(struct WlanConnection *connection);
 void wlanPsPhaseReset(void);
+int wlanPsHostModeExit(void);					/* 0: host power save mode was on */
+int wlanPsHostModeEnter(const uint8_t *params);			/* 0: entered */
 void wlanPsConfirmNow(void);
 int wlanPsHostSleepReply(OsaBuffer *buffer);
 int wlanPsHostSessionStart(void);

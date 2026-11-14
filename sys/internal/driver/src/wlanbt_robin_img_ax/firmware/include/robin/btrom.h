@@ -53,7 +53,7 @@ void romHsmStateInit(struct RomHsmState *state, struct RomHsmState *parent, RomH
 void romHsmStart(void *machine, struct RomHsmState *initial);
 void romHsmTransition(void *machine, struct RomHsmState *target);
 int mdevRomProcessState(void *device);
-int osa_MsgQueueCount(void *queue);
+void *osa_MsgQueuePeek(void *queue);		/* the first message, left in the list */
 void osa_BlockPoolCreate(void *pool, void *name, void *start, void *size);
 int mdevRegisterDriver(void *driver, void *reserved);
 /* Next message of the calling task. */
