@@ -1,15 +1,18 @@
 /*
- * Management side of a connection (0xfdfe..0x1069c): events and host
+ * Management side of a connection (0xfdfe..0x10d1c): events and host
  * commands posted to the connection's state machines, the channel the radio
  * is tuned to and the transmit power limits that follow it, the management
  * frames the firmware builds itself (deauthentication, disassociation), the
  * events reported to the host, and the custom information elements the host
- * adds to the frames of each interface (mlan's HostCmd_CMD_MGMT_IE_LIST).
+ * adds to the frames of each interface (mlan's HostCmd_CMD_MGMT_IE_LIST),
+ * the 802.11 frame classes a peer may send in its state, and an access
+ * point's ERP protection, preamble and slot time.
  * No Marvell source names these; the names say what the code does.
  */
 #include <stddef.h>
 #include "robin/adhoc.h"
 #include "robin/btrom.h"
+#include "robin/ie.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
 #include "robin/mac.h"
@@ -20,6 +23,7 @@
 #include "robin/rf.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sys.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
@@ -50,6 +54,28 @@
 #define WLAN_CUSTOM_IE_SIZE		256
 #define WLAN_CUSTOM_IE_ALL_FRAMES	0xffff	/* mask: also built into the beacon */
 #define WLAN_IE_CHANNEL_SWITCH		37
+#define TLV_TYPE_MGMT_IE		0x0169
+#define HostCmd_ACT_GEN_SET		1
+/* Where the elements start in a beacon or probe response body. */
+#define WLAN_BEACON_IE_OFFSET		12
+
+/* 802.11 frame types (frame control bits 2-3) and the classes of IEEE 802.11 11.3. */
+#define WLAN_FC0_TYPE(fc0)		(((fc0) >> 2) & 3)
+#define WLAN_TYPE_MANAGEMENT		0
+#define WLAN_TYPE_CONTROL		1
+#define WLAN_TYPE_DATA			2
+#define WLAN_FC1_TO_DS			0x01
+#define WLAN_FC1_FROM_DS		0x02
+#define WLAN_CATEGORY_PUBLIC		4
+#define WLAN_REASON_CLASS2_FROM_NONAUTH	6
+#define WLAN_REASON_CLASS3_FROM_NONASSOC 7
+/* WlanConnectionInfo.capability */
+#define WLAN_CAPABILITY0_SHORT_PREAMBLE	0x20
+#define WLAN_CAPABILITY1_SHORT_SLOT	0x04
+#define WLAN_PHY_MODE_B			2
+/* WlanConnectionInfo.rateFlags */
+#define WLAN_RATE_FLAG_LOW_NULL		0x08
+#define WLAN_RATE_FLAG_PROTECTION	0x10
 /* What wlanBssBit() returns: one bit per BSS, eight per interface type. */
 #define WLAN_BSS_BIT(type, number)	((1u << (number)) << (8 * (type)))
 
@@ -105,7 +131,6 @@ void macTxNotifyClearTable(void);						/* 0x31de8 */
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
 				int broadcast);					/* 0x3d3f0 */
 int p2pDirectTrackContext(const WlanWirelessFrame *frame);			/* 0x40dd6 */
-uint32_t wlanBssBit(unsigned int interfaceType, unsigned int bssNumber);	/* 0x10d10 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 void p2pSqramBuildContext(struct WlanConnection *connection, const uint8_t *ies,
@@ -114,6 +139,27 @@ void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
 			    uint32_t *length);				/* SQRAM 0xc000cd37 */
 void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8d */
 extern struct WlanChannelPowerTable wlanChannelPowerTable;			/* 0x000574ec */
+void macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer,
+			  unsigned int reason);				/* 0x38990 */
+void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
+			 unsigned int reason, int unused);			/* 0x34f7c */
+int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
+void wlanPsResolveFrame(struct WlanConnection *connection, int update, int state); /* 0x3d712 */
+void rfCalibProcessQueue(struct WlanConnection *connection, uint8_t *erpInfo,
+			 uint8_t *params, uint8_t *state);			/* 0x2a6de */
+void rfCalibUpdateQueue(uint8_t *erpInfo);					/* 0x2a778 */
+void rfCalibClearDescriptor(unsigned int phyMode, uint8_t *erpInfo);		/* 0x2a50e */
+void rfCalibConvertDescriptor(uint8_t *erpInfo);				/* 0x2a53c */
+void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
+void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
+void macTxNotifyConvertEntry(unsigned int interfaceType, unsigned int lowRate);	/* 0x3128c */
+void rfCalibFilterBuffer(void);							/* 0x2897c */
+void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
+void macTxNotifyFilterBuffer(int shared);					/* 0x32510 */
+/* Connection hooks called by code not converted yet. */
+extern void (*wlanApErpUpdateHook)(struct WlanConnection *connection);		/* 0x00054e80 */
+extern void (*wlanPsRefreshHook)(struct WlanConnection *connection);		/* 0x00054e60 */
+extern void (*wlanSecurityRefreshHook)(struct WlanConnection *connection);	/* 0x00054e88 */
 
 /* Power limits in dBm; WLAN_TX_POWER_NONE: no limit. */
 int32_t wlanTxPowerHostLimit __attribute__((section(".itcm.rw"))) = WLAN_TX_POWER_NONE;
@@ -678,4 +724,458 @@ uint16_t wlanCustomIeGet(struct WlanConnection *connection, uint8_t *out, int si
 		}
 	}
 	return total;
+}
+
+/* Drops an interface from every custom IE; entries nobody uses are cleared. */
+void wlanCustomIeRemoveBss(unsigned int interfaceType, unsigned int bssNumber)
+{
+	uint32_t bit = WLAN_BSS_BIT(interfaceType, bssNumber);
+	unsigned int slot;
+
+	for (slot = 0; slot < WLAN_CUSTOM_IE_SLOTS; slot++) {
+		wlanCustomIes.owners[slot] &= ~bit;
+		if (wlanCustomIes.owners[slot] == 0)
+			__aeabi_memclr(&wlanCustomIes.entries[slot], sizeof(wlanCustomIes.entries[slot]));
+	}
+	wlanCustomIeUpdateMask();
+}
+
+int wlanCustomIeReset(void)
+{
+	__aeabi_memclr(wlanCustomIes.entries, sizeof(wlanCustomIes.entries));
+	__aeabi_memclr(wlanCustomIes.owners, sizeof(wlanCustomIes.owners));
+	wlanCustomIeMask = 0;
+	return 0;
+}
+
+/* Adds the interface's custom IEs for the frame's subtype to the frame, or removes them. */
+void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
+		       uint8_t offset)
+{
+	uint32_t bit;
+	unsigned int slot;
+
+	if (frame == NULL)
+		return;
+	bit = wlanBssBit(connection->interfaceType, connection->bssNumber);
+	if (!((1 << (frame->frameControl[0] >> 4)) & wlanCustomIeMask))
+		return;
+	for (slot = 0; slot < WLAN_CUSTOM_IE_SLOTS; slot++) {
+		const struct WlanCustomIe *entry = &wlanCustomIes.entries[slot];
+
+		if (!(wlanCustomIes.owners[slot] & bit))
+			continue;
+		if (entry->mask == WLAN_CUSTOM_IE_ALL_FRAMES ||
+		    !(entry->mask & (1 << (frame->frameControl[0] >> 4))))
+			continue;
+		if (add)
+			wlanAppendIeList(frame, offset, entry->buffer, entry->length);
+		else
+			wlanRemoveIeList(frame, offset, entry->buffer, entry->length);
+	}
+}
+
+/*
+ * Sets custom IEs from the host. While an IBSS or station interface is
+ * running, its beacon and probe response templates are rebuilt with them.
+ */
+void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length)
+{
+	int running = 0;
+	OsaBuffer *beacon = connection->beaconBuffer;
+	WlanWirelessFrame *beaconFrame =
+		(WlanWirelessFrame *)((uint8_t *)beacon + beacon->dataOffset);
+	WlanWirelessFrame *probeResponse = (WlanWirelessFrame *)
+		((uint8_t *)connection->probeResponseBuffer + 28 + WLAN_REPLY_FRAME_BODY);
+
+	if ((connection->interfaceType == WLAN_IF_IBSS ||
+	     connection->interfaceType == WLAN_IF_STATION) && connection->state != 0) {
+		running = 1;
+		wlanCustomIeApply(connection, 0, beaconFrame, WLAN_BEACON_IE_OFFSET);
+		wlanCustomIeApply(connection, 0, probeResponse, WLAN_BEACON_IE_OFFSET);
+	}
+	wlanCustomIeConfigure(connection, list, length);
+	if (running) {
+		wlanCustomIeApply(connection, 1, beaconFrame, WLAN_BEACON_IE_OFFSET);
+		wlanCustomIeApply(connection, 1, probeResponse, WLAN_BEACON_IE_OFFSET);
+	}
+}
+
+/*
+ * HostCmd_CMD_MGMT_IE_LIST: sets the custom IEs of the TLVs, or reads them
+ * back into the TLVs and the command size.
+ */
+void wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
+			 uint16_t *size)
+{
+	int remaining = *size - 10;
+	unsigned int length;
+
+	while (remaining > 0) {
+		if (LE16(tlv) == TLV_TYPE_MGMT_IE) {
+			if (action == HostCmd_ACT_GEN_SET) {
+				wlanCustomIeSet(connection, tlv + 4, (int16_t)LE16(tlv + 2));
+			} else {
+				uint16_t written = wlanCustomIeGet(connection, tlv + 4, LE16(tlv + 2));
+
+				*size = written;
+				tlv[2] = written;
+				tlv[3] = written >> 8;
+				*size += 14;
+			}
+		}
+		length = LE16(tlv + 2);
+		remaining = remaining - length - 4;
+		tlv += length + 4;
+	}
+}
+
+/* The class of a frame (IEEE 802.11 11.3) received on an interface of the type. */
+unsigned int wlanFrameClass(unsigned int interfaceType, const WlanWirelessFrame *frame)
+{
+	unsigned int fc0 = frame->frameControl[0];
+
+	switch (WLAN_FC0_TYPE(fc0)) {
+	case WLAN_TYPE_DATA:
+		if (interfaceType == WLAN_IF_IBSS &&
+		    !(frame->frameControl[1] & WLAN_FC1_TO_DS) &&
+		    !(frame->frameControl[1] & WLAN_FC1_FROM_DS))
+			return 1;
+		return 3;
+	case WLAN_TYPE_MANAGEMENT:
+		switch (fc0 >> 4) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+		case 10:
+			return 2;
+		case 4:
+		case 5:
+		case 8:
+		case 9:
+		case 11:
+		case 12:
+			return 1;
+		case 13:
+			if (interfaceType == WLAN_IF_IBSS)
+				return 1;
+			if (interfaceType == WLAN_IF_AP && frame->body[0] == WLAN_CATEGORY_PUBLIC)
+				return 1;
+			return 3;
+		default:
+			return 3;
+		}
+	case WLAN_TYPE_CONTROL:
+		switch ((fc0 >> 4) - 8) {
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+			return 1;
+		default:
+			return 3;
+		}
+	default:
+		return 3;
+	}
+}
+
+/* The BSSID of a received frame, or NULL for a frame between distribution systems. */
+const uint8_t *wlanFrameBssid(const WlanWirelessFrame *frame)
+{
+	unsigned int fc0 = frame->frameControl[0];
+
+	switch (WLAN_FC0_TYPE(fc0)) {
+	case WLAN_TYPE_DATA:
+		if (!(frame->frameControl[1] & WLAN_FC1_TO_DS))
+			return (frame->frameControl[1] & WLAN_FC1_FROM_DS) ? frame->address2 :
+									      frame->address3;
+		if (!(frame->frameControl[1] & WLAN_FC1_FROM_DS))
+			return frame->address1;
+		return NULL;
+	case WLAN_TYPE_MANAGEMENT:
+		return frame->address3;
+	case WLAN_TYPE_CONTROL:
+		switch (fc0 >> 4) {
+		case 10:			/* PS-Poll */
+			return frame->address1;
+		case 14:			/* CF-End */
+		case 15:
+			return frame->address2;
+		}
+		return NULL;
+	default:
+		return NULL;
+	}
+}
+
+/* Whether the peer of the connection may send class 2 frames. */
+int wlanConnectionAuthenticated(struct WlanConnection *connection)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+	if (connection->mode == 2) {
+		if (role->state >= 2)
+			return 1;
+	} else if (connection->mode == 3 || connection->mode == 1) {
+		return 1;
+	}
+	return connection->interfaceType == WLAN_IF_IBSS || connection->interfaceType == WLAN_IF_AMP;
+}
+
+/* Whether the connection's BSS is up. */
+int wlanConnectionBssStarted(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info;
+
+	if (connection == NULL)
+		return 0;
+	info = wlanConnectionInfo(connection);
+	if (info == NULL)
+		return 0;
+	if (info->bssStarted != 1)
+		return 0;
+	return info->bssStarted;
+}
+
+/*
+ * Checks the class of a unicast frame against what its sender may send
+ * (with no connection: the one the frame's BSSID names) and answers a
+ * frame of a higher class with a deauthentication or disassociation.
+ * Returns 1 when the frame is to be dropped.
+ */
+int wlanRxCheckFrameClass(struct WlanConnection *connection, const WlanWirelessFrame *frame)
+{
+	int rejected = 0;
+	unsigned int allowed = 1;
+	unsigned int class;
+
+	wlanConnectionInfo(connection);
+	if (frame->address1[0] & 1)
+		return 0;
+	if (connection != NULL) {
+		if (connection->flags2 & 0x10)
+			return 0;
+		allowed = wlanConnectionAuthenticated(connection) ? 2 : 1;
+	} else {
+		const uint8_t *bssid = wlanFrameBssid(frame);
+
+		if (bssid == NULL)
+			return 1;
+		connection = wlanConnectionFindFlaggedByLocal(bssid);
+		if (connection == NULL) {
+			connection = wlanConnectionFirst(WLAN_IF_AP);
+			if (connection == NULL)
+				return 1;
+		}
+		if ((connection->interfaceType == WLAN_IF_STATION && !wlanConnectionBssStarted(connection)) ||
+		    (connection->interfaceType == WLAN_IF_AP && connection->mode == 0))
+			return 1;
+	}
+	if (frame->address2[0] & 1)
+		return 1;
+	class = wlanFrameClass(connection->interfaceType, frame);
+	if (class > allowed) {
+		unsigned int reason = class == 3 ? WLAN_REASON_CLASS3_FROM_NONASSOC :
+						   WLAN_REASON_CLASS2_FROM_NONAUTH;
+
+		rejected = 1;
+		if (connection->mode == 2)
+			macMgmtInspectBuffer(connection, frame->address2, reason);
+		else
+			macMgmtAcquireState(connection, frame->address2, reason, 0);
+	}
+	return rejected;
+}
+
+/* Refreshes the power-save state of every connection of the connection's BSS. */
+void wlanPsRefreshBss(struct WlanConnection *connection)
+{
+	UINT posture = sysIrqDisable();
+	struct WlanConnection *peer;
+
+	for (peer = wlanConnectionFind(connection->bssType, connection->bssNumber); peer != NULL;
+	     peer = wlanConnectionNextByBss(peer, peer->bssType, peer->bssNumber))
+		wlanPsResolveFrame(peer, 1, macTxNotifyConvertState(peer));
+	sysIrqRestore(posture);
+}
+
+void wlanSecurityRefresh(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+	if (info->securityEnabled != 0)
+		rfCalibProcessQueue(connection, &info->erpInfo, info->securityParams,
+				    info->securityState);
+}
+
+/* Restarts the overlapping legacy BSS detection for a beacon interval in TU. */
+void wlanApOlbcReset(struct WlanConnectionInfo *info, unsigned int beaconInterval)
+{
+	rfCalibUpdateQueue(&info->erpInfo);
+	info->olbcDetected = 0;
+	info->olbcCount = 0;
+	info->olbcTimeout = 5000000 / (beaconInterval << 10) + 1;
+}
+
+/* Rebuilds the ERP element once no key handshake is under way. */
+void wlanApErpUpdate(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+	if (info->phyMode != 0 && (role->securityFlags & 3) == 0) {
+		rfCalibClearDescriptor(info->phyMode, &info->erpInfo);
+		macMgmtInspectFrame(connection);
+		macTxNotifyConvertEntry(connection->interfaceType,
+					(info->rateFlags & WLAN_RATE_FLAG_LOW_NULL) != 0);
+	}
+}
+
+void wlanApOlbcClear(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+	info->olbcActive = 0;
+	rfCalibConvertDescriptor(&info->erpInfo);
+	wlanApErpUpdate(connection);
+}
+
+/* Turns protection and the short preamble on or off from the stations seen. */
+void wlanApUpdateProtection(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+	if (info->phyMode == WLAN_PHY_MODE_B) {
+		info->rateFlags &= ~WLAN_RATE_FLAG_PROTECTION;
+		info->capability[0] &= ~WLAN_CAPABILITY0_SHORT_PREAMBLE;
+	} else {
+		int protect = (info->protectionFlags & 1) || info->nonErpStations != 0;
+
+		info->rateFlags = (info->rateFlags & ~WLAN_RATE_FLAG_PROTECTION) |
+				  (protect ? WLAN_RATE_FLAG_PROTECTION : 0);
+		if (protect)
+			info->capability[0] &= ~WLAN_CAPABILITY0_SHORT_PREAMBLE;
+		else
+			info->capability[0] |= WLAN_CAPABILITY0_SHORT_PREAMBLE;
+	}
+	macMgmtInspectFrame(connection);
+	macMgmtConvertFrame(connection);
+	rfCalibFilterBuffer();
+}
+
+void wlanApNonErpGone(struct WlanConnection *connection)
+{
+	wlanConnectionInfo(connection)->nonErpStations = 0;
+	wlanApUpdateProtection(connection);
+}
+
+/* The listen interval the peer is held to in its state. */
+void wlanConnectionUpdateListenInterval(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+	if (role->state > 1)
+		role->listenInterval = role->powerSaveMode == 1 ? info->listenIntervalPs :
+								   info->listenInterval;
+	else if (role->state == 1)
+		role->listenInterval = 2 * connection->listenIntervalBase + 1;
+}
+
+/* Short slot time unless an 802.11b network or a long-slot station needs the long one. */
+void wlanApUpdateSlotTime(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	int longSlot;
+
+	if (info->phyMode == WLAN_PHY_MODE_B)
+		longSlot = 0;
+	else if (info->phyMode == 0)
+		longSlot = 1;
+	else
+		longSlot = info->longSlotStations != 0;
+	if (info->phyMode != WLAN_PHY_MODE_B && !longSlot)
+		info->capability[1] |= WLAN_CAPABILITY1_SHORT_SLOT;
+	else
+		info->capability[1] &= ~WLAN_CAPABILITY1_SHORT_SLOT;
+	wlanSetSlotTime(!longSlot);
+	macMgmtConvertFrame(connection);
+}
+
+void wlanApLongSlotGone(struct WlanConnection *connection)
+{
+	wlanConnectionInfo(connection)->longSlotStations = 0;
+	wlanApUpdateSlotTime(connection);
+}
+
+void wlanApInstallHooks(void)
+{
+	wlanApErpUpdateHook = wlanApErpUpdate;
+	wlanPsRefreshHook = wlanPsRefreshBss;
+	wlanSecurityRefreshHook = wlanSecurityRefresh;
+}
+
+/* The band of a channel descriptor's start frequency (MHz). */
+unsigned int wlanStartFrequencyBand(unsigned int startFrequency, unsigned int channel)
+{
+	switch (startFrequency) {
+	case 2400:
+	case 2407:
+	case 2414:
+		return 0;
+	case 4000:
+		return 2;
+	case 5000:
+		return 1;
+	default:
+		return channel > 14;
+	}
+}
+
+unsigned int wlanStartFrequency(unsigned int band, unsigned int channel)
+{
+	return channel == 14 ? 2414 : 2407;
+}
+
+/* Fills a channel descriptor: start frequency, width in MHz, channel. */
+void wlanChannelDescriptor(uint8_t *descriptor, unsigned int band, unsigned int channel,
+			   unsigned int width)
+{
+	unsigned int start = wlanStartFrequency(band, channel);
+
+	descriptor[0] = start;
+	descriptor[1] = start >> 8;
+	descriptor[3] = channel;
+	if (width == 1)
+		descriptor[2] = 10;
+	else if (width == 2)
+		descriptor[2] = 40;
+	else
+		descriptor[2] = 20;
+}
+
+/* Tells the transmit path whether more than one connection type shares the radio. */
+void wlanTxSetSharedRadio(int which)
+{
+	int shared = wlanConnectionTypeCount() > 1;
+
+	switch (which) {
+	case 0:
+		macTxNotifyRecordBuffer(shared);
+		break;
+	case 1:
+		macTxNotifyFilterBuffer(shared);
+		break;
+	case 2:
+		romLibInspectContext(shared);
+		break;
+	}
+}
+
+uint32_t wlanBssBit(unsigned int interfaceType, unsigned int bssNumber)
+{
+	return WLAN_BSS_BIT(interfaceType, bssNumber);
 }

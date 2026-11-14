@@ -166,15 +166,15 @@ int wlanConnectionDecrement(void)
 	return --wlanConnectionCount;
 }
 
-/* Address of the information pointer of a station or access point connection. */
-struct WlanConnectionInfo **wlanConnectionInfoSlot(struct WlanConnection *connection)
+/* The role block of a station or access point connection, at its information pointer. */
+struct WlanConnectionRole *wlanConnectionInfoSlot(struct WlanConnection *connection)
 {
 	if (connection == NULL)
 		return NULL;
 	if (connection->interfaceType == WLAN_IF_STATION)
-		return &connection->stationInfo;
+		return (struct WlanConnectionRole *)&connection->stationInfo;
 	if (connection->interfaceType == WLAN_IF_AP)
-		return &connection->apInfo;
+		return (struct WlanConnectionRole *)&connection->apInfo;
 	return NULL;
 }
 

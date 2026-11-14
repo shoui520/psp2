@@ -62,17 +62,57 @@ struct WlanConnectionInfo {
 	uint8_t reserved0[31];
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
-	uint8_t reserved33[323];
+	uint8_t reserved33[35];
+	uint32_t securityEnabled;	/* nonzero: securityParams apply */
+	uint8_t securityParams[28];
+	uint8_t securityState[256];
 	uint8_t ready;
-	uint8_t reserved357[195];
+	uint8_t reserved357[184];
+	uint8_t protectionFlags;	/* bit 0: protection forced on */
+	uint8_t reserved542[10];
 	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
-	uint8_t reserved556[28];
+	uint8_t reserved556[24];
+	uint8_t capability[2];		/* bit 5: short preamble; bit 10: short slot time */
+	uint8_t reserved582[2];
 	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
-	uint8_t reserved588[4];
-	uint8_t rateFlags;		/* bit 3: send null frames at a low rate */
+	uint8_t phyMode;		/* 0, 1, 2: 802.11b only */
+	uint8_t erpInfo;		/* the ERP information element's value */
+	uint8_t nonErpStations;		/* nonzero: protection needed */
+	uint8_t longSlotStations;	/* nonzero: the long slot time is needed */
+	uint8_t rateFlags;		/* bit 3: send null frames at a low rate; bit 4: protection */
+	uint8_t reserved593[3];
+	uint8_t olbcDetected;		/* an overlapping legacy BSS was seen */
+	uint8_t olbcActive;
+	uint8_t olbcCount;
+	uint8_t reserved599;
+	uint32_t olbcTimeout;		/* beacon intervals in 5 s, plus one */
+	uint8_t reserved604[156];
+	uint8_t bssStarted;		/* 1: the BSS of a station or access point role is up */
+	uint8_t reserved761[123];
+	uint32_t listenInterval;	/* the peer is in power save */
+	uint32_t listenIntervalPs;	/* the same with WMM power save */
 };
 
 struct WlanSubscribeEvents;
+
+/*
+ * The block of a station (at stationInfo) or access point (at apInfo)
+ * connection that starts with its information pointer (partial).
+ */
+struct WlanConnectionRole {
+	struct WlanConnectionInfo *info;
+	uint8_t reserved4[4];
+	uint8_t securityFlags;		/* bits 0-1: a key handshake is under way */
+	uint8_t reserved9[3];
+	uint32_t listenInterval;
+	uint8_t reserved16[16];
+	uint8_t powerSaveMode;		/* 1: WMM power save */
+	uint8_t reserved33[55];
+	uint8_t state;			/* 802.11 state: 1 unauthenticated, 2 authenticated, 3 associated */
+};
+
+_Static_assert(offsetof(struct WlanConnectionRole, state) == 88, "role state");
+_Static_assert(offsetof(struct WlanConnectionRole, listenInterval) == 12, "role listen interval");
 
 /*
  * The record an event is posted to a connection's state machine with
@@ -114,11 +154,17 @@ struct WlanConnection {
 	uint8_t reserved1c[6];
 	uint8_t beaconMissThreshold;	/* beacons missed before the link is lost (subscribed) */
 	uint8_t preBeaconLostThreshold;
-	uint8_t reserved1e[65];
+	uint8_t reserved1e[62];
+	uint8_t listenIntervalBase;	/* an unauthenticated peer's listen interval is 2n + 1 */
+	uint8_t reserved150[2];
 	uint8_t localAddress[6];
 	uint8_t reserved2[14];
 	uint8_t channel;
-	uint8_t reserved3a[33];
+	uint8_t reserved3a[7];
+	OsaBuffer *beaconBuffer;	/* the beacon template; the frame at its data offset */
+	uint8_t reserved184[4];
+	OsaBuffer *probeResponseBuffer;	/* the probe response template, from wlanMgmtAllocFrame() */
+	uint8_t reserved192[14];
 	int16_t noise;			/* dBm, last measured */
 	uint8_t reserved3b[2];
 	int16_t snr;
@@ -196,10 +242,19 @@ _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscri
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
 _Static_assert(offsetof(struct WlanConnectionInfo, smState) == 552, "info state machine");
+_Static_assert(offsetof(struct WlanConnectionInfo, securityEnabled) == 68, "info security");
+_Static_assert(offsetof(struct WlanConnectionInfo, protectionFlags) == 541, "info protection");
+_Static_assert(offsetof(struct WlanConnectionInfo, capability) == 580, "info capability");
+_Static_assert(offsetof(struct WlanConnectionInfo, phyMode) == 588, "info PHY mode");
+_Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OLBC timeout");
+_Static_assert(offsetof(struct WlanConnectionInfo, bssStarted) == 760, "info BSS started");
+_Static_assert(offsetof(struct WlanConnectionInfo, listenInterval) == 884, "info listen interval");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");
+_Static_assert(offsetof(struct WlanConnection, beaconBuffer) == 180, "beacon template");
+_Static_assert(offsetof(struct WlanConnection, probeResponseBuffer) == 188, "probe response template");
 _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");
 _Static_assert(offsetof(struct WlanConnection, snr) == 210, "SNR");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
@@ -237,7 +292,7 @@ void wlanConnectionRelease(struct WlanConnection *connection);
 struct WlanConnection *wlanConnectionGetSession(void);
 int wlanConnectionSetSession(struct WlanConnection *connection);
 int wlanConnectionDecrement(void);
-struct WlanConnectionInfo **wlanConnectionInfoSlot(struct WlanConnection *connection);
+struct WlanConnectionRole *wlanConnectionInfoSlot(struct WlanConnection *connection);
 struct WlanConnectionInfo *wlanConnectionInfo(struct WlanConnection *connection);
 int wlanConnectionIsReady(struct WlanConnection *connection);
 void wlanConnectionSetActiveFlag(struct WlanConnection *connection, int active);

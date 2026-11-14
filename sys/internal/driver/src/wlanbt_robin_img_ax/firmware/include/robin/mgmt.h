@@ -1,5 +1,5 @@
 /*
- * Management side of a connection (0xfdfe..0x1069c): state machine posting,
+ * Management side of a connection (0xfdfe..0x10d1c): state machine posting,
  * the radio channel and transmit power limits, management frames built by
  * the firmware, events reported to the host and the host's custom IEs.
  * See wlan/mgmt.c.
@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/wlan.h"
 
 struct WlanConnection;
 struct WlanReplyFrame;
@@ -57,5 +58,35 @@ void wlanCustomIeUpdateMask(void);
 int wlanCustomIeConfigure(struct WlanConnection *connection, const uint8_t *list,
 			  int16_t remaining);
 uint16_t wlanCustomIeGet(struct WlanConnection *connection, uint8_t *out, int single);
+void wlanCustomIeRemoveBss(unsigned int interfaceType, unsigned int bssNumber);
+int wlanCustomIeReset(void);
+void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
+		       uint8_t offset);
+void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length);
+void wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
+			 uint16_t *size);
+unsigned int wlanFrameClass(unsigned int interfaceType, const WlanWirelessFrame *frame);
+const uint8_t *wlanFrameBssid(const WlanWirelessFrame *frame);
+int wlanConnectionAuthenticated(struct WlanConnection *connection);
+int wlanConnectionBssStarted(struct WlanConnection *connection);
+int wlanRxCheckFrameClass(struct WlanConnection *connection, const WlanWirelessFrame *frame);
+void wlanPsRefreshBss(struct WlanConnection *connection);
+void wlanSecurityRefresh(struct WlanConnection *connection);
+struct WlanConnectionInfo;
+void wlanApOlbcReset(struct WlanConnectionInfo *info, unsigned int beaconInterval);
+void wlanApErpUpdate(struct WlanConnection *connection);
+void wlanApOlbcClear(struct WlanConnection *connection);
+void wlanApUpdateProtection(struct WlanConnection *connection);
+void wlanApNonErpGone(struct WlanConnection *connection);
+void wlanConnectionUpdateListenInterval(struct WlanConnection *connection);
+void wlanApUpdateSlotTime(struct WlanConnection *connection);
+void wlanApLongSlotGone(struct WlanConnection *connection);
+void wlanApInstallHooks(void);
+unsigned int wlanStartFrequencyBand(unsigned int startFrequency, unsigned int channel);
+unsigned int wlanStartFrequency(unsigned int band, unsigned int channel);
+void wlanChannelDescriptor(uint8_t *descriptor, unsigned int band, unsigned int channel,
+			   unsigned int width);
+void wlanTxSetSharedRadio(int which);
+uint32_t wlanBssBit(unsigned int interfaceType, unsigned int bssNumber);
 
 #endif /* ROBIN_MGMT_H */

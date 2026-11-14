@@ -83,7 +83,6 @@ OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
-int macTxReleaseTimer(int which);			/* 0x10ce0 */
 int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
 extern uint8_t wlanConnectionPhase;			/* 0x54b70 */
@@ -272,7 +271,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 			connection->flags &= ~8;
 			__aeabi_memcpy(&connection->schedule, schedule, sizeof(connection->schedule));
 			connection->scheduleValid = 1;
-			macTxReleaseTimer(2);
+			wlanTxSetSharedRadio(2);
 		}
 		wlanReleasePacket(buffer);
 		return 0;
@@ -498,7 +497,7 @@ int ampPalOwnsConnection(struct WlanConnection *connection)
 	    strcmp(((struct MdevDriver *)connection->device)->name, ampPalDriverName) == 0) {
 		connection->linkFlags = 3;
 		owns = 1;
-		macTxReleaseTimer(2);
+		wlanTxSetSharedRadio(2);
 	}
 	return owns;
 }

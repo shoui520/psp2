@@ -7,6 +7,7 @@
 #include "robin/amp.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
+#include "robin/mgmt.h"
 #include "robin/rom.h"
 #include "robin/sys.h"
 #include "robin/wlan.h"
@@ -78,7 +79,6 @@ void macMgmtConvertHeader(void);						/* 0x3b8fc */
 void macTxResetParam(struct WlanConnection *connection);			/* 0x12a44 */
 void macTxProcessConfig(struct WlanConnection *connection);			/* 0x131d4 */
 void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
-int uapGroupRekeyDue(uintptr_t connection);					/* 0x10970 */
 struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);		/* 0x333ce */
@@ -211,7 +211,7 @@ int wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 	unsigned int subtype;
 
 	if (WLAN_FC0_TYPE(frame->frameControl[0]) != WLAN_TYPE_CONTROL ||
-	    uapGroupRekeyDue((uintptr_t)buffer->context) != 1)
+	    wlanConnectionBssStarted(buffer->context) != 1)
 		return osa_BufferFree(buffer);
 	if (wlanApPsEnabled())
 		macTxQueryConfig(wlanConnectionByRole(2));
@@ -231,7 +231,7 @@ int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument)
 	struct WlanConnection *connection = buffer->context;
 	const WlanWirelessFrame *frame = WLAN_FRAME(buffer);
 
-	if (uapGroupRekeyDue((uintptr_t)connection) == 0)
+	if (wlanConnectionBssStarted(connection) == 0)
 		return 1;
 	switch (WLAN_FC0_SUBTYPE(frame->frameControl[0])) {
 	case WLAN_SUBTYPE_ASSOC_REQUEST:
@@ -336,12 +336,12 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 		break;
 	case WLAN_SUBTYPE_AUTH:
 		connection = wlanConnectionFindByLocal(WLAN_IF_STATION, frame->address3);
-		if (connection == NULL || uapGroupRekeyDue((uintptr_t)connection) == 0) {
+		if (connection == NULL || wlanConnectionBssStarted(connection) == 0) {
 			connection = wlanConnectionFindByLocal(WLAN_IF_AP, frame->address3);
 			if (connection != NULL && wlanP2pConnection(connection) == 0)
 				connection = NULL;
 		}
-		if (uapGroupRekeyDue((uintptr_t)connection) == 0)
+		if (wlanConnectionBssStarted(connection) == 0)
 			break;
 		if (macMgmtCheckHeader(connection, frame->address2)) {
 			reason = 6;

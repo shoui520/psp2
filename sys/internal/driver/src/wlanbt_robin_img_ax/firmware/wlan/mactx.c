@@ -862,7 +862,6 @@ queueOrComplete:
  * Not converted yet; provisional names for what the transmit task uses them
  * for.
  */
-int uapGroupRekeyDue(uintptr_t message);				/* 0x10970 */
 void uapGroupRekey(uintptr_t message);					/* 0x1f7b4 */
 void mdevWlanTrackState(void);						/* 0x015f0 */
 int cbProcTxAllowed(void);						/* 0x1e032 */
@@ -897,8 +896,6 @@ extern uint8_t wlanPrimaryEvents;					/* 0x04008828, bit 5: no rate below index 
 
 /* Management frames from the "MAC Mgmt" task keep the frame at a fixed place. */
 #define MAC_TX_MGMT_FRAME	176
-/* The association state 88 bytes past a connection's information slot (3: associated). */
-#define WLAN_INFO_SLOT_STATE(slot)	(((const uint8_t *)(slot))[88])
 /* Bits 3-9 of WlanMacTxRequest.rate hold the rate index. */
 #define MAC_TX_RATE_MASK		0x3f8u
 #define MAC_TX_RATE(index)		(((index) << 25) >> 22)
@@ -955,7 +952,7 @@ void macTxTaskMain(ULONG input)
 			wlanConnectionStage = 0;
 		if (actual & MAC_TX_EVENT_REKEY)
 			while (osaMsgQueueReceive(uapGroupRekeyQueue, &message, 4, 0) != 15)
-				if (uapGroupRekeyDue(message) != 0)
+				if (wlanConnectionBssStarted((struct WlanConnection *)message) != 0)
 					uapGroupRekey(message);
 		if (actual & MAC_TX_EVENT_TRACK)
 			mdevWlanTrackState();
@@ -1098,14 +1095,14 @@ group:
 				}
 byPeer:
 				{
-					struct WlanConnectionInfo **slot;
+					struct WlanConnectionRole *role;
 
 					connection = wlanConnectionFindByPeer(peer);
 					info = wlanConnectionInfo(connection);
-					slot = wlanConnectionInfoSlot(connection);
+					role = wlanConnectionInfoSlot(connection);
 					if (connection == NULL)
 						goto complete;
-					if (WLAN_INFO_SLOT_STATE(slot) != 3) {
+					if (role->state != 3) {
 						connection = NULL;
 						goto complete;
 					}
