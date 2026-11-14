@@ -507,7 +507,7 @@ static uint8_t *hevagSkipEnds(NgsPlayerSettings *settings, int32_t channel, uint
 	return block;
 }
 
-static int32_t hevagDecode(int32_t *history, const uint8_t *block, int16_t *samples)
+static __attribute__((noinline, noclone)) int32_t hevagDecode(int32_t *history, const uint8_t *block, int16_t *samples)
 {
 	int32_t filter = (block[1] & 0xf0) | (block[0] >> 4);
 	int32_t shift = block[0] & 0xf;

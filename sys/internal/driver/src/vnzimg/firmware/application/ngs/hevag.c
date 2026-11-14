@@ -175,8 +175,8 @@ static int32_t nibble(const uint8_t *block, int32_t i, int32_t shift)
 	return (int16_t)(((i & 1 ? byte >> 4 : byte) & 0xf) << 12) >> shift;
 }
 
-/* the three kernels differ only in the taps they read */
-static void hevagFilter(const uint8_t *block, int16_t *samples, const int32_t *history,
+/* the kernels' loop: they differ only in the taps they read */
+static inline void hevagFilter(const uint8_t *block, int16_t *samples, const int32_t *history,
 	const int16_t *coefficient, int32_t taps, int32_t shift)
 {
 	int32_t previous[4], i, k;
@@ -197,15 +197,43 @@ static void hevagFilter(const uint8_t *block, int16_t *samples, const int32_t *h
 	}
 }
 
-void ngsHevagDecode(int32_t *history, const uint8_t *block, int16_t *samples,
+/* 0x8abdb0: one tap, its coefficient given */
+static void hevagFilter1(const uint8_t *block, int16_t *samples, const int32_t *history,
+	int16_t coefficient, int32_t shift)
+{
+	hevagFilter(block, samples, history, &coefficient, 1, shift);
+}
+
+/* 0x8acbf8: two taps */
+static void hevagFilter2(const uint8_t *block, int16_t *samples, const int32_t *history,
+	const int16_t *coefficient, int32_t shift)
+{
+	hevagFilter(block, samples, history, coefficient, 2, shift);
+}
+
+/* 0x8ad350: four taps */
+static void hevagFilter4(const uint8_t *block, int16_t *samples, const int32_t *history,
+	const int16_t *coefficient, int32_t shift)
+{
+	hevagFilter(block, samples, history, coefficient, 4, shift);
+}
+
+/* the block by its filter's kernel; the history is then its last four samples */
+int32_t ngsHevagDecode(int32_t *history, const uint8_t *block, int16_t *samples,
 	int16_t filter, int16_t shift)
 {
 	const int16_t *coefficient = hevagCoefficients[filter];
 	int32_t taps = hevagTaps[filter];
 
-	hevagFilter(block, samples, history, coefficient, taps ? taps : 4, shift);
+	if (taps == 1)
+		hevagFilter1(block, samples, history, coefficient[0], shift);
+	else if (taps == 2)
+		hevagFilter2(block, samples, history, coefficient, shift);
+	else
+		hevagFilter4(block, samples, history, coefficient, shift);
 	history[0] = samples[HEVAG_SAMPLES - 1];
 	history[1] = samples[HEVAG_SAMPLES - 2];
 	history[2] = samples[HEVAG_SAMPLES - 3];
 	history[3] = samples[HEVAG_SAMPLES - 4];
+	return 0;
 }

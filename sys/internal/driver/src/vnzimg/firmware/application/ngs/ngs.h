@@ -566,7 +566,7 @@ void ngsDelayBypass(void *settings, const int32_t *input, int32_t *output,
 	uint32_t samples);						/* 0x87fd90 */
 int32_t ngsPitchShiftRun(NgsBufferList *inputs, NgsBufferList *outputs,
 	NgsModuleParams *params);					/* 0x8805f8 */
-void ngsHevagDecode(int32_t *history, const uint8_t *block, int16_t *samples,
+int32_t ngsHevagDecode(int32_t *history, const uint8_t *block, int16_t *samples,
 	int16_t filter, int16_t shift);					/* 0x8add60 */
 int32_t ngsAdpcmResample(uint32_t *fraction, int32_t *output, const int16_t *input,
 	int32_t samples, int32_t rate);					/* 0x8adec8 */
