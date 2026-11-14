@@ -91,6 +91,31 @@ typedef struct _Sft {
 } _Sft;
 
 int _Getfld(_Sft *px);
+int _Getfloat(_Sft *px, void *pans);
+int _Getint(_Sft *px, void *pans);
+int _Getstr(_Sft *px, int sfl);
+
+/* read a character, counting it */
+#define GET(px)		(++(px)->nchar, (*(px)->pfn)((px)->arg, 0, 1))
+
+/* read a character of the field: EOF once the field's width is used up */
+#define GETN(px)	(0 <= --(px)->nget ? GET(px) : (++(px)->nchar, EOF))
+
+/* push back the character ch, uncounting it */
+#define UNGET(px, ch)							\
+	do {								\
+		--(px)->nchar;						\
+		(*(px)->pfn)((px)->arg, ch, 0);				\
+	} while (0)
+
+/* push back the character ch unless it is EOF, uncounting it */
+#define UNGETN(px, ch)							\
+	do {								\
+		if ((ch) != EOF)					\
+			UNGET(px, ch);					\
+		else							\
+			--(px)->nchar;					\
+	} while (0)
 
 void _Vacopy(va_list *pap, va_list ap);
 void _Ldtob(_Pft *px, char code);

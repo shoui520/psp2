@@ -65,9 +65,11 @@ extern const _Dconst _LDenorm, _LInf, _LNan, _LSnan;
 
 short _Dnorm(_Dval *ps);
 short _Dscale(double *px, long lexp);
+short _Dunscale(short *pex, double *px);
 double _Dtento(double x, long n, int *perr);
 short _FDnorm(_Fval *ps);
 short _LDscale(long double *px, long lexp);
+short _LDunscale(short *pex, long double *px);
 long double _LDtento(long double x, long n, int *perr);
 short _FDscale(float *px, long lexp);
 float _FDtento(double x, long n, int *perr);

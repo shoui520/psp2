@@ -10,17 +10,6 @@
 #include "xstdio.h"
 #include "xwchar.h"
 
-/* read a character, counting it */
-#define GETN(px)	(++(px)->nchar, (*(px)->pfn)((px)->arg, 0, 1))
-
-/* push back the character ch, uncounting it */
-#define UNGETN(px, ch)							\
-	do {								\
-		--(px)->nchar;						\
-		if ((ch) != EOF)					\
-			(*(px)->pfn)((px)->arg, ch, 0);			\
-	} while (0)
-
 int _Scanf(_Scin *pfn, void *arg, const char *fmt, va_list ap, int secure)
 {
 	int nconv = EOF;
@@ -42,7 +31,7 @@ int _Scanf(_Scin *pfn, void *arg, const char *fmt, va_list ap, int secure)
 		if (n <= 0)
 			n = *x.s != '\0';
 		if (isspace(_Wctob(wc))) {	/* white space matches any amount */
-			while (isspace(ch = GETN(&x)))
+			while (isspace(ch = GET(&x)))
 				;
 			UNGETN(&x, ch);
 		} else {			/* the text before the % must match */
@@ -50,7 +39,7 @@ int _Scanf(_Scin *pfn, void *arg, const char *fmt, va_list ap, int secure)
 			int m = wc == L'%' ? n - 1 : n;
 
 			for (; 0 <= --m; ++s) {
-				if ((ch = GETN(&x)) != *s) {
+				if ((ch = GET(&x)) != *s) {
 					UNGETN(&x, ch);
 					return nconv < 0 ? 0 : nconv;
 				}
@@ -88,7 +77,7 @@ int _Scanf(_Scin *pfn, void *arg, const char *fmt, va_list ap, int secure)
 			++x.s;
 		}
 		if (strchr("cCn[", *x.s) == NULL) {	/* skip white space before the field */
-			while (isspace(ch = GETN(&x)))
+			while (isspace(ch = GET(&x)))
 				;
 			UNGETN(&x, ch);
 		}
