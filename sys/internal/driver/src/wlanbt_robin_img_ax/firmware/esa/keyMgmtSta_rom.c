@@ -13,6 +13,8 @@
 #include "robin/patch.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sys.h"
+#include "robin/threadx.h"
 
 /* this file's part of the ROM-patch table, 0x55b10.. (0x55b20/24: the WPA and RSN parsers') */
 ROBIN_PATCH_SLOT(FillKeyMaterialStruct_internal_hook);
@@ -27,6 +29,9 @@ ROBIN_PATCH_SLOT(KeyMgmtSta_PrepareEAPOLFrame_hook);
 ROBIN_PATCH_SLOT(KeyMgmtSta_PopulateEAPOLLengthMic_hook);
 ROBIN_PATCH_SLOT(KeyMgmtSta_PrepareEAPOLMicErrFrame_hook);
 ROBIN_PATCH_SLOT(KeyMgmtSta_DeriveKeys_hook);
+ROBIN_PATCH_SLOT(ramHook_keyMgmtSendTkipQuietOver);
+ROBIN_PATCH_SLOT(ramHook_keyMgmtProcessMsgExt);
+ROBIN_PATCH_SLOT(ramHook_keyMgmtSendDeauth);
 
 static inline uint32_t ntohl(uint32_t x)
 {
@@ -834,4 +839,227 @@ void KeyMgmtSta_DeriveKeys(uint8_t *pPMK, uint8_t *da, uint8_t *sa, uint8_t *ANo
 	__aeabi_memcpy(newPWKey->TxMICKey, pPtk->txMicKey, sizeof(pPtk->txMicKey));
 
 	osa_BufferFree(pBufDesc);
+}
+
+void SetEAPOLKeyDescTypeVersion(EAPOL_KeyMsg_Tx_t *pTxEapol, BOOLEAN isWPA2,
+				BOOLEAN isKDF, BOOLEAN nonTKIP)
+{
+	if (isWPA2)
+		pTxEapol->keyMsg.desc_type = 2;		/* WPA2 */
+	else
+		pTxEapol->keyMsg.desc_type = 254;	/* WPA */
+
+	if (isKDF)
+		/* 802.11r and 802.11w use the SHA-256 KDF and their own version */
+		pTxEapol->keyMsg.key_info.KeyDescriptorVersion = 3;
+	else if (nonTKIP)
+		pTxEapol->keyMsg.key_info.KeyDescriptorVersion = 2;	/* CCMP */
+	else
+		pTxEapol->keyMsg.key_info.KeyDescriptorVersion = 1;	/* TKIP or WEP */
+}
+
+/* The received key message, checked; the first message of the 4-way handshake also draws the SNonce. */
+EAPOL_KeyMsg_t *GetKeyMsgNonceFromEAPOL(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	/* this build hands the 802.1X frame without its Ethernet header */
+	EAPOL_KeyMsg_t *pKeyMsg = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
+
+	if (!KeyMgmtSta_IsRxEAPOLValid(pKeyMgmtInfoSta, pKeyMsg))
+		return NULL;
+
+	/* generate the nonce if this is the first pairwise message */
+	if (pKeyMsg->key_info.KeyMIC == 0) {
+		__aeabi_memcpy(pKeyMgmtInfoSta->ANonce, pKeyMsg->key_nonce, NONCE_SIZE);
+		supplicantGenerateRand(pKeyMgmtInfoSta->SNonce, NONCE_SIZE);
+	}
+	return pKeyMsg;
+}
+
+EAPOL_KeyMsg_t *ProcessRxEAPOL_PwkMsg3(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	EAPOL_KeyMsg_t *pKeyMsg;
+
+	pKeyMsg = GetKeyMsgNonceFromEAPOL(pmbuf, pKeyMgmtInfoSta);
+	if (!pKeyMsg)
+		return NULL;
+
+	pKeyMgmtInfoSta->newPWKey.TxIV16 = 1;
+	pKeyMgmtInfoSta->newPWKey.TxIV32 = 0;
+
+	/* look for the group key once the pairwise key has been plumbed */
+	if (pKeyMsg->key_info.EncryptedKeyData) {
+		osaCancelTimer(pKeyMgmtInfoSta->rsnTimer);
+		pKeyMgmtInfoSta->rsnTimer = 0;
+
+		KeyMgmtSta_ApplyKEK(pKeyMsg, &pKeyMgmtInfoSta->GRKey,
+				    pKeyMgmtInfoSta->EAPOL_Encr_Key);
+
+		if (ramHook_keyMgmtProcessMsgExt(pKeyMsg) == 0)
+			return NULL;
+
+		parseKeyDataGTK(pKeyMsg->key_data, pKeyMsg->key_material_len,
+				&pKeyMgmtInfoSta->GRKey);
+	}
+	return pKeyMsg;
+}
+
+EAPOL_KeyMsg_t *ProcessRxEAPOL_GrpMsg1(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	EAPOL_KeyMsg_t *pKeyMsg;
+
+	pKeyMsg = GetKeyMsgNonceFromEAPOL(pmbuf, pKeyMgmtInfoSta);
+	if (!pKeyMsg)
+		return NULL;
+
+	KeyMgmtSta_ApplyKEK(pKeyMsg, &pKeyMgmtInfoSta->GRKey,
+			    pKeyMgmtInfoSta->EAPOL_Encr_Key);
+
+	pKeyMgmtInfoSta->RSNDataTrafficEnabled = 1;
+	osaCancelTimer(pKeyMgmtInfoSta->rsnTimer);
+	pKeyMgmtInfoSta->rsnTimer = 0;
+
+	/* decrypt the group key */
+	if (pKeyMsg->desc_type == 2) {
+		/* WPA2: the 802.11i GTK KDE */
+		parseKeyDataGTK(pKeyMsg->key_data, pKeyMsg->key_material_len,
+				&pKeyMgmtInfoSta->GRKey);
+
+		if (ramHook_keyMgmtProcessMsgExt(pKeyMsg) == 0)
+			return NULL;
+	} else {
+		/* WPA or dynamic WEP */
+		__aeabi_memcpy(pKeyMgmtInfoSta->GRKey.Key, pKeyMsg->key_data,
+			       pKeyMsg->key_material_len);
+
+		pKeyMgmtInfoSta->GRKey.KeyIndex = pKeyMsg->key_info.KeyIndex;
+	}
+
+	return pKeyMsg;
+}
+
+/* The MIC failure timer expired. */
+void MicErrTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfo)
+{
+	if (pKeyMgmtInfo) {
+		if (pKeyMgmtInfo->micTimer == timerId) {
+			if (pKeyMgmtInfo->sta_MIC_Error.status == SECOND_MIC_FAIL_IN_60_SEC)
+				ramHook_keyMgmtSendTkipQuietOver(pKeyMgmtInfo);
+
+			pKeyMgmtInfo->sta_MIC_Error.status = NO_MIC_FAILURE;
+			pKeyMgmtInfo->sta_MIC_Error.disableStaAsso = 0;
+		}
+
+		pKeyMgmtInfo->micTimer = 0;
+	}
+}
+
+#define IEEEtypes_REASON_MIC_FAILURE		14
+#define IEEEtypes_REASON_4WAY_HANDSHK_TIMEOUT	15
+
+void DeauthDelayTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	if (pKeyMgmtInfoSta) {
+		if (pKeyMgmtInfoSta->deauthDelayTimer == timerId &&
+		    pKeyMgmtInfoSta->sta_MIC_Error.status == SECOND_MIC_FAIL_IN_60_SEC)
+			ramHook_keyMgmtSendDeauth(pKeyMgmtInfoSta->psapriv,
+						  IEEEtypes_REASON_MIC_FAILURE);
+
+		pKeyMgmtInfoSta->deauthDelayTimer = 0;
+	}
+}
+
+/* The 4-way handshake did not finish in time. */
+void keyMgmtStaRsnSecuredTimeoutHandler(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	if (pKeyMgmtInfoSta) {
+		if (pKeyMgmtInfoSta->rsnTimer == timerId) {
+			if (pKeyMgmtInfoSta->RSNSecured == 0) {
+				/*
+				 * Clear the timer before the timeout handling, so the
+				 * SME state clearing cannot cancel it (timer re-entrancy).
+				 */
+				pKeyMgmtInfoSta->rsnTimer = 0;
+				ramHook_keyMgmtSendDeauth(pKeyMgmtInfoSta->psapriv,
+							  IEEEtypes_REASON_4WAY_HANDSHK_TIMEOUT);
+			}
+		}
+		pKeyMgmtInfoSta->rsnTimer = 0;
+	}
+}
+
+/* Starts the 4-way handshake timer and resets the authenticator's replay counter. */
+void keyMgmtSta_StartSession_internal(keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+				      MicroTimerCallback_t callback, uint32_t expiry,
+				      uint8_t flags)
+{
+	if (!pKeyMgmtInfoSta->sta_MIC_Error.disableStaAsso) {
+		osaCancelTimer(pKeyMgmtInfoSta->rsnTimer);
+		pKeyMgmtInfoSta->rsnTimer = 0;
+		osaCreateTimer(callback, (uint32_t)pKeyMgmtInfoSta, expiry,
+			       &pKeyMgmtInfoSta->rsnTimer, flags);
+	}
+
+	/* reset the authenticator replay counter */
+	pKeyMgmtInfoSta->apCounterLo = 0;
+	pKeyMgmtInfoSta->apCounterHi = 0;
+	pKeyMgmtInfoSta->apCounterZeroDone = 0;
+}
+
+void KeyMgmtSta_handleMICDeauthTimer(keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+				     MicroTimerCallback_t callback, uint32_t expiry,
+				     uint8_t flags)
+{
+	osaCancelTimer(pKeyMgmtInfoSta->deauthDelayTimer);
+	osaCreateTimer(callback, (uint32_t)pKeyMgmtInfoSta, expiry,
+		       &pKeyMgmtInfoSta->deauthDelayTimer, flags);
+}
+
+/* this build waits 60 s in both cases */
+#define MIC_ERROR_CHECK_TIME_INTERVAL	60000000
+#define MIC_ERROR_QUIET_TIME_INTERVAL	60000000
+
+/*
+ * A Michael MIC failure; state is NO_MIC_FAILURE or FIRST_MIC_FAIL_IN_60_SEC,
+ * never anything else.
+ */
+void KeyMgmtSta_handleMICErr(uint8_t state, keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+			     MicroTimerCallback_t callback, uint8_t flags)
+{
+	uint32_t expiry;
+	UINT int_save = tx_interrupt_control(TX_INT_DISABLE);
+
+	if (state == NO_MIC_FAILURE) {
+		/* the first MIC failure */
+		pKeyMgmtInfoSta->sta_MIC_Error.status = FIRST_MIC_FAIL_IN_60_SEC;
+		expiry = MIC_ERROR_CHECK_TIME_INTERVAL;
+	} else {
+		/* two MIC failures within 60 s: deauthenticate from the AP */
+		pKeyMgmtInfoSta->sta_MIC_Error.disableStaAsso = 1;
+		pKeyMgmtInfoSta->sta_MIC_Error.status = SECOND_MIC_FAIL_IN_60_SEC;
+		pKeyMgmtInfoSta->apCounterHi = 0;
+		pKeyMgmtInfoSta->apCounterLo = 0;
+		expiry = MIC_ERROR_QUIET_TIME_INTERVAL;
+	}
+	tx_interrupt_control(int_save);
+
+	osaCancelTimer(pKeyMgmtInfoSta->micTimer);
+	osaCreateTimer(callback, (uint32_t)pKeyMgmtInfoSta, expiry,
+		       &pKeyMgmtInfoSta->micTimer, flags);
+}
+
+void KeyMgmtSta_InitSession(keyMgmtInfoSta_t *pKeyMgmtInfoSta)
+{
+	pKeyMgmtInfoSta->RSNDataTrafficEnabled = 0;
+	pKeyMgmtInfoSta->RSNSecured = 0;
+	pKeyMgmtInfoSta->pRxDecryptKey = NULL;
+	pKeyMgmtInfoSta->pwkHandshakeComplete = 0;
+
+	if (!pKeyMgmtInfoSta->sta_MIC_Error.disableStaAsso) {
+		osaCancelTimer(pKeyMgmtInfoSta->micTimer);
+		pKeyMgmtInfoSta->micTimer = 0;
+		osaCancelTimer(pKeyMgmtInfoSta->deauthDelayTimer);
+		pKeyMgmtInfoSta->deauthDelayTimer = 0;
+	}
+	osaCancelTimer(pKeyMgmtInfoSta->rsnTimer);
+	pKeyMgmtInfoSta->rsnTimer = 0;
 }

@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+#include "robin/buffer.h"
+
 #define MAX_PMK_SIZE		32
 #define BSSID_FLAG		0xff	/* pmkElement_t.length of a PMK keyed by BSSID */
 #define PSK_PASS_PHRASE_LEN_MAX	64
@@ -268,9 +270,15 @@ typedef enum MIC_Fail_State_e {
 	SECOND_MIC_FAIL_IN_60_SEC
 } MIC_Fail_State_e;
 
+/*
+ * This build's BOOLEAN is 32 bits and its enums take the smallest type that
+ * holds them (armcc), so the layout differs from the 8977's.
+ */
+typedef uint32_t BOOLEAN;
+
 typedef struct MIC_Error_t {
-	MIC_Fail_State_e status;
-	uint8_t MICCounterMeasureEnabled;
+	uint8_t status;			/* MIC_Fail_State_e */
+	BOOLEAN MICCounterMeasureEnabled;
 	uint32_t disableStaAsso;
 } MIC_Error_t;
 
@@ -286,20 +294,24 @@ typedef struct keyMgmtInfoSta_t {
 	uint32_t apCounterZeroDone;	/* have we processed replay == 0? */
 	uint32_t staCounterLo;		/* counter used in request EAPOL frames */
 	uint32_t staCounterHi;
-	uint8_t RSNDataTrafficEnabled;	/* enabled after the 4-way handshake */
-	uint8_t RSNSecured;		/* enabled after the group key is established */
-	uint8_t pwkHandshakeComplete;
+	BOOLEAN RSNDataTrafficEnabled;	/* enabled after the 4-way handshake */
+	BOOLEAN RSNSecured;		/* enabled after the group key is established */
+	BOOLEAN pwkHandshakeComplete;
 	struct cipher_key_t *pRxDecryptKey;
 	KeyData_t PWKey;
 	KeyData_t GRKey;
 	KeyData_t newPWKey;
 	MIC_Error_t sta_MIC_Error;
-	void *rsnTimer;
-	void *micTimer;
-	void *deauthDelayTimer;		/* delays the deauthentication */
+	uint32_t rsnTimer;
+	uint32_t micTimer;
+	uint32_t deauthDelayTimer;	/* delays the deauthentication */
+	void *psapriv;			/* commented out in the 8977's */
 	KeyData_t IGtk;
 } keyMgmtInfoSta_t;
 
+_Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, GRKey) == 172, "group key");
+_Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, sta_MIC_Error) == 252, "MIC error");
+_Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, psapriv) == 276, "supplicant context");
 _Static_assert(__builtin_offsetof(keyMgmtInfoSta_t, apCounterZeroDone) == 104, "replay counters");
 
 #define EAPOL_MIC_SIZE				16
@@ -475,6 +487,27 @@ void KeyMgmtSta_PrepareEAPOLMicErrFrame(EAPOL_KeyMsg_Tx_t *pTxEapol, int isUnica
 					IEEEtypes_MacAddr_t *da, IEEEtypes_MacAddr_t *sa,
 					keyMgmtInfoSta_t *pKeyMgmtInfoSta);
 int supplicantAkmUsesKdf(AkmSuite_t *pAkm);
+void SetEAPOLKeyDescTypeVersion(EAPOL_KeyMsg_Tx_t *pTxEapol, BOOLEAN isWPA2,
+				BOOLEAN isKDF, BOOLEAN nonTKIP);
+EAPOL_KeyMsg_t *GetKeyMsgNonceFromEAPOL(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+EAPOL_KeyMsg_t *ProcessRxEAPOL_PwkMsg3(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+EAPOL_KeyMsg_t *ProcessRxEAPOL_GrpMsg1(OsaBuffer *pmbuf, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+void MicErrTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfo);
+void DeauthDelayTimerExp_Sta(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+void keyMgmtStaRsnSecuredTimeoutHandler(uint32_t timerId, keyMgmtInfoSta_t *pKeyMgmtInfoSta);
+
+/* microTimerStart's callback: the timer and its argument */
+typedef void (*MicroTimerCallback_t)(uint32_t timerId, uint32_t data);
+
+void keyMgmtSta_StartSession_internal(keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+				      MicroTimerCallback_t callback, uint32_t expiry,
+				      uint8_t flags);
+void KeyMgmtSta_handleMICDeauthTimer(keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+				     MicroTimerCallback_t callback, uint32_t expiry,
+				     uint8_t flags);
+void KeyMgmtSta_handleMICErr(uint8_t state, keyMgmtInfoSta_t *pKeyMgmtInfoSta,
+			     MicroTimerCallback_t callback, uint8_t flags);
+void KeyMgmtSta_InitSession(keyMgmtInfoSta_t *pKeyMgmtInfoSta);
 void supplicantConstructContext(uint8_t *pAddr1, uint8_t *pAddr2, uint8_t *pNonce1,
 				uint8_t *pNonce2, uint8_t *pContext);
 void KeyMgmt_DerivePTK(uint8_t *pAddr1, uint8_t *pAddr2, uint8_t *pNonce1,

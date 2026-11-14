@@ -114,6 +114,7 @@ enum {
 #define SOC_PENDING_EVENT_STATUS REG32(0x8000a7ac)
 #define SOC_MAC_EVENT_CONTROL	REG32(0x8000a700)
 #define SOC_MAC_REGISTER_BASE	0x8000a000u
+#define SOC_MAC_TIMER		REG32(0x8000a600)	/* free-running; the defragmenter's start times */
 /* MAC register file; the offsets are the hardware's, no names are known. */
 #define MAC_REG(offset)		REG32(SOC_MAC_REGISTER_BASE + (offset))
 #define SOC_MAC_EVENT_PATH_CONTROL REG32(0x8000a7e0)
