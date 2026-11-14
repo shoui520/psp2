@@ -143,6 +143,8 @@ _Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
 #define WLAN_HOST_EVENT_DISASSOCIATED		0x09
 #define WLAN_HOST_EVENT_PS_AWAKE		0x0a
 #define WLAN_HOST_EVENT_PS_SLEEP		0x0b
+#define WLAN_HOST_EVENT_MIC_ERR_MULTICAST	0x0d
+#define WLAN_HOST_EVENT_MIC_ERR_UNICAST		0x0e
 #define WLAN_HOST_EVENT_DEEP_SLEEP_AWAKE	0x10
 #define WLAN_HOST_EVENT_HOST_SLEEP_AWAKE	0x12
 

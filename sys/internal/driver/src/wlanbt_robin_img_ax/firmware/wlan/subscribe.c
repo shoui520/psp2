@@ -20,8 +20,6 @@
 unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *threshold, uint8_t *count); /* 0x2c60e */
 unsigned int wlanTlvCopyValue(const uint8_t *tlv, void *value);			/* 0x2c662 */
 
-#define WLAN_EVENT_SUBSCRIBED		0x08000000u	/* wlanPostConnectionEvent: events met */
-
 struct WlanLinkQualityState wlanLinkQuality __attribute__((section(".dtcm.rw")));
 
 /* The subscription of the first connection that needs one. */

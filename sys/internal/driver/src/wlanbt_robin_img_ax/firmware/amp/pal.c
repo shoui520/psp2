@@ -543,13 +543,8 @@ struct OsaEventFlags *ampEventFlags __attribute__((section(".itcm.rw")));
 TX_THREAD *ampTaskThread __attribute__((section(".itcm.rw")));
 uint8_t ampPalUsers __attribute__((section(".itcm.bss")));
 
-/* Pool geometry: (block count << 16) | block size. */
-struct OsaPoolConfig {
-	uint32_t reserved;
-	uint32_t geometry;
-};
-static struct OsaPoolConfig ampHciPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x60118 };
-static struct OsaPoolConfig ampTransmitPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x307e8 };
+static struct OsaPoolConfig ampHciPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x118, 6 };
+static struct OsaPoolConfig ampTransmitPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x7e8, 3 };
 static uint32_t ampHciPoolControl[6] __attribute__((section(".itcm.bss")));
 static uint32_t ampTransmitPoolControl[6] __attribute__((section(".itcm.bss")));
 static uint8_t ampHciPoolMemory[6 * 0x118] __attribute__((section(".sqram1.bss")));

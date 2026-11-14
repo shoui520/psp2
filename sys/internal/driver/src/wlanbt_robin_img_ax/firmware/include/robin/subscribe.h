@@ -118,6 +118,9 @@ _Static_assert(sizeof(struct WlanLinkQualityState) == 16, "link quality state");
 #define WLAN_LINK_PRE_BEACON_LOST	0x01	/* the beacons missed reached the pre-loss threshold */
 
 extern struct WlanLinkQualityState wlanLinkQuality;
+/* wlanPostConnectionEvent() event: subscribed events were met. */
+#define WLAN_EVENT_SUBSCRIBED		0x08000000u
+
 extern struct WlanSubscribeEvents wlanSubscribeEventsDefault;
 
 void wlanSubscribeEventsInit(struct WlanSubscribeEvents *events);

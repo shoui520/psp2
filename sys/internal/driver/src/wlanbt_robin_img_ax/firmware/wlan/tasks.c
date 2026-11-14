@@ -67,8 +67,8 @@ static WlanQueueObject macMgmtMaskQueueB __attribute__((section(".itcm.bss")));
 static uint8_t macMgmtMaskStorageB[24] __attribute__((section(".itcm.bss")));
 
 static struct WlanTaskHandles wlanTaskHandles __attribute__((section(".itcm.bss")));
-static struct WlanInitStage *wlanInitStageHead __attribute__((section(".itcm.rw")));
-static struct WlanInitStage *wlanInitStageTail __attribute__((section(".itcm.rw")));
+struct WlanInitStage *wlanInitStageHead __attribute__((section(".itcm.rw")));
+struct WlanInitStage *wlanInitStageTail __attribute__((section(".itcm.rw")));
 static struct WlanInitStage macTxStage __attribute__((section(".itcm.bss")));
 static struct WlanInitStage macMgmtFlushStage __attribute__((section(".itcm.bss")));
 

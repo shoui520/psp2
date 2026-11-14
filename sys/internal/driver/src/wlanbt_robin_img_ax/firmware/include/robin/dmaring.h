@@ -50,6 +50,15 @@ enum {
 
 extern struct WlanDmaRing wlanDmaRings[WLAN_DMA_RING_COUNT];
 extern uint8_t wlanDmaRingPending[128];
+#define WLAN_DMA_RX_DATA_SIZE		83
+#define WLAN_DMA_RX_DATA_BUFFER		0x100
+#define WLAN_DMA_RX_A_BUFFER		0x300
+#define WLAN_DMA_RX_B_BUFFER		0x400
+#define WLAN_DMA_RX_SMALL_SIZE		2
+
+extern uint8_t wlanDmaRxBBuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_B_BUFFER];	/* SQRAM 0xc0014400 */
+extern uint8_t wlanDmaRxABuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_A_BUFFER];	/* SQRAM 0xc0014c00 */
+extern uint8_t wlanDmaRxDataBuffers[WLAN_DMA_RX_DATA_SIZE][WLAN_DMA_RX_DATA_BUFFER];	/* SQRAM 0xc0015400 */
 
 uint32_t wlanDmaRingReadBuffer(unsigned int ring);
 uint32_t wlanDmaRingRearm(unsigned int ring);

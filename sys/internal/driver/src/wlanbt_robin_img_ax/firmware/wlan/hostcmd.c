@@ -24,6 +24,8 @@
 #include "robin/wlantask.h"
 #include "robin/btrom.h"
 #include "robin/calibration.h"
+#include "robin/amp.h"
+#include "robin/dmaring.h"
 #include "robin/coex.h"
 #include "robin/ibss.h"
 #include "robin/join.h"
@@ -51,7 +53,6 @@
 #define HOSTCMD_RATE_STEPS		16
 
 /* Not converted yet; provisional names. */
-void cbProcFilterContext(void);						/* 0x1b6d0 */
 unsigned int rfCalibDispatchTable(void);				/* 0x2761a */
 void uapSqramFilterEntry(int enable);					/* SQRAM 0xc0009ba0 */
 void wlanPsHandleBuffer(unsigned int count);				/* 0x3c124 */
@@ -60,7 +61,11 @@ uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
 extern uint32_t wlanPsFilterState;					/* 0x54c58 */
 extern uint16_t hostCmdRateDefault;					/* SQRAM 0xc0011ba8 */
 extern uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS];			/* SQRAM 0xc0011b8a */
+int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 extern uint32_t hostCmdRateLimits[4];					/* 0x040089b0 */
+extern struct WlanMacTxRequest *wlanIbssBeaconRequest;			/* 0x54bc4 */
+extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;		/* 0x54bc8 */
+int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh); /* 0x322f2 */
 
 /* The command being run: set while its response is outstanding. */
 uint8_t hostCmdBusy __attribute__((section(".itcm.rw")));			/* 0x54b8c */
@@ -68,6 +73,18 @@ uint8_t hostCmdBusy __attribute__((section(".itcm.rw")));			/* 0x54b8c */
 OsaBuffer *hostCmdResponse __attribute__((section(".itcm.rw")));		/* 0x54b9c */
 /* HostCmd_CMD 0x0101: the value the host set. */
 uint16_t hostCmdNodeValue __attribute__((section(".itcm.rw")));		/* 0x54b98 */
+
+/* A host command holds the state semaphore of the control task while it runs. */
+uint8_t hostCmdLocked __attribute__((section(".itcm.rw")));			/* 0x54b8d */
+
+/* Gives the state semaphore back, if a host command holds it. */
+void hostCmdUnlock(void)
+{
+	if (hostCmdLocked) {
+		hostCmdLocked = 0;
+		wlanReleaseStateSemaphore();
+	}
+}
 
 /* The default release of a response buffer: the connection's power save phase restarts. */
 static int hostCmdResponseRelease(OsaBuffer *buffer)
@@ -86,7 +103,7 @@ int hostCmdRespond(struct WlanConnection *connection, int (*release)(OsaBuffer *
 		release = hostCmdResponseRelease;
 	if (!hostCmdBusy)
 		return hostCmdBusy;
-	cbProcFilterContext();
+	hostCmdUnlock();
 	if (wlanApPsEnabled()) {
 		hostCmdResponse->dataOffset = 32;
 		response = (uint8_t *)hostCmdResponse + 32;
@@ -106,6 +123,125 @@ uint16_t hostCmdNode(const uint8_t *body)
 {
 	if (HOSTCMD_U16(body) == 1)
 		hostCmdNodeValue = HOSTCMD_U16(body + 2);
+	return hostCmdNodeValue;
+}
+
+/*
+ * HostCmd_CMD 0x0094, set: the four limits are the rate steps the body
+ * names.
+ */
+int hostCmdRateStepsSet(uint8_t *body)
+{
+	unsigned int i;
+
+	for (i = 0; i < HOSTCMD_RATE_STEPS; i++) {
+		unsigned int step = hostCmdRateSteps[i];
+
+		if (HOSTCMD_U16(body + 8) == step)
+			hostCmdRateLimits[0] = step * 1000;
+		if (HOSTCMD_U16(body + 10) == step)
+			hostCmdRateLimits[1] = step * 1000;
+		if (HOSTCMD_U16(body + 12) == step)
+			hostCmdRateLimits[2] = step * 1000;
+		if (HOSTCMD_U16(body + 14) == step)
+			hostCmdRateLimits[3] = step * 1000;
+	}
+	wlanBaTablesChangedHandler();
+	return 1;
+}
+
+/*
+ * HostCmd_CMD 0x004d (MAC address): action 0 reads the interface address,
+ * action 1 sets it, where the interface allows it: the local address too
+ * for a station, and for an AP or a P2P connection that has none yet; the
+ * MAC is told the address. 0: done.
+ */
+int hostCmd004d(struct WlanConnection *connection, uint8_t *body)
+{
+	unsigned int action = HOSTCMD_U16(body);
+	int fresh = 1;
+
+	if (action == 0) {
+		__aeabi_memcpy(body + 2, connection->interfaceAddress, 6);
+		return 0;
+	}
+	if (action != 1)
+		return 1;
+	if (connection->interfaceType != 0 && connection->interfaceType != WLAN_IF_IBSS) {
+		if (connection->interfaceType == WLAN_IF_STATION) {
+			if (connection->state != 0)
+				return 1;
+			__aeabi_memcpy(connection->localAddress, body + 2, 6);
+			fresh = 0;
+		} else {
+			if (connection->interfaceType != WLAN_IF_AP)
+				return 1;
+			if (wlanP2pConnection(connection) != 0 || connection->mode == 1) {
+				if (connection->state != 0)
+					return 1;
+				__aeabi_memcpy(connection->localAddress, body + 2, 6);
+			} else if (connection->flags2 & 0x10) {
+				return 1;
+			}
+		}
+	} else if (connection->flags2 & 0x10) {
+		return 1;
+	}
+	__aeabi_memcpy(connection->interfaceAddress, body + 2, 6);
+	ampPalSetLocalAddress(body + 2, 0);
+	return macTxNotifyAcquireBuffer(2, connection->interfaceAddress, connection->interfaceIndex, fresh);
+}
+
+/* The capability byte HostCmd_DS_GET_HW_SPEC reports. */
+static uint32_t hostCmdHwCaps __attribute__((section(".itcm.rw")));		/* 0x54bcc */
+
+int hostCmd0003Caps(void)
+{
+	return (uint8_t)hostCmdHwCaps;
+}
+
+void hostCmd0003CapsSet(uint32_t caps)
+{
+	hostCmdHwCaps = caps;
+}
+
+/* The buffers the transmit notification hands out, by kind (0 .. 6): 0 none-or-base, 5 and 7: none. */
+void *macTxNotifyBufferBase(unsigned int kind)
+{
+	switch (kind) {
+	case 0:
+		return (void *)0xc0000000;
+	case 1:
+		return wlanIbssBeaconRequest;
+	case 2:
+		return wlanDmaRxBBuffers;
+	case 3:
+		return wlanDmaRxABuffers;
+	case 4:
+		return wlanDmaRxDataBuffers;
+	case 6:
+		return wlanIbssProbeResponseRequest;
+	default:
+		return NULL;
+	}
+}
+
+/* Nothing: the hook of macTxNotifyConfigurePacket() for an empty step. */
+void macTxNotifyPrepareNothing(void)
+{
+}
+
+/* Whether a command is HostCmd_CMD 0x0101 with action 1: the host sets the value. */
+int hostCmdIsNodeSet(const uint8_t *command)
+{
+	if (HOSTCMD_U16(command) == 0x101)
+		return HOSTCMD_U16(command + 8) == 1;
+	return 0;
+}
+
+/* The value the host set with HostCmd_CMD 0x0101. */
+uint16_t hostCmdNodeGet(void)
+{
 	return hostCmdNodeValue;
 }
 
@@ -261,7 +397,6 @@ struct WlanDriverQueue;
 int hostCmdUsesRole(const uint8_t *command);					/* 0x2c940 */
 void hostCmd0003Fill(uint8_t *body, int caps, unsigned int primary, unsigned int secondary,
 		     int extra);							/* 0x2cf42 */
-int hostCmd0003Caps(void);							/* 0x1b820 */
 unsigned int hostCmd0003Version(void);						/* 0x27de0 */
 int hostCmd0006(struct WlanConnection *connection, int bgScan, uint8_t *body, int length); /* 0x370f2 */
 void hostCmd000a(uint8_t *body, unsigned int channel, int psState, unsigned int radioOn); /* 0x2cba4 */
@@ -280,7 +415,6 @@ void hostCmd002bStart(struct WlanConnection *connection, uint8_t *command);	/* 0
 void hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command);	/* 0x3675e */
 void hostCmd0036(uint8_t *body, int authenticator, uint8_t *state);		/* 0x2cc7e */
 void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
-int hostCmd004d(struct WlanConnection *connection, uint8_t *body);		/* 0x1b74e */
 void hostCmd004eSet(uint8_t *body, unsigned int length);			/* SQRAM 0xc0009bea */
 unsigned int hostCmd004eGet(uint8_t *body);					/* SQRAM 0xc0009c50 */
 unsigned int hostCmd005bGet(struct WlanConnection *connection, uint8_t *data);	/* 0x3009a */
@@ -365,7 +499,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);		/* 0x1d604 */
 int hostCmdMisc(uint16_t *result, uint8_t *body, struct WlanConnection *connection); /* 0x2ccb6 */
-int hostCmdRateStepsSet(uint8_t *body);						/* 0x1b6e4 */
 void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
 void wlanPsFormatBuffer(struct WlanConnection *connection, unsigned int rate);	/* 0x3c7b8 */
 void wlanPsReleaseBuffer(void);							/* 0x3c9ba */
@@ -382,7 +515,6 @@ void macMgmtPrepareDescriptor(uint16_t atimWindow);				/* 0x3bc5a */
 void wlanPsAdjustTable(struct WlanConnection *connection);			/* 0x3c0aa */
 void macMgmtNotifyEntry(struct WlanConnection *connection);			/* 0x36a78 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
-int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 extern uint8_t hostCmd0096Tracking;						/* 0x54f9c */
 
@@ -423,7 +555,6 @@ struct WlanHwInfo {
 };
 extern struct WlanHwInfo wlanHwInfo;						/* 0x040088ac */
 
-uint8_t hostCmdLocked __attribute__((section(".itcm.rw")));			/* 0x54b8d */
 uint16_t wlanMgmtFrameSize __attribute__((section(".itcm.rw"))) = 1860;	/* 0x54b8e */
 uint16_t wlanMulticastCount __attribute__((section(".itcm.rw")));		/* 0x54b90 */
 static uint16_t hostCmdFragLimited __attribute__((section(".itcm.rw")));	/* 0x54b92 */
@@ -431,6 +562,14 @@ uint16_t wlanIbssAtimWindow __attribute__((section(".itcm.rw")));		/* 0x54b94 */
 uint16_t hostCmdResponseLimit __attribute__((section(".itcm.rw")));		/* 0x54b96 */
 uint32_t hostCmdMacAwake __attribute__((section(".itcm.rw")));			/* 0x54ba4 */
 uint8_t *hostCmdResponseData __attribute__((section(".itcm.rw")));		/* 0x54bbc */
+
+/* The command being run: its code; 0 when none runs. */
+unsigned int hostCmdCurrentCode(void)
+{
+	if (hostCmdBusy)
+		return HOSTCMD_U16(hostCmdResponseData) & 0x7fff;
+	return 0;
+}
 
 #define PUT16(p, v)	do { (p)[0] = (uint8_t)(v); (p)[1] = (uint8_t)((v) >> 8); } while (0)
 #define MAC_644_STATE	MAC_REG(0x644)
@@ -1490,7 +1629,7 @@ int hostCmdProcess(void)
 					goto done;
 				if (a != 5)
 					goto failed;
-				cbProcFilterContext();
+				hostCmdUnlock();
 			}
 			respond = 0;
 			goto done;
@@ -1877,7 +2016,7 @@ int hostCmdProcess(void)
 		goto done;
 	filtered:
 		respond = 0;
-		cbProcFilterContext();
+		hostCmdUnlock();
 		goto finish;
 	quiet:
 		respond = 0;

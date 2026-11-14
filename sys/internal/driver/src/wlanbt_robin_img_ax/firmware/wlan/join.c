@@ -49,7 +49,7 @@
 #define WLAN_CAPABILITY1_SHORT_SLOT	0x04
 #define WLAN_CAPABILITY1_RADIO_MEASURE	0x10
 
-/* The connection event cbProcClearContext() reports when the port opens. */
+/* The connection event wlanPortOpenNotify() reports when the port opens. */
 #define WLAN_CONN_EVENT_PORT_OPEN	64
 
 /* The host command response posted when a join ends without a result. */
@@ -113,7 +113,6 @@ int macTxNotifySetupFrame(struct WlanConnection *connection,
 			  const struct WlanJoinBss *previous);		/* 0x33878 */
 int macTxNotifyReleaseFrame(struct WlanConnection *connection,
 			    const struct WlanJoinAssocRequest *request);	/* 0x33816 */
-void cbProcClearContext(struct WlanConnection *connection, int event);	/* 0x1b540 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 void macTxNotifyBuildHeader(struct WlanConnection *connection, const struct WlanJoinBss *peer,
 			    int kind, const void *unused, uint32_t timeout);	/* 0x34094 */
@@ -209,12 +208,12 @@ void keyMgmtControlledPortOpen(void)
 
 	supplicantStopSessionTimer();
 	if (wlanJoin.portOpen) {
-		cbProcClearContext(wlanJoin.connection, WLAN_CONN_EVENT_PORT_OPEN);
+		wlanPortOpenNotify(wlanJoin.connection, WLAN_CONN_EVENT_PORT_OPEN);
 		return;
 	}
 	wlanJoin.portOpen = 1;
 	wlanJoinSetBusy(wlanJoin.connection, 0);
-	cbProcClearContext(wlanJoin.connection, WLAN_CONN_EVENT_PORT_OPEN);
+	wlanPortOpenNotify(wlanJoin.connection, WLAN_CONN_EVENT_PORT_OPEN);
 	p2pDirectVerifyEntry(wlanJoin.connection);
 	if (wlanJoin.newBss && wlanJoin.portTimeout)
 		macTxNotifyBuildHeader(wlanJoin.connection, &wlanJoin.previous, 3, NULL,

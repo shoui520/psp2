@@ -175,6 +175,15 @@ extern void *wlanSdioDev;			/* mdev "sdio" handle (0x547ac) */
 extern void *btSdioDev;				/* mdev "bt_sdio" handle (0x54c90) */
 
 /* sys/timer_slot.c */
+/* A node of the doubly linked free list of timer slots; the sentinels carry no slot. */
+struct SysTimerSlotNode {
+	uint32_t reserved;
+	uint32_t index;
+	struct SysTimerSlotNode *prev;
+	struct SysTimerSlotNode *next;
+};
+
+struct SysTimerSlotNode *sysTimerSlotAcquire(SysTimerCallback callback, uint32_t arg);
 int sysTimerSlotInit(void);
 
 /* sys/trace.c */

@@ -9,14 +9,6 @@
 
 #define SYS_TIMER_SLOT_NODES	5
 
-/* A node of the doubly linked free list; the sentinels carry no slot. */
-struct SysTimerSlotNode {
-	uint32_t reserved;
-	uint32_t index;
-	struct SysTimerSlotNode *prev;
-	struct SysTimerSlotNode *next;
-};
-
 /* Nodes 0..4 are slots, followed by the head and tail sentinels. */
 static struct SysTimerSlotNode sysTimerSlotList[SYS_TIMER_SLOT_NODES + 2]
 	__attribute__((section(".itcm.bss")));

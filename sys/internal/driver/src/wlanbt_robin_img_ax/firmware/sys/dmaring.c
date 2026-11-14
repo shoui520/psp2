@@ -3,6 +3,7 @@
  * that re-arm or reclaim descriptors. The filename is inferred.
  */
 #include "robin/dmaring.h"
+#include "robin/hostcmd.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
@@ -51,12 +52,7 @@ uint8_t wlanDmaRingPending[128] __attribute__((section(".sqram1.bss")));
 uint32_t wlanDmaRxDataStalls __attribute__((section(".sqram1.rw"))) = 0;
 
 /* Descriptors and buffers of the receive rings. */
-#define WLAN_DMA_RX_DATA_SIZE		83
-#define WLAN_DMA_RX_DATA_BUFFER		0x100
-#define WLAN_DMA_RX_A_BUFFER		0x300
-#define WLAN_DMA_RX_B_BUFFER		0x400
 #define WLAN_DMA_RX_C_BUFFER		0x100
-#define WLAN_DMA_RX_SMALL_SIZE		2
 
 static struct WlanDmaDescriptor wlanDmaRxDataDescriptors[WLAN_DMA_RX_DATA_SIZE]
 	__attribute__((section(".sqram1.bss")));			/* 0xc0014130 */
@@ -66,13 +62,13 @@ static struct WlanDmaDescriptor wlanDmaRxBDescriptors[WLAN_DMA_RX_SMALL_SIZE]
 	__attribute__((section(".sqram1.bss")));			/* 0xc00143d8 */
 static struct WlanDmaDescriptor wlanDmaRxCDescriptors[WLAN_DMA_RX_SMALL_SIZE]
 	__attribute__((section(".sqram1.bss")));			/* 0xc00143e8 */
-static uint8_t wlanDmaRxBBuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_B_BUFFER]
+uint8_t wlanDmaRxBBuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_B_BUFFER]
 	__attribute__((section(".sqram1.bss"), aligned(8)));		/* 0xc0014400 */
-static uint8_t wlanDmaRxABuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_A_BUFFER]
+uint8_t wlanDmaRxABuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_A_BUFFER]
 	__attribute__((section(".sqram1.bss"), aligned(8)));		/* 0xc0014c00 */
 static uint8_t wlanDmaRxCBuffers[WLAN_DMA_RX_SMALL_SIZE][WLAN_DMA_RX_C_BUFFER]
 	__attribute__((section(".sqram1.bss"), aligned(8)));		/* 0xc0015200 */
-static uint8_t wlanDmaRxDataBuffers[WLAN_DMA_RX_DATA_SIZE][WLAN_DMA_RX_DATA_BUFFER]
+uint8_t wlanDmaRxDataBuffers[WLAN_DMA_RX_DATA_SIZE][WLAN_DMA_RX_DATA_BUFFER]
 	__attribute__((section(".sqram1.bss"), aligned(8)));		/* 0xc0015400 */
 
 #define RING_INDEX(pointer)	(((pointer) << 20) >> 23)
@@ -137,7 +133,7 @@ void wlanDmaRingsDrain(void)
 	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_C))
 		osaTaskSleep(1);
 	while (wlanDmaRingHasPending(WLAN_DMA_RING_RX_DATA)) {
-		if (cbProcVerifyContext())
+		if (hostCmdNodeGet())
 			mdevIoctl(wlanSdioDev, SDIO_IOCTL_KICK_HOST, 0);
 		osaTaskSleep(1);
 	}

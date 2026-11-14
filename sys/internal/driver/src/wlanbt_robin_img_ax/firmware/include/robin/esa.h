@@ -622,6 +622,7 @@ EAPOL_KeyMsg_t *KeyMgmtStaHsk_Recvd_PWKMsg3(OsaBuffer *pmbuf);
 int KeyMgmtStaHsk_Recvd_GrpMsg1(OsaBuffer *pmbuf);
 void ProcessKeyMgmtDataSta(OsaBuffer *pmbuf, IEEEtypes_MacAddr_t *sa, IEEEtypes_MacAddr_t *da);
 void supplicantMICCounterMeasureInvoke(struct WlanConnection *connPtr, BOOLEAN isUnicast);
+void wlanMicErrorReport(struct WlanConnection *connection, int group);	/* 0x1b504 */
 void keyMgmtSta_StartSession(struct WlanConnection *connPtr, IEEEtypes_MacAddr_t *pBssid,
 			     IEEEtypes_MacAddr_t *pStaAddr);
 void supplicantInitSession(struct WlanConnection *connPtr, uint8_t *pSsid, uint16_t len,

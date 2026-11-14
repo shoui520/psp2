@@ -54,7 +54,10 @@ void romHsmStart(void *machine, struct RomHsmState *initial);
 void romHsmTransition(void *machine, struct RomHsmState *target);
 int mdevRomProcessState(void *device);
 void *osa_MsgQueuePeek(void *queue);		/* the first message, left in the list */
-void osa_BlockPoolCreate(void *pool, void *name, void *start, void *size);
+struct OsaPoolEntry;
+/* A pool of fixed blocks: its descriptor, its configuration (struct OsaPoolConfig), its control block and its memory. */
+int osa_BlockPoolCreate(void *pool, void *config, void *control, void *memory);
+int osa_BlockPoolDelete(void *pool, int (*release)(struct OsaPoolEntry *entry));
 int mdevRegisterDriver(void *driver, void *reserved);
 /* Next message of the calling task. */
 uint32_t *mdevReceiveMessage(void);

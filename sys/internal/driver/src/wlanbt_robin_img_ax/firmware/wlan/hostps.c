@@ -12,6 +12,8 @@
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"
+#include "robin/hostcmd.h"
+#include "robin/hostps.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
 #include "robin/mgmt.h"
@@ -38,7 +40,6 @@
 
 /* Events to the control task (wlanPostConnectionEvent()). */
 #define WLAN_EVENT_HOST_TRAFFIC		0x00040000
-#define WLAN_EVENT_HOST_ASLEEP		0x00400000
 
 /* Control-task events (wlanRaiseEvent()). */
 #define WLAN_PS_EVENT_HOST_MODE		1
@@ -64,7 +65,7 @@ int wpaSuppSyncQueue(const uint8_t *packet);		/* 0x2c972 */
 int wpaSuppApplyQueue(const uint8_t *packet);		/* 0x2c9a6 */
 
 /* 0x17144: the host sent traffic during its session. */
-int wlanPsNoteHostActive(void)
+int wlanPsNoteHostActive(OsaBuffer *buffer)
 {
 	if (wlanSessionId != 0)
 		wlanPsHostActive = 1;
@@ -141,7 +142,7 @@ void wlanPsPhaseTimerExpired(uint32_t timer, uint32_t argument)
 	if (wlanConnectionsIdle()) {
 		if (wlanConnectionPhase != WLAN_PHASE_COUNTDOWN)
 			return;
-		if (cbProcSelectContext() != 0 || wlanSlotHasCurrent()) {
+		if (hostCmdCurrentCode() != 0 || wlanSlotHasCurrent()) {
 			osaCreateTimer(wlanPsPhaseTimerExpired, argument, wlanPsPhaseDelay * 1000,
 				       &wlanPendingTimer, 0);
 			return;
@@ -295,7 +296,7 @@ int wlanPsHostSleepReply(OsaBuffer *buffer)
 }
 
 /* 0x174a4: the host session begins. */
-int wlanPsHostSessionStart(void)
+int wlanPsHostSessionStart(OsaBuffer *buffer)
 {
 	if (wlanApPsEnabled())
 		return 0;

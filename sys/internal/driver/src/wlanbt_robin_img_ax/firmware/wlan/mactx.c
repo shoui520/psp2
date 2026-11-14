@@ -631,7 +631,7 @@ unsigned int wlanPeerNextSequence(struct WlanConnection *connection, unsigned in
 unsigned int wlanGroupNextSequence(unsigned int tid);			/* 0x4204c */
 
 /* Hardware window numbers handed to transmit Block Ack sessions. */
-static struct WlanWindowId wlanTxWindowIds[WLAN_TX_BA_MAX] __attribute__((section(".itcm.bss")));
+struct WlanWindowId wlanTxWindowIds[WLAN_TX_BA_MAX] __attribute__((section(".itcm.bss")));
 extern uint32_t macTxResetMarker;					/* 0x04000170 */
 
 static inline uint8_t *macTxBufferData(OsaBuffer *buffer)

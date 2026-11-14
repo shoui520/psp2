@@ -15,6 +15,12 @@ struct OsaBufferPool {
 		};
 	};
 };
+/* What osa_BlockPoolCreate() builds a pool from: its blocks' size and count. */
+struct OsaPoolConfig {
+	uint32_t reserved;
+	uint16_t blockSize;
+	uint16_t blockCount;
+};
 typedef struct OsaBuffer OsaBuffer;
 
 struct OsaBuffer {

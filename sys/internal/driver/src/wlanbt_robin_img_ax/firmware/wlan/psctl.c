@@ -7,6 +7,7 @@
  */
 #include <stdint.h>
 #include "robin/coex.h"
+#include "robin/hostcmd.h"
 #include "robin/hostps.h"
 #include "robin/conn.h"
 #include "robin/join.h"
@@ -44,7 +45,7 @@
 #define WLAN_PS_POWER_DOZE		4
 #define WLAN_PS_POWER_ASLEEP		5
 
-/* cbProcSelectContext(): the control task's state while it scans. */
+/* hostCmdCurrentCode(): the control task's state while it scans. */
 #define WLAN_CB_STATE_SCAN		0x21
 
 /* The default wake timer (wlanPsInit()): 50 beacons, 5 s when idle. */
@@ -501,8 +502,8 @@ int wlanPsAsleep(void)
 /* 0x16f46: the host cannot be reached now: the WLAN side sleeps. */
 int wlanPsHostBlocked(int reason)
 {
-	if (wlanHostSleepArmed() || cbProcSelectContext() == WLAN_CB_STATE_SCAN ||
-	    (reason == 5 && cbProcVerifyContext()))
+	if (wlanHostSleepArmed() || hostCmdCurrentCode() == WLAN_CB_STATE_SCAN ||
+	    (reason == 5 && hostCmdNodeGet()))
 		return 0;
 	if (wlanPsAsleep())
 		return 1;

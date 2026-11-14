@@ -44,6 +44,8 @@ extern struct OsaMessageQueue *timerCbQueue;
 
 void wlanSuspendTasks(int raise);
 void wlanResumeTasks(void);
+extern struct WlanInitStage *wlanInitStageHead;		/* the chain of stages, run again after a reset */
+extern struct WlanInitStage *wlanInitStageTail;
 int wlanInitStageRegister(struct WlanInitStage *stage);
 int wlanTaskHandlesInit(const struct WlanTaskHandles *handles);
 int cbProcCreateTask(void);
@@ -62,7 +64,5 @@ int macMgmtFlushQueues(void);
 /* Not converted yet; provisional names. */
 void cbProcResume(unsigned int reason);					/* 0x1c800 */
 void cbProcFlush(void);							/* 0x1c840 */
-int cbProcVerifyContext(void);						/* 0x1b5ac */
-unsigned int cbProcSelectContext(void);					/* 0x1b5b2 */
 
 #endif /* ROBIN_WLANTASK_H */
