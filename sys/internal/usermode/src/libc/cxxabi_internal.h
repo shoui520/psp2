@@ -5,63 +5,10 @@
 #define _CXXABI_INTERNAL_H
 #include <exception>
 #include <typeinfo>
+#include "unwinder.h"
 
 #define SCE_LIBC_TERMINATE_CODE		0x108	/* sceKernelCallAbortHandler: terminate() */
 #define SCE_LIBC_UNEXPECTED_CODE	0x109	/* sceKernelCallAbortHandler: unexpected() */
-
-extern "C" {
-		// THE EHABI UNWINDER INTERFACE
-typedef enum
-	{	// unwinder and personality routine results
-	_URC_OK = 0,
-	_URC_FOREIGN_EXCEPTION_CAUGHT = 1,
-	_URC_HANDLER_FOUND = 6,
-	_URC_INSTALL_CONTEXT = 7,
-	_URC_CONTINUE_UNWIND = 8,
-	_URC_FAILURE = 9
-	} _Unwind_Reason_Code;
-
-typedef struct _Unwind_Control_Block
-	{	// the exception object the unwinder sees
-	char exception_class[8];
-	void (*exception_cleanup)(_Unwind_Reason_Code, struct _Unwind_Control_Block *);
-	struct
-		{	// the unwinder's own state
-		unsigned int reserved1;	// nonzero while a copy of the state is saved
-		unsigned int reserved2;
-		unsigned int reserved3;
-		unsigned int reserved4;
-		unsigned int reserved5;
-		} unwinder_cache;
-	struct
-		{	// what phase 1 found, for phase 2
-		unsigned int sp;
-		unsigned int bitpattern[5];
-		} barrier_cache;
-	struct
-		{	// the personality routine's cleanup state
-		unsigned int bitpattern[4];
-		} cleanup_cache;
-	struct
-		{	// the current frame's exception table entry
-		unsigned int fnstart;
-		void *ehtp;
-		unsigned int additional;
-		unsigned int reserved1;
-		} pr_cache;
-	long long : 0;
-	} _Unwind_Control_Block;
-
-_Unwind_Reason_Code _Unwind_RaiseException(_Unwind_Control_Block *ucbp);
-void _Unwind_Resume(_Unwind_Control_Block *ucbp);
-void _Unwind_Complete(_Unwind_Control_Block *ucbp);
-void _Unwind_DeleteException(_Unwind_Control_Block *ucbp);
-
-		// THE DEBUGGER HOOK
-#define _UASUBSYS_CPP		0x00	/* _Unwind_Activity: the C++ runtime */
-#define _UAACT_STARTING		0x0	/* _Unwind_Activity: a throw starts */
-void _Unwind_Activity(_Unwind_Control_Block *ucbp, unsigned int reason, unsigned int arg);
-}
 
 		// THE C++ EXCEPTION OBJECT
 struct __cxa_exception
@@ -196,8 +143,20 @@ struct __cxa_eh_globals
 	int initialized;
 	};
 
+typedef enum
+	{	// how a thrown object matched a handler
+	ctm_failed = 0,
+	ctm_succeeded = 1,
+	ctm_succeeded_with_ptr_to_base = 2
+	} __cxa_type_match_result;
+
 extern "C" {
 __cxa_eh_globals *__cxa_get_globals();
+__cxa_type_match_result __cxa_type_match(_Unwind_Control_Block *ucbp,
+	const _STD type_info *match_type, bool is_reference_type, void **matched_object);
+bool __cxa_begin_cleanup(_Unwind_Control_Block *ucbp);
+void __cxa_call_terminate(_Unwind_Control_Block *ucbp);
+void __cxa_call_unexpected(_Unwind_Control_Block *ucbp);
 int sceKernelCallAbortHandler(unsigned int code, const void *opt);
 }
 #endif /* _CXXABI_INTERNAL_H */

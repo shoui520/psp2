@@ -646,6 +646,9 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	wiostream.cpp
 	xmutex.cpp
 	cppsemantics.cpp
+	snc_personality.c
+	cxxabi_typeinfo.cpp
+	unwind_pr.cpp
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
@@ -668,3 +671,6 @@ set_source_files_properties(../../../kernel/src/sysmem/compare_core.S PROPERTIES
 # _Strcollx (286 B) out of line.
 set_source_files_properties(strxfrm.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=64)
 set_source_files_properties(cppsemantics.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+set_source_files_properties(unwind_pr.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+set_source_files_properties(cxxabi_typeinfo.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+set_source_files_properties(snc_personality.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)

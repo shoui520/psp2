@@ -12,17 +12,10 @@
 #define EMERGENCY_BUFFER_SIZE	0x88	/* one exception object when malloc fails */
 #define EMERGENCY_OBJECT_MAX	(EMERGENCY_BUFFER_SIZE - 4)
 
-typedef enum
-	{	// how a thrown object matched a handler
-	ctm_failed = 0,
-	ctm_succeeded = 1,
-	ctm_succeeded_with_ptr_to_base = 2
-	} __cxa_type_match_result;
-
 extern "C" {
 __cxa_eh_globals *__rt_eh_globals_addr(void);
 void __cxa_bad_typeid(void);
-int __ARM_find_base(void **objptr, void **foundptr,
+int __derived_to_base_conversion(void **objptr, void **foundptr,
 	const __cxxabiv1::__class_type_info *derived, const _STD type_info *base,
 	int flags, int offset);
 }
@@ -320,7 +313,7 @@ extern "C" __cxa_type_match_result __cxa_type_match(_Unwind_Control_Block *ucbp,
 	if ((pointer_depth == 0 || (pointer_depth == 1 && !is_reference_type))
 		&& (*thrown_kind == typeid(__cxxabiv1::__si_class_type_info)
 			|| *thrown_kind == typeid(__cxxabiv1::__vmi_class_type_info))
-		&& __ARM_find_base(&object, &found,
+		&& __derived_to_base_conversion(&object, &found,
 			(const __cxxabiv1::__class_type_info *)thrown_type, match_type, 0, 0))
 		{	// a base class of the thrown class
 		*matched_object = found;
