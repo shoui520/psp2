@@ -316,7 +316,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xwstof.c
 	xwstoflt.c
 	xwstold.c
+	xwstoll.c
 	xwstopfx.c
+	xwstoul.c
+	xwstoull.c
 	xwstoxflt.c
 )
 if(TARGET vs0_sys_external_libc)
