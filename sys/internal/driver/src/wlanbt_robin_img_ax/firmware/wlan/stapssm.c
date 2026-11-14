@@ -27,6 +27,7 @@
 #include "robin/stapssm.h"
 #include "robin/mgmt.h"
 #include "robin/subscribe.h"
+#include "robin/wmm.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
 #include "robin/task.h"
@@ -118,7 +119,6 @@ extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
 extern uint8_t wlanSavedMgmtPriority;			/* 0x040088da */
 void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
-int wlanWmmEnabled(void);				/* 0x41cb8 */
 int p2pDirectReleaseEntry(void);			/* 0x419a6 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void macMgmtValidateTable(int reason);			/* 0x3726c */

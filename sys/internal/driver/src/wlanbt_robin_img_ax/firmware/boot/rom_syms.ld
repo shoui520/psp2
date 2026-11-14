@@ -178,3 +178,13 @@ PROVIDE(romMacConfigureEntry = 0x03f3a865);
 
 /* Marvell's MAC timer read (msi_wl_GetMCUCoreTimerTxTSF, named in Marvell's esa sources) */
 PROVIDE(msi_wl_GetMCUCoreTimerTxTSF = 0x03f3a6b9);
+
+PROVIDE(romGetMicroseconds = 0x03f3a7cb);
+PROVIDE(romLibRecordState  = 0x03f3a76f);
+PROVIDE(romLibProcessContext = 0x03f3a7e3);
+PROVIDE(romLibNotifyState  = 0x03f3a551);
+PROVIDE(romMul64x32        = 0x03f3f3ac);
+PROVIDE(romEdcaSetCwMin    = 0x03f3a62f);
+PROVIDE(romEdcaSetCwMax    = 0x03f3a643);
+PROVIDE(romEdcaSetAifsn    = 0x03f3a665);
+PROVIDE(romEdcaSetTxop     = 0x03f3a64d);

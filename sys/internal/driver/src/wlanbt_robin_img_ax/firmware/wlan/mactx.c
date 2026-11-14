@@ -26,6 +26,7 @@
 #include "robin/sys.h"
 #include "robin/task.h"
 #include "robin/wlantask.h"
+#include "robin/wmm.h"
 
 struct WlanTxWindowQueue wlanTxWindowQueues[2] __attribute__((section(".dtcm.bss")));
 uint32_t wlanTxWindowFlags __attribute__((section(".itcm.bss")));
@@ -597,7 +598,6 @@ int wlanTxQueueMgmtFrame(OsaBuffer *buffer);			/* 0x32038 */
 void wlanTxCountDropped(OsaBuffer *buffer);			/* 0x41f2e */
 void cbProcLoopbackFrame(OsaBuffer *buffer);			/* 0x1eea6 */
 void cbProcFlushConnection(struct WlanConnection *connection);	/* 0x1ecde */
-int wlanWmmEnabled(void);					/* 0x41cb8 */
 unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
 unsigned int wlanNextSequence(struct WlanConnection *connection, unsigned int tid); /* 0x42068 */
 int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned int tid,
@@ -626,8 +626,6 @@ void wlanBaNotifyAdded(struct WlanConnection *connection, unsigned int hwSlot,
 void wlanBaNotifyDeleted(struct WlanConnection *connection, unsigned int hwSlot,
 			 const uint8_t *peer);				/* 0x33420 */
 int wlanP2pConnection(struct WlanConnection *connection);		/* 0x41228 */
-unsigned int wlanPeerNextSequence(struct WlanConnection *connection, unsigned int tid,
-				  int advance);				/* 0x1e246 */
 unsigned int wlanGroupNextSequence(unsigned int tid);			/* 0x4204c */
 
 /* Hardware window numbers handed to transmit Block Ack sessions. */
@@ -873,7 +871,6 @@ struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *conne
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
-int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer); /* 0x1e234 */
 unsigned int wlanRateSelect(uint8_t *rateControl);			/* 0x2be18 */
 unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
 int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */

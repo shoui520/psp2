@@ -391,7 +391,8 @@ struct WlanConnection {
 	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
-	uint8_t reserved4c[30];
+	uint8_t reserved694[14];
+	uint16_t txSequence[8];		/* the next sequence number of each TID towards the peer */
 	int32_t txPowerLimit;		/* dBm from the channel power table; 255: none */
 	uint32_t qosPeer;		/* 1: the peer associated with WMM (QoS) */
 	uint8_t interfaceAddress[6];
@@ -414,7 +415,9 @@ struct WlanConnection {
 						   beacon timing changed, bit 6 a peer was heard */
 			uint8_t reserved764[4];
 			uint32_t lastBeaconTime[2];	/* IBSS: when a beacon of ours was last matched */
-			uint8_t reserved776[6];
+			uint32_t peerCheckTime;	/* IBSS: the link check's last time (wlanIbssCheckPeers) */
+			uint8_t peerCheckMisses;	/* ... and the checks that found the peer silent */
+			uint8_t reserved781;
 			uint8_t securitySuites[2];	/* IBSS: compared with macMgmtDispatchEntry()'s fourth, third results */
 		};
 	};
@@ -516,6 +519,14 @@ extern struct WlanConnection *wlanConnectionSession;
 extern struct WlanConnection *wlanConnectionPrimary;
 #define WLAN_CONNECTION_SLOTS	4
 
+/* The timing record of a BSS the join and start code keep (the beacon time and the next target time). */
+struct WlanBssTiming {
+	uint32_t timestamp[2];
+	uint32_t next[2];		/* 64-bit time of the next target; 0: none yet */
+	uint32_t reserved16[2];
+	uint32_t interval;		/* the target's period */
+};
+
 extern uint32_t wlanConnectionCount;
 extern uint8_t wlanChannelInUse[1];
 extern uint8_t wlanConnectionSlotMask;
@@ -563,6 +574,29 @@ struct WlanConnection *wlanConnectionDuplicateType2(const uint8_t *peer,
 						    const struct WlanConnection *source);	/* 0x1da78 */
 void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source);		/* 0x1daba */
 void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source);		/* 0x1dc8c */
+
+struct WlanConnection *wlanConnectionFindIbssBySsid(const uint8_t *ssidElement);	/* 0x1ddd6 */
+int wlanIbssSecurityActive(void);							/* 0x1ded2 */
+int wlanAnyConnectionTxAllowed(void);							/* 0x1e032 */
+int wlanBssSelectAddress(unsigned int kind, const void *descriptor);			/* 0x1e064 */
+int wlanBssAllowStart(unsigned int stage);						/* 0x1e0e8 */
+int wlanBssRecordTiming(unsigned int kind, struct WlanBssTiming *timing);		/* 0x1e12a */
+int wlanConnectionUpdatePeer(struct WlanConnection *connection, int argument);		/* 0x1e220 */
+int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer);	/* 0x1e234 */
+unsigned int wlanPeerNextSequence(struct WlanConnection *connection, unsigned int tid,
+				  int advance);						/* 0x1e246 */
+void wlanIbssLeave(struct WlanConnection *connection, int teardown);			/* 0x1e260 */
+void wlanIbssLeaveAll(int teardown);							/* 0x1e29c */
+void wlanIbssCheckPeers(void);								/* 0x1e2c8 */
+int wlanIbssResetPeerCheck(struct WlanConnection *connection);				/* 0x1e378 */
+int wlanBssQueuedFrames(const struct WlanConnection *bss);				/* 0x1e38e */
+int wlanConnectionCountMode2(int stage);						/* 0x1e3cc */
+int wlanTxPowerLimitMin(void);								/* 0x1e42e */
+int wlanConnectionIndexAssign(const uint8_t *address);					/* 0x1e458 */
+int wlanConnectionIndexUnassign(const uint8_t *address);				/* 0x1e476 */
+struct WlanConnection *wlanConnectionSlotGet(unsigned int index);			/* 0x1e510 */
+int wlanConnectionTeardownStation(struct WlanConnection *connection);			/* 0x1e51a */
+int wlanConnectionTeardownType0(struct WlanConnection *connection);			/* 0x1e53c */
 
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber);
 int wlanConnectionExists(unsigned int interfaceType);

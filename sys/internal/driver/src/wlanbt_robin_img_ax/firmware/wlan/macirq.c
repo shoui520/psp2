@@ -90,7 +90,6 @@ void wlanPsRecordFrame(void);									/* 0x3dc46 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body,
 			  unsigned int length);							/* 0x35ac2 */
 int macTxNotifyResolveState(struct WlanConnection *connection);					/* 0x2ff0c */
-struct WlanConnection *cbProcNotifyPacket(unsigned int index);					/* 0x1e510 */
 void macMgmtConfigureState(struct WlanConnection *connection);					/* 0x347e8 */
 void rfCalibSelectQueue(struct WlanConnection *connection, uint8_t *olbcActive,
 			uint8_t *erpInfo);							/* 0x2b680 */
@@ -328,7 +327,7 @@ void wlanMacEvents(int line, uint32_t pending)
 		if (MAC_500_SLEEP_CONTROL & 2) {
 			connection = wlanConnectionFindByTypeNumber(WLAN_IF_IBSS, 0);
 		} else if (MAC_500_SLEEP_CONTROL & 1) {
-			connection = cbProcNotifyPacket(wlanMacRing);
+			connection = wlanConnectionSlotGet(wlanMacRing);
 			if (!wlanConnectionBssStarted(connection))
 				connection = NULL;
 		}
@@ -406,7 +405,7 @@ void wlanMacEvents(int line, uint32_t pending)
 		}
 		if (MAC_500_SLEEP_CONTROL & 1) {
 			wlanMacRing = MAC_2E8_RING;
-			connection = cbProcNotifyPacket(wlanMacRing);
+			connection = wlanConnectionSlotGet(wlanMacRing);
 			if (connection != NULL) {
 				if (++connection->beaconsSinceDtim != connection->beaconsPerDtim ||
 				    (connection->beaconsSinceDtim = 0, connection->dtimHold != 0)) {

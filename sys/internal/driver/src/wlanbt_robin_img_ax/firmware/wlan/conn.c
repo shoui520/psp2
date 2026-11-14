@@ -6,11 +6,13 @@
 #include "robin/calibration.h"
 #include "robin/conn.h"
 #include "robin/hostps.h"
+#include "robin/ie.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
 #include "robin/osa.h"
 #include "robin/signal.h"
+#include "robin/stream.h"
 #include "robin/subscribe.h"
 #include "robin/txring.h"
 #include "robin/rom.h"
@@ -34,18 +36,25 @@ extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc
 extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
 void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
 void macMgmtFilterState(const uint8_t **machine);						/* 0x354cc */
+void rfCalibApplyDescriptor(const void *descriptor);						/* 0x2a214 */
+uint64_t wlanSignalTimeNow(void);								/* 0x2a4fc */
+void rfCalibFormatContext(void);								/* 0x26b78 */
+void rfCalibInspectContext(void);								/* 0x26baa */
+void rfCalibTrackContext(void);									/* 0x26bdc */
+void rfCalibManageContext(void);								/* 0x26c0e */
+int macMgmtSelectContext(struct WlanConnection *connection);					/* 0x35f7c */
+void wlanPsSetupPacket(void *state, int argument);						/* 0x3d29e */
+int macTxNotifyApplyFrame(struct WlanConnection *connection);					/* 0x3360a */
 void macTxNotifyReleaseBuffer(void);								/* 0x3239c */
 void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, unsigned int beaconPeriodA,
 			    unsigned int beaconPeriodB);						/* 0x323f8 */
 
 /* Not converted yet; provisional names. */
-void cbProcInspectPacket(struct WlanConnection *connection);					/* 0x1e53c */
-void cbProcFormatPacket(struct WlanConnection *connection);					/* 0x1e51a */
 struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);				/* 0x333ce */
 void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
-void wpaSuppConvertDescriptor(void *descriptor);						/* 0x2c17c */
+int wpaSuppConvertDescriptor(void *descriptor);						/* 0x2c17c */
 int macMgmtApplyEntry(void);									/* 0x36a2a */
 void btLmpLcHandleState(int state);								/* 0x42488 */
 void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
@@ -830,7 +839,7 @@ void wlanConnectionReset(struct WlanConnection *connection)
 /* Forgets what was heard of the peer's security. */
 void wlanConnectionClearSecurity(struct WlanConnection *connection)
 {
-	wpaSuppConvertDescriptor((uint8_t *)connection + 636);
+	wpaSuppConvertDescriptor(connection->reserved636);
 	macTxNotifyParseFrame(connection);
 	__aeabi_memclr(connection->peerAddress, 6);
 }
@@ -871,7 +880,7 @@ int wlanConnectionTeardownWds(struct WlanConnection *connection)
 
 	switch (connection->interfaceType) {
 	case 0:
-		cbProcInspectPacket(connection);
+		wlanConnectionTeardownType0(connection);
 		goto finish;
 	case 1:
 		wlanConnectionTeardownIbss(connection);
@@ -883,7 +892,7 @@ int wlanConnectionTeardownWds(struct WlanConnection *connection)
 		goto finish;
 	case 3:
 		if (connection->mode == 3)
-			cbProcFormatPacket(connection);
+			wlanConnectionTeardownStation(connection);
 		else if (connection->mode == 2)
 			wlanConnectionTeardownBss(connection);
 finish:
@@ -1449,4 +1458,416 @@ void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source)
 		wlanConnectionDuplicateType2(peer, source);
 	else if (source->interfaceType == 3 && source->mode == 2)
 		wlanConnectionDuplicateAp(peer, source);
+}
+
+/* The IBSS connection whose SSID is the one of the SSID element (ID, length, SSID). */
+struct WlanConnection *wlanConnectionFindIbssBySsid(const uint8_t *ssidElement)
+{
+	struct WlanConnection *connection;
+	UINT posture;
+
+	if (ssidElement[1] == 0)
+		return NULL;
+	posture = sysIrqDisable();
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->interfaceType == 1 && ssidElement[1] == connection->networkSsidLength &&
+		    memcmp(connection->networkSsid, ssidElement + 2, ssidElement[1]) == 0) {
+			sysIrqRestore(posture);
+			return connection;
+		}
+	}
+	sysIrqRestore(posture);
+	return NULL;
+}
+
+/* 1: an IBSS (one we did not start) has its key handshake state in the second stage with the first bit set. */
+int wlanIbssSecurityActive(void)
+{
+	struct WlanConnection *connection;
+	UINT posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->interfaceType == 1 && !(connection->flags & 4)) {
+			uint8_t *block = connection->snmpBssParams[0];
+
+			if (block != NULL && block[28 + 7] == 2 && (block[28 + 10] & 1)) {
+				sysIrqRestore(posture);
+				return 1;
+			}
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/*
+ * A Block Ack session was added or removed (or a role changed): the radio's
+ * mode follows whether any connection carries host data and whether a Block
+ * Ack session is open.
+ */
+void wlanBaTablesChangedHandler(void)
+{
+	int data = wlanAnyConnectionHostFlag8() != 0 || wlanAnyConnectionFlag4() != 0 ||
+		   wlanAnyConnectionFlag10() != 0 || wlanIbssSecurityActive() != 0;
+	int active = wlanBaAnyActive(wlanTxBaSessions, wlanRxBaSessions);
+
+	if (data) {
+		if (active != 0)
+			rfCalibManageContext();
+		else
+			rfCalibInspectContext();
+	} else if (active != 0) {
+		rfCalibTrackContext();
+	} else {
+		rfCalibFormatContext();
+	}
+}
+
+/* 1: a connection may transmit now. */
+int wlanAnyConnectionTxAllowed(void)
+{
+	struct WlanConnection *connection;
+	UINT posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (macMgmtSelectContext(connection) == 1) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/*
+ * The BSS address registers are programmed for the stage a join or a
+ * start reaches (kind): from the descriptor, or from the peer of the
+ * station connection. 1: allowed (no access point or station BSS is
+ * already up).
+ */
+int wlanBssSelectAddress(unsigned int kind, const void *descriptor)
+{
+	int allowed = 1;
+	UINT posture = sysIrqDisable();
+
+	switch (kind) {
+	case 0:
+	case 1:
+	case 7:
+	case 8:
+	case 9:
+	case 10:
+		if (wlanConnectionAnyStarted(3) == 1)
+			allowed = 0;
+		if (wlanConnectionAnyStarted(2) == 1) {
+			allowed = 0;
+			break;
+		}
+		/* fall through */
+	case 2:
+		if (allowed == 1)
+			rfCalibApplyDescriptor(descriptor);
+		break;
+	case 3: {
+		struct WlanConnection *connection = p2pDirectProcessEntry(3);
+
+		if (connection != NULL || (connection = wlanConnectionFirst(0)) != NULL) {
+			if (connection->flags2 & 0x10)
+				descriptor = connection->peerAddress;
+		}
+		rfCalibApplyDescriptor(descriptor);
+		break;
+	}
+	default:
+		for (;;)
+			;
+	}
+	sysIrqRestore(posture);
+	return allowed;
+}
+
+/* The same check for the stages that only need to know whether the BSS may come up. */
+int wlanBssAllowStart(unsigned int stage)
+{
+	int allowed = 1;
+	UINT posture = sysIrqDisable();
+
+	if (stage != 0 && stage != 3) {
+		for (;;)
+			;
+	}
+	if (wlanConnectionAnyStarted(3) == 1)
+		allowed = 0;
+	if (wlanConnectionAnyStarted(2) == 1)
+		allowed = 0;
+	else if (allowed == 1)
+		romLibNotifyState();
+	sysIrqRestore(posture);
+	return allowed;
+}
+
+/*
+ * A BSS timing record (the beacon time and the next target time) is
+ * brought up to date for the stage that reached it.
+ */
+int wlanBssRecordTiming(unsigned int kind, struct WlanBssTiming *timing)
+{
+	int allowed = 1;
+	UINT posture = sysIrqDisable();
+
+	switch (kind) {
+	case 0:
+		if (wlanConnectionCount != 0) {
+			allowed = 0;
+			goto done;
+		} else {
+			uint32_t interval = timing->interval;
+			uint64_t next = ((uint64_t)timing->next[1] << 32) | timing->next[0];
+			uint64_t now = romLibRecordState(timing->next[0]);
+
+			if (next == 0 || next + interval < now || now < next) {
+				uint64_t quotient = next / interval;
+
+				next = romMul64x32(quotient + 1, interval);
+				timing->next[1] = next >> 32;
+				timing->next[0] = next;
+			}
+		}
+		break;
+	case 2: {
+		struct WlanConnection *connection = p2pDirectProcessEntry(3);
+
+		if (connection != NULL || (connection = wlanConnectionFirst(0)) != NULL) {
+			if (connection->flags2 & 0x10) {
+				uint64_t now = wlanSignalTimeNow();
+
+				timing->timestamp[1] = now >> 32;
+				timing->timestamp[0] = now;
+			}
+		}
+		break;
+	}
+	case 3: {
+		struct WlanConnection *connection = wlanConnectionFirst(0);
+
+		if (connection != NULL && (connection->flags2 & 0x10)) {
+			uint64_t now = wlanSignalTimeNow();
+			uint64_t timer;
+
+			timing->timestamp[1] = now >> 32;
+			timing->timestamp[0] = now;
+			timer = romGetTimerTimestamp();
+			timing->next[1] = timer >> 32;
+			timing->next[0] = timer;
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	romLibProcessContext(timing);
+done:
+	sysIrqRestore(posture);
+	return allowed;
+}
+
+/* The peer's address and state of the link check are cleared and the connection's peer state gets the argument. */
+int wlanConnectionUpdatePeer(struct WlanConnection *connection, int argument)
+{
+	wlanPsSetupPacket(connection->peerLinkState, argument);
+	return macTxNotifyApplyFrame(connection);
+}
+
+/* 1: the peer is not a group address and the connection's peers are QoS stations. */
+int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer)
+{
+	if (peer[0] & 1)
+		return 0;
+	return (connection->flags2 >> 3) & 1;
+}
+
+/* The next sequence number of a TID towards the peer (advanced when asked). */
+unsigned int wlanPeerNextSequence(struct WlanConnection *connection, unsigned int tid, int advance)
+{
+	unsigned int sequence = connection->txSequence[tid];
+
+	if (advance == 1)
+		connection->txSequence[tid] = (sequence + 1) & 0xfff;
+	return sequence;
+}
+
+/* An IBSS is left: the connection goes (when it was not the first of its BSS) or is torn down or its security cleared. */
+void wlanIbssLeave(struct WlanConnection *connection, int teardown)
+{
+	connection->stationFlags &= ~0x40u;
+	if (!(connection->flags2 & 4)) {
+		wlanConnectionRelease(connection);
+		return;
+	}
+	if (teardown != 0) {
+		wlanConnectionTeardownIbss(connection);
+		return;
+	}
+	wlanConnectionTxPowerUpdate(connection, 1);
+	wlanConnectionClearSecurity(connection);
+}
+
+void wlanIbssLeaveAll(int teardown)
+{
+	struct WlanConnection *connection;
+	UINT posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL;) {
+		struct WlanConnection *next = connection->next;
+
+		if (connection->interfaceType == 1)
+			wlanIbssLeave(connection, teardown);
+		connection = next;
+	}
+	sysIrqRestore(posture);
+}
+
+/*
+ * The link check of the IBSS connections: a peer silent for 2 s counts a miss,
+ * three misses leave the IBSS (and tell the host, unless it is the merge state).
+ */
+void wlanIbssCheckPeers(void)
+{
+	uint8_t none[8] = { 0 };
+	struct WlanConnection *connection = wlanConnectionList;
+	uint32_t now = romGetMicroseconds();
+
+	while (connection != NULL) {
+		if (connection->interfaceType == 1) {
+			if (connection->stationFlags & 0x80) {
+				if ((unsigned int)wlanTimeDelta(now, connection->peerCheckTime) >= 2000000) {
+					if (++connection->peerCheckMisses < 3) {
+						connection->peerCheckTime = now;
+					} else {
+						connection->peerCheckMisses = 0;
+						wlanIbssLeave(connection, 0);
+					}
+				}
+				return;
+			}
+			if (memcmp(connection->peerAddress, none, 6) != 0) {
+				if ((unsigned int)wlanTimeDelta(now, connection->peerCheckTime) >= 2000000) {
+					if (++connection->peerCheckMisses < 3) {
+						connection->peerCheckTime = now;
+					} else {
+						connection->peerCheckMisses = 0;
+						wlanHostEventSendAddress(connection, WLAN_HOST_EVENT_IBSS_PEER_SILENT,
+									 connection->peerAddress);
+						wlanIbssLeave(connection, 0);
+					}
+				}
+			}
+		}
+		connection = connection->next;
+	}
+}
+
+int wlanIbssResetPeerCheck(struct WlanConnection *connection)
+{
+	connection->peerCheckTime = romGetMicroseconds();
+	connection->peerCheckMisses = 0;
+	return 0;
+}
+
+/* The power-save frames queued on the connections of one BSS. */
+int wlanBssQueuedFrames(const struct WlanConnection *bss)
+{
+	unsigned int bssNumber = bss->bssNumber;
+	unsigned int bssType = bss->bssType;
+	struct WlanConnection *connection;
+	int total = 0;
+	UINT posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->bssNumber == bssNumber && connection->bssType == bssType) {
+			struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+			if (role != NULL)
+				total += role->psQueue.count;
+		}
+	}
+	sysIrqRestore(posture);
+	return total;
+}
+
+/* The BSS count over the access points and stations in mode 2. */
+int wlanConnectionCountMode2(int stage)
+{
+	unsigned int types = 0x302;	/* interface types 2, 3 */
+	int total = 0;
+
+	if (stage == 2) {
+		unsigned int i;
+
+		for (i = 0; i < 2; i++) {
+			struct WlanConnection *connection = wlanConnectionFirst((types >> (8 * i)) & 0xff);
+
+			while (connection != NULL) {
+				if (connection->mode == 2)
+					total += wlanConnectionBssCount(connection);
+				connection = wlanConnectionNextFlagged(connection, connection->interfaceType);
+			}
+		}
+	}
+	return total;
+}
+
+/* The lowest transmit power limit of the connections (255: none set). */
+int wlanTxPowerLimitMin(void)
+{
+	struct WlanConnection *connection;
+	int limit = 255;
+	UINT posture = sysIrqDisable();
+
+	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
+		if (connection->txPowerLimit < limit)
+			limit = connection->txPowerLimit;
+	}
+	sysIrqRestore(posture);
+	return limit;
+}
+
+/* The hardware address slot 4 takes (or gives back) the address: its bit in the index mask follows. */
+int wlanConnectionIndexAssign(const uint8_t *address)
+{
+	int result = macTxNotifyAcquireBuffer(1, address, 4, 1);
+
+	if (result == 0)
+		wlanConnectionIndexMask |= 0x10;
+	return result;
+}
+
+int wlanConnectionIndexUnassign(const uint8_t *address)
+{
+	int result = macTxNotifyAcquireBuffer(0, address, 4, 1);
+
+	if (result == 0)
+		wlanConnectionIndexMask &= ~0x10u;
+	return result;
+}
+
+struct WlanConnection *wlanConnectionSlotGet(unsigned int index)
+{
+	return wlanConnectionSlots[index];
+}
+
+/* A connection of type 0 is given back: its link check stops and the supplicant state is cleared. */
+int wlanConnectionTeardownType0(struct WlanConnection *connection)
+{
+	osaCancelTimer(connection->link.timer);
+	__aeabi_memclr4(&connection->link, 24);
+	return wpaSuppConvertDescriptor(connection->reserved636);
+}
+
+/* The same for a station connection in mode 3. */
+int wlanConnectionTeardownStation(struct WlanConnection *connection)
+{
+	osaCancelTimer(connection->link.timer);
+	__aeabi_memclr4(&connection->link, 24);
+	return wpaSuppConvertDescriptor(connection->reserved636);
 }

@@ -149,6 +149,8 @@ _Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
 #define WLAN_HOST_EVENT_MIC_ERR_UNICAST		0x0e
 #define WLAN_HOST_EVENT_DEEP_SLEEP_AWAKE	0x10
 #define WLAN_HOST_EVENT_HOST_SLEEP_AWAKE	0x12
+#define WLAN_HOST_EVENT_WMM_STATUS		0x17
+#define WLAN_HOST_EVENT_IBSS_PEER_SILENT	0x21	/* the IBSS's peer missed three link checks (inferred) */
 
 extern struct OsaMsgList wlanHostEventQueue;
 extern uint16_t wlanHostSleepEndOnWake;

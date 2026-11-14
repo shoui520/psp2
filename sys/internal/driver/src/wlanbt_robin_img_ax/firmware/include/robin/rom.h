@@ -48,6 +48,15 @@ unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the 
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */
 uint64_t romGetTimerTimestamp(void);
+uint32_t romGetMicroseconds(void);		/* 0x03f3a7cb: the MAC's clock, low word, microseconds */
+uint64_t romLibRecordState(uint32_t reference);	/* 0x03f3a76f: the current 64-bit time */
+void romLibProcessContext(void *timing);	/* 0x03f3a7e3 */
+void romLibNotifyState(void);			/* 0x03f3a551 */
+uint64_t romMul64x32(uint64_t value, uint32_t factor);	/* 0x03f3f3ac (ARM) */
+int romEdcaSetCwMin(unsigned int queue, unsigned int value);	/* 0x03f3a62f */
+int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
+int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
+int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
 /* The MAC's wake and sleep requests (0x03f3a917, 0x03f3a907); no argument. */
 void romMacWakeRequest(void);
 void romMacSleepNotify(void);
