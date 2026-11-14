@@ -42,7 +42,7 @@ static const struct {	/* the ranges of x above 54, each with its approximation *
 long double _LTgamma(long double *px, short *pex)
 {
 	long double x = *px;
-	long double z = 1.0L;
+	long double z;
 
 	if (54.0L <= x) {	/* Stirling: x^(x - 1/2) e^-x sqrtl(2pi) times the series */
 		long double y;
@@ -54,6 +54,7 @@ long double _LTgamma(long double *px, short *pex)
 		*px /= z * expl(-x);
 		return 0.0L;
 	} else if (x < -0.5L) {	/* multiply up */
+		z = 1.0L;
 		for (;;) {
 			z *= x;
 			if (0.5L < x)

@@ -102,10 +102,12 @@ unsigned int _LQuad(long double *px)
 			x = x - gs * twopi_mod[0][0] - gs * twopi_mod[0][1] - gs * twopi_mod[0][2]
 			    - gs * twopi_mod[0][3] - gs * twopi_mod[0][4];
 		}
+		*px = x;
 	} else {	/* reduce modulo 2pi first */
-		long double acc[NTERMS];
-		long double w[2];
 		long double t[NTERMS];
+		long double w[2];
+		long double acc[NTERMS];
+		short yexp;
 		short xexp;
 		int n;
 
@@ -134,7 +136,6 @@ unsigned int _LQuad(long double *px)
 			if (w[1] != 0.0L) {
 				long double u[NTERMS];
 				long double y = acc[0];
-				short yexp;
 
 				_LDunscale(&yexp, &y);
 				n = NUSED(yexp) <= NTERMS ? NUSED(yexp) : NTERMS;
@@ -150,7 +151,6 @@ unsigned int _LQuad(long double *px)
 		if (g != 0.0L) {
 			long double v[NTERMS];
 			long double y = acc[0];
-			short yexp;
 
 			_LDunscale(&yexp, &y);
 			n = NUSED(yexp) <= NTERMS ? NUSED(yexp) : NTERMS;
@@ -159,8 +159,8 @@ unsigned int _LQuad(long double *px)
 			_LXp_addx(acc, n, v, n);
 		}
 		x = _LXp_getw(acc, n);
+		*px = x;
 	}
-	*px = x;
 	if (g < -(long double)INT_MAX || (long double)INT_MAX < g)	/* keep the quadrant in an int */
 		g = fmodl(g, (long double)INT_MAX + 1);
 	return (int)g & 3;

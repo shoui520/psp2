@@ -36,7 +36,7 @@ static const struct {	/* the ranges of x above 31, each with its approximation *
 float _FTgamma(float *px, short *pex)
 {
 	float x = *px;
-	float z = 1.0F;
+	float z;
 
 	if (31.0F <= x) {	/* Stirling: x^(x - 1/2) e^-x sqrt(2pi) times the series */
 		float y;
@@ -48,6 +48,7 @@ float _FTgamma(float *px, short *pex)
 		*px /= z * expf(-x);
 		return 0.0F;
 	} else if (x < -0.5F) {	/* multiply up */
+		z = 1.0F;
 		for (;;) {
 			z *= x;
 			if (0.5F < x)

@@ -42,7 +42,7 @@ static const struct {	/* the ranges of x above 54, each with its approximation *
 double _Tgamma(double *px, short *pex)
 {
 	double x = *px;
-	double z = 1.0;
+	double z;
 
 	if (54.0 <= x) {	/* Stirling: x^(x - 1/2) e^-x sqrt(2pi) times the series */
 		double y;
@@ -54,6 +54,7 @@ double _Tgamma(double *px, short *pex)
 		*px /= z * exp(-x);
 		return 0.0;
 	} else if (x < -0.5) {	/* multiply up */
+		z = 1.0;
 		for (;;) {
 			z *= x;
 			if (0.5 < x)

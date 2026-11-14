@@ -102,10 +102,12 @@ unsigned int _Quad(double *px)
 			x = x - gs * twopi_mod[0][0] - gs * twopi_mod[0][1] - gs * twopi_mod[0][2]
 			    - gs * twopi_mod[0][3] - gs * twopi_mod[0][4];
 		}
+		*px = x;
 	} else {	/* reduce modulo 2pi first */
-		double acc[NTERMS];
-		double w[2];
 		double t[NTERMS];
+		double w[2];
+		double acc[NTERMS];
+		short yexp;
 		short xexp;
 		int n;
 
@@ -134,7 +136,6 @@ unsigned int _Quad(double *px)
 			if (w[1] != 0.0) {
 				double u[NTERMS];
 				double y = acc[0];
-				short yexp;
 
 				_Dunscale(&yexp, &y);
 				n = NUSED(yexp) <= NTERMS ? NUSED(yexp) : NTERMS;
@@ -150,7 +151,6 @@ unsigned int _Quad(double *px)
 		if (g != 0.0) {
 			double v[NTERMS];
 			double y = acc[0];
-			short yexp;
 
 			_Dunscale(&yexp, &y);
 			n = NUSED(yexp) <= NTERMS ? NUSED(yexp) : NTERMS;
@@ -159,8 +159,8 @@ unsigned int _Quad(double *px)
 			_Xp_addx(acc, n, v, n);
 		}
 		x = _Xp_getw(acc, n);
+		*px = x;
 	}
-	*px = x;
 	if (g < -(double)INT_MAX || (double)INT_MAX < g)	/* keep the quadrant in an int */
 		g = fmod(g, (double)INT_MAX + 1);
 	return (int)g & 3;
