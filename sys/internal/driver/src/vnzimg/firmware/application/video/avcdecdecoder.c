@@ -21,8 +21,8 @@ static void runRead(AvcdecDecoder *decoder);
 static void runDone(AvcdecDecoder *decoder);
 static void stripesDone(AvcdecDecoder *decoder);
 static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t row);
-static void stripeNext(AvcdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t mode,
-	uint32_t width);
+static void stripeNext(AvcdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
+	uint32_t mode, uint32_t width);
 static void rowsStartSingle(AvcdecDecoder *decoder, AvcdecDecoderInfo *info, int32_t lastRow);
 static void runReadSingle(AvcdecDecoder *decoder);
 static void stripesDoneSingle(AvcdecDecoder *decoder);
@@ -760,7 +760,7 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 		self = -1;
 	} else if (!entry->runEnd) {
 		/* the row's next stripe, once the row two above is far enough */
-		stripeNext(entry, jobIndex, row, mode, width);
+		stripeNext(entry, jobIndex, row, count, mode, width);
 		self = jobIndex + 1;
 		if (row < 2 || decoder->rowStripes[row - 2] == stripes)
 			limit = self + 1;
@@ -836,17 +836,17 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 }
 
 /* 0x82e5e2: a row's entry moved on to its next stripe */
-static void stripeNext(AvcdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t mode,
-	uint32_t width)
+static void stripeNext(AvcdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
+	uint32_t mode, uint32_t width)
 {
 	const VideoHelperJob *job = (const VideoHelperJob *)entry->job;
-	uint32_t endY = job->endY, endX = job->endX, count;
+	uint32_t endY = job->endY, endX = job->endX;
 
 	entry->leftover = 0;
 	entry->fromStart = 0;
 	entry->runEnd = 0;
 	entry->jobIndex = jobIndex + 1;
-	entry->x += entry->count;
+	entry->x += count;
 	count = mode;
 	if (!(entry->x + mode < width))
 		count = width - entry->x;

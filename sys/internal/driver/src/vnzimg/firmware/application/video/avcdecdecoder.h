@@ -116,8 +116,8 @@ typedef struct AvcdecDecoderInfo {
 /* the pictures decoded and their frames (128 bytes) */
 typedef struct AvcdecDecoderStatus {
 	uint32_t count;			/* the pictures decoded */
-	uint8_t outputCount;		/* the parser's: the pictures to give out */
-	uint8_t outputStart;
+	int8_t outputCount;		/* the parser's: the pictures to give out */
+	int8_t outputStart;
 	uint8_t reserved[2];
 	uint32_t decoderData;		/* the VideoAvcFrame records */
 	uint32_t frames[DECODER_FRAMES];	/* a picture's frame, raw; 0 none */

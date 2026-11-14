@@ -4,6 +4,7 @@
  * records of m4vdecdecoder.h), then the stripes' jobs.
  */
 #include "m4vdecdecoder.h"
+#include "m4vdecparser.h"	/* m4vdecDcDivide */
 
 static M4vdecDecoder *decoderBegin(uint32_t memory);
 static uint32_t decoderWait(M4vdecDecoder *decoder);
@@ -20,8 +21,8 @@ static void runRead(M4vdecDecoder *decoder);
 static void runDone(M4vdecDecoder *decoder);
 static void stripesDone(M4vdecDecoder *decoder);
 static uint32_t stripeDone(M4vdecDecoder *decoder, uint32_t jobIndex, uint32_t row);
-static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t mode,
-	uint32_t width);
+static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
+	uint32_t mode, uint32_t width);
 static void rowsStartSingle(M4vdecDecoder *decoder, M4vdecDecoderInfo *info, int32_t lastRow);
 static void runReadSingle(M4vdecDecoder *decoder);
 static void stripesDoneSingle(M4vdecDecoder *decoder);
@@ -727,7 +728,7 @@ static uint32_t stripeDone(M4vdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 		self = -1;
 	} else if (!entry->runEnd) {
 		/* the row's next stripe, once the row two above is far enough */
-		stripeNext(entry, jobIndex, row, mode, width);
+		stripeNext(entry, jobIndex, row, count, mode, width);
 		self = jobIndex + 1;
 		if (row < 2 || decoder->rowStripes[row - 2] == stripes)
 			limit = self + 1;
@@ -803,17 +804,17 @@ static uint32_t stripeDone(M4vdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 }
 
 /* 0x8488e4: a row's entry moved on to its next stripe */
-static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t mode,
-	uint32_t width)
+static void stripeNext(M4vdecRow *entry, uint32_t jobIndex, uint32_t row, uint32_t count,
+	uint32_t mode, uint32_t width)
 {
 	const VideoHelperJob *job = (const VideoHelperJob *)entry->job;
-	uint32_t endY = job->endY, endX = job->endX, count;
+	uint32_t endY = job->endY, endX = job->endX;
 
 	entry->leftover = 0;
 	entry->fromStart = 0;
 	entry->runEnd = 0;
 	entry->jobIndex = jobIndex + 1;
-	entry->x += entry->count;
+	entry->x += count;
 	count = mode;
 	if (!(entry->x + mode < width))
 		count = width - entry->x;
@@ -1132,29 +1133,29 @@ static void runClose(const M4vdecDecoderInfo *info, const M4vdecRun *run, M4vdec
 static void rowsClear(const M4vdecDecoderInfo *info)
 {
 	uint32_t width = info->widthInMbs, size = (width + 1) * sizeof(M4vdecAbove);
-	M4vdecAboveBlocks *luma, *chroma;
+	M4vdecPredictors *luma, *chroma;
 	M4vdecAbove *above;
 	int32_t i, j;
 
 	above = (M4vdecAbove *)vnzPublicOpenPrivate(info->row0, size);
-	luma = (M4vdecAboveBlocks *)vnzPublicOpenPrivate(info->row1, size);
-	chroma = (M4vdecAboveBlocks *)vnzPublicOpenPrivate(info->row2, size);
+	luma = (M4vdecPredictors *)vnzPublicOpenPrivate(info->row1, size);
+	chroma = (M4vdecPredictors *)vnzPublicOpenPrivate(info->row2, size);
 	for (i = 0; i < (int32_t)width + 1; i++) {
 		above[i].quant = 1;
 		above[i].vectors[0].word = 0;
 		above[i].vectors[1].word = 0;
 		above[i].available = 0;
-		luma[i].blocks[0].dc = DC_RESET;
-		luma[i].blocks[1].dc = DC_RESET;
-		for (j = 0; j < 7; j++) {
-			luma[i].blocks[0].ac[j] = 0;
-			luma[i].blocks[1].ac[j] = 0;
+		luma[i].rows[0][0] = DC_RESET;
+		luma[i].rows[1][0] = DC_RESET;
+		for (j = 1; j < 8; j++) {
+			luma[i].rows[0][j] = 0;
+			luma[i].rows[1][j] = 0;
 		}
-		chroma[i].blocks[0].dc = DC_RESET;
-		chroma[i].blocks[1].dc = DC_RESET;
-		for (j = 0; j < 7; j++) {
-			chroma[i].blocks[0].ac[j] = 0;
-			chroma[i].blocks[1].ac[j] = 0;
+		chroma[i].rows[0][0] = DC_RESET;
+		chroma[i].rows[1][0] = DC_RESET;
+		for (j = 1; j < 8; j++) {
+			chroma[i].rows[0][j] = 0;
+			chroma[i].rows[1][j] = 0;
 		}
 	}
 	vnzPublicClosePrivate((uint32_t)above, size);
@@ -1329,6 +1330,357 @@ static void stripeClose(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
 	vnzKernelVThreadJobSignal(locked, info->jobsPerKind + entry->jobIndex);
 	vnzKernelVThreadJobSignal(locked, info->jobsPerKind * 2 + entry->jobIndex);
 	vnzKernelVThreadContextUnlock(locked);
+}
+
+/* the luma job's, after the run pass */
+static void lumaOpen(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe);
+static void lumaLoad(M4vdecStripe *stripe);
+static void lumaAdvance(M4vdecStripe *stripe);
+static void lumaClose(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe);
+static void lumaIntra(M4vdecStripe *stripe);
+static void lumaInter(M4vdecStripe *stripe);
+static void lumaPredict(M4vdecStripe *stripe);
+static void referenceFetch(const M4vdecStripe *stripe, const uint8_t *frame, int32_t x, int32_t y,
+	M4vdecReference *reference);
+
+/*
+ * 0x849644, a job: a stripe's luma decoded, its intra macroblocks from
+ * their coefficients, the others predicted from the last picture with
+ * their residual; the row's luma noted done for the chroma job's or done.
+ */
+void m4vdecStripeLuma(uint32_t infoAddress, uint32_t rowAddress, uint32_t unused,
+	uint32_t unused2)
+{
+	const M4vdecDecoderInfo *info = (const M4vdecDecoderInfo *)infoAddress;
+	uint32_t slot = workSlot();
+	AvcdecLockArea *lockArea;
+	M4vdecStripe *stripe;
+	M4vdecRow *entry;
+	uint32_t bit;
+	int32_t i;
+
+	entry = (M4vdecRow *)vnzPublicOpenProtected(rowAddress, DECODER_ROW_SIZE);
+	stripe = (M4vdecStripe *)vnzPublicOpenPrivate(entry->common + slot * M4VDEC_STRIPE_SIZE,
+		M4VDEC_STRIPE_SIZE);
+	vnzCacheInvalidateInside((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	lumaOpen(info, entry, stripe);
+	for (i = 0; i < entry->count; i++) {
+		lumaLoad(stripe);
+		if (stripe->kind & M4V_KIND_INTRA) {
+			lumaIntra(stripe);
+		} else {
+			lumaPredict(stripe);
+			lumaInter(stripe);
+		}
+		lumaAdvance(stripe);
+	}
+	lumaClose(info, entry, stripe);
+	lockArea = info->lockArea;
+	bit = 1 << (stripe->row & 31);
+	vnzCachePurge((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	vnzPublicClosePrivate((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	vnzPublicCloseProtected((uint32_t)entry, DECODER_ROW_SIZE);
+	vnzSpinLock(lockArea->lock);
+	if (lockArea->pending & bit) {
+		lockArea->pending &= ~bit;
+		lockArea->doneRows |= bit;
+	} else {
+		lockArea->pending |= bit;
+	}
+	vnzSpinUnlock(lockArea->lock);
+}
+
+/*
+ * 0x849730: the luma job's records opened: the stripe's luma in the frame,
+ * its coefficients' cursor, its macroblocks' in the row's ring, its
+ * predictors in the rows above; the predictors reset where a packet starts.
+ */
+static void lumaOpen(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe)
+{
+	uint32_t x = entry->x, count = entry->count, row = entry->row, mode = info->mode;
+	const VideoHelperJob *job;
+	const VideoM4vCommand *command;
+	M4vdecPredictors *predictors;
+	M4vdecBlockCursor *cursor;
+	uint32_t ring, limit, i, k;
+
+	stripe->x = x;
+	stripe->row = row;
+	command = (const VideoM4vCommand *)vnzPublicOpenProtected((uint32_t)info->command,
+		sizeof(VideoM4vCommand));
+	stripe->command = command;
+	stripe->luma = (uint8_t *)vnzPublicOpenPrivate(info->luma + x * 256 + row * info->width * 16,
+		count * 256);
+	ring = row % info->mbSize;
+	stripe->blockCursor = (M4vdecBlockCursor *)(info->table2048b + ring * sizeof(M4vdecBlockCursor));
+	stripe->blockCursor = (M4vdecBlockCursor *)vnzPublicOpenPrivate((uint32_t)stripe->blockCursor,
+		sizeof(M4vdecBlockCursor));
+	stripe->mb = (M4vdecMbRecord *)vnzPublicOpenProtected(info->table4096 +
+		ring * mode * sizeof(M4vdecMbRecord), mode * sizeof(M4vdecMbRecord)) + (mode - count);
+	stripe->predictors = (M4vdecPredictors *)(info->row1 + x * sizeof(M4vdecPredictors));
+	stripe->predictors = (M4vdecPredictors *)vnzPublicOpenPrivate((uint32_t)stripe->predictors,
+		count * sizeof(M4vdecPredictors) + sizeof(M4vdecPredictors));
+	stripe->roundingType = command->roundingType;
+	stripe->shortHeader = command->shortHeader;
+	stripe->width = info->widthInMbs * 16;
+	stripe->height = info->heightInMbs * 16;
+	stripe->reference = (const uint8_t *)info->referenceLuma;
+	stripe->frameWidth = info->width;
+	job = (const VideoHelperJob *)entry->job;
+	if (!x || job->firstX == x) {
+		cursor = stripe->blockCursor;
+		cursor->coefficients = (const int16_t *)(job->buffers[5] +
+			command->lumaRowSize * (row - job->firstY));
+		cursor->aboveLeftDc = DC_RESET;
+		predictors = stripe->predictors;
+		for (k = 0; k < 2; k++) {
+			predictors->columns[k][0] = DC_RESET;
+			for (i = 1; i < 8; i++)
+				predictors->columns[k][i] = 0;
+		}
+	}
+	if (job->sliceUsed) {
+		if (row == job->endY)
+			limit = 0;
+		else if (row + 1 == job->endY)
+			limit = (int8_t)job->endX;
+		else
+			limit = info->widthInMbs;
+	} else {
+		limit = info->widthInMbs;
+	}
+	stripe->limit = limit;
+	if (job->load && job->firstX) {
+		predictors = stripe->predictors;
+		for (i = 0; i < count; i++) {
+			for (k = 0; k < 2; k++) {
+				predictors[i].rows[k][0] = DC_RESET;
+				for (ring = 1; ring < 8; ring++)
+					predictors[i].rows[k][ring] = 0;
+			}
+		}
+	}
+}
+
+/* 0x8498f4: the next macroblock's kind and quantisers */
+static void lumaLoad(M4vdecStripe *stripe)
+{
+	const M4vdecMbRecord *mb = stripe->mb;
+
+	stripe->kind = mb->kind;
+	stripe->quant = mb->quant;
+	stripe->leftQuant = mb->leftQuant;
+	stripe->aboveQuant = mb->aboveQuant;
+}
+
+/* 0x849918: the next macroblock; the predictors below reset past the packet */
+static void lumaAdvance(M4vdecStripe *stripe)
+{
+	M4vdecPredictors *predictors;
+	uint32_t k, i;
+
+	if (stripe->x >= stripe->limit) {
+		predictors = stripe->predictors;
+		for (k = 0; k < 2; k++) {
+			predictors->rows[k][0] = DC_RESET;
+			for (i = 1; i < 8; i++)
+				predictors->rows[k][i] = 0;
+		}
+	}
+	stripe->luma += 256;
+	stripe->predictors++;
+	stripe->mb++;
+	stripe->x++;
+}
+
+/* 0x849970: the luma job's records closed */
+static void lumaClose(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe)
+{
+	uint32_t count = entry->count, mode = info->mode;
+
+	vnzPublicCloseProtected((uint32_t)stripe->command, sizeof(VideoM4vCommand));
+	vnzPublicCloseProtected((uint32_t)(stripe->mb - mode), mode * sizeof(M4vdecMbRecord));
+	vnzPublicClosePrivate((uint32_t)stripe->blockCursor, sizeof(M4vdecBlockCursor));
+	vnzPublicClosePrivate((uint32_t)(stripe->predictors - count),
+		count * sizeof(M4vdecPredictors) + sizeof(M4vdecPredictors));
+	vnzPublicClosePrivate((uint32_t)(stripe->luma - count * 256), count * 256);
+}
+
+/* the chroma job's */
+static void chromaOpen(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe);
+static void chromaLoad(M4vdecStripe *stripe);
+static void chromaAdvance(M4vdecStripe *stripe);
+static void chromaClose(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe);
+static void chromaIntra(M4vdecStripe *stripe);
+static void chromaInter(M4vdecStripe *stripe);
+static void chromaPredict(M4vdecStripe *stripe);
+
+/* 0x8499cc, a job: a stripe's chroma decoded, as m4vdecStripeLuma its luma */
+void m4vdecStripeChroma(uint32_t infoAddress, uint32_t rowAddress, uint32_t unused,
+	uint32_t unused2)
+{
+	const M4vdecDecoderInfo *info = (const M4vdecDecoderInfo *)infoAddress;
+	uint32_t slot = workSlot();
+	AvcdecLockArea *lockArea;
+	M4vdecStripe *stripe;
+	M4vdecRow *entry;
+	uint32_t bit;
+	int32_t i;
+
+	entry = (M4vdecRow *)vnzPublicOpenProtected(rowAddress, DECODER_ROW_SIZE);
+	stripe = (M4vdecStripe *)vnzPublicOpenPrivate(entry->common + slot * M4VDEC_STRIPE_SIZE,
+		M4VDEC_STRIPE_SIZE);
+	vnzCacheInvalidateInside((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	chromaOpen(info, entry, stripe);
+	for (i = 0; i < entry->count; i++) {
+		chromaLoad(stripe);
+		if (stripe->kind & M4V_KIND_INTRA) {
+			chromaIntra(stripe);
+		} else {
+			chromaPredict(stripe);
+			chromaInter(stripe);
+		}
+		chromaAdvance(stripe);
+	}
+	chromaClose(info, entry, stripe);
+	lockArea = info->lockArea;
+	bit = 1 << (stripe->row & 31);
+	vnzCachePurge((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	vnzPublicClosePrivate((uint32_t)stripe, M4VDEC_STRIPE_SIZE);
+	vnzPublicCloseProtected((uint32_t)entry, DECODER_ROW_SIZE);
+	vnzSpinLock(lockArea->lock);
+	if (lockArea->pending & bit) {
+		lockArea->pending &= ~bit;
+		lockArea->doneRows |= bit;
+	} else {
+		lockArea->pending |= bit;
+	}
+	vnzSpinUnlock(lockArea->lock);
+}
+
+/* 0x849ab8: the chroma job's records opened, as lumaOpen the luma's */
+static void chromaOpen(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe)
+{
+	uint32_t x = entry->x, count = entry->count, row = entry->row, mode = info->mode;
+	const VideoHelperJob *job;
+	const VideoM4vCommand *command;
+	M4vdecPredictors *predictors;
+	M4vdecChromaCursor *cursor;
+	uint32_t ring, limit, i, k;
+
+	stripe->x = x;
+	stripe->row = row;
+	command = (const VideoM4vCommand *)vnzPublicOpenProtected((uint32_t)info->command,
+		sizeof(VideoM4vCommand));
+	stripe->command = command;
+	stripe->chroma = (uint8_t *)vnzPublicOpenPrivate(info->chroma + x * 128 +
+		row * info->pitch * 8, count * 128);
+	ring = row % info->mbSize;
+	stripe->chromaCursor = (M4vdecChromaCursor *)(info->table1024b +
+		ring * sizeof(M4vdecChromaCursor));
+	stripe->chromaCursor = (M4vdecChromaCursor *)vnzPublicOpenPrivate(
+		(uint32_t)stripe->chromaCursor, sizeof(M4vdecChromaCursor));
+	stripe->mb = (M4vdecMbRecord *)vnzPublicOpenProtected(info->table4096 +
+		ring * mode * sizeof(M4vdecMbRecord), mode * sizeof(M4vdecMbRecord)) + (mode - count);
+	stripe->chromaPredictors = (M4vdecPredictors *)(info->row2 + x * sizeof(M4vdecPredictors));
+	stripe->chromaPredictors = (M4vdecPredictors *)vnzPublicOpenPrivate(
+		(uint32_t)stripe->chromaPredictors,
+		count * sizeof(M4vdecPredictors) + sizeof(M4vdecPredictors));
+	stripe->roundingType = command->roundingType;
+	stripe->shortHeader = command->shortHeader;
+	stripe->chromaWidth = info->widthInMbs * 8;
+	stripe->chromaHeight = info->heightInMbs * 8;
+	stripe->referenceChroma = (const uint8_t *)info->referenceChroma;
+	stripe->chromaFrameWidth = info->pitch;
+	job = (const VideoHelperJob *)entry->job;
+	if (!x || job->firstX == x) {
+		cursor = stripe->chromaCursor;
+		cursor->coefficients[0] = (const int16_t *)(job->buffers[6] +
+			command->chromaRowSize * (row - job->firstY));
+		cursor->coefficients[1] = (const int16_t *)(job->buffers[7] +
+			command->chromaRowSize * (row - job->firstY));
+		cursor->aboveLeftDc[1] = DC_RESET;
+		cursor->aboveLeftDc[0] = DC_RESET;
+		predictors = stripe->chromaPredictors;
+		for (k = 0; k < 2; k++) {
+			predictors->columns[k][0] = DC_RESET;
+			for (i = 1; i < 8; i++)
+				predictors->columns[k][i] = 0;
+		}
+	}
+	if (job->sliceUsed) {
+		if (row == job->endY)
+			limit = 0;
+		else if (row + 1 == job->endY)
+			limit = (int8_t)job->endX;
+		else
+			limit = info->widthInMbs;
+	} else {
+		limit = info->widthInMbs;
+	}
+	stripe->limit = limit;
+	if (job->load && job->firstX) {
+		predictors = stripe->chromaPredictors;
+		for (i = 0; i < count; i++) {
+			for (k = 0; k < 2; k++) {
+				predictors[i].rows[k][0] = DC_RESET;
+				for (ring = 1; ring < 8; ring++)
+					predictors[i].rows[k][ring] = 0;
+			}
+		}
+	}
+}
+
+/* 0x849c86: the next macroblock's kind and quantisers (lumaLoad's) */
+static void chromaLoad(M4vdecStripe *stripe)
+{
+	const M4vdecMbRecord *mb = stripe->mb;
+
+	stripe->kind = mb->kind;
+	stripe->quant = mb->quant;
+	stripe->leftQuant = mb->leftQuant;
+	stripe->aboveQuant = mb->aboveQuant;
+}
+
+/* 0x849caa: the next macroblock; the predictors below reset past the packet */
+static void chromaAdvance(M4vdecStripe *stripe)
+{
+	M4vdecPredictors *predictors;
+	uint32_t k, i;
+
+	if (stripe->x >= stripe->limit) {
+		predictors = stripe->chromaPredictors;
+		for (k = 0; k < 2; k++) {
+			predictors->rows[k][0] = DC_RESET;
+			for (i = 1; i < 8; i++)
+				predictors->rows[k][i] = 0;
+		}
+	}
+	stripe->chroma += 128;
+	stripe->chromaPredictors++;
+	stripe->mb++;
+	stripe->x++;
+}
+
+/* 0x849d02: the chroma job's records closed */
+static void chromaClose(const M4vdecDecoderInfo *info, const M4vdecRow *entry,
+	M4vdecStripe *stripe)
+{
+	uint32_t count = entry->count, mode = info->mode;
+
+	vnzPublicCloseProtected((uint32_t)stripe->command, sizeof(VideoM4vCommand));
+	vnzPublicCloseProtected((uint32_t)(stripe->mb - mode), mode * sizeof(M4vdecMbRecord));
+	vnzPublicClosePrivate((uint32_t)stripe->chromaCursor, sizeof(M4vdecChromaCursor));
+	vnzPublicClosePrivate((uint32_t)(stripe->chromaPredictors - count),
+		count * sizeof(M4vdecPredictors) + sizeof(M4vdecPredictors));
+	vnzPublicClosePrivate((uint32_t)(stripe->chroma - count * 128), count * 128);
 }
 
 /* the kinds by the parser's type (0x8fc174) */
@@ -1735,4 +2087,659 @@ static void vectorsIntra(M4vdecStripe *stripe)
 	mb->vectors[1].word = 0;
 	above->vectors[1].word = 0;
 	above->vectors[0].word = 0;
+}
+
+/* the luma's dc_scaler by quantiser (0x8fc1b8) */
+static const uint8_t g_m4vdecDcScalerLuma[32] = {
+	0, 8, 8, 8, 8, 10, 12, 14, 16, 17, 18, 19, 20, 21, 22, 23,
+	24, 25, 26, 27, 28, 29, 30, 31, 32, 34, 36, 38, 40, 42, 44, 46,
+};
+
+static void lumaIntraShort(M4vdecStripe *stripe);
+static void lumaIntraPredicted(M4vdecStripe *stripe);
+static void lumaResidual(M4vdecStripe *stripe);
+static void lumaInterPredictors(M4vdecStripe *stripe);
+static uint32_t dcPredict(M4vdecBlock *block, int32_t left, int32_t aboveLeft, int32_t above,
+	int32_t scaler);
+
+/*
+ * 0x84a824: an intra macroblock's luma, by the picture's header. (It sets
+ * ccr8 to 0xfedcba10, cpperm0's lane 0 from its second operand, for
+ * dcDequantize's DC.)
+ */
+static void lumaIntra(M4vdecStripe *stripe)
+{
+	if (stripe->shortHeader)
+		lumaIntraShort(stripe);
+	else
+		lumaIntraPredicted(stripe);
+}
+
+/* 0x84a83e: an inter macroblock's luma residual, its predictors reset for intra neighbours */
+static void lumaInter(M4vdecStripe *stripe)
+{
+	if (((stripe->kind >> 8) & 63) >> 2)
+		lumaResidual(stripe);
+	lumaInterPredictors(stripe);
+}
+
+/* 0x84a870: the block's IDCT */
+static void idct(M4vdecBlock *block)
+{
+	m4vdecIdctRows(block);
+	m4vdecIdctColumns(block);
+}
+
+/* 0x84a884: an intra block dequantised, its DC by the dc_scaler, in 12 bits */
+static void dcDequantize(M4vdecBlock *block, uint32_t even, uint32_t quant, int32_t scaler)
+{
+	int32_t dc;
+
+	dc = max32(min32(block->coef[0][0] * scaler, 2047), -2048);
+	m4vdecDequantize(block, even, quant);
+	block->coef[0][0] = dc;
+}
+
+/* 0x84a8b6: a short header's intra luma: no AC/DC prediction, the DCs by 8 */
+static void lumaIntraShort(M4vdecStripe *stripe)
+{
+	const int16_t *coefficients = stripe->blockCursor->coefficients;
+	uint32_t quant = (uint8_t)stripe->quant, even = ~quant & 1;
+	uint32_t coded = ((stripe->kind >> 16) & 63) >> 2;
+	uint8_t *luma = stripe->luma;
+	M4vdecBlock block;
+	int32_t i;
+
+	for (i = 0; i < 4; i++) {
+		if (coded & 8) {
+			m4vdecBlockLoad(&block, coefficients);
+			coefficients += 64;
+		} else {
+			m4vdecBlockLoadDc(&block, coefficients);
+			coefficients += 4;
+		}
+		dcDequantize(&block, even, quant, 8);
+		idct(&block);
+		m4vdecBlockStore(&block, luma + (i & 1) * 8 + (i & 2) * 64);
+		coded <<= 1;
+	}
+	stripe->blockCursor->coefficients = coefficients;
+}
+
+/* a block's coefficients, all of them or its DC alone */
+static inline const int16_t *blockLoad(M4vdecBlock *block, const int16_t *coefficients,
+	uint32_t full)
+{
+	if (full) {
+		m4vdecBlockLoad(block, coefficients);
+		return coefficients + 64;
+	}
+	m4vdecBlockLoadDc(block, coefficients);
+	return coefficients + 4;
+}
+
+/* the AC prediction's row or column, into the coprocessor */
+static inline void predictorLoad(M4vdecBlock *block, const int16_t *predictor)
+{
+	uint32_t i;
+
+	for (i = 0; i < 8; i++)
+		block->predictor[i] = predictor[i];
+}
+
+/* the DC alone predicted: added to the DC lanes */
+static inline void dcAdd(M4vdecBlock *block)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		block->coef[0][i] = (int16_t)(block->coef[0][i] + block->dc[i]);
+}
+
+/* the AC predicted from the left, rescaled from its quantiser when it is another */
+static inline void acPredictLeft(M4vdecBlock *block, const int16_t *predictor, int32_t quant,
+	int32_t predictorQuant)
+{
+	predictorLoad(block, predictor);
+	if (quant == predictorQuant)
+		m4vdecAcPredictLeft(block);
+	else
+		m4vdecAcPredictLeftScaled(block, quant, predictorQuant);
+}
+
+/* and from above */
+static inline void acPredictTop(M4vdecBlock *block, const int16_t *predictor, int32_t quant,
+	int32_t predictorQuant)
+{
+	predictorLoad(block, predictor);
+	if (quant == predictorQuant)
+		m4vdecAcPredictTop(block);
+	else
+		m4vdecAcPredictTopScaled(block, quant, predictorQuant);
+}
+
+/*
+ * 0x84a954: an intra macroblock's luma with AC/DC prediction (7.4.3): each
+ * block's DC from the neighbour its gradient picks, with the first column
+ * or row of AC when ac_pred_flag is set; its own kept for the blocks after.
+ * Blocks 0 and 2 predict from the macroblock to the left, 0 and 1 from the
+ * one above, at its quantiser.
+ */
+static void lumaIntraPredicted(M4vdecStripe *stripe)
+{
+	const int16_t *coefficients = stripe->blockCursor->coefficients;
+	uint32_t quant = (uint8_t)stripe->quant, aboveQuant = (uint8_t)stripe->aboveQuant;
+	uint32_t leftQuant = (uint8_t)stripe->leftQuant, even = ~quant & 1;
+	uint32_t acPrediction = stripe->kind & M4V_KIND_AC_PREDICTION;
+	uint32_t coded = ((stripe->kind >> 16) & 63) >> 2;
+	int32_t scaler = g_m4vdecDcScalerLuma[quant];
+	M4vdecPredictors *slot = stripe->predictors, *next = slot + 1;
+	uint8_t *luma = stripe->luma;
+	int32_t aboveLeft, dc0, dc1, dc2, dc3;
+	M4vdecBlockCursor *cursor;
+	M4vdecBlock block;
+	uint32_t left;
+
+	/* block 0: left from the macroblock to the left, above from the one above */
+	coefficients = blockLoad(&block, coefficients, coded & 8);
+	cursor = stripe->blockCursor;
+	aboveLeft = cursor->aboveLeftDc;
+	cursor->aboveLeftDc = slot->rows[1][0];
+	left = dcPredict(&block, slot->columns[0][0], aboveLeft, slot->rows[0][0], scaler);
+	if (!acPrediction)
+		dcAdd(&block);
+	else if (left)
+		acPredictLeft(&block, slot->columns[0], quant, leftQuant);
+	else
+		acPredictTop(&block, slot->rows[0], quant, aboveQuant);
+	aboveLeft = slot->rows[0][0];
+	m4vdecPredictorsStore(&block, next->columns[0], slot->rows[0]);
+	dcDequantize(&block, even, quant, scaler);
+	dc0 = block.coef[0][0];
+	idct(&block);
+	m4vdecBlockStore(&block, luma);
+
+	/* block 1: left from block 0, above from the macroblock above */
+	coefficients = blockLoad(&block, coefficients, coded & 4);
+	left = dcPredict(&block, dc0, aboveLeft, slot->rows[1][0], scaler);
+	if (!acPrediction) {
+		dcAdd(&block);
+	} else if (left) {
+		predictorLoad(&block, next->columns[0]);
+		m4vdecAcPredictLeft(&block);
+	} else {
+		acPredictTop(&block, slot->rows[1], quant, aboveQuant);
+	}
+	m4vdecPredictorsStore(&block, next->columns[0], slot->rows[1]);
+	dcDequantize(&block, even, quant, scaler);
+	dc1 = block.coef[0][0];
+	next->columns[0][0] = dc1;
+	idct(&block);
+	m4vdecBlockStore(&block, luma + 8);
+
+	/* block 2: left from the macroblock to the left, above from block 0 */
+	coefficients = blockLoad(&block, coefficients, coded & 2);
+	left = dcPredict(&block, slot->columns[1][0], slot->columns[0][0], dc0, scaler);
+	if (!acPrediction) {
+		dcAdd(&block);
+	} else if (left) {
+		acPredictLeft(&block, slot->columns[1], quant, leftQuant);
+	} else {
+		predictorLoad(&block, slot->rows[0]);
+		m4vdecAcPredictTop(&block);
+	}
+	m4vdecPredictorsStore(&block, next->columns[1], slot->rows[0]);
+	dcDequantize(&block, even, quant, scaler);
+	dc2 = block.coef[0][0];
+	slot->rows[0][0] = dc2;
+	idct(&block);
+	m4vdecBlockStore(&block, luma + 128);
+
+	/* block 3: left from block 2, above from block 1 */
+	coefficients = blockLoad(&block, coefficients, coded & 1);
+	left = dcPredict(&block, dc2, dc0, dc1, scaler);
+	if (!acPrediction) {
+		dcAdd(&block);
+	} else if (left) {
+		predictorLoad(&block, next->columns[1]);
+		m4vdecAcPredictLeft(&block);
+	} else {
+		predictorLoad(&block, slot->rows[1]);
+		m4vdecAcPredictTop(&block);
+	}
+	m4vdecPredictorsStore(&block, next->columns[1], slot->rows[1]);
+	dcDequantize(&block, even, quant, scaler);
+	dc3 = block.coef[0][0];
+	slot->rows[1][0] = dc3;
+	next->columns[1][0] = dc3;
+	idct(&block);
+	m4vdecBlockStore(&block, luma + 136);
+	stripe->blockCursor->coefficients = coefficients;
+}
+
+/* 0x84abfe: an inter macroblock's luma residual, added to its prediction */
+static void lumaResidual(M4vdecStripe *stripe)
+{
+	const int16_t *coefficients = stripe->blockCursor->coefficients;
+	uint32_t quant = (uint8_t)stripe->quant, even = ~quant & 1;
+	uint32_t full = ((stripe->kind >> 16) & 63) >> 2;
+	uint32_t coded = ((stripe->kind >> 8) & 63) >> 2;
+	uint8_t *luma = stripe->luma;
+	M4vdecBlock block;
+	int32_t i;
+
+	for (i = 0; i < 4; i++) {
+		if (coded & 8) {
+			coefficients = blockLoad(&block, coefficients, full & 8);
+			m4vdecDequantize(&block, even, quant);
+			idct(&block);
+			m4vdecBlockAdd(&block, luma + (i & 1) * 8 + (i & 2) * 64);
+		}
+		full <<= 1;
+		coded <<= 1;
+	}
+	stripe->blockCursor->coefficients = coefficients;
+}
+
+/* 0x84acba: an inter macroblock's predictors, for intra ones next to it: reset */
+static void lumaInterPredictors(M4vdecStripe *stripe)
+{
+	M4vdecPredictors *slot = stripe->predictors, *next = slot + 1;
+	uint32_t k, i;
+
+	stripe->blockCursor->aboveLeftDc = slot->rows[1][0];
+	for (k = 0; k < 2; k++) {
+		next->columns[k][0] = DC_RESET;
+		for (i = 1; i < 8; i++)
+			next->columns[k][i] = 0;
+	}
+	for (k = 0; k < 2; k++) {
+		slot->rows[k][0] = DC_RESET;
+		for (i = 1; i < 8; i++)
+			slot->rows[k][i] = 0;
+	}
+}
+
+/*
+ * 0x84b058: a block's DC predicted (7.4.3.1): from above where the
+ * gradient from the block above-left is flatter that way, else from the
+ * left; divided by the dc_scaler. Returns 1 from the left.
+ */
+static uint32_t dcPredict(M4vdecBlock *block, int32_t left, int32_t aboveLeft, int32_t above,
+	int32_t scaler)
+{
+	uint32_t fromLeft;
+	int32_t prediction;
+
+	if (abs32(left - aboveLeft) < abs32(aboveLeft - above)) {
+		prediction = above;
+		fromLeft = 0;
+	} else {
+		prediction = left;
+		fromLeft = 1;
+	}
+	block->dc[0] = m4vdecDcDivide(prediction, scaler);
+	block->dc[1] = 0;
+	block->dc[2] = 0;
+	block->dc[3] = 0;
+	return fromLeft;
+}
+
+/*
+ * 0x84b09c: an inter macroblock's luma predicted from the last picture, a
+ * block by its vector, in half samples (7.6.2)
+ */
+static void lumaPredict(M4vdecStripe *stripe)
+{
+	const uint8_t *frame = stripe->reference;
+	uint8_t *luma = stripe->luma, *samples;
+	int32_t x = stripe->x * 16, y = stripe->row * 16;
+	uint32_t rounding = stripe->roundingType;
+	const M4vdecMbRecord *mb = stripe->mb;
+	M4vdecReference reference;
+	int32_t i, vx, vy;
+
+	for (i = 0; i < 4; i++) {
+		samples = luma + (i & 1) * 8 + (i & 2) * 64;
+		vx = mb->vectors[i].x;
+		vy = mb->vectors[i].y;
+		referenceFetch(stripe, frame, (vx >> 1) + x + (i & 1) * 8,
+			(vy >> 1) + y + (i & 2) * 4, &reference);
+		if (!(vx & 1)) {
+			if (!(vy & 1))
+				m4vdecPredictFull(&reference, samples);
+			else if (rounding)
+				m4vdecPredictDown(&reference, samples);
+			else
+				m4vdecPredictDownRounded(&reference, samples);
+		} else if (!(vy & 1)) {
+			if (rounding)
+				m4vdecPredictAcross(&reference, samples);
+			else
+				m4vdecPredictAcrossRounded(&reference, samples);
+		} else {
+			m4vdecPredictBoth(&reference, samples, rounding ? 1 : 2);
+		}
+	}
+}
+
+/*
+ * 0x84b170: a block's 9 x 9 reference samples at (x, y) in the frame's
+ * 16 x 16 tiles, read where they are inside the picture, its edges
+ * repeated outside (the unrestricted vectors of 7.6.4)
+ */
+static void referenceFetch(const M4vdecStripe *stripe, const uint8_t *frame, int32_t x, int32_t y,
+	M4vdecReference *reference)
+{
+	int32_t width = stripe->width, height = stripe->height;
+	int32_t frameWidth = (uint16_t)stripe->frameWidth;
+	const uint8_t *first, *second;
+	int32_t insideX, insideY;
+
+	insideX = min32(max32(x, 0), width - 9);
+	insideY = min32(max32(y, 0), height - 9);
+	first = frame + (insideY & ~15) * frameWidth + (insideX & ~15) * 16 + (insideY & 15) * 16 +
+		(insideX & 8);
+	second = insideX & 8 ? first + 248 : first + 8;
+	m4vdecReferenceLoad(reference, first, second, frameWidth * 16 - 256, insideY, insideX & 7);
+	if (x < 0) {
+		if (x >= -7)
+			m4vdecReferenceLeftEdge(reference, -x);
+		else
+			m4vdecReferenceLeftOutside(reference);
+	} else if (x > width - 9) {
+		if (x < width - 1)
+			m4vdecReferenceRightEdge(reference, -(x + 9));
+		else
+			m4vdecReferenceRightOutside(reference);
+	}
+	if (y < 0)
+		m4vdecReferenceTopEdge(reference, y);
+	else if (y > height - 9)
+		m4vdecReferenceBottomEdge(reference, y - height + 9);
+	m4vdecReferenceNext(reference);
+}
+
+/* the chroma's dc_scaler by quantiser (0x8fc1d8) */
+static const uint8_t g_m4vdecDcScalerChroma[32] = {
+	0, 8, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14,
+	14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 20, 21, 22, 23, 24, 25,
+};
+
+static void chromaIntraShort(M4vdecStripe *stripe);
+static void chromaIntraPredicted(M4vdecStripe *stripe);
+static void chromaResidual(M4vdecStripe *stripe);
+static void chromaInterPredictors(M4vdecStripe *stripe);
+
+/* 0x84acec: an intra macroblock's chroma, by the picture's header (ccr8 as lumaIntra's) */
+static void chromaIntra(M4vdecStripe *stripe)
+{
+	if (stripe->shortHeader)
+		chromaIntraShort(stripe);
+	else
+		chromaIntraPredicted(stripe);
+}
+
+/* 0x84ad06: an inter macroblock's chroma residual, its predictors reset */
+static void chromaInter(M4vdecStripe *stripe)
+{
+	if ((stripe->kind >> 8) & 3)
+		chromaResidual(stripe);
+	chromaInterPredictors(stripe);
+}
+
+/* 0x84ad36: a chroma block's IDCT */
+static void chromaIdct(M4vdecBlock *block)
+{
+	m4vdecChromaIdctRows(block);
+	m4vdecChromaIdctColumns(block);
+}
+
+/* 0x84ad4a: dcDequantize's, with the chroma's kernel */
+static void chromaDcDequantize(M4vdecBlock *block, uint32_t even, uint32_t quant, int32_t scaler)
+{
+	int32_t dc;
+
+	dc = max32(min32(block->coef[0][0] * scaler, 2047), -2048);
+	m4vdecChromaDequantize(block, even, quant);
+	block->coef[0][0] = dc;
+}
+
+/* 0x84ad7c: the block's DC kept as its row's and its column's first */
+static void dcKeep(const M4vdecBlock *block, int16_t *row, int16_t *column)
+{
+	int32_t dc = block->coef[0][0];
+
+	column[0] = dc;
+	row[0] = dc;
+}
+
+/* 0x84ad8a: a short header's intra chroma: Cb then Cr, the DCs by 8 */
+static void chromaIntraShort(M4vdecStripe *stripe)
+{
+	uint32_t quant = (uint8_t)stripe->quant, even = ~quant & 1;
+	uint32_t coded = (stripe->kind >> 16) & 3;
+	const int16_t *coefficients = stripe->chromaCursor->coefficients[0];
+	uint8_t *chroma = stripe->chroma;
+	M4vdecBlock block;
+	int32_t k;
+
+	for (k = 0; k < 2; k++) {
+		if (coded & 2) {
+			m4vdecChromaBlockLoad(&block, coefficients);
+			coefficients += 64;
+		} else {
+			m4vdecChromaBlockLoadDc(&block, coefficients);
+			coefficients += 4;
+		}
+		chromaDcDequantize(&block, even, quant, 8);
+		chromaIdct(&block);
+		m4vdecChromaBlockStore(&block, chroma);
+		if (!k) {
+			chroma += 64;
+			stripe->chromaCursor->coefficients[0] = coefficients;
+			coded <<= 1;
+			coefficients = stripe->chromaCursor->coefficients[1];
+		}
+	}
+	stripe->chromaCursor->coefficients[1] = coefficients;
+}
+
+/* a chroma block's coefficients, all of them or its DC alone */
+static inline const int16_t *chromaBlockLoad(M4vdecBlock *block, const int16_t *coefficients,
+	uint32_t full)
+{
+	if (full) {
+		m4vdecChromaBlockLoad(block, coefficients);
+		return coefficients + 64;
+	}
+	m4vdecChromaBlockLoadDc(block, coefficients);
+	return coefficients + 4;
+}
+
+/*
+ * 0x84ae14: an intra macroblock's chroma with AC/DC prediction: Cb then
+ * Cr, each from the macroblocks to the left and above
+ */
+static void chromaIntraPredicted(M4vdecStripe *stripe)
+{
+	uint32_t quant = (uint8_t)stripe->quant, aboveQuant = (uint8_t)stripe->aboveQuant;
+	uint32_t leftQuant = (uint8_t)stripe->leftQuant, even = ~quant & 1;
+	uint32_t acPrediction = stripe->kind & M4V_KIND_AC_PREDICTION;
+	uint32_t coded = (stripe->kind >> 16) & 3;
+	int32_t scaler = g_m4vdecDcScalerChroma[quant];
+	uint8_t *chroma = stripe->chroma;
+	const int16_t *coefficients = stripe->chromaCursor->coefficients[0];
+	M4vdecPredictors *slot;
+	int16_t *column, *row, *left;
+	M4vdecBlock block;
+	int32_t k, above;
+	uint32_t fromLeft;
+
+	for (k = 0; k < 2; k++) {
+		slot = stripe->chromaPredictors;
+		row = slot->rows[k];
+		left = slot->columns[k];
+		column = slot[1].columns[k];
+		coefficients = chromaBlockLoad(&block, coefficients, coded & 2);
+		above = row[0];
+		fromLeft = dcPredict(&block, left[0], stripe->chromaCursor->aboveLeftDc[k], above,
+			scaler);
+		if (!acPrediction) {
+			dcAdd(&block);
+		} else if (fromLeft) {
+			acPredictLeft(&block, left, quant, leftQuant);
+		} else {
+			acPredictTop(&block, row, quant, aboveQuant);
+		}
+		m4vdecChromaPredictorsStore(&block, row, column);
+		chromaDcDequantize(&block, even, quant, scaler);
+		stripe->chromaCursor->aboveLeftDc[k] = above;
+		dcKeep(&block, row, column);
+		chromaIdct(&block);
+		m4vdecChromaBlockStore(&block, chroma);
+		coded <<= 1;
+		if (!k) {
+			chroma += 64;
+			stripe->chromaCursor->coefficients[0] = coefficients;
+			coefficients = stripe->chromaCursor->coefficients[1];
+		}
+	}
+	stripe->chromaCursor->coefficients[1] = coefficients;
+}
+
+/* 0x84af58: an inter macroblock's chroma residual, added to its prediction */
+static void chromaResidual(M4vdecStripe *stripe)
+{
+	uint8_t *chroma = stripe->chroma;
+	uint32_t full = (stripe->kind >> 16) & 3, coded = (stripe->kind >> 8) & 3;
+	uint32_t quant = (uint8_t)stripe->quant, even = ~quant & 1;
+	const int16_t *coefficients;
+	M4vdecBlock block;
+
+	if (coded & 2) {
+		coefficients = stripe->chromaCursor->coefficients[0];
+		coefficients = chromaBlockLoad(&block, coefficients, full & 2);
+		m4vdecChromaDequantize(&block, even, quant);
+		chromaIdct(&block);
+		m4vdecChromaBlockAdd(&block, chroma);
+		stripe->chromaCursor->coefficients[0] = coefficients;
+	}
+	if (coded & 1) {
+		coefficients = stripe->chromaCursor->coefficients[1];
+		coefficients = chromaBlockLoad(&block, coefficients, full & 1);
+		m4vdecChromaDequantize(&block, even, quant);
+		chromaIdct(&block);
+		m4vdecChromaBlockAdd(&block, chroma + 64);
+		stripe->chromaCursor->coefficients[1] = coefficients;
+	}
+}
+
+/* 0x84b012: an inter macroblock's chroma predictors, for intra ones next to it: reset */
+static void chromaInterPredictors(M4vdecStripe *stripe)
+{
+	M4vdecPredictors *slot;
+	uint32_t k, i;
+
+	for (k = 0; k < 2; k++) {
+		slot = stripe->chromaPredictors;
+		stripe->chromaCursor->aboveLeftDc[k] = slot->rows[k][0];
+		slot[1].columns[k][0] = DC_RESET;
+		slot->rows[k][0] = DC_RESET;
+		for (i = 1; i < 8; i++) {
+			slot[1].columns[k][i] = 0;
+			slot->rows[k][i] = 0;
+		}
+	}
+}
+
+static void chromaReferenceFetch(const M4vdecStripe *stripe, const uint8_t *frame, int32_t x,
+	int32_t y, uint32_t component, M4vdecReference *reference);
+
+/* 0x84b260: an inter macroblock's Cb and Cr predicted by its chroma vector */
+static void chromaPredict(M4vdecStripe *stripe)
+{
+	const uint8_t *frame = stripe->referenceChroma;
+	uint8_t *chroma = stripe->chroma;
+	uint32_t rounding = stripe->roundingType;
+	M4vVector vector = stripe->mb->chromaVector;
+	int32_t x = (vector.x >> 1) + stripe->x * 8, y = (vector.y >> 1) + stripe->row * 8;
+	M4vdecReference reference;
+
+	chromaReferenceFetch(stripe, frame, x, y, 0, &reference);
+	if (!(vector.x & 1)) {
+		if (!(vector.y & 1)) {
+			m4vdecChromaPredictFull(&reference, chroma);
+			chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+			m4vdecChromaPredictFull(&reference, chroma + 64);
+		} else if (rounding) {
+			m4vdecChromaPredictDown(&reference, chroma);
+			chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+			m4vdecChromaPredictDown(&reference, chroma + 64);
+		} else {
+			m4vdecChromaPredictDownRounded(&reference, chroma);
+			chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+			m4vdecChromaPredictDownRounded(&reference, chroma + 64);
+		}
+	} else if (!(vector.y & 1)) {
+		if (rounding) {
+			m4vdecChromaPredictAcross(&reference, chroma);
+			chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+			m4vdecChromaPredictAcross(&reference, chroma + 64);
+		} else {
+			m4vdecChromaPredictAcrossRounded(&reference, chroma);
+			chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+			m4vdecChromaPredictAcrossRounded(&reference, chroma + 64);
+		}
+	} else {
+		m4vdecChromaPredictBoth(&reference, chroma, rounding ? 1 : 2);
+		chromaReferenceFetch(stripe, frame, x, y, 1, &reference);
+		m4vdecChromaPredictBoth(&reference, chroma + 64, rounding ? 1 : 2);
+	}
+}
+
+/*
+ * 0x84b3a0: referenceFetch's for a chroma component: the frame's 8 x 8
+ * tiles hold a tile's Cb then its Cr; a picture of one tile across or down
+ * repeats its tile.
+ */
+static void chromaReferenceFetch(const M4vdecStripe *stripe, const uint8_t *frame, int32_t x,
+	int32_t y, uint32_t component, M4vdecReference *reference)
+{
+	int32_t width = stripe->chromaWidth, height = stripe->chromaHeight;
+	int32_t pitch = (uint16_t)stripe->chromaFrameWidth, stride;
+	const uint8_t *first, *second;
+	int32_t insideX, insideY;
+
+	insideX = min32(max32(x, 0), width - 9);
+	insideY = min32(max32(y, 0), height - 9);
+	stride = pitch * 8 - 64;
+	if (width < 9)
+		insideX = 0;
+	if (height < 9) {
+		insideY = 0;
+		stride = -8;
+	}
+	first = frame + (insideX & ~7) * 16 + (insideY & ~7) * pitch + (insideY & 7) * 8 +
+		component * 64;
+	second = width < 9 ? first : first + 128;
+	m4vdecChromaReferenceLoad(reference, first, second, stride, insideY, insideX & 7);
+	if (x < 0) {
+		if (x >= -7)
+			m4vdecChromaReferenceLeftEdge(reference, -x);
+		else
+			m4vdecChromaReferenceLeftOutside(reference);
+	} else if (x > width - 9) {
+		if (width < 9)
+			m4vdecChromaReferenceNarrow(reference);
+		if (x < width - 1)
+			m4vdecChromaReferenceRightEdge(reference, -(x + 9));
+		else
+			m4vdecChromaReferenceRightOutside(reference);
+	}
+	if (y < 0)
+		m4vdecChromaReferenceTopEdge(reference, y);
+	else if (y > height - 9)
+		m4vdecChromaReferenceBottomEdge(reference, height < 9 ? y : y - height + 9);
+	m4vdecChromaReferenceNext(reference);
 }
