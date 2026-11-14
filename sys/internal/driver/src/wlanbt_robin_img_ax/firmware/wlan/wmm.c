@@ -5,10 +5,21 @@
  */
 #include "robin/calibration.h"
 #include "robin/conn.h"
+#include "robin/esa.h"
+#include "robin/ie.h"
+#include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
+#include "robin/mgmt.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/stapssm.h"
+#include "robin/sys.h"
+#include "robin/task.h"
+#include "robin/threadx.h"
+#include "robin/txring.h"
+#include "robin/txstats.h"
+#include "robin/wlanrx.h"
 #include "robin/wmm.h"
 
 struct WlanWmm wlanWmm __attribute__((section(".dtcm.bss")));					/* 0x04008c4c */
@@ -32,20 +43,20 @@ int wlanWmmEnable(void)
 int wlanWmmApplyQueue(unsigned int queue)
 {
 	struct WlanWmmQueue *record = &wlanWmm.queues[queue];
-	unsigned int category = wlanAccessCategoryToQueue((record->info >> 1) & 3);
+	unsigned int category = wlanAccessCategoryToQueue((record->edca.info >> 1) & 3);
 	int fallback = 0;
 	unsigned int chosen = category;
 	unsigned int target = category;
 	unsigned int i;
 	int slot;
 
-	if (record->info & 8) {
+	if (record->edca.info & 8) {
 		if (record->admittedTime == 0) {
 			fallback = 1;
 			chosen = record->fallback;
 			target = record->fallback;
-			wlanWmmSetEdca(queue, record);
-		} else if (record->streams != 0) {
+			wlanWmmSetEdca(queue, &record->edca);
+		} else if (record->exhausted != 0) {
 			chosen = record->fallback;
 		}
 	}
@@ -64,7 +75,7 @@ int wlanWmmApplyQueue(unsigned int queue)
 					entry->activeRing = wlanWmmRings[2 * target + i];
 				}
 			}
-			wlanWmmSetEdca(entry->activeQueue, &wlanWmm.queues[chosen]);
+			wlanWmmSetEdca(entry->activeQueue, &wlanWmm.queues[chosen].edca);
 		}
 	}
 	for (slot = WLAN_WMM_SLOTS - 1; wlanWmmSlots[slot].activeQueue != wlanWmmSlots[slot].ownQueue;) {
@@ -86,18 +97,18 @@ int wlanWmmSetParameters(const uint8_t *element, uint8_t *count)
 	for (i = 0; i < WLAN_WMM_QUEUES; i = (uint8_t)(i + 1)) {
 		unsigned int queue = wlanAccessCategoryToQueue((element[4 * i + 10] >> 5) & 3);
 
-		wlanWmmStoreQueue(&wlanWmm.queues[queue], &element[4 * i + 10]);
+		wlanWmmStoreQueue(&wlanWmm.queues[queue].edca, &element[4 * i + 10]);
 	}
 	for (i = 0; i < WLAN_WMM_QUEUES; i = (uint8_t)(i + 1)) {
 		struct WlanWmmQueue *record = &wlanWmm.queues[i];
 		unsigned int fallback;
 
-		if (record->info & 8) {
+		if (record->edca.info & 8) {
 			unsigned int k;
 
 			fallback = 255;
 			for (k = 0; k <= i; k = (uint8_t)(k + 1)) {
-				if (!(wlanWmm.queues[k].info & 8))
+				if (!(wlanWmm.queues[k].edca.info & 8))
 					fallback = k;
 			}
 		} else {
@@ -136,11 +147,11 @@ int wlanWmmQueueStatus(const struct WlanConnection *connection, uint8_t *tlvs)
 		} else {
 			uint16_t admitted = record->admittedTime;
 
-			tlvs[8] = (record->info & 8) != 0;	/* flow required */
+			tlvs[8] = (record->edca.info & 8) != 0;	/* flow required */
 			tlvs[9] = admitted != 0;		/* flow created */
 			tlvs[6] = admitted;			/* medium time */
 			tlvs[7] = admitted >> 8;
-			if ((record->info & 8) && admitted == 0)
+			if ((record->edca.info & 8) && admitted == 0)
 				tlvs[5] = 1;
 			if (wlanWmmFlowBits & (1 << bit))
 				tlvs[10] = 1;
@@ -227,12 +238,12 @@ int wlanWmmQueueBit(int queue)
 }
 
 /* A queue's contention parameters go to the MAC (the ROM's EDCA setters). */
-int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmQueue *record)
+int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmEdca *edca)
 {
-	romEdcaSetCwMin(queue, (1 << (record->contention >> 4)) - 1);
-	romEdcaSetCwMax(queue, (1 << (record->contention & 0xf)) - 1);
-	romEdcaSetAifsn(queue, record->info >> 4);
-	return romEdcaSetTxop(queue, record->txop);
+	romEdcaSetCwMin(queue, (1 << (edca->contention >> 4)) - 1);
+	romEdcaSetCwMax(queue, (1 << (edca->contention & 0xf)) - 1);
+	romEdcaSetAifsn(queue, edca->info >> 4);
+	return romEdcaSetTxop(queue, edca->txop);
 }
 
 /* 1: the WMM parameter element holds all four access categories; its parameter set count goes to *count. */
@@ -248,14 +259,14 @@ int wlanWmmParseParameter(const uint8_t *element, uint8_t *count)
 }
 
 /* An AC parameter record of the element (ACI/AIFSN, ECW, TXOP limit) becomes a queue's record. */
-struct WlanWmmQueue *wlanWmmStoreQueue(struct WlanWmmQueue *queue, const uint8_t *record)
+struct WlanWmmEdca *wlanWmmStoreQueue(struct WlanWmmEdca *edca, const uint8_t *record)
 {
-	queue->info = (queue->info & 0xf9) | (2 * ((record[0] >> 5) & 3));
-	queue->info = (queue->info & 0xf7) | (8 * ((record[0] >> 4) & 1));
-	queue->info = (queue->info & 0x0f) | (16 * record[0]);
-	queue->contention = ((record[1] & 0xf) << 4) | (record[1] >> 4);
-	queue->txop = (record[3] << 8) | record[2];
-	return queue;
+	edca->info = (edca->info & 0xf9) | (2 * ((record[0] >> 5) & 3));
+	edca->info = (edca->info & 0xf7) | (8 * ((record[0] >> 4) & 1));
+	edca->info = (edca->info & 0x0f) | (16 * record[0]);
+	edca->contention = ((record[1] & 0xf) << 4) | (record[1] >> 4);
+	edca->txop = (record[3] << 8) | record[2];
+	return edca;
 }
 
 /* HostCmd_CMD_WMM_QUEUE_CONFIG's action on one queue's medium time: 0 get, 1 set, 2 default. */
@@ -298,4 +309,666 @@ int wlanWmmAppendIe(uint8_t *body, const uint8_t *element)
 	tlv[3] = 0;
 	__aeabi_memcpy(tlv + 4, element + 2, element[1]);
 	return element[1] + 4;
+}
+
+/* The WMM state of the BSS and its stand-in for a BSS without WMM. */
+uint8_t wlanBssWmmIe[9] __attribute__((section(".dtcm.bss")));				/* 0x04008fc9 */
+uint8_t wlanWmmIe[3][9] __attribute__((section(".dtcm.bss")));				/* 0x04008fd2 */
+uint16_t wlanWmmPoliced __attribute__((section(".dtcm.bss")));				/* 0x0400900a */
+struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009018 */
+struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009038 */
+uint32_t wlanQosNullSequence __attribute__((section(".sqram1.bss")));			/* SQRAM 0xc0011b08 */
+int (*wlanEdcaApplyHook)(struct WlanConnection *connection) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb4 */
+uint8_t wlanWmmParameterElement[26] __attribute__((section(".sqram1.bss")));		/* SQRAM 0xc0031ee4 */
+
+/* The pointer to a transmit data's frame (at 96), read as an aligned word here. */
+#define WMM_TX_FRAME(data)	(*(const uint8_t *const *)((data) + 96))
+
+extern void wlanTspecTrack(void);						/* 0x4190a */
+extern void wlanTspecManage(void);						/* 0x41940 */
+extern int macTxNotifyReleaseEntry(struct WlanConnection *connection, unsigned int rate,
+				   uint32_t control);				/* 0x3125c */
+extern void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);	/* 0x3cfd2 */
+extern uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused);		/* 0x3d2f8 */
+
+/* The connection's QoS flag (the association used WMM). */
+__attribute__((noinline)) int wlanConnectionQosEnabled(struct WlanConnection *connection)
+{
+	return (connection->flags >> 6) & 1;
+}
+
+/* HostCmd_CMD_WMM_QUEUE_STATS. */
+int hostCmd0081(uint8_t *body)
+{
+	return wlanWmmStatsCommand(body, wlanWmmStats, &wlanWmmPoliced);
+}
+
+/* The queues but the first start with no outstanding admission counters. */
+void wlanWmmResetCounters(void)
+{
+	unsigned int queue;
+
+	for (queue = wlanAccessCategoryToQueue(1); queue <= 3; queue++) {
+		wlanWmmTiming[queue].lastTime = 0;
+		wlanWmmTiming[queue].pending = 0;
+	}
+}
+
+/*
+ * WMM is switched on or off for a connection. Off, every queue gets the
+ * default contention parameters (AIFSN 2, CWmin 15, CWmax 1023, no TXOP) and
+ * the default medium times, and the information elements are forgotten.
+ */
+__attribute__((noinline)) void wlanWmmSet(struct WlanConnection *connection, int enable, int report)
+{
+	struct WlanWmmEdca edca;
+
+	if (enable != 0) {
+		wlanWmm.enabled = 1;
+	} else {
+		wlanWmm.enabled = 0;
+		wlanWmmResetDefaults(wlanWmmIe[0], wlanWmmIe[1], wlanWmmIe[2], wlanWmmElement, &edca,
+				     wlanRadioConfig->wmmQueueTime, 4, 10);
+	}
+	if (report != 0)
+		wlanWmmReportStatus(connection);
+	wlanTspecTrack();
+	wlanWmmResetCounters();
+}
+
+/*
+ * The WMM elements of a beacon or probe response, or their absence, decide
+ * whether the BSS is a WMM one. Without elements the BSS's own parameters
+ * are the defaults of the WMM parameter element.
+ */
+void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int report)
+{
+	unsigned int queue;
+
+	if (elements->pWmmParam == NULL) {
+		if (elements->pEdcaParam == NULL && wlanConnectionQosEnabled(connection) == 0) {
+			wlanWmmSet(connection, 0, report);
+			wlanPsSetRoleMasks(0, 0);
+			return;
+		}
+	}
+	if (elements->pEdcaParam != NULL) {
+		wlanWmmSet(connection, 1, 0);
+		return;
+	}
+	if (elements->pWmmParam == NULL) {
+		wlanWmmBuildParameterElement(wlanBssWmmIe);
+		wlanWmmFillParameterElement(wlanWmmParameterElement);
+		elements->pWmmParam = wlanWmmParameterElement;
+	}
+	for (queue = wlanAccessCategoryToQueue(1); queue <= 3; queue = (uint8_t)(queue + 1))
+		wlanWmmSetupQueue(queue);
+	if (report != 0)
+		wlanTspecManage();
+	__aeabi_memcpy(wlanWmmIe[0], wlanBssWmmIe, 9);
+	__aeabi_memcpy(wlanWmmIe[1], wlanBssWmmIe, 9);
+	__aeabi_memcpy(wlanWmmIe[2], wlanBssWmmIe, 9);
+	wlanPsSetRoleMasks(wlanWmmFlowBits, wlanWmmSessionBits);
+	if (wlanWmmSetParameters(elements->pWmmParam, &wlanWmm.parameterSetCount) != 0)
+		__aeabi_memcpy(wlanWmmElement, elements->pWmmParam, 26);
+	wlanWmmSet(connection, 1, report);
+}
+
+/* Whether a WMM parameter element header is on hand. */
+int wlanWmmHasElement(void)
+{
+	if (wlanBssWmmIe[0] != 0)
+		return 1;
+	return wlanBssWmmIe[0];
+}
+
+int wlanWmmCurrentSlotNumber(void)
+{
+	return wlanWmmCurrentSlot;
+}
+
+/* A transmit Block Ack window changed the queue and ring a TID's frames use. */
+int wlanWmmSetBaWindow(unsigned int tid, unsigned int queue, unsigned int ring)
+{
+	struct WlanWmmSlot *slot = &wlanWmmSlots[tid];
+
+	slot->activeQueue = queue;
+	slot->statsRing = ring;
+	wlanWmmApplyQueue(wlanAccessCategoryToQueue(wlanTidToAccessCategory(tid)));
+	return macTxStatsAddValidated(ring, (int *)&((uint8_t *)&wlanWmm)[4 * ring + 960]);
+}
+
+/* Everything WMM knows is forgotten. */
+void wlanWmmClear(void)
+{
+	__aeabi_memclr4(&wlanWmm, 0x3cc);
+	__aeabi_memclr4(wlanWmmStats, sizeof(wlanWmmStats));
+}
+
+/* The EDCA parameters the AP announced for the four access categories reach the MAC. */
+int wlanWmmApplyApEdca(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	struct WlanWmmEdca edca = { 0, 0, 0 };
+	unsigned int category = 0;
+	unsigned int queue;
+	int result;
+
+	do {
+		queue = wlanAccessCategoryToQueue(category);
+		romLibDispatchEntry(queue);
+		while (((1 << queue) & MAC_258_PENDING_STATUS) == 0)
+			;
+		wlanWmmStoreQueue(&edca, info->wmmRecords[category]);
+		wlanWmmSetEdca(queue, &edca);
+		result = romLibParseEntry(queue);
+		category = (uint8_t)(category + 1);
+	} while (category < 4);
+	return result;
+}
+
+/* Bit 7 of the QoS info of a WMM element: the AP supports U-APSD. */
+void wlanWmmSetApsdSupport(uint8_t *ie, int enable)
+{
+	if (ie != NULL) {
+		if (enable == 1)
+			ie[8] |= 0x80;
+		else
+			ie[8] &= 0x7f;
+	}
+}
+
+/* A QoS Null frame from the access point to a peer's TID ends a U-APSD service period. */
+int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid)
+{
+	OsaBuffer *buffer;
+	struct WlanReplyFrame *request;
+	WlanWirelessFrame *frame;
+	unsigned int sequence;
+	int result;
+
+	if (connection == NULL)
+		return 0;
+	while ((buffer = wlanMgmtAllocFrame(connection, 300)) == NULL)
+		osaTaskSleep(1);
+	frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	wlanInitMgmtHeader(frame, 2, 12, connection->peerAddress, connection->interfaceAddress,
+			   connection->localAddress);
+	frame->duration[0] = 2;
+	frame->duration[1] = 1;
+	sequence = (frame->sequenceControl[0] & 0xf) | (uint16_t)(16 * wlanQosNullSequence++);
+	frame->sequenceControl[0] = (uint8_t)sequence;
+	frame->sequenceControl[1] = (uint8_t)(sequence >> 8);
+	frame->frameControl[1] |= 2;
+	if (moreData != 0)
+		frame->frameControl[1] |= 0x20;
+	else
+		frame->frameControl[1] &= 0xdf;
+	buffer->dataOffset = 28;
+	request = (struct WlanReplyFrame *)buffer->data;
+	__aeabi_memclr4(request, offsetof(struct WlanReplyFrame, frameLength));
+	request->kind = 49;
+	request->frame = frame->bodyLength;
+	request->descriptor.header.bssType = (request->descriptor.header.bssType >> 3 << 3) | (tid & 7) | 0x10;
+	request->descriptor.header.wire.packetLength[0] = wlanTxDataRate(connection, 0);
+	request->queue = wlanAccessCategoryToQueue(wlanTidToAccessCategory(tid));
+	result = wlanTxSubmit(buffer);
+	if (result != 1)
+		osa_BufferFree(buffer);
+	return result;
+}
+
+/* The defaults of the parameter element the access point announces without WMM. */
+void wlanWmmInitDefaults(void)
+{
+	wlanWmmDefaultTime = 500;
+	wlanEdcaApplyHook = wlanWmmApplyApEdca;
+}
+
+/* The two TID slots of a queue are pointed at it and cleared. */
+void wlanWmmSetupQueue(unsigned int queue)
+{
+	struct WlanWmmQueue *record = &wlanWmm.queues[queue];
+	unsigned int i;
+
+	record->exhausted = 0;
+	record->fallback = 0;
+	record->usedTime = 0;
+	record->admittedTime = 0;
+	*(uint32_t *)&record->edca = 0;
+	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
+		unsigned int tid = wlanWmmRings[2 * queue + i];
+		struct WlanWmmSlot *slot = &wlanWmmSlots[tid];
+
+		record->slots[i] = slot;
+		slot->ownQueue = queue;
+		slot->activeQueue = queue;
+		slot->nextSequence = 0;
+		slot->lastSequence = 0;
+		slot->activeRing = tid;
+		slot->fallbackQueue = queue;
+		slot->statsRing = 0;
+	}
+}
+
+/* Bits of the TS Info field's first byte and the response of HostCmd_CMD_WMM_QUEUE_STATS. */
+struct __attribute__((packed)) WlanWmmStatsResponse {
+	uint8_t action;			/* 0 start, 1 stop, 2 get */
+	uint8_t bin;
+	uint16_t packets;
+	uint16_t lost;
+	uint8_t averageQueueDelay[4];		/* unaligned words, set with __aeabi_uwrite4 */
+	uint8_t averageTransmitDelay[4];
+	uint16_t usedTime;
+	uint16_t policedTime;
+	uint8_t histogram[14];
+	uint16_t policed;
+};
+
+/*
+ * HostCmd_CMD_WMM_QUEUE_STATS: a queue's bin is cleared (actions 0 and 1) or read
+ * and cleared (action 2). Returns the length of the response, 0 on error.
+ */
+int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *policed)
+{
+	struct WlanWmmStatsResponse *response = (struct WlanWmmStatsResponse *)body;
+	struct WlanWmmStats *bin;
+	unsigned int queue = body[1];
+	unsigned int level;
+	int length;
+
+	if (queue >= 4)
+		return 0;
+	level = tx_interrupt_control(TX_INT_DISABLE);
+	bin = &bins[queue];
+	if (response->action == 0 || response->action == 1) {
+		__aeabi_memclr4(bin, sizeof(*bin));
+		length = 2;
+	} else if (response->action == 2) {
+		unsigned int delivered;
+		unsigned int transmitDelay;
+
+		response->packets = bin->packets;
+		response->lost = bin->lost;
+		delivered = (uint16_t)(bin->packets - bin->lost);
+		if (bin->packets == bin->lost) {
+			__aeabi_uwrite4(0, body + 6);
+			transmitDelay = 0;
+		} else {
+			__aeabi_uwrite4(bin->queueDelay / delivered, body + 6);
+			transmitDelay = bin->transmitDelay / delivered;
+		}
+		__aeabi_uwrite4(transmitDelay, body + 10);
+		response->usedTime = bin->usedTime;
+		response->policedTime = bin->policedTime;
+		__aeabi_memcpy(response->histogram, bin->histogram, 14);
+		response->policed = *policed;
+		__aeabi_memclr4(bin, sizeof(*bin));
+		length = 34;
+		*policed = 0;
+	} else {
+		length = 0;
+	}
+	tx_interrupt_control(level);
+	return length;
+}
+
+/* Without WMM the four queues, the three information elements and the parameter element are reset. */
+int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
+			 uint16_t *times, unsigned int cwMin, unsigned int cwMax)
+{
+	unsigned int queue;
+
+	__aeabi_memclr(info1, 9);
+	__aeabi_memclr(info2, 9);
+	__aeabi_memclr(info3, 9);
+	__aeabi_memclr(element, 26);
+	edca->info = 2 << 4;
+	edca->contention = (cwMin << 4) | (cwMax & 0xf);
+	edca->txop = 0;
+	for (queue = 0; queue <= 7; queue = (uint8_t)(queue + 1)) {
+		wlanWmmSetEdca(queue, edca);
+		times[queue] = wlanWmmDefaultTime;
+	}
+	return wlanWmmDefaultTime;
+}
+
+/* A WMM parameter element's header: vendor element, Microsoft OUI, type 2, subtype 1, version 1. */
+void wlanWmmBuildParameterElement(uint8_t *ie)
+{
+	uint32_t oui = 0x02f25000;
+
+	ie[0] = 221;
+	ie[1] = 24;
+	__aeabi_memcpy(ie + 2, &oui, 4);
+	ie[6] = 1;
+	ie[7] = 1;
+	ie[8] = 0;
+}
+
+/* The parameter element an AP announces without any of its own (the WMM defaults). */
+void wlanWmmFillParameterElement(uint8_t *ie)
+{
+	wlanWmmBuildParameterElement(ie);
+	ie[9] = 0;
+	ie[10] = (16 * (ie[10] >> 4) + 3) & 0xf;		/* AC_BE: AIFSN 3 */
+	ie[11] = 0xa4;						/* ECWmin 4, ECWmax 10 */
+	ie[12] = 0;
+	ie[13] = 0;
+	ie[14] = (((16 * (ie[14] >> 4) + 7) & 0x8f) + 32) & 0x7f;	/* AC_BK: AIFSN 7 */
+	ie[15] = 0xa4;
+	ie[16] = 0;
+	ie[17] = 0;
+	ie[18] = (((16 * (ie[18] >> 4) + 2) & 0x8f) + 64) & 0x7f;	/* AC_VI: AIFSN 2, TXOP 188 */
+	ie[19] = 0x43;
+	ie[20] = 0xbc;
+	ie[21] = 0;
+	ie[22] = ((16 * (ie[22] >> 4) + 2) & 0xf) | 0x60;	/* AC_VO: AIFSN 2, TXOP 102 */
+	ie[23] = 0x32;
+	ie[24] = 0x66;
+	ie[25] = 0;
+}
+
+/* The transmit TID of a queue's slot. */
+unsigned int wlanWmmTid(unsigned int priority)
+{
+	return ((struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * priority))->activeRing;
+}
+
+/* The next sequence number of a TID, as it stands. */
+unsigned int wlanGroupNextSequence(unsigned int tid)
+{
+	return wlanWmmSlots[tid].nextSequence;
+}
+
+/* The sequence number of the last frame of a TID that went out. */
+unsigned int wlanWmmLastSequence(unsigned int tid)
+{
+	return wlanWmmSlots[tid].lastSequence;
+}
+
+/* The AIFSN of a queue (2 without WMM). */
+unsigned int wlanWmmAifsn(unsigned int queue)
+{
+	if (wlanWmm.enabled != 0 && queue < 4)
+		return wlanWmm.queues[queue].edca.info >> 4;
+	return 2;
+}
+
+/*
+ * The sequence number of the next frame of a TID. A peer that is not
+ * a QoS peer shares one sequence space among a TID's access category.
+ */
+unsigned int wlanNextSequence(struct WlanConnection *connection, unsigned int tid)
+{
+	struct WlanWmmSlot *slot = &wlanWmmSlots[tid];
+	unsigned int sequence = slot->nextSequence;
+
+	if (wlanConnectionQosEnabled(connection) != 0) {
+		slot->nextSequence++;
+	} else {
+		switch (tid) {
+		case 0:
+		case 3:
+			wlanWmmSlots[0].nextSequence++;
+			wlanWmmSlots[3].nextSequence++;
+			break;
+		case 1:
+		case 2:
+			wlanWmmSlots[1].nextSequence++;
+			wlanWmmSlots[2].nextSequence++;
+			break;
+		case 4:
+		case 5:
+			wlanWmmSlots[4].nextSequence++;
+			wlanWmmSlots[5].nextSequence++;
+			break;
+		case 6:
+		case 7:
+			wlanWmmSlots[6].nextSequence++;
+			wlanWmmSlots[7].nextSequence++;
+			break;
+		default:
+			break;
+		}
+	}
+	return sequence;
+}
+
+/* A queue's frame that never got a delivery: counted as sent and lost. */
+__attribute__((noinline)) void wlanWmmCountLost(unsigned int queue)
+{
+	wlanWmmStats[queue].packets++;
+	wlanWmmStats[queue].lost++;
+}
+
+/* The delays of a delivered frame go into its queue's bin: the sums and the histogram. */
+void wlanWmmRecordDelay(struct WlanWmmStats *bin, unsigned int queueDelay, unsigned int transmitDelay)
+{
+	bin->packets++;
+	bin->transmitDelay += transmitDelay;
+	bin->queueDelay += queueDelay;
+	if (queueDelay > 5000) {
+		if (queueDelay > 10000) {
+			if (queueDelay > 20000) {
+				if (queueDelay > 30000) {
+					if (queueDelay > 40000) {
+						if (queueDelay > 50000)
+							bin->histogram[6]++;
+						else
+							bin->histogram[5]++;
+					} else {
+						bin->histogram[4]++;
+					}
+				} else {
+					bin->histogram[3]++;
+				}
+			} else {
+				bin->histogram[2]++;
+			}
+		} else {
+			bin->histogram[1]++;
+		}
+	} else {
+		bin->histogram[0]++;
+	}
+}
+
+/*
+ * A frame left the queue. Its delays (from when it was queued, and from the previous
+ * frame's end) go into the queue's statistics, the medium time it took and the part
+ * over the admitted time into the used and policed times. Without WMM every frame counts for queue 1.
+ */
+void wlanWmmFrameDone(uint8_t *data, unsigned int queue, int delivered, unsigned int usedTime,
+		      unsigned int policedTime)
+{
+	struct WlanWmmTiming *timing = &wlanWmmTiming[queue];
+	unsigned int statsQueue;
+	unsigned int level;
+	uint32_t high, now, last, transmitDelay, queueDelay, limit;
+	uint32_t queuedAt;
+
+	if (timing->pending == 0)
+		return;
+	statsQueue = wlanWmm.enabled != 0 ? queue : 1;
+	level = sysIrqDisable();
+	timing->pending--;
+	queuedAt = *(uint32_t *)(data + 100);
+	if (queuedAt == 0) {
+		wlanWmmCountLost(statsQueue);
+		sysIrqRestore(level);
+		return;
+	}
+	sysIrqRestore(level);
+	msi_wl_GetMCUCoreTimerTxTSF(&high, &now);
+	last = data[106] != 0 ? queuedAt : timing->lastTime;
+	timing->lastTime = now;
+	if (delivered != 0) {
+		transmitDelay = now >= last ? now - last : 5000;
+		queueDelay = queuedAt <= now ? now - queuedAt : transmitDelay;
+		queueDelay += 1000 * *(uint16_t *)(data + 104);
+		limit = wlanRadioConfig->wmmQueueTime[queue] << 10;
+		if (limit <= queueDelay)
+			queueDelay = limit;
+		if (limit <= transmitDelay)
+			transmitDelay = limit;
+		wlanWmmRecordDelay(&wlanWmmStats[statsQueue], queueDelay, transmitDelay);
+	} else {
+		wlanWmmCountLost(statsQueue);
+	}
+	wlanWmmStats[statsQueue].usedTime += usedTime;
+	wlanWmmStats[statsQueue].policedTime += policedTime;
+}
+
+/* The medium time a transmitted frame took: the airtime of each rate it was sent at. */
+uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *status)
+{
+	uint8_t attempts[32];
+	const uint8_t *frame = WMM_TX_FRAME(status->data);
+	uint32_t airtime = 0;
+	unsigned int rate;
+
+	__aeabi_memclr4(attempts, sizeof(attempts));
+	wlanTxRateAttempts(status, attempts);
+	for (rate = 0; rate < 0x1f; rate = (uint8_t)(rate + 1)) {
+		while (attempts[rate] != 0) {
+			int time = romLibConfigureState(rate, (uint16_t)*(uint32_t *)(status->data + 8),
+							(frame[1] << 8) | frame[0], wlanWmm.enabled);
+
+			airtime += time + macTxNotifyReleaseEntry(connection, rate, *(uint32_t *)(status->data + 8));
+			attempts[rate]--;
+		}
+	}
+	return airtime;
+}
+
+/* The medium time of a frame that was sent at the rate in use, as many times as its statistics ring saw it validated. */
+int wlanTxAirtimeValidated(struct WlanConnection *connection, struct WlanTxStatus *status)
+{
+	const uint8_t *frame = WMM_TX_FRAME(status->data);
+	unsigned int ring = ((struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * (status->data[0] & 7)))->statsRing;
+	int count = macTxStatsAddValidated(ring, (int *)&((uint8_t *)&wlanWmm)[4 * ring + 960]);
+	uint8_t rate = ((uint8_t *)connection + 600)[*(uint32_t *)((uint8_t *)connection + 448)];
+
+	return count * romLibConfigureState(rate, (uint16_t)*(uint32_t *)(status->data + 8),
+					    (frame[1] << 8) | frame[0], 1);
+}
+
+/*
+ * A frame was queued: which slot and queue it uses, whether the queue's medium time is used up,
+ * and how many frames the queue now has outstanding. 0: the frame is dropped.
+ */
+int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned int priority,
+		    unsigned int delay)
+{
+	struct WlanWmmSlot *slot = (struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * priority);
+	unsigned int queue = slot->ownQueue;
+	unsigned int ring = slot->activeQueue;
+	int accepted = 1;
+	unsigned int subtype;
+
+	*(uint16_t *)(data + 4) = 0;
+	if (connection->interfaceType == 1) {
+		ring = 0;
+	} else if (wlanWmm.enabled != 0) {
+		unsigned int limit = wlanRadioConfig->wmmQueueTime[queue];
+
+		accepted = priority != 255;
+		if (limit != 0xffff) {
+			if (limit <= delay) {
+				wlanWmmCountLost(queue);
+				wlanTxStatsCountDropped(data[2], 1);
+				return 0;
+			}
+			*(uint16_t *)(data + 4) = 0;
+		}
+		if (priority == 255)
+			return accepted;
+	}
+	data[108] = ring;
+	subtype = WMM_TX_FRAME(data)[2] >> 4;
+	if (subtype == 0 || subtype == 8 || subtype == 12) {
+		struct WlanWmmTiming *timing = &wlanWmmTiming[queue];
+		unsigned int level;
+
+		*(uint16_t *)(data + 104) = delay;
+		level = sysIrqDisable();
+		if ((int8_t)timing->pending > 0) {
+			data[106] = 0;
+		} else {
+			timing->pending = 0;
+			data[106] = 1;
+		}
+		timing->pending++;
+		sysIrqRestore(level);
+	}
+	return accepted;
+}
+
+/* A frame that was dropped before it went out counts as lost in its queue's statistics. */
+void wlanTxCountDropped(OsaBuffer *buffer)
+{
+	uint8_t *data;
+	unsigned int subtype;
+
+	if (((struct WlanConnection *)buffer->context)->mode == 2)
+		return;
+	data = buffer->data;
+	subtype = WMM_TX_FRAME(data)[2] >> 4;
+	if (subtype == 0 || subtype == 8 || subtype == 12)
+		wlanWmmFrameDone(data, wlanWmmSlots[data[0] & 7].ownQueue, 0, 0, 0);
+}
+
+/*
+ * A transmitted frame's medium time is charged to its queue when admission control is on, and
+ * the queue falls back once it exceeds the medium time that was admitted.
+ */
+void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *status)
+{
+	uint8_t *data = status->data;
+	const uint8_t *frame = WMM_TX_FRAME(data);
+	unsigned int used = 0;
+	unsigned int policed = 0;
+	int reapply = 0;
+	unsigned int slotIndex = data[0] & 7;
+	unsigned int queue;
+	unsigned int subtype;
+
+	romGetTimerTimestamp();
+	queue = wlanWmmSlots[slotIndex].ownQueue;
+	wlanWmmSlots[slotIndex].lastSequence = ((frame[25] << 8) | frame[24]) >> 4;
+	subtype = frame[2] >> 4;
+	if (subtype != 0 && subtype != 8 && subtype != 12)
+		return;
+	{
+		struct WlanWmmQueue *record = &wlanWmm.queues[queue];
+
+		if (record->edca.info & 8) {
+			int airtime;
+			unsigned int medium;
+
+			if (*(uint32_t *)(data + 8) & 0x20000000)
+				airtime = wlanTxAirtimeValidated(connection, status);
+			else
+				airtime = wlanTxAirtime(connection, status);
+			medium = (unsigned int)(airtime << 11) >> 16;
+			if (record->admittedTime == 0 || record->exhausted != 0) {
+				policed = medium;
+			} else {
+				unsigned int total;
+
+				used = medium;
+				total = (uint16_t)(record->usedTime + medium);
+				record->usedTime = total;
+				if (total > record->admittedTime) {
+					policed = total - record->admittedTime;
+					record->exhausted = 1;
+					reapply = 1;
+				}
+			}
+		}
+	}
+	wlanWmmFrameDone(data, queue, status->result == 0, used, policed);
+	if (reapply != 0)
+		wlanWmmApplyQueue(queue);
 }

@@ -10,35 +10,46 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/buffer.h"
 #include "robin/conn.h"
 
 #define WLAN_WMM_QUEUES		4
 #define WLAN_WMM_SLOTS		8
 
-/* A transmit queue's state in the MAC: only the part the WMM code sets (96 bytes). */
+/* A transmit queue's state in the MAC: only the part the WMM code sets (96 bytes, one per TID). */
 struct WlanWmmSlot {
 	uint8_t reserved0[85];
 	uint8_t ownQueue;		/* the queue that normally uses the slot */
 	uint8_t fallbackQueue;		/* the queue it falls back to when admission control rules the queue out */
 	uint8_t activeQueue;		/* the queue using it now */
-	uint8_t activeRing;		/* the transmit ring that goes with the active queue */
-	uint8_t reserved89[7];
+	uint8_t activeRing;		/* the TID/ring that goes with the active queue (wlanWmmRings) */
+	uint8_t reserved89;
+	uint16_t nextSequence;		/* the sequence number of the next frame of the TID */
+	uint16_t lastSequence;		/* the sequence number of the last frame sent */
+	uint8_t statsRing;		/* the ring whose statistics count the slot's frames */
+	uint8_t reserved95;
 };
 
-/* The parameter record of one hardware queue (an access category, the first two swapped). */
-struct WlanWmmQueue {
+/* EDCA parameters of an access category as the MAC takes them (the first two swapped). */
+struct WlanWmmEdca {
 	uint8_t info;			/* bits 1-2: access category, bit 3: admission control mandatory, bits 4-7: AIFSN */
 	uint8_t contention;		/* ECWmin << 4 | ECWmax */
 	uint16_t txop;			/* TXOP limit */
+};
+
+/* The parameter record of one hardware queue. */
+struct WlanWmmQueue {
+	struct WlanWmmEdca edca;
 	struct WlanWmmSlot *slots[2];
 	uint16_t admittedTime;		/* the medium time a TSPEC was admitted for; 0: none */
-	uint8_t reserved14[2];
-	uint8_t streams;		/* admitted streams in the queue */
+	uint16_t usedTime;		/* the medium time its frames used since the admission */
+	uint8_t exhausted;		/* the used time went over the admitted time: use the fallback */
 	uint8_t fallback;		/* the queue it falls back to without admission: 255: none */
 	uint8_t reserved18[2];
 };
 
 _Static_assert(sizeof(struct WlanWmmSlot) == 96, "WMM slot");
+_Static_assert(sizeof(struct WlanWmmEdca) == 4, "EDCA parameters");
 _Static_assert(sizeof(struct WlanWmmQueue) == 20, "WMM queue");
 
 struct WlanWmm {
@@ -48,9 +59,40 @@ struct WlanWmm {
 	struct WlanWmmQueue queues[WLAN_WMM_QUEUES];
 };
 
+/* What a queue's frames cost: one bin of Marvell's HostCmd_CMD_WMM_QUEUE_STATS (32 bytes). */
+struct WlanWmmStats {
+	uint16_t packets;
+	uint16_t lost;
+	uint16_t usedTime;
+	uint16_t policedTime;
+	uint32_t queueDelay;		/* sum, microseconds */
+	uint32_t transmitDelay;		/* sum, microseconds */
+	uint16_t histogram[7];		/* delays of 5, 10, 20, 30, 40 and 50 ms and over */
+	uint16_t reserved30;
+};
+
+/* The frames a queue has in flight and when its last one finished. */
+struct WlanWmmTiming {
+	uint32_t lastTime;
+	uint8_t pending;
+	uint8_t reserved5[3];
+};
+
+_Static_assert(sizeof(struct WlanWmmStats) == 32, "WMM statistics bin");
+_Static_assert(sizeof(struct WlanWmmTiming) == 8, "WMM queue timing");
+
+struct WlanConnection;
+struct WlanIePointers;
+struct WlanTspecRequest;
+
 extern struct WlanWmm wlanWmm;					/* 0x04008c4c */
 extern struct WlanWmmSlot wlanWmmSlots[WLAN_WMM_SLOTS];		/* 0x04008ca0 */
+extern uint8_t wlanBssWmmIe[9];				/* 0x04008fc9: the parameter element's header */
+extern uint8_t wlanWmmIe[3][9];					/* 0x04008fd2: the information elements in use */
 extern uint8_t wlanWmmCurrentSlot;				/* 0x04009007 */
+extern uint16_t wlanWmmPoliced;					/* 0x0400900a */
+extern struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES];	/* 0x04009018 */
+extern struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES];	/* 0x04009038 */
 extern uint8_t wlanWmmFlowBits;					/* 0x04008fda */
 extern uint8_t wlanWmmSessionBits;				/* 0x04008fec */
 extern uint8_t wlanWmmElement[26];				/* 0x04008fed: the parameter element, ID 221 */
@@ -64,11 +106,51 @@ int wlanWmmSetParameters(const uint8_t *element, uint8_t *count);	/* 0x1e63c */
 int wlanWmmQueueStatus(const struct WlanConnection *connection, uint8_t *tlvs);	/* 0x1e6c8 */
 int wlanWmmReportStatus(struct WlanConnection *connection);	/* 0x1e79a */
 int wlanWmmUpdate(struct WlanConnection *connection, const uint8_t *info, const uint8_t *parameter);	/* 0x1e7cc */
+void wlanWmmSet(struct WlanConnection *connection, int enable, int report);	/* 0x1e868 */
+void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int report);	/* 0x1e8ba */
 int wlanWmmQueueBit(int queue);					/* 0x2d1c6 */
-int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmQueue *record);	/* 0x2d1e2 */
+int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmEdca *edca);	/* 0x2d1e2 */
 int wlanWmmParseParameter(const uint8_t *element, uint8_t *count);	/* 0x2d2e2 */
-struct WlanWmmQueue *wlanWmmStoreQueue(struct WlanWmmQueue *queue, const uint8_t *record);	/* 0x2d338 */
+struct WlanWmmEdca *wlanWmmStoreQueue(struct WlanWmmEdca *edca, const uint8_t *record);	/* 0x2d338 */
 int wlanWmmQueueConfig(uint8_t *body, uint16_t *table, uint32_t *length);	/* 0x2d38c */
 int wlanWmmAppendIe(uint8_t *body, const uint8_t *element);	/* 0x2d4b0 */
+unsigned int hostCmd0070(uint8_t *body);			/* 0x41af8..: WMM_QUEUE_CONFIG's length */
+int hostCmd0081(uint8_t *body);					/* 0x1e83c: HostCmd_CMD_WMM_QUEUE_STATS */
+void wlanWmmResetCounters(void);				/* 0x1e84a */
+int wlanWmmHasElement(void);					/* 0x1e9ac */
+int wlanWmmCurrentSlotNumber(void);				/* 0x1e9ba */
+int wlanWmmSetBaWindow(unsigned int tid, unsigned int queue, unsigned int ring);	/* 0x1e9c2 */
+void wlanWmmClear(void);					/* 0x1e9f2 */
+void wlanWmmInitDefaults(void);					/* 0x1eb4e */
+void wlanWmmSetupQueue(unsigned int queue);			/* 0x1eb5e */
+int wlanWmmApplyApEdca(struct WlanConnection *connection);	/* 0x1ea08 */
+void wlanWmmSetApsdSupport(uint8_t *ie, int enable);		/* 0x1ea54 */
+int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid);	/* 0x1ea6c */
+int wlanConnectionQosEnabled(struct WlanConnection *connection);	/* 0x30324 */
+unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
+unsigned int wlanGroupNextSequence(unsigned int tid);		/* 0x4204c */
+unsigned int wlanWmmLastSequence(unsigned int tid);		/* 0x4205a */
+unsigned int wlanWmmAifsn(unsigned int queue);			/* 0x42030 */
+unsigned int wlanNextSequence(struct WlanConnection *connection, unsigned int tid);	/* 0x42068 */
+void wlanWmmCountLost(unsigned int queue);			/* 0x41cbe */
+void wlanWmmRecordDelay(struct WlanWmmStats *bin, unsigned int queueDelay, unsigned int transmitDelay);	/* 0x420f4 */
+void wlanWmmFrameDone(uint8_t *data, unsigned int queue, int delivered, unsigned int usedTime,
+		      unsigned int policedTime);		/* 0x41cd2 */
+struct WlanTxStatus;
+uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *status);	/* 0x41db2 */
+int wlanTxAirtimeValidated(struct WlanConnection *connection, struct WlanTxStatus *status);	/* 0x41e22 */
+int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned int priority,
+		    unsigned int delay);			/* 0x41e84 */
+void wlanTxCountDropped(OsaBuffer *buffer);		/* 0x41f2e */
+void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *status);	/* 0x41f6a */
+void wlanWmmBuildParameterElement(uint8_t *ie);			/* 0x2d220 */
+void wlanWmmFillParameterElement(uint8_t *ie);			/* 0x2d248 */
+unsigned int wlanTspecDirection(const uint8_t *tsInfo, uint8_t *directions);	/* 0x2cfbc */
+int wlanTspecQueue(int tid);					/* 0x2cfde */
+int wlanTspecApplyBits(int action, uint8_t *uplink, uint8_t *downlink, const uint8_t *reference,
+		       const uint8_t *tspec, const uint8_t *directions);	/* 0x2d000 */
+int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *policed);	/* 0x2d3d0 */
+int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
+			 uint16_t *times, unsigned int cwMin, unsigned int cwMax);	/* 0x2d4e4 */
 
 #endif /* ROBIN_WMM_H */

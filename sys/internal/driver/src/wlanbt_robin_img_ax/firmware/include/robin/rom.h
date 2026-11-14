@@ -21,10 +21,6 @@ size_t strlen(const char *string);
 /* Mask ROM string helpers (0x03f066ed, 0x03f0672b); semantics inferred from callers. */
 unsigned int romStringCopy(void *destination, const void *source, unsigned int limit);
 /* EDCA parameters of a channel-access queue (contention windows as masks, AIFSN, TXOP). */
-int romEdcaSetCwMin(unsigned int queue, unsigned int value);	/* 0x03f3a62f */
-int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
-int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
-int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
 /*
  * MAC timing entry points around a channel change and a calibration
  * (wlan/mgmt.c); their ROM bodies are not available, so the names are
@@ -57,6 +53,12 @@ int romEdcaSetCwMin(unsigned int queue, unsigned int value);	/* 0x03f3a62f */
 int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
 int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
 int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
+/* Brackets an EDCA queue's parameter update (0x03f3acf3 before, 0x03f3ad03 after). */
+void romLibDispatchEntry(unsigned int queue);
+int romLibParseEntry(unsigned int queue);
+/* The airtime in microseconds of a frame at a rate (0x03f3a2d1); arguments inferred from wlanTxAirtime(). */
+unsigned int romLibConfigureState(unsigned int rate, unsigned int sequence, unsigned int length,
+				  unsigned int wmm);
 /* The MAC's wake and sleep requests (0x03f3a917, 0x03f3a907); no argument. */
 void romMacWakeRequest(void);
 void romMacSleepNotify(void);

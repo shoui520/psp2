@@ -6,12 +6,24 @@
  */
 #include "robin/btrom.h"
 #include "robin/defrag.h"
+#include "robin/dmaring.h"
+#include "robin/mactx.h"
+#include "robin/sys.h"
 #include "robin/mef.h"
 #include "robin/patch.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
 #include "robin/threadx.h"
+
+WlanDefragContext wlanDefragContext __attribute__((section(".itcm.bss")));
+uint8_t wlanDefragDiscarding __attribute__((section(".sqram1.rw")));
+uint32_t wlanRomServicesTimerOffset __attribute__((section(".sqram1.rw")));
+OsaBuffer *wlanDefragReassembly __attribute__((section(".sqram1.rw")));
+static uint32_t wlanDefragSpare __attribute__((section(".sqram1.rw")));
+
+extern struct OsaBufferPool wlanPacketBufferPool;	/* 0x04000dcc */
+void wlanBufferResetDataOffset(OsaBuffer *buffer);	/* 0xbd34, not converted */
 
 ROBIN_PATCH_SLOT(wlanDefragmentOverride);
 ROBIN_PATCH_SLOT(wlanDefragmentWepOverride);
@@ -254,4 +266,35 @@ discard:
 	wlanDefragReset(context);
 	*reassembly = NULL;
 	return NULL;
+}
+
+/* Two services the ROM code calls do nothing in this build. */
+static void wlanRomServicesNone(void)
+{
+}
+
+static void wlanRomServicesNoneBuffer(OsaBuffer *buffer)
+{
+	(void)buffer;
+}
+
+void wlanRomServicesInit(void)
+{
+	wlanRomServices.postConnectionEvent = wlanPostConnectionEvent;
+	wlanRomServices.sendHostEvent = wlanHostEventSendData;
+	wlanRomServices.releaseDmaSpan = wlanReleaseDmaSpan;
+	wlanRomServices.submitBbpCommand = sysSubmitBbpCommand;
+	wlanRomServices.resetBufferDataOffset = wlanBufferResetDataOffset;
+	wlanRomServices.onWepIcvError = (void (*)(struct WlanConnection *))wlanRomServicesNone;
+	wlanRomServices.onWepDecrypted = wlanRomServicesNoneBuffer;
+	wlanRomServices.timerOffset = wlanRomServicesTimerOffset;
+	wlanRomServices.packetPool = &wlanPacketBufferPool;
+}
+
+void wlanDefragInit(void)
+{
+	__aeabi_memclr4(&wlanDefragContext, sizeof(wlanDefragContext));
+	wlanDefragDiscarding = 1;
+	wlanDefragReassembly = NULL;
+	wlanDefragSpare = 0;
 }

@@ -298,10 +298,47 @@ _Static_assert(sizeof(cipher_key_hdr_t) == 12, "cipher key header");
 /* keyApiStaTypes.h: cipher_key_hdr_t.keyState */
 #define KEY_STATE_FORCE_EAPOL_UNENCRYPTED	0x02
 
-/* The key data union (ckd) follows the header; nothing here reads it. */
-typedef struct cipher_key_t {
+/*
+ * The key data union (ckd) follows the header. TKIP and AES keep their key
+ * with the receive and send counters (the next packet number to send is
+ * txIv32:txIv16); WAPI keeps two keys, the packet number step and the send
+ * and receive packet numbers, least significant byte first, and a pointer
+ * to the key that replaces it. The layout is read off the frame paths.
+ */
+typedef struct __attribute__((packed)) cipher_key_wapi_t {
+	uint8_t keyIndex;
+	uint8_t dataKey[16];
+	uint8_t micKey[16];
+	uint8_t pnStep;			/* 2 for a unicast key, 1 for a group key */
+	uint8_t txPn[16];
+	uint8_t rxPn[16];
+	uint32_t replacement;		/* key to use next, or 0 (unaligned) */
+} cipher_key_wapi_t;
+
+typedef struct __attribute__((packed)) cipher_key_aes_t {
+	uint8_t key[16];
+	uint8_t txMicKey[8];
+	uint8_t rxMicKey[8];
+	uint32_t rxIv32;
+	uint16_t rxIv16;
+	uint8_t reserved50[2];
+	uint32_t txIv32;
+	uint16_t txIv16;
+} cipher_key_aes_t;
+
+typedef struct __attribute__((packed)) cipher_key_t {
 	cipher_key_hdr_t hdr;
+	union __attribute__((packed)) {
+		cipher_key_aes_t aes;		/* also TKIP */
+		cipher_key_wapi_t wapi;
+	} ckd;
 } cipher_key_t;
+
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.txIv32) == 52, "send counter");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.rxPn) == 62, "WAPI receive packet number");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.replacement) == 78, "WAPI replacement key");
+
+#define KEY_DIRECTION_RX	0x02	/* cipher_key_hdr_t.keyDirection: the key decrypts received frames (inferred) */
 
 typedef struct keyMgmtInfoSta_t {
 	uint8_t ANonce[NONCE_SIZE];
@@ -494,7 +531,7 @@ void supplicantParseRsnIe(IEEEtypes_RSNElement_t *pRsnIe, SecurityMode_t *pWpaTy
 /* the MIC algorithms: hmac_sha1.c (0x2db58), aes_cmac_rom.c (0x2d636), hmac_md5.c (0x2da70) */
 void Mrvl_hmac_sha1(uint8_t **ppText, int *pTextLen, int textNum, uint8_t *key,
 		    int key_len, uint8_t *output, int outputLen);
-void mrvl_aes_cmac(uint8_t *key, uint8_t *input, int length, uint8_t *mac);
+void mrvl_aes_cmac(const uint8_t *key, const uint8_t *input, int length, uint8_t *mac);		/* 0x2d636 */
 void Mrvl_hmac_md5(uint8_t *text_data, int text_len, uint8_t *key, int key_len,
 		   uint8_t *digest);
 

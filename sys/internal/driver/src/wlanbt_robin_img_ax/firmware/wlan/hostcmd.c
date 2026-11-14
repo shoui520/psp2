@@ -17,6 +17,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/stapssm.h"
+#include "robin/swcrypto.h"
 #include "robin/sys.h"
 #include "robin/task.h"
 #include "robin/threadx.h"
@@ -431,8 +432,6 @@ unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e
 void hostCmd0074Reset(void);							/* 0x311d0 */
 void hostCmd0074Arm(void);							/* 0x311ee */
 void hostCmd0078Parse(uint32_t *status, uint8_t *body, uint32_t *type, uint32_t *extra); /* SQRAM 0xc00078d6 */
-void hostCmd0078Lock(void);							/* 0x26c40 */
-void hostCmd0078Unlock(void);							/* 0x26c4c */
 extern void (*hostCmd0078Handlers[])(uint32_t *type, uint32_t *failed);		/* SQRAM 0xc0011f34 */
 void hostCmd007f(struct WlanConnection *connection, uint32_t *rate, uint32_t *flags); /* 0x335b0 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */
@@ -1276,7 +1275,7 @@ int hostCmdProcess(void)
 				goto failed;
 			socEvents = (SOC_EVENT_CONTROL << 22) >> 30;
 			if (socEvents == 0)
-				hostCmd0078Lock();
+				socEventsHold();
 			subCommand = HOSTCMD_U16(body + 2);
 			handler = hostCmd0078Handlers[12 * (uint8_t)type + 1 + 2 * subCommand];
 			if (handler != NULL)
@@ -1284,7 +1283,7 @@ int hostCmdProcess(void)
 			else
 				failedFlag = 1;
 			if (socEvents == 0)
-				hostCmd0078Unlock();
+				socEventsRelease();
 			if (failedFlag != 0)
 				goto failed;
 			if ((uint8_t)extra != 0)

@@ -188,3 +188,6 @@ PROVIDE(romEdcaSetCwMin    = 0x03f3a62f);
 PROVIDE(romEdcaSetCwMax    = 0x03f3a643);
 PROVIDE(romEdcaSetAifsn    = 0x03f3a665);
 PROVIDE(romEdcaSetTxop     = 0x03f3a64d);
+PROVIDE(romLibDispatchEntry = 0x03f3acf3);
+PROVIDE(romLibParseEntry   = 0x03f3ad03);
+PROVIDE(romLibConfigureState = 0x03f3a2d1);

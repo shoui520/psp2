@@ -18,8 +18,8 @@ struct WlanRadioConfig {
 	uint32_t regionPowerTable;	/* nonzero: the region's power table limits transmit power */
 	uint8_t params[15];		/* a connection's SNMP values; cleared when one is configured */
 	uint8_t reserved43[160 - 43];
-	uint16_t wmmQueueTime[4];	/* HostCmd_CMD_WMM_QUEUE_CONFIG's medium times */
-	uint8_t reserved168[0xda - 168];
+	uint16_t wmmQueueTime[8];	/* HostCmd_CMD_WMM_QUEUE_CONFIG's medium times */
+	uint8_t reserved176[0xda - 176];
 	uint8_t secondaryAntenna;
 	uint8_t primaryAntenna;
 	uint8_t secondaryDiversity;

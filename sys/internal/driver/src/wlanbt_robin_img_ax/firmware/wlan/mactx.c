@@ -16,6 +16,7 @@
 #include "robin/pspoll.h"
 #include "robin/txring.h"
 #include "robin/mactx.h"
+#include "robin/swcrypto.h"
 #include "robin/ieee80211.h"
 #include "robin/wlanrx.h"
 #include "robin/rom.h"
@@ -595,13 +596,9 @@ void macTxAdvanceStage(void)
 
 /* Not converted yet; provisional names. */
 int wlanTxQueueMgmtFrame(OsaBuffer *buffer);			/* 0x32038 */
-void wlanTxCountDropped(OsaBuffer *buffer);			/* 0x41f2e */
-void cbProcLoopbackFrame(OsaBuffer *buffer);			/* 0x1eea6 */
-void cbProcFlushConnection(struct WlanConnection *connection);	/* 0x1ecde */
-unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
-unsigned int wlanNextSequence(struct WlanConnection *connection, unsigned int tid); /* 0x42068 */
-int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned int tid,
-		    int ampdu);						/* 0x41e84 */
+
+
+
 uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused); /* 0x3d2f8 */
 uint8_t wlanTxLowRate(struct WlanConnection *connection, unsigned int limit); /* 0x31db0 */
 void wlanPsTriggerSent(void);					/* 0x2eade */
@@ -611,8 +608,6 @@ unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
 extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
 uint32_t wlanRateTimeoutValue(uint8_t *rateControl, uint32_t timeout, unsigned int shift); /* 0x2bd4a */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
-void cbProcMoveFrames(unsigned int from, unsigned int to, unsigned int tid,
-		      const uint8_t *peer);				/* 0x1ee52 */
 void wlanBaSlotDetach(unsigned int queue, unsigned int hwSlot);	/* 0x2931c */
 void wlanBaSlotClear(unsigned int hwSlot);			/* 0x2940e */
 int wlanBaSlotSetup(const struct WlanBaRequest *request, unsigned int windowId,
@@ -703,11 +698,11 @@ void macTxSendDataFrame(OsaBuffer *buffer)
 
 			frame[0] = (uint8_t)length;
 			frame[1] = (uint8_t)(length >> 8);
-			cbProcLoopbackFrame(buffer);
+			wlanCryptoSend(buffer);
 			return;
 		}
 		if (kind == 3) {
-			cbProcLoopbackFrame(buffer);
+			wlanCryptoSend(buffer);
 			return;
 		}
 	}
@@ -1414,7 +1409,7 @@ void macTxFlushConnection(struct WlanConnection *connection)
 
 	wlanTrace(0xbbbbbbbb, 0xffff1111);
 	wakeBit = macTxAcquireWakeBit();
-	cbProcFlushConnection(connection);
+	wlanCryptoFlushConnection(connection);
 	for (ring = 0; ring < 4; ++ring) {
 		wlanTxRingFlush((uint8_t)ring, (uintptr_t)connection);
 		wlanTxRingRequeueFilled((uint8_t)ring, (uintptr_t)connection);
@@ -1713,7 +1708,7 @@ int macTxBaDelete(struct WlanConnection *connection, const uint8_t *peer, unsign
 	wlanWindowFree(windowId, wlanWindowOwners, wlanTxWindowIds);
 	wlanBaSlotRelease(hwSlot, windowId);
 	wlanTxWindowFlush(windowId);
-	cbProcMoveFrames(windowId, queue, tid, connection->peerAddress);
+	wlanCryptoMoveFrames(windowId, queue, tid, connection->peerAddress);
 	wlanBaSlotDetach(queue, hwSlot);
 	wlanTxRingMovePending(windowId, queue);
 	wlanTxRingMoveFilled(windowId, queue);
@@ -1742,7 +1737,7 @@ int macTxBaAbort(struct WlanConnection *connection, const uint8_t *peer, unsigne
 	wlanWindowFree(windowId, wlanWindowOwners, wlanTxWindowIds);
 	wlanBaSlotRelease(hwSlot, windowId);
 	wlanTxWindowReset(windowId);
-	cbProcFlushConnection(connection);
+	wlanCryptoFlushConnection(connection);
 	wlanBaSlotClear(hwSlot);
 	wlanTxRingFlush(windowId, 0);
 	wlanTxRingRequeueFilled(windowId, 0);
@@ -1806,7 +1801,7 @@ int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *re
 		wlanTidToAccessCategory((uint8_t)__aeabi_uread4(request->tid)));
 	posture = sysIrqDisable();
 	wakeBit = macTxAcquireWakeBit();
-	cbProcMoveFrames(queue, windowId, (uint8_t)__aeabi_uread4(request->tid),
+	wlanCryptoMoveFrames(queue, windowId, (uint8_t)__aeabi_uread4(request->tid),
 			 connection->peerAddress);
 	wlanTxRingMoveToWindow(windowId, queue, (uint8_t)__aeabi_uread4(request->tid),
 			       connection->peerAddress);

@@ -26,6 +26,9 @@
 #include "robin/slot.h"
 #include "robin/soc.h"
 #include "robin/stream.h"
+#include "robin/ccm.h"
+#include "robin/defrag.h"
+#include "robin/swcrypto.h"
 #include "robin/subscribe.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
@@ -89,9 +92,6 @@ extern uint8_t wlanTxFramePoolControl[], wlanTxFramePoolMemory[];			/* 0x04004f4
 extern uint8_t wlanEventPoolControl[], wlanEventPoolMemory[];				/* 0x04004fb8, SQRAM 0xc002f7b0 */
 
 /* The state of the frames the management layer builds (0x04001070), its entry and the buffer. */
-extern uint8_t wlanFrameState[];							/* 0x04001070 */
-extern uint32_t wlanFrameEntry[];							/* 0x040010ec; [2]: the buffer */
-extern uint8_t wlanFrameBuffer[];							/* 0x04008900 */
 
 /* The ROM reads the pool the encryption routines take their buffers from. */
 struct OsaBufferPool *ramHook_encrPoolConfig __attribute__((section(".itcm.rw")));	/* 0x54ef4 */
@@ -139,7 +139,6 @@ void macMgmtAdjustHeader(void);								/* 0x3b93a */
 void macTxNotifyParseState(void);							/* 0x2fbcc */
 void macTxNotifyComputeFrame(void);							/* 0x3355c */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
-void cbProcSyncFrame(void *state, void *entry);						/* 0x1ec14 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
 int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
@@ -154,8 +153,6 @@ void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
 void macTxNotifyProcessState(void);							/* 0x2f94a */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void macTxNotifyApplyEntry(void);							/* 0x31156 */
-void p2pDirectScheduleTable(void);							/* 0x4228e */
-void cbProcHandleHeader(void);								/* 0x1f328 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
 void uapSqramProcessContext(void);							/* SQRAM 0xc0008204 */
 void p2pDirectCheckState(void);								/* 0x3f34c */
@@ -292,8 +289,8 @@ static int wlanTablesInit(void)
 	macTxNotifyComputeFrame();
 	wlanPsApplyDescriptor();
 	wlanMefDisable();
-	cbProcSyncFrame(wlanFrameState, wlanFrameEntry);
-	wlanFrameEntry[2] = (uintptr_t)wlanFrameBuffer;
+	wlanCryptoRingsInit(&wlanCryptoTxRing, &wlanCryptoRxRing);
+	wlanCryptoRxRing.scratch = &wlanCryptoScratch;
 	wlanCustomIeReset();
 	macMgmtResetFrame();
 	wlanApPsInit();
@@ -458,8 +455,8 @@ int wlanInit(void)
 	ramHook_encrPoolConfig = &wlanEncrPool;
 	wlanPsTrackDescriptor();
 	macTxNotifyApplyEntry();
-	p2pDirectScheduleTable();
-	cbProcHandleHeader();
+	wlanCcmSetup();
+	wlanRomServicesInit();
 	wlanBaTablesInit();
 	p2pSqramConfigureEntry();
 	uapSqramProcessContext();

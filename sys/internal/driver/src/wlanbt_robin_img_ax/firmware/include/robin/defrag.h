@@ -51,6 +51,14 @@ typedef struct __attribute__((packed)) HostCmd_DS_802_11_GET_LOG {
 
 _Static_assert(sizeof(HostCmd_DS_802_11_GET_LOG) == 0x44, "802.11 statistics");
 
+/* The defragmenter's state for received frames (the CCM path; WEP frames have their own). */
+extern WlanDefragContext wlanDefragContext;		/* 0x5f110 */
+extern uint8_t wlanDefragDiscarding;			/* SQRAM 0xc0011b0c */
+extern uint32_t wlanRomServicesTimerOffset;		/* SQRAM 0xc0011b10 */
+extern OsaBuffer *wlanDefragReassembly;			/* SQRAM 0xc0011b14 */
+
+void wlanRomServicesInit(void);				/* 0x1f328 */
+void wlanDefragInit(void);				/* 0x1f362 */
 void wlanDefragReset(WlanDefragContext *context);
 OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,
 			  OsaBuffer **reassembly, WlanDefragContext *context,

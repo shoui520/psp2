@@ -160,7 +160,9 @@ struct WlanConnectionInfo {
 	uint8_t maxStations;		/* stations an access point admits */
 	uint8_t reserved33[3];
 	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
-	uint8_t reserved40[28];
+	uint8_t reserved40[10];
+	uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
+	uint8_t reserved66[2];
 	uint32_t securityEnabled;	/* nonzero: securityParams apply */
 	uint8_t securityParams[28];
 	uint8_t securityState[24];
@@ -192,7 +194,9 @@ struct WlanConnectionInfo {
 	uint8_t reserved761[3];
 	uint32_t dozingStations;	/* peers in power save */
 	struct WlanApPsQueue groupQueue;	/* group-addressed frames kept for the DTIM beacon */
-	uint8_t reserved780[104];
+	uint8_t reserved780[70];
+	uint16_t groupKeyIndex;		/* the key group-addressed frames are sent with (inferred from the CCMP send path) */
+	uint8_t reserved852[32];
 	uint32_t listenInterval;	/* the peer is in power save */
 	uint32_t listenIntervalPs;	/* the same with WMM power save */
 	struct WlanPsMachine psMachine;
@@ -469,6 +473,7 @@ _Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OL
 _Static_assert(offsetof(struct WlanConnectionInfo, bssStarted) == 760, "info BSS started");
 _Static_assert(offsetof(struct WlanConnectionInfo, listenInterval) == 884, "info listen interval");
 _Static_assert(offsetof(struct WlanConnectionInfo, groupQueue) == 768, "info group queue");
+_Static_assert(offsetof(struct WlanConnectionInfo, groupKeyIndex) == 850, "info group key index");
 _Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS machine");
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
 _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");
