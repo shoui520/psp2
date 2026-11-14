@@ -23,6 +23,13 @@ int _TermLocks(void);
 int _InitTlsMutex(void);
 int _TermTlsMutex(void);
 
+/*
+ * the allocator of the TLS blocks: the program's user_malloc_for_tls and user_free_for_tls
+ * when it replaces them, else malloc and free (set when the heap starts)
+ */
+extern void *(*_MallocForTls)(size_t size);
+extern void (*_FreeForTls)(void *ptr);
+
 /* the standard streams */
 void _InitStdFiles(void);
 void _Fcloseall(int exiting);

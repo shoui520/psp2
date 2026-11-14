@@ -100,6 +100,12 @@ uint32_t SceLibKernel_9F793F84(void);
 /* the calling thread's TLS word at index */
 void *sceKernelGetTLSAddr(SceUInt32 index);
 
+/* call handler on the events in eventMask of threadId's threads; the handler's UID */
+SceUID sceKernelRegisterThreadEventHandler(const char *name, SceUID id, SceInt32 mask,
+					   SceKernelThreadEventHandler handler, void *argument);
+/* SceThreadmgr: the user syscall that removes it */
+int sceKernelUnregisterThreadEventHandler(SceUID uid);
+
 /* run the module_exit functions of the calling process's modules (lifecycle.c) */
 void sceKernelCallModuleExit(int type);
 
