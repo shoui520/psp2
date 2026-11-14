@@ -63,8 +63,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	../../../../../sys/internal/usermode/src/ces/libces/src/MBCS/Mbcs_FromUCS4.c
 	../../../../../sys/internal/usermode/src/ces/libces/src/SBCS/ces_sbcs_profile.c
 	../../../../../sys/internal/usermode/src/ces/libces/src/JIS/jis2004_FromUcs.c
-	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
