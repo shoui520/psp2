@@ -193,6 +193,12 @@ static void transform(int32_t *data, int32_t length, const int32_t *table, int32
 	data[half] = shift28((int64_t)table[half] * (work[0] - work[1]));
 }
 
+/* 0x86cbcc: the analysis bank's cosine transform, on the 32 points' sines */
+void aacSbrAnalysisTransform(int32_t *data, int32_t length, int32_t *work)
+{
+	aacSbrCosineTransform(data, length, aacSbrDctSin32, work);
+}
+
 /* 0x86cbe2: the synthesis bank's cosine transform, 64 or 32 points */
 void aacSbrSynthesisTransform(int32_t *data, int32_t length, int32_t *work)
 {

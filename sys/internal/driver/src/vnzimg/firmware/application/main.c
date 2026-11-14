@@ -78,6 +78,7 @@ static const RpcFunction g_systemFunctions[0x20];
 static void serverThread(uint32_t slot, uint32_t argument2);
 static void systemServerThread(uint32_t slot, uint32_t argument2);
 static void interruptThread(uint32_t argument, uint32_t argument2);
+static void ringBack(uint32_t slot, uint32_t value);
 
 static const ThreadEntry g_threadEntries[THREADS] = {
 	{ serverThread, 4, 0x400 },
@@ -157,11 +158,6 @@ static RpcFunction rpcFunction(uint32_t id)
 	if (id < 0x200)
 		return g_rpcFunctions[id];
 	return 0;
-}
-
-static void ringBack(uint32_t slot, uint32_t value)
-{
-	((volatile uint32_t *)DOORBELL_OUT)[slot] = value;
 }
 
 /* The ARM went down to no core: tell it. */
@@ -313,6 +309,11 @@ static void serverThread(uint32_t slot, uint32_t argument2)
 				ringBack(slot, doorbells->values[slot] & 0xffff);
 		}
 	} while (!(flags & FLAG_EXIT));
+}
+
+static void ringBack(uint32_t slot, uint32_t value)
+{
+	((volatile uint32_t *)DOORBELL_OUT)[slot] = value;
 }
 
 static RpcFunction systemFunction(uint32_t id)

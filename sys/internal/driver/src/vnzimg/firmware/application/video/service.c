@@ -42,7 +42,7 @@ static VideoServiceSlot *encoderSlot(VideoService *service, int32_t index)
 	return &service->encoders[index - service->numOfDecoders];
 }
 
-static void threadStop(VnzKernelThread *thread)
+static inline void threadStop(VnzKernelThread *thread)
 {
 	vnzThreadSetFlags(thread, SERVICE_FLAG_EXIT);
 	while (vnzThreadIsAlive(thread))
@@ -160,7 +160,7 @@ static void decoderOpen(VideoService *service, uint32_t codec, int32_t index)
 	vnzThreadStart(thread2, memory2, codec);
 }
 
-static void slotClose(VideoServiceSlot *slot)
+static inline void slotClose(VideoServiceSlot *slot)
 {
 	VnzKernelThread *thread = slot->thread, *thread2 = slot->thread2;
 

@@ -68,7 +68,7 @@ static void analysisReal(const int32_t *sum, int32_t *out, int32_t *work)
 	for (k = 0; k < 16; k++)
 		out[16 + k] = (sum[32 - k] - sum[k]) >> 1;
 
-	aacSbrCosineTransform(out, 32, aacSbrDctSin32, work);
+	aacSbrAnalysisTransform(out, 32, work);
 }
 
 /*

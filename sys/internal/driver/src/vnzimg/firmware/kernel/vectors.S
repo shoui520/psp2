@@ -19,6 +19,23 @@
 #define VNZ_KERNEL_CORE_EVENTS		16		/* VnzKernelCore.eventsHead */
 #define VNZ_KERNEL_CORE_SIZE		0x40
 
+/*
+ * The image's start, the vector base until vnzKernelInterruptsInitialize
+ * copies the table below over it: reset and NMI, the other exceptions
+ * stopped where they are, and the debug vector's return.
+ */
+	.section .boot, "ax"
+	.global	vnzKernelBootVectors
+	.p2align 2
+vnzKernelBootVectors:
+	jmp	vnzKernelReset				/* reset */
+	jmp	exceptionNmi			/* NMI */
+1:	jmp	1b				/* reserved instruction */
+2:	jmp	2b				/* zero divide */
+3:	jmp	3b				/* BRK */
+4:	jmp	4b				/* SWI */
+	dret					/* debug */
+
 	.section .vectors, "ax"
 	.global	vnzKernelVectors
 	.global	vnzKernelVectorsEnd

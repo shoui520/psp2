@@ -414,6 +414,7 @@ void aacFft(int32_t *data, int32_t length);
 void aacSbrModulateReal(int32_t *data, int32_t length, int32_t *out);
 void aacSbrModulateImag(int32_t *data, int32_t length, int32_t *out);
 void aacSbrModulate64(int32_t *data, int32_t imaginary);
+void aacSbrAnalysisTransform(int32_t *data, int32_t length, int32_t *work);
 void aacSbrSynthesisTransform(int32_t *data, int32_t length, int32_t *work);
 void aacSbrAnalysis(const int32_t *input, int32_t *timing, int32_t **real, int32_t **imag,
 	AacSbrQmf *qmf, int32_t *work, uint8_t created);
