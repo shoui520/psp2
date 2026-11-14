@@ -1012,7 +1012,7 @@ static inline uint32_t rowStep(uint32_t y, uint32_t row, uint32_t step)
 }
 
 /* rows of eight samples from two streams */
-static void loadRows(AvcdecInter *inter, uint32_t first, uint32_t count, const uint8_t *address,
+static void loadRows(AvcInter *inter, uint32_t first, uint32_t count, const uint8_t *address,
 	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
 {
 	uint32_t row, advance;
@@ -1026,7 +1026,7 @@ static void loadRows(AvcdecInter *inter, uint32_t first, uint32_t count, const u
 }
 
 /* rows of sixteen from two streams: the second half the second's, shifted round */
-static void loadRowsPair(AvcdecInter *inter, uint32_t first, uint32_t count,
+static void loadRowsPair(AvcInter *inter, uint32_t first, uint32_t count,
 	const uint8_t *address, const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
 {
 	uint32_t row, advance, i;
@@ -1048,7 +1048,7 @@ static void loadRowsPair(AvcdecInter *inter, uint32_t first, uint32_t count,
 }
 
 /* rows of sixteen from three streams */
-static void loadRowsWide(AvcdecInter *inter, uint32_t first, uint32_t count,
+static void loadRowsWide(AvcInter *inter, uint32_t first, uint32_t count,
 	const uint8_t *address, const uint8_t *next, const uint8_t *third, uint32_t y,
 	uint32_t step, uint32_t shift)
 {
@@ -1065,63 +1065,63 @@ static void loadRowsWide(AvcdecInter *inter, uint32_t first, uint32_t count,
 }
 
 /* 0x895140: a 4x4 block's four rows */
-void avcdecLoad4(AvcdecInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+void avcdecLoad4(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
 	uint32_t step, uint32_t shift)
 {
 	loadRows(inter, 0, 4, address, next, y, step, shift);
 }
 
 /* 0x895218: the five rows below them a vertical filter reads */
-void avcdecLoad4Tall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad4Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRows(inter, 4, 5, address, next, y, step, shift);
 }
 
 /* 0x895350: four rows of nine samples and more, for a horizontal filter */
-void avcdecLoad4Wide(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad4Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRowsPair(inter, 0, 4, address, next, y, step, shift);
 }
 
 /* 0x895448 */
-void avcdecLoad4WideTall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad4WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRowsPair(inter, 4, 5, address, next, y, step, shift);
 }
 
 /* 0x8955a8: an 8x8 block's eight rows */
-void avcdecLoad8(AvcdecInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+void avcdecLoad8(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
 	uint32_t step, uint32_t shift)
 {
 	loadRows(inter, 0, 8, address, next, y, step, shift);
 }
 
 /* 0x895860 */
-void avcdecLoad8Tall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad8Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRows(inter, 8, 5, address, next, y, step, shift);
 }
 
 /* 0x895998 */
-void avcdecLoad8Wide(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad8Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRowsWide(inter, 0, 8, address, next, third, y, step, shift);
 }
 
 /* 0x895d78 */
-void avcdecLoad8WideTall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecLoad8WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
 	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift)
 {
 	loadRowsWide(inter, 8, 5, address, next, third, y, step, shift);
 }
 
 /* the picture's left edge `shift` columns in: its first column repeated before it */
-static void edgeLeft(AvcdecInter *inter, uint32_t first, uint32_t count, uint32_t width,
+static void edgeLeft(AvcInter *inter, uint32_t first, uint32_t count, uint32_t width,
 	int32_t shift)
 {
 	uint32_t row;
@@ -1134,7 +1134,7 @@ static void edgeLeft(AvcdecInter *inter, uint32_t first, uint32_t count, uint32_
 }
 
 /* the right edge: column `last`'s sample repeated past it */
-static void edgeRight(AvcdecInter *inter, uint32_t first, uint32_t count, int32_t last,
+static void edgeRight(AvcInter *inter, uint32_t first, uint32_t count, int32_t last,
 	int32_t shift)
 {
 	uint32_t row;
@@ -1147,7 +1147,7 @@ static void edgeRight(AvcdecInter *inter, uint32_t first, uint32_t count, int32_
 }
 
 /* the top edge: the first row repeated above it */
-static void edgeTop(AvcdecInter *inter, int32_t count, int32_t shift)
+static void edgeTop(AvcInter *inter, int32_t count, int32_t shift)
 {
 	int32_t row;
 	uint32_t column;
@@ -1159,7 +1159,7 @@ static void edgeTop(AvcdecInter *inter, int32_t count, int32_t shift)
 }
 
 /* the bottom edge: the last row repeated below it */
-static void edgeBottom(AvcdecInter *inter, int32_t count, int32_t shift)
+static void edgeBottom(AvcInter *inter, int32_t count, int32_t shift)
 {
 	int32_t row, last = count - 1;
 	uint32_t column;
@@ -1171,199 +1171,199 @@ static void edgeBottom(AvcdecInter *inter, int32_t count, int32_t shift)
 }
 
 /* 0x895f30: a 4x4 block's rows, `shift` columns left of the picture */
-void avcdecEdgeLeft4(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft4(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 0, 4, 8, shift);
 }
 
 /* 0x895f50 */
-void avcdecEdgeLeft4Tall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft4Tall(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 4, 5, 8, shift);
 }
 
 /* 0x895f78: the rows of a horizontal filter */
-void avcdecEdgeLeft4Wide(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft4Wide(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 0, 4, 16, shift);
 }
 
 /* 0x895fa8: all of them left of it */
-void avcdecEdgeLeft4WideFar(AvcdecInter *inter)
+void avcdecEdgeLeft4WideFar(AvcInter *inter)
 {
 	edgeLeft(inter, 0, 4, 16, 16);
 }
 
 /* 0x895fc8 */
-void avcdecEdgeLeft4WideTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft4WideTall(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 4, 5, 16, shift);
 }
 
 /* 0x896008 */
-void avcdecEdgeLeft4WideFarTall(AvcdecInter *inter)
+void avcdecEdgeLeft4WideFarTall(AvcInter *inter)
 {
 	edgeLeft(inter, 4, 5, 16, 16);
 }
 
 /* 0x896030 */
-void avcdecEdgeLeft8(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 0, 8, 8, shift);
 }
 
 /* 0x896070 */
-void avcdecEdgeLeft8Tall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8Tall(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 8, 5, 8, shift);
 }
 
 /* 0x896098: under eight columns out */
-void avcdecEdgeLeft8Wide(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8Wide(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 0, 8, 16, shift);
 }
 
 /* 0x8960f8: eight or more: the first half all the edge's */
-void avcdecEdgeLeft8WideFar(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8WideFar(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 0, 8, 16, shift);
 }
 
 /* 0x896158 */
-void avcdecEdgeLeft8WideTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8WideTall(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 8, 5, 16, shift);
 }
 
 /* 0x896198 */
-void avcdecEdgeLeft8WideFarTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeLeft8WideFarTall(AvcInter *inter, int32_t shift)
 {
 	edgeLeft(inter, 8, 5, 16, shift);
 }
 
 /* 0x8961d8: the picture's last column `shift` in from the window's */
-void avcdecEdgeRight4(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight4(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 0, 4, 7, shift);
 }
 
 /* 0x8961f8 */
-void avcdecEdgeRight4Tall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight4Tall(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 4, 5, 7, shift);
 }
 
 /* 0x896220: nine columns, the last ones past the picture */
-void avcdecEdgeRight4Wide(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight4Wide(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 0, 4, 8, shift);
 }
 
 /* 0x896240: all of them past it: the ninth column's sample */
-void avcdecEdgeRight4WideFar(AvcdecInter *inter)
+void avcdecEdgeRight4WideFar(AvcInter *inter)
 {
 	edgeRight(inter, 0, 4, 8, 8);
 }
 
 /* 0x896250 */
-void avcdecEdgeRight4WideTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight4WideTall(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 4, 5, 8, shift);
 }
 
 /* 0x896278 */
-void avcdecEdgeRight4WideFarTall(AvcdecInter *inter)
+void avcdecEdgeRight4WideFarTall(AvcInter *inter)
 {
 	edgeRight(inter, 4, 5, 8, 8);
 }
 
 /* 0x896290 */
-void avcdecEdgeRight8(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 0, 8, 7, shift);
 }
 
 /* 0x8962d0 */
-void avcdecEdgeRight8Tall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8Tall(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 8, 5, 7, shift);
 }
 
 /* 0x8962f8 */
-void avcdecEdgeRight8Wide(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8Wide(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 0, 8, 15, shift);
 }
 
 /* 0x896358: eight or more columns past it */
-void avcdecEdgeRight8WideFar(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8WideFar(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 0, 8, 15, shift);
 }
 
 /* 0x8963b8 */
-void avcdecEdgeRight8WideTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8WideTall(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 8, 5, 15, shift);
 }
 
 /* 0x8963f8 */
-void avcdecEdgeRight8WideFarTall(AvcdecInter *inter, int32_t shift)
+void avcdecEdgeRight8WideFarTall(AvcInter *inter, int32_t shift)
 {
 	edgeRight(inter, 8, 5, 15, shift);
 }
 
 /* 0x896438: the block's first row `-y` rows below the picture's top */
-void avcdecEdgeTop4(AvcdecInter *inter, int32_t y)
+void avcdecEdgeTop4(AvcInter *inter, int32_t y)
 {
 	edgeTop(inter, 4, -y);
 }
 
 /* 0x896468 */
-void avcdecEdgeTop4Tall(AvcdecInter *inter, int32_t y)
+void avcdecEdgeTop4Tall(AvcInter *inter, int32_t y)
 {
 	edgeTop(inter, 9, -y);
 }
 
 /* 0x8964c0 */
-void avcdecEdgeTop8(AvcdecInter *inter, int32_t y)
+void avcdecEdgeTop8(AvcInter *inter, int32_t y)
 {
 	edgeTop(inter, 8, -y);
 }
 
 /* 0x896510 */
-void avcdecEdgeTop8Tall(AvcdecInter *inter, int32_t y)
+void avcdecEdgeTop8Tall(AvcInter *inter, int32_t y)
 {
 	edgeTop(inter, 13, -y);
 }
 
 /* 0x896588: the window's last row `below` rows past the picture's */
-void avcdecEdgeBottom4(AvcdecInter *inter, int32_t below)
+void avcdecEdgeBottom4(AvcInter *inter, int32_t below)
 {
 	edgeBottom(inter, 4, below);
 }
 
 /* 0x8965b8 */
-void avcdecEdgeBottom4Tall(AvcdecInter *inter, int32_t below)
+void avcdecEdgeBottom4Tall(AvcInter *inter, int32_t below)
 {
 	edgeBottom(inter, 9, below);
 }
 
 /* 0x896610 */
-void avcdecEdgeBottom8(AvcdecInter *inter, int32_t below)
+void avcdecEdgeBottom8(AvcInter *inter, int32_t below)
 {
 	edgeBottom(inter, 8, below);
 }
 
 /* 0x896660 */
-void avcdecEdgeBottom8Tall(AvcdecInter *inter, int32_t below)
+void avcdecEdgeBottom8Tall(AvcInter *inter, int32_t below)
 {
 	edgeBottom(inter, 13, below);
 }
 
 /* 0x8966d8: a whole-sample 4x4 block, the window's corner */
-void avcdecFull4(AvcdecInter *inter)
+void avcdecFull4(AvcInter *inter)
 {
 	uint32_t row, column;
 
@@ -1373,7 +1373,7 @@ void avcdecFull4(AvcdecInter *inter)
 }
 
 /* 0x8966e0: a vertical filter's taps, the window's nine rows */
-void avcdecTapsVertical4(AvcdecInter *inter)
+void avcdecTapsVertical4(AvcInter *inter)
 {
 	uint32_t row, column;
 
@@ -1383,7 +1383,7 @@ void avcdecTapsVertical4(AvcdecInter *inter)
 }
 
 /* 0x896700: a horizontal filter's, the window's nine columns turned into rows */
-void avcdecTapsHorizontal4(AvcdecInter *inter)
+void avcdecTapsHorizontal4(AvcInter *inter)
 {
 	uint32_t row, column;
 
@@ -1411,19 +1411,19 @@ static inline uint8_t averageSamples(uint32_t a, uint32_t b)
 }
 
 /* a half sample down a column of the window */
-static inline uint8_t halfVertical(const AvcdecInter *inter, uint32_t row, uint32_t column)
+static inline uint8_t halfVertical(const AvcInter *inter, uint32_t row, uint32_t column)
 {
 	return clipSample((sixTap(&inter->window[row][column], 16) + 16) >> 5);
 }
 
 /* along a row */
-static inline uint8_t halfHorizontal(const AvcdecInter *inter, uint32_t row, uint32_t column)
+static inline uint8_t halfHorizontal(const AvcInter *inter, uint32_t row, uint32_t column)
 {
 	return clipSample((sixTap(&inter->window[row][column], 1) + 16) >> 5);
 }
 
 /* the centre (j): the rows' sums unrounded, then down the column */
-static inline uint8_t halfCentre(const AvcdecInter *inter, uint32_t row, uint32_t column)
+static inline uint8_t halfCentre(const AvcInter *inter, uint32_t row, uint32_t column)
 {
 	int32_t sums[6];
 	uint32_t i;
@@ -1445,7 +1445,7 @@ static inline uint8_t halfCentre(const AvcdecInter *inter, uint32_t row, uint32_
 #define LUMA_RIGHT		0x01
 
 /* 0x896748: a 4x4 block's vertical half samples (h), or d and n */
-void avcdecLumaVertical4(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaVertical4(AvcInter *inter, uint32_t mode)
 {
 	uint32_t row, column, side = 2 + ((mode & LUMA_BELOW) != 0);
 	uint8_t value;
@@ -1460,7 +1460,7 @@ void avcdecLumaVertical4(AvcdecInter *inter, uint32_t mode)
 }
 
 /* 0x8967a8: horizontal ones (b), or a and c: down the turned taps, then turned back */
-void avcdecLumaHorizontal4(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaHorizontal4(AvcInter *inter, uint32_t mode)
 {
 	uint32_t row, column, side = 2 + ((mode & 3) == 3);
 	uint8_t value;
@@ -1475,7 +1475,7 @@ void avcdecLumaHorizontal4(AvcdecInter *inter, uint32_t mode)
 }
 
 /* the centre's (j), or f, q, i or k with the half sample beside */
-static void centre(AvcdecInter *inter, uint8_t *out, uint32_t stride, uint32_t size,
+static void centre(AvcInter *inter, uint8_t *out, uint32_t stride, uint32_t size,
 	uint32_t mode)
 {
 	uint32_t row, column, side = 2 + ((mode & LUMA_BELOW) != 0);
@@ -1497,7 +1497,7 @@ static void centre(AvcdecInter *inter, uint8_t *out, uint32_t stride, uint32_t s
 }
 
 /* the diagonal quarter samples (e, g, p, r): a horizontal and a vertical half averaged */
-static void diagonal(AvcdecInter *inter, uint8_t *out, uint32_t stride, uint32_t size,
+static void diagonal(AvcInter *inter, uint8_t *out, uint32_t stride, uint32_t size,
 	uint32_t mode)
 {
 	uint32_t row, column, below = 2 + ((mode & LUMA_BELOW) != 0);
@@ -1511,19 +1511,19 @@ static void diagonal(AvcdecInter *inter, uint8_t *out, uint32_t stride, uint32_t
 }
 
 /* 0x896820 */
-void avcdecLumaCentre4(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaCentre4(AvcInter *inter, uint32_t mode)
 {
 	centre(inter, inter->small[0], 4, 4, mode);
 }
 
 /* 0x896c18 */
-void avcdecLumaDiagonal4(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaDiagonal4(AvcInter *inter, uint32_t mode)
 {
 	diagonal(inter, inter->small[0], 4, 4, mode);
 }
 
 /* 0x896d90: an 8x8 block's vertical ones, the window from two rows above */
-void avcdecLumaVertical8(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaVertical8(AvcInter *inter, uint32_t mode)
 {
 	uint32_t row, column, side = 2 + ((mode & LUMA_BELOW) != 0);
 	uint8_t value;
@@ -1538,7 +1538,7 @@ void avcdecLumaVertical8(AvcdecInter *inter, uint32_t mode)
 }
 
 /* 0x896ec8: horizontal ones, the window from two columns left */
-void avcdecLumaHorizontal8(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaHorizontal8(AvcInter *inter, uint32_t mode)
 {
 	uint32_t row, column, side = mode & 3;
 	uint8_t value;
@@ -1553,19 +1553,19 @@ void avcdecLumaHorizontal8(AvcdecInter *inter, uint32_t mode)
 }
 
 /* 0x897068 */
-void avcdecLumaCentre8(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaCentre8(AvcInter *inter, uint32_t mode)
 {
 	centre(inter, inter->block[0], 8, 8, mode);
 }
 
 /* 0x897720 */
-void avcdecLumaDiagonal8(AvcdecInter *inter, uint32_t mode)
+void avcdecLumaDiagonal8(AvcInter *inter, uint32_t mode)
 {
 	diagonal(inter, inter->block[0], 8, 8, mode);
 }
 
 /* 0x897a38: list 0's block, as the prediction stored it (16 apart) */
-void avcdecLoadList0(AvcdecInter *inter, const uint8_t *samples)
+void avcdecLoadList0(AvcInter *inter, const uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -1575,7 +1575,7 @@ void avcdecLoadList0(AvcdecInter *inter, const uint8_t *samples)
 }
 
 /* 0x897a80: explicit weighting (8.4.2.3.2): ((p w + round) >> shift) + o */
-void avcdecWeight(AvcdecInter *inter, int32_t weight, int32_t offset, int32_t round,
+void avcdecWeight(AvcInter *inter, int32_t weight, int32_t offset, int32_t round,
 	int32_t shift)
 {
 	uint32_t row, column;
@@ -1589,7 +1589,7 @@ void avcdecWeight(AvcdecInter *inter, int32_t weight, int32_t offset, int32_t ro
 }
 
 /* 0x897ba8: both lists': ((p0 w0 + p1 w1 + round) >> shift) + o */
-void avcdecWeightBi(AvcdecInter *inter, int32_t weight0, int32_t weight1, int32_t offset,
+void avcdecWeightBi(AvcInter *inter, int32_t weight0, int32_t weight1, int32_t offset,
 	int32_t round, int32_t shift)
 {
 	uint32_t row, column;
@@ -1604,7 +1604,7 @@ void avcdecWeightBi(AvcdecInter *inter, int32_t weight0, int32_t weight1, int32_
 }
 
 /* 0x897d68: the default (8.4.2.3.1): the lists' blocks averaged */
-void avcdecAverage(AvcdecInter *inter)
+void avcdecAverage(AvcInter *inter)
 {
 	uint32_t row, column;
 
@@ -1615,7 +1615,7 @@ void avcdecAverage(AvcdecInter *inter)
 }
 
 /* 0x897d90: a 4x4 block put in its place in the 8x8 one */
-void avcdecPlace4(AvcdecInter *inter, uint32_t block)
+void avcdecPlace4(AvcInter *inter, uint32_t block)
 {
 	uint32_t row, column, top = (block & 2) * 2, left = (block & 1) * 4;
 
@@ -1640,7 +1640,7 @@ static inline int16_t addSaturate(int32_t a, int32_t b)
 }
 
 /* a quadrant of the 8x8 block: the residual added, clipped */
-static void addQuadrant(AvcdecRecon *recon, uint32_t block)
+static void addQuadrant(AvcRecon *recon, uint32_t block)
 {
 	uint32_t row, column, top = (block & 2) * 2, left = (block & 1) * 4;
 
@@ -1652,31 +1652,31 @@ static void addQuadrant(AvcdecRecon *recon, uint32_t block)
 }
 
 /* 0x898f80: an inter macroblock's first 4x4 block of the 8x8 */
-void avcdecAddResidual0(AvcdecRecon *recon)
+void avcdecAddResidual0(AvcRecon *recon)
 {
 	addQuadrant(recon, 0);
 }
 
 /* 0x898f98 */
-void avcdecAddResidual1(AvcdecRecon *recon)
+void avcdecAddResidual1(AvcRecon *recon)
 {
 	addQuadrant(recon, 1);
 }
 
 /* 0x898fb0 */
-void avcdecAddResidual2(AvcdecRecon *recon)
+void avcdecAddResidual2(AvcRecon *recon)
 {
 	addQuadrant(recon, 2);
 }
 
 /* 0x898fc8 */
-void avcdecAddResidual3(AvcdecRecon *recon)
+void avcdecAddResidual3(AvcRecon *recon)
 {
 	addQuadrant(recon, 3);
 }
 
 /* an 8x8 block of the macroblock's samples (16 apart) */
-static void loadBlock(AvcdecRecon *recon, const uint8_t *samples)
+static void loadBlock(AvcRecon *recon, const uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -1685,7 +1685,7 @@ static void loadBlock(AvcdecRecon *recon, const uint8_t *samples)
 			recon->block[row][column] = samples[row * 16 + column];
 }
 
-static void storeBlock(const AvcdecRecon *recon, uint8_t *samples)
+static void storeBlock(const AvcRecon *recon, uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -1695,19 +1695,19 @@ static void storeBlock(const AvcdecRecon *recon, uint8_t *samples)
 }
 
 /* 0x898fe0: the prediction of an inter 8x8 block */
-void avcdecLoadBlock(AvcdecRecon *recon, const uint8_t *samples)
+void avcdecLoadBlock(AvcRecon *recon, const uint8_t *samples)
 {
 	loadBlock(recon, samples);
 }
 
 /* 0x899030: and the block reconstructed back */
-void avcdecStoreBlock(const AvcdecRecon *recon, uint8_t *samples)
+void avcdecStoreBlock(const AvcRecon *recon, uint8_t *samples)
 {
 	storeBlock(recon, samples);
 }
 
 /* 0x899080: its right column, for the intra macroblock right */
-void avcdecKeepRight(const AvcdecRecon *recon, uint8_t *right)
+void avcdecKeepRight(const AvcRecon *recon, uint8_t *right)
 {
 	uint32_t row;
 
@@ -1738,7 +1738,7 @@ static void inverse4(int16_t *x, uint32_t step)
 }
 
 /* the levels dequantised, rows then columns transformed, (x + 32) >> 6 */
-static void inverseBlock(AvcdecRecon *recon, const int16_t *coef, uint32_t withDc)
+static void inverseBlock(AvcRecon *recon, const int16_t *coef, uint32_t withDc)
 {
 	int16_t *x = recon->residual[0];
 	uint32_t i;
@@ -1760,7 +1760,7 @@ static void inverseBlock(AvcdecRecon *recon, const int16_t *coef, uint32_t withD
  * dequantised ((f v) << (QP / 6 - 2), or rounded right below QP 12), by
  * 8x8 block.
  */
-void avcdecDcIntra16(AvcdecRecon *recon, const int16_t *coef, uint32_t qp)
+void avcdecDcIntra16(AvcRecon *recon, const int16_t *coef, uint32_t qp)
 {
 	int16_t f[16], t[16];
 	int32_t value, shift;
@@ -1793,15 +1793,15 @@ void avcdecDcIntra16(AvcdecRecon *recon, const int16_t *coef, uint32_t qp)
 }
 
 /* 0x8992a0: an Intra16x16 4x4 block's: its AC levels and the DC */
-void avcdecIdctAc(AvcdecRecon *recon, const int16_t *coef)
+void avcdecIdctAc(AvcRecon *recon, const int16_t *coef)
 {
 	inverseBlock(recon, coef, 1);
 }
 
 /* 0x8993b0: one with the DC alone */
-void avcdecIdctDc(AvcdecRecon *recon)
+void avcdecIdctDc(AvcRecon *recon)
 {
-	int16_t value = addSaturate(recon->blockDc[0], 32) >> 6;
+	int16_t value = (int16_t)(recon->blockDc[0] + 32) >> 6;	/* cpadd3.h: it wraps */
 	uint32_t row, column;
 
 	for (row = 0; row < 4; row++)
@@ -1810,37 +1810,37 @@ void avcdecIdctDc(AvcdecRecon *recon)
 }
 
 /* 0x8993d8: a 4x4 block's levels */
-void avcdecIdct(AvcdecRecon *recon, const int16_t *coef)
+void avcdecIdct(AvcRecon *recon, const int16_t *coef)
 {
 	inverseBlock(recon, coef, 0);
 }
 
 /* 0x8994d8: an Intra4x4 macroblock's 4x4 blocks */
-void avcdecAddIntra0(AvcdecRecon *recon)
+void avcdecAddIntra0(AvcRecon *recon)
 {
 	addQuadrant(recon, 0);
 }
 
 /* 0x8994f8 */
-void avcdecAddIntra1(AvcdecRecon *recon)
+void avcdecAddIntra1(AvcRecon *recon)
 {
 	addQuadrant(recon, 1);
 }
 
 /* 0x899518 */
-void avcdecAddIntra2(AvcdecRecon *recon)
+void avcdecAddIntra2(AvcRecon *recon)
 {
 	addQuadrant(recon, 2);
 }
 
 /* 0x899538 */
-void avcdecAddIntra3(AvcdecRecon *recon)
+void avcdecAddIntra3(AvcRecon *recon)
 {
 	addQuadrant(recon, 3);
 }
 
 /* 0x899558 */
-void avcdecStoreIntra(const AvcdecRecon *recon, uint8_t *samples)
+void avcdecStoreIntra(const AvcRecon *recon, uint8_t *samples)
 {
 	storeBlock(recon, samples);
 }
@@ -1850,7 +1850,7 @@ void avcdecStoreIntra(const AvcdecRecon *recon, uint8_t *samples)
  * above right (or its last sample repeated where that macroblock is not
  * there), the column left; the first 8x8 block's of them.
  */
-void avcdecIntraNeighbours(AvcdecRecon *recon, const AvcdecEdges *edges,
+void avcdecIntraNeighbours(AvcRecon *recon, const AvcEdges *edges,
 	uint32_t aboveRight)
 {
 	uint32_t i;
@@ -1867,7 +1867,7 @@ void avcdecIntraNeighbours(AvcdecRecon *recon, const AvcdecEdges *edges,
 }
 
 /* 0x8995f0: the next 8x8 block's, from the block just reconstructed */
-void avcdecIntraNext(AvcdecRecon *recon, uint32_t block, const AvcdecEdges *edges)
+void avcdecIntraNext(AvcRecon *recon, uint32_t block, const AvcEdges *edges)
 {
 	uint32_t i;
 
@@ -1906,7 +1906,7 @@ void avcdecIntraNext(AvcdecRecon *recon, uint32_t block, const AvcdecEdges *edge
  * the 8x8 block: its neighbours the 8x8 block's or, inside it, the blocks
  * reconstructed before it; above right of the last block not there.
  */
-static void intra4x4(AvcdecRecon *recon, uint32_t block, uint32_t mode, uint32_t leftAvailable,
+static void intra4x4(AvcRecon *recon, uint32_t block, uint32_t mode, uint32_t leftAvailable,
 	uint32_t aboveAvailable)
 {
 	uint32_t x0 = (block & 1) * 4, y0 = (block & 2) * 2, x, y, i, sum;
@@ -2010,25 +2010,25 @@ static void intra4x4(AvcdecRecon *recon, uint32_t block, uint32_t mode, uint32_t
 }
 
 /* 0x899670: the 8x8 block's first 4x4 block */
-void avcdecIntra4x4Block0(AvcdecRecon *recon, uint32_t mode, uint32_t left, uint32_t above)
+void avcdecIntra4x4Block0(AvcRecon *recon, uint32_t mode, uint32_t left, uint32_t above)
 {
 	intra4x4(recon, 0, mode, left, above);
 }
 
 /* 0x8997e8 */
-void avcdecIntra4x4Block1(AvcdecRecon *recon, uint32_t mode, uint32_t above)
+void avcdecIntra4x4Block1(AvcRecon *recon, uint32_t mode, uint32_t above)
 {
 	intra4x4(recon, 1, mode, 1, above);
 }
 
 /* 0x899940 */
-void avcdecIntra4x4Block2(AvcdecRecon *recon, uint32_t mode, uint32_t left)
+void avcdecIntra4x4Block2(AvcRecon *recon, uint32_t mode, uint32_t left)
 {
 	intra4x4(recon, 2, mode, left, 1);
 }
 
 /* 0x899a90 */
-void avcdecIntra4x4Block3(AvcdecRecon *recon, uint32_t mode)
+void avcdecIntra4x4Block3(AvcRecon *recon, uint32_t mode)
 {
 	intra4x4(recon, 3, mode, 1, 1);
 }
@@ -2038,10 +2038,12 @@ void avcdecIntra4x4Block3(AvcdecRecon *recon, uint32_t mode)
  * right column and the corner for the one right, its last row for the one
  * below.
  */
-void avcdecIntraKeep(const AvcdecRecon *recon, const uint8_t *samples, AvcdecEdges *edges)
+void avcdecIntraKeep(const AvcRecon *recon, const uint8_t *samples, AvcEdges *edges)
 {
 	uint32_t i;
 
+	for (i = 0; i < 7; i++)
+		edges[1].leftAbove[i] = recon->mbAbove[8 + i];
 	edges[1].aboveLeft = recon->mbAbove[15];
 	for (i = 0; i < 16; i++) {
 		edges->above[i] = samples[240 + i];
@@ -2050,13 +2052,13 @@ void avcdecIntraKeep(const AvcdecRecon *recon, const uint8_t *samples, AvcdecEdg
 }
 
 /* 0x899bf8: an Intra16x16 macroblock's 8x8 block, predicted */
-void avcdecLoadIntra16(AvcdecRecon *recon, const uint8_t *samples)
+void avcdecLoadIntra16(AvcRecon *recon, const uint8_t *samples)
 {
 	loadBlock(recon, samples);
 }
 
 /* the next 4x4 block's DC first */
-static void nextDc(AvcdecRecon *recon)
+static void nextDc(AvcRecon *recon)
 {
 	recon->blockDc[0] = recon->blockDc[1];
 	recon->blockDc[1] = recon->blockDc[2];
@@ -2064,47 +2066,47 @@ static void nextDc(AvcdecRecon *recon)
 }
 
 /* 0x899c48 */
-void avcdecAddIntra16Block0(AvcdecRecon *recon)
+void avcdecAddIntra16Block0(AvcRecon *recon)
 {
 	addQuadrant(recon, 0);
 	nextDc(recon);
 }
 
 /* 0x899c70 */
-void avcdecAddIntra16Block1(AvcdecRecon *recon)
+void avcdecAddIntra16Block1(AvcRecon *recon)
 {
 	addQuadrant(recon, 1);
 	nextDc(recon);
 }
 
 /* 0x899c98 */
-void avcdecAddIntra16Block2(AvcdecRecon *recon)
+void avcdecAddIntra16Block2(AvcRecon *recon)
 {
 	addQuadrant(recon, 2);
 	nextDc(recon);
 }
 
 /* 0x899cc0 */
-void avcdecAddIntra16Block3(AvcdecRecon *recon)
+void avcdecAddIntra16Block3(AvcRecon *recon)
 {
 	addQuadrant(recon, 3);
 }
 
 /* 0x899ce0 */
-void avcdecStoreIntra16(const AvcdecRecon *recon, uint8_t *samples)
+void avcdecStoreIntra16(const AvcRecon *recon, uint8_t *samples)
 {
 	storeBlock(recon, samples);
 }
 
 /* 0x899d30: the block's right column, `*right` moved on past it */
-void avcdecKeepRightIntra16(const AvcdecRecon *recon, uint8_t **right)
+void avcdecKeepRightIntra16(const AvcRecon *recon, uint8_t **right)
 {
 	avcdecKeepRight(recon, *right);
 	*right += 8;
 }
 
 /* 0x899d58: Intra16x16 vertical: the row above down the macroblock */
-void avcdecIntra16Vertical(const AvcdecEdges *edges, uint8_t *samples)
+void avcdecIntra16Vertical(const AvcEdges *edges, uint8_t *samples)
 {
 	uint32_t row, column;
 
@@ -2124,7 +2126,7 @@ void avcdecIntra16Horizontal(const uint8_t *left, uint8_t *samples)
 }
 
 /* 0x899e30: DC, of the neighbours there */
-void avcdecIntra16Dc(const uint8_t *left, const AvcdecEdges *edges, uint32_t leftAvailable,
+void avcdecIntra16Dc(const uint8_t *left, const AvcEdges *edges, uint32_t leftAvailable,
 	uint32_t aboveAvailable, uint8_t *samples)
 {
 	uint32_t sumLeft = 0, sumAbove = 0, i, value;
@@ -2146,7 +2148,7 @@ void avcdecIntra16Dc(const uint8_t *left, const AvcdecEdges *edges, uint32_t lef
 }
 
 /* 0x899f98: plane */
-void avcdecIntra16Plane(const uint8_t *left, const AvcdecEdges *edges, uint32_t aboveLeft,
+void avcdecIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t aboveLeft,
 	uint8_t *samples)
 {
 	const uint8_t *above = edges->above;

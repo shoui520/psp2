@@ -1284,10 +1284,175 @@ typedef struct VideoAvcMacroblock {
 					 * 24 Intra16x16 DC, 25 Cb DC, 26 Cr DC */
 } VideoAvcMacroblock;
 
+/* the residual's tables (avcdeckernel.c, 0x91b1f8-0x91b346), the encoder's too */
+extern const int16_t avcdecLevelScale[6][16];
+extern const uint8_t avcdecQpShift[88];
+extern const uint8_t avcdecQpRemainder[54];
+
 /*
- * The deblocking's kernels (avcdeckernel.c): the decoder's, whose copies the
- * encoder's deblocking calls too (avcenckernel.c)
+ * The luma prediction's kernels, the intra prediction's and residual's and
+ * the deblocking's (avcdeckernel.c): the decoder's, whose copies the encoder
+ * calls too (avcenckernel.c)
  */
+
+/*
+ * The luma prediction in the coprocessor, as its fetches and kernels hand
+ * it on: the reference samples a fetch read (clamped to the picture), the
+ * 8x8 block (c8-c15), a 4x4 block before it is placed (c16, c18) and list
+ * 0's block read back for the weighting (c20-c23, c0-c3).
+ */
+typedef struct AvcInter {
+	uint8_t window[13][16];		/* from x - 2 and y - 2 where the filter reads them */
+	uint8_t taps[9][4];		/* a 4x4 block's along its filter: rows, or the columns */
+	uint8_t block[8][8];
+	uint8_t small[4][4];
+	uint8_t list0[8][8];
+} AvcInter;
+
+/* the luma prediction's kernels (0x895140-0x897dd8) */
+#define LUMA_HALF		0x02	/* their mode: the half sample alone */
+void avcdecLoad4(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+	uint32_t step, uint32_t shift);
+void avcdecLoad4Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcdecLoad4Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcdecLoad4WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcdecLoad8(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+	uint32_t step, uint32_t shift);
+void avcdecLoad8Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcdecLoad8Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
+void avcdecLoad8WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
+void avcdecEdgeLeft4(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft4Tall(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft4Wide(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft4WideFar(AvcInter *inter);
+void avcdecEdgeLeft4WideTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft4WideFarTall(AvcInter *inter);
+void avcdecEdgeLeft8(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft8Tall(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft8Wide(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft8WideFar(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft8WideTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeLeft8WideFarTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight4(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight4Tall(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight4Wide(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight4WideFar(AvcInter *inter);
+void avcdecEdgeRight4WideTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight4WideFarTall(AvcInter *inter);
+void avcdecEdgeRight8(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight8Tall(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight8Wide(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight8WideFar(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight8WideTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeRight8WideFarTall(AvcInter *inter, int32_t shift);
+void avcdecEdgeTop4(AvcInter *inter, int32_t y);
+void avcdecEdgeTop4Tall(AvcInter *inter, int32_t y);
+void avcdecEdgeTop8(AvcInter *inter, int32_t y);
+void avcdecEdgeTop8Tall(AvcInter *inter, int32_t y);
+void avcdecEdgeBottom4(AvcInter *inter, int32_t below);
+void avcdecEdgeBottom4Tall(AvcInter *inter, int32_t below);
+void avcdecEdgeBottom8(AvcInter *inter, int32_t below);
+void avcdecEdgeBottom8Tall(AvcInter *inter, int32_t below);
+void avcdecFull4(AvcInter *inter);
+void avcdecTapsVertical4(AvcInter *inter);
+void avcdecTapsHorizontal4(AvcInter *inter);
+void avcdecLumaVertical4(AvcInter *inter, uint32_t mode);
+void avcdecLumaHorizontal4(AvcInter *inter, uint32_t mode);
+void avcdecLumaCentre4(AvcInter *inter, uint32_t mode);
+void avcdecLumaDiagonal4(AvcInter *inter, uint32_t mode);
+void avcdecLumaVertical8(AvcInter *inter, uint32_t mode);
+void avcdecLumaHorizontal8(AvcInter *inter, uint32_t mode);
+void avcdecLumaCentre8(AvcInter *inter, uint32_t mode);
+void avcdecLumaDiagonal8(AvcInter *inter, uint32_t mode);
+void avcdecLoadList0(AvcInter *inter, const uint8_t *samples);
+void avcdecWeight(AvcInter *inter, int32_t weight, int32_t offset, int32_t round,
+	int32_t shift);
+void avcdecWeightBi(AvcInter *inter, int32_t weight0, int32_t weight1, int32_t offset,
+	int32_t round, int32_t shift);
+void avcdecAverage(AvcInter *inter);
+void avcdecPlace4(AvcInter *inter, uint32_t block);
+
+/*
+ * The samples an intra macroblock is predicted from, by column (64 bytes):
+ * the bottom row of the macroblock above, the corner above left, the right
+ * column of the macroblock left; the decoder's residual job keeps them in
+ * info->row1, the encoder's chunk job (with its coded 4x4 blocks) in the
+ * chunk's neighbours.
+ */
+typedef struct AvcEdges {
+	uint8_t above[16];
+	uint8_t leftAbove[7];		/* the macroblock left's row above, its samples 8..14 */
+	uint8_t aboveLeft;		/* and 15: this one's above left */
+	uint8_t left[16];
+	uint16_t leftBlocks;		/* the encoder's: the macroblock left's coded 4x4 blocks */
+	uint16_t topBlocks;		/* the macroblock above's, then this one's */
+	uint8_t reserved2[20];
+} AvcEdges;
+
+typedef char avcEdgesSizeCheck[sizeof(AvcEdges) == 64 ? 1 : -1];
+
+/*
+ * The residual in the coprocessor: the dequantisation (c8-c11, c5), a 4x4
+ * block's residual (c12-c15), an Intra16x16 macroblock's DC levels (c17-c20,
+ * the 8x8 block's in c16), the 8x8 block reconstructed (c21-c28) and an
+ * Intra4x4 macroblock's neighbours (c26-c31); the encoder's copies of the
+ * kernels keep an Intra16x16 macroblock's DC levels in c16-c19 (the 8x8
+ * block's in c20), the dequantisation in c10, c11.
+ */
+typedef struct AvcRecon {
+	int16_t scale[16];		/* LevelScale by QP % 6, by position */
+	uint32_t shift;			/* QP / 6 */
+	int16_t residual[4][4];
+	int16_t dc[4][4];		/* by 8x8 block, its 4x4 blocks' */
+	int16_t blockDc[4];		/* the 8x8 block's, the next first */
+	uint8_t block[8][8];
+	uint8_t mbAbove[16];		/* the macroblock's: the row above */
+	uint8_t mbAboveRight[8];	/* the macroblock above right's, or the last repeated */
+	uint8_t bottom[16];		/* the first 8x8 blocks' last rows */
+	uint8_t above[16];		/* the 8x8 block's: above it and above right */
+	uint8_t left[8];
+	uint8_t aboveLeft;
+	uint8_t predicted[4][4];	/* the encoder's: the 4x4 block just predicted (c16, c17) */
+} AvcRecon;
+
+/* the intra prediction's and the residual's kernels (0x899110-0x89a768) */
+void avcdecDcIntra16(AvcRecon *recon, const int16_t *coef, uint32_t qp);
+void avcdecIdctAc(AvcRecon *recon, const int16_t *coef);
+void avcdecIdctDc(AvcRecon *recon);
+void avcdecIdct(AvcRecon *recon, const int16_t *coef);
+void avcdecAddIntra0(AvcRecon *recon);
+void avcdecAddIntra1(AvcRecon *recon);
+void avcdecAddIntra2(AvcRecon *recon);
+void avcdecAddIntra3(AvcRecon *recon);
+void avcdecStoreIntra(const AvcRecon *recon, uint8_t *samples);
+void avcdecIntraNeighbours(AvcRecon *recon, const AvcEdges *edges,
+	uint32_t aboveRight);
+void avcdecIntraNext(AvcRecon *recon, uint32_t block, const AvcEdges *edges);
+void avcdecIntra4x4Block0(AvcRecon *recon, uint32_t mode, uint32_t left, uint32_t above);
+void avcdecIntra4x4Block1(AvcRecon *recon, uint32_t mode, uint32_t above);
+void avcdecIntra4x4Block2(AvcRecon *recon, uint32_t mode, uint32_t left);
+void avcdecIntra4x4Block3(AvcRecon *recon, uint32_t mode);
+void avcdecIntraKeep(const AvcRecon *recon, const uint8_t *samples, AvcEdges *edges);
+void avcdecLoadIntra16(AvcRecon *recon, const uint8_t *samples);
+void avcdecAddIntra16Block0(AvcRecon *recon);
+void avcdecAddIntra16Block1(AvcRecon *recon);
+void avcdecAddIntra16Block2(AvcRecon *recon);
+void avcdecAddIntra16Block3(AvcRecon *recon);
+void avcdecStoreIntra16(const AvcRecon *recon, uint8_t *samples);
+void avcdecKeepRightIntra16(const AvcRecon *recon, uint8_t **right);
+void avcdecIntra16Vertical(const AvcEdges *edges, uint8_t *samples);
+void avcdecIntra16Horizontal(const uint8_t *left, uint8_t *samples);
+void avcdecIntra16Dc(const uint8_t *left, const AvcEdges *edges, uint32_t leftAvailable,
+	uint32_t aboveAvailable, uint8_t *samples);
+void avcdecIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t aboveLeft,
+	uint8_t *samples);
+
 /* the luma's deblocking in the coprocessor: half the macroblock, the samples across an edge */
 typedef struct AvcDeblock {
 	uint8_t rows[8][16];		/* each 8x8 half turned for the vertical edges */

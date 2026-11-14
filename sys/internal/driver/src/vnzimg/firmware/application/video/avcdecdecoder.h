@@ -284,19 +284,6 @@ typedef struct AvcdecRowState {
 	uint32_t reserved2[6];
 } AvcdecRowState;
 
-/*
- * The samples the residual job predicts an intra macroblock from, by
- * column, in info->row1 (64 bytes): the bottom row of the macroblock above,
- * the corner above left, the right column of the macroblock left.
- */
-typedef struct AvcdecEdges {
-	uint8_t above[16];
-	uint8_t reserved[7];
-	uint8_t aboveLeft;
-	uint8_t left[16];
-	uint8_t reserved2[24];
-} AvcdecEdges;
-
 /* a row's residual: where its macroblocks' coefficients are, in info->table2048b (128 bytes) */
 typedef struct AvcdecRowData {
 	const int16_t *coef;		/* the run's buffers[5] at the row */
@@ -364,41 +351,6 @@ typedef struct AvcdecChromaRecon {
 } AvcdecChromaRecon;
 
 
-/*
- * The luma prediction in the coprocessor, as its fetches and kernels hand
- * it on: the reference samples a fetch read (clamped to the picture), the
- * 8x8 block (c8-c15), a 4x4 block before it is placed (c16, c18) and list
- * 0's block read back for the weighting (c20-c23, c0-c3).
- */
-typedef struct AvcdecInter {
-	uint8_t window[13][16];		/* from x - 2 and y - 2 where the filter reads them */
-	uint8_t taps[9][4];		/* a 4x4 block's along its filter: rows, or the columns */
-	uint8_t block[8][8];
-	uint8_t small[4][4];
-	uint8_t list0[8][8];
-} AvcdecInter;
-
-/*
- * The residual in the coprocessor: the dequantisation (c8-c11, c5), a 4x4
- * block's residual (c12-c15), an Intra16x16 macroblock's DC levels (c17-c20,
- * the 8x8 block's in c16), the 8x8 block reconstructed (c21-c28) and an
- * Intra4x4 macroblock's neighbours (c26-c31).
- */
-typedef struct AvcdecRecon {
-	int16_t scale[16];		/* LevelScale by QP % 6, by position */
-	uint32_t shift;			/* QP / 6 */
-	int16_t residual[4][4];
-	int16_t dc[4][4];		/* by 8x8 block, its 4x4 blocks' */
-	int16_t blockDc[4];		/* the 8x8 block's, the next first */
-	uint8_t block[8][8];
-	uint8_t mbAbove[16];		/* the macroblock's: the row above */
-	uint8_t mbAboveRight[8];	/* the macroblock above right's, or the last repeated */
-	uint8_t bottom[16];		/* the first 8x8 blocks' last rows */
-	uint8_t above[16];		/* the 8x8 block's: above it and above right */
-	uint8_t left[8];
-	uint8_t aboveLeft;
-} AvcdecRecon;
-
 /* a core's work area for a stripe's jobs (192 bytes, 192 apart) */
 typedef struct AvcdecStripe {
 	uint8_t x;			/* the macroblock's */
@@ -413,7 +365,7 @@ typedef struct AvcdecStripe {
 	AvcdecMbVectors *vectors;
 	AvcdecMbFilter *filter;
 	AvcdecTop *top;
-	AvcdecEdges *edges;		/* the residual's: the intra neighbours, by column */
+	AvcEdges *edges;		/* the residual's: the intra neighbours, by column */
 	struct AvcdecChromaEdges *chromaEdges;	/* the chroma job's */
 	AvcdecRowState *rowState;
 	AvcdecRowData *rowData;		/* the residual's: the row's coefficients */
@@ -609,121 +561,19 @@ void avcdecStrengthsB(AvcdecStripe *stripe, const AvcdecMotion *motion, uint32_t
 	uint32_t top);
 void avcdecFilterIndexes(AvcdecStripe *stripe);
 
-/* the luma prediction's kernels (0x895140-0x897dd8) */
-void avcdecLoad4(AvcdecInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
-	uint32_t step, uint32_t shift);
-void avcdecLoad4Tall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	uint32_t y, uint32_t step, uint32_t shift);
-void avcdecLoad4Wide(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	uint32_t y, uint32_t step, uint32_t shift);
-void avcdecLoad4WideTall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	uint32_t y, uint32_t step, uint32_t shift);
-void avcdecLoad8(AvcdecInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
-	uint32_t step, uint32_t shift);
-void avcdecLoad8Tall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	uint32_t y, uint32_t step, uint32_t shift);
-void avcdecLoad8Wide(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
-void avcdecLoad8WideTall(AvcdecInter *inter, const uint8_t *address, const uint8_t *next,
-	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
-void avcdecEdgeLeft4(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft4Tall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft4Wide(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft4WideFar(AvcdecInter *inter);
-void avcdecEdgeLeft4WideTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft4WideFarTall(AvcdecInter *inter);
-void avcdecEdgeLeft8(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft8Tall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft8Wide(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft8WideFar(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft8WideTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeLeft8WideFarTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight4(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight4Tall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight4Wide(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight4WideFar(AvcdecInter *inter);
-void avcdecEdgeRight4WideTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight4WideFarTall(AvcdecInter *inter);
-void avcdecEdgeRight8(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight8Tall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight8Wide(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight8WideFar(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight8WideTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeRight8WideFarTall(AvcdecInter *inter, int32_t shift);
-void avcdecEdgeTop4(AvcdecInter *inter, int32_t y);
-void avcdecEdgeTop4Tall(AvcdecInter *inter, int32_t y);
-void avcdecEdgeTop8(AvcdecInter *inter, int32_t y);
-void avcdecEdgeTop8Tall(AvcdecInter *inter, int32_t y);
-void avcdecEdgeBottom4(AvcdecInter *inter, int32_t below);
-void avcdecEdgeBottom4Tall(AvcdecInter *inter, int32_t below);
-void avcdecEdgeBottom8(AvcdecInter *inter, int32_t below);
-void avcdecEdgeBottom8Tall(AvcdecInter *inter, int32_t below);
-void avcdecFull4(AvcdecInter *inter);
-void avcdecTapsVertical4(AvcdecInter *inter);
-void avcdecTapsHorizontal4(AvcdecInter *inter);
-void avcdecLumaVertical4(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaHorizontal4(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaCentre4(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaDiagonal4(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaVertical8(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaHorizontal8(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaCentre8(AvcdecInter *inter, uint32_t mode);
-void avcdecLumaDiagonal8(AvcdecInter *inter, uint32_t mode);
-void avcdecLoadList0(AvcdecInter *inter, const uint8_t *samples);
-void avcdecWeight(AvcdecInter *inter, int32_t weight, int32_t offset, int32_t round,
-	int32_t shift);
-void avcdecWeightBi(AvcdecInter *inter, int32_t weight0, int32_t weight1, int32_t offset,
-	int32_t round, int32_t shift);
-void avcdecAverage(AvcdecInter *inter);
-void avcdecPlace4(AvcdecInter *inter, uint32_t block);
-
 /* the luma deblocking's kernel that is the decoder's own (the others: service.h) */
 void avcdecDeblockKeepLeft(AvcdecStripe *stripe);
 
-/* the residual's tables (0x91b1f8-0x91b346) */
-extern const int16_t avcdecLevelScale[6][16];
-extern const uint8_t avcdecQpShift[88];
-extern const uint8_t avcdecQpRemainder[54];
 
 /* the residual's kernels (0x898f80-0x89a768) */
-void avcdecAddResidual0(AvcdecRecon *recon);
-void avcdecAddResidual1(AvcdecRecon *recon);
-void avcdecAddResidual2(AvcdecRecon *recon);
-void avcdecAddResidual3(AvcdecRecon *recon);
-void avcdecLoadBlock(AvcdecRecon *recon, const uint8_t *samples);
-void avcdecStoreBlock(const AvcdecRecon *recon, uint8_t *samples);
-void avcdecKeepRight(const AvcdecRecon *recon, uint8_t *right);
+void avcdecAddResidual0(AvcRecon *recon);
+void avcdecAddResidual1(AvcRecon *recon);
+void avcdecAddResidual2(AvcRecon *recon);
+void avcdecAddResidual3(AvcRecon *recon);
+void avcdecLoadBlock(AvcRecon *recon, const uint8_t *samples);
+void avcdecStoreBlock(const AvcRecon *recon, uint8_t *samples);
+void avcdecKeepRight(const AvcRecon *recon, uint8_t *right);
 void avcdecKeepRightOf(const uint8_t *samples, uint8_t *right);
-void avcdecDcIntra16(AvcdecRecon *recon, const int16_t *coef, uint32_t qp);
-void avcdecIdctAc(AvcdecRecon *recon, const int16_t *coef);
-void avcdecIdctDc(AvcdecRecon *recon);
-void avcdecIdct(AvcdecRecon *recon, const int16_t *coef);
-void avcdecAddIntra0(AvcdecRecon *recon);
-void avcdecAddIntra1(AvcdecRecon *recon);
-void avcdecAddIntra2(AvcdecRecon *recon);
-void avcdecAddIntra3(AvcdecRecon *recon);
-void avcdecStoreIntra(const AvcdecRecon *recon, uint8_t *samples);
-void avcdecIntraNeighbours(AvcdecRecon *recon, const AvcdecEdges *edges,
-	uint32_t aboveRight);
-void avcdecIntraNext(AvcdecRecon *recon, uint32_t block, const AvcdecEdges *edges);
-void avcdecIntra4x4Block0(AvcdecRecon *recon, uint32_t mode, uint32_t left, uint32_t above);
-void avcdecIntra4x4Block1(AvcdecRecon *recon, uint32_t mode, uint32_t above);
-void avcdecIntra4x4Block2(AvcdecRecon *recon, uint32_t mode, uint32_t left);
-void avcdecIntra4x4Block3(AvcdecRecon *recon, uint32_t mode);
-void avcdecIntraKeep(const AvcdecRecon *recon, const uint8_t *samples, AvcdecEdges *edges);
-void avcdecLoadIntra16(AvcdecRecon *recon, const uint8_t *samples);
-void avcdecAddIntra16Block0(AvcdecRecon *recon);
-void avcdecAddIntra16Block1(AvcdecRecon *recon);
-void avcdecAddIntra16Block2(AvcdecRecon *recon);
-void avcdecAddIntra16Block3(AvcdecRecon *recon);
-void avcdecStoreIntra16(const AvcdecRecon *recon, uint8_t *samples);
-void avcdecKeepRightIntra16(const AvcdecRecon *recon, uint8_t **right);
-void avcdecIntra16Vertical(const AvcdecEdges *edges, uint8_t *samples);
-void avcdecIntra16Horizontal(const uint8_t *left, uint8_t *samples);
-void avcdecIntra16Dc(const uint8_t *left, const AvcdecEdges *edges, uint32_t leftAvailable,
-	uint32_t aboveAvailable, uint8_t *samples);
-void avcdecIntra16Plane(const uint8_t *left, const AvcdecEdges *edges, uint32_t aboveLeft,
-	uint8_t *samples);
 
 /* the chroma job's kernels (0x89a760-0x89cfe0) */
 void avcdecChromaLoad(AvcdecChromaInter *inter, const uint8_t *address, const uint8_t *next,

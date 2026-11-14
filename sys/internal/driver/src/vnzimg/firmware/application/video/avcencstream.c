@@ -489,6 +489,16 @@ const int16_t avcencChromaThreshold[10][8] = {			/* 0x91b518 */
 	{ 1643, 2640, 1643, 2640, 2640, 4217, 2640, 4217 },
 };
 
+/* the quantisation's MF (8.5.12's inverse) by QP % 6: rows 0 and 2, rows 1 and 3 */
+const int16_t avcencQuantScale[6][2][4] = {			/* 0x91b5b8 */
+	{ { 13107, 8066, 13107, 8066 }, { 8066, 5243, 8066, 5243 } },
+	{ { 11916, 7490, 11916, 7490 }, { 7490, 4660, 7490, 4660 } },
+	{ { 10082, 6554, 10082, 6554 }, { 6554, 4194, 6554, 4194 } },
+	{ { 9362, 5825, 9362, 5825 }, { 5825, 3647, 5825, 3647 } },
+	{ { 8192, 5243, 8192, 5243 }, { 5243, 3355, 5243, 3355 } },
+	{ { 7282, 4559, 7282, 4559 }, { 4559, 2893, 4559, 2893 } },
+};
+
 /* the preparing jobs, on the other cores (avcencjob.c) */
 void avcencJobScene(uint32_t picture, uint32_t slices, uint32_t rate, uint32_t unused);
 void avcencJobLoad(uint32_t picture, uint32_t slices, uint32_t position, uint32_t unused);

@@ -314,7 +314,8 @@ typedef struct AvcencOutput {
 	uint32_t chromaModes;		/* each intra macroblock's chroma mode */
 	uint32_t reserved5;
 	uint32_t differences;		/* each coded inter macroblock's vector differences */
-	uint8_t reserved6[88];
+	uint32_t levels;		/* the rows' levels */
+	uint8_t reserved6[84];
 } AvcencOutput;
 
 /* the output's arrays: the bytes a row of macroblocks takes in each */
@@ -324,6 +325,7 @@ typedef struct AvcencLayout {
 	uint16_t chromaModesPitch;
 	uint16_t reserved2;
 	uint16_t differencesPitch;
+	uint16_t levelsPitch;
 } AvcencLayout;
 
 /* the modes job's per core info (64 bytes of 192 a core, in the output info) */
@@ -657,6 +659,10 @@ typedef struct AvcencRefineInfo {
  * motion job writes its type over the modes and, for an inter macroblock,
  * its vectors over the 4x4 blocks' modes
  */
+#define MB_KIND			0x300		/* its type: intra, or the inter partitions */
+#define MB_INTRA		0x200
+#define MB_SKIP_SHIFT		11		/* P_Skip */
+#define MB_CHECKED_SHIFT	28		/* the skip check passed: no residual */
 typedef struct AvcencMacroblock {
 	union {
 		struct {
@@ -786,9 +792,19 @@ typedef struct AvcencDeblockRow {
 	uint8_t reserved[29];
 } AvcencDeblockRow;
 
-/* the deblocking stage's per core info (192 bytes, in the output info) */
-#define DEBLOCK_INFO_SIZE	192
-typedef struct AvcencDeblockInfo {
+/* a row's levels in the output (64 bytes a row & 15, at the job record's command[3]) */
+typedef struct AvcencRowLevels {
+	uint32_t next;			/* where the next 4x4 block's levels go */
+	uint32_t used;			/* the bytes written in the row */
+	uint8_t reserved[56];
+} AvcencRowLevels;
+
+/*
+ * The chunk stages' per core info (192 bytes, in the output info): the
+ * deblocking's (the first stage) and the macroblock coding's (the second)
+ */
+#define CHUNK_INFO_SIZE	192
+typedef struct AvcencChunkInfo {
 	uint8_t column;			/* the macroblock's */
 	uint8_t row;
 	uint8_t qp;			/* the picture's */
@@ -804,28 +820,53 @@ typedef struct AvcencDeblockInfo {
 	uint32_t left;
 	uint32_t above;
 	uint32_t macroblock;		/* its VideoAvcMacroblock in the output */
-	uint8_t reserved[18];
+	uint32_t intraRounding;		/* the quantisation's f, 2^qbits / 3 */
+	uint32_t interRounding;		/* 2^qbits / 6 */
+	uint32_t quantScale;		/* its MF by QP % 6 (avcencQuantScale) */
+	uint32_t levelScale;		/* the dequantisation's (avcdecLevelScale) */
+	uint8_t quantShift;		/* qbits */
+	int8_t levelShift;		/* QP / 6 */
 	uint8_t firstMb;		/* the chunk's */
 	uint8_t mbs;
-	uint8_t reserved2[12];
+	uint32_t reserved2;
+	uint32_t neighbours;		/* the macroblock's column's AvcEdges (64 bytes, the chunk's
+					   and the one after it at the job record's command[1]) */
+	uint32_t reserved3;
 	uint32_t deblockRow;		/* the row's AvcencDeblockRow */
-	uint8_t reserved3[28];
+	uint32_t rowLevels;		/* the row's AvcencRowLevels */
+	uint8_t reserved4[12];
+	uint32_t levels;		/* the output's levels the chunk writes, opened */
+	uint8_t reserved5[8];
 	uint32_t macroblocks;		/* the output's VideoAvcMacroblock records, the row's */
-	uint8_t reserved4[16];
+	uint32_t levelsSize;
+	uint8_t reserved6[8];
+	int8_t hasLeft;			/* the macroblock's neighbours in the slice */
+	int8_t hasAbove;
+	int8_t hasAboveRight;
+	int8_t hasAboveLeft;
 	uint32_t coded;			/* the macroblock's coded blocks (VideoAvcMacroblock's) */
 	uint32_t luma;			/* the macroblock's samples */
 	uint32_t chroma;
 	uint32_t lumaAbove;		/* the macroblock's above */
 	uint32_t chromaAbove;
 	uint16_t width;			/* the picture's, in samples */
-	uint16_t reserved5;
+	uint16_t reserved7;
 	uint16_t height;
-	uint8_t reserved6[38];
-} AvcencDeblockInfo;
+	uint16_t reserved8;
+	uint16_t pitch;			/* the luma's */
+	uint16_t reserved9;
+	uint32_t reference;		/* the previous picture's luma */
+	uint32_t reserved10;
+	uint32_t source;		/* the client's luma, the macroblock's */
+	uint8_t reserved11[20];
+} AvcencChunkInfo;
+
+/* the quantisation's MF (avcencstream.c) */
+extern const int16_t avcencQuantScale[6][2][4];
 
 /* the macroblocks' bS (avcencmacroblock.c) */
-void avcencStrengthsIntra(AvcencDeblockInfo *info);
-void avcencStrengthsInter(AvcencDeblockInfo *info);
+void avcencStrengthsIntra(AvcencChunkInfo *info);
+void avcencStrengthsInter(AvcencChunkInfo *info);
 
 
 typedef char jobInfoSizeCheck[sizeof(AvcencJobInfo) == 64 ? 1 : -1];
@@ -845,7 +886,8 @@ typedef char strengthsSizeCheck[sizeof(AvcencStrengths) == 32 ? 1 : -1];
 typedef char lumaCodedSizeCheck[sizeof(AvcencLumaCoded) == 8 ? 1 : -1];
 typedef char chromaCodedSizeCheck[sizeof(AvcencChromaCoded) == 8 ? 1 : -1];
 typedef char deblockRowSizeCheck[sizeof(AvcencDeblockRow) == 128 ? 1 : -1];
-typedef char deblockInfoSizeCheck[sizeof(AvcencDeblockInfo) == DEBLOCK_INFO_SIZE ? 1 : -1];
+typedef char rowLevelsSizeCheck[sizeof(AvcencRowLevels) == 64 ? 1 : -1];
+typedef char chunkInfoSizeCheck[sizeof(AvcencChunkInfo) == CHUNK_INFO_SIZE ? 1 : -1];
 typedef char streamSizeCheck[sizeof(AvcencStream) == STREAM_HEADER_SIZE ? 1 : -1];
 
 #endif

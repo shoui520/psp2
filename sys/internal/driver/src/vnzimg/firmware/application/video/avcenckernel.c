@@ -2289,6 +2289,691 @@ uint32_t avcencChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
 }
 
 /*
+ * The luma prediction's kernels (0x8a3c30-0x8a4d18+): the decoder's
+ * (0x8955a8-0x897dd8), copied, its loads with their own jump tables, and
+ * its half sample filters without the quarter samples' averaging, the
+ * encoder's vectors being half samples
+ */
+
+/* 0x8a3c30 */
+void avcencLoad8(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+	uint32_t step, uint32_t shift)
+{
+	avcdecLoad8(inter, address, next, y, step, shift);
+}
+
+/* 0x8a3ee8 */
+void avcencLoad8Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift)
+{
+	avcdecLoad8Tall(inter, address, next, y, step, shift);
+}
+
+/* 0x8a4020 */
+void avcencLoad8Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift)
+{
+	avcdecLoad8Wide(inter, address, next, third, y, step, shift);
+}
+
+/* 0x8a4400 */
+void avcencLoad8WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift)
+{
+	avcdecLoad8WideTall(inter, address, next, third, y, step, shift);
+}
+
+/* 0x8a45b8 */
+void avcencEdgeLeft8(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8(inter, shift);
+}
+
+/* 0x8a45f8 */
+void avcencEdgeLeft8Tall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8Tall(inter, shift);
+}
+
+/* 0x8a4620 */
+void avcencEdgeLeft8Wide(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8Wide(inter, shift);
+}
+
+/* 0x8a4680 */
+void avcencEdgeLeft8WideFar(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8WideFar(inter, shift);
+}
+
+/* 0x8a46e0 */
+void avcencEdgeLeft8WideTall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8WideTall(inter, shift);
+}
+
+/* 0x8a4720 */
+void avcencEdgeLeft8WideFarTall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeLeft8WideFarTall(inter, shift);
+}
+
+/* 0x8a4760 */
+void avcencEdgeRight8(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8(inter, shift);
+}
+
+/* 0x8a47a0 */
+void avcencEdgeRight8Tall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8Tall(inter, shift);
+}
+
+/* 0x8a47c8 */
+void avcencEdgeRight8Wide(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8Wide(inter, shift);
+}
+
+/* 0x8a4828 */
+void avcencEdgeRight8WideFar(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8WideFar(inter, shift);
+}
+
+/* 0x8a4888 */
+void avcencEdgeRight8WideTall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8WideTall(inter, shift);
+}
+
+/* 0x8a48c8 */
+void avcencEdgeRight8WideFarTall(AvcInter *inter, int32_t shift)
+{
+	avcdecEdgeRight8WideFarTall(inter, shift);
+}
+
+/* 0x8a4908 */
+void avcencEdgeTop8(AvcInter *inter, int32_t y)
+{
+	avcdecEdgeTop8(inter, y);
+}
+
+/* 0x8a4958 */
+void avcencEdgeTop8Tall(AvcInter *inter, int32_t y)
+{
+	avcdecEdgeTop8Tall(inter, y);
+}
+
+/* 0x8a49d0 */
+void avcencEdgeBottom8(AvcInter *inter, int32_t below)
+{
+	avcdecEdgeBottom8(inter, below);
+}
+
+/* 0x8a4a20 */
+void avcencEdgeBottom8Tall(AvcInter *inter, int32_t below)
+{
+	avcdecEdgeBottom8Tall(inter, below);
+}
+
+/*
+ * 0x8a4a98: the vertical half samples; the mode's quarter bits (the
+ * encoder passes 2) pick the whole rows beside them, which nothing averages
+ */
+void avcencLumaVertical8(AvcInter *inter, uint32_t mode)
+{
+	avcdecLumaVertical8(inter, LUMA_HALF);
+}
+
+/* 0x8a4ba8: the horizontal ones */
+void avcencLumaHorizontal8(AvcInter *inter, uint32_t mode)
+{
+	avcdecLumaHorizontal8(inter, LUMA_HALF);
+}
+
+/* 0x8a4d18: the centre ones */
+void avcencLumaCentre8(AvcInter *inter, uint32_t mode)
+{
+	avcdecLumaCentre8(inter, LUMA_HALF);
+}
+
+/*
+ * The residual's kernels (0x8a5170-0x8a6b40): the 4x4 forward transform
+ * (2 for the odd rows and columns) of the source less the prediction, its
+ * coefficients quantised ((|c| MF + f) >> qbits, the sign put back), the
+ * levels dequantised and inverse transformed (8.5.12) as the decoder does,
+ * the residual added to the prediction; two 4x4 blocks side by side at a
+ * time, the left one's levels coded first.
+ */
+
+/* the reconstruction of the pair's left block (c28, c29) or right (c30, c31) */
+static void reconstruct(AvcencResidual *residual, uint32_t side)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			residual->predicted[side][row][column] = clampByte(
+				residual->predicted[side][row][column] + residual->block[row][column]);
+}
+
+/* 0x8a5170 */
+void avcencReconstructLeft(AvcencResidual *residual)
+{
+	reconstruct(residual, 0);
+}
+
+/* 0x8a5188 */
+void avcencReconstructRight(AvcencResidual *residual)
+{
+	reconstruct(residual, 1);
+}
+
+/* 0x8a51a0: the pair's four rows back, 16 apart */
+void avcencStorePair(const AvcencResidual *residual, uint8_t *samples)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++) {
+			samples[row * 16 + column] = residual->predicted[0][row][column];
+			samples[row * 16 + 4 + column] = residual->predicted[1][row][column];
+		}
+}
+
+/* 0x8a51d0: a macroblock's right column, the next one's left */
+void avcencKeepRight(const uint8_t *samples, uint8_t *left)
+{
+	uint32_t row;
+
+	for (row = 0; row < 16; row++)
+		left[row] = samples[row * 16 + 15];
+}
+
+/* 0x8a52b8: whether a level is past 1 (the block then is not dropped) */
+uint32_t avcencLevelsPastOne(const AvcencResidual *residual)
+{
+	uint32_t i;
+	int32_t level;
+
+	for (i = 0; i < 16; i++) {
+		level = residual->block[i >> 2][i & 3];
+		if (level > 1 || level < -1)
+			return 1;
+	}
+	return 0;
+}
+
+/* the transform of a row or column (a, b, c, d) in place, `step` apart */
+static void forward4(int16_t *x, uint32_t step)
+{
+	int16_t x0 = x[0], x1 = x[step], x2 = x[2 * step], x3 = x[3 * step];
+	int16_t sum03 = x0 + x3, sum12 = x1 + x2, diff03 = x0 - x3, diff12 = x1 - x2;
+
+	x[0] = sum03 + sum12;
+	x[step] = saturate16(diff03 * 2) + diff12;
+	x[2 * step] = sum03 - sum12;
+	x[3 * step] = diff03 - saturate16(diff12 * 2);
+}
+
+/* a 4x4 block's residual transformed, columns then rows */
+static void forwardBlock(int16_t *x)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		forward4(&x[i], 4);
+	for (i = 0; i < 4; i++)
+		forward4(&x[i * 4], 1);
+}
+
+/*
+ * its coefficients quantised, (|c| MF + f) >> qbits, the sign put back; MF
+ * by the row's parity (c8, c9)
+ */
+static void quantiseBlock(int16_t *x, const int16_t *scale, int32_t rounding, uint32_t shift)
+{
+	int32_t value;
+	uint32_t i;
+
+	for (i = 0; i < 16; i++) {
+		value = x[i] < 0 ? -x[i] : x[i];
+		value = (int16_t)((value * scale[((i >> 2) & 1) * 4 + (i & 3)] + rounding) >> shift);
+		x[i] = x[i] < 0 ? -value : value;
+	}
+}
+
+/* by byte of the rows or'd together, where a level is not 0 */
+static uint32_t levelsMask(const int16_t *x)
+{
+	uint32_t i, any, mask = 0;
+
+	for (i = 0; i < 4; i++) {
+		any = (uint16_t)(x[i] | x[4 + i] | x[8 + i] | x[12 + i]);
+		if (any & 0xff)
+			mask |= 1 << (2 * i);
+		if (any >> 8)
+			mask |= 2 << (2 * i);
+	}
+	return mask;
+}
+
+/* a block's residual transformed and quantised: whether a level is not 0 */
+static uint32_t quantise(AvcencResidual *residual)
+{
+	forwardBlock(residual->block[0]);
+	quantiseBlock(residual->block[0], residual->quantScale[0], residual->rounding,
+		residual->quantShift);
+	return levelsMask(residual->block[0]) != 0;
+}
+
+/* the source less the prediction, the pair's left block or right */
+static void difference(AvcencResidual *residual, uint32_t side)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			residual->block[row][column] = residual->source[side][row][column] -
+				residual->predicted[side][row][column];
+}
+
+/*
+ * 0x8a5328: a pair of 4x4 blocks: the prediction (kept at `saved`) and the
+ * source read, the left block's levels
+ */
+uint32_t avcencResidualPair(AvcencResidual *residual, const uint8_t *predicted,
+	const uint8_t *source, uint8_t *saved)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++) {
+			residual->source[0][row][column] = source[row * 16 + column];
+			residual->source[1][row][column] = source[row * 16 + 4 + column];
+			residual->predicted[0][row][column] = predicted[row * 16 + column];
+			residual->predicted[1][row][column] = predicted[row * 16 + 4 + column];
+		}
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 8; column++)
+			saved[row * 16 + column] = predicted[row * 16 + column];
+	difference(residual, 0);
+	return quantise(residual);
+}
+
+/* 0x8a54c8: the right block's levels */
+uint32_t avcencResidualRight(AvcencResidual *residual)
+{
+	difference(residual, 1);
+	return quantise(residual);
+}
+
+/* the inverse transform of a row or column, as the decoder's */
+static void inverse4(int16_t *x, uint32_t step)
+{
+	int16_t x0 = x[0], x1 = x[step], x2 = x[2 * step], x3 = x[3 * step];
+	int16_t e = saturate16(x0 + x2), f = saturate16(x0 - x2);
+	int16_t g = saturate16((x1 >> 1) - x3), h = saturate16(x1 + (x3 >> 1));
+
+	x[0] = saturate16(e + h);
+	x[step] = saturate16(f + g);
+	x[2 * step] = saturate16(f - g);
+	x[3 * step] = saturate16(e - h);
+}
+
+/* the residual of a block's levels, rows then columns, (x + 32) >> 6 */
+static void inverseBlock(int16_t *x)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		inverse4(&x[i * 4], 1);
+	for (i = 0; i < 4; i++)
+		inverse4(&x[i], 4);
+	for (i = 0; i < 16; i++)
+		x[i] = saturate16(x[i] + 32) >> 6;
+}
+
+/* 0x8a52f0: a block's levels dequantised, (l v) << QP / 6; v by the row's parity (c10, c11) */
+static void dequantise(int16_t *x, const int16_t *scale, uint32_t shift)
+{
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		x[i] = (int16_t)((x[i] * scale[((i >> 2) & 1) * 4 + (i & 3)]) << shift);
+}
+
+/* 0x8a5618: a block's levels dequantised and their residual */
+void avcencInverseLevels(AvcencResidual *residual)
+{
+	dequantise(residual->block[0], residual->levelScale[0], residual->levelShift);
+	inverseBlock(residual->block[0]);
+}
+
+/*
+ * An intra macroblock's (0x8a5708-0x8a6b40): an Intra16x16 one's 4x4
+ * blocks transformed, their DCs taken out for the Hadamard (8.5.10) and
+ * quantised apart (qbits + 1, 2f); an Intra4x4 one's predicted, coded and
+ * reconstructed block by block. The prediction and reconstruction are the
+ * decoder's kernels' copies.
+ */
+
+/* 0x8a5708: the block's coefficients quantised */
+void avcencQuantise(AvcencResidual *residual)
+{
+	quantiseBlock(residual->block[0], residual->quantScale[0], residual->rounding,
+		residual->quantShift);
+}
+
+/* a row or column of the DCs through the Hadamard, in 16 bits */
+static void hadamard4(const int16_t *x, uint32_t step, int16_t *sums)
+{
+	sums[0] = (int16_t)(x[0] + x[2 * step]);
+	sums[1] = (int16_t)(x[step] + x[3 * step]);
+	sums[2] = (int16_t)(x[0] - x[2 * step]);
+	sums[3] = (int16_t)(x[step] - x[3 * step]);
+}
+
+/*
+ * 0x8a5790: the 16 DCs (by row) through the Hadamard: the rows, then the
+ * columns halved (the sums' in 17 bits, the differences' in 16)
+ */
+void avcencDcTransform(int16_t (*dc)[4])
+{
+	int16_t sums[4];
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		hadamard4(dc[i], 1, sums);
+		dc[i][0] = (int16_t)(sums[0] + sums[1]);
+		dc[i][1] = (int16_t)(sums[2] + sums[3]);
+		dc[i][2] = (int16_t)(sums[2] - sums[3]);
+		dc[i][3] = (int16_t)(sums[0] - sums[1]);
+	}
+	for (i = 0; i < 4; i++) {
+		hadamard4(&dc[0][i], 4, sums);
+		dc[0][i] = (sums[0] + sums[1]) >> 1;
+		dc[1][i] = (sums[2] + sums[3]) >> 1;
+		dc[2][i] = (int16_t)(sums[2] - sums[3]) >> 1;
+		dc[3][i] = (int16_t)(sums[0] - sums[1]) >> 1;
+	}
+}
+
+/*
+ * 0x8a5820: an Intra16x16 macroblock's pair of 4x4 blocks: the source and
+ * the prediction read, the left block's residual transformed
+ */
+void avcencIntra16Pair(AvcencResidual *residual, const uint8_t *source,
+	const uint8_t *predicted)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++) {
+			residual->source[0][row][column] = source[row * 16 + column];
+			residual->source[1][row][column] = source[row * 16 + 4 + column];
+			residual->predicted[0][row][column] = predicted[row * 16 + column];
+			residual->predicted[1][row][column] = predicted[row * 16 + 4 + column];
+		}
+	difference(residual, 0);
+	forwardBlock(residual->block[0]);
+}
+
+/* 0x8a5908: the right block's */
+void avcencIntra16Right(AvcencResidual *residual)
+{
+	difference(residual, 1);
+	forwardBlock(residual->block[0]);
+}
+
+/* 0x8a59a8: whether the block has a level not 0 (by byte) */
+uint32_t avcencLevelsAny(const AvcencResidual *residual)
+{
+	return levelsMask(residual->block[0]);
+}
+
+/* 0x8a59d8: whether the DCs have */
+uint32_t avcencDcAny(const int16_t *dc)
+{
+	return levelsMask(dc);
+}
+
+/* 0x8a5a08: an Intra16x16 macroblock's DC levels back, by 8x8 block */
+void avcencDcIntra16(AvcRecon *recon, const int16_t *levels, uint32_t qp)
+{
+	avcdecDcIntra16(recon, levels, qp);
+}
+
+/* 0x8a5b98: a 4x4 block's AC levels and its DC */
+void avcencIdctAc(AvcRecon *recon, const int16_t *levels)
+{
+	avcdecIdctAc(recon, levels);
+}
+
+/* 0x8a5c98: its DC alone */
+void avcencIdctDc(AvcRecon *recon)
+{
+	avcdecIdctDc(recon);
+}
+
+/*
+ * 0x8a5cc0: a 4x4 block's levels dequantised by the rows' parity (c10, c11:
+ * the scale's rows 2 and 3) and their residual (nothing calls it)
+ */
+void avcencIdct(AvcRecon *recon, const int16_t *levels)
+{
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		recon->residual[i >> 2][i & 3] = levels[i];
+	dequantise(recon->residual[0], &recon->scale[8], recon->shift);
+	inverseBlock(recon->residual[0]);
+}
+
+/* 0x8a5db8: an Intra4x4 macroblock's 4x4 block's levels dequantised and their residual */
+void avcencIntraInverse(AvcRecon *recon, uint32_t levelShift, const int16_t *levelScale)
+{
+	dequantise(recon->residual[0], levelScale, levelShift);
+	inverseBlock(recon->residual[0]);
+}
+
+/*
+ * 0x8a5ea8: and its levels: the source less the block just predicted,
+ * transformed and quantised; by byte, where a level is not 0
+ */
+uint32_t avcencIntraResidual(AvcRecon *recon, const uint8_t *source, uint32_t quantShift,
+	int32_t rounding, const int16_t *quantScale, uint32_t unused)
+{
+	int16_t *x = recon->residual[0];
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			recon->residual[row][column] = source[row * 16 + column] -
+				recon->predicted[row][column];
+	forwardBlock(x);
+	quantiseBlock(x, quantScale, rounding, quantShift);
+	return levelsMask(x);
+}
+
+/* 0x8a5fd0: the DCs' quantisation: one MF (the first), its qbits and f */
+void avcencDcQuantSetup(AvcencResidual *residual, uint32_t quantShift, int32_t rounding,
+	const int16_t *quantScale, uint32_t unused)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		residual->quantScale[0][i] = quantScale[0];
+		residual->quantScale[1][i] = quantScale[0];
+	}
+	residual->quantShift = quantShift;
+	residual->rounding = rounding;
+}
+
+/* 0x8a5ff0: the DCs quantised */
+void avcencQuantiseDc(const AvcencResidual *residual, int16_t (*dc)[4])
+{
+	quantiseBlock(dc[0], residual->quantScale[0], residual->rounding, residual->quantShift);
+}
+
+/* 0x8a6080: an Intra4x4 macroblock's 4x4 blocks reconstructed */
+void avcencAddIntra0(AvcRecon *recon)
+{
+	avcdecAddIntra0(recon);
+}
+
+/* 0x8a60a0 */
+void avcencAddIntra1(AvcRecon *recon)
+{
+	avcdecAddIntra1(recon);
+}
+
+/* 0x8a60c0 */
+void avcencAddIntra2(AvcRecon *recon)
+{
+	avcdecAddIntra2(recon);
+}
+
+/* 0x8a60e0 */
+void avcencAddIntra3(AvcRecon *recon)
+{
+	avcdecAddIntra3(recon);
+}
+
+/* 0x8a6100 */
+void avcencStoreIntra(const AvcRecon *recon, uint8_t *samples)
+{
+	avcdecStoreIntra(recon, samples);
+}
+
+/* 0x8a6150: the macroblock's neighbours, the first 8x8 block's */
+void avcencIntraNeighbours(AvcRecon *recon, const AvcEdges *edges, uint32_t aboveRight)
+{
+	avcdecIntraNeighbours(recon, edges, aboveRight);
+}
+
+/* 0x8a6198: the next 8x8 block's */
+void avcencIntraNext(AvcRecon *recon, uint32_t block, const AvcEdges *edges)
+{
+	avcdecIntraNext(recon, block, edges);
+}
+
+/* the 4x4 block just predicted, as the residual reads it */
+static void keepPredicted(AvcRecon *recon, uint32_t block)
+{
+	uint32_t row, column, top = (block & 2) * 2, left = (block & 1) * 4;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			recon->predicted[row][column] = recon->block[top + row][left + column];
+}
+
+/* 0x8a6218: the 8x8 block's 4x4 blocks predicted, by their modes */
+void avcencIntra4x4Block0(AvcRecon *recon, uint32_t mode, uint32_t left, uint32_t above)
+{
+	avcdecIntra4x4Block0(recon, mode, left, above);
+	keepPredicted(recon, 0);
+}
+
+/* 0x8a6390 */
+void avcencIntra4x4Block1(AvcRecon *recon, uint32_t mode, uint32_t above)
+{
+	avcdecIntra4x4Block1(recon, mode, above);
+	keepPredicted(recon, 1);
+}
+
+/* 0x8a64e8 */
+void avcencIntra4x4Block2(AvcRecon *recon, uint32_t mode, uint32_t left)
+{
+	avcdecIntra4x4Block2(recon, mode, left);
+	keepPredicted(recon, 2);
+}
+
+/* 0x8a6638 */
+void avcencIntra4x4Block3(AvcRecon *recon, uint32_t mode)
+{
+	avcdecIntra4x4Block3(recon, mode);
+	keepPredicted(recon, 3);
+}
+
+/* 0x8a6760: what the macroblocks right and below predict from */
+void avcencIntraKeep(const AvcRecon *recon, const uint8_t *samples, AvcEdges *edges)
+{
+	avcdecIntraKeep(recon, samples, edges);
+}
+
+/* 0x8a67a0: an Intra16x16 macroblock's 8x8 block, predicted */
+void avcencLoadIntra16(AvcRecon *recon, const uint8_t *samples)
+{
+	avcdecLoadIntra16(recon, samples);
+}
+
+/* 0x8a67f0: its 4x4 blocks reconstructed, the next one's DC first */
+void avcencAddIntra16Block0(AvcRecon *recon)
+{
+	avcdecAddIntra16Block0(recon);
+}
+
+/* 0x8a6818 */
+void avcencAddIntra16Block1(AvcRecon *recon)
+{
+	avcdecAddIntra16Block1(recon);
+}
+
+/* 0x8a6840 */
+void avcencAddIntra16Block2(AvcRecon *recon)
+{
+	avcdecAddIntra16Block2(recon);
+}
+
+/* 0x8a6868 */
+void avcencAddIntra16Block3(AvcRecon *recon)
+{
+	avcdecAddIntra16Block3(recon);
+}
+
+/* 0x8a6888 */
+void avcencStoreIntra16(const AvcRecon *recon, uint8_t *samples)
+{
+	avcdecStoreIntra16(recon, samples);
+}
+
+/* 0x8a68d8: its right column, `*right` moved on past it */
+void avcencKeepRightIntra16(const AvcRecon *recon, uint8_t **right)
+{
+	avcdecKeepRightIntra16(recon, right);
+}
+
+/* 0x8a6900: Intra16x16 vertical */
+void avcencIntra16Vertical(const AvcEdges *edges, uint8_t *samples)
+{
+	avcdecIntra16Vertical(edges, samples);
+}
+
+/* 0x8a6940: horizontal */
+void avcencIntra16Horizontal(const uint8_t *left, uint8_t *samples)
+{
+	avcdecIntra16Horizontal(left, samples);
+}
+
+/* 0x8a69d8: DC */
+void avcencIntra16Dc(const uint8_t *left, const AvcEdges *edges, uint32_t leftAvailable,
+	uint32_t aboveAvailable, uint8_t *samples)
+{
+	avcdecIntra16Dc(left, edges, leftAvailable, aboveAvailable, samples);
+}
+
+/* 0x8a6b40: plane */
+void avcencIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t aboveLeft,
+	uint8_t *samples)
+{
+	avcdecIntra16Plane(left, edges, aboveLeft, samples);
+}
+
+/*
  * The strengths' kernels (0x8df4d0-0x8df640): a P macroblock's bS, two edges
  * a register: 2 where either 4x4 block has coefficients, 4 next to an intra
  * macroblock, 1 where the 8x8 blocks' vectors are a sample apart

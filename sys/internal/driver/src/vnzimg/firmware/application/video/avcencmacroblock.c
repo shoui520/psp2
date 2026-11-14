@@ -4,13 +4,11 @@
  */
 #include "avcencstream.h"
 
-#define MB_INTRA		0x200	/* AvcencMacroblock's type */
-
 /*
  * 0x866f60: an intra macroblock's: 4 on its edges (but on the picture's),
  * 3 inside
  */
-void avcencStrengthsIntra(AvcencDeblockInfo *info)
+void avcencStrengthsIntra(AvcencChunkInfo *info)
 {
 	AvcencStrengths *strengths = (AvcencStrengths *)info->strengths;
 	uint32_t left = info->column != 0, top = info->row != 0, edge, group;
@@ -29,7 +27,7 @@ void avcencStrengthsIntra(AvcencDeblockInfo *info)
  * order), it or the one on its left, or above it, has some; the edges next
  * to an intra macroblock
  */
-static void strengthsCoded(AvcencDeblockInfo *info, AvcencStrengthLanes *lanes)
+static void strengthsCoded(AvcencChunkInfo *info, AvcencStrengthLanes *lanes)
 {
 	const AvcencMacroblock *left = (const AvcencMacroblock *)info->left;
 	const AvcencMacroblock *above = (const AvcencMacroblock *)info->above;
@@ -48,7 +46,7 @@ static void strengthsCoded(AvcencDeblockInfo *info, AvcencStrengthLanes *lanes)
  * 0x866f76: an inter macroblock's: its coefficients', then its vectors'
  * over them; none on the picture's edges
  */
-void avcencStrengthsInter(AvcencDeblockInfo *info)
+void avcencStrengthsInter(AvcencChunkInfo *info)
 {
 	AvcencStrengths *strengths = (AvcencStrengths *)info->strengths;
 	AvcencStrengthLanes lanes;

@@ -387,6 +387,108 @@ uint32_t avcencChromaDeblockEdge(AvcChromaDeblock *deblock, uint32_t indexA,
 uint32_t avcencChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
 	uint32_t indexB, uint32_t strengths);
 
+/* the luma prediction's kernels (0x8a3c30-0x8a4d18+): the decoder's, copied */
+void avcencLoad8(AvcInter *inter, const uint8_t *address, const uint8_t *next, uint32_t y,
+	uint32_t step, uint32_t shift);
+void avcencLoad8Tall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcencLoad8Wide(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
+void avcencLoad8WideTall(AvcInter *inter, const uint8_t *address, const uint8_t *next,
+	const uint8_t *third, uint32_t y, uint32_t step, uint32_t shift);
+void avcencEdgeLeft8(AvcInter *inter, int32_t shift);
+void avcencEdgeLeft8Tall(AvcInter *inter, int32_t shift);
+void avcencEdgeLeft8Wide(AvcInter *inter, int32_t shift);
+void avcencEdgeLeft8WideFar(AvcInter *inter, int32_t shift);
+void avcencEdgeLeft8WideTall(AvcInter *inter, int32_t shift);
+void avcencEdgeLeft8WideFarTall(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8Tall(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8Wide(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8WideFar(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8WideTall(AvcInter *inter, int32_t shift);
+void avcencEdgeRight8WideFarTall(AvcInter *inter, int32_t shift);
+void avcencEdgeTop8(AvcInter *inter, int32_t y);
+void avcencEdgeTop8Tall(AvcInter *inter, int32_t y);
+void avcencEdgeBottom8(AvcInter *inter, int32_t below);
+void avcencEdgeBottom8Tall(AvcInter *inter, int32_t below);
+void avcencLumaVertical8(AvcInter *inter, uint32_t mode);
+void avcencLumaHorizontal8(AvcInter *inter, uint32_t mode);
+void avcencLumaCentre8(AvcInter *inter, uint32_t mode);
+
+/*
+ * The residual in the coprocessor: the quantisation's MF by row (c8 rows 0
+ * and 2, c9 rows 1 and 3), its f (c22, c4) and qbits (c5); the
+ * dequantisation's v (c17, c18) and shift (c16); a 4x4 block's levels or
+ * residual (c12-c15); two 4x4 blocks side by side, the source (c24-c27) and
+ * the prediction, then reconstruction (c28-c31).
+ */
+typedef struct AvcencResidual {
+	int16_t quantScale[2][4];
+	int32_t rounding;
+	uint32_t quantShift;
+	int16_t levelScale[2][4];
+	uint32_t levelShift;
+	int16_t block[4][4];
+	uint8_t source[2][4][4];	/* the left block, the right */
+	uint8_t predicted[2][4][4];
+} AvcencResidual;
+
+/* the residual's kernels (0x8a5170-0x8a6080) */
+void avcencReconstructLeft(AvcencResidual *residual);
+void avcencReconstructRight(AvcencResidual *residual);
+void avcencStorePair(const AvcencResidual *residual, uint8_t *samples);
+void avcencKeepRight(const uint8_t *samples, uint8_t *left);
+uint32_t avcencLevelsPastOne(const AvcencResidual *residual);
+uint32_t avcencResidualPair(AvcencResidual *residual, const uint8_t *predicted,
+	const uint8_t *source, uint8_t *saved);
+uint32_t avcencResidualRight(AvcencResidual *residual);
+void avcencInverseLevels(AvcencResidual *residual);
+
+/* an intra macroblock's kernels (avcenckernel.c) */
+void avcencQuantise(AvcencResidual *residual);
+void avcencDcTransform(int16_t (*dc)[4]);
+void avcencIntra16Pair(AvcencResidual *residual, const uint8_t *source,
+	const uint8_t *predicted);
+void avcencIntra16Right(AvcencResidual *residual);
+uint32_t avcencLevelsAny(const AvcencResidual *residual);
+uint32_t avcencDcAny(const int16_t *dc);
+void avcencDcIntra16(AvcRecon *recon, const int16_t *levels, uint32_t qp);
+void avcencIdctAc(AvcRecon *recon, const int16_t *levels);
+void avcencIdctDc(AvcRecon *recon);
+void avcencIdct(AvcRecon *recon, const int16_t *levels);
+void avcencIntraInverse(AvcRecon *recon, uint32_t levelShift, const int16_t *levelScale);
+uint32_t avcencIntraResidual(AvcRecon *recon, const uint8_t *source, uint32_t quantShift,
+	int32_t rounding, const int16_t *quantScale, uint32_t unused);
+void avcencDcQuantSetup(AvcencResidual *residual, uint32_t quantShift, int32_t rounding,
+	const int16_t *quantScale, uint32_t unused);
+void avcencQuantiseDc(const AvcencResidual *residual, int16_t (*dc)[4]);
+void avcencAddIntra0(AvcRecon *recon);
+void avcencAddIntra1(AvcRecon *recon);
+void avcencAddIntra2(AvcRecon *recon);
+void avcencAddIntra3(AvcRecon *recon);
+void avcencStoreIntra(const AvcRecon *recon, uint8_t *samples);
+void avcencIntraNeighbours(AvcRecon *recon, const AvcEdges *edges, uint32_t aboveRight);
+void avcencIntraNext(AvcRecon *recon, uint32_t block, const AvcEdges *edges);
+void avcencIntra4x4Block0(AvcRecon *recon, uint32_t mode, uint32_t left, uint32_t above);
+void avcencIntra4x4Block1(AvcRecon *recon, uint32_t mode, uint32_t above);
+void avcencIntra4x4Block2(AvcRecon *recon, uint32_t mode, uint32_t left);
+void avcencIntra4x4Block3(AvcRecon *recon, uint32_t mode);
+void avcencIntraKeep(const AvcRecon *recon, const uint8_t *samples, AvcEdges *edges);
+void avcencLoadIntra16(AvcRecon *recon, const uint8_t *samples);
+void avcencAddIntra16Block0(AvcRecon *recon);
+void avcencAddIntra16Block1(AvcRecon *recon);
+void avcencAddIntra16Block2(AvcRecon *recon);
+void avcencAddIntra16Block3(AvcRecon *recon);
+void avcencStoreIntra16(const AvcRecon *recon, uint8_t *samples);
+void avcencKeepRightIntra16(const AvcRecon *recon, uint8_t **right);
+void avcencIntra16Vertical(const AvcEdges *edges, uint8_t *samples);
+void avcencIntra16Horizontal(const uint8_t *left, uint8_t *samples);
+void avcencIntra16Dc(const uint8_t *left, const AvcEdges *edges, uint32_t leftAvailable,
+	uint32_t aboveAvailable, uint8_t *samples);
+void avcencIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t aboveLeft,
+	uint8_t *samples);
+
 /*
  * a macroblock's bS as its kernels hand them on, by register: two edges of
  * four 4-sample groups each, the vertical edges 0-1 and 2-3, then the

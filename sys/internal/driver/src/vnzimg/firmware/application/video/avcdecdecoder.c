@@ -2883,30 +2883,30 @@ static void lumaClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
 
 static void lumaPredictP(AvcdecStripe *stripe, uint32_t weighted);
 static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted);
-static void lumaPredict8x8(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+static void lumaPredict8x8(AvcdecStripe *stripe, AvcInter *inter, int32_t x, int32_t y,
 	const int16_t *mv);
-static void lumaPredict4x4(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+static void lumaPredict4x4(AvcdecStripe *stripe, AvcInter *inter, int32_t x, int32_t y,
 	const int16_t *mv);
-static void lumaFetch8(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+static void lumaFetch8(const AvcdecStripe *stripe, AvcInter *inter, const uint8_t *reference,
 	int32_t x, int32_t y);
-static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaFetch8Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Both(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaFetch4(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+static void lumaFetch4(const AvcdecStripe *stripe, AvcInter *inter, const uint8_t *reference,
 	int32_t x, int32_t y);
-static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaFetch4Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Both(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void lumaStore(const AvcdecInter *inter, uint8_t *luma);
-static void lumaWeightP(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+static void lumaStore(const AvcInter *inter, uint8_t *luma);
+static void lumaWeightP(const AvcdecStripe *weighting, AvcInter *inter, uint8_t *luma,
 	int32_t refIdx);
-static void lumaWeightB(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+static void lumaWeightB(const AvcdecStripe *weighting, AvcInter *inter, uint8_t *luma,
 	int32_t refIdx0, int32_t refIdx1);
 
 /* 0x831538: by the slice's kind, weighted or not */
@@ -2929,7 +2929,7 @@ static inline void lumaInvalidate(const AvcdecStripe *stripe)
 }
 
 /* an 8x8 block's prediction from one list's reference: whole, or by its 4x4 blocks */
-static inline void lumaPredictBlock(AvcdecStripe *stripe, AvcdecInter *inter, uint32_t block,
+static inline void lumaPredictBlock(AvcdecStripe *stripe, AvcInter *inter, uint32_t block,
 	int32_t x, int32_t y, uint32_t list)
 {
 	const AvcdecMbVectors *vectors = stripe->vectors;
@@ -2954,7 +2954,7 @@ static void lumaPredictP(AvcdecStripe *stripe, uint32_t weighted)
 	const VideoHelperSlice *slice = stripe->slice;
 	const int8_t *refIdx = stripe->mb->refIdx.b;
 	int32_t mbX = stripe->x * 16, mbY = stripe->row * 16, x, y, ref;
-	AvcdecInter inter;
+	AvcInter inter;
 	uint32_t block;
 	uint8_t *luma;
 
@@ -2977,7 +2977,7 @@ static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted)
 	const VideoHelperSlice *slice = stripe->slice;
 	const int8_t *refIdx = stripe->mb->refIdx.b;
 	int32_t mbX = stripe->x * 16, mbY = stripe->row * 16, x, y, ref0, ref1;
-	AvcdecInter inter;
+	AvcInter inter;
 	uint32_t block;
 	uint8_t *luma;
 
@@ -3002,7 +3002,6 @@ static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted)
 }
 
 /* the kernels' modes by the vector's fraction (y * 4 + x), as the jump tables give them */
-#define LUMA_HALF		0x02
 #define LUMA_QUARTER		0x12
 #define LUMA_QUARTER_RIGHT	0x13
 #define LUMA_QUARTER_BELOW	0x16
@@ -3011,7 +3010,7 @@ static void lumaPredictB(AvcdecStripe *stripe, uint32_t weighted)
 #define LUMA_QUARTER_COLUMNS_RIGHT 0x1e
 
 /* 0x83180c: an 8x8 block at (x, y) plus its vector, by the vector's fraction (0x8f72f8) */
-static void lumaPredict8x8(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+static void lumaPredict8x8(AvcdecStripe *stripe, AvcInter *inter, int32_t x, int32_t y,
 	const int16_t *mv)
 {
 	const uint8_t *reference = stripe->reference;
@@ -3085,7 +3084,7 @@ static void lumaPredict8x8(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, 
 }
 
 /* 0x8318d8: a 4x4 block's (0x8f7334) */
-static void lumaPredict4x4(AvcdecStripe *stripe, AvcdecInter *inter, int32_t x, int32_t y,
+static void lumaPredict4x4(AvcdecStripe *stripe, AvcInter *inter, int32_t x, int32_t y,
 	const int16_t *mv)
 {
 	const uint8_t *reference = stripe->reference;
@@ -3181,7 +3180,7 @@ static inline const uint8_t *tiledNext(const uint8_t *address, int32_t x)
 }
 
 /* 0x831df2: an 8x8 block of whole samples */
-static void lumaFetch8(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+static void lumaFetch8(const AvcdecStripe *stripe, AvcInter *inter, const uint8_t *reference,
 	int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3206,7 +3205,7 @@ static void lumaFetch8(const AvcdecStripe *stripe, AvcdecInter *inter, const uin
 }
 
 /* 0x831ed6: from two rows above to three below, for a vertical filter */
-static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Vertical(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3254,7 +3253,7 @@ static inline void tiledStreams(const uint8_t *address, int32_t x, const uint8_t
 }
 
 /* 0x831ffc: from two columns left to three right, for a horizontal filter */
-static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3287,7 +3286,7 @@ static void lumaFetch8Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
 }
 
 /* 0x832122: both, for the centre and the diagonals */
-static void lumaFetch8Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch8Both(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3340,7 +3339,7 @@ static inline const uint8_t *tiledNext4(const uint8_t *address, int32_t x)
 }
 
 /* 0x8319a4: a 4x4 block of whole samples */
-static void lumaFetch4(const AvcdecStripe *stripe, AvcdecInter *inter, const uint8_t *reference,
+static void lumaFetch4(const AvcdecStripe *stripe, AvcInter *inter, const uint8_t *reference,
 	int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3360,7 +3359,7 @@ static void lumaFetch4(const AvcdecStripe *stripe, AvcdecInter *inter, const uin
 }
 
 /* 0x831a8e */
-static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3394,7 +3393,7 @@ static void lumaFetch4Vertical(const AvcdecStripe *stripe, AvcdecInter *inter,
 }
 
 /* 0x831bbc */
-static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3424,7 +3423,7 @@ static void lumaFetch4Horizontal(const AvcdecStripe *stripe, AvcdecInter *inter,
 }
 
 /* 0x831cb4 */
-static void lumaFetch4Both(const AvcdecStripe *stripe, AvcdecInter *inter,
+static void lumaFetch4Both(const AvcdecStripe *stripe, AvcInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->width, height = stripe->height, pitch = stripe->pitch;
@@ -3467,7 +3466,7 @@ static void lumaFetch4Both(const AvcdecStripe *stripe, AvcdecInter *inter,
 }
 
 /* 0x8322a0: the 8x8 block into the macroblock's samples (16 apart) */
-static void lumaStore(const AvcdecInter *inter, uint8_t *luma)
+static void lumaStore(const AvcInter *inter, uint8_t *luma)
 {
 	uint32_t row, column;
 
@@ -3477,7 +3476,7 @@ static void lumaStore(const AvcdecInter *inter, uint8_t *luma)
 }
 
 /* 0x8322c2: a P block's explicit weighting, then the block stored */
-static void lumaWeightP(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+static void lumaWeightP(const AvcdecStripe *weighting, AvcInter *inter, uint8_t *luma,
 	int32_t refIdx)
 {
 	const VideoHelperSlice *slice;
@@ -3496,7 +3495,7 @@ static void lumaWeightP(const AvcdecStripe *weighting, AvcdecInter *inter, uint8
  * 0x832318: a B block's: list 1's put with list 0's stored (averaged, or by
  * weighted_bipred_idc's explicit or implicit weights), or alone.
  */
-static void lumaWeightB(const AvcdecStripe *weighting, AvcdecInter *inter, uint8_t *luma,
+static void lumaWeightB(const AvcdecStripe *weighting, AvcInter *inter, uint8_t *luma,
 	int32_t refIdx0, int32_t refIdx1)
 {
 	const VideoHelperSlice *slice;
@@ -3570,8 +3569,8 @@ static void residualOpen(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
 		stripe->left = stripe->mb + count - 1;
 	else
 		stripe->left = stripe->mb - 1;
-	stripe->edges = (AvcdecEdges *)vnzPublicOpenPrivate(info->row1 + x * sizeof(AvcdecEdges),
-		count * sizeof(AvcdecEdges) + sizeof(AvcdecEdges));
+	stripe->edges = (AvcEdges *)vnzPublicOpenPrivate(info->row1 + x * sizeof(AvcEdges),
+		count * sizeof(AvcEdges) + sizeof(AvcEdges));
 	if (x && (!job->load || job->firstX != x || job->firstY != row))
 		return;
 	rows = row - job->firstY;
@@ -3610,7 +3609,7 @@ static void residualClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
 	vnzPublicCloseProtected((uint32_t)(stripe->mb - mode), mode * sizeof(AvcdecMbState));
 	vnzPublicCloseProtected((uint32_t)(stripe->filter - mode), mode * sizeof(AvcdecMbFilter));
 	vnzPublicClosePrivate((uint32_t)(stripe->edges - count),
-		count * sizeof(AvcdecEdges) + sizeof(AvcdecEdges));
+		count * sizeof(AvcEdges) + sizeof(AvcEdges));
 	if ((int8_t)entry->row)
 		vnzPublicClosePrivate((uint32_t)(stripe->above - count * 256), count * 256);
 	if ((int8_t)entry->x)
@@ -3620,7 +3619,7 @@ static void residualClose(const AvcdecDecoderInfo *info, const AvcdecRow *entry,
 }
 
 /* 0x83279c: the dequantisation of the macroblock's QP */
-static void residualScale(AvcdecRecon *recon, uint32_t qp)
+static void residualScale(AvcRecon *recon, uint32_t qp)
 {
 	uint32_t i;
 
@@ -3647,9 +3646,9 @@ static void residualInter(AvcdecStripe *stripe)
 	uint32_t cbp = (kind >> AVC_MB_CBP_SHIFT) & 0xf, block;
 	uint32_t keepRight = (kind & AVC_MB_KEEP_RIGHT) != 0;
 	uint32_t keepBottom = (kind & AVC_MB_KEEP_BOTTOM) != 0;
-	AvcdecEdges *edges = stripe->edges;
+	AvcEdges *edges = stripe->edges;
 	uint8_t *right = edges[1].left, *bottom = edges->above, *samples;
-	AvcdecRecon recon;
+	AvcRecon recon;
 
 	residualScale(&recon, (uint8_t)stripe->qp);
 	edges[1].aboveLeft = edges->above[15];
@@ -3728,7 +3727,7 @@ static void residualIntra(AvcdecStripe *stripe)
 static void intraPcm(AvcdecStripe *stripe)
 {
 	const uint8_t *pcm = stripe->rowData->pcm;
-	AvcdecEdges *edges = stripe->edges;
+	AvcEdges *edges = stripe->edges;
 	uint8_t *luma = stripe->luma;
 	uint32_t i;
 
@@ -3753,8 +3752,8 @@ static void intra4x4(AvcdecStripe *stripe)
 	const int8_t *modes = stripe->filter->modes;
 	uint32_t neighbours = stripe->filter->intraNeighbours, cbf = stripe->cbf & 0xffff;
 	uint32_t lefts = neighbours & 1 ? 15 : 10, aboves = neighbours & 2 ? 15 : 12, block;
-	AvcdecEdges *edges = stripe->edges;
-	AvcdecRecon recon;
+	AvcEdges *edges = stripe->edges;
+	AvcRecon recon;
 
 	residualScale(&recon, (uint8_t)stripe->qp);
 	avcdecIntraNeighbours(&recon, edges, (neighbours & 4) != 0);
@@ -3796,7 +3795,7 @@ static void intra4x4(AvcdecStripe *stripe)
 /* 0x8329e4: an Intra16x16 macroblock's prediction, by Intra16x16PredMode */
 static void intra16Predict(AvcdecStripe *stripe)
 {
-	const AvcdecEdges *edges = stripe->edges;
+	const AvcEdges *edges = stripe->edges;
 	uint32_t neighbours;
 	uint8_t *luma = stripe->luma;
 
@@ -3819,7 +3818,7 @@ static void intra16Predict(AvcdecStripe *stripe)
 }
 
 /* 0x832a5a: the 8x8 block's DC levels */
-static void intra16Dc(AvcdecRecon *recon, uint32_t block)
+static void intra16Dc(AvcRecon *recon, uint32_t block)
 {
 	uint32_t i;
 
@@ -3837,9 +3836,9 @@ static void intra16Residual(AvcdecStripe *stripe)
 	uint32_t kind = stripe->kind, cbf = stripe->cbf & 0xffff, block;
 	uint32_t keepRight = (kind & AVC_MB_KEEP_RIGHT) != 0;
 	uint32_t keepBottom = (kind & AVC_MB_KEEP_BOTTOM) != 0;
-	AvcdecEdges *edges = stripe->edges;
+	AvcEdges *edges = stripe->edges;
 	uint8_t *right = edges[1].left, *bottom = edges->above, *samples;
-	AvcdecRecon recon;
+	AvcRecon recon;
 
 	edges[1].aboveLeft = edges->above[15];
 	if ((stripe->cbf >> 24) & 1) {
