@@ -16,6 +16,7 @@
 #include "robin/hostps.h"
 #include "robin/icverr.h"
 #include "robin/join.h"
+#include "robin/keyMgmtAp.h"
 #include "robin/mactx.h"
 #include "robin/mdev.h"
 #include "robin/mef.h"
@@ -103,7 +104,6 @@ void rfCalibBuildQueue(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);					/* 0x3bc5a */
 void wlanMacFlush(void);									/* 0x1c840 */
-int cbProcSetupHeader(struct WlanConnection *connection);				/* 0x1fc24 */
 extern uint16_t wlanAmsduEnabled;							/* 0x04000ff8 */
 void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
 extern uint8_t wlanScanRequested;							/* 0x54c80 */
@@ -140,7 +140,7 @@ void wlanPsHostAwakeAnnounce(struct WlanConnection *connection)
 void wlanMicErrorReport(struct WlanConnection *connection, int group)
 {
 	if (connection->mode == 2) {
-		cbProcSetupHeader(connection);
+		ApMicCounterMeasureInvoke(connection);
 		return;
 	}
 	wlanHostEventSendPlain(connection, group != 0 ? WLAN_HOST_EVENT_MIC_ERR_MULTICAST :

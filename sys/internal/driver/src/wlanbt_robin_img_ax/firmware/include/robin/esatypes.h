@@ -140,8 +140,8 @@ typedef struct apRsnConfig_t {
 	uint8_t PSKValue[PMK_LEN_MAX];
 	uint8_t MaxPwsHskRetries;
 	uint8_t MaxGrpHskRetries;
-	uint32_t PwsHskTimeOut;		/* seconds */
-	uint32_t GrpHskTimeOut;
+	uint32_t PwsHskTimeOut;		/* milliseconds */
+	uint32_t GrpHskTimeOut;		/* milliseconds */
 } apRsnConfig_t;
 
 _Static_assert(sizeof(apRsnConfig_t) == 124, "access point RSN configuration");

@@ -22,6 +22,7 @@
 #include "robin/osa.h"
 #include "robin/rf.h"
 #include "robin/rom.h"
+#include "robin/keyMgmtAp.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
@@ -135,8 +136,6 @@ void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
 			    uint32_t *length);				/* SQRAM 0xc000cd37 */
 void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8d */
 extern struct WlanChannelPowerTable wlanChannelPowerTable;			/* 0x000574ec */
-void macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer,
-			  unsigned int reason);				/* 0x38990 */
 void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
 			 unsigned int reason, int unused);			/* 0x34f7c */
 int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */

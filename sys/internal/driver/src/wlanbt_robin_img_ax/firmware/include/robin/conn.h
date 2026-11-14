@@ -306,6 +306,14 @@ struct WlanSqramState {
 	const void *currentState;
 };
 
+/* WlanConnection.flags */
+#define WLAN_CONN_JOIN_OPEN		0x02	/* the join ended without privacy */
+#define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
+#define WLAN_CONN_WAPI			0x10
+
+/* WlanConnection.flags2 */
+#define WLAN_CONN2_ASSOCIATED		0x10	/* the peer is associated */
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;

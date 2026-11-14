@@ -30,14 +30,6 @@
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
-/* WlanConnection.flags */
-#define WLAN_CONN_JOIN_OPEN		0x02	/* the join ended without privacy */
-#define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
-#define WLAN_CONN_WAPI			0x10
-
-/* WlanConnection.flags2 */
-#define WLAN_CONN2_ASSOCIATED		0x10
-
 /* WlanConnection.state */
 #define WLAN_CONN_STATE_JOINING		3
 #define WLAN_CONN_STATE_ASSOCIATED	4

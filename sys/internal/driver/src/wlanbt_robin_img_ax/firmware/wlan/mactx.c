@@ -20,6 +20,7 @@
 #include "robin/ieee80211.h"
 #include "robin/wlanrx.h"
 #include "robin/rom.h"
+#include "robin/keyMgmtAp.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
 #include "robin/stream.h"
@@ -854,7 +855,6 @@ queueOrComplete:
  * Not converted yet; provisional names for what the transmit task uses them
  * for.
  */
-void uapGroupRekey(uintptr_t message);					/* 0x1f7b4 */
 void mdevWlanTrackState(void);						/* 0x015f0 */
 int cbProcTxAllowed(void);						/* 0x1e032 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
