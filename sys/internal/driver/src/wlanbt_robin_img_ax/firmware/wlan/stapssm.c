@@ -14,6 +14,7 @@
 #include "robin/coex.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"
+#include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
 #include "robin/pspoll.h"
@@ -62,35 +63,49 @@
 struct WlanStaPsMachine wlanStaPs __attribute__((section(".dtcm.bss")));
 
 uint8_t wlanPsBtShareMode __attribute__((section(".itcm.rw")));		/* 0x54aa8 */
+uint8_t wlanPsPollFlag __attribute__((section(".itcm.rw")));			/* 0x54aa9 */
+uint8_t wlanPsHostWakePending __attribute__((section(".itcm.rw")));		/* 0x54aaa */
 uint8_t wlanPsLastTxComplete __attribute__((section(".itcm.rw")));		/* 0x54aab */
 uint8_t wlanPsNullSuppressed __attribute__((section(".itcm.rw")));		/* 0x54aac */
+uint8_t wlanPsPeriodHold __attribute__((section(".itcm.rw")));		/* 0x54aad */
 uint8_t wlanPsConfirmArmed __attribute__((section(".itcm.rw")));		/* 0x54aae */
 uint8_t wlanPsSleepAllowance __attribute__((section(".itcm.rw")));		/* 0x54aaf */
 uint8_t wlanPsRoleMask __attribute__((section(".itcm.rw")));			/* 0x54ab0 */
+uint8_t wlanPsPeerRoleMask __attribute__((section(".itcm.rw")));		/* 0x54ab1 */
 uint16_t wlanPsHoldSeconds __attribute__((section(".itcm.rw"))) = 30;		/* 0x54ab4 */
 uint32_t wlanPsLastHostEvent __attribute__((section(".itcm.rw")));		/* 0x54ab8 */
 uint32_t wlanPsDataPending __attribute__((section(".itcm.rw")));		/* 0x54abc */
 uint32_t wlanPsIeeeFlag __attribute__((section(".itcm.rw")));			/* 0x54ac0 */
 uint32_t wlanTxPowerSaveCount __attribute__((section(".itcm.rw")));		/* 0x54ac4 */
+uint32_t wlanPsPollSkips __attribute__((section(".itcm.rw")));		/* 0x54ac8 */
 uint32_t wlanPsNullRetries __attribute__((section(".itcm.rw")));		/* 0x54acc */
 uint32_t wlanPsNullTimeouts __attribute__((section(".itcm.rw")));		/* 0x54ad0 */
 uint32_t wlanPsPowerStateChanges __attribute__((section(".itcm.rw")));	/* 0x54ad4 */
 uint32_t wlanPsRetries __attribute__((section(".itcm.rw")));			/* 0x54ad8 */
 uint32_t wlanPsRetryTimer __attribute__((section(".itcm.rw")));		/* 0x54adc */
+uint32_t wlanPsCalibrations __attribute__((section(".itcm.rw")));		/* 0x54ae0 */
+uint32_t wlanPsCalibrationDue __attribute__((section(".itcm.rw")));		/* 0x54ae4 */
+uint32_t wlanPsIeeeFlagAtSleep __attribute__((section(".itcm.rw")));		/* 0x54aec */
+uint32_t wlanPsPeriodSleepTime __attribute__((section(".itcm.rw")));		/* 0x54b00 */
+uint32_t wlanPsPeriodEntries __attribute__((section(".itcm.rw")));		/* 0x54b04 */
 uint32_t wlanPsHostBusy __attribute__((section(".itcm.rw")));			/* 0x54b08 */
 uint32_t wlanPsListenTimer __attribute__((section(".itcm.rw")));		/* 0x54b0c */
 uint32_t wlanPsLastEvent __attribute__((section(".itcm.rw")));		/* 0x54b10 */
 uint32_t wlanPsHostWakeSkips __attribute__((section(".itcm.rw")));		/* 0x54b14 */
 uint32_t wlanPsIeeeEntries __attribute__((section(".itcm.rw")));		/* 0x54b18 */
+uint64_t wlanPsPeriodNow __attribute__((section(".itcm.rw")));		/* 0x54b20 */
+uint64_t wlanPsPeriodStart __attribute__((section(".itcm.rw")));		/* 0x54b28 */
 uint64_t wlanPsPollReplyTime __attribute__((section(".itcm.rw")));		/* 0x54b30 */
 uint64_t wlanPsPollSentTime __attribute__((section(".itcm.rw")));		/* 0x54b38 */
+uint64_t wlanPsHeaderDeadline __attribute__((section(".itcm.rw")));		/* 0x54b40 */
 
 /* Not converted yet; provisional names. */
 extern uint16_t wlanPsBeaconInterval;			/* 0x56288 */
 extern uint16_t wlanPsListenBeacons;			/* 0x56292 */
-extern uint16_t wlanPsWakeHold;				/* 0x56298 */
 extern uint16_t wlanPsAltModeActive;			/* 0x562a0 */
 extern uint16_t wlanPsAltModeRequest;			/* 0x562a2 */
+extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
+extern struct OsaBufferPool wlanTxFramePool;
 extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
 extern uint32_t wlanPsMgmtWakeDue;			/* 0x54c50 */
 extern uint32_t wlanPsHostWakeDue;			/* 0x54c54 */
@@ -124,6 +139,9 @@ int macTxNotifyApplyState(void);			/* 0x2fefa */
 int macTxNotifyBuildState(void);			/* 0x2fbe8 */
 int wlanPsProcessHeader(void);				/* 0x3dd26 */
 uint32_t wlanPsParseHeader(uint64_t *wake, uint16_t *margin);	/* 0x3defe */
+void wlanPsPrepareHeader(uint64_t *next);		/* 0x3dd98 */
+unsigned int wpaSuppSelectQueue(unsigned int ac);	/* 0x2cfde */
+void uapSqramFilterEntry(int enable);			/* SQRAM 0xc0009ba0 */
 
 static inline __attribute__((always_inline)) void wlanStaPsRestartTimer(TX_TIMER *timer, ULONG ticks)
 {
@@ -179,7 +197,7 @@ void wlanStaPsRestart(struct WlanStaPsMachine *machine)
 
 	if (wlanPsAltModeRequest != 0) {
 		wlanPsManageContext(machine);
-		target = &machine->state124;
+		target = &machine->periodic;
 	} else {
 		connection = machine->connection;
 		sleepCalibrationUpdate();
@@ -556,7 +574,7 @@ const int32_t *wlanStaPsActive(struct WlanStaPsMachine *machine, const int32_t *
 		if (wlanCoexUseP2pMode() || wlanCoexUseStationMode()) {
 			wlanPsAcquireContext(machine);
 			macMgmtValidateTable(4);
-			romHsmTransition(machine, &machine->state124);
+			romHsmTransition(machine, &machine->periodic);
 			return NULL;
 		}
 		wlanTxPowerSaveCount = 1;
@@ -795,7 +813,7 @@ const int32_t *wlanStaPsSleep(struct WlanStaPsMachine *machine, const int32_t *e
 		if (machine->restartDue) {
 			machine->restartDue = 0;
 			wlanStaPsRestart(machine);
-			if (wlanPsWakeHold != 0)
+			if (wlanPsAltModeActive != 0)
 				return NULL;
 		}
 		sleepCalibrationKick(1);
@@ -1298,5 +1316,387 @@ asleep:
 	wlanPsSetPowerState(5);
 sleep:
 	romHsmTransition(machine, &machine->sleep);
+	return NULL;
+}
+
+/* 0x15a5c: the host is to be told before the station sleeps. */
+int wlanStaPsShouldNotify(void)
+{
+	int notify = wlanStaPsNotifyPending();
+
+	if (notify == 0 && wlanPsEnabled() && wlanStaPsHoldExpired())
+		notify = 1;
+	return notify;
+}
+
+/* 0x15a7c: U-APSD is on for some access categories, not all four. */
+int wlanPsUapsdPartial(void)
+{
+	return wlanCoexUseP2pMode() == 1 && (~wlanPsRoleMask & 0x0f) != 0;
+}
+
+/* 0x15a9a: an access category U-APSD does not deliver. */
+int wlanPsAcLegacy(unsigned int ac)
+{
+	if (wlanPsUapsdPartial() != 1)
+		return 0;
+	return ((1u << wpaSuppSelectQueue(ac)) & wlanPsRoleMask) == 0;
+}
+
+/* 0x15ac2 */
+void wlanPsSetRoleMasks(uint8_t mask, uint8_t peerMask)
+{
+	wlanPsRoleMask = mask;
+	wlanPsPeerRoleMask = peerMask;
+}
+
+/* 0x15ad2 */
+void wlanPsPeriodTimerExpired(uint32_t timer, uint32_t argument)
+{
+	if (wlanPsRetryTimer != timer)
+		return;
+	wlanPsRetryTimer = 0;
+	wlanRaiseEvent(22);
+}
+
+/* 0x15ae8 */
+void wlanPsPeriodRetryExpired(uint32_t timer, uint32_t argument)
+{
+	if (wlanPsRetryTimer != timer)
+		return;
+	wlanPsRetries = 0;
+	wlanPsRetryTimer = 0;
+	uapSqramFilterEntry(2);
+	wlanRaiseEvent(3);
+}
+
+/* 0x15b06: the next multiple of period (TU) after now (us). */
+uint64_t wlanPsNextPeriod(uint64_t now, uint32_t period)
+{
+	uint32_t interval = period << 10;
+
+	return now - now % interval + interval;
+}
+
+/* 0x15b26: the next header time if it comes before deadline, else 0. */
+uint64_t wlanPsHeaderBefore(uint64_t deadline)
+{
+	uint64_t next;
+
+	wlanPsPrepareHeader(&next);
+	if (next < deadline)
+		return next;
+	return 0;
+}
+
+/* 0x15b48: nothing is left to send or to hand to the host. */
+int wlanStaPsTxIdle(void)
+{
+	return macTxIdle() && MAC_010_QUEUE_HEAD == MAC_014_QUEUE_TAIL &&
+	       mdevIoctl(wlanSdioDev, 8, 0) == 0 && wlanTxInFlightFrames() == 0 &&
+	       wlanHostQueueDepth(0) == 0 && wlanHostQueueDepth(0) == 0 && wlanHostSleepPending == 0;
+}
+
+void wlanStaPsRequestSleep(void);
+
+/* 0x15b94 */
+void wlanStaPsSleepRetryExpired(uint32_t timer, uint32_t argument)
+{
+	if (wlanPsRetryTimer != timer)
+		return;
+	wlanPsRetryTimer = 0;
+	wlanStaPsRequestSleep();
+}
+
+static inline __attribute__((always_inline)) int wlanStaPsPoolFull(struct OsaBufferPool *pool)
+{
+	int blocks = osa_BufferClone(pool);
+	int free = osa_PoolQuery(pool, 8);
+
+	return blocks == free + osa_PoolQuery(pool, 16);
+}
+
+/*
+ * 0x15ba8: ask the MAC to sleep for the period, or tell the control task it
+ * cannot; retries every WLAN_COEX_SLEEP_RETRY ticks.
+ */
+void wlanStaPsRequestSleep(void)
+{
+	if ((wlanStaPsTxIdle() == 1 && wlanStaPsPoolFull(&wlanBlockPool28) &&
+	     wlanStaPsPoolFull(&wlanBlockPool7) && wlanStaPsPoolFull(&wlanReplyFramePool)) ||
+	    wlanPsHostBusy != 0 || wlanPsSleepAllowance == 0) {
+		wlanRaiseEvent(WLAN_EVENT_SLEEP_REFUSED);
+		return;
+	}
+	macTxPostEvent(1);
+	wlanPsSleepAllowance--;
+	wlanPsArmRetryTimer(WLAN_COEX_SLEEP_RETRY, wlanStaPsSleepRetryExpired);
+}
+
+/* 0x15c40: the access point answered a PS-Poll. */
+void wlanPsPollReplied(void)
+{
+	if (wlanPsLegacyPollMode() && !wlanPsDisabled())
+		wlanPsPollReplyTime = romGetTimerTimestamp();
+}
+
+/* 0x15c60 */
+void wlanPsHostFrameSeen(void)
+{
+	wlanRaiseEvent(25);
+}
+
+/* 0x15c6a: a frame from the access point after a PS-Poll; poll again for more. */
+void wlanPsPollFrameReceived(struct WlanConnection *connection, int moreData, int subtype)
+{
+	if (wlanPsDisabled() || !wlanPsLegacyPollMode() || !wlanPsSleepStateReached())
+		return;
+	if (wlanPsAltModeActive != 0 && wlanPsHostBusy != 0)
+		return;
+	if (wlanPsPollSentTime == 0 || wlanPsPollSentTime >= wlanPsPollReplyTime)
+		return;
+	if (wlanDmaRingsHaveRoom() == 1)
+		return;
+	if (moreData != 0)
+		wlanPsEnterSleep(connection, 0);
+	else if (mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0)
+		wlanPsHostWakePending = 1;
+	else
+		wlanRaiseEvent(26);
+	if (wlanCoexUseStationMode())
+		return;
+	wlanPsLastTxComplete = moreData == 0;
+	if (subtype == 4 || subtype == 12) {
+		wlanPsPollSkips++;
+		return;
+	}
+	wlanPsPollSkips = 0;
+	wlanPsBuildEntry();
+}
+
+/* 0x15d48: PM=0 with the access point, from the periodic states. */
+const int32_t *wlanStaPsPeriodicIeeeExit(struct WlanStaPsMachine *machine, const int32_t *event)
+{
+	struct WlanConnection *connection = machine->connection;
+
+	switch (*event) {
+	case 43:
+		if (machine->resume == &machine->active) {
+			wlanStaPsWakeAp(machine);
+		} else if (macTxGetPowerSave() == 0) {
+			machine->ieeeTries = 0;
+			machine->ieeeState = 1;
+			macTxSetPowerSave(1);
+			wlanStaPsSendIeeeNull(connection, 1, 0);
+		}
+		romHsmTransition(machine, machine->resume);
+		return NULL;
+	case 44:
+	case 45:
+		machine->resume = &machine->active;
+		machine->ieeeState = 0;
+		macTxSetPowerSave(0);
+		sleepCalibrationUpdate();
+		sleepWake();
+		machine->eventPending = 0;
+		romHsmTransition(machine, machine->resume);
+		return NULL;
+	case WLAN_STA_PS_EVENT_HOST_CONFIRMED:
+		machine->exitEventDue = 1;
+		return NULL;
+	case ROM_HSM_EXIT:
+		machine->exitEventDue = 0;
+		break;
+	case ROM_HSM_ENTRY:
+		machine->ieeeTries = 0;
+		break;
+	default:
+		return event;
+	}
+	osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
+	return NULL;
+}
+
+/* 0x15e00: PM=1 with the access point, from the periodic states. */
+const int32_t *wlanStaPsPeriodicIeeeNull(struct WlanStaPsMachine *machine, const int32_t *event)
+{
+	struct WlanConnection *connection = machine->connection;
+
+	switch (*event) {
+	case 39:
+	case 40:
+		return NULL;
+	case ROM_HSM_EXIT:
+		machine->exitEventDue = 0;
+		break;
+	case ROM_HSM_ENTRY:
+		machine->wakeBits = macTxAcquireWakeBit();
+		break;
+	case WLAN_STA_PS_EVENT_HOST_CONFIRMED:
+		machine->exitEventDue = 1;
+		return NULL;
+	case 43:
+		machine->slotHeld = 0;
+		macTxReleaseWakeBits(&machine->wakeBits);
+		if (machine->resume == &machine->active) {
+			macTxSetPowerSave(1);
+			wlanStaPsWakeAp(machine);
+		} else if (machine->exitEventDue) {
+			wlanRaiseEvent(9);
+		}
+		romHsmTransition(machine, machine->resume);
+		return NULL;
+	case 44:
+	case 45:
+		sleepCalibrationUpdate();
+		sleepWake();
+		tx_timer_deactivate(&machine->nullTimer);
+		wlanPsSetPowerState(6);
+		machine->ieeeState = 0;
+		macTxSetPowerSave(0);
+		macTxReleaseWakeBits(&machine->wakeBits);
+		if (machine->resume != &machine->active)
+			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		machine->eventPending = 0;
+		machine->resume = &machine->active;
+		romHsmTransition(machine, &machine->active);
+		break;
+	case 47:
+		wlanPsNullRetries++;
+		return NULL;
+	default:
+		return event;
+	}
+	osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
+	return NULL;
+}
+
+/* 0x15f02: asleep for the period; event 24 tries to sleep until the next one. */
+const int32_t *wlanStaPsPeriodicSleep(struct WlanStaPsMachine *machine, const int32_t *event)
+{
+	struct WlanConnection *connection = machine->connection;
+	struct RomHsmState *periodic = &machine->periodic;
+	uint64_t now;
+	uint64_t wake;
+	uint8_t previous[4];
+	UINT irq;
+
+	switch (*event) {
+	case 11:
+	case 12:
+	case 21:
+	case 22:
+	case 25:
+	case 26:
+	case 32:
+	case 33:
+	case 34:
+	case 38:
+		return NULL;
+	case 23:
+		machine->sleepRequested = 1;
+		if (wlanPsRetries != 15)
+			return NULL;
+		wlanPsRetries = 0;
+		wlanPsCancelRetryTimer();
+		goto request;
+	case ROM_HSM_EXIT:
+		sleepWake();
+		return NULL;
+	case ROM_HSM_ENTRY:
+		wlanPsClearHostEvent();
+		wlanPsCancelRetryTimer();
+		wlanPsPeriodEntries++;
+		wlanPsSleepAllowance = 10;
+request:
+		if (machine->servicePeriod == 0)
+			wlanStaPsRequestSleep();
+		else
+			wlanCoexRequestSleep();
+		return NULL;
+	case WLAN_STA_PS_EVENT_STOP:
+		wlanStaPsWakeAp(machine);
+		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		romHsmTransition(machine, &machine->active);
+		return NULL;
+	case 3:
+		if (wlanSavedMgmtPriority != 0xff) {
+			osaTaskSetPriority(macMgmtTask, wlanSavedMgmtPriority, previous);
+			wlanSavedMgmtPriority = 0xff;
+		}
+		goto awake;
+	case WLAN_STA_PS_EVENT_IEEE_ENTER:
+		machine->slotHeld = 1;
+		return NULL;
+	case WLAN_STA_PS_EVENT_IEEE_EXIT:
+		machine->resume = periodic;
+		romHsmTransition(machine, &machine->periodicIeeeExit);
+		return NULL;
+	case WLAN_EVENT_SLEEP_REFUSED:
+		break;
+	default:
+		return event;
+	}
+
+	if (wlanCoexActive()) {
+		wlanCoexHandleEvent(connection, WLAN_EVENT_SLEEP_REFUSED);
+	} else if (mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0) {
+		sleepCalibrationUpdate();
+		goto awake;
+	}
+	if (machine->headerPending == 1 && machine->sleepRequested == 1) {
+		if (machine->headerTime >= wlanPsHeaderDeadline) {
+			wlanPsHeaderDeadline = 0;
+			machine->headerPending = 0;
+		}
+		machine->sleepRequested = 0;
+	}
+	if (wlanPsCalibrationDue == 1) {
+		sleepCalibrationUpdate();
+		wlanPsCalibrationDue = 0;
+	}
+	now = romGetTimerTimestamp();
+	wlanPsPeriodNow = now;
+	if (now >= machine->nextWake || wlanPsHostBusy != 0)
+		goto awake;
+	wlanPsPeriodSleepTime = (uint32_t)(machine->nextWake - wlanPsPeriodNow);
+	irq = sysIrqDisable();
+	if (machine->headerPending == 1 || wlanPsPeriodSleepTime < 5500 ||
+	    (uint32_t)(wlanPsAltModeActive << 10) < wlanPsPeriodSleepTime)
+		goto retry;
+	if (wlanCoexUseP2pMode() == 1 && wlanPsIeeeFlagAtSleep != wlanPsIeeeFlag)
+		goto retry;
+	if ((wlanPsUapsdPartial() && wlanPsPeriodHold != 0) || wlanPsSleepAllowance == 0 ||
+	    machine->servicePeriod != 0 || mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0)
+		goto retry;
+	if (wlanSessionId != 0 && osa_PoolQuery(&wlanTxFramePool, 2) != 0) {
+		sysIrqRestore(irq);
+		goto awake;
+	}
+	wake = machine->nextWake - wlanPsWakeAdvance;
+	wlanPsIeeeFlag = 0;
+	wlanPsIeeeFlagAtSleep = 0;
+	wlanPsSetPowerState(6);
+	osaPauseTimers();
+	if (sleepEnter(&wake, (uint16_t)(sleepWakeLatency + 30), 1000, wlanPsAltModeActive << 10,
+		       (uint8_t)machine->servicePeriod) == 0) {
+		sysIrqRestore(irq);
+		osaResumeTimers();
+		goto awake;
+	}
+	sysIrqRestore(irq);
+	return NULL;
+
+retry:
+	sysIrqRestore(irq);
+	wlanPsRetries = 15;
+	uapSqramFilterEntry(3);
+	wlanPsArmRetryTimer((uint16_t)wlanPsPeriodSleepTime, wlanPsPeriodRetryExpired);
+	wlanPsIeeeFlag = 0;
+	wlanPsIeeeFlagAtSleep = 0;
+	return NULL;
+
+awake:
+	romHsmTransition(machine, periodic);
 	return NULL;
 }

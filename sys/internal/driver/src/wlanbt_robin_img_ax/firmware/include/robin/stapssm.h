@@ -34,12 +34,18 @@ struct WlanStaPsMachine {
 	struct RomHsmState enter;
 	struct RomHsmState sleep;
 	struct RomHsmState confirm;
-	struct RomHsmState state112;
-	struct RomHsmState state124;
+	struct RomHsmState periodicSleep;
+	struct RomHsmState periodic;
 	struct RomHsmState state136;
-	struct RomHsmState state148;
-	struct RomHsmState state160;
-	uint8_t reserved172[44];
+	struct RomHsmState periodicIeeeNull;
+	struct RomHsmState periodicIeeeExit;
+	uint32_t sleepRequested;	/* event 23: the MAC may sleep for the period */
+	uint32_t headerPending;		/* a header is due before the next period */
+	uint32_t reserved180;
+	uint64_t nextWake;		/* the next period (us) */
+	uint64_t periodWake;		/* nextWake when the period was laid out */
+	uint64_t headerTime;		/* the header that ends headerPending */
+	uint64_t lastCalibration;	/* when sleepCalibrationKick(2) last ran */
 	uint8_t slotHeld;		/* wlanSlotResume() once the machine wakes */
 	uint8_t exitEventDue;		/* event 9 to the control task after IeeeExit */
 	uint16_t wakeTimerArmed;	/* wlanPsBuildEntry() when the machine wakes */
@@ -74,6 +80,7 @@ struct WlanStaPsMachine {
 };
 
 _Static_assert(offsetof(struct WlanStaPsMachine, sleep) == 88, "station PS sleep state");
+_Static_assert(offsetof(struct WlanStaPsMachine, nextWake) == 184, "station PS next wake");
 _Static_assert(offsetof(struct WlanStaPsMachine, slotHeld) == 216, "station PS slot");
 _Static_assert(offsetof(struct WlanStaPsMachine, confirmTimer) == 248, "station PS confirm timer");
 _Static_assert(offsetof(struct WlanStaPsMachine, nullTimer) == 292, "station PS null timer");
@@ -135,5 +142,22 @@ int wlanCoexUseP2pSleepMode(void);
 int wlanStaPsNotifyPending(void);
 const int32_t *wlanStaPsSleep(struct WlanStaPsMachine *machine, const int32_t *event);
 const int32_t *wlanStaPsConfirm(struct WlanStaPsMachine *machine, const int32_t *event);
+int wlanStaPsShouldNotify(void);
+int wlanPsUapsdPartial(void);
+int wlanPsAcLegacy(unsigned int ac);
+void wlanPsSetRoleMasks(uint8_t mask, uint8_t peerMask);
+void wlanPsPeriodTimerExpired(uint32_t timer, uint32_t argument);
+void wlanPsPeriodRetryExpired(uint32_t timer, uint32_t argument);
+uint64_t wlanPsNextPeriod(uint64_t now, uint32_t period);
+uint64_t wlanPsHeaderBefore(uint64_t deadline);
+int wlanStaPsTxIdle(void);
+void wlanStaPsSleepRetryExpired(uint32_t timer, uint32_t argument);
+void wlanStaPsRequestSleep(void);
+void wlanPsPollReplied(void);
+void wlanPsHostFrameSeen(void);
+void wlanPsPollFrameReceived(struct WlanConnection *connection, int moreData, int subtype);
+const int32_t *wlanStaPsPeriodicIeeeExit(struct WlanStaPsMachine *machine, const int32_t *event);
+const int32_t *wlanStaPsPeriodicIeeeNull(struct WlanStaPsMachine *machine, const int32_t *event);
+const int32_t *wlanStaPsPeriodicSleep(struct WlanStaPsMachine *machine, const int32_t *event);
 
 #endif /* ROBIN_STAPSSM_H */

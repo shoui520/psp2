@@ -873,7 +873,6 @@ struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *conne
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
-void wlanPsHostFrameSeen(void);						/* 0x15c60 */
 int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer); /* 0x1e234 */
 unsigned int wlanRateSelect(uint8_t *rateControl);			/* 0x2be18 */
 unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
