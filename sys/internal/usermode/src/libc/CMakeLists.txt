@@ -656,6 +656,7 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xonce.c
 	../../../../sdk/target/src/libsnc/pure_virt.c
 	../../../../sdk/target/src/libsnc/rtti.c
+	../../../../sdk/target/src/libsnc/vec_newdel.c
 	../../../../sdk/target/src/libsnc/error.c
 	../../../../sdk/target/src/libsnc/memzero.c
 )
@@ -688,5 +689,6 @@ set_source_files_properties(rtglobals.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1
 set_source_files_properties(xthrow.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 # SNC's runtime (libsnc): EDG wrote these .c files in C++ (-Tp: SNC goes by the extension)
 set_source_files_properties(../../../../sdk/target/src/libsnc/rtti.c
+	../../../../sdk/target/src/libsnc/vec_newdel.c
 	../../../../sdk/target/src/libsnc/error.c PROPERTIES
 	LANGUAGE CXX COMPILE_OPTIONS "-Tp;-Xblxcall=1")
