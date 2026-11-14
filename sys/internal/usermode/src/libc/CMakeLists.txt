@@ -650,7 +650,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	cxxabi_typeinfo.cpp
 	unwind_pr.cpp
 	unwinder.c
+	rtglobals.cpp
+	xthrow.cpp
 	unwinder_asm.S
+	xonce.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
@@ -677,3 +680,5 @@ set_source_files_properties(unwind_pr.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1
 set_source_files_properties(cxxabi_typeinfo.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(snc_personality.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(unwinder.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+set_source_files_properties(rtglobals.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+set_source_files_properties(xthrow.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
