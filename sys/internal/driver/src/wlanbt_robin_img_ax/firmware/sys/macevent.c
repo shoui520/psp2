@@ -9,8 +9,8 @@
 #include "robin/phy.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/soc.h"
 
-#define REG32(address)		(*(volatile uint32_t *)(address))
 #define SOC_EVENT_CONTEXT	REG32(0x800020e4)	/* bit 0: event pattern pending */
 
 #define WLAN_TX_POWER_DEFAULT_MAX	20	/* dBm, without a record */

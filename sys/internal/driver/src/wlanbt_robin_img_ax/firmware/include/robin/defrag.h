@@ -28,7 +28,10 @@ typedef struct WlanDefragContext {
 
 _Static_assert(sizeof(WlanDefragContext) == 20, "defragmentation context");
 
-/* mlan_fw.h: the 802.11 statistics up to the beacon counters (newer chips append more) */
+/*
+ * mlan_fw.h: the 802.11 statistics. This firmware's log ends at the WEP ICV
+ * counters; newer chips append bcn_rcv_cnt and bcn_miss_cnt.
+ */
 typedef struct __attribute__((packed)) HostCmd_DS_802_11_GET_LOG {
 	uint32_t mcast_tx_frame;
 	uint32_t failed;
@@ -44,9 +47,9 @@ typedef struct __attribute__((packed)) HostCmd_DS_802_11_GET_LOG {
 	uint32_t tx_frame;
 	uint32_t reserved;
 	uint32_t wep_icv_err_cnt[4];	/* WEP ICV errors per key */
-	uint32_t bcn_rcv_cnt;
-	uint32_t bcn_miss_cnt;
 } HostCmd_DS_802_11_GET_LOG;
+
+_Static_assert(sizeof(HostCmd_DS_802_11_GET_LOG) == 0x44, "802.11 statistics");
 
 void wlanDefragReset(WlanDefragContext *context);
 OsaBuffer *wlanDefragment(OsaBuffer *rxBuffer, WlanWirelessFrame *frame,

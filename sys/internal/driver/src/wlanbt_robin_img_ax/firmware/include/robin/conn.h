@@ -69,6 +69,8 @@ struct WlanConnectionInfo {
 	uint8_t rateFlags;		/* bit 3: send null frames at a low rate */
 };
 
+struct WlanSubscribeEvents;
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;
@@ -89,7 +91,10 @@ struct WlanConnection {
 	uint8_t supportedRates[12];
 	uint8_t reserved1b[2];
 	uint8_t supportedRatesLength;
-	uint8_t reserved1c[73];
+	uint8_t reserved1c[6];
+	uint8_t beaconMissThreshold;	/* beacons missed before the link is lost (subscribed) */
+	uint8_t preBeaconLostThreshold;
+	uint8_t reserved1e[65];
 	uint8_t localAddress[6];
 	uint8_t reserved2[14];
 	uint8_t channel;
@@ -103,7 +108,10 @@ struct WlanConnection {
 	uint8_t reserved4a;
 	uint16_t associationId;		/* AID the access point assigned */
 	uint8_t reserved4[18];
-	uint8_t rateControl[324];	/* rate adaptation state (not converted yet) */
+	uint8_t rateControl[280];	/* rate adaptation state (not converted yet) */
+	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
+	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
+	uint8_t reserved4c[38];
 	uint8_t interfaceAddress[6];
 	uint8_t interfaceIndex;
 	uint8_t reserved4b[5];
@@ -149,6 +157,9 @@ _Static_assert(offsetof(struct WlanConnection, stationFlags) == 760, "station fl
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
 _Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
+_Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beacon miss threshold");
+_Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
+_Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");

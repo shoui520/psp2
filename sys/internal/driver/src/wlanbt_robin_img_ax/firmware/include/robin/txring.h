@@ -76,12 +76,17 @@ struct WlanTxStatus {
 	uint8_t *data;			/* buffer data of the frame */
 	uint8_t reserved4[12];
 	uint32_t result;		/* 0: acknowledged */
-	uint8_t reserved20[3];
+	uint8_t rate;			/* rate index the frame was first sent at */
+	uint8_t finalRate;		/* rate index of the last transmission */
+	uint8_t reserved22;
 	uint8_t retryBlocked;		/* the frame must not be sent again */
+	uint8_t reserved24;
+	uint8_t retries;		/* transmissions after the first */
 };
 
 _Static_assert(offsetof(struct WlanTxStatus, result) == 16, "transmit result");
 _Static_assert(offsetof(struct WlanTxStatus, retryBlocked) == 23, "retry blocked");
+_Static_assert(offsetof(struct WlanTxStatus, retries) == 25, "retries");
 
 extern struct OsaBufferPool wlanBlockPool7;
 extern struct OsaBufferPool wlanBlockPool28;
