@@ -605,7 +605,7 @@ void avcencJobScene(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t ra
 	int8_t change;
 
 	if (picture->predicted) {
-		rate->forceIdr = 0;
+		rate->sceneChange = 0;
 		return;
 	}
 	slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
@@ -620,7 +620,7 @@ void avcencJobScene(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t ra
 	}
 	vnzPublicCloseProtected(results, picture->heightInGroups * 64);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
-	rate->forceIdr = change;
+	rate->sceneChange = change;
 }
 
 /* the weights, by QP, of a vector's bits in the inter decision and of the intra one's */

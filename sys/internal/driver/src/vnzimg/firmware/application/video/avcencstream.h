@@ -118,7 +118,7 @@ typedef struct AvcencPicture {
 	int8_t quantizer;
 	int8_t quantizer2;
 	int8_t rateQp;			/* the rate control's */
-	int8_t rateIntra;
+	int8_t rateChromaQp;
 	int8_t rateDone;
 	int8_t cropped;			/* the frame is not whole macroblocks */
 	uint8_t cropLeft;
@@ -162,55 +162,105 @@ typedef struct AvcencSlices {
 	uint8_t reserved6[4];
 } AvcencSlices;
 
-/* the rate control's state, as the stream thread reads it (576 bytes) */
+/*
+ * the rate control's state (576 bytes). The HRD's times are in the time
+ * scale's units, shifted left by 8 (the picture's removal times, its bits'
+ * arrival), NAL then VCL; the bits are the picture's as the settings answer
+ */
 typedef struct AvcencRate {
-	uint8_t reserved[80];
-	uint64_t sums[6];		/* the running sums, cleared at the start */
-	uint32_t counts[4];
-	uint32_t maxCpbLimit;		/* nine tenths of the CPB sizes */
+	uint64_t delay[2];		/* initial_cpb_removal_delay */
+	uint64_t delayOffset[2];	/* initial_cpb_removal_delay_offset */
+	uint64_t savedRemoval[2];	/* the times before the picture, for a skipped one */
+	uint64_t savedDelay[2];
+	uint64_t savedDelayOffset[2];
+	uint64_t initialArrival[2];	/* the next picture's first bit */
+	uint64_t finalArrival[2];	/* the picture's last bit */
+	uint64_t removal[2];		/* the next picture's removal */
+	int32_t groupBitsLeft;		/* of the IDR period's bits, at the picture bit rate */
+	int32_t groupMaxBitsLeft;	/* and at the picture maximum bit rate */
+	int32_t groupBits;
+	int32_t fullness;		/* the bits taken over the average, within half the CPB */
+	uint32_t maxCpbLimit;		/* the most bits the next picture may take, by HRD */
 	uint32_t cpbLimit;
 	uint32_t maxFrameBits;		/* the bit rates per frame */
 	uint32_t frameBits;
-	uint32_t reserved2;
-	int8_t sceneChange;
-	int8_t idrRequested;
-	int8_t intraRequested;
-	int8_t idrTaken;
-	uint16_t pictures;
-	int8_t idrCounted;
-	uint8_t reserved3;
-	uint32_t intraBits;
-	int8_t qp;			/* the picture's, to its info */
-	int8_t intra;
-	uint8_t reserved4;
-	int8_t initialQp;		/* from the bits a macroblock gets */
-	uint8_t reserved5[12];
-	uint32_t error[2];
-	uint32_t gain;			/* 1.5 in Q16 */
-	uint32_t gain2;			/* a third in Q15 */
-	uint8_t reserved6[8];
+	uint32_t averageBits;		/* a picture's at the picture bit rate */
+	int8_t nalOverflow;		/* the picture overflowed the NAL HRD */
+	int8_t vclOverflow;		/* the VCL HRD */
+	int8_t oversized;		/* it took more than the picture may */
+	int8_t idr;			/* the picture is an IDR */
+	uint16_t picturesLeft;		/* in the IDR period */
+	int8_t periodicIdr;		/* the IDR period's start */
+	uint8_t reserved;
+	uint32_t targetBits;		/* the picture's */
+	int8_t qp;			/* the picture's */
+	int8_t chromaQp;
+	int8_t chosenQp;		/* the rate control's */
+	int8_t initialQp;		/* an IDR's, from the bits a macroblock gets */
+	uint8_t previousQp;		/* the last picture's */
+	uint8_t intraQp;		/* the last IDR's */
+	uint16_t interPictures;		/* since the last restart */
+	uint16_t groupPictures;		/* the IDR period's */
+	uint16_t reserved2;
+	uint32_t interQpSum;		/* of the inter pictures since the last restart */
+	uint32_t intraComplexity;	/* the last IDR's bits, at a step of 1.0 */
+	uint32_t interComplexity;	/* the inter pictures', summed */
+	uint32_t intraRatio;		/* an IDR's complexity to an inter picture's, in Q15 */
+	uint32_t interRatio;		/* and its inverse */
+	uint32_t reserved3;
+	uint32_t minimumBits;		/* an eighth of the average */
 	uint32_t pictureBits;		/* a picture's share of the CPB, rounded up to 2048 bits */
 	uint32_t pictureBitsLimit;
-	uint8_t reserved7[28];
+	uint32_t sceneSizeLimit;	/* four fifths of the picture size, after a scene change */
+	uint32_t sizeLimit;		/* and otherwise */
+	int8_t limited;			/* the target is the limit's */
+	uint8_t reserved4[3];
+	uint32_t cost;			/* the motion job's statistics: the SATDs */
+	uint32_t modeBits;		/* the modes' and vectors' bits */
+	uint32_t reserved5;
+	uint32_t pictureBitRate;	/* the one the IDR period's bits are from */
 	uint32_t frameRate;		/* in Q15 */
-	uint32_t reserved8;
-	uint32_t weights[3];		/* 1.0 in Q15 */
-	uint32_t intraCount;
-	uint8_t reserved9[18];
-	int8_t forceIdr;
+	uint32_t quantizerStep;		/* the QP's, in Q15 */
+	uint32_t weight;		/* the bits a step of cost takes, in Q15: the picture's, */
+	uint32_t intraWeight;		/* an intra macroblock's */
+	uint32_t interWeight;		/* and an inter one's */
+	uint32_t pictures;		/* coded */
+	uint32_t numUnitsInTick;	/* compared with the picture's */
+	uint32_t timeScale;
+	uint8_t reserved6[9];
+	int8_t codedQp;
+	int8_t sceneChange;		/* the scene job's */
 	uint8_t idrPending;
-	uint8_t reserved10[4];
+	uint16_t intraMbs;		/* the motion job's statistics */
+	uint16_t interMbs;
 	uint32_t initialCpbRemovalDelay;
 	uint32_t vclInitialCpbRemovalDelay;
 	uint32_t initialCpbRemovalDelayOffset;
 	uint32_t vclInitialCpbRemovalDelayOffset;
-	uint8_t reserved11[24];
-	uint8_t overflow[3];
-	uint8_t reserved12[25];
-	int8_t sceneIdr;
-	uint8_t reserved13;
+	uint32_t delayTotal[2];		/* the delays and their offsets, as the first picture had them */
+	uint32_t sliceBits;		/* the picture's, as the settings answer them */
+	uint32_t headerBits;
+	uint32_t skipSliceBits;		/* and a skipped one's */
+	uint32_t skipHeaderBits;
+	int8_t restart;			/* the bit rate changed: the QP is estimated again */
+	int8_t maxQp;			/* the picture takes QP 51 */
+	int8_t skipNext;		/* the next rate job does nothing */
+	int8_t wasIdr;			/* the picture the rate job ran for */
+	uint32_t savedLimits[2];	/* the CPB limits before the picture */
+	uint32_t savedDelays[4];	/* and the delays */
+	int8_t pictureOverflow;		/* it took more than a picture's share of the CPB */
+	uint8_t reserved7;
 	int16_t qpLimit;
-	uint8_t reserved14[204];
+	int16_t interCount;		/* the motion job's statistics */
+	uint16_t skipCount;
+	uint32_t historyBits[16];	/* the last inter pictures' bits and costs */
+	uint32_t historyCost[16];
+	uint32_t sinceScene;		/* pictures since the last scene change */
+	uint8_t historyIndex;
+	uint8_t historyCount;
+	int8_t sceneKind;		/* 1 a scene change, 2 a smaller one */
+	int8_t previousSceneKind;
+	uint8_t reserved8[64];
 } AvcencRate;
 
 /* the picture's progress, which its jobs share (at PICTURE_FRAME_OFFSET) */
@@ -248,9 +298,10 @@ typedef struct AvcencRecord {
 typedef struct AvcencOutput {
 	uint16_t reserved;
 	uint16_t mbs;			/* the macroblocks it holds */
-	uint16_t reserved0;
+	uint16_t modesMbs;		/* the macroblocks its mode arrays hold */
 	uint16_t firstMb;		/* 0 for the picture's first output */
-	int8_t flags[2];		/* to the job record */
+	int8_t flags;			/* to the job record */
+	uint8_t firstRow;
 	uint8_t reserved1;
 	int8_t next;			/* the row after its last (the output after it) */
 	uint8_t withInfo;		/* the picture's info comes with it */
@@ -258,8 +309,32 @@ typedef struct AvcencOutput {
 	int8_t hasPicture;
 	uint8_t reserved3;
 	uint32_t info;			/* the picture's VideoAvcPictureInfo */
-	uint8_t reserved4[108];
+	uint32_t reserved4;
+	uint32_t modes;			/* the 4x4 blocks' modes of each Intra4x4 macroblock */
+	uint32_t chromaModes;		/* each intra macroblock's chroma mode */
+	uint32_t reserved5;
+	uint32_t differences;		/* each coded inter macroblock's vector differences */
+	uint8_t reserved6[88];
 } AvcencOutput;
+
+/* the output's mode arrays: the bytes a row of macroblocks takes in each */
+typedef struct AvcencModesLayout {
+	uint16_t reserved;
+	uint16_t modesPitch;
+	uint16_t chromaModesPitch;
+	uint16_t reserved2;
+	uint16_t differencesPitch;
+} AvcencModesLayout;
+
+/* the modes job's per core info (64 bytes of 192 a core, in the output info) */
+typedef struct AvcencModesInfo {
+	uint8_t reserved[12];
+	uint32_t modes;			/* the output's arrays, opened */
+	uint32_t chromaModes;
+	uint32_t differences;
+	uint32_t output;		/* the AvcencOutput, opened */
+	uint8_t reserved2[36];
+} AvcencModesInfo;
 
 /* a row's slot in the client's outputs, 32 in turn */
 typedef struct AvcencOutputSlot {
@@ -391,7 +466,8 @@ typedef char clientMemorySizeCheck[sizeof(AvcencClientMemory) == 64 ? 1 : -1];
 /* the picture's job record, for the output's jobs */
 typedef struct AvcencJobInfo {
 	uint32_t output;		/* the AvcencOutput it fills */
-	int8_t outputFlags[2];		/* the output's */
+	int8_t outputFlags;		/* the output's */
+	uint8_t firstRow;
 	uint8_t mbs;
 	uint8_t reserved;
 	uint32_t reserved2;
@@ -597,6 +673,8 @@ typedef struct AvcencMacroblock {
 	union {
 		int8_t modeCodes[16];	/* -128 for the predicted mode, else rem_intra4x4_pred_mode */
 		int16_t differences[4][2];	/* the vectors' from their predictions */
+		uint64_t modeWords[2];	/* the codes, as the modes job copies them */
+		uint32_t differenceWords[4];	/* a difference a word */
 	};
 	uint8_t reserved2[8];
 	uint16_t intraCost;		/* the 4x4 blocks' SATD; all ones when inter is taken */

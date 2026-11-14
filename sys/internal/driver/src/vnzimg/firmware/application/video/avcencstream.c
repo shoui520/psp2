@@ -379,16 +379,16 @@ static void pictureKind(AvcencStream *stream)
 
 	if (picture->predicted)
 		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_SKIP);
-	else if (rate->forceIdr || slices->idr)
+	else if (rate->sceneChange || slices->idr)
 		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_IDR);
 	else
 		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_KIND);
-	if (!buffers->idrNext && rate->forceIdr) {
+	if (!buffers->idrNext && rate->sceneChange) {
 		buffers->idrNext = 1;
 		buffers->idrCountdown = picture->idrInterval;
 	}
-	rate->idrTaken = buffers->idrNext;
-	rate->idrCounted = buffers->idrPending;
+	rate->idr = buffers->idrNext;
+	rate->periodicIdr = buffers->idrPending;
 }
 
 /* 0x836278: the next frame becomes the picture's, with the rate control's decisions */
@@ -407,7 +407,7 @@ static void pictureNext(AvcencStream *stream)
 	picture->clientHeight = picture->nextHeight;
 	picture->settings = stream->settings;
 	picture->rateQp = rate->qp;
-	picture->rateIntra = rate->intra;
+	picture->rateChromaQp = rate->chromaQp;
 	picture->qpLimit = rate->qpLimit;
 	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
 		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
@@ -424,13 +424,13 @@ static int32_t pictureIdr(AvcencStream *stream)
 	AvcencPicture *picture = stream->picture;
 	AvcencBuffers *buffers = stream->buffers;
 
-	if (rate->intraRequested)
+	if (rate->oversized)
 		goto idr;
-	if ((picture->option || rate->sceneIdr) && (!buffers->idrNext || rate->idrTaken) &&
-	    (rate->sceneChange || rate->idrRequested || rate->intraRequested) &&
+	if ((picture->option || rate->pictureOverflow) && (!buffers->idrNext || rate->idr) &&
+	    (rate->nalOverflow || rate->vclOverflow || rate->oversized) &&
 	    picture->option2 != 1)
 		goto idr;
-	if (picture->option2 && rate->idrCounted)
+	if (picture->option2 && rate->periodicIdr)
 		buffers->idrCountdown = picture->idrInterval - 1;
 	return 0;
 idr:
@@ -569,7 +569,7 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 		last = 0;
 	} else {
 		last = (countdown ^ 1) < 1;
-		request = (rate->idrRequested || rate->sceneChange) ? 1 : 0;
+		request = (rate->vclOverflow || rate->nalOverflow) ? 1 : 0;
 		if (picture->option2) {
 			idr = (request & ((0 < (uint8_t)picture->option) & buffers->flushing)) |
 				((uint8_t)picture->intra | ((buffers->released < 1) & last));
@@ -1685,9 +1685,9 @@ void avcencStreamAu(uint32_t memory, uint32_t request)
 		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
 }
 
-/* the rate control's jobs after the stream thread's picture (avcencrate.c) */
-void avcencJobRateFirst(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
-void avcencJobRateOutput(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
+/* the jobs that give the output its macroblocks' modes (avcencrate.c) */
+void avcencJobModesFirst(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
+void avcencJobModes(uint32_t picture, uint32_t jobInfo, uint32_t rate, uint32_t unused);
 
 #define PICTURE_INFO_SIZE	896
 
@@ -1791,8 +1791,8 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 	output->next = (firstMb + mbs) / picture->widthInMbs;
 	stream->waitWake = 0;
 	info = (AvcencJobInfo *)vnzPublicOpenPrivate(stream->jobInfo, 64);
-	info->outputFlags[0] = output->flags[0];
-	info->outputFlags[1] = output->flags[1];
+	info->outputFlags = output->flags;
+	info->firstRow = output->firstRow;
 	info->skipLevel = stream->skipLevel;
 	info->sliceType = stream->sliceType;
 	info->mbs = output->mbs;
@@ -1811,13 +1811,13 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 			vkVThreadContextUnlock(context);
 			context = vkVThreadContextLock(stream->context);
 		}
-		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobRateFirst,
+		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobModesFirst,
 		    (uint32_t)picture, jobInfo, rate, 0, picture->thread, STREAM_FLAG_OUTPUT)) {
 			vkVThreadContextUnlock(context);
 			context = vkVThreadContextLock(stream->context);
 		}
 	} else {
-		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobRateOutput,
+		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobModes,
 		    (uint32_t)picture, jobInfo, rate, 0, picture->thread,
 		    STREAM_FLAG_OUTPUT | STREAM_FLAG_CHUNKS_SET)) {
 			vkVThreadContextUnlock(context);
