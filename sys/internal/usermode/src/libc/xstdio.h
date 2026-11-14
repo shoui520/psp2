@@ -40,6 +40,14 @@ int _WScanf(_WScin *pfn, void *arg, const wchar_t *fmt, va_list ap, int secure);
 
 /* opening streams */
 FILE *_Fofind(void);
+void _Fofree(FILE *str, int exiting);
+
+/* buffering and positioning */
+int _Frprep(FILE *str);
+int _WFrprep(FILE *str);
+int _Fwprep(FILE *str);
+int _WFwprep(FILE *str);
+long _Fgpos(FILE *str, fpos_t *ptr);
 FILE *_Foprep(const char *filename, const char *mods, FILE *str, _FD_TYPE fd, int share,
 	      int reopen);
 

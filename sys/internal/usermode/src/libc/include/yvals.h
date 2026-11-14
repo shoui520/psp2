@@ -24,6 +24,7 @@ typedef long long _Longlong;
 typedef unsigned long long _ULonglong;
 
 #define _FD_TYPE		int
+#define _FD_INVALID	(-1)	/* no file descriptor */
 #define _FILE_OFFSET_TYPE	signed long long
 
 /* the state of a multibyte translation */

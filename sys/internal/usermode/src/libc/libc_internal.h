@@ -41,6 +41,15 @@ mbstate_t *_Getwcrtombstate(void);
 mbstate_t *_Getwcsrtombsstate(void);
 mbstate_t *_Getwctombstate(void);
 mbstate_t *_Getwctomb_sstate(void);
+char *_Getstrerrorbuf(void);
+struct tm *_Gettmbuf(void);
+char **_Getstrtokptr(void);
+unsigned int _Getjmpbufguard(void);
+unsigned int _Getptrguard(void);
+void *_Gettlsbuf(size_t size);
+
+/* exit's DSO: __cxa_finalize's argument (__cxa_set_dso_handle_main) */
+extern void *_Dso_handle_main;
 
 /* the message for an error code, in buf or a static buffer when buf is NULL */
 char *_Strerror(int errcode, char *buf);

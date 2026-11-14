@@ -100,6 +100,9 @@ uint32_t SceLibKernel_9F793F84(void);
 /* the calling thread's TLS word at index */
 void *sceKernelGetTLSAddr(SceUInt32 index);
 
+/* run the module_exit functions of the calling process's modules (lifecycle.c) */
+void sceKernelCallModuleExit(int type);
+
 /* the module holding address */
 int sceKernelGetModuleInfoByAddr(const void *address, SceKernelModuleInfo *info);
 /* SceModulemgr: the user syscalls */
