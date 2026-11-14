@@ -21,6 +21,7 @@ CopyMemoryForward:
 	.type	memcpy, %function
 	.thumb_set memcpy, CopyMemoryForward
 #endif
+.Lcopy_forward:
 	push	{r0, r4, lr}
 	subs	r2, #32
 	bcc	.Ltail
@@ -75,5 +76,7 @@ CopyMemoryForward:
 	vstmia	r0!, {d0-d3}
 	bcs	.Lunaligned
 	b	.Ltail
+#ifndef MEMMOVE_AFTER_MEMCPY
 	.balign	16
+#endif
 	.size	CopyMemoryForward, . - CopyMemoryForward

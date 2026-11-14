@@ -332,12 +332,28 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	"${libc_dlmalloc_source}"
 	cxa_atexit.c
 	cxa_guard.c
+	memcpy.S
+	../../../kernel/src/sysmem/fill_core.S
+	setjmp.S
+	../../../kernel/src/sysmem/memchr.S
+	../../../kernel/src/sysmem/strchr.S
+	../../../kernel/src/sysmem/strlen.S
+	../../../kernel/src/sysmem/strrchr.S
+	../../../kernel/src/sysmem/compare_core.S
+	strcmp.S
+	strcpy.S
+	../../../kernel/src/sysmem/strncpy.S
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
 	target_compile_definitions(vs0_sys_external_libc PRIVATE __STDC_WANT_LIB_EXT1__=1)
 	target_include_directories(vs0_sys_external_libc BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 endif()
+# the kernel's memset and memcmp cores under their standard names
+set_source_files_properties(../../../kernel/src/sysmem/fill_core.S PROPERTIES
+	COMPILE_DEFINITIONS "SetMemoryCore=memset;SYSCLIB_NO_STANDARD_ALIASES")
+set_source_files_properties(../../../kernel/src/sysmem/compare_core.S PROPERTIES
+	COMPILE_DEFINITIONS "CompareMemoryCore=memcmp;SYSCLIB_NO_STANDARD_ALIASES")
 # strxfrm.c inlines _Strxfrmx (138 B) into strxfrm and keeps its own copy; strcoll.c keeps
 # _Strcollx (286 B) out of line.
 set_source_files_properties(strxfrm.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=64)
