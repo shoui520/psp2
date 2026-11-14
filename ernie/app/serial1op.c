@@ -53,7 +53,11 @@ void serial1Operation(void)
 			serialSetAnswer(SERIAL_ANSWER);
 			serialPostAnswer();
 		}
-		/* no break in Sony's: operation 3 runs too */
+#if FW_SINCE(0x0100060B)
+		break;
+#else
+		/* no break in Sony's before 0x0100060B: operation 3 runs too */
+#endif
 	case 3:		/* 0x0942: the Cookie's register */
 		result = cookieRead(&serial1Args.byte[0], &serial1Args.byte[1]);
 		if (serial.state == SERIAL_ANSWER_LATER) {
@@ -83,7 +87,11 @@ void serial1Operation(void)
 			serialSetAnswer(SERIAL_ANSWER);
 			serialPostAnswer();
 		}
-		/* no break in Sony's: operation 5 runs too */
+#if FW_SINCE(0x0100060B)
+		break;
+#else
+		/* no break in Sony's before 0x0100060B: operation 5 runs too */
+#endif
 	case 5:		/* 0x0944: the battery's register */
 		result = batteryRead(&serial1Args.byte[0], &serial1Args.byte[1], 2);
 		if (serial.state == SERIAL_ANSWER_LATER) {

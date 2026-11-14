@@ -5,6 +5,7 @@
 #ifndef ERNIE_COMMAND_H
 #define ERNIE_COMMAND_H
 
+#include "ernie.h"
 #include "host.h"
 
 extern struct HostRequest commandRequest;
@@ -18,6 +19,9 @@ extern unsigned char hostCommandClock(unsigned char *out, unsigned char *length)
 extern unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommand0013(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandPins(unsigned char *out, unsigned char *length);
+#if FW_SINCE(0x0100060B)
+extern unsigned char hostCommand0015(unsigned char *out, unsigned char *length);
+#endif
 extern void commandRequestInit(void);
 extern void commandRequestReceive(void);
 extern void commandRequestNotify(void);

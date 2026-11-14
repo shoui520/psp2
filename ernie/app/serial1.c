@@ -9,6 +9,9 @@
 
 #include <string.h>
 
+#include "ernie.h"
+#include "battery.h"
+#include "bbmc.h"
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
@@ -18,6 +21,7 @@
 #include "log.h"
 #include "nvs.h"
 #include "param.h"
+#include "powerseq.h"
 #include "rtc.h"
 #include "serial.h"
 #include "serial1.h"
@@ -32,12 +36,22 @@
 #include "state.h"
 #include "sysinfo.h"
 #include "task.h"
+#include "task5.h"
+#include "touch.h"
 #include "version.h"
 
 extern unsigned char intp11Low(void);
 
 extern const struct SerialCommand1 serialCommands1[];
 
+/* command 0x0105's tests of the int charge helpers: before 0x01000104 and since 0x0100060B they read only the low byte */
+#if FW_SINCE(0x01000104) && !FW_SINCE(0x0100060B)
+#define CHARGE_TEST(call)	(call)
+#else
+#define CHARGE_TEST(call)	((unsigned char)(call))
+#endif
+
+#if !FW_SINCE(0x0100060B)
 /* a level of commands 0x0950 and 0x0951 and its byte of the parameter block */
 struct Serial1Level {
 	unsigned char	channel;		/* 0x81-0x84 */
@@ -47,6 +61,7 @@ struct Serial1Level {
 #define SERIAL1_LEVELS	4
 
 extern const struct Serial1Level serial1Levels[SERIAL1_LEVELS];
+#endif
 
 /* the bytes command 0x0900 compares its request with (the PS Dev Wiki's "service 0x900 passphrase") */
 static const unsigned char serial1Password[16] = {
@@ -192,12 +207,20 @@ unsigned int serial1SleepFactor(void)
 #if FW_SINCE(0x01000104)
 unsigned char serialCommands1Count(void)
 {
+#if FW_SINCE(0x0100060B)
+	return 0x37;
+#else
 	return 0x31;
+#endif
 }
 
 unsigned char serialNotifies1Count(void)
 {
+#if FW_SINCE(0x0100060B)
+	return 4;
+#else
 	return 3;
+#endif
 }
 #else
 /* before 0x01000104 no commands 0x0161, 0x0162, 0x0172 and 0x0190 (0x00090804: no 0x0180-0x0182,
@@ -329,16 +352,12 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-#if FW_SINCE(0x01000104)
-		if (!chargeMayStart()) {
-#else
-		if (!(unsigned char)chargeMayStart()) {
-#endif
+		if (!CHARGE_TEST(chargeMayStart())) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
 #if FW_SINCE(0x01000104)
-		if (chargeAlarm0On()) {
+		if (CHARGE_TEST(chargeAlarm0On())) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
@@ -354,6 +373,16 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
+#if FW_SINCE(0x0100060B)
+		if (!CHARGE_TEST(chargeMayStart())) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x51;
+		}
+		if (CHARGE_TEST(chargeAlarm0On())) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x53;
+		}
+#endif
 		result = STATE_TRANSITION(0x11);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else {
@@ -560,6 +589,18 @@ static unsigned char serial1Command0141(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result == 0 ? 0 : result;
 }
+
+#if FW_SINCE(0x0100060B)
+/* 0x0168: sleepFactorGetOffInfo's */
+static unsigned char serial1Command0168(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	response->length = 4;
+	response->data = serial1Data.byte;
+	sleepFactorGetOffInfo(serial1Data.byte);
+	serialSetAnswer(SERIAL_ANSWER);
+	return 0;
+}
+#endif
 
 /* 0x0142: the offset, the size, the data: a write to the open copy (configWrite) */
 static unsigned char serial1Command0142(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -933,6 +974,36 @@ static unsigned char serial1Notify0162(void)
 	resetChip();
 	return 0;
 }
+
+#if FW_SINCE(0x0100060B)
+/* 0x0163: 0x5a; the notification raises the battery's bootloader line and, but in the off
+   state, runs transition 0x5c */
+static unsigned char serial1Command0163(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char key;
+
+	response->length = 0;
+	key = request->data[0];
+	if (key != 0x5a)
+		result = 0x33;
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+static unsigned char serial1Notify0163(void)
+{
+	unsigned int state;
+
+	state = stateGet();
+	batteryBLLineOn();
+	if (state != 0x0004)
+		STATE_TRANSITION(0x5c);
+	else
+		powerJobPostOffEnd();
+	return 0;
+}
+#endif
 #endif
 
 #if FW_SINCE(0x00090903)
@@ -1004,6 +1075,98 @@ static unsigned char serial1Command0190(struct SerialBuffer *request, struct Ser
 	serial1Data.byte[5] = (unsigned char)serial2TestAreaUsed();
 	serial1Data.byte[6] = (unsigned char)serial2GetArmed();
 	serial1Data.byte[7] = (unsigned char)serial2InTime();
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+#endif
+
+#if FW_SINCE(0x0100060B)
+/* 0x01a0: in system state 0x20, both touch panels' information (family, variant, version,
+   build, configuration version, grip edges) */
+static unsigned char serial1Command01a0(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned int state;
+
+	response->length = 0;
+	state = stateGet();
+	if (state != 0x0020) {
+		serialSetAnswer(SERIAL_ANSWER);
+		result = 0x40;
+	} else {
+		response->data = serial1Data.byte;
+		response->length = 0x14;
+		memcpy(serial1Data.byte, &touch.panel[0], 10);
+		memcpy(&serial1Data.byte[10], &touch.panel[1], 10);
+		serialSetAnswer(SERIAL_ANSWER);
+	}
+	return result;
+}
+
+/* 0x01a1: in system state 0x20, the report IDs of the frame being filled */
+static unsigned char serial1Command01a1(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned int state;
+
+	response->length = 0;
+	state = stateGet();
+	if (state != 0x0020) {
+		serialSetAnswer(SERIAL_ANSWER);
+		result = 0x40;
+	} else {
+		response->data = serial1Data.byte;
+		response->length = 0x0c;
+		touchGetReportIds(serial1Data.byte);
+		serialSetAnswer(SERIAL_ANSWER);
+	}
+	return result;
+}
+
+/* 0x01b0: the Elmo's registers 0xb0-0xb2 at the last power cut */
+static unsigned char serial1Command01b0(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+
+	response->data = serial1Data.byte;
+	response->length = 6;
+	powerGetCutRegs(serial1Data.byte);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x01d0: bbmcGetInfo's */
+static unsigned char serial1Command01d0(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	response->data = serial1Data.byte;
+	response->length = sizeof(struct BbmcInfo);
+	bbmcGetInfo(serial1Data.byte);
+	serialSetAnswer(SERIAL_ANSWER);
+	return 0;
+}
+
+/* 0x01d1: an off flag, a byte, the BBMC registers 4 and 5 (its mode): the mode written, then
+   the modem's power off (flag 0) or, in system state 0x20, on */
+static unsigned char serial1Command01d1(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result;
+	unsigned char *data;
+
+	response->length = 0;
+	response->data = serial1Data.byte;
+	if (request->length == 4) {
+		data = request->data;
+		bbmcWriteRegs(4, 2, &data[2], BBMC_WRITE_SET);
+		result = 0;
+		if (data[0] == 0)
+			powerDeviceSetPending(0x0200);
+		else if (stateGet() == 0x0020)
+			powerDeviceSetPending(0x0001);
+		else
+			result = 0x50;
+	} else {
+		result = 0x32;
+	}
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
@@ -1242,6 +1405,26 @@ static unsigned char serial1Command0941(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if FW_SINCE(0x0100060B)
+/* 0x0952: in the off state, transition 0x43 */
+static unsigned char serial1Command0952(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned int state;
+
+	state = stateGet();
+	response->length = 0;
+	if (state != 0x0004) {
+		serialSetAnswer(SERIAL_ANSWER);
+		result = 0x50;
+	} else {
+		result = STATE_TRANSITION(0x43);
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+	}
+	return result;
+}
+#else
 /* 0x0950: a channel's level, as 1400 less 10 for each step above paramGetBase's base, most
    significant byte first */
 static unsigned char serial1Command0950(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1328,6 +1511,7 @@ done:
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 /* the commands, by number */
 const struct SerialCommand1 serialCommands1[] = {
@@ -1365,6 +1549,10 @@ const struct SerialCommand1 serialCommands1[] = {
 #if FW_SINCE(0x01000104)
 	{ 0x0162, serial1Command0162, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif
+#if FW_SINCE(0x0100060B)
+	{ 0x0163, serial1Command0163, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+	{ 0x0168, serial1Command0168, SERIAL1_UNLOCKED },
+#endif
 	{ 0x0170, serial1Command0170, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0171, serial1Command0171, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #if FW_SINCE(0x01000104)
@@ -1377,6 +1565,13 @@ const struct SerialCommand1 serialCommands1[] = {
 #endif
 #if FW_SINCE(0x01000104)
 	{ 0x0190, serial1Command0190, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#endif
+#if FW_SINCE(0x0100060B)
+	{ 0x01a0, serial1Command01a0, SERIAL1_UNLOCKED },
+	{ 0x01a1, serial1Command01a1, SERIAL1_UNLOCKED },
+	{ 0x01b0, serial1Command01b0, SERIAL1_UNLOCKED },
+	{ 0x01d0, serial1Command01d0, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+	{ 0x01d1, serial1Command01d1, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif
 	{ 0x0300, serial1Command0300, 0 },
 	{ 0x0301, serial1Command0301, 0 },
@@ -1397,8 +1592,12 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0943, serial1Command0941, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0944, serial1Command0940, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0945, serial1Command0941, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#if FW_SINCE(0x0100060B)
+	{ 0x0952, serial1Command0952, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#else
 	{ 0x0950, serial1Command0950, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0951, serial1Command0951, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#endif
 };
 
 const struct SerialNotify serialNotifies1[] = {
@@ -1407,11 +1606,16 @@ const struct SerialNotify serialNotifies1[] = {
 	{ 0x0161, serial1Notify0161 },
 	{ 0x0162, serial1Notify0162 },
 #endif
+#if FW_SINCE(0x0100060B)
+	{ 0x0163, serial1Notify0163 },
+#endif
 };
 
+#if !FW_SINCE(0x0100060B)
 const struct Serial1Level serial1Levels[SERIAL1_LEVELS] = {
 	{ 0x81, &param.levels[0] },
 	{ 0x82, &param.levels[1] },
 	{ 0x83, &param.levels[2] },
 	{ 0x84, &param.levels[3] },
 };
+#endif

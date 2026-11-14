@@ -27,5 +27,6 @@ extern unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned ch
 extern unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length);
 extern void powerRequestLedDone(void);
+extern void powerInputChanged(void);
 
 #endif

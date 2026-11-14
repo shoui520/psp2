@@ -38,8 +38,10 @@ extern void powerSeqLevels(void);
 extern void powerSeqWaitP67(void);
 extern unsigned char powerSeqOff(void);
 extern unsigned char powerSeqSuspend(void);
+#if !FW_SINCE(0x0100060B)
 extern unsigned char powerNoneOn(void);
 extern unsigned char powerNoneOff(void);
+#endif
 extern unsigned char powerAccOn(void);
 extern unsigned char powerAccOff(void);
 extern unsigned char powerOnWlan(void);
@@ -76,13 +78,18 @@ extern unsigned char powerHdmiCecOn(void);
 extern unsigned char powerHdmiCecOff(void);
 extern unsigned char powerMotionOn(void);
 extern unsigned char powerMotionOff(void);
+#if !FW_SINCE(0x0100060B)
 extern unsigned char powerNone2On(void);
 extern unsigned char powerNone2Off(void);
 extern unsigned char powerNone3On(void);
 extern unsigned char powerNone3Off(void);
+#endif
 extern unsigned char powerHpremoteOn(void);
 extern unsigned char powerHpremoteOff(void);
 extern unsigned char powerBbmcStart(void);
 extern unsigned char powerLedSet(unsigned char on);
+#if FW_SINCE(0x0100060B)
+extern void powerGetCutRegs(unsigned char *regs);
+#endif
 
 #endif

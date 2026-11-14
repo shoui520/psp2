@@ -25,8 +25,8 @@ OBJECT	csi10.c
 OBJECT	dma.c
 OBJECT	touch.c
 OBJECT	inputreq.c
-OBJECT	csi01.c
-OBJECT	motion.c
+OBJECT	csi01.c		IF ERNIE_FW<0x0100060B	# BOARD_MOTION
+OBJECT	motion.c	IF ERNIE_FW<0x0100060B
 OBJECT	util.c
 OBJECT	inputbits.c
 OBJECT	serial.c
@@ -39,8 +39,9 @@ OBJECT	updatereq.c
 OBJECT	sha1.c
 OBJECT	powerreq.c
 OBJECT	task5.c
-# the serial authentication's keys: their own object, before serialauth.c's tables
-OBJECT	authkeys.c
+# the serial authentication's keys: their own object, before serialauth.c's tables (since
+# 0x0100060B all the keys, after led.c)
+OBJECT	authkeys.c	IF ERNIE_FW<0x0100060B
 OBJECT	serialauth.c
 OBJECT	nvs.c
 OBJECT	power.c
@@ -78,9 +79,12 @@ OBJECT	log.c
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
 OBJECT	param.c
 OBJECT	led.c
+OBJECT	authkeys.c	IF ERNIE_FW>=0x0100060B
 OBJECT	serialreq.c	IF ERNIE_FW!=0x00090804
 OBJECT	snvs.c		IF ERNIE_FW!=0x00090804
-OBJECT	gf.c
+OBJECT	debugpin.c	IF ERNIE_FW>=0x0100060B
+OBJECT	gf.c		IF ERNIE_FW<0x0100060B
+OBJECT	aestable.c	IF ERNIE_FW>=0x0100060B
 OBJECT	configdefault.c	IF ERNIE_FW>=0x01000104
 OBJECT	kernel.asm
 OBJECT	kernelcfg.asm
@@ -150,6 +154,8 @@ DROP	@@VECT??
 # defaults ("ConfZZ"), the version block
 AT	0x00000
 SEG	@@VECT
+AT	0x00200	IF ERNIE_FW>=0x0100060B	# aes.c's round tables
+SEG	@@CNSTL		aestable.c IF ERNIE_FW>=0x0100060B
 AT	0x00800	IF ERNIE_FW>=0x01000104
 SEG	@@CNSTL		configdefault.c IF ERNIE_FW>=0x01000104
 AT	0x00f00
@@ -184,6 +190,8 @@ AT	0x0f6e0		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090903
 AT	0x0f57a		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090804
 AT	0x0f592		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x01000306
 AT	0x0f52c		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100010B
+AT	0x0f488		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100060B
+AT	0x0f488		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100060D
 AT	0x0f6f6		IF ERNIE_HW==0x00414000&&ERNIE_FW==0x01000306
 SEG	@@R_INIT
 SEG	@@R_INIS
@@ -195,7 +203,9 @@ SEG	@@RLINIT
 SEG	@@CODEL		IF ERNIE_FW!=0x01000306
 SEG	@@CODEL		main.c tau.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c
 SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c clockout.c csi10.c dma.c
-SEG	@@CODEL		touch.c inputreq.c csi01.c motion.c util.c inputbits.c serial.c adc.c analog.c scratchpad.c
+SEG	@@CODEL		touch.c inputreq.c
+SEG	@@CODEL		csi01.c motion.c IF ERNIE_FW<0x0100060B
+SEG	@@CODEL		util.c inputbits.c serial.c adc.c analog.c scratchpad.c
 SEG	@@CODEL		nvsreq.c serial1.c updatereq.c sha1.c powerreq.c task5.c serialauth.c nvs.c power.c timer.c
 SEG	@@CODEL		iica.c powerjob.c elmo.c serial2.c
 SEG	@@CODEL		uart4.c IF ERNIE_HW!=0x00406000

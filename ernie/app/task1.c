@@ -10,6 +10,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "config.h"
+#include "debugpin.h"
 #include "kernel.h"
 #include "log.h"
 #include "param.h"
@@ -67,6 +68,9 @@ void systemInit(void)
 	stateNext = 0;
 	stateEvents = 0;
 	stateCause = 0x7f;
+#if FW_SINCE(0x0100060B)
+	debugPinInit();
+#endif
 	resetFlags = RESF;
 	configInit();
 	timerInit();
@@ -111,5 +115,8 @@ void systemInit(void)
 	}
 #endif
 	stateEnter();
+#if FW_SINCE(0x0100060B)
+	taskHookState();
+#endif
 	return;
 }

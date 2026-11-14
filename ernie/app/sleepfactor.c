@@ -8,6 +8,7 @@
  */
 #include "ernie.h"
 #include "chip.h"
+#include "config.h"
 #include "kernel.h"
 #include "sleepfactor.h"
 
@@ -277,4 +278,40 @@ void sleepFactorSet20(unsigned char on)
 	}
 }
 #endif
+#endif
+
+#if FW_SINCE(0x0100060B)
+/* host command 0x0015 and serial command 0x0168: what the settings say of the off state, a
+   code for its flags, the flags (bit 3 transition 0x18 blocked, bits 0 and 1 the settings'
+   offInfoBit0 and offInfoBit1, bit 2 always) and the settings' offInfo2 and offInfo3 */
+void sleepFactorGetOffInfo(unsigned char *info)
+{
+	unsigned char flags = 0;
+
+	flags |= configGet()->offTransitionBlock == 0x5aa5 ? 0x08 : 0;
+	flags |= configGet()->offInfoBit0 != 0 ? 0x01 : 0;
+	flags |= configGet()->offInfoBit1 != 0 ? 0x02 : 0;
+	flags |= 0x04;
+	switch (flags) {
+	case 3:
+	case 4:
+	case 7:
+		info[0] = 0x70;
+		break;
+	case 8:
+	case 12:
+		info[0] = 0x00;
+		break;
+	case 9:
+	case 13:
+		info[0] = 0x20;
+		break;
+	default:
+		info[0] = 0x80;
+		break;
+	}
+	info[1] = flags;
+	info[2] = configGet()->offInfo2;
+	info[3] = configGet()->offInfo3;
+}
 #endif

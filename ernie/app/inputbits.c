@@ -16,9 +16,11 @@ struct InputHandler inputHandler1Bit1 = { 0, 0, 0 };
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
 static struct InputHandler * const inputHandlers1Bit4[] = { &inputHandlerWake2 };
+#if !FW_SINCE(0x0100060B)
 static struct InputHandler * const inputHandlers1Bit2[] = {
 	&inputHandler1Bit2Low, &inputHandler1Bit2High
 };
+#endif
 static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandler1Bit1 };
 static struct InputHandler * const inputHandlers1Bit5[] = {
 	&inputHandlerSerial1, &inputHandlerMultiCn
@@ -40,7 +42,9 @@ static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler1Bit0 }
 static unsigned char inputHandlers1Bit6Count(void);
 static unsigned char inputHandlers1Bit7Count(void);
 static unsigned char inputHandlers1Bit4Count(void);
+#if !FW_SINCE(0x0100060B)
 static unsigned char inputHandlers1Bit2Count(void);
+#endif
 static unsigned char inputHandlers1Bit1Count(void);
 static unsigned char inputHandlers1Bit5Count(void);
 static unsigned char inputHandlers1Bit3Count(void);
@@ -55,7 +59,11 @@ static unsigned char inputHandlers1Bit0Count(void);
 const struct InputBit inputBits1[8] = {
 	{ inputHandlers1Bit0, inputHandlers1Bit0Count },
 	{ inputHandlers1Bit1, inputHandlers1Bit1Count },
+#if FW_SINCE(0x0100060B)
+	{ NULL, NULL },
+#else
 	{ inputHandlers1Bit2, inputHandlers1Bit2Count },
+#endif
 	{ inputHandlers1Bit3, inputHandlers1Bit3Count },
 	{ inputHandlers1Bit4, inputHandlers1Bit4Count },
 	{ inputHandlers1Bit5, inputHandlers1Bit5Count },
@@ -111,10 +119,12 @@ static unsigned char inputHandlers1Bit4Count(void)
 	return LENGTH(inputHandlers1Bit4);
 }
 
+#if !FW_SINCE(0x0100060B)
 static unsigned char inputHandlers1Bit2Count(void)
 {
 	return LENGTH(inputHandlers1Bit2);
 }
+#endif
 
 static unsigned char inputHandlers1Bit1Count(void)
 {
@@ -160,3 +170,4 @@ static unsigned char inputHandlers1Bit0Count(void)
 {
 	return LENGTH(inputHandlers1Bit0);
 }
+

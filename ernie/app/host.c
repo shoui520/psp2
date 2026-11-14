@@ -18,6 +18,8 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "bbmc.h"
+#include "board.h"
 #include "chip.h"
 #include "command.h"
 #include "config.h"
@@ -102,6 +104,9 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0012, hostCommandAlarm, 0 },
 	{ 0x0013, hostCommand0013, 0 },
 	{ 0x0014, hostCommandPins, 0 },
+#if FW_SINCE(0x0100060B)
+	{ 0x0015, hostCommand0015, 0 },
+#endif
 	{ 0x0100, hostCommandControlsInfo, 0 },
 	{ 0x0101, hostCommandControlsAnalog, 0 },
 	{ 0x0102, hostCommand0102, 0 },
@@ -110,18 +115,28 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0111, hostCommandAnalog, 0 },
 	{ 0x0112, hostCommand0112, 0 },
 	{ 0x0113, hostCommandAnalogBoth, 0 },
+#if FW_SINCE(0x0100060B)
+	{ 0x0120, hostCommand0120, 0 },
+#endif
 	{ 0x0300, (HostCommandHandler)&hostStream0300, 1 },
 	{ 0x0301, (HostCommandHandler)&hostStream0301, 1 },
 	{ 0x0302, (HostCommandHandler)&hostStream0302, 1 },
+#if BOARD_MOTION
 	{ 0x0400, (HostCommandHandler)&hostStream0400, 1 },
+#endif
 	{ 0x0800, hostCommandPowerStatus, 0 },
 	{ 0x0801, hostCommand0801, 0 },
+#if !FW_SINCE(0x0100060B)
 	{ 0x0802, hostCommandBatteryRemainCapOld, 0 },
 	{ 0x0803, hostCommandBatteryVoltOld, 0 },
+#endif
 	{ 0x0804, hostCommand0804, 0 },
 	{ 0x0900, hostCommandBatteryRemainCap, 0 },
 	{ 0x0901, hostCommandBatteryVolt, 0 },
 	{ 0x0902, hostCommandBatteryLifePercent, 0 },
+#if FW_SINCE(0x0100060B)
+	{ 0x0a00, hostCommand0a00, 0 },
+#endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1300, hostCommandConfigVersions, 0 },
 };
@@ -141,7 +156,9 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x1300, hostCommandConfigVersions, 0 },
 };
 
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x0100060B)
+static const char hostRevision[] = "$Rev: 4066 $";
+#elif FW_SINCE(0x00090903)
 static const char hostRevision[] = "$Rev: 2579 $";
 #else
 static const char hostRevision[] = "$Rev: 1800 $";
@@ -536,11 +553,19 @@ int hostFrameCommand(void)
 /* the rest of the command; 0 when the answer was the longer */
 unsigned char hostFrameData(void)
 {
+#if FW_SINCE(0x0100060B)
+	unsigned int length;
+#else
 	unsigned char length;
+#endif
 
 	if (hostLink.tx[2] <= hostLink.rx[2])
 		return 0;
+#if FW_SINCE(0x0100060B)
+	length = (unsigned int)hostLink.tx[2] + 3;
+#else
 	length = hostLink.tx[2] + 3;
+#endif
 	if (hostLink.frameSize < length) {
 		hostLink.flags.bits.overflow = 1;
 		length = hostLink.frameSize;

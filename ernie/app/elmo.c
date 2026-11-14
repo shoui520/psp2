@@ -54,7 +54,9 @@ static const struct ElmoRegInit elmoRegInit[] = {
 /* writes every register of elmoRegInit with its initial value */
 void elmoInitRegs(void)
 {
+#if !FW_SINCE(0x0100060B)
 	unsigned char result;
+#endif
 	unsigned int i;
 
 	for (i = 0; i < 11; i++) {
@@ -62,7 +64,11 @@ void elmoInitRegs(void)
 		elmoCommand[0] = elmoRegInit[i].reg;
 		elmoCommand[1] = ((unsigned char *)elmoRegInit[i].value)[1];
 		elmoCommand[2] = *(unsigned char *)elmoRegInit[i].value;
+#if FW_SINCE(0x0100060B)
+		elmoWrite(elmoCommand, 3);
+#else
 		result = elmoWrite(elmoCommand, 3);
+#endif
 	}
 }
 
@@ -85,6 +91,9 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 		request.txCount = length;
 		request.address = ELMO_ADDRESS;
 		request.status = &status;
+#if FW_SINCE(0x0100060B)
+		clr_flg(4, ~ELMO_DONE);
+#endif
 		iicaStart(&request);
 		ercd = twai_flg(4, ELMO_DONE, TWF_ORW, &ptn, ELMO_TIMEOUT);
 		if (ercd == E_OK) {
@@ -120,6 +129,9 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 		request.txCount = 1;
 		request.address = ELMO_ADDRESS;
 		request.status = &status;
+#if FW_SINCE(0x0100060B)
+		clr_flg(4, ~ELMO_DONE);
+#endif
 		iicaStart(&request);
 		ercd = twai_flg(4, ELMO_DONE, TWF_ORW, &ptn, ELMO_TIMEOUT);
 		if (ercd == E_OK) {

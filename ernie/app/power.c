@@ -27,6 +27,19 @@
 
 #define POWER_PARTS	6
 #define POWER_ALL	0x3f		/* every part's bit */
+#define POWER_PART(id)	(1 << ((id) - 1))	/* part id's bit (powerParts) */
+
+/* a sequence's wait for a part: since 0x0100060B for that part's bit alone, cleared before the
+   part is started, and the result kept by some sequences */
+#if FW_SINCE(0x0100060B)
+#define POWER_WAIT_CLEAR(id)		clr_flg(5, ~POWER_PART(id))
+#define POWER_WAIT(id, timeout)		powerWait(POWER_PART(id), timeout)
+#define POWER_WAIT_KEEP(id, timeout)	(waitResult = powerWait(POWER_PART(id), timeout))
+#else
+#define POWER_WAIT_CLEAR(id)
+#define POWER_WAIT(id, timeout)		powerWait(timeout)
+#define POWER_WAIT_KEEP(id, timeout)	powerWait(timeout)
+#endif
 
 /* a part of a sequence and its bit in powerPending and in event flag 5 */
 struct PowerPart {
@@ -114,6 +127,12 @@ void powerSequence(void)
 	if (result == 0) {
 		powerState &= 0x7fff;
 		statePhase = 2;
+#if FW_SINCE(0x0100060B)
+		/* Sony's tests off, suspend and resume here and does nothing */
+		if ((powerState & STATE_OFF) || (powerState & STATE_SUSPEND) ||
+		    (powerState & STATE_RESUME))
+			;
+#endif
 		stateEnter();
 		task2SetFlag(3, 0x1000);
 #if FW_SINCE(0x01000104)
@@ -188,7 +207,11 @@ unsigned char powerPendingGet(void)
 }
 
 /* waits for any part to report itself; 1 when none did in time */
+#if FW_SINCE(0x0100060B)
+unsigned char powerWait(FLGPTN pattern, TMO timeout)
+#else
 unsigned char powerWait(TMO timeout)
+#endif
 {
 	unsigned char result;
 	ER ercd;
@@ -196,7 +219,11 @@ unsigned char powerWait(TMO timeout)
 
 	result = 0;
 	ptn = 0;
+#if FW_SINCE(0x0100060B)
+	ercd = twai_flg(5, pattern, TWF_ORW, &ptn, timeout);
+#else
 	ercd = twai_flg(5, POWER_ALL, TWF_ORW, &ptn, timeout);
+#endif
 	if (ercd == E_OK)
 		clr_flg(5, ~ptn);
 	else
@@ -208,22 +235,35 @@ unsigned char powerWait(TMO timeout)
 unsigned char powerOn(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 	sleepFactorInit();
 	powerErrorClear();
 	spiDevInit();
 	powerPendingClear(1);
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 	inputInit();
 	powerPendingClear(3);
+	POWER_WAIT_CLEAR(5);
 	powerJobPostOn();
-	powerWait(0x19);
+	POWER_WAIT(5, 0x19);
 	powerPendingClear(5);
 	powerPendingClear(4);
+#if FW_SINCE(0x0100060B)
+	POWER_WAIT_CLEAR(6);
+	task6SetFlag(6, 0x2080);
+	POWER_WAIT(6, 3);
+#endif
 	powerPendingClear(6);
 	if (powerPendingGet() != 0)
 		result = 1;
@@ -234,8 +274,14 @@ unsigned char powerOn(void)
 unsigned char powerResume(union PowerRequest *request)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 #if FW_SINCE(0x00090903)
 	if (stateCause == 0x72) {
 		updaterRequestAnswerOk();
@@ -251,14 +297,19 @@ unsigned char powerResume(union PowerRequest *request)
 #endif
 	stateWakeupFactor.word = request->word;
 	inputResumePrepare();
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
 	task6SetFlag(6, 0x80);
+#if FW_SINCE(0x0100060B)
+	POWER_WAIT_KEEP(6, 5);
+#endif
 	powerPendingClear(6);
 	if (request->bits.mode != 0x54) {
+		POWER_WAIT_CLEAR(5);
 		powerJobPostResume();
-		powerWait(0x19);
+		POWER_WAIT_KEEP(5, 0x19);
 	}
 	powerPendingClear(5);
 	inputResumeOpen();
@@ -306,12 +357,18 @@ unsigned char powerResume(union PowerRequest *request)
 unsigned char powerOff(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 #if !FW_SINCE(0x01000104)
 	unsigned char cause;
 	STATE_TRANSITION_EVENT
 #endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 #if FW_SINCE(0x01000104)
 	switch (configGet()->hardwareInfoSelect) {
@@ -354,23 +411,30 @@ unsigned char powerOff(void)
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
+	POWER_WAIT_CLEAR(5);
 	powerJobPostOff();
-	powerWait(0x8ca);
+	POWER_WAIT(5, 0x8ca);
 	powerPendingClear(5);
+	POWER_WAIT_CLEAR(6);
 	task6SetFlag(6, 0x80);
-	powerWait(5);
+	POWER_WAIT(6, 5);
 	powerPendingClear(6);
 #if !FW_SINCE(0x01000104)
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
 	PER0.2 = 0;
+#if FW_SINCE(0x0100060B)
+	if (stateCause == 0x56 || stateCause == 0x5c)
+#else
 	if (stateCause == 0x56)
+#endif
 		powerJobPostOffEnd();
 	if (powerPendingGet() != 0)
 		result = 1;
@@ -399,8 +463,14 @@ unsigned char powerOff(void)
 unsigned char powerSuspend(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 #if FW_SINCE(0x01000104)
 	sleepFactorSet20(0);
@@ -421,20 +491,23 @@ unsigned char powerSuspend(void)
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
+	POWER_WAIT_CLEAR(5);
 	powerJobPostSuspend();
-	powerWait(0xfa);
+	POWER_WAIT(5, 0xfa);
 	powerPendingClear(5);
+	POWER_WAIT_CLEAR(6);
 	task6SetFlag(6, 0x80);
-	powerWait(5);
+	POWER_WAIT(6, 5);
 	powerPendingClear(6);
 #if !FW_SINCE(0x01000104)
 	/* before 0x01000104 the host link stops last */
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
 	PER0.2 = 0;
@@ -447,8 +520,14 @@ unsigned char powerSuspend(void)
 unsigned char powerShutdown(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 	inputShutdown();
 	powerPendingClear(3);
@@ -466,18 +545,20 @@ unsigned char powerShutdown(void)
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
+	POWER_WAIT_CLEAR(5);
 	powerJobPostShutdown();
-	powerWait(0x8ca);
+	POWER_WAIT_KEEP(5, 0x8ca);
 	powerPendingClear(5);
 	powerPendingClear(6);
 #if !FW_SINCE(0x01000104)
 	/* before 0x01000104 the host link stops last */
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
 #endif
 	if (powerPendingGet() != 0)
@@ -489,11 +570,18 @@ unsigned char powerShutdown(void)
 unsigned char powerCut(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	clockOutputStop();
+	POWER_WAIT_CLEAR(5);
 	powerJobPostCut();
-	powerWait(0x19);
+	POWER_WAIT(5, 0x19);
 	powerPendingClear(5);
 	if (input2Bit0Get() == 1)
 		P33 = 1;
@@ -514,8 +602,9 @@ unsigned char powerCut(void)
 	inputCut();
 	powerPendingClear(3);
 	powerPendingClear(6);
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
 	if (powerPendingGet() != 0)
 		result = 1;
@@ -532,8 +621,14 @@ unsigned char powerCut(void)
 unsigned char powerReset(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 	inputReset();
 	powerPendingClear(3);
@@ -544,15 +639,17 @@ unsigned char powerReset(void)
 	powerPendingClear(4);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000107)
+	POWER_WAIT_CLEAR(5);
 	powerJobPostReset();
 #endif
 #if FW_SINCE(0x01000306)
-	powerWait(0x19);
+	POWER_WAIT(5, 0x19);
 #endif
 	powerPendingClear(5);
 	powerPendingClear(6);
+	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
-	powerWait(0x19);
+	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
 	P1.7 = 0;
 	dly_tsk(3);
@@ -577,20 +674,28 @@ unsigned char powerUpdateAnswer(void)
 unsigned char powerUpdate(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x0100060B)
+	unsigned char waitResult;
+#endif
 
 	result = 0;
+#if FW_SINCE(0x0100060B)
+	waitResult = 0;
+#endif
 	powerPendingReset();
 	powerPendingClear(3);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
+	POWER_WAIT_CLEAR(5);
 	powerJobPostUpdate();
-	powerWait(0xfa);
+	POWER_WAIT(5, 0xfa);
 #endif
 	powerPendingClear(5);
 	powerPendingClear(6);
 	powerPendingClear(2);
+	POWER_WAIT_CLEAR(4);
 	updaterRequestAnswerOk();
-	powerWait(0x32);
+	POWER_WAIT_KEEP(4, 0x32);
 	powerPendingClear(4);
 	if (powerPendingGet() != 0)
 		result = 1;

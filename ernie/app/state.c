@@ -497,6 +497,9 @@ static int stateOffHandle(struct StateEvent *event)
 {
 	switch (event->transition) {
 	case 0x41:
+#if FW_SINCE(0x0100060B)
+	case 0x43:
+#endif
 		stateNext = STATE_CUT;
 		break;
 	case 0x40:
@@ -573,6 +576,9 @@ static int stateResumeHandle(struct StateEvent *event)
 #if FW_SINCE(0x01000306)
 	case 0x5b:
 #endif
+#if FW_SINCE(0x0100060B)
+	case 0x5c:
+#endif
 		stateNext = STATE_OFF;
 		break;
 	case 0x51:
@@ -616,6 +622,9 @@ static int stateSuspendHandle(struct StateEvent *event)
 	case 0x3a:
 	case 0x52:
 	case 0x57:
+#endif
+#if FW_SINCE(0x0100060B)
+	case 0x5c:
 #endif
 		stateNext = STATE_OFF;
 		break;

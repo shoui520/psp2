@@ -6,7 +6,16 @@
 #ifndef ERNIE_POWERWAIT_H
 #define ERNIE_POWERWAIT_H
 
+#include "ernie.h"
 #include "kernel.h"
+
+/* a power timer's number 4-0xb: since 0x0100060B bits 0 and 3 (timers 4 and 7) have none, and
+   the others are one or two earlier */
+#if FW_SINCE(0x0100060B)
+#define POWER_TIMER(id)		((id) < 7 ? (id) - 1 : (id) - 2)
+#else
+#define POWER_TIMER(id)		(id)
+#endif
 
 /* a device job: run when its bit is posted */
 struct PowerDeviceJob {

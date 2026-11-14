@@ -26,6 +26,9 @@ int timerInit(void)
 	for (i = 0; i < TIMER_COUNT; i++) {
 		timers[i].time = 0;
 		timers[i].state = 0;
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+		timers[i].handlerSet = 0;
+#endif
 		timers[i].handler = NULL;
 	}
 	ticks = 0;
@@ -41,12 +44,40 @@ int timerSetHandler(unsigned char id, struct TimerHandler *handler)
 {
 	if (id < TIMER_COUNT) {
 		timers[id].handler = handler->handler;
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+		timers[id].handlerSet = 1;
+#endif
 		return 0;
 	}
 	return 1;
 }
 
 /* arms a timer to run its handler after ticks more ticks */
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+/* 0x0100060B: 1 for no such timer, 2 for one without a handler; the last test cannot fail,
+   and its path returns nothing */
+int timerStart(unsigned char id, unsigned int ticks)
+{
+	if (id >= TIMER_COUNT)
+		return 1;
+	if (timers[id].handlerSet == 0)
+		return 2;
+	if (id < TIMER_RTC_FIRST) {
+		DI();
+		timers[id].time = ticks + timerTicks + 1;
+		timers[id].state = 1;
+		EI();
+		return 0;
+	}
+	if (id < TIMER_COUNT) {
+		DI();
+		timers[id].time = ticks + timerRtcTicks + 1;
+		timers[id].state = 1;
+		EI();
+		return 0;
+	}
+}
+#else
 int timerStart(unsigned char id, unsigned int ticks)
 {
 	if (id < TIMER_RTC_FIRST) {
@@ -71,6 +102,7 @@ int timerStart(unsigned char id, unsigned int ticks)
 	return 1;
 }
 
+#endif
 int timerStop(unsigned char id)
 {
 	if (id < TIMER_COUNT) {
@@ -151,7 +183,10 @@ void timerTick(void)
 	for (i = 0; i < TIMER_RTC_FIRST; i++) {
 		if (timers[i].state == 1 && timers[i].time == timerTicks) {
 			timers[i].state = 0;
-			timers[i].handler();
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+			if (timers[i].handler != NULL)
+#endif
+				timers[i].handler();
 		}
 	}
 	EI();

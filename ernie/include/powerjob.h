@@ -22,6 +22,7 @@ struct PowerJobState {
 };
 
 extern struct PowerJobState powerJobState;
+extern unsigned int powerCutRegs[3];
 
 extern void powerJob(void);
 

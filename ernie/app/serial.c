@@ -263,7 +263,9 @@ unsigned int serialChecksum(unsigned char *data, unsigned int length)
 /* runs the command received (unless its status is not 0) and answers it */
 unsigned char serialDispatch(void)
 {
-	unsigned int i;
+#if BOARD_SERIAL2 || !FW_SINCE(0x0100060B)
+	unsigned int i;		/* 0x0100060B leaves it out where it is unused */
+#endif
 	struct SerialBuffer request;
 	struct SerialBuffer response;
 
@@ -490,7 +492,11 @@ unsigned char serialNotify(void)
 			}
 		}
 #endif
+#if FW_SINCE(0x0100060B)
+	} else if ((serial.mode & SERIAL_MODE) == 1 && serial.status == 0) {
+#else
 	} else if ((serial.mode & SERIAL_MODE) == 1) {
+#endif
 		i = serialNotifies1Count();
 		while (i--) {
 			if ((serial.command & 0x7fff) == serialNotifies1[i].command) {

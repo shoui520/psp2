@@ -26,8 +26,8 @@
 extern void inputChanged(void);
 extern unsigned char input1Bit7Active(void);
 
-/* chargeUpdate's tests of the int helpers: before 0x01000306 they read only the low byte */
-#if FW_SINCE(0x01000306)
+/* chargeUpdate's tests of the int helpers: before 0x01000306 and since 0x0100060B they read only the low byte */
+#if FW_SINCE(0x01000306) && !FW_SINCE(0x0100060B)
 #define CHARGE_TEST(call)	(call)
 #else
 #define CHARGE_TEST(call)	((unsigned char)(call))
@@ -123,7 +123,11 @@ void chargeInit(void)
 		if (deviceVersions.battery.id != 0) {
 			batteryReadRemainCap(&charge.batteryRemainCap);
 			batteryReadVolt(&charge.batteryVolt);
+#if FW_SINCE(0x0100060B)
+			charge.flagsRead = charge.flags = charge.flagsLast = chargeReadFlags();
+#else
 			charge.flagsLast = chargeReadFlags();
+#endif
 		}
 		if (deviceVersions.battery.version[2] != 0)
 			chargeSetBattery();
@@ -138,6 +142,10 @@ void chargeInit(void)
 	timerSetHandler(TIMER_RTC(0x1e), &handler);
 	handler.handler = chargeTimer1f;
 	timerSetHandler(TIMER_RTC(0x1f), &handler);
+#endif
+#if FW_SINCE(0x0100060B)
+	handler.handler = chargeUpdateSoon;
+	timerSetHandler(0x16, &handler);
 #endif
 }
 
@@ -167,11 +175,16 @@ void chargeUpdate(void)
 	state = stateGet();
 	if (status1.word != cookieStatus1.word || status2.word != cookieStatus2.word) {
 		chargeSetPowerStatus();
+#if FW_SINCE(0x0100060B)
+		if (((unsigned char)status1.bits.ac ^ (unsigned char)cookieStatus1.bits.ac) ||
+		    ((unsigned char)status1.bits.charging ^ (unsigned char)cookieStatus1.bits.charging) ||
+		    ((unsigned char)status2.bits.vbus ^ (unsigned char)cookieStatus2.bits.vbus))
+#elif FW_SINCE(0x01000109)
 		if ((status1.bits.ac ^ cookieStatus1.bits.ac) ||
-#if FW_SINCE(0x01000109)
 		    (status1.bits.charging ^ cookieStatus1.bits.charging) ||
 		    (status2.bits.vbus ^ cookieStatus2.bits.vbus))
 #else
+		if ((status1.bits.ac ^ cookieStatus1.bits.ac) ||
 		    (status1.bits.charging ^ cookieStatus1.bits.charging))
 #endif
 			inputChanged();
@@ -270,7 +283,11 @@ void chargeUpdate(void)
 			chargeFactors.4 = (charge.flags & 0x0100) ? 1 : 0;
 			sleepFactorSet18(chargeFactors.4);
 #if FW_SINCE(0x01000107)
+#if FW_SINCE(0x0100060B)
+			if (chargeFactors.5 && state != STATE_RESUME) {
+#else
 			if (chargeFactors.5) {
+#endif
 				if (input1Bit7Active())
 					chargeLedSetBlink(1);
 				powerLedSetAlarm(1);
@@ -735,8 +752,21 @@ void chargeAlarmUpdate(void)
 	unsigned int temp;
 	unsigned int hold;
 	unsigned int ticks;
+#if FW_SINCE(0x0100060B)
+	int adjust;
+	unsigned char level;
 	unsigned char i;
-#if FW_SINCE(0x01000104)
+	struct ChargeAlarmLimit *limits;
+
+	if (configGet()->board.bits.bbmcDetect) {
+		paramGetAlarmLevel3G(&level);
+		limits = configGet()->chargeAlarmLimits3G;
+	} else {
+		paramGetAlarmLevel(&level);
+		limits = configGet()->chargeAlarmLimits;
+	}
+#elif FW_SINCE(0x01000104)
+	unsigned char i;
 	struct ChargeAlarmLimit *limits;
 
 	if (configGet()->board.bits.bbmcDetect)
@@ -744,6 +774,8 @@ void chargeAlarmUpdate(void)
 	else
 		limits = configGet()->chargeAlarmLimits;
 #else
+	unsigned char i;
+
 	/* before 0x01000104 no 3G modem's limits, and the config is looked up each time */
 #define limits	(configGet()->chargeAlarmLimits)
 #endif
@@ -752,10 +784,18 @@ void chargeAlarmUpdate(void)
 			temp = charge.batteryTemp;
 		else
 			temp = charge.batteryBicTemp;
+#if FW_SINCE(0x0100060B)
+		adjust = configGet()->chargeAlarmAdjust[level][i];
+		if (temp >= limits[i].high + adjust)
+			charge.alarms[i].flags.bits.over = 1;
+		else if (limits[i].low + adjust >= temp)
+			charge.alarms[i].flags.bits.over = 0;
+#else
 		if (temp >= limits[i].high)
 			charge.alarms[i].flags.bits.over = 1;
 		else if (limits[i].low >= temp)
 			charge.alarms[i].flags.bits.over = 0;
+#endif
 		else
 			charge.alarms[i].flags.bits.over = charge.alarms[i].flags.bits.on;
 		if (charge.alarms[i].flags.bits.over != charge.alarms[i].flags.bits.on) {
@@ -874,9 +914,19 @@ void chargeTimer1f(void)
 }
 #endif
 
+#if FW_SINCE(0x0100060B)
+/* the charge input's handler: chargeUpdateSoon after 5 ticks of timer 0x16 */
+void chargeUpdateLater(void)
+{
+	timerStart(0x16, 5);
+}
+#endif
+
 void chargeUpdateSoon(void)
 {
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x0100060B)
+	/* timer 0x16's handler: the wait is the timer's */
+#elif FW_SINCE(0x00090903)
 	dly_tsk(5);
 #else
 	if (!input1Bit7Active())

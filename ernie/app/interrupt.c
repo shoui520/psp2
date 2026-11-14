@@ -3,7 +3,9 @@
  * pins' edges start the input scan again (inputScanHold), or run a pin monitor's handler at
  * once when it has no reload, or start the monitor counting.
  */
+#if ERNIE_FW < 0x0100060B	/* BOARD_MOTION (board.h) */
 #pragma interrupt INTTM01 tm01Interrupt
+#endif
 #pragma rtos_interrupt INTTM03 tm03Interrupt
 #pragma rtos_interrupt INTP1 intp1Interrupt
 #pragma rtos_interrupt INTP2 intp2Interrupt
@@ -16,7 +18,9 @@
 #pragma interrupt INTTM04 tm04Interrupt
 #pragma rtos_interrupt INTSRE0 sre0Interrupt
 #pragma rtos_interrupt INTP0 intp0Interrupt
+#if ERNIE_FW < 0x0100060B	/* BOARD_MOTION */
 #pragma interrupt INTTM11 tm11Interrupt
+#endif
 #pragma sfr
 #pragma DI
 
@@ -33,12 +37,14 @@
 #include "tau.h"
 #include "touch.h"
 
+#if BOARD_MOTION
 /* the motion sensor's frame timer: a frame read while key 0x0010 is held */
 void tm01Interrupt(void)
 {
 	if (inputKeys.state & 0x0010)
 		motionReadFrame();
 }
+#endif
 
 /* the power sequence's wait: event 0x0004 of flag 4 */
 void tm03Interrupt(void)
@@ -155,6 +161,7 @@ void intp0Interrupt(void)
 		STATE_TRANSITION(0x41);
 }
 
+#if BOARD_MOTION
 /* the hang timer: as the RTC's interrupt counts, the system reset (cause 0x30) at the
    eighth tick that hangLimitReached allows; with no hang, the timer stopped */
 void tm11Interrupt(void)
@@ -179,3 +186,4 @@ void tm11Interrupt(void)
 		hangState = HANG_NONE;
 	}
 }
+#endif

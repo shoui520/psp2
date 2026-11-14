@@ -15,12 +15,15 @@
 	PUBLIC	_security_id
 	EXTRN	_cstart, _intp0Interrupt, _intp1Interrupt, _intp2Interrupt, _intp3Interrupt
 	EXTRN	_intp4Interrupt, _hostInterrupt, _uart3SendInterrupt, _uart3ReceiveInterrupt
-	EXTRN	_uart3ErrorInterrupt, _dma0Interrupt, _csiInterrupt, _csi01Interrupt
+	EXTRN	_uart3ErrorInterrupt, _dma0Interrupt, _csiInterrupt
 	EXTRN	_sre0Interrupt, _csi10Interrupt, _iicaInterrupt
-	EXTRN	_tm01Interrupt, _tm03Interrupt, _adcInterrupt, _rtcInterrupt
+	EXTRN	_tm03Interrupt, _adcInterrupt, _rtcInterrupt
 	EXTRN	_uart2SendInterrupt, _tm04Interrupt, _uart2ReceiveInterrupt, _intp7Interrupt
 	EXTRN	_intp8Interrupt, _intp10Interrupt, _intp11Interrupt, _tickInterrupt
-	EXTRN	_tm11Interrupt, _uart2ErrorInterrupt
+	EXTRN	_uart2ErrorInterrupt
+$_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
+	EXTRN	_csi01Interrupt, _tm01Interrupt, _tm11Interrupt
+$ENDIF
 $_IF (ERNIE_HW!=0x00406000)	; BOARD_SERIAL4: PCH-1000 has no UART4
 	EXTRN	_uart4ErrorInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
 $ENDIF
@@ -55,7 +58,11 @@ _vector_INTDMA0:
 _vector_INTST0:
 	DW	LOWW(_csiInterrupt)	; 1EH
 _vector_INTSR0:
+$_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	DW	LOWW(_csi01Interrupt)	; 20H
+$ELSE
+	DW	0			; 20H
+$ENDIF
 _vector_INTSRE0:
 	DW	LOWW(_sre0Interrupt)	; 22H
 _vector_INTST1:
@@ -71,7 +78,11 @@ _vector_INTIICA:
 	DW	LOWW(_iicaInterrupt)	; 2AH
 	DW	0			; 2CH
 _vector_INTTM01:
+$_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	DW	LOWW(_tm01Interrupt)	; 2EH
+$ELSE
+	DW	0			; 2EH
+$ENDIF
 	DW	0			; 30H
 _vector_INTTM03:
 	DW	LOWW(_tm03Interrupt)	; 32H
@@ -104,7 +115,11 @@ _vector_INTSRE4:
 _vector_INTTM10:
 	DW	LOWW(_tickInterrupt)	; 56H
 _vector_INTTM11:
+$_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	DW	LOWW(_tm11Interrupt)	; 58H
+$ELSE
+	DW	0			; 58H
+$ENDIF
 	DW	0			; 5AH
 _vector_INTSRE2:
 	DW	LOWW(_uart2ErrorInterrupt)	; 5CH

@@ -16,15 +16,23 @@
 #include "tau.h"
 #include "timer.h"
 
-static const struct PowerDeviceJob powerDeviceJobs[] = {
+#if FW_SINCE(0x0100060B)
+#define POWER_DEVICE_JOBS	9
+#else
+#define POWER_DEVICE_JOBS	11
+#endif
+
+static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0001, powerAccOn },
 	{ 0x0002, powerAccOff },
 	{ 0x0004, powerHpremoteOn },
 	{ 0x0008, powerHpremoteOff },
 	{ 0x0010, powerMultiCnOn },
 	{ 0x0020, powerMultiCnOff },
+#if !FW_SINCE(0x0100060B)
 	{ 0x0040, powerNoneOn },
 	{ 0x0080, powerNoneOff },
+#endif
 	{ 0x0100, powerBbmcStart },
 	{ 0x0200, powerBbmcCycle },
 	{ 0x1000, powerCookieSet },
@@ -38,7 +46,7 @@ void powerDeviceRun(void)
 {
 	unsigned char i;
 
-	for (i = 0; i < 11; i++) {
+	for (i = 0; i < POWER_DEVICE_JOBS; i++) {
 		if (powerDeviceJobs[i].bits & powerDevicePending) {
 			powerDeviceJobs[i].job();
 			powerDevicePending &= ~powerDeviceJobs[i].bits;
@@ -70,6 +78,9 @@ void powerWaitMs(unsigned int ms)
 	ER ercd;
 	FLGPTN ptn;
 
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x04);
+#endif
 	TDR03 = (unsigned long)ms * 1000 / 32 + (ms * 1000 % 32 ? 1 : 0);
 	TS0L = 0x08;
 	ercd = twai_flg(4, 0x04, TWF_ORW, &ptn, 0x4b);
@@ -95,11 +106,22 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 	ER ercd;
 	FLGPTN ptn;
 
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x40);
+#endif
 	powerInputHandler.edges = edges;
 	powerInputHandler.type = 1;
 	ercd = twai_flg(4, 0x40, TWF_ORW, &ptn, timeout);
+#if FW_SINCE(0x0100060B)
+	if (ercd == E_OK) {
+		if (ptn & 0x40)
+			clr_flg(4, ~0x40);
+	}
+	powerInputHandler.type = 0;
+#else
 	powerInputHandler.type = 0;
 	clr_flg(4, ~0x40);
+#endif
 }
 
 /* until the timers of the bits ran out */
@@ -115,10 +137,13 @@ void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks)
 	timerStart(id, ticks);
 }
 
+#if !FW_SINCE(0x0100060B)
+/* bits 0 and 3 have no timer since 0x0100060B */
 static void powerTimerEnd0(void)
 {
 	powerTimers &= ~0x0001;
 }
+#endif
 
 static void powerTimerEnd1(void)
 {
@@ -130,10 +155,12 @@ static void powerTimerEnd2(void)
 	powerTimers &= ~0x0004;
 }
 
+#if !FW_SINCE(0x0100060B)
 static void powerTimerEnd3(void)
 {
 	powerTimers &= ~0x0008;
 }
+#endif
 
 static void powerTimerEnd4(void)
 {
@@ -181,27 +208,38 @@ static void powerTimerEnd13(void)
 	powerTimers &= ~0x2000;
 }
 
+#if FW_SINCE(0x0100060B)
+static void powerTimerEnd14(void)
+{
+	powerTimers &= ~0x4000;
+}
+#endif
+
 void powerTimersInit(void)
 {
 	struct TimerHandler handler;
 
 	powerTimers = 0;
+#if !FW_SINCE(0x0100060B)
 	handler.handler = powerTimerEnd0;
 	timerSetHandler(0x04, &handler);
+#endif
 	handler.handler = powerTimerEnd1;
-	timerSetHandler(0x05, &handler);
+	timerSetHandler(POWER_TIMER(0x05), &handler);
 	handler.handler = powerTimerEnd2;
-	timerSetHandler(0x06, &handler);
+	timerSetHandler(POWER_TIMER(0x06), &handler);
+#if !FW_SINCE(0x0100060B)
 	handler.handler = powerTimerEnd3;
 	timerSetHandler(0x07, &handler);
+#endif
 	handler.handler = powerTimerEnd4;
-	timerSetHandler(0x08, &handler);
+	timerSetHandler(POWER_TIMER(0x08), &handler);
 	handler.handler = powerTimerEnd5;
-	timerSetHandler(0x09, &handler);
+	timerSetHandler(POWER_TIMER(0x09), &handler);
 	handler.handler = powerTimerEnd6;
-	timerSetHandler(0x0a, &handler);
+	timerSetHandler(POWER_TIMER(0x0a), &handler);
 	handler.handler = powerTimerEnd7;
-	timerSetHandler(0x0b, &handler);
+	timerSetHandler(POWER_TIMER(0x0b), &handler);
 #if !FW_SINCE(0x01000104)
 	handler.handler = powerTimerEnd9;
 	timerSetHandler(0x0c, &handler);
@@ -214,4 +252,8 @@ void powerTimersInit(void)
 	timerSetHandler(TIMER(0x0d), &handler);
 	handler.handler = powerTimerEnd13;
 	timerSetHandler(TIMER(0x0e), &handler);
+#if FW_SINCE(0x0100060B)
+	handler.handler = powerTimerEnd14;
+	timerSetHandler(0x15, &handler);
+#endif
 }

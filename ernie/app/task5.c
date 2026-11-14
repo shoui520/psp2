@@ -15,6 +15,7 @@
 #include "powerseq.h"
 #include "powerwait.h"
 #include "serial1.h"
+#include "state.h"
 #include "task.h"
 #include "task5.h"
 
@@ -211,7 +212,11 @@ static void task5ChargeLed(void)
 			return;
 		}
 		chargeLedSetOff(0);
+#if FW_SINCE(0x0100060B)
+		if (chargeBatteryLevel9() && stateGet() != STATE_RESUME)
+#else
 		if (chargeBatteryLevel9())
+#endif
 			chargeLedSetBlink(1);
 	} else {
 		chargeLedSetBlink(0);

@@ -16,8 +16,11 @@ void task6(VP_INT exinf)
 	FLGPTN ptn;
 	ER ercd;
 
+#if !FW_SINCE(0x0100060B)
+	/* since 0x0100060B the trace is gone, and bbmcEvent starts the modem at a power on */
 	traceInit();
 	bbmcInit();
+#endif
 	for (;;) {
 		ercd = wai_flg(6, 0x73ff, TWF_ORW, &ptn);
 		if (ercd != E_OK)

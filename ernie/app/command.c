@@ -28,6 +28,7 @@
 #include "scratchpad.h"
 #include "serial.h"
 #include "snvs.h"
+#include "sleepfactor.h"
 #include "state.h"
 #include "task.h"
 #include "task5.h"
@@ -87,11 +88,30 @@ union CommandPins {
 union CommandPins commandPins;
 
 /* a word the commands carry least significant byte first */
+#if FW_SINCE(0x0100060B)
+/* 0x00b4's and 0x00b5's pins, in the word's high byte */
+union CommandPinState {
+	unsigned char	value;
+	struct {
+		unsigned char	p30:1;		/* P3.0 */
+		unsigned char	p67:1;		/* P6.7 */
+		unsigned char	reserved:5;
+		unsigned char	p31:1;		/* P3.1 */
+	} bits;
+};
+#endif
+
 union CommandWord {
 	unsigned int	value;
 	unsigned char	byte[2];
 	struct HostLinkConfig config;
 	union Watchdog	watchdog;
+#if FW_SINCE(0x0100060B)
+	struct {
+		unsigned char	low;
+		union CommandPinState state;
+	} pins;
+#endif
 };
 
 /* the commands request 0 takes before the handshake */
@@ -189,12 +209,26 @@ unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 {
 	commandPins.bits.p30 = P3.0;
 	commandPins.bits.present = 1;
+#if FW_SINCE(0x0100060B)
+	commandPins.bits.p31 = 1;	/* P3.1 is driven low (inputInit): reported high */
+#else
 	commandPins.bits.p31 = P3.1;
+#endif
 	commandPins.bits.p76 = P7.6;
 	*out = commandPins.value & 0x0f;
 	*length = 1;
 	return 0;
 }
+
+#if FW_SINCE(0x0100060B)
+/* 0x0015: sleepFactorGetOffInfo's */
+unsigned char hostCommand0015(unsigned char *out, unsigned char *length)
+{
+	sleepFactorGetOffInfo(out);
+	*length = 4;
+	return 0;
+}
+#endif
 
 void commandRequestInit(void)
 {
@@ -451,6 +485,27 @@ allowed:
 #endif
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 1);
 			break;
+#if FW_SINCE(0x0100060B)
+		case 0x00b4:		/* P3.1, P6.7 and P3.0 */
+			word.pins.state.value = 0;
+			word.pins.state.bits.p31 = P3.1;
+			word.pins.state.bits.p67 = P6.7;
+			word.pins.state.bits.p30 = P3.0;
+			commandRequestAnswer[0] = word.pins.state.value;
+			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 1);
+			break;
+		case 0x00b5:		/* P3.1, while sleep factor bit 0 is set */
+			if (commandRequest.length == 1) {
+				if (sleepFactorGet() & 1) {
+					word.pins.state.value = commandRequestData[0];
+					P3.1 = word.pins.state.bits.p31;
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				} else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+			} else
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+			break;
+#endif
 		case 0x00c0:		/* a transition with its parameter */
 			if (commandRequest.length == 4) {
 #if !FW_SINCE(0x01000104)

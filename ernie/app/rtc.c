@@ -8,6 +8,8 @@
 #pragma DI
 #pragma EI
 
+#include <stddef.h>
+
 #include "ernie.h"
 #include "input.h"
 #include "keepram.h"
@@ -219,7 +221,10 @@ void rtcInterrupt(void)
 		if (timers[i].state == 1 && timers[i].time == rtcClockLow) {
 #endif
 			timers[i].state = 0;
-			timers[i].handler();
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+			if (timers[i].handler != NULL)
+#endif
+				timers[i].handler();
 		}
 	}
 #if !FW_SINCE(0x01000107)

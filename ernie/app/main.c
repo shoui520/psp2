@@ -34,10 +34,20 @@ void hdwinit(void)
 	CSC = 0xc0;
 	CKC = 0x09;
 	OSMC = 0x01;
+#if FW_SINCE(0x0100060B)
+	P4.0 = 0;
+	PM4.0 = 0;
+#endif
 	OSTS = 0x01;
 	MSTOP = 0;
+#if FW_SINCE(0x0100060B)
+	P4.0 = 1;
+#endif
 	do {
 	} while (OSTC != 0xc0);
+#if FW_SINCE(0x0100060B)
+	P4.0 = 0;
+#endif
 	CKC = 0x18;
 	while (!MCS)
 		;

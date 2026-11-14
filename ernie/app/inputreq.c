@@ -53,13 +53,22 @@ struct InputRequests {
 	unsigned char	touchPending;		/* TOUCH_PENDING */
 	unsigned char	reserved;		/* cleared by inputRequestInit, otherwise unused */
 	unsigned char	touchData[0x20];
+#if FW_SINCE(0x0100060B)
+	unsigned char	touchAnswer[0x18];
+#else
 	unsigned char	touchAnswer[0x10];
+#endif
 	unsigned char	touchPhase;		/* the step of a command that takes several runs */
 	unsigned char	touchTimer;		/* the runs it waits at most */
 	unsigned char	motionFlags;		/* MOTION_* */
 	unsigned char	motionCommand;		/* the command's low bits: its motionCommands entry */
+#if BOARD_MOTION
 	unsigned char	motionData[0x20];
 	unsigned char	motionAnswer[0x40];
+#else
+	unsigned char	motionData[4];
+	unsigned char	motionAnswer[8];
+#endif
 	unsigned char	motionPhase;		/* the step of a command that takes several runs */
 	unsigned char	motionDelay;		/* the runs to skip before the next step */
 	unsigned char	controlsData[0x10];
@@ -81,7 +90,9 @@ void controlsReadAnalog1(unsigned char *out);
 void touchStream0301Prepare(void);
 void touchStream0302Prepare(void);
 void touchStream0300Prepare(void);
+#if BOARD_MOTION
 void motionStreamPrepare(void);
+#endif
 static void controlsRequest0180(void);
 static void controlsRequest0181(void);
 static void controlsRequest0182(void);
@@ -104,6 +115,10 @@ static void touchRequestSetPower(void);
 static void touchRequestStatus(void);
 static void touchRequestSetGrip(void);
 #endif
+#if FW_SINCE(0x0100060B)
+static void touchRequestPanelInfo(void);
+static void touchRequestGripEdges(void);
+#endif
 static void touchRequestEnterBootloader0(void);
 static void touchRequestUnlock0(void);
 static void touchRequestLoad0(void);
@@ -124,6 +139,7 @@ static void touchRequestReset1(void);
 static void touchRequestConfigVersion1(void);
 static void touchRequestUserData1(void);
 static void touchRequestSelfTest1(void);
+#if BOARD_MOTION
 static void motionRequest0480(void);
 static void motionRequest0481(void);
 static void motionRequestUnknown(void);
@@ -133,6 +149,7 @@ static void motionRequest0485(void);
 static void motionRequest0486(void);
 static void motionRequest0487(void);
 static void motionRequest0488(void);
+#endif
 
 struct HostRequest controlsRequest;		/* request 1 */
 struct HostRequest touchRequest;		/* request 3 */
@@ -141,7 +158,9 @@ static struct InputRequests inputRequests;
 struct HostStream hostStream0300;
 struct HostStream hostStream0301;
 struct HostStream hostStream0302;
+#if BOARD_MOTION
 struct HostStream hostStream0400;
+#endif
 static unsigned char touchFlashExtra;		/* added to a full buffer's length (0x03a3), never
 						   set */
 
@@ -169,6 +188,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x0388, touchRequestStatus },
 	{ 0x0389, touchRequestSetGrip },
 #endif
+#if FW_SINCE(0x0100060B)
+	{ 0x0390, touchRequestPanelInfo },
+	{ 0x0391, touchRequestGripEdges },
+#endif
 	{ 0x03a0, touchRequestEnterBootloader0 },
 	{ 0x03a1, touchRequestUnlock0 },
 	{ 0x03a2, touchRequestLoad0 },
@@ -191,6 +214,7 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03b9, touchRequestSelfTest1 },
 };
 
+#if BOARD_MOTION
 /* request 4's commands, 0x0480 to 0x0488 (bit 7 ignored) */
 static void (* const motionCommands[])(void) = {
 	motionRequest0480,
@@ -203,6 +227,7 @@ static void (* const motionCommands[])(void) = {
 	motionRequest0487,
 	motionRequest0488,
 };
+#endif
 
 void inputRequestInit(void)
 {
@@ -231,12 +256,17 @@ void inputRequestInit(void)
 	touchRequest.notify = touchRequestNotify;
 	touchRequest.state = HOST_REQUEST_RECEIVE;
 	motionRequest.id = 4;
+#if BOARD_MOTION
 	motionRequest.size = 0x40;		/* more than motionData holds */
+#else
+	motionRequest.size = sizeof(inputRequests.motionData);
+#endif
 	motionRequest.data = inputRequests.motionData;
 	motionRequest.answer = inputRequests.motionAnswer;
 	motionRequest.notify = motionRequestNotify;
 	motionRequest.state = HOST_REQUEST_RECEIVE;
 
+#if BOARD_MOTION
 	hostStream0400.state = 0;
 	hostStream0400.block = 0xff;
 	hostStream0400.first = 0;
@@ -244,6 +274,7 @@ void inputRequestInit(void)
 	hostStream0400.blocks[0] = motionFrames[0];
 	hostStream0400.blocks[1] = motionFrames[1];
 	hostStream0400.prepare = motionStreamPrepare;
+#endif
 	hostStream0300.state = 0;
 	hostStream0300.block = 0xff;
 	hostStream0300.first = 0;
@@ -284,6 +315,7 @@ void touchRequestNotify(void)
 	}
 }
 
+#if BOARD_MOTION
 /* request 4's: 0x0480 to 0x0489 are answered at once while the sensor is not set up */
 void motionRequestNotify(void)
 {
@@ -330,6 +362,41 @@ void motionRequestNotify(void)
 		break;
 	}
 }
+#else
+/* request 4's, with no motion sensor: 0x0480 answers no information, the others 0x04 */
+void motionRequestNotify(void)
+{
+	switch (motionRequest.event) {
+	case HOST_EVENT_COMMAND:
+		switch (motionRequest.command) {
+		case 0x0480:
+			inputRequests.motionAnswer[0] = 0xff;
+			inputRequests.motionAnswer[1] = 0xff;
+			inputRequests.motionAnswer[2] = 0xff;
+			inputRequests.motionAnswer[3] = 0xff;
+			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0, 4);
+			return;
+		case 0x0481:
+		case 0x0483:
+		case 0x0484:
+		case 0x0485:
+		case 0x0486:
+		case 0x0487:
+		case 0x0488:
+			hostRequestAnswer(&motionRequest, HOST_REQUEST_ANSWER, 0x04, 0);
+			return;
+		default:
+			hostRequestAnswer(&motionRequest, HOST_REQUEST_UNKNOWN, 0, 0);
+			return;
+		}
+	case HOST_EVENT_ANSWERED:
+		hostRequestSetState(&motionRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_NONE:
+		break;
+	}
+}
+#endif
 
 /* request 1's: task 3 runs the command (controlsRequestRun) */
 void controlsRequestNotify(void)
@@ -369,6 +436,7 @@ static void touchRequestRun(void)
 	}
 }
 
+#if BOARD_MOTION
 /* request 4's command, from motionCommands (after motionDelay runs), then the end of its
    CSI01 transfer */
 static void motionRequestRun(void)
@@ -403,12 +471,15 @@ static void motionRequestRun(void)
 		}
 	}
 }
+#endif
 
 /* requests 3 and 4 */
 void devicesRequestRun(void)
 {
 	touchRequestRun();
+#if BOARD_MOTION
 	motionRequestRun();
+#endif
 	return;
 }
 
@@ -577,6 +648,10 @@ static void controlsRequest0181(void)
 			analogCalibrationDefault();
 			analogCalibrationSave();
 		}
+#if FW_SINCE(0x0100060B)
+		else if (controlsRequest.data[0] == 3)
+			analogCalibrationDefault();	/* not saved */
+#endif
 		controlsRequest.status = 0;
 	} else
 		controlsRequest.status = 0x3b;
@@ -1052,6 +1127,38 @@ done:
 }
 #endif
 
+#if FW_SINCE(0x0100060B)
+/* 0x0390: each panel identified again, then its information block's first bytes, its
+   configuration version and its grip edges (10 bytes a panel) */
+static void touchRequestPanelInfo(void)
+{
+	touchIdentify0();
+	memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
+	touchReadConfigVersion0(&inputRequests.touchAnswer[4]);
+	touchReadGripEdges0(&inputRequests.touchAnswer[6]);
+	touchIdentify1();
+	memcpy(&inputRequests.touchAnswer[10], &touch.panel[1].family, 4);
+	touchReadConfigVersion1(&inputRequests.touchAnswer[14]);
+	touchReadGripEdges1(&inputRequests.touchAnswer[16]);
+	inputRequests.touchPending = 0;
+	touchRequest.answerLength = 0x14;
+	touchRequest.status = 0;
+	hostRequestAnswerReady(&touchRequest.state);
+}
+
+/* 0x0391: each panel's grip edges */
+static void touchRequestGripEdges(void)
+{
+	touchReadGripEdges0(&inputRequests.touchAnswer[0]);
+	touchReadGripEdges1(&inputRequests.touchAnswer[4]);
+	inputRequests.touchPending = 0;
+	touchRequest.answerLength = 8;
+	touchRequest.status = 0;
+	hostRequestAnswerReady(&touchRequest.state);
+	return;
+}
+#endif
+
 /* 0x03a0: panel 0's controller to its bootloader; its status 8 runs later */
 static void touchRequestEnterBootloader0(void)
 {
@@ -1523,6 +1630,7 @@ static void touchRequestSelfTest1(void)
 	hostRequestAnswerReady(&touchRequest.state);
 }
 
+#if BOARD_MOTION
 /* 0x0482 */
 static void motionRequestUnknown(void)
 {
@@ -1858,11 +1966,20 @@ static void motionRequest0488(void)
 		inputRequests.motionFlags &= ~MOTION_PENDING;
 	}
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 /* the buttons, for a module that is not here (unused) */
 void controlsGetButtons(unsigned char *out)
 {
 	controlsReadButtons(out);
+}
+#endif
+
+#if FW_SINCE(0x0100060B)
+/* host command 0x0120: not taken (0x3e) */
+unsigned char hostCommand0120(unsigned char *out, unsigned char *length)
+{
+	return 0x3e;
 }
 #endif

@@ -8,6 +8,7 @@
 #include "ernie.h"
 #include "analog.h"
 #include "board.h"
+#include "debugpin.h"
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
@@ -36,10 +37,14 @@ void task3(VP_INT exinf)
 				inputProcess();
 				if (stateGet() == 0x0020)
 					devicesRequestRun();
+#if FW_SINCE(0x0100060B)
+				debugPinSet((unsigned char)(P4.0 ^ 1));
+#else
 				if (P4.0)
 					P4.0 = 0;
 				else
 					P4.0 = 1;
+#endif
 			}
 			if (ptn & 0x0004) {
 				clr_flg(2, ~0x0004);

@@ -205,6 +205,9 @@ extern void chargeTimer(void);
 extern void chargeCookieTimer(void);
 extern void chargeTimer1f(void);
 extern void chargeUpdateSoon(void);
+#if FW_SINCE(0x0100060B)
+extern void chargeUpdateLater(void);
+#endif
 extern int chargeSetCurrent(void);
 #ifdef ERNIE_UPDATER
 extern unsigned char chargeMayStart(void);

@@ -35,7 +35,14 @@ struct Param {
 	unsigned char	reserved4[2];
 #endif
 	unsigned char	pattern2[PARAM_PATTERN_SIZE];	/* blink pattern 2 */
+#if FW_SINCE(0x0100060B)
+	unsigned char	alarmLevel;		/* the charge alarms' adjust (0-2) without the
+						   3G modem (paramGetAlarmLevel) */
+	unsigned char	alarmLevel3G;		/* and with it */
+	unsigned char	reserved3[6];
+#else
 	unsigned char	reserved3[8];
+#endif
 };
 
 extern struct Param param;
@@ -57,9 +64,15 @@ extern void paramGetLevel1(unsigned char *level);
 extern void paramGetLevel2(unsigned char *level);
 extern void paramGetLevel3(unsigned char *level);
 #endif
+#if !FW_SINCE(0x0100060B)
 extern void paramGetBase(unsigned char *base);
+#endif
 extern void paramGetAdjust(unsigned char *adjust);
 extern void paramGetPattern1(unsigned char *pattern);
 extern void paramGetPattern2(unsigned char *pattern);
+#if FW_SINCE(0x0100060B)
+extern void paramGetAlarmLevel3G(unsigned char *level);
+extern void paramGetAlarmLevel(unsigned char *level);
+#endif
 
 #endif

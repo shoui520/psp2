@@ -193,10 +193,10 @@ int nvsJobRead(unsigned int offset, unsigned int size, unsigned char *data, unsi
 	struct NvsJob *job;
 
 	if (done == NULL)
-		return 1;
+		return NVS_JOB_ERROR_DONE;
 	job = nvsJobAlloc();
 	if (job == NULL)
-		return 2;
+		return NVS_JOB_ERROR_FULL;
 	job->state = NVS_JOB_READ;
 	job->done = done;
 	job->command = command;
@@ -214,10 +214,10 @@ int nvsJobWrite(unsigned int offset, unsigned int size, unsigned char *data, uns
 	struct NvsJob *job;
 
 	if (done == NULL)
-		return 1;
+		return NVS_JOB_ERROR_DONE;
 	job = nvsJobAlloc();
 	if (job == NULL)
-		return 2;
+		return NVS_JOB_ERROR_FULL;
 	job->state = NVS_JOB_WRITE;
 	job->done = done;
 	job->command = command;
@@ -236,7 +236,7 @@ int nvsJobService(void)
 
 	job = nvsJobAlloc();
 	if (job == NULL)
-		return 2;
+		return NVS_JOB_ERROR_FULL;
 	job->state = NVS_JOB_SERVICE;
 	job->done = NULL;
 	job->command = 0;
@@ -269,6 +269,9 @@ static struct NvsJob *nvsJobAlloc(void)
 	for (i = 0; i < NVS_JOBS; i++) {
 		if (nvsJobs[i].state == NVS_JOB_FREE) {
 			job = &nvsJobs[i];
+#if FW_SINCE(0x0100060B)
+			job->state = NVS_JOB_TAKEN;
+#endif
 			break;
 		}
 	}
@@ -284,7 +287,11 @@ static struct NvsJob *nvsJobNext(void)
 	job = NULL;
 	dis_dsp();
 	for (i = 0; i < NVS_JOBS; i++) {
+#if FW_SINCE(0x0100060B)
+		if (nvsJobs[i].state >= NVS_JOB_READ) {
+#else
 		if (nvsJobs[i].state != NVS_JOB_FREE) {
+#endif
 			job = &nvsJobs[i];
 			break;
 		}

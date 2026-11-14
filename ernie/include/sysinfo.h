@@ -36,8 +36,10 @@ extern int hangDetected(void);
 #include "chip.h"
 #define HANG_DETECTED()		(!P11.5 && !P4.6)
 #endif
+#if !FW_SINCE(0x0100060B)
 extern int hangStarted(void);
-#if FW_SINCE(0x01000104)
+#endif
+#if FW_SINCE(0x01000104) && !FW_SINCE(0x0100060B)
 extern int hangTimerRunning(void);
 #endif
 extern unsigned char getResetFlags(void);

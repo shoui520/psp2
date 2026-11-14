@@ -19,6 +19,7 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
+#include "sleepfactor.h"
 #include "state.h"
 #include "task.h"
 #include "timer.h"
@@ -35,9 +36,8 @@ unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
 #endif
 struct PowerJobState powerJobState;
-unsigned int powerCutReg0;		/* registers 0xb0-0xb2 of elmoRead's device, read at a */
-unsigned int powerCutReg1;		/* power cut and cleared at a power on */
-unsigned int powerCutReg2;
+unsigned int powerCutRegs[3];		/* registers 0xb0-0xb2 of elmoRead's device, read at a
+					   power cut and cleared at a power on */
 
 /* the charge update's period: chargeSetAcDelay's since 0x01000306, 10 before */
 #if FW_SINCE(0x01000306)
@@ -58,6 +58,10 @@ unsigned int powerCutReg2;
 #define POWER_JOB_VBUS_ON()	(task5SetFlag(4, 0x400), chargeVbus.0 = 1)
 #else
 #define POWER_JOB_VBUS_ON()	(chargeVbus = 1)
+#endif
+
+#if FW_SINCE(0x0100060B)
+extern unsigned char input1Bit7Active(void);
 #endif
 
 static void powerJobOn(void);
@@ -126,7 +130,11 @@ static void powerJobOn(void)
 	PIF0 = 0;
 	PMK0 = 0;
 	powerSeqOn();
-	powerCutReg0 = powerCutReg1 = powerCutReg2 = 0;
+#if FW_SINCE(0x0100060B)
+	/* the power cut's registers kept through a start from cause 0x42 */
+	if (stateGetCause() != 0x42)
+#endif
+		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = 0;
 	powerTimersInit();
 	powerSeqInit();
 #if FW_SINCE(0x01000104)
@@ -219,6 +227,12 @@ static void powerJobOff(void)
 #if FW_SINCE(0x01000306)
 	ledSetOff(0);
 #endif
+#if FW_SINCE(0x0100060B)
+	/* sleep factor 19 (the charge's, sleepFactorSet19) with input 1's bit 7: the charge LED
+	   blinks */
+	if ((sleepFactorGet() & 0x00080000) && input1Bit7Active())
+		chargeLedSetBlink(1);
+#endif
 	if (configGet()->state.bits.chargeLedOff)
 		chargeLedSetOff(1);
 	else
@@ -295,6 +309,13 @@ static void powerJobSuspend(void)
 	POWER_JOB_MODE();
 	if (!powerLedGetKeep())
 		powerLedSetMode(POWER_LED_SET_ON);
+#if FW_SINCE(0x0100060B)
+	if (sleepFactorGet() & 0x00080000) {
+		if (input1Bit7Active())
+			chargeLedSetBlink(1);
+		powerLedSetAlarm(1);
+	}
+#endif
 	POWER_JOB_AC_DELAY_DOWN();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
@@ -330,11 +351,11 @@ static void powerJobCut(void)
 	P6.3 = 0;
 	P13.1 = 0;
 	reg = 0xb0;
-	result = elmoRead(&reg, (unsigned char *)&powerCutReg0);
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[0]);
 	reg = 0xb1;
-	result = elmoRead(&reg, (unsigned char *)&powerCutReg1);
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[1]);
 	reg = 0xb2;
-	result = elmoRead(&reg, (unsigned char *)&powerCutReg2);
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
 #if FW_SINCE(0x01000104)
 	chargeLedInit();
 #endif

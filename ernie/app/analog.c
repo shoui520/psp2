@@ -288,6 +288,9 @@ void analogCalibrationSave(void)
 	ER ercd;
 	FLGPTN ptn;
 
+#if FW_SINCE(0x0100060B)
+	clr_flg(2, ~0x0020);
+#endif
 	analogStoreWrite((unsigned char *)&analogCalibration, 0, analogCalibrationSaved);
 	ercd = wai_flg(2, 0x0020, TWF_ORW, &ptn);
 	if (ercd == E_OK && (ptn & 0x0020))
@@ -328,6 +331,11 @@ unsigned char analogStart(unsigned int inputs)
 {
 	unsigned char mask;
 	unsigned char skip;
+#if FW_SINCE(0x0100060B)
+	unsigned char busy;
+
+	busy = 0;
+#endif
 
 	mask = 0;
 	skip = 1;
@@ -340,8 +348,14 @@ unsigned char analogStart(unsigned int inputs)
 		mask |= 0x08;
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
+#if FW_SINCE(0x0100060B)
+	busy = adcStart(mask, skip);
+	if (busy)
+		return 1;
+#else
 	if (adcStart(mask, skip))
 		return 1;
+#endif
 	return 0;
 }
 

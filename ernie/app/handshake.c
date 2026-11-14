@@ -87,6 +87,16 @@ static int handshakeUnlock15(void);
 static int handshakeLockHandler15(void);
 #endif
 
+#if FW_SINCE(0x0100060B)
+/* in the keys object, authkeys.c */
+extern const unsigned char mode11Check[16];
+extern const unsigned char mode11Key1[16];
+extern const unsigned char mode15Check1[16];
+extern const unsigned char mode15Check2[16];
+extern const unsigned char mode15Key1[16];
+extern const unsigned char mode15Key2[16];
+extern const unsigned char mode15Key3[16];
+#else
 static const unsigned char mode11Check[16];
 static const unsigned char mode11Key1[16];
 #if FW_SINCE(0x00090903)
@@ -95,6 +105,7 @@ static const unsigned char mode15Check2[16];
 static const unsigned char mode15Key1[16];
 static const unsigned char mode15Key2[16];
 static const unsigned char mode15Key3[16];
+#endif
 #endif
 
 /* (a mode not found reads past the table, as Sony's does) */
@@ -576,6 +587,8 @@ unsigned char handshakeRefuse(void)
 #endif
 }
 
+#if !FW_SINCE(0x0100060B)
+/* (since 0x0100060B the keys object, authkeys.c, holds these) */
 /* the packet header the serial side sends (unused here), then the IV and the keys */
 static const unsigned char handshakeHeader[4] = {
 	0x01, 0x00, 0x00, 0x00
@@ -618,4 +631,5 @@ static const unsigned char mode15Key2[16] = {
 static const unsigned char mode15Key3[16] = {
 	0xeb, 0xe3, 0x46, 0x0d, 0x84, 0xa4, 0x17, 0x54, 0xac, 0x44, 0x13, 0x68, 0xcf, 0x02, 0x00, 0xd8
 };
+#endif
 #endif

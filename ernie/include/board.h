@@ -49,8 +49,8 @@
 #define BOARD_WDT		(ERNIE_HW == 0x00406000)
 
 /* a power-on reset clears the scratch pad under an updater older than 0x16 (getErnieDlVersion's
-   bytes 1 and 2): PCH-1000's systemInit */
-#define BOARD_DL_SCRATCHPAD	(ERNIE_HW == 0x00406000)
+   bytes 1 and 2): PCH-1000's systemInit, not since 0x0100060B */
+#define BOARD_DL_SCRATCHPAD	(ERNIE_HW == 0x00406000 && !FW_SINCE(0x0100060B))
 
 /* the HDMI output: HDMI CEC's power (the Elmo's register 0xa1 bit 15: powerHdmiCecOn and
    Off), with 0xa2's 0x0200 switched off by the power sequences' steps; not on PCH-1000, whose
@@ -100,6 +100,10 @@
 #define BOARD_STANDBY_STOP	(ERNIE_HW == 0x00406000)
 
 /* boardSetMultiCnOutput's and boardGetMultiCnOutput's outputs */
+/* the motion sensor (CSI01, its frame timer TM01, request 4 and stream 0x0400) and timer 11's
+   hang interrupt: gone from the 0x0100060x builds */
+#define BOARD_MOTION		(!FW_SINCE(0x0100060B))
+
 #define BOARD_MULTICN_HOST	0	/* P13.0 low, P2.2 high */
 #define BOARD_MULTICN_DONGLE	1	/* P13.0 high */
 #define BOARD_MULTICN_OFF	4	/* both low (boardSetMultiCnOutput: 2-4) */

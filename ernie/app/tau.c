@@ -6,6 +6,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "board.h"
 #include "kernel.h"
 #include "tau.h"
 
@@ -87,6 +88,7 @@ void tm10Stop(void)
 	TT1L.0 = 1;
 }
 
+#if BOARD_MOTION
 void tm11Start(void)
 {
 	TMR11 = 0x8000;
@@ -102,3 +104,4 @@ void tm11Stop(void)
 	TMIF11 = 0;
 	TT1L.1 = 1;
 }
+#endif

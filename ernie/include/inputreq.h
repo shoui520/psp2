@@ -31,6 +31,9 @@ extern unsigned char hostCommand0102(unsigned char *out, unsigned char *length);
 extern void touchRequestCancel(void);
 #if FW_SINCE(0x01000104)
 extern void controlsGetButtons(unsigned char *out);
+#if FW_SINCE(0x0100060B)
+extern unsigned char hostCommand0120(unsigned char *out, unsigned char *length);
+#endif
 #endif
 
 #endif

@@ -37,12 +37,15 @@ int hangDetected(void)
 }
 #endif
 
+#if !FW_SINCE(0x0100060B)
+/* neither is in 0x0100060B */
 int hangStarted(void)
 {
 	return hangCount == 1;
 }
+#endif
 
-#if FW_SINCE(0x01000104)
+#if FW_SINCE(0x01000104) && !FW_SINCE(0x0100060B)
 /* timer 11 running (TE11) */
 int hangTimerRunning(void)
 {

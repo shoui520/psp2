@@ -88,7 +88,10 @@ const unsigned char updaterSegments[UPDATER_SEGMENTS / 8] = {
 void (*updaterDownloader)(void);		/* the downloader's entry */
 struct HostRequest updaterRequest;
 unsigned char updaterRequestAnswer[4];
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x0100060B)
+unsigned char updaterRequestData[0x7c];
+struct Updater updater;
+#elif FW_SINCE(0x00090903)
 unsigned char updaterRequestData[0x80];
 struct Updater updater;
 #else
@@ -243,7 +246,15 @@ void updaterStartDownloader(void)
 	if (updaterFlashPrepare() == 0) {
 		DOWNLOADER_START->snapshot = snapshot;
 		memcpy(DOWNLOADER_START->sleepFactor, &sleepFactor, 4);
+#if FW_SINCE(0x0100060B)
+		/* the downloader's frames stay within its 0x80 bytes */
+		if (hostLink.frameSize > 0x80)
+			DOWNLOADER_START->frameSize = 0x80;
+		else
+			DOWNLOADER_START->frameSize = hostLink.frameSize & 0xff;
+#else
 		DOWNLOADER_START->frameSize = hostLink.frameSize;
+#endif
 #if FW_SINCE(0x01000104)
 		if (version <= 0x000102ff)
 			DOWNLOADER_START->link.size = hostLink.config.size;

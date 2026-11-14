@@ -206,8 +206,14 @@ unsigned int taskGetPending(void)
 /* standby halts while a timer, a task, a dongle or debug link or a hang needs the clock */
 int taskStandbyHalt(void)
 {
+#if FW_SINCE(0x0100060B)
+	/* no hang check since 0x0100060B */
+	return timerArmed() || taskGetPending() || boardMultiCnIsDongle() ||
+	       boardMultiCnIsDebug();
+#else
 	return timerArmed() || taskGetPending() || boardMultiCnIsDongle() ||
 	       boardMultiCnIsDebug() || hangStarted();
+#endif
 }
 #else
 /* standby halts, never stops, on the other boards */

@@ -45,6 +45,9 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	cookieIica.status = &status;
 	for (i = 1; i < length; i++)
 		;
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x10);
+#endif
 	iicaStart(&cookieIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 	if (ercd == E_OK) {
@@ -69,6 +72,9 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	cookieIica.txCount = 1;
 	cookieIica.address = COOKIE_ADDRESS;
 	cookieIica.status = &status;
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x10);
+#endif
 	iicaStart(&cookieIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 	if (ercd == E_OK) {

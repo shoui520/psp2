@@ -14,6 +14,9 @@ struct TimerHandler {
 /* a timer: armed (1) until its count of ticks reaches time, then its handler runs */
 struct Timer {
 	unsigned char	state;
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+	unsigned char	handlerSet;	/* timerSetHandler gave it one: timerStart arms only then */
+#endif
 	unsigned int	time;
 	void		(*handler)(void);
 };
@@ -23,8 +26,13 @@ struct Timer {
    (the power LED's fade step): its RTC timers are 0x14-0x1e, each one below its number since,
    which TIMER_RTC() gives. Before 0x01000104 power timers 9 and 10 have timers 0x0c and 0x0d,
    so the timers from 0x0c up are two later (TIMER()), the RTC's from 0x15 one later, and there
-   are no 0x1e and 0x1f */
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x01000306)
+   are no 0x1e and 0x1f. Since 0x0100060B power bits 0 and 3 have no timer, so the timers from
+   0x0c up are two earlier (TIMER(), POWER_TIMER()), and two new ones (0x15, power bit 14, and
+   0x16) put the RTC's at 0x17-0x21 */
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#define TIMER_RTC_FIRST		0x17
+#define TIMER_RTC(id)		((id) + 2)
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000306)
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		(id)
 #elif FW_SINCE(0x01000104)
@@ -34,7 +42,9 @@ struct Timer {
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		((id) + 1)
 #endif
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x01000104)
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#define TIMER(id)		((id) - 2)
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104)
 #define TIMER(id)		(id)
 #else
 #define TIMER(id)		((id) + 2)

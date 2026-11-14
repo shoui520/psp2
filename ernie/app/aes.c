@@ -4,12 +4,20 @@
  * bytes of the block). The state is the block in RAM, column by column (state[r + 4 * c]); the
  * round keys are the words of the key schedule, byte 0 the first.
  */
+#if !defined(ERNIE_UPDATER) && ERNIE_FW >= 0x0100060B
+/* memcpy expanded in place, as Sony's 0x0100060B build does */
+#pragma inline
+#endif
 #include <stddef.h>
 #include <string.h>
 
 #include "ernie.h"
 #include "aes.h"
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#include "aestable.h"
+#else
 #include "gf.h"
+#endif
 
 static const unsigned char aesSbox[256] = {
 	0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5,
@@ -91,7 +99,9 @@ static const unsigned char aesRcon[14] = {
 /* the updater's revision carries no revision string, and tests the near blocks against 0 */
 #define AES_NULL	0
 #else
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x0100060B)
+static const char aesRevision[] = "$Rev: 4488 $";
+#elif FW_SINCE(0x00090903)
 static const char aesRevision[] = "$Rev: 2587 $";
 #else
 static const char aesRevision[] = "$Rev: 2166 $";
@@ -99,6 +109,14 @@ static const char aesRevision[] = "$Rev: 2166 $";
 
 /* the application's tests them against NULL, a far null */
 #define AES_NULL	NULL
+#endif
+
+/* 0x0100060B (rev 4488): table-driven rounds (aestable.c), each round one function, the block
+   length fixed at 4 words, and only the CBC mode */
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#define AES_TABLES	1
+#else
+#define AES_TABLES	0
 #endif
 
 /* a round's key: its 4 words of 4 bytes (the offset in char arithmetic, as the original) */
@@ -110,6 +128,13 @@ static const char aesRevision[] = "$Rev: 2166 $";
 static unsigned long aesRotWord(unsigned long word);
 static unsigned long aesSubWord(unsigned long word);
 static void aesAddRoundKey(unsigned char __near *state, const unsigned char *key);
+#if AES_TABLES
+static void aesSubBytesShiftRows(unsigned char __near *state);
+static void aesRound(unsigned char __near *state);
+static void aesInvRound(unsigned char __near *state);
+static void aesInvShiftRowsSubBytes(unsigned char __near *state);
+static void aesXor(unsigned char __near *dst, const unsigned char __near *src);
+#else
 static void aesSubBytes(unsigned char __near *state);
 static void aesShiftRows(unsigned char __near *state);
 static void aesMixColumns(unsigned char __near *state);
@@ -119,6 +144,7 @@ static void aesInvMixColumns(unsigned char __near *state);
 static void aesXor(unsigned char __near *dst, const unsigned char __near *a,
 		   const unsigned char __near *b, unsigned char len);
 static void aesIncrementCounter(unsigned char __near *counter);
+#endif
 
 int aesKeyExpansion(const unsigned long *key, struct AesKey __near *ks)
 {
@@ -129,6 +155,12 @@ int aesKeyExpansion(const unsigned long *key, struct AesKey __near *ks)
 		return AES_ERROR_NULL;
 	if (ks->nk < 4 || ks->nk > 8)
 		return AES_ERROR_KEY_LENGTH;
+#if AES_TABLES
+	if (ks->nb != 4)
+		return AES_ERROR_BLOCK_LENGTH;
+	nk = ks->nk;
+	nr = nk + 6;
+#else
 	if (ks->nb < 4 || ks->nb > 8)
 		return AES_ERROR_BLOCK_LENGTH;
 	nk = ks->nk;
@@ -136,6 +168,7 @@ int aesKeyExpansion(const unsigned long *key, struct AesKey __near *ks)
 		nr = nk + 6;
 	else
 		nr = 10;
+#endif
 	for (i = 0; i < nk; i++)
 		ks->w[i] = key[i];
 	if (nk < 7) {
@@ -185,6 +218,317 @@ static unsigned long aesSubWord(unsigned long word)
 	return word;
 }
 
+#if AES_TABLES
+int aesEncrypt(const unsigned char __near *in, unsigned char __near *out, struct AesKey __near *ks)
+{
+	unsigned char round, nr;
+
+	if (in == AES_NULL || out == AES_NULL || ks->w == NULL)
+		return AES_ERROR_NULL;
+	if (ks->nk < 4 || ks->nk > 8)
+		return AES_ERROR_KEY_LENGTH;
+	if (ks->nb != 4)
+		return AES_ERROR_BLOCK_LENGTH;
+	nr = ks->nk + 6;
+	memcpy(out, in, AES_BLOCK_SIZE);
+	aesAddRoundKey(out, (const unsigned char *)ks->w);
+	for (round = 1; round < nr; round++) {
+		aesRound(out);
+		aesAddRoundKey(out, ROUND_KEY(ks, round));
+	}
+	aesSubBytesShiftRows(out);
+	aesAddRoundKey(out, ROUND_KEY(ks, round));
+	return 0;
+}
+
+int aesDecrypt(const unsigned char __near *in, unsigned char __near *out, struct AesKey __near *ks)
+{
+	unsigned char round, nr;
+
+	if (out == AES_NULL || in == AES_NULL || ks->w == NULL)
+		return AES_ERROR_NULL;
+	if (ks->nk < 4 || ks->nk > 8)
+		return AES_ERROR_KEY_LENGTH;
+	if (ks->nb != 4)
+		return AES_ERROR_BLOCK_LENGTH;
+	nr = ks->nk + 6;
+	memcpy(out, in, AES_BLOCK_SIZE);
+	aesAddRoundKey(out, ROUND_KEY(ks, nr));
+	aesInvShiftRowsSubBytes(out);
+	for (round = nr - 1; round != 0; round--) {
+		aesAddRoundKey(out, ROUND_KEY(ks, round));
+		aesInvRound(out);
+	}
+	aesAddRoundKey(out, ROUND_KEY(ks, round));
+	return 0;
+}
+
+static void aesAddRoundKey(unsigned char __near *state, const unsigned char *key)
+{
+	state[0] ^= key[0];
+	state[1] ^= key[1];
+	state[2] ^= key[2];
+	state[3] ^= key[3];
+	state[4] ^= key[4];
+	state[5] ^= key[5];
+	state[6] ^= key[6];
+	state[7] ^= key[7];
+	state[8] ^= key[8];
+	state[9] ^= key[9];
+	state[10] ^= key[10];
+	state[11] ^= key[11];
+	state[12] ^= key[12];
+	state[13] ^= key[13];
+	state[14] ^= key[14];
+	state[15] ^= key[15];
+}
+
+/* SubBytes and ShiftRows, the last round's */
+static void aesSubBytesShiftRows(unsigned char __near *state)
+{
+	unsigned char t;
+
+	state[0] = aesSbox[state[0]];
+	state[4] = aesSbox[state[4]];
+	state[8] = aesSbox[state[8]];
+	state[12] = aesSbox[state[12]];
+	t = aesSbox[state[1]];
+	state[1] = aesSbox[state[5]];
+	state[5] = aesSbox[state[9]];
+	state[9] = aesSbox[state[13]];
+	state[13] = t;
+	t = aesSbox[state[2]];
+	state[2] = aesSbox[state[10]];
+	state[10] = t;
+	t = aesSbox[state[6]];
+	state[6] = aesSbox[state[14]];
+	state[14] = t;
+	t = aesSbox[state[3]];
+	state[3] = aesSbox[state[15]];
+	state[15] = aesSbox[state[11]];
+	state[11] = aesSbox[state[7]];
+	state[7] = t;
+}
+
+/* SubBytes, ShiftRows and MixColumns: each column from the S-box times 1, 2 and 3 */
+static void aesRound(unsigned char __near *state)
+{
+	unsigned char t[AES_BLOCK_SIZE];
+
+	t[0] = aesSboxMul2[state[0]] ^ aesSboxMul3[state[5]] ^
+		aesSbox[state[10]] ^ aesSbox[state[15]];
+	t[1] = aesSbox[state[0]] ^ aesSboxMul2[state[5]] ^
+		aesSboxMul3[state[10]] ^ aesSbox[state[15]];
+	t[2] = aesSbox[state[0]] ^ aesSbox[state[5]] ^
+		aesSboxMul2[state[10]] ^ aesSboxMul3[state[15]];
+	t[3] = aesSboxMul3[state[0]] ^ aesSbox[state[5]] ^
+		aesSbox[state[10]] ^ aesSboxMul2[state[15]];
+	t[4] = aesSboxMul2[state[4]] ^ aesSboxMul3[state[9]] ^
+		aesSbox[state[14]] ^ aesSbox[state[3]];
+	t[5] = aesSbox[state[4]] ^ aesSboxMul2[state[9]] ^
+		aesSboxMul3[state[14]] ^ aesSbox[state[3]];
+	t[6] = aesSbox[state[4]] ^ aesSbox[state[9]] ^
+		aesSboxMul2[state[14]] ^ aesSboxMul3[state[3]];
+	t[7] = aesSboxMul3[state[4]] ^ aesSbox[state[9]] ^
+		aesSbox[state[14]] ^ aesSboxMul2[state[3]];
+	t[8] = aesSboxMul2[state[8]] ^ aesSboxMul3[state[13]] ^
+		aesSbox[state[2]] ^ aesSbox[state[7]];
+	t[9] = aesSbox[state[8]] ^ aesSboxMul2[state[13]] ^
+		aesSboxMul3[state[2]] ^ aesSbox[state[7]];
+	t[10] = aesSbox[state[8]] ^ aesSbox[state[13]] ^
+		aesSboxMul2[state[2]] ^ aesSboxMul3[state[7]];
+	t[11] = aesSboxMul3[state[8]] ^ aesSbox[state[13]] ^
+		aesSbox[state[2]] ^ aesSboxMul2[state[7]];
+	t[12] = aesSboxMul2[state[12]] ^ aesSboxMul3[state[1]] ^
+		aesSbox[state[6]] ^ aesSbox[state[11]];
+	t[13] = aesSbox[state[12]] ^ aesSboxMul2[state[1]] ^
+		aesSboxMul3[state[6]] ^ aesSbox[state[11]];
+	t[14] = aesSbox[state[12]] ^ aesSbox[state[1]] ^
+		aesSboxMul2[state[6]] ^ aesSboxMul3[state[11]];
+	t[15] = aesSboxMul3[state[12]] ^ aesSbox[state[1]] ^
+		aesSbox[state[6]] ^ aesSboxMul2[state[11]];
+	state[0] = t[0];
+	state[1] = t[1];
+	state[2] = t[2];
+	state[3] = t[3];
+	state[4] = t[4];
+	state[5] = t[5];
+	state[6] = t[6];
+	state[7] = t[7];
+	state[8] = t[8];
+	state[9] = t[9];
+	state[10] = t[10];
+	state[11] = t[11];
+	state[12] = t[12];
+	state[13] = t[13];
+	state[14] = t[14];
+	state[15] = t[15];
+}
+
+/* InvMixColumns, InvShiftRows and InvSubBytes, the inverse rounds before the last */
+static void aesInvRound(unsigned char __near *state)
+{
+	unsigned char t[AES_BLOCK_SIZE];
+
+	t[0] = aesMul14[state[0]] ^ aesMul11[state[1]] ^
+		aesMul13[state[2]] ^ aesMul9[state[3]];
+	t[5] = aesMul9[state[0]] ^ aesMul14[state[1]] ^
+		aesMul11[state[2]] ^ aesMul13[state[3]];
+	t[10] = aesMul13[state[0]] ^ aesMul9[state[1]] ^
+		aesMul14[state[2]] ^ aesMul11[state[3]];
+	t[15] = aesMul11[state[0]] ^ aesMul13[state[1]] ^
+		aesMul9[state[2]] ^ aesMul14[state[3]];
+	t[4] = aesMul14[state[4]] ^ aesMul11[state[5]] ^
+		aesMul13[state[6]] ^ aesMul9[state[7]];
+	t[9] = aesMul9[state[4]] ^ aesMul14[state[5]] ^
+		aesMul11[state[6]] ^ aesMul13[state[7]];
+	t[14] = aesMul13[state[4]] ^ aesMul9[state[5]] ^
+		aesMul14[state[6]] ^ aesMul11[state[7]];
+	t[3] = aesMul11[state[4]] ^ aesMul13[state[5]] ^
+		aesMul9[state[6]] ^ aesMul14[state[7]];
+	t[8] = aesMul14[state[8]] ^ aesMul11[state[9]] ^
+		aesMul13[state[10]] ^ aesMul9[state[11]];
+	t[13] = aesMul9[state[8]] ^ aesMul14[state[9]] ^
+		aesMul11[state[10]] ^ aesMul13[state[11]];
+	t[2] = aesMul13[state[8]] ^ aesMul9[state[9]] ^
+		aesMul14[state[10]] ^ aesMul11[state[11]];
+	t[7] = aesMul11[state[8]] ^ aesMul13[state[9]] ^
+		aesMul9[state[10]] ^ aesMul14[state[11]];
+	t[12] = aesMul14[state[12]] ^ aesMul11[state[13]] ^
+		aesMul13[state[14]] ^ aesMul9[state[15]];
+	t[1] = aesMul9[state[12]] ^ aesMul14[state[13]] ^
+		aesMul11[state[14]] ^ aesMul13[state[15]];
+	t[6] = aesMul13[state[12]] ^ aesMul9[state[13]] ^
+		aesMul14[state[14]] ^ aesMul11[state[15]];
+	t[11] = aesMul11[state[12]] ^ aesMul13[state[13]] ^
+		aesMul9[state[14]] ^ aesMul14[state[15]];
+	state[0] = aesInvSbox[t[0]];
+	state[1] = aesInvSbox[t[1]];
+	state[2] = aesInvSbox[t[2]];
+	state[3] = aesInvSbox[t[3]];
+	state[4] = aesInvSbox[t[4]];
+	state[5] = aesInvSbox[t[5]];
+	state[6] = aesInvSbox[t[6]];
+	state[7] = aesInvSbox[t[7]];
+	state[8] = aesInvSbox[t[8]];
+	state[9] = aesInvSbox[t[9]];
+	state[10] = aesInvSbox[t[10]];
+	state[11] = aesInvSbox[t[11]];
+	state[12] = aesInvSbox[t[12]];
+	state[13] = aesInvSbox[t[13]];
+	state[14] = aesInvSbox[t[14]];
+	state[15] = aesInvSbox[t[15]];
+}
+
+/* InvShiftRows and InvSubBytes, the first inverse round's */
+static void aesInvShiftRowsSubBytes(unsigned char __near *state)
+{
+	unsigned char t;
+
+	state[0] = aesInvSbox[state[0]];
+	state[4] = aesInvSbox[state[4]];
+	state[8] = aesInvSbox[state[8]];
+	state[12] = aesInvSbox[state[12]];
+	t = aesInvSbox[state[13]];
+	state[13] = aesInvSbox[state[9]];
+	state[9] = aesInvSbox[state[5]];
+	state[5] = aesInvSbox[state[1]];
+	state[1] = t;
+	t = aesInvSbox[state[2]];
+	state[2] = aesInvSbox[state[10]];
+	state[10] = t;
+	t = aesInvSbox[state[6]];
+	state[6] = aesInvSbox[state[14]];
+	state[14] = t;
+	t = aesInvSbox[state[3]];
+	state[3] = aesInvSbox[state[7]];
+	state[7] = aesInvSbox[state[11]];
+	state[11] = aesInvSbox[state[15]];
+	state[15] = t;
+}
+
+/* dst ^= src, a block, from the last byte; never called */
+static void aesXor(unsigned char __near *dst, const unsigned char __near *src)
+{
+	unsigned char i;
+
+	i = AES_BLOCK_SIZE;
+	while (i != 0) {
+		i--;
+		dst[i] ^= src[i];
+	}
+}
+
+int aesCbcEncrypt(const unsigned char __near *in, unsigned char __near *out,
+		  struct AesKey __near *ks, const unsigned char *iv, unsigned int len)
+{
+	char ret;
+	unsigned char block[AES_BLOCK_SIZE];
+
+	if (len % AES_BLOCK_SIZE)
+		return AES_ERROR_LENGTH;
+	memcpy((unsigned char __near *)block, iv, AES_BLOCK_SIZE);
+	while (len != 0) {
+		block[0] ^= in[0];
+		block[1] ^= in[1];
+		block[2] ^= in[2];
+		block[3] ^= in[3];
+		block[4] ^= in[4];
+		block[5] ^= in[5];
+		block[6] ^= in[6];
+		block[7] ^= in[7];
+		block[8] ^= in[8];
+		block[9] ^= in[9];
+		block[10] ^= in[10];
+		block[11] ^= in[11];
+		block[12] ^= in[12];
+		block[13] ^= in[13];
+		block[14] ^= in[14];
+		block[15] ^= in[15];
+		ret = aesEncrypt(block, out, ks);
+		memcpy((unsigned char __near *)block, out, AES_BLOCK_SIZE);
+		in += AES_BLOCK_SIZE;
+		out += AES_BLOCK_SIZE;
+		len -= AES_BLOCK_SIZE;
+	}
+	return ret;
+}
+
+int aesCbcDecrypt(const unsigned char __near *in, unsigned char __near *out,
+		  struct AesKey __near *ks, const unsigned char *iv, unsigned int len)
+{
+	char ret;
+	unsigned char block[AES_BLOCK_SIZE];
+
+	if (len % AES_BLOCK_SIZE)
+		return AES_ERROR_LENGTH;
+	memcpy((unsigned char __near *)block, iv, AES_BLOCK_SIZE);
+	while (len != 0) {
+		ret = aesDecrypt(in, out, ks);
+		out[0] ^= block[0];
+		out[1] ^= block[1];
+		out[2] ^= block[2];
+		out[3] ^= block[3];
+		out[4] ^= block[4];
+		out[5] ^= block[5];
+		out[6] ^= block[6];
+		out[7] ^= block[7];
+		out[8] ^= block[8];
+		out[9] ^= block[9];
+		out[10] ^= block[10];
+		out[11] ^= block[11];
+		out[12] ^= block[12];
+		out[13] ^= block[13];
+		out[14] ^= block[14];
+		out[15] ^= block[15];
+		memcpy((unsigned char __near *)block, in, AES_BLOCK_SIZE);
+		out += AES_BLOCK_SIZE;
+		in += AES_BLOCK_SIZE;
+		len -= AES_BLOCK_SIZE;
+	}
+	return ret;
+}
+#else
 int aesEncrypt(const unsigned char __near *in, unsigned char __near *out, struct AesKey __near *ks)
 {
 	unsigned char round, nk, nr;
@@ -520,3 +864,4 @@ static void aesIncrementCounter(unsigned char __near *counter)
 	if (low == 0)
 		counter[0]++;
 }
+#endif

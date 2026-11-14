@@ -12,8 +12,10 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if FW_SINCE(0x01000306)
-#define CONFIG_VERSION		0x31	/* this build's layout */
+#if FW_SINCE(0x0100060B)
+#define CONFIG_VERSION		0x38	/* this build's layout */
+#elif FW_SINCE(0x01000306)
+#define CONFIG_VERSION		0x31	/* (no charge alarm adjusts or off information) */
 #elif FW_SINCE(0x01000109)
 #define CONFIG_VERSION		0x29	/* (no touch delays, host link limits or off transition 0x18) */
 #elif FW_SINCE(0x01000107)
@@ -219,7 +221,20 @@ struct ConfigBlock {
 	unsigned char	offTransition18:1;	/* set: the off state entered by transition 0x31
 						   runs transition 0x18 */
 	unsigned char	reserved29:7;
+#if FW_SINCE(0x0100060B)
+	unsigned char	reserved33;
+	int		chargeAlarmAdjust[3][4];	/* added to each alarm's limits
+							   (chargeAlarmUpdate), by the
+							   parameter block's alarm level */
+	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
+	unsigned char	offInfo3;
+	unsigned char	reserved34[0x3e0 - 0x1e0];
+	unsigned char	offInfoBit0;		/* not 0: sleepFactorGetOffInfo's bit 0 */
+	unsigned char	offInfoBit1;		/* and its bit 1 */
+	unsigned char	reserved30[CONFIG_SIZE - 0x3e2];
+#else
 	unsigned char	reserved30[CONFIG_SIZE - 0x1c5];
+#endif
 #else
 	unsigned char	reserved30[CONFIG_SIZE - 0x1b0];
 #endif

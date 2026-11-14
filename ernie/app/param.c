@@ -32,15 +32,22 @@ int paramInit(void)
 {
 	dis_dsp();
 	memset(&param, 0, sizeof(param));
+#if !FW_SINCE(0x0100060B)
+	/* the 0x0100060x builds have no regulator levels (commands 0x0950 and 0x0951) */
 	param.levels[0] = 0x23;
 	param.levels[1] = 0x23;
 	param.levels[2] = 0x23;
 	param.levels[3] = 0x23;
 	param.base = 7;
+#endif
 	param.adjust = 0;
 	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
 #if FW_SINCE(0x01000306)
 	memcpy(param.pattern2, paramPattern2Default, PARAM_PATTERN_SIZE);
+#endif
+#if FW_SINCE(0x0100060B)
+	param.alarmLevel = 0;
+	param.alarmLevel3G = 0;
 #endif
 	paramLoad();
 	ena_dsp();
@@ -133,12 +140,14 @@ void paramGetChargeLevels(struct ChargeLevel *levels)
 }
 
 #if FW_SINCE(0x01000306)
+#if !FW_SINCE(0x0100060B)
 void paramGetBase(unsigned char *base)
 {
 	dis_dsp();
 	*base = param.base & 0x3f;
 	ena_dsp();
 }
+#endif
 
 void paramGetAdjust(unsigned char *adjust)
 {
@@ -160,6 +169,30 @@ void paramGetPattern2(unsigned char *pattern)
 	memcpy(pattern, param.pattern2, PARAM_PATTERN_SIZE);
 	ena_dsp();
 }
+
+#if FW_SINCE(0x0100060B)
+/* the charge alarms' adjust (config chargeAlarmAdjust's row): 0 when the host set none of
+   0-2 */
+void paramGetAlarmLevel3G(unsigned char *level)
+{
+	dis_dsp();
+	if (param.alarmLevel3G < 3)
+		*level = param.alarmLevel3G;
+	else
+		*level = 0;
+	ena_dsp();
+}
+
+void paramGetAlarmLevel(unsigned char *level)
+{
+	dis_dsp();
+	if (param.alarmLevel < 3)
+		*level = param.alarmLevel;
+	else
+		*level = 0;
+	ena_dsp();
+}
+#endif
 #else
 /* the Elmo's regulators 0x81-0x84's levels */
 void paramGetLevel0(unsigned char *level)

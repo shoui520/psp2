@@ -6,6 +6,7 @@
 #define ERNIE_INPUT_H
 
 #include "ernie.h"
+#include "board.h"
 
 struct InputKeys {
 	unsigned int	state;		/* the keys held */
@@ -18,7 +19,9 @@ extern struct InputKeys inputKeys;
 struct InputDelays {
 	unsigned char	flag40;		/* sets bit 0x0040 of event flag 2 */
 	unsigned char	flag80;		/* sets bit 0x0080 of event flag 2 */
+#if BOARD_MOTION
 	unsigned char	motionInfo;	/* starts reading the motion sensor's information */
+#endif
 	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
 	unsigned char	latchOn;	/* calls analogLatchOn */
 };
@@ -42,8 +45,10 @@ struct InputBit {
 };
 
 extern struct InputHandler inputHandlerWake2;
+#if !FW_SINCE(0x0100060B)
 extern struct InputHandler inputHandler1Bit2Low;
 extern struct InputHandler inputHandler1Bit2High;
+#endif
 extern struct InputHandler inputHandlerSerial2Request;
 extern struct InputHandler inputHandlerSerial2Link;
 extern struct InputHandler inputHandlerSerial1;

@@ -27,7 +27,7 @@ Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only w
 definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
 objects and places. `<`, `<=`, `>` and `>=` compare numbers (a firmware version's own places),
 and several conditions joined by `&&` must all hold (`IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306`).
-An assembly source's `$_IF (NAME==VALUE)` and `$_IF (NAME!=VALUE)` blocks,
+An assembly source's `$_IF (NAME op VALUE)` blocks, with the same operators,
 each with an optional `$ELSE`, to their `$ENDIF`, are decided the same way (RA78K0R's own
 conditional assembly cannot see a -D definition).
 
@@ -86,21 +86,19 @@ def holds(values, name, op, text):
 	return {'<': a < b, '<=': a <= b, '>': a > b, '>=': a >= b}[op]
 
 
-CONDITION = re.compile(r'\s*\$_IF\s*\(\s*(\w+)\s*(==|!=)\s*([^\s)]+)\s*\)\s*(;.*)?$', re.I)
+CONDITION = re.compile(r'\s*\$_IF\s*\(\s*(\w+)\s*(==|!=|<=|>=|<|>)\s*([^\s)]+)\s*\)\s*(;.*)?$', re.I)
 ELSE = re.compile(r'\s*\$ELSE\s*(;.*)?$', re.I)
 ENDIF = re.compile(r'\s*\$ENDIF\s*(;.*)?$', re.I)
 
 
 def conditions(text, values):
-	"""an assembly source with its $_IF (NAME==VALUE) and $_IF (NAME!=VALUE) blocks (each
-	with an optional $ELSE, to its $ENDIF) decided by the -D definitions, as the link
-	file's IF: the lines of the branch not taken, and the controls, left out"""
+	"""an assembly source with its $_IF (NAME op VALUE) blocks (each with an optional $ELSE,
+	to its $ENDIF) decided by the -D definitions, as the link file's IF: the lines of the branch not taken, and the controls, left out"""
 	out, taking = [], [True]
 	for line in text.splitlines():
 		m = CONDITION.match(line)
 		if m:
-			holds = same(values.get(m.group(1)), m.group(3)) == (m.group(2) == '==')
-			taking.append(taking[-1] and holds)
+			taking.append(taking[-1] and holds(values, m.group(1), m.group(2), m.group(3)))
 		elif ELSE.match(line) and len(taking) > 1:
 			taking[-1] = taking[-2] and not taking[-1]
 		elif ENDIF.match(line) and len(taking) > 1:

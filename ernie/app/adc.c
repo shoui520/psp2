@@ -63,8 +63,15 @@ void adcClose(void)
 /* converts the channels of mask; 1 if a conversion runs or mask is empty */
 unsigned char adcStart(unsigned char mask, int skip)
 {
+#if FW_SINCE(0x0100060B)
+	if (ADCS)
+		return 1;
+	if (mask == 0)
+		return 2;
+#else
 	if (ADCS || mask == 0)
 		return 1;
+#endif
 	adcMask = mask;
 	adcSkip = (unsigned char)skip;
 	adcDone = 0;

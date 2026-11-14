@@ -53,6 +53,10 @@ void touchClearPanels(void)
 #if FW_SINCE(0x01000104)
 	touch.panel[0].configVersion = 0;
 #endif
+#if FW_SINCE(0x0100060B)
+	touch.panel[0].gripEdges[0] = 0;
+	touch.panel[0].gripEdges[1] = 0;
+#endif
 	memset(&touch.panel[0].objects, 0, sizeof(touch.panel[0].objects));
 	memset(touch.panel[0].modes, 0, sizeof(touch.panel[0].modes));
 	touch.panel[1].family = 0;
@@ -61,6 +65,10 @@ void touchClearPanels(void)
 	touch.panel[1].build = 0;
 #if FW_SINCE(0x01000104)
 	touch.panel[1].configVersion = 0;
+#endif
+#if FW_SINCE(0x0100060B)
+	touch.panel[1].gripEdges[0] = 0;
+	touch.panel[1].gripEdges[1] = 0;
 #endif
 	memset(&touch.panel[1].objects, 0, sizeof(touch.panel[1].objects));
 	memset(touch.panel[1].modes, 0, sizeof(touch.panel[1].modes));
@@ -1187,6 +1195,29 @@ unsigned char touchSetGrip1(unsigned char *data)
 }
 #endif
 
+#if FW_SINCE(0x0100060B)
+/* T20's bytes 1-4, kept in the panel's gripEdges */
+unsigned char touchReadGripEdges0(unsigned char *data)
+{
+	unsigned char result;
+
+	result = touchRead(touch.panel[0].objects.grip + 1, data, 4, 0);
+	if (result == 0)
+		memcpy(touch.panel[0].gripEdges, data, 4);
+	return result;
+}
+
+unsigned char touchReadGripEdges1(unsigned char *data)
+{
+	unsigned char result;
+
+	result = touchRead(touch.panel[1].objects.grip + 1, data, 4, 1);
+	if (result == 0)
+		memcpy(touch.panel[1].gripEdges, data, 4);
+	return result;
+}
+#endif
+
 #if FW_SINCE(0x01000306)
 void touchSetFlags(unsigned char flags)
 {
@@ -1200,5 +1231,36 @@ void touchClearFlags(unsigned char flags)
 	DI();
 	touch.flags &= ~flags;
 	EI();
+}
+#endif
+
+#if FW_SINCE(0x0100060B)
+/* serial command 0x01a1: the first byte (the report ID) of each touch of the frame being
+   filled, panel 0's touches then panel 1's */
+void touchGetReportIds(unsigned char *ids)
+{
+#if FW_SINCE(0x0100060B)
+	unsigned char i;
+	unsigned char offset;
+#else
+	unsigned char offset;
+	unsigned char i;
+#endif
+
+#if FW_SINCE(0x0100060B)
+	for (offset = 0, i = 0; i < touch.setting[0]; offset += 6, i++) {
+		*ids = touchFrames[touch.frame].panel[0][offset];
+		ids++;
+	}
+	for (offset = 0, i = 0; i < touch.setting[1]; offset += 6, i++) {
+		*ids = touchFrames[touch.frame].panel[1][offset];
+		ids++;
+	}
+#else
+	for (offset = 0, i = 0; i < touch.setting[0]; i++, offset += 6)
+		*ids++ = touchFrames[touch.frame].panel[0][offset];
+	for (offset = 0, i = 0; i < touch.setting[1]; i++, offset += 6)
+		*ids++ = touchFrames[touch.frame].panel[1][offset];
+#endif
 }
 #endif

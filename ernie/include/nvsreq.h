@@ -21,10 +21,26 @@
 
 /* a job's state */
 #define NVS_JOB_FREE		0
+#if FW_SINCE(0x0100060B)
+#define NVS_JOB_TAKEN		1	/* nvsJobAlloc's, until the job is filled in */
+#define NVS_JOB_READ		2
+#define NVS_JOB_WRITE		3
+#define NVS_JOB_SERVICE		4
+#else
 #define NVS_JOB_READ		1
 #define NVS_JOB_WRITE		2
 #if FW_SINCE(0x00090903)
 #define NVS_JOB_SERVICE		3	/* the NVS's upkeep (0x00090804: event flag 3's 0x0040) */
+#endif
+#endif
+
+/* nvsJobRead's, nvsJobWrite's and nvsJobService's errors: no done, no free job */
+#if FW_SINCE(0x0100060B)
+#define NVS_JOB_ERROR_DONE	0x30
+#define NVS_JOB_ERROR_FULL	0x31
+#else
+#define NVS_JOB_ERROR_DONE	1
+#define NVS_JOB_ERROR_FULL	2
 #endif
 
 struct NvsJob {
@@ -33,7 +49,11 @@ struct NvsJob {
 	unsigned char	*data;
 	unsigned char	area;		/* NVS_AREA_* */
 	unsigned char	command;	/* passed to done */
+#if FW_SINCE(0x0100060B)
+	signed char	state;		/* NVS_JOB_*: ready from NVS_JOB_READ */
+#else
 	unsigned char	state;		/* NVS_JOB_* */
+#endif
 	void		(*done)(unsigned char command, unsigned char result);
 };
 

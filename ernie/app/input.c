@@ -23,6 +23,7 @@
 #include "kernel.h"
 #include "motion.h"
 #include "param.h"
+#include "powerreq.h"
 #include "serial1.h"
 #include "serial2.h"
 #include "serialauth.h"
@@ -113,8 +114,10 @@ void pinMonitor5Expired(void);
 void pinMonitor6Set(struct PinConfig *config);
 void pinMonitor6Enable(unsigned char enable);
 void pinMonitor6Expired(void);
+#if !FW_SINCE(0x0100060B)
 void input1Bit2Low(void);
 void input1Bit2High(void);
+#endif
 void inputMultiCnChanged(void);
 void input1Bit0Changed(void);
 void inputScanHold(unsigned int ticks);
@@ -143,8 +146,10 @@ struct InputGroup inputGroup1;
 struct InputGroup inputGroup2;
 struct InputGroup inputGroup3;
 struct InputHandler inputHandlerWake2;
+#if !FW_SINCE(0x0100060B)
 struct InputHandler inputHandler1Bit2Low;
 struct InputHandler inputHandler1Bit2High;
+#endif
 struct InputHandler inputHandlerSerial2Request;
 struct InputHandler inputHandlerSerial2Link;
 struct InputHandler inputHandlerSerial1;
@@ -155,6 +160,9 @@ struct InputHandler inputHandlerCharge;
 struct InputHandler inputHandler1Bit7;
 struct InputHandler inputHandler1Bit3;
 struct InputHandler inputHandler1Bit0;
+#if FW_SINCE(0x0100060B)
+struct InputHandler powerInputHandler;		/* group 2's bit 0, with the BBMC's */
+#endif
 struct InputDelays inputDelays;
 struct InputScan inputScan;
 struct PinMonitors pinMonitors;
@@ -224,7 +232,11 @@ void inputInit(void)
 	inputGroup1.prev = 0xff;
 	inputGroup1.changed = 0;
 	inputGroup1.pending = 0xa1;
+#if FW_SINCE(0x0100060B)
+	inputGroup1.enable = 0xfb;	/* bit 2 is not watched */
+#else
 	inputGroup1.enable = 0xff;
+#endif
 	inputGroup1.bits = inputBits1;
 	inputGroup1.count = inputBits1Count;
 	inputRaw2 = 0;
@@ -251,12 +263,14 @@ void inputInit(void)
 	inputHandlerWake2.type = 1;
 	inputHandlerWake2.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerWake2.handler = stateInputWake2;
+#if !FW_SINCE(0x0100060B)
 	inputHandler1Bit2Low.type = 1;
 	inputHandler1Bit2Low.edges = INPUT_EDGE_LOW;
 	inputHandler1Bit2Low.handler = input1Bit2Low;
 	inputHandler1Bit2High.type = 1;
 	inputHandler1Bit2High.edges = INPUT_EDGE_HIGH;
 	inputHandler1Bit2High.handler = input1Bit2High;
+#endif
 #if BOARD_SERIAL2
 	inputHandlerSerial2Request.type = 1;
 #if FW_SINCE(0x01000104)
@@ -290,7 +304,11 @@ void inputInit(void)
 	inputHandlerWake1.handler = stateInputWake1;
 	inputHandlerCharge.type = 1;
 	inputHandlerCharge.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+#if FW_SINCE(0x0100060B)
+	inputHandlerCharge.handler = chargeUpdateLater;
+#else
 	inputHandlerCharge.handler = chargeUpdateSoon;
+#endif
 	inputHandler1Bit7.type = 1;
 	inputHandler1Bit7.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit7.handler = input1Bit7Changed;
@@ -300,6 +318,11 @@ void inputInit(void)
 	inputHandler1Bit0.type = 1;
 	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit0.handler = input1Bit0Changed;
+#if FW_SINCE(0x0100060B)
+	powerInputHandler.type = 0;
+	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	powerInputHandler.handler = powerInputChanged;
+#endif
 	config.reload = 0x40;
 	config.handler = button1Held;
 	pinMonitor0Set(&config);
@@ -334,7 +357,9 @@ void inputInit(void)
 	inputDelays.flag40 = 0;
 	inputDelays.flag80 = 0;
 #endif
+#if BOARD_MOTION
 	inputDelays.motionInfo = 0;
+#endif
 	inputDelays.reserved = 0;
 	inputDelays.latchOn = 0;
 	inputKeys.state = 0;
@@ -377,11 +402,13 @@ void inputResumeOpen(void)
 #endif
 	adcOpenForBoard();
 	inputGroup1.pending |= 0x08;
+#if BOARD_MOTION
 	if (elmoVersion0() == 0xff)
 		motionOpen();
 	motion.status = 0;
 	motion.info[0].value = 0;
 	motion.info[1].value = 0;
+#endif
 	inputRequestInit();
 	return;
 }
@@ -400,7 +427,9 @@ void inputPowerOff(void)
 		}
 	}
 	touchClose();
+#if BOARD_MOTION
 	motionClose();
+#endif
 #if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
@@ -433,7 +462,9 @@ void inputStateOff(void)
 void inputShutdown(void)
 {
 	touchClose();
+#if BOARD_MOTION
 	motionClose();
+#endif
 #if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
@@ -455,7 +486,9 @@ void inputStateShutdown(void)
 void inputCut(void)
 {
 	touchClose();
+#if BOARD_MOTION
 	motionClose();
+#endif
 #if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
@@ -508,7 +541,9 @@ void inputSuspend(void)
 		}
 	}
 	touchClose();
+#if BOARD_MOTION
 	motionClose();
+#endif
 #if FW_SINCE(0x0100010B)
 	inputKeysClose();
 	analogStop();
@@ -531,7 +566,9 @@ void inputReset(void)
 {
 	touchDisable0();
 	touchDisable1();
+#if BOARD_MOTION
 	motionStop();
+#endif
 #if FW_SINCE(0x0100010B)
 	analogStop();
 #else
@@ -571,8 +608,10 @@ void inputProcess(void)
 	events = inputKeys.events;
 	switch (stateGet() & 0x7fff) {
 	case 0x0020:
+#if BOARD_MOTION
 		if (events & 0x0400)
 			motionInfoPoll();
+#endif
 		if (touch.rate == 0 && (events & 0x000c))
 			touchStartFrame();
 	case 0x0004:
@@ -784,10 +823,12 @@ unsigned char input1Bit1Active(void)
 	return !inputState1.1;
 }
 
+#if !FW_SINCE(0x0100060B)
 unsigned char input1Bit2Active(void)
 {
 	return !inputState1.2;
 }
+#endif
 
 unsigned char input1Bit5Active(void)
 {
@@ -838,10 +879,12 @@ int input2Bit1Get(void)
 	return (unsigned char)inputState2.1;
 }
 
+#if BOARD_MOTION
 void inputMotionInfoLater(void)
 {
 	inputDelays.motionInfo = 0x10;
 }
+#endif
 
 #if BOARD_TOUCH_RESET
 void inputFlag40Later(void)
@@ -892,7 +935,11 @@ void pinMonitor1Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x02;
 	} else {
+#if FW_SINCE(0x0100060B)
+		pinMonitors.pin[1].last = 0;
+#else
 		pinMonitors.pin[1].last = P4.6;
+#endif
 		pinMonitors.pin[1].count = pinMonitors.pin[1].config.reload;
 		pinMonitors.mask |= 0x02;
 	}
@@ -956,9 +1003,15 @@ void button2Held(void)
 	state = stateGet();
 	if (buttonPress2.count < 2) {
 		pinMonitor1Enable(1);
+#if FW_SINCE(0x0100060B)
+		if (buttonPress2.count == 1)
+			inputKeysOpen();
+#endif
 	} else if (buttonPress2.count == 2) {
+#if !FW_SINCE(0x0100060B)
 		inputKeysOpen();
 		dly_tsk(3);
+#endif
 		buttonPress2.keys = button2Keys();
 		pinMonitor1Enable(1);
 		paramRead(0x2e, 1, &value);
@@ -1058,7 +1111,11 @@ void pinMonitor0Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x01;
 	} else {
+#if FW_SINCE(0x0100060B)
+		pinMonitors.pin[0].last = 0;
+#else
 		pinMonitors.pin[0].last = P11.5;
+#endif
 		pinMonitors.pin[0].count = pinMonitors.pin[0].config.reload;
 		pinMonitors.mask |= 0x01;
 	}
@@ -1180,9 +1237,15 @@ void button1Held(void)
 		button1SetState(0);
 	} else if (buttonPress1.count < 2) {
 		pinMonitor0Enable(1);
+#if FW_SINCE(0x0100060B)
+		if (buttonPress1.count == 1)
+			inputKeysOpen();
+#endif
 	} else if (buttonPress1.count == 2) {
+#if !FW_SINCE(0x0100060B)
 		inputKeysOpen();
 		dly_tsk(3);
+#endif
 		buttonPress1.keys = button1Keys();
 		pinMonitor0Enable(1);
 		paramRead(0x2e, 1, &value);
@@ -1299,7 +1362,11 @@ void pinMonitor4Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x10;
 	} else {
+#if FW_SINCE(0x0100060B)
+		pinMonitors.pin[4].last = 0;
+#else
 		pinMonitors.pin[4].last = P3.0;
+#endif
 		pinMonitors.pin[4].count = pinMonitors.pin[4].config.reload;
 		pinMonitors.mask |= 0x10;
 	}
@@ -1337,7 +1404,11 @@ void pinMonitor5Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x20;
 	} else {
+#if FW_SINCE(0x0100060B)
+		pinMonitors.pin[5].last = 0;
+#else
 		pinMonitors.pin[5].last = P7.6;
+#endif
 		pinMonitors.pin[5].count = pinMonitors.pin[5].config.reload;
 		pinMonitors.mask |= 0x20;
 	}
@@ -1376,7 +1447,11 @@ void pinMonitor6Enable(unsigned char enable)
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x40;
 	} else {
+#if FW_SINCE(0x0100060B)
+		pinMonitors.pin[6].last = 1;
+#else
 		pinMonitors.pin[6].last = P7.4;
+#endif
 		pinMonitors.pin[6].count = pinMonitors.pin[6].config.reload;
 		pinMonitors.mask |= 0x40;
 	}
@@ -1387,6 +1462,7 @@ void pinMonitor6Expired(void)
 	task6SetFlag(6, 0x0200);
 }
 
+#if !FW_SINCE(0x0100060B)
 void input1Bit2Low(void)
 {
 }
@@ -1394,6 +1470,7 @@ void input1Bit2Low(void)
 void input1Bit2High(void)
 {
 }
+#endif
 
 void inputMultiCnChanged(void)
 {
@@ -1447,7 +1524,11 @@ void inputScanTimer(void)
 
 	inputKeys.events = 0;
 	toggled = scanCount++ ^ scanCount;
+#if FW_SINCE(0x0100060B)
+	inputKeys.events |= inputKeys.state & 0x0002;
+#else
 	inputKeys.events |= inputKeys.state & 0x0402;
+#endif
 	if (toggled & 0x02)
 		inputKeys.events |= inputKeys.state & 0x000c;
 	if (toggled & 0x04)
@@ -1461,10 +1542,12 @@ void inputScanTimer(void)
 	} else {
 		timerStart(3, inputScan.interval);
 	}
+#if BOARD_MOTION
 	if (inputDelays.motionInfo != 0) {
 		if (--inputDelays.motionInfo == 0)
 			motionInfoStart();
 	}
+#endif
 #if BOARD_TOUCH_RESET
 	if (inputDelays.flag40 != 0) {
 		if (--inputDelays.flag40 == 0)

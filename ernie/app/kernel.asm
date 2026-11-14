@@ -113,9 +113,15 @@ kResult		EQU	0FFE70H		; a service's result, or an index it keeps
 kTemp		EQU	0FFE72H
 kTimeout	EQU	0FFE74H		; a service's timeout, 32 bits
 $ELSE
+$_IF (ERNIE_FW>=0x0100060B)	; (no csi01.c, motion.c short data)
+kResult		EQU	0FFE68H
+kTemp		EQU	0FFE6AH
+kTimeout	EQU	0FFE6CH
+$ELSE
 kResult		EQU	0FFE74H
 kTemp		EQU	0FFE76H
 kTimeout	EQU	0FFE78H
+$ENDIF
 $ENDIF
 regVar		EQU	0FFEB4H		; the compiler's register variables (16 bytes)
 SEGAX		EQU	0FFED4H

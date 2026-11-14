@@ -33,7 +33,14 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x0100060B)
+	/* Sony's adds the negated trim, and tests for a level below 0 too */
+	result = -trim + level;
+	if (result < 0)
+		result = 0;
+#else
 	result = level - trim;
+#endif
 	if (result >= 0x40)
 		result = 0;
 	return result;

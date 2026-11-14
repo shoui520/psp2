@@ -74,6 +74,7 @@ struct ConfigRecords {
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
 extern void FSL_Open(void);
 extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_Init_cont(unsigned char *descriptor);
 extern unsigned char FSL_ModeCheck(void);
 extern unsigned char FSL_BlankCheck(unsigned int block);
 extern unsigned char FSL_Erase(unsigned int block);
@@ -461,7 +462,7 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 		copy->block.pressTime1 = kept->block.pressTime1;
 		copy->block.pressTime2 = kept->block.pressTime2;
 	}
-#if FW_RETAIL_10X
+#if FW_RETAIL_10X || FW_SINCE(0x0100060B)
 	copy->block.test.value = kept->block.test.value;
 #endif
 #if FW_SINCE(0x01000104)
@@ -472,8 +473,18 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	if (kept->block.start.bits.chargeLedOff)
 		copy->block.state.bits.chargeLedOff = kept->block.start.bits.chargeLedOff;
 #endif
+#if FW_SINCE(0x0100060B)
+	memcpy(copy->block.chargeTempLevels, kept->block.chargeTempLevels,
+	       sizeof(copy->block.chargeTempLevels));
+	memcpy(copy->block.chargeTempLevelsCharge, kept->block.chargeTempLevelsCharge,
+	       sizeof(copy->block.chargeTempLevelsCharge));
+#endif
 #if FW_SINCE(0x01000306)
 	copy->block.offTransitionBlock = kept->block.offTransitionBlock;
+#endif
+#if FW_SINCE(0x0100060B)
+	copy->block.offInfo2 = kept->block.offInfo2;
+	copy->block.offInfo3 = kept->block.offInfo3;
 #endif
 	config.bank = to;
 	result = configCommit();
@@ -529,7 +540,11 @@ close:
 	FSL_Open();
 	result = FSL_Init(fslDataBuffer);
 	while (result == 0x1f)
+#if FW_SINCE(0x0100060B)
+		result = FSL_Init_cont(fslDataBuffer);
+#else
 		result = FSL_Init(fslDataBuffer);
+#endif
 	if (result == 0) {
 		do {
 #if BOARD_WDT

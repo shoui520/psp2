@@ -21,6 +21,7 @@
 #include "input.h"
 #include "kernel.h"
 #include "nvsreq.h"
+#include "power.h"
 #include "powerwait.h"
 #include "sleepfactor.h"
 #include "state.h"
@@ -51,6 +52,11 @@ extern void intp8Enable(int);
 
 struct Bbmc bbmc;			/* the link */
 static unsigned int bbmcSavedMode;	/* the mode as NVS holds it */
+#if FW_SINCE(0x0100060B)
+static unsigned char bbmcPackets;	/* the packets answered since the start */
+static unsigned long bbmcStatusSeen;	/* the status bits set since the start */
+static unsigned long bbmcEventsSeen;	/* and the events */
+#endif
 union BbmcRegs bbmcRegs;
 struct HostRequest bbmcRequest;
 static unsigned char bbmcRequestAnswer[0x20];
@@ -110,6 +116,11 @@ void bbmcInit(void)
 	bbmc.pending = 0;
 	bbmc.transition = 0;
 	bbmc.state = 1;
+#if FW_SINCE(0x0100060B)
+	bbmcPackets = 0;
+	bbmcStatusSeen = 0;
+	bbmcEventsSeen = 0;
+#endif
 	bbmcRegsInit();
 	bbmcRequest.id = 0x0a;
 	bbmcRequest.data = bbmcRequestData;
@@ -212,6 +223,11 @@ unsigned char bbmcStart(void)
 	PM36 = 1;
 	bbmcWriteRegs(6, 2, bbmcZero2, BBMC_WRITE_SET);
 	bbmcWriteRegs(8, 4, bbmcZero4, BBMC_WRITE_RESET);
+#if FW_SINCE(0x0100060B)
+	bbmcPackets = 0;
+	bbmcStatusSeen = 0;
+	bbmcEventsSeen = 0;
+#endif
 #else
 	unsigned char zero2[2] = { 0 };
 	unsigned char zero4[4] = { 0 };
@@ -421,6 +437,44 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		}
 	}
+#elif FW_SINCE(0x0100060B)
+	/* the power sequences' part 6 (task6SetFlag(6, BBMC_EVENT_STATE), powerWait): the modem
+	   started at a power on, and the part reported ready */
+	if (ptn & BBMC_EVENT_STATE) {
+		switch (stateGet()) {
+		case 0x8002:
+			bbmcInit();
+			powerReady(6);
+			break;
+		case 0x0020:
+			break;
+		case 0x8020:
+			if (bbmcIsOn())
+				uart2Open();
+			bbmc.transition = 0;
+			powerReady(6);
+			break;
+		case 0x0008:
+			if (bbmcRegs.r.events != 0) {
+				STATE_TRANSITION(8);
+				bbmc.transition = 1;
+			}
+			break;
+		case 0x8008:
+			if (bbmcIsOn()) {
+				timerStart(TIMER(0x13), 5000);
+				bbmc.transition = 0;
+			}
+			powerReady(6);
+			break;
+		case 0x0004:
+			break;
+		case 0x8004:
+			bbmcPowerOff();
+			powerReady(6);
+			break;
+		}
+	}
 #else
 	if (ptn & BBMC_EVENT_STATE) {
 		unsigned int state;
@@ -461,6 +515,16 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		bbmcRequestRun();
 	return 0;
 }
+
+#if FW_SINCE(0x0100060B)
+/* host command 0x0a00: bbmcGetInfo's */
+unsigned char hostCommand0a00(unsigned char *out, unsigned char *length)
+{
+	bbmcGetInfo(out);
+	*length = sizeof(struct BbmcInfo);
+	return 0;
+}
+#endif
 
 /* a packet in or out (prints nothing) */
 void bbmcTrace(const char *name, unsigned char *packet)
@@ -532,6 +596,9 @@ void bbmcReceive(void)
 				bbmc.repeats = 0;
 			}
 			{
+#endif
+#if FW_SINCE(0x0100060B)
+				bbmcPackets++;
 #endif
 				bbmc.tx.start = BBMC_ANSWER_START;
 				bbmc.tx.command = bbmc.rx.command;
@@ -683,6 +750,34 @@ void bbmcNvsDone(unsigned char command, unsigned char result)
 	}
 }
 
+#if FW_SINCE(0x0100060B)
+/* host command 0x0a00 and serial command 0x01d0: the link's state, the modem's lines (P12.6,
+   P3.4, P3.2, P7.4, P3.6, P14.3), the packets answered, the registers' mode and version, the
+   status and events seen */
+void bbmcGetInfo(unsigned char *out)
+{
+	struct BbmcInfo *info;
+
+	info = (struct BbmcInfo *)out;
+	info->state = bbmc.state;
+	info->lines.value = 0;
+	info->lines.bits.p126 = P12.6;
+	info->lines.bits.p34 = P3.4;
+	info->lines.bits.p32 = P3.2;
+	info->lines.bits.p74 = P7.4;
+	info->lines.bits.p36 = P3.6;
+	info->lines.bits.p143 = P14.3;
+	info->packets = bbmcPackets;
+	info->lastSequence = bbmc.lastSequence;
+	info->modeActive = bbmcRegs.r.modeActive;
+	info->version = bbmcRegs.r.version;
+	info->reg14 = bbmcRegs.byte[0x14];
+	memcpy(info->regs1c, &bbmcRegs.byte[0x1c], sizeof(info->regs1c));
+	info->statusSeen = bbmcStatusSeen;
+	info->eventsSeen = bbmcEventsSeen;
+}
+#endif
+
 void bbmcRegsInit(void)
 {
 	unsigned char result;
@@ -707,6 +802,10 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 {
 	unsigned char result;
 	unsigned char changed;
+#if FW_SINCE(0x0100060B)
+	unsigned char ret;	/* nvsJobRead's: the result stays the count */
+	unsigned char unused;	/* a byte Sony's frame keeps and nothing reads */
+#endif
 	STATE_TRANSITION_EVENT
 
 	changed = 0;
@@ -737,19 +836,40 @@ unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned cha
 	bbmc.pending = (bbmcRegs.r.status != 0 || bbmcRegs.r.events != 0) ? (unsigned char)1 :
 									     (unsigned char)0;
 	sleepFactorSet8(bbmc.pending);
+#if FW_SINCE(0x0100060B)
+	if (bbmcRegs.r.status != 0)
+		bbmcStatusSeen |= bbmcRegs.r.status;
+#endif
 #if FW_SINCE(0x01000104)
 	if (bbmcRegs.r.events & 8)
 		sleepFactorSet20(1);
 #endif
+#if FW_SINCE(0x0100060B)
+	if (bbmcRegs.r.events != 0) {
+		if (!bbmc.transition && stateGet() == 0x0008) {
+			bbmc.transition = 1;
+			STATE_TRANSITION(8);
+		}
+		bbmcEventsSeen |= bbmcRegs.r.events;
+	}
+#else
 	if (bbmcRegs.r.events != 0 && !bbmc.transition && stateGet() == 0x0008) {
 		bbmc.transition = 1;
 		STATE_TRANSITION(8);
 	}
+#endif
 	if (changed) {
+#if FW_SINCE(0x0100060B)
+		ret = nvsJobRead(BBMC_NVS_MODE, 2, (unsigned char *)&bbmcSavedMode, 1,
+				 BBMC_NVS_SAVE, bbmcNvsDone);
+		if (ret != 0)
+			;
+#else
 		result = nvsJobRead(BBMC_NVS_MODE, 2, (unsigned char *)&bbmcSavedMode, 1,
 				    BBMC_NVS_SAVE, bbmcNvsDone);
 		if (result != 0)
 			;
+#endif
 	}
 	return result;
 }

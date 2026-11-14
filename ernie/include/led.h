@@ -15,7 +15,7 @@
 
 #define CHARGE_LED_TIMER	TIMER_RTC(0x18)	/* the charge LED's blink */
 #if FW_SINCE(0x01000306)
-#define POWER_LED_STEP_TIMER	0x14	/* a fade's step */
+#define POWER_LED_STEP_TIMER	TIMER(0x14)	/* a fade's step */
 #endif
 #define POWER_LED_HOLD_TIMER	TIMER_RTC(0x1c)	/* the hold between two fades */
 

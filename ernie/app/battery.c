@@ -50,6 +50,9 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	batteryIica.txCount = length;
 	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x10);
+#endif
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 	if (ercd == E_OK) {
@@ -79,6 +82,9 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	batteryIica.txCount = 1;
 	batteryIica.address = BATTERY_ADDRESS;
 	batteryIica.status = &status;
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x10);
+#endif
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 	if (ercd == E_OK) {
@@ -224,6 +230,9 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 	batteryIica.txCount = 1;
 	batteryIica.address = *packet;
 	batteryIica.status = &status;
+#if FW_SINCE(0x0100060B)
+	clr_flg(4, ~0x10);
+#endif
 	iicaStart(&batteryIica);
 	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 	if (ercd == E_OK) {
@@ -252,6 +261,9 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 		batteryIica.txData = packet + 1;
 		batteryIica.address = *packet;
 		batteryIica.status = &status;
+#if FW_SINCE(0x0100060B)
+		clr_flg(4, ~0x10);
+#endif
 		iicaStart(&batteryIica);
 		ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
 		if (ercd == E_OK) {

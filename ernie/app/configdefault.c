@@ -16,7 +16,11 @@ const struct ConfigBank configDefault = {
 #if FW_SINCE(0x01000104)
 		{ { { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 } } },	/* analogCalibration */
 		0xaa, 0x60,	/* analogScale0, analogScale1 */
+#if FW_SINCE(0x0100060B)
+		{ 0x0030 },	/* start: wakeUnmask15 and bit 5 */
+#else
 		{ 0x0010 },	/* start: wakeUnmask15 */
+#endif
 #else
 		{ { { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 }, { 0xffc0, 0x0000 } } },	/* analogCalibration */
 		0xaa, 0x60,	/* analogScale0, analogScale1 */
@@ -70,7 +74,11 @@ const struct ConfigBank configDefault = {
 			{ 0x0115, 0x0dac },
 		},
 #if FW_SINCE(0x01000104)
+#if FW_SINCE(0x0100060B)
+		0x03, 0x1c, 0x0e,	/* pressTime1, pressTime2, hangLimit */
+#else
 		0x03, 0x26, 0x0e,	/* pressTime1, pressTime2, hangLimit */
+#endif
 		0, 0,	/* pressAnyState, reserved2 */
 		0x8000, 0x8000, 0x64, 0x00,	/* analogMin, analogMax, analogMinRange, reserved3 */
 #else
@@ -89,14 +97,21 @@ const struct ConfigBank configDefault = {
 		0x04, 0x01,	/* paramSetting1, paramSetting2: the charge LED's blink */
 #endif
 		0x23, 0x23, 0x23, 0x23,	/* voltage81-84 */
-#if ERNIE_HW == 0x00406000
+#if ERNIE_HW == 0x00406000 && FW_SINCE(0x0100060B)
+		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
+		{ 0x00, 0x00, 0x00 },	/* reserved7 */
+#elif ERNIE_HW == 0x00406000
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
 		{ 0x07, 0x00, 0x00 },	/* reserved7 */
 #else
 		0x0b, 0x08,	/* reserved22, voltageTrim */
 		{ 0x05, 0x07, 0x00, 0x00 },	/* reserved7 */
 #endif
-#if FW_SINCE(0x01000306)
+#if FW_SINCE(0x0100060B)
+		{ 0x07127e01, 0xf82001fc, 0x001c6201, 0xf8221890 },	/* wakeMasks0-2: off, on, */
+		{ 0x07125e01, 0xf82021fc, 0x001c4201, 0xf8223890 },	/* suspendOff, suspendOn */
+		{ 0x07121e00, 0xf82061fc, 0x001c0201, 0xf8227890 },
+#elif FW_SINCE(0x01000306)
 		{ 0x03127e01, 0xfc2001fc, 0x001c6201, 0xfc221890 },	/* wakeMasks0-2: off, on, */
 		{ 0x03125e01, 0xfc2021fc, 0x001c4201, 0xfc223890 },	/* suspendOff, suspendOn */
 		{ 0x03121e00, 0xfc2061fc, 0x001c0201, 0xfc227890 },
@@ -167,6 +182,17 @@ const struct ConfigBank configDefault = {
 		{ 0x5f, 0x5f, 0x5f, 0x5f, 0x08, 0x05 },	/* reserved28 */
 		0x5aa5,	/* offTransitionBlock */
 		1, 0,	/* offTransition18, reserved29 */
+#endif
+#if FW_SINCE(0x0100060B)
+		0x00,	/* reserved33 */
+		{	/* chargeAlarmAdjust: by alarm level, for alarms 0-3 */
+			{ 0, 0, 0, 0 },
+			{ 0, -10, -10, 0 },
+			{ 0, 10, 10, 0 },
+		},
+		0x00, 0x00,	/* offInfo2, offInfo3 */
+		{ 0 },	/* reserved34 */
+		0x00, 0x00,	/* offInfoBit0, offInfoBit1 */
 #endif
 		{ 0 }	/* reserved30 */
 #else

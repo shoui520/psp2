@@ -7,6 +7,7 @@
 #ifndef ERNIE_SLEEPFACTOR_H
 #define ERNIE_SLEEPFACTOR_H
 
+#include "ernie.h"
 #include "chip.h"
 
 /* the flags (sleepfactor.c's sleepFactor, and sleepFactorRead as the host reads them) */
@@ -57,5 +58,8 @@ extern void sleepFactorSet19(unsigned char on);
 extern void sleepFactorSet22(unsigned char on);
 extern void sleepFactorSet23(unsigned char on);
 extern void sleepFactorSet20(unsigned char on);
+#if FW_SINCE(0x0100060B)
+extern void sleepFactorGetOffInfo(unsigned char *info);
+#endif
 
 #endif

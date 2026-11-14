@@ -34,9 +34,17 @@ int watchdogSetup(void)
 		setting = &watchdog;
 	else if (factor->bits.notify && keep->bits.keepNotify)
 		setting = &watchdog;
+#if FW_SINCE(0x0100060B)
+	else {
+		/* a kept setting is not copied over itself */
+		setting = &configGet()->watchdog;
+		watchdogSet(setting);
+	}
+#else
 	else
 		setting = &configGet()->watchdog;
 	watchdogSet(setting);
+#endif
 	if (setting->bytes.timeout != 0)
 		return watchdogStart();
 	return watchdogStop();

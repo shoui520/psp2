@@ -79,6 +79,33 @@ struct Bbmc {
 	struct BbmcAnswer	tx;
 };
 
+#if FW_SINCE(0x0100060B)
+/* bbmcGetInfo's (host command 0x0a00, serial command 0x01d0) */
+struct BbmcInfo {
+	unsigned char	state;		/* Bbmc.state */
+	union {
+		unsigned char	value;
+		struct {
+			unsigned char	p126:1;	/* the modem's lines */
+			unsigned char	p34:1;
+			unsigned char	p32:1;
+			unsigned char	p74:1;
+			unsigned char	p36:1;
+			unsigned char	p143:1;
+			unsigned char	reserved:2;
+		} bits;
+	} lines;
+	unsigned char	packets;	/* the packets answered since the start */
+	unsigned char	lastSequence;
+	unsigned int	modeActive;	/* the registers' */
+	unsigned char	version;
+	unsigned char	reg14;		/* register 0x14 */
+	unsigned char	regs1c[8];	/* registers 0x1c-0x23 */
+	unsigned long	statusSeen;	/* the status bits set since the start */
+	unsigned long	eventsSeen;	/* and the events */
+};
+#endif
+
 extern struct Bbmc bbmc;
 extern union BbmcRegs bbmcRegs;
 extern struct HostRequest bbmcRequest;
@@ -111,6 +138,10 @@ extern unsigned char bbmcCommandRead(struct BbmcPacket *packet, struct BbmcAnswe
 extern unsigned char bbmcCommandEcho20(struct BbmcPacket *packet, struct BbmcAnswer *answer);
 extern unsigned char bbmcCommandEcho21(struct BbmcPacket *packet, struct BbmcAnswer *answer);
 extern void bbmcNvsDone(unsigned char command, unsigned char result);
+#if FW_SINCE(0x0100060B)
+extern void bbmcGetInfo(unsigned char *out);
+extern unsigned char hostCommand0a00(unsigned char *out, unsigned char *length);
+#endif
 extern void bbmcRegsInit(void);
 extern unsigned char bbmcWriteRegs(unsigned char reg, unsigned char count, unsigned char *values,
 				   unsigned char mode);

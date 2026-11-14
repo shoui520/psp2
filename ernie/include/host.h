@@ -80,6 +80,26 @@ union HostFlags {
 };
 
 /* the link */
+#if FW_SINCE(0x0100060B)
+/* 0x0100060B: the frame's size a word, and the bytes after the pointers */
+struct HostLink {
+	unsigned int	frameMax;	/* the frames' largest size */
+	struct HostLinkConfig config;
+	unsigned int	frameSize;	/* the frame's size from config */
+	unsigned int	frameCount;
+	unsigned char	*tx;		/* the host's command */
+	unsigned char	*rx;		/* the answer */
+	struct HostRequest *request;	/* the request the frame polls */
+	unsigned char	requestActive;
+	unsigned char	requestMismatch;	/* the command is not the request's */
+	unsigned char	state;		/* the frame's state (host.c) */
+	unsigned char	position;	/* the bytes of the frame transferred */
+	union HostFlags	flags;
+	unsigned char	reserved;	/* nothing reads or writes it */
+	unsigned char	txBuffer[0x80];
+	unsigned char	rxBuffer[0x80];
+};
+#else
 struct HostLink {
 	unsigned int	frameMax;	/* the frames' largest size */
 	struct HostLinkConfig config;
@@ -96,6 +116,7 @@ struct HostLink {
 	unsigned char	txBuffer[0x80];
 	unsigned char	rxBuffer[0x80];
 };
+#endif
 
 extern struct HostLink hostLink;
 

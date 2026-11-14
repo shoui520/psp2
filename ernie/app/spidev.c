@@ -23,6 +23,7 @@
 #define SWAP32(x)	((((x) << 24) & 0xff000000UL) | (((x) << 8) & 0x00ff0000UL) | \
 			 (((x) >> 8) & 0x0000ff00UL) | (((x) >> 24) & 0x000000ffUL))
 
+#if !FW_SINCE(0x0100060B)
 /* the factory handshake key, expanded: AES-256's 15 round keys (the random generator's
  * key when no block is free) */
 const unsigned long factoryRoundKeys[60] = {
@@ -42,6 +43,7 @@ const unsigned long factoryRoundKeys[60] = {
 	0x558db461UL, 0x66d85ed7UL, 0xcb76480fUL, 0x3963a239UL,
 	0xaacc5e5eUL, 0xa790671aUL, 0xe653ab84UL, 0xf765a6dcUL,
 };
+#endif
 
 void spiDevInit(void)
 {

@@ -14,6 +14,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "battery.h"
 #include "charge.h"
 #include "chip.h"
@@ -55,7 +56,6 @@ extern void inputFlag80Later(void);
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
 
-void powerInputChanged(void);
 void powerRequestNotify(void);
 void batteryRequestNotify(void);
 void powerRequestUnknown(void);
@@ -135,13 +135,18 @@ static void batteryRequestSetBLCommand(void);
 static void batteryRequestExecBLCommand(void);
 static void batteryRequestReadBLCommand(void);
 static unsigned char batteryResult(unsigned char result);
+#if FW_SINCE(0x0100060B)
+static void powerRequest08C5(void);
+#endif
 
 struct HostRequest powerRequest;		/* request 8 */
 struct HostRequest batteryRequest;		/* request 9 */
 static unsigned int powerCommand;		/* request 8's command, while it runs */
 static unsigned char powerRequestData[10];
 static unsigned char powerRequestAnswer[10];
-struct InputHandler powerInputHandler;
+#if !FW_SINCE(0x0100060B)
+struct InputHandler powerInputHandler;	/* input.c's since 0x0100060B */
+#endif
 static union BatteryBuffer batteryRequestData;
 static union BatteryBuffer batteryRequestAnswer;
 
@@ -198,6 +203,9 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x08c2, powerRequestCtrlChargingCurrent },
 	{ 0x08c3, powerRequestCtrlSupplyCurrentAc },
 	{ 0x08c4, powerRequestCtrlSupplyCurrentUsb },
+#if FW_SINCE(0x0100060B)
+	{ 0x08c5, powerRequest08C5 },
+#endif
 };
 
 /* request 9's commands */
@@ -242,9 +250,11 @@ void powerRequestInit(void)
 	batteryRequest.answer = batteryRequestAnswer.byte;
 	batteryRequest.notify = batteryRequestNotify;
 	batteryRequest.state = HOST_REQUEST_RECEIVE;
+#if !FW_SINCE(0x0100060B)
 	powerInputHandler.type = 0;
 	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	powerInputHandler.handler = powerInputChanged;
+#endif
 }
 
 /* the power input bit changed: event flag 4's 0x0040 */
@@ -342,6 +352,7 @@ unsigned char hostCommand0801(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
+#if !FW_SINCE(0x0100060B)
 /* 0x0802 (sceSysconGetBatteryRemainCap, to version 0x70503) */
 unsigned char hostCommandBatteryRemainCapOld(unsigned char *out, unsigned char *length)
 {
@@ -359,6 +370,7 @@ unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *lengt
 	*length = 2;
 	return 0;
 }
+#endif
 
 /* 0x0804: the USB state 4 */
 unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
@@ -860,7 +872,12 @@ static void powerRequestCtrlVoltage(void)
 			result = 3;
 			goto done;
 		}
+#if FW_SINCE(0x0100060B)
+		/* Sony's tests the level against a lowest level of 0 too */
+		if (powerRequestData[1] < 0 || powerRequestData[1] >= 0x40) {
+#else
 		if (powerRequestData[1] >= 0x40) {
+#endif
 			result = 3;
 		} else {
 			trim = configGet()->voltageTrim;
@@ -883,10 +900,12 @@ static void powerRequestCtrlDeviceReset(void)
 			if (powerRequestData[1] & 0x01)
 				;
 			if (powerRequestData[1] & 0x02) {
+#if BOARD_MOTION
 				if (powerRequestData[0] != 0 && motionGetStatus() != 0xff) {
 					P4.2 = 1;
 					inputMotionInfoLater();
 				}
+#endif
 				P6.3 = powerRequestData[0];
 			}
 			if (powerRequestData[1] & 0x04) {
@@ -1788,3 +1807,14 @@ static unsigned char batteryResult(unsigned char result)
 	}
 	return status;
 }
+
+#if FW_SINCE(0x0100060B)
+/* 0x08c5: refused (0x3e) */
+static void powerRequest08C5(void)
+{
+	unsigned char status;
+
+	status = 0x3e;
+	powerRequestDone(status);
+}
+#endif

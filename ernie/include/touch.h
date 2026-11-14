@@ -119,6 +119,10 @@ struct TouchPanel {
 #if FW_SINCE(0x01000104)
 	unsigned int	configVersion;	/* T38's first two bytes, big-endian */
 #endif
+#if FW_SINCE(0x0100060B)
+	unsigned int	gripEdges[2];	/* T20's bytes 1-4 (XLOGRIP, XHIGRIP, YLOGRIP, YHIGRIP),
+					   as touchReadGripEdges last read them */
+#endif
 	struct TouchObjects objects;
 	struct TouchMode modes[TOUCH_MODES];
 };
@@ -265,6 +269,11 @@ extern unsigned char touchStatusOn1(void);
 extern unsigned char touchStatusOff1(void);
 extern unsigned char touchSetGrip0(unsigned char *data);
 extern unsigned char touchSetGrip1(unsigned char *data);
+#endif
+#if FW_SINCE(0x0100060B)
+extern unsigned char touchReadGripEdges0(unsigned char *data);
+extern unsigned char touchReadGripEdges1(unsigned char *data);
+extern void touchGetReportIds(unsigned char *ids);
 #endif
 #if FW_SINCE(0x01000306)
 extern void touchSetFlags(unsigned char flags);
