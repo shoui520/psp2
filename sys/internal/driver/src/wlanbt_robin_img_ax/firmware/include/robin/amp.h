@@ -142,6 +142,9 @@ enum {
 
 /* amp/pal.c and amp/wlanif.c */
 int ampPalNotify(int value, int code);
+int ampPalNotifySecured(int link);
+int ampPalLinkEstablished(struct WlanConnection *context);
+extern const uint8_t ampSnapPrefix[6];
 int ampPalNotifyCode10(int first, int second);
 int ampPalNotifyCode11(int first, int second);
 int ampPalNotifyCode12(int first, int second);

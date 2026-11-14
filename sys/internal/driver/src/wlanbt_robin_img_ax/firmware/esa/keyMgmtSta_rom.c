@@ -33,19 +33,6 @@ ROBIN_PATCH_SLOT(ramHook_keyMgmtSendTkipQuietOver);
 ROBIN_PATCH_SLOT(ramHook_keyMgmtProcessMsgExt);
 ROBIN_PATCH_SLOT(ramHook_keyMgmtSendDeauth);
 
-static inline uint32_t ntohl(uint32_t x)
-{
-	return (x << 24) + ((x & 0xff00) << 8) + ((x & 0xff0000) >> 8) + (x >> 24);
-}
-
-static inline uint16_t ntohs(uint16_t x)
-{
-	return (uint16_t)((x << 8) | (x >> 8));
-}
-
-#define htons ntohs
-#define htonl ntohl
-
 /* The cipher, AKM and capabilities the association uses, from what both sides allow. */
 void supplicantSetAssocRsn_internal(RSNConfig_t *pRsnConfig,
 				    SecurityParams_t *pSecurityParams,

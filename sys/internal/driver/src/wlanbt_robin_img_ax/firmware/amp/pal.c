@@ -25,6 +25,7 @@ struct AmpPalMessage {
 
 /* Host notification codes sent with ampPalNotify(). */
 enum {
+	AMP_PAL_NOTIFY_SECURED = 4,
 	AMP_PAL_NOTIFY_DISCONNECT = 8,
 	AMP_PAL_NOTIFY_STATE = 10,
 	AMP_PAL_NOTIFY_CHANNEL = 11,
@@ -333,7 +334,7 @@ extern uint32_t ampActivityReports;		/* nonzero: send Activity Reports */
 extern uint8_t ampLocalFrameAddress[6];		/* source address of AMP frames */
 
 /* LLC/SNAP prefix of the Bluetooth SIG (organization 00:19:58). */
-static const uint8_t ampSnapPrefix[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x19, 0x58 };
+const uint8_t ampSnapPrefix[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x19, 0x58 };
 
 /* 0x0002375a: writes the transmit descriptor and the Ethernet and SNAP headers. */
 int ampPalBuildFrame(WlanTxFrameHeader *frame, const uint8_t *peer, uint32_t length,
@@ -477,6 +478,12 @@ extern struct OsaBufferPool wlanFramePool;
 
 extern uint8_t ampActivityPayload[2];
 extern uint8_t ampActivityPayloadLength;
+
+/* 0x00022ed8: notice 4, the link's keys are installed. */
+int ampPalNotifySecured(int link)
+{
+	return ampPalNotify(link, AMP_PAL_NOTIFY_SECURED);
+}
 
 /* 0x00022edc: sends an Activity Report with the payload prepared by the caller. */
 int ampPalSendActivityReport(struct WlanConnection *context)

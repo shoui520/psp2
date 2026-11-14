@@ -425,6 +425,8 @@ void mrvl_sha256_crypto_kdf(uint8_t *pKey, uint8_t key_len, char *label,
 /* crypt_new_rom.c, rc4.c */
 int MRVL_AesUnWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *cipher,
 		   uint8_t *keyIv, uint8_t *plain);
+int MRVL_AesWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *plain,
+		 uint8_t *keyIv, uint8_t *cipher);
 void RC4_Encrypt(uint8_t *Encr_Key, uint8_t *IV, uint16_t iv_length, uint8_t *Data,
 		 uint16_t data_length, uint16_t skipBytes);
 
@@ -649,5 +651,29 @@ uint16_t btampAddRsnIe(IEEEtypes_RSNElement_t *pRsnIe);
 int keyMgmtKeyPairAndGroupTxDone(OsaBuffer *pBufDesc);
 void SendMICFailReport_sta(struct WlanConnection *connPtr, keyMgmtInfoSta_t *pKeyMgmtInfoSta,
 			   BOOLEAN isUnicast);
+
+/* keyApi (SQRAM, 0xc000869e) */
+uint32_t keyApi_UpdateKeyMaterial(struct WlanConnection *connPtr, key_MgtMaterial_t *keyMgtData_p);
+
+/* Network byte order; the EAPOL-Key fields are big-endian. */
+static inline uint32_t ntohl(uint32_t x)
+{
+	return (x << 24) + ((x & 0xff00) << 8) + ((x & 0xff0000) >> 8) + (x >> 24);
+}
+
+static inline uint16_t ntohs(uint16_t x)
+{
+	return (uint16_t)((x << 8) | (x >> 8));
+}
+
+#define htons ntohs
+#define htonl ntohl
+
+/* esa/btampKeyMgmt.c */
+extern keyMgmtInfoSta_t btampKeyMgmtInfo;
+void keyMgmtSendDeauth(struct WlanConnection *connPtr, IEEEtypes_MacAddr_t *pPeer, uint16_t reason);
+void btampKeyMgmtInit(void);
+int btampGeneratePWKMsg1(struct WlanConnection *connPtr);
+void btampProcessKeyMgmtData(OsaBuffer *pBufDesc);
 
 #endif /* ROBIN_ESA_H */

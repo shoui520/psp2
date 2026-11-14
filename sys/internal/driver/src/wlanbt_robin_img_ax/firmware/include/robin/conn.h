@@ -399,14 +399,14 @@ struct WlanConnection {
 	};
 	uint8_t scheduleValid;
 	struct WlanScheduleRequest schedule;
-	uint8_t linkFlags;
+	uint8_t linkFlags;		/* AMP link: 3..6 the 4-way handshake (esa/btampKeyMgmt.c), 7 up */
 	WlanTxFrameHeader txHeader;
 	uint8_t reserved6[11];
 	uint32_t reserved7;
 	uint32_t timerHandle;
 	uint32_t secondTimerHandle;
 	uint8_t retryCount;
-	uint8_t reserved8[63];
+	uint8_t rsnElement[63];		/* AMP link: its RSN element (ID, length, body), for EAPOL-Key */
 	uint8_t transmitBusy;
 };
 
@@ -474,6 +474,7 @@ _Static_assert(offsetof(struct WlanConnection, linkFlags) == 815, "link flags");
 _Static_assert(offsetof(struct WlanConnection, txHeader) == 816, "TX header");
 _Static_assert(offsetof(struct WlanConnection, timerHandle) == 868, "timer");
 _Static_assert(offsetof(struct WlanConnection, retryCount) == 876, "retry count");
+_Static_assert(offsetof(struct WlanConnection, rsnElement) == 877, "AMP RSN element");
 _Static_assert(offsetof(struct WlanConnection, transmitBusy) == 940, "transmit busy");
 
 /* wlan/conn.c */

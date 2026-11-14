@@ -20,12 +20,8 @@
 #include "robin/wlantask.h"
 
 /* Not converted yet; provisional names */
-void keyMgmtSendDeauth(struct WlanConnection *connPtr, IEEEtypes_MacAddr_t *pPeer,
-		       uint16_t reason);					/* 0x17bd8 */
 /* the SQRAM build's PMK cache and key API */
 uint8_t *pmkCacheFindPSK(uint8_t *pSsid, uint8_t ssidLen);		/* 0xc0008190 */
-uint32_t keyApi_UpdateKeyMaterial(struct WlanConnection *connPtr,
-				  key_MgtMaterial_t *keyMgtData_p);	/* 0xc000869e */
 
 /* the queue of data frames waiting for the MAC Tx task (wlan/driver.c) */
 extern struct WlanDriverQueue wlanDriverQueue4;
