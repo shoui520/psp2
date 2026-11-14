@@ -5,6 +5,7 @@
  */
 #include <stddef.h>
 #include "robin/rfbus.h"
+#include "robin/rfreg.h"
 #include "robin/soc.h"
 #include "robin/threadx.h"
 
@@ -19,8 +20,6 @@ static uint8_t rfBusLockState __attribute__((section(".itcm.rw"))) = RFBUS_LOCK_
 static uint32_t rfBusOwnerPosture __attribute__((section(".itcm.bss")));
 static uint32_t rfBusLockDepth __attribute__((section(".itcm.bss")));
 
-/* Constant words in read-only data; the third one goes to the control register. */
-static const uint16_t rfBusSettings[3] = { 0x000f, 0x007f, 0x0001 };
 
 void rfBusWaitIdle(void)
 {
@@ -53,7 +52,7 @@ void rfBusLock(void)
 	rfBusLockDepth = 1;
 	kept = RFBUS_CONFIGURATION & RFBUS_CONFIGURATION_KEEP;
 	if ((RFBUS_CONFIGURATION & ~kept) != RFBUS_CONFIGURATION_MODE) {
-		RFBUS_CONTROL = rfBusSettings[2];
+		RFBUS_CONTROL = rfBusControlModes[2];
 		RFBUS_CONFIGURATION = kept | RFBUS_CONFIGURATION_MODE;
 	}
 }

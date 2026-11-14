@@ -56,7 +56,7 @@
 #define HOSTCMD_RATE_STEPS		16
 
 /* Not converted yet; provisional names. */
-unsigned int rfCalibDispatchTable(void);				/* 0x2761a */
+unsigned int clockCurrentRate(void);				/* 0x2761a */
 void uapSqramFilterEntry(int enable);					/* SQRAM 0xc0009ba0 */
 void wlanPsHandleBuffer(unsigned int count);				/* 0x3c124 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
@@ -276,7 +276,7 @@ void hostCmdSuspendMacTasks(void)
  */
 void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 {
-	unsigned int current = rfCalibDispatchTable() / 1000;
+	unsigned int current = clockCurrentRate() / 1000;
 	unsigned int i;
 
 	body[2] = hostCmdRateDefault;
@@ -481,10 +481,6 @@ unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *data);	/* 0
 int hostCmd00e4Check(struct WlanConnection *connection, uint8_t *data, unsigned int length); /* 0x3f1f6 */
 int hostCmd00e9(struct WlanConnection *connection, uint8_t *body, unsigned int length); /* 0x307d2 */
 int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d086 */
-void hostCmd00ed(void);								/* 0x2691a */
-void hostCmd00edEnd(void);							/* 0x26906 */
-void hostCmd00edSet(unsigned int reg, unsigned int value);			/* 0x267d2 */
-unsigned int hostCmd00edGet(unsigned int reg);					/* 0x267ee */
 void hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
 int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t *data,
 		unsigned int *length);						/* 0x3f002 */
@@ -1880,12 +1876,12 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 237:
-			hostCmd00ed();
+			rfRegBegin();
 			if (action == 1)
-				hostCmd00edSet(HOSTCMD_U16(body + 2), body[4]);
+				rfRegWrite(HOSTCMD_U16(body + 2), body[4]);
 			else
-				body[4] = hostCmd00edGet(HOSTCMD_U16(body + 2));
-			hostCmd00edEnd();
+				body[4] = rfRegRead(HOSTCMD_U16(body + 2));
+			rfRegEnd();
 			goto done;
 
 		case 242:

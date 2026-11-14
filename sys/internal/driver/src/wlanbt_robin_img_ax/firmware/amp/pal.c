@@ -328,7 +328,7 @@ int ampPalNotifyCode11(int first, int second)
 
 /* ---- Frames of a physical link --------------------------------------------- */
 
-extern int rfCalibApplyContext(uint32_t value);
+extern int clockApplyCore(uint32_t value);
 int ampPalSdioDataCallback(OsaBuffer *buffer);
 extern uint32_t ampActivityReports;		/* nonzero: send Activity Reports */
 extern uint8_t ampLocalFrameAddress[6];		/* source address of AMP frames */
@@ -512,7 +512,7 @@ int ampPalActivityTimer(uint32_t timer, struct WlanConnection *context)
 /* 0x00022f2e: the physical link is up; starts supervision and the reports. */
 int ampPalLinkEstablished(struct WlanConnection *context)
 {
-	rfCalibApplyContext(128000);
+	clockApplyCore(128000);
 	context->flags |= 8;
 	context->linkFlags = 7;
 	context->retryCount = 0;

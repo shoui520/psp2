@@ -35,7 +35,7 @@ extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 5: no rate below index 5
 extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
 extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
 void wlanPsSelectHeader(unsigned int band, uint32_t channel);	/* 0x3e3aa */
-int rfCalibConfigureContext(void);				/* 0x26842 */
+int sysRefClockProfile(void);				/* 0x26842 */
 void rfCalibQueryBuffer(uint16_t channel, uint16_t value, int flags);	/* 0x28496 */
 void macTxNotifyFilterContext(int enable);			/* 0x30dec */
 extern uint32_t rfBusEnabled;
@@ -277,7 +277,7 @@ int rfWaitLock(void)
 	int locked = 1;
 	int loops;
 
-	rfCalibSyncState(100);
+	sysDelayUs(100);
 	loops = rfLockWaitLoops();
 	while (!(SOC_STATUS & SOC_STATUS_RF_LOCKED) && loops > 0)
 		--loops;
@@ -310,7 +310,7 @@ void rfLoadBandRegisters(int band, int mode)
 	modeTable = column == -1 ? NULL : rfModeRegisters[fiveGhz][column];
 	rfBusWriteTable(rfBandRegisters[fiveGhz]);
 	rfBusWriteTable(modeTable);
-	if (rfCalibConfigureContext() != 6 && rfCalibConfigureContext() != 9) {
+	if (sysRefClockProfile() != 6 && sysRefClockProfile() != 9) {
 		rfBusWrite(RF_REG_CALIBRATION0, 0x00);
 		rfBusWrite(RF_REG_CALIBRATION1, 0x30);
 		rfBusWrite(RF_REG_CALIBRATION2, 0xc3);
@@ -327,7 +327,7 @@ void rfChannelHookAfter(void)
 
 void rfCalibrateChannel(int unused, unsigned int channel)
 {
-	int index = rfCalibConfigureContext();
+	int index = sysRefClockProfile();
 
 	rfCalibQueryBuffer(romRfChannelTable[channel], rfCalibrationTable[3 + index], 0);
 }

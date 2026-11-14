@@ -546,7 +546,7 @@ int wlanHostEventNotify(unsigned int classes, OsaBuffer *buffer)
 		sysIrqRestore(posture);
 	}
 	gpio = wlanHostSleepActive->gpio;
-	rfCalibSyncState(5000);
+	sysDelayUs(5000);
 	wlanMefConfig.hostState = WLAN_HOST_WAKING;
 	if (gpio != -1 && gpio != -2)
 		mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO, 1);

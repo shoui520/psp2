@@ -87,8 +87,8 @@ extern uint32_t sleepHostWakeMargin;			/* 0x56234 */
 extern uint32_t sleepHostClockParameter;		/* 0x5623c */
 extern uint32_t wlanIbssPsActive;			/* 0x593d4 */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
-int rfCalibConfigureContext(void);			/* 0x26842 */
-void rfCalibResolveContext(void);			/* 0x26ae0 */
+int sysRefClockProfile(void);			/* 0x26842 */
+void clockHostSetMax(void);			/* 0x26ae0 */
 void wlanPsResolveBuffer(void);				/* 0x3c68e */
 void wlanPsSyncBuffer(void);				/* 0x3c65a */
 void macMgmtResolveDescriptor(void);			/* 0x3bfa0 */
@@ -183,7 +183,7 @@ int wlanPsInit(void)
 	wlanHostSleepEndOnWake = 0;
 	wlanPsHostActive = 0;
 	wlanPsWakeAdvance = 345;
-	sleepWakeLatency = rfCalibrationTable[13 + rfCalibConfigureContext()];
+	sleepWakeLatency = rfCalibrationTable[13 + sysRefClockProfile()];
 	sleepCalibrating = 0;
 	sleepCalibrationCycles = 1;
 	sleepCalibrationSamples = 1;
@@ -445,7 +445,7 @@ void wlanPsBeaconIdle(struct WlanConnection *connection)
 	if (wlanRoleOtherOnly() && wlanPsEnabled() && (wlanHostSleepArmed() || wlanPsSessionOpen()) &&
 	    (wlanPsSleepTimeout == 1 || (wlanSessionId != 0 && wlanPsSleepSequence != 0))) {
 		if (!wlanCoexBtNeedsSharing()) {
-			rfCalibResolveContext();
+			clockHostSetMax();
 			wlanStaPs.beaconsSeen++;
 			wlanPostConnectionEvent(connection, 1);
 			return;

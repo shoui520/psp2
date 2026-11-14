@@ -8,6 +8,9 @@
 #define ROBIN_EVENTPOWER_H
 
 #include <stdint.h>
+#include "robin/clock.h"
+#include "robin/rfreg.h"
+#include "robin/socpower.h"
 
 struct OsaEventFlags;
 
@@ -184,25 +187,12 @@ int fmCoexValidateState(uint32_t *state);		/* 0x49bba */
 void fmCoexAdjustState(void);				/* 0x4a570 */
 void fmCoexRecordState(void);				/* 0x4a58a */
 void rfCalibReleaseTable(unsigned int channel, int flag);	/* 0x281d0 */
+void rfCalibManageTable(unsigned int channel, int flag);	/* 0x2812c */
 void rfCalibAcquireTable(unsigned int channel, int flag);	/* 0x28142 */
-uint32_t rfCalibQueryTable(void);			/* 0x27860 */
-int rfCalibPrepareTable(void);				/* 0x275f8 */
-uint32_t rfCalibResetEntry(void);			/* 0x26fc0 */
-int rfCalibComputeEntry(void);				/* 0x26f94 */
-int rfCalibConvertEntry(void);				/* 0x27416 */
-void rfCalibFilterState(int a1, int a2);		/* 0x26804 */
-void rfCalibHandleContext(int a1, int a2);		/* 0x2681a */
-void rfCalibScheduleContext(void);			/* 0x26b14 */
-uint32_t rfCalibCheckState(uint32_t a1, int a2);	/* 0x2651a */
-int rfCalibConfigureContext(void);			/* 0x26842 */
-void rfCalibNotifyContext(void);			/* 0x26b48 */
 extern struct OsaEventFlags *wlanHostSleepFlags;		/* 0x54bdc */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 void wlanMacRestart(void);				/* 0x1c92e */
 void wlanMacSleepExit(void);				/* 0x1c870 */
-void hostCmd00ed(void);					/* 0x2691a */
-void hostCmd00edEnd(void);				/* 0x26906 */
-uint32_t hostCmd00edGet(uint32_t index);		/* 0x267ee */
 int ampHciIsIdle(void);					/* 0x20f00 */
 void wpaSuppQueryParam(uint32_t previous, uint32_t profile);	/* 0x2ec2a */
 

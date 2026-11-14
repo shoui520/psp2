@@ -20,20 +20,20 @@
 
 /* Coexistence interval table and its helpers (rf/coex, not converted). */
 int cbProcFilterHeader(int selector, uint32_t value);
-uint32_t rfCalibHandleTable(void);
-uint32_t rfCalibProcessTable(void);
-uint32_t rfCalibUpdateTable(void);
-int rfCalibFilterEntry(void);
-int rfCalibRecordEntry(void);
-int rfCalibTrackEntry(void);
-int rfCalibSetupEntry(int enable);
-int rfCalibReleaseEntry(int enable);
-int rfCalibVerifyEntry(int enable);
-uint32_t rfCalibParseState(int a1);
-uint32_t rfCalibCheckState(uint32_t a1, int a2);
+uint32_t clockReferenceRate(void);
+uint32_t clockBaseRate(void);
+uint32_t clockSlowestRateGet(void);
+int rfBlock3Get(void);
+int rfBlock2Get(void);
+int rfEventTransitionActive(void);
+int rfBlock3Set(int enable);
+int rfBlock2Set(int enable);
+int rfEventTransitionSet(int enable);
+uint32_t clockRequestedCore(int a1);
+uint32_t clockRequestCore(uint32_t a1, int a2);
 extern uint8_t cbProcPolicy;
 extern uint32_t cbProcWindow;
-int rfCalibConvertEntry(void);
+int rfBlock4Get(void);
 extern uint32_t cbProcSecondaryCounter;
 extern uint32_t romHctCoexMode;
 extern uint32_t romCoexPrimaryFlag;
@@ -149,12 +149,12 @@ void hctCoexTick(void)
 		if (hctCoexTickCount < 5)
 			hctCoexTickCount++;
 		if ((cbProcPolicy & 8) != 0) {
-			if (rfCalibFilterEntry() == 0)
-				rfCalibSetupEntry(1);
-			if (rfCalibRecordEntry() == 0)
-				rfCalibReleaseEntry(1);
-			if (!rfCalibTrackEntry())
-				rfCalibVerifyEntry(1);
+			if (rfBlock3Get() == 0)
+				rfBlock3Set(1);
+			if (rfBlock2Get() == 0)
+				rfBlock2Set(1);
+			if (!rfEventTransitionActive())
+				rfEventTransitionSet(1);
 			cbProcFilterHeader(4, romHctCoexMode);
 			hctComputeCoexIntervals();
 			slow = 4000;
@@ -180,16 +180,16 @@ uint32_t sysUpdateEventDeadline(void)
 
 	if ((cbProcPolicy & 8) != 0) {
 		interval = 16000;
-		parsed = rfCalibParseState(6);
-		result = rfCalibConvertEntry();
+		parsed = clockRequestedCore(6);
+		result = rfBlock4Get();
 		if (result != 0) {
-			result = rfCalibUpdateTable();
+			result = clockSlowestRateGet();
 			if (result >= 16000)
 				result = 16000;
 			interval = result;
 		}
 		if (parsed < interval) {
-			rfCalibCheckState(interval, 0);
+			clockRequestCore(interval, 0);
 			hctCoexDirty = 1;
 			return 1;
 		}

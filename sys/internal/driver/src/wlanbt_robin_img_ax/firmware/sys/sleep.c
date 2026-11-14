@@ -6,6 +6,7 @@
  * inferred; no Marvell source names this code.
  */
 #include <stddef.h>
+#include "robin/clock.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
 #include "robin/psctl.h"
@@ -65,8 +66,6 @@ extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
 extern uint32_t wlanPendingEvents[2];				/* wlan/connctl.c */
 extern struct OsaEventFlags *wlanHostSleepFlags;		/* 0x54bdc */
 extern uint8_t sysSleepShortWake;				/* 0x54cf1 */
-int rfCalibConfigureContext(void);				/* 0x26842 */
-void rfCalibNotifyContext(void);				/* 0x26b48 */
 uint32_t sysGetBusClock(void);					/* 0x23b0a, in Hz */
 void sysSleepAllow(uint32_t votes);				/* 0x23d64 */
 void sysSleepForbid(uint32_t votes);				/* 0x23dea */
@@ -132,7 +131,7 @@ void sleepCalibrationStart(uint32_t cycles)
 	sleepCalibrating = 1;
 	SOC_SLEEP_MEASURE_CONTROL |= SOC_SLEEP_MEASURING;
 	SOC_SLEEP_CLOCK_CONTROL |= SOC_SLEEP_CALIBRATION;
-	sleepCalibrationClockRate = rfCalibrationTable[3 + rfCalibConfigureContext()] * 100;
+	sleepCalibrationClockRate = rfCalibrationTable[3 + sysRefClockProfile()] * 100;
 	sysStartEventMeasurement(sleepCalibrationClockRate * cycles);
 }
 
@@ -192,7 +191,7 @@ void sleepCalibrationRestart(uint32_t cycles)
 
 	sleepCalibrating = 1;
 	SOC_SLEEP_MEASURE_CONTROL |= SOC_SLEEP_MEASURING;
-	sleepCalibrationClockRate = rfCalibrationTable[3 + rfCalibConfigureContext()] * 100;
+	sleepCalibrationClockRate = rfCalibrationTable[3 + sysRefClockProfile()] * 100;
 	if (cycles != 0)
 		extent = sleepCalibrationClockRate * cycles;
 	else
@@ -398,7 +397,7 @@ int sleepEnter(const uint64_t *deadline, uint32_t margin, uint32_t minimum, uint
 			MAC_650_OPERATION |= MAC_OPERATION_HALT;
 			steps = SLEEP_HALT_STEPS;
 		}
-		rfCalibSyncState(1);
+		sysDelayUs(1);
 	}
 	if (deadline != NULL) {
 		elapsed = sleepElapsedUs();
@@ -423,7 +422,7 @@ int sleepEnter(const uint64_t *deadline, uint32_t margin, uint32_t minimum, uint
 	} else {
 		uapSqramFilterEntry(4);
 	}
-	rfCalibNotifyContext();
+	clockHostApplyTarget();
 	if (wake & 0x01)
 		sysDisableEventEngineMode();
 	wake &= 0x42;

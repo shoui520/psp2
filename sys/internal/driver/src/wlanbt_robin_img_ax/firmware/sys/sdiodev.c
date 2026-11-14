@@ -435,7 +435,7 @@ static __attribute__((noinline, noclone)) void sdioSetFunctionBusy(unsigned int 
 	if (idle != 0) {
 		if (sdioSleepConfig.timer == 0xffff)
 			return;
-		rfCalibSyncState(sdioSleepConfig.timer);
+		sysDelayUs(sdioSleepConfig.timer);
 		SDIO_CLOCK_REQUEST = request | SDIO_CLOCK_REQUEST_IDLE;
 		switch (sdioSleepConfig.channel) {
 		case 4:
@@ -454,7 +454,7 @@ static __attribute__((noinline, noclone)) void sdioSetFunctionBusy(unsigned int 
 		return;
 	}
 	if (sdioSleepConfig.config == 0 && sdioSleepConfig.queue != 0xffff) {
-		rfCalibSyncState(sdioSleepConfig.queue);
+		sysDelayUs(sdioSleepConfig.queue);
 		SDIO_CLOCK_REQUEST = request | SDIO_CLOCK_REQUEST_ACTIVE;
 	}
 }

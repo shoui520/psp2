@@ -11,8 +11,6 @@
 #include "robin/runtime.h"
 #include "robin/soc.h"
 
-#define SOC_EVENT_CONTEXT	REG32(0x800020e4)	/* bit 0: event pattern pending */
-
 #define WLAN_TX_POWER_DEFAULT_MAX	20	/* dBm, without a record */
 #define WLAN_CHANNEL_WRAP		200	/* channel numbers wrap past 200 */
 #define WLAN_RF_CONTEXT_DEFAULT		0x40

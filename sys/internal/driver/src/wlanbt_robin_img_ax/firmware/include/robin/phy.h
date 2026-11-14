@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "robin/rfbus.h"
+#include "robin/socpower.h"
 
 /*
  * Calibration of a signal level: the offset added for the antenna in use
@@ -48,7 +49,5 @@ void bbpNoiseHistogramStart(uint32_t period, unsigned int resolution, int wideRa
 int bbpNoiseHistogramRead(uint8_t *shares, uint16_t *average);
 void rfWaitBtIdle(uint32_t path);
 
-/* Not converted yet; provisional name. */
-void rfCalibSyncState(int delay);	/* 0x2656a */
 
 #endif /* ROBIN_PHY_H */

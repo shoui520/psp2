@@ -38,10 +38,10 @@ void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc000
 void macMgmtFilterState(const uint8_t **machine);						/* 0x354cc */
 void rfCalibApplyDescriptor(const void *descriptor);						/* 0x2a214 */
 uint64_t wlanSignalTimeNow(void);								/* 0x2a4fc */
-void rfCalibFormatContext(void);								/* 0x26b78 */
-void rfCalibInspectContext(void);								/* 0x26baa */
-void rfCalibTrackContext(void);									/* 0x26bdc */
-void rfCalibManageContext(void);								/* 0x26c0e */
+void clockHostSelectPreset0(void);								/* 0x26b78 */
+void clockHostSelectPreset1(void);								/* 0x26baa */
+void clockHostSelectPreset2(void);									/* 0x26bdc */
+void clockHostSelectPreset3(void);								/* 0x26c0e */
 int macMgmtSelectContext(struct WlanConnection *connection);					/* 0x35f7c */
 void wlanPsSetupPacket(void *state, int argument);						/* 0x3d29e */
 int macTxNotifyApplyFrame(struct WlanConnection *connection);					/* 0x3360a */
@@ -1513,13 +1513,13 @@ void wlanBaTablesChangedHandler(void)
 
 	if (data) {
 		if (active != 0)
-			rfCalibManageContext();
+			clockHostSelectPreset3();
 		else
-			rfCalibInspectContext();
+			clockHostSelectPreset1();
 	} else if (active != 0) {
-		rfCalibTrackContext();
+		clockHostSelectPreset2();
 	} else {
-		rfCalibFormatContext();
+		clockHostSelectPreset0();
 	}
 }
 

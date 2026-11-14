@@ -325,8 +325,8 @@ void sysEventRoute0Hold(void)
 		sysSecondaryGateOpen();
 		sysSecondaryWaitAltMode();
 	}
-	while (rfCalibConvertEntry() == 0)
-		rfCalibPrepareTable();
+	while (rfBlock4Get() == 0)
+		clockSourceMode();
 	btLmpLcFormatContext(0, 0, 8, 0);
 }
 
@@ -356,7 +356,7 @@ void sysEnterPrimaryEvent(void)
 
 	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH) {
 		sysHandlePrimaryEvent();
-		rfCalibSyncState(1000);
+		sysDelayUs(1000);
 		btLtsRomParseState(0);
 	}
 	sysIrqRestore(posture);
@@ -495,9 +495,9 @@ void sysFmCoexPathSet(void)
 	uint32_t clock;
 
 	if (sysFmCoexPathState == 0) {
-		hostCmd00ed();
-		rfCalibFilterState(31, 134);
-		hostCmd00edEnd();
+		rfRegBegin();
+		rfRegSetBits(31, 134);
+		rfRegEnd();
 		EVENT_PATH_STATUS = (EVENT_PATH_STATUS & 0xedffffff) | 0x10000000;
 		clock = sysReadEventClock();
 		while (sysReadEventClock() == clock)
@@ -505,9 +505,9 @@ void sysFmCoexPathSet(void)
 		EVENT_PATH_STATUS |= 0x12000000;
 		EVENT_PATH_CONTROL &= ~8u;
 		EVENT_PATH_MEASURE &= ~0x80u;
-		hostCmd00ed();
-		rfCalibHandleContext(32, 8);
-		hostCmd00edEnd();
+		rfRegBegin();
+		rfRegClearBits(32, 8);
+		rfRegEnd();
 		sysFmCoexPathState = 1;
 	}
 	sysIrqRestore(posture);
@@ -520,10 +520,10 @@ void sysFmCoexPathRestore(void)
 	uint32_t clock;
 
 	if (sysFmCoexPathState == 1) {
-		if (!rfCalibComputeEntry()) {
-			hostCmd00ed();
-			rfCalibFilterState(32, 8);
-			hostCmd00edEnd();
+		if (!socStrapIsSet()) {
+			rfRegBegin();
+			rfRegSetBits(32, 8);
+			rfRegEnd();
 		}
 		EVENT_PATH_MEASURE |= 0x80;
 		EVENT_PATH_CONTROL &= ~8u;
@@ -531,12 +531,12 @@ void sysFmCoexPathRestore(void)
 		clock = sysReadEventClock();
 		while (sysReadEventClock() == clock)
 			;
-		rfCalibSyncState(10);
+		sysDelayUs(10);
 		EVENT_PATH_CONTROL |= 8;
 		EVENT_PATH_STATUS &= 0xedffffff;
-		hostCmd00ed();
-		rfCalibHandleContext(31, 4);
-		hostCmd00edEnd();
+		rfRegBegin();
+		rfRegClearBits(31, 4);
+		rfRegEnd();
 		sysFmCoexPathState = 0;
 	}
 	sysIrqRestore(posture);
@@ -692,12 +692,12 @@ void sysTertiaryPathConfigure(void)
 	sysConfigureTertiaryEventPath();
 	EVENT_PATH_COMMAND = (EVENT_PATH_COMMAND & 0xcffffffd) | 0x3800000;
 	EVENT_PATH_FRAME &= 0xffffc7fe;
-	if (!rfCalibComputeEntry())
+	if (!socStrapIsSet())
 		EVENT_PATH_PENDING_CONTROL |= 0x10001;
 	if (sysTertiaryRadioFlag == 0xff) {
-		hostCmd00ed();
-		sysTertiaryRadioFlag = hostCmd00edGet(18) & 4;
-		hostCmd00edEnd();
+		rfRegBegin();
+		sysTertiaryRadioFlag = rfRegRead(18) & 4;
+		rfRegEnd();
 	}
 	if (sysTertiaryRadioFlag == 0)
 		EVENT_PATH_PENDING_CONTROL |= 0x10001;
@@ -806,7 +806,7 @@ static __attribute__((noinline)) void sysIdleDeepSleep(uint32_t macState)
 			sysClearEventFlags(0x80);
 			sysEnableEventSources(sources << 7);
 			SOC_EVENT_LATCH = 3;
-			rfCalibSyncState(100);
+			sysDelayUs(100);
 		}
 		if ((SOC_EVENT_STATE & 0xe) == macState)
 			robinCpuWaitForInterrupt();
@@ -872,9 +872,9 @@ uint32_t sysIdleSleep(void)
 	enabled = SOC_IRQ_ENABLE_SET;
 	SOC_IRQ_ENABLE_CLEAR = 0xffffffff;
 	interval = 16000;
-	if (rfCalibQueryTable() <= 0x3e80)
-		interval = rfCalibQueryTable();
-	rfCalibCheckState(interval, 4);
+	if (clockSlowestRate() <= 0x3e80)
+		interval = clockSlowestRate();
+	clockRequestCore(interval, 4);
 	sysIdleDeepSleep(macState);
 	SOC_IRQ_ENABLE_SET = enabled;
 	goto done;
@@ -882,7 +882,7 @@ wait:
 	sysIdleWait();
 done:
 	sysIrqRestore(posture);
-	return rfCalibCheckState(0, 4);
+	return clockRequestCore(0, 4);
 }
 
 /* 0x23ab0: the idle thread's pass. */
@@ -927,7 +927,7 @@ uint32_t sysEventEngineSleepPeriod(void)
 /* 0x23b0a: the bus clock in Hz. */
 uint32_t sysGetBusClock(void)
 {
-	uint32_t clock = rfCalibrationTable[3 + rfCalibConfigureContext()] * 100000;
+	uint32_t clock = rfCalibrationTable[3 + sysRefClockProfile()] * 100000;
 
 	switch (EVENT_PATH_BUS_CLOCK & 0xf) {
 	case 0:
@@ -982,14 +982,14 @@ void sysEventEngineInit(void)
 		sysEventEngineFlags &= ~SYS_ENGINE_EVENT_PATHS;
 	sysSleepVotes = 0;
 	sysInitializeEventRegisters();
-	upper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingA[rfCalibConfigureContext()]) /
+	upper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingA[sysRefClockProfile()]) /
 			   1000000 + 1);
-	lower = (uint16_t)(romMul32x32(rfCalibResetEntry(), rfCalibrationTable[13 + rfCalibConfigureContext()]) /
+	lower = (uint16_t)(romMul32x32(uapActiveEntryGet(), rfCalibrationTable[13 + sysRefClockProfile()]) /
 			   1000000 + 1);
 	sysSetEventPrimaryTiming(lower, upper);
-	secondaryUpper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingB[rfCalibConfigureContext()]) /
+	secondaryUpper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingB[sysRefClockProfile()]) /
 				    1000000 + 1);
-	lower = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingC[rfCalibConfigureContext()]) /
+	lower = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingC[sysRefClockProfile()]) /
 			   1000000 + 1);
 	sysSetEventSecondaryTiming(lower, secondaryUpper);
 	sysSetEventTimingControl(8);
@@ -1031,7 +1031,7 @@ void sysSleepAllow(uint32_t votes)
 				SOC_EVENT_PATH_CONTROL &= 0xffdfff7f;
 				if (sysSleepShortWake == 0 || (SOC_EVENT_STATE & 4) != 0 ||
 				    !sysSleepVotesAllowed(1) || !sysSleepVotesAllowed(4))
-					rfCalibScheduleContext();
+					clockHostSetMin();
 				sysSleepShortWake = 0;
 			} else {
 				sysStartEventEngine();
@@ -1056,7 +1056,7 @@ void sysSleepForbid(uint32_t votes)
 			SOC_EVENT_CONTROL |= 0x80000048;
 			sysStopEventEngineAndWait();
 			SOC_EVENT_PATH_CONTROL |= 0x200080;
-			rfCalibNotifyContext();
+			clockHostApplyTarget();
 		}
 		if (votes & SLEEP_VOTE_WLAN)
 			sysSleepVotes &= ~SLEEP_VOTE_WLAN_ENGINE;
@@ -1095,7 +1095,7 @@ uint32_t sysEventClockNow(void)
 uint32_t sysEventClockElapsedUs(uint32_t since)
 {
 	uint32_t elapsed = sysReadEventClock() - since;
-	uint32_t frequency = rfCalibResetEntry();
+	uint32_t frequency = uapActiveEntryGet();
 
 	return romMul32x32(elapsed, 1000000) / frequency;
 }
@@ -1274,7 +1274,7 @@ __attribute__((noinline)) int sysPathPresetSelect(void)
 {
 	if (sysPathPresets.ready == 0)
 		return 0;
-	return sysPathPresets.alternate[rfCalibConfigureContext()] != 0;
+	return sysPathPresets.alternate[sysRefClockProfile()] != 0;
 }
 
 /* 0x24154: applies the preset, when there is one. */
@@ -1288,7 +1288,7 @@ int sysPathPresetApply(void)
 		table = sysPathPresets.alternate;
 	else
 		table = sysPathPresets.base;
-	EVENT_PATH_KEY = table[rfCalibConfigureContext()] | (EVENT_PATH_KEY & 0xc3);
+	EVENT_PATH_KEY = table[sysRefClockProfile()] | (EVENT_PATH_KEY & 0xc3);
 	return 1;
 }
 

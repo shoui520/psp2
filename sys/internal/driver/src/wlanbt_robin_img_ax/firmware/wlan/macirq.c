@@ -78,7 +78,7 @@
 void uapSqramFilterEntry(int enable);								/* SQRAM 0xc0009ba0 */
 uint32_t wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t *tim);		/* 0x3e98a */
 void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);					/* 0x03f3abf7 */
-void rfCalibResolveContext(void);								/* 0x26ae0 */
+void clockHostSetMax(void);								/* 0x26ae0 */
 int macTxNotifyUpdatePacket(void);								/* 0x32584 */
 void macMgmtVerifyHeader(void);									/* 0x3b904 */
 int wlanStaSmLinked(const struct WlanConnection *connection);					/* 0x35faa */
@@ -100,7 +100,7 @@ void macMgmtClearPacket(struct WlanConnection *connection);					/* 0x3a2fa */
 void macMgmtCheckDescriptor(void);								/* 0x3bc28 */
 void wlanPsConvertTable(uint32_t activeFrame);							/* 0x3c054 */
 void macMgmtFormatContext(void);								/* 0x35936 */
-void rfCalibNotifyContext(void);								/* 0x26b48 */
+void clockHostApplyTarget(void);								/* 0x26b48 */
 void rfCalibAcquireBuffer(void);								/* 0x28722 */
 void macTxNotifyUpdateTable(void);								/* 0x31596 */
 void rfCalibTrackBuffer(void);									/* 0x28706 */
@@ -154,10 +154,10 @@ void wlanMacEvents(int line, uint32_t pending)
 	uint8_t *body;
 	uint16_t bodyLength;
 
-	rfCalibResolveContext();
+	clockHostSetMax();
 	events = MAC_510_EVENTS;
 	if ((int32_t)MAC_540_STATUS < 0) {
-		rfCalibSyncState(20);
+		sysDelayUs(20);
 		if (MAC_8FC_ACTIVE_SLOT != 0) {
 			wlanMacAbortCount++;
 			macTxPostEvent(0x40);
@@ -463,7 +463,7 @@ void wlanMacEvents(int line, uint32_t pending)
 		MAC_510_EVENTS = ~MAC_EVENT_COUNT_20;
 	}
 	if (wlanPsSleepTimeout == 0)
-		rfCalibNotifyContext();
+		clockHostApplyTarget();
 	SOC_IRQ_ENABLE_SET = SOC_IRQ_ENABLE_SET | (1u << 10);
 }
 
@@ -484,7 +484,7 @@ void wlanMacResume(unsigned int reason)
 
 	romLibResolveState();
 	rfCalibAcquireBuffer();
-	rfCalibSyncState(20);
+	sysDelayUs(20);
 	if (reason == 0)
 		wlanDmaRingsDrain();
 	posture = sysIrqDisable();

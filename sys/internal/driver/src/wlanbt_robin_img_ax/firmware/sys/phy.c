@@ -464,9 +464,9 @@ int rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth)
 	MAC_828_CONTROL &= ~MAC_828_TUNE_CLEAR;
 	MAC_824_CONTROL |= MAC_824_TUNING;
 	bbpSetRegisterBits(BBP_REG_RESET, 0x80);
-	rfCalibSyncState(1);
+	sysDelayUs(1);
 	bbpClearRegisterBits(BBP_REG_RESET, 0x80);
-	rfCalibSyncState(1);
+	sysDelayUs(1);
 	rfTunePrepare(band, channel);
 	bbpWriteTable(bbpInitRegisters);
 	channel8 = (uint8_t)channel;
@@ -646,7 +646,7 @@ void rfWaitBtIdle(uint32_t path)
 	while ((SOC_PENDING_EVENT_CONTROL & SOC_PENDING_EVENT_ARMED) &&
 	       (SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) &&
 	       (state == BT_STATE_BUSY_A || state == BT_STATE_BUSY_B) && count-- != 0) {
-		rfCalibSyncState(10);
+		sysDelayUs(10);
 		state = BT_LINK_STATE & 0xf;
 	}
 	/* The link state is not read again here. */
@@ -655,5 +655,5 @@ void rfWaitBtIdle(uint32_t path)
 	       sysPendingEventPolicyIsEnabled() &&
 	       !(SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) &&
 	       (state == BT_STATE_BUSY_A || state == BT_STATE_BUSY_B) && count-- != 0)
-		rfCalibSyncState(10);
+		sysDelayUs(10);
 }

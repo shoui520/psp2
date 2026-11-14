@@ -24,6 +24,7 @@
 /* Event sources cascaded through interrupt line 22. */
 #define SOC_EVENT_STATUS		REG32(0x8000208c)
 #define SOC_EVENT_CONTROL	REG32(0x8000200c)
+#define SOC_EVENT_CONTEXT	REG32(0x800020e4)	/* bit 0: event pattern pending */
 #define SOC_EVENT_STATE		REG8(0x80000002)
 #define SOC_EVENT_LATCH		REG8(0x80000092)
 #define SOC_EVENT_SOURCE_ENABLE	REG32(0x80002080)

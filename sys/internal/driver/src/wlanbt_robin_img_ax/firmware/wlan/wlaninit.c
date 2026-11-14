@@ -125,8 +125,8 @@ static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((sec
 
 /* Not converted yet; provisional names. */
 void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
-void rfCalibSyncContext(void);								/* 0x26ab4 */
-void rfCalibNotifyContext(void);							/* 0x26b48 */
+void sysChipIdRead(void);								/* 0x26ab4 */
+void clockHostApplyTarget(void);							/* 0x26b48 */
 void macTxNotifyProcessTable(uint32_t descriptor, uint32_t first, uint32_t second);	/* 0x31450 */
 void macTxNotifySetupPacket(void);							/* 0x32c16 */
 void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
@@ -217,7 +217,7 @@ static void wlanHwInfoInit(void)
 static int wlanInitStageHwInfo(void)
 {
 	wlanHwInfoInit();
-	rfCalibSyncContext();
+	sysChipIdRead();
 	macTxNotifyState = macTxNotifyConfigurePacket(1);
 	wlanHwInfoStage.run = wlanInitStageHwInfo;
 	wlanInitStageRegister(&wlanHwInfoStage);
@@ -230,7 +230,7 @@ static int wlanInitStageRadio(void)
 	uint32_t posture;
 
 	wlanCalibrationTableUpdate(NULL, 0, 0, 0);
-	rfCalibNotifyContext();
+	clockHostApplyTarget();
 	macTxNotifyProcessTable(__aeabi_uread4(wlanBssLocalDescriptor), macTxNotifyState[9],
 				macTxNotifyState[13]);
 	if (macTxNotifySetupDone == 0) {
