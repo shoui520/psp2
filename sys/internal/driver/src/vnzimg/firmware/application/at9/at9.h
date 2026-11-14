@@ -195,3 +195,4 @@ void at9Imdct64(At9Channel *channel, At9Work *work);
 /* the frame's channels as 16-bit PCM, `count` samples from `skip` (at9output.c) */
 void at9Output(int32_t channelConfig, int16_t *pcm, At9Channel *channels, int32_t skip,
 	int32_t count);
+void at9Memset(void *destination, int32_t value, int32_t size);

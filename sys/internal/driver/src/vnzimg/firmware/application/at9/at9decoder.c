@@ -161,7 +161,7 @@ static int32_t open(At9DecoderState *decoder, int32_t channelConfig, uint8_t **w
 		return AT9_ERROR_FLAGS;
 	if (wordLength != 16)
 		return AT9_ERROR_WORD_LENGTH;
-	memset(decoder, 0, sizeof(*decoder));
+	at9Memset(decoder, 0, sizeof(*decoder));
 	decoder->physical = physical;
 	error = setup(decoder, rateIndex, channelConfig, superframeBytes, frames, wordLength);
 	if (error < 0)
@@ -172,7 +172,7 @@ static int32_t open(At9DecoderState *decoder, int32_t channelConfig, uint8_t **w
 	if (channels < 0)
 		return channels;
 	for (channel = 0; channel < channels; channel++)
-		memset(work[channel], 0, sizeof(At9Work));
+		at9Memset(work[channel], 0, sizeof(At9Work));
 
 	next = 0;
 	for (block = 0; block < channelConfigs[decoder->channelConfig][CONFIG_BLOCKS]; block++) {
@@ -213,7 +213,7 @@ void ngsAt9DecoderReset(At9DecoderState *decoder)
 
 		decoder->block[block].quantUnitsPrevious = 0;
 		for (channel = 0; channel < at9ChannelsOfBlock(type); channel++)
-			memset(decoder->block[block].work[channel], 0, 96);
+			at9Memset(decoder->block[block].work[channel], 0, 96);
 	}
 }
 

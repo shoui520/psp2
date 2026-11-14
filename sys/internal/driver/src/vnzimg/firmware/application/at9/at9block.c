@@ -116,7 +116,7 @@ static void readStereoParams(At9DecoderState *decoder, At9Params *params, int32_
 			for (i = block->stereoUnits; i < block->quantUnits; i++)
 				params->stereoSigns[i] = at9ReadBit(&decoder->reader);
 		} else {
-			memset(params->stereoSigns, 0, block->quantUnits);
+			at9Memset(params->stereoSigns, 0, block->quantUnits);
 		}
 	}
 	if (block->hasExtension)
