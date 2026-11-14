@@ -11,9 +11,78 @@
 extern void *__dso_handle;
 extern int _ExitInProgress;
 
-/* the heap */
+/* the process parameters the program's crt0 gives (sceKernelGetProcessParam) */
+struct SceLibcParam;
+typedef struct SceProcessParam {
+	unsigned int size;
+	unsigned int magic;			/* "PSP2" */
+	unsigned int version;
+	unsigned int sdkVersion;
+	const char *sceUserMainThreadName;
+	int *sceUserMainThreadPriority;
+	unsigned int *sceUserMainThreadStackSize;
+	unsigned int *sceUserMainThreadAttribute;
+	const char *sceProcessName;
+	unsigned int *sceKernelPreloadModuleInhibit;
+	int *sceUserMainThreadCpuAffinityMask;
+	const struct SceLibcParam *sceLibcParam;	/* version 5 and later */
+} SceProcessParam;
+
+/* the program's replacement of the C library's allocator (user_malloc_init ...) */
+typedef struct SceLibcMallocReplace {
+	unsigned int size;
+	unsigned int version;
+	void (*user_malloc_init)(void);
+	void (*user_malloc_finalize)(void);
+	void *(*user_malloc)(size_t size);
+	void (*user_free)(void *ptr);
+	void *(*user_calloc)(size_t nelem, size_t size);
+	void *(*user_realloc)(void *ptr, size_t size);
+	void *(*user_memalign)(size_t boundary, size_t size);
+	void *(*user_reallocalign)(void *ptr, size_t size, size_t boundary);
+	int (*user_malloc_stats)(struct malloc_managed_size *mmsize);
+	int (*user_malloc_stats_fast)(struct malloc_managed_size *mmsize);
+	size_t (*user_malloc_usable_size)(void *ptr);
+} SceLibcMallocReplace;
+
+/* the program's replacement of the TLS blocks' allocator (user_malloc_for_tls_init ...) */
+typedef struct SceLibcMallocReplaceForTls {
+	unsigned int size;
+	unsigned int version;
+	void (*user_malloc_for_tls_init)(void);
+	void (*user_malloc_for_tls_finalize)(void);
+	void *(*user_malloc_for_tls)(size_t size);
+	void (*user_free_for_tls)(void *ptr);
+} SceLibcMallocReplaceForTls;
+
+/* the C library's parameters (__sce_libcparam) */
+typedef struct SceLibcParam {
+	unsigned int size;
+	unsigned int version;
+	unsigned int *sceLibcHeapSize;
+	unsigned int *sceLibcHeapSizeDefault;
+	unsigned int *sceLibcHeapExtendedAlloc;
+	unsigned int *sceLibcHeapDelayedAlloc;
+	unsigned int sdkVersion;
+	unsigned int reserved;
+	const SceLibcMallocReplace *_sceLibcMallocReplace;	/* size 0x28 and later */
+	const void *_sceLibcNewReplace;
+	unsigned int *sceLibcHeapInitialSize;			/* size 0x30 and later */
+	unsigned int *sceLibcHeapUnitSize1MiB;
+	unsigned int *sceLibcHeapDetectOverrun;		/* size 0x34 and later */
+	const SceLibcMallocReplaceForTls *_sceLibcMallocReplaceForTls;	/* size 0x38 and later */
+} SceLibcParam;
+
+/* the heap (malloc.c) */
 int _MallocInit(void);
 int _MallocTerm(void);
+
+/* the default heap's dlmalloc state: set up, and its lock deleted */
+int _HeapInit(void *msp);
+void _HeapTerm(void);
+
+/* C++: take the program's operator new replacement (user_new ...) */
+int _InitNewReplace(const void *newReplace) __attribute__((weak));
 
 /* the library's locks */
 int _InitLocks(void);
