@@ -95,7 +95,7 @@ int cbProcPrepareTable(int table, int value);					/* 0x1cdc8 */
 void cbProcDispatchTable(int table, int value);					/* 0x1ce46 */
 int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel);		/* 0x355d2 */
 void macMgmtCheckContext(void);							/* 0x3564a */
-void wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
+int wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
 void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
 			 unsigned int count, unsigned int bitmap);		/* 0x356f6 */
 void cbProcSelectBuffer(int kind, const uint8_t *bssid);			/* 0x1e064 */

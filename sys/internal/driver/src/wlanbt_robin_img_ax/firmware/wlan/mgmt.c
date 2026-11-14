@@ -411,9 +411,9 @@ int wlanSetChannel(uint32_t channel, const uint8_t *flags, int wait)
 	if (wait && macTxNotifySetupTable(WLAN_CHANNEL_SWITCH_TIMEOUT, &status) == 0) {
 		wlanChannelSwitchHolds++;
 		if (!(status & 0x20))
-			cbProcResume(0);
+			wlanMacResume(0);
 		if (!(status & 0x10))
-			cbProcFlush();
+			wlanMacFlush();
 		romLibResolveState();
 		macTxNotifySetupTable(0, &status);
 	}

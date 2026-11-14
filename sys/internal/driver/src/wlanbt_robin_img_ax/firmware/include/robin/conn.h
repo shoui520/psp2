@@ -321,7 +321,10 @@ struct WlanConnection {
 	uint8_t fragThreshold[2];
 	uint8_t shortRetryLimit;
 	uint8_t longRetryLimit;
-	uint8_t reserved164[8];
+	uint8_t dtimHold;		/* nonzero: the group frames are not released at the DTIM */
+	uint8_t beaconsPerDtim;		/* the DTIM period */
+	uint8_t beaconsSinceDtim;	/* beacons since the last DTIM */
+	uint8_t reserved167[5];
 	uint8_t channel;
 	uint8_t groupRing;		/* the transmit ring of the BSS's group frames */
 	uint8_t reserved174[2];
@@ -493,7 +496,20 @@ extern struct WlanConnection *wlanConnectionList;
 extern struct WlanConnection *wlanConnectionFreeList;
 extern struct WlanConnection *wlanConnectionSession;
 extern struct WlanConnection *wlanConnectionPrimary;
-extern uint8_t wlanConnectionCount;
+#define WLAN_CONNECTION_SLOTS	4
+
+extern uint32_t wlanConnectionCount;
+extern uint8_t wlanChannelInUse[1];
+extern uint8_t wlanConnectionSlotMask;
+extern uint32_t wlanConnectionTable;
+extern struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS];
+
+int wlanConnectionGetCount(void);						/* 0x1cb00 */
+int wlanConnectionIncrement(void);						/* 0x1cb06 */
+uint32_t wlanConnectionGetTable(void);						/* 0x1cb1a */
+int wlanConnectionSlotAcquire(struct WlanConnection *connection);		/* 0x1cb20 */
+int wlanConnectionSlotAttach(struct WlanConnection *connection);		/* 0x1cbce */
+int wlanConnectionSlotDetach(struct WlanConnection *connection);		/* 0x1cc26 */
 
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber);
 int wlanConnectionExists(unsigned int interfaceType);

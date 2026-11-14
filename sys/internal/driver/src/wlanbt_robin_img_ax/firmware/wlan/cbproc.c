@@ -102,7 +102,7 @@ void macMgmtSyncHeader(struct WlanConnection *connection);				/* 0x3b4d2 */
 void rfCalibBuildQueue(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);					/* 0x3bc5a */
-void cbProcFlush(void);									/* 0x1c840 */
+void wlanMacFlush(void);									/* 0x1c840 */
 int cbProcSetupHeader(struct WlanConnection *connection);				/* 0x1fc24 */
 extern uint16_t wlanAmsduEnabled;							/* 0x04000ff8 */
 void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
@@ -377,7 +377,7 @@ static void cbProcHostSleepEnter(struct WlanConnection *connection)
 		mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_SLEEP_CONFIG, 0);
 	}
 	hostCmdUnlock();
-	cbProcFlush();
+	wlanMacFlush();
 	macMgmtValidateTable(7);
 	btSdioHciSelectFrame(1);
 	if (wlanPsIdleSleep() != 0)

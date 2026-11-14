@@ -447,7 +447,7 @@ int wlanDmaRingRxDataSettled(void)
 	if (*(volatile uint32_t *)descriptor->buffer >> 16 == WLAN_DMA_FRAME_READY)
 		return 1;
 	wlanDmaRxDataStalls++;
-	cbProcResume(0);
+	wlanMacResume(0);
 	return 0;
 }
 

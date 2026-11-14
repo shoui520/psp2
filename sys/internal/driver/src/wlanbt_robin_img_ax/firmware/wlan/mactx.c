@@ -937,11 +937,11 @@ void macTxTaskMain(ULONG input)
 		while (actual == 0);
 
 		if (actual & MAC_TX_EVENT_RESUME) {
-			cbProcResume(0);
+			wlanMacResume(0);
 			MAC_REG(0x544) |= 0x80000000u;
 		}
 		if (actual & MAC_TX_EVENT_FLUSH) {
-			cbProcFlush();
+			wlanMacFlush();
 			osaEventFlagsSet(macMgmtEventFlags, 0x10, 7);
 			wlanRaiseEvent(47);
 		}

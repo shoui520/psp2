@@ -2,7 +2,9 @@
  * Connection control block list: lookups and release. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/btrom.h"
 #include "robin/conn.h"
+#include "robin/mactx.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
@@ -11,8 +13,22 @@ struct WlanConnection *wlanConnectionList __attribute__((section(".sqram1.rw")))
 struct WlanConnection *wlanConnectionFreeList __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionSession __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionPrimary __attribute__((section(".sqram1.rw")));
-uint8_t wlanConnectionCount __attribute__((section(".dtcm.bss")));
-uint8_t wlanChannelInUse[1] __attribute__((section(".dtcm.bss")));
+/* The DTCM block at 0x040088dc: the channel in use, the slots (rings) taken, the counts and the slot table. */
+uint8_t wlanChannelInUse[1] __attribute__((section(".dtcm.bss")));				/* 0x040088dc */
+uint8_t wlanConnectionSlotMask __attribute__((section(".dtcm.bss")));				/* 0x040088dd */
+uint32_t wlanConnectionCount __attribute__((section(".dtcm.bss")));				/* 0x040088e4 */
+uint32_t wlanConnectionTable __attribute__((section(".dtcm.bss")));				/* 0x040088e8 */
+struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x040088f0 */
+
+/* The beacon and the probe response of each slot: their buffers, pools and the requests the MAC reads. */
+extern struct OsaBufferPool wlanBlockPool0;							/* 0x04000ec0 */
+extern struct OsaBufferPool wlanBlockPool1;							/* 0x04000ed4 */
+extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc0031d64 */
+extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
+void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
+void macTxNotifyReleaseBuffer(void);								/* 0x3239c */
+void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, unsigned int beaconPeriodA,
+			    unsigned int beaconPeriodB);						/* 0x323f8 */
 
 /* Type-specific teardown, not converted yet. */
 int wlanConnectionTeardownWds(struct WlanConnection *connection);	/* 0x1d146 */
@@ -161,9 +177,110 @@ int wlanConnectionSetSession(struct WlanConnection *connection)
 	return 0;
 }
 
+int wlanConnectionGetCount(void)
+{
+	return wlanConnectionCount;
+}
+
+int wlanConnectionIncrement(void)
+{
+	return ++wlanConnectionCount;
+}
+
 int wlanConnectionDecrement(void)
 {
 	return --wlanConnectionCount;
+}
+
+uint32_t wlanConnectionGetTable(void)
+{
+	return wlanConnectionTable;
+}
+
+/*
+ * Gives the connection the first free slot: its group ring, the beacon and
+ * probe response buffers, and the requests the MAC reads. 1: no slot is free.
+ * A buffer that cannot be had stops the processor.
+ */
+int wlanConnectionSlotAcquire(struct WlanConnection *connection)
+{
+	unsigned int slot;
+	OsaBuffer *buffer;
+
+	for (slot = 0; (1 << slot) & wlanConnectionSlotMask; ) {
+		slot = (uint8_t)(slot + 1);
+		if (slot >= WLAN_CONNECTION_SLOTS)
+			return 1;
+	}
+	connection->groupRing = slot;
+	wlanConnectionSlotMask |= 1 << slot;
+	wlanConnectionSlots[slot] = connection;
+	buffer = osa_BufferAlloc(&wlanBlockPool0, 100, 0);
+	connection->beaconBuffer = buffer;
+	if (buffer == NULL)
+		for (;;)
+			;
+	__aeabi_memclr4(wlanBssBeaconRequests[slot], 48);
+	connection->beaconRequest = (struct WlanMacTxRequest *)wlanBssBeaconRequests[slot];
+	buffer = osa_BufferAlloc(&wlanBlockPool1, 100, 0);
+	connection->probeResponseBuffer = buffer;
+	if (buffer == NULL)
+		for (;;)
+			;
+	__aeabi_memclr4(wlanBssProbeResponseRequests[slot], 48);
+	connection->probeResponseRequest = (struct WlanMacTxRequest *)wlanBssProbeResponseRequests[slot];
+	if (connection->interfaceType != WLAN_IF_IBSS) {
+		if (wlanConnectionCount == 1)
+			macTxNotifyReleaseBuffer();
+		macTxNotifyClearBuffer(connection->groupRing, connection->interfaceIndex, 1,
+				       connection->dtimPeriod, connection->dtimPeriod);
+	}
+	return 0;
+}
+
+/*
+ * Takes the connection's slot unless a slot already belongs to its BSS (the
+ * same type and number); the first connection also names the channel in use.
+ */
+int wlanConnectionSlotAttach(struct WlanConnection *connection)
+{
+	unsigned int slot;
+
+	if (wlanChannelInUse[0] == 0)
+		wlanChannelInUse[0] = connection->channel;
+	if (connection->interfaceType == WLAN_IF_IBSS || connection->interfaceType == WLAN_IF_STATION ||
+	    connection->interfaceType == WLAN_IF_AP || connection->interfaceType == WLAN_IF_AMP) {
+		for (slot = 0; slot < WLAN_CONNECTION_SLOTS; slot = (uint8_t)(slot + 1)) {
+			struct WlanConnection *other;
+
+			if (!((1 << slot) & wlanConnectionSlotMask))
+				continue;
+			other = wlanConnectionSlots[slot];
+			if (other->bssNumber == connection->bssNumber && other->bssType == connection->bssType)
+				return 0;
+		}
+		return wlanConnectionSlotAcquire(connection);
+	}
+	return 0;
+}
+
+/* Gives the connection's slot buffers back; the slot itself is released by wlanConnectionRelease(). */
+int wlanConnectionSlotDetach(struct WlanConnection *connection)
+{
+	if (connection->interfaceType == WLAN_IF_IBSS || connection->interfaceType == WLAN_IF_STATION ||
+	    connection->interfaceType == WLAN_IF_AP || connection->interfaceType == WLAN_IF_AMP) {
+		if (connection->beaconBuffer != NULL)
+			osa_BufferFree(connection->beaconBuffer);
+		if (connection->probeResponseBuffer != NULL)
+			osa_BufferFree(connection->probeResponseBuffer);
+		connection->beaconRequest = NULL;
+		connection->beaconBuffer = NULL;
+		connection->probeResponseRequest = NULL;
+		connection->probeResponseBuffer = NULL;
+		uapSqramHandleState(connection);
+		connection->groupRing = 0xff;
+	}
+	return 0;
 }
 
 /* The role block of a station or access point connection, at its information pointer. */

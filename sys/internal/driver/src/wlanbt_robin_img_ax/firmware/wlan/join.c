@@ -393,7 +393,7 @@ int wlanJoinSlotEvent(uint32_t handle, int event, uint32_t argument)
 		if (wlanJoin.retries == 0 || wlanJoin.retries >= 2)
 			break;
 		wlanJoin.retries++;
-		cbProcFlush();
+		wlanMacFlush();
 		wlanJoinSendAuth(0);
 		break;
 	case WLAN_SLOT_EVENT_JOIN_EXPIRED:
@@ -454,7 +454,7 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 						handled = 1;
 						break;
 					}
-					cbProcFlush();
+					wlanMacFlush();
 				}
 				wlanSignalJoinFrame(wlanJoin.connection, (const struct WlanRxStatus *)argument);
 				wlanIeBufferReset(&wlanJoin.ieBuffer);
@@ -468,7 +468,7 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 				wlanSlotClearWindow(wlanJoin.slot);
 				if (wlanJoin.retries != 0 && wlanJoin.retries < 2) {
 					wlanJoin.retries++;
-					cbProcFlush();
+					wlanMacFlush();
 					wlanJoinSendAuth(0);
 				}
 				handled = 1;
@@ -480,7 +480,7 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 						handled = 1;
 						break;
 					}
-					cbProcFlush();
+					wlanMacFlush();
 				}
 				wlanSignalJoinFrame(wlanJoin.connection, (const struct WlanRxStatus *)argument);
 				macTxNotifyUpdateHeader(rx);

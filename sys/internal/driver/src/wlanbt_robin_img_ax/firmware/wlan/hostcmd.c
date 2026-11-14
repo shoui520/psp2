@@ -58,7 +58,6 @@ void uapSqramFilterEntry(int enable);					/* SQRAM 0xc0009ba0 */
 void wlanPsHandleBuffer(unsigned int count);				/* 0x3c124 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
-extern uint32_t wlanPsFilterState;					/* 0x54c58 */
 extern uint16_t hostCmdRateDefault;					/* SQRAM 0xc0011ba8 */
 extern uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS];			/* SQRAM 0xc0011b8a */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */

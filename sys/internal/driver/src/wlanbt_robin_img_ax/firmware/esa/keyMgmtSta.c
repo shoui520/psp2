@@ -288,7 +288,7 @@ void supplicantMICCounterMeasureInvoke(struct WlanConnection *connPtr, BOOLEAN i
 	state = pKeyMgmtInfoSta->sta_MIC_Error.status;
 
 	/* clear any pending TX packets, so a TX buffer can be had */
-	cbProcFlush();
+	wlanMacFlush();
 	SendMICFailReport_sta(connPtr, pKeyMgmtInfoSta, isUnicast);
 
 	switch (state) {

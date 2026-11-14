@@ -115,8 +115,6 @@ extern uint16_t wlanPsHeaderSpacing;			/* 0x562b0 */
 extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
 int wlanPsResetDescriptor(struct WlanConnection *connection, const void *beacon); /* 0x3e98a */
 extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
-extern uint32_t wlanPsMgmtWakeDue;			/* 0x54c50 */
-extern uint32_t wlanPsHostWakeDue;			/* 0x54c54 */
 extern uint8_t wlanSavedMgmtPriority;			/* 0x040088da */
 void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */

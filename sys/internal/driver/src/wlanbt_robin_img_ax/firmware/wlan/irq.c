@@ -13,14 +13,14 @@ struct WlanIrqLine {
 };
 
 /* Handlers not converted yet. */
-int cbProcScheduleEntry(int line, uint32_t pending);			/* 0x1c7a0, line 10 */
+int wlanMacIrq(int line, uint32_t pending);			/* 0x1c7a0, line 10 */
 
 int wlanHostLineMaskIrq(int line, uint32_t pending);
 
 /* Lines installed by wlanIrqRegisterAll(), terminated by a NULL handler. */
 static struct WlanIrqLine wlanIrqTable[] __attribute__((section(".itcm.rw"))) = {
 	{ sysOsTimerIrq,	5 },
-	{ cbProcScheduleEntry,	10 },
+	{ wlanMacIrq,	10 },
 	{ wlanHostLineMaskIrq,	12 },
 	{ NULL,			0 },
 };

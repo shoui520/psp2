@@ -213,6 +213,9 @@ int wlanTxRingsPending(void);				/* 0x31fd6 */
 int wlanTxRingPublishNext(void);			/* 0x320bc */
 extern uint32_t wlanPsSleepTimeout;			/* 0x54c4c */
 extern uint16_t wlanPsSleepSequence;			/* 0x54b84 */
+extern uint32_t wlanPsMgmtWakeDue;			/* 0x54c50 */
+extern uint32_t wlanPsHostWakeDue;			/* 0x54c54 */
+extern uint32_t wlanPsFilterState;			/* 0x54c58 */
 extern uint8_t wlanHostSleepPending;			/* 0x04000d40 */
 
 #endif /* ROBIN_COEX_H */

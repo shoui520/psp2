@@ -391,7 +391,7 @@ int sleepEnter(const uint64_t *deadline, uint32_t margin, uint32_t minimum, uint
 			if (MAC_OPERATION_STATE(status) == MAC_STATE_HALTING)
 				sleepStats.haltRetriesUnderway++;
 			sleepMacResume();
-			cbProcFlush();
+			wlanMacFlush();
 			MAC_300_MODE &= ~8u;
 			SOC_MAC_EVENT_CONTROL &= ~8u;
 			MAC_650_OPERATION &= ~MAC_OPERATION_KEEP;
@@ -485,7 +485,7 @@ void sleepMacHalt(void)
 		MAC_650_OPERATION |= MAC_OPERATION_HALT_ALL;
 		if (--steps == 0) {
 			sleepMacResume();
-			cbProcFlush();
+			wlanMacFlush();
 			sleepStats.savedHaltBit = MAC_650_OPERATION & MAC_OPERATION_KEEP;
 			MAC_650_OPERATION &= ~MAC_OPERATION_KEEP;
 			MAC_300_MODE &= ~8u;

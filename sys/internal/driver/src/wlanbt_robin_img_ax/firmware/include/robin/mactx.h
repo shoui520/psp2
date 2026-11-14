@@ -31,7 +31,9 @@ struct WlanPsPeerState {
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t reserved44;
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
-	uint8_t reserved46[1186];
+	uint8_t reserved46[1178];
+	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
+	uint8_t reserved1228[4];
 	uint8_t p2pIeState[4];		/* kept by the P2P code from custom IE slot 1 */
 };
 
