@@ -15,7 +15,7 @@ typedef int (*SysInitFunc)(void);
 
 int btRomHooksInit(void);	/* 0x00042e00, not converted */
 int wlanInit(void);		/* 0x0001bdc4, not converted */
-int rfInit(void);		/* 0xc0007506, not converted */
+int rfCalibInitStage(void);	/* 0xc0007506, not converted */
 int clockInit(void);		/* 0xc0007540, not converted */
 int bufferPoolsInit(void);	/* 0x0001bcce, not converted */
 int btHctInit(void);		/* 0x00042d9a, not converted; creates thread "hct" */
@@ -30,7 +30,7 @@ static SysInitFunc sysInitTable[] __attribute__((section(".sqram1.rw"))) = {
 	btRomHooksInit,
 	wlanInit,
 	sysTimerSlotInit,
-	rfInit,
+	rfCalibInitStage,
 	clockInit,
 	sysIrqEnableAll,
 	bufferPoolsInit,
