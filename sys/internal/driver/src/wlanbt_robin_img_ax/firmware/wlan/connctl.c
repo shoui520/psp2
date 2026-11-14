@@ -10,6 +10,7 @@
 #include "robin/runtime.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
+#include "robin/wlan.h"
 #include "robin/wlantask.h"
 
 /*
@@ -83,6 +84,10 @@ int wlanConnectionActivate(struct WlanConnection *connection)
 	wlanConnectionClient = connection;
 	wlanRoleMask = 3;
 	return 0;
+}
+
+void wlanTrace(uint32_t tag, uint32_t value)
+{
 }
 
 /* Posts (connection, event) to the control task queue; returns 1 if it cannot. */

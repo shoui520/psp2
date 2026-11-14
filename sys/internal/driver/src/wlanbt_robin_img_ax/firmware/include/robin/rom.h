@@ -31,6 +31,7 @@ int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
  * provisional.
  */
 void romLibResolveState(void);			/* 0x03f3a521: before the radio is retuned */
+int romLibScheduleState(void);			/* 0x03f3a52d: after the host changes the connection's keys or rates */
 int romLibApplyState(void);			/* 0x03f3a515: after it */
 void romLibScheduleContext(void);		/* 0x03f3a96b */
 void romLibResolveContext(unsigned int slotTime);	/* 0x03f3a963: microseconds */

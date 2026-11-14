@@ -94,7 +94,7 @@ int wlanConvertWirelessToEthernet(OsaBuffer *buffer, struct ether_header **outpu
 				 const WlanWirelessFrame *wirelessHeader,
 				 uint8_t *payload, int stripSnap);
 
-/* Debug trace hook (tag, value), empty in this firmware. Not converted yet: 0x189b4. */
+/* Debug trace hook (tag, value), empty in this firmware. */
 void wlanTrace(uint32_t tag, uint32_t value);
 
 #endif /* ROBIN_WLAN_H */
