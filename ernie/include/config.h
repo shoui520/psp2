@@ -147,12 +147,20 @@ struct ConfigBlock {
 	unsigned int	bbmcPowerDelay;		/* the 3G modem's power line's hold at a power-on
 						   when its power input is up (powerBbmcOn) */
 	struct ChargeAlarmLimit chargeAlarmLimits3G[4];	/* the alarms with a 3G modem (bbmcDetect) */
-	unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105 starts state 9
-						   although serial2TestAreaUsed and serial2InTime
-						   refuse */
-	unsigned char	testDisarm:1;		/* set: notification 0x0211 runs transition 0 once
-						   armed (serial2Arm) */
-	unsigned char	reserved4:6;
+	union {
+		unsigned char	value;
+		struct {
+			unsigned char	startCheckOff:1;	/* set: mode 1's command 0x0105
+								   starts state 9 although
+								   serial2TestAreaUsed and
+								   serial2InTime refuse */
+			unsigned char	testDisarm:1;		/* set: notification 0x0211 runs
+								   transition 0 once armed
+								   (serial2Arm) */
+			unsigned char	reserved4:6;
+		} bits;
+	} test;					/* the serial2 test mode's; kept across a new
+						   layout in the retail boards' 0x010001xx */
 	unsigned char	startClockLimit;	/* the clock's low byte up to which serial2InTime
 						   holds */
 	unsigned char	chargeLedBlink1On;	/* before 0x01000107 the charge LED's first counted

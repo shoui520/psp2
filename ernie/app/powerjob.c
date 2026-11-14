@@ -45,6 +45,12 @@ unsigned int powerCutReg2;
 #else
 #define POWER_JOB_AC_DELAY()	(charge.acDelay = 10)
 #endif
+/* after an off or a suspend: 60 in the retail boards' 0x010001xx */
+#if FW_RETAIL_10X
+#define POWER_JOB_AC_DELAY_DOWN()	(charge.acDelay = 0x3c)
+#else
+#define POWER_JOB_AC_DELAY_DOWN()	POWER_JOB_AC_DELAY()
+#endif
 
 /* before 0x01000104, the off and suspend jobs: the Cookie's hold released (task 5's event
    0x400) and the VBUS charge's first bit set; 0x00090804 has no hold and one VBUS flag */
@@ -205,7 +211,7 @@ static void powerJobOff(void)
 		powerCookieHold();
 		POWER_JOB_MODE();
 	}
-	POWER_JOB_AC_DELAY();
+	POWER_JOB_AC_DELAY_DOWN();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;
@@ -289,7 +295,7 @@ static void powerJobSuspend(void)
 	POWER_JOB_MODE();
 	if (!powerLedGetKeep())
 		powerLedSetMode(POWER_LED_SET_ON);
-	POWER_JOB_AC_DELAY();
+	POWER_JOB_AC_DELAY_DOWN();
 	task5SetFlag(4, 0x20);
 	chargeVbus.0 = 1;
 	chargeControl.1 = 1;

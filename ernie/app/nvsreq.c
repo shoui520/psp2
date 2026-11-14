@@ -6,6 +6,7 @@
  */
 #include <string.h>
 
+#include "board.h"
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
@@ -19,7 +20,7 @@ static struct NvsJob *nvsJobNext(void);
 
 #if FW_SINCE(0x01000104)
 /* the lowest offset the host may read or write */
-const unsigned int nvsHostOffsetMin = 0;
+const unsigned int nvsHostOffsetMin = BOARD_NVS_HOST_OFFSET_MIN;
 #endif
 
 unsigned char nvsRequestAnswer[0x20];

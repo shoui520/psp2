@@ -220,7 +220,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
-		if (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff) {
+		if (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}
@@ -271,7 +271,7 @@ static unsigned char serial2Notify0211(void)
 	unsigned char result;
 
 	result = 0;
-	if (serial2GetArmed() != 0 && configGet()->testDisarm) {
+	if (serial2GetArmed() != 0 && configGet()->test.bits.testDisarm) {
 		serial2Disarm();
 		result = STATE_TRANSITION(0);
 	}

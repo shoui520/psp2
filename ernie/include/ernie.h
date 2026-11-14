@@ -18,6 +18,13 @@
 #define HW_IS(id)		(ERNIE_HW == (id))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
 
+/* the retail boards' 0x010001xx (PCH-1000 0x00406000, PDEL 0x00416000): built from a source
+   of their own, between 0x00090903's and the DEM boards' 0x010001xx (no transition 0x5b, a
+   transition's result read as a byte, a 60-tick AC delay after an off or a suspend), by the
+   0x00090903 compiler */
+#define FW_RETAIL_10X		(FW_SINCE(0x01000104) && !FW_SINCE(0x01000306) && \
+				 (HW_IS(0x00406000) || HW_IS(0x00416000)))
+
 /* tables 0x00090804 keeps in initialised RAM (@@INITL, copied by cstart) and later versions
    in the constants */
 #if FW_SINCE(0x00090903)

@@ -212,8 +212,8 @@ void commandRequestReceive(void)
 }
 
 /* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 (0xff000000 before
-   0x01000104) */
-#if FW_SINCE(0x01000104)
+   0x01000104 and in the retail boards' 0x010001xx) */
+#if FW_SINCE(0x01000104) && !FW_RETAIL_10X
 #define COMMAND_PARAMETER_WINDOW	0xfc000000
 #else
 #define COMMAND_PARAMETER_WINDOW	0xff000000
@@ -494,16 +494,22 @@ allowed:
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x00800000;
 					stateSetWakeMask(parameter);
+#if !FW_RETAIL_10X
 				} else if (commandRequestData[0] == 0x13) {
 					transition = 0x5b;
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x02000000;
 					stateSetWakeMask(parameter);
+#endif
 				} else {
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 					break;
 				}
+#if FW_RETAIL_10X
+				if ((unsigned char)STATE_TRANSITION_NOMASK(transition) == 0)
+#else
 				if (STATE_TRANSITION_NOMASK(transition) == 0)
+#endif
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
@@ -519,7 +525,11 @@ allowed:
 				if (commandRequestData[0] == 0x5a) {
 #if FW_SINCE(0x01000104)
 					transition = 0x56;
+#if FW_RETAIL_10X
+					if ((unsigned char)STATE_TRANSITION(transition) == 0)
+#else
 					if (STATE_TRANSITION(transition) == 0)
+#endif
 #else
 					transitionEvent.transition = 0x56;
 					transitionEvent.wakeMask = stateGetWakeMask();

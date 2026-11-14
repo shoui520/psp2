@@ -134,7 +134,11 @@ const struct ConfigBank configDefault = {
 			{ 0x0c64, 0x0c50, 0x0078, 0x0078, 0x00 },
 			{ 0xffff, 0xffff, 0xffff, 0xffff, 0xff },
 		},
-		0, 1, 0,	/* startCheckOff, testDisarm, reserved4 */
+#if FW_SINCE(0x0100060B) || FW_RETAIL_10X
+		{ 0x01 },	/* test: startCheckOff */
+#else
+		{ 0x02 },	/* test: testDisarm */
+#endif
 		0x14,	/* startClockLimit */
 		0x01, 0x01, 0x05,	/* chargeLedBlink1On, chargeLedBlink1Off, chargeLedBlink1Count */
 		0x03,	/* chargeLedBlink2Count */

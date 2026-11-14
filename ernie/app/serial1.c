@@ -342,7 +342,7 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
-		if (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff && serial2InTime() != 0) {
+		if (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff && serial2InTime() != 0) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x52;
 		}

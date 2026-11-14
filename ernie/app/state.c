@@ -534,7 +534,7 @@ static int stateOffHandle(struct StateEvent *event)
 			stateNext = 0;
 #if FW_SINCE(0x01000104)
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On() ||
-		    (serial2TestAreaUsed() == 0 && !configGet()->startCheckOff &&
+		    (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff &&
 		     serial2InTime() != 0))
 			stateNext = 0;
 #else

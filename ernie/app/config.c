@@ -461,6 +461,9 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 		copy->block.pressTime1 = kept->block.pressTime1;
 		copy->block.pressTime2 = kept->block.pressTime2;
 	}
+#if FW_RETAIL_10X
+	copy->block.test.value = kept->block.test.value;
+#endif
 #if FW_SINCE(0x01000104)
 	copy->block.hardwareInfoSelect = kept->block.hardwareInfoSelect;
 	copy->block.state.value = kept->block.state.value;

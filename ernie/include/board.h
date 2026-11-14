@@ -31,6 +31,10 @@
    PCH-1000's NVS holds 0xba0 bytes, the others' 0xf80 */
 #define BOARD_NVS_DATA_BLOCKS	(ERNIE_HW == 0x00406000 ? 3 : 4)
 
+/* the lowest NVS offset the host may read or write (app/nvsreq.c): PCH-1000 keeps its first
+   0x400 bytes from the host */
+#define BOARD_NVS_HOST_OFFSET_MIN	(ERNIE_HW == 0x00406000 ? 0x0400 : 0)
+
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others
    keep input1Bit7Poll empty */
