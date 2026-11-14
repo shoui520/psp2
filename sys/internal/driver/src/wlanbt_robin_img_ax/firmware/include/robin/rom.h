@@ -26,6 +26,7 @@ int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
 int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
 int romEdcaSetTxop(unsigned int queue, unsigned int value);	/* 0x03f3a64d */
 unsigned int romRateIndex(unsigned int rate);	/* 0x03f3ab4f */
+unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order rates */
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */
 uint64_t romGetTimerTimestamp(void);

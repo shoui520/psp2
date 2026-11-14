@@ -617,7 +617,7 @@ int wlanPsPollTxStatus(struct WlanConnection *connection, uint8_t *data, struct 
 	wlanTxRingFilled[wlanTxDataRing] += 4;
 	header = (uint8_t *)__aeabi_uread4(request->frame);
 	header[3] |= 0x08;	/* frame control: Retry */
-	request->requeued = 1;
+	request->mode = 1;
 	if (wlanPsPollUsesMacTimer()) {
 		MAC_7F4_TIMING_LOW |= MAC_PS_POLL_TIMER_ENABLE;
 	} else {

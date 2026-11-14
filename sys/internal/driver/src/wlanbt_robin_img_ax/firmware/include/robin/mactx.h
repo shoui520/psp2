@@ -33,6 +33,26 @@ struct WlanPsPeerState {
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
 };
 
+/*
+ * What the transmit task hands the frame builder (0x2ed44, not converted)
+ * for one host frame: where the transmit data and the payload are, the
+ * TID and sequence number, and room for the 802.11 header.
+ */
+struct MacTxFrameBuild {
+	uint8_t *data;			/* the transmit data (struct WlanReplyFrame) */
+	uint8_t *payload;
+	uint16_t payloadLength;
+	uint8_t reserved10;
+	uint8_t tid;
+	uint8_t reserved12[4];
+	uint16_t sequenceControl;	/* bits 4-15: sequence number */
+	uint8_t reserved18[2];
+	uint8_t header[32];
+};
+
+_Static_assert(sizeof(struct MacTxFrameBuild) == 52, "frame build");
+_Static_assert(offsetof(struct MacTxFrameBuild, header) == 20, "frame build header");
+
 /* Hardware counters of one channel-access queue accumulated in software. */
 struct MacTxQueueStats {
 	uint32_t prepared;

@@ -302,7 +302,7 @@ void wlanPsTriggerSent(void);					/* 0x2eade */
 int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
-extern uint8_t wlanTxRateFlags;
+extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
 uint32_t wlanRateTimeoutValue(uint8_t *rateControl, uint32_t timeout, unsigned int shift); /* 0x2bd4a */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
 void cbProcMoveFrames(unsigned int from, unsigned int to, unsigned int tid,
@@ -325,7 +325,7 @@ unsigned int wlanPeerNextSequence(struct WlanConnection *connection, unsigned in
 unsigned int wlanGroupNextSequence(unsigned int tid);			/* 0x4204c */
 
 /* Hardware window numbers handed to transmit Block Ack sessions. */
-static struct WlanWindowId wlanTxWindowIds[WLAN_TX_BA_MAX] __attribute__((section(".itcm.bss")));				/* 0x040088a6, bit 6: no low rate for null frames */
+static struct WlanWindowId wlanTxWindowIds[WLAN_TX_BA_MAX] __attribute__((section(".itcm.bss")));
 extern uint32_t macTxResetMarker;					/* 0x04000170 */
 
 static inline uint8_t *macTxBufferData(OsaBuffer *buffer)
@@ -549,6 +549,497 @@ queueOrComplete:
 	if (macTxEnqueue(connection, window, entry) == 1)
 		wlanCompletePacket(macTxEntryBuffer(entry), 0);
 	return 0;
+}
+
+/*
+ * Not converted yet; provisional names for what the transmit task uses them
+ * for.
+ */
+void cbProcResume(unsigned int reason);					/* 0x1c800 */
+void cbProcFlush(void);							/* 0x1c840 */
+int uapGroupRekeyDue(uintptr_t message);				/* 0x10970 */
+void uapGroupRekey(uintptr_t message);					/* 0x1f7b4 */
+void mdevWlanTrackState(void);						/* 0x015f0 */
+int cbProcTxAllowed(void);						/* 0x1e032 */
+int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
+void wlanDirectLinkTrigger(void);					/* 0x41184 */
+void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /* 0x41202 */
+OsaBuffer *macTxNotifyNextFrame(void);					/* 0x2fe92 */
+struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *connection,
+						    const uint8_t *peer);	/* 0x0fbf2 */
+void wlanConnectionTouch(struct WlanConnection *connection);		/* 0x1175c */
+void macTxBeginFrame(void);						/* 0x0f662 */
+unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
+int wlanPsTriggerWanted(void);						/* 0x2ea82 */
+void wlanPsHostFrameSeen(void);						/* 0x15c60 */
+int wlanPeerQosEnabled(struct WlanConnection *connection, const uint8_t *peer); /* 0x1e234 */
+unsigned int wlanRateSelect(uint8_t *rateControl);			/* 0x2be18 */
+unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
+void wlanTxSetProtection(struct WlanMacTxRequest *request, int lowRate, int option); /* 0x04b52 */
+int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
+uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int *drop, int *eapol,
+			  int reserved, unsigned int packetType, int ampdu,
+			  const uint8_t **loopback, int qos);		/* 0x2ed44 */
+void wlanTxSetQosControl(struct WlanMacTxRequest *request, struct WlanReplyFrame *data,
+			 uint32_t control, unsigned int tid, int raw);	/* 0x04af6 */
+uint32_t wlanTxControlAddLifetime(uint32_t control, unsigned int shift);	/* 0x04b40 */
+int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
+void wlanTxPrepareRequest(struct WlanReplyFrame *data, struct WlanMacTxRequest *request); /* 0x31ab0 */
+void wlanTxSetSecurity(struct WlanConnection *connection, struct WlanReplyFrame *data,
+		       struct WlanMacTxRequest *request);		/* 0x31798 */
+void wlanTxSetRetry(struct WlanConnection *connection, struct WlanReplyFrame *data,
+		    struct WlanMacTxRequest *request);			/* 0x31a3a */
+extern struct OsaDevice ampWlanDriver;					/* 0x04009860 */
+extern struct OsaMessageQueue wlanDriverQueue15;			/* 0x04004a18 */
+extern struct OsaMessageQueue wlanDriverQueue4;				/* 0x04004a04 */
+extern uint8_t wlanPrimaryEvents;					/* 0x04008828, bit 5: no rate below index 5 */
+
+/* Management frames from the "MAC Mgmt" task keep the frame at a fixed place. */
+#define MAC_TX_MGMT_FRAME	176
+/* The association state 88 bytes past a connection's information slot (3: associated). */
+#define WLAN_INFO_SLOT_STATE(slot)	(((const uint8_t *)(slot))[88])
+/* Bits 3-9 of WlanMacTxRequest.rate hold the rate index. */
+#define MAC_TX_RATE_MASK		0x3f8u
+#define MAC_TX_RATE(index)		(((index) << 25) >> 22)
+#define MAC_TX_RATE_INDEX(rate)		(((uint32_t)(rate) << 22) >> 25)
+
+static inline void macTxSetRate(struct WlanMacTxRequest *request, unsigned int index)
+{
+	request->rate = (request->rate & ~MAC_TX_RATE_MASK) | MAC_TX_RATE(index);
+}
+
+static inline void macTxSetFlags(struct WlanMacTxRequest *request, uint32_t set, uint32_t clear)
+{
+	__aeabi_uwrite4((__aeabi_uread4(request->flags) | set) & ~clear, request->flags);
+}
+
+/*
+ * The "MAC Tx" task. It handles the events posted to it, sends the frames of
+ * the management task, and while the host has data and the MAC may transmit
+ * builds a transmit request for every host frame: the connection it goes
+ * to, the 802.11 header, the rate, the Block Ack session and the ring.
+ */
+void macTxTaskMain(ULONG input)
+{
+	struct WlanConnection *connection = NULL;
+	struct WlanConnectionInfo *info = NULL;
+	struct MacTxFrameBuild build;
+	struct WlanReplyFrame tx;
+	struct WlanMacTxRequest *request;
+	uintptr_t message;
+	uint32_t actual;
+
+	macTxSemaphore = (struct OsaSemaphore *)macTxSemaphoreObject;
+	osaSemaphoreInit(&macTxSemaphore, 1, 12);
+	macTxResetQueues();
+
+	for (;;) {
+		OsaBuffer *buffer;
+		unsigned int window;
+
+		do
+			osaEventFlagsWait(macTxEventFlags, MAC_TX_EVENT_ALL, 8, &actual, 0xffffffff);
+		while (actual == 0);
+
+		if (actual & MAC_TX_EVENT_RESUME) {
+			cbProcResume(0);
+			MAC_REG(0x544) |= 0x80000000u;
+		}
+		if (actual & MAC_TX_EVENT_FLUSH) {
+			cbProcFlush();
+			osaEventFlagsSet(macMgmtEventFlags, 0x10, 7);
+			wlanRaiseEvent(47);
+		}
+		if (actual & MAC_TX_EVENT_STAGE)
+			wlanConnectionStage = 0;
+		if (actual & MAC_TX_EVENT_REKEY)
+			while (osaMsgQueueReceive(uapGroupRekeyQueue, &message, 4, 0) != 15)
+				if (uapGroupRekeyDue(message) != 0)
+					uapGroupRekey(message);
+		if (actual & MAC_TX_EVENT_TRACK)
+			mdevWlanTrackState();
+		if (actual & MAC_TX_EVENT_MGMT) {
+			uintptr_t entry;
+
+			while (osaMsgQueueReceive(macTxMgmtQueue, &entry, 4, 0) != 15) {
+				WlanWirelessFrame *frame;
+				struct WlanReplyFrame *data;
+
+				buffer = (OsaBuffer *)entry;
+				buffer->dataOffset = 28;
+				connection = buffer->context;
+				frame = (WlanWirelessFrame *)((uint8_t *)buffer + MAC_TX_MGMT_FRAME);
+				frame->frameControl[1] &= ~4;
+				frame->sequenceControl[0] &= 0x0f;
+				frame->sequenceControl[1] = 0;
+				frame->sequenceControl[0] = frame->sequenceControl[0] >> 4 << 4;
+				data = (struct WlanReplyFrame *)buffer->data;
+				data->frame = frame->bodyLength;
+				data->queue = 4;
+				macTxSendMgmtFrame(buffer);
+			}
+		}
+
+		if ((actual & (MAC_TX_EVENT_DATA | MAC_TX_EVENT_NOTIFY)) == 0) {
+			wlanHostSleepPending = 0;
+			continue;
+		}
+		message = 0;
+		mdevIoctl(&ampWlanDriver, 0x56, 0);
+		if (cbProcTxAllowed() == 0 || macTxWakeBits != 0 || macTxPathReady() != 0)
+			continue;
+		connection = wlanConnectionFirst(3);
+		if (connection != NULL && connection->mode != 0 &&
+		    wlanDirectLinkPoll(connection, &message) == 0) {
+			wlanConnectionPsState(connection)->triggerPending = 1;
+			wlanDirectLinkTrigger();
+			wlanDirectLinkSend(connection, message);
+			continue;
+		}
+
+		/* Windows whose Block Ack change waited for the hardware to finish. */
+		if (wlanTxWindowFlags & (WLAN_TX_WINDOW_DRAINING * 3)) {
+			for (window = 0; window < 2; ++window) {
+				struct WlanTxWindowQueue *queue = &wlanTxWindowQueues[window];
+				uint32_t entry;
+
+				if (!(wlanTxWindowFlags & (WLAN_TX_WINDOW_DRAINING << window)) ||
+				    queue->pending != 0)
+					continue;
+				wlanTxWindowFlags &= ~(WLAN_TX_WINDOW_DRAINING << window);
+				if (wlanTxWindowFlags & (WLAN_TX_WINDOW_ENABLED << window)) {
+					wlanTrace(0xbbbbbbbb, 0x11111111);
+					wlanBaSlotSetSequence(queue->slot, queue->startSequence);
+					wlanBaSlotApply(queue->slot, window + 5);
+				} else {
+					wlanTrace(0xbbbbbbbb, 0x22222222);
+					wlanBaSlotFlush(queue->slot, window + 5);
+				}
+				while (macTxDequeue(window, &entry) == 0) {
+					wlanTrace(0xbbbbbbbb, 0x33333333);
+					macTxSendDataFrame(macTxEntryBuffer(entry));
+					++queue->pending;
+				}
+			}
+		}
+
+		for (;;) {
+			WlanTxDescriptor *descriptor;
+			const uint8_t *peer;
+			WlanWirelessFrame *frame;
+			uint8_t *data, *built;
+			const uint8_t *loopback;
+			unsigned int skip, rate, sequence, category;
+			int qos, forced, lowRate, ampdu, drop, eapol;
+			uint32_t control, txControl;
+			uint8_t baIndex;
+
+			if (actual & MAC_TX_EVENT_NOTIFY) {
+				buffer = macTxNotifyNextFrame();
+			} else {
+				buffer = osa_MsgQueueRecv(&wlanDriverQueue15);
+				if (buffer == NULL)
+					buffer = osa_MsgQueueRecv(&wlanDriverQueue4);
+				if (buffer != NULL)
+					buffer->packetClass = 4;
+			}
+			if (buffer == NULL)
+				break;
+
+			descriptor = (WlanTxDescriptor *)((uint8_t *)buffer + buffer->dataOffset);
+			peer = (const uint8_t *)descriptor + (descriptor->header.wire.packetOffset[1] << 8 |
+							      descriptor->header.wire.packetOffset[0]);
+
+			/* The connection the frame goes to. */
+			switch (descriptor->header.bssType) {
+			case 0:
+				connection = wlanConnectionFind(0, descriptor->header.bssNumber);
+				if (connection->interfaceType == 1 && !(connection->stationFlags & 0x80)) {
+					struct WlanConnection *direct = wlanConnectionFindByPeer(peer);
+
+					if (direct != NULL) {
+						connection = direct;
+						goto found;
+					}
+					if (!(peer[0] & 1) && connection->state == 6) {
+						direct = wlanConnectionFindDirectPeer(connection, peer);
+						if (direct != NULL) {
+							connection = direct;
+							wlanConnectionTouch(direct);
+							goto found;
+						}
+					}
+				}
+				break;
+			case 1:
+				if (!(peer[0] & 1))
+					goto byPeer;
+				connection = wlanConnectionFind(1, descriptor->header.bssNumber);
+				info = wlanConnectionInfo(connection);
+				wlanConnectionInfoSlot(connection);
+				if (connection == NULL)
+					goto complete;
+				goto group;
+			case 2:
+				connection = wlanConnectionFind(2, descriptor->header.bssNumber);
+				if (connection == NULL)
+					goto complete;
+				if (wlanP2pConnection(connection) == 0)
+					goto found;
+				if (peer[0] & 1) {
+					info = wlanConnectionInfo(connection);
+					wlanConnectionInfoSlot(connection);
+group:
+					if (info == NULL || info->dataAllowed != 0)
+						goto found;
+					connection = NULL;
+					goto complete;
+				}
+byPeer:
+				{
+					struct WlanConnectionInfo **slot;
+
+					connection = wlanConnectionFindByPeer(peer);
+					info = wlanConnectionInfo(connection);
+					slot = wlanConnectionInfoSlot(connection);
+					if (connection == NULL)
+						goto complete;
+					if (WLAN_INFO_SLOT_STATE(slot) != 3) {
+						connection = NULL;
+						goto complete;
+					}
+				}
+				goto found;
+			case 7:
+				connection = buffer->context;
+				break;
+			}
+			if (connection == NULL)
+				goto complete;
+found:
+			buffer->context = connection;
+			wlanHostSleepPending = 1;
+			macTxBeginFrame();
+			__aeabi_memclr4(&tx, offsetof(struct WlanReplyFrame, frameLength));
+			__aeabi_memcpy(&macTxDescriptor, descriptor, 15);
+			if (macTxDescriptor.header.packetLength >= 8000)
+				goto complete;
+
+			/* A null frame for the power-save machinery, not data. */
+			if (macTxDescriptor.flags & 1) {
+				macTxAdvanceStage();
+				if (wlanCoexUseP2pMode(0) && wlanPsNullSuppressed == 0) {
+					if (wlanPsTriggerWanted()) {
+						unsigned int priority = cbProcNullPriority();
+
+						macTxSendNullFrame(connection, 1, priority,
+								   (macTxDescriptor.flags >> 3) & 1, 1, 0);
+					} else {
+						wlanCoexRequestTx();
+					}
+				}
+				if (wlanCoexUseStationMode())
+					wlanPsHostFrameSeen();
+				goto complete;
+			}
+
+			request = &tx.request;
+			__aeabi_uwrite4((int)descriptor, request->host);
+			__aeabi_uwrite4((int)build.header, request->frame);
+			request->hwStatus = 0;
+			request->hwRetries = 0;
+			request->hwFlags = 0;
+			build.data = (uint8_t *)&tx;
+			if (connection->interfaceType == 1 || connection->mode == 2)
+				qos = wlanPeerQosEnabled(connection, peer);
+			else
+				qos = wlanWmmEnabled();
+			macTxBuildDataHeader(connection, &macTxDescriptor,
+					     (WlanWirelessFrame *)__aeabi_uread4(request->frame), peer, qos);
+			frame = (WlanWirelessFrame *)__aeabi_uread4(request->frame);
+			if ((frame->frameControl[1] & 2) && (frame->frameControl[1] & 1))
+				macTxSetFlags(request, 1, 0);
+
+			/* The payload after the Ethernet addresses, unless the host sent 802.11. */
+			skip = macTxDescriptor.header.packetType == 230 ? 0 : 12;
+			build.payloadLength = macTxDescriptor.header.packetLength - skip;
+			build.payload = (uint8_t *)descriptor + skip +
+					(descriptor->header.wire.packetOffset[1] << 8 |
+					 descriptor->header.wire.packetOffset[0]);
+			build.tid = 0;
+			if (macTxDescriptor.priority >= 8)
+				macTxDescriptor.priority = 0;
+
+			if ((connection->mode == 3 || connection->mode == 1) && wlanWmmEnabled()) {
+				macTxDescriptor.priority = wlanWmmTid(macTxDescriptor.priority);
+				build.tid = macTxDescriptor.priority;
+				sequence = wlanNextSequence(connection, build.tid);
+				build.sequenceControl = (build.sequenceControl & 0xf) | sequence << 4;
+			} else if (((connection->interfaceType == 1 && wlanWmmEnabled()) ||
+				    connection->mode == 2 || connection->interfaceType == 4) &&
+				   wlanPeerQosEnabled(connection, peer)) {
+				build.tid = macTxDescriptor.priority;
+				sequence = wlanPeerNextSequence(connection, macTxDescriptor.priority, 1);
+				build.sequenceControl = (build.sequenceControl & 0xf) | sequence << 4;
+			}
+
+			/* The rate: fixed by the host or the connection, else chosen per frame. */
+			forced = 0;
+			if (connection->interfaceType == 4) {
+				request->rate = (request->rate & ~MAC_TX_RATE_MASK) + MAC_TX_RATE(12);
+				forced = 1;
+			}
+			if (connection->dataRate != 254) {
+				macTxSetRate(request, connection->dataRate);
+				forced = 1;
+				macTxSetFlags(request, 0x1000, 0);
+			} else {
+				macTxSetRate(request, wlanRateSelect(connection->rateControl));
+				if (forced != 0 ||
+				    (((WlanWirelessFrame *)__aeabi_uread4(request->frame))->address1[0] & 1))
+					macTxSetFlags(request, 0x1000, 0);
+			}
+			if (((WlanWirelessFrame *)__aeabi_uread4(request->frame))->address1[0] & 1) {
+				macTxSetFlags(request, 0x100, 0x20);
+				if (connection->mode == 2) {
+					if (info->txRate != 0)
+						rate = romRateIndex(info->txRate);
+					else
+						rate = wlanTxApGroupRate(connection);
+					macTxSetRate(request, rate);
+				} else if (connection->groupRate != 254) {
+					macTxSetRate(request, connection->groupRate);
+				} else if (forced == 0) {
+					macTxSetRate(request, wlanTxControlRate(connection));
+				}
+			}
+			if (MAC_TX_RATE_INDEX(request->rate) <= 3 && (wlanPrimaryEvents & 0x20))
+				request->rate = (request->rate & ~MAC_TX_RATE_MASK) + MAC_TX_RATE(5);
+
+			lowRate = 1;
+			if (!(wlanTxPolicyFlags & 0x10) &&
+			    (connection->mode != 2 || !(info->rateFlags & 8)))
+				lowRate = 0;
+			if (connection->interfaceType == 0 && !(connection->txOptions & 8)) {
+				unsigned int value = romRateValue(MAC_TX_RATE_INDEX(request->rate));
+
+				if (value <= romRateValue(18)) {
+					wlanTxSetProtection(request, 1, (connection->txOptions >> 1) & 1);
+					goto protected;
+				}
+			}
+			wlanTxSetProtection(request, lowRate, (connection->txOptions >> 1) & 1);
+protected:
+
+			/* Aggregate when a Block Ack session is up and the rate allows it. */
+			frame = (WlanWirelessFrame *)__aeabi_uread4(request->frame);
+			if (wlanTxBaFind(macTxDescriptor.priority, frame->address1, &baIndex,
+					 wlanTxBaSessions) != 0) {
+				if (wlanRateAmpduAllowed(MAC_TX_RATE_INDEX(request->rate))) {
+					wlanTrace(0xbbbbbbbb, 0x44444444);
+					ampdu = 1;
+				} else {
+					wlanTrace(0xbbbbbbbb, 0x55555555);
+					ampdu = 2;
+				}
+			} else {
+				wlanTrace(0xbbbbbbbb, 0x66666666);
+				ampdu = 0;
+			}
+
+			buffer->dataOffset = 28;
+			data = buffer->data;
+			loopback = NULL;
+			built = wlanTxBuildFrame(&build, buffer, &drop, &eapol, 0,
+						 descriptor->header.wire.packetType[0], ampdu == 1,
+						 &loopback, qos);
+			if (drop != 0 || built == NULL)
+				goto complete;
+			if (eapol != 0 && lowRate != 0 && MAC_TX_RATE_INDEX(request->rate) > 3) {
+				request->rate = (request->rate & ~MAC_TX_RATE_MASK) + MAC_TX_RATE(3);
+				macTxSetFlags(request, 0, 0xa0);
+			}
+			control = macTxDescriptor.control;
+			rate = MAC_TX_RATE_INDEX(request->rate);
+			txControl = rate | 0x10 | control >> 5 << 5;
+			macTxDescriptor.control = txControl;
+			if (loopback != NULL)
+				tx.loopback = loopback;
+			tx.frame = built;
+			__aeabi_uwrite4((int)txControl, &tx.descriptor.priority);
+			tx.queue = 0;
+			tx.descriptor.header.wire.packetLength[0] = rate;
+			tx.descriptor.header.packetType = request->length;
+			sequence = ((built[25] << 8 | built[24]) & 0xf) | (build.sequenceControl >> 4 << 4);
+			built[24] = (uint8_t)sequence;
+			built[25] = (uint8_t)(sequence >> 8);
+			tx.descriptor.header.bssType = 0;
+			tx.descriptor.header.bssNumber = 0;
+			if ((built[2] >> 4) == 8)
+				wlanTxSetQosControl(request, &tx, macTxDescriptor.control, build.tid,
+						    macTxDescriptor.header.packetType == 230);
+
+			/* The ring. */
+			if (connection->mode == 3 || connection->mode == 1) {
+				if (!wlanWmmSetQueue(connection, (uint8_t *)&tx, macTxDescriptor.priority,
+						     macTxDescriptor.delay * 2))
+					goto complete;
+			} else if (connection->interfaceType == 1 || connection->mode == 2) {
+				category = qos;
+				if (qos != 0) {
+					if (ampdu != 0) {
+						wlanTxBaWindowId(baIndex, &tx.queue, wlanTxBaSessions);
+						goto queued;
+					}
+					category = wlanTidToAccessCategory(macTxDescriptor.priority);
+				}
+				tx.queue = wlanAccessCategoryToQueue(category);
+			}
+queued:
+			if (eapol != 0 || ((connection->interfaceType == 0 || connection->mode == 3) &&
+					   wlanPsLifetimeWanted())) {
+				tx.descriptor.header.packetOffset = 0x7fff;
+				if (ampdu != 1)
+					__aeabi_uwrite4((int)wlanTxControlAddLifetime(
+								__aeabi_uread4(&tx.descriptor.priority), 14),
+							&tx.descriptor.priority);
+			}
+			wlanTxPrepareRequest(&tx, request);
+			if (ampdu == 1) {
+				wlanTrace(0xbbbbbbbb, 0x77777777);
+				wlanTxBaCountFrame(baIndex, wlanTxBaSessions);
+				macTxSetFlags(request, 0x20000000, 0);
+				request->mode = 10;
+			} else {
+				wlanTrace(0xbbbbbbbb, 0x88888888);
+				wlanTxSetSecurity(connection, &tx, request);
+			}
+			if (macTxDescriptor.flags & 8) {
+				macTxAdvanceStage();
+				macTxSetFlags(request, 0x80000000u, 0);
+			}
+			tx.descriptor.control = __aeabi_uread4(request->flags);
+			tx.sequence[0] = request->sequence[0];
+			tx.sequence[1] = request->sequence[1];
+			wlanTxSetRetry(connection, &tx, request);
+			__aeabi_uwrite4((int)(__aeabi_uread4(request->flags) & 0x0fffffff), request->flags);
+			request->type = tx.descriptor.header.bssType;
+			request->info = tx.descriptor.header.bssNumber;
+			__aeabi_uwrite4((int)data, request->buffer);
+			__aeabi_uwrite4(0, request->next);
+			__aeabi_memcpy4(data, &tx, offsetof(struct WlanReplyFrame, frameLength));
+			wlanTrace(0xbbbbbbbb, 0x99999999);
+			wlanTrace(0xbbbbbbbb, tx.descriptor.control);
+			wlanTrace(0xbbbbbbbb, tx.queue);
+			if (macTxBlockAckWindow(connection, ampdu, tx.queue, baIndex, (uint32_t)data,
+						(uint8_t *)&tx) != 0)
+				macTxSendDataFrame(buffer);
+			continue;
+complete:
+			wlanCompletePacket(buffer, 0);
+		}
+		wlanHostSleepPending = 0;
+	}
 }
 
 /* Sends every frame still queued in window 5 or 6 and clears its state. */

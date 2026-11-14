@@ -7,9 +7,11 @@
 #ifndef ROBIN_MEF_H
 #define ROBIN_MEF_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/txring.h"
 #include <wlanbt/wlanbt_protocol.h>
 
 /* The stack: bytes are pushed after the length. */
@@ -112,17 +114,22 @@ enum {
 
 /* A frame the offload sends on its own (one buffer, header at dataOffset). */
 struct WlanReplyFrame {
-	WlanTxDescriptor descriptor;
-	uint8_t reserved16[80];
+	WlanTxDescriptor descriptor;	/* bytes 12-15 hold the transmit control word */
+	uint16_t sequence[2];
+	struct WlanMacTxRequest request;
 	uint8_t *frame;			/* points at frameLength */
 	uint8_t reserved100[8];
 	uint8_t queue;
 	uint8_t kind;
-	uint8_t reserved110[6];
+	uint8_t retries;
+	uint8_t reserved111;
+	const uint8_t *loopback;	/* set for frames the callback processor sent */
 	uint8_t frameLength[2];
 	uint8_t header[30];		/* frame control, duration, three addresses */
 	uint8_t body[];
 };
+
+_Static_assert(offsetof(struct WlanReplyFrame, frameLength) == 116, "transmit data");
 
 #define WLAN_REPLY_FRAME_BODY	148	/* offset of body from the start of the data */
 

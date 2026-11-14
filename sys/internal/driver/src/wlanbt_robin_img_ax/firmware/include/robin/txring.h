@@ -25,20 +25,29 @@
 
 /* Transmit request the MAC reads (76 bytes); only the fields the ring code touches are named. */
 struct WlanMacTxRequest {
-	uint8_t requeued;	/* 1: put back at the head of its ring for a retry */
+	uint8_t mode;		/* 1: put back at the head of its ring for a retry; 10: Block Ack */
 	uint8_t reserved1[3];
 	uint8_t frame[4];	/* unaligned pointer to the frame (length first) */
-	uint8_t reserved8[20];
+	uint16_t hwStatus;	/* hwStatus..hwFlags: cleared before a data frame goes out */
+	uint8_t hwRetries;
+	uint8_t hwFlags;
+	uint16_t sequence[2];	/* copied into the data at 16 */
+	uint8_t reserved16[12];
 	uint8_t flags[4];	/* unaligned word; bit 13 marks a frame sent without publishing */
 	uint8_t type;		/* bits 0-2 */
-	uint8_t reserved33;
+	uint8_t info;		/* byte 1 of the data */
 	uint16_t length;
-	uint8_t reserved36[32];
+	uint8_t reserved36[4];
+	uint16_t rate;		/* bits 3-9: rate index */
+	uint8_t reserved42[22];
+	uint8_t host[4];	/* unaligned pointer to the host descriptor */
 	uint8_t buffer[4];	/* unaligned pointer to the buffer data (28 bytes past the buffer) */
-	uint8_t reserved72[4];
+	uint8_t next[4];	/* unaligned word, cleared */
 };
 
 _Static_assert(sizeof(struct WlanMacTxRequest) == 76, "transmit request");
+_Static_assert(offsetof(struct WlanMacTxRequest, rate) == 40, "request rate");
+_Static_assert(offsetof(struct WlanMacTxRequest, host) == 64, "request host descriptor");
 
 /*
  * The buffer data starts with the transmit descriptor; the transmit request

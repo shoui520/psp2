@@ -79,9 +79,11 @@ struct WlanConnection {
 	uint8_t flags2;
 	uint8_t reserved0[2];
 	void *device;
-	uint8_t reserved1a[38];
+	uint8_t reserved1a[36];
+	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
+	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
-	uint8_t reserved1d0;
+	uint8_t txOptions;		/* bit 1: passed to the frame builder; bit 3: any rate allowed */
 	uint8_t timingFlags;		/* bit 4: estimate the PS-Poll timeout on a P2P link */
 	uint8_t reserved1d[7];
 	uint8_t supportedRates[12];
@@ -115,6 +117,10 @@ struct WlanConnection {
 	union {
 		char ssid[32];			/* AMP link */
 		struct WlanConnectionInfo *apInfo;	/* access point */
+		struct {
+			uint8_t reserved752[8];
+			uint32_t stationFlags;	/* station; bit 7: host frames are not routed by destination */
+		};
 	};
 	uint8_t initiator;
 	uint8_t reserved785;
@@ -136,7 +142,10 @@ struct WlanConnection {
 };
 
 _Static_assert(offsetof(struct WlanConnection, device) == 12, "device");
+_Static_assert(offsetof(struct WlanConnection, dataRate) == 52, "data rate");
 _Static_assert(offsetof(struct WlanConnection, hostFlags) == 54, "host flags");
+_Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
+_Static_assert(offsetof(struct WlanConnection, stationFlags) == 760, "station flags");
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
 _Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
