@@ -642,8 +642,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	once.cpp
 	xrngabort.cpp
 	xrngdev.cpp
+	uncaught.cpp
 	wiostream.cpp
 	xmutex.cpp
+	cppsemantics.cpp
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
@@ -665,3 +667,4 @@ set_source_files_properties(../../../kernel/src/sysmem/compare_core.S PROPERTIES
 # strxfrm.c inlines _Strxfrmx (138 B) into strxfrm and keeps its own copy; strcoll.c keeps
 # _Strcollx (286 B) out of line.
 set_source_files_properties(strxfrm.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=64)
+set_source_files_properties(cppsemantics.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)

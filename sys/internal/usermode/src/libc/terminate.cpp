@@ -16,11 +16,11 @@ void terminate() _THROW0()
 	{	// call the terminate handler, then abort
 	sceKernelCallAbortHandler(SCE_LIBC_TERMINATE_CODE, 0);
 	__cxa_eh_globals *globals = __cxa_get_globals();
-	void (*handler)() = globals->pendingHandler;
+	void (*handler)() = globals->call_hook;
 
 	if (handler != 0)
 		{	// a one-time handler
-		globals->pendingHandler = 0;
+		globals->call_hook = 0;
 		(*handler)();
 		}
 	else
@@ -41,11 +41,11 @@ void unexpected()
 	{	// call the unexpected handler, then terminate
 	sceKernelCallAbortHandler(SCE_LIBC_UNEXPECTED_CODE, 0);
 	__cxa_eh_globals *globals = __cxa_get_globals();
-	void (*handler)() = globals->pendingHandler;
+	void (*handler)() = globals->call_hook;
 
 	if (handler != 0)
 		{	// a one-time handler
-		globals->pendingHandler = 0;
+		globals->call_hook = 0;
 		(*handler)();
 		}
 	else
