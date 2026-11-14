@@ -654,6 +654,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xthrow.cpp
 	unwinder_asm.S
 	xonce.c
+	../../../../sdk/target/src/libsnc/pure_virt.c
+	../../../../sdk/target/src/libsnc/rtti.c
+	../../../../sdk/target/src/libsnc/error.c
+	../../../../sdk/target/src/libsnc/memzero.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
@@ -682,3 +686,7 @@ set_source_files_properties(snc_personality.c PROPERTIES COMPILE_OPTIONS -Xblxca
 set_source_files_properties(unwinder.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(rtglobals.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(xthrow.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+# SNC's runtime (libsnc): EDG wrote these .c files in C++ (-Tp: SNC goes by the extension)
+set_source_files_properties(../../../../sdk/target/src/libsnc/rtti.c
+	../../../../sdk/target/src/libsnc/error.c PROPERTIES
+	LANGUAGE CXX COMPILE_OPTIONS "-Tp;-Xblxcall=1")

@@ -110,10 +110,14 @@ def compile_one(src, out, kind, defines, includes, opt, gcc=None, extra=(), mode
 	else:
 		incs = [f'-I{win(i[2:])}' if i.startswith('-I') else i for i in includes]
 		extra = [f'-I{win(i[2:])}' if i.startswith('-I') and len(i) > 2 else i for i in extra]
+		# -Tp: a .c source compiled as C++ (SNC's runtime, EDG's .c files); SNC takes it in
+		# front of the source
+		cxx = ['-Tp'] if '-Tp' in extra else []
+		extra = [e for e in extra if e != '-Tp']
 		# asm is a C++ keyword (the SDK's xkeycheck.h rejects redefining it)
-		asm = [] if src.suffix == '.cpp' else ['-Dasm=__asm__']
+		asm = [] if src.suffix == '.cpp' or cxx else ['-Dasm=__asm__']
 		cmd = snc_command(opt, ['-Xthumb', *extra, *asm, *name, *defines, *incs,
-					'-c', win(src), '-o', win(out)])
+					'-c', *cxx, win(src), '-o', win(out)])
 	result = subprocess.run(cmd, capture_output=True, text=True)
 	if result.returncode:
 		sys.stderr.write(result.stdout + result.stderr)
