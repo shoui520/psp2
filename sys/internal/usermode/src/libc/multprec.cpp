@@ -1,5 +1,6 @@
 // multprec.cpp: multiprecision arithmetic for the random number engines of <random>, on
 // arrays of _MP_len words of 32 bits each held in 64-bit elements.
+#include <functional>	/* its placeholders: Sony's object has their empty initializer */
 #include <limits>
 
 _STD_BEGIN
