@@ -10,14 +10,14 @@
 
 #include "service.h"
 
-/* the engine's memory: its header, its info, the stream, the job, the unit, the VOP and the packet */
+/* the engine's memory: its header, its info, the stream, the job, the unit, the VOL and the VOP */
 #define PARSER_HEADER_SIZE		64
 #define PARSER_INFO_SIZE		64
 #define PARSER_STREAM_SIZE		64
 #define PARSER_JOB_SIZE			1408
 #define PARSER_UNIT_SIZE		256
-#define PARSER_VOP_SIZE			64
-#define PARSER_PACKET_SIZE		256
+#define PARSER_VOL_SIZE			64
+#define PARSER_VOP_SIZE			256
 #define PARSER_FIXED_SIZE		2176	/* all of them */
 #define PARSER_FRAMES_SIZE		2048	/* the pictures' records */
 #define PARSER_TABLE_SIZE		64	/* a VideoM4vTable */

@@ -10,8 +10,8 @@
 
 #define STREAM_SIZE		64
 #define UNIT_SIZE		256
-#define VOP_SIZE		64
-#define PACKET_SIZE		256
+#define VOL_SIZE		64
+#define VOP_SIZE		256
 #define M4V_JOB_SIZE		1408
 #define TABLE_SIZE		64
 #define COMMAND_RECORD_SIZE	64
@@ -34,7 +34,7 @@
 #define SHORT_VIDEO_END		0x3f	/* short_video_end_marker */
 #define GOB_START_BITS		17
 #define START_CODE_PREFIX_BITS	24
-#define RESYNC_BITS(packet)	((packet)->predicted ? (packet)->fcode + 16 : 17)
+#define RESYNC_BITS(vop)	((vop)->codingType ? (vop)->fcode + 16 : 17)
 
 /* the VThread jobs, by the slot's index on the context */
 
@@ -171,15 +171,15 @@ void m4vdecHelperFinish(VideoHelper *helper)
 	shared = (VideoHelperShared *)vnzPublicOpenPrivate((uint32_t)helper->shared, SHARED_SIZE);
 	stream = (const VideoM4vStream *)vnzPublicOpenProtected(shared->argument, STREAM_SIZE);
 	unit = (VideoM4vUnit *)vnzPublicOpenPrivate(stream->unit, UNIT_SIZE);
-	if (unit->failed || unit->vop->notCoded || !unit->packet->unitRuns) {
+	if (unit->failed || unit->vol->dataPartitioned || !unit->vop->vopCoded) {
 		vnzThreadSetFlags(shared->thread, HELPER_FLAG_UNIT);
 	} else {
 		load = unit->load;
 		if (load)
 			m4vdecUnitLoad(shared, stream, unit);
 		count = unit->runMacroblocks;
-		if (unit->vop->shortHeader && unit->packet->runEnd < count)
-			count = unit->packet->runEnd;
+		if (unit->vol->shortHeader && unit->vop->runEnd < count)
+			count = unit->vop->runEnd;
 		VIDEO_UNIT[VIDEO_UNIT_DESCRIPTORS] = count;
 		VIDEO_UNIT[VIDEO_UNIT_COMMAND] = VIDEO_UNIT_RUN;
 	}
@@ -201,7 +201,7 @@ void m4vdecHelperStep(VideoHelper *helper)
 	stream = (const VideoM4vStream *)shared->argument;
 	unit = (const VideoM4vUnit *)stream->unit;
 	argument2 = shared->argument2;
-	if (!unit->vop->notCoded)
+	if (!unit->vol->dataPartitioned)
 		shared->interruptStatus = *helper->interruptStatus;
 	index = JOB_INDEX_SLICE(shared->slot);
 	argument = shared->argument;
@@ -221,8 +221,8 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 	const VideoHelperShared *shared;
 	VideoM4vJob *job;
 	VideoM4vUnit *unit;
+	VideoM4vVol *vol;
 	VideoM4vVop *vop;
-	VideoM4vPacket *packet;
 	VideoM4vTable *tables;
 	uint32_t tablesSize;
 	int32_t error, resync;
@@ -230,27 +230,27 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 	stream = (const VideoM4vStream *)vnzPublicOpenProtected(streamAddress, STREAM_SIZE);
 	job = (VideoM4vJob *)vnzPublicOpenPrivate(jobAddress, M4V_JOB_SIZE);
 	unit = (VideoM4vUnit *)vnzPublicOpenPrivate(stream->unit, UNIT_SIZE);
+	unit->vol = (VideoM4vVol *)vnzPublicOpenPrivate((uint32_t)unit->vol, VOL_SIZE);
 	unit->vop = (VideoM4vVop *)vnzPublicOpenPrivate((uint32_t)unit->vop, VOP_SIZE);
-	unit->packet = (VideoM4vPacket *)vnzPublicOpenPrivate((uint32_t)unit->packet, PACKET_SIZE);
 	shared = (const VideoHelperShared *)vnzPublicOpenProtected(sharedAddress, SHARED_SIZE);
 	vnzCacheInvalidateInside((uint32_t)job, M4V_JOB_SIZE);
 	job->bits = &unit->bits;
 	job->unit = unit;
-	vop = unit->vop;
+	vol = unit->vol;
 	m4vdecBitsRestore(&unit->registers);
 	if (unit->load) {
 		unit->command = shared->command;
 		unit->context = shared->context;
 		error = videoSetJump(job->jump);
 		if (!error) {
-			packet = unit->packet;
+			vop = unit->vop;
 			unit->failed = 0;
-			resync = RESYNC_BITS(packet);
-			if (vop->shortHeader == 1) {
+			resync = RESYNC_BITS(vop);
+			if (vol->shortHeader == 1) {
 				if (m4vdecBitsPeek(&unit->bits, SHORT_VIDEO_START_BITS) ==
-				    SHORT_VIDEO_START && vop->pictureHeader == 1) {
+				    SHORT_VIDEO_START && vol->pictureHeader == 1) {
 					m4vdecShortHeader(stream, job);
-					vop->pictureHeader = 0;
+					vol->pictureHeader = 0;
 				} else {
 					m4vdecGobHeader(job);
 					unit->firstMacroblock += unit->runMacroblocks;
@@ -258,21 +258,21 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 			} else if (m4vdecBitsPeekAligned(&unit->bits, resync) == 1) {
 				m4vdecPacketHeader(stream, job);
 				unit->firstMacroblock += unit->runMacroblocks;
-			} else if (packet->vopHeader) {
+			} else if (vop->vopHeader) {
 				m4vdecVopHeader(stream, job);
-				unit->packet->vopHeader = 0;
+				unit->vop->vopHeader = 0;
 			} else {
 				m4vdecParserError(stream, job, 2, ERROR_PACKET);
 			}
 		} else {
-			if (!vop->shortHeader && !unit->packet->vopHeader)
+			if (!vol->shortHeader && !unit->vop->vopHeader)
 				unit->firstMacroblock += unit->runMacroblocks;
-			if (vop->shortHeader == 1 && !vop->pictureHeader)
+			if (vol->shortHeader == 1 && !vol->pictureHeader)
 				unit->firstMacroblock += unit->runMacroblocks;
-			if (unit->packet->vopHeader == 1)
-				unit->packet->vopHeader = 0;
-			if (vop->pictureHeader == 1)
-				vop->pictureHeader = 0;
+			if (unit->vop->vopHeader == 1)
+				unit->vop->vopHeader = 0;
+			if (vol->pictureHeader == 1)
+				vol->pictureHeader = 0;
 		}
 	} else {
 		error = 0;
@@ -284,19 +284,19 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 		tables = (VideoM4vTable *)vnzPublicOpenPrivate(stream->tables, tablesSize);
 		job->tables = tables;
 		job->table = &tables[unit->table];
-		unit->flags = (uint8_t)unit->packet->predicted;
+		unit->flags = (uint8_t)unit->vop->codingType;
 		m4vdecPictureBegin(stream, job);
 		vnzPublicClosePrivate((uint32_t)tables, unit->tables * TABLE_SIZE);
 	} else if (unit->load) {
-		unit->flags |= (uint8_t)unit->packet->predicted;
+		unit->flags |= (uint8_t)unit->vop->codingType;
 	}
 	if (error & ERRORS_FATAL)
 		m4vdecRunFailed(shared, stream, job);
 	else if (unit->failed)
 		;
-	else if (unit->vop->notCoded)
+	else if (unit->vol->dataPartitioned)
 		m4vdecRunNotCoded(shared, stream, job);
-	else if (!unit->packet->unitRuns)
+	else if (!unit->vop->vopCoded)
 		m4vdecRunSoftware(shared, stream, job);
 	else {
 		unit->dataBits = m4vdecBitsTell(stream, unit);
@@ -308,9 +308,9 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 	}
 	m4vdecBitsSave(&unit->registers);
 	vnzPublicCloseProtected((uint32_t)shared, SHARED_SIZE);
-	unit->vop = (VideoM4vVop *)vnzPublicClosePrivate((uint32_t)unit->vop, VOP_SIZE);
-	unit->packet = (VideoM4vPacket *)vnzPublicClosePrivate((uint32_t)unit->packet,
-		PACKET_SIZE);
+	unit->vol = (VideoM4vVol *)vnzPublicClosePrivate((uint32_t)unit->vol, VOL_SIZE);
+	unit->vop = (VideoM4vVop *)vnzPublicClosePrivate((uint32_t)unit->vop,
+		VOP_SIZE);
 	vnzPublicCloseProtected((uint32_t)stream, STREAM_SIZE);
 	vnzPublicClosePrivate((uint32_t)job, M4V_JOB_SIZE);
 	vnzPublicClosePrivate((uint32_t)unit, UNIT_SIZE);
@@ -323,7 +323,7 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
  */
 static void findResync(VideoM4vUnit *unit, VideoBitstream *bits, int32_t count, int32_t resync)
 {
-	if (unit->vop->shortHeader) {
+	if (unit->vol->shortHeader) {
 		do {
 			m4vdecBitsByteAlign(bits);
 			if (unit->firstMacroblock + count < unit->macroblocks) {
@@ -369,8 +369,8 @@ static void requestFill(VideoHelperJob *request, const VideoHelperShared *shared
 	request->load = unit->load;
 	request->slice = shared->context;
 	request->command = shared->command;
-	request->mode = unit->packet->mode;
-	request->fcode = unit->packet->fcode;
+	request->mode = unit->vop->quant;
+	request->fcode = unit->vop->fcode;
 	unit->load = 0;
 }
 
@@ -403,7 +403,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	const VideoM4vStream *stream;
 	VideoM4vJob *job;
 	VideoM4vUnit *unit;
-	VideoM4vVop *vop;
+	VideoM4vVol *vol;
 	VideoM4vTable *tables;
 	VideoHelperJob *request;
 	VideoBitstream *bits;
@@ -411,7 +411,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	uint32_t ended, last;
 
 	unit = (VideoM4vUnit *)((const VideoM4vStream *)streamAddress)->unit;
-	if (!unit->packet->unitRuns) {
+	if (!unit->vop->vopCoded) {
 		m4vdecJobSliceSoftware(sharedAddress, streamAddress, jobAddress);
 		return;
 	}
@@ -419,8 +419,8 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	stream = (const VideoM4vStream *)vnzPublicOpenProtected(streamAddress, STREAM_SIZE);
 	job = (VideoM4vJob *)vnzPublicOpenPrivate(jobAddress, M4V_JOB_SIZE);
 	unit = (VideoM4vUnit *)vnzPublicOpenPrivate(stream->unit, UNIT_SIZE);
+	unit->vol = (VideoM4vVol *)vnzPublicOpenPrivate((uint32_t)unit->vol, VOL_SIZE);
 	unit->vop = (VideoM4vVop *)vnzPublicOpenPrivate((uint32_t)unit->vop, VOP_SIZE);
-	unit->packet = (VideoM4vPacket *)vnzPublicOpenPrivate((uint32_t)unit->packet, PACKET_SIZE);
 	tables = (VideoM4vTable *)vnzPublicOpenPrivate(stream->tables, unit->tables * TABLE_SIZE);
 	request = (VideoHelperJob *)vnzPublicOpenPrivate(shared->request, JOB_SIZE);
 	vnzCacheInvalidateInside((uint32_t)job, M4V_JOB_SIZE);
@@ -429,13 +429,13 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	job->tables = tables;
 	job->table = &tables[unit->table];
 	bits = job->bits;
-	vop = unit->vop;
+	vol = unit->vol;
 	m4vdecBitsRestore(&unit->registers);
 
 	if (unit->failed) {
 		done = 0;
 		status = RUN_ENDED;
-	} else if (vop->notCoded) {
+	} else if (vol->dataPartitioned) {
 		done = unit->doneMacroblocks;
 		status = unit->doneStatus;
 	} else {
@@ -446,9 +446,9 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 			VIDEO_UNIT[0] = 1;
 		}
 	}
-	if (unit->vop->shortHeader) {
+	if (unit->vol->shortHeader) {
 		if (status != VIDEO_UNIT_ENDED) {
-			count = unit->packet->runEnd - done;
+			count = unit->vop->runEnd - done;
 			if (unit->firstMacroblock + count >= unit->macroblocks) {
 				status = RUN_ENDED;
 			} else {
@@ -465,14 +465,14 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 		count = unit->runMacroblocks - done;
 	}
 	ended = unit->failed || status == VIDEO_UNIT_ENDED;
-	resync = RESYNC_BITS(unit->packet);
+	resync = RESYNC_BITS(unit->vop);
 	if (ended) {
 		if (unit->runOffset)
 			n = unit->widthInMacroblocks - unit->runOffset;
 		else
 			n = unit->runLength;
-		if (unit->vop->notCoded)
-			unit->packet->skipped = 0;
+		if (unit->vol->dataPartitioned)
+			unit->vop->skipped = 0;
 		status = RUN_ENDED;
 		count = n;
 		if (unit->macroblocks - unit->firstMacroblock < count)
@@ -495,7 +495,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 		last = 1;
 	}
 	if (!last && status) {
-		if (!unit->vop->notCoded && !unit->vop->shortHeader)
+		if (!unit->vol->dataPartitioned && !unit->vol->shortHeader)
 			m4vdecBitsSkipUnit(shared, bits);
 		unit->load = 1;
 	}
@@ -516,9 +516,9 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	shared->status = status;
 	shared->finished = last;
 	vnzPublicClosePrivate((uint32_t)tables, unit->tables * TABLE_SIZE);
-	unit->vop = (VideoM4vVop *)vnzPublicClosePrivate((uint32_t)unit->vop, VOP_SIZE);
-	unit->packet = (VideoM4vPacket *)vnzPublicClosePrivate((uint32_t)unit->packet,
-		PACKET_SIZE);
+	unit->vol = (VideoM4vVol *)vnzPublicClosePrivate((uint32_t)unit->vol, VOL_SIZE);
+	unit->vop = (VideoM4vVop *)vnzPublicClosePrivate((uint32_t)unit->vop,
+		VOP_SIZE);
 	vnzPublicClosePrivate((uint32_t)shared, SHARED_SIZE);
 	vnzPublicCloseProtected((uint32_t)stream, STREAM_SIZE);
 	vnzPublicClosePrivate((uint32_t)job, M4V_JOB_SIZE);
@@ -536,8 +536,8 @@ void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint
 	VideoM4vTable *tables;
 	VideoHelperJob *request;
 	VideoBitstream *bits;
+	const VideoM4vVol *vol;
 	const VideoM4vVop *vop;
-	const VideoM4vPacket *packet;
 	int32_t done, status, count, resync;
 	uint32_t ended, last;
 
@@ -554,8 +554,8 @@ void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint
 	job->table = &tables[unit->table];
 	bits = job->bits;
 	/* the VOP and packet headers are not opened here: their own addresses */
+	vol = unit->vol;
 	vop = unit->vop;
-	packet = unit->packet;
 	m4vdecBitsRestore(&unit->registers);
 
 	if (unit->failed) {
@@ -565,22 +565,22 @@ void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint
 		done = unit->doneMacroblocks;
 		status = unit->doneStatus;
 	}
-	if (vop->shortHeader) {
+	if (vol->shortHeader) {
 		gobAlign(bits);
-		count = packet->runEnd - done;
+		count = vop->runEnd - done;
 		status = m4vdecMacroblocksDecode(unit, bits, m4vdecMacroblocksContext(job), count);
 	} else {
 		count = unit->runMacroblocks - done;
 	}
 	ended = unit->failed || status == VIDEO_UNIT_ENDED;
-	resync = RESYNC_BITS(packet);
+	resync = RESYNC_BITS(vop);
 	if (ended) {
 		status = RUN_ENDED;
 		count = unit->runLength - unit->runOffset;
 		if (unit->macroblocks - unit->firstMacroblock < count)
 			count = unit->macroblocks - unit->firstMacroblock;
 		if (unit->error == ERROR_RESYNC) {
-			if (vop->shortHeader) {
+			if (vol->shortHeader) {
 				do {
 					m4vdecBitsByteAlign(bits);
 					if (m4vdecBitsPeekAligned(bits, SHORT_VIDEO_START_BITS) ==
@@ -678,8 +678,8 @@ void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 	table->pitch = pitch;
 	table->reserved = 0;
 	table->info = 0;
-	table->reserved2[1] = 0;
-	table->reserved2[0] = 0;
+	table->skipped2 = 0;
+	table->skipped = 0;
 	table->concealed = 0;
 	table->failed = 0;
 	table->info2 = unit->info2;
@@ -745,14 +745,14 @@ int32_t m4vdecFrameOut(const VideoM4vStream *stream, VideoM4vJob *job, VideoM4vU
 	frame->displayHeight = table->pitch;
 	frame->number2 = unit->frameCount;
 	frame->number = unit->frameCount;
-	frame->vopInfo4 = unit->vop->info4;
-	frame->vopInfo[0] = unit->vop->info[0];
-	frame->vopInfo[1] = unit->vop->info[1];
-	frame->vopInfo[2] = unit->vop->info[2];
-	frame->vopInfo[3] = unit->vop->info2;
-	frame->data = unit->vop->data;
-	frame->frameRate = unit->vop->frameRate;
-	frame->vopInfo3 = unit->vop->info3;
+	frame->vbvBufferSize = unit->vol->vbvBufferSize;
+	frame->aspectRatioInfo = unit->vol->aspectRatioInfo;
+	frame->parWidth = unit->vol->parWidth;
+	frame->parHeight = unit->vol->parHeight;
+	frame->matrixCoefficients = unit->vol->matrixCoefficients;
+	frame->timeIncrementResolution = unit->vol->timeIncrementResolution;
+	frame->fixedVopRate = unit->vol->fixedVopRate;
+	frame->fixedVopTimeIncrement = unit->vol->fixedVopTimeIncrement;
 	frame->reserved = 0;
 	frame->reserved3 = 0;
 	frame->flags = unit->flags;

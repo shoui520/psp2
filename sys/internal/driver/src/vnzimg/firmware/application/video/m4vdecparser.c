@@ -124,23 +124,23 @@ static M4vdecParser *parserBegin(uint32_t memory)
 
 	headerUnit = (VideoM4vUnit *)(memory + PARSER_HEADER_SIZE + PARSER_INFO_SIZE +
 		PARSER_STREAM_SIZE + PARSER_JOB_SIZE);
-	headerUnit->vop = (VideoM4vVop *)((uint32_t)headerUnit + PARSER_UNIT_SIZE);
+	headerUnit->vol = (VideoM4vVol *)((uint32_t)headerUnit + PARSER_UNIT_SIZE);
 	header->info = (M4vdecParserInfo *)(memory + PARSER_HEADER_SIZE);
 	header->stream = memory + PARSER_HEADER_SIZE + PARSER_INFO_SIZE;
 	header->job = memory + PARSER_HEADER_SIZE + PARSER_INFO_SIZE + PARSER_STREAM_SIZE;
 	header->unit = (uint32_t)headerUnit;
-	headerUnit->packet = (VideoM4vPacket *)((uint32_t)headerUnit + PARSER_UNIT_SIZE +
-		PARSER_VOP_SIZE);
+	headerUnit->vop = (VideoM4vVop *)((uint32_t)headerUnit + PARSER_UNIT_SIZE +
+		PARSER_VOL_SIZE);
 	parser = (M4vdecParser *)vnzPublicOpenPrivate(memory, PARSER_HEADER_SIZE);
 	unit = (VideoM4vUnit *)parser->unit;
 	info = parser->info;
 	info->thread = vnzThreadCurrent();
 	unit->lastTable = 0;
-	unit->reserved8 = 0;
+	unit->restart = 0;
 	info->contextSet = 0;
 	unit->error = 0;
 	unit->tables = 1;
-	unit->vop->info2 = 1;
+	unit->vol->matrixCoefficients = 1;
 	unit->pictureCount = 0;
 	unit->lastPts = 0;
 	unit->lastTime = 0;
@@ -340,7 +340,7 @@ static void requestStatus(M4vdecParser *parser)
 		request->vertical = unit->vertical;
 		request->contextFlags = 0;
 		request->sequenceInfo = unit->sequenceInfo;
-		if (unit->vop->notCoded)
+		if (unit->vol->dataPartitioned)
 			request->contextFlags |= VIDEO_ENGINE_CONTEXT_MACROBLOCK;
 	} else {
 		request->sequenceInfo = 0;
@@ -403,7 +403,7 @@ static void picturesPrepare(M4vdecParser *parser, M4vdecParserInfo *info)
 	for (i = 0; i < PARSER_TABLES; i++) {
 		tables[i].address = address;
 		tables[i].state = 0;
-		tables[i].reserved2[0] = 1;
+		tables[i].skipped = 1;
 		tables[i].fieldCount = 0;
 		address += size;
 	}

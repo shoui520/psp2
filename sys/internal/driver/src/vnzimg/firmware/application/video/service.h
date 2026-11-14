@@ -728,36 +728,82 @@ typedef struct VideoM4vStream {
 	uint32_t reserved3;
 } VideoM4vStream;
 
-/* a VOP's header (64 bytes) */
-typedef struct VideoM4vVop {
-	uint8_t reserved[13];
-	int8_t notCoded;		/* vop_coded 0: no run on the unit */
-	uint8_t reserved2[2];
-	uint32_t data;			/* given out with the picture */
+/* the video object layer's header, video_object_layer() (64 bytes) */
+typedef struct VideoM4vVol {
+	uint8_t timeIncrementBits;	/* vop_time_increment's, at least 1 */
+	uint8_t complexityEstimationDisable;
+	uint8_t quantPrecision;
+	uint8_t scalability;
+	int16_t width;			/* in macroblocks, times 16 */
+	int16_t height;
+	uint16_t layerWidth;		/* video_object_layer_width */
+	uint16_t layerHeight;
+	uint8_t resyncMarkerDisable;
+	int8_t dataPartitioned;		/* the engine decodes it: no run on the unit */
+	uint8_t reversibleVlc;
+	uint8_t reserved;		/* cleared with the layer, copied to the VOP */
+	uint32_t timeIncrementResolution;	/* vop_time_increment_resolution */
 	int8_t shortHeader;		/* short_video_header: H.263 pictures and GOBs */
 	int8_t pictureHeader;		/* the picture header is still to be read */
-	uint8_t reserved3[23];
-	uint8_t info[3];		/* given out with the picture, with info2 */
-	int16_t info3;
-	int8_t frameRate;
-	uint8_t info2;
-	uint32_t info4;
-	uint8_t reserved4[8];
-} VideoM4vVop;
+	/* define_vop_complexity_estimation_header() */
+	uint8_t estimationMethod;
+	uint8_t opaque;
+	uint8_t transparent;
+	uint8_t intraCae;
+	uint8_t interCae;
+	uint8_t noUpdate;
+	uint8_t upsampling;
+	uint8_t intraBlocks;
+	uint8_t interBlocks;
+	uint8_t inter4vBlocks;
+	uint8_t notCodedBlocks;
+	uint8_t dctCoefs;
+	uint8_t dctLines;
+	uint8_t vlcSymbols;
+	uint8_t vlcBits;
+	uint8_t apm;
+	uint8_t npm;
+	uint8_t interpolateMcQ;
+	uint8_t forwBackMcQ;
+	uint8_t halfpel2;
+	uint8_t halfpel4;
+	uint8_t sadct;
+	uint8_t quarterpel;
+	/* given out with the picture */
+	uint8_t aspectRatioInfo;
+	uint8_t parWidth;
+	uint8_t parHeight;
+	uint16_t fixedVopTimeIncrement;
+	uint8_t fixedVopRate;
+	uint8_t matrixCoefficients;
+	uint32_t vbvBufferSize;		/* in bytes */
+	uint8_t reserved2[8];
+} VideoM4vVol;
 
-/* a video packet's header (256 bytes) */
-typedef struct VideoM4vPacket {
-	int8_t predicted;		/* a P-VOP: the resync marker is 16 + fcode bits */
+/* a VOP's header, vop() or the short header's picture (256 bytes) */
+typedef struct VideoM4vVop {
+	int8_t codingType;		/* vop_coding_type: 0 I, else predicted */
 	int8_t vopHeader;		/* the VOP header is still to be read */
-	uint8_t reserved[14];
-	int32_t fcode;			/* vop_fcode_forward */
-	int32_t mode;
-	uint8_t reserved2[40];
+	uint8_t reserved[2];
+	int32_t width;			/* the layer's, or the source format's */
+	int32_t height;
+	int32_t intraDcVlcThr;
+	int32_t fcode;			/* vop_fcode_forward: the resync marker is 16 + fcode bits */
+	int32_t quant;			/* vop_quant */
+	uint32_t reserved2;
+	uint32_t timeIncrementResolution;	/* the layer's */
+	int32_t moduloTimeBase;		/* its ones, as bits */
+	int32_t timeIncrement;		/* vop_time_increment */
+	uint32_t volReserved;		/* the layer's reserved byte */
+	uint32_t reserved3;		/* cleared with the short header */
+	uint32_t reversibleVlc;		/* the layer's */
+	uint32_t reserved4[2];
+	int32_t numGobsInVop;		/* short header: the source format's */
 	int32_t runEnd;			/* short header: the macroblock the GOB ends at */
-	int32_t unitRuns;		/* the unit decodes the macroblocks */
+	int32_t vopCoded;		/* vop_coded 0: the unit runs nothing */
 	int32_t skipped;
-	uint8_t reserved3[180];
-} VideoM4vPacket;
+	uint8_t reserved5[180];
+} VideoM4vVop;
 
 /* the decoder's tables of a picture (64 bytes each) */
 typedef struct VideoM4vTable {
@@ -768,7 +814,8 @@ typedef struct VideoM4vTable {
 	int8_t info2;
 	int8_t failed;
 	int8_t concealed;
-	uint8_t reserved2[2];
+	uint8_t skipped;		/* not decoded: no reference for the next */
+	uint8_t skipped2;
 	uint16_t width;
 	uint16_t pitch;			/* the luma's: the width rounded up to 32 */
 	uint16_t codedWidth;		/* in macroblocks, times 16 */
@@ -803,12 +850,15 @@ typedef struct VideoM4vFrame {
 	uint32_t fields;
 	uint32_t reserved3;
 	uint32_t number2;
-	uint32_t vopInfo4;
-	uint8_t vopInfo[4];
-	uint32_t data;
-	int8_t frameRate;
+	uint32_t vbvBufferSize;		/* the layer's */
+	uint8_t aspectRatioInfo;
+	uint8_t parWidth;
+	uint8_t parHeight;
+	uint8_t matrixCoefficients;
+	uint32_t timeIncrementResolution;
+	int8_t fixedVopRate;
 	uint8_t reserved4;
-	int16_t vopInfo3;
+	uint16_t fixedVopTimeIncrement;
 	uint8_t reserved5[40];
 } VideoM4vFrame;
 
@@ -869,9 +919,9 @@ typedef struct VideoM4vUnit {
 	uint8_t pictureInfo[2];		/* given to the engine with the job, swapped */
 	uint8_t reserved7[6];
 	uint32_t flags;
+	VideoM4vVol *vol;
 	VideoM4vVop *vop;
-	VideoM4vPacket *packet;
-	uint8_t reserved8;
+	uint8_t restart;		/* the request's auMode: a restart */
 	int8_t lastTable;
 	int8_t failed;
 	uint8_t reserved9;
