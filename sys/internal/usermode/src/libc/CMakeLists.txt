@@ -31,6 +31,56 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	gets_s.c
 	gmtime_s.c
 	localtime_s.c
+	mbsrtowcs_s.c
+	mbstowcs_s.c
+	memcpy_s.c
+	memmove_s.c
+	printf_s.c
+	qsort_s.c
+	scanf_s.c
+	snprintf_s.c
+	snwprintf_s.c
+	sprintf_s.c
+	sscanf_s.c
+	strcat_s.c
+	strcpy_s.c
+	strerrorlen_s.c
+	strerror_s.c
+	strncat_s.c
+	strncpy_s.c
+	strnlen_s.c
+	strtok_s.c
+	swprintf_s.c
+	swscanf_s.c
+	vfprintf_s.c
+	vfscanf_s.c
+	vfwprintf_s.c
+	vfwscanf_s.c
+	vprintf_s.c
+	vscanf_s.c
+	vsnprintf_s.c
+	vsnwprintf_s.c
+	vsprintf_s.c
+	vsscanf_s.c
+	vswprintf_s.c
+	vswscanf_s.c
+	vwprintf_s.c
+	vwscanf_s.c
+	wcrtomb_s.c
+	wcscat_s.c
+	wcscpy_s.c
+	wcsncat_s.c
+	wcsncpy_s.c
+	wcsnlen_s.c
+	wcsrtombs_s.c
+	wcstok_s.c
+	wcstombs_s.c
+	wctomb_s.c
+	wmemcpy_s.c
+	wmemmove_s.c
+	wprintf_s.c
+	wscanf_s.c
+	xfail_s.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces

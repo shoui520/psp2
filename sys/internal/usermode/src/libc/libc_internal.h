@@ -31,4 +31,18 @@ void _Fcloseall(int exiting);
 int __cxa_atexit(void (*func)(void *), void *arg, void *dso);
 void __cxa_finalize(void *dso);
 
+/* the thread-local data of the C library (sceKernelGetTLSAddr slots) */
+#include <wchar.h>
+mbstate_t *_Getmbrlenstate(void);
+mbstate_t *_Getmbrtowcstate(void);
+mbstate_t *_Getmbsrtowcsstate(void);
+mbstate_t *_Getmbtowcstate(void);
+mbstate_t *_Getwcrtombstate(void);
+mbstate_t *_Getwcsrtombsstate(void);
+mbstate_t *_Getwctombstate(void);
+mbstate_t *_Getwctomb_sstate(void);
+
+/* the message for an error code, in buf or a static buffer when buf is NULL */
+char *_Strerror(int errcode, char *buf);
+
 #endif /* _LIBC_INTERNAL_H */
