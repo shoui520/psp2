@@ -2641,7 +2641,7 @@ static void outputInOrder(const VideoStream *stream, VideoSliceJob *job, uint32_
 }
 
 /* the pictures released and no longer references: free again */
-static void picturesFree(VideoSliceJob *job, const VideoNal *nal)
+static void __attribute__((noinline, noclone)) picturesFree(VideoSliceJob *job, const VideoNal *nal)
 {
 	VideoAvcPicture *picture = job->pictures;
 	int32_t count = nal->pictures, i;
@@ -2747,110 +2747,137 @@ static void frameOut(const VideoStream *stream, VideoSliceJob *job, VideoNal *na
 	vnzPublicClosePrivate((uint32_t)frame, sizeof(VideoAvcFrame));
 }
 
+static void picOrderCntType0(VideoSliceJob *job);
+static void picOrderCntType1(VideoSliceJob *job);
+static void picOrderCntType2(VideoSliceJob *job);
+
 /* 8.2.1: the picture's order counts, by the sequence's type */
 static void picOrderCnt(VideoSliceJob *job)
 {
 	const VideoAvcSps *sps = (const VideoAvcSps *)job->parameterSet;
+
+	if (sps->picOrderCntType == 0)
+		picOrderCntType0(job);
+	else if (sps->picOrderCntType == 1)
+		picOrderCntType1(job);
+	else
+		picOrderCntType2(job);
+}
+
+/* 8.2.1.1: pic_order_cnt_type 0, from pic_order_cnt_lsb and the last reference's */
+static void __attribute__((noinline, noclone)) picOrderCntType0(VideoSliceJob *job)
+{
+	const VideoAvcSps *sps = (const VideoAvcSps *)job->parameterSet;
 	VideoNal *nal = job->parser.nal;
-	int32_t prevMsb, prevLsb, msb, lsb, half, max, top, bottom, offset, absFrameNum;
+	int32_t prevMsb, prevLsb, msb, lsb, half, max, top, bottom;
+
+	if (nal->type == NAL_IDR) {
+		prevMsb = 0;
+		prevLsb = 0;
+	} else {
+		prevMsb = nal->prevPicOrderCntMsb;
+		prevLsb = nal->prevPicOrderCntLsb;
+	}
+	max = sps->maxPicOrderCntLsb;
+	lsb = nal->picOrderCntLsb;
+	half = max / 2;
+	msb = prevMsb;
+	if (lsb < prevLsb && !(prevLsb - lsb < half))
+		msb = prevMsb + max;
+	else if (prevLsb < lsb && half < lsb - prevLsb)
+		msb = prevMsb - max;
+	top = msb + lsb;
+	nal->topFieldOrderCnt = top;
+	bottom = nal->deltaPicOrderCnt[0] + top;
+	nal->bottomFieldOrderCnt = bottom;
+	nal->picOrderCnt = top < bottom ? top : bottom;
+	if (nal->refIdc) {
+		if (nal->mmco5) {
+			nal->prevPicOrderCntMsb = 0;
+			nal->prevPicOrderCntLsb = 0;
+		} else {
+			nal->prevPicOrderCntLsb = lsb;
+			nal->prevPicOrderCntMsb = msb;
+		}
+	}
+	if (nal->type == NAL_IDR)
+		nal->frameNumOffset = 0;
+}
+
+/* 8.2.1.2: pic_order_cnt_type 1, from the frame number and the sequence's cycle of offsets */
+static void __attribute__((noinline, noclone)) picOrderCntType1(VideoSliceJob *job)
+{
+	const VideoAvcSps *sps = (const VideoAvcSps *)job->parameterSet;
+	VideoNal *nal = job->parser.nal;
+	int32_t top, bottom, offset, absFrameNum;
 	int32_t cycle, count, inCycle, expectedDelta, expected, i;
 
-	switch (sps->picOrderCntType) {
-	case 0:
-		if (nal->type == NAL_IDR) {
-			prevMsb = 0;
-			prevLsb = 0;
-		} else {
-			prevMsb = nal->prevPicOrderCntMsb;
-			prevLsb = nal->prevPicOrderCntLsb;
-		}
-		max = sps->maxPicOrderCntLsb;
-		lsb = nal->picOrderCntLsb;
-		half = max / 2;
-		msb = prevMsb;
-		if (lsb < prevLsb && !(prevLsb - lsb < half))
-			msb = prevMsb + max;
-		else if (prevLsb < lsb && half < lsb - prevLsb)
-			msb = prevMsb - max;
-		top = msb + lsb;
-		nal->topFieldOrderCnt = top;
-		bottom = nal->deltaPicOrderCnt[0] + top;
-		nal->bottomFieldOrderCnt = bottom;
-		nal->picOrderCnt = top < bottom ? top : bottom;
-		if (nal->refIdc) {
-			if (nal->mmco5) {
-				nal->prevPicOrderCntMsb = 0;
-				nal->prevPicOrderCntLsb = 0;
-			} else {
-				nal->prevPicOrderCntLsb = lsb;
-				nal->prevPicOrderCntMsb = msb;
-			}
-		}
-		if (nal->type == NAL_IDR)
-			nal->frameNumOffset = 0;
-		break;
-	case 1:
-		cycle = sps->numRefFramesInPicOrderCntCycle;
-		if (nal->type == NAL_IDR) {
-			offset = 0;
-		} else {
-			offset = nal->frameNumOffset;
-			if (nal->frameNum < nal->prevFrameNum)
-				offset = nal->maxFrameNum + offset;
-		}
-		absFrameNum = cycle ? nal->frameNum + offset : 0;
-		if (!nal->refIdc && absFrameNum > 0)
-			absFrameNum--;
-		expected = 0;
-		if (absFrameNum > 0) {
-			count = (absFrameNum - 1) / cycle;
-			inCycle = (absFrameNum - 1) % cycle;
-			expectedDelta = 0;
-			for (i = 0; i < cycle; i++)
-				expectedDelta += sps->offsetForRefFrame[i];
-			expected = count * expectedDelta;
-			for (i = 0; i <= inCycle; i++)
-				expected += sps->offsetForRefFrame[i];
-		}
-		if (!nal->refIdc)
-			expected = sps->offsetForNonRefPic + expected;
-		top = nal->deltaPicOrderCnt[0] + expected;
-		nal->topFieldOrderCnt = top;
-		bottom = sps->offsetForTopToBottomField + top + nal->deltaPicOrderCnt[1];
-		nal->bottomFieldOrderCnt = bottom;
-		nal->picOrderCnt = top < bottom ? top : bottom;
-		if (nal->mmco5)
-			offset = 0;
-		nal->frameNumOffset = offset;
-		if (nal->type == NAL_IDR) {
-			nal->prevPicOrderCntLsb = 0;
-			nal->prevPicOrderCntMsb = 0;
-		}
-		break;
-	default:
+	cycle = sps->numRefFramesInPicOrderCntCycle;
+	if (nal->type == NAL_IDR) {
 		offset = 0;
-		if (nal->type != NAL_IDR) {
-			offset = nal->frameNumOffset;
-			if (nal->frameNum < nal->prevFrameNum)
-				offset = sps->maxFrameNum + offset;
-		}
-		top = 0;
-		if (nal->type != NAL_IDR) {
-			top = (nal->frameNum + offset) * 2;
-			if (!nal->refIdc)
-				top--;
-		}
-		nal->picOrderCnt = top;
-		nal->topFieldOrderCnt = top;
-		nal->bottomFieldOrderCnt = top;
-		if (nal->mmco5)
-			offset = 0;
-		nal->frameNumOffset = offset;
-		if (nal->type == NAL_IDR) {
-			nal->prevPicOrderCntLsb = 0;
-			nal->prevPicOrderCntMsb = 0;
-		}
-		break;
+	} else {
+		offset = nal->frameNumOffset;
+		if (nal->frameNum < nal->prevFrameNum)
+			offset = nal->maxFrameNum + offset;
+	}
+	absFrameNum = cycle ? nal->frameNum + offset : 0;
+	if (!nal->refIdc && absFrameNum > 0)
+		absFrameNum--;
+	expected = 0;
+	if (absFrameNum > 0) {
+		count = (absFrameNum - 1) / cycle;
+		inCycle = (absFrameNum - 1) % cycle;
+		expectedDelta = 0;
+		for (i = 0; i < cycle; i++)
+			expectedDelta += sps->offsetForRefFrame[i];
+		expected = count * expectedDelta;
+		for (i = 0; i <= inCycle; i++)
+			expected += sps->offsetForRefFrame[i];
+	}
+	if (!nal->refIdc)
+		expected = sps->offsetForNonRefPic + expected;
+	top = nal->deltaPicOrderCnt[0] + expected;
+	nal->topFieldOrderCnt = top;
+	bottom = sps->offsetForTopToBottomField + top + nal->deltaPicOrderCnt[1];
+	nal->bottomFieldOrderCnt = bottom;
+	nal->picOrderCnt = top < bottom ? top : bottom;
+	if (nal->mmco5)
+		offset = 0;
+	nal->frameNumOffset = offset;
+	if (nal->type == NAL_IDR) {
+		nal->prevPicOrderCntLsb = 0;
+		nal->prevPicOrderCntMsb = 0;
+	}
+}
+
+/* 8.2.1.3: pic_order_cnt_type 2, twice the frame number (less one when not a reference) */
+static void __attribute__((noinline, noclone)) picOrderCntType2(VideoSliceJob *job)
+{
+	const VideoAvcSps *sps = (const VideoAvcSps *)job->parameterSet;
+	VideoNal *nal = job->parser.nal;
+	int32_t top, offset;
+
+	offset = 0;
+	if (nal->type != NAL_IDR) {
+		offset = nal->frameNumOffset;
+		if (nal->frameNum < nal->prevFrameNum)
+			offset = sps->maxFrameNum + offset;
+	}
+	top = 0;
+	if (nal->type != NAL_IDR) {
+		top = (nal->frameNum + offset) * 2;
+		if (!nal->refIdc)
+			top--;
+	}
+	nal->picOrderCnt = top;
+	nal->topFieldOrderCnt = top;
+	nal->bottomFieldOrderCnt = top;
+	if (nal->mmco5)
+		offset = 0;
+	nal->frameNumOffset = offset;
+	if (nal->type == NAL_IDR) {
+		nal->prevPicOrderCntLsb = 0;
+		nal->prevPicOrderCntMsb = 0;
 	}
 }
 
@@ -3340,7 +3367,7 @@ static void slidingWindow(VideoSliceJob *job, VideoNal *nal, uint32_t current)
 static void mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t difference);
 static void mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermPicNum);
 static void mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx);
-static void mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
+static void __attribute__((noinline, noclone)) mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
 	uint32_t longTermFrameIdx);
 static void mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t maxPlus1);
 static void mmcoAllUnused(VideoSliceJob *job, VideoNal *nal);
@@ -3404,7 +3431,7 @@ static void unmarkReference(VideoSliceJob *job, const VideoNal *nal, int32_t ind
 }
 
 /* operation 1: a short-term picture (or a gap's frame) unused */
-static void mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t difference)
+static void __attribute__((noinline, noclone)) mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t difference)
 {
 	const VideoAvcPicture *picture = job->pictures;
 	VideoAvcPictureExtra *extra = (VideoAvcPictureExtra *)job->pictureExtras;
@@ -3424,7 +3451,7 @@ static void mmcoShortTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_
 }
 
 /* operation 2: a long-term picture unused */
-static void mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermPicNum)
+static void __attribute__((noinline, noclone)) mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermPicNum)
 {
 	const VideoAvcPicture *picture = job->pictures;
 	int32_t count = nal->pictures, i;
@@ -3438,7 +3465,7 @@ static void mmcoLongTermUnused(VideoSliceJob *job, const VideoNal *nal, uint32_t
 }
 
 /* operation 3's first part: the long-term picture holding the index goes */
-static void mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
+static void __attribute__((noinline, noclone)) mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
 {
 	const VideoAvcPicture *picture = job->pictures;
 	int32_t count = nal->pictures, i;
@@ -3451,7 +3478,7 @@ static void mmcoLongTermIdxFree(VideoSliceJob *job, const VideoNal *nal, uint32_
 }
 
 /* operation 3: a short-term picture made long-term */
-static void mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
+static void __attribute__((noinline, noclone)) mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t difference,
 	uint32_t longTermFrameIdx)
 {
 	VideoAvcPicture *picture = job->pictures;
@@ -3467,7 +3494,7 @@ static void mmcoShortTermToLongTerm(VideoSliceJob *job, const VideoNal *nal, uin
 }
 
 /* operation 4: the long-term pictures above the new maximum index go */
-static void mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t maxPlus1)
+static void __attribute__((noinline, noclone)) mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t maxPlus1)
 {
 	int32_t max = -1, count = nal->pictures, i;
 
@@ -3479,7 +3506,7 @@ static void mmcoMaxLongTermIdx(VideoSliceJob *job, const VideoNal *nal, uint32_t
 }
 
 /* operation 5: every reference goes, and the picture's frame_num becomes 0 */
-static void mmcoAllUnused(VideoSliceJob *job, VideoNal *nal)
+static void __attribute__((noinline, noclone)) mmcoAllUnused(VideoSliceJob *job, VideoNal *nal)
 {
 	VideoAvcPictureExtra *extra = (VideoAvcPictureExtra *)job->pictureExtras;
 	VideoAvcPicture *picture = job->picture;
@@ -3494,7 +3521,7 @@ static void mmcoAllUnused(VideoSliceJob *job, VideoNal *nal)
 }
 
 /* operation 6: the current picture long-term */
-static void mmcoCurrentLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
+static void __attribute__((noinline, noclone)) mmcoCurrentLongTerm(VideoSliceJob *job, const VideoNal *nal, uint32_t longTermFrameIdx)
 {
 	VideoAvcPicture *picture = job->picture;
 
