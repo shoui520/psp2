@@ -64,6 +64,7 @@ extern uint8_t osaWorkspaceReady;
 extern struct OsaWorkspace *osaWorkspaceHandle;
 extern struct OsaWorkspace osaWorkspace;
 extern struct OsaIdleHook *osaIdleHooks;
+extern TX_THREAD osaIdleThread;
 
 /* osa/pool.c */
 int osaInit(void);

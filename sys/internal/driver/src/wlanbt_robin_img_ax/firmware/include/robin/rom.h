@@ -30,6 +30,9 @@ unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order 
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */
 uint64_t romGetTimerTimestamp(void);
+/* The MAC's wake and sleep requests (0x03f3a917, 0x03f3a907); no argument. */
+void romMacWakeRequest(void);
+void romMacSleepNotify(void);
 
 /* Signals an interrupt to an open mdev device (called from the SDIO line). */
 int mdevInterrupt(void *dev, int arg);

@@ -15,6 +15,7 @@
 #include "robin/sys.h"
 #include "robin/task.h"
 #include "robin/wlan.h"
+#include "robin/sleep.h"
 
 /* Link-control messages the AMP side sends through the "btamp_pal" device. */
 enum {
@@ -78,7 +79,6 @@ struct AmpLinkRequest {
 extern struct OsaEventFlags *ampEventFlags;
 extern struct OsaBufferPool wlanFramePool;
 OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t a, uint32_t b);
-int macTxHandlePacket(void);				/* 0xcff8 */
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
@@ -306,7 +306,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 				wlanPrimaryEvents |= 1;
 				if (sysEventEngineIsActive())
 					sysProcessEventQueues(0x400000);
-				macTxHandlePacket();
+				sleepMacResume();
 				SOC_PENDING_EVENT_CONTROL |= 4;
 			}
 			connection = wlanConnectionConfigure(WLAN_IF_AMP, WLAN_BSS_TYPE_AMP, physical,

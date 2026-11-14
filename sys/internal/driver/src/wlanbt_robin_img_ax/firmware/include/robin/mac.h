@@ -24,7 +24,9 @@
 #define MAC_254_PENDING_REQUEST	MAC_REG(0x254)
 #define MAC_258_PENDING_STATUS	MAC_REG(0x258)
 #define MAC_2D0_FLAGS		MAC_REG(0x2d0)
-#define MAC_300_MODE		MAC_REG(0x300)
+#define MAC_300_MODE		MAC_REG(0x300)	/* bit 3: sleep wake-up enable */
+#define MAC_500_SLEEP_CONTROL	MAC_REG(0x500)
+#define MAC_514_SLEEP_MODE	MAC_REG(0x514)	/* 2 while asleep */
 /*
  * Indexed window onto an internal table of 6-byte entries (192..255): write
  * the data words and then the index with the write command (0x400), or write

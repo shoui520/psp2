@@ -28,6 +28,9 @@
 #define SOC_EVENT_LATCH		REG8(0x80000092)
 #define SOC_EVENT_SOURCE_ENABLE	REG32(0x80002080)
 #define SOC_EVENT_SECONDARY_ENABLE REG32(0x80002088)
+#define SOC_SLEEP_CLOCK_CONTROL	REG32(0x8000203c)	/* bit 13: calibration clock */
+#define SOC_SLEEP_MEASURE_CONTROL REG32(0x800020a8)	/* bit 15: measuring */
+#define SOC_POWER_CONTROL	REG32(0x80002210)	/* bit 27: awake */
 #define SOC_EVENT_ENGINE_GATE	REG32(0x80002090)
 
 /* The original firmware stores this hardware base in a single data word. */

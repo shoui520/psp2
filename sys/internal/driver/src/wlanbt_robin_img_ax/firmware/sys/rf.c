@@ -30,7 +30,6 @@
 #define RF_PATH_REG(path, reg)	((uint16_t)(((path) << 8) + (reg)))
 
 /* Not converted yet; provisional names. */
-uint64_t romScaleClock(uint32_t clock, uint32_t factor);	/* ROM 0x03f3f3b4, body not available */
 extern uint32_t sysClockFrequency;				/* SQRAM 0xc0011b24 */
 extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 5: no rate below index 5 */
 extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
@@ -199,7 +198,7 @@ unsigned int rfGetBandwidth(void)
 /* Loops of the lock wait: the clock scaled by 4000, over 1024. */
 static inline int rfLockWaitLoops(void)
 {
-	return (int)(romScaleClock(sysClockFrequency, 4000) >> 10);
+	return (int)(((uint64_t)sysClockFrequency * 4000) >> 10);
 }
 
 /*

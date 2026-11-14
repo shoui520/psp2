@@ -53,8 +53,6 @@ int romMacStatPrepare(unsigned int queue);				/* 0x03f3ace7 */
 int romMacStatCheck(unsigned int queue);				/* 0x03f3accf */
 
 /* Called as the MAC is first woken and when the last wake bit is released. */
-void romMacWakeRequest(void);						/* 0x03f3a917 */
-void romMacSleepNotify(int waited);					/* 0x03f3a907 */
 
 /* Debug statistics hook (a no-op in this firmware). */
 
@@ -255,7 +253,8 @@ void macTxReleaseWakeBits(uint32_t *bits)
 	macTxWakeBits &= ~*bits;
 	*bits = 0;
 	if (macTxWakeBits == 0) {
-		romMacSleepNotify(macTxMeasureWait(111));
+		macTxMeasureWait(111);
+		romMacSleepNotify();
 		macTxPostEvent(1);
 	}
 	sysIrqRestore(posture);
