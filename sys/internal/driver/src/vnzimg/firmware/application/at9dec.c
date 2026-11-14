@@ -21,6 +21,11 @@
 #define BATCH_JOB			7
 #define DONE_FLAG			0x80000000
 
+/* the output a call maps: none, always, or only when the call gives a size */
+#define OUTPUT_NONE			0
+#define OUTPUT_ALWAYS			1
+#define OUTPUT_IF_GIVEN			2
+
 /* SceAudiodecInfoAt9 */
 typedef struct At9Info {
 	uint32_t size;
@@ -60,7 +65,7 @@ typedef struct At9Ctrl {
 	uint32_t reserved5[2];
 } At9Ctrl;
 
-static uint32_t memoryOpen(uint32_t address, uint32_t size)
+static uint32_t __attribute__((noinline, noclone)) memoryOpen(uint32_t address, uint32_t size)
 {
 	address = enterMemoryAccessProtocol(address, size);
 	if (address)
@@ -68,7 +73,7 @@ static uint32_t memoryOpen(uint32_t address, uint32_t size)
 	return address;
 }
 
-static uint32_t memoryClose(uint32_t address, uint32_t size)
+static uint32_t __attribute__((noinline, noclone)) memoryClose(uint32_t address, uint32_t size)
 {
 	address = closePublicMemory(address, size);
 	if (address)
@@ -77,7 +82,8 @@ static uint32_t memoryClose(uint32_t address, uint32_t size)
 }
 
 /* width bits of the configuration, from bit (big-endian) */
-static uint32_t configBits(const uint8_t *config, uint32_t width, uint32_t bit)
+static uint32_t __attribute__((noinline, noclone)) configBits(const uint8_t *config, uint32_t width,
+	uint32_t bit)
 {
 	uint32_t value;
 
@@ -86,18 +92,18 @@ static uint32_t configBits(const uint8_t *config, uint32_t width, uint32_t bit)
 	return ((value << (bit & 7)) & 0xffffff) >> (24 - width);
 }
 
-static uint32_t configRateIndex(const uint8_t *config)
+static uint32_t __attribute__((noinline, noclone)) configRateIndex(const uint8_t *config)
 {
 	return configBits(config, 4, 8);
 }
 
-static uint32_t configSuperframeBytes(const uint8_t *config)
+static uint32_t __attribute__((noinline, noclone)) configSuperframeBytes(const uint8_t *config)
 {
 	return configBits(config, 11, 16) + 1;
 }
 
 /* the bit rate of a configuration */
-static int32_t configBitRate(const uint8_t *config)
+static int32_t __attribute__((noinline, noclone)) configBitRate(const uint8_t *config)
 {
 	int32_t rateIndex = configRateIndex(config);
 	int32_t bytes = configSuperframeBytes(config);
@@ -145,7 +151,8 @@ static void at9InitJob(uint32_t argument, uint32_t argument2, uint32_t argument3
 		result = ERROR_SAMPLING_RATE;
 		goto out;
 	}
-	result = ngsAt9DecoderInit((struct At9DecoderState *)decoder, ctrl->info.ch, ctrl->work, &ctrl->info.configData, 1);
+	result = ngsAt9DecoderInit((struct At9DecoderState *)decoder, ctrl->info.ch, ctrl->work,
+		&ctrl->info.configData, 1);
 	if (result < 0)
 		goto out;
 	decoderCounters(ctrl, decoder);
@@ -162,8 +169,8 @@ static void at9DecodeJob(uint32_t argument, uint32_t argument2, uint32_t argumen
 	int32_t result, samples;
 
 	ctrl->pcmSize = 0;
-	result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder, (const uint8_t *)ctrl->pEs, &ctrl->esSize,
-		(int16_t *)ctrl->pPcm);
+	result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder,
+		(const uint8_t *)ctrl->pEs, &ctrl->esSize, (int16_t *)ctrl->pPcm);
 	if (result < 0)
 		goto out;
 	result = ngsAt9DecoderSamples((struct At9DecoderState *)decoder);
@@ -201,7 +208,8 @@ static void at9DecodeManyJob(uint32_t argument, uint32_t count, uint32_t argumen
 		goto out;
 	channels = result;
 	for (i = 0; i < (int32_t)count; i++) {
-		result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder, es, &used, (int16_t *)pcm);
+		result = ngsAt9DecodeSuperframe((struct At9DecoderState *)decoder, es, &used,
+			(int16_t *)pcm);
 		if (result < 0)
 			goto out;
 		bytes = samples * channels * 2;
@@ -248,7 +256,8 @@ static void at9DecodeRangeJob(uint32_t argument, uint32_t skip, uint32_t count,
 			taken = samples - skipped;
 			if (count < taken)
 				taken = count;
-			result = ngsAt9DecodeRange((struct At9DecoderState *)decoder, es, &used, (int16_t *)pcm, skipped, taken);
+			result = ngsAt9DecodeRange((struct At9DecoderState *)decoder, es, &used,
+				(int16_t *)pcm, skipped, taken);
 			if (result < 0)
 				goto out;
 			count -= taken;
@@ -260,6 +269,47 @@ static void at9DecodeRangeJob(uint32_t argument, uint32_t skip, uint32_t count,
 		ctrl->esSize += used;
 		ctrl->pcmSize += bytes;
 	}
+	decoderCounters(ctrl, decoder);
+out:
+	ctrl->result = result;
+}
+
+/* one superframe skipped; nothing is written */
+static void at9SkipJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
+	uint32_t argument4)
+{
+	At9Ctrl *ctrl = (At9Ctrl *)argument;
+	At9Decoder *decoder = ctrl->decoder;
+	int32_t result;
+
+	result = ngsAt9SkipSuperframe((struct At9DecoderState *)decoder, (const uint8_t *)ctrl->pEs,
+		&ctrl->esSize);
+	if (result < 0)
+		goto out;
+	ctrl->pcmSize = 0;
+	decoderCounters(ctrl, decoder);
+out:
+	ctrl->result = result;
+}
+
+/* one superframe, skip samples of it skipped and count kept */
+static void at9DecodeSegmentJob(uint32_t argument, uint32_t skip, uint32_t count,
+	uint32_t argument4)
+{
+	At9Ctrl *ctrl = (At9Ctrl *)argument;
+	At9Decoder *decoder = ctrl->decoder;
+	int32_t result, channels;
+
+	ctrl->pcmSize = 0;
+	result = ngsAt9DecoderChannels((struct At9DecoderState *)decoder);
+	if (result < 0)
+		goto out;
+	channels = result;
+	result = ngsAt9DecodeRange((struct At9DecoderState *)decoder, (const uint8_t *)ctrl->pEs,
+		&ctrl->esSize, (int16_t *)ctrl->pPcm, skip, count);
+	if (result < 0)
+		goto out;
+	ctrl->pcmSize = channels * count * 2;
 	decoderCounters(ctrl, decoder);
 out:
 	ctrl->result = result;
@@ -370,9 +420,9 @@ int32_t rpcAt9Release(uint32_t ctrlAddress)
 	return result;
 }
 
-/* a job with the stream's input and output mapped (output only when given, if optional) */
+/* a job with the stream's input and its output (as output says) mapped */
 static int32_t at9Call(uint32_t ctrlAddress, VnzKernelJobFunction job, uint32_t argument2,
-	uint32_t argument3, uint32_t outputOptional)
+	uint32_t argument3, uint32_t output)
 {
 	uint32_t esSize, pcmSize;
 	int32_t result;
@@ -394,7 +444,7 @@ static int32_t at9Call(uint32_t ctrlAddress, VnzKernelJobFunction job, uint32_t 
 		goto close;
 	}
 	pcmSize = ctrl->pcmSize;
-	if (!outputOptional || pcmSize) {
+	if (output == OUTPUT_ALWAYS || (output == OUTPUT_IF_GIVEN && pcmSize)) {
 		ctrl->pPcm = memoryOpen(ctrl->pPcm, pcmSize);
 		if (ctrl->pPcm == 0) {
 			result = ERROR_MEMORY;
@@ -403,7 +453,7 @@ static int32_t at9Call(uint32_t ctrlAddress, VnzKernelJobFunction job, uint32_t 
 	}
 	at9Run(ctrl->decoder, job, ctrl, argument2, argument3);
 	result = ctrl->result;
-	if (!outputOptional || pcmSize) {
+	if (output == OUTPUT_ALWAYS || (output == OUTPUT_IF_GIVEN && pcmSize)) {
 		ctrl->pPcm = memoryClose(ctrl->pPcm, pcmSize);
 		if (ctrl->pPcm == 0 && result == 0)
 			result = ERROR_MEMORY;
@@ -418,10 +468,16 @@ close:
 	return result;
 }
 
+/* one superframe skipped (no RPC number reaches it: 131 is empty) */
+int32_t rpcAt9Skip(uint32_t ctrlAddress)
+{
+	return at9Call(ctrlAddress, at9SkipJob, 0, 0, OUTPUT_NONE);
+}
+
 /* RPC 132: one superframe */
 int32_t rpcAt9Decode(uint32_t ctrlAddress)
 {
-	return at9Call(ctrlAddress, at9DecodeJob, 0, 0, 0);
+	return at9Call(ctrlAddress, at9DecodeJob, 0, 0, OUTPUT_ALWAYS);
 }
 
 /* RPC 134 */
@@ -449,46 +505,85 @@ int32_t rpcAt9Reset(uint32_t ctrlAddress)
 /* RPC 135: count superframes */
 int32_t rpcAt9DecodeMany(uint32_t ctrlAddress, uint32_t count)
 {
-	return at9Call(ctrlAddress, at9DecodeManyJob, count, 0, 0);
+	return at9Call(ctrlAddress, at9DecodeManyJob, count, 0, OUTPUT_ALWAYS);
 }
 
 /* RPC 137: skip samples, then decode count */
 int32_t rpcAt9DecodeRange(uint32_t ctrlAddress, uint32_t skip, uint32_t count)
 {
-	return at9Call(ctrlAddress, at9DecodeRangeJob, skip, count, 1);
+	return at9Call(ctrlAddress, at9DecodeRangeJob, skip, count, OUTPUT_IF_GIVEN);
 }
 
-/* the input (or output) of each stream of a batch mapped; on a failure none */
-static int32_t batchOpen(At9Ctrl *ctrls, uint32_t *sizes, uint32_t count, uint32_t output);
-
-static int32_t batchClose(At9Ctrl *ctrls, const uint32_t *sizes, uint32_t count, uint32_t output)
+/* one superframe's samples skip to skip + count (no RPC number reaches it) */
+int32_t rpcAt9DecodeSegment(uint32_t ctrlAddress, uint32_t skip, uint32_t count)
 {
-	int32_t result = 0;
-	uint32_t i, *address;
+	return at9Call(ctrlAddress, at9DecodeSegmentJob, skip, count, OUTPUT_ALWAYS);
+}
+
+/* each stream's input of a batch mapped; on a failure none */
+static int32_t batchInputClose(At9Ctrl *ctrls, const uint32_t *sizes, uint32_t count);
+
+static int32_t __attribute__((noinline, noclone)) batchInputOpen(At9Ctrl *ctrls, uint32_t *sizes,
+	uint32_t count)
+{
+	uint32_t i;
 
 	for (i = 0; i < count; i++) {
-		address = output ? &ctrls[i].pPcm : &ctrls[i].pEs;
-		*address = memoryClose(*address, sizes[i]);
-		if (*address == 0 && result == 0)
+		sizes[i] = ctrls[i].esSize;
+		ctrls[i].pEs = memoryOpen(ctrls[i].pEs, sizes[i]);
+		if (ctrls[i].pEs == 0) {
+			batchInputClose(ctrls, sizes, i);
+			return ERROR_MEMORY;
+		}
+	}
+	return 0;
+}
+
+static int32_t __attribute__((noinline, noclone)) batchInputClose(At9Ctrl *ctrls,
+	const uint32_t *sizes, uint32_t count)
+{
+	int32_t result = 0;
+	uint32_t i;
+
+	for (i = 0; i < count; i++) {
+		ctrls[i].pEs = memoryClose(ctrls[i].pEs, sizes[i]);
+		if (ctrls[i].pEs == 0 && result == 0)
 			result = ERROR_MEMORY;
 	}
 	return result;
 }
 
-static int32_t batchOpen(At9Ctrl *ctrls, uint32_t *sizes, uint32_t count, uint32_t output)
+/* each stream's output of a batch mapped; on a failure none */
+static int32_t batchOutputClose(At9Ctrl *ctrls, const uint32_t *sizes, uint32_t count);
+
+static int32_t __attribute__((noinline, noclone)) batchOutputOpen(At9Ctrl *ctrls, uint32_t *sizes,
+	uint32_t count)
 {
-	uint32_t i, *address;
+	uint32_t i;
 
 	for (i = 0; i < count; i++) {
-		address = output ? &ctrls[i].pPcm : &ctrls[i].pEs;
-		sizes[i] = output ? ctrls[i].pcmSize : ctrls[i].esSize;
-		*address = memoryOpen(*address, sizes[i]);
-		if (*address == 0) {
-			batchClose(ctrls, sizes, i, output);
+		sizes[i] = ctrls[i].pcmSize;
+		ctrls[i].pPcm = memoryOpen(ctrls[i].pPcm, sizes[i]);
+		if (ctrls[i].pPcm == 0) {
+			batchOutputClose(ctrls, sizes, i);
 			return ERROR_MEMORY;
 		}
 	}
 	return 0;
+}
+
+static int32_t __attribute__((noinline, noclone)) batchOutputClose(At9Ctrl *ctrls,
+	const uint32_t *sizes, uint32_t count)
+{
+	int32_t result = 0;
+	uint32_t i;
+
+	for (i = 0; i < count; i++) {
+		ctrls[i].pPcm = memoryClose(ctrls[i].pPcm, sizes[i]);
+		if (ctrls[i].pPcm == 0 && result == 0)
+			result = ERROR_MEMORY;
+	}
+	return result;
 }
 
 /* RPC 136: a superframe for each of count streams, decoded in parallel */
@@ -517,10 +612,10 @@ int32_t rpcAt9DecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 		}
 	}
 	/* all run on the last stream's context */
-	result = batchOpen(ctrls, esSizes, count, 0);
+	result = batchInputOpen(ctrls, esSizes, count);
 	if (result < 0)
 		goto close;
-	result = batchOpen(ctrls, pcmSizes, count, 1);
+	result = batchOutputOpen(ctrls, pcmSizes, count);
 	if (result < 0)
 		goto closeEs;
 
@@ -536,11 +631,11 @@ int32_t rpcAt9DecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 		if (result == 0)
 			result = ctrls[i].result;
 
-	closed = batchClose(ctrls, pcmSizes, count, 1);
+	closed = batchOutputClose(ctrls, pcmSizes, count);
 	if (closed < 0 && result == 0)
 		result = closed;
 closeEs:
-	closed = batchClose(ctrls, esSizes, count, 0);
+	closed = batchInputClose(ctrls, esSizes, count);
 	if (closed < 0 && result == 0)
 		result = closed;
 close:

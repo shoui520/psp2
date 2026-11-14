@@ -37,9 +37,15 @@ int32_t aacSbrDivide(int32_t dividend, int32_t divisor)
 	return quotient;
 }
 
+/* 0x8540aa */
+static int32_t log2Of(int32_t value)
+{
+	return log2Table[value];
+}
+
 int32_t aacSbrLog2Ratio(int32_t low, int32_t high)
 {
-	return log2Table[high] - log2Table[low];
+	return log2Of(high) - log2Of(low);
 }
 
 /* Shell sort, ascending */

@@ -75,8 +75,8 @@ static int32_t keepError(int32_t result, int32_t closed)
 }
 
 /* a new encoder gets its context */
-static int32_t silkEncSetup(SilkEncCtrl *ctrl, VnzKernelVThreadResource *resource,
-	SilkEncoder *encoder, uint32_t create)
+static int32_t __attribute__((noinline, noclone)) silkEncSetup(SilkEncCtrl *ctrl,
+	VnzKernelVThreadResource *resource, SilkEncoder *encoder, uint32_t create)
 {
 	if (create) {
 		memset(encoder, 0, 4);
@@ -87,7 +87,7 @@ static int32_t silkEncSetup(SilkEncCtrl *ctrl, VnzKernelVThreadResource *resourc
 	return 0;
 }
 
-static int32_t silkEncRelease(SilkEncoder *encoder)
+static int32_t __attribute__((noinline, noclone)) silkEncRelease(SilkEncoder *encoder)
 {
 	if (encoder->context) {
 		vnzKernelVThreadContextDelete(encoder->context);
@@ -174,15 +174,27 @@ out:
 	vnzExtMemoryClose(&encoderMemory, &encoderAddress);
 }
 
-/* a job on the context, waited for */
-static int32_t silkEncRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job,
-	uint32_t encoder,
-	uint32_t pcm, uint32_t es)
+/* the start job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) silkEncStartRun(uint32_t encoder,
+	VnzKernelVThreadContext *context)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, encoder, pcm, es, 0, vnzThreadCurrent(),
-		DONE_FLAG);
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, silkEncStartJob, encoder, 0, 0, 0,
+		vnzThreadCurrent(), DONE_FLAG);
+	vnzKernelVThreadContextUnlock(locked);
+	vnzThreadWaitFlags(DONE_FLAG);
+	return 0;
+}
+
+/* a frame's encode job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) silkEncodeRun(uint32_t encoder,
+	VnzKernelVThreadContext *context, uint32_t pcm, uint32_t es)
+{
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
+
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, silkEncodeJob, encoder, pcm, es, 0,
+		vnzThreadCurrent(), DONE_FLAG);
 	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
@@ -236,7 +248,7 @@ static int32_t silkEncStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *
 	result = keepError(result, vnzExtMemoryClose(&encoderMemory, &encoderAddress));
 	if (result < 0)
 		goto close;
-	result = silkEncRun(context, silkEncStartJob, encoderAddress, 0, 0);
+	result = silkEncStartRun(encoderAddress, context);
 	if (result < 0)
 		goto close;
 	result = vnzExtMemoryOpen(&encoderMemory, 1, VNZ_MEMORY_MODE_PROTECTED, &encoderAddress,
@@ -340,7 +352,7 @@ int32_t rpcSilkEncode(uint32_t ctrlAddress)
 	if (result >= 0) {
 		result = vnzExtMemoryOpen(&esMemory, 0, VNZ_MEMORY_MODE_PUBLIC, &es, esSize);
 		if (result >= 0)
-			result = silkEncRun(context, silkEncodeJob, encoderAddress, pcm, es);
+			result = silkEncodeRun(encoderAddress, context, pcm, es);
 		result = keepError(result, vnzExtMemoryClose(&esMemory, &es));
 	}
 	result = keepError(result, vnzExtMemoryClose(&pcmMemory, &pcm));

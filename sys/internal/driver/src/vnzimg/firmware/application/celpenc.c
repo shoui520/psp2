@@ -81,8 +81,8 @@ static int32_t keepError(int32_t result, int32_t closed)
 }
 
 /* a new encoder gets its context */
-static int32_t celpEncSetup(CelpEncCtrl *ctrl, VnzKernelVThreadResource *resource,
-	CelpEncoder *encoder, uint32_t create)
+static int32_t __attribute__((noinline, noclone)) celpEncSetup(CelpEncCtrl *ctrl,
+	VnzKernelVThreadResource *resource, CelpEncoder *encoder, uint32_t create)
 {
 	if (create) {
 		memset(encoder, 0, 4);
@@ -93,7 +93,7 @@ static int32_t celpEncSetup(CelpEncCtrl *ctrl, VnzKernelVThreadResource *resourc
 	return 0;
 }
 
-static int32_t celpEncRelease(CelpEncoder *encoder)
+static int32_t __attribute__((noinline, noclone)) celpEncRelease(CelpEncoder *encoder)
 {
 	if (encoder->context) {
 		vnzKernelVThreadContextDelete(encoder->context);
@@ -201,15 +201,41 @@ out:
 	vnzExtMemoryClose(&encoderMemory, &encoderAddress);
 }
 
-/* a job on the context, waited for */
-static int32_t celpEncRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job,
-	uint32_t encoder,
-	uint32_t pcm, uint32_t es)
+/* the start (create) or restart job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) celpEncStartRun(uint32_t encoder,
+	VnzKernelVThreadContext *context, uint32_t create)
+{
+	VnzKernelJobFunction job = create ? celpEncInitJob : celpEncResetJob;
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
+
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, encoder, 0, 0, 0,
+		vnzThreadCurrent(), DONE_FLAG);
+	vnzKernelVThreadContextUnlock(locked);
+	vnzThreadWaitFlags(DONE_FLAG);
+	return 0;
+}
+
+/* a frame's encode job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) celpEncodeRun(uint32_t encoder,
+	VnzKernelVThreadContext *context, uint32_t pcm, uint32_t es)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, encoder, pcm, es, 0, vnzThreadCurrent(),
-		DONE_FLAG);
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, celpEncodeJob, encoder, pcm, es, 0,
+		vnzThreadCurrent(), DONE_FLAG);
+	vnzKernelVThreadContextUnlock(locked);
+	vnzThreadWaitFlags(DONE_FLAG);
+	return 0;
+}
+
+/* the header job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) celpEncHeaderRun(uint32_t encoder,
+	VnzKernelVThreadContext *context)
+{
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
+
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, celpEncHeaderJob, encoder, 0, 0, 0,
+		vnzThreadCurrent(), DONE_FLAG);
 	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
@@ -266,8 +292,7 @@ static int32_t celpEncStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *
 	result = keepError(result, vnzExtMemoryClose(&encoderMemory, &encoderAddress));
 	if (result < 0)
 		goto close;
-	result = celpEncRun(context, create ? celpEncInitJob : celpEncResetJob, encoderAddress,
-		0, 0);
+	result = celpEncStartRun(encoderAddress, context, create);
 	if (result < 0)
 		goto close;
 	result = vnzExtMemoryOpen(&encoderMemory, 1, VNZ_MEMORY_MODE_PROTECTED, &encoderAddress,
@@ -365,7 +390,7 @@ int32_t rpcCelpEncode(uint32_t ctrlAddress)
 	if (result >= 0) {
 		result = vnzExtMemoryOpen(&esMemory, 0, VNZ_MEMORY_MODE_PUBLIC, &es, esSize);
 		if (result >= 0)
-			result = celpEncRun(context, celpEncodeJob, encoderAddress, pcm, es);
+			result = celpEncodeRun(encoderAddress, context, pcm, es);
 		result = keepError(result, vnzExtMemoryClose(&esMemory, &es));
 	}
 	result = keepError(result, vnzExtMemoryClose(&pcmMemory, &pcm));
@@ -416,7 +441,7 @@ int32_t rpcCelpEncOptInfo(uint32_t ctrlAddress)
 	result = keepError(result, vnzExtMemoryClose(&encoderMemory, &encoderAddress));
 	if (result < 0)
 		goto close;
-	result = celpEncRun(context, celpEncHeaderJob, encoderAddress, 0, 0);
+	result = celpEncHeaderRun(encoderAddress, context);
 	if (result < 0)
 		goto close;
 

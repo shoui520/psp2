@@ -11,9 +11,9 @@
 #define LONG_TAPS	12
 #define SHORT_TAPS	8
 
-/* 0x8b5d08 (12 taps) and 0x8b6020 (8 taps) */
-static void filter(int32_t *x, int32_t size, int32_t step, const int32_t *lpc,
-	int32_t shift, int32_t order, int32_t taps)
+/* the body of both filters, for a delay line of taps */
+static inline __attribute__((always_inline)) void filter(int32_t *x, int32_t size, int32_t step,
+	const int32_t *lpc, int32_t shift, int32_t order, int32_t taps)
 {
 	int32_t coef[LONG_TAPS], history[LONG_TAPS] = { 0 }, n, i;
 
@@ -36,6 +36,20 @@ static void filter(int32_t *x, int32_t size, int32_t step, const int32_t *lpc,
 			history[i] = history[i - 1];
 		history[0] = y;
 	}
+}
+
+/* 0x8b5d08: a long window's filter, 12 taps */
+static void __attribute__((noinline)) filterLong(int32_t *x, int32_t size, int32_t step,
+	const int32_t *lpc, int32_t shift, int32_t order)
+{
+	filter(x, size, step, lpc, shift, order, LONG_TAPS);
+}
+
+/* 0x8b6020: a short window's filter, 8 taps */
+static void __attribute__((noinline)) filterShort(int32_t *x, int32_t size, int32_t step,
+	const int32_t *lpc, int32_t shift, int32_t order)
+{
+	filter(x, size, step, lpc, shift, order, SHORT_TAPS);
 }
 
 void aacTnsFilter(AacBitstream *bits, AacIcs *ics)
@@ -73,9 +87,12 @@ void aacTnsFilter(AacBitstream *bits, AacIcs *ics)
 
 			/* the coefficients advance only past filters that ran */
 			x = ics->spectrum + w * 128 + (tns->direction[filterIndex] ? end - 1 : start);
-			filter(x, end - start, tns->direction[filterIndex] ? -1 : 1, tns->lpc + coef,
-				tns->shift[filterIndex], tns->order[filterIndex],
-				windows == 1 ? LONG_TAPS : SHORT_TAPS);
+			if (windows == 1)
+				filterLong(x, end - start, tns->direction[filterIndex] ? -1 : 1,
+					tns->lpc + coef, tns->shift[filterIndex], tns->order[filterIndex]);
+			else
+				filterShort(x, end - start, tns->direction[filterIndex] ? -1 : 1,
+					tns->lpc + coef, tns->shift[filterIndex], tns->order[filterIndex]);
 			coef += tns->order[filterIndex];
 		}
 	}

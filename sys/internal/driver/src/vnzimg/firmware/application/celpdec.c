@@ -99,8 +99,8 @@ static int32_t celpBitRateIndex(uint32_t bitRate)
 }
 
 /* the stream's bit rate; a new decoder also gets its context */
-static int32_t celpSetup(CelpCtrl *ctrl, VnzKernelVThreadResource *resource, CelpDecoder *decoder,
-	uint32_t create)
+static int32_t __attribute__((noinline, noclone)) celpSetup(CelpCtrl *ctrl,
+	VnzKernelVThreadResource *resource, CelpDecoder *decoder, uint32_t create)
 {
 	if (create)
 		memset(decoder, 0, 4);
@@ -112,7 +112,7 @@ static int32_t celpSetup(CelpCtrl *ctrl, VnzKernelVThreadResource *resource, Cel
 	return 0;
 }
 
-static int32_t celpRelease(CelpDecoder *decoder)
+static int32_t __attribute__((noinline, noclone)) celpRelease(CelpDecoder *decoder)
 {
 	if (decoder->context) {
 		vnzKernelVThreadContextDelete(decoder->context);
@@ -160,7 +160,8 @@ static void celpResetJob(uint32_t decoder, uint32_t argument2, uint32_t argument
 }
 
 /* a frame; the decoder and its input and output are mapped here, on the VThread */
-static void celpDecodeFrame(uint32_t decoderAddress, uint32_t esAddress, uint32_t pcmAddress)
+static void __attribute__((noinline, noclone)) celpDecodeFrame(uint32_t decoderAddress,
+	uint32_t esAddress, uint32_t pcmAddress)
 {
 	VnzExtMemory decoderMemory, esMemory, pcmMemory;
 	CelpDecoder *decoder;
@@ -216,21 +217,35 @@ static void celpBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t arg
 {
 }
 
-/* a job on the context, waited for */
-static int32_t celpRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job, uint32_t decoder,
-	uint32_t es, uint32_t pcm)
+/* the start (create) or restart job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) celpStartRun(uint32_t decoder,
+	VnzKernelVThreadContext *context, uint32_t create)
 {
+	VnzKernelJobFunction job = create ? celpInitJob : celpResetJob;
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, decoder, 0, 0, 0, vnzThreadCurrent(),
 		DONE_FLAG);
 	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
 
-static int32_t celpRunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
-	const uint32_t *es, const uint32_t *pcm, uint32_t count)
+/* a frame's decode job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) celpDecodeRun(uint32_t decoder,
+	VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
+{
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
+
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, celpDecodeJob, decoder, es, pcm, 0,
+		vnzThreadCurrent(), DONE_FLAG);
+	vnzKernelVThreadContextUnlock(locked);
+	vnzThreadWaitFlags(DONE_FLAG);
+	return 0;
+}
+
+static int32_t __attribute__((noinline, noclone)) celpRunBatch(const uint32_t *decoders,
+	VnzKernelVThreadContext *context, const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
@@ -293,7 +308,7 @@ static int32_t celpStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *res
 	result = keepError(result, vnzExtMemoryClose(&decoderMemory, &decoderAddress));
 	if (result < 0)
 		goto close;
-	result = celpRun(context, create ? celpInitJob : celpResetJob, decoderAddress, 0, 0);
+	result = celpStartRun(decoderAddress, context, create);
 	if (result < 0)
 		goto close;
 	result = vnzExtMemoryOpen(&decoderMemory, 1, VNZ_MEMORY_MODE_PROTECTED, &decoderAddress,
@@ -392,7 +407,7 @@ int32_t rpcCelpDecode(uint32_t ctrlAddress)
 	if (result >= 0) {
 		result = vnzExtMemoryOpen(&pcmMemory, 0, VNZ_MEMORY_MODE_PUBLIC, &pcm, pcmSize);
 		if (result >= 0)
-			result = celpRun(context, celpDecodeJob, decoderAddress, es, pcm);
+			result = celpDecodeRun(decoderAddress, context, es, pcm);
 		result = keepError(result, vnzExtMemoryClose(&pcmMemory, &pcm));
 	}
 	result = keepError(result, vnzExtMemoryClose(&esMemory, &es));

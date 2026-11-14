@@ -65,8 +65,8 @@ static int32_t keepError(int32_t result, int32_t closed)
 }
 
 /* a new decoder gets its context */
-static int32_t silkSetup(SilkCtrl *ctrl, VnzKernelVThreadResource *resource, SilkDecoder *decoder,
-	uint32_t create)
+static int32_t __attribute__((noinline, noclone)) silkSetup(SilkCtrl *ctrl,
+	VnzKernelVThreadResource *resource, SilkDecoder *decoder, uint32_t create)
 {
 	if (create) {
 		memset(decoder, 0, 4);
@@ -77,7 +77,7 @@ static int32_t silkSetup(SilkCtrl *ctrl, VnzKernelVThreadResource *resource, Sil
 	return 0;
 }
 
-static int32_t silkRelease(SilkDecoder *decoder)
+static int32_t __attribute__((noinline, noclone)) silkRelease(SilkDecoder *decoder)
 {
 	if (decoder->context) {
 		vnzKernelVThreadContextDelete(decoder->context);
@@ -117,7 +117,8 @@ out:
  * A packet: its frames, one call each, until the decoder has no more (or,
  * for a lost packet, for the frames a packet holds).
  */
-static void silkDecodeFrame(uint32_t decoderAddress, uint32_t esAddress, uint32_t pcmAddress)
+static void __attribute__((noinline, noclone)) silkDecodeFrame(uint32_t decoderAddress,
+	uint32_t esAddress, uint32_t pcmAddress)
 {
 	VnzExtMemory decoderMemory, esMemory, pcmMemory;
 	SKP_SILK_SDK_DecControlStruct control;
@@ -182,8 +183,8 @@ static void silkDecodeJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t 
  * this one, from the packet at es into lbrr; nothing in the image runs this job,
  * which the image keeps.
  */
-static void __attribute__((used)) silkSearchLbrrJob(uint32_t decoderAddress, uint32_t esAddress, uint32_t lbrrAddress,
-	uint32_t argument4)
+static void __attribute__((used)) silkSearchLbrrJob(uint32_t decoderAddress, uint32_t esAddress,
+	uint32_t lbrrAddress, uint32_t argument4)
 {
 	VnzExtMemory decoderMemory, esMemory, lbrrMemory;
 	SilkDecoder *decoder;
@@ -215,14 +216,27 @@ out:
 	vnzExtMemoryClose(&decoderMemory, &decoderAddress);
 }
 
-/* a job on the context, waited for */
-static int32_t silkRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job, uint32_t decoder,
-	uint32_t es, uint32_t pcm)
+/* the start job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) silkStartRun(uint32_t decoder,
+	VnzKernelVThreadContext *context)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
-		DONE_FLAG);
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, silkStartJob, decoder, 0, 0, 0,
+		vnzThreadCurrent(), DONE_FLAG);
+	vnzKernelVThreadContextUnlock(locked);
+	vnzThreadWaitFlags(DONE_FLAG);
+	return 0;
+}
+
+/* a frame's decode job on the context, waited for */
+static int32_t __attribute__((noinline, noclone)) silkDecodeRun(uint32_t decoder,
+	VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
+{
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
+
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, silkDecodeJob, decoder, es, pcm, 0,
+		vnzThreadCurrent(), DONE_FLAG);
 	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
@@ -276,7 +290,7 @@ static int32_t silkStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *res
 	result = keepError(result, vnzExtMemoryClose(&decoderMemory, &decoderAddress));
 	if (result < 0)
 		goto close;
-	result = silkRun(context, silkStartJob, decoderAddress, 0, 0);
+	result = silkStartRun(decoderAddress, context);
 	if (result < 0)
 		goto close;
 	result = vnzExtMemoryOpen(&decoderMemory, 1, VNZ_MEMORY_MODE_PROTECTED, &decoderAddress,
@@ -376,7 +390,7 @@ int32_t rpcSilkDecode(uint32_t ctrlAddress)
 	if (result >= 0) {
 		result = vnzExtMemoryOpen(&pcmMemory, 0, VNZ_MEMORY_MODE_PUBLIC, &pcm, pcmSize);
 		if (result >= 0)
-			result = silkRun(context, silkDecodeJob, decoderAddress, es, pcm);
+			result = silkDecodeRun(decoderAddress, context, es, pcm);
 		result = keepError(result, vnzExtMemoryClose(&pcmMemory, &pcm));
 	}
 	result = keepError(result, vnzExtMemoryClose(&esMemory, &es));
@@ -397,4 +411,10 @@ int32_t rpcSilkDecode(uint32_t ctrlAddress)
 	ctrl->time = timerRead() - ctrl->time;
 close:
 	return keepError(result, vnzExtMemoryClose(&ctrlMemory, &ctrlAddress));
+}
+
+/* RPC 276, the batch decode: SILK has none, and Sony's entry decodes the first stream */
+int32_t rpcSilkDecodeBatch(uint32_t ctrlAddress)
+{
+	return rpcSilkDecode(ctrlAddress);
 }

@@ -92,7 +92,8 @@ static int32_t mp3Configure(Mp3Decoder *decoder, const AudioDecoderEngine *engin
 	return engine->control(decoder->handle, keys, 2, values, work);
 }
 
-static int32_t mp3Init(Mp3Ctrl *ctrl, VnzKernelVThreadResource *resource, Mp3Decoder *decoder)
+static int32_t __attribute__((noinline, noclone)) mp3Init(Mp3Ctrl *ctrl,
+	VnzKernelVThreadResource *resource, Mp3Decoder *decoder)
 {
 	const AudioDecoderEngine *engine = mp3Engine();
 	int32_t key, size, result;
@@ -116,7 +117,7 @@ static int32_t mp3Init(Mp3Ctrl *ctrl, VnzKernelVThreadResource *resource, Mp3Dec
 	return mp3Configure(decoder, engine);
 }
 
-static int32_t mp3Release(Mp3Decoder *decoder)
+static int32_t __attribute__((noinline, noclone)) mp3Release(Mp3Decoder *decoder)
 {
 	const AudioDecoderEngine *engine = mp3Engine();
 	int32_t result = 0, destroyed;
@@ -134,7 +135,7 @@ static int32_t mp3Release(Mp3Decoder *decoder)
 }
 
 /* a new instance in the same memory */
-static int32_t mp3Reset(Mp3Decoder *decoder)
+static int32_t __attribute__((noinline, noclone)) mp3Reset(Mp3Decoder *decoder)
 {
 	const AudioDecoderEngine *engine = mp3Engine();
 	int32_t result;
@@ -153,7 +154,8 @@ static int32_t mp3Reset(Mp3Decoder *decoder)
  * The first offset with a header of the stream's MPEG version and channels
  * (the sync word is not checked), or the error of the first header.
  */
-static int32_t mp3FindHeader(Mp3Decoder *decoder, const uint8_t *es)
+static int32_t __attribute__((noinline, noclone)) mp3FindHeader(Mp3Decoder *decoder,
+	const uint8_t *es)
 {
 	uint8_t header[HEADER_SIZE];
 	int32_t result = 0, error;
@@ -233,7 +235,8 @@ static void mp3BatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argu
 {
 }
 
-static int32_t mp3Run(uint32_t decoder, VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
+static int32_t __attribute__((noinline, noclone)) mp3Run(uint32_t decoder,
+	VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
@@ -244,8 +247,8 @@ static int32_t mp3Run(uint32_t decoder, VnzKernelVThreadContext *context, uint32
 	return 0;
 }
 
-static int32_t mp3RunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
-	const uint32_t *es, const uint32_t *pcm, uint32_t count)
+static int32_t __attribute__((noinline, noclone)) mp3RunBatch(const uint32_t *decoders,
+	VnzKernelVThreadContext *context, const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
@@ -261,7 +264,7 @@ static int32_t mp3RunBatch(const uint32_t *decoders, VnzKernelVThreadContext *co
 }
 
 /* the last decode's result; a frame error counts only for some statuses */
-static int32_t mp3Result(Mp3Decoder *decoder)
+static int32_t __attribute__((noinline, noclone)) mp3Result(Mp3Decoder *decoder)
 {
 	const AudioDecoderEngine *engine = mp3Engine();
 	int32_t result = decoder->result, key, status;

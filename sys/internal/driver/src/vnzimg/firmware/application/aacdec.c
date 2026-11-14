@@ -95,7 +95,7 @@ static int32_t keepError(int32_t result, int32_t closed)
 	return result;
 }
 
-static uint32_t aacMemoryLayout(uint32_t ch, uint32_t isSbr)
+static uint32_t __attribute__((noinline, noclone)) aacMemoryLayout(uint32_t ch, uint32_t isSbr)
 {
 	if (isSbr) {
 		switch (ch) {
@@ -125,7 +125,7 @@ static uint32_t aacMemoryLayout(uint32_t ch, uint32_t isSbr)
 }
 
 /* the instance size for the channels */
-static uint32_t aacMemorySize(uint32_t ch, uint32_t isSbr)
+static uint32_t __attribute__((noinline, noclone)) aacMemorySize(uint32_t ch, uint32_t isSbr)
 {
 	const AudioDecoderEngine *engine = aacEngine();
 	int32_t key, size, result;
@@ -164,7 +164,8 @@ static int32_t aacConfigure(AacDecoder *decoder, const AudioDecoderEngine *engin
 	return engine->control(decoder->handle, keys, 8, values, work);
 }
 
-static int32_t aacInit(AacCtrl *ctrl, VnzKernelVThreadResource *resource, AacDecoder *decoder)
+static int32_t __attribute__((noinline, noclone)) aacInit(AacCtrl *ctrl,
+	VnzKernelVThreadResource *resource, AacDecoder *decoder)
 {
 	const AudioDecoderEngine *engine = aacEngine();
 	uint32_t size;
@@ -190,7 +191,7 @@ static int32_t aacInit(AacCtrl *ctrl, VnzKernelVThreadResource *resource, AacDec
 	return aacConfigure(decoder, engine);
 }
 
-static int32_t aacRelease(AacDecoder *decoder)
+static int32_t __attribute__((noinline, noclone)) aacRelease(AacDecoder *decoder)
 {
 	const AudioDecoderEngine *engine = aacEngine();
 	int32_t result = 0, destroyed;
@@ -208,7 +209,7 @@ static int32_t aacRelease(AacDecoder *decoder)
 }
 
 /* a new instance in the same memory */
-static int32_t aacReset(AacDecoder *decoder)
+static int32_t __attribute__((noinline, noclone)) aacReset(AacDecoder *decoder)
 {
 	const AudioDecoderEngine *engine = aacEngine();
 	uint32_t size;
@@ -298,7 +299,8 @@ static void aacBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argu
 {
 }
 
-static int32_t aacRun(uint32_t decoder, VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
+static int32_t __attribute__((noinline, noclone)) aacRun(uint32_t decoder,
+	VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
@@ -309,8 +311,8 @@ static int32_t aacRun(uint32_t decoder, VnzKernelVThreadContext *context, uint32
 	return 0;
 }
 
-static int32_t aacRunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
-	const uint32_t *es, const uint32_t *pcm, uint32_t count)
+static int32_t __attribute__((noinline, noclone)) aacRunBatch(const uint32_t *decoders,
+	VnzKernelVThreadContext *context, const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
 	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
