@@ -554,8 +554,6 @@ queueOrComplete:
  * Not converted yet; provisional names for what the transmit task uses them
  * for.
  */
-void cbProcResume(unsigned int reason);					/* 0x1c800 */
-void cbProcFlush(void);							/* 0x1c840 */
 int uapGroupRekeyDue(uintptr_t message);				/* 0x10970 */
 void uapGroupRekey(uintptr_t message);					/* 0x1f7b4 */
 void mdevWlanTrackState(void);						/* 0x015f0 */

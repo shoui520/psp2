@@ -71,7 +71,6 @@ void sysSleepAllow(uint32_t votes);				/* 0x23d64 */
 void sysSleepForbid(uint32_t votes);				/* 0x23dea */
 int sysEnableEventSources(uint32_t sources);			/* 0x351c */
 int wlanPsAcquireEntry(void);					/* 0x17024 */
-void cbProcFlush(void);						/* 0x1c840 */
 void uapSqramFilterEntry(int enable);				/* SQRAM 0xc0009ba0 */
 int uapSqramHandleTable(void);					/* SQRAM 0xc00099e5 */
 

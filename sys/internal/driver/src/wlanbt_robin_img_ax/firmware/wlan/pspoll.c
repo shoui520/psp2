@@ -133,7 +133,7 @@ int wlanPsPollReserve(void)
 		}
 		return 1;
 	}
-	if (macTxSequenceWindowOpen() == 0) {
+	if (wlanDmaRingRxDataWindowOpen() == 0) {
 		sysIrqRestore(posture);
 		++wlanPsPoll.windowClosed;
 		wlanPsPollStartTimeout();

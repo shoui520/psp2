@@ -3,6 +3,7 @@
 #define ROBIN_DMARING_H
 
 #include <stdint.h>
+#include "robin/buffer.h"
 #include "robin/wlanrx.h"
 
 /* One descriptor: a control word and a buffer pointer. */
@@ -20,7 +21,8 @@ struct WlanDmaDescriptor {
  * each time the ring wraps.
  */
 struct WlanDmaRing {
-	uint32_t reserved0[2];
+	uint32_t number;		/* the ring's own number */
+	uint8_t *buffers;		/* the buffers the descriptors point to, one after another */
 	uint32_t controlNext;		/* control word armed into every descriptor but the last */
 	uint32_t controlLast;		/* control word armed into the last descriptor */
 	uint32_t size;			/* descriptors in the ring */
@@ -66,5 +68,9 @@ int wlanDmaRingPeekReady(uint8_t **raw, uint8_t **header, uint8_t **body, uint16
 int wlanDmaRingTakeB(struct WlanRxStatus *status);
 int wlanDmaRingTakeA(struct WlanRxStatus *status);
 int wlanDmaRingTakeC(struct WlanRxStatus *status);
+int wlanDmaRingRxDataWindowOpen(void);
+int wlanDmaRingRxDataSettled(void);
+OsaBuffer *wlanDmaRingTakeData(struct WlanRxStatus *status, uint16_t *length);
+void wlanDmaRingsInit(void);
 
 #endif /* ROBIN_DMARING_H */

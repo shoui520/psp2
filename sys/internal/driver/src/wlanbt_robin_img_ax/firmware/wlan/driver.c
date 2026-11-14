@@ -42,8 +42,7 @@ void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 void macMgmtResetState(uintptr_t argument, unsigned int command, uintptr_t second,
 		       int third);						/* 0x34ba6, command 0x59 */
 void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
-OsaBuffer *macTxSelectPacket(void *ring, uint16_t *length);			/* 0xda94 */
-void mdevWlanSyncState(OsaBuffer *buffer, void *ring);				/* 0xba4 */
+void mdevWlanSyncState(OsaBuffer *buffer, void *status);				/* 0xba4 */
 int macTxNotifyDispatchState(struct WlanConnection *connection);		/* 0x2fb7e */
 uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
 extern struct OsaDevice ampWlanDriver;						/* 0x04009860 */
@@ -62,16 +61,16 @@ void wlanBufferResetDataOffset(OsaBuffer *buffer)
 /*
  * Takes the next received packet of a DMA ring unless the caller is busy:
  * reclaims its ring space (all of it when the packet is under 100 bytes) and
- * strips the 4-byte trailer. An empty packet goes back to the ring.
+ * strips the 4-byte trailer. An empty packet goes back to the ring; *status receives the frame status.
  */
-OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, void *ring)
+OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, struct WlanRxStatus *status)
 {
 	OsaBuffer *buffer = NULL;
 	uint16_t length = 0;
 
 	if (busy)
 		return NULL;
-	buffer = macTxSelectPacket(ring, &length);
+	buffer = wlanDmaRingTakeData(status, &length);
 	if (buffer != NULL) {
 		buffer->pool = NULL;
 		if (length < 100)
@@ -84,7 +83,7 @@ OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, void *ring)
 		buffer->length = length - 4;
 	} else if (buffer != NULL) {
 		buffer->length = 0;
-		mdevWlanSyncState(buffer, ring);
+		mdevWlanSyncState(buffer, status);
 		buffer = NULL;
 	}
 	return buffer;

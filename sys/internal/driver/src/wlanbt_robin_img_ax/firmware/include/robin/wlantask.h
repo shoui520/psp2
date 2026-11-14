@@ -59,4 +59,8 @@ int cbProcPostInitCreateTasks(void);
 int cbProcPostInitStartTasks(void);
 int macMgmtFlushQueues(void);
 
+/* Not converted yet; provisional names. */
+void cbProcResume(unsigned int reason);					/* 0x1c800 */
+void cbProcFlush(void);							/* 0x1c840 */
+
 #endif /* ROBIN_WLANTASK_H */

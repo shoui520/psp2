@@ -736,7 +736,7 @@ int wlanCoexMayTransmit(int urgent)
 		return 0;
 	if (wlanCoex.outstanding >= 1 && urgent == 0)
 		return 0;
-	return macTxSequenceWindowOpen() != 0;
+	return wlanDmaRingRxDataWindowOpen() != 0;
 }
 
 int wlanCoexTxAllowed(void)
