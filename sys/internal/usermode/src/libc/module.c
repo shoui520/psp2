@@ -93,12 +93,19 @@ int atexit(void (*func)(void))
 	return __cxa_atexit((void (*)(void *))func, NULL, &__dso_handle);
 }
 
-void _Trap0(void)
+/*
+ * A division by zero in SNC's helpers (__udivsi3, __udivdi3, __divdi3) stops at a
+ * breakpoint: the module's own definitions take the place of the runtime's weak ones
+ * (libsnc aeabi_div0.o).
+ */
+int __aeabi_idiv0(int return_value)
 {
 	__asm__ volatile("bkpt 0x80");
+	return return_value;
 }
 
-void _Trap1(void)
+long long __aeabi_ldiv0(long long return_value)
 {
 	__asm__ volatile("bkpt 0x80");
+	return return_value;
 }

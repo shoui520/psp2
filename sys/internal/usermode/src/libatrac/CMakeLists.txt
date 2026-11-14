@@ -9,6 +9,7 @@ psp2_module(vs0_sys_external_libatrac KIND user SOURCES
 	atrac.c
 	atrac_outputable.c
 	atrac_header.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/i32ops.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c

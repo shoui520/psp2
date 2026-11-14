@@ -1,27 +1,14 @@
 /*
- * The 32-bit division helpers of SNC's runtime library (libsnc i32ops.o and
- * aeabi_div0.o), which SNC links into every module that divides: SNC calls
- * __udivsi3 / __divsi3 / __umodsi3 / __modsi3 for "/" and "%".  A division
- * by zero goes to the system's __sce_aeabi_idiv0.
+ * The 32-bit division helpers of SNC's runtime library (libsnc i32ops.o),
+ * which SNC links into every module that divides: SNC calls __udivsi3 /
+ * __divsi3 / __umodsi3 / __modsi3 for "/" and "%".  A division by zero goes
+ * to __aeabi_idiv0 (aeabi_div0.c, or the module's own).
  *
  * GCC calls the ARM run-time ABI names instead; they map onto the same
  * code, so the module carries no SceRtabi import that Sony's does not have.
  */
 
 #include "i32ops.h"
-
-int __sce_aeabi_idiv0(int return_value);
-long long __sce_aeabi_ldiv0(long long return_value);
-
-int __aeabi_idiv0(int return_value)
-{
-	return __sce_aeabi_idiv0(return_value);
-}
-
-long long __aeabi_ldiv0(long long return_value)
-{
-	return __sce_aeabi_ldiv0(return_value);
-}
 
 unsigned int __udivsi3(unsigned int n, unsigned int d)
 {

@@ -657,8 +657,15 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	../../../../sdk/target/src/libsnc/pure_virt.c
 	../../../../sdk/target/src/libsnc/rtti.c
 	../../../../sdk/target/src/libsnc/vec_newdel.c
+	../../../../sdk/target/src/libsnc/i64ops.c
+	../../../../sdk/target/src/libsnc/i64shr.c
+	../../../../sdk/target/src/libsnc/i32ops.c
+	../../../../sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sdk/target/src/libsnc/unwind_pr1.c
+	../../../../sdk/target/src/libsnc/unwind_pr2.c
 	../../../../sdk/target/src/libsnc/error.c
 	../../../../sdk/target/src/libsnc/memzero.c
+	xfdunscal.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
@@ -687,6 +694,10 @@ set_source_files_properties(snc_personality.c PROPERTIES COMPILE_OPTIONS -Xblxca
 set_source_files_properties(unwinder.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(rtglobals.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(xthrow.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
+# SNC's runtime (libsnc) as libc links it: its personality routines call through ip
+set_source_files_properties(../../../../sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sdk/target/src/libsnc/unwind_pr1.c
+	../../../../sdk/target/src/libsnc/unwind_pr2.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 # SNC's runtime (libsnc): EDG wrote these .c files in C++ (-Tp: SNC goes by the extension)
 set_source_files_properties(../../../../sdk/target/src/libsnc/rtti.c
 	../../../../sdk/target/src/libsnc/vec_newdel.c

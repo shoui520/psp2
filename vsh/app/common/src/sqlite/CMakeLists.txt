@@ -41,6 +41,7 @@ psp2_module(vs0_sys_external_sqlite KIND user COMPILER snc SOURCES
 	module.c
 	sqlite3.c
 	os_psp2.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/i32ops.c
 	../../../../../sys/sdk/target/src/libsnc/i64ops.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
