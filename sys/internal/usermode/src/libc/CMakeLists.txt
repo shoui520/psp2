@@ -177,9 +177,37 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	sprintf.c
 	srand.c
 	sscanf.c
+	strcasecmp.c
+	strcat.c
+	strcoll.c
+	strcspn.c
+	strdup.c
+	strerror.c
+	strftime.c
+	strncasecmp.c
+	strncat.c
+	strncmp.c
+	strpbrk.c
+	strspn.c
+	strstr.c
+	strtod.c
+	strtof.c
+	strtoimax.c
+	strtok.c
+	strtok_r.c
+	strtol.c
+	strtold.c
+	strtoll.c
+	strtoul.c
+	strtoull.c
+	strtoumax.c
+	strxfrm.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
 	target_compile_definitions(vs0_sys_external_libc PRIVATE __STDC_WANT_LIB_EXT1__=1)
 	target_include_directories(vs0_sys_external_libc BEFORE PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 endif()
+# strxfrm.c inlines _Strxfrmx (138 B) into strxfrm and keeps its own copy; strcoll.c keeps
+# _Strcollx (286 B) out of line.
+set_source_files_properties(strxfrm.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=64)
