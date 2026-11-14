@@ -685,7 +685,7 @@ static void engineRequestDone(VideoEngineRequest *request)
 }
 
 /* an encoder's request into its slot or engine request */
-static void encoderRequest(VideoService *service, uint32_t code, int32_t index, int32_t id,
+static inline void encoderRequest(VideoService *service, uint32_t code, int32_t index, int32_t id,
 	const VideoServiceRequest *request)
 {
 	VideoServiceSlot *slot = encoderSlot(service, index);
@@ -728,7 +728,7 @@ static void encoderRequest(VideoService *service, uint32_t code, int32_t index, 
 	}
 }
 
-static void decoderRequest(VideoService *service, uint32_t code, int32_t index, int32_t id,
+static inline void decoderRequest(VideoService *service, uint32_t code, int32_t index, int32_t id,
 	const VideoServiceRequest *request)
 {
 	VideoServiceDecoder *decoder = &service->decoders[index];

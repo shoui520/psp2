@@ -284,7 +284,7 @@ static void makeCopies(void)
 {
 	VnzKernelCrashCopy *copy, *next;
 
-	vnzTestAndSet(g_vnzKernelCrashCopiesLock);
+	vnzKernelSpinTry(g_vnzKernelCrashCopiesLock);
 	for (copy = g_vnzKernelCrashCopies; copy; copy = next) {
 		next = copy->next;
 		copyWords(copy->source, copy->size, (uint32_t *)copy);
@@ -294,7 +294,7 @@ static void makeCopies(void)
 /* An exception (from kernel/vectors.S): the core stops here. */
 void vnzKernelCrash(uint32_t index, VnzKernelExceptionFrame *frame, uint32_t exception)
 {
-	vnzTestAndSet(g_vnzKernelCrashLock);
+	vnzKernelSpinTry(g_vnzKernelCrashLock);
 	if (g_vnzKernelCrashHook)
 		g_vnzKernelCrashHook(index + VNZ_FIRST_CORE_ID, exception,
 			g_vnzKernelCrashHookArgument,

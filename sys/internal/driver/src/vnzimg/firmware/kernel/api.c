@@ -453,32 +453,32 @@ void vnzMemorySync(uint32_t address, uint32_t size, VnzKernelThread *owner)
 
 void *vnzAllocateStack(uint32_t size)
 {
-	return vnzKernelHeapAllocateStack(vnzKernelCurrentHeap(), size);
+	return vnzHeapAllocateStack(vnzCurrentHeap(), size);
 }
 
 void vnzFreeStack(void *memory, uint32_t size)
 {
-	vnzKernelHeapFreeStack(vnzKernelCurrentHeap(), memory, size);
+	vnzHeapFreeStack(vnzCurrentHeap(), memory, size);
 }
 
 void *vnzKernelAllocatePublic(uint32_t size)
 {
-	return vnzKernelHeapAllocatePublic(vnzKernelCurrentHeap(), size);
+	return vnzHeapAllocatePublic(vnzCurrentHeap(), size);
 }
 
 void vnzKernelFreePublic(void *memory, uint32_t size)
 {
-	vnzKernelHeapFreePublic(vnzKernelCurrentHeap(), memory, size);
+	vnzHeapFreePublic(vnzCurrentHeap(), memory, size);
 }
 
 void *vnzAllocateUncached(uint32_t size)
 {
-	return vnzKernelHeapAllocateUncached(vnzKernelCurrentHeap(), size);
+	return vnzHeapAllocateUncached(vnzCurrentHeap(), size);
 }
 
 void vnzFreeUncached(void *memory, uint32_t size)
 {
-	vnzKernelHeapFreeUncached(vnzKernelCurrentHeap(), memory, size);
+	vnzHeapFreeUncached(vnzCurrentHeap(), memory, size);
 }
 
 /*

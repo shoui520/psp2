@@ -259,7 +259,7 @@ VnzKernelMessageQueue *vnzKernelMessageQueueCreate(VnzKernelThread *thread, uint
 	queue->entries = (VnzKernelMessageEntry *)vnzKernelPhysicalToPublic((uint32_t)entries);
 	if (queue->entries == NULL)
 		goto freeQueue;
-	queue->lock = vnzKernelLockPageAllocate();
+	queue->lock = vnzLockAllocate();
 	if (queue->lock == NULL)
 		goto freeEntries;
 	queue->thread = thread;
@@ -287,7 +287,7 @@ void vnzKernelMessageQueueDelete(VnzKernelMessageQueue *queue)
 	VnzKernelMessageEntry *entries = queue->entries;
 
 	queue->magic = 0;
-	vnzKernelLockPageFree(queue->lock);
+	vnzLockFree(queue->lock);
 	vnzKernelHeapFree(vnzKernelThreadHeap(queue->thread),
 		(void *)vnzKernelPublicToPhysical((uint32_t)entries),
 		size, 0x40);
@@ -300,14 +300,14 @@ void vnzKernelMessageQueueDelete(VnzKernelMessageQueue *queue)
  * The queue's indexes are read through the cache and written back before the
  * lock is given.
  */
-static void queueRelease(VnzKernelMessageQueue *cached)
+static inline void queueRelease(VnzKernelMessageQueue *cached)
 {
 	VnzKernelMessageQueue *queue;
 
-	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	vnzCacheWriteback((uint32_t)cached, 0x40);
 	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	vnzSpinUnlock(queue->lock);
-	vnzKernelEnableDispatch();
+	vnzEnableDispatch();
 }
 
 /* Send a message. Returns 1, or 0 when the queue is full. */
@@ -319,7 +319,7 @@ uint32_t vnzKernelMessageSend(VnzKernelMessageQueue *queue, VnzKernelMessage *me
 	VnzKernelThread *thread;
 	uint32_t write, flags;
 
-	vnzKernelDisableDispatch();
+	vnzDisableDispatch();
 	vnzSpinLock(queue->lock);
 	cached = (VnzKernelMessageQueue *)vnzKernelPublicToPhysical((uint32_t)queue);
 	write = cached->write;
@@ -332,13 +332,13 @@ uint32_t vnzKernelMessageSend(VnzKernelMessageQueue *queue, VnzKernelMessage *me
 	entry->message = message;
 	thread = cached->thread;
 	flags = cached->flags;
-	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	vnzCacheWriteback((uint32_t)cached, 0x40);
 	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	queue->write = write + 1;
 	if (flags)
-		vnzKernelThreadSetFlags(thread, flags);
+		vnzThreadSetFlags(thread, flags);
 	vnzSpinUnlock(queue->lock);
-	vnzKernelEnableDispatch();
+	vnzEnableDispatch();
 	return 1;
 }
 
@@ -350,7 +350,7 @@ uint32_t vnzKernelMessageReceive(VnzKernelMessageQueue *queue, uint32_t argument
 	VnzKernelMessage *message;
 	uint32_t read, messageArgument;
 
-	vnzKernelDisableDispatch();
+	vnzDisableDispatch();
 	vnzSpinLock(queue->lock);
 	cached = (VnzKernelMessageQueue *)vnzKernelPublicToPhysical((uint32_t)queue);
 	read = cached->read;
@@ -361,11 +361,11 @@ uint32_t vnzKernelMessageReceive(VnzKernelMessageQueue *queue, uint32_t argument
 	entry = &cached->entries[read & cached->mask];
 	messageArgument = entry->argument;
 	message = entry->message;
-	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	vnzCacheWriteback((uint32_t)cached, 0x40);
 	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	queue->read = read + 1;
 	vnzSpinUnlock(queue->lock);
-	vnzKernelEnableDispatch();
+	vnzEnableDispatch();
 	message(argument, messageArgument);
 	return 1;
 }
