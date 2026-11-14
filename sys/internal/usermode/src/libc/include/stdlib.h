@@ -102,7 +102,8 @@ long jrand48(unsigned short xsubi[3]);
 int atexit(void (*func)(void));
 void *bsearch(const void *key, const void *base, size_t nelem, size_t size,
 	      int (*compar)(const void *, const void *));
-void qsort(void *base, size_t nelem, size_t size, int (*compar)(const void *, const void *));
+typedef int _Cmpfun(const void *, const void *);
+void qsort(void *base, size_t nelem, size_t size, _Cmpfun *cmp);
 
 double atof(const char *s);
 float atoff(const char *s);

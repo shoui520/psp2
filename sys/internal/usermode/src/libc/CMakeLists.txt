@@ -117,6 +117,66 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	gets.c
 	getwc.c
 	getwchar.c
+	gmtime.c
+	imaxabs.c
+	imaxdiv.c
+	isalnum.c
+	isalpha.c
+	isblank.c
+	iscntrl.c
+	isdigit.c
+	isgraph.c
+	islower.c
+	isprint.c
+	ispunct.c
+	isspace.c
+	isupper.c
+	iswalnum.c
+	iswalpha.c
+	iswblank.c
+	iswcntrl.c
+	iswctype.c
+	iswdigit.c
+	iswgraph.c
+	iswlower.c
+	iswprint.c
+	iswpunct.c
+	iswspace.c
+	iswupper.c
+	iswxdigit.c
+	isxdigit.c
+	labs.c
+	ldiv.c
+	llabs.c
+	lldiv.c
+	localtime.c
+	mblen.c
+	mbrlen.c
+	mbrtoc16.c
+	mbrtoc32.c
+	mbrtowc.c
+	mbsinit.c
+	mbsrtowcs.c
+	mbstowcs.c
+	mbtowc.c
+	perror.c
+	printf.c
+	putc.c
+	putchar.c
+	puts.c
+	putwc.c
+	putwchar.c
+	qsort.c
+	rand.c
+	rand_r.c
+	rewind.c
+	scanf.c
+	setbuf.c
+	setvbuf.c
+	snprintf.c
+	sprintf.c
+	srand.c
+	sscanf.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces

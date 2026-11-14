@@ -46,6 +46,8 @@ struct tm *_Gettmbuf(void);
 char **_Getstrtokptr(void);
 unsigned int _Getjmpbufguard(void);
 unsigned int _Getptrguard(void);
+
+extern unsigned long long _Randseed;
 void *_Gettlsbuf(size_t size);
 
 /* exit's DSO: __cxa_finalize's argument (__cxa_set_dso_handle_main) */
