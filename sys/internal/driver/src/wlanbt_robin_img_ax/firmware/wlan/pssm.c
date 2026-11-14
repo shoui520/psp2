@@ -13,6 +13,7 @@
 #include "robin/coex.h"
 #include "robin/stapssm.h"
 #include "robin/conn.h"
+#include "robin/psctl.h"
 #include "robin/dmaring.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
@@ -55,9 +56,6 @@ extern uint64_t wlanPsSleepTimerStart;			/* SQRAM 0xc000fb08 */
 extern uint32_t wlanPsAnnounceLimit;			/* 0x7ff0 */
 extern const uint8_t wlanPsBroadcast[6];		/* 0x53d4a */
 extern uint8_t (*wlanDeviceAddress)[6];			/* 0x54a7c */
-void wlanPsConvertEntry(int on);			/* 0x170ec */
-void wlanPsVerifyEntry(int on);				/* 0x170f2 */
-void wlanPsSelectEntry(int on);				/* 0x170f8 */
 void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 int cbProcBuildPacket(struct WlanConnection *connection);	/* 0x1e38e */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
@@ -144,8 +142,8 @@ const int32_t *wlanPsMachineOff(struct WlanPsMachine *machine, const int32_t *ev
 		return NULL;
 	case ROM_HSM_ENTRY:
 		macTxWakeup();
-		wlanPsConvertEntry(1);
-		wlanPsVerifyEntry(1);
+		wlanPsSetOverride(1);
+		wlanPsSetSleepLeft(1);
 		wlanTxPowerSaveCount = 0;
 		macTxSetPowerSave(0);
 		if (machine->eventPending) {
@@ -290,8 +288,8 @@ const int32_t *wlanPsMachineOn(struct WlanPsMachine *machine, const int32_t *eve
 	case ROM_HSM_EXIT:
 		return NULL;
 	case ROM_HSM_ENTRY:
-		wlanPsVerifyEntry(0);
-		wlanPsConvertEntry(0);
+		wlanPsSetSleepLeft(0);
+		wlanPsSetOverride(0);
 		wlanTxPowerSaveCount = 1;
 		if (machine->eventPending) {
 			wlanRaiseEvent(17);
@@ -666,10 +664,10 @@ const int32_t *wlanPsMachineIeee(struct WlanPsMachine *machine, const int32_t *e
 		cbProcAdjustContext(machine->connection);
 		return NULL;
 	case ROM_HSM_EXIT:
-		wlanPsSelectEntry(0);
+		wlanPsSetIeeeActive(0);
 		return NULL;
 	case ROM_HSM_ENTRY:
-		wlanPsSelectEntry(1);
+		wlanPsSetIeeeActive(1);
 		return NULL;
 	}
 	return event;

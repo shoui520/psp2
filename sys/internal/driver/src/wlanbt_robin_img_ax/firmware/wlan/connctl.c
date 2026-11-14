@@ -3,6 +3,7 @@
  * The filename is inferred; no source filename survives.
  */
 #include "robin/conn.h"
+#include "robin/psctl.h"
 #include "robin/buffer.h"
 #include "robin/btrom.h"
 #include "robin/rom.h"
@@ -21,22 +22,12 @@ struct WlanConnection *wlanConnectionOther __attribute__((section(".sqram1.rw"))
 uint8_t wlanRoleMask __attribute__((section(".sqram1.rw")));
 uint8_t wlanConnectionPhase __attribute__((section(".itcm.rw")));	/* 0x54b70 */
 uint8_t wlanConnectionStage __attribute__((section(".itcm.rw")));	/* 0x54b71 */
-uint32_t wlanPendingEvents[2] __attribute__((section(".itcm.bss")));
 uint32_t wlanPendingTimer __attribute__((section(".itcm.bss")));
-uint32_t wlanPsOverride __attribute__((section(".itcm.bss")));
 struct OsaBufferPool wlanEventPool __attribute__((section(".dtcm.bss")));
-
-#define WLAN_CB_EVENT_PENDING_BITS	0x4000000
 
 int wlanRoleMaskIs(unsigned int mask)
 {
 	return mask == wlanRoleMask;
-}
-
-/* True when the AP role is the only one present. */
-int wlanHasApRole(void)
-{
-	return wlanRoleMaskIs(3);
 }
 
 struct WlanConnection *wlanConnectionByRole(int role)
@@ -141,66 +132,7 @@ int wlanPsCancelPendingTimer(void)
 	return result;
 }
 
-/*
- * Raises event bit 0 to 47 for the control task. The task is woken only when
- * no event was pending.
- */
-unsigned int wlanRaiseEvent(unsigned int bit)
-{
-	UINT posture;
-	uint32_t low;
-	uint32_t high;
-	uint32_t oldLow;
-	uint32_t oldHigh;
-
-	if (bit < 32) {
-		low = 1u << bit;
-		high = 0;
-	} else {
-		low = 0;
-		high = 1u << (bit - 32);
-	}
-	posture = sysIrqDisable();
-	oldLow = wlanPendingEvents[0];
-	oldHigh = wlanPendingEvents[1];
-	wlanPendingEvents[0] = oldLow | low;
-	wlanPendingEvents[1] = oldHigh | high;
-	sysIrqRestore(posture);
-	if ((oldLow | oldHigh) == 0)
-		wlanPostConnectionEvent(wlanConnectionByRole(wlanHasApRole() ? 2 : 0),
-					WLAN_CB_EVENT_PENDING_BITS);
-	return oldLow | oldHigh;
-}
-
-/* Only the "other" role is present. */
-int wlanRoleOtherOnly(void)
-{
-	return wlanRoleMaskIs(1);
-}
-
-/* Only an IBSS is present. */
-int wlanRoleIbssOnly(void)
-{
-	return wlanRoleMaskIs(2);
-}
-
-/* Power save is allowed: no remote cipher override is set. */
-int wlanPsEnabled(void)
-{
-	return wlanPsOverride == 0;
-}
-
 int wlanPsDisabled(void)
 {
 	return !wlanPsEnabled();
-}
-
-int wlanIbssPsEnabled(void)
-{
-	return wlanRoleIbssOnly() != 0 && wlanPsEnabled();
-}
-
-int wlanApPsEnabled(void)
-{
-	return wlanHasApRole() != 0 && wlanPsEnabled();
 }

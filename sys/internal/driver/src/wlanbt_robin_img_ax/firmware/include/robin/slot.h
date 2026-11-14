@@ -131,5 +131,6 @@ void wlanSlotCancelById(uint32_t handle);
 int wlanSlotSetChannel(int channel, int band);
 int wlanSlotBegin(void);
 int wlanSlotQueryStart(int power);
+int wlanSlotHasCurrentAlias(void);
 
 #endif /* ROBIN_SLOT_H */

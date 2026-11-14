@@ -12,6 +12,7 @@
 #include "robin/mac.h"
 #include "robin/mef.h"
 #include "robin/phy.h"
+#include "robin/psctl.h"
 #include "robin/pspoll.h"
 #include "robin/txring.h"
 #include "robin/mactx.h"
@@ -207,7 +208,6 @@ uint32_t macTxAcquireWakeBit(void)
 
 /* Not converted yet; provisional names. */
 int macTxResolveDescriptor(struct WlanConnection *connection);		/* 0xf826 */
-void wlanPsCheckEntry(unsigned int reason);				/* 0x16a80 */
 
 /* Control-task event bit raised for an event to the host while the AP sleeps clients. */
 #define WLAN_EVENT_HOST_EVENT		5
@@ -422,7 +422,7 @@ void wlanHostAwake(void)
 	    wlanHostSleepSettings.gpio != -2)
 		mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO, 0);
 	if (wlanPsHostMode == 1)
-		wlanPsCheckEntry(19);
+		wlanPsPostEvent(19);
 	wlanMefConfig.hostState = WLAN_HOST_AWAKE;
 	macTxPostEvent(4);
 	mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_AWAKE, 0);

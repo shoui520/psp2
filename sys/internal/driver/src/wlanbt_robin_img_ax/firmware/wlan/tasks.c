@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "robin/mgmt.h"
 #include "robin/conn.h"
+#include "robin/psctl.h"
 #include "robin/wlantask.h"
 #include "robin/osa.h"
 #include "robin/rom.h"
@@ -80,7 +81,6 @@ void macTxNotifyTaskMain(ULONG input);		/* 0x2f42c */
 void cbProcTaskMain(ULONG input);		/* 0x1aeae */
 int macMgmtConfigureBuffer(void);		/* 0x37d74 */
 int uapSqramValidateContext(void);		/* SQRAM via ROM veneer 0x52eb4 */
-void wlanPsConfigureEntry(void);		/* 0x16a4c */
 void macMgmtRecordContext(void);		/* 0x35fca */
 void macTxNotifyVerifyFrame(void);		/* 0x33abc */
 int tx_queue_create_words(void *queue, void *name, unsigned int words, void *start, unsigned int size);
@@ -147,7 +147,7 @@ int cbProcCreateTask(void)
 	if (osaCreateTask(&cbProcTask, cbProcStack, sizeof(cbProcStack), WLAN_TASK_PRIORITY_MGMT,
 			  "CB Proc", cbProcTaskMain, 0) != 0)
 		return 1;
-	wlanPsConfigureEntry();
+	wlanPsSetup();
 	return 0;
 }
 

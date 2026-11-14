@@ -48,14 +48,14 @@ struct WlanStaPsMachine {
 	uint64_t lastCalibration;	/* when sleepCalibrationKick(2) last ran */
 	uint8_t slotHeld;		/* wlanSlotResume() once the machine wakes */
 	uint8_t exitEventDue;		/* event 9 to the control task after IeeeExit */
-	uint16_t wakeTimerArmed;	/* wlanPsBuildEntry() when the machine wakes */
+	uint16_t beaconsSeen;	/* wlanPsArmWakeTimer() when the machine wakes */
 	uint16_t confirmBits;		/* WLAN_STA_PS_* */
 	uint16_t reserved222;
 	uint32_t dataPendingSeen;	/* wlanPsDataPending when the sleep was checked */
 	uint32_t ieeeFlagSeen;		/* wlanPsIeeeFlag when the sleep was checked */
 	uint8_t hostState;		/* 2: the host asked to be woken; 4: it is waking */
 	uint8_t reserved233[3];
-	uint32_t beaconWait;		/* waiting for a beacon: wlanPsBuildEntry() */
+	uint32_t beaconWait;		/* waiting for a beacon: wlanPsArmWakeTimer() */
 	uint16_t nullRetry;		/* the PM=1 null frame is to be sent again */
 	uint16_t reserved242;
 	uint32_t dataPendingAtConfirm;	/* wlanPsDataPending when Confirm was entered */
@@ -108,6 +108,7 @@ extern uint8_t wlanPsLastTxComplete;
 extern uint8_t wlanPsNullSuppressed;
 extern uint8_t wlanPsSleepAllowance;
 extern uint8_t wlanPsConfirmArmed;
+extern uint8_t wlanPsPeriodHold;
 extern uint8_t wlanPsRoleMask;
 extern uint16_t wlanPsHoldSeconds;
 extern uint32_t wlanPsLastHostEvent;
@@ -180,10 +181,5 @@ void wlanStaPsTellHost(struct WlanConnection *connection, uint32_t event, int fo
 void wlanStaPsStartPeriodic(struct WlanStaPsMachine *machine);
 void wlanStaPsBeginPeriodic(struct WlanStaPsMachine *machine);
 void wlanStaPsInitStates(struct WlanStaPsMachine *machine);
-uint32_t wlanPsGetOverride(void);
-
-/* Not converted yet; provisional names. */
-void wlanPsSleepConfirmTimerCb(ULONG input);		/* 0x16e86 */
-void wlanPsApNullPktDoneTimerCb(ULONG input);		/* 0x16b0a */
 
 #endif /* ROBIN_STAPSSM_H */

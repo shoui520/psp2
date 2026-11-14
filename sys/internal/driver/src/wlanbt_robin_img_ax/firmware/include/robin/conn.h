@@ -466,7 +466,6 @@ extern uint8_t wlanConnectionPhase;
 extern uint8_t wlanConnectionStage;
 
 int wlanRoleMaskIs(unsigned int mask);
-int wlanHasApRole(void);
 struct WlanConnection *wlanConnectionByRole(int role);
 int wlanConnectionHasPrimary(void);
 struct WlanConnection *wlanConnectionGetPrimary(void);
@@ -478,13 +477,17 @@ int wlanPostConnectionEvent(struct WlanConnection *connection, uint32_t event);
 int wlanConnectEventTryWait(void);
 int wlanReleaseStateSemaphore(void);
 int wlanPsCancelPendingTimer(void);
-unsigned int wlanRaiseEvent(unsigned int bit);
+int wlanPsDisabled(void);
+
+/* wlan/psctl.c, used by most of the MAC; the rest is in robin/psctl.h */
+extern uint32_t wlanPsOverride;
+
+int wlanHasApRole(void);
 int wlanRoleOtherOnly(void);
 int wlanRoleIbssOnly(void);
 int wlanPsEnabled(void);
-extern uint32_t wlanPsOverride;
-int wlanPsDisabled(void);
 int wlanIbssPsEnabled(void);
 int wlanApPsEnabled(void);
+unsigned int wlanRaiseEvent(unsigned int bit);
 
 #endif /* ROBIN_CONN_H */

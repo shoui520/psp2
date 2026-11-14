@@ -12,6 +12,7 @@
 #include "robin/coex.h"
 #include "robin/stapssm.h"
 #include "robin/conn.h"
+#include "robin/psctl.h"
 #include "robin/dmaring.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"

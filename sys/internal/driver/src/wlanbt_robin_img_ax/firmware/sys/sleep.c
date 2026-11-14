@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "robin/coex.h"
 #include "robin/conn.h"
+#include "robin/psctl.h"
 #include "robin/mac.h"
 #include "robin/osa.h"
 #include "robin/phy.h"
@@ -70,7 +71,6 @@ uint32_t sysGetBusClock(void);					/* 0x23b0a, in Hz */
 void sysSleepAllow(uint32_t votes);				/* 0x23d64 */
 void sysSleepForbid(uint32_t votes);				/* 0x23dea */
 int sysEnableEventSources(uint32_t sources);			/* 0x351c */
-int wlanPsAcquireEntry(void);					/* 0x17024 */
 void uapSqramFilterEntry(int enable);				/* SQRAM 0xc0009ba0 */
 int uapSqramHandleTable(void);					/* SQRAM 0xc00099e5 */
 
@@ -268,7 +268,7 @@ int sleepHoldRequested(void)
 {
 	int coex = wlanCoexHoldRequested();
 
-	return wlanPsAcquireEntry() | coex;
+	return wlanStaPsServicePeriod() | coex;
 }
 
 void sleepRfRelock(void)
