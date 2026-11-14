@@ -28,7 +28,8 @@ void mp3Copy(void *dst, const void *src, int32_t size)
 		*to++ = *from++;
 }
 
-static void fill(void *dst, uint8_t value, int32_t size)
+/* 0x84d7e8 */
+void mp3Fill(void *dst, uint8_t value, int32_t size)
 {
 	uint8_t *to = dst;
 
@@ -46,7 +47,7 @@ static int hostBigEndian(void)
 
 static void decoderClear(Mp3Decoder *decoder)
 {
-	fill(decoder, 0, sizeof(*decoder));
+	mp3Fill(decoder, 0, sizeof(*decoder));
 	decoder->header.initialized = 1;
 	decoder->header.layer = 3;
 	decoder->sideReader.word = NULL;
@@ -453,7 +454,8 @@ static int32_t sideInfo(Mp3Decoder *decoder, uint32_t channels)
 	return 0;
 }
 
-static void readBands(Mp3Reservoir *reservoir, int32_t *band, uint32_t count, uint32_t length)
+static inline void readBands(Mp3Reservoir *reservoir, int32_t *band, uint32_t count,
+	uint32_t length)
 {
 	uint32_t i;
 
@@ -515,7 +517,7 @@ static int32_t lsfScalefactors(Mp3Decoder *decoder, uint32_t ch, uint32_t gr)
 	int8_t values[54];
 	uint32_t table = 0, kind = 0, i, k, band, window, n = 0;
 
-	fill(values, 0, sizeof(values));
+	mp3Fill(values, 0, sizeof(values));
 	for (i = 0; i < MP3_LSF_BANDS; i++)
 		decoder->lsfIllegal[i] = 0;
 	if (granule->blockType == MP3_BLOCK_SHORT && !granule->mixedBlock)

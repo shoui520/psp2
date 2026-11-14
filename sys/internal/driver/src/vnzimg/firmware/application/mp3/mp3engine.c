@@ -73,7 +73,7 @@ static int32_t mp3Create(void **handle, void *memory, uint32_t size)
 
 	if (!memory || !handle || size < mp3MemorySize)
 		return MP3_ERROR_PARAMETER;
-	mp3Copy(mp3, &(Mp3Handle){ 0 }, sizeof(*mp3));
+	mp3Fill(mp3, 0, sizeof(*mp3));
 	mp3->decoder = (Mp3Decoder *)(mp3 + 1);
 	if (mp3DecoderInit(mp3->decoder))
 		return MP3_ERROR_PARAMETER;

@@ -148,14 +148,6 @@ static uint32_t aacMemoryLayout(uint32_t *layout, uint32_t *channels, uint32_t s
 	return 0;
 }
 
-static void fill(void *destination, int32_t value, int32_t size)
-{
-	uint8_t *byte = destination;
-
-	while (size-- > 0)
-		*byte++ = value;
-}
-
 /* the reader at the frame's start, its tables, the channels' overlap cleared */
 static void bitstreamInit(AacBitstream *bits, uint32_t channels)
 {
@@ -163,6 +155,18 @@ static void bitstreamInit(AacBitstream *bits, uint32_t channels)
 	bits->samplingIndex = 3;
 	bits->samplingRates = bits->tables->samplingRates;
 	aacOverlapClear(bits, channels);
+}
+
+/* 0x84e3c8: the engine's own copy of aacSeek */
+static int32_t bitstreamSeek(AacBitstream *bits, const AacBitPosition *position)
+{
+	bits->position = *position;
+	bits->cursor = bits->buffer + bits->position.byte;
+	bits->bytesRead = bits->position.byte;
+	if (bits->end < bits->position.byte)
+		return -1;
+	bits->bytesRead = bits->position.byte + 1;
+	return 0;
 }
 
 static int32_t aacDecoderInit(AacDecoder *decoder, uint32_t sbrMode, uint32_t upsampling)
@@ -189,7 +193,7 @@ static int32_t aacDecoderInit(AacDecoder *decoder, uint32_t sbrMode, uint32_t up
 	stream->value4c = 1;
 	stream->channelMode = 0;
 	start = stream->syntax.frameStart;
-	aacSeek(&stream->bits, &start);
+	bitstreamSeek(&stream->bits, &start);
 	bitstreamInit(&stream->bits, channels);
 	stream->bits.end = 0x1000;
 	stream->bits.bytesRead = 0;
@@ -233,13 +237,13 @@ static int32_t aacCreate(void **handle, void *memory, uint32_t size)
 		perChannel = (channels * CHANNEL_BYTES_SBR + 63) & ~63;
 
 	decoder = (AacDecoder *)align64((uint8_t *)memory + sizeof(*aac));
-	fill(decoder, 0, sizeof(*decoder));
+	aacSbrFill((int8_t *)decoder, 0, sizeof(*decoder));
 	aac->decoder = decoder;
 	next = align64((uint8_t *)decoder + sizeof(*decoder));
 	decoder->numChannels = channels;
 	decoder->layout = layout;
 	if (layout == AAC_LAYOUT_SBR) {
-		fill(next, 0, SPECTRA_BYTES_SBR);
+		aacSbrFill((int8_t *)next, 0, SPECTRA_BYTES_SBR);
 		decoder->spectra = (int32_t *)next;
 		next += SPECTRA_BYTES_SBR;
 		decoder->sbrWork[0] = decoder->spectra;
@@ -247,7 +251,7 @@ static int32_t aacCreate(void **handle, void *memory, uint32_t size)
 		decoder->sbrWork[2] = decoder->sbrWork[1] + SBR_WORK_BYTES / 4;
 		decoder->savedChannel = decoder->sbrWork[2] + SBR_WORK_BYTES / 4;
 	} else {
-		fill(next, 0, SPECTRA_BYTES_PLAIN);
+		aacSbrFill((int8_t *)next, 0, SPECTRA_BYTES_PLAIN);
 		decoder->spectra = (int32_t *)next;
 		next += SPECTRA_BYTES_PLAIN;
 		decoder->sbrWork[0] = NULL;
@@ -257,7 +261,7 @@ static int32_t aacCreate(void **handle, void *memory, uint32_t size)
 	}
 
 	/* each channel's buffers, those SBR needs only with it */
-	fill(next, 0, perChannel);
+	aacSbrFill((int8_t *)next, 0, perChannel);
 	decoder->channelMemory = next;
 	decoder->channelMemoryEnd = decoder->channelMemory;
 	buffer = decoder->channelMemoryEnd;
@@ -272,34 +276,34 @@ static int32_t aacCreate(void **handle, void *memory, uint32_t size)
 
 	stream = (AacStream *)align64(next + perChannel);
 	decoder->stream = stream;
-	fill(stream, 0, sizeof(*stream));
+	aacSbrFill((int8_t *)stream, 0, sizeof(*stream));
 	next = align64((uint8_t *)stream + sizeof(*stream));
 	if (layout == AAC_LAYOUT_SBR) {
 		decoder->sbrState = next;
-		fill(decoder->sbrState, 0, SBR_STATE_BYTES);
+		aacSbrFill((int8_t *)decoder->sbrState, 0, SBR_STATE_BYTES);
 		next += SBR_STATE_BYTES;
 	}
 	next = align64(next);
-	fill(next, 0, sizeof(AacIcs));
+	aacSbrFill((int8_t *)next, 0, sizeof(AacIcs));
 	stream->syntax.ics[0] = (AacIcs *)next;
 	next = align64(next + sizeof(AacIcs));
-	fill(next, 0, sizeof(AacIcs));
+	aacSbrFill((int8_t *)next, 0, sizeof(AacIcs));
 	stream->syntax.ics[1] = (AacIcs *)next;
 	next = align64(next + sizeof(AacIcs));
-	fill(next, 0, sizeof(AacTables));
+	aacSbrFill((int8_t *)next, 0, sizeof(AacTables));
 	stream->bits.tables = (AacTables *)next;
 	next = align64(next + sizeof(AacTables));
 	stream->syntax.sce.ics = stream->syntax.ics[0];
 	stream->syntax.cpe.ics[0] = stream->syntax.ics[0];
 	stream->syntax.cpe.ics[1] = stream->syntax.ics[1];
-	fill(next, 0, sizeof(AacCouplingChannelElement));
+	aacSbrFill((int8_t *)next, 0, sizeof(AacCouplingChannelElement));
 	stream->syntax.cce = (AacCouplingChannelElement *)next;
 	stream->syntax.cce->ics = stream->syntax.ics[0];
 	stream->syntax.sce.ics->spectrum = decoder->spectra;
 	stream->syntax.cpe.ics[0]->spectrum = decoder->spectra;
 	stream->syntax.cpe.ics[1]->spectrum = decoder->spectra + AAC_FRAME_SAMPLES;
 	next += sizeof(AacCouplingChannelElement);
-	fill(next, 0, channels << 11);
+	aacSbrFill((int8_t *)next, 0, channels << 11);
 	next = align64(next);
 	for (i = 0; i < channels; i++) {
 		stream->bits.overlap[i] = (int32_t *)next;
@@ -309,7 +313,7 @@ static int32_t aacCreate(void **handle, void *memory, uint32_t size)
 		return AAC_ERROR_PARAMETER;
 
 	start = stream->syntax.frameStart;
-	aacSeek(&stream->bits, &start);
+	bitstreamSeek(&stream->bits, &start);
 	bitstreamInit(&stream->bits, channels);
 	aacDecoderInit(decoder, AAC_DEFAULT_SBR_MODE, AAC_DEFAULT_UPSAMPLING);
 	aac->size = size;

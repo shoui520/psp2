@@ -286,6 +286,7 @@ int32_t mp3DecoderInit(Mp3Decoder *decoder);
 int32_t mp3DecoderReset(Mp3Decoder *decoder);
 int32_t mp3DecodeFrame(Mp3Decoder *decoder);
 void mp3Copy(void *dst, const void *src, int32_t size);
+void mp3Fill(void *dst, uint8_t value, int32_t size);
 
 /* mp3huffman.c */
 int32_t mp3Huffman(Mp3Decoder *decoder, uint32_t ch, uint32_t gr, int32_t part2,
