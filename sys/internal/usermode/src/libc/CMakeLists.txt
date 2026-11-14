@@ -301,6 +301,9 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xtowctrans.c
 	xwctomb.c
 	xiswctype.c
+	xstrerror.c
+	xstrftime.c
+	xstrxfrm.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
