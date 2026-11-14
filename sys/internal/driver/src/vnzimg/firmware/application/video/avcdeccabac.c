@@ -345,8 +345,8 @@ static inline void cbfAllCoded(VideoAvcCabacMb *mb)
 	mb->chromaDcCbf[1] = 1;
 	mb->chromaAcCbf[0] = 0xff;
 	mb->chromaAcCbf[1] = 0xff;
-	mb->reserved[0] = 1;
-	mb->reserved[1] = 1;
+	mb->cbfExtra[0] = 1;
+	mb->cbfExtra[1] = 1;
 }
 
 static inline void cbfNoneCoded(VideoAvcCabacMb *mb)
@@ -356,8 +356,8 @@ static inline void cbfNoneCoded(VideoAvcCabacMb *mb)
 	mb->chromaDcCbf[1] = 0;
 	mb->chromaAcCbf[0] = 0;
 	mb->chromaAcCbf[1] = 0;
-	mb->reserved[0] = 0;
-	mb->reserved[1] = 0;
+	mb->cbfExtra[0] = 0;
+	mb->cbfExtra[1] = 0;
 }
 
 /* the absMvd a neighbour keeps of a motion vector difference (x | y << 16) */
@@ -1412,7 +1412,7 @@ static void macroblockI(VideoSliceJob *job)
 	info->subMbType[2] = 0;
 	info->subMbType[3] = 0;
 	info->reserved = 0;
-	info->reserved2 = 0;
+	info->qpChroma = 0;
 	if (type == I_PCM) {
 		decodePcm(job);
 		info->cbp = 0;
@@ -1496,7 +1496,7 @@ static inline __attribute__((always_inline)) void infoInit(VideoAvcMbInfo *info,
 	info->subMbType[2] = 0;
 	info->subMbType[3] = 0;
 	info->reserved = 0;
-	info->reserved2 = 0;
+	info->qpChroma = 0;
 }
 
 /* no motion vector differences: of an intra, PCM or direct macroblock */
@@ -1619,7 +1619,7 @@ static void macroblockSkip(VideoSliceJob *job)
 	info->cbf = 0;
 	info->qpDelta = 0;
 	info->cbp = 0;
-	info->reserved2 = 0;
+	info->qpChroma = 0;
 	info->reserved = 0;
 	info->subMbType[3] = 0;
 	info->subMbType[2] = 0;

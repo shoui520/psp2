@@ -431,7 +431,7 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	if (!lock)
 		return M4VDEC_ERROR;
 	vnzSpinLock(lock);
-	if (library->reserved3 >= library->numOfDecoders) {
+	if (library->decodersOpen >= library->numOfDecoders) {
 		vnzSpinUnlock(lock);
 		return M4VDEC_ERROR_IN_USE;
 	}
@@ -440,7 +440,7 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 		return M4VDEC_ERROR_LIBRARY_STATE;
 	}
 	library->active = 2;
-	library->reserved3++;
+	library->decodersOpen++;
 	vnzSpinUnlock(lock);
 
 	flag = library->coreMask;
@@ -485,8 +485,8 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	lock = library->lock;
 	if (lock) {
 		vnzSpinLock(lock);
-		library->reserved3--;
-		if (!library->reserved3 && !library->reserved4)
+		library->decodersOpen--;
+		if (!library->decodersOpen && !library->encodersOpen)
 			library->active = 1;
 		vnzSpinUnlock(lock);
 	}
@@ -702,8 +702,8 @@ int32_t m4vdecTerminate(uint32_t handle)
 	lock = library->lock;
 	if (lock) {
 		vnzSpinLock(lock);
-		library->reserved3--;
-		if (!library->reserved3 && !library->reserved4)
+		library->decodersOpen--;
+		if (!library->decodersOpen && !library->encodersOpen)
 			library->active = 1;
 		vnzSpinUnlock(lock);
 	}

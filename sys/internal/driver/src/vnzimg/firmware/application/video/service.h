@@ -566,7 +566,7 @@ typedef struct VideoAvcCabacMb {
 	uint16_t lumaCbf;		/* coded_block_flag of the 4x4 blocks */
 	uint8_t chromaDcCbf[2];
 	uint8_t chromaAcCbf[2];		/* a bit per 4x4 block */
-	uint8_t reserved[2];		/* written with the cbf words, never read */
+	uint8_t cbfExtra[2];		/* written with the cbf words, never read */
 } VideoAvcCabacMb;
 
 /* a macroblock of the run's first buffer, as the unit reads it (16 bytes) */
@@ -585,7 +585,7 @@ typedef struct VideoAvcMbInfo {
 		int8_t qpDelta;		/* mb_qp_delta */
 		int8_t qp;		/* the decoder engine's, once read */
 	};
-	uint8_t reserved2;		/* written 0 */
+	uint8_t qpChroma;		/* the decoder engine's chroma QP; 0 from the parser */
 	uint8_t qpPrevious;		/* the decoder engine's: the QP before it */
 	uint8_t reserved3;
 	uint32_t cbf;			/* coded_block_flag: luma 4x4 by bit, Cb and Cr AC
@@ -594,7 +594,7 @@ typedef struct VideoAvcMbInfo {
 
 typedef struct VideoNal {
 	VideoBitstream bits;
-	uint32_t reserved[2];
+	uint32_t bitsSaved[2];		/* kept with bits across a look ahead, never read */
 	uint32_t search;		/* where the search goes on */
 	int32_t searchLeft;
 	uint32_t start;			/* its first byte */
@@ -917,7 +917,7 @@ typedef struct VideoM4vCommand {
 /* the stream unit being parsed (256 bytes) */
 typedef struct VideoM4vUnit {
 	VideoBitstream bits;
-	uint32_t reserved[2];
+	uint32_t bitsSaved[2];		/* kept with bits across a look ahead, never read */
 	uint32_t search;		/* where the parser looks for the next start code */
 	int32_t searchLeft;		/* the bytes left there */
 	uint32_t start;			/* its first byte */
@@ -1838,7 +1838,7 @@ typedef struct VideoAvcEncodeJob {
 	uint32_t cr;
 	uint32_t reserved[7];
 	VideoAvcCabacCoder *coder;
-	uint32_t reserved2[16];
+	uint32_t coderState[16];	/* a skipped picture's coder (writeSkipPicture) */
 	uint32_t skipRun;		/* mb_skip_run of a skipped picture */
 	uint32_t binCount;		/* CABAC's bins, for the zero words */
 	uint32_t jump[8];

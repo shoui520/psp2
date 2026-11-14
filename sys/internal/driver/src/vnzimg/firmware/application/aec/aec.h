@@ -37,7 +37,7 @@ typedef struct AecBin {
 	uint32_t delaySquare;		/* its mean square */
 	int32_t noiseGain;
 	int32_t echoGain;
-	int32_t reserved;
+	int32_t resetLevel;		/* 100 from binsReset, never read */
 	int32_t delaySpread;
 	int32_t delayAverage;
 } AecBin;
@@ -83,7 +83,7 @@ typedef struct AecWork {
 	int32_t echoScale;
 	int32_t noiseScale;
 	int32_t highPass;
-	int32_t reserved2;
+	int32_t resetFlag;		/* 1 from aecDefaults, never read */
 	int32_t delay;			/* the far end's, in the bins' log units */
 	int16_t farHistory[AEC_FRAME];
 	int16_t farPrevious[AEC_HALF];

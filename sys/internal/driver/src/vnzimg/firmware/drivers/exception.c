@@ -35,10 +35,12 @@ static void moduleSuspend(void)
 {
 }
 
+extern const uint8_t vnzKernelExceptionSize[];	/* the link's (image.ld) */
+
 const VnzKernelModule g_vnzKernelExceptionModule VNZ_KERNEL_SECTION(".exception.module") = {
 	.magic = VNZ_KERNEL_MODULE_DRIVER,
 	.self = VNZ_PHYSICAL_OF(0x80d000),
-	.size = 0x780,
+	.size = (uint32_t)vnzKernelExceptionSize,
 	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
 	.version = VNZ_KERNEL_MODULE_VERSION,
 	.resume = moduleResume,

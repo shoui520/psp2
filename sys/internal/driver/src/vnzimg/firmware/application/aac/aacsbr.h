@@ -52,7 +52,7 @@ typedef struct AacSbrHeader {
 	uint8_t smoothingMode;
 	uint8_t reserved3[2];
 	AacSbrBands *bands;
-	uint8_t reserved4[4];
+	uint8_t padding[4];		/* the default's are the original's bytes, never read */
 } AacSbrHeader;
 
 /* a QMF bank (ISO/IEC 14496-3 4.6.18.4) */

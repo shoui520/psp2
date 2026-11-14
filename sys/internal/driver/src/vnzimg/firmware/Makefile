@@ -37,8 +37,20 @@ HEADERS := $(wildcard include/*.h kernel/*.h drivers/*.h application/*.h applica
 	$(silktree)
 objs = $(patsubst %,$(O)/%.o,$(basename $(if $(filter silk,$(1)),$(addprefix silk/,$(silk)),$($(1)))))
 
-.PHONY: objects clean
-objects: $(foreach p,$(PARTS),$(call objs,$(p)))
+LIBGCC = $(shell $(CC) -print-file-name=el/libgcc.a)
+OBJECTS := $(foreach p,$(PARTS),$(call objs,$(p)))
+
+.PHONY: image objects clean
+image: $(O)/vnzimg.bin
+objects: $(OBJECTS)
+
+# the image (image.ld), libgcc for what the codecs' floating point and 64-bit
+# arithmetic call
+$(O)/vnzimg.elf: $(OBJECTS) image.ld
+	$(LD) -T image.ld -Map $(O)/vnzimg.map -o $@ $(OBJECTS) $(LIBGCC)
+
+$(O)/vnzimg.bin: $(O)/vnzimg.elf
+	$(OBJCOPY) -O binary $< $@
 
 $(O)/%.o: %.c $(HEADERS)
 	@mkdir -p $(dir $@)

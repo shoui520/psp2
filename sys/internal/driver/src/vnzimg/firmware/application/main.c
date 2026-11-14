@@ -8,6 +8,7 @@
  * which runs the function on the slot's arguments and rings back.
  */
 #include "application.h"
+#include "ngs/ngs.h"
 
 #define SPRAM			0x1f840000	/* physically */
 #define SPRAM_UNCACHED		0xf1840000
@@ -73,7 +74,7 @@ typedef struct ThreadEntry {
 	uint32_t stackSize;
 } ThreadEntry;
 
-extern const RpcFunction g_rpcFunctions[0x200];
+static const RpcFunction g_rpcFunctions[0x200];
 static const RpcFunction g_systemFunctions[0x20];
 static void serverThread(uint32_t slot, uint32_t argument2);
 static void systemServerThread(uint32_t slot, uint32_t argument2);
@@ -630,6 +631,113 @@ int32_t rpcNothing(void)
 	return 0;
 }
 
+/* the RPC functions, by the ARM's number */
+static const RpcFunction g_rpcFunctions[0x200] = {
+	[0] = (RpcFunction)rpcAvcdecQueryMemory,
+	[1] = (RpcFunction)rpcAvcdecInitialize,
+	[2] = (RpcFunction)rpcAvcdecQuerySequence,
+	[3] = (RpcFunction)rpcAvcdecQueryContext,
+	[4] = (RpcFunction)rpcAvcdecInitializeContext,
+	[5] = (RpcFunction)rpcAvcdecDecode,
+	[6] = (RpcFunction)rpcAvcdecDecodeStop,
+	[7] = (RpcFunction)rpcAvcdecTerminate,
+	[16] = (RpcFunction)rpcAvcencQueryMemory,
+	[17] = (RpcFunction)rpcAvcencInitialize,
+	[18] = (RpcFunction)rpcAvcencEncode,
+	[19] = (RpcFunction)rpcAvcencEncodeStop,
+	[20] = (RpcFunction)rpcAvcencTerminate,
+	[32] = (RpcFunction)rpcM4vdecQueryMemory,
+	[33] = (RpcFunction)rpcM4vdecInitialize,
+	[34] = (RpcFunction)rpcM4vdecQuerySequence,
+	[35] = (RpcFunction)rpcM4vdecQueryContext,
+	[36] = (RpcFunction)rpcM4vdecInitializeContext,
+	[37] = (RpcFunction)rpcM4vdecDecode,
+	[38] = (RpcFunction)rpcM4vdecDecodeStop,
+	[39] = (RpcFunction)rpcM4vdecTerminate,
+	[96] = (RpcFunction)rpcVideoQueryMemory,
+	[97] = (RpcFunction)rpcVideoCreateLibrary,
+	[98] = (RpcFunction)rpcVideoDeleteLibrary,
+	[99] = (RpcFunction)rpcVideoInitializeMemory,
+	[100] = (RpcFunction)rpcVideoAllocMemory,
+	[128] = (RpcFunction)rpcAt9Sizes,
+	[129] = (RpcFunction)rpcAt9Init,
+	[130] = (RpcFunction)rpcAt9Release,
+	[132] = (RpcFunction)rpcAt9Decode,
+	[134] = (RpcFunction)rpcAt9Reset,
+	[135] = (RpcFunction)rpcAt9DecodeMany,
+	[136] = (RpcFunction)rpcAt9DecodeBatch,
+	[137] = (RpcFunction)rpcAt9DecodeRange,
+	[176] = (RpcFunction)rpcMp3Sizes,
+	[177] = (RpcFunction)rpcMp3Init,
+	[178] = (RpcFunction)rpcMp3Release,
+	[179] = (RpcFunction)rpcMp3Decode,
+	[180] = (RpcFunction)rpcMp3DecodeBatch,
+	[181] = (RpcFunction)rpcMp3Reset,
+	[192] = (RpcFunction)rpcAacSizes,
+	[193] = (RpcFunction)rpcAacInit,
+	[194] = (RpcFunction)rpcAacRelease,
+	[195] = (RpcFunction)rpcAacDecode,
+	[196] = (RpcFunction)rpcAacDecodeBatch,
+	[197] = (RpcFunction)rpcAacReset,
+	[256] = (RpcFunction)rpcCelpSizes,
+	[257] = (RpcFunction)rpcCelpInit,
+	[258] = (RpcFunction)rpcCelpRelease,
+	[259] = (RpcFunction)rpcCelpDecode,
+	[260] = (RpcFunction)rpcCelpDecodeBatch,
+	[261] = (RpcFunction)rpcCelpReset,
+	[264] = (RpcFunction)rpcCelpEncSizes,
+	[265] = (RpcFunction)rpcCelpEncInit,
+	[266] = (RpcFunction)rpcCelpEncRelease,
+	[267] = (RpcFunction)rpcCelpEncode,
+	[268] = (RpcFunction)rpcCelpEncReset,
+	[269] = (RpcFunction)rpcCelpEncOptInfo,
+	[272] = (RpcFunction)rpcSilkSizes,
+	[273] = (RpcFunction)rpcSilkInit,
+	[274] = (RpcFunction)rpcSilkRelease,
+	[275] = (RpcFunction)rpcSilkDecode,
+	[276] = (RpcFunction)rpcSilkDecodeBatch,
+	[277] = (RpcFunction)rpcSilkReset,
+	[280] = (RpcFunction)rpcSilkEncSizes,
+	[281] = (RpcFunction)rpcSilkEncInit,
+	[282] = (RpcFunction)rpcSilkEncRelease,
+	[283] = (RpcFunction)rpcSilkEncode,
+	[284] = (RpcFunction)rpcSilkEncReset,
+	[320] = (RpcFunction)ngsSystemCreate,
+	[321] = (RpcFunction)ngsSystemUpdate,
+	[322] = (RpcFunction)ngsSystemRelease,
+	[323] = (RpcFunction)ngsRackInit,
+	[324] = (RpcFunction)ngsRackRelease,
+	[325] = (RpcFunction)ngsLocksCreate,
+	[326] = (RpcFunction)ngsLocksDelete,
+	[327] = (RpcFunction)ngsModuleAuxiliary,
+	[416] = (RpcFunction)rpcAecSizes,
+	[417] = (RpcFunction)rpcAecInit,
+	[418] = (RpcFunction)rpcAecRelease,
+	[419] = (RpcFunction)rpcAecReset,
+	[420] = (RpcFunction)rpcAecProcess,
+	[421] = (RpcFunction)rpcAecSetCurve,
+	[424] = (RpcFunction)rpcAecGetState,
+	[448] = (RpcFunction)rpcJpegDecodeMJpegYCbCr,
+	[449] = (RpcFunction)rpcJpegGetOutputInfo,
+	[450] = (RpcFunction)rpcJpegCreateSplitDecoder,
+	[451] = (RpcFunction)rpcJpegDeleteSplitDecoder,
+	[452] = (RpcFunction)rpcJpegSplitDecodeMJpeg,
+	[453] = (RpcFunction)rpcJpegEncoder,
+	[454] = (RpcFunction)rpcJpegMJpegCsc,
+	[496] = (RpcFunction)rpcAllocate,
+	[497] = (RpcFunction)rpcFree,
+	[498] = (RpcFunction)rpcAllocatePublic,
+	[499] = (RpcFunction)rpcFreePublic,
+	[500] = (RpcFunction)rpcInvalidate,
+	[501] = (RpcFunction)rpcOpenPublic,
+	[502] = (RpcFunction)rpcClosePublic,
+	[503] = (RpcFunction)rpcVThreadResourceCreate,
+	[504] = (RpcFunction)rpcVThreadResourceDelete,
+	[505] = (RpcFunction)rpcVThreadSetCores,
+	[508] = (RpcFunction)rpcPowerDown,
+	[509] = (RpcFunction)rpcNothing,
+};
+
 /* the application: its threads run until the interrupt thread exits */
 static void applicationMain(void)
 {
@@ -656,10 +764,12 @@ void applicationStart(void)
 	applicationMain();
 }
 
+extern const uint8_t vnzKernelApplicationSize[];	/* the link's (image.ld) */
+
 const VnzKernelModule g_vnzKernelApplicationModule VNZ_KERNEL_SECTION(".application.module") = {
 	.magic = VNZ_KERNEL_MODULE_APPLICATION,
 	.self = VNZ_PHYSICAL_OF(0x811000),
-	.size = 0x115b14,
+	.size = (uint32_t)vnzKernelApplicationSize,
 	.entry = applicationStart,
 	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
 	.version = VNZ_KERNEL_MODULE_VERSION,

@@ -667,7 +667,7 @@ void avcencEncoderInitialize(uint32_t memory, VideoService *service, int32_t ind
 	job->stream = writer;
 	job->nals = (VideoAvcNalList *)settings->streamTable;
 	job->nals->count = 0;
-	job->coder = (VideoAvcCabacCoder *)job->reserved2;
+	job->coder = (VideoAvcCabacCoder *)job->coderState;
 	writeSkipPicture(sequence, info, job);
 	nalBytes((const VideoAvcNalList *)settings->streamTable, &sliceBytes, &otherBytes);
 	info->skipHeaderBytes = otherBytes;

@@ -75,10 +75,10 @@ typedef struct AvcencParam {
 	uint8_t level;			/* 10 times the level number */
 	uint16_t horizontal;
 	uint16_t vertical;
-	uint8_t reserved;		/* must be 0 */
+	uint8_t param3;			/* must be 0 (AVCENC_ERROR_PARAM3), only kept */
 	uint8_t numOfSlices;
-	uint8_t reserved2;		/* must be 0 */
-	uint8_t reserved3;		/* must be 1 */
+	uint8_t param5;			/* must be 0 (AVCENC_ERROR_PARAM5), only kept */
+	uint8_t param6;			/* must be 1 (AVCENC_ERROR_PARAM6), only kept */
 	uint8_t entropyCoding;		/* 1 is not baseline */
 	uint8_t mode;			/* 0..2 */
 	uint32_t numUnitsInTick;
@@ -504,13 +504,13 @@ int32_t avcencInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 		return AVCENC_ERROR_WIDTH;
 	if (p->vertical < 64 || p->vertical > 1088)
 		return AVCENC_ERROR_HEIGHT;
-	if (p->reserved)
+	if (p->param3)
 		return AVCENC_ERROR_PARAM3;
 	if (p->numOfSlices < 1 || p->numOfSlices > maxSlices)
 		return AVCENC_ERROR_SLICES;
-	if (p->reserved2)
+	if (p->param5)
 		return AVCENC_ERROR_PARAM5;
-	if (p->reserved3 != 1)
+	if (p->param6 != 1)
 		return AVCENC_ERROR_PARAM6;
 	if (p->profile != PROFILE_BASELINE && p->profile != PROFILE_MAIN)
 		return AVCENC_ERROR_PROFILE;
@@ -552,10 +552,10 @@ int32_t avcencInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 		sequence->level = p->level;
 		sequence->horizontal = p->horizontal;
 		sequence->vertical = p->vertical;
-		sequence->reserved = p->reserved;
+		sequence->param3 = p->param3;
 		sequence->numOfSlices = p->numOfSlices;
-		sequence->reserved2 = p->reserved2;
-		sequence->reserved3 = p->reserved3;
+		sequence->param5 = p->param5;
+		sequence->param6 = p->param6;
 		sequence->entropyCoding = p->entropyCoding;
 		sequence->mode = p->mode;
 		sequence->option2 = p->option2;
@@ -599,7 +599,7 @@ int32_t avcencInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	if (!lock)
 		return AVCENC_ERROR;
 	vnzSpinLock(lock);
-	if (library->reserved4 >= library->numOfEncoders) {
+	if (library->encodersOpen >= library->numOfEncoders) {
 		vnzSpinUnlock(lock);
 		return AVCENC_ERROR_IN_USE;
 	}
@@ -608,7 +608,7 @@ int32_t avcencInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 		return AVCENC_ERROR_LIBRARY_STATE;
 	}
 	library->active = 2;
-	library->reserved4++;
+	library->encodersOpen++;
 	vnzSpinUnlock(lock);
 
 	flag2 = library->coreMask2;
@@ -661,8 +661,8 @@ int32_t avcencInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	lock = library->lock;
 	if (lock) {
 		vnzSpinLock(lock);
-		library->reserved4--;
-		if (!library->reserved3 && !library->reserved4)
+		library->encodersOpen--;
+		if (!library->decodersOpen && !library->encodersOpen)
 			library->active = 1;
 		vnzSpinUnlock(lock);
 	}
@@ -904,8 +904,8 @@ int32_t avcencTerminate(uint32_t handle)
 	lock = library->lock;
 	if (lock) {
 		vnzSpinLock(lock);
-		library->reserved4--;
-		if (!library->reserved3 && !library->reserved4)
+		library->encodersOpen--;
+		if (!library->decodersOpen && !library->encodersOpen)
 			library->active = 1;
 		vnzSpinUnlock(lock);
 	}

@@ -569,7 +569,7 @@ typedef struct AvcencMotionStats {
 	uint16_t intraCount;
 	uint16_t intra16x16Count;
 	uint16_t interCount;
-	uint16_t reserved;
+	uint16_t spareCount;		/* cleared and summed like the others, never counted */
 	uint16_t skipCount;
 	uint16_t skipDecidedCount;	/* skipped as the inter decision had it */
 	uint16_t skipFoundCount;	/* skipped by the check alone */

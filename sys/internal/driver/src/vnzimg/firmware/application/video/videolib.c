@@ -91,8 +91,8 @@ int32_t videoLibraryInitialize(uint32_t *library, const VideoLibraryParam *param
 			created->numOfDecoders = numOfDecoders;
 			created->lock = lock;
 			created->numOfEncoders = numOfEncoders;
-			created->reserved3 = 0;
-			created->reserved4 = 0;
+			created->decodersOpen = 0;
+			created->encodersOpen = 0;
 			*library = vnzPublicClosePrivate((uint32_t)created, LIBRARY_SIZE);
 			return 0;
 		}

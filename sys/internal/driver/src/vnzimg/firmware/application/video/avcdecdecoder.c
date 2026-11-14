@@ -1518,7 +1518,7 @@ static void mbFill(VideoAvcMbInfo *mb, uint32_t sliceHeader)
 		kind = SKIP_KIND_P;
 	mb->kind = kind;
 	mb->cbf = 0;
-	mb->reserved2 = 0;
+	mb->qpChroma = 0;
 	mb->qp = 0;
 }
 
@@ -1765,7 +1765,7 @@ static void mbLoad(AvcdecStripe *stripe)
 
 	mb->kind = mbInfo->kind;
 	mb->qp = mbInfo->qp;
-	mb->qpChroma = mbInfo->reserved2;
+	mb->qpChroma = mbInfo->qpChroma;
 	mb->cbf = mbInfo->cbf;
 	for (i = 0; i < 4; i++)
 		mb->subKinds[i] = mbInfo->subMbType[i];

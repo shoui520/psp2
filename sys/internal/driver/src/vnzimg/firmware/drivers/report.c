@@ -60,10 +60,12 @@ static void moduleSuspend(void)
 	vnzKernelExceptionHook(VNZ_KERNEL_EXCEPTION_NMI, 0, 0);
 }
 
+extern const uint8_t vnzKernelReportSize[];	/* the link's (image.ld) */
+
 const VnzKernelModule g_vnzKernelReportModule VNZ_KERNEL_SECTION(".report.module") = {
 	.magic = VNZ_KERNEL_MODULE_DRIVER,
 	.self = VNZ_PHYSICAL_OF(0x80e000),
-	.size = 0x24c,
+	.size = (uint32_t)vnzKernelReportSize,
 	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
 	.version = VNZ_KERNEL_MODULE_VERSION,
 	.resume = moduleResume,

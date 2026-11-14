@@ -3,7 +3,7 @@
  *
  * The module has no code and exports nothing but its module info: the
  * loader of the image finds it through the module's data segment, which
- * holds the image verbatim (data/, one file per distinct image).
+ * holds the image built from firmware/ (IMAGE_BIN, CMakeLists.txt).
  */
 
 	.data

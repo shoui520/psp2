@@ -26,6 +26,10 @@ typedef struct VnzKernelScratchContext {
 	uint32_t savedSp;
 } VnzKernelScratchContext;
 
+VnzKernelThread g_vnzKernelIdleThreads[VNZ_CORES] VNZ_KERNEL_SHARED;
+VnzKernelQueue g_vnzKernelRunQueues[VNZ_CORES][VNZ_KERNEL_PRIORITIES] VNZ_KERNEL_SHARED;
+uint32_t g_vnzKernelThreadCounts[VNZ_CORES] VNZ_KERNEL_SHARED;
+VnzKernelThread *g_vnzKernelNextThreads[VNZ_CORES] VNZ_KERNEL_SHARED;
 uint32_t g_vnzKernelExitedThreads VNZ_KERNEL_SHARED;
 uint32_t g_vnzKernelExitedLimit VNZ_KERNEL_SHARED;
 

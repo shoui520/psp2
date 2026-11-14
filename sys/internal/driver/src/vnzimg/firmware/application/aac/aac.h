@@ -235,7 +235,8 @@ typedef struct AacBitstream {
 	uint32_t reserved6;
 	uint32_t bytesRead;
 	const uint8_t *cursor;
-	uint32_t reserved7[3];
+	uint32_t cursorBits;		/* cleared at a reset, never read */
+	uint32_t reserved7[2];
 	AacNoise noise;
 	uint32_t reserved8[27];
 } AacBitstream;
@@ -446,8 +447,8 @@ typedef struct AacStream {
 	uint32_t crcCheck;		/* the CRC is checked */
 	uint32_t crcPresent;		/* this frame has one */
 	uint32_t crcErrors;
-	uint32_t value10;
-	uint32_t value14;
+	uint32_t sampleBits;		/* 24, never read */
+	uint32_t spectrumBits;		/* 32: the dequantiser keeps 7 more bits */
 	uint32_t format;		/* AAC_FORMAT_ */
 	uint32_t frames;
 	uint32_t rawDataBlocks;		/* this frame's */
@@ -456,10 +457,10 @@ typedef struct AacStream {
 	uint32_t channelMap[AAC_MAX_CHANNELS];
 	uint32_t pceFound;
 	uint32_t numElements;
-	uint32_t value4c;
+	uint32_t resetDone;		/* 1 from a reset, never read */
 	uint32_t samplingRate;
 	uint32_t rawDataBlock;		/* this frame's, decoded */
-	uint32_t value58;
+	uint32_t resetMode;		/* 2 from a reset, never read */
 	uint32_t matrixMixdown;		/* the program config's, when it has one */
 	uint32_t reserved2;
 	uint32_t surroundMix;		/* not the pseudo surround one */
@@ -530,7 +531,7 @@ typedef struct AacDecoder {
 	uint8_t reserved4;
 	uint8_t outputBytes;
 	uint8_t reserved5[3];
-	uint8_t value111;
+	uint8_t lfePresent;		/* the frames had an LFE element */
 	uint8_t outputMode;
 	uint8_t sbrActive;
 	uint8_t ignoreCrc;
@@ -682,9 +683,9 @@ int32_t aacCrcLfe(AacBitstream *bits, const AacSingleChannelElement *lfe);
 
 /* aacspectrum.c */
 void aacSceReconstruct(AacBitstream *bits, AacSingleChannelElement *sce, uint32_t channel,
-	uint32_t value14, int32_t *spectra);
+	uint32_t spectrumBits, int32_t *spectra);
 void aacCpeReconstruct(AacBitstream *bits, AacChannelPairElement *cpe, uint32_t channel,
-	uint32_t value14, int32_t *spectra);
+	uint32_t spectrumBits, int32_t *spectra);
 int32_t aacSync(AacBitPosition *start, AacBitstream *bits, uint32_t minimum, uint32_t size);
 void aacBitstreamReset(AacBitstream *bits);
 
@@ -716,7 +717,7 @@ void aacOutput(int32_t *output, int32_t samples, int32_t channels, uint32_t down
 	const int32_t *mix);
 int32_t aacSpectralData(AacBitstream *bits, AacIcs *ics);
 void aacDequantize(AacBitstream *bits, AacIcs *ics, AacChannelPairElement *cpe,
-	uint32_t value14, int32_t *work);
+	uint32_t spectrumBits, int32_t *work);
 void aacStereo(AacBitstream *bits, AacChannelPairElement *cpe);
 void aacTnsFilter(AacBitstream *bits, AacIcs *ics);
 void aacImdct(AacBitstream *bits, AacIcs *ics, int32_t *work);

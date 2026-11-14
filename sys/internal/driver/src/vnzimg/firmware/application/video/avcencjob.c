@@ -2281,7 +2281,7 @@ void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 			stats[i].intraCount = 0;
 			stats[i].intra16x16Count = 0;
 			stats[i].interCount = 0;
-			stats[i].reserved = 0;
+			stats[i].spareCount = 0;
 			stats[i].skipCount = 0;
 			stats[i].skipDecidedCount = 0;
 			stats[i].skipFoundCount = 0;
@@ -2333,7 +2333,7 @@ void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 			stats[0].intraCount += stats[i].intraCount;
 			stats[0].intra16x16Count += stats[i].intra16x16Count;
 			stats[0].interCount += stats[i].interCount;
-			stats[0].reserved += stats[i].reserved;
+			stats[0].spareCount += stats[i].spareCount;
 			stats[0].skipCount += stats[i].skipCount;
 			stats[0].skipDecidedCount += stats[i].skipDecidedCount;
 			stats[0].skipFoundCount += stats[i].skipFoundCount;

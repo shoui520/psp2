@@ -184,13 +184,13 @@ static int32_t aacDecoderInit(AacDecoder *decoder, uint32_t sbrMode, uint32_t up
 	stream->crcPresent = 0;
 	stream->crcErrors = 0;
 	stream->pceFound = 0;
-	stream->value58 = 2;
-	stream->value10 = 24;
-	stream->value14 = 32;
+	stream->resetMode = 2;
+	stream->sampleBits = 24;
+	stream->spectrumBits = 32;
 	stream->crcWholeCpe = 1;
 	stream->crcCheck = 1;
 	stream->id = 1;
-	stream->value4c = 1;
+	stream->resetDone = 1;
 	stream->channelMode = 0;
 	start = stream->syntax.frameStart;
 	bitstreamSeek(&stream->bits, &start);
@@ -199,7 +199,7 @@ static int32_t aacDecoderInit(AacDecoder *decoder, uint32_t sbrMode, uint32_t up
 	stream->bits.bytesRead = 0;
 	stream->bits.randomSeed = 0;
 	stream->bits.position.byte = 0;
-	stream->bits.reserved7[0] = 0;
+	stream->bits.cursorBits = 0;
 	for (i = 0; i < channels; i++)
 		stream->channelState[i] = &decoder->channelStates[i];
 	stream->matrixMixdown = 1;
@@ -464,7 +464,7 @@ static int32_t controlKey(AacHandle *aac, int32_t key, int32_t *values, uint32_t
 	case AAC_KEY_SBR_STATE:
 		values[(*i)++] = decoder->sbrStatus;
 		values[(*i)++] = decoder->outputMode;
-		values[(*i)++] = decoder->value111;
+		values[(*i)++] = decoder->lfePresent;
 		values[*i] = decoder->sbrActive;
 		return 0;
 	case AAC_KEY_INTERLEAVED:

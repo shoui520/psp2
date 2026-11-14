@@ -48,6 +48,116 @@ int32_t rpcVThreadResourceDelete(uint32_t holder);
 int32_t rpcVThreadSetCores(uint32_t count);
 int32_t rpcPowerDown(void);
 int32_t rpcNothing(void);
+
+/* the services' RPC functions (application/main.c's g_rpcFunctions) */
+/* video/avcdecrpc.c */
+int32_t rpcAvcdecQueryMemory(uint32_t paddr);
+int32_t rpcAvcdecInitialize(uint32_t paddr, uint32_t libraryPaddr);
+int32_t rpcAvcdecQuerySequence(uint32_t paddr);
+int32_t rpcAvcdecQueryContext(uint32_t paddr);
+int32_t rpcAvcdecInitializeContext(uint32_t paddr);
+int32_t rpcAvcdecDecode(uint32_t paddr);
+int32_t rpcAvcdecDecodeStop(uint32_t paddr);
+int32_t rpcAvcdecTerminate(uint32_t paddr, uint32_t libraryPaddr);
+
+/* video/avcencrpc.c */
+int32_t rpcAvcencQueryMemory(uint32_t paddr);
+int32_t rpcAvcencInitialize(uint32_t paddr, uint32_t libraryPaddr);
+int32_t rpcAvcencEncode(uint32_t paddr);
+int32_t rpcAvcencEncodeStop(uint32_t paddr);
+int32_t rpcAvcencTerminate(uint32_t paddr, uint32_t libraryPaddr);
+
+/* video/m4vdecrpc.c */
+int32_t rpcM4vdecQueryMemory(uint32_t paddr);
+int32_t rpcM4vdecInitialize(uint32_t paddr, uint32_t libraryPaddr);
+int32_t rpcM4vdecQuerySequence(uint32_t paddr);
+int32_t rpcM4vdecQueryContext(uint32_t paddr);
+int32_t rpcM4vdecInitializeContext(uint32_t paddr);
+int32_t rpcM4vdecDecode(uint32_t paddr);
+int32_t rpcM4vdecDecodeStop(uint32_t paddr);
+int32_t rpcM4vdecTerminate(uint32_t paddr, uint32_t libraryPaddr);
+
+/* video/library.c */
+int32_t rpcVideoQueryMemory(uint32_t paddr);
+int32_t rpcVideoCreateLibrary(uint32_t paddr, uint32_t resource);
+int32_t rpcVideoDeleteLibrary(uint32_t paddr);
+int32_t rpcVideoInitializeMemory(uint32_t paddr);
+uint32_t rpcVideoAllocMemory(uint32_t kind, uint32_t size);
+
+/* at9dec.c */
+int32_t rpcAt9Sizes(uint32_t ctrlAddress);
+int32_t rpcAt9Init(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcAt9Release(uint32_t ctrlAddress);
+int32_t rpcAt9Decode(uint32_t ctrlAddress);
+int32_t rpcAt9Reset(uint32_t ctrlAddress);
+int32_t rpcAt9DecodeMany(uint32_t ctrlAddress, uint32_t count);
+int32_t rpcAt9DecodeBatch(uint32_t ctrlsAddress, uint32_t count);
+int32_t rpcAt9DecodeRange(uint32_t ctrlAddress, uint32_t skip, uint32_t count);
+
+/* mp3dec.c */
+int32_t rpcMp3Sizes(uint32_t ctrlAddress);
+int32_t rpcMp3Init(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcMp3Release(uint32_t ctrlAddress);
+int32_t rpcMp3Decode(uint32_t ctrlAddress);
+int32_t rpcMp3DecodeBatch(uint32_t ctrlsAddress, uint32_t count);
+int32_t rpcMp3Reset(uint32_t ctrlAddress);
+
+/* aacdec.c */
+int32_t rpcAacSizes(uint32_t ctrlAddress, uint32_t isSbr);
+int32_t rpcAacInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcAacRelease(uint32_t ctrlAddress);
+int32_t rpcAacDecode(uint32_t ctrlAddress);
+int32_t rpcAacDecodeBatch(uint32_t ctrlsAddress, uint32_t count);
+int32_t rpcAacReset(uint32_t ctrlAddress);
+
+/* celpdec.c */
+int32_t rpcCelpSizes(uint32_t ctrlAddress);
+int32_t rpcCelpInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcCelpRelease(uint32_t ctrlAddress);
+int32_t rpcCelpDecode(uint32_t ctrlAddress);
+int32_t rpcCelpDecodeBatch(uint32_t ctrlsAddress, uint32_t count);
+int32_t rpcCelpReset(uint32_t ctrlAddress);
+
+/* celpenc.c */
+int32_t rpcCelpEncSizes(uint32_t ctrlAddress);
+int32_t rpcCelpEncInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcCelpEncRelease(uint32_t ctrlAddress);
+int32_t rpcCelpEncode(uint32_t ctrlAddress);
+int32_t rpcCelpEncReset(uint32_t ctrlAddress);
+int32_t rpcCelpEncOptInfo(uint32_t ctrlAddress);
+
+/* silkdec.c */
+int32_t rpcSilkSizes(uint32_t ctrlAddress);
+int32_t rpcSilkInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcSilkRelease(uint32_t ctrlAddress);
+int32_t rpcSilkDecode(uint32_t ctrlAddress);
+int32_t rpcSilkDecodeBatch(uint32_t ctrlAddress);
+int32_t rpcSilkReset(uint32_t ctrlAddress);
+
+/* silkenc.c */
+int32_t rpcSilkEncSizes(uint32_t ctrlAddress);
+int32_t rpcSilkEncInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcSilkEncRelease(uint32_t ctrlAddress);
+int32_t rpcSilkEncode(uint32_t ctrlAddress);
+int32_t rpcSilkEncReset(uint32_t ctrlAddress);
+
+/* aec/aec.c */
+int32_t rpcAecSizes(uint32_t ctrlAddress);
+int32_t rpcAecInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource);
+int32_t rpcAecRelease(uint32_t ctrlAddress);
+int32_t rpcAecReset(uint32_t ctrlAddress);
+int32_t rpcAecProcess(uint32_t ctrlAddress, int32_t delay, uint32_t flags);
+int32_t rpcAecSetCurve(uint32_t ctrlAddress, uint32_t curve);
+int32_t rpcAecGetState(uint32_t ctrlAddress, uint32_t dst, uint32_t size);
+
+/* jpeg/rpc.c */
+int32_t rpcJpegDecodeMJpegYCbCr(VnzKernelVThreadResource *resource, uint32_t paramAddress);
+int32_t rpcJpegGetOutputInfo(VnzKernelVThreadResource *resource, uint32_t paramAddress);
+int32_t rpcJpegCreateSplitDecoder(VnzKernelVThreadResource *resource, uint32_t ctrlAddress);
+int32_t rpcJpegDeleteSplitDecoder(VnzKernelVThreadResource *resource, uint32_t ctrlAddress);
+int32_t rpcJpegSplitDecodeMJpeg(VnzKernelVThreadResource *resource, uint32_t ctrlAddress, uint32_t workAddress);
+int32_t rpcJpegEncoder(VnzKernelVThreadResource *resource, uint32_t contextAddress, uint32_t argument, uint32_t argument2);
+int32_t rpcJpegMJpegCsc(VnzKernelVThreadResource *resource, uint32_t paramAddress);
 void applicationStart(void);
 
 /* application/memory.c */

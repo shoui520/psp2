@@ -21,7 +21,7 @@ static const AacSbrHeader defaultHeader = {
 	.limiterGains = 2,
 	.interpolFreq = 1,
 	.smoothingMode = 1,
-	.reserved4 = { 1, 2, 0xc0, 0xbf },
+	.padding = { 1, 2, 0xc0, 0xbf },
 };
 
 int32_t aacSbrCheck(AacSbrHeader *header, uint32_t what)

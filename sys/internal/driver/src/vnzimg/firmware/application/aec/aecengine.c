@@ -206,7 +206,7 @@ static void binsReset(AecWork *work)
 		bin->delayMoment = 0x1a930000;
 		bin->delaySquare = 0x0301c09a;
 		bin->noiseGain = 0;
-		bin->reserved = 100;
+		bin->resetLevel = 100;
 		bin->delaySpread = 0;
 		bin->delayAverage = 6803;
 	}
@@ -215,7 +215,7 @@ static void binsReset(AecWork *work)
 static void aecDefaults(AecWork *work)
 {
 	work->delay = 0;
-	work->reserved2 = 1;
+	work->resetFlag = 1;
 	work->highPass = 1;
 	work->noiseScale = 16;
 	work->echoScale = 1;

@@ -121,9 +121,9 @@ typedef struct VideoLibrary {
 	uint32_t (*callback[3])(void);
 	volatile uint8_t *lock;
 	uint8_t numOfDecoders;
-	uint8_t reserved3;
+	uint8_t decodersOpen;		/* of numOfDecoders */
 	uint8_t numOfEncoders;
-	uint8_t reserved4;
+	uint8_t encodersOpen;
 	uint16_t horizontal;
 	int16_t active;
 } VideoLibrary;
@@ -470,9 +470,9 @@ typedef struct AvcencSequence {
 	uint32_t maxBitRate;
 	uint32_t cpbSize;
 	uint32_t maxCpbSize;
-	uint8_t reserved;
-	uint8_t reserved2;
-	uint8_t reserved3;
+	uint8_t param3;			/* AvcencParam's, never read */
+	uint8_t param5;
+	uint8_t param6;
 	uint8_t entropyCoding;
 	uint8_t mode;
 	uint8_t vuiFlag;

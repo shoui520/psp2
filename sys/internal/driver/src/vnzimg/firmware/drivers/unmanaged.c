@@ -31,10 +31,12 @@ static void moduleSuspend(void)
 {
 }
 
+extern const uint8_t vnzKernelUnmanagedSize[];	/* the link's (image.ld) */
+
 const VnzKernelModule g_vnzKernelUnmanagedModule VNZ_KERNEL_SECTION(".unmanaged.module") = {
 	.magic = VNZ_KERNEL_MODULE_DRIVER,
 	.self = VNZ_PHYSICAL_OF(0x80c000),
-	.size = 0x41c,
+	.size = (uint32_t)vnzKernelUnmanagedSize,
 	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
 	.version = VNZ_KERNEL_MODULE_VERSION,
 	.resume = moduleResume,

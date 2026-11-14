@@ -40,7 +40,7 @@ static int32_t dequantize(const AacTables *tables, int32_t x, int32_t scale, int
 }
 
 void aacDequantize(AacBitstream *bits, AacIcs *ics, AacChannelPairElement *cpe,
-	uint32_t value14, int32_t *work)
+	uint32_t spectrumBits, int32_t *work)
 {
 	const AacTables *tables = bits->tables;
 	const AacIcsInfo *info = &ics->info;
@@ -49,7 +49,7 @@ void aacDequantize(AacBitstream *bits, AacIcs *ics, AacChannelPairElement *cpe,
 		tables->swbOffsetLong[bits->samplingIndex];
 	int32_t numSwb = tables->numSwb[isShort][bits->samplingIndex];
 	int32_t count = info->maxSfb < numSwb ? info->maxSfb : numSwb;
-	int32_t extraShift = value14 == 32 ? 7 : 0;
+	int32_t extraShift = spectrumBits == 32 ? 7 : 0;
 	int32_t frameShift = isShort ? -22 : -25;	/* the window's length */
 	int32_t noiseShift = isShort ? -23 : -26;
 	int32_t window = 0, g, w, sfb, k;

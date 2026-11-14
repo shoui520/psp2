@@ -1935,8 +1935,8 @@ void avcdecSliceStart(const VideoStream *stream, VideoSliceJob *job)
 	size = nal->size;
 	start = nal->start;
 	bits = nal->bits;
-	words[0] = nal->reserved[0];
-	words[1] = nal->reserved[1];
+	words[0] = nal->bitsSaved[0];
+	words[1] = nal->bitsSaved[1];
 	type = videoNalNext(stream, &job->parser, 0);
 	if (type == NAL_SLICE || type == NAL_IDR) {
 		videoBitsBegin(stream, &job->parser);
@@ -1949,8 +1949,8 @@ void avcdecSliceStart(const VideoStream *stream, VideoSliceJob *job)
 	}
 	nal->nextType = type;
 	nal->bits = bits;
-	nal->reserved[0] = words[0];
-	nal->reserved[1] = words[1];
+	nal->bitsSaved[0] = words[0];
+	nal->bitsSaved[1] = words[1];
 	nal->start = start;
 	nal->size = size;
 }

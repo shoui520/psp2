@@ -488,7 +488,7 @@ int32_t aacElements(AacDecoder *decoder, int32_t *sbrPresent)
 	int32_t *spectra = (int32_t *)decoder->spectra;
 	int16_t channelsBefore = stream->channels;
 	uint32_t pceFound = stream->pceFound, frames = stream->frames;
-	uint32_t value14 = stream->value14, crcWholeCpe = stream->crcWholeCpe;
+	uint32_t spectrumBits = stream->spectrumBits, crcWholeCpe = stream->crcWholeCpe;
 	uint32_t crcPresent = stream->crcPresent;
 	int32_t counts[AAC_MAX_CHANNELS], result, n;
 	uint32_t ch = 0, numElements = 0, i;
@@ -511,7 +511,7 @@ int32_t aacElements(AacDecoder *decoder, int32_t *sbrPresent)
 		case AAC_ID_SCE:
 		case AAC_ID_LFE:
 			if (id == AAC_ID_LFE)
-				decoder->value111 = 1;
+				decoder->lfePresent = 1;
 			if (!(ch < numChannels))
 				return AAC_STATUS_CHANNELS;
 			counts[ch] = 1;
@@ -532,7 +532,7 @@ int32_t aacElements(AacDecoder *decoder, int32_t *sbrPresent)
 				if (result)
 					return result;
 			}
-			aacSceReconstruct(bits, &syntax->sce, ch, value14, spectra);
+			aacSceReconstruct(bits, &syntax->sce, ch, spectrumBits, spectra);
 			element = &syntax->elements[numElements++];
 			element->id = id;
 			element->elementInstanceTag = syntax->sce.elementInstanceTag;
@@ -554,7 +554,7 @@ int32_t aacElements(AacDecoder *decoder, int32_t *sbrPresent)
 				if (result)
 					return result;
 			}
-			aacCpeReconstruct(bits, &syntax->cpe, ch, value14, spectra);
+			aacCpeReconstruct(bits, &syntax->cpe, ch, spectrumBits, spectra);
 			element = &syntax->elements[numElements++];
 			element->id = id;
 			element->elementInstanceTag = syntax->cpe.elementInstanceTag;

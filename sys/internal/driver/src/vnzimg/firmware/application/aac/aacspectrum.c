@@ -12,12 +12,12 @@ static void aacPulseDecode(AacBitstream *bits, AacIcs *ics);
 static void aacFilterbank(AacBitstream *bits, AacIcs *ics, uint32_t channel, int32_t *work);
 
 void aacSceReconstruct(AacBitstream *bits, AacSingleChannelElement *sce, uint32_t channel,
-	uint32_t value14, int32_t *spectra)
+	uint32_t spectrumBits, int32_t *spectra)
 {
 	int32_t *work = spectra + 2048;
 
 	aacPulseDecode(bits, sce->ics);
-	aacDequantize(bits, sce->ics, NULL, value14, work);
+	aacDequantize(bits, sce->ics, NULL, spectrumBits, work);
 	aacTnsFilter(bits, sce->ics);
 	aacImdct(bits, sce->ics, work);
 	aacFilterbank(bits, sce->ics, channel, work);
@@ -25,14 +25,14 @@ void aacSceReconstruct(AacBitstream *bits, AacSingleChannelElement *sce, uint32_
 }
 
 void aacCpeReconstruct(AacBitstream *bits, AacChannelPairElement *cpe, uint32_t channel,
-	uint32_t value14, int32_t *spectra)
+	uint32_t spectrumBits, int32_t *spectra)
 {
 	int32_t *work = spectra + 2048;
 
 	aacPulseDecode(bits, cpe->ics[0]);
-	aacDequantize(bits, cpe->ics[0], cpe, value14, work);
+	aacDequantize(bits, cpe->ics[0], cpe, spectrumBits, work);
 	aacPulseDecode(bits, cpe->ics[1]);
-	aacDequantize(bits, cpe->ics[1], cpe, value14, work);
+	aacDequantize(bits, cpe->ics[1], cpe, spectrumBits, work);
 	aacStereo(bits, cpe);
 	aacTnsFilter(bits, cpe->ics[0]);
 	aacTnsFilter(bits, cpe->ics[1]);

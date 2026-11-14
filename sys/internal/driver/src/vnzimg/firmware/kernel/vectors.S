@@ -120,7 +120,8 @@ vnzKernelReset:
 	add3	$9, $9, $0
 	sw	$4, VNZ_KERNEL_THREAD_STACK($9)
 	sw	$5, VNZ_KERNEL_THREAD_STACK_SIZE($9)
-	movu	$12, vnzKernelKernelStart
+	movh	$12, %hi(vnzKernelKernelStart)
+	add3	$12, $12, %lo(vnzKernelKernelStart)
 	jsr	$12
 3:	bra	3b
 
@@ -350,7 +351,8 @@ threadStart:
 	.global	vnzKernelInitialFrame
 vnzKernelInitialFrame:
 	add	$1, -24
-	movu	$9, threadStart
+	movh	$9, %hi(threadStart)
+	add3	$9, $9, %lo(threadStart)
 	sw	$9, 20($1)
 	sw	$2, ($1)
 	sw	$3, 4($1)

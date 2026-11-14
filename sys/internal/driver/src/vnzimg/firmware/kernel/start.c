@@ -11,6 +11,7 @@
 
 /* the image's first start, until the primary is done */
 uint32_t g_vnzKernelBootFirst VNZ_KERNEL_SHARED;
+uint8_t g_vnzKernelBootStacks[VNZ_CORES][0x200] VNZ_KERNEL_SHARED;	/* a core's stack until its idle thread runs */
 uint32_t g_vnzKernelBootStarted[VNZ_CORES] VNZ_KERNEL_SHARED;	/* the core that won the election */
 uint32_t g_vnzKernelBootReady[VNZ_CORES] VNZ_KERNEL_SHARED;	/* a core has started once */
 volatile uint8_t g_vnzKernelBootStages[VNZ_CORES] VNZ_KERNEL_SHARED;
