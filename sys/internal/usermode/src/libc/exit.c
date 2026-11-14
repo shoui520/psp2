@@ -5,9 +5,6 @@
 
 #include "libc_internal.h"
 
-#define SCE_LIBC_EXIT_SUCCESS_CODE	0x102	/* sceKernelCallAbortHandler: exit(0) */
-#define SCE_LIBC_EXIT_FAILURE_CODE	0x103	/* sceKernelCallAbortHandler: exit(nonzero) */
-
 void *_Dso_handle_main;
 
 void __cxa_set_dso_handle_main(void *dso)

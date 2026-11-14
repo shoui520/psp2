@@ -48,6 +48,13 @@ unsigned int _Getjmpbufguard(void);
 unsigned int _Getptrguard(void);
 
 extern unsigned long long _Randseed;
+
+/* the reasons the C library gives sceKernelCallAbortHandler */
+#define SCE_LIBC_EXIT_SUCCESS_CODE	0x102	/* exit(0) */
+#define SCE_LIBC_EXIT_FAILURE_CODE	0x103	/* exit(nonzero) */
+#define SCE_LIBC__EXIT_SUCCESS_CODE	0x104	/* _Exit(0) */
+#define SCE_LIBC__EXIT_FAILURE_CODE	0x105	/* _Exit(nonzero) */
+#define SCE_LIBC_ASSERT_CODE		0x107	/* a failed assertion */
 void *_Gettlsbuf(size_t size);
 
 /* exit's DSO: __cxa_finalize's argument (__cxa_set_dso_handle_main) */

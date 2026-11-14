@@ -19,6 +19,7 @@ long double _WStold(const wchar_t *s, wchar_t **endptr, long base);
 long long _WStoll(const wchar_t *s, wchar_t **endptr, int base);
 unsigned long _WStoul(const wchar_t *s, wchar_t **endptr, int base);
 unsigned long long _WStoull(const wchar_t *s, wchar_t **endptr, int base);
+size_t _Wcsxfrm(wchar_t *buf, const wchar_t **ps, size_t n, mbstate_t *pst);
 
 int _Mbtowcx(wchar_t *pwc, const char *s, size_t nin, mbstate_t *pst);
 int _Wctombx(char *s, wchar_t wchar, mbstate_t *pst);
