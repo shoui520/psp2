@@ -58,6 +58,9 @@ typedef struct _WSft {
 } _WSft;
 
 int _WGetfld(_WSft *px);
+int _WGetfloat(_WSft *px, void *pans);
+int _WGetint(_WSft *px, void *pans);
+int _WGetstr(_WSft *px, int sfl);
 void _WLdtob(_WPft *px, wchar_t code);
 void _WLitob(_WPft *px, wchar_t code);
 

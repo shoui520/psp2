@@ -9,9 +9,6 @@
 
 #include "xwstdio.h"
 
-/* read a wide character, counting it */
-#define GETN(px)	(++(px)->nchar, (*(px)->pfn)((px)->arg, 0, 1))
-
 int _WScanf(_WScin *pfn, void *arg, const wchar_t *fmt, va_list ap, int secure)
 {
 	int nconv = EOF;
@@ -31,12 +28,12 @@ int _WScanf(_WScin *pfn, void *arg, const wchar_t *fmt, va_list ap, int secure)
 			if (*x.s == L'\0')
 				return nconv < 0 ? 0 : nconv;
 			if (iswspace(*x.s)) {	/* white space matches any amount */
-				while (iswspace(ch = GETN(&x)))
+				while (iswspace(ch = GET(&x)))
 					;
 				--x.nchar;
 				if (ch != WEOF)
 					(*x.pfn)(x.arg, ch, 0);
-			} else if (*x.s != (ch = GETN(&x))) {	/* the text must match */
+			} else if (*x.s != (ch = GET(&x))) {	/* the text must match */
 				if (ch != WEOF) {
 					--x.nchar;
 					(*x.pfn)(x.arg, ch, 0);
@@ -75,7 +72,7 @@ int _WScanf(_WScin *pfn, void *arg, const wchar_t *fmt, va_list ap, int secure)
 			++x.s;
 		}
 		if (wcschr(L"cCn[", *x.s) == NULL) {	/* skip white space before the field */
-			while (iswspace(ch = GETN(&x)))
+			while (iswspace(ch = GET(&x)))
 				;
 			--x.nchar;
 			if (ch != WEOF)
