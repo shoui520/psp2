@@ -41,6 +41,23 @@ typedef struct _WPft {
 	char secure;
 } _WPft;
 
+/* wide scanf formatting information: _Sft with a wide format */
+typedef struct _WSft {
+	_WScin *pfn;		/* reads (getfl 1) or pushes back (getfl 0) a character */
+	void *arg;
+	va_list ap;
+	const wchar_t *s;	/* the format */
+	int nchar;		/* characters read */
+	int nget;		/* characters left in the field */
+	int width;
+	size_t prec;		/* SCE: the precision, ".n" or ".*" */
+	wchar_t qual;
+	char noconv;		/* '*': convert without storing */
+	char stored;
+	char secure;
+} _WSft;
+
+int _WGetfld(_WSft *px);
 void _WLdtob(_WPft *px, wchar_t code);
 void _WLitob(_WPft *px, wchar_t code);
 
