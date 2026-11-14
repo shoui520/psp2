@@ -2969,6 +2969,680 @@ void avcencIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t abo
 }
 
 /*
+ * The inter decision's kernels (0x8dd958-0x8df4d0): the window around the
+ * coarse search's vector brought in from the tiled reference a band at a
+ * time, the search's SADs over a checkerboard of the macroblock's pixels
+ * (the vectors of a parity, the pixels of one), the refinement's at the
+ * neighbours (the other parity, the other pixels), the choices, and the
+ * skip check's transforms of the residual
+ */
+
+static inline int32_t magnitude(int32_t value)
+{
+	return value < 0 ? -value : value;
+}
+
+/* a pixel of the window's line: its own parity's first, then the others' last four and first eight */
+static inline uint8_t windowPixel(const uint8_t *line, uint32_t parity, uint32_t x)
+{
+	uint32_t sample = x >> 1;
+
+	if ((x & 1) == parity)
+		return line[sample];
+	return sample >= 8 ? line[12 + sample - 8] : line[16 + sample];
+}
+
+/*
+ * 0x8dd958: the search's choice: for each 8x8 block, half and the whole
+ * macroblock, the candidate of the lowest SAD and twice its distance from
+ * the vector, the first of equal ones
+ */
+void avcencInterBest(const uint16_t *sads, AvcencInterBest *best, int8_t (*deltas)[2])
+{
+	const uint16_t *candidate = sads;
+	uint16_t costs[8];
+	uint32_t whole[2];
+	int32_t dx, dy, i, length;
+
+	for (i = 0; i < 8; i++)
+		best->costs[i] = 32767;
+	best->whole[0] = 0xffff;
+	best->whole[1] = 0xffff;
+	for (dy = -4; dy <= 4; dy++) {
+		for (dx = (dy & 1) - 4; dx <= 4; dx += 2) {
+			length = 2 * (magnitude(dx) + magnitude(dy));
+			for (i = 0; i < 4; i++)
+				costs[i] = candidate[i] + length;
+			costs[INTER_HALF_LEFT] = candidate[0] + candidate[2] + length;
+			costs[INTER_HALF_RIGHT] = candidate[1] + candidate[3] + length;
+			costs[INTER_HALF_TOP] = candidate[0] + candidate[1] + length;
+			costs[INTER_HALF_BOTTOM] = candidate[2] + candidate[3] + length;
+			whole[0] = (uint16_t)(candidate[0] + candidate[1] + candidate[2] + candidate[3]) +
+				length;
+			whole[1] = length;
+			for (i = 0; i < 8; i++) {
+				if ((int16_t)best->costs[i] > (int16_t)costs[i]) {
+					best->costs[i] = costs[i];
+					best->deltas[i][0] = dx;
+					best->deltas[i][1] = dy;
+				}
+			}
+			for (i = 0; i < 2; i++) {
+				if (best->whole[i] > whole[i]) {
+					best->whole[i] = whole[i];
+					best->deltas[INTER_WHOLE + 2 * i][0] = dx;
+					best->deltas[INTER_WHOLE + 2 * i][1] = dy;
+					best->deltas[INTER_WHOLE + 2 * i + 1][0] = dx;
+					best->deltas[INTER_WHOLE + 2 * i + 1][1] = dy;
+				}
+			}
+			candidate += 8;
+		}
+	}
+	for (i = 0; i < 12; i++) {
+		deltas[i][0] = best->deltas[i][0];
+		deltas[i][1] = best->deltas[i][1];
+	}
+}
+
+/* the partitions' header bits: 8x8, 8x16, 16x8, 16x16 */
+static const uint16_t partitionBits[4] = { 21, 5, 5, 4 };
+
+/* a vector difference component's bits, roughly, by its quarter pixels */
+static inline uint32_t differenceBits(int32_t first, int32_t second)
+{
+	uint8_t quarters = (uint8_t)(magnitude(first - second) << 2);
+
+	if (quarters == 0)
+		return 1;
+	if (quarters > 16)
+		return 16;
+	if (quarters > 8)
+		return 14;
+	return quarters + 2;
+}
+
+static inline uint32_t deltaBits(const int8_t *first, const int8_t *second)
+{
+	return differenceBits(first[0], second[0]) + differenceBits(first[1], second[1]);
+}
+
+/* the length the search's costs have in them */
+static inline uint16_t searchLength(const int8_t *delta)
+{
+	return 2 * (magnitude(delta[0]) + magnitude(delta[1]));
+}
+
+/*
+ * 0x8dda78: each partition's cost (8x8, 8x16, 16x8, 16x16): its SAD and,
+ * by the weight, its bits: the header's and the vectors' differences
+ */
+void avcencInterPartitionCosts(const AvcencInterBest *best, uint32_t weight, uint16_t *costs,
+	uint16_t *sads)
+{
+	const int8_t (*deltas)[2] = best->deltas;
+	uint32_t bits[4], i;
+
+	bits[0] = deltaBits(deltas[INTER_WHOLE], deltas[0]) + deltaBits(deltas[0], deltas[1]) +
+		deltaBits(deltas[0], deltas[2]) + deltaBits(deltas[2], deltas[3]);
+	bits[1] = deltaBits(deltas[INTER_WHOLE], deltas[INTER_HALF_LEFT]) +
+		deltaBits(deltas[INTER_HALF_LEFT], deltas[INTER_HALF_RIGHT]);
+	bits[2] = deltaBits(deltas[INTER_WHOLE], deltas[INTER_HALF_TOP]) +
+		deltaBits(deltas[INTER_HALF_TOP], deltas[INTER_HALF_BOTTOM]);
+	bits[3] = 2;
+	sads[0] = 0;
+	for (i = 0; i < 4; i++)
+		sads[0] += best->costs[i] - searchLength(deltas[i]);
+	sads[1] = best->costs[INTER_HALF_LEFT] - searchLength(deltas[INTER_HALF_LEFT]) +
+		best->costs[INTER_HALF_RIGHT] - searchLength(deltas[INTER_HALF_RIGHT]);
+	sads[2] = best->costs[INTER_HALF_TOP] - searchLength(deltas[INTER_HALF_TOP]) +
+		best->costs[INTER_HALF_BOTTOM] - searchLength(deltas[INTER_HALF_BOTTOM]);
+	sads[3] = best->whole[0] - searchLength(deltas[INTER_WHOLE]);
+	for (i = 0; i < 4; i++)
+		costs[i] = (uint16_t)(weight * (partitionBits[i] + bits[i])) + sads[i];
+}
+
+/*
+ * 0x8ddbb0: the coarse search's vector, in whole pixels, from the
+ * macroblock: kept at most eight pixels out of the picture
+ */
+void avcencInterPosition(const uint8_t *vector, uint32_t x, uint32_t y, uint32_t width,
+	uint32_t height, int16_t *position, int16_t *origin)
+{
+	int16_t limits[2] = { (int16_t)(width - 8), (int16_t)(height - 8) };
+	int32_t i;
+
+	origin[0] = (int16_t)(x << 4);
+	origin[1] = (int16_t)(y << 4);
+	for (i = 0; i < 2; i++) {
+		position[i] = (int16_t)((int8_t)vector[i] << 2) + origin[i];
+		if (position[i] < -8)
+			position[i] = -8;
+		if (position[i] > limits[i])
+			position[i] = limits[i];
+	}
+}
+
+/* 0x8ddc10: a band into the window, each line's own parity's pixels first */
+void avcencInterBandStore(const AvcencInterBand *band, uint8_t (*window)[24])
+{
+	uint32_t i, j, own, other;
+
+	for (i = 0; i < 8; i++) {
+		own = i & 1;
+		other = own ^ 1;
+		for (j = 0; j < 12; j++)
+			window[i][j] = band->lines[i][2 * j + own];
+		for (j = 0; j < 4; j++)
+			window[i][12 + j] = band->lines[i][2 * (8 + j) + other];
+		for (j = 0; j < 8; j++)
+			window[i][16 + j] = band->lines[i][2 * j + other];
+	}
+}
+
+/*
+ * 0x8ddce0: four lines of the window, 16 pixels from the offset; the
+ * first line's parity given
+ */
+void avcencInterSkipLoad(AvcencInterSkip *skip, const uint8_t (*lines)[24], uint32_t offset,
+	uint32_t parity)
+{
+	uint32_t i, x;
+
+	for (i = 0; i < 4; i++)
+		for (x = 0; x < 16; x++)
+			skip->luma[i][x] = windowPixel(lines[i], parity ^ (i & 1), offset + x);
+}
+
+/* the transform's pass over a 4x4 block's columns */
+static inline void transformColumns(int32_t (*lines)[4])
+{
+	int32_t sum, difference, inner, outer, i;
+
+	for (i = 0; i < 4; i++) {
+		sum = lines[0][i] + lines[3][i];
+		inner = lines[1][i] + lines[2][i];
+		outer = lines[0][i] - lines[3][i];
+		difference = lines[1][i] - lines[2][i];
+		lines[0][i] = sum + inner;
+		lines[2][i] = sum - inner;
+		lines[1][i] = difference + 2 * outer;
+		lines[3][i] = outer - 2 * difference;
+	}
+}
+
+static inline int32_t below(const int32_t *line, const int16_t *thresholds)
+{
+	int32_t i;
+
+	for (i = 0; i < 4; i++)
+		if (thresholds[i] <= magnitude(line[i]))
+			return 0;
+	return 1;
+}
+
+/*
+ * 0x8ddee0: the residual's 4x4 transform, the standard's, and whether its
+ * first and third lines are under their thresholds; the lines kept, as
+ * magnitudes
+ */
+int32_t avcencInterSkipTransform(int16_t (*lines)[4], const int16_t *thresholds)
+{
+	int32_t values[4][4], transposed[4][4], i, j, under;
+
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			values[i][j] = lines[i][j];
+	transformColumns(values);
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			transposed[i][j] = values[j][i];
+	transformColumns(transposed);
+	under = below(transposed[0], thresholds) && below(transposed[2], thresholds);
+	for (i = 0; i < 4; i++)
+		for (j = 0; j < 4; j++)
+			lines[i][j] = (int16_t)magnitude(transposed[i][j]);
+	return under;
+}
+
+/* a 4x4 block's residual under the thresholds, all of it */
+static inline int32_t residualBelow(int16_t (*residual)[4], const int16_t (*thresholds)[4])
+{
+	int32_t i, under;
+
+	under = avcencInterSkipTransform(residual, thresholds[0]);
+	for (i = 1; i < 4; i += 2) {
+		if (!under)
+			break;
+		under = residual[i][0] < thresholds[1][0] && residual[i][1] < thresholds[1][1] &&
+			residual[i][2] < thresholds[1][2] && residual[i][3] < thresholds[1][3];
+	}
+	return under;
+}
+
+/* 0x8ddf60: four lines of the macroblock against the reference's, each 4x4 block's residual */
+int32_t avcencInterSkipLuma(const AvcencInterSkip *skip, const uint8_t *source)
+{
+	int16_t residual[4][4];
+	uint32_t block, i, j;
+
+	for (block = 0; block < 4; block++) {
+		for (i = 0; i < 4; i++)
+			for (j = 0; j < 4; j++)
+				residual[i][j] = skip->luma[i][4 * block + j] -
+					source[16 * i + 4 * block + j];
+		if (!residualBelow(residual, skip->thresholds))
+			return 0;
+	}
+	return 1;
+}
+
+/* a chroma line's place: the tiles' lines of U then V, eight each, a row of tiles below the last */
+static inline const uint8_t *chromaLine(const uint8_t *tile, uint32_t pitch, uint32_t line,
+	uint32_t i)
+{
+	return tile + 8 * i + (line + i >= 8 ? pitch * 8 - 64 : 0);
+}
+
+/* 0x8de0e0: four lines of U and V of the reference, from the tile's line */
+void avcencInterSkipChroma(AvcencInterSkip *skip, const uint8_t *tile, uint32_t pitch,
+	uint32_t line)
+{
+	const uint8_t *u;
+	uint32_t i, j;
+
+	for (i = 0; i < 4; i++) {
+		u = chromaLine(tile, pitch, line, i);
+		for (j = 0; j < 8; j++) {
+			skip->chroma[0][i][j] = u[j];
+			skip->chroma[1][i][j] = u[64 + j];
+		}
+	}
+}
+
+/* 0x8de190: and from a pixel in it, the rest from the next tile */
+void avcencInterSkipChromaShifted(AvcencInterSkip *skip, const uint8_t *tile,
+	const uint8_t *next, uint32_t pitch, uint32_t line, uint32_t shift)
+{
+	const uint8_t *u, *v;
+	uint32_t i, j, k;
+
+	for (i = 0; i < 4; i++) {
+		u = chromaLine(tile, pitch, line, i);
+		v = chromaLine(next, pitch, line, i);
+		for (j = 0; j < 8; j++) {
+			k = j + shift;
+			skip->chroma[0][i][j] = k < 8 ? u[k] : v[k - 8];
+			skip->chroma[1][i][j] = k < 8 ? u[64 + k] : v[64 + k - 8];
+		}
+	}
+}
+
+/*
+ * 0x8de2b8: the chroma lines out of the picture: the edge's pixels and
+ * lines repeated, from the place the lines were taken from, the nearest
+ */
+void avcencInterSkipChromaEdges(AvcencInterSkip *skip, int32_t x, int32_t y, int32_t width,
+	int32_t height)
+{
+	uint8_t old[8], edge;
+	int32_t plane, i, j, shift;
+
+	if (x < 0) {
+		shift = -(x < -7 ? -7 : x);
+		for (plane = 0; plane < 2; plane++) {
+			for (i = 0; i < 4; i++) {
+				for (j = 0; j < 8; j++)
+					old[j] = skip->chroma[plane][i][j];
+				for (j = 0; j < 8; j++)
+					skip->chroma[plane][i][j] = j < shift ? old[0] : old[j - shift];
+			}
+		}
+	} else if (x > width - 8) {
+		shift = 8 - (-(x < width ? x : width) & 7);
+		for (plane = 0; plane < 2; plane++) {
+			for (i = 0; i < 4; i++) {
+				edge = skip->chroma[plane][i][7];
+				for (j = 0; j < 8; j++)
+					old[j] = skip->chroma[plane][i][j];
+				for (j = 0; j < 8; j++)
+					skip->chroma[plane][i][j] = j + shift < 8 ? old[j + shift] : edge;
+			}
+		}
+	}
+	for (; y < 0; y++)
+		for (plane = 0; plane < 2; plane++)
+			for (i = 3; i > 0; i--)
+				for (j = 0; j < 8; j++)
+					skip->chroma[plane][i][j] = skip->chroma[plane][i - 1][j];
+	for (; y > height - 4; y--)
+		for (plane = 0; plane < 2; plane++)
+			for (i = 0; i < 3; i++)
+				for (j = 0; j < 8; j++)
+					skip->chroma[plane][i][j] = skip->chroma[plane][i + 1][j];
+}
+
+/*
+ * 0x8de3f0: a 4x4 block of each chroma part against the reference's, the
+ * left or the right one of four lines
+ */
+int32_t avcencInterSkipChromaCheck(const AvcencInterSkip *skip, const uint8_t *source,
+	int32_t left)
+{
+	int16_t residual[4][4];
+	uint32_t plane, column = left ? 0 : 4, i, j;
+
+	for (plane = 0; plane < 2; plane++) {
+		for (i = 0; i < 4; i++)
+			for (j = 0; j < 4; j++)
+				residual[i][j] = skip->chroma[plane][i][column + j] -
+					source[64 * plane + 8 * i + column + j];
+		if (!residualBelow(residual, skip->thresholds))
+			return 0;
+	}
+	return 1;
+}
+
+/* the band's lines moved right, the left edge's pixel repeated */
+static inline void shiftBandRight(AvcencInterBand *band, uint32_t count)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++) {
+		for (j = 23; j >= count; j--)
+			band->lines[i][j] = band->lines[i][j - count];
+		for (j = 1; j < count; j++)
+			band->lines[i][j] = band->lines[i][0];
+	}
+}
+
+/* and left, the right edge's repeated */
+static inline void shiftBandLeft(AvcencInterBand *band, uint32_t count)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++) {
+		for (j = 0; j < 24 - count; j++)
+			band->lines[i][j] = band->lines[i][j + count];
+		for (; j < 23; j++)
+			band->lines[i][j] = band->lines[i][23];
+	}
+}
+
+/* 0x8de568: the window four pixels out of the picture's left */
+void avcencInterBandLeft4(AvcencInterBand *band)
+{
+	shiftBandRight(band, 4);
+}
+
+/* 0x8de5e8: eight */
+void avcencInterBandLeft8(AvcencInterBand *band)
+{
+	shiftBandRight(band, 8);
+}
+
+/* 0x8de648: twelve */
+void avcencInterBandLeft12(AvcencInterBand *band)
+{
+	shiftBandRight(band, 12);
+}
+
+/* 0x8de6c0: four out of its right */
+void avcencInterBandRight4(AvcencInterBand *band)
+{
+	shiftBandLeft(band, 4);
+}
+
+/* 0x8de740 */
+void avcencInterBandRight8(AvcencInterBand *band)
+{
+	shiftBandLeft(band, 8);
+}
+
+/* 0x8de7c0 */
+void avcencInterBandRight12(AvcencInterBand *band)
+{
+	shiftBandLeft(band, 12);
+}
+
+static inline void bandLine(AvcencInterBand *band, uint32_t to, uint32_t from)
+{
+	uint32_t j;
+
+	for (j = 0; j < 24; j++)
+		band->lines[to][j] = band->lines[from][j];
+}
+
+/* 0x8de838: the band's first four lines above the picture: its first line repeated */
+void avcencInterBandTop4(AvcencInterBand *band)
+{
+	int32_t i;
+
+	for (i = 7; i >= 4; i--)
+		bandLine(band, i, i - 4);
+	for (i = 1; i < 4; i++)
+		bandLine(band, i, 0);
+}
+
+/* 0x8de890: all of them */
+void avcencInterBandTop8(AvcencInterBand *band)
+{
+	uint32_t i;
+
+	for (i = 1; i < 8; i++)
+		bandLine(band, i, 0);
+}
+
+/* 0x8de8e8: its last four below the picture: its last line repeated */
+void avcencInterBandBottom4(AvcencInterBand *band)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		bandLine(band, i, i + 4);
+	for (i = 4; i < 7; i++)
+		bandLine(band, i, 7);
+}
+
+/* 0x8de940: all of them */
+void avcencInterBandBottom8(AvcencInterBand *band)
+{
+	uint32_t i;
+
+	for (i = 0; i < 7; i++)
+		bandLine(band, i, 7);
+}
+
+/*
+ * 0x8de998: a band from the tiled reference: its lines' first eight pixels
+ * and the eight after them, four lines from each pair, the rest from the
+ * next tile
+ */
+void avcencInterBandLoad(AvcencInterBand *band, const uint8_t *first, const uint8_t *second,
+	const uint8_t *third, const uint8_t *fourth)
+{
+	const uint8_t *a, *b;
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++) {
+		a = (i < 4 ? first : third) + 16 * (i & 3);
+		b = (i < 4 ? second : fourth) + 16 * (i & 3);
+		for (j = 0; j < 8; j++) {
+			band->lines[i][j] = a[j];
+			band->lines[i][8 + j] = b[j];
+			band->lines[i][16 + j] = a[256 + j];
+		}
+	}
+}
+
+/* 0x8dea70: and from four pixels into the first eight */
+void avcencInterBandLoadShifted(AvcencInterBand *band, const uint8_t *first,
+	const uint8_t *second, const uint8_t *third, const uint8_t *fourth)
+{
+	const uint8_t *a, *b;
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++) {
+		a = (i < 4 ? first : third) + 16 * (i & 3);
+		b = (i < 4 ? second : fourth) + 16 * (i & 3);
+		for (j = 0; j < 4; j++) {
+			band->lines[i][j] = a[4 + j];
+			band->lines[i][20 + j] = b[256 + j];
+		}
+		for (j = 0; j < 8; j++) {
+			band->lines[i][4 + j] = b[j];
+			band->lines[i][12 + j] = a[256 + j];
+		}
+	}
+}
+
+/* 0x8deba0: the macroblock's eight lines, the even pixels of the even lines, the odd of the odd */
+void avcencInterSearchSource(AvcencInterSearch *search, const uint8_t *luma)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++)
+		for (j = 0; j < 8; j++)
+			search->source[i][j] = luma[16 * i + 2 * j + (i & 1)];
+}
+
+/* 0x8dec60: the other pixels */
+void avcencInterSearchSourceOther(AvcencInterSearch *search, const uint8_t *luma)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 8; i++)
+		for (j = 0; j < 8; j++)
+			search->source[i][j] = luma[16 * i + 2 * j + 1 - (i & 1)];
+}
+
+/* 0x8ded20: nine lines of the window */
+void avcencInterSearchLines(AvcencInterSearch *search, const uint8_t *window)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 9; i++)
+		for (j = 0; j < 16; j++)
+			search->lines[i][j] = window[24 * i + j];
+}
+
+/*
+ * 0x8dedb8: a tenth, and the lines a byte to the right, their eighth byte
+ * in front
+ */
+void avcencInterSearchShift(AvcencInterSearch *search, const uint8_t *window)
+{
+	uint8_t old[16];
+	uint32_t i, j;
+
+	for (j = 0; j < 16; j++)
+		search->lines[9][j] = window[j];
+	for (i = 0; i < 10; i++) {
+		for (j = 0; j < 16; j++)
+			old[j] = search->lines[i][j];
+		search->lines[i][0] = old[7];
+		for (j = 1; j < 16; j++)
+			search->lines[i][j] = old[j - 1];
+	}
+}
+
+/* 0x8dee18: the lines two down: the next two of the window */
+void avcencInterSearchNext(AvcencInterSearch *search, const uint8_t *window)
+{
+	uint32_t i, j;
+
+	for (i = 0; i < 7; i++)
+		for (j = 0; j < 16; j++)
+			search->lines[i][j] = search->lines[i + 2][j];
+	for (j = 0; j < 16; j++) {
+		search->lines[7][j] = window[j];
+		search->lines[8][j] = window[24 + j];
+	}
+}
+
+/* where a funnel shift's eight bytes start in a line, for its count: the second eight for none */
+static inline uint32_t funnelStart(int32_t count)
+{
+	return 8 - (-count & 7);
+}
+
+/*
+ * a block's SAD (of the source's two, the left or the right) against eight
+ * lines from the first, from a byte of the even lines and one of the odd
+ */
+static inline uint16_t interSad(const AvcencInterSearch *search, uint32_t first, uint32_t block,
+	uint32_t even, uint32_t odd)
+{
+	uint32_t sad = 0, i, j, start;
+
+	for (i = 0; i < 8; i++) {
+		start = 4 * block + (i & 1 ? odd : even);
+		for (j = 0; j < 4; j++)
+			sad += magnitude(search->source[i][4 * block + j] -
+				search->lines[first + i][start + j]);
+	}
+	return sad;
+}
+
+/*
+ * 0x8dee60: the SADs at a vector's neighbours, its lines' parity even:
+ * above, below, left and right, the blocks' each; the lines a byte to the
+ * right
+ */
+void avcencInterNeighboursEven(const AvcencInterSearch *search, uint16_t *sads, uint32_t offset)
+{
+	uint32_t at = funnelStart(offset + 1), left = funnelStart(offset),
+		right = funnelStart(offset + 2), block;
+
+	for (block = 0; block < 2; block++) {
+		sads[block] = interSad(search, 0, block, at, at);
+		sads[2 + block] = interSad(search, 2, block, at, at);
+		sads[4 + block] = interSad(search, 1, block, at, left);
+		sads[6 + block] = interSad(search, 1, block, right, at);
+	}
+}
+
+/* 0x8df038: and odd */
+void avcencInterNeighboursOdd(const AvcencInterSearch *search, uint16_t *sads, uint32_t offset)
+{
+	uint32_t at = funnelStart(offset + 1), right = funnelStart(offset + 2), block;
+
+	for (block = 0; block < 2; block++) {
+		sads[block] = interSad(search, 0, block, right, at);
+		sads[2 + block] = interSad(search, 2, block, right, at);
+		sads[4 + block] = interSad(search, 1, block, at, at);
+		sads[6 + block] = interSad(search, 1, block, right, right);
+	}
+}
+
+/*
+ * 0x8df210: two lines of candidates' SADs, by block: five at the lines'
+ * own parity, four a line down, a pixel to the right on the odd lines
+ */
+void avcencInterSearchRows(const AvcencInterSearch *search, uint16_t *sads)
+{
+	uint32_t candidate, block;
+
+	for (candidate = 0; candidate < 5; candidate++)
+		for (block = 0; block < 2; block++)
+			sads[8 * candidate + block] = interSad(search, 0, block, candidate, candidate);
+	for (candidate = 0; candidate < 4; candidate++)
+		for (block = 0; block < 2; block++)
+			sads[8 * (5 + candidate) + block] =
+				interSad(search, 1, block, candidate, candidate + 1);
+}
+
+/* 0x8df3f8: the last line's */
+void avcencInterSearchLastRow(const AvcencInterSearch *search, uint16_t *sads)
+{
+	uint32_t candidate, block;
+
+	for (candidate = 0; candidate < 5; candidate++)
+		for (block = 0; block < 2; block++)
+			sads[8 * candidate + block] = interSad(search, 0, block, candidate, candidate);
+}
+
+/*
  * The strengths' kernels (0x8df4d0-0x8df640): a P macroblock's bS, two edges
  * a register: 2 where either 4x4 block has coefficients, 4 next to an intra
  * macroblock, 1 where the 8x8 blocks' vectors are a sample apart

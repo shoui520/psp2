@@ -550,7 +550,8 @@ typedef struct AvcencInterRecord {
 	int16_t differences[4][2];	/* the vectors' differences from their predictions */
 	uint16_t costs[4];		/* the SATDs at the whole pixels, by partition */
 	int16_t vector[2];		/* the macroblock's, in pixels */
-	uint8_t reserved2[4];
+	uint8_t reserved2[2];
+	uint16_t sad;			/* the partition's SAD at the whole pixels; 32767 for intra */
 	uint8_t partition;		/* 0 16x16, 1 16x8, 2 8x16, 3 8x8 */
 	int8_t skip;			/* the decision takes P_Skip */
 	int8_t intra;			/* it takes intra, the vector is not refined */
@@ -698,34 +699,57 @@ typedef struct AvcencMacroblock {
 /*
  * the decide job's per core info (1344 bytes): each macroblock of a group,
  * a row at a time, the inter decision (around the coarse search's vector)
- * then the intra one and the final choice. The kernels' and the decisions'
- * own state takes the rest
+ * then the intra one and the final choice. The decisions' own state takes
+ * the rest, the intra one's in the inter one's place
  */
 #define DECIDE_INFO_SIZE	1344
+#define INTER_CANDIDATES	41	/* the search's, around the vector: a checkerboard of [-4, 4] */
 typedef struct AvcencDecideInfo {
-	AvcencIntraRow intraRows[6];	/* the 4x4 candidates, by row, and the predictions kept */
-	/* the intra decision's */
-	uint8_t columns;		/* of macroblocks in the group, up to four */
-	uint8_t rows;
-	uint8_t column;			/* the group's first macroblock */
-	uint8_t row;
-	uint16_t mbX;			/* the macroblock's */
-	uint16_t mbY;
-	uint32_t sliceType;
-	uint16_t widthInMbs;
-	uint16_t heightInMbs;
-	int16_t pitch;			/* the source's */
-	int16_t chromaPitch;
-	uint32_t sourceLuma;
-	uint32_t sourceChroma;
-	uint32_t luma;			/* the macroblock's, in the source */
-	uint32_t chroma;
-	uint32_t interRecord;		/* the inter decision's, of the macroblock */
-	uint32_t record;		/* the macroblock's, the decisions' result */
-	int8_t sliceStart;		/* the row starts a slice */
-	uint8_t reserved2;
-	uint16_t intraWeight;		/* by QP */
-	uint8_t reserved3[984];
+	union {
+		struct {
+			AvcencIntraRow intraRows[6];	/* the 4x4 candidates, by row, and the predictions kept */
+			/* the intra decision's */
+			uint8_t columns;	/* of macroblocks in the group, up to four */
+			uint8_t rows;
+			uint8_t column;		/* the group's first macroblock */
+			uint8_t row;
+			uint16_t mbX;		/* the macroblock's */
+			uint16_t mbY;
+			uint32_t sliceType;
+			uint16_t widthInMbs;
+			uint16_t heightInMbs;
+			int16_t pitch;		/* the source's */
+			int16_t chromaPitch;
+			uint32_t sourceLuma;
+			uint32_t sourceChroma;
+			uint32_t luma;		/* the macroblock's, in the source */
+			uint32_t chroma;
+			uint32_t interRecord;	/* the inter decision's, of the macroblock */
+			uint32_t record;	/* the macroblock's, the decisions' result */
+			int8_t sliceStart;	/* the row starts a slice */
+			uint8_t reserved2;
+			uint16_t intraWeight;	/* by QP */
+		};
+		struct {
+			union {
+				/*
+				 * the search's SADs: each candidate's by 8x8 block,
+				 * eight apart, the candidates by line and column
+				 */
+				uint16_t sads[INTER_CANDIDATES * 8 - 4];
+				/* the refinement's, around a vector: two partitions' */
+				uint16_t neighbours[2][16];
+			};
+			/*
+			 * the reference around the vector, from four pixels left of
+			 * and above it, its edges repeated outside the picture: a
+			 * line's samples of its own parity first (the even pixels of
+			 * an even line), then the others
+			 */
+			uint8_t window[24][24];
+			AvcencInterBest best;	/* the search's, by partition */
+		};
+	};
 	/* the inter decision's */
 	uint32_t reference;		/* the reference picture's luma */
 	uint32_t referenceChroma;
@@ -747,7 +771,7 @@ typedef struct AvcencDecideInfo {
 	const int16_t *lumaThreshold;	/* the slices', by QP */
 	int8_t lumaShift;
 	uint8_t interWeight;		/* by QP */
-	uint8_t reserved4[2];
+	uint16_t interCost;		/* the chosen partition's */
 	uint32_t prefetchLuma;		/* the reference's next lines to bring in */
 	uint32_t prefetchChroma;
 	uint16_t prefetchLumaSize;

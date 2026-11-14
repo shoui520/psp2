@@ -564,6 +564,101 @@ void avcencChromaIntraPlane(AvcChromaRecon *recon, const uint8_t (*left)[8],
 	const AvcChromaEdges *edges);
 
 /*
+ * the inter decision's search result, as its kernels keep it: the lowest
+ * cost (SAD and the vector's length) of each 8x8 block, of the 8x16
+ * halves (left, right) and the 16x8 ones (top, bottom), and of the whole
+ * macroblock, and the candidates that have them. The decision keeps them
+ * in its info too
+ */
+typedef struct AvcencInterBest {
+	uint16_t costs[8];		/* the blocks, then left, right, top, bottom */
+	uint32_t whole[2];		/* the macroblock's, then the least length's */
+	int8_t deltas[12][2];		/* the same order, in whole pixels, x and y */
+} AvcencInterBest;
+
+#define INTER_HALF_LEFT		4	/* the deltas' and costs' places */
+#define INTER_HALF_RIGHT	5
+#define INTER_HALF_TOP		6
+#define INTER_HALF_BOTTOM	7
+#define INTER_WHOLE		8
+
+/* a cost no SAD reaches: the neighbour is out of the window */
+#define INTER_UNAVAILABLE	16383
+
+/*
+ * the window's bands, as their kernels keep them while they bring them in:
+ * eight lines of the reference, 24 pixels each
+ */
+typedef struct AvcencInterBand {
+	uint8_t lines[8][24];
+} AvcencInterBand;
+
+/*
+ * the search, as its kernels keep it: eight lines of a half of the
+ * macroblock, a parity's pixels of each, alternating (the even pixels of
+ * the even lines, or the odd ones), and ten lines of the window, the first
+ * 16 bytes of each
+ */
+typedef struct AvcencInterSearch {
+	uint8_t source[8][8];
+	uint8_t lines[10][16];
+} AvcencInterSearch;
+
+/*
+ * the skip check's: four lines of the reference at the vector, 16 pixels,
+ * or four of each chroma part's, eight; and the thresholds of the residual's
+ * coefficients, the first and third lines' then the second and fourth's
+ */
+typedef struct AvcencInterSkip {
+	uint8_t luma[4][16];
+	uint8_t chroma[2][4][8];	/* U, then V */
+	int16_t thresholds[2][4];
+} AvcencInterSkip;
+
+/* the inter decision's kernels (0x8dd958-0x8df4d0) */
+void avcencInterBest(const uint16_t *sads, AvcencInterBest *best, int8_t (*deltas)[2]);
+void avcencInterPartitionCosts(const AvcencInterBest *best, uint32_t weight, uint16_t *costs,
+	uint16_t *sads);
+void avcencInterPosition(const uint8_t *vector, uint32_t x, uint32_t y, uint32_t width,
+	uint32_t height, int16_t *position, int16_t *origin);
+void avcencInterBandStore(const AvcencInterBand *band, uint8_t (*window)[24]);
+void avcencInterSkipLoad(AvcencInterSkip *skip, const uint8_t (*lines)[24], uint32_t offset,
+	uint32_t parity);
+int32_t avcencInterSkipTransform(int16_t (*lines)[4], const int16_t *thresholds);
+int32_t avcencInterSkipLuma(const AvcencInterSkip *skip, const uint8_t *source);
+void avcencInterSkipChroma(AvcencInterSkip *skip, const uint8_t *tile, uint32_t pitch,
+	uint32_t line);
+void avcencInterSkipChromaShifted(AvcencInterSkip *skip, const uint8_t *tile,
+	const uint8_t *next, uint32_t pitch, uint32_t line, uint32_t shift);
+void avcencInterSkipChromaEdges(AvcencInterSkip *skip, int32_t x, int32_t y, int32_t width,
+	int32_t height);
+int32_t avcencInterSkipChromaCheck(const AvcencInterSkip *skip, const uint8_t *source,
+	int32_t left);
+void avcencInterBandLeft4(AvcencInterBand *band);
+void avcencInterBandLeft8(AvcencInterBand *band);
+void avcencInterBandLeft12(AvcencInterBand *band);
+void avcencInterBandRight4(AvcencInterBand *band);
+void avcencInterBandRight8(AvcencInterBand *band);
+void avcencInterBandRight12(AvcencInterBand *band);
+void avcencInterBandTop4(AvcencInterBand *band);
+void avcencInterBandTop8(AvcencInterBand *band);
+void avcencInterBandBottom4(AvcencInterBand *band);
+void avcencInterBandBottom8(AvcencInterBand *band);
+void avcencInterBandLoad(AvcencInterBand *band, const uint8_t *first, const uint8_t *second,
+	const uint8_t *third, const uint8_t *fourth);
+void avcencInterBandLoadShifted(AvcencInterBand *band, const uint8_t *first,
+	const uint8_t *second, const uint8_t *third, const uint8_t *fourth);
+void avcencInterSearchSource(AvcencInterSearch *search, const uint8_t *luma);
+void avcencInterSearchSourceOther(AvcencInterSearch *search, const uint8_t *luma);
+void avcencInterSearchLines(AvcencInterSearch *search, const uint8_t *window);
+void avcencInterSearchShift(AvcencInterSearch *search, const uint8_t *window);
+void avcencInterSearchNext(AvcencInterSearch *search, const uint8_t *window);
+void avcencInterNeighboursEven(const AvcencInterSearch *search, uint16_t *sads, uint32_t offset);
+void avcencInterNeighboursOdd(const AvcencInterSearch *search, uint16_t *sads, uint32_t offset);
+void avcencInterSearchRows(const AvcencInterSearch *search, uint16_t *sads);
+void avcencInterSearchLastRow(const AvcencInterSearch *search, uint16_t *sads);
+
+/*
  * a macroblock's bS as its kernels hand them on, by register: two edges of
  * four 4-sample groups each, the vertical edges 0-1 and 2-3, then the
  * horizontal ones
