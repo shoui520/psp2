@@ -334,7 +334,7 @@ int wlanPsPollSend(struct WlanConnection *connection)
 	request->frame = frame->frameLength;
 	request->descriptor.header.wire.packetLength[0] = wlanTxControlRate(connection);
 	request->descriptor.control = 0x402;
-	if ((wlanTxPolicyFlags & 0x20) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
+	if ((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
 		request->descriptor.control = 0x40000402;
 	request->queue = 3;
 

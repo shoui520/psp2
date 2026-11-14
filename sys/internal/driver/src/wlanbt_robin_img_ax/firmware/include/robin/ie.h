@@ -10,6 +10,8 @@ enum {
 	IE_SUPPORTED_RATES = 1,
 	IE_FH_PARAMETER = 2,
 	IE_DS_PARAMETER = 3,
+	IE_CF_PARAMETER_SET = 4,
+	IE_TIM = 5,
 	IE_IBSS_PARAMETER = 6,
 	IE_ERP_INFORMATION = 42,
 	IE_RSN = 48,
@@ -106,6 +108,8 @@ extern WlanMoveFn wlanIeMoveForward;
 extern WlanMoveFn wlanIeMoveBackward;
 extern uint16_t wlanIeLimitProbe;
 extern uint16_t wlanIeLimitBeacon;
+extern uint8_t *wlanBeaconTemplateEnd;
+extern uint8_t *wlanProbeTemplateEnd;
 int wlanIeInit(void);
 int wlanChannelHooksInit(void);
 

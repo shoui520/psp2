@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/txring.h"
+#include "robin/protection.h"
 
 struct WlanConnection;
 
@@ -141,7 +142,6 @@ int wlanIbssTxFrame(OsaBuffer *buffer, int transmit);	/* 0x3baec */
 uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41db2 */
 extern uint64_t wlanPsPollSentTime;			/* 0x54b38 */
 extern uint8_t wlanPsNullSuppressed;			/* 0x54aac */
-extern uint8_t wlanTxPolicyFlags;			/* 0x04008844, bit 5: no rate for control frames */
 extern uint8_t wlanTxDataRing;				/* 0xc0011bd4 */
 
 #endif /* ROBIN_PSPOLL_H */

@@ -31,7 +31,14 @@ struct WlanMacTxRequest {
 	uint16_t hwStatus;	/* hwStatus..hwFlags: cleared before a data frame goes out */
 	uint8_t hwRetries;
 	uint8_t hwFlags;
-	uint16_t sequence[2];	/* copied into the data at 16 */
+	union {
+		uint16_t sequence[2];	/* copied into the data at 16 */
+		struct {		/* a beacon or probe response template */
+			uint8_t cfOffset;	/* where the elements from the CF Parameter Set on start */
+			uint8_t timOffset;	/* where the TIM element starts */
+			uint8_t templateLength[2];
+		};
+	};
 	uint8_t reserved16[12];
 	uint8_t flags[4];	/* unaligned word; bit 13 marks a frame sent without publishing */
 	uint8_t type;		/* bits 0-2 */

@@ -913,7 +913,7 @@ found:
 				request->rate = (request->rate & ~MAC_TX_RATE_MASK) + MAC_TX_RATE(5);
 
 			lowRate = 1;
-			if (!(wlanTxPolicyFlags & 0x10) &&
+			if (!(wlanProtection.flags & WLAN_PROTECTION_USE_PROTECTION) &&
 			    (connection->mode != 2 || !(info->rateFlags & 8)))
 				lowRate = 0;
 			if (connection->interfaceType == 0 && !(connection->txOptions & 8)) {
@@ -1276,7 +1276,7 @@ int macTxSendPsPoll(struct WlanConnection *connection, int urgent)
 	request->descriptor.control = 0x402;
 	if (!wlanCoexBtNeedsSharing())
 		request->descriptor.control |= 0x1000;
-	if ((wlanTxPolicyFlags & 0x20) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
+	if ((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
 		request->descriptor.control |= 0x40000000;
 	request->queue = wlanCoexActive() ? wlanCoexRetryLimit() : 3;
 	if (wlanTxSubmit(buffer) == 0) {
@@ -1361,13 +1361,13 @@ void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
 
 		request->descriptor.header.wire.packetLength[0] = rate;
 		if (rate > 3 &&
-		    (((wlanTxPolicyFlags & 0x10) && !(wlanTxRateFlags & 0x40)) ||
+		    (((wlanProtection.flags & WLAN_PROTECTION_USE_PROTECTION) && !(wlanTxRateFlags & 0x40)) ||
 		     (connection->mode == 2 && (connection->stationInfo->rateFlags & 8)))) {
 			request->descriptor.header.wire.packetLength[0] = wlanTxLowRate(connection, 3);
 			request->descriptor.control |= 0x1000;
 		}
 	}
-	if ((wlanTxPolicyFlags & 0x20) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
+	if ((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) == 0 && request->descriptor.header.wire.packetLength[0] != 0)
 		request->descriptor.control |= 0x40000000;
 
 	if (wlanPsTriggerMode() != 0 && trigger != 0) {

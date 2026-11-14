@@ -14,6 +14,9 @@ WlanMoveFn wlanIeMoveForward __attribute__((section(".itcm.rw"))) = NULL;
 WlanMoveFn wlanIeMoveBackward __attribute__((section(".itcm.rw"))) = NULL;
 uint16_t wlanIeLimitProbe __attribute__((section(".itcm.rw"))) = 0;
 uint16_t wlanIeLimitBeacon __attribute__((section(".itcm.rw"))) = 0;
+/* Where the bodies of the beacon and probe response templates end. */
+uint8_t *wlanBeaconTemplateEnd __attribute__((section(".itcm.rw"))) = NULL;
+uint8_t *wlanProbeTemplateEnd __attribute__((section(".itcm.rw"))) = NULL;
 
 static ROBIN_PATCH_SLOT(wlanFindIeOverride);
 static ROBIN_PATCH_SLOT(wlanSetIeOverride);
