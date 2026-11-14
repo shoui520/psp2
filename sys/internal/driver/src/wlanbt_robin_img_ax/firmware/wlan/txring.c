@@ -319,7 +319,6 @@ static uint16_t wlanTxInFlightClashes __attribute__((section(".itcm.bss")));
 static uint16_t wlanTxInFlightMisses __attribute__((section(".itcm.bss")));
 
 extern OsaBuffer wlanStaticBuffer;
-extern struct OsaBufferPool wlanBlockPool28;
 extern struct OsaBufferPool wlanBlockPool1;
 extern struct OsaBufferPool wlanReplyFramePool;
 extern struct OsaBufferPool ampTransmitPool;

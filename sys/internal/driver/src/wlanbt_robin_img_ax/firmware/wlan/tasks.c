@@ -71,7 +71,7 @@ static struct WlanInitStage macTxStage __attribute__((section(".itcm.bss")));
 static struct WlanInitStage macMgmtFlushStage __attribute__((section(".itcm.bss")));
 
 /* Unconverted pieces. */
-int macTxParseState(void);			/* 0x9b20, init stage of the transmit task */
+int macTxResetStage(void);			/* 0x9b20, init stage of the transmit task */
 void macTxNotifyParseState(void);		/* 0x2fbcc */
 void macTxQueryQueue(int value, int apply);	/* 0x10068 */
 void macTxResetQueue(int value, int apply);	/* 0x1007a */
@@ -183,7 +183,7 @@ int macTxCreateTask(void)
 	if (osaCreateTask(&macTxTask, macTxStack, sizeof(macTxStack), WLAN_TASK_PRIORITY_TX,
 			  "MAC Tx", macTxTaskMain, 0) != 0)
 		return 1;
-	macTxStage.run = macTxParseState;
+	macTxStage.run = macTxResetStage;
 	wlanInitStageRegister(&macTxStage);
 	return 0;
 }

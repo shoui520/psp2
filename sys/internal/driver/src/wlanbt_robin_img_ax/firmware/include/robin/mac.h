@@ -61,6 +61,11 @@
  */
 #define MAC_AC0_BA_ACTIVE	MAC_REG(0xac0)
 #define MAC_ACC_BA_WINDOWS	MAC_REG(0xacc)
+#define MAC_028_TX_DONE		MAC_REG(0x28)	/* frames the MAC has finished */
+#define MAC_02C_TX_QUEUED	MAC_REG(0x2c)	/* frames handed to the MAC */
+#define MAC_370_QUEUE_MODE	MAC_REG(0x370)	/* bit 2: per-queue pointers at 0x930 */
+#define MAC_930_QUEUE_QUEUED(queue) MAC_REG(0x930 + 8 * (queue))
+#define MAC_934_QUEUE_DONE(queue) MAC_REG(0x934 + 8 * (queue))
 #define MAC_E00_BA_CONTROL	MAC_REG(0xe00)
 #define MAC_EC0_BA_COUNTER(window) MAC_REG(0xec0 + 4 * (window))
 
@@ -112,5 +117,9 @@ int wlanBaSlotApply(int slot, int window);
 int wlanBaSlotRelease(int slot, int window);
 void wlanBaWindowCounterReset(int window);
 void wlanMacE80Select(void);
+
+/* Not converted yet; provisional names. */
+void wlanBaSlotSetSequence(int slot, uint16_t sequence);	/* 0x2921e */
+void wlanBaSlotFlush(int slot, int window);		/* 0x29640: release, retry what is left */
 
 #endif /* ROBIN_MAC_H */

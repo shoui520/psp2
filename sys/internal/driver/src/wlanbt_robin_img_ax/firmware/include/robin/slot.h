@@ -6,6 +6,7 @@
 #ifndef ROBIN_SLOT_H
 #define ROBIN_SLOT_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "robin/conn.h"
 #include "robin/sync.h"
@@ -35,8 +36,8 @@ struct WlanSlotRequest {
 	uint8_t mode;			/* 5 */
 	uint8_t bssType;		/* 6 */
 	uint8_t reserved7;
-	uint32_t startTime;		/* 8: when it was submitted */
-	uint8_t reserved12[8];
+	uint64_t startTime;		/* 8: when it is due to start */
+	uint32_t tag;			/* 16: the submitter's, kept for it */
 	uint32_t duration;		/* 20: 0 for no limit */
 	uint32_t *elapsed;		/* 24: receives the time spent waiting */
 	int (*callback)(uint32_t handle, int event, uint32_t argument);	/* 28 */
@@ -52,6 +53,30 @@ struct WlanSlotRequest {
 };
 
 _Static_assert(sizeof(struct WlanSlotRequest) == 56, "slot request");
+
+/* What a submitter asks for (wlanSlotSubmit()). */
+struct WlanSlotParams {
+	int (*callback)(uint32_t handle, int event, uint32_t argument);
+	uint32_t context;
+	uint32_t argument;
+	uint32_t reserved12;
+	uint64_t startTime;		/* absolute start; 0: start after delay */
+	uint32_t delay;
+	uint32_t tag;
+	uint32_t duration;
+	uint32_t *elapsed;
+	uint8_t mode;
+	uint8_t bssTypeLow;		/* WlanSlotRequest.bssType bits 0-1 */
+	uint8_t bssTypeMiddle;		/* bits 2-3 */
+	uint8_t bssTypeHigh;		/* bits 4-5 */
+	uint8_t flags;			/* bit 0: phase 1; bits 1-2: request flags; bit 3: periodic timer */
+	uint8_t reserved45[3];
+	struct WlanConnection *connection;
+};
+
+_Static_assert(offsetof(struct WlanSlotParams, startTime) == 16, "slot start time");
+_Static_assert(offsetof(struct WlanSlotParams, mode) == 40, "slot mode");
+_Static_assert(offsetof(struct WlanSlotParams, connection) == 48, "slot connection");
 
 struct WlanSlotScheduler {
 	uint32_t rejectedInvalid;	/* submitted without a handle */
@@ -79,6 +104,7 @@ extern struct WlanSlotScheduler wlanSlotScheduler;
 
 int wlanSlotStart(uint32_t timer, struct WlanSlotRequest *request);
 void wlanSlotWindowExpired(uint32_t timer, struct WlanSlotRequest *request);
+uint32_t wlanSlotSubmit(const struct WlanSlotParams *params);
 int wlanSlotCancel(struct WlanSlotRequest *request);
 void wlanSlotGetRunning(uint32_t *context, uint32_t *handle, uint32_t *argument);
 int wlanSlotPoll(void);

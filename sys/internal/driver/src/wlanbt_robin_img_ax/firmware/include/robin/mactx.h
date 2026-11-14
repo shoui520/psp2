@@ -2,23 +2,36 @@
 #ifndef ROBIN_MACTX_H
 #define ROBIN_MACTX_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include <wlanbt/wlanbt_protocol.h>
 #include "robin/conn.h"
+#include "robin/threadx.h"
 #include "robin/wlan.h"
 
 /* Queue of frames waiting in one hardware window (144 bytes, two windows). */
 struct WlanTxWindowQueue {
 	uint8_t pending;	/* frames handed to the hardware and not yet completed */
-	uint8_t reserved0[3];
+	uint8_t slot;		/* block-ack slot of the window being changed */
+	uint16_t startSequence;	/* sequence control of the frame that queued first */
 	uint16_t head;
 	uint16_t tail;
 	uint32_t entries[32];	/* frame data pointers (OsaBuffer.data) */
 	uint32_t count;
-	uint32_t reserved1;
+	ULONG queuedAt;		/* sysGetTime() when the window started queueing */
 };
 
 _Static_assert(sizeof(struct WlanTxWindowQueue) == 144, "transmit window queue");
+_Static_assert(offsetof(struct WlanTxWindowQueue, head) == 4, "window queue head");
+_Static_assert(offsetof(struct WlanTxWindowQueue, count) == 136, "window queue count");
+
+/* Power-save state kept per connection (partial; its owner is not converted yet). */
+struct WlanPsPeerState {
+	uint8_t reserved0[43];
+	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
+	uint8_t reserved44;
+	uint8_t powerManagement;	/* the PM bit of the last null frame */
+};
 
 /* Hardware counters of one channel-access queue accumulated in software. */
 struct MacTxQueueStats {
@@ -46,7 +59,27 @@ extern struct MacTxQueueStats macTxQueueStats[];
 extern uint16_t wlanSessionId;
 extern struct WlanLocalState *wlanLocalState;
 extern uint32_t macTxMaxWait;
-extern uint8_t wlanSlotContext;
+extern uint8_t macTxDrainWaits;
+extern WlanTxDescriptor macTxDescriptor;
+extern struct OsaSemaphore *macTxSemaphore;
+extern uint8_t macTxBuildOverride;
+
+/* Block-ack window operations of macTxBlockAckWindow(). */
+enum {
+	MAC_TX_WINDOW_ADD = 1,
+	MAC_TX_WINDOW_DELETE = 2,
+};
+
+/* Events of the transmit task (macTxEventFlags). */
+#define MAC_TX_EVENT_DATA		0x001	/* host data queued */
+#define MAC_TX_EVENT_MGMT		0x002	/* a management frame in macTxMgmtQueue */
+#define MAC_TX_EVENT_TRACK		0x004
+#define MAC_TX_EVENT_NOTIFY		0x008	/* frames from the notify task */
+#define MAC_TX_EVENT_FLUSH		0x010
+#define MAC_TX_EVENT_STAGE		0x020	/* back to connection stage 0 */
+#define MAC_TX_EVENT_RESUME		0x040
+#define MAC_TX_EVENT_REKEY		0x200	/* group rekey timeouts in uapGroupRekeyQueue */
+#define MAC_TX_EVENT_ALL		0x3ff
 
 int macWaitPendingClear(unsigned int mask, unsigned int limit);
 int macWaitBasebandStable(uint32_t mask, uint32_t *iterations, uint32_t samples);
@@ -68,11 +101,34 @@ void wlanTxWindowComplete(unsigned int window);
 int macTxQueueMgmtMessage(uintptr_t message);
 int macTxDequeue(unsigned int window, uint32_t *entry);
 int macTxResetQueues(void);
+void macTxSendMgmtFrame(OsaBuffer *buffer);
+int macTxResetStage(void);
+void macTxSendDataFrame(OsaBuffer *buffer);
+int macTxEnqueue(struct WlanConnection *connection, unsigned int window, uint32_t entry);
+int macTxBlockAckWindow(struct WlanConnection *connection, int operation, unsigned int ring,
+			int slot, uint32_t entry, uint8_t *data);
+void macTxTaskMain(ULONG input);
 unsigned int macTxActivateWindow(unsigned int window);
-void macTxClearSlotTable(void);
-void macTxClearSlotBuffer(void);
-int macTxGetContext(void);
-void macTxSetContext(int value);
+void macTxNullReleased(void);
+uint32_t wlanTxBaTimeoutRegister(uintptr_t owner, uint32_t timeout);
+struct WlanBaRequest;
+int macTxBaDelete(struct WlanConnection *connection, const uint8_t *peer, unsigned int tid);
+int macTxBaAbort(struct WlanConnection *connection, const uint8_t *peer, unsigned int tid);
+int macRxBaDelete(const uint8_t *peer, unsigned int tid);
+int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *request);
+void macTxBaResyncSequences(void);
+void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
+			unsigned int priority, int exclusive, int trigger, uint8_t kind);
+void macTxPsPollReleased(void);
+int macTxSendPsPoll(struct WlanConnection *connection, int urgent);
+void wlanTxWindowFlush(unsigned int ring);
+void macTxFlushConnection(struct WlanConnection *connection);
+int macTxGetDrainWaits(void);
+void macTxSetDrainWaits(int value);
+int macTxHardwareIdle(void);
+int macTxIdle(void);
+int macTxPoolsIdle(void);
+void macTxWaitIdle(void);
 void macTxSetPowerSave(int mode);
 int macTxGetPowerSave(void);
 void macTxStatsReset(unsigned int queue);

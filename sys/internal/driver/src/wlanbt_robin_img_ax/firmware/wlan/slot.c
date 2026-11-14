@@ -11,6 +11,8 @@
 struct WlanSlotScheduler wlanSlotScheduler __attribute__((section(".dtcm.bss")));
 static struct OsaSemaphore *wlanSlotLockHandle __attribute__((section(".dtcm.bss")));
 static uint32_t wlanSlotLockObject[7] __attribute__((section(".dtcm.bss")));
+/* Handle of the last request; handles start at 1 and skip 0. */
+static uint32_t wlanSlotLastHandle __attribute__((section(".dtcm.bss")));
 
 /* Unconverted callees. */
 void wlanReportEvent(struct WlanConnection *connection, const void *data, int code);	/* 0x10316 */
@@ -64,6 +66,63 @@ void wlanSlotWindowExpired(uint32_t timer, struct WlanSlotRequest *request)
 			osaEventFlagsSet(macMgmtEventFlags, 0x80, 7);
 		}
 	}
+}
+
+/*
+ * Takes a free request entry, fills it in and arms its start timer. Returns
+ * the request handle, or 0 when no entry or timer is free.
+ */
+uint32_t wlanSlotSubmit(const struct WlanSlotParams *params)
+{
+	struct WlanSlotRequest *request;
+	uint64_t now;
+	uint32_t delay;
+
+	wlanSlotLock();
+	request = wlanSlotFind(0);
+	if (request == NULL) {
+		wlanSlotUnlock();
+		return 0;
+	}
+	request->connection = params->connection;
+	request->handle = ++wlanSlotLastHandle;
+	wlanSlotUnlock();
+	now = romGetTimerTimestamp();
+	delay = 0;
+	if (request->handle == 0) {
+		wlanSlotLastHandle = 1;
+		request->handle = 1;
+	}
+	request->state = WLAN_SLOT_IDLE;
+	request->mode = params->mode;
+	request->bssType = (request->bssType >> 2 << 2) | (params->bssTypeLow & 3);
+	request->bssType = (request->bssType & 0xf3) | ((params->bssTypeMiddle << 2) & 0xf);
+	request->bssType = (request->bssType & 0xcf) | ((params->bssTypeHigh << 4) & 0x3f);
+	if (params->startTime != 0) {
+		if (params->startTime >= now)
+			delay = (uint32_t)params->startTime - (uint32_t)now;
+	} else if (params->delay != 0) {
+		delay = params->delay;
+	}
+	request->startTime = now + delay;
+	request->tag = params->tag;
+	request->duration = params->duration;
+	request->elapsed = params->elapsed;
+	request->callback = params->callback;
+	request->context = params->context;
+	request->argument = params->argument;
+	request->flags = (request->flags >> 1 << 1) | ((params->flags & 2) != 0);
+	request->flags = (request->flags & 0xfd) | (((params->flags & 4) != 0) << 1);
+	request->timerFlags = 2;
+	if (params->flags & 8)
+		request->timerFlags = 6;
+	request->phase = (params->flags & 1) ? 1 : 2;
+	if (osaCreateTimer((OsaTimerCallback)wlanSlotStart, (uint32_t)request, delay,
+			   &request->timer, request->timerFlags) == 0) {
+		request->handle = 0;
+		return 0;
+	}
+	return request->handle;
 }
 
 /* Cancels a request that is not the current one. */
@@ -414,7 +473,8 @@ int wlanSlotBegin(void)
 		wlanSlotSetChannel(SCHED.current->bssType, SCHED.current->mode);
 	SCHED.current->state = WLAN_SLOT_RUNNING;
 	if (SCHED.current->elapsed != NULL)
-		*SCHED.current->elapsed = (uint32_t)romGetTimerTimestamp() - SCHED.current->startTime;
+		*SCHED.current->elapsed = (uint32_t)romGetTimerTimestamp() -
+					  (uint32_t)SCHED.current->startTime;
 	SCHED.current->callback(SCHED.current->handle, WLAN_SLOT_EVENT_START, SCHED.current->argument);
 	if (SCHED.current->duration != 0 && SCHED.current->timer == 0)
 		osaCreateTimer((OsaTimerCallback)wlanSlotStart, (uint32_t)SCHED.current,

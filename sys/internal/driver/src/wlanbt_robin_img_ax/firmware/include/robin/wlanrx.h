@@ -30,8 +30,8 @@ struct WlanRxStatus {
 
 _Static_assert(sizeof(struct WlanRxStatus) == 68, "receive status");
 
-void wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter, const uint8_t *bssid,
-		     int powerSave, uint16_t aid);
+WlanWirelessFrame *wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter,
+				   const uint8_t *bssid, int powerSave, uint16_t aid);
 void wlanSetHeaderAddresses(WlanWirelessFrame *frame, const uint8_t *address1,
 			    const uint8_t *address2, const uint8_t *address3);
 void wlanInitMgmtHeader(WlanWirelessFrame *frame, unsigned int type, unsigned int subtype,

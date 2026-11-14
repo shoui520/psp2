@@ -59,8 +59,14 @@ struct WlanScheduleRequest {
 
 /* Per-association information of a station or access point connection (partial). */
 struct WlanConnectionInfo {
-	uint8_t reserved0[356];
+	uint8_t reserved0[31];
+	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
+	uint8_t reserved32[324];
 	uint8_t ready;
+	uint8_t reserved357[227];
+	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
+	uint8_t reserved588[4];
+	uint8_t rateFlags;		/* bit 3: send null frames at a low rate */
 };
 
 struct WlanConnection {
@@ -94,7 +100,8 @@ struct WlanConnection {
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
 	uint16_t associationId;		/* AID the access point assigned */
-	uint8_t reserved4[342];
+	uint8_t reserved4[18];
+	uint8_t rateControl[324];	/* rate adaptation state (not converted yet) */
 	uint8_t interfaceAddress[6];
 	uint8_t interfaceIndex;
 	uint8_t reserved4b[5];
@@ -132,6 +139,10 @@ _Static_assert(offsetof(struct WlanConnection, device) == 12, "device");
 _Static_assert(offsetof(struct WlanConnection, hostFlags) == 54, "host flags");
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
+_Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
+_Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
+_Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
+_Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");
 _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");
 _Static_assert(offsetof(struct WlanConnection, snr) == 210, "SNR");

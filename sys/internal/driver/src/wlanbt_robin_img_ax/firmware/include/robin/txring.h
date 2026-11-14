@@ -63,6 +63,7 @@ _Static_assert(offsetof(struct WlanTxStatus, result) == 16, "transmit result");
 _Static_assert(offsetof(struct WlanTxStatus, retryBlocked) == 23, "retry blocked");
 
 extern struct OsaBufferPool wlanBlockPool7;
+extern struct OsaBufferPool wlanBlockPool28;
 
 extern volatile uint32_t *wlanTxRingReadIndex[WLAN_TX_RING_COUNT];
 extern volatile uint32_t *wlanTxRingWriteIndex[WLAN_TX_RING_COUNT];

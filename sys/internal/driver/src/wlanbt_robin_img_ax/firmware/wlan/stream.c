@@ -2,6 +2,7 @@
  * Block Ack session tables and the hardware window numbers of the transmit
  * sessions. The filename is inferred; no source filename survives.
  */
+#include "robin/mactx.h"
 #include "robin/stream.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"

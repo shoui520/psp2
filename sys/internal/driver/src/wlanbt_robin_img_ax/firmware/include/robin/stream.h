@@ -74,8 +74,6 @@ void wlanBaTablesInit(void);
 /* Not converted yet; defined by the MAC transmit and coprocessor code. */
 void wlanBaTablesChangedHandler(void);
 uint32_t wlanTxBaTimeoutShift(uintptr_t owner);
-uint32_t wlanTxBaTimeoutRegister(uintptr_t owner, uint32_t timeout);
-void wlanTxWindowReset(unsigned int window);
 int wlanBaAnyActive(struct WlanTxBaSession *txSessions,
 		    struct WlanRxBaSession *rxSessions);
 struct WlanTxBaSession *wlanTxBaCountFrame(unsigned int index,

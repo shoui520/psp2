@@ -8,8 +8,8 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 
-/* Builds a PS-Poll control frame in front of the data offset of buffer. */
-void wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter, const uint8_t *bssid,
+/* Builds a PS-Poll control frame at the data offset of buffer and returns it. */
+WlanWirelessFrame *wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter, const uint8_t *bssid,
 		     int powerSave, uint16_t aid)
 {
 	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
@@ -24,6 +24,7 @@ void wlanBuildPsPoll(OsaBuffer *buffer, const uint8_t *transmitter, const uint8_
 	frame->duration[1] = (aid >> 8) | 0xc0;
 	__aeabi_memcpy(frame->address2, transmitter, 6);
 	__aeabi_memcpy(frame->address1, bssid, 6);
+	return frame;
 }
 
 void wlanSetHeaderAddresses(WlanWirelessFrame *frame, const uint8_t *address1,

@@ -17,6 +17,9 @@ void *osa_MsgAlloc(uint32_t size);
 int osa_MsgSend(void **message, uint32_t queue);
 int osa_MsgFree(void **message);
 OsaBuffer *osa_BufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags);
+/* Pool counters: the blocks of a pool, and by query 8 and 16 the free ones of each kind. */
+int osa_BufferClone(struct OsaBufferPool *pool);
+int osa_PoolQuery(struct OsaBufferPool *pool, int query);
 void *osa_MsgQueueRecv(void *queue);
 /* Posts an event record to the queue of an object created by osa_QueueCreate(). */
 int mdevRomQueryState(void *object, uint32_t event, const void *record);
