@@ -48,8 +48,8 @@ static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.
 
 /* The key of a calibration lookup, passed by value. */
 struct WlanCalibrationKey {
-	uint8_t channel;
 	uint8_t band;
+	uint8_t channel;
 	uint8_t reserved[2];
 };
 
@@ -278,7 +278,7 @@ static inline void bbpWriteCalibration(int pair, uint16_t value)
 	bbpWriteRegister(bbpCalibrationRegisters[pair][1], value & 0xff);
 }
 
-void bbpLoadCalibration0(unsigned int band, unsigned int channel)
+void bbpLoadCalibration0(unsigned int channel, unsigned int band)
 {
 	struct WlanCalibrationKey key;
 	uint16_t value;
@@ -291,7 +291,7 @@ void bbpLoadCalibration0(unsigned int band, unsigned int channel)
 			bbpWriteCalibration(path * 2 + 0, value);
 }
 
-void bbpLoadCalibration1(unsigned int band, unsigned int channel)
+void bbpLoadCalibration1(unsigned int channel, unsigned int band)
 {
 	struct WlanCalibrationKey key;
 	uint16_t value;
@@ -304,7 +304,7 @@ void bbpLoadCalibration1(unsigned int band, unsigned int channel)
 			bbpWriteCalibration(path * 2 + 1, value);
 }
 
-void bbpLoadCalibration2(unsigned int band, unsigned int channel)
+void bbpLoadCalibration2(unsigned int channel, unsigned int band)
 {
 	struct WlanCalibrationKey key;
 	uint16_t value;
@@ -318,7 +318,7 @@ void bbpLoadCalibration2(unsigned int band, unsigned int channel)
 }
 
 /* The signal-level offsets of the channel, or the defaults when there are none. */
-void bbpLoadSignalCalibration(unsigned int band, unsigned int channel)
+void bbpLoadSignalCalibration(unsigned int channel, unsigned int band)
 {
 	struct WlanCalibrationKey key;
 	int8_t values[8];
