@@ -39,7 +39,6 @@ extern struct OsaEventFlags *ampEventFlags;
 extern struct OsaEventFlags *ampDataEventFlags;
 extern TX_THREAD *ampTaskThread;
 extern uint8_t ampPalUsers;
-extern int osa_MsgQueueSend(struct AmpQueue *queue, void *message);
 
 static struct AmpPalMessage *ampPalBody(OsaBuffer *buffer)
 {

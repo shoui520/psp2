@@ -20,7 +20,13 @@ OsaBuffer *osa_BufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t f
 /* Pool counters: the blocks of a pool, and by query 8 and 16 the free ones of each kind. */
 int osa_BufferClone(struct OsaBufferPool *pool);
 int osa_PoolQuery(struct OsaBufferPool *pool, int query);
+/* A message list of the Mask ROM's OSA, for osa_MsgQueueSend() and osa_MsgQueueRecv(). */
+struct OsaMsgList {
+	uint32_t words[5];
+};
+
 void *osa_MsgQueueRecv(void *queue);
+int osa_MsgQueueSend(void *queue, void *message);
 /* Posts an event record to the queue of an object created by osa_QueueCreate(). */
 int mdevRomQueryState(void *object, uint32_t event, const void *record);
 int mdevRomProcessState(void *device);

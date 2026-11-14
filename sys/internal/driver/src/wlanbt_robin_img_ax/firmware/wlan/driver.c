@@ -31,7 +31,6 @@ struct WlanDriverQueue wlanDriverQueue1 __attribute__((section(".dtcm.bss")));
 static struct MdevDriver wlanDriver __attribute__((section(".dtcm.bss")));
 
 /* Appends a message to a ROM message queue (20 bytes of control data). */
-int osa_MsgQueueSend(void *queue, void *message);
 
 /* Bit n set: frames of 802.11 type n are passed to the host. */
 uint16_t wlanRxFrameTypeMask __attribute__((section(".dtcm.rw")));

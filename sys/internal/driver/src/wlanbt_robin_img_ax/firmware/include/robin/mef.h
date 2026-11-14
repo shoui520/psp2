@@ -87,9 +87,33 @@ struct WlanMefAddressRule {
 	uint32_t target;	/* IPv4 address an ARP must ask for, 0xffffffff any */
 };
 
+/*
+ * Host sleep: its state, and the address rules of its wake filter. All of
+ * it is cleared by wlanMefConfigClear().
+ */
 struct WlanMefConfig {
-	uint8_t header[20];
+	uint8_t activated;		/* host sleep is armed */
+	uint8_t wakeSignalled;		/* the wake GPIO was raised for the host */
+	uint8_t reserved2[6];
+	uint8_t hostState;		/* WLAN_HOST_* */
+	uint8_t reserved9[11];
 	struct WlanMefAddressRule rules[8];
+};
+
+/* WlanMefConfig.hostState */
+#define WLAN_HOST_AWAKE		0
+#define WLAN_HOST_WAKING	2	/* woken, events wait in wlanHostEventQueue */
+#define WLAN_HOST_ASLEEP	3
+
+/*
+ * Host sleep parameters as the host's command gives them: the wake
+ * conditions (address classes, as wlanAddressClass(), and WLAN_WAKE_*), the GPIO that wakes the host
+ * (-1: none, -2: the SDIO interrupt) and the gap before it is raised.
+ */
+struct WlanHostSleepConfig {
+	uint8_t conditions[4];		/* unaligned; WLAN_WAKE_* */
+	int8_t gpio;
+	uint8_t gap;
 };
 
 _Static_assert(sizeof(struct WlanMefConfig) == 84, "MEF configuration");
@@ -98,7 +122,13 @@ _Static_assert(sizeof(struct WlanMefConfig) == 84, "MEF configuration");
 
 extern struct WlanMefEntry wlanMefEntries[WLAN_MEF_ENTRIES];
 extern struct WlanMefConfig wlanMefConfig;
-extern uint32_t wlanWakeClassMask;
+/* Wake classes of wlanHostEventNotify() and the host sleep conditions. */
+#define WLAN_WAKE_EVENT		0x04	/* an event for the host */
+#define WLAN_WAKE_ALL		0xff	/* wakes the host whatever the conditions */
+
+/* The host sleep parameters in force, NULL while host sleep is off. */
+extern const struct WlanHostSleepConfig *wlanHostSleepActive;
+extern struct WlanHostSleepConfig wlanHostSleepSettings;
 int wlanMefMatchFrame(OsaBuffer *buffer);
 void wlanMefConfigClear(void);
 void wlanMefConfigParse(const uint8_t *tlvs, int length);

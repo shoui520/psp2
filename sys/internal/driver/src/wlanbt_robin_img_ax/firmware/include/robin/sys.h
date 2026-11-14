@@ -180,4 +180,9 @@ int sysTimerSlotInit(void);
 /* sys/trace.c */
 void sysLogStatistic(unsigned int id, uint32_t value, uint32_t extra);
 
+/* boot/reset.S: spins for the given number of loop iterations. */
+int robinDelayLoop(int iterations);
+/* The bus clock in MHz, kept in SQRAM. */
+extern uint32_t sysClockFrequency;		/* SQRAM 0xc0011b24 */
+
 #endif /* ROBIN_SYS_H */

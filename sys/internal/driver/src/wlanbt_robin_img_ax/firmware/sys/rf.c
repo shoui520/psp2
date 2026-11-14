@@ -5,6 +5,7 @@
  * and the names say what the code does.
  */
 #include <stddef.h>
+#include "robin/sys.h"
 #include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/soc.h"
@@ -30,7 +31,6 @@
 #define RF_PATH_REG(path, reg)	((uint16_t)(((path) << 8) + (reg)))
 
 /* Not converted yet; provisional names. */
-extern uint32_t sysClockFrequency;				/* SQRAM 0xc0011b24 */
 extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 5: no rate below index 5 */
 extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
 extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */

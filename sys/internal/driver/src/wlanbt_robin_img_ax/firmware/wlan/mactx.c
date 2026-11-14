@@ -7,6 +7,7 @@
 #include "robin/coex.h"
 #include "robin/mac.h"
 #include "robin/mef.h"
+#include "robin/phy.h"
 #include "robin/pspoll.h"
 #include "robin/txring.h"
 #include "robin/mactx.h"
@@ -200,6 +201,61 @@ uint32_t macTxAcquireWakeBit(void)
 	return acquired;
 }
 
+/* Not converted yet; provisional names. */
+int macTxResolveDescriptor(struct WlanConnection *connection);		/* 0xf826 */
+void wlanPsCheckEntry(unsigned int reason);				/* 0x16a80 */
+extern uint8_t wlanPsHostMode;						/* 0x55130 */
+
+/* Control-task event bit raised for an event to the host while the AP sleeps clients. */
+#define WLAN_EVENT_HOST_EVENT		5
+
+/* mdevIoctl() of the SDIO device: the host wake GPIO, and the end of host sleep. */
+#define SDIO_IOCTL_WAKE_GPIO		0x61
+#define SDIO_IOCTL_HOST_AWAKE		0x0c
+
+/*
+ * Events for the host wait here while it sleeps, and go out once it is awake
+ * (wlanHostEventFlush()).
+ */
+struct OsaMsgList wlanHostEventQueue __attribute__((section(".itcm.bss")));
+/* Host sleep ends with the host's next wake-up. */
+uint16_t wlanHostSleepEndOnWake __attribute__((section(".itcm.rw"))) = 0;
+
+void wlanHostEventQueueInit(void)
+{
+	__aeabi_memclr4(&wlanHostEventQueue, sizeof(wlanHostEventQueue));
+}
+
+/*
+ * Sends an event frame to the host for a connection: the frame is tagged with
+ * the connection's BSS, and a link-lost event is dropped when the connection
+ * no longer has a descriptor. Only frames of kind WLAN_HOST_FRAME_EVENT go
+ * out. Returns 1 when the buffer was freed (or was NULL), 0 otherwise.
+ */
+int wlanHostEventSend(struct WlanConnection *connection, OsaBuffer *buffer)
+{
+	struct WlanHostEventFrame *frame;
+
+	if (buffer == NULL)
+		return 1;
+	frame = (struct WlanHostEventFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	if (connection != NULL) {
+		if (frame->kind == WLAN_HOST_FRAME_EVENT &&
+		    frame->event == WLAN_HOST_EVENT_LINK_LOST &&
+		    !macTxResolveDescriptor(connection))
+			goto drop;
+		frame->bssNumber = connection->bssNumber;
+		frame->bssType = connection->bssType;
+	}
+	if (frame->kind != WLAN_HOST_FRAME_EVENT)
+		return 0;
+	if (wlanHostEventNotify(WLAN_WAKE_EVENT, buffer) != 0)
+		return 0;
+drop:
+	osa_BufferFree(buffer);
+	return 1;
+}
+
 /* Pool the transmit frames of the management tasks come from; created by bufferPoolsInit(). */
 extern struct OsaBufferPool wlanTxFramePool;
 
@@ -243,6 +299,258 @@ OsaBuffer *wlanTxAllocFrameType2(uint16_t priority, int (*release)(OsaBuffer *bu
 		descriptor->control = (descriptor->control & 0xffff) | (2u << 16);
 	}
 	return buffer;
+}
+
+/* An event without data; release, if not NULL, is called when the buffer is freed. */
+int wlanHostEventSendRelease(struct WlanConnection *connection, uint16_t event,
+			     int (*release)(OsaBuffer *buffer))
+{
+	OsaBuffer *buffer = wlanTxAllocFrameType2(event, release);
+
+	if (buffer == NULL)
+		return 0;
+	return wlanHostEventSend(connection, buffer);
+}
+
+int wlanHostEventSendPlain(struct WlanConnection *connection, uint16_t event)
+{
+	return wlanHostEventSendRelease(connection, event, NULL);
+}
+
+/* An event that carries a 16-bit code. */
+int wlanHostEventSendCode(struct WlanConnection *connection, uint16_t event, uint16_t code)
+{
+	OsaBuffer *buffer;
+	struct WlanHostEventFrame *frame;
+
+	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 100, event))
+		return 0;
+	frame->code = code;
+	frame->length = 2;
+	return wlanHostEventSend(connection, buffer);
+}
+
+/* An event that carries a MAC address, with a zero code. */
+int wlanHostEventSendAddress(struct WlanConnection *connection, uint16_t event,
+			     const uint8_t *address)
+{
+	OsaBuffer *buffer;
+	struct WlanHostEventFrame *frame;
+
+	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, event))
+		return 0;
+	frame->code = 0;
+	__aeabi_memcpy(frame->address, address, 6);
+	frame->length = 8;
+	return wlanHostEventSend(connection, buffer);
+}
+
+/* An event that carries the given data. */
+int wlanHostEventSendData(struct WlanConnection *connection, uint16_t event, const void *data,
+			  uint16_t length)
+{
+	OsaBuffer *buffer;
+	struct WlanHostEventFrame *frame;
+
+	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, event))
+		return 0;
+	__aeabi_memcpy(&frame->code, data, length);
+	frame->length = length;
+	return wlanHostEventSend(connection, buffer);
+}
+
+/* An event that carries a 16-bit code and a MAC address. */
+int wlanHostEventSendCodeAddress(struct WlanConnection *connection, uint16_t event, uint16_t code,
+				 const uint8_t *address)
+{
+	OsaBuffer *buffer;
+	struct WlanHostEventFrame *frame;
+
+	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 100, event))
+		return 0;
+	frame->code = code;
+	__aeabi_memcpy(frame->address, address, 6);
+	frame->length = 8;
+	return wlanHostEventSend(connection, buffer);
+}
+
+/* Puts a zero code and a MAC address in front of an event's data, and sends it. */
+int wlanHostEventSendWithAddress(struct WlanConnection *connection, const uint8_t *address,
+				 OsaBuffer *buffer)
+{
+	struct WlanHostEventFrame *frame =
+		(struct WlanHostEventFrame *)((uint8_t *)buffer + buffer->dataOffset);
+
+	frame->code = 0;
+	__aeabi_memcpy(frame->address, address, 6);
+	frame->length += 8;
+	return wlanHostEventSend(connection, buffer);
+}
+
+/* Hands an event frame to the host. */
+int wlanHostEventDeliver(OsaBuffer *buffer)
+{
+	struct WlanHostEventFrame *frame =
+		(struct WlanHostEventFrame *)((uint8_t *)buffer + buffer->dataOffset);
+
+	if (wlanApPsEnabled() && frame->event != WLAN_HOST_EVENT_PS_SLEEP)
+		wlanRaiseEvent(WLAN_EVENT_HOST_EVENT);
+	return wlanHostCallback(wlanDevice, buffer, 0, 2);
+}
+
+/* Delivers the events that waited while the host slept. */
+void wlanHostEventFlush(void)
+{
+	OsaBuffer *buffer;
+
+	while ((buffer = osa_MsgQueueRecv(&wlanHostEventQueue)) != NULL)
+		wlanHostEventDeliver(buffer);
+}
+
+/*
+ * The host is awake: lowers the wake GPIO if it was raised, tells the SDIO
+ * device and delivers the events that waited.
+ */
+void wlanHostAwake(void)
+{
+	unsigned int posture = sysIrqDisable();
+
+	if (wlanMefConfig.wakeSignalled && wlanHostSleepSettings.gpio != -1 &&
+	    wlanHostSleepSettings.gpio != -2)
+		mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO, 0);
+	if (wlanPsHostMode == 1)
+		wlanPsCheckEntry(19);
+	wlanMefConfig.hostState = WLAN_HOST_AWAKE;
+	macTxPostEvent(4);
+	mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_AWAKE, 0);
+	wlanHostEventFlush();
+	sysIrqRestore(posture);
+}
+
+/* Ends host sleep. */
+void wlanHostSleepCancel(void)
+{
+	wlanHostAwake();
+	wlanMefConfig.activated = 0;
+	wlanHostSleepActive = NULL;
+	wlanPsSleepTimeout = 0;
+}
+
+void wlanHostSleepEnter(void)
+{
+	if (wlanMefConfig.hostState != WLAN_HOST_ASLEEP)
+		wlanMefConfig.hostState = WLAN_HOST_ASLEEP;
+}
+
+/* True while host sleep is configured and armed. */
+int wlanHostSleepArmed(void)
+{
+	if (wlanHostSleepActive == NULL || !wlanMefConfig.activated)
+		return 0;
+	return 1;
+}
+
+/* The wake classes that match the conditions; WLAN_WAKE_ALL matches whatever they are. */
+unsigned int wlanHostSleepWakeMatch(unsigned int classes, unsigned int conditions)
+{
+	if (classes == WLAN_WAKE_ALL)
+		return classes;
+	return classes & conditions;
+}
+
+/* Waits the host sleep gap, in milliseconds, before the host is woken. */
+void wlanHostSleepGap(unsigned int gap)
+{
+	uint32_t iterations = ((uint64_t)gap * sysClockFrequency * 1000) >> 10;
+
+	if (iterations != 0)
+		robinDelayLoop(iterations);
+}
+
+/*
+ * Something for the host happened, of the given wake classes, with an event
+ * frame or none. While host sleep is off the frame goes out at once; while
+ * the host sleeps it is queued. Otherwise, when the host sleep conditions
+ * match, the host is woken (its GPIO raised after the gap) and the frame
+ * queued until it is awake. Link and power-save events wake it whatever the
+ * conditions. Returns 0 when the conditions do not match.
+ */
+int wlanHostEventNotify(unsigned int classes, OsaBuffer *buffer)
+{
+	struct WlanHostEventFrame *frame = NULL;
+	unsigned int event = 0;
+	unsigned int posture;
+	uint8_t state;
+	int8_t gpio;
+
+	if (buffer != NULL)
+		frame = (struct WlanHostEventFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	if (!wlanHostSleepArmed()) {
+		if ((classes & WLAN_WAKE_EVENT) && buffer != NULL) {
+			wlanHostEventFlush();
+			wlanHostEventDeliver(buffer);
+		}
+		return 1;
+	}
+	/* The state is read once: a host still waking up hangs this loop. */
+	state = wlanMefConfig.hostState;
+	while (state == WLAN_HOST_WAKING)
+		;
+	if (state == WLAN_HOST_ASLEEP) {
+		if ((classes & WLAN_WAKE_EVENT) && buffer != NULL)
+			osa_MsgQueueSend(&wlanHostEventQueue, buffer);
+		return 1;
+	}
+	if (buffer != NULL) {
+		if (classes & WLAN_WAKE_EVENT) {
+			event = frame->event;
+			switch (event) {
+			case WLAN_HOST_EVENT_PS_AWAKE:
+			case WLAN_HOST_EVENT_PS_SLEEP:
+				if ((wlanSessionId | wlanConnectionPhase) == 0) {
+					classes &= ~WLAN_WAKE_EVENT;
+					break;
+				}
+				/* fall through */
+			case WLAN_HOST_EVENT_LINK_LOST:
+			case WLAN_HOST_EVENT_DEAUTHENTICATED:
+			case WLAN_HOST_EVENT_DISASSOCIATED:
+			case WLAN_HOST_EVENT_DEEP_SLEEP_AWAKE:
+			case WLAN_HOST_EVENT_HOST_SLEEP_AWAKE:
+				classes = WLAN_WAKE_ALL;
+				break;
+			}
+		}
+		if ((classes >> 4) & 3)
+			event = frame->event;
+	}
+	if (wlanHostSleepWakeMatch(classes, __aeabi_uread4(wlanHostSleepActive->conditions)) == 0)
+		return 0;
+	if (event != 0) {
+		if (wlanHostSleepEndOnWake != 0 && wlanHostSleepSettings.gpio == -1) {
+			wlanHostSleepGap(wlanHostSleepActive->gap);
+			wlanHostSleepCancel();
+			wlanHostSleepEndOnWake = 0;
+			wlanMefConfig.wakeSignalled = 0;
+			wlanHostEventDeliver(buffer);
+			return 1;
+		}
+		posture = sysIrqDisable();
+		osa_MsgQueueSend(&wlanHostEventQueue, buffer);
+		sysIrqRestore(posture);
+	}
+	gpio = wlanHostSleepActive->gpio;
+	rfCalibSyncState(5000);
+	wlanMefConfig.hostState = WLAN_HOST_WAKING;
+	if (gpio != -1 && gpio != -2)
+		mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO, 1);
+	wlanHostSleepGap(wlanHostSleepActive->gap);
+	if (wlanHostSleepEndOnWake != 0 && wlanHostSleepArmed()) {
+		wlanHostSleepCancel();
+		wlanMefConfig.wakeSignalled = 0;
+		wlanHostSleepEndOnWake = 0;
+	}
+	return 1;
 }
 
 /* Gives up the wake bits in *bits; the last one out lets the MAC go to sleep. */

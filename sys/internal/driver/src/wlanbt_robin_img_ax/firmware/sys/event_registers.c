@@ -3,7 +3,6 @@
 #include "robin/soc.h"
 
 /* Original ARM busy-wait helper supplied by boot/reset.S. */
-extern int robinDelayLoop(int iterations);
 
 volatile void *sysEventRegisterBase __attribute__((section(".itcm.rw"))) =
 	(volatile void *)0x80002400;

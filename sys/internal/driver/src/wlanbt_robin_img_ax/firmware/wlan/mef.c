@@ -466,8 +466,13 @@ int wlanParam64Get(const uint8_t *slot, unsigned int index, void *value)
 /* The configured filters; the last one is the copy that gets evaluated. */
 struct WlanMefEntry wlanMefEntries[WLAN_MEF_ENTRIES] __attribute__((section(".itcm.bss")));
 struct WlanMefConfig wlanMefConfig __attribute__((section(".itcm.bss")));
-/* Address classes the wake filter lets through. */
-uint32_t wlanWakeClassMask __attribute__((section(".itcm.bss")));
+const struct WlanHostSleepConfig *wlanHostSleepActive __attribute__((section(".itcm.rw"))) = NULL;
+/* The parameters the host last configured: none by default. */
+struct WlanHostSleepConfig wlanHostSleepSettings __attribute__((section(".itcm.rw"))) = {
+	.conditions = { 0xff, 0xff, 0xff, 0xff },
+	.gpio = -1,
+	.gap = 10,
+};
 
 /*
  * Evaluates the working filter on a received frame. The 14 bytes in front of
@@ -567,7 +572,7 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 			return 0;
 		}
 	}
-	if ((__aeabi_uread4(&wlanWakeClassMask) & class) == 0)
+	if ((__aeabi_uread4(wlanHostSleepActive->conditions) & class) == 0)
 		return 0;
 	if (!isData || *(uint32_t *)&wlanMefConfig.rules[0] == 0)
 		return 1;

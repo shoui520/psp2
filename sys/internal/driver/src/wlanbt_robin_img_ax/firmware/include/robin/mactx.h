@@ -112,6 +112,61 @@ void macTxAdvanceStage(void);
 int wlanTxAllocFrame(OsaBuffer **buffer, WlanTxDescriptor **descriptor, uint32_t size,
 		     uint16_t priority);
 OsaBuffer *wlanTxAllocFrameType2(uint16_t priority, int (*release)(OsaBuffer *buffer));
+
+/*
+ * An event frame for the host, as wlanTxAllocFrame() lays it out with the
+ * event as its priority. The data (code, address, or any data) follows.
+ */
+struct WlanHostEventFrame {
+	WlanPacketHeader header;
+	uint16_t kind;			/* WLAN_HOST_FRAME_EVENT: the TX descriptor's control word */
+	uint16_t length;		/* bytes of data, from code on */
+	uint16_t event;			/* WLAN_HOST_EVENT_* */
+	uint8_t bssNumber;
+	uint8_t bssType;
+	uint16_t code;
+	uint8_t address[6];
+};
+
+_Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
+
+#define WLAN_HOST_FRAME_EVENT		1
+
+/* Events to the host (the event numbers of Marvell's host interface, as Linux's mwifiex names them). */
+#define WLAN_HOST_EVENT_LINK_LOST		0x03
+#define WLAN_HOST_EVENT_DEAUTHENTICATED		0x08
+#define WLAN_HOST_EVENT_DISASSOCIATED		0x09
+#define WLAN_HOST_EVENT_PS_AWAKE		0x0a
+#define WLAN_HOST_EVENT_PS_SLEEP		0x0b
+#define WLAN_HOST_EVENT_DEEP_SLEEP_AWAKE	0x10
+#define WLAN_HOST_EVENT_HOST_SLEEP_AWAKE	0x12
+
+extern struct OsaMsgList wlanHostEventQueue;
+extern uint16_t wlanHostSleepEndOnWake;
+
+void wlanHostEventQueueInit(void);
+int wlanHostEventSend(struct WlanConnection *connection, OsaBuffer *buffer);
+int wlanHostEventSendRelease(struct WlanConnection *connection, uint16_t event,
+			     int (*release)(OsaBuffer *buffer));
+int wlanHostEventSendPlain(struct WlanConnection *connection, uint16_t event);
+int wlanHostEventSendCode(struct WlanConnection *connection, uint16_t event, uint16_t code);
+int wlanHostEventSendAddress(struct WlanConnection *connection, uint16_t event,
+			     const uint8_t *address);
+int wlanHostEventSendData(struct WlanConnection *connection, uint16_t event, const void *data,
+			  uint16_t length);
+int wlanHostEventSendCodeAddress(struct WlanConnection *connection, uint16_t event, uint16_t code,
+				 const uint8_t *address);
+int wlanHostEventSendWithAddress(struct WlanConnection *connection, const uint8_t *address,
+				 OsaBuffer *buffer);
+int wlanHostEventDeliver(OsaBuffer *buffer);
+void wlanHostEventFlush(void);
+void wlanHostAwake(void);
+void wlanHostSleepCancel(void);
+void wlanHostSleepEnter(void);
+int wlanHostSleepArmed(void);
+unsigned int wlanHostSleepWakeMatch(unsigned int classes, unsigned int conditions);
+void wlanHostSleepGap(unsigned int gap);
+int wlanHostEventNotify(unsigned int classes, OsaBuffer *buffer);
 void macWakeSettle(uint32_t mask);
 uint32_t macTxAcquireWakeBit(void);
 void macTxReleaseWakeBits(uint32_t *bits);
