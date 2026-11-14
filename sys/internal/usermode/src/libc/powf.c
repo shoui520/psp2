@@ -13,6 +13,9 @@
 
 #define NBUF	4	/* the extended-precision words */
 
+/* the sign bit of a value, from its bits */
+#define SIGN(x)	(((union { float _V; unsigned int _W; }){(x)})._W & 0x80000000U)
+
 static const float invln2[NBUF] = {	/* 1 / ln(2), in four parts */
 	1.4423828F, 0.00031220913F, 1.9237632e-08F, 2.1991298e-11F,
 };
@@ -40,26 +43,28 @@ float _FPow(float x, float y, short *pex)
 		else if (erry == _NANCODE)
 			return y;
 		else if (errx == _INFCODE)	/* x == +-INF */
-			return !FSIGN(x) ? (!FSIGN(y) ? _FInf._Float : 0.0F)
-				: !FSIGN(y) ? (erry == 0 && _FDint(&yi, -1) < 0
+			return !SIGN(x) ? (!SIGN(y) ? _FInf._Float : 0.0F)
+				: !SIGN(y) ? (erry == 0 && _FDint(&yi, -1) < 0
 					? -_FInf._Float : _FInf._Float)
 				: erry == 0 && _FDint(&yi, -1) < 0 ? -_FZero : 0.0F;
 		else if (erry == _INFCODE)	/* y == +-INF */
-			return !FSIGN(y) ? (0 < xexp ? _FInf._Float : 0.0F)
+			return !SIGN(y) ? (0 < xexp ? _FInf._Float : 0.0F)
 				: 0 < xexp ? 0.0F : _FInf._Float;
-		else if (!FSIGN(y))	/* x == 0, y > 0 */
-			return erry == 0 && _FDint(&yi, -1) < 0 && FSIGN(x) ? -_FZero : 0.0F;
+		else if (!SIGN(y))	/* x == 0, y > 0 */
+			return erry == 0 && _FDint(&yi, -1) < 0 && SIGN(x) ? -_FZero : 0.0F;
 		_Feraise(_FE_DIVBYZERO);	/* x == 0, y < 0 */
-		return erry == 0 && _FDint(&yi, -1) < 0 && FSIGN(x)
+		return erry == 0 && _FDint(&yi, -1) < 0 && SIGN(x)
 			? -_FInf._Float : _FInf._Float;
 	}
 
-	if (FSIGN(x) && erry < 0) {	/* negative x, nonintegral y */
+	if (SIGN(x) && erry < 0) {	/* negative x, nonintegral y */
 		_Feraise(_FE_INVALID);
 		return _FNan._Float;
 	}
 	neg = 0;
-	if (x <= 0.0F) {	/* odd y makes the result negative */
+	if (0.0F < x) {
+		;
+	} else {	/* odd y makes the result negative */
 		x = -x;
 		neg = _FDint(&yi, -1);
 	}

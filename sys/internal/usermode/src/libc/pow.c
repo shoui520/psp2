@@ -13,6 +13,9 @@
 
 #define NBUF	4	/* the extended-precision words */
 
+/* the sign bit of a value, from its bits */
+#define SIGN(x)	(((union { double _V; unsigned long long _W; }){(x)})._W & 0x8000000000000000ULL)
+
 static double log2tab[][NBUF] = {	/* log2(0.5 + k / 64), in three parts */
 	{-1.0, -0.0, -0.0, 0.0},
 	{-0.9556058645248413, -1.6116704859570063e-08, -3.941830807715784e-16, 0.0},
@@ -78,26 +81,28 @@ double _Pow(double x, double y, short *pex)
 		else if (erry == _NANCODE)
 			return y;
 		else if (errx == _INFCODE)	/* x == +-INF */
-			return !DSIGN(x) ? (!DSIGN(y) ? _Inf._Double : 0.0)
-				: !DSIGN(y) ? (erry == 0 && _Dint(&yi, -1) < 0
+			return !SIGN(x) ? (!SIGN(y) ? _Inf._Double : 0.0)
+				: !SIGN(y) ? (erry == 0 && _Dint(&yi, -1) < 0
 					? -_Inf._Double : _Inf._Double)
 				: erry == 0 && _Dint(&yi, -1) < 0 ? -_Zero : 0.0;
 		else if (erry == _INFCODE)	/* y == +-INF */
-			return !DSIGN(y) ? (0 < xexp ? _Inf._Double : 0.0)
+			return !SIGN(y) ? (0 < xexp ? _Inf._Double : 0.0)
 				: 0 < xexp ? 0.0 : _Inf._Double;
-		else if (!DSIGN(y))	/* x == 0, y > 0 */
-			return erry == 0 && _Dint(&yi, -1) < 0 && DSIGN(x) ? -_Zero : 0.0;
+		else if (!SIGN(y))	/* x == 0, y > 0 */
+			return erry == 0 && _Dint(&yi, -1) < 0 && SIGN(x) ? -_Zero : 0.0;
 		_Feraise(_FE_DIVBYZERO);	/* x == 0, y < 0 */
-		return erry == 0 && _Dint(&yi, -1) < 0 && DSIGN(x)
+		return erry == 0 && _Dint(&yi, -1) < 0 && SIGN(x)
 			? -_Inf._Double : _Inf._Double;
 	}
 
-	if (DSIGN(x) && erry < 0) {	/* negative x, nonintegral y */
+	if (SIGN(x) && erry < 0) {	/* negative x, nonintegral y */
 		_Feraise(_FE_INVALID);
 		return _Nan._Double;
 	}
 	neg = 0;
-	if (x <= 0.0) {	/* odd y makes the result negative */
+	if (0.0 < x) {
+		;
+	} else {	/* odd y makes the result negative */
 		x = -x;
 		neg = _Dint(&yi, -1);
 	}

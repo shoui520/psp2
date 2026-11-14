@@ -13,6 +13,7 @@
 
 #define NBUF	4	/* the extended-precision words */
 
+
 static long double log2tab[][NBUF] = {	/* log2(0.5 + k / 64), in three parts */
 	{-1.0L, -0.0L, -0.0L, 0.0L},
 	{-0.9556058645248413L, -1.6116704859570063e-08L, -3.941830807715784e-16L, 0.0L},
@@ -97,7 +98,9 @@ long double _LPow(long double x, long double y, short *pex)
 		return _LNan._Long_double;
 	}
 	neg = 0;
-	if (x <= 0.0L) {	/* odd y makes the result negative */
+	if (0.0L < x) {
+		;
+	} else {	/* odd y makes the result negative */
 		x = -x;
 		neg = _LDint(&yi, -1);
 	}
