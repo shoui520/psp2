@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/coex.h"
+#include "robin/stapssm.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"
 #include "robin/mactx.h"
@@ -52,7 +53,6 @@
 extern uint32_t wlanPsSleepTimerEnd;			/* SQRAM 0xc000fb00 */
 extern uint64_t wlanPsSleepTimerStart;			/* SQRAM 0xc000fb08 */
 extern uint32_t wlanPsAnnounceLimit;			/* 0x7ff0 */
-extern uint32_t wlanPsIeeeFlag;				/* 0x54ac0 */
 extern const uint8_t wlanPsBroadcast[6];		/* 0x53d4a */
 extern uint8_t (*wlanDeviceAddress)[6];			/* 0x54a7c */
 void wlanPsConvertEntry(int on);			/* 0x170ec */
@@ -168,7 +168,7 @@ const int32_t *wlanPsMachineOff(struct WlanPsMachine *machine, const int32_t *ev
 	case 43:
 	case 44:
 	case 45:
-		mdevRomQueryState(&wlanPsCurrentState, *event, NULL);
+		mdevRomQueryState(&wlanStaPs, *event, NULL);
 		return NULL;
 	}
 	return event;
@@ -373,7 +373,7 @@ const int32_t *wlanPsMachineOn(struct WlanPsMachine *machine, const int32_t *eve
 	case 43:
 	case 44:
 	case 45:
-		mdevRomQueryState(&wlanPsCurrentState, *event, NULL);
+		mdevRomQueryState(&wlanStaPs, *event, NULL);
 		return NULL;
 	default:
 		return event;

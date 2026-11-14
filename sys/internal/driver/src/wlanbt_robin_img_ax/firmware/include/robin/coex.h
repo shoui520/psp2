@@ -201,12 +201,6 @@ int btCoexRefreshActivityIdle(void);			/* 0x24566 */
 int btCoexActivityIdle(void);				/* 0x2457a */
 unsigned int btCoexActiveLinks(void);			/* 0x2459e */
 unsigned int btCoexLinkCapacity(void);			/* 0x245a6 */
-int wlanCoexUseStationMode(void);			/* 0x14a5e */
-int wlanCoexUseP2pMode(uint32_t unused);		/* 0x14a8a */
-int wlanCoexUseP2pSleepMode(void);			/* 0x14f50 */
-void wlanPsEnterSleep(struct WlanConnection *connection, int reason);	/* 0x14ee0 */
-void wlanPsSendPowerSaveNull(struct WlanConnection *connection); /* 0x14f2c */
-void wlanPsArmRetryTimer(uint32_t delay, void (*callback)(uint32_t timer, uint32_t slot)); /* 0x143dc */
 void wlanPsSetPowerState(uint8_t state);		/* 0x16fac */
 int wlanPsSleepStateReached(void);			/* 0x16fc2 */
 uint32_t wlanHostQueueDepth(unsigned int queue);	/* 0x1ebe8 */
@@ -221,11 +215,6 @@ int wlanTxRingsPending(void);				/* 0x31fd6 */
 int wlanTxRingPublishNext(void);			/* 0x320bc */
 extern uint32_t wlanPsSleepTimeout;			/* 0x54c4c */
 extern uint16_t wlanPsSleepSequence;			/* 0x54b84 */
-extern uint8_t wlanPsSleepAllowance;			/* 0x54aaf */
-extern uint8_t wlanPsLastTxComplete;			/* 0x54aab */
-extern uint32_t wlanPsHostBusy;				/* 0x54b08 */
 extern uint8_t wlanHostSleepPending;			/* 0x04000d40 */
-extern void *wlanPsCurrentState;			/* 0x04004d20 */
-extern uint8_t wlanPsStateSleep[];			/* 0x04004d78 */
 
 #endif /* ROBIN_COEX_H */

@@ -10,6 +10,7 @@
  * The filename is inferred; no source filename survives.
  */
 #include "robin/btrom.h"
+#include "robin/stapssm.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"

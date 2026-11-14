@@ -129,7 +129,6 @@ int wlanPsTriggerEnabled(void);				/* 0x2e9d4 */
 int wlanCoexPsPollForced(void);				/* 0x2ea3a */
 uint32_t wlanPsTriggerMode(void);			/* 0x2ea9e */
 uint8_t wlanPsPollEnabled(void);			/* 0x2eaaa */
-int wlanPsLegacyPollMode(void);				/* 0x14ea2 */
 int btCoexProfilePollable(void);			/* 0x24516 */
 void btCoexPollTiming(uint32_t *interval, uint32_t *offset);	/* 0x244ec */
 int wlanTxRingsDrained(void);				/* 0x31ffe */
@@ -140,8 +139,6 @@ int wlanTxQueueFrame(OsaBuffer *buffer);		/* 0x32094 */
 int wlanTxReleaseFrame(OsaBuffer *buffer);		/* 0x319d0 */
 int wlanIbssTxFrame(OsaBuffer *buffer, int transmit);	/* 0x3baec */
 uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41db2 */
-extern uint64_t wlanPsPollSentTime;			/* 0x54b38 */
-extern uint8_t wlanPsNullSuppressed;			/* 0x54aac */
 extern uint8_t wlanTxDataRing;				/* 0xc0011bd4 */
 
 #endif /* ROBIN_PSPOLL_H */

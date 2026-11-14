@@ -94,9 +94,12 @@ struct WlanMefAddressRule {
 struct WlanMefConfig {
 	uint8_t activated;		/* host sleep is armed */
 	uint8_t wakeSignalled;		/* the wake GPIO was raised for the host */
-	uint8_t reserved2[6];
+	uint8_t sleepHeld;		/* cleared when the station goes to sleep */
+	uint8_t reserved3[5];
 	uint8_t hostState;		/* WLAN_HOST_* */
-	uint8_t reserved9[11];
+	uint8_t reserved9[3];
+	uint32_t queuedEvents;		/* events wait for the host: keep the beacon wait */
+	uint32_t hostEvents;		/* the host holds the station awake */
 	struct WlanMefAddressRule rules[8];
 };
 

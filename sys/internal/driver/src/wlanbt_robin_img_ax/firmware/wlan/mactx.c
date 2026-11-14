@@ -4,6 +4,7 @@
  * survives.
  */
 #include "robin/apps.h"
+#include "robin/stapssm.h"
 #include "robin/ibss.h"
 #include "robin/mgmt.h"
 #include "robin/btrom.h"
@@ -1123,7 +1124,7 @@ found:
 			/* A null frame for the power-save machinery, not data. */
 			if (macTxDescriptor.flags & 1) {
 				macTxAdvanceStage();
-				if (wlanCoexUseP2pMode(0) && wlanPsNullSuppressed == 0) {
+				if (wlanCoexUseP2pMode() && wlanPsNullSuppressed == 0) {
 					if (wlanPsTriggerWanted()) {
 						unsigned int priority = cbProcNullPriority();
 

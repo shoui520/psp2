@@ -10,6 +10,7 @@
  * cycles before.
  */
 #include "robin/coex.h"
+#include "robin/stapssm.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"
 #include "robin/mac.h"
@@ -470,7 +471,7 @@ static inline uint32_t wlanCoexSelectMode(void)
 {
 	if (wlanCoexUseStationMode())
 		return WLAN_COEX_MODE_STATION;
-	if (wlanCoexUseP2pMode(0))
+	if (wlanCoexUseP2pMode())
 		return WLAN_COEX_MODE_P2P;
 	if (wlanCoexConfig.btConfig == 4)
 		return WLAN_COEX_MODE_BT_QUARTER;
@@ -887,7 +888,7 @@ void wlanCoexBtActivityChanged(int busy, int scheduled)
 
 	if (wlanCoexActive() && wlanCoex.mode == WLAN_COEX_MODE_BT_HALF && wlanCoex.btActive == 1) {
 		if (busy != 0 && scheduled != 0) {
-			if (wlanPsCurrentState == wlanPsStateSleep) {
+			if (wlanStaPs.state == &wlanStaPs.sleep) {
 				wlanCoex.request = WLAN_COEX_REQUEST_BT_SLEEP;
 				wlanRaiseEvent(WLAN_EVENT_COEX_REQUEST);
 			}

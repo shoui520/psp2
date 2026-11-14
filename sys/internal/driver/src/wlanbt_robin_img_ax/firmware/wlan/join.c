@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/calibration.h"
+#include "robin/stapssm.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
@@ -355,7 +356,7 @@ int wlanJoinSlotEvent(uint32_t handle, int event, uint32_t argument)
 	case WLAN_SLOT_EVENT_JOIN_START:
 		wlanJoin.starts++;
 		if ((connection->flags2 & WLAN_CONN2_ASSOCIATED) && wlanPsEnabled() &&
-		    (wlanCoexUseP2pMode(1) || wlanCoexUseStationMode()))
+		    (wlanCoexUseP2pMode() || wlanCoexUseStationMode()))
 			break;
 		if (!macTxPoolsIdle())
 			result = 2;

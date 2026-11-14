@@ -38,7 +38,6 @@ uint32_t wlanTxRingPublishLimit __attribute__((section(".sqram1.bss")));
 uint32_t wlanTxRingMaskFill __attribute__((section(".sqram1.bss")));
 uint32_t wlanTxRingMaskPush __attribute__((section(".sqram1.bss")));
 /* Running total of what wlanFrameSetPowerSave() returned. */
-uint32_t wlanTxPowerSaveCount __attribute__((section(".itcm.bss")));
 /* Owner of each window number; 1 marks a window that publishes entries itself. */
 uintptr_t wlanWindowOwners[20] __attribute__((section(".dtcm.bss")));
 
