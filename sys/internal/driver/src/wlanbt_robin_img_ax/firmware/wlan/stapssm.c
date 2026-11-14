@@ -23,6 +23,7 @@
 #include "robin/sleep.h"
 #include "robin/slot.h"
 #include "robin/stapssm.h"
+#include "robin/mgmt.h"
 #include "robin/subscribe.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
@@ -72,6 +73,7 @@ uint8_t wlanPsConfirmArmed __attribute__((section(".itcm.rw")));		/* 0x54aae */
 uint8_t wlanPsSleepAllowance __attribute__((section(".itcm.rw")));		/* 0x54aaf */
 uint8_t wlanPsRoleMask __attribute__((section(".itcm.rw")));			/* 0x54ab0 */
 uint8_t wlanPsPeerRoleMask __attribute__((section(".itcm.rw")));		/* 0x54ab1 */
+uint8_t wlanPsPeriodAnnounced __attribute__((section(".itcm.rw")));		/* 0x54ab2 */
 uint16_t wlanPsHoldSeconds __attribute__((section(".itcm.rw"))) = 30;		/* 0x54ab4 */
 uint32_t wlanPsLastHostEvent __attribute__((section(".itcm.rw")));		/* 0x54ab8 */
 uint32_t wlanPsDataPending __attribute__((section(".itcm.rw")));		/* 0x54abc */
@@ -85,7 +87,12 @@ uint32_t wlanPsRetries __attribute__((section(".itcm.rw")));			/* 0x54ad8 */
 uint32_t wlanPsRetryTimer __attribute__((section(".itcm.rw")));		/* 0x54adc */
 uint32_t wlanPsCalibrations __attribute__((section(".itcm.rw")));		/* 0x54ae0 */
 uint32_t wlanPsCalibrationDue __attribute__((section(".itcm.rw")));		/* 0x54ae4 */
+uint32_t wlanPsPeriodWakes __attribute__((section(".itcm.rw")));		/* 0x54ae8 */
 uint32_t wlanPsIeeeFlagAtSleep __attribute__((section(".itcm.rw")));		/* 0x54aec */
+uint32_t wlanPsPeriodSleeps __attribute__((section(".itcm.rw")));		/* 0x54af0 */
+uint32_t wlanPsPeriodMisses __attribute__((section(".itcm.rw")));		/* 0x54af4 */
+uint32_t wlanPsPeriodAborts __attribute__((section(".itcm.rw")));		/* 0x54af8 */
+uint32_t wlanPsPeriodDataSleeps __attribute__((section(".itcm.rw")));		/* 0x54afc */
 uint32_t wlanPsPeriodSleepTime __attribute__((section(".itcm.rw")));		/* 0x54b00 */
 uint32_t wlanPsPeriodEntries __attribute__((section(".itcm.rw")));		/* 0x54b04 */
 uint32_t wlanPsHostBusy __attribute__((section(".itcm.rw")));			/* 0x54b08 */
@@ -106,6 +113,16 @@ extern uint16_t wlanPsAltModeActive;			/* 0x562a0 */
 extern uint16_t wlanPsAltModeRequest;			/* 0x562a2 */
 extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
 extern struct OsaBufferPool wlanTxFramePool;
+extern uint32_t wlanPsWakeWindow;			/* 0x56298: ms */
+extern uint32_t wlanPsCalibrationInterval;		/* 0x5629c: ms */
+extern uint16_t wlanPsHeaderSpacing;			/* 0x562b0 */
+extern uint32_t wlanPsDtimPolicy;			/* 0x54b54 */
+extern struct OsaSemaphore *wlanPsResetDone;		/* 0x54b5c */
+extern uint16_t wlanPsNullWindow;			/* 0x54b6c */
+extern uint16_t wlanPsPollWindow;			/* 0x54b76 */
+extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
+int wlanPsResetDescriptor(struct WlanConnection *connection, const void *beacon); /* 0x3e98a */
+void wlanPsApplyEntry(struct WlanConnection *connection, int bits, int dtim, int force); /* 0x16c06 */
 extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
 extern uint32_t wlanPsMgmtWakeDue;			/* 0x54c50 */
 extern uint32_t wlanPsHostWakeDue;			/* 0x54c54 */
@@ -120,9 +137,6 @@ void wlanPsComputeEntry(void);				/* 0x16bb4 */
 void wlanPsQueryEntry(uint64_t delay);			/* 0x16bd6 */
 void wlanPsResetEntry(void);				/* 0x16bf2 */
 int wlanPsSyncEntry(void);				/* 0x16bfa */
-void wlanPsTrackContext(struct WlanConnection *connection, uint32_t event, int force); /* 0x16724 */
-void wlanPsManageContext(struct WlanStaPsMachine *machine);	/* 0x1673e */
-void wlanPsAcquireContext(struct WlanStaPsMachine *machine);	/* 0x1679a */
 void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int wlanWmmEnabled(void);				/* 0x41cb8 */
@@ -196,7 +210,7 @@ void wlanStaPsRestart(struct WlanStaPsMachine *machine)
 	struct WlanConnection *connection;
 
 	if (wlanPsAltModeRequest != 0) {
-		wlanPsManageContext(machine);
+		wlanStaPsStartPeriodic(machine);
 		target = &machine->periodic;
 	} else {
 		connection = machine->connection;
@@ -209,7 +223,7 @@ void wlanStaPsRestart(struct WlanStaPsMachine *machine)
 		wlanPsSetPowerState(1);
 		wlanPsComputeEntry();
 		macMgmtValidateTable(3);
-		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		target = &machine->sleep;
 	}
 	wlanPsAltModeActive = wlanPsAltModeRequest;
@@ -406,7 +420,7 @@ const int32_t *wlanStaPsIeeeExit(struct WlanStaPsMachine *machine, const int32_t
 	case 45:
 		tx_timer_deactivate(&machine->nullTimer);
 		if (machine->resume != &machine->active)
-			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		machine->resume = &machine->active;
 		machine->ieeeState = 0;
 		macTxSetPowerSave(0);
@@ -572,7 +586,7 @@ const int32_t *wlanStaPsActive(struct WlanStaPsMachine *machine, const int32_t *
 	case WLAN_STA_PS_EVENT_START:
 		cbProcAdjustContext(connection);
 		if (wlanCoexUseP2pMode() || wlanCoexUseStationMode()) {
-			wlanPsAcquireContext(machine);
+			wlanStaPsBeginPeriodic(machine);
 			macMgmtValidateTable(4);
 			romHsmTransition(machine, &machine->periodic);
 			return NULL;
@@ -640,7 +654,7 @@ const int32_t *wlanStaPsPowerSave(struct WlanStaPsMachine *machine, const int32_
 		wlanPsRetries = 0;
 		wlanPsCancelRetryTimer();
 		cbProcAdjustContext(connection);
-		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		wlanPostConnectionEvent(connection, WLAN_EVENT_HOST_PS_PEER);
 		wlanCoexHandleEvent(connection, 17);
 		romHsmTransition(machine, &machine->active);
@@ -831,7 +845,7 @@ const int32_t *wlanStaPsSleep(struct WlanStaPsMachine *machine, const int32_t *e
 		post = 1;
 		if (machine->hostState == 2 || mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0) {
 			machine->hostState = 0;
-			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		}
 		if (wlanStaPsNotifyPending())
 			post = 9;
@@ -897,7 +911,7 @@ entered:
 	case 3:
 		if (machine->hostState == 2) {
 			machine->hostState = 0;
-			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 			macTxPostEvent(1);
 			wlanPsHostWakeDue = 0;
 		}
@@ -1044,7 +1058,7 @@ triggerSent:
 		goto confirm;
 	case 28:
 		machine->hostState = 0;
-		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		return NULL;
 	case 32:
 	case 33:
@@ -1148,7 +1162,7 @@ const int32_t *wlanStaPsConfirm(struct WlanStaPsMachine *machine, const int32_t 
 	case 31:
 		if (wlanStaPsBusy() != 0)
 			goto asleep;
-		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
 		tx_timer_deactivate(&machine->confirmTimer);
 		tx_timer_change(&machine->confirmTimer, WLAN_STA_PS_CONFIRM_TICKS, 0);
 		tx_timer_activate(&machine->confirmTimer);
@@ -1210,7 +1224,7 @@ told:
 		    wlanPsLastHostEvent != WLAN_EVENT_HOST_PS_AWAKE)
 			goto hostDone;
 		if ((machine->confirmBits & WLAN_STA_PS_NULL_DONE) || wlanPsListenBeacons == 0) {
-			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
+			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
 			wlanStaPsRestartTimer(&machine->confirmTimer, WLAN_STA_PS_CONFIRM_TICKS);
 		}
 		goto check;
@@ -1556,7 +1570,7 @@ const int32_t *wlanStaPsPeriodicIeeeNull(struct WlanStaPsMachine *machine, const
 		macTxSetPowerSave(0);
 		macTxReleaseWakeBits(&machine->wakeBits);
 		if (machine->resume != &machine->active)
-			wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		machine->eventPending = 0;
 		machine->resume = &machine->active;
 		romHsmTransition(machine, &machine->active);
@@ -1616,7 +1630,7 @@ request:
 		return NULL;
 	case WLAN_STA_PS_EVENT_STOP:
 		wlanStaPsWakeAp(machine);
-		wlanPsTrackContext(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		romHsmTransition(machine, &machine->active);
 		return NULL;
 	case 3:
@@ -1699,4 +1713,341 @@ retry:
 awake:
 	romHsmTransition(machine, periodic);
 	return NULL;
+}
+
+/* 0x161a0: awake for the period; Enter once nothing is left to do. */
+const int32_t *wlanStaPsPeriodic(struct WlanStaPsMachine *machine, const int32_t *event)
+{
+	struct WlanConnection *connection = machine->connection;
+	struct RomHsmState *enter = &machine->periodicEnter;
+	uint32_t ieeeFlag;
+	uint32_t window;
+	uint64_t next;
+	uint32_t sleepTime;
+
+	switch (*event) {
+	case ROM_HSM_ENTRY:
+		macTxWakeup();
+		if (machine->restartDue) {
+			machine->restartDue = 0;
+			wlanStaPsRestart(machine);
+			if (wlanPsAltModeActive == 0)
+				return NULL;
+		}
+		machine->servicePeriod = 0;
+		wlanPsDataPending = 0;
+		wlanPsIeeeFlag = 0;
+		wlanTxPowerSaveCount = 0;
+		wlanPsIeeeFlagAtSleep = 0;
+		wlanPsConfirmArmed = 0;
+		wlanPsLastTxComplete = 0;
+		wlanPsPollReplyTime = 0;
+		wlanPsPollSentTime = 0;
+		wlanPsHostWakePending = 0;
+		wlanPsPollFlag = 0;
+		wlanPsHostBusy = 0;
+		wlanPsPeriodStart = romGetTimerTimestamp();
+		next = wlanPsNextPeriod(wlanPsPeriodStart, wlanPsAltModeActive);
+		machine->nextWake = next;
+		if (wlanPsPeriodStart + wlanPsWakeWindow * 1000 >= next)
+			machine->nextWake += (int32_t)(wlanPsAltModeActive << 10);
+		window = wlanPsWakeWindow * 1000;
+		next = machine->nextWake;
+		sleepTime = (uint32_t)(next - wlanPsPeriodStart - window);
+		wlanPsPeriodSleepTime = sleepTime;
+		if (sleepTime < 5000) {
+			machine->nextWake = next + (int32_t)(wlanPsAltModeActive << 10);
+			wlanPsPeriodSleepTime = (wlanPsAltModeActive << 10) + sleepTime;
+		}
+		wlanPsArmRetryTimer((uint16_t)wlanPsPeriodSleepTime, wlanPsPeriodTimerExpired);
+		if (machine->lastCalibration + wlanPsCalibrationInterval * 1000 < wlanPsPeriodStart) {
+			machine->lastCalibration = wlanPsPeriodStart;
+			sleepCalibrationKick(2);
+			wlanPsCalibrations++;
+			wlanPsCalibrationDue = 1;
+		}
+		wlanPsHeaderDeadline = wlanPsHeaderBefore(machine->nextWake);
+		machine->periodWake = machine->nextWake;
+		if (wlanPsHeaderDeadline != 0) {
+			machine->headerPending = 1;
+			if (machine->sleepRequested == 1) {
+				if (machine->headerTime >= wlanPsHeaderDeadline) {
+					wlanPsHeaderDeadline = 0;
+					machine->headerPending = 0;
+				}
+				machine->sleepRequested = 0;
+			}
+		}
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 1);
+		if (machine->hostState == 2)
+			machine->hostState = 0;
+		if (wlanSubscribeEventsPending(connection))
+			wlanPostConnectionEvent(connection, 0x08000000);
+		if (wlanPsEvaluate(connection, 2) == 0)
+			return NULL;
+		goto evaluated;
+	case ROM_HSM_EXIT:
+		wlanPsIeeeFlagAtSleep = wlanPsIeeeFlag;
+		wlanPsCancelRetryTimer();
+		wlanPsPollStop();
+		return NULL;
+	case WLAN_STA_PS_EVENT_STOP:
+		wlanStaPsWakeAp(machine);
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+		romHsmTransition(machine, &machine->active);
+		return NULL;
+	case 21:
+		ieeeFlag = wlanPsIeeeFlag;
+		if (ieeeFlag == 0 || wlanPsDataPending == 0 || !wpaSuppBuildParam() ||
+		    wlanPsConfirmArmed != 1 || wlanStaPsTxIdle() != 1 || wlanDmaRingsHaveRoom() == 1 ||
+		    wlanPsNullSuppressed != 0) {
+			wlanPsTriggerSent();
+			return NULL;
+		}
+		wlanPsCancelRetryTimer();
+		wlanPsPeriodDataSleeps++;
+		goto sleep;
+	case 22:
+		wlanPsCancelRetryTimer();
+		wlanPsHostBusy++;
+		if (wlanPsPollBusy() || wlanCoexDeferred()) {
+			wlanPsArmRetryTimer(2000, wlanPsPeriodTimerExpired);
+			return NULL;
+		}
+		wlanCoexHandleEvent(connection, 22);
+sleep:
+		wlanPsIeeeFlagAtSleep = wlanPsIeeeFlag;
+		break;
+	case 23:
+		machine->sleepRequested = 1;
+		return NULL;
+	case WLAN_EVENT_SLEEP_REFUSED:
+		return NULL;
+	case 25:
+		if (wlanPsNullSuppressed != 0 || macTxPathReady() != 1)
+			return NULL;
+		wlanPsConfirmArmed = 1;
+		if (!wlanCoexUseStationMode() || wlanPsLastTxComplete == 0 || !wpaSuppBuildParam())
+			return NULL;
+		break;
+	case 26:
+		if (!wlanCoexUseStationMode() || wlanDmaRingsHaveRoom() != 0 || wlanPsDataPending == 0)
+			return NULL;
+		wlanPsLastTxComplete = 1;
+		wlanPsEvaluate(connection, 4);
+		if (wlanPsConfirmArmed == 0 || !wpaSuppBuildParam())
+			return NULL;
+		break;
+	case 32:
+	case 33:
+		wlanPsPollHandleEvent(connection, *event);
+		return NULL;
+	case 34:
+		if (wpaSuppProcessParam() == 0)
+			return NULL;
+		wlanPsCancelRetryTimer();
+		wlanPsIeeeFlagAtSleep = wlanPsIeeeFlag;
+		machine->servicePeriod = 1;
+		break;
+	case 38:
+evaluated:
+		if (*event == 38)
+			wlanPsEvaluate(connection, 3);
+		if (wlanCoexUseStationMode())
+			wlanPsEnterSleep(connection, 0);
+		macTxPostEvent(1);
+		return NULL;
+	case WLAN_STA_PS_EVENT_IEEE_ENTER:
+		machine->slotHeld = 1;
+		return NULL;
+	case WLAN_STA_PS_EVENT_IEEE_EXIT:
+		machine->resume = &machine->periodic;
+		romHsmTransition(machine, &machine->periodicIeeeExit);
+		return NULL;
+	default:
+		return event;
+	}
+	romHsmTransition(machine, enter);
+	return NULL;
+}
+
+/* 0x1654e: tell the host, then sleep for the period. */
+const int32_t *wlanStaPsPeriodicEnter(struct WlanStaPsMachine *machine, const int32_t *event)
+{
+	struct WlanConnection *connection = machine->connection;
+	struct RomHsmState *target;
+
+	switch (*event) {
+	case ROM_HSM_EXIT:
+		return NULL;
+	case ROM_HSM_ENTRY:
+		break;
+	default:
+		return event;
+	}
+	if (machine->slotHeld) {
+		sysEnablePendingEvent();
+		machine->resume = &machine->periodicEnter;
+		target = &machine->periodicIeeeNull;
+	} else if (wlanPsTriggerMode() != 0 && (machine->servicePeriod | wlanPsHostBusy) != 0) {
+		target = &machine->periodicSleep;
+	} else {
+		wlanCoexHandleEvent(connection, 50);
+		wlanPsPeriodAnnounced = 1;
+		if (mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0)
+			target = &machine->periodic;
+		else
+			target = &machine->periodicSleep;
+	}
+	romHsmTransition(machine, target);
+	return NULL;
+}
+
+/* 0x165c4 */
+UINT wlanStaPsCreate(void)
+{
+	wlanStaPsInitStates(&wlanStaPs);
+	romHsmStart(&wlanStaPs, &wlanStaPs.active);
+	tx_timer_create(&wlanStaPs.confirmTimer, "SleepConfirmTmr", wlanPsSleepConfirmTimerCb, 0,
+			WLAN_STA_PS_CONFIRM_TICKS, 0, 0);
+	return tx_timer_create(&wlanStaPs.nullTimer, "NullPktDoneTmr", wlanPsApNullPktDoneTimerCb, 0,
+			       WLAN_STA_PS_NULL_TICKS, 0, 0);
+}
+
+/* 0x16606: a beacon from the access point. */
+void wlanStaPsBeaconSeen(struct WlanConnection *connection, const void *beacon, int dtimOnly)
+{
+	int bits;
+	int dtim;
+
+	wlanStaPs.wakeTimerArmed++;
+	if (!wlanPsEnabled())
+		return;
+	bits = wlanPsResetDescriptor(connection, beacon);
+	dtim = bits & 2;
+	bits &= 9;
+	if (dtimOnly != 0) {
+		if (dtim == 0)
+			return;
+		bits = 0;
+	}
+	wlanPsApplyEntry(connection, bits, dtim, 0);
+}
+
+/* 0x16646 */
+void wlanStaPsReset(void)
+{
+	osaSemaphoreRelease(wlanPsResetDone);
+	romHsmStart(&wlanStaPs, &wlanStaPs.active);
+	wlanPsDataPending = 0;
+	wlanPsIeeeFlag = 0;
+	wlanTxPowerSaveCount = 0;
+	wlanPsHoldSeconds = 30;
+}
+
+static inline __attribute__((always_inline)) unsigned int wlanPsHostConfigValue(const uint8_t *value)
+{
+	return value[1] << 8 | value[0];
+}
+
+/* 0x166b8: the host's power-save parameters. */
+void wlanStaPsLoadHostConfig(void)
+{
+	unsigned int value;
+
+	value = wlanPsHostConfigValue(wlanPsHostConfig.dtimPolicy);
+	if (value != 0 && (value <= 5 || value >= 0xfffd))
+		wlanPsDtimPolicy = value;
+	value = wlanPsHostConfigValue(wlanPsHostConfig.holdSeconds);
+	if (value != 0)
+		wlanPsHoldSeconds = value;
+	value = wlanPsHostConfigValue(wlanPsHostConfig.nullWindow);
+	if (value != 0)
+		wlanPsNullWindow = value;
+	wlanPsHeaderSpacing = wlanPsHostConfigValue(wlanPsHostConfig.headerSpacing);
+	wlanPsPollWindow = wlanPsHostConfigValue(wlanPsHostConfig.pollWindow);
+	if (wlanPsHostMode == 0)
+		wlanPsBtShareMode = wlanPsHostConfigValue(wlanPsHostConfig.btShare) == 2;
+}
+
+/* 0x16724: tell the host of the wake-up or the sleep once, or again when forced. */
+void wlanStaPsTellHost(struct WlanConnection *connection, uint32_t event, int force)
+{
+	if (event != wlanPsLastHostEvent || force != 0)
+		wlanPostConnectionEvent(connection, event);
+	wlanPsLastHostEvent = event;
+}
+
+/* 0x1673e: into the periodic states with PM=1 already set. */
+void wlanStaPsStartPeriodic(struct WlanStaPsMachine *machine)
+{
+	struct WlanConnection *connection = machine->connection;
+	uint64_t now;
+
+	wlanPsSetPowerState(5);
+	wlanPsPeriodWakes = 0;
+	wlanPsHostBusy = 0;
+	wlanPsCalibrations = 0;
+	wlanPsPeriodSleeps = 0;
+	wlanPsPeriodMisses = 0;
+	wlanPsPeriodAborts = 0;
+	wlanPsConfirmArmed = 0;
+	if (macTxGetPowerSave() == 0)
+		wlanStaPsSendNull(connection, 1);
+	now = romGetTimerTimestamp();
+	machine->periodWake = now;
+	machine->lastCalibration = now;
+	macMgmtValidateTable(4);
+	wlanPsEvaluate(connection, 0);
+	wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
+}
+
+/* 0x1679a: into the periodic states from Active. */
+void wlanStaPsBeginPeriodic(struct WlanStaPsMachine *machine)
+{
+	struct WlanConnection *connection;
+	uint64_t now;
+
+	wlanPsPeriodWakes = 0;
+	wlanPsHostBusy = 0;
+	wlanPsCalibrations = 0;
+	wlanPsPeriodSleeps = 0;
+	wlanPsPeriodMisses = 0;
+	wlanPsPeriodAborts = 0;
+	wlanPsConfirmArmed = 0;
+	connection = machine->connection;
+	wlanStaPsSendNull(connection, 1);
+	now = romGetTimerTimestamp();
+	machine->periodWake = now;
+	machine->lastCalibration = now;
+	wlanPsEvaluate(connection, 0);
+}
+
+/* 0x167d8 */
+void wlanStaPsInitStates(struct WlanStaPsMachine *machine)
+{
+	romHsmStateInit(&machine->root, NULL, (RomHsmHandler)wlanStaPsRoot);
+	romHsmStateInit(&machine->active, &machine->root, (RomHsmHandler)wlanStaPsActive);
+	romHsmStateInit(&machine->powerSave, &machine->root, (RomHsmHandler)wlanStaPsPowerSave);
+	romHsmStateInit(&machine->ieee, &machine->root, (RomHsmHandler)wlanStaPsIeee);
+	romHsmStateInit(&machine->ieeeNull, &machine->ieee, (RomHsmHandler)wlanStaPsIeeeNull);
+	romHsmStateInit(&machine->ieeeExit, &machine->ieee, (RomHsmHandler)wlanStaPsIeeeExit);
+	romHsmStateInit(&machine->enter, &machine->powerSave, (RomHsmHandler)wlanStaPsEnter);
+	romHsmStateInit(&machine->sleep, &machine->powerSave, (RomHsmHandler)wlanStaPsSleep);
+	romHsmStateInit(&machine->confirm, &machine->powerSave, (RomHsmHandler)wlanStaPsConfirm);
+	romHsmStateInit(&machine->periodicIeeeNull, &machine->ieee,
+			(RomHsmHandler)wlanStaPsPeriodicIeeeNull);
+	romHsmStateInit(&machine->periodicIeeeExit, &machine->ieee,
+			(RomHsmHandler)wlanStaPsPeriodicIeeeExit);
+	romHsmStateInit(&machine->periodicSleep, &machine->powerSave,
+			(RomHsmHandler)wlanStaPsPeriodicSleep);
+	romHsmStateInit(&machine->periodic, &machine->powerSave, (RomHsmHandler)wlanStaPsPeriodic);
+	romHsmStateInit(&machine->periodicEnter, &machine->powerSave,
+			(RomHsmHandler)wlanStaPsPeriodicEnter);
+}
+
+/* 0x168fe */
+uint32_t wlanPsGetOverride(void)
+{
+	return wlanPsOverride;
 }

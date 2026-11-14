@@ -64,8 +64,6 @@ unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int wlanWmmEnabled(void);				/* 0x41cb8 */
 int macTxNotifyScheduleTable(struct WlanConnection *connection, void *data); /* 0x31ae8 */
 int macTxNotifyQueryTable(OsaBuffer *buffer);		/* 0x3199e */
-void wlanPsSleepConfirmTimerCb(ULONG input);		/* 0x16e86 */
-void wlanPsApNullPktDoneTimerCb(ULONG input);		/* 0x16b0a */
 
 static inline __attribute__((always_inline)) struct WlanPsSleep *wlanPsSleepOf(struct WlanConnection *connection)
 {

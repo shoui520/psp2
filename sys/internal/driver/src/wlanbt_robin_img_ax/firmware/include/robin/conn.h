@@ -482,6 +482,7 @@ unsigned int wlanRaiseEvent(unsigned int bit);
 int wlanRoleOtherOnly(void);
 int wlanRoleIbssOnly(void);
 int wlanPsEnabled(void);
+extern uint32_t wlanPsOverride;
 int wlanPsDisabled(void);
 int wlanIbssPsEnabled(void);
 int wlanApPsEnabled(void);

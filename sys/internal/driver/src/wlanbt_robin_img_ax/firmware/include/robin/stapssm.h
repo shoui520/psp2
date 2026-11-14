@@ -36,7 +36,7 @@ struct WlanStaPsMachine {
 	struct RomHsmState confirm;
 	struct RomHsmState periodicSleep;
 	struct RomHsmState periodic;
-	struct RomHsmState state136;
+	struct RomHsmState periodicEnter;
 	struct RomHsmState periodicIeeeNull;
 	struct RomHsmState periodicIeeeExit;
 	uint32_t sleepRequested;	/* event 23: the MAC may sleep for the period */
@@ -90,6 +90,17 @@ _Static_assert(offsetof(struct WlanStaPsMachine, connection) == 380, "station PS
 _Static_assert(sizeof(struct WlanStaPsMachine) == 384, "station PS machine");
 
 extern struct WlanStaPsMachine wlanStaPs;
+
+/* The host's power-save parameters (0x568be), little-endian 16-bit values. */
+struct WlanPsHostConfig {
+	uint8_t holdSeconds[2];		/* wlanPsHoldSeconds */
+	uint8_t dtimPolicy[2];		/* wlanPsDtimPolicy: 1..5 or 0xfffd.. */
+	uint8_t nullWindow[2];
+	uint8_t headerSpacing[2];
+	uint8_t reserved8[2];
+	uint8_t btShare[2];		/* 2: wlanPsBtShareMode */
+	uint8_t pollWindow[2];
+};
 
 /* The station's power-save state (0x54aa8..0x54b40). */
 extern uint8_t wlanPsBtShareMode;
@@ -159,5 +170,20 @@ void wlanPsPollFrameReceived(struct WlanConnection *connection, int moreData, in
 const int32_t *wlanStaPsPeriodicIeeeExit(struct WlanStaPsMachine *machine, const int32_t *event);
 const int32_t *wlanStaPsPeriodicIeeeNull(struct WlanStaPsMachine *machine, const int32_t *event);
 const int32_t *wlanStaPsPeriodicSleep(struct WlanStaPsMachine *machine, const int32_t *event);
+const int32_t *wlanStaPsPeriodic(struct WlanStaPsMachine *machine, const int32_t *event);
+const int32_t *wlanStaPsPeriodicEnter(struct WlanStaPsMachine *machine, const int32_t *event);
+UINT wlanStaPsCreate(void);
+void wlanStaPsBeaconSeen(struct WlanConnection *connection, const void *beacon, int dtimOnly);
+void wlanStaPsReset(void);
+void wlanStaPsLoadHostConfig(void);
+void wlanStaPsTellHost(struct WlanConnection *connection, uint32_t event, int force);
+void wlanStaPsStartPeriodic(struct WlanStaPsMachine *machine);
+void wlanStaPsBeginPeriodic(struct WlanStaPsMachine *machine);
+void wlanStaPsInitStates(struct WlanStaPsMachine *machine);
+uint32_t wlanPsGetOverride(void);
+
+/* Not converted yet; provisional names. */
+void wlanPsSleepConfirmTimerCb(ULONG input);		/* 0x16e86 */
+void wlanPsApNullPktDoneTimerCb(ULONG input);		/* 0x16b0a */
 
 #endif /* ROBIN_STAPSSM_H */
