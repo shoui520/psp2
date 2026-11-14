@@ -421,6 +421,8 @@ def references(e):
 	for sec, place, code, (name, value, shndx, bind) in sorted(e.relocs(), key=lambda r: r[1]):
 		if sec in (".sceModuleInfo.rodata", ".ARM.exidx", ".ARM.extab"):
 			continue			# segment offsets and PREL31 (handled by move())
+		if code == 0:
+			continue			# R_ARM_NONE: ld's leftover of a merged .eh_frame CIE
 		if shndx == SHN_UNDEF:
 			if bind != 2 or value:
 				raise SystemExit(f"mkprx: undefined {name} at {place:#x}")
