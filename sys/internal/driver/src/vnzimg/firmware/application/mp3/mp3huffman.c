@@ -106,16 +106,16 @@ static int codeMatches(uint32_t entry, uint32_t window)
  * code's top 4 bits, else a search of their range, else the neighbour the
  * search ended next to.
  */
-static uint32_t huffmanLookup(const Mp3HuffmanTable *table, uint32_t window)
+static uint32_t huffmanLookup(const uint32_t *entries, const uint8_t *index, uint32_t window)
 {
 	uint32_t top = window >> 28, key = (window & ~0x1fff) | 0x1ff;
-	const uint32_t *entry = &table->entries[table->index[top]];
+	const uint32_t *entry = &entries[index[top]];
 	int32_t count = 0, step, backward = 0;
 
 	if (codeMatches(*entry, window))
 		return *entry;
 	if (top != 15)
-		count = table->index[top + 1] - table->index[top];
+		count = index[top + 1] - index[top];
 	while (count >= 2) {
 		step = count >> 1;
 		if (!backward) {
@@ -142,9 +142,10 @@ static uint32_t huffmanLookup(const Mp3HuffmanTable *table, uint32_t window)
 }
 
 /* a code from the reservoir; its value is in the low 8 bits */
-static uint32_t huffmanRead(Mp3Reservoir *reservoir, const Mp3HuffmanTable *table)
+static uint32_t huffmanRead(Mp3Reservoir *reservoir, const uint32_t *entries,
+	const uint8_t *index)
 {
-	uint32_t entry = huffmanLookup(table, reservoirPeek(reservoir));
+	uint32_t entry = huffmanLookup(entries, index, reservoirPeek(reservoir));
 
 	mp3ReservoirSkip(reservoir, (entry >> 8) & 31);
 	return entry;
@@ -157,22 +158,23 @@ static int32_t signRead(Mp3Reservoir *reservoir, int32_t value)
 	return value;
 }
 
-/* count big values, two a code */
-static void huffmanPairs(int32_t *out, Mp3Reservoir *reservoir, const Mp3HuffmanTable *table,
+/* 0x874ca4: count big values, two a code, from a table's entries, index and linbits */
+static __attribute__((noinline, noclone)) void huffmanPairs(int32_t *out,
+	Mp3Reservoir *reservoir, const uint32_t *entries, const uint8_t *index, int32_t linbits,
 	int32_t count)
 {
 	int32_t i, x, y;
 	uint32_t entry;
 
 	for (i = 0; i < count; i += 2) {
-		entry = huffmanRead(reservoir, table);
+		entry = huffmanRead(reservoir, entries, index);
 		x = (entry >> 4) & 15;
 		y = entry & 15;
-		if (x == 15 && table->linbits >= 1)
-			x += mp3ReservoirRead(reservoir, table->linbits);
+		if (x == 15 && linbits >= 1)
+			x += mp3ReservoirRead(reservoir, linbits);
 		x = signRead(reservoir, x);
-		if (y == 15 && table->linbits >= 1)
-			y += mp3ReservoirRead(reservoir, table->linbits);
+		if (y == 15 && linbits >= 1)
+			y += mp3ReservoirRead(reservoir, linbits);
 		y = signRead(reservoir, y);
 		out[0] = x;
 		out[1] = y;
@@ -181,13 +183,13 @@ static void huffmanPairs(int32_t *out, Mp3Reservoir *reservoir, const Mp3Huffman
 }
 
 /* count1 quadruples until the granule's part 2 and 3 end */
-static void huffmanQuads(int32_t *out, Mp3Reservoir *reservoir, const Mp3HuffmanTable *table,
-	uint32_t *count, int32_t end)
+static inline void huffmanQuads(int32_t *out, Mp3Reservoir *reservoir,
+	const uint32_t *entries, const uint8_t *index, uint32_t *count, int32_t end)
 {
 	uint32_t value;
 
 	while (reservoir->bitCount < end && *count < COUNT1_LAST) {
-		value = (huffmanRead(reservoir, table) >> 4) & 15;
+		value = (huffmanRead(reservoir, entries, index) >> 4) & 15;
 		out[0] = signRead(reservoir, (value >> 3) & 1);
 		out[1] = signRead(reservoir, (value >> 2) & 1);
 		out[2] = signRead(reservoir, (value >> 1) & 1);
@@ -195,6 +197,14 @@ static void huffmanQuads(int32_t *out, Mp3Reservoir *reservoir, const Mp3Huffman
 		out += 4;
 		*count += 4;
 	}
+}
+
+/* count big values from the table table_select names */
+static inline void pairsOfTable(int32_t *out, Mp3Reservoir *reservoir, uint32_t table,
+	int32_t count)
+{
+	huffmanPairs(out, reservoir, mp3HuffmanEntries[table], mp3HuffmanIndex[table],
+		mp3HuffmanLinbits[table], count);
 }
 
 static int tableInvalid(uint8_t table)
@@ -211,7 +221,7 @@ int32_t mp3Huffman(Mp3Decoder *decoder, uint32_t ch, uint32_t gr, int32_t part2,
 	int32_t end = decoder->granuleStart + granule->part23Length;
 	Mp3Reservoir *reservoir = &decoder->reservoir;
 	int32_t count, region1, region2, i;
-	uint32_t nonzero = 0;
+	uint32_t nonzero = 0, table;
 
 	if (granule->part23Length - part2 < 0)
 		return MP3_STATUS_PART2_3;
@@ -249,21 +259,19 @@ int32_t mp3Huffman(Mp3Decoder *decoder, uint32_t ch, uint32_t gr, int32_t part2,
 				region1 = count;
 			}
 		}
-		huffmanPairs(xr, reservoir, &mp3HuffmanTables[granule->tableSelect[0]], region1);
+		pairsOfTable(xr, reservoir, granule->tableSelect[0], region1);
 		if (granule->windowSwitching && granule->blockType == MP3_BLOCK_SHORT) {
-			huffmanPairs(xr + region1, reservoir,
-				&mp3HuffmanTables[granule->tableSelect[1]], count - region1);
+			pairsOfTable(xr + region1, reservoir, granule->tableSelect[1], count - region1);
 		} else {
-			huffmanPairs(xr + region1, reservoir,
-				&mp3HuffmanTables[granule->tableSelect[1]], region2 - region1);
-			huffmanPairs(xr + region2, reservoir,
-				&mp3HuffmanTables[granule->tableSelect[2]], count - region2);
+			pairsOfTable(xr + region1, reservoir, granule->tableSelect[1], region2 - region1);
+			pairsOfTable(xr + region2, reservoir, granule->tableSelect[2], count - region2);
 		}
 		nonzero = count;
 	}
 
-	huffmanQuads(xr + nonzero, reservoir,
-		&mp3HuffmanTables[MP3_COUNT1_TABLE + granule->count1TableSelect], &nonzero, end);
+	table = MP3_COUNT1_TABLE + granule->count1TableSelect;
+	huffmanQuads(xr + nonzero, reservoir, mp3HuffmanEntries[table], mp3HuffmanIndex[table],
+		&nonzero, end);
 	/* the last quadruple read past the end is dropped */
 	if ((uint32_t)end < (uint32_t)reservoir->bitCount) {
 		mp3ReservoirRewind(reservoir, reservoir->bitCount - end);

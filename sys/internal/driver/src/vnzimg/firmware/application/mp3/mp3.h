@@ -255,12 +255,6 @@ typedef struct Mp3Handle {
 	uint32_t reserved3[11];
 } Mp3Handle;
 
-typedef struct Mp3HuffmanTable {
-	const uint32_t *entries;
-	uint8_t index[16];		/* the first entry by the code's top 4 bits */
-	int8_t linbits;
-} Mp3HuffmanTable;
-
 /* the scale factor bands of a sampling rate */
 typedef struct Mp3BandWidths {
 	const uint8_t *longWidths;	/* 22 */
@@ -274,7 +268,9 @@ typedef struct Mp3BandBounds {
 } Mp3BandBounds;
 
 /* mp3tables.c */
-extern const Mp3HuffmanTable mp3HuffmanTables[MP3_HUFFMAN_TABLES];
+extern const uint8_t mp3HuffmanIndex[MP3_HUFFMAN_TABLES][16];
+extern const uint32_t *const mp3HuffmanEntries[MP3_HUFFMAN_TABLES];
+extern const int8_t mp3HuffmanLinbits[MP3_COUNT1_TABLE];
 extern const Mp3BandWidths mp3BandWidths[9];
 extern const Mp3BandBounds mp3BandBounds[9];
 extern const uint32_t mp3SamplingRates[3];
