@@ -48,6 +48,7 @@ int _WFrprep(FILE *str);
 int _Fwprep(FILE *str);
 int _WFwprep(FILE *str);
 long _Fgpos(FILE *str, fpos_t *ptr);
+int _Fspos(FILE *str, const fpos_t *ptr, long long off, int way);
 FILE *_Foprep(const char *filename, const char *mods, FILE *str, _FD_TYPE fd, int share,
 	      int reopen);
 
