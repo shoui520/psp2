@@ -32,6 +32,10 @@
 #define SOC_SLEEP_MEASURE_CONTROL REG32(0x800020a8)	/* bit 15: measuring */
 #define SOC_POWER_CONTROL	REG32(0x80002210)	/* bit 27: awake */
 #define SOC_EVENT_ENGINE_GATE	REG32(0x80002090)
+/* The register file around the event engine; the offsets are the hardware's, no names are known. */
+#define SOC_REG(offset)		REG32(0x80002000u + (offset))
+/* The second block of peripheral registers (0x90000000); the same. */
+#define PERIPH_REG(offset)	REG32(0x90000000u + (offset))
 
 /* The original firmware stores this hardware base in a single data word. */
 extern volatile void *sysEventRegisterBase;

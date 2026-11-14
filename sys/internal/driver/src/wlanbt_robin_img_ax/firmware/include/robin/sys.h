@@ -92,8 +92,6 @@ int osaCancelTimer(uint32_t timer);
 uint32_t sysServiceEventInterrupts(void);
 int sysDisableEventSources(uint32_t sources);
 uint32_t sysUpdateEventDeadline(void);
-int sysHandlePrimaryEvent(void);
-int sysHandleSecondaryEvent(void);
 uint32_t sysSetEventFlags(uint32_t flags);
 uint32_t sysClearEventFlags(uint32_t flags);
 uint32_t sysSetSecondaryEventFlags(uint32_t flags);
@@ -154,10 +152,8 @@ void sysDispatchMiddleEventBits(uint32_t events);
 void sysDispatchHighEventBits(uint32_t events);
 void sysDispatchEventSource(uint32_t index, uint32_t sources, uint32_t flags);
 uint32_t sysGetEventSourceMapping(uint32_t index);
-int sysHandleMappedEventSource(uint32_t index, uint32_t dispatch);
 int sysEventEngineIsActive(void);
 int sysPrepareEventDeadline(void);
-int sysProcessEventQueues(uint32_t events);
 uint32_t sysStopEventEngine(void);
 extern uint32_t sysForceEventDispatch;
 
@@ -191,6 +187,8 @@ void sysLogStatistic(unsigned int id, uint32_t value, uint32_t extra);
 
 /* boot/reset.S: spins for the given number of loop iterations. */
 int robinDelayLoop(int iterations);
+/* boot/reset.S: waits for an interrupt (CP15 c7, c0, 4). */
+void robinCpuWaitForInterrupt(void);
 /* The bus clock in MHz, kept in SQRAM. */
 extern uint32_t sysClockFrequency;		/* SQRAM 0xc0011b24 */
 

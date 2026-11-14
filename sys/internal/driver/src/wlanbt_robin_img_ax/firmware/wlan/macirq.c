@@ -31,6 +31,7 @@
 #include "robin/stapssm.h"
 #include "robin/subscribe.h"
 #include "robin/sync.h"
+#include "robin/eventpower.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
@@ -112,12 +113,10 @@ extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
 extern struct OsaEventFlags *macMgmtEventFlags;							/* 0x55138 */
 extern struct OsaEventFlags *macTxNotifyEventFlags;						/* 0x04000180 */
 
-void btSdioHciSelectFrame(int selected);							/* 0x245ac */
 void hostCmd0074Arm(void);									/* 0x311ee */
 void wlanMacSleepDone(void);									/* 0x1caa6 */
 void wlanMacReset(void);									/* 0x1ca28 */
 extern uint8_t wlanPrimaryEvents;								/* 0x04008828, bit 0: radio on */
-extern struct OsaEventFlags *wlanHostSleepFlags;						/* 0x54bdc */
 
 /* The ring (entry) of the last beacon event, and what the handler counts. */
 uint8_t wlanMacRing __attribute__((section(".itcm.rw")));				/* 0x54c30 */
@@ -471,7 +470,7 @@ void wlanMacEvents(int line, uint32_t pending)
 /* Line 10: the MAC has something to report, unless the coexistence mask keeps it. */
 int wlanMacIrq(int line, uint32_t pending)
 {
-	if (!wlanCoexFeatureEnabled(16)) {
+	if (!sysSleepVotesAllowed(16)) {
 		SOC_IRQ_ENABLE_CLEAR = 1u << 10;
 		wlanMacEvents(line, pending);
 	}
@@ -514,7 +513,7 @@ void wlanMacFlush(void)
 void wlanMacSleepExit(void)
 {
 	sleepExit();
-	btSdioHciSelectFrame(0);
+	btSdioSetEnabled(0);
 	if (wlanRoleOtherOnly() && wlanPsEnabled() && (wlanHostSleepArmed() || wlanPsSessionOpen()) &&
 	    !wlanApPsEnabled()) {
 		if (wlanHostSleepArmed())
@@ -558,7 +557,7 @@ void wlanMacRestart(void)
 	if (wlanRoleOtherOnly() && wlanPsEnabled() && wlanPsDtimPolicy != 0xffff)
 		wlanApPsEnabled();
 	sleepExit();
-	btSdioHciSelectFrame(0);
+	btSdioSetEnabled(0);
 	if (wlanConnectionByRole(0) != NULL)
 		wlanPsVerifyFrame(2);
 	if (wlanRoleOtherOnly() && wlanPsEnabled() && (wlanHostSleepArmed() || wlanPsSessionOpen()) &&

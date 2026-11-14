@@ -191,7 +191,6 @@ void wlanCoexCancelCycleTimer(void);
  * Not converted yet. The names say what this file uses them for and are
  * provisional until their own files are written.
  */
-int wlanCoexFeatureEnabled(uint32_t features);		/* 0x23d54 */
 int btCoexLinkIsActive(void);				/* 0x2453a */
 int btCoexLinkIsStarting(void);				/* 0x2454e */
 uint32_t btCoexProfileBit1(void);			/* 0x2450a */

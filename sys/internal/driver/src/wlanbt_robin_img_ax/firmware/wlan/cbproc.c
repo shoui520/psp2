@@ -29,6 +29,7 @@
 #include "robin/soc.h"
 #include "robin/subscribe.h"
 #include "robin/sync.h"
+#include "robin/eventpower.h"
 #include "robin/sys.h"
 #include "robin/task.h"
 #include "robin/threadx.h"
@@ -96,7 +97,6 @@ void wlanPsVerifyTable(void);								/* 0x3c07c */
 void wlanPsApplyBuffer(void);								/* 0x3c686 */
 void wlanPsApplyHeader(void);								/* 0x3e0c0 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
-int btSdioHciSelectFrame(int selector);							/* 0x245ac */
 void wpaSuppClearQueue(struct WlanConnection *connection, unsigned int events);	/* 0x2ceb4 */
 void wpaSuppResolveQueue(struct WlanConnection *connection, unsigned int event);	/* 0x2c9ce */
 void macMgmtSyncHeader(struct WlanConnection *connection);				/* 0x3b4d2 */
@@ -113,7 +113,6 @@ extern uint8_t hostCmdBusy;								/* 0x54b8c */
 extern OsaBuffer *hostCmdResponse;							/* 0x54b9c */
 extern uint32_t hostCmdMacAwake;							/* 0x54ba4 */
 extern struct WlanDriverQueue wlanDriverQueue1;
-extern struct OsaEventFlags *wlanHostSleepFlags;					/* 0x54bdc */
 extern uint32_t wlanPsSavedDtimPolicy;							/* 0x54b58 */
 
 /*
@@ -378,7 +377,7 @@ static void cbProcHostSleepEnter(struct WlanConnection *connection)
 	hostCmdUnlock();
 	wlanMacFlush();
 	macMgmtValidateTable(7);
-	btSdioHciSelectFrame(1);
+	btSdioSetEnabled(1);
 	if (wlanPsIdleSleep() != 0)
 		return;
 	wlanPsHostAwakeAnnounce(connection);

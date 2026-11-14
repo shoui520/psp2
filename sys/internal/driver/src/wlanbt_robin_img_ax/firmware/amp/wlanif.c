@@ -17,6 +17,7 @@
 #include "robin/task.h"
 #include "robin/wlan.h"
 #include "robin/sleep.h"
+#include "robin/eventpower.h"
 
 /* Link-control messages the AMP side sends through the "btamp_pal" device. */
 enum {

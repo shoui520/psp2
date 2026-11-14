@@ -14,6 +14,7 @@
 #include "robin/threadx.h"
 #include "robin/event.h"
 #include "robin/rf.h"
+#include "robin/eventpower.h"
 
 #define BIT(n)	(1u << (n))
 

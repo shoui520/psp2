@@ -17,6 +17,7 @@
 #include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/rom.h"
+#include "robin/eventpower.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
 
@@ -139,7 +140,7 @@ void wlanCoexAccountWake(void)
 
 void wlanCoexEndBtWindow(void)
 {
-	if (wlanCoexFeatureEnabled(16)) {
+	if (sysSleepVotesAllowed(16)) {
 		if (wlanCoex.request >> 8)
 			wlanPsSetPowerState(3);
 		return;

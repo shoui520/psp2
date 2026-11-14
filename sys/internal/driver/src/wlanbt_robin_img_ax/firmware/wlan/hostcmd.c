@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/eventpower.h"
 #include "robin/hostps.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
@@ -450,7 +451,6 @@ void hostCmd0096Disable(void);							/* 0x26c5a */
 unsigned int hostCmd0096Get(void);						/* 0x26c5c */
 void hostCmd0096Track(void);							/* 0x31222 */
 int hostCmd00a9Shutdown(void);							/* 0x1be44 */
-void hostCmd00a9Reset(void);							/* 0x24590 */
 void pmicRegWrite(uint8_t reg, uint8_t value);					/* 0x3121c */
 uint8_t pmicRegRead(uint8_t reg);						/* 0x3121e */
 int hostCmd00af(struct WlanConnection *connection);				/* 0x38608 */

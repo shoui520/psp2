@@ -49,6 +49,7 @@ uint64_t romLibRecordState(uint32_t reference);	/* 0x03f3a76f: the current 64-bi
 void romLibProcessContext(void *timing);	/* 0x03f3a7e3 */
 void romLibNotifyState(void);			/* 0x03f3a551 */
 uint64_t romMul64x32(uint64_t value, uint32_t factor);	/* 0x03f3f3ac (ARM) */
+uint64_t romMul32x32(uint32_t a, uint32_t b);		/* 0x03f3f3b4 (ARM) */
 int romEdcaSetCwMin(unsigned int queue, unsigned int value);	/* 0x03f3a62f */
 int romEdcaSetCwMax(unsigned int queue, unsigned int value);	/* 0x03f3a643 */
 int romEdcaSetAifsn(unsigned int queue, unsigned int value);	/* 0x03f3a665 */
