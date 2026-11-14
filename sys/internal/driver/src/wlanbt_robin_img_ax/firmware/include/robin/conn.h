@@ -10,7 +10,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/btrom.h"
 #include "robin/buffer.h"
+#include "robin/threadx.h"
 
 /*
  * The 37 bytes in front of a frame sent through the WLAN SDIO device: the
@@ -66,12 +68,98 @@ struct WlanApPsQueue {
 	struct WlanApPsEntry *tail;
 };
 
+/*
+ * The power-save state machine of a connection (wlan/pssm.c), driven
+ * through mdevRomQueryState(). Off: power save is off; On: it is on, Confirm
+ * (the host and the peers are told), Sleep and Awake below it; Ieee: the
+ * 802.11 power-management exchange of null frames, IeeeNull and IeeeExit
+ * below it.
+ */
+struct WlanPsMachine {
+	struct RomHsmState *state;	/* current state */
+	struct RomHsmState root;
+	struct RomHsmState off;
+	struct RomHsmState on;
+	struct RomHsmState confirm;
+	struct RomHsmState sleep;
+	struct RomHsmState awake;
+	struct RomHsmState ieee;
+	struct RomHsmState ieeeNull;
+	struct RomHsmState ieeeExit;
+	TX_TIMER confirmTimer;		/* "SleepConfirmTmr": the host's sleep confirmation */
+	uint32_t awakeReportDue;	/* tell the host when awake (event 0x1000) */
+	uint32_t sleepReportDue;	/* tell the host before sleeping (event 0x2000) */
+	uint32_t announced;		/* the sleep announcement went out, or none is needed */
+	uint32_t hostConfirmed;		/* the host confirmed the sleep */
+	uint32_t sleepBlocked;		/* traffic: do not sleep */
+	uint32_t nullAcked;		/* the power-management null frame is done */
+	uint32_t txPending;		/* frames are waiting to be sent */
+	uint8_t nullRetries;
+	uint8_t nullFailed;
+	uint8_t reserved186[2];
+	TX_TIMER nullTimer;		/* "AP_NullPktDoneTmr" */
+	struct RomHsmState *resume;	/* where IeeeNull and IeeeExit return to */
+	uint8_t ieeeState;		/* 1: PM=1 sent, 2: PM=0 sent, 3: gave up */
+	uint8_t ieeeTries;
+	uint8_t eventPending;		/* control-task event 17 is owed */
+	uint8_t reserved239;
+	uint32_t wakeBits;		/* macTxAcquireWakeBit() */
+	struct WlanConnection *connection;
+	uint8_t reserved248[4];
+};
+
+_Static_assert(offsetof(struct WlanPsMachine, confirmTimer) == 112, "PS confirm timer");
+_Static_assert(offsetof(struct WlanPsMachine, nullTimer) == 188, "PS null timer");
+_Static_assert(offsetof(struct WlanPsMachine, resume) == 232, "PS resume state");
+_Static_assert(offsetof(struct WlanPsMachine, connection) == 244, "PS connection");
+_Static_assert(sizeof(struct WlanPsMachine) == 252, "PS machine");
+
+/* WlanPsSleep.mode */
+#define WLAN_PS_SLEEP_INACTIVITY	1	/* sleep after the inactivity timeout */
+#define WLAN_PS_SLEEP_DTIM		2	/* sleep between DTIM beacons */
+
+/* When the device sleeps (the host's sleep parameters, times in us). */
+struct __attribute__((packed, aligned(4))) WlanPsSleep {
+	uint8_t recentActivity;		/* the inactivity timer runs */
+	uint8_t sleepAllowed;
+	uint8_t sleepTimerArmed;
+	uint8_t reserved3;
+	uint16_t mode;			/* WLAN_PS_SLEEP_* */
+	uint8_t reserved6[2];
+	uint32_t sleepDuration;
+	uint32_t wakeLatency;		/* the longest wake-up seen */
+	uint64_t wakeAt;
+	uint64_t sleptAt;
+	uint64_t lastActivity;
+	uint64_t tbttReference;		/* when beacon count 0 was due */
+	uint64_t tsfReference;
+	uint32_t dtimCount;		/* beacons to the next DTIM at tbttReference */
+	uint16_t beaconPeriod;		/* TU */
+	uint8_t reserved62[2];
+	uint32_t beaconInterval;
+	uint32_t sleepTimer;		/* osaCreateTimer() handles */
+	uint32_t activityTimer;
+	uint32_t control;		/* bit 0: announce the sleep */
+	uint32_t minSleep;
+	uint32_t maxSleep;
+	uint32_t inactivityTimeout;
+	uint32_t minAwake;
+	uint32_t maxAwake;
+};
+
+_Static_assert(offsetof(struct WlanPsSleep, wakeAt) == 16, "PS wake time");
+_Static_assert(offsetof(struct WlanPsSleep, tbttReference) == 40, "PS TBTT reference");
+_Static_assert(offsetof(struct WlanPsSleep, sleepTimer) == 68, "PS sleep timer");
+_Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
+
 /* Per-association information of a station or access point connection (partial). */
 struct WlanConnectionInfo {
 	uint8_t reserved0[31];
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
-	uint8_t reserved33[35];
+	uint8_t reserved33[3];
+	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
+	uint8_t reserved40[28];
 	uint32_t securityEnabled;	/* nonzero: securityParams apply */
 	uint8_t securityParams[28];
 	uint8_t securityState[256];
@@ -103,12 +191,8 @@ struct WlanConnectionInfo {
 	uint8_t reserved780[104];
 	uint32_t listenInterval;	/* the peer is in power save */
 	uint32_t listenIntervalPs;	/* the same with WMM power save */
-	uint8_t reserved892[252];
-	uint8_t groupDeliveryBusy;
-	uint8_t reserved1145[3];
-	uint16_t groupDeliveryMode;	/* 2: group frames may wake the host side */
-	uint8_t reserved1150[70];
-	uint32_t groupDeliveryFlags;	/* bit 0: data frames follow the group frames */
+	struct WlanPsMachine psMachine;
+	struct WlanPsSleep sleep;
 };
 
 struct WlanSubscribeEvents;
@@ -195,7 +279,7 @@ struct WlanConnection {
 	uint8_t reserved115;
 	uint8_t networkSsid[32];	/* the SSID of the IBSS started */
 	uint8_t networkSsidLength;
-	uint8_t listenIntervalBase;	/* an unauthenticated peer's listen interval is 2n + 1 */
+	uint8_t dtimPeriod;		/* beacons per DTIM; an unauthenticated peer is held to 2n + 1 */
 	uint16_t beaconPeriod;		/* TU, of the IBSS started or joined */
 	uint8_t localAddress[6];
 	uint8_t reserved2[14];
@@ -298,8 +382,9 @@ _Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OL
 _Static_assert(offsetof(struct WlanConnectionInfo, bssStarted) == 760, "info BSS started");
 _Static_assert(offsetof(struct WlanConnectionInfo, listenInterval) == 884, "info listen interval");
 _Static_assert(offsetof(struct WlanConnectionInfo, groupQueue) == 768, "info group queue");
-_Static_assert(offsetof(struct WlanConnectionInfo, groupDeliveryMode) == 1148, "info group delivery");
-_Static_assert(offsetof(struct WlanConnectionInfo, groupDeliveryFlags) == 1220, "info group delivery flags");
+_Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS machine");
+_Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
+_Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");

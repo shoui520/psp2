@@ -10,6 +10,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/pssm.h"
 #include "robin/apps.h"
 #include "robin/conn.h"
 #include "robin/list.h"
@@ -77,8 +78,6 @@ void macMgmtInspectPacket(struct WlanConnection *connection, unsigned int aid, i
 unsigned int macTxNotifyParseTable(unsigned int ring);			/* 0x318cc */
 int macTxNotifyQueryTable(OsaBuffer *buffer);				/* 0x3199e */
 int macTxNotifyComputeTable(OsaBuffer *buffer);				/* 0x31952 */
-void macTxApplyConfig(struct WlanConnection *connection);		/* 0x13978 */
-void macTxQueryConfig(struct WlanConnection *connection);		/* 0x1365a */
 int wpaSuppPrepareDescriptor(OsaBuffer *buffer);			/* 0x1891a */
 void cbProcPrepareFrame(struct WlanConnection *connection, unsigned int more,
 			unsigned int tid);				/* 0x1ea6c */
@@ -360,9 +359,9 @@ void wlanApPsSendGroup(struct WlanConnection *connection, int dtim)
 	uint8_t *data;
 
 	if (dtim) {
-		if (wlanApPsEnabled() && info->groupDeliveryMode == 2 && macTxPoolsIdle() &&
-		    info->groupDeliveryBusy == 0) {
-			if (info->groupDeliveryFlags & 1) {
+		if (wlanApPsEnabled() && info->sleep.mode == WLAN_PS_SLEEP_DTIM && macTxPoolsIdle() &&
+		    info->sleep.recentActivity == 0) {
+			if (info->sleep.control & 1) {
 				if (info->dataAllowed)
 					dataFollows = 1;
 			} else {
@@ -390,7 +389,7 @@ void wlanApPsSendGroup(struct WlanConnection *connection, int dtim)
 			room--;
 	}
 	if (dataFollows && room != 0)
-		macTxApplyConfig(connection);
+		wlanPsAnnounceSleep(connection);
 }
 
 /* 0x12d9a: the peer entered (1) or left (0) power save. */
@@ -636,7 +635,7 @@ int wlanTxHoldForPeer(OsaBuffer *buffer, struct WlanConnection *connection)
 		goto queued;
 	failed = 1;
 	if (wlanApPsEnabled())
-		macTxQueryConfig(wlanConnectionByRole(2));
+		wlanPsActivity(wlanConnectionByRole(2));
 	goto release;
 
 send:

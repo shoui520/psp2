@@ -4,6 +4,7 @@
  * is inferred.
  */
 #include <stddef.h>
+#include "robin/pssm.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
 #include "robin/task.h"
@@ -40,7 +41,6 @@ void wlanUpdateAntennaDiversity(const struct WlanRxStatus *status);		/* 0xaf6 */
 void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 void macMgmtResetState(uintptr_t argument, unsigned int command, uintptr_t second,
 		       int third);						/* 0x34ba6, command 0x59 */
-void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
 void mdevWlanSyncState(OsaBuffer *buffer, void *status);				/* 0xba4 */
 int macTxNotifyDispatchState(struct WlanConnection *connection);		/* 0x2fb7e */
 uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
@@ -100,7 +100,7 @@ int wlanDriverEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 		return 0;
 	case 4:
 		if (wlanApPsEnabled())
-			macTxQueryConfig(wlanConnectionByRole(2));
+			wlanPsActivity(wlanConnectionByRole(2));
 		osa_MsgQueueSend(&wlanDriverQueue4, buffer);
 		break;
 	case 15:

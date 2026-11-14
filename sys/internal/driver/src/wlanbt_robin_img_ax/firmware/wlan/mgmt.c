@@ -1078,7 +1078,7 @@ void wlanConnectionUpdateListenInterval(struct WlanConnection *connection)
 		role->listenInterval = role->peerPowerSave == 1 ? info->listenIntervalPs :
 								   info->listenInterval;
 	else if (role->state == 1)
-		role->listenInterval = 2 * connection->listenIntervalBase + 1;
+		role->listenInterval = 2 * connection->dtimPeriod + 1;
 }
 
 /* Short slot time unless an 802.11b network or a long-slot station needs the long one. */

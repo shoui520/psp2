@@ -289,7 +289,7 @@ void wlanJoinFinish(uint8_t result)
 		wpaSuppScheduleDescriptor(wlanJoin.connection);
 		wlanJoin.connection->bssCapability[0] = wlanJoin.capability[0];
 		wlanJoin.connection->bssCapability[1] = wlanJoin.capability[1];
-		wlanJoin.connection->listenIntervalBase = 0;
+		wlanJoin.connection->dtimPeriod = 0;
 		wlanPsHostMode = 0;
 		wlanJoin.connection->flags = (wlanJoin.connection->flags & ~WLAN_CONN_PRIVACY) |
 					     ((wlanJoin.privacy << 2) & 7);

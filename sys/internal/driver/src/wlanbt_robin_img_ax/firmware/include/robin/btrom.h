@@ -29,6 +29,27 @@ void *osa_MsgQueueRecv(void *queue);
 int osa_MsgQueueSend(void *queue, void *message);
 /* Posts an event record to the queue of an object created by osa_QueueCreate(). */
 int mdevRomQueryState(void *object, uint32_t event, const void *record);
+
+/*
+ * The Mask ROM's hierarchical state machines. A machine starts with its
+ * current state; its states (12 bytes each, kept by the ROM) follow. A
+ * handler is given the machine and the event (its number first) and returns
+ * NULL when it handled the event, the event for the parent state otherwise.
+ * mdevRomQueryState() dispatches an event; a state is sent ROM_HSM_EXIT when
+ * it is left and ROM_HSM_ENTRY when it is entered.
+ */
+#define ROM_HSM_ENTRY	(-1)
+#define ROM_HSM_EXIT	(-2)
+
+struct RomHsmState {
+	uint32_t rom[3];
+};
+
+typedef const int32_t *(*RomHsmHandler)(void *machine, const int32_t *event);
+
+void romHsmStateInit(struct RomHsmState *state, struct RomHsmState *parent, RomHsmHandler handler);
+void romHsmStart(void *machine, struct RomHsmState *initial);
+void romHsmTransition(void *machine, struct RomHsmState *target);
 int mdevRomProcessState(void *device);
 int osa_MsgQueueCount(void *queue);
 void osa_BlockPoolCreate(void *pool, void *name, void *start, void *size);

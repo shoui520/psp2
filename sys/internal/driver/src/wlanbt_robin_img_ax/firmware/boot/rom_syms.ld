@@ -138,6 +138,9 @@ PROVIDE(romHctCoexMode          = 0x0400f448);
 PROVIDE(romCoexPrimaryFlag      = 0xc00330c8);
 PROVIDE(romHctRxHook             = 0x0400fa30);
 PROVIDE(mdevRomQueryState       = 0x03f06611);
+PROVIDE(romHsmStart             = 0x03f0662f);
+PROVIDE(romHsmStateInit         = 0x03f06637);
+PROVIDE(romHsmTransition        = 0x03f0664f);
 PROVIDE(mdevRomProcessState     = 0x03f062b3);
 
 PROVIDE(romStringCopy   = 0x03f066ed);
