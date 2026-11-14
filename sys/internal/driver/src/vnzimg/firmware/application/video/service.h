@@ -710,10 +710,17 @@ typedef struct VideoParser {
 
 /* the MPEG-4 decoder's stream as the helper's jobs get it (64 bytes) */
 typedef struct VideoM4vStream {
-	uint32_t reserved[3];
+	int32_t id;			/* the decoder's */
+	uint32_t base;			/* the unit's first byte, mapped */
+	uint32_t esSize;
 	uint32_t ringStart;
 	uint32_t ringEnd;		/* its last byte */
-	uint32_t reserved2[4];
+	uint32_t mapped;		/* the unit's lines mapped (the ring's end when it wraps) */
+	uint32_t bufferSize;
+	uint32_t esOffset;
+	int8_t auMode;			/* the request's, VIDEO_ENGINE_RESTART on a restart */
+	uint8_t sequence;		/* only the sequence is asked */
+	uint8_t reserved[2];
 	uint32_t unit;			/* a VideoM4vUnit, 256 bytes */
 	uint32_t tables;		/* VideoM4vTable, unit->tables of them */
 	VideoTime pts;			/* the access unit's */
@@ -763,7 +770,7 @@ typedef struct VideoM4vTable {
 	int8_t concealed;
 	uint8_t reserved2[2];
 	uint16_t width;
-	uint16_t height;
+	uint16_t pitch;			/* the luma's: the width rounded up to 32 */
 	uint16_t codedWidth;		/* in macroblocks, times 16 */
 	uint16_t codedHeight;
 	VideoTime pts;
@@ -811,7 +818,7 @@ typedef struct VideoM4vCommand {
 	int8_t table;
 	uint32_t address;
 	uint16_t width;
-	uint16_t height;
+	uint16_t pitch;			/* the luma's: the width rounded up to 32 */
 	uint32_t pictureSize;
 	uint32_t chromaOffset;
 	uint32_t pictureSize2;
@@ -844,14 +851,17 @@ typedef struct VideoM4vUnit {
 	VideoM4vFrame *frame;		/* the picture's record */
 	uint32_t reserved5;
 	uint16_t width;
-	uint16_t height;
+	uint16_t pitch;			/* the luma's: the width rounded up to 32 */
 	uint32_t pictureSize;
 	uint32_t chromaOffset;		/* from the luma */
 	uint32_t pictureSize2;
 	uint8_t tables;
 	int8_t table;			/* the picture's */
 	int8_t info2;
-	uint8_t reserved6[9];
+	uint8_t reserved6;
+	int16_t horizontal;		/* the sequence's, for the engine's request */
+	int16_t vertical;
+	uint32_t sequenceInfo;
 	uint32_t frames;		/* VideoM4vFrame, one a table */
 	uint32_t frameCount;
 	uint8_t pictureInfo[2];		/* given to the engine with the job, swapped */

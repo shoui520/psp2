@@ -655,14 +655,14 @@ void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 	VideoM4vCommand *command;
 	uint32_t pictureSize2 = unit->pictureSize2;
 	uint32_t chromaOffset = unit->chromaOffset;
-	uint16_t height = unit->height;
+	uint16_t pitch = unit->pitch;
 	uint16_t width = unit->width;
 	uint32_t fields;
 
 	command = (VideoM4vCommand *)vnzPublicOpenPrivate(unit->command, COMMAND_RECORD_SIZE);
 	command->table = unit->table;
 	command->width = width;
-	command->height = height;
+	command->pitch = pitch;
 	command->pictureSize = unit->pictureSize;
 	command->chromaOffset = chromaOffset;
 	command->pictureSize2 = pictureSize2;
@@ -674,7 +674,7 @@ void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 	table->codedWidth = unit->widthInMacroblocks << 4;
 	table->width = width;
 	table->codedHeight = unit->heightInMacroblocks << 4;
-	table->height = height;
+	table->pitch = pitch;
 	table->reserved = 0;
 	table->info = 0;
 	table->reserved2[1] = 0;
@@ -741,7 +741,7 @@ int32_t m4vdecFrameOut(const VideoM4vStream *stream, VideoM4vJob *job, VideoM4vU
 	frame->chromaWidth = frame->width / 2;
 	frame->chromaHeight = frame->height / 2;
 	frame->displayWidth = table->width;
-	frame->displayHeight = table->height;
+	frame->displayHeight = table->pitch;
 	frame->number2 = unit->frameCount;
 	frame->number = unit->frameCount;
 	frame->vopInfo4 = unit->vop->info4;
