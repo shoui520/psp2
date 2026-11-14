@@ -320,7 +320,6 @@ static uint16_t wlanTxInFlightMisses __attribute__((section(".itcm.bss")));
 
 extern OsaBuffer wlanStaticBuffer;
 extern struct OsaBufferPool wlanBlockPool28;
-extern struct OsaBufferPool wlanBlockPool7;
 extern struct OsaBufferPool wlanBlockPool1;
 extern struct OsaBufferPool wlanReplyFramePool;
 extern struct OsaBufferPool ampTransmitPool;
@@ -427,13 +426,6 @@ int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *
 /* Builds the transmit request of a frame; not converted yet. */
 int macTxNotifyScheduleTable(struct WlanConnection *connection, void *data);	/* 0x31ae8 */
 
-/*
- * The buffer data starts with the transmit descriptor; the transmit request
- * is at 20, the pointer to the frame at 96 and the ring number at 108.
- */
-#define TX_DATA_REQUEST(data)	((struct WlanMacTxRequest *)((data) + 20))
-#define TX_DATA_FRAME(data)	__aeabi_uread4((data) + 96)
-#define TX_DATA_RING(data)	((data)[108])
 
 /* Sends a frame again, waiting a tick at a time while its ring is full. */
 int wlanTxResubmit(OsaBuffer *buffer)

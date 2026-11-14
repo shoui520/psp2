@@ -15,6 +15,9 @@
 #define MAC_004_REGION_B	MAC_REG(0x004)
 #define MAC_008_REGION_C	MAC_REG(0x008)
 /* One bit per policy slot, kept in step with a software copy. */
+/* Head and tail of the MAC's transmit queue; equal when it is empty. */
+#define MAC_010_QUEUE_HEAD	MAC_REG(0x010)
+#define MAC_014_QUEUE_TAIL	MAC_REG(0x014)
 #define MAC_090_POLICY_MASK	MAC_REG(0x090)
 #define MAC_13C_CONFIG		MAC_REG(0x13c)
 /* Bits requested pending by software, and the hardware's answer. */
@@ -43,6 +46,13 @@
 #define MAC_650_OPERATION	MAC_REG(0x650)
 #define MAC_658_OPERATION_STATUS MAC_REG(0x658)
 #define MAC_868_ENABLE		MAC_REG(0x868)
+/*
+ * PS-Poll response timing: 0x730 holds the timeout (low half) and the poll
+ * interval (high half), 0x7f4 the interval again (low half) and the enable
+ * of the hardware timeout (bit 31). The coexistence code reprograms both.
+ */
+#define MAC_730_TIMING_HIGH	MAC_REG(0x730)
+#define MAC_7F4_TIMING_LOW	MAC_REG(0x7f4)
 #define MAC_E80_CONTROL		MAC_REG(0xe80)
 /*
  * Block Ack hardware slots: bit n of AC0 marks slot n active, ACC holds a

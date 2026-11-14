@@ -18,11 +18,6 @@
 #include "robin/sys.h"
 #include "robin/txring.h"
 
-#define MAC_010_QUEUE_HEAD	MAC_REG(0x010)
-#define MAC_014_QUEUE_TAIL	MAC_REG(0x014)
-#define MAC_730_TIMING_HIGH	MAC_REG(0x730)
-#define MAC_7F4_TIMING_LOW	MAC_REG(0x7f4)
-
 WlanCoexConfig wlanCoexConfig __attribute__((section(".itcm.bss")));
 WlanCoex wlanCoex __attribute__((section(".itcm.bss")));
 WlanCoexLast wlanCoexLast __attribute__((section(".itcm.rw"))) = {
@@ -224,7 +219,7 @@ void wlanCoexCycleTimerExpired(uint32_t timer, uint32_t connection)
 	if (wlanCoex.mode == WLAN_COEX_MODE_DEFAULT) {
 		wlanCoexReleaseTx();
 		if (wlanCoex.txHold)
-			wlanPsEnterSleep(link);
+			wlanPsEnterSleep(link, 0);
 	} else if (wlanCoex.mode == WLAN_COEX_MODE_P2P_SLEEP) {
 		if (wlanTxRingsPending())
 			wlanCoexReleaseTx();
@@ -481,7 +476,7 @@ static inline uint32_t wlanCoexSelectMode(void)
 		return WLAN_COEX_MODE_BT_QUARTER;
 	if (wlanCoexConfig.btConfig == 8)
 		return WLAN_COEX_MODE_BT_HALF;
-	if (wlanCoexUseP2pSleepMode(wlanCoexConfig.btConfig))
+	if (wlanCoexUseP2pSleepMode())
 		return WLAN_COEX_MODE_P2P_SLEEP;
 	return WLAN_COEX_MODE_DEFAULT;
 }
@@ -634,7 +629,7 @@ static inline int wlanCoexOpenWindow(struct WlanConnection *connection)
 		if (wlanCoex.mode == WLAN_COEX_MODE_DEFAULT) {
 			wlanCoexReleaseTx();
 			if (wlanCoex.txHold)
-				wlanPsEnterSleep(connection);
+				wlanPsEnterSleep(connection, 0);
 		} else if (wlanCoex.mode == WLAN_COEX_MODE_P2P_SLEEP ||
 			   wlanCoex.mode == WLAN_COEX_MODE_P2P) {
 			if (wlanTxRingsPending()) {
@@ -741,7 +736,7 @@ int wlanCoexMayTransmit(int urgent)
 		return 0;
 	if (wlanCoex.outstanding >= 1 && urgent == 0)
 		return 0;
-	return macTxSequenceWindowOpen(0, 0, wlanCoex.outstanding) != 0;
+	return macTxSequenceWindowOpen() != 0;
 }
 
 int wlanCoexTxAllowed(void)

@@ -203,8 +203,8 @@ unsigned int btCoexActiveLinks(void);			/* 0x2459e */
 unsigned int btCoexLinkCapacity(void);			/* 0x245a6 */
 int wlanCoexUseStationMode(void);			/* 0x14a5e */
 int wlanCoexUseP2pMode(uint32_t unused);		/* 0x14a8a */
-int wlanCoexUseP2pSleepMode(uint32_t btConfig);		/* 0x14f50 */
-void wlanPsEnterSleep(struct WlanConnection *connection);	/* 0x14ee0 */
+int wlanCoexUseP2pSleepMode(void);			/* 0x14f50 */
+void wlanPsEnterSleep(struct WlanConnection *connection, int reason);	/* 0x14ee0 */
 void wlanPsSendPowerSaveNull(struct WlanConnection *connection); /* 0x14f2c */
 void wlanPsArmRetryTimer(uint32_t delay, void (*callback)(uint32_t timer, uint32_t slot)); /* 0x143dc */
 void wlanPsSetPowerState(uint8_t state);		/* 0x16fac */
@@ -221,7 +221,7 @@ int wlanTxRingsPending(void);				/* 0x31fd6 */
 int wlanTxRingPublishNext(void);			/* 0x320bc */
 int macTxIdle(void);					/* 0xaf4e */
 int macTxPoolsIdle(void);				/* 0xaf5e */
-int macTxSequenceWindowOpen(uint32_t unused0, uint32_t unused1, int outstanding); /* 0xd9f8 */
+int macTxSequenceWindowOpen(void);			/* 0xd9f8 */
 extern uint32_t wlanPsSleepTimeout;			/* 0x54c4c */
 extern uint16_t wlanPsSleepSequence;			/* 0x54b84 */
 extern uint8_t wlanPsSleepAllowance;			/* 0x54aaf */

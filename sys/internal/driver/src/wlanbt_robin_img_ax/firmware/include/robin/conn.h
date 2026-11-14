@@ -75,7 +75,9 @@ struct WlanConnection {
 	void *device;
 	uint8_t reserved1a[38];
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
-	uint8_t reserved1d[9];
+	uint8_t reserved1d0;
+	uint8_t timingFlags;		/* bit 4: estimate the PS-Poll timeout on a P2P link */
+	uint8_t reserved1d[7];
 	uint8_t supportedRates[12];
 	uint8_t reserved1b[2];
 	uint8_t supportedRatesLength;
@@ -90,7 +92,9 @@ struct WlanConnection {
 	uint8_t reserved3c[168];
 	uint8_t state;
 	uint8_t peerAddress[6];
-	uint8_t reserved4[345];
+	uint8_t reserved4a;
+	uint16_t associationId;		/* AID the access point assigned */
+	uint8_t reserved4[342];
 	uint8_t interfaceAddress[6];
 	uint8_t interfaceIndex;
 	uint8_t reserved4b[5];
@@ -133,6 +137,9 @@ _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");
 _Static_assert(offsetof(struct WlanConnection, snr) == 210, "SNR");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
 _Static_assert(offsetof(struct WlanConnection, peerAddress) == 381, "peer address");
+_Static_assert(offsetof(struct WlanConnection, timingFlags) == 56, "timing flags");
+_Static_assert(offsetof(struct WlanConnection, associationId) == 388, "association ID");
+_Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 _Static_assert(offsetof(struct WlanConnection, localName) == 744, "local name");
 _Static_assert(offsetof(struct WlanConnection, ssid) == 752, "SSID");

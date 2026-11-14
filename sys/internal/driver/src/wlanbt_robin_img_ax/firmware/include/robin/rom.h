@@ -14,6 +14,7 @@ void __aeabi_memclr4(void *dest, size_t n);
 void __aeabi_memclr(void *dest, size_t n);
 void __aeabi_memcpy(void *dest, const void *source, size_t size);
 void __aeabi_memcpy4(void *dest, const void *source, size_t size);
+void __aeabi_memmove(void *dest, const void *source, size_t size);
 void __aeabi_memset4(void *dest, size_t n, int value);
 uint32_t __aeabi_uread4(const void *address);
 size_t strlen(const char *string);

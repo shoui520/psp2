@@ -11,9 +11,11 @@
 #ifndef ROBIN_TXRING_H
 #define ROBIN_TXRING_H
 
+#include <stddef.h>
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/rom.h"
 
 #define WLAN_TX_RING_COUNT	14
 #define WLAN_TX_RING_SHADOWED	7	/* rings below this fill before publishing */
@@ -23,7 +25,8 @@
 
 /* Transmit request the MAC reads (76 bytes); only the fields the ring code touches are named. */
 struct WlanMacTxRequest {
-	uint8_t reserved0[4];
+	uint8_t requeued;	/* 1: put back at the head of its ring for a retry */
+	uint8_t reserved1[3];
 	uint8_t frame[4];	/* unaligned pointer to the frame (length first) */
 	uint8_t reserved8[20];
 	uint8_t flags[4];	/* unaligned word; bit 13 marks a frame sent without publishing */
@@ -36,6 +39,30 @@ struct WlanMacTxRequest {
 };
 
 _Static_assert(sizeof(struct WlanMacTxRequest) == 76, "transmit request");
+
+/*
+ * The buffer data starts with the transmit descriptor; the transmit request
+ * is at 20, the pointer to the frame at 96, the ring number at 108 and the
+ * transmissions left at 110.
+ */
+#define TX_DATA_REQUEST(data)	((struct WlanMacTxRequest *)((data) + 20))
+#define TX_DATA_FRAME(data)	__aeabi_uread4((data) + 96)
+#define TX_DATA_RING(data)	((data)[108])
+#define TX_DATA_RETRIES(data)	((data)[110])
+
+/* What the transmit-done task learns of a finished frame (partial). */
+struct WlanTxStatus {
+	uint8_t *data;			/* buffer data of the frame */
+	uint8_t reserved4[12];
+	uint32_t result;		/* 0: acknowledged */
+	uint8_t reserved20[3];
+	uint8_t retryBlocked;		/* the frame must not be sent again */
+};
+
+_Static_assert(offsetof(struct WlanTxStatus, result) == 16, "transmit result");
+_Static_assert(offsetof(struct WlanTxStatus, retryBlocked) == 23, "retry blocked");
+
+extern struct OsaBufferPool wlanBlockPool7;
 
 extern volatile uint32_t *wlanTxRingReadIndex[WLAN_TX_RING_COUNT];
 extern volatile uint32_t *wlanTxRingWriteIndex[WLAN_TX_RING_COUNT];
