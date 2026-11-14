@@ -28,6 +28,40 @@ static struct WlanSignalCalibration wlanRssiCalibration[3] __attribute__((sectio
 	{ { -15, -15 }, -1, -110 },
 };
 
+/* bbpSetAdjustment(): 0 or 1 selects BBP_REG_ADJUST_SELECT; 0xff: none set. */
+static uint8_t bbpAdjustMode __attribute__((section(".itcm.rw"))) = 0xff;
+static uint8_t bbpAdjustOffset __attribute__((section(".itcm.rw")));
+
+/* The register pairs (high byte, low byte) the calibration lookups go to. */
+static uint16_t bbpCalibrationRegisters[3][2] __attribute__((section(".itcm.rw"))) = {
+	{ 0x3c0, 0x3c1 }, { 0x3be, 0x3bf }, { 0x3c4, 0x3c5 },
+};
+
+/* Written at start-up (the host may patch it); ends with 0xffff, 0xff. */
+static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.rw"))) = {
+	{ 0xffff, 0xff, 0 },
+};
+
+#define BBP_REG_ADJUST_SELECT	0x70	/* bit 2: mode 1 */
+#define BBP_REG_ADJUST0		0x5f
+#define BBP_REG_ADJUST1		0x60
+
+/* The key of a calibration lookup, passed by value. */
+struct WlanCalibrationKey {
+	uint8_t channel;
+	uint8_t band;
+	uint8_t reserved[2];
+};
+
+/* Not converted yet; provisional names. */
+int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec38 */
+int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec10 */
+int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec60 */
+int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values);	/* 0xecb4 */
+uint32_t bbpReadVersionRegister(uint32_t index);
+extern uint8_t opRegionMinor;
+extern uint8_t opRegionMajor;
+
 void bbpWriteTable(const struct PhyRegisterEntry *table)
 {
 	if (table == NULL)
@@ -36,6 +70,17 @@ void bbpWriteTable(const struct PhyRegisterEntry *table)
 		BBP_REGISTER(table->reg) = table->value;
 		table++;
 	}
+}
+
+/* Turns the baseband on and writes its start-up table; operating region 1.38. */
+int bbpInit(void)
+{
+	SOC_CONTROL |= SOC_CONTROL_BASEBAND;
+	SOC_BASEBAND_ENABLE |= 1;
+	bbpWriteTable(bbpInitRegisters);
+	opRegionMajor = 1;
+	opRegionMinor = 38;
+	return 1;
 }
 
 void bbpWriteRegister(unsigned int reg, unsigned int value)
@@ -220,6 +265,72 @@ void wlanRxConvertStatus(struct WlanRxStatus *status)
  * and is only mapped on 2.4 GHz. Returns 54 for a channel that is not part
  * of a pair.
  */
+/* Always 0: the transmit path asks it whether to adjust a frame. */
+int bbpTxHook(void)
+{
+	return 0;
+}
+
+/* Writes a 16-bit calibration value, high byte first, to a register pair. */
+static inline void bbpWriteCalibration(int pair, uint16_t value)
+{
+	bbpWriteRegister(bbpCalibrationRegisters[pair][0], value >> 8);
+	bbpWriteRegister(bbpCalibrationRegisters[pair][1], value & 0xff);
+}
+
+void bbpLoadCalibration0(unsigned int band, unsigned int channel)
+{
+	struct WlanCalibrationKey key;
+	uint16_t value;
+	int path;
+
+	key.channel = channel;
+	key.band = band;
+	for (path = 0; path < 1; path++)
+		if (wlanCalibrationLookup0(key, &value))
+			bbpWriteCalibration(path * 2 + 0, value);
+}
+
+void bbpLoadCalibration1(unsigned int band, unsigned int channel)
+{
+	struct WlanCalibrationKey key;
+	uint16_t value;
+	int path;
+
+	key.channel = channel;
+	key.band = band;
+	for (path = 0; path < 1; path++)
+		if (wlanCalibrationLookup1(key, &value))
+			bbpWriteCalibration(path * 2 + 1, value);
+}
+
+void bbpLoadCalibration2(unsigned int band, unsigned int channel)
+{
+	struct WlanCalibrationKey key;
+	uint16_t value;
+	int path;
+
+	key.channel = channel;
+	key.band = band;
+	for (path = 0; path < 1; path++)
+		if (wlanCalibrationLookup2(key, &value))
+			bbpWriteCalibration(path * 2 + 2, value);
+}
+
+/* The signal-level offsets of the channel, or the defaults when there are none. */
+void bbpLoadSignalCalibration(unsigned int band, unsigned int channel)
+{
+	struct WlanCalibrationKey key;
+	int8_t values[8];
+
+	key.channel = channel;
+	key.band = band;
+	if (wlanCalibrationLookupSignal(key, values))
+		wlanSignalCalibrationLoad(values);
+	else
+		wlanSignalCalibrationReset();
+}
+
 int wlanHt40CenterChannel(int fiveGHz, int channel, int mode)
 {
 	if (!fiveGHz) {
@@ -269,4 +380,29 @@ int wlanHt40CenterChannel(int fiveGHz, int channel, int mode)
 		return 110;
 	}
 	return 54;
+}
+
+/* Host command: mode 0, 1 or 0xffff (none) and an offset; 1 when refused. */
+int bbpSetAdjustment(unsigned int mode, uint8_t offset)
+{
+	if (mode != 0 && mode != 1 && mode != 0xffff)
+		return 1;
+	bbpAdjustMode = mode;
+	bbpAdjustOffset = offset;
+	return 0;
+}
+
+/* Applies the adjustment after a channel change. */
+void bbpApplyAdjustment(void)
+{
+	if (bbpAdjustMode == 0xff)
+		return;
+	if (bbpAdjustMode == 1)
+		bbpSetRegisterBits(BBP_REG_ADJUST_SELECT, 4);
+	else
+		bbpClearRegisterBits(BBP_REG_ADJUST_SELECT, 4);
+	BBP_REGISTER(BBP_REG_ADJUST0) = (uint8_t)(bbpReadVersionRegister(BBP_REG_ADJUST0) +
+						  bbpAdjustOffset);
+	BBP_REGISTER(BBP_REG_ADJUST1) = (uint8_t)(bbpReadVersionRegister(BBP_REG_ADJUST1) +
+						  bbpAdjustOffset);
 }

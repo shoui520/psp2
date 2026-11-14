@@ -34,6 +34,14 @@ int8_t wlanCalibrateRssi(int rssi, unsigned int phyMode);
 int8_t wlanCalibrateNoise(int noise);
 void wlanSignalCalibrationLoad(const int8_t *values);
 void wlanSignalCalibrationReset(void);
+int bbpInit(void);
+int bbpTxHook(void);
+void bbpLoadCalibration0(unsigned int band, unsigned int channel);
+void bbpLoadCalibration1(unsigned int band, unsigned int channel);
+void bbpLoadCalibration2(unsigned int band, unsigned int channel);
+void bbpLoadSignalCalibration(unsigned int band, unsigned int channel);
+int bbpSetAdjustment(unsigned int mode, uint8_t offset);
+void bbpApplyAdjustment(void);
 int wlanClampRssi(int dbm);
 
 #endif /* ROBIN_PHY_H */
