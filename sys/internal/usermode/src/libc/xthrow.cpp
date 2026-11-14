@@ -17,8 +17,8 @@ void _Xout_of_range(const char *_Message)
 	}
 
 void _Xbad_alloc()
-	{	// report a bad_alloc
-	_THROW_N(bad_alloc, _EMPTY_ARGUMENT);
+	{	// report a bad_alloc (constructed from a null message)
+	_THROW_N(bad_alloc, (const char *)0);
 	}
 
 void _Xinvalid_argument(const char *_Message)
@@ -45,4 +45,9 @@ void _Xregex_error(regex_constants::error_type _Code)
 	{	// report a regex_error
 	_THROW_N(regex_error, _Code);
 	}
+
+// the string assignment the exception constructors call, out of line (exported)
+template basic_string<char, char_traits<char>, allocator<char> >&
+	basic_string<char, char_traits<char>, allocator<char> >::assign(
+		const basic_string<char, char_traits<char>, allocator<char> >&, size_type, size_type);
 _STD_END

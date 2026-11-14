@@ -693,7 +693,6 @@ set_source_files_properties(cxxabi_typeinfo.cpp PROPERTIES COMPILE_OPTIONS -Xblx
 set_source_files_properties(snc_personality.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(unwinder.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 set_source_files_properties(rtglobals.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
-set_source_files_properties(xthrow.cpp PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 # SNC's runtime (libsnc) as libc links it: its personality routines call through ip
 set_source_files_properties(../../../../sdk/target/src/libsnc/unwind_pr0.c
 	../../../../sdk/target/src/libsnc/unwind_pr1.c

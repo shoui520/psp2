@@ -16,6 +16,10 @@ wostream wcout(_Noinit);
 wostream wcerr(_Noinit);
 wostream wclog(_Noinit);
 
+// the stream constructor _Winit calls, out of line (exported)
+template basic_ostream<wchar_t, char_traits<wchar_t> >::basic_ostream(
+	basic_streambuf<wchar_t, char_traits<wchar_t> > *, bool);
+
 _Winit::_Winit()
 	{	// initialize standard wide streams on first construction
 	bool doinit;

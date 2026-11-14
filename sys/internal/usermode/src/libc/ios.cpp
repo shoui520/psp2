@@ -20,6 +20,11 @@ char _PJP_CPP_Copyright[] =
 int ios_base::_Index = 0;
 bool ios_base::_Sync = true;
 
+/*
+ * Sony's build calls the string constructor out of line in clear (the exported copy);
+ * SNC's explicit-inline budget for clear reproduces it.
+ */
+#pragma control %push inlinesize=128
 void ios_base::clear(iostate _State, bool _Reraise)
 {	// set state, possibly reraise exception
 	_Mystate = (iostate)(_State & _Statmask);
@@ -34,6 +39,7 @@ void ios_base::clear(iostate _State, bool _Reraise)
 	else
 		_THROW_N(failure, string("ios_base::eofbit set"));
 }
+#pragma control %pop inlinesize
 
 ios_base::_Iosarray& ios_base::_Findarr(int _Idx)
 {	// locate or make a variable array element

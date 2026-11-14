@@ -1,7 +1,15 @@
 // xstring.cpp: _String_base, the base the library's older basic_string threw its length and
 // position errors through. The SDK's headers have basic_string throw them itself; the class
 // stays for the programs built against the older headers.
+/*
+ * Sony's build inlined less into the exception constructors <stdexcept> defines: its
+ * length_error and out_of_range wrappers call logic_error(const string&) (exported), whose
+ * own copy has the string copy inlined. SNC's explicit-inline budget for that header's
+ * definitions reproduces it.
+ */
+#pragma control %push inlinesize=160
 #include <stdexcept>
+#pragma control %pop inlinesize
 #include <string>
 
 _STD_BEGIN

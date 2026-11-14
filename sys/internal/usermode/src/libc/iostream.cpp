@@ -16,6 +16,10 @@ static filebuf ferr(_Noinit);
 ostream cerr(_Noinit);
 ostream clog(_Noinit);
 
+// the stream constructor Init calls, out of line (exported)
+template basic_ostream<char, char_traits<char> >::basic_ostream(
+	basic_streambuf<char, char_traits<char> > *, bool);
+
 ios_base::Init::Init()
 {	// initialize standard streams on first construction
 	bool doinit;
