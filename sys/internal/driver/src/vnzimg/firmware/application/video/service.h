@@ -9,7 +9,7 @@
 
 #include "video.h"
 
-#define VIDEO_NO_THREAD			((VkThread *)-1)
+#define VIDEO_NO_THREAD			((VnzKernelThread *)-1)
 #define SERVICE_CORE			(VNZ_FIRST_CORE_ID + 7)
 #define SERVICE_PRIORITY		3
 
@@ -26,19 +26,19 @@
 /* a codec's slot: its engine's threads and queues, the client's queue */
 typedef struct VideoServiceSlot {
 	uint32_t memory;		/* the engine's: the first thread's, then the second's */
-	VkThread *thread;
-	VkThread *thread2;
-	VkMessageQueue *auQueue;	/* the access units, to the engine's thread taking them */
-	VkMessageQueue *decodeQueue;	/* the decodes */
-	VkMessageQueue *wakeQueue;
-	VkMessageQueue *innerQueue;	/* between the engine's threads */
+	VnzKernelThread *thread;
+	VnzKernelThread *thread2;
+	VnzKernelMessageQueue *auQueue;	/* the access units, to the engine's thread taking them */
+	VnzKernelMessageQueue *decodeQueue;	/* the decodes */
+	VnzKernelMessageQueue *wakeQueue;
+	VnzKernelMessageQueue *innerQueue;	/* between the engine's threads */
 	uint32_t auRequests;		/* two of 128 bytes, used in turn */
 	uint32_t decodeRequests;	/* two of 128 bytes, used in turn */
 	uint8_t auIndex;
 	uint8_t decodeIndex;
 	int16_t id;			/* -1 free */
-	VkThread *clientThread;
-	VkMessageQueue *clientQueue;
+	VnzKernelThread *clientThread;
+	VnzKernelMessageQueue *clientQueue;
 	uint32_t replies;		/* two of 64 bytes, used in turn */
 	uint8_t replyIndex;
 	uint8_t codec;
@@ -66,7 +66,7 @@ typedef struct VideoServiceDecoder {
 typedef struct VideoService {
 	uint32_t reserved;
 	int32_t state;			/* 2 running, 0 to stop */
-	VkThread *helper;
+	VnzKernelThread *helper;
 	uint32_t helperMemory;
 	VideoServiceDecoder *decoders;
 	VideoServiceSlot *encoders;
@@ -79,22 +79,22 @@ typedef struct VideoService {
 	int8_t queueSize;		/* a power of two, twice the codecs */
 	int8_t current;			/* the slot of the request taken */
 	int16_t lastId;
-	VkMessageQueue *helperQueue;
-	VkMessageQueue *helperQueue2;
-	VkMessageQueue *helperQueue3;
-	VkMessageQueue *engineQueue;	/* the engines' replies */
-	VkMessageQueue *engineQueue2;
-	VkVThreadResource *resource;
-	VkVThreadContext *encoderContext;
-	VkVThreadContext *context[2];
+	VnzKernelMessageQueue *helperQueue;
+	VnzKernelMessageQueue *helperQueue2;
+	VnzKernelMessageQueue *helperQueue3;
+	VnzKernelMessageQueue *engineQueue;	/* the engines' replies */
+	VnzKernelMessageQueue *engineQueue2;
+	VnzKernelVThreadResource *resource;
+	VnzKernelVThreadContext *encoderContext;
+	VnzKernelVThreadContext *context[2];
 	volatile uint8_t *contextLock[2];
 	volatile uint8_t *encoderLock;
-	VkThread *client;
+	VnzKernelThread *client;
 	int32_t status;
 	uint32_t replyToggle;		/* a bit per slot: its reply in use */
 	uint32_t replyReady;
-	VkMessageQueue *requestQueue;
-	VkMessageQueue *releaseQueue;
+	VnzKernelMessageQueue *requestQueue;
+	VnzKernelMessageQueue *releaseQueue;
 	uint32_t flagAccepted;
 	uint32_t flagReplied;
 	uint32_t (*callback[3])(void);
@@ -122,10 +122,10 @@ typedef struct VideoEngineRequest {
 	uint16_t horizontal;
 	uint16_t vertical;
 	int32_t status;
-	VkThread *thread;		/* asked: the parser engine's thread, its stream, */
+	VnzKernelThread *thread;		/* asked: the parser engine's thread, its stream, */
 	uint32_t stream;		/* its job and its queue to the decoder engine */
 	uint32_t job;
-	VkMessageQueue *queue;
+	VnzKernelMessageQueue *queue;
 	uint32_t user;
 	uint32_t sequenceInfo;
 	uint32_t dts[2];
@@ -165,8 +165,8 @@ typedef struct VideoServiceRequest {
 		};
 		struct {
 			uint32_t reserved4;
-			VkThread *thread;
-			VkMessageQueue *queue;
+			VnzKernelThread *thread;
+			VnzKernelMessageQueue *queue;
 			uint32_t frames;
 		};
 	};
@@ -829,7 +829,9 @@ typedef struct VideoM4vCommand {
 /* the stream unit being parsed (256 bytes) */
 typedef struct VideoM4vUnit {
 	VideoBitstream bits;
-	uint32_t reserved[4];
+	uint32_t reserved[2];
+	uint32_t search;		/* where the parser looks for the next start code */
+	int32_t searchLeft;		/* the bytes left there */
 	uint32_t start;			/* its first byte */
 	int32_t size;
 	uint32_t pictureCount;
@@ -979,10 +981,10 @@ typedef struct VideoHelperRequest {
 	uint8_t reserved3;
 	uint8_t flags;			/* VIDEO_HELPER_* */
 	uint8_t reserved4[10];
-	VkThread *engineThread;
+	VnzKernelThread *engineThread;
 	uint32_t argument;
 	uint32_t argument2;
-	VkMessageQueue *engineQueue;
+	VnzKernelMessageQueue *engineQueue;
 	uint32_t reserved5[19];
 } VideoHelperRequest;
 
@@ -992,8 +994,8 @@ typedef struct VideoHelperRequest {
 
 /* what the helper and the engine thread it serves share (128 bytes) */
 typedef struct VideoHelperShared {
-	VkThread *thread;
-	VkThread *engineThread;
+	VnzKernelThread *thread;
+	VnzKernelThread *engineThread;
 	uint32_t stream;
 	int16_t slot;
 	uint8_t first;
@@ -1026,7 +1028,7 @@ typedef struct VideoHelperShared {
 
 /* a job context of the helper (64 bytes): the VThread context its jobs run on, their memory */
 typedef struct VideoHelperContext {
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t table128;		/* the names say the sizes, until the jobs are read */
 	uint32_t lockArea;		/* its first word: the context's lock */
 	uint32_t table2048;
@@ -1117,14 +1119,14 @@ typedef struct VideoHelper {
 	int32_t state;			/* 2 idle, 3 waiting, 4 running, 5 working */
 	uint32_t reserved;
 	VideoHelperShared *shared;
-	VkMessageQueue *startQueue;
-	VkMessageQueue *jobQueue;
-	VkMessageQueue *engineQueue;
-	VkMessageQueue *encoderQueue;
+	VnzKernelMessageQueue *startQueue;
+	VnzKernelMessageQueue *jobQueue;
+	VnzKernelMessageQueue *engineQueue;
+	VnzKernelMessageQueue *encoderQueue;
 	uint32_t pendingJobs[3];
-	VkInterruptHandler *interrupt;
+	VnzKernelInterruptHandler *interrupt;
 	uint32_t *interruptStatus;	/* the word the interrupt writes */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint8_t commandsInUse;		/* a bit per command */
 	uint8_t slicesInUse;		/* a bit per slice */
 	uint8_t needCommand;
@@ -1232,8 +1234,8 @@ typedef struct VideoAvcNalList {
  * engine's own (the engine's memory's second 64 bytes)
  */
 typedef struct VideoAvcSequence {
-	VkThread *thread;		/* the encoder engine's */
-	VkThread *thread2;		/* its stream thread */
+	VnzKernelThread *thread;		/* the encoder engine's */
+	VnzKernelThread *thread2;		/* its stream thread */
 	int32_t id;			/* the codec's */
 	int16_t index;			/* the slot's */
 	uint16_t commandSize;		/* the helper's */

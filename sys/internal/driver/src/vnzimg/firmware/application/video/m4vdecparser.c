@@ -36,17 +36,18 @@ void m4vdecParserThread(uint32_t memory, uint32_t codec)
 {
 	M4vdecParser *parser = parserBegin(memory);
 	M4vdecParserInfo *info = parser->info;
-	VkMessageQueue *auQueue = parser->auQueue;
-	VkMessageQueue *serviceQueue = parser->serviceQueue;
-	VkMessageQueue *decoderQueue = parser->decoderQueue;
-	VkMessageQueue *wakeQueue = parser->wakeQueue;
-	VkMessageQueue *helperQueue = parser->helperQueue;
+	VnzKernelMessageQueue *auQueue = parser->auQueue;
+	VnzKernelMessageQueue *serviceQueue = parser->serviceQueue;
+	VnzKernelMessageQueue *decoderQueue = parser->decoderQueue;
+	VnzKernelMessageQueue *wakeQueue = parser->wakeQueue;
+	VnzKernelMessageQueue *helperQueue = parser->helperQueue;
 	uint32_t flags;
 
 	(void)codec;
 	do {
 		flags = parserWait(parser);
-		if (parser->state == PARSER_IDLE && vkMessageReceive(auQueue, (uint32_t)parser))
+		if (parser->state == PARSER_IDLE && vnzKernelMessageReceive(auQueue,
+			(uint32_t)parser))
 			parser->state = PARSER_STARTING;
 		if (parser->state == PARSER_STARTING) {
 			if (flags & PARSER_FLAG_DECODE) {
@@ -68,7 +69,8 @@ void m4vdecParserThread(uint32_t memory, uint32_t codec)
 					requestStatus(parser);
 					requestFinish(parser);
 				}
-				vkMessageSend(serviceQueue, videoServiceAuDone, parser->request);
+				vnzKernelMessageSend(serviceQueue, videoServiceAuDone,
+					parser->request);
 				parser->state = PARSER_IDLE;
 				vnzThreadSetFlags(info->thread, PARSER_FLAG_AU);
 			} else if (flags & PARSER_FLAG_FAILED) {
@@ -79,9 +81,10 @@ void m4vdecParserThread(uint32_t memory, uint32_t codec)
 			}
 		}
 		if (parser->state == PARSER_PARSING &&
-		    vkMessageReceive(wakeQueue, (uint32_t)parser)) {
+		    vnzKernelMessageReceive(wakeQueue, (uint32_t)parser)) {
 			if (!parser->output)
-				vkMessageSend(helperQueue, videoHelperStart, parser->request);
+				vnzKernelMessageSend(helperQueue, videoHelperStart,
+					parser->request);
 			else if (parser->flush == 1)
 				flushRun(parser);
 			else
@@ -90,7 +93,7 @@ void m4vdecParserThread(uint32_t memory, uint32_t codec)
 		}
 		if (parser->state == PARSER_HELPING && (flags & PARSER_FLAG_JOB_DONE)) {
 			requestFinish(parser);
-			vkMessageSend(serviceQueue, videoServiceAuDone, parser->request);
+			vnzKernelMessageSend(serviceQueue, videoServiceAuDone, parser->request);
 			if (flags & PARSER_FLAG_FAILED) {
 				unitSkip(parser);
 				parser->state = PARSER_PARSING;
@@ -98,7 +101,8 @@ void m4vdecParserThread(uint32_t memory, uint32_t codec)
 			} else {
 				if (parser->output) {
 					parsedSet(parser);
-					vkMessageSend(decoderQueue, m4vdecDecoderParsed, parser->parsedWord);
+					vnzKernelMessageSend(decoderQueue, m4vdecDecoderParsed,
+						parser->parsedWord);
 					parser->keepError = 0;
 					parser->flush = 0;
 					parser->output = 0;
@@ -183,7 +187,7 @@ void m4vdecParserAu(uint32_t memory, uint32_t requestAddress)
 	VideoEngineRequest *request;
 	VideoM4vStream *stream;
 	uint32_t start, esSize, bufferSize, esOffset, end, line, first, size, index;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	parser->request = requestAddress;
 	request = (VideoEngineRequest *)vnzPublicOpenPrivate(requestAddress, REQUEST_SIZE);
@@ -277,10 +281,11 @@ void m4vdecParserAu(uint32_t memory, uint32_t requestAddress)
 		request->contextFlags |= 0x08;
 	vnzPublicClosePrivate((uint32_t)request, REQUEST_SIZE);
 	vnzPublicClosePrivate((uint32_t)stream, PARSER_STREAM_SIZE);
-	locked = vkVThreadContextLock(parser->context);
-	vkVThreadJobSet(locked, index, 0, m4vdecParserJobStart, (uint32_t)info, parser->stream,
+	locked = vnzKernelVThreadContextLock(parser->context);
+	vnzKernelVThreadJobSet(locked, index, 0, m4vdecParserJobStart, (uint32_t)info,
+		parser->stream,
 		parser->job, 0);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /* 0x841cf2: nothing to wake */
@@ -413,14 +418,14 @@ static void outputRun(M4vdecParser *parser)
 {
 	M4vdecParserInfo *info = parser->info;
 	uint32_t index = info->index << 3, busy;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	do {
-		locked = vkVThreadContextLock(parser->context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, m4vdecParserJobOutput,
+		locked = vnzKernelVThreadContextLock(parser->context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, m4vdecParserJobOutput,
 			(uint32_t)info, parser->stream, parser->job, parser->keepError,
 			info->thread, PARSER_FLAG_JOB_DONE);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -429,14 +434,14 @@ static void flushRun(M4vdecParser *parser)
 {
 	M4vdecParserInfo *info = parser->info;
 	uint32_t index = info->index << 3, busy;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	do {
-		locked = vkVThreadContextLock(parser->context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, m4vdecParserJobFlush,
+		locked = vnzKernelVThreadContextLock(parser->context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, m4vdecParserJobFlush,
 			(uint32_t)info, parser->stream, parser->job, 0, info->thread,
 			PARSER_FLAG_JOB_DONE);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -509,4 +514,202 @@ void m4vdecParserInitialize(uint32_t memory, VideoService *service, int32_t inde
 	info->option5 = timeOf(decoder->option5) << 1;
 	info->option4 = timeOf(decoder->option4) << 1;
 	vnzPublicClosePrivate((uint32_t)parser, PARSER_FIXED_SIZE);
+}
+
+/*
+ * The start codes in the unit's bytes, by a window of the last bytes read
+ * (shifted up a byte each time): 0x000001 (start_code_prefix) is the window
+ * 0x100, a short header's 17-bit 0...1 prefix (short_video_start_marker,
+ * gob_resync_marker) its top bits 0x8000 of 0xffff8000, the whole 22-bit
+ * short_video_start_marker 0x8000 of 0xfffffc00.
+ */
+#define WINDOW_START			0xffffff00	/* no zeros yet */
+#define WINDOW_START_CODE		0x100
+#define WINDOW_SHORT_MASK		0xffff8000
+#define WINDOW_SHORT_START_MASK		0xfffffc00
+#define WINDOW_SHORT			0x8000
+
+/* the byte after one in the ring */
+static inline uint32_t ringNext(uint32_t read, uint32_t ringStart, uint32_t ringEnd)
+{
+	return read != ringEnd ? read + 1 : ringStart;
+}
+
+/* the byte `back` before one, which may be at the ring's start */
+static inline uint32_t ringBack(uint32_t next, uint32_t back, uint32_t base, uint32_t ringStart,
+	uint32_t ringEnd)
+{
+	if ((next < base || ringEnd < next) && next < ringStart + back)
+		return ringEnd + (next - ringStart) - (back - 1);
+	return next - back;
+}
+
+/*
+ * 0x8421a4: the next start code from where the parser looks: its byte
+ * (-1 none), the unit from past its prefix to the next one (or to the end
+ * of the data less its trailing zeros)
+ */
+static int32_t startCodeNext(const VideoM4vStream *stream, VideoM4vJob *job)
+{
+	VideoM4vUnit *unit = job->unit;
+	uint32_t ringEnd = stream->ringEnd, ringStart = stream->ringStart, base = stream->base;
+	uint32_t read = unit->search, window = WINDOW_START, start = 0, size;
+	int32_t left = unit->searchLeft, code = 0;
+
+	/* the start code */
+	while (left >= 1) {
+		window = (window | *(const uint8_t *)read) << 8;
+		read = ringStart ? ringNext(read, ringStart, ringEnd) : read + 1;
+		left--;
+		if (window == WINDOW_START_CODE) {
+			code = *(const uint8_t *)read;
+			start = read;
+			break;
+		}
+	}
+
+	/* its end: the next one, its prefix and byte not the unit's */
+	if (start) {
+		while (left >= 1) {
+			window = (window | *(const uint8_t *)read) << 8;
+			read = ringStart ? ringNext(read, ringStart, ringEnd) : read + 1;
+			left--;
+			if (window == WINDOW_START_CODE) {
+				left += 4;
+				if (ringStart)
+					read = ringBack(read, 4, base, ringStart, ringEnd);
+				else
+					read -= 4;
+				break;
+			}
+		}
+	}
+
+	if (!start)
+		return -1;
+	if (!left) {
+		/* to the end of the data: its trailing zeros are not the unit's */
+		do {
+			if (read == ringStart)
+				read = ringEnd;
+			else
+				read--;
+		} while (!*(const int8_t *)read);
+	}
+	if ((read < base || ringEnd < read) && start >= base && start <= ringEnd)
+		size = read - ringStart + (ringEnd - start) + 2;
+	else
+		size = read - start + 1;
+	unit->start = start;
+	unit->size = size;
+	unit->search = read;
+	unit->searchLeft = left;
+	return code;
+}
+
+/*
+ * 0x8422da: the next short header picture from where the parser looks:
+ * from its 17-bit prefix to the next short_video_start_marker (or to the
+ * end of the data less its trailing zeros). Without a ring the prefix is
+ * looked for past the data's end. Returns 1 when found.
+ */
+static uint32_t shortVideoNext(const VideoM4vStream *stream, VideoM4vJob *job)
+{
+	VideoM4vUnit *unit = job->unit;
+	uint32_t ringEnd = stream->ringEnd, ringStart = stream->ringStart, base = stream->base;
+	uint32_t read = unit->search, window = WINDOW_START, start = 0, size;
+	int32_t left = unit->searchLeft;
+
+	if (ringStart) {
+		if (left < 1)
+			return 0;
+		while (1) {
+			window = (window | *(const uint8_t *)read) << 8;
+			read = ringNext(read, ringStart, ringEnd);
+			left--;
+			if ((window & WINDOW_SHORT_MASK) == WINDOW_SHORT) {
+				start = ringBack(read, 3, base, ringStart, ringEnd);
+				break;
+			}
+			if (left < 1)
+				break;
+		}
+		if (start) {
+			while (left >= 1) {
+				window = (window | *(const uint8_t *)read) << 8;
+				read = ringNext(read, ringStart, ringEnd);
+				left--;
+				if ((window & WINDOW_SHORT_START_MASK) == WINDOW_SHORT) {
+					left += 3;
+					read = ringBack(read, 3, base, ringStart, ringEnd);
+					break;
+				}
+			}
+		}
+	} else {
+		do {
+			window = (window | *(const uint8_t *)read) << 8;
+			read++;
+			left--;
+		} while ((window & WINDOW_SHORT_MASK) != WINDOW_SHORT);
+		start = read - 3;
+		while (left >= 1) {
+			window = (window | *(const uint8_t *)read) << 8;
+			read++;
+			left--;
+			if ((window & WINDOW_SHORT_START_MASK) == WINDOW_SHORT) {
+				left += 3;
+				read -= 3;
+				break;
+			}
+		}
+	}
+
+	if (!start)
+		return 0;
+	if (!left) {
+		do {
+			if (read == ringStart)
+				read = ringEnd;
+			else
+				read--;
+		} while (!*(const int8_t *)read);
+	}
+	if ((read < base || ringEnd < read) && start >= base && start <= ringEnd)
+		size = read - ringStart + (ringEnd - start) + 2;
+	else
+		size = read - start + 1;
+	unit->start = start == ringStart ? ringEnd : start - 1;
+	unit->search = read;
+	unit->searchLeft = left;
+	unit->size = size + 1;
+	return 1;
+}
+
+/*
+ * 0x84244c: whether a short header's 17-bit prefix comes next, with only
+ * zero bytes and bytes below 32 (the prefix's own) before it
+ */
+static uint32_t shortVideoAhead(const VideoM4vStream *stream, VideoM4vJob *job)
+{
+	const VideoM4vUnit *unit = job->unit;
+	uint32_t ringEnd = stream->ringEnd, ringStart = stream->ringStart;
+	uint32_t read = unit->search, window = WINDOW_START, byte;
+	int32_t left = unit->searchLeft;
+
+	while (left-- >= 1) {
+		byte = *(const uint8_t *)read;
+		window = (window | byte) << 8;
+		if (byte) {
+			if ((window & WINDOW_SHORT_MASK) == WINDOW_SHORT)
+				return 1;
+			if (!((int32_t)byte < 32))
+				return 0;
+		}
+		if (ringStart)
+			read = ringNext(read, ringStart, ringEnd);
+		else
+			read++;
+	}
+	return 0;
 }
