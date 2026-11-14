@@ -39,6 +39,10 @@ SceInt32 sceKernelPowerTick(SceInt32 arg);
 int sceKernelPowerLock(int type);
 int sceKernelPowerUnlock(int type);
 
+/* not in the SDK: the C library's abort handler call (SceProcessmgr's
+ * sceKernelCallAbortHandlerForUser) */
+int sceKernelCallAbortHandler(SceUInt32 code, const void *opt);
+
 /* the time since the process started, in microseconds */
 SceInt32 sceKernelGetProcessTime(SceKernelSysClock *pClock);
 SceUInt32 sceKernelGetProcessTimeLow(void);
