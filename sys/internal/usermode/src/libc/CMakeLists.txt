@@ -202,6 +202,28 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	strtoull.c
 	strtoumax.c
 	strxfrm.c
+	swprintf.c
+	swscanf.c
+	tolower.c
+	toupper.c
+	towctrans.c
+	towlower.c
+	towupper.c
+	ungetc.c
+	ungetwc.c
+	vfprintf.c
+	vfscanf.c
+	vfwprintf.c
+	vfwscanf.c
+	vprintf.c
+	vscanf.c
+	vsnprintf.c
+	vsprintf.c
+	vsscanf.c
+	vswprintf.c
+	vswscanf.c
+	vwprintf.c
+	vwscanf.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
