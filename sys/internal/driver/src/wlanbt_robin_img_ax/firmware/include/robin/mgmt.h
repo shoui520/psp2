@@ -99,7 +99,6 @@ void wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
 void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
 			 unsigned int count, unsigned int bitmap);		/* 0x356f6 */
 void cbProcSelectBuffer(int kind, const uint8_t *bssid);			/* 0x1e064 */
-void wlanPsUpdateTable(struct WlanConnection *connection);			/* 0x17206 */
 void rfCalibResolveDescriptor(void);						/* 0x2a254 */
 extern uint8_t wlanPsHostMode;							/* 0x55130 */
 

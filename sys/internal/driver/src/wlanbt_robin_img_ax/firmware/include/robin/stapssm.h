@@ -104,6 +104,8 @@ struct WlanPsHostConfig {
 
 /* The station's power-save state (0x54aa8..0x54b40). */
 extern uint8_t wlanPsBtShareMode;
+extern uint8_t wlanPsPollFlag;
+extern uint8_t wlanPsHostWakePending;
 extern uint8_t wlanPsLastTxComplete;
 extern uint8_t wlanPsNullSuppressed;
 extern uint8_t wlanPsSleepAllowance;

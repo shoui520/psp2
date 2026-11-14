@@ -62,5 +62,7 @@ int macMgmtFlushQueues(void);
 /* Not converted yet; provisional names. */
 void cbProcResume(unsigned int reason);					/* 0x1c800 */
 void cbProcFlush(void);							/* 0x1c840 */
+int cbProcVerifyContext(void);						/* 0x1b5ac */
+unsigned int cbProcSelectContext(void);					/* 0x1b5b2 */
 
 #endif /* ROBIN_WLANTASK_H */

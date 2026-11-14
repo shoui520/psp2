@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "robin/adhoc.h"
 #include "robin/conn.h"
+#include "robin/hostps.h"
 #include "robin/esa.h"
 #include "robin/ibss.h"
 #include "robin/icverr.h"
@@ -401,7 +402,7 @@ void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *f
 	if (wlanIbssInfo.atimWindow) {
 		wlanPsClearTable(connection, 0);
 		if (wlanSessionId & 0x10)
-			wlanPsUpdateTable(connection);
+			wlanPsStartHostModeTimer(connection);
 	} else {
 		wlanPsAdjustTable(connection);
 		wpaSuppNotifyDescriptor();

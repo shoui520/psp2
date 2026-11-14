@@ -7,6 +7,7 @@
  */
 #include <stdint.h>
 #include "robin/coex.h"
+#include "robin/hostps.h"
 #include "robin/conn.h"
 #include "robin/join.h"
 #include "robin/mactx.h"
@@ -79,22 +80,17 @@ static TX_SEMAPHORE wlanPsResetDoneStorage __attribute__((section(".itcm.bss")))
 /* Not converted yet; provisional names. */
 extern uint16_t wlanPsSessionTimeout;			/* 0x568cc: s, set by the host */
 extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
-extern uint16_t wlanPsPollWindow;			/* 0x54b76 */
 extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
 extern uint16_t sleepHostWakeCount;			/* 0x5622e */
 extern uint32_t sleepHostWakeMargin;			/* 0x56234 */
 extern uint32_t sleepHostClockParameter;		/* 0x5623c */
-extern uint32_t wlanPsPeerFrames;			/* 0x54b78 */
 extern uint32_t wlanIbssPsActive;			/* 0x593d4 */
-extern struct WlanPsMachine wlanIbssPsMachine;		/* 0x5963c */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 int rfCalibConfigureContext(void);			/* 0x26842 */
 void rfCalibResolveContext(void);			/* 0x26ae0 */
 void wlanPsResolveBuffer(void);				/* 0x3c68e */
 void wlanPsSyncBuffer(void);				/* 0x3c65a */
 void macMgmtResolveDescriptor(void);			/* 0x3bfa0 */
-unsigned int cbProcSelectContext(void);			/* 0x1b5b2 */
-int cbProcVerifyContext(void);				/* 0x1b5ac */
 
 /* 0x168e0: the AP role is the only one present. */
 int wlanHasApRole(void)
@@ -184,7 +180,7 @@ int wlanPsInit(void)
 	wlanPsSleepSequence = 0;
 	wlanConnectionPhase = 0;
 	wlanHostSleepEndOnWake = 0;
-	wlanPsPeerFrames = 0;
+	wlanPsHostActive = 0;
 	wlanPsWakeAdvance = 345;
 	sleepWakeLatency = rfCalibrationTable[13 + rfCalibConfigureContext()];
 	sleepCalibrating = 0;
@@ -310,7 +306,7 @@ void wlanPsStartBeaconWakeTimer(int dtim)
 	if (wlanConnectionExists(WLAN_IF_IBSS) && wlanIbssPsActive != 0)
 		goto out;
 	if (((wlanStaPs.state == &wlanStaPs.sleep) |
-	     (wlanIbssPsMachine.state == &wlanIbssPsMachine.awake)) == 0)
+	     (wlanIbssPsMachine.state == &wlanIbssPsMachine.sleep)) == 0)
 		goto out;
 	if (dtim == 0 || (beacons = wlanPsWakeDtims) == 0)
 		beacons = wlanPsWakeBeacons;
@@ -497,7 +493,7 @@ int wlanPsAsleep(void)
 			inSleep = state == &wlanStaPs.confirm;
 		asleep = (state == &wlanStaPs.periodic) | inSleep;
 	} else if (wlanRoleIbssOnly()) {
-		asleep = wlanIbssPsMachine.state == &wlanIbssPsMachine.awake;
+		asleep = wlanIbssPsMachine.state == &wlanIbssPsMachine.sleep;
 	}
 	return asleep;
 }
@@ -550,7 +546,7 @@ int wlanPsSleepStateReached(void)
 		info = wlanConnectionInfo(wlanConnectionByRole(2));
 		return info->psMachine.state == &info->psMachine.awake;
 	}
-	return wlanIbssPsMachine.state == &wlanIbssPsMachine.awake;
+	return wlanIbssPsMachine.state == &wlanIbssPsMachine.sleep;
 }
 
 /* 0x17024 */
@@ -602,7 +598,7 @@ int wlanPsEndSession(struct WlanConnection *connection, uint32_t flags)
 	}
 	if ((wlanSessionId & (WLAN_SESSION_STATION | WLAN_SESSION_AP)) == 0) {
 		wlanPsSleepSequence = 0;
-		wlanPsPeerFrames = 0;
+		wlanPsHostActive = 0;
 	}
 	return changed;
 }

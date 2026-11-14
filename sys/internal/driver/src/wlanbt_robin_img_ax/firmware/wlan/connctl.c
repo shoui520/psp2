@@ -20,9 +20,6 @@
 struct WlanConnection *wlanConnectionClient __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionOther __attribute__((section(".sqram1.rw")));
 uint8_t wlanRoleMask __attribute__((section(".sqram1.rw")));
-uint8_t wlanConnectionPhase __attribute__((section(".itcm.rw")));	/* 0x54b70 */
-uint8_t wlanConnectionStage __attribute__((section(".itcm.rw")));	/* 0x54b71 */
-uint32_t wlanPendingTimer __attribute__((section(".itcm.bss")));
 struct OsaBufferPool wlanEventPool __attribute__((section(".dtcm.bss")));
 
 int wlanRoleMaskIs(unsigned int mask)
@@ -118,18 +115,6 @@ int wlanConnectEventTryWait(void)
 int wlanReleaseStateSemaphore(void)
 {
 	return osaSemaphoreRelease(cbProcSemaphore);
-}
-
-int wlanPsCancelPendingTimer(void)
-{
-	int result = wlanPendingTimer;
-
-	if (wlanPendingTimer != 0) {
-		osaCancelTimer(wlanPendingTimer);
-		wlanPendingTimer = 0;
-		return 0;
-	}
-	return result;
 }
 
 int wlanPsDisabled(void)

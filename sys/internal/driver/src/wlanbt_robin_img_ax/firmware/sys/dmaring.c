@@ -19,7 +19,6 @@ void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);	/* 0x03f3abf7 */
 void romDmaRxDataRingStart(unsigned int size);			/* 0x03f3a359 */
 
 /* Not converted yet; provisional name. */
-int cbProcVerifyContext(void);					/* 0x1b5ac */
 
 /* The MAC's read pointer of the receive data ring (bits 3-12, as WlanDmaRing.pointer). */
 #define MAC_390_RX_DATA_POINTER	MAC_REG(0x390)

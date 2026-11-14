@@ -11,6 +11,7 @@
 #include "robin/stapssm.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
+#include "robin/hostps.h"
 #include "robin/esa.h"
 #include "robin/ie.h"
 #include "robin/join.h"
@@ -117,7 +118,6 @@ void macTxNotifyBuildHeader(struct WlanConnection *connection, const struct Wlan
 			    int kind, const void *unused, uint32_t timeout);	/* 0x34094 */
 void macTxNotifyResolveContext(struct WlanConnection *connection,
 			       const struct WlanJoinBss *previous);	/* 0x308e8 */
-void wlanPsValidateTable(void);						/* 0x172cc */
 void wpaSuppNotifyHeader(struct WlanConnection *connection);		/* 0x17b64 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
 void macMgmtResolveState(struct WlanConnection *connection, unsigned int security); /* 0x34cc4 */
@@ -224,7 +224,7 @@ void keyMgmtControlledPortOpen(void)
 	if (wlanSessionId && wlanRoleOtherOnly()) {
 		connection = wlanJoin.connection;
 		if (connection->interfaceType != WLAN_IF_AMP)
-			wlanPsUpdateTable(connection);
+			wlanPsStartHostModeTimer(connection);
 	}
 }
 
@@ -266,7 +266,7 @@ void wlanJoinFinish(uint8_t result)
 	if (wlanJoin.result == WLAN_JOIN_OK) {
 		wlanJoinClosePort();
 		macTxNotifyResolveContext(wlanJoin.connection, &wlanJoin.previous);
-		wlanPsValidateTable();
+		wlanPsPhaseSuspend();
 		if (wlanJoin.reassociationRequest)
 			wlanJoin.associatedAt = 0;
 		else

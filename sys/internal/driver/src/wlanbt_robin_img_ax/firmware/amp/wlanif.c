@@ -85,7 +85,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 					       int policy, void *driver);	/* 0x1d604 */
 int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
-extern uint8_t wlanConnectionPhase;			/* 0x54b70 */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
 
 uint8_t ampLocalFrameAddress[6] __attribute__((section(".itcm.rw")));

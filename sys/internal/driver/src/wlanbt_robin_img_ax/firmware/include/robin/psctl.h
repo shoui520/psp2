@@ -8,7 +8,9 @@
 #ifndef ROBIN_PSCTL_H
 #define ROBIN_PSCTL_H
 
+#include <stddef.h>
 #include <stdint.h>
+#include "robin/btrom.h"
 #include "robin/conn.h"
 #include "robin/threadx.h"
 #include "robin/wlantask.h"
@@ -38,6 +40,25 @@ extern struct WlanInitStage wlanPsInitStage;
 extern uint16_t wlanPsNullWindow;
 
 extern uint32_t wlanPendingEvents[2];
+
+/*
+ * The IBSS power-save machine (0x5963c), made by the IBSS power-save code
+ * (0x3c65a, not converted yet); only what wlan/psctl.c and wlan/hostps.c use.
+ */
+struct WlanIbssPsMachine {
+	struct RomHsmState *state;	/* current state */
+	struct RomHsmState root;
+	struct RomHsmState off;		/* the state romHsmStart() enters */
+	struct RomHsmState reserved28[3];
+	struct RomHsmState sleep;
+	struct RomHsmState reserved76[2];
+	TX_TIMER confirmTimer;		/* "SleepConfirmTmr" */
+};
+
+_Static_assert(offsetof(struct WlanIbssPsMachine, sleep) == 64, "IBSS PS sleep state");
+_Static_assert(offsetof(struct WlanIbssPsMachine, confirmTimer) == 100, "IBSS PS confirm timer");
+
+extern struct WlanIbssPsMachine wlanIbssPsMachine;
 
 uint32_t wlanPsGetOverride(void);
 int wlanPsSessionOpen(void);

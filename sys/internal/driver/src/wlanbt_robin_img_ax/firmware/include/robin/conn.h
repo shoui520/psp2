@@ -462,8 +462,6 @@ void *wlanGetBufferDevice(OsaBuffer *buffer);
 extern struct WlanConnection *wlanConnectionClient;
 extern struct WlanConnection *wlanConnectionOther;
 extern uint8_t wlanRoleMask;
-extern uint8_t wlanConnectionPhase;
-extern uint8_t wlanConnectionStage;
 
 int wlanRoleMaskIs(unsigned int mask);
 struct WlanConnection *wlanConnectionByRole(int role);
@@ -476,8 +474,13 @@ int wlanConnectionActivate(struct WlanConnection *connection);
 int wlanPostConnectionEvent(struct WlanConnection *connection, uint32_t event);
 int wlanConnectEventTryWait(void);
 int wlanReleaseStateSemaphore(void);
-int wlanPsCancelPendingTimer(void);
 int wlanPsDisabled(void);
+
+/* wlan/hostps.c */
+extern uint8_t wlanConnectionPhase;
+extern uint8_t wlanConnectionStage;
+
+int wlanPsCancelPendingTimer(void);
 
 /* wlan/psctl.c, used by most of the MAC; the rest is in robin/psctl.h */
 extern uint32_t wlanPsOverride;

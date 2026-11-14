@@ -18,6 +18,7 @@
 #include "robin/mactx.h"
 #include "robin/mef.h"
 #include "robin/pspoll.h"
+#include "robin/hostps.h"
 #include "robin/psctl.h"
 #include "robin/pssm.h"
 #include "robin/rom.h"
@@ -111,7 +112,6 @@ uint64_t wlanPsHeaderDeadline __attribute__((section(".itcm.rw")));		/* 0x54b40 
 extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
 extern struct OsaBufferPool wlanTxFramePool;
 extern uint16_t wlanPsHeaderSpacing;			/* 0x562b0 */
-extern uint16_t wlanPsPollWindow;			/* 0x54b76 */
 extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
 int wlanPsResetDescriptor(struct WlanConnection *connection, const void *beacon); /* 0x3e98a */
 extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
