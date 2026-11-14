@@ -62,6 +62,9 @@ void powerRequestUnknown(void);
 void powerRequestDone(unsigned char status);
 static void powerRequestGetElmoVersion(void);
 static void powerRequestGetCookieVersion(void);
+#if !FW_SINCE(0x00090903)
+static void powerRequest0882(void);
+#endif
 static void powerRequestGetPowerStatus(void);
 static void powerRequest0884(void);
 static void powerRequest0885(void);
@@ -100,6 +103,16 @@ static void powerRequestCtrlChargingCurrent(void);
 static void powerRequestCtrlSupplyCurrentAc(void);
 static void powerRequestCtrlSupplyCurrentUsb(void);
 void powerReadStatus(unsigned char *out);
+#if !FW_SINCE(0x00090903)
+static void powerRequest08A0(void);
+static void powerRequest08A1(void);
+static void powerRequest08A2(void);
+static void powerRequest08A3(void);
+static void powerRequest08A4(void);
+static void powerRequest08A8(void);
+static void powerRequest08A9(void);
+static void powerRequest08AA(void);
+#endif
 static void batteryRequestGetVersion(void);
 static void batteryRequestGetTemp(void);
 static void batteryRequestGetFullCap(void);
@@ -112,8 +125,10 @@ static void batteryRequest0988(void);
 static void batteryRequestSWReset(void);
 static void batteryRequestGetFullCap2(void);
 static void batteryRequestGetBicTemp(void);
+#if FW_SINCE(0x00090903)
 static void batteryRequestGetCycleCount(void);
 static void batteryRequest098D(void);
+#endif
 static void batteryRequestStartBLMode(void);
 static void batteryRequestStopBLMode(void);
 static void batteryRequestSetBLCommand(void);
@@ -134,6 +149,9 @@ static union BatteryBuffer batteryRequestAnswer;
 static const struct PowerCommand powerCommands[] = {
 	{ 0x0880, powerRequestGetElmoVersion },
 	{ 0x0881, powerRequestGetCookieVersion },
+#if !FW_SINCE(0x00090903)
+	{ 0x0882, powerRequest0882 },
+#endif
 	{ 0x0883, powerRequestGetPowerStatus },
 	{ 0x0884, powerRequest0884 },
 	{ 0x0885, powerRequest0885 },
@@ -164,6 +182,16 @@ static const struct PowerCommand powerCommands[] = {
 #if LED_REQUESTS
 	{ 0x089e, powerRequestSetChargeLedCtrl },
 #endif
+#if !FW_SINCE(0x00090903)
+	{ 0x08a0, powerRequest08A0 },
+	{ 0x08a1, powerRequest08A1 },
+	{ 0x08a2, powerRequest08A2 },
+	{ 0x08a3, powerRequest08A3 },
+	{ 0x08a4, powerRequest08A4 },
+	{ 0x08a8, powerRequest08A8 },
+	{ 0x08a9, powerRequest08A9 },
+	{ 0x08aa, powerRequest08AA },
+#endif
 	{ 0x08b0, powerRequestBatteryStartBLMode },
 	{ 0x08c0, powerRequestCtrlManualChargeMode },
 	{ 0x08c1, powerRequestCtrlBatteryCharge },
@@ -186,8 +214,10 @@ static const struct PowerCommand batteryCommands[] = {
 	{ 0x0989, batteryRequestSWReset },
 	{ 0x098a, batteryRequestGetFullCap2 },
 	{ 0x098b, batteryRequestGetBicTemp },
+#if FW_SINCE(0x00090903)
 	{ 0x098c, batteryRequestGetCycleCount },
 	{ 0x098d, batteryRequest098D },
+#endif
 	{ 0x09b0, batteryRequestStartBLMode },
 	{ 0x09b1, batteryRequestStopBLMode },
 	{ 0x09b2, batteryRequestSetBLCommand },
@@ -377,6 +407,22 @@ static void powerRequestGetCookieVersion(void)
 	powerRequest.status = 0;
 }
 
+#if !FW_SINCE(0x00090903)
+/* 0x0882 (0x00090804's): the battery's three version words */
+static void powerRequest0882(void)
+{
+	unsigned int *answer;
+
+	answer = (unsigned int *)powerRequestAnswer;
+	*answer++ = deviceVersions.battery.version[0];
+	*answer++ = deviceVersions.battery.version[1];
+	*answer = deviceVersions.battery.version[2];
+	powerRequest.answerLength = 6;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = 0;
+}
+#endif
+
 /* 0x0883 (sceSysconGetPowerStatus) */
 static void powerRequestGetPowerStatus(void)
 {
@@ -557,6 +603,7 @@ static void powerRequestCtrlUsbStatus(void)
 
 	if (powerRequest.length < 3) {
 		chargeUsbMode = powerRequestData[0];
+#if FW_SINCE(0x00090903)
 		switch (chargeUsbMode) {
 		case 3:
 			chargeUsbHold = 0;
@@ -573,6 +620,7 @@ static void powerRequestCtrlUsbStatus(void)
 				chargeUsbHold = 0xff;
 			break;
 		}
+#endif
 #if FW_SINCE(0x01000104)
 		cookieReadStatus2(status);
 		dis_dsp();
@@ -585,7 +633,11 @@ static void powerRequestCtrlUsbStatus(void)
 		powerStatus.bits.usb = cookieStatus2.bits.usb;
 		ena_dsp();
 #endif
+#if FW_SINCE(0x00090903)
 		result = powerResult(chargeSetCurrent());
+#else
+		result = powerResult((unsigned char)chargeSetCurrent());
+#endif
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -962,6 +1014,7 @@ static void powerRequestCtrlChargeVBUS(void)
 	unsigned char result;
 
 	if (powerRequest.length < 3) {
+#if FW_SINCE(0x00090903)
 		if (powerRequestData[0] != 0) {
 			if (powerRequestData[1] == 1)
 				chargeVbus.1 = 1;
@@ -974,6 +1027,17 @@ static void powerRequestCtrlChargeVBUS(void)
 				chargeVbus.0 = 0;
 		}
 		result = powerResult(chargeSetCurrent());
+#else
+		/* 0x00090804's: on or off, the Cookie's charge set at once */
+		if (powerRequestData[0] != 0) {
+			chargeVbus = 1;
+			result = powerCookieClear();
+		} else {
+			chargeVbus = 0;
+			result = powerCookieSet();
+		}
+		result = powerResult(result);
+#endif
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
@@ -1178,6 +1242,133 @@ void powerReadStatus(unsigned char *out)
 	*out++ = elmoStatusMask.byte[9];
 }
 
+#if !FW_SINCE(0x00090903)
+/* 0x00090804's battery gauge commands on the power request (the battery request's later) */
+
+/* 0x08a0: the battery's temperature */
+static void powerRequest08A0(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 0)
+		result = powerResult(batteryReadTemp((unsigned int *)powerRequestAnswer));
+	else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a1: the gauge's register 0x3c */
+static void powerRequest08A1(void)
+{
+	unsigned char result;
+	unsigned char reg;
+
+	if (powerRequest.length == 0) {
+		reg = 0x3c;
+		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a2: register 0x14 */
+static void powerRequest08A2(void)
+{
+	unsigned char result;
+	unsigned char reg;
+
+	if (powerRequest.length == 0) {
+		reg = 0x14;
+		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a3: register 0x16 */
+static void powerRequest08A3(void)
+{
+	unsigned char result;
+	unsigned char reg;
+
+	if (powerRequest.length == 0) {
+		reg = 0x16;
+		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a4: register 0x28 */
+static void powerRequest08A4(void)
+{
+	unsigned char result;
+	unsigned char reg;
+
+	if (powerRequest.length == 0) {
+		reg = 0x28;
+		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a8: data[0] the register to read */
+static void powerRequest08A8(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 2)
+		result = powerResult(batteryRead(powerRequestData, powerRequestAnswer, 2));
+	else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08a9: data[0] the register, data[1-2] its value */
+static void powerRequest08A9(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 4) {
+		powerRequestData[1] = powerRequestData[0];
+		result = powerResult(batteryWrite(&powerRequestData[1], 3));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 0;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+
+/* 0x08aa: data[0] the control command */
+static void powerRequest08AA(void)
+{
+	unsigned char result;
+	unsigned int command;
+
+	if (powerRequest.length == 2) {
+		command = powerRequestData[0];
+		result = powerResult(batteryControl(command, powerRequestAnswer, 2));
+	} else
+		result = 0x3b;
+	powerRequest.answerLength = 2;
+	hostRequestAnswerReady(&powerRequest.state);
+	powerRequest.status = result;
+}
+#endif
+
 /* 0x0900 (sceSysconGetBatteryRemainCap) */
 unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned char *length)
 {
@@ -1365,7 +1556,8 @@ static void batteryRequestGetFullCap2(void)
 	batteryRequest.status = result;
 }
 
-/* 0x098c (sceSysconGetBatteryCycleCount): register 0x2a */
+#if FW_SINCE(0x00090903)
+/* 0x098c (sceSysconGetBatteryCycleCount): register 0x2a (0x00090804 has not it, nor 0x098d) */
 static void batteryRequestGetCycleCount(void)
 {
 	unsigned char result;
@@ -1396,6 +1588,7 @@ static void batteryRequest098D(void)
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
 }
+#endif
 
 /* 0x0986 (sceSysconReadBatteryReg): data[0] the register */
 static void batteryRequestReadReg(void)

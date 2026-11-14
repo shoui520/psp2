@@ -65,7 +65,11 @@ extern __sreg unsigned char statePhase;	/* the phase: 1 to run, 2 done, 3 failed
 extern __sreg unsigned int powerState;
 extern __sreg unsigned int stateNext;
 extern __sreg unsigned int stateEvents;
+#if FW_SINCE(0x00090903)
 extern __sreg unsigned char stateCause;	/* the transition that started the state */
+#else
+extern __sreg unsigned int stateCause;	/* 0x00090804: a word */
+#endif
 extern union PowerRequest stateWakeupFactor;
 extern union PowerRequest stateRequest;
 
@@ -76,7 +80,9 @@ extern void stateSetWakeMask(unsigned long mask);
 extern unsigned long stateGetWakeMask(void);
 extern void stateInit(void);
 extern union PowerRequest *stateGetWakeupFactor(void);
+#if FW_SINCE(0x00090903)
 extern unsigned char stateGetCause(void);
+#endif
 extern unsigned int stateGet(void);
 #if FW_SINCE(0x01000104)
 extern int stateTransition(unsigned char transition);

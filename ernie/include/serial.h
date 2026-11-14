@@ -7,10 +7,17 @@
 #ifndef ERNIE_SERIAL_H
 #define ERNIE_SERIAL_H
 
+#include "ernie.h"
 #include "kernel.h"
 
 #define SERIAL_PORT		3	/* the UART */
 #define SERIAL_DATA_SIZE	0x39	/* the most data a frame carries */
+/* the most a received frame carries: 0x00090804 takes less than it sends */
+#if FW_SINCE(0x00090903)
+#define SERIAL_RECEIVE_SIZE	SERIAL_DATA_SIZE
+#else
+#define SERIAL_RECEIVE_SIZE	0x31
+#endif
 
 /* a frame: the command, the status, the data's length (in text, twice it), the data, then
    0xffff less the sum of the bytes before */

@@ -159,7 +159,7 @@ unsigned char serial4Receive(void)
 			return SERIAL_BAD_LENGTH;
 		serial4.length >>= 1;
 	}
-	if (serial4.length > SERIAL_DATA_SIZE || size - 7 != serial4.length)
+	if (serial4.length > SERIAL_RECEIVE_SIZE || size - 7 != serial4.length)
 		return SERIAL_BAD_LENGTH;
 	return SERIAL_OK;
 }

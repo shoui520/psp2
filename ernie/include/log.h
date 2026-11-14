@@ -7,7 +7,13 @@
 #ifndef ERNIE_LOG_H
 #define ERNIE_LOG_H
 
+#include "ernie.h"
+
+#if FW_SINCE(0x00090903)
 #define LOG_VERSION		3	/* the records' layout */
+#else
+#define LOG_VERSION		2
+#endif
 #define LOG_HEADER		0	/* the header's record */
 #define LOG_EVENTS		3	/* the events queued */
 
@@ -60,7 +66,9 @@ extern int logWriteHeader(struct LogHeader *header);
 extern int logRead(unsigned int id, void *data, unsigned char *size);
 extern int logWrite(unsigned int id, void *data);
 extern int logNvsRead(unsigned int offset, unsigned char size, void *data);
+#if FW_SINCE(0x00090903)
 extern int logNvsWrite(unsigned int offset, unsigned char size, void *data);
+#endif
 extern int logClearAll(void);
 extern unsigned int logRecordCount(void);
 

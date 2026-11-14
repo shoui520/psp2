@@ -384,7 +384,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 	}
 #if !FW_SINCE(0x01000104)
 	/* before 0x01000104 the states and their transitions are handled alike, and the mode's
-	   status and events cleared off */
+	   status and events cleared off; 0x00090804 leaves the transition flag set */
 	if (ptn & BBMC_EVENT_STATE) {
 		unsigned long zero;
 		unsigned int state;
@@ -396,7 +396,9 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		case 0x8020:
 			if (bbmcIsOn())
 				uart2Open();
+#if FW_SINCE(0x00090903)
 			bbmc.transition = 0;
+#endif
 			break;
 		case 0x0008:
 		case 0x8008:
@@ -405,13 +407,17 @@ unsigned char bbmcEvent(FLGPTN ptn)
 				intp8Enable(1);
 				if (P7.4)
 					task6SetFlag(6, BBMC_EVENT_RESUME);
+#if FW_SINCE(0x00090903)
 				bbmc.transition = 0;
+#endif
 			}
 			break;
 		case 0x0004:
 		case 0x8004:
 			bbmcWriteRegs(8, 4, (unsigned char *)&zero, BBMC_WRITE_RESET);
+#if FW_SINCE(0x00090903)
 			bbmc.transition = 0;
+#endif
 			break;
 		}
 	}

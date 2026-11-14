@@ -140,6 +140,86 @@ void csi10Release(void)
 
 /* a byte went both ways: store the one received, send the next; at a transfer's end, start
    the next phase */
+#if !FW_SINCE(0x00090903)
+/* 0x00090804: each phase's end starts the next itself, and the frame has no status reads */
+void csi10Interrupt(void)
+{
+	unsigned char data;
+	unsigned char i;
+
+	if (0x01 & SSR02L) {
+		SIR02L = 0x01;
+		data = 0;
+	} else
+		data = SIO10;
+	if (csi10.receiveCount != 0) {
+		*csi10.receive = data;
+		csi10.receive++;
+		csi10.receiveCount--;
+	}
+	for (i = 0; i < TOUCH_DELAY_BYTE; i++)
+		NOP();
+	if (csi10.sendCount != 0) {
+		SIO10 = *csi10.send;
+		csi10.send++;
+		csi10.sendCount--;
+	} else if (csi10.receiveCount != 0)
+		SIO10 = 0;
+	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(0x40 & SSR02L)) {
+		csi10.state &= ~CSI10_BUSY;
+		switch (csi10.state & CSI10_PHASE) {
+		case CSI10_TRANSFER:
+			csi10.state = CSI10_DONE;
+			break;
+		case CSI10_COMMAND1:
+			csi10.receive = touchFrames[touch.frame].panel[1];
+			csi10.receiveCount = TOUCH_REPORT_SIZE;
+			csi10.send = (unsigned char *)&touchCommand;
+			csi10.sendCount = 0;
+			csi10.state = CSI10_REPORT1 | CSI10_BUSY;
+			SIO10 = 0;
+			break;
+		case CSI10_REPORT1:
+			P0.0 = 1;
+			if (touch.flags & TOUCH_PANEL0) {
+				P0.1 = 0;
+				touchFrames[touch.frame].time0 = TCR02;
+				touchFrames[touch.frame].state0 = touch.state.value;
+				for (i = 0; i < TOUCH_DELAY_SELECT; i++)
+					NOP();
+				touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+				csi10.receive = (unsigned char *)&touchReply;
+				csi10.receiveCount = 0;
+				csi10.send = (unsigned char *)&touchCommand;
+				csi10.sendCount = 2;
+				csi10.state = CSI10_COMMAND0 | CSI10_BUSY;
+				SIO10 = *csi10.send;
+				csi10.send++;
+				csi10.sendCount--;
+			} else
+				csi10.state = CSI10_FRAME;
+			break;
+		case CSI10_COMMAND0:
+			csi10.receive = touchFrames[touch.frame].panel[0];
+			csi10.receiveCount = TOUCH_REPORT_SIZE;
+			csi10.send = (unsigned char *)&touchCommand;
+			csi10.sendCount = 0;
+			csi10.state = CSI10_REPORT0 | CSI10_BUSY;
+			SIO10 = 0;
+			break;
+		case CSI10_REPORT0:
+			P0.1 = 1;
+			csi10.state = CSI10_FRAME;
+			break;
+		}
+		if (csi10.state == CSI10_FRAME) {
+			hostStream0300.first = hostStream0301.first = hostStream0302.first = touch.frame;
+			csi10.state = CSI10_OPEN;
+			touch.flags |= TOUCH_FRAME;
+		}
+	}
+}
+#else
 void csi10Interrupt(void)
 {
 	unsigned char data;
@@ -302,3 +382,4 @@ void csi10Interrupt(void)
 		}
 	}
 }
+#endif

@@ -560,8 +560,10 @@ unsigned char powerCookieClear(void)
 	result = 0;
 #if FW_SINCE(0x01000107)
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
-#else
+#elif FW_SINCE(0x00090903)
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1) {
+#else
+	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && chargeVbus) {
 #endif
 		cookieReadReg3();
 #if BOARD_COOKIE_REG_HIGH
@@ -821,7 +823,7 @@ void powerBbmcPulse(void)
 	powerSleep(0x0e74);
 	P33 = 0;
 }
-#else
+#elif FW_SINCE(0x00090903)
 /* task 5's (flag 0x0400): the Cookie's charge off for a second and on again, while its status
    has no bit 1 and register 3's bit 7 is clear */
 void powerCookieCycle(void)

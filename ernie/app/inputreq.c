@@ -100,8 +100,10 @@ static void touchRequestRead0(void);
 static void touchRequestWrite1(void);
 static void touchRequestRead1(void);
 static void touchRequestSetPower(void);
+#if FW_SINCE(0x00090903)
 static void touchRequestStatus(void);
 static void touchRequestSetGrip(void);
+#endif
 static void touchRequestEnterBootloader0(void);
 static void touchRequestUnlock0(void);
 static void touchRequestLoad0(void);
@@ -163,8 +165,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x0385, touchRequestWrite1 },
 	{ 0x0386, touchRequestRead1 },
 	{ 0x0387, touchRequestSetPower },
+#if FW_SINCE(0x00090903)
 	{ 0x0388, touchRequestStatus },
 	{ 0x0389, touchRequestSetGrip },
+#endif
 	{ 0x03a0, touchRequestEnterBootloader0 },
 	{ 0x03a1, touchRequestUnlock0 },
 	{ 0x03a2, touchRequestLoad0 },
@@ -705,6 +709,9 @@ void touchStream0301Prepare(void)
 	age = touchFrames[block].time0 - age;
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
+#if !FW_SINCE(0x00090903)
+	touchFrames[block].panel[0][TOUCH_PANEL_STATE] = touchFrames[block].state0;
+#endif
 }
 
 void touchStream0302Prepare(void)
@@ -719,6 +726,9 @@ void touchStream0302Prepare(void)
 	age = touchFrames[block].time1 - age;
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
+#if !FW_SINCE(0x00090903)
+	touchFrames[block].panel[1][TOUCH_PANEL_STATE] = touchFrames[block].state1;
+#endif
 }
 
 void touchStream0300Prepare(void)
@@ -734,9 +744,15 @@ void touchStream0300Prepare(void)
 	age = touchFrames[block].time0 - now;
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
+#if !FW_SINCE(0x00090903)
+	touchFrames[block].panel[0][TOUCH_PANEL_STATE] = touchFrames[block].state0;
+#endif
 	age = touchFrames[block].time1 - now;
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
+#if !FW_SINCE(0x00090903)
+	touchFrames[block].panel[1][TOUCH_PANEL_STATE] = touchFrames[block].state1;
+#endif
 }
 
 /* 0x0380 (sceSysconGetTouchpanelDeviceInfo): each controller's family, variant, version and
@@ -952,7 +968,9 @@ static void touchRequestSetPower(void)
 	result = 0;	/* never set before 104: the answer is then whatever was left in L */
 #endif
 	if (touchRequest.length == 8) {
+#if FW_SINCE(0x00090903)
 		touchRequest.status = 0;
+#endif
 		if (inputRequests.touchData[0] != 0) {
 			result = touchSetPower0(inputRequests.touchData[1]);
 			if (result != 0)
@@ -963,6 +981,9 @@ static void touchRequestSetPower(void)
 			if (result != 0)
 				goto done;
 		}
+#if !FW_SINCE(0x00090903)
+		touchRequest.status = 0;
+#endif
 	} else
 		touchRequest.status = 0x3b;
 done:
@@ -972,6 +993,7 @@ done:
 	hostRequestAnswerReady(&touchRequest.state);
 }
 
+#if FW_SINCE(0x00090903)
 /* 0x0388: each panel's status read with its frames (data[0], data[1]) on or off */
 static void touchRequestStatus(void)
 {
@@ -1028,6 +1050,7 @@ done:
 	inputRequests.touchPending = 0;
 	hostRequestAnswerReady(&touchRequest.state);
 }
+#endif
 
 /* 0x03a0: panel 0's controller to its bootloader; its status 8 runs later */
 static void touchRequestEnterBootloader0(void)

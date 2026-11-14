@@ -108,7 +108,9 @@ extern void hostRequestInit(void);
 extern void hostIntInit(void);
 extern void hostIntEnable(void);
 extern void hostIntDisable(void);
+#if FW_SINCE(0x00090903)
 extern void hostIntCancel(void);
+#endif
 extern int hostInit(void);
 extern unsigned char hostSetLinkConfig(struct HostLinkConfig config);
 #if FW_SINCE(0x01000104)

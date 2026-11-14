@@ -1,6 +1,6 @@
 /*
  * The host's watchdog: the host arms it (command 0x0083) with a timeout and a mode, and
- * kicks it (0x0085) before the timeout runs out; when it does run out, transition 0x35 is
+ * kicks it (0x0085) before the timeout runs out; when it does run out, transition 0x35 (0x00090804's 0x32) is
  * run (in mode 0). At a power-on it takes the setting of the settings block, or keeps the
  * one it had (watchdogKeep).
  */
@@ -95,7 +95,11 @@ static void watchdogExpire(void)
 	STATE_TRANSITION_EVENT
 	switch (watchdog.bytes.mode) {
 	case 0:
+#if FW_SINCE(0x00090903)
 		STATE_TRANSITION_NOMASK(0x35);
+#else
+		STATE_TRANSITION_NOMASK(0x32);
+#endif
 		break;
 	}
 }

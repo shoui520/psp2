@@ -24,6 +24,9 @@
 #include "serial2.h"
 #include "serial4.h"
 #include "serialauth.h"
+#if !FW_SINCE(0x00090903)
+#include "serialreq.h"
+#endif
 #include "sleepfactor.h"
 #include "spidev.h"
 #include "state.h"
@@ -56,6 +59,12 @@ union Serial1Word {
 	unsigned char	byte[2];
 };
 
+#if !FW_SINCE(0x00090903)
+/* request 0x20's (its code follows serial1Reset) */
+struct HostRequest serialRequest;
+unsigned char serialRequestData[0x1c];		/* the offset, the size, the data; the answer */
+#endif
+
 unsigned char serial1Buffer[0x28];		/* commands 0x0300 and 0x0301's */
 
 /* the answers' data */
@@ -80,12 +89,22 @@ void serial1Reset(void)
 {
 	serialLock(1);
 	sleepFactorSet25(0);
+#if FW_SINCE(0x00090903)
 	serial1BufferClear();
+#else
+	memset(serial1Buffer, 0, sizeof(serial1Buffer));
+#endif
 	memset(&serial1Data, 0, sizeof(serial1Data));
 	serialAuthInit();
 	serial1State = 0;
 	serial1Key = SERIAL1_KEY_CLOSED;
 }
+
+#if !FW_SINCE(0x00090903)
+/* 0x00090804 has request 0x20 here, after serial1Reset; it has its own object (serialreq.c)
+   since 0x00090903 */
+#include "serialreq.c"
+#endif
 
 /* runs command; status 1 if no command has its number */
 unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
@@ -149,11 +168,13 @@ unsigned char serial1BufferWrite(unsigned char offset, unsigned char size, unsig
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 unsigned char serial1BufferClear(void)
 {
 	memset(serial1Buffer, 0, sizeof(serial1Buffer));
 	return 0;
 }
+#endif
 
 /* an input bit's handler: event flag 3's bit 0x0001 */
 void serial1InputHandler(void)
@@ -179,10 +200,15 @@ unsigned char serialNotifies1Count(void)
 	return 3;
 }
 #else
-/* before 0x01000104 no commands 0x0161, 0x0162, 0x0172 and 0x0190 */
+/* before 0x01000104 no commands 0x0161, 0x0162, 0x0172 and 0x0190 (0x00090804: no 0x0180-0x0182,
+   and 0x0910-0x0916) */
 unsigned char serialCommands1Count(void)
 {
+#if FW_SINCE(0x00090903)
 	return 0x2d;
+#else
+	return 0x31;
+#endif
 }
 
 unsigned char serialNotifies1Count(void)
@@ -632,6 +658,7 @@ static unsigned char serial1Command0171(struct SerialBuffer *request, struct Ser
 	unsigned long state;
 
 	response->data = serial1Data.byte;
+#if FW_SINCE(0x00090903)
 	response->length = 9;
 	serial1Data.byte[0] = getResetFlags();
 	serial1Data.byte[1] = getResetCause();
@@ -639,6 +666,12 @@ static unsigned char serial1Command0171(struct SerialBuffer *request, struct Ser
 	memcpy(&serial1Data.byte[3], stateGetWakeupFactor(), 2);
 	state = stateGetWakeMask();
 	memcpy(&serial1Data.byte[5], &state, 4);
+#else
+	response->length = 5;		/* 0x00090804: the wakeup factor's first byte, the mask */
+	serial1Data.byte[0] = *(unsigned char *)stateGetWakeupFactor();
+	state = stateGetWakeMask();
+	memcpy(&serial1Data.byte[1], &state, 4);
+#endif
 	serialSetAnswer(SERIAL_ANSWER);
 	return 0;
 }
@@ -902,6 +935,7 @@ static unsigned char serial1Notify0162(void)
 }
 #endif
 
+#if FW_SINCE(0x00090903)
 /* 0x0180-0x0182: task 4's operations 7-9, answered when they are done; status 0x61 while one
    runs */
 static unsigned char serial1Command0180(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -951,6 +985,7 @@ static unsigned char serial1Command0182(struct SerialBuffer *request, struct Ser
 	task5SetFlag(4, 0x4000);
 	return result;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 /* 0x0190 */
@@ -1006,6 +1041,148 @@ static unsigned char serial1Command0901(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+
+#if !FW_SINCE(0x00090903)
+/* 0x0910-0x0916 (0x00090804): the kernel's objects (a status of 0x33 for an ID it has none
+   of): tasks and event flags 1-6, memory pools 1-2, mailbox 1 and cyclic handler 7 */
+#define SERIAL1_KERNEL_TASKS		6
+#define SERIAL1_KERNEL_FLAGS		6
+#define SERIAL1_KERNEL_POOLS		2
+#define SERIAL1_KERNEL_MAILBOX		1
+#define SERIAL1_KERNEL_HANDLER		7
+
+/* 0x0910: ref_tsk, a task's state */
+static unsigned char serial1Command0910(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	if (id == 0 || id > SERIAL1_KERNEL_TASKS) {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	packet = serial1Data.byte;
+	result = ref_tsk(id, (T_RTSK *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RTSK);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x0911: ref_sem, a semaphore's state: the kernel has none */
+static unsigned char serial1Command0911(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	response->length = 0;
+	serialSetAnswer(SERIAL_ANSWER);
+	return 0x33;
+}
+
+/* 0x0912: ref_flg, an event flag's state */
+static unsigned char serial1Command0912(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	if (id == 0 || id > SERIAL1_KERNEL_FLAGS) {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	packet = serial1Data.byte;
+	result = ref_flg(id, (T_RFLG *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RFLG);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x0913: ref_mbx, a mailbox's state */
+static unsigned char serial1Command0913(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	if (id != SERIAL1_KERNEL_MAILBOX) {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	packet = serial1Data.byte;
+	result = ref_mbx(id, (T_RMBX *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RMBX);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x0914: ref_mpf, a fixed-size memory pool's state */
+static unsigned char serial1Command0914(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	if (id == 0 || id > SERIAL1_KERNEL_POOLS) {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	packet = serial1Data.byte;
+	result = ref_mpf(id, (T_RMPF *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RMPF);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x0915: ref_cyc, a cyclic handler's state */
+static unsigned char serial1Command0915(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char id;
+	unsigned char *packet;
+
+	id = request->data[0];
+	if (id != SERIAL1_KERNEL_HANDLER) {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x33;
+	}
+	packet = serial1Data.byte;
+	result = ref_cyc(id, (T_RCYC *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RCYC);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+
+/* 0x0916: ref_ver, the kernel's version */
+static unsigned char serial1Command0916(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+	unsigned char *packet;
+
+	packet = serial1Data.byte;
+	result = ref_ver((T_RVER *)packet);
+	response->data = packet;
+	response->length = sizeof(T_RVER);
+	serialSetAnswer(SERIAL_ANSWER);
+	return result;
+}
+#endif
 
 /* 0x0940, 0x0942, 0x0944: task 4's operations 1, 3 and 5, with a byte */
 static unsigned char serial1Command0940(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1193,9 +1370,11 @@ const struct SerialCommand1 serialCommands1[] = {
 #if FW_SINCE(0x01000104)
 	{ 0x0172, serial1Command0172, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif
+#if FW_SINCE(0x00090903)
 	{ 0x0180, serial1Command0180, SERIAL1_UNLOCKED },
 	{ 0x0181, serial1Command0181, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x0182, serial1Command0182, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
+#endif
 #if FW_SINCE(0x01000104)
 	{ 0x0190, serial1Command0190, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 #endif
@@ -1203,6 +1382,15 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0301, serial1Command0301, 0 },
 	{ 0x0900, serial1Command0900, SERIAL1_NVS_KEY3 },
 	{ 0x0901, serial1Command0901, SERIAL1_NVS_KEY3 },
+#if !FW_SINCE(0x00090903)
+	{ 0x0910, serial1Command0910, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0911, serial1Command0911, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0912, serial1Command0912, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0913, serial1Command0913, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0914, serial1Command0914, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0915, serial1Command0915, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+	{ 0x0916, serial1Command0916, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#endif
 	{ 0x0940, serial1Command0940, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0941, serial1Command0941, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0942, serial1Command0940, SERIAL1_KEY | SERIAL1_NVS_KEY3 },

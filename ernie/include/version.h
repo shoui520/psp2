@@ -36,7 +36,9 @@ extern void		setHardwareInfoFlags(unsigned char flags);
 #if FW_SINCE(0x01000104)
 extern void		clearHardwareInfoFlags(unsigned char flags);
 #endif
+#if FW_SINCE(0x00090903)
 extern void		setDlFlags(unsigned char flags);
+#endif
 extern void		getErnieDlVersion(unsigned char *buf);
 
 #endif

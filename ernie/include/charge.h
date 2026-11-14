@@ -103,8 +103,8 @@ struct ChargeLevel {
 	unsigned int	volt;
 };
 
-#ifdef ERNIE_UPDATER
-/* the updater's, an older revision: no alarms and no timer 0x1f */
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x00090903)
+/* the updater's and 0x00090804's, an older revision: no alarms and no timer 0x1f */
 struct Charge {
 	unsigned int	flags;			/* as the application's */
 	unsigned int	flagsRead;
@@ -118,7 +118,7 @@ struct Charge {
 	unsigned int	batteryBicTempC;
 	unsigned int	acDelay;		/* timer 0x18's, the update's period */
 	unsigned int	tempTicks;		/* not used by the updater */
-	unsigned int	checkTicks;
+	unsigned int	checkTicks;		/* 0x00090804's: the RTC's ticks at the update */
 };
 #else
 struct Charge {
@@ -180,10 +180,14 @@ extern __sreg unsigned char chargeControl;	/* 0: transition 0x16 due at the AC (
 extern __sreg struct ChargeTemp chargeTemp;
 extern __sreg unsigned char chargeCurrent;	/* the charge setting sent (cookieCtrlSupplyCurrentUsb); 0xff none */
 extern __sreg unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
+#if FW_SINCE(0x00090903)
 extern __sreg unsigned char chargeUsbHold;	/* 0xff: mode 5 while charging; no transition 0x0f */
-extern __sreg unsigned char chargeVbus;		/* the VBUS charge's bits (0x0893) */
+#endif
+extern __sreg unsigned char chargeVbus;		/* the VBUS charge's bits (0x0893; 0x00090804: on) */
 extern __sreg unsigned char chargeBbmcVersion;	/* the 3G modem's version at the last update */
+#if FW_SINCE(0x00090903)
 extern __sreg unsigned char chargeCookieSetting;	/* cookieCtrlSupplyCurrentAc's (alarm 2) */
+#endif
 #if FW_SINCE(0x01000107)
 extern __sreg unsigned char chargeCookieHeld;	/* powerCookieHold's */
 #endif

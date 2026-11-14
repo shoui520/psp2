@@ -34,13 +34,13 @@ static const struct LedPattern ledPatternDefault = {
 };
 #else
 /* before 0x01000306 pattern 2 is this one, not the parameter block's */
-static const struct LedPattern ledPattern2Default = {
+static TABLE_CONST struct LedPattern ledPattern2Default = {
 	{ 0x00, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 0x01 },
 	{ 0x01, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 50, 0x00 },
 	0x04, 0x0a,
 };
 
-static const struct LedPattern ledPatternDefault = {
+static TABLE_CONST struct LedPattern ledPatternDefault = {
 	{ 0x00, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 0x01 },
 	{ 0x01, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 0x00 },
 	0x08, 0x0a,

@@ -4,6 +4,8 @@
  * 1's buffer, 0x2084 writes it and sends the bytes written down the link, and 0x2085 does
  * either. All but the first two need the link unlocked and open in mode 1.
  */
+#include <string.h>
+
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
@@ -13,9 +15,31 @@
 #include "sleepfactor.h"
 #include "task.h"
 
+#if FW_SINCE(0x00090903)
 unsigned char serialRequestAnswer[0x28];
 unsigned char serialRequestData[0x2b];		/* the offset, the size, the data */
 struct HostRequest serialRequest;
+#else
+extern struct HostRequest serialRequest;	/* (defined in serial1.c) */
+extern unsigned char serialRequestData[0x1c];
+#define serialRequestAnswer	serialRequestData
+#endif
+
+/* how the restart's refusals leave it (0x00090804: through its end) */
+#if FW_SINCE(0x00090903)
+#define SERIAL_REQUEST_RESTART_END	break
+#else
+#define SERIAL_REQUEST_RESTART_END	goto restartEnd
+#endif
+
+/* a frame's data from serial1Buffer (0x00090804: copied in place, the answer 0) */
+#if FW_SINCE(0x00090903)
+#define SERIAL_REQUEST_COPY()	(result = serial1BufferRead(offset, size, serial.buffer))
+#define SERIAL_REQUEST_RESULT	result
+#else
+#define SERIAL_REQUEST_COPY()	memcpy(serial.buffer, &serial1Buffer[offset], size)
+#define SERIAL_REQUEST_RESULT	0
+#endif
 
 void serialRequestInit(void)
 {
@@ -31,7 +55,11 @@ void serialRequestReset(void)
 {
 	serialRequest.state = HOST_REQUEST_RECEIVE;
 	sleepFactorSet25(0);
+#if FW_SINCE(0x00090903)
 	serial1BufferClear();
+#else
+	memset(serial1Buffer, 0, sizeof(serial1Buffer));
+#endif
 	return;
 }
 
@@ -66,7 +94,7 @@ void serialRequestNotify(void)
 				result = serialGetState();
 				if (result != 0 && result != 1) {
 					hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 1, 0);
-					break;
+					SERIAL_REQUEST_RESTART_END;
 				}
 				if (serialRequestData[0] == 0)
 					serialStart(1);
@@ -74,7 +102,7 @@ void serialRequestNotify(void)
 					serialStart(SERIAL_BINARY | 1);
 				else {
 					hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 3, 0);
-					break;
+					SERIAL_REQUEST_RESTART_END;
 				}
 				if (serialRequestData[1] == 0 || serialRequestData[1] == 1) {
 					result = serialReopen(serialRequestData[1] += 2);
@@ -83,6 +111,9 @@ void serialRequestNotify(void)
 					hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 3, 0);
 			} else
 				hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 2, 0);
+#if !FW_SINCE(0x00090903)
+restartEnd:
+#endif
 			break;
 		case 0x2083:		/* read the buffer */
 			if (serialRequest.length == 2) {
@@ -105,12 +136,13 @@ void serialRequestNotify(void)
 				if (result == 0) {
 					dis_dsp();
 					if (serialGetState() == SERIAL_RECEIVE) {
-						result = serial1BufferRead(offset, size, serial.buffer);
+						SERIAL_REQUEST_COPY();
 						serial.command = SERIAL_REQUEST_FRAME;
 						serial.status = 0;
 						serial.length = size;
 						task2SetFlag(3, 0x0010);
-						hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, result, 0);
+						hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER,
+								  SERIAL_REQUEST_RESULT, 0);
 					} else
 						hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 5, 0);
 					ena_dsp();
@@ -130,7 +162,7 @@ void serialRequestNotify(void)
 					size = serialRequestData[2];
 					dis_dsp();
 					if (serialGetState() == SERIAL_RECEIVE) {
-						result = serial1BufferRead(offset, size, serial.buffer);
+						SERIAL_REQUEST_COPY();
 						serial.command = SERIAL_REQUEST_FRAME;
 						serial.status = 0;
 						serial.length = size;

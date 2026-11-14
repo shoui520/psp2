@@ -47,15 +47,21 @@ struct Updater {
 };
 
 extern struct HostRequest updaterRequest;
+#if FW_SINCE(0x00090903)
 extern struct Updater updater;
+#endif
 
 extern void updaterRequestInit(void);
 extern unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char *length);
+#if FW_SINCE(0x00090903)
 extern unsigned char hostCommandUpdaterProgress(unsigned char *out, unsigned char *length);
+#endif
 extern void updaterRequestNotify(void);
 extern void updaterStartDownloader(void);
+#if FW_SINCE(0x00090903)
 extern void updaterRequestAnswerOk(void);
 extern void updaterRequestEvent(FLGPTN ptn);
+#endif
 extern unsigned char updaterDecryptInit(void);
 extern unsigned char updaterDecryptReset(void);
 extern unsigned char updaterDecryptData(unsigned int length, unsigned char remaining,

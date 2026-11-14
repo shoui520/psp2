@@ -32,6 +32,37 @@ typedef struct t_rmbx {
 	T_MSG		*pk_msg;	/* the first message queued, NULL none */
 } T_RMBX;
 
+/* ref_tsk's, ref_mpf's, ref_cyc's and ref_ver's packets */
+typedef struct t_rtsk {
+	unsigned int	tskstat;	/* TTS_* */
+	unsigned char	tskpri;
+	unsigned char	tskbpri;
+	unsigned int	tskwait;	/* TTW_* */
+	ID		wobjid;		/* the object waited on */
+	TMO		lefttmo;
+	unsigned int	actcnt;
+	unsigned int	wupcnt;
+	unsigned int	suscnt;
+} T_RTSK;
+
+typedef struct t_rmpf {
+	ID		wtskid;
+	unsigned int	fblkcnt;	/* the free blocks */
+} T_RMPF;
+
+typedef struct t_rcyc {
+	unsigned int	cycstat;
+	RELTIM		lefttim;
+} T_RCYC;
+
+typedef struct t_rver {
+	unsigned int	maker;
+	unsigned int	prid;
+	unsigned int	spver;
+	unsigned int	prver;
+	unsigned int	prno[4];
+} T_RVER;
+
 #define E_OK		0
 #define E_TMOUT		(-50)
 
@@ -44,6 +75,7 @@ typedef struct t_rmbx {
 #define TSK_SELF	0
 
 extern ER	act_tsk(ID tskid);
+extern ER	ref_tsk(ID tskid, T_RTSK *pk_rtsk);
 extern void	ext_tsk(void);
 extern ER	chg_pri(ID tskid, PRI tskpri);
 extern ER	dly_tsk(RELTIM dlytim);
@@ -62,8 +94,12 @@ extern ER	ref_mbx(ID mbxid, T_RMBX *pk_rmbx);
 extern ER	get_mpf(ID mpfid, VP *p_blk);
 extern ER	pget_mpf(ID mpfid, VP *p_blk);
 extern ER	rel_mpf(ID mpfid, VP blk);
+extern ER	ref_mpf(ID mpfid, T_RMPF *pk_rmpf);
 
 extern ER	sta_cyc(ID cycid);
+extern ER	ref_cyc(ID cycid, T_RCYC *pk_rcyc);
+
+extern ER	ref_ver(T_RVER *pk_rver);
 
 extern ER	isig_tim(void);
 

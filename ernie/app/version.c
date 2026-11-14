@@ -12,9 +12,10 @@
 
 struct VersionFlags {
 	unsigned char	hardwareInfoFlags;	/* ORed into the hardware info's low byte */
-#ifndef ERNIE_UPDATER
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x00090903)
 	unsigned char	dlFlags;		/* byte 0x2d of NVS area 1 (task 2 reads it); bit 0:
-						   report the downloader's version */
+						   report the downloader's version (0x00090804 always
+						   does) */
 #endif
 };
 
@@ -140,7 +141,9 @@ void getErnieDlVersion(unsigned char *buf)
 void versionInit(void)
 {
 	versionFlags.hardwareInfoFlags = 0;
+#if FW_SINCE(0x00090903)
 	versionFlags.dlFlags = 0xff;
+#endif
 }
 
 void getErnieVersion(unsigned char *buf)
@@ -177,6 +180,7 @@ void clearHardwareInfoFlags(unsigned char flags)
 }
 #endif
 
+#if FW_SINCE(0x00090903)
 void setDlFlags(unsigned char flags)
 {
 	versionFlags.dlFlags = flags;
@@ -192,4 +196,10 @@ void getErnieDlVersion(unsigned char *buf)
 	else
 		memcpy(buf, &none, 4);
 }
+#else
+void getErnieDlVersion(unsigned char *buf)
+{
+	memcpy(buf, UPDATER_VERSION_INFO->dlVersion, 4);
+}
+#endif
 #endif

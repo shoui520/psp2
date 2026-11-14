@@ -10,12 +10,19 @@
 
 #define TOUCH_FRAMES		2
 
-/* a panel's part of a frame: its controller's report, then bytes of the touch module's */
+/* a panel's part of a frame: its controller's report, then bytes of the touch module's
+   (0x00090804: the report alone, Touch.state after both parts) */
+#if FW_SINCE(0x00090903)
 #define TOUCH_REPORT_SIZE	0x34
+#else
+#define TOUCH_REPORT_SIZE	0x3c	/* the streams then write over its bytes 0x34-0x36 */
+#endif
 #define TOUCH_PANEL_AGE		0x34	/* the frame's age when its stream sent it (TCR02 counts
 					   down), least significant byte first */
 #define TOUCH_PANEL_STATE	0x36	/* Touch.state when its command went out */
+#if FW_SINCE(0x00090903)
 #define TOUCH_PANEL_STATUS	0x37	/* its status (TOUCH_STATUS0, TOUCH_STATUS1) */
+#endif
 #define TOUCH_PANEL_SIZE	0x3c
 
 /* a frame: panel 0's part, panel 1's, and TCR02 at each one's command */
@@ -23,7 +30,18 @@ struct TouchFrame {
 	unsigned char	panel[2][TOUCH_PANEL_SIZE];
 	unsigned int	time0;
 	unsigned int	time1;
+#if !FW_SINCE(0x00090903)
+	unsigned char	state0;		/* Touch.state at panel 0's command */
+	unsigned char	state1;		/* and at panel 1's */
+#endif
 };
+
+/* Touch.state at panel p's command, in frame f */
+#if FW_SINCE(0x00090903)
+#define TOUCH_FRAME_STATE(f, p)	touchFrames[f].panel[p][TOUCH_PANEL_STATE]
+#else
+#define TOUCH_FRAME_STATE(f, p)	touchFrames[f].state##p
+#endif
 
 /* a controller's information block, at its address 0: family, variant, firmware version and
    build, matrix size X and Y, then the object table's entries */
@@ -56,8 +74,10 @@ struct TouchObjects {
 	unsigned int	noise;		/* T22 (noise suppression) */
 	unsigned int	touchScreen;	/* T9 (multiple touch screen) */
 	unsigned int	t51;
+#if FW_SINCE(0x00090903)
 	unsigned int	status;		/* T34's byte 0x54: read after a frame's report */
 	unsigned int	grip;		/* T20 (grip and face suppression) */
+#endif
 #if FW_SINCE(0x01000109)
 	unsigned int	cte;		/* T28 (CTE configuration) */
 #endif
@@ -73,6 +93,9 @@ struct TouchMode {
 #if FW_SINCE(0x01000109)
 	unsigned char	frequency[4];	/* T22's bytes 12-15 */
 	unsigned char	gcafDepth;	/* T28's ACTVGCAFDEPTH (byte 4) */
+#endif
+#if !FW_SINCE(0x00090903)
+	unsigned char	reserved;
 #endif
 };
 
@@ -235,12 +258,14 @@ extern void touchSetMode(unsigned char mode);
 extern void touchReadModes0(void);
 extern void touchReadModes1(void);
 extern void touchUpdateState(void);
+#if FW_SINCE(0x00090903)
 extern unsigned char touchStatusOn0(void);
 extern unsigned char touchStatusOff0(void);
 extern unsigned char touchStatusOn1(void);
 extern unsigned char touchStatusOff1(void);
 extern unsigned char touchSetGrip0(unsigned char *data);
 extern unsigned char touchSetGrip1(unsigned char *data);
+#endif
 #if FW_SINCE(0x01000306)
 extern void touchSetFlags(unsigned char flags);
 extern void touchClearFlags(unsigned char flags);

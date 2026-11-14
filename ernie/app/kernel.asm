@@ -19,6 +19,9 @@
 	PUBLIC	_ena_dsp, _ext_tsk, _get_mpf, _pget_mpf, _tget_mpf, _rcv_mbx, _prcv_mbx
 	PUBLIC	_trcv_mbx, _ref_flg, _ref_mbx, _rel_mpf, _ret_int, _iset_flg, _set_flg
 	PUBLIC	_snd_mbx, _sta_cyc, _isig_tim, _wai_flg, _pol_flg, _twai_flg
+$_IF (ERNIE_FW==0x00090804)
+	PUBLIC	_ref_cyc, _ref_mpf, _ref_tsk, _ref_ver
+$ENDIF
 	PUBLIC	__kernel_int_entry, _kernelStart
 	PUBLIC	_cycInit, _flgInit, _mbxInit, _mpfInit
 	PUBLIC	_readyAndDispatch, _waitEnter, _restoreRegs, _retIntIdle, _dispatch
@@ -29,28 +32,34 @@
 	EXTRN	_kernelInitHook, _standby, _kernelConfig
 	EXTRN	@SEGDE, @RTARG0, @RTARG2, @RTARG4, @RTARG6
 
-; the configuration (page 0)
-CYC_HANDLER	EQU	0D60AH		; a cyclic handler's address and its CS
-CYC_SEG		EQU	0D60CH
-CYC_TIME	EQU	0D60EH		; its period, 32 bits
-MPF_AREA	EQU	0D612H		; a fixed-size pool's memory (a far pointer)
-MPF_SIZE	EQU	0D61CH		; its block size
-MPF_BLOCKS	EQU	0D620H		; its block count
-TASK_ENTRY	EQU	0D622H		; a task's entry
-TASK_ATTR	EQU	0D624H		; its CS (bits 0-3), TA_* (bits 4-7) and priority (bits 10-14)
-TASK_EXINF	EQU	0D63AH		; its extended information, 32 bits
-TASK_STACK	EQU	0D654H		; the top of its stack
-KERNEL_SP	EQU	0D662H		; the kernel's stack
-HOOK_TABLE	EQU	0D664H		; where kHooks is (a far pointer)
-INIT_TABLE	EQU	0D668H		; the objects' initialisers, ended by a CS of 0xff
-FLG_ATTR	EQU	0D67BH		; an event flag's attributes (TA_CLR 4)
-TASK_COUNT	EQU	0D682H
-FLG_COUNT	EQU	0D684H
-MBX_COUNT	EQU	0D685H
-MBXPRI_COUNT	EQU	0D686H		; the mailboxes with prioritised messages
-MPF_COUNT	EQU	0D687H
-CYC_COUNT	EQU	0D688H
-PRI_COUNT	EQU	0D689H
+; the configuration (page 0), where the link puts kernelcfg.asm's: first the kernel's version
+; (ref_ver's T_RVER), then the objects' tables
+$_IF (ERNIE_FW==0x00090804)
+CONFIG		EQU	0D878H
+$ELSE
+CONFIG		EQU	0D5FEH
+$ENDIF
+CYC_HANDLER	EQU	CONFIG+00CH		; a cyclic handler's address and its CS
+CYC_SEG		EQU	CONFIG+00EH
+CYC_TIME	EQU	CONFIG+010H		; its period, 32 bits
+MPF_AREA	EQU	CONFIG+014H		; a fixed-size pool's memory (a far pointer)
+MPF_SIZE	EQU	CONFIG+01EH		; its block size
+MPF_BLOCKS	EQU	CONFIG+022H		; its block count
+TASK_ENTRY	EQU	CONFIG+024H		; a task's entry
+TASK_ATTR	EQU	CONFIG+026H		; its CS (bits 0-3), TA_* (bits 4-7) and priority (bits 10-14)
+TASK_EXINF	EQU	CONFIG+03CH		; its extended information, 32 bits
+TASK_STACK	EQU	CONFIG+056H		; the top of its stack
+KERNEL_SP	EQU	CONFIG+064H		; the kernel's stack
+HOOK_TABLE	EQU	CONFIG+066H		; where kHooks is (a far pointer)
+INIT_TABLE	EQU	CONFIG+06AH		; the objects' initialisers, ended by a CS of 0xff
+FLG_ATTR	EQU	CONFIG+07DH		; an event flag's attributes (TA_CLR 4)
+TASK_COUNT	EQU	CONFIG+084H
+FLG_COUNT	EQU	CONFIG+086H
+MBX_COUNT	EQU	CONFIG+087H
+MBXPRI_COUNT	EQU	CONFIG+088H		; the mailboxes with prioritised messages
+MPF_COUNT	EQU	CONFIG+089H
+CYC_COUNT	EQU	CONFIG+08AH
+PRI_COUNT	EQU	CONFIG+08BH
 
 ; the kernel's RAM (page 0xf), where the link puts @@KRAM: its state, then the tables the
 ; configurator lays out (each label one entry before its table, the tables being indexed
@@ -78,8 +87,8 @@ taskWait:	DS	7	; TWF_ORW 1, 0x10 timed, 0x20 queued, 0x40 released
 taskTmoNext:	DS	7
 taskTmoPrev:	DS	7
 taskPri:	DS	6
-taskWupCnt:	DS	6
 taskSusCnt:	DS	6
+taskWupCnt:	DS	6
 taskActCnt:	DS	6	; activations queued
 taskNext:	DS	6	; the queue the task is on, 0xff dormant
 taskPrev:	DS	5
@@ -99,9 +108,15 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
-kResult		EQU	0FFE74H		; a service's result, or an index it keeps
+$_IF (ERNIE_FW==0x00090804)
+kResult		EQU	0FFE70H		; a service's result, or an index it keeps
+kTemp		EQU	0FFE72H
+kTimeout	EQU	0FFE74H		; a service's timeout, 32 bits
+$ELSE
+kResult		EQU	0FFE74H
 kTemp		EQU	0FFE76H
-kTimeout	EQU	0FFE78H		; a service's timeout, 32 bits
+kTimeout	EQU	0FFE78H
+$ENDIF
 regVar		EQU	0FFEB4H		; the compiler's register variables (16 bytes)
 SEGAX		EQU	0FFED4H
 
@@ -881,6 +896,77 @@ _trcv_mbx:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+$_IF (ERNIE_FW==0x00090804)
+; ER ref_cyc(ID cycid, T_RCYC *pk_rcyc): its state, and the ticks to its next start (the
+; counts of the timeout queue up to it, when it is on the queue)
+_ref_cyc:
+	PUSH	PSW
+	PUSH	HL
+	PUSH	AX
+	CPU_LOCK
+	POP	AX
+	MOVW	BC, #0FFADH
+	CALL	$!_serviceEnter
+	MOVW	BC, AX
+	MOVW	DE, AX
+	MOV	A, [HL+0EH]
+	MOV	kResult, A
+	MOVW	AX, [HL+0CH]
+	MOVW	HL, AX
+	MOV	A, ES:taskState[BC]
+	MOV	kResult+1, A
+	AND	A, #1
+	BZ	$?refCycEnd
+	MOV	A, ES:taskWait[BC]
+	AND	A, #20H
+	BZ	$?refCycOwn
+	MOV	A, ES:!kTimerHead+1
+	MOV	C, A
+	CLRB	B
+	CLRW	AX
+	MOVW	kTimeout, AX
+	MOVW	kTimeout+2, AX
+?refCycSum:
+	PUSH	BC
+	SHLW	BC, 2
+	MOVW	AX, ES:taskTmo+2[BC]
+	ADDW	AX, kTimeout+2
+	MOVW	kTimeout+2, AX
+	MOVW	AX, ES:taskTmo[BC]
+	ADDW	AX, kTimeout
+	MOVW	kTimeout, AX
+	SKNC
+	INCW	kTimeout+2
+	POP	BC
+	MOVW	AX, BC
+	CMPW	AX, DE
+	BZ	$?refCycTime
+	MOV	A, ES:taskTmoNext[BC]
+	MOV	C, A
+	CLRB	B
+	BR	$?refCycSum
+?refCycOwn:
+	SHLW	BC, 2
+	MOVW	AX, ES:taskTmo[BC]
+	MOVW	kTimeout, AX
+	MOVW	AX, ES:taskTmo+2[BC]
+	MOVW	kTimeout+2, AX
+?refCycTime:
+	MOV	ES, kResult
+	MOVW	AX, kTimeout
+	MOVW	ES:[HL+2], AX
+	MOVW	AX, kTimeout+2
+	MOVW	ES:[HL+4], AX
+?refCycEnd:
+	CLRB	A
+	MOV	X, kResult+1
+	MOV	ES, kResult
+	MOVW	ES:[HL+0], AX
+	MOV	ES, #0FH
+	MOVW	HL, #0
+	BR	$!_serviceExit
+$ENDIF
+
 ; ER ref_flg(ID flgid, T_RFLG *pk_rflg)
 _ref_flg:
 	PUSH	PSW
@@ -953,6 +1039,242 @@ _ref_mbx:
 	MOV	ES, #0FH
 	MOVW	HL, #0
 	BR	$!_serviceExit
+
+$_IF (ERNIE_FW==0x00090804)
+; ER ref_mpf(ID mpfid, T_RMPF *pk_rmpf): the task waiting first, or the free blocks' count
+_ref_mpf:
+	PUSH	PSW
+	PUSH	HL
+	PUSH	AX
+	CPU_LOCK
+	POP	AX
+	MOVW	BC, #0FFB4H
+	CALL	$!_serviceEnter
+	MOVW	BC, AX
+	MOV	A, [HL+0EH]
+	MOV	kResult, A
+	MOVW	AX, [HL+0CH]
+	MOVW	HL, AX
+	SHLW	BC, 2
+	MOVW	AX, ES:mpfFreeSeg[BC]
+	XCH	A, X
+	CMP	A, #0FFH
+	BZ	$?refMpfNone
+	MOV	kResult+1, A
+	MOVW	AX, ES:mpfFree[BC]
+	MOVW	DE, AX
+	CLRW	BC
+	MOV	ES, kResult+1
+	BR	$?refMpfCount
+?refMpfNext:
+	MOV	kResult+1, A
+	MOVW	AX, ES:[DE+0]
+	MOVW	DE, AX
+	MOV	ES, kResult+1
+?refMpfCount:
+	INCW	BC
+	MOV	A, ES:[DE+2]
+	CMP	A, #0FFH
+	BNZ	$?refMpfNext
+	MOV	A, #0
+	MOV	ES, kResult
+	MOV	ES:[HL+0], A
+	MOVW	AX, BC
+?refMpfEnd:
+	MOVW	ES:[HL+2], AX
+	MOV	ES, #0FH
+	MOVW	HL, #0
+	BR	$!_serviceExit
+?refMpfNone:
+	MOV	A, X
+	CMP	A, #0FFH
+	SKNZ
+	MOV	A, #0
+	MOV	ES, kResult
+	MOV	ES:[HL+0], A
+	CLRW	AX
+	BR	$?refMpfEnd
+
+; ER ref_tsk(ID tskid, T_RTSK *pk_rtsk): TSK_SELF (0) the running task
+_ref_tsk:
+	PUSH	PSW
+	PUSH	HL
+	PUSH	AX
+	CPU_LOCK
+	POP	AX
+	CMP0	X
+	BNZ	$?refTsk1
+	MOV	ES, #0FH
+	MOV	X, ES:!kRunTask
+?refTsk1:
+	MOVW	BC, #0FFF1H
+	CALL	$!_serviceEnter
+	MOVW	BC, AX
+	MOV	D, #0
+	MOV	ES, #0FH
+	MOV	A, ES:taskPri[BC]
+	PUSH	AX
+	MOV	A, ES:taskActCnt[BC]
+	MOV	E, A
+	PUSH	DE
+	MOV	A, ES:taskWupCnt[BC]
+	MOV	E, A
+	PUSH	DE
+	MOV	A, ES:taskSusCnt[BC]
+	MOV	E, A
+	PUSH	DE
+	MOVW	AX, [HL+0CH]
+	MOVW	DE, AX
+	MOV	A, [HL+0EH]
+	MOV	L, A
+	MOV	ES, A
+	POP	AX
+	MOVW	ES:[DE+10H], AX		; suscnt
+	POP	AX
+	MOVW	ES:[DE+0EH], AX		; wupcnt
+	POP	AX
+	MOVW	ES:[DE+0CH], AX		; actcnt
+	POP	AX
+	MOV	ES:[DE+3], A		; tskbpri
+	MOV	ES:[DE+2], A		; tskpri
+	MOV	ES, #0FH
+	MOV	A, ES:taskNext[BC]
+	CMP	A, #0FFH
+	BZ	$?refTskDormant
+	MOV	A, ES:taskSusCnt[BC]
+	CMP0	A
+	SKZ
+	MOV	A, #8			; TTS_SUS
+	MOV	H, A
+	BNZ	$?refTskWait
+	MOV	A, ES:!kRunTask
+	CMP	A, C
+	BZ	$?refTskRun
+?refTskWait:
+	MOV	A, ES:taskState[BC]
+	MOV	X, A
+	AND	A, #1FH
+	BZ	$?refTskReady
+	MOV	A, #4			; TTS_WAI
+	OR	A, H
+	MOV	H, A
+	SHL	C, 1
+	MOV	A, ES:taskWaitObj[BC]
+	XCH	A, L
+	MOV	ES, A
+	MOV	A, X
+	AND	A, #0BFH
+	CMP	A, #1
+	MOVW	BC, #1			; TTW_SLP
+	BZ	$?refTskWaitSet
+	CMP	A, #2
+	MOVW	BC, #2			; TTW_DLY
+	BZ	$?refTskWaitSet
+	CMP	A, #3
+	MOVW	BC, #4			; TTW_SEM
+	BZ	$?refTskWaitSet
+	CMP	A, #4
+	MOVW	BC, #8			; TTW_FLG
+	BZ	$?refTskWaitSet
+	CMP	A, #7
+	MOVW	BC, #40H		; TTW_MBX
+	BZ	$?refTskWaitSet
+	CMP	A, #0EH
+	MOVW	BC, #2000H		; TTW_MPF
+	BZ	$?refTskWaitSet
+?refTskWaitSet:
+	MOVW	AX, BC
+	MOVW	ES:[DE+4], AX		; tskwait
+	MOV	A, H
+	MOV	X, A
+	CLRB	A
+	MOVW	ES:[DE+0], AX		; tskstat
+	MOV	A, L
+	MOV	ES:[DE+6], A		; wobjid
+	MOV	ES, #0FH
+	MOVW	HL, #0
+	BR	$!_serviceExit
+?refTskReady:
+	MOV	A, H
+	AND	A, #8
+	XCH	A, X
+	BNZ	$?refTskStat
+	MOV	X, #2			; TTS_RDY
+	BR	$?refTskStat
+?refTskDormant:
+	MOV	X, #10H			; TTS_DMT
+	BR	$?refTskStat
+?refTskRun:
+	MOV	X, #1			; TTS_RUN
+?refTskStat:
+	XCH	A, L
+	MOV	ES, A
+	CLRB	A
+	MOVW	ES:[DE+0], AX
+	CLRW	AX
+	MOVW	ES:[DE+4], AX
+	MOV	ES:[DE+6], A
+	MOV	ES, #0FH
+	MOVW	HL, #0
+	BR	$!_serviceExit
+
+; ER ref_ver(T_RVER *pk_rver): the configuration's first 16 bytes
+_ref_ver:
+	PUSH	PSW
+	PUSH	HL
+	PUSH	AX
+	CPU_LOCK
+	POP	AX
+	MOVW	kTimeout, AX
+	MOVW	AX, BC
+	MOVW	kTemp, AX
+	MOVW	BC, #0FF90H
+	CALL	$!_serviceEnter
+	MOVW	DE, kTimeout
+	MOVW	AX, #CONFIG
+	MOVW	HL, AX
+	MOV	A, #0
+	MOV	kTemp+1, A
+	MOV	ES, A
+	MOVW	AX, ES:[HL+0]
+	MOVW	kResult, AX
+	MOVW	AX, ES:[HL+2]
+	MOVW	kTimeout, AX
+	MOVW	AX, ES:[HL+4]
+	MOVW	kTimeout+2, AX
+	MOV	ES, kTemp
+	MOVW	AX, kResult
+	MOVW	ES:[DE+0], AX
+	MOVW	AX, kTimeout
+	MOVW	ES:[DE+2], AX
+	MOVW	AX, kTimeout+2
+	MOVW	ES:[DE+4], AX
+	MOV	ES, kTemp+1
+	MOVW	AX, ES:[HL+6]
+	MOVW	kResult, AX
+	MOVW	AX, ES:[HL+8]
+	MOVW	kTimeout, AX
+	MOVW	AX, ES:[HL+0AH]
+	MOVW	kTimeout+2, AX
+	MOVW	AX, ES:[HL+0CH]
+	PUSH	AX
+	MOVW	AX, ES:[HL+0EH]
+	PUSH	AX
+	MOV	ES, kTemp
+	MOVW	AX, kResult
+	MOVW	ES:[DE+6], AX
+	MOVW	AX, kTimeout
+	MOVW	ES:[DE+8], AX
+	MOVW	AX, kTimeout+2
+	MOVW	ES:[DE+0AH], AX
+	POP	AX
+	MOVW	ES:[DE+0CH], AX
+	POP	AX
+	MOVW	ES:[DE+0EH], AX
+	MOV	ES, #0FH
+	MOVW	HL, #0
+	BR	$!_serviceExit
+$ENDIF
 
 ; ER rel_mpf(ID mpfid, VP blk): to a waiting task, else to the free list
 _rel_mpf:
@@ -1994,8 +2316,8 @@ _taskInit:
 	MOVW	HL, AX
 	CLRW	AX
 	MOV	ES:taskState[BC], A
-	MOV	ES:taskSusCnt[BC], A
 	MOV	ES:taskWupCnt[BC], A
+	MOV	ES:taskSusCnt[BC], A
 	MOV	ES:taskNext[BC], #0FFH
 	SHLW	BC, 1
 	MOVW	ES:taskWaitObj[BC], AX

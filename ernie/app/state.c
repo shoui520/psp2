@@ -53,8 +53,10 @@ static int stateSuspendEnter(void);
 static int stateShutdownEnter(void);
 static int stateCutEnter(void);
 static int stateResetEnter(void);
+#if FW_SINCE(0x00090903)
 static int stateUpdateAnswerEnter(void);
 static int stateUpdateEnter(void);
+#endif
 static int stateStartHandle(struct StateEvent *event);
 static int stateOnHandle(struct StateEvent *event);
 static int stateOffHandle(struct StateEvent *event);
@@ -63,29 +65,44 @@ static int stateSuspendHandle(struct StateEvent *event);
 static int stateShutdownHandle(struct StateEvent *event);
 static int stateCutHandle(struct StateEvent *event);
 static int stateResetHandle(struct StateEvent *event);
+#if FW_SINCE(0x00090903)
 static int stateUpdateAnswerHandle(struct StateEvent *event);
 static int stateUpdateHandle(struct StateEvent *event);
+#endif
 static unsigned int stateEventsOf(unsigned int state);
 static unsigned int stateNextOf(void);
+
+/* the updater's states' events (0x00090804 has no updater states) */
+#if FW_SINCE(0x00090903)
+#define STATE_UPDATES	(STATE_UPDATE_ANSWER | STATE_UPDATE)
+#else
+#define STATE_UPDATES	0
+#endif
 
 static const struct StateEntry stateTable[] = {
 	{ STATE_START, 0x0002, stateStartEnter, stateStartHandle },
 	{ STATE_ON, 0x0804, stateOnEnter, stateOnHandle },
 	{ STATE_OFF, 0x0830, stateOffEnter, stateOffHandle },
-	{ STATE_RESUME, 0x0e5c, stateResumeEnter, stateResumeHandle },
+	{ STATE_RESUME, 0x085c | STATE_UPDATES, stateResumeEnter, stateResumeHandle },
 	{ STATE_SUSPEND, 0x0834, stateSuspendEnter, stateSuspendHandle },
 	{ STATE_SHUTDOWN, 0x0802, stateShutdownEnter, stateShutdownHandle },
 	{ STATE_CUT, 0x0002, stateCutEnter, stateCutHandle },
 	{ STATE_RESET, 0x0830, stateResetEnter, stateResetHandle },
+#if FW_SINCE(0x00090903)
 	{ STATE_UPDATE_ANSWER, 0x0834, stateUpdateAnswerEnter, stateUpdateAnswerHandle },
 	{ STATE_UPDATE, 0x0000, stateUpdateEnter, stateUpdateHandle },
+#endif
 };
 
 __sreg unsigned char statePhase;
 __sreg unsigned int powerState;
 __sreg unsigned int stateNext;
 __sreg unsigned int stateEvents;
+#if FW_SINCE(0x00090903)
 __sreg unsigned char stateCause;
+#else
+__sreg unsigned int stateCause;
+#endif
 static unsigned char stateReserved[6];
 union PowerRequest stateWakeupFactor;
 union PowerRequest stateRequest;
@@ -120,7 +137,7 @@ void stateEvent(struct StateEvent *event)
 	unsigned char i;
 	unsigned int status;
 
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < sizeof(stateTable) / sizeof(stateTable[0]); i++) {
 		if (stateTable[i].state == powerState) {
 			switch (event->type) {
 			case STATE_EVENT_ENTER:
@@ -195,10 +212,12 @@ union PowerRequest *stateGetWakeupFactor(void)
 	return &stateWakeupFactor;
 }
 
+#if FW_SINCE(0x00090903)
 unsigned char stateGetCause(void)
 {
 	return stateCause;
 }
+#endif
 
 unsigned int stateGet(void)
 {
@@ -298,6 +317,9 @@ static int stateOnEnter(void)
 {
 	STATE_TRANSITION_EVENT
 	stateInit();
+#if !FW_SINCE(0x00090903)
+	transitionEvent.type = STATE_EVENT_TRANSITION;
+#endif
 	STATE_TRANSITION_NOMASK(0x32);
 	return 0;
 }
@@ -318,6 +340,7 @@ static int stateOffEnter(void)
 	serialAnswer0105();
 	tau0PowerOff();
 	stateCheck();
+#if FW_SINCE(0x00090903)
 	switch (stateCause) {
 	case 0x31:
 		logEvent(5);
@@ -329,6 +352,10 @@ static int stateOffEnter(void)
 		logEvent(0x18);
 		break;
 	}
+#else
+	if (stateCause == 0x31)
+		logEvent(5);
+#endif
 #if FW_SINCE(0x01000104)
 	cause = getResetCause();
 	switch (cause) {
@@ -384,8 +411,10 @@ static int stateSuspendEnter(void)
 	inputStateSuspend();
 	tau0PowerOff();
 	stateCheck();
+#if FW_SINCE(0x00090903)
 	if (sleepFactorGet() & 0x00800000)
 		logEvent(0x0b);
+#endif
 #if FW_SINCE(0x01000104)
 	if (stateCause == 0x59)
 		STATE_TRANSITION(0x0a);
@@ -429,6 +458,7 @@ static int stateResetEnter(void)
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 static int stateUpdateAnswerEnter(void)
 {
 	return 0;
@@ -439,6 +469,7 @@ static int stateUpdateEnter(void)
 	updaterStartDownloader();
 	return 0;
 }
+#endif
 
 static int stateStartHandle(struct StateEvent *event)
 {
@@ -525,7 +556,11 @@ static int stateResumeHandle(struct StateEvent *event)
 		stateNext = STATE_SHUTDOWN;
 		break;
 	case 0x31:
+#if FW_SINCE(0x00090903)
 	case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: case 0x38: case 0x39:
+#else
+	case 0x32:
+#endif
 #if FW_SINCE(0x01000104)
 	case 0x3a:
 #endif
@@ -549,12 +584,14 @@ static int stateResumeHandle(struct StateEvent *event)
 	case 0x54:
 		stateNext = STATE_RESET;
 		break;
+#if FW_SINCE(0x00090903)
 	case 0x71:
 		stateNext = STATE_UPDATE_ANSWER;
 		break;
 	case 0x70:
 		stateNext = STATE_UPDATE;
 		break;
+#endif
 	}
 	return 0;
 }
@@ -569,8 +606,12 @@ static int stateSuspendHandle(struct StateEvent *event)
 		stateNext = STATE_SHUTDOWN;
 		break;
 	case 0x31:
+#if FW_SINCE(0x00090903)
 	case 0x34:
 	case 0x37: case 0x38: case 0x39:
+#else
+	case 0x32:
+#endif
 #if FW_SINCE(0x01000104)
 	case 0x3a:
 	case 0x52:
@@ -646,6 +687,7 @@ static int stateResetHandle(struct StateEvent *event)
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 static int stateUpdateAnswerHandle(struct StateEvent *event)
 {
 	switch (event->transition) {
@@ -681,6 +723,7 @@ static int stateUpdateHandle(struct StateEvent *event)
 	event = event;
 	return 0;
 }
+#endif
 
 /* the events that end the state: the off, shutdown and cut states' own, and every state's
    own bit, are not */
@@ -691,13 +734,13 @@ static unsigned int stateEventsOf(unsigned int state)
 	events = stateEvents;
 	switch (state) {
 	case STATE_CUT:
-		events &= ~(state | 0x0e7f);
+		events &= ~(state | 0x0a7f | STATE_UPDATES);
 		break;
 	case STATE_SHUTDOWN:
-		events &= ~(state | 0x067f);
+		events &= ~(state | 0x027f | STATE_UPDATES);
 		break;
 	case STATE_OFF:
-		events &= ~(state | 0x066f);
+		events &= ~(state | 0x026f | STATE_UPDATES);
 		break;
 	default:
 		events &= ~state;
@@ -714,7 +757,7 @@ static unsigned int stateNextOf(void)
 	unsigned int next;
 	unsigned int i;
 
-	events = stateEvents & 0x0e7f;
+	events = stateEvents & (0x0a7f | STATE_UPDATES);
 	if (events & STATE_CUT)
 		next = STATE_CUT;
 	else if (events & STATE_SHUTDOWN)
@@ -784,9 +827,13 @@ unsigned char stateSerialUnlock(void)
 	return (unsigned char)STATE_TRANSITION_NOMASK(0x0c);
 }
 
-/* and its lock: transition 0x34 */
+/* and its lock: transition 0x34 (0x00090804's 0x32) */
 int stateSerialLock(void)
 {
 	STATE_TRANSITION_EVENT
+#if FW_SINCE(0x00090903)
 	return (unsigned char)STATE_TRANSITION_NOMASK(0x34);
+#else
+	return (unsigned char)STATE_TRANSITION_NOMASK(0x32);
+#endif
 }

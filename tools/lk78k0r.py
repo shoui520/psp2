@@ -37,7 +37,8 @@ the page left behind, as CA78K0R's linker does.
 
 A segment with an AT attribute of its own goes there, and an object's segment no SEG names is
 an error, as are a symbol no object or SYMBOL defines and segments that overlap each other
-or a RESERVE. The output is Intel HEX of every byte
+or a RESERVE. A bit segment (BSEG, the compiler's @@BITS) takes the saddr bytes its DBIT bits
+fill, from bit 0 of its first. The output is Intel HEX of every byte
 the program places; --map lists every segment and public symbol with its address.
 """
 from pathlib import Path
@@ -201,16 +202,24 @@ def reserved(seg):
 	return total
 
 
+DBIT = re.compile(r'^[A-Za-z_?@][\w?@]*\s+DBIT\b', re.I)
+
+
+def bits(seg):
+	"""the bytes a bit segment's DBIT lines take, from bit 0 of its first byte"""
+	return (sum(1 for line in seg.lines if DBIT.match(line)) + 7) // 8
+
+
 def dummy_bases(obj):
 	"""a base for each of the object's segments, apart from each other, in a region of the
 	same kind, for measuring them"""
 	out, code, near, ram, saddr = {}, 0x40000, 0x02000, 0xfcf00, 0xffe20
 	for seg in obj.segments():
-		if seg.kind == 'BSEG':
-			raise LinkError(f'{obj.name}: bit segments not supported yet ({seg.name})')
 		at = segment_at(seg)
 		if at is not None:
 			out[id(seg)] = at
+		elif seg.kind == 'BSEG':
+			out[id(seg)], saddr = saddr, saddr + bits(seg) + 2
 		elif seg.kind == 'CSEG' and NEAR.search(seg.attr):
 			out[id(seg)], near = near, near + 0x1000
 		elif seg.kind == 'CSEG':
@@ -296,8 +305,8 @@ class Linker:
 			sizes = {name: size for name, start, size in
 				 ((n, s, z) for n, s, z in listing.segments)}
 			for seg in obj.segments():
-				obj.size[id(seg)] = sizes.get(names.get(id(seg)), 0)
-				base = place[id(seg)]
+				obj.size[id(seg)] = bits(seg) if seg.kind == 'BSEG' else \
+					sizes.get(names.get(id(seg)), 0)
 			for seg in obj.segments():
 				for label in seg.labels:
 					if label in listing.labels:

@@ -33,13 +33,20 @@ struct Config {
 #endif
 };
 
-/* the records' digest, in the updater's buffers */
+/* the records' digest, in the updater's buffers; 0x00090804 keeps the buffers here */
 struct ConfigHash {
 	SHA1Context	context;
+#if FW_SINCE(0x00090903)
 	unsigned char __near *expected;
 	unsigned long __near *w;
 	unsigned char __near *block;
 	unsigned char	*digest;
+#else
+	unsigned char	expected[SHA1HashSize];
+	unsigned long	w[16];
+	unsigned char	block[SHA1BlockSize];
+	unsigned char	digest[SHA1HashSize];
+#endif
 	unsigned char	unhashed;		/* set: records written since the last digest */
 };
 
@@ -100,10 +107,12 @@ int configInit(void)
 	unsigned char result1;
 
 	memset(&configRecords, 0, sizeof(configRecords));
+#if FW_SINCE(0x00090903)
 	configHash.expected = (unsigned char __near *)updater.expected;
 	configHash.w = (unsigned long __near *)updater.shaW;
 	configHash.block = (unsigned char __near *)updater.shaBlock;
 	configHash.digest = updater.hash;
+#endif
 	result0 = configCheck(0);
 	result1 = configCheck(1);
 	if (result0 == 0 && result1 == 0) {
@@ -119,11 +128,13 @@ int configInit(void)
 	} else {
 		config.bank = result0 == 0 ? 0 : 1;
 	}
+#if FW_SINCE(0x00090903)
 	if (configBanks[config.bank].version < CONFIG_VERSION) {
 		result0 = configMerge(2, config.bank);
 		if (result0 != 0) {
 		}
 	}
+#endif
 	config.ready = 1;
 #if FW_SINCE(0x01000104)
 	config.changed = 0;
@@ -178,8 +189,10 @@ unsigned char configWrite(unsigned int offset, unsigned char size, unsigned char
 /* copies the bank used for the host to change */
 unsigned char configOpen(void)
 {
+#if FW_SINCE(0x00090903)
 	if (stateGet() == STATE_UPDATE_ANSWER)
 		return 0x22;
+#endif
 	if (config.state == CONFIG_COMMITTING)
 		return 2;
 	configHash.unhashed = 0;
@@ -243,13 +256,16 @@ unsigned char configWriteRecords(unsigned int offset, unsigned char size, unsign
 	unsigned char chunk;
 
 	result = 0;
+#if FW_SINCE(0x00090903)
 	if (stateGet() == STATE_UPDATE_ANSWER)
 		return 0x22;
+#endif
 	if (offset == 0) {
 		configRecords.count = 0;
 		configHash.unhashed = 0;
 		if ((unsigned char)SHA1Reset((SHA1Context __near *)&configHash.context,
-					     configHash.block, configHash.w) != 0)
+					     (unsigned char __near *)configHash.block,
+					     (unsigned long __near *)configHash.w) != 0)
 			return 0x20;
 	}
 	while (size != 0 && result == 0) {
@@ -257,7 +273,9 @@ unsigned char configWriteRecords(unsigned int offset, unsigned char size, unsign
 			size : SHA1BlockSize - configRecords.count;
 		memcpy(&configRecords.buffer[configRecords.count], data, chunk);
 		configRecords.count += chunk;
+#if FW_SINCE(0x00090903)
 		data += chunk;
+#endif
 		if (configRecords.count == SHA1BlockSize) {
 			result = configApplyRecords(configRecords.buffer, configRecords.count, check);
 			configRecords.count = 0;
@@ -362,6 +380,7 @@ unsigned char configPrepareUpdate(void)
 	return result;
 }
 
+#if FW_SINCE(0x00090903)
 /* the flash segment (1 KiB) of the bank not used, which an update writes */
 unsigned int configUpdateSegment(void)
 {
@@ -382,6 +401,7 @@ unsigned char configMergeUpdate(void)
 	config.bank = other;
 	return result;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 unsigned char configTakeChanged(void)
@@ -394,10 +414,16 @@ unsigned char configTakeChanged(void)
 }
 #endif
 
+#if FW_SINCE(0x00090903)
 /* the banks, then the defaults */
 static const struct ConfigBank *const configTable[3] = {
 	&configBanks[0], &configBanks[1], &configDefault
 };
+#define CONFIG_BANK(i)	configTable[i]
+#else
+/* 0x00090804 merges only one bank into the other */
+#define CONFIG_BANK(i)	(&configBanks[i])
+#endif
 
 /* the block of one bank (from: 0 or 1, or 2 the defaults), with what another keeps (to: the
    sticks' calibration, the board, ...), written over to: when from is a new layout's defaults
@@ -408,17 +434,19 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	const struct ConfigBank *kept;
 	unsigned char result;
 
+#if FW_SINCE(0x00090903)
 	if (to >= 2 || from >= 3)
 		return 1;
-	if (configTable[to]->count == 1)
+#endif
+	if (CONFIG_BANK(to)->count == 1)
 		return 0;
-	if (configTable[from]->count != 1)
+	if (CONFIG_BANK(from)->count != 1)
 		return 0;
 	if (config.state == CONFIG_CLOSED) {
 	}
 	config.state = CONFIG_OPEN;
-	memcpy(&configBuffer, configTable[from], sizeof(configBuffer));
-	kept = configTable[to];
+	memcpy(&configBuffer, CONFIG_BANK(from), sizeof(configBuffer));
+	kept = CONFIG_BANK(to);
 	copy = &configBuffer;
 	copy->block.analogCalibration = kept->block.analogCalibration;
 	copy->block.board.value = kept->block.board.value;

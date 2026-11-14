@@ -5,6 +5,8 @@
 #ifndef ERNIE_CSI10_H
 #define ERNIE_CSI10_H
 
+#include "ernie.h"
+
 /* a transfer: the bytes to receive and to send, and the phase it is (csi10GetState) */
 struct Csi10Transfer {
 	unsigned char	*receive;
@@ -27,9 +29,13 @@ struct Csi10Transfer {
 #define CSI10_REPORT0		0x30	/* panel 0's report */
 #define CSI10_COMMAND1		0x40	/* panel 1's report command */
 #define CSI10_REPORT1		0x50	/* panel 1's report */
+#if FW_SINCE(0x00090903)
 #define CSI10_STATUS1		0x60	/* panel 1's status */
 #define CSI10_STATUS0		0x70	/* panel 0's status */
 #define CSI10_FRAME		0x80	/* the frame is complete */
+#else
+#define CSI10_FRAME		0x60	/* 0x00090804: no status reads */
+#endif
 
 extern int csi10Open(void);
 extern int csi10Transfer(struct Csi10Transfer *transfer);

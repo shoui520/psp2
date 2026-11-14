@@ -18,6 +18,14 @@
 #define HW_IS(id)		(ERNIE_HW == (id))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
 
+/* tables 0x00090804 keeps in initialised RAM (@@INITL, copied by cstart) and later versions
+   in the constants */
+#if FW_SINCE(0x00090903)
+#define TABLE_CONST		const
+#else
+#define TABLE_CONST
+#endif
+
 /*
  * a far pointer moved by n bytes over all its 24 bits: Sony's compiler adds to a far pointer
  * as a long (@@luadd), the build's CA78K0R V1.72 to its low 16 bits only

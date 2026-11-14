@@ -78,8 +78,8 @@ OBJECT	log.c
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
 OBJECT	param.c
 OBJECT	led.c
-OBJECT	serialreq.c
-OBJECT	snvs.c
+OBJECT	serialreq.c	IF ERNIE_FW!=0x00090804
+OBJECT	snvs.c		IF ERNIE_FW!=0x00090804
 OBJECT	gf.c
 OBJECT	configdefault.c	IF ERNIE_FW>=0x01000104
 OBJECT	kernel.asm
@@ -91,7 +91,7 @@ OBJECT	../lib/lucom.asm
 OBJECT	../lib/iumul.asm
 OBJECT	../lib/lumul.asm
 OBJECT	../lib/cudiv.asm
-OBJECT	../lib/iudiv.asm
+OBJECT	../lib/iudiv.asm	IF ERNIE_FW!=0x00090804
 OBJECT	../lib/curem.asm
 OBJECT	../lib/luadd.asm
 OBJECT	../lib/lulsh.asm
@@ -158,7 +158,8 @@ SEG	@@CNSTL		version.c
 # the kernel and its configuration
 AT	0x0c000
 SEG	@@KERNEL
-AT	0x0d5fe		# where kernel.asm reads it
+AT	0x0d5fe		IF ERNIE_FW!=0x00090804	# where kernel.asm reads it (CONFIG)
+AT	0x0d878		IF ERNIE_FW==0x00090804
 SEG	@@KCFG
 
 # the startup, the runtime, the interrupts, the flash library and the C library's functions,
@@ -217,7 +218,8 @@ SEG	@@FSLDAT	IF ERNIE_FW!=0x01000306
 SEG	@@INIS		IF ERNIE_FW!=0x01000306
 # The original handshake packet and state start here on these boards.
 AT	0xfdcde		IF ERNIE_HW==0x00415000&&ERNIE_FW>=0x01000306
-AT	0xfdcd4		IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306
+AT	0xfdcd4		IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306&&ERNIE_FW!=0x00090804
+AT	0xfdcd0		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090804
 AT	0xfdcde		IF ERNIE_HW==0x00406000
 SEG	@@DATA		handshake.c cstartend.asm
 SEG	@@FSLDAT
@@ -227,13 +229,15 @@ SEG	@@INIS
 # blocks
 AT	0xfdd46		IF ERNIE_FW>=0x01000306
 AT	0xfdd3c		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107
-AT	0xfdd0e		IF ERNIE_FW<0x01000107
+AT	0xfdd0e		IF ERNIE_FW<0x01000107&&ERNIE_FW!=0x00090804
+AT	0xfdcf4		IF ERNIE_FW==0x00090804
 SEG	@@KRAM
 # after the kernel's: the flash library's buffer, the initialised data, then what cstart
 # clears, from its start label to cstartend's
 AT	0xfe06c		IF ERNIE_FW>=0x01000306
 AT	0xfe062		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107
-AT	0xfe034		IF ERNIE_FW<0x01000107
+AT	0xfe034		IF ERNIE_FW<0x01000107&&ERNIE_FW!=0x00090804
+AT	0xfe01a		IF ERNIE_FW==0x00090804
 SEG	@@DATA		main.c
 SEG	@@INITL
 SEG	@@DATAL		cstart.asm
@@ -242,5 +246,8 @@ SEG	@@DATAL
 AT	0xffe20
 SEG	@@DATS		cstart.asm
 SEG	@@DATS
+# the saddr bits (0x00090804's updater flag), after the kernel's saddr work area
+AT	0xffe78		IF ERNIE_FW==0x00090804
+SEG	@@BITS
 AT	0xffee2
 SEG	@@FSLSAD

@@ -11,7 +11,9 @@
 #define HANDSHAKE_UNLOCKED	0xa5a5
 #define HANDSHAKE_LOCKED	0x5a5a
 
+#if FW_SINCE(0x00090903)
 extern unsigned char handshakeKey[16];
+#endif
 
 #if FW_SINCE(0x01000104)
 extern int handshakeInit(unsigned char keepKey);
@@ -22,9 +24,11 @@ extern unsigned char handshakeSetMode(unsigned char state, unsigned char mode);
 extern unsigned char handshakeCommand(unsigned char *data);
 extern unsigned char handshakeState(void);
 extern unsigned char handshakeUnlocked11(void);
+#if FW_SINCE(0x00090903)
 extern int handshakeLock11(void);
 extern int handshakeUnlocked15(void);
 extern int handshakeLock15(void);
+#endif
 extern unsigned char handshakeRefuse(void);
 
 #endif

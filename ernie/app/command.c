@@ -45,6 +45,7 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
 		   CommandDone done);
 void commandLogDone(unsigned char command, unsigned char result);
+#if FW_SINCE(0x00090903)
 int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone done);
 int commandSnvs00D1(unsigned char *data, unsigned char command, CommandDone done);
 int commandSnvsRead(unsigned char *data, unsigned char *answer, unsigned char command,
@@ -52,11 +53,17 @@ int commandSnvsRead(unsigned char *data, unsigned char *answer, unsigned char co
 int commandSnvsWrite(unsigned char *data, unsigned char *answer, unsigned char command,
 		     CommandDone done);
 void commandSnvsDone(unsigned char command, unsigned char result);
+#endif
 
 /* request 0: its answer and its command's data */
 struct HostRequest commandRequest;
+#if FW_SINCE(0x00090903)
 unsigned char commandRequestAnswer[0x40];
 unsigned char commandRequestData[0x40];
+#else
+unsigned char commandRequestAnswer[0x28];	/* 0x00090804: the handshake's 0x28 bytes at most */
+unsigned char commandRequestData[0x28];
+#endif
 
 /* 0x0088's answer: the log's data from offset */
 struct LogRead {
@@ -255,11 +262,13 @@ void commandRequestNotify(void)
 allowed:
 	switch (commandRequest.event) {
 	case HOST_EVENT_COMMAND:
+#if FW_SINCE(0x00090903)
 		if (commandRequest.command >= 0x00d2 && commandRequest.command < 0x00d4 &&
 		    snvsUnlocked() == 0) {
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x11, 0);
 			return;
 		}
+#endif
 		switch (commandRequest.command) {
 		case 0x0080:		/* the link's settings */
 			if (commandRequest.length == 2) {
@@ -328,7 +337,9 @@ allowed:
 			break;
 		case 0x0086:		/* the log: sceSysconGetLogInfo */
 		case 0x0087:		/* sceSysconLogStart */
+#if FW_SINCE(0x00090903)
 		case 0x0088:		/* sceSysconLogReadData */
+#endif
 			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			break;
@@ -523,6 +534,7 @@ allowed:
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
+#if FW_SINCE(0x00090903)
 		case 0x00d0:		/* the handshake before the SNVS */
 			if (commandRequest.length == 0x28) {
 				task2SetFlag(3, 0x2000);
@@ -543,6 +555,7 @@ allowed:
 			}
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 2, 0);
 			return;
+#endif
 		default:
 			hostRequestAnswer(&commandRequest, 0x10, 0x3f, 0);
 			return;
@@ -564,12 +577,15 @@ void commandRequestRun(void)
 	case 0x0087:
 		commandLogStart(commandRequestData, 0x87, commandLogDone);
 		break;
+#if FW_SINCE(0x00090903)
 	case 0x0088:
 		commandLogRead(commandRequestData, commandRequestAnswer, 0x88, commandLogDone);
 		break;
+#endif
 	case 0x00a0:
 		commandHandshake(commandRequestData, 0, commandHandshakeDone);
 		break;
+#if FW_SINCE(0x00090903)
 	case 0x00d0:
 		commandSnvsHandshake(commandRequestData, 0xd0, commandSnvsDone);
 		break;
@@ -582,6 +598,7 @@ void commandRequestRun(void)
 	case 0x00d3:
 		commandSnvsWrite(commandRequestData, commandRequestAnswer, 0xd3, commandSnvsDone);
 		break;
+#endif
 	default:
 		hostRequestAnswer(&commandRequest, 0x10, 0, 0);
 		break;
@@ -593,8 +610,14 @@ int commandHandshake(unsigned char *data, unsigned char command, CommandDone don
 {
 	unsigned char result;
 
+#if FW_SINCE(0x00090903)
 	memcpy(commandRequestAnswer, data, 0x28);
 	result = handshakeCommand(commandRequestAnswer);
+#else
+	/* 0x00090804: the handshake answers in the command's data, copied after */
+	result = handshakeCommand(data);
+	memcpy(commandRequestAnswer, data, 0x28);
+#endif
 	done(command, result);
 	return 0;
 }
@@ -627,6 +650,7 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 /* 0x0088 (sceSysconLogReadData): the log's data from the offset the host gives */
 int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
 		   CommandDone done)
@@ -646,6 +670,7 @@ int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char com
 	done(command, result);
 	return 0;
 }
+#endif
 
 void commandLogDone(unsigned char command, unsigned char result)
 {
@@ -667,13 +692,16 @@ void commandLogDone(unsigned char command, unsigned char result)
 	case 0x86:
 		length = 8;
 		break;
+#if FW_SINCE(0x00090903)
 	case 0x88:
 		length = ((struct LogRead *)commandRequestAnswer)->length + 3;
 		break;
+#endif
 	}
 	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, status, length);
 }
 
+#if FW_SINCE(0x00090903)
 /* 0x00d0: the handshake before the SNVS; its 0x28 bytes are answered back */
 int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone done)
 {
@@ -755,3 +783,4 @@ void commandSnvsDone(unsigned char command, unsigned char result)
 	}
 	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, length);
 }
+#endif

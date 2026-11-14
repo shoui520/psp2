@@ -159,13 +159,15 @@ unsigned char cookieCtrlCharge(unsigned char on)
 	return result;
 }
 
-/* register 6's low byte, at most chargeCookieSetting: 0x08c4 (sceSysconCtrlSupplyCurrentUsb) */
+/* register 6's low byte, at most chargeCookieSetting (0x00090804: as given): 0x08c4 (sceSysconCtrlSupplyCurrentUsb) */
 unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x00090903)
 	if (chargeCookieSetting < current)
 		current = chargeCookieSetting;
+#endif
 	elmoCommand[0] = COOKIE_REG(6);
 	elmoCommand[1] = current;
 	elmoCommand[2] = cookieRegs[3].byte[1];
@@ -175,16 +177,18 @@ unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current)
 	return result;
 }
 
-/* register 5's low byte, halved on a Cookie before 0x31 and at most chargeCookieSetting:
-   0x08c3 (sceSysconCtrlSupplyCurrentAc) */
+/* register 5's low byte, halved on a Cookie before 0x31 and at most chargeCookieSetting
+   (0x00090804: as given): 0x08c3 (sceSysconCtrlSupplyCurrentAc) */
 unsigned char cookieCtrlSupplyCurrentAc(unsigned char current)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x00090903)
 	if (deviceVersions.cookie[1] < 0x31)
 		current >>= 1;
 	if (chargeCookieSetting < current)
 		current = chargeCookieSetting;
+#endif
 	elmoCommand[0] = COOKIE_REG(5);
 	elmoCommand[1] = current;
 	elmoCommand[2] = cookieRegs[2].byte[1];

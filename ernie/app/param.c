@@ -11,7 +11,7 @@
 #include "kernel.h"
 #include "param.h"
 
-static const unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
+static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x00, 0x0c, 0x12,

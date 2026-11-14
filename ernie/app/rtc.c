@@ -172,6 +172,11 @@ void rtcInterrupt(void)
 #endif
 	EI();
 	rtcClockLow = keepRam.clock;
+#if !FW_SINCE(0x00090903)
+	/* 0x00090804: task 2's flag 0x0040 every 2 s, outside state 0x0010 */
+	if (state != 0x0010 && (rtcClockLow & 0x0003) == 0)
+		task2SetFlag(3, 0x0040);
+#endif
 	if (state == 0x0010) {
 		levelMonitor1Poll();
 		input1Bit7Poll();

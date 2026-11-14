@@ -14,6 +14,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "nvs.h"
+#include "trace.h"
 
 #define NVS_FIRST_BLOCK		0xf0
 #define NVS_BLOCKS		0x10
@@ -1176,8 +1177,25 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned i
 	return 0;
 }
 
-void nvsNone(void)
+/* the state and the blocks, to the trace (no one calls it; from 0x01000104 its prints are
+   left out) */
+void nvsPrintStatus(void)
 {
+#if !FW_SINCE(0x01000104)
+	int i;
+	struct NvsHeader header;
+
+	header = ((struct NvsBlock *)((unsigned long)nvsDataBlocks[0] << 10))->header;
+	tracePrintf("NVS Status\n");
+	tracePrintf(" status = %02X\n", nvsState);
+	tracePrintf(" ver=%02X movingCount=%d\n", header.mark, 0xffff - header.generation);
+	for (i = 0; i < NVS_DATA_BLOCKS; i++)
+		tracePrintf(" basePhy   [%d] = %d\n", i, nvsDataBlocks[i]);
+	for (i = 0; i < NVS_DATA_BLOCKS; i++)
+		tracePrintf(" basersvPhy[%d] = %d\n", i, nvsCopyBlocks[i]);
+	for (i = 0; i < NVS_SPARE_BLOCKS; i++)
+		tracePrintf(" modifyPhy [%d] = %d\n", i, nvsSpareBlocks[i]);
+#endif
 }
 
 /* marks a block as data (the first block of the data, or another) and writes its header */

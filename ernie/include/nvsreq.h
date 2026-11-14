@@ -13,13 +13,19 @@
 #define NVS_AREA_HOST		0
 #define NVS_AREA_SYSCON		1
 
+#if FW_SINCE(0x00090903)
 #define NVS_JOBS		3
+#else
+#define NVS_JOBS		2
+#endif
 
 /* a job's state */
 #define NVS_JOB_FREE		0
 #define NVS_JOB_READ		1
 #define NVS_JOB_WRITE		2
-#define NVS_JOB_SERVICE		3	/* the NVS's upkeep */
+#if FW_SINCE(0x00090903)
+#define NVS_JOB_SERVICE		3	/* the NVS's upkeep (0x00090804: event flag 3's 0x0040) */
+#endif
 
 struct NvsJob {
 	unsigned int	offset;
@@ -41,7 +47,9 @@ extern int nvsJobRead(unsigned int offset, unsigned int size, unsigned char *dat
 extern int nvsJobWrite(unsigned int offset, unsigned int size, unsigned char *data,
 		       unsigned char area, unsigned char command,
 		       void (*done)(unsigned char command, unsigned char result));
+#if FW_SINCE(0x00090903)
 extern int nvsJobService(void);
+#endif
 extern void nvsRequestNotify(void);
 
 #endif

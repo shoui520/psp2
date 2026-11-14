@@ -19,7 +19,9 @@
 void serial1Operation(void)
 {
 	unsigned char result;
+#if FW_SINCE(0x00090903)
 	unsigned char reg;
+#endif
 
 	switch (serial1State) {
 	case 1:		/* 0x0940: the Elmo's register byte[0], into byte[1] */
@@ -112,6 +114,7 @@ void serial1Operation(void)
 			serialPostAnswer();
 		}
 		break;
+#if FW_SINCE(0x00090903)
 	case 7:		/* 0x0180: the battery's readings, and its registers 0x2c and 0x14 */
 		serial.status = 0;
 		serial1Args.word[0] = charge.batteryRemainCap;
@@ -171,6 +174,7 @@ void serial1Operation(void)
 			serialPostAnswer();
 		}
 		break;
+#endif
 	default:
 		if (serial.state == SERIAL_ANSWER_LATER) {
 			serial.command |= 0x8000;

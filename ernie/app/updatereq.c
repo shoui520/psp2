@@ -46,6 +46,7 @@ extern unsigned char fslDataBuffer[];		/* the library's descriptor */
 #define UPDATER_NVS_AREA	1
 
 static unsigned char updaterFlashPrepare(void);
+#if FW_SINCE(0x00090903)
 static char updaterSegmentAllowed(unsigned char segment);
 static char updaterSegmentReceived(unsigned char segment);
 static void updaterSegmentSetReceived(unsigned char segment);
@@ -82,12 +83,78 @@ const unsigned char updaterSegments[UPDATER_SEGMENTS / 8] = {
 	0x00, 0x00, 0xe0, 0xff, 0xff, 0x3f, 0x00, 0x00,
 };
 
+#endif
+
 void (*updaterDownloader)(void);		/* the downloader's entry */
 struct HostRequest updaterRequest;
 unsigned char updaterRequestAnswer[4];
+#if FW_SINCE(0x00090903)
 unsigned char updaterRequestData[0x80];
 struct Updater updater;
+#else
+/* 0x00090804: the request takes run mode 0x1183 alone, and 0x9a54 starts the downloader */
+unsigned char updaterRequestData[4];
+static __boolean updaterStart;
 
+void updaterRequestInit(void)
+{
+	updaterRequest.id = 0x11;
+	updaterRequest.data = updaterRequestData;
+	updaterRequest.answer = updaterRequestAnswer;
+	updaterRequest.size = sizeof(updaterRequestData);
+	updaterRequest.notify = updaterRequestNotify;
+	updaterRequest.state = HOST_REQUEST_RECEIVE;
+	updaterStart = 0;
+	updaterDownloader = (void (*)(void))DOWNLOADER_ENTRY;
+}
+
+/* 0x1100 (sceSysconGetErnieDLVersion) */
+unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char *length)
+{
+	getErnieDlVersion(out);
+	*length = 4;
+	return 0;
+}
+
+/* refused until mode 0x0b is unlocked; 0x1183's run modes 0x9a54 (the downloader, once the
+   answer went out) and 0x72ba */
+void updaterRequestNotify(void)
+{
+	switch (updaterRequest.event) {
+	case HOST_EVENT_COMMAND:
+		if (!handshakeUnlocked11()) {
+			hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+			handshakeRefuse();
+			return;
+		}
+		switch (updaterRequest.command) {
+		case 0x1183:
+			updaterRequest.status = 0x3c;
+			updaterRequest.answerLength = 0;
+			if (updaterRequest.length == 2) {
+				if (updaterRequestData[0] == 0x54 && updaterRequestData[1] == 0x9a) {
+					updaterStart = 1;
+					updaterRequest.status = 0;
+				} else if (updaterRequestData[0] == 0xba && updaterRequestData[1] == 0x72)
+					updaterRequest.status = 0;
+			}
+			hostRequestAnswerReady(&updaterRequest.state);
+			break;
+		default:
+			updaterRequest.state = HOST_REQUEST_ERROR;
+			break;
+		}
+		break;
+	case HOST_EVENT_ANSWERED:
+		updaterRequest.state = HOST_REQUEST_RECEIVE;
+		if (updaterStart)
+			updaterStartDownloader();
+		break;
+	}
+}
+#endif
+
+#if FW_SINCE(0x00090903)
 void updaterRequestInit(void)
 {
 	updaterRequest.id = 0x11;
@@ -138,6 +205,7 @@ void updaterRequestNotify(void)
 		break;
 	}
 }
+#endif
 
 /*
  * starts the downloader, with the host link's state in DOWNLOADER_START and the RAM its
@@ -185,7 +253,11 @@ void updaterStartDownloader(void)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
 #else
 		/* before 0x01000104 the version is compared as read, low byte first */
+#if FW_SINCE(0x00090903)
 		DOWNLOADER_START->link.size = hostLink.config.size;
+#else
+		DOWNLOADER_START->link.config = hostLink.config;
+#endif
 		if (version >= 0x00200000 && version <= 0x00260000)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
 #endif
@@ -205,11 +277,13 @@ void updaterStartDownloader(void)
 	EI();
 }
 
+#if FW_SINCE(0x00090903)
 /* answers the request with no data */
 void updaterRequestAnswerOk(void)
 {
 	hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, 0, 0);
 }
+#endif
 
 /* opens the flash library for the downloader; 0 when it may start */
 static unsigned char updaterFlashPrepare(void)
@@ -230,6 +304,8 @@ static unsigned char updaterFlashPrepare(void)
 	FSL_Close();
 	return result;
 }
+
+#if FW_SINCE(0x00090903)
 
 /* event flag 3's 0x0040: the host's update command came in */
 void updaterRequestEvent(FLGPTN ptn)
@@ -660,3 +736,4 @@ static unsigned char updaterWriteDlFlags(unsigned char flags)
 	setDlFlags(flags);
 	return 0;
 }
+#endif

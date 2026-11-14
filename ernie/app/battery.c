@@ -351,6 +351,7 @@ unsigned char batteryHibernate(void)
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 /* 0x098d: the gauge's control command 0x0015 */
 unsigned char batteryControl0015(void)
 {
@@ -360,3 +361,4 @@ unsigned char batteryControl0015(void)
 	elmoCommand[2] = 0;
 	return batteryWrite(elmoCommand, 3);
 }
+#endif

@@ -42,7 +42,34 @@ void nvsRequestInit(void)
 void nvsRequestEvent(FLGPTN ptn)
 {
 	unsigned char result;
+#if !FW_SINCE(0x00090903)
+	unsigned char status;
 
+	/* 0x00090804: 0x0040, the NVS's upkeep (task2On, the RTC's interrupt every 2 s) */
+	if (ptn & 0x0040) {
+		status = nvsGetState();
+		switch (status) {
+		case NVS_STATE_FAILED:
+			result = nvsFormat();
+			break;
+		case NVS_STATE_FULL:
+			result = nvsMove();
+			if (result == 0x0a)
+				;
+			break;
+		case NVS_STATE_MOVED:
+			result = nvsClean(2);
+			if (result == 0x20)
+				;
+			break;
+		default:
+			result = nvsClean(2);
+			if (result == 0x20)
+				;
+			break;
+		}
+	}
+#endif
 	if (ptn & 0x0020) {
 		unsigned int offset;
 		unsigned char size;
@@ -113,7 +140,9 @@ void nvsRequestEvent(FLGPTN ptn)
 	}
 	if (ptn & 0x0080) {
 		struct NvsJob *job;
+#if FW_SINCE(0x00090903)
 		unsigned char status;
+#endif
 
 		while ((job = nvsJobNext()) != NULL) {
 			switch (job->state) {
@@ -125,6 +154,7 @@ void nvsRequestEvent(FLGPTN ptn)
 				result = nvsWrite(job->offset, job->size, job->data, job->area);
 				job->done(job->command, result);
 				break;
+#if FW_SINCE(0x00090903)
 			case NVS_JOB_SERVICE:
 				status = nvsGetState();
 				switch (status) {
@@ -148,6 +178,7 @@ void nvsRequestEvent(FLGPTN ptn)
 					break;
 				}
 				break;
+#endif
 			}
 			job->state = NVS_JOB_FREE;
 		}
@@ -197,6 +228,7 @@ int nvsJobWrite(unsigned int offset, unsigned int size, unsigned char *data, uns
 	return 0;
 }
 
+#if FW_SINCE(0x00090903)
 int nvsJobService(void)
 {
 	struct NvsJob *job;
@@ -210,6 +242,7 @@ int nvsJobService(void)
 	task2SetFlag(3, 0x0080);
 	return 0;
 }
+#endif
 
 /* request 0x10's: the command runs in task 2 */
 void nvsRequestNotify(void)

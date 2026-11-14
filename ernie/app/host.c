@@ -135,11 +135,17 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 	{ 0x0013, hostCommand0013, 0 },
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
+#if FW_SINCE(0x00090903)
 	{ 0x1101, hostCommandUpdaterProgress, 0 },
+#endif
 	{ 0x1300, hostCommandConfigVersions, 0 },
 };
 
+#if FW_SINCE(0x00090903)
 static const char hostRevision[] = "$Rev: 2579 $";
+#else
+static const char hostRevision[] = "$Rev: 1800 $";
+#endif
 
 int hostStep(FLGPTN flgptn);
 int hostFrameBegin(void);
@@ -180,11 +186,13 @@ void hostIntDisable(void)
 	PMK5 = 1;
 }
 
+#if FW_SINCE(0x00090903)
 void hostIntCancel(void)
 {
 	PMK5 = 1;
 	clr_flg(1, ~0x0001);
 }
+#endif
 
 /* the host starts a frame */
 void hostInterrupt(void)

@@ -102,6 +102,7 @@ void touchClose(void)
 /* panel 0's parts of both frames: no touch */
 void touchClearFrames0(void)
 {
+#if FW_SINCE(0x00090903)
 	memset(touchFrames[0].panel[0], 0x80, TOUCH_REPORT_SIZE);
 	memset(&touchFrames[0].panel[0][TOUCH_REPORT_SIZE], 0,
 	       TOUCH_PANEL_SIZE - TOUCH_REPORT_SIZE);
@@ -110,10 +111,15 @@ void touchClearFrames0(void)
 	       TOUCH_PANEL_SIZE - TOUCH_REPORT_SIZE);
 	touchFrames[0].time0 = 0;
 	touchFrames[1].time0 = 0;
+#else
+	memset(touchFrames[0].panel[0], 0x80, TOUCH_PANEL_SIZE);
+	memset(touchFrames[1].panel[0], 0x80, TOUCH_PANEL_SIZE);
+#endif
 }
 
 void touchClearFrames1(void)
 {
+#if FW_SINCE(0x00090903)
 	memset(touchFrames[0].panel[1], 0x80, TOUCH_REPORT_SIZE);
 	memset(&touchFrames[0].panel[1][TOUCH_REPORT_SIZE], 0,
 	       TOUCH_PANEL_SIZE - TOUCH_REPORT_SIZE);
@@ -122,6 +128,10 @@ void touchClearFrames1(void)
 	       TOUCH_PANEL_SIZE - TOUCH_REPORT_SIZE);
 	touchFrames[0].time1 = 0;
 	touchFrames[1].time1 = 0;
+#else
+	memset(touchFrames[0].panel[1], 0x80, TOUCH_PANEL_SIZE);
+	memset(touchFrames[1].panel[1], 0x80, TOUCH_PANEL_SIZE);
+#endif
 }
 
 /* starts a frame, into a frame no stream is sending: panel 1's report first when it is
@@ -152,10 +162,10 @@ void touchStartFrame(void)
 		touch.frame = next;
 		if (touch.flags & TOUCH_PANEL1) {
 			touchFrames[touch.frame].time1 = TCR02;
-			touchFrames[touch.frame].panel[1][TOUCH_PANEL_STATE] = touch.state.value;
+			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
 		} else if (touch.flags & TOUCH_PANEL0) {
 			touchFrames[touch.frame].time0 = TCR02;
-			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATE] = touch.state.value;
+			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
 		touchDelaySelect();
 		transfer.receive = (unsigned char *)&touchReply;
@@ -193,10 +203,10 @@ void touchStartFrameNoLock(void)
 		touch.frame = next;
 		if (touch.flags & TOUCH_PANEL1) {
 			touchFrames[touch.frame].time1 = TCR02;
-			touchFrames[touch.frame].panel[1][TOUCH_PANEL_STATE] = touch.state.value;
+			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
 		} else if (touch.flags & TOUCH_PANEL0) {
 			touchFrames[touch.frame].time0 = TCR02;
-			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATE] = touch.state.value;
+			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
 		touchDelaySelect();
 		transfer.receive = (unsigned char *)&touchReply;
@@ -731,9 +741,15 @@ unsigned char touchSelfTest0(unsigned char test, unsigned char *pass)
 	unsigned char command[2];
 	unsigned char value;
 	unsigned char result;
+#if FW_SINCE(0x00090903)
 	unsigned int address;
+#endif
 
+#if FW_SINCE(0x00090903)
 	if (touch.panel[0].version < 0x21) {
+#else
+	if (touch.panel[0].version < 0x24) {
+#endif
 		*pass = 0xfe;
 		return 0;
 	}
@@ -741,6 +757,7 @@ unsigned char touchSelfTest0(unsigned char test, unsigned char *pass)
 	command[1] = test;
 	touchWrite(touch.panel[0].objects.selfTest, command, 2, 0);
 	dly_tsk(8);
+#if FW_SINCE(0x00090903)
 	address = touch.panel[0].objects.t34;
 	if (touch.panel[0].version >= 0x24)
 		address += 0x62;
@@ -751,6 +768,9 @@ unsigned char touchSelfTest0(unsigned char test, unsigned char *pass)
 	else
 		address += 0x85;
 	result = touchRead(address, &value, 1, 0);
+#else
+	result = touchRead(touch.panel[0].objects.t34 + 0x62, &value, 1, 0);
+#endif
 	if (value == 0xfe)
 		*pass = 0;
 	else
@@ -763,9 +783,15 @@ unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
 	unsigned char command[2];
 	unsigned char value;
 	unsigned char result;
+#if FW_SINCE(0x00090903)
 	unsigned int address;
+#endif
 
+#if FW_SINCE(0x00090903)
 	if (touch.panel[1].version < 0x21) {
+#else
+	if (touch.panel[0].version < 0x24) {	/* (0x00090804's: panel 0's version) */
+#endif
 		*pass = 0xfe;
 		return 0;
 	}
@@ -773,6 +799,7 @@ unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
 	command[1] = test;
 	touchWrite(touch.panel[1].objects.selfTest, command, 2, 1);
 	dly_tsk(8);
+#if FW_SINCE(0x00090903)
 	address = touch.panel[1].objects.t34;
 	if (touch.panel[1].version >= 0x24)
 		address += 0x62;
@@ -783,6 +810,9 @@ unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
 	else
 		address += 0x85;
 	result = touchRead(address, &value, 1, 1);
+#else
+	result = touchRead(touch.panel[1].objects.t34 + 0x62, &value, 1, 1);
+#endif
 	if (value == 0xfe)
 		*pass = 0;
 	else
@@ -824,9 +854,11 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 				objects->numTouch = TOUCH_OBJECT_ADDRESS(table[i]) + 0x0e;
 				objects->touchScreen = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#if FW_SINCE(0x00090903)
 			case 20:
 				objects->grip = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#endif
 			case 22:
 				objects->noise = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
@@ -840,9 +872,13 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 #endif
 			case 34:
 				objects->report = TOUCH_OBJECT_ADDRESS(table[i]) + 0x0e;
+#if FW_SINCE(0x00090903)
 				objects->status = TOUCH_OBJECT_ADDRESS(table[i]) + 0x54;
 				objects->report *= 2;
 				objects->status *= 2;
+#else
+				objects->report *= 2;
+#endif
 				objects->t34 = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
 			case 38:
@@ -1067,6 +1103,7 @@ void touchUpdateState(void)
 	}
 }
 
+#if FW_SINCE(0x00090903)
 /* enables panel 0's grip status (T20), which each frame then reads */
 unsigned char touchStatusOn0(void)
 {
@@ -1148,6 +1185,7 @@ unsigned char touchSetGrip1(unsigned char *data)
 	result = touchWriteVerified(touch.panel[1].objects.grip + 7, data, 5, 1);
 	return result;
 }
+#endif
 
 #if FW_SINCE(0x01000306)
 void touchSetFlags(unsigned char flags)

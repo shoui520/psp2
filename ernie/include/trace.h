@@ -7,6 +7,8 @@
 #ifndef ERNIE_TRACE_H
 #define ERNIE_TRACE_H
 
+#include "ernie.h"
+
 #define TRACE_PORT		3	/* the UART */
 
 extern unsigned int traceMask;
@@ -22,5 +24,12 @@ extern void traceWrite(unsigned int mask, unsigned char *data, unsigned char siz
 extern void tracePrintf(const char *format, ...);
 extern unsigned char traceUartWrite(unsigned char *data, unsigned char size);
 extern unsigned char traceUartRead(unsigned char *data, unsigned char size);
+#if !FW_SINCE(0x01000104)
+extern const char __far traceBanner[];
+extern const char __far traceNewline[];
+extern void traceConsolePrompt(void);
+extern void traceConsoleInit(void);
+extern void traceConsoleCommand(void);
+#endif
 
 #endif

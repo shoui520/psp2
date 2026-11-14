@@ -243,8 +243,8 @@ void sleepFactorSet19(unsigned char on)
 	}
 }
 
-/* the updater has not the last three */
-#ifndef ERNIE_UPDATER
+/* the updater has not the last three, 0x00090804 not 22 and 23 */
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x00090903)
 void sleepFactorSet22(unsigned char on)
 {
 	if (sleepFactor.bits[2].b6 ^ on) {

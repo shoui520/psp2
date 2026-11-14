@@ -42,8 +42,10 @@ void task5(VP_INT exinf)
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
 #elif LED_REQUESTS
 		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
-#else
+#elif FW_SINCE(0x00090903)
 		ercd = wai_flg(4, 0xf7a3, TWF_ORW, &ptn);
+#else
+		ercd = wai_flg(4, 0xf3a3, TWF_ORW, &ptn);	/* no Cookie cycle */
 #endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
@@ -70,6 +72,7 @@ void task5(VP_INT exinf)
 				ledUpdate();
 #endif
 			}
+#if FW_SINCE(0x00090903)
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
 #if FW_SINCE(0x01000104)
@@ -78,6 +81,7 @@ void task5(VP_INT exinf)
 				powerCookieCycle();
 #endif
 			}
+#endif
 #if FW_SINCE(0x01000306)
 			if (ptn & 0x0008) {
 				clr_flg(4, ~0x0008);

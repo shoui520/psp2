@@ -64,8 +64,10 @@ unsigned char powerSuspend(void);
 unsigned char powerShutdown(void);
 unsigned char powerCut(void);
 unsigned char powerReset(void);
+#if FW_SINCE(0x00090903)
 unsigned char powerUpdateAnswer(void);
 unsigned char powerUpdate(void);
+#endif
 #if FW_SINCE(0x01000104)
 void powerParamLoad(void);
 #endif
@@ -100,12 +102,14 @@ void powerSequence(void)
 	case 0x8040:
 		result = powerReset();
 		break;
+#if FW_SINCE(0x00090903)
 	case 0x8200:
 		result = powerUpdateAnswer();
 		break;
 	case 0x8400:
 		result = powerUpdate();
 		break;
+#endif
 	}
 	if (result == 0) {
 		powerState &= 0x7fff;
@@ -232,11 +236,13 @@ unsigned char powerResume(union PowerRequest *request)
 	unsigned char result;
 
 	result = 0;
+#if FW_SINCE(0x00090903)
 	if (stateCause == 0x72) {
 		updaterRequestAnswerOk();
 		powerPendingClear(5);
 		return result;
 	}
+#endif
 	powerPendingReset();
 #if FW_SINCE(0x01000104)
 	if (configTakeChanged() != 0)
@@ -369,13 +375,18 @@ unsigned char powerOff(void)
 	if (powerPendingGet() != 0)
 		result = 1;
 #if !FW_SINCE(0x01000104)
-	/* before 0x01000104 a warm reset's cause is taken here: transition 0x14 after one */
+	/* before 0x01000104 a warm reset's cause is taken here: transition 0x14 after one
+	   (0x00090804's 0x00) */
 	if (result == 0) {
 		cause = getResetCause();
 		switch (cause) {
 		case 0xf1:
 		case 0x11:
+#if FW_SINCE(0x00090903)
 			STATE_TRANSITION_NOMASK(0x14);
+#else
+			STATE_TRANSITION_NOMASK(0x00);
+#endif
 			break;
 		}
 		setResetCause(0);
@@ -551,6 +562,7 @@ unsigned char powerReset(void)
 	return result;
 }
 
+#if FW_SINCE(0x00090903)
 /* 0x8200 */
 unsigned char powerUpdateAnswer(void)
 {
@@ -584,6 +596,7 @@ unsigned char powerUpdate(void)
 		result = 1;
 	return result;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 void powerParamLoad(void)

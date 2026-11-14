@@ -130,8 +130,9 @@ int iicaStart(struct IicaRequest *request)
 	return 0;
 }
 
-#ifdef ERNIE_UPDATER
-/* the updater's: nothing calls it, and it does nothing */
+#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000104)
+/* the updater's, and the application's before 0x01000104: nothing calls it, and it does
+   nothing */
 int iicaNone(void)
 {
 	return 0;

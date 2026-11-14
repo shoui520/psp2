@@ -43,8 +43,10 @@ struct Timer {
 #define TIMER_COUNT		0x1e
 #elif FW_SINCE(0x01000104)
 #define TIMER_COUNT		(TIMER_RTC(0x1f) + 1)
-#else
+#elif FW_SINCE(0x00090903)
 #define TIMER_COUNT		0x1f
+#else
+#define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
 #endif
 
 extern __near struct Timer timers[TIMER_COUNT];

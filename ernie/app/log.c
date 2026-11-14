@@ -22,7 +22,8 @@ union LogValue {
 	unsigned int	word;
 };
 
-static const struct LogRecord logRecords[] = {
+static TABLE_CONST struct LogRecord logRecords[] = {
+#if FW_SINCE(0x00090903)
 	{ 0x00, 0x00, 4 },	/* the header */
 	{ 0x01, 0x1c, 4 },
 	{ 0x02, 0x20, 4 },
@@ -48,6 +49,31 @@ static const struct LogRecord logRecords[] = {
 	{ 0x16, 0x1b, 1 },
 	{ 0x17, 0x06, 2 },
 	{ 0x18, 0x10, 1 },
+#else
+	{ 0x00, 0x00, 4 },	/* the header */
+	{ 0x01, 0x04, 2 },
+	{ 0x02, 0x06, 2 },
+	{ 0x03, 0x08, 1 },
+	{ 0x04, 0x09, 1 },
+	{ 0x05, 0x0a, 1 },
+	{ 0x06, 0x0b, 1 },
+	{ 0x07, 0x0c, 1 },
+	{ 0x08, 0x0d, 1 },
+	{ 0x09, 0x0e, 1 },
+	{ 0x0a, 0x0f, 1 },
+	{ 0x0b, 0x10, 1 },
+	{ 0x0c, 0x11, 1 },
+	{ 0x0d, 0x12, 1 },
+	{ 0x0e, 0x13, 1 },
+	{ 0x0f, 0x14, 1 },
+	{ 0x10, 0x15, 1 },
+	{ 0x11, 0x16, 1 },
+	{ 0x12, 0x17, 1 },
+	{ 0x13, 0x18, 1 },
+	{ 0x14, 0x19, 1 },
+	{ 0x15, 0x1a, 1 },
+	{ 0x16, 0x1b, 1 },
+#endif
 };
 
 static struct LogHeader logHeader;
@@ -78,7 +104,9 @@ void logInit(void)
 void logUpdate(void)
 {
 	union LogValue record;
+#if FW_SINCE(0x00090903)
 	union LogValue old;
+#endif
 	int result;
 	unsigned int id;
 	unsigned char size;
@@ -98,6 +126,7 @@ void logUpdate(void)
 		switch (logHeader.version) {
 		case 0:
 		case 1:
+#if FW_SINCE(0x00090903)
 			old.value = 0;
 			logNvsRead(0x04, 2, &old);
 			logNvsWrite(0x1c, 4, &old);
@@ -106,7 +135,12 @@ void logUpdate(void)
 			logNvsWrite(0x20, 4, &old);
 			for (id = 3; id < 0x19; id++)
 				logClear(id);
+#else
+			for (id = 3; id < 0x17; id++)
+				logClear(id);
+#endif
 			break;
+#if FW_SINCE(0x00090903)
 		case 2:
 			old.value = 0;
 			logNvsRead(0x04, 2, &old);
@@ -125,6 +159,7 @@ void logUpdate(void)
 			logNvsRead(0x0a, 1, &old);
 			logNvsWrite(0x0e, 2, &old);
 			break;
+#endif
 		}
 		result = logWriteHeader(&record.header);
 		if (result != 0)
@@ -399,10 +434,12 @@ int logNvsRead(unsigned int offset, unsigned char size, void *data)
 	return nvsRead(offset, size, data, NVS_AREA_SYSCON);
 }
 
+#if FW_SINCE(0x00090903)
 int logNvsWrite(unsigned int offset, unsigned char size, void *data)
 {
 	return nvsWrite(offset, size, data, NVS_AREA_SYSCON);
 }
+#endif
 
 int logClearAll(void)
 {

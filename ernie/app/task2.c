@@ -45,6 +45,14 @@ unsigned char task2Cut(void);
 unsigned char task2Reset(void);
 unsigned char task2Tick(void);
 
+/* the NVS request's events (0x00090804: 0x0040 too, the job service's, which task2On and the
+   RTC's interrupt set) */
+#if FW_SINCE(0x00090903)
+#define TASK2_NVS_EVENTS	0x00a0
+#else
+#define TASK2_NVS_EVENTS	0x00e0
+#endif
+
 void task2(VP_INT exinf)
 {
 	ER ercd;
@@ -68,8 +76,8 @@ void task2(VP_INT exinf)
 			}
 			if (ptn & 0x0e1e)
 				serial4Event(ptn);
-			if (ptn & 0x00a0) {
-				clr_flg(3, ~(ptn & 0x00a0));
+			if (ptn & TASK2_NVS_EVENTS) {
+				clr_flg(3, ~(ptn & TASK2_NVS_EVENTS));
 				nvsRequestEvent(ptn);
 			}
 			if (ptn & 0x8000) {
@@ -80,10 +88,12 @@ void task2(VP_INT exinf)
 				clr_flg(3, ~0x4000);
 				configRequestEvent(ptn);
 			}
+#if FW_SINCE(0x00090903)
 			if (ptn & 0x0040) {
 				clr_flg(3, ~(ptn & 0x0040));
 				updaterRequestEvent(ptn);
 			}
+#endif
 		}
 		task2Idle();
 	}
@@ -194,7 +204,11 @@ unsigned char task2On(void)
 	serial4Reopen(2);
 	serial2Init();
 	if (nvsInit() != 0)
+#if FW_SINCE(0x00090903)
 		nvsJobService();
+#else
+		task2SetFlag(3, 0x0040);
+#endif
 	serial1Reset();
 	boardMultiCnOutputOff();
 	watchdogSet(&configGet()->watchdog);
@@ -205,7 +219,9 @@ unsigned char task2On(void)
 unsigned char task2Off(void)
 {
 	unsigned char ret;
+#if FW_SINCE(0x00090903)
 	unsigned char value;
+#endif
 
 	ret = 0;
 	commandRequestInit();
@@ -220,8 +236,10 @@ unsigned char task2Off(void)
 	updaterRequestInit();
 	configRequestInit();
 	watchdogStop();
+#if FW_SINCE(0x00090903)
 	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);
+#endif
 #if FW_SINCE(0x01000104)
 	if (getAlarmMode() == 1)
 		setAlarm(RTC_ALARM_NONE);
@@ -255,8 +273,8 @@ unsigned char task2Resume(void)
 	commandRequestReceive();
 	serialRequestReset();
 	watchdogSetup();
-#if !FW_SINCE(0x01000104)
-	snvsReset();
+#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090903)
+	snvsReset();	/* (0x00090804 has no SNVS) */
 #endif
 	return ret;
 }
@@ -322,12 +340,16 @@ unsigned char task2Tick(void)
 	unsigned char ret;
 	STATE_TRANSITION_EVENT
 	unsigned int state;
+#if FW_SINCE(0x00090903)
 	unsigned char clock;
+#endif
 #endif
 
 	ret = 0;
 	state = stateGet();
+#if FW_SINCE(0x00090903)
 	clock = getClock().byte[0];
+#endif
 #if BOARD_WDT
 	WDTE = 0xac;
 #endif
@@ -344,8 +366,10 @@ unsigned char task2Tick(void)
 	} else {
 		sleepFactorSet3(0);
 	}
+#if FW_SINCE(0x00090903)
 	if (state != 0x0010 && (clock & 3) == 3)
 		nvsJobService();
+#endif
 	logUpdate();
 	if (state != 0x0004 && state != 0x0008)
 		taskHookStandby();

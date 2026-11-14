@@ -46,6 +46,14 @@ unsigned int powerCutReg2;
 #define POWER_JOB_AC_DELAY()	(charge.acDelay = 10)
 #endif
 
+/* before 0x01000104, the off and suspend jobs: the Cookie's hold released (task 5's event
+   0x400) and the VBUS charge's first bit set; 0x00090804 has no hold and one VBUS flag */
+#if FW_SINCE(0x00090903)
+#define POWER_JOB_VBUS_ON()	(task5SetFlag(4, 0x400), chargeVbus.0 = 1)
+#else
+#define POWER_JOB_VBUS_ON()	(chargeVbus = 1)
+#endif
+
 static void powerJobOn(void);
 static void powerJobResume(void);
 static void powerJobOff(void);
@@ -234,8 +242,7 @@ static void powerJobOff(void)
 	cookieCtrlBatteryCharge(1);
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
-	task5SetFlag(4, 0x400);
-	chargeVbus.0 = 1;
+	POWER_JOB_VBUS_ON();
 	chargeControl.1 = 1;
 	powerLedFadeStart(0);
 	powerReady(POWER_JOB_PART);
@@ -301,8 +308,7 @@ static void powerJobSuspend(void)
 	powerSeqSuspend();
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
-	task5SetFlag(4, 0x400);
-	chargeVbus.0 = 1;
+	POWER_JOB_VBUS_ON();
 	chargeControl.1 = 1;
 	powerReady(POWER_JOB_PART);
 }

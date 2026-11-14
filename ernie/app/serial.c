@@ -244,7 +244,7 @@ unsigned char serialReceive(void)
 			return SERIAL_BAD_LENGTH;
 		serial.length >>= 1;
 	}
-	if (serial.length > SERIAL_DATA_SIZE || size - 7 != serial.length)
+	if (serial.length > SERIAL_RECEIVE_SIZE || size - 7 != serial.length)
 		return SERIAL_BAD_LENGTH;
 	return SERIAL_OK;
 }
