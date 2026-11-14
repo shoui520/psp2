@@ -492,6 +492,9 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	nexttoward.c
 	nexttowardf.c
 	nexttowardl.c
+	pow.c
+	powf.c
+	powl.c
 	remainder.c
 	remainderf.c
 	remainderl.c
@@ -587,6 +590,10 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xsin.c
 	xsinh.c
 	xtgamma.c
+	fegetround.c
+	feraiseexcept.c
+	fesetenv.c
+	fegetenv.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces

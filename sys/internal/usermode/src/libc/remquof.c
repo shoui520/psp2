@@ -2,6 +2,7 @@
  * remquof function: the remainder of x/y rounded to nearest, and the low
  * bits of that quotient, with its sign, at pquo.
  */
+#include <limits.h>
 #include <math.h>
 
 #include "xmath.h"
@@ -26,8 +27,8 @@ float (remquof)(float x, float y, int *pquo)
 		}
 	} else {
 		float t;
-		short xchar;
 		short ychar;
+		short xchar;
 		short neg = 0;
 		int quo = 0;
 		int xneg = 0;
@@ -53,7 +54,7 @@ float (remquof)(float x, float y, int *pquo)
 				_FDscale(&t, n);
 				if (t <= x) {
 					x -= t;
-					if (n < 32)
+					if (n < sizeof (quo) * CHAR_BIT)
 						quo += 1 << n;
 					break;
 				}

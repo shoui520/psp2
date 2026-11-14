@@ -4,8 +4,9 @@
  * carrying at most BITS_WORD significant bits, a zero term ending the
  * sum. The includer defines FTYPE (the type), FNAME(x) (the helper's name
  * for the type), FCONST(x) (the type's member of a _Dconst), FLIT(x) (a
- * literal of the type), FSIGNBIT(x) (the sign bit), FLDEXP, FSQRT,
- * BITS_WORD and BIG_EXP (an exponent above every term's).
+ * literal of the type), FSIGNBIT(x) (the sign bit), FLDEXP, FSQRT, FBITS
+ * (the type's significant bits), BITS_WORD and BIG_EXP (an exponent above
+ * every term's).
  */
 #include <string.h>
 
@@ -45,8 +46,22 @@ FTYPE *FNAME(Xp_setw)(FTYPE *p, int n, FTYPE x)
 		FNAME(Dscale)(&x0, xexp);
 		p[0] = x0;
 		p[1] = x - x0;
+#if 2 * BITS_WORD < FBITS
+		if (2 < n && p[1] != FLIT(0.0)) {	/* the rest has more than BITS_WORD bits too */
+			x = p[1];
+			FNAME(Dunscale)(&xexp, &p[1]);
+			FNAME(Dint)(&p[1], BITS_WORD);
+			FNAME(Dscale)(&p[1], xexp);
+			p[2] = x - p[1];
+			if (3 < n && p[2] != FLIT(0.0))
+				p[3] = FLIT(0.0);
+		} else if (2 < n) {
+			p[2] = FLIT(0.0);
+		}
+#else
 		if (2 < n)
 			p[2] = FLIT(0.0);
+#endif
 	}
 	return p;
 }

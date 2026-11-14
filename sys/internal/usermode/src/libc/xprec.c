@@ -8,6 +8,7 @@
 #define FSIGNBIT(x)	DSIGN(x)
 #define FLDEXP		ldexp
 #define FSQRT		sqrt
+#define FBITS		53
 #define BITS_WORD	26
 #define BIG_EXP		2048
 

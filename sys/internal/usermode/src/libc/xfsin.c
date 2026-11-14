@@ -6,7 +6,7 @@
 #include "xmath.h"
 
 static const float c[] = {	/* cos(x) - 1 is x^2 times this in x^2 */
-	-0.0013602249F, 0.041656695F, -0.499999F,
+	-0.0013602249F, 0.041656695F, -0.49999902F,
 };
 static const float s[] = {	/* sin(x) - x is x^3 times this in x^2 */
 	-0.0001950727F, 0.008332076F, -0.16666652F,
