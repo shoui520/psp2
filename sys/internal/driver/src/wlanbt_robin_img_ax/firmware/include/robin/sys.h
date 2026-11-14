@@ -160,7 +160,7 @@ int sysPrepareEventDeadline(void);
 int sysProcessEventQueues(uint32_t events);
 uint32_t sysStopEventEngine(void);
 extern uint32_t sysForceEventDispatch;
-int sysServiceIndirectStatus(void);
+
 uint32_t sysSubmitBbpCommand(uint32_t target, uint32_t value, uint32_t command);
 int sysIssueBbpCommand(uint32_t target, uint32_t value, uint32_t command);
 int sysAcknowledgeEvents(uint32_t events);

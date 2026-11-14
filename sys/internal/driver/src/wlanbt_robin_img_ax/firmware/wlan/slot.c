@@ -7,6 +7,7 @@
 #include "robin/sys.h"
 #include "robin/wlantask.h"
 #include "robin/mactx.h"
+#include "robin/task.h"
 
 struct WlanSlotScheduler wlanSlotScheduler __attribute__((section(".dtcm.bss")));
 static struct OsaSemaphore *wlanSlotLockHandle __attribute__((section(".dtcm.bss")));
@@ -21,6 +22,7 @@ void macMgmtValidateContext(void);							/* 0x3565e */
 void macMgmtCheckContext(void);								/* 0x3564a */
 int macMgmtSyncContext(struct WlanConnection *connection);				/* 0x3576a */
 void uapSqramRecordEntry(unsigned int posture);						/* SQRAM via 0x52d3c */
+void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
 
 #define SCHED	wlanSlotScheduler
 
@@ -184,6 +186,52 @@ int wlanSlotResume(void)
 		return osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
 	}
 	return 0;
+}
+
+/*
+ * The management task's step for the current request (event 0x40): its phase
+ * says whether it waits for the state semaphore (1, 2), may start (3) or ends
+ * (6-8); any other phase goes to its callback. Waits a tick and runs again
+ * while the semaphore or the channel switch is refused.
+ */
+int wlanSlotRun(void)
+{
+	struct WlanSlotRequest *current = SCHED.current;
+	int power;
+
+	if (current == NULL)
+		return WLAN_SLOT_FAILED;
+	switch (current->phase) {
+	case 1:
+	case 2:
+		power = current->phase == 1;
+		if (!wlanConnectEventTryWait())
+			break;
+		if (wlanSlotQueryStart(power) == WLAN_SLOT_OK) {
+			SCHED.current->phase = 3;
+			return WLAN_SLOT_OK;
+		}
+		wlanReleaseStateSemaphore();
+		break;
+	case 3:
+		uapSqramFilterEntry(1);
+		SCHED.current->phase = 4;
+		wlanSlotBegin();
+		return WLAN_SLOT_OK;
+	case 7:
+		wlanSlotCancelByFlags(1, 0);
+		/* fall through */
+	case 6:
+	case 8:
+		wlanSlotFinish();
+		return WLAN_SLOT_OK;
+	default:
+		current->callback(current->handle, current->phase, current->argument);
+		return WLAN_SLOT_OK;
+	}
+	osaTaskSleep(1);
+	osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
+	return WLAN_SLOT_OK;
 }
 
 int wlanSlotNotifyTick(void)

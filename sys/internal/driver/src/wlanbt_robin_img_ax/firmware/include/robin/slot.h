@@ -109,6 +109,7 @@ int wlanSlotCancel(struct WlanSlotRequest *request);
 void wlanSlotGetRunning(uint32_t *context, uint32_t *handle, uint32_t *argument);
 int wlanSlotPoll(void);
 int wlanSlotResume(void);
+int wlanSlotRun(void);
 int wlanSlotNotifyTick(void);
 int wlanSlotInit(void);
 int wlanSlotHasCurrent(void);

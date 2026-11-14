@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include "robin/btrom.h"
 #include "robin/conn.h"
+#include "robin/task.h"
+#include "robin/dmaring.h"
 #include "robin/ieee80211.h"
 #include "robin/mactx.h"
 #include "robin/mdev.h"
@@ -36,11 +38,57 @@ uint16_t wlanRxFrameTypeMask __attribute__((section(".dtcm.rw")));
 
 /* Command handlers of the driver, not converted yet. */
 void wlanUpdateAntennaDiversity(const struct WlanRxStatus *status);		/* 0xaf6 */
-void macTxFormatEntry(uintptr_t argument);					/* 0xbdf0, command 0x52 */
 void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 void macMgmtResetState(uintptr_t argument, unsigned int command, uintptr_t second,
 		       int third);						/* 0x34ba6, command 0x59 */
 void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
+OsaBuffer *macTxSelectPacket(void *ring, uint16_t *length);			/* 0xda94 */
+void mdevWlanSyncState(OsaBuffer *buffer, void *ring);				/* 0xba4 */
+int macTxNotifyDispatchState(struct WlanConnection *connection);		/* 0x2fb7e */
+uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
+extern struct OsaDevice ampWlanDriver;						/* 0x04009860 */
+
+#define WLAN_DRIVER_RX_DATA_OFFSET	64
+#define WLAN_DRIVER_FLUSH_MARKER	0xbabe	/* OsaBuffer.poolMetadata of the marker */
+#define WLAN_DRIVER_AMP_DATA_OFFSET	176	/* where an AMP frame's SDIO header starts */
+#define WLAN_PACKET_TYPE_AMP		0xe0
+
+/* Where the received data of a buffer starts again once it is handed back. */
+void wlanBufferResetDataOffset(OsaBuffer *buffer)
+{
+	buffer->dataOffset = WLAN_DRIVER_RX_DATA_OFFSET;
+}
+
+/*
+ * Takes the next received packet of a DMA ring unless the caller is busy:
+ * reclaims its ring space (all of it when the packet is under 100 bytes) and
+ * strips the 4-byte trailer. An empty packet goes back to the ring.
+ */
+OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, void *ring)
+{
+	OsaBuffer *buffer = NULL;
+	uint16_t length = 0;
+
+	if (busy)
+		return NULL;
+	buffer = macTxSelectPacket(ring, &length);
+	if (buffer != NULL) {
+		buffer->pool = NULL;
+		if (length < 100)
+			buffer->ringEnd = wlanDmaRingReclaim(3);
+		else
+			buffer->ringEnd = wlanDmaRingAdvance(3, buffer->ringStart, length);
+	}
+	if (length != 0) {
+		buffer->dataOffset = WLAN_DRIVER_RX_DATA_OFFSET;
+		buffer->length = length - 4;
+	} else if (buffer != NULL) {
+		buffer->length = 0;
+		mdevWlanSyncState(buffer, ring);
+		buffer = NULL;
+	}
+	return buffer;
+}
 
 /* Event callback of the driver: frames from the host. */
 int wlanDriverEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigned int event)
@@ -68,6 +116,53 @@ int wlanDriverEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 	return 0;
 }
 
+/*
+ * Command 0x52: drops the queued AMP frames of one HCI handle. The queue is
+ * cycled once, up to a marker message, with interrupts off; the frames of the
+ * handle complete, the others go back. Then waits for the AMP link to stop
+ * dispatching and tells the AMP driver.
+ */
+void wlanDriverFlushAmpLink(const uint16_t *argument)
+{
+	uint32_t handle = *argument;
+	OsaBuffer marker;
+	OsaBuffer *buffer;
+	struct WlanConnection *connection;
+	unsigned int posture;
+
+	marker.poolMetadata = WLAN_DRIVER_FLUSH_MARKER;
+	posture = sysIrqDisable();
+	buffer = &marker;
+	for (;;) {
+		osa_MsgQueueSend(&wlanDriverQueue4, buffer);
+		for (;;) {
+			const WlanTxFrameHeader *header;
+			const uint8_t *data;
+
+			buffer = osa_MsgQueueRecv(&wlanDriverQueue4);
+			if (buffer == NULL || buffer->poolMetadata == WLAN_DRIVER_FLUSH_MARKER)
+				goto done;
+			buffer->dataOffset = WLAN_DRIVER_AMP_DATA_OFFSET;
+			header = (const WlanTxFrameHeader *)((uint8_t *)buffer +
+							      WLAN_DRIVER_AMP_DATA_OFFSET);
+			if ((header->packetType[0] | header->packetType[1] << 8) !=
+			    WLAN_PACKET_TYPE_AMP)
+				break;
+			buffer->dataOffset = ampPalFrameDataOffset();
+			data = (const uint8_t *)buffer + buffer->dataOffset;
+			if (((data[0] | data[1] << 8) & 0xfff) != (uint16_t)handle)
+				break;
+			wlanCompletePacket(buffer, ((uint32_t)buffer->ringEnd << 16) + 1);
+		}
+	}
+done:
+	sysIrqRestore(posture);
+	connection = wlanConnectionFirst(WLAN_IF_AMP);
+	while (macTxNotifyDispatchState(connection))
+		osaTaskSleep(1);
+	mdevIoctl(&ampWlanDriver, 0x55, (uintptr_t)&handle);
+}
+
 /* Control callback of the driver. */
 int wlanDriverControl(void *device, unsigned int command, uintptr_t argument, int third)
 {
@@ -76,7 +171,7 @@ int wlanDriverControl(void *device, unsigned int command, uintptr_t argument, in
 		wlanHostCallback = (WlanHostCallback)argument;
 		break;
 	case 0x52:
-		macTxFormatEntry(argument);
+		wlanDriverFlushAmpLink((const uint16_t *)argument);
 		break;
 	case 0x58:
 		macMgmtUpdateEntry(argument);

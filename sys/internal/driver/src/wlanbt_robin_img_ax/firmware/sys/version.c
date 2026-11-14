@@ -4,13 +4,11 @@
  */
 #include <stddef.h>
 #include "robin/osa.h"
+#include "robin/rf.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
 
-/* Versions read from the radio at start-up; their loaders are not converted. */
-uint8_t rfVersion __attribute__((section(".itcm.rw")));
-uint8_t rfSubVersion __attribute__((section(".itcm.rw")));
 static uint8_t bbpVersionMajorCache __attribute__((section(".itcm.rw")));
 static uint8_t bbpVersionMinorCache __attribute__((section(".itcm.rw")));
 uint8_t opRegionMinor __attribute__((section(".itcm.rw")));
@@ -53,15 +51,6 @@ uint32_t bbpGetVersionPatch(void)
 	return 0;
 }
 
-uint32_t rfGetVersion(void)
-{
-	return rfVersion;
-}
-
-uint32_t rfGetSubVersion(void)
-{
-	return rfSubVersion;
-}
 
 static void versionAppendByte(char *buffer, uint32_t value)
 {

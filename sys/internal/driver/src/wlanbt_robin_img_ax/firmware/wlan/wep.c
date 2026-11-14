@@ -95,8 +95,8 @@ void wlanCryptoLoadKey(const uint32_t *config, const uint8_t *key)
 
 void wlanCryptoKick(void)
 {
-	SOC_CRYPTO_CONTROL &= ~SOC_CRYPTO_RESET;
-	SOC_CRYPTO_CONTROL |= SOC_CRYPTO_RESET;
+	SOC_CONTROL &= ~SOC_CONTROL_CRYPTO_RESET;
+	SOC_CONTROL |= SOC_CONTROL_CRYPTO_RESET;
 	wlanCryptoOps.afterReset();
 }
 

@@ -22,13 +22,6 @@ static uint32_t rfBusLockDepth __attribute__((section(".itcm.bss")));
 /* Constant words in read-only data; the third one goes to the control register. */
 static const uint16_t rfBusSettings[3] = { 0x000f, 0x007f, 0x0001 };
 
-/* Lets the accessors touch the bus. */
-int rfBusEnable(void)
-{
-	rfBusEnabled = 1;
-	return 1;
-}
-
 void rfBusWaitIdle(void)
 {
 	while (RFBUS_STATUS & RFBUS_STATUS_BUSY)
@@ -132,12 +125,3 @@ void rfBusClearBits(uint16_t reg, uint8_t mask)
 	rfBusWrite(reg, rfBusRead(reg) & ~mask);
 }
 
-/* Writes register 0x1bb + 0x100 * index under the bus lock. */
-void rfBusWriteIndexed(int index, uint8_t value)
-{
-	uint16_t reg = (index << 8) + 443;
-
-	rfBusAcquire();
-	rfBusWrite(reg, value);
-	rfBusRelease();
-}

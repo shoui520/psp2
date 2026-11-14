@@ -56,9 +56,6 @@
 #define CRYPTO_MODE_FIRST_FRAGMENT	0x30000
 #define CRYPTO_MODE_WEP104_SHIFT	6
 
-/* Resets the engine's input path once it has finished (SOC 0x8000205c). */
-#define SOC_CRYPTO_CONTROL		REG32(0x8000205c)
-#define SOC_CRYPTO_RESET		0x300
 
 /* Set up at start-up (0x31156); zero until then. */
 typedef struct WlanCryptoOps {

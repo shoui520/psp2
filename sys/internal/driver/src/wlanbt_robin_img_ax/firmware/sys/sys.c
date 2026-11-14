@@ -13,6 +13,7 @@
 #include "robin/sys.h"
 #include "robin/threadx.h"
 #include "robin/event.h"
+#include "robin/rf.h"
 
 #define BIT(n)	(1u << (n))
 
@@ -461,7 +462,7 @@ int irq22Handler(int line, uint32_t pending)
 int irq28Handler(int line, uint32_t pending)
 {
 	SOC_IRQ_ENABLE_CLEAR = BIT(28);
-	sysServiceIndirectStatus();
+	rfLockInterrupt();
 	SOC_IRQ_ENABLE_SET |= BIT(28);
 	return 1;
 }

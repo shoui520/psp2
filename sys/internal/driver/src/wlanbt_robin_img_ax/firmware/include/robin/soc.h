@@ -13,6 +13,14 @@
 #define REG16(addr)	(*(volatile uint16_t *)(addr))
 #define REG8(addr)	(*(volatile uint8_t *)(addr))
 
+/* General control and status. */
+#define SOC_CONTROL		REG32(0x8000205c)	/* bits 8-9: crypto input reset; bit 22: baseband */
+#define SOC_CONTROL_CRYPTO_RESET	0x300
+#define SOC_CONTROL_BASEBAND	0x400000
+#define SOC_STATUS		REG32(0x80002070)
+#define SOC_STATUS_RF_LOCKED	0x20000		/* the radio's synthesizer is locked */
+#define SOC_BASEBAND_ENABLE	REG32(0x8000207c)	/* bit 0 */
+
 /* Event sources cascaded through interrupt line 22. */
 #define SOC_EVENT_STATUS		REG32(0x8000208c)
 #define SOC_EVENT_CONTROL	REG32(0x8000200c)
