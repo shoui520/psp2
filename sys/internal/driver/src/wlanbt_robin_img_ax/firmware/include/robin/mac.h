@@ -44,6 +44,16 @@
 #define MAC_46C_FILTER		MAC_REG(0x46c)
 #define MAC_474_VALUE		MAC_REG(0x474)
 #define MAC_5F8_STATUS		MAC_REG(0x5f8)
+/*
+ * The beacon timing an IBSS takes over from the network it adopts
+ * (wlanIbssAdopt()); written with MAC_300_MODE bit 3 cleared. 0x600 is
+ * SOC_MAC_TIMER (the TSF, low word).
+ */
+#define MAC_604_TIMER_HIGH	MAC_REG(0x604)
+#define MAC_608_NEXT_BEACON	MAC_REG(0x608)	/* the beacon period << 11 */
+#define MAC_60C_NEXT_BEACON_HIGH MAC_REG(0x60c)
+#define MAC_618_BEACON_PERIOD	MAC_REG(0x618)	/* TU */
+#define MAC_640_BEACON_WINDOW	MAC_REG(0x640)
 /* Start bits and a two-bit progress field (bits 4-5 of the status). */
 #define MAC_650_OPERATION	MAC_REG(0x650)
 #define MAC_658_OPERATION_STATUS MAC_REG(0x658)

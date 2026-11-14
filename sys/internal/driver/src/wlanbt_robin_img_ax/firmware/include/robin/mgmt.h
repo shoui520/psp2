@@ -23,7 +23,7 @@ extern uint16_t wlanCustomIeMask;
 int wlanSmPost(struct WlanConnection *connection, const struct WlanSmMessage *message);
 void wlanSmPostCommand(OsaBuffer *buffer);
 void wlanSetSlotTime(int shortSlot);
-int wlanCalibrationStart(struct WlanConnection *connection, int value);
+int wlanCalibrationStart(struct WlanConnection *connection, const void *parameters);
 void wlanCalibrationEnd(void);
 unsigned int wlanTxPowerMinimum(unsigned int channel, unsigned int band);
 int wlanTxPowerAllowed(unsigned int channel, unsigned int band, unsigned int rate);
@@ -88,5 +88,12 @@ void wlanChannelDescriptor(uint8_t *descriptor, unsigned int band, unsigned int 
 			   unsigned int width);
 void wlanTxSetSharedRadio(int which);
 uint32_t wlanBssBit(unsigned int interfaceType, unsigned int bssNumber);
+
+/* Not converted yet; provisional names. */
+void macMgmtPrepareContext(uint32_t *flags, uint32_t *extra);			/* 0x3566a */
+int cbProcPrepareTable(int table, int value);					/* 0x1cdc8 */
+void cbProcDispatchTable(int table, int value);					/* 0x1ce46 */
+int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel);		/* 0x355d2 */
+void macMgmtCheckContext(void);							/* 0x3564a */
 
 #endif /* ROBIN_MGMT_H */

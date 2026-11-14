@@ -15,6 +15,7 @@
 /* WlanProtection.flags */
 #define WLAN_PROTECTION_USE_PROTECTION	0x10	/* RTS/CTS or CTS-to-self before OFDM frames */
 #define WLAN_PROTECTION_LONG_PREAMBLE	0x20	/* no short preamble */
+#define WLAN_PROTECTION_DSSS_BSS	0x40	/* the IBSS's own rates are DSSS/CCK only */
 
 /* WlanProtection.timers */
 enum {
@@ -24,8 +25,8 @@ enum {
 	WLAN_PROTECTION_TIMER3,		/* set by code not converted yet */
 	WLAN_PROTECTION_DSSS_ONLY,	/* a station with DSSS/CCK rates only */
 	WLAN_PROTECTION_NO_SHORT_PREAMBLE, /* a station without the Short Preamble capability */
-	WLAN_PROTECTION_TIMER6,		/* timers 6-11: set by code not converted yet */
-	WLAN_PROTECTION_TIMER7,
+	WLAN_PROTECTION_NON_GREENFIELD,	/* an HT element said Non-Greenfield STAs Present */
+	WLAN_PROTECTION_TIMER7,		/* timers 7-11: set by code not converted yet */
 	WLAN_PROTECTION_TIMER8,
 	WLAN_PROTECTION_TIMER9,
 	WLAN_PROTECTION_TIMER10,

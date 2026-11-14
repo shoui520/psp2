@@ -125,6 +125,8 @@ struct WlanSmRecord {
 	const void *message;
 };
 
+struct WlanMacTxRequest;
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;
@@ -145,24 +147,28 @@ struct WlanConnection {
 	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
 	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
-	uint8_t txOptions;		/* bit 1: passed to the frame builder; bit 3: any rate allowed */
-	uint8_t timingFlags;		/* bit 4: estimate the PS-Poll timeout on a P2P link */
-	uint8_t reserved1d[7];
-	uint8_t supportedRates[12];
-	uint8_t reserved1b[2];
+	uint8_t txOptions;		/* bit 1: passed to the frame builder; bit 3: any rate allowed;
+				   bit 5: the BSS uses ERP protection */
+	uint8_t bssCapability[2];	/* capability information of the IBSS started or joined */
+	uint8_t reserved58[6];
+	uint8_t supportedRates[14];
 	uint8_t supportedRatesLength;
 	uint8_t reserved1c[6];
 	uint8_t beaconMissThreshold;	/* beacons missed before the link is lost (subscribed) */
 	uint8_t preBeaconLostThreshold;
-	uint8_t reserved1e[62];
+	uint8_t htCapability[28];	/* WlanHtCapabilityIe; its rates count in the rate bitmap */
+	uint8_t reserved115;
+	uint8_t networkSsid[32];	/* the SSID of the IBSS started */
+	uint8_t networkSsidLength;
 	uint8_t listenIntervalBase;	/* an unauthenticated peer's listen interval is 2n + 1 */
-	uint8_t reserved150[2];
+	uint16_t beaconPeriod;		/* TU, of the IBSS started or joined */
 	uint8_t localAddress[6];
 	uint8_t reserved2[14];
 	uint8_t channel;
-	uint8_t reserved3a[7];
+	uint8_t reserved173[3];
+	struct WlanMacTxRequest *beaconRequest;	/* the MAC's request for the beacon template */
 	OsaBuffer *beaconBuffer;	/* the beacon template; the frame at its data offset */
-	uint8_t reserved184[4];
+	struct WlanMacTxRequest *probeResponseRequest;
 	OsaBuffer *probeResponseBuffer;	/* the probe response template, from wlanMgmtAllocFrame() */
 	uint8_t reserved192[14];
 	int16_t noise;			/* dBm, last measured */
@@ -259,7 +265,10 @@ _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");
 _Static_assert(offsetof(struct WlanConnection, snr) == 210, "SNR");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
 _Static_assert(offsetof(struct WlanConnection, peerAddress) == 381, "peer address");
-_Static_assert(offsetof(struct WlanConnection, timingFlags) == 56, "timing flags");
+_Static_assert(offsetof(struct WlanConnection, bssCapability) == 56, "BSS capability");
+_Static_assert(offsetof(struct WlanConnection, networkSsid) == 116, "network SSID");
+_Static_assert(offsetof(struct WlanConnection, beaconPeriod) == 150, "beacon period");
+_Static_assert(offsetof(struct WlanConnection, beaconRequest) == 176, "beacon request");
 _Static_assert(offsetof(struct WlanConnection, associationId) == 388, "association ID");
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");

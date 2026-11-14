@@ -17,9 +17,7 @@ static uint32_t wlanSlotLockObject[7] __attribute__((section(".dtcm.bss")));
 static uint32_t wlanSlotLastHandle __attribute__((section(".dtcm.bss")));
 
 /* Unconverted callees. */
-int macMgmtUpdateContext(int a, int b, int c, int d);					/* 0x355d2 */
 void macMgmtValidateContext(void);							/* 0x3565e */
-void macMgmtCheckContext(void);								/* 0x3564a */
 int macMgmtSyncContext(struct WlanConnection *connection);				/* 0x3576a */
 void uapSqramRecordEntry(unsigned int posture);						/* SQRAM via 0x52d3c */
 void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
@@ -508,7 +506,7 @@ void wlanSlotCancelById(uint32_t handle)
 
 int wlanSlotSetChannel(int channel, int band)
 {
-	return macMgmtUpdateContext(channel, band, 0, 0) == 0;
+	return macMgmtUpdateContext(channel, band) == 0;
 }
 
 /* The current request gets the channel: switches, reports and calls back. */

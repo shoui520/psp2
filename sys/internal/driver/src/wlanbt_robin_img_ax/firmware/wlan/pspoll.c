@@ -505,7 +505,7 @@ void wlanPsPollAnswered(struct WlanConnection *connection)
 		wlanPsPollCancelTimeout();
 	if (wlanPsPollUsesMacTimer()) {
 		if (wlanPsLegacyPollMode() ||
-		    (wlanCoexUseP2pSleepMode() && (connection->timingFlags & 0x10))) {
+		    (wlanCoexUseP2pSleepMode() && (connection->bssCapability[0] & 0x10))) {
 			int32_t deviation = wlanPsPollTiming.deviation;
 			int32_t mean = wlanPsPollTiming.mean;
 

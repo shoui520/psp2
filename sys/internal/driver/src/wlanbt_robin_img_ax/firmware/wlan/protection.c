@@ -69,7 +69,7 @@ void wlanProtectionAgeMode1(WlanProtection *protection, unsigned int now)
 {
 	WlanProtectionTimer *last = &protection->timers[WLAN_PROTECTION_TIMER11];
 
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER6, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_NON_GREENFIELD, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER7, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER8, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_TIMER9, now);

@@ -46,7 +46,9 @@ struct WlanMacTxRequest {
 	uint16_t length;
 	uint8_t reserved36[4];
 	uint16_t rate;		/* bits 3-9: rate index */
-	uint8_t reserved42[22];
+	uint8_t reserved42[2];
+	uint8_t rateInfo[4];	/* unaligned word the radio calibration derives from the rate (0x2bc6c) */
+	uint8_t reserved48[16];
 	uint8_t host[4];	/* unaligned pointer to the host descriptor */
 	uint8_t buffer[4];	/* unaligned pointer to the buffer data (28 bytes past the buffer) */
 	uint8_t next[4];	/* unaligned word, cleared */
