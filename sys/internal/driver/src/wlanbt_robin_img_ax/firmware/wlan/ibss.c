@@ -88,7 +88,6 @@ void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t 
 			  uint8_t *ssidLength);				/* 0x35558 */
 void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
-extern WepIcvErrList wlanIbssIcvErrList;				/* 0x5f124 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */
 void wlanIbssTemplateSetProtection(WlanWirelessFrame *frame, int protection)

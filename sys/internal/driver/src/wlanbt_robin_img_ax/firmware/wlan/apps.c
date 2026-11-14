@@ -73,7 +73,6 @@ static struct RobinList wlanApPsFree __attribute__((section(".itcm.bss")));
 static struct RobinList wlanApPsUsed __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
-extern uint16_t wlanMgmtFrameSize;					/* 0x54b8e */
 void macMgmtInspectPacket(struct WlanConnection *connection, unsigned int aid, int set); /* 0x3a06e */
 unsigned int macTxNotifyParseTable(unsigned int ring);			/* 0x318cc */
 int macTxNotifyQueryTable(OsaBuffer *buffer);				/* 0x3199e */

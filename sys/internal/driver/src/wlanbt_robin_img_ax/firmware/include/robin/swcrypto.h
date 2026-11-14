@@ -110,7 +110,5 @@ WLAN_CRYPTO_CALL unsigned int socEventsRelease(void);					/* 0x26c4c */
 /* Not converted. */
 int macMgmtPostRelease(void);						/* 0x34852 */
 int macMgmtPostReceived(void);						/* 0x3483e */
-int mdevWlanFormatState(OsaBuffer *buffer, struct WlanRxStatus *status);	/* 0x13d2 */
-int mdevWlanSyncState(OsaBuffer *buffer, struct WlanRxStatus *status);	/* 0xba4 */
 
 #endif /* ROBIN_SWCRYPTO_H */

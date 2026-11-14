@@ -93,6 +93,7 @@ _Static_assert(offsetof(struct WlanTxStatus, retries) == 25, "retries");
 
 extern struct OsaBufferPool wlanBlockPool7;
 extern struct OsaBufferPool wlanBlockPool28;
+extern uint16_t wlanMgmtFrameSize;			/* 0x54b8e: the size of the transmit event buffers */
 
 extern volatile uint32_t *wlanTxRingReadIndex[WLAN_TX_RING_COUNT];
 extern volatile uint32_t *wlanTxRingWriteIndex[WLAN_TX_RING_COUNT];

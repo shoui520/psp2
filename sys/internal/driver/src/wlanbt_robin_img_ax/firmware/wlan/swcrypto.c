@@ -457,7 +457,7 @@ int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 	low = 0;
 	high = 0;
 	if (wlanConnectionIsReady(connection))
-		wlanRxReplayCheck(iv, (const struct WlanRxKey *)key, &low, &high);
+		wlanRxReplayCheck(iv, key, &low, &high);
 	wlanCryptoScratch.buffer = buffer;
 	__aeabi_memcpy(&wlanCryptoScratch.status, status, sizeof(wlanCryptoScratch.status));
 	wlanCryptoAcquire(0);
@@ -465,7 +465,7 @@ int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 	wlanCryptoRxKey = key;
 	wlanCcmDecrypt((const WlanWirelessFrame *)frame, iv, (uint16_t)dataLength,
 		       (const uint32_t *)key->ckd.aes.key, status->qosControl[0] & 7, 0);
-	wlanRxKeySetReplayCounter((struct WlanRxKey *)key, low, high);
+	wlanRxKeySetReplayCounter(key, low, high);
 	return 1;
 }
 
@@ -562,8 +562,8 @@ int sysServiceWlanPackets(void)
 								      &wlanDefragDiscarding);
 
 				if (assembled != NULL) {
-					mdevWlanFormatState(assembled, &wlanCryptoScratch.status);
-					mdevWlanSyncState(assembled, &wlanCryptoScratch.status);
+					wlanRxHostSleepFilter(assembled, &wlanCryptoScratch.status);
+					wlanRxIndicate(assembled, &wlanCryptoScratch.status);
 				}
 			} else {
 				macMgmtPostReceived();

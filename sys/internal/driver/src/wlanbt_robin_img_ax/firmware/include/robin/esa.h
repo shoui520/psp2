@@ -240,6 +240,7 @@ typedef struct cipher_key_hdr_t {
 _Static_assert(sizeof(cipher_key_hdr_t) == 12, "cipher key header");
 
 /* keyApiStaTypes.h: cipher_key_hdr_t.keyState */
+#define KEY_STATE_ENABLE			0x01
 #define KEY_STATE_FORCE_EAPOL_UNENCRYPTED	0x02
 
 /*
@@ -268,6 +269,8 @@ typedef struct __attribute__((packed)) cipher_key_aes_t {
 	uint8_t reserved50[2];
 	uint32_t txIv32;
 	uint16_t txIv16;
+	uint8_t reserved58[2];
+	uint32_t decryptState[5];	/* where wlanCcmpDecrypt() keeps a fragment's state for the next one */
 } cipher_key_aes_t;
 
 typedef struct __attribute__((packed)) cipher_key_t {
@@ -279,6 +282,7 @@ typedef struct __attribute__((packed)) cipher_key_t {
 } cipher_key_t;
 
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.txIv32) == 52, "send counter");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.decryptState) == 60, "decryption state");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.rxPn) == 62, "WAPI receive packet number");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.replacement) == 78, "WAPI replacement key");
 

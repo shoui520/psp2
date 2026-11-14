@@ -26,6 +26,8 @@
 #define MAC_2D0_FLAGS		MAC_REG(0x2d0)
 #define MAC_300_MODE		MAC_REG(0x300)	/* bit 3: sleep wake-up enable */
 #define MAC_500_SLEEP_CONTROL	MAC_REG(0x500)
+/* The events the MAC raised: the handler clears one by writing a word without its bit. */
+#define MAC_510_EVENT_STATUS	MAC_REG(0x510)	/* bit 7: a received frame waits */
 #define MAC_514_SLEEP_MODE	MAC_REG(0x514)	/* 2 while asleep */
 /*
  * Indexed window onto an internal table of 6-byte entries (192..255): write

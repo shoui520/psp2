@@ -3,6 +3,7 @@
 #define ROBIN_WLANRX_H
 
 #include <stdint.h>
+#include "robin/esa.h"
 #include "robin/wlan.h"
 
 /*
@@ -30,30 +31,40 @@ struct WlanRxStatus {
 
 _Static_assert(sizeof(struct WlanRxStatus) == 68, "receive status");
 
-/*
- * A receive key as the decryption checks read it (partial: the key table
- * that owns it is not converted yet).
- */
-struct WlanRxKey {
-	uint8_t reserved0[7];
-	uint8_t cipher;			/* WLAN_RX_KEY_* */
-	uint8_t reserved8[28];
-	uint8_t rxMicKey[8];
-	uint32_t rscHigh;		/* receive sequence counter of the last frame; ~0: none yet */
-	uint16_t rscLow;
+
+/* The SDIO receive descriptor the host gets, followed by one more halfword. */
+struct WlanHostRxPacket {
+	WlanRxDescriptor descriptor;
+	uint16_t frameCount;
 };
 
-_Static_assert(__builtin_offsetof(struct WlanRxKey, rxMicKey) == 0x24, "MIC key");
-_Static_assert(__builtin_offsetof(struct WlanRxKey, rscLow) == 0x30, "sequence counter");
+#define WLAN_HOST_RX_FRAME_PLAIN	1
+#define WLAN_HOST_RX_FRAME_QOS		2
 
-#define WLAN_RX_KEY_TKIP	1
+struct WlanConnection;
 
+/* Receive diversity (sys/phy.c holds the state). */
+extern int32_t wlanAntennaRssiHigh;
+extern int32_t wlanAntennaRssiLow;
+extern uint32_t wlanAntenna;
+extern uint32_t wlanAntennaStrongTime;
+
+void wlanBeaconSignal(struct WlanConnection *connection, const struct WlanRxStatus *status);	/* 0xabc */
+void wlanUpdateAntennaDiversity(const struct WlanRxStatus *status);				/* 0xaf6 */
+int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status);				/* 0xba4 */
+void wlanRxHostSleepFilter(OsaBuffer *buffer, struct WlanRxStatus *status);			/* 0x13d2 */
+int wlanRxProcessFrames(void);									/* 0x15f0 */
+int wlanRxDecryptWep(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key, int ivOffset);	/* 0x10c8 */
+int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key);	/* 0x11ea */
+int wlanRxDecrypt(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key);		/* 0x1354 */
+OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, struct WlanRxStatus *status);		/* wlan/driver.c */
+void wlanDeliverRxFrame(OsaBuffer *buffer, struct WlanRxStatus *status);			/* wlan/driver.c */
 int wlanRxTkipTrailer(unsigned int status, uint8_t *frame, const uint8_t *end, OsaBuffer *buffer,
 		      int *tkip, void *mic);
 int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
-		       const struct WlanRxKey *key, const uint32_t *expected);
-void wlanRxKeySetReplayCounter(struct WlanRxKey *key, uint16_t low, uint32_t high);
-int wlanRxReplayCheck(const uint8_t *iv, const struct WlanRxKey *key, uint16_t *low, uint32_t *high);
+		       const cipher_key_t *key, const uint32_t *expected);
+void wlanRxKeySetReplayCounter(cipher_key_t *key, uint16_t low, uint32_t high);
+int wlanRxReplayCheck(const uint8_t *iv, const cipher_key_t *key, uint16_t *low, uint32_t *high);
 /* Not converted yet. */
 void wlanMichaelMic(const uint8_t *frame, const uint8_t *key, const uint8_t *data,
 		    uint32_t *mic);	/* 0x2e8d4 */

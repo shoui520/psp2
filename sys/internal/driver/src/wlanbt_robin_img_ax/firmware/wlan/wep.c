@@ -176,7 +176,7 @@ void wlanCcmpEncrypt(const WlanWirelessFrame *frame, uint8_t *output, uint32_t p
  * Returns the engine's error bits, 0 when the MIC checked.
  */
 int wlanCcmpDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t length,
-		    uint8_t *mic, const uint32_t *config, const uint8_t *key,
+		    uint32_t priority, const uint32_t *config, const uint8_t *key,
 		    uint32_t *state0, uint32_t *state1, uint32_t *state2, uint32_t *state3,
 		    uint32_t *state4)
 {
@@ -184,7 +184,7 @@ int wlanCcmpDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t leng
 	uint32_t mode;
 	int result = 0;
 
-	if (wlanCcmpDecryptOverride(frame, data, length, mic, config, key, state0, state1,
+	if (wlanCcmpDecryptOverride(frame, data, length, priority, config, key, state0, state1,
 				    state2, state3, state4, &result))
 		return result;
 	token = wlanCryptoOps.enter();
@@ -196,7 +196,7 @@ int wlanCcmpDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t leng
 	CRYPTO_LENGTH = length;
 	CRYPTO_OUTPUT = (uint32_t)data;
 	wlanCryptoLoadHeader(frame);
-	CRYPTO_MIC_ADDRESS = (uint32_t)mic;
+	CRYPTO_MIC_ADDRESS = priority;
 	mode = (frame->frameControl[1] & WLAN_FC1_MORE_FRAG) ? 0 : CRYPTO_MODE_LAST_FRAGMENT;
 	if (frame->sequenceControl[0] & 0xf) {
 		CRYPTO_STATE_IN(0) = *state0;

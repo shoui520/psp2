@@ -27,7 +27,6 @@
 #include "robin/wlantask.h"
 
 #define SDIO_IOCTL_QUEUE_DRAINED	0x1e
-#define SDIO_IOCTL_HOST_PENDING		0x46
 
 /* wlanConnectionPhase */
 #define WLAN_PHASE_OFF			0

@@ -173,7 +173,9 @@ struct WlanConnectionInfo {
 	uint8_t ready;
 	uint8_t reserved357[184];
 	uint8_t protectionFlags;	/* bit 0: protection forced on */
-	uint8_t reserved542[10];
+	uint8_t reserved542[2];
+	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
+	uint8_t reserved545[7];
 	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
 	uint8_t reserved556[20];
 	struct WlanConnection *connection;	/* the connection that owns this block */
@@ -311,7 +313,17 @@ struct WlanSqramState {
 #define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
 #define WLAN_CONN_WAPI			0x10
 
+/*
+ * WlanConnectionInfo.pktFwdCtl of an access point (Marvell's pkt_fwd_ctl; the
+ * meaning of each bit is inferred from the receive path).
+ */
+#define WLAN_PKT_FWD_RELAY		0x01	/* the firmware relays the frames between its stations */
+#define WLAN_PKT_FWD_NO_GROUP_RELAY	0x02	/* ... but not the group-addressed frames */
+#define WLAN_PKT_FWD_DROP_INTRA_BSS	0x04	/* frames for another station of the BSS are dropped */
+#define WLAN_PKT_FWD_DROP_INTER_BSS	0x08	/* frames for a station of another BSS are dropped */
+
 /* WlanConnection.flags2 */
+#define WLAN_CONN2_QOS			0x08	/* the peer uses QoS (inferred) */
 #define WLAN_CONN2_ASSOCIATED		0x10	/* the peer is associated */
 
 struct WlanConnection {
@@ -391,7 +403,7 @@ struct WlanConnection {
 	uint16_t beaconRssiShift;
 	uint16_t dataRssiShift;
 	uint16_t lastSequence;		/* 0xffff: none seen yet */
-	uint16_t reserved378;
+	uint16_t lastFragment;		/* the fragment number of the last frame; 0: none under way (inferred) */
 	uint8_t state;
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
@@ -487,6 +499,7 @@ _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
 _Static_assert(offsetof(struct WlanConnectionInfo, smState) == 552, "info state machine");
 _Static_assert(offsetof(struct WlanConnectionInfo, securityEnabled) == 68, "info security");
 _Static_assert(offsetof(struct WlanConnectionInfo, protectionFlags) == 541, "info protection");
+_Static_assert(offsetof(struct WlanConnectionInfo, pktFwdCtl) == 544, "info packet forwarding");
 _Static_assert(offsetof(struct WlanConnectionInfo, capability) == 580, "info capability");
 _Static_assert(offsetof(struct WlanConnectionInfo, phyMode) == 588, "info PHY mode");
 _Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OLBC timeout");
@@ -630,6 +643,8 @@ int wlanConnectionExists(unsigned int interfaceType);
 struct WlanConnection *wlanConnectionFirst(unsigned int interfaceType);
 struct WlanConnection *wlanConnectionFindByPeer(const uint8_t *peer);
 struct WlanConnection *wlanConnectionFindByLocal(unsigned int interfaceType, const uint8_t *local);
+struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *connection,
+						    const uint8_t *peer);	/* 0xfbf2 */
 void wlanConnectionRelease(struct WlanConnection *connection);
 struct WlanConnection *wlanConnectionGetSession(void);
 int wlanConnectionSetSession(struct WlanConnection *connection);

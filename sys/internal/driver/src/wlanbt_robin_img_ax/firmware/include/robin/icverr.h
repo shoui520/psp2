@@ -63,6 +63,7 @@ struct WlanRomServices {
 };
 
 extern struct WlanRomServices wlanRomServices;
+extern WepIcvErrList wlanIbssIcvErrList;		/* 0x5f124 */
 
 void wlanWepIcvErrInit(WepIcvErrEntry *entries, WepIcvErrList *list);
 void wlanWepIcvErrRemove(WepIcvErrEntry *prev, WepIcvErrEntry *entry, WepIcvErrList *list);

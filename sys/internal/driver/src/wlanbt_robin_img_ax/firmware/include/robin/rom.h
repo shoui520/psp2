@@ -71,6 +71,7 @@ void mdevForwardEvent(void *device, OsaBuffer *buffer, uintptr_t argument,
 		      unsigned int event);
 void *mdevOpenDevice(const char *name, unsigned int flags);
 int mdevIoctl(void *device, unsigned int operation, uintptr_t argument);
+#define SDIO_IOCTL_HOST_PENDING		0x46
 void mdevReleaseDevice(void *device);
 
 /* sqram/rom_ram.c */

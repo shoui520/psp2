@@ -56,6 +56,7 @@ extern WlanDefragContext wlanDefragContext;		/* 0x5f110 */
 extern uint8_t wlanDefragDiscarding;			/* SQRAM 0xc0011b0c */
 extern uint32_t wlanRomServicesTimerOffset;		/* SQRAM 0xc0011b10 */
 extern OsaBuffer *wlanDefragReassembly;			/* SQRAM 0xc0011b14 */
+extern OsaBuffer *wlanDefragReassemblyWep;		/* SQRAM 0xc0011b18: the WEP fragments' */
 
 void wlanRomServicesInit(void);				/* 0x1f328 */
 void wlanDefragInit(void);				/* 0x1f362 */

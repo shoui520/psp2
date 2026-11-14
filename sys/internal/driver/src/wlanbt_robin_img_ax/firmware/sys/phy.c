@@ -15,8 +15,16 @@
 #include "robin/sys.h"
 #include "robin/wlanrx.h"
 
-/* Index of the antenna in use (0 or 1); the receive diversity code switches it. */
+/*
+ * The receive diversity (wlanUpdateAntennaDiversity()): the RSSI above which
+ * the antenna is switched to 1, the RSSI at or below which it goes back to 0
+ * after a while, the antenna in use (0 or 1), and when the signal was last
+ * strong. The thresholds are not set anywhere in this firmware (inferred names).
+ */
+int32_t wlanAntennaRssiHigh __attribute__((section(".dtcm.bss")));
+int32_t wlanAntennaRssiLow __attribute__((section(".dtcm.bss")));
 uint32_t wlanAntenna __attribute__((section(".dtcm.bss")));
+uint32_t wlanAntennaStrongTime __attribute__((section(".dtcm.bss")));
 
 /* Added to every calibrated RSSI. */
 static int8_t wlanRssiBias __attribute__((section(".itcm.bss")));

@@ -145,7 +145,7 @@ int wlanRxTkipTrailer(unsigned int status, uint8_t *frame, const uint8_t *end, O
 
 /* Removes the Michael MIC from a TKIP frame and checks it; returns 1 when it matches. */
 int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
-		       const struct WlanRxKey *key, const uint32_t *expected)
+		       const cipher_key_t *key, const uint32_t *expected)
 {
 	unsigned int length = (frame[1] << 8 | frame[0]) - 8;
 	uint32_t mic[2];
@@ -153,15 +153,15 @@ int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
 	frame[0] = (uint8_t)length;
 	frame[1] = (uint8_t)(length >> 8);
 	buffer->length -= 8;
-	wlanMichaelMic(frame, key->rxMicKey, data, mic);
+	wlanMichaelMic(frame, key->ckd.aes.rxMicKey, data, mic);
 	return mic[0] == expected[0] && mic[1] == expected[1];
 }
 
 /* Stores the receive sequence counter of the last frame accepted with a key. */
-void wlanRxKeySetReplayCounter(struct WlanRxKey *key, uint16_t low, uint32_t high)
+void wlanRxKeySetReplayCounter(cipher_key_t *key, uint16_t low, uint32_t high)
 {
-	key->rscLow = low;
-	key->rscHigh = high;
+	key->ckd.aes.rxIv16 = low;
+	key->ckd.aes.rxIv32 = high;
 }
 
 /*
@@ -169,20 +169,20 @@ void wlanRxKeySetReplayCounter(struct WlanRxKey *key, uint16_t low, uint32_t hig
  * and returns 1 if it is not newer than the key's last one (a replay).
  * Otherwise returns 0 with the number in *low and *high.
  */
-int wlanRxReplayCheck(const uint8_t *iv, const struct WlanRxKey *key, uint16_t *low, uint32_t *high)
+int wlanRxReplayCheck(const uint8_t *iv, const cipher_key_t *key, uint16_t *low, uint32_t *high)
 {
 	uint16_t counterLow;
 	uint32_t counterHigh;
 
-	if (key->cipher == WLAN_RX_KEY_TKIP)
+	if (key->hdr.keyType == KEY_TYPE_TKIP)
 		counterLow = (uint16_t)((iv[0] << 8) + iv[2]);
 	else
 		counterLow = (uint16_t)((iv[1] << 8) + iv[0]);
 	counterHigh = ((((iv[7] << 8) + iv[6]) << 8) + iv[5]) << 8;
 	counterHigh += iv[4];
-	if (key->rscHigh == counterHigh && key->rscLow >= counterLow)
+	if (key->ckd.aes.rxIv32 == counterHigh && key->ckd.aes.rxIv16 >= counterLow)
 		return 1;
-	if (key->rscHigh != 0xffffffff && key->rscHigh > counterHigh)
+	if (key->ckd.aes.rxIv32 != 0xffffffff && key->ckd.aes.rxIv32 > counterHigh)
 		return 1;
 	*low = counterLow;
 	*high = counterHigh;
@@ -236,14 +236,14 @@ int wlanRxFilterStation(int enabled, OsaBuffer *buffer, const WlanWirelessFrame 
 	return 0;
 }
 
-/* Null frames are never protected; returns 1, or 2 when the frame is protected. */
+/* Null frames are never protected; returns 1 when the frame is not protected, 0 when it is. */
 int wlanRxClearProtectedOnNull(WlanWirelessFrame *frame)
 {
 	unsigned int subtype = frame->frameControl[0] >> IEEE80211_FC0_SUBTYPE_SHIFT;
 
 	if (subtype == IEEE80211_SUBTYPE_NULL || subtype == IEEE80211_SUBTYPE_QOS_NULL)
 		frame->frameControl[1] &= ~IEEE80211_FC1_PROTECTED;
-	return ((frame->frameControl[1] & IEEE80211_FC1_PROTECTED) != 0) + 1;
+	return !(frame->frameControl[1] & IEEE80211_FC1_PROTECTED);
 }
 
 /* Drops a frame relayed back from the distribution system with our own source address. */

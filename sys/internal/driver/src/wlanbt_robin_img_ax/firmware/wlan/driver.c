@@ -37,11 +37,9 @@ static struct MdevDriver wlanDriver __attribute__((section(".dtcm.bss")));
 uint16_t wlanRxFrameTypeMask __attribute__((section(".dtcm.rw")));
 
 /* Command handlers of the driver, not converted yet. */
-void wlanUpdateAntennaDiversity(const struct WlanRxStatus *status);		/* 0xaf6 */
 void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 void macMgmtResetState(uintptr_t argument, unsigned int command, uintptr_t second,
 		       int third);						/* 0x34ba6, command 0x59 */
-void mdevWlanSyncState(OsaBuffer *buffer, void *status);				/* 0xba4 */
 int macTxNotifyDispatchState(struct WlanConnection *connection);		/* 0x2fb7e */
 uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
 extern struct OsaDevice ampWlanDriver;						/* 0x04009860 */
@@ -82,7 +80,7 @@ OsaBuffer *wlanRxTakePacket(int busy, uint32_t unused, struct WlanRxStatus *stat
 		buffer->length = length - 4;
 	} else if (buffer != NULL) {
 		buffer->length = 0;
-		mdevWlanSyncState(buffer, status);
+		wlanRxIndicate(buffer, status);
 		buffer = NULL;
 	}
 	return buffer;
@@ -266,15 +264,6 @@ int wlanSubmitControlFrame(struct WlanConnection *context, const void *frame)
 	sysIrqRestore(posture);
 	return 1;
 }
-
-/* SDIO receive descriptor followed by one more halfword. */
-struct WlanHostRxPacket {
-	WlanRxDescriptor descriptor;
-	uint16_t frameCount;
-};
-
-#define WLAN_HOST_RX_FRAME_PLAIN	1
-#define WLAN_HOST_RX_FRAME_QOS		2
 
 /*
  * Prepares the SDIO receive packet for a received 802.11 frame: the packet

@@ -476,7 +476,7 @@ int wlanPsMachineMaySleep(struct WlanPsMachine *machine, uint64_t now)
 	    sleep->sleepDuration < sleepWakeLatency + WLAN_PS_MIN_SLEEP ||
 	    cbProcBuildPacket(connection) != 0 || sleep->recentActivity != 0 ||
 	    sleep->sleepTimer != 0 || wlanHostQueueDepth(0) != 0 || wlanHostQueueDepth(0) != 0 ||
-	    mdevIoctl(wlanSdioDev, 0x46, 0) != 0 || wlanDmaRing3HasRoom() != 0 ||
+	    mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0 || wlanDmaRing3HasRoom() != 0 ||
 	    wlanPsDtimTooClose(sleep, now) != 0 || !macTxPoolsIdle())
 		return 0;
 	return 1;

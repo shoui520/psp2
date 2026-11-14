@@ -318,10 +318,10 @@ void wlanLinkTxDone(struct WlanConnection *connection, int acknowledged)
 	}
 }
 
-void wlanLinkFrameReceived(struct WlanConnection *connection, int rssi, int snr)
+void wlanLinkFrameReceived(struct WlanConnection *connection, int16_t snr, int16_t rssi)
 {
-	(void)rssi;
 	(void)snr;
+	(void)rssi;
 	connection->link.frameSeen = 1;
 	connection->link.nullFrames = 0;
 }

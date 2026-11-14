@@ -1211,7 +1211,7 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		__aeabi_memclr(wlanRadioConfig->params, 15);
 		connection->subscribeTriggered = 0;
 		connection->lastSequence = 0xffff;
-		connection->reserved378 = 0;
+		connection->lastFragment = 0;
 		connection->state = 0;
 		connection->dataRate = 254;
 		connection->groupRate = 254;
@@ -1323,7 +1323,7 @@ int wlanConnectionReconfigure(struct WlanConnection *connection, int interfaceTy
 	__aeabi_memclr(wlanRadioConfig->params, 15);
 	connection->subscribeTriggered = 0;
 	connection->lastSequence = 0xffff;
-	connection->reserved378 = 0;
+	connection->lastFragment = 0;
 	connection->state = 0;
 	connection->dataRate = 254;
 	connection->groupRate = 254;

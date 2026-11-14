@@ -115,7 +115,6 @@ extern uint32_t hostCmdMacAwake;							/* 0x54ba4 */
 extern struct WlanDriverQueue wlanDriverQueue1;
 extern struct OsaEventFlags *wlanHostSleepFlags;					/* 0x54bdc */
 extern uint32_t wlanPsSavedDtimPolicy;							/* 0x54b58 */
-extern WepIcvErrList wlanIbssIcvErrList;						/* 0x5f124 */
 
 /*
  * The host wakes up (host sleep ends): tell it so, in the phase where the

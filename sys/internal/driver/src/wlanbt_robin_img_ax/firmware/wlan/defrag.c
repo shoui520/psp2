@@ -20,7 +20,7 @@ WlanDefragContext wlanDefragContext __attribute__((section(".itcm.bss")));
 uint8_t wlanDefragDiscarding __attribute__((section(".sqram1.rw")));
 uint32_t wlanRomServicesTimerOffset __attribute__((section(".sqram1.rw")));
 OsaBuffer *wlanDefragReassembly __attribute__((section(".sqram1.rw")));
-static uint32_t wlanDefragSpare __attribute__((section(".sqram1.rw")));
+OsaBuffer *wlanDefragReassemblyWep __attribute__((section(".sqram1.rw")));
 
 extern struct OsaBufferPool wlanPacketBufferPool;	/* 0x04000dcc */
 void wlanBufferResetDataOffset(OsaBuffer *buffer);	/* 0xbd34, not converted */
@@ -296,5 +296,5 @@ void wlanDefragInit(void)
 	__aeabi_memclr4(&wlanDefragContext, sizeof(wlanDefragContext));
 	wlanDefragDiscarding = 1;
 	wlanDefragReassembly = NULL;
-	wlanDefragSpare = 0;
+	wlanDefragReassemblyWep = NULL;
 }

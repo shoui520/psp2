@@ -855,14 +855,11 @@ queueOrComplete:
  * Not converted yet; provisional names for what the transmit task uses them
  * for.
  */
-void mdevWlanTrackState(void);						/* 0x015f0 */
 int cbProcTxAllowed(void);						/* 0x1e032 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void wlanDirectLinkTrigger(void);					/* 0x41184 */
 void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /* 0x41202 */
 OsaBuffer *macTxNotifyNextFrame(void);					/* 0x2fe92 */
-struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *connection,
-						    const uint8_t *peer);	/* 0x0fbf2 */
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
@@ -944,7 +941,7 @@ void macTxTaskMain(ULONG input)
 				if (wlanConnectionBssStarted((struct WlanConnection *)message) != 0)
 					uapGroupRekey(message);
 		if (actual & MAC_TX_EVENT_TRACK)
-			mdevWlanTrackState();
+			wlanRxProcessFrames();
 		if (actual & MAC_TX_EVENT_MGMT) {
 			uintptr_t entry;
 

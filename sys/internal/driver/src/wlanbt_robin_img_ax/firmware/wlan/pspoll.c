@@ -493,7 +493,7 @@ void wlanPsPollSetTimeout(int32_t mean, int32_t deviation)
 }
 
 /* The access point has answered: updates the estimate and ends the poll. */
-void wlanPsPollAnswered(struct WlanConnection *connection)
+void wlanPsPollAnswered(const struct WlanRxStatus *status)
 {
 	UINT posture;
 
@@ -507,7 +507,7 @@ void wlanPsPollAnswered(struct WlanConnection *connection)
 		wlanPsPollCancelTimeout();
 	if (wlanPsPollUsesMacTimer()) {
 		if (wlanPsLegacyPollMode() ||
-		    (wlanCoexUseP2pSleepMode() && (connection->bssCapability[0] & 0x10))) {
+		    (wlanCoexUseP2pSleepMode() && (status->qosControl[0] & 0x10))) {
 			int32_t deviation = wlanPsPollTiming.deviation;
 			int32_t mean = wlanPsPollTiming.mean;
 

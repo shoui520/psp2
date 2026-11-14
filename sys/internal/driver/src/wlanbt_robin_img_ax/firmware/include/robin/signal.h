@@ -40,7 +40,7 @@ void wlanSignalInit(struct WlanConnection *connection);
 int wlanBeaconCckSeen(const struct WlanConnection *connection);
 void wlanSignalJoinDone(struct WlanConnection *connection);
 void wlanLinkTxDone(struct WlanConnection *connection, int acknowledged);
-void wlanLinkFrameReceived(struct WlanConnection *connection, int rssi, int snr);
+void wlanLinkFrameReceived(struct WlanConnection *connection, int16_t snr, int16_t rssi);
 void wlanLinkTimerExpired(uint32_t timer, uint32_t argument);
 void wlanLinkCheck(struct WlanConnection *connection);
 void wlanLinkMonitorStart(struct WlanConnection *connection);

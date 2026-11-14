@@ -119,10 +119,6 @@ void wlanMacReset(void);									/* 0x1ca28 */
 extern uint8_t wlanPrimaryEvents;								/* 0x04008828, bit 0: radio on */
 extern struct OsaEventFlags *wlanHostSleepFlags;						/* 0x54bdc */
 
-/* What the host sleep exit leaves for the rate the power save code starts at. */
-uint8_t wlanBssPsDefaultCounter __attribute__((section(".itcm.rw")));				/* 0x562cd */
-uint8_t wlanBssPsDefaultRate __attribute__((section(".itcm.rw")));				/* 0x562d4 */
-
 /* The ring (entry) of the last beacon event, and what the handler counts. */
 uint8_t wlanMacRing __attribute__((section(".itcm.rw")));				/* 0x54c30 */
 uint32_t wlanMacTxDoneCount __attribute__((section(".itcm.rw")));			/* 0x54c34 */
@@ -530,12 +526,12 @@ void wlanMacSleepExit(void)
 	hostCmd0074Arm();
 	mdevIoctl(wlanSdioDev, 25, 0);
 	if (wlanHostSleepArmed()) {
-		wlanBssPsDefaultRate = 1;
+		wlanMefConfig.hostState = WLAN_HOST_LEAVING;
 		wlanHostSleepCancel();
 		if (wlanHostSleepEndOnWake != 0) {
 			wlanHostSleepEndOnWake = 0;
-			wlanBssPsDefaultRate = 0;
-			wlanBssPsDefaultCounter = 0;
+			wlanMefConfig.hostState = WLAN_HOST_AWAKE;
+			wlanMefConfig.wakeSignalled = 0;
 		} else {
 			wlanHostSleepEnter();
 		}

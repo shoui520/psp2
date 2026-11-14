@@ -105,6 +105,7 @@ struct WlanMefConfig {
 
 /* WlanMefConfig.hostState */
 #define WLAN_HOST_AWAKE		0
+#define WLAN_HOST_LEAVING	1	/* the sleep exit has begun (inferred) */
 #define WLAN_HOST_WAKING	2	/* woken, events wait in wlanHostEventQueue */
 #define WLAN_HOST_ASLEEP	3
 

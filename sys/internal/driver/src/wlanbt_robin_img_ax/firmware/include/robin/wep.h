@@ -24,7 +24,7 @@
 #define CRYPTO_DESTINATION_HIGH		CRYPTO_REG(0x028)
 #define CRYPTO_SOURCE_LOW		CRYPTO_REG(0x02c)
 #define CRYPTO_SOURCE_HIGH		CRYPTO_REG(0x030)
-#define CRYPTO_MIC_ADDRESS		CRYPTO_REG(0x034)
+#define CRYPTO_MIC_ADDRESS		CRYPTO_REG(0x034)	/* wlanCcmpEncrypt() writes an address, wlanCcmpDecrypt() the TID */
 #define CRYPTO_INPUT			CRYPTO_REG(0x038)
 #define CRYPTO_LENGTH			CRYPTO_REG(0x03c)
 #define CRYPTO_OUTPUT			CRYPTO_REG(0x040)
@@ -95,7 +95,7 @@ void wlanCryptoLoadHeader(const WlanWirelessFrame *frame);
 void wlanCcmpEncrypt(const WlanWirelessFrame *frame, uint8_t *output, uint32_t pnHigh,
 		     uint16_t pnLow, uint8_t *mic, const uint32_t *config, const uint8_t *key);
 int wlanCcmpDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t length,
-		    uint8_t *mic, const uint32_t *config, const uint8_t *key,
+		    uint32_t priority, const uint32_t *config, const uint8_t *key,
 		    uint32_t *state0, uint32_t *state1, uint32_t *state2, uint32_t *state3,
 		    uint32_t *state4);
 void wlanWepEncrypt(uint8_t *output, const uint8_t *input, uint32_t length,

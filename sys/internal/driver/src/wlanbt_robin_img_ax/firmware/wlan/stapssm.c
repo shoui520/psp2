@@ -54,7 +54,6 @@
 
 /* mdevIoctl() of the SDIO device. */
 #define SDIO_IOCTL_HOST_BUSY		0x1b
-#define SDIO_IOCTL_HOST_PENDING		0x46
 #define SDIO_IOCTL_HOST_EVENT_DONE	0x49
 #define SDIO_IOCTL_HOST_SLEEPING	0x4a
 
