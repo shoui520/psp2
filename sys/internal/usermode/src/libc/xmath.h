@@ -65,6 +65,8 @@ short _Dnorm(_Dval *ps);
 short _Dscale(double *px, long lexp);
 double _Dtento(double x, long n, int *perr);
 short _FDnorm(_Fval *ps);
+short _LDscale(long double *px, long lexp);
+long double _LDtento(long double x, long n, int *perr);
 short _FDscale(float *px, long lexp);
 float _FDtento(double x, long n, int *perr);
 

@@ -124,15 +124,15 @@ void sceLibcSetHeapInitError(unsigned int err_number);
 
 /* the library's converters (the macro forms of atoi and the others call them) */
 unsigned long _Stoul(const char *s, char **endptr, int base);
-float _Stof(const char *s, char **endptr, long base);
-double _Stod(const char *s, char **endptr, long base);
-long double _Stold(const char *s, char **endptr, long base);
+float _Stof(const char *s, char **endptr, long pten);
+double _Stod(const char *s, char **endptr, long pten);
+long double _Stold(const char *s, char **endptr, long pten);
 long long _Stoll(const char *s, char **endptr, int base);
 unsigned long long _Stoull(const char *s, char **endptr, int base);
 
-float _Stofx(const char *s, char **endptr, long base, int *perr);
-double _Stodx(const char *s, char **endptr, long base, int *perr);
-long double _Stoldx(const char *s, char **endptr, long base, int *perr);
+float _Stofx(const char *s, char **endptr, long pten, int *perr);
+double _Stodx(const char *s, char **endptr, long pten, int *perr);
+long double _Stoldx(const char *s, char **endptr, long pten, int *perr);
 long _Stolx(const char *s, char **endptr, int base, int *perr);
 unsigned long _Stoulx(const char *s, char **endptr, int base, int *perr);
 long long _Stollx(const char *s, char **endptr, int base, int *perr);
