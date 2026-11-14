@@ -9,6 +9,18 @@
  */
 #include "ngs.h"
 
+/* 0x84bda8: the smaller of two (the one-tap HEVAG kernel clamps through it) */
+int32_t ngsMinimum(int32_t a, int32_t b)
+{
+	return a < b ? a : b;
+}
+
+/* 0x84bdb0: the larger */
+int32_t ngsMaximum(int32_t a, int32_t b)
+{
+	return a > b ? a : b;
+}
+
 #define SCE_NGS_PLAYER_MAX_BUFFERS		4
 #define SCE_NGS_PLAYER_MAX_PCM_CHANNELS		2
 #define SCE_NGS_PLAYER_NULL_CHANNEL		(-1)

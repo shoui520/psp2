@@ -38,7 +38,7 @@ void avcdecPictureMark(VideoSliceJob *job);			/* 0x829d8c */
 void avcdecPictureFinish(VideoSliceJob *job);			/* 0x829dd6 */
 
 /* run a job on the helper's context until the context takes it */
-static void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
+static inline void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
 	uint32_t shared, uint32_t argument, uint32_t argument2, uint32_t flags)
 {
 	VnzKernelVThreadContext *locked;

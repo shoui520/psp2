@@ -316,6 +316,13 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 	vnzKernelVThreadContextUnlock(locked);
 }
 
+/* 0x8252f6: nothing to wake */
+void avcdecParserWake(uint32_t memory, uint32_t request)
+{
+	(void)memory;
+	(void)request;
+}
+
 /* 0x8252f8: the request answered with the unit's error, its bytes unmapped */
 static void requestFinish(AvcdecParser *parser)
 {

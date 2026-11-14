@@ -190,7 +190,9 @@ static inline void hevagFilter(const uint8_t *block, int16_t *samples, const int
 		for (k = 0; k < taps; k++)
 			prediction += (uint32_t)previous[k] * (uint32_t)(int32_t)coefficient[k];
 		x = nibble(block, i, shift) - ((int32_t)prediction >> 13);
-		samples[i] = clamp(x);
+		/* the one-tap kernel clamps through the core's min and max */
+		samples[i] = taps == 1 ? ngsMaximum(ngsMinimum(x, SAMPLE_LIMIT), -SAMPLE_LIMIT) :
+			clamp(x);
 		for (k = 3; k > 0; k--)
 			previous[k] = previous[k - 1];
 		previous[0] = x;

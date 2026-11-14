@@ -1285,8 +1285,55 @@ uint8_t avcencChromaChooseLeft(const AvcencIntraRow *row)
 	return chromaCost(row, CHROMA_HORIZONTAL) < chromaCost(row, CHROMA_DC) ? 1 : 0;
 }
 
+/* 0x89f790: a 4x4 block's differences through the Hadamard, the coefficients' magnitudes summed */
+static __attribute__((noinline, noclone)) int32_t hadamardSum(int32_t (*residual)[4])
+{
+	int32_t sum = 0, line, i, a, b, c, d;
+
+	for (i = 0; i < 4; i++) {
+		a = residual[0][i] + residual[2][i];
+		b = residual[1][i] + residual[3][i];
+		c = residual[0][i] - residual[2][i];
+		d = residual[1][i] - residual[3][i];
+		residual[0][i] = a + b;
+		residual[1][i] = c + d;
+		residual[2][i] = c - d;
+		residual[3][i] = a - b;
+	}
+	for (line = 0; line < 4; line++) {
+		a = residual[line][0] + residual[line][2];
+		b = residual[line][1] + residual[line][3];
+		c = residual[line][0] - residual[line][2];
+		d = residual[line][1] - residual[line][3];
+		sum += abs32(a + b) + abs32(a - b) + abs32(c + d) + abs32(c - d);
+	}
+	return sum;
+}
+
 /*
- * The sub-pel refinement's kernels (0x89f818-0x8a1480). A half pixel is the
+ * the block's SATD against eight lines of pixels (a line's step apart): its
+ * 4x4 blocks' Hadamard sums, saturated, halved
+ */
+static inline uint16_t satdLines(const AvcencRefine *refine, const uint8_t *lines, uint32_t step)
+{
+	int32_t residual[4][4], sum, block, line, i;
+
+	sum = 0;
+	for (block = 0; block < 4; block++) {
+		for (line = 0; line < 4; line++)
+			for (i = 0; i < 4; i++)
+				residual[line][i] = refine->source[(block & 2) * 2 + line]
+					[(block & 1) * 4 + i] -
+					lines[((block & 2) * 2 + line) * step + (block & 1) * 4 + i];
+		sum += hadamardSum(residual);
+		if (sum > 32767)
+			sum = 32767;
+	}
+	return sum >> 1;
+}
+
+/*
+ * The sub-pel refinement's kernels (0x89f790-0x8a1480). A half pixel is the
  * four tap filter (-1, 5, 5, -1) / 8 of the pixels around it, rounded and
  * clamped; a diagonal one is the filter across the vertical half pixels.
  */
@@ -1354,10 +1401,22 @@ uint16_t avcencRefineDiagonalSadAbove(const AvcencRefine *refine)
 	return halfSad(refine, 0);
 }
 
+/* 0x89fab8: the SATD against them (nothing calls it) */
+uint16_t avcencRefineDiagonalSatdAbove(const AvcencRefine *refine)
+{
+	return satdLines(refine, refine->half[0], 9);
+}
+
 /* 0x89fb48: below them */
 uint16_t avcencRefineDiagonalSadBelow(const AvcencRefine *refine)
 {
 	return halfSad(refine, 1);
+}
+
+/* 0x89fb98: below them (nothing calls it) */
+uint16_t avcencRefineDiagonalSatdBelow(const AvcencRefine *refine)
+{
+	return satdLines(refine, refine->half[1], 9);
 }
 
 /* 0x89fc28: the vertical half pixels, from the window as it was stored */
@@ -1393,10 +1452,22 @@ uint16_t avcencRefineVerticalSadAbove(const AvcencRefine *refine)
 	return verticalSad(refine, 0);
 }
 
+/* 0x89ff58: the SATD (nothing calls it) */
+uint16_t avcencRefineVerticalSatdAbove(const AvcencRefine *refine)
+{
+	return satdLines(refine, &refine->vertical[0][2], 12);
+}
+
 /* 0x8a0040 */
 uint16_t avcencRefineVerticalSadBelow(const AvcencRefine *refine)
 {
 	return verticalSad(refine, 1);
+}
+
+/* 0x8a00b8 (nothing calls it) */
+uint16_t avcencRefineVerticalSatdBelow(const AvcencRefine *refine)
+{
+	return satdLines(refine, &refine->vertical[1][2], 12);
 }
 
 /* 0x8a01a0: the horizontal half pixels of the block's lines, left of its pixels */
@@ -1417,6 +1488,12 @@ void avcencRefineHorizontal(AvcencRefine *refine)
 uint16_t avcencRefineHorizontalSad(const AvcencRefine *refine)
 {
 	return halfSad(refine, 0);
+}
+
+/* 0x8a0378: the SATD (nothing calls it) */
+uint16_t avcencRefineHorizontalSatd(const AvcencRefine *refine)
+{
+	return satdLines(refine, refine->half[0], 9);
 }
 
 /* the window moved right by a count of pixels, the first repeated */
@@ -1548,40 +1625,10 @@ uint16_t avcencRefineSad(const AvcencRefine *refine)
 	return sum;
 }
 
-/* 0x8a10b0: its SATD: the 4x4 blocks' Hadamard sums, saturated, halved */
+/* 0x8a10b0: its SATD against the window at the candidate */
 uint16_t avcencRefineSatd(const AvcencRefine *refine)
 {
-	int32_t residual[4][4], sum, block, line, i, a, b, c, d;
-
-	sum = 0;
-	for (block = 0; block < 4; block++) {
-		for (line = 0; line < 4; line++)
-			for (i = 0; i < 4; i++)
-				residual[line][i] = refine->source[(block & 2) * 2 + line]
-					[(block & 1) * 4 + i] -
-					refine->window[2 + (block & 2) * 2 + line]
-					[2 + (block & 1) * 4 + i];
-		for (i = 0; i < 4; i++) {
-			a = residual[0][i] + residual[2][i];
-			b = residual[1][i] + residual[3][i];
-			c = residual[0][i] - residual[2][i];
-			d = residual[1][i] - residual[3][i];
-			residual[0][i] = a + b;
-			residual[1][i] = c + d;
-			residual[2][i] = c - d;
-			residual[3][i] = a - b;
-		}
-		for (line = 0; line < 4; line++) {
-			a = residual[line][0] + residual[line][2];
-			b = residual[line][1] + residual[line][3];
-			c = residual[line][0] - residual[line][2];
-			d = residual[line][1] - residual[line][3];
-			sum += abs32(a + b) + abs32(a - b) + abs32(c + d) + abs32(c - d);
-		}
-	}
-	if (sum > 32767)
-		sum = 32767;
-	return sum >> 1;
+	return satdLines(refine, &refine->window[2][2], 16);
 }
 
 /* two costs added, saturating */
@@ -2745,7 +2792,13 @@ void avcencDcIntra16(AvcRecon *recon, const int16_t *levels, uint32_t qp)
 /* 0x8a5b98: a 4x4 block's AC levels and its DC */
 void avcencIdctAc(AvcRecon *recon, const int16_t *levels)
 {
-	avcdecIdctAc(recon, levels);
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		recon->residual[i >> 2][i & 3] = levels[i];
+	dequantise(recon->residual[0], &recon->scale[8], recon->shift);
+	recon->residual[0][0] = recon->blockDc[0];
+	inverseBlock(recon->residual[0]);
 }
 
 /* 0x8a5c98: its DC alone */
@@ -2782,16 +2835,24 @@ void avcencIntraInverse(AvcRecon *recon, uint32_t levelShift, const int16_t *lev
 uint32_t avcencIntraResidual(AvcRecon *recon, const uint8_t *source, uint32_t quantShift,
 	int32_t rounding, const int16_t *quantScale, uint32_t unused)
 {
-	int16_t *x = recon->residual[0];
+	AvcencResidual residual;
 	uint32_t row, column;
 
+	for (row = 0; row < 2; row++)
+		for (column = 0; column < 4; column++)
+			residual.quantScale[row][column] = quantScale[row * 4 + column];
+	residual.rounding = rounding;
+	residual.quantShift = quantShift;
 	for (row = 0; row < 4; row++)
 		for (column = 0; column < 4; column++)
-			recon->residual[row][column] = source[row * 16 + column] -
+			residual.block[row][column] = source[row * 16 + column] -
 				recon->predicted[row][column];
-	forwardBlock(x);
-	quantiseBlock(x, quantScale, rounding, quantShift);
-	return levelsMask(x);
+	forwardBlock(residual.block[0]);
+	avcencQuantise(&residual);
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			recon->residual[row][column] = residual.block[row][column];
+	return avcencLevelsAny(&residual);
 }
 
 /* 0x8a5fd0: the DCs' quantisation: one MF (the first), its qbits and f */

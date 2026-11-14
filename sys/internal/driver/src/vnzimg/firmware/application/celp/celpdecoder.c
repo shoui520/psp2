@@ -85,7 +85,7 @@ int32_t celpDecoderTerminate(void *engine)
 	return 0;
 }
 
-/* 0x854774: back to the first bit rate */
+/* 0x854772: back to the first bit rate */
 int32_t celpDecoderReset(void *engine)
 {
 	CelpDecoderState *state;

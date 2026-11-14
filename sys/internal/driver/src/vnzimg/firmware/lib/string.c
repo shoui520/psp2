@@ -31,7 +31,7 @@ void *memcpy(void *destination, const void *source, size_t size)
 	return destination;
 }
 
-/* 0x924f5e: forwards unless the destination lies above the source */
+/* 0x924f60: forwards unless the destination lies above the source */
 void *memmove(void *destination, const void *source, size_t size)
 {
 	uint8_t *to = destination;
