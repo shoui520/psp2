@@ -1453,6 +1453,102 @@ void avcdecIntra16Dc(const uint8_t *left, const AvcEdges *edges, uint32_t leftAv
 void avcdecIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t aboveLeft,
 	uint8_t *samples);
 
+/*
+ * The samples the chroma job predicts an intra macroblock from, by column,
+ * in info->row2 (64 bytes): the bottom rows of the macroblock above, its
+ * corners, the right columns of the macroblock left; Cb then Cr.
+ */
+typedef struct AvcChromaEdges {
+	uint8_t above[2][8];
+	uint8_t reserved[6];
+	uint8_t aboveLeftCr;
+	uint8_t aboveLeftCb;
+	uint8_t left[2][8];
+	uint8_t reserved2[24];
+} AvcChromaEdges;
+
+/*
+ * The chroma prediction in the coprocessor: the reference samples a fetch
+ * read (c22-c31), a 4x4 block's put by its 2x2 blocks (c12-c23) and each
+ * list's prediction, a row's Cb then its Cr (c8-c11, c12-c15).
+ */
+typedef struct AvcChromaInter {
+	uint8_t window[2][5][8];	/* by component: from (x, y) where the fetch read them */
+	uint8_t quarter[4][3][2][4];	/* by 2x2 block: its window's rows, Cb then Cr */
+	uint8_t block[2][4][2][4];	/* by list and row */
+} AvcChromaInter;
+
+/*
+ * The chroma residual in the coprocessor: the dequantisation (c9-c10, c8,
+ * c5), the DC levels (c11), a 4x4 block's residual (c12-c15), and the
+ * samples (c16-c31): rows, or each 4x4 block's in pairs of registers
+ * (avcdecChromaBlocks*).
+ */
+typedef struct AvcChromaRecon {
+	int16_t scale[8];		/* LevelScale by QP % 6, positions 0-7 */
+	uint32_t dcShift;		/* |QP / 6 - 1| */
+	uint32_t shift;			/* QP / 6 */
+	int16_t dc[4];			/* the next 4x4 block's last */
+	int16_t residual[4][4];
+	uint8_t rows[2][8][8];		/* by component */
+} AvcChromaRecon;
+
+/* the chroma job's kernels (0x89a760-0x89cfe0) */
+void avcdecChromaLoad(AvcChromaInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcdecChromaEdgeLeft(AvcChromaInter *inter, int32_t shift);
+void avcdecChromaEdgeRight(AvcChromaInter *inter, int32_t shift);
+void avcdecChromaEdgeTop(AvcChromaInter *inter, int32_t y);
+void avcdecChromaEdgeBottom(AvcChromaInter *inter, int32_t below);
+void avcdecChromaLoadSmall(AvcChromaInter *inter, const uint8_t *address,
+	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift);
+void avcdecChromaEdgeLeftSmall(AvcChromaInter *inter, int32_t shift);
+void avcdecChromaEdgeRightSmall(AvcChromaInter *inter, int32_t shift);
+void avcdecChromaEdgeTopSmall(AvcChromaInter *inter, int32_t y);
+void avcdecChromaEdgeBottomSmall(AvcChromaInter *inter, int32_t below);
+void avcdecChromaQuarter0(AvcChromaInter *inter);
+void avcdecChromaQuarter1(AvcChromaInter *inter);
+void avcdecChromaQuarter2(AvcChromaInter *inter);
+void avcdecChromaQuarter3(AvcChromaInter *inter);
+void avcdecChromaPredict(AvcChromaInter *inter, uint32_t fraction);
+void avcdecChromaPredictList1(AvcChromaInter *inter, uint32_t fraction);
+void avcdecChromaPredictQuarters(AvcChromaInter *inter, uint32_t fraction0,
+	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3);
+void avcdecChromaPredictQuartersList1(AvcChromaInter *inter, uint32_t fraction0,
+	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3);
+void avcdecChromaStore(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr);
+void avcdecChromaStoreList1(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr);
+void avcdecChromaStoreAverage(AvcChromaInter *inter, uint8_t *cb, uint8_t *cr);
+void avcdecChromaLoadRows(AvcChromaRecon *recon, const uint8_t *samples);
+void avcdecChromaLoadBottom(AvcChromaRecon *recon, const uint8_t *samples);
+void avcdecChromaDc(AvcChromaRecon *recon, const int16_t *coef, uint32_t qp);
+void avcdecChromaIdctDc(AvcChromaRecon *recon);
+void avcdecChromaIdct(AvcChromaRecon *recon, const int16_t *coef);
+void avcdecChromaStoreCb(const AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaStoreCr(const AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaStoreRows(const AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaAddDcCb(AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaAddDcCr(AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaBlocksCb(AvcChromaRecon *recon);
+void avcdecChromaBlocksCr(AvcChromaRecon *recon);
+void avcdecChromaAddCb0(AvcChromaRecon *recon);
+void avcdecChromaAddCb1(AvcChromaRecon *recon);
+void avcdecChromaAddCb2(AvcChromaRecon *recon);
+void avcdecChromaAddCb3(AvcChromaRecon *recon);
+void avcdecChromaAddCr0(AvcChromaRecon *recon);
+void avcdecChromaAddCr1(AvcChromaRecon *recon);
+void avcdecChromaAddCr2(AvcChromaRecon *recon);
+void avcdecChromaAddCr3(AvcChromaRecon *recon);
+void avcdecChromaRowsCb(AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaRowsCr(AvcChromaRecon *recon, uint8_t *samples);
+void avcdecChromaKeepBottom(const AvcChromaRecon *recon, AvcChromaEdges *edges);
+void avcdecChromaKeepRight(const AvcChromaRecon *recon, uint8_t (*left)[8]);
+void avcdecChromaIntraDc(AvcChromaRecon *recon, const AvcChromaEdges *edges,
+	uint32_t leftAvailable, uint32_t aboveAvailable);
+void avcdecChromaIntraHorizontal(AvcChromaRecon *recon, const AvcChromaEdges *edges);
+void avcdecChromaIntraVertical(AvcChromaRecon *recon, const AvcChromaEdges *edges);
+void avcdecChromaIntraPlane(AvcChromaRecon *recon, const AvcChromaEdges *edges);
+
 /* the luma's deblocking in the coprocessor: half the macroblock, the samples across an edge */
 typedef struct AvcDeblock {
 	uint8_t rows[8][16];		/* each 8x8 half turned for the vertical edges */

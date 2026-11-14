@@ -2438,7 +2438,7 @@ static const uint8_t chromaWeights[64][4] = {			/* 0x91b368 */
 };
 
 /* rows of eight samples of both components (Cr 64 on) from two streams */
-static void chromaRows(AvcdecChromaInter *inter, uint32_t count, const uint8_t *address,
+static void chromaRows(AvcChromaInter *inter, uint32_t count, const uint8_t *address,
 	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
 {
 	uint32_t row, advance;
@@ -2453,7 +2453,7 @@ static void chromaRows(AvcdecChromaInter *inter, uint32_t count, const uint8_t *
 }
 
 /* the picture's left edge `shift` columns in: its first column repeated before it */
-static void chromaEdgeLeft(AvcdecChromaInter *inter, uint32_t count, int32_t shift)
+static void chromaEdgeLeft(AvcChromaInter *inter, uint32_t count, int32_t shift)
 {
 	uint32_t component, row;
 	int32_t column;
@@ -2467,7 +2467,7 @@ static void chromaEdgeLeft(AvcdecChromaInter *inter, uint32_t count, int32_t shi
 }
 
 /* the right edge, the picture's last column the window's eighth: repeated past it */
-static void chromaEdgeRight(AvcdecChromaInter *inter, uint32_t count, int32_t shift)
+static void chromaEdgeRight(AvcChromaInter *inter, uint32_t count, int32_t shift)
 {
 	uint32_t component, row;
 	int32_t column;
@@ -2480,7 +2480,7 @@ static void chromaEdgeRight(AvcdecChromaInter *inter, uint32_t count, int32_t sh
 						column + shift : 7];
 }
 
-static void chromaEdgeTop(AvcdecChromaInter *inter, int32_t count, int32_t shift)
+static void chromaEdgeTop(AvcChromaInter *inter, int32_t count, int32_t shift)
 {
 	uint32_t component, column;
 	int32_t row;
@@ -2492,7 +2492,7 @@ static void chromaEdgeTop(AvcdecChromaInter *inter, int32_t count, int32_t shift
 					inter->window[component][row >= shift ? row - shift : 0][column];
 }
 
-static void chromaEdgeBottom(AvcdecChromaInter *inter, int32_t count, int32_t shift)
+static void chromaEdgeBottom(AvcChromaInter *inter, int32_t count, int32_t shift)
 {
 	uint32_t component, column;
 	int32_t row, last = count - 1;
@@ -2506,69 +2506,69 @@ static void chromaEdgeBottom(AvcdecChromaInter *inter, int32_t count, int32_t sh
 }
 
 /* 0x89a760: an 8x8 luma block's: five rows */
-void avcdecChromaLoad(AvcdecChromaInter *inter, const uint8_t *address, const uint8_t *next,
+void avcdecChromaLoad(AvcChromaInter *inter, const uint8_t *address, const uint8_t *next,
 	uint32_t y, uint32_t step, uint32_t shift)
 {
 	chromaRows(inter, 5, address, next, y, step, shift);
 }
 
 /* 0x89a998 */
-void avcdecChromaEdgeLeft(AvcdecChromaInter *inter, int32_t shift)
+void avcdecChromaEdgeLeft(AvcChromaInter *inter, int32_t shift)
 {
 	chromaEdgeLeft(inter, 5, shift);
 }
 
 /* 0x89a9e8 */
-void avcdecChromaEdgeRight(AvcdecChromaInter *inter, int32_t shift)
+void avcdecChromaEdgeRight(AvcChromaInter *inter, int32_t shift)
 {
 	chromaEdgeRight(inter, 5, shift);
 }
 
 /* 0x89aa38: the window's first row `-y` rows above the picture's */
-void avcdecChromaEdgeTop(AvcdecChromaInter *inter, int32_t y)
+void avcdecChromaEdgeTop(AvcChromaInter *inter, int32_t y)
 {
 	chromaEdgeTop(inter, 5, -y);
 }
 
 /* 0x89aae8 */
-void avcdecChromaEdgeBottom(AvcdecChromaInter *inter, int32_t below)
+void avcdecChromaEdgeBottom(AvcChromaInter *inter, int32_t below)
 {
 	chromaEdgeBottom(inter, 5, below);
 }
 
 /* 0x89ab80: a 4x4 luma block's: three rows */
-void avcdecChromaLoadSmall(AvcdecChromaInter *inter, const uint8_t *address,
+void avcdecChromaLoadSmall(AvcChromaInter *inter, const uint8_t *address,
 	const uint8_t *next, uint32_t y, uint32_t step, uint32_t shift)
 {
 	chromaRows(inter, 3, address, next, y, step, shift);
 }
 
 /* 0x89ac78 */
-void avcdecChromaEdgeLeftSmall(AvcdecChromaInter *inter, int32_t shift)
+void avcdecChromaEdgeLeftSmall(AvcChromaInter *inter, int32_t shift)
 {
 	chromaEdgeLeft(inter, 3, shift);
 }
 
 /* 0x89aca8 */
-void avcdecChromaEdgeRightSmall(AvcdecChromaInter *inter, int32_t shift)
+void avcdecChromaEdgeRightSmall(AvcChromaInter *inter, int32_t shift)
 {
 	chromaEdgeRight(inter, 3, shift);
 }
 
 /* 0x89acd8 */
-void avcdecChromaEdgeTopSmall(AvcdecChromaInter *inter, int32_t y)
+void avcdecChromaEdgeTopSmall(AvcChromaInter *inter, int32_t y)
 {
 	chromaEdgeTop(inter, 3, -y);
 }
 
 /* 0x89ad10 */
-void avcdecChromaEdgeBottomSmall(AvcdecChromaInter *inter, int32_t below)
+void avcdecChromaEdgeBottomSmall(AvcChromaInter *inter, int32_t below)
 {
 	chromaEdgeBottom(inter, 3, below);
 }
 
 /* a 2x2 block's window put by itself */
-static void chromaQuarter(AvcdecChromaInter *inter, uint32_t quarter)
+static void chromaQuarter(AvcChromaInter *inter, uint32_t quarter)
 {
 	uint32_t row, component, column;
 
@@ -2580,25 +2580,25 @@ static void chromaQuarter(AvcdecChromaInter *inter, uint32_t quarter)
 }
 
 /* 0x89ad40 */
-void avcdecChromaQuarter0(AvcdecChromaInter *inter)
+void avcdecChromaQuarter0(AvcChromaInter *inter)
 {
 	chromaQuarter(inter, 0);
 }
 
 /* 0x89ad50 */
-void avcdecChromaQuarter1(AvcdecChromaInter *inter)
+void avcdecChromaQuarter1(AvcChromaInter *inter)
 {
 	chromaQuarter(inter, 1);
 }
 
 /* 0x89ad60 */
-void avcdecChromaQuarter2(AvcdecChromaInter *inter)
+void avcdecChromaQuarter2(AvcChromaInter *inter)
 {
 	chromaQuarter(inter, 2);
 }
 
 /* 0x89ad70 */
-void avcdecChromaQuarter3(AvcdecChromaInter *inter)
+void avcdecChromaQuarter3(AvcChromaInter *inter)
 {
 	chromaQuarter(inter, 3);
 }
@@ -2612,7 +2612,7 @@ static inline uint8_t bilinear(const uint8_t *weights, const uint8_t *top,
 }
 
 /* a 4x4 block of both components from the window */
-static void chromaPredict(AvcdecChromaInter *inter, uint32_t list, uint32_t fraction)
+static void chromaPredict(AvcChromaInter *inter, uint32_t list, uint32_t fraction)
 {
 	const uint8_t *weights = chromaWeights[fraction];
 	uint32_t row, component, column;
@@ -2626,19 +2626,19 @@ static void chromaPredict(AvcdecChromaInter *inter, uint32_t list, uint32_t frac
 }
 
 /* 0x89ad80: list 0's */
-void avcdecChromaPredict(AvcdecChromaInter *inter, uint32_t fraction)
+void avcdecChromaPredict(AvcChromaInter *inter, uint32_t fraction)
 {
 	chromaPredict(inter, 0, fraction);
 }
 
 /* 0x89ae58: list 1's */
-void avcdecChromaPredictList1(AvcdecChromaInter *inter, uint32_t fraction)
+void avcdecChromaPredictList1(AvcChromaInter *inter, uint32_t fraction)
 {
 	chromaPredict(inter, 1, fraction);
 }
 
 /* a 4x4 block by its 2x2 blocks, each by its own vector */
-static void chromaPredictQuarters(AvcdecChromaInter *inter, uint32_t list,
+static void chromaPredictQuarters(AvcChromaInter *inter, uint32_t list,
 	const uint32_t fractions[4])
 {
 	const uint8_t *weights;
@@ -2657,7 +2657,7 @@ static void chromaPredictQuarters(AvcdecChromaInter *inter, uint32_t list,
 }
 
 /* 0x89af30 */
-void avcdecChromaPredictQuarters(AvcdecChromaInter *inter, uint32_t fraction0,
+void avcdecChromaPredictQuarters(AvcChromaInter *inter, uint32_t fraction0,
 	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3)
 {
 	const uint32_t fractions[4] = { fraction0, fraction1, fraction2, fraction3 };
@@ -2666,7 +2666,7 @@ void avcdecChromaPredictQuarters(AvcdecChromaInter *inter, uint32_t fraction0,
 }
 
 /* 0x89b0a8 */
-void avcdecChromaPredictQuartersList1(AvcdecChromaInter *inter, uint32_t fraction0,
+void avcdecChromaPredictQuartersList1(AvcChromaInter *inter, uint32_t fraction0,
 	uint32_t fraction1, uint32_t fraction2, uint32_t fraction3)
 {
 	const uint32_t fractions[4] = { fraction0, fraction1, fraction2, fraction3 };
@@ -2675,7 +2675,7 @@ void avcdecChromaPredictQuartersList1(AvcdecChromaInter *inter, uint32_t fractio
 }
 
 /* a 4x4 block of each component into the macroblock's (8 apart) */
-static void chromaStore(const AvcdecChromaInter *inter, uint32_t list, uint8_t *cb,
+static void chromaStore(const AvcChromaInter *inter, uint32_t list, uint8_t *cb,
 	uint8_t *cr)
 {
 	uint32_t row, column;
@@ -2688,19 +2688,19 @@ static void chromaStore(const AvcdecChromaInter *inter, uint32_t list, uint8_t *
 }
 
 /* 0x89b220 */
-void avcdecChromaStore(const AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+void avcdecChromaStore(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr)
 {
 	chromaStore(inter, 0, cb, cr);
 }
 
 /* 0x89b268 */
-void avcdecChromaStoreList1(const AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+void avcdecChromaStoreList1(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr)
 {
 	chromaStore(inter, 1, cb, cr);
 }
 
 /* 0x89b2b0: the default (8.4.2.3.1): the lists' blocks averaged */
-void avcdecChromaStoreAverage(AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr)
+void avcdecChromaStoreAverage(AvcChromaInter *inter, uint8_t *cb, uint8_t *cr)
 {
 	uint32_t row, component, column;
 
@@ -2714,7 +2714,7 @@ void avcdecChromaStoreAverage(AvcdecChromaInter *inter, uint8_t *cb, uint8_t *cr
 }
 
 /* explicit weighting (8.4.2.3.2) of one list's block: ((p w + round) >> shift) + o */
-static void chromaWeight(AvcdecChromaInter *inter, uint32_t list,
+static void chromaWeight(AvcChromaInter *inter, uint32_t list,
 	const AvcdecChromaWeights *weights, uint8_t *cb, uint8_t *cr)
 {
 	uint32_t row, component, column;
@@ -2733,21 +2733,21 @@ static void chromaWeight(AvcdecChromaInter *inter, uint32_t list,
 }
 
 /* 0x89b300 */
-void avcdecChromaWeight(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+void avcdecChromaWeight(AvcChromaInter *inter, const AvcdecChromaWeights *weights,
 	uint8_t *cb, uint8_t *cr)
 {
 	chromaWeight(inter, 0, weights, cb, cr);
 }
 
 /* 0x89b3f8 */
-void avcdecChromaWeightList1(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+void avcdecChromaWeightList1(AvcChromaInter *inter, const AvcdecChromaWeights *weights,
 	uint8_t *cb, uint8_t *cr)
 {
 	chromaWeight(inter, 1, weights, cb, cr);
 }
 
 /* 0x89b4f0: both lists': ((p0 w0 + p1 w1 + round) >> shift) + o */
-void avcdecChromaWeightBi(AvcdecChromaInter *inter, const AvcdecChromaWeights *weights,
+void avcdecChromaWeightBi(AvcChromaInter *inter, const AvcdecChromaWeights *weights,
 	uint8_t *cb, uint8_t *cr)
 {
 	uint32_t row, component, column;
@@ -2940,7 +2940,7 @@ uint32_t avcdecChromaDeblockInner(AvcChromaDeblock *deblock, uint32_t indexA,
 }
 
 /* 0x89bed8: the macroblock's prediction, or its samples */
-void avcdecChromaLoadRows(AvcdecChromaRecon *recon, const uint8_t *samples)
+void avcdecChromaLoadRows(AvcChromaRecon *recon, const uint8_t *samples)
 {
 	uint32_t component, row, column;
 
@@ -2952,7 +2952,7 @@ void avcdecChromaLoadRows(AvcdecChromaRecon *recon, const uint8_t *samples)
 }
 
 /* 0x89bf68: their last rows only, for the macroblocks below */
-void avcdecChromaLoadBottom(AvcdecChromaRecon *recon, const uint8_t *samples)
+void avcdecChromaLoadBottom(AvcChromaRecon *recon, const uint8_t *samples)
 {
 	uint32_t component, column;
 
@@ -2966,7 +2966,7 @@ void avcdecChromaLoadBottom(AvcdecChromaRecon *recon, const uint8_t *samples)
  * dequantised, (f v) << (QP / 6 - 1), or >> 1 below QP 6; the first block's
  * last.
  */
-void avcdecChromaDc(AvcdecChromaRecon *recon, const int16_t *coef, uint32_t qp)
+void avcdecChromaDc(AvcChromaRecon *recon, const int16_t *coef, uint32_t qp)
 {
 	int16_t c0 = coef[0], c1 = coef[1], c2 = coef[2], c3 = coef[3];
 	int16_t f[4];
@@ -2988,7 +2988,7 @@ void avcdecChromaDc(AvcdecChromaRecon *recon, const int16_t *coef, uint32_t qp)
 }
 
 /* the next 4x4 block's DC level last, after the one used */
-static inline void chromaNextDc(AvcdecChromaRecon *recon)
+static inline void chromaNextDc(AvcChromaRecon *recon)
 {
 	int16_t last = recon->dc[3];
 
@@ -2999,7 +2999,7 @@ static inline void chromaNextDc(AvcdecChromaRecon *recon)
 }
 
 /* 0x89bfe0: a 4x4 block of its DC level only */
-void avcdecChromaIdctDc(AvcdecChromaRecon *recon)
+void avcdecChromaIdctDc(AvcChromaRecon *recon)
 {
 	int16_t value = (int16_t)(recon->dc[3] + 32) >> 6;
 	uint32_t row, column;
@@ -3010,7 +3010,7 @@ void avcdecChromaIdctDc(AvcdecChromaRecon *recon)
 }
 
 /* 0x89c008: a 4x4 block's levels dequantised, its DC level put first, transformed */
-void avcdecChromaIdct(AvcdecChromaRecon *recon, const int16_t *coef)
+void avcdecChromaIdct(AvcChromaRecon *recon, const int16_t *coef)
 {
 	int16_t *x = recon->residual[0];
 	uint32_t i;
@@ -3027,7 +3027,7 @@ void avcdecChromaIdct(AvcdecChromaRecon *recon, const int16_t *coef)
 }
 
 /* a component's rows into the macroblock's */
-static void chromaStoreComponent(const AvcdecChromaRecon *recon, uint32_t component,
+static void chromaStoreComponent(const AvcChromaRecon *recon, uint32_t component,
 	uint8_t *samples)
 {
 	uint32_t row, column;
@@ -3038,26 +3038,26 @@ static void chromaStoreComponent(const AvcdecChromaRecon *recon, uint32_t compon
 }
 
 /* 0x89c118: Cb's prediction as it is */
-void avcdecChromaStoreCb(const AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaStoreCb(const AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaStoreComponent(recon, 0, samples);
 }
 
 /* 0x89c168 */
-void avcdecChromaStoreCr(const AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaStoreCr(const AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaStoreComponent(recon, 1, samples);
 }
 
 /* 0x89c1b8: both */
-void avcdecChromaStoreRows(const AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaStoreRows(const AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaStoreComponent(recon, 0, samples);
 	chromaStoreComponent(recon, 1, samples + 64);
 }
 
 /* a component's rows plus its 4x4 blocks' DC levels alone ((dc + 32) >> 6), stored */
-static void chromaAddDc(AvcdecChromaRecon *recon, uint32_t component, uint8_t *samples)
+static void chromaAddDc(AvcChromaRecon *recon, uint32_t component, uint8_t *samples)
 {
 	int16_t dc[4];
 	uint32_t block, row, column;
@@ -3073,13 +3073,13 @@ static void chromaAddDc(AvcdecChromaRecon *recon, uint32_t component, uint8_t *s
 }
 
 /* 0x89c248 */
-void avcdecChromaAddDcCb(AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaAddDcCb(AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaAddDc(recon, 0, samples);
 }
 
 /* 0x89c390 */
-void avcdecChromaAddDcCr(AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaAddDcCr(AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaAddDc(recon, 1, samples);
 }
@@ -3088,7 +3088,7 @@ void avcdecChromaAddDcCr(AvcdecChromaRecon *recon, uint8_t *samples)
  * A component's rows as its 4x4 blocks: each pair of rows, their left
  * halves then their right ones; a block's rows in two registers, two apart.
  */
-static void chromaBlocks(AvcdecChromaRecon *recon, uint32_t component)
+static void chromaBlocks(AvcChromaRecon *recon, uint32_t component)
 {
 	uint8_t (*rows)[8] = recon->rows[component];
 	uint8_t pair[2][8];
@@ -3109,19 +3109,19 @@ static void chromaBlocks(AvcdecChromaRecon *recon, uint32_t component)
 }
 
 /* 0x89c4d8 */
-void avcdecChromaBlocksCb(AvcdecChromaRecon *recon)
+void avcdecChromaBlocksCb(AvcChromaRecon *recon)
 {
 	chromaBlocks(recon, 0);
 }
 
 /* 0x89c508 */
-void avcdecChromaBlocksCr(AvcdecChromaRecon *recon)
+void avcdecChromaBlocksCr(AvcChromaRecon *recon)
 {
 	chromaBlocks(recon, 1);
 }
 
 /* a 4x4 block's residual added to its samples; the next block's DC level last */
-static void chromaAdd(AvcdecChromaRecon *recon, uint32_t component, uint32_t block,
+static void chromaAdd(AvcChromaRecon *recon, uint32_t component, uint32_t block,
 	uint32_t next)
 {
 	uint32_t first = (block & 2) * 2 + (block & 1), i;
@@ -3136,55 +3136,55 @@ static void chromaAdd(AvcdecChromaRecon *recon, uint32_t component, uint32_t blo
 }
 
 /* 0x89c538 */
-void avcdecChromaAddCb0(AvcdecChromaRecon *recon)
+void avcdecChromaAddCb0(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 0, 0, 1);
 }
 
 /* 0x89c560 */
-void avcdecChromaAddCb1(AvcdecChromaRecon *recon)
+void avcdecChromaAddCb1(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 0, 1, 1);
 }
 
 /* 0x89c588 */
-void avcdecChromaAddCb2(AvcdecChromaRecon *recon)
+void avcdecChromaAddCb2(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 0, 2, 1);
 }
 
 /* 0x89c5b0 */
-void avcdecChromaAddCb3(AvcdecChromaRecon *recon)
+void avcdecChromaAddCb3(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 0, 3, 0);
 }
 
 /* 0x89c5d0 */
-void avcdecChromaAddCr0(AvcdecChromaRecon *recon)
+void avcdecChromaAddCr0(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 1, 0, 1);
 }
 
 /* 0x89c5f8 */
-void avcdecChromaAddCr1(AvcdecChromaRecon *recon)
+void avcdecChromaAddCr1(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 1, 1, 1);
 }
 
 /* 0x89c620 */
-void avcdecChromaAddCr2(AvcdecChromaRecon *recon)
+void avcdecChromaAddCr2(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 1, 2, 1);
 }
 
 /* 0x89c648 */
-void avcdecChromaAddCr3(AvcdecChromaRecon *recon)
+void avcdecChromaAddCr3(AvcChromaRecon *recon)
 {
 	chromaAdd(recon, 1, 3, 0);
 }
 
 /* the 4x4 blocks back into rows, stored */
-static void chromaRowsBack(AvcdecChromaRecon *recon, uint32_t component, uint8_t *samples)
+static void chromaRowsBack(AvcChromaRecon *recon, uint32_t component, uint8_t *samples)
 {
 	uint8_t (*rows)[8] = recon->rows[component];
 	uint8_t pair[2][8];
@@ -3206,19 +3206,19 @@ static void chromaRowsBack(AvcdecChromaRecon *recon, uint32_t component, uint8_t
 }
 
 /* 0x89c668 */
-void avcdecChromaRowsCb(AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaRowsCb(AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaRowsBack(recon, 0, samples);
 }
 
 /* 0x89c6b8 */
-void avcdecChromaRowsCr(AvcdecChromaRecon *recon, uint8_t *samples)
+void avcdecChromaRowsCr(AvcChromaRecon *recon, uint8_t *samples)
 {
 	chromaRowsBack(recon, 1, samples);
 }
 
 /* 0x89c708: the macroblock's last rows, for the macroblock below */
-void avcdecChromaKeepBottom(const AvcdecChromaRecon *recon, AvcdecChromaEdges *edges)
+void avcdecChromaKeepBottom(const AvcChromaRecon *recon, AvcChromaEdges *edges)
 {
 	uint32_t component, column;
 
@@ -3228,7 +3228,7 @@ void avcdecChromaKeepBottom(const AvcdecChromaRecon *recon, AvcdecChromaEdges *e
 }
 
 /* 0x89c728: its last columns, for the macroblock right */
-void avcdecChromaKeepRight(const AvcdecChromaRecon *recon, uint8_t (*left)[8])
+void avcdecChromaKeepRight(const AvcChromaRecon *recon, uint8_t (*left)[8])
 {
 	uint32_t component, row;
 
@@ -3248,7 +3248,7 @@ static inline uint32_t sum4(const uint8_t *samples)
  * above and left averaged, the corner blocks' both, the others' the side
  * nearest them when it is available; 128 without any.
  */
-void avcdecChromaIntraDc(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges,
+void avcdecChromaIntraDc(AvcChromaRecon *recon, const AvcChromaEdges *edges,
 	uint32_t leftAvailable, uint32_t aboveAvailable)
 {
 	uint32_t component, block, row, column, top, left, dc[4];
@@ -3279,7 +3279,7 @@ void avcdecChromaIntraDc(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edge
 }
 
 /* 0x89c9d0: Intra chroma horizontal */
-void avcdecChromaIntraHorizontal(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+void avcdecChromaIntraHorizontal(AvcChromaRecon *recon, const AvcChromaEdges *edges)
 {
 	uint32_t component, row, column;
 
@@ -3290,7 +3290,7 @@ void avcdecChromaIntraHorizontal(AvcdecChromaRecon *recon, const AvcdecChromaEdg
 }
 
 /* 0x89ca58: Intra chroma vertical */
-void avcdecChromaIntraVertical(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+void avcdecChromaIntraVertical(AvcChromaRecon *recon, const AvcChromaEdges *edges)
 {
 	uint32_t component, row, column;
 
@@ -3305,7 +3305,7 @@ void avcdecChromaIntraVertical(AvcdecChromaRecon *recon, const AvcdecChromaEdges
  * b and c (34 H + 32) >> 6 and (34 V + 32) >> 6, the samples
  * (a + b (x - 3) + c (y - 3) + 16) >> 5.
  */
-void avcdecChromaIntraPlane(AvcdecChromaRecon *recon, const AvcdecChromaEdges *edges)
+void avcdecChromaIntraPlane(AvcChromaRecon *recon, const AvcChromaEdges *edges)
 {
 	static const int16_t fromCentre[8] = { -3, -2, -1, 0, 1, 2, 3, 4 };	/* 0x91b468 */
 	const uint8_t *above, *left;

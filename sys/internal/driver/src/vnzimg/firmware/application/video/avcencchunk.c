@@ -1568,3 +1568,806 @@ static void reconstructIntra16(AvcencChunkInfo *info)
 	}
 	rowLevels->next = (uint32_t)levels;
 }
+
+/*
+ * The third stage (0x840358-0x841730): the chunk's chroma as the second
+ * stage codes its luma: the inter macroblocks predicted by their vectors,
+ * then each macroblock's levels into the output and its reconstruction
+ * into the picture's samples, the reconstruction the chroma job's.
+ */
+
+/* the decimation's scores of the chroma's AC levels, by the zeros below each (x264's) */
+static const uint8_t chromaDecimateScores[16] = {		/* 0x8f8264 */
+	3, 2, 2, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+};
+
+/* the chroma levels' coded blocks (AvcencChunkInfo's coded): AC by 4x4 block, then the DCs */
+#define CODED_CHROMA_AC_SHIFT	16		/* Cb's four, Cr's four */
+#define CODED_CHROMA_DC_SHIFT	25		/* Cb's, Cr's */
+
+/* the most a macroblock's levels of a component take: its DC levels and four 4x4 blocks */
+#define MB_CHROMA_LEVELS_SIZE	(8 + 4 * 32)
+
+static void chromaCodingSetup(AvcencPicture *picture, AvcencOutputSlot *slot,
+	AvcencChunkInfo *info);
+static void chromaCodingType(AvcencChunkInfo *info);
+static void chromaPredictNext(AvcencChunkInfo *info);
+static void chromaCodingStart(AvcencChunkInfo *info);
+static void chromaCodingNext(AvcencChunkInfo *info);
+static void chromaCodingClose(AvcencPicture *picture, AvcencOutputSlot *slot,
+	AvcencChunkInfo *info);
+static void predictChroma(AvcencChunkInfo *info);
+static void codeChromaInter(AvcencChunkInfo *info);
+static void codeChromaIntra(AvcencChunkInfo *info);
+
+/*
+ * 0x840358: the third stage: the chunk's inter macroblocks' chroma
+ * predicted, then every macroblock's coded; the row's progress counted, the
+ * next job signalled when the chunk ends the row and the others are done
+ */
+void avcencJobChunkStage3(uint32_t pictureAddress, uint32_t slotAddress, uint32_t unused,
+	uint32_t unused2)
+{
+	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
+	uint32_t core = ((int32_t)vnzReadControl(VNZ_CR_ID) >> 16) & 7;
+	uint32_t mbs, i, bit, firstMb, end, chunk, widthInMbs, signal, ready;
+	AvcencFrameRecord *frameRecord;
+	AvcencChunkInfo *info;
+	AvcencOutputSlot *slot;
+	VkVThreadContext *context;
+
+	slot = (AvcencOutputSlot *)vnzPublicOpenProtected(slotAddress, 64);
+	info = (AvcencChunkInfo *)vnzPublicOpenPrivate(slot->outputInfo +
+		core * CHUNK_INFO_SIZE, CHUNK_INFO_SIZE);
+	vnzCacheInvalidateInside((uint32_t)info, CHUNK_INFO_SIZE);
+	mbs = slot->mbs;
+	chromaCodingSetup(picture, slot, info);
+	for (i = 0; i < mbs; i++) {
+		chromaCodingType(info);
+		if ((info->type & MB_KIND) != MB_INTRA)
+			predictChroma(info);
+		chromaPredictNext(info);
+	}
+	info->chroma -= mbs * 128;
+	info->current -= mbs * 64;
+	info->chromaSource -= mbs * 128;
+	info->column = slot->firstMb;
+	for (i = 0; i < mbs; i++) {
+		chromaCodingStart(info);
+		if ((info->type & MB_KIND) == MB_INTRA)
+			codeChromaIntra(info);
+		else
+			codeChromaInter(info);
+		chromaCodingNext(info);
+	}
+	chromaCodingClose(picture, slot, info);
+
+	bit = 1 << (slot->row & 31);
+	firstMb = slot->firstMb;
+	end = firstMb + slot->mbs;
+	frameRecord = (AvcencFrameRecord *)picture->frameRecord;
+	chunk = slot->chunk;
+	vnzCachePurge((uint32_t)info, CHUNK_INFO_SIZE);
+	vnzPublicClosePrivate((uint32_t)info, CHUNK_INFO_SIZE);
+	vnzPublicCloseProtected((uint32_t)slot, 64);
+	widthInMbs = picture->widthInMbs;
+	if (!firstMb) {
+		if (widthInMbs == end) {
+			signal = 1;
+		} else {
+			vnzSpinLock(picture->lock);
+			if (frameRecord->progress[1] & bit) {
+				frameRecord->progress[1] &= ~bit;
+				frameRecord->rowsEncoded |= bit;
+			} else {
+				frameRecord->progress[2] |= bit;
+			}
+			vnzSpinUnlock(picture->lock);
+			signal = 0;
+		}
+	} else {
+		vnzSpinLock(picture->lock);
+		ready = frameRecord->progress[1] & bit;
+		if (widthInMbs == end) {
+			if (ready && (frameRecord->progress[0] & bit)) {
+				frameRecord->progress[1] &= ~bit;
+				frameRecord->progress[0] &= ~bit;
+				signal = 1;
+			} else {
+				frameRecord->progress[2] |= bit;
+				signal = 0;
+			}
+		} else {
+			if (ready && (frameRecord->progress[0] & bit)) {
+				frameRecord->progress[1] &= ~bit;
+				frameRecord->progress[0] &= ~bit;
+				frameRecord->rowsEncoded |= bit;
+			} else {
+				frameRecord->progress[2] |= bit;
+			}
+			signal = 0;
+		}
+		vnzSpinUnlock(picture->lock);
+	}
+	if (signal) {
+		context = vkVThreadContextLock(picture->outputContext);
+		vkVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
+		vkVThreadContextUnlock(context);
+	}
+}
+
+/*
+ * 0x840542: the chunk's chroma opened: the samples, the source's, the coded
+ * blocks' records, the macroblocks' records, the row's levels and
+ * neighbours; each component's levels in the output from where the chunk
+ * before stopped; the quantisation by the chroma's QP
+ */
+static void chromaCodingSetup(AvcencPicture *picture, AvcencOutputSlot *slot,
+	AvcencChunkInfo *info)
+{
+	const AvcencLayout *layout = (const AvcencLayout *)picture->layout;
+	uint32_t column = slot->firstMb, row = slot->row, mbs = slot->mbs, line = row & 15;
+	uint32_t chroma, coded, base, cb, cr, size, cbSize, crSize, cbOffset, crOffset;
+	uint32_t cbWindow, crWindow, cbLevels, crLevels, qp, quantShift, unit;
+	const AvcencOutput *output;
+	AvcencChromaRowLevels *rowLevels;
+
+	info->column = column;
+	info->row = row;
+	chroma = picture->chroma + column * 128 + row * picture->chromaWidth * 8;
+	if (!(column & 1))
+		vnzL2Flush(chroma, ((mbs + 1) & 0xe) * 128);
+	else if (mbs >= 3)
+		vnzL2Flush(chroma + 128, ((mbs - 1) & 0xe) * 128);
+	info->chroma = vnzPublicOpenPrivate(chroma, mbs * 128);
+	info->chromaSource = picture->clientChroma + column * 128 +
+		row * picture->clientChromaPitch * 8;
+	coded = picture->chromaCoded + line * 64;
+	if (slot->parity)
+		coded += 1024;
+	info->chromaCoded = vnzPublicOpenPrivate(coded, 64);
+	info->current = picture->macroblocks + picture->widthInMbs * row * 64 + column * 64;
+	info->chromaRowLevels = vnzPublicOpenPrivate(picture->command[5] + line * 64, 64);
+	info->chromaNeighbours = vnzPublicOpenPrivate(picture->command[2] + column * 64,
+		mbs * 64 + 64);
+
+	output = (const AvcencOutput *)slot->output;
+	rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	size = mbs * MB_CHROMA_LEVELS_SIZE;
+	base = (row - output->firstRow) * layout->chromaLevelsPitch;
+	cb = base + output->chromaLevels[0];
+	cr = base + output->chromaLevels[1];
+	if (column) {
+		cb += rowLevels->used[0];
+		cr += rowLevels->used[1];
+		cbOffset = rowLevels->used[0] & 63;
+		cbSize = ((cb + size + 63) & ~63) - (cb - cbOffset);
+		cbWindow = vnzPublicOpenPrivate(cb - cbOffset, cbSize);
+		cbLevels = cbWindow + cbOffset;
+		crOffset = rowLevels->used[1] & 63;
+		crSize = ((cr + size + 63) & ~63) - (cr - crOffset);
+		crWindow = vnzPublicOpenPrivate(cr - crOffset, crSize);
+		crLevels = crWindow + crOffset;
+	} else {
+		cbSize = crSize = (size + 63) & ~63;
+		cbWindow = cbLevels = vnzPublicOpenPrivate(cb, cbSize);
+		crWindow = crLevels = vnzPublicOpenPrivate(cr, crSize);
+		rowLevels->used[1] = 0;
+		rowLevels->used[0] = 0;
+	}
+	info->chromaLevels[1] = crWindow;
+	info->chromaLevels[0] = cbWindow;
+	info->chromaLevelsSize[1] = crSize;
+	info->chromaLevelsSize[0] = cbSize;
+	rowLevels->next[1] = crLevels;
+	rowLevels->next[0] = cbLevels;
+
+	info->sliceType = slot->sliceType;
+	info->chromaWidth = picture->widthInMbs * 8;
+	info->chromaHeight = picture->heightInMbs * 8;
+	info->chromaPitch = picture->chromaWidth;
+	info->chromaReference = picture->previousChroma;
+	info->jobsDone = picture->jobsDone;
+	info->hasAbove = !(output->withInfo && output->firstRow == row);
+	info->hasLeft = info->column > 0;
+	qp = picture->rateChromaQp;
+	info->chromaQp = qp;
+	quantShift = quantShifts[qp];
+	info->quantShift = quantShift;
+	unit = 1 << (quantShift - 11);
+	info->intraRounding = unit * 682;
+	info->interRounding = unit * 342;
+	info->quantScale = (uint32_t)avcencQuantScale[qpRemainder[qp]];
+}
+
+/* 0x8407c8: the macroblock's type */
+static void chromaCodingType(AvcencChunkInfo *info)
+{
+	info->type = ((const AvcencMacroblock *)info->current)->type;
+}
+
+/* 0x8407d4: the next macroblock's */
+static void chromaPredictNext(AvcencChunkInfo *info)
+{
+	info->chromaSource += 128;
+	info->current += 64;
+	info->column++;
+	info->chroma += 128;
+}
+
+/*
+ * 0x840800: the macroblock's coding started: its type, its neighbours
+ * above (by the chroma's width in macroblocks of 16 samples)
+ */
+static void chromaCodingStart(AvcencChunkInfo *info)
+{
+	uint32_t widthInMbs = (int32_t)info->chromaWidth >> 4;
+
+	info->type = ((const AvcencMacroblock *)info->current)->type;
+	info->hasAboveRight = info->hasAbove && info->column != widthInMbs - 1;
+	info->hasAboveLeft = info->hasAbove && info->column != 0;
+	info->coded = 0;
+}
+
+/* 0x840842: and ended: its coded blocks' record */
+static void chromaCodingNext(AvcencChunkInfo *info)
+{
+	AvcencChromaCoded *chromaCoded;
+	uint32_t coded = info->coded, type = info->type;
+
+	info->hasLeft = 1;
+	info->chromaSource += 128;
+	info->current += 64;
+	info->column++;
+	info->chroma += 128;
+	info->chromaNeighbours += sizeof(AvcChromaEdges);
+	chromaCoded = (AvcencChromaCoded *)info->chromaCoded;
+	chromaCoded->ac = (coded >> CODED_CHROMA_AC_SHIFT) & 0xff;
+	chromaCoded->dc = (coded >> CODED_CHROMA_DC_SHIFT) & 3;
+	chromaCoded->cbp = (type >> MB_CHROMA_CBP_SHIFT) & 3;
+	info->chromaCoded += sizeof(AvcencChromaCoded);
+}
+
+/* 0x8408bc: the chunk's closed, the row's levels counted on */
+static void chromaCodingClose(AvcencPicture *picture, AvcencOutputSlot *slot,
+	AvcencChunkInfo *info)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	uint32_t mbs = slot->mbs, component, used;
+
+	for (component = 0; component < 2; component++) {
+		used = rowLevels->used[component];
+		rowLevels->used[component] = used + (rowLevels->next[component] -
+			info->chromaLevels[component]) - (used & 63);
+		vnzPublicClosePrivate(info->chromaLevels[component],
+			info->chromaLevelsSize[component]);
+	}
+	vnzPublicClosePrivate(info->chromaRowLevels, 64);
+	vnzPublicClosePrivate(info->chromaNeighbours - mbs * 64, mbs * 64 + 64);
+	vnzPublicClosePrivate(info->chromaCoded - mbs * 8, 64);
+	vnzPublicClosePrivate(info->chroma - mbs * 128, mbs * 128);
+}
+
+static void chromaFetch8(const AvcencChunkInfo *info, AvcChromaInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y, const int16_t *vector);
+
+/*
+ * 0x84094c: an inter macroblock's chroma, by its 8x8 luma blocks' vectors:
+ * each 4x4 block of both components
+ */
+static void predictChroma(AvcencChunkInfo *info)
+{
+	uint8_t *chroma = (uint8_t *)info->chroma;
+	const AvcencMacroblock *macroblock = (const AvcencMacroblock *)info->current;
+	int32_t x = info->column * 8, y = info->row * 8;
+	uint32_t block, offset;
+	AvcChromaInter inter;
+
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, chroma);
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, chroma + 64);
+	for (block = 0; block < 4; block++) {
+		offset = (block & 1) * 4 + (block & 2) * 16;
+		chromaFetch8(info, &inter, (const uint8_t *)info->chromaReference,
+			x + (block & 1) * 4, y + (block & 2) * 2, macroblock->vectors[block]);
+		avcencChromaMcStore(&inter, chroma + offset, chroma + offset + 64);
+	}
+}
+
+static void chromaFetch(const AvcencChunkInfo *info, AvcChromaInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y);
+
+/* 0x840974: a 4x4 block by its vector, in eighth samples */
+static void chromaFetch8(const AvcencChunkInfo *info, AvcChromaInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y, const int16_t *vector)
+{
+	chromaFetch(info, inter, reference, x + (vector[0] >> 3), y + (vector[1] >> 3));
+	avcencChromaMcPredict(inter, (vector[0] & 7) << 3 | (vector[1] & 7));
+}
+
+/*
+ * 0x840a40: the five rows of five samples a 4x4 block reads (as the chroma
+ * job's chromaFetch), the picture's edges repeated beyond it
+ */
+static void chromaFetch(const AvcencChunkInfo *info, AvcChromaInter *inter,
+	const uint8_t *reference, int32_t x, int32_t y)
+{
+	int32_t width = info->chromaWidth, height = info->chromaHeight;
+	int32_t pitch = info->chromaPitch;
+	int32_t cx = clampTo(x, 0, width - 8), cy = clampTo(y, 0, height - 5);
+	const uint8_t *address = reference + (cy & ~7) * pitch + (cx & ~7) * 16 + (cy & 7) * 8;
+
+	avcencChromaMcLoad(inter, address, (cx & 7) >= 4 ? address + 128 : address, cy,
+		pitch * 8 - 64, -cx & 7);
+	if (x < 0)
+		avcencChromaMcEdgeLeft(inter, -(x > -7 ? x : -7));
+	else if (x > width - 8)
+		avcencChromaMcEdgeRight(inter, (x < width - 1 ? x : width - 1) - (width - 8));
+	if (y < 0)
+		avcencChromaMcEdgeTop(inter, y);
+	else if (y > height - 5)
+		avcencChromaMcEdgeBottom(inter, y - height + 5);
+}
+
+static void chromaInterLevels(AvcencChunkInfo *info);
+static void reconstructChromaInter(AvcencChunkInfo *info);
+
+/* 0x840b14: an inter macroblock's: its levels (none for P_Skip), then reconstructed */
+static void codeChromaInter(AvcencChunkInfo *info)
+{
+	if ((info->type >> MB_SKIP_SHIFT) & 1)
+		info->coded = 0;
+	else
+		chromaInterLevels(info);
+	reconstructChromaInter(info);
+}
+
+static void chromaResidualNone(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void chromaResidualDc(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void chromaResidualAc(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void chromaKeep(AvcencChunkInfo *info, const AvcChromaRecon *recon);
+
+/* 0x840b44: reconstructed by its coded_block_pattern's chroma, then the edges kept */
+static void reconstructChromaInter(AvcencChunkInfo *info)
+{
+	AvcChromaRecon recon;
+	uint32_t pattern = (info->type >> MB_CHROMA_CBP_SHIFT) & 3;
+
+	if (pattern == 1)
+		chromaResidualDc(info, &recon);
+	else if (pattern)
+		chromaResidualAc(info, &recon);
+	else
+		chromaResidualNone(info, &recon);
+	chromaKeep(info, &recon);
+}
+
+/* 0x840b74: none: the samples the macroblocks right and below read */
+static void chromaResidualNone(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	uint32_t type = info->type;
+
+	if (type & MB_KEEP_RIGHT)
+		avcencChromaLoadRows(recon, (const uint8_t *)info->chroma);
+	else if (type & MB_KEEP_BOTTOM)
+		avcencChromaLoadBottom(recon, (const uint8_t *)info->chroma);
+}
+
+static void chromaScale(AvcChromaRecon *recon, uint32_t qp);
+
+/* 0x840ba4: DC levels only */
+static void chromaResidualDc(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	uint32_t dc = (info->coded >> CODED_CHROMA_DC_SHIFT) & 3, qp = info->chromaQp;
+	uint8_t *chroma = (uint8_t *)info->chroma;
+	const int16_t *levels;
+
+	avcencChromaLoadRows(recon, chroma);
+	chromaScale(recon, qp);
+	if (dc & 1) {
+		levels = (const int16_t *)rowLevels->next[0];
+		avcencChromaDcInverse(recon, levels, qp);
+		rowLevels->next[0] = (uint32_t)(levels + 4);
+		avcencChromaAddDcCb(recon, chroma);
+	}
+	chroma += 64;
+	if (dc & 2) {
+		levels = (const int16_t *)rowLevels->next[1];
+		avcencChromaDcInverse(recon, levels, qp);
+		rowLevels->next[1] = (uint32_t)(levels + 4);
+		avcencChromaAddDcCr(recon, chroma);
+	}
+}
+
+/* a component's DC levels, or none */
+static inline const int16_t *chromaDcLevels(AvcChromaRecon *recon, const int16_t *levels,
+	uint32_t coded, uint32_t qp)
+{
+	uint32_t i;
+
+	if (coded) {
+		avcencChromaDcInverse(recon, levels, qp);
+	} else {
+		for (i = 0; i < 4; i++)
+			recon->dc[i] = 0;
+	}
+	return levels + 4;
+}
+
+/* a component's 4x4 block: its levels transformed, or its DC level alone */
+static inline const int16_t *chromaBlockLevels(AvcChromaRecon *recon, const int16_t *levels,
+	uint32_t coded)
+{
+	if (!coded) {
+		avcencChromaIdctDc(recon);
+		return levels;
+	}
+	avcencChromaIdct(recon, levels);
+	return levels + 16;
+}
+
+/* Cb's residual by its 4x4 blocks, added and stored */
+static const int16_t *chromaResidualCb(AvcChromaRecon *recon, const int16_t *levels,
+	uint32_t dc, uint32_t ac, uint32_t qp, uint8_t *samples)
+{
+	avcencChromaBlocksCb(recon);
+	levels = chromaDcLevels(recon, levels, dc, qp);
+	levels = chromaBlockLevels(recon, levels, ac & 1);
+	avcencChromaAddCb0(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 2);
+	avcencChromaAddCb1(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 4);
+	avcencChromaAddCb2(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 8);
+	avcencChromaAddCb3(recon);
+	avcencChromaRowsCb(recon, samples);
+	return levels;
+}
+
+/* Cr's */
+static const int16_t *chromaResidualCr(AvcChromaRecon *recon, const int16_t *levels,
+	uint32_t dc, uint32_t ac, uint32_t qp, uint8_t *samples)
+{
+	avcencChromaBlocksCr(recon);
+	levels = chromaDcLevels(recon, levels, dc, qp);
+	levels = chromaBlockLevels(recon, levels, ac & 1);
+	avcencChromaAddCr0(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 2);
+	avcencChromaAddCr1(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 4);
+	avcencChromaAddCr2(recon);
+	levels = chromaBlockLevels(recon, levels, ac & 8);
+	avcencChromaAddCr3(recon);
+	avcencChromaRowsCr(recon, samples);
+	return levels;
+}
+
+/* 0x840c26: AC levels too: a component with any by its 4x4 blocks */
+static void chromaResidualAc(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	uint32_t coded = info->coded, ac = (coded >> CODED_CHROMA_AC_SHIFT) & 0xff;
+	uint32_t qp = info->chromaQp, dc = (coded >> CODED_CHROMA_DC_SHIFT) & 3;
+	uint8_t *chroma = (uint8_t *)info->chroma;
+
+	avcencChromaLoadRows(recon, chroma);
+	chromaScale(recon, qp);
+	if ((dc & 1) || (ac & 15))
+		rowLevels->next[0] = (uint32_t)chromaResidualCb(recon,
+			(const int16_t *)rowLevels->next[0], dc & 1, ac, qp, chroma);
+	ac >>= 4;
+	chroma += 64;
+	if ((dc & 2) || (ac & 15))
+		rowLevels->next[1] = (uint32_t)chromaResidualCr(recon,
+			(const int16_t *)rowLevels->next[1], dc & 2, ac, qp, chroma);
+}
+
+static void chromaDcStore(const AvcencChromaResidual *residual, int16_t *levels);
+
+/*
+ * 0x840dd0: an intra macroblock's levels: each component's 4x4 blocks'
+ * into the output past its DC levels, then the DC levels' transformed
+ */
+static void chromaIntraLevels(AvcencChunkInfo *info)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	const uint8_t *source = (const uint8_t *)info->chromaSource;
+	const uint8_t *predicted = (const uint8_t *)info->chroma;
+	uint32_t component, block, coded = 0, ac = 0, dc = 0, cbp;
+	int32_t rounding;
+	int16_t *levels;
+	AvcencChromaResidual residual;
+
+	rounding = (info->type & MB_KIND) == MB_INTRA ? info->intraRounding : info->interRounding;
+	avcencChromaQuantSetup(&residual, (const int16_t *)info->quantScale, info->quantShift,
+		rounding);
+	for (component = 0; component < 2; component++) {
+		levels = (int16_t *)rowLevels->next[component] + 4;
+		for (block = 0; block < 4; block++) {
+			if (block == 0)
+				avcencChromaResidual0(&residual, source, predicted);
+			else if (block == 1)
+				avcencChromaResidual1(&residual);
+			else if (block == 2)
+				avcencChromaResidual2(&residual, source + 32, predicted + 32);
+			else
+				avcencChromaResidual3(&residual);
+			avcencChromaQuantise(&residual);
+			if (avcencChromaLevelsAny(&residual)) {
+				avcencChromaStoreLevels(&residual, levels);
+				levels += 16;
+				ac = 1;
+				coded |= 1 << (CODED_CHROMA_AC_SHIFT + component * 4 + block);
+			}
+		}
+		avcencChromaDcTransform(&residual);
+		avcencChromaQuantiseDc(&residual);
+		if (avcencChromaDcAny(&residual)) {
+			chromaDcStore(&residual, (int16_t *)rowLevels->next[component]);
+			dc = 1;
+			coded |= 1 << (CODED_CHROMA_DC_SHIFT + component);
+		}
+		source += 64;
+		predicted += 64;
+	}
+	cbp = ac ? 2 : dc;
+	info->coded = coded;
+	info->type |= (cbp & 3) << MB_CHROMA_CBP_SHIFT;
+}
+
+/* a 4x4 block's AC level at a zigzag position */
+static inline int16_t chromaScanned(const AvcencChromaResidual *residual, uint32_t i)
+{
+	return residual->block[zigzag[i] >> 2][zigzag[i] & 3];
+}
+
+/*
+ * 0x840fc0: a 4x4 block's decimation score (x264's, of the 15 AC levels),
+ * its levels all 1 or less
+ */
+static uint32_t chromaDecimateScore(const AvcencChromaResidual *residual)
+{
+	uint32_t score = 0, run, i = 16;
+
+	/* from the last level down to the first AC one: each one's score by the zeros below it */
+	while (i > 1 && !chromaScanned(residual, i - 1))
+		i--;
+	while (i > 1) {
+		i--;
+		for (run = 0; i > 1 && !chromaScanned(residual, i - 1); run++)
+			i--;
+		score += chromaDecimateScores[run];
+	}
+	return score;
+}
+
+/*
+ * 0x841008: an inter macroblock's levels: as an intra one's, but a
+ * component's AC levels dropped where their decimation scores add up to
+ * less than 7
+ */
+static void chromaInterLevels(AvcencChunkInfo *info)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	const uint8_t *source = (const uint8_t *)info->chromaSource;
+	const uint8_t *predicted = (const uint8_t *)info->chroma;
+	uint32_t component, block, coded = 0, ac[2] = { 0, 0 }, dc = 0, blocks, score, cbp;
+	int16_t *levels;
+	AvcencChromaResidual residual;
+
+	avcencChromaQuantSetup(&residual, (const int16_t *)info->quantScale, info->quantShift,
+		info->interRounding);
+	for (component = 0; component < 2; component++) {
+		levels = (int16_t *)rowLevels->next[component] + 4;
+		blocks = 0;
+		score = 0;
+		for (block = 0; block < 4; block++) {
+			if (block == 0)
+				avcencChromaResidual0(&residual, source, predicted);
+			else if (block == 1)
+				avcencChromaResidual1(&residual);
+			else if (block == 2)
+				avcencChromaResidual2(&residual, source + 32, predicted + 32);
+			else
+				avcencChromaResidual3(&residual);
+			avcencChromaQuantise(&residual);
+			if (avcencChromaLevelsAny(&residual)) {
+				avcencChromaStoreLevels(&residual, levels);
+				levels += 16;
+				ac[component] = 1;
+				blocks |= 1 << (CODED_CHROMA_AC_SHIFT + component * 4 + block);
+				if (score < 9)
+					score += avcencChromaLevelsPastOne(&residual) ? 9 :
+						chromaDecimateScore(&residual);
+			}
+		}
+		if (score < 7)
+			ac[component] = 0;
+		else
+			coded |= blocks;
+		avcencChromaDcTransform(&residual);
+		avcencChromaQuantiseDc(&residual);
+		if (avcencChromaDcAny(&residual)) {
+			chromaDcStore(&residual, (int16_t *)rowLevels->next[component]);
+			dc = 1;
+			coded |= 1 << (CODED_CHROMA_DC_SHIFT + component);
+		}
+		source += 64;
+		predicted += 64;
+	}
+	cbp = ac[0] || ac[1] ? 2 : dc;
+	info->type |= (cbp & 3) << MB_CHROMA_CBP_SHIFT;
+	info->coded = coded;
+}
+
+/* 0x8412de: a component's DC levels into the output */
+static void chromaDcStore(const AvcencChromaResidual *residual, int16_t *levels)
+{
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		levels[i] = residual->dc[i];
+}
+
+/* 0x8412e2: the dequantisation's parameters by the chroma's QP (the chroma job's) */
+static void chromaScale(AvcChromaRecon *recon, uint32_t qp)
+{
+	const int16_t *scale = avcdecLevelScale[avcdecQpRemainder[qp]];
+	uint32_t i;
+
+	recon->dcShift = avcdecQpShift[qp + 30];
+	recon->shift = avcdecQpShift[qp + 36];
+	for (i = 0; i < 8; i++)
+		recon->scale[i] = scale[i];
+}
+
+/*
+ * 0x841306: the samples kept the intra macroblocks after it predict from:
+ * the corners the next one reads, the macroblock's last row and column
+ */
+static void chromaKeep(AvcencChunkInfo *info, const AvcChromaRecon *recon)
+{
+	AvcChromaEdges *edges = (AvcChromaEdges *)info->chromaNeighbours;
+	uint32_t type = info->type;
+
+	edges[1].aboveLeftCr = edges->above[1][7];
+	edges[1].aboveLeftCb = edges->above[0][7];
+	if (type & MB_KEEP_BOTTOM)
+		avcencChromaKeepBottom(recon, edges);
+	if (type & MB_KEEP_RIGHT)
+		avcencChromaKeepRight(recon, edges[1].left);
+}
+
+static void predictChromaIntra(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void reconstructChromaIntra(AvcencChunkInfo *info, AvcChromaRecon *recon);
+
+/* 0x841354: an intra macroblock's: predicted, its levels, then reconstructed */
+static void codeChromaIntra(AvcencChunkInfo *info)
+{
+	uint8_t *chroma = (uint8_t *)info->chroma;
+	AvcChromaRecon recon;
+
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, chroma);
+	vnzCacheLine(VNZ_CACHE_INVALIDATE, chroma + 64);
+	predictChromaIntra(info, &recon);
+	chromaIntraLevels(info);
+	reconstructChromaIntra(info, &recon);
+}
+
+static void chromaRowsLoad(AvcChromaRecon *recon, const uint8_t *samples);
+static void chromaIntraNone(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void chromaIntraDc(AvcencChunkInfo *info, AvcChromaRecon *recon);
+static void chromaIntraAc(AvcencChunkInfo *info, AvcChromaRecon *recon);
+
+/* 0x841380: reconstructed from its prediction by its coded_block_pattern's chroma */
+static void reconstructChromaIntra(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	uint32_t pattern = (info->type >> MB_CHROMA_CBP_SHIFT) & 3;
+
+	chromaRowsLoad(recon, (const uint8_t *)info->chroma);
+	if (pattern == 1)
+		chromaIntraDc(info, recon);
+	else if (pattern)
+		chromaIntraAc(info, recon);
+	else
+		chromaIntraNone(info, recon);
+	chromaKeep(info, recon);
+}
+
+/* 0x8413bc: predicted by its chroma mode, the prediction into the samples */
+static void predictChromaIntra(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	const AvcChromaEdges *edges = (const AvcChromaEdges *)info->chromaNeighbours;
+	uint8_t *samples = (uint8_t *)info->chroma;
+	uint32_t component, row, column;
+
+	switch ((info->type >> MB_CHROMA_MODE_SHIFT) & 3) {
+	case 0:
+		avcencChromaIntraDc(recon, edges->left, edges, info->column > 0,
+			(uint8_t)info->hasAbove > 0);
+		break;
+	case 1:
+		avcencChromaIntraHorizontal(recon, edges->left, edges);
+		break;
+	case 2:
+		avcencChromaIntraVertical(recon, edges);
+		break;
+	default:
+		avcencChromaIntraPlane(recon, edges->left, edges);
+		break;
+	}
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				samples[component * 64 + row * 8 + column] =
+					recon->rows[component][row][column];
+}
+
+/* 0x84147c: the macroblock's samples, both components */
+static void chromaRowsLoad(AvcChromaRecon *recon, const uint8_t *samples)
+{
+	uint32_t component, row, column;
+
+	for (component = 0; component < 2; component++)
+		for (row = 0; row < 8; row++)
+			for (column = 0; column < 8; column++)
+				recon->rows[component][row][column] =
+					samples[component * 64 + row * 8 + column];
+}
+
+/* 0x8414de: no levels: the prediction as it is */
+static void chromaIntraNone(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	avcencChromaStoreRows(recon, (uint8_t *)info->chroma);
+}
+
+/* 0x8414f2: DC levels only */
+static void chromaIntraDc(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	uint32_t dc = (info->coded >> CODED_CHROMA_DC_SHIFT) & 3, qp = info->chromaQp;
+	uint8_t *chroma = (uint8_t *)info->chroma;
+	const int16_t *levels;
+
+	chromaScale(recon, qp);
+	if (dc & 1) {
+		levels = (const int16_t *)rowLevels->next[0];
+		avcencChromaDcInverse(recon, levels, qp);
+		rowLevels->next[0] = (uint32_t)(levels + 4);
+		avcencChromaAddDcCb(recon, chroma);
+	} else {
+		avcencChromaStoreCb(recon, chroma);
+	}
+	chroma += 64;
+	if (dc & 2) {
+		levels = (const int16_t *)rowLevels->next[1];
+		avcencChromaDcInverse(recon, levels, qp);
+		rowLevels->next[1] = (uint32_t)(levels + 4);
+		avcencChromaAddDcCr(recon, chroma);
+	} else {
+		avcencChromaStoreCr(recon, chroma);
+	}
+}
+
+/* 0x84157e: AC levels too */
+static void chromaIntraAc(AvcencChunkInfo *info, AvcChromaRecon *recon)
+{
+	AvcencChromaRowLevels *rowLevels = (AvcencChromaRowLevels *)info->chromaRowLevels;
+	uint32_t coded = info->coded, ac = (coded >> CODED_CHROMA_AC_SHIFT) & 0xff;
+	uint32_t qp = info->chromaQp, dc = (coded >> CODED_CHROMA_DC_SHIFT) & 3;
+	uint8_t *chroma = (uint8_t *)info->chroma;
+
+	chromaScale(recon, qp);
+	if ((dc & 1) || (ac & 15))
+		rowLevels->next[0] = (uint32_t)chromaResidualCb(recon,
+			(const int16_t *)rowLevels->next[0], dc & 1, ac, qp, chroma);
+	else
+		avcencChromaStoreCb(recon, chroma);
+	ac >>= 4;
+	chroma += 64;
+	if ((dc & 2) || (ac & 15))
+		rowLevels->next[1] = (uint32_t)chromaResidualCr(recon,
+			(const int16_t *)rowLevels->next[1], dc & 2, ac, qp, chroma);
+	else
+		avcencChromaStoreCr(recon, chroma);
+}

@@ -490,6 +490,80 @@ void avcencIntra16Plane(const uint8_t *left, const AvcEdges *edges, uint32_t abo
 	uint8_t *samples);
 
 /*
+ * The chroma residual in the coprocessor: the quantisation's MF by row
+ * (c24 rows 0 and 2, c25 rows 1 and 3), f (c20) and qbits (c18), the DC
+ * levels' MF(0, 0), 2f and qbits + 1 (c22, c21, c19); four rows of the
+ * source (c8-c11) and of the prediction (c12-c15), Cb's or Cr's; a 4x4
+ * block's coefficients or levels (c28-c31); the component's DC levels (c4).
+ */
+typedef struct AvcencChromaResidual {
+	int16_t quantScale[2][4];
+	int32_t rounding;
+	uint32_t quantShift;
+	int16_t dcScale;
+	int32_t dcRounding;
+	uint32_t dcShift;
+	uint8_t source[4][8];
+	uint8_t predicted[4][8];
+	int16_t block[4][4];
+	int16_t dc[4];
+} AvcencChromaResidual;
+
+/* the chroma's kernels (0x8a7308-0x8a8cb0) */
+void avcencChromaMcLoad(AvcChromaInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift);
+void avcencChromaMcEdgeLeft(AvcChromaInter *inter, int32_t shift);
+void avcencChromaMcEdgeRight(AvcChromaInter *inter, int32_t shift);
+void avcencChromaMcEdgeTop(AvcChromaInter *inter, int32_t y);
+void avcencChromaMcEdgeBottom(AvcChromaInter *inter, int32_t below);
+void avcencChromaMcPredict(AvcChromaInter *inter, uint32_t fraction);
+void avcencChromaMcStore(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr);
+void avcencChromaLoadRows(AvcChromaRecon *recon, const uint8_t *samples);
+void avcencChromaLoadBottom(AvcChromaRecon *recon, const uint8_t *samples);
+void avcencChromaResidual0(AvcencChromaResidual *residual, const uint8_t *source, const uint8_t *predicted);
+void avcencChromaResidual2(AvcencChromaResidual *residual, const uint8_t *source, const uint8_t *predicted);
+void avcencChromaResidual1(AvcencChromaResidual *residual);
+void avcencChromaResidual3(AvcencChromaResidual *residual);
+uint32_t avcencChromaLevelsAny(const AvcencChromaResidual *residual);
+uint32_t avcencChromaDcAny(const AvcencChromaResidual *residual);
+void avcencChromaQuantise(AvcencChromaResidual *residual);
+void avcencChromaQuantiseDc(AvcencChromaResidual *residual);
+void avcencChromaDcTransform(AvcencChromaResidual *residual);
+void avcencChromaQuantSetup(AvcencChromaResidual *residual, const int16_t *quantScale, uint32_t quantShift,
+	int32_t rounding);
+uint32_t avcencChromaLevelsPastOne(const AvcencChromaResidual *residual);
+void avcencChromaStoreLevels(const AvcencChromaResidual *residual, int16_t *levels);
+void avcencChromaDcInverse(AvcChromaRecon *recon, const int16_t *levels, uint32_t qp);
+void avcencChromaIdctDc(AvcChromaRecon *recon);
+void avcencChromaIdct(AvcChromaRecon *recon, const int16_t *levels);
+void avcencChromaStoreCb(const AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaStoreCr(const AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaStoreRows(const AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaAddDcCb(AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaAddDcCr(AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaBlocksCb(AvcChromaRecon *recon);
+void avcencChromaBlocksCr(AvcChromaRecon *recon);
+void avcencChromaAddCb0(AvcChromaRecon *recon);
+void avcencChromaAddCb1(AvcChromaRecon *recon);
+void avcencChromaAddCb2(AvcChromaRecon *recon);
+void avcencChromaAddCb3(AvcChromaRecon *recon);
+void avcencChromaAddCr0(AvcChromaRecon *recon);
+void avcencChromaAddCr1(AvcChromaRecon *recon);
+void avcencChromaAddCr2(AvcChromaRecon *recon);
+void avcencChromaAddCr3(AvcChromaRecon *recon);
+void avcencChromaRowsCb(AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaRowsCr(AvcChromaRecon *recon, uint8_t *samples);
+void avcencChromaKeepBottom(const AvcChromaRecon *recon, AvcChromaEdges *edges);
+void avcencChromaKeepRight(const AvcChromaRecon *recon, uint8_t (*left)[8]);
+void avcencChromaIntraDc(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges, uint32_t leftAvailable, uint32_t aboveAvailable);
+void avcencChromaIntraHorizontal(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges);
+void avcencChromaIntraVertical(AvcChromaRecon *recon, const AvcChromaEdges *edges);
+void avcencChromaIntraPlane(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges);
+
+/*
  * a macroblock's bS as its kernels hand them on, by register: two edges of
  * four 4-sample groups each, the vertical edges 0-1 and 2-3, then the
  * horizontal ones

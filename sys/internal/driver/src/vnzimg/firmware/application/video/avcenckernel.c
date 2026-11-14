@@ -3049,3 +3049,406 @@ void avcencStrengthsVectors(AvcencStrengthLanes *lanes, const int16_t (*current)
 			lanes->edges[edge][i] = (int8_t)lanes->coded[edge][i] > (int8_t)far[edge][i] ?
 				lanes->coded[edge][i] : far[edge][i];
 }
+
+/*
+ * The chroma's (0x8a7308-0x8a8cb0): the motion compensation's and the
+ * reconstruction's are the chroma job's (avcdeckernel.c); the residual's
+ * forward transform and quantisation the encoder's own.
+ */
+
+/* 0x8a7308: an 8x8 luma block's chroma: five rows */
+void avcencChromaMcLoad(AvcChromaInter *inter, const uint8_t *address, const uint8_t *next,
+	uint32_t y, uint32_t step, uint32_t shift)
+{
+	avcdecChromaLoad(inter, address, next, y, step, shift);
+}
+
+/* 0x8a7540 */
+void avcencChromaMcEdgeLeft(AvcChromaInter *inter, int32_t shift)
+{
+	avcdecChromaEdgeLeft(inter, shift);
+}
+
+/* 0x8a7590 */
+void avcencChromaMcEdgeRight(AvcChromaInter *inter, int32_t shift)
+{
+	avcdecChromaEdgeRight(inter, shift);
+}
+
+/* 0x8a75e0 */
+void avcencChromaMcEdgeTop(AvcChromaInter *inter, int32_t y)
+{
+	avcdecChromaEdgeTop(inter, y);
+}
+
+/* 0x8a7690 */
+void avcencChromaMcEdgeBottom(AvcChromaInter *inter, int32_t below)
+{
+	avcdecChromaEdgeBottom(inter, below);
+}
+
+/* 0x8a7728: the 4x4 block by the vector's fraction */
+void avcencChromaMcPredict(AvcChromaInter *inter, uint32_t fraction)
+{
+	avcdecChromaPredict(inter, fraction);
+}
+
+/* 0x8a7800 */
+void avcencChromaMcStore(const AvcChromaInter *inter, uint8_t *cb, uint8_t *cr)
+{
+	avcdecChromaStore(inter, cb, cr);
+}
+
+/* 0x8a7848: the macroblock's samples */
+void avcencChromaLoadRows(AvcChromaRecon *recon, const uint8_t *samples)
+{
+	avcdecChromaLoadRows(recon, samples);
+}
+
+/* 0x8a78d8: their last rows only */
+void avcencChromaLoadBottom(AvcChromaRecon *recon, const uint8_t *samples)
+{
+	avcdecChromaLoadBottom(recon, samples);
+}
+
+/* 0x8a78f8: the 4x4 block's forward transform, columns then rows */
+static void chromaForward(AvcencChromaResidual *residual)
+{
+	forwardBlock(residual->block[0]);
+}
+
+/*
+ * a 4x4 block's residual, the source less the prediction: its left or right
+ * half of the rows; transformed, its DC put by the block's in the DC levels
+ * and cleared
+ */
+static void chromaResidual(AvcencChromaResidual *residual, uint32_t half, uint32_t block)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 4; column++)
+			residual->block[row][column] = residual->source[row][half * 4 + column] -
+				residual->predicted[row][half * 4 + column];
+	chromaForward(residual);
+	residual->dc[block] = residual->block[0][0];
+	residual->block[0][0] = 0;
+}
+
+/* four rows of the source's and of the prediction's (8 apart) */
+static void chromaRows(AvcencChromaResidual *residual, const uint8_t *source, const uint8_t *predicted)
+{
+	uint32_t row, column;
+
+	for (row = 0; row < 4; row++)
+		for (column = 0; column < 8; column++) {
+			residual->source[row][column] = source[row * 8 + column];
+			residual->predicted[row][column] = predicted[row * 8 + column];
+		}
+}
+
+/* 0x8a7988: a component's first 4x4 block, its DC levels cleared before it */
+void avcencChromaResidual0(AvcencChromaResidual *residual, const uint8_t *source, const uint8_t *predicted)
+{
+	uint32_t i;
+
+	chromaRows(residual, source, predicted);
+	for (i = 0; i < 4; i++)
+		residual->dc[i] = 0;
+	chromaResidual(residual, 0, 0);
+}
+
+/* 0x8a7a10: the third, from the rows below */
+void avcencChromaResidual2(AvcencChromaResidual *residual, const uint8_t *source, const uint8_t *predicted)
+{
+	chromaRows(residual, source, predicted);
+	chromaResidual(residual, 0, 2);
+}
+
+/* 0x8a7a98: the second, the rows' right half */
+void avcencChromaResidual1(AvcencChromaResidual *residual)
+{
+	chromaResidual(residual, 1, 1);
+}
+
+/* 0x8a7ae8: the fourth */
+void avcencChromaResidual3(AvcencChromaResidual *residual)
+{
+	chromaResidual(residual, 1, 3);
+}
+
+/* 0x8a7b30: whether a level is not 0 */
+uint32_t avcencChromaLevelsAny(const AvcencChromaResidual *residual)
+{
+	return levelsMask(residual->block[0]);
+}
+
+/* 0x8a7b60: whether a DC level is not 0 */
+uint32_t avcencChromaDcAny(const AvcencChromaResidual *residual)
+{
+	uint32_t i, mask = 0;
+
+	/* a byte's bit where it is not 0 */
+	for (i = 0; i < 4; i++) {
+		if ((uint16_t)residual->dc[i] & 0xff)
+			mask |= 1 << (2 * i);
+		if ((uint16_t)residual->dc[i] >> 8)
+			mask |= 2 << (2 * i);
+	}
+	return mask;
+}
+
+/* 0x8a7b80: the 4x4 block's levels, (|c| MF + f) >> qbits */
+void avcencChromaQuantise(AvcencChromaResidual *residual)
+{
+	quantiseBlock(residual->block[0], residual->quantScale[0], residual->rounding,
+		residual->quantShift);
+}
+
+/* 0x8a7c10: the DC levels', (|c| MF(0, 0) + 2f) >> (qbits + 1) */
+void avcencChromaQuantiseDc(AvcencChromaResidual *residual)
+{
+	int32_t value;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++) {
+		value = residual->dc[i] < 0 ? -residual->dc[i] : residual->dc[i];
+		value = (int16_t)((value * residual->dcScale + residual->dcRounding) >> residual->dcShift);
+		residual->dc[i] = residual->dc[i] < 0 ? -value : value;
+	}
+}
+
+/* the 2x2 Hadamard (8.5.11.1's) of four values, 16 bits wide */
+static void hadamard2(int16_t *x)
+{
+	int16_t c0 = x[0], c1 = x[1], c2 = x[2], c3 = x[3];
+
+	x[0] = (int16_t)((int16_t)(c0 + c1) + (int16_t)(c2 + c3));
+	x[1] = (int16_t)((int16_t)(c0 - c1) + (int16_t)(c2 - c3));
+	x[2] = (int16_t)((int16_t)(c0 + c1) - (int16_t)(c2 + c3));
+	x[3] = (int16_t)((int16_t)(c0 - c1) - (int16_t)(c2 - c3));
+}
+
+/* 0x8a7c48: the DC levels' transform */
+void avcencChromaDcTransform(AvcencChromaResidual *residual)
+{
+	hadamard2(residual->dc);
+}
+
+/* 0x8a7c78: the quantisation's parameters: MF by row parity, qbits, f */
+void avcencChromaQuantSetup(AvcencChromaResidual *residual, const int16_t *quantScale, uint32_t quantShift,
+	int32_t rounding)
+{
+	uint32_t i;
+
+	for (i = 0; i < 8; i++)
+		residual->quantScale[i >> 2][i & 3] = quantScale[i];
+	residual->rounding = rounding;
+	residual->quantShift = quantShift;
+	residual->dcScale = quantScale[0];
+	residual->dcRounding = rounding * 2;
+	residual->dcShift = quantShift + 1;
+}
+
+/* 0x8a7cd8: whether a level is past 1 */
+uint32_t avcencChromaLevelsPastOne(const AvcencChromaResidual *residual)
+{
+	uint32_t i;
+	int32_t level;
+
+	for (i = 0; i < 16; i++) {
+		level = residual->block[i >> 2][i & 3];
+		if (level > 1 || level < -1)
+			return 1;
+	}
+	return 0;
+}
+
+/* 0x8a7d10: the 4x4 block's levels into the output */
+void avcencChromaStoreLevels(const AvcencChromaResidual *residual, int16_t *levels)
+{
+	uint32_t i;
+
+	for (i = 0; i < 16; i++)
+		levels[i] = residual->block[i >> 2][i & 3];
+}
+
+/*
+ * 0x8a7d40: a component's DC levels transformed and dequantised as the
+ * chroma job's (avcdecChromaDc): the first block's last, as the chroma
+ * job's kernels take them
+ */
+void avcencChromaDcInverse(AvcChromaRecon *recon, const int16_t *levels, uint32_t qp)
+{
+	int16_t f[4];
+	int32_t value;
+	uint32_t i;
+
+	for (i = 0; i < 4; i++)
+		f[i] = levels[i];
+	hadamard2(f);
+	for (i = 0; i < 4; i++) {
+		value = f[i] * recon->scale[0];
+		if ((uint8_t)qp < 6)
+			value >>= recon->dcShift;
+		else
+			value <<= recon->dcShift;
+		recon->dc[3 - i] = (int16_t)value;
+	}
+}
+
+/* 0x8a7d98 */
+void avcencChromaIdctDc(AvcChromaRecon *recon)
+{
+	avcdecChromaIdctDc(recon);
+}
+
+/* 0x8a7dc0 */
+void avcencChromaIdct(AvcChromaRecon *recon, const int16_t *levels)
+{
+	avcdecChromaIdct(recon, levels);
+}
+
+/* 0x8a7ed0 */
+void avcencChromaStoreCb(const AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaStoreCb(recon, samples);
+}
+
+/* 0x8a7f20 */
+void avcencChromaStoreCr(const AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaStoreCr(recon, samples);
+}
+
+/* 0x8a7f70 */
+void avcencChromaStoreRows(const AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaStoreRows(recon, samples);
+}
+
+/* 0x8a8000 */
+void avcencChromaAddDcCb(AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaAddDcCb(recon, samples);
+}
+
+/* 0x8a8148 */
+void avcencChromaAddDcCr(AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaAddDcCr(recon, samples);
+}
+
+/* 0x8a8290 */
+void avcencChromaBlocksCb(AvcChromaRecon *recon)
+{
+	avcdecChromaBlocksCb(recon);
+}
+
+/* 0x8a82c0 */
+void avcencChromaBlocksCr(AvcChromaRecon *recon)
+{
+	avcdecChromaBlocksCr(recon);
+}
+
+/* 0x8a82f0 */
+void avcencChromaAddCb0(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCb0(recon);
+}
+
+/* 0x8a8318 */
+void avcencChromaAddCb1(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCb1(recon);
+}
+
+/* 0x8a8340 */
+void avcencChromaAddCb2(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCb2(recon);
+}
+
+/* 0x8a8368 */
+void avcencChromaAddCb3(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCb3(recon);
+}
+
+/* 0x8a8388 */
+void avcencChromaAddCr0(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCr0(recon);
+}
+
+/* 0x8a83b0 */
+void avcencChromaAddCr1(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCr1(recon);
+}
+
+/* 0x8a83d8 */
+void avcencChromaAddCr2(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCr2(recon);
+}
+
+/* 0x8a8400 */
+void avcencChromaAddCr3(AvcChromaRecon *recon)
+{
+	avcdecChromaAddCr3(recon);
+}
+
+/* 0x8a8420 */
+void avcencChromaRowsCb(AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaRowsCb(recon, samples);
+}
+
+/* 0x8a8470 */
+void avcencChromaRowsCr(AvcChromaRecon *recon, uint8_t *samples)
+{
+	avcdecChromaRowsCr(recon, samples);
+}
+
+/* 0x8a84c0 */
+void avcencChromaKeepBottom(const AvcChromaRecon *recon, AvcChromaEdges *edges)
+{
+	avcdecChromaKeepBottom(recon, edges);
+}
+
+/* 0x8a84e0 */
+void avcencChromaKeepRight(const AvcChromaRecon *recon, uint8_t (*left)[8])
+{
+	avcdecChromaKeepRight(recon, left);
+}
+
+/* 0x8a8538: Intra chroma DC */
+void avcencChromaIntraDc(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges, uint32_t leftAvailable, uint32_t aboveAvailable)
+{
+	(void)left;
+	avcdecChromaIntraDc(recon, edges, leftAvailable, aboveAvailable);
+}
+
+/* 0x8a86a0: horizontal */
+void avcencChromaIntraHorizontal(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges)
+{
+	(void)left;
+	avcdecChromaIntraHorizontal(recon, edges);
+}
+
+/* 0x8a8728: vertical */
+void avcencChromaIntraVertical(AvcChromaRecon *recon, const AvcChromaEdges *edges)
+{
+	avcdecChromaIntraVertical(recon, edges);
+}
+
+/* 0x8a8770: plane */
+void avcencChromaIntraPlane(AvcChromaRecon *recon, const uint8_t (*left)[8],
+	const AvcChromaEdges *edges)
+{
+	(void)left;
+	avcdecChromaIntraPlane(recon, edges);
+}

@@ -4176,13 +4176,13 @@ static inline uint32_t chromaFraction(uint32_t mv)
 	return (vectorX(mv) & 7) << 3 | (vectorY(mv) & 7);
 }
 
-static void chromaFetch(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
-static void chromaFetchSmall(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetchSmall(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y);
 
 /* 0x83315a: an 8x8 luma block's chroma from list 0's reference, by its vector */
-static void chromaFetch8(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch8(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y, const uint32_t *mv)
 {
 	chromaFetch(stripe, inter, reference, x + (vectorX(*mv) >> 3), y + (vectorY(*mv) >> 3));
@@ -4190,7 +4190,7 @@ static void chromaFetch8(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
 }
 
 /* 0x833198: list 1's */
-static void chromaFetch8List1(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch8List1(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y, const uint32_t *mv)
 {
 	chromaFetch(stripe, inter, reference, x + (vectorX(*mv) >> 3), y + (vectorY(*mv) >> 3));
@@ -4199,7 +4199,7 @@ static void chromaFetch8List1(const AvcdecStripe *stripe, AvcdecChromaInter *int
 
 /* the 2x2 block of a 4x4 luma block's vector fetched, and put by itself */
 static inline uint32_t chromaFetchQuarter(const AvcdecStripe *stripe,
-	AvcdecChromaInter *inter, const uint8_t *reference, int32_t x, int32_t y, uint32_t mv,
+	AvcChromaInter *inter, const uint8_t *reference, int32_t x, int32_t y, uint32_t mv,
 	uint32_t quarter)
 {
 	chromaFetchSmall(stripe, inter, reference, x + (vectorX(mv) >> 3) + (quarter & 1) * 2,
@@ -4222,7 +4222,7 @@ static inline uint32_t chromaFetchQuarter(const AvcdecStripe *stripe,
 }
 
 /* 0x8331d6: an 8x8 luma block of 4x4 ones', list 0's (the vectors by 4x4 block and list) */
-static void chromaFetch4(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch4(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y, const uint32_t (*mv)[2])
 {
 	uint32_t fractions[4], i;
@@ -4234,7 +4234,7 @@ static void chromaFetch4(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
 }
 
 /* 0x8332f4: list 1's */
-static void chromaFetch4List1(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch4List1(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y, const uint32_t (*mv)[2])
 {
 	uint32_t fractions[4], i;
@@ -4279,7 +4279,7 @@ static inline void chromaInvalidate(const AvcdecStripe *stripe)
 }
 
 /* an 8x8 luma block's chroma from one list's reference: whole, or by its 4x4 blocks */
-static inline void chromaPredictBlock(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static inline void chromaPredictBlock(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	uint32_t block, int32_t x, int32_t y, uint32_t list)
 {
 	const VideoHelperSlice *slice = stripe->slice;
@@ -4315,7 +4315,7 @@ static inline uint8_t *chromaBlock(const AvcdecStripe *stripe, uint32_t block, i
 /* 0x833420: a P macroblock's */
 static void chromaPredictP(AvcdecStripe *stripe)
 {
-	AvcdecChromaInter inter;
+	AvcChromaInter inter;
 	uint32_t block;
 	uint8_t *samples;
 	int32_t x, y;
@@ -4332,7 +4332,7 @@ static void chromaPredictP(AvcdecStripe *stripe)
 static void chromaPredictB(AvcdecStripe *stripe)
 {
 	const int8_t *refIdx = stripe->mb->refIdx.b;
-	AvcdecChromaInter inter;
+	AvcChromaInter inter;
 	uint32_t block;
 	uint8_t *samples;
 	int32_t x, y;
@@ -4362,7 +4362,7 @@ static inline int32_t chromaRound(uint32_t shift)
 }
 
 /* 0x833c30: list 0's explicit weighting, then the block stored */
-static void chromaWeightP(const AvcdecStripe *stripe, AvcdecChromaInter *inter, int32_t refIdx,
+static void chromaWeightP(const AvcdecStripe *stripe, AvcChromaInter *inter, int32_t refIdx,
 	uint8_t *cb, uint8_t *cr)
 {
 	const VideoHelperSlice *slice = stripe->slice;
@@ -4379,7 +4379,7 @@ static void chromaWeightP(const AvcdecStripe *stripe, AvcdecChromaInter *inter, 
 }
 
 /* 0x833c8a: list 1's */
-static void chromaWeightList1(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaWeightList1(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	int32_t refIdx, uint8_t *cb, uint8_t *cr)
 {
 	const VideoHelperSlice *slice = stripe->slice;
@@ -4396,7 +4396,7 @@ static void chromaWeightList1(const AvcdecStripe *stripe, AvcdecChromaInter *int
 }
 
 /* 0x833ce4: both lists' explicit weights, the offsets averaged */
-static void chromaWeightBi(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaWeightBi(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	int32_t refIdx0, int32_t refIdx1, uint8_t *cb, uint8_t *cr)
 {
 	const VideoHelperSlice *slice = stripe->slice;
@@ -4417,7 +4417,7 @@ static void chromaWeightBi(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
 }
 
 /* 0x833d64: the implicit weights (8.4.2.3.1): w0 by the pictures' distances, w1 64 - w0 */
-static void chromaWeightImplicit(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaWeightImplicit(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	int32_t refIdx0, int32_t refIdx1, uint8_t *cb, uint8_t *cr)
 {
 	const VideoHelperSlice *slice = stripe->slice;
@@ -4440,7 +4440,7 @@ static void chromaWeightImplicit(const AvcdecStripe *stripe, AvcdecChromaInter *
 static void chromaPredictPWeighted(AvcdecStripe *stripe)
 {
 	const int8_t *refIdx = stripe->mb->refIdx.b;
-	AvcdecChromaInter inter;
+	AvcChromaInter inter;
 	uint32_t block;
 	uint8_t *samples;
 	int32_t x, y;
@@ -4457,7 +4457,7 @@ static void chromaPredictPWeighted(AvcdecStripe *stripe)
 static void chromaPredictBExplicit(AvcdecStripe *stripe)
 {
 	const int8_t *refIdx = stripe->mb->refIdx.b;
-	AvcdecChromaInter inter;
+	AvcChromaInter inter;
 	uint32_t block;
 	uint8_t *samples;
 	int32_t x, y, ref0, ref1;
@@ -4486,7 +4486,7 @@ static void chromaPredictBExplicit(AvcdecStripe *stripe)
 static void chromaPredictBImplicit(AvcdecStripe *stripe)
 {
 	const int8_t *refIdx = stripe->mb->refIdx.b;
-	AvcdecChromaInter inter;
+	AvcChromaInter inter;
 	uint32_t block;
 	uint8_t *samples;
 	int32_t x, y, ref0, ref1;
@@ -4520,7 +4520,7 @@ static inline const uint8_t *chromaTiled(const uint8_t *reference, uint32_t pitc
 }
 
 /* 0x833a88: the five rows of five samples an 8x8 luma block's 4x4 chroma reads */
-static void chromaFetch(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetch(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->chromaWidth, height = stripe->chromaHeight;
@@ -4541,7 +4541,7 @@ static void chromaFetch(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
 }
 
 /* 0x833b5c: the three rows of three a 4x4 luma block's 2x2 reads */
-static void chromaFetchSmall(const AvcdecStripe *stripe, AvcdecChromaInter *inter,
+static void chromaFetchSmall(const AvcdecStripe *stripe, AvcChromaInter *inter,
 	const uint8_t *reference, int32_t x, int32_t y)
 {
 	int32_t width = stripe->chromaWidth, height = stripe->chromaHeight;
@@ -4593,9 +4593,9 @@ static void chromaResidualOpen(const AvcdecDecoderInfo *info, const AvcdecRow *e
 		stripe->left = stripe->mb + count - 1;
 	else
 		stripe->left = stripe->mb - 1;
-	stripe->chromaEdges = (AvcdecChromaEdges *)vnzPublicOpenPrivate(info->row2 +
-		x * sizeof(AvcdecChromaEdges), count * sizeof(AvcdecChromaEdges) +
-		sizeof(AvcdecChromaEdges));
+	stripe->chromaEdges = (AvcChromaEdges *)vnzPublicOpenPrivate(info->row2 +
+		x * sizeof(AvcChromaEdges), count * sizeof(AvcChromaEdges) +
+		sizeof(AvcChromaEdges));
 	if (x && (!job->load || job->firstX != x || job->firstY != row))
 		return;
 	rows = row - job->firstY;
@@ -4636,7 +4636,7 @@ static void chromaResidualClose(const AvcdecDecoderInfo *info, const AvcdecRow *
 	vnzPublicCloseProtected((uint32_t)(stripe->mb - mode), mode * sizeof(AvcdecMbState));
 	vnzPublicCloseProtected((uint32_t)(stripe->filter - mode), mode * sizeof(AvcdecMbFilter));
 	vnzPublicClosePrivate((uint32_t)(stripe->chromaEdges - count),
-		count * sizeof(AvcdecChromaEdges) + sizeof(AvcdecChromaEdges));
+		count * sizeof(AvcChromaEdges) + sizeof(AvcChromaEdges));
 	if ((int8_t)entry->row)
 		vnzPublicClosePrivate((uint32_t)(stripe->chromaAbove - count * 128), count * 128);
 	if ((int8_t)entry->x)
@@ -4647,7 +4647,7 @@ static void chromaResidualClose(const AvcdecDecoderInfo *info, const AvcdecRow *
 }
 
 /* 0x83410c: the dequantisation of QPc */
-static void chromaScale(AvcdecChromaRecon *recon, uint32_t qp)
+static void chromaScale(AvcChromaRecon *recon, uint32_t qp)
 {
 	const int16_t *scale = avcdecLevelScale[avcdecQpRemainder[qp]];
 	uint32_t i;
@@ -4659,7 +4659,7 @@ static void chromaScale(AvcdecChromaRecon *recon, uint32_t qp)
 }
 
 /* a component's coded levels taken: its DC levels, by the cbf's bit */
-static inline const int16_t *chromaDcLevels(AvcdecChromaRecon *recon, const int16_t *coef,
+static inline const int16_t *chromaDcLevels(AvcChromaRecon *recon, const int16_t *coef,
 	uint32_t coded, uint32_t qp)
 {
 	if (coded)
@@ -4670,7 +4670,7 @@ static inline const int16_t *chromaDcLevels(AvcdecChromaRecon *recon, const int1
 }
 
 /* a component's 4x4 block: its levels transformed, or its DC level alone */
-static inline const int16_t *chromaBlockLevels(AvcdecChromaRecon *recon, const int16_t *coef,
+static inline const int16_t *chromaBlockLevels(AvcChromaRecon *recon, const int16_t *coef,
 	uint32_t coded)
 {
 	if (!coded) {
@@ -4682,7 +4682,7 @@ static inline const int16_t *chromaBlockLevels(AvcdecChromaRecon *recon, const i
 }
 
 /* Cb's residual by its 4x4 blocks, added and stored */
-static inline const int16_t *chromaResidualCb(AvcdecChromaRecon *recon, const int16_t *coef,
+static inline const int16_t *chromaResidualCb(AvcChromaRecon *recon, const int16_t *coef,
 	uint32_t dc, uint32_t ac, uint32_t qp, uint8_t *samples)
 {
 	avcdecChromaBlocksCb(recon);
@@ -4700,7 +4700,7 @@ static inline const int16_t *chromaResidualCb(AvcdecChromaRecon *recon, const in
 }
 
 /* Cr's */
-static inline const int16_t *chromaResidualCr(AvcdecChromaRecon *recon, const int16_t *coef,
+static inline const int16_t *chromaResidualCr(AvcChromaRecon *recon, const int16_t *coef,
 	uint32_t dc, uint32_t ac, uint32_t qp, uint8_t *samples)
 {
 	avcdecChromaBlocksCr(recon);
@@ -4721,15 +4721,15 @@ static inline const int16_t *chromaResidualCr(AvcdecChromaRecon *recon, const in
 #define CHROMA_CBF_AC_SHIFT	16
 #define CHROMA_CBF_DC_SHIFT	25
 
-static void chromaResidualNone(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
-static void chromaResidualDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
-static void chromaResidualAc(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
-static void chromaKeep(AvcdecStripe *stripe, const AvcdecChromaRecon *recon);
+static void chromaResidualNone(AvcdecStripe *stripe, AvcChromaRecon *recon);
+static void chromaResidualDc(AvcdecStripe *stripe, AvcChromaRecon *recon);
+static void chromaResidualAc(AvcdecStripe *stripe, AvcChromaRecon *recon);
+static void chromaKeep(AvcdecStripe *stripe, const AvcChromaRecon *recon);
 
 /* 0x833e88: an inter macroblock's residual by its coded_block_pattern's chroma, then the edges kept */
 static void chromaInter(AvcdecStripe *stripe)
 {
-	AvcdecChromaRecon recon;
+	AvcChromaRecon recon;
 	uint32_t pattern = (stripe->kind >> (AVC_MB_CBP_SHIFT + 4)) & 3;
 
 	if (pattern == 1)
@@ -4742,7 +4742,7 @@ static void chromaInter(AvcdecStripe *stripe)
 }
 
 /* 0x833eb8: none: the samples the macroblocks right and below read */
-static void chromaResidualNone(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaResidualNone(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	uint32_t kind = stripe->kind;
 
@@ -4753,7 +4753,7 @@ static void chromaResidualNone(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
 }
 
 /* 0x833ee8: DC levels only */
-static void chromaResidualDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaResidualDc(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	AvcdecChromaRowData *rowData;
 	uint32_t qp = (uint8_t)stripe->qpChroma;
@@ -4778,7 +4778,7 @@ static void chromaResidualDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
 }
 
 /* 0x833f66: AC levels too: a component with any by its 4x4 blocks */
-static void chromaResidualAc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaResidualAc(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	uint32_t cbf = stripe->cbf, ac = (cbf >> CHROMA_CBF_AC_SHIFT) & 0xff;
 	uint32_t qp = (uint8_t)stripe->qpChroma, dc = (cbf >> CHROMA_CBF_DC_SHIFT) & 3;
@@ -4801,9 +4801,9 @@ static void chromaResidualAc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
  * the corner the next one reads (the bottom row above's last), the
  * macroblock's last row and column
  */
-static void chromaKeep(AvcdecStripe *stripe, const AvcdecChromaRecon *recon)
+static void chromaKeep(AvcdecStripe *stripe, const AvcChromaRecon *recon)
 {
-	AvcdecChromaEdges *edges = stripe->chromaEdges;
+	AvcChromaEdges *edges = stripe->chromaEdges;
 	uint32_t kind = stripe->kind;
 
 	edges[1].aboveLeftCr = edges->above[1][7];
@@ -4815,15 +4815,15 @@ static void chromaKeep(AvcdecStripe *stripe, const AvcdecChromaRecon *recon)
 }
 
 static void chromaPcm(AvcdecStripe *stripe);
-static void chromaIntraPredict(AvcdecStripe *stripe, AvcdecChromaRecon *recon, uint32_t mode);
-static void chromaIntraNone(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
-static void chromaIntraDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
-static void chromaIntraAc(AvcdecStripe *stripe, AvcdecChromaRecon *recon);
+static void chromaIntraPredict(AvcdecStripe *stripe, AvcChromaRecon *recon, uint32_t mode);
+static void chromaIntraNone(AvcdecStripe *stripe, AvcChromaRecon *recon);
+static void chromaIntraDc(AvcdecStripe *stripe, AvcChromaRecon *recon);
+static void chromaIntraAc(AvcdecStripe *stripe, AvcChromaRecon *recon);
 
 /* 0x834180: an intra macroblock's: its samples as they came, or predicted and reconstructed */
 static void chromaIntra(AvcdecStripe *stripe)
 {
-	AvcdecChromaRecon recon;
+	AvcChromaRecon recon;
 	uint32_t kind, pattern;
 
 	chromaInvalidate(stripe);
@@ -4847,7 +4847,7 @@ static void chromaIntra(AvcdecStripe *stripe)
 static void chromaPcm(AvcdecStripe *stripe)
 {
 	AvcdecChromaRowData *rowData = stripe->chromaRowData;
-	AvcdecChromaEdges *edges = stripe->chromaEdges;
+	AvcChromaEdges *edges = stripe->chromaEdges;
 	uint8_t *samples = stripe->chroma;
 	uint32_t kind = stripe->kind, component, i;
 
@@ -4871,9 +4871,9 @@ static void chromaPcm(AvcdecStripe *stripe)
 }
 
 /* 0x8342e4: by intra_chroma_pred_mode */
-static void chromaIntraPredict(AvcdecStripe *stripe, AvcdecChromaRecon *recon, uint32_t mode)
+static void chromaIntraPredict(AvcdecStripe *stripe, AvcChromaRecon *recon, uint32_t mode)
 {
-	const AvcdecChromaEdges *edges = stripe->chromaEdges;
+	const AvcChromaEdges *edges = stripe->chromaEdges;
 	uint32_t neighbours;
 
 	switch (mode) {
@@ -4894,13 +4894,13 @@ static void chromaIntraPredict(AvcdecStripe *stripe, AvcdecChromaRecon *recon, u
 }
 
 /* 0x83433e: no residual: the prediction stored */
-static void chromaIntraNone(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaIntraNone(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	avcdecChromaStoreRows(recon, stripe->chroma);
 }
 
 /* 0x834352: DC levels only, a component without the prediction stored */
-static void chromaIntraDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaIntraDc(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	AvcdecChromaRowData *rowData;
 	uint32_t qp = (uint8_t)stripe->qpChroma;
@@ -4928,7 +4928,7 @@ static void chromaIntraDc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
 }
 
 /* 0x8343da: AC levels too */
-static void chromaIntraAc(AvcdecStripe *stripe, AvcdecChromaRecon *recon)
+static void chromaIntraAc(AvcdecStripe *stripe, AvcChromaRecon *recon)
 {
 	uint32_t cbf = stripe->cbf, ac = (cbf >> CHROMA_CBF_AC_SHIFT) & 0xff;
 	uint32_t qp = (uint8_t)stripe->qpChroma, dc = (cbf >> CHROMA_CBF_DC_SHIFT) & 3;
