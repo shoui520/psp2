@@ -120,6 +120,7 @@ int _Getstr(_Sft *px, int sfl);
 void _Vacopy(va_list *pap, va_list ap);
 void _Ldtob(_Pft *px, char code);
 void _Litob(_Pft *px, char code);
+void _Genld(_Pft *px, char code, char *p, short nsig, short xexp);
 
 /* the formatted I/O engines: pfn writes or reads through arg */
 typedef void *_Prout(void *arg, const char *buf, size_t n);
