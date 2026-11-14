@@ -1,6 +1,7 @@
 /*
  * The complex analysis bank's modulation (0x86cc2a, 0x86cc64; kernels
- * 0x8e3988 and 0x8e3c98 for 32 points): the input turned pairwise into
+ * 0x8e3560 and 0x8e3988 for the real part, 0x8e3c98 and 0x8e3fe0 for the
+ * imaginary, of 64 and 32 points): the input turned pairwise into
  * length / 2 complex points, a complex FFT, and the result turned back,
  * the imaginary part's kernel placing and negating the same products.
  */
@@ -70,8 +71,8 @@ static int32_t diff27(int32_t a, int32_t p, int32_t b, int32_t q, int32_t negate
 	return (int32_t)((negate ? -value : value) >> 27);
 }
 
-/* 0x8e3988 (imaginary = 0) and 0x8e3c98 (imaginary = 1) */
-static void modulate(const int32_t *in, int32_t length, int32_t *out, const int32_t *pre,
+/* the 32-point kernels' work, from in to out */
+static inline void modulate(const int32_t *in, int32_t length, int32_t *out, const int32_t *pre,
 		     const int32_t *post, int32_t imaginary)
 {
 	int32_t i;
@@ -132,58 +133,111 @@ static void modulate(const int32_t *in, int32_t length, int32_t *out, const int3
 }
 
 /*
- * The 64-point kernels (0x8e3560 real, 0x8e3fe0 imaginary), in place: each
- * point paired with its mirror under the pre-twiddle, the FFT, and each
- * complex result split back to both ends under the post-twiddle.
+ * The 64-point kernels' work, in place: each point paired with its mirror
+ * under the pre-twiddle, the FFT, and each complex result split back to both
+ * ends under the post-twiddle.
  */
-void aacSbrModulate64(int32_t *data, int32_t imaginary)
+static inline void pre64(int32_t *data, int32_t length, const int32_t *cos,
+	const int32_t *sin, int32_t n, int32_t first, int32_t second, int32_t imaginary)
 {
-	int32_t in[64];
-	int32_t n;
+	int32_t c = cos[n], s = sin[n];
 
-	aacSbrCopy((int8_t *)in, (const int8_t *)data, sizeof(in));
-	for (n = 0; n < 32; n++) {
-		int32_t first = in[2 * n], second = in[63 - 2 * n];
-		int32_t c = preCos64[n], s = preSin64[n];
+	(void)length;
+	if (!imaginary) {
+		data[2 * n] = sum28(first, c, second, s);
+		data[2 * n + 1] = diff28(second, c, first, s);
+	} else {
+		data[2 * n] = diff28(second, s, first, c);
+		data[2 * n + 1] = sum28(first, s, second, c);
+	}
+}
 
-		if (!imaginary) {
-			data[2 * n] = sum28(first, c, second, s);
-			data[2 * n + 1] = diff28(second, c, first, s);
-		} else {
-			data[2 * n] = diff28(second, s, first, c);
-			data[2 * n + 1] = sum28(first, s, second, c);
-		}
+static inline void post64(int32_t *data, int32_t length, const int32_t *post, int32_t n,
+	int32_t re, int32_t im, int32_t imaginary)
+{
+	int32_t c = post[n], s = post[(length >> 1) - n];
+
+	if (!imaginary) {
+		data[2 * n] = sum27(re, s, im, c, 0);
+		data[length - 1 - 2 * n] = diff27(re, c, im, s, 0);
+	} else {
+		data[2 * n] = diff27(im, s, re, c, 0);
+		data[length - 1 - 2 * n] = sum27(re, s, im, c, 1);
+	}
+}
+
+/*
+ * The 64-point kernels' work, in place: each point paired with its mirror
+ * under the pre-twiddle, the FFT, and each complex result split back to both
+ * ends under the post-twiddle. Point n and point half - 1 - n read and write
+ * the same four words, so they are taken together.
+ */
+static inline void modulate64(int32_t *data, int32_t length, const int32_t *cos,
+	const int32_t *sin, const int32_t *post, int32_t imaginary)
+{
+	int32_t half = length >> 1, n;
+
+	for (n = 0; n < half >> 1; n++) {
+		int32_t m = half - 1 - n;
+		int32_t a = data[2 * n], b = data[2 * n + 1];
+		int32_t y = data[length - 2 - 2 * n], z = data[length - 1 - 2 * n];
+
+		pre64(data, length, cos, sin, n, a, z, imaginary);
+		pre64(data, length, cos, sin, m, y, b, imaginary);
 	}
 
-	aacFft(data, 32);
+	aacFft(data, half);
 
-	aacSbrCopy((int8_t *)in, (const int8_t *)data, sizeof(in));
-	for (n = 0; n < 32; n++) {
-		int32_t re = in[2 * n], im = in[2 * n + 1];
-		int32_t c = postSin64[n], s = postSin64[32 - n];
+	for (n = 0; n < half >> 1; n++) {
+		int32_t m = half - 1 - n;
+		int32_t a = data[2 * n], b = data[2 * n + 1];
+		int32_t y = data[length - 2 - 2 * n], z = data[length - 1 - 2 * n];
 
-		if (!imaginary) {
-			data[2 * n] = sum27(re, s, im, c, 0);
-			data[63 - 2 * n] = diff27(re, c, im, s, 0);
-		} else {
-			data[2 * n] = diff27(im, s, re, c, 0);
-			data[63 - 2 * n] = sum27(re, s, im, c, 1);
-		}
+		post64(data, length, post, n, a, b, imaginary);
+		post64(data, length, post, m, y, z, imaginary);
 	}
+}
+
+/* 0x8e3560 */
+static __attribute__((noinline, noclone)) void modulate64Real(int32_t *data, int32_t length,
+	const int32_t *cos, const int32_t *sin, const int32_t *post)
+{
+	modulate64(data, length, cos, sin, post, 0);
+}
+
+/* 0x8e3988 */
+static __attribute__((noinline, noclone)) void modulateReal(const int32_t *in, int32_t length,
+	int32_t *out, const int32_t *pre, const int32_t *post)
+{
+	modulate(in, length, out, pre, post, 0);
+}
+
+/* 0x8e3c98 */
+static __attribute__((noinline, noclone)) void modulateImag(const int32_t *in, int32_t length,
+	int32_t *out, const int32_t *pre, const int32_t *post)
+{
+	modulate(in, length, out, pre, post, 1);
+}
+
+/* 0x8e3fe0 */
+static __attribute__((noinline, noclone)) void modulate64Imag(int32_t *data, int32_t length,
+	const int32_t *cos, const int32_t *sin, const int32_t *post)
+{
+	modulate64(data, length, cos, sin, post, 1);
 }
 
 void aacSbrModulateReal(int32_t *data, int32_t length, int32_t *out)
 {
 	if (length == 64)
-		aacSbrModulate64(data, 0);
+		modulate64Real(data, 64, preCos64, preSin64, postSin64);
 	else if (length == 32)
-		modulate(data, 32, out, preTwiddle32, postTwiddle32, 0);
+		modulateReal(data, 32, out, preTwiddle32, postTwiddle32);
 }
 
 void aacSbrModulateImag(int32_t *data, int32_t length, int32_t *out)
 {
 	if (length == 64)
-		aacSbrModulate64(data, 1);
+		modulate64Imag(data, 64, preCos64, preSin64, postSin64);
 	else if (length == 32)
-		modulate(data, 32, out, preTwiddle32, postTwiddle32, 1);
+		modulateImag(data, 32, out, preTwiddle32, postTwiddle32);
 }
