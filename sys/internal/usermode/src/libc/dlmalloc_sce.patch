@@ -170,7 +170,7 @@
  /* Get the internal overhead associated with chunk p */
  #define overhead_for(p)\
 - (is_mmapped(p)? MMAP_CHUNK_OVERHEAD : CHUNK_OVERHEAD)
-+ (is_mmapped(p)? MMAP_CHUNK_OVERHEAD : CHUNK_OVERHEAD_OF((p)->head & FOOTER_BIT))
++ CHUNK_OVERHEAD_OF((p)->head & FOOTER_BIT)	/* SCE: no mmapped chunks */
  
  /* Return true if malloced space is not necessarily cleared */
  #if MMAP_CLEARS
@@ -966,25 +966,8 @@
 -        tbase = br;
 -        tsize = asize;
 -      }
-+/*
-+  SCE: allocate a memblock of size bytes named name; 0 on success, with
-+  its base in *base and its id, guarded, in its first word.
-+*/
-+static int alloc_memblock(const char* name, size_t size, char** base) {
-+  SceUID uid = sceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, size, NULL);
-+  if (uid > 0) {
-+    void* p = NULL;
-+    int res = sceKernelGetMemBlockBase(uid, &p);
-+    if (res == 0) {
-+      *(SceUID*)p = _Getptrguard() ^ uid;
-+      *base = (char*)p;
-+      return 0;
-     }
-+    uid = res;
-+  }
-+  return uid;
-+}
- 
+-    }
+-
 -    if (tbase == CMFAIL) {    /* Cope with partial failure */
 -      if (br != CMFAIL) {    /* Try to use/extend the space we did get */
 -        if (asize < HALF_MAX_SIZE_T &&
@@ -1007,28 +990,26 @@
 -      }
 -      else
 -        disable_contiguous(m); /* Don't try contiguous path in the future */
--    }
 +/*
-+  SCE: get memory from the system: a memblock for the space, or the default
-+  heap's own block. With extend set the new memory only grows the space
-+  and the result says whether it did.
++  SCE: allocate a memblock of size bytes named name; 0 on success, with
++  its base in *base and its id, guarded, in its first word.
 +*/
-+static void* sys_alloc(mstate m, size_t nb, size_t bytes, flag_t extend) {
-+  char* tbase;
-+  size_t asize;
-+  flag_t footers = m->mflags & USE_FOOTERS_BIT;
-+  size_t need = nb + TOP_FOOT_SIZE_OF(footers);
- 
++static int alloc_memblock(const char* name, size_t size, char** base) {
++  SceUID uid = sceKernelAllocMemBlock(name, SCE_KERNEL_MEMBLOCK_TYPE_USER_RW, size, NULL);
++  if (uid > 0) {
++    void* p = NULL;
++    int res = sceKernelGetMemBlockBase(uid, &p);
++    if (res == 0) {
++      *(SceUID*)p = _Getptrguard() ^ uid;
++      *base = (char*)p;
++      return 0;
+     }
+-
 -    RELEASE_MORECORE_LOCK();
--  }
-+  if (is_global(m) && heapNotExtended)
-+    asize = heapSize;
-+  else if (is_global(m) && m->top == 0 && heapInitialSizeSet)
-+    asize = heapInitialSize;
-+  else
-+    asize = (need + m->granularity + SIZE_T_ONE) & ~(m->granularity - SIZE_T_ONE);
-+  if (asize <= nb)
-+    return 0; /* wraparound */
++    uid = res;
+   }
++  return uid;
++}
  
 -  if (HAVE_MMAP && tbase == CMFAIL) {  /* Try MMAP */
 -    size_t req = nb + TOP_FOOT_SIZE + SIZE_T_ONE;
@@ -1041,15 +1022,28 @@
 -        mmap_flag = IS_MMAPPED_BIT;
 -      }
 -    }
-+  if (is_global(m)) {
-+    if (heapSize != MAX_SIZE_T && heapSize < m->footprint + asize)
-+      return 0;
-+    if (heapBlock != 0)
-+      tbase = heapBlock;
-+    else if (alloc_memblock("SceLibcMalloc", asize, &tbase) != 0)
-+      return 0;
-   }
--
+-  }
++/*
++  SCE: get memory from the system: a memblock for the space, or the default
++  heap's own block. With extend set the new memory only grows the space
++  and the result says whether it did.
++*/
++static void* sys_alloc(mstate m, size_t nb, size_t bytes, flag_t extend) {
++  char name[0x23];
++  char* tbase;
++  size_t asize;
++  flag_t footers = m->mflags & USE_FOOTERS_BIT;
++  size_t need = nb + TOP_FOOT_SIZE_OF(footers);
++
++  if (is_global(m) && heapNotExtended)
++    asize = heapSize;
++  else if (is_global(m) && m->top == 0 && heapInitialSizeSet)
++    asize = heapInitialSize;
++  else
++    asize = (need + m->granularity + SIZE_T_ONE) & ~(m->granularity - SIZE_T_ONE);
++  if (asize <= nb)
++    return 0; /* wraparound */
+ 
 -  if (HAVE_MORECORE && tbase == CMFAIL) { /* Try noncontiguous MORECORE */
 -    size_t asize = granularity_align(nb + TOP_FOOT_SIZE + SIZE_T_ONE);
 -    if (asize < HALF_MAX_SIZE_T) {
@@ -1067,8 +1061,15 @@
 -        }
 -      }
 -    }
++  if (is_global(m)) {
++    if (heapSize != MAX_SIZE_T && heapSize < m->footprint + asize)
++      return 0;
++    if (heapBlock != 0)
++      tbase = heapBlock;
++    else if (alloc_memblock("SceLibcMalloc", asize, &tbase) != 0)
++      return 0;
++  }
 +  else {
-+    char name[0x23];
 +    sceClibSnprintf(name, sizeof(name), "SceLibcMspaceU%08X", (unsigned int)m);
 +    if (alloc_memblock(name, asize, &tbase) != 0)
 +      return 0;
@@ -1476,7 +1477,7 @@
  /* -------------------------- public routines ---------------------------- */
  
  #if !ONLY_MSPACES
-@@ -4365,99 +4426,238 @@
+@@ -4365,99 +4426,241 @@
  
  #if MSPACES
  
@@ -1511,8 +1512,11 @@
 +    libc = NULL;
 +  else if (5 <= param->version)
 +    libc = param->sceLibcParam;
-+  else
-+    libc = &__sce_libcparam;
++  else {
++    /* SCE: the weak reference is tested through memory, so that it is not folded */
++    const SceLibcParam* volatile weak = &__sce_libcparam;
++    libc = (weak != NULL)? &__sce_libcparam : NULL;
++  }
 +  if (libc == NULL) {
 +    heapSize = MAX_SIZE_T;
 +    return 0;
@@ -1774,7 +1778,7 @@
        idx = small_index(nb);
        smallbits = ms->smallmap >> idx;
  
-@@ -4471,7 +4671,7 @@
+@@ -4471,7 +4674,7 @@
          set_inuse_and_pinuse(ms, p, small_index2size(idx));
          mem = chunk2mem(p);
          check_malloced_chunk(ms, mem, nb);
@@ -1783,7 +1787,7 @@
        }
  
        else if (nb > ms->dvsize) {
-@@ -4498,22 +4698,22 @@
+@@ -4498,22 +4701,22 @@
            }
            mem = chunk2mem(p);
            check_malloced_chunk(ms, mem, nb);
@@ -1810,7 +1814,7 @@
        }
      }
  
-@@ -4534,7 +4734,7 @@
+@@ -4534,7 +4737,7 @@
        }
        mem = chunk2mem(p);
        check_malloced_chunk(ms, mem, nb);
@@ -1819,7 +1823,7 @@
      }
  
      else if (nb < ms->topsize) { /* Split top */
-@@ -4546,11 +4746,35 @@
+@@ -4546,11 +4749,35 @@
        mem = chunk2mem(p);
        check_top_chunk(ms, ms->top);
        check_malloced_chunk(ms, mem, nb);
@@ -1857,7 +1861,7 @@
    postaction:
      POSTACTION(ms);
      return mem;
-@@ -4562,28 +4786,26 @@
+@@ -4562,39 +4789,40 @@
  void mspace_free(mspace msp, void* mem) {
    if (mem != 0) {
      mchunkptr p  = mem2chunk(mem);
@@ -1871,12 +1875,12 @@
 -      USAGE_ERROR_ACTION(fm, p);
 -      return;
 +    flag_t footers;
-+    if (fm != 0) {
-+      if ((fm->mflags & USE_FOOTERS_BIT) != 0 && get_mstate_for(p) != fm)
-+        ABORT;
++    if (fm == 0) {
++      if ((p->head & FOOTER_BIT) != 0)
++        fm = get_mstate_for(p);
      }
-+    else if ((p->head & FOOTER_BIT) != 0)
-+      fm = get_mstate_for(p);
++    else if ((fm->mflags & USE_FOOTERS_BIT) != 0 && (fm = get_mstate_for(p)) != (mstate)msp)
++      ABORT;
      if (!PREACTION(fm)) {
 +      footers = fm->mflags & USE_FOOTERS_BIT;
        check_inuse_chunk(fm, p);
@@ -1896,32 +1900,33 @@
            }
            else {
              mchunkptr prev = chunk_minus_offset(p, prevsize);
-@@ -4591,10 +4813,12 @@
++            mchunkptr freed = p;	/* SCE */
+             psize += prevsize;
              p = prev;
              if (RTCHECK(ok_address(fm, prev))) { /* consolidate backward */
                if (p != fm->dv) {
-+                clear_cinuse(mem2chunk(mem));	/* SCE */
++                clear_cinuse(freed);	/* SCE */
                  unlink_chunk(fm, p, prevsize);
                }
                else if ((next->head & INUSE_BITS) == INUSE_BITS) {
                  fm->dvsize = psize;
-+                clear_cinuse(mem2chunk(mem));	/* SCE */
++                clear_cinuse(freed);	/* SCE */
                  set_free_with_pinuse(p, psize, next);
                  goto postaction;
                }
-@@ -4614,8 +4838,9 @@
+@@ -4614,8 +4842,9 @@
                  fm->dv = 0;
                  fm->dvsize = 0;
                }
 -              if (should_trim(fm, tsize))
 -                sys_trim(fm, 0);
 +              /* SCE: the default heap cannot trim */
-+              if (is_global(fm) && should_trim(fm, tsize))
++              if (is_global(fm) && tsize > fm->trim_check)
 +                ABORT;
                goto postaction;
              }
              else if (next == fm->dv) {
-@@ -4645,6 +4870,40 @@
+@@ -4645,6 +4874,40 @@
      erroraction:
        USAGE_ERROR_ACTION(fm, p);
      postaction:
@@ -1962,7 +1967,7 @@
        POSTACTION(fm);
      }
    }
-@@ -4665,7 +4924,7 @@
+@@ -4665,7 +4928,7 @@
        req = MAX_SIZE_T; /* force downstream failure on overflow */
    }
    mem = internal_malloc(ms, req);
@@ -1971,7 +1976,7 @@
      memset(mem, 0, req);
    return mem;
  }
-@@ -4673,24 +4932,17 @@
+@@ -4673,24 +4936,17 @@
  void* mspace_realloc(mspace msp, void* oldmem, size_t bytes) {
    if (oldmem == 0)
      return mspace_malloc(msp, bytes);
@@ -2004,7 +2009,7 @@
    }
  }
  
-@@ -4703,6 +4955,7 @@
+@@ -4703,6 +4959,7 @@
    return internal_memalign(ms, alignment, bytes);
  }
  
@@ -2012,7 +2017,7 @@
  void** mspace_independent_calloc(mspace msp, size_t n_elements,
                                   size_t elem_size, void* chunks[]) {
    size_t sz = elem_size; /* serves as 1-element array */
-@@ -4724,6 +4977,376 @@
+@@ -4724,6 +4981,376 @@
    return ialloc(ms, n_elements, sizes, 0, chunks);
  }
  
@@ -2357,7 +2362,7 @@
 +  flag_t footers;
 +  PREACTION(m);
 +  footers = m->mflags & USE_FOOTERS_BIT;
-+  if (malloc_corruption_error_count != 0 || is_initialized(m))
++  if ((malloc_corruption_error_count | (size_t)m->top) != 0)
 +    used = m->current_in_use;
 +  else if (heapNotExtended && !heapDelayedAlloc)
 +    used = SEGMENT_IN_USE_OF(footers);
@@ -2389,7 +2394,7 @@
  int mspace_trim(mspace msp, size_t pad) {
    int result = 0;
    mstate ms = (mstate)msp;
-@@ -4785,6 +5408,7 @@
+@@ -4785,6 +5412,7 @@
    return change_mparam(param_number, value);
  }
  
