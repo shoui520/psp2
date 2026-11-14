@@ -37,6 +37,7 @@ void romLibResolveContext(unsigned int slotTime);	/* 0x03f3a963: microseconds */
 void romLibFormatContext(void);			/* 0x03f3a9c5 */
 void romLibInspectContext(int value);		/* 0x03f3a9d5 */
 void romLibTrackContext(void);			/* 0x03f3a9e5 */
+void romLibUpdateContext(void *timing);		/* 0x03f3a831: fills a station TSF record */
 unsigned int romRateIndex(unsigned int rate);	/* 0x03f3ab4f */
 unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order rates */
 unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the link rate threshold */

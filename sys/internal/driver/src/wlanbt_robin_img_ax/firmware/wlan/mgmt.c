@@ -114,7 +114,6 @@ void macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int value);	
 void macTxNotifyConvertTable(int table);					/* 0x31dfe */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
 void rfCalibScheduleDescriptor(const uint8_t *local, const uint8_t *peer);	/* 0x2a25c */
-void rfCalibResolveDescriptor(void);						/* 0x2a254 */
 int rfCalibNotifyDescriptor(const void *parameters);					/* 0x2a2e6 */
 void rfCalibInspectDescriptor(int value);					/* 0x2a3ca */
 int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b784 */
@@ -245,7 +244,7 @@ void wlanSetSlotTime(int shortSlot)
 	unsigned int slotTime;
 	uint8_t queue;
 
-	macMgmtPrepareContext(&flags, NULL);
+	macMgmtPrepareContext((uint8_t *)&flags, NULL);
 	if (flags & 3) {
 		macTxNotifyConvertTable(2);
 		slotTime = WLAN_SLOT_TIME_SHORT;

@@ -52,7 +52,6 @@ extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;	/* 0x54bc8 */
 extern uint8_t *wlanBeaconRatesEnd;				/* 0x54a9c */
 extern uint8_t *wlanProbeRatesEnd;				/* 0x54aa0 */
 extern uint8_t wlanIbssErpPending[];				/* SQRAM 0xc0031f00 */
-void wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc */
 void macTxNotifyReleaseState(struct WlanConnection *connection);	/* 0x301b0 */
 int macTxNotifyNotifyState(struct WlanConnection *connection);		/* 0x2ff62 */
 int macTxNotifyInspectState(struct WlanConnection *connection, uint8_t *buffer); /* 0x2ffa0 */
@@ -62,23 +61,18 @@ int macTxNotifyRecordState(struct WlanConnection *connection);		/* 0x30324 */
 void cbProcTrackPacket(void);						/* 0x1e570 */
 int macMgmtRecordTable(const uint8_t *address, uint8_t *buffer);	/* 0x37d02 */
 uint32_t rfCalibInspectTimer(unsigned int rate);			/* 0x2bc6c */
-void wlanPsVerifyFrame(int reason);					/* 0x3dac6 */
 void wlanPsFilterFrame(uint16_t beaconPeriod);				/* 0x3dc4e */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
-void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
-			 unsigned int count, unsigned int bitmap);	/* 0x356f6 */
 void macTxNotifyApplyFrame(struct WlanConnection *connection);		/* 0x3360a */
 void macMgmtResolveEntry(struct WlanConnection *connection, unsigned int channel,
 			 int start);					/* 0x36a32 */
 int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
 void btLmpLcHandleState(int state);					/* 0x42488 */
-void cbProcSelectBuffer(int kind, const uint8_t *bssid);		/* 0x1e064 */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);			/* 0x3bc5a */
 uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
 void wlanPsClearTable(struct WlanConnection *connection, int value);	/* 0x3c03c */
-void wlanPsUpdateTable(struct WlanConnection *connection);		/* 0x17206 */
 void wlanPsAdjustTable(struct WlanConnection *connection);		/* 0x3c0aa */
 void wpaSuppNotifyDescriptor(void);					/* 0x18c16 */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
@@ -88,7 +82,6 @@ void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
 const uint8_t *wpaSuppHandleQueue(int ieId, const uint8_t *ies, unsigned int length); /* 0x2c3d8 */
-int wpaSuppAdjustDescriptor(const uint8_t *oui);			/* 0x2c276 */
 void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *third,
 			  uint8_t *fourth, uint32_t a, uint32_t b, uint32_t c);	/* 0x364be */
 void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
@@ -96,7 +89,6 @@ void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t 
 void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
 extern WepIcvErrList wlanIbssIcvErrList;				/* 0x5f124 */
-extern uint8_t wlanPsHostMode;						/* 0x55130 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */
 void wlanIbssTemplateSetProtection(WlanWirelessFrame *frame, int protection)
@@ -140,7 +132,7 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 	int useProtection;
 	int barker;
 
-	macMgmtPrepareContext(&flags, NULL);
+	macMgmtPrepareContext((uint8_t *)&flags, NULL);
 	rate = wlanTxControlRate(connection);
 	frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
 	end = wlanBuildIbssBeacon(start, connection->interfaceAddress, bssid, subtype,
@@ -257,7 +249,7 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 	unsigned int channel;
 	int status;
 
-	macMgmtPrepareContext(&flags, &extra);
+	macMgmtPrepareContext((uint8_t *)&flags, &extra);
 	if (wlanIbssBeaconFrame || wlanIbssProbeResponseFrame) {
 		status = 1;
 	} else {
@@ -304,7 +296,7 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 	unsigned int rates;
 	int status;
 
-	macMgmtPrepareContext(&flags, &extra);
+	macMgmtPrepareContext((uint8_t *)&flags, &extra);
 	if (wlanIbssBeaconFrame || wlanIbssProbeResponseFrame || start->bssMode != 2 ||
 	    start->beaconPeriod == 0) {
 		status = 1;

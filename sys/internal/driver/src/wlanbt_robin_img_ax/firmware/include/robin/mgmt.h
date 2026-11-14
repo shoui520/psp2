@@ -90,10 +90,17 @@ void wlanTxSetSharedRadio(int which);
 uint32_t wlanBssBit(unsigned int interfaceType, unsigned int bssNumber);
 
 /* Not converted yet; provisional names. */
-void macMgmtPrepareContext(uint32_t *flags, uint32_t *extra);			/* 0x3566a */
+void macMgmtPrepareContext(uint8_t *band, uint32_t *extra);			/* 0x3566a */
 int cbProcPrepareTable(int table, int value);					/* 0x1cdc8 */
 void cbProcDispatchTable(int table, int value);					/* 0x1ce46 */
 int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel);		/* 0x355d2 */
 void macMgmtCheckContext(void);							/* 0x3564a */
+void wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
+void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
+			 unsigned int count, unsigned int bitmap);		/* 0x356f6 */
+void cbProcSelectBuffer(int kind, const uint8_t *bssid);			/* 0x1e064 */
+void wlanPsUpdateTable(struct WlanConnection *connection);			/* 0x17206 */
+void rfCalibResolveDescriptor(void);						/* 0x2a254 */
+extern uint8_t wlanPsHostMode;							/* 0x55130 */
 
 #endif /* ROBIN_MGMT_H */

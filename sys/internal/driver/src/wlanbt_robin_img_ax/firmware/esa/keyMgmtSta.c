@@ -12,6 +12,7 @@
 #include "robin/btrom.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
+#include "robin/join.h"
 #include "robin/rom.h"
 #include "robin/sys.h"
 #include "robin/task.h"
@@ -21,7 +22,6 @@
 /* Not converted yet; provisional names */
 void keyMgmtSendDeauth(struct WlanConnection *connPtr, IEEEtypes_MacAddr_t *pPeer,
 		       uint16_t reason);					/* 0x17bd8 */
-void keyMgmtControlledPortOpen(void);					/* 0x11b8a */
 /* the SQRAM build's PMK cache and key API */
 uint8_t *pmkCacheFindPSK(uint8_t *pSsid, uint8_t ssidLen);		/* 0xc0008190 */
 uint32_t keyApi_UpdateKeyMaterial(struct WlanConnection *connPtr,

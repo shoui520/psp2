@@ -156,6 +156,7 @@ PROVIDE(romLibScheduleContext = 0x03f3a96b);
 PROVIDE(romLibFormatContext   = 0x03f3a9c5);
 PROVIDE(romLibInspectContext  = 0x03f3a9d5);
 PROVIDE(romLibTrackContext    = 0x03f3a9e5);
+PROVIDE(romLibUpdateContext   = 0x03f3a831);
 PROVIDE(romMacStatValidate = 0x03f3acdb);
 PROVIDE(romMacStatPrepare  = 0x03f3ace7);
 PROVIDE(romMacStatCheck    = 0x03f3accf);

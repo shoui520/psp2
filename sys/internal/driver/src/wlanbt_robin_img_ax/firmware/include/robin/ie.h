@@ -3,6 +3,7 @@
 #define ROBIN_IE_H
 
 #include <stdint.h>
+#include "robin/buffer.h"
 #include "robin/wlan.h"
 
 enum {
@@ -139,5 +140,29 @@ int wlanClearBodyLength(uint16_t *length);
 unsigned int wlanRateBitmapBasic(const uint8_t *rates, unsigned int count);
 unsigned int wlanRateBitmap(const uint8_t *rates, unsigned int count);
 int wlanTimeDelta(unsigned int now, unsigned int last);
+
+/*
+ * A growing run of elements in a pool buffer (0x2a790..0x2a8a6, not
+ * converted yet; provisional names).
+ */
+struct WlanIeBuffer {
+	OsaBuffer *buffer;
+	uint16_t length;		/* bytes kept, from the buffer's data offset */
+	uint16_t size;			/* bytes the buffer holds */
+};
+
+unsigned int wlanIeBufferAppend(struct WlanIeBuffer *ies, const void *data,
+				unsigned int length);			/* 0x2a790 */
+unsigned int wlanIeBufferAppendTlv(struct WlanIeBuffer *ies, const uint8_t *tlv); /* 0x2a7d2 */
+unsigned int wlanIeBufferGet(struct WlanIeBuffer *ies, uint8_t **data);	/* 0x2a83e */
+void wlanIeBufferReset(struct WlanIeBuffer *ies);				/* 0x2a84a */
+void wlanIeBufferFree(struct WlanIeBuffer *ies);				/* 0x2a850 */
+int wlanIeBufferAlloc(struct WlanIeBuffer *ies);				/* 0x2a866 */
+int cbProcRecordBuffer(int first, int argument);				/* 0x1e12a */
+void wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc */
+int wpaSuppSelectDescriptor(const uint8_t *oui);				/* 0x2c21c */
+int wpaSuppAdjustDescriptor(const uint8_t *oui);				/* 0x2c276 */
+unsigned int wpaSuppConfigureQueue(const uint8_t *tlv, uint8_t *channels,
+				   uint32_t *channel);				/* 0x2c4c6 */
 
 #endif /* ROBIN_IE_H */
