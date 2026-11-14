@@ -73,7 +73,7 @@ enum {
 	WLAN_CHANNEL_OFFSET_BELOW = 0x30,
 };
 
-extern const uint8_t wlanBroadcastAddress[6];
+extern uint8_t wlanBroadcastAddress[6];
 
 /* the 802.11 header builder (0x2a414) */
 void *wlanBuildMgmtHeader(WlanWirelessFrame *frame, const uint8_t *source,

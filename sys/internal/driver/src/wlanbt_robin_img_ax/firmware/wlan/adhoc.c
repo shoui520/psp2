@@ -13,7 +13,7 @@
 
 static ROBIN_PATCH_SLOT(wlanSetSecondaryChannelOverride);
 
-const uint8_t wlanBroadcastAddress[6] __attribute__((section(".itcm.rw"))) = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+uint8_t wlanBroadcastAddress[6] __attribute__((section(".itcm.rw"))) = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 /* Returns the WMM parameter element the access point and IBSS beacons carry (0x2d248). */
 void wlanGetWmmParameterIe(WlanWmmParameterIe *ie);
