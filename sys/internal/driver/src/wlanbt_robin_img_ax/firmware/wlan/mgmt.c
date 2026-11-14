@@ -799,10 +799,10 @@ void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int
 
 /*
  * HostCmd_CMD_MGMT_IE_LIST: sets the custom IEs of the TLVs, or reads them
- * back into the TLVs and the command size.
+ * back into the TLVs and the command size. Returns 0.
  */
-void wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
-			 uint16_t *size)
+int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
+			uint16_t *size)
 {
 	int remaining = *size - 10;
 	unsigned int length;
@@ -824,6 +824,7 @@ void wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t 
 		remaining = remaining - length - 4;
 		tlv += length + 4;
 	}
+	return 0;
 }
 
 /* The class of a frame (IEEE 802.11 11.3) received on an interface of the type. */

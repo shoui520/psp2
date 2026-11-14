@@ -63,8 +63,8 @@ int wlanCustomIeReset(void);
 void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
 		       uint8_t offset);
 void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length);
-void wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
-			 uint16_t *size);
+int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
+			uint16_t *size);
 unsigned int wlanFrameClass(unsigned int interfaceType, const WlanWirelessFrame *frame);
 const uint8_t *wlanFrameBssid(const WlanWirelessFrame *frame);
 int wlanConnectionAuthenticated(struct WlanConnection *connection);

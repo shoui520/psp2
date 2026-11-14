@@ -24,9 +24,11 @@
 unsigned int uapSqramBuildEntry(unsigned int band, unsigned int channel);	/* 0xc0008f81 */
 int uapSqramValidateEntry(int low, int high, int lowPoint, int highPoint, int point); /* 0xc0008ef3 */
 unsigned int uapSqramComputeEntry(unsigned int secondary);			/* 0xc0008fbb */
-void uapSqramCheckTable(int a, int b, int c, int d);				/* 0xc0009cc5 */
-int uapSqramNotifyTable(int a, int b, int c, int d);				/* 0xc000a225 */
-int uapSqramQueryTable(void);							/* 0xc0009fb9 */
+void uapSqramCheckTable(const uint8_t *data, unsigned int offset, unsigned int length,
+			unsigned int action);					/* 0xc0009cc5 */
+int uapSqramNotifyTable(const uint8_t *data, unsigned int offset, unsigned int length,
+			unsigned int action);					/* 0xc000a225 */
+int uapSqramQueryTable(uint8_t *data, uint16_t *length);			/* 0xc0009fb9 */
 int rfCalibSyncHeader(unsigned int index, uint8_t *value);			/* 0x29e7e */
 int rfCalibScheduleHeader(unsigned int index, uint8_t *value);			/* 0x29e9a */
 int rfCalibInspectHeader(unsigned int index, uint16_t *value);			/* 0x29eba */
@@ -245,17 +247,20 @@ int wlanRfEventRefresh(void)
 	return 0;
 }
 
-int wlanCalibrationTableUpdate(int a, int b, int c, int d)
+/* HostCmd_CMD_CFG_DATA, the calibration table: writes the host's data into it. */
+int wlanCalibrationTableUpdate(const uint8_t *data, unsigned int offset, unsigned int length,
+			       unsigned int action)
 {
-	uapSqramCheckTable(a, b, c, d);
-	if (!uapSqramNotifyTable(a, b, c, d))
+	uapSqramCheckTable(data, offset, length, action);
+	if (!uapSqramNotifyTable(data, offset, length, action))
 		wlanRfEventRefresh();
 	return 0;
 }
 
-int wlanCalibrationTableQuery(void)
+/* HostCmd_CMD_CFG_DATA, the calibration table: copies it out with its length. */
+int wlanCalibrationTableQuery(uint8_t *data, uint16_t *length)
 {
-	return uapSqramQueryTable();
+	return uapSqramQueryTable(data, length);
 }
 
 /*

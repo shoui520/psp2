@@ -82,8 +82,9 @@ unsigned int wlanRegionTableIndex(unsigned int code);
 int wlanCalibrationLookupByte(unsigned int index, uint8_t *value);
 void wlanRfApplyEventContext(unsigned int index);
 int wlanRfEventRefresh(void);
-int wlanCalibrationTableUpdate(int a, int b, int c, int d);
-int wlanCalibrationTableQuery(void);
+int wlanCalibrationTableUpdate(const uint8_t *data, unsigned int offset, unsigned int length,
+			       unsigned int action);			/* 0xe85a */
+int wlanCalibrationTableQuery(uint8_t *data, uint16_t *length);	/* 0xe880 */
 int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, unsigned int channel,
 				  uint8_t *low, uint8_t *high, uint8_t *lowIndex,
 				  uint8_t *highIndex);
