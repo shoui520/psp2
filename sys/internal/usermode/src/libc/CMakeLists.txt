@@ -358,6 +358,11 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xwgetfloat.c
 	xwgetint.c
 	xwgetstr.c
+	xwldtob.c
+	xwlitob.c
+	xdunscal.c
+	xgenld.c
+	xwgenld.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces

@@ -63,5 +63,6 @@ int _WGetint(_WSft *px, void *pans);
 int _WGetstr(_WSft *px, int sfl);
 void _WLdtob(_WPft *px, wchar_t code);
 void _WLitob(_WPft *px, wchar_t code);
+void _WGenld(_WPft *px, wchar_t code, wchar_t *p, short nsig, short xexp);
 
 #endif /* _XWSTDIO */
