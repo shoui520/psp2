@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/signal.h"
 #include "robin/soc.h"
 #include "robin/txring.h"
 #include "robin/txstats.h"
@@ -27,7 +28,6 @@
 
 /* Not converted yet; provisional names. */
 void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);	/* 0x3cfd2 */
-void wlanRateControlUpdate(struct WlanConnection *connection, int acknowledged);	/* 0x17a06 */
 
 HostCmd_DS_802_11_GET_LOG wlanTxStatistics __attribute__((section(".dtcm.bss")));
 struct WlanTxRateStats wlanTxRateStatistics[WLAN_TX_RATE_COUNT] __attribute__((section(".dtcm.bss")));
@@ -47,7 +47,7 @@ void wlanTxStatsCountRate(struct WlanConnection *connection, const struct WlanTx
 	wlanTxRateAttempts(status, attempts);
 	finalRate = status->finalRate;
 	retries = status->retries;
-	wlanRateControlUpdate(connection, status->result == 0);
+	wlanLinkTxDone(connection, status->result == 0);
 	if (status->result == 0) {
 		if (finalRate < WLAN_TX_RATE_COUNT)
 			wlanTxRateStatistics[finalRate].acknowledged++;

@@ -246,6 +246,40 @@ struct WlanSmRecord {
 
 struct WlanMacTxRequest;
 
+/*
+ * The signal measurements of a connection (wlan/signal.c). A filter keeps
+ * the last three samples: their mean while they lie within 3 dB of each
+ * other, else the lowest.
+ */
+#define WLAN_SIGNAL_FILTERS		3	/* 0: frame noise floor, 1: join noise floor */
+#define WLAN_SIGNAL_UNKNOWN		(-98)	/* dBm, nothing measured yet */
+
+struct WlanSignalFilter {
+	int32_t samples[3];		/* oldest first */
+	int32_t value;
+	uint8_t count;			/* samples taken, up to 3 */
+	uint8_t reserved17[3];
+};
+
+/* A running average: the sum of 1 << shift samples, then average << shift. */
+struct WlanSignalAverage {
+	int32_t sum;
+	int32_t count;
+};
+
+/* The link check: frames heard, or beacons missed since silentSince. */
+struct WlanLinkMonitor {
+	uint64_t silentSince;		/* when the silence began (us) */
+	uint32_t timer;			/* the check's timer */
+	uint32_t frameSeen;		/* a frame was received or acknowledged */
+	uint32_t silent;		/* nothing was heard in the last check */
+	uint8_t nullFrames;		/* null frames sent to probe the peer */
+	uint8_t reserved21[3];
+};
+
+_Static_assert(sizeof(struct WlanSignalFilter) == 20, "signal filter");
+_Static_assert(sizeof(struct WlanLinkMonitor) == 24, "link monitor");
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;
@@ -290,11 +324,29 @@ struct WlanConnection {
 	OsaBuffer *beaconBuffer;	/* the beacon template; the frame at its data offset */
 	struct WlanMacTxRequest *probeResponseRequest;
 	OsaBuffer *probeResponseBuffer;	/* the probe response template, from wlanMgmtAllocFrame() */
-	uint8_t reserved192[14];
-	int16_t noise;			/* dBm, last measured */
-	uint8_t reserved3b[2];
-	int16_t snr;
-	uint8_t reserved3c[168];
+	uint8_t reserved192[8];
+	/* The signal of the data frames and the beacons (wlan/signal.c), dBm. */
+	int16_t dataNoiseFloor;		/* the last data frame's */
+	int16_t dataRssi;
+	int16_t dataSnr;
+	int16_t noise;			/* the last beacon's noise floor */
+	int16_t beaconRssi;
+	int16_t snr;			/* the last beacon's SNR */
+	uint8_t reserved212[4];
+	struct WlanLinkMonitor link;
+	struct WlanSignalFilter signalFilters[WLAN_SIGNAL_FILTERS];
+	struct WlanSignalAverage noiseFloorAverage;	/* the beacons' noise floor */
+	struct WlanSignalAverage beaconRssiCck;		/* beacons at a DSSS/CCK rate */
+	struct WlanSignalAverage beaconRssiOfdm;	/* beacons at an OFDM rate */
+	struct WlanSignalAverage joinNoiseFloor;	/* the frames of the join */
+	struct WlanSignalAverage joinRssiCck;
+	struct WlanSignalAverage joinRssiOfdm;
+	struct WlanSignalAverage spareAverage;		/* cleared by wlanSignalInit() only */
+	struct WlanSignalAverage beaconRssiAverage;	/* over 1 << beaconRssiShift beacons */
+	struct WlanSignalAverage dataRssiAverage;	/* over 1 << dataRssiShift frames */
+	uint16_t beaconRssiShift;
+	uint16_t dataRssiShift;
+	uint8_t reserved376[4];
 	uint8_t state;
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
@@ -393,6 +445,13 @@ _Static_assert(offsetof(struct WlanConnection, beaconBuffer) == 180, "beacon tem
 _Static_assert(offsetof(struct WlanConnection, probeResponseBuffer) == 188, "probe response template");
 _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");
 _Static_assert(offsetof(struct WlanConnection, snr) == 210, "SNR");
+_Static_assert(offsetof(struct WlanConnection, dataNoiseFloor) == 200, "data noise floor");
+_Static_assert(offsetof(struct WlanConnection, link) == 216, "link monitor");
+_Static_assert(offsetof(struct WlanConnection, signalFilters) == 240, "signal filters");
+_Static_assert(offsetof(struct WlanConnection, noiseFloorAverage) == 300, "noise floor average");
+_Static_assert(offsetof(struct WlanConnection, beaconRssiAverage) == 356, "beacon RSSI average");
+_Static_assert(offsetof(struct WlanConnection, beaconRssiShift) == 372, "RSSI shifts");
+_Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beacon miss threshold");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
 _Static_assert(offsetof(struct WlanConnection, peerAddress) == 381, "peer address");
 _Static_assert(offsetof(struct WlanConnection, bssCapability) == 56, "BSS capability");

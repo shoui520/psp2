@@ -20,6 +20,7 @@
 #include "robin/protection.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/signal.h"
 #include "robin/slot.h"
 #include "robin/stream.h"
 #include "robin/sys.h"
@@ -118,7 +119,6 @@ void macTxNotifyBuildHeader(struct WlanConnection *connection, const struct Wlan
 			    int kind, const void *unused, uint32_t timeout);	/* 0x34094 */
 void macTxNotifyResolveContext(struct WlanConnection *connection,
 			       const struct WlanJoinBss *previous);	/* 0x308e8 */
-void wpaSuppNotifyHeader(struct WlanConnection *connection);		/* 0x17b64 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
 void macMgmtResolveState(struct WlanConnection *connection, unsigned int security); /* 0x34cc4 */
 void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
@@ -127,10 +127,8 @@ void macMgmtClearContext(struct WlanConnection *connection);		/* 0x35dc0 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
 OsaBuffer *macMgmtApplyState(struct WlanConnection *connection);	/* 0x34c94 */
 void macMgmtNotifyState(OsaBuffer *buffer);				/* 0x34d80 */
-void wlanPsSetupTable(struct WlanConnection *connection, int argument);	/* 0x177b2 */
 void macTxNotifyClearFrame(OsaBuffer *rx);				/* 0x338e2 */
 void macTxNotifyUpdateHeader(OsaBuffer *rx);				/* 0x33dee */
-void wpaSuppValidateHeader(struct WlanConnection *connection);		/* 0x17892 */
 void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
 int cbProcSetupEntry(void);						/* 0x1cb00 */
 int cbProcVerifyEntry(void);						/* 0x1cb1a */
@@ -283,7 +281,7 @@ void wlanJoinFinish(uint8_t result)
 
 		wlanPsVerifyFrame(3);
 		if (wlanJoin.connection->interfaceType != WLAN_IF_AMP)
-			wpaSuppNotifyHeader(wlanJoin.connection);
+			wlanLinkMonitorStart(wlanJoin.connection);
 		if (wlanJoin.capability[1] & WLAN_CAPABILITY1_SPECTRUM_MGMT)
 			wlanTxPowerUpdateConnection(wlanJoin.connection, wlanJoin.channel, 0);
 		wlanTxPowerApply();
@@ -459,7 +457,7 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 					}
 					cbProcFlush();
 				}
-				wlanPsSetupTable(wlanJoin.connection, argument);
+				wlanSignalJoinFrame(wlanJoin.connection, (const struct WlanRxStatus *)argument);
 				wlanIeBufferReset(&wlanJoin.ieBuffer);
 				wlanIeBufferAppend(&wlanJoin.ieBuffer, frame->body,
 						   LE16(frame->bodyLength));
@@ -485,7 +483,7 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 					}
 					cbProcFlush();
 				}
-				wlanPsSetupTable(wlanJoin.connection, argument);
+				wlanSignalJoinFrame(wlanJoin.connection, (const struct WlanRxStatus *)argument);
 				macTxNotifyUpdateHeader(rx);
 				handled = 1;
 				break;
@@ -721,7 +719,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 	     wlanJoin.reassociationWindow >=
 		     (romGetTimerTimestamp() - wlanJoin.initTime) / 1000000))
 		wlanJoin.reassociationRequest = 1;
-	wpaSuppValidateHeader(wlanJoin.connection);
+	wlanSignalJoinReset(wlanJoin.connection);
 	macMgmtTrackState(wlanJoin.connection);
 	params.mode = wlanJoin.channel;
 	params.bssTypeLow = wlanJoin.band & 3;

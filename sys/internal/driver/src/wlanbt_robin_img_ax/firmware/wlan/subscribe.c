@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "robin/conn.h"
 #include "robin/rom.h"
+#include "robin/signal.h"
 #include "robin/subscribe.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
@@ -18,13 +19,8 @@
 /* Not converted yet; provisional names. */
 unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *threshold, uint8_t *count); /* 0x2c60e */
 unsigned int wlanTlvCopyValue(const uint8_t *tlv, void *value);			/* 0x2c662 */
-int wlanBeaconRssi(struct WlanConnection *connection);				/* 0x1780c */
-int wlanBeaconSnr(struct WlanConnection *connection);				/* 0x1787e */
-int wlanDataRssi(struct WlanConnection *connection);				/* 0x17818 */
-int wlanDataSnr(struct WlanConnection *connection);				/* 0x17824 */
 
 #define WLAN_EVENT_SUBSCRIBED		0x08000000u	/* wlanPostConnectionEvent: events met */
-#define WLAN_SIGNAL_UNKNOWN		(-98)
 
 struct WlanLinkQualityState wlanLinkQuality __attribute__((section(".dtcm.rw")));
 
