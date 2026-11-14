@@ -10,6 +10,22 @@
 #include "video.h"
 
 #define VIDEO_NO_THREAD			((VnzKernelThread *)-1)
+#define ALIGN64(size)			(((size) + 63) & ~63)
+
+static inline int32_t abs32(int32_t value)
+{
+	return value < 0 ? -value : value;
+}
+
+static inline int32_t min32(int32_t a, int32_t b)
+{
+	return a < b ? a : b;
+}
+
+static inline int32_t max32(int32_t a, int32_t b)
+{
+	return a > b ? a : b;
+}
 #define SERVICE_CORE			(VNZ_FIRST_CORE_ID + 7)
 #define SERVICE_PRIORITY		3
 
@@ -277,6 +293,13 @@ typedef struct VideoBitsRegisters {
 	uint32_t status;
 	uint32_t state6;
 } VideoBitsRegisters;
+
+/* the MPEG-4 decoder's bit reader as a data partitioned run saves it (24 bytes): the reader and the word after it */
+typedef struct VideoM4vBits {
+	VideoBitstream bits;
+	uint32_t after;
+	uint32_t reserved;
+} VideoM4vBits;
 
 /* the bitstream unit's registers saved with a slice */
 typedef struct VideoBitsState {
@@ -741,7 +764,7 @@ typedef struct VideoM4vVol {
 	uint8_t resyncMarkerDisable;
 	int8_t dataPartitioned;		/* the engine decodes it: no run on the unit */
 	uint8_t reversibleVlc;
-	uint8_t reserved;		/* cleared with the layer, copied to the VOP */
+	uint8_t intraH263;		/* H.263 intra blocks (an 8-bit DC, no AC or DC prediction); cleared, copied to the VOP */
 	uint32_t timeIncrementResolution;	/* vop_time_increment_resolution */
 	int8_t shortHeader;		/* short_video_header: H.263 pictures and GOBs */
 	int8_t pictureHeader;		/* the picture header is still to be read */
@@ -790,19 +813,23 @@ typedef struct VideoM4vVop {
 	int32_t intraDcVlcThr;
 	int32_t fcode;			/* vop_fcode_forward: the resync marker is 16 + fcode bits */
 	int32_t quant;			/* vop_quant */
-	uint32_t reserved2;
+	int32_t runQuant;		/* the quantiser a packet's next run starts with */
 	uint32_t timeIncrementResolution;	/* the layer's */
 	int32_t moduloTimeBase;		/* its ones, as bits */
 	int32_t timeIncrement;		/* vop_time_increment */
-	uint32_t volReserved;		/* the layer's reserved byte */
+	uint32_t intraH263;		/* the layer's */
 	uint32_t reserved3;		/* cleared with the short header */
 	uint32_t reversibleVlc;		/* the layer's */
-	uint32_t reserved4[2];
+	uint32_t macroblockNumber;	/* the video packet's */
+	uint32_t reserved4;
 	int32_t numGobsInVop;		/* short header: the source format's */
 	int32_t runEnd;			/* short header: the macroblock the GOB ends at */
 	int32_t vopCoded;		/* vop_coded 0: the unit runs nothing */
-	int32_t skipped;
-	uint8_t reserved5[180];
+	int32_t pastRun;		/* a data partitioned packet's macroblocks past the run */
+	/* and the partitions' bit reader states where the run ends, for the next run */
+	VideoM4vBits partitionBits[3];
+	VideoBitsRegisters partitionRegisters[3];
+	uint8_t reserved5[24];
 } VideoM4vVop;
 
 /* the decoder's tables of a picture (64 bytes each) */
@@ -864,7 +891,14 @@ typedef struct VideoM4vFrame {
 
 /* the unit's command, as the engine reads it (64 bytes) */
 typedef struct VideoM4vCommand {
-	uint8_t reserved[11];
+	/* the decoder's row buffers, as the AVC command's of their sizes a macroblock */
+	uint16_t mbRowSize;		/* the run buffers' row sizes: macroblock records, 8 bytes a macroblock */
+	uint16_t vectorRowSize;		/* motion vectors, 16 */
+	uint16_t lumaRowSize;		/* luma coefficients, 512 */
+	uint16_t chromaRowSize;		/* a chroma component's, 128 */
+	uint8_t widthInMacroblocks;
+	uint8_t heightInMacroblocks;
+	uint8_t mode;			/* 6 below 40 macroblocks across, else 8 */
 	int8_t table;
 	uint32_t address;
 	uint16_t width;
@@ -873,7 +907,11 @@ typedef struct VideoM4vCommand {
 	uint32_t chromaOffset;
 	uint32_t pictureSize2;
 	uint32_t frames;
-	uint8_t reserved2[28];
+	uint8_t reserved2[4];
+	uint8_t roundingType;		/* vop_rounding_type */
+	uint8_t shortHeader;
+	int8_t codingType;		/* vop_coding_type */
+	uint8_t reserved3[21];
 } VideoM4vCommand;
 
 /* the stream unit being parsed (256 bytes) */
@@ -892,16 +930,17 @@ typedef struct VideoM4vUnit {
 	int16_t heightInMacroblocks;
 	int16_t runLength;		/* a run's macroblocks */
 	int16_t runOffset;		/* the run starts this far into a row */
-	int16_t reserved3;
+	int16_t runRow;			/* the row the run starts in */
 	int16_t runMacroblocks;		/* the unit's word 8: the run's length */
 	int16_t doneMacroblocks;	/* the unit's words 11 and 10, when it is not run */
 	int16_t doneStatus;
-	uint8_t reserved4[3];
+	int16_t picturePackets;		/* cleared with a picture's header */
+	uint8_t pictureNew;		/* set with a picture's header */
 	uint8_t load;			/* the packet's data goes to the unit */
 	uint32_t context;		/* the helper's context and command for the run */
 	uint32_t command;
 	VideoM4vFrame *frame;		/* the picture's record */
-	uint32_t reserved5;
+	uint32_t partitionData;		/* a data partitioned packet's macroblocks: types, cbps, quantisers and DCs */
 	uint16_t width;
 	uint16_t pitch;			/* the luma's: the width rounded up to 32 */
 	uint32_t pictureSize;
@@ -938,6 +977,32 @@ typedef struct VideoM4vUnit {
 	uint8_t reserved10[31];
 } VideoM4vUnit;
 
+/* a macroblock's record in the run's first buffer (8 bytes) */
+typedef struct VideoM4vMacroblock {
+	uint8_t type;			/* the mcbpc's; 9 not coded */
+	int8_t dquant;
+	int8_t acPrediction;		/* ac_pred_flag */
+	uint8_t reserved;
+	uint8_t blocks;			/* the blocks coded, by 1 << (5 - block) */
+	uint8_t acCoded;		/* the blocks with AC coefficients */
+	uint8_t dcCoded;		/* and with a DC */
+	uint8_t reserved2;
+} VideoM4vMacroblock;
+
+/* a macroblock's type: the MCBPC's mb_type, or not coded */
+#define MB_TYPE_INTER			0
+#define MB_TYPE_INTER_Q			1
+#define MB_TYPE_INTER4V			2
+#define MB_TYPE_INTRA			3
+#define MB_TYPE_INTRA_Q			4
+#define MB_NOT_CODED			9	/* not_coded in a P-VOP */
+
+#define DC_RESET			1024	/* an intra DC predictor with no block to give it */
+
+/* vop_coding_type */
+#define VOP_CODING_I			0
+#define VOP_CODING_P			1
+
 /* a VThread job's state on a unit (1408 bytes) */
 typedef struct VideoM4vJob {
 	VideoBitstream *bits;
@@ -946,8 +1011,28 @@ typedef struct VideoM4vJob {
 	VideoM4vTable *tables;
 	VideoM4vTable *table;
 	uint32_t jump[8];		/* videoSetJump's, for the parser's errors */
-	uint8_t reserved2[1356];
+	/* the run's buffers 0 and 4-7 at the row (0x84423c), and on as macroblocks are decoded */
+	VideoM4vMacroblock *macroblock;
+	int16_t *vectors;		/* 1 or 4 a macroblock */
+	int16_t *luma;			/* a coded block's 64 coefficients, or its DC in 4 */
+	int16_t *cb;
+	int16_t *cr;
+	int16_t *dcRowAt;		/* the intra DC predictors above the macroblock */
+	int16_t *dcRow;			/* a row's: 4 a macroblock */
+	int16_t dc[7];			/* the macroblock's and its left's */
+	int8_t quant;			/* the macroblock's quantiser */
+	uint8_t reserved3;
+	/* where a data partitioned packet's macroblocks past the run go */
+	VideoM4vMacroblock pastRunMacroblock;
+	int16_t pastRunVectors[8];
+	int16_t pastRunLuma[256];
+	int16_t pastRunCb[64];
+	int16_t pastRunCr[64];
+	int32_t block[64];		/* a block's coefficients, at their zigzag positions */
+	int32_t scanned[64];		/* and in raster order */
+	uint8_t reserved4[8];
 } VideoM4vJob;
+
 
 void videoParserError(const VideoStream *stream, VideoParser *parser, uint32_t stage,
 	int32_t code);								/* 0x862c0c */
@@ -1834,6 +1919,7 @@ void avcdecParserWake(uint32_t memory, uint32_t request);		/* 0x8252f6 */
 void avcdecParserInitialize(uint32_t memory, VideoService *service, int32_t index);
 void avcdecDecoderThread(uint32_t memory, uint32_t codec);		/* 0x82cd90 */
 void avcdecDecoderDecode(uint32_t memory, uint32_t request);		/* 0x82d2e4 */
+void avcdecDecoderParsed(uint32_t memory, uint32_t word);		/* 0x82cf94 */
 void avcdecDecoderInitialize(uint32_t memory, VideoService *service, int32_t index);
 void avcencEncoderThread(uint32_t memory, uint32_t codec);		/* 0x834588 */
 void avcencEncoderEncode(uint32_t memory, uint32_t request);		/* 0x834904 */
@@ -1851,6 +1937,7 @@ void m4vdecParserWake(uint32_t memory, uint32_t request);		/* 0x841cf2 */
 void m4vdecParserInitialize(uint32_t memory, VideoService *service, int32_t index);
 void m4vdecDecoderThread(uint32_t memory, uint32_t codec);		/* 0x8471ac */
 void m4vdecDecoderDecode(uint32_t memory, uint32_t request);		/* 0x847676 */
+void m4vdecDecoderParsed(uint32_t memory, uint32_t word);		/* 0x847390 */
 void m4vdecDecoderInitialize(uint32_t memory, VideoService *service, int32_t index);
 
 /* the helper's memory and start (0x86238c-) */

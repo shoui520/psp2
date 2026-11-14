@@ -5,7 +5,6 @@
  */
 #include "avcdecparser.h"
 
-#define ALIGN64(size)		(((size) + 63) & ~63)
 #define ALIGN256(size)		(((size) + 255) & ~255)
 
 /* the parameter cache: the lists' heads and two bytes a node, aligned */
@@ -17,7 +16,6 @@ void avcdecParserAu(uint32_t memory, uint32_t request);
 void avcdecParserJobStart(uint32_t info, uint32_t stream, uint32_t job, uint32_t unused);
 void avcdecParserJobFlush(uint32_t info, uint32_t stream, uint32_t job, uint32_t unused);
 void avcdecParserJobOutput(uint32_t info, uint32_t stream, uint32_t job, uint32_t keepError);
-void avcdecDecoderParsed(uint32_t memory, uint32_t parsed);
 void avcdecPictureOutput(const VideoStream *stream, VideoSliceJob *job, uint32_t flush);
 void avcdecSliceHeader(const VideoStream *stream, VideoSliceJob *job);
 void avcdecSliceStart(const VideoStream *stream, VideoSliceJob *job);
@@ -2332,7 +2330,6 @@ void avcdecSliceRun(const VideoStream *stream, VideoSliceJob *job)
 close:
 	vnzPublicClosePrivate((uint32_t)slice, VIDEO_HELPER_SLICE_SIZE);
 }
-
 
 void avcdecPictureFinish(VideoSliceJob *job);
 void avcdecPictureMark(VideoSliceJob *job);

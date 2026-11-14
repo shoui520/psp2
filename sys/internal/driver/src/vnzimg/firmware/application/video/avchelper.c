@@ -16,7 +16,6 @@
 
 #define RUN_SLICE_ENDED		3
 
-#define ALIGN64(size)		(((size) + 63) & ~63)
 
 /* the VThread jobs, by the slot's index on the context */
 

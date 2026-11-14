@@ -2198,11 +2198,6 @@ static const uint8_t deblockTables[6][52] = {
 #define DEBLOCK_ALPHA	4
 #define DEBLOCK_BETA	5
 
-static inline int32_t absolute(int32_t value)
-{
-	return value < 0 ? -value : value;
-}
-
 static inline int32_t clip3(int32_t low, int32_t high, int32_t value)
 {
 	return value < low ? low : value > high ? high : value;
@@ -2220,11 +2215,11 @@ static uint32_t filterLine(uint8_t *const p[4], uint8_t *const q[4], uint32_t of
 	int32_t alpha = deblockTables[DEBLOCK_ALPHA][indexA], beta = deblockTables[DEBLOCK_BETA][indexB], tc0, tc, delta;
 	uint32_t ap, aq;
 
-	if (!bS || absolute(p0 - q0) >= alpha || absolute(p1 - p0) >= beta ||
-	    absolute(q1 - q0) >= beta)
+	if (!bS || abs32(p0 - q0) >= alpha || abs32(p1 - p0) >= beta ||
+	    abs32(q1 - q0) >= beta)
 		return 0;
-	ap = absolute(p2 - p0) < beta;
-	aq = absolute(q2 - q0) < beta;
+	ap = abs32(p2 - p0) < beta;
+	aq = abs32(q2 - q0) < beta;
 	if (bS < 4) {
 		tc0 = deblockTables[bS][indexA];
 		tc = tc0 + ap + aq;
@@ -2237,14 +2232,14 @@ static uint32_t filterLine(uint8_t *const p[4], uint8_t *const q[4], uint32_t of
 			q[1][offset] = q1 + clip3(-tc0, tc0, (q2 + ((p0 + q0 + 1) >> 1) - (q1 << 1)) >> 1);
 		return 1;
 	}
-	if (ap && absolute(p0 - q0) < ((alpha >> 2) + 2)) {
+	if (ap && abs32(p0 - q0) < ((alpha >> 2) + 2)) {
 		p[3][offset] = (p2 + 2 * p1 + 2 * p0 + 2 * q0 + q1 + 4) >> 3;
 		p[2][offset] = (p2 + p1 + p0 + q0 + 2) >> 2;
 		p[1][offset] = (2 * p3 + 3 * p2 + p1 + p0 + q0 + 4) >> 3;
 	} else {
 		p[3][offset] = (2 * p1 + p0 + q1 + 2) >> 2;
 	}
-	if (aq && absolute(p0 - q0) < ((alpha >> 2) + 2)) {
+	if (aq && abs32(p0 - q0) < ((alpha >> 2) + 2)) {
 		q[0][offset] = (p1 + 2 * p0 + 2 * q0 + 2 * q1 + q2 + 4) >> 3;
 		q[1][offset] = (p0 + q0 + q1 + q2 + 2) >> 2;
 		q[2][offset] = (2 * q3 + 3 * q2 + q1 + q0 + p0 + 4) >> 3;
@@ -2863,9 +2858,9 @@ uint32_t avcdecChromaDeblockMask(const AvcChromaDeblock *deblock, uint32_t index
 		chromaEdgeLines((AvcChromaDeblock *)deblock, component, inner, lines);
 		for (lane = 0; lane < 8; lane++)
 			if (((strengths >> (lane >> 1) * 8) & 0xff) &&
-			    absolute(lines[1][lane] - lines[2][lane]) < alpha &&
-			    absolute(lines[1][lane] - lines[0][lane]) < beta &&
-			    absolute(lines[2][lane] - lines[3][lane]) < beta)
+			    abs32(lines[1][lane] - lines[2][lane]) < alpha &&
+			    abs32(lines[1][lane] - lines[0][lane]) < beta &&
+			    abs32(lines[2][lane] - lines[3][lane]) < beta)
 				mask |= 1 << (component * 8 + lane);
 	}
 	return mask;

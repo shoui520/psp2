@@ -25,8 +25,6 @@
 /* the codec's parts of the helper */
 
 /* the engines' messages: a parsed job back */
-void avcdecDecoderParsed(uint32_t memory, uint32_t job);		/* 0x82cf94 */
-void m4vdecDecoderParsed(uint32_t memory, uint32_t job);		/* 0x847390 */
 void avcencStreamParsed(uint32_t memory, uint32_t job);		/* 0x835d0c */
 
 static VideoHelper *helperBegin(uint32_t memory);

@@ -6,10 +6,6 @@
  */
 #include "avcdecdecoder.h"
 
-#define ALIGN64(size)		(((size) + 63) & ~63)
-
-void avcdecDecoderParsed(uint32_t memory, uint32_t word);
-
 static AvcdecDecoder *decoderBegin(uint32_t memory);
 static uint32_t decoderWait(AvcdecDecoder *decoder);
 static void runStart(AvcdecDecoder *decoder, uint32_t jobAddress);
@@ -40,20 +36,6 @@ static void runOpen(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecW
 static void runMacroblocks(const AvcdecDecoderInfo *info, AvcdecRun *run, AvcdecWork *work);
 static void runClose(const AvcdecDecoderInfo *info, const AvcdecRun *run, AvcdecWork *work);
 static void rowsClear(const AvcdecDecoderInfo *info);
-
-/* a job set on a locked context, the context relocked until it takes it */
-static inline VnzKernelVThreadContext *jobNotify(VnzKernelVThreadContext *context,
-	VnzKernelVThreadContext *locked,
-	uint32_t index, uint32_t wanted, VnzKernelJobFunction function, uint32_t argument,
-	uint32_t argument2, uint32_t argument3, VnzKernelThread *thread, uint32_t flags)
-{
-	while (vnzKernelVThreadJobSetNotify(locked, index, wanted, function, argument, argument2,
-	    argument3, 0, thread, flags)) {
-		vnzKernelVThreadContextUnlock(locked);
-		locked = vnzKernelVThreadContextLock(context);
-	}
-	return locked;
-}
 
 /* a stripe's three jobs: its prediction waits for `wanted` signals, the others for it */
 static inline void stripeSet(const AvcdecDecoderInfo *info, VnzKernelVThreadContext *locked,
@@ -2686,11 +2668,6 @@ static inline int32_t intraMode(int32_t predicted, int32_t rem)
 	return rem + 1;
 }
 
-static inline int32_t minimum(int32_t a, int32_t b)
-{
-	return a < b ? a : b;
-}
-
 /*
  * 0x830cb8: an Intra4x4 macroblock's modes (8.3.1.1): each predicted from
  * the smaller of the left and the upper block's, DC where either is not
@@ -2719,22 +2696,22 @@ static void intraModes(AvcdecStripe *stripe)
 	top = dcModes;
 	if (!dcTop && AVC_MB_CLASS(topKind) == AVC_MB_CLASS_INTRA4X4)
 		top = stripe->top->modes;
-	modes[0] = intraMode(dcLeft || dcTop ? 2 : minimum(left[5], top[0]), rem[0]);
-	modes[2] = intraMode(dcLeft ? 2 : minimum(left[7], modes[0]), rem[2]);
-	modes[8] = intraMode(dcLeft ? 2 : minimum(left[13], modes[2]), rem[8]);
-	modes[10] = intraMode(dcLeft ? 2 : minimum(left[15], modes[8]), rem[10]);
-	modes[1] = intraMode(dcTop ? 2 : minimum(modes[0], top[1]), rem[1]);
-	modes[4] = intraMode(dcTop ? 2 : minimum(modes[1], top[2]), rem[4]);
-	modes[5] = intraMode(dcTop ? 2 : minimum(modes[4], top[3]), rem[5]);
-	modes[3] = intraMode(minimum(modes[2], modes[1]), rem[3]);
-	modes[6] = intraMode(minimum(modes[3], modes[4]), rem[6]);
-	modes[7] = intraMode(minimum(modes[6], modes[5]), rem[7]);
-	modes[9] = intraMode(minimum(modes[8], modes[3]), rem[9]);
-	modes[11] = intraMode(minimum(modes[10], modes[9]), rem[11]);
-	modes[12] = intraMode(minimum(modes[9], modes[6]), rem[12]);
-	modes[13] = intraMode(minimum(modes[12], modes[7]), rem[13]);
-	modes[14] = intraMode(minimum(modes[11], modes[12]), rem[14]);
-	modes[15] = intraMode(minimum(modes[14], modes[13]), rem[15]);
+	modes[0] = intraMode(dcLeft || dcTop ? 2 : min32(left[5], top[0]), rem[0]);
+	modes[2] = intraMode(dcLeft ? 2 : min32(left[7], modes[0]), rem[2]);
+	modes[8] = intraMode(dcLeft ? 2 : min32(left[13], modes[2]), rem[8]);
+	modes[10] = intraMode(dcLeft ? 2 : min32(left[15], modes[8]), rem[10]);
+	modes[1] = intraMode(dcTop ? 2 : min32(modes[0], top[1]), rem[1]);
+	modes[4] = intraMode(dcTop ? 2 : min32(modes[1], top[2]), rem[4]);
+	modes[5] = intraMode(dcTop ? 2 : min32(modes[4], top[3]), rem[5]);
+	modes[3] = intraMode(min32(modes[2], modes[1]), rem[3]);
+	modes[6] = intraMode(min32(modes[3], modes[4]), rem[6]);
+	modes[7] = intraMode(min32(modes[6], modes[5]), rem[7]);
+	modes[9] = intraMode(min32(modes[8], modes[3]), rem[9]);
+	modes[11] = intraMode(min32(modes[10], modes[9]), rem[11]);
+	modes[12] = intraMode(min32(modes[9], modes[6]), rem[12]);
+	modes[13] = intraMode(min32(modes[12], modes[7]), rem[13]);
+	modes[14] = intraMode(min32(modes[11], modes[12]), rem[14]);
+	modes[15] = intraMode(min32(modes[14], modes[13]), rem[15]);
 	stripe->rowState->intra += 16;
 }
 

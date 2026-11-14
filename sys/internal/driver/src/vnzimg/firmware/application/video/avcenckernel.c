@@ -475,11 +475,6 @@ void avcencSearchChoose(AvcencChoice *choice, const int16_t *top, const int16_t 
 /* the line above's place in the macroblock above, and the macroblocks beside it */
 #define MB_SIZE		256
 
-static inline int32_t abs32(int32_t value)
-{
-	return value < 0 ? -value : value;
-}
-
 /* 0x89e280: the first row, with its neighbours above and to the left */
 void avcencIntraLoad(AvcencIntra *intra, const uint8_t *lines, const uint8_t *top,
 	int32_t topRight)

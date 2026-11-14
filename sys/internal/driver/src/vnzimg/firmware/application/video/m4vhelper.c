@@ -6,7 +6,7 @@
  * run (or after the engine decoded them itself) that tells the engine the
  * run and finds where the next one starts.
  */
-#include "service.h"
+#include "m4vdecparser.h"
 
 #define STREAM_SIZE		64
 #define UNIT_SIZE		256
@@ -21,47 +21,14 @@
 #define TABLE_DECODING		1
 #define TABLE_DECODED		4
 
-#define RUN_ENDED		3
-#define ERROR_RESYNC		8192	/* the parser lost its place: on to a resync marker */
-#define ERROR_PACKET		0x8007
-#define ERROR_TIME		8229	/* the first times are negative */
-#define ERROR_TIME_ORDER	8230	/* the pts is before the dts */
-#define ERRORS_FATAL		0xc000
-
-/* the markers looked for, by their bits */
-#define SHORT_VIDEO_START_BITS	22
-#define SHORT_VIDEO_START	0x20	/* short_video_start_marker */
-#define SHORT_VIDEO_END		0x3f	/* short_video_end_marker */
-#define GOB_START_BITS		17
-#define START_CODE_PREFIX_BITS	24
-#define RESYNC_BITS(vop)	((vop)->codingType ? (vop)->fcode + 16 : 17)
 
 /* the VThread jobs, by the slot's index on the context */
 
 void m4vdecJobPrepare(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
 void m4vdecJobSlice(uint32_t shared, uint32_t stream, uint32_t job, uint32_t unused);
-void m4vdecJobSliceSoftware(uint32_t shared, uint32_t stream, uint32_t job);
+void m4vdecJobSliceNotCoded(uint32_t shared, uint32_t stream, uint32_t job);
 void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job);
 void m4vdecPictureEnd(const VideoM4vStream *stream, VideoM4vJob *job);
-
-/* the parser's parts the jobs run (the MPEG-4 engine's) */
-void m4vdecVopHeader(const VideoM4vStream *stream, VideoM4vJob *job);	/* 0x843736 */
-void m4vdecShortHeader(const VideoM4vStream *stream, VideoM4vJob *job);	/* 0x84394e */
-void m4vdecGobHeader(VideoM4vJob *job);					/* 0x843b90 */
-void m4vdecPacketHeader(const VideoM4vStream *stream, VideoM4vJob *job);	/* 0x843c16 */
-void m4vdecRunUnit(const VideoHelperShared *shared, const VideoM4vStream *stream,
-	VideoM4vJob *job);						/* 0x843e06 */
-void m4vdecRunNotCoded(const VideoHelperShared *shared, const VideoM4vStream *stream,
-	VideoM4vJob *job);						/* 0x844044 */
-void m4vdecRunSoftware(const VideoHelperShared *shared, const VideoM4vStream *stream,
-	VideoM4vJob *job);						/* 0x8440f2 */
-void m4vdecRunFailed(const VideoHelperShared *shared, const VideoM4vStream *stream,
-	VideoM4vJob *job);						/* 0x84415c */
-uint32_t m4vdecMacroblocksContext(VideoM4vJob *job);			/* 0x846044 */
-int32_t m4vdecMacroblocksDecode(VideoM4vUnit *unit, VideoBitstream *bits,
-	uint32_t context, int32_t count);				/* 0x8458e6 */
-void m4vdecParserError(const VideoM4vStream *stream, VideoM4vJob *job, uint32_t stage,
-	int32_t code);							/* 0x847184 */
 
 /* run a job on the helper's context until the context takes it */
 static void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
@@ -262,7 +229,7 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 				m4vdecVopHeader(stream, job);
 				unit->vop->vopHeader = 0;
 			} else {
-				m4vdecParserError(stream, job, 2, ERROR_PACKET);
+				m4vdecParserError(stream, job, 2, ERROR_VOP);
 			}
 		} else {
 			if (!vol->shortHeader && !unit->vop->vopHeader)
@@ -295,9 +262,9 @@ void m4vdecJobPrepare(uint32_t sharedAddress, uint32_t streamAddress, uint32_t j
 	else if (unit->failed)
 		;
 	else if (unit->vol->dataPartitioned)
-		m4vdecRunNotCoded(shared, stream, job);
+		m4vdecRunPartitioned(shared, stream, job);
 	else if (!unit->vop->vopCoded)
-		m4vdecRunSoftware(shared, stream, job);
+		m4vdecRunNotCoded(shared, stream, job);
 	else {
 		unit->dataBits = m4vdecBitsTell(stream, unit);
 		m4vdecRunUnit(shared, stream, job);
@@ -412,7 +379,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 
 	unit = (VideoM4vUnit *)((const VideoM4vStream *)streamAddress)->unit;
 	if (!unit->vop->vopCoded) {
-		m4vdecJobSliceSoftware(sharedAddress, streamAddress, jobAddress);
+		m4vdecJobSliceNotCoded(sharedAddress, streamAddress, jobAddress);
 		return;
 	}
 	shared = (VideoHelperShared *)vnzPublicOpenPrivate(sharedAddress, SHARED_SIZE);
@@ -455,8 +422,8 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 				/* the rest of the GOB, decoded here */
 				m4vdecBitsSkipUnit(shared, bits);
 				gobAlign(bits);
-				status = m4vdecMacroblocksDecode(unit, bits,
-					m4vdecMacroblocksContext(job), count);
+				status = m4vdecRunStatus(unit, bits,
+					m4vdecGobStartNext(job), count);
 				if (!status)
 					VIDEO_UNIT[VIDEO_UNIT_BITS] = 0;
 			}
@@ -472,7 +439,7 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 		else
 			n = unit->runLength;
 		if (unit->vol->dataPartitioned)
-			unit->vop->skipped = 0;
+			unit->vop->pastRun = 0;
 		status = RUN_ENDED;
 		count = n;
 		if (unit->macroblocks - unit->firstMacroblock < count)
@@ -526,8 +493,8 @@ void m4vdecJobSlice(uint32_t sharedAddress, uint32_t streamAddress, uint32_t job
 	vnzPublicClosePrivate((uint32_t)request, JOB_SIZE);
 }
 
-/* the second job when the engine decoded the run itself (no unit) */
-void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint32_t jobAddress)
+/* the second job of a VOP not coded: no run on the unit */
+void m4vdecJobSliceNotCoded(uint32_t sharedAddress, uint32_t streamAddress, uint32_t jobAddress)
 {
 	VideoHelperShared *shared;
 	const VideoM4vStream *stream;
@@ -568,7 +535,7 @@ void m4vdecJobSliceSoftware(uint32_t sharedAddress, uint32_t streamAddress, uint
 	if (vol->shortHeader) {
 		gobAlign(bits);
 		count = vop->runEnd - done;
-		status = m4vdecMacroblocksDecode(unit, bits, m4vdecMacroblocksContext(job), count);
+		status = m4vdecRunStatus(unit, bits, m4vdecGobStartNext(job), count);
 	} else {
 		count = unit->runMacroblocks - done;
 	}
@@ -684,13 +651,13 @@ void m4vdecPictureBegin(const VideoM4vStream *stream, VideoM4vJob *job)
 	table->failed = 0;
 	table->info2 = unit->info2;
 	if (stream->pts < stream->dts)
-		m4vdecParserError(0, job, 3, ERROR_TIME_ORDER);
+		m4vdecParserError(NULL, job, 3, ERROR_TIME_ORDER);
 
 	if (unit->pictureCount == 0) {
 		if (unit->firstPts < 0 || unit->firstDts < 0) {
 			unit->firstPts = 0;
 			unit->firstDts = 0;
-			m4vdecParserError(0, job, 3, ERROR_TIME);
+			m4vdecParserError(NULL, job, 3, ERROR_TIME);
 		}
 		if (stream->dts == VIDEO_TIME_NONE || stream->pts == VIDEO_TIME_NONE) {
 			table->dts = unit->firstDts;

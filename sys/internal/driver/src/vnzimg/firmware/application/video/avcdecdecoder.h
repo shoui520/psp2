@@ -546,4 +546,21 @@ void avcdecStripePredict(uint32_t info, uint32_t row, uint32_t unused, uint32_t 
 void avcdecStripeResidual(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
 void avcdecStripeFilter(uint32_t info, uint32_t row, uint32_t unused, uint32_t unused2);
 
+/*
+ * a job set on a locked context, the context relocked until it takes it (both
+ * decoder engines)
+ */
+static inline VnzKernelVThreadContext *jobNotify(VnzKernelVThreadContext *context,
+	VnzKernelVThreadContext *locked,
+	uint32_t index, uint32_t wanted, VnzKernelJobFunction function, uint32_t argument,
+	uint32_t argument2, uint32_t argument3, VnzKernelThread *thread, uint32_t flags)
+{
+	while (vnzKernelVThreadJobSetNotify(locked, index, wanted, function, argument, argument2,
+	    argument3, 0, thread, flags)) {
+		vnzKernelVThreadContextUnlock(locked);
+		locked = vnzKernelVThreadContextLock(context);
+	}
+	return locked;
+}
+
 #endif

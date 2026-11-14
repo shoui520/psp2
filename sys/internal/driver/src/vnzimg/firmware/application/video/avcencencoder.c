@@ -22,7 +22,6 @@
 #define RATE_SIZE		128
 #define BUFFER_BLOCK		256	/* the writer's buffer, and the line the stream's end is read back by */
 
-#define ALIGN64(size)		(((size) + 63) & ~63)
 #define ALIGN256(size)		(((size) + 255) & ~255)
 
 /* the engine's states */
