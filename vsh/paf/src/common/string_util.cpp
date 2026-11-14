@@ -9,6 +9,21 @@
 #include <stdarg.h>
 
 namespace paf {
+
+/* Sony's Split calls push_back rather than inlining it. */
+template<>
+inline __attribute__((noinline)) int
+vector<common::String>::push_back(const common::String &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) common::String(val);
+		result = ++count;
+	}
+	return result;
+}
+
 namespace common {
 
 /* 10 to the power -1 - i, and 10 to the power 1 + i */

@@ -15,6 +15,23 @@
 #include <graphics/surface/surface_display.h>
 
 namespace paf {
+
+/* Sony's DeleteObj has the unlinking inline. */
+template<>
+inline __attribute__((always_inline)) list<graph::ScreenCopyObj *>::iterator
+list<graph::ScreenCopyObj *>::erase(iterator where)
+{
+	_Node *node = where.node;
+	_Node *next = node->next;
+
+	node->next->prev = node->prev;
+	node->prev->next = node->next;
+	destroy(&node->value);
+	operator delete(node);
+	--count;
+	return iterator(next);
+}
+
 namespace graph {
 
 ScreenCopy *ScreenCopy::s_instance;

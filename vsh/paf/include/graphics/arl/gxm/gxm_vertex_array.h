@@ -161,6 +161,27 @@ public:
 		sce_paf_memcpy(buffer->m_memory->m_addr, vertices, size);
 	}
 
+	/* the same, out of line: Sony's TextGraphicsImpl::Draw calls it for its quad, where every
+	   other user has it inline (the tag and its name ours) */
+	struct OutOfLine {
+	};
+
+	__attribute__((noinline)) VertexArray(common::SharedPtr<VramAllocator> allocator,
+					      const common::SharedPtr<VertexArraySpec> &spec,
+					      const void *vertices, uint32_t count, OutOfLine)
+		: m_spec(spec), m_buffer(new VertexBuffer(allocator))
+	{
+		uint32_t size = count * spec->m_stride;
+		VertexBuffer *buffer = m_buffer.get();
+		SurfaceMemory *memory = buffer->m_memory.get();
+
+		if (memory->m_addr == NULL) {
+			memory->m_allocator->Alloc(memory, size);
+			memory->m_size = size;
+		}
+		sce_paf_memcpy(buffer->m_memory->m_addr, vertices, size);
+	}
+
 	/* room for count vertices, put in later (the page-turn meshes') */
 	VertexArray(common::SharedPtr<VramAllocator> allocator,
 		    common::SharedPtr<VertexArraySpec> spec, uint32_t count)

@@ -13,6 +13,7 @@
 #include <common/shared_ptr.h>
 #include <std/string>
 #include <graphics/arl/arl_defines.h>
+#include <graphics/graphmem/graphmem.h>
 #include <image/image_types.h>
 
 namespace paf {
@@ -50,15 +51,27 @@ inline uint32_t BytesPerPixel(ImageMode format)
 	}
 }
 
-/* gives surfaces their video memory */
+/* gives surfaces their video memory from one of GraphMem's heaps, counting what it gave
+   (Sony's class name; its members' names ours) */
 class VramAllocator {
 public:
+	VramAllocator(const char *name,
+			  const common::WeakPtr<GraphMem::GraphHeapAllocator> &heap)
+		: m_used(0), m_name(name), m_heap(heap)
+	{
+	}
+
 	virtual ~VramAllocator()
 	{
 	}
 
-	virtual void Alloc(SurfaceMemory *memory, uint32_t size) = 0;
-	virtual void Free(SurfaceMemory *memory) = 0;
+	virtual inline void Alloc(SurfaceMemory *memory, uint32_t size);
+
+	virtual inline void Free(SurfaceMemory *memory);
+
+	uint32_t m_used;
+	string m_name;
+	common::WeakPtr<GraphMem::GraphHeapAllocator> m_heap;
 };
 
 /* a block of video memory, given back to its allocator when the last owner lets it go */
@@ -81,6 +94,38 @@ public:
 	uint32_t m_size;
 	common::SharedPtr<VramAllocator> m_allocator;
 };
+
+inline void VramAllocator::Alloc(SurfaceMemory *memory, uint32_t size)
+{
+	common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
+
+	if (heap.get() != NULL) {
+		GraphMem::GraphHeapAllocator *allocator =
+			common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
+
+		memory->m_addr = allocator->sce_paf_malloc(size);
+	}
+	memory->m_alloc_size = size;
+	m_used += size;
+}
+
+inline void VramAllocator::Free(SurfaceMemory *memory)
+{
+	if (memory->m_addr != NULL) {
+		m_used -= memory->m_alloc_size;
+
+		common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
+
+		if (heap.get() != NULL) {
+			GraphMem::GraphHeapAllocator *allocator =
+				common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
+
+			allocator->sce_paf_free(memory->m_addr);
+		}
+		memory->m_addr = NULL;
+		memory->m_alloc_size = 0;
+	}
+}
 
 /* a surface's memory and how its mip levels are laid out in it */
 class SurfaceStorage {

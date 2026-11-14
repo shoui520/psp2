@@ -249,7 +249,7 @@ AppIconBase::AppIconBase(Widget *parent, CreateParam *param)
 	DrawObjAttr label_attr(2);
 
 	label_attr.m_flag1 = false;
-	AddDrawObj(DrawObjEntry(common::SharedPtr<graph::DrawObj>(m_text_obj), label_attr),
+	AddDrawObj(DrawObjEntry(common::SharedPtr<graph::DrawObj>(static_cast<graph::DrawObj *>(m_text_obj)), label_attr),
 		   false);
 	GetDrawObj(1)->SetSize(math::v3(54.0f, 54.0f, 0.0f));
 }

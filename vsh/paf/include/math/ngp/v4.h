@@ -14,7 +14,7 @@ public:
 	{
 	}
 
-	v4(float x, float y, float z, float w) : _impl(x, y, z, w)
+	__attribute__((always_inline)) v4(float x, float y, float z, float w) : _impl(x, y, z, w)
 	{
 	}
 

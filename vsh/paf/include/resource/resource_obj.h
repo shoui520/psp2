@@ -172,7 +172,7 @@ public:
 	/* the IDs' debug symbols from the resource's .rcd file (name ours) */
 	int32_t LoadResourceDescription(const char *name);
 
-	void SetResolutionResource(ui::ResolutionResource resource)
+	void SetResolutionResource(IDParam resource)
 	{
 		m_resolution_resource = resource;
 	}
@@ -197,7 +197,7 @@ public:
 	uint32_t m_create_type;
 	/* each ID's debug symbol: its "id:", "src:" and "type:" fields, comma separated */
 	map<uint32_t, string> m_id_map;
-	ui::ResolutionResource m_resolution_resource;
+	IDParam m_resolution_resource;
 };
 
 }

@@ -2,17 +2,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* setjmp_abi.S: the pattern stored over bytes from destination on */
+void *sce_paf_memfill32(void *destination, uint32_t pattern, size_t bytes);
+
 void *sce_paf_memset32(void *destination, uint32_t pattern, size_t words)
 {
-	uint8_t *out = (uint8_t *)destination;
-	size_t i;
-
-	for (i = 0; i < words; i++) {
-		out[0] = (uint8_t)pattern;
-		out[1] = (uint8_t)(pattern >> 8);
-		out[2] = (uint8_t)(pattern >> 16);
-		out[3] = (uint8_t)(pattern >> 24);
-		out += 4;
-	}
+	sce_paf_memfill32(destination, pattern, words * 4);
 	return destination;
 }

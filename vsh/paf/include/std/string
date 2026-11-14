@@ -250,6 +250,11 @@ public:
 		return npos;
 	}
 
+	size_type find(const _Myt &str, size_type pos = 0) const
+	{
+		return find(str.ptr, pos, str.count);
+	}
+
 	size_type find(_Elem ch, size_type pos = 0) const
 	{
 		return find(&ch, pos, 1);
@@ -803,5 +808,15 @@ inline bool operator<(const string &left, const string &right)
 }
 
 }
+
+/* list<string>: inlined everywhere, emitted by whichever of <std/list> and <std/string> comes second */
+#ifdef PAF_STD_LIST
+PAF_LIST_INLINE_DTOR(string)
+#endif
+
+/* vector<wstring>::operator=: emitted by whichever of <std/vector> and <std/string> comes second */
+#ifdef PAF_STD_VECTOR
+PAF_VECTOR_NOINLINE_ASSIGN(wstring)
+#endif
 
 #endif

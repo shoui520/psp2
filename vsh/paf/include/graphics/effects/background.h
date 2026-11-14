@@ -63,6 +63,24 @@ public:
 	virtual void SetUVTransform(const math::matrix &transform) = 0;
 };
 
+}
+
+/* Sony's Renderer constructor calls push_back for its two backgrounds rather than inlining it. */
+template<>
+inline __attribute__((noinline)) int
+vector<common::SharedPtr<graph::Background> >::push_back(const common::SharedPtr<graph::Background> &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) common::SharedPtr<graph::Background>(val);
+		result = ++count;
+	}
+	return result;
+}
+
+namespace graph {
+
 /* the backgrounds, of which the one at the index is drawn */
 class BackgroundList : public Background {
 public:

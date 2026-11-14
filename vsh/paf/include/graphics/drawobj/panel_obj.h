@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <arm_neon.h>
 #include <common/shared_ptr.h>
-#include <graphics/color.h>
 #include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <math/ngp/v2.h>
@@ -31,20 +30,8 @@ public:
 /* what the panel renderer draws a panel with (0x90 bytes) */
 class PanelParam {
 public:
-	PanelParam()
-		: m_pos(PanelVec(0.0f, 0.0f, 0.0f, 1.0f)), m_rot(PanelVec(0.0f, 0.0f, 0.0f, 1.0f)),
-		  m_scale(PanelVec(1.0f, 1.0f, 1.0f, 1.0f)), m_edge(vdup_n_f32(0.1f)),
-		  m_color(s_color_white.getImpl().get128()), m_pair_y(1.0f), m_pair_x(1.0f),
-		  m_flag0(false), m_flag1(false)
-	{
-		m_revolution.m_axis[0] = 0.0f;
-		m_revolution.m_axis[1] = 0.0f;
-		m_revolution.m_axis[2] = 1.0f;
-		m_revolution.m_angle = 13.0f;
-		for (uint32_t i = 0; i < sizeof(m_name.m_words) / sizeof(m_name.m_words[0]); i++)
-			m_name.m_words[i] = 0;
-		SetName("");
-	}
+	/* defined below, where graphics/color.h is included */
+	inline PanelParam();
 
 	/* the name, cut to 31 characters */
 	void SetName(const char *name)
@@ -123,6 +110,25 @@ public:
 /* m_revolution, for Widget::SetObjAnim (not exported; name ours) */
 math::v4 GetPanelRevolution(const PanelObj *obj);
 
+
+/* white needs the colours of graphics/color.h, which this header does not include: Sony's
+   widget.cpp uses PanelObj and has none of their initialisers */
+#ifdef PAF_GRAPHICS_COLOR_H
+inline PanelParam::PanelParam()
+	: m_pos(PanelVec(0.0f, 0.0f, 0.0f, 1.0f)), m_rot(PanelVec(0.0f, 0.0f, 0.0f, 1.0f)),
+	  m_scale(PanelVec(1.0f, 1.0f, 1.0f, 1.0f)), m_edge(vdup_n_f32(0.1f)),
+	  m_color(s_color_white.getImpl().get128()), m_pair_y(1.0f), m_pair_x(1.0f), m_flag0(false),
+	  m_flag1(false)
+{
+	m_revolution.m_axis[0] = 0.0f;
+	m_revolution.m_axis[1] = 0.0f;
+	m_revolution.m_axis[2] = 1.0f;
+	m_revolution.m_angle = 13.0f;
+	for (uint32_t i = 0; i < sizeof(m_name.m_words) / sizeof(m_name.m_words[0]); i++)
+		m_name.m_words[i] = 0;
+	SetName("");
+}
+#endif
 }
 }
 

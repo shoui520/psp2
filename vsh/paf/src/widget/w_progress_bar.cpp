@@ -1605,10 +1605,10 @@ const ProgressBar::LabelPos ProgressBar::c_labelPosTable[] = {
 	{ math::v2(1.0f, 0.0f), math::v2(1.0f, 0.0f), 1, 0 },
 	{ math::v2(0.0f, 1.0f), math::v2(0.0f, 1.0f), 0, 1 },
 	{ math::v2(0.0f, -1.0f), math::v2(0.0f, -1.0f), 0, 2 },
-	{ math::v2(-1.0f, 1.0f), math::v2(0.0f, 1.0f), 2, 1 },
-	{ math::v2(-1.0f, -1.0f), math::v2(0.0f, -1.0f), 2, 2 },
-	{ math::v2(1.0f, 1.0f), math::v2(0.0f, 1.0f), 1, 1 },
-	{ math::v2(1.0f, -1.0f), math::v2(0.0f, -1.0f), 1, 2 },
+	{ math::v2(-1.0f, 1.0f), math::v2(0.0f, 1.0f), 1, 1 },
+	{ math::v2(-1.0f, -1.0f), math::v2(0.0f, -1.0f), 1, 2 },
+	{ math::v2(1.0f, 1.0f), math::v2(0.0f, 1.0f), 2, 1 },
+	{ math::v2(1.0f, -1.0f), math::v2(0.0f, -1.0f), 2, 2 },
 };
 
 thread::Mutex ProgressBar::s_async_lock("ScePafProgressBar", 0);

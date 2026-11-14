@@ -154,7 +154,7 @@ public:
 
 	~vector();
 
-	PAF_VECTOR_NOINLINE _Myt &operator=(const _Myt &src)
+	_Myt &operator=(const _Myt &src)
 	{
 		_Myt(src).swap(*this);
 		return *this;
@@ -292,17 +292,24 @@ vector<_Ty, _Ax>::vector(const _Myt &src) : alloc(src.alloc)
 	}
 }
 
+/* the destructor body; also the inline destructor of the element types Sony keeps no
+   out-of-line copy for (PAF_VECTOR_INLINE_DTOR) */
+#define PAF_VECTOR_DESTROY_ALL \
+	if (ptr != NULL) { \
+		for (size_type i = count; i != 0; --i) \
+			ptr[i - 1].~_Elem(); \
+		alloc.deallocate(ptr, limit); \
+	} \
+	ptr = (_Elem *)-1; \
+	count = -1; \
+	limit = -1;
+
 template<class _Ty, class _Ax>
 vector<_Ty, _Ax>::~vector()
 {
-	if (ptr != NULL) {
-		for (size_type i = count; i != 0; --i)
-			ptr[i - 1].~_Ty();
-		alloc.deallocate(ptr, limit);
-	}
-	ptr = (_Ty *)-1;
-	count = -1;
-	limit = -1;
+	typedef _Ty _Elem;
+
+	PAF_VECTOR_DESTROY_ALL
 }
 
 template<class _Ty, class _Ax>
@@ -529,5 +536,43 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 }
 
 }
+
+/* vector<T>::~vector inline, at namespace scope after T: Sony inlines it everywhere */
+#define PAF_VECTOR_INLINE_DTOR(T) \
+	namespace paf { \
+	template<> inline vector<T, allocator<T> >::~vector() \
+	{ \
+		typedef T _Elem; \
+		PAF_VECTOR_DESTROY_ALL \
+	} \
+	}
+
+/* vector<T>::operator= out of line, at namespace scope after T: Sony keeps it out of line for
+   these element types and inlines it for the rest */
+#define PAF_VECTOR_NOINLINE_ASSIGN(T) \
+	namespace paf { \
+	template<> inline __attribute__((noinline)) vector<T, allocator<T> > & \
+	vector<T, allocator<T> >::operator=(const vector<T, allocator<T> > &src) \
+	{ \
+		vector<T, allocator<T> >(src).swap(*this); \
+		return *this; \
+	} \
+	}
+
+/* element types Sony's code inlines the destructor of everywhere */
+namespace paf {
+namespace ui { class Widget; class RearTap; }
+namespace graph { class DrawObjParam; }
+}
+PAF_VECTOR_INLINE_DTOR(unsigned char)
+PAF_VECTOR_INLINE_DTOR(ui::Widget *)
+PAF_VECTOR_INLINE_DTOR(ui::RearTap *)
+PAF_VECTOR_INLINE_DTOR(graph::DrawObjParam *)
+#ifdef PAF_STD_STRING
+PAF_VECTOR_NOINLINE_ASSIGN(wstring)
+#endif
+#ifdef PAF_VERSATILEPARAM_IDPARAM_H
+PAF_VECTOR_NOINLINE_ASSIGN(IDParam)
+#endif
 
 #endif

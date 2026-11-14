@@ -41,6 +41,28 @@ extern "C" int sceAppMgrSetRecommendedScreenOrientationActivated(int32_t activat
 extern "C" int vshMotionNoiseFilterIsAvailable(void);
 
 namespace paf {
+namespace common {
+
+/* Sony's Environment constructor calls the input listeners' assignment out of line. */
+template<>
+inline __attribute__((noinline)) SharedPtr<inputdevice::InputListener> &
+SharedPtr<inputdevice::InputListener>::operator=(const SharedPtr &src)
+{
+	inputdevice::InputListener *ptr = src.m_ptr;
+	RefCounter *counter = src.m_ref_counter;
+
+	if (m_ptr != ptr) {
+		Release();
+		m_ptr = ptr;
+		m_ref_counter = counter;
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+	return *this;
+}
+
+}
+
 
 /* Sony has the lookup in the scene entries inline. */
 template<>
@@ -87,6 +109,103 @@ inline __attribute__((noinline)) void list<ui::EntryRequest>::push_back(const ui
 		ScePafStdc_D608246A();
 	if (node != NULL)
 		new (&node->value) ui::EntryRequest(val);
+	else
+		node = head;
+	if (node != head) {
+		node->prev = head->prev;
+		node->next = head;
+		head->prev->next = node;
+		head->prev = node;
+		++count;
+	}
+}
+
+/* Sony's EventLoop and FlushDelayedEvents have the unlinking of the first event inline. */
+template<>
+inline __attribute__((always_inline)) void list<ui::Event>::pop_front()
+{
+	if (count != 0 && head != NULL) {
+		_Node *node = head->next;
+
+		node->next->prev = node->prev;
+		node->prev->next = node->next;
+		destroy(&node->value);
+		operator delete(node);
+		--count;
+	}
+}
+
+/* Sony's OnUpdatePre and UpdateWidgetGroups have the removal by key inline. */
+template<>
+inline __attribute__((always_inline)) void
+_Tree<_Tmap_traits<int32_t, ui::Widget *, less<int32_t> > >::erase(const int32_t &key)
+{
+	_Node *node = _Find(key);
+
+	if (node != NULL && !node->isnil)
+		_Erase(node);
+}
+
+template<>
+inline __attribute__((always_inline)) void
+_Tree<_Tmap_traits<uint32_t, ui::ModalWidgetList, less<uint32_t> > >::erase(const uint32_t &key)
+{
+	_Node *node = _Find(key);
+
+	if (node != NULL && !node->isnil)
+		_Erase(node);
+}
+
+/* Sony's Environment constructor calls its lists' and maps' constructors out of line. */
+#define PAF_ENV_LIST_CTOR(T) \
+	template<> \
+	inline __attribute__((noinline)) list<T>::list(const allocator<T> &al) : alloc(al) \
+	{ \
+		count = 0; \
+\
+		_Node *node = (_Node *)operator new(sizeof(_Node)); \
+\
+		if (node == NULL) \
+			ScePafStdc_D608246A(); \
+		head = node; \
+		if (head != NULL) { \
+			head->prev = head; \
+			head->next = head; \
+		} \
+	}
+
+PAF_ENV_LIST_CTOR(ui::Event)
+PAF_ENV_LIST_CTOR(ui::EntryRequest)
+PAF_ENV_LIST_CTOR(ui::TextureRequest)
+PAF_ENV_LIST_CTOR(ui::Scene *)
+PAF_ENV_LIST_CTOR(ui::HitInfo)
+PAF_ENV_LIST_CTOR(ui::Widget *)
+
+#undef PAF_ENV_LIST_CTOR
+
+template<>
+inline __attribute__((noinline)) map<int32_t, ui::Widget *>::map(const allocator_type &al)
+{
+}
+
+template<>
+inline __attribute__((noinline)) map<uint32_t, ui::ModalWidgetList>::map(const allocator_type &al)
+{
+}
+
+/* Sony's UpdateRestructScene calls the scene list's push_back rather than inlining it. */
+template<>
+inline __attribute__((noinline)) void list<ui::Scene *>::push_back(ui::Scene *const &val)
+{
+	if (head == NULL)
+		return;
+
+	_Node *node = (_Node *)operator new(sizeof(_Node));
+
+	if (node == NULL)
+		ScePafStdc_D608246A();
+	if (node != NULL)
+		new (&node->value) ui::Scene *(val);
 	else
 		node = head;
 	if (node != head) {
@@ -914,7 +1033,7 @@ void Environment::UpdateDisplayArea()
 		}
 	}
 	if (m_display_area_changed) {
-		for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+		for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
 		     ++it) {
 			Scene *scene = static_cast<Scene *>(*it);
 
@@ -1246,7 +1365,7 @@ static int32_t SimulateGesture(Environment *env, int32_t type, Widget *widget,
 	ev.m_data[1] = (int32_t)pos.extract_y();
 
 	if (env->m_scenes_onupdate.size() != 0) {
-		list<Widget *>::iterator it = env->m_scenes_onupdate.end();
+		list<Scene *>::iterator it = env->m_scenes_onupdate.end();
 
 		while (it != env->m_scenes_onupdate.begin()) {
 			--it;
@@ -1359,8 +1478,8 @@ found:
 extern "C" int32_t ScePafWidget_8AD528C7(Environment *env, int32_t type, const IDParam &id,
 					 const GestureParam *param)
 {
-	list<Widget *>::iterator end = env->m_scenes_onupdate.end();
-	list<Widget *>::iterator it = env->m_scenes_onupdate.begin();
+	list<Scene *>::iterator end = env->m_scenes_onupdate.end();
+	list<Scene *>::iterator it = env->m_scenes_onupdate.begin();
 	Widget *widget = NULL;
 
 	if (id != IDParam()) {
@@ -1582,7 +1701,7 @@ void Environment::OnUpdateTouchDeviceRegion()
 
 void Environment::OnUpdatePost()
 {
-	for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
+	for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
 		(*it)->OnUpdate();
 	graph::DrawObj::SetDirtyCount(2);
 	UpdateRestructScene();
@@ -1591,7 +1710,7 @@ void Environment::OnUpdatePost()
 		m_focus_cursor_rear.Update(0.0f);
 	}
 	UpdateDisplayAreaSettings();
-	for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
+	for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end(); it++)
 		(*it)->OnUpdatePost();
 	OnUpdateTouchDeviceRegion();
 	graph::DrawObj::SetDirtyCount(1);
@@ -1748,7 +1867,7 @@ void Environment::EventLoop()
 			   e.m_target == NULL) {
 			/* to the scenes from the top one down until one takes it; a touch is turned and
 			   scaled into each scene's screen first */
-			list<Widget *>::iterator it = m_scenes_onupdate.end();
+			list<Scene *>::iterator it = m_scenes_onupdate.end();
 			int32_t result = 0;
 
 			while (it != m_scenes_onupdate.begin()) {
@@ -2193,7 +2312,7 @@ void Environment::UpdateRestructScene()
 		RefreshOrderLists(true);
 		m_scene_restruct = false;
 	} else {
-		for (list<Widget *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
+		for (list<Scene *>::iterator it = m_scenes_onupdate.begin(); it != m_scenes_onupdate.end();
 		     it++)
 			static_cast<Scene *>(*it)->UpdateLayerWeight();
 		RefreshOrderLists(false);
@@ -2267,7 +2386,7 @@ extern "C" void ScePafWidget_DC1B19DB(Environment *env)
 	graph::UpdatePanelLayers();
 	graph::DrawCalls()->BeginFrame(false);
 
-	list<Widget *>::iterator it;
+	list<Scene *>::iterator it;
 
 	for (it = env->m_scenes_onupdate.begin(); it != env->m_scenes_onupdate.end(); it++) {
 		Scene *scene = static_cast<Scene *>(*it);

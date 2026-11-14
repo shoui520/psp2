@@ -33,6 +33,20 @@
  #define SQUISH_USE_SIMD 1
  #else
  #define SQUISH_USE_SIMD 0
+--- a/rangefit.cpp
++++ b/rangefit.cpp
+@@ -83,8 +83,9 @@
+ 	// clamp the output to [0, 1]
+ 	Vec3 const one( 1.0f );
+ 	Vec3 const zero( 0.0f );
+-	start = Min( one, Max( zero, start ) );
+-	end = Min( one, Max( zero, end ) );
++	/* SCE: the clamped value first in Min, so a NaN component stays NaN */
++	start = Min( Max( zero, start ), one );
++	end = Min( Max( zero, end ), one );
+ 
+ 	// clamp to the grid and save
+ 	Vec3 const grid( 31.0f, 63.0f, 31.0f );
 --- a/simd.h
 +++ b/simd.h
 @@ -32,6 +32,8 @@

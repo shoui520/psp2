@@ -13,7 +13,7 @@ public:
 	{
 	}
 
-	v2(float x, float y) : _impl(x, y)
+	__attribute__((always_inline)) v2(float x, float y) : _impl(x, y)
 	{
 	}
 

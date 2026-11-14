@@ -25,6 +25,19 @@ public:
    down (names ours); 0x20 bytes */
 class PageTurnQuad {
 public:
+	PageTurnQuad()
+	{
+	}
+
+	/* the same, out of line: Sony's TextureOps constructor calls it for its quad, where the
+	   other users have it inline (the tag and its name ours) */
+	struct OutOfLine {
+	};
+
+	explicit __attribute__((noinline)) PageTurnQuad(OutOfLine)
+	{
+	}
+
 	/* 0x812153bc: the place, the texture coordinates or both from -1 to 1 instead of 0 to 1
 	   (Sony's build keeps it out of line) */
 	__attribute__((noinline)) void Init(bool ndc_position, bool ndc_uv)

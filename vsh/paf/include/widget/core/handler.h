@@ -289,6 +289,22 @@ public:
 };
 
 }
+
+/* Sony has the lookups in a handler's listener maps inline wherever they are made. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::iterator
+_Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(const int32_t &key)
+{
+	return iterator(_Find(key));
+}
+
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::TimeoutListener *, less<int32_t> > >::iterator
+_Tree<_Tmap_traits<int32_t, ui::TimeoutListener *, less<int32_t> > >::find(const int32_t &key)
+{
+	return iterator(_Find(key));
+}
+
 }
 
 #endif

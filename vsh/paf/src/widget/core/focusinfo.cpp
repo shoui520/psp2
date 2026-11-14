@@ -298,7 +298,8 @@ bool FocusInfo::IsMoveImmediate()
 	return false;
 }
 
-intrusive_ptr<graph::Surface> FocusInfo::s_textures[9];
+/* the first one initialised from NULL, as Sony's is (its static init calls intrusive_ptr(NULL, true)) */
+intrusive_ptr<graph::Surface> FocusInfo::s_textures[9] = { NULL };
 
 /* the textures the common resource gives the cursor frames: the table's index and the ID (inline
    in Sony's B6C64486, a copy of the load for each) */

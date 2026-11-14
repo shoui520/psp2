@@ -19,6 +19,25 @@
 #include <std/map>
 
 namespace paf {
+
+/* Sony has the lookup and the removal in the panel object map inline. */
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<graph::DrawObj *, int32_t, less<graph::DrawObj *> > >::iterator
+_Tree<_Tmap_traits<graph::DrawObj *, int32_t, less<graph::DrawObj *> > >::find(graph::DrawObj *const &key)
+{
+	return iterator(_Find(key));
+}
+
+template<>
+inline __attribute__((always_inline)) void
+_Tree<_Tmap_traits<graph::DrawObj *, int32_t, less<graph::DrawObj *> > >::erase(graph::DrawObj *const &key)
+{
+	_Node *node = _Find(key);
+
+	if (node != NULL && !node->isnil)
+		_Erase(node);
+}
+
 namespace graph {
 
 /* the scene draws the refractions' and the glass bubbles' layers while there are no panels */

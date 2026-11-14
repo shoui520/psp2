@@ -144,4 +144,7 @@ public:
 }
 }
 
+PAF_VECTOR_INLINE_DTOR(graph::FFTWavePhase)
+PAF_VECTOR_INLINE_DTOR(graph::Half)
+
 #endif

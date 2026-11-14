@@ -3945,7 +3945,7 @@ ScePaf:
         - _ZN3paf2ui14AnimListenerF16OnTickEPvS2_: 0x6B532EC9
         - _ZN3paf2ui14BoxLayoutParam6CreateEi: 0x6B6018B2
         - _ZN3paf2ui16AppIconBaseParamC1Ev: 0x6B6C4693
-        - ScePafWidget_6B810963: 0x6B810963
+        - _ZN3paf2ui13UIPadListener12PostPadEventEjjjbi: 0x6B810963
         - _ZN3paf2ui18PageTurnStyleParam7SetEachEPNS0_6WidgetE: 0x6BA0A3FD
         - _ZN3paf2ui13BusyIndicator9SendEventEiiiii: 0x6BAC4D7A
         - _ZN3paf2ui4Text16HandleTouchPressEPNS0_5EventE: 0x6BF58C60
@@ -4187,7 +4187,7 @@ ScePaf:
         - _ZN3paf2ui4Text15GetNextRightHitEjRj: 0x8403FC5B
         - _ZN3paf2ui11Environment16IsHitStackParentEPNS0_6WidgetE: 0x84212F4F
         - _ZN3paf2ui5PlaneD1Ev: 0x845DC32E
-        - ScePafWidget_846CA0D5: 0x846CA0D5
+        - _ZN3paf2ui14UIBtrmListener8OnUpdateEPKNS_11inputdevice4DataE: 0x846CA0D5
         - _ZN3paf2ui16ProgressBarTouch16CreateSliderGlowEv: 0x8491B570
         - _ZN3paf2ui11ProgressBar16SetMaxValueAsyncEf: 0x8495C7B8
         - _ZN3paf2ui5wutil5debug14LoadPngTextureERKNS_12basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEEERNS_13intrusive_ptrINS_5graph7SurfaceEEE: 0x84BE12BE
@@ -4368,7 +4368,7 @@ ScePaf:
         - _ZNK3paf2ui6Widget20get_resolution_data2EPKNS0_14ResolutionDataEjjjPS4_S5_: 0x96FDCAE6
         - _ZN3paf2ui7Focuser21ScePafWidget_97020684EPv: 0x97020684
         - _ZN3paf2ui13SlidingDrawer16HandleTouchEventEPNS0_5EventE: 0x970BAC60
-        - ScePafWidget_971CF15F: 0x971CF15F
+        - _ZN3paf2ui17UIPadHoldListener8OnUpdateEPKNS_11inputdevice4DataE: 0x971CF15F
         - _ZN3paf2ui13SlidingDrawer19OnViewLayoutUpdatedEb: 0x9785B04F
         - _ZN3paf2ui8ListView21ScePafWidget_D9FE36A6EiRNS_4math2v2ES4_: 0x979F0084
         - _ZN3paf2ui8ListView14OnCellDragStopEii: 0x97A5714B
@@ -4655,7 +4655,7 @@ ScePaf:
         - _ZN3paf2ui8listview7Segment11DestroyCellEij: 0xB5DC0192
         - _ZN3paf2ui8RichText8SetCTextEPKcj: 0xB5E9FC42
         - _ZN3paf2ui21ScrollViewScrollParamC1Ev: 0xB612DA42
-        - ScePafWidget_B61B0E90: 0xB61B0E90
+        - _ZN3paf2ui13UIPadListener9UpdatePadEPjS2_PiS3_PKNS_11inputdevice4DataE: 0xB61B0E90
         - _ZN3paf2ui13SlidingDrawer8TypeNameEv: 0xB67C8F50
         - _ZN3paf2ui8BoxParamC1Ev: 0xB696AC11
         - _ZN3paf2ui13ImageSlideBar10CheckStateEv: 0xB6A04319
@@ -4886,7 +4886,7 @@ ScePaf:
         - _ZNK3paf2ui23ImageButtonHandlerParam12GetParamNameEv: 0xD089504F
         - _ZN3paf2ui6Widget16GrabEventRoutingEPNS0_5EventERKNS_4math2v4ES7_PNS0_9TouchInfoEPNS0_7HitInfoE: 0xD0ADF61A
         - _ZN3paf2ui6Widget17IsMorphResolutionERjS2_RfS3_: 0xD0B1977D
-        - _ZN3paf2ui14AnimListenerF110GetHermiteERfS1_S1_S1_: 0xD0D78958
+        - _ZN3paf2ui14AnimListenerF110GetHermiteERfS2_S2_S2_: 0xD0D78958
         - _ZN3paf2ui11ScrollBar2d15OnDragEndSliderEPNS0_5EventEb: 0xD0F14292
         - _ZN3paf2ui8SlideBarD1Ev: 0xD10169EB
         - _ZNK3paf2ui8SlideBar9IsInheritEPKc: 0xD123A71C
@@ -4998,7 +4998,7 @@ ScePaf:
         - _ZN3paf2ui7TextBox6OnDrawERNS_5graph8DrawInfoE: 0xDBDCDA56
         - _ZN3paf2ui8filelist10Visualizer11GetListItemEv: 0xDBE176A7
         - ScePafWidget_DC1B19DB: 0xDC1B19DB
-        - ScePafWidget_DC5E436A: 0xDC5E436A
+        - _ZN3paf2ui17UIPadHoldListener12PostPadEventEjjjbi: 0xDC5E436A
         - _ZN3paf2ui4Text10InvalidateEv: 0xDC679268
         - _ZN3paf2ui11ProgressBar10CheckStateEv: 0xDCACF3F6
         - _ZN3paf2ui8filelist13SegmentSource5GetIDEi: 0xDCCDC90C

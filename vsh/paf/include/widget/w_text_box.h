@@ -107,6 +107,13 @@ public:
 	/* the glow object's texture, the glow made first (obj OBJ_GLOW) */
 	virtual int32_t SetTexture(const intrusive_ptr<graph::Surface> &surf, int32_t obj,
 				   uint32_t index);
+	/* it takes the text events while edited, or where event 0x20004 or a tap has a listener */
+	virtual bool IsTextEventEnabled()
+	{
+		return m_edit_mode ||
+		       m_map_e_listener.find(0x20004) != m_map_e_listener.end() ||
+		       m_map_e_listener.find(CB_TEXT_BOX_TAPPED) != m_map_e_listener.end();
+	}
 	virtual void UpdateTouchMode();
 	/* where the focus moves: down only once tapping or editing takes it (name ours) */
 	virtual int32_t GetFocusDirectionMask()

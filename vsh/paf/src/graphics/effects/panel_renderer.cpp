@@ -5,6 +5,21 @@
 #include <stdint.h>
 #include <gxm.h>
 #include <vectormath.h>
+#include <graphics/effects/wave_param.h>
+
+namespace paf {
+namespace graph {
+
+/* Sony's PanelRenderer destructor calls the point-light set's destructor out of line; declared
+   ahead of the headers whose inline destructors destroy one */
+template<>
+inline __attribute__((noinline)) ParamSetInstance<PointLightSphereParamSet>::~ParamSetInstance()
+{
+}
+
+}
+}
+
 #include <graphics/color.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/drawobj/effect_path.h>

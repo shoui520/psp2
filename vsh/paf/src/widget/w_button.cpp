@@ -86,7 +86,7 @@ static graph::TextObj *CreateLabel(Button *button)
 	style.reserved1 = 0;
 
 	graph::TextObj *obj = new graph::TextObj(style);
-	common::SharedPtr<graph::DrawObj> ptr(obj);
+	common::SharedPtr<graph::DrawObj> ptr(static_cast<graph::DrawObj *>(obj));
 	Widget::DrawObjAttr attr(Button::OBJ_LABEL);
 
 	attr.m_flag1 = false;

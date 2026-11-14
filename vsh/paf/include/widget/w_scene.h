@@ -26,15 +26,11 @@ class Camera;
 /* one screen resolution a scene lays out for */
 class SceneResolution {
 public:
-	SceneResolution()
-	{
-	}
-
 	uint32_t m_id;
 	uint32_t m_base_id;
-	/* the resource variants of m_id and of m_base_id */
-	ResolutionResource m_resource;
-	ResolutionResource m_base_resource;
+	/* the resource variants (strings' and textures') of m_id and of m_base_id */
+	IDParam m_resource;
+	IDParam m_base_resource;
 	/* the sizes of the scene's screen viewport and scissor (Screen's vp and sp; names
 	   ours) */
 	int32_t m_viewport_width;

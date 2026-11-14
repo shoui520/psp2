@@ -5,6 +5,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <graphics/color.h>
 #include <inputdevice/inputdevice.h>
 #include <inputdevice/inputlistener.h>
 #include <inputdevice/btrm/btrm.h>

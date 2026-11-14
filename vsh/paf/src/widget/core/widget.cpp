@@ -22,7 +22,38 @@
 #include <widget/w_camera.h>
 #include <widget/w_scene.h>
 
+/* the adjustment a widget without its own is given (name ours) */
+paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
+
 namespace paf {
+
+/*
+ * Sony keeps erasing an animation queue and a touch capture by iterator out of line, with the
+ * search by its key inline (erase(key) has no copy of its own).
+ */
+template<>
+inline __attribute__((noinline)) void
+_Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::erase(iterator where)
+{
+	if (where.node != NULL) {
+		_Node *node = _Find(where.node->value.first);
+
+		if (node != NULL && !node->isnil)
+			_Erase(node);
+	}
+}
+
+template<>
+inline __attribute__((noinline)) void
+_Tree<_Tmap_traits<uint32_t, ui::TouchCapture *, less<uint32_t> > >::erase(iterator where)
+{
+	if (where.node != NULL) {
+		_Node *node = _Find(where.node->value.first);
+
+		if (node != NULL && !node->isnil)
+			_Erase(node);
+	}
+}
 
 /* Sony's build calls the draw objects' push_back rather than inlining it. */
 template<>
@@ -74,7 +105,7 @@ _Tree<_Tmap_traits<int32_t, ui::AnimQueue *, less<int32_t> > >::find(const int32
 	return iterator(_Find(key));
 }
 
-/* Sony's RemoveChild has the unlinking inline, and its DoEvent the lookup in the listener map. */
+/* Sony's RemoveChild has the unlinking inline. */
 template<>
 inline __attribute__((always_inline)) list<ui::Widget *>::iterator
 list<ui::Widget *>::erase(iterator where)
@@ -90,19 +121,22 @@ list<ui::Widget *>::erase(iterator where)
 	return iterator(next);
 }
 
-template<>
-inline __attribute__((always_inline)) _Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::iterator
-_Tree<_Tmap_traits<int32_t, ui::EventListenerList *, less<int32_t> > >::find(const int32_t &key)
-{
-	return iterator(_Find(key));
-}
-
 /* Sony's transition timer functions have the lookup in the widget timer maps inline. */
 template<>
 inline __attribute__((always_inline)) _Tree<_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> > >::iterator
 _Tree<_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> > >::find(ui::Widget *const &key)
 {
 	return iterator(_Find(key));
+}
+
+template<>
+inline __attribute__((always_inline)) void
+_Tree<_Tmap_traits<ui::Widget *, Timer *, less<ui::Widget *> > >::erase(ui::Widget *const &key)
+{
+	_Node *node = _Find(key);
+
+	if (node != NULL && !node->isnil)
+		_Erase(node);
 }
 
 namespace ui {
@@ -573,17 +607,19 @@ public:
 	AnimListener *m_listener;
 };
 
+list<RestructInfo> Widget::s_list_restruct;
+
 extern "C" {
 list<AnimPending> ScePafWidget_8A0DA7BF;
 }
+
+/* the draw objects SwapDrawObj took out, kept until the frame ends (name ours) */
+list<common::SharedPtr<graph::DrawObj> > s_swapped_drawobjs;
 
 /* the timers of the widgets that hide and are destroyed when theirs runs out, and those of the
    widgets that show (names ours) */
 map<Widget *, Timer *> s_destroy_timers;
 static map<Widget *, Timer *> s_show_timers;
-
-/* the draw objects SwapDrawObj took out, kept until the frame ends (name ours) */
-list<common::SharedPtr<graph::DrawObj> > s_swapped_drawobjs;
 
 /* the widget's timer in the map taken out and deleted, if it has one (inline in Sony's callers;
    name ours) */
@@ -3255,17 +3291,17 @@ void Widget::SetFocusDirection(int32_t dir, IDParam id)
 		if (dir != 0) {
 			switch (dir) {
 			case 1:
-				hint->m_direction_id[1] = id;
+				hint->m_down = id;
 				break;
 			case 2:
-				hint->m_direction_id[2] = id;
+				hint->m_left = id;
 				break;
 			case 3:
-				hint->m_direction_id[3] = id;
+				hint->m_right = id;
 				break;
 			}
 		} else {
-			hint->m_direction_id[0] = id;
+			hint->m_up = id;
 		}
 	}
 }
@@ -3561,7 +3597,7 @@ Widget *Widget::SearchFocus(FocusSearchInfo *info, Widget *from, uint32_t mode)
 			}
 		}
 	} else if (!m_focus_searching) {
-		list<Widget *>::iterator scene = m_env->m_scenes_onupdate.begin();
+		list<Scene *>::iterator scene = m_env->m_scenes_onupdate.begin();
 		int32_t entry = -1;
 		Widget *first = m_children.size() == 0 ? NULL : *m_children.begin();
 
@@ -4896,9 +4932,9 @@ static __attribute__((noinline)) math::v4 Transform(const math::matrix &m, const
    name ours) */
 static __attribute__((noinline)) math::v4 HitBoxOffset(Widget *w)
 {
-	if (w->m_hit_box != NULL)
-		return w->m_hit_box[0];
-	return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	if (w->m_hit_box == NULL)
+		return math::v4(0.0f, 0.0f, 0.0f, 0.0f);
+	return w->m_hit_box[0];
 }
 
 /* the world and the local matrix (Sony's copies out of line, 0x812427bc and 0x812427d8; names
@@ -6770,8 +6806,8 @@ int32_t Widget::get_resolution_data2(const ResolutionData *array, uint32_t num, 
 	if (resolution_a == NULL || resolution_b == NULL)
 		return -1;
 
-	uint32_t key_a = resolution_a->m_resource.m_value;
-	uint32_t key_b = resolution_b->m_resource.m_value;
+	uint32_t key_a = resolution_a->m_resource.m_idhash;
+	uint32_t key_b = resolution_b->m_resource.m_idhash;
 	uint32_t i;
 
 	for (i = 0; i < num; i++) {
@@ -6782,8 +6818,8 @@ int32_t Widget::get_resolution_data2(const ResolutionData *array, uint32_t num, 
 		if (*a != NULL && *b != NULL)
 			return 0;
 	}
-	key_a = resolution_a->m_base_resource.m_value;
-	key_b = resolution_b->m_base_resource.m_value;
+	key_a = resolution_a->m_base_resource.m_idhash;
+	key_b = resolution_b->m_base_resource.m_idhash;
 	for (i = 0; i < num; i++) {
 		if (array[i].m_id == key_a)
 			*a = &array[i];
@@ -9172,7 +9208,6 @@ uint32_t Widget::s_upmat_count_W;
 int32_t Widget::s_base_destroy_count = 1;
 int32_t Widget::s_destroying_count;
 int32_t Widget::s_instance_count;
-list<RestructInfo> Widget::s_list_restruct;
 
 int32_t Widget::GetBaseDestroyCount()
 {
@@ -9197,5 +9232,3 @@ static bool DepthLess(Widget *a, Widget *b)
 }
 }
 
-/* the adjustment a widget without its own is given (name ours) */
-paf::ui::AdjustParam ScePafWidget_BE1CEA2E;

@@ -3,10 +3,10 @@
 #include "string.h"
 #include "ctype.h"
 
-int PafFormatBody(PafFormatOutput output, void *context,
-		  const char *format, va_list args, char *buffer)
+int prnt(PafFormatOutput output, void *context, const char *format, va_list args)
 {
-	/* The ABI entry supplies the native, untouched conversion area. */
+	/* the conversion area: digits are written backwards from its end */
+	char buffer[32];
 	char *const end = buffer + 31;
 	const char *digits = "0123456789abcdef";
 	uint64_t wideValue = 0;

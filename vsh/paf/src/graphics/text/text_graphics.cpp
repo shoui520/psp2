@@ -7,6 +7,30 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include <common/shared_ptr.h>
+
+namespace paf {
+namespace graph {
+namespace arl {
+class VramAllocator;
+}
+}
+
+namespace common {
+
+/*
+ * Sony's Draw drops the default allocator for its quad out of line (the copy is inline);
+ * declared ahead of the headers whose inline code drops it.
+ */
+template<>
+inline __attribute__((noinline)) SharedPtr<graph::arl::VramAllocator>::~SharedPtr()
+{
+	Release();
+}
+
+}
+}
+
 #include <graphics/arl/arl_defines.h>
 #include <graphics/arl/gxm/gxm_arl_frontend.h>
 #include <graphics/arl/gxm/gxm_vertex_array.h>
@@ -70,8 +94,9 @@ static inline math::v4 UnpackColor(uint32_t color)
 		vcvtq_f32_u32(vmovl_u16(vget_low_u16(rgba))), vdupq_n_f32(1.0f / 255.0f))));
 }
 
-/* the matrix that scales by scale, then moves by pos (name ours) */
-inline math::matrix QuadMatrix(const math::v3 &pos, const math::v3 &scale)
+/* the matrix that scales by scale, then moves by pos (name ours; out of line in Sony's Draw) */
+inline __attribute__((noinline)) math::matrix QuadMatrix(const math::v3 &pos,
+							  const math::v3 &scale)
 {
 	return math::matrix(sce::Vectormath::Simd::Aos::Matrix4(
 		sce::Vectormath::Simd::Aos::Matrix3::scale(scale.getImpl()), pos.getImpl()));
@@ -353,16 +378,28 @@ int32_t TextGraphicsImpl::Update()
 /* Each rectangle is the quad scaled to it under the box's matrix, in the color times the
    rectangle's. A glyph clipped by the box draws the part of its surface left; one of an image
    (an emoji) keeps its colors, under the text color's alpha. */
+/* Sony's Draw has its first two matrix products and its first model load out of line and the
+   rest inline (SNC stopped inlining into it): those out-of-line copies (names ours) */
+static __attribute__((noinline)) math::matrix MulMatrix(const math::matrix &a, const math::matrix &b)
+{
+	return a * b;
+}
+
+static __attribute__((noinline)) void LoadMatrix(arl::MatrixStack *stack, const math::matrix &matrix)
+{
+	stack->Load(matrix);
+}
+
 int32_t TextGraphicsImpl::Draw(const math::matrix &world, const math::v4 &color, Shader *shader)
 {
 	ArlInstance *gl = arl::Gl();
 
 	if (s_vertices == NULL)
-		s_vertices = new VertexArray(gl->m_default_allocator,
+		s_vertices = new VertexArray(gl->GetDefaultAllocator(),
 					     ScePafGraphics_4D1E289A(gl,
 						VertexArraySpec::ATTRIB0_F3_ATTRIB3_F2,
 						SCE_GXM_INDEX_SOURCE_INDEX_16BIT),
-					     s_vertex_data, 4);
+					     s_vertex_data, 4, VertexArray::OutOfLine());
 
 	PlaneObjDrawParams params(NULL, NULL);
 
@@ -371,10 +408,10 @@ int32_t TextGraphicsImpl::Draw(const math::matrix &world, const math::v4 &color,
 	params.m_instances = 1;
 	params.m_num_textures = 0;
 
-	math::matrix base = world * QuadMatrix(math::v3(-m_draw_rect.extract_x(),
-							m_draw_rect.extract_y(), 0.0f),
-					       math::v3(m_draw_scale.extract_x(),
-							m_draw_scale.extract_y(), 0.0f));
+	math::matrix base = MulMatrix(world, QuadMatrix(math::v3(-m_draw_rect.extract_x(),
+								 m_draw_rect.extract_y(), 0.0f),
+							math::v3(m_draw_scale.extract_x(),
+								 m_draw_scale.extract_y(), 0.0f)));
 	for (list<TextGraphics::Char *>::iterator it = m_draw_chars.begin();
 	     it != m_draw_chars.end(); ++it) {
 		Char *c = (Char *)*it;
@@ -384,10 +421,11 @@ int32_t TextGraphicsImpl::Draw(const math::matrix &world, const math::v4 &color,
 		if (back_color.extract_w() > 0.0f && c->m_draw_rect.extract_z() > 0.0f &&
 		    c->m_draw_rect.extract_w() > 0.0f) {
 			gl->Color(math::v4(mulPerElem(color.getImpl(), back_color.getImpl())));
-			gl->m_model.Load(base * QuadMatrix(math::v3(c->m_draw_rect.extract_x(),
-								    -c->m_draw_rect.extract_y(), 0.0f),
-							   math::v3(c->m_draw_rect.extract_z(),
-								    c->m_draw_rect.extract_w(), 1.0f)));
+			LoadMatrix(&gl->m_model,
+				   MulMatrix(base, QuadMatrix(math::v3(c->m_draw_rect.extract_x(),
+								       -c->m_draw_rect.extract_y(), 0.0f),
+							      math::v3(c->m_draw_rect.extract_z(),
+								       c->m_draw_rect.extract_w(), 1.0f))));
 			params.m_effect = PlaneObjDrawParams::Effect_None;
 			params.m_textures = NULL;
 			params.m_num_textures = 0;

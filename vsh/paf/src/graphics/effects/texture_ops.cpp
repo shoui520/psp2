@@ -27,7 +27,71 @@
 
 using namespace sce::Vectormath::Simd::Aos;
 
+/*
+ * Sony's TextureOps constructor calls its members' constructors and its frame buffer object's
+ * shared pointer out of line (SNC stopped inlining into it).
+ */
 namespace paf {
+namespace graph {
+namespace arl {
+
+template<>
+inline __attribute__((noinline)) ShaderInstance<QuadVertShader, VertShaderObject>::ShaderInstance()
+	: m_object(&m_interface)
+{
+}
+
+}
+}
+
+namespace common {
+
+template<>
+template<>
+inline __attribute__((noinline))
+SharedPtr<graph::arl::FrameBufferObject>::SharedPtr(graph::arl::FrameBufferObject *ptr) : m_ptr(ptr)
+{
+	if (ptr != NULL) {
+		m_ref_counter = (RefCounter *)operator new(sizeof(RefCounter));
+		if (m_ref_counter != NULL) {
+			m_ref_counter->m_ptr = ptr;
+			m_ref_counter->m_counter = 1;
+			m_ref_counter->m_weak_counter = 1;
+			m_ref_counter->m_deleter = &SharedPtr<graph::arl::FrameBufferObject>::DefaultDeleter;
+		} else {
+			m_ptr = NULL;
+			m_ref_counter = NULL;
+		}
+	} else {
+		m_ref_counter = NULL;
+	}
+}
+
+template<>
+inline __attribute__((noinline)) SharedPtr<graph::arl::FrameBufferObject> &
+SharedPtr<graph::arl::FrameBufferObject>::operator=(const SharedPtr &src)
+{
+	graph::arl::FrameBufferObject *ptr = src.m_ptr;
+	RefCounter *counter = src.m_ref_counter;
+
+	if (m_ptr != ptr) {
+		Release();
+		m_ptr = ptr;
+		m_ref_counter = counter;
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+	return *this;
+}
+
+template<>
+inline __attribute__((noinline)) SharedPtr<graph::arl::FrameBufferObject>::~SharedPtr()
+{
+	Release();
+}
+
+}
+
 namespace graph {
 
 /* the box blurs drawn with the programs of radius 4 and 5 (name ours); nothing reads it */
@@ -146,13 +210,14 @@ inline __attribute__((noinline)) void InitBicubicTable(common::SharedPtr<arl::Te
 	}
 }
 
-TextureOps::TextureOps()
+TextureOps::TextureOps() : m_quad(PageTurnQuad::OutOfLine())
 {
 	m_programs = new TextureOpsPrograms;
 
 	arl::ArlInstance *gl = arl::Gl();
 
-	m_fbo = common::SharedPtr<arl::FrameBufferObject>(new arl::FrameBufferObject());
+	m_fbo = common::SharedPtr<arl::FrameBufferObject>(
+		new arl::FrameBufferObject(arl::FrameBufferObject::OutOfLine()));
 	m_quad.Init(false, false);
 
 	arl::ProgramState *state = gl;

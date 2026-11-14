@@ -90,6 +90,24 @@ string Join(const string &left, const string &right)
 using namespace paf;
 using paf::common::path::PathSegment;
 
+namespace paf {
+
+/* Sony's normalizer destroys its segment lists inline */
+template<>
+inline vector<PathSegment, allocator<PathSegment> >::~vector()
+{
+	if (ptr != NULL) {
+		for (size_type i = count; i != 0; --i)
+			ptr[i - 1].~PathSegment();
+		alloc.deallocate(ptr, limit);
+	}
+	ptr = (PathSegment *)-1;
+	count = -1;
+	limit = -1;
+}
+
+}
+
 string ScePafCommon_19056E57(const string &path)
 {
 	vector<PathSegment> parts;

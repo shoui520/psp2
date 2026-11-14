@@ -377,56 +377,6 @@ public:
 	bool m_full_size;
 };
 
-/* a VramAllocator over one of GraphMem's heaps, counting what it gave (names ours) */
-class HeapVramAllocator : public VramAllocator {
-public:
-	HeapVramAllocator(const char *name,
-			  const common::WeakPtr<GraphMem::GraphHeapAllocator> &heap)
-		: m_used(0), m_name(name), m_heap(heap)
-	{
-	}
-
-	virtual ~HeapVramAllocator()
-	{
-	}
-
-	virtual void Alloc(SurfaceMemory *memory, uint32_t size)
-	{
-		common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
-
-		if (heap.get() != NULL) {
-			GraphMem::GraphHeapAllocator *allocator =
-				common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
-
-			memory->m_addr = allocator->sce_paf_malloc(size);
-		}
-		memory->m_alloc_size = size;
-		m_used += size;
-	}
-
-	virtual void Free(SurfaceMemory *memory)
-	{
-		if (memory->m_addr != NULL) {
-			m_used -= memory->m_alloc_size;
-
-			common::SharedPtr<GraphMem::GraphHeapAllocator> heap(m_heap);
-
-			if (heap.get() != NULL) {
-				GraphMem::GraphHeapAllocator *allocator =
-					common::SharedPtr<GraphMem::GraphHeapAllocator>(m_heap).get();
-
-				allocator->sce_paf_free(memory->m_addr);
-			}
-			memory->m_addr = NULL;
-			memory->m_alloc_size = 0;
-		}
-	}
-
-	uint32_t m_used;
-	string m_name;
-	common::WeakPtr<GraphMem::GraphHeapAllocator> m_heap;
-};
-
 /* the scenes drawn into, innermost last: the bottom one stays */
 class SceneDataStack {
 public:
@@ -483,6 +433,13 @@ class ArlInstance : public TransformState, public ShaderState, public ProgramSta
 public:
 	ArlInstance();
 	~ArlInstance();
+
+	/* the default allocator, a reference taken (name ours; Sony's TextGraphicsImpl::Draw
+	   calls it out of line) */
+	__attribute__((noinline)) common::SharedPtr<VramAllocator> GetDefaultAllocator()
+	{
+		return m_default_allocator;
+	}
 
 	void CullMode(CullModeEnum mode);
 	void BlendFunc(BlendingFactor src_rgb, BlendingFactor dst_rgb, BlendingFactor src_a,

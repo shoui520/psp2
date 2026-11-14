@@ -32,6 +32,16 @@ public:
 	{
 	}
 
+	/* the same empty source, out of line: Sony's PageTurnRenderer constructor calls it for its
+	   three (SNC stops inlining into that constructor), where every other user has it inline
+	   (the tag and its name ours) */
+	struct OutOfLine {
+	};
+
+	explicit __attribute__((noinline)) TextureSource(OutOfLine)
+	{
+	}
+
 	/* Sony's build keeps this one out of line */
 	__attribute__((noinline)) TextureSource(const common::SharedPtr<TextureObject> &texture);
 
@@ -96,10 +106,10 @@ inline void ShaderParameter<TextureSource>::Apply()
 }
 
 /* a VramAllocator that gives out memory it was given, a page of the screen (names ours) */
-class FixedVramAllocator : public HeapVramAllocator {
+class FixedVramAllocator : public VramAllocator {
 public:
 	FixedVramAllocator(void *memory)
-		: HeapVramAllocator("", common::WeakPtr<GraphMem::GraphHeapAllocator>()),
+		: VramAllocator("", common::WeakPtr<GraphMem::GraphHeapAllocator>()),
 		  m_memory(memory), m_count(0)
 	{
 	}

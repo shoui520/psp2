@@ -16,6 +16,24 @@ sceSasAsStackChkFail:
 	nop
 	.size	sceSasAsStackChkFail, . - sceSasAsStackChkFail
 
+/*
+ * A second copy of the handler with its own unwind entry, which nothing calls, in Sony's link
+ * of libpaf, then an epilogue (pop {r4-r6, pc}) and a halfword that nothing reaches either, up
+ * to the next object. What they were built from is not known (name ours); they are kept as
+ * the instructions they decode to so the layout is Sony's.
+ */
+	.global	sceSasAsStackChkFailUnused
+	.type	sceSasAsStackChkFailUnused, %function
+	.thumb_func
+sceSasAsStackChkFailUnused:
+	bkpt	0x81
+	nop
+	pop	{r4, r5, r6, pc}
+	nop
+	strh	r0, [r6, #14]
+	nop
+	.size	sceSasAsStackChkFailUnused, . - sceSasAsStackChkFailUnused
+
 	.bss
 	.balign	4
 	.global	sceSasAsStackChkGuard

@@ -62,3 +62,58 @@ sce_paf_longjmp:
 	bx lr
 	.fnend
 	.size sce_paf_longjmp, . - sce_paf_longjmp
+
+/*
+ * sce_paf_memfill32(dst, pattern, bytes): bytes of the 32-bit pattern from dst on, the pattern
+ * turned a byte on with every byte stored before dst is word aligned, then words to a 32-byte
+ * boundary and NEON blocks of 32 bytes; returns dst (Sony's helper after longjmp; name ours).
+ */
+	.global sce_paf_memfill32
+	.type sce_paf_memfill32, %function
+	.thumb_func
+sce_paf_memfill32:
+	.fnstart
+	cbz r2, .Lreturn
+	mov ip, r0
+.Lhead:
+	tst.w r0, #3
+	beq .Lwords
+	subs r2, #1
+	strb.w r1, [r0], #1
+	mov.w r1, r1, ror #8
+	bne .Lhead
+	mov r0, ip
+.Lreturn:
+	bx lr
+.Lwords:
+	tst.w r0, #0x1f
+	beq .Lblocks
+	subs r2, #4
+	bcc .Ltail4
+	str.w r1, [r0], #4
+	bne .Lwords
+	mov r0, ip
+	bx lr
+.Lblocks:
+	vdup.32 q0, r1
+	vmov q1, q0
+.Lblock:
+	subs r2, #0x20
+	blt .Ltail32
+	vstmia r0!, {d0-d3}
+	bne .Lblock
+	mov r0, ip
+	bx lr
+.Ltail32:
+	adds r2, #0x1c
+.Ltail4:
+	adds r2, #4
+.Ltail:
+	subs r2, #1
+	strb.w r1, [r0], #1
+	mov.w r1, r1, ror #8
+	bne .Ltail
+	mov r0, ip
+	bx lr
+	.fnend
+	.size sce_paf_memfill32, . - sce_paf_memfill32

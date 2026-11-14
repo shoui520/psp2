@@ -590,6 +590,12 @@ public:
  * from the resource, that makes its widget when the template opens
  * (template_cache.cpp; class and member names ours).
  */
+}
+
+PAF_LIST_INLINE_DTOR(WidgetResourceInfo::LayoutData)
+
+namespace paf {
+
 class TemplateCache {
 public:
 	class Item;
@@ -598,10 +604,8 @@ public:
 	{
 	}
 
-	~TemplateCache()
-	{
-		Clear();
-	}
+	/* Sony inlines it into every caller */
+	__attribute__((always_inline)) ~TemplateCache();
 
 	/* makes the template's items; 0 when done */
 	int32_t Create(Plugin *plugin, const IDParam &id);
@@ -612,6 +616,17 @@ public:
 	bool m_created;
 	list<Item *> m_items;
 };
+
+}
+
+PAF_LIST_INLINE_DTOR(TemplateCache::Item *)
+
+namespace paf {
+
+inline TemplateCache::~TemplateCache()
+{
+	Clear();
+}
 
 /* A template's widget as read from its element: its type's factories and parameters. */
 class TemplateCache::Item {
@@ -708,5 +723,6 @@ paf::intrusive_ptr<paf::graph::Surface> ScePafToplevel_F13D2937(paf::Plugin *plu
 								uint32_t size, uint32_t type,
 								bool compressed, uint32_t origsize);
 }
+
 
 #endif

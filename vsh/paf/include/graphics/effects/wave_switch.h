@@ -24,10 +24,10 @@ class WaveSwitch {
 public:
 	/* ScePafGraphics_C0487D0A (C1), ScePafGraphics_ACD27A89 (C2): the switch made on, the
 	   waves' layers given their priorities */
-	WaveSwitch();
+	__declspec(dllexport) WaveSwitch();
 	/* ScePafGraphics_2A2F68EF (D1), ScePafGraphics_2FB40E94 (D2): the layers drawn by their
 	   owner again */
-	~WaveSwitch();
+	__declspec(dllexport) ~WaveSwitch();
 
 	/* the waves drawn and moved on */
 	bool m_on;

@@ -34,20 +34,6 @@ namespace ui {
 class Screen;
 }
 
-/* the distance and exp-minus textures' levels: Sony's renderer destroys them inline */
-template<>
-inline vector<uint8_t, allocator<uint8_t> >::~vector()
-{
-	if (ptr != NULL) {
-		for (size_type i = count; i != 0; --i)
-			ptr[i - 1].~uint8_t();
-		alloc.deallocate(ptr, limit);
-	}
-	ptr = (uint8_t *)-1;
-	count = -1;
-	limit = -1;
-}
-
 namespace graph {
 
 /* the parameters the page-turn renderer sets on a page's vertex shader, which keeps those it

@@ -169,9 +169,9 @@ extern "C" void ScePafGraphics_9AA25028(ArlInstance *gl, const InitParam &param)
 	}
 
 	gl->m_default_allocator =
-		common::SharedPtr<VramAllocator>(new HeapVramAllocator("default", s_heap));
+		common::SharedPtr<VramAllocator>(new VramAllocator("default", s_heap));
 	gl->m_debug_allocator =
-		common::SharedPtr<VramAllocator>(new HeapVramAllocator("debug", s_heap));
+		common::SharedPtr<VramAllocator>(new VramAllocator("debug", s_heap));
 	gl->m_clear = new ClearBase();
 	gl->m_quad_indices = new IndexArray(gl->m_default_allocator);
 	gl->m_render_target_pool = new RenderTargetPool();

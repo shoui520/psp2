@@ -60,6 +60,15 @@ public:
 	{
 	}
 
+	/* the same, out of line: Sony's TextureOps constructor calls it, where the frame buffer
+	   copy has it inline (the tag and its name ours) */
+	struct OutOfLine {
+	};
+
+	explicit __attribute__((noinline)) FrameBufferObject(OutOfLine) : m_size_source(NULL)
+	{
+	}
+
 	/* 0x81194264: drawn into from here on: the texture's level as the attachment, the
 	   viewport and scissor its size, the scene pushed (names ours) */
 	void Bind(const common::SharedPtr<TextureObject> &texture, uint32_t level,

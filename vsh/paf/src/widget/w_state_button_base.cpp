@@ -52,7 +52,7 @@ static graph::PlaneObj *CreateImage(StateButtonBase *button)
 static graph::TextObj *CreateLabel(StateButtonBase *button)
 {
 	graph::TextObj *obj = new graph::TextObj(graph::TextObjStyle());
-	common::SharedPtr<graph::DrawObj> ptr(obj);
+	common::SharedPtr<graph::DrawObj> ptr(static_cast<graph::DrawObj *>(obj));
 	Widget::DrawObjAttr attr(StateButtonBase::OBJ_LABEL);
 
 	attr.m_flag1 = false;

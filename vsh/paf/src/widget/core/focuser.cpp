@@ -13,6 +13,28 @@
 namespace paf {
 namespace ui {
 
+/*
+ * An object Sony's file builds at startup and destroys at exit, and nothing in the module
+ * reads: two vectors of plain values and a factor of 1 (0x813142e0 CEX). Nothing names it or
+ * its element types; the names and the float elements are ours.
+ */
+class FocusWork {
+public:
+	__attribute__((noinline)) FocusWork() : m_scale(1.0f)
+	{
+	}
+
+	__attribute__((noinline)) ~FocusWork()
+	{
+	}
+
+	vector<float> m_first;
+	vector<float> m_second;
+	float m_scale;
+};
+
+static FocusWork s_focus_work;
+
 /* the widget of the direction, the first for any other value (ScePafWidget_71349B04 inlined) */
 static inline __attribute__((always_inline)) Widget *DirectionWidgetOf(FocusDirectionWidget *data,
 								      int32_t dir)
@@ -31,15 +53,15 @@ static inline __attribute__((always_inline)) Widget *DirectionWidgetOf(FocusDire
 /* the ID of the direction in the hint, the first for any other value */
 static inline __attribute__((always_inline)) IDParam *DirectionIDOf(FocusHint *hint, int32_t dir)
 {
-	IDParam *id = &hint->m_direction_id[0];
+	IDParam *id = &hint->m_up;
 
 	if (dir != 0) {
 		if (dir == 1)
-			id += 1;
+			id = &hint->m_down;
 		else if (dir == 2)
-			id += 2;
+			id = &hint->m_left;
 		else if (dir == 3)
-			id += 3;
+			id = &hint->m_right;
 	}
 	return id;
 }

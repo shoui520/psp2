@@ -31,6 +31,21 @@
 using namespace sce::Vectormath::Simd::Aos;
 
 namespace paf {
+
+/* Sony's ParseTable calls the cells' push_back out of line. */
+template<>
+inline __attribute__((noinline)) int
+vector<ui::RichText::Cell>::push_back(const ui::RichText::Cell &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) ui::RichText::Cell(val);
+		result = ++count;
+	}
+	return result;
+}
+
 namespace ui {
 
 /* the font sizes of the size 0 (the base) and of font size= 1 to 7 */
@@ -909,7 +924,7 @@ __attribute__((noinline)) void HtmlParser::BeginHidden()
 }
 
 /* where it is lowered */
-static char ToLower(char ch);
+static __attribute__((noinline)) char ToLower(char ch);
 
 static const char s_delims[] = "= \t\n/>";
 

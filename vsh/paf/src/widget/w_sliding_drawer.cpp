@@ -227,7 +227,8 @@ static inline void SetScrollBoxHitBox(ScrollViewBase *view)
 	Vector2 corner = box - mulPerElem(size, Vector2(-0.5f, 0.5f));
 	math::v4 center = view->m_view_parent->GetPosCenter(0, view, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 
-	view->SetHitBox(3, math::v4(Vector4(size, Vector2(1.0f))),
+	/* the size read again after GetPosCenter, as Sony's */
+	view->SetHitBox(3, math::v4(Vector4(view->m_scroll_box_size.getImpl(), Vector2(1.0f))),
 			math::v4(Vector4(corner + center.getImpl().getXY(), Vector2(0.0f))));
 }
 

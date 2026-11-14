@@ -44,6 +44,8 @@ class WinHandle;
 
 namespace ui {
 
+class Scene;
+
 /*
  * A render target: its clear colour, viewport and scissor, and its surface. The
  * viewport and scissor are rectangles here, where older builds kept four ints
@@ -123,20 +125,6 @@ class Camera;
 class SceneResolution;
 
 /*
- * What the resource of a resolution is read with: the name of its strings' and
- * textures' variant and its value (names ours).
- */
-class ResolutionResource {
-public:
-	ResolutionResource() : m_name(s_empty_name), m_value(0)
-	{
-	}
-
-	string m_name;
-	uint32_t m_value;
-};
-
-/*
  * The screen resolutions the layouts are made for and the ones to use (Sony's class name, by the
  * NID hash of its constructors and of Scene's; names of the rest ours): a table of resolutions
  * and the ids of the ones in use, each shared with the default or owned.
@@ -192,7 +180,7 @@ extern "C" SceneResolution *ScePafWidget_615501F0(const Resolution *param, const
 extern "C" int32_t ScePafWidget_36505C86(const Resolution *param, const IDParam &id);
 /* the resource variant of the resolution with the ID or whose base has it; an empty one without
    (no name found) */
-extern "C" ResolutionResource ScePafWidget_E963EAEE(const Resolution *param, uint32_t id);
+extern "C" IDParam ScePafWidget_E963EAEE(const Resolution *param, uint32_t id);
 /* the display's largest frame buffer size (DisplaySurface::GetMaximumResolution; no name found
    for this export) */
 extern "C" __attribute__((noinline)) void ScePafWidget_608BC317(int32_t *width, int32_t *height);
@@ -266,6 +254,12 @@ public:
 	HitInfo() : m_widget_rot(0.0f, 0.0f, 0.0f, 1.0f)
 	{
 		sce_paf_memset(this, 0, sizeof(HitInfo));
+	}
+
+	/* empty, but declared: Sony's widget.cpp registers it at exit for its nearest hit
+	   (0x8123ca78 CEX) */
+	~HitInfo()
+	{
 	}
 
 	/* where the touch is, as SpinBase's drum takes it when the touch goes down (name ours) */
@@ -910,8 +904,9 @@ public:
 	EventQueue m_ev_queue;
 	list<Event> m_ev_subrouting;
 	list<Event> m_ev_doevent;
-	/* the scenes, updated each frame (name after ScePaf-RE) */
-	list<Widget *> m_scenes_onupdate;
+	/* the scenes, updated each frame (name after ScePaf-RE); a list type of its own in Sony's
+	   code (its constructor and push_back are not list<Widget *>'s) */
+	list<Scene *> m_scenes_onupdate;
 	/* the screen SetScreen gives */
 	Screen *m_screen;
 	/* a state per port (the front panel's and the rear's) and touch ID: the widget taking a
@@ -1067,5 +1062,12 @@ int32_t ScePafWidget_323CEF70(void);
 /* loads the effects whose bits are set from the folder */
 int32_t ScePafWidget_BA6EB0C6(uint32_t effects, const paf::string &dir);
 }
+
+PAF_LIST_INLINE_DTOR(ui::EntryRequest)
+PAF_LIST_INLINE_DTOR(ui::TextureRequest)
+PAF_LIST_INLINE_DTOR(ui::HitInfo)
+PAF_LIST_INLINE_DTOR(ui::Scene *)
+PAF_VECTOR_INLINE_DTOR(ui::EntryRange)
+PAF_VECTOR_INLINE_DTOR(ui::OrderEntry)
 
 #endif

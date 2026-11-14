@@ -20,6 +20,36 @@
 #include <src/paf_types.h>
 
 namespace paf {
+namespace common {
+
+/* Sony's DecodeImage calls the image pointer's copy and assignment out of line. */
+template<>
+inline __attribute__((noinline)) SharedPtr<image::Image>::SharedPtr(const SharedPtr &src)
+	: m_ptr(src.m_ptr), m_ref_counter(src.m_ref_counter)
+{
+	if (m_ptr != NULL)
+		sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+}
+
+template<>
+inline __attribute__((noinline)) SharedPtr<image::Image> &
+SharedPtr<image::Image>::operator=(const SharedPtr &src)
+{
+	image::Image *ptr = src.m_ptr;
+	RefCounter *counter = src.m_ref_counter;
+
+	if (m_ptr != ptr) {
+		Release();
+		m_ptr = ptr;
+		m_ref_counter = counter;
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+	return *this;
+}
+
+}
+
 namespace graph {
 
 int32_t Surface::AddRef()

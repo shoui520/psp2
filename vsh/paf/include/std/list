@@ -284,25 +284,30 @@ list<_Ty, _Ax>::list(const list &other)
 	}
 }
 
+/* the destructor body; also the inline destructor of the element types Sony keeps no
+   out-of-line copy for (PAF_LIST_INLINE_DTOR) */
+#define PAF_LIST_DESTROY_ALL \
+	if (head != NULL) { \
+		_Node *node = head->next; \
+ \
+		if (node != head) { \
+			do { \
+				_Node *next = node->next; \
+ \
+				destroy(&node->value); \
+				operator delete(node); \
+				node = next; \
+			} while (node != head); \
+		} \
+		operator delete(head); \
+	} \
+	head = (_Node *)-1; \
+	count = (size_type)-1;
+
 template<class _Ty, class _Ax>
 list<_Ty, _Ax>::~list()
 {
-	if (head != NULL) {
-		_Node *node = head->next;
-
-		if (node != head) {
-			do {
-				_Node *next = node->next;
-
-				destroy(&node->value);
-				operator delete(node);
-				node = next;
-			} while (node != head);
-		}
-		operator delete(head);
-	}
-	head = (_Node *)-1;
-	count = (size_type)-1;
+	PAF_LIST_DESTROY_ALL
 }
 
 template<class _Ty, class _Ax>
@@ -466,5 +471,30 @@ list<_Ty, _Ax>::remove(const _Ty &val)
 }
 
 }
+
+/* list<T>::~list inline, at namespace scope after T: Sony inlines it everywhere */
+#define PAF_LIST_INLINE_DTOR(T) \
+	namespace paf { \
+	template<> inline list<T, allocator<T> >::~list() \
+	{ \
+		PAF_LIST_DESTROY_ALL \
+	} \
+	}
+
+/* pointer element types Sony's code inlines the destructor of everywhere */
+namespace paf {
+class TimerListener;
+class TemplateCache;
+namespace ui { class Widget; }
+namespace graph { class ScreenCopyObj; }
+}
+PAF_LIST_INLINE_DTOR(ui::Widget *)
+PAF_LIST_INLINE_DTOR(TimerListener *)
+PAF_LIST_INLINE_DTOR(graph::ScreenCopyObj *)
+
+/* list<string>: inlined everywhere, emitted by whichever of <std/list> and <std/string> comes second */
+#ifdef PAF_STD_STRING
+PAF_LIST_INLINE_DTOR(string)
+#endif
 
 #endif

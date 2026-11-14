@@ -640,4 +640,6 @@ public:
 /* how far its contents scroll (npeula negates it into a position): the view box's height */
 #define m_scroll_extent m_view_box_size.extract_y()
 
+PAF_LIST_INLINE_DTOR(ui::RichText::LineGroup)
+
 #endif

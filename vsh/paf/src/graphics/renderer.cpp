@@ -21,6 +21,46 @@
 #include <src/common/frame_count.h>
 
 namespace paf {
+namespace common {
+
+/* Sony's Renderer constructor calls the draw environment's and the motion listener's
+   assignments out of line. */
+template<>
+inline __attribute__((noinline)) SharedPtr<graph::DrawEnv> &
+SharedPtr<graph::DrawEnv>::operator=(const SharedPtr &src)
+{
+	graph::DrawEnv *ptr = src.m_ptr;
+	RefCounter *counter = src.m_ref_counter;
+
+	if (m_ptr != ptr) {
+		Release();
+		m_ptr = ptr;
+		m_ref_counter = counter;
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+	return *this;
+}
+
+template<>
+inline __attribute__((noinline)) SharedPtr<graph::MotionListener> &
+SharedPtr<graph::MotionListener>::operator=(const SharedPtr &src)
+{
+	graph::MotionListener *ptr = src.m_ptr;
+	RefCounter *counter = src.m_ref_counter;
+
+	if (m_ptr != ptr) {
+		Release();
+		m_ptr = ptr;
+		m_ref_counter = counter;
+		if (m_ptr != NULL)
+			sceAtomicIncrement32AcqRel(&m_ref_counter->m_counter);
+	}
+	return *this;
+}
+
+}
+
 namespace graph {
 
 /* the folder the renderers load their resources from: the one given, else the firmware's */

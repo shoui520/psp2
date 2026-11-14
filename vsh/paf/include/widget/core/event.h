@@ -95,6 +95,15 @@ public:
 	Handler *m_target;
 };
 
+}
+}
+
+PAF_LIST_INLINE_DTOR(ui::Event)
+PAF_VECTOR_INLINE_DTOR(ui::Event)
+
+namespace paf {
+namespace ui {
+
 /* 0x38 bytes */
 class EventQueue {
 public:
@@ -125,5 +134,6 @@ public:
 
 }
 }
+
 
 #endif

@@ -396,8 +396,12 @@ public:
 	{
 	}
 
-	/* up, down, left and right */
-	IDParam m_direction_id[4];
+	/* the IDs the focus moves to up, down, left and right (four members: Sony's destructor
+	   destroys them one by one; names ours) */
+	IDParam m_up;
+	IDParam m_down;
+	IDParam m_left;
+	IDParam m_right;
 	math::rect m_search_rect;
 	/* whether the search rect is searched (EnableFocusSearchRect) */
 	bool m_search_rect_enable;
@@ -414,6 +418,11 @@ public:
 		m_widget[1] = NULL;
 		m_widget[2] = NULL;
 		m_widget[3] = NULL;
+	}
+
+	/* declared: Sony's ~Focuser tests it for NULL before deleting it */
+	~FocusDirectionWidget()
+	{
 	}
 
 	Widget *m_widget[4];
@@ -472,16 +481,16 @@ public:
 
 		switch (dir) {
 		case 0:
-			hint->m_direction_id[0] = value;
+			hint->m_up = value;
 			break;
 		case 1:
-			hint->m_direction_id[1] = value;
+			hint->m_down = value;
 			break;
 		case 2:
-			hint->m_direction_id[2] = value;
+			hint->m_left = value;
 			break;
 		case 3:
-			hint->m_direction_id[3] = value;
+			hint->m_right = value;
 			break;
 		}
 	}
@@ -1941,6 +1950,8 @@ paf::intrusive_ptr<paf::graph::Surface> ScePafResource_31C3B828(paf::ui::WidgetP
 								 const paf::IDParam &id);
 }
 
+PAF_LIST_INLINE_DTOR(ui::WidgetParam::IndexedRef)
+
 namespace paf {
 namespace ui {
 
@@ -2146,5 +2157,8 @@ extern paf::ui::AdjustParam ScePafWidget_BE1CEA2E;
    they differ; -1 where it has none, else 0 */
 int32_t ScePafWidget_B1C23134(paf::ui::Widget *widget, const paf::ui::AdjustParam &param);
 }
+
+PAF_VECTOR_INLINE_DTOR(ui::ResolutionData)
+PAF_VECTOR_INLINE_DTOR(ui::Widget::DeleteCBInfo)
 
 #endif

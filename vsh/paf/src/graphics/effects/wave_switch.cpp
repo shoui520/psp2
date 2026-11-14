@@ -72,7 +72,7 @@ static inline WaveRenderer *Waves(bool create)
 	return ScePafGraphics_4E038C05()->m_ptr->GetWaveRenderer(create).get();
 }
 
-__attribute__((always_inline)) WaveSwitch::WaveSwitch() : m_on(true)
+inline WaveSwitch::WaveSwitch() : m_on(true)
 {
 	s_wave_switch = this;
 
@@ -97,7 +97,7 @@ void ScePafGraphics_3EB90427(void)
 		new WaveSwitch;
 }
 
-__attribute__((always_inline)) WaveSwitch::~WaveSwitch()
+inline WaveSwitch::~WaveSwitch()
 {
 	s_wave_switch = NULL;
 	DrawCalls()->SetDrawMode(Waves(false)->m_rs_wave, 2);

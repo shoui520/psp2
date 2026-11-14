@@ -37,6 +37,20 @@ paf::ui::TextBoxEditMenuListener *ScePafWidget_1EE9D37E(void);
 
 namespace paf {
 
+/* Sony's link setters call the links' push_back out of line. */
+template<>
+inline __attribute__((noinline)) int
+vector<ui::Text::Link>::push_back(const ui::Text::Link &val)
+{
+	int result;
+
+	if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) {
+		new (&ptr[count]) ui::Text::Link(val);
+		result = ++count;
+	}
+	return result;
+}
+
 /* the focus shapes' clear and push_back, which Sony keeps out of line (widget.h) */
 template<>
 __attribute__((noinline)) void vector<ui::FocusShape>::clear()

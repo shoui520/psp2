@@ -457,10 +457,8 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	src/std/tty.cpp
 	src/std/printf.c
 	src/std/format.c
-	src/std/format_abi.S
 	src/std/wprintf.c
 	src/std/wformat.c
-	src/std/wformat_abi.S
 	../../sys/sdk/target/src/libsnc/i32ops.c
 	../../sys/sdk/target/src/libsnc/i64ops.c
 	../../sys/sdk/target/src/libsnc/unwind_pr0.c

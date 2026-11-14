@@ -29,51 +29,29 @@ __attribute__((noinline)) int vector<ui::SceneResolution, allocator<ui::SceneRes
 namespace ui {
 
 /* the twelve resolutions: qHD, HD and full HD, each for the normal orientation, left, right
-   and the pad key sides (ids 0 to 11 as GetResolutionId counts them) */
-static SceneResolution s_resolution_table[12];
-
-/* the sizes and the resource variants of the table (Sony has the numbers in the data and sets
-   the names from the static initializer) */
-static void SetResolutionTableEntry(int32_t index, uint32_t id, uint32_t base_id, const char *name,
-				    const char *base_name, int32_t width, int32_t height,
-				    int32_t oriented_width, int32_t oriented_height)
-{
-	SceneResolution *entry = &s_resolution_table[index];
-
-	entry->m_id = id;
-	entry->m_base_id = base_id;
-	entry->m_resource.m_name = name;
-	entry->m_base_resource.m_name = base_name;
-	entry->m_viewport_width = width;
-	entry->m_viewport_height = height;
-	entry->m_scissor_width = width;
-	entry->m_scissor_height = height;
-	entry->m_width = oriented_width;
-	entry->m_height = oriented_height;
-}
-
-static void InitResolutionTable()
-{
-	SetResolutionTableEntry(0, 1, 15, "landscape_padkey_footside", "landscape", 960, 544, 960, 544);
-	SetResolutionTableEntry(1, 2, 16, "portrait_padkey_leftside", "portrait", 960, 544, 544, 960);
-	SetResolutionTableEntry(2, 0, 15, "landscape_padkey_headside", "landscape", 960, 544, 960, 544);
-	SetResolutionTableEntry(3, 3, 16, "portrait_padkey_rightside", "portrait", 960, 544, 544, 960);
-	SetResolutionTableEntry(4, 5, 17, "half_hd_landscape_padkey_footside", "half_hd", 1280, 725, 1280, 725);
-	SetResolutionTableEntry(5, 6, 18, "half_hd_portrait_padkey_leftside", "half_hd_portrait", 1280, 725, 725, 1280);
-	SetResolutionTableEntry(6, 4, 17, "half_hd_landscape_padkey_headside", "half_hd", 1280, 725, 1280, 725);
-	SetResolutionTableEntry(7, 7, 18, "half_hd_portrait_padkey_rightside", "half_hd_portrait", 1280, 725, 725, 1280);
-	SetResolutionTableEntry(8, 9, 19, "full_hd_landscape_padkey_footside", "full_hd", 1920, 1088, 1920, 1088);
-	SetResolutionTableEntry(9, 10, 20, "full_hd_landscape_padkey_footside", "full_hd_portrait", 1920, 1088, 1088, 1920);
-	SetResolutionTableEntry(10, 8, 19, "full_hd_landscape_padkey_footside", "full_hd", 1920, 1088, 1920, 1088);
-	SetResolutionTableEntry(11, 11, 20, "full_hd_landscape_padkey_footside", "full_hd_portrait", 1920, 1088, 1088, 1920);
-}
-
-static struct ResolutionTableInit {
-	ResolutionTableInit()
-	{
-		InitResolutionTable();
-	}
-} s_resolution_table_init;
+   and the pad key sides (ids 0 to 11 as GetResolutionId counts them), with their resource
+   variants and the sizes of the viewport, the scissor and the oriented screen. Sony's
+   full HD rows all name the footside variant. */
+static SceneResolution s_resolution_table[12] = {
+	{ 1, 15, "landscape_padkey_footside", "landscape", 960, 544, 960, 544, 960, 544 },
+	{ 2, 16, "portrait_padkey_leftside", "portrait", 960, 544, 960, 544, 544, 960 },
+	{ 0, 15, "landscape_padkey_headside", "landscape", 960, 544, 960, 544, 960, 544 },
+	{ 3, 16, "portrait_padkey_rightside", "portrait", 960, 544, 960, 544, 544, 960 },
+	{ 5, 17, "half_hd_landscape_padkey_footside", "half_hd", 1280, 725, 1280, 725, 1280, 725 },
+	{ 6, 18, "half_hd_portrait_padkey_leftside", "half_hd_portrait", 1280, 725, 1280, 725, 725,
+	  1280 },
+	{ 4, 17, "half_hd_landscape_padkey_headside", "half_hd", 1280, 725, 1280, 725, 1280, 725 },
+	{ 7, 18, "half_hd_portrait_padkey_rightside", "half_hd_portrait", 1280, 725, 1280, 725, 725,
+	  1280 },
+	{ 9, 19, "full_hd_landscape_padkey_footside", "full_hd", 1920, 1088, 1920, 1088, 1920,
+	  1088 },
+	{ 10, 20, "full_hd_landscape_padkey_footside", "full_hd_portrait", 1920, 1088, 1920, 1088,
+	  1088, 1920 },
+	{ 8, 19, "full_hd_landscape_padkey_footside", "full_hd", 1920, 1088, 1920, 1088, 1920,
+	  1088 },
+	{ 11, 20, "full_hd_landscape_padkey_footside", "full_hd_portrait", 1920, 1088, 1920, 1088,
+	  1088, 1920 },
+};
 
 vector<SceneResolution> Resolution::s_default_table;
 vector<uint32_t> Resolution::s_default_ids;
@@ -351,7 +329,7 @@ extern "C" SceneResolution *ScePafWidget_615501F0(const Resolution *param, const
 		uint32_t idhash = id.m_idhash;
 
 		for (; it != end; ++it) {
-			if (it->m_resource.m_value == idhash || it->m_base_resource.m_value == idhash) {
+			if (it->m_resource.m_idhash == idhash || it->m_base_resource.m_idhash == idhash) {
 				result = &*it;
 				break;
 			}
@@ -371,15 +349,15 @@ extern "C" int32_t ScePafWidget_36505C86(const Resolution *param, const IDParam 
 	uint32_t idhash = id.m_idhash;
 
 	for (; it != end; ++it) {
-		if (it->m_resource.m_value == idhash)
+		if (it->m_resource.m_idhash == idhash)
 			return it->m_id;
-		if (it->m_base_resource.m_value == idhash)
+		if (it->m_base_resource.m_idhash == idhash)
 			return it->m_base_id;
 	}
 	return -1;
 }
 
-extern "C" ResolutionResource ScePafWidget_E963EAEE(const Resolution *param, uint32_t id)
+extern "C" IDParam ScePafWidget_E963EAEE(const Resolution *param, uint32_t id)
 {
 	vector<SceneResolution>::iterator it = param->m_resolutions->begin();
 	vector<SceneResolution>::iterator end = param->m_resolutions->end();
@@ -391,10 +369,10 @@ extern "C" ResolutionResource ScePafWidget_E963EAEE(const Resolution *param, uin
 			return it->m_base_resource;
 	}
 
-	ResolutionResource empty;
+	IDParam empty;
 
-	empty.m_name = "";
-	empty.m_value = 0;
+	empty.m_id = "";
+	empty.m_idhash = 0;
 	return empty;
 }
 

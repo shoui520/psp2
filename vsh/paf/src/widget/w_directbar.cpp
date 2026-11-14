@@ -20,6 +20,41 @@
 #include <widget/w_directbar.h>
 
 namespace paf {
+
+/* Sony's SetString and its label layout take the separator's length and call the search out of
+   line. */
+template<>
+inline __attribute__((noinline)) wstring::size_type
+wstring::find(const wchar_t *str, size_type pos, size_type len) const
+{
+	if (len == 0 && pos <= count)
+		return pos;
+
+	size_type left = count - pos;
+
+	if (pos < count && len <= left) {
+		const wchar_t *at = ptr + pos;
+
+		while (left != 0) {
+			const wchar_t *found = char_traits<wchar_t>::find(at, *str);
+
+			if (found == NULL)
+				break;
+			if (char_traits<wchar_t>::compare(found, str, len) == 0)
+				return found - ptr;
+			left -= found - at + 1;
+			at = found + 1;
+		}
+	}
+	return npos;
+}
+
+template<>
+inline wstring::size_type wstring::find(const wchar_t *str, size_type pos) const
+{
+	return find(str, pos, char_traits<wchar_t>::length(str));
+}
+
 namespace ui {
 
 /* the color as RGBA bytes, each saturated, as DrawObj::SetColor keeps it */
@@ -29,6 +64,27 @@ static inline uint32_t ColorRGBA8(const math::v4 &color)
 		vcvtq_u32_f32(vmulq_f32(color.getImpl().get128(), vdupq_n_f32(255.0f))));
 
 	return vget_lane_u32(vreinterpret_u32_u8(vqmovn_u16(vcombine_u16(rgba, rgba))), 0);
+}
+
+/* Sony's AnimDBarState calls these out of line where its closing animation sets them up (names
+   ours) */
+static __attribute__((noinline)) void SetWidgetHitBox(Widget *widget, uint8_t mode,
+						      const math::v4 &size, const math::v4 &center)
+{
+	widget->SetHitBox(mode, size, center);
+}
+
+static __attribute__((noinline)) math::v4 GetDrawObjColor(const graph::DrawObj *obj)
+{
+	return obj->GetColor();
+}
+
+__attribute__((noinline))
+AnimListenerObj::AnimListenerObj(Timer *t, Widget *w, graph::DrawObj *obj, const math::v4 &src,
+				 const math::v4 &dst, AnimPropertyV4 *prop)
+	: AnimListenerV4(t, w, src, dst, prop, NULL, NULL)
+{
+	m_obj = obj;
 }
 
 void DirectBar::SendEvent(int32_t type, int32_t v0, int32_t v1, int32_t v2, int32_t v3)
@@ -46,7 +102,7 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 		float first = time * 0.4f;
 		float second = time - time * 0.4f;
 
-		SetHitBox(3, m_size, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
+		SetWidgetHitBox(this, 3, m_size, math::v4(0.0f, 0.0f, 0.0f, 0.0f));
 		for (int32_t i = 0; i < OBJ_DIRECT_BAR_END; i++) {
 			graph::DrawObj *obj = GetDrawObj(i);
 
@@ -128,8 +184,9 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 		break;
 	case ST_DBAR_CLOSED: {
 		ReleaseDBar();
-		SetHitBox(3, math::v4(m_closed_hit_width, m_closed_hit_height, 0.0f, 0.0f),
-			  math::v4(m_closed_hit_x, m_launchbtn_y + m_closed_hit_y, 0.0f, 0.0f));
+		SetWidgetHitBox(this, 3,
+				math::v4(m_closed_hit_width, m_closed_hit_height, 0.0f, 0.0f),
+				math::v4(m_closed_hit_x, m_launchbtn_y + m_closed_hit_y, 0.0f, 0.0f));
 
 		float fade = time * 1.2f;
 
@@ -139,7 +196,7 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 			if (obj == NULL)
 				continue;
 
-			math::v4 color = obj->GetColor();
+			math::v4 color = GetDrawObjColor(obj);
 			math::v4 color_to = color;
 			math::v4 size(obj->m_size, 0.0f);
 			math::v4 size_to = size;
@@ -165,15 +222,13 @@ void DirectBar::AnimDBarState(int32_t state, float time)
 			}
 			SetAnimListener(0x20300 + i,
 					new AnimListenerObj(new Timer(fade), this, obj, color, color_to,
-							    &AnimListenerObj::s_prop_obj_color, NULL,
-							    NULL),
+							    &AnimListenerObj::s_prop_obj_color),
 					2);
 			if (!(size_to == size))
 				SetAnimListener(0x20200 + i,
 						new AnimListenerObj(new Timer(time, Timer::FUNC_QUAD_OUT),
 								    this, obj, size, size_to,
-								    &AnimListenerObj::s_prop_obj_size,
-								    NULL, NULL),
+								    &AnimListenerObj::s_prop_obj_size),
 						2);
 			if (!(pos_to == pos))
 				SetAnimListener(0x20100 + i,

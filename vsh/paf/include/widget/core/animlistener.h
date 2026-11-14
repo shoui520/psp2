@@ -212,7 +212,8 @@ public:
 
 	virtual ~AnimListenerV4()
 	{
-		delete[] m_herm_data;
+		if (m_herm_data != NULL)
+			delete[] m_herm_data;
 	}
 
 	virtual void OnTick(void *data1, void *data2);
@@ -268,6 +269,10 @@ public:
 	{
 		m_obj = obj;
 	}
+
+	/* without a callback: DirectBar's copy, out of line (w_directbar.cpp) */
+	AnimListenerObj(Timer *t, Widget *w, graph::DrawObj *obj, const math::v4 &src,
+			const math::v4 &dst, AnimPropertyV4 *prop);
 
 	virtual ~AnimListenerObj()
 	{

@@ -433,7 +433,7 @@ void PngReader::Open(common::SharedPtr<File> file, int64_t offset, size_t size)
 	m_pos = 0;
 	m_read = ReadFile;
 	m_seek = SeekFile;
-	if (SeekFile(this, 0, SCE_SEEK_SET) < 0) {
+	if (m_seek(this, 0, SCE_SEEK_SET) < 0) {
 		Image::SetErrorType(SCE_PAF_ERROR_IMAGE_SEEK);
 		m_error = true;
 		m_opened = false;

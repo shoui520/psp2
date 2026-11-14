@@ -559,8 +559,9 @@ public:
 		return static_cast<DrawLayer &>(static_cast<DrawListNode<1> &>(node));
 	}
 
-	/* whether the layer is drawn before the other this frame (0x8123d688; name ours) */
-	static bool OrderLess(const DrawLayer &layer, const DrawLayer &other)
+	/* whether the layer is drawn before the other this frame (0x8123d688; name ours); out
+	   of line in Sony's BeginFrame */
+	static __attribute__((noinline)) bool OrderLess(const DrawLayer &layer, const DrawLayer &other)
 	{
 		return layer.m_frame_priority < other.m_frame_priority;
 	}
@@ -622,7 +623,8 @@ void FlushPanelReflections();
    turned from its axes to the view's (names ours) */
 class MotionListener : public inputdevice::InputListener {
 public:
-	MotionListener()
+	/* out of line in Sony's Renderer constructor, its one user */
+	__attribute__((noinline)) MotionListener()
 		: inputdevice::InputListener(inputdevice::DEVICE_TYPE_PAD),
 		  m_rotation(math::matrix::Identity())
 	{
@@ -775,5 +777,8 @@ void ScePafGraphics_505CD74E(bool flag);
 paf::common::SharedPtr<paf::graph::EffectRenderer> &
 ScePafGraphics_71E2CB77(paf::graph::Renderer *renderer, bool create);
 }
+
+PAF_VECTOR_INLINE_DTOR(graph::DrawLayer::Key)
+PAF_VECTOR_INLINE_DTOR(graph::DrawLayer::Entry)
 
 #endif

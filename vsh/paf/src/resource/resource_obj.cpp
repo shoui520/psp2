@@ -860,7 +860,7 @@ cxml::Element ResourceObj::GetOverrideElement(const cxml::Element &elm) const
 			bool match = false;
 
 			if (scePafResourceGetAttributeStyleId(&child, "resolution", &resolution) == 0) {
-				if (resolution != m_resolution_resource.m_value)
+				if (resolution != m_resolution_resource.m_idhash)
 					continue;
 				match = true;
 			}
@@ -1102,7 +1102,7 @@ static list<string> SplitString(const string &str, const char *delimiter)
 	list<string> fields;
 
 	for (;;) {
-		size_t pos = rest.find(delim.c_str());
+		size_t pos = rest.find(delim);
 
 		if (pos == string::npos)
 			break;

@@ -776,9 +776,10 @@ public:
 
 /* the one of the two the list holds first, given back as the other: NULL with neither in it
    (inline in Sony's code; name ours) */
-static __attribute__((always_inline)) Widget *GetLater(list<Widget *> &l, Widget *a, Widget *b)
+template<class T>
+static __attribute__((always_inline)) Widget *GetLater(list<T *> &l, Widget *a, Widget *b)
 {
-	for (list<Widget *>::iterator it = l.begin(); it != l.end(); ++it) {
+	for (typename list<T *>::iterator it = l.begin(); it != l.end(); ++it) {
 		if (*it == a)
 			return b;
 		if (*it == b)

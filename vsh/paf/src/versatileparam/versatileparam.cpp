@@ -826,13 +826,13 @@ int32_t WidgetLayoutParam::Write(common::SharedPtr<File> fp, uint32_t type, uint
 		if (scene == NULL)
 			continue;
 
-		ResolutionResource resource =
+		IDParam resource =
 			ScePafWidget_E963EAEE(scene->m_env_param, m_pos_array[i].m_id);
 		ResourceParam *child = new ResourceParam();
 
 		if (child != NULL) {
 			child->SetTagName("resolution");
-			child->SetIDName(resource.m_name.c_str());
+			child->SetIDName(resource.m_id.c_str());
 			child->AddParam(s_names[0], &m_pos_array[i], ResourceParam::SEMANTIC_RESOARRAY);
 			child->AddParam(s_names[1], &m_size_array[i], ResourceParam::SEMANTIC_RESOARRAY);
 			child->AddParam(s_names[2], &m_rot_array[i], ResourceParam::SEMANTIC_RESOARRAY);

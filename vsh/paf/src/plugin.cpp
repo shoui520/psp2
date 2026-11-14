@@ -785,7 +785,7 @@ Plugin::Plugin(const InitParam *param)
 			ui::SceneResolution *resolution = ScePafWidget_CDC90BA2(m_env_param, id);
 
 			if (resolution != NULL) {
-				ui::ResolutionResource resource =
+				IDParam resource =
 					ScePafWidget_E963EAEE(m_env_param, resolution->m_base_id);
 
 				m_rscobj->SetResolutionResource(resource);
@@ -2461,9 +2461,9 @@ int32_t Plugin::WritePageTable(common::SharedPtr<File> fp, bool table, bool prin
 		indent = 1;
 	}
 
-	list<ui::Widget *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
+	list<ui::Scene *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
 
-	for (list<ui::Widget *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
+	for (list<ui::Scene *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
 	     ++it) {
 		IDParam plugin_id(m_name);
 
@@ -2614,9 +2614,9 @@ int32_t Plugin::GetOpenedPages(vector<string> *pages)
 	if (pages == NULL)
 		return -1;
 
-	list<ui::Widget *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
+	list<ui::Scene *> &scenes = Framework::framework->m_env->m_scenes_onupdate;
 
-	for (list<ui::Widget *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
+	for (list<ui::Scene *>::iterator it = scenes.begin(), end = scenes.end(); it != end;
 	     ++it) {
 		IDParam plugin_id(m_name);
 		ui::Scene *scene = (ui::Scene *)*it;

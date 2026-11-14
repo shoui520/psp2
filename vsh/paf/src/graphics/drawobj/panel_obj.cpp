@@ -5,6 +5,7 @@
  */
 #include <stdint.h>
 #include <graphics/drawobj/effect_path.h>
+#include <graphics/color.h>
 #include <graphics/drawobj/panel_obj.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/arl/arl_defines.h>

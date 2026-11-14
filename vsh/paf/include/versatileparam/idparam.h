@@ -76,4 +76,9 @@ public:
 
 }
 
+/* vector<IDParam>::operator=: emitted by whichever of <std/vector> and this comes second */
+#ifdef PAF_STD_VECTOR
+PAF_VECTOR_NOINLINE_ASSIGN(IDParam)
+#endif
+
 #endif

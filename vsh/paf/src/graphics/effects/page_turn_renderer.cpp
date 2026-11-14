@@ -173,12 +173,58 @@ void PageTurnRenderer::MakeDistanceTexture(common::SharedPtr<arl::TextureObject>
 	texture->setWrapT(arl::TEXTURE_WRAP_CLAMP_FULL_BORDER);
 }
 
+/* Sony's PageTurnRenderer constructor calls these rather than inlining them. */
+template<>
+inline __attribute__((noinline))
+ParamSetInstance<MaterialParamSet>::ParamSetInstance(ParamSetKeysManager &manager, const string &variant)
+	: m_keys(variant), m_set(true)
+{
+	m_keys.Add(&m_set);
+	manager.Add(&m_keys);
+}
+
+template<>
+inline __attribute__((noinline))
+ParamSetInstance<PointLightSphereParamSet>::ParamSetInstance(ParamSetKeysManager &manager,
+							    const string &variant)
+	: m_keys(variant), m_set(true)
+{
+	m_keys.Add(&m_set);
+	manager.Add(&m_keys);
+}
+
+template<>
+inline __attribute__((noinline))
+ParamSetInstance<TurnPageParamSet>::ParamSetInstance(ParamSetKeysManager &manager, const string &variant)
+	: m_keys(variant), m_set(true)
+{
+	m_keys.Add(&m_set);
+	manager.Add(&m_keys);
+}
+
+template<>
+inline __attribute__((noinline)) WaveMesh<WaveVertex>::WaveMesh()
+	: m_index_count(0), m_width(0), m_height(0), m_strip_count(0),
+	  m_primitive(arl::TRIANGLE_STRIP), m_line_count(0)
+{
+}
+
+/* the light's PointLightPack2, which Sony's Draw calls out of line where every other user has it
+   inline (SNC stopped inlining into Draw; name ours) */
+static __attribute__((noinline)) math::matrix
+GetPointLightPack2(const PointLightSphereParamSet::Values &values)
+{
+	return values.GetPack2();
+}
+
 PageTurnRenderer::PageTurnRenderer(const string &dir)
 	: m_shaders(new PageTurnShaders), m_debug_transform(false), m_unused_flag0(false),
 	  m_unused_flag1(false), m_unused_flag2(false), m_wireframe(false), m_unused_flag3(false),
 	  m_manager("PageTurnRenderer"), m_frame(-1), m_material(m_manager, ""),
 	  m_light(m_manager, ""), m_shadow_light(m_manager, "for_shadow"),
-	  m_turn_page(m_manager, ""), m_draw_material(true), m_screen(NULL)
+	  m_turn_page(m_manager, ""), m_draw_material(true),
+	  m_corner(arl::TextureSource::OutOfLine()), m_distance(arl::TextureSource::OutOfLine()),
+	  m_background(arl::TextureSource::OutOfLine()), m_screen(NULL)
 {
 	m_exp_minus.Init(128, 5.0f);
 
@@ -544,7 +590,7 @@ void PageTurnRenderer::Draw(PageTurnParam *param, PageTurnMesh *mesh)
 		fp->SetNormalScaleZ(turn_page.m_normal_scale_z.m_value);
 		fp->SetMaterialPack(material.GetPack());
 		fp->SetPointLightPack1(m_light.m_set.m_values.GetPack1());
-		fp->SetPointLightPack2(m_light.m_set.m_values.GetPack2());
+		fp->SetPointLightPack2(GetPointLightPack2(m_light.m_set.m_values));
 		fp->SetEye(gl->m_view.GetInverse().w());
 
 		vp->SetGrep(param->m_curl);
@@ -555,7 +601,7 @@ void PageTurnRenderer::Draw(PageTurnParam *param, PageTurnMesh *mesh)
 		vp->SetNormalScaleZ(turn_page.m_normal_scale_z.m_value);
 		vp->SetMaterialPack(material.GetPack());
 		vp->SetPointLightPack1(m_light.m_set.m_values.GetPack1());
-		vp->SetPointLightPack2(m_light.m_set.m_values.GetPack2());
+		vp->SetPointLightPack2(GetPointLightPack2(m_light.m_set.m_values));
 		vp->SetEye(gl->m_view.GetInverse().w());
 
 		/* the corner: the part of the page turned, and the texture refracted under it */

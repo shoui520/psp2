@@ -164,6 +164,18 @@ static inline __attribute__((always_inline)) void DrawMesh(arl::ArlInstance *gl,
 	state->m_dirty_fragment = 0;
 }
 
+/* vectormath's scale and translation matrices, which Sony's Draw_ calls out of line (SNC stopped
+   inlining into it; names ours) */
+static __attribute__((noinline)) Matrix4 ScaleMatrix(const Vector3 &scale)
+{
+	return Matrix4::scale(scale);
+}
+
+static __attribute__((noinline)) Matrix4 TranslationMatrix(const Vector3 &translation)
+{
+	return Matrix4::translation(translation);
+}
+
 void GateBlur::Draw_()
 {
 	if (m_mode == Mode_None)
@@ -317,11 +329,11 @@ void GateBlur::Draw_()
 			float scale = Timer::DoFuncCubicIn(1.0f - q) * spread + 1.0f;
 			float move = Timer::DoFuncSineInOut(q);
 			math::matrix grow =
-				math::matrix(Matrix4::scale(Vector3(scale, scale, 1.0f))) *
-				math::matrix(Matrix4::translation(Vector3(-m_x, -m_y, 0.0f)));
+				math::matrix(ScaleMatrix(Vector3(scale, scale, 1.0f))) *
+				math::matrix(TranslationMatrix(Vector3(-m_x, -m_y, 0.0f)));
 
 			s_programs->m_vert.m_interface.m_mat.Set(
-				math::matrix(Matrix4::translation(Vector3(m_x * move, m_y * move, 0.0f))) *
+				math::matrix(TranslationMatrix(Vector3(m_x * move, m_y * move, 0.0f))) *
 				grow);
 			s_programs->m_frag.m_interface.m_color.Set(color);
 			s_programs->m_vert.m_object.begin();
@@ -349,7 +361,7 @@ void GateBlur::Draw_()
 		/* the cover grows from the gate to the screen */
 		float size = Timer::DoFuncCubicIn(1.0f - rest);
 		float move = Timer::DoFuncSineInOut(rest);
-		math::matrix scale(Matrix4::scale(Vector3(size * (1.0f - GATE_WIDTH) + GATE_WIDTH,
+		math::matrix scale(ScaleMatrix(Vector3(size * (1.0f - GATE_WIDTH) + GATE_WIDTH,
 							  size * (1.0f - GATE_HEIGHT) + GATE_HEIGHT,
 							  1.0f)));
 

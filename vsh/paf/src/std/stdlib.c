@@ -22,7 +22,7 @@ void *sce_paf_bsearch(const void *key, const void *base, size_t count,
 	int32_t first = 0;
 	int32_t last;
 
-	if (!key || !compare || !count || !element_size)
+	if (!base || !compare || !count || !element_size)
 		return NULL;
 	last = (int32_t)((uint32_t)count - 1);
 	while (first <= last) {
