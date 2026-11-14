@@ -4,6 +4,7 @@
  * buffer's data offset, with the firmware's fixed header (WlanWirelessFrame).
  */
 #include <stddef.h>
+#include "robin/apps.h"
 #include "robin/ibss.h"
 #include "robin/amp.h"
 #include "robin/btrom.h"
@@ -77,7 +78,6 @@ void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */
 void macMgmtConvertHeader(void);						/* 0x3b8fc */
-void macTxResetParam(struct WlanConnection *connection);			/* 0x12a44 */
 void macTxProcessConfig(struct WlanConnection *connection);			/* 0x131d4 */
 void macTxQueryConfig(struct WlanConnection *connection);			/* 0x1365a */
 struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
@@ -236,7 +236,7 @@ int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument)
 	switch (WLAN_FC0_SUBTYPE(frame->frameControl[0])) {
 	case WLAN_SUBTYPE_ASSOC_REQUEST:
 	case WLAN_SUBTYPE_REASSOC_REQUEST:
-		macTxResetParam(connection);
+		wlanApPsResetStation(connection);
 		macMgmtConfigurePacket(connection, frame, 0);
 		break;
 	case WLAN_SUBTYPE_DISASSOC:

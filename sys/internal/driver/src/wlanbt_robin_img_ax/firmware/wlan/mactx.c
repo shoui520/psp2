@@ -3,6 +3,7 @@
  * and the 802.11 data header. The filename is inferred; no source filename
  * survives.
  */
+#include "robin/apps.h"
 #include "robin/ibss.h"
 #include "robin/mgmt.h"
 #include "robin/btrom.h"
@@ -592,9 +593,6 @@ void macTxAdvanceStage(void)
 
 /* Not converted yet; provisional names. */
 int wlanTxQueueMgmtFrame(OsaBuffer *buffer);			/* 0x32038 */
-int wlanTxHoldForPeer(OsaBuffer *buffer, struct WlanConnection *connection); /* 0x13096 */
-int wlanTxPeerHolding(struct WlanConnection *connection);	/* 0x131ba */
-int wlanTxHoldFrame(OsaBuffer *buffer, int reason);		/* 0x18924 */
 void wlanTxCountDropped(OsaBuffer *buffer);			/* 0x41f2e */
 void cbProcLoopbackFrame(OsaBuffer *buffer);			/* 0x1eea6 */
 void cbProcFlushConnection(struct WlanConnection *connection);	/* 0x1ecde */

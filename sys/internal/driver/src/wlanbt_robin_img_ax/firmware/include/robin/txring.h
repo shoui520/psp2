@@ -119,6 +119,12 @@ void wlanTxRingRetarget(struct WlanMacTxRequest *request, unsigned int ring);
 void wlanTxRingComplete(struct WlanMacTxRequest *request);
 int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *request, unsigned int ring);
 int wlanTxResubmit(OsaBuffer *buffer);
+
+/* Not converted yet; provisional names. */
+struct OsaBufferPool;
+OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags,
+			     unsigned int queue);				/* 0x188b2 */
+int wlanTxHoldFrame(OsaBuffer *buffer, int reason);		/* 0x18924 */
 int wlanTxSubmit(OsaBuffer *buffer);
 unsigned int wlanTxInFlightIndex(OsaBuffer *buffer);
 int wlanTxInFlightAdd(OsaBuffer *buffer);

@@ -57,6 +57,15 @@ struct WlanScheduleRequest {
 	uint8_t interval[4];	/* unaligned word, microseconds */
 };
 
+struct WlanApPsEntry;
+
+/* Frames an access point keeps for a peer in power save (see robin/apps.h). */
+struct WlanApPsQueue {
+	uint32_t count;
+	struct WlanApPsEntry *head;
+	struct WlanApPsEntry *tail;
+};
+
 /* Per-association information of a station or access point connection (partial). */
 struct WlanConnectionInfo {
 	uint8_t reserved0[31];
@@ -88,9 +97,18 @@ struct WlanConnectionInfo {
 	uint32_t olbcTimeout;		/* beacon intervals in 5 s, plus one */
 	uint8_t reserved604[156];
 	uint8_t bssStarted;		/* 1: the BSS of a station or access point role is up */
-	uint8_t reserved761[123];
+	uint8_t reserved761[3];
+	uint32_t dozingStations;	/* peers in power save */
+	struct WlanApPsQueue groupQueue;	/* group-addressed frames kept for the DTIM beacon */
+	uint8_t reserved780[104];
 	uint32_t listenInterval;	/* the peer is in power save */
 	uint32_t listenIntervalPs;	/* the same with WMM power save */
+	uint8_t reserved892[252];
+	uint8_t groupDeliveryBusy;
+	uint8_t reserved1145[3];
+	uint16_t groupDeliveryMode;	/* 2: group frames may wake the host side */
+	uint8_t reserved1150[70];
+	uint32_t groupDeliveryFlags;	/* bit 0: data frames follow the group frames */
 };
 
 struct WlanSubscribeEvents;
@@ -105,13 +123,26 @@ struct WlanConnectionRole {
 	uint8_t securityFlags;		/* bits 0-1: a key handshake is under way */
 	uint8_t reserved9[3];
 	uint32_t listenInterval;
-	uint8_t reserved16[16];
-	uint8_t powerSaveMode;		/* 1: WMM power save */
-	uint8_t reserved33[55];
+	uint8_t reserved16[4];
+	struct WlanApPsQueue psQueue;	/* the peer's frames while it dozes */
+	uint8_t peerPowerSave;		/* 1: the peer is in power save */
+	uint8_t psCounted;		/* counted in the stations sharing the buffers */
+	uint8_t reserved34[54];
 	uint8_t state;			/* 802.11 state: 1 unauthenticated, 2 authenticated, 3 associated */
+	uint8_t reserved89[7];
+	struct WlanApPsQueue uapsdQueue;	/* frames of delivery-enabled access categories */
+	uint8_t reserved108[4];
+	struct {
+		uint8_t reserved[5];
+		uint8_t deliveryEnabled;	/* bits 3..0: AC 0..3 is delivery-enabled */
+	} uapsd;
+	uint8_t fullReported;		/* the host was told the peer's buffers are full */
 };
 
 _Static_assert(offsetof(struct WlanConnectionRole, state) == 88, "role state");
+_Static_assert(offsetof(struct WlanConnectionRole, psQueue) == 20, "role power-save queue");
+_Static_assert(offsetof(struct WlanConnectionRole, uapsdQueue) == 96, "role U-APSD queue");
+_Static_assert(offsetof(struct WlanConnectionRole, fullReported) == 118, "role buffers full");
 _Static_assert(offsetof(struct WlanConnectionRole, listenInterval) == 12, "role listen interval");
 
 /*
@@ -165,7 +196,8 @@ struct WlanConnection {
 	uint8_t localAddress[6];
 	uint8_t reserved2[14];
 	uint8_t channel;
-	uint8_t reserved173[3];
+	uint8_t groupRing;		/* the transmit ring of the BSS's group frames */
+	uint8_t reserved174[2];
 	struct WlanMacTxRequest *beaconRequest;	/* the MAC's request for the beacon template */
 	OsaBuffer *beaconBuffer;	/* the beacon template; the frame at its data offset */
 	struct WlanMacTxRequest *probeResponseRequest;
@@ -192,7 +224,7 @@ struct WlanConnection {
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
 	uint8_t reserved4c[30];
 	int32_t txPowerLimit;		/* dBm from the channel power table; 255: none */
-	uint8_t reserved728[4];
+	uint32_t qosPeer;		/* 1: the peer associated with WMM (QoS) */
 	uint8_t interfaceAddress[6];
 	uint8_t interfaceIndex;
 	uint8_t reserved4b[5];
@@ -261,6 +293,9 @@ _Static_assert(offsetof(struct WlanConnectionInfo, phyMode) == 588, "info PHY mo
 _Static_assert(offsetof(struct WlanConnectionInfo, olbcTimeout) == 600, "info OLBC timeout");
 _Static_assert(offsetof(struct WlanConnectionInfo, bssStarted) == 760, "info BSS started");
 _Static_assert(offsetof(struct WlanConnectionInfo, listenInterval) == 884, "info listen interval");
+_Static_assert(offsetof(struct WlanConnectionInfo, groupQueue) == 768, "info group queue");
+_Static_assert(offsetof(struct WlanConnectionInfo, groupDeliveryMode) == 1148, "info group delivery");
+_Static_assert(offsetof(struct WlanConnectionInfo, groupDeliveryFlags) == 1220, "info group delivery flags");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");

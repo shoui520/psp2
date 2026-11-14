@@ -1075,7 +1075,7 @@ void wlanConnectionUpdateListenInterval(struct WlanConnection *connection)
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 
 	if (role->state > 1)
-		role->listenInterval = role->powerSaveMode == 1 ? info->listenIntervalPs :
+		role->listenInterval = role->peerPowerSave == 1 ? info->listenIntervalPs :
 								   info->listenInterval;
 	else if (role->state == 1)
 		role->listenInterval = 2 * connection->listenIntervalBase + 1;

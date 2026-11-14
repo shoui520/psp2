@@ -237,8 +237,6 @@ int wlanBufferNeedsSecurity(OsaBuffer *buffer)
 
 /* Not converted yet; provisional names */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
-OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t flags,
-			     unsigned int queue);				/* 0x188b2 */
 
 /*
  * A buffer for an EAPOL frame the firmware sends itself (keyMgmtSta.c's
