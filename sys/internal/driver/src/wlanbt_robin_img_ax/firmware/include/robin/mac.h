@@ -100,6 +100,7 @@ unsigned int wlanFindSetBitDown(uint32_t mask, unsigned int start, unsigned int 
 
 #define MAC_2D4_FLAGS		MAC_REG(0x2d4)
 #define MAC_824_CONTROL		MAC_REG(0x824)
+#define MAC_828_CONTROL		MAC_REG(0x828)
 
 extern int (*wlanTxRingsResetHook)(void);
 extern int (*wlanModeVetoHook)(void);

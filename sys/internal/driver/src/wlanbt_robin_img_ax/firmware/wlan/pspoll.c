@@ -23,13 +23,6 @@
 #include "robin/txring.h"
 #include "robin/wlantask.h"
 
-/* State of the Bluetooth link controller (low nibble); 5 and 6 while it uses the air. */
-#define BT_LINK_STATE		REG32(0x90010020)
-#define BT_STATE_BUSY_A		5
-#define BT_STATE_BUSY_B		6
-
-#define SOC_PENDING_EVENT_ARMED	(1u << 1)	/* SOC_PENDING_EVENT_CONTROL */
-#define SOC_PENDING_EVENT_BT	(1u << 30)	/* SOC_PENDING_EVENT_STATUS: Bluetooth holds the air */
 #define MAC_PS_POLL_TIMER_ENABLE (1u << 31)	/* MAC_7F4_TIMING_LOW */
 
 #define PS_POLL_COUNTDOWN	30

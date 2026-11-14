@@ -136,6 +136,13 @@ enum {
 #define SOC_EVENT_PATH_CONTROL	REG32(0x80002134)
 #define SOC_SOURCE_IRQ_STATUS	REG32(0x8000219c)
 #define SOC_PENDING_EVENT_CONTROL REG32(0x8000a70c)
+#define SOC_PENDING_EVENT_ARMED	(1u << 1)	/* SOC_PENDING_EVENT_CONTROL */
+#define SOC_PENDING_EVENT_BT	(1u << 30)	/* SOC_PENDING_EVENT_STATUS: Bluetooth holds the air */
+
+/* State of the Bluetooth link controller (low nibble); 5 and 6 while it uses the air. */
+#define BT_LINK_STATE		REG32(0x90010020)
+#define BT_STATE_BUSY_A		5
+#define BT_STATE_BUSY_B		6
 
 /*
  * Interrupt controller (0x80002800). One bit per line, 32 lines.

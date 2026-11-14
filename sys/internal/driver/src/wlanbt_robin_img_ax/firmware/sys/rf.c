@@ -5,6 +5,7 @@
  * and the names say what the code does.
  */
 #include <stddef.h>
+#include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/soc.h"
 
@@ -35,8 +36,6 @@ extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 5: no rate below index 5
 extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
 extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
 void wlanPsSelectHeader(unsigned int band, uint32_t channel);	/* 0x3e3aa */
-void rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth); /* 0xc710 */
-void rfCalibSyncState(int delay);				/* 0x2656a */
 int rfCalibConfigureContext(void);				/* 0x26842 */
 void rfCalibQueryBuffer(uint16_t channel, uint16_t value, int flags);	/* 0x28496 */
 void macTxNotifyFilterContext(int enable);			/* 0x30dec */

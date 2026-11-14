@@ -4,8 +4,14 @@
  * signal levels. The filename is inferred.
  */
 #include <stddef.h>
+#include "robin/coex.h"
+#include "robin/event.h"
+#include "robin/mac.h"
 #include "robin/phy.h"
+#include "robin/rf.h"
+#include "robin/rom.h"
 #include "robin/soc.h"
+#include "robin/sys.h"
 #include "robin/wlanrx.h"
 
 /* Index of the antenna in use (0 or 1); the receive diversity code switches it. */
@@ -37,6 +43,16 @@ static uint16_t bbpCalibrationRegisters[3][2] __attribute__((section(".itcm.rw")
 	{ 0x3c0, 0x3c1 }, { 0x3be, 0x3bf }, { 0x3c4, 0x3c5 },
 };
 
+/* rfTuneChannel(): tunes that ended with the synthesizer unlocked, in all and by lock state. */
+static uint32_t rfUnlockedTunes __attribute__((section(".itcm.rw")));
+static uint32_t rfUnlockedTunesByState[3] __attribute__((section(".itcm.rw")));
+
+/* bbpNoiseHistogramRead(): the level of each bin in dBm, 9 bins then 11. */
+static const int8_t bbpNoiseHistogramLevels[20] = {
+	-92, -89, -84, -79, -74, -69, -64, -59, -57,
+	-92, -90, -87, -84, -81, -77, -72, -67, -62, -58, -55,
+};
+
 /* Written at start-up (the host may patch it); ends with 0xffff, 0xff. */
 static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.rw"))) = {
 	{ 0xffff, 0xff, 0 },
@@ -45,6 +61,25 @@ static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.
 #define BBP_REG_ADJUST_SELECT	0x70	/* bit 2: mode 1 */
 #define BBP_REG_ADJUST0		0x5f
 #define BBP_REG_ADJUST1		0x60
+#define BBP_REG_RESET		0x02	/* bit 7, pulsed before a channel change */
+#define BBP_REG_HISTOGRAM_CONTROL 0xcc	/* bit 7: start; bits 4-5: resolution; bits 0-3: bin */
+#define BBP_REG_HISTOGRAM_PERIOD_LOW 0xcd
+#define BBP_REG_HISTOGRAM_PERIOD_HIGH 0xce
+#define BBP_REG_HISTOGRAM_COUNT0 0xcf	/* the selected bin's count, low byte first */
+#define BBP_REG_HISTOGRAM_COUNT1 0xd0
+#define BBP_REG_HISTOGRAM_COUNT2 0xd1
+#define BBP_REG_HISTOGRAM_CONFIG 0xd2	/* bits 0-4: noise offset; bit 6: 9 bins */
+
+#define BBP_HISTOGRAM_START	0x80
+#define BBP_HISTOGRAM_NARROW	0x40
+
+#define RF_REG_LOCK_CONTROL	0x007	/* bit 1: lock detection; bit 4: 2.4 GHz path; bits 6-7: state */
+#define RF_REG_CONTROL4B	0x04b
+
+#define MAC_824_TUNING		0x800000c0u	/* MAC_824_CONTROL, held while the baseband is retuned */
+#define MAC_828_TUNE_CLEAR	0x00000203u	/* MAC_828_CONTROL */
+#define MAC_2D0_BAND_MASK	0xe000u		/* MAC_2D0_FLAGS */
+#define MAC_2D0_ENABLE		0x0008u
 
 /* The key of a calibration lookup, passed by value. */
 struct WlanCalibrationKey {
@@ -59,6 +94,20 @@ int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value);	/* 0
 int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value);	/* 0xec60 */
 int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values);	/* 0xecb4 */
 uint32_t bbpReadVersionRegister(uint32_t index);
+void rfTunePrepare(unsigned int band, uint32_t channel);			/* 0x32b82 */
+void bbpLoadBandwidthTables(unsigned int band, unsigned int bandwidth, uint8_t channel); /* 0x325ec */
+void bbpFmCoexAdjust(void);						/* 0x326a8 */
+void macTxRefreshQueues(void);						/* 0x30dd6 */
+void bbpLoadPathTable(unsigned int band, int enabled);			/* 0x326bc */
+void macTuneHoldStart(void);						/* 0x326ec */
+void macTuneHoldEnd(void);						/* 0x32710 */
+int phyChannelPowerCheck(unsigned int band);				/* 0x31e88 */
+void phyChannelPowerLoad(unsigned int band, uint32_t channel);		/* 0x31eec */
+void phyChannelPowerApply(unsigned int band, uint32_t channel);		/* 0x31f0e */
+void wlanPsFilterHeader(unsigned int band, uint32_t channel, unsigned int bandwidth); /* 0x3e4ce */
+extern struct PhyRegisterEntry bbpChannel14Registers[];		/* 0x0400070c */
+/* 0x04000668: payload mode 1 writes the first entry too. */
+extern struct PhyRegisterEntry bbpPayloadModeRegisters[];
 extern uint8_t opRegionMinor;
 extern uint8_t opRegionMajor;
 
@@ -405,4 +454,208 @@ void bbpApplyAdjustment(void)
 						  bbpAdjustOffset);
 	BBP_REGISTER(BBP_REG_ADJUST1) = (uint8_t)(bbpReadVersionRegister(BBP_REG_ADJUST1) +
 						  bbpAdjustOffset);
+}
+
+/* Retunes the baseband and the radio to a channel; always 1. */
+int rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth)
+{
+	uint8_t channel8;
+	int center;
+
+	rfWaitBtIdle(band);
+	MAC_828_CONTROL &= ~MAC_828_TUNE_CLEAR;
+	MAC_824_CONTROL |= MAC_824_TUNING;
+	bbpSetRegisterBits(BBP_REG_RESET, 0x80);
+	rfCalibSyncState(1);
+	bbpClearRegisterBits(BBP_REG_RESET, 0x80);
+	rfCalibSyncState(1);
+	rfTunePrepare(band, channel);
+	bbpWriteTable(bbpInitRegisters);
+	channel8 = (uint8_t)channel;
+	bbpLoadBandwidthTables(band, bandwidth, channel8);
+	if (band == RF_BAND_2GHZ) {
+		const struct PhyRegisterEntry *table;
+
+		if (bandwidth != 2 && bandwidth != 3 && channel == 14)
+			table = bbpChannel14Registers;
+		else if (macGetEventPayloadMode() == 1)
+			table = &bbpPayloadModeRegisters[0];
+		else
+			table = &bbpPayloadModeRegisters[1];
+		bbpWriteTable(table);
+	}
+	bbpFmCoexAdjust();
+	bbpApplyAdjustment();
+	bbpLoadCalibration2(channel, band);
+	bbpLoadCalibration1(channel, band);
+	bbpLoadCalibration0(channel, band);
+	bbpLoadSignalCalibration(channel, band);
+	MAC_824_CONTROL &= ~MAC_824_TUNING;
+
+	rfBusAcquire();
+	rfLoadBandRegisters(band, bandwidth);
+	macTxRefreshQueues();
+	center = wlanHt40CenterChannel(band, channel8, bandwidth);
+	rfChannelHookAfter();
+	bbpLoadPathTable(band, sysEventPathIsEnabled(band));
+	rfChannelHookBefore();
+	rfBusClearBits(RF_REG_LOCK_CONTROL, 0x02);
+	macTuneHoldStart();
+	if (sysEventPathIsEnabled(band))
+		rfBusClearBits(RF_REG_LOCK_CONTROL, 0x10);
+	else
+		rfBusSetBits(RF_REG_LOCK_CONTROL, 0x10);
+	rfBusClearBits(RF_REG_CONTROL4B, 0x20);
+	rfCalibrateChannel(band, center);
+	rfWaitLock();
+	macTuneHoldEnd();
+	rfBusSetBits(RF_REG_CONTROL4B, 0x20);
+	if (sysEventPathIsEnabled(band)) {
+		if (!(SOC_STATUS & SOC_STATUS_RF_LOCKED)) {
+			switch (rfBusRead(RF_REG_LOCK_CONTROL) >> 6) {
+			case 1:
+				rfUnlockedTunesByState[0]++;
+				break;
+			case 2:
+				rfUnlockedTunesByState[1]++;
+				break;
+			case 3:
+				rfUnlockedTunesByState[2]++;
+				break;
+			}
+			rfUnlockedTunes++;
+		}
+		rfBusSetBits(RF_REG_LOCK_CONTROL, 0x02);
+	}
+	rfBusRelease();
+
+	MAC_2D0_FLAGS &= ~MAC_2D0_BAND_MASK;
+	if (band == RF_BAND_2GHZ) {
+		MAC_2D0_FLAGS |= 0xa000;
+		MAC_2D0_FLAGS = 0xa808;
+	} else {
+		MAC_2D0_FLAGS |= 0x6000;
+		MAC_2D0_FLAGS = 0x6808;
+	}
+	sysSelectEventPath(band);
+	if (phyChannelPowerCheck(band) == 1)
+		phyChannelPowerLoad(band, channel);
+	phyChannelPowerApply(band, channel);
+	MAC_2D0_FLAGS |= MAC_2D0_ENABLE;
+	wlanPsFilterHeader(band, channel, bandwidth);
+	return 1;
+}
+
+/* Starts a noise histogram over a period, at a resolution of 32, 64 or 128. */
+void bbpNoiseHistogramStart(uint32_t period, unsigned int resolution, int wideRange)
+{
+	int8_t offset = wlanNoiseCalibration.offset[0];
+	uint32_t ticks = (period << 6) >> 16;
+	uint8_t magnitude = offset > 0 ? 0 : -offset;
+	unsigned int select;
+	uint32_t config;
+
+	if (magnitude >= 0x1f)
+		magnitude = 0x1f;
+	switch (resolution) {
+	case 0x20:
+		select = 0x10;
+		break;
+	case 0x40:
+		select = 0x20;
+		break;
+	case 0x80:
+		select = 0x30;
+		break;
+	default:
+		select = 0;
+		break;
+	}
+	BBP_REGISTER(BBP_REG_HISTOGRAM_PERIOD_LOW) = (uint8_t)ticks;
+	BBP_REGISTER(BBP_REG_HISTOGRAM_PERIOD_HIGH) = ticks >> 8;
+	config = (bbpReadVersionRegister(BBP_REG_HISTOGRAM_CONFIG) & ~0x1fu) | magnitude;
+	if (!wideRange)
+		config |= BBP_HISTOGRAM_NARROW;
+	else
+		config &= 0xbf;
+	BBP_REGISTER(BBP_REG_HISTOGRAM_CONFIG) = config;
+	BBP_REGISTER(BBP_REG_HISTOGRAM_CONTROL) = select | BBP_HISTOGRAM_START;
+}
+
+/*
+ * Reads the histogram: each bin's share of 255 into shares, the weighted
+ * level in dBm into *average (when given); returns the number of bins.
+ */
+int bbpNoiseHistogramRead(uint8_t *shares, uint16_t *average)
+{
+	uint32_t counts[11];
+	const int8_t *levels;
+	uint32_t total;
+	uint8_t sum;
+	int weighted;
+	int bins;
+	int i;
+
+	if (bbpReadVersionRegister(BBP_REG_HISTOGRAM_CONFIG) & BBP_HISTOGRAM_NARROW) {
+		levels = bbpNoiseHistogramLevels;
+		bins = 9;
+	} else {
+		levels = bbpNoiseHistogramLevels + 9;
+		bins = 11;
+	}
+	__aeabi_memclr(shares, bins);
+	sum = 0;
+	weighted = 0;
+	total = 0;
+	for (i = 0; i < bins; i++) {
+		BBP_REGISTER(BBP_REG_HISTOGRAM_CONTROL) =
+			(uint8_t)((bbpReadVersionRegister(BBP_REG_HISTOGRAM_CONTROL) & 0x70) | i);
+		counts[i] = bbpReadVersionRegister(BBP_REG_HISTOGRAM_COUNT2) << 16;
+		counts[i] |= bbpReadVersionRegister(BBP_REG_HISTOGRAM_COUNT1) << 8;
+		counts[i] |= bbpReadVersionRegister(BBP_REG_HISTOGRAM_COUNT0);
+		total += counts[i];
+	}
+	if (total != 0) {
+		for (i = 0; i < bins; i++) {
+			uint8_t share = (counts[i] * 255) / total;
+
+			shares[i] = share;
+			sum += share;
+			weighted += levels[i] * share;
+		}
+	} else {
+		shares[bins - 1] = 0xff;
+		sum = 0xff;
+		weighted = levels[bins - 1] * 255;
+	}
+	shares[0] += 255 - sum;
+	weighted += levels[0] * (255 - sum);
+	if (average)
+		*average = weighted >> 8;
+	return bins;
+}
+
+/* Waits (up to 300 steps each) while Bluetooth holds the air on a shared path. */
+void rfWaitBtIdle(uint32_t path)
+{
+	unsigned int state;
+	unsigned int count;
+
+	if (!wlanCoexBtNeedsSharing() || !btCoexProfileBit1() || !sysEventPathIsEnabled(path))
+		return;
+	state = BT_LINK_STATE & 0xf;
+	count = 300;
+	while ((SOC_PENDING_EVENT_CONTROL & SOC_PENDING_EVENT_ARMED) &&
+	       (SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) &&
+	       (state == BT_STATE_BUSY_A || state == BT_STATE_BUSY_B) && count-- != 0) {
+		rfCalibSyncState(10);
+		state = BT_LINK_STATE & 0xf;
+	}
+	/* The link state is not read again here. */
+	count = 300;
+	while ((SOC_PENDING_EVENT_CONTROL & SOC_PENDING_EVENT_ARMED) &&
+	       sysPendingEventPolicyIsEnabled() &&
+	       !(SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) &&
+	       (state == BT_STATE_BUSY_A || state == BT_STATE_BUSY_B) && count-- != 0)
+		rfCalibSyncState(10);
 }
