@@ -285,6 +285,7 @@ psp2_module(vs0_sys_external_libc KIND user COMPILER snc PARTIAL SOURCES
 	xstoull.c
 	xstoxflt.c
 	xmtx.c
+	xdscale.c
 )
 if(TARGET vs0_sys_external_libc)
 	# the library defines the C11 bounds-checking interfaces
