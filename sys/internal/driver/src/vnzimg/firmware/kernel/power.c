@@ -1,8 +1,8 @@
 /*
  * Power: which cores are up.
  *
- * vkPowerSetCores asks for a set of cores. Each core has a power thread; a
- * core leaving the set is told by it and goes down (vkPowerSuspendCore, in
+ * vnzKernelPowerSetCores asks for a set of cores. Each core has a power thread; a
+ * core leaving the set is told by it and goes down (vnzKernelPowerSuspendCore, in
  * kernel/vectors.S), sleeping until a doorbell finds it back in the set. A
  * core coming back resumes the modules and is counted up again. When the
  * active set reaches the target, the threads waiting on the notify list are
@@ -13,38 +13,38 @@
  */
 #include "kernel.h"
 
-#define VK_POWER_LOCAL_NONE	1	/* the local RAM save, by state */
-#define VK_POWER_LOCAL_SAVED	2
-#define VK_POWER_LOCAL_RESTORED	3
-#define VK_POWER_LOCAL_FREED	4
+#define VNZ_KERNEL_POWER_LOCAL_NONE	1	/* the local RAM save, by state */
+#define VNZ_KERNEL_POWER_LOCAL_SAVED	2
+#define VNZ_KERNEL_POWER_LOCAL_RESTORED	3
+#define VNZ_KERNEL_POWER_LOCAL_FREED	4
 
-#define VK_POWER_REGISTER	vnzRegister(0x4fd568)	/* kept over a power down */
+#define VNZ_KERNEL_POWER_REGISTER	vnzRegister(0x4fd568)	/* kept over a power down */
 
 /* a core's state over a power down (0x20 bytes) */
-typedef struct VkPowerCore {
+typedef struct VnzKernelPowerCore {
 	uint32_t controller[6];		/* control bus registers 2 to 7 */
 	uint32_t resumePrimary;
 	uint32_t resumeFirstStart;
-} VkPowerCore;
+} VnzKernelPowerCore;
 
-typedef struct VkPower {
+typedef struct VnzKernelPower {
 	uint32_t active;		/* a bit per core up */
-	uint32_t expected;		/* what the caller of vkPowerSetCores saw */
+	uint32_t expected;		/* what the caller of vnzKernelPowerSetCores saw */
 	uint32_t target;
 	uint32_t changing;
-	VkThread *threads[VNZ_CORES];
-	VkPowerCore cores[VNZ_CORES];
-	VkPowerList notify;
-	VkPowerList callbacks;
+	VnzKernelThread *threads[VNZ_CORES];
+	VnzKernelPowerCore cores[VNZ_CORES];
+	VnzKernelPowerList notify;
+	VnzKernelPowerList callbacks;
 	uint32_t savedRegister;
 	void *localSave;		/* public */
 	uint32_t localSaveSize;
 	uint32_t localState;
-} VkPower;
+} VnzKernelPower;
 
-VkPower g_vkPower VK_SHARED;
+VnzKernelPower g_vnzKernelPower VNZ_KERNEL_SHARED;
 
-static volatile uint32_t *const powerSemaphore = vkSemaphore(VK_SEMAPHORE_POWER);
+static volatile uint32_t *const powerSemaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_POWER);
 
 static void localSave(void);
 static void powerNotify(void);
@@ -52,19 +52,19 @@ static void powerCallbacks(uint32_t cores);
 
 static uint32_t currentCore(void)
 {
-	return vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	return vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
 }
 
 /* firstBoot: the image's first start (not a resume of every core) */
-void vkPowerInitialize(uint32_t firstBoot, uint32_t primary)
+void vnzKernelPowerInitialize(uint32_t firstBoot, uint32_t primary)
 {
-	VkPower *power = &g_vkPower;
+	VnzKernelPower *power = &g_vnzKernelPower;
 	int i;
 
 	if (firstBoot) {
 		if (!primary)
 			return;
-		vkGiveSemaphore(powerSemaphore);
+		vnzKernelGiveSemaphore(powerSemaphore);
 		power->expected = 0;
 		power->active = 0;
 		power->notify.head = NULL;
@@ -72,7 +72,7 @@ void vkPowerInitialize(uint32_t firstBoot, uint32_t primary)
 		power->callbacks.head = NULL;
 		power->callbacks.tail = NULL;
 		power->changing = 1;
-		power->target = VK_CONFIGURATION->cores;
+		power->target = VNZ_KERNEL_CONFIGURATION->cores;
 		for (i = 0; i < VNZ_CORES; i++)
 			power->threads[i] = NULL;
 		power->localSave = NULL;
@@ -80,62 +80,63 @@ void vkPowerInitialize(uint32_t firstBoot, uint32_t primary)
 		power->localState = 0;
 		return;
 	}
-	vkTakeSemaphore(powerSemaphore);
+	vnzKernelTakeSemaphore(powerSemaphore);
 	if (power->changing == 0 && power->active == 0) {
 		power->expected = 0;
 		power->changing = 1;
-		power->target = VK_CONFIGURATION->cores;
+		power->target = VNZ_KERNEL_CONFIGURATION->cores;
 	}
-	vkGiveSemaphore(powerSemaphore);
+	vnzKernelGiveSemaphore(powerSemaphore);
 }
 
 /* a core's power thread: down when told, then up again */
 static void powerThread(void)
 {
 	uint32_t index;
-	VkCore *core;
-	VkThread *thread;
+	VnzKernelCore *core;
+	VnzKernelThread *thread;
 
-	vkDisableDispatch();
-	core = vkCurrentCore(&index);
-	thread = vkThreadCurrent();
+	vnzKernelDisableDispatch();
+	core = vnzKernelCurrentCore(&index);
+	thread = vnzKernelThreadCurrent();
 	vnzWriteControl(VNZ_CR_PSW, vnzReadControl(VNZ_CR_PSW) & ~VNZ_PSW_IEP);
-	vkPowerCoreUp();
+	vnzKernelPowerCoreUp();
 	for (;;) {
 		vnzWriteControl(VNZ_CR_PSW, vnzReadControl(VNZ_CR_PSW) | VNZ_PSW_IEP);
-		vkThreadWaitFlags(1);
+		vnzKernelThreadWaitFlags(1);
 		vnzWriteControl(VNZ_CR_PSW, vnzReadControl(VNZ_CR_PSW) & ~VNZ_PSW_IEP);
-		vkPowerSuspendCore(thread, core);
-		vkPowerResume();
+		vnzKernelPowerSuspendCore(thread, core);
+		vnzKernelPowerResume();
 	}
 }
 
 /* At a core's start: its power thread, or (coming back up) a word to it. */
-void vkPowerStart(uint32_t primary, uint32_t firstStart)
+void vnzKernelPowerStart(uint32_t primary, uint32_t firstStart)
 {
-	uint32_t coreId = vkCurrentCoreId(), core = coreId - VNZ_FIRST_CORE_ID;
-	VkThread *thread;
+	uint32_t coreId = vnzKernelCurrentCoreId(), core = coreId - VNZ_FIRST_CORE_ID;
+	VnzKernelThread *thread;
 
-	g_vkPower.cores[core].resumeFirstStart = firstStart;
-	g_vkPower.cores[core].resumePrimary = primary;
+	g_vnzKernelPower.cores[core].resumeFirstStart = firstStart;
+	g_vnzKernelPower.cores[core].resumePrimary = primary;
 	if (firstStart) {
-		thread = (VkThread *)vkThreadCreateHere(powerThread, coreId, 9, 0x200);
-		if (thread == (VkThread *)-1)
+		thread = (VnzKernelThread *)vnzKernelThreadCreateHere(powerThread, coreId, 9,
+			0x200);
+		if (thread == (VnzKernelThread *)-1)
 			return;
-		g_vkPower.threads[core] = thread;
-		vkThreadStart(thread, 0, 0);
-		vkThreadResume(thread);
-		vkModulesResume();
+		g_vnzKernelPower.threads[core] = thread;
+		vnzKernelThreadStart(thread, 0, 0);
+		vnzKernelThreadResume(thread);
+		vnzKernelModulesResume();
 		return;
 	}
-	thread = g_vkPower.threads[core];
-	vkThreadSetFlags(thread, 1);
-	vkThreadResume(thread);
+	thread = g_vnzKernelPower.threads[core];
+	vnzKernelThreadSetFlags(thread, 1);
+	vnzKernelThreadResume(thread);
 }
 
-void vkPowerSaveInterrupts(void)
+void vnzKernelPowerSaveInterrupts(void)
 {
-	VkPowerCore *core = &g_vkPower.cores[currentCore()];
+	VnzKernelPowerCore *core = &g_vnzKernelPower.cores[currentCore()];
 	uint32_t psw = vnzReadControl(VNZ_CR_PSW);
 
 	vnzDisableInterrupts();
@@ -148,9 +149,9 @@ void vkPowerSaveInterrupts(void)
 	vnzWriteControl(VNZ_CR_PSW, psw);
 }
 
-void vkPowerRestoreInterrupts(void)
+void vnzKernelPowerRestoreInterrupts(void)
 {
-	VkPowerCore *core = &g_vkPower.cores[currentCore()];
+	VnzKernelPowerCore *core = &g_vnzKernelPower.cores[currentCore()];
 	uint32_t psw = vnzReadControl(VNZ_CR_PSW);
 
 	vnzDisableInterrupts();
@@ -164,34 +165,34 @@ void vkPowerRestoreInterrupts(void)
 }
 
 /* This core is going down. */
-void vkPowerCoreDown(void)
+void vnzKernelPowerCoreDown(void)
 {
 	uint32_t bit = 1 << currentCore(), active;
 
-	vkTakeSemaphore(powerSemaphore);
-	active = g_vkPower.active & ~bit;
-	g_vkPower.active = active;
-	if (active == g_vkPower.target) {
-		g_vkPower.changing = 0;
+	vnzKernelTakeSemaphore(powerSemaphore);
+	active = g_vnzKernelPower.active & ~bit;
+	g_vnzKernelPower.active = active;
+	if (active == g_vnzKernelPower.target) {
+		g_vnzKernelPower.changing = 0;
 		powerNotify();
 		if (active == 0) {
 			/* the last one */
-			vkGiveSemaphore(powerSemaphore);
+			vnzKernelGiveSemaphore(powerSemaphore);
 			localSave();
-			vkL2OperationAll(VK_L2_WRITEBACK);
+			vnzKernelL2OperationAll(VNZ_KERNEL_L2_WRITEBACK);
 		}
 		powerCallbacks(active);
 	}
 	if (active != 0)
-		vkGiveSemaphore(powerSemaphore);
+		vnzKernelGiveSemaphore(powerSemaphore);
 }
 
 /* Sleep until this core is in the target again. */
-void vkPowerWaitUp(void)
+void vnzKernelPowerWaitUp(void)
 {
 	uint32_t core = currentCore(), bit = 1 << core;
 
-	while (!(g_vkPower.target & bit)) {
+	while (!(g_vnzKernelPower.target & bit)) {
 		mep_halt();
 		vnzRegister(VNZ_DOORBELLS + core * 0x20) = 0;
 	}
@@ -201,7 +202,7 @@ void vkPowerWaitUp(void)
  * At boot, a core outside the cores to start waits until another core has
  * started (its barrier word set), then sleeps until it is wanted.
  */
-void vkPowerBootWait(uint32_t primary, uint32_t firstStart, uint32_t starting, uint32_t core)
+void vnzKernelPowerBootWait(uint32_t primary, uint32_t firstStart, uint32_t starting, uint32_t core)
 {
 	uint32_t bit = 1 << core, psw, enabled;
 	volatile int i;
@@ -212,23 +213,23 @@ void vkPowerBootWait(uint32_t primary, uint32_t firstStart, uint32_t starting, u
 		if (starting & bit)
 			return;
 		for (n = 0; n < VNZ_CORES; n++) {
-			if (g_vkBootStarted[n]) {
+			if (g_vnzKernelBootStarted[n]) {
 				first = n;
 				break;
 			}
 		}
-		while (g_vkBootReady[first] == 0)
+		while (g_vnzKernelBootReady[first] == 0)
 			for (i = 0; i < 100; i++)
 				;
 	}
 	psw = vnzReadControl(VNZ_CR_PSW);
 	enabled = vnzReadControlBus(VNZ_CB_INTERRUPT_ENABLE);
 	vnzDisableInterrupts();
-	vkDoorbellInitialize();
-	vkInterruptSetEdge(VNZ_INTERRUPT_DOORBELL, 0);
-	vkInterruptSetLevel(VNZ_INTERRUPT_DOORBELL, 10);
-	vkInterruptSetEnable(VNZ_INTERRUPT_DOORBELL, 1);
-	while (!(g_vkPower.target & bit)) {
+	vnzKernelDoorbellInitialize();
+	vnzKernelInterruptSetEdge(VNZ_INTERRUPT_DOORBELL, 0);
+	vnzKernelInterruptSetLevel(VNZ_INTERRUPT_DOORBELL, 10);
+	vnzKernelInterruptSetEnable(VNZ_INTERRUPT_DOORBELL, 1);
+	while (!(g_vnzKernelPower.target & bit)) {
 		mep_sleep();
 		vnzRegister(VNZ_DOORBELLS + core * 0x20) = 0;
 	}
@@ -237,27 +238,27 @@ void vkPowerBootWait(uint32_t primary, uint32_t firstStart, uint32_t starting, u
 }
 
 /* This core is up. */
-void vkPowerCoreUp(void)
+void vnzKernelPowerCoreUp(void)
 {
 	uint32_t bit = 1 << currentCore(), active;
 
-	vkTakeSemaphore(powerSemaphore);
-	active = g_vkPower.active | bit;
-	g_vkPower.active = active;
-	if (active == g_vkPower.target) {
-		g_vkPower.changing = 0;
+	vnzKernelTakeSemaphore(powerSemaphore);
+	active = g_vnzKernelPower.active | bit;
+	g_vnzKernelPower.active = active;
+	if (active == g_vnzKernelPower.target) {
+		g_vnzKernelPower.changing = 0;
 		powerNotify();
 		powerCallbacks(active);
 	}
-	vkGiveSemaphore(powerSemaphore);
+	vnzKernelGiveSemaphore(powerSemaphore);
 }
 
 /* back from a power down (kernel/vectors.S) */
-void vkPowerResume(void)
+void vnzKernelPowerResume(void)
 {
-	vkPowerRestoreInterrupts();
-	vkModulesResume();
-	vkPowerCoreUp();
+	vnzKernelPowerRestoreInterrupts();
+	vnzKernelModulesResume();
+	vnzKernelPowerCoreUp();
 }
 
 /*
@@ -270,22 +271,22 @@ static uint32_t localSaveAllocate(void)
 	uint32_t base, size = 0, result = 1;
 	void *buffer = NULL;
 
-	base = vkMemoryRegion(VK_MEMORY_LOCAL_RAM, &size);
+	base = vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_LOCAL_RAM, &size);
 	if (base == 0 || base < VNZ_LOCAL_RAM || base >= VNZ_LOCAL_RAM + 0x2000)
 		size = 0;
 	if (size) {
-		buffer = vkHeapAllocate(vkSystemHeap(), size, 0x40);
+		buffer = vnzKernelHeapAllocate(vnzKernelSystemHeap(), size, 0x40);
 		if (buffer == NULL) {
 			size = 0;
 			result = 0;
 		} else {
-			buffer = (void *)vkPhysicalToPublic((uint32_t)buffer);
+			buffer = (void *)vnzKernelPhysicalToPublic((uint32_t)buffer);
 			result = (uint32_t)buffer;
 		}
 	}
-	g_vkPower.localState = VK_POWER_LOCAL_NONE;
-	g_vkPower.localSave = buffer;
-	g_vkPower.localSaveSize = size;
+	g_vnzKernelPower.localState = VNZ_KERNEL_POWER_LOCAL_NONE;
+	g_vnzKernelPower.localSave = buffer;
+	g_vnzKernelPower.localSaveSize = size;
 	return result;
 }
 
@@ -301,61 +302,64 @@ static void localSave(void)
 {
 	uint32_t *buffer, size;
 
-	g_vkPower.savedRegister = VK_POWER_REGISTER;
-	if (g_vkPower.localSave) {
-		buffer = (uint32_t *)vkPublicToPhysical((uint32_t)g_vkPower.localSave);
-		size = g_vkPower.localSaveSize;
-		copyWords(buffer, (const uint32_t *)vkMemoryRegion(VK_MEMORY_LOCAL_RAM, NULL), size);
-		vkCacheWriteback((uint32_t)buffer, (size + 63) & ~63);
+	g_vnzKernelPower.savedRegister = VNZ_KERNEL_POWER_REGISTER;
+	if (g_vnzKernelPower.localSave) {
+		buffer = (uint32_t *)vnzKernelPublicToPhysical((uint32_t)g_vnzKernelPower.localSave);
+		size = g_vnzKernelPower.localSaveSize;
+		copyWords(buffer,
+			(const uint32_t *)vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_LOCAL_RAM, NULL),
+			size);
+		vnzKernelCacheWriteback((uint32_t)buffer, (size + 63) & ~63);
 	}
-	g_vkPower.localState = VK_POWER_LOCAL_SAVED;
+	g_vnzKernelPower.localState = VNZ_KERNEL_POWER_LOCAL_SAVED;
 }
 
 /* The first core up puts local RAM back; the others wait for it. */
-void vkPowerLocalRestore(void)
+void vnzKernelPowerLocalRestore(void)
 {
 	uint32_t *buffer, size;
 	volatile int i;
 
-	if (vkTrySemaphore(powerSemaphore) != 0) {
-		while (g_vkPower.localState < VK_POWER_LOCAL_RESTORED)
+	if (vnzKernelTrySemaphore(powerSemaphore) != 0) {
+		while (g_vnzKernelPower.localState < VNZ_KERNEL_POWER_LOCAL_RESTORED)
 			for (i = 0; i < 50; i++)
 				;
 		return;
 	}
-	if (g_vkPower.localState < VK_POWER_LOCAL_RESTORED) {
-		VK_POWER_REGISTER = g_vkPower.savedRegister;
-		if (g_vkPower.localSave) {
-			buffer = (uint32_t *)vkPublicToPhysical((uint32_t)g_vkPower.localSave);
-			size = g_vkPower.localSaveSize;
-			copyWords((uint32_t *)vkMemoryRegion(VK_MEMORY_LOCAL_RAM, NULL), buffer, size);
-			vkCachePurge((uint32_t)buffer, (size + 63) & ~63);
+	if (g_vnzKernelPower.localState < VNZ_KERNEL_POWER_LOCAL_RESTORED) {
+		VNZ_KERNEL_POWER_REGISTER = g_vnzKernelPower.savedRegister;
+		if (g_vnzKernelPower.localSave) {
+			buffer = (uint32_t *)vnzKernelPublicToPhysical((uint32_t)g_vnzKernelPower.localSave);
+			size = g_vnzKernelPower.localSaveSize;
+			copyWords((uint32_t *)vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_LOCAL_RAM,
+				NULL), buffer, size);
+			vnzKernelCachePurge((uint32_t)buffer, (size + 63) & ~63);
 		}
-		vkLocalCodeCopy(1);
-		g_vkPower.localState = VK_POWER_LOCAL_RESTORED;
+		vnzKernelLocalCodeCopy(1);
+		g_vnzKernelPower.localState = VNZ_KERNEL_POWER_LOCAL_RESTORED;
 	}
-	vkGiveSemaphore(powerSemaphore);
+	vnzKernelGiveSemaphore(powerSemaphore);
 }
 
 /* Free the buffer once the cores are back. */
-void vkPowerLocalFree(void)
+void vnzKernelPowerLocalFree(void)
 {
 	volatile int i;
 
-	if (vkTrySemaphore(powerSemaphore) != 0) {
-		while (g_vkPower.localState < VK_POWER_LOCAL_FREED)
+	if (vnzKernelTrySemaphore(powerSemaphore) != 0) {
+		while (g_vnzKernelPower.localState < VNZ_KERNEL_POWER_LOCAL_FREED)
 			for (i = 0; i < 50; i++)
 				;
 		return;
 	}
-	if (g_vkPower.localState < VK_POWER_LOCAL_FREED) {
-		if (g_vkPower.localSave)
-			vkHeapFree(vkSystemHeap(),
-				(void *)vkPublicToPhysical((uint32_t)g_vkPower.localSave),
-				g_vkPower.localSaveSize, 0x40);
-		g_vkPower.localState = VK_POWER_LOCAL_FREED;
+	if (g_vnzKernelPower.localState < VNZ_KERNEL_POWER_LOCAL_FREED) {
+		if (g_vnzKernelPower.localSave)
+			vnzKernelHeapFree(vnzKernelSystemHeap(),
+				(void *)vnzKernelPublicToPhysical((uint32_t)g_vnzKernelPower.localSave),
+				g_vnzKernelPower.localSaveSize, 0x40);
+		g_vnzKernelPower.localState = VNZ_KERNEL_POWER_LOCAL_FREED;
 	}
-	vkGiveSemaphore(powerSemaphore);
+	vnzKernelGiveSemaphore(powerSemaphore);
 }
 
 /*
@@ -363,14 +367,14 @@ void vkPowerLocalFree(void)
  * Returns 0, or the set up now when it is not expected (or a change is
  * under way).
  */
-uint32_t vkPowerSetCores(uint32_t expected, uint32_t cores)
+uint32_t vnzKernelPowerSetCores(uint32_t expected, uint32_t cores)
 {
-	VkPower *power = &g_vkPower;
+	VnzKernelPower *power = &g_vnzKernelPower;
 	uint32_t active, result, core, bit;
-	VkThread *thread;
+	VnzKernelThread *thread;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(powerSemaphore);
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(powerSemaphore);
 	active = power->active;
 	if (active == expected && power->changing == 0 && (cores != 0 || localSaveAllocate() != 0)) {
 		result = 0;
@@ -394,32 +398,33 @@ uint32_t vkPowerSetCores(uint32_t expected, uint32_t cores)
 			continue;
 		thread = power->threads[core];
 		if (thread) {
-			vkThreadSetFlags(thread, 1);
-			vkThreadResume(thread);
+			vnzKernelThreadSetFlags(thread, 1);
+			vnzKernelThreadResume(thread);
 		} else {
 			/* not started yet: ring it */
 			vnzRegister(VNZ_DOORBELLS + 0x10 + vnzCoreIndex() * 0x20) = bit;
 		}
 	}
 out:
-	vkGiveSemaphore(powerSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(powerSemaphore);
+	vnzKernelEnableDispatch();
 	return result;
 }
 
-uint32_t vkPowerActiveCores(void)
+uint32_t vnzKernelPowerActiveCores(void)
 {
-	return g_vkPower.active;
+	return g_vnzKernelPower.active;
 }
 
 /*
  * The notify list (threads sent flags) and the callbacks (called with the
  * new set), when the active set reaches the target.
  */
-static VkPowerHook *hookCreate(VkThread *thread, uint32_t flags,
+static VnzKernelPowerHook *hookCreate(VnzKernelThread *thread, uint32_t flags,
 	void (*function)(uint32_t cores, uint32_t argument), uint32_t argument)
 {
-	VkPowerHook *hook = vkHeapAllocate(vkCurrentHeap(), sizeof(VkPowerHook), 0x40);
+	VnzKernelPowerHook *hook = vnzKernelHeapAllocate(vnzKernelCurrentHeap(),
+		sizeof(VnzKernelPowerHook), 0x40);
 
 	if (hook == NULL)
 		return NULL;
@@ -430,17 +435,18 @@ static VkPowerHook *hookCreate(VkThread *thread, uint32_t flags,
 	hook->next = NULL;
 	hook->previous = NULL;
 	hook->registered = 0;
-	hook->magic = VK_HOOK_MAGIC;
-	vkCacheWriteback((uint32_t)hook, 0x40);
-	return (VkPowerHook *)vkPhysicalToPublic((uint32_t)hook);
+	hook->magic = VNZ_KERNEL_HOOK_MAGIC;
+	vnzKernelCacheWriteback((uint32_t)hook, 0x40);
+	return (VnzKernelPowerHook *)vnzKernelPhysicalToPublic((uint32_t)hook);
 }
 
-VkPowerHook *vkPowerNotifyCreate(VkThread *thread, uint32_t flags)
+VnzKernelPowerHook *vnzKernelPowerNotifyCreate(VnzKernelThread *thread, uint32_t flags)
 {
 	return hookCreate(thread, flags, NULL, 0);
 }
 
-VkPowerHook *vkPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t argument),
+VnzKernelPowerHook *vnzKernelPowerCallbackCreate(void (*function)(uint32_t cores,
+	uint32_t argument),
 	uint32_t argument)
 {
 	return hookCreate(NULL, 0, function, argument);
@@ -450,82 +456,82 @@ VkPowerHook *vkPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t arg
  * A hook list is linked like a run queue (next and previous first, then head and
  * tail), and Sony's kernel links it with the run queues' functions.
  */
-static void hookRegister(VkPowerList *list, VkPowerHook *hook)
+static void hookRegister(VnzKernelPowerList *list, VnzKernelPowerHook *hook)
 {
-	vkDisableDispatch();
-	vkTakeSemaphore(powerSemaphore);
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(powerSemaphore);
 	if (!hook->registered) {
-		vkQueueAppend((VkQueue *)list, (VkThread *)hook);
+		vnzKernelQueueAppend((VnzKernelQueue *)list, (VnzKernelThread *)hook);
 		hook->registered = 1;
 	}
-	vkGiveSemaphore(powerSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(powerSemaphore);
+	vnzKernelEnableDispatch();
 }
 
-static void hookUnregister(VkPowerList *list, VkPowerHook *hook)
+static void hookUnregister(VnzKernelPowerList *list, VnzKernelPowerHook *hook)
 {
-	vkDisableDispatch();
-	vkTakeSemaphore(powerSemaphore);
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(powerSemaphore);
 	if (hook->registered == 1) {
-		vkQueueRemove((VkQueue *)list, (VkThread *)hook);
+		vnzKernelQueueRemove((VnzKernelQueue *)list, (VnzKernelThread *)hook);
 		hook->registered = 0;
 	}
-	vkGiveSemaphore(powerSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(powerSemaphore);
+	vnzKernelEnableDispatch();
 }
 
-void vkPowerNotifyRegister(VkPowerHook *hook)
+void vnzKernelPowerNotifyRegister(VnzKernelPowerHook *hook)
 {
-	hookRegister(&g_vkPower.notify, hook);
+	hookRegister(&g_vnzKernelPower.notify, hook);
 }
 
-void vkPowerCallbackRegister(VkPowerHook *hook)
+void vnzKernelPowerCallbackRegister(VnzKernelPowerHook *hook)
 {
-	hookRegister(&g_vkPower.callbacks, hook);
+	hookRegister(&g_vnzKernelPower.callbacks, hook);
 }
 
-void vkPowerNotifyUnregister(VkPowerHook *hook)
+void vnzKernelPowerNotifyUnregister(VnzKernelPowerHook *hook)
 {
-	hookUnregister(&g_vkPower.notify, hook);
+	hookUnregister(&g_vnzKernelPower.notify, hook);
 }
 
-void vkPowerCallbackUnregister(VkPowerHook *hook)
+void vnzKernelPowerCallbackUnregister(VnzKernelPowerHook *hook)
 {
-	hookUnregister(&g_vkPower.callbacks, hook);
+	hookUnregister(&g_vnzKernelPower.callbacks, hook);
 }
 
-static void hookFree(VkPowerHook *hook)
+static void hookFree(VnzKernelPowerHook *hook)
 {
 	hook->magic = 0;
-	vkHeapFree(vkCurrentHeap(), (void *)vkPublicToPhysical((uint32_t)hook),
-		sizeof(VkPowerHook), 0x40);
+	vnzKernelHeapFree(vnzKernelCurrentHeap(), (void *)vnzKernelPublicToPhysical((uint32_t)hook),
+		sizeof(VnzKernelPowerHook), 0x40);
 }
 
-void vkPowerNotifyDelete(VkPowerHook *hook)
+void vnzKernelPowerNotifyDelete(VnzKernelPowerHook *hook)
 {
-	hookUnregister(&g_vkPower.notify, hook);
+	hookUnregister(&g_vnzKernelPower.notify, hook);
 	hookFree(hook);
 }
 
-void vkPowerCallbackDelete(VkPowerHook *hook)
+void vnzKernelPowerCallbackDelete(VnzKernelPowerHook *hook)
 {
-	hookUnregister(&g_vkPower.callbacks, hook);
+	hookUnregister(&g_vnzKernelPower.callbacks, hook);
 	hookFree(hook);
 }
 
 static void powerNotify(void)
 {
-	VkPowerHook *hook;
+	VnzKernelPowerHook *hook;
 
-	for (hook = g_vkPower.notify.head; hook; hook = hook->next)
-		vkThreadSetFlags(hook->thread, hook->flags);
+	for (hook = g_vnzKernelPower.notify.head; hook; hook = hook->next)
+		vnzKernelThreadSetFlags(hook->thread, hook->flags);
 }
 
 static void powerCallbacks(uint32_t cores)
 {
-	VkPowerHook *hook;
+	VnzKernelPowerHook *hook;
 
-	for (hook = g_vkPower.callbacks.head; hook; hook = hook->next)
+	for (hook = g_vnzKernelPower.callbacks.head; hook; hook = hook->next)
 		hook->function(cores, hook->argument);
 }
 
@@ -533,16 +539,16 @@ static void powerCallbacks(uint32_t cores)
  * The modules: resumed in order at a core's start, suspended in reverse
  * before it goes down.
  */
-void vkModulesResume(void)
+void vnzKernelModulesResume(void)
 {
-	const VkModuleTable *table = VK_CONFIGURATION->modules;
-	VkPowerCore *power;
+	const VnzKernelModuleTable *table = VNZ_KERNEL_CONFIGURATION->modules;
+	VnzKernelPowerCore *power;
 	uint32_t core, firstStart, primary = 0, i;
 
 	if (table == NULL)
 		return;
 	core = currentCore();
-	power = &g_vkPower.cores[core];
+	power = &g_vnzKernelPower.cores[core];
 	firstStart = power->resumeFirstStart;
 	if (firstStart)
 		primary = power->resumePrimary;
@@ -550,15 +556,15 @@ void vkModulesResume(void)
 		if (table->modules[i]->resume)
 			table->modules[i]->resume(primary, firstStart);
 	if (firstStart) {
-		vkBootBarrier(primary, core, g_vkPower.expected, 4, 5);
+		vnzKernelBootBarrier(primary, core, g_vnzKernelPower.expected, 4, 5);
 		power->resumeFirstStart = 0;
 		power->resumePrimary = 0;
 	}
 }
 
-void vkModulesSuspend(void)
+void vnzKernelModulesSuspend(void)
 {
-	const VkModuleTable *table = VK_CONFIGURATION->modules;
+	const VnzKernelModuleTable *table = VNZ_KERNEL_CONFIGURATION->modules;
 	uint32_t count, i;
 
 	if (table == NULL)

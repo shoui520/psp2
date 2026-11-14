@@ -53,16 +53,17 @@ void avcdecParserThread(uint32_t memory, uint32_t codec)
 {
 	AvcdecParser *parser = parserBegin(memory);
 	AvcdecParserInfo *info = parser->info;
-	VkMessageQueue *auQueue = parser->auQueue;
-	VkMessageQueue *serviceQueue = parser->serviceQueue;
-	VkMessageQueue *decoderQueue = parser->decoderQueue;
-	VkMessageQueue *wakeQueue = parser->wakeQueue;
-	VkMessageQueue *helperQueue = parser->helperQueue;
+	VnzKernelMessageQueue *auQueue = parser->auQueue;
+	VnzKernelMessageQueue *serviceQueue = parser->serviceQueue;
+	VnzKernelMessageQueue *decoderQueue = parser->decoderQueue;
+	VnzKernelMessageQueue *wakeQueue = parser->wakeQueue;
+	VnzKernelMessageQueue *helperQueue = parser->helperQueue;
 	uint32_t flags;
 
 	do {
 		flags = parserWait(parser);
-		if (parser->state == PARSER_IDLE && vkMessageReceive(auQueue, (uint32_t)parser))
+		if (parser->state == PARSER_IDLE && vnzKernelMessageReceive(auQueue,
+			(uint32_t)parser))
 			parser->state = PARSER_STARTING;
 		if (parser->state == PARSER_STARTING) {
 			if (flags & PARSER_FLAG_DECODE) {
@@ -84,7 +85,8 @@ void avcdecParserThread(uint32_t memory, uint32_t codec)
 					requestStatus(parser);
 					requestFinish(parser);
 				}
-				vkMessageSend(serviceQueue, videoServiceAuDone, parser->request);
+				vnzKernelMessageSend(serviceQueue, videoServiceAuDone,
+					parser->request);
 				parser->state = PARSER_IDLE;
 				vnzThreadSetFlags(info->thread, PARSER_FLAG_AU);
 			} else if (flags & PARSER_FLAG_FAILED) {
@@ -95,9 +97,10 @@ void avcdecParserThread(uint32_t memory, uint32_t codec)
 			}
 		}
 		if (parser->state == PARSER_PARSING &&
-		    vkMessageReceive(wakeQueue, (uint32_t)parser)) {
+		    vnzKernelMessageReceive(wakeQueue, (uint32_t)parser)) {
 			if (!parser->output)
-				vkMessageSend(helperQueue, videoHelperStart, parser->request);
+				vnzKernelMessageSend(helperQueue, videoHelperStart,
+					parser->request);
 			else if (parser->flush == 1)
 				flushRun(parser);
 			else
@@ -106,7 +109,7 @@ void avcdecParserThread(uint32_t memory, uint32_t codec)
 		}
 		if (parser->state == PARSER_HELPING && (flags & PARSER_FLAG_JOB_DONE)) {
 			requestFinish(parser);
-			vkMessageSend(serviceQueue, videoServiceAuDone, parser->request);
+			vnzKernelMessageSend(serviceQueue, videoServiceAuDone, parser->request);
 			if (flags & PARSER_FLAG_FAILED) {
 				unitSkip(parser);
 				parser->state = PARSER_PARSING;
@@ -114,7 +117,8 @@ void avcdecParserThread(uint32_t memory, uint32_t codec)
 			} else {
 				if (parser->output) {
 					parsedSet(parser);
-					vkMessageSend(decoderQueue, avcdecDecoderParsed, parser->parsedWord);
+					vnzKernelMessageSend(decoderQueue, avcdecDecoderParsed,
+						parser->parsedWord);
 					parser->keepError = 0;
 					parser->flush = 0;
 					parser->output = 0;
@@ -202,7 +206,7 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 	VideoEngineRequest *request;
 	VideoStream *stream;
 	uint32_t start, esSize, bufferSize, esOffset, end, line, first, size, index;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	parser->request = requestAddress;
 	request = (VideoEngineRequest *)vnzPublicOpenPrivate(requestAddress, REQUEST_SIZE);
@@ -307,10 +311,11 @@ void avcdecParserAu(uint32_t memory, uint32_t requestAddress)
 		request->contextFlags |= 0x08;
 	vnzPublicClosePrivate((uint32_t)request, REQUEST_SIZE);
 	vnzPublicClosePrivate((uint32_t)stream, PARSER_STREAM_SIZE);
-	locked = vkVThreadContextLock(parser->context);
-	vkVThreadJobSet(locked, index, 0, avcdecParserJobStart, (uint32_t)info, parser->stream,
+	locked = vnzKernelVThreadContextLock(parser->context);
+	vnzKernelVThreadJobSet(locked, index, 0, avcdecParserJobStart, (uint32_t)info,
+		parser->stream,
 		parser->job, 0);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /* 0x8252f8: the request answered with the unit's error, its bytes unmapped */
@@ -450,14 +455,15 @@ static void outputRun(AvcdecParser *parser)
 {
 	AvcdecParserInfo *info = parser->info;
 	uint32_t index = info->index << 3, busy;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	do {
-		locked = vkVThreadContextLock(parser->context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, avcdecParserJobOutput, (uint32_t)info,
+		locked = vnzKernelVThreadContextLock(parser->context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, avcdecParserJobOutput,
+			(uint32_t)info,
 			parser->stream, parser->job, parser->keepError, info->thread,
 			PARSER_FLAG_JOB_DONE);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -466,13 +472,14 @@ static void flushRun(AvcdecParser *parser)
 {
 	AvcdecParserInfo *info = parser->info;
 	uint32_t index = info->index << 3, busy;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	do {
-		locked = vkVThreadContextLock(parser->context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, avcdecParserJobFlush, (uint32_t)info,
+		locked = vnzKernelVThreadContextLock(parser->context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, avcdecParserJobFlush,
+			(uint32_t)info,
 			parser->stream, parser->job, 0, info->thread, PARSER_FLAG_JOB_DONE);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 

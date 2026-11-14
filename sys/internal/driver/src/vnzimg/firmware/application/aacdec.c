@@ -52,7 +52,7 @@ typedef struct AacInfo {
 typedef struct AacDecoder {
 	uint32_t esSize;		/* the bytes given; then the bytes used */
 	uint32_t pcmSize;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;			/* the last decode's */
 	void *handle;
 	uint32_t ch;
@@ -164,14 +164,14 @@ static int32_t aacConfigure(AacDecoder *decoder, const AudioDecoderEngine *engin
 	return engine->control(decoder->handle, keys, 8, values, work);
 }
 
-static int32_t aacInit(AacCtrl *ctrl, VkVThreadResource *resource, AacDecoder *decoder)
+static int32_t aacInit(AacCtrl *ctrl, VnzKernelVThreadResource *resource, AacDecoder *decoder)
 {
 	const AudioDecoderEngine *engine = aacEngine();
 	uint32_t size;
 	int32_t result;
 
 	memset(decoder, 0, ctrl->decoderSize);
-	decoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	decoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (decoder->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
 	decoder->format = ctrl->info.isAdts ? AAC_FORMAT_ADTS : AAC_FORMAT_RAW;
@@ -201,7 +201,7 @@ static int32_t aacRelease(AacDecoder *decoder)
 			result = destroyed;
 	}
 	if (decoder->context) {
-		vkVThreadContextDelete(decoder->context);
+		vnzKernelVThreadContextDelete(decoder->context);
 		decoder->context = NULL;
 	}
 	return result;
@@ -285,12 +285,12 @@ static void aacDecodeJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t a
 /* a batch's decode, signalling the batch job */
 static void aacBatchJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t argument4)
 {
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	aacDecode(decoder, es, pcm);
-	context = vkVThreadContextLock((VkVThreadContext *)argument4);
-	vkVThreadJobSignal(context, BATCH_JOB);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)argument4);
+	vnzKernelVThreadJobSignal(context, BATCH_JOB);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 static void aacBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
@@ -298,29 +298,29 @@ static void aacBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argu
 {
 }
 
-static int32_t aacRun(uint32_t decoder, VkVThreadContext *context, uint32_t es, uint32_t pcm)
+static int32_t aacRun(uint32_t decoder, VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, aacDecodeJob, decoder, es, pcm, 0,
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, aacDecodeJob, decoder, es, pcm, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
 
-static int32_t aacRunBatch(const uint32_t *decoders, VkVThreadContext *context,
+static int32_t aacRunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
 	const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
 
 	for (i = 0; i < count; i++)
-		vkVThreadJobSet(locked, i, 0, aacBatchJob, decoders[i], es[i], pcm[i],
+		vnzKernelVThreadJobSet(locked, i, 0, aacBatchJob, decoders[i], es[i], pcm[i],
 			(uint32_t)context);
-	vkVThreadJobSetNotify(locked, BATCH_JOB, count, aacBatchDoneJob, 0, 0, 0, 0,
+	vnzKernelVThreadJobSetNotify(locked, BATCH_JOB, count, aacBatchDoneJob, 0, 0, 0, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -340,7 +340,7 @@ int32_t rpcAacSizes(uint32_t ctrlAddress, uint32_t isSbr)
 }
 
 /* RPC 193: a decoder for the stream, on a context of the resource */
-int32_t rpcAacInit(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcAacInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	VnzExtMemory ctrlMemory, decoderMemory;
 	uint32_t decoderAddress = 0;
@@ -413,7 +413,7 @@ int32_t rpcAacDecode(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, decoderMemory, esMemory, pcmMemory;
 	uint32_t decoderAddress = 0, es = 0, pcm = 0, esSize, pcmSize;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	AacDecoder *decoder;
 	int32_t result;
 	AacCtrl *ctrl;
@@ -499,7 +499,7 @@ int32_t rpcAacDecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 	uint32_t decoders[SCE_AUDIODEC_AAC_MAX_NSTREAMS], es[SCE_AUDIODEC_AAC_MAX_NSTREAMS];
 	uint32_t pcm[SCE_AUDIODEC_AAC_MAX_NSTREAMS], esSize[SCE_AUDIODEC_AAC_MAX_NSTREAMS];
 	uint32_t pcmSize[SCE_AUDIODEC_AAC_MAX_NSTREAMS], i;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	int32_t result, closed;
 	AacDecoder *decoder;
 	AacCtrl *ctrls;

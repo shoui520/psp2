@@ -50,8 +50,8 @@
 
 /* the engine's info, read by its jobs (64 bytes) */
 typedef struct M4vdecParserInfo {
-	VkThread *thread;		/* the parser engine's */
-	VkThread *decoderThread;	/* the decoder engine's */
+	VnzKernelThread *thread;		/* the parser engine's */
+	VnzKernelThread *decoderThread;	/* the decoder engine's */
 	int32_t id;			/* the decoder's */
 	int32_t index;			/* the decoder's slot */
 	uint32_t reserved;
@@ -95,12 +95,12 @@ typedef struct M4vdecParser {
 	uint8_t keepError;		/* the output job keeps the unit's error */
 	uint8_t option;
 	uint8_t reserved[3];
-	VkMessageQueue *auQueue;
-	VkMessageQueue *serviceQueue;	/* the service's, for the units done */
-	VkMessageQueue *helperQueue;
-	VkMessageQueue *decoderQueue;	/* the decoder engine's */
-	VkMessageQueue *wakeQueue;
-	VkVThreadContext *context;
+	VnzKernelMessageQueue *auQueue;
+	VnzKernelMessageQueue *serviceQueue;	/* the service's, for the units done */
+	VnzKernelMessageQueue *helperQueue;
+	VnzKernelMessageQueue *decoderQueue;	/* the decoder engine's */
+	VnzKernelMessageQueue *wakeQueue;
+	VnzKernelVThreadContext *context;
 } M4vdecParser;
 
 #endif

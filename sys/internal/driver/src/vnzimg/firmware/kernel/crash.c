@@ -3,29 +3,29 @@
  *
  * An exception (kernel/vectors.S) saves the core's registers and stops the
  * core here: the crash hook runs, the core's state and the kernel's are written
- * to the crash region (VK_MEMORY_CRASH) for the ARM side, the registered
+ * to the crash region (VNZ_KERNEL_MEMORY_CRASH) for the ARM side, the registered
  * copies are made, and the core sleeps for good.
  */
 #include "kernel.h"
 
-#define VK_CRASH_MAGIC		0xdead0001
-#define VK_CRASH_VERSION	1
-#define VK_CRASH_SIZE		0xd58
+#define VNZ_KERNEL_CRASH_MAGIC		0xdead0001
+#define VNZ_KERNEL_CRASH_VERSION	1
+#define VNZ_KERNEL_CRASH_SIZE		0xd58
 
 /* the registers an exception saves (kernel/vectors.S) */
-typedef struct VkExceptionFrame {
+typedef struct VnzKernelExceptionFrame {
 	uint32_t registers[16];
 	uint32_t lp;
-} VkExceptionFrame;
+} VnzKernelExceptionFrame;
 
 /* a core's state in the record (0xe0 bytes) */
-typedef struct VkCrashCore {
+typedef struct VnzKernelCrashCore {
 	uint32_t registers[16];
 	uint32_t control[32];		/* the control registers, by number */
 	uint32_t interruptController[8];
-} VkCrashCore;
+} VnzKernelCrashCore;
 
-typedef struct VkCrashHardware {
+typedef struct VnzKernelCrashHardware {
 	uint32_t l2Control;
 	uint32_t reserved4;
 	uint32_t dmaFlush;
@@ -37,88 +37,88 @@ typedef struct VkCrashHardware {
 		uint32_t pending;
 		uint32_t mask;
 	} doorbells[2][VNZ_CORES];
-} VkCrashHardware;
+} VnzKernelCrashHardware;
 
-typedef struct VkCrashKernelCore {
-	VkThread *current;
-	VkThread *idle;
+typedef struct VnzKernelCrashKernelCore {
+	VnzKernelThread *current;
+	VnzKernelThread *idle;
 	uint8_t reserved8;
 	uint8_t reschedulePending;
 	uint16_t reservedA;
 	uint32_t inKernel;
-	VkInterruptHandler *eventsHead;
-	VkInterruptHandler *eventsTail;
+	VnzKernelInterruptHandler *eventsHead;
+	VnzKernelInterruptHandler *eventsTail;
 	uint32_t dispatchDisable;
 	uint32_t type;
 	uint32_t reserved20[8];
-} VkCrashKernelCore;
+} VnzKernelCrashKernelCore;
 
-typedef struct VkCrashKernel {
-	VkCrashKernelCore cores[VNZ_CORES];
+typedef struct VnzKernelCrashKernel {
+	VnzKernelCrashKernelCore cores[VNZ_CORES];
 	void *handlers[VNZ_CORES][8];	/* the handlers of the interrupts a core records */
 	void *lockPagesHead;
 	void *lockPagesTail;
-	VkQueue runQueues[VNZ_CORES][VK_PRIORITIES];
+	VnzKernelQueue runQueues[VNZ_CORES][VNZ_KERNEL_PRIORITIES];
 	uint32_t threadCounts[VNZ_CORES];
-	VkThread *nextThreads[VNZ_CORES];
-} VkCrashKernel;
+	VnzKernelThread *nextThreads[VNZ_CORES];
+} VnzKernelCrashKernel;
 
 /* the crash region's contents */
-typedef struct VkCrashRecord {
+typedef struct VnzKernelCrashRecord {
 	uint32_t magic;
 	uint32_t version;
 	uint32_t cores;
 	uint32_t coreId;		/* that crashed */
 	uint32_t exception;
 	uint32_t reserved14[3];
-	VkCrashCore core[VNZ_CORES];
-	VkCrashHardware hardware;
-	VkCrashKernel kernel;
-} VkCrashRecord;
+	VnzKernelCrashCore core[VNZ_CORES];
+	VnzKernelCrashHardware hardware;
+	VnzKernelCrashKernel kernel;
+} VnzKernelCrashRecord;
 
-/* a copy made when the kernel crashes (vkCrashCopyRegister) */
-typedef struct VkCrashCopy {
-	struct VkCrashCopy *next;
+/* a copy made when the kernel crashes (vnzKernelCrashCopyRegister) */
+typedef struct VnzKernelCrashCopy {
+	struct VnzKernelCrashCopy *next;
 	const void *source;
 	uint32_t size;
-} VkCrashCopy;
+} VnzKernelCrashCopy;
 
 static const uint32_t doorbellBanks[2] = { VNZ_DOORBELLS, VNZ_DOORBELLS2 };
 
-volatile uint8_t *g_vkCrashLock VK_SHARED;
-VkCrashHook g_vkCrashHook VK_SHARED;
-uint32_t g_vkCrashHookArgument VK_SHARED;
-uint32_t g_vkCrashHookArgument2 VK_SHARED;
-VkCrashCopy *g_vkCrashCopies VK_SHARED;
-volatile uint8_t *g_vkCrashCopiesLock VK_SHARED;
-const uint32_t *g_vkConfigurationReserved VK_SHARED;	/* recorded, never read */
+volatile uint8_t *g_vnzKernelCrashLock VNZ_KERNEL_SHARED;
+VnzKernelCrashHook g_vnzKernelCrashHook VNZ_KERNEL_SHARED;
+uint32_t g_vnzKernelCrashHookArgument VNZ_KERNEL_SHARED;
+uint32_t g_vnzKernelCrashHookArgument2 VNZ_KERNEL_SHARED;
+VnzKernelCrashCopy *g_vnzKernelCrashCopies VNZ_KERNEL_SHARED;
+volatile uint8_t *g_vnzKernelCrashCopiesLock VNZ_KERNEL_SHARED;
+const uint32_t *g_vnzKernelConfigurationReserved VNZ_KERNEL_SHARED;	/* recorded, never read */
 
-void vkCrashInitialize(uint32_t primary)
+void vnzKernelCrashInitialize(uint32_t primary)
 {
 	volatile uint8_t *lock;
 
 	if (!primary)
 		return;
-	lock = vkLockPageAllocate();
+	lock = vnzKernelLockPageAllocate();
 	if (lock == NULL)
 		return;
-	g_vkCrashLock = lock;
-	g_vkCrashHook = NULL;
-	g_vkExitedThreads = 0;
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_EXITS));
-	g_vkExitedLimit = VK_CONFIGURATION->maxExited;
-	g_vkConfigurationReserved = &VK_CONFIGURATION->reserved8;
-	g_vkCrashCopies = NULL;
-	g_vkCrashCopiesLock = vkLockPageAllocate();
+	g_vnzKernelCrashLock = lock;
+	g_vnzKernelCrashHook = NULL;
+	g_vnzKernelExitedThreads = 0;
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_EXITS));
+	g_vnzKernelExitedLimit = VNZ_KERNEL_CONFIGURATION->maxExited;
+	g_vnzKernelConfigurationReserved = &VNZ_KERNEL_CONFIGURATION->reserved8;
+	g_vnzKernelCrashCopies = NULL;
+	g_vnzKernelCrashCopiesLock = vnzKernelLockPageAllocate();
 }
 
-static void recordHeader(VkCrashRecord *record, uint32_t exception)
+static void recordHeader(VnzKernelCrashRecord *record, uint32_t exception)
 {
-	record->version = VK_CRASH_VERSION;
+	record->version = VNZ_KERNEL_CRASH_VERSION;
 	record->cores = VNZ_CORES;
-	record->magic = VK_CRASH_MAGIC;
+	record->magic = VNZ_KERNEL_CRASH_MAGIC;
 	record->exception = exception;
-	record->coreId = vkCurrentCoreId();
+	record->coreId = vnzKernelCurrentCoreId();
 	record->reserved14[2] = 0;
 	record->reserved14[1] = 0;
 	record->reserved14[0] = 0;
@@ -132,7 +132,7 @@ static void recordRegisters(uint32_t *to, const uint32_t *from)
 		to[i] = from[i];
 }
 
-static void recordControl(uint32_t *control, const VkExceptionFrame *frame)
+static void recordControl(uint32_t *control, const VnzKernelExceptionFrame *frame)
 {
 	control[VNZ_CR_PC] = vnzReadControl(VNZ_CR_PC);
 	control[VNZ_CR_LP] = frame->lp;
@@ -180,7 +180,7 @@ static void recordInterruptController(uint32_t *to)
 	to[7] = vnzReadControlBus(VNZ_CB_INTERRUPT_LEVEL3);
 }
 
-static void recordHardware(VkCrashHardware *hardware)
+static void recordHardware(VnzKernelCrashHardware *hardware)
 {
 	uint32_t banks[2] = { doorbellBanks[0], doorbellBanks[1] };
 	uint32_t bank, core;
@@ -203,9 +203,10 @@ static void recordHardware(VkCrashHardware *hardware)
 }
 
 /* this core's state in the record */
-static void recordCore(uint32_t index, VkCrashRecord *record, const VkExceptionFrame *frame)
+static void recordCore(uint32_t index, VnzKernelCrashRecord *record,
+	const VnzKernelExceptionFrame *frame)
 {
-	VkCrashCore *core = &record->core[index];
+	VnzKernelCrashCore *core = &record->core[index];
 
 	recordRegisters(core->registers, frame->registers);
 	recordControl(core->control, frame);
@@ -214,21 +215,21 @@ static void recordCore(uint32_t index, VkCrashRecord *record, const VkExceptionF
 }
 
 /* the handlers of the interrupts the core's configuration says to record */
-static void recordHandlers(uint32_t index, VkCrashKernel *kernel)
+static void recordHandlers(uint32_t index, VnzKernelCrashKernel *kernel)
 {
-	uint32_t interrupts = VK_CONFIGURATION->coreTable->cores[index].interrupts;
-	VkInterruptHandler *handler;
+	uint32_t interrupts = VNZ_KERNEL_CONFIGURATION->coreTable->cores[index].interrupts;
+	VnzKernelInterruptHandler *handler;
 	uint32_t bit = 1, recorded = 0, i;
 
 	for (i = 0; i < VNZ_INTERRUPTS && recorded < 8; i++, bit <<= 1) {
 		if (!(interrupts & bit))
 			continue;
-		handler = g_vkInterruptTables[index].handlers[i];
+		handler = g_vnzKernelInterruptTables[index].handlers[i];
 		kernel->handlers[index][recorded++] = handler ? (void *)handler->handler : NULL;
 	}
 }
 
-static void recordKernelCore(const VkCore *core, VkCrashKernelCore *to)
+static void recordKernelCore(const VnzKernelCore *core, VnzKernelCrashKernelCore *to)
 {
 	to->current = core->current;
 	to->idle = core->idle;
@@ -240,32 +241,32 @@ static void recordKernelCore(const VkCore *core, VkCrashKernelCore *to)
 	to->type = core->type;
 }
 
-static void recordKernel(uint32_t index, VkCrashKernel *kernel)
+static void recordKernel(uint32_t index, VnzKernelCrashKernel *kernel)
 {
 	uint32_t core, priority;
 
-	recordKernelCore(&g_vkCores[index], &kernel->cores[index]);
+	recordKernelCore(&g_vnzKernelCores[index], &kernel->cores[index]);
 	recordHandlers(index, kernel);
-	kernel->lockPagesHead = g_vkLockPages.head;
-	kernel->lockPagesTail = g_vkLockPages.tail;
+	kernel->lockPagesHead = g_vnzKernelLockPages.head;
+	kernel->lockPagesTail = g_vnzKernelLockPages.tail;
 	for (core = 0; core < VNZ_CORES; core++)
-		for (priority = 0; priority < VK_PRIORITIES; priority++)
-			kernel->runQueues[core][priority] = g_vkRunQueues[core][priority];
+		for (priority = 0; priority < VNZ_KERNEL_PRIORITIES; priority++)
+			kernel->runQueues[core][priority] = g_vnzKernelRunQueues[core][priority];
 	for (core = 0; core < VNZ_CORES; core++)
-		kernel->threadCounts[core] = g_vkThreadCounts[core];
+		kernel->threadCounts[core] = g_vnzKernelThreadCounts[core];
 	for (core = 0; core < VNZ_CORES; core++)
-		kernel->nextThreads[core] = g_vkNextThreads[core];
+		kernel->nextThreads[core] = g_vnzKernelNextThreads[core];
 }
 
-static void recordCrash(uint32_t index, const VkExceptionFrame *frame, uint32_t exception)
+static void recordCrash(uint32_t index, const VnzKernelExceptionFrame *frame, uint32_t exception)
 {
-	VkCrashRecord *record;
+	VnzKernelCrashRecord *record;
 	uint32_t size;
-	uint32_t base = vkMemoryRegion(VK_MEMORY_CRASH, &size);
+	uint32_t base = vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_CRASH, &size);
 
-	if (base == 0 || size < VK_CRASH_SIZE)
+	if (base == 0 || size < VNZ_KERNEL_CRASH_SIZE)
 		return;
-	record = (VkCrashRecord *)vkToUncached(base);
+	record = (VnzKernelCrashRecord *)vnzKernelToUncached(base);
 	if (record == NULL)
 		return;
 	recordHeader(record, exception);
@@ -281,22 +282,23 @@ static void copyWords(const uint32_t *from, uint32_t size, uint32_t *to)
 
 static void makeCopies(void)
 {
-	VkCrashCopy *copy, *next;
+	VnzKernelCrashCopy *copy, *next;
 
-	vnzTestAndSet(g_vkCrashCopiesLock);
-	for (copy = g_vkCrashCopies; copy; copy = next) {
+	vnzTestAndSet(g_vnzKernelCrashCopiesLock);
+	for (copy = g_vnzKernelCrashCopies; copy; copy = next) {
 		next = copy->next;
 		copyWords(copy->source, copy->size, (uint32_t *)copy);
 	}
 }
 
 /* An exception (from kernel/vectors.S): the core stops here. */
-void vkCrash(uint32_t index, VkExceptionFrame *frame, uint32_t exception)
+void vnzKernelCrash(uint32_t index, VnzKernelExceptionFrame *frame, uint32_t exception)
 {
-	vnzTestAndSet(g_vkCrashLock);
-	if (g_vkCrashHook)
-		g_vkCrashHook(index + VNZ_FIRST_CORE_ID, exception, g_vkCrashHookArgument,
-			g_vkCrashHookArgument2);
+	vnzTestAndSet(g_vnzKernelCrashLock);
+	if (g_vnzKernelCrashHook)
+		g_vnzKernelCrashHook(index + VNZ_FIRST_CORE_ID, exception,
+			g_vnzKernelCrashHookArgument,
+			g_vnzKernelCrashHookArgument2);
 	recordCrash(index, frame, exception);
 	makeCopies();
 	for (;;)
@@ -304,35 +306,35 @@ void vkCrash(uint32_t index, VkExceptionFrame *frame, uint32_t exception)
 }
 
 /* Set the function a crash calls first. Returns 0, or -1 when one is set. */
-int32_t vkCrashSetHook(VkCrashHook hook, uint32_t argument, uint32_t argument2)
+int32_t vnzKernelCrashSetHook(VnzKernelCrashHook hook, uint32_t argument, uint32_t argument2)
 {
 	int32_t result = -1;
 
-	vkDisableDispatch();
-	vkSpinLock(g_vkCrashLock);
-	if (g_vkCrashHook == NULL) {
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(g_vnzKernelCrashLock);
+	if (g_vnzKernelCrashHook == NULL) {
 		result = 0;
-		g_vkCrashHookArgument2 = argument2;
-		g_vkCrashHookArgument = argument;
-		g_vkCrashHook = hook;
+		g_vnzKernelCrashHookArgument2 = argument2;
+		g_vnzKernelCrashHookArgument = argument;
+		g_vnzKernelCrashHook = hook;
 	}
-	vkSpinUnlock(g_vkCrashLock);
-	vkEnableDispatch();
+	vnzKernelSpinUnlock(g_vnzKernelCrashLock);
+	vnzKernelEnableDispatch();
 	return result;
 }
 
-int32_t vkCrashClearHook(void)
+int32_t vnzKernelCrashClearHook(void)
 {
 	int32_t result = -1;
 
-	vkDisableDispatch();
-	vkSpinLock(g_vkCrashLock);
-	if (g_vkCrashHook) {
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(g_vnzKernelCrashLock);
+	if (g_vnzKernelCrashHook) {
 		result = 0;
-		g_vkCrashHook = NULL;
+		g_vnzKernelCrashHook = NULL;
 	}
-	vkSpinUnlock(g_vkCrashLock);
-	vkEnableDispatch();
+	vnzKernelSpinUnlock(g_vnzKernelCrashLock);
+	vnzKernelEnableDispatch();
 	return result;
 }
 
@@ -340,22 +342,22 @@ int32_t vkCrashClearHook(void)
  * Have a crash copy size bytes from source into the memory region id (which
  * holds the copy's header first). Returns 0, or -1 when the region is too small.
  */
-int32_t vkCrashCopyRegister(uint32_t id, const void *source, uint32_t size)
+int32_t vnzKernelCrashCopyRegister(uint32_t id, const void *source, uint32_t size)
 {
-	VkCrashCopy *copy;
+	VnzKernelCrashCopy *copy;
 	uint32_t base, regionSize;
 
-	base = vkMemoryRegion(id, &regionSize);
+	base = vnzKernelMemoryRegion(id, &regionSize);
 	if (base == 0 || regionSize < size || regionSize < 0x10)
 		return -1;
-	copy = (VkCrashCopy *)vkPhysicalToUncached(base);
+	copy = (VnzKernelCrashCopy *)vnzKernelPhysicalToUncached(base);
 	copy->source = source;
 	copy->size = size;
-	vkDisableDispatch();
-	vkSpinLock(g_vkCrashCopiesLock);
-	copy->next = g_vkCrashCopies;
-	g_vkCrashCopies = copy;
-	vkSpinUnlock(g_vkCrashCopiesLock);
-	vkEnableDispatch();
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(g_vnzKernelCrashCopiesLock);
+	copy->next = g_vnzKernelCrashCopies;
+	g_vnzKernelCrashCopies = copy;
+	vnzKernelSpinUnlock(g_vnzKernelCrashCopiesLock);
+	vnzKernelEnableDispatch();
 	return 0;
 }

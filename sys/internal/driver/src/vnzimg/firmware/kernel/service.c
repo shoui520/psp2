@@ -3,21 +3,22 @@
  *
  * Each core runs a service thread (priority 9). A move is queued to the
  * thread's core, whose service thread takes the thread off the core and stands
- * in for its interrupt handlers (vkInterruptsHook), then queues the move to the
+ * in for its interrupt handlers (vnzKernelInterruptsHook), then queues the move to the
  * target core, whose service thread puts the thread on that core and moves the
- * handlers there (vkInterruptsMove). The move semaphore keeps the moves in order.
+ * handlers there (vnzKernelInterruptsMove). The move semaphore keeps the moves in order.
  */
 #include "kernel.h"
 
-#define VK_SERVICE_OUTGOING	0x2	/* a move off this core is queued */
-#define VK_SERVICE_INCOMING	0x1	/* a move to this core is queued */
+#define VNZ_KERNEL_SERVICE_OUTGOING	0x2	/* a move off this core is queued */
+#define VNZ_KERNEL_SERVICE_INCOMING	0x1	/* a move to this core is queued */
 
-VkMigrationQueue g_vkServiceQueues[VNZ_CORES][2] VK_SHARED;	/* outgoing, incoming */
-VkThread *g_vkServiceThreads[VNZ_CORES] VK_SHARED;
+/* outgoing, incoming */
+VnzKernelMigrationQueue g_vnzKernelServiceQueues[VNZ_CORES][2] VNZ_KERNEL_SHARED;
+VnzKernelThread *g_vnzKernelServiceThreads[VNZ_CORES] VNZ_KERNEL_SHARED;
 
-static volatile uint32_t *const moveSemaphore = vkSemaphore(VK_SEMAPHORE_MOVES);
+static volatile uint32_t *const moveSemaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_MOVES);
 
-static void migrationAppend(VkMigrationQueue *queue, VkMigration *migration)
+static void migrationAppend(VnzKernelMigrationQueue *queue, VnzKernelMigration *migration)
 {
 	if (queue->head)
 		queue->tail->next = migration;
@@ -26,9 +27,9 @@ static void migrationAppend(VkMigrationQueue *queue, VkMigration *migration)
 	queue->tail = migration;
 }
 
-static VkMigration *migrationTake(VkMigrationQueue *queue)
+static VnzKernelMigration *migrationTake(VnzKernelMigrationQueue *queue)
 {
-	VkMigration *migration = queue->head;
+	VnzKernelMigration *migration = queue->head;
 
 	if (migration) {
 		queue->head = migration->next;
@@ -44,116 +45,121 @@ static VkMigration *migrationTake(VkMigrationQueue *queue)
  * arrived. Returns 0, or -1 when the thread is already moving, its interrupts
  * are taken on that core, or there is no memory.
  */
-int32_t vkThreadMigrate(VkThread *thread, uint32_t coreId, VkThread *notify, uint32_t notifyFlags)
+int32_t vnzKernelThreadMigrate(VnzKernelThread *thread, uint32_t coreId, VnzKernelThread *notify,
+	uint32_t notifyFlags)
 {
-	VkHeap *heap = vkSystemHeap();
-	VkMigration *migration;
-	VkCore *core;
+	VnzKernelHeap *heap = vnzKernelSystemHeap();
+	VnzKernelMigration *migration;
+	VnzKernelCore *core;
 	uint32_t index, from, to;
 
-	migration = vkHeapAllocate(heap, sizeof(*migration), 0x40);
+	migration = vnzKernelHeapAllocate(heap, sizeof(*migration), 0x40);
 	if (migration == NULL)
 		return -1;
-	migration = (VkMigration *)vkPhysicalToPublic((uint32_t)migration);
-	migration->lock = vkLockPageAllocate();
+	migration = (VnzKernelMigration *)vnzKernelPhysicalToPublic((uint32_t)migration);
+	migration->lock = vnzKernelLockPageAllocate();
 	if (migration->lock) {
-		vkDisableDispatch();
-		core = vkCurrentCore(&index);
+		vnzKernelDisableDispatch();
+		core = vnzKernelCurrentCore(&index);
 		core->inKernel = 1;
-		vkLockThread(thread);
-		if (thread->attributes != VK_THREAD_MOVING) {
+		vnzKernelLockThread(thread);
+		if (thread->attributes != VNZ_KERNEL_THREAD_MOVING) {
 			from = thread->core;
 			to = coreId - VNZ_FIRST_CORE_ID;
-			if (vkInterruptsReserve(to, thread->interrupts) == 0) {
-				thread->attributes = VK_THREAD_MOVING;
+			if (vnzKernelInterruptsReserve(to, thread->interrupts) == 0) {
+				thread->attributes = VNZ_KERNEL_THREAD_MOVING;
 				migration->next = NULL;
 				migration->thread = thread;
 				migration->from = thread->core;
 				migration->to = to;
 				migration->notify = notify;
 				migration->notifyFlags = notifyFlags;
-				migrationAppend(&g_vkServiceQueues[from][0], migration);
-				vkUnlockThread(thread);
-				vkProcessEvents(core);
-				if (g_vkServiceThreads[from])
-					vkThreadSetFlags(g_vkServiceThreads[from], VK_SERVICE_OUTGOING);
-				vkEnableDispatch();
+				migrationAppend(&g_vnzKernelServiceQueues[from][0], migration);
+				vnzKernelUnlockThread(thread);
+				vnzKernelProcessEvents(core);
+				if (g_vnzKernelServiceThreads[from])
+					vnzKernelThreadSetFlags(g_vnzKernelServiceThreads[from],
+						VNZ_KERNEL_SERVICE_OUTGOING);
+				vnzKernelEnableDispatch();
 				return 0;
 			}
 		}
-		vkUnlockThread(thread);
-		vkProcessEvents(core);
-		vkEnableDispatch();
-		vkLockPageFree(migration->lock);
+		vnzKernelUnlockThread(thread);
+		vnzKernelProcessEvents(core);
+		vnzKernelEnableDispatch();
+		vnzKernelLockPageFree(migration->lock);
 	}
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)migration), sizeof(*migration), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)migration),
+		sizeof(*migration), 0x40);
 	return -1;
 }
 
 /* Take a moving thread off this core and pass it on. */
-static void sendThread(uint32_t index, VkCore *core, VkMigration *migration)
+static void sendThread(uint32_t index, VnzKernelCore *core, VnzKernelMigration *migration)
 {
-	VkThread *thread = migration->thread;
+	VnzKernelThread *thread = migration->thread;
 	uint32_t from = thread->core;
 	uint32_t to;
 
-	vkInterruptsHook(migration);
-	thread->core = VK_NO_CORE;
-	if ((thread->state & VK_STATE_MASK) == VK_STATE_READY)
-		vkQueueRemove(&g_vkRunQueues[from][thread->priority - 1], thread);
-	g_vkThreadCounts[index]--;
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + index));
+	vnzKernelInterruptsHook(migration);
+	thread->core = VNZ_KERNEL_NO_CORE;
+	if ((thread->state & VNZ_KERNEL_STATE_MASK) == VNZ_KERNEL_STATE_READY)
+		vnzKernelQueueRemove(&g_vnzKernelRunQueues[from][thread->priority - 1], thread);
+	g_vnzKernelThreadCounts[index]--;
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + index));
 
 	to = migration->to;
-	vkTakeSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + to));
-	migrationAppend(&g_vkServiceQueues[to][1], migration);
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + to));
-	vkGiveSemaphore(moveSemaphore);
-	vkProcessEvents(core);
-	if (g_vkServiceThreads[to])
-		vkThreadSetFlags(g_vkServiceThreads[to], VK_SERVICE_INCOMING);
+	vnzKernelTakeSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + to));
+	migrationAppend(&g_vnzKernelServiceQueues[to][1], migration);
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + to));
+	vnzKernelGiveSemaphore(moveSemaphore);
+	vnzKernelProcessEvents(core);
+	if (g_vnzKernelServiceThreads[to])
+		vnzKernelThreadSetFlags(g_vnzKernelServiceThreads[to], VNZ_KERNEL_SERVICE_INCOMING);
 }
 
 /* Put a thread that moved here on this core. */
-static void receiveThread(uint32_t index, VkCore *core, VkHeap *heap, VkMigration *migration)
+static void receiveThread(uint32_t index, VnzKernelCore *core, VnzKernelHeap *heap,
+	VnzKernelMigration *migration)
 {
-	VkThread *thread = migration->thread;
+	VnzKernelThread *thread = migration->thread;
 	uint32_t ended = 1;
 
 	thread->core = index;
-	if ((thread->state & VK_STATE_MASK) == VK_STATE_READY)
-		vkQueueAppend(&g_vkRunQueues[index][thread->priority - 1], thread);
-	if (thread->state & VK_STATE_MASK) {
-		g_vkThreadCounts[index]++;
+	if ((thread->state & VNZ_KERNEL_STATE_MASK) == VNZ_KERNEL_STATE_READY)
+		vnzKernelQueueAppend(&g_vnzKernelRunQueues[index][thread->priority - 1], thread);
+	if (thread->state & VNZ_KERNEL_STATE_MASK) {
+		g_vnzKernelThreadCounts[index]++;
 		ended = 0;
 	}
 	thread->attributes = 0;
-	vkInterruptsMove(migration);
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + index));
-	vkGiveSemaphore(moveSemaphore);
-	vkProcessEvents(core);
+	vnzKernelInterruptsMove(migration);
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + index));
+	vnzKernelGiveSemaphore(moveSemaphore);
+	vnzKernelProcessEvents(core);
 
 	if (migration->notifyFlags)
-		vkThreadSetFlags(migration->notify, migration->notifyFlags);
+		vnzKernelThreadSetFlags(migration->notify, migration->notifyFlags);
 	if (ended)		/* it was deleted while it moved */
-		vkThreadRelease(thread);
-	vkLockPageFree(migration->lock);
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)migration), sizeof(*migration), 0x40);
+		vnzKernelThreadRelease(thread);
+	vnzKernelLockPageFree(migration->lock);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)migration),
+		sizeof(*migration), 0x40);
 }
 
 /* Take the next move from one of this core's queues, holding the semaphores if there is one. */
-static VkMigration *nextMove(uint32_t index, VkCore *core, uint32_t incoming)
+static VnzKernelMigration *nextMove(uint32_t index, VnzKernelCore *core, uint32_t incoming)
 {
-	VkMigration *migration;
+	VnzKernelMigration *migration;
 
 	core->inKernel = 1;
-	vkTakeSemaphore(moveSemaphore);
-	vkTakeSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + index));
-	migration = migrationTake(&g_vkServiceQueues[index][incoming]);
+	vnzKernelTakeSemaphore(moveSemaphore);
+	vnzKernelTakeSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + index));
+	migration = migrationTake(&g_vnzKernelServiceQueues[index][incoming]);
 	if (migration == NULL) {
-		vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_THREADS + index));
-		vkGiveSemaphore(moveSemaphore);
-		vkProcessEvents(core);
+		vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_THREADS + index));
+		vnzKernelGiveSemaphore(moveSemaphore);
+		vnzKernelProcessEvents(core);
 	}
 	return migration;
 }
@@ -161,36 +167,37 @@ static VkMigration *nextMove(uint32_t index, VkCore *core, uint32_t incoming)
 /* The service thread (runs with dispatching disabled, except while it waits). */
 static void serviceThread(void)
 {
-	VkMigration *migration;
+	VnzKernelMigration *migration;
 	uint32_t index, flags;
-	VkCore *core;
-	VkHeap *heap;
+	VnzKernelCore *core;
+	VnzKernelHeap *heap;
 
-	vkDisableDispatch();
-	core = vkCurrentCore(&index);
-	heap = vkSystemHeap();
+	vnzKernelDisableDispatch();
+	core = vnzKernelCurrentCore(&index);
+	heap = vnzKernelSystemHeap();
 	for (;;) {
-		flags = vkThreadWaitFlags(VK_SERVICE_OUTGOING | VK_SERVICE_INCOMING);
-		if (flags & VK_SERVICE_OUTGOING) {
-			vkCacheWritebackAll();
+		flags = vnzKernelThreadWaitFlags(VNZ_KERNEL_SERVICE_OUTGOING | VNZ_KERNEL_SERVICE_INCOMING);
+		if (flags & VNZ_KERNEL_SERVICE_OUTGOING) {
+			vnzKernelCacheWritebackAll();
 			mep_syncm();
 			while ((migration = nextMove(index, core, 0)) != NULL)
 				sendThread(index, core, migration);
 		}
-		if (flags & VK_SERVICE_INCOMING)
+		if (flags & VNZ_KERNEL_SERVICE_INCOMING)
 			while ((migration = nextMove(index, core, 1)) != NULL)
 				receiveThread(index, core, heap, migration);
 	}
 }
 
-void vkServiceStart(void)
+void vnzKernelServiceStart(void)
 {
 	int32_t thread;
 
-	thread = vkThreadCreateHere(serviceThread, vkCurrentCoreId(), 9, 0x200);
+	thread = vnzKernelThreadCreateHere(serviceThread, vnzKernelCurrentCoreId(), 9, 0x200);
 	if (thread == -1)
 		return;
-	vkThreadSetFlags((VkThread *)thread, VK_SERVICE_OUTGOING | VK_SERVICE_INCOMING);
-	g_vkServiceThreads[vnzCoreIndex()] = (VkThread *)thread;
-	vkThreadStart((VkThread *)thread, 0, 0);
+	vnzKernelThreadSetFlags((VnzKernelThread *)thread,
+		VNZ_KERNEL_SERVICE_OUTGOING | VNZ_KERNEL_SERVICE_INCOMING);
+	g_vnzKernelServiceThreads[vnzCoreIndex()] = (VnzKernelThread *)thread;
+	vnzKernelThreadStart((VnzKernelThread *)thread, 0, 0);
 }

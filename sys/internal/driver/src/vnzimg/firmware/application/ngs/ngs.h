@@ -141,8 +141,8 @@ typedef struct NgsSystemInitParams {
 } NgsSystemInitParams;
 
 typedef struct NgsSystem {
-	VkVThreadContext *context;
-	VkVThreadResource *resource;
+	VnzKernelVThreadContext *context;
+	VnzKernelVThreadResource *resource;
 	uint32_t sampleRate;
 	uint32_t granularity;
 	uint32_t maxRacks;

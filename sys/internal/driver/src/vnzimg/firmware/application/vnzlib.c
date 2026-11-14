@@ -102,15 +102,17 @@ uint32_t vnzMemoryCloseProtected(VnzMemory *memory)
 }
 
 /* the job, on the context, waited for */
-int32_t vnzVThreadExecute(VkVThreadContext *context, uint32_t index, VkJobFunction entry,
+int32_t vnzVThreadExecute(VnzKernelVThreadContext *context, uint32_t index,
+	VnzKernelJobFunction entry,
 	uint32_t argument, uint32_t argument2, uint32_t argument3, uint32_t argument4)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	int32_t result;
 
-	result = vkVThreadJobSetNotify(locked, index, 0, entry, argument, argument2, argument3,
+	result = vnzKernelVThreadJobSetNotify(locked, index, 0, entry, argument, argument2,
+		argument3,
 		argument4, vnzThreadCurrent(), DONE_FLAG);
-	result |= vkVThreadContextUnlock(locked);
+	result |= vnzKernelVThreadContextUnlock(locked);
 	if (result)
 		return -10001;
 	vnzThreadWaitFlags(DONE_FLAG);

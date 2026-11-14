@@ -43,7 +43,7 @@ void avcencJobChunkStage1(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 	AvcencFrameRecord *frameRecord;
 	AvcencChunkInfo *info;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	slot = (AvcencOutputSlot *)vnzPublicOpenProtected(slotAddress, 64);
 	info = (AvcencChunkInfo *)vnzPublicOpenPrivate(slot->outputInfo +
@@ -109,9 +109,9 @@ void avcencJobChunkStage1(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 		}
 		vnzSpinUnlock(picture->lock);
 		if (signal) {
-			context = vkVThreadContextLock(picture->outputContext);
-			vkVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
-			vkVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(picture->outputContext);
+			vnzKernelVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
+			vnzKernelVThreadContextUnlock(context);
 		}
 		return;
 	}
@@ -577,7 +577,7 @@ void avcencJobChunkStage2(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 	AvcencFrameRecord *frameRecord;
 	AvcencChunkInfo *info;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	slot = (AvcencOutputSlot *)vnzPublicOpenProtected(slotAddress, 64);
 	info = (AvcencChunkInfo *)vnzPublicOpenPrivate(slot->outputInfo +
@@ -654,9 +654,9 @@ void avcencJobChunkStage2(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 		vnzSpinUnlock(picture->lock);
 	}
 	if (signal) {
-		context = vkVThreadContextLock(picture->outputContext);
-		vkVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
-		vkVThreadContextUnlock(context);
+		context = vnzKernelVThreadContextLock(picture->outputContext);
+		vnzKernelVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
+		vnzKernelVThreadContextUnlock(context);
 	}
 }
 
@@ -1614,7 +1614,7 @@ void avcencJobChunkStage3(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 	AvcencFrameRecord *frameRecord;
 	AvcencChunkInfo *info;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	slot = (AvcencOutputSlot *)vnzPublicOpenProtected(slotAddress, 64);
 	info = (AvcencChunkInfo *)vnzPublicOpenPrivate(slot->outputInfo +
@@ -1690,9 +1690,9 @@ void avcencJobChunkStage3(uint32_t pictureAddress, uint32_t slotAddress, uint32_
 		vnzSpinUnlock(picture->lock);
 	}
 	if (signal) {
-		context = vkVThreadContextLock(picture->outputContext);
-		vkVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
-		vkVThreadContextUnlock(context);
+		context = vnzKernelVThreadContextLock(picture->outputContext);
+		vnzKernelVThreadJobSignal(context, chunk + picture->chunkSteps * 2);
+		vnzKernelVThreadContextUnlock(context);
 	}
 }
 

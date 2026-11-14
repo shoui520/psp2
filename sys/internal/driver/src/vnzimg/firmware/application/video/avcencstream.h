@@ -54,11 +54,11 @@
 
 /* the picture's state, as the preparing jobs get it (256 bytes) */
 typedef struct AvcencPicture {
-	VkThread *thread;		/* the stream thread's */
-	VkThread *engine;		/* the encoder engine's */
+	VnzKernelThread *thread;		/* the stream thread's */
+	VnzKernelThread *engine;		/* the encoder engine's */
 	int32_t id;			/* the codec's */
-	VkVThreadContext *outputContext; /* the client's, for the output's jobs */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *outputContext; /* the client's, for the output's jobs */
+	VnzKernelVThreadContext *context;
 	uint16_t chunkSteps;		/* four per chunk of the rows, one more for the row's end */
 	int8_t index;			/* the slot's */
 	uint8_t jobsDone;
@@ -410,12 +410,12 @@ typedef struct AvcencStream {
 	uint32_t request;		/* the frame being taken */
 	uint32_t previousRequest;	/* the one before it, answered with the picture */
 	uint32_t record;		/* the picture record being filled, 128 bytes */
-	VkMessageQueue *auQueue;
-	VkMessageQueue *engineQueue;
-	VkMessageQueue *wakeQueue;
-	VkMessageQueue *innerQueue;
-	VkMessageQueue *helperQueue;
-	VkVThreadContext *context;
+	VnzKernelMessageQueue *auQueue;
+	VnzKernelMessageQueue *engineQueue;
+	VnzKernelMessageQueue *wakeQueue;
+	VnzKernelMessageQueue *innerQueue;
+	VnzKernelMessageQueue *helperQueue;
+	VnzKernelVThreadContext *context;
 	int8_t started;			/* the sequence's settings taken */
 	int8_t ended;			/* the client's frames ended */
 	int8_t waitWake;		/* the engine's wake to take */
@@ -447,7 +447,7 @@ typedef struct AvcencStream {
 typedef char pictureSizeCheck[sizeof(AvcencPicture) == PICTURE_SIZE ? 1 : -1];
 /* the encoder's memory, as the client lays it out (64 bytes) */
 typedef struct AvcencClientMemory {
-	VkVThreadContext *outputContext;
+	VnzKernelVThreadContext *outputContext;
 	uint32_t record;		/* the rows' chunk counts, 128 bytes */
 	uint32_t reserved;
 	uint32_t outputs;

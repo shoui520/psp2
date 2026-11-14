@@ -42,7 +42,7 @@ typedef struct Mp3Decoder {
 	uint32_t engine[ENGINE_MEMORY_SIZE / 4];
 	uint32_t esSize;		/* the bytes given; then the bytes used */
 	uint32_t pcmSize;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;			/* the last decode's */
 	void *handle;
 	uint32_t ch;
@@ -92,14 +92,14 @@ static int32_t mp3Configure(Mp3Decoder *decoder, const AudioDecoderEngine *engin
 	return engine->control(decoder->handle, keys, 2, values, work);
 }
 
-static int32_t mp3Init(Mp3Ctrl *ctrl, VkVThreadResource *resource, Mp3Decoder *decoder)
+static int32_t mp3Init(Mp3Ctrl *ctrl, VnzKernelVThreadResource *resource, Mp3Decoder *decoder)
 {
 	const AudioDecoderEngine *engine = mp3Engine();
 	int32_t key, size, result;
 	uint32_t work[4];
 
 	memset(decoder, 0, 4);
-	decoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	decoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (decoder->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
 	decoder->ch = ctrl->info.ch;
@@ -127,7 +127,7 @@ static int32_t mp3Release(Mp3Decoder *decoder)
 			result = destroyed;
 	}
 	if (decoder->context) {
-		vkVThreadContextDelete(decoder->context);
+		vnzKernelVThreadContextDelete(decoder->context);
 		decoder->context = NULL;
 	}
 	return result;
@@ -220,12 +220,12 @@ static void mp3DecodeJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t a
 /* a batch's decode, signalling the batch job */
 static void mp3BatchJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t argument4)
 {
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	mp3Decode(decoder, es, pcm);
-	context = vkVThreadContextLock((VkVThreadContext *)argument4);
-	vkVThreadJobSignal(context, BATCH_JOB);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)argument4);
+	vnzKernelVThreadJobSignal(context, BATCH_JOB);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 static void mp3BatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
@@ -233,29 +233,29 @@ static void mp3BatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argu
 {
 }
 
-static int32_t mp3Run(uint32_t decoder, VkVThreadContext *context, uint32_t es, uint32_t pcm)
+static int32_t mp3Run(uint32_t decoder, VnzKernelVThreadContext *context, uint32_t es, uint32_t pcm)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, mp3DecodeJob, decoder, es, pcm, 0,
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, mp3DecodeJob, decoder, es, pcm, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
 
-static int32_t mp3RunBatch(const uint32_t *decoders, VkVThreadContext *context,
+static int32_t mp3RunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
 	const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
 
 	for (i = 0; i < count; i++)
-		vkVThreadJobSet(locked, i, 0, mp3BatchJob, decoders[i], es[i], pcm[i],
+		vnzKernelVThreadJobSet(locked, i, 0, mp3BatchJob, decoders[i], es[i], pcm[i],
 			(uint32_t)context);
-	vkVThreadJobSetNotify(locked, BATCH_JOB, count, mp3BatchDoneJob, 0, 0, 0, 0,
+	vnzKernelVThreadJobSetNotify(locked, BATCH_JOB, count, mp3BatchDoneJob, 0, 0, 0, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -301,7 +301,7 @@ int32_t rpcMp3Sizes(uint32_t ctrlAddress)
 }
 
 /* RPC 177: a decoder for the stream, on a context of the resource */
-int32_t rpcMp3Init(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcMp3Init(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	VnzExtMemory ctrlMemory, decoderMemory;
 	uint32_t decoderAddress = 0;
@@ -377,7 +377,7 @@ int32_t rpcMp3Decode(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, decoderMemory, esMemory, pcmMemory;
 	uint32_t decoderAddress = 0, es = 0, pcm = 0, esSize, pcmSize;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	Mp3Decoder *decoder;
 	int32_t result;
 	Mp3Ctrl *ctrl;
@@ -474,7 +474,7 @@ int32_t rpcMp3DecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 	uint32_t decoders[SCE_AUDIODEC_MP3_MAX_NSTREAMS], es[SCE_AUDIODEC_MP3_MAX_NSTREAMS];
 	uint32_t pcm[SCE_AUDIODEC_MP3_MAX_NSTREAMS], esSize[SCE_AUDIODEC_MP3_MAX_NSTREAMS];
 	uint32_t pcmSize[SCE_AUDIODEC_MP3_MAX_NSTREAMS], i;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	int32_t result, closed;
 	Mp3Decoder *decoder;
 	Mp3Ctrl *ctrls;

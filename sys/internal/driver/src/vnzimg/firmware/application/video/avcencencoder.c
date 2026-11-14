@@ -90,12 +90,12 @@ typedef struct AvcencEncoder {
 	int8_t overflow;		/* the last picture overflowed the stream's buffer */
 	int8_t option;			/* the slot's */
 	uint8_t reserved2;
-	VkMessageQueue *encodeQueue;
-	VkMessageQueue *serviceQueue;
-	VkMessageQueue *wakeQueue;	/* the stream thread's pictures */
-	VkMessageQueue *helperQueue;
-	VkMessageQueue *innerQueue;
-	VkVThreadContext *context;
+	VnzKernelMessageQueue *encodeQueue;
+	VnzKernelMessageQueue *serviceQueue;
+	VnzKernelMessageQueue *wakeQueue;	/* the stream thread's pictures */
+	VnzKernelMessageQueue *helperQueue;
+	VnzKernelMessageQueue *innerQueue;
+	VnzKernelVThreadContext *context;
 	uint32_t reserved3;
 } AvcencEncoder;
 
@@ -117,17 +117,19 @@ static void writeSkipPicture(VideoAvcSequence *sequence, const VideoAvcStreamInf
 	VideoAvcEncodeJob *job);
 
 /* a job set on the engine's context, until the context takes it */
-static inline void jobSet(const AvcencEncoder *encoder, VkJobFunction function, uint32_t flags)
+static inline void jobSet(const AvcencEncoder *encoder, VnzKernelJobFunction function,
+	uint32_t flags)
 {
 	const VideoAvcSequence *sequence = encoder->sequence;
 	uint32_t index = sequence->index * 8, busy;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	do {
-		locked = vkVThreadContextLock(encoder->context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, function, (uint32_t)encoder->sequence,
+		locked = vnzKernelVThreadContextLock(encoder->context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, function,
+			(uint32_t)encoder->sequence,
 			encoder->info, encoder->job, 0, sequence->thread, flags);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -136,17 +138,17 @@ void avcencEncoderThread(uint32_t memory, uint32_t codec)
 {
 	AvcencEncoder *encoder = encoderBegin(memory);
 	VideoAvcSequence *sequence = encoder->sequence;
-	VkMessageQueue *encodeQueue = encoder->encodeQueue;
-	VkMessageQueue *serviceQueue = encoder->serviceQueue;
-	VkMessageQueue *helperQueue = encoder->helperQueue;
-	VkMessageQueue *wakeQueue = encoder->wakeQueue;
+	VnzKernelMessageQueue *encodeQueue = encoder->encodeQueue;
+	VnzKernelMessageQueue *serviceQueue = encoder->serviceQueue;
+	VnzKernelMessageQueue *helperQueue = encoder->helperQueue;
+	VnzKernelMessageQueue *wakeQueue = encoder->wakeQueue;
 	VideoEngineRequest *request;
 	uint32_t flags, kind;
 
 	do {
 		flags = encoderWait(encoder);
 		if (encoder->state == ENCODER_WAITING) {
-			if (vkMessageReceive(wakeQueue, (uint32_t)encoder)) {
+			if (vnzKernelMessageReceive(wakeQueue, (uint32_t)encoder)) {
 				sequence = encoder->sequence;
 				encoder->state = ENCODER_PICTURE;
 			} else if (flags & ENCODER_FLAG_ENDED) {
@@ -162,13 +164,14 @@ void avcencEncoderThread(uint32_t memory, uint32_t codec)
 			encoder->skip = (kind & ENCODER_FLAG_SKIP) != 0;
 		}
 		if (encoder->state == ENCODER_IDLE &&
-		    vkMessageReceive(encodeQueue, (uint32_t)encoder)) {
+		    vnzKernelMessageReceive(encodeQueue, (uint32_t)encoder)) {
 			if (encoder->ended) {
 				request = (VideoEngineRequest *)encoder->request;
 				request->status = 0;
 				request->esSize = 0;
 				request->numOfPictures = 0;
-				vkMessageSend(serviceQueue, videoServicePicturesDone, encoder->request);
+				vnzKernelMessageSend(serviceQueue, videoServicePicturesDone,
+					encoder->request);
 				streamRestart(encoder);
 				encoder->state = ENCODER_WAITING;
 			} else if (encoder->skip) {
@@ -182,7 +185,7 @@ void avcencEncoderThread(uint32_t memory, uint32_t codec)
 			encoder->state = ENCODER_HELPER;
 		if (encoder->state == ENCODER_HELPER) {
 			vnzThreadWaitFlags(ENCODER_FLAG_HELPER);
-			vkMessageSend(helperQueue, videoHelperStart, encoder->request);
+			vnzKernelMessageSend(helperQueue, videoHelperStart, encoder->request);
 			encoder->state = ENCODER_ENCODING;
 		}
 		if (encoder->state != ENCODER_ENCODING || !(flags & ENCODER_FLAG_DONE))
@@ -203,7 +206,7 @@ void avcencEncoderThread(uint32_t memory, uint32_t codec)
 			encoder->failed = 1;
 		}
 		pictureAnswer(encoder);
-		vkMessageSend(serviceQueue, videoServicePicturesDone, encoder->request);
+		vnzKernelMessageSend(serviceQueue, videoServicePicturesDone, encoder->request);
 		vnzThreadSetFlags(sequence->thread, STREAM_FLAG_LOOP);
 		vnzThreadSetFlags(sequence->thread2, STREAM_FLAG_ANSWERED);
 		encoder->state = ENCODER_WAITING;

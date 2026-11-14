@@ -64,17 +64,17 @@ void m4vdecParserError(const VideoM4vStream *stream, VideoM4vJob *job, uint32_t 
 	int32_t code);							/* 0x847184 */
 
 /* run a job on the helper's context until the context takes it */
-static void runJob(VkVThreadContext *context, uint32_t index, VkJobFunction function,
+static void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
 	uint32_t shared, uint32_t argument, uint32_t argument2, uint32_t flags)
 {
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	uint32_t busy;
 
 	do {
-		locked = vkVThreadContextLock(context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, function, shared, argument,
+		locked = vnzKernelVThreadContextLock(context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, function, shared, argument,
 			argument2, 0, ((VideoHelperShared *)shared)->thread, flags);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -134,7 +134,8 @@ void m4vdecHelperRun(VideoHelper *helper, uint32_t job)
 			shared->context = context;
 			/* the jobs held while there was none go again, last first */
 			for (n = helper->pending - 1; n >= 0; n--)
-				vkMessageSend(helper->jobQueue, videoHelperJob, helper->pendingJobs[n]);
+				vnzKernelMessageSend(helper->jobQueue, videoHelperJob,
+					helper->pendingJobs[n]);
 			helper->pending = 0;
 		} else {
 			helper->pending++;

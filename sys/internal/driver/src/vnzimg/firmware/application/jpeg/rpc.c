@@ -54,7 +54,7 @@ typedef struct SceJpegSplitDecodeCtrl {
 	uint32_t pOutputBuffer;
 	uint32_t pCoefBuffer;
 	uint32_t state;			/* internalData[0..2] */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;
 } SceJpegSplitDecodeCtrl;
 
@@ -70,13 +70,14 @@ typedef struct JpegCscParam {
 	uint32_t iFrameWidth;
 	uint32_t threads;
 	uint32_t reserved;
-	VkThread *caller;		/* each VThread sets its flag here */
+	VnzKernelThread *caller;		/* each VThread sets its flag here */
 } JpegCscParam;
 
 /* the parameter block mapped, a context made, the job run on it */
-static int32_t jpegCall(VkVThreadResource *resource, VkJobFunction job, uint32_t paramAddress)
+static int32_t jpegCall(VnzKernelVThreadResource *resource, VnzKernelJobFunction job,
+	uint32_t paramAddress)
 {
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	VnzMemory paramMemory;
 	int32_t *param, result;
 
@@ -86,7 +87,7 @@ static int32_t jpegCall(VkVThreadResource *resource, VkJobFunction job, uint32_t
 		goto close;
 	}
 	param = (int32_t *)paramMemory.vaddrVnz;
-	context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (context == NULL) {
 		result = ERROR_MEMORY;
 		goto close;
@@ -96,25 +97,26 @@ static int32_t jpegCall(VkVThreadResource *resource, VkJobFunction job, uint32_t
 		result = *param;
 close:
 	if (context)
-		vkVThreadContextDelete(context);
+		vnzKernelVThreadContextDelete(context);
 	if (paramMemory.vaddrVnz && vnzMemoryClosePublic(&paramMemory) == 0 && result >= 0)
 		result = ERROR_MEMORY;
 	return result;
 }
 
 /* a job set on the context once its slot is free */
-static int32_t jpegJobSet(VkVThreadContext *context, uint32_t index, VkJobFunction job,
+static int32_t jpegJobSet(VnzKernelVThreadContext *context, uint32_t index,
+	VnzKernelJobFunction job,
 	uint32_t argument, uint32_t argument2, uint32_t argument3, uint32_t argument4)
 {
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	int32_t result;
 
-	while (vkVThreadJobState(context, index))
+	while (vnzKernelVThreadJobState(context, index))
 		vnzThreadYield();
-	locked = vkVThreadContextLock(context);
-	result = vkVThreadJobSet(locked, index, 0, job, argument, argument2, argument3,
+	locked = vnzKernelVThreadContextLock(context);
+	result = vnzKernelVThreadJobSet(locked, index, 0, job, argument, argument2, argument3,
 		argument4);
-	return result | vkVThreadContextUnlock(locked);
+	return result | vnzKernelVThreadContextUnlock(locked);
 }
 
 /* the buffer sizes rounded up to 256 bytes */
@@ -204,22 +206,22 @@ close:
 }
 
 /* RPC 448 */
-int32_t rpcJpegDecodeMJpegYCbCr(VkVThreadResource *resource, uint32_t paramAddress)
+int32_t rpcJpegDecodeMJpegYCbCr(VnzKernelVThreadResource *resource, uint32_t paramAddress)
 {
 	return jpegCall(resource, decodeJob, paramAddress);
 }
 
 /* RPC 449 */
-int32_t rpcJpegGetOutputInfo(VkVThreadResource *resource, uint32_t paramAddress)
+int32_t rpcJpegGetOutputInfo(VnzKernelVThreadResource *resource, uint32_t paramAddress)
 {
 	return jpegCall(resource, outputInfoJob, paramAddress);
 }
 
 /* RPC 450: sceJpegCreateSplitDecoder */
-int32_t rpcJpegCreateSplitDecoder(VkVThreadResource *resource, uint32_t ctrlAddress)
+int32_t rpcJpegCreateSplitDecoder(VnzKernelVThreadResource *resource, uint32_t ctrlAddress)
 {
 	SceJpegSplitDecodeCtrl *ctrl;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	VnzMemory ctrlMemory;
 	int32_t result;
 
@@ -229,7 +231,7 @@ int32_t rpcJpegCreateSplitDecoder(VkVThreadResource *resource, uint32_t ctrlAddr
 		goto close;
 	}
 	ctrl = (SceJpegSplitDecodeCtrl *)ctrlMemory.vaddrVnz;
-	context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (context == NULL) {
 		result = ERROR_MEMORY;
 		goto close;
@@ -245,7 +247,7 @@ close:
 }
 
 /* RPC 451: sceJpegDeleteSplitDecoder */
-int32_t rpcJpegDeleteSplitDecoder(VkVThreadResource *resource, uint32_t ctrlAddress)
+int32_t rpcJpegDeleteSplitDecoder(VnzKernelVThreadResource *resource, uint32_t ctrlAddress)
 {
 	SceJpegSplitDecodeCtrl *ctrl;
 	VnzMemory ctrlMemory;
@@ -256,7 +258,7 @@ int32_t rpcJpegDeleteSplitDecoder(VkVThreadResource *resource, uint32_t ctrlAddr
 		result = ERROR_MEMORY;
 	} else {
 		ctrl = (SceJpegSplitDecodeCtrl *)ctrlMemory.vaddrVnz;
-		vkVThreadContextDelete(ctrl->context);
+		vnzKernelVThreadContextDelete(ctrl->context);
 		ctrl->state = SPLIT_HEADER;
 		result = 0;
 		ctrl->context = NULL;
@@ -397,7 +399,7 @@ close:
 }
 
 /* RPC 452: sceJpegSplitDecodeMJpeg, in the decoder's 8 KB work memory */
-int32_t rpcJpegSplitDecodeMJpeg(VkVThreadResource *resource, uint32_t ctrlAddress,
+int32_t rpcJpegSplitDecodeMJpeg(VnzKernelVThreadResource *resource, uint32_t ctrlAddress,
 	uint32_t workAddress)
 {
 	SceJpegSplitDecodeCtrl *ctrl;
@@ -468,10 +470,10 @@ done:
 }
 
 /* 0x81f9a2: a job on the encoder's context (in the ARM's memory) on a VThread of its own */
-static int32_t encoderExecute(VkVThreadResource *resource, VkJobFunction job,
+static int32_t encoderExecute(VnzKernelVThreadResource *resource, VnzKernelJobFunction job,
 	uint32_t contextAddress, uint32_t argument, uint32_t argument2)
 {
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	JpegEncoderContext *encoder;
 	VnzMemory encoderMemory;
 	int32_t result;
@@ -482,7 +484,7 @@ static int32_t encoderExecute(VkVThreadResource *resource, VkJobFunction job,
 		goto close;
 	}
 	encoder = (JpegEncoderContext *)encoderMemory.vaddrVnz;
-	context = vkVThreadContextCreate(1, resource);
+	context = vnzKernelVThreadContextCreate(1, resource);
 	if (context == NULL) {
 		result = ERROR_MEMORY;
 		goto close;
@@ -492,24 +494,25 @@ static int32_t encoderExecute(VkVThreadResource *resource, VkJobFunction job,
 		result = encoder->result;
 close:
 	if (context)
-		vkVThreadContextDelete(context);
+		vnzKernelVThreadContextDelete(context);
 	if (encoderMemory.vaddrVnz && vnzMemoryClosePublic(&encoderMemory) == 0 && result >= 0)
 		result = ERROR_MEMORY;
 	return result;
 }
 
 /* RPC 453 (0x81f988): the encoder, with its context in the ARM's memory */
-int32_t rpcJpegEncoder(VkVThreadResource *resource, uint32_t contextAddress, uint32_t argument,
+int32_t rpcJpegEncoder(VnzKernelVThreadResource *resource, uint32_t contextAddress,
+	uint32_t argument,
 	uint32_t argument2)
 {
 	return encoderExecute(resource, jpegEncoderJob, contextAddress, argument, argument2);
 }
 
 /* RPC 454: sceJpegMJpegCsc, on one or two VThreads */
-int32_t rpcJpegMJpegCsc(VkVThreadResource *resource, uint32_t paramAddress)
+int32_t rpcJpegMJpegCsc(VnzKernelVThreadResource *resource, uint32_t paramAddress)
 {
 	VnzMemory paramMemory, ycbcrMemory, rgbaMemory;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	uint32_t physical, flags;
 	JpegCscParam *param;
 	int32_t result;
@@ -535,7 +538,7 @@ int32_t rpcJpegMJpegCsc(VkVThreadResource *resource, uint32_t paramAddress)
 	param->rgbaSize = rgbaMemory.size;
 	param->caller = vnzThreadCurrent();
 
-	context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (context == NULL) {
 		result = ERROR_MEMORY;
 		goto close;
@@ -557,7 +560,7 @@ int32_t rpcJpegMJpegCsc(VkVThreadResource *resource, uint32_t paramAddress)
 	result = param->result;
 close:
 	if (context)
-		vkVThreadContextDelete(context);
+		vnzKernelVThreadContextDelete(context);
 	if (paramMemory.vaddrVnz) {
 		if (rgbaMemory.vaddrVnz && vnzMemoryClosePublic(&rgbaMemory) == 0 && result >= 0)
 			result = ERROR_MEMORY;

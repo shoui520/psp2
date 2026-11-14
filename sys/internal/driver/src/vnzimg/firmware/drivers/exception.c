@@ -2,7 +2,7 @@
  * Exception hooks, the driver at +0xd000 of the image. A hooked vector slot
  * jumps to an entry of drivers/entry.S, which saves the state into the
  * taking core's frame and runs the hook on it. The frames are carved from
- * the memory region VK_MEMORY_EXCEPTION, an eighth for each core.
+ * the memory region VNZ_KERNEL_MEMORY_EXCEPTION, an eighth for each core.
  *
  * The driver is not in the configuration's module table: its resume and
  * suspend do nothing, and the crash reporter (drivers/report.c) calls it.
@@ -10,22 +10,22 @@
 #include "exception.h"
 
 /* the hooks' state, reached physically (0x4c bytes) */
-typedef struct VkExceptionHooks {
+typedef struct VnzKernelExceptionHooks {
 	uint32_t frames[VNZ_CORES];		/* each core's frame: its top */
-	VkExceptionHandler handlers[VK_EXCEPTIONS];
+	VnzKernelExceptionHandler handlers[VNZ_KERNEL_EXCEPTIONS];
 	uint8_t kinds[VNZ_CORES];		/* the exception each core is in */
-} VkExceptionHooks;
+} VnzKernelExceptionHooks;
 
-#define VK_EXCEPTION_NONE	0xff
+#define VNZ_KERNEL_EXCEPTION_NONE	0xff
 #define CACHE_LINE		64
 
-#define VK_EXCEPTION_LOCAL	VK_SECTION(".exception.local")
+#define VNZ_KERNEL_EXCEPTION_LOCAL	VNZ_KERNEL_SECTION(".exception.local")
 
-VkExceptionHooks g_vkExceptionHooks VK_EXCEPTION_LOCAL;
-extern uint32_t g_vkExceptionSaved[VK_EXCEPTIONS];
-extern uint32_t g_vkExceptionJumps[VK_EXCEPTIONS];
+VnzKernelExceptionHooks g_vnzKernelExceptionHooks VNZ_KERNEL_EXCEPTION_LOCAL;
+extern uint32_t g_vnzKernelExceptionSaved[VNZ_KERNEL_EXCEPTIONS];
+extern uint32_t g_vnzKernelExceptionJumps[VNZ_KERNEL_EXCEPTIONS];
 
-void vkExceptionResume(VkExceptionState *state, uint32_t *target, uint32_t kind);
+void vnzKernelExceptionResume(VnzKernelExceptionState *state, uint32_t *target, uint32_t kind);
 
 static void moduleResume(uint32_t primary, uint32_t resumed)
 {
@@ -35,12 +35,12 @@ static void moduleSuspend(void)
 {
 }
 
-const VkModule g_vkExceptionModule VK_SECTION(".exception.module") = {
-	.magic = VK_MODULE_DRIVER,
+const VnzKernelModule g_vnzKernelExceptionModule VNZ_KERNEL_SECTION(".exception.module") = {
+	.magic = VNZ_KERNEL_MODULE_DRIVER,
 	.self = VNZ_PHYSICAL_OF(0x80d000),
 	.size = 0x780,
-	.attributes = VK_MODULE_ATTRIBUTES,
-	.version = VK_MODULE_VERSION,
+	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
+	.version = VNZ_KERNEL_MODULE_VERSION,
 	.resume = moduleResume,
 	.suspend = moduleSuspend,
 };
@@ -71,18 +71,18 @@ static uint32_t *vectorSlot(uint32_t kind)
 {
 	uint32_t offset;
 
-	if (kind == VK_EXCEPTION_NMI)
+	if (kind == VNZ_KERNEL_EXCEPTION_NMI)
 		return (uint32_t *)(vnzReadControl(VNZ_CR_RES30) + 4);
-	if (kind == VK_EXCEPTION_DEBUG)
+	if (kind == VNZ_KERNEL_EXCEPTION_DEBUG)
 		return (uint32_t *)(vnzReadControl(VNZ_CR_RES30) + 0x18);
 	switch (kind) {
-	case VK_EXCEPTION_RESERVED:
+	case VNZ_KERNEL_EXCEPTION_RESERVED:
 		offset = 8;
 		break;
-	case VK_EXCEPTION_ZERO_DIVIDE:
+	case VNZ_KERNEL_EXCEPTION_ZERO_DIVIDE:
 		offset = 0xc;
 		break;
-	case VK_EXCEPTION_BREAK:
+	case VNZ_KERNEL_EXCEPTION_BREAK:
 		offset = 0x10;
 		break;
 	default:
@@ -96,20 +96,21 @@ static uint32_t *vectorSlot(uint32_t kind)
  * Hook an exception (handler 0: unhook it), on every core. The first hook
  * of a kind takes its vector slot; *previous receives the hook replaced.
  */
-int32_t vkExceptionHook(uint32_t kind, VkExceptionHandler handler, VkExceptionHandler *previous)
+int32_t vnzKernelExceptionHook(uint32_t kind, VnzKernelExceptionHandler handler,
+	VnzKernelExceptionHandler *previous)
 {
 	uint32_t base, size, core, i;
 	uint32_t *slot, *saved, jump;
 
-	base = vnzMemoryRegion(VK_MEMORY_EXCEPTION, &size);
+	base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_EXCEPTION, &size);
 	if (base == 0 || size < 0x800 || (size & 0x7ff) != 0)
 		return VNZ_ERROR;
 	switch (kind) {
-	case VK_EXCEPTION_NMI:
-	case VK_EXCEPTION_RESERVED:
-	case VK_EXCEPTION_ZERO_DIVIDE:
-	case VK_EXCEPTION_BREAK:
-	case VK_EXCEPTION_DEBUG:
+	case VNZ_KERNEL_EXCEPTION_NMI:
+	case VNZ_KERNEL_EXCEPTION_RESERVED:
+	case VNZ_KERNEL_EXCEPTION_ZERO_DIVIDE:
+	case VNZ_KERNEL_EXCEPTION_BREAK:
+	case VNZ_KERNEL_EXCEPTION_DEBUG:
 		break;
 	default:
 		return VNZ_ERROR;
@@ -118,19 +119,19 @@ int32_t vkExceptionHook(uint32_t kind, VkExceptionHandler handler, VkExceptionHa
 	vnzDisableDispatch();
 	core = vnzCurrentCoreId() & 7;
 	slot = vectorSlot(kind);
-	jump = g_vkExceptionJumps[kind];
-	if (inCachedImage((uint32_t)&g_vkExceptionJumps[kind]))
-		vnzCachePurge(cacheLine((uint32_t)&g_vkExceptionJumps[kind]), CACHE_LINE);
-	saved = &g_vkExceptionSaved[kind];
+	jump = g_vnzKernelExceptionJumps[kind];
+	if (inCachedImage((uint32_t)&g_vnzKernelExceptionJumps[kind]))
+		vnzCachePurge(cacheLine((uint32_t)&g_vnzKernelExceptionJumps[kind]), CACHE_LINE);
+	saved = &g_vnzKernelExceptionSaved[kind];
 
 	if (handler) {
 		if (*slot != jump) {
 			for (i = 0; i < VNZ_CORES; i++) {
 				base += size / VNZ_CORES;
-				g_vkExceptionHooks.frames[i] = base;
+				g_vnzKernelExceptionHooks.frames[i] = base;
 			}
-			g_vkExceptionHooks.handlers[kind] = 0;
-			g_vkExceptionHooks.kinds[core] = VK_EXCEPTION_NONE;
+			g_vnzKernelExceptionHooks.handlers[kind] = 0;
+			g_vnzKernelExceptionHooks.kinds[core] = VNZ_KERNEL_EXCEPTION_NONE;
 			*saved = *slot;
 			writebackWord(saved, 0);
 			*slot = jump;
@@ -144,39 +145,39 @@ int32_t vkExceptionHook(uint32_t kind, VkExceptionHandler handler, VkExceptionHa
 	}
 
 	if (previous)
-		*previous = g_vkExceptionHooks.handlers[kind];
-	g_vkExceptionHooks.handlers[kind] = handler;
+		*previous = g_vnzKernelExceptionHooks.handlers[kind];
+	g_vnzKernelExceptionHooks.handlers[kind] = handler;
 	vnzEnableDispatch();
 	return 0;
 }
 
 /* this core's saved state, in a hook */
-VkExceptionState *vkExceptionState(void)
+VnzKernelExceptionState *vnzKernelExceptionState(void)
 {
-	return (VkExceptionState *)(g_vkExceptionHooks.frames[vnzCurrentCoreId() & 7] -
-				    sizeof(VkExceptionState));
+	return (VnzKernelExceptionState *)(g_vnzKernelExceptionHooks.frames[vnzCurrentCoreId() & 7] -
+				    sizeof(VnzKernelExceptionState));
 }
 
 /* the exception this core is in, in a hook */
-uint32_t vkExceptionKind(void)
+uint32_t vnzKernelExceptionKind(void)
 {
-	return g_vkExceptionHooks.kinds[vnzCurrentCoreId() & 7];
+	return g_vnzKernelExceptionHooks.kinds[vnzCurrentCoreId() & 7];
 }
 
 /*
  * End a hook: with a function, call it; without, go on to what the vector
  * slot held before the hook took it.
  */
-void vkExceptionChain(void (*function)(void))
+void vnzKernelExceptionChain(void (*function)(void))
 {
-	VkExceptionState *state;
+	VnzKernelExceptionState *state;
 	uint32_t kind;
 
 	if (function) {
 		function();
 		return;
 	}
-	state = vkExceptionState();
-	kind = g_vkExceptionHooks.kinds[vnzCurrentCoreId() & 7];
-	vkExceptionResume(state, &g_vkExceptionSaved[kind], kind);
+	state = vnzKernelExceptionState();
+	kind = g_vnzKernelExceptionHooks.kinds[vnzCurrentCoreId() & 7];
+	vnzKernelExceptionResume(state, &g_vnzKernelExceptionSaved[kind], kind);
 }

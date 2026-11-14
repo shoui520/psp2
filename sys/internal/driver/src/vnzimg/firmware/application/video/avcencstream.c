@@ -528,31 +528,34 @@ void avcencJobLoadReference(uint32_t picture, uint32_t slices, uint32_t position
 #define JOB_FLAG_CHUNK		0x00100000
 
 /* a job set on the encoders' context, the context let go and taken again while it is busy */
-static VkVThreadContext *jobSet(VkVThreadContext *context, const AvcencPicture *picture,
-	uint32_t index, uint32_t count, VkJobFunction function, uint32_t argument,
+static VnzKernelVThreadContext *jobSet(VnzKernelVThreadContext *context,
+	const AvcencPicture *picture,
+	uint32_t index, uint32_t count, VnzKernelJobFunction function, uint32_t argument,
 	uint32_t argument2, uint32_t argument3, uint32_t flags)
 {
-	while (vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture, argument,
+	while (vnzKernelVThreadJobSetNotify(context, index, count, function, (uint32_t)picture,
+		argument,
 	    argument2, argument3, picture->thread, flags)) {
-		vkVThreadContextUnlock(context);
-		context = vkVThreadContextLock(picture->context);
+		vnzKernelVThreadContextUnlock(context);
+		context = vnzKernelVThreadContextLock(picture->context);
 	}
 	return context;
 }
 
 /* a job set with the context taken and let go for each attempt, until it is not busy */
 static void jobPost(const AvcencPicture *picture, uint32_t index, uint32_t count,
-	VkJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
+	VnzKernelJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
 	uint32_t flags)
 {
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t busy;
 
 	do {
-		context = vkVThreadContextLock(picture->context);
-		busy = vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture,
+		context = vnzKernelVThreadContextLock(picture->context);
+		busy = vnzKernelVThreadJobSetNotify(context, index, count, function,
+			(uint32_t)picture,
 			argument, argument2, argument3, picture->thread, flags);
-		vkVThreadContextUnlock(context);
+		vnzKernelVThreadContextUnlock(context);
 	} while (busy);
 }
 
@@ -569,7 +572,7 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	int32_t index = picture->index, idr, last, countdown, qp, chroma, quotient, i;
 	uint32_t previousIdr, request, scene, load;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	AvcencSlices *slices;
 
 	countdown = buffers->idrCountdown;
@@ -648,7 +651,7 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 		slices->chromaShift = 7 - quotient;
 	}
 
-	context = vkVThreadContextLock(picture->context);
+	context = vnzKernelVThreadContextLock(picture->context);
 	if (idr) {
 		context = jobSet(context, picture, scene, 1, avcencJobScene, (uint32_t)slices,
 			(uint32_t)rate, 0, JOB_FLAG_SCENE);
@@ -663,7 +666,7 @@ static void picturesStart(AvcencStream *stream, AvcencPicture *picture)
 		context = jobSet(context, picture, load, 0, avcencJobLoad, (uint32_t)slices, 0, 0,
 			JOB_FLAG_LOAD);
 	}
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 /*
@@ -711,17 +714,17 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 	int32_t heightInMbs = picture->heightInMbs, columns, rows, groups, groupRows;
 	int32_t step, steps, row, column, waits, jobs, position, started;
 	uint32_t idrNext = stream->buffers->idrNext;
-	VkVThreadContext *context;
-	VkThread *thread;
+	VnzKernelVThreadContext *context;
+	VnzKernelThread *thread;
 
 	((AvcencSlices *)slices)->idr = idrNext;
 	((AvcencSlices *)slices)->sliceType = (0 < idrNext) << 1;
 	thread = picture->thread;
 	if (picture->predicted) {
-		context = vkVThreadContextLock(picture->context);
+		context = vnzKernelVThreadContextLock(picture->context);
 		context = jobSet(context, picture, index * 8 + picture->jobs * 8 + 9,
 			0 < rateJobs, avcencJobRate, rate, 0, 0, JOB_FLAG_RATE);
-		vkVThreadContextUnlock(context);
+		vnzKernelVThreadContextUnlock(context);
 		return;
 	}
 	for (step = 0; step < 8; step++)
@@ -730,7 +733,7 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 	columns = (widthInMbs + 1) >> 1;
 	groupRows = (heightInMbs + 3) >> 2;
 	rows = (heightInMbs + 1) >> 1;
-	context = vkVThreadContextLock(picture->context);
+	context = vnzKernelVThreadContextLock(picture->context);
 
 	/* the motion jobs */
 	step = 0;
@@ -797,7 +800,7 @@ static void picturesRun(AvcencStream *stream, AvcencPicture *picture, uint32_t r
 	frameRecord->chunkStep = step;
 	context = jobSet(context, picture, index * 8 + picture->jobs * 8 + 9,
 		(0 < rateJobs) + 1, avcencJobRate, rate, 0, 0, JOB_FLAG_RATE);
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 	(void)thread;
 }
 
@@ -853,7 +856,7 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 	int32_t step = frameRecord->step, end, row, column, waits, jobs;
 	int32_t position, started;
 	uint32_t slices, idr;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	if (frameRecord->started[((step - 20) >> 2) & 7])
 		return;
@@ -863,7 +866,7 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 	groups = (widthInMbs + 3) >> 2;
 	groupRows = (heightInMbs + 3) >> 2;
 	rows = (heightInMbs + 1) >> 1;
-	context = vkVThreadContextLock(picture->context);
+	context = vnzKernelVThreadContextLock(picture->context);
 
 	/* the motion jobs */
 	if (groups >= 3)
@@ -924,7 +927,7 @@ static void picturesStep(AvcencStream *stream, AvcencPicture *picture)
 		}
 	}
 	frameRecord->chunkStep = step;
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 #define ROW_FIRST	0x20		/* the row's flags in the outputs: its first chunk */
@@ -1024,19 +1027,21 @@ static void streamRowsLayout(AvcencStream *stream, AvcencPicture *picture)
 static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo);
 
 /* a chunk job set on the client's context, let go and taken again while it is busy */
-static VkVThreadContext *chunkJobSet(VkVThreadContext *context, AvcencPicture *picture,
-	uint32_t index, uint32_t count, VkJobFunction function, uint32_t outputs)
+static VnzKernelVThreadContext *chunkJobSet(VnzKernelVThreadContext *context,
+	AvcencPicture *picture,
+	uint32_t index, uint32_t count, VnzKernelJobFunction function, uint32_t outputs)
 {
-	while (vkVThreadJobSetNotify(context, index, count, function, (uint32_t)picture, outputs,
+	while (vnzKernelVThreadJobSetNotify(context, index, count, function, (uint32_t)picture,
+		outputs,
 	    0, 0, picture->thread, JOB_FLAG_CHUNK)) {
-		vkVThreadContextUnlock(context);
-		context = vkVThreadContextLock(picture->outputContext);
+		vnzKernelVThreadContextUnlock(context);
+		context = vnzKernelVThreadContextLock(picture->outputContext);
 	}
 	return context;
 }
 
 /* a chunk's three stages, each a row of chunk steps after the last */
-static void chunkJobsSet(VkVThreadContext *context, AvcencPicture *picture, uint32_t index,
+static void chunkJobsSet(VnzKernelVThreadContext *context, AvcencPicture *picture, uint32_t index,
 	uint32_t count, uint32_t outputs)
 {
 	uint32_t steps = picture->chunkSteps;
@@ -1061,13 +1066,13 @@ void avcencJobChunks(uint32_t pictureAddress, uint32_t jobInfo, uint32_t unused,
 	AvcencJobInfo *info = (AvcencJobInfo *)jobInfo;
 	uint32_t width = picture->chunkWidth, widthInMbs = picture->widthInMbs;
 	uint32_t sliceMode = (uint8_t)info->sliceMode, outputs, index, x;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	if (width >= widthInMbs) {
 		chunkRowsSingle(picture, jobInfo);
 		return;
 	}
-	context = vkVThreadContextLock(picture->outputContext);
+	context = vnzKernelVThreadContextLock(picture->outputContext);
 	outputs = info->outputs;
 	index = 0;
 	for (x = 0; x < widthInMbs; x += width)
@@ -1079,7 +1084,7 @@ void avcencJobChunks(uint32_t pictureAddress, uint32_t jobInfo, uint32_t unused,
 	for (index++, x = width - 1; x < widthInMbs - width; x += width)
 		chunkJobsSet(context, picture, index++, 2, outputs);
 	chunkJobsSet(context, picture, index, widthInMbs - x == sliceMode ? 1 : 2, outputs);
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 /*
@@ -1089,9 +1094,9 @@ void avcencJobChunks(uint32_t pictureAddress, uint32_t jobInfo, uint32_t unused,
 static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo)
 {
 	uint32_t outputs = ((AvcencJobInfo *)jobInfo)->outputs, steps;
-	VkVThreadContext *context, *current;
+	VnzKernelVThreadContext *context, *current;
 
-	context = vkVThreadContextLock(picture->outputContext);
+	context = vnzKernelVThreadContextLock(picture->outputContext);
 	steps = picture->chunkSteps;
 	current = chunkJobSet(context, picture, 0, 1, avcencJobChunkStage1, outputs);
 	chunkJobSet(current, picture, steps, 1, avcencJobChunkStage2, outputs);
@@ -1102,7 +1107,7 @@ static void chunkRowsSingle(AvcencPicture *picture, uint32_t jobInfo)
 	current = chunkJobSet(context, picture, 1, 2, avcencJobChunkStage1, outputs);
 	current = chunkJobSet(current, picture, steps + 1, 2, avcencJobChunkStage2, outputs);
 	chunkJobSet(current, picture, steps * 2 + 1, 2, avcencJobChunkStage3, outputs);
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 /*
@@ -1116,7 +1121,7 @@ static void streamChunksStart(AvcencStream *stream)
 	uint32_t outputs = stream->outputs, row = stream->chunksDone, end, phase, request;
 	uint32_t widthInMbs = picture->widthInMbs, second;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	request = vnzPublicOpenRaw(((AvcencJobInfo *)stream->jobInfo)->output, RECORD_SIZE);
 	end = (uint8_t)((AvcencOutput *)request)->next;
@@ -1134,10 +1139,10 @@ static void streamChunksStart(AvcencStream *stream)
 		slot->outputInfo = stream->outputInfo;
 		vnzPublicClosePrivate((uint32_t)slot, 64);
 		if (row <= stream->chunkPending) {
-			context = vkVThreadContextLock(picture->outputContext);
-			vkVThreadJobSignal(context, phase);
-			vkVThreadJobSignal(context, second);
-			vkVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(picture->outputContext);
+			vnzKernelVThreadJobSignal(context, phase);
+			vnzKernelVThreadJobSignal(context, second);
+			vnzKernelVThreadContextUnlock(context);
 		}
 	}
 	stream->chunksDone = end;
@@ -1157,7 +1162,7 @@ static void streamChunkDone(AvcencStream *stream)
 	uint32_t row = stream->chunksSent, outputs = stream->outputs, heightInMbs, bit;
 	AvcencFrameRecord *frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	uint32_t end, next, phase, slot;
-	VkVThreadContext *context, *current;
+	VnzKernelVThreadContext *context, *current;
 
 	heightInMbs = picture->heightInMbs;
 	if (row >= heightInMbs)
@@ -1177,7 +1182,7 @@ static void streamChunkDone(AvcencStream *stream)
 	}
 	if (row < heightInMbs - 2) {
 		next = row + 2;
-		context = vkVThreadContextLock(picture->outputContext);
+		context = vnzKernelVThreadContextLock(picture->outputContext);
 		phase = next & 3;
 		slot = outputs + (next & 31) * 64;
 		current = chunkJobSet(context, picture, phase, 2, avcencJobChunkStage1, slot);
@@ -1187,16 +1192,16 @@ static void streamChunkDone(AvcencStream *stream)
 			avcencJobChunkStage3, slot);
 		stream->chunkPending = next;
 		if (next <= stream->chunkLast) {
-			vkVThreadJobSignal(context, phase);
-			vkVThreadJobSignal(context, picture->chunkSteps + phase);
+			vnzKernelVThreadJobSignal(context, phase);
+			vnzKernelVThreadJobSignal(context, picture->chunkSteps + phase);
 		}
-		vkVThreadContextUnlock(context);
+		vnzKernelVThreadContextUnlock(context);
 	}
-	context = vkVThreadContextLock(picture->outputContext);
+	context = vnzKernelVThreadContextLock(picture->outputContext);
 	phase = (row + 1) & 3;
-	vkVThreadJobSignal(context, phase);
-	vkVThreadJobSignal(context, picture->chunkSteps + phase);
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadJobSignal(context, phase);
+	vnzKernelVThreadJobSignal(context, picture->chunkSteps + phase);
+	vnzKernelVThreadContextUnlock(context);
 	if (end - 1 == row)
 		vnzThreadSetFlags(picture->thread, STREAM_FLAG_OUTPUT_DONE);
 }
@@ -1231,7 +1236,7 @@ static int32_t streamChunkNext(AvcencStream *stream, uint32_t chunk, uint32_t ro
 	int32_t done = 0, signal, signal2, limit, previous;
 	int8_t *rowChunks = (int8_t *)stream->record, current;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context, *job;
+	VnzKernelVThreadContext *context, *job;
 
 	slot = (AvcencOutputSlot *)vnzPublicOpenPrivate(outputs + (row & 31) * 64, 64);
 	first = slot->firstMb;
@@ -1287,7 +1292,7 @@ static int32_t streamChunkNext(AvcencStream *stream, uint32_t chunk, uint32_t ro
 		count = (stream->chunkBits & bit) ? 1 : 2;
 		stream->chunkBits &= ~bit;
 		base = ((row + 2) & 3) * chunks + current;
-		context = vkVThreadContextLock(picture->outputContext);
+		context = vnzKernelVThreadContextLock(picture->outputContext);
 		if (end >= widthInMbs) {
 			if (flags & ROW_FIRST) {
 				chunkJobSet(context, picture, picture->chunkSteps * 2 + base - 1, count,
@@ -1330,29 +1335,29 @@ static int32_t streamChunkNext(AvcencStream *stream, uint32_t chunk, uint32_t ro
 		if (!first) {
 			stream->chunkPending = row + 2;
 			if (row + 2 <= stream->chunkLast) {
-				vkVThreadJobSignal(context, base);
-				vkVThreadJobSignal(context, steps + base);
+				vnzKernelVThreadJobSignal(context, base);
+				vnzKernelVThreadJobSignal(context, steps + base);
 			}
 		}
-		vkVThreadContextUnlock(context);
+		vnzKernelVThreadContextUnlock(context);
 	}
 
 	/* the next chunk's jobs of this row and of the row below */
-	context = vkVThreadContextLock(picture->outputContext);
+	context = vnzKernelVThreadContextLock(picture->outputContext);
 	if (signal >= 0) {
-		vkVThreadJobSignal(context, signal);
-		vkVThreadJobSignal(context, steps + signal);
-		vkVThreadJobSignal(context, steps * 2 + chunk);
+		vnzKernelVThreadJobSignal(context, signal);
+		vnzKernelVThreadJobSignal(context, steps + signal);
+		vnzKernelVThreadJobSignal(context, steps * 2 + chunk);
 	}
 	if (signal2 >= 0) {
-		vkVThreadJobSignal(context, signal2);
-		vkVThreadJobSignal(context, steps + signal2);
+		vnzKernelVThreadJobSignal(context, signal2);
+		vnzKernelVThreadJobSignal(context, steps + signal2);
 		if (first && first != 2)
-			vkVThreadJobSignal(context, steps * 2 + signal2 - 1);
+			vnzKernelVThreadJobSignal(context, steps * 2 + signal2 - 1);
 		if (end >= widthInMbs)
-			vkVThreadJobSignal(context, steps * 2 + signal2);
+			vnzKernelVThreadJobSignal(context, steps * 2 + signal2);
 	}
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 	if (end < widthInMbs)
 		rowChunks[row]++;
 	else
@@ -1371,7 +1376,7 @@ static void streamOutputsStart(AvcencStream *stream)
 	uint32_t chunks = (uint8_t)stream->chunks, outputs = stream->outputs;
 	uint32_t row = stream->chunksDone, end, chunk, second, request;
 	AvcencOutputSlot *slot;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	if (picture->chunkWidth >= picture->widthInMbs) {
 		streamChunksStart(stream);
@@ -1393,10 +1398,10 @@ static void streamOutputsStart(AvcencStream *stream)
 		slot->outputInfo = stream->outputInfo;
 		vnzPublicClosePrivate((uint32_t)slot, 64);
 		if (row <= stream->chunkPending) {
-			context = vkVThreadContextLock(picture->outputContext);
-			vkVThreadJobSignal(context, chunk);
-			vkVThreadJobSignal(context, second);
-			vkVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(picture->outputContext);
+			vnzKernelVThreadJobSignal(context, chunk);
+			vnzKernelVThreadJobSignal(context, second);
+			vnzKernelVThreadContextUnlock(context);
 		}
 	}
 	stream->waitWake = 1;
@@ -1453,18 +1458,19 @@ static void streamChunksDone(AvcencStream *stream)
 void avcencStreamThread(uint32_t memory, uint32_t codec)
 {
 	AvcencStream *stream = streamBegin(memory);
-	VkMessageQueue *innerQueue = stream->innerQueue, *engineQueue = stream->engineQueue;
-	VkMessageQueue *auQueue = stream->auQueue;
+	VnzKernelMessageQueue *innerQueue = stream->innerQueue, *engineQueue = stream->engineQueue;
+	VnzKernelMessageQueue *auQueue = stream->auQueue;
 	AvcencBuffers *buffers = stream->buffers;
 	AvcencPicture *picture = stream->picture;
-	VkThread *thread = picture->thread;
+	VnzKernelThread *thread = picture->thread;
 	int32_t waiting = 0, answer = 0, outputDone = 0, kindDone = 0, idr = 0;
 	uint32_t flags;
 
 	vnzThreadSetPriority(thread, vnzThreadPriority(thread) + 1);
 	do {
 		flags = streamWait(stream);
-		if (stream->state == STREAM_IDLE && vkMessageReceive(auQueue, (uint32_t)stream)) {
+		if (stream->state == STREAM_IDLE && vnzKernelMessageReceive(auQueue,
+			(uint32_t)stream)) {
 			picture = stream->picture;
 			if (!stream->ended) {
 				if (waiting) {
@@ -1474,16 +1480,18 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 					stream->state = STREAM_STARTED;
 				}
 			} else if (!waiting) {
-				vkMessageSend(engineQueue, videoServiceAuDone, stream->request);
+				vnzKernelMessageSend(engineQueue, videoServiceAuDone,
+					stream->request);
 				streamRestart(stream);
 			}
 		}
 		if (stream->state == STREAM_IDLE) {
-			if (vkMessageReceive(innerQueue, (uint32_t)stream)) {
+			if (vnzKernelMessageReceive(innerQueue, (uint32_t)stream)) {
 				picture = stream->picture;
 				stream->state = STREAM_FLUSHING;
 			} else if (answer) {
-				vkMessageSend(engineQueue, videoServiceAuDone, stream->previousRequest);
+				vnzKernelMessageSend(engineQueue, videoServiceAuDone,
+					stream->previousRequest);
 				vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
 				pictureRateUpdate(stream, picture);
 				clientRelease(stream);
@@ -1495,7 +1503,7 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 			}
 		}
 		if (stream->state == STREAM_ENDING &&
-		    vkMessageReceive(innerQueue, (uint32_t)stream)) {
+		    vnzKernelMessageReceive(innerQueue, (uint32_t)stream)) {
 			picture = stream->picture;
 			picturesStart(stream, picture);
 			stream->state = STREAM_ENDED;
@@ -1507,7 +1515,7 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 			if (flags & STREAM_FLAG_SCENE) {
 				pictureKind(stream);
 				if (answer) {
-					vkMessageSend(engineQueue, videoServiceAuDone,
+					vnzKernelMessageSend(engineQueue, videoServiceAuDone,
 						stream->previousRequest);
 					picturesRun(stream, picture, 1);
 					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
@@ -1530,7 +1538,8 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 			if (flags & STREAM_FLAG_LOADED)
 				pictureLoads(stream, picture);
 			if (flags & ~(STREAM_FLAG_LOADED | STREAM_FLAG_CHUNK)) {
-				if (stream->waitWake && vkMessageReceive(innerQueue, (uint32_t)stream))
+				if (stream->waitWake && vnzKernelMessageReceive(innerQueue,
+					(uint32_t)stream))
 					picture = stream->picture;
 				if (flags & STREAM_FLAG_OUTPUT) {
 					vnzThreadWaitFlags(STREAM_FLAG_CHUNKS_SET);
@@ -1538,7 +1547,8 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
 				}
 				if (flags & (STREAM_FLAG_PICTURE_DONE | STREAM_FLAG_OUTPUT_DONE)) {
-					vkMessageSend(stream->helperQueue, avcencHelperEncode,
+					vnzKernelMessageSend(stream->helperQueue,
+						avcencHelperEncode,
 						(uint32_t)outputNext(stream));
 					if (flags & STREAM_FLAG_PICTURE_DONE)
 						outputDone = 1;
@@ -1550,7 +1560,7 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 				if (outputDone & kindDone) {
 					sourceSwap(stream);
 					picture = stream->picture;
-					vkMessageSend(engineQueue, videoServiceAuDone,
+					vnzKernelMessageSend(engineQueue, videoServiceAuDone,
 						stream->previousRequest);
 					picturesRun(stream, picture, 1);
 					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
@@ -1570,7 +1580,8 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 			if (flags & STREAM_FLAG_CHUNK)
 				streamChunksDone(stream);
 			if (flags & ~(STREAM_FLAG_LOADED | STREAM_FLAG_CHUNK)) {
-				if (stream->waitWake && vkMessageReceive(innerQueue, (uint32_t)stream))
+				if (stream->waitWake && vnzKernelMessageReceive(innerQueue,
+					(uint32_t)stream))
 					picture = stream->picture;
 				if (flags & STREAM_FLAG_OUTPUT) {
 					vnzThreadWaitFlags(STREAM_FLAG_CHUNKS_SET);
@@ -1578,12 +1589,13 @@ void avcencStreamThread(uint32_t memory, uint32_t codec)
 					vnzThreadSetFlags(picture->thread, STREAM_FLAG_AU);
 				}
 				if (flags & (STREAM_FLAG_PICTURE_DONE | STREAM_FLAG_OUTPUT_DONE))
-					vkMessageSend(stream->helperQueue, avcencHelperEncode,
+					vnzKernelMessageSend(stream->helperQueue,
+						avcencHelperEncode,
 						(uint32_t)outputNext(stream));
 				if (flags & STREAM_FLAG_PICTURE_DONE) {
 					sourceSwap(stream);
 					picture = stream->picture;
-					vkMessageSend(engineQueue, videoServiceAuDone,
+					vnzKernelMessageSend(engineQueue, videoServiceAuDone,
 						stream->previousRequest);
 					vnzThreadWaitFlags(STREAM_FLAG_ENCODED);
 					pictureRateUpdate(stream, picture);
@@ -1690,7 +1702,7 @@ void avcencStreamAu(uint32_t memory, uint32_t request)
 	pictureFrame(stream, picture);
 	if (!buffers->frames)
 		avcencRateInitialize(picture, stream->rate);
-	vkMessageSend(stream->wakeQueue, avcencEncoderSequence, (uint32_t)settings);
+	vnzKernelMessageSend(stream->wakeQueue, avcencEncoderSequence, (uint32_t)settings);
 	stream->picture = (AvcencPicture *)vnzPublicOpenRaw(
 		vnzPublicClosePrivate((uint32_t)picture, PICTURE_SIZE), PICTURE_SIZE);
 }
@@ -1720,7 +1732,7 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 	VideoAvcPictureInfo *pictureInfo;
 	AvcencRate *rateState;
 	uint32_t mbs, firstMb, reference, *sourceChroma, source;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	output = (AvcencOutput *)vnzPublicOpenPrivate(job, RECORD_SIZE);
 	pictureInfo = (VideoAvcPictureInfo *)output->info;
@@ -1814,25 +1826,25 @@ void avcencStreamParsed(uint32_t memory, uint32_t job)
 	jobInfo = vnzPublicClosePrivate((uint32_t)info, 64);
 
 	index = picture->index * 8;
-	context = vkVThreadContextLock(stream->context);
+	context = vnzKernelVThreadContextLock(stream->context);
 	if (!firstMb) {
-		while (vkVThreadJobSetNotify(context, index + 4, 0, avcencJobChunks,
+		while (vnzKernelVThreadJobSetNotify(context, index + 4, 0, avcencJobChunks,
 		    (uint32_t)picture, jobInfo, 0, 0, picture->thread, STREAM_FLAG_CHUNKS_SET)) {
-			vkVThreadContextUnlock(context);
-			context = vkVThreadContextLock(stream->context);
+			vnzKernelVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(stream->context);
 		}
-		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobModesFirst,
+		while (vnzKernelVThreadJobSetNotify(context, index + 7, 0, avcencJobModesFirst,
 		    (uint32_t)picture, jobInfo, rate, 0, picture->thread, STREAM_FLAG_OUTPUT)) {
-			vkVThreadContextUnlock(context);
-			context = vkVThreadContextLock(stream->context);
+			vnzKernelVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(stream->context);
 		}
 	} else {
-		while (vkVThreadJobSetNotify(context, index + 7, 0, avcencJobModes,
+		while (vnzKernelVThreadJobSetNotify(context, index + 7, 0, avcencJobModes,
 		    (uint32_t)picture, jobInfo, rate, 0, picture->thread,
 		    STREAM_FLAG_OUTPUT | STREAM_FLAG_CHUNKS_SET)) {
-			vkVThreadContextUnlock(context);
-			context = vkVThreadContextLock(stream->context);
+			vnzKernelVThreadContextUnlock(context);
+			context = vnzKernelVThreadContextLock(stream->context);
 		}
 	}
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 }

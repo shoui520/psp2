@@ -8,31 +8,32 @@
  * the number of signals it waits for, and becomes ready when they have come.
  * A broadcast runs a function once on every core.
  *
- * (VVNZRunner's names: vnzVThreadCreateContext is vkVThreadContextCreate,
- * vnzVThreadDeleteContext vkVThreadContextDelete.)
+ * (VVNZRunner's names: vnzVThreadCreateContext is vnzKernelVThreadContextCreate,
+ * vnzVThreadDeleteContext vnzKernelVThreadContextDelete.)
  */
 #include "api.h"
 
-#define VK_VTHREAD_WORKER_PRIORITY	1
-#define VK_VTHREAD_WORKER_STACK		0x200
-#define VK_VTHREAD_WAKE			0x1	/* the event flag the workers wait for */
+#define VNZ_KERNEL_VTHREAD_WORKER_PRIORITY	1
+#define VNZ_KERNEL_VTHREAD_WORKER_STACK		0x200
+#define VNZ_KERNEL_VTHREAD_WAKE			0x1	/* the event flag the workers wait for */
 
-#define VK_JOB_IDLE		0
-#define VK_JOB_WAITING		1	/* for its signals */
-#define VK_JOB_READY		2
-#define VK_JOB_RUNNING		3
+#define VNZ_KERNEL_JOB_IDLE		0
+#define VNZ_KERNEL_JOB_WAITING		1	/* for its signals */
+#define VNZ_KERNEL_JOB_READY		2
+#define VNZ_KERNEL_JOB_RUNNING		3
 
-#define VK_BROADCAST_ENABLED	1	/* to the enabled cores; else to those with a worker */
-#define VK_BROADCAST_WORKERS	2
+/* to the enabled cores; else to those with a worker */
+#define VNZ_KERNEL_BROADCAST_ENABLED	1
+#define VNZ_KERNEL_BROADCAST_WORKERS	2
 
-#define VK_RESOURCE_MAGIC	0x56545052	/* "VTPR" */
-#define VK_CONTEXT_MAGIC	0x56545350	/* "VTSP" */
-#define VK_CORE_EVENT_MAGIC	0x4343454f	/* "CCEO" */
+#define VNZ_KERNEL_RESOURCE_MAGIC	0x56545052	/* "VTPR" */
+#define VNZ_KERNEL_CONTEXT_MAGIC	0x56545350	/* "VTSP" */
+#define VNZ_KERNEL_CORE_EVENT_MAGIC	0x4343454f	/* "CCEO" */
 
-VkVThreadSystem g_vkVThreads VK_SHARED;
+VnzKernelVThreadSystem g_vnzKernelVThreads VNZ_KERNEL_SHARED;
 
 /* singly linked lists */
-static void listAppend(VkList *list, VkListNode *node)
+static void listAppend(VnzKernelList *list, VnzKernelListNode *node)
 {
 	node->next = NULL;
 	if (list->head)
@@ -42,9 +43,9 @@ static void listAppend(VkList *list, VkListNode *node)
 	list->tail = node;
 }
 
-static VkListNode *listTake(VkList *list)
+static VnzKernelListNode *listTake(VnzKernelList *list)
 {
-	VkListNode *node = list->head;
+	VnzKernelListNode *node = list->head;
 
 	if (node) {
 		list->head = node->next;
@@ -54,7 +55,7 @@ static VkListNode *listTake(VkList *list)
 }
 
 /* Move all of from's nodes to the end of to. */
-static void listMove(VkList *from, VkList *to)
+static void listMove(VnzKernelList *from, VnzKernelList *to)
 {
 	if (to->head)
 		to->tail->next = from->head;
@@ -65,7 +66,7 @@ static void listMove(VkList *from, VkList *to)
 }
 
 /* the workers waiting for work */
-static void addWaiting(VkVThreadSystem *system, VkThread *thread)
+static void addWaiting(VnzKernelVThreadSystem *system, VnzKernelThread *thread)
 {
 	uint32_t i;
 
@@ -75,7 +76,7 @@ static void addWaiting(VkVThreadSystem *system, VkThread *thread)
 	system->waiting[system->waitingCount++] = thread;
 }
 
-static uint32_t takeWaiting(VkVThreadSystem *system, VkThread **threads)
+static uint32_t takeWaiting(VnzKernelVThreadSystem *system, VnzKernelThread **threads)
 {
 	uint32_t count = system->waitingCount, i;
 
@@ -85,7 +86,7 @@ static uint32_t takeWaiting(VkVThreadSystem *system, VkThread **threads)
 	return count;
 }
 
-static uint32_t removeWaiting(VkVThreadSystem *system, VkThread *thread)
+static uint32_t removeWaiting(VnzKernelVThreadSystem *system, VnzKernelThread *thread)
 {
 	uint32_t count = system->waitingCount, kept = 0, removed = 0, i;
 
@@ -100,21 +101,21 @@ static uint32_t removeWaiting(VkVThreadSystem *system, VkThread *thread)
 	return removed;
 }
 
-static void wakeAll(int32_t count, VkThread **threads)
+static void wakeAll(int32_t count, VnzKernelThread **threads)
 {
 	int32_t i;
 
 	for (i = count - 1; i >= 0; i--)
-		vkThreadSetFlags(threads[i], VK_VTHREAD_WAKE);
+		vnzKernelThreadSetFlags(threads[i], VNZ_KERNEL_VTHREAD_WAKE);
 }
 
 /* the threads told when the enabled cores have all started or stopped */
-static void notifyCoreEvents(VkVThreadSystem *system)
+static void notifyCoreEvents(VnzKernelVThreadSystem *system)
 {
-	VkCoreEvent *event;
+	VnzKernelCoreEvent *event;
 
 	for (event = system->coreEvents.head; event; event = event->next)
-		vkThreadSetFlags(event->thread, event->flags);
+		vnzKernelThreadSetFlags(event->thread, event->flags);
 }
 
 /*
@@ -123,33 +124,34 @@ static void notifyCoreEvents(VkVThreadSystem *system)
 
 static uint32_t contextSize(uint32_t count)
 {
-	return ((count * sizeof(VkJob) + 0x3f) & ~0x3f) +
-		((count * sizeof(VkJobCounter) + 0x3f) & ~0x3f) + 0x80;
+	return ((count * sizeof(VnzKernelJob) + 0x3f) & ~0x3f) +
+		((count * sizeof(VnzKernelJobCounter) + 0x3f) & ~0x3f) + 0x80;
 }
 
 /* Create a context of count jobs that queues them into resource. Returns it, or NULL. */
-VkVThreadContext *vkVThreadContextCreate(uint32_t count, VkVThreadResource *resource)
+VnzKernelVThreadContext *vnzKernelVThreadContextCreate(uint32_t count,
+	VnzKernelVThreadResource *resource)
 {
-	VkVThreadContext *physical, *context;
-	VkJobCounter *counters;
-	VkJob *jobs;
-	VkHeap *heap;
+	VnzKernelVThreadContext *physical, *context;
+	VnzKernelJobCounter *counters;
+	VnzKernelJob *jobs;
+	VnzKernelHeap *heap;
 	uint32_t countersSize, jobsSize, i;
 
 	if (count == 0)
 		return NULL;
-	heap = vkCurrentHeap();
-	countersSize = (count * sizeof(VkJobCounter) + 0x3f) & ~0x3f;
-	jobsSize = (count * sizeof(VkJob) + 0x3f) & ~0x3f;
-	physical = vkHeapAllocate(heap, contextSize(count), 0x40);
+	heap = vnzKernelCurrentHeap();
+	countersSize = (count * sizeof(VnzKernelJobCounter) + 0x3f) & ~0x3f;
+	jobsSize = (count * sizeof(VnzKernelJob) + 0x3f) & ~0x3f;
+	physical = vnzKernelHeapAllocate(heap, contextSize(count), 0x40);
 	if (physical == NULL)
 		return NULL;
-	context = (VkVThreadContext *)vkPhysicalToPublic((uint32_t)physical);
+	context = (VnzKernelVThreadContext *)vnzKernelPhysicalToPublic((uint32_t)physical);
 
-	physical->lock = vkLockPageAllocate();
+	physical->lock = vnzKernelLockPageAllocate();
 	if (physical->lock == NULL) {
 		vnzCacheLine(VNZ_CACHE_PURGE, physical);
-		vkHeapFree(heap, physical, contextSize(count), 0x40);
+		vnzKernelHeapFree(heap, physical, contextSize(count), 0x40);
 		return NULL;
 	}
 	physical->count = count;
@@ -157,29 +159,29 @@ VkVThreadContext *vkVThreadContextCreate(uint32_t count, VkVThreadResource *reso
 	physical->deleting = 0;
 	physical->heap = heap;
 	physical->space = resource->space;
-	physical->counters = (VkJobCounter *)(context + 1);
-	physical->magic = VK_CONTEXT_MAGIC;
+	physical->counters = (VnzKernelJobCounter *)(context + 1);
+	physical->magic = VNZ_KERNEL_CONTEXT_MAGIC;
 
-	counters = (VkJobCounter *)vkPublicToPhysical((uint32_t)physical->counters);
+	counters = (VnzKernelJobCounter *)vnzKernelPublicToPhysical((uint32_t)physical->counters);
 	for (i = 0; i < count; i++) {
 		counters[i].done = 0;
 		counters[i].wanted = 0;
 	}
-	vkCacheWriteback((uint32_t)counters, countersSize);
+	vnzKernelCacheWriteback((uint32_t)counters, countersSize);
 
-	physical->jobs = (VkJob *)((uint8_t *)physical->counters + countersSize);
-	jobs = (VkJob *)vkPublicToPhysical((uint32_t)physical->jobs);
+	physical->jobs = (VnzKernelJob *)((uint8_t *)physical->counters + countersSize);
+	jobs = (VnzKernelJob *)vnzKernelPublicToPhysical((uint32_t)physical->jobs);
 	physical->jobsPhysical = jobs;
 	for (i = 0; i < count; i++) {
 		jobs[i].next = NULL;
 		jobs[i].index = i;
 		jobs[i].context = context;
-		jobs[i].state = VK_JOB_IDLE;
+		jobs[i].state = VNZ_KERNEL_JOB_IDLE;
 		jobs[i].counter = &physical->counters[i];
 		vnzCacheLine(VNZ_CACHE_WRITEBACK, &jobs[i]);
 	}
 
-	physical->ready = (VkJobList *)((uint8_t *)physical->jobs + jobsSize);
+	physical->ready = (VnzKernelJobList *)((uint8_t *)physical->jobs + jobsSize);
 	physical->ready->count = 0;
 	physical->ready->list.head = NULL;
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, physical->ready);
@@ -188,25 +190,25 @@ VkVThreadContext *vkVThreadContextCreate(uint32_t count, VkVThreadResource *reso
 	return context;
 }
 
-static void contextFree(VkVThreadContext *context)
+static void contextFree(VnzKernelVThreadContext *context)
 {
-	VkHeap *heap = context->heap;
+	VnzKernelHeap *heap = context->heap;
 	uint32_t size = contextSize(context->count);
 
-	vkLockPageFree(context->lock);
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)context), size, 0x40);
+	vnzKernelLockPageFree(context->lock);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)context), size, 0x40);
 }
 
 /* Run on every worker core while a context is deleted: drop its queued jobs. */
 static void contextCancel(uint32_t argument, uint32_t argument2)
 {
-	VkVThreadContext *context = (VkVThreadContext *)argument;
-	VkVThreadSpace *space = context->space;
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
-	VkJob **slot = space->slot[index];
-	VkVThreadSystem *system;
-	VkList kept;
-	VkJob *job;
+	VnzKernelVThreadContext *context = (VnzKernelVThreadContext *)argument;
+	VnzKernelVThreadSpace *space = context->space;
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelJob **slot = space->slot[index];
+	VnzKernelVThreadSystem *system;
+	VnzKernelList kept;
+	VnzKernelJob *job;
 	uint32_t first, removed;
 
 	vnzSpinLock(context->lock);
@@ -219,11 +221,11 @@ static void contextCancel(uint32_t argument, uint32_t argument2)
 		kept.tail = NULL;
 		vnzSpinLock(space->lock);
 		removed = 0;
-		while ((job = (VkJob *)listTake(&space->ready)) != NULL) {
+		while ((job = (VnzKernelJob *)listTake(&space->ready)) != NULL) {
 			if (job->context == context)
 				removed++;
 			else
-				listAppend(&kept, (VkListNode *)job);
+				listAppend(&kept, (VnzKernelListNode *)job);
 		}
 		listMove(&kept, &space->ready);
 		vnzSpinUnlock(space->lock);
@@ -242,7 +244,7 @@ static void contextCancel(uint32_t argument, uint32_t argument2)
 /* The end of a context's cancelling broadcast: free it when its deletion is done. */
 static void contextCancelled(uint32_t argument, uint32_t argument2)
 {
-	VkVThreadContext *context = (VkVThreadContext *)argument;
+	VnzKernelVThreadContext *context = (VnzKernelVThreadContext *)argument;
 	volatile int8_t *deferred = (volatile int8_t *)&context->deferredFree;
 	volatile int32_t i;
 
@@ -258,22 +260,22 @@ static void contextCancelled(uint32_t argument, uint32_t argument2)
 }
 
 /* Delete a context: its queued jobs are dropped, its running jobs finish. */
-void vkVThreadContextDelete(VkVThreadContext *context)
+void vnzKernelVThreadContextDelete(VnzKernelVThreadContext *context)
 {
-	VkVThreadSpace *space;
-	VkJob *volatile *current;
+	VnzKernelVThreadSpace *space;
+	VnzKernelJob *volatile *current;
 	uint32_t running = 0, core;
 	volatile int32_t i;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(context->lock);
 	context->deleting = 1;
 	vnzSpinUnlock(context->lock);
 	context->deferredFree = 0;
 	context->users = 0;
-	if (vkVThreadBroadcastTo(context->resource, contextCancel, (uint32_t)context, 0,
-	    contextCancelled, (uint32_t)context, 0, VK_BROADCAST_WORKERS) != 0) {
-		vkEnableDispatch();
+	if (vnzKernelVThreadBroadcastTo(context->resource, contextCancel, (uint32_t)context, 0,
+	    contextCancelled, (uint32_t)context, 0, VNZ_KERNEL_BROADCAST_WORKERS) != 0) {
+		vnzKernelEnableDispatch();
 		return;
 	}
 
@@ -286,11 +288,11 @@ void vkVThreadContextDelete(VkVThreadContext *context)
 		}
 	}
 	vnzSpinUnlock(space->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 
 	if (running == 1) {
 		for (core = 0; core < VNZ_CORES; core++) {
-			current = (VkJob *volatile *)&context->space->current[core];
+			current = (VnzKernelJob *volatile *)&context->space->current[core];
 			while (*current && (*current)->context == context)
 				for (i = 0; i < 100; i++)
 					;
@@ -305,26 +307,26 @@ void vkVThreadContextDelete(VkVThreadContext *context)
 }
 
 /* Lock a context for setting its jobs; returns it physically. */
-VkVThreadContext *vkVThreadContextLock(VkVThreadContext *context)
+VnzKernelVThreadContext *vnzKernelVThreadContextLock(VnzKernelVThreadContext *context)
 {
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(context->lock);
-	return (VkVThreadContext *)vkPublicToPhysical((uint32_t)context);
+	return (VnzKernelVThreadContext *)vnzKernelPublicToPhysical((uint32_t)context);
 }
 
 /* Hand the jobs that became ready to the workers. */
-static int32_t contextFlush(VkVThreadContext *context, VkJobList *ready)
+static int32_t contextFlush(VnzKernelVThreadContext *context, VnzKernelJobList *ready)
 {
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
-	VkVThreadSpace *space = context->space;
-	VkVThreadSystem *system;
-	VkThread *waiting[VNZ_CORES];
-	VkJob **slot = space->slot[index];
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelVThreadSpace *space = context->space;
+	VnzKernelVThreadSystem *system;
+	VnzKernelThread *waiting[VNZ_CORES];
+	VnzKernelJob **slot = space->slot[index];
 	uint32_t count;
 
 	if (space->current[index] && *slot == NULL) {
 		/* this core is in a job: it takes the first itself */
-		*slot = (VkJob *)listTake(&ready->list);
+		*slot = (VnzKernelJob *)listTake(&ready->list);
 		ready->count--;
 	}
 	if (ready->list.head == NULL)
@@ -344,7 +346,7 @@ static int32_t contextFlush(VkVThreadContext *context, VkJobList *ready)
 }
 
 /* Unlock a context, starting the jobs that became ready. */
-int32_t vkVThreadContextUnlock(VkVThreadContext *context)
+int32_t vnzKernelVThreadContextUnlock(VnzKernelVThreadContext *context)
 {
 	volatile uint8_t *lock = context->lock;
 	int32_t result = 0;
@@ -354,7 +356,7 @@ int32_t vkVThreadContextUnlock(VkVThreadContext *context)
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, context->ready);
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, context);
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return result;
 }
 
@@ -362,11 +364,11 @@ int32_t vkVThreadContextUnlock(VkVThreadContext *context)
  * Set a job (the context locked): it runs function once it has had wanted
  * signals. Returns 0, or the job's state when it is in use.
  */
-uint32_t vkVThreadJobSet(VkVThreadContext *context, uint32_t index, uint32_t wanted,
-	VkJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
+uint32_t vnzKernelVThreadJobSet(VnzKernelVThreadContext *context, uint32_t index, uint32_t wanted,
+	VnzKernelJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
 	uint32_t argument4)
 {
-	VkJob *job = &context->jobsPhysical[index];
+	VnzKernelJob *job = &context->jobsPhysical[index];
 
 	if (job->state) {
 		vnzCacheLine(VNZ_CACHE_PURGE, job);
@@ -382,27 +384,29 @@ uint32_t vkVThreadJobSet(VkVThreadContext *context, uint32_t index, uint32_t wan
 	job->notify = NULL;
 
 	if (job->counter->done < wanted) {
-		job->state = VK_JOB_WAITING;
+		job->state = VNZ_KERNEL_JOB_WAITING;
 		vnzCacheLine(VNZ_CACHE_WRITEBACK, job);
 	} else {
-		job->state = VK_JOB_READY;
+		job->state = VNZ_KERNEL_JOB_READY;
 		vnzCacheLine(VNZ_CACHE_WRITEBACK, job);
-		listAppend(&context->ready->list, (VkListNode *)&context->jobs[index]);
+		listAppend(&context->ready->list, (VnzKernelListNode *)&context->jobs[index]);
 		context->ready->count++;
 	}
-	vkTrace(VK_TRACE_JOB_SET, (uint32_t)context, index, wanted, VK_TRACE_JOBS);
+	vnzKernelTrace(VNZ_KERNEL_TRACE_JOB_SET, (uint32_t)context, index, wanted,
+		VNZ_KERNEL_TRACE_JOBS);
 	return 0;
 }
 
 /* The same, sending notify notifyFlags when the job has run. */
-uint32_t vkVThreadJobSetNotify(VkVThreadContext *context, uint32_t index, uint32_t wanted,
-	VkJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
-	uint32_t argument4, VkThread *notify, uint32_t notifyFlags)
+uint32_t vnzKernelVThreadJobSetNotify(VnzKernelVThreadContext *context, uint32_t index,
+	uint32_t wanted,
+	VnzKernelJobFunction function, uint32_t argument, uint32_t argument2, uint32_t argument3,
+	uint32_t argument4, VnzKernelThread *notify, uint32_t notifyFlags)
 {
 	uint32_t result;
-	VkJob *job;
+	VnzKernelJob *job;
 
-	result = vkVThreadJobSet(context, index, wanted, function, argument, argument2,
+	result = vnzKernelVThreadJobSet(context, index, wanted, function, argument, argument2,
 		argument3, argument4);
 	if (result == 0) {
 		job = &context->jobsPhysical[index];
@@ -414,33 +418,34 @@ uint32_t vkVThreadJobSetNotify(VkVThreadContext *context, uint32_t index, uint32
 }
 
 /* Signal a job (the context locked); it becomes ready with its last signal. */
-int32_t vkVThreadJobSignal(VkVThreadContext *context, uint32_t index)
+int32_t vnzKernelVThreadJobSignal(VnzKernelVThreadContext *context, uint32_t index)
 {
-	VkJobCounter *counter = &context->counters[index];
+	VnzKernelJobCounter *counter = &context->counters[index];
 	uint32_t done = ++counter->done;
-	VkJob *job;
+	VnzKernelJob *job;
 
 	if (counter->wanted == done) {
 		job = &context->jobsPhysical[index];
-		job->state = VK_JOB_READY;
+		job->state = VNZ_KERNEL_JOB_READY;
 		vnzCacheLine(VNZ_CACHE_WRITEBACK, job);
-		listAppend(&context->ready->list, (VkListNode *)&context->jobs[index]);
+		listAppend(&context->ready->list, (VnzKernelListNode *)&context->jobs[index]);
 		context->ready->count++;
 	}
-	vkTrace(VK_TRACE_JOB_SIGNAL, (uint32_t)context, index, done, VK_TRACE_SIGNALS);
+	vnzKernelTrace(VNZ_KERNEL_TRACE_JOB_SIGNAL, (uint32_t)context, index, done,
+		VNZ_KERNEL_TRACE_SIGNALS);
 	return 0;
 }
 
 /* Reset a job that is idle or waiting. Returns 0, or its state. */
-uint32_t vkVThreadJobClear(VkVThreadContext *context, uint32_t index)
+uint32_t vnzKernelVThreadJobClear(VnzKernelVThreadContext *context, uint32_t index)
 {
-	VkJob *job = &context->jobsPhysical[index];
+	VnzKernelJob *job = &context->jobsPhysical[index];
 
-	if (job->state != VK_JOB_IDLE && job->state != VK_JOB_WAITING) {
+	if (job->state != VNZ_KERNEL_JOB_IDLE && job->state != VNZ_KERNEL_JOB_WAITING) {
 		vnzCacheLine(VNZ_CACHE_PURGE, job);
 		return job->state;
 	}
-	job->state = VK_JOB_IDLE;
+	job->state = VNZ_KERNEL_JOB_IDLE;
 	job->counter->done = 0;
 	job->counter->wanted = 0;
 	job->notifyFlags = 0;
@@ -449,12 +454,12 @@ uint32_t vkVThreadJobClear(VkVThreadContext *context, uint32_t index)
 	return 0;
 }
 
-uint32_t vkVThreadJobState(VkVThreadContext *context, uint32_t index)
+uint32_t vnzKernelVThreadJobState(VnzKernelVThreadContext *context, uint32_t index)
 {
 	return context->jobs[index].state;
 }
 
-uint32_t vkVThreadJobStateUnlocked(VkVThreadContext *context, uint32_t index)
+uint32_t vnzKernelVThreadJobStateUnlocked(VnzKernelVThreadContext *context, uint32_t index)
 {
 	return context->jobs[index].state;
 }
@@ -463,11 +468,12 @@ uint32_t vkVThreadJobStateUnlocked(VkVThreadContext *context, uint32_t index)
  * Broadcasts.
  */
 
-static VkBroadcast *broadcastCreate(VkBroadcastFunction function, uint32_t argument,
-	uint32_t argument2, VkBroadcastFunction done, uint32_t doneArgument, uint32_t doneArgument2)
+static VnzKernelBroadcast *broadcastCreate(VnzKernelBroadcastFunction function, uint32_t argument,
+	uint32_t argument2, VnzKernelBroadcastFunction done, uint32_t doneArgument,
+		uint32_t doneArgument2)
 {
-	VkHeap *heap = vkCurrentHeap();
-	VkBroadcast *broadcast = vkHeapAllocate(heap, sizeof(*broadcast), 0x40);
+	VnzKernelHeap *heap = vnzKernelCurrentHeap();
+	VnzKernelBroadcast *broadcast = vnzKernelHeapAllocate(heap, sizeof(*broadcast), 0x40);
 
 	if (broadcast == NULL)
 		return NULL;
@@ -479,32 +485,33 @@ static VkBroadcast *broadcastCreate(VkBroadcastFunction function, uint32_t argum
 	broadcast->doneArgument = doneArgument;
 	broadcast->heap = heap;
 	broadcast->doneArgument2 = doneArgument2;
-	vkCacheWriteback((uint32_t)broadcast, 0x80);
-	return (VkBroadcast *)vkPhysicalToPublic((uint32_t)broadcast);
+	vnzKernelCacheWriteback((uint32_t)broadcast, 0x80);
+	return (VnzKernelBroadcast *)vnzKernelPhysicalToPublic((uint32_t)broadcast);
 }
 
-static void broadcastFree(VkBroadcast *broadcast)
+static void broadcastFree(VnzKernelBroadcast *broadcast)
 {
-	VkHeap *heap = broadcast->heap;
+	VnzKernelHeap *heap = broadcast->heap;
 
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)broadcast), sizeof(*broadcast), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)broadcast),
+		sizeof(*broadcast), 0x40);
 }
 
 /* Queue a broadcast to each core's list in the space. */
-static void broadcastQueue(VkVThreadResource *resource, VkVThreadSpace *space,
-	VkBroadcast *broadcast, uint32_t mode)
+static void broadcastQueue(VnzKernelVThreadResource *resource, VnzKernelVThreadSpace *space,
+	VnzKernelBroadcast *broadcast, uint32_t mode)
 {
-	VkVThreadSystem *system = resource->system;
+	VnzKernelVThreadSystem *system = resource->system;
 	volatile uint8_t *spaceLock = space->lock;
 	volatile uint8_t *systemLock = system->lock;
-	VkThread *waiting[VNZ_CORES];
+	VnzKernelThread *waiting[VNZ_CORES];
 	uint32_t core, eligible, count = 0, woken;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(spaceLock);
 	vnzSpinLock(systemLock);
 	for (core = 0; core < VNZ_CORES; core++) {
-		if (mode == VK_BROADCAST_ENABLED)
+		if (mode == VNZ_KERNEL_BROADCAST_ENABLED)
 			eligible = system->enabledCores & (1 << core);
 		else
 			eligible = system->workers[core] != NULL;
@@ -530,18 +537,19 @@ static void broadcastQueue(VkVThreadResource *resource, VkVThreadSpace *space,
 			broadcast->done(broadcast->doneArgument, broadcast->doneArgument2);
 		broadcastFree(broadcast);
 	}
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
 /*
  * Run function(argument, argument2) once on each core the mode names; done
  * runs after the last. Returns 0, or -1 when there is no memory.
  */
-int32_t vkVThreadBroadcastTo(VkVThreadResource *resource, VkBroadcastFunction function,
-	uint32_t argument, uint32_t argument2, VkBroadcastFunction done,
+int32_t vnzKernelVThreadBroadcastTo(VnzKernelVThreadResource *resource,
+	VnzKernelBroadcastFunction function,
+	uint32_t argument, uint32_t argument2, VnzKernelBroadcastFunction done,
 	uint32_t doneArgument, uint32_t doneArgument2, uint32_t mode)
 {
-	VkBroadcast *broadcast;
+	VnzKernelBroadcast *broadcast;
 
 	broadcast = broadcastCreate(function, argument, argument2, done, doneArgument,
 		doneArgument2);
@@ -551,38 +559,40 @@ int32_t vkVThreadBroadcastTo(VkVThreadResource *resource, VkBroadcastFunction fu
 	return 0;
 }
 
-int32_t vkVThreadBroadcast(VkVThreadResource *resource, VkBroadcastFunction function,
+int32_t vnzKernelVThreadBroadcast(VnzKernelVThreadResource *resource,
+	VnzKernelBroadcastFunction function,
 	uint32_t argument, uint32_t argument2)
 {
-	return vkVThreadBroadcastTo(resource, function, argument, argument2, NULL, 0, 0,
-		VK_BROADCAST_ENABLED);
+	return vnzKernelVThreadBroadcastTo(resource, function, argument, argument2, NULL, 0, 0,
+		VNZ_KERNEL_BROADCAST_ENABLED);
 }
 
-int32_t vkVThreadBroadcastDone(VkVThreadResource *resource, VkBroadcastFunction function,
-	uint32_t argument, uint32_t argument2, VkBroadcastFunction done,
+int32_t vnzKernelVThreadBroadcastDone(VnzKernelVThreadResource *resource,
+	VnzKernelBroadcastFunction function,
+	uint32_t argument, uint32_t argument2, VnzKernelBroadcastFunction done,
 	uint32_t doneArgument, uint32_t doneArgument2)
 {
-	return vkVThreadBroadcastTo(resource, function, argument, argument2, done,
-		doneArgument, doneArgument2, VK_BROADCAST_ENABLED);
+	return vnzKernelVThreadBroadcastTo(resource, function, argument, argument2, done,
+		doneArgument, doneArgument2, VNZ_KERNEL_BROADCAST_ENABLED);
 }
 
 /* A space's per-core job: run the broadcasts queued for this core. */
 static void runBroadcasts(uint32_t argument, uint32_t argument2, uint32_t argument3,
 	uint32_t argument4)
 {
-	VkVThreadSpace *space = (VkVThreadSpace *)argument;
-	VkVThreadSystem *system = (VkVThreadSystem *)argument2;
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelVThreadSpace *space = (VnzKernelVThreadSpace *)argument;
+	VnzKernelVThreadSystem *system = (VnzKernelVThreadSystem *)argument2;
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
 	volatile uint8_t *lock = space->lock;
-	VkList *list = &space->broadcasts[index];
-	VkBroadcast *broadcast;
+	VnzKernelList *list = &space->broadcasts[index];
+	VnzKernelBroadcast *broadcast;
 	uint32_t ran = 0, completed;
 
 	(void)argument3;
 	(void)argument4;
 	for (;;) {
 		vnzSpinLock(lock);
-		broadcast = (VkBroadcast *)((uint32_t)listTake(list) & ~0x3f);
+		broadcast = (VnzKernelBroadcast *)((uint32_t)listTake(list) & ~0x3f);
 		vnzSpinUnlock(lock);
 		if (broadcast == NULL)
 			break;
@@ -608,28 +618,30 @@ static void runBroadcasts(uint32_t argument, uint32_t argument2, uint32_t argume
  * Resources.
  */
 
-static int32_t spaceInitialize(VkVThreadSpace *space, VkHeap *heap, VkVThreadSystem *system)
+static int32_t spaceInitialize(VnzKernelVThreadSpace *space, VnzKernelHeap *heap,
+	VnzKernelVThreadSystem *system)
 {
-	VkJob *job;
+	VnzKernelJob *job;
 	uint32_t i;
 
-	space->lock = vkLockPageAllocate();
+	space->lock = vnzKernelLockPageAllocate();
 	if (space->lock == NULL)
 		return -1;
 	space->ready.head = NULL;
 
-	space->jobs = vkHeapAllocate(heap, VNZ_CORES * sizeof(VkJob), 0x40);
-	space->jobs = (VkJob *)vkPhysicalToPublic((uint32_t)space->jobs);
+	space->jobs = vnzKernelHeapAllocate(heap, VNZ_CORES * sizeof(VnzKernelJob), 0x40);
+	space->jobs = (VnzKernelJob *)vnzKernelPhysicalToPublic((uint32_t)space->jobs);
 	if (space->jobs == NULL)
 		goto noJobs;
-	space->counters = vkHeapAllocate(heap, VNZ_CORES * sizeof(VkJobCounter), 0x40);
-	space->counters = (VkJobCounter *)vkPhysicalToPublic((uint32_t)space->counters);
+	space->counters = vnzKernelHeapAllocate(heap, VNZ_CORES * sizeof(VnzKernelJobCounter),
+		0x40);
+	space->counters = (VnzKernelJobCounter *)vnzKernelPhysicalToPublic((uint32_t)space->counters);
 	if (space->counters == NULL)
 		goto noCounters;
 
 	for (i = 0; i < VNZ_CORES; i++) {
 		space->queue[i] = NULL;
-		space->slot[i] = (VkJob **)&space->slot[i];
+		space->slot[i] = (VnzKernelJob **)&space->slot[i];
 		space->current[i] = NULL;
 		space->broadcasts[i].head = NULL;
 		space->counters[i].wanted = 0;
@@ -643,7 +655,7 @@ static int32_t spaceInitialize(VkVThreadSpace *space, VkHeap *heap, VkVThreadSys
 		job->arguments[1] = (uint32_t)system;
 		job->arguments[0] = (uint32_t)space;
 		job->function = runBroadcasts;
-		job->state = VK_JOB_IDLE;
+		job->state = VNZ_KERNEL_JOB_IDLE;
 		job->counter = &space->counters[i];
 		job->context = NULL;
 		job->index = i;
@@ -652,26 +664,27 @@ static int32_t spaceInitialize(VkVThreadSpace *space, VkHeap *heap, VkVThreadSys
 	return 0;
 
 noCounters:
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)space->jobs),
-		VNZ_CORES * sizeof(VkJob), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)space->jobs),
+		VNZ_CORES * sizeof(VnzKernelJob), 0x40);
 noJobs:
-	vkLockPageFree(space->lock);
+	vnzKernelLockPageFree(space->lock);
 	return -1;
 }
 
-static void spaceRelease(VkVThreadSpace *space, VkHeap *heap)
+static void spaceRelease(VnzKernelVThreadSpace *space, VnzKernelHeap *heap)
 {
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)space->counters),
-		VNZ_CORES * sizeof(VkJobCounter), 0x40);
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)space->jobs),
-		VNZ_CORES * sizeof(VkJob), 0x40);
-	vkLockPageFree(space->lock);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)space->counters),
+		VNZ_CORES * sizeof(VnzKernelJobCounter), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)space->jobs),
+		VNZ_CORES * sizeof(VnzKernelJob), 0x40);
+	vnzKernelLockPageFree(space->lock);
 }
 
-static int32_t resourceInitialize(VkVThreadResource *resource, VkVThreadSystem *system,
-	VkVThreadSpace *space, uint32_t stackSize)
+static int32_t resourceInitialize(VnzKernelVThreadResource *resource,
+	VnzKernelVThreadSystem *system,
+	VnzKernelVThreadSpace *space, uint32_t stackSize)
 {
-	resource->lock = vkLockPageAllocate();
+	resource->lock = vnzKernelLockPageAllocate();
 	if (resource->lock == NULL)
 		return -1;
 	resource->stackSize = stackSize;
@@ -680,20 +693,20 @@ static int32_t resourceInitialize(VkVThreadResource *resource, VkVThreadSystem *
 	resource->owner = NULL;
 	resource->users = 0;
 	resource->next = NULL;
-	resource->magic = VK_RESOURCE_MAGIC;
+	resource->magic = VNZ_KERNEL_RESOURCE_MAGIC;
 	return 0;
 }
 
-static void resourceRelease(VkVThreadResource *resource)
+static void resourceRelease(VnzKernelVThreadResource *resource)
 {
 	resource->magic = 0;
-	vkLockPageFree(resource->lock);
+	vnzKernelLockPageFree(resource->lock);
 }
 
 /* Take a resource out of the ring. */
-static void resourceRemove(VkVThreadSystem *system, VkVThreadResource *resource)
+static void resourceRemove(VnzKernelVThreadSystem *system, VnzKernelVThreadResource *resource)
 {
-	VkVThreadResource *previous, *at;
+	VnzKernelVThreadResource *previous, *at;
 
 	if (system->head == system->tail) {
 		if (system->head == resource) {
@@ -723,32 +736,32 @@ static void resourceRemove(VkVThreadSystem *system, VkVThreadResource *resource)
 }
 
 /* Create a processing resource whose jobs run on stacks of stackSize. Returns it, or NULL. */
-VkVThreadResource *vkVThreadResourceCreate(uint32_t stackSize)
+VnzKernelVThreadResource *vnzKernelVThreadResourceCreate(uint32_t stackSize)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
-	VkHeap *heap = vkCurrentHeap();
-	VkVThreadResource *resource;
-	VkVThreadSpace *space;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
+	VnzKernelHeap *heap = vnzKernelCurrentHeap();
+	VnzKernelVThreadResource *resource;
+	VnzKernelVThreadSpace *space;
 	void *memory;
 
-	memory = vkHeapAllocate(heap, sizeof(VkVThreadSpace), 0x40);
+	memory = vnzKernelHeapAllocate(heap, sizeof(VnzKernelVThreadSpace), 0x40);
 	if (memory == NULL)
 		return NULL;
-	space = (VkVThreadSpace *)vkPhysicalToPublic((uint32_t)memory);
+	space = (VnzKernelVThreadSpace *)vnzKernelPhysicalToPublic((uint32_t)memory);
 	if (spaceInitialize(space, heap, system) != 0)
 		goto noSpace;
 
-	memory = vkHeapAllocate(heap, sizeof(VkVThreadResource), 0x40);
+	memory = vnzKernelHeapAllocate(heap, sizeof(VnzKernelVThreadResource), 0x40);
 	if (memory == NULL)
 		goto noResource;
-	resource = (VkVThreadResource *)vkPhysicalToPublic((uint32_t)memory);
+	resource = (VnzKernelVThreadResource *)vnzKernelPhysicalToPublic((uint32_t)memory);
 	if (resourceInitialize(resource, system, space, stackSize) != 0) {
-		vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)resource),
-			sizeof(VkVThreadResource), 0x40);
+		vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)resource),
+			sizeof(VnzKernelVThreadResource), 0x40);
 		goto noResource;
 	}
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(system->lock);
 	if (system->head) {
 		resource->next = system->head;
@@ -759,29 +772,30 @@ VkVThreadResource *vkVThreadResourceCreate(uint32_t stackSize)
 	}
 	system->tail = resource;
 	vnzSpinUnlock(system->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return resource;
 
 noResource:
 	spaceRelease(space, heap);
 noSpace:
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)space), sizeof(VkVThreadSpace), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)space),
+		sizeof(VnzKernelVThreadSpace), 0x40);
 	return NULL;
 }
 
 /* Delete a resource once its work is done; waits for it. */
-void vkVThreadResourceDelete(VkVThreadResource *resource)
+void vnzKernelVThreadResourceDelete(VnzKernelVThreadResource *resource)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	volatile uint8_t *lock;
-	VkThread *waiting[VNZ_CORES];
+	VnzKernelThread *waiting[VNZ_CORES];
 	uint32_t count = 0, core, busy;
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (resource == NULL)
 		return;
 	lock = system->lock;
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	for (;;) {
 		vnzSpinLock(lock);
 		busy = resource->users != 0;
@@ -789,25 +803,25 @@ void vkVThreadResourceDelete(VkVThreadResource *resource)
 			busy = resource->space->broadcasts[core].head != NULL;
 		if (!busy)
 			break;
-		resource->owner = vkThreadCurrent();
+		resource->owner = vnzKernelThreadCurrent();
 		vnzSpinUnlock(lock);
-		vkThreadSleep();
+		vnzKernelThreadSleep();
 	}
 	resourceRemove(system, resource);
 	if (system->head == NULL)
 		count = takeWaiting(system, waiting);
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	if (count)
 		wakeAll(count, waiting);
 
-	heap = vkCurrentHeap();
+	heap = vnzKernelCurrentHeap();
 	spaceRelease(resource->space, heap);
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)resource->space),
-		sizeof(VkVThreadSpace), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)resource->space),
+		sizeof(VnzKernelVThreadSpace), 0x40);
 	resourceRelease(resource);
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)resource),
-		sizeof(VkVThreadResource), 0x40);
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)resource),
+		sizeof(VnzKernelVThreadResource), 0x40);
 }
 
 /*
@@ -815,18 +829,19 @@ void vkVThreadResourceDelete(VkVThreadResource *resource)
  */
 
 /* Pick this core's next job in a resource's space. */
-static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob **slot)
+static VnzKernelJob *fetchJob(VnzKernelVThreadResource *resource, VnzKernelVThreadSpace *space,
+	VnzKernelJob **slot)
 {
-	VkVThreadSystem *system = resource->system;
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
-	VkList *queue = space->queue[index];
+	VnzKernelVThreadSystem *system = resource->system;
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelList *queue = space->queue[index];
 	volatile uint8_t *spaceLock = space->lock;
 	volatile uint8_t *systemLock;
-	VkVThreadResource *next;
-	VkJob *job;
+	VnzKernelVThreadResource *next;
+	VnzKernelJob *job;
 	uint32_t core;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(spaceLock);
 	if (space->broadcasts[index].head) {
 		job = &space->jobs[index];
@@ -834,7 +849,7 @@ static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob
 		job = *slot;
 		*slot = NULL;
 	} else {
-		job = (VkJob *)listTake(queue);
+		job = (VnzKernelJob *)listTake(queue);
 		systemLock = system->lock;
 		vnzSpinLock(systemLock);
 		if (job) {
@@ -852,34 +867,34 @@ static VkJob *fetchJob(VkVThreadResource *resource, VkVThreadSpace *space, VkJob
 						continue;
 					resource->space->queue[core] = &system->idleQueue;
 					resource->space->slot[core] =
-						(VkJob **)&resource->space->slot[core];
+						(VnzKernelJob **)&resource->space->slot[core];
 				}
 			}
-			addWaiting(system, vkThreadCurrent());
+			addWaiting(system, vnzKernelThreadCurrent());
 		}
 		vnzSpinUnlock(systemLock);
 	}
 	space->current[index] = job;
 	vnzSpinUnlock(spaceLock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return job;
 }
 
-static void runJob(uint32_t index, VkVThreadResource *resource, VkJob *job)
+static void runJob(uint32_t index, VnzKernelVThreadResource *resource, VnzKernelJob *job)
 {
-	VkJob *physical;
-	VkThread *notify;
+	VnzKernelJob *physical;
+	VnzKernelThread *notify;
 
-	job->state = VK_JOB_RUNNING;
-	physical = (VkJob *)vkPublicToPhysical((uint32_t)job);
-	vkTrace(VK_TRACE_JOB_START, (uint32_t)physical->context, physical->index,
-		(uint32_t)physical->function, VK_TRACE_JOB_RUNS);
-	vkThreadSetUserWord((uint32_t)physical->function);
+	job->state = VNZ_KERNEL_JOB_RUNNING;
+	physical = (VnzKernelJob *)vnzKernelPublicToPhysical((uint32_t)job);
+	vnzKernelTrace(VNZ_KERNEL_TRACE_JOB_START, (uint32_t)physical->context, physical->index,
+		(uint32_t)physical->function, VNZ_KERNEL_TRACE_JOB_RUNS);
+	vnzKernelThreadSetUserWord((uint32_t)physical->function);
 	physical->function(physical->arguments[0], physical->arguments[1],
 		physical->arguments[2], physical->arguments[3]);
-	vkThreadSetUserWord(0);
-	vkTrace(VK_TRACE_JOB_END, (uint32_t)physical->context, physical->index,
-		(uint32_t)physical->function, VK_TRACE_JOB_RUNS);
+	vnzKernelThreadSetUserWord(0);
+	vnzKernelTrace(VNZ_KERNEL_TRACE_JOB_END, (uint32_t)physical->context, physical->index,
+		(uint32_t)physical->function, VNZ_KERNEL_TRACE_JOB_RUNS);
 
 	notify = NULL;
 	if (physical->notifyFlags) {
@@ -887,28 +902,29 @@ static void runJob(uint32_t index, VkVThreadResource *resource, VkJob *job)
 		physical->notify = NULL;
 		physical->notifyFlags = 0;
 	}
-	physical->state = VK_JOB_IDLE;
+	physical->state = VNZ_KERNEL_JOB_IDLE;
 	physical->counter->done = 0;
 	physical->counter->wanted = 0;
 	resource->space->current[index] = NULL;
 	vnzCacheLine(VNZ_CACHE_WRITEBACK, physical);
 	if (notify)
-		vkThreadSetFlags(notify, physical->notifyFlags);
+		vnzKernelThreadSetFlags(notify, physical->notifyFlags);
 }
 
 /* Run a resource's jobs until it has none for this core (on the resource's stack). */
-void vkVThreadServe(VkVThreadSystem *system, VkVThreadResource *resource)
+void vnzKernelVThreadServe(VnzKernelVThreadSystem *system, VnzKernelVThreadResource *resource)
 {
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
-	VkJob *(*fetch)(VkVThreadResource *, VkVThreadSpace *, VkJob **) = system->fetch;
-	VkVThreadSpace *space = resource->space;
-	VkJob **slot = &system->stacks[index]->slot;
-	VkJob *job;
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelJob *(*fetch)(VnzKernelVThreadResource *, VnzKernelVThreadSpace *,
+		VnzKernelJob **) = system->fetch;
+	VnzKernelVThreadSpace *space = resource->space;
+	VnzKernelJob **slot = &system->stacks[index]->slot;
+	VnzKernelJob *job;
 
 	*slot = NULL;
 	for (;;) {
-		vkEnableDispatch();
-		vkDisableDispatch();
+		vnzKernelEnableDispatch();
+		vnzKernelDisableDispatch();
 		job = fetch(resource, space, slot);
 		if (job == NULL)
 			return;
@@ -917,19 +933,19 @@ void vkVThreadServe(VkVThreadSystem *system, VkVThreadResource *resource)
 }
 
 /* Serve a resource on a stack of its size. */
-static void serveResource(VkVThreadSystem *system, VkVThreadResource *resource)
+static void serveResource(VnzKernelVThreadSystem *system, VnzKernelVThreadResource *resource)
 {
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
-	VkWorkerStack *stack = system->stacks[index];
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelWorkerStack *stack = system->stacks[index];
 	uint32_t size = stack->size;
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (size < resource->stackSize) {
-		heap = vkCurrentHeap();
+		heap = vnzKernelCurrentHeap();
 		if (size)
-			vkHeapFreeStack(heap, stack->base, size);
+			vnzKernelHeapFreeStack(heap, stack->base, size);
 		size = resource->stackSize;
-		stack->base = vkHeapAllocateStack(heap, size);
+		stack->base = vnzKernelHeapAllocateStack(heap, size);
 		if (stack->base == NULL) {
 			stack->base = NULL;
 			stack->size = 0;
@@ -937,15 +953,15 @@ static void serveResource(VkVThreadSystem *system, VkVThreadResource *resource)
 		}
 		stack->size = size;
 	}
-	vkDisableDispatch();
-	vkCallOnStack(system, resource, (uint8_t *)stack->base + size);
-	vkEnableDispatch();
+	vnzKernelDisableDispatch();
+	vnzKernelCallOnStack(system, resource, (uint8_t *)stack->base + size);
+	vnzKernelEnableDispatch();
 }
 
 /* A worker leaves: its core no longer serves. */
-static void workerExit(uint32_t index, VkVThreadSystem *system)
+static void workerExit(uint32_t index, VnzKernelVThreadSystem *system)
 {
-	removeWaiting(system, vkThreadCurrent());
+	removeWaiting(system, vnzKernelThreadCurrent());
 	system->workers[index] = NULL;
 	system->workerCount--;
 	system->runningCores &= ~(1 << index);
@@ -958,17 +974,17 @@ static void workerExit(uint32_t index, VkVThreadSystem *system)
 /* A core's worker thread. */
 static void workerThread(uint32_t argument)
 {
-	VkVThreadSystem *system = (VkVThreadSystem *)argument;
-	uint32_t index = vkCurrentCoreId() - VNZ_FIRST_CORE_ID;
+	VnzKernelVThreadSystem *system = (VnzKernelVThreadSystem *)argument;
+	uint32_t index = vnzKernelCurrentCoreId() - VNZ_FIRST_CORE_ID;
 	uint32_t bit = 1 << index;
 	volatile uint8_t *lock = system->lock;
-	VkThread *waiting[VNZ_CORES];
-	VkVThreadResource *resource;
-	VkWorkerStack *stack;
+	VnzKernelThread *waiting[VNZ_CORES];
+	VnzKernelVThreadResource *resource;
+	VnzKernelWorkerStack *stack;
 	uint32_t idle, mine, count;
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
-	stack = vkHeapAllocateStack(vkCurrentHeap(), sizeof(*stack));
+	stack = vnzKernelHeapAllocateStack(vnzKernelCurrentHeap(), sizeof(*stack));
 	if (stack == NULL)
 		return;
 	stack->base = NULL;
@@ -977,7 +993,7 @@ static void workerThread(uint32_t argument)
 	system->stacks[index] = stack;
 	system->workerStart(system);
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(lock);
 	resource = system->head;
 	if (!(system->enabledCores & bit) && resource == NULL)
@@ -993,19 +1009,19 @@ static void workerThread(uint32_t argument)
 			} else {
 				resource->space->queue[index] = &system->idleQueue;
 				resource->space->slot[index] =
-					(VkJob **)&resource->space->slot[index];
+					(VnzKernelJob **)&resource->space->slot[index];
 			}
 			vnzSpinUnlock(lock);
-			vkEnableDispatch();
+			vnzKernelEnableDispatch();
 			serveResource(system, resource);
-			vkDisableDispatch();
+			vnzKernelDisableDispatch();
 			vnzSpinLock(lock);
 
 			idle = system->jobsGiven == system->jobsTaken;
 			mine = system->broadcastsQueued[index] == system->broadcastsRun[index];
 			if (!(idle && mine)) {
-				removeWaiting(system, vkThreadCurrent());
-				vkThreadClearFlags(VK_VTHREAD_WAKE);
+				removeWaiting(system, vnzKernelThreadCurrent());
+				vnzKernelThreadClearFlags(VNZ_KERNEL_VTHREAD_WAKE);
 				if (!idle) {
 					count = takeWaiting(system, waiting);
 					if ((int32_t)count >= 1)
@@ -1019,7 +1035,7 @@ static void workerThread(uint32_t argument)
 					if (resource->space->broadcasts[count].head)
 						break;
 				if (count == VNZ_CORES) {
-					while (vkThreadWakeup(resource->owner, 0) != 0)
+					while (vnzKernelThreadWakeup(resource->owner, 0) != 0)
 						;
 					resourceRemove(system, resource);
 				}
@@ -1030,7 +1046,7 @@ static void workerThread(uint32_t argument)
 				if (!idle)
 					goto restart;
 				vnzSpinUnlock(lock);
-				vkThreadWaitFlags(VK_VTHREAD_WAKE);
+				vnzKernelThreadWaitFlags(VNZ_KERNEL_VTHREAD_WAKE);
 				vnzSpinLock(lock);
 				mine = system->broadcastsQueued[index] == system->broadcastsRun[index];
 				idle = 0;
@@ -1041,14 +1057,14 @@ static void workerThread(uint32_t argument)
 		}
 
 		/* nothing to serve: wait */
-		addWaiting(system, vkThreadCurrent());
+		addWaiting(system, vnzKernelThreadCurrent());
 		vnzSpinUnlock(lock);
 		if (stack->base) {
-			vkHeapFreeStack(vkCurrentHeap(), stack->base, stack->size);
+			vnzKernelHeapFreeStack(vnzKernelCurrentHeap(), stack->base, stack->size);
 			stack->size = 0;
 			stack->base = NULL;
 		}
-		vkThreadWaitFlags(VK_VTHREAD_WAKE);
+		vnzKernelThreadWaitFlags(VNZ_KERNEL_VTHREAD_WAKE);
 		vnzSpinLock(lock);
 restart:
 		resource = system->head;
@@ -1059,56 +1075,56 @@ restart:
 leave:
 	workerExit(index, system);
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
-	heap = vkCurrentHeap();
+	vnzKernelEnableDispatch();
+	heap = vnzKernelCurrentHeap();
 	if (stack->base) {
-		vkHeapFreeStack(heap, stack->base, stack->size);
+		vnzKernelHeapFreeStack(heap, stack->base, stack->size);
 		stack->size = 0;
 		stack->base = NULL;
 	}
-	vkHeapFreeStack(heap, stack, sizeof(*stack));
+	vnzKernelHeapFreeStack(heap, stack, sizeof(*stack));
 	system->workerEnd(system);
 }
 
 /* Start a worker on core coreId. Returns 0, or -1. */
-static int32_t workerCreate(VkVThreadSystem *system, uint32_t coreId)
+static int32_t workerCreate(VnzKernelVThreadSystem *system, uint32_t coreId)
 {
 	uint32_t index = coreId - VNZ_FIRST_CORE_ID;
 	int32_t thread;
 
 	if (system->workers[index])
 		return 0;
-	thread = vkThreadCreateHere(workerThread, coreId, VK_VTHREAD_WORKER_PRIORITY,
-		VK_VTHREAD_WORKER_STACK);
+	thread = vnzKernelThreadCreateHere(workerThread, coreId, VNZ_KERNEL_VTHREAD_WORKER_PRIORITY,
+		VNZ_KERNEL_VTHREAD_WORKER_STACK);
 	if (thread == -1) {
 		system->workers[index] = NULL;
 		return -1;
 	}
-	system->workers[index] = (VkThread *)thread;
-	vkThreadStart((VkThread *)thread, (uint32_t)system, 0);
-	vkThreadDetach((VkThread *)thread);
+	system->workers[index] = (VnzKernelThread *)thread;
+	vnzKernelThreadStart((VnzKernelThread *)thread, (uint32_t)system, 0);
+	vnzKernelThreadDetach((VnzKernelThread *)thread);
 	system->workerCount++;
 	return 0;
 }
 
 /* the system's default hooks around a worker: nothing */
-static void workerStartNothing(VkVThreadSystem *system)
+static void workerStartNothing(VnzKernelVThreadSystem *system)
 {
 	(void)system;
 }
 
-static void workerEndNothing(VkVThreadSystem *system)
+static void workerEndNothing(VnzKernelVThreadSystem *system)
 {
 	(void)system;
 }
 
 /* Set up the workers' state (the primary core, at boot). */
-void vkVThreadInitialize(void)
+void vnzKernelVThreadInitialize(void)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	uint32_t core;
 
-	system->lock = vkLockPageAllocate();
+	system->lock = vnzKernelLockPageAllocate();
 	system->workerCount = 0;
 	system->waitingCount = 0;
 	system->jobsGiven = 0;
@@ -1130,7 +1146,7 @@ void vkVThreadInitialize(void)
 	system->head = NULL;
 
 	for (core = 0; core < VNZ_CORES; core++)
-		if (vkCoreType(VNZ_FIRST_CORE_ID + core) & VK_CORE_VTHREADS)
+		if (vnzKernelCoreType(VNZ_FIRST_CORE_ID + core) & VNZ_KERNEL_CORE_VTHREADS)
 			system->enabledCores |= 1 << core;
 	system->settled = system->enabledCores == 0;
 
@@ -1140,17 +1156,17 @@ void vkVThreadInitialize(void)
 }
 
 /* Start this core's worker when the core is enabled (each core, at its first start). */
-void vkVThreadStartWorker(void)
+void vnzKernelVThreadStartWorker(void)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
-	uint32_t coreId = vkCurrentCoreId();
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
+	uint32_t coreId = vnzKernelCurrentCoreId();
 	uint32_t bit = 1 << (coreId - VNZ_FIRST_CORE_ID);
 	volatile uint8_t *lock;
 
 	if (system->settled || !(system->enabledCores & bit))
 		return;
 	lock = system->lock;
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(lock);
 	if (workerCreate(system, coreId) == 0)
 		system->runningCores |= bit;
@@ -1159,22 +1175,22 @@ void vkVThreadStartWorker(void)
 		notifyCoreEvents(system);
 	}
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
 /*
  * Change the cores the workers run on, from expected to cores. Returns 0, or
  * -1 when the cores are not expected or a change is under way.
  */
-int32_t vkVThreadSetCores(uint32_t expected, uint32_t cores)
+int32_t vnzKernelVThreadSetCores(uint32_t expected, uint32_t cores)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	volatile uint8_t *lock = system->lock;
 	uint32_t running, bit, core;
-	VkThread *worker;
+	VnzKernelThread *worker;
 	int32_t result;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(lock);
 	if (system->enabledCores != expected || system->settled != 1) {
 		result = -1;
@@ -1198,11 +1214,11 @@ int32_t vkVThreadSetCores(uint32_t expected, uint32_t cores)
 			if (system->head) {
 				system->head->space->queue[core] = &system->idleQueue;
 				system->head->space->slot[core] =
-					(VkJob **)&system->head->space->slot[core];
+					(VnzKernelJob **)&system->head->space->slot[core];
 			}
 			worker = system->workers[core];
 			if (removeWaiting(system, worker))
-				vkThreadSetFlags(worker, VK_VTHREAD_WAKE);
+				vnzKernelThreadSetFlags(worker, VNZ_KERNEL_VTHREAD_WAKE);
 		}
 	}
 	if (system->runningCores == cores) {
@@ -1212,27 +1228,28 @@ int32_t vkVThreadSetCores(uint32_t expected, uint32_t cores)
 	result = 0;
 out:
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return result;
 }
 
-uint32_t vkVThreadCores(void)
+uint32_t vnzKernelVThreadCores(void)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	uint32_t cores;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(system->lock);
 	cores = system->runningCores;
 	vnzSpinUnlock(system->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return cores;
 }
 
 /* An event a thread gets (flags) when a change of cores has settled. */
-VkCoreEvent *vkVThreadCoreEventCreate(VkThread *thread, uint32_t flags)
+VnzKernelCoreEvent *vnzKernelVThreadCoreEventCreate(VnzKernelThread *thread, uint32_t flags)
 {
-	VkCoreEvent *event = vkHeapAllocate(vkCurrentHeap(), sizeof(*event), 0x40);
+	VnzKernelCoreEvent *event = vnzKernelHeapAllocate(vnzKernelCurrentHeap(), sizeof(*event),
+		0x40);
 
 	if (event == NULL)
 		return NULL;
@@ -1240,12 +1257,12 @@ VkCoreEvent *vkVThreadCoreEventCreate(VkThread *thread, uint32_t flags)
 	event->flags = flags;
 	event->next = NULL;
 	event->previous = NULL;
-	event->magic = VK_CORE_EVENT_MAGIC;
-	vkCacheWriteback((uint32_t)event, 0x40);
-	return (VkCoreEvent *)vkPhysicalToPublic((uint32_t)event);
+	event->magic = VNZ_KERNEL_CORE_EVENT_MAGIC;
+	vnzKernelCacheWriteback((uint32_t)event, 0x40);
+	return (VnzKernelCoreEvent *)vnzKernelPhysicalToPublic((uint32_t)event);
 }
 
-static void coreEventAppend(VkCoreEventList *list, VkCoreEvent *event)
+static void coreEventAppend(VnzKernelCoreEventList *list, VnzKernelCoreEvent *event)
 {
 	if (list->head) {
 		list->tail->next = event;
@@ -1256,9 +1273,9 @@ static void coreEventAppend(VkCoreEventList *list, VkCoreEvent *event)
 	list->tail = event;
 }
 
-static void coreEventRemove(VkCoreEventList *list, VkCoreEvent *event)
+static void coreEventRemove(VnzKernelCoreEventList *list, VnzKernelCoreEvent *event)
 {
-	VkCoreEvent *previous = event->previous, *next = event->next;
+	VnzKernelCoreEvent *previous = event->previous, *next = event->next;
 
 	if (previous == NULL && next == NULL) {
 		if (list->head == event) {
@@ -1279,45 +1296,46 @@ static void coreEventRemove(VkCoreEventList *list, VkCoreEvent *event)
 	event->previous = NULL;
 }
 
-static uint32_t coreEventListed(VkCoreEventList *list, VkCoreEvent *event)
+static uint32_t coreEventListed(VnzKernelCoreEventList *list, VnzKernelCoreEvent *event)
 {
 	return event->previous || event->next || list->head == event;
 }
 
-void vkVThreadCoreEventRegister(VkCoreEvent *event)
+void vnzKernelVThreadCoreEventRegister(VnzKernelCoreEvent *event)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	volatile uint8_t *lock = system->lock;
-	VkCoreEventList *list = &system->coreEvents;
+	VnzKernelCoreEventList *list = &system->coreEvents;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(lock);
 	if (!coreEventListed(list, event))
 		coreEventAppend(list, event);
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
-void vkVThreadCoreEventUnregister(VkCoreEvent *event)
+void vnzKernelVThreadCoreEventUnregister(VnzKernelCoreEvent *event)
 {
-	VkVThreadSystem *system = &g_vkVThreads;
+	VnzKernelVThreadSystem *system = &g_vnzKernelVThreads;
 	volatile uint8_t *lock = system->lock;
-	VkCoreEventList *list = &system->coreEvents;
+	VnzKernelCoreEventList *list = &system->coreEvents;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(lock);
 	if (coreEventListed(list, event))
 		coreEventRemove(list, event);
 	vnzSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
-void vkVThreadCoreEventDelete(VkCoreEvent *event)
+void vnzKernelVThreadCoreEventDelete(VnzKernelCoreEvent *event)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
-	vkVThreadCoreEventUnregister(event);
+	vnzKernelVThreadCoreEventUnregister(event);
 	event->magic = 0;
-	heap = vkCurrentHeap();
-	vkHeapFree(heap, (void *)vkPublicToPhysical((uint32_t)event), sizeof(*event), 0x40);
+	heap = vnzKernelCurrentHeap();
+	vnzKernelHeapFree(heap, (void *)vnzKernelPublicToPhysical((uint32_t)event), sizeof(*event),
+		0x40);
 }

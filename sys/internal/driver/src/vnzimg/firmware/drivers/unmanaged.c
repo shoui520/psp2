@@ -31,86 +31,86 @@ static void moduleSuspend(void)
 {
 }
 
-const VkModule g_vkUnmanagedModule VK_SECTION(".unmanaged.module") = {
-	.magic = VK_MODULE_DRIVER,
+const VnzKernelModule g_vnzKernelUnmanagedModule VNZ_KERNEL_SECTION(".unmanaged.module") = {
+	.magic = VNZ_KERNEL_MODULE_DRIVER,
 	.self = VNZ_PHYSICAL_OF(0x80c000),
 	.size = 0x41c,
-	.attributes = VK_MODULE_ATTRIBUTES,
-	.version = VK_MODULE_VERSION,
+	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
+	.version = VNZ_KERNEL_MODULE_VERSION,
 	.resume = moduleResume,
 	.suspend = moduleSuspend,
 };
 
 /* the base operations: no address changes */
-uint32_t vkUnmanagedEnter(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedEnter(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedLeave(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedLeave(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedPhysicalToStack(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPhysicalToStack(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedPhysicalToPublic(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPhysicalToPublic(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedPhysicalToUncached(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPhysicalToUncached(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedStackToPhysical(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedStackToPhysical(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedPublicToPhysical(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPublicToPhysical(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedUncachedToPhysical(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedUncachedToPhysical(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
 /* the state changes */
-uint32_t vkUnmanagedOpenPrivate(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedOpenPrivate(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedClosePrivate(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedClosePrivate(uint32_t address, uint32_t size)
 {
 	vnzCacheWriteback(address, roundLine(size));
 	return address;
 }
 
-uint32_t vkUnmanagedOpenProtected(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedOpenProtected(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedCloseProtected(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedCloseProtected(uint32_t address, uint32_t size)
 {
 	vnzCachePurge(address, roundLine(size));
 	return address;
 }
 
-uint32_t vkUnmanagedOpenPublic(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedOpenPublic(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedClosePublic(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedClosePublic(uint32_t address, uint32_t size)
 {
 	size = roundL2Line(size);
 	mep_syncm();
@@ -118,23 +118,23 @@ uint32_t vkUnmanagedClosePublic(uint32_t address, uint32_t size)
 	return address;
 }
 
-uint32_t vkUnmanagedUncachedOpenRaw(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedUncachedOpenRaw(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedUncachedCloseRaw(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedUncachedCloseRaw(uint32_t address, uint32_t size)
 {
 	vnzCachePurgeAllCores(address, roundLine(size));
 	return address;
 }
 
-uint32_t vkUnmanagedPublicOpenRaw(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPublicOpenRaw(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedPublicCloseRaw(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedPublicCloseRaw(uint32_t address, uint32_t size)
 {
 	size = roundLine(size);
 	vnzCachePurgeAllCores(address, size);
@@ -143,27 +143,27 @@ uint32_t vkUnmanagedPublicCloseRaw(uint32_t address, uint32_t size)
 }
 
 /* allocation from a heap, in a state */
-uint32_t vkUnmanagedAllocateStack(VkHeap *heap, uint32_t size)
+uint32_t vnzKernelUnmanagedAllocateStack(VnzKernelHeap *heap, uint32_t size)
 {
 	uint32_t address = (uint32_t)vnzHeapAllocate(heap, size, LINE);
 
 	if (address == 0)
 		return 0;
 	size = roundLine(size);
-	return vkUnmanagedPhysicalToStack(vkUnmanagedEnter(address, size), size);
+	return vnzKernelUnmanagedPhysicalToStack(vnzKernelUnmanagedEnter(address, size), size);
 }
 
-uint32_t vkUnmanagedAllocatePublic(VkHeap *heap, uint32_t size)
+uint32_t vnzKernelUnmanagedAllocatePublic(VnzKernelHeap *heap, uint32_t size)
 {
 	uint32_t address = (uint32_t)vnzHeapAllocate(heap, size, LINE);
 
 	if (address == 0)
 		return 0;
 	size = roundLine(size);
-	return vkUnmanagedPhysicalToPublic(vkUnmanagedEnter(address, size), size);
+	return vnzKernelUnmanagedPhysicalToPublic(vnzKernelUnmanagedEnter(address, size), size);
 }
 
-uint32_t vkUnmanagedAllocateUncached(VkHeap *heap, uint32_t size)
+uint32_t vnzKernelUnmanagedAllocateUncached(VnzKernelHeap *heap, uint32_t size)
 {
 	uint32_t address = (uint32_t)vnzHeapAllocate(heap, size, L2_LINE);
 
@@ -171,58 +171,60 @@ uint32_t vkUnmanagedAllocateUncached(VkHeap *heap, uint32_t size)
 		return 0;
 	size = roundL2Line(size);
 	vnzL2Invalidate(address, size);
-	return vkUnmanagedPhysicalToUncached(vkUnmanagedEnter(address, size), size);
+	return vnzKernelUnmanagedPhysicalToUncached(vnzKernelUnmanagedEnter(address, size), size);
 }
 
-void vkUnmanagedFreeStack(VkHeap *heap, uint32_t address, uint32_t size)
+void vnzKernelUnmanagedFreeStack(VnzKernelHeap *heap, uint32_t address, uint32_t size)
 {
 	uint32_t rounded = roundLine(size);
 
-	address = vkUnmanagedStackToPhysical(address, rounded);
+	address = vnzKernelUnmanagedStackToPhysical(address, rounded);
 	vnzCachePurge(address, rounded);
-	address = vkUnmanagedLeave(address, rounded);
+	address = vnzKernelUnmanagedLeave(address, rounded);
 	vnzHeapFree(heap, (void *)address, size, LINE);
 }
 
-void vkUnmanagedFreePublic(VkHeap *heap, uint32_t address, uint32_t size)
+void vnzKernelUnmanagedFreePublic(VnzKernelHeap *heap, uint32_t address, uint32_t size)
 {
 	uint32_t rounded = roundLine(size);
 
-	address = vkUnmanagedLeave(vkUnmanagedPublicToPhysical(address, rounded), rounded);
+	address = vnzKernelUnmanagedLeave(vnzKernelUnmanagedPublicToPhysical(address, rounded),
+		rounded);
 	vnzHeapFree(heap, (void *)address, size, LINE);
 }
 
-void vkUnmanagedFreeUncached(VkHeap *heap, uint32_t address, uint32_t size)
+void vnzKernelUnmanagedFreeUncached(VnzKernelHeap *heap, uint32_t address, uint32_t size)
 {
 	uint32_t rounded = roundL2Line(size);
 
-	address = vkUnmanagedLeave(vkUnmanagedUncachedToPhysical(address, rounded), rounded);
+	address = vnzKernelUnmanagedLeave(vnzKernelUnmanagedUncachedToPhysical(address, rounded),
+		rounded);
 	vnzHeapFree(heap, (void *)address, size, L2_LINE);
 }
 
 /* four more functions in Sony's driver that keep the address; nothing calls them */
-uint32_t vkUnmanagedSameAddress1(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedSameAddress1(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedSameAddress2(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedSameAddress2(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedSameAddress3(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedSameAddress3(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
-uint32_t vkUnmanagedSameAddress4(uint32_t address, uint32_t size)
+uint32_t vnzKernelUnmanagedSameAddress4(uint32_t address, uint32_t size)
 {
 	return address;
 }
 
 /* the cache lines wholly inside a range of at most 0x2000 bytes */
-void vkUnmanagedInvalidateInside(uint32_t address, uint32_t size)
+void vnzKernelUnmanagedInvalidateInside(uint32_t address, uint32_t size)
 {
 	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
 	uint32_t end = (address + size) & ~(LINE - 1);
@@ -231,7 +233,7 @@ void vkUnmanagedInvalidateInside(uint32_t address, uint32_t size)
 		vnzCacheInvalidate(start, end - start);
 }
 
-void vkUnmanagedPrefetchInside(uint32_t address, uint32_t size)
+void vnzKernelUnmanagedPrefetchInside(uint32_t address, uint32_t size)
 {
 	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
 	uint32_t end = (address + size) & ~(LINE - 1);
@@ -241,25 +243,16 @@ void vkUnmanagedPrefetchInside(uint32_t address, uint32_t size)
 }
 
 /* unmanaged memory is not in the L2's windows */
-void vkUnmanagedL2FlushInside(uint32_t address, uint32_t size)
+void vnzKernelUnmanagedL2FlushInside(uint32_t address, uint32_t size)
 {
 }
 
-void vkUnmanagedL2SyncInside(uint32_t address, uint32_t size)
+void vnzKernelUnmanagedL2SyncInside(uint32_t address, uint32_t size)
 {
 }
 
-/* three more copies of vkUnmanagedPrefetchInside and two empty functions in Sony's driver; nothing calls them */
-void vkUnmanagedPrefetchInsideCopy1(uint32_t address, uint32_t size)
-{
-	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
-	uint32_t end = (address + size) & ~(LINE - 1);
-
-	if (size <= 0x2000 && start < end)
-		vnzCachePrefetch(start, end - start);
-}
-
-void vkUnmanagedPrefetchInsideCopy2(uint32_t address, uint32_t size)
+/* three more copies of vnzKernelUnmanagedPrefetchInside and two empty functions in Sony's driver; nothing calls them */
+void vnzKernelUnmanagedPrefetchInsideCopy1(uint32_t address, uint32_t size)
 {
 	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
 	uint32_t end = (address + size) & ~(LINE - 1);
@@ -268,7 +261,7 @@ void vkUnmanagedPrefetchInsideCopy2(uint32_t address, uint32_t size)
 		vnzCachePrefetch(start, end - start);
 }
 
-void vkUnmanagedPrefetchInsideCopy3(uint32_t address, uint32_t size)
+void vnzKernelUnmanagedPrefetchInsideCopy2(uint32_t address, uint32_t size)
 {
 	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
 	uint32_t end = (address + size) & ~(LINE - 1);
@@ -277,10 +270,19 @@ void vkUnmanagedPrefetchInsideCopy3(uint32_t address, uint32_t size)
 		vnzCachePrefetch(start, end - start);
 }
 
-void vkUnmanagedNothing1(void)
+void vnzKernelUnmanagedPrefetchInsideCopy3(uint32_t address, uint32_t size)
+{
+	uint32_t start = (address + LINE - 1) & ~(LINE - 1);
+	uint32_t end = (address + size) & ~(LINE - 1);
+
+	if (size <= 0x2000 && start < end)
+		vnzCachePrefetch(start, end - start);
+}
+
+void vnzKernelUnmanagedNothing1(void)
 {
 }
 
-void vkUnmanagedNothing2(void)
+void vnzKernelUnmanagedNothing2(void)
 {
 }

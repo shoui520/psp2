@@ -4,38 +4,38 @@
  * A pool is a free list of blocks in address order. A free block's header is
  * at its end: the next block and the block's size. Blocks are 0x40 or 0x100
  * aligned. The kernel has two pools under semaphores (pool 0, from the
- * VK_MEMORY_POOL1 region; pool 1, the system heap's).
+ * VNZ_KERNEL_MEMORY_POOL1 region; pool 1, the system heap's).
  *
  * A heap is a pool behind an interface (create, delete, allocate, free); the
  * heaps are kept in a tree by address so that memory is freed to its own heap.
- * A thread allocates from its heap (vkCurrentHeap). An allocation is returned
+ * A thread allocates from its heap (vnzKernelCurrentHeap). An allocation is returned
  * in the window the caller asks for.
  */
 #include "api.h"
 
-#define VK_POOLS		2
-#define VK_HEAP_POOL		1	/* the system heap's */
+#define VNZ_KERNEL_POOLS		2
+#define VNZ_KERNEL_HEAP_POOL		1	/* the system heap's */
 
 /* a free block's header, at its end */
-typedef struct VkFreeBlock {
-	struct VkFreeBlock *next;
+typedef struct VnzKernelFreeBlock {
+	struct VnzKernelFreeBlock *next;
 	uint32_t size;
-} VkFreeBlock;
+} VnzKernelFreeBlock;
 
-#define blockStart(block)	((uint32_t)(block) + sizeof(VkFreeBlock) - (block)->size)
-#define blockEnd(block)		((uint32_t)(block) + sizeof(VkFreeBlock))
+#define blockStart(block)	((uint32_t)(block) + sizeof(VnzKernelFreeBlock) - (block)->size)
+#define blockEnd(block)		((uint32_t)(block) + sizeof(VnzKernelFreeBlock))
 
-VkPool g_vkPools[VK_POOLS] VK_SHARED;
-VkHeap g_vkSystemHeap VK_SHARED;
-VkHeap *g_vkHeapTree VK_SHARED;
+VnzKernelPool g_vnzKernelPools[VNZ_KERNEL_POOLS] VNZ_KERNEL_SHARED;
+VnzKernelHeap g_vnzKernelSystemHeap VNZ_KERNEL_SHARED;
+VnzKernelHeap *g_vnzKernelHeapTree VNZ_KERNEL_SHARED;
 
-static volatile uint32_t *const heapSemaphore = vkSemaphore(VK_SEMAPHORE_HEAPS);
+static volatile uint32_t *const heapSemaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_HEAPS);
 
 /* Insert the free range [start, start + size), merging it with its neighbours. */
-static void poolInsert(VkPool *pool, uint32_t start, uint32_t size)
+static void poolInsert(VnzKernelPool *pool, uint32_t start, uint32_t size)
 {
-	VkFreeBlock **link = &pool->head, **previousLink = NULL;
-	VkFreeBlock *previous = NULL, *block = pool->head, *inserted;
+	VnzKernelFreeBlock **link = &pool->head, **previousLink = NULL;
+	VnzKernelFreeBlock *previous = NULL, *block = pool->head, *inserted;
 	uint32_t end = start + size;
 
 	while (block && blockStart(block) < start) {
@@ -50,7 +50,7 @@ static void poolInsert(VkPool *pool, uint32_t start, uint32_t size)
 		start = blockStart(previous);
 		link = previousLink;
 	}
-	inserted = (VkFreeBlock *)(end - sizeof(VkFreeBlock));
+	inserted = (VnzKernelFreeBlock *)(end - sizeof(VnzKernelFreeBlock));
 	inserted->size = end - start;
 	inserted->next = block;
 	*link = inserted;
@@ -63,15 +63,15 @@ static void poolInsert(VkPool *pool, uint32_t start, uint32_t size)
 }
 
 /* Set a pool up on the range [start, end); the range's addresses become public ones. */
-int32_t vkPoolInitialize(VkPool *pool, uint32_t start, uint32_t end)
+int32_t vnzKernelPoolInitialize(VnzKernelPool *pool, uint32_t start, uint32_t end)
 {
 	uint32_t last = end - 1;
 	uint32_t first;
 
-	if (vkToPublic(start) == 0 || vkToPublic(last) == 0)
+	if (vnzKernelToPublic(start) == 0 || vnzKernelToPublic(last) == 0)
 		return -1;
-	first = vkToPublic((start + 0x3f) & ~0x3f);
-	last = vkToPublic((end & ~0x3f) - 1);
+	first = vnzKernelToPublic((start + 0x3f) & ~0x3f);
+	last = vnzKernelToPublic((end & ~0x3f) - 1);
 	if (last < first)
 		return -1;
 	vnzMemoryResume();
@@ -82,9 +82,9 @@ int32_t vkPoolInitialize(VkPool *pool, uint32_t start, uint32_t end)
 }
 
 /* Take size bytes, 0x40 (mode 0) or 0x100 (mode 1) aligned. Returns the block, or 0. */
-uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
+uint32_t vnzKernelPoolTake(VnzKernelPool *pool, uint32_t size, uint32_t mode)
 {
-	VkFreeBlock **link, *block, *gap;
+	VnzKernelFreeBlock **link, *block, *gap;
 	uint32_t start, result = 0, needed;
 
 	if (size == 0)
@@ -118,7 +118,7 @@ uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
 
 	if (start < result) {
 		/* the bytes before the aligned block stay free, as a block of their own */
-		gap = (VkFreeBlock *)(result - sizeof(VkFreeBlock));
+		gap = (VnzKernelFreeBlock *)(result - sizeof(VnzKernelFreeBlock));
 		gap->size = result - start;
 		gap->next = block;
 		*link = gap;
@@ -133,8 +133,8 @@ uint32_t vkPoolTake(VkPool *pool, uint32_t size, uint32_t mode)
 	return result;
 }
 
-/* Give back a block vkPoolTake gave. */
-void vkPoolGive(VkPool *pool, uint32_t address, uint32_t size, uint32_t mode)
+/* Give back a block vnzKernelPoolTake gave. */
+void vnzKernelPoolGive(VnzKernelPool *pool, uint32_t address, uint32_t size, uint32_t mode)
 {
 	uint32_t shift, start, end;
 
@@ -156,31 +156,31 @@ void vkPoolGive(VkPool *pool, uint32_t address, uint32_t size, uint32_t mode)
 /* the kernel's pools, under their semaphores */
 static int32_t kernelPoolInitialize(uint32_t pool, uint32_t start, uint32_t end)
 {
-	return vkPoolInitialize(&g_vkPools[pool], start, end);
+	return vnzKernelPoolInitialize(&g_vnzKernelPools[pool], start, end);
 }
 
-uint32_t vkKernelPoolTake(uint32_t pool, uint32_t size, uint32_t mode)
+uint32_t vnzKernelKernelPoolTake(uint32_t pool, uint32_t size, uint32_t mode)
 {
-	volatile uint32_t *semaphore = vkSemaphore(VK_SEMAPHORE_POOLS + pool);
+	volatile uint32_t *semaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_POOLS + pool);
 	uint32_t block;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(semaphore);
-	block = vkPoolTake(&g_vkPools[pool], size, mode);
-	vkGiveSemaphore(semaphore);
-	vkEnableDispatch();
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(semaphore);
+	block = vnzKernelPoolTake(&g_vnzKernelPools[pool], size, mode);
+	vnzKernelGiveSemaphore(semaphore);
+	vnzKernelEnableDispatch();
 	return block;
 }
 
-void vkKernelPoolGive(uint32_t pool, uint32_t address, uint32_t size, uint32_t mode)
+void vnzKernelKernelPoolGive(uint32_t pool, uint32_t address, uint32_t size, uint32_t mode)
 {
-	volatile uint32_t *semaphore = vkSemaphore(VK_SEMAPHORE_POOLS + pool);
+	volatile uint32_t *semaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_POOLS + pool);
 
-	vkDisableDispatch();
-	vkTakeSemaphore(semaphore);
-	vkPoolGive(&g_vkPools[pool], address, size, mode);
-	vkGiveSemaphore(semaphore);
-	vkEnableDispatch();
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(semaphore);
+	vnzKernelPoolGive(&g_vnzKernelPools[pool], address, size, mode);
+	vnzKernelGiveSemaphore(semaphore);
+	vnzKernelEnableDispatch();
 }
 
 /* The pool mode of an alignment, and the size rounded to it. Returns -1 for others. */
@@ -203,17 +203,17 @@ static int32_t alignmentMode(uint32_t alignment, uint32_t *size, uint32_t *mode)
 static uint32_t toWindow(uint32_t physical, uint32_t size, int32_t window)
 {
 	switch (window) {
-	case VK_WINDOW_RAW:
+	case VNZ_KERNEL_WINDOW_RAW:
 		return vnzMemoryLeave(physical, size);
-	case VK_WINDOW_PHYSICAL:
+	case VNZ_KERNEL_WINDOW_PHYSICAL:
 		return vnzMemoryPhysicalToStack(physical, size);
-	case VK_WINDOW_PUBLIC:
+	case VNZ_KERNEL_WINDOW_PUBLIC:
 		return vnzMemoryPhysicalToPublic(physical, size);
-	case VK_WINDOW_UNCACHED:
-		if (size <= VK_L2_LINE_LIMIT)
-			vkL2LineOperation(physical, size, VK_L2_INVALIDATE);
+	case VNZ_KERNEL_WINDOW_UNCACHED:
+		if (size <= VNZ_KERNEL_L2_LINE_LIMIT)
+			vnzKernelL2LineOperation(physical, size, VNZ_KERNEL_L2_INVALIDATE);
 		else
-			vkL2Operation(physical, size, VK_L2_INVALIDATE);
+			vnzKernelL2Operation(physical, size, VNZ_KERNEL_L2_INVALIDATE);
 		return vnzMemoryPhysicalToUncached(physical, size);
 	}
 	return 0;
@@ -223,14 +223,14 @@ static uint32_t toWindow(uint32_t physical, uint32_t size, int32_t window)
 static uint32_t fromWindow(uint32_t address, uint32_t size, int32_t window)
 {
 	switch (window) {
-	case VK_WINDOW_RAW:
+	case VNZ_KERNEL_WINDOW_RAW:
 		return vnzMemoryEnter(address, size);
-	case VK_WINDOW_PHYSICAL:
-		vkCachePurge(address, size);
+	case VNZ_KERNEL_WINDOW_PHYSICAL:
+		vnzKernelCachePurge(address, size);
 		return vnzMemoryStackToPhysical(address, size);
-	case VK_WINDOW_PUBLIC:
+	case VNZ_KERNEL_WINDOW_PUBLIC:
 		return vnzMemoryPublicToPhysical(address, size);
-	case VK_WINDOW_UNCACHED:
+	case VNZ_KERNEL_WINDOW_UNCACHED:
 		return vnzMemoryUncachedToPhysical(address, size);
 	}
 	return (uint32_t)-1;
@@ -242,11 +242,11 @@ static uint32_t fromWindow(uint32_t address, uint32_t size, int32_t window)
 static int32_t systemHeapCreate(void *context, uint32_t base, uint32_t size)
 {
 	(void)context;
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_POOLS + VK_HEAP_POOL));
-	g_vkPools[VK_HEAP_POOL].head = NULL;
-	g_vkPools[VK_HEAP_POOL].reserved = 0;
-	kernelPoolInitialize(VK_HEAP_POOL, base, base + size);
-	fromWindow(base, size, VK_WINDOW_RAW);
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_POOLS + VNZ_KERNEL_HEAP_POOL));
+	g_vnzKernelPools[VNZ_KERNEL_HEAP_POOL].head = NULL;
+	g_vnzKernelPools[VNZ_KERNEL_HEAP_POOL].reserved = 0;
+	kernelPoolInitialize(VNZ_KERNEL_HEAP_POOL, base, base + size);
+	fromWindow(base, size, VNZ_KERNEL_WINDOW_RAW);
 	return 0;
 }
 
@@ -264,12 +264,12 @@ static void *systemHeapAllocate(void *context, uint32_t size, uint32_t alignment
 	(void)context;
 	if (alignmentMode(alignment, &size, &mode) == -1)
 		return NULL;
-	block = vkKernelPoolTake(VK_HEAP_POOL, size, mode);
+	block = vnzKernelKernelPoolTake(VNZ_KERNEL_HEAP_POOL, size, mode);
 	if (block == 0)
 		return NULL;
-	address = toWindow(vkPublicToPhysical(block), size, window);
+	address = toWindow(vnzKernelPublicToPhysical(block), size, window);
 	if (address == 0)
-		vkKernelPoolGive(VK_HEAP_POOL, block, size, mode);
+		vnzKernelKernelPoolGive(VNZ_KERNEL_HEAP_POOL, block, size, mode);
 	return (void *)address;
 }
 
@@ -282,75 +282,76 @@ static void systemHeapFree(void *context, void *memory, uint32_t size, uint32_t 
 	if (alignmentMode(alignment, &size, &mode) == -1)
 		return;
 	physical = fromWindow((uint32_t)memory, size, window);
-	if (window == VK_WINDOW_RAW)
+	if (window == VNZ_KERNEL_WINDOW_RAW)
 		physical = (uint32_t)memory;
-	vkKernelPoolGive(VK_HEAP_POOL, vkPhysicalToPublic(physical), size, mode);
+	vnzKernelKernelPoolGive(VNZ_KERNEL_HEAP_POOL, vnzKernelPhysicalToPublic(physical), size,
+		mode);
 }
 
 /*
- * A heap of its own (vkHeapCreatePool): a pool under a lock page.
+ * A heap of its own (vnzKernelHeapCreatePool): a pool under a lock page.
  */
-int32_t vkPoolHeapCreate(void *context, uint32_t base, uint32_t size)
+int32_t vnzKernelPoolHeapCreate(void *context, uint32_t base, uint32_t size)
 {
-	VkPoolHeap *heap = context;
+	VnzKernelPoolHeap *heap = context;
 
-	heap->lock = vkLockPageAllocate();
+	heap->lock = vnzKernelLockPageAllocate();
 	if (heap->lock == NULL)
 		return -1;
 	heap->pool.head = NULL;
-	if (vkPoolInitialize(&heap->pool, base, base + size) != 0)
+	if (vnzKernelPoolInitialize(&heap->pool, base, base + size) != 0)
 		return -1;
-	fromWindow(base, size, VK_WINDOW_RAW);
+	fromWindow(base, size, VNZ_KERNEL_WINDOW_RAW);
 	return 0;
 }
 
-void vkPoolHeapDelete(void *context, uint32_t base, uint32_t size)
+void vnzKernelPoolHeapDelete(void *context, uint32_t base, uint32_t size)
 {
-	VkPoolHeap *heap = context;
+	VnzKernelPoolHeap *heap = context;
 
-	toWindow(base, size, VK_WINDOW_RAW);
-	vkLockPageFree(heap->lock);
+	toWindow(base, size, VNZ_KERNEL_WINDOW_RAW);
+	vnzKernelLockPageFree(heap->lock);
 }
 
-void *vkPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
+void *vnzKernelPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
 {
-	VkPoolHeap *heap = context;
+	VnzKernelPoolHeap *heap = context;
 	uint32_t mode, block, address;
 
 	if (alignmentMode(alignment, &size, &mode) == -1)
 		return NULL;
-	vkDisableDispatch();
-	vkSpinLock(heap->lock);
-	block = vkPoolTake(&heap->pool, size, mode);
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(heap->lock);
+	block = vnzKernelPoolTake(&heap->pool, size, mode);
 	if (block == 0) {
-		vkSpinUnlock(heap->lock);
-		vkEnableDispatch();
+		vnzKernelSpinUnlock(heap->lock);
+		vnzKernelEnableDispatch();
 		return NULL;
 	}
-	address = toWindow(vkPublicToPhysical(block), size, window);
+	address = toWindow(vnzKernelPublicToPhysical(block), size, window);
 	if (address == 0)
-		vkPoolGive(&heap->pool, block, size, mode);
-	vkSpinUnlock(heap->lock);
-	vkEnableDispatch();
+		vnzKernelPoolGive(&heap->pool, block, size, mode);
+	vnzKernelSpinUnlock(heap->lock);
+	vnzKernelEnableDispatch();
 	return (void *)address;
 }
 
-void vkPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment,
+void vnzKernelPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment,
 	int32_t window)
 {
-	VkPoolHeap *heap = context;
+	VnzKernelPoolHeap *heap = context;
 	uint32_t mode, physical;
 
 	if (alignmentMode(alignment, &size, &mode) == -1)
 		return;
-	vkDisableDispatch();
-	vkSpinLock(heap->lock);
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(heap->lock);
 	physical = fromWindow((uint32_t)memory, size, window);
-	if (window == VK_WINDOW_RAW)
+	if (window == VNZ_KERNEL_WINDOW_RAW)
 		physical = (uint32_t)memory;
-	vkPoolGive(&heap->pool, vkPhysicalToPublic(physical), size, mode);
-	vkSpinUnlock(heap->lock);
-	vkEnableDispatch();
+	vnzKernelPoolGive(&heap->pool, vnzKernelPhysicalToPublic(physical), size, mode);
+	vnzKernelSpinUnlock(heap->lock);
+	vnzKernelEnableDispatch();
 }
 
 /*
@@ -358,16 +359,16 @@ void vkPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignme
  */
 
 /* the heap holding [address, address + size) */
-VkHeap *vkHeapFind(uint32_t address, uint32_t size)
+VnzKernelHeap *vnzKernelHeapFind(uint32_t address, uint32_t size)
 {
 	uint32_t end = address + size;
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (size == 0)
 		return NULL;
-	vkDisableDispatch();
-	vkTakeSemaphore(heapSemaphore);
-	heap = g_vkHeapTree;
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(heapSemaphore);
+	heap = g_vnzKernelHeapTree;
 	while (heap) {
 		if (address >= heap->base && heap->base + heap->size >= end)
 			break;
@@ -378,19 +379,19 @@ VkHeap *vkHeapFind(uint32_t address, uint32_t size)
 		else
 			heap = NULL;
 	}
-	vkGiveSemaphore(heapSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(heapSemaphore);
+	vnzKernelEnableDispatch();
 	return heap;
 }
 
 /* Add a heap for [base, base + size); returns it, or NULL when it overlaps one. */
-static VkHeap *heapInsert(uint32_t base, uint32_t size, VkHeap *heap)
+static VnzKernelHeap *heapInsert(uint32_t base, uint32_t size, VnzKernelHeap *heap)
 {
-	VkHeap **link = &g_vkHeapTree, *at;
-	VkHeap *result = heap;
+	VnzKernelHeap **link = &g_vnzKernelHeapTree, *at;
+	VnzKernelHeap *result = heap;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(heapSemaphore);
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(heapSemaphore);
 	while ((at = *link) != NULL) {
 		if (base < at->base) {
 			if (at->base < base + size) {
@@ -412,19 +413,19 @@ static VkHeap *heapInsert(uint32_t base, uint32_t size, VkHeap *heap)
 	heap->left = NULL;
 	*link = heap;
 out:
-	vkGiveSemaphore(heapSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(heapSemaphore);
+	vnzKernelEnableDispatch();
 	return result;
 }
 
 /* Take a heap out of the tree. Returns 0, or -1 when it is not there. */
-static int32_t heapRemove(uint32_t base, uint32_t size, VkHeap *heap)
+static int32_t heapRemove(uint32_t base, uint32_t size, VnzKernelHeap *heap)
 {
-	VkHeap **link = &g_vkHeapTree, *at, *rightmost;
+	VnzKernelHeap **link = &g_vnzKernelHeapTree, *at, *rightmost;
 	int32_t result = -1;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(heapSemaphore);
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(heapSemaphore);
 	while ((at = *link) != NULL && at != heap) {
 		if (base < at->base)
 			link = &at->left;
@@ -447,44 +448,46 @@ static int32_t heapRemove(uint32_t base, uint32_t size, VkHeap *heap)
 		}
 		result = 0;
 	}
-	vkGiveSemaphore(heapSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(heapSemaphore);
+	vnzKernelEnableDispatch();
 	return result;
 }
 
 /* a heap's header (0x40 bytes) and its context (0x100), from the system heap */
-static VkHeap *heapHeaderAllocate(void)
+static VnzKernelHeap *heapHeaderAllocate(void)
 {
-	VkHeap *system = vkSystemHeap();
-	VkHeap *heap;
+	VnzKernelHeap *system = vnzKernelSystemHeap();
+	VnzKernelHeap *heap;
 	void *context;
 
-	heap = vkHeapAllocate(system, 0x40, 0x40);
+	heap = vnzKernelHeapAllocate(system, 0x40, 0x40);
 	if (heap == NULL)
 		return NULL;
-	context = vkHeapAllocate(system, 0x100, 0x100);
+	context = vnzKernelHeapAllocate(system, 0x100, 0x100);
 	if (context == NULL) {
-		vkHeapFree(system, heap, 0x40, 0x40);
+		vnzKernelHeapFree(system, heap, 0x40, 0x40);
 		return NULL;
 	}
-	heap = (VkHeap *)vkPhysicalToPublic((uint32_t)heap);
-	heap->context = (void *)vkPhysicalToPublic((uint32_t)context);
+	heap = (VnzKernelHeap *)vnzKernelPhysicalToPublic((uint32_t)heap);
+	heap->context = (void *)vnzKernelPhysicalToPublic((uint32_t)context);
 	return heap;
 }
 
-static void heapHeaderFree(VkHeap *heap)
+static void heapHeaderFree(VnzKernelHeap *heap)
 {
-	VkHeap *system = vkSystemHeap();
+	VnzKernelHeap *system = vnzKernelSystemHeap();
 
-	vkHeapFree(system, (void *)vkPublicToPhysical((uint32_t)heap->context), 0x100, 0x100);
-	vkHeapFree(system, (void *)vkPublicToPhysical((uint32_t)heap), 0x40, 0x40);
+	vnzKernelHeapFree(system, (void *)vnzKernelPublicToPhysical((uint32_t)heap->context), 0x100,
+		0x100);
+	vnzKernelHeapFree(system, (void *)vnzKernelPublicToPhysical((uint32_t)heap), 0x40, 0x40);
 }
 
 /* Create a heap on [base, base + size) with its own functions. Returns it, or NULL. */
-VkHeap *vkHeapCreate(uint32_t base, uint32_t size, VkHeapCreate create, VkHeapDelete delete,
-	VkHeapAllocate allocate, VkHeapFree free)
+VnzKernelHeap *vnzKernelHeapCreate(uint32_t base, uint32_t size, VnzKernelHeapCreate create,
+	VnzKernelHeapDelete delete,
+	VnzKernelHeapAllocate allocate, VnzKernelHeapFree free)
 {
-	VkHeap *heap = heapHeaderAllocate();
+	VnzKernelHeap *heap = heapHeaderAllocate();
 
 	if (heap == NULL)
 		return NULL;
@@ -506,133 +509,134 @@ fail:
 	return NULL;
 }
 
-void vkHeapDelete(VkHeap *heap)
+void vnzKernelHeapDelete(VnzKernelHeap *heap)
 {
 	heap->delete(heap->context, heap->base, heap->size);
 	heapRemove(heap->base, heap->size, heap);
 	heapHeaderFree(heap);
 }
 
-void *vkHeapContext(VkHeap *heap)
+void *vnzKernelHeapContext(VnzKernelHeap *heap)
 {
 	return heap->context;
 }
 
 /* A heap on [base, base + size) of the kernel's own kind. */
-VkHeap *vkHeapCreatePool(uint32_t base, uint32_t size)
+VnzKernelHeap *vnzKernelHeapCreatePool(uint32_t base, uint32_t size)
 {
-	return vkHeapCreate(base, size, vkPoolHeapCreate, vkPoolHeapDelete, vkPoolHeapAllocate,
-		vkPoolHeapFree);
+	return vnzKernelHeapCreate(base, size, vnzKernelPoolHeapCreate, vnzKernelPoolHeapDelete,
+		vnzKernelPoolHeapAllocate,
+		vnzKernelPoolHeapFree);
 }
 
-void vkHeapDeletePool(VkHeap *heap)
+void vnzKernelHeapDeletePool(VnzKernelHeap *heap)
 {
-	vkHeapDelete(heap);
+	vnzKernelHeapDelete(heap);
 }
 
-void *vkHeapAllocateStack(VkHeap *heap, uint32_t size)
+void *vnzKernelHeapAllocateStack(VnzKernelHeap *heap, uint32_t size)
 {
-	return heap->allocate(heap->context, size, 0x40, VK_WINDOW_PHYSICAL);
+	return heap->allocate(heap->context, size, 0x40, VNZ_KERNEL_WINDOW_PHYSICAL);
 }
 
-void *vkHeapAllocatePublic(VkHeap *heap, uint32_t size)
+void *vnzKernelHeapAllocatePublic(VnzKernelHeap *heap, uint32_t size)
 {
-	return heap->allocate(heap->context, size, 0x40, VK_WINDOW_PUBLIC);
+	return heap->allocate(heap->context, size, 0x40, VNZ_KERNEL_WINDOW_PUBLIC);
 }
 
-void *vkHeapAllocateUncached(VkHeap *heap, uint32_t size)
+void *vnzKernelHeapAllocateUncached(VnzKernelHeap *heap, uint32_t size)
 {
-	return heap->allocate(heap->context, size, 0x100, VK_WINDOW_UNCACHED);
+	return heap->allocate(heap->context, size, 0x100, VNZ_KERNEL_WINDOW_UNCACHED);
 }
 
-void *vkHeapAllocate(VkHeap *heap, uint32_t size, uint32_t alignment)
+void *vnzKernelHeapAllocate(VnzKernelHeap *heap, uint32_t size, uint32_t alignment)
 {
-	return heap->allocate(heap->context, size, alignment, VK_WINDOW_RAW);
+	return heap->allocate(heap->context, size, alignment, VNZ_KERNEL_WINDOW_RAW);
 }
 
 /* the heap that holds memory: heap itself, or the one the tree finds */
-static VkHeap *heapOwner(VkHeap *heap, uint32_t address, uint32_t size)
+static VnzKernelHeap *heapOwner(VnzKernelHeap *heap, uint32_t address, uint32_t size)
 {
 	if (address >= heap->base && heap->base + heap->size >= address + size)
 		return heap;
-	return vkHeapFind(address, size);
+	return vnzKernelHeapFind(address, size);
 }
 
-void vkHeapFreeStack(VkHeap *heap, void *memory, uint32_t size)
+void vnzKernelHeapFreeStack(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	VkHeap *owner = heapOwner(heap, (uint32_t)memory, size);
+	VnzKernelHeap *owner = heapOwner(heap, (uint32_t)memory, size);
 
 	if (owner)
-		owner->free(owner->context, memory, size, 0x40, VK_WINDOW_PHYSICAL);
+		owner->free(owner->context, memory, size, 0x40, VNZ_KERNEL_WINDOW_PHYSICAL);
 }
 
-void vkHeapFreePublic(VkHeap *heap, void *memory, uint32_t size)
+void vnzKernelHeapFreePublic(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	VkHeap *owner = heapOwner(heap, vkPublicToPhysical((uint32_t)memory), size);
+	VnzKernelHeap *owner = heapOwner(heap, vnzKernelPublicToPhysical((uint32_t)memory), size);
 
 	if (owner)
-		owner->free(owner->context, memory, size, 0x40, VK_WINDOW_PUBLIC);
+		owner->free(owner->context, memory, size, 0x40, VNZ_KERNEL_WINDOW_PUBLIC);
 }
 
-void vkHeapFreeUncached(VkHeap *heap, void *memory, uint32_t size)
+void vnzKernelHeapFreeUncached(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	VkHeap *owner = heapOwner(heap, vkUncachedToPhysical((uint32_t)memory), size);
+	VnzKernelHeap *owner = heapOwner(heap, vnzKernelUncachedToPhysical((uint32_t)memory), size);
 
 	if (owner)
-		owner->free(owner->context, memory, size, 0x100, VK_WINDOW_UNCACHED);
+		owner->free(owner->context, memory, size, 0x100, VNZ_KERNEL_WINDOW_UNCACHED);
 }
 
-void vkHeapFree(VkHeap *heap, void *memory, uint32_t size, uint32_t alignment)
+void vnzKernelHeapFree(VnzKernelHeap *heap, void *memory, uint32_t size, uint32_t alignment)
 {
-	VkHeap *owner = heapOwner(heap, (uint32_t)memory, size);
+	VnzKernelHeap *owner = heapOwner(heap, (uint32_t)memory, size);
 
 	if (owner)
-		owner->free(owner->context, memory, size, alignment, VK_WINDOW_RAW);
+		owner->free(owner->context, memory, size, alignment, VNZ_KERNEL_WINDOW_RAW);
 }
 
-VkHeap *vkSystemHeap(void)
+VnzKernelHeap *vnzKernelSystemHeap(void)
 {
-	return &g_vkSystemHeap;
+	return &g_vnzKernelSystemHeap;
 }
 
 /* the current thread's heap */
-VkHeap *vkCurrentHeap(void)
+VnzKernelHeap *vnzKernelCurrentHeap(void)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
-	vkDisableDispatch();
-	heap = g_vkCores[vnzCoreIndex()].current->heap;
-	vkEnableDispatch();
+	vnzKernelDisableDispatch();
+	heap = g_vnzKernelCores[vnzCoreIndex()].current->heap;
+	vnzKernelEnableDispatch();
 	return heap;
 }
 
-VkHeap *vkThreadHeap(VkThread *thread)
+VnzKernelHeap *vnzKernelThreadHeap(VnzKernelThread *thread)
 {
 	return thread->heap;
 }
 
 /* The pools and the system heap (the primary core, at boot). */
-void vkHeapInitialize(uint32_t primary)
+void vnzKernelHeapInitialize(uint32_t primary)
 {
 	uint32_t base, size;
 
 	if (!primary)
 		return;
-	g_vkHeapTree = NULL;
-	vkGiveSemaphore(heapSemaphore);
+	g_vnzKernelHeapTree = NULL;
+	vnzKernelGiveSemaphore(heapSemaphore);
 
-	base = vkMemoryRegion(VK_MEMORY_POOL1, &size);
-	vkGiveSemaphore(vkSemaphore(VK_SEMAPHORE_POOLS));
-	g_vkPools[0].reserved = 0;
-	g_vkPools[0].head = NULL;
+	base = vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_POOL1, &size);
+	vnzKernelGiveSemaphore(vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_POOLS));
+	g_vnzKernelPools[0].reserved = 0;
+	g_vnzKernelPools[0].head = NULL;
 	kernelPoolInitialize(0, base, base + size);
 
-	base = vkMemoryRegion(VK_MEMORY_POOL0, &size);
-	g_vkSystemHeap.allocate = systemHeapAllocate;
-	g_vkSystemHeap.free = systemHeapFree;
-	g_vkSystemHeap.delete = systemHeapDelete;
-	g_vkSystemHeap.create = systemHeapCreate;
-	heapInsert(base, size, &g_vkSystemHeap);
+	base = vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_POOL0, &size);
+	g_vnzKernelSystemHeap.allocate = systemHeapAllocate;
+	g_vnzKernelSystemHeap.free = systemHeapFree;
+	g_vnzKernelSystemHeap.delete = systemHeapDelete;
+	g_vnzKernelSystemHeap.create = systemHeapCreate;
+	heapInsert(base, size, &g_vnzKernelSystemHeap);
 	systemHeapCreate(NULL, base, size);
 }
 
@@ -641,7 +645,7 @@ void vkHeapInitialize(uint32_t primary)
  */
 
 /* the index of id in the map's sorted regions, or -1 */
-static int32_t regionIndex(const VkMemoryRegion *regions, uint32_t count, uint32_t id)
+static int32_t regionIndex(const VnzKernelMemoryRegion *regions, uint32_t count, uint32_t id)
 {
 	int32_t low = 0, high = count - 1, middle;
 
@@ -660,9 +664,9 @@ static int32_t regionIndex(const VkMemoryRegion *regions, uint32_t count, uint32
 }
 
 /* A memory region's base, and its size; 0 when the map has no such region. */
-uint32_t vkMemoryRegion(uint32_t id, uint32_t *size)
+uint32_t vnzKernelMemoryRegion(uint32_t id, uint32_t *size)
 {
-	const VkMemoryMap *map = VK_CONFIGURATION->memory;
+	const VnzKernelMemoryMap *map = VNZ_KERNEL_CONFIGURATION->memory;
 	int32_t index = regionIndex(map->regions, map->count, id);
 
 	if (index == -1) {

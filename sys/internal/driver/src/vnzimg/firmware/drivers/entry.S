@@ -2,36 +2,36 @@
  * What C cannot express of the exception hooks (drivers/exception.c): the
  * jump words a hooked vector slot takes, the entries that save the state the
  * exception interrupted into this core's frame, run the hook and restore it,
- * and vkExceptionResume.
+ * and vnzKernelExceptionResume.
  *
  * Control registers 30 and 31 (the debug and the normal vector bases) have
  * no assembler name.
  */
 #include <vnz.h>
 
-#define VK_EXCEPTION_DEBUG	6
-#define VK_EXCEPTION_STATE	0xc0		/* sizeof(VkExceptionState) */
-#define VK_CONTROL(n)		(64 + (n) * 4)	/* VkExceptionState.control[n] */
-#define HOOKS_FRAMES		0		/* VkExceptionHooks.frames */
-#define HOOKS_HANDLERS		32		/* VkExceptionHooks.handlers */
-#define HOOKS_KINDS		68		/* VkExceptionHooks.kinds */
+#define VNZ_KERNEL_EXCEPTION_DEBUG	6
+#define VNZ_KERNEL_EXCEPTION_STATE	0xc0		/* sizeof(VnzKernelExceptionState) */
+#define VNZ_KERNEL_CONTROL(n)		(64 + (n) * 4)	/* VnzKernelExceptionState.control[n] */
+#define HOOKS_FRAMES		0		/* VnzKernelExceptionHooks.frames */
+#define HOOKS_HANDLERS		32		/* VnzKernelExceptionHooks.handlers */
+#define HOOKS_KINDS		68		/* VnzKernelExceptionHooks.kinds */
 
 	.section .exception.text, "ax"
 	.p2align 2
 
 /*
- * The vector words: g_vkExceptionSaved[kind] receives what the hooked slot
- * held, g_vkExceptionJumps[kind] is the word a hooked slot gets. The words
+ * The vector words: g_vnzKernelExceptionSaved[kind] receives what the hooked slot
+ * held, g_vnzKernelExceptionJumps[kind] is the word a hooked slot gets. The words
  * of unused kinds jump to themselves.
  */
-	.global	g_vkExceptionSaved
-g_vkExceptionSaved:
+	.global	g_vnzKernelExceptionSaved
+g_vnzKernelExceptionSaved:
 	.irp	kind, 0, 1, 2, 3, 4, 5, 6, 7, 8
 0:	jmp	0b
 	.endr
 
-	.global	g_vkExceptionJumps
-g_vkExceptionJumps:
+	.global	g_vnzKernelExceptionJumps
+g_vnzKernelExceptionJumps:
 0:	jmp	0b
 	jmp	exceptionNmi
 	jmp	exceptionReservedInstruction
@@ -54,7 +54,7 @@ name:					\
 	EXCEPTION_ENTRY(exceptionReservedInstruction, 2)
 	EXCEPTION_ENTRY(exceptionZeroDivide, 3)
 	EXCEPTION_ENTRY(exceptionBreak, 4)
-	EXCEPTION_ENTRY(exceptionDebug, VK_EXCEPTION_DEBUG)
+	EXCEPTION_ENTRY(exceptionDebug, VNZ_KERNEL_EXCEPTION_DEBUG)
 
 /*
  * $1 = the kind, the interrupted $1 on the stack. Record the kind, save
@@ -68,16 +68,16 @@ exceptionEntry:
 	ldc	$0, $id
 	srl	$0, 16
 	and3	$0, $0, 7
-	movh	$2, %hi(g_vkExceptionHooks + HOOKS_KINDS)
-	add3	$2, $2, %lo(g_vkExceptionHooks + HOOKS_KINDS)
+	movh	$2, %hi(g_vnzKernelExceptionHooks + HOOKS_KINDS)
+	add3	$2, $2, %lo(g_vnzKernelExceptionHooks + HOOKS_KINDS)
 	add3	$2, $2, $0
 	sb	$1, ($2)
-	movh	$2, %hi(g_vkExceptionHooks + HOOKS_FRAMES)
-	add3	$2, $2, %lo(g_vkExceptionHooks + HOOKS_FRAMES)
+	movh	$2, %hi(g_vnzKernelExceptionHooks + HOOKS_FRAMES)
+	add3	$2, $2, %lo(g_vnzKernelExceptionHooks + HOOKS_FRAMES)
 	sll	$0, 2
 	add3	$2, $2, $0
 	lw	$2, ($2)
-	add3	$2, $2, -VK_EXCEPTION_STATE
+	add3	$2, $2, -VNZ_KERNEL_EXCEPTION_STATE
 
 	lw	$0, ($sp)
 	sw	$0, 0($2)
@@ -100,7 +100,7 @@ exceptionEntry:
 	add3	$0, $sp, 12
 	sw	$0, 60($2)
 
-#define SAVE(reg, n)	ldc $0, reg; sw $0, VK_CONTROL(n)($2)
+#define SAVE(reg, n)	ldc $0, reg; sw $0, VNZ_KERNEL_CONTROL(n)($2)
 	SAVE($pc, VNZ_CR_PC)
 	SAVE($lp, VNZ_CR_LP)
 	SAVE($sar, VNZ_CR_SAR)
@@ -121,7 +121,7 @@ exceptionEntry:
 	SAVE($cfg, VNZ_CR_CFG)
 	SAVE($vid, VNZ_CR_VID)
 	SAVE($npc, VNZ_CR_NPC)
-	bnei	$1, VK_EXCEPTION_DEBUG, 1f
+	bnei	$1, VNZ_KERNEL_EXCEPTION_DEBUG, 1f
 	SAVE($dbg, VNZ_CR_DBG)
 	SAVE($depc, VNZ_CR_DEPC)
 1:	SAVE($opt, VNZ_CR_OPT)
@@ -131,8 +131,8 @@ exceptionEntry:
 	SAVE(31, VNZ_CR_RES31)
 
 	mov	$sp, $2
-	movh	$2, %hi(g_vkExceptionHooks + HOOKS_HANDLERS)
-	add3	$2, $2, %lo(g_vkExceptionHooks + HOOKS_HANDLERS)
+	movh	$2, %hi(g_vnzKernelExceptionHooks + HOOKS_HANDLERS)
+	add3	$2, $2, %lo(g_vnzKernelExceptionHooks + HOOKS_HANDLERS)
 	sll	$1, 2
 	add3	$2, $2, $1
 	lw	$2, ($2)
@@ -142,24 +142,24 @@ exceptionEntry:
 	ldc	$0, $id
 	srl	$0, 16
 	and3	$0, $0, 7
-	movh	$2, %hi(g_vkExceptionHooks)
-	add3	$1, $2, %lo(g_vkExceptionHooks + HOOKS_KINDS)
-	add3	$2, $2, %lo(g_vkExceptionHooks + HOOKS_FRAMES)
+	movh	$2, %hi(g_vnzKernelExceptionHooks)
+	add3	$1, $2, %lo(g_vnzKernelExceptionHooks + HOOKS_KINDS)
+	add3	$2, $2, %lo(g_vnzKernelExceptionHooks + HOOKS_FRAMES)
 	add3	$1, $1, $0
 	lb	$1, ($1)
 	sll	$0, 2
 	add3	$2, $2, $0
 	lw	$2, ($2)
-	add3	$2, $2, -VK_EXCEPTION_STATE
+	add3	$2, $2, -VNZ_KERNEL_EXCEPTION_STATE
 
-#define RESTORE(base, reg, n)	lw $0, VK_CONTROL(n)(base); stc $0, reg
+#define RESTORE(base, reg, n)	lw $0, VNZ_KERNEL_CONTROL(n)(base); stc $0, reg
 #define RESTORE_STATE(base, kind)				\
 	RESTORE(base, 31, VNZ_CR_RES31);			\
 	RESTORE(base, 30, VNZ_CR_RES30);			\
 	RESTORE(base, $ccfg, VNZ_CR_CCFG);			\
 	RESTORE(base, $rcfg, VNZ_CR_RCFG);			\
 	RESTORE(base, $opt, VNZ_CR_OPT);			\
-	bnei	kind, VK_EXCEPTION_DEBUG, 1f;			\
+	bnei	kind, VNZ_KERNEL_EXCEPTION_DEBUG, 1f;		\
 	RESTORE(base, $depc, VNZ_CR_DEPC);			\
 	RESTORE(base, $dbg, VNZ_CR_DBG);			\
 1:	RESTORE(base, $npc, VNZ_CR_NPC);			\
@@ -198,7 +198,7 @@ exceptionEntry:
 	lw	$0, 0(base)
 
 	RESTORE_STATE($2, $1)
-	beqi	$1, VK_EXCEPTION_DEBUG, 2f
+	beqi	$1, VNZ_KERNEL_EXCEPTION_DEBUG, 2f
 	lw	$1, 4($2)
 	lw	$2, 8($2)
 	reti
@@ -207,12 +207,12 @@ exceptionEntry:
 	dret
 
 /*
- * vkExceptionResume(state, target, kind): leave a hook for target with the
+ * vnzKernelExceptionResume(state, target, kind): leave a hook for target with the
  * state restored, its $0 in $tmp (target is the vector word the hook
  * replaced: what it jumps to takes $0 from $tmp).
  */
-	.global	vkExceptionResume
-vkExceptionResume:
+	.global	vnzKernelExceptionResume
+vnzKernelExceptionResume:
 	RESTORE_STATE($1, $3)
 	stc	$0, $tmp
 	mov	$0, $2

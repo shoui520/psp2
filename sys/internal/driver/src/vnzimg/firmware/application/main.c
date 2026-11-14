@@ -120,7 +120,7 @@ static void deleteThreads(int32_t *threads)
 		;
 	for (i = 0; i < THREADS; i++) {
 		if (threads[i] != -1) {
-			vnzThreadDelete((VkThread *)threads[i]);
+			vnzThreadDelete((VnzKernelThread *)threads[i]);
 			threads[i] = -1;
 		}
 	}
@@ -213,11 +213,11 @@ static uint32_t doorbellInterrupt(uint32_t argument, uint32_t argument2)
  */
 static void interruptThread(uint32_t argument, uint32_t argument2)
 {
-	VkThread **threads = (VkThread **)argument;
-	VkThread *parent = (VkThread *)argument2;
-	VkInterruptHandler *interrupt = NULL;
+	VnzKernelThread **threads = (VnzKernelThread **)argument;
+	VnzKernelThread *parent = (VnzKernelThread *)argument2;
+	VnzKernelInterruptHandler *interrupt = NULL;
 	Doorbells *doorbells = NULL;
-	VkPowerHook *power;
+	VnzKernelPowerHook *power;
 	uint32_t flags, slots, slot, size, base, i;
 
 	power = vnzPowerCallbackCreate(powerCallback, 0);
@@ -225,10 +225,10 @@ static void interruptThread(uint32_t argument, uint32_t argument2)
 		goto exit;
 	vnzPowerCallbackRegister(power);
 
-	base = vnzMemoryRegion(VK_MEMORY_HEAP, &size);
+	base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_HEAP, &size);
 	if (vnzHeapCreatePool(base, size) == NULL)
 		goto release;
-	base = vnzMemoryRegion(VK_MEMORY_WORK, &size);
+	base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_WORK, &size);
 	if (vnzHeapCreatePool(base, size) == NULL)
 		goto release;
 	doorbells = vnzAllocateStack(sizeof(Doorbells));
@@ -274,9 +274,9 @@ exit:
 		vnzThreadSetFlags(threads[i], FLAG_EXIT);
 	if (doorbells)
 		vnzFreeStack(doorbells, sizeof(Doorbells));
-	base = vnzMemoryRegion(VK_MEMORY_WORK, &size);
+	base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_WORK, &size);
 	vnzHeapDeletePool(vnzHeapFind(base, size));
-	base = vnzMemoryRegion(VK_MEMORY_HEAP, &size);
+	base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_HEAP, &size);
 	vnzHeapDeletePool(vnzHeapFind(base, size));
 	if (power) {
 		vnzPowerCallbackUnregister(power);
@@ -448,19 +448,19 @@ static const RpcFunction g_systemFunctions[0x20] = {
  * the VThread resources, the cores the VThreads run on.
  */
 #define HEAP_SYSTEM	0
-#define HEAP_KERNEL	1	/* VK_MEMORY_HEAP's */
-#define HEAP_WORK	2	/* VK_MEMORY_WORK's */
+#define HEAP_KERNEL	1	/* VNZ_KERNEL_MEMORY_HEAP's */
+#define HEAP_WORK	2	/* VNZ_KERNEL_MEMORY_WORK's */
 
-static VkHeap *heapOf(uint32_t kind)
+static VnzKernelHeap *heapOf(uint32_t kind)
 {
 	uint32_t base, size;
 
 	if (kind == HEAP_SYSTEM)
 		return vnzSystemHeap();
 	if (kind == HEAP_KERNEL)
-		base = vnzMemoryRegion(VK_MEMORY_HEAP, &size);
+		base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_HEAP, &size);
 	else if (kind == HEAP_WORK)
-		base = vnzMemoryRegion(VK_MEMORY_WORK, &size);
+		base = vnzMemoryRegion(VNZ_KERNEL_MEMORY_WORK, &size);
 	else
 		return NULL;
 	return vnzHeapFind(base, size);
@@ -469,7 +469,7 @@ static VkHeap *heapOf(uint32_t kind)
 /* memory for the ARM: neither cache holds any of it */
 uint32_t rpcAllocate(uint32_t kind, uint32_t size)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 	uint32_t memory;
 
 	if (kind > HEAP_WORK)
@@ -486,7 +486,7 @@ uint32_t rpcAllocate(uint32_t kind, uint32_t size)
 
 int32_t rpcFree(uint32_t kind, uint32_t memory, uint32_t size)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (kind > HEAP_WORK)
 		return -1003;
@@ -499,7 +499,7 @@ int32_t rpcFree(uint32_t kind, uint32_t memory, uint32_t size)
 
 uint32_t rpcAllocatePublic(uint32_t kind, uint32_t size)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (kind > HEAP_WORK)
 		return 0;
@@ -511,7 +511,7 @@ uint32_t rpcAllocatePublic(uint32_t kind, uint32_t size)
 
 int32_t rpcFreePublic(uint32_t kind, uint32_t memory, uint32_t size)
 {
-	VkHeap *heap;
+	VnzKernelHeap *heap;
 
 	if (kind > HEAP_WORK)
 		return -1003;
@@ -552,14 +552,14 @@ int32_t rpcVThreadResourceDelete(uint32_t holder);
 
 int32_t rpcVThreadResourceCreate(uint32_t holder)
 {
-	VkVThreadResource **resource;
+	VnzKernelVThreadResource **resource;
 
 	if (holder == 0)
 		return -1001;
-	resource = (VkVThreadResource **)enterMemoryAccessProtocol(holder, 4);
+	resource = (VnzKernelVThreadResource **)enterMemoryAccessProtocol(holder, 4);
 	if (resource) {
 		if (*resource == NULL) {
-			*resource = vkVThreadResourceCreate(0x4000);
+			*resource = vnzKernelVThreadResourceCreate(0x4000);
 			if (*resource == NULL)
 				goto fail;
 		}
@@ -573,15 +573,15 @@ fail:
 
 int32_t rpcVThreadResourceDelete(uint32_t holder)
 {
-	VkVThreadResource **resource;
+	VnzKernelVThreadResource **resource;
 
 	if (holder == 0)
 		return -1001;
-	resource = (VkVThreadResource **)enterMemoryAccessProtocol(holder, 4);
+	resource = (VnzKernelVThreadResource **)enterMemoryAccessProtocol(holder, 4);
 	if (resource == NULL)
 		return -10001;
 	if (*resource) {
-		vkVThreadResourceDelete(*resource);
+		vnzKernelVThreadResourceDelete(*resource);
 		*resource = NULL;
 	}
 	leaveMemoryAccessProtocol((uint32_t)resource, 4);
@@ -591,22 +591,22 @@ int32_t rpcVThreadResourceDelete(uint32_t holder)
 /* Run the VThreads on the first count cores (at most 7). */
 int32_t rpcVThreadSetCores(uint32_t count)
 {
-	VkCoreEvent *event;
+	VnzKernelCoreEvent *event;
 	uint32_t cores, i;
 
-	event = vkVThreadCoreEventCreate(vnzThreadCurrent(), 1);
+	event = vnzKernelVThreadCoreEventCreate(vnzThreadCurrent(), 1);
 	if (event == NULL)
 		return 0;
-	vkVThreadCoreEventRegister(event);
+	vnzKernelVThreadCoreEventRegister(event);
 	cores = 0;
 	for (i = 0; i < (count < 7 ? count : 7); i++)
 		cores |= 1 << i;
-	if (vkVThreadSetCores(vkVThreadCores(), cores) != 0)
+	if (vnzKernelVThreadSetCores(vnzKernelVThreadCores(), cores) != 0)
 		return 0;
 	vnzThreadWaitFlags(1);
 	if (event) {
-		vkVThreadCoreEventUnregister(event);
-		vkVThreadCoreEventDelete(event);
+		vnzKernelVThreadCoreEventUnregister(event);
+		vnzKernelVThreadCoreEventDelete(event);
 	}
 	if (count)
 		setCoreCount(count);
@@ -638,7 +638,7 @@ static void applicationMain(void)
 	if (threads == NULL)
 		return;
 	if (createThreads(threads) >= 0) {
-		vnzThreadStart((VkThread *)threads[INTERRUPT_THREAD], (uint32_t)threads,
+		vnzThreadStart((VnzKernelThread *)threads[INTERRUPT_THREAD], (uint32_t)threads,
 			(uint32_t)vnzThreadCurrent());
 		vnzThreadWaitFlags(FLAG_DOORBELL);
 		setState(STATE_READY);
@@ -655,11 +655,11 @@ void applicationStart(void)
 	applicationMain();
 }
 
-const VkModule g_vkApplicationModule VK_SECTION(".application.module") = {
-	.magic = VK_MODULE_APPLICATION,
+const VnzKernelModule g_vnzKernelApplicationModule VNZ_KERNEL_SECTION(".application.module") = {
+	.magic = VNZ_KERNEL_MODULE_APPLICATION,
 	.self = VNZ_PHYSICAL_OF(0x811000),
 	.size = 0x115b14,
 	.entry = applicationStart,
-	.attributes = VK_MODULE_ATTRIBUTES,
-	.version = VK_MODULE_VERSION,
+	.attributes = VNZ_KERNEL_MODULE_ATTRIBUTES,
+	.version = VNZ_KERNEL_MODULE_VERSION,
 };

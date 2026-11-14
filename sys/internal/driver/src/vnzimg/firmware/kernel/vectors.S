@@ -3,28 +3,28 @@
  * interrupt entries that save the interrupted registers, the thread switch.
  *
  * The vector table is kept at +0x500 in the image and copied to the image's
- * start, the vector base, by vkInterruptsInitialize.
+ * start, the vector base, by vnzKernelInterruptsInitialize.
  */
 #include <vnz.h>
 
-#define VK_BOOT_STACK		0x200		/* each core's, until its idle thread runs */
-#define VK_IDLE_THREAD_SIZE	0x80
-#define VK_THREAD_DISPATCH	16		/* VkThread.savedDispatchDisable */
-#define VK_THREAD_SP		24		/* VkThread.savedSp */
-#define VK_THREAD_STACK		64		/* VkThread.stack */
-#define VK_THREAD_STACK_SIZE	68		/* VkThread.stackSize */
-#define VK_CORE_DISPATCH	24		/* VkCore.dispatchDisable */
-#define VK_CORE_RESCHEDULE	9		/* VkCore.reschedulePending */
-#define VK_CORE_IN_KERNEL	12		/* VkCore.inKernel */
-#define VK_CORE_EVENTS		16		/* VkCore.eventsHead */
-#define VK_CORE_SIZE		0x40
+#define VNZ_KERNEL_BOOT_STACK		0x200	/* each core's, until its idle thread runs */
+#define VNZ_KERNEL_IDLE_THREAD_SIZE	0x80
+#define VNZ_KERNEL_THREAD_DISPATCH	16		/* VnzKernelThread.savedDispatchDisable */
+#define VNZ_KERNEL_THREAD_SP		24		/* VnzKernelThread.savedSp */
+#define VNZ_KERNEL_THREAD_STACK		64		/* VnzKernelThread.stack */
+#define VNZ_KERNEL_THREAD_STACK_SIZE	68		/* VnzKernelThread.stackSize */
+#define VNZ_KERNEL_CORE_DISPATCH	24		/* VnzKernelCore.dispatchDisable */
+#define VNZ_KERNEL_CORE_RESCHEDULE	9		/* VnzKernelCore.reschedulePending */
+#define VNZ_KERNEL_CORE_IN_KERNEL	12		/* VnzKernelCore.inKernel */
+#define VNZ_KERNEL_CORE_EVENTS		16		/* VnzKernelCore.eventsHead */
+#define VNZ_KERNEL_CORE_SIZE		0x40
 
 	.section .vectors, "ax"
-	.global	vkVectors
-	.global	vkVectorsEnd
+	.global	vnzKernelVectors
+	.global	vnzKernelVectorsEnd
 	.p2align 2
-vkVectors:
-	jmp	vkReset				/* reset */
+vnzKernelVectors:
+	jmp	vnzKernelReset				/* reset */
 	jmp	exceptionNmi			/* NMI */
 	jmp	exceptionReservedInstruction	/* reserved instruction */
 	jmp	exceptionZeroDivide		/* zero divide */
@@ -35,13 +35,13 @@ vkVectors:
 	jmp	exceptionCoprocessor		/* coprocessor */
 	.word	0, 0, 0
 	.rept	17				/* interrupts 0-16 */
-	jmp	vkInterruptEntry
+	jmp	vnzKernelInterruptEntry
 	.endr
-	jmp	vkDoorbellEntry			/* interrupt 17: another core's doorbell */
+	jmp	vnzKernelDoorbellEntry			/* interrupt 17: another core's doorbell */
 	.rept	6				/* interrupts 18-23 */
-	jmp	vkInterruptEntry
+	jmp	vnzKernelInterruptEntry
 	.endr
-vkVectorsEnd:
+vnzKernelVectorsEnd:
 
 	.text
 	.p2align 1
@@ -50,8 +50,8 @@ vkVectorsEnd:
  * Reset: clear the registers and the accumulators, take this core's boot stack
  * (it becomes the idle thread's), and start the kernel.
  */
-	.global	vkReset
-vkReset:
+	.global	vnzKernelReset
+vnzKernelReset:
 	mov	$0, 0
 	mov	$1, $0
 	mov	$2, $0
@@ -87,9 +87,9 @@ vkReset:
 	cmovc	$acc1_5, $0
 	cmovc	$acc1_6, $0
 	cmovc	$acc1_7, $0
-2:	movu	$5, VK_BOOT_STACK
-	movh	$4, %hi(g_vkBootStacks)
-	add3	$4, $4, %lo(g_vkBootStacks)
+2:	movu	$5, VNZ_KERNEL_BOOT_STACK
+	movh	$4, %hi(g_vnzKernelBootStacks)
+	add3	$4, $4, %lo(g_vnzKernelBootStacks)
 	ldc	$0, $id
 	sra	$0, 16
 	and3	$0, $0, 7
@@ -97,19 +97,19 @@ vkReset:
 	sll	$9, 9
 	add3	$4, $4, $9
 	add3	$sp, $4, $5
-	movh	$9, %hi(g_vkIdleThreads)
-	add3	$9, $9, %lo(g_vkIdleThreads)
+	movh	$9, %hi(g_vnzKernelIdleThreads)
+	add3	$9, $9, %lo(g_vnzKernelIdleThreads)
 	sll	$0, 7
 	add3	$9, $9, $0
-	sw	$4, VK_THREAD_STACK($9)
-	sw	$5, VK_THREAD_STACK_SIZE($9)
-	movu	$12, vkKernelStart
+	sw	$4, VNZ_KERNEL_THREAD_STACK($9)
+	sw	$5, VNZ_KERNEL_THREAD_STACK_SIZE($9)
+	movu	$12, vnzKernelKernelStart
 	jsr	$12
 3:	bra	3b
 
 /*
  * Exceptions: the number goes to $tmp, then the registers to a frame below the
- * idle thread's saved stack pointer, and the core stops in vkCrash.
+ * idle thread's saved stack pointer, and the core stops in vnzKernelCrash.
  */
 #define EXCEPTION(name, number)		\
 name:					\
@@ -131,8 +131,8 @@ EXCEPTION(exceptionReservedInstruction, 2)
 EXCEPTION(exceptionZeroDivide, 3)
 EXCEPTION(exceptionDsp, 4)
 EXCEPTION(exceptionCoprocessor, 5)
-	.global	vkExceptionTooManyExited
-EXCEPTION(vkExceptionTooManyExited, 16)
+	.global	vnzKernelExceptionTooManyExited
+EXCEPTION(vnzKernelExceptionTooManyExited, 16)
 
 exception:
 	add	$sp, -12
@@ -142,11 +142,11 @@ exception:
 	ldc	$1, $id
 	sra	$1, 16
 	and3	$1, $1, 7
-	movh	$2, %hi(g_vkIdleThreads)
-	add3	$2, $2, %lo(g_vkIdleThreads)
+	movh	$2, %hi(g_vnzKernelIdleThreads)
+	add3	$2, $2, %lo(g_vnzKernelIdleThreads)
 	sll3	$0, $1, 7
 	add3	$2, $2, $0
-	lw	$2, VK_THREAD_SP($2)
+	lw	$2, VNZ_KERNEL_THREAD_SP($2)
 	movh	$0, 0
 	add3	$0, $0, -68
 	add3	$2, $2, $0
@@ -175,11 +175,11 @@ exception:
 	sw	$sp, 60($2)
 	mov	$sp, $2
 	ldc	$3, $tmp
-	jmp	vkCrash				/* (core index, frame, exception) */
+	jmp	vnzKernelCrash				/* (core index, frame, exception) */
 
 /* An interrupt: save the interrupted registers, and dispatch it. */
-	.global	vkInterruptEntry
-vkInterruptEntry:
+	.global	vnzKernelInterruptEntry
+vnzKernelInterruptEntry:
 	add3	$sp, $sp, -96
 	sw	$0, ($sp)
 	sw	$1, 4($sp)
@@ -215,11 +215,11 @@ vkInterruptEntry:
 	ldcb	$1, VNZ_CB_INTERRUPT_STATUS
 	and3	$1, $1, 0xf8
 	srl	$1, 3
-	bsr	vkInterruptDispatch
+	bsr	vnzKernelInterruptDispatch
 	bra	restore
 
-	.global	vkDoorbellEntry
-vkDoorbellEntry:
+	.global	vnzKernelDoorbellEntry
+vnzKernelDoorbellEntry:
 	add3	$sp, $sp, -96
 	sw	$0, ($sp)
 	sw	$1, 4($sp)
@@ -252,7 +252,7 @@ vkDoorbellEntry:
 	sw	$0, 84($sp)
 	ldc	$0, $lp
 	sw	$0, 88($sp)
-	bsr	vkDoorbellDispatch
+	bsr	vnzKernelDoorbellDispatch
 
 restore:
 	lw	$0, 88($sp)
@@ -290,13 +290,13 @@ restore:
 	reti
 
 /*
- * vkSwitchContext(core, current, next): save current's callee-saved registers
+ * vnzKernelSwitchContext(core, current, next): save current's callee-saved registers
  * and dispatch lock on its stack, and continue next where it switched out.
  */
-	.global	vkSwitchContext
-vkSwitchContext:
-	lw	$9, VK_CORE_DISPATCH($1)
-	sw	$9, VK_THREAD_DISPATCH($2)
+	.global	vnzKernelSwitchContext
+vnzKernelSwitchContext:
+	lw	$9, VNZ_KERNEL_CORE_DISPATCH($1)
+	sw	$9, VNZ_KERNEL_THREAD_DISPATCH($2)
 	ldc	$0, $lp
 	add	$sp, -24
 	sw	$0, 20($sp)
@@ -305,8 +305,8 @@ vkSwitchContext:
 	sw	$7, 8($sp)
 	sw	$6, 4($sp)
 	sw	$5, ($sp)
-	sw	$sp, VK_THREAD_SP($2)
-	lw	$sp, VK_THREAD_SP($3)
+	sw	$sp, VNZ_KERNEL_THREAD_SP($2)
+	lw	$sp, VNZ_KERNEL_THREAD_SP($3)
 	lw	$5, ($sp)
 	lw	$6, 4($sp)
 	lw	$7, 8($sp)
@@ -314,8 +314,8 @@ vkSwitchContext:
 	lw	$tp, 16($sp)
 	lw	$0, 20($sp)
 	add	$sp, 24
-	lw	$9, VK_THREAD_DISPATCH($3)
-	sw	$9, VK_CORE_DISPATCH($1)
+	lw	$9, VNZ_KERNEL_THREAD_DISPATCH($3)
+	sw	$9, VNZ_KERNEL_CORE_DISPATCH($1)
 	jmp	$0
 
 /* where a new thread starts: entry(argument, argument2), then its exit */
@@ -324,14 +324,14 @@ threadStart:
 	mov	$1, $6
 	mov	$2, $7
 	jsr	$5
-	bsr	vkThreadExit
+	bsr	vnzKernelThreadExit
 
 /*
- * vkInitialFrame(top, entry, argument, argument2): the frame vkSwitchContext
+ * vnzKernelInitialFrame(top, entry, argument, argument2): the frame vnzKernelSwitchContext
  * pops to start a thread at entry; returns its stack pointer.
  */
-	.global	vkInitialFrame
-vkInitialFrame:
+	.global	vnzKernelInitialFrame
+vnzKernelInitialFrame:
 	add	$1, -24
 	movu	$9, threadStart
 	sw	$9, 20($1)
@@ -341,22 +341,22 @@ vkInitialFrame:
 	mov	$0, $1
 	ret
 
-/* vkEndThread(thread, core, idleSp): leave the ending thread's stack, then finish it. */
-	.global	vkEndThread
-vkEndThread:
+/* vnzKernelEndThread(thread, core, idleSp): leave the ending thread's stack, then finish it. */
+	.global	vnzKernelEndThread
+vnzKernelEndThread:
 	mov	$sp, $3
-	jmp	vkThreadFinish
+	jmp	vnzKernelThreadFinish
 
-/* vkCallOnStack(system, resource, top): vkVThreadServe(system, resource) on another stack. */
-	.global	vkCallOnStack
-vkCallOnStack:
+/* vnzKernelCallOnStack(system, resource, top): vnzKernelVThreadServe(system, resource) on another stack. */
+	.global	vnzKernelCallOnStack
+vnzKernelCallOnStack:
 	add	$sp, -8
 	ldc	$0, $lp
 	sw	$0, 4($sp)
 	sw	$5, ($sp)
 	mov	$5, $sp
 	mov	$sp, $3
-	bsr	vkVThreadServe
+	bsr	vnzKernelVThreadServe
 	mov	$sp, $5
 	lw	$5, ($sp)
 	lw	$0, 4($sp)
@@ -364,11 +364,11 @@ vkCallOnStack:
 	jmp	$0
 
 /*
- * vkPowerSuspendCore(thread, core): save the thread to resume here, power the
+ * vnzKernelPowerSuspendCore(thread, core): save the thread to resume here, power the
  * core down, and come back when it is powered up again.
  */
-	.global	vkPowerSuspendCore
-vkPowerSuspendCore:
+	.global	vnzKernelPowerSuspendCore
+vnzKernelPowerSuspendCore:
 	add	$sp, -12
 	ldc	$0, $lp
 	sw	$0, ($sp)
@@ -376,11 +376,11 @@ vkPowerSuspendCore:
 	sw	$6, 8($sp)
 	mov	$5, $1
 	mov	$6, $2
-	bsr	vkModulesSuspend
+	bsr	vnzKernelModulesSuspend
 	mov	$1, $5
 	mov	$2, $6
-	lw	$9, VK_CORE_DISPATCH($2)
-	sw	$9, VK_THREAD_DISPATCH($1)
+	lw	$9, VNZ_KERNEL_CORE_DISPATCH($2)
+	sw	$9, VNZ_KERNEL_THREAD_DISPATCH($1)
 	add	$sp, -24
 	movu	$0, resumed
 	sw	$0, 20($sp)
@@ -389,18 +389,18 @@ vkPowerSuspendCore:
 	sw	$7, 8($sp)
 	sw	$6, 4($sp)
 	sw	$5, ($sp)
-	sw	$sp, VK_THREAD_SP($1)
-	bsr	vkThreadHoldForResume
-	bsr	vkPowerSaveInterrupts
+	sw	$sp, VNZ_KERNEL_THREAD_SP($1)
+	bsr	vnzKernelThreadHoldForResume
+	bsr	vnzKernelPowerSaveInterrupts
 	movu	$0, 1 << VNZ_INTERRUPT_DOORBELL
 	stcb	$0, VNZ_CB_INTERRUPT_ENABLE
 	movu	$0, 0
 	stcb	$0, VNZ_CB_INTERRUPT_CLEAR
-	bsr	vkCacheWritebackAll
-	bsr	vkPowerCoreDown
-	bsr	vkPowerWaitUp			/* the core was not powered down */
+	bsr	vnzKernelCacheWritebackAll
+	bsr	vnzKernelPowerCoreDown
+	bsr	vnzKernelPowerWaitUp			/* the core was not powered down */
 	mov	$1, $5
-	bsr	vkThreadReleaseFromResume
+	bsr	vnzKernelThreadReleaseFromResume
 	lw	$5, ($sp)
 	lw	$6, 4($sp)
 	lw	$7, 8($sp)
@@ -408,12 +408,12 @@ vkPowerSuspendCore:
 	lw	$tp, 16($sp)
 	add	$sp, 24
 	bra	1f
-resumed:					/* powered up again: from vkSwitchContext */
+resumed:					/* powered up again: from vnzKernelSwitchContext */
 	ldc	$0, $psw
 	mov	$1, ~VNZ_PSW_IEP
 	and	$0, $1
 	stc	$0, $psw
-	bsr	vkPowerWaitUp
+	bsr	vnzKernelPowerWaitUp
 1:	lw	$6, 8($sp)
 	lw	$5, 4($sp)
 	lw	$0, ($sp)

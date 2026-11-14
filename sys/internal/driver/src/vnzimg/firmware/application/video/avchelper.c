@@ -39,17 +39,17 @@ void avcdecPictureMark(VideoSliceJob *job);			/* 0x829d8c */
 void avcdecPictureFinish(VideoSliceJob *job);			/* 0x829dd6 */
 
 /* run a job on the helper's context until the context takes it */
-static void runJob(VkVThreadContext *context, uint32_t index, VkJobFunction function,
+static void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
 	uint32_t shared, uint32_t argument, uint32_t argument2, uint32_t flags)
 {
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	uint32_t busy;
 
 	do {
-		locked = vkVThreadContextLock(context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, function, shared, argument,
+		locked = vnzKernelVThreadContextLock(context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, function, shared, argument,
 			argument2, 0, ((VideoHelperShared *)shared)->thread, flags);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -122,7 +122,8 @@ void avcdecHelperRun(VideoHelper *helper, uint32_t job)
 			shared->context = context;
 			/* the jobs held while there was none go again, last first */
 			for (n = helper->pending - 1; n >= 0; n--)
-				vkMessageSend(helper->jobQueue, videoHelperJob, helper->pendingJobs[n]);
+				vnzKernelMessageSend(helper->jobQueue, videoHelperJob,
+					helper->pendingJobs[n]);
 			helper->pending = 0;
 		} else {
 			helper->pending++;
@@ -164,7 +165,7 @@ void avcdecHelperFinish(VideoHelper *helper)
 	VideoHelperShared *shared;
 	const VideoStream *stream;
 	VideoNal *nal;
-	VkThread *thread;
+	VnzKernelThread *thread;
 	uint32_t load = 0;
 	uint32_t index, argument, argument2, address;
 
@@ -238,7 +239,7 @@ void videoHelperInitialize(uint32_t memory, VideoService *service)
 	VideoHelperShared *shared = (VideoHelperShared *)(memory + VIDEO_HELPER_SHARED);
 	VideoHelperContext *context;
 	VideoHelperJob *job;
-	VkMessageQueue *jobQueue;
+	VnzKernelMessageQueue *jobQueue;
 	uint32_t rowSize, commandSize, next, area;
 	int32_t i;
 
@@ -312,7 +313,7 @@ void videoHelperInitialize(uint32_t memory, VideoService *service)
 		job->buffers[10] = next += ALIGN64(64 * commandSize);
 		next += ALIGN64(64 * commandSize);
 		job->slice = memory + VIDEO_HELPER_SLICES + i * VIDEO_HELPER_SLICE_SIZE;
-		vkMessageSend(jobQueue, videoHelperJob,
+		vnzKernelMessageSend(jobQueue, videoHelperJob,
 			vnzPublicClosePrivate((uint32_t)job, JOB_SIZE));
 	}
 }

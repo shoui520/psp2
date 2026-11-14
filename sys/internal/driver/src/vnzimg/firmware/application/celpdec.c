@@ -33,7 +33,7 @@ typedef struct CelpDecoder {
 	uint32_t engine[ENGINE_MEMORY_SIZE / 4];
 	uint32_t esSize;		/* the bytes given; then the bytes used */
 	uint32_t pcmSize;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;			/* the last job's */
 	int32_t bitRateIndex;		/* the engine's for the bit rate, or -1 */
 	uint32_t lostCount;
@@ -99,14 +99,14 @@ static int32_t celpBitRateIndex(uint32_t bitRate)
 }
 
 /* the stream's bit rate; a new decoder also gets its context */
-static int32_t celpSetup(CelpCtrl *ctrl, VkVThreadResource *resource, CelpDecoder *decoder,
+static int32_t celpSetup(CelpCtrl *ctrl, VnzKernelVThreadResource *resource, CelpDecoder *decoder,
 	uint32_t create)
 {
 	if (create)
 		memset(decoder, 0, 4);
 	decoder->bitRateIndex = celpBitRateIndex(ctrl->info.bitRate);
 	if (create)
-		decoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+		decoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (decoder->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
 	return 0;
@@ -115,7 +115,7 @@ static int32_t celpSetup(CelpCtrl *ctrl, VkVThreadResource *resource, CelpDecode
 static int32_t celpRelease(CelpDecoder *decoder)
 {
 	if (decoder->context) {
-		vkVThreadContextDelete(decoder->context);
+		vnzKernelVThreadContextDelete(decoder->context);
 		decoder->context = NULL;
 	}
 	return 0;
@@ -203,12 +203,12 @@ static void celpDecodeJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t 
 /* a batch's decode, signalling the batch job */
 static void celpBatchJob(uint32_t decoder, uint32_t es, uint32_t pcm, uint32_t argument4)
 {
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	celpDecodeFrame(decoder, es, pcm);
-	context = vkVThreadContextLock((VkVThreadContext *)argument4);
-	vkVThreadJobSignal(context, BATCH_JOB);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)argument4);
+	vnzKernelVThreadJobSignal(context, BATCH_JOB);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 static void celpBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
@@ -217,30 +217,30 @@ static void celpBatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t arg
 }
 
 /* a job on the context, waited for */
-static int32_t celpRun(VkVThreadContext *context, VkJobFunction job, uint32_t decoder,
+static int32_t celpRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job, uint32_t decoder,
 	uint32_t es, uint32_t pcm)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
 		DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
 
-static int32_t celpRunBatch(const uint32_t *decoders, VkVThreadContext *context,
+static int32_t celpRunBatch(const uint32_t *decoders, VnzKernelVThreadContext *context,
 	const uint32_t *es, const uint32_t *pcm, uint32_t count)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	uint32_t i;
 
 	for (i = 0; i < count; i++)
-		vkVThreadJobSet(locked, i, 0, celpBatchJob, decoders[i], es[i], pcm[i],
+		vnzKernelVThreadJobSet(locked, i, 0, celpBatchJob, decoders[i], es[i], pcm[i],
 			(uint32_t)context);
-	vkVThreadJobSetNotify(locked, BATCH_JOB, count, celpBatchDoneJob, 0, 0, 0, 0,
+	vnzKernelVThreadJobSetNotify(locked, BATCH_JOB, count, celpBatchDoneJob, 0, 0, 0, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -259,10 +259,11 @@ int32_t rpcCelpSizes(uint32_t ctrlAddress)
 }
 
 /* a decoder made (with its context, on the resource) or restarted */
-static int32_t celpStartCall(uint32_t ctrlAddress, VkVThreadResource *resource, uint32_t create)
+static int32_t celpStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *resource,
+	uint32_t create)
 {
 	VnzExtMemory ctrlMemory, decoderMemory;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t decoderAddress = 0;
 	int32_t result;
 	CelpCtrl *ctrl;
@@ -306,7 +307,7 @@ close:
 }
 
 /* RPC 257 */
-int32_t rpcCelpInit(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcCelpInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	return celpStartCall(ctrlAddress, resource, 1);
 }
@@ -348,7 +349,7 @@ int32_t rpcCelpDecode(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, decoderMemory, esMemory, pcmMemory;
 	uint32_t decoderAddress = 0, es = 0, pcm = 0, esSize, pcmSize;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	CelpDecoder *decoder;
 	int32_t result;
 	CelpCtrl *ctrl;
@@ -435,7 +436,7 @@ int32_t rpcCelpDecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 	uint32_t decoders[SCE_AUDIODEC_CELP_MAX_NSTREAMS], es[SCE_AUDIODEC_CELP_MAX_NSTREAMS];
 	uint32_t pcm[SCE_AUDIODEC_CELP_MAX_NSTREAMS], esSize[SCE_AUDIODEC_CELP_MAX_NSTREAMS];
 	uint32_t pcmSize[SCE_AUDIODEC_CELP_MAX_NSTREAMS], i;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	int32_t result, closed;
 	CelpDecoder *decoder;
 	CelpCtrl *ctrls;

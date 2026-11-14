@@ -42,23 +42,25 @@ static void runClose(const AvcdecDecoderInfo *info, const AvcdecRun *run, Avcdec
 static void rowsClear(const AvcdecDecoderInfo *info);
 
 /* a job set on a locked context, the context relocked until it takes it */
-static inline VkVThreadContext *jobNotify(VkVThreadContext *context, VkVThreadContext *locked,
-	uint32_t index, uint32_t wanted, VkJobFunction function, uint32_t argument,
-	uint32_t argument2, uint32_t argument3, VkThread *thread, uint32_t flags)
+static inline VnzKernelVThreadContext *jobNotify(VnzKernelVThreadContext *context,
+	VnzKernelVThreadContext *locked,
+	uint32_t index, uint32_t wanted, VnzKernelJobFunction function, uint32_t argument,
+	uint32_t argument2, uint32_t argument3, VnzKernelThread *thread, uint32_t flags)
 {
-	while (vkVThreadJobSetNotify(locked, index, wanted, function, argument, argument2,
+	while (vnzKernelVThreadJobSetNotify(locked, index, wanted, function, argument, argument2,
 	    argument3, 0, thread, flags)) {
-		vkVThreadContextUnlock(locked);
-		locked = vkVThreadContextLock(context);
+		vnzKernelVThreadContextUnlock(locked);
+		locked = vnzKernelVThreadContextLock(context);
 	}
 	return locked;
 }
 
 /* a stripe's three jobs: its prediction waits for `wanted` signals, the others for it */
-static inline void stripeSet(const AvcdecDecoderInfo *info, VkVThreadContext *locked,
+static inline void stripeSet(const AvcdecDecoderInfo *info, VnzKernelVThreadContext *locked,
 	uint32_t index, uint32_t wanted, uint32_t row)
 {
-	vkVThreadJobSet(locked, index, wanted, avcdecStripePredict, (uint32_t)info, row, 0, 0);
+	vnzKernelVThreadJobSet(locked, index, wanted, avcdecStripePredict, (uint32_t)info, row, 0,
+		0);
 	locked = jobNotify(info->context, locked, info->jobsPerKind + index, 1,
 		avcdecStripeResidual, (uint32_t)info, row, 0, info->thread,
 		DECODER_FLAG_STRIPE_DONE);
@@ -76,28 +78,28 @@ static inline uint32_t rowEntry(uint32_t rows, uint32_t row)
 void avcdecDecoderThread(uint32_t memory, uint32_t codec)
 {
 	AvcdecDecoder *decoder = decoderBegin(memory);
-	VkMessageQueue *parsedQueue = decoder->parsedQueue;
+	VnzKernelMessageQueue *parsedQueue = decoder->parsedQueue;
 	AvcdecDecoderInfo *info = decoder->info;
-	VkMessageQueue *serviceQueue = decoder->serviceQueue;
-	VkMessageQueue *decodeQueue = decoder->decodeQueue;
-	VkMessageQueue *helperQueue = decoder->helperQueue;
+	VnzKernelMessageQueue *serviceQueue = decoder->serviceQueue;
+	VnzKernelMessageQueue *decodeQueue = decoder->decodeQueue;
+	VnzKernelMessageQueue *helperQueue = decoder->helperQueue;
 	AvcdecDecoderStatus *status = info->status;
 	uint32_t flags;
 
 	do {
 		flags = decoderWait(decoder);
 		if (decoder->state == DECODER_IDLE &&
-		    vkMessageReceive(decodeQueue, (uint32_t)decoder))
+		    vnzKernelMessageReceive(decodeQueue, (uint32_t)decoder))
 			decoder->state = DECODER_WAITING;
 		if (decoder->state == DECODER_WAITING &&
-		    (!decoder->receive || vkMessageReceive(parsedQueue, (uint32_t)decoder)))
+		    (!decoder->receive || vnzKernelMessageReceive(parsedQueue, (uint32_t)decoder)))
 			decoder->state = DECODER_RUNNING;
 		if (decoder->state != DECODER_RUNNING)
 			continue;
 		if (decoder->receive)
-			vkMessageReceive(parsedQueue, (uint32_t)decoder);
+			vnzKernelMessageReceive(parsedQueue, (uint32_t)decoder);
 		if (flags & (DECODER_FLAG_NEXT_RUN | DECODER_FLAG_PICTURE_DONE)) {
-			vkMessageSend(helperQueue, videoHelperJob, jobClose(decoder));
+			vnzKernelMessageSend(helperQueue, videoHelperJob, jobClose(decoder));
 			if (decoder->helperWait) {
 				vnzThreadSetFlags(info->thread, DECODER_FLAG_NEXT_RUN);
 				decoder->helperWait = 0;
@@ -125,7 +127,8 @@ void avcdecDecoderThread(uint32_t memory, uint32_t codec)
 			} else {
 				answerDrain(decoder);
 			}
-			vkMessageSend(serviceQueue, videoServicePicturesDone, decoder->request);
+			vnzKernelMessageSend(serviceQueue, videoServicePicturesDone,
+				decoder->request);
 			decoder->state = DECODER_IDLE;
 		}
 	} while (decoder->state != DECODER_STOPPED);
@@ -194,7 +197,7 @@ static void runStart(AvcdecDecoder *decoder, uint32_t jobAddress)
 	const VideoHelperSlice *slice;
 	uint32_t first, load, sliceHeader, contextAddress, commandAddress, runAddress, index;
 	uint8_t missingReference;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	AvcdecRun *run;
 	int8_t qp;
 
@@ -282,7 +285,7 @@ static void runStart(AvcdecDecoder *decoder, uint32_t jobAddress)
 	run->common = decoder->common;
 	runAddress = vnzPublicClosePrivate((uint32_t)run, DECODER_RUN_SIZE);
 
-	locked = vkVThreadContextLock(decoder->context);
+	locked = vnzKernelVThreadContextLock(decoder->context);
 	index = info->index * 8;
 	locked = jobNotify(decoder->context, locked, index + DECODER_JOB_RUN,
 		load && first ? 1 : 0, jobRun, (uint32_t)info, runAddress, 0, info->thread,
@@ -291,7 +294,7 @@ static void runStart(AvcdecDecoder *decoder, uint32_t jobAddress)
 		locked = jobNotify(decoder->context, locked, index + DECODER_JOB_REFERENCES, 0,
 			jobReferences, (uint32_t)info, decoder->slice, decoder->pictureStart,
 			info->thread, DECODER_FLAG_RUN_DONE);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	if (!first)
 		rowsStart(decoder, info, info->heightInMbs - 1);
 }
@@ -346,17 +349,17 @@ static void pictureDone(AvcdecDecoder *decoder)
 		AvcdecParsed parsed;
 		uint32_t word;
 	} done;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	done.parsed.flush = 0;
 	done.parsed.valid = 1;
 	done.parsed.pictureInfo[0] = decoder->outputCount;
 	done.parsed.pictureInfo[1] = decoder->outputStart;
-	locked = vkVThreadContextLock(decoder->context);
+	locked = vnzKernelVThreadContextLock(decoder->context);
 	locked = jobNotify(decoder->context, locked, info->index * 8 + DECODER_JOB_OUTPUT, 0,
 		jobPictureDone, (uint32_t)info, done.word, 0, info->thread,
 		DECODER_FLAG_OUTPUT_DONE);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	decoder->rowStripes = (int8_t *)vnzPublicClosePrivate((uint32_t)decoder->rowStripes,
 		DECODER_ROW_STRIPES_SIZE);
 }
@@ -382,7 +385,7 @@ static void answerPictures(AvcdecDecoder *decoder)
 static void outputStart(AvcdecDecoder *decoder, uint32_t word)
 {
 	AvcdecDecoderInfo *info;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	union {
 		AvcdecParsed parsed;
 		uint32_t word;
@@ -391,7 +394,7 @@ static void outputStart(AvcdecDecoder *decoder, uint32_t word)
 	decoder->receive = 0;
 	info = decoder->info;
 	parsed.word = word;
-	locked = vkVThreadContextLock(decoder->context);
+	locked = vnzKernelVThreadContextLock(decoder->context);
 	if (parsed.parsed.flush)
 		locked = jobNotify(decoder->context, locked, info->index * 8 + DECODER_JOB_FLUSH, 0,
 			jobFlush, (uint32_t)info, word, 0, info->thread, DECODER_FLAG_FLUSHED);
@@ -399,7 +402,7 @@ static void outputStart(AvcdecDecoder *decoder, uint32_t word)
 		locked = jobNotify(decoder->context, locked, info->index * 8 + DECODER_JOB_OUTPUT,
 			0, jobOutput, (uint32_t)info, word, 0, info->thread,
 			DECODER_FLAG_OUTPUT_DONE);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /* 0x82d5d0: the decode answered as a drain */
@@ -532,13 +535,13 @@ static void rowsStart(AvcdecDecoder *decoder, AvcdecDecoderInfo *info, int32_t l
 {
 	uint32_t mode = info->mode, width = info->widthInMbs, last = decoder->lastStripe;
 	uint32_t column, index, rows;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	if (!(mode < width)) {
 		rowsStartSingle(decoder, info, lastRow);
 		return;
 	}
-	locked = vkVThreadContextLock(info->context);
+	locked = vnzKernelVThreadContextLock(info->context);
 	rows = decoder->rows;
 	stripeSet(info, locked, 0, 2, rows);
 	for (column = mode, index = 1; column < width; column += mode, index++)
@@ -552,7 +555,7 @@ static void rowsStart(AvcdecDecoder *decoder, AvcdecDecoderInfo *info, int32_t l
 			stripeSet(info, locked, index, 2, rows);
 		stripeSet(info, locked, index, width - column == last ? 1 : 2, rows);
 	}
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /*
@@ -564,7 +567,7 @@ static void runRead(AvcdecDecoder *decoder)
 	uint32_t stripes = decoder->rowJobs, rows = decoder->rows, row = decoder->row;
 	AvcdecDecoderInfo *info = decoder->info;
 	uint32_t width = info->widthInMbs, firstX, endX, endY, failed, index;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	VideoHelperJob *job;
 	AvcdecRow *entry;
 
@@ -614,9 +617,9 @@ static void runRead(AvcdecDecoder *decoder)
 		if (!(entry->count + firstX < width))
 			entry->count = width - entry->x;
 		vnzPublicClosePrivate((uint32_t)entry, DECODER_ROW_SIZE);
-		locked = vkVThreadContextLock(info->context);
-		vkVThreadJobSignal(locked, index);
-		vkVThreadContextUnlock(locked);
+		locked = vnzKernelVThreadContextLock(info->context);
+		vnzKernelVThreadJobSignal(locked, index);
+		vnzKernelVThreadContextUnlock(locked);
 	} else {
 		/* the run's rows from their starts: their first stripes */
 		for (; row < endY + (endX > 0); row++) {
@@ -643,9 +646,9 @@ static void runRead(AvcdecDecoder *decoder)
 			}
 			vnzPublicClosePrivate((uint32_t)entry, DECODER_ROW_SIZE);
 			if (!(decoder->signalRow < row)) {
-				locked = vkVThreadContextLock(info->context);
-				vkVThreadJobSignal(locked, index);
-				vkVThreadContextUnlock(locked);
+				locked = vnzKernelVThreadContextLock(info->context);
+				vnzKernelVThreadJobSignal(locked, index);
+				vnzKernelVThreadContextUnlock(locked);
 			}
 		}
 	}
@@ -662,16 +665,16 @@ static void runRead(AvcdecDecoder *decoder)
 static void runDone(AvcdecDecoder *decoder)
 {
 	const AvcdecDecoderInfo *info = decoder->info;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	if (!decoder->pictureStart) {
-		locked = vkVThreadContextLock(decoder->context);
-		vkVThreadJobSignal(locked, info->index * 8 + DECODER_JOB_RUN);
-		vkVThreadContextUnlock(locked);
+		locked = vnzKernelVThreadContextLock(decoder->context);
+		vnzKernelVThreadJobSignal(locked, info->index * 8 + DECODER_JOB_RUN);
+		vnzKernelVThreadContextUnlock(locked);
 	} else {
-		locked = vkVThreadContextLock(info->context);
-		vkVThreadJobSignal(locked, 0);
-		vkVThreadContextUnlock(locked);
+		locked = vnzKernelVThreadContextLock(info->context);
+		vnzKernelVThreadJobSignal(locked, 0);
+		vnzKernelVThreadContextUnlock(locked);
 		decoder->pictureStart = 0;
 	}
 }
@@ -725,7 +728,7 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 	AvcdecDecoderInfo *info = decoder->info;
 	int32_t next, self, limit, started, below;
 	uint32_t leftover, fromStart, flagged, entryAddress, belowRow, wanted, bit;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	const VideoHelperJob *job;
 	AvcdecRow *entry;
 
@@ -803,9 +806,9 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 	entryAddress = vnzPublicClosePrivate((uint32_t)entry, DECODER_ROW_SIZE);
 	if (leftover) {
 		/* the stripe again, with the macroblocks of the next run */
-		locked = vkVThreadContextLock(info->context);
+		locked = vnzKernelVThreadContextLock(info->context);
 		stripeSet(info, locked, jobIndex, 1, entryAddress);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 		decoder->rowStripes[row]--;
 		flags &= ~ROW_FLAG_START_BELOW;
 	}
@@ -816,7 +819,7 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 		wanted = !(decoder->waitingRows & bit) + 1;
 		decoder->waitingRows &= ~bit;
 		below = started + ((row + 2) & 3) * stripes;
-		locked = vkVThreadContextLock(info->context);
+		locked = vnzKernelVThreadContextLock(info->context);
 		if (!(end < width)) {
 			if (flags & ROW_FLAG_TWO_BELOW) {
 				stripeSet(info, locked, below, wanted, belowRow);
@@ -834,15 +837,15 @@ static uint32_t stripeDone(AvcdecDecoder *decoder, uint32_t jobIndex, uint32_t r
 		if (!(row + 2 < decoder->signalRow))
 			decoder->signalRow = row + 2;
 		if (fromStart && !(decoder->lastRow < row + 2))
-			vkVThreadJobSignal(locked, below);
-		vkVThreadContextUnlock(locked);
+			vnzKernelVThreadJobSignal(locked, below);
+		vnzKernelVThreadContextUnlock(locked);
 	}
-	locked = vkVThreadContextLock(info->context);
+	locked = vnzKernelVThreadContextLock(info->context);
 	if (self >= 0)
-		vkVThreadJobSignal(locked, self);
+		vnzKernelVThreadJobSignal(locked, self);
 	if (next >= 0)
-		vkVThreadJobSignal(locked, next);
-	vkVThreadContextUnlock(locked);
+		vnzKernelVThreadJobSignal(locked, next);
+	vnzKernelVThreadContextUnlock(locked);
 	if (!(end < width))
 		decoder->rowStripes[row] = stripes;
 	else
@@ -876,12 +879,12 @@ static void stripeNext(AvcdecRow *entry, uint32_t jobIndex, uint32_t row, uint32
 /* 0x82e65a: rowsStart for a picture of one stripe a row */
 static void rowsStartSingle(AvcdecDecoder *decoder, AvcdecDecoderInfo *info, int32_t lastRow)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(info->context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(info->context);
 
 	stripeSet(info, locked, 0, 2, decoder->rows);
 	if (lastRow >= 1)
 		stripeSet(info, locked, 1, 2, decoder->rows + DECODER_ROW_SIZE);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /* 0x82e7bc: runRead for a picture of one stripe a row */
@@ -890,7 +893,7 @@ static void runReadSingle(AvcdecDecoder *decoder)
 	uint32_t rows = decoder->rows, row = decoder->row, index;
 	AvcdecDecoderInfo *info = decoder->info;
 	uint32_t width = info->widthInMbs, firstX, endX, endY, failed;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	VideoHelperJob *job;
 	AvcdecRow *entry;
 
@@ -927,9 +930,9 @@ static void runReadSingle(AvcdecDecoder *decoder)
 		}
 		vnzPublicClosePrivate((uint32_t)entry, DECODER_ROW_SIZE);
 		if (!(decoder->signalRow < row)) {
-			locked = vkVThreadContextLock(info->context);
-			vkVThreadJobSignal(locked, index);
-			vkVThreadContextUnlock(locked);
+			locked = vnzKernelVThreadContextLock(info->context);
+			vnzKernelVThreadJobSignal(locked, index);
+			vnzKernelVThreadContextUnlock(locked);
 		}
 	} else {
 		for (; row < endY + (endX > 0); row++) {
@@ -953,9 +956,9 @@ static void runReadSingle(AvcdecDecoder *decoder)
 			}
 			vnzPublicClosePrivate((uint32_t)entry, DECODER_ROW_SIZE);
 			if (!(decoder->signalRow < row)) {
-				locked = vkVThreadContextLock(info->context);
-				vkVThreadJobSignal(locked, index);
-				vkVThreadContextUnlock(locked);
+				locked = vnzKernelVThreadContextLock(info->context);
+				vnzKernelVThreadJobSignal(locked, index);
+				vnzKernelVThreadContextUnlock(locked);
 			}
 		}
 	}
@@ -976,7 +979,7 @@ static void stripesDoneSingle(AvcdecDecoder *decoder)
 	AvcdecLockArea *lockArea = info->lockArea;
 	uint32_t count, x, endY, endX;
 	const AvcdecRow *entry;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 
 	width = info->widthInMbs;
 	height = info->heightInMbs;
@@ -996,9 +999,9 @@ static void stripesDoneSingle(AvcdecDecoder *decoder)
 	if (x + count < width) {
 		/* the run ended in the row: the row again with the next run */
 		index = row & 3;
-		locked = vkVThreadContextLock(info->context);
+		locked = vnzKernelVThreadContextLock(info->context);
 		stripeSet(info, locked, index, 1, (uint32_t)entry);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 		vnzThreadSetFlags(info->thread, DECODER_FLAG_NEXT_RUN);
 		return;
 	}
@@ -1008,16 +1011,16 @@ static void stripesDoneSingle(AvcdecDecoder *decoder)
 		vnzThreadSetFlags(info->thread, DECODER_FLAG_NEXT_RUN | DECODER_FLAG_PICTURE_DONE);
 		return;
 	}
-	locked = vkVThreadContextLock(info->context);
+	locked = vnzKernelVThreadContextLock(info->context);
 	if (row < height - 2) {
 		index = (row + 2) & 3;
 		stripeSet(info, locked, index, 2, rowEntry(rows, row + 2));
 		decoder->signalRow = row + 2;
 		if (!(decoder->lastRow < row + 2))
-			vkVThreadJobSignal(locked, index);
+			vnzKernelVThreadJobSignal(locked, index);
 	}
-	vkVThreadJobSignal(locked, (row + 1) & 3);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadJobSignal(locked, (row + 1) & 3);
+	vnzKernelVThreadContextUnlock(locked);
 	if (endY - 1 == row && !endX)
 		vnzThreadSetFlags(info->thread, DECODER_FLAG_NEXT_RUN);
 }
@@ -1617,7 +1620,7 @@ void avcdecStripePredict(uint32_t infoAddress, uint32_t rowAddress, uint32_t unu
 {
 	const AvcdecDecoderInfo *info = (const AvcdecDecoderInfo *)infoAddress;
 	uint32_t slot = workSlot(), isP, index;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	AvcdecStripe *stripe;
 	AvcdecMotion motion;
 	AvcdecRow *entry;
@@ -1647,11 +1650,11 @@ void avcdecStripePredict(uint32_t infoAddress, uint32_t rowAddress, uint32_t unu
 		}
 		stripeClose(info, entry, stripe);
 	}
-	locked = vkVThreadContextLock(info->context);
+	locked = vnzKernelVThreadContextLock(info->context);
 	index = info->jobsPerKind + entry->jobIndex;
-	vkVThreadJobSignal(locked, index);
-	vkVThreadJobSignal(locked, info->jobsPerKind * 2 + entry->jobIndex);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadJobSignal(locked, index);
+	vnzKernelVThreadJobSignal(locked, info->jobsPerKind * 2 + entry->jobIndex);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzCachePurge((uint32_t)stripe, DECODER_STRIPE_SIZE);
 	vnzPublicClosePrivate((uint32_t)stripe, DECODER_STRIPE_SIZE);
 	vnzPublicCloseProtected((uint32_t)entry, DECODER_ROW_SIZE);

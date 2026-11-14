@@ -15,7 +15,7 @@ static int inRange(uint32_t address, uint32_t start, uint32_t size)
 	return address - start < size;
 }
 
-uint32_t vkPhysicalToPublic(uint32_t address)
+uint32_t vnzKernelPhysicalToPublic(uint32_t address)
 {
 	if (inRange(address, 0x18000000, 0x08000000) || inRange(address, 0x20000000, 0x08000000))
 		return address + 0xa8000000;
@@ -24,7 +24,7 @@ uint32_t vkPhysicalToPublic(uint32_t address)
 	return 0;
 }
 
-uint32_t vkPhysicalToUncached(uint32_t address)
+uint32_t vnzKernelPhysicalToUncached(uint32_t address)
 {
 	if (inRange(address, 0x1e000000, 0x02000000) || inRange(address, 0x20000000, 0x02000000) ||
 	    inRange(address, 0x22000000, 0x02000000))
@@ -34,7 +34,7 @@ uint32_t vkPhysicalToUncached(uint32_t address)
 	return 0;
 }
 
-uint32_t vkPublicToPhysical(uint32_t address)
+uint32_t vnzKernelPublicToPhysical(uint32_t address)
 {
 	if (inRange(address, 0xc0000000, 0x08000000) || inRange(address, 0xc8000000, 0x08000000))
 		return address - 0xa8000000;
@@ -43,14 +43,14 @@ uint32_t vkPublicToPhysical(uint32_t address)
 	return 0;
 }
 
-uint32_t vkPublicToUncached(uint32_t address)
+uint32_t vnzKernelPublicToUncached(uint32_t address)
 {
-	uint32_t physical = vkPublicToPhysical(address);
+	uint32_t physical = vnzKernelPublicToPhysical(address);
 
-	return physical ? vkPhysicalToUncached(physical) : 0;
+	return physical ? vnzKernelPhysicalToUncached(physical) : 0;
 }
 
-uint32_t vkUncachedToPhysical(uint32_t address)
+uint32_t vnzKernelUncachedToPhysical(uint32_t address)
 {
 	if (inRange(address, 0xf0000000, 0x02000000) || inRange(address, 0xf2000000, 0x02000000) ||
 	    inRange(address, 0xf4000000, 0x02000000))
@@ -60,11 +60,11 @@ uint32_t vkUncachedToPhysical(uint32_t address)
 	return 0;
 }
 
-uint32_t vkUncachedToPublic(uint32_t address)
+uint32_t vnzKernelUncachedToPublic(uint32_t address)
 {
-	uint32_t physical = vkUncachedToPhysical(address);
+	uint32_t physical = vnzKernelUncachedToPhysical(address);
 
-	return physical ? vkPhysicalToPublic(physical) : 0;
+	return physical ? vnzKernelPhysicalToPublic(physical) : 0;
 }
 
 static int isPublic(uint32_t address)
@@ -83,34 +83,34 @@ static int isPhysical(uint32_t address)
 }
 
 /* an address of any window, physically */
-uint32_t vkToPhysical(uint32_t address)
+uint32_t vnzKernelToPhysical(uint32_t address)
 {
 	if (isPublic(address))
-		return vkPublicToPhysical(address);
+		return vnzKernelPublicToPhysical(address);
 	if (isUncached(address))
-		return vkUncachedToPhysical(address);
+		return vnzKernelUncachedToPhysical(address);
 	if (isPhysical(address))
 		return address;
 	return 0;
 }
 
-uint32_t vkToPublic(uint32_t address)
+uint32_t vnzKernelToPublic(uint32_t address)
 {
 	if (isPhysical(address))
-		return vkPhysicalToPublic(address);
+		return vnzKernelPhysicalToPublic(address);
 	if (isUncached(address))
-		return vkUncachedToPublic(address);
+		return vnzKernelUncachedToPublic(address);
 	if (isPublic(address))
 		return address;
 	return 0;
 }
 
-uint32_t vkToUncached(uint32_t address)
+uint32_t vnzKernelToUncached(uint32_t address)
 {
 	if (isPhysical(address))
-		return vkPhysicalToUncached(address);
+		return vnzKernelPhysicalToUncached(address);
 	if (isPublic(address))
-		return vkPublicToUncached(address);
+		return vnzKernelPublicToUncached(address);
 	if (isUncached(address))
 		return address;
 	return 0;

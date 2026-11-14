@@ -61,17 +61,17 @@ static void transfersFinish(NgsUpdate *update)
 static void updateAbort(NgsSystem *system)
 {
 	int32_t count = system->maxVoices + system->maxRacks + 33;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t i;
 
 	if (system->context == NULL)
 		return;
-	context = vkVThreadContextLock(system->context);
+	context = vnzKernelVThreadContextLock(system->context);
 	if (context == NULL)
 		return;
 	for (i = 0; i < count; i++)
-		vkVThreadJobClear(context, i);
-	vkVThreadContextUnlock(context);
+		vnzKernelVThreadJobClear(context, i);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 static void voiceJob(uint32_t contextArgument, uint32_t voiceArgument, uint32_t next,
@@ -99,13 +99,13 @@ static int32_t nextBarrier(NgsJob *jobs, int32_t from, int32_t count, int32_t ba
 static int32_t updateRun(NgsSystem *system, NgsUpdate *update, int32_t count)
 {
 	NgsJob *jobs = update->jobs;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t barrier, failed, i;
 	uint32_t result;
 	int32_t error;
 
 	transfersPrepare(update);
-	context = vkVThreadContextLock(system->context);
+	context = vnzKernelVThreadContextLock(system->context);
 	barrier = nextBarrier(jobs, 0, count, -1);
 
 	failed = 0;
@@ -113,7 +113,7 @@ static int32_t updateRun(NgsSystem *system, NgsUpdate *update, int32_t count)
 		NgsJob *job = &jobs[i];
 
 		if (job->type == NGS_JOB_VOICE) {
-			result = vkVThreadJobSet(context, i, job->wanted, voiceJob,
+			result = vnzKernelVThreadJobSet(context, i, job->wanted, voiceJob,
 				(uint32_t)system->context,
 				(uint32_t)system->update + job->offset, barrier,
 				(uint32_t)system);
@@ -126,11 +126,12 @@ static int32_t updateRun(NgsSystem *system, NgsUpdate *update, int32_t count)
 
 			cachePurgeInvalidate((uint32_t)object, ngsRoundUp(sizeof(NgsBarrier), L2_LINE));
 			if (object->next != -1)
-				result = vkVThreadJobSet(context, i, job->wanted, barrierJob,
+				result = vnzKernelVThreadJobSet(context, i, job->wanted, barrierJob,
 					(uint32_t)system->context, (uint32_t)object,
 					(uint32_t)vnzThreadCurrent(), object->size);
 			else
-				result = vkVThreadJobSetNotify(context, i, job->wanted, barrierJob,
+				result = vnzKernelVThreadJobSetNotify(context, i, job->wanted,
+					barrierJob,
 					(uint32_t)system->context, (uint32_t)object,
 					(uint32_t)vnzThreadCurrent(), object->size,
 					vnzThreadCurrent(), 1);
@@ -140,7 +141,7 @@ static int32_t updateRun(NgsSystem *system, NgsUpdate *update, int32_t count)
 			}
 			barrier = nextBarrier(jobs, i + 1, count, barrier);
 		} else if (job->type == NGS_JOB_TASK) {
-			result = vkVThreadJobSet(context, i, 0, taskJob,
+			result = vnzKernelVThreadJobSet(context, i, 0, taskJob,
 				(uint32_t)system->context, job->offset, job->wanted,
 				(uint32_t)system);
 			if (result) {
@@ -152,7 +153,7 @@ static int32_t updateRun(NgsSystem *system, NgsUpdate *update, int32_t count)
 			break;
 		}
 	}
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 
 	if (failed == 0) {
 		vnzThreadWaitFlags(1);
@@ -286,8 +287,8 @@ static void systemFree(NgsSystem **holder)
 {
 	NgsSystem *system = *holder;
 
-	vkVThreadContextDelete(system->context);
-	vkVThreadResourceDelete(system->resource);
+	vnzKernelVThreadContextDelete(system->context);
+	vnzKernelVThreadResourceDelete(system->resource);
 	rpcFree(1, (uint32_t)system, system->size);
 	*holder = NULL;
 }
@@ -326,10 +327,10 @@ static int32_t systemInitialize(NgsSystem *system, NgsModuleTable *table,
 		LINE) != size)
 		return SCE_NGS_ERROR;
 
-	system->resource = vkVThreadResourceCreate(0x2000);
+	system->resource = vnzKernelVThreadResourceCreate(0x2000);
 	if (system->resource == NULL)
 		return SCE_NGS_ERROR_INTERNAL_ALLOC;
-	system->context = vkVThreadContextCreate(system->maxVoices + system->maxRacks + 33,
+	system->context = vnzKernelVThreadContextCreate(system->maxVoices + system->maxRacks + 33,
 		system->resource);
 	if (system->context == NULL)
 		return SCE_NGS_ERROR_INTERNAL_ALLOC;
@@ -743,7 +744,7 @@ static void callbackRecord(NgsVoiceStatus *status, uint32_t module, NgsModulePar
 static void voiceJob(uint32_t contextArgument, uint32_t voiceArgument, uint32_t next,
 	uint32_t systemArgument)
 {
-	VkVThreadContext *context = (VkVThreadContext *)contextArgument;
+	VnzKernelVThreadContext *context = (VnzKernelVThreadContext *)contextArgument;
 	NgsVoice *voice = (NgsVoice *)voiceArgument;
 	NgsSystem *system = (NgsSystem *)systemArgument;
 	NgsBuffer *buffers[NGS_VOICE_BUFFERS], *inputBuffers[8], *outputBuffers[8];
@@ -760,7 +761,7 @@ static void voiceJob(uint32_t contextArgument, uint32_t voiceArgument, uint32_t 
 	NgsVoiceStatus *status;
 	NgsModuleSlot *slot;
 	NgsRack *rack;
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	uint32_t i, newState;
 
 	cachePurgeRange((uint32_t)system, LINE);
@@ -942,9 +943,9 @@ static void voiceJob(uint32_t contextArgument, uint32_t voiceArgument, uint32_t 
 	cacheFlushRange((uint32_t)voice->states, voice->statesSize);
 	cacheFlushRange((uint32_t)voice->status, voice->statusSize);
 
-	locked = vkVThreadContextLock(context);
-	vkVThreadJobSignal(locked, next);
-	vkVThreadContextUnlock(locked);
+	locked = vnzKernelVThreadContextLock(context);
+	vnzKernelVThreadJobSignal(locked, next);
+	vnzKernelVThreadContextUnlock(locked);
 }
 
 /* a barrier: the jobs after it are signalled */
@@ -952,14 +953,14 @@ static void barrierJob(uint32_t contextArgument, uint32_t barrierArgument, uint3
 	uint32_t size)
 {
 	NgsBarrier *barrier = (NgsBarrier *)barrierArgument;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t i;
 
 	cachePurgeInvalidate((uint32_t)barrier, size);
-	context = vkVThreadContextLock((VkVThreadContext *)contextArgument);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)contextArgument);
 	for (i = 0; i < barrier->signalCount; i++)
-		vkVThreadJobSignal(context, barrier->signals[i]);
-	vkVThreadContextUnlock(context);
+		vnzKernelVThreadJobSignal(context, barrier->signals[i]);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 /* a task: its function run on its data, with work memory when it asks */
@@ -970,7 +971,7 @@ static void taskJob(uint32_t contextArgument, uint32_t taskArgument, uint32_t si
 	NgsSystem *system = (NgsSystem *)systemArgument;
 	uint8_t *work = NULL;
 	uint32_t workSize = 0, first, count, start, length;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 
 	cachePurgeRange(lineStart(taskArgument), lineLength(taskArgument, sizeof(NgsTask)));
 	cachePurgeRange((uint32_t)system, LINE);
@@ -986,7 +987,7 @@ static void taskJob(uint32_t contextArgument, uint32_t taskArgument, uint32_t si
 		workRelease(system, first, count);
 	cacheFlushRange(start, length);
 
-	context = vkVThreadContextLock((VkVThreadContext *)contextArgument);
-	vkVThreadJobSignal(context, signal);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)contextArgument);
+	vnzKernelVThreadJobSignal(context, signal);
+	vnzKernelVThreadContextUnlock(context);
 }

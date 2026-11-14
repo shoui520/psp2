@@ -25,7 +25,7 @@ typedef struct SilkDecoder {
 	uint32_t engine[ENGINE_MEMORY_SIZE / 4];
 	uint32_t esSize;		/* the bytes given */
 	uint32_t pcmSize;		/* the bytes given; then the bytes written */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;			/* the last job's */
 	int32_t sampleRate;
 	int32_t lostFlag;
@@ -65,12 +65,12 @@ static int32_t keepError(int32_t result, int32_t closed)
 }
 
 /* a new decoder gets its context */
-static int32_t silkSetup(SilkCtrl *ctrl, VkVThreadResource *resource, SilkDecoder *decoder,
+static int32_t silkSetup(SilkCtrl *ctrl, VnzKernelVThreadResource *resource, SilkDecoder *decoder,
 	uint32_t create)
 {
 	if (create) {
 		memset(decoder, 0, 4);
-		decoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+		decoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	}
 	if (decoder->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
@@ -80,7 +80,7 @@ static int32_t silkSetup(SilkCtrl *ctrl, VkVThreadResource *resource, SilkDecode
 static int32_t silkRelease(SilkDecoder *decoder)
 {
 	if (decoder->context) {
-		vkVThreadContextDelete(decoder->context);
+		vnzKernelVThreadContextDelete(decoder->context);
 		decoder->context = NULL;
 	}
 	return 0;
@@ -216,14 +216,14 @@ out:
 }
 
 /* a job on the context, waited for */
-static int32_t silkRun(VkVThreadContext *context, VkJobFunction job, uint32_t decoder,
+static int32_t silkRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job, uint32_t decoder,
 	uint32_t es, uint32_t pcm)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, decoder, es, pcm, 0, vnzThreadCurrent(),
 		DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -242,11 +242,11 @@ int32_t rpcSilkSizes(uint32_t ctrlAddress)
 }
 
 /* a decoder made (with its context, on the resource) or restarted */
-static int32_t silkStartCall(uint32_t ctrlAddress, VkVThreadResource *resource,
+static int32_t silkStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *resource,
 	uint32_t create)
 {
 	VnzExtMemory ctrlMemory, decoderMemory;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t decoderAddress = 0;
 	int32_t result;
 	SilkCtrl *ctrl;
@@ -290,7 +290,7 @@ close:
 }
 
 /* RPC 273 */
-int32_t rpcSilkInit(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcSilkInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	return silkStartCall(ctrlAddress, resource, 1);
 }
@@ -332,7 +332,7 @@ int32_t rpcSilkDecode(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, decoderMemory, esMemory, pcmMemory;
 	uint32_t decoderAddress = 0, es = 0, pcm = 0, esSize, pcmSize;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	SilkDecoder *decoder;
 	int32_t result;
 	SilkCtrl *ctrl;

@@ -1,36 +1,36 @@
 /*
  * Lock pages, message queues and object arenas.
  *
- * A lock is one byte (vkSpinLock). Locks come from lock pages: 0x100 bytes
+ * A lock is one byte (vnzKernelSpinLock). Locks come from lock pages: 0x100 bytes
  * whose byte 0 is the index of the first free lock and each free lock holds
  * the index of the next one, 0xff ending the list. Pages are kept in blocks:
- * the first is the VK_MEMORY_LOCAL_RAM region's, the others 0x1000 bytes of
+ * the first is the VNZ_KERNEL_MEMORY_LOCAL_RAM region's, the others 0x1000 bytes of
  * the system heap, given back when their last lock is freed.
  */
 #include "api.h"
 
-#define VK_LOCK_PAGE		0x100
-#define VK_LOCK_PAGES_END	0xff	/* a page's list: no lock left */
-#define VK_LOCK_BLOCK_SIZE	0x1000
+#define VNZ_KERNEL_LOCK_PAGE		0x100
+#define VNZ_KERNEL_LOCK_PAGES_END	0xff	/* a page's list: no lock left */
+#define VNZ_KERNEL_LOCK_BLOCK_SIZE	0x1000
 
 /* a block of lock pages (0x20 bytes) */
-typedef struct VkLockBlock {
-	struct VkLockBlock *next;
-	struct VkLockBlock *previous;
+typedef struct VnzKernelLockBlock {
+	struct VnzKernelLockBlock *next;
+	struct VnzKernelLockBlock *previous;
 	uint32_t kind;
 	uint32_t base;
 	uint32_t size;
 	uint32_t pages;
 	uint8_t *freePage;		/* a page with a free lock, or NULL */
 	uint32_t used;			/* locks given out */
-} VkLockBlock;
+} VnzKernelLockBlock;
 
-#define VK_LOCK_BLOCK_REGION	1	/* the local RAM region's: never freed */
-#define VK_LOCK_BLOCK_HEAP	2
+#define VNZ_KERNEL_LOCK_BLOCK_REGION	1	/* the local RAM region's: never freed */
+#define VNZ_KERNEL_LOCK_BLOCK_HEAP	2
 
-VkLockPages g_vkLockPages VK_SHARED;
+VnzKernelLockPages g_vnzKernelLockPages VNZ_KERNEL_SHARED;
 
-static volatile uint32_t *const pagesSemaphore = vkSemaphore(VK_SEMAPHORE_PAGES);
+static volatile uint32_t *const pagesSemaphore = vnzKernelSemaphore(VNZ_KERNEL_SEMAPHORE_PAGES);
 
 /* every lock of a page free: byte i holds i + 1 */
 static void lockPageInitialize(uint32_t *page)
@@ -38,22 +38,22 @@ static void lockPageInitialize(uint32_t *page)
 	uint32_t word = 0x04030201;
 	int i;
 
-	for (i = 0; i < VK_LOCK_PAGE / 4 - 1; i++) {
+	for (i = 0; i < VNZ_KERNEL_LOCK_PAGE / 4 - 1; i++) {
 		page[i] = word;
 		word += 0x04040404;
 	}
 	page[i] = 0x00fffefd;
 }
 
-static VkLockBlock *lockBlockCreate(uint32_t kind, uint32_t base, uint32_t size)
+static VnzKernelLockBlock *lockBlockCreate(uint32_t kind, uint32_t base, uint32_t size)
 {
-	VkLockBlock *block;
+	VnzKernelLockBlock *block;
 	uint32_t i;
 
-	block = vkHeapAllocate(vkSystemHeap(), sizeof(VkLockBlock), 0x40);
+	block = vnzKernelHeapAllocate(vnzKernelSystemHeap(), sizeof(VnzKernelLockBlock), 0x40);
 	if (block == NULL)
 		return NULL;
-	block = (VkLockBlock *)vkPhysicalToPublic((uint32_t)block);
+	block = (VnzKernelLockBlock *)vnzKernelPhysicalToPublic((uint32_t)block);
 	block->next = NULL;
 	block->previous = NULL;
 	block->base = base;
@@ -67,59 +67,60 @@ static VkLockBlock *lockBlockCreate(uint32_t kind, uint32_t base, uint32_t size)
 	return block;
 }
 
-static void lockBlockAppend(VkLockBlock *block)
+static void lockBlockAppend(VnzKernelLockBlock *block)
 {
-	if (g_vkLockPages.head == NULL) {
-		g_vkLockPages.head = block;
+	if (g_vnzKernelLockPages.head == NULL) {
+		g_vnzKernelLockPages.head = block;
 	} else {
-		g_vkLockPages.tail->next = block;
-		block->previous = g_vkLockPages.tail;
+		g_vnzKernelLockPages.tail->next = block;
+		block->previous = g_vnzKernelLockPages.tail;
 	}
-	g_vkLockPages.tail = block;
+	g_vnzKernelLockPages.tail = block;
 }
 
-static void lockBlockRemove(VkLockBlock *block)
+static void lockBlockRemove(VnzKernelLockBlock *block)
 {
 	if (block->previous == NULL) {
 		if (block->next == NULL) {
-			g_vkLockPages.head = NULL;
-			g_vkLockPages.tail = NULL;
+			g_vnzKernelLockPages.head = NULL;
+			g_vnzKernelLockPages.tail = NULL;
 			return;
 		}
 		block->next->previous = NULL;
-		g_vkLockPages.head = block->next;
+		g_vnzKernelLockPages.head = block->next;
 		return;
 	}
 	if (block->next == NULL) {
 		block->previous->next = NULL;
-		g_vkLockPages.tail = block->previous;
+		g_vnzKernelLockPages.tail = block->previous;
 		return;
 	}
 	block->previous->next = block->next;
 	block->next->previous = block->previous;
 }
 
-static void lockBlockFree(VkLockBlock *block)
+static void lockBlockFree(VnzKernelLockBlock *block)
 {
-	vkHeapFree(vkSystemHeap(), (void *)vkPublicToPhysical((uint32_t)block), sizeof(VkLockBlock), 0x40);
+	vnzKernelHeapFree(vnzKernelSystemHeap(), (void *)vnzKernelPublicToPhysical((uint32_t)block),
+		sizeof(VnzKernelLockBlock), 0x40);
 }
 
 static int pageHasFree(const uint8_t *page)
 {
-	return page[0] != VK_LOCK_PAGES_END;
+	return page[0] != VNZ_KERNEL_LOCK_PAGES_END;
 }
 
-static int blockHasFree(const VkLockBlock *block)
+static int blockHasFree(const VnzKernelLockBlock *block)
 {
 	return block->freePage != NULL;
 }
 
-static int blockUnused(const VkLockBlock *block)
+static int blockUnused(const VnzKernelLockBlock *block)
 {
-	return block->kind == VK_LOCK_BLOCK_HEAP && block->used == 0;
+	return block->kind == VNZ_KERNEL_LOCK_BLOCK_HEAP && block->used == 0;
 }
 
-static volatile uint8_t *lockTake(VkLockBlock *block)
+static volatile uint8_t *lockTake(VnzKernelLockBlock *block)
 {
 	uint8_t *page = block->freePage, *lock, *next;
 	uint32_t i;
@@ -128,11 +129,11 @@ static volatile uint8_t *lockTake(VkLockBlock *block)
 	page[0] = *lock;
 	*lock = 0;
 	block->used++;
-	if (page[0] == VK_LOCK_PAGES_END) {
+	if (page[0] == VNZ_KERNEL_LOCK_PAGES_END) {
 		/* the page is full: look for another */
 		block->freePage = NULL;
-		next = page + VK_LOCK_PAGE;
-		for (i = 0; i < block->pages - 1; i++, next += VK_LOCK_PAGE) {
+		next = page + VNZ_KERNEL_LOCK_PAGE;
+		for (i = 0; i < block->pages - 1; i++, next += VNZ_KERNEL_LOCK_PAGE) {
 			if ((uint32_t)next >= block->base + (block->pages << 8))
 				next = (uint8_t *)block->base;
 			if (pageHasFree(next)) {
@@ -144,28 +145,28 @@ static volatile uint8_t *lockTake(VkLockBlock *block)
 	return lock;
 }
 
-static void lockGive(VkLockBlock *block, volatile uint8_t *lock)
+static void lockGive(VnzKernelLockBlock *block, volatile uint8_t *lock)
 {
-	uint8_t *page = (uint8_t *)((uint32_t)lock & ~(VK_LOCK_PAGE - 1));
+	uint8_t *page = (uint8_t *)((uint32_t)lock & ~(VNZ_KERNEL_LOCK_PAGE - 1));
 
 	block->used--;
 	*lock = page[0];
-	page[0] = (uint32_t)lock & (VK_LOCK_PAGE - 1);
+	page[0] = (uint32_t)lock & (VNZ_KERNEL_LOCK_PAGE - 1);
 	if (!blockHasFree(block))
 		block->freePage = page;
 }
 
-void vkLockPagesInitialize(uint32_t primary)
+void vnzKernelLockPagesInitialize(uint32_t primary)
 {
 	uint32_t base, size, start;
-	VkLockBlock *block;
+	VnzKernelLockBlock *block;
 
 	if (!primary)
 		return;
-	vkGiveSemaphore(pagesSemaphore);
-	g_vkLockPages.head = NULL;
-	g_vkLockPages.tail = NULL;
-	base = vkMemoryRegion(VK_MEMORY_LOCAL_RAM, &size);
+	vnzKernelGiveSemaphore(pagesSemaphore);
+	g_vnzKernelLockPages.head = NULL;
+	g_vnzKernelLockPages.tail = NULL;
+	base = vnzKernelMemoryRegion(VNZ_KERNEL_MEMORY_LOCAL_RAM, &size);
 	if (base == 0)
 		return;
 	start = (base + 0xff) & ~0xff;
@@ -174,51 +175,53 @@ void vkLockPagesInitialize(uint32_t primary)
 	size = (size - (start - base)) & ~0xff;
 	if (size == 0)
 		return;
-	block = lockBlockCreate(VK_LOCK_BLOCK_REGION, start, size);
+	block = lockBlockCreate(VNZ_KERNEL_LOCK_BLOCK_REGION, start, size);
 	if (block)
 		lockBlockAppend(block);
 }
 
 /* A lock, free. Returns NULL when there is no memory for another page. */
-volatile uint8_t *vkLockPageAllocate(void)
+volatile uint8_t *vnzKernelLockPageAllocate(void)
 {
-	VkLockBlock *block;
+	VnzKernelLockBlock *block;
 	volatile uint8_t *lock = NULL;
 	void *pages;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(pagesSemaphore);
-	for (block = g_vkLockPages.head; block; block = block->next) {
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(pagesSemaphore);
+	for (block = g_vnzKernelLockPages.head; block; block = block->next) {
 		if (blockHasFree(block)) {
 			lock = lockTake(block);
 			break;
 		}
 	}
 	if (lock == NULL) {
-		pages = vkHeapAllocate(vkSystemHeap(), VK_LOCK_BLOCK_SIZE, 0x100);
+		pages = vnzKernelHeapAllocate(vnzKernelSystemHeap(), VNZ_KERNEL_LOCK_BLOCK_SIZE,
+			0x100);
 		if (pages == NULL)
 			goto out;
-		block = lockBlockCreate(VK_LOCK_BLOCK_HEAP, vkPhysicalToPublic((uint32_t)pages),
-			VK_LOCK_BLOCK_SIZE);
+		block = lockBlockCreate(VNZ_KERNEL_LOCK_BLOCK_HEAP,
+			vnzKernelPhysicalToPublic((uint32_t)pages),
+			VNZ_KERNEL_LOCK_BLOCK_SIZE);
 		if (block == NULL)
 			goto out;
 		lockBlockAppend(block);
 		lock = lockTake(block);
 	}
 out:
-	vkGiveSemaphore(pagesSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(pagesSemaphore);
+	vnzKernelEnableDispatch();
 	return lock;
 }
 
-void vkLockPageFree(volatile uint8_t *lock)
+void vnzKernelLockPageFree(volatile uint8_t *lock)
 {
-	VkLockBlock *block;
+	VnzKernelLockBlock *block;
 	uint32_t base;
 
-	vkDisableDispatch();
-	vkTakeSemaphore(pagesSemaphore);
-	for (block = g_vkLockPages.head; block; block = block->next) {
+	vnzKernelDisableDispatch();
+	vnzKernelTakeSemaphore(pagesSemaphore);
+	for (block = g_vnzKernelLockPages.head; block; block = block->next) {
 		if ((uint32_t)lock < block->base || (uint32_t)lock >= block->base + block->size)
 			continue;
 		lockGive(block, lock);
@@ -226,34 +229,37 @@ void vkLockPageFree(volatile uint8_t *lock)
 			base = block->base;
 			lockBlockRemove(block);
 			lockBlockFree(block);
-			vkHeapFree(vkSystemHeap(), (void *)vkPublicToPhysical(base),
-				VK_LOCK_BLOCK_SIZE, 0x100);
+			vnzKernelHeapFree(vnzKernelSystemHeap(),
+				(void *)vnzKernelPublicToPhysical(base),
+				VNZ_KERNEL_LOCK_BLOCK_SIZE, 0x100);
 		}
 		break;
 	}
-	vkGiveSemaphore(pagesSemaphore);
-	vkEnableDispatch();
+	vnzKernelGiveSemaphore(pagesSemaphore);
+	vnzKernelEnableDispatch();
 }
 
 /*
  * Message queues: a ring of (message, argument) pairs one thread receives,
  * told of each by its event flags.
  */
-VkMessageQueue *vkMessageQueueCreate(VkThread *thread, uint32_t flags, uint32_t count)
+VnzKernelMessageQueue *vnzKernelMessageQueueCreate(VnzKernelThread *thread, uint32_t flags,
+	uint32_t count)
 {
-	VkHeap *heap = vkThreadHeap(thread);
-	VkMessageQueue *queue;
+	VnzKernelHeap *heap = vnzKernelThreadHeap(thread);
+	VnzKernelMessageQueue *queue;
 	void *entries;
 
-	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)vkHeapAllocate(heap,
-		sizeof(VkMessageQueue), 0x40));
+	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)vnzKernelHeapAllocate(heap,
+		sizeof(VnzKernelMessageQueue), 0x40));
 	if (queue == NULL)
 		return NULL;
-	entries = vkHeapAllocate(vkThreadHeap(thread), count * sizeof(VkMessageEntry), 0x40);
-	queue->entries = (VkMessageEntry *)vkPhysicalToPublic((uint32_t)entries);
+	entries = vnzKernelHeapAllocate(vnzKernelThreadHeap(thread),
+		count * sizeof(VnzKernelMessageEntry), 0x40);
+	queue->entries = (VnzKernelMessageEntry *)vnzKernelPhysicalToPublic((uint32_t)entries);
 	if (queue->entries == NULL)
 		goto freeQueue;
-	queue->lock = vkLockPageAllocate();
+	queue->lock = vnzKernelLockPageAllocate();
 	if (queue->lock == NULL)
 		goto freeEntries;
 	queue->thread = thread;
@@ -261,56 +267,61 @@ VkMessageQueue *vkMessageQueueCreate(VkThread *thread, uint32_t flags, uint32_t 
 	queue->write = 0;
 	queue->mask = count - 1;
 	queue->flags = flags;
-	queue->magic = VK_MESSAGE_QUEUE_MAGIC;
+	queue->magic = VNZ_KERNEL_MESSAGE_QUEUE_MAGIC;
 	return queue;
 
 freeEntries:
-	vkHeapFree(vkThreadHeap(thread), (void *)vkPublicToPhysical((uint32_t)queue->entries),
-		count * sizeof(VkMessageEntry), 0x40);
+	vnzKernelHeapFree(vnzKernelThreadHeap(thread),
+		(void *)vnzKernelPublicToPhysical((uint32_t)queue->entries),
+		count * sizeof(VnzKernelMessageEntry), 0x40);
 freeQueue:
-	vkHeapFree(vkThreadHeap(thread), (void *)vkPublicToPhysical((uint32_t)queue),
-		sizeof(VkMessageQueue), 0x40);
+	vnzKernelHeapFree(vnzKernelThreadHeap(thread),
+		(void *)vnzKernelPublicToPhysical((uint32_t)queue),
+		sizeof(VnzKernelMessageQueue), 0x40);
 	return NULL;
 }
 
-void vkMessageQueueDelete(VkMessageQueue *queue)
+void vnzKernelMessageQueueDelete(VnzKernelMessageQueue *queue)
 {
-	uint32_t size = (queue->mask + 1) * sizeof(VkMessageEntry);
-	VkMessageEntry *entries = queue->entries;
+	uint32_t size = (queue->mask + 1) * sizeof(VnzKernelMessageEntry);
+	VnzKernelMessageEntry *entries = queue->entries;
 
 	queue->magic = 0;
-	vkLockPageFree(queue->lock);
-	vkHeapFree(vkThreadHeap(queue->thread), (void *)vkPublicToPhysical((uint32_t)entries),
+	vnzKernelLockPageFree(queue->lock);
+	vnzKernelHeapFree(vnzKernelThreadHeap(queue->thread),
+		(void *)vnzKernelPublicToPhysical((uint32_t)entries),
 		size, 0x40);
-	vkHeapFree(vkThreadHeap(queue->thread), (void *)vkPublicToPhysical((uint32_t)queue),
-		sizeof(VkMessageQueue), 0x40);
+	vnzKernelHeapFree(vnzKernelThreadHeap(queue->thread),
+		(void *)vnzKernelPublicToPhysical((uint32_t)queue),
+		sizeof(VnzKernelMessageQueue), 0x40);
 }
 
 /*
  * The queue's indexes are read through the cache and written back before the
  * lock is given.
  */
-static void queueRelease(VkMessageQueue *cached)
+static void queueRelease(VnzKernelMessageQueue *cached)
 {
-	VkMessageQueue *queue;
+	VnzKernelMessageQueue *queue;
 
-	vkCacheWriteback((uint32_t)cached, 0x40);
-	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)cached);
+	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	vnzSpinUnlock(queue->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
 /* Send a message. Returns 1, or 0 when the queue is full. */
-uint32_t vkMessageSend(VkMessageQueue *queue, VkMessage *message, uint32_t argument)
+uint32_t vnzKernelMessageSend(VnzKernelMessageQueue *queue, VnzKernelMessage *message,
+	uint32_t argument)
 {
-	VkMessageQueue *cached;
-	VkMessageEntry *entry;
-	VkThread *thread;
+	VnzKernelMessageQueue *cached;
+	VnzKernelMessageEntry *entry;
+	VnzKernelThread *thread;
 	uint32_t write, flags;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(queue->lock);
-	cached = (VkMessageQueue *)vkPublicToPhysical((uint32_t)queue);
+	cached = (VnzKernelMessageQueue *)vnzKernelPublicToPhysical((uint32_t)queue);
 	write = cached->write;
 	if (cached->mask < write - cached->read) {
 		queueRelease(cached);
@@ -321,27 +332,27 @@ uint32_t vkMessageSend(VkMessageQueue *queue, VkMessage *message, uint32_t argum
 	entry->message = message;
 	thread = cached->thread;
 	flags = cached->flags;
-	vkCacheWriteback((uint32_t)cached, 0x40);
-	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)cached);
+	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	queue->write = write + 1;
 	if (flags)
-		vkThreadSetFlags(thread, flags);
+		vnzKernelThreadSetFlags(thread, flags);
 	vnzSpinUnlock(queue->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	return 1;
 }
 
 /* Receive a message: its function is called. Returns 1, or 0 when there was none. */
-uint32_t vkMessageReceive(VkMessageQueue *queue, uint32_t argument)
+uint32_t vnzKernelMessageReceive(VnzKernelMessageQueue *queue, uint32_t argument)
 {
-	VkMessageQueue *cached;
-	VkMessageEntry *entry;
-	VkMessage *message;
+	VnzKernelMessageQueue *cached;
+	VnzKernelMessageEntry *entry;
+	VnzKernelMessage *message;
 	uint32_t read, messageArgument;
 
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 	vnzSpinLock(queue->lock);
-	cached = (VkMessageQueue *)vkPublicToPhysical((uint32_t)queue);
+	cached = (VnzKernelMessageQueue *)vnzKernelPublicToPhysical((uint32_t)queue);
 	read = cached->read;
 	if ((int32_t)(cached->write - read) < 1) {
 		queueRelease(cached);
@@ -350,11 +361,11 @@ uint32_t vkMessageReceive(VkMessageQueue *queue, uint32_t argument)
 	entry = &cached->entries[read & cached->mask];
 	messageArgument = entry->argument;
 	message = entry->message;
-	vkCacheWriteback((uint32_t)cached, 0x40);
-	queue = (VkMessageQueue *)vkPhysicalToPublic((uint32_t)cached);
+	vnzKernelCacheWriteback((uint32_t)cached, 0x40);
+	queue = (VnzKernelMessageQueue *)vnzKernelPhysicalToPublic((uint32_t)cached);
 	queue->read = read + 1;
 	vnzSpinUnlock(queue->lock);
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 	message(argument, messageArgument);
 	return 1;
 }
@@ -365,28 +376,28 @@ uint32_t vkMessageReceive(VkMessageQueue *queue, uint32_t argument)
  * freed count grows as they are freed. A block whose objects are all freed is
  * used again.
  */
-#define VK_ARENA_BLOCK_HEADER	0x40
+#define VNZ_KERNEL_ARENA_BLOCK_HEADER	0x40
 
 static uint32_t objectSize(uint32_t size)
 {
 	return (((size + 3) >> 6) + 1) << 6;
 }
 
-static VkArenaBlock *arenaBlockAdd(VkArena *arena)
+static VnzKernelArenaBlock *arenaBlockAdd(VnzKernelArena *arena)
 {
 	uint32_t size = arena->blockSize;
-	VkArenaBlock *block, *current;
+	VnzKernelArenaBlock *block, *current;
 
-	block = vkAllocatePublic(size);
+	block = vnzKernelAllocatePublic(size);
 	if (block == NULL)
 		return NULL;
-	block->lock = vkLockPageAllocate();
+	block->lock = vnzKernelLockPageAllocate();
 	if (block->lock == NULL) {
-		vkFreePublic(block, size);
+		vnzKernelFreePublic(block, size);
 		return NULL;
 	}
-	block->used = VK_ARENA_BLOCK_HEADER;
-	block->freed = VK_ARENA_BLOCK_HEADER;
+	block->used = VNZ_KERNEL_ARENA_BLOCK_HEADER;
+	block->freed = VNZ_KERNEL_ARENA_BLOCK_HEADER;
 	current = arena->current;
 	if (current == NULL) {
 		block->next = block;
@@ -403,9 +414,9 @@ static VkArenaBlock *arenaBlockAdd(VkArena *arena)
 }
 
 /* Take a block out of the ring and free it; returns the block after it, or NULL. */
-static VkArenaBlock *arenaBlockRemove(VkArena *arena, VkArenaBlock *block)
+static VnzKernelArenaBlock *arenaBlockRemove(VnzKernelArena *arena, VnzKernelArenaBlock *block)
 {
-	VkArenaBlock *next;
+	VnzKernelArenaBlock *next;
 	uint32_t size;
 
 	arena->count--;
@@ -420,33 +431,33 @@ static VkArenaBlock *arenaBlockRemove(VkArena *arena, VkArenaBlock *block)
 			arena->current = next;
 	}
 	size = arena->blockSize;
-	vkLockPageFree(block->lock);
-	vkFreePublic(block, size);
+	vnzKernelLockPageFree(block->lock);
+	vnzKernelFreePublic(block, size);
 	return next;
 }
 
-void vkArenaDelete(VkArena *arena)
+void vnzKernelArenaDelete(VnzKernelArena *arena)
 {
-	VkArenaBlock *block = arena->current;
+	VnzKernelArenaBlock *block = arena->current;
 
 	if (block && block->next) {
 		block = block->next;
 		while ((block = arenaBlockRemove(arena, block)) != NULL)
 			;
 	}
-	vkFreePublic(arena, sizeof(VkArena));
+	vnzKernelFreePublic(arena, sizeof(VnzKernelArena));
 }
 
 /* An arena of minimum to maximum blocks of blockSize bytes; the minimum are made now. */
-VkArena *vkArenaCreate(uint32_t blockSize, uint32_t minimum, uint32_t maximum)
+VnzKernelArena *vnzKernelArenaCreate(uint32_t blockSize, uint32_t minimum, uint32_t maximum)
 {
-	VkArena *arena;
+	VnzKernelArena *arena;
 
 	if (minimum == 0)
 		minimum = 1;
 	if (maximum < minimum)
 		maximum = minimum;
-	arena = vkAllocatePublic(sizeof(VkArena));
+	arena = vnzKernelAllocatePublic(sizeof(VnzKernelArena));
 	if (arena == NULL)
 		return NULL;
 	arena->blockSize = blockSize;
@@ -457,14 +468,14 @@ VkArena *vkArenaCreate(uint32_t blockSize, uint32_t minimum, uint32_t maximum)
 	while (arena->count < minimum && arenaBlockAdd(arena))
 		;
 	if (arena->count < minimum) {
-		vkArenaDelete(arena);
+		vnzKernelArenaDelete(arena);
 		return NULL;
 	}
 	return arena;
 }
 
 /* Make blocks until there are minimum. Returns the arena, or NULL (and deletes it) when out of memory. */
-VkArena *vkArenaSetMinimum(VkArena *arena, uint32_t minimum)
+VnzKernelArena *vnzKernelArenaSetMinimum(VnzKernelArena *arena, uint32_t minimum)
 {
 	if (minimum == 0)
 		minimum = 1;
@@ -473,7 +484,7 @@ VkArena *vkArenaSetMinimum(VkArena *arena, uint32_t minimum)
 	while (arena->count < minimum && arenaBlockAdd(arena))
 		;
 	if (arena->count < minimum) {
-		vkArenaDelete(arena);
+		vnzKernelArenaDelete(arena);
 		return NULL;
 	}
 	arena->minimum = minimum;
@@ -481,9 +492,9 @@ VkArena *vkArenaSetMinimum(VkArena *arena, uint32_t minimum)
 }
 
 /* Free unused blocks while there are more than low, and while more than high. */
-static uint32_t arenaTrim(VkArena *arena, uint32_t low, uint32_t high, uint32_t count)
+static uint32_t arenaTrim(VnzKernelArena *arena, uint32_t low, uint32_t high, uint32_t count)
 {
-	VkArenaBlock *current = arena->current, *block = current->next;
+	VnzKernelArenaBlock *current = arena->current, *block = current->next;
 
 	while (block != current && low < count) {
 		if (block->freed == block->used) {
@@ -498,7 +509,7 @@ static uint32_t arenaTrim(VkArena *arena, uint32_t low, uint32_t high, uint32_t 
 	return count;
 }
 
-void vkArenaSetMaximum(VkArena *arena, uint32_t maximum)
+void vnzKernelArenaSetMaximum(VnzKernelArena *arena, uint32_t maximum)
 {
 	if (maximum < arena->minimum)
 		maximum = arena->minimum;
@@ -507,25 +518,25 @@ void vkArenaSetMaximum(VkArena *arena, uint32_t maximum)
 		arena->count = arenaTrim(arena, maximum, maximum, arena->count);
 }
 
-void vkArenaTrim(VkArena *arena)
+void vnzKernelArenaTrim(VnzKernelArena *arena)
 {
 	arena->count = arenaTrim(arena, arena->minimum, arena->maximum, arena->count);
 }
 
-static void arenaBlockReset(VkArenaBlock *block)
+static void arenaBlockReset(VnzKernelArenaBlock *block)
 {
-	block->used = VK_ARENA_BLOCK_HEADER;
-	block->freed = VK_ARENA_BLOCK_HEADER;
+	block->used = VNZ_KERNEL_ARENA_BLOCK_HEADER;
+	block->freed = VNZ_KERNEL_ARENA_BLOCK_HEADER;
 }
 
 /* Take size bytes; NULL when no block has room. */
-void *vkArenaAllocate(VkArena *arena, uint32_t size)
+void *vnzKernelArenaAllocate(VnzKernelArena *arena, uint32_t size)
 {
-	VkArenaBlock *current = arena->current, *next, *block;
+	VnzKernelArenaBlock *current = arena->current, *next, *block;
 	uint8_t *object;
 
 	if (arena->blockSize < current->used + size + 4) {
-		if (arena->blockSize < size + VK_ARENA_BLOCK_HEADER + 4)
+		if (arena->blockSize < size + VNZ_KERNEL_ARENA_BLOCK_HEADER + 4)
 			return NULL;
 		next = current->next;
 		if (next->freed == next->used) {
@@ -566,19 +577,19 @@ void *vkArenaAllocate(VkArena *arena, uint32_t size)
 		}
 	}
 	object = (uint8_t *)current + current->used;
-	*(VkArenaBlock **)(object + size) = current;
+	*(VnzKernelArenaBlock **)(object + size) = current;
 	current->used += objectSize(size);
 	return object;
 }
 
-void vkArenaFree(void *object, uint32_t size)
+void vnzKernelArenaFree(void *object, uint32_t size)
 {
-	VkArenaBlock *block = *(VkArenaBlock **)((uint8_t *)object + size);
+	VnzKernelArenaBlock *block = *(VnzKernelArenaBlock **)((uint8_t *)object + size);
 	volatile uint8_t *lock = block->lock;
 
-	vkDisableDispatch();
-	vkSpinLock(lock);
+	vnzKernelDisableDispatch();
+	vnzKernelSpinLock(lock);
 	block->freed += objectSize(size);
-	vkSpinUnlock(lock);
-	vkEnableDispatch();
+	vnzKernelSpinUnlock(lock);
+	vnzKernelEnableDispatch();
 }

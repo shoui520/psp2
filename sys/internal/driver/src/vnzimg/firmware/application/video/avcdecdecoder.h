@@ -73,12 +73,12 @@ typedef struct AvcdecLockArea {
 
 /* the engine's info: what its jobs share (128 bytes) */
 typedef struct AvcdecDecoderInfo {
-	VkThread *thread;		/* the decoder engine's */
-	VkThread *parserThread;
+	VnzKernelThread *thread;		/* the decoder engine's */
+	VnzKernelThread *parserThread;
 	int32_t id;			/* the decoder's */
 	int16_t index;			/* the decoder's slot */
 	uint16_t reserved;
-	VkVThreadContext *context;	/* the helper's, the stripes' jobs run on it */
+	VnzKernelVThreadContext *context;	/* the helper's, the stripes' jobs run on it */
 	uint16_t jobsPerKind;		/* the stripes' jobs, by kind */
 	uint8_t mbSize;			/* 16 */
 	uint8_t mode;			/* the command's: macroblocks a stripe */
@@ -366,11 +366,11 @@ typedef struct AvcdecDecoder {
 	AvcdecDecoderStatus *status;
 	uint32_t request;		/* the decode's VideoEngineRequest */
 	int8_t *rowStripes;		/* by row: the stripes started */
-	VkMessageQueue *parsedQueue;	/* the parser engine's and the helper's */
-	VkMessageQueue *helperQueue;
-	VkMessageQueue *decodeQueue;
-	VkMessageQueue *serviceQueue;
-	VkVThreadContext *context;	/* the service's */
+	VnzKernelMessageQueue *parsedQueue;	/* the parser engine's and the helper's */
+	VnzKernelMessageQueue *helperQueue;
+	VnzKernelMessageQueue *decodeQueue;
+	VnzKernelMessageQueue *serviceQueue;
+	VnzKernelVThreadContext *context;	/* the service's */
 	uint8_t receive;		/* a message is wanted from the parsed queue */
 	uint8_t jobRow;			/* the row of the run to give back */
 	uint8_t row;			/* the row the next run starts in */

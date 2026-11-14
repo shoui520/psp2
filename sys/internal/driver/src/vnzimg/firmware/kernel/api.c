@@ -8,7 +8,7 @@
 
 static int priorityValid(uint32_t priority)
 {
-	return priority >= 1 && priority <= VK_PRIORITIES - 1;
+	return priority >= 1 && priority <= VNZ_KERNEL_PRIORITIES - 1;
 }
 
 /* threads */
@@ -16,125 +16,125 @@ int32_t vnzThreadCreate(void *entry, uint32_t coreId, uint32_t priority, uint32_
 {
 	if (!priorityValid(priority) || stackSize < 0x100)
 		return VNZ_ERROR;
-	return vkThreadCreateHere(entry, coreId, priority, stackSize);
+	return vnzKernelThreadCreateHere(entry, coreId, priority, stackSize);
 }
 
 int32_t vnzThreadCreateOnHeap(void *entry, uint32_t coreId, uint32_t priority, uint32_t stackSize,
-	VkHeap *heap)
+	VnzKernelHeap *heap)
 {
 	if (!priorityValid(priority) || stackSize < 0x100)
 		return VNZ_ERROR;
-	return vkThreadCreate(entry, coreId, priority, stackSize, heap);
+	return vnzKernelThreadCreate(entry, coreId, priority, stackSize, heap);
 }
 
-int32_t vnzThreadStart(VkThread *thread, uint32_t argument, uint32_t argument2)
+int32_t vnzThreadStart(VnzKernelThread *thread, uint32_t argument, uint32_t argument2)
 {
-	return vkThreadStart(thread, argument, argument2);
+	return vnzKernelThreadStart(thread, argument, argument2);
 }
 
 void vnzThreadExit(void)
 {
-	vkThreadExit();
+	vnzKernelThreadExit();
 }
 
 void vnzThreadExitWithStatus(uint32_t status, uint32_t status2)
 {
-	vkThreadExitWithStatus(status, status2);
+	vnzKernelThreadExitWithStatus(status, status2);
 }
 
-int32_t vnzThreadDelete(VkThread *thread)
+int32_t vnzThreadDelete(VnzKernelThread *thread)
 {
-	return vkThreadDelete(thread);
+	return vnzKernelThreadDelete(thread);
 }
 
 void vnzThreadYield(void)
 {
-	vkThreadYield();
+	vnzKernelThreadYield();
 }
 
-int32_t vnzThreadSetPriority(VkThread *thread, uint32_t priority)
+int32_t vnzThreadSetPriority(VnzKernelThread *thread, uint32_t priority)
 {
 	if (!priorityValid(priority))
 		return VNZ_ERROR;
-	vkThreadSetPriority(thread, priority);
+	vnzKernelThreadSetPriority(thread, priority);
 	return 0;
 }
 
-VkThread *vnzThreadCurrent(void)
+VnzKernelThread *vnzThreadCurrent(void)
 {
-	return vkThreadCurrent();
+	return vnzKernelThreadCurrent();
 }
 
-uint32_t vnzThreadPriority(VkThread *thread)
+uint32_t vnzThreadPriority(VnzKernelThread *thread)
 {
-	return vkThreadPriority(thread);
+	return vnzKernelThreadPriority(thread);
 }
 
-void vnzThreadInformation(VkThread *thread, VkThreadInformation *information)
+void vnzThreadInformation(VnzKernelThread *thread, VnzKernelThreadInformation *information)
 {
-	vkThreadInformation(thread, information);
+	vnzKernelThreadInformation(thread, information);
 }
 
 void vnzDisableDispatch(void)
 {
-	vkDisableDispatch();
+	vnzKernelDisableDispatch();
 }
 
 void vnzEnableDispatch(void)
 {
-	vkEnableDispatch();
+	vnzKernelEnableDispatch();
 }
 
 uint32_t vnzThreadWaitChildren(void)
 {
-	return vkThreadWaitChildren();
+	return vnzKernelThreadWaitChildren();
 }
 
 uint32_t vnzThreadJoining(void)
 {
-	return vkThreadJoining();
+	return vnzKernelThreadJoining();
 }
 
-void vnzThreadDetach(VkThread *thread)
+void vnzThreadDetach(VnzKernelThread *thread)
 {
-	vkThreadDetach(thread);
+	vnzKernelThreadDetach(thread);
 }
 
-uint32_t vnzThreadIsAlive(VkThread *thread)
+uint32_t vnzThreadIsAlive(VnzKernelThread *thread)
 {
-	return vkThreadIsAlive(thread);
+	return vnzKernelThreadIsAlive(thread);
 }
 
-uint32_t vnzThreadHasExited(VkThread *thread)
+uint32_t vnzThreadHasExited(VnzKernelThread *thread)
 {
-	return vkThreadHasExited(thread);
+	return vnzKernelThreadHasExited(thread);
 }
 
-int32_t vnzThreadNotifyExit(VkThread *thread, uint32_t flags)
+int32_t vnzThreadNotifyExit(VnzKernelThread *thread, uint32_t flags)
 {
-	return vkThreadNotifyExit(thread, flags);
+	return vnzKernelThreadNotifyExit(thread, flags);
 }
 
-int32_t vnzThreadCancelExitNotify(VkThread *thread)
+int32_t vnzThreadCancelExitNotify(VnzKernelThread *thread)
 {
-	return vkThreadCancelExitNotify(thread);
+	return vnzKernelThreadCancelExitNotify(thread);
 }
 
-int32_t vnzThreadExitStatus(VkThread *thread, uint32_t *status, uint32_t *status2)
+int32_t vnzThreadExitStatus(VnzKernelThread *thread, uint32_t *status, uint32_t *status2)
 {
-	return vkThreadExitStatus(thread, status, status2);
+	return vnzKernelThreadExitStatus(thread, status, status2);
 }
 
 uint32_t vnzExitedThreads(void)
 {
-	return vkExitedThreads();
+	return vnzKernelExitedThreads();
 }
 
-int32_t vnzThreadSetFlags(VkThread *thread, uint32_t flags)
+int32_t vnzThreadSetFlags(VnzKernelThread *thread, uint32_t flags)
 {
 	if (flags == 0)
 		return VNZ_ERROR;
-	vkThreadSetFlags(thread, flags);
+	vnzKernelThreadSetFlags(thread, flags);
 	return 0;
 }
 
@@ -142,256 +142,258 @@ uint32_t vnzThreadWaitFlags(uint32_t flags)
 {
 	if (flags == 0)
 		return 0;
-	return vkThreadWaitFlags(flags);
+	return vnzKernelThreadWaitFlags(flags);
 }
 
 uint32_t vnzThreadClearFlags(uint32_t flags)
 {
-	return vkThreadClearFlags(flags);
+	return vnzKernelThreadClearFlags(flags);
 }
 
 uint32_t *vnzThreadLocal0(void)
 {
-	return vkThreadLocal0();
+	return vnzKernelThreadLocal0();
 }
 
 uint32_t *vnzThreadLocal1(void)
 {
-	return vkThreadLocal1();
+	return vnzKernelThreadLocal1();
 }
 
 uint32_t *vnzThreadLocal2(void)
 {
-	return vkThreadLocal2();
+	return vnzKernelThreadLocal2();
 }
 
-int32_t vnzThreadMove(VkThread *thread, uint32_t coreId)
+int32_t vnzThreadMove(VnzKernelThread *thread, uint32_t coreId)
 {
-	return vkThreadMigrate(thread, coreId, NULL, 0);
+	return vnzKernelThreadMigrate(thread, coreId, NULL, 0);
 }
 
-int32_t vnzThreadMoveNotify(VkThread *thread, uint32_t coreId, VkThread *notify, uint32_t flags)
+int32_t vnzThreadMoveNotify(VnzKernelThread *thread, uint32_t coreId, VnzKernelThread *notify,
+	uint32_t flags)
 {
-	return vkThreadMigrate(thread, coreId, notify, flags);
+	return vnzKernelThreadMigrate(thread, coreId, notify, flags);
 }
 
-uint32_t vnzThreadAttributes(VkThread *thread)
+uint32_t vnzThreadAttributes(VnzKernelThread *thread)
 {
-	return vkThreadAttributes(thread);
+	return vnzKernelThreadAttributes(thread);
 }
 
 /* memory */
 uint32_t vnzMemoryRegion(uint32_t id, uint32_t *size)
 {
-	return vkMemoryRegion(id, size);
+	return vnzKernelMemoryRegion(id, size);
 }
 
-VkHeap *vnzHeapCreatePool(uint32_t base, uint32_t size)
+VnzKernelHeap *vnzHeapCreatePool(uint32_t base, uint32_t size)
 {
-	return vkHeapCreatePool(base, size);
+	return vnzKernelHeapCreatePool(base, size);
 }
 
-void vnzHeapDeletePool(VkHeap *heap)
+void vnzHeapDeletePool(VnzKernelHeap *heap)
 {
-	vkHeapDeletePool(heap);
+	vnzKernelHeapDeletePool(heap);
 }
 
-VkHeap *vnzHeapFind(uint32_t address, uint32_t size)
+VnzKernelHeap *vnzHeapFind(uint32_t address, uint32_t size)
 {
-	return vkHeapFind(address, size);
+	return vnzKernelHeapFind(address, size);
 }
 
-VkHeap *vnzHeapCreate(uint32_t base, uint32_t size, VkHeapCreate create, VkHeapDelete delete,
-	VkHeapAllocate allocate, VkHeapFree free)
+VnzKernelHeap *vnzHeapCreate(uint32_t base, uint32_t size, VnzKernelHeapCreate create,
+	VnzKernelHeapDelete delete,
+	VnzKernelHeapAllocate allocate, VnzKernelHeapFree free)
 {
-	return vkHeapCreate(base, size, create, delete, allocate, free);
+	return vnzKernelHeapCreate(base, size, create, delete, allocate, free);
 }
 
-void vnzHeapDelete(VkHeap *heap)
+void vnzHeapDelete(VnzKernelHeap *heap)
 {
-	vkHeapDelete(heap);
+	vnzKernelHeapDelete(heap);
 }
 
-void *vnzHeapContext(VkHeap *heap)
+void *vnzHeapContext(VnzKernelHeap *heap)
 {
-	return vkHeapContext(heap);
+	return vnzKernelHeapContext(heap);
 }
 
-void *vnzHeapAllocateStack(VkHeap *heap, uint32_t size)
+void *vnzHeapAllocateStack(VnzKernelHeap *heap, uint32_t size)
 {
-	return vkHeapAllocateStack(heap, size);
+	return vnzKernelHeapAllocateStack(heap, size);
 }
 
-void *vnzHeapAllocatePublic(VkHeap *heap, uint32_t size)
+void *vnzHeapAllocatePublic(VnzKernelHeap *heap, uint32_t size)
 {
-	return vkHeapAllocatePublic(heap, size);
+	return vnzKernelHeapAllocatePublic(heap, size);
 }
 
-void *vnzHeapAllocateUncached(VkHeap *heap, uint32_t size)
+void *vnzHeapAllocateUncached(VnzKernelHeap *heap, uint32_t size)
 {
-	return vkHeapAllocateUncached(heap, size);
+	return vnzKernelHeapAllocateUncached(heap, size);
 }
 
-void *vnzHeapAllocate(VkHeap *heap, uint32_t size, uint32_t alignment)
+void *vnzHeapAllocate(VnzKernelHeap *heap, uint32_t size, uint32_t alignment)
 {
-	return vkHeapAllocate(heap, size, alignment);
+	return vnzKernelHeapAllocate(heap, size, alignment);
 }
 
-void vnzHeapFreeStack(VkHeap *heap, void *memory, uint32_t size)
+void vnzHeapFreeStack(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	vkHeapFreeStack(heap, memory, size);
+	vnzKernelHeapFreeStack(heap, memory, size);
 }
 
-void vnzHeapFreePublic(VkHeap *heap, void *memory, uint32_t size)
+void vnzHeapFreePublic(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	vkHeapFreePublic(heap, memory, size);
+	vnzKernelHeapFreePublic(heap, memory, size);
 }
 
-void vnzHeapFreeUncached(VkHeap *heap, void *memory, uint32_t size)
+void vnzHeapFreeUncached(VnzKernelHeap *heap, void *memory, uint32_t size)
 {
-	vkHeapFreeUncached(heap, memory, size);
+	vnzKernelHeapFreeUncached(heap, memory, size);
 }
 
-void vnzHeapFree(VkHeap *heap, void *memory, uint32_t size, uint32_t alignment)
+void vnzHeapFree(VnzKernelHeap *heap, void *memory, uint32_t size, uint32_t alignment)
 {
-	vkHeapFree(heap, memory, size, alignment);
+	vnzKernelHeapFree(heap, memory, size, alignment);
 }
 
-VkHeap *vnzSystemHeap(void)
+VnzKernelHeap *vnzSystemHeap(void)
 {
-	return vkSystemHeap();
+	return vnzKernelSystemHeap();
 }
 
-VkHeap *vnzCurrentHeap(void)
+VnzKernelHeap *vnzCurrentHeap(void)
 {
-	return vkCurrentHeap();
+	return vnzKernelCurrentHeap();
 }
 
 /* the functions of the kernel's kind of heap, for heaps of a caller's own */
 int32_t vnzPoolHeapCreate(void *context, uint32_t base, uint32_t size)
 {
-	return vkPoolHeapCreate(context, base, size);
+	return vnzKernelPoolHeapCreate(context, base, size);
 }
 
 void vnzPoolHeapDelete(void *context, uint32_t base, uint32_t size)
 {
-	vkPoolHeapDelete(context, base, size);
+	vnzKernelPoolHeapDelete(context, base, size);
 }
 
 void *vnzPoolHeapAllocate(void *context, uint32_t size, uint32_t alignment, int32_t window)
 {
-	return vkPoolHeapAllocate(context, size, alignment, window);
+	return vnzKernelPoolHeapAllocate(context, size, alignment, window);
 }
 
 void vnzPoolHeapFree(void *context, void *memory, uint32_t size, uint32_t alignment, int32_t window)
 {
-	vkPoolHeapFree(context, memory, size, alignment, window);
+	vnzKernelPoolHeapFree(context, memory, size, alignment, window);
 }
 
 /* the data cache */
 void vnzCachePurge(uint32_t address, uint32_t size)
 {
-	vkCachePurge(address, size);
+	vnzKernelCachePurge(address, size);
 }
 
 void vnzCachePurgeAllCores(uint32_t address, uint32_t size)
 {
-	vkCachePurgeAllCores(address, size);
+	vnzKernelCachePurgeAllCores(address, size);
 }
 
 void vnzCacheFlush(uint32_t address, uint32_t size)
 {
-	vkCacheFlush(address, size);
+	vnzKernelCacheFlush(address, size);
 }
 
 void vnzCacheWriteback(uint32_t address, uint32_t size)
 {
-	vkCacheWriteback(address, size);
+	vnzKernelCacheWriteback(address, size);
 }
 
 void vnzCachePrefetch(uint32_t address, uint32_t size)
 {
-	vkCachePrefetch(address, size);
+	vnzKernelCachePrefetch(address, size);
 }
 
 void vnzCacheInvalidate(uint32_t address, uint32_t size)
 {
-	vkCacheInvalidate(address, size);
+	vnzKernelCacheInvalidate(address, size);
 }
 
 void vnzL2PurgeAllCores(uint32_t address, uint32_t size)
 {
-	vkL2PurgeAllCores(address, size);
+	vnzKernelL2PurgeAllCores(address, size);
 }
 
 void vnzL2InvalidateTags(uint32_t address, uint32_t size)
 {
-	vkL2InvalidateTags(address, size);
+	vnzKernelL2InvalidateTags(address, size);
 }
 
-/* the L2: line by line up to VK_L2_LINE_LIMIT, by the controller past it */
+/* the L2: line by line up to VNZ_KERNEL_L2_LINE_LIMIT, by the controller past it */
 static void l2Range(uint32_t address, uint32_t size, uint32_t operation)
 {
-	if (size <= VK_L2_LINE_LIMIT)
-		vkL2LineOperation(address, size, operation);
+	if (size <= VNZ_KERNEL_L2_LINE_LIMIT)
+		vnzKernelL2LineOperation(address, size, operation);
 	else
-		vkL2Operation(address, size, operation);
+		vnzKernelL2Operation(address, size, operation);
 }
 
 void vnzL2Invalidate(uint32_t address, uint32_t size)
 {
-	l2Range(address, size, VK_L2_INVALIDATE);
+	l2Range(address, size, VNZ_KERNEL_L2_INVALIDATE);
 }
 
 void vnzL2Writeback(uint32_t address, uint32_t size)
 {
-	l2Range(address, size, VK_L2_WRITEBACK);
+	l2Range(address, size, VNZ_KERNEL_L2_WRITEBACK);
 }
 
 void vnzL2Purge(uint32_t address, uint32_t size)
 {
-	l2Range(address, size, VK_L2_PURGE);
+	l2Range(address, size, VNZ_KERNEL_L2_PURGE);
 }
 
 void vnzL2Sync(uint32_t address, uint32_t size)
 {
-	vkL2LineOperation(address, size, VK_L2_SYNC);
+	vnzKernelL2LineOperation(address, size, VNZ_KERNEL_L2_SYNC);
 }
 
 void vnzL2Flush(uint32_t address, uint32_t size)
 {
-	vkL2LineOperation(address, size, VK_L2_FLUSH);
+	vnzKernelL2LineOperation(address, size, VNZ_KERNEL_L2_FLUSH);
 }
 
 void vnzL2SetMode(uint32_t mode)
 {
-	vkL2SetMode(mode);
+	vnzKernelL2SetMode(mode);
 }
 
 void vnzL2Disable(void)
 {
-	vkL2Disable();
+	vnzKernelL2Disable();
 }
 
 void vnzL2Enable(void)
 {
-	vkL2Enable();
+	vnzKernelL2Enable();
 }
 
 /* spinlocks */
 uint32_t vnzSpinTry(volatile uint8_t *lock)
 {
-	return vkSpinTry(lock);
+	return vnzKernelSpinTry(lock);
 }
 
 void vnzSpinUnlock(volatile uint8_t *lock)
 {
-	vkSpinUnlock(lock);
+	vnzKernelSpinUnlock(lock);
 }
 
 void vnzSpinLock(volatile uint8_t *lock)
 {
-	vkSpinLock(lock);
+	vnzKernelSpinLock(lock);
 }
 
 /* memory for the current thread */
@@ -421,12 +423,12 @@ uint32_t vnzMemoryPhysicalToStack(uint32_t address, uint32_t size)
 
 uint32_t vnzMemoryPhysicalToPublic(uint32_t address, uint32_t size)
 {
-	return vkPhysicalToPublic(address);
+	return vnzKernelPhysicalToPublic(address);
 }
 
 uint32_t vnzMemoryPhysicalToUncached(uint32_t address, uint32_t size)
 {
-	return vkPhysicalToUncached(address);
+	return vnzKernelPhysicalToUncached(address);
 }
 
 uint32_t vnzMemoryStackToPhysical(uint32_t address, uint32_t size)
@@ -436,47 +438,47 @@ uint32_t vnzMemoryStackToPhysical(uint32_t address, uint32_t size)
 
 uint32_t vnzMemoryPublicToPhysical(uint32_t address, uint32_t size)
 {
-	return vkPublicToPhysical(address);
+	return vnzKernelPublicToPhysical(address);
 }
 
 uint32_t vnzMemoryUncachedToPhysical(uint32_t address, uint32_t size)
 {
-	return vkUncachedToPhysical(address);
+	return vnzKernelUncachedToPhysical(address);
 }
 
-/* a thread's stack changes hands (vkThreadStart, and before it is freed) */
-void vnzMemorySync(uint32_t address, uint32_t size, VkThread *owner)
+/* a thread's stack changes hands (vnzKernelThreadStart, and before it is freed) */
+void vnzMemorySync(uint32_t address, uint32_t size, VnzKernelThread *owner)
 {
 }
 
 void *vnzAllocateStack(uint32_t size)
 {
-	return vkHeapAllocateStack(vkCurrentHeap(), size);
+	return vnzKernelHeapAllocateStack(vnzKernelCurrentHeap(), size);
 }
 
 void vnzFreeStack(void *memory, uint32_t size)
 {
-	vkHeapFreeStack(vkCurrentHeap(), memory, size);
+	vnzKernelHeapFreeStack(vnzKernelCurrentHeap(), memory, size);
 }
 
-void *vkAllocatePublic(uint32_t size)
+void *vnzKernelAllocatePublic(uint32_t size)
 {
-	return vkHeapAllocatePublic(vkCurrentHeap(), size);
+	return vnzKernelHeapAllocatePublic(vnzKernelCurrentHeap(), size);
 }
 
-void vkFreePublic(void *memory, uint32_t size)
+void vnzKernelFreePublic(void *memory, uint32_t size)
 {
-	vkHeapFreePublic(vkCurrentHeap(), memory, size);
+	vnzKernelHeapFreePublic(vnzKernelCurrentHeap(), memory, size);
 }
 
 void *vnzAllocateUncached(uint32_t size)
 {
-	return vkHeapAllocateUncached(vkCurrentHeap(), size);
+	return vnzKernelHeapAllocateUncached(vnzKernelCurrentHeap(), size);
 }
 
 void vnzFreeUncached(void *memory, uint32_t size)
 {
-	vkHeapFreeUncached(vkCurrentHeap(), memory, size);
+	vnzKernelHeapFreeUncached(vnzKernelCurrentHeap(), memory, size);
 }
 
 /*
@@ -488,19 +490,19 @@ void vnzFreeUncached(void *memory, uint32_t size)
  */
 uint32_t vnzPublicOpenPrivate(uint32_t address, uint32_t size)
 {
-	return vkPublicToPhysical(address);
+	return vnzKernelPublicToPhysical(address);
 }
 
 uint32_t vnzPublicClosePrivate(uint32_t address, uint32_t size)
 {
-	vkCacheWriteback(address, (size + 63) & ~63);
-	return vkPhysicalToPublic(address);
+	vnzKernelCacheWriteback(address, (size + 63) & ~63);
+	return vnzKernelPhysicalToPublic(address);
 }
 
 uint32_t vnzPublicOpenProtected(uint32_t address, uint32_t size)
 {
 	if (address >= 0xc0000000 && address < 0xe0000000)
-		return vkPublicToPhysical(address);
+		return vnzKernelPublicToPhysical(address);
 	return address;
 }
 
@@ -508,13 +510,13 @@ uint32_t vnzPublicCloseProtected(uint32_t address, uint32_t size)
 {
 	if (address < VNZ_DRAM || address >= VNZ_DRAM + 0xa8000000)
 		return address;
-	vkCachePurge(address, (size + 63) & ~63);
-	return vkPhysicalToPublic(address);
+	vnzKernelCachePurge(address, (size + 63) & ~63);
+	return vnzKernelPhysicalToPublic(address);
 }
 
 uint32_t vnzUncachedOpenPublic(uint32_t address, uint32_t size)
 {
-	return vkUncachedToPublic(address);
+	return vnzKernelUncachedToPublic(address);
 }
 
 /* to uncached: purged from the caches first */
@@ -524,33 +526,33 @@ uint32_t vnzUncachedClosePublic(uint32_t address, uint32_t size)
 
 	size = (size + 0xff) & ~0xff;
 	mep_syncm();
-	physical = vkPublicToPhysical(address);
-	l2Range(physical, size, VK_L2_PURGE);
-	return vkPhysicalToUncached(physical);
+	physical = vnzKernelPublicToPhysical(address);
+	l2Range(physical, size, VNZ_KERNEL_L2_PURGE);
+	return vnzKernelPhysicalToUncached(physical);
 }
 
 uint32_t vnzUncachedOpenRaw(uint32_t address, uint32_t size)
 {
-	return vkUncachedToPhysical(address);
+	return vnzKernelUncachedToPhysical(address);
 }
 
 uint32_t vnzUncachedCloseRaw(uint32_t address, uint32_t size)
 {
 	size = (size + 63) & ~63;
-	vkCachePurgeAllCores(address, size);
-	l2Range(address, (size + 0xff) & ~0xff, VK_L2_INVALIDATE);
-	return vkPhysicalToUncached(address);
+	vnzKernelCachePurgeAllCores(address, size);
+	l2Range(address, (size + 0xff) & ~0xff, VNZ_KERNEL_L2_INVALIDATE);
+	return vnzKernelPhysicalToUncached(address);
 }
 
 uint32_t vnzPublicOpenRaw(uint32_t address, uint32_t size)
 {
-	return vkPublicToPhysical(address);
+	return vnzKernelPublicToPhysical(address);
 }
 
 uint32_t vnzPublicCloseRaw(uint32_t address, uint32_t size)
 {
-	vkCachePurgeAllCores(address, (size + 63) & ~63);
-	return vkPhysicalToPublic(address);
+	vnzKernelCachePurgeAllCores(address, (size + 63) & ~63);
+	return vnzKernelPhysicalToPublic(address);
 }
 
 /* the lines wholly inside a range, for ranges up to VNZ_SMALL_RANGE */
@@ -564,7 +566,7 @@ void vnzCacheInvalidateInside(uint32_t address, uint32_t size)
 	uint32_t start, end;
 
 	if (WHOLE_LINES(address, size, 0x40, start, end))
-		vkCacheInvalidate(start, end - start);
+		vnzKernelCacheInvalidate(start, end - start);
 }
 
 void vnzCachePrefetchInside(uint32_t address, uint32_t size)
@@ -572,7 +574,7 @@ void vnzCachePrefetchInside(uint32_t address, uint32_t size)
 	uint32_t start, end;
 
 	if (WHOLE_LINES(address, size, 0x40, start, end))
-		vkCachePrefetch(start, end - start);
+		vnzKernelCachePrefetch(start, end - start);
 }
 
 void vnzL2FlushInside(uint32_t address, uint32_t size)
@@ -581,9 +583,9 @@ void vnzL2FlushInside(uint32_t address, uint32_t size)
 
 	if (size > VNZ_SMALL_RANGE)
 		return;
-	physical = vkPublicToPhysical(address);
+	physical = vnzKernelPublicToPhysical(address);
 	if (WHOLE_LINES(physical, size, 0x100, start, end))
-		vkL2LineOperation(start, end - start, VK_L2_FLUSH);
+		vnzKernelL2LineOperation(start, end - start, VNZ_KERNEL_L2_FLUSH);
 }
 
 void vnzL2SyncInside(uint32_t address, uint32_t size)
@@ -592,9 +594,9 @@ void vnzL2SyncInside(uint32_t address, uint32_t size)
 
 	if (size > VNZ_SMALL_RANGE)
 		return;
-	physical = vkPublicToPhysical(address);
+	physical = vnzKernelPublicToPhysical(address);
 	if (WHOLE_LINES(physical, size, 0x100, start, end))
-		vkL2LineOperation(start, end - start, VK_L2_SYNC);
+		vnzKernelL2LineOperation(start, end - start, VNZ_KERNEL_L2_SYNC);
 }
 
 /* three more copies of vnzCachePrefetchInside in Sony's kernel; nothing calls them */
@@ -603,7 +605,7 @@ void vnzCachePrefetchInsideCopy1(uint32_t address, uint32_t size)
 	uint32_t start, end;
 
 	if (WHOLE_LINES(address, size, 0x40, start, end))
-		vkCachePrefetch(start, end - start);
+		vnzKernelCachePrefetch(start, end - start);
 }
 
 void vnzCachePrefetchInsideCopy2(uint32_t address, uint32_t size)
@@ -611,7 +613,7 @@ void vnzCachePrefetchInsideCopy2(uint32_t address, uint32_t size)
 	uint32_t start, end;
 
 	if (WHOLE_LINES(address, size, 0x40, start, end))
-		vkCachePrefetch(start, end - start);
+		vnzKernelCachePrefetch(start, end - start);
 }
 
 void vnzCachePrefetchInsideCopy3(uint32_t address, uint32_t size)
@@ -619,100 +621,100 @@ void vnzCachePrefetchInsideCopy3(uint32_t address, uint32_t size)
 	uint32_t start, end;
 
 	if (WHOLE_LINES(address, size, 0x40, start, end))
-		vkCachePrefetch(start, end - start);
+		vnzKernelCachePrefetch(start, end - start);
 }
 
 /* address windows */
 uint32_t vnzUncachedToPhysical(uint32_t address)
 {
-	return vkUncachedToPhysical(address);
+	return vnzKernelUncachedToPhysical(address);
 }
 
 uint32_t vnzPhysicalToUncached(uint32_t address)
 {
-	return vkPhysicalToUncached(address);
+	return vnzKernelPhysicalToUncached(address);
 }
 
 uint32_t vnzDramAddress(uint32_t address)
 {
-	return vkDramAddress(address);
+	return vnzKernelDramAddress(address);
 }
 
 /* a second copy in Sony's kernel; nothing calls it */
 uint32_t vnzDramAddressCopy(uint32_t address)
 {
-	return vkDramAddress(address);
+	return vnzKernelDramAddress(address);
 }
 
 uint32_t vnzToPhysical(uint32_t address)
 {
-	return vkToPhysical(address);
+	return vnzKernelToPhysical(address);
 }
 
 uint32_t vnzToPublic(uint32_t address)
 {
-	return vkToPublic(address);
+	return vnzKernelToPublic(address);
 }
 
 uint32_t vnzToUncached(uint32_t address)
 {
-	return vkToUncached(address);
+	return vnzKernelToUncached(address);
 }
 
 uint32_t vnzCurrentCoreId(void)
 {
-	return vkCurrentCoreId();
+	return vnzKernelCurrentCoreId();
 }
 
 /* locks */
 volatile uint8_t *vnzLockAllocate(void)
 {
-	return vkLockPageAllocate();
+	return vnzKernelLockPageAllocate();
 }
 
 void vnzLockFree(volatile uint8_t *lock)
 {
-	vkLockPageFree(lock);
+	vnzKernelLockPageFree(lock);
 }
 
 /* interrupts: levels below 16, edge or level triggered */
-VkInterruptHandler *vnzInterruptRegister(uint32_t interrupt, int32_t level, uint32_t edge,
+VnzKernelInterruptHandler *vnzInterruptRegister(uint32_t interrupt, int32_t level, uint32_t edge,
 	uint32_t (*handler)(uint32_t, uint32_t), uint32_t argument, uint32_t argument2)
 {
 	if (level < 0 || level >= 0x10 || (edge != 0 && edge != 1))
 		return NULL;
-	return vkInterruptRegister(interrupt, level, edge, handler, argument, argument2);
+	return vnzKernelInterruptRegister(interrupt, level, edge, handler, argument, argument2);
 }
 
-void vnzInterruptRelease(VkInterruptHandler *handler)
+void vnzInterruptRelease(VnzKernelInterruptHandler *handler)
 {
-	vkInterruptRelease(handler);
+	vnzKernelInterruptRelease(handler);
 }
 
-int32_t vnzInterruptEnable(VkInterruptHandler *handler)
+int32_t vnzInterruptEnable(VnzKernelInterruptHandler *handler)
 {
-	return vkInterruptEnable(handler);
+	return vnzKernelInterruptEnable(handler);
 }
 
-int32_t vnzInterruptDisable(VkInterruptHandler *handler)
+int32_t vnzInterruptDisable(VnzKernelInterruptHandler *handler)
 {
-	return vkInterruptDisable(handler);
+	return vnzKernelInterruptDisable(handler);
 }
 
 /* crashes */
-int32_t vnzCrashSetHook(VkCrashHook hook, uint32_t argument, uint32_t argument2)
+int32_t vnzCrashSetHook(VnzKernelCrashHook hook, uint32_t argument, uint32_t argument2)
 {
-	return vkCrashSetHook(hook, argument, argument2);
+	return vnzKernelCrashSetHook(hook, argument, argument2);
 }
 
 int32_t vnzCrashClearHook(void)
 {
-	return vkCrashClearHook();
+	return vnzKernelCrashClearHook();
 }
 
 int32_t vnzCrashCopyRegister(uint32_t id, const void *source, uint32_t size)
 {
-	return vkCrashCopyRegister(id, source, size);
+	return vnzKernelCrashCopyRegister(id, source, size);
 }
 
 /* tracing, into a memory region (id) */
@@ -722,85 +724,85 @@ int32_t vnzTraceSetup(uint32_t id, uint32_t mode)
 
 	if (mode >= 2)
 		return VNZ_ERROR;
-	base = vkMemoryRegion(id, &size);
+	base = vnzKernelMemoryRegion(id, &size);
 	if (base == 0)
 		return VNZ_ERROR;
-	return vkTraceSetup((void *)vkPhysicalToPublic(base), size, mode);
+	return vnzKernelTraceSetup((void *)vnzKernelPhysicalToPublic(base), size, mode);
 }
 
 int32_t vnzTraceSetShare(uint32_t coreId, uint32_t size)
 {
-	return vkTraceSetShare(coreId, size);
+	return vnzKernelTraceSetShare(coreId, size);
 }
 
 int32_t vnzTraceStart(uint32_t mask)
 {
-	return vkTraceStart(mask);
+	return vnzKernelTraceStart(mask);
 }
 
 int32_t vnzTraceStop(void)
 {
-	return vkTraceStop();
+	return vnzKernelTraceStop();
 }
 
 /* Stop using the buffer, written back for the reader. */
 void vnzTraceRelease(void)
 {
 	uint32_t size;
-	void *buffer = vkTraceBuffer(&size);
+	void *buffer = vnzKernelTraceBuffer(&size);
 
-	vkTraceRelease();
-	l2Range(vkPublicToPhysical((uint32_t)buffer), size, VK_L2_WRITEBACK);
+	vnzKernelTraceRelease();
+	l2Range(vnzKernelPublicToPhysical((uint32_t)buffer), size, VNZ_KERNEL_L2_WRITEBACK);
 }
 
 /* power */
 uint32_t vnzPowerSetCores(uint32_t expected, uint32_t cores)
 {
-	return vkPowerSetCores(expected, cores);
+	return vnzKernelPowerSetCores(expected, cores);
 }
 
-VkPowerHook *vnzPowerNotifyCreate(VkThread *thread, uint32_t flags)
+VnzKernelPowerHook *vnzPowerNotifyCreate(VnzKernelThread *thread, uint32_t flags)
 {
-	return vkPowerNotifyCreate(thread, flags);
+	return vnzKernelPowerNotifyCreate(thread, flags);
 }
 
-void vnzPowerNotifyDelete(VkPowerHook *hook)
+void vnzPowerNotifyDelete(VnzKernelPowerHook *hook)
 {
-	vkPowerNotifyDelete(hook);
+	vnzKernelPowerNotifyDelete(hook);
 }
 
-void vnzPowerNotifyRegister(VkPowerHook *hook)
+void vnzPowerNotifyRegister(VnzKernelPowerHook *hook)
 {
-	vkPowerNotifyRegister(hook);
+	vnzKernelPowerNotifyRegister(hook);
 }
 
-void vnzPowerNotifyUnregister(VkPowerHook *hook)
+void vnzPowerNotifyUnregister(VnzKernelPowerHook *hook)
 {
-	vkPowerNotifyUnregister(hook);
+	vnzKernelPowerNotifyUnregister(hook);
 }
 
 uint32_t vnzPowerActiveCores(void)
 {
-	return vkPowerActiveCores();
+	return vnzKernelPowerActiveCores();
 }
 
-VkPowerHook *vnzPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t argument),
+VnzKernelPowerHook *vnzPowerCallbackCreate(void (*function)(uint32_t cores, uint32_t argument),
 	uint32_t argument)
 {
-	return vkPowerCallbackCreate(function, argument);
+	return vnzKernelPowerCallbackCreate(function, argument);
 }
 
-void vnzPowerCallbackDelete(VkPowerHook *hook)
+void vnzPowerCallbackDelete(VnzKernelPowerHook *hook)
 {
-	vkPowerCallbackDelete(hook);
+	vnzKernelPowerCallbackDelete(hook);
 }
 
-void vnzPowerCallbackRegister(VkPowerHook *hook)
+void vnzPowerCallbackRegister(VnzKernelPowerHook *hook)
 {
-	vkPowerCallbackRegister(hook);
+	vnzKernelPowerCallbackRegister(hook);
 }
 
-void vnzPowerCallbackUnregister(VkPowerHook *hook)
+void vnzPowerCallbackUnregister(VnzKernelPowerHook *hook)
 {
-	vkPowerCallbackUnregister(hook);
+	vnzKernelPowerCallbackUnregister(hook);
 }

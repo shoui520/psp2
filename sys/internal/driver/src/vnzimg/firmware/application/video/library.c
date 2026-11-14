@@ -208,9 +208,9 @@ int32_t videoServerCreate(uint32_t kind, VideoServer *server)
 		vnzLockFree(server->lock);
 		return VIDEO_ERROR_MEMORY;
 	}
-	server->thread = (VkThread *)thread;
+	server->thread = (VnzKernelThread *)thread;
 	server->client = vnzThreadCurrent();
-	vnzThreadStart((VkThread *)thread, (uint32_t)server, 0);
+	vnzThreadStart((VnzKernelThread *)thread, (uint32_t)server, 0);
 	vnzThreadWaitFlags(VIDEO_FLAG_DONE);
 	return 0;
 }
@@ -218,7 +218,7 @@ int32_t videoServerCreate(uint32_t kind, VideoServer *server)
 /* tells a server thread to exit and deletes it once it has */
 int32_t videoServerDelete(VideoServer *server, uint32_t argument)
 {
-	VkThread *thread = server->thread;
+	VnzKernelThread *thread = server->thread;
 	uint32_t deleted = 0, tries = 0;
 	int32_t result;
 
@@ -474,15 +474,17 @@ uint32_t videoInvalidate(uint32_t address, uint32_t size)
 }
 
 /* the job, on the context, waited for */
-int32_t videoVThreadExecute(VkVThreadContext *context, uint32_t index, VkJobFunction entry,
+int32_t videoVThreadExecute(VnzKernelVThreadContext *context, uint32_t index,
+	VnzKernelJobFunction entry,
 	uint32_t argument, uint32_t argument2, uint32_t argument3, uint32_t argument4)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 	int32_t result;
 
-	result = vkVThreadJobSetNotify(locked, index, 0, entry, argument, argument2, argument3,
+	result = vnzKernelVThreadJobSetNotify(locked, index, 0, entry, argument, argument2,
+		argument3,
 		argument4, vnzThreadCurrent(), 0x80000000);
-	result |= vkVThreadContextUnlock(locked);
+	result |= vnzKernelVThreadContextUnlock(locked);
 	if (result)
 		return VIDEO_ERROR_MEMORY;
 	vnzThreadWaitFlags(0x80000000);

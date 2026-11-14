@@ -62,7 +62,8 @@ uint32_t enterMemoryAccessProtocol(uint32_t address, uint32_t size)
 		address = vnzMemoryPhysicalToPublic(vnzMemoryEnter(range.base, range.size),
 			range.size);
 	else
-		address = vkUnmanagedPhysicalToUncached(vkUnmanagedEnter(range.base, range.size),
+		address = vnzKernelUnmanagedPhysicalToUncached(vnzKernelUnmanagedEnter(range.base,
+			range.size),
 			range.size);
 	physical = vnzToPhysical(address);
 	vnzCachePurge(physical, range.size);
@@ -83,7 +84,8 @@ uint32_t leaveMemoryAccessProtocol(uint32_t address, uint32_t size)
 		address = vnzMemoryLeave(vnzMemoryPublicToPhysical(range.base, range.size),
 			range.size);
 	else
-		address = vkUnmanagedLeave(vkUnmanagedUncachedToPhysical(range.base, range.size),
+		address = vnzKernelUnmanagedLeave(vnzKernelUnmanagedUncachedToPhysical(range.base,
+			range.size),
 			range.size);
 	return rangeAddress(&range, address);
 }
@@ -99,7 +101,7 @@ uint32_t openRawMemory(uint32_t address, uint32_t size)
 	else if (inPublicWindow(&range))
 		address = vnzPublicOpenRaw(range.base, range.size);
 	else
-		address = vkUnmanagedPublicOpenRaw(range.base, range.size);
+		address = vnzKernelUnmanagedPublicOpenRaw(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 
@@ -113,7 +115,7 @@ uint32_t closeRawMemory(uint32_t address, uint32_t size)
 	else if (inPublicWindow(&range))
 		address = vnzPublicCloseRaw(range.base, range.size);
 	else
-		address = vkUnmanagedPublicCloseRaw(range.base, range.size);
+		address = vnzKernelUnmanagedPublicCloseRaw(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 
@@ -126,7 +128,7 @@ uint32_t openPublicMemory(uint32_t address, uint32_t size)
 	if (inUncachedWindow(&range))
 		address = vnzUncachedOpenPublic(range.base, range.size);
 	else if (!inPublicWindow(&range))
-		address = vkUnmanagedOpenPublic(range.base, range.size);
+		address = vnzKernelUnmanagedOpenPublic(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 
@@ -141,7 +143,7 @@ uint32_t closePublicMemory(uint32_t address, uint32_t size)
 	else if (inPublicWindow(&range))
 		vnzL2Purge(range.base, range.size);
 	else
-		address = vkUnmanagedClosePublic(range.base, range.size);
+		address = vnzKernelUnmanagedClosePublic(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 
@@ -153,7 +155,7 @@ uint32_t openProtectedMemory(uint32_t address, uint32_t size)
 	if (vnzToPublic(range.base) && vnzToPublic(range.last))
 		address = vnzPublicOpenProtected(range.base, range.size);
 	else
-		address = vkUnmanagedOpenProtected(range.base, range.size);
+		address = vnzKernelUnmanagedOpenProtected(range.base, range.size);
 	if (vnzCurrentCoreId() != VNZ_UNCACHED_CORE_ID)
 		vnzCachePurge(vnzToPhysical(address), range.size);
 	return rangeAddress(&range, address);
@@ -167,7 +169,7 @@ uint32_t closeProtectedMemory(uint32_t address, uint32_t size)
 	if (vnzToPublic(range.base) && vnzToPublic(range.last))
 		address = vnzPublicCloseProtected(range.base, range.size);
 	else
-		address = vkUnmanagedCloseProtected(range.base, range.size);
+		address = vnzKernelUnmanagedCloseProtected(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 
@@ -179,7 +181,7 @@ uint32_t openPrivateMemory(uint32_t address, uint32_t size)
 	if (vnzToPublic(range.base) && vnzToPublic(range.last))
 		address = vnzPublicOpenPrivate(range.base, range.size);
 	else
-		address = vkUnmanagedOpenPrivate(range.base, range.size);
+		address = vnzKernelUnmanagedOpenPrivate(range.base, range.size);
 	if (vnzCurrentCoreId() != VNZ_UNCACHED_CORE_ID)
 		vnzCachePurge(vnzToPhysical(address), range.size);
 	return rangeAddress(&range, address);
@@ -193,7 +195,7 @@ uint32_t closePrivateMemory(uint32_t address, uint32_t size)
 	if (vnzToPublic(range.base) && vnzToPublic(range.last))
 		address = vnzPublicClosePrivate(range.base, range.size);
 	else
-		address = vkUnmanagedClosePrivate(range.base, range.size);
+		address = vnzKernelUnmanagedClosePrivate(range.base, range.size);
 	return rangeAddress(&range, address);
 }
 

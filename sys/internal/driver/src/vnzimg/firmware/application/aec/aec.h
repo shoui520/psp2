@@ -99,7 +99,7 @@ typedef struct AecWork {
 	int32_t frames;			/* since the parameters changed, to 100 */
 	uint8_t curve[AEC_BINS];	/* the microphone's gain by bin, (x + 1) / 256 */
 	uint32_t size;			/* bytes a call */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;
 	uint32_t reserved4;
 } AecWork;

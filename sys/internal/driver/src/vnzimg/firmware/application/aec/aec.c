@@ -50,11 +50,11 @@ int32_t rpcAecSizes(uint32_t ctrlAddress)
 }
 
 /* a new canceller gets its context */
-static int32_t aecSetup(VkVThreadResource *resource, AecWork *work, uint32_t create)
+static int32_t aecSetup(VnzKernelVThreadResource *resource, AecWork *work, uint32_t create)
 {
 	if (create) {
 		memset(work, 0, 4);
-		work->context = vkVThreadContextCreate(1, resource);
+		work->context = vnzKernelVThreadContextCreate(1, resource);
 	}
 	if (work->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
@@ -64,14 +64,14 @@ static int32_t aecSetup(VkVThreadResource *resource, AecWork *work, uint32_t cre
 static int32_t aecRelease(AecWork *work)
 {
 	if (work->context) {
-		vkVThreadContextDelete(work->context);
+		vnzKernelVThreadContextDelete(work->context);
 		work->context = NULL;
 	}
 	return 0;
 }
 
 /* a canceller made (with its context, on the resource) or reset */
-static int32_t aecInit(uint32_t ctrlAddress, VkVThreadResource *resource, uint32_t create)
+static int32_t aecInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource, uint32_t create)
 {
 	VnzExtMemory ctrlMemory, workMemory;
 	uint32_t workAddress = 0;
@@ -111,7 +111,7 @@ close:
 }
 
 /* RPC 417 */
-int32_t rpcAecInit(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcAecInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	return aecInit(ctrlAddress, resource, 1);
 }
@@ -181,13 +181,13 @@ out:
 }
 
 /* the call on the context, waited for */
-static int32_t aecRun(uint32_t work, VkVThreadContext *context, uint32_t near, uint32_t far)
+static int32_t aecRun(uint32_t work, VnzKernelVThreadContext *context, uint32_t near, uint32_t far)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, aecJob, work, near, far, 0, vnzThreadCurrent(),
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, aecJob, work, near, far, 0, vnzThreadCurrent(),
 		DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -197,7 +197,7 @@ int32_t rpcAecProcess(uint32_t ctrlAddress, int32_t delay, uint32_t flags)
 {
 	VnzExtMemory ctrlMemory, workMemory, nearMemory, farMemory;
 	uint32_t workAddress = 0, near = 0, far = 0;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	AecWork *work;
 	int32_t result;
 	AecCtrl *ctrl;

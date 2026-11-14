@@ -39,7 +39,7 @@ typedef struct CelpEncoder {
 	uint32_t engine[ENGINE_MEMORY_SIZE / 4];
 	uint32_t pcmSize;		/* the bytes given; then the bytes used */
 	uint32_t esSize;		/* the bytes given; then the bytes written */
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	int32_t result;			/* the last job's */
 	uint32_t bitRate;
 	uint8_t header[HEADER_SIZE];
@@ -81,12 +81,12 @@ static int32_t keepError(int32_t result, int32_t closed)
 }
 
 /* a new encoder gets its context */
-static int32_t celpEncSetup(CelpEncCtrl *ctrl, VkVThreadResource *resource,
+static int32_t celpEncSetup(CelpEncCtrl *ctrl, VnzKernelVThreadResource *resource,
 	CelpEncoder *encoder, uint32_t create)
 {
 	if (create) {
 		memset(encoder, 0, 4);
-		encoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+		encoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	}
 	if (encoder->context == NULL)
 		return VNZ_THREAD_CONTEXT_ERROR_CREATE;
@@ -96,7 +96,7 @@ static int32_t celpEncSetup(CelpEncCtrl *ctrl, VkVThreadResource *resource,
 static int32_t celpEncRelease(CelpEncoder *encoder)
 {
 	if (encoder->context) {
-		vkVThreadContextDelete(encoder->context);
+		vnzKernelVThreadContextDelete(encoder->context);
 		encoder->context = NULL;
 	}
 	return 0;
@@ -202,14 +202,15 @@ out:
 }
 
 /* a job on the context, waited for */
-static int32_t celpEncRun(VkVThreadContext *context, VkJobFunction job, uint32_t encoder,
+static int32_t celpEncRun(VnzKernelVThreadContext *context, VnzKernelJobFunction job,
+	uint32_t encoder,
 	uint32_t pcm, uint32_t es)
 {
-	VkVThreadContext *locked = vkVThreadContextLock(context);
+	VnzKernelVThreadContext *locked = vnzKernelVThreadContextLock(context);
 
-	vkVThreadJobSetNotify(locked, 0, 0, job, encoder, pcm, es, 0, vnzThreadCurrent(),
+	vnzKernelVThreadJobSetNotify(locked, 0, 0, job, encoder, pcm, es, 0, vnzThreadCurrent(),
 		DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	return 0;
 }
@@ -228,11 +229,11 @@ int32_t rpcCelpEncSizes(uint32_t ctrlAddress)
 }
 
 /* an encoder made (with its context, on the resource) or restarted */
-static int32_t celpEncStartCall(uint32_t ctrlAddress, VkVThreadResource *resource,
+static int32_t celpEncStartCall(uint32_t ctrlAddress, VnzKernelVThreadResource *resource,
 	uint32_t create)
 {
 	VnzExtMemory ctrlMemory, encoderMemory;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t encoderAddress = 0;
 	CelpEncoder *encoder;
 	CelpEncCtrl *ctrl;
@@ -280,7 +281,7 @@ close:
 }
 
 /* RPC 265 */
-int32_t rpcCelpEncInit(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcCelpEncInit(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	return celpEncStartCall(ctrlAddress, resource, 1);
 }
@@ -322,7 +323,7 @@ int32_t rpcCelpEncode(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, encoderMemory, pcmMemory, esMemory;
 	uint32_t encoderAddress = 0, pcm = 0, es = 0, pcmSize, esSize;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	CelpEncoder *encoder;
 	CelpEncCtrl *ctrl;
 	int32_t result;
@@ -391,7 +392,7 @@ close:
 int32_t rpcCelpEncOptInfo(uint32_t ctrlAddress)
 {
 	VnzExtMemory ctrlMemory, encoderMemory;
-	VkVThreadContext *context = NULL;
+	VnzKernelVThreadContext *context = NULL;
 	uint32_t encoderAddress = 0;
 	CelpEncoder *encoder;
 	CelpEncCtrl *ctrl;

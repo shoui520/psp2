@@ -42,7 +42,7 @@ static VideoServiceSlot *encoderSlot(VideoService *service, int32_t index)
 	return &service->encoders[index - service->numOfDecoders];
 }
 
-static void threadStop(VkThread *thread)
+static void threadStop(VnzKernelThread *thread)
 {
 	vnzThreadSetFlags(thread, SERVICE_FLAG_EXIT);
 	while (vnzThreadIsAlive(thread))
@@ -53,18 +53,18 @@ static void threadStop(VkThread *thread)
 static void serviceThread(uint32_t address, uint32_t helperMemory)
 {
 	VideoService *service = serviceBegin(address);
-	VkMessageQueue *requestQueue = service->requestQueue;
-	VkMessageQueue *engineQueue = service->engineQueue;
-	VkMessageQueue *engineQueue2 = service->engineQueue2;
+	VnzKernelMessageQueue *requestQueue = service->requestQueue;
+	VnzKernelMessageQueue *engineQueue = service->engineQueue;
+	VnzKernelMessageQueue *engineQueue2 = service->engineQueue2;
 	uint32_t flags;
 
 	do {
 		flags = serviceWait(service);
-		while (vkMessageReceive(requestQueue, (uint32_t)service))
+		while (vnzKernelMessageReceive(requestQueue, (uint32_t)service))
 			;
-		while (vkMessageReceive(engineQueue, (uint32_t)service))
+		while (vnzKernelMessageReceive(engineQueue, (uint32_t)service))
 			;
-		while (vkMessageReceive(engineQueue2, (uint32_t)service))
+		while (vnzKernelMessageReceive(engineQueue2, (uint32_t)service))
 			;
 		if (flags & SERVICE_FLAG_EXIT)
 			service->state = 0;
@@ -72,16 +72,17 @@ static void serviceThread(uint32_t address, uint32_t helperMemory)
 	serviceEnd(service);
 }
 
-static VkThread *helperCreate(VideoService *service, uint32_t memory)
+static VnzKernelThread *helperCreate(VideoService *service, uint32_t memory)
 {
-	VkMessageQueue *queue, *queue2, *queue3;
-	VkThread *thread;
+	VnzKernelMessageQueue *queue, *queue2, *queue3;
+	VnzKernelThread *thread;
 
-	thread = (VkThread *)vnzThreadCreate(videoHelperThread, SERVICE_CORE, ENGINE_PRIORITY,
+	thread = (VnzKernelThread *)vnzThreadCreate(videoHelperThread, SERVICE_CORE,
+		ENGINE_PRIORITY,
 		ENGINE_STACK);
-	queue = vkMessageQueueCreate(thread, 0x10000, service->queueSize);
-	queue2 = vkMessageQueueCreate(thread, 2, 4);
-	queue3 = vkMessageQueueCreate(thread, 8, 4);
+	queue = vnzKernelMessageQueueCreate(thread, 0x10000, service->queueSize);
+	queue2 = vnzKernelMessageQueueCreate(thread, 2, 4);
+	queue3 = vnzKernelMessageQueueCreate(thread, 8, 4);
 	service->helper = thread;
 	service->helperMemory = memory;
 	service->helperQueue = queue;
@@ -98,16 +99,16 @@ static VkThread *helperCreate(VideoService *service, uint32_t memory)
 
 static void helperDelete(VideoService *service)
 {
-	VkThread *thread = service->helper;
+	VnzKernelThread *thread = service->helper;
 
 	if (thread != VIDEO_NO_THREAD)
 		threadStop(thread);
 	if (service->helperQueue)
-		vkMessageQueueDelete(service->helperQueue);
+		vnzKernelMessageQueueDelete(service->helperQueue);
 	if (service->helperQueue2)
-		vkMessageQueueDelete(service->helperQueue2);
+		vnzKernelMessageQueueDelete(service->helperQueue2);
 	if (service->helperQueue3)
-		vkMessageQueueDelete(service->helperQueue3);
+		vnzKernelMessageQueueDelete(service->helperQueue3);
 	if (thread != VIDEO_NO_THREAD) {
 		vnzThreadDelete(thread);
 		service->helper = VIDEO_NO_THREAD;
@@ -118,23 +119,23 @@ static void helperDelete(VideoService *service)
 static void decoderOpen(VideoService *service, uint32_t codec, int32_t index)
 {
 	VideoServiceSlot *slot = &service->decoders[index].slot;
-	VkMessageQueue *auQueue, *wakeQueue, *innerQueue, *decodeQueue;
-	VkThread *thread, *thread2;
+	VnzKernelMessageQueue *auQueue, *wakeQueue, *innerQueue, *decodeQueue;
+	VnzKernelThread *thread, *thread2;
 	uint32_t memory, memory2;
 
-	thread = (VkThread *)vnzThreadCreate(decoderThread, SERVICE_CORE, ENGINE_PRIORITY,
+	thread = (VnzKernelThread *)vnzThreadCreate(decoderThread, SERVICE_CORE, ENGINE_PRIORITY,
 		ENGINE_STACK);
-	thread2 = (VkThread *)vnzThreadCreate(decoderThread2, SERVICE_CORE, ENGINE_PRIORITY,
+	thread2 = (VnzKernelThread *)vnzThreadCreate(decoderThread2, SERVICE_CORE, ENGINE_PRIORITY,
 		ENGINE_STACK);
 	memory = slot->memory;
 	if (codec == SERVICE_CODEC_AVCDEC)
 		memory2 = memory + avcdecQueryParserMemory(slot->maxStreams, slot->maxFrames);
 	else
 		memory2 = memory + m4vdecQueryParserMemory();
-	auQueue = vkMessageQueueCreate(thread, 1, 2);
-	wakeQueue = vkMessageQueueCreate(thread, 4, 2);
-	innerQueue = vkMessageQueueCreate(thread2, 1, 4);
-	decodeQueue = vkMessageQueueCreate(thread2, 4, 2);
+	auQueue = vnzKernelMessageQueueCreate(thread, 1, 2);
+	wakeQueue = vnzKernelMessageQueueCreate(thread, 4, 2);
+	innerQueue = vnzKernelMessageQueueCreate(thread2, 1, 4);
+	decodeQueue = vnzKernelMessageQueueCreate(thread2, 4, 2);
 	slot->thread = thread;
 	slot->thread2 = thread2;
 	slot->auQueue = auQueue;
@@ -161,20 +162,20 @@ static void decoderOpen(VideoService *service, uint32_t codec, int32_t index)
 
 static void slotClose(VideoServiceSlot *slot)
 {
-	VkThread *thread = slot->thread, *thread2 = slot->thread2;
+	VnzKernelThread *thread = slot->thread, *thread2 = slot->thread2;
 
 	if (thread != VIDEO_NO_THREAD)
 		threadStop(thread);
 	if (thread2 != VIDEO_NO_THREAD)
 		threadStop(thread2);
 	if (slot->auQueue)
-		vkMessageQueueDelete(slot->auQueue);
+		vnzKernelMessageQueueDelete(slot->auQueue);
 	if (slot->wakeQueue)
-		vkMessageQueueDelete(slot->wakeQueue);
+		vnzKernelMessageQueueDelete(slot->wakeQueue);
 	if (slot->decodeQueue)
-		vkMessageQueueDelete(slot->decodeQueue);
+		vnzKernelMessageQueueDelete(slot->decodeQueue);
 	if (slot->innerQueue)
-		vkMessageQueueDelete(slot->innerQueue);
+		vnzKernelMessageQueueDelete(slot->innerQueue);
 	if (thread != VIDEO_NO_THREAD)
 		vnzThreadDelete(thread);
 	if (thread2 != VIDEO_NO_THREAD)
@@ -190,20 +191,20 @@ static void decoderClose(VideoService *service, int32_t index)
 static void encoderOpen(VideoService *service, uint32_t codec, int32_t index)
 {
 	VideoServiceSlot *slot = encoderSlot(service, index);
-	VkMessageQueue *auQueue, *wakeQueue, *innerQueue, *decodeQueue;
-	VkThread *thread, *thread2;
+	VnzKernelMessageQueue *auQueue, *wakeQueue, *innerQueue, *decodeQueue;
+	VnzKernelThread *thread, *thread2;
 	uint32_t memory, memory2;
 
-	thread = (VkThread *)vnzThreadCreate(encoderThread, SERVICE_CORE, ENGINE_PRIORITY,
+	thread = (VnzKernelThread *)vnzThreadCreate(encoderThread, SERVICE_CORE, ENGINE_PRIORITY,
 		ENGINE_STACK);
-	thread2 = (VkThread *)vnzThreadCreate(encoderThread2, SERVICE_CORE, ENGINE_PRIORITY,
+	thread2 = (VnzKernelThread *)vnzThreadCreate(encoderThread2, SERVICE_CORE, ENGINE_PRIORITY,
 		ENCODER_STACK2);
 	memory = slot->memory;
 	memory2 = memory + avcencQueryContextMemory();
-	auQueue = vkMessageQueueCreate(thread2, 1, 2);
-	wakeQueue = vkMessageQueueCreate(thread, 1, 2);
-	innerQueue = vkMessageQueueCreate(thread2, 4, 4);
-	decodeQueue = vkMessageQueueCreate(thread, 4, 2);
+	auQueue = vnzKernelMessageQueueCreate(thread2, 1, 2);
+	wakeQueue = vnzKernelMessageQueueCreate(thread, 1, 2);
+	innerQueue = vnzKernelMessageQueueCreate(thread2, 4, 4);
+	decodeQueue = vnzKernelMessageQueueCreate(thread, 4, 2);
 	slot->thread = thread;
 	slot->thread2 = thread2;
 	slot->decodeQueue = decodeQueue;
@@ -308,7 +309,7 @@ void videoServiceSetup(uint32_t address, uint32_t resource, uint32_t flagAccepte
 	service->numOfEncoders = numOfEncoders;
 	service->numOfDecoders = numOfDecoders;
 	service->flagAccepted = flagAccepted;
-	service->resource = (VkVThreadResource *)resource;
+	service->resource = (VnzKernelVThreadResource *)resource;
 	service->replyToggle = 0;
 	service->replyReady = -1;
 	service->flagReplied = flagReplied;
@@ -329,16 +330,16 @@ void videoServiceSetup(uint32_t address, uint32_t resource, uint32_t flagAccepte
 int32_t videoServiceOpen(uint32_t address, uint32_t *info, uint32_t *info2,
 	uint32_t numOfDecoders, uint32_t numOfEncoders, uint32_t horizontal)
 {
-	VkMessageQueue *engineQueue, *engineQueue2, *requestQueue, *releaseQueue;
+	VnzKernelMessageQueue *engineQueue, *engineQueue2, *requestQueue, *releaseQueue;
 	uint32_t decoders, encoders, helperMemory, jobs, count;
 	int32_t widthInMbs, groups, rows, columns, queueSize, i;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	volatile uint8_t *lock;
 	VideoService *service;
-	VkThread *thread, *helper;
+	VnzKernelThread *thread, *helper;
 	uint32_t failed;
 
-	thread = (VkThread *)vnzThreadCreate(serviceThread, SERVICE_CORE, 4, SERVICE_STACK);
+	thread = (VnzKernelThread *)vnzThreadCreate(serviceThread, SERVICE_CORE, 4, SERVICE_STACK);
 	decoders = address + SERVICE_SIZE;
 	encoders = decoders + numOfDecoders * DECODER_SIZE;
 	helperMemory = encoders + numOfEncoders * ENCODER_SIZE;
@@ -356,10 +357,10 @@ int32_t videoServiceOpen(uint32_t address, uint32_t *info, uint32_t *info2,
 		columns = 2;
 	rows = ((widthInMbs + 7) >> 3) + 1;
 	count = (numOfDecoders + numOfEncoders) * 8 + (columns * 8 + rows * 8 + 4) * numOfEncoders;
-	service->encoderContext = vkVThreadContextCreate(count, service->resource);
+	service->encoderContext = vnzKernelVThreadContextCreate(count, service->resource);
 	failed = !service->encoderContext;
 	for (i = 0; i < 2; i++) {
-		context = vkVThreadContextCreate(jobs, service->resource);
+		context = vnzKernelVThreadContextCreate(jobs, service->resource);
 		lock = vnzLockAllocate();
 		failed |= !context;
 		failed |= !lock;
@@ -374,10 +375,10 @@ int32_t videoServiceOpen(uint32_t address, uint32_t *info, uint32_t *info2,
 	service->encoderLock = lock;
 
 	queueSize = service->queueSize;
-	engineQueue = vkMessageQueueCreate(thread, SERVICE_FLAG_ENGINE, queueSize * 2);
-	engineQueue2 = vkMessageQueueCreate(thread, SERVICE_FLAG_ENGINE2, queueSize * 2);
-	requestQueue = vkMessageQueueCreate(thread, SERVICE_FLAG_REQUEST, queueSize);
-	releaseQueue = vkMessageQueueCreate(thread, SERVICE_FLAG_RELEASE, queueSize * 2);
+	engineQueue = vnzKernelMessageQueueCreate(thread, SERVICE_FLAG_ENGINE, queueSize * 2);
+	engineQueue2 = vnzKernelMessageQueueCreate(thread, SERVICE_FLAG_ENGINE2, queueSize * 2);
+	requestQueue = vnzKernelMessageQueueCreate(thread, SERVICE_FLAG_REQUEST, queueSize);
+	releaseQueue = vnzKernelMessageQueueCreate(thread, SERVICE_FLAG_RELEASE, queueSize * 2);
 	service->engineQueue = engineQueue;
 	service->engineQueue2 = engineQueue2;
 	service->requestQueue = requestQueue;
@@ -402,30 +403,30 @@ int32_t videoServiceOpen(uint32_t address, uint32_t *info, uint32_t *info2,
 void videoServiceClose(uint32_t address, int32_t handle)
 {
 	VideoService *service = (VideoService *)address;
-	VkThread *thread = (VkThread *)handle;
+	VnzKernelThread *thread = (VnzKernelThread *)handle;
 	int32_t i;
 
 	if (thread != VIDEO_NO_THREAD)
 		threadStop(thread);
 	helperDelete(service);
 	if (service->encoderContext)
-		vkVThreadContextDelete(service->encoderContext);
+		vnzKernelVThreadContextDelete(service->encoderContext);
 	for (i = 0; i < 2; i++) {
 		if (service->context[i])
-			vkVThreadContextDelete(service->context[i]);
+			vnzKernelVThreadContextDelete(service->context[i]);
 		if (service->contextLock[i])
 			vnzLockFree(service->contextLock[i]);
 	}
 	if (service->encoderLock)
 		vnzLockFree(service->encoderLock);
 	if (service->engineQueue)
-		vkMessageQueueDelete(service->engineQueue);
+		vnzKernelMessageQueueDelete(service->engineQueue);
 	if (service->engineQueue2)
-		vkMessageQueueDelete(service->engineQueue2);
+		vnzKernelMessageQueueDelete(service->engineQueue2);
 	if (service->requestQueue)
-		vkMessageQueueDelete(service->requestQueue);
+		vnzKernelMessageQueueDelete(service->requestQueue);
 	if (service->releaseQueue)
-		vkMessageQueueDelete(service->releaseQueue);
+		vnzKernelMessageQueueDelete(service->releaseQueue);
 	if (thread != VIDEO_NO_THREAD)
 		vnzThreadDelete(thread);
 }
@@ -552,7 +553,7 @@ static void replyWait(VideoService *service, int32_t index)
 	uint32_t bit = 1 << index;
 
 	while (!(service->replyToggle & bit) && !(service->replyReady & bit))
-		while (!vkMessageReceive(service->releaseQueue, (uint32_t)service))
+		while (!vnzKernelMessageReceive(service->releaseQueue, (uint32_t)service))
 			vnzThreadWaitFlags(SERVICE_FLAG_RELEASE);
 	if (service->replyToggle & bit) {
 		service->replyToggle &= ~bit;
@@ -644,16 +645,16 @@ static void replySend(VideoService *service, uint32_t code, uint32_t kind, int32
 		slot = encoderSlot(service, index);
 		reply = slot->replies + slot->replyIndex * REPLY_SIZE;
 		slot->replyIndex = 1 - slot->replyIndex;
-		vkMessageSend(slot->clientQueue, avcencReceive, reply);
+		vnzKernelMessageSend(slot->clientQueue, avcencReceive, reply);
 		return;
 	}
 	slot = &service->decoders[index].slot;
 	reply = slot->replies + slot->replyIndex * REPLY_SIZE;
 	slot->replyIndex = 1 - slot->replyIndex;
 	if (slot->codec == SERVICE_CODEC_AVCDEC)
-		vkMessageSend(slot->clientQueue, avcdecReceive, reply);
+		vnzKernelMessageSend(slot->clientQueue, avcdecReceive, reply);
 	else if (slot->codec == SERVICE_CODEC_M4VDEC)
-		vkMessageSend(slot->clientQueue, m4vdecReceive, reply);
+		vnzKernelMessageSend(slot->clientQueue, m4vdecReceive, reply);
 }
 
 static void slotOpen(VideoServiceSlot *slot, const VideoServiceRequest *request, int32_t id)
@@ -842,12 +843,12 @@ static void requestDispatch(VideoService *service, uint32_t code)
 	if (index >= service->numOfDecoders) {
 		slot = encoderSlot(service, index);
 		if (code == SERVICE_AU) {
-			vkMessageSend(slot->auQueue, avcencStreamAu,
+			vnzKernelMessageSend(slot->auQueue, avcencStreamAu,
 				slot->auRequests + slot->auIndex * REQUEST_SIZE);
 			return;
 		}
 		if (code == SERVICE_DECODE) {
-			vkMessageSend(slot->decodeQueue, avcencEncoderEncode,
+			vnzKernelMessageSend(slot->decodeQueue, avcencEncoderEncode,
 				slot->decodeRequests + slot->decodeIndex * REQUEST_SIZE);
 			return;
 		}
@@ -865,19 +866,19 @@ static void requestDispatch(VideoService *service, uint32_t code)
 	if (code == SERVICE_AU) {
 		request = slot->auRequests + slot->auIndex * REQUEST_SIZE;
 		if (slot->codec == SERVICE_CODEC_AVCDEC)
-			vkMessageSend(slot->auQueue, avcdecParserAu, request);
+			vnzKernelMessageSend(slot->auQueue, avcdecParserAu, request);
 		else if (slot->codec == SERVICE_CODEC_M4VDEC)
-			vkMessageSend(slot->auQueue, m4vdecParserAu, request);
+			vnzKernelMessageSend(slot->auQueue, m4vdecParserAu, request);
 		return;
 	}
 	if (code == SERVICE_DECODE) {
 		request = slot->decodeRequests + slot->decodeIndex * REQUEST_SIZE;
 		if (slot->codec == SERVICE_CODEC_AVCDEC) {
-			vkMessageSend(slot->wakeQueue, avcdecParserWake, request);
-			vkMessageSend(slot->decodeQueue, avcdecDecoderDecode, request);
+			vnzKernelMessageSend(slot->wakeQueue, avcdecParserWake, request);
+			vnzKernelMessageSend(slot->decodeQueue, avcdecDecoderDecode, request);
 		} else if (slot->codec == SERVICE_CODEC_M4VDEC) {
-			vkMessageSend(slot->wakeQueue, m4vdecParserWake, request);
-			vkMessageSend(slot->decodeQueue, m4vdecDecoderDecode, request);
+			vnzKernelMessageSend(slot->wakeQueue, m4vdecParserWake, request);
+			vnzKernelMessageSend(slot->decodeQueue, m4vdecDecoderDecode, request);
 		}
 		return;
 	}
@@ -910,11 +911,11 @@ void videoServiceRequest(uint32_t address, uint32_t requestAddress)
 				REQUEST_SIZE);
 			vnzThreadSetFlags(request->thread, service->flagAccepted);
 			if (request->codec == SERVICE_CODEC_AVCDEC)
-				vkMessageSend(request->queue, avcdecReceive, 0);
+				vnzKernelMessageSend(request->queue, avcdecReceive, 0);
 			else if (request->codec == SERVICE_CODEC_M4VDEC)
-				vkMessageSend(request->queue, m4vdecReceive, 0);
+				vnzKernelMessageSend(request->queue, m4vdecReceive, 0);
 			else
-				vkMessageSend(request->queue, avcencReceive, 0);
+				vnzKernelMessageSend(request->queue, avcencReceive, 0);
 			vnzPublicCloseProtected((uint32_t)request, REQUEST_SIZE);
 			return;
 		}

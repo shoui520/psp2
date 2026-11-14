@@ -232,7 +232,7 @@ void avcencJobRateUpdate(uint32_t pictureAddress, uint32_t rateAddress, uint32_t
 	AvcencPicture *picture = (AvcencPicture *)pictureAddress;
 	AvcencRate *rate = (AvcencRate *)vnzPublicOpenPrivate(rateAddress, RATE_STATE_SIZE);
 	int32_t nalOverflow, vclOverflow, oversized;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t index;
 
 	rate->headerBits = picture->settings->headerBits;
@@ -257,10 +257,10 @@ void avcencJobRateUpdate(uint32_t pictureAddress, uint32_t rateAddress, uint32_t
 	else
 		vnzThreadSetFlags(picture->engine, ENGINE_FLAG_RATE_DONE);
 	index = picture->jobs * 8 + picture->index * 8 + 9;
-	context = vkVThreadContextLock(picture->context);
-	if (vkVThreadJobStateUnlocked(context, index) == 1)
-		vkVThreadJobSignal(context, index);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock(picture->context);
+	if (vnzKernelVThreadJobStateUnlocked(context, index) == 1)
+		vnzKernelVThreadJobSignal(context, index);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 /*

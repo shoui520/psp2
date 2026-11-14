@@ -81,8 +81,8 @@ typedef struct VideoServer {
 	uint32_t command;
 	uint32_t argument[5];
 	int32_t result;
-	VkThread *thread;
-	VkThread *client;		/* who sent the command */
+	VnzKernelThread *thread;
+	VnzKernelThread *client;		/* who sent the command */
 	volatile uint8_t *lock;
 } VideoServer;
 
@@ -381,7 +381,8 @@ uint32_t videoWritebackToPhysical(uint32_t address, uint32_t size);
 uint32_t videoPurgeToPhysical(uint32_t address, uint32_t size);
 uint32_t videoReopenPrivate(uint32_t address, uint32_t size);
 uint32_t videoInvalidate(uint32_t address, uint32_t size);
-int32_t videoVThreadExecute(VkVThreadContext *context, uint32_t index, VkJobFunction entry,
+int32_t videoVThreadExecute(VnzKernelVThreadContext *context, uint32_t index,
+	VnzKernelJobFunction entry,
 	uint32_t argument, uint32_t argument2, uint32_t argument3, uint32_t argument4);
 int32_t videoServerCall(VideoServer *server, uint32_t command, uint32_t argument,
 	uint32_t argument2, uint32_t argument3, uint32_t argument4, uint32_t argument5);

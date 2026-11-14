@@ -107,5 +107,6 @@ uint32_t vnzMemoryOpenPrivate(VnzMemory *memory);
 uint32_t vnzMemoryClosePrivate(VnzMemory *memory);
 uint32_t vnzMemoryOpenProtected(VnzMemory *memory);
 uint32_t vnzMemoryCloseProtected(VnzMemory *memory);
-int32_t vnzVThreadExecute(VkVThreadContext *context, uint32_t index, VkJobFunction entry,
+int32_t vnzVThreadExecute(VnzKernelVThreadContext *context, uint32_t index,
+	VnzKernelJobFunction entry,
 	uint32_t argument, uint32_t argument2, uint32_t argument3, uint32_t argument4);

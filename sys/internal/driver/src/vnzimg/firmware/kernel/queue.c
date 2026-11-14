@@ -3,7 +3,7 @@
  */
 #include "kernel.h"
 
-void vkQueueAppend(VkQueue *queue, VkThread *thread)
+void vnzKernelQueueAppend(VnzKernelQueue *queue, VnzKernelThread *thread)
 {
 	thread->next = NULL;
 	if (queue->head) {
@@ -16,7 +16,7 @@ void vkQueueAppend(VkQueue *queue, VkThread *thread)
 	queue->tail = thread;
 }
 
-void vkQueuePrepend(VkQueue *queue, VkThread *thread)
+void vnzKernelQueuePrepend(VnzKernelQueue *queue, VnzKernelThread *thread)
 {
 	if (queue->head) {
 		thread->previous = NULL;
@@ -30,7 +30,7 @@ void vkQueuePrepend(VkQueue *queue, VkThread *thread)
 	queue->head = thread;
 }
 
-void vkQueueRemove(VkQueue *queue, VkThread *thread)
+void vnzKernelQueueRemove(VnzKernelQueue *queue, VnzKernelThread *thread)
 {
 	if (thread->next && thread->previous) {
 		thread->previous->next = thread->next;

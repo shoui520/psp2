@@ -35,7 +35,7 @@ typedef struct At9Info {
 /* the decoder's state, in memory the ARM gives */
 typedef struct At9Decoder {
 	uint8_t state[96];
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 } At9Decoder;
 
 /* the ARM's control block */
@@ -279,12 +279,12 @@ static void at9ResetJob(uint32_t argument, uint32_t argument2, uint32_t argument
 static void at9BatchJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
 	uint32_t argument4)
 {
-	VkVThreadContext *context = (VkVThreadContext *)argument2;
+	VnzKernelVThreadContext *context = (VnzKernelVThreadContext *)argument2;
 
 	at9DecodeJob(argument, 0, 0, 0);
-	context = vkVThreadContextLock(context);
-	vkVThreadJobSignal(context, BATCH_JOB);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock(context);
+	vnzKernelVThreadJobSignal(context, BATCH_JOB);
+	vnzKernelVThreadContextUnlock(context);
 }
 
 static void at9BatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argument3,
@@ -293,14 +293,14 @@ static void at9BatchDoneJob(uint32_t argument, uint32_t argument2, uint32_t argu
 }
 
 /* the job on the stream's context, waited for */
-static void at9Run(At9Decoder *decoder, VkJobFunction job, At9Ctrl *ctrl, uint32_t argument2,
+static void at9Run(At9Decoder *decoder, VnzKernelJobFunction job, At9Ctrl *ctrl, uint32_t argument2,
 	uint32_t argument3)
 {
-	VkVThreadContext *context = vkVThreadContextLock(decoder->context);
+	VnzKernelVThreadContext *context = vnzKernelVThreadContextLock(decoder->context);
 
-	vkVThreadJobSetNotify(context, 0, 0, job, (uint32_t)ctrl, argument2, argument3, 0,
+	vnzKernelVThreadJobSetNotify(context, 0, 0, job, (uint32_t)ctrl, argument2, argument3, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 	vnzThreadWaitFlags(DONE_FLAG);
 }
 
@@ -322,7 +322,7 @@ int32_t rpcAt9Sizes(uint32_t ctrlAddress)
 }
 
 /* RPC 129: a decoder for the stream, on a context of the resource */
-int32_t rpcAt9Init(uint32_t ctrlAddress, VkVThreadResource *resource)
+int32_t rpcAt9Init(uint32_t ctrlAddress, VnzKernelVThreadResource *resource)
 {
 	int32_t result;
 	At9Ctrl *ctrl;
@@ -335,7 +335,7 @@ int32_t rpcAt9Init(uint32_t ctrlAddress, VkVThreadResource *resource)
 	if (ctrl == NULL)
 		return ERROR_MEMORY;
 	ctrl->info.bitRate = configBitRate((const uint8_t *)&ctrl->info.configData);
-	ctrl->decoder->context = vkVThreadContextCreate(CONTEXT_JOBS, resource);
+	ctrl->decoder->context = vnzKernelVThreadContextCreate(CONTEXT_JOBS, resource);
 	if (ctrl->decoder->context == NULL) {
 		result = ERROR_MEMORY;
 	} else {
@@ -361,7 +361,7 @@ int32_t rpcAt9Release(uint32_t ctrlAddress)
 	if (ctrl->decoder->context == NULL) {
 		result = ERROR_MEMORY;
 	} else {
-		vkVThreadContextDelete(ctrl->decoder->context);
+		vnzKernelVThreadContextDelete(ctrl->decoder->context);
 		ctrl->outputLeft = 0;
 		ctrl->inputLeft = 0;
 	}
@@ -371,7 +371,7 @@ int32_t rpcAt9Release(uint32_t ctrlAddress)
 }
 
 /* a job with the stream's input and output mapped (output only when given, if optional) */
-static int32_t at9Call(uint32_t ctrlAddress, VkJobFunction job, uint32_t argument2,
+static int32_t at9Call(uint32_t ctrlAddress, VnzKernelJobFunction job, uint32_t argument2,
 	uint32_t argument3, uint32_t outputOptional)
 {
 	uint32_t esSize, pcmSize;
@@ -495,7 +495,7 @@ static int32_t batchOpen(At9Ctrl *ctrls, uint32_t *sizes, uint32_t count, uint32
 int32_t rpcAt9DecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 {
 	uint32_t esSizes[MAX_BATCH], pcmSizes[MAX_BATCH], size, i;
-	VkVThreadContext *context = NULL, *locked;
+	VnzKernelVThreadContext *context = NULL, *locked;
 	int32_t result, closed;
 	At9Ctrl *ctrls;
 
@@ -524,12 +524,13 @@ int32_t rpcAt9DecodeBatch(uint32_t ctrlsAddress, uint32_t count)
 	if (result < 0)
 		goto closeEs;
 
-	locked = vkVThreadContextLock(context);
+	locked = vnzKernelVThreadContextLock(context);
 	for (i = 0; i < count; i++)
-		vkVThreadJobSet(locked, i, 0, at9BatchJob, (uint32_t)&ctrls[i], (uint32_t)context, 0, 0);
-	vkVThreadJobSetNotify(locked, BATCH_JOB, count, at9BatchDoneJob, 0, 0, 0, 0,
+		vnzKernelVThreadJobSet(locked, i, 0, at9BatchJob, (uint32_t)&ctrls[i],
+			(uint32_t)context, 0, 0);
+	vnzKernelVThreadJobSetNotify(locked, BATCH_JOB, count, at9BatchDoneJob, 0, 0, 0, 0,
 		vnzThreadCurrent(), DONE_FLAG);
-	vkVThreadContextUnlock(locked);
+	vnzKernelVThreadContextUnlock(locked);
 	vnzThreadWaitFlags(DONE_FLAG);
 	for (i = 0; i < count; i++)
 		if (result == 0)

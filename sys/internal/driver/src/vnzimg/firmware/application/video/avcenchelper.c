@@ -26,18 +26,18 @@ void avcencCabacSave(VideoAvcWriter *writer);					/* 0x874498 */
 /* the header writer's (avcencheader.c) */
 
 /* run a job on the helper's context until the context takes it */
-static void runJob(VkVThreadContext *context, uint32_t index, VkJobFunction function,
+static void runJob(VnzKernelVThreadContext *context, uint32_t index, VnzKernelJobFunction function,
 	uint32_t shared, uint32_t argument, uint32_t argument2, uint32_t argument3,
 	uint32_t flags)
 {
-	VkVThreadContext *locked;
+	VnzKernelVThreadContext *locked;
 	uint32_t busy;
 
 	do {
-		locked = vkVThreadContextLock(context);
-		busy = vkVThreadJobSetNotify(locked, index, 0, function, shared, argument,
+		locked = vnzKernelVThreadContextLock(context);
+		busy = vnzKernelVThreadJobSetNotify(locked, index, 0, function, shared, argument,
 			argument2, argument3, ((VideoHelperShared *)shared)->thread, flags);
-		vkVThreadContextUnlock(locked);
+		vnzKernelVThreadContextUnlock(locked);
 	} while (busy);
 }
 
@@ -112,7 +112,8 @@ void avcencHelperRun(VideoHelper *helper, uint32_t job)
 			shared->command = command;
 			shared->context = context;
 			for (n = helper->pending - 1; n >= 0; n--)
-				vkMessageSend(helper->jobQueue, videoHelperJob, helper->pendingJobs[n]);
+				vnzKernelMessageSend(helper->jobQueue, videoHelperJob,
+					helper->pendingJobs[n]);
 			helper->pending = 0;
 		} else {
 			helper->pending++;
@@ -174,7 +175,7 @@ void avcencHelperFinish(VideoHelper *helper, uint32_t argument)
 	const VideoAvcStreamInfo *info;
 	VideoAvcWriter *writer;
 	const VideoHelperJob *run;
-	VkThread *thread;
+	VnzKernelThread *thread;
 
 	shared = (VideoHelperShared *)vnzPublicOpenPrivate((uint32_t)helper->shared, SHARED_SIZE);
 	info = (const VideoAvcStreamInfo *)vnzPublicOpenProtected(shared->argument, INFO_SIZE);

@@ -48,9 +48,9 @@ typedef struct M4vdecInstance {
 	uint32_t flagAccepted;
 	uint32_t flagReplied;
 	uint32_t request;
-	VkMessageQueue *serviceQueue;
-	VkMessageQueue *queue;
-	VkMessageQueue *serviceQueue2;
+	VnzKernelMessageQueue *serviceQueue;
+	VnzKernelMessageQueue *queue;
+	VnzKernelMessageQueue *serviceQueue2;
 	uint32_t replyKind;
 	uint32_t context;
 	uint32_t pictures;		/* the engine's list, or the sequence's param */
@@ -93,8 +93,8 @@ typedef struct M4vdecRequest {
 		};
 		struct {
 			uint32_t reserved5;
-			VkThread *thread;
-			VkMessageQueue *queue;
+			VnzKernelThread *thread;
+			VnzKernelMessageQueue *queue;
 			uint32_t frames;
 		};
 	};
@@ -178,7 +178,7 @@ static void waitAccepted(M4vdecInstance *instance)
 static void waitReply(M4vdecInstance *instance, uint32_t bit)
 {
 	while (!(instance->waitToggle & bit) && !(instance->waitReady & bit))
-		while (!vkMessageReceive(instance->queue, (uint32_t)instance))
+		while (!vnzKernelMessageReceive(instance->queue, (uint32_t)instance))
 			vnzThreadWaitFlags(instance->flagReplied);
 	if (instance->waitToggle & bit) {
 		instance->waitToggle &= ~bit;
@@ -245,7 +245,7 @@ static void requestSend(M4vdecInstance *instance, uint32_t type, const VideoAu *
 	const M4vdecParam *param)
 {
 	requestBuild(instance, type, au, param);
-	vkMessageSend(instance->serviceQueue, videoServiceRequest, instance->request);
+	vnzKernelMessageSend(instance->serviceQueue, videoServiceRequest, instance->request);
 	waitAccepted(instance);
 }
 
@@ -316,7 +316,8 @@ void m4vdecReceive(uint32_t argument, uint32_t address)
 		instance->replyKind = WAIT_DONE;
 	} else {
 		replyRead(instance, address);
-		vkMessageSend(instance->serviceQueue2, videoServiceRelease, instance->serviceSlot);
+		vnzKernelMessageSend(instance->serviceQueue2, videoServiceRelease,
+			instance->serviceSlot);
 	}
 	replyDone(instance);
 }
@@ -413,7 +414,7 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	VideoLibrary *library = p->library;
 	uint32_t flag, flag2, serviceQueue, serviceQueue2;
 	M4vdecInstance *instance;
-	VkMessageQueue *queue;
+	VnzKernelMessageQueue *queue;
 	volatile uint8_t *lock;
 	uint32_t size;
 
@@ -447,12 +448,12 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	serviceQueue2 = library->serviceInfo[1];
 	serviceQueue = library->serviceInfo[0];
 	/* Sony's code keeps the library counted in use when this fails */
-	queue = vkMessageQueueCreate(vnzThreadCurrent(), flag2, 2);
+	queue = vnzKernelMessageQueueCreate(vnzThreadCurrent(), flag2, 2);
 	if (!queue)
 		return M4VDEC_ERROR;
 
 	instance = (M4vdecInstance *)vnzPublicOpenPrivate(workAddress, INSTANCE_SIZE);
-	instance->serviceQueue = (VkMessageQueue *)serviceQueue;
+	instance->serviceQueue = (VnzKernelMessageQueue *)serviceQueue;
 	instance->queue = queue;
 	instance->flagReplied = flag2;
 	instance->lastMode = AU_RESET;
@@ -466,7 +467,7 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	instance->releasedFrame[0] = 0;
 	instance->request = workAddress + 128;
 	instance->releasedFrame[1] = 0;
-	instance->serviceQueue2 = (VkMessageQueue *)serviceQueue2;
+	instance->serviceQueue2 = (VnzKernelMessageQueue *)serviceQueue2;
 	instance->flagAccepted = flag;
 	instance->released = -1;
 	requestSend(instance, REQUEST_INITIALIZE, 0, p);
@@ -479,7 +480,7 @@ int32_t m4vdecInitialize(uint32_t *handle, const uint32_t *param, uint32_t workA
 	}
 
 	if (queue)
-		vkMessageQueueDelete(queue);
+		vnzKernelMessageQueueDelete(queue);
 	vnzPublicClosePrivate((uint32_t)instance, INSTANCE_SIZE);
 	lock = library->lock;
 	if (lock) {
@@ -694,7 +695,7 @@ int32_t m4vdecTerminate(uint32_t handle)
 	requestSend(instance, REQUEST_TERMINATE, 0, 0);
 	waitReply(instance, WAIT_DONE);
 	if (instance->queue)
-		vkMessageQueueDelete(instance->queue);
+		vnzKernelMessageQueueDelete(instance->queue);
 	library = instance->library;
 	instance->state = STATE_NONE;
 	vnzPublicClosePrivate((uint32_t)instance, INSTANCE_SIZE);

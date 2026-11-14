@@ -119,7 +119,7 @@ void avcencJobLoad(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t pos
 	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
 	uint32_t motionWidth, rows, size, motion, i;
 	AvcencFrameRecord *frameRecord;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	AvcencLoad *load;
 	int32_t group, last;
 
@@ -164,9 +164,9 @@ void avcencJobLoad(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t pos
 	group = load->firstRow >> 2;
 	frameRecord->loaded = group;
 	if (group == last) {
-		context = vkVThreadContextLock((VkVThreadContext *)picture->context);
-		vkVThreadJobSignal(context, picture->index * 8 + 24);
-		vkVThreadContextUnlock(context);
+		context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)picture->context);
+		vnzKernelVThreadJobSignal(context, picture->index * 8 + 24);
+		vnzKernelVThreadContextUnlock(context);
 	}
 	vnzCachePurge((uint32_t)load, 64);
 	vnzPublicClosePrivate((uint32_t)load, 64);
@@ -480,7 +480,7 @@ void avcencJobLoadReference(uint32_t pictureAddress, uint32_t slicesAddress,
 	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
 	int32_t pitch, first, last, blocks, i, left;
 	AvcencFrameRecord *frameRecord;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	AvcencSearchInfo *info;
 	uint32_t current;
 	uint8_t group;
@@ -537,9 +537,9 @@ void avcencJobLoadReference(uint32_t pictureAddress, uint32_t slicesAddress,
 	group = info->firstRow >> 2;
 	frameRecord = (AvcencFrameRecord *)picture->frameRecord;
 	frameRecord->references[group & 3] = group;
-	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
-	vkVThreadJobSignal(context, picture->index * 8 + 24);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)picture->context);
+	vnzKernelVThreadJobSignal(context, picture->index * 8 + 24);
+	vnzKernelVThreadContextUnlock(context);
 	vnzCachePurge((uint32_t)info, CORE_INFO_SIZE);
 	vnzPublicClosePrivate((uint32_t)info, CORE_INFO_SIZE);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
@@ -819,7 +819,7 @@ void avcencJobDecide(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	uint32_t core = ((int32_t)vnzReadControl(VNZ_CR_ID) >> 16) & 7;
 	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
 	uint32_t column = position & 0xff, row = (position >> 8) & 0xff, job, step;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	AvcencDecideInfo *info;
 	int8_t idr;
 
@@ -858,9 +858,9 @@ void avcencJobDecide(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	} else {
 		job = picture->index * 8 + picture->jobs * 4 + (row & 3) * picture->jobs + column;
 	}
-	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
-	vkVThreadJobSignal(context, job + 8);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)picture->context);
+	vnzKernelVThreadJobSignal(context, job + 8);
+	vnzKernelVThreadContextUnlock(context);
 	vnzCachePurge((uint32_t)info, DECIDE_INFO_SIZE);
 	vnzPublicClosePrivate((uint32_t)info, DECIDE_INFO_SIZE);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
@@ -1189,7 +1189,7 @@ void avcencJobRefine(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	AvcencSlices *slices = (AvcencSlices *)vnzPublicOpenProtected(slicesAddress, 64);
 	uint32_t column = position & 0xff, row = (position >> 8) & 0xff, job, step;
 	int32_t r, m, rows, columns, size, y;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	AvcencRefineInfo *info;
 	AvcencInterRecord *record;
 	uint32_t records;
@@ -1237,9 +1237,9 @@ void avcencJobRefine(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	else
 		job = picture->index * 8 + picture->jobArgument + picture->jobGroups * (step & 7) +
 			((column * 2 + (step & 3)) >> 2);
-	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
-	vkVThreadJobSignal(context, job + 8);
-	vkVThreadContextUnlock(context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)picture->context);
+	vnzKernelVThreadJobSignal(context, job + 8);
+	vnzKernelVThreadContextUnlock(context);
 	vnzCachePurge((uint32_t)info, REFINE_INFO_SIZE);
 	vnzPublicClosePrivate((uint32_t)info, REFINE_INFO_SIZE);
 	vnzPublicCloseProtected((uint32_t)slices, 64);
@@ -2248,7 +2248,7 @@ void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 	AvcencMotionStats *stats;
 	AvcencMotionInfo *info;
 	AvcencMotion motion;
-	VkVThreadContext *context;
+	VnzKernelVThreadContext *context;
 	uint32_t total;
 
 	info = (AvcencMotionInfo *)vnzPublicOpenPrivate(slices->streamInfo +
@@ -2345,7 +2345,7 @@ void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 
 	/* the jobs it lets start: the rows of groups below's, the next band's */
 	frameRecord = (AvcencFrameRecord *)picture->frameRecord;
-	context = vkVThreadContextLock((VkVThreadContext *)picture->context);
+	context = vnzKernelVThreadContextLock((VnzKernelVThreadContext *)picture->context);
 	step = (row + 2) >> 1;
 	if (width < 9) {
 		if (row + 2 < height)
@@ -2353,22 +2353,25 @@ void avcencJobMotion(uint32_t pictureAddress, uint32_t slicesAddress, uint32_t p
 				picture->jobGroups * (step & 7) + (((column >> 1) + (step & 3)) >> 2) + 8;
 		else
 			job = picture->jobs * 8 + picture->index * 8 + 9;
-		vkVThreadJobSignal(context, job);
+		vnzKernelVThreadJobSignal(context, job);
 	} else {
 		if (row + 2 < height && ((row & 6) != 6 || column >= 1))
-			vkVThreadJobSignal(context, picture->index * 8 + picture->jobArgument +
+			vnzKernelVThreadJobSignal(context,
+				picture->index * 8 + picture->jobArgument +
 				picture->jobGroups * (step & 7) + ((((column - 2) >> 1) + (step & 3)) >> 2) +
 				8);
 		if (column + 8 < width) {
 			step = row >> 1;
-			vkVThreadJobSignal(context, picture->index * 8 + picture->jobArgument +
+			vnzKernelVThreadJobSignal(context,
+				picture->index * 8 + picture->jobArgument +
 				picture->jobGroups * (step & 7) + ((((column + 8) >> 1) + (step & 3)) >> 2) +
 				8);
 		} else if (row + 2 >= height) {
-			vkVThreadJobSignal(context, picture->jobs * 8 + picture->index * 8 + 9);
+			vnzKernelVThreadJobSignal(context,
+				picture->jobs * 8 + picture->index * 8 + 9);
 		}
 	}
-	vkVThreadContextUnlock(context);
+	vnzKernelVThreadContextUnlock(context);
 	i = ((column >> 1) + (row >> 1) * 5) >> 2;
 	vnzSpinLock(picture->lock);
 	frameRecord->started[i & 7]--;

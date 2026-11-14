@@ -41,13 +41,13 @@ static void helperStop(VideoHelper *helper);
 /* a decoder's jobs, until its engine lets the helper go */
 static uint32_t decoderLoop(VideoHelper *helper, uint32_t flags)
 {
-	VkMessageQueue *engineQueue = helper->engineQueue;
-	VkMessageQueue *jobQueue = helper->jobQueue;
-	VkThread *thread = helper->shared->thread;
+	VnzKernelMessageQueue *engineQueue = helper->engineQueue;
+	VnzKernelMessageQueue *jobQueue = helper->jobQueue;
+	VnzKernelThread *thread = helper->shared->thread;
 
 	for (;;) {
 		if (helper->state == HELPER_WAITING &&
-		    vkMessageReceive(jobQueue, (uint32_t)helper)) {
+		    vnzKernelMessageReceive(jobQueue, (uint32_t)helper)) {
 			if (helper->pending)
 				vnzThreadSetFlags(thread, ENGINE_FLAG_HELPER);
 			else
@@ -56,10 +56,10 @@ static uint32_t decoderLoop(VideoHelper *helper, uint32_t flags)
 		if (helper->state == HELPER_WORKING) {
 			if (flags & (HELPER_FLAG_RESTART | HELPER_FLAG_STOP)) {
 				if (helper->codec == SERVICE_CODEC_AVCDEC)
-					vkMessageSend(engineQueue, avcdecDecoderParsed,
+					vnzKernelMessageSend(engineQueue, avcdecDecoderParsed,
 						helper->pendingJobs[0]);
 				else if (helper->codec == SERVICE_CODEC_M4VDEC)
-					vkMessageSend(engineQueue, m4vdecDecoderParsed,
+					vnzKernelMessageSend(engineQueue, m4vdecDecoderParsed,
 						helper->pendingJobs[0]);
 			}
 			if (flags & HELPER_FLAG_FINISH) {
@@ -98,11 +98,11 @@ static uint32_t decoderLoop(VideoHelper *helper, uint32_t flags)
 /* the encoder's jobs: the stream's, then the encoder's, until it lets go */
 static uint32_t encoderLoop(VideoHelper *helper, uint32_t flags)
 {
-	VkMessageQueue *encoderQueue = helper->encoderQueue;
-	VkMessageQueue *jobQueue = helper->jobQueue;
-	VkMessageQueue *engineQueue = helper->engineQueue;
-	VkThread *thread = helper->shared->thread;
-	VkThread *engineThread = helper->shared->engineThread;
+	VnzKernelMessageQueue *encoderQueue = helper->encoderQueue;
+	VnzKernelMessageQueue *jobQueue = helper->jobQueue;
+	VnzKernelMessageQueue *engineQueue = helper->engineQueue;
+	VnzKernelThread *thread = helper->shared->thread;
+	VnzKernelThread *engineThread = helper->shared->engineThread;
 	uint32_t first = 1, working = 0;
 
 	for (;;) {
@@ -113,7 +113,7 @@ static uint32_t encoderLoop(VideoHelper *helper, uint32_t flags)
 				vnzThreadWaitFlags(HELPER_FLAG_JOBS_DONE);
 				helperKick(helper);
 			} else if (helper->encoderJobs >= 1 &&
-				   vkMessageReceive(jobQueue, (uint32_t)helper)) {
+				   vnzKernelMessageReceive(jobQueue, (uint32_t)helper)) {
 				if (helper->pending) {
 					vnzThreadSetFlags(thread, ENGINE_FLAG_HELPER);
 				} else {
@@ -123,13 +123,14 @@ static uint32_t encoderLoop(VideoHelper *helper, uint32_t flags)
 			}
 		}
 		if (helper->state == HELPER_WAITING && first &&
-		    vkMessageReceive(encoderQueue, (uint32_t)helper)) {
+		    vnzKernelMessageReceive(encoderQueue, (uint32_t)helper)) {
 			first = 0;
 			helper->state = HELPER_WORKING;
 		}
 		if (helper->state == HELPER_WORKING) {
 			if (flags & HELPER_FLAG_FINISH) {
-				vkMessageSend(engineQueue, avcencStreamParsed, helper->pendingJobs[0]);
+				vnzKernelMessageSend(engineQueue, avcencStreamParsed,
+					helper->pendingJobs[0]);
 				vnzThreadYield();
 				vnzThreadSetFlags(thread, ENGINE_FLAG_HELPER);
 				helper->state = HELPER_WAITING;
@@ -153,7 +154,8 @@ static uint32_t encoderLoop(VideoHelper *helper, uint32_t flags)
 				working = 1;
 			}
 			if (flags & (HELPER_FLAG_RESTART | HELPER_FLAG_STOP))
-				vkMessageSend(jobQueue, videoHelperJob, helper->encoderArgument);
+				vnzKernelMessageSend(jobQueue, videoHelperJob,
+					helper->encoderArgument);
 		}
 		flags = helperWait(helper, working);
 		if (helper->state == HELPER_IDLE)
@@ -167,12 +169,13 @@ static uint32_t encoderLoop(VideoHelper *helper, uint32_t flags)
 void videoHelperThread(uint32_t memory, uint32_t argument2)
 {
 	VideoHelper *helper = helperBegin(memory);
-	VkMessageQueue *startQueue = helper->startQueue;
+	VnzKernelMessageQueue *startQueue = helper->startQueue;
 	uint32_t flags;
 
 	do {
 		flags = helperWait(helper, 0);
-		if (helper->state == HELPER_IDLE && vkMessageReceive(startQueue, (uint32_t)helper)) {
+		if (helper->state == HELPER_IDLE && vnzKernelMessageReceive(startQueue,
+			(uint32_t)helper)) {
 			helper->state = HELPER_WAITING;
 			if (helper->codec == SERVICE_CODEC_AVCDEC ||
 			    helper->codec == SERVICE_CODEC_M4VDEC)
@@ -182,7 +185,7 @@ void videoHelperThread(uint32_t memory, uint32_t argument2)
 		}
 	} while (!(flags & HELPER_FLAG_EXIT));
 	helper->state = 0;
-	while (vkMessageReceive(helper->jobQueue, (uint32_t)helper))
+	while (vnzKernelMessageReceive(helper->jobQueue, (uint32_t)helper))
 		;
 	helperEnd(helper);
 }
