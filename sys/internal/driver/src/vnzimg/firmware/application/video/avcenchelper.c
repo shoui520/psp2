@@ -18,11 +18,6 @@ void avcencJobPrepare(uint32_t shared, uint32_t info, uint32_t job, uint32_t unu
 void avcencJobEncode(uint32_t shared, uint32_t info, uint32_t job, uint32_t request);
 void avcencJobStep(uint32_t shared, uint32_t info, uint32_t job, uint32_t unused);
 
-/* the AVC encoder's parts the jobs run */
-void avcencCabacLoad(VideoAvcEncodeJob *job, VideoAvcWriter *writer);		/* 0x874448 */
-void avcencCabacStart(VideoAvcWriter *writer);					/* 0x8744d2 */
-void avcencCabacSave(VideoAvcWriter *writer);					/* 0x874498 */
-
 /* the header writer's (avcencheader.c) */
 
 /* run a job on the helper's context until the context takes it */
@@ -356,7 +351,7 @@ void avcencJobEncode(uint32_t sharedAddress, uint32_t infoAddress, uint32_t jobA
 	writer = (VideoAvcWriter *)vnzPublicOpenPrivate(info->writer, WRITER_SIZE);
 	job->stream = writer;
 	if (shared->hold)
-		job->cabacState = (uint32_t)writer->cabacState;
+		job->cabacState = &writer->cabacState;
 	run = (VideoHelperJob *)vnzPublicOpenPrivate(request, JOB_SIZE);
 	if (run->load) {
 		slice = vnzPublicOpenProtected(run->slice, VIDEO_HELPER_SLICE_SIZE);

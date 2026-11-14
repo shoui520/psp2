@@ -1281,6 +1281,72 @@ typedef struct VideoHelper {
  */
 #define VIDEO_AVC_UNIT_PARAMETERS	7
 
+/* the AVC encoder's CABAC engine (avcenccabac.c), which also codes the bins (avcencbins.c) */
+#define CABAC			((volatile uint32_t *)0x4e8000)
+#define CABAC_RESET		0x00
+#define CABAC_COMMAND		0x01
+#define CABAC_STATUS		0x02	/* bit 0 busy, bit 9 the buffer switched, 16-24 bytes */
+#define CABAC_PICTURE		0x10
+#define CABAC_SLICE		0x11
+#define CABAC_HEADER		0x12
+#define CABAC_BITS		0x14
+#define CABAC_VALUE		0x15
+#define CABAC_WIDTH		0x13	/* in macroblocks, less one */
+#define CABAC_PENDING		0x16	/* bytes before the engine's first */
+#define CABAC_WRITE		0x17
+
+#define CABAC_BUFFER(bit)	((bit) ? 0x014e8e00 : 0x014e8c00)
+#define CABAC_BUFFER_SIZE	512
+
+/* the engine's command word (job->unitState) */
+#define STATE_OPERATION		0x0000000f
+#define STATE_BUFFER		0x00000100	/* the engine's output buffer */
+#define STATE_BINS		0x00000200	/* the bins' buffer it reads */
+#define STATE_BYTES		0x01ff0000
+#define OPERATION_NAL_HEADER	3
+#define OPERATION_CONTINUE	0
+#define OPERATION_SLICE_INIT	5
+#define OPERATION_PICTURE	6
+#define OPERATION_FLUSH		11
+#define OPERATION_SLICE_HEADER	10
+#define OPERATION_ALIGN		15
+
+/* the bin coder's buffers, and its registers in the bitstream unit (through `dsp`) */
+#define BINS_BUFFER(bit)	((bit) ? 0x014e8a00 : 0x014e8800)
+#define BINS_BUFFER_SIZE	512
+#define BINS_PUT		0x0000	/* count bins of value: a word is full */
+#define BINS_END		0x0001	/* the last word padded */
+#define BINS_SWAP		0x4000	/* a word's bytes reversed */
+#define BINS_READ		0x8000	/* + register: read */
+#define BINS_WRITE		0x9000	/* + register: write */
+#define BINS_CONTROL		0
+#define BINS_STATE1		1
+#define BINS_WORD		2	/* the word filled */
+#define BINS_FREE		3	/* the bits left in it */
+#define BINS_STATE4		4
+#define BINS_STATUS		5
+#define BINS_STATE6		6
+
+/* the bins' buffers and the bin coder's registers, kept while the helper holds the unit (52 bytes) */
+typedef struct VideoAvcCabacState {
+	uint32_t buffer;		/* being filled */
+	uint32_t last;			/* its last byte */
+	uint32_t write;
+	int32_t left;			/* bytes in it */
+	uint32_t reserved[3];
+	uint8_t bufferBit;		/* job->unitState's STATE_BINS for it */
+	uint8_t engineRunning;		/* the engine was given the first buffer */
+	uint8_t reserved2[2];
+	uint8_t control;		/* the coder's registers */
+	uint8_t free;
+	uint8_t status;
+	uint8_t state6;
+	uint32_t state1;
+	uint32_t word;
+	uint32_t state4;
+	uint32_t reserved3;
+} VideoAvcCabacState;
+
 typedef struct VideoAvcWriter {
 	uint32_t start;
 	uint32_t end;			/* its last byte */
@@ -1335,7 +1401,7 @@ typedef struct VideoAvcWriter {
 	uint16_t gopPictures;
 	uint16_t frameRate;		/* pictures a second */
 	uint32_t commandResult;		/* the picture's VideoAvcEncodeResult */
-	uint8_t cabacState[52];		/* the job's, while the helper holds the unit */
+	VideoAvcCabacState cabacState;	/* the job's, while the helper holds the unit */
 } VideoAvcWriter;
 
 /* what the client is told of a picture encoded (its command's result) */
@@ -1760,7 +1826,7 @@ typedef struct VideoAvcEncodeJob {
 	VideoAvcPictureInfo *picture;
 	VideoAvcNalList *nals;
 	int8_t sei[VIDEO_AVC_SEIS];
-	uint32_t cabacState;		/* writer->cabacState when the helper holds the unit */
+	VideoAvcCabacState *cabacState;	/* the writer's, when the helper holds the unit */
 	uint32_t unitState;		/* the CABAC engine's command word */
 	uint32_t macroblock;		/* the row's buffers, from the job's (VideoAvcMacroblock) */
 	uint32_t predModes;		/* int8 per 4x4 block */
@@ -1980,6 +2046,19 @@ void avcencRunClose(const VideoHelperShared *shared, VideoAvcEncodeJob *job, Vid
 void avcencCabacReset(VideoAvcEncodeJob *job, uint32_t value);
 void avcencCabacInit(VideoAvcEncodeJob *job, uint32_t sliceType);
 void avcencCabacSkipped(VideoAvcEncodeJob *job, uint32_t sliceType);
+void avcencCabacCopyBlock(VideoAvcEncodeJob *job);
+void avcencCabacResume(VideoAvcEncodeJob *job);
+
+/* application/video/avcencbins.c */
+void avcencCabacLoad(VideoAvcEncodeJob *job, VideoAvcWriter *writer);
+void avcencCabacSave(VideoAvcWriter *writer);
+void avcencCabacStart(const VideoAvcWriter *writer);
+uint32_t avcencBinsPut(VideoAvcEncodeJob *job, uint32_t value, int32_t count);
+uint32_t avcencBinsFinish(VideoAvcEncodeJob *job);
+uint32_t avcencSwap32(uint32_t word);
+uint32_t avcencBitsAligned(const VideoAvcWriter *writer);
+void avcencBitsUe(VideoAvcWriter *writer, uint32_t value);
+void avcencBitsSe(VideoAvcWriter *writer, int32_t value);
 
 /* application/video/avcencencoder.c: the stream opened for a job and closed after it */
 void avcencStreamOpenEnd(const VideoAvcStreamInfo *info, VideoAvcEncodeJob *job);

@@ -8,34 +8,6 @@
  */
 #include "service.h"
 
-#define CABAC			((volatile uint32_t *)0x4e8000)
-#define CABAC_RESET		0x00
-#define CABAC_COMMAND		0x01
-#define CABAC_STATUS		0x02	/* bit 0 busy, bit 9 the buffer switched, 16-24 bytes */
-#define CABAC_PICTURE		0x10
-#define CABAC_SLICE		0x11
-#define CABAC_HEADER		0x12
-#define CABAC_BITS		0x14
-#define CABAC_VALUE		0x15
-#define CABAC_WIDTH		0x13	/* in macroblocks, less one */
-#define CABAC_PENDING		0x16	/* bytes before the engine's first */
-#define CABAC_WRITE		0x17
-
-#define CABAC_BUFFER(bit)	((bit) ? 0x014e8e00 : 0x014e8c00)
-#define CABAC_BUFFER_SIZE	512
-
-/* the engine's command word (job->unitState) */
-#define STATE_OPERATION		0x0000000f
-#define STATE_BUFFER		0x00000100
-#define STATE_BYTES		0x01ff0000
-#define OPERATION_NAL_HEADER	3
-#define OPERATION_CONTINUE	0
-#define OPERATION_SLICE_INIT	5
-#define OPERATION_PICTURE	6
-#define OPERATION_FLUSH		11
-#define OPERATION_SLICE_HEADER	10
-#define OPERATION_ALIGN		15
-
 /* the slice header registers */
 #define SLICE_HEADER		((volatile uint32_t *)0x4e9000)
 #define SLICE_HEADER_WORDS	8
@@ -43,11 +15,6 @@
 #define I_TYPES			26
 #define P_TYPES			5
 #define PREFIX_INTRA_IN_P	(I_TYPES + P_TYPES)
-
-/* the VLIW coder's */
-uint32_t avcencBinsPut(VideoAvcEncodeJob *job, uint32_t value, int32_t count);	/* 0x87461a */
-uint32_t avcencBinsFinish(VideoAvcEncodeJob *job);				/* 0x874692 */
-uint32_t avcencSwap32(uint32_t word);						/* 0x87477e */
 
 typedef struct Code {
 	uint32_t code;

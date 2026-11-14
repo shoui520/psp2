@@ -30,11 +30,6 @@
 #define UNIT_FLUSH		18
 #define UNIT_FLAG		0x40000	/* the unit's interrupt, on the helper */
 
-/* the bit writer's other half (with the encoder's VLIW code) */
-uint32_t avcencBitsAligned(VideoAvcWriter *writer);			/* 0x874784 */
-void avcencBitsUe(VideoAvcWriter *writer, uint32_t value);		/* 0x87478c */
-void avcencBitsSe(VideoAvcWriter *writer, int32_t value);		/* 0x8747d4 */
-
 /* the slice header the unit writes, and CABAC's */
 
 void avcencBitsPut(VideoAvcWriter *writer, int32_t count, uint32_t value);
