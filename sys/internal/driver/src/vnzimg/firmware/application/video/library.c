@@ -77,7 +77,7 @@ int32_t rpcVideoInitializeMemory(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, 16);
-	vnzMemoryCreate(&memory, paddr, 16);
+	videoMemoryCreate(&memory, paddr, 16);
 	if (!videoMemoryOpenPrivate(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 	} else {
@@ -101,7 +101,7 @@ int32_t rpcVideoQueryMemory(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, 64);
-	vnzMemoryCreate(&memory, paddr, 64);
+	videoMemoryCreate(&memory, paddr, 64);
 	if (!videoMemoryOpenPrivate(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 	} else {
@@ -244,7 +244,7 @@ int32_t rpcVideoCreateLibrary(uint32_t paddr, uint32_t resource)
 	int32_t result;
 
 	videoInvalidate(paddr, 64);
-	vnzMemoryCreate(&memory, paddr, 64);
+	videoMemoryCreate(&memory, paddr, 64);
 	if (!videoMemoryOpenPublic(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 		goto out;
@@ -252,7 +252,7 @@ int32_t rpcVideoCreateLibrary(uint32_t paddr, uint32_t resource)
 	command = (VideoLibraryCommand *)memory.vaddrVnz;
 
 	videoInvalidate(command->context, 256);
-	vnzMemoryCreate(&context, command->context, 256);
+	videoMemoryCreate(&context, command->context, 256);
 	if (!videoMemoryOpenPublic(&context)) {
 		result = VIDEO_ERROR_MEMORY;
 		goto out;
@@ -260,7 +260,7 @@ int32_t rpcVideoCreateLibrary(uint32_t paddr, uint32_t resource)
 	command->context = context.vaddrVnz;
 
 	videoInvalidate(command->workAddress, command->workSize);
-	vnzMemoryCreate(&work, command->workAddress, command->workSize);
+	videoMemoryCreate(&work, command->workAddress, command->workSize);
 	if (!videoMemoryOpenPublic(&work)) {
 		result = VIDEO_ERROR_MEMORY;
 		goto out;
@@ -294,7 +294,7 @@ int32_t rpcVideoDeleteLibrary(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, 64);
-	vnzMemoryCreate(&memory, paddr, 64);
+	videoMemoryCreate(&memory, paddr, 64);
 	if (!videoMemoryOpenPublic(&memory))
 		return VIDEO_ERROR_MEMORY;
 	command = (VideoLibraryCommand *)memory.vaddrVnz;
@@ -302,18 +302,26 @@ int32_t rpcVideoDeleteLibrary(uint32_t paddr)
 	result = 0;
 
 	videoInvalidate(command->workAddress, command->workSize);
-	vnzMemoryCreate(&work, command->workAddress, command->workSize);
+	videoMemoryCreate(&work, command->workAddress, command->workSize);
 	if (!videoMemoryClosePublic(&work, 1) && result >= 0)
 		result = VIDEO_ERROR_MEMORY;
 
 	videoInvalidate(command->context, 256);
-	vnzMemoryCreate(&context, command->context, 256);
+	videoMemoryCreate(&context, command->context, 256);
 	if (!videoMemoryClosePublic(&context, 1) && result >= 0)
 		result = VIDEO_ERROR_MEMORY;
 
 	if (memory.vaddrVnz && !videoMemoryClosePublic(&memory, 0) && result >= 0)
 		result = VIDEO_ERROR_MEMORY;
 	return result;
+}
+
+/* 0x820484: the video code's own copy of vnzMemoryCreate */
+void videoMemoryCreate(VnzMemory *memory, uint32_t paddr, uint32_t size)
+{
+	memory->paddr = paddr;
+	memory->size = size;
+	memory->vaddrVnz = 0;
 }
 
 int32_t videoMemoryOpenPublic(VnzMemory *memory)

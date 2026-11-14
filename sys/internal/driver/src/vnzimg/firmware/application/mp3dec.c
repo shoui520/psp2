@@ -335,7 +335,7 @@ close:
 }
 
 /* the decoder of a control block, released or reset */
-static int32_t mp3DecoderCall(uint32_t ctrlAddress, int32_t (*call)(Mp3Decoder *decoder))
+static inline int32_t mp3DecoderCall(uint32_t ctrlAddress, int32_t (*call)(Mp3Decoder *decoder))
 {
 	VnzExtMemory ctrlMemory, decoderMemory;
 	uint32_t decoderAddress = 0;

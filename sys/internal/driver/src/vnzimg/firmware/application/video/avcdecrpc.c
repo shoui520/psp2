@@ -72,7 +72,7 @@ int32_t rpcAvcdecQueryMemory(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	if (!videoMemoryOpenPrivate(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 	} else {
@@ -97,7 +97,7 @@ int32_t rpcAvcdecInitialize(uint32_t paddr, uint32_t libraryPaddr)
 	uint32_t i;
 
 	videoInvalidate(libraryPaddr, 64);
-	vnzMemoryCreate(&library, libraryPaddr, 64);
+	videoMemoryCreate(&library, libraryPaddr, 64);
 	memory.vaddrVnz = 0;
 	if (!videoMemoryOpenPublic(&library))
 		goto fail;
@@ -105,19 +105,19 @@ int32_t rpcAvcdecInitialize(uint32_t paddr, uint32_t libraryPaddr)
 	server = (VideoServer *)libraryCommand->context;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	if (!videoMemoryOpenPublic(&memory))
 		goto fail;
 	command = (VideoDecoderCommand *)memory.vaddrVnz;
 
 	videoInvalidate(command->context, CONTEXT_SIZE);
-	vnzMemoryCreate(&context, command->context, CONTEXT_SIZE);
+	videoMemoryCreate(&context, command->context, CONTEXT_SIZE);
 	if (!videoMemoryOpenPublic(&context))
 		goto fail;
 	command->context = context.vaddrVnz;
 
 	videoInvalidate(command->workAddress, command->workSize);
-	vnzMemoryCreate(&work, command->workAddress, command->workSize);
+	videoMemoryCreate(&work, command->workAddress, command->workSize);
 	if (!videoMemoryOpenPublic(&work))
 		goto fail;
 	command->workAddress = work.vaddrVnz;
@@ -126,7 +126,7 @@ int32_t rpcAvcdecInitialize(uint32_t paddr, uint32_t libraryPaddr)
 	/* both buffers must map */
 	for (i = 0; i < 2; i++) {
 		videoInvalidate(command->au[i].buffer, command->au[i].bufferSize);
-		vnzMemoryCreate(&decoder->stream[i], command->au[i].buffer,
+		videoMemoryCreate(&decoder->stream[i], command->au[i].buffer,
 			command->au[i].bufferSize);
 		if (!videoMemoryOpenPublic(&decoder->stream[i]))
 			goto fail;
@@ -194,7 +194,7 @@ int32_t rpcAvcdecQuerySequence(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	pictures.vaddrVnz = 0;
 	if (!videoMemoryOpenPublic(&memory))
 		goto fail;
@@ -202,7 +202,7 @@ int32_t rpcAvcdecQuerySequence(uint32_t paddr)
 	decoder = (VideoDecoderContext *)command->context;
 
 	videoInvalidate(command->pictures, command->numOfPictures * sizeof(VideoPicture));
-	vnzMemoryCreate(&pictures, command->pictures,
+	videoMemoryCreate(&pictures, command->pictures,
 		command->numOfPictures * sizeof(VideoPicture));
 	if (!videoMemoryOpenPublic(&pictures))
 		goto fail;
@@ -235,7 +235,7 @@ int32_t rpcAvcdecQueryContext(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	if (!videoMemoryOpenPrivate(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 	} else {
@@ -257,14 +257,14 @@ int32_t rpcAvcdecInitializeContext(uint32_t paddr)
 	int32_t result;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	if (!videoMemoryOpenPublic(&memory))
 		goto fail;
 	command = (VideoDecoderCommand *)memory.vaddrVnz;
 	decoder = (VideoDecoderContext *)command->context;
 
 	videoInvalidate(command->contextAddress, command->contextSize);
-	vnzMemoryCreate(&decoder->context, command->contextAddress, command->contextSize);
+	videoMemoryCreate(&decoder->context, command->contextAddress, command->contextSize);
 	if (!videoMemoryOpenPublic(&decoder->context))
 		goto fail;
 	result = videoServerCall(&decoder->server, AVCDEC_INITIALIZE_CONTEXT, command->handle,
@@ -338,7 +338,7 @@ static int32_t decode(uint32_t paddr, uint32_t operation)
 	int32_t result;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	pictures.vaddrVnz = 0;
 	if (!videoMemoryOpenPublic(&memory))
 		goto fail;
@@ -347,7 +347,7 @@ static int32_t decode(uint32_t paddr, uint32_t operation)
 
 	count = command->numOfPictures ? command->numOfPictures : 1;
 	videoInvalidate(command->pictures, count * sizeof(VideoPicture));
-	vnzMemoryCreate(&pictures, command->pictures, count * sizeof(VideoPicture));
+	videoMemoryCreate(&pictures, command->pictures, count * sizeof(VideoPicture));
 	if (!videoMemoryOpenPublic(&pictures))
 		goto fail;
 	stream = &decoder->stream[command->auIndex];
@@ -408,7 +408,7 @@ int32_t rpcAvcdecTerminate(uint32_t paddr, uint32_t libraryPaddr)
 	uint32_t i;
 
 	videoInvalidate(libraryPaddr, 64);
-	vnzMemoryCreate(&library, libraryPaddr, 64);
+	videoMemoryCreate(&library, libraryPaddr, 64);
 	memory.vaddrVnz = 0;
 	if (!videoMemoryOpenPublic(&library)) {
 		result = VIDEO_ERROR_MEMORY;
@@ -417,7 +417,7 @@ int32_t rpcAvcdecTerminate(uint32_t paddr, uint32_t libraryPaddr)
 	libraryCommand = (VideoLibraryCommand *)library.vaddrVnz;
 
 	videoInvalidate(paddr, COMMAND_SIZE);
-	vnzMemoryCreate(&memory, paddr, COMMAND_SIZE);
+	videoMemoryCreate(&memory, paddr, COMMAND_SIZE);
 	if (!videoMemoryOpenPublic(&memory)) {
 		result = VIDEO_ERROR_MEMORY;
 		goto out;
@@ -437,11 +437,11 @@ int32_t rpcAvcdecTerminate(uint32_t paddr, uint32_t libraryPaddr)
 		result = VIDEO_ERROR_MEMORY;
 
 	videoInvalidate(command->workAddress, command->workSize);
-	vnzMemoryCreate(&work, command->workAddress, command->workSize);
+	videoMemoryCreate(&work, command->workAddress, command->workSize);
 	if (!videoMemoryClosePublic(&work, 1) && result >= 0)
 		result = VIDEO_ERROR_MEMORY;
 	videoInvalidate(command->context, CONTEXT_SIZE);
-	vnzMemoryCreate(&context, command->context, CONTEXT_SIZE);
+	videoMemoryCreate(&context, command->context, CONTEXT_SIZE);
 	if (!videoMemoryClosePublic(&context, 1) && result >= 0)
 		result = VIDEO_ERROR_MEMORY;
 out:

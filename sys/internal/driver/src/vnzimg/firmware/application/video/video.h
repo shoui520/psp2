@@ -371,6 +371,7 @@ typedef struct VideoM4vPicture {
 } VideoM4vPicture;
 
 /* video/library.c */
+void videoMemoryCreate(VnzMemory *memory, uint32_t paddr, uint32_t size);
 int32_t videoMemoryOpenPublic(VnzMemory *memory);
 int32_t videoMemoryClosePublic(VnzMemory *memory, uint32_t physical);
 int32_t videoMemoryOpenPrivate(VnzMemory *memory);
