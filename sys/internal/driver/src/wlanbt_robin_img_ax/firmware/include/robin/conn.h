@@ -61,7 +61,8 @@ struct WlanScheduleRequest {
 struct WlanConnectionInfo {
 	uint8_t reserved0[31];
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
-	uint8_t reserved32[324];
+	uint8_t maxStations;		/* stations an access point admits */
+	uint8_t reserved33[323];
 	uint8_t ready;
 	uint8_t reserved357[227];
 	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
@@ -81,7 +82,13 @@ struct WlanConnection {
 	uint8_t flags2;
 	uint8_t reserved0[2];
 	void *device;
-	uint8_t reserved1a[36];
+	/* The station state machine (driven through mdevRomQueryState from here). */
+	const uint8_t *smState;		/* the current state's entry in smStates */
+	uint32_t reserved20;
+	const uint8_t *smStates;
+	uint8_t reserved1a[16];
+	int (*rxManagement)(OsaBuffer *buffer, uintptr_t argument);	/* management frames for this connection */
+	uint8_t reserved1f[4];
 	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
 	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
@@ -107,8 +114,15 @@ struct WlanConnection {
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
 	uint16_t associationId;		/* AID the access point assigned */
-	uint8_t reserved4[18];
-	uint8_t rateControl[280];	/* rate adaptation state (not converted yet) */
+	uint8_t reserved4[6];
+	union {
+		uint8_t peerLinkState[240];	/* cleared when the connection takes a new peer */
+		struct {
+			uint8_t reserved396[12];
+			uint8_t rateControl[228];	/* rate adaptation state (not converted yet) */
+		};
+	};
+	uint8_t reserved636[52];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
 	uint8_t reserved4c[38];
@@ -134,8 +148,10 @@ struct WlanConnection {
 	uint8_t reserved785;
 	uint16_t capability;
 	uint8_t reserved5[4];
-	uint32_t scheduleReference;
-	uint8_t reserved5b[4];
+	union {
+		uint32_t scheduleReference;	/* low word of peerTimestamp */
+		uint8_t peerTimestamp[8];	/* the TSF of the peer's beacon, taken when scheduleValid */
+	};
 	uint8_t scheduleValid;
 	struct WlanScheduleRequest schedule;
 	uint8_t linkFlags;
@@ -150,6 +166,9 @@ struct WlanConnection {
 };
 
 _Static_assert(offsetof(struct WlanConnection, device) == 12, "device");
+_Static_assert(offsetof(struct WlanConnection, smStates) == 24, "state machine states");
+_Static_assert(offsetof(struct WlanConnection, rxManagement) == 44, "management handler");
+_Static_assert(offsetof(struct WlanConnection, peerLinkState) == 396, "peer link state");
 _Static_assert(offsetof(struct WlanConnection, dataRate) == 52, "data rate");
 _Static_assert(offsetof(struct WlanConnection, hostFlags) == 54, "host flags");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");

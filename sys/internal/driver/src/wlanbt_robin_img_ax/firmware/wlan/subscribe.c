@@ -478,7 +478,7 @@ static inline __attribute__((always_inline)) void wlanSubscribeEventsDrop(struct
 	connection->subscribeTriggered = 0;
 }
 
-/* Forget the subscriptions of the station, its second interface and the access point. */
+/* Forget the subscriptions of the first type 0, access point and IBSS connections. */
 void wlanSubscribeEventsClearAll(void)
 {
 	struct WlanConnection *connection;
@@ -486,10 +486,10 @@ void wlanSubscribeEventsClearAll(void)
 	connection = wlanConnectionFirst(0);
 	if (connection != NULL)
 		wlanSubscribeEventsDrop(connection);
-	connection = wlanConnectionFirst(3);
+	connection = wlanConnectionFirst(WLAN_IF_AP);
 	if (connection != NULL)
 		wlanSubscribeEventsDrop(connection);
-	connection = wlanConnectionFirst(1);
+	connection = wlanConnectionFirst(WLAN_IF_IBSS);
 	if (connection != NULL)
 		wlanSubscribeEventsDrop(connection);
 }
