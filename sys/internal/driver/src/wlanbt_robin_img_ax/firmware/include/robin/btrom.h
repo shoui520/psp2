@@ -95,7 +95,10 @@ uint8_t *btLcoRomProcessState(uint32_t index);
 uint8_t *btLdrRomReleaseState(void);
 int btLtsRomManageState(int link, uint8_t *record);
 int btLtsRomScheduleState(uint32_t clock);
-int btLcoRomManageContext(int link, uint32_t a2, uint32_t a3);
+int btLcoRomManageContext(int link);
+struct BtDeviceProfile;
+void btLtsRomQueryState(struct BtDeviceProfile *profile);
+void btLtsRomApplyState(struct BtDeviceProfile *profile, uint32_t clock, uint32_t mode);
 
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);

@@ -1,5 +1,5 @@
 /*
- * The controller's per-link sample records (bt/lcsource.c, 0x43bfc - 0x43ebe): for each of the eight
+ * The controller's per-link sample records (bt/lcsource.c, 0x43bfc - 0x4414e): for each of the eight
  * links two rings of four samples (a measured value, its weight and how many clock ticks it covers),
  * their averages, and the rate taken from them. The names of the firmware's placeholders are kept
  * (btLmpLc...Entry, btSource...); the roles are inferred from what the code does.
@@ -33,7 +33,7 @@ struct BtSourceRecord {
 	uint32_t secondClock;			/* the event clock of the second ring's last sample */
 	uint8_t firstRate;			/* the rate the first ring gives, at most btSource.timer */
 	uint8_t secondRate;
-	uint8_t mode;				/* 6 */
+	uint8_t rateLimit;			/* 6: the first ring's rate is taken at most this */
 	uint8_t reserved67;
 };
 
@@ -49,6 +49,38 @@ struct BtSourceState {
 	uint8_t param;				/* 1 */
 };
 
+/*
+ * The ROM's profile of a device link (72 bytes, 0x400d814, index 1..7): the fields the sample code reads
+ * and writes; the rest is the ROM's.
+ */
+struct BtDeviceProfile {
+	uint32_t reserved0;
+	uint32_t connection;			/* non-zero: the link is up */
+	uint8_t reserved8[6];
+	uint16_t index;				/* its record in btSourceBuffer */
+	uint16_t interval;			/* the link's own timing, in ticks */
+	uint16_t span;				/* the ticks the active link is given */
+	uint16_t rate;				/* the ticks the sample rates give, 1: none */
+	uint8_t secondSetting;			/* the ROM's rate setting of the second ring, or 1 */
+	uint8_t firstSetting;			/* the same for the first ring */
+	uint8_t active;				/* non-zero: the link is active */
+	uint8_t adjust;				/* 1: the rates are to be taken again */
+	uint8_t reserved26[2];
+	uint32_t due;				/* the event clock the link's next slot is due at */
+	uint8_t reserved32[20];
+	uint8_t limit;				/* non-zero: the ticks to give the link instead */
+	uint8_t reserved53[15];
+	uint8_t state;				/* 5 or 9: the link's mode */
+	uint8_t reserved69[3];
+};
+
+_Static_assert(sizeof(struct BtSourceRing) == 26, "sample ring");
+_Static_assert(sizeof(struct BtSourceRecord) == 68, "link record");
+_Static_assert(sizeof(struct BtDeviceProfile) == 72, "device profile");
+
+extern struct BtDeviceProfile btDeviceProfile[8];		/* 0x400d814 */
+extern uint32_t btDeviceRecord;					/* 0x400dde8: the event clock of the next slot */
+extern uint16_t btTargetConfig;					/* 0x400de50 */
 extern struct BtSourceRecord btSourceBuffer[BT_SOURCE_LINKS];	/* 0x5a054 */
 extern struct BtSourceState btSource;				/* 0x5a274 */
 extern uint16_t btHostWindow[];					/* 0x400c4d4: link to record index */
@@ -64,6 +96,8 @@ struct BtSourceState *btLmpLcClearEntry(int link, int unused, uint16_t value, ui
 struct BtSourceState *btLmpLcConvertEntry(int link, int unused, uint16_t weight, uint16_t sample);	/* 0x43d6c */
 unsigned int btLmpLcVerifyEntry(int link, unsigned int clock);	/* 0x43daa */
 unsigned int btLmpLcSelectEntry(int link, unsigned int clock);	/* 0x43de2 */
-unsigned int btLmpLcAdjustEntry(uint8_t *link, unsigned int first, unsigned int second);	/* 0x43e0e */
+unsigned int btLmpLcAdjustEntry(struct BtDeviceProfile *profile, unsigned int first, unsigned int second);	/* 0x43e0e */
+void btLmpLcRecordEntry(void);					/* 0x43ebe */
+void btLmpLcFilterEntry(struct BtDeviceProfile *profile, unsigned int clock);	/* 0x43fd6 */
 
 #endif /* ROBIN_BTSOURCE_H */

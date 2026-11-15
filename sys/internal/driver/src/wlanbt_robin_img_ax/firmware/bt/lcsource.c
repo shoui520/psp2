@@ -1,5 +1,5 @@
 /*
- * The controller's per-link sample records (0x43bfc - 0x43ebe). Each link has two rings of four samples
+ * The controller's per-link sample records (0x43bfc - 0x4414e). Each link has two rings of four samples
  * (a value, its weight and the ticks it covers); the averages of a ring give the rate the link is
  * running at, which the Bluetooth host is told. The file name and the roles are inferred; the function
  * names are the firmware's placeholders.
@@ -56,7 +56,7 @@ unsigned int btLmpLcManageEntry(void)
 		struct BtSourceRecord *record = &btSourceBuffer[link];
 
 		link = (uint8_t)(link + 1);
-		record->mode = 6;
+		record->rateLimit = 6;
 	} while (link < BT_SOURCE_LINKS);
 	return link;
 }
@@ -151,7 +151,7 @@ struct BtSourceState *btLmpLcConvertEntry(int link, int unused, uint16_t weight,
 }
 
 /* The first ring has run past its limit: its clock is moved up and the ROM is asked about the link. */
-unsigned int btLmpLcVerifyEntry(int link, unsigned int clock)
+__attribute__((noinline)) unsigned int btLmpLcVerifyEntry(int link, unsigned int clock)
 {
 	struct BtSourceRecord *record = &btSourceBuffer[link];
 	unsigned int elapsed = clock - record->firstClock;
@@ -160,14 +160,14 @@ unsigned int btLmpLcVerifyEntry(int link, unsigned int clock)
 		unsigned int span = 2 * btSource.queue;
 
 		record->firstClock = clock - span;
-		if (btLcoRomManageContext(link, clock - span, span) == 0)
+		if (btLcoRomManageContext(link) == 0)
 			btSource.frame &= ~(1 << link);
 	}
 	return (uint16_t)elapsed;
 }
 
 /* The same for the second ring, without asking the ROM. */
-unsigned int btLmpLcSelectEntry(int link, unsigned int clock)
+__attribute__((noinline)) unsigned int btLmpLcSelectEntry(int link, unsigned int clock)
 {
 	struct BtSourceRecord *record = &btSourceBuffer[link];
 	unsigned int elapsed = clock - record->secondClock;
@@ -180,27 +180,26 @@ unsigned int btLmpLcSelectEntry(int link, unsigned int clock)
 }
 
 /*
- * Takes the two rings' rates for the host's link record (halfword 14: its record index; bytes 22 and 23
- * get the ROM's rate settings of the link, or 1) and stores them in the record.
+ * Takes the two rings' rates for the device's profile (secondSetting and firstSetting get the ROM's rate
+ * settings of the link, or 1) and stores them in its record.
  */
-unsigned int btLmpLcAdjustEntry(uint8_t *link, unsigned int first, unsigned int second)
+unsigned int btLmpLcAdjustEntry(struct BtDeviceProfile *profile, unsigned int first, unsigned int second)
 {
-	unsigned int index = *(BtHalf *)(link + 14);
-	struct BtSourceRecord *record = &btSourceBuffer[index];
+	struct BtSourceRecord *record = &btSourceBuffer[profile->index];
 	const uint8_t *table = btLdrRomReleaseState();
-	int policy = btLmpLcInspectEntry(btThresholdPolicy, *(BtHalf *)(link + 14));
+	int policy = btLmpLcInspectEntry(btThresholdPolicy, profile->index);
 	unsigned int firstShort = btSource.queue > first;
 	unsigned int secondShort = btSource.queue > second;
 	uint8_t value = 1;
 	unsigned int rate;
 
 	if (policy == 0 || firstShort != 0)
-		link[23] = table[116 * *(BtHalf *)(link + 14) + 13];
+		profile->firstSetting = table[116 * profile->index + 13];
 	else
-		link[23] = 1;
+		profile->firstSetting = 1;
 	if (secondShort != 0)
-		value = table[116 * *(BtHalf *)(link + 14) + 12];
-	link[22] = value;
+		value = table[116 * profile->index + 12];
+	profile->secondSetting = value;
 	rate = btLmpLcReleaseEntry(&record->first, secondShort);
 	if (rate <= btSource.timer)
 		rate = btLmpLcReleaseEntry(&record->first, secondShort);
@@ -214,4 +213,115 @@ unsigned int btLmpLcAdjustEntry(uint8_t *link, unsigned int first, unsigned int 
 		rate = btLmpLcReleaseEntry(&record->second, firstShort);
 	record->secondRate = rate;
 	return rate;
+}
+
+/* Whether a link's first ring is late (the rate it gives is below its elapsed ticks). */
+static inline int btSourceFirstLate(const struct BtSourceRecord *record, unsigned int elapsed)
+{
+	unsigned int rate = record->rateLimit;
+
+	if (rate >= record->firstRate)
+		rate = record->firstRate;
+	return rate < elapsed;
+}
+
+/*
+ * Each event: the rings of the links 1..7 are aged, and a link whose rate is late is moved to the
+ * next slot by the ROM.
+ */
+void btLmpLcRecordEntry(void)
+{
+	unsigned int clock = btLmpLcTrackEntry();
+	unsigned int link;
+
+	btTargetConfig = btSource.frame == 0 && btSource.header == 0 ? 290 : 72;
+	link = 1;
+	do {
+		struct BtDeviceProfile *profile = &btDeviceProfile[link];
+		unsigned int first = btLmpLcVerifyEntry(link, clock);
+		unsigned int second = btLmpLcSelectEntry(link, clock);
+		struct BtSourceRecord *record;
+		int late;
+		int lateSecond;
+		int due;
+		int policy;
+
+		if (btLmpLcInspectEntry(btSource.packet, link) == 0 || profile->connection == 0 ||
+		    (profile->state != 5 && profile->state != 9))
+			goto next;
+		record = &btSourceBuffer[profile->index];
+		late = btLcoRomManageContext(profile->index) != 0 && btSourceFirstLate(record, first);
+		lateSecond = btSource.queue > second && record->secondRate < second;
+		if ((late | lateSecond) == 0)
+			goto next;
+		due = (int32_t)(profile->due - btDeviceRecord) > 0;
+		policy = btLmpLcInspectEntry(btThresholdPolicy, link);
+		if (due || (profile->active != 0 && policy != 0 && profile->state == 9)) {
+			btLtsRomQueryState(profile);
+			btLtsRomApplyState(profile, due ? btDeviceRecord : profile->due, policy != 0 ? 5 : profile->state);
+		}
+next:
+		link = (uint8_t)(link + 1);
+	} while (link <= 7);
+}
+
+/* A link's slot ended at clock: its rates and ticks are taken again and the ROM schedules the next. */
+void btLmpLcFilterEntry(struct BtDeviceProfile *profile, unsigned int clock)
+{
+	unsigned int start = profile->due;
+	unsigned int index = profile->index;
+	unsigned int second = btLmpLcSelectEntry(index, clock);
+	unsigned int first = btLmpLcVerifyEntry(index, clock);
+	struct BtSourceRecord *record = &btSourceBuffer[index];
+	int policy = btLmpLcInspectEntry(btThresholdPolicy, index);
+	int fresh;
+	int late;
+	unsigned int average;
+	unsigned int span;
+	unsigned int offset;
+	unsigned int mode;
+
+	fresh = btLcoRomManageContext(index) != 0 || btSource.queue > second || btSource.queue > first;
+	if (btLcoRomManageContext(index) != 0 && btSourceFirstLate(record, first))
+		late = 1;
+	else
+		late = btSource.queue > second && record->secondRate < second;
+	average = (profile->firstSetting + profile->secondSetting) >> 1;
+	span = average + 1 >= 3 ? average + 1 : 3;
+	if (profile->active != 0) {
+		if (fresh)
+			btLmpLcAdjustEntry(profile, second, first);
+		profile->adjust = 0;
+		start = clock;
+		profile->span = span;
+		mode = policy != 0 && late != 0 ? 5 : 9;
+		offset = 0;
+	} else {
+		if (fresh && profile->adjust == 1)
+			btLmpLcAdjustEntry(profile, second, first);
+		profile->adjust = 0;
+		if (fresh) {
+			unsigned int rate = record->firstRate;
+
+			if (rate >= record->secondRate)
+				rate = record->secondRate;
+			if ((policy != 0 ? btSource.param : btSource.channel) * span > rate) {
+				offset = 0;
+				start = clock;
+			} else if (profile->limit != 0) {
+				span = profile->limit;
+				offset = 0;
+				start = clock;
+			} else if (policy != 0) {
+				offset = btSource.timer;
+			} else {
+				offset = profile->interval <= rate ? profile->interval : rate;
+			}
+		} else {
+			offset = profile->interval;
+		}
+		profile->rate = (fresh | late) != 0 ? span : 1;
+		mode = policy != 0 ? 5 : 9;
+	}
+	btLtsRomApplyState(profile, start + offset, mode);
 }
