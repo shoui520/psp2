@@ -116,6 +116,25 @@ int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel);		/* 0x355d
 void macMgmtCheckContext(void);							/* 0x3564a */
 void macMgmtConfigureContext(const uint8_t *htOperation);				/* 0x3560c */
 void macMgmtValidateContext(void);						/* 0x3565e */
+int macMgmtDispatchContext(unsigned int channel, unsigned int band, unsigned int offset); /* 0x3567e */
+int macMgmtParseContext(void);							/* 0x356b4 */
+void hostCmd001eChannel(uint8_t *channel);					/* 0x356c6 */
+unsigned int macMgmtComputeContext(struct WlanConnection *connection, unsigned int bitmap); /* 0x356d2 */
+void macMgmtResetContext(int adhoc, const uint8_t *address);			/* 0x35734 */
+int macMgmtSyncContext(struct WlanConnection *connection);			/* 0x3576a */
+void macMgmtApplyContext(struct WlanConnection *connection, uint8_t *htInformation); /* 0x357ea */
+void macMgmtResolveContext(struct WlanConnection *connection, unsigned int rate); /* 0x358c8 */
+void macMgmtScheduleContext(void);						/* 0x35906 */
+void macMgmtNotifyContext(struct WlanConnection *connection, unsigned int now);	/* 0x35916 */
+void macMgmtFormatContext(void);						/* 0x35936 */
+struct WlanIePointers;
+unsigned int macMgmtInspectContext(struct WlanConnection *connection, const uint8_t *frame,
+				   struct WlanIePointers *elements);		/* 0x35962 */
+void macMgmtTrackContext(const uint8_t *capability, unsigned int rates, const uint8_t *erp,
+			 unsigned int now);					/* 0x359a6 */
+int macMgmtVerifyContext(void);							/* 0x35f74 */
+int macMgmtSelectContext(struct WlanConnection *connection);			/* 0x35f7c */
+int wlanStaSmLinked(const struct WlanConnection *connection);			/* 0x35faa */
 int wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
 void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
 			 unsigned int count, unsigned int bitmap);		/* 0x356f6 */
