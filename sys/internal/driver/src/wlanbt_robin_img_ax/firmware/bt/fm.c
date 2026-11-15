@@ -57,7 +57,7 @@ static uint8_t fmTaskStack[FM_TASK_STACK_SIZE] __attribute__((section(".itcm.bss
 struct FmReply fmReply __attribute__((section(".sqram1.bss")));		/* 0xc0033328 */
 static struct OsaMsgList fmMessages __attribute__((section(".sqram1.bss")));	/* 0xc0033424 */
 /* The event flags group; the space reaches up to fmSettings. */
-static uint32_t fmFlags[22] __attribute__((section(".sqram1.bss")));		/* 0xc0033438 */
+uint32_t fmFlags[22] __attribute__((section(".sqram1.bss")));		/* 0xc0033438 */
 struct FmSettings fmSettings __attribute__((section(".sqram1.bss")));		/* 0xc0033490 */
 
 static inline uint32_t fmCommandWord(const uint8_t *bytes)
@@ -133,7 +133,7 @@ int fmCoexTaskMain(void)
 	}
 	if ((fmSettings.features >> 4) & 2) {
 		if (status & FM_STATUS_LEVEL) {
-			btSbcAdjustEntry();
+			btSbcAdjustEntry(status);
 			btLmpLcParseDescriptor(FM_STATUS_LEVEL);
 		}
 		if (status & FM_STATUS_STEREO) {

@@ -13,6 +13,7 @@
 #include "robin/sbc.h"
 #include "robin/soc.h"
 #include "robin/socpower.h"
+#include "robin/threadx.h"
 
 struct FmTuner fmTuner __attribute__((section(".itcm.rw"))) = {	/* 0x55694 */
 	.reserved2 = { 0x0f, 0x17, 0x1f, 0x00 },
@@ -342,12 +343,496 @@ int btSbcClearEntry(uint8_t clock)
 	fmTuner.reserved7[0] = 1;
 	fmTuner.reserved7[1] = 0;
 	fmTuner.reserved0 = 0;
-	fmTuner.reserved13[0] = 20;
-	fmTuner.reserved13[1] = 15;
-	fmTuner.reserved13[2] = 10;
+	fmTuner.measureTolerance = 20;
+	fmTuner.measureSpread = 15;
+	fmTuner.reserved16 = 10;
 	fmTuner.reserved14 = 1;
-	fmTuner.reserved10 = 2;
-	fmTuner.reserved11 = 10;
-	fmTuner.reserved15 = 1;
+	fmTuner.measureGain = 2;
+	fmTuner.measureTime = 10;
+	fmTuner.measureScale = 1;
 	return 0;
+}
+
+/* A tune or search completed (the FM interrupt): finishes it and marks it done. */
+void btSbcConvertEntry(void)
+{
+	uint32_t config;
+	uint16_t value;
+	unsigned int mode;
+	uint16_t status;
+
+	if ((FM_REGISTER(0x008) & 4) == 0) {
+		if (FM_REGISTER(0x000) >> 7 > 7) {
+			btFmTuneHook(fmSettings.frequency);
+			if ((FM_REGISTER(0x174) >> 14) + 2 == 3 && fmSettings.frequency <= 104000)
+				FM_REGISTER(0x170) |= 0x200;
+			else
+				FM_REGISTER(0x170) &= ~0x200;
+		}
+		btFmInjectionHook(fmSettings.frequency, &config);
+		value = FM_REGISTER(0x02c) & 0x8007;
+		if ((uint16_t)config >> 15 != 0)
+			value += 0x4718;
+		else
+			value += 0x1188;
+		FM_REGISTER(0x02c) = value;
+	} else {
+		value = FM_REGISTER(0x078);
+		FM_REGISTER(0x078) = value & ~0xc0;
+		FM_REGISTER(0x078) = value;
+	}
+	mode = FM_REGISTER(0x00c) >> 5 & 7;
+	status = FM_REGISTER(0x004);
+	if (mode == 2 && (status & 0x1000) != 0) {
+		FM_REGISTER(0x008) |= 0x10;
+		return;
+	}
+	fmTuner.tuneDone = 1;
+}
+
+/*
+ * An RDS group arrived (the FM interrupt): its four blocks go to the RDS
+ * buffer when blocks A and B match what the host asked for.
+ */
+void btSbcVerifyEntry(void)
+{
+	uint16_t status;
+	uint16_t blockA;
+	uint16_t blockB;
+	uint16_t blockC;
+	uint16_t blockD;
+	uint32_t now;
+	uint32_t elapsed;
+	uint32_t match;
+	unsigned int size;
+
+	status = FM_REGISTER(0x2e0);
+	if ((status & 0x2000) != 0) {
+		FM_REGISTER(0x2e0) = status & ~0x2000;
+		btSbcFilterTable();
+		return;
+	}
+	fmSettings.rdsFlags |= FM_RDS_RECEIVING;
+	now = SOC_EVENT_CLOCK;
+	if (now > fmTuner.rdsLastClock)
+		elapsed = now - fmTuner.rdsLastClock;
+	else
+		elapsed = now - fmTuner.rdsLastClock - 1;
+	fmTuner.rdsLastClock = now;
+	if (elapsed > FM_RDS_TIMEOUT) {
+		/* The ROM routine takes no arguments; the original leaves the limit and the time in r0 and r1. */
+		btSbcRomVerifyEntry();
+		btSbcFilterTable();
+		return;
+	}
+	if (FM_RDS_MODE(status) == 2 && FM_RDS_MODE(fmSettings.rdsFlags) == 1)
+		return;
+	blockA = FM_REGISTER(0x2ec);
+	blockB = FM_REGISTER(0x2f0);
+	blockC = FM_REGISTER(0x2f4);
+	blockD = FM_REGISTER(0x2f8);
+	match = fmSettings.rdsBlockAMatch;
+	if ((match & match >> 16) == (match >> 16 & blockA))
+		btSbcRomConvertContext(0x80);
+	match = fmSettings.rdsBlockBMatch;
+	if ((match & match >> 16) != (match >> 16 & blockB))
+		return;
+	btSbcRomConvertContext(0x40);
+	if (fmSettings.rdsIndex.read == fmSettings.rdsIndex.write && (fmSettings.rdsFlags & FM_RDS_PENDING) != 0) {
+		fmSettings.rdsIndex.read += 4;
+		fmSettings.rdsIndex.read %= FM_RDS_SIZE(fmSettings.rdsFlags);
+	}
+	fmRdsBlocks[fmSettings.rdsIndex.write++] = blockA;
+	fmRdsBlocks[fmSettings.rdsIndex.write++] = blockB;
+	fmRdsBlocks[fmSettings.rdsIndex.write++] = blockC;
+	fmRdsBlocks[fmSettings.rdsIndex.write++] = blockD;
+	size = FM_RDS_SIZE(fmSettings.rdsFlags);
+	fmSettings.rdsIndex.write %= size;
+	fmSettings.rdsFlags |= FM_RDS_PENDING;
+	if (btSbcRomConvertEntry(0x100) == 0)
+		return;
+	btSbcRomConvertContext(2);
+	if ((fmSettings.eventMask & 2) != 0)
+		tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 8, TX_OR);
+}
+
+/* The RDS interrupt: counts, during a search, whether it saw a group. */
+void btSbcSelectEntry(void)
+{
+	if ((fmSettings.features >> 4 & 4) != 0) {
+		btSbcRomTrackEntry();
+		return;
+	}
+	btSbcVerifyEntry();
+	if (fmTuner.searchCount == 0 || fmTuner.searchCount > fmTuner.searchLimit)
+		return;
+	if ((fmSettings.rdsFlags & FM_RDS_RECEIVING) != 0)
+		fmTuner.rdsReceived++;
+	else
+		fmTuner.rdsMissed++;
+}
+
+/* The level interrupt: wakes the FM task for the levels that crossed. */
+void btSbcAdjustEntry(uint32_t status)
+{
+	if ((status & 0x80) != 0 || (status & 0x40) != 0)
+		tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x200, TX_OR);
+	if ((status & 0x400) != 0)
+		tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x800, TX_OR);
+	if ((status & 0x800) != 0)
+		tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x400, TX_OR);
+}
+
+/* The stereo interrupt. */
+void btSbcRecordEntry(void)
+{
+	if ((FM_REGISTER(0x378) & 0x400) != 0)
+		tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x2000, TX_OR);
+	btSbcRomConvertContext(0x200);
+}
+
+/* The search interrupt. */
+void btSbcFilterEntry(void)
+{
+	if ((fmSettings.features >> 4 & 4) != 0) {
+		btSbcResolveBuffer();
+		btSbcScheduleBuffer();
+		return;
+	}
+	btSbcRomConvertContext(4);
+	tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 2, TX_OR);
+	tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x100, TX_OR);
+}
+
+/* Starts a search from a frequency, up or down. */
+int btSbcHandleTable(uint32_t frequency, int up)
+{
+	int result;
+
+	fmSettings.frequency = frequency;
+	if (up != 0)
+		FM_REGISTER(0x004) |= 8;
+	else
+		FM_REGISTER(0x004) &= ~8;
+	result = btFmWaitHook(0);
+	if (result != 0)
+		return result;
+	result = btFmWaitHook(1);
+	if (result != 0)
+		return result;
+	return btSbcRomFilterContext();
+}
+
+/*
+ * Holds the two level registers at what the block measures now (enable), or
+ * gives them back their saved values.
+ */
+__attribute__((noinline)) void btSbcProcessTable(int enable)
+{
+	unsigned int level;
+	uint16_t value;
+
+	if (enable == 0) {
+		FM_REGISTER(0x134) = fmTuner.savedLevels[0];
+		FM_REGISTER(0x138) = fmTuner.savedLevels[1];
+		return;
+	}
+	level = FM_REGISTER(0x12c) >> 7 & 0xf;
+	fmTuner.savedLevels[0] = FM_REGISTER(0x134);
+	value = (fmTuner.savedLevels[0] & ~0xf0) | level << 4;
+	FM_REGISTER(0x134) = (value & ~0xf) | level;
+	FM_REGISTER(0x130) = (FM_REGISTER(0x130) & ~0x1e00) | level << 9;
+	FM_REGISTER(0x078) &= ~4;
+	FM_REGISTER(0x078) |= 4;
+	btSbcApplyEntry(0xa4);
+	level = FM_REGISTER(0x12c) >> 11;
+	fmTuner.savedLevels[1] = FM_REGISTER(0x138);
+	value = (fmTuner.savedLevels[1] & ~0x3e0) | level << 5;
+	FM_REGISTER(0x138) = (value & ~0x1f) | level;
+}
+
+#define FM_MEASURE_POINTS	3
+#define FM_MEASURE_STEP		35	/* kHz between the points */
+
+/*
+ * Measures the level at three points around a frequency, 35 kHz apart.
+ * Each must be within the tolerance, their mean too, and each near the mean:
+ * returns 1 and the mean then, 0 otherwise.
+ */
+int btSbcUpdateTable(uint32_t frequency, int tolerance, int16_t *mean)
+{
+	int16_t levels[FM_MEASURE_POINTS];
+	int16_t upper, lower, high, low;
+	unsigned int gain, i;
+	uint16_t value;
+	int8_t offset;
+	int result;
+
+	offset = -FM_MEASURE_STEP;
+	result = 1;
+	upper = fmTuner.measureSpread + tolerance;
+	lower = -upper;
+	value = FM_REGISTER(0x03c);
+	gain = value >> 2 & 7;
+	FM_REGISTER(0x03c) = (value & ~0x1c) | fmTuner.measureGain << 2;
+	*mean = 0;
+	for (i = 0; i < FM_MEASURE_POINTS; i = (uint8_t)(i + 1)) {
+		btFmFrequencyHook(frequency + offset);
+		value = FM_REGISTER(0x038);
+		FM_REGISTER(0x038) = value | 4;
+		FM_REGISTER(0x038) = value & ~4;
+		btSbcApplyEntry(((uint32_t)fmTuner.measureTime << 15) / 1000 + 1);
+		levels[i] = FM_REGISTER(0x044);
+		if (fmTuner.measureScale != 0)
+			levels[i] = levels[i] * 0x5b3 >> 16;
+		else
+			levels[i] = levels[i] * 0x422 >> 16;
+		levels[i] = (uint16_t)levels[i] - offset;
+		if (levels[i] > upper || levels[i] < lower) {
+			result = 0;
+			goto out;
+		}
+		*mean += levels[i];
+		offset += FM_MEASURE_STEP;
+	}
+	if (result == 0)
+		goto out;
+	*mean = *mean / FM_MEASURE_POINTS;
+	if (*mean > tolerance || *mean < -tolerance) {
+		result = 0;
+		goto out;
+	}
+	high = *mean + fmTuner.measureSpread;
+	low = *mean - fmTuner.measureSpread;
+	for (i = 0; i < FM_MEASURE_POINTS; i = (uint8_t)(i + 1)) {
+		if (levels[i] > high || levels[i] < low) {
+			result = 0;
+			goto out;
+		}
+	}
+out:
+	FM_REGISTER(0x03c) = (FM_REGISTER(0x03c) & ~0x1c) | gain << 2;
+	return result;
+}
+
+/*
+ * Calibrates the frequency offset at a frequency: measures without the offset
+ * and takes the mean it finds, or none. Returns 60 when the measurement fails.
+ */
+int btSbcConfigureTable(uint32_t frequency)
+{
+	int16_t mean;
+	uint32_t calibrated;
+	int result;
+
+	result = 0;
+	if ((fmSettings.features >> 4 & 4) != 0)
+		return result;
+	calibrated = fmSettings.tuneFlags >> 31;
+	fmSettings.frequencyOffset = 0;
+	fmSettings.tuneFlags &= ~FM_TUNE_OFFSET;
+	if (btSbcUpdateTable(frequency, fmTuner.measureTolerance, &mean) != 0) {
+		fmSettings.frequencyOffset = -mean;
+	} else {
+		result = 60;
+		fmSettings.frequencyOffset = 0;
+	}
+	fmSettings.tuneFlags = (fmSettings.tuneFlags & ~FM_TUNE_OFFSET) | calibrated << 31;
+	btFmFrequencyHook(frequency);
+	return result;
+}
+
+/* Waits for the block's state to settle: 18 with bit 13 of the features, else 0. */
+int btSbcCheckTable(void)
+{
+	unsigned int state;
+	uint16_t polls;
+	int result;
+
+	polls = 0;
+	result = 0;
+	btSbcRomRecordContext(0);
+	if ((fmSettings.features & 0x2000) != 0)
+		state = 0x12;
+	else
+		state = 0;
+	do {
+		btSbcApplyEntry(0x21);
+		polls++;
+		if ((FM_REGISTER(0x00c) & 0x1f) == state)
+			break;
+	} while (polls < FM_TUNE_POLLS);
+	if (polls == FM_TUNE_POLLS)
+		result = FM_TUNE_TIMEOUT;
+	FM_REGISTER(0x004) &= ~0x1000;
+	return result;
+}
+
+/* Tunes to a frequency in the band, calibrating the offset there. */
+int btSbcValidateTable(uint32_t frequency)
+{
+	uint32_t features;
+	unsigned int mode;
+	int result;
+
+	features = fmSettings.features;
+	if ((features & 0x1000) == 0)
+		return 21;
+	if (romFmBands[features & 0xf].high < frequency || romFmBands[features & 0xf].low > frequency)
+		return 60;
+	if ((features & 0x2000) == 0) {
+		fmSettings.frequency = frequency;
+		return 0;
+	}
+	if (fmSettings.frequency == frequency)
+		return 0;
+	result = btSbcCheckTable();
+	if (result != 0)
+		return result;
+	mode = fmSettings.policy & 0xf;
+	btSbcRomConfigureEntry(mode | 1);
+	fmSettings.tuneFlags &= ~FM_TUNE_OFFSET;
+	btSbcRomVerifyContext(0x20);
+	btSbcRomAdjustContext(0xcc0, 0);
+	result = btFmFrequencyHook(frequency);
+	if (result != 0)
+		return result;
+	fmSettings.tuneFlags |= FM_TUNE_OFFSET;
+	btSbcApplyEntry(0xa4);
+	btSbcProcessTable(1);
+	btSbcConfigureTable(frequency);
+	btSbcProcessTable(0);
+	btSbcRomConvertContext(0x20);
+	btSbcBuildBuffer();
+	btSbcRomRecordContext(1);
+	btSbcRomConfigureEntry(mode);
+	return result;
+}
+
+/* Sets the audio level and the registers that go with the mode (1 or not). */
+int btSbcPrepareTable(int mode)
+{
+	unsigned int rearm;
+	uint32_t level;
+
+	rearm = fmSettings.policy >> 4 & 0xf;
+	level = fmSettings.audioLevel & ~0x1fe0000;
+	if (mode == 1) {
+		FM_REGISTER(0x178) &= ~0x4000;
+		FM_REGISTER(0x1d8) = (FM_REGISTER(0x1d8) | 6) & ~1;
+		if (rearm == 0) {
+			if (FM_REGISTER(0x000) >> 7 > 7)
+				fmSettings.audioLevel = level + 0x1900000;
+			else
+				fmSettings.audioLevel = level + 0x1400000;
+			FM_REGISTER(0x330) = 0x4a;
+		} else {
+			fmSettings.audioLevel = level + 0x1000000;
+			FM_REGISTER(0x330) = 0xc5;
+		}
+		FM_REGISTER(0x1dc) = 0xadb;
+	} else {
+		FM_REGISTER(0x178) |= 0x4000;
+		FM_REGISTER(0x1d8) = ((FM_REGISTER(0x1d8) & ~6) + 2) | 1;
+		if (rearm == 0) {
+			fmSettings.audioLevel = level + 0x1200000;
+			FM_REGISTER(0x330) = 0x4a;
+		} else {
+			fmSettings.audioLevel = level + 0xc00000;
+			FM_REGISTER(0x330) = 0xc5;
+		}
+		FM_REGISTER(0x1dc) = 0x49b;
+	}
+	btSbcRomProcessEntry(fmSettings.audioLevel << 15 >> 16);
+	return 0;
+}
+
+/* Sends a 4-byte value as an FM event. */
+int btSbcDispatchTable(uint32_t value)
+{
+	fmReply.status = 0;
+	fmReply.command = FM_EVENT_VALUE;
+	fmReply.data[2] = value >> 24;
+	fmReply.data[1] = value >> 16;
+	fmReply.data[0] = value >> 8;
+	fmReply.result = value;
+	return fmEventSend(&fmReply, 6, FM_REPLY_EVENT);
+}
+
+/* The level the block measures. */
+__attribute__((noinline)) uint16_t btSbcParseTable(void)
+{
+	uint16_t level;
+
+	level = FM_REGISTER(0x230) & 0x1ff;
+	if ((fmSettings.levelFlags & 0x4000) != 0)
+		level -= 0x38;
+	return level;
+}
+
+/* Sets the measurement's mode, bits 3..0 of register 0x22c. */
+__attribute__((noinline)) void btSbcBuildTable(unsigned int value)
+{
+	uint16_t control;
+
+	control = FM_REGISTER(0x22c) & ~0xf;
+	FM_REGISTER(0x22c) = control;
+	FM_REGISTER(0x22c) = (control & ~0xf) | value;
+}
+
+/* Measures the level at a frequency. */
+int btSbcComputeTable(uint32_t frequency)
+{
+	int result;
+
+	result = btFmFrequencyHook(frequency);
+	if (result != 0)
+		return result;
+	btSbcBuildTable(7);
+	btSbcApplyEntry(0x42);
+	return btSbcParseTable();
+}
+
+/* The measurement's limits, set and read by the vendor commands. */
+void btSbcQueryTable(int16_t tolerance, uint16_t reserved16, uint16_t spread, uint32_t reserved14)
+{
+	fmTuner.measureTolerance = tolerance;
+	fmTuner.measureSpread = spread;
+	fmTuner.reserved16 = reserved16;
+	fmTuner.reserved14 = reserved14;
+}
+
+void btSbcResetTable(uint8_t *tolerance, uint8_t *reserved16, uint8_t *spread, uint8_t *reserved14)
+{
+	*tolerance = fmTuner.measureTolerance;
+	*spread = fmTuner.measureSpread;
+	*reserved16 = fmTuner.reserved16;
+	*reserved14 = fmTuner.reserved14;
+}
+
+void btSbcSyncTable(uint8_t gain, uint8_t time, uint32_t scale)
+{
+	fmTuner.measureGain = gain;
+	fmTuner.measureTime = time;
+	fmTuner.measureScale = scale;
+}
+
+void btSbcApplyTable(uint8_t *gain, uint8_t *time, uint8_t *scale)
+{
+	*gain = fmTuner.measureGain;
+	*time = fmTuner.measureTime;
+	*scale = fmTuner.measureScale;
+}
+
+/* Turns the level measurement on, or off unless bit 28 of the features keeps it. */
+void btSbcResolveTable(int enable)
+{
+	if (enable != 0) {
+		FM_REGISTER(0x234) |= 0x800;
+		FM_REGISTER(0x230) |= 0x200;
+		return;
+	}
+	if ((fmSettings.features & 0x10000000) == 0)
+		FM_REGISTER(0x234) &= ~0x800;
+	FM_REGISTER(0x230) &= ~0x200;
 }
