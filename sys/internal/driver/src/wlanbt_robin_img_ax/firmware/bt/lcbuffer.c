@@ -1706,3 +1706,23 @@ void btLmpLcFormatPacket(void)
 	btLmpLcResolvePacket(0);
 	btLmpLcSyncPacket();
 }
+
+/*
+ * Whether the request's handle, while pending, may go on: its ROM state is 7 or 11, or it is 0 and
+ * the handle is no longer busy (then it is no longer pending either).
+ */
+int btLmpLcInspectPacket(const uint8_t *request)
+{
+	unsigned int handle = *(const BtHalf *)(request + 4);
+	unsigned int state;
+
+	if (btHandlePending[handle] == 0)
+		return 0;
+	state = btHccRomBuildState(handle);
+	if (state == 11 || state == 7)
+		return 1;
+	if (state != 0 || btTablePeerBusy[handle] != 0)
+		return 0;
+	btHandlePending[handle] = 0;
+	return 1;
+}

@@ -43,6 +43,8 @@ extern uint8_t btTableLongWindows[8];			/* 0x55318 */
 extern uint8_t btTableExtras[8];				/* 0x55320 */
 extern uint8_t btTableHoldWindows[8];			/* 0x55328 */
 extern void (*btTableRadioWrite)(uint16_t reg, uint32_t value);	/* 0x552b4 */
+extern const uint8_t btPeerBusy[];				/* 0x400b393: non-zero: the handle is busy */
+extern const uint8_t *btTablePeerBusy;				/* 0x552b8 */
 extern uint8_t btTableRetries[8];				/* 0x55330: each link's missed slots */
 extern uint8_t btTableLinkModes[8];				/* 0x55338: each link's mode, 0 to 3 */
 extern uint32_t btTableModeSlot;				/* 0x552c8: the clock of the next mode 9 slot */
