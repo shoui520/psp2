@@ -56,6 +56,24 @@ void p2pProvisionDiscoveryBuild(struct WlanConnection *connection, uint8_t *fram
 int p2pProvisionDiscoveryRequestSend(struct WlanConnection *connection, const uint8_t *destination,
 				     uint8_t *groupId);				/* SQRAM 0xc000b864 */
 void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsigned int pending);	/* SQRAM 0xc000b8e0 */
+void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000ba1a */
+int p2pListenSlotStart(struct WlanConnection *connection, uint32_t slot);	/* SQRAM 0xc000bce4, veneer 0x53284 */
+int p2pChannelShared(struct WlanConnection *connection);		/* SQRAM 0xc000bdaa, veneer 0x53294 */
+void p2pDiscoverabilityResponseBuild(struct WlanConnection *connection, uint8_t *frame);	/* SQRAM 0xc000bdb6 */
+int p2pDiscoverabilityRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000bdee */
+int p2pDiscoverabilityResponseCheck(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000bf6c */
+int p2pGoNegotiationRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000bfa0 */
+int p2pGoNegotiationConfirmed(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c076 */
+void p2pDeviceStateSave(struct WlanConnection *connection);		/* SQRAM 0xc000c114 */
+void p2pDeviceStateRestore(struct WlanConnection *connection);		/* SQRAM 0xc000c14a */
+int p2pGoNegotiationResponseAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c1b4 */
+int p2pProvisionDiscoveryRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c2ae */
+int p2pProvisionDiscoveryResponseAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c410 */
+unsigned int p2pPresenceResponseBuild(struct WlanConnection *connection, uint8_t *frame);	/* SQRAM 0xc000c4b6 */
+int p2pVendorActionSend(struct WlanConnection *connection, const uint8_t *destination, unsigned int kind,
+			unsigned int dialogToken, unsigned int unused, unsigned int subtype);	/* SQRAM 0xc000c512 */
+int p2pPresenceRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c5c0 */
+void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8c, not converted yet */
 uint8_t *p2pSqramTrackContext(struct WlanConnection *connection, uint32_t *invitation);	/* SQRAM 0xc000da82, not converted yet */
 void p2pSqramReleaseContext(struct WlanConnection *connection, uint32_t invitation, uint8_t *address,
 			    struct WlanDirectContext *peer);			/* SQRAM 0xc000db0c, not converted yet */

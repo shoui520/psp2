@@ -103,6 +103,7 @@ struct WlanDirectContext {
 extern const uint8_t wlanWpsOui[4];			/* 0x53f86: the OUI and type of the WPS element */
 extern const uint8_t wlanP2pOui[4];			/* SQRAM 0xc000faa3: the OUI and type of the P2P element */
 
+extern uint8_t p2pBroadcastAddress[6];			/* 0x5524c */
 extern uint32_t p2pFrameDataMissing;			/* 0x55254 */
 extern struct WlanConnection *p2pDeviceConnection;	/* 0x55258: the P2P device's connection (hostCmd00ea()) */
 extern struct WlanConnection *p2pGroupConnection;	/* 0x55260: the group owner's connection once it is set up */

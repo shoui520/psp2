@@ -58,7 +58,7 @@ __attribute__((noinline)) int macMgmtFormatEntry(void)
 			return wlanSlotAbort(scan->slot, 6);
 		if (p2pDirectInspectState() != 0 && macMgmtFormatTable(scan) &&
 		    !macMgmtInspectTable(scan->channelIndex))
-			return p2pSqramScheduleState(connection, scan->slot);
+			return p2pListenSlotStart(connection, scan->slot);
 	}
 	index = scan->channelIndex;
 	if (index >= scan->channelCount)
@@ -187,7 +187,7 @@ int macMgmtReleaseEntry(uint32_t handle, int event, uint32_t argument)
 	case 1:
 	case 2:
 		if (wlanScanState.connection->interfaceType == WLAN_IF_AP)
-			p2pSqramProcessState(wlanScanState.connection, 3, argument, event);
+			p2pConnectionStateSet(wlanScanState.connection, 3);
 		macMgmtFilterPacket(40, 2);
 		macMgmtFilterPacket(40, 3);
 		if (wlanScanState.connection->interfaceType == WLAN_IF_AP)
@@ -660,7 +660,7 @@ int macMgmtPrepareTable(void)
 	__aeabi_memcpy(scan->rates, wlanLocalState->rates, WLAN_SCAN_RATES);
 	connection = state->connection;
 	if (connection->interfaceType == WLAN_IF_AP) {
-		if (p2pSqramNotifyState() != 0)
+		if (p2pChannelShared(connection) != 0)
 			config->channelsPerScan = 1;
 		else
 			config->channelsPerScan = config->channelCount - state->position;
@@ -678,7 +678,7 @@ int macMgmtPrepareTable(void)
 			interval = config->interval;
 		} else {
 			ps = wlanConnectionPsState(connection);
-			p2pSqramProcessState(connection, 2, 0, 0);
+			p2pConnectionStateSet(connection, 2);
 			if (ps->p2pWindowValid != 0)
 				interval = (uint16_t)(ps->p2pWindowEnd - ps->p2pWindowStart);
 			else

@@ -44,8 +44,6 @@
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
-void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
-			     uintptr_t argument);					/* SQRAM */
 void rfCalibFilterQueue(unsigned int wpa, void *keyData);				/* 0x2b764 */
 void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *length); /* 0x2b774 */
 void rfCalibProcessTimer(unsigned int value, uint8_t **cursor, uint8_t *length);	/* 0x2b7b6 */
@@ -973,7 +971,7 @@ void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer, u
 
 		if (connection->interfaceType == 3) {
 			if (connection->mode == 1 || connection->mode == 2) {
-				p2pSqramMatchDirectSsid(connection, frame, argument);
+				p2pProbeRequestAnswer(connection, frame);
 				return;
 			}
 		} else if (connection->interfaceType == 2 && macMgmtVerifyPacket(connection, frame) == 1) {

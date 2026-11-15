@@ -29,6 +29,9 @@ void p2pSqramHandleEntry(struct WlanPsPeerState *ps);				/* 0xc000e1f0 */
 int p2pSqramConvertContext(struct WlanConnection *connection, uint8_t *type, uint8_t *tail, uint8_t *ssid,
 			   unsigned int mode, unsigned int flag);			/* 0xc000dc2e */
 
+uint8_t p2pBroadcastAddress[6] __attribute__((section(".itcm.rw"), aligned(4))) = {	/* 0x5524c */
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+};
 uint32_t p2pFrameDataMissing __attribute__((section(".itcm.rw")));	/* 0x55254: frames p2pActionFrameAlloc() got without data */
 struct WlanConnection *p2pDeviceConnection __attribute__((section(".itcm.rw")));	/* 0x55258 */
 struct WlanConnection *p2pGroupConnection __attribute__((section(".itcm.rw")));
@@ -185,9 +188,9 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	ps->p2pBssActive = 0;
 	ps->pendingFrame = NULL;
 	ps->groupSettingE = 1;
-	ps->groupSettingF = 256;
+	ps->wpsConfigMethod = 256;
 	ps->groupSettingH = 1;
-	ps->groupSettingG = 5;
+	ps->wpsDevicePasswordId = 5;
 	if (p2pDirectInspectState() != 0)
 		ps->channelShared = 1;
 	__aeabi_memcpy(address, ps->interfaceAddress, 6);

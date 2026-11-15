@@ -26,6 +26,10 @@ _Static_assert(offsetof(struct WlanTxWindowQueue, head) == 4, "window queue head
 _Static_assert(offsetof(struct WlanTxWindowQueue, count) == 136, "window queue count");
 
 /* Power-save state kept per connection (partial; its owner is not converted yet). */
+/* WlanPsPeerState.noaMode */
+#define NOA_MODE_CTWINDOW	1
+#define NOA_MODE_ABSENCE	2
+
 struct WlanPsPeerState {
 	uint8_t beaconTimestamp[8];	/* the TSF of the last beacon heard (a P2P group owner's) */
 	uint32_t beaconTimerLow;	/* the MAC timer when it was heard */
@@ -59,8 +63,12 @@ struct WlanPsPeerState {
 		uint8_t country[3];
 		uint8_t operatingClass;
 		uint8_t count;
-		uint8_t channels[69];
+		uint8_t channels[35];
 	} commonChannels;
+	uint8_t savedP2pState;		/* the connection's p2pState, mode and channel before an invitation or a provision discovery made it a device (p2pDeviceStateSave()) */
+	uint8_t savedMode;
+	uint8_t savedChannel;
+	uint8_t presenceNoaAttribute[31];	/* the Notice of Absence attribute a presence request carries (p2pVendorActionSend()) */
 	uint8_t noaAttribute[31];	/* the Notice of Absence attribute of the last beacon: ID, length, index, CTWindow, descriptors */
 	union {
 		uint8_t capabilityAttribute[5];	/* the P2P Capability attribute: device and group capability */
@@ -130,11 +138,12 @@ struct WlanPsPeerState {
 	uint32_t groupSettingD;		/* 255 when the group starts */
 	uint8_t reserved1180[8];
 	uint8_t p2pBssActive;		/* 1: the channel of the group owner is the one the radio is on */
-	uint8_t reserved1189;
+	uint8_t clientDiscoverabilityPending;	/* a GO discoverability request went to a client for a device discoverability request (p2pDiscoverabilityRequestAnswer()) */
 	uint8_t discoverabilityPending;	/* a device discoverability request is out (p2pDiscoverabilityCheck()); cleared by its timer and when the group starts */
-	uint8_t reserved1191;
+	uint8_t discoverabilityDialogToken;	/* the dialog token of the device discoverability request being answered */
 	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on; 255: none */
-	uint8_t reserved1193[15];
+	uint8_t discoverabilityRequester[6];	/* the device that sent it */
+	uint8_t reserved1199[9];
 	uint32_t groupSettingA;		/* 1 when the group starts */
 	uint32_t groupSettingB;		/* 1 */
 	OsaBuffer *pendingFrame;	/* a frame p2pPendingFrameSend() queues later (a retry or a timer's) */
@@ -153,8 +162,8 @@ struct WlanPsPeerState {
 	uint8_t reserved1326[13];
 	uint8_t dialogToken;		/* the dialog token of the P2P public action frames sent */
 	uint32_t groupSettingE;		/* 1 when the group starts */
-	uint32_t groupSettingF;		/* 256 */
-	uint32_t groupSettingG;		/* 5 */
+	uint32_t wpsConfigMethod;		/* the WPS config method provisioning uses (256: keypad) */
+	uint32_t wpsDevicePasswordId;	/* its WPS device password ID (5: registrar specified) */
 	uint32_t groupSettingH;		/* 1 */
 	uint8_t p2pGroupId[6];		/* the group owner a beacon names: the one the discoverability request went to */
 };

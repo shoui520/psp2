@@ -250,10 +250,6 @@ unsigned int fmCoexConvertEntry(unsigned int type, const uint8_t *tlv, uint8_t *
 unsigned int fmCoexVerifyEntry(const struct WlanScanResults *results, uint32_t mode);	/* 0x4bb2c */
 
 /* Provisional prototypes of what is not converted yet (their addresses). */
-int p2pSqramScheduleState(struct WlanConnection *connection, uint32_t slot);	/* SQRAM, veneer 0x53284 */
-void p2pSqramProcessState(struct WlanConnection *connection, unsigned int state, uintptr_t argument,
-			  int event);					/* SQRAM, veneer 0x5328c */
-int p2pSqramNotifyState(void);						/* SQRAM, veneer 0x53294 */
 int p2pSqramParseContext(uintptr_t context);				/* SQRAM, veneer 0x539fc */
 void p2pSqramDispatchContext(uintptr_t context, const WlanWirelessFrame *frame);	/* SQRAM, veneer 0x53a04 */
 

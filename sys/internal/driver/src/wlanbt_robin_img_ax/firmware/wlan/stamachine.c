@@ -77,8 +77,6 @@ int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 void macMgmtFilterTable(WlanWirelessFrame *frame, const uint8_t *address);		/* 0x37d26 */
 int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
 void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *frame, int unused);
-void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
-			     uintptr_t argument);
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);
@@ -648,7 +646,7 @@ static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *mac
 		break;
 	case WLAN_STA_EVENT_DIRECT_SSID:
 		if (connection != NULL && connection->interfaceType == 3 && connection->mode == 1) {
-			p2pSqramMatchDirectSsid(connection, data->frame, data->argument);
+			p2pProbeRequestAnswer(connection, data->frame);
 			return NULL;
 		}
 		return event;
@@ -718,7 +716,7 @@ static const struct WlanStaEvent *macMgmtSelectState(struct WlanIbssMachine *mac
 		return NULL;
 	case WLAN_STA_EVENT_DIRECT_SSID:
 		if (connection != NULL && connection->interfaceType == 3 && connection->mode == 1) {
-			p2pSqramMatchDirectSsid(connection, data->frame, data->argument);
+			p2pProbeRequestAnswer(connection, data->frame);
 			return NULL;
 		}
 		return event;

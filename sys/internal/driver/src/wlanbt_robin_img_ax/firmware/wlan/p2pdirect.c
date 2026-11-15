@@ -28,8 +28,6 @@ unsigned int wlanDirectLinkAbsences __attribute__((section(".itcm.rw")));	/* 0x5
 #define NOA_CTWINDOW(ps)	((ps)->noaAttribute[4])
 /* The first absence descriptor: count, duration, interval and start. */
 #define NOA_DESCRIPTOR(ps)	(&(ps)->noaAttribute[5])
-#define NOA_MODE_CTWINDOW	1
-#define NOA_MODE_ABSENCE	2
 
 /* The TSF of the beacon, read as one word pair. */
 struct __attribute__((may_alias)) WlanBeaconTimestamp {
