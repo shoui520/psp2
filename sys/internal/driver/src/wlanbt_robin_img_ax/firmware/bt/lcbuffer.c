@@ -1747,3 +1747,108 @@ unsigned int btLmpLcTrackPacket(void)
 		free = (uint8_t)(btTargetSessions - 1);
 	return free;
 }
+
+/*
+ * Hands out the free target sessions' slots from the device record's clock: each round walks the
+ * 13 slot queues, giving the first queue whose link fits its slots there, else filling the gap up
+ * to the nearest link. Returns the clock it got to.
+ */
+uint32_t btLmpLcManagePacket(void)
+{
+	uint32_t clock;
+	uint16_t remaining;
+	uint8_t stop;
+
+	btLinkModeControl->header = btTableModeHeader;
+	clock = btDeviceRecord;
+	romTargetTable = 0;
+	remaining = btLmpLcTrackPacket();
+	while ((int16_t)remaining > 0) {
+		struct BtDeviceProfile *chosen = NULL;
+		unsigned int best = 0xffff;
+		unsigned int taken = 0;
+		unsigned int queue = 0;
+
+		do {
+			struct BtSlotQueue *slots = &btSlotQueues[queue];
+			struct BtDeviceProfile *profile = slots->head;
+			uint8_t before;
+			uint8_t setup;
+			uint8_t after;
+			uint8_t hold;
+			uint32_t start;
+			unsigned int need;
+
+			while (profile != NULL && btLtsRomAdjustState(queue) == 0)
+				;
+			if (profile == NULL)
+				goto next;
+			profile->guard = btLdrRomResolveState(profile->index);
+			start = profile->due - profile->guard;
+			btSlotNeedHook(profile, chosen, &before, &setup, &after, &hold);
+			need = (uint8_t)(before + setup + after + hold);
+			if (btTableModeEntry != 0xff) {
+				if ((int32_t)(clock - btTableModeSlot) >= 0) {
+					btTableModeEntry = 0xff;
+				} else if (queue > btTableModeEntry &&
+					   btLmpLcInspectEntry(btTableModeMask, profile->index) == 0) {
+					unsigned int wait = (uint16_t)(btTableModeSlot - clock);
+
+					if (wait <= best)
+						best = wait;
+				}
+			}
+			if ((int32_t)(clock - start + before + setup) < 0 || best < need) {
+				int16_t gap = (int16_t)(start - clock);
+
+				if (gap > 0 && (int)best > gap) {
+					best = (uint16_t)gap;
+					chosen = profile;
+				}
+			} else if (((1u << profile->state) & btTableShortStates) &&
+				   (int32_t)(clock + before + setup - (profile->window + start) + 1) > 0) {
+				unsigned int lead = before + setup;
+
+				if (lead <= best)
+					best = lead;
+				best = best >= 1 ? best : 1;
+			} else {
+				unsigned int lead;
+
+				if (need > remaining)
+					return clock;
+				lead = (uint8_t)(before + setup);
+				remaining -= lead;
+				clock += lead;
+				best = (uint16_t)(best - lead);
+				while (lead-- != 0)
+					btLtsRomFormatState(clock, 1, btTargetState, 0);
+				taken = slots->take(slots, profile, clock, (uint16_t)(best - hold));
+				if (profile->adjust >= 2 || profile->tracked != 0) {
+					btTargetIndex = profile->index;
+					btTargetMode = profile->state;
+					btTargetStart = clock;
+					btTargetWindow = best - after - hold;
+					romTargetTable = 1;
+				}
+			}
+next:
+			queue = (uint8_t)(queue + 1);
+		} while (taken == 0 && queue < 13);
+
+		btLmpLcConfigureTable(&remaining, taken, best);
+		if (taken == 0) {
+			btTargetEnterHook(4);
+			taken = btSlotFillHook(clock, best, remaining, &stop);
+			btTargetLeaveHook(4);
+		}
+		clock += taken;
+		btSlotDoneHook(clock);
+		if (btDeviceWaitHook != NULL && btDeviceWaitHook(clock) != 0)
+			btDeviceWaitHook = NULL;
+		if ((romTargetTable | stop) != 0)
+			return clock;
+		remaining -= taken;
+	}
+	return clock;
+}

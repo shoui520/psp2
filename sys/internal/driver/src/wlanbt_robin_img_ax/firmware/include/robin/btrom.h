@@ -166,6 +166,7 @@ void btLdaRomReleaseState(void);
 void btLdaRomAcquireState(unsigned int mode);
 void btLdaRomTrackState(uint8_t *request);
 unsigned int btHccRomBuildState(unsigned int handle);
+int btLtsRomAdjustState(unsigned int queue);
 int btHccRomCheckState(unsigned int link, uint32_t first, uint32_t second, uint8_t *out);
 void btLcoRomFormatState(unsigned int event, unsigned int handle);
 void btHccRomConfigureState(unsigned int value);

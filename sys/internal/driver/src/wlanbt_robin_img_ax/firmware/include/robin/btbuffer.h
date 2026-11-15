@@ -156,6 +156,18 @@ extern uint16_t btLinkRateExtra;				/* 0x400f7ea: the ticks added to a link's ra
 extern uint8_t btHostRate;					/* 0x400c4f1: the host link's rate state, 1 to 3 */
 extern uint8_t btHandlePending[];				/* 0x400f586: per handle */
 extern uint8_t btTargetSessions;				/* 0x400de55 */
+extern void (*btSlotNeedHook)(struct BtDeviceProfile *profile, struct BtDeviceProfile *previous, uint8_t *before,
+			      uint8_t *setup, uint8_t *after, uint8_t *hold);	/* 0x400edb0 */
+extern void (*btTargetEnterHook)(int kind);			/* 0x400ea04 */
+extern void (*btTargetLeaveHook)(int kind);			/* 0x400ea00 */
+extern unsigned int (*btSlotFillHook)(uint32_t clock, unsigned int limit, unsigned int remaining,
+				      uint8_t *stop);			/* 0x400edd0 */
+extern void (*btSlotDoneHook)(uint32_t clock);			/* 0x400eddc */
+extern int (*btDeviceWaitHook)(uint32_t clock);			/* 0x400dde4: cleared once it returns non-zero */
+extern uint32_t btTargetStart;					/* 0x400de00 */
+extern uint16_t btTargetWindow;					/* 0x400ddfa */
+extern uint16_t btTargetIndex;					/* 0x400de04 */
+extern uint8_t btTargetMode;					/* 0x400de06 */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -247,6 +259,7 @@ void btLmpLcNotifyPacket(void);					/* 0x46c66 */
 void btLmpLcFormatPacket(void);					/* 0x46c74 */
 int btLmpLcInspectPacket(const uint8_t *request);		/* 0x46c82 */
 unsigned int btLmpLcTrackPacket(void);				/* 0x46cb6 */
+uint32_t btLmpLcManagePacket(void);				/* 0x46cf4 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

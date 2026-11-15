@@ -13,7 +13,11 @@
 /* One of the ROM's slot queues (20 bytes, 0x400dcdc): profiles in order of their due clock. */
 struct BtSlotQueue {
 	struct BtDeviceProfile *head;
-	uint8_t reserved4[16];
+	uint8_t reserved4[8];
+	/* gives the first profile its slots from clock, at most limit ticks; returns the ticks used */
+	unsigned int (*take)(struct BtSlotQueue *queue, struct BtDeviceProfile *profile, uint32_t clock,
+			     unsigned int limit);
+	uint8_t reserved16[4];
 };
 _Static_assert(sizeof(struct BtSlotQueue) == 20, "slot queue");
 
@@ -47,6 +51,7 @@ extern const uint8_t btPeerBusy[];				/* 0x400b393: non-zero: the handle is busy
 extern const uint8_t *btTablePeerBusy;				/* 0x552b8 */
 extern uint8_t btTableRetries[8];				/* 0x55330: each link's missed slots */
 extern uint8_t btTableLinkModes[8];				/* 0x55338: each link's mode, 0 to 3 */
+extern uint32_t btTableShortStates;				/* 0x552c4 */
 extern uint32_t btTableModeSlot;				/* 0x552c8: the clock of the next mode 9 slot */
 
 /* The ROM's event of a due slot. */

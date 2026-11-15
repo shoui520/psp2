@@ -39,6 +39,8 @@ void (*btTableRadioWrite)(uint16_t reg, uint32_t value) __attribute__((section("
 const uint8_t *btTablePeerBusy __attribute__((section(".itcm.rw"))) = btPeerBusy;	/* 0x552b8 */
 /* The ROM's record of the last host request's slots. */
 struct BtSlotRequest *btTableSlotRequest __attribute__((section(".itcm.rw"))) = &btSlotRequest;	/* 0x552c0 */
+/* The link states (bit n: state n) whose slots may be cut short (btLmpLcManagePacket()). */
+uint32_t btTableShortStates __attribute__((section(".itcm.rw"))) = 0x116;	/* 0x552c4 */
 uint32_t btTableModeSlot __attribute__((section(".itcm.rw")));		/* 0x552c8 */
 /* The clock the target's slots run out at (btLmpLcParsePacket()). */
 uint32_t btTableTargetClock __attribute__((section(".itcm.rw")));		/* 0x55304 */
