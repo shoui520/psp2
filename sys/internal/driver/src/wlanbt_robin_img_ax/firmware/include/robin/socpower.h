@@ -63,7 +63,6 @@ extern uint16_t sysChipIdLow;				/* 0x040089d6 */
 extern uint32_t sysMacVersion;				/* 0x040089dc */
 
 /* Not converted yet; provisional names. Addresses are those of the 4.00 image. */
-int fmCoexSetupState(uint32_t reg, uint32_t *value, uint32_t count);	/* 0x4a348 */
 void macTxNotifyResetPacket(void);			/* 0x32940 */
 int wlanPsSetupHeader(void);				/* 0x3e29c */
 uint32_t uapSqramUpdateEntry(void);			/* SQRAM 0xc0008e2e, via the veneer at 0x53074 */

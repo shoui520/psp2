@@ -20,6 +20,7 @@
 #include "robin/conn.h"
 #include "robin/keyMgmtAp.h"
 #include "robin/mdev.h"
+#include "robin/nvram.h"
 #include "robin/osa.h"
 #include "robin/phy.h"
 #include "robin/rom.h"

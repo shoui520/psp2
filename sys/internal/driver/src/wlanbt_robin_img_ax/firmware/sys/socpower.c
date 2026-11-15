@@ -9,6 +9,7 @@
 #include "robin/clock.h"
 #include "robin/event.h"
 #include "robin/hct.h"
+#include "robin/nvram.h"
 #include "robin/rfbus.h"
 #include "robin/rfreg.h"
 #include "robin/rom.h"
@@ -257,7 +258,7 @@ int socSensorCalibration(void)
 
 	if (socSensorOffset == SENSOR_OFFSET_UNREAD) {
 		socSensorOffset = 0;
-		if (fmCoexSetupState(10, &value, 1) == 0 && (value & 0x80)) {
+		if (fmCoexSetupState(10, (uint8_t *)&value, 1) == 0 && (value & 0x80)) {
 			socSensorOffset = value & 0x3f;
 			if (value & 0x40)
 				socSensorOffset = -(value & 0x3f);
@@ -361,7 +362,7 @@ void rfCalibrateTrim(void)
 	int trim;
 	uint8_t status;
 
-	if (fmCoexSetupState(0, &state, 1) != 0 || !(state & 0x40)) {
+	if (fmCoexSetupState(0, (uint8_t *)&state, 1) != 0 || !(state & 0x40)) {
 		rfRegBegin();
 		rfRegClearBits(31, 32);
 		rfRegClearBits(52, 26);

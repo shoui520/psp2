@@ -181,8 +181,6 @@ uint32_t btLtsRomParseState(int which);		/* ROM, via 0x52c5c */
 int fmCoexPrepareState(uint32_t *state);		/* 0x49bc2 */
 int fmCoexDispatchState(void);				/* 0x49be2 */
 int fmCoexValidateState(uint32_t *state);		/* 0x49bba */
-void fmCoexAdjustState(void);				/* 0x4a570 */
-void fmCoexRecordState(void);				/* 0x4a58a */
 extern struct OsaEventFlags *wlanHostSleepFlags;		/* 0x54bdc */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 void wlanMacRestart(void);				/* 0x1c92e */
