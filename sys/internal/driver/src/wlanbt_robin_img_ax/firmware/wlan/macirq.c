@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/apps.h"
+#include "robin/autotx.h"
 #include "robin/buffer.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
@@ -92,7 +93,6 @@ void wlanPsAdjustFrame(struct WlanConnection *connection, const uint8_t *body);	
 void wlanPsRecordFrame(void);									/* 0x3dc46 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body,
 			  unsigned int length);							/* 0x35ac2 */
-int macTxNotifyResolveState(struct WlanConnection *connection);					/* 0x2ff0c */
 void macMgmtConfigureState(struct WlanConnection *connection);					/* 0x347e8 */
 void wlanApOlbcSelect(struct WlanConnection *connection, uint8_t *olbcActive,
 			uint8_t *erpInfo);							/* 0x2b680 */
@@ -105,7 +105,6 @@ void macMgmtFormatContext(void);								/* 0x35936 */
 void clockHostApplyTarget(void);								/* 0x26b48 */
 void macTxNotifyUpdateTable(void);								/* 0x31596 */
 void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */
-int macTxNotifyValidateState(void);								/* 0x2fa22 */
 int wlanPsSleepBlocked(void);									/* 0x2ea5c */
 extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
 extern struct OsaEventFlags *macMgmtEventFlags;							/* 0x55138 */
@@ -297,7 +296,7 @@ void wlanMacEvents(int line, uint32_t pending)
 						   (wlanSessionId != 0 && wlanPsSleepSequence != 0)) {
 						wlanPsMgmtWakeDue = 1;
 					}
-					if (macTxNotifyResolveState(connection) && shouldNotify) {
+					if (wlanAutoTxWanted(connection) && shouldNotify) {
 						if (!wlanPsEnabled() || wlanCoexUseP2pMode() || wlanCoexUseStationMode())
 							macTxPostEvent(8);
 						else
@@ -596,7 +595,7 @@ void wlanMacReset(void)
 	wlanSetChannel(wlanCurrentChannel(), flags, 0);
 	wlanAmpTxPacketsAdjust();
 	wlanBaHwReset();
-	macTxNotifyValidateState();
+	wlanTxInFlightPurge();
 	macTxBaResyncSequences();
 	wlanTxWindowsClearPending();
 	wlanPsPoll.sent = 0;

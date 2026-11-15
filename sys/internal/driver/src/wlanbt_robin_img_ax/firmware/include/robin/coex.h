@@ -223,7 +223,6 @@ void wlanPsBeginBtHold(void);				/* 0x2ead0 */
 int wlanPsEvaluate(struct WlanConnection *connection, int reason);	/* 0x2eb18 */
 int wlanCoexUpdateEstimate(uint64_t start, uint64_t now, uint32_t maxSample, int32_t *mean,
 			   uint32_t maxDeviation, int32_t *deviation);	/* 0x2ecc2 */
-unsigned int wlanTxInFlightFrames(void);			/* 0x2f944 */
 int wlanTxRingsPending(void);				/* 0x31fd6 */
 int wlanTxRingPublishNext(void);			/* 0x320bc */
 extern uint32_t wlanPsSleepTimeout;			/* 0x54c4c */

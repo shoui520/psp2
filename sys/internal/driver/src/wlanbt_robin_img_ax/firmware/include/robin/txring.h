@@ -141,5 +141,10 @@ unsigned int wlanTxInFlightIndex(OsaBuffer *buffer);
 int wlanTxInFlightAdd(OsaBuffer *buffer);
 int wlanTxInFlightRemove(OsaBuffer *buffer);
 int wlanBufferIsPooled(const OsaBuffer *buffer);
+unsigned int wlanTxInFlightFrames(void);			/* 0x2f944 */
+void wlanTxInFlightClear(void);				/* 0x2f94a */
+void wlanTxInFlightPurge(void);				/* 0x2fa22 */
+int wlanTxInFlightWatchdog(void);			/* 0x2faec */
+int wlanTxInFlightHasConnection(const struct WlanConnection *connection);	/* 0x2fb7e */
 
 #endif /* ROBIN_TXRING_H */

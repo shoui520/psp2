@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/domain.h"
+#include "robin/autotx.h"
 #include "robin/eventpower.h"
 #include "robin/hostps.h"
 #include "robin/mactx.h"
@@ -420,8 +422,6 @@ void hostCmd0036(uint8_t *body, int authenticator, uint8_t *state);		/* 0x2cc7e 
 void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
 void hostCmd004eSet(uint8_t *body, unsigned int length);			/* SQRAM 0xc0009bea */
 unsigned int hostCmd004eGet(uint8_t *body);					/* SQRAM 0xc0009c50 */
-unsigned int hostCmd005bGet(struct WlanConnection *connection, uint8_t *data);	/* 0x3009a */
-int hostCmd005bSet(struct WlanConnection *connection, uint8_t *data, unsigned int length); /* 0x30144 */
 unsigned int hostCmd005d(uint8_t *body);					/* 0x418d4 */
 void hostCmd005e(struct WlanConnection *connection, uint8_t *data, uint8_t *end); /* 0x3eb24 */
 unsigned int hostCmd005eGet(struct WlanConnection *connection, uint8_t *data);	/* 0x3ebe2 */
@@ -438,8 +438,6 @@ void hostCmd0078Parse(uint32_t *status, uint8_t *body, uint32_t *type, uint32_t 
 extern void (*hostCmd0078Handlers[])(uint32_t *type, uint32_t *failed);		/* SQRAM 0xc0011f34 */
 void hostCmd007f(struct WlanConnection *connection, uint32_t *rate, uint32_t *flags); /* 0x335b0 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */
-unsigned int hostCmd0082Set(uint8_t *body);					/* 0x2fcc2 */
-unsigned int hostCmd0082Get(uint8_t *body);					/* 0x2fd28 */
 void hostCmd0083(unsigned int bssType, unsigned int bssNumber, unsigned int value); /* SQRAM 0xc0007406 */
 void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
 void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
@@ -1086,14 +1084,14 @@ int hostCmdProcess(void)
 			}
 			goto unsupported;
 
-		case 91:	/* HostCmd_CMD_802_11_ADDTS? */
+		case 91:	/* HostCmd_CMD_802_11D_DOMAIN_INFO */
 			if (action == 0) {
-				PUT16(hdr + 2, hostCmd005bGet(connection, body + 2) + HOSTCMD_U16(hdr + 2));
+				PUT16(hdr + 2, hostCmdDomainInfoGet(connection, body + 2) + HOSTCMD_U16(hdr + 2));
 				goto done;
 			}
 			if (action != 1)
 				goto failed;
-			if (hostCmd005bSet(connection, body + 2, bodyLength) != 0)
+			if (hostCmdDomainInfoSet(connection, body + 2, bodyLength) != 0)
 				goto done;
 			goto failed;
 
@@ -1305,14 +1303,14 @@ int hostCmdProcess(void)
 			goto done;
 		}
 
-		case 130:
+		case 130:	/* HostCmd_CMD_AUTO_TX */
 			if (action == 1) {
 				if (bodyLength == 2)
-					result = hostCmd0082Set(NULL);
+					result = hostCmdAutoTxSet(NULL);
 				else
-					result = hostCmd0082Set(body);
+					result = hostCmdAutoTxSet(body);
 			} else if (action == 0) {
-				result = hostCmd0082Get(body);
+				result = hostCmdAutoTxGet(body);
 				a = HOSTCMD_U16(body + 4);
 				PUT16(hdr + 2, a != 0 ? a + 14 : 2);
 				PUT16(body, 0);

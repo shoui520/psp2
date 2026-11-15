@@ -3,7 +3,11 @@
  * robin/txring.h. The filename is inferred.
  */
 #include <stddef.h>
+#include "robin/amp.h"
+#include "robin/apps.h"
+#include "robin/ieee80211.h"
 #include "robin/mac.h"
+#include "robin/mef.h"
 #include "robin/mactx.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
@@ -12,6 +16,11 @@
 #include "robin/task.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
+#include "robin/wlantask.h"
+#include "robin/wmm.h"
+
+/* Not converted yet; provisional name. */
+void macMgmtConvertPacket(struct WlanConnection *connection);	/* 0x3a32a */
 
 #define RING_READ(n)	((volatile uint32_t *)(SOC_MAC_REGISTER_BASE + (n)))
 
@@ -312,10 +321,18 @@ struct WlanTxInFlight {
 	uint32_t time;
 };
 
-static struct WlanTxInFlight wlanTxInFlight[41] __attribute__((section(".dtcm.bss")));
-static uint8_t wlanTxInFlightCount __attribute__((section(".itcm.bss")));
-static uint16_t wlanTxInFlightClashes __attribute__((section(".itcm.bss")));
-static uint16_t wlanTxInFlightMisses __attribute__((section(".itcm.bss")));
+#define WLAN_TX_IN_FLIGHT_SLOTS		44
+#define WLAN_TX_IN_FLIGHT_POOLED_SLOTS	40	/* the rest are for buffers of no pool */
+#define WLAN_TX_IN_FLIGHT_CHECK_MS	10	/* between two looks for frames the MAC kept too long */
+#define WLAN_TX_IN_FLIGHT_STALE_MS	330
+
+static struct WlanTxInFlight wlanTxInFlight[WLAN_TX_IN_FLIGHT_SLOTS] __attribute__((section(".dtcm.bss")));
+static uint8_t wlanTxInFlightCount __attribute__((section(".itcm.bss")));		/* 0x54f2c */
+static uint16_t wlanTxInFlightStale __attribute__((section(".itcm.bss")));		/* 0x54f2e: frames found past the limit */
+static uint16_t wlanTxInFlightClashes __attribute__((section(".itcm.bss")));		/* 0x54f30 */
+static uint16_t wlanTxInFlightMisses __attribute__((section(".itcm.bss")));		/* 0x54f32 */
+static uint32_t wlanTxInFlightIdle __attribute__((section(".itcm.bss")));		/* 0x54f34: the MAC went idle with frames out */
+static uint32_t wlanTxInFlightChecked __attribute__((section(".itcm.bss")));		/* 0x54f38: when the table was last looked at */
 
 extern OsaBuffer wlanStaticBuffer;
 extern struct OsaBufferPool wlanBlockPool1;
@@ -386,6 +403,128 @@ int wlanTxInFlightRemove(OsaBuffer *buffer)
 	}
 	++wlanTxInFlightMisses;
 	return 0;
+}
+
+/* How many frames the table holds. */
+unsigned int wlanTxInFlightFrames(void)
+{
+	return wlanTxInFlightCount;
+}
+
+/* The table is empty. */
+void wlanTxInFlightClear(void)
+{
+	__aeabi_memclr4(wlanTxInFlight, sizeof(wlanTxInFlight));
+	wlanTxInFlightCount = 0;
+}
+
+/* The first frame control byte of the frame the transmit data points to. */
+static uint8_t wlanTxFrameControl(const uint8_t *data)
+{
+	return ((const uint8_t *)(uintptr_t)TX_DATA_FRAME(data))[2];
+}
+
+/* The frame is a probe response (management, subtype 5). */
+static int wlanTxFrameIsProbeResponse(const uint8_t *data)
+{
+	uint8_t control = wlanTxFrameControl(data);
+
+	return (control & IEEE80211_FC0_TYPE_MASK) == IEEE80211_FC0_TYPE_MGMT &&
+	       (control >> IEEE80211_FC0_SUBTYPE_SHIFT) == 5;
+}
+
+/* Every frame in the table is given up: counted, told to the owners and freed. */
+void wlanTxInFlightPurge(void)
+{
+	unsigned int posture = sysIrqDisable();
+	unsigned int i;
+
+	for (i = 0; i < WLAN_TX_IN_FLIGHT_SLOTS; i++) {
+		OsaBuffer *buffer = wlanTxInFlight[i].buffer;
+		const uint8_t *data;
+		int release = 1;
+
+		if (buffer == NULL)
+			continue;
+		data = (const uint8_t *)buffer + buffer->dataOffset;
+		if (ieee80211IsData(wlanTxFrameControl(data)))
+			wlanTxCountDropped(buffer);
+		if (TX_DATA_TAG(data) == 48)
+			wlanReplyFrameFree(buffer);
+		if (wlanTxFrameIsProbeResponse(data) && ((struct WlanConnection *)buffer->context)->interfaceType == 2) {
+			macMgmtConvertPacket(buffer->context);
+			release = 0;
+		}
+		wlanApPsTxDone(buffer->context, data);
+		if (wlanTxFrameIsProbeResponse(data) && ((struct WlanConnection *)buffer->context)->interfaceType == 4) {
+			((struct WlanConnection *)buffer->context)->transmitBusy = 0;
+			release = 0;
+		}
+		if ((i < WLAN_TX_IN_FLIGHT_POOLED_SLOTS || wlanBufferIsPooled(buffer)) && release) {
+			if (((struct WlanConnection *)buffer->context)->interfaceType == 4 &&
+			    buffer->pool == &ampTransmitPool)
+				mdevIoctl(ampPalDevice, 0x53, (uintptr_t)buffer);
+			osa_BufferFree(buffer);
+		}
+	}
+	wlanTxInFlightClear();
+	sysIrqRestore(posture);
+}
+
+/*
+ * Looks, every 10 ms, for frames the MAC has kept longer than 330 ms and asks the transmit
+ * task to flush them; when the MAC went idle with frames still out the notify task is told.
+ */
+int wlanTxInFlightWatchdog(void)
+{
+	unsigned int posture = sysIrqDisable();
+	ULONG now;
+
+	if (sysEventEngineIsActive() != 0 || MAC_REG(0x10) == MAC_REG(0x14)) {
+		int remaining = wlanTxInFlightCount;
+
+		sysGetTime(&now);
+		if (remaining != 0 && now - wlanTxInFlightChecked >= WLAN_TX_IN_FLIGHT_CHECK_MS) {
+			unsigned int stale = 0;
+			unsigned int i = 0;
+
+			wlanTxInFlightChecked = now;
+			do {
+				if (remaining <= 0)
+					break;
+				if (wlanTxInFlight[i].buffer != NULL) {
+					--remaining;
+					if (now - wlanTxInFlight[i].time > WLAN_TX_IN_FLIGHT_STALE_MS) {
+						++stale;
+						++wlanTxInFlightStale;
+					}
+				}
+				i++;
+			} while (i < WLAN_TX_IN_FLIGHT_SLOTS);
+			if (stale != 0)
+				macTxPostEvent(MAC_TX_EVENT_FLUSH);
+		}
+		return sysIrqRestore(posture);
+	}
+	sysIrqRestore(posture);
+	++wlanTxInFlightIdle;
+	return osaEventFlagsSet(macTxNotifyEventFlags, 1, 7);
+}
+
+/* A frame of the connection is in the table. */
+int wlanTxInFlightHasConnection(const struct WlanConnection *connection)
+{
+	int found = 0;
+	unsigned int i = 0;
+
+	do {
+		OsaBuffer *buffer = wlanTxInFlight[i].buffer;
+
+		if (buffer != NULL && buffer->context == connection)
+			found = 1;
+		i++;
+	} while (i < WLAN_TX_IN_FLIGHT_SLOTS && found == 0);
+	return found;
 }
 
 /* Tries to put a request on its ring; for the owner's rings the filled entries are published first. */

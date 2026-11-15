@@ -4,6 +4,7 @@
  * survives.
  */
 #include "robin/apps.h"
+#include "robin/autotx.h"
 #include "robin/stapssm.h"
 #include "robin/ibss.h"
 #include "robin/mgmt.h"
@@ -854,7 +855,6 @@ int cbProcTxAllowed(void);						/* 0x1e032 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void wlanDirectLinkTrigger(void);					/* 0x41184 */
 void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /* 0x41202 */
-OsaBuffer *macTxNotifyNextFrame(void);					/* 0x2fe92 */
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
@@ -1013,7 +1013,7 @@ void macTxTaskMain(ULONG input)
 			uint8_t baIndex;
 
 			if (actual & MAC_TX_EVENT_NOTIFY) {
-				buffer = macTxNotifyNextFrame();
+				buffer = wlanAutoTxNextFrame();
 			} else {
 				buffer = osa_MsgQueueRecv(&wlanDriverQueue15);
 				if (buffer == NULL)

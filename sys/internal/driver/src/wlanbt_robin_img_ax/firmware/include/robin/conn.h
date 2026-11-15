@@ -234,7 +234,7 @@ struct WlanUapContext;
 struct WlanConnectionRole {
 	struct WlanConnectionInfo *info;
 	OsaBuffer *infoBuffer;		/* the buffer the information block is in */
-	uint8_t securityFlags;		/* bits 0-1: a key handshake is under way */
+	uint8_t channelFlags;		/* WlanChannelFlags of the role's channel: the band is in bits 0-1 */
 	uint8_t reserved9[3];
 	uint32_t listenInterval;
 	uint8_t reserved16[4];

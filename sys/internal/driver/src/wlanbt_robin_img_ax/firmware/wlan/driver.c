@@ -5,6 +5,7 @@
  */
 #include <stddef.h>
 #include "robin/pssm.h"
+#include "robin/txring.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
 #include "robin/task.h"
@@ -40,7 +41,6 @@ uint16_t wlanRxFrameTypeMask __attribute__((section(".dtcm.rw")));
 void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 void macMgmtResetState(uintptr_t argument, unsigned int command, uintptr_t second,
 		       int third);						/* 0x34ba6, command 0x59 */
-int macTxNotifyDispatchState(struct WlanConnection *connection);		/* 0x2fb7e */
 uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
 extern struct OsaDevice ampWlanDriver;						/* 0x04009860 */
 
@@ -154,7 +154,7 @@ void wlanDriverFlushAmpLink(const uint16_t *argument)
 done:
 	sysIrqRestore(posture);
 	connection = wlanConnectionFirst(WLAN_IF_AMP);
-	while (macTxNotifyDispatchState(connection))
+	while (wlanTxInFlightHasConnection(connection))
 		osaTaskSleep(1);
 	mdevIoctl(&ampWlanDriver, 0x55, (uintptr_t)&handle);
 }

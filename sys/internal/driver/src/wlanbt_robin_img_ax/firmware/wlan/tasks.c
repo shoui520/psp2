@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "robin/mgmt.h"
 #include "robin/conn.h"
+#include "robin/autotx.h"
 #include "robin/psctl.h"
 #include "robin/wlantask.h"
 #include "robin/osa.h"
@@ -74,7 +75,6 @@ static struct WlanInitStage macMgmtFlushStage __attribute__((section(".itcm.bss"
 
 /* Unconverted pieces. */
 int macTxResetStage(void);			/* 0x9b20, init stage of the transmit task */
-void macTxNotifyParseState(void);		/* 0x2fbcc */
 void macTxTaskMain(ULONG input);		/* 0x9e3c */
 void macMgmtTaskMain(ULONG input);		/* 0x342a8 */
 void macTxNotifyTaskMain(ULONG input);		/* 0x2f42c */
@@ -175,7 +175,7 @@ int macTxCreateTask(void)
 	macTxSelectState();
 	macTxEventFlags = (struct OsaEventFlags *)&macTxEventFlagsObject;
 	osaEventFlagsInit(&macTxEventFlags);
-	macTxNotifyParseState();
+	wlanAutoTxInit();
 	__aeabi_memset4(macTxStack, sizeof(macTxStack), 0xc1);
 	macTxTask = &macTxTaskObject;
 	if (osaCreateTask(&macTxTask, macTxStack, sizeof(macTxStack), WLAN_TASK_PRIORITY_TX,

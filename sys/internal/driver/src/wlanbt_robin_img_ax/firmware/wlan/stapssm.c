@@ -13,6 +13,7 @@
 #include "robin/btrom.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
+#include "robin/autotx.h"
 #include "robin/dmaring.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
@@ -121,8 +122,6 @@ unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int p2pDirectReleaseEntry(void);			/* 0x419a6 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void macMgmtValidateTable(int reason);			/* 0x3726c */
-int macTxNotifyApplyState(void);			/* 0x2fefa */
-int macTxNotifyBuildState(void);			/* 0x2fbe8 */
 int wlanPsProcessHeader(void);				/* 0x3dd26 */
 uint32_t wlanPsParseHeader(uint64_t *wake, uint16_t *margin);	/* 0x3defe */
 void wlanPsPrepareHeader(uint64_t *next);		/* 0x3dd98 */
@@ -768,10 +767,10 @@ int wlanCoexUseP2pSleepMode(void)
 /* 0x14f8e */
 int wlanStaPsNotifyPending(void)
 {
-	int pending = macTxNotifyApplyState();
+	int pending = wlanAutoTxConfigured();
 
 	if (pending != 0)
-		pending = macTxNotifyBuildState();
+		pending = wlanAutoTxTick();
 	return pending;
 }
 

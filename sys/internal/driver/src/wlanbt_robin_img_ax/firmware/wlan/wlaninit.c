@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/domain.h"
+#include "robin/autotx.h"
 #include "robin/btrom.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
@@ -136,12 +138,10 @@ void macTxNotifySetupPacket(void);							/* 0x32c16 */
 void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
 void hostCmd0074Reset(void);								/* 0x311d0 */
 void hostCmd0074Arm(void);								/* 0x311ee */
-void macTxNotifyFormatState(void);							/* 0x2ff78 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
 void macMgmtAdjustHeader(void);								/* 0x3b93a */
-void macTxNotifyParseState(void);							/* 0x2fbcc */
 void macTxNotifyComputeFrame(void);							/* 0x3355c */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
@@ -152,9 +152,7 @@ void uapSqramParseState(void);							/* SQRAM 0xc00074d4 */
 void macTxNotifyFormatContext(void);							/* 0x309ac */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
 void p2pDirectAcquireContext(void);							/* 0x40df6 */
-int macTxNotifyPrepareState(void);							/* 0x2faec */
 void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
-void macTxNotifyProcessState(void);							/* 0x2f94a */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void macTxNotifyApplyEntry(void);							/* 0x31156 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
@@ -182,7 +180,7 @@ extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
 /* The idle hook of the transmit notification. */
 static int wlanTxNotifyIdle(void)
 {
-	int result = macTxNotifyPrepareState();
+	int result = wlanTxInFlightWatchdog();
 
 	uapSqramSelectEntry();
 	return result;
@@ -275,7 +273,7 @@ static int wlanTablesInit(void)
 	wlanTablesStage.run = wlanTablesInit;
 	wlanInitStageRegister(&wlanTablesStage);
 	wlanHostEventQueueInit();
-	macTxNotifyFormatState();
+	wlanDomainClear();
 	wlanPsReleaseHeader();
 	macMgmtUpdateContext(0, 6);
 	macMgmtCheckContext();
@@ -284,7 +282,7 @@ static int wlanTablesInit(void)
 	macMgmtAdjustHeader();
 	wlanTaskHandlesInit(&handles);
 	wlanMefConfigClear();
-	macTxNotifyParseState();
+	wlanAutoTxInit();
 	wlanSubscribeEventsClearAll();
 	macTxNotifyComputeFrame();
 	wlanPsApplyDescriptor();
@@ -361,7 +359,7 @@ void wlanTxBufSizeSet(uint16_t *size)
 		   osa_PoolQuery(&wlanReplyFramePool, 8) + osa_PoolQuery(&wlanReplyFramePool, 16))
 		osaTaskSleep(1);
 	mdevIoctl(wlanSdioDev, 0x41, 0);
-	macTxNotifyProcessState();
+	wlanTxInFlightClear();
 	osa_BlockPoolDelete(&wlanBlockPool28, osaDeletePoolEntry);
 	wlanBlockPool28Config.blockSize = wlanMgmtFrameSize;
 	wlanBlockPool28Config.blockCount = count;

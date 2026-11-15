@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "robin/adhoc.h"
 #include "robin/conn.h"
+#include "robin/domain.h"
 #include "robin/hostps.h"
 #include "robin/esa.h"
 #include "robin/ibss.h"
@@ -54,8 +55,6 @@ extern uint8_t *wlanBeaconRatesEnd;				/* 0x54a9c */
 extern uint8_t *wlanProbeRatesEnd;				/* 0x54aa0 */
 extern uint8_t wlanIbssErpPending[];				/* SQRAM 0xc0031f00 */
 void macTxNotifyReleaseState(struct WlanConnection *connection);	/* 0x301b0 */
-int macTxNotifyNotifyState(struct WlanConnection *connection);		/* 0x2ff62 */
-int macTxNotifyInspectState(struct WlanConnection *connection, uint8_t *buffer); /* 0x2ffa0 */
 int macTxNotifyHandleContext(struct WlanConnection *connection, int ieId,
 			     uint8_t *buffer);				/* 0x3033e */
 int macTxNotifyRecordState(struct WlanConnection *connection);		/* 0x30324 */
@@ -145,8 +144,8 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 	__aeabi_memcpy(end, start->ssParamSet, 4);
 	end += 4;
 	wlanSetSlotTime((start->capability & 0x20) != 0);
-	if (macTxNotifyNotifyState(connection) == 1)
-		end += macTxNotifyInspectState(connection, end);
+	if (wlanDomainApplies(connection) == 1)
+		end += wlanDomainBuildIe(connection, end);
 	if (!(flags & 3) && !(wlanProtection.flags & WLAN_PROTECTION_DSSS_BSS)) {
 		barker = 0;
 		nonErp = 0;

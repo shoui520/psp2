@@ -91,7 +91,6 @@ int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
 int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */
 int wlanStaRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfdb2 */
 void macMgmtSetupContext(struct WlanConnection *connection);					/* 0x35da6 */
-int macTxNotifyDispatchState(struct WlanConnection *connection);				/* 0x2fb7e */
 int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb70 */
 int wlanApRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb1c */
 struct WlanUapContext *uapSqramUpdateContext(int unused);					/* SQRAM 0xc000824c */
@@ -1072,7 +1071,7 @@ void wlanConnectionSetupType1(struct WlanConnection *connection)
 
 int wlanConnectionIdle(struct WlanConnection *connection)
 {
-	return macTxNotifyDispatchState(connection) == 0;
+	return wlanTxInFlightHasConnection(connection) == 0;
 }
 
 /* The idle hook: connections that were released are freed once the transmit side is done with them. */

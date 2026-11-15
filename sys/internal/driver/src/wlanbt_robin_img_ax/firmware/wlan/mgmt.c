@@ -15,6 +15,7 @@
 #include "robin/ie.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
+#include "robin/domain.h"
 #include "robin/mac.h"
 #include "robin/macrate.h"
 #include "robin/mactx.h"
@@ -94,14 +95,6 @@ struct __attribute__((packed)) WlanCustomIeTable {
 	struct WlanCustomIe entries[WLAN_CUSTOM_IE_SLOTS];
 };
 
-/* The channel power table (0x574ec): transmit power per listed channel. */
-struct WlanChannelPowerTable {
-	uint8_t reserved0[3];
-	uint8_t count;
-	uint8_t channels[64];
-	uint8_t power[64];
-};
-
 /* Not converted yet; provisional names. */
 void macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x38a18 */
 void macTxNotifyConvertTable(int table);					/* 0x31dfe */
@@ -110,7 +103,6 @@ int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rat
 int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b73e */
 void macMgmtResetHeader(int unused, unsigned int channel);			/* 0x3b4b6 */
 int cbProcResetPacket(void);							/* 0x1e42e */
-int macTxNotifyScheduleState(unsigned int channel, uint8_t *index);		/* 0x2ff3c */
 int macTxNotifySetupTable(uint32_t timeout, uint32_t *status);			/* 0x31dd2 */
 void macTxNotifyClearTable(void);						/* 0x31de8 */
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
@@ -123,7 +115,6 @@ void p2pSqramBuildContext(struct WlanConnection *connection, const uint8_t *ies,
 void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
 			    uint32_t *length);				/* SQRAM 0xc000cd37 */
 void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8d */
-extern struct WlanChannelPowerTable wlanChannelPowerTable;			/* 0x000574ec */
 void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
 			 unsigned int reason, int unused);			/* 0x34f7c */
 int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
@@ -365,7 +356,7 @@ void wlanTxPowerUpdateConnection(struct WlanConnection *connection, unsigned int
 	uint8_t index = 0;
 	int32_t limit = WLAN_TX_POWER_NONE;
 
-	if ((connection->flags2 & 1) && macTxNotifyScheduleState(channel, &index) == 1)
+	if ((connection->flags2 & 1) && wlanDomainChannelIndex(channel, &index) == 1)
 		limit = wlanChannelPowerTable.power[index];
 	wlanTxPowerSetConnectionLimit(&connection->txPowerLimit, limit, apply);
 }
@@ -998,13 +989,13 @@ void wlanApOlbcReset(struct WlanConnectionInfo *info, unsigned int beaconInterva
 	info->olbcTimeout = 5000000 / (beaconInterval << 10) + 1;
 }
 
-/* Rebuilds the ERP element once no key handshake is under way. */
+/* Rebuilds the ERP element of an access point on the 2.4 GHz band. */
 void wlanApErpUpdate(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 
-	if (info->phyMode != 0 && (role->securityFlags & 3) == 0) {
+	if (info->phyMode != 0 && (role->channelFlags & WLAN_CHANNEL_BAND_MASK) == WLAN_CHANNEL_BAND_2GHZ) {
 		wlanApRateFlagsUpdate(info->phyMode, &info->erpInfo);
 		macMgmtInspectFrame(connection);
 		macTxNotifyConvertEntry(connection->interfaceType,
