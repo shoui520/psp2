@@ -2839,3 +2839,30 @@ int btLmpLcNotifyFrame(const uint8_t *message)
 	}
 	return 1;
 }
+
+/* The link's missed slots start over before the ROM releases its context. */
+int btLmpLcFormatFrame(unsigned int link, uint32_t second)
+{
+	unsigned int record = btHostWindow[link];
+
+	btTableRetries[record] = 0;
+	return btLcoRomReleaseContext(link, second, record, 0);
+}
+
+/*
+ * A pending radio register value (register 0xfa) is written first; then the host link's scan
+ * slot drops bit 1 of its register at 40 and the mode table flag clears before the ROM's step.
+ */
+int btLmpLcInspectFrame(void)
+{
+	if (btTableCommand != 0) {
+		btBdhRomUpdateState(0xfa, btTableEvent);
+		btTableCommand = 0;
+		btTableEvent = 0;
+	}
+	osa_LockAcquire();
+	*(BtHalf *)(btLinkScanSlot + romHctHostSlot[btLinkHostIndex][4] * 2 + 40) &= ~2;
+	osa_LockRelease();
+	btTableModeTable = 0;
+	return btLdaRomInspectState();
+}
