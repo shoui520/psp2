@@ -526,7 +526,7 @@ const int32_t *wlanPsMachineConfirm(struct WlanPsMachine *machine, const int32_t
 		}
 		if (machine->sleepBlocked != 0 || sleep->mode == WLAN_PS_SLEEP_DTIM ||
 		    (sleep->control & 1) == 0 || sleep->sleepDuration > wlanPsAnnounceLimit ||
-		    info->dataAllowed == 0)
+		    info->stationCount == 0)
 			machine->announced = 1;
 		else
 			wlanPsAnnounceSleep(machine->connection);

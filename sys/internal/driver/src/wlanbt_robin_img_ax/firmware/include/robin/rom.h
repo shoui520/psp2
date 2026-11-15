@@ -83,6 +83,7 @@ void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb *
  * romLibResetState() writes the 48-bit address a station uses (high halfword first), romLibQueryState()
  * takes the address in an eight-byte buffer, romLibVerifyState() reads the 64-bit TSF.
  */
+void romLibVerifyState(uint32_t *first, uint32_t *second);			/* 0x03f3a6b9: the 64-bit timer, as two words (inferred) */
 void romLibQueryState(const void *address);					/* 0x03f3a4c9 */
 void romLibResetState(uint32_t high, uint32_t low);				/* 0x03f3a4db */
 void romLibBuildState(void);							/* 0x03f3a417 */

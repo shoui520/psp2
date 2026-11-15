@@ -210,6 +210,7 @@ PROVIDE(romAesEncryptBlock = 0x03f3be7f);
 PROVIDE(romLibPrepareState = 0x03f3a36f);
 PROVIDE(romLibSelectContext = 0x03f3ab21);
 PROVIDE(romLibConvertContext = 0x03f3aaf1);
+PROVIDE(romLibVerifyState   = 0x03f3a6b9);
 PROVIDE(romLibQueryState    = 0x03f3a4c9);
 PROVIDE(romLibResetState    = 0x03f3a4db);
 PROVIDE(romLibBuildState    = 0x03f3a417);

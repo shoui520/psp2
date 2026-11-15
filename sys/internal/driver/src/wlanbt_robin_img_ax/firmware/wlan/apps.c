@@ -361,7 +361,7 @@ void wlanApPsSendGroup(struct WlanConnection *connection, int dtim)
 		if (wlanApPsEnabled() && info->sleep.mode == WLAN_PS_SLEEP_DTIM && macTxPoolsIdle() &&
 		    info->sleep.recentActivity == 0) {
 			if (info->sleep.control & 1) {
-				if (info->dataAllowed)
+				if (info->stationCount)
 					dataFollows = 1;
 			} else {
 				markLast = 1;

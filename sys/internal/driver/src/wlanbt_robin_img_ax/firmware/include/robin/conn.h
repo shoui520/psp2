@@ -169,7 +169,8 @@ struct WlanConnectionInfo {
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
-	uint8_t reserved33[3];
+	uint8_t securityFlags;		/* WLAN_INFO_SEC_*: what the BSS's security is (inferred) */
+	uint8_t reserved34[2];
 	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
 	uint8_t reserved40[10];
 	uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
@@ -183,7 +184,8 @@ struct WlanConnectionInfo {
 	uint8_t ready;
 	uint8_t reserved357[184];
 	uint8_t protectionFlags;	/* bit 0: protection forced on */
-	uint8_t reserved542[2];
+	uint8_t reserved542;
+	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
 	uint8_t reserved545[7];
 	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
@@ -191,7 +193,7 @@ struct WlanConnectionInfo {
 	struct WlanConnection *connection;	/* the connection that owns this block */
 	uint8_t capability[2];		/* bit 5: short preamble; bit 10: short slot time */
 	uint8_t reserved582[2];
-	uint32_t dataAllowed;		/* 0: data frames to this peer are dropped */
+	uint32_t stationCount;		/* stations associated with the access point; data frames go out only when nonzero */
 	uint8_t phyMode;		/* 0, 1, 2: 802.11b only */
 	uint8_t erpInfo;		/* the ERP information element's value */
 	uint8_t nonErpStations;		/* nonzero: protection needed */
@@ -200,12 +202,17 @@ struct WlanConnectionInfo {
 	uint8_t htMixedStations;	/* what the HT operating mode is derived from (inferred): non-HT stations */
 	uint8_t htNonGreenfieldStations;
 	uint8_t ht20MhzStations;
-	uint8_t olbcDetected;		/* an overlapping legacy BSS was seen */
+	uint8_t ht40IntolerantStations;	/* associated HT stations that are 40 MHz intolerant */
 	uint8_t olbcActive;
 	uint8_t olbcCount;
 	uint8_t reserved599;
 	uint32_t olbcTimeout;		/* beacon intervals in 5 s, plus one */
-	uint8_t reserved604[156];
+	uint32_t challengeTimer;	/* osaCreateTimer() handle: the shared key challenge's expiry */
+	uint8_t challengeText[128];	/* the challenge sent to the station that is authenticating */
+	uint8_t challengePending;	/* a challenge is outstanding (one at a time) */
+	uint8_t reserved737[3];
+	uint8_t aidBitmap[4];		/* association IDs in use, bit n: AID n + 1 */
+	uint8_t reserved744[16];
 	uint8_t bssStarted;		/* 1: the BSS of a station or access point role is up */
 	uint8_t reserved761[3];
 	uint32_t dozingStations;	/* peers in power save */
@@ -245,7 +252,9 @@ struct WlanConnectionRole {
 	uint8_t reserved34[2];
 	apKeyMgmtInfoSta_t keyMgmt;	/* an access point's handshake with the peer */
 	uint8_t state;			/* 802.11 state: 1 unauthenticated, 2 authenticated, 3 associated */
-	uint8_t reserved89[7];
+	uint8_t erpCapable;		/* the peer supports ERP (else it counts in WlanConnectionInfo.erpInfo) */
+	uint16_t eventCode;		/* the host event code the peer's leaving is reported with (bit 15: none) */
+	uint8_t *p2pContext;		/* a P2P group owner's peer: its P2P context (p2pDirectSetupContext()) */
 	struct WlanApPsQueue uapsdQueue;	/* frames of delivery-enabled access categories */
 	uint8_t reserved108[4];
 	struct {
@@ -326,6 +335,13 @@ struct __attribute__((may_alias)) WlanHtElements {
 #define WLAN_CONN_JOIN_OPEN		0x02	/* the join ended without privacy */
 #define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
 #define WLAN_CONN_WAPI			0x10
+#define WLAN_CONN_HT			0x20	/* the peer is HT capable */
+
+/* WlanConnectionInfo.securityFlags (inferred from the access point's start and station removal). */
+#define WLAN_INFO_SEC_OPEN		0x01	/* no privacy: the capability's privacy bit is clear */
+#define WLAN_INFO_SEC_WPA		0x08
+#define WLAN_INFO_SEC_RSN		0x20
+#define WLAN_INFO_SEC_WAPI		0x80
 
 /*
  * WlanConnectionInfo.pktFwdCtl of an access point (Marvell's pkt_fwd_ctl; the
@@ -339,6 +355,7 @@ struct __attribute__((may_alias)) WlanHtElements {
 /* WlanConnection.flags2 */
 #define WLAN_CONN2_QOS			0x08	/* the peer uses QoS (inferred) */
 #define WLAN_CONN2_ASSOCIATED		0x10	/* the peer is associated */
+#define WLAN_CONN2_HOLD			0x04	/* the connection stays when its peer leaves (inferred) */
 
 struct WlanConnection {
 	struct WlanConnection *next;
@@ -385,7 +402,9 @@ struct WlanConnection {
 	uint8_t dtimHold;		/* nonzero: the group frames are not released at the DTIM */
 	uint8_t beaconsPerDtim;		/* the DTIM period */
 	uint8_t beaconsSinceDtim;	/* beacons since the last DTIM */
-	uint8_t reserved167[5];
+	uint8_t reserved167;
+	uint16_t authAlgorithm;		/* access point's peer: the authentication algorithm expected; 255: any */
+	uint16_t authSequence;		/* ... and the transaction sequence number expected next */
 	uint8_t channel;
 	uint8_t groupRing;		/* the transmit ring of the BSS's group frames */
 	uint8_t reserved174[2];
@@ -532,7 +551,7 @@ _Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS m
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
 _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
-_Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
+_Static_assert(offsetof(struct WlanConnectionInfo, stationCount) == 584, "info station count");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");
 _Static_assert(offsetof(struct WlanConnection, rateSet) == 192, "rate set");

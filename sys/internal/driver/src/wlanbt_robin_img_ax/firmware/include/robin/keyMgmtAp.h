@@ -116,9 +116,6 @@ int isValidReplayCount(apKeyMgmtInfoSta_t *pKeyMgmtInfo, uint8_t *pRxReplayCount
 uint32_t keyApi_ApUpdateKeyMaterial(struct WlanConnection *connPtr, int updateGrpKey);	/* SQRAM, veneer 0x52f54 */
 void uapSqramPskUpdated(struct WlanConnection *connPtr, const uint8_t *localAddress,
 			const uint8_t *ssid, unsigned int ssidLength);			/* SQRAM, veneer 0x52f5c (inferred) */
-void macMgmtInspectBuffer(struct WlanConnection *connPtr, const uint8_t *peer,
-			  unsigned int reason);						/* 0x38990 */
-void macMgmtFilterBuffer(struct WlanConnection *connPtr);				/* 0x38e14 */
 uint64_t romMul32x32(uint32_t a, uint32_t b);						/* 0x03f3f3b4 */
 
 #endif /* ROBIN_KEYMGMTAP_H */

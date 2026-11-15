@@ -1043,7 +1043,7 @@ void macTxTaskMain(ULONG input)
 					info = wlanConnectionInfo(connection);
 					wlanConnectionInfoSlot(connection);
 group:
-					if (info == NULL || info->dataAllowed != 0)
+					if (info == NULL || info->stationCount != 0)
 						goto found;
 					connection = NULL;
 					goto complete;

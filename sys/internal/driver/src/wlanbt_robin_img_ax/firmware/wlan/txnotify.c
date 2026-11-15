@@ -8,6 +8,7 @@
  */
 #include <stddef.h>
 #include "robin/apps.h"
+#include "robin/apsta.h"
 #include "robin/conn.h"
 #include "robin/coex.h"
 #include "robin/esa.h"
@@ -64,9 +65,6 @@ uint16_t wlanPsSchedulePacket(struct WlanConnection *connection, struct WlanTxSt
 void p2pDirectPrepareTable(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41f6a */
 void macMgmtFilterHeader(void);							/* 0x3b99e */
 void p2pSqramPrepareContext(OsaBuffer *buffer, int acknowledged);			/* SQRAM 0xc000cac0 */
-void macMgmtManageBuffer(struct WlanConnection *connection, const uint8_t *address); /* 0x38a8a */
-void macMgmtAcquireBuffer(struct WlanConnection *connection);			/* 0x38ae0 */
-int macMgmtBuildBuffer(struct WlanConnection *connection, unsigned int kind);	/* 0x385de */
 void macMgmtConvertPacket(struct WlanConnection *connection);			/* inferred */
 extern uint32_t wlanPsPollSkips;
 

@@ -27,7 +27,9 @@ _Static_assert(offsetof(struct WlanTxWindowQueue, count) == 136, "window queue c
 
 /* Power-save state kept per connection (partial; its owner is not converted yet). */
 struct WlanPsPeerState {
-	uint8_t reserved0[43];
+	uint8_t reserved0[41];
+	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
+	uint8_t reserved42;
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t reserved44;
 	uint8_t powerManagement;	/* the PM bit of the last null frame */

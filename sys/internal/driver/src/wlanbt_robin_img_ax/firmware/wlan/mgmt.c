@@ -14,6 +14,7 @@
 #include "robin/btrom.h"
 #include "robin/ie.h"
 #include "robin/calibration.h"
+#include "robin/apsta.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
 #include "robin/mac.h"
@@ -98,7 +99,6 @@ struct __attribute__((packed)) WlanCustomIeTable {
 };
 
 /* Not converted yet; provisional names. */
-void macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x38a18 */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
 int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b784 */
 int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b73e */
@@ -980,7 +980,7 @@ void wlanSecurityRefresh(struct WlanConnection *connection)
 void wlanApOlbcReset(struct WlanConnectionInfo *info, unsigned int beaconInterval)
 {
 	wlanApHtStationsForget(&info->erpInfo);
-	info->olbcDetected = 0;
+	info->ht40IntolerantStations = 0;
 	info->olbcCount = 0;
 	info->olbcTimeout = 5000000 / (beaconInterval << 10) + 1;
 }

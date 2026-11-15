@@ -375,7 +375,7 @@ void wlanMacEvents(int line, uint32_t pending)
 			if (sleep->mode == WLAN_PS_SLEEP_DTIM && (MAC_610_CIPHER == 0 || MAC_620_EVENT == 1) &&
 			    sleep->recentActivity == 0) {
 				if (sleep->control & 1) {
-					if (info->dataAllowed == 0)
+					if (info->stationCount == 0)
 						wlanRaiseEvent(0x12);
 				} else if (macTxHardwareIdle()) {
 					wlanRaiseEvent(0x12);

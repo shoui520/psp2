@@ -9,6 +9,7 @@
 #include "robin/autotx.h"
 #include "robin/psctl.h"
 #include "robin/wlantask.h"
+#include "robin/apsta.h"
 #include "robin/osa.h"
 #include "robin/rom.h"
 #include "robin/sync.h"
@@ -119,6 +120,29 @@ int macMgmtFlushQueues(void)
 	wlanTxPowerSetHostLimit(255, 0);
 	wlanTxPowerSetLinkLimit(255, 0);
 	wlanTxPowerApply();
+	return 0;
+}
+
+/* A message for the management task, from the frame pool; its data starts at 176. */
+extern struct OsaBufferPool wlanMgmtFramePool;			/* 0x04000de0 */
+
+OsaBuffer *macMgmtHandleState(struct WlanConnection *connection)
+{
+	OsaBuffer *message = osa_BufferAlloc(&wlanMgmtFramePool, 0x320, 0);
+
+	if (message != NULL) {
+		message->context = connection;
+		message->dataOffset = 176;
+	}
+	return message;
+}
+
+/* Queues it and wakes the task (event 4); 1: the queue is full. */
+int macMgmtProcessState(OsaBuffer *message)
+{
+	if (osaMsgQueueSend(*wlanTaskHandles.mgmtSmeQueue, 4, (uintptr_t)message, 0) != 0)
+		return 1;
+	osaEventFlagsSet(*wlanTaskHandles.mgmtEventFlags, 4, 7);
 	return 0;
 }
 

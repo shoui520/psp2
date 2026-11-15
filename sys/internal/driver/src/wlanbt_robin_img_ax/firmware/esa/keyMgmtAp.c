@@ -8,6 +8,7 @@
  * Written from Marvell's source (Copyright (C) 2014-2017, Marvell International
  * Ltd., GPL-2.0) as this firmware has it.
  */
+#include "robin/apsta.h"
 #include "robin/assocAp.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
