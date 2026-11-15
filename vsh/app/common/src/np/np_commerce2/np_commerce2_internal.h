@@ -32,6 +32,12 @@ extern void SceNpManager_9554802B(const void *data1, const void *data2, const vo
 /* the request does not name what it is for */
 #define NP_COMMERCE2_ERROR_NO_TARGET	-2141908950	/* 0x805510aa */
 
+/* a store check was asked for a target type it does not have */
+#define NP_COMMERCE2_ERROR_INVALID_TARGET_TYPE	-2141909098	/* 0x80550f96 */
+
+/* a name did not fit the buffer it was copied to */
+#define NP_COMMERCE2_ERROR_BUF_TOO_SMALL	-2141909116	/* 0x80550f84 */
+
 /* set by Init, cleared by Term */
 extern int g_initialized;
 
@@ -313,6 +319,34 @@ extern int npCommerce2_81016904(int a1, int a2, int a3);
 extern int npCommerce2_8101690C(int a1, int a2);
 extern int npCommerce2_8100A82C(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A742(int a1, int a2, int a3, int a4, int a5, int a6);
+extern int npCommerce2_810169A8(int a1, int a2, void *a3);
+extern int npCommerce2_8100A982(int a1, const char **a2, int a3);
+extern int npCommerce2_81016914(SceNpCommerce2GetProductInfoListResult *result, void *buf,
+				SceSize bufLen);
+extern int npCommerce2_810071DC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100A974(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100DF44(int a1, int a2, int a3);
+extern int npCommerce2_8100AAC0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100AACE(int a1, int a2, int a3, int a4, SceUInt32 a5, SceUInt32 a6);
+extern int npCommerce2_81016A3A(int a1, void *a2, int a3);
+extern int npCommerce2_8100AC2A(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100AC38(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_81016B50(int a1, void *a2, int a3);
+extern int npCommerce2_8100AD70(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_81016BC6(int a1, void *a2, int a3);
+extern int npCommerce2_81016C50(int a1, int a2, int a3);
+extern int npCommerce2_8100AEBC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100AD7E(int a1, int a2, int a3);
+extern int npCommerce2_8100B002(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100B010(SceUInt32 reqId);
+extern int npCommerce2_8100B166(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100B238(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2_8100B3C6(int a1, int a2);
+extern int npCommerce2_8100B292(int a1, int a2, int a3, int a4);
+extern int npCommerce2_8100B372(int a1, int a2);
+extern int npCommerce2_8100B41A(int a1, const char *a2);
+extern int npCommerce2_8100B7A0(SceUInt32 ctxId, SceInt32 *shortfall);
+extern int npCommerce2_8100B7F4(SceUInt32 ctxId, SceInt32 *shortfall);
 extern int npCommerce2_8100D6BC(int a1, void *a2, int a3);
 extern int npCommerce2_8100D8E4(int a1, int a2, int a3);
 extern int npCommerce2_8100D8EC(int a1, int a2);
