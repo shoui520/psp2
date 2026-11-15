@@ -225,6 +225,9 @@ extern void (*btTableConnectQuery)(const uint8_t *address, uint32_t *linkType, u
 				   uint8_t *slot);			/* 0x552f0 */
 extern void (*btTableInquiryFilterClear)(void);		/* 0x552f4 */
 extern void (*btTableConnectFail)(const uint8_t *message);	/* 0x552f8 */
+extern uint16_t btTargetCounts[8];				/* 0x400de60: per host slot, 0xffff: none */
+extern uint32_t btTargetLinkClocks[4];				/* 0x400de70: per link */
+extern uint32_t btTargetLastClock;				/* 0x400f990 */
 extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
 extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
@@ -395,6 +398,7 @@ int btLmpLcScheduleFrame(unsigned int status);			/* 0x47f0e */
 int btLmpLcNotifyFrame(const uint8_t *message);			/* 0x47f30 */
 int btLmpLcFormatFrame(unsigned int link, uint32_t second);	/* 0x47f68 */
 int btLmpLcInspectFrame(void);					/* 0x47f7e */
+void btLmpLcTrackFrame(void);					/* 0x47fc4 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

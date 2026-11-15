@@ -2866,3 +2866,53 @@ int btLmpLcInspectFrame(void)
 	btTableModeTable = 0;
 	return btLdaRomInspectState();
 }
+
+/*
+ * After a target slot (state 3) the link clocks move on by the ticks since btTargetLastClock:
+ * every link but the host link's (in state 6) and the context's tracked one gets its clock in its
+ * event registers, one more when the hardware already holds that value and the link is active.
+ * Every host slot's count moves on the same way, below the limit of its packet type.
+ */
+void btLmpLcTrackFrame(void)
+{
+	uint32_t now;
+	uint32_t ticks;
+	uint8_t *context;
+	unsigned int link;
+	unsigned int slot;
+
+	if (romTargetTable != 3)
+		return;
+	now = btLtsRomScheduleState(btLtsRomParseState(0));
+	ticks = now - btTargetLastClock - 1;
+	context = btLcoRomDispatchContext(now);
+	for (link = 1; link < 4; link = (uint8_t)(link + 1)) {
+		volatile uint8_t *registers;
+		uint32_t clock;
+
+		if (btLinkHostIndex != 0xffff && romHctHostSlot[btLinkHostIndex][4] == link &&
+		    romHctHostSlot[btLinkHostIndex][0] == 6)
+			continue;
+		if (context[32] == 1 && romHctHostSlot[*(BtHalf *)(context + 6)][4] == link)
+			continue;
+		registers = btLinkEvent + link * 32;
+		clock = (btTargetLinkClocks[link] + ticks) & 0x3ffffff;
+		*(volatile uint32_t *)(registers + 8) = clock;
+		if (*(volatile uint16_t *)(registers + 30) != 0 && *(volatile uint32_t *)(registers + 8) == clock)
+			*(volatile uint32_t *)(registers + 8) = (*(volatile uint32_t *)(registers + 8) + 1) & 0x3ffffff;
+	}
+	for (slot = 1; slot <= 7; slot = (uint8_t)(slot + 1)) {
+		unsigned int count = btTargetCounts[slot];
+		uint8_t *type;
+		int moved;
+
+		if (count == 0xffff)
+			continue;
+		moved = (int16_t)ticks;
+		type = btPacketTypes + romHctHostSlot[slot][2] * 12;
+		if ((int)(count + moved) < (int)(*(BtHalf *)(type + 6) & 0x7fff))
+			*(BtHalf *)(type + 4) = count + moved + 1;
+		else
+			*(BtHalf *)(type + 4) = (*(BtHalf *)(type + 6) & 0x7fff) - 1;
+	}
+}

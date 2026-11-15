@@ -75,7 +75,7 @@ struct BtStateHooks {
 	void (*due)(struct BtSlotEvent *event, uint32_t clock);
 };
 extern struct BtStateHooks btStateHooks[12];			/* 0x400f9ac */
-extern const uint8_t *btPacketTypes;				/* 0x400f968: 12 bytes per type, halfword 4 its length */
+extern uint8_t *btPacketTypes;					/* 0x400f968: 12 bytes per type, halfword 4 its length, halfword 6 its limit (bits 0-14) */
 extern uint8_t btTargetStatus;					/* 0x400de53 */
 extern uint16_t btTargetNode;					/* 0x400de56 */
 extern uint8_t btDeviceWindow;					/* 0x400cd28 */

@@ -51,7 +51,7 @@ uint8_t *btLmpLcProcessContext(uint8_t *record);		/* 0x42b8a */
 int btLmpLcUpdateContext(void);					/* 0x42b98 */
 int btLmpLcConfigureContext(void);				/* 0x42ba0 */
 unsigned int btLmpLcCheckContext(void);				/* 0x42ce8 */
-unsigned int btLmpLcPrepareContext(void);			/* 0x42f30 */
+void btLmpLcPrepareContext(void);			/* 0x42f30 */
 int btLmpLcDispatchContext(void);				/* 0x42f38 */
 uint8_t *btLmpLcParseContext(void);				/* 0x42f46 */
 int btLmpLcBuildContext(uint32_t *remaining);			/* 0x42f4e */
@@ -81,7 +81,6 @@ int btLmpLcFormatContext(int link, int kind, int type, int value);	/* 0x432bc */
 unsigned int btLmpLcResetEntry(void);				/* 0x438b0 */
 
 /* Not converted yet, or in another file. */
-unsigned int btLmpLcTrackFrame(void);				/* 0x47fc4 */
 unsigned int hostCmd0003Version(void);				/* 0x27de0 */
 
 #endif

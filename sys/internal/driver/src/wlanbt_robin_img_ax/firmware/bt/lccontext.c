@@ -103,9 +103,9 @@ unsigned int btLmpLcCheckContext(void)
 	return (hostCmd0003Version() >> 24) + 17152;
 }
 
-unsigned int btLmpLcPrepareContext(void)
+void btLmpLcPrepareContext(void)
 {
-	return btLmpLcTrackFrame();
+	btLmpLcTrackFrame();
 }
 
 int btLmpLcDispatchContext(void)

@@ -314,6 +314,9 @@ PROVIDE(romStateActiveTable     = 0x03f419e0);
 /* The controller's variables in the ROM's DTCM (0x0400a700 - 0x0400fc00); the image only reads and hooks them. */
 PROVIDE(btSyncFrameDoneHook          = 0x0400ece8);
 PROVIDE(btSyncMode                   = 0x0400f714);
+PROVIDE(btTargetCounts               = 0x0400de60);
+PROVIDE(btTargetLinkClocks           = 0x0400de70);
+PROVIDE(btTargetLastClock            = 0x0400f990);
 PROVIDE(btHostSettings               = 0x0400b280);
 PROVIDE(btHostSyncLimits             = 0x0400b42a);
 PROVIDE(btConnectScoRequest          = 0x0400f535);
