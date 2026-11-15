@@ -11,9 +11,6 @@
 #include "robin/bttable.h"
 #include "robin/eventpower.h"
 
-typedef uint16_t __attribute__((may_alias)) BtHalf;
-typedef uint32_t __attribute__((may_alias)) BtWord;
-
 uint8_t btTableEnabled __attribute__((section(".itcm.rw"))) = 1;		/* 0x55294 */
 uint8_t btTableLinkMask __attribute__((section(".itcm.rw")));			/* 0x55295 */
 uint8_t btTableProfile __attribute__((section(".itcm.rw")));			/* 0x55296 */

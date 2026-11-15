@@ -9,6 +9,10 @@
 
 #include <stdint.h>
 
+/* A halfword and a word of a record the ROM keeps, read through byte pointers. */
+typedef uint16_t __attribute__((may_alias)) BtHalf;
+typedef uint32_t __attribute__((may_alias)) BtWord;
+
 #define BT_SOURCE_LINKS		8
 #define BT_SOURCE_SAMPLES	4
 

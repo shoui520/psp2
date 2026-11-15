@@ -10,10 +10,6 @@
 #include "robin/btsource.h"
 #include "robin/bttable.h"
 
-/* A halfword of a record the ROM keeps. */
-typedef uint16_t __attribute__((may_alias)) BtHalf;
-typedef uint32_t __attribute__((may_alias)) BtWord;
-
 struct BtSourceState btSource __attribute__((section(".itcm.bss")));		/* 0x5a274 */
 struct BtSourceRecord btSourceBuffer[BT_SOURCE_LINKS] __attribute__((section(".itcm.bss")));	/* 0x5a054 */
 
