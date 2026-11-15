@@ -70,6 +70,22 @@ int macMgmtFormatPacket(struct WlanConnection *connection);				/* 0x39d82 */
 int macMgmtInspectPacket(struct WlanConnection *connection, unsigned int a, unsigned int b); /* 0x3a06e */
 int macMgmtTrackPacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3a0a6 */
 
+void macMgmtManagePacket(struct WlanConnection *connection, int want);			/* 0x3a100 */
+void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *counter,
+			  uint8_t *erpInfo);						/* 0x3a204 */
+void macMgmtReleasePacket(struct WlanConnection *connection, const uint8_t *body, uint16_t length,
+			  unsigned int beaconPeriod, uint8_t *erpInfo, uint8_t *counter,
+			  unsigned int seconds);					/* 0x3a230 */
+void macMgmtSetupPacket(OsaBuffer *buffer);						/* 0x3a2ba */
+void macMgmtClearPacket(struct WlanConnection *connection);				/* 0x3a2fa */
+void macMgmtConvertPacket(struct WlanConnection *connection);				/* 0x3a32a */
+int macMgmtVerifyPacket(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3a33e */
+void macMgmtSelectPacket(struct WlanConnection *connection, OsaBuffer *buffer);		/* 0x3a410 */
+int macMgmtAdjustPacket(struct WlanConnection *connection, const uint8_t *peer);	/* 0x3a454 */
+void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
+			 uintptr_t argument);						/* 0x3a4e2 */
+void macMgmtFilterPacket(int code, unsigned int interfaceType);				/* 0x3a5aa */
+
 /* The management task's message queue (wlan/tasks.c). */
 OsaBuffer *macMgmtHandleState(struct WlanConnection *connection);			/* 0x34778 */
 int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
@@ -78,7 +94,6 @@ int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);			/* 0x333ce */
 void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
 int macMgmtSchedulePacket(void);							/* 0x39cb2 */
-void macMgmtManagePacket(struct WlanConnection *connection, int arg);			/* 0x3a100 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int type);			/* 0x41250 */
 void p2pDirectSetupContext(struct WlanConnection *connection, uint8_t *context);	/* 0x40f46 */
 void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,

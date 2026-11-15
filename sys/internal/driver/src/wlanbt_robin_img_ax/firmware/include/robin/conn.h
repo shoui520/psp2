@@ -188,9 +188,14 @@ struct WlanConnectionInfo {
 	uint8_t ready;
 	uint8_t reserved357[139];
 	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
-	uint8_t reserved498[42];
-	uint8_t ht20Only;		/* nonzero: no 40 MHz channel width */
-	uint8_t protectionFlags;	/* bit 0: protection forced on */
+	uint8_t reserved498[22];
+	uint16_t coexDelayFactor;	/* 20/40 coexistence: times its scan interval, the time the 40 MHz width is held off (inferred) */
+	uint8_t reserved522[4];
+	uint16_t coexScanInterval;
+	uint8_t reserved528[8];
+	uint32_t mgmtForwardMask;	/* bit n: management frames of subtype n are handed to the host */
+	uint8_t ht2040Managed;		/* nonzero: the BSS starts at 20 MHz and macMgmtManagePacket() widens it */
+	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: broadcast SSID probe requests are answered */
 	uint8_t reserved542;
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */

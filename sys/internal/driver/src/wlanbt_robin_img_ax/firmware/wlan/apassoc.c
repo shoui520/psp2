@@ -12,6 +12,7 @@
 #include "robin/assocAp.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
+#include "robin/pssm.h"
 #include "robin/hostps.h"
 #include "robin/htba.h"
 #include "robin/ie.h"
@@ -24,12 +25,19 @@
 #include "robin/mgmt.h"
 #include "robin/osa.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
 
 /* Not converted yet; provisional names. */
+void macMgmtReleaseFrame(struct WlanConnection *connection);				/* 0x3b0d8 */
+void wlanPsAcquirePacket(struct WlanConnection *connection);				/* 0x3d1f4 */
+void macTxNotifyApplyFrame(struct WlanConnection *connection);				/* 0x33550 */
+void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
+void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
+			     uintptr_t argument);					/* SQRAM */
 void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
 void rfCalibFilterQueue(unsigned int wpa, void *keyData);				/* 0x2b764 */
 void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *length); /* 0x2b774 */
@@ -407,7 +415,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	wlanApNonErpGone(connection);
 	wlanApLongSlotGone(connection);
 	macMgmtComputePacket(info, info->htOperation, info->htCapability, role, connection->beaconPeriod);
-	if (info->ht20Only != 0 || !(info->htCapability[2] & 0x02)) {
+	if (info->ht2040Managed != 0 || !(info->htCapability[2] & 0x02)) {
 		info->htOperation[3] &= 0xf8;
 	} else {
 		info->htOperation[3] |= 4;
@@ -496,4 +504,237 @@ int macMgmtTrackPacket(OsaBuffer *buffer, uintptr_t argument)
 		category = 127;
 	}
 	return p2pSqramFilterState(connection, frame, category);
+}
+
+/*
+ * Whether the BSS may use its 40 MHz channel width (want == 1) or has to fall back to 20 MHz
+ * (want == 0), when the access point manages 20/40 coexistence itself: the HT Information
+ * element's STA channel width and secondary channel offset change, and the beacon and the
+ * associated peers are told.
+ */
+void macMgmtManagePacket(struct WlanConnection *connection, int want)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	unsigned int posture;
+	uint8_t *operation;
+
+	wlanConnectionInfoSlot(connection);
+	if (info->ht2040Managed == 0 || !(info->htCapability[2] & 0x02))
+		return;
+	posture = sysIrqDisable();
+	if (want == 1) {
+		if (info->olbcTimeout != 0 || info->ht40IntolerantStations != 0 ||
+		    ((info->rateFlags & WLAN_RATE_FLAG_HT_OBSS) && info->phyMode != 2)) {
+			sysIrqRestore(posture);
+			return;
+		}
+	} else if (want == 0) {
+		struct WlanConnectionInfo *same = wlanConnectionInfo(connection);
+
+		same->olbcTimeout = (1000000 * same->coexDelayFactor * same->coexScanInterval) /
+				    ((unsigned int)connection->beaconPeriod << 10) + 1;
+	}
+	sysIrqRestore(posture);
+	operation = info->htOperation;
+	if (((operation[3] >> 2) & 1) != want && (info->htCapability[2] & 0x02)) {
+		struct WlanConnection *peer = wlanConnectionFind(connection->bssType, connection->bssNumber);
+		struct WlanConnectionRole *role = wlanConnectionInfoSlot(peer);
+
+		operation[3] = (operation[3] & 0xfb) | ((4 * want) & 7);
+		if (want == 1)
+			operation[3] = ((operation[3] >> 2) << 2) | ((role->channelFlags >> 4) & 3);
+		else
+			operation[3] = (operation[3] >> 2) << 2;
+		macMgmtReleaseFrame(connection);
+		while (peer != NULL) {
+			if (peer->flags2 & WLAN_CONN2_ASSOCIATED) {
+				wlanPsAcquirePacket(peer);
+				macTxNotifyApplyFrame(peer);
+			}
+			peer = wlanConnectionNextByBss(peer, peer->bssType, peer->bssNumber);
+		}
+	}
+}
+
+/* The count of the HT overlapping BSS timer runs down; at zero the flag goes and the BSS may widen. */
+void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *counter, uint8_t *erpInfo)
+{
+	if (*counter != 0 && --*counter == 0) {
+		erpInfo[3] &= ~WLAN_RATE_FLAG_HT_OBSS;
+		wlanSecurityRefresh(connection);
+		macMgmtManagePacket(connection, 1);
+	}
+}
+
+/*
+ * A beacon of another BSS (the body, length bytes): when it says legacy or non-HT stations are around, the
+ * HT overlapping BSS flag is set (it goes after 1 s of beacons without) and the BSS narrows to 20 MHz.
+ */
+void macMgmtReleasePacket(struct WlanConnection *connection, const uint8_t *body, uint16_t length,
+			  unsigned int beaconPeriod, uint8_t *erpInfo, uint8_t *counter, unsigned int seconds)
+{
+	WlanIePointers elements;
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	unsigned int was = (erpInfo[3] >> 5) & 1;
+
+	wlanParseIes(body + 12, (uint16_t)(length - 12), &elements);
+	if (elements.pErpInfo != NULL ? !(elements.pErpInfo[2] & 1) : info->phyMode == 2) {
+		if (elements.pHtInfo != NULL && !(elements.pHtInfo[4] & 0x10))
+			return;
+	}
+	erpInfo[3] |= WLAN_RATE_FLAG_HT_OBSS;
+	if (((erpInfo[3] >> 5) & 1) != was)
+		wlanSecurityRefresh(connection);
+	*counter = (seconds * 1000000) / (beaconPeriod << 10) + 1;
+	if (info->phyMode != 2)
+		macMgmtManagePacket(connection, 0);
+}
+
+void macMgmtSetupPacket(OsaBuffer *buffer)
+{
+	struct WlanConnection *connection = buffer->context;
+	const uint8_t *frame = (const uint8_t *)buffer + buffer->dataOffset;
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+	if (info->htEnabled != 0)
+		macMgmtReleasePacket(connection, frame + 32, frame[1] << 8 | frame[0], connection->beaconPeriod,
+				     &info->erpInfo, &info->olbcCount, 1);
+}
+
+/* The 20/40 timer of the BSS ticks. */
+void macMgmtClearPacket(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	unsigned int posture = sysIrqDisable();
+
+	if (info->olbcTimeout != 0 && --info->olbcTimeout == 0)
+		macMgmtManagePacket(connection, 1);
+	sysIrqRestore(posture);
+}
+
+void macMgmtConvertPacket(struct WlanConnection *connection)
+{
+	wlanConnectionInfo(connection)->uapBusy = 0;
+}
+
+/*
+ * A probe request: 1 when this BSS is to answer it (its SSID, or a broadcast SSID when allowed, and the BSS's
+ * address or the broadcast address as the BSSID and the address it is sent to).
+ */
+int macMgmtVerifyPacket(struct WlanConnection *connection, const uint8_t *frame)
+{
+	int answer = 0;
+	int local = 0;
+	struct WlanConnection *peer = wlanConnectionFindByPeer(frame + 12);
+
+	if (frame[33] != 0) {
+		unsigned int length = connection->networkSsidLength;
+
+		if (frame[33] != length || memcmp(frame + 34, connection->networkSsid, length) != 0)
+			goto done;
+		answer = 1;
+		if (peer == NULL ||
+		    (!(peer->flags2 & WLAN_CONN2_ASSOCIATED) && connection->bssType == peer->bssType &&
+		     connection->bssNumber == peer->bssNumber))
+			local = 1;
+	} else {
+		if (!(wlanConnectionInfo(connection)->protectionFlags & 2))
+			goto done;
+		answer = 1;
+	}
+	if (memcmp(frame + 18, connection->localAddress, 6) == 0 || memcmp(wlanBroadcastAddress, frame + 18, 6) == 0) {
+		if (memcmp(connection->localAddress, frame + 6, 6) == 0)
+			local = 1;
+	} else {
+		answer = 0;
+	}
+done:
+	if (wlanApPsEnabled() && local == 1 && answer == 1)
+		wlanPsActivity(wlanConnectionByRole(2));
+	return answer;
+}
+
+/* The transmit request of a probe response is made from the BSS's template's. */
+void macMgmtSelectPacket(struct WlanConnection *connection, OsaBuffer *buffer)
+{
+	struct WlanMacTxRequest *request = (struct WlanMacTxRequest *)((uint8_t *)buffer + 48);
+	const struct WlanMacTxRequest *template = connection->probeResponseRequest;
+
+	buffer->dataOffset = 28;
+	__aeabi_memclr(request, 0x40);
+	__aeabi_uwrite4(__aeabi_uread4(template->expiry), request->expiry);
+	__aeabi_uwrite4(__aeabi_uread4(template->expiry + 4), request->expiry + 4);
+	request->reserved1[1] = 0;
+	request->reserved1[2] = template->reserved1[2];
+}
+
+/* A probe response for the peer (a probe request's address) goes out from the BSS's template; 0: sent. */
+int macMgmtAdjustPacket(struct WlanConnection *connection, const uint8_t *peer)
+{
+	struct WlanConnectionInfo *info = NULL;
+	OsaBuffer *buffer;
+	uint8_t *data;
+	int result;
+
+	if (connection->interfaceType != 4)
+		info = wlanConnectionInfo(connection);
+	buffer = connection->probeResponseBuffer;
+	buffer->context = connection;
+	buffer->flags &= ~1;
+	data = (uint8_t *)buffer + 176;
+	__aeabi_memcpy(data + 6, peer, 6);
+	data[3] &= 0x97;
+	macMgmtSelectPacket(connection, buffer);
+	if (connection->interfaceType == 4)
+		connection->transmitBusy = 1;
+	else
+		info->uapBusy = 1;
+	result = wlanMgmtSendFrame(buffer);
+	if (result != 0) {
+		if (connection->interfaceType == 4)
+			connection->transmitBusy = 0;
+		else
+			info->uapBusy = 0;
+	}
+	return result;
+}
+
+/* A probe request is received: the access point or P2P group owner answers it, and the AMP link does when it is looking for its peer. */
+void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer, uintptr_t argument)
+{
+	const uint8_t *frame = (const uint8_t *)buffer + buffer->dataOffset;
+
+	if (connection->interfaceType == 3 || connection->interfaceType == 2) {
+		struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+		if (connection->interfaceType == 3) {
+			if (connection->mode == 1 || connection->mode == 2) {
+				p2pSqramMatchDirectSsid(connection, frame, argument);
+				return;
+			}
+		} else if (connection->interfaceType == 2 && macMgmtVerifyPacket(connection, frame) == 1) {
+			if (info->uapBusy == 1)
+				return;
+			if (macMgmtAdjustPacket(connection, frame + 12) == 0 &&
+			    (info->mgmtForwardMask & (1u << (frame[2] >> 4))) != 0)
+				wlanSubmitControlFrame(connection, frame);
+		}
+	}
+	if (frame[33] == 0)
+		connection = wlanConnectionFirst(4);
+	if (connection != NULL && connection->interfaceType == 4 &&
+	    (connection->transmitBusy != 1 || connection->state != 0))
+		macMgmtAdjustPacket(connection, frame + 12);
+}
+
+/* Every connection of an interface type that is in a BSS role of its own is sent the event. */
+void macMgmtFilterPacket(int code, unsigned int interfaceType)
+{
+	struct WlanConnection *connection;
+
+	for (connection = wlanConnectionFirst(interfaceType); connection != NULL;
+	     connection = wlanConnectionNextFlagged(connection, interfaceType)) {
+		if (connection->mode == 2)
+			wlanReportEvent(connection, NULL, code);
+	}
 }
