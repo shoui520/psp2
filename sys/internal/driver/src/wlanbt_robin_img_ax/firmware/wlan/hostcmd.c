@@ -1005,10 +1005,10 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 54:
-			hostCmd0036(body, 0, connection->snmpBssParams[1] + 28);
+			hostCmd0036(body, 0, connection->keyBlocks[1] + 28);
 			goto done;
 		case 55:
-			hostCmd0036(body, 1, connection->snmpBssParams[0] + 28);
+			hostCmd0036(body, 1, connection->keyBlocks[0] + 28);
 			goto done;
 
 		case 60:	/* automatic frequency control */
@@ -1099,7 +1099,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				hostCmd005e(connection, body + 2, hdr + HOSTCMD_U16(hdr + 2));
 				wlanBaTablesChangedHandler();
-				if (connection->snmpBssParams[1] + 28 != NULL && (connection->snmpBssParams[1][38] & 1)) {
+				if (connection->keyBlocks[1] + 28 != NULL && (connection->keyBlocks[1][38] & 1)) {
 					hostCmdConnectionChanged();
 				}
 				if (wlanSessionId != 0 && wlanRoleOtherOnly() && (connection->flags & 1))

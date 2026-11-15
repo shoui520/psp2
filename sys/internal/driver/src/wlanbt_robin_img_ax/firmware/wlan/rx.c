@@ -658,7 +658,7 @@ int wlanRxProcessFrames(void)
 			rxSetFrame(&status, buffer);
 			goto indicate;
 		}
-		holder = (frame->address1[0] & 1) ? &connection->snmpBssParams[0] : &connection->snmpBssParams[1];
+		holder = (frame->address1[0] & 1) ? &connection->keyBlocks[0] : &connection->keyBlocks[1];
 		if (*holder != NULL)
 			key = (cipher_key_t *)(*holder + 28);
 		if (key == NULL) {

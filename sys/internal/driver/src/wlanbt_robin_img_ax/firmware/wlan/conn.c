@@ -1208,10 +1208,10 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		connection->dataRate = 254;
 		connection->groupRate = 254;
 		connection->flags2 &= ~0x10;
-		connection->snmpBssParams[1] = NULL;
+		connection->keyBlocks[1] = NULL;
 		connection->reserved664 = 0;
 		connection->reserved668 = 0;
-		connection->snmpBssParams[0] = NULL;
+		connection->keyBlocks[0] = NULL;
 		__aeabi_memclr4(&connection->bssCapability, 60);
 		__aeabi_memclr4(connection->localAddress, 6);
 		__aeabi_memclr4(connection->networkSsid, 32);
@@ -1436,8 +1436,8 @@ void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *sou
 	if (!(source->flags & 4)) {
 		copy->reserved664 = source->reserved664;
 		copy->reserved668 = source->reserved668;
-		copy->snmpBssParams[0] = source->snmpBssParams[0];
-		copy->snmpBssParams[1] = source->snmpBssParams[1];
+		copy->keyBlocks[0] = source->keyBlocks[0];
+		copy->keyBlocks[1] = source->keyBlocks[1];
 	}
 }
 
@@ -1480,7 +1480,7 @@ int wlanIbssSecurityActive(void)
 
 	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
 		if (connection->interfaceType == 1 && !(connection->flags & 4)) {
-			uint8_t *block = connection->snmpBssParams[0];
+			uint8_t *block = connection->keyBlocks[0];
 
 			if (block != NULL && block[28 + 7] == 2 && (block[28 + 10] & 1)) {
 				sysIrqRestore(posture);

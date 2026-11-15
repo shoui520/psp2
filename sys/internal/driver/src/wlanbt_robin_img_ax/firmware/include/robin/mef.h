@@ -158,7 +158,7 @@ struct WlanReplyFrame {
 	uint8_t kind;
 	uint8_t retries;
 	uint8_t reserved111;
-	const uint8_t *loopback;	/* set for frames the callback processor sent */
+	const uint8_t *key;		/* the key the frame is sent with (wlanTxBuildFrame()); NULL: none */
 	uint8_t frameLength[2];
 	uint8_t header[30];		/* frame control, duration, three addresses */
 	uint8_t body[];

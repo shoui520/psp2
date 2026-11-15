@@ -33,6 +33,7 @@ struct WlanMacTxRequest {
 	uint8_t hwFlags;
 	union {
 		uint16_t sequence[2];	/* copied into the data at 16 */
+		uint16_t duration[2];	/* a built data frame's: the duration of the first fragment and of the last */
 		struct {		/* a beacon or probe response template */
 			uint8_t cfOffset;	/* where the elements from the CF Parameter Set on start */
 			uint8_t timOffset;	/* where the TIM element starts */
@@ -54,6 +55,11 @@ struct WlanMacTxRequest {
 	uint8_t buffer[4];	/* unaligned pointer to the buffer data (28 bytes past the buffer) */
 	uint8_t next[4];	/* unaligned word, cleared */
 };
+
+/* Bits 3-9 of WlanMacTxRequest.rate hold the rate index. */
+#define MAC_TX_RATE_MASK		0x3f8u
+#define MAC_TX_RATE(index)		(((index) << 25) >> 22)
+#define MAC_TX_RATE_INDEX(rate)		(((uint32_t)(rate) << 22) >> 25)
 
 /* Bits of WlanMacTxRequest.flags. */
 #define MAC_TX_FLAG_RTS			0x00000020u

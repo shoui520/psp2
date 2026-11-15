@@ -33,6 +33,7 @@
 #include "robin/wmm.h"
 #include "robin/macentry.h"
 #include "robin/htba.h"
+#include "robin/txbuild.h"
 
 struct WlanTxWindowQueue wlanTxWindowQueues[2] __attribute__((section(".dtcm.bss")));
 uint32_t wlanTxWindowFlags __attribute__((section(".itcm.bss")));
@@ -592,12 +593,6 @@ void macTxAdvanceStage(void)
 		wlanConnectionStage = 4;
 }
 
-/*
- * Loopback information of a frame (the pointer at 112 of its data): kind 2
- * frames carry a 16-byte header to strip, kind 3 frames go back as they are.
- */
-#define TX_DATA_LOOPBACK(data)	(*(const uint8_t *const *)((data) + 112))
-#define TX_LOOPBACK_KIND(info)	((info)[7])
 
 /* Not converted yet; provisional names. */
 uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused); /* 0x3d2f8 */
@@ -605,7 +600,6 @@ void wlanPsTriggerSent(void);					/* 0x2eade */
 int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
-extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
 void wlanBaNotifyAdded(struct WlanConnection *connection, unsigned int hwSlot,
 		       const uint8_t *peer);				/* 0x333f6 */
@@ -673,15 +667,15 @@ int macTxResetStage(void)
 	return 0;
 }
 
-/* Sends a data frame; loopback frames go back to the callback processor instead. */
+/* Sends a data frame; one of an AES or WAPI key is encrypted by the crypto engine instead. */
 void macTxSendDataFrame(OsaBuffer *buffer)
 {
 	struct WlanReplyFrame *request = (struct WlanReplyFrame *)macTxBufferData(buffer);
-	const uint8_t *loopback = TX_DATA_LOOPBACK((uint8_t *)request);
+	const uint8_t *key = TX_DATA_KEY((uint8_t *)request);
 	struct WlanConnection *connection;
 
-	if (loopback != NULL) {
-		unsigned int kind = TX_LOOPBACK_KIND(loopback);
+	if (key != NULL) {
+		unsigned int kind = TX_KEY_TYPE(key);
 
 		if (kind == 2) {
 			uint8_t *frame = request->frame;
@@ -853,9 +847,6 @@ void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
 int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
-uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int *drop, int *eapol,
-			  int reserved, unsigned int packetType, int ampdu,
-			  const uint8_t **loopback, int qos);		/* 0x2ed44 */
 int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
 extern struct OsaDevice ampWlanDriver;					/* 0x04009860 */
 extern struct OsaMessageQueue wlanDriverQueue15;			/* 0x04004a18 */
@@ -864,10 +855,6 @@ extern uint8_t wlanPrimaryEvents;					/* 0x04008828, bit 5: no rate below index 
 
 /* Management frames from the "MAC Mgmt" task keep the frame at a fixed place. */
 #define MAC_TX_MGMT_FRAME	176
-/* Bits 3-9 of WlanMacTxRequest.rate hold the rate index. */
-#define MAC_TX_RATE_MASK		0x3f8u
-#define MAC_TX_RATE(index)		(((index) << 25) >> 22)
-#define MAC_TX_RATE_INDEX(rate)		(((uint32_t)(rate) << 22) >> 25)
 
 static inline void macTxSetRate(struct WlanMacTxRequest *request, unsigned int index)
 {
@@ -994,7 +981,7 @@ void macTxTaskMain(ULONG input)
 			const uint8_t *peer;
 			WlanWirelessFrame *frame;
 			uint8_t *data, *built;
-			const uint8_t *loopback;
+			const uint8_t *key;
 			unsigned int skip, rate, sequence, category;
 			int qos, forced, lowRate, ampdu, drop, eapol;
 			uint32_t control, txControl;
@@ -1215,10 +1202,10 @@ protected:
 
 			buffer->dataOffset = 28;
 			data = buffer->data;
-			loopback = NULL;
+			key = NULL;
 			built = wlanTxBuildFrame(&build, buffer, &drop, &eapol, 0,
 						 descriptor->header.wire.packetType[0], ampdu == 1,
-						 &loopback, qos);
+						 &key, qos);
 			if (drop != 0 || built == NULL)
 				goto complete;
 			if (eapol != 0 && lowRate != 0 && MAC_TX_RATE_INDEX(request->rate) > 3) {
@@ -1229,8 +1216,8 @@ protected:
 			rate = MAC_TX_RATE_INDEX(request->rate);
 			txControl = rate | 0x10 | control >> 5 << 5;
 			macTxDescriptor.control = txControl;
-			if (loopback != NULL)
-				tx.loopback = loopback;
+			if (key != NULL)
+				tx.key = key;
 			tx.frame = built;
 			__aeabi_uwrite4((int)txControl, &tx.descriptor.priority);
 			tx.queue = 0;

@@ -322,6 +322,7 @@ struct __attribute__((may_alias)) WlanHtElements {
 };
 
 /* WlanConnection.flags */
+#define WLAN_CONN_ENCRYPTED		0x01	/* a frame without a key is dropped (inferred from wlanTxBuildFrame()) */
 #define WLAN_CONN_JOIN_OPEN		0x02	/* the join ended without privacy */
 #define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
 #define WLAN_CONN_WAPI			0x10
@@ -437,7 +438,7 @@ struct WlanConnection {
 	uint32_t reserved660;
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
-	uint8_t *snmpBssParams[2];	/* [0]: HostCmd 0x37's, [1]: 0x36's and 0x5e's; each +28 is its block */
+	uint8_t *keyBlocks[2];		/* [0]: the group key's (HostCmd 0x37's), [1]: the pairwise key's (0x36's and 0x5e's); each +28 is its cipher_key_t */
 	union {
 		uint8_t *radioParams;	/* the radio configuration's block this connection's SNMP values use */
 		eapolHskData_t *hskData;	/* an access point's peer: the handshake's nonce and key */
@@ -509,7 +510,7 @@ _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local addr
 _Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
 _Static_assert(offsetof(struct WlanConnection, rtsThreshold) == 158, "SNMP MIB values");
 _Static_assert(offsetof(struct WlanConnection, localName) == 744, "AMP link name");
-_Static_assert(offsetof(struct WlanConnection, snmpBssParams) == 672, "SNMP BSS parameters");
+_Static_assert(offsetof(struct WlanConnection, keyBlocks) == 672, "SNMP BSS parameters");
 _Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beacon miss threshold");
 _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
