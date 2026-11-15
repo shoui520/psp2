@@ -281,6 +281,9 @@ void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, u
 			  uint32_t fifth);				/* 0x471f2 */
 void btLmpLcVerifyPacket(unsigned int slot, uint32_t first, uint32_t second);	/* 0x47264 */
 void btLmpLcSelectPacket(unsigned int link);			/* 0x47336 */
+void btLmpLcAdjustPacket(uint32_t first, uint8_t *record, uint32_t third, uint32_t fourth,
+			 uint32_t fifth);				/* 0x473ea */
+void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step);	/* 0x47402 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

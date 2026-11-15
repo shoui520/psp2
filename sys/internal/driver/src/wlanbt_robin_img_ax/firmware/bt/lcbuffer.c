@@ -2105,3 +2105,20 @@ void btLmpLcSelectPacket(unsigned int link)
 		record[8] = 0;
 	}
 }
+
+/* The ROM's record step, after which the record's pending byte is clear. */
+void btLmpLcAdjustPacket(uint32_t first, uint8_t *record, uint32_t third, uint32_t fourth,
+			 uint32_t fifth)
+{
+	btLdrRomManageState(first, record, third, fourth, fifth);
+	record[24] = 0;
+}
+
+/* The record's clock (26 bits) moves on by the step, its pending byte cleared. */
+void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step)
+{
+	unsigned int ticks = *step;
+
+	record[24] = 0;
+	*(BtWord *)record = (*(BtWord *)record + ticks) & 0x3ffffff;
+}
