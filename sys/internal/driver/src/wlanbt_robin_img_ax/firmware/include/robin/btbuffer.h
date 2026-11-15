@@ -51,7 +51,8 @@ struct BtHostPolicy {
 	uint32_t flags;				/* bit n: step n of the role switch is done here */
 	uint8_t reserved36;
 	int8_t step;				/* the step of the role switch */
-	uint8_t reserved38[2];
+	uint8_t reserved38;
+	uint8_t pending;			/* 1: a step is being handled */
 	uint8_t busy;
 	uint8_t reserved41[3];
 };
@@ -72,7 +73,16 @@ extern struct BtRateHistory btRateHistory[8];			/* 0x59f08 */
 extern struct BtHostPolicy btHostPolicy;			/* 0x400bb80 */
 extern struct BtDeviceContext btDeviceContext;			/* 0x400c7b4 */
 extern uint32_t btPeerPolicy;					/* 0x400f62c: the peer's flags of the role switch */
-extern uint32_t (*btRoleSource)(uint32_t source);		/* 0x400f03c */
+extern uint32_t (*btRoleSource)(uint8_t *source);		/* 0x400f03c */
+extern int (*btRoleCommand)(int8_t factor, int allow);		/* 0x400f08c */
+extern int (*btLinkLimitQuery)(void);				/* 0x400f0d0 */
+extern void (*btLinkLimitPacket)(void);				/* 0x400f0e0 */
+extern void (*btLinkLimitFrame)(void);				/* 0x400f0e4 */
+extern uint8_t btPeerPending;					/* 0x400f614 */
+extern uint8_t btPeerLimit;					/* 0x400f616 */
+extern uint8_t btHostSetting;					/* 0x400bd43 */
+extern uint8_t btHostRoleNow;					/* 0x400bd4e */
+extern uint8_t btHostRoleWanted;				/* 0x400bd4f */
 extern uint32_t (*btRoleRecord)(uint8_t *record);		/* 0x400f038 */
 extern void (*btRoleUpdate)(uint32_t from, uint32_t to);	/* 0x400f050 */
 extern int (*btRoleAllowed)(void);				/* 0x400f014 */
@@ -125,5 +135,6 @@ int btLmpLcNotifyBuffer(uint8_t *message);			/* 0x45926 */
 int btLmpLcFormatBuffer(const uint8_t *flags);			/* 0x45a56 */
 void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
 int btLmpLcTrackBuffer(void);					/* 0x45c00 */
+void btLmpLcManageBuffer(int step);				/* 0x45dd4 */
 
 #endif /* ROBIN_BTBUFFER_H */

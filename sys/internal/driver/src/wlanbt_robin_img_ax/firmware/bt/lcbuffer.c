@@ -808,7 +808,7 @@ void btLmpLcInspectBuffer(unsigned int link, unsigned int role)
  */
 int btLmpLcTrackBuffer(void)
 {
-	uint32_t source = btLcoRomRecordState();
+	uint8_t *source = btLcoRomRecordState();
 	uint8_t *record = btLcoRomFilterState();
 	uint32_t from;
 	uint32_t to;
@@ -893,4 +893,61 @@ int btLmpLcTrackBuffer(void)
 	if (record[2] == 1 && btHostPolicy.step < 14)
 		record[3] = 0;
 	return local;
+}
+
+/*
+ * The ROM's handler of a role switch step, with steps 2 and 11 taken here: step 2 asks the host
+ * link's limits (when the host has any), step 11 the role command; a step not yet answered is
+ * run again and marks the peer's flag (bit 2, bit 11) while the switch is busy.
+ */
+void btLmpLcManageBuffer(int step)
+{
+	const uint8_t *state = btLcoRomAdjustState(step);
+
+	if (step == 2) {
+		const uint8_t *source = btLcoRomRecordState();
+		const uint8_t *record = btLcoRomFilterState();
+
+		btHostPolicy.pending = 1;
+		btHostPolicy.busy = 1;
+		btPeerPending = 0;
+		if (btHostFlags != 0) {
+			if (btLinkLimitQuery() == -1) {
+				unsigned int any = source[0] != 0 || source[1] != 0 || record[0] != 0;
+
+				if (btHostSetting != any || btHostRoleWanted != btHostRoleNow)
+					btLinkLimitPacket();
+				else if (btRoleAllowed() == 1)
+					btLinkLimitFrame();
+			}
+			if (btPeerPending != 0)
+				return;
+		}
+		btHostPolicy.step--;
+		if (btHostPolicy.busy == 1)
+			btPeerPolicy |= 4;
+	} else if (step == 11) {
+		unsigned int factor;
+		int allow;
+
+		btHostPolicy.pending = 1;
+		btHostPolicy.busy = 1;
+		btPeerPending = 1;
+		factor = btLinkSlotFactor;
+		if (btHostPolicy.state == 14)
+			allow = btPeerLimit > factor;
+		else if (btHostPolicy.state == 0x37 && state[0] != 0 && btPeerLimit < factor)
+			allow = 0;
+		else
+			allow = 1;
+		if (btRoleCommand((int8_t)factor, allow) != 0)
+			btPeerPending = 0;
+		else if (btPeerPending != 0)
+			return;
+		btHostPolicy.step--;
+		if (btHostPolicy.busy == 1)
+			btPeerPolicy |= 0x800;
+	} else {
+		btLcoRomInspectState(step);
+	}
 }
