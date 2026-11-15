@@ -2060,3 +2060,48 @@ void btLmpLcVerifyPacket(unsigned int slot, uint32_t first, uint32_t second)
 done:
 	SLOT_REGISTER(link, 0) |= 0x400;
 }
+
+/*
+ * The link's slot clock moves on by its step (modulo 0x2d2, also into its slot register 12). When
+ * the link's status register 30 has bit 0 set, the record's kind comes from bits 1-3 (bit 2 set
+ * while the link controller's register 58 has 1 in bits 4-7); a link waiting for its sync keeps
+ * waiting only for kinds 0 and 4, and its report clock is dropped then. A pending report is sent
+ * as message 0x1f8: handle and kind, step, clock.
+ */
+void btLmpLcSelectPacket(unsigned int link)
+{
+	uint8_t *record = btLtsRomValidateState(0) + link * 40;
+	unsigned int status;
+
+	*(BtWord *)(record + 12) = *(BtWord *)(record + 28) + *(BtHalf *)(record + 20);
+	*(BtHalf *)(record + 20) = (unsigned int)(*(BtHalf *)(record + 20) + *(BtHalf *)(record + 10)) % 0x2d2;
+	SLOT_REGISTER(link, 12) = *(BtHalf *)(record + 20);
+	record[39] = 0;
+	status = *(BtHalf *)(btLinkSlotStatus + link * 32 + 30);
+	if (status & 1) {
+		unsigned int kind = (status >> 1) & 7;
+		uint8_t pending;
+
+		if (((LINK_HALF(58) >> 4) & 0xf) == 1)
+			kind |= 4;
+		record[39] = romSlotKindTable[kind];
+		pending = btLinkSyncPending;
+		if (pending & (1u << link)) {
+			if (kind & 3)
+				btLinkSyncPending = pending & ~(1u << link);
+			else
+				*(BtWord *)(record + 12) = 0;
+		}
+	}
+	if (record[8] != 0 && *(BtWord *)(record + 12) != 0) {
+		uint8_t *message = osa_MsgAlloc(12);
+
+		*(BtWord *)message = 0x1f8;
+		*(BtHalf *)(message + 4) = *(BtHalf *)(record + 2) | record[39] << 12;
+		*(BtHalf *)(message + 6) = *(BtHalf *)(record + 10);
+		*(BtWord *)(message + 8) = *(BtWord *)(record + 12);
+		osa_MsgSend((void **)&message, btQueueSyncReport);
+		*(BtWord *)(record + 12) = 0;
+		record[8] = 0;
+	}
+}

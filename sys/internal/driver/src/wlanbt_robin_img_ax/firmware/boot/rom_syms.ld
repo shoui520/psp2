@@ -314,6 +314,10 @@ PROVIDE(romStateActiveTable     = 0x03f419e0);
 /* The controller's variables in the ROM's DTCM (0x0400a700 - 0x0400fc00); the image only reads and hooks them. */
 PROVIDE(btLinkSlotRegisters          = 0x0400f93c);
 PROVIDE(btLinkControlWord            = 0x0400f940);
+PROVIDE(btLinkSlotStatus             = 0x0400f944);
+PROVIDE(btLinkSyncPending            = 0x0400f8ce);
+PROVIDE(btQueueSyncReport            = 0x0400f720);
+PROVIDE(romSlotKindTable             = 0x03f41f18);
 PROVIDE(btLinkContext                = 0x0400f954);
 PROVIDE(btLinkRecord                 = 0x0400f95c);
 PROVIDE(btLinkEvent                  = 0x0400f948);

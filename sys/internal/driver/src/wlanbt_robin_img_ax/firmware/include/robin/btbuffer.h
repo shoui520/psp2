@@ -146,6 +146,10 @@ struct BtLinkSession {
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
 extern uint8_t *btLinkSlotRegisters;				/* 0x400f93c: 32 bytes of registers per link */
 extern uint16_t *btLinkControlWord;				/* 0x400f940 */
+extern uint8_t *btLinkSlotStatus;				/* 0x400f944: 32 bytes of status registers per link */
+extern uint8_t btLinkSyncPending;				/* 0x400f8ce: a bit per link */
+extern uint32_t btQueueSyncReport;				/* 0x400f720: where message 0x1f8 goes */
+extern const uint8_t romSlotKindTable[8];			/* ROM 0x3f41f18 */
 extern uint16_t btTargetHold;					/* 0x400de10: non-zero: no target slot is taken (set by the ROM) */
 extern uint8_t btTargetFits;					/* 0x400de59: 1: the queued links' intervals fit the slots */
 extern uint16_t btTargetLongest;				/* 0x400de5a: the longest interval of the queued links */
@@ -276,6 +280,7 @@ void btLmpLcClearPacket(uint32_t clock, uint32_t extra);	/* 0x4712e */
 void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, uint32_t fourth,
 			  uint32_t fifth);				/* 0x471f2 */
 void btLmpLcVerifyPacket(unsigned int slot, uint32_t first, uint32_t second);	/* 0x47264 */
+void btLmpLcSelectPacket(unsigned int link);			/* 0x47336 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
