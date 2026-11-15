@@ -9,6 +9,7 @@
 #define ROBIN_AMP_H
 
 #include <stdint.h>
+#include "robin/btcontext.h"
 #include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
@@ -258,8 +259,6 @@ int ampHciEnhancedFlushComplete(uint16_t opcode, OsaBuffer *command);
 
 char ampHexDigit(uint32_t nibble);
 
-/* Link controller (bt/lmp, not converted). */
-void btLmpLcAcquireContext(int a1);
 
 /* amp/pal.c */
 int ampPalInit(void);

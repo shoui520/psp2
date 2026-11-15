@@ -154,10 +154,6 @@ extern struct OsaMsgList wlanHostEventQueue;
 void sdioDevicesInit(void);
 
 /* Not converted yet; the names are provisional. Addresses are those of the 4.00 image. */
-int btLmpLcSetupContext(int amp, uint8_t *packet);		/* 0x435b0 */
-int btLmpLcClearContext(int amp, uint8_t *packet);		/* 0x435d0 */
-int btLmpLcConvertContext(int amp, uint8_t *packet);		/* 0x435e4 */
 void uapSqramAdjustEntry(unsigned int pin, unsigned int mask);	/* SQRAM 0xc0009b38, via the veneer at 0x53064 */
-extern struct OsaBufferPool btPacketPool;			/* SQRAM 0xc000113c */
 
 #endif /* ROBIN_SDIODEV_H */

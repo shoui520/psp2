@@ -24,12 +24,13 @@ struct BtLcContext {
 
 /* The state of one of the controller's two targets (0 the Bluetooth device, 1 the AMP), 16 bytes. */
 struct BtLcTarget {
-	uint8_t reserved0;
-	uint8_t flag;			/* cleared once the target was released */
-	uint8_t reserved2[2];
+	uint8_t enabled;		/* the release is armed (event 1 of btLmpLcReleaseContext) */
+	uint8_t flag;			/* the target was asked to release and is not yet */
+	uint8_t pending;		/* a release was selected by btLmpLcSelectContext() */
+	uint8_t idle;			/* the host transport was told to go idle for it */
 	uint8_t mode;			/* 0xff: the target is released without power-save handshake */
 	uint8_t delay;			/* milliseconds the target needs, 0xff: none */
-	uint8_t reserved6[2];
+	uint16_t timeout;		/* milliseconds after which the release is due, 0: at once */
 	uint32_t since;			/* the event clock when the delay began */
 	uint8_t phase;			/* 3: released, waiting for btLmpLcInspectContext() */
 	uint8_t reserved13[3];
@@ -62,6 +63,15 @@ int btLmpLcScheduleContext(void);				/* 0x43208 */
 int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length);	/* 0x4324c */
 void btLmpLcInspectContext(int link, int notify);		/* 0x432ea */
 int btLmpLcTrackContext(int link);				/* 0x43348 */
+int btLmpLcManageContext(int link);				/* 0x433f0 */
+void btLmpLcAcquireContext(int link);				/* 0x43436 */
+void btLmpLcReleaseContext(int link, int event, int argument);	/* 0x4347c */
+int btLmpLcSetupContext(int link, const uint8_t *event);	/* 0x435b0 */
+int btLmpLcClearContext(int link, const uint8_t *event);	/* 0x435d0 */
+int btLmpLcConvertContext(int link, const uint8_t *event);	/* 0x435e4 */
+int btLmpLcVerifyContext(int link);				/* 0x435f8 */
+int btLmpLcSelectContext(int link, int kind, const uint8_t *request);	/* 0x43608 */
+int btLmpLcAdjustContext(int link);				/* 0x436c8 */
 int btLmpLcQueryContext(int link, const uint8_t *event);	/* 0x42f96 */
 int btLmpLcResetContext(int link, const uint8_t *event);	/* 0x42ff2 */
 void btLmpLcSyncContext(void);					/* 0x43030 */

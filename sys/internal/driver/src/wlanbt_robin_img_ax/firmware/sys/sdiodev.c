@@ -17,6 +17,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/btpool.h"
 #include "robin/amp.h"
 #include "robin/btrom.h"
 #include "robin/buffer.h"

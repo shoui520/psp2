@@ -174,7 +174,6 @@ extern const uint8_t rfCalibTimingA[];			/* 0x53d7e, per clock index */
 extern const uint8_t rfCalibTimingB[];			/* 0x53d92 */
 extern const uint8_t rfCalibTimingC[];			/* 0x53d88 */
 int btLmpLcBuildContext(uint32_t *remaining);		/* 0x42f4e */
-int btLmpLcManageContext(int link);			/* 0x433f0 */
 int btLmpLcUpdateDescriptor(void);			/* 0x49376 */
 void btLmpLcSyncContext(void);				/* 0x43030 */
 int btHccRomHandleState(void);				/* ROM, via 0x52c54 */

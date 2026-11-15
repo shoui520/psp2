@@ -8,6 +8,7 @@
  */
 #include <stdarg.h>
 #include <stddef.h>
+#include "robin/btcontext.h"
 #include "robin/amp.h"
 #include "robin/btrom.h"
 #include "robin/osa.h"
@@ -16,8 +17,6 @@
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
-/* Link controller, WLAN and coexistence code the AMP layer calls (not converted). */
-void *btLmpLcFormatContext(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4);
 
 /* Offsets into the OSA buffers and messages used throughout. */
 #define HCI_COMMAND_OPCODE(data)	((data)[0] | ((data)[1] << 8))

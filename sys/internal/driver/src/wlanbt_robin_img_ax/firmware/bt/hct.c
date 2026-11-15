@@ -7,6 +7,7 @@
  * The filename and all role names are inferred; no source name survives.
  */
 #include <stddef.h>
+#include "robin/btcontext.h"
 #include "robin/btrom.h"
 #include "robin/hct.h"
 #include "robin/mdev.h"
@@ -39,9 +40,6 @@ extern uint32_t romHctCoexMode;
 extern uint32_t romCoexPrimaryFlag;
 
 /* BT link controller RAM patches (bt/lmp, not converted). */
-int btLmpLcVerifyContext(int a1);
-void btLmpLcAcquireContext(int a1);
-void btLmpLcReleaseContext(uint32_t type, uint32_t a, uint32_t b);
 void *btLmpLcComputeEntry(uint32_t a1);
 void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t a4);
 void btLmpLcConfigureDescriptor(void);
