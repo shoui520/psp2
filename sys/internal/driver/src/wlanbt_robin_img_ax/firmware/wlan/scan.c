@@ -8,6 +8,7 @@
  * the structures are inferred.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include "robin/hostps.h"

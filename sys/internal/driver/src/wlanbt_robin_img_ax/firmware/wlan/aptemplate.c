@@ -10,6 +10,7 @@
  * transmit data, where the data offset points.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"

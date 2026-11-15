@@ -30,6 +30,9 @@ unsigned int romLibAcquireState(unsigned int a, unsigned int b, unsigned int ind
 void romLibDispatchState(void);			/* 0x03f3a3b5: first of the three calls that set the MAC's channel timing up */
 void romLibParseState(const void *settings);	/* 0x03f3a3ed: takes two or four bytes (a register and its value) */
 void romLibResolveState(void);			/* 0x03f3a521: before the radio is retuned */
+void romLibManageState(const uint8_t *address);	/* 0x03f3a599: the MAC address the radio answers to */
+int romLibFormatState(void);			/* 0x03f3a55d */
+void romLibConfigureContext(unsigned int index, unsigned int value);	/* 0x03f3a865 */
 int romLibScheduleState(void);			/* 0x03f3a52d: after the host changes the connection's keys or rates */
 int romLibApplyState(void);			/* 0x03f3a515: after it */
 void romLibScheduleContext(void);		/* 0x03f3a96b */

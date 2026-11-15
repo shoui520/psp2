@@ -30,15 +30,23 @@ struct WlanPsPeerState {
 	uint8_t beaconTimestamp[8];	/* the TSF of the last beacon heard (a P2P group owner's) */
 	uint32_t beaconTimerLow;	/* the MAC timer when it was heard */
 	uint32_t beaconTimerHigh;
-	uint8_t reserved16[14];
+	uint32_t configuredMask;	/* what the host has configured of the group; the group starts when every bit p2pDirectAcquireState() requires is set */
+	uint8_t reserved20[4];
+	uint16_t stage;			/* 1 when the group starts (inferred: the negotiation's stage) */
+	uint16_t stageLimit;		/* 3 */
+	uint8_t reserved28[2];
 	uint8_t p2pFlags;		/* bit 1: the P2P element names the device address; bit 2: a P2P group owner's beacon carries the P2P element */
-	uint8_t reserved31[10];
+	uint8_t tieBreaker;		/* rand() & 1 when the group starts (the GO Intent tie-breaker bit) */
+	uint8_t reserved32[9];
 	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
-	uint8_t reserved42;
+	uint8_t p2pStartedPeers;	/* cleared when the group starts */
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t noaMode;		/* 1: the Notice of Absence has a CTWindow, 2: it has absence periods */
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
-	uint8_t reserved46[26];
+	uint8_t reserved46;
+	uint8_t ssidPending;		/* 1: the group's SSID is still to be made ("DIRECT-" and two random characters) */
+	uint8_t channelShared;		/* an infrastructure connection or an access point is up: the group shares its channel */
+	uint8_t reserved49[23];
 	uint32_t p2pGroupActive;	/* nonzero while the P2P group is up (inferred: the state machine reads it when it enters or leaves a state) */
 	uint8_t reserved76[77];
 	uint8_t noaAttribute[31];	/* the Notice of Absence attribute of the last beacon: ID, length, index, CTWindow, descriptors */
@@ -48,31 +56,72 @@ struct WlanPsPeerState {
 		uint8_t id;		/* the attribute the P2P element of a probe request carries, when its length is not 0 */
 		uint8_t length[2];
 	} p2pAttribute;
-	uint8_t reserved192[934];
+	uint8_t reserved192[9];
+	uint8_t interfaceAddress[6];	/* the group's P2P interface address */
+	uint8_t reserved207[7];
+	uint8_t defaultChannel;		/* the channel the group's connection starts on */
+	uint8_t reserved215[7];
+	uint8_t requestedChannel;	/* the host's: when nonzero, groupChannel takes it */
+	uint8_t reserved223[846];
+	uint8_t groupInfoType;		/* the group information p2pSqramConvertContext() writes starts here */
+	uint16_t groupInfoLength;	/* the SSID's length (15: "DIRECT-" and eight characters) */
+	uint8_t reserved1072[6];
+	uint8_t groupSsid[32];		/* "DIRECT-xy..." */
+	uint8_t reserved1110[16];
 	uint16_t p2pWindowStart;	/* inferred: the start of the group owner's window the scan engine measures a dwell against (TU) */
 	uint16_t p2pWindowEnd;		/* inferred: its end; the dwell is the difference */
-	uint8_t reserved1130[36];
+	uint8_t reserved1130[30];
+	uint8_t groupAddress[6];	/* the BSSID of the group */
 	struct {
 		uint8_t id;			/* 0: the Status attribute */
 		uint8_t length[2];
 		uint8_t value;			/* 0: success, 3: limit reached */
 	} p2pStatus;
-	uint8_t reserved1170[18];
+	uint8_t reserved1170[6];
+	uint32_t groupSettingD;		/* 255 when the group starts */
+	uint8_t reserved1180[8];
 	uint8_t p2pBssActive;		/* 1: the channel of the group owner is the one the radio is on */
-	uint8_t reserved1189[3];
-	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on */
-	uint8_t reserved1193[31];
+	uint8_t reserved1189;
+	uint8_t groupStarted;		/* cleared when the group starts */
+	uint8_t reserved1191;
+	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on; 255: none */
+	uint8_t reserved1193[15];
+	uint32_t groupSettingA;		/* 1 when the group starts */
+	uint32_t groupSettingB;		/* 1 */
+	uint32_t groupSettingC;		/* 0 */
+	uint32_t ssidFixed;		/* nonzero: the host supplied the group's SSID, which is not generated */
 	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
-	uint8_t reserved1228;
+	uint8_t groupChannel;		/* the channel the group is on */
 	uint8_t p2pWindowValid;		/* inferred: nonzero while p2pWindowStart and p2pWindowEnd hold a window */
 	uint8_t reserved1230[2];
-	uint8_t p2pIeState[4];		/* kept by the P2P code from custom IE slot 1 */
-	uint8_t reserved1236[84];
+	union {
+		uint8_t p2pIeState[4];	/* kept by the P2P code from custom IE slot 1 */
+		uint8_t *customIe[19];	/* the custom information elements the group's frames carry, one per bit of the host's mask */
+	};
+	uint8_t reserved1308[12];
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
-	uint8_t reserved1326[30];
+	uint8_t reserved1326[14];
+	uint32_t groupSettingE;		/* 1 when the group starts */
+	uint32_t groupSettingF;		/* 256 */
+	uint32_t groupSettingG;		/* 5 */
+	uint32_t groupSettingH;		/* 1 */
 	uint8_t p2pGroupId[6];		/* the group owner a beacon names */
 };
 
+_Static_assert(offsetof(struct WlanPsPeerState, tieBreaker) == 31, "P2P tie-breaker");
+_Static_assert(offsetof(struct WlanPsPeerState, ssidPending) == 47, "P2P SSID pending");
+_Static_assert(offsetof(struct WlanPsPeerState, interfaceAddress) == 201, "P2P interface address");
+_Static_assert(offsetof(struct WlanPsPeerState, requestedChannel) == 222, "P2P requested channel");
+_Static_assert(offsetof(struct WlanPsPeerState, groupInfoType) == 1069, "P2P group information");
+_Static_assert(offsetof(struct WlanPsPeerState, groupSsid) == 1078, "P2P group SSID");
+_Static_assert(offsetof(struct WlanPsPeerState, groupAddress) == 1160, "P2P group address");
+_Static_assert(offsetof(struct WlanPsPeerState, groupSettingD) == 1176, "P2P group setting");
+_Static_assert(offsetof(struct WlanPsPeerState, groupStarted) == 1190, "P2P group started");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
+_Static_assert(offsetof(struct WlanPsPeerState, ssidFixed) == 1220, "P2P fixed SSID");
+_Static_assert(offsetof(struct WlanPsPeerState, groupChannel) == 1228, "P2P group channel");
+_Static_assert(offsetof(struct WlanPsPeerState, customIe) == 1232, "P2P custom IEs");
+_Static_assert(offsetof(struct WlanPsPeerState, groupSettingE) == 1340, "P2P group setting E");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pOptions) == 188, "P2P options");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pAttribute) == 189, "P2P attribute");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pStatus) == 1166, "P2P status");

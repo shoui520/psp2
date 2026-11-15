@@ -243,7 +243,8 @@ struct WlanConnectionInfo {
 	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
 	uint8_t reserved8[6];
 	uint8_t rates[14];		/* the BSS's rate set (supported rates, with the basic bit) */
-	uint8_t reserved28[2];
+	uint8_t reserved28;
+	uint8_t rateCount;		/* 13 for a P2P group */
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
@@ -272,10 +273,15 @@ struct WlanConnectionInfo {
 	uint8_t ready;
 	uint8_t reserved357[3];
 	uint32_t uapsdEnabled;		/* 1: the access point supports U-APSD: a peer's QoS Info can request it (inferred) */
-	struct WlanApChannel channels[18];	/* the channels to start on */
-	uint8_t reserved490[6];
+	struct WlanApChannel channels[14];	/* the channels to start on */
+	uint8_t ssid[32];		/* the BSS's SSID (a P2P group's: "DIRECT-xy...") */
+	uint8_t ssidLength;
+	uint8_t dtimPeriod;		/* the BSS's DTIM period */
 	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
-	uint8_t reserved498[16];
+	uint8_t bssid[6];		/* the BSS's address (a P2P group's: the P2P interface address) */
+	uint16_t rtsThreshold;		/* the RTS threshold the BSS starts with (2347: off) */
+	uint16_t fragThreshold;		/* the fragmentation threshold (2346) */
+	uint8_t reserved508[6];
 	struct {
 		uint8_t id;		/* 74 */
 		uint8_t length;		/* 14 */
@@ -678,6 +684,10 @@ _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subs
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
 _Static_assert(offsetof(struct WlanConnectionInfo, channelCount) == 132, "info channel count");
 _Static_assert(offsetof(struct WlanConnectionInfo, channels) == 364, "info channels");
+_Static_assert(offsetof(struct WlanConnectionInfo, ssid) == 462, "info SSID");
+_Static_assert(offsetof(struct WlanConnectionInfo, bssid) == 498, "info BSSID");
+_Static_assert(offsetof(struct WlanConnectionInfo, apRsn.PSKValue) == 313, "info pre-shared key");
+_Static_assert(offsetof(struct WlanConnectionInfo, htOperation) == 100, "info HT operation");
 _Static_assert(sizeof(struct WlanApChannel) == 7, "access point channel");
 _Static_assert(offsetof(struct WlanConnectionInfo, connection) == 576, "info connection");
 _Static_assert(offsetof(struct WlanConnectionInfo, machine.root) == 560, "machine root");

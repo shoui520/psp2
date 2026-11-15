@@ -9,6 +9,7 @@
  * hands it events (macMgmtSetupContext(), wlan/chanctx.c).
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
 #include "robin/apsta.h"
@@ -77,8 +78,6 @@ struct WlanDirectContext {
 unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
 				   const void *attributes, unsigned int include,
 				   unsigned int exclude);				/* 0x402ea */
-struct WlanDirectContext *p2pDirectSelectState(struct WlanConnection *connection,
-					       WlanWirelessFrame *frame);		/* 0x40090 */
 const void *p2pDirectFormatTable(uint8_t *length);					/* 0x42374 */
 int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
