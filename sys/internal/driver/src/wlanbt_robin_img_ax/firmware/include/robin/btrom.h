@@ -103,6 +103,7 @@ void btLtsRomResetState(struct BtDeviceProfile *profile, struct BtDeviceProfile 
 uint16_t btLcoRomScheduleContext(int link);
 void btLcoRomNotifyContext(int link);
 void btLcoRomSetupContext(int link);
+int btLcoRomAcquireContext(int link);
 
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);

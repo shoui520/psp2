@@ -37,12 +37,25 @@ extern uint16_t btTableModeDescriptor;				/* 0x552a4 */
 extern uint16_t btTableModeQueue;				/* 0x552a6 */
 extern uint16_t btTablePacketType;				/* 0x552a8: index into romStateActiveTable */
 extern uint16_t btTablePacketLength;				/* 0x552aa */
+extern uint8_t btTableRetries[8];				/* 0x55330: each link's missed slots */
 extern uint8_t btTableLinkModes[8];				/* 0x55338: each link's mode, 0 to 3 */
+extern uint32_t btTableModeSlot;				/* 0x552c8: the clock of the next mode 9 slot */
+
+/* The ROM's event of a due slot. */
+struct BtSlotEvent {
+	struct BtDeviceProfile *profile;
+	uint32_t reserved4;
+	uint8_t state;
+};
 
 extern const uint16_t romStateActiveTable[];			/* ROM 0x03f419e0: the slots of each packet type */
 extern uint8_t btLinkPacketType;				/* 0x400f710 */
 extern uint8_t btSlotQueueIndex[];				/* 0x400f99c: the queue of each state */
 extern struct BtSlotQueue btSlotQueues[];			/* 0x400dcdc */
+extern const uint8_t *btPacketTypes;				/* 0x400f968: 12 bytes per type, halfword 4 its length */
+extern uint8_t btTargetStatus;					/* 0x400de53 */
+extern uint16_t btTargetNode;					/* 0x400de56 */
+extern uint8_t btTargetSlot;					/* 0x400de58: the retries a link is allowed */
 
 void btLmpLcHandleTable(int link, uint16_t length);		/* 0x4414e */
 struct BtSourceState *btLmpLcProcessTable(int link);		/* 0x4415c */
@@ -53,5 +66,9 @@ void btLmpLcValidateTable(struct BtDeviceProfile *profile, struct BtDeviceProfil
 			  uint8_t state);			/* 0x44224 */
 void btLmpLcPrepareTable(struct BtDeviceProfile *profile, uint32_t clock, uint8_t state);	/* 0x4424c */
 int btLmpLcDispatchTable(int link);				/* 0x4426a */
+void btLmpLcParseTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned int kind);	/* 0x44292 */
+int btLmpLcBuildTable(struct BtDeviceProfile *profile, uint32_t clock);	/* 0x4438e */
+void btLmpLcComputeTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned int kind);	/* 0x44426 */
+void btLmpLcQueryTable(const struct BtSlotEvent *event, uint32_t clock);	/* 0x44524 */
 
 #endif /* ROBIN_BTTABLE_H */

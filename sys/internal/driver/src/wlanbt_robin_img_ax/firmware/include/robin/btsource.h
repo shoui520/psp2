@@ -67,10 +67,18 @@ struct BtDeviceProfile {
 	uint8_t adjust;				/* 1: the rates are to be taken again */
 	uint8_t reserved26[2];
 	uint32_t due;				/* the event clock the link's next slot is due at */
-	uint8_t reserved32[20];
+	uint8_t reserved32[8];
+	uint32_t since;				/* the event clock the link last went active at */
+	uint16_t window;			/* the ticks of the link's current window */
+	uint8_t reserved46[2];
+	uint8_t offset;				/* the ticks from the clock to a mode 5 slot */
+	uint8_t shortWindow;			/* the window of a mode 5 slot */
+	uint8_t longWindow;			/* the window of a mode 9 slot */
+	uint8_t hold;				/* non-zero: a mode 5 slot waits for the link's interval */
 	uint8_t limit;				/* non-zero: the ticks to give the link instead */
-	uint8_t reserved53[3];
-	uint32_t priority;			/* the queue order among profiles due at once */
+	uint8_t reserved53;
+	uint16_t peer;				/* the link a slot is shared with, 0xffff: none */
+	uint32_t queued;			/* the event clock the profile was queued at */
 	uint8_t reserved60[8];
 	uint8_t state;				/* 5 or 9: the link's mode */
 	uint8_t reserved69[3];

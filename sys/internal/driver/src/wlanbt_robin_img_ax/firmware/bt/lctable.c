@@ -32,6 +32,7 @@ uint16_t btTableModeDescriptor __attribute__((section(".itcm.rw"))) = 4;	/* 0x55
 uint16_t btTableModeQueue __attribute__((section(".itcm.rw")));			/* 0x552a6 */
 uint16_t btTablePacketType __attribute__((section(".itcm.rw")));		/* 0x552a8 */
 uint16_t btTablePacketLength __attribute__((section(".itcm.rw")));		/* 0x552aa */
+uint8_t btTableRetries[8] __attribute__((section(".itcm.rw")));			/* 0x55330 */
 uint8_t btTableLinkModes[8] __attribute__((section(".itcm.rw")));		/* 0x55338 */
 
 /* A packet was sent on the link: its type (from the ROM) and length are kept for btLmpLcProcessTable(). */
@@ -115,14 +116,14 @@ __attribute__((noinline)) void btLmpLcValidateTable(struct BtDeviceProfile *prof
 	while ((node = *link) != NULL) {
 		if ((int32_t)(node->due - clock) > 0)
 			break;
-		if (node->priority > profile->priority)
+		if (node->queued > profile->queued)
 			break;
 		link = &node->next;
 	}
 	btLtsRomResetState(profile, link);
 }
 
-void btLmpLcPrepareTable(struct BtDeviceProfile *profile, uint32_t clock, uint8_t state)
+__attribute__((noinline)) void btLmpLcPrepareTable(struct BtDeviceProfile *profile, uint32_t clock, uint8_t state)
 {
 	btLmpLcValidateTable(profile, &btSlotQueues[btSlotQueueIndex[state]].head, clock, state);
 }
@@ -140,5 +141,167 @@ int btLmpLcDispatchTable(int link)
 		return btLmpLcCheckTable(btTableModeMask, link);
 	default:
 		return 0;
+	}
+}
+
+/*
+ * The slot of a link that was due ended: mode 5 or 9 by which windows it has, at the ticks of its
+ * offset (or after its interval, when it holds). A link outside its mode's mask gets its window and
+ * rate from the sample rates and is moved to the end of its window.
+ */
+void btLmpLcParseTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned int kind)
+{
+	unsigned int interval = profile->interval;
+	uint32_t start = profile->due;
+	unsigned int wait;
+
+	if (btLmpLcDispatchTable(profile->index) != 0) {
+		unsigned int offset;
+		unsigned int mode;
+		uint32_t at;
+
+		if (kind == 5) {
+			if (profile->longWindow != 0) {
+				profile->window = profile->longWindow;
+				offset = 0;
+				mode = 9;
+				if (btTableModeEntry == 0xff) {
+					btTableModeSlot = profile->longWindow + clock;
+					btTableModeEntry = btSlotQueueIndex[9] - 1;
+				}
+			} else {
+				offset = profile->offset;
+				profile->window = profile->shortWindow;
+				mode = 5;
+			}
+		} else {
+			if (profile->shortWindow != 0 || profile->hold != 0) {
+				mode = 5;
+				profile->window = profile->shortWindow;
+			} else {
+				mode = 9;
+				profile->window = profile->longWindow;
+			}
+			offset = profile->offset;
+		}
+		at = clock + offset;
+		if (mode == 5 && profile->hold != 0) {
+			at = profile->due + profile->interval;
+			if ((int32_t)(clock - at) > 0)
+				at = clock;
+		}
+		btLmpLcPrepareTable(profile, at, mode);
+		return;
+	}
+	wait = profile->window;
+	if (wait >= profile->span)
+		wait = profile->span;
+	if (profile->active == 0 && btLcoRomAcquireContext(profile->index) != 0)
+		profile->since = clock;
+	if ((int32_t)(profile->since + btTargetNode - clock) >= 0) {
+		unsigned int setting = profile->secondSetting;
+
+		interval = 0;
+		if (setting <= profile->firstSetting)
+			setting = profile->firstSetting;
+		profile->rate = (setting >> 1) + btTargetStatus;
+	}
+	if (btLmpLcCheckTable(btTableLinkMask, profile->index) == 0 && profile->active == 0 && btTableModeMask != 0)
+		profile->rate = 1;
+	btLtsRomApplyState(profile, start + wait + interval - 1, 9);
+}
+
+/*
+ * Whether the link has missed its slots: its packet type's length is over the target, it is the
+ * queue's head and late, or the ROM counts more retries than the target allows.
+ */
+int btLmpLcBuildTable(struct BtDeviceProfile *profile, uint32_t clock)
+{
+	int missed = 0;
+	struct BtDeviceProfile *head = btSlotQueues[btSlotQueueIndex[1]].head;
+	unsigned int index = profile->index;
+	const uint8_t *slot = romHctHostSlot[index];
+
+	if (*(const BtHalf *)(btPacketTypes + 12 * slot[2] + 4) > btTargetConfig &&
+	    clock - profile->queued > btTargetConfig)
+		missed = 1;
+	if (head != NULL && head->peer == index && (int32_t)(clock - profile->due) >= (int)btTargetConfig)
+		missed = 1;
+	if (slot[4] != 0 && btLcoRomManageContext(index) != 0) {
+		unsigned int retries = (uint8_t)(btTableRetries[profile->index] + 1);
+
+		btTableRetries[profile->index] = retries;
+		if (retries > btTargetSlot)
+			missed = 1;
+	}
+	if (head != NULL && head->interval == 1)
+		missed = 0;
+	return missed;
+}
+
+/* The link's slot is due at clock in the state (kind): it is scheduled again. */
+void btLmpLcComputeTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned int kind)
+{
+	uint32_t start = profile->due;
+	int quiet = 0;
+	int missed;
+	unsigned int adjust;
+
+	btLcoRomResetContext(profile->index);
+	missed = btLmpLcBuildTable(profile, clock);
+	if (btLmpLcDispatchTable(profile->index) != 0 && btLmpLcInspectEntry(btSource.packet, profile->index) == 0)
+		quiet = 1;
+	adjust = profile->adjust;
+	if ((missed | quiet | adjust) == 0)
+		return;
+	if ((int32_t)(clock - (start + profile->window)) < 0) {
+		uint32_t due;
+
+		if (btTableLinkModes[profile->index] != 1 || adjust == 0)
+			return;
+		due = profile->due;
+		btLtsRomQueryState(profile);
+		profile->adjust = 0;
+		if (profile->state == 5) {
+			btLtsRomApplyState(profile, profile->due, kind);
+		} else {
+			btLtsRomApplyState(profile, clock, kind);
+			profile->due = due;
+		}
+		return;
+	}
+	btLtsRomQueryState(profile);
+	if (missed != 0 && btLmpLcDispatchTable(profile->index) == 0) {
+		unsigned int setting;
+
+		profile->adjust = 0;
+		setting = profile->secondSetting > profile->firstSetting ? profile->secondSetting : profile->firstSetting;
+		profile->rate = setting > 1 ? setting >> 1 : 1;
+		if (profile->active == 0 && btSource.frame == 0 && btSource.header == 0)
+			clock += profile->interval;
+		btLtsRomApplyState(profile, clock, 6);
+		return;
+	}
+	if (btLmpLcInspectEntry(btSource.packet, profile->index) != 0) {
+		btLmpLcFilterEntry(profile, clock);
+		return;
+	}
+	profile->adjust = 0;
+	btLmpLcParseTable(profile, clock, kind);
+}
+
+/* The slot of the event's profile is due: it and every other link in the same state in the mode mask. */
+void btLmpLcQueryTable(const struct BtSlotEvent *event, uint32_t clock)
+{
+	struct BtDeviceProfile *owner = event->profile;
+	unsigned int link;
+
+	btLmpLcComputeTable(owner, clock, event->state);
+	for (link = 1; link < 8; link = (uint16_t)(link + 1)) {
+		struct BtDeviceProfile *profile = &btDeviceProfile[link];
+
+		if (profile->state == event->state && owner != profile &&
+		    btLmpLcInspectEntry(btTableModeMask, profile->index) != 0)
+			btLmpLcComputeTable(profile, clock, event->state);
 	}
 }
