@@ -2349,3 +2349,42 @@ int btLmpLcUpdateFrame(void *message)
 	}
 	return taken;
 }
+
+/* The ROM's link timeout setting; a link set to none without a timeout gets 50 first. */
+int btLmpLcConfigureFrame(unsigned int link, unsigned int value)
+{
+	uint8_t *links = btLscRomParseState(0);
+
+	if (value == 0 && *(BtWord *)(links + link * 248 + 60) == 0)
+		*(BtWord *)(links + link * 248 + 60) = 50;
+	return btLscRomDispatchState(link, value);
+}
+
+/* A link with a timeout running is reported (message 0x42, reason 0x17); returns 1 then. */
+int btLmpLcCheckFrame(unsigned int link)
+{
+	int reported = 0;
+
+	if (*(BtWord *)(btLscRomParseState(0) + link * 248 + 60) != 0) {
+		btLcoRomHandleContext(0x42, 0x17, link);
+		reported = 1;
+	}
+	return reported;
+}
+
+/*
+ * A device address for the ROM: handled at once when direct, else sent on to the link controller
+ * as message 4 (kind, then the six address bytes).
+ */
+int btLmpLcValidateFrame(uint8_t kind, const uint8_t *address, int direct)
+{
+	uint8_t *message;
+
+	if (direct != 0)
+		return btLcoRomParseContext(address, kind);
+	message = osa_MsgAlloc(12);
+	*(BtWord *)message = 4;
+	message[4] = kind;
+	__aeabi_memcpy(message + 5, address, 6);
+	return osa_MsgSend((void **)&message, btQueueLcCommand);
+}
