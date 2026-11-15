@@ -6,10 +6,17 @@
  */
 #include <stddef.h>
 #include "robin/btpool.h"
+#include "robin/btpower.h"
 #include "robin/btrom.h"
+#include "robin/clock.h"
 #include "robin/rfreg.h"
 #include "robin/rom.h"
+#include "robin/soc.h"
+#include "robin/socpower.h"
 #include "robin/sys.h"
+
+/* Bit of SOC_EVENT_ENGINE_GATE the radio set-up holds open. */
+#define EVENT_ENGINE_RADIO	(1u << 24)
 
 /* Where a buffer's data begins: after the allocator's header and the controller's own. */
 #define POOL_DATA_OFFSET	40
@@ -164,5 +171,117 @@ int btLmpLcSyncEntry(uint16_t reg, const uint16_t *data, uint32_t mask)
 	if ((status & 0x80) != 0)
 		result = 0;
 	rfBusLeave1350();
+	return result;
+}
+
+/*
+ * Brings the radio up from the tables: the registers of the level state, the list of further words,
+ * and waits for the radio to report its status (0 when it does, 1 when the wait ran out).
+ */
+int btLmpLcApplyEntry(void)
+{
+	int failed = 0;
+	unsigned int gated = SOC_EVENT_ENGINE_GATE & EVENT_ENGINE_RADIO;
+	unsigned int state;
+	unsigned int index;
+	unsigned int value;
+	uint16_t count;
+
+	SOC_EVENT_ENGINE_GATE |= EVENT_ENGINE_RADIO;
+	rfBusEnter1350();
+	rfRegWrite(2, 4);
+	rfRegWrite(2, 7);
+	rfBusLeave1350();
+	state = btPowerLevelState[sysRefClockProfile()];
+	if (state == 7)
+		for (;;)
+			;
+	rfBusEnter1350();
+	for (index = 0; index < BT_POWER_MASKS; index = (uint8_t)(index + 1))
+		rfRegWrite(btPowerMaskEntry[index], btPowerMaskContext[index][state]);
+	rfBusLeave1350();
+	rfRegBegin();
+	value = 2 * (rfRegRead(33) >> 1);
+	rfRegWrite(33, value | btPowerIndexCommand[btPowerLevelState[sysRefClockProfile()]]);
+	rfRegEnd();
+	rfBusEnter1350();
+	for (index = 0; index < BT_POWER_WORDS; index++) {
+		unsigned int reg = btPowerLevelPacket[index].reg;
+
+		if (reg == 0xfff)
+			break;
+		if (reg != 0xffe)
+			rfRegWrite(reg, btPowerLevelPacket[index].value);
+	}
+	rfBusLeave1350();
+	sysDelayUs(400);
+	rfBusEnter1350();
+	if (btPowerValueRecord != 0) {
+		rfRegWrite(72, 1);
+		rfRegWrite(96, 54);
+	}
+	rfRegWrite(2, 16 * (rfRegRead(2) >> 4) | 6);
+	count = 5000;
+	while ((rfRegRead(86) & 0x3f) != 0xf) {
+		count = (uint16_t)(count - 1);
+		if (count == 0) {
+			failed = 1;
+			break;
+		}
+		sysDelayUs(100);
+	}
+	rfBusLeave1350();
+	if (gated == 0)
+		SOC_EVENT_ENGINE_GATE &= ~EVENT_ENGINE_RADIO;
+	return failed;
+}
+
+/* Resets the radio's control registers, notes its identity words, loads the two tables and applies them. */
+int btLmpLcResolveEntry(void)
+{
+	uint8_t saved;
+	int count;
+
+	rfBusEnter1350();
+	rfRegWrite(9, rfRegRead(9) | 0xc);
+	rfRegWrite(21, rfRegRead(21) & 0xbf);
+	saved = rfRegRead(71);
+	rfRegWrite(71, saved | 6);
+	for (count = 0; count < 10; count++)
+		rfRegRead(71);
+	rfRegWrite(71, saved & 0xf9);
+	rfRegWrite(70, rfRegRead(70) | 0x10);
+	rfRegWrite(71, rfRegRead(71) & 0xf9);
+	btPowerLevelContext = rfRegRead(0);
+	btPowerLevelEntry = rfRegRead(1);
+	rfBusLeave1350();
+	if (btLmpLcSyncEntry(0x8000, (const uint16_t *)btPoolHeaderMemory, 32) == 0 ||
+	    btLmpLcSyncEntry(0xc000, (const uint16_t *)btPoolFrameMemory, 64) == 0)
+		for (;;)
+			;
+	btSbcApplyContext();
+	return btLmpLcApplyEntry();
+}
+
+void btLmpLcScheduleEntry(uint8_t value)
+{
+	btPowerValueRecord = value;
+}
+
+/* With the value record set the link record's words are given the values the radio's tables need. */
+int btLmpLcNotifyEntry(void)
+{
+	int result = btPowerValueRecord;
+
+	if (btPowerValueRecord != 0) {
+		uint8_t *record = btLinkRecord;
+
+		result = (int)(uintptr_t)record;
+		*(uint16_t *)(record + 14) = 0x3033;
+		*(uint16_t *)(record + 18) = 0x1c13;
+		*(uint16_t *)(record + 24) = 0xe027;
+		*(uint16_t *)(record + 42) = 0x17c;
+		*(uint16_t *)(record + 44) = 0x7c;
+	}
 	return result;
 }

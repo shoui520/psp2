@@ -38,6 +38,16 @@ struct BtPowerValue {
 };
 
 #define BT_POWER_LEVELS		67
+#define BT_POWER_MASKS		28	/* the radio registers btLmpLcApplyEntry() sets from the mask table */
+#define BT_POWER_PROFILES	10	/* the reference clock profiles (sysRefClockProfile) */
+#define BT_POWER_WORDS		76	/* the longest list of radio words */
+
+/* One radio word: the register, and the value it is given. */
+struct BtPowerWord {
+	uint16_t reg;			/* 0xfff ends the list, 0xffe skips the word */
+	uint8_t value;
+	uint8_t reserved;
+};
 #define BT_POWER_DEVICES	10
 
 extern struct BtPowerState btPower;				/* 0x55268 */
@@ -45,6 +55,14 @@ extern uint16_t btPowerIndexRegister[BT_POWER_LEVELS];		/* 0x55470 */
 extern uint16_t btPowerIndexRecord[BT_POWER_LEVELS];	/* 0x554f6 */
 extern uint8_t btPowerLevelHeader;				/* 0x55a32: base of the level index */
 extern uint8_t btPowerLevelContext;				/* 0x55797: 7 when the level is fixed */
+extern uint8_t btPowerIndexCommand[8];				/* 0x55468 */
+extern uint8_t btPowerMaskContext[BT_POWER_MASKS][7];		/* 0x5557c */
+extern uint16_t btPowerMaskEntry[BT_POWER_MASKS];		/* 0x55640 */
+extern uint8_t btPowerValueRecord;				/* 0x5578c */
+extern uint8_t btPowerLevelState[BT_POWER_PROFILES];		/* 0x5578d */
+extern uint8_t btPowerLevelEntry;				/* 0x55798 */
+extern struct BtPowerWord btPowerLevelPacket[BT_POWER_WORDS];	/* 0x557aa */
+extern uint8_t btThresholdPolicy;				/* 0x55295 */
 
 extern uint8_t *btLinkRecord;					/* 0x400f95c */
 extern uint8_t *btLinkEvent;					/* 0x400f948 */
@@ -114,9 +132,13 @@ unsigned int btLmpLcSelectState(uint8_t channel);		/* 0x42a70 */
 int btLmpLcAdjustState(uint8_t channel);			/* 0x42a90 */
 unsigned int btLmpLcFilterState(void);				/* 0x42b3e */
 
-/* Not converted yet. */
 int btLmpLcApplyEntry(void);					/* 0x439a8 */
+int btLmpLcResolveEntry(void);					/* 0x43ad6 */
+void btLmpLcScheduleEntry(uint8_t value);			/* 0x43b8c */
 int btLmpLcNotifyEntry(void);					/* 0x43b94 */
+
+/* Not converted yet. */
+void btSbcApplyContext(void);					/* 0x4e85c */
 unsigned int btSbcSyncContext(void);				/* 0x4e7c4 */
 int btSbcFilterState(int selector, uint8_t *value);		/* 0x4e35e */
 

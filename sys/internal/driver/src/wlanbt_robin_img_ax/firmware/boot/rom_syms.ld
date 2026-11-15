@@ -261,12 +261,16 @@ PROVIDE(btLcoRomResetContext    = 0x03f1f6e5);
 PROVIDE(btLdaRomPrepareState    = 0x03f21d67);
 PROVIDE(btLcoRomProcessState    = 0x03f14a65);
 PROVIDE(btLdrRomReleaseState    = 0x03f2aa65);
+PROVIDE(btLtsRomManageState     = 0x03f33561);
+PROVIDE(btLtsRomScheduleState   = 0x03f33143);
+PROVIDE(btLcoRomManageContext   = 0x03f2021b);
 /* The controller's variables in the ROM's DTCM (0x0400a700 - 0x0400fc00); the image only reads and hooks them. */
 PROVIDE(btLinkContext                = 0x0400f954);
 PROVIDE(btLinkRecord                 = 0x0400f95c);
 PROVIDE(btLinkEvent                  = 0x0400f948);
 PROVIDE(btLinkStatus                 = 0x0400f8f0);
 PROVIDE(btLinkValues                 = 0x0400f960);
+PROVIDE(btHostWindow                 = 0x0400c4d4);
 PROVIDE(btPeerPacket                 = 0x0400adaa);
 PROVIDE(btPeerFrame                  = 0x0400ae0c);
 PROVIDE(btPeerBuffer                 = 0x0400ada0);
