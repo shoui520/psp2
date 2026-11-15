@@ -38,7 +38,6 @@ struct BtLcTarget {
 extern struct BtLcTarget btLmpLcTarget[2];			/* 0x59ec8 */
 extern uint8_t btLinkIndexRecord;				/* 0x400f7fd */
 extern uint8_t btLinkMaskState;					/* 0x400f7fe */
-extern uint8_t btDeviceEntry;					/* 0x400c7b8 */
 extern struct BtLcContext btLmpLcContext;			/* 0x55284 */
 #define btLmpLcActiveCount	(btLmpLcContext.activeCount)	/* 0x55287 */
 

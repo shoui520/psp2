@@ -58,14 +58,35 @@ struct BtHostPolicy {
 };
 _Static_assert(sizeof(struct BtHostPolicy) == 44, "BtHostPolicy");
 
-/* The ROM's device context (0x400c7b4) whose bitmap event btLmpLcNotifyBuffer() passes on. */
-struct BtDeviceContext {
-	uint8_t reserved0[12];
+/* The timing of one of the device context's two slot kinds. */
+struct BtSlotTiming {
 	uint16_t buffer;
-	uint16_t packet;
+	uint16_t packet;			/* the ticks of the kind's window */
 	uint8_t frame;
-	uint8_t reserved17[59];
-	uint32_t queue;
+	uint8_t reserved5;
+};
+_Static_assert(sizeof(struct BtSlotTiming) == 6, "BtSlotTiming");
+
+/* The steps one of the slot kinds has taken (btLmpLcHandleDescriptor() takes one). */
+struct BtStepRecord {
+	uint8_t reserved0[20];
+	uint32_t steps;				/* 9 or more: the kind's mode 7 slot may move */
+	uint8_t reserved24[4];
+};
+_Static_assert(sizeof(struct BtStepRecord) == 28, "BtStepRecord");
+
+/*
+ * The ROM's device context (0x400c7b4) whose bitmap event btLmpLcNotifyBuffer() passes on. Its two
+ * slot kinds: 0 for most links, 1 for a profile whose stepKind is 1.
+ */
+struct BtDeviceContext {
+	uint8_t reserved0[4];
+	uint8_t entry;
+	uint8_t reserved5;
+	struct BtSlotTiming timings[2];		/* 6 */
+	uint8_t reserved18[2];
+	struct BtStepRecord steps[2];		/* 20 */
+	uint32_t queue;				/* 76 */
 };
 _Static_assert(sizeof(struct BtDeviceContext) == 80, "BtDeviceContext");
 
@@ -87,6 +108,9 @@ extern unsigned int (*btLinkEventHook)(unsigned int policy);	/* 0x400f088 */
 extern void (*btLinkPayloadHook)(void);				/* 0x400f0a0 */
 extern void (*btLinkRegisterHook)(unsigned int link);		/* 0x400f0a8 */
 extern int (*btLinkRecordHook)(unsigned int link);		/* 0x400f0ac */
+extern void (*btLinkStepHook)(struct BtStepRecord *step, const struct BtSlotTiming *timing, uint32_t clock,
+			      int flags);				/* 0x400f250 */
+extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
 extern uint8_t btHostRoleWanted;				/* 0x400bd4f */
@@ -146,5 +170,10 @@ void btLmpLcManageBuffer(int step);				/* 0x45dd4 */
 int btLmpLcAcquireBuffer(int limit, int apply);			/* 0x45ed4 */
 struct BtSlotEvent;
 void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x46100 */
+struct BtDeviceProfile;
+void btLmpLcSetupBuffer(struct BtDeviceProfile *profile, uint32_t clock, struct BtStepRecord *step,
+			const struct BtSlotTiming *timing, unsigned int kind);	/* 0x4618c */
+void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x461f0 */
+void btLmpLcHandleDescriptor(struct BtStepRecord *step);		/* 0x49254 */
 
 #endif /* ROBIN_BTBUFFER_H */

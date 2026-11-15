@@ -371,6 +371,8 @@ PROVIDE(btLinkEventHook              = 0x0400f088);
 PROVIDE(btLinkPayloadHook            = 0x0400f0a0);
 PROVIDE(btLinkRegisterHook           = 0x0400f0a8);
 PROVIDE(btLinkRecordHook             = 0x0400f0ac);
+PROVIDE(btLinkStepHook               = 0x0400f250);
+PROVIDE(btTargetRepeat               = 0x0400de4f);
 PROVIDE(btLcoRomSetupState      = 0x03f1b8cb);
 PROVIDE(btHccRomResolveState    = 0x03f13189);
 PROVIDE(btLtsRomReleaseState    = 0x03f33a93);
@@ -410,7 +412,6 @@ PROVIDE(btLinkMaskContext            = 0x0400f7ff);
 PROVIDE(btLinkMaskHeader             = 0x0400f8c8);
 PROVIDE(btLinkIndexRecord            = 0x0400f7fd);
 PROVIDE(btLinkMaskState              = 0x0400f7fe);
-PROVIDE(btDeviceEntry                = 0x0400c7b8);
 /* The controller's pools below the image's SQRAM (0xc0001100 - 0xc0006fff), outside its scatter regions. */
 PROVIDE(btPoolHeaderMemory           = 0xc00022f4);
 PROVIDE(btPoolFrameMemory            = 0xc0001154);

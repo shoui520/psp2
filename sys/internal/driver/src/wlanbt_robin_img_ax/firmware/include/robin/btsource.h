@@ -78,18 +78,26 @@ struct BtDeviceProfile {
 	uint8_t guard;				/* the ticks a tracked slot is taken before it is due */
 	uint8_t tracked;			/* 1: the ROM's slot is followed (btLmpLcClearTable()) */
 	union {
-		struct {
+		struct {			/* modes 5 and 9 */
 			uint8_t offset;		/* the ticks from the clock to a mode 5 slot */
 			uint8_t shortWindow;	/* the window of a mode 5 slot */
 			uint8_t longWindow;	/* the window of a mode 9 slot */
 			uint8_t hold;		/* non-zero: a mode 5 slot waits for the link's interval */
+			uint8_t limit;		/* non-zero: the ticks to give the link instead */
+			uint8_t reserved53;
+			uint16_t peer;		/* the link a slot is shared with, 0xffff: none */
+			uint32_t queued;	/* the event clock the profile was queued at */
 		};
-		uint32_t windows;		/* the four, as the due clock btLmpLcReleaseBuffer() lends the ROM */
+		struct {			/* modes 7 and 11: the slot hooks of bt/lcbuffer.c */
+			uint32_t anchor;	/* the event clock the link's slots are counted from */
+			uint16_t repeatLimit;	/* the mode 11 slots a link may repeat */
+			uint16_t repeats;	/* the ones it did */
+			uint8_t reserved56;
+			uint8_t stepKind;	/* 1: the link counts in the context's second slot kind */
+			uint8_t keepWindow;	/* non-zero: a mode 11 slot keeps its window */
+			uint8_t reserved59;
+		};
 	};
-	uint8_t limit;				/* non-zero: the ticks to give the link instead */
-	uint8_t reserved53;
-	uint16_t peer;				/* the link a slot is shared with, 0xffff: none */
-	uint32_t queued;			/* the event clock the profile was queued at */
 	uint8_t reserved60[8];
 	uint8_t state;				/* 5 or 9: the link's mode */
 	uint8_t reserved69[3];

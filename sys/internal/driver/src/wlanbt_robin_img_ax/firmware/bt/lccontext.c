@@ -4,6 +4,7 @@
  * the roles are inferred; the function names are the firmware's placeholders.
  */
 #include <stddef.h>
+#include "robin/btbuffer.h"
 #include "robin/btcontext.h"
 #include "robin/btrom.h"
 #include "robin/clock.h"
@@ -256,7 +257,7 @@ void btLmpLcApplyContext(void)
 
 	if ((btLinkMaskState | btLinkIndexRecord) != 0)
 		profile |= 8;
-	if (btDeviceEntry != 0)
+	if (btDeviceContext.entry != 0)
 		profile |= 4;
 	for (slot = 1; slot < 11; slot = (uint16_t)(slot + 1)) {
 		unsigned int state = romHctHostSlot[slot][0];

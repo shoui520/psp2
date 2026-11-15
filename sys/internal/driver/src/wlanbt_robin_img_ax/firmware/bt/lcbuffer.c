@@ -694,8 +694,8 @@ int btLmpLcNotifyBuffer(uint8_t *message)
 		btLmpLcSetupTable();
 		break;
 	case 0xccf:
-		btNextBitmap(12, btDeviceContext.queue, 1, btDeviceContext.frame, btDeviceContext.packet,
-			     btDeviceContext.buffer);
+		btNextBitmap(12, btDeviceContext.queue, 1, btDeviceContext.timings[1].frame,
+			     btDeviceContext.timings[1].packet, btDeviceContext.timings[1].buffer);
 		break;
 	case 0xcd2: {
 		const uint8_t *records = btLdrRomReleaseState();
@@ -1066,7 +1066,7 @@ void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock)
 	uint32_t due = profile->due;
 	struct BtDeviceProfile *head;
 
-	profile->due = profile->windows;
+	profile->due = profile->anchor;
 	btLtsRomReleaseState(event);
 	profile->due = due;
 	if (btLinkMaskState != 1 && btLinkIndexRecord != 1)
@@ -1082,4 +1082,103 @@ void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock)
 		return;
 	btLtsRomQueryState(profile);
 	btLtsRomApplyState(profile, btLtsRomNotifyState(profile, clock), event->state);
+}
+
+/*
+ * The link's step record took a step at clock: its next slot is mode 11, or mode 7 again once
+ * 0x400 ticks have passed since its due clock (kind 7) or its anchor (otherwise, with the window
+ * set to 9).
+ */
+void btLmpLcSetupBuffer(struct BtDeviceProfile *profile, uint32_t clock, struct BtStepRecord *step,
+			const struct BtSlotTiming *timing, unsigned int kind)
+{
+	uint32_t due;
+
+	btLinkStepHook(step, timing, clock, 0);
+	profile->adjust = 0;
+	btLtsRomQueryState(profile);
+	due = btLtsRomNotifyState(profile, clock);
+	if (kind == 7) {
+		if ((int32_t)(due - profile->due) < 0x400) {
+			btLtsRomApplyState(profile, due, 11);
+			return;
+		}
+	} else if ((int32_t)(due - profile->anchor) < 0x400) {
+		if (profile->keepWindow == 0)
+			profile->window = timing->packet;
+		btLtsRomApplyState(profile, due, 11);
+		return;
+	} else {
+		profile->window = 9;
+	}
+	btLtsRomApplyState(profile, due, 7);
+}
+
+/* The ROM's slot hook of modes 7 and 11: at the end of the link's window, its next slot. */
+void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock)
+{
+	struct BtDeviceProfile *profile = event->profile;
+	unsigned int window = profile->window;
+	struct BtStepRecord *step;
+	const struct BtSlotTiming *timing;
+	unsigned int keep;
+	unsigned int packet;
+
+	if ((int32_t)(clock - (window + profile->due)) < 0)
+		return;
+	if (profile->stepKind == 1) {
+		step = &btDeviceContext.steps[1];
+		timing = &btDeviceContext.timings[1];
+	} else {
+		step = &btDeviceContext.steps[0];
+		timing = &btDeviceContext.timings[0];
+	}
+	keep = profile->keepWindow;
+	packet = timing->packet;
+	if (event->state == 7) {
+		if (step->steps < 9)
+			return;
+		step->steps = 0;
+		if (keep == 0) {
+			profile->anchor = profile->due;
+			if (profile->window != packet) {
+				profile->window = timing->packet - profile->window;
+				goto apply;
+			}
+		} else if (profile->repeats == 0) {
+			profile->window += 9;
+			btLmpLcHandleDescriptor(step);
+			profile->repeats++;
+			return;
+		} else {
+			profile->anchor = profile->due;
+			if (packet == 9)
+				goto restart;
+			btLmpLcHandleDescriptor(step);
+			profile->repeats++;
+			profile->window = 9;
+			profile->adjust = 0;
+			goto apply;
+		}
+	} else if (event->state == 11) {
+		if (keep != 0) {
+			if (profile->repeats < profile->repeatLimit) {
+				profile->window = window + 9;
+				profile->repeats++;
+				btLmpLcHandleDescriptor(step);
+				btTargetRepeat = 0;
+				return;
+			}
+restart:
+			profile->repeats = 0;
+			profile->window = 9;
+		}
+	} else {
+		return;
+	}
+	btLmpLcSetupBuffer(profile, clock, step, timing, event->state);
+	return;
+apply:
+	btLtsRomQueryState(profile);
+	btLtsRomApplyState(profile, clock, 11);
 }
