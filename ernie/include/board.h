@@ -19,8 +19,8 @@
 #define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000)
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
-   after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 */
-#define BOARD_TOUCH_RESET	(ERNIE_BOARD != 0x00406000)
+   after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 or PDEL */
+#define BOARD_TOUCH_RESET	(!BOARD_IS(0x00406000) && !BOARD_IS(0x00416000))
 
 /* timer 0x1f, started and stopped by chargeUpdate (the settings' chargeTimer1f), and the
    charge's transition 0x16 with the AC on (offWakeUnmask22): PCH-1000's; the others keep
@@ -31,9 +31,10 @@
    PCH-1000's NVS holds 0xba0 bytes, the others' 0xf80 */
 #define BOARD_NVS_DATA_BLOCKS	(ERNIE_BOARD == 0x00406000 ? 3 : 4)
 
-/* the lowest NVS offset the host may read or write (app/nvsreq.c): PCH-1000 keeps its first
-   0x400 bytes from the host */
-#define BOARD_NVS_HOST_OFFSET_MIN	(ERNIE_HW == 0x00406000 ? 0x0400 : 0)
+/* the lowest NVS offset the host may read or write (app/nvsreq.c): PCH-1000 and PDEL keep their
+   first 0x400 bytes from the host (the hardware ID's, not the code's: 0x00405x00 and
+   0x00415200 run their code with 0) */
+#define BOARD_NVS_HOST_OFFSET_MIN	(HW_IS(0x00406000) || HW_IS(0x00416000) ? 0x0400 : 0)
 
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others

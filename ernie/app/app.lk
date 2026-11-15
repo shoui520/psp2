@@ -218,6 +218,7 @@ SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c trace.c board.c powerseq.c bat
 # host handshake passes to rel_mpf when its first allocation fails. Preserve it.
 AT	0x2b48d		IF ERNIE_BOARD==0x00415000
 AT	0x29ced		IF ERNIE_BOARD==0x00406000
+AT	0x2b3b6		IF ERNIE_BOARD==0x00416000&&ERNIE_FW==0x01000306
 SEG	@@CODEL		handshake.c
 SEG	@@CODEL		serial1op.c param.c
 SEG	@@CODEL
@@ -236,6 +237,7 @@ AT	0xfdcde		IF ERNIE_BOARD==0x00415000&&ERNIE_FW>=0x01000306
 AT	0xfdcd4		IF ERNIE_BOARD==0x00415000&&ERNIE_FW<0x01000306&&ERNIE_FW!=0x00090804
 AT	0xfdcd0		IF ERNIE_BOARD==0x00415000&&ERNIE_FW==0x00090804
 AT	0xfdcde		IF ERNIE_BOARD==0x00406000
+AT	0xfdcde		IF ERNIE_BOARD==0x00416000
 SEG	@@DATA		handshake.c cstartend.asm
 SEG	@@FSLDAT
 # the startup's (empty) saddr initialised data, where Sony's link has it
