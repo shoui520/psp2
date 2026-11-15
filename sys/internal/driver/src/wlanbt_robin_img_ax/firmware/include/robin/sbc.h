@@ -26,6 +26,32 @@
 #define SBC_IOCTL_STATUS	0x27	/* bit 0: busy */
 #define SBC_IOCTL_QUEUE		0x2c
 #define SBC_IOCTL_CONSUMED	0x2d	/* the bytes the decoder took */
+#define SBC_IOCTL_STOP		0x28	/* the PCM port */
+#define SBC_IOCTL_START		0x29	/* the PCM port */
+#define SBC_IOCTL_RESTART	0x2a	/* a codec */
+
+/* The SCO stream's requests (btSbcSyncState()). */
+#define SBC_SCO_OPEN		0x001
+#define SBC_SCO_CLOSE		0x006
+#define SBC_SCO_MSBC		0x008
+#define SBC_SCO_HOLD		0x040
+#define SBC_SCO_RESUME		0x080
+#define SBC_SCO_FRAME		0x200
+
+/*
+ * A clock register of the Bluetooth audio block: bits 3..0 and 15..8 are
+ * dividers, which btSbcTrackState() halves once the path presets change the
+ * rate; bit 6 asks for that to be skipped once. Inferred from that use alone.
+ */
+#define SBC_AUDIO_CLOCK		REG32(0x9000c018)
+#define SBC_AUDIO_CLOCK_KEEP	0x40
+
+/* The SCO line the controller's audio interrupt arrives on. */
+#define SBC_SCO_IRQ_LINE	21
+
+/* SbcFrame.active of a stream without a codec (CVSD: the PCM samples go to the host as they are). */
+#define SBC_FRAME_PCM		2
+#define SBC_PCM_SCO_OFFSET	39	/* where the samples go in a SCO packet: after its 3-byte header */
 
 /* The devices the encoder opens (btSbcOpenCodecDevices(), 0x4d770). */
 struct SbcDevices {
@@ -78,13 +104,34 @@ struct SbcPcmConfig {
 
 _Static_assert(sizeof(struct SbcPcmConfig) == 12, "SBC PCM configuration");
 
-/* The encoder's settings, as the A2DP configuration gives them. */
+/*
+ * The codec's settings, as the A2DP configuration gives them, or the mSBC
+ * ones of wideband speech (btSbcBuildState()). Only the bitpool, the channel
+ * mode and the sampling frequency are read here; the roles of the others are
+ * inferred from the mSBC values (1, 0 and 0x8003).
+ */
 struct SbcEncoderConfig {
-	uint16_t reserved0[3];
+	uint16_t bitpool;
+	uint16_t wideband;
+	uint16_t allocation;
 	uint16_t channelMode;		/* 0: mono */
-	uint16_t reserved8;
+	uint16_t subbandFlags;
 	uint16_t samplingFrequency;	/* 0: 16 kHz, 1: 32 kHz, 2: 44.1 kHz, 3: 48 kHz */
 };
+
+/* mSBC (wideband speech): its settings and frames. */
+#define SBC_MSBC_BITPOOL	26
+#define SBC_MSBC_SUBBAND_FLAGS	0x8003
+#define SBC_MSBC_FRAME		58	/* bytes of an encoded frame */
+#define SBC_MSBC_SAMPLES	240
+#define SBC_MSBC_SAMPLE_BYTES	480
+#define SBC_MSBC_SCO_HEADER	41	/* where the frames start in a SCO packet */
+#define SBC_MSBC_SCO_SIZE	0x5c	/* of a SCO packet's buffer */
+#define SBC_SCO_TAG		3	/* OsaBuffer.transportTag and the event of the HCI device */
+
+/* The mSBC H2 synchronization header: 0x01, then 0x08 and the sequence number's two bits, each doubled. */
+#define SBC_H2_SYNC		0x01
+#define SBC_H2_SIGNATURE	0x08
 
 _Static_assert(sizeof(struct SbcEncoderConfig) == 12, "SBC encoder configuration");
 
@@ -159,30 +206,50 @@ struct __attribute__((packed)) SbcPcmDescriptor {
 _Static_assert(sizeof(struct SbcPcmDescriptor) == 16, "SBC PCM descriptor");
 
 /*
- * A test of the stream that drops frames (btSbcPrepareState()): every frame
- * below a threshold of a 128-frame cycle, at random, or once every threshold
- * frames. The settings come from a host command (btSbcConfigureState()).
- * The bytes in pending are read by btSbcResetState() (0x4da5e) and are named
- * when it is converted. The roles are inferred.
+ * The mSBC receive path's state (btSbcResetState()): the H2 sequence numbers
+ * sent and received, whether the last frame was good, the silent frame put in
+ * a lost one's place, and a test that drops frames on purpose
+ * (btSbcPrepareState(): every frame below a threshold of a 128-frame cycle,
+ * at random, or once every threshold frames), set by a host command
+ * (btSbcConfigureState()). The roles are inferred.
  */
-struct SbcFrameDrop {
-	uint8_t enable;			/* 1 */
-	uint8_t mode;			/* SBC_DROP_* */
-	uint8_t pending2[6];
-	uint16_t threshold;		/* 20 */
-	uint8_t pending10[14];
+struct SbcMsbcState {
+	uint8_t plcEnable;		/* 1: lost frames are concealed */
+	uint8_t dropMode;		/* SBC_DROP_* */
+	uint8_t h2Sequence;		/* the next H2 sequence number sent, 0-3 */
+	uint8_t rxSequence;		/* the next H2 sequence number expected */
+	uint8_t rxSynced;		/* rxSequence is known */
+	uint8_t reserved5;
+	uint16_t frameGood;		/* the last frame was received whole; 1 */
+	uint16_t threshold;		/* of the drop test; 20 */
+	uint8_t reserved10[2];
+	OsaBuffer *silentFrame;		/* the silent frame decoded in a lost one's place */
+	uint32_t goodFrames;
+	uint32_t frameCalls;
 	uint32_t count;			/* the frames since the last drop */
 	uint32_t seed;			/* of the random drops */
 };
 
-_Static_assert(sizeof(struct SbcFrameDrop) == 32, "SBC frame drop test");
+_Static_assert(sizeof(struct SbcMsbcState) == 32, "mSBC receive state");
 
 #define SBC_DROP_CYCLE		1
 #define SBC_DROP_RANDOM		2
 #define SBC_DROP_EVERY		3
 
-extern struct SbcFrameDrop sbcFrameDrop;		/* 0x55430 */
+#define SBC_MSBC_FRAME_LENGTH	57	/* an mSBC frame without its H2 header */
+#define SBC_SCO_MAXIMUM		0x130	/* what the receive buffer holds */
 
+extern struct SbcMsbcState sbcMsbc;			/* 0x55430 */
+extern const uint8_t sbcMsbcSilentFrame[SBC_MSBC_FRAME_LENGTH];	/* 0x545bc */
+
+/* The packet loss concealment code, not converted yet; provisional names. */
+extern uint8_t sbcPlcState[];				/* 0x5a998 */
+extern uint16_t sbcPlcStatus;				/* 0x5ac86 */
+extern uint32_t sbcPlcPending;				/* 0x5ac8c */
+uint16_t btSbcSetupBuffer(void *state);			/* 0x517a8 */
+void btSbcReleaseBuffer(void *state);			/* 0x51790: resets it */
+void btSbcAdjustBuffer(void *state, int16_t *input, int16_t *output);	/* 0x51ae2: a lost frame */
+void btSbcRecordBuffer(void *state, int16_t *input, int16_t *output);	/* 0x51bae: a good frame */
 /* The ROM's variables (boot/rom_syms.ld). */
 extern uint8_t sbcPcmPortConfig;			/* DTCM 0x400f8d3 */
 extern uint8_t sbcPcmSlotConfig;			/* DTCM 0x400f8d5 */
@@ -253,6 +320,12 @@ void btSbcRomScheduleState(void);
 int btSbcRomParseContext(OsaBuffer *event);
 int btSbcRomBuildContext(const uint8_t *data);
 int btSbcRomQueryContext(const uint8_t *data);
+void btSbcRomSyncContext(uint32_t value);
+void btSbcRomConfigureState(uint32_t first, uint32_t second, uint32_t third);
+/* Takes the encoded frames into a SCO packet; what it does with the last two arguments is not known. */
+void btSbcRomResetContext(uint8_t *frames, unsigned int sequence, unsigned int next, unsigned int header);
+void mdevRomUpdateState(void *device, OsaBuffer *buffer, uintptr_t argument, unsigned int event);
+void btSbcRomComputeContext(uint8_t *frame);		/* decodes the H2 header's frame */
 
 /* Not converted yet; provisional prototype. */
 int btSbcPcmStreamHandler(void);			/* 0x515bc */
@@ -279,5 +352,48 @@ int btSbcCloseCodecDevices(OsaBuffer *event);		/* 0x4d758 */
 int btSbcDispatchState(const uint8_t *data);		/* 0x4d760 */
 int btSbcParseState(const uint8_t *data);		/* 0x4d768 */
 int btSbcOpenCodecDevices(void);			/* 0x4d770 */
+int btSbcBuildState(void);				/* 0x4d7ec */
+int btSbcComputeState(void);				/* 0x4d8da */
+int btSbcQueryState(void);				/* 0x4d92e */
+int btSbcResetState(void);				/* 0x4da5e */
+int btSbcSyncState(uint32_t requests);			/* 0x4dd60 */
+int btSbcApplyState(void);				/* 0x4dda4 */
+int btSbcResolveState(void);				/* 0x4ddde */
+int btSbcScheduleState(void);				/* 0x4de16 */
+int btSbcNotifyState(void);				/* 0x4ded4 */
+int btSbcFormatState(void);				/* 0x4df68 */
+int btSbcInspectState(uint32_t requests, uintptr_t argument);	/* 0x4dfe8 */
+int btSbcTrackState(void);				/* 0x4e054 */
+int (*btSbcManageState(void))(void);			/* 0x4e0aa */
+int btSbcAcquireState(int line, uint32_t pending);	/* 0x4e0c0 */
+void btSbcReleaseState(void);				/* 0x4e0fe */
+
+/*
+ * The CVSD stream's ROM side (btSbcInspectState()). The original calls the
+ * last three with what its flag tests left in r0 and r1, so they are taken
+ * to have no arguments.
+ */
+int btSbcRomCheckContext(uintptr_t argument);
+int btSbcRomPrepareContext(void);
+int btSbcRomDispatchContext(void);
+int btSbcRomValidateContext(void);
+void btSbcRomUpdateState(void);
+
+/* The SQRAM code the audio interrupt runs, not converted yet; provisional names. */
+extern uint8_t p2pSqramTableActive;			/* 0x5576a */
+extern uint8_t p2pSqramEntryActive;			/* 0x55751 */
+void p2pSqramUpdateTable(void);				/* SQRAM, veneer 0x53acc */
+void p2pSqramSetupEntry(void);				/* SQRAM, veneer 0x53ad4 */
+
+/* A hook the ROM calls when the audio clock changes; set to btSbcTrackState(). */
+extern int (*sbcClockHook)(void);			/* DTCM 0x400edf4 */
+
+/* An interrupt handler the SCO code registers (btSbcReleaseState()). */
+struct SbcIrqHandler {
+	SysIrqHandler handler;
+	uint32_t line;
+};
+
+extern struct SbcIrqHandler sbcIrqHandlers[];	/* 0x55450 */
 
 #endif /* ROBIN_SBC_H */
