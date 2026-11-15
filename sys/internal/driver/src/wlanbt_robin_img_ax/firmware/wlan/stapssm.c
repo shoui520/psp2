@@ -10,6 +10,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/swcrypto.h"
 #include "robin/btrom.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
@@ -118,8 +119,6 @@ extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
 int wlanPsResetDescriptor(struct WlanConnection *connection, const void *beacon); /* 0x3e98a */
 extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
 extern uint8_t wlanSavedMgmtPriority;			/* 0x040088da */
-void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
-unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int p2pDirectReleaseEntry(void);			/* 0x419a6 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void macMgmtValidateTable(int reason);			/* 0x3726c */
@@ -137,7 +136,7 @@ static inline __attribute__((always_inline)) void wlanStaPsRestartTimer(TX_TIMER
 static inline __attribute__((always_inline)) void wlanStaPsSendIeeeNull(struct WlanConnection *connection,
 								       int powerManagement, int trigger)
 {
-	macTxSendNullFrame(connection, powerManagement, cbProcNullPriority(), 0, trigger,
+	macTxSendNullFrame(connection, powerManagement, wlanWmmCurrentSlotNumber(), 0, trigger,
 			   WLAN_NULL_KIND_IEEE);
 }
 
@@ -169,7 +168,7 @@ void wlanStaPsSendNull(struct WlanConnection *connection, int powerManagement)
 
 	macTxSetPowerSave(powerManagement);
 	trigger = wlanStaPs.uapsd == 0 || powerManagement != 1;
-	macTxSendNullFrame(connection, powerManagement, cbProcNullPriority(), 0, trigger,
+	macTxSendNullFrame(connection, powerManagement, wlanWmmCurrentSlotNumber(), 0, trigger,
 			   WLAN_NULL_KIND_STATION);
 }
 
@@ -209,7 +208,7 @@ void wlanPsListenTimerExpired(uint32_t timer, uint32_t argument)
 /* 0x144d6: nothing keeps the station awake. */
 int wlanStaPsIdle(void)
 {
-	return macTxPoolsIdle() && wlanHostQueueDepth(0) == 0 && wlanHostQueueDepth(0) == 0 &&
+	return macTxPoolsIdle() && wlanCryptoCount(0) == 0 && wlanCryptoCount(0) == 0 &&
 	       wlanSlotHasCurrent() == 0 && wlanPsIdle() && wlanStaPs.btShare != 2 &&
 	       mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) == 0 && !p2pDirectReleaseEntry();
 }
@@ -222,7 +221,7 @@ int wlanStaPsBusy(void)
 	if ((wlanPsListenBeacons != 0 && wlanStaPs.dataPendingAtConfirm != wlanPsDataPending) ||
 	    wlanStaPs.beaconWait != 0 || mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0 ||
 	    mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0 || wlanSlotHasCurrent() != 0 ||
-	    wlanHostQueueDepth(0) != 0 || wlanHostQueueDepth(0) != 0)
+	    wlanCryptoCount(0) != 0 || wlanCryptoCount(0) != 0)
 		busy = 1;
 	else
 		busy = p2pDirectReleaseEntry();
@@ -333,11 +332,11 @@ const int32_t *wlanStaPsIeee(struct WlanStaPsMachine *machine, const int32_t *ev
 	case WLAN_STA_PS_EVENT_START:
 		machine->restartDue = 1;
 		machine->resume = &machine->sleep;
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case WLAN_STA_PS_EVENT_STOP:
 		machine->resume = &machine->active;
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case WLAN_STA_PS_EVENT_RESTART:
 		machine->restartDue = 1;
@@ -531,7 +530,7 @@ const int32_t *wlanStaPsActive(struct WlanStaPsMachine *machine, const int32_t *
 		tx_timer_deactivate(&machine->nullTimer);
 		/* fall through */
 	case WLAN_STA_PS_EVENT_STOP:
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case ROM_HSM_EXIT:
 		return NULL;
@@ -554,7 +553,7 @@ const int32_t *wlanStaPsActive(struct WlanStaPsMachine *machine, const int32_t *
 		wlanPsEvaluate(connection, 1);
 		return NULL;
 	case WLAN_STA_PS_EVENT_START:
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		if (wlanCoexUseP2pMode() || wlanCoexUseStationMode()) {
 			wlanStaPsBeginPeriodic(machine);
 			macMgmtValidateTable(4);
@@ -611,7 +610,7 @@ const int32_t *wlanStaPsPowerSave(struct WlanStaPsMachine *machine, const int32_
 			wlanStaPsSendNull(connection, 0);
 			wlanStaPsRestartTimer(&machine->nullTimer, WLAN_STA_PS_NULL_TICKS);
 		} else {
-			cbProcAdjustContext(connection);
+			wlanPsHostCmdRespond(connection);
 		}
 		romHsmTransition(machine, &machine->active);
 		return NULL;
@@ -623,7 +622,7 @@ const int32_t *wlanStaPsPowerSave(struct WlanStaPsMachine *machine, const int32_
 		tx_timer_deactivate(&machine->confirmTimer);
 		wlanPsRetries = 0;
 		wlanPsCancelRetryTimer();
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_AWAKE, 0);
 		wlanPostConnectionEvent(connection, WLAN_EVENT_HOST_PS_PEER);
 		wlanCoexHandleEvent(connection, 17);
@@ -750,7 +749,7 @@ void wlanPsSendPowerSaveNull(struct WlanConnection *connection)
 {
 	if (wlanPsNullSuppressed != 0)
 		return;
-	macTxSendNullFrame(connection, 1, cbProcNullPriority(), 1, 1, WLAN_NULL_KIND_TRIGGER);
+	macTxSendNullFrame(connection, 1, wlanWmmCurrentSlotNumber(), 1, 1, WLAN_NULL_KIND_TRIGGER);
 }
 
 /* 0x14f50 */
@@ -836,7 +835,7 @@ const int32_t *wlanStaPsSleep(struct WlanStaPsMachine *machine, const int32_t *e
 			if (wlanStaPsHoldExpired() && wlanCoexBtNeedsSharing() && machine->btShare == 1) {
 				if (wlanPsTriggerWanted()) {
 					machine->triggerSent = 1;
-					macTxSendNullFrame(connection, 1, cbProcNullPriority(), 0, 1,
+					macTxSendNullFrame(connection, 1, wlanWmmCurrentSlotNumber(), 0, 1,
 							   WLAN_NULL_KIND_TRIGGER);
 				} else {
 					wlanCoexSetHold();
@@ -1080,7 +1079,7 @@ triggerSent:
 		if (wlanStaPsHoldExpired() && wlanCoexBtNeedsSharing() && machine->btShare == 1 &&
 		    wlanPsTriggerWanted()) {
 			machine->triggerSent = 1;
-			macTxSendNullFrame(connection, 1, cbProcNullPriority(), 0, 1,
+			macTxSendNullFrame(connection, 1, wlanWmmCurrentSlotNumber(), 0, 1,
 					   WLAN_NULL_KIND_TRIGGER);
 			return NULL;
 		}
@@ -1378,7 +1377,7 @@ int wlanStaPsTxIdle(void)
 {
 	return macTxIdle() && MAC_010_QUEUE_HEAD == MAC_014_QUEUE_TAIL &&
 	       mdevIoctl(wlanSdioDev, 8, 0) == 0 && wlanTxInFlightFrames() == 0 &&
-	       wlanHostQueueDepth(0) == 0 && wlanHostQueueDepth(0) == 0 && wlanHostSleepPending == 0;
+	       wlanCryptoCount(0) == 0 && wlanCryptoCount(0) == 0 && wlanHostSleepPending == 0;
 }
 
 void wlanStaPsRequestSleep(void);

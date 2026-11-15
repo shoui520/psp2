@@ -10,6 +10,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
 #include "robin/pssm.h"
 #include "robin/apps.h"
 #include "robin/conn.h"
@@ -51,7 +52,7 @@
 #define WLAN_EVENT_PS_BUFFER_FULL	85
 #define TLV_TYPE_PS_BUFFER_FULL		0x0194
 
-/* wpaSuppPrepareDescriptor(): an EAPOL frame. */
+/* wlanTxBufferQueue(): an EAPOL frame. */
 #define WLAN_FRAME_CLASS_EAPOL		3
 
 /* What the host is told when a peer's buffers are full. */
@@ -77,9 +78,6 @@ void macMgmtInspectPacket(struct WlanConnection *connection, unsigned int aid, i
 
 
 
-int wpaSuppPrepareDescriptor(OsaBuffer *buffer);			/* 0x1891a */
-void cbProcPrepareFrame(struct WlanConnection *connection, unsigned int more,
-			unsigned int tid);				/* 0x1ea6c */
 
 static inline __attribute__((always_inline)) uint8_t *wlanApPsData(OsaBuffer *buffer)
 {
@@ -577,7 +575,7 @@ int wlanApPsMayBuffer(struct WlanConnection *connection, OsaBuffer *buffer)
 	if (wlanApPsUnderQuota(connection))
 		return 1;
 	if (wlanApPsLimits.reportFull == 1 &&
-	    wpaSuppPrepareDescriptor(buffer) != WLAN_FRAME_CLASS_EAPOL) {
+	    wlanTxBufferQueue(buffer) != WLAN_FRAME_CLASS_EAPOL) {
 		if (role->fullReported == 0) {
 			role->fullReported = 1;
 			wlanApPsReportFull(connection);
@@ -681,7 +679,7 @@ int wlanApPsPsPoll(struct WlanConnection *connection)
 	if (role->psQueue.count != 0)
 		wlanApPsSendNext(connection, &role->psQueue, 0);
 	else
-		cbProcPrepareFrame(connection, 0, 0);
+		wlanWmmSendQosNull(connection, 0, 0);
 	sysIrqRestore(posture);
 	return 0;
 }
@@ -748,7 +746,7 @@ void wlanApPsStartServicePeriod(struct WlanConnection *connection, unsigned int 
 	if (endWithNull != 1)
 		goto out;
 null:
-	cbProcPrepareFrame(connection, queue->count, tid);
+	wlanWmmSendQosNull(connection, queue->count, tid);
 out:
 	sysIrqRestore(posture);
 }

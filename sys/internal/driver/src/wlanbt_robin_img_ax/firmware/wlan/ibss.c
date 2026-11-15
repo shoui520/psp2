@@ -6,6 +6,7 @@
  * filename survives.
  */
 #include <stdint.h>
+#include "robin/wmm.h"
 #include "robin/btpower.h"
 #include "robin/ratesel.h"
 #include "robin/adhoc.h"
@@ -60,17 +61,11 @@ extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;	/* 0x54bc8 */
 extern uint8_t *wlanBeaconRatesEnd;				/* 0x54a9c */
 extern uint8_t *wlanProbeRatesEnd;				/* 0x54aa0 */
 extern uint8_t wlanHtOperationIe[];				/* SQRAM 0xc0031f00 */
-void cbProcTrackPacket(void);						/* 0x1e570 */
 int macMgmtRecordTable(const uint8_t *address, uint8_t *buffer);	/* 0x37d02 */
-uint32_t rfCalibInspectTimer(unsigned int rate);			/* 0x2bc6c */
 void wlanPsFilterFrame(uint16_t beaconPeriod);				/* 0x3dc4e */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
-int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
-void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
-void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
-struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */
@@ -158,7 +153,7 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 	end += wlanHtElementGet(connection, 74, end);
 	if (wlanConnectionIsHt(connection)) {
 		wlanPutWmmParameterIe(&end);
-		cbProcTrackPacket();
+		wlanWmmEnable();
 	}
 	end += macMgmtRecordTable(connection->interfaceAddress, end);
 	end += wlanCopyIes(IE_VENDOR, end, subtype, (uint8_t *)frame, bodyOffset,
@@ -166,7 +161,7 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 
 	wlanTxRequestReset(request);
 	__aeabi_uwrite4(0, request->flags);
-	__aeabi_uwrite4(rfCalibInspectTimer(rate), request->rateInfo);
+	__aeabi_uwrite4((uint32_t)wlanRateTableLookup(rate), request->rateInfo);
 	__aeabi_uwrite4((int)frame, request->frame);
 	length = (uint16_t)(end - (uint8_t *)frame - sizeof(*frame));
 	frame->bodyLength[0] = length;
@@ -236,8 +231,8 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 	if (wlanIbssBeaconFrame || wlanIbssProbeResponseFrame) {
 		status = 1;
 	} else {
-		cbProcDispatchTable(9, 1);
-		cbProcPrepareTable(9, 0);
+		wlanConnectionCommandCheck(9, 1);
+		wlanConnectionCommandPrepare(9, 0);
 		if (join->reserved[1]) {
 			channelFlags = join->reserved[0];
 			channel = join->reserved[1];
@@ -253,14 +248,14 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 		connection->beaconPeriod = start.beaconPeriod;
 		if (start.capability & WLAN_CAPABILITY_SPECTRUM_MANAGEMENT)
 			macMgmtResolveEntry(connection, channel, 0);
-		if (cbProcAdjustEntry(connection))
+		if (wlanConnectionSlotAttach(connection))
 			for (;;)
 				;
 		wlanIbssSetTemplates(connection, &start, join->bssid);
 		wlanPsFilterFrame(start.beaconPeriod);
-		cbProcDispatchTable(9, 2);
+		wlanConnectionCommandCheck(9, 2);
 		SOC_MAC_EVENT_CONTROL |= 0x20;
-		cbProcPrepareTable(9, 1);
+		wlanConnectionCommandPrepare(9, 1);
 		wlanIbssSetInfo(connection, join->beaconPeriod, LE16(&join->ssParamSet[2]));
 		if (!(flags & 3))
 			btLmpLcHandleState(macMgmtQueryState(flags, extra));
@@ -316,16 +311,16 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 			macMgmtResolveEntry(connection, channel[1], 1);
 		wlanProtection.flags = (wlanProtection.flags & ~WLAN_PROTECTION_DSSS_BSS) |
 				       ((wlanRatesDsssOnly(rates) & 1) << 6);
-		if (cbProcAdjustEntry(connection))
+		if (wlanConnectionSlotAttach(connection))
 			for (;;)
 				;
 		wlanIbssSetTemplates(connection, start, connection->localAddress);
 		wlanPsFilterFrame(start->beaconPeriod);
 		connection->bssCapability[0] = start->capability;
 		connection->bssCapability[1] = start->capability >> 8;
-		cbProcDispatchTable(8, 2);
+		wlanConnectionCommandCheck(8, 2);
 		SOC_MAC_EVENT_CONTROL |= 0x20;
-		cbProcPrepareTable(8, 1);
+		wlanConnectionCommandPrepare(8, 1);
 		wlanIbssSetInfo(connection, start->beaconPeriod, LE16(&start->ssParamSet[2]));
 		if (!(flags & 3))
 			btLmpLcHandleState(macMgmtQueryState(flags, extra));
@@ -349,7 +344,7 @@ void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *f
 	__aeabi_memclr(&wlanIbssInfo, sizeof(wlanIbssInfo));
 	__aeabi_memcpy(connection->localAddress, frame->address3, 6);
 	state = sysIrqDisable();
-	cbProcSelectBuffer(10, connection->localAddress);
+	wlanBssSelectAddress(10, connection->localAddress);
 	__aeabi_memcpy(beacon->address3, frame->address3, 6);
 	__aeabi_memcpy(wlanIbssProbeResponseFrame->address3, frame->address3, 6);
 	__aeabi_memcpy(wlanIbssInfo.bssid, frame->address3, 6);
@@ -414,7 +409,7 @@ void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWireles
 	if (!(flags & 0x40) || ((flags & 0x80) && !(connection->flags2 & 0x10))) {
 		connection->stationFlags = flags | 0x40;
 		connection->flags2 |= 0x10;
-		cbProcUpdatePacket(connection, peerRates & rates);
+		wlanConnectionUpdatePeer(connection, peerRates & rates);
 		macTxNotifyQueryFrame(connection);
 		macTxNotifyDispatchFrame(connection);
 		wlanConnectionSetActiveFlag(connection, ies->pWmmParam != NULL);
@@ -429,9 +424,9 @@ void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWireles
 				__aeabi_memcpy(peer->localAddress, bssid, 6);
 			wlanPostConnectionEvent(connection, 0x80000000u);
 		}
-		cbProcParsePacket(connection);
+		wlanIbssResetPeerCheck(connection);
 	} else if (!(flags & 1) || wlanConnectionHasLocalAddress(connection, bssid)) {
-		cbProcParsePacket(connection);
+		wlanIbssResetPeerCheck(connection);
 	}
 	if (wlanPsEnabled())
 		wlanPsFilterTable(connection);
@@ -454,7 +449,7 @@ void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWireles
 			__aeabi_uwrite4(WLAN_PROTECTION_TIMEOUT, noWmm->remaining);
 		wlanConnectionSetActiveFlag(connection, (int32_t)__aeabi_uread4(noWmm->remaining) <= 0);
 		if (changed) {
-			cbProcUpdatePacket(connection, peerRates & rates);
+			wlanConnectionUpdatePeer(connection, peerRates & rates);
 			macTxNotifyQueryFrame(connection);
 			macTxNotifyDispatchFrame(connection);
 		}
@@ -477,11 +472,11 @@ void wlanConnectionTouch(struct WlanConnection *connection)
 	connection->flags2 |= 0x10;
 	rates = wlanRateBitmapAll(connection->supportedRates, connection->supportedRatesLength, NULL,
 				  0, (const WlanHtCapabilityIe *)connection->htCapability);
-	cbProcUpdatePacket(connection, rates & 0xf);
+	wlanConnectionUpdatePeer(connection, rates & 0xf);
 	macTxNotifyQueryFrame(connection);
 	macTxNotifyDispatchFrame(connection);
 	connection->flags |= 3;
-	cbProcParsePacket(connection);
+	wlanIbssResetPeerCheck(connection);
 }
 
 struct WlanIbssInfo *wlanIbssGetInfo(void)
@@ -503,9 +498,9 @@ void wlanIbssRefreshBeacons(struct WlanConnection *connection)
 
 int wlanChannelValidate(void)
 {
-	cbProcDispatchTable(7, 2);
+	wlanConnectionCommandCheck(7, 2);
 	SOC_MAC_EVENT_CONTROL |= 0x20;
-	return cbProcPrepareTable(7, 1);
+	return wlanConnectionCommandPrepare(7, 1);
 }
 
 void wlanIbssReset(void)
@@ -523,7 +518,7 @@ struct WlanConnection *wlanIbssMatchBeacon(const WlanWirelessFrame *frame, const
 
 	if (!(body[10] & 2))		/* capability: IBSS */
 		return NULL;
-	connection = cbProcResetBuffer(body + WLAN_BEACON_FIXED_LENGTH);
+	connection = wlanConnectionFindIbssBySsid(body + WLAN_BEACON_FIXED_LENGTH);
 	if (connection == NULL || !(connection->stationFlags & 1))
 		return NULL;
 	ds = wlanIeFind(IE_DS_PARAMETER, body + WLAN_BEACON_FIXED_LENGTH,

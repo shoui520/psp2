@@ -789,15 +789,22 @@ extern struct WlanConnection *wlanConnectionSession;
 extern struct WlanConnection *wlanConnectionPrimary;
 #define WLAN_CONNECTION_SLOTS	4
 
-/* The timing record of a BSS the join and start code keep (the beacon time and the next target time). */
+/*
+ * The timing record of a BSS the join and start code keep (the beacon time
+ * and the next target time), filled by romLibUpdateContext() and completed
+ * from the BSS's parameters.
+ */
 struct WlanBssTiming {
-	uint32_t timestamp[2];
+	uint32_t timestamp[2];		/* the BSS's TSF: zero for a start */
 	uint32_t next[2];		/* 64-bit time of the next target; 0: none yet */
-	uint32_t reserved16[2];
-	uint32_t interval;		/* the target's period */
-	uint32_t reserved28;
+	uint32_t reserved16;
+	uint32_t cfpCount;		/* CF parameter set: the CFP count */
+	uint32_t beaconPeriod;		/* the target's period */
+	uint32_t atimWindow;		/* IBSS parameter set: the ATIM window */
 	uint32_t dtimPeriod;		/* beacons per DTIM (macMgmtUpdateEntry()) */
-	uint32_t reserved36[3];
+	uint32_t reserved36;
+	uint32_t cfpPeriod;
+	uint32_t cfpMaxDuration;
 };
 
 _Static_assert(sizeof(struct WlanBssTiming) == 48, "BSS timing record");
@@ -857,8 +864,8 @@ struct WlanConnection *wlanConnectionDuplicateAp(const uint8_t *peer,
 						 const struct WlanConnection *source);	/* 0x1da20 */
 struct WlanConnection *wlanConnectionDuplicateType2(const uint8_t *peer,
 						    const struct WlanConnection *source);	/* 0x1da78 */
-void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source);		/* 0x1daba */
-void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source);		/* 0x1dc8c */
+struct WlanConnection *wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source);		/* 0x1daba */
+struct WlanConnection *wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source);		/* 0x1dc8c */
 
 struct WlanConnection *wlanConnectionFindIbssBySsid(const uint8_t *ssidElement);	/* 0x1ddd6 */
 int wlanIbssSecurityActive(void);							/* 0x1ded2 */

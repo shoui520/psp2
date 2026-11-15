@@ -21,7 +21,6 @@
 struct WlanConnection *wlanConnectionClient __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionOther __attribute__((section(".sqram1.rw")));
 uint8_t wlanRoleMask __attribute__((section(".sqram1.rw")));
-struct OsaBufferPool wlanEventPool __attribute__((section(".dtcm.bss")));
 
 int wlanRoleMaskIs(unsigned int mask)
 {

@@ -3,6 +3,7 @@
  * and the host commands for them. See robin/wmm.h. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/tspec.h"
 #include "robin/ratesel.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
@@ -517,8 +518,6 @@ uint8_t wlanWmmParameterElement[26] __attribute__((section(".sqram1.bss")));		/*
 /* The pointer to a transmit data's frame (at 96), read as an aligned word here. */
 #define WMM_TX_FRAME(data)	(*(const uint8_t *const *)((data) + 96))
 
-extern void wlanTspecTrack(void);						/* 0x4190a */
-extern void wlanTspecManage(void);						/* 0x41940 */
 
 /* The connection's QoS flag (the association used WMM). */
 __attribute__((noinline)) int wlanConnectionQosEnabled(struct WlanConnection *connection)
@@ -561,7 +560,7 @@ __attribute__((noinline)) void wlanWmmSet(struct WlanConnection *connection, int
 	}
 	if (report != 0)
 		wlanWmmReportStatus(connection);
-	wlanTspecTrack();
+	p2pDirectTrackEntry();
 	wlanWmmResetCounters();
 }
 
@@ -570,7 +569,8 @@ __attribute__((noinline)) void wlanWmmSet(struct WlanConnection *connection, int
  * whether the BSS is a WMM one. Without elements the BSS's own parameters
  * are the defaults of the WMM parameter element.
  */
-void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int report)
+void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int sameBss,
+		 int report)
 {
 	unsigned int queue;
 
@@ -592,8 +592,8 @@ void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *eleme
 	}
 	for (queue = wlanAccessCategoryToQueue(1); queue <= 3; queue = (uint8_t)(queue + 1))
 		wlanWmmSetupQueue(queue);
-	if (report != 0)
-		wlanTspecManage();
+	if (sameBss != 0)
+		p2pDirectManageEntry();
 	__aeabi_memcpy(wlanWmmIe[0], wlanBssWmmIe, 9);
 	__aeabi_memcpy(wlanWmmIe[1], wlanBssWmmIe, 9);
 	__aeabi_memcpy(wlanWmmIe[2], wlanBssWmmIe, 9);

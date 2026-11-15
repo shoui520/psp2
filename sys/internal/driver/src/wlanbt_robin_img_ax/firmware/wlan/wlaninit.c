@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
 #include "robin/antdiv.h"
 #include "robin/led.h"
 #include "robin/p2pgo.h"
@@ -144,7 +145,6 @@ static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((sec
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
-void cbProcConfigureFrame(void);							/* 0x1e9f2 */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
@@ -153,12 +153,10 @@ void wlanPsComputeFrame(void);								/* 0x3d510 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
-void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
 int wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
-int cbProcProcessBuffer(void);								/* 0x1d52e */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
 
 /* The idle hook of the transmit notification. */
@@ -262,7 +260,7 @@ static int wlanTablesInit(void)
 	macMgmtUpdateContext(0, 6);
 	macMgmtCheckContext();
 	antDivStart();
-	cbProcConfigureFrame();
+	wlanWmmClear();
 	macMgmtAdjustHeader();
 	wlanTaskHandlesInit(&handles);
 	wlanMefConfigClear();
@@ -394,7 +392,7 @@ int bufferPoolsInit(void)
 				wlanEventPoolMemory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
-	if (cbProcProcessBuffer() != 0)
+	if (wlanConnectionsInit() != 0)
 		for (;;)
 			;
 	wlanDriverInit();
@@ -436,7 +434,7 @@ int wlanInit(void)
 	wlanIeBufferInit();
 	wlanMefInit();
 	wlanTxRingOpsInit();
-	cbProcDispatchFrame();
+	wlanWmmInitDefaults();
 	wlanBaTimeoutOpsInit();
 	wlanSessionOpsInit();
 	wlanPsAcquireFrame();

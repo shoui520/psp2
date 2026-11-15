@@ -2,6 +2,8 @@
  * WLAN device callbacks and frame adaptation. The filename is inferred from
  * the original driver's callback family; no source filename survives.
  */
+#include "robin/wmm.h"
+#include "robin/amp.h"
 #include "robin/wlan.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
@@ -12,7 +14,6 @@
 #include "robin/rom.h"
 #include "robin/sys.h"
 
-void *ampPalDevice __attribute__((section(".itcm.rw"))) = NULL;
 void *wlanSdioDev __attribute__((section(".itcm.rw"))) = NULL;
 void *wlanDevice __attribute__((section(".itcm.rw"))) = NULL;
 void *wlanSdioCallbackDevice __attribute__((section(".itcm.rw"))) = NULL;
@@ -236,7 +237,6 @@ int wlanBufferNeedsSecurity(OsaBuffer *buffer)
 }
 
 /* Not converted yet; provisional names */
-unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 
 /*
  * A buffer for an EAPOL frame the firmware sends itself (keyMgmtSta.c's
@@ -270,7 +270,7 @@ found:
 	descriptor = (WlanTxDescriptor *)((uint8_t *)buffer + headroom);
 	buffer->packetClass = 8;
 	__aeabi_memclr(descriptor, 15);
-	descriptor->priority = cbProcNullPriority();
+	descriptor->priority = wlanWmmCurrentSlotNumber();
 	descriptor->header.wire.packetOffset[0] = 15;
 	descriptor->header.wire.packetOffset[1] = 0;
 	descriptor->header.wire.packetType[0] = 8;

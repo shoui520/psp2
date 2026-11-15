@@ -67,24 +67,6 @@ struct WlanHostMessage {
 #define WLAN_CHALLENGE_SIZE		128
 #define WLAN_CHALLENGE_TIMEOUT		500000	/* us */
 
-/* What a peer's leaving is reported to the host as: the event code of a deauthentication reason. */
-__attribute__((noinline)) int wlanEventMaskIndex(int reason)
-{
-	switch (reason) {
-	case 2:
-	case 3:
-		return 1;
-	case 6:
-		return 4;
-	case 15:
-		return 8;
-	case 16:
-		return 9;
-	default:
-		return 0;
-	}
-}
-
 /* Takes the first free bit of a bitmap of count bits; returns its number, 255: none. */
 __attribute__((noinline)) unsigned int wlanBitmapAllocate(uint8_t *bitmap, unsigned int count)
 {

@@ -446,6 +446,12 @@ int wlanParam32Get(const uint8_t *slot, unsigned int index, uint32_t *value)
 	return 1;
 }
 
+/* Drops both values of a slot and their flags. */
+void wlanParamSlotClear(uint8_t *slot)
+{
+	__aeabi_memclr(slot, 9);
+}
+
 int wlanParam64Set(uint8_t *slot, unsigned int index, const void *value)
 {
 	if (index >= 2)
@@ -594,7 +600,6 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 struct WlanConnection *wlanMefConnection __attribute__((section(".itcm.rw"))) = NULL;
 uint16_t wlanMefEntryCount __attribute__((section(".itcm.rw"))) = 0;
 
-int macTxNotifyFormatTable(OsaBuffer *buffer);		/* 0x31c0a, not converted yet */
 
 /* Allocates a frame buffer for the connection; 0 if the pool is empty. */
 OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection)
@@ -652,7 +657,7 @@ int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtyp
 	frame->descriptor.header.wire.packetLength[0] = 3;
 	frame->descriptor.control = 0;
 	frame->descriptor.flags = (frame->descriptor.flags & ~0x1f) | 0x11;
-	return macTxNotifyFormatTable(buffer);
+	return wlanTxSubmit(buffer);
 }
 
 /*

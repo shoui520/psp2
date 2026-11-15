@@ -23,7 +23,6 @@
 void macMgmtSyncHeader(int unused);						/* 0x3b4d2 */
 void macMgmtQueryHeader(int kind, int count, void *value);			/* 0x3b384 */
 void wlanPsConvertHeader(void);							/* 0x3e32e */
-void rfCalibComputeContext(unsigned int value);					/* 0x26984 */
 
 struct MacEventState macEventState __attribute__((section(".dtcm.bss"), aligned(4)));
 uint8_t macEventProfileActive __attribute__((section(".dtcm.rw")));
@@ -188,7 +187,7 @@ void wlanRfApplyEventContext(unsigned int index)
 		if (!wlanCalibrationLookupByte(index, &value))
 			value = WLAN_RF_CONTEXT_DEFAULT;
 	}
-	rfCalibComputeContext(value);
+	rfRegWriteLow7(value);
 }
 
 int macGetEventPolicy(struct MacEventPolicy *policy)

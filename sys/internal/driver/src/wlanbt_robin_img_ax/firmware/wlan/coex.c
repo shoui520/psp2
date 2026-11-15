@@ -9,6 +9,7 @@
  * (wlanCoexUpdateEstimate()), corrected by the drift carried over from the
  * cycles before.
  */
+#include "robin/swcrypto.h"
 #include "robin/coex.h"
 #include "robin/stapssm.h"
 #include "robin/conn.h"
@@ -319,7 +320,7 @@ void wlanCoexRequestSleep(void)
 	sysIrqRestore(posture);
 
 	idle = macTxIdle() && MAC_010_QUEUE_HEAD == MAC_014_QUEUE_TAIL && outstanding == 0 &&
-	       wlanHostQueueDepth(0) == 0 && wlanHostQueueDepth(0) == 0 &&
+	       wlanCryptoCount(0) == 0 && wlanCryptoCount(0) == 0 &&
 	       wlanHostSleepPending == 0;
 	if ((idle == 1 && wlanDmaRingsHaveRoom() != 1) || wlanPsHostBusy != 0 ||
 	    wlanPsSleepAllowance == 0) {

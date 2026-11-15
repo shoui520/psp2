@@ -208,7 +208,6 @@ int btCoexRefreshActivityIdle(void);			/* 0x24566 */
 int btCoexActivityIdle(void);				/* 0x2457a */
 unsigned int btCoexActiveLinks(void);			/* 0x2459e */
 unsigned int btCoexLinkCapacity(void);			/* 0x245a6 */
-uint32_t wlanHostQueueDepth(unsigned int queue);	/* 0x1ebe8 */
 int wlanCoexBtNeedsSharing(void);			/* 0x2e9ee */
 void wlanPsSetBtHold(int hold);				/* 0x2eaa4 */
 void wlanPsSetPollEnabled(uint8_t mode);		/* 0x2eab0 */

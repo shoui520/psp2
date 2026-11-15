@@ -258,6 +258,13 @@ PROVIDE(wpa_MD5Update = 0x03f3b511);
 PROVIDE(wpa_MD5Final  = 0x03f3b58d);
 /* Signed 32-bit divide, reached through the veneer at 0x52cf4. */
 PROVIDE(__aeabi_idiv  = 0x03f3f240);
+/* The ROM's divides give the remainder in r1 as well (the firmware reads it): they are the divmods too. */
+PROVIDE(__aeabi_idivmod  = 0x03f3f240);
+/* Unsigned 32-bit divide (ARM), reached through the veneer at 0x52c64. */
+PROVIDE(__aeabi_uidiv    = 0x03f3fa14);
+PROVIDE(__aeabi_uidivmod = 0x03f3fa14);
+/* The copies GCC emits for structure assignments and initialisers: the ROM's __aeabi_memcpy (their result is not used). */
+PROVIDE(memcpy           = 0x03f3f00c);
 
 /* SHA-256 (Thumb), reached through the veneers at 0x531ec and 0x531f4. */
 PROVIDE(sha256_vector       = 0x03f059bd);
@@ -967,3 +974,34 @@ PROVIDE(hctCompleteTransferHook      = 0x0400f464);
 PROVIDE(sbcTaskHandlers              = 0xc0033000);
 PROVIDE(btSbcRomProcessState         = 0x03f357ef);
 PROVIDE(btSbcRomHandleState          = 0x03f357c7);
+
+/* ROM entries the C calls directly; the firmware reached them through the ITCM literal veneers. */
+PROVIDE(romDmaRingHardwarePointer    = 0x03f3abd1);
+PROVIDE(romDmaRingSetPointer         = 0x03f3abf7);
+PROVIDE(romDmaRxDataRingStart        = 0x03f3a359);
+PROVIDE(romLibSyncContext            = 0x03f3a927);
+PROVIDE(romLibApplyContext           = 0x03f3a94f);
+PROVIDE(romLibNotifyContext          = 0x03f3a989);	/* veneer 0x532e4 */
+PROVIDE(romLibHandleContext          = 0x03f3a7d3);	/* veneer 0x53224 */
+PROVIDE(romLibSyncState              = 0x03f3a509);
+PROVIDE(romLibInspectState           = 0x03f3a581);
+PROVIDE(romLibTrackState             = 0x03f3a58d);
+PROVIDE(romLibSelectState            = 0x03f3a6ed);
+PROVIDE(romLibAdjustState            = 0x03f3a701);
+PROVIDE(osaRomHandleState            = 0x03f056b9);
+PROVIDE(mdevRomPrepareState          = 0x03f0643f);
+PROVIDE(mdevRomDispatchState         = 0x03f0648f);
+PROVIDE(mdevRomParseState            = 0x03f064d7);
+PROVIDE(mdevRomBuildState            = 0x03f06571);
+PROVIDE(mdevRomComputeState          = 0x03f065a3);
+PROVIDE(btHccRomHandleState          = 0x03f0d0a9);	/* veneer 0x52c54 */
+
+/* ROM data, and RAM the ROM's own zero-initialised areas hold (DTCM 0x0400a700.., SQRAM 0xc0033000..). */
+PROVIDE(romRfChannelTable            = 0x03f42130);	/* 2.4 GHz frequencies */
+PROVIDE(romRfChannelTable5G          = 0x03f4214c);	/* 5 GHz frequencies */
+PROVIDE(wlanSignalSnapshot           = 0x0400d288);
+PROVIDE(sbcPcmEvents                 = 0xc0033164);
+PROVIDE(fmRdsBlocks                  = 0xc00334f8);
+
+/* MAC registers. */
+PROVIDE(macPendingParam              = 0x8000a138);

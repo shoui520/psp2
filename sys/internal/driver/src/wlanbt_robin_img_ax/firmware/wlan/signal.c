@@ -9,6 +9,8 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/antdiv.h"
+#include "robin/wmm.h"
 #include "robin/coex.h"
 #include "robin/txhold.h"
 #include "robin/conn.h"
@@ -39,12 +41,10 @@
 #define WLAN_REPORT_BEACON_LOSS		7	/* wlanReportEvent() */
 
 /* Not converted yet; provisional names. */
-int romSignalFilterNoise(struct WlanConnection *connection, const struct WlanRxStatus *status); /* 0xc000a431 */
 uint64_t wlanSignalTimeNow(void);					/* 0x2a4fc */
 int wlanStaSmLinked(const struct WlanConnection *connection);		/* 0x35faa */
 unsigned int wlanPsDiscountMissed(uint8_t *missed);			/* 0x3dfc4 */
 int wlanLinkCheckPost(struct WlanConnection *connection);		/* 0x347be */
-unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 extern uint8_t wlanSignalSnapshot[8];					/* 0x0400d288 */
 
 /* Link timers that expired after the check had moved to a new one. */
@@ -368,7 +368,7 @@ void wlanLinkCheck(struct WlanConnection *connection)
 			if (connection->beaconMissThreshold <= missed) {
 				if (wlanCoexBtNeedsSharing() && link->nullFrames < WLAN_LINK_NULL_PROBES) {
 					if (!wlanPsInIeee()) {
-						unsigned int priority = cbProcNullPriority();
+						unsigned int priority = wlanWmmCurrentSlotNumber();
 
 						macTxSendNullFrame(connection, macTxGetPowerSave(), priority,
 								   0, 0, WLAN_LINK_NULL_KIND);
@@ -420,7 +420,7 @@ int wlanSignalMeasure(struct WlanConnection *connection, const struct WlanRxStat
 	int filtered = 0;
 	int level;
 
-	if (romSignalFilterNoise(connection, status)) {
+	if (antDivHoldOff()) {
 		wlanSignalFilterAdd(connection, WLAN_SIGNAL_FILTER_FRAMES, floor);
 		floor = wlanSignalFilterGet(connection, WLAN_SIGNAL_FILTER_FRAMES);
 		filtered = 1;

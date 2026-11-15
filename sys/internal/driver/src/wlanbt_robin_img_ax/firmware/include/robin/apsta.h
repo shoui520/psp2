@@ -81,7 +81,7 @@ struct WlanApEvent;
 struct RomHsmState;
 int macMgmtHandleFrame(struct WlanConnection *connection);				/* 0x3a5d6 */
 int macMgmtProcessFrame(struct WlanConnection *connection);				/* 0x3a636 */
-int macMgmtUpdateFrame(struct WlanConnection *unused, OsaBuffer *buffer);		/* 0x3a6a4 */
+int macMgmtUpdateFrame(int status, OsaBuffer *buffer);		/* 0x3a6a4 */
 void macMgmtConfigureFrame(struct WlanConnection *connection);				/* 0x3a712 */
 void macMgmtCheckFrame(struct WlanConnection *connection);				/* 0x3a778 */
 int macMgmtValidateFrame(struct WlanConnection *connection);				/* 0x3a796 */

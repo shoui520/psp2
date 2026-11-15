@@ -7,6 +7,7 @@
  * point. The file name is inferred.
  */
 #include <stddef.h>
+#include "robin/wmm.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/txhold.h"
@@ -64,7 +65,6 @@ _Static_assert(offsetof(struct WlanConnectionInfo, sleep) + 4 == 1148, "sleep mo
 #define TX_TAG_MGMT		90
 
 /* Not converted yet; provisional names. */
-void p2pDirectPrepareTable(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41f6a */
 void macMgmtConvertPacket(struct WlanConnection *connection);			/* inferred */
 extern uint32_t wlanPsPollSkips;
 
@@ -219,7 +219,7 @@ void macTxNotifyTaskMain(void)
 				wlanTxStatsCount(connection, &status);
 				wlanSubscribeCheckLinkRate(connection, &status);
 				if (connection->mode == 3 || connection->mode == 1)
-					p2pDirectPrepareTable(connection, &status);
+					wlanWmmTxDone(connection, &status);
 				if (wlanPsEnabled()) {
 					if (!(frame[3] & FC1_POWER_MANAGEMENT) || connection->interfaceType == 1 ||
 					    wlanCoexUseP2pSleepMode() || wlanPsLegacyPollMode()) {

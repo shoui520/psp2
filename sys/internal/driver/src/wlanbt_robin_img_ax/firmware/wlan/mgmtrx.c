@@ -73,10 +73,6 @@ void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
-struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConnection *connection); /* 0x1dc8c */
-void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
-unsigned int cbProcComputePacket(unsigned int mode);				/* 0x1e3cc */
-unsigned int cbProcUpdateBuffer(struct WlanConnection *connection);		/* 0x1d5ba */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 
 /* Management frames of a station. */
@@ -255,7 +251,7 @@ struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *conne
 						    const uint8_t *address)
 {
 	if (!p2pDirectPrepareState(connection->peerAddress))
-		return cbProcParseBuffer(address, connection);
+		return wlanConnectionDuplicate(address, connection);
 	__aeabi_memcpy(connection->peerAddress, address, 6);
 	macTxNotifyConfigureFrame(connection);
 	__aeabi_memclr4(&connection->peerLink, sizeof(connection->peerLink));
@@ -316,7 +312,7 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 		peer = wlanConnectionFindDirectPeer(connection, frame->address2);
 		if (peer != NULL) {
 			wlanRxManagementTo(peer, buffer, argument);
-			cbProcParsePacket(peer);
+			wlanIbssResetPeerCheck(peer);
 		}
 		break;
 	case WLAN_SUBTYPE_AUTH:
@@ -332,9 +328,9 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 			reason = 6;
 		} else {
 			struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
-			unsigned int kind = cbProcComputePacket(connection->mode);
+			unsigned int kind = wlanConnectionCountMode2(connection->mode);
 
-			if (info->maxStations > cbProcUpdateBuffer(connection) && kind < 10) {
+			if (info->maxStations > wlanConnectionBssCount(connection) && kind < 10) {
 				peer = wlanConnectionFindDirectPeer(connection, frame->address2);
 				if (peer != NULL) {
 					uapBssApply(connection, peer, frame->address2);

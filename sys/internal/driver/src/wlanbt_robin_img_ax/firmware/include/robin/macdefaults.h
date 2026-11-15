@@ -50,6 +50,7 @@ union MacTxControl {
 _Static_assert(sizeof(union MacTxControl) == 4, "transmit control word");
 
 extern struct MacRegisterDefault macRegisterDefaults[MAC_REGISTER_DEFAULTS];	/* DTCM 0x40009a8 */
+int wlanIbssAtimTimerCancel(void);		/* 0x4c922 */
 extern uint32_t wlanIbssAtimTimer;		/* 0x5540c: osaCreateTimer() handle of the ATIM window */
 extern uint32_t macDefaultsTxControlSet;	/* 0x55410: fmCoexApplyBuffer() set the transmit control */
 

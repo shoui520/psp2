@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/btrom.h"
+#include "robin/chanrpt.h"
 #include "robin/conn.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
@@ -61,24 +62,6 @@ struct ChanRptCommand {
 	uint8_t dwellTime[4];		/* milliseconds */
 	uint8_t tlvs[];
 };
-
-/* What the measurement is asked to do. */
-struct ChanRptRequest {
-	uint8_t band;			/* bits 0-1: the band; bits 2-3: the command's band configuration bits 0-1 */
-	uint8_t channel;
-	uint8_t reserved2[2];
-	uint32_t delay;			/* before the slot starts */
-	uint32_t reserved8[2];
-	uint32_t dwell;			/* microseconds */
-	uint8_t reserved20[40];
-	uint8_t histogramWideRange;
-	uint8_t reserved61[3];
-	uint32_t radar;			/* the host asked for the radar bit */
-	uint8_t reserved68[4];
-};
-
-_Static_assert(offsetof(struct ChanRptRequest, histogramWideRange) == 60, "channel report request");
-_Static_assert(sizeof(struct ChanRptRequest) == 72, "channel report request");
 
 /* The report as it is measured, in the measurement's buffer. */
 struct ChanRptReport {
@@ -229,9 +212,9 @@ static int chanRptFrameReceived(uint32_t handle, int unused, OsaBuffer *frame, c
 }
 
 /* Starts a measurement on the slot scheduler; `done` gets the report buffer, or (0, NULL) when none can start. */
-static int __attribute__((noinline, noclone)) chanRptStart(struct WlanConnection *connection,
+__attribute__((noinline, noclone)) int chanRptStart(struct WlanConnection *connection,
 						  const struct ChanRptRequest *request,
-						  int (*done)(int status, OsaBuffer *buffer))
+						  ChanRptDone done)
 {
 	struct ChanRptState *state = &chanRptState;
 	struct WlanSlotParams params;

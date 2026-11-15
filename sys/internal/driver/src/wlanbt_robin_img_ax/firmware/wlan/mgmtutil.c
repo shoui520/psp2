@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/adhoc.h"
+#include "robin/conn.h"
 #include "robin/esa.h"
 #include "robin/mac.h"
 #include "robin/mgmt.h"
@@ -22,25 +23,9 @@ static ROBIN_PATCH_SLOT(wlanIbssRecordStartOverride);
 static ROBIN_PATCH_SLOT(wlanBuildMgmtHeaderOverride);
 static ROBIN_PATCH_SLOT(wlanEventMessageBuildOverride);
 
-extern int (*wlanFrameRecordHook)(int argument);	/* 0x54e5c */
+extern int (*wlanFrameRecordHook)(struct WlanBssTiming *timing);	/* 0x54e5c */
 
 /* What the timing record of an IBSS holds (romLibUpdateContext() fills it; 48 bytes). */
-struct WlanIbssRecord {
-	uint32_t timestamp[2];		/* the BSS's TSF: zero for a start */
-	uint32_t interval;		/* the beacon period in microseconds, less 1024 times 2 */
-	uint32_t reserved12;
-	uint32_t reserved16;
-	uint32_t cfpCount;		/* CF parameter set: the CFP count */
-	uint32_t beaconPeriod;		/* in time units */
-	uint32_t atimWindow;		/* IBSS parameter set: the ATIM window */
-	uint32_t dtimPeriod;
-	uint32_t reserved36;
-	uint32_t cfpPeriod;
-	uint32_t cfpMaxDuration;
-};
-
-_Static_assert(sizeof(struct WlanIbssRecord) == 48, "IBSS record");
-
 /* 0x0002a20c: the association changed (set or cleared); tells the ROM. */
 int wlanAssociationChanged(void)
 {
@@ -108,7 +93,7 @@ void wlanIbssAddressGenerate(uint8_t *address, const uint8_t *source)
 /* The timing record of an IBSS the host starts. */
 int wlanIbssRecordStart(const WlanAdHocStart *start)
 {
-	struct WlanIbssRecord record;
+	struct WlanBssTiming record;
 	int result;
 
 	result = wlanIbssRecordStartOverride(start);
@@ -123,11 +108,11 @@ int wlanIbssRecordStart(const WlanAdHocStart *start)
 			record.cfpPeriod = start->ssParamSet[3];
 			record.cfpMaxDuration = (start->ssParamSet[5] << 8) | start->ssParamSet[4];
 		}
-		record.reserved12 = 0;
-		record.interval = start->beaconPeriod << 11;
+		record.next[1] = 0;
+		record.next[0] = start->beaconPeriod << 11;
 		record.timestamp[0] = 0;
 		record.timestamp[1] = 0;
-		return wlanFrameRecordHook((int)&record);
+		return wlanFrameRecordHook(&record);
 	}
 	return result;
 }
@@ -135,7 +120,7 @@ int wlanIbssRecordStart(const WlanAdHocStart *start)
 /* The timing record of the IBSS the host joins. */
 int wlanIbssRecordJoin(const WlanAdHocBssDesc *join)
 {
-	struct WlanIbssRecord record;
+	struct WlanBssTiming record;
 	int result;
 
 	result = wlanIbssRecordJoinOverride(join);
@@ -150,9 +135,9 @@ int wlanIbssRecordJoin(const WlanAdHocBssDesc *join)
 		} else if (join->ssParamSet[0] == 6) {
 			record.atimWindow = (join->ssParamSet[3] << 8) | join->ssParamSet[2];
 		}
-		record.reserved12 = 0;
-		record.interval = join->beaconPeriod << 11;
-		return wlanFrameRecordHook((int)&record);
+		record.next[1] = 0;
+		record.next[0] = join->beaconPeriod << 11;
+		return wlanFrameRecordHook(&record);
 	}
 	return result;
 }

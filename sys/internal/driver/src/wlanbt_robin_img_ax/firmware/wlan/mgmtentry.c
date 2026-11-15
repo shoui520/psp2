@@ -190,7 +190,7 @@ void macMgmtUpdateEntry(uintptr_t argument)
 	wlanTxSetSharedRadio(2);
 	macTxNotifyHandlePacket();
 	romLibUpdateContext(&timing);
-	timing.interval = connection->beaconPeriod;
+	timing.beaconPeriod = connection->beaconPeriod;
 	timing.next[1] = 0;
 	timing.dtimPeriod = connection->dtimPeriod;
 	timing.next[0] = connection->beaconPeriod << 11;

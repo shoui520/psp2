@@ -52,7 +52,6 @@ void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);			/* 0x37c72 
 int wlanFrequencyTrackingStub(void);							/* 0x2e9c8 */
 void hostCmd003c(int timing, int carrier);						/* 0x2e9cc */
 void romLibSyncContext(unsigned int mask);						/* ROM */
-void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
 
 /* The automatic frequency control (hostcmd.c: host command 60), which hostCmd003c() is a stub of here. */
 uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
@@ -546,7 +545,7 @@ void macMgmtConvertContext(struct WlanConnection *connection)
 	wlanPsBuildPacket();
 	macMgmtQueryContext(connection, rates, count, wlanRateBitmapAll(rates, count, 0, 0, NULL));
 	macTxNotifyApplyFrame(connection);
-	cbProcRecordPacket(connection, 0, 0);
+	wlanWmmSet(connection, 0, 0);
 	btLmpLcHandleState(0);
 	connection->flags &= ~(0x10 | 0x04);
 	connection->dtimPeriod = 0;

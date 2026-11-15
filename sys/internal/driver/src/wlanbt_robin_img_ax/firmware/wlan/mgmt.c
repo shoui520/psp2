@@ -10,6 +10,7 @@
  * No Marvell source names these; the names say what the code does.
  */
 #include <stddef.h>
+#include "robin/wmm.h"
 #include "robin/p2pgo.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
@@ -104,8 +105,6 @@ struct __attribute__((packed)) WlanCustomIeTable {
 };
 
 /* Not converted yet; provisional names. */
-unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
-int cbProcResetPacket(void);							/* 0x1e42e */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
@@ -214,7 +213,7 @@ void wlanSetSlotTime(int shortSlot)
 	romLibScheduleContext();
 	romLibResolveContext(slotTime);
 	for (queue = 0; queue < 8; queue++)
-		romEdcaSetAifsn(queue, p2pDirectDispatchTable(queue));
+		romEdcaSetAifsn(queue, wlanWmmAifsn(queue));
 }
 
 /* Starts a calibration against the connection's peer. */
@@ -229,8 +228,8 @@ int wlanIbssTimingStart(struct WlanConnection *connection, const void *parameter
 void wlanIbssTimingEnd(void)
 {
 	wlanIbssTimersControl(0);
-	romLibInspectContext(cbProcPrepareTable(6, 0));
-	cbProcDispatchTable(6, 1);
+	romLibInspectContext(wlanConnectionCommandPrepare(6, 0));
+	wlanConnectionCommandCheck(6, 1);
 	romLibTrackContext();
 	wlanMacSet46cBits();
 }
@@ -330,7 +329,7 @@ void wlanTxPowerSetConnectionLimit(int32_t *slot, int32_t limit, int apply)
 
 	if (*slot != limit || limit == WLAN_TX_POWER_NONE) {
 		*slot = limit;
-		lowest = cbProcResetPacket();
+		lowest = wlanTxPowerLimitMin();
 		if (lowest != wlanTxPowerLinkLimit)
 			wlanTxPowerSetLinkLimit(lowest, apply);
 	}

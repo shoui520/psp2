@@ -117,7 +117,8 @@ int wlanWmmQueueStatus(const struct WlanConnection *connection, uint8_t *tlvs);	
 int wlanWmmReportStatus(struct WlanConnection *connection);	/* 0x1e79a */
 int wlanWmmUpdate(struct WlanConnection *connection, const uint8_t *info, const uint8_t *parameter);	/* 0x1e7cc */
 void wlanWmmSet(struct WlanConnection *connection, int enable, int report);	/* 0x1e868 */
-void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int report);	/* 0x1e8ba */
+void wlanWmmJoin(struct WlanConnection *connection, struct WlanIePointers *elements, int sameBss,
+		 int report);	/* 0x1e8ba */
 int wlanWmmQueueBit(int queue);					/* 0x2d1c6 */
 int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmEdca *edca);	/* 0x2d1e2 */
 int wlanWmmParseParameter(const uint8_t *element, uint8_t *count);	/* 0x2d2e2 */

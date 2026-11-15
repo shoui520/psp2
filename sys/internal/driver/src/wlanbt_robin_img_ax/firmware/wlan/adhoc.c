@@ -4,6 +4,7 @@
  * the beacon fields the IBSS code changes later (0x5c20..0x5fb6). The
  * filename is inferred; no source filename survives.
  */
+#include "robin/wmm.h"
 #include "robin/adhoc.h"
 #include "robin/ie.h"
 #include "robin/mef.h"

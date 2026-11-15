@@ -68,3 +68,16 @@ char *strcpy(char *destination, const char *source)
 		;
 	return destination;
 }
+
+/*
+ * Not in the original: GCC calls it for the zeroed locals that the original
+ * clears with inline stores (OPT -Os in the Makefile).
+ */
+void *memset(void *dest, int value, size_t size)
+{
+	uint8_t *d = dest;
+
+	while (size-- != 0)
+		*d++ = (uint8_t)value;
+	return dest;
+}

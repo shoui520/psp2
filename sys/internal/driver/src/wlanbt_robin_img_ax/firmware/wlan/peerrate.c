@@ -22,7 +22,6 @@
 #include "robin/softtimer.h"
 #include "robin/sys.h"
 
-void *rfCalibBuildHeader(void *slot);							/* 0x29e20: clears 9 bytes */
 int wlanRateProbingAt(const struct WlanRateControl *rc, int index);			/* ratectl.h */
 
 /* The statistics macTxStatsAdd*() last read of each hardware block acknowledgement slot: prepared, checked, validated. */
@@ -307,7 +306,7 @@ void macTxNotifyTrackFrame(void)
 	wlanCalibValue2Clear();
 	wlanCalibSignalClear();
 	wlanCalibBlockClear();
-	rfCalibBuildHeader(channelCalibration.quad);
+	wlanParamSlotClear(channelCalibration.quad);
 	wlanCalibPowerClear();
 	wlanCalibSecondaryClear();
 	wlanCalibLevelsClear();

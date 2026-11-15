@@ -5,6 +5,7 @@
  * the firmware's own placeholders are kept, see robin/txhold.h.
  */
 #include <stddef.h>
+#include "robin/macdefaults.h"
 #include "robin/btrom.h"
 #include "robin/coex.h"
 #include "robin/mac.h"
@@ -23,7 +24,6 @@
 #include "robin/wlanrx.h"
 
 /* Not converted yet. */
-void fmCoexResetBuffer(void);							/* 0x4c922 */
 
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 
@@ -451,7 +451,7 @@ static const int32_t *macMgmtQueryDescriptor(struct WlanTxHoldMachine *machine, 
 	if (*event == 1) {
 		MAC_090_POLICY_MASK &= ~1u;
 		MAC_090_POLICY_MASK &= ~0x10u;
-		fmCoexResetBuffer();
+		wlanIbssAtimTimerCancel();
 		macMgmtParseDescriptor();
 		target = &machine->compute;
 	} else {

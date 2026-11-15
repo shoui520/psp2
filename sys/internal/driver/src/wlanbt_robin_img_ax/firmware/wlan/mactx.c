@@ -3,6 +3,7 @@
  * and the 802.11 data header. The filename is inferred; no source filename
  * survives.
  */
+#include "robin/subscribe.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/autotx.h"
@@ -216,7 +217,6 @@ uint32_t macTxAcquireWakeBit(void)
 }
 
 /* Not converted yet; provisional names. */
-int macTxResolveDescriptor(struct WlanConnection *connection);		/* 0xf826 */
 
 /* Control-task event bit raised for an event to the host while the AP sleeps clients. */
 #define WLAN_EVENT_HOST_EVENT		5
@@ -254,7 +254,7 @@ int wlanHostEventSend(struct WlanConnection *connection, OsaBuffer *buffer)
 	if (connection != NULL) {
 		if (frame->kind == WLAN_HOST_FRAME_EVENT &&
 		    frame->event == WLAN_HOST_EVENT_LINK_LOST &&
-		    !macTxResolveDescriptor(connection))
+		    !wlanSubscribeBeaconMissEnabled(connection))
 			goto drop;
 		frame->bssNumber = connection->bssNumber;
 		frame->bssType = connection->bssType;
@@ -600,7 +600,6 @@ void wlanPsTriggerSent(void);					/* 0x2eade */
 int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
-void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
 void wlanBaNotifyAdded(struct WlanConnection *connection, unsigned int hwSlot,
 		       const uint8_t *peer);				/* 0x333f6 */
 void wlanBaNotifyDeleted(struct WlanConnection *connection, unsigned int hwSlot,
@@ -839,12 +838,9 @@ queueOrComplete:
  * Not converted yet; provisional names for what the transmit task uses them
  * for.
  */
-int cbProcTxAllowed(void);						/* 0x1e032 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void wlanDirectLinkTrigger(void);					/* 0x41184 */
 void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /* 0x41202 */
-void macTxBeginFrame(void);						/* 0x0f662 */
-unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
 int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
 extern struct OsaDevice ampWlanDriver;					/* 0x04009860 */
@@ -938,7 +934,7 @@ void macTxTaskMain(ULONG input)
 		}
 		message = 0;
 		mdevIoctl(&ampWlanDriver, 0x56, 0);
-		if (cbProcTxAllowed() == 0 || macTxWakeBits != 0 || macTxPathReady() != 0)
+		if (wlanAnyConnectionTxAllowed() == 0 || macTxWakeBits != 0 || macTxPathReady() != 0)
 			continue;
 		connection = wlanConnectionFirst(3);
 		if (connection != NULL && connection->mode != 0 &&
@@ -1071,7 +1067,7 @@ byPeer:
 found:
 			buffer->context = connection;
 			wlanHostSleepPending = 1;
-			macTxBeginFrame();
+			wlanLinkQualityCountFrame();
 			__aeabi_memclr4(&tx, offsetof(struct WlanReplyFrame, frameLength));
 			__aeabi_memcpy(&macTxDescriptor, descriptor, 15);
 			if (macTxDescriptor.header.packetLength >= 8000)
@@ -1082,7 +1078,7 @@ found:
 				macTxAdvanceStage();
 				if (wlanCoexUseP2pMode() && wlanPsNullSuppressed == 0) {
 					if (wlanPsTriggerWanted()) {
-						unsigned int priority = cbProcNullPriority();
+						unsigned int priority = wlanWmmCurrentSlotNumber();
 
 						macTxSendNullFrame(connection, 1, priority,
 								   (macTxDescriptor.flags >> 3) & 1, 1, 0);
@@ -1667,7 +1663,7 @@ int macTxBaDelete(struct WlanConnection *connection, const uint8_t *peer, unsign
 	tid = (uint8_t)tid;
 	queue = wlanAccessCategoryToQueue(wlanTidToAccessCategory(tid));
 	if (connection->mode == 3 || connection->mode == 1)
-		cbProcSetBaWindow(tid, queue, hwSlot);
+		wlanWmmSetBaWindow(tid, queue, hwSlot);
 	posture = sysIrqDisable();
 	wakeBit = macTxAcquireWakeBit();
 	wlanWindowFree(windowId, wlanWindowOwners, wlanTxWindowIds);
@@ -1756,7 +1752,7 @@ int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *re
 		return 0;
 	wlanBaNotifyAdded(connection, hwSlot, request->peer);
 	if (connection->mode == 3 || connection->mode == 1)
-		cbProcSetBaWindow((uint8_t)__aeabi_uread4(request->tid), windowId, hwSlot);
+		wlanWmmSetBaWindow((uint8_t)__aeabi_uread4(request->tid), windowId, hwSlot);
 	wlanBaWindowCounterReset(windowId);
 	wlanBaWindowEnable(window);
 	wlanWindowOwners[window] = 1;

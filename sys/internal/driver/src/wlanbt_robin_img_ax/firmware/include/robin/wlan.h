@@ -85,6 +85,7 @@ int wlanConvertDataFrame(OsaBuffer *buffer, WlanPacketHeader *header,
 int wlanPrepareAmsduFrame(OsaBuffer *buffer, WlanPacketHeader *header);
 void wlanDefaultReceiveError(void *context);
 struct OsaBufferPool *wlanInitializeReceiveErrorHandler(void);
+extern struct OsaBufferPool wlanEventPool;				/* 0x04000eac: the events to the host (wlan/wlaninit.c) */
 void wlanForwardEventPacket(OsaBuffer *buffer);
 void wlanSetEventPacketLength(OsaBuffer *buffer, uint32_t length);
 int wlanReleasePacket(OsaBuffer *buffer);

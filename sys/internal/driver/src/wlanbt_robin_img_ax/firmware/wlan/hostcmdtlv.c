@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/adhoc.h"
+#include "robin/apsta.h"
 #include "robin/buffer.h"
 #include "robin/ie.h"
 #include "robin/join.h"
@@ -259,7 +260,7 @@ void wlanWepHostKeySet(WlanWepHostConfig *config, WlanWepHostKeys *keys, const u
 }
 
 /* Which of the host's event masks (by bit) an event code belongs to; 0 for none. */
-unsigned int wlanEventMaskIndex(int event)
+int wlanEventMaskIndex(int event)
 {
 	switch (event) {
 	case 2:

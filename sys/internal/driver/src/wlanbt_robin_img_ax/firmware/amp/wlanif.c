@@ -3,6 +3,7 @@
  * stack calls, its link-control messages, the access-window timers and the
  * association request sent for a link. The filename is inferred.
  */
+#include "robin/join.h"
 #include "robin/mgmt.h"
 #include "robin/esa.h"
 #include <stddef.h>
@@ -85,7 +86,6 @@ OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
-int macTxClearChannel(struct WlanConnection *connection, const uint8_t *body, unsigned int length);	/* 0x12678 */
 /* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
 
@@ -212,7 +212,7 @@ void ampPalStartLink(struct WlanConnection *connection)
 		size += length + 4;
 	}
 	put16(command + 2, size);
-	if (macTxClearChannel(connection, command + 8, (uint16_t)(size - 8)) == 0)
+	if (wlanJoinAssociate(connection, (HostCmd_DS_802_11_ASSOCIATE *)(command + 8), (uint16_t)(size - 8)) == 0)
 		ampPalNotify(connection->bssNumber, 5);
 	osa_BufferFree(buffer);
 }

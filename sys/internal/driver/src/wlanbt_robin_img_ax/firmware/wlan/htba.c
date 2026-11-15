@@ -32,7 +32,6 @@
 
 /* Not converted yet; provisional names. */
 void macMgmtManagePacket(struct WlanConnection *connection, int enable);			/* 0x3a100 */
-int p2pDirectBuildTable(unsigned int tid);							/* 0x4205a */
 
 /* The HT configuration the host set (HostCmd_CMD_11N_CFG), and the Block Ack state kept in SQRAM. */
 extern uint8_t wlanHtTxCapability[2];				/* SQRAM 0xc0011bc1 */
@@ -268,7 +267,7 @@ void wlanBaAddbaResponseReceived(struct WlanConnection *connection, int result,
 		if (connection->interfaceType == WLAN_IF_IBSS || connection->mode == 2)
 			sequence = wlanPeerNextSequence(connection, (response[5] >> 2) & 0xf, 0);
 		else
-			sequence = p2pDirectBuildTable((response[5] >> 2) & 0xf);
+			sequence = wlanWmmLastSequence((response[5] >> 2) & 0xf);
 		wlanBaAddbaAccepted(connection, sequence, U16(wlanAddbaPending.request.timeout),
 				    U16(response + 5), peer, wlanTxBaSessions, wlanBaTimeoutCallback);
 	}
@@ -363,7 +362,7 @@ int hostCmd00ce(uint8_t *body, unsigned int length)
 				if (connection->interfaceType == WLAN_IF_IBSS || connection->mode == 2)
 					sequence = wlanPeerNextSequence(connection, tid, 0);
 				else
-					sequence = p2pDirectBuildTable(tid);
+					sequence = wlanWmmLastSequence(tid);
 				wlanBaAddbaRequestBuild(frame, sequence, request);
 				body[8] = (body[8] & 0xc3) | ((hostTid << 2) & 0x3c);
 				wlanAddbaDialogToken = request->dialogToken;

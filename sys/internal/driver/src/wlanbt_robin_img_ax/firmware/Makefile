@@ -24,7 +24,9 @@ LD := $(BINUTILS)ld
 O ?= build
 
 ARCH_FLAGS := -march=armv5te -mthumb-interwork -mfloat-abi=soft
-OPT ?= -O2
+# The image fills the chip's ITCM, DTCM and SQRAM as Marvell built it (the
+# heap base is fixed at 0x5f800), so it is built for size.
+OPT ?= -Os
 CFLAGS := $(ARCH_FLAGS) -mthumb $(OPT) -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
 	-Iinclude -I$(ROOT)/sys/internal/include
 ASFLAGS := $(ARCH_FLAGS) -g -Iinclude
@@ -43,6 +45,13 @@ SRCS := $(BOOT_SRCS) $(SYS_SRCS) $(OSA_SRCS) $(WLAN_SRCS) $(BT_SRCS) $(AMP_SRCS)
 HEADERS := $(wildcard include/*.h include/robin/*.h)
 SCRIPTS := robin.ld boot/rom_syms.ld
 OBJS := $(patsubst %,$(O)/%.o,$(basename $(SRCS)))
+
+# GCC's Thumb-1 switch helpers (the original's switches call the ROM's __rt_switch8),
+# from the pinned GCC's lib1funcs.S. Only these two: libgcc's other members would
+# take the place of the ROM's run-time functions.
+LIB1FUNCS := $(ROOT)/contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
+LIBGCC_OBJS := $(O)/libgcc/thumb1_case_uqi.o $(O)/libgcc/thumb1_case_uhi.o
+OBJS += $(LIBGCC_OBJS)
 
 .PHONY: image objects clean
 image: $(O)/wlanbt_robin_img_ax.bin
@@ -80,8 +89,12 @@ $(O)/%.o: %.S $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -c $< -o $@
 
+$(O)/libgcc/thumb1_case_%.o: $(LIB1FUNCS)
+	@mkdir -p $(dir $@)
+	$(CC) $(ASFLAGS) -mthumb -DL_thumb1_case_$* -c $< -o $@
+
 $(O)/robin.elf: $(OBJS) $(SCRIPTS)
-	$(LD) -EL -n --no-warn-mismatch -T robin.ld -o $@ $(OBJS)
+	$(LD) -EL -n --no-warn-mismatch --use-blx -T robin.ld -o $@ $(OBJS)
 
 $(O)/wlanbt_robin_img_ax.bin: pack.py $(O)/robin.elf
 	python3 pack.py $@ $(O)/robin.elf

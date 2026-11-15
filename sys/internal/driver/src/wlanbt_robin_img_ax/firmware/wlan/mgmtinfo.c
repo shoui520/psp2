@@ -9,13 +9,11 @@
 #include "robin/conn.h"
 #include "robin/ie.h"
 #include "robin/mgmt.h"
+#include "robin/p2pgo.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 
 #define WLAN_TLV_FRAME_DATA		360
-
-/* The OUI and type of the WPS element (00:50:f2, type 4). */
-const uint8_t wlanWpsOui[4] = { 0x00, 0x50, 0xf2, 0x04 };
 
 /* The ERP and HT state of a connection is passed around as a pointer to its erpInfo byte. */
 #define WLAN_ERP_INFO(erpInfo) \

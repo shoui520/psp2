@@ -9,6 +9,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
 #include "robin/led.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
@@ -99,7 +100,6 @@ void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *olbcCount,
 void macMgmtClearPacket(struct WlanConnection *connection);					/* 0x3a2fa */
 void macMgmtFormatContext(void);								/* 0x35936 */
 void clockHostApplyTarget(void);								/* 0x26b48 */
-void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */
 int wlanPsSleepBlocked(void);									/* 0x2ea5c */
 extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
 extern struct OsaEventFlags *macMgmtEventFlags;							/* 0x55138 */
@@ -587,7 +587,7 @@ void wlanMacReset(void)
 	wlanCurrentChannelFlags(flags);
 	rfSleepHook();
 	wlanSetChannel(wlanCurrentChannel(), flags, 0);
-	wlanAmpTxPacketsAdjust();
+	wlanWmmResetCounters();
 	wlanBaHwReset();
 	wlanTxInFlightPurge();
 	macTxBaResyncSequences();

@@ -9,6 +9,7 @@ int __aeabi_uwrite4(int value, void *address);
 /* RVCT library routines in ITCM (runtime/string.c, runtime/stringarm.c, runtime/rand.c). */
 char *strcpy(char *destination, const char *source);
 int memcmp(const void *left, const void *right, size_t size);
+void *memset(void *dest, int value, size_t size);
 
 char *strncpy(char *destination, const char *source, size_t size);
 

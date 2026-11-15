@@ -180,6 +180,12 @@ int fmCoexQueryBuffer(void)
 	return osaCreateTimer((OsaTimerCallback)wlanPsSelectTable, 0, delay, &wlanIbssAtimTimer, 8);
 }
 
+/* Stops the ATIM window's wake timer. */
+int wlanIbssAtimTimerCancel(void)
+{
+	return osaCancelTimer(wlanIbssAtimTimer);
+}
+
 uint32_t fmCoexSyncBuffer(void)
 {
 	return macDefaultsTxControlSet;

@@ -219,6 +219,7 @@ int wlanParam16Set(uint8_t *slot, unsigned int index, const uint16_t *value);
 int wlanParam16Get(const uint8_t *slot, unsigned int index, uint16_t *value);
 int wlanParam32Set(uint8_t *slot, unsigned int index, const uint32_t *value);
 int wlanParam32Get(const uint8_t *slot, unsigned int index, uint32_t *value);
+void wlanParamSlotClear(uint8_t *slot);					/* 0x29e20 */
 int wlanParam64Set(uint8_t *slot, unsigned int index, const void *value);
 int wlanParam64Get(const uint8_t *slot, unsigned int index, void *value);
 

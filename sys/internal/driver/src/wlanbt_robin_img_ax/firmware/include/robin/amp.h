@@ -193,6 +193,8 @@ int ampPalNotifySecured(int link);
 int ampPalLinkEstablished(struct WlanConnection *context);
 extern const uint8_t ampSnapPrefix[6];
 void ampPalSetLocalAddress(const uint8_t *address, int reversed);
+int ampWlanDriverInit(void);						/* amp/wlanif.c */
+int ampDriverInit(void);						/* amp/pal.c */
 int ampPalNotifyCode10(int first, int second);
 int ampPalNotifyCode11(int first, int second);
 int ampPalNotifyCode12(int first, int second);

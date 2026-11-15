@@ -416,8 +416,6 @@ unsigned int hostCmd0003Version(void);						/* 0x27de0 */
 int hostCmd0006(struct WlanConnection *connection, int bgScan, uint8_t *body, int length); /* 0x370f2 */
 void hostCmd000a(uint8_t *body, unsigned int channel, int psState, unsigned int radioOn); /* 0x2cba4 */
 void hostCmd0010(uint8_t *body, uint16_t *count);				/* 0x2cad0 */
-void hostCmd0019Build(void);							/* 0x23e90 */
-unsigned int hostCmd0019Parse(void);						/* 0x23e3e */
 int hostCmd001cResolve(void);							/* 0x37966 */
 void hostCmd001eChannel(uint8_t *channel);					/* 0x356c6 */
 int hostCmd0020(uint8_t *body, unsigned int action, uint16_t *result, uint8_t *antenna); /* 0x2ce5e */
@@ -468,7 +466,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 					       int policy, void *driver);		/* 0x1d604 */
 int hostCmdMisc(uint16_t *result, uint8_t *body, struct WlanConnection *connection); /* 0x2ccb6 */
 void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
-void wlanHostWakeGpioSet(unsigned int gpio, int enable);			/* 0x28142 */
 void macMgmtValidateTable(int reason);						/* 0x3726c */
 void macMgmtScheduleTable(int value);						/* 0x3796e */
 void macMgmtNotifyTable(void);							/* 0x3797a */
@@ -783,7 +780,7 @@ int hostCmdProcess(void)
 						wlanCoexConfig.flags[0] = 0;
 					}
 				} else if (reg == 0xc001) {
-					hostCmd0019Build();
+					sysIdleStatsReset();
 				} else if (reg == 0xd000) {
 					wlanCoexSetBtLinkLimit(value);
 				} else {
@@ -793,7 +790,7 @@ int hostCmdProcess(void)
 				if (reg == 0xc000)
 					value = wlanCoexConfig.btConfig >> 1;
 				else if (reg == 0xc001)
-					value = hostCmd0019Parse();
+					value = sysIdlePercent();
 				else if (reg == 0xd000)
 					value = wlanCoexBtLinkLimit();
 				else
@@ -1818,7 +1815,7 @@ int hostCmdProcess(void)
 					if (wlanHostSleepSettings.gpio != -1 && wlanHostSleepSettings.gpio != -2) {
 						mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO_SET, wlanHostSleepSettings.gpio);
 						mdevIoctl(wlanSdioDev, SDIO_IOCTL_WAKE_GPIO_ARM, 0);
-						wlanHostWakeGpioSet((uint8_t)wlanHostSleepSettings.gpio, 1);
+						gpioPinSelect((uint8_t)wlanHostSleepSettings.gpio, 1);
 					}
 				}
 			}

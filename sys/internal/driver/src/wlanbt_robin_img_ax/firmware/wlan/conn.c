@@ -1371,15 +1371,15 @@ struct WlanConnection *wlanConnectionDuplicateType2(const uint8_t *peer, const s
  * (one more member of the network) that then takes its interface type, state
  * machine, addresses, rates and flags; the peer is the one of the copy.
  */
-void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source)
+struct WlanConnection *wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *source)
 {
 	struct WlanConnection *copy;
 
 	if (source->interfaceType == 1 && (source->stationFlags & 0x80))
-		return;
+		return source;
 	copy = wlanConnectionConfigure(5, source->bssType, source->bssNumber, NULL, NULL, 0, source->device);
 	if (copy == NULL)
-		return;
+		return NULL;
 	copy->mode = source->mode;
 	copy->interfaceType = source->interfaceType;
 	macMgmtFilterState(&copy->machine);
@@ -1419,17 +1419,19 @@ void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *sou
 		copy->keyBlocks[0] = source->keyBlocks[0];
 		copy->keyBlocks[1] = source->keyBlocks[1];
 	}
+	return copy;
 }
 
-/* A connection is copied by its interface type. */
-void wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source)
+/* A connection is copied by its interface type: the copy, or NULL. */
+struct WlanConnection *wlanConnectionDuplicate(const uint8_t *peer, struct WlanConnection *source)
 {
 	if (source->interfaceType == 1)
-		wlanConnectionDuplicateIbss(peer, source);
-	else if (source->interfaceType == 2)
-		wlanConnectionDuplicateType2(peer, source);
-	else if (source->interfaceType == 3 && source->mode == 2)
-		wlanConnectionDuplicateAp(peer, source);
+		return wlanConnectionDuplicateIbss(peer, source);
+	if (source->interfaceType == 2)
+		return wlanConnectionDuplicateType2(peer, source);
+	if (source->interfaceType == 3 && source->mode == 2)
+		return wlanConnectionDuplicateAp(peer, source);
+	return NULL;
 }
 
 /* The IBSS connection whose SSID is the one of the SSID element (ID, length, SSID). */
@@ -1594,7 +1596,7 @@ int wlanBssRecordTiming(unsigned int kind, struct WlanBssTiming *timing)
 			allowed = 0;
 			goto done;
 		} else {
-			uint32_t interval = timing->interval;
+			uint32_t interval = timing->beaconPeriod;
 			uint64_t next = ((uint64_t)timing->next[1] << 32) | timing->next[0];
 			uint64_t now = romLibRecordState(timing->next[0]);
 

@@ -4,6 +4,9 @@
  * The filename is inferred; no source filename survives.
  */
 #include <stddef.h>
+#include "robin/amp.h"
+#include "robin/hct.h"
+#include "robin/sdiodev.h"
 #include "robin/osa.h"
 #include "robin/power.h"
 #include "robin/rom.h"
@@ -332,20 +335,16 @@ const uint8_t *osaFindTlv(const uint8_t *data, int type, int length)
 }
 
 /* Driver registrations run once at start-up; the names below are provisional. */
-int btSdioHciScheduleHeader(void);	/* 0x00026224 */
-int btSdioHciAdjustState(void);		/* 0x00020e2c */
 int btSbcBuildEntry(void);		/* 0x0004f490 */
-int btSdioHciFormatBuffer(void);	/* 0x0002366c */
-int ampPalBuildState(void);		/* 0x00002782 */
 
 void osaInitSubsystems(void)
 {
-	btSdioHciScheduleHeader();
-	btSdioHciAdjustState();
+	sdioDevicesInit();
+	hctRegisterDriver();
 	fmCoexFilterBuffer();
 	fmCoexHandlePacket();
 	btSbcUpdateState();
 	btSbcBuildEntry();
-	btSdioHciFormatBuffer();
-	ampPalBuildState();
+	ampWlanDriverInit();
+	ampDriverInit();
 }

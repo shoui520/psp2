@@ -1,7 +1,7 @@
 /*
  * The access point's BSS machine: it starts and stops the BSS and, when the host gave several
  * channels (WlanConnectionInfo.channelCount), picks the least loaded one first: every channel of
- * the list is surveyed by the SQRAM code (uapSqramSetupEntry()) and its load (the share of time the
+ * the list is surveyed by the SQRAM code (chanRptStart()) and its load (the share of time the
  * channel was busy, and the access points heard on it) decides. Marvell published no source for
  * it; the names are the firmware's own placeholder names, kept, and the file name is inferred.
  *
@@ -11,6 +11,7 @@
  */
 #include <stddef.h>
 #include "robin/apsta.h"
+#include "robin/chanrpt.h"
 #include "robin/conn.h"
 #include "robin/htba.h"
 #include "robin/hostps.h"
@@ -55,19 +56,6 @@ struct WlanApEvent {
 };
 
 /* The request of one channel's survey: the SQRAM code answers with a WlanSurveyResult. */
-struct WlanSurveyRequest {
-	uint8_t channelFlags;
-	uint8_t channel;
-	uint8_t reserved2[2];
-	uint32_t reserved4[3];
-	uint32_t duration;		/* us */
-	uint8_t reserved20[40];
-	uint8_t enable;
-	uint8_t reserved61[11];
-};
-
-_Static_assert(sizeof(struct WlanSurveyRequest) == 0x48, "survey request");
-
 struct WlanSurveyResult {
 	uint8_t reserved0[16];
 	uint8_t channelFlags;
@@ -78,10 +66,6 @@ struct WlanSurveyResult {
 	uint8_t accessPoints;		/* access points heard on it */
 };
 
-/* Not converted yet; provisional names. */
-int uapSqramSetupEntry(struct WlanConnection *connection, struct WlanSurveyRequest *request,
-		       int (*callback)(struct WlanConnection *connection, OsaBuffer *buffer),
-		       struct WlanSurveyRequest *argument);			/* SQRAM, via the veneer at 0x532ec */
 void macTxNotifySetupBuffer(void);							/* 0x323ce */
 void macTxNotifyReleaseBuffer(void);							/* 0x3239c */
 
@@ -115,18 +99,18 @@ int macMgmtProcessFrame(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	const struct WlanApChannel *entry = &info->channels[wlanApSurveyed];
-	struct WlanSurveyRequest request;
+	struct ChanRptRequest request;
 
 	__aeabi_memclr4(&request, sizeof(request));
-	request.channelFlags = entry->channelFlags & 3;
+	request.band = entry->channelFlags & 3;
 	request.channel = entry->channel;
-	request.duration = (uint32_t)(entry->measureTime[0] | entry->measureTime[1] << 8) << 10;
-	request.enable = 1;
-	return uapSqramSetupEntry(connection, &request, macMgmtUpdateFrame, &request);
+	request.dwell = (uint32_t)(entry->measureTime[0] | entry->measureTime[1] << 8) << 10;
+	request.histogramWideRange = 1;
+	return chanRptStart(connection, &request, macMgmtUpdateFrame);
 }
 
 /* 0x3a6a4: a channel's survey is in: its cost is the share of busy time (%) plus 10 per access point. */
-int macMgmtUpdateFrame(struct WlanConnection *unused, OsaBuffer *buffer)
+int macMgmtUpdateFrame(int status, OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 	const struct WlanSurveyResult *result = (const struct WlanSurveyResult *)((uint8_t *)buffer + buffer->dataOffset);

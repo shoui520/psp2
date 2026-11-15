@@ -10,6 +10,9 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
+#include "robin/hostps.h"
+#include "robin/swcrypto.h"
 #include "robin/coex.h"
 #include "robin/stapssm.h"
 #include "robin/conn.h"
@@ -55,9 +58,6 @@ extern uint32_t wlanPsSleepTimerEnd;			/* SQRAM 0xc000fb00 */
 extern uint64_t wlanPsSleepTimerStart;			/* SQRAM 0xc000fb08 */
 extern uint32_t wlanPsAnnounceLimit;			/* 0x7ff0 */
 extern const uint8_t wlanPsBroadcast[6];		/* 0x53d4a */
-void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
-int cbProcBuildPacket(struct WlanConnection *connection);	/* 0x1e38e */
-unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int wlanWmmEnabled(void);				/* 0x41cb8 */
 
 static inline __attribute__((always_inline)) struct WlanPsSleep *wlanPsSleepOf(struct WlanConnection *connection)
@@ -81,7 +81,7 @@ static inline __attribute__((always_inline)) void wlanPsSendNull(struct WlanConn
 								int powerManagement, int trigger,
 								uint8_t kind)
 {
-	macTxSendNullFrame(connection, powerManagement, cbProcNullPriority(), 0, trigger, kind);
+	macTxSendNullFrame(connection, powerManagement, wlanWmmCurrentSlotNumber(), 0, trigger, kind);
 }
 
 /* 0x13410: tell the host the device is awake, once after a sleep it was told of. */
@@ -150,7 +150,7 @@ const int32_t *wlanPsMachineOff(struct WlanPsMachine *machine, const int32_t *ev
 		wlanPsSetPowerState(0);
 		return NULL;
 	case 1:
-		cbProcAdjustContext(machine->connection);
+		wlanPsHostCmdRespond(machine->connection);
 		romHsmTransition(machine, &machine->on);
 		return NULL;
 	case 17:
@@ -300,7 +300,7 @@ const int32_t *wlanPsMachineOn(struct WlanPsMachine *machine, const int32_t *eve
 		sleepCalibrationUpdate();
 		sleepWake();
 		wlanPsMachineStopTimers(machine);
-		cbProcAdjustContext(connection);
+		wlanPsHostCmdRespond(connection);
 		romHsmTransition(machine, &machine->off);
 		return NULL;
 	case 7:
@@ -471,8 +471,8 @@ int wlanPsMachineMaySleep(struct WlanPsMachine *machine, uint64_t now)
 		return 1;
 	if (left < sleep->sleepDuration + margin || sleep->sleepAllowed != 1 ||
 	    sleep->sleepDuration < sleepWakeLatency + WLAN_PS_MIN_SLEEP ||
-	    cbProcBuildPacket(connection) != 0 || sleep->recentActivity != 0 ||
-	    sleep->sleepTimer != 0 || wlanHostQueueDepth(0) != 0 || wlanHostQueueDepth(0) != 0 ||
+	    wlanBssQueuedFrames(connection) != 0 || sleep->recentActivity != 0 ||
+	    sleep->sleepTimer != 0 || wlanCryptoCount(0) != 0 || wlanCryptoCount(0) != 0 ||
 	    mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0 || wlanDmaRing3HasRoom() != 0 ||
 	    wlanPsDtimTooClose(sleep, now) != 0 || !macTxPoolsIdle())
 		return 0;
@@ -654,11 +654,11 @@ const int32_t *wlanPsMachineIeee(struct WlanPsMachine *machine, const int32_t *e
 	switch (*event) {
 	case 1:
 		machine->resume = &machine->on;
-		cbProcAdjustContext(machine->connection);
+		wlanPsHostCmdRespond(machine->connection);
 		return NULL;
 	case 2:
 		machine->resume = &machine->off;
-		cbProcAdjustContext(machine->connection);
+		wlanPsHostCmdRespond(machine->connection);
 		return NULL;
 	case ROM_HSM_EXIT:
 		wlanPsSetIeeeActive(0);

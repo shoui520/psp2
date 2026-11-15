@@ -6,6 +6,7 @@
  * placeholder names, kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/wmm.h"
 #include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
@@ -44,7 +45,6 @@
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
-void cbProcCheckFrame(struct WlanConnection *connection);				/* 0x1ea08 */
 
 /* The association request goes back with the BSS's own elements (custom ones too) as a response, after the station is let go of. */
 int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument)
@@ -705,7 +705,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	} else {
 		info->listenInterval = 0;
 	}
-	cbProcCheckFrame(connection);
+	wlanWmmApplyApEdca(connection);
 	romLibNotifyContext();
 	uapSqramConfigureState(wlanConnectionCommandCheck(2, 0));
 	wlanConnectionCommandPrepare(2, 1);

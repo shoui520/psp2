@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
 #include "robin/beacontrack.h"
 #include "robin/conn.h"
 #include "robin/ie.h"

@@ -7,6 +7,8 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/wmm.h"
+#include "robin/hostcmd.h"
 #include "robin/calibration.h"
 #include "robin/stapssm.h"
 #include "robin/coex.h"
@@ -76,31 +78,14 @@
 /* mdevIoctl() on the SDIO device: the MAC is busy joining. */
 #define MDEV_IOCTL_SDIO_JOIN_BUSY	0x48
 
-/* What romLibUpdateContext() fills for cbProcRecordBuffer(). */
-struct WlanTsfRecord {
-	uint64_t timestamp;		/* the BSS's TSF */
-	uint8_t reserved8[16];
-	uint32_t beaconInterval;	/* microseconds */
-	uint8_t reserved28[20];
-};
-
-_Static_assert(sizeof(struct WlanTsfRecord) == 48, "TSF record");
-
 struct WlanJoin wlanJoin __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
 extern uint8_t wlanJoinWmmIe[9];					/* DTCM 0x04008fc0 */
 extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
-void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
-void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
-			uint32_t sameBss, int unused);			/* 0x1e8ba */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
-int cbProcSetupEntry(void);						/* 0x1cb00 */
-int cbProcVerifyEntry(void);						/* 0x1cb1a */
 void macMgmtFilterPacket(int filter, int kind);				/* 0x3a5aa */
-void cbProcClearPacket(struct WlanConnection *connection);		/* 0x1e79a */
-void wlanPsPrepareTable(struct WlanConnection *connection);		/* 0x172f0 */
 
 /* 0x11a60: authenticate with the algorithm the host asked for. */
 int wlanJoinSendAuth(int shared)
@@ -201,7 +186,7 @@ void wlanJoinSetBss(const struct WlanJoinBss *bss)
 	__aeabi_memclr4(connection->networkSsid, sizeof(connection->networkSsid));
 	__aeabi_memcpy(connection->networkSsid, bss->ssid, bss->ssidLength);
 	connection->networkSsidLength = bss->ssidLength;
-	cbProcSelectBuffer(0, bss->bssid);
+	wlanBssSelectAddress(0, bss->bssid);
 	wlanTxSetSharedRadio(1);
 	wlanMacAddressApply();
 }
@@ -210,8 +195,8 @@ void wlanJoinSetBss(const struct WlanJoinBss *bss)
 void wlanJoinFinish(uint8_t result)
 {
 	struct WlanConnection *connection;
-	struct WlanTsfRecord record;
-	uint64_t now;
+	struct WlanBssTiming record;
+	uint64_t now, tsf;
 	uint8_t *response;
 	unsigned int length;
 	unsigned int flags;
@@ -240,9 +225,11 @@ void wlanJoinFinish(uint8_t result)
 
 		posture = sysIrqDisable();
 		romLibUpdateContext(&record);
-		record.timestamp = now + wlanJoin.tsfOffset;
-		record.beaconInterval = 102400;
-		cbProcRecordBuffer(0, (int)(uintptr_t)&record);
+		tsf = now + wlanJoin.tsfOffset;
+		record.timestamp[0] = (uint32_t)tsf;
+		record.timestamp[1] = (uint32_t)(tsf >> 32);
+		record.beaconPeriod = 102400;
+		wlanBssRecordTiming(0, &record);
 		sysIrqRestore(posture);
 
 		wlanPsVerifyFrame(3);
@@ -251,7 +238,7 @@ void wlanJoinFinish(uint8_t result)
 		if (wlanJoin.capability[1] & WLAN_CAPABILITY1_SPECTRUM_MGMT)
 			wlanTxPowerUpdateConnection(wlanJoin.connection, wlanJoin.channel, 0);
 		wlanTxPowerApply();
-		wpaSuppScheduleDescriptor(wlanJoin.connection);
+		hostCmdConnectionChanged();
 		wlanJoin.connection->bssCapability[0] = wlanJoin.capability[0];
 		wlanJoin.connection->bssCapability[1] = wlanJoin.capability[1];
 		wlanJoin.connection->dtimPeriod = 0;
@@ -273,7 +260,7 @@ void wlanJoinFinish(uint8_t result)
 						      (IEEEtypes_MacAddr_t *)wlanJoin.bss.bssid,
 						      (IEEEtypes_MacAddr_t *)wlanDeviceAddress->address);
 		}
-		cbProcFilterPacket(wlanJoin.connection, &wlanJoin.ies, wlanJoin.sameBss, 0);
+		wlanWmmJoin(wlanJoin.connection, &wlanJoin.ies, wlanJoin.sameBss, 0);
 		wlanSetSlotTime((wlanJoin.connection->bssCapability[1] >> 2) & 1);
 		wlanSlotAbort(wlanJoin.slot, WLAN_SLOT_EVENT_JOIN_DONE);
 		connection = wlanJoin.connection;
@@ -776,13 +763,13 @@ void wlanJoinInit(void)
 int wlanJoinReported(OsaBuffer *buffer)
 {
 	if (wlanJoin.result == WLAN_JOIN_OK) {
-		cbProcClearPacket(buffer->context);
+		wlanWmmReportStatus(buffer->context);
 		if (wlanJoin.portPending)
 			keyMgmtControlledPortOpen();
 		wlanJoin.portPending = 0;
 		wlanJoinSetBusy(buffer->context, 0);
 	}
-	wlanPsPrepareTable(buffer->context);
+	wlanPsPhaseArm(buffer->context);
 	return 0;
 }
 
@@ -857,7 +844,7 @@ int wlanJoinFilterIdle(void)
 {
 	int filter = WLAN_JOIN_FILTER_IDLE;
 
-	if (cbProcVerifyEntry())
+	if (wlanConnectionDtimHoldCount())
 		filter = WLAN_JOIN_FILTER_IDLE_ENTRY;
 	macMgmtFilterPacket(filter, 2);
 	macMgmtFilterPacket(filter, 3);
@@ -880,7 +867,7 @@ int wlanJoinFilterActive(void)
 	uint8_t flags;
 	int filter;
 
-	if (cbProcSetupEntry()) {
+	if (wlanConnectionGetCount()) {
 		filter = WLAN_JOIN_FILTER_SAME_CHANNEL;
 		wlanCurrentChannelFlags(&flags);
 		if (wlanOperatingChannel() != wlanJoin.channel ||
