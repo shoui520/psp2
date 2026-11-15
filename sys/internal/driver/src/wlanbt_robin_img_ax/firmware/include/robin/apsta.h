@@ -125,6 +125,15 @@ void macMgmtVerifyFrame(const uint8_t *ie, struct WlanMacTxRequest *beacon,
 void macMgmtSelectFrame(struct WlanConnection *connection);				/* 0x3b0d0 */
 void fmCoexScheduleTable(uint8_t *frame, uint16_t algorithm, uint16_t sequence,
 			 uint16_t status, const void *challenge);			/* 0x4bebe */
+void fmCoexNotifyTable(uint8_t *frame, uint16_t capability, uint16_t listenInterval,
+		       const uint8_t *currentAp);					/* 0x4bf66 */
+int fmCoexFormatTable(const WlanBeaconIePointers *ies, uint8_t *htCapability, uint8_t *htOperation,
+		      uint8_t *coexistence, uint8_t *overlapScan);			/* 0x4bfa8 */
+unsigned int fmCoexInspectTable(const WlanBeaconIePointers *ies, uint8_t *rates, uint8_t *count,
+				const WlanHtCapabilityIe *htCapability);		/* 0x4bff2 */
+void fmCoexTrackTable(WlanWirelessFrame *frame, const void *ssid, const void *rates,
+		      const void *dsChannel);						/* 0x4c05a */
+void fmCoexManageTable(uint8_t *table);							/* 0x4c0cc */
 
 /* wlan/apassoc.c */
 int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3902c */

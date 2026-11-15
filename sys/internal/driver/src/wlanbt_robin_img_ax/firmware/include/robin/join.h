@@ -113,7 +113,8 @@ struct WlanJoinBss {
 struct WlanJoinAuthRequest {
 	uint8_t peer[6];
 	uint8_t algorithm;		/* WLAN_AUTH_ALG_* */
-	uint8_t reserved7[5];
+	uint8_t sequence[2];		/* the transaction sequence number; 0: 1 */
+	uint8_t reserved9[3];
 };
 
 /* The (re)association request macTxNotifyReleaseFrame()/SetupFrame() send. */

@@ -11,6 +11,7 @@
 #include "robin/btrom.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"
+#include "robin/joinframe.h"
 #include "robin/mgmt.h"
 #include "robin/rom.h"
 #include "robin/sys.h"
@@ -64,10 +65,6 @@ struct __attribute__((packed)) WlanBarHostEvent {
 };
 
 /* Not converted yet; provisional names. */
-void macTxNotifyConvertFrame(OsaBuffer *buffer);				/* 0x33a5e */
-void macTxNotifySelectFrame(OsaBuffer *buffer);					/* 0x33acc */
-void macTxNotifyConfigureHeader(OsaBuffer *buffer);				/* 0x33eb6 */
-void macTxNotifyCheckHeader(OsaBuffer *buffer);					/* 0x33ef8 */
 int macMgmtDispatchState(OsaBuffer *buffer, uintptr_t argument, uint32_t channel); /* 0x348c4 */
 void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);		/* 0x37c72 */
 void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */

@@ -15,6 +15,7 @@
 #include "robin/esa.h"
 #include "robin/ie.h"
 #include "robin/join.h"
+#include "robin/joinframe.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
 #include "robin/protection.h"
@@ -90,25 +91,13 @@ struct WlanJoin wlanJoin __attribute__((section(".itcm.bss")));
 extern IEEEtypes_MacAddr_t *wlanDeviceAddress;				/* 0x54a7c */
 extern uint8_t wlanJoinWmmIe[9];					/* DTCM 0x04008fc0 */
 extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
-extern uint8_t wlanJoinHtCapability[28];				/* SQRAM 0xc0032154 */
-int macTxNotifyFilterFrame(struct WlanConnection *connection,
-			   const struct WlanJoinAuthRequest *request);	/* 0x33c96 */
-int macTxNotifySetupFrame(struct WlanConnection *connection,
-			  const struct WlanJoinAssocRequest *request,
-			  const struct WlanJoinBss *previous);		/* 0x33878 */
-int macTxNotifyReleaseFrame(struct WlanConnection *connection,
-			    const struct WlanJoinAssocRequest *request);	/* 0x33816 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
-void macTxNotifyBuildHeader(struct WlanConnection *connection, const struct WlanJoinBss *peer,
-			    int kind, const void *unused, uint32_t timeout);	/* 0x34094 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
 void macMgmtResolveState(struct WlanConnection *connection, unsigned int security); /* 0x34cc4 */
 void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
 			uint32_t sameBss, int unused);			/* 0x1e8ba */
 void macMgmtClearContext(struct WlanConnection *connection);		/* 0x35dc0 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
-void macTxNotifyClearFrame(OsaBuffer *rx);				/* 0x338e2 */
-void macTxNotifyUpdateHeader(OsaBuffer *rx);				/* 0x33dee */
 void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
 int cbProcSetupEntry(void);						/* 0x1cb00 */
 int cbProcVerifyEntry(void);						/* 0x1cb1a */
@@ -197,7 +186,7 @@ void keyMgmtControlledPortOpen(void)
 	wlanPortOpenNotify(wlanJoin.connection, WLAN_CONN_EVENT_PORT_OPEN);
 	p2pDirectVerifyEntry(wlanJoin.connection);
 	if (wlanJoin.newBss && wlanJoin.portTimeout)
-		macTxNotifyBuildHeader(wlanJoin.connection, &wlanJoin.previous, 3, NULL,
+		macTxNotifyBuildHeader(wlanJoin.connection, wlanJoin.previous.bssid, 3, NULL,
 				       1000 * wlanJoin.portTimeout);
 	if (wlanSessionId && wlanRoleOtherOnly()) {
 		connection = wlanJoin.connection;
