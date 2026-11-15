@@ -407,6 +407,7 @@ void btLmpLcAcquireFrame(unsigned int link);			/* 0x480be */
 int btLmpLcReleaseFrame(unsigned int link);			/* 0x48108 */
 void btLmpLcSetupFrame(const uint8_t *parameters);		/* 0x4814a */
 int btLmpLcClearFrame(void);					/* 0x481ca */
+int btLmpLcConvertFrame(void **slot);				/* 0x481ec */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

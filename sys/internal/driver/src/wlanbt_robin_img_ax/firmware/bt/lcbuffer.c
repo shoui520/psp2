@@ -3004,3 +3004,29 @@ int btLmpLcClearFrame(void)
 	}
 	return btLdrRomValidateState(0);
 }
+
+/*
+ * An LMP SCO link request (opcode 0x2b) on a link with an AMP slot that has none yet is refused
+ * (reason 0x0d, limited resources) while the WLAN side is flagged; anything else goes to the ROM.
+ */
+int btLmpLcConvertFrame(void **slot)
+{
+	const uint8_t *pdu = *slot;
+
+	if (btCoexWlanFlagged() != 0 && pdu[7] >> 1 == 0x2b) {
+		unsigned int handle = *(const BtHalf *)(pdu + 4);
+		unsigned int amp = btLcoRomQueryState(handle);
+
+		if (amp != 0) {
+			const uint8_t *amps = btLcoRomProcessState(amp);
+
+			if (amps[(uint16_t)(amp - 8) * 30 + 2] == 0) {
+				unsigned int transaction = pdu[7] & 1;
+
+				if (pdu[12] == 0)
+					return btLdrRomComputeState(handle, transaction, 0x2b, 0x0d);
+			}
+		}
+	}
+	return btLcoRomDispatchState(slot);
+}
