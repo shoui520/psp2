@@ -24,7 +24,6 @@ enum {
 };
 
 /* Control objects the ROM kernel fills in; sizes are what the firmware reserves. */
-typedef struct { uint32_t words[14]; } WlanQueueObject;
 typedef struct { uint32_t words[8]; } WlanEventFlagsObject;
 typedef struct { uint32_t words[7]; } WlanSemaphoreObject;
 
@@ -63,13 +62,16 @@ static WlanQueueObject timerCbQueueObject __attribute__((section(".itcm.bss")));
 static WlanEventFlagsObject macMgmtEventFlagsObject __attribute__((section(".itcm.bss")));
 static struct TX_THREAD_STRUCT macMgmtTaskObject __attribute__((section(".itcm.bss")));
 static uint8_t macMgmtStack[1700] __attribute__((section(".dtcm.bss")));
-/* Two single-word queues of the management task, with their 24-byte storage. */
-static WlanQueueObject macMgmtMaskQueueA __attribute__((section(".itcm.bss")));
+/*
+ * Two single-word queues of the management task, with their 24-byte storage: the connections
+ * whose link is to be checked (event 8) and the ones to be looked at for a missing peer (event 0x800).
+ */
+WlanQueueObject macMgmtLinkCheckQueue __attribute__((section(".itcm.bss")));
 static uint8_t macMgmtMaskStorageA[24] __attribute__((section(".itcm.bss")));
-static WlanQueueObject macMgmtMaskQueueB __attribute__((section(".itcm.bss")));
+WlanQueueObject macMgmtPeerCheckQueue __attribute__((section(".itcm.bss")));
 static uint8_t macMgmtMaskStorageB[24] __attribute__((section(".itcm.bss")));
 
-static struct WlanTaskHandles wlanTaskHandles __attribute__((section(".itcm.bss")));
+struct WlanTaskHandles wlanTaskHandles __attribute__((section(".itcm.bss")));
 struct WlanInitStage *wlanInitStageHead __attribute__((section(".itcm.rw")));
 struct WlanInitStage *wlanInitStageTail __attribute__((section(".itcm.rw")));
 static struct WlanInitStage macTxStage __attribute__((section(".itcm.bss")));
@@ -78,7 +80,6 @@ static struct WlanInitStage macMgmtFlushStage __attribute__((section(".itcm.bss"
 /* Unconverted pieces. */
 int macTxResetStage(void);			/* 0x9b20, init stage of the transmit task */
 void macTxTaskMain(ULONG input);		/* 0x9e3c */
-void macMgmtTaskMain(ULONG input);		/* 0x342a8 */
 void macTxNotifyTaskMain(ULONG input);		/* 0x2f42c */
 void cbProcTaskMain(ULONG input);		/* 0x1aeae */
 int macMgmtConfigureBuffer(void);		/* 0x37d74 */
@@ -241,9 +242,9 @@ int macMgmtCreateTask(void)
 	macMgmtSmeQueue = (struct OsaMessageQueue *)&macMgmtSmeQueueObject;
 	osaMsgQueueCreate(wlanTaskHandles.mgmtSmeQueue, "MacMgmtSMEMsgQ", WLAN_QUEUE_MESSAGE, 6,
 			  WLAN_QUEUE_CLASS);
-	tx_queue_create((TX_QUEUE *)&macMgmtMaskQueueA, NULL, 1, macMgmtMaskStorageA,
+	tx_queue_create((TX_QUEUE *)&macMgmtLinkCheckQueue, NULL, 1, macMgmtMaskStorageA,
 			sizeof(macMgmtMaskStorageA));
-	tx_queue_create((TX_QUEUE *)&macMgmtMaskQueueB, NULL, 1, macMgmtMaskStorageB,
+	tx_queue_create((TX_QUEUE *)&macMgmtPeerCheckQueue, NULL, 1, macMgmtMaskStorageB,
 			sizeof(macMgmtMaskStorageB));
 	macMgmtEventFlags = (struct OsaEventFlags *)&macMgmtEventFlagsObject;
 	osaEventFlagsInit(wlanTaskHandles.mgmtEventFlags);

@@ -27,25 +27,55 @@ _Static_assert(offsetof(struct WlanTxWindowQueue, count) == 136, "window queue c
 
 /* Power-save state kept per connection (partial; its owner is not converted yet). */
 struct WlanPsPeerState {
-	uint8_t reserved0[41];
+	uint8_t beaconTimestamp[8];	/* the TSF of the last beacon heard (a P2P group owner's) */
+	uint32_t beaconTimerLow;	/* the MAC timer when it was heard */
+	uint32_t beaconTimerHigh;
+	uint8_t reserved16[14];
+	uint8_t p2pFlags;		/* bit 1: the P2P element names the device address; bit 2: a P2P group owner's beacon carries the P2P element */
+	uint8_t reserved31[10];
 	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
 	uint8_t reserved42;
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
-	uint8_t reserved44;
+	uint8_t noaMode;		/* 1: the Notice of Absence has a CTWindow, 2: it has absence periods */
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
-	uint8_t reserved46[142];
+	uint8_t reserved46[107];
+	uint8_t noaAttribute[31];	/* the Notice of Absence attribute of the last beacon: ID, length, index, CTWindow, descriptors */
+	uint8_t reserved184[4];
 	uint8_t p2pOptions;		/* bit 1: the Extended Listen Timing attribute goes into the P2P element */
-	uint8_t reserved189[977];
+	struct {
+		uint8_t id;		/* the attribute the P2P element of a probe request carries, when its length is not 0 */
+		uint8_t length[2];
+	} p2pAttribute;
+	uint8_t reserved192[974];
 	struct {
 		uint8_t id;			/* 0: the Status attribute */
 		uint8_t length[2];
 		uint8_t value;			/* 0: success, 3: limit reached */
 	} p2pStatus;
-	uint8_t reserved1170[54];
+	uint8_t reserved1170[18];
+	uint8_t p2pBssActive;		/* 1: the channel of the group owner is the one the radio is on */
+	uint8_t reserved1189[3];
+	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on */
+	uint8_t reserved1193[31];
 	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
 	uint8_t reserved1228[4];
 	uint8_t p2pIeState[4];		/* kept by the P2P code from custom IE slot 1 */
+	uint8_t reserved1236[84];
+	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
+	uint8_t reserved1326[30];
+	uint8_t p2pGroupId[6];		/* the group owner a beacon names */
 };
+
+_Static_assert(offsetof(struct WlanPsPeerState, p2pOptions) == 188, "P2P options");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pAttribute) == 189, "P2P attribute");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pStatus) == 1166, "P2P status");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pEntryPending) == 1224, "P2P entry pending");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pDeviceAddress) == 1320, "P2P device address");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pGroupId) == 1356, "P2P group");
+_Static_assert(offsetof(struct WlanPsPeerState, noaAttribute) == 153, "Notice of Absence");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pBssActive) == 1188, "P2P BSS active");
+_Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
+_Static_assert(offsetof(struct WlanPsPeerState, noaMode) == 44, "Notice of Absence mode");
 
 /*
  * What the transmit task hands the frame builder (wlanTxBuildFrame())

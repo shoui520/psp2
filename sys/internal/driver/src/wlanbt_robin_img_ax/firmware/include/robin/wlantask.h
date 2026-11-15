@@ -9,6 +9,8 @@
 #include "robin/sync.h"
 #include "robin/threadx.h"
 
+struct WlanConnection;
+
 /* One entry of the post-initialisation chain; the chain is run by the control task. */
 struct WlanInitStage {
 	int (*run)(void);
@@ -19,6 +21,9 @@ struct WlanInitStage {
  * Handles the management layer uses to reach the queues of the other tasks.
  * Each member points to the handle variable, not to the object.
  */
+/* The control object of a ROM queue, as the firmware reserves it (56 bytes). */
+typedef struct { uint32_t words[14]; } WlanQueueObject;
+
 struct WlanTaskHandles {
 	struct OsaEventFlags **mgmtEventFlags;
 	struct OsaMessageQueue **mgmtSmeQueue;
@@ -41,6 +46,13 @@ extern struct OsaEventFlags *macMgmtEventFlags;
 extern struct OsaMessageQueue *macMgmt80211Queue;
 extern struct OsaMessageQueue *macMgmtSmeQueue;
 extern struct OsaMessageQueue *timerCbQueue;
+
+extern struct WlanTaskHandles wlanTaskHandles;				/* 0x57814 */
+extern WlanQueueObject macMgmtLinkCheckQueue;				/* 0x5772c */
+extern WlanQueueObject macMgmtPeerCheckQueue;				/* 0x577a0 */
+
+void macMgmtTaskMain(ULONG input);					/* 0x342a8 */
+int wlanLinkCheckPost(struct WlanConnection *connection);		/* 0x347be */
 
 void wlanSuspendTasks(int raise);
 void wlanResumeTasks(void);

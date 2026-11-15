@@ -12,6 +12,8 @@
 #include <stdint.h>
 #include "robin/ratectl.h"
 #include "robin/softtimer.h"
+
+struct WlanWirelessFrame;
 #include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
@@ -214,6 +216,27 @@ struct WlanApStates {
 	struct RomHsmState query;
 	struct RomHsmState compute;	/* the BSS is up */
 };
+
+/*
+ * The ROM's hierarchical state machine of an IBSS connection (wlan/stamachine.c; the connection holds
+ * it from offset 16). The report is what macMgmtInspectState() hands the host when the machine is
+ * left: a host event code (3: the IBSS ended, 8 and 9 a disassociation and a deauthentication) and
+ * its reason code.
+ */
+struct WlanIbssMachine {
+	struct RomHsmState *state;	/* the current state */
+	uint8_t ibss;			/* 1: the machine is for an IBSS being joined (event 22), 0: started (event 23) */
+	uint8_t reserved5[3];
+	struct RomHsmState *root;	/* wlanIbssStates.clear */
+	struct RomHsmState *previous;	/* the state to return to (kept by the exit of a state) */
+	uint32_t reserved16;
+	uint8_t reportCode;
+	uint8_t reserved21;
+	uint16_t reportReason;
+	struct WlanConnection *connection;
+};
+
+_Static_assert(sizeof(struct WlanIbssMachine) == 28, "IBSS machine");
 
 struct WlanConnectionInfo {
 	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
@@ -477,13 +500,18 @@ struct WlanConnection {
 	uint8_t reserved0[2];
 	void *device;
 	/* The station state machine (driven through mdevRomQueryState from here). */
-	const uint8_t *smState;		/* the current state's entry in smStates */
-	uint32_t reserved20;
-	const uint8_t *smStates;
-	uint8_t reserved1a[12];
-	struct WlanConnection *owner;	/* itself: the connection's state machine is handed this */
+	union {
+		struct {
+			const uint8_t *smState;		/* the current state's entry in smStates */
+			uint32_t reserved20;
+			const uint8_t *smStates;
+			uint8_t reserved1a[12];
+			struct WlanConnection *owner;	/* itself: the connection's state machine is handed this */
+		};
+		struct WlanIbssMachine machine;	/* the IBSS's and the station's state machine (macMgmtSetupContext()) */
+	};
 	int (*rxManagement)(OsaBuffer *buffer, uintptr_t argument);	/* management frames for this connection */
-	int (*rxControl)(OsaBuffer *buffer, uintptr_t argument);	/* control frames for this connection */
+	int (*rxControl)(const struct WlanWirelessFrame *frame, OsaBuffer *buffer);	/* control frames for this connection */
 	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
 	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
@@ -586,6 +614,7 @@ struct WlanConnection {
 			const char *name;
 		} localName;			/* AMP link */
 		struct WlanConnectionInfo *stationInfo;	/* station */
+		uint8_t p2pState;		/* a P2P group owner's connection (interface type 3): 1 and 3 build probe requests with the P2P element, 3 is a connection being torn down, 4 started again */
 	};
 	union {
 		char ssid[32];			/* AMP link */

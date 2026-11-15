@@ -82,10 +82,10 @@ extern const struct WlanDeviceConfig *wlanDeviceAddress;					/* 0x54a7c */
 void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a */
 int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
 int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */
-int wlanStaRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfdb2 */
+int wlanStaRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);					/* 0xfdb2 */
 void macMgmtSetupContext(struct WlanConnection *connection);					/* 0x35da6 */
 int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb70 */
-int wlanApRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb1c */
+int wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);					/* 0xfb1c */
 
 /* Finds the connection of a BSS type and number. */
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber)
