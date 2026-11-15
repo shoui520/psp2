@@ -288,6 +288,14 @@ void wlanCryptoReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_ke
 		wlanCryptoReleaseBuffer(buffer);
 }
 
+/* The engine's polling delay and its default start and prepare hooks (0x1f174, from wlanCcmSetup()). */
+void wlanCcmHooksInit(void)
+{
+	wlanCcmPollLoops = 50;
+	wlanCcmHookStart = wlanCcmStart;
+	wlanCcmHookPrepare = wlanCcmPrepare;
+}
+
 /* Holds a received frame with its status and key until the engine is free; 0 if the ring is full. */
 int wlanCryptoRxPush(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t *key,
 		     struct WlanCryptoRxRing *ring)

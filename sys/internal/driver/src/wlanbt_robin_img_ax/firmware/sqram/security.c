@@ -14,12 +14,9 @@
 #include "robin/rom.h"
 #include "robin/sys.h"
 
+static ROBIN_PATCH_SLOT(wlanAesEncryptOverride);			/* 0x55b74 */
+static ROBIN_PATCH_SLOT(wlanAesWrapOverride);			/* 0x55b80 */
 static ROBIN_PATCH_SLOT(wlanAesUnwrapOverride);			/* 0x55b84 */
-
-/* The ROM's AES: sets the key up (bits long, for decryption when encrypt is 0), and runs one block. */
-void romAesKeySet(void *context, const uint8_t *key, unsigned int bits, int encrypt);	/* 0x03f3be3e */
-void romAesDecryptBlock(void *context, const uint8_t *input, uint8_t *output);		/* 0x03f3be6e */
-void romAesEncryptBlock(void *context, const uint8_t *input, uint8_t *output);		/* 0x03f3be7e */
 
 /* The initial value of RFC 3394 (0xc000fa60). */
 static const uint8_t aesWrapIv[8] __attribute__((section(".sqram1.rw"))) = {
@@ -27,7 +24,7 @@ static const uint8_t aesWrapIv[8] __attribute__((section(".sqram1.rw"))) = {
 };
 
 /* Compares two byte strings without stopping at the first difference: 0 when they are the same, else -1 (0xc0007648). */
-int sqramBytesEqual(const uint8_t *first, const uint8_t *second, int length)
+__attribute__((noinline)) int sqramBytesEqual(const uint8_t *first, const uint8_t *second, int length)
 {
 	int equal = length;
 
@@ -46,7 +43,7 @@ int sqramBytesEqual(const uint8_t *first, const uint8_t *second, int length)
 }
 
 /* Fills a byte string (0xc000766e). */
-uint8_t *sqramMemset(uint8_t *destination, uint8_t value, int length)
+__attribute__((noinline)) uint8_t *sqramMemset(uint8_t *destination, uint8_t value, int length)
 {
 	while (length-- != 0)
 		*destination++ = value;
@@ -68,6 +65,63 @@ uint8_t *sqramMemmove(uint8_t *destination, const uint8_t *source, int length)
 		}
 	}
 	return destination;
+}
+
+/* Encrypts one 128-bit block (data) into ret with the key kek, kekLen of 64 bits (0xc00076a6). */
+int MRVL_AesEncrypt(uint8_t *kek, uint8_t kekLen, uint8_t *data, uint8_t *ret)
+{
+	int result;
+	OsaBuffer *buffer;
+	uint8_t *context;
+
+	if (wlanAesEncryptOverride(kek, kekLen, data, ret, &result) != 0)
+		return result;
+	buffer = osa_BufferAlloc(ramHook_encrPoolConfig, 400, 0xffffffff);
+	context = (uint8_t *)buffer + buffer->dataOffset;
+	romAesKeySet(context, kek, kekLen << 6, 1);
+	romAesEncryptBlock(context, data, ret);
+	osa_BufferFree(buffer);
+	return 0;
+}
+
+/*
+ * Wraps n 64-bit blocks of key data (plain) with the key-encryption key, kekLen of 64 bits, into
+ * the n + 1 blocks of cipher; keyIv (or the initial value of RFC 3394) starts the first block
+ * (0xc00076fc). -1 when there is nothing to wrap.
+ */
+int MRVL_AesWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *plain, uint8_t *keyIv, uint8_t *cipher)
+{
+	int result;
+	uint8_t block[16];
+	uint8_t a[8];
+	uint8_t *blocks;
+	int step;
+
+	step = 0;
+	if (wlanAesWrapOverride(kek, kekLen, n, plain, keyIv, cipher, &result) != 0)
+		return result;
+	if (n == 0)
+		return -1;
+	blocks = cipher + 8;
+	sqramMemset(block, 0, 16);
+	sqramMemmove(a, keyIv != NULL ? keyIv : aesWrapIv, 8);
+	sqramMemmove(cipher + 8, plain, 8 * n);
+	do {
+		uint8_t *r = blocks;
+		uint32_t i;
+
+		for (i = 1; i <= n; i++) {
+			sqramMemmove(block, a, 8);
+			sqramMemmove(block + 8, r, 8);
+			MRVL_AesEncrypt(kek, kekLen, block, block);
+			sqramMemmove(a, block, 8);
+			a[7] ^= (uint8_t)(n * step + i);
+			sqramMemmove(r, block + 8, 8);
+			r += 8;
+		}
+	} while (++step <= 5);
+	sqramMemmove(cipher, a, 8);
+	return 0;
 }
 
 /*

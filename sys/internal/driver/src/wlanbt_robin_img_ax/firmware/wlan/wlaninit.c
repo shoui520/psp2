@@ -18,6 +18,7 @@
 #include "robin/btrom.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
+#include "robin/esa.h"
 #include "robin/ie.h"
 #include "robin/join.h"
 #include "robin/mac.h"
@@ -148,15 +149,12 @@ void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
-int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
-void uapSqramParseState(void);							/* SQRAM 0xc00074d4 */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
 void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
-void uapSqramProcessContext(void);							/* SQRAM 0xc0008204 */
 void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
 void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
@@ -435,7 +433,7 @@ int wlanInit(void)
 	wlanRomServicesInit();
 	wlanBaTablesInit();
 	p2pSqramConfigureEntry();
-	uapSqramProcessContext();
+	pmkCacheRamInit();
 	p2pDirectCheckState();
 	p2pDirectResetTable();
 	uapSqramTrackContext();

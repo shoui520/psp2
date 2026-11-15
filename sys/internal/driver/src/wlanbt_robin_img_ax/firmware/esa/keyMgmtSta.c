@@ -21,7 +21,6 @@
 
 /* Not converted yet; provisional names */
 /* the SQRAM build's PMK cache and key API */
-uint8_t *pmkCacheFindPSK(uint8_t *pSsid, uint8_t ssidLen);		/* 0xc0008190 */
 
 /* the queue of data frames waiting for the MAC Tx task (wlan/driver.c) */
 extern struct WlanDriverQueue wlanDriverQueue4;

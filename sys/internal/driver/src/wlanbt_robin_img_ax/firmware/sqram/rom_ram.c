@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "robin/sys.h"
 #include "robin/osa.h"
+#include "robin/socpower.h"
 
 #define ROM_ZI_DTCM		((uint32_t *)0x0400a700)
 #define ROM_ZI_DTCM_SIZE	0x4300
@@ -21,10 +22,9 @@
 #define ROM_RW_B_INIT		((const uint32_t *)0x03f47600)
 #define ROM_RW_B_SIZE		0xa00
 
-void rfHookInit(void);		/* 0x00026fc6, not converted */
 
 /* Word copy (0xc00075e8). */
-static void romRamCopy(uint32_t *dst, const uint32_t *src, uint32_t size)
+static __attribute__((noinline, noclone)) void romRamCopy(uint32_t *dst, const uint32_t *src, uint32_t size)
 {
 	uint32_t i;
 
@@ -33,7 +33,7 @@ static void romRamCopy(uint32_t *dst, const uint32_t *src, uint32_t size)
 }
 
 /* Word fill (0xc00075fe). */
-static void romRamFill(uint32_t *dst, uint32_t value, uint32_t size)
+static __attribute__((noinline, noclone)) void romRamFill(uint32_t *dst, uint32_t value, uint32_t size)
 {
 	uint32_t i;
 
@@ -49,6 +49,6 @@ int romRamInit(void)
 	romRamCopy(ROM_RW_B, ROM_RW_B_INIT, ROM_RW_B_SIZE);
 	osaTimerListInit();
 	socEventHookInit();
-	rfHookInit();
+	sysDelayHookInit();
 	return 0;
 }

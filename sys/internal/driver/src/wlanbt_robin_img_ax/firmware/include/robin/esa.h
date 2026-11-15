@@ -289,6 +289,21 @@ _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.decryptState) == 60, "de
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.rxPn) == 62, "WAPI receive packet number");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.replacement) == 78, "WAPI replacement key");
 
+/* A key the MAC installed, in a buffer of the key pools: the buffer's header, then the key (wlanKeyBufferAlloc()). */
+struct WlanKeyBuffer {
+	OsaBuffer buffer;
+	union {
+		cipher_key_t key;
+		uint8_t keyData[84];
+	};
+};
+
+_Static_assert(sizeof(struct WlanKeyBuffer) == 112, "key buffer");
+
+struct WlanKeyBuffer *wlanKeyBufferAlloc(void);				/* SQRAM 0xc000824c */
+void wlanKeyBufferFree(struct WlanKeyBuffer *key);				/* SQRAM 0xc0008292 */
+int wlanKeyPoolsInit(void);							/* SQRAM 0xc00082bc */
+
 #define KEY_DIRECTION_RX	0x02	/* cipher_key_hdr_t.keyDirection: the key decrypts received frames (inferred) */
 
 typedef struct keyMgmtInfoSta_t {
@@ -405,6 +420,7 @@ typedef struct TkipPtk_t {
 /* sha1.c (robin/sha1.h: Mrvl_PRF 0x2dc5c), mrvl_sha256_crypto.c (robin/sha256.h) */
 
 /* crypt_new_rom.c, rc4.c */
+int MRVL_AesEncrypt(uint8_t *kek, uint8_t kekLen, uint8_t *data, uint8_t *ret);
 int MRVL_AesUnWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *cipher,
 		   uint8_t *keyIv, uint8_t *plain);
 int MRVL_AesWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *plain,
@@ -461,6 +477,10 @@ void pmkCacheDeletePSK(uint8_t *pSsid, uint8_t ssidLen);
 uint8_t pmkCacheGetHexNibble(uint8_t nibble);
 void pmkCacheGeneratePSK(uint8_t *pSsid, uint8_t ssidLen, char *pPassphrase,
 			 uint8_t *pPSK);
+uint8_t *pmkCacheFindPSK(uint8_t *pSsid, uint8_t ssidLen);	/* SQRAM 0xc0008190 */
+void pmkCacheInit(void);					/* SQRAM 0xc00081d4 */
+void pmkCacheFlush(void);					/* SQRAM 0xc00081f0 */
+void pmkCacheRamInit(void);					/* SQRAM 0xc0008204 */
 
 /*
  * pmkCache.c: the host's SUPPLICANT_PMK command (0x00c4) on the cache. The command body is a

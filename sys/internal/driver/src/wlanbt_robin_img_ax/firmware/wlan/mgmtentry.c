@@ -58,7 +58,6 @@ extern struct WlanMacTxRequest *wlanIbssBeaconRequest;				/* 0x54bc4 */
 void wlanPsFilterFrame(uint16_t beaconPeriod);					/* 0x3dc4e */
 int wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
 void wlanMacFlush(void);								/* 0x1c840 */
-void uapSqramConfigureState(int value);						/* SQRAM */
 
 /* 0x3600a: the beacon (subtype 8) or probe response (5) template of an AMP link and its MAC request. */
 void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype, OsaBuffer *buffer,

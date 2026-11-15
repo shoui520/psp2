@@ -437,7 +437,7 @@ int macTxNotifyProcessHeader(OsaBuffer *buffer)
 	unsigned int status = U16(frame->body + 4);
 	OsaBuffer *reply;
 	WlanWirelessFrame *out;
-	const uint8_t *key;
+	const struct WlanKeyBuffer *key;
 	int kind;
 
 	kind = WLAN_JOIN_RECORD_REFUSED;
@@ -464,7 +464,7 @@ build:
 		return -1;
 	}
 	wlanTxEncryptWepFragment((uint8_t *)out, U16(out->bodyLength),
-				 (const WlanWepHostConfig *)(key + 28));
+				 (const WlanWepHostConfig *)&key->key);
 	if (wlanMgmtSendFrame(reply) == -1)
 		return -1;
 	return 1;

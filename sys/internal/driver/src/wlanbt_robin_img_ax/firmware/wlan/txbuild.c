@@ -313,7 +313,7 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 	int aes = 0;
 	uint8_t cipher = WLAN_TX_CIPHER_NONE;
 	uint16_t threshold = 0;
-	uint8_t *block;
+	struct WlanKeyBuffer *block;
 	uint8_t flags;
 	unsigned int i;
 
@@ -322,7 +322,7 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 		snapLength = 0;
 	block = (frame[6] & 1) ? connection->keyBlocks[0] : connection->keyBlocks[1];
 	if (block != NULL)
-		*key = block + 28;
+		*key = (const uint8_t *)&block->key;
 	flags = connection->flags;
 	if ((flags & WLAN_CONN_ENCRYPTED) && *key == NULL &&
 	    ((connection->hostFlags & WLAN_CONN_HOST_WEP) || (flags & WLAN_CONN_PRIVACY)))

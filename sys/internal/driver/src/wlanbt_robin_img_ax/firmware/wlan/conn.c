@@ -38,9 +38,6 @@ uint32_t wlanConnectionDtimHolds __attribute__((section(".dtcm.bss")));			/* 0x0
 struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x040088f0 */
 
 /* The beacon and the probe response of each slot: their buffers, pools and the requests the MAC reads. */
-extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc0031d64 */
-extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
-void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
 uint64_t wlanSignalTimeNow(void);								/* 0x2a4fc */
 void clockHostSelectPreset0(void);								/* 0x26b78 */
 void clockHostSelectPreset1(void);								/* 0x26baa */
@@ -68,7 +65,8 @@ extern uint8_t wlanConnectionPoolControl[], wlanConnectionPoolMemory[];				/* 0x
 extern uint8_t wlanBlockPool0Control[], wlanBlockPool0Memory[];					/* 0x04004fe0, SQRAM 0xc002fa40 */
 extern uint8_t wlanBlockPool1Control[], wlanBlockPool1Memory[];					/* 0x04004ff0, SQRAM 0xc0030ac0 */
 extern uint8_t wlanBlockPool2Control[], wlanBlockPool2Memory[];					/* 0x04000f08, 0x04007dc0 */
-uint32_t wlanConnectionSlotsFree __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
+/* The greatest common divisor of the slots' beacon periods (uapSqramProcessState()). */
+uint32_t wlanBeaconPeriodGcd __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
 struct OsaIdleHook wlanConnectionIdleHook __attribute__((section(".sqram1.rw")));		/* 0xc0011b00 */
 /* The device's address and the SNMP defaults a connection starts with (the pointer is at 0x54a7c). */
 void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a */
@@ -890,7 +888,7 @@ finish:
 void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info;
-	struct WlanUapContext *context;
+	struct WlanKeyBuffer *key;
 
 	wlanConnectionInfoSlot(connection);
 	info = wlanConnectionInfo(connection);
@@ -901,16 +899,17 @@ void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 	connection->rxManagement = wlanApRxManagement;
 	connection->rxControl = wlanApRxControl;
 	connection->dataRate = info->unicastRate != 0 ? romRateIndex(info->unicastRate) : 254;
-	if (info->uapContext == NULL) {
-		context = uapSqramUpdateContext(0);
-		info->uapContext = context;
-		if (context == NULL)
+	if (info->bssKey == NULL) {
+		key = wlanKeyBufferAlloc();
+		info->bssKey = key;
+		if (key == NULL)
 			for (;;)
 				;
-		__aeabi_memclr4(&context->params, 84);
-		context->params.mode = 3;
-		context->params.options = 0;
-		context->params.control = context->params.control >> 1 << 1;
+		__aeabi_memclr4(key->keyData, 84);
+		key->key.hdr.keyDirection = 3;
+		key->key.hdr.keyType = 0;
+		key->key.hdr.version = 0;
+		key->key.hdr.keyState &= ~1;
 	}
 }
 
@@ -918,7 +917,7 @@ void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 void wlanConnectionSetupType2(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info;
-	struct WlanUapContext *context;
+	struct WlanKeyBuffer *key;
 
 	connection->mode = 2;
 	wlanConnectionInfoSlot(connection);
@@ -932,16 +931,17 @@ void wlanConnectionSetupType2(struct WlanConnection *connection)
 	connection->rxManagement = wlanApRxManagement;
 	connection->rxControl = wlanApRxControl;
 	connection->dataRate = info->unicastRate != 0 ? romRateIndex(info->unicastRate) : 254;
-	if (info->uapContext == NULL) {
-		context = uapSqramUpdateContext(0);
-		info->uapContext = context;
-		if (context == NULL)
+	if (info->bssKey == NULL) {
+		key = wlanKeyBufferAlloc();
+		info->bssKey = key;
+		if (key == NULL)
 			for (;;)
 				;
-		__aeabi_memclr4(&context->params, 84);
-		context->params.mode = 3;
-		context->params.options = 0;
-		context->params.control = context->params.control >> 1 << 1;
+		__aeabi_memclr4(key->keyData, 84);
+		key->key.hdr.keyDirection = 3;
+		key->key.hdr.keyType = 0;
+		key->key.hdr.version = 0;
+		key->key.hdr.keyState &= ~1;
 	}
 }
 
@@ -1081,7 +1081,7 @@ int wlanConnectionsInit(void)
 	wlanChannelInUse[0] = 0;
 	wlanConnectionSlotMask = 0;
 	wlanConnectionIndexMask = 0;
-	wlanConnectionSlotsFree = 0;
+	wlanBeaconPeriodGcd = 0;
 	for (slot = 0; slot < WLAN_CONNECTION_SLOTS; slot = (uint8_t)(slot + 1))
 		wlanConnectionSlots[slot] = NULL;
 	if (osa_BlockPoolCreate(&wlanConnectionPool, &wlanConnectionPoolConfig, wlanConnectionPoolControl,
@@ -1454,9 +1454,10 @@ int wlanIbssSecurityActive(void)
 
 	for (connection = wlanConnectionList; connection != NULL; connection = connection->next) {
 		if (connection->interfaceType == 1 && !(connection->flags & 4)) {
-			uint8_t *block = connection->keyBlocks[0];
+			struct WlanKeyBuffer *block = connection->keyBlocks[0];
 
-			if (block != NULL && block[28 + 7] == 2 && (block[28 + 10] & 1)) {
+			if (block != NULL && block->key.hdr.keyType == 2 && block->key.hdr.version == 0 &&
+			    (block->key.hdr.keyState & 1)) {
 				sysIrqRestore(posture);
 				return 1;
 			}

@@ -130,4 +130,9 @@ void mdevReleaseDevice(void *device);
 /* sqram/rom_ram.c */
 int romRamInit(void);
 
+/* The ROM's AES: sets the key up (bits long, for decryption when encrypt is 0), and runs one block. */
+void romAesKeySet(void *context, const uint8_t *key, unsigned int bits, int encrypt);	/* 0x03f3be3e */
+void romAesDecryptBlock(void *context, const uint8_t *input, uint8_t *output);		/* 0x03f3be6e */
+void romAesEncryptBlock(void *context, const uint8_t *input, uint8_t *output);		/* 0x03f3be7e */
+
 #endif /* ROBIN_ROM_H */

@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/esa.h"
 #include "robin/ratectl.h"
 #include "robin/softtimer.h"
 
@@ -274,7 +275,7 @@ struct WlanConnectionInfo {
 	uint32_t htEnabled;		/* nonzero: the access point's HT elements apply */
 	uint8_t htCapability[28];	/* the access point's HT capability element */
 	uint8_t htOperation[24];	/* its HT operation element */
-	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
+	struct WlanKeyBuffer *bssKey;	/* the access point's own key: its static WEP key */
 	const struct WlanWapiContext *wapiContext;	/* a WAPI BSS: what the host is told with an association (TLV 103) */
 	uint8_t channelCount;		/* the channels the access point may start on: 0 none, 1 the one given, more: the least loaded of them (automatic selection) */
 	uint8_t macFilterPolicy;	/* the host's MAC filter (hostCmd 0x..): 0 off, 1 only the listed stations are admitted, 2 the listed ones are refused */
@@ -363,21 +364,6 @@ struct WlanConnectionInfo {
 
 struct WlanSubscribeEvents;
 /* The access point's association context: its first block is set up with the connection. */
-struct WlanUapContext {
-	uint8_t reserved0[28];
-	struct {
-		uint8_t reserved0[6];
-		uint8_t mode;
-		uint8_t options;
-		uint8_t reserved8[2];
-		uint8_t control;		/* bit 0: the context applies */
-		uint8_t reserved11[73];
-	} params;
-};
-_Static_assert(sizeof(((struct WlanUapContext *)0)->params) == 84, "access point context parameters");
-
-struct WlanUapContext *uapSqramUpdateContext(int unused);				/* SQRAM 0xc000824c */
-
 /*
  * The block of a station (at stationInfo) or access point (at apInfo)
  * connection that starts with its information pointer (partial).
@@ -610,7 +596,7 @@ struct WlanConnection {
 	uint8_t reserved661[3];
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
-	uint8_t *keyBlocks[2];		/* [0]: the group key's (HostCmd 0x37's), [1]: the pairwise key's (0x36's and 0x5e's); each +28 is its cipher_key_t */
+	struct WlanKeyBuffer *keyBlocks[2];	/* [0]: the group key (HostCmd 0x37's), [1]: the pairwise key (0x36's and 0x5e's) */
 	union {
 		uint8_t *radioParams;	/* the radio configuration's block this connection's SNMP values use */
 		eapolHskData_t *hskData;	/* an access point's peer: the handshake's nonce and key */
@@ -790,6 +776,16 @@ _Static_assert(sizeof(struct WlanBssTiming) == 48, "BSS timing record");
 extern uint32_t wlanConnectionCount;
 extern uint8_t wlanChannelInUse[1];
 extern uint8_t wlanConnectionSlotMask;
+extern uint32_t wlanBeaconPeriodGcd;
+extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc0031d64 */
+extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
+
+/* sqram/bss.c */
+int uapSqramHandleState(struct WlanConnection *connection);				/* 0xc0007200 */
+void uapSqramProcessState(void);							/* 0xc00072ae */
+int uapSqramCheckState(void);								/* 0xc00073a6 */
+int uapSqramDispatchState(void);							/* 0xc00074c6 */
+int uapSqramParseState(void);								/* 0xc00074d4 */
 extern uint32_t wlanConnectionDtimHolds;
 extern struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS];
 

@@ -102,8 +102,8 @@ void macMgmtResolveFrame(struct WlanConnectionInfo *info);				/* 0x3ac50 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);					/* 0x355b0 */
-void uapSqramUpdateState(int value);							/* SQRAM */
-void uapSqramConfigureState(int value);						/* SQRAM */
+int uapSqramUpdateState(int value);							/* SQRAM 0xc000738e */
+int uapSqramConfigureState(int value);							/* SQRAM 0xc0007398 */
 void romLibNotifyContext(void);								/* ROM veneer 0x532e4 */
 void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
 void macMgmtNotifyFrame(struct WlanConnection *connection, struct WlanMacTxRequest *request); /* 0x3af22 */
@@ -184,7 +184,6 @@ void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConne
 			     const uint8_t *address);					/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);				/* 0x41228 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);	/* 0x1d1f6 */
-void uapSqramConfigureContext(uint8_t *keyBlock);					/* SQRAM */
-void uapSqramResolveContext(uint8_t **keyBlock);					/* SQRAM */
+void uapSqramResolveContext(struct WlanKeyBuffer **keyBlock);			/* SQRAM */
 
 #endif /* ROBIN_APSTA_H */

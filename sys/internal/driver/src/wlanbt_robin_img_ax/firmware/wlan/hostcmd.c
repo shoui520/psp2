@@ -17,6 +17,7 @@
 #include "robin/domain.h"
 #include "robin/autotx.h"
 #include "robin/eventpower.h"
+#include "robin/hostcmd.h"
 #include "robin/hostps.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
@@ -435,8 +436,6 @@ int hostCmd006e(struct WlanConnection *connection, char *body, int length);	/* 0
 void hostCmd006f(uint8_t *body, int length);					/* 0x41838 */
 unsigned int hostCmd0070(uint8_t *body);					/* 0x1e826 */
 unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e782 */
-void hostCmd0078Parse(uint32_t *status, uint8_t *body, uint32_t *type, uint32_t *extra); /* SQRAM 0xc00078d6 */
-extern void (*hostCmd0078Handlers[])(uint32_t *type, uint32_t *failed);		/* SQRAM 0xc0011f34 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */
 void hostCmd0083(unsigned int bssType, unsigned int bssNumber, unsigned int value); /* SQRAM 0xc0007406 */
 void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
@@ -986,10 +985,10 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 54:
-			hostCmd0036(body, 0, connection->keyBlocks[1] + 28);
+			hostCmd0036(body, 0, (uint8_t *)&connection->keyBlocks[1]->key);
 			goto done;
 		case 55:
-			hostCmd0036(body, 1, connection->keyBlocks[0] + 28);
+			hostCmd0036(body, 1, (uint8_t *)&connection->keyBlocks[0]->key);
 			goto done;
 
 		case 60:	/* automatic frequency control */
@@ -1080,7 +1079,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				hostCmd005e(connection, body + 2, hdr + HOSTCMD_U16(hdr + 2));
 				wlanBaTablesChangedHandler();
-				if (connection->keyBlocks[1] + 28 != NULL && (connection->keyBlocks[1][38] & 1)) {
+				if ((uintptr_t)connection->keyBlocks[1] + 28 != 0 && (connection->keyBlocks[1]->key.hdr.keyState & 1)) {
 					hostCmdConnectionChanged();
 				}
 				if (wlanSessionId != 0 && wlanRoleOtherOnly() && (connection->flags & 1))
@@ -1227,31 +1226,31 @@ int hostCmdProcess(void)
 		case 120:
 		{
 			uint32_t status = 0;
-			uint32_t type;
-			uint32_t extra = 0;
-			uint32_t failedFlag = 0;
+			struct HostCmdCryptoRequest request;
+			int8_t lengthChange = 0;
+			int failedFlag = 0;
 			unsigned int subCommand;
 			unsigned int socEvents;
-			void (*handler)(uint32_t *type, uint32_t *failedFlag);
+			HostCmdCryptoHandler handler;
 
-			hostCmd0078Parse(&status, body, &type, &extra);
+			hostCmd0078Parse(&status, body, &request, &lengthChange);
 			if (status != 0)
 				goto failed;
 			socEvents = (SOC_EVENT_CONTROL << 22) >> 30;
 			if (socEvents == 0)
 				socEventsHold();
 			subCommand = HOSTCMD_U16(body + 2);
-			handler = hostCmd0078Handlers[12 * (uint8_t)type + 1 + 2 * subCommand];
+			handler = hostCmd0078Handlers[request.encdec][subCommand].handler;
 			if (handler != NULL)
-				handler(&type, &failedFlag);
+				handler(&request, &failedFlag);
 			else
 				failedFlag = 1;
 			if (socEvents == 0)
 				socEventsRelease();
 			if (failedFlag != 0)
 				goto failed;
-			if ((uint8_t)extra != 0)
-				PUT16(hdr + 2, HOSTCMD_U16(hdr + 2) + (uint8_t)extra);
+			if (lengthChange != 0)
+				PUT16(hdr + 2, HOSTCMD_U16(hdr + 2) + lengthChange);
 			if (subCommand != 4)
 				goto done;
 			if (HOSTCMD_U16(body) != 0)

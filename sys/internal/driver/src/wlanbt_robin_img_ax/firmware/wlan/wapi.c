@@ -113,7 +113,7 @@ int wlanWapiReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 	replacement = __aeabi_uread4(&keyData->replacement);
 	if (frame[2 + 34] == keyData->keyIndex) {
 		if (replacement != 0) {
-			wlanSqramKeyApply(replacement);
+			wlanKeyBufferFree((struct WlanKeyBuffer *)replacement);
 			__aeabi_uwrite4(0, &keyData->replacement);
 		}
 	} else {

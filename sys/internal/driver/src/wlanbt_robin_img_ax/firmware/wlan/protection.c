@@ -170,7 +170,7 @@ void wlanTxRequestReset(struct WlanMacTxRequest *request)
 	request->mode = 1;
 	request->reserved1[0] = 0;
 	request->reserved1[1] = 0;
-	request->reserved1[2] = 0;
+	request->txFlags = 0;
 	request->hwStatus = 0;
 	request->hwRetries = 0;
 	request->hwFlags = 0;

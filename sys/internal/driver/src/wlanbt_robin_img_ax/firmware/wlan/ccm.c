@@ -5,6 +5,7 @@
  * take over AES-CMAC, the AES block and the two CCM operations.
  */
 #include "robin/ccm.h"
+#include "robin/esa.h"
 #include "robin/mef.h"
 #include "robin/patch.h"
 #include "robin/rom.h"
@@ -78,9 +79,7 @@ uint32_t wlanCcmWaitClear(uint32_t mask, uint32_t block)
 /* Fixes the engine's parameters and hooks at start-up (called from wlanInit()). */
 void wlanCcmSetup(void)
 {
-	wlanCcmPollLoops = 50;
-	wlanCcmHookStart = wlanCcmStart;
-	wlanCcmHookPrepare = wlanCcmPrepare;
+	wlanCcmHooksInit();
 	wlanCcmAadLength = 22;
 	wlanCcmAadLengthQos = 24;
 	wlanOffloadHeadroom = 4;
@@ -88,7 +87,7 @@ void wlanCcmSetup(void)
 	wlanCcmIvHigh = 4;
 }
 
-static void ccmCopy16(volatile uint32_t *destination, const uint32_t *source)
+static __attribute__((noinline)) void ccmCopy16(volatile uint32_t *destination, const uint32_t *source)
 {
 	destination[0] = source[0];
 	destination[1] = source[1];
@@ -96,7 +95,7 @@ static void ccmCopy16(volatile uint32_t *destination, const uint32_t *source)
 	destination[3] = source[3];
 }
 
-static void ccmCopy16Block(volatile uint8_t *destination, const uint8_t *source)
+static __attribute__((noinline)) void ccmCopy16Block(volatile uint8_t *destination, const uint8_t *source)
 {
 	uint32_t *words = (uint32_t *)source;
 	volatile uint32_t *target = (volatile uint32_t *)destination;
@@ -107,7 +106,7 @@ static void ccmCopy16Block(volatile uint8_t *destination, const uint8_t *source)
 	target[3] = words[3];
 }
 
-static void ccmCopy6(uint8_t *destination, const uint8_t *source)
+static __attribute__((noinline)) void ccmCopy6(uint8_t *destination, const uint8_t *source)
 {
 	uint16_t *to = (uint16_t *)destination;
 	const uint16_t *from = (const uint16_t *)source;
@@ -122,7 +121,7 @@ static void ccmCopy6(uint8_t *destination, const uint8_t *source)
  * the priority, the transmitter address and the packet number from the CCMP
  * header at frame + 32, and the length of the data, as 802.11 lays it out.
  */
-static void ccmBlock0(uint8_t *block, const WlanWirelessFrame *frame, uint32_t length, uint8_t priority)
+static __attribute__((noinline)) void ccmBlock0(uint8_t *block, const WlanWirelessFrame *frame, uint32_t length, uint8_t priority)
 {
 	const uint8_t *iv = (const uint8_t *)frame + 32;
 	uint32_t pnHigh = *(const uint32_t *)(iv + 4);
@@ -141,7 +140,7 @@ static void ccmBlock0(uint8_t *block, const WlanWirelessFrame *frame, uint32_t l
  * The first AAD block: the length of the AAD, the frame control with the
  * bits CCMP masks out, and the first two addresses.
  */
-static void ccmAad1(uint8_t *block, const WlanWirelessFrame *frame, uint8_t aadLength)
+static __attribute__((noinline)) void ccmAad1(uint8_t *block, const WlanWirelessFrame *frame, uint8_t aadLength)
 {
 	uint16_t control = frame->frameControl[0] | (frame->frameControl[1] << 8);
 	uint16_t mask;
@@ -160,7 +159,7 @@ static void ccmAad1(uint8_t *block, const WlanWirelessFrame *frame, uint8_t aadL
 }
 
 /* The second AAD block: the third address, the sequence control and the fourth address or the QoS control. */
-static void ccmAad2(uint8_t *block, const WlanWirelessFrame *frame, uint32_t qos)
+static __attribute__((noinline)) void ccmAad2(uint8_t *block, const WlanWirelessFrame *frame, uint32_t qos)
 {
 	ccmCopy6(block, frame->address3);
 	block[6] = frame->sequenceControl[0] & 0xf;
@@ -267,11 +266,11 @@ int mrvl_aes_128(const uint8_t *key, const uint8_t *input, uint8_t *output)
 	int result = wlanAesBlockOverride(key, input, output);
 
 	if (result == 0)
-		return wlanSqramAes(key, 2, input, output);
+		return MRVL_AesEncrypt((uint8_t *)key, 2, (uint8_t *)input, output);
 	return result;
 }
 
-void xor_128(const uint8_t *left, const uint8_t *right, uint8_t *output)
+__attribute__((noinline)) void xor_128(const uint8_t *left, const uint8_t *right, uint8_t *output)
 {
 	int i;
 
@@ -280,7 +279,7 @@ void xor_128(const uint8_t *left, const uint8_t *right, uint8_t *output)
 }
 
 /* output = input << 1 over the 128 bits, most significant byte first. */
-void leftshift_onebit(const uint8_t *input, uint8_t *output)
+__attribute__((noinline)) void leftshift_onebit(const uint8_t *input, uint8_t *output)
 {
 	uint8_t carry = 0;
 	int i;
@@ -314,7 +313,7 @@ void generate_subkey(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2)
 }
 
 /* Pads the last block: `length` bytes of input, then 0x80 and zeros. */
-void padding(const uint8_t *input, uint8_t *output, int length)
+__attribute__((noinline)) void padding(const uint8_t *input, uint8_t *output, int length)
 {
 	int i;
 

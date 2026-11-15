@@ -361,7 +361,7 @@ int macMgmtResolveState(struct WlanConnection *connection, unsigned int security
 	cipher_key_t *key = NULL;
 
 	if (connection->keyBlocks[1] != NULL)
-		key = (cipher_key_t *)(connection->keyBlocks[1] + 28);
+		key = &connection->keyBlocks[1]->key;
 	if (security != 0 || !(connection->bssCapability[0] & 0x10)) {
 		uapSqramApplyContext(connection, 1);
 		if (!(connection->bssCapability[0] & 0x10)) {

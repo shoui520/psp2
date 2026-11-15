@@ -15,6 +15,7 @@ int ramHook_MAX_PMK_CACHE_ENTRIES __attribute__((section(".itcm.rw"))) = 0;
 pmkElement_t *ramHook_pmkCache __attribute__((section(".itcm.rw"))) = NULL;
 void (*ramHook_hal_SetCpuMaxSpeed)(void) __attribute__((section(".itcm.rw"))) = NULL;
 void (*ramHook_hal_RestoreCpuSpeed)(void) __attribute__((section(".itcm.rw"))) = NULL;
+uint8_t *ramHook_PSKPassPhrase __attribute__((section(".itcm.rw"))) = NULL;	/* 0x548a8 */
 
 ROBIN_PATCH_SLOT(pmkCacheFindPSKElement_hook);
 ROBIN_PATCH_SLOT(pmkCacheAddPMK_hook);

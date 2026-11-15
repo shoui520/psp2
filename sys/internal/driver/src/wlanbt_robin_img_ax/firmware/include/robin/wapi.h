@@ -43,7 +43,4 @@ void wlanWapiNextPacketNumber(cipher_key_wapi_t *key, uint8_t *output);	/* 0x3f8
 int wlanWapiCheckPacketNumber(int notStation, cipher_key_wapi_t *key, const uint8_t *packetNumber);	/* 0x3f87c */
 void wlanReverseBytes(uint8_t *output, const uint8_t *input, uint8_t length);	/* 0x3f8ba */
 
-/* SQRAM 0xc0008292, not converted: applies and frees a replacement key. */
-void wlanSqramKeyApply(uint32_t key);
-
 #endif /* ROBIN_WAPI_H */

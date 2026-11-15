@@ -49,8 +49,6 @@ uint32_t *wlanPsFormatFrame(struct WlanConnection *connection, unsigned int mult
 
 /* WlanMacTxRequest.reserved1[1]: not acknowledged (as the MAC reports it). */
 #define MAC_TX_DONE_FAILED	0x01
-/* WlanMacTxRequest.reserved1[2]: the frame has a lifetime. */
-#define MAC_TX_HAS_LIFETIME	0x80
 
 #define REQUEST_FLAGS(request)	__aeabi_uread4((request)->flags)
 #define FRAME_LENGTH(frame)	(((frame)[1] << 8) | (frame)[0])
@@ -234,7 +232,7 @@ void wlanTxPrepareRequest(uint8_t *data, struct WlanMacTxRequest *request)
 	TX_DATA_TIMESTAMP(data) = (uint32_t)now;
 	wlanTxLifetimeSet(request, now, TX_DATA_LIFETIME(data));
 	if (TX_DATA_LIFETIME(data) != 0)
-		request->reserved1[2] |= MAC_TX_HAS_LIFETIME;
+		request->txFlags |= MAC_TX_HAS_LIFETIME;
 }
 
 /* Builds the transmit request of a data frame from its descriptor. */

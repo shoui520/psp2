@@ -15,6 +15,9 @@
 #include "robin/patch.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sqram.h"
+#include "robin/clock.h"
+#include "robin/stream.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
@@ -27,8 +30,57 @@ static ROBIN_PATCH_SLOT(SupplicantClearPMKOverride);
 extern void (*ramHook_supplicantEnable)(void);
 extern uint8_t *(*ramHook_pmkCacheFindPSK)(uint8_t *pSsid, uint8_t ssidLen);
 
-/* The passphrase for networks the host named no SSID for (a buffer of the ROM's, 64 bytes). */
-extern uint8_t *ramHook_PSKPassPhrase;
+/*
+ * The cache itself and the passphrase for networks the host named no SSID for, which
+ * pmkCacheRamInit() hands to the ROM's code through its hooks; the RAM functions of
+ * Marvell's pmkCache.c are in SQRAM.
+ */
+#define PMK_CACHE_ENTRIES	10
+static pmkElement_t pmkCache[PMK_CACHE_ENTRIES] __attribute__((section(".itcm.bss")));		/* 0x568ce */
+static uint8_t PSKPassPhrase[PSK_PASS_PHRASE_LEN_MAX] __attribute__((section(".itcm.bss")));	/* 0x56b62 */
+
+/* 0xc0008190: the PSK of an SSID; made from the passphrase and cached when there is none yet. */
+SQRAM_CODE uint8_t *pmkCacheFindPSK(uint8_t *pSsid, uint8_t ssidLen)
+{
+	uint8_t *pPMK = NULL;
+	pmkElement_t *pPMKElement;
+
+	pPMKElement = pmkCacheFindPSKElement(pSsid, ssidLen);
+	if (pPMKElement != NULL) {
+		pPMK = pPMKElement->PMK;
+	} else if (PSKPassPhrase[0] != 0) {
+		pmkCacheAddPSK(pSsid, ssidLen, NULL);
+		pPMKElement = pmkCacheFindPSKElement(pSsid, ssidLen);
+		pPMK = pPMKElement->PMK;
+		pmkCacheGeneratePSK(pSsid, ssidLen, (char *)PSKPassPhrase, pPMK);
+	}
+	return pPMK;
+}
+
+/* 0xc00081d4 */
+SQRAM_CODE void pmkCacheInit(void)
+{
+	__aeabi_memclr(pmkCache, sizeof(pmkCache));
+	__aeabi_memclr(PSKPassPhrase, sizeof(PSKPassPhrase));
+	replacementRankMax = 0;
+}
+
+/* 0xc00081f0 */
+SQRAM_CODE void pmkCacheFlush(void)
+{
+	__aeabi_memclr(pmkCache, sizeof(pmkCache));
+	replacementRankMax = 0;
+}
+
+/* 0xc0008204: the ROM's cache code works on this cache, and raises the CPU clock through these. */
+SQRAM_CODE void pmkCacheRamInit(void)
+{
+	ramHook_MAX_PMK_CACHE_ENTRIES = PMK_CACHE_ENTRIES;
+	ramHook_pmkCache = pmkCache;
+	ramHook_PSKPassPhrase = PSKPassPhrase;
+	ramHook_hal_SetCpuMaxSpeed = clockHostSelectPreset1;
+	ramHook_hal_RestoreCpuSpeed = wlanBaTablesChangedHandler;
+}
 
 unsigned int SupplicantSetPassphrase(const uint8_t *buffer, int length)
 {

@@ -24,9 +24,13 @@
 	REG32(SOC_MAC_REGISTER_BASE | ((unsigned int)(ring) << 8) | (uint8_t)(index))
 
 /* Transmit request the MAC reads (76 bytes); only the fields the ring code touches are named. */
+/* WlanMacTxRequest.txFlags: the MAC holds the frame to the time in expiry (a lifetime, a template's time). */
+#define MAC_TX_HAS_LIFETIME	0x80
+
 struct WlanMacTxRequest {
 	uint8_t mode;		/* 1: put back at the head of its ring for a retry; 10: Block Ack */
-	uint8_t reserved1[3];
+	uint8_t reserved1[2];
+	uint8_t txFlags;	/* MAC_TX_HAS_LIFETIME: expiry holds the frame's time */
 	uint8_t frame[4];	/* unaligned pointer to the frame (length first) */
 	uint16_t hwStatus;	/* hwStatus..hwFlags: cleared before a data frame goes out */
 	uint8_t hwRetries;

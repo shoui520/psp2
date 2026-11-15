@@ -213,14 +213,14 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 	if (info->securityMode.noRsn) {
 		connection->flags |= WLAN_CONN_ENCRYPTED | WLAN_CONN_JOIN_OPEN;
 	} else if (info->securityMode.wepStatic) {
-		if (info->uapContext->params.control & 1)
+		if (info->bssKey->key.hdr.keyState & 1)
 			connection->flags |= WLAN_CONN_ENCRYPTED | WLAN_CONN_JOIN_OPEN;
 	} else if ((info->securityMode.wpa || info->securityMode.wpa2) &&
 		   wlanInterfaceNeedsSecurity(connection) != 0) {
 		if (connection->keyBlocks[1] != NULL)
-			__aeabi_memclr4(connection->keyBlocks[1] + 28, 84);
+			__aeabi_memclr4(connection->keyBlocks[1]->keyData, 84);
 		else
-			connection->keyBlocks[1] = (uint8_t *)uapSqramUpdateContext(0);
+			connection->keyBlocks[1] = wlanKeyBufferAlloc();
 	}
 	if (info->qosEnabled == 1 &&
 	    (ies.pWmmInfo != NULL || (info->htEnabled == 1 && ies.pHtCap != NULL))) {
@@ -444,7 +444,7 @@ void macMgmtQueryPacket(struct WlanConnection *connection)
 	osaCancelTimer(info->grpRekeyTimer);
 	if (info->securityMode.wpa || info->securityMode.wpa2) {
 		if (connection->keyBlocks[0] != NULL)
-			uapSqramConfigureContext(connection->keyBlocks[0]);
+			wlanKeyBufferFree(connection->keyBlocks[0]);
 	}
 	connection->keyBlocks[0] = NULL;
 	if (info->securityMode.wapi && connection->keyBlocks[1] != NULL)
@@ -929,7 +929,7 @@ void macMgmtSelectPacket(struct WlanConnection *connection, OsaBuffer *buffer)
 	__aeabi_uwrite4(__aeabi_uread4(template->expiry), request->expiry);
 	__aeabi_uwrite4(__aeabi_uread4(template->expiry + 4), request->expiry + 4);
 	request->reserved1[1] = 0;
-	request->reserved1[2] = template->reserved1[2];
+	request->txFlags = template->txFlags;
 }
 
 /* A probe response for the peer (a probe request's address) goes out from the BSS's template; 0: sent. */

@@ -36,6 +36,9 @@
 #define CCM_MODE_HOLD			0x010u	/* set by the start hook */
 #define CCM_MODE_INPUT_HOLD		0x400u	/* set and cleared around a transfer */
 
+/* The engine's interrupt line, masked while the crypto test (sqram/crypto.c) polls the engine. */
+#define SOC_IRQ_CCM_ENGINE		0x00020000u
+
 /* CRYPTO_MODE (robin/wep.h) bit that hands the engine over to this block. */
 #define CRYPTO_MODE_CCM_ENGINE		0x8000u
 
@@ -49,6 +52,7 @@ extern void (*wlanCcmHookStart)(void);
 extern uint32_t wlanCcmPollLoops;	/* delay loops between two status reads */
 
 void wlanCcmSetup(void);
+void wlanCcmHooksInit(void);
 void wlanCcmPrepare(void);
 void wlanCcmStart(void);
 void wlanCcmInputHold(void);
@@ -67,7 +71,5 @@ void leftshift_onebit(const uint8_t *input, uint8_t *output);
 void generate_subkey(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2);
 void padding(const uint8_t *input, uint8_t *output, int length);
 
-/* SQRAM 0xc00076a6, not converted: one block through the AES unit (mode 2: encrypt). */
-int wlanSqramAes(const uint8_t *key, int mode, const uint8_t *input, uint8_t *output);
 
 #endif /* ROBIN_CCM_H */

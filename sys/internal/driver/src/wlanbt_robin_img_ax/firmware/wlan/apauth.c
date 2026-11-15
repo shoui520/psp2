@@ -753,16 +753,16 @@ void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument)
 
 	macMgmtFilterBuffer(connection);
 	if (frame->frameControl[1] & 0x40) {
-		const uint8_t *key = connection->keyBlocks[0];
+		const struct WlanKeyBuffer *key = connection->keyBlocks[0];
 		uint8_t *length;
 
 		if (key == NULL)
 			return;
-		if (!(key[38] & 1))
+		if (!(key->key.hdr.keyState & 1))
 			return;
 		length = (uint8_t *)__aeabi_uread4(status->frame);
 		PUT_U16(length, U16(length) + 96);
-		if (wlanRxDecryptWep(&buffer, status, (cipher_key_t *)(key + 28), 0) == 0)
+		if (wlanRxDecryptWep(&buffer, status, (cipher_key_t *)&key->key, 0) == 0)
 			result = 15;
 		frame = (WlanWirelessFrame *)BUFFER_DATA(buffer);
 	}
@@ -876,7 +876,7 @@ __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connec
 	}
 	if (info->securityMode.wpa || info->securityMode.wpa2) {
 		if (connection->keyBlocks[1] != NULL) {
-			uapSqramConfigureContext(connection->keyBlocks[1]);
+			wlanKeyBufferFree(connection->keyBlocks[1]);
 			connection->keyBlocks[1] = NULL;
 		}
 	}

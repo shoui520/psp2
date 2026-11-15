@@ -569,7 +569,7 @@ int wlanRxProcessFrames(void)
 		OsaBuffer *indicated;
 		uint8_t *header;
 		const uint8_t *destination;
-		uint8_t **holder;
+		struct WlanKeyBuffer **holder;
 		int ampdu = (status.flags >> 3) & 1;
 
 		if (wlanConnectionHasPrimary()) {
@@ -660,7 +660,7 @@ int wlanRxProcessFrames(void)
 		}
 		holder = (frame->address1[0] & 1) ? &connection->keyBlocks[0] : &connection->keyBlocks[1];
 		if (*holder != NULL)
-			key = (cipher_key_t *)(*holder + 28);
+			key = &(*holder)->key;
 		if (key == NULL) {
 			frame->frameControl[1] &= ~IEEE80211_FC1_PROTECTED;
 			buffer->length = 0;

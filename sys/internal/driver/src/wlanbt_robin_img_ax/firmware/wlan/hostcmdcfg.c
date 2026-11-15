@@ -71,12 +71,10 @@ extern WlanWirelessFrame *wlanIbssBeaconFrame;						/* 0x54c2c */
 extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;				/* 0x54bc8 */
 extern struct WlanMacTxRequest *wlanIbssBeaconRequest;					/* 0x54bc4 */
 int uapSqramInspectContext(struct WlanConnection *connection, uint8_t *buffer, int pairwise);	/* SQRAM 0xc0008718 */
-int uapSqramHandleContext(void);							/* SQRAM 0xc00081f0 */
 void *mdevRomComputeState(void *table, int next);					/* ROM 0x03f065a2 */
 
 /* The ROM expires the software timers through this one (0x54e98). */
 extern void (*wlanSoftTimerExpireHook)(struct WlanSoftTimer *timer);			/* 0x54e98 */
-uint8_t *pmkCacheFindPSK(uint8_t *ssid, uint8_t length);				/* SQRAM 0xc0008190 */
 
 /* The 0x108 TLV of 0x4e: the mode of every entry of a group; calls changed() when a group's mode changes. */
 unsigned int wlanPsSetupDescriptor(const uint8_t *tlv, uint16_t length, struct WlanTableGroup *table,
@@ -182,7 +180,8 @@ int wlanPsConvertDescriptor(const uint8_t *buffer, int length)
 
 	if (result == 0) {
 		supplicantDisable();
-		return uapSqramHandleContext();
+		pmkCacheFlush();
+		return 0;
 	}
 	return result;
 }
