@@ -31,7 +31,6 @@
 
 /* The ROM's. */
 void romLibSyncContext(unsigned int mask);
-struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel);	/* SQRAM, veneer 0x52dc4 */
 
 struct WlanScanState wlanScanState __attribute__((section(".itcm.bss")));			/* 0x578c0 */
 struct WlanScan wlanCommandScan __attribute__((section(".itcm.bss")));				/* 0x578d4 */
@@ -166,7 +165,7 @@ int macMgmtAcquireEntry(uint32_t handle, uint32_t event, OsaBuffer *buffer, uint
 	subtype = frame[2] >> 4;
 	if (subtype == 2) {
 		channel = 0;
-		if (p2pSqramCheckContext(buffer, &channel) != NULL)
+		if (p2pActionFrameConnection(buffer, &channel) != NULL)
 			macMgmtDispatchState(buffer, argument, channel);
 	} else if (subtype == 5 || subtype == 8) {
 		fmCoexFormatBuffer((uintptr_t)buffer->context, (WlanWirelessFrame *)frame, argument, wlanScanState.scan,

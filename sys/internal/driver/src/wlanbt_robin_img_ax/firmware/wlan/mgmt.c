@@ -108,10 +108,6 @@ unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
 int cbProcResetPacket(void);							/* 0x1e42e */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
-void p2pSqramBuildContext(struct WlanConnection *connection, const uint8_t *ies,
-			  unsigned int length);				/* SQRAM 0xc000cc1d */
-void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
-			    uint32_t *length);				/* SQRAM 0xc000cd37 */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
@@ -605,11 +601,11 @@ int wlanCustomIeConfigure(struct WlanConnection *connection, const uint8_t *list
 				}
 				if (entry->mask == WLAN_CUSTOM_IE_ALL_FRAMES) {
 					if (slot == 0) {
-						p2pSqramBuildContext(connection, entry->buffer,
-								     entry->length);
+						p2pHostAttributesSet(connection, entry->buffer,
+							     entry->length);
 					} else if (slot == 1) {
-						p2pSqramQueryContext(entry->buffer, entry->length,
-							wlanConnectionPsState(connection)->p2pIeState);
+						wpsAttributesParse(entry->buffer, entry->length,
+								   wlanConnectionPsState(connection)->wpsAttributes);
 					}
 				}
 				goto next;
@@ -666,7 +662,7 @@ uint16_t wlanCustomIeGet(struct WlanConnection *connection, uint8_t *out, int si
 
 			out[0] = slot;
 			out[1] = slot >> 8;
-			p2pSqramComputeContext(connection, out, &length);
+			p2pHostAttributesGet(connection, out, (uint16_t *)&length);
 			out += 2;
 			out[0] = mask[0];
 			out[1] = mask[1];

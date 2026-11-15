@@ -530,6 +530,7 @@ struct WlanConnection {
 			const uint8_t *smState;		/* the current state's entry in smStates */
 			uint32_t reserved20;
 			const uint8_t *smStates;
+#define WLAN_SM_STATE_NO_PROBES	0x48	/* the byte offset in smStates of the state that ignores probe requests */
 			uint8_t reserved1a[12];
 			struct WlanConnection *owner;	/* itself: the connection's state machine is handed this */
 		};

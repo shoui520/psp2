@@ -75,8 +75,6 @@ __attribute__((noinline)) const void *p2pDirectFormatTable(uint8_t *length);				
 int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
 void macMgmtFilterTable(WlanWirelessFrame *frame, const uint8_t *address);		/* 0x37d26 */
-int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
-void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *frame, int unused);
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);
@@ -156,12 +154,12 @@ int macMgmtDispatchState(OsaBuffer *buffer, uintptr_t argument, int matched)
 	case WLAN_ACTION_CATEGORY_P2P_PUBLIC:
 		handled = 1;
 		if (frame->body[1] == 9)
-			p2pSqramFilterState(connection, (const uint8_t *)frame, WLAN_ACTION_CATEGORY_P2P_PUBLIC);
+			p2pActionFrameReceive(connection, (const uint8_t *)frame, WLAN_ACTION_CATEGORY_P2P_PUBLIC);
 		return handled;
 	case WLAN_ACTION_CATEGORY_DIRECT:
 		return p2pDirectFormatEntry(connection, frame->body, (const uint8_t *)frame);
 	case WLAN_ACTION_CATEGORY_VENDOR:
-		p2pSqramFilterState(connection, (const uint8_t *)frame, WLAN_ACTION_CATEGORY_VENDOR);
+		p2pActionFrameReceive(connection, (const uint8_t *)frame, WLAN_ACTION_CATEGORY_VENDOR);
 		return 1;
 	default:
 		return handled;
@@ -582,7 +580,7 @@ static inline __attribute__((always_inline)) void macMgmtDirectResume(struct Wla
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	uint8_t flags[4];
 
-	if (p2pBssActiveGet(connection) == 0 || ps->p2pGroupActive == 0)
+	if (p2pBssActiveGet(connection) == 0 || ps->deferredFrame == NULL)
 		return;
 	if (ps->p2pChannel != 255) {
 		wlanCurrentChannelFlags(flags);
@@ -590,7 +588,7 @@ static inline __attribute__((always_inline)) void macMgmtDirectResume(struct Wla
 	}
 	if (started)
 		connection->p2pState = 4;
-	p2pSqramFilterState(connection, NULL, 0);
+	p2pActionFrameReceive(connection, NULL, 0);
 }
 
 /* The state the machine starts in: it takes the host's requests. */
@@ -634,7 +632,7 @@ static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *mac
 		return NULL;
 	case WLAN_STA_EVENT_FRAME:
 		if (connection != NULL)
-			p2pSqramHandleContext(connection, data->frame, 0);
+			p2pActionFrameRoute(connection, data->frame);
 		return event;
 	case WLAN_STA_EVENT_JOINED:
 		machine->ibss = 1;

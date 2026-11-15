@@ -60,6 +60,7 @@
 #include "robin/macentry.h"
 #include "robin/htba.h"
 #include "robin/peerrate.h"
+#include "robin/uapbss.h"
 
 #define HOSTCMD_U16(p)		((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -459,7 +460,6 @@ int hostCmd00e0(unsigned int action, uint8_t *data, unsigned int length);	/* 0x3
 unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *data);	/* 0x3f2c0 */
 int hostCmd00e4Check(struct WlanConnection *connection, uint8_t *data, unsigned int length); /* 0x3f1f6 */
 int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d086 */
-void hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
 int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t *data,
 		uint16_t *length);						/* 0x3f002 */
 void hostCmd0102(unsigned int enable);						/* 0x32538 */

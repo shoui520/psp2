@@ -33,6 +33,7 @@
 #include "robin/txstats.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
+#include "robin/uapbss.h"
 
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) + 4 == 1148, "sleep mode");
 
@@ -64,7 +65,6 @@ _Static_assert(offsetof(struct WlanConnectionInfo, sleep) + 4 == 1148, "sleep mo
 
 /* Not converted yet; provisional names. */
 void p2pDirectPrepareTable(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41f6a */
-void p2pSqramPrepareContext(OsaBuffer *buffer, int acknowledged);			/* SQRAM 0xc000cac0 */
 void macMgmtConvertPacket(struct WlanConnection *connection);			/* inferred */
 extern uint32_t wlanPsPollSkips;
 
@@ -321,7 +321,7 @@ void macTxNotifyTaskMain(void)
 				if (sendAck) {
 					if (status.result != 0)
 						acknowledged = 0;
-					p2pSqramPrepareContext(buffer, acknowledged);
+					p2pFrameSent(buffer, acknowledged);
 				}
 				actual = 0;
 				if (release != 0)

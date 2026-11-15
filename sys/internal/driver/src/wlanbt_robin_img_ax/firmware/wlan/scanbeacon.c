@@ -10,6 +10,7 @@
 #include "robin/phy.h"
 #include "robin/scan.h"
 #include "robin/wlanrx.h"
+#include "robin/uapbss.h"
 
 /* The capability read as a word, as the original loads it. */
 typedef uint32_t __attribute__((may_alias)) WlanCapabilityWord;
@@ -53,12 +54,12 @@ void fmCoexFormatBuffer(uintptr_t context, WlanWirelessFrame *frame, uintptr_t a
 	    wlanFindIe(frame, IE_VENDOR, WLAN_FRAME_BEACON, wlanScanWpsOui, 4) != NULL)
 		return;
 	if (fmCoexNotifyBuffer(*(const WlanCapabilityWord *)&frame->body[10], scan->bssType,
-			       p2pSqramParseContext(context)) == 0)
+			       p2pDiscoveryActive((struct WlanConnection *)context)) == 0)
 		return;
 	if (fmCoexClearEntry(frame->address3, scan->bssid) == 0)
 		return;
 	fmCoexInspectEntry(frame, scan, &found);
-	p2pSqramDispatchContext(context, frame);
+	p2pScanResultFound((struct WlanConnection *)context, (const uint8_t *)frame);
 	if (!found)
 		return;
 	macMgmtAdjustTable(frame, WLAN_FRAME_BEACON);

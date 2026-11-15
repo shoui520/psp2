@@ -49,7 +49,6 @@ void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *
 void rfCalibProcessTimer(unsigned int value, uint8_t **cursor, uint8_t *length);	/* 0x2b7b6 */
 void rfCalibUpdateTimer(const uint8_t *wmm, uint8_t **cursor, uint8_t *length);	/* 0x2b7ea */
 void cbProcCheckFrame(struct WlanConnection *connection);				/* 0x1ea08 */
-int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
 int rfCalibRecordQueue(struct WlanConnection *connection, unsigned int a, unsigned int b,
 		       unsigned int maxStations, uint8_t *table);			/* 0x2b4c0 */
 void rfCalibAdjustQueue(struct WlanConnection *connection, const WlanIePointers *elements,
@@ -765,7 +764,7 @@ int macMgmtTrackPacket(OsaBuffer *buffer, uintptr_t argument)
 			return (int)(uintptr_t)connection;
 		category = 127;
 	}
-	return p2pSqramFilterState(connection, frame, category);
+	return p2pActionFrameReceive(connection, frame, category);
 }
 
 /*

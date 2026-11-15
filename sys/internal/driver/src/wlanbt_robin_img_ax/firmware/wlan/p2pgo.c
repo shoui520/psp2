@@ -46,7 +46,7 @@ unsigned int p2pDirectNotifyState(struct WlanConnection *connection)
 
 	wlanConnectionCommandCheck(15, 1);
 	__aeabi_memclr4(wlanBssTargetCounter, sizeof(wlanBssTargetCounter));
-	__aeabi_memclr4(ps->customIe, sizeof(ps->customIe));
+	__aeabi_memclr4(ps->wpsAttributes, sizeof(ps->wpsAttributes));
 	__aeabi_memclr4(connection->networkSsid, sizeof(connection->networkSsid));
 	connection->networkSsidLength = 0;
 	p2pSqramHandleEntry(ps);
@@ -170,7 +170,7 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	if ((P2P_GROUP_REQUIRED & ~ps->configuredMask) != 0)
 		return 1;
 	for (i = 0; i < 17; i++) {
-		if (i != 6 && ps->customIe[i] == NULL)
+		if (i != 6 && ps->wpsAttributes[i] == NULL)
 			return 1;
 	}
 	ps->tieBreaker = rand() & 1;
@@ -350,7 +350,7 @@ unsigned int p2pDirectClearState(uint8_t *out, const uint8_t *attribute)
 unsigned int p2pDirectConvertState(struct WlanConnection *connection, WlanWirelessFrame *frame, unsigned int mask)
 {
 	uint8_t *buffer = (uint8_t *)frame;
-	uint8_t *const *attributes = wlanConnectionPsState(connection)->customIe;
+	uint8_t *const *attributes = wlanConnectionPsState(connection)->wpsAttributes;
 	uint8_t *element = &buffer[((buffer[1] << 8) | buffer[0]) + 32];
 	uint8_t *length = element + 1;
 	uint8_t *end = element + 6;

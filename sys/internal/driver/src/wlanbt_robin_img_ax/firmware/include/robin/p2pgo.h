@@ -69,9 +69,30 @@ struct WlanP2pClient {
 	uint8_t information[];		/* the Device Info attribute after its device address */
 };
 
+/* The slots of a WPS element's attributes (wpsAttributesParse(), WlanPsPeerState.wpsAttributes); slot 6 is not used. */
+enum {
+	WPS_SLOT_VERSION = 0,			/* 0x104a */
+	WPS_SLOT_WPS_STATE = 1,			/* 0x1044 */
+	WPS_SLOT_REQUEST_TYPE = 2,		/* 0x103a */
+	WPS_SLOT_RESPONSE_TYPE = 3,		/* 0x103b */
+	WPS_SLOT_CONFIG_METHODS = 4,		/* 0x1008 */
+	WPS_SLOT_UUID_E = 5,			/* 0x1047 */
+	WPS_SLOT_PRIMARY_DEVICE_TYPE = 7,	/* 0x1054 */
+	WPS_SLOT_RF_BANDS = 8,			/* 0x103c */
+	WPS_SLOT_ASSOCIATION_STATE = 9,		/* 0x1002 */
+	WPS_SLOT_CONFIGURATION_ERROR = 10,	/* 0x1009 */
+	WPS_SLOT_DEVICE_PASSWORD_ID = 11,	/* 0x1012 */
+	WPS_SLOT_DEVICE_NAME = 12,		/* 0x1011 */
+	WPS_SLOT_MANUFACTURER = 13,		/* 0x1021 */
+	WPS_SLOT_MODEL_NUMBER = 14,		/* 0x1024 */
+	WPS_SLOT_MODEL_NAME = 15,		/* 0x1023 */
+	WPS_SLOT_SERIAL_NUMBER = 16,		/* 0x1042 */
+	WPS_SLOT_COUNT = 19,
+};
+
 extern struct WlanInitStage p2pDirectInitStage;		/* 0x55244 */
 
-/* The slots of WlanDirectContext.attributes (and of WlanPsPeerState.customIe), which the firmware does not order by attribute ID. */
+/* The slots of WlanDirectContext.attributes, which the firmware does not order by attribute ID. */
 enum {
 	P2P_SLOT_CAPABILITY = 0,
 	P2P_SLOT_GO_INTENT = 1,

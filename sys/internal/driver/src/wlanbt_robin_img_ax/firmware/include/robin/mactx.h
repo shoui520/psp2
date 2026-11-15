@@ -54,9 +54,9 @@ struct WlanPsPeerState {
 	uint32_t directLinkTimer;	/* osaCreateTimer() handle: the delay wlanDirectLinkSend() waits for */
 	uint32_t provisionTimer;		/* osaCreateTimer() handle: the provision discovery request's 200 ms */
 	uint32_t negotiationTimer;	/* osaCreateTimer() handle: the GO negotiation request's 10 s */
-	uint8_t reserved64[4];
+	uint32_t invitationTimer;	/* osaCreateTimer() handle: the invitation's 120 ms */
 	uint32_t discoverabilityTimer;	/* osaCreateTimer() handle: the device discoverability request's 2 s */
-	uint32_t p2pGroupActive;	/* nonzero while the P2P group is up (inferred: the state machine reads it when it enters or leaves a state) */
+	OsaBuffer *deferredFrame;	/* a P2P action frame that came while the device was busy: p2pActionFrameReceive() takes it up when the group owner's channel is back */
 	struct {
 		uint8_t id;		/* 11: the Channel List attribute of the channels both sides support */
 		uint8_t length[2];
@@ -152,10 +152,7 @@ struct WlanPsPeerState {
 	uint8_t groupChannel;		/* the channel the group is on */
 	uint8_t p2pWindowValid;		/* inferred: nonzero while p2pWindowStart and p2pWindowEnd hold a window */
 	uint8_t reserved1230[2];
-	union {
-		uint8_t p2pIeState[4];	/* kept by the P2P code from custom IE slot 1 */
-		uint8_t *customIe[19];	/* the attributes the host gave the group, by P2P_SLOT_* (struct WlanDirectContext) */
-	};
+	uint8_t *wpsAttributes[19];	/* the attributes of the WPS element the host gave (custom IE slot 1), by WPS_SLOT_* (wpsAttributesParse()) */
 	uint8_t eventPeerAddress[6];	/* the peer the listen channel's event (type 2) names (p2pListenTimerExpired()) */
 	uint8_t discoveryDeviceAddress[6];	/* the client the host wants discovered: its group owner gets a device discoverability request */
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
@@ -195,7 +192,7 @@ _Static_assert(offsetof(struct WlanPsPeerState, discoverabilityPending) == 1190,
 _Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
 _Static_assert(offsetof(struct WlanPsPeerState, ssidFixed) == 1220, "P2P fixed SSID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupChannel) == 1228, "P2P group channel");
-_Static_assert(offsetof(struct WlanPsPeerState, customIe) == 1232, "P2P custom IEs");
+_Static_assert(offsetof(struct WlanPsPeerState, wpsAttributes) == 1232, "WPS attributes");
 _Static_assert(offsetof(struct WlanPsPeerState, groupSettingE) == 1340, "P2P group setting E");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pOptions) == 188, "P2P options");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pAttribute) == 189, "P2P attribute");

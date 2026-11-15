@@ -14,8 +14,10 @@
 #include "robin/conn.h"
 #include "robin/esa.h"
 #include "robin/hostps.h"
+#include "robin/htba.h"
 #include "robin/ie.h"
 #include "robin/macentry.h"
+#include "robin/mef.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
 #include "robin/osa.h"
@@ -27,6 +29,7 @@
 #include "robin/slot.h"
 #include "robin/sys.h"
 #include "robin/txpower.h"
+#include "robin/txring.h"
 #include "robin/uapbss.h"
 #include "robin/wapiie.h"
 #include "robin/wmm.h"
@@ -655,7 +658,7 @@ void p2pDiscoverabilityCheck(struct WlanDirectContext *peer, uint32_t changed, s
 unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-	uint8_t *attribute = ps->customIe[11];
+	uint8_t *attribute = ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID];
 	uint8_t saved[2] = { 0, 0 };
 	uint32_t value = 0;
 	unsigned int result;
@@ -668,7 +671,7 @@ unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *fram
 		attribute[5] = ((uint8_t *)&value)[1];
 	}
 	result = p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
-	if (ps->customIe[11] != NULL && ps->groupSettingE != 0) {
+	if (ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID] != NULL && ps->groupSettingE != 0) {
 		attribute[4] = saved[0];
 		attribute[5] = saved[1];
 	}
@@ -995,7 +998,7 @@ int p2pGoNegotiationRequestSend(struct WlanConnection *connection)
 /* Adds the WPS element of attribute 4 the host gave, with its value (bytes 4 and 5) set to configMethods for this frame only. */
 void p2pWpsConfigMethodsAppend(struct WlanConnection *connection, uint8_t *frame, const uint8_t *configMethods)
 {
-	uint8_t *attribute = wlanConnectionPsState(connection)->customIe[4];
+	uint8_t *attribute = wlanConnectionPsState(connection)->wpsAttributes[WPS_SLOT_CONFIG_METHODS];
 	uint8_t saved[2];
 
 	if (attribute == NULL)
@@ -1566,7 +1569,7 @@ report:
 int p2pProvisionDiscoveryRequestAnswer(struct WlanConnection *connection, const uint8_t *frame)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-	uint8_t *wps[19];
+	uint8_t *wps[WPS_SLOT_COUNT];
 	const uint8_t *element;
 	uint8_t *data;
 	OsaBuffer *response;
@@ -1589,16 +1592,16 @@ int p2pProvisionDiscoveryRequestAnswer(struct WlanConnection *connection, const 
 	do {
 		size = (uint8_t)(element[1] + 2);
 		if (memcmp(element + 2, wlanWpsOui, 4) == 0)
-			p2pSqramQueryContext(element + 6, (uint16_t)(size - 6), wps);
+			wpsAttributesParse(element + 6, (uint16_t)(size - 6), wps);
 		left -= size;
 		element += size;
 	} while (left > 0 && element != NULL);
-	if (wps[4] != NULL) {
-		((uint8_t *)&peer)[0] = wps[4][4];
-		((uint8_t *)&peer)[1] = wps[4][5];
-		if (ps->customIe[4] != NULL) {
-			((uint8_t *)&ours)[0] = ps->customIe[4][4];
-			((uint8_t *)&ours)[1] = ps->customIe[4][5];
+	if (wps[WPS_SLOT_CONFIG_METHODS] != NULL) {
+		((uint8_t *)&peer)[0] = wps[WPS_SLOT_CONFIG_METHODS][4];
+		((uint8_t *)&peer)[1] = wps[WPS_SLOT_CONFIG_METHODS][5];
+		if (ps->wpsAttributes[WPS_SLOT_CONFIG_METHODS] != NULL) {
+			((uint8_t *)&ours)[0] = ps->wpsAttributes[WPS_SLOT_CONFIG_METHODS][4];
+			((uint8_t *)&ours)[1] = ps->wpsAttributes[WPS_SLOT_CONFIG_METHODS][5];
 		}
 		if (peer & ours) {
 			unsigned int method;
@@ -1642,7 +1645,7 @@ failed:
 int p2pProvisionDiscoveryResponseAnswer(struct WlanConnection *connection, const uint8_t *frame)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-	uint8_t *wps[19];
+	uint8_t *wps[WPS_SLOT_COUNT];
 	const uint8_t *element = frame + 40;
 	union {
 		uint32_t word;
@@ -1658,13 +1661,13 @@ int p2pProvisionDiscoveryResponseAnswer(struct WlanConnection *connection, const
 	do {
 		size = (uint8_t)(element[1] + 2);
 		if (memcmp(element + 2, wlanWpsOui, 4) == 0)
-			p2pSqramQueryContext(element + 6, (uint16_t)(size - 6), wps);
+			wpsAttributesParse(element + 6, (uint16_t)(size - 6), wps);
 		left -= size;
 		element += size;
 	} while (left > 0 && element != NULL);
-	if (wps[4] != NULL) {
-		selected.bytes[0] = wps[4][4];
-		selected.bytes[1] = wps[4][5];
+	if (wps[WPS_SLOT_CONFIG_METHODS] != NULL) {
+		selected.bytes[0] = wps[WPS_SLOT_CONFIG_METHODS][4];
+		selected.bytes[1] = wps[WPS_SLOT_CONFIG_METHODS][5];
 	}
 	if (ps->provisionTimer != 0) {
 		osaCancelTimer(ps->provisionTimer);
@@ -1758,5 +1761,699 @@ int p2pPresenceRequestAnswer(struct WlanConnection *connection, const uint8_t *f
 			ps->p2pEntryPending = 1;
 		}
 	}
+	return 0;
+}
+
+/*
+ * A P2P public action (kind 9) or P2P action frame (kind 127) for the P2P
+ * interface. A group owner takes only frames to its interface (or to the
+ * group, from its clients). While the radio is away from the group's channel
+ * the frame is kept, and comes back here once the channel is back (no frame);
+ * otherwise it goes to the handler of its subtype.
+ */
+int p2pActionFrameReceive(struct WlanConnection *connection, const uint8_t *frame, unsigned int kind)
+{
+	struct WlanPsPeerState *ps;
+	uint32_t flags;
+	int result;
+
+	if (connection == NULL) {
+		connection = wlanConnectionFirst(3);
+		if (connection == NULL)
+			return -1;
+	} else if (connection->interfaceType != 3) {
+		return -1;
+	}
+	ps = wlanConnectionPsState(connection);
+	if (connection->mode == 2) {
+		struct WlanConnection *peer = wlanConnectionFindByPeer(frame + 12);
+		unsigned int state = 0;
+
+		if (peer != NULL) {
+			wlanConnectionInfo(peer);
+			state = wlanConnectionInfoSlot(peer)->state;
+		}
+		if (state == 3) {
+			if (memcmp(ps->groupAddress, frame + 6, 6) != 0)
+				return -1;
+		} else if (memcmp(ps->interfaceAddress, frame + 6, 6) != 0) {
+			return -1;
+		}
+	}
+	wlanCurrentChannelFlags((uint8_t *)&flags);
+	if (connection->smState == connection->smStates + WLAN_SM_STATE_NO_PROBES) {
+		ps->p2pBssActive = 1;
+		macMgmtAdjustEntry(connection);
+		connection->p2pState = 2;
+		macMgmtValidateTable((connection->flags2 & WLAN_CONN2_ASSOCIATED) ? 1 : 0);
+		ps->p2pChannel = wlanOperatingChannel();
+		ps->deferredFrame = wlanTxBufferAlloc(&wlanBlockPool28, 2000, 0xffffffff, 3);
+		if (ps->deferredFrame == NULL) {
+			ps->p2pBssActive = 0;
+			ps->p2pChannel = 255;
+			connection->p2pState = 3;
+			macMgmtValidateTable(0);
+		} else {
+			__aeabi_memcpy((uint8_t *)ps->deferredFrame + ps->deferredFrame->dataOffset, frame, 1000);
+			macMgmtNotifyTable();
+		}
+		return 0;
+	}
+	if (ps->p2pBssActive != 0 && ps->deferredFrame != NULL) {
+		frame = (const uint8_t *)ps->deferredFrame + ps->deferredFrame->dataOffset;
+		ps->deferredFrame = NULL;
+		if (frame[32] == WLAN_ACTION_CATEGORY_PUBLIC)
+			goto public_action;
+		if (frame[32] == P2P_FRAME_ACTION)
+			goto action;
+	}
+	if (kind != P2P_FRAME_PUBLIC_ACTION) {
+		if (kind != P2P_FRAME_ACTION || frame[32] != P2P_FRAME_ACTION)
+			return 0;
+		goto action;
+	}
+public_action:
+	switch (frame[32 + 6]) {
+	case 0:		/* GO negotiation request */
+		if (ps->p2pChannel != 255)
+			wlanSetChannel(ps->p2pChannel, (uint8_t *)&flags, 1);
+		p2pGoNegotiationRequestAnswer(connection, frame);
+		ps->p2pBssActive = 0;
+		return 0;
+	case 1:		/* GO negotiation response */
+		if (connection->p2pState != 4)
+			return 0;
+		p2pGoNegotiationResponseAnswer(connection, frame);
+		ps->p2pBssActive = 0;
+		return 0;
+	case 2:		/* GO negotiation confirmation */
+		if (connection->p2pState != 4)
+			return 0;
+		result = p2pGoNegotiationConfirmed(connection, frame);
+		ps->p2pBssActive = 0;
+		return result;
+	case 3:		/* invitation request */
+		result = p2pSqramRecordContext(connection, frame);
+		ps->p2pBssActive = 0;
+		return result;
+	case 4:		/* invitation response */
+		p2pSqramFilterContext(connection, frame, ps->groupSettingD);
+		ps->p2pBssActive = 0;
+		return 0;
+	case 5:		/* device discoverability request */
+		return p2pDiscoverabilityRequestAnswer(connection, frame);
+	case 6:		/* device discoverability response */
+		result = p2pDiscoverabilityResponseCheck(connection, frame);
+		ps->p2pBssActive = 0;
+		return result;
+	case 7:		/* provision discovery request */
+		return p2pProvisionDiscoveryRequestAnswer(connection, frame);
+	case 8:		/* provision discovery response */
+		return p2pProvisionDiscoveryResponseAnswer(connection, frame);
+	default:
+		return 0;
+	}
+action:
+	switch (frame[32 + 5]) {
+	case 1:		/* presence request */
+	case 2:		/* presence response */
+		p2pPresenceRequestAnswer(connection, frame);
+		break;
+	case 3:		/* GO discoverability request */
+		return p2pDiscoverabilityRequestAnswer(connection, frame);
+	}
+	return 0;
+}
+
+/* A received action frame: public actions and P2P actions go to p2pActionFrameReceive(). */
+int p2pActionFrameRoute(struct WlanConnection *connection, const uint8_t *frame)
+{
+	unsigned int category = frame[32];
+
+	if (category == WLAN_ACTION_CATEGORY_PUBLIC || category == P2P_FRAME_PUBLIC_ACTION)
+		category = P2P_FRAME_PUBLIC_ACTION;
+	else if (category != P2P_FRAME_ACTION)
+		return 1;
+	p2pActionFrameReceive(connection, frame, category);
+	return 1;
+}
+
+/*
+ * A P2P public action frame went out: a GO negotiation frame waits ten seconds
+ * for the next one, an invitation 120 ms, and after a device discoverability
+ * request the device searches again.
+ */
+void p2pPublicActionSent(struct WlanConnection *connection, unsigned int subtype)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	OsaTimerCallback callback;
+	uint32_t *timer;
+	uint32_t delay;
+
+	switch (subtype) {
+	case 0:
+	case 1:
+	case 2:
+		if (ps->negotiationTimer != 0) {
+			osaCancelTimer(ps->negotiationTimer);
+			ps->negotiationTimer = 0;
+		}
+		callback = p2pListenTimerExpired;
+		delay = 10000000;
+		timer = &ps->negotiationTimer;
+		break;
+	case 3:
+	case 4:
+		if (ps->invitationTimer != 0) {
+			osaCancelTimer(ps->invitationTimer);
+			ps->invitationTimer = 0;
+		}
+		callback = p2pSqramScheduleContext;
+		delay = 120000;
+		timer = &ps->invitationTimer;
+		break;
+	case 5:
+		connection->mode = 1;
+		p2pDiscoveryResume(connection);
+		return;
+	default:
+		return;
+	}
+	osaCreateTimer(callback, (uint32_t)connection, delay, timer, 0);
+}
+
+/*
+ * A P2P action frame went unanswered: a GO discoverability request to a client
+ * makes the device discoverability response report the failure.
+ */
+void p2pActionSent(struct WlanConnection *connection, unsigned int subtype)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+	switch (subtype) {
+	case 0:
+	case 1:
+	case 2:
+		break;
+	case 3:
+		ps->p2pStatus.value = 6;
+		p2pDiscoverabilityRequestAnswer(connection, NULL);
+		break;
+	}
+}
+
+/* The peer acknowledged our GO negotiation confirmation: the group formed. */
+void p2pConfirmationAcked(struct WlanConnection *connection, const uint8_t *frame)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	uint16_t peer[16];
+	unsigned int role;
+
+	if (frame[32 + 6] != P2P_GO_NEG_CONFIRM)
+		return;
+	if (ps->negotiationTimer != 0) {
+		osaCancelTimer(ps->negotiationTimer);
+		ps->negotiationTimer = 0;
+	}
+	peer[0] = 32;
+	__aeabi_memcpy((uint8_t *)peer + 12, frame + 6, 6);
+	if (connection->mode == 2)
+		role = 1;
+	else if (connection->mode == 3)
+		role = 2;
+	else
+		role = 0;
+	p2pEventSendPeer(connection, (const uint8_t *)peer, 2, role);
+}
+
+/*
+ * The P2P interface a P2P public action or P2P action frame belongs to, if it
+ * is up; forUs is set when the frame's receiver is the interface, the
+ * broadcast address or the device.
+ */
+struct WlanConnection *p2pActionFrameConnection(const OsaBuffer *buffer, uint32_t *forUs)
+{
+	const uint8_t *frame = (const uint8_t *)buffer + buffer->dataOffset;
+	const uint8_t *oui;
+	struct WlanConnection *connection;
+	struct WlanPsPeerState *ps;
+
+	if (frame[32] == WLAN_ACTION_CATEGORY_PUBLIC) {
+		if (frame[33] != 9)	/* vendor specific */
+			return NULL;
+		oui = frame + 34;
+	} else if (frame[32] == P2P_FRAME_ACTION) {
+		oui = frame + 33;
+	} else {
+		return NULL;
+	}
+	if (memcmp(oui, wlanP2pOui, 4) != 0)
+		return NULL;
+	connection = wlanConnectionFirst(3);
+	if (connection == NULL || connection->mode == 0)
+		return NULL;
+	ps = wlanConnectionPsState(connection);
+	if ((frame[2] >> 4) == 13) {	/* an action frame */
+		if (memcmp(connection->interfaceAddress, frame + 6, 6) == 0 ||
+		    memcmp(wlanScanAnyBssid, frame + 6, 6) == 0 ||
+		    (ps != NULL && memcmp(ps->interfaceAddress, frame + 6, 6) == 0))
+			*forUs = 1;
+	}
+	return connection;
+}
+
+/* An address in two words (the BSSID p2pServiceDiscoverySend() puts in its frame). */
+union WlanBssidWords {
+	uint8_t bytes[8];
+	uint32_t words[2];
+};
+
+static const union WlanBssidWords p2pWildcardBssid = {
+	.bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 },
+};
+
+/*
+ * A service discovery (GAS) frame the host gives: the peer's address and the
+ * public action body. A device sends an initial request after the peer's next
+ * probe, and its initial response at once; 1: no frame, 2: not GAS or not sent.
+ */
+int p2pServiceDiscoverySend(struct WlanConnection *connection, const uint8_t *request, unsigned int length)
+{
+	struct WlanPsPeerState *ps;
+	const uint8_t *body = request + 6;
+	union WlanBssidWords bssid = p2pWildcardBssid;
+	const uint8_t *address = NULL;
+	unsigned int now = 0;
+	OsaBuffer *frame;
+	uint8_t *data;
+
+	ps = wlanConnectionPsState(connection);
+	__aeabi_memcpy(ps->eventPeerAddress, request, 6);
+	frame = wlanMgmtAllocFrame(connection, 400);
+	if (frame == NULL)
+		return 1;
+	frame->context = connection;
+	data = (uint8_t *)frame + frame->dataOffset;
+	if (data == NULL)
+		return 1;
+	__aeabi_memclr(data, 400);
+	if (connection->mode == 2) {
+		const union WlanBssidWords *local = (const void *)connection->localAddress;
+
+		bssid = *local;	/* the 6 bytes and the 2 after them */
+	} else if (connection->mode == 3) {
+		address = request;
+	} else if (connection->mode == 1) {
+		if (body[1] == 10) {		/* GAS initial request */
+			address = request;
+		} else if (body[1] == 11) {	/* GAS initial response */
+			now = 1;
+			address = ps->interfaceAddress;
+		}
+	}
+	if (address != NULL)
+		__aeabi_memcpy(bssid.bytes, address, 6);
+	wlanMgmtBuildFrame(frame, connection->interfaceAddress, request, 13, bssid.bytes);
+	if (body[1] != 10 && body[1] != 11)
+		return 2;
+	__aeabi_memcpy(data + 32, body, length - 6);
+	length = ((data[1] << 8) | data[0]) + length - 6;
+	data[0] = length;
+	data[1] = length >> 8;
+	if (now == 0) {
+		ps->pendingFrame = frame;
+		ps->p2pFlags |= 0x01;
+		return 0;
+	}
+	if (wlanMgmtSendFrame(frame) != 0)
+		return 2;
+	return 0;
+}
+
+/*
+ * A management frame of the P2P interface went out. Acknowledged: a GO
+ * discoverability request makes the device discoverability response report
+ * success, an empty GAS initial response lets the device search again, and a
+ * GO negotiation confirmation forms the group; else the frame's sent handlers.
+ */
+void p2pFrameSent(OsaBuffer *buffer, int acknowledged)
+{
+	struct WlanConnection *connection = buffer->context;
+	const struct WlanReplyFrame *reply = (const struct WlanReplyFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	const uint8_t *frame = (const uint8_t *)reply->frame;
+	const uint8_t *body;
+	struct WlanPsPeerState *ps;
+
+	if (connection == NULL || connection->interfaceType != 3)
+		return;
+	ps = wlanConnectionPsState(connection);
+	if (acknowledged == 0) {
+		body = frame + 32;
+		if (body[0] == WLAN_ACTION_CATEGORY_PUBLIC)
+			p2pPublicActionSent(connection, body[6]);
+		if (body[0] == P2P_FRAME_ACTION)
+			p2pActionSent(connection, body[5]);
+		return;
+	}
+	body = frame + 32;
+	if (body[0] == P2P_FRAME_ACTION) {
+		if (body[5] == 3) {
+			ps->p2pStatus.value = 0;
+			p2pDiscoverabilityRequestAnswer(connection, frame);
+		}
+		return;
+	}
+	if (body[0] != WLAN_ACTION_CATEGORY_PUBLIC || connection->mode == 0)
+		return;
+	if (body[1] == 11 && ((body[5] << 8) | body[4]) == 0)
+		p2pDiscoveryResume(connection);
+	if (memcmp(frame + 34, wlanP2pOui, 3) == 0 && body[5] == 9)
+		p2pConfirmationAcked(connection, frame);
+}
+
+/* A beacon or probe response with a P2P element while the device searches: the host hears of the peer. */
+void p2pScanResultFound(struct WlanConnection *connection, const uint8_t *frame)
+{
+	struct WlanPsPeerState *ps;
+
+	if (connection != NULL && connection->interfaceType != 3)
+		return;
+	p2pDeviceConnection = connection;
+	if (connection == NULL)
+		p2pDeviceConnection = wlanConnectionFirst(3);
+	ps = wlanConnectionPsState(p2pDeviceConnection);
+	if (p2pDirectInspectContext((WlanWirelessFrame *)(uintptr_t)frame) == 0)
+		return;
+	p2pGroupSsidUpdate(p2pDeviceConnection, frame);
+	p2pEventSend(p2pDeviceConnection, frame, WLAN_HOST_EVENT_WIFIDIRECT_GENERIC, 14, 0);
+	p2pPeerFound(p2pDeviceConnection, frame, ps->p2pFlags);
+}
+
+/* The P2P device searches (or listens), or is a client: scan results take P2P peers. */
+int p2pDiscoveryActive(struct WlanConnection *connection)
+{
+	if (connection == NULL) {
+		connection = wlanConnectionFirst(3);
+		if (connection == NULL)
+			return 0;
+	}
+	if (connection->interfaceType != 3)
+		return 0;
+	wlanConnectionPsState(connection);
+	if (connection->p2pState == 1 || connection->p2pState == 3 || connection->mode == 3)
+		return 1;
+	return 0;
+}
+
+/*
+ * The P2P attributes the host gives (its custom P2P element): each one the
+ * device keeps is copied to its place and marked configured. The listen
+ * channel is the operating channel too; the GO intent keeps its tie-breaker.
+ */
+void p2pHostAttributesSet(struct WlanConnection *connection, const uint8_t *attributes, unsigned int length)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+	while (length != 0) {
+		unsigned int size = (uint16_t)(((attributes[2] << 8) | attributes[1]) + 3);
+
+		switch (attributes[0]) {
+		case P2P_ATTR_CAPABILITY:
+			__aeabi_memcpy(ps->capabilityAttribute, attributes, size);
+			break;
+		case P2P_ATTR_DEVICE_ID:
+			__aeabi_memcpy(ps->deviceIdAttribute, attributes, size);
+			break;
+		case P2P_ATTR_GO_INTENT:
+			__aeabi_memcpy(ps->groupOwnerIntentAttribute, attributes, size);
+			ps->groupOwnerIntentAttribute[3] = (ps->groupOwnerIntentAttribute[3] & 1) | (attributes[3] << 1);
+			break;
+		case P2P_ATTR_CONFIGURATION_TIMEOUT:
+			__aeabi_memcpy(ps->configTimeoutAttribute, attributes, size);
+			break;
+		case P2P_ATTR_LISTEN_CHANNEL:
+			__aeabi_memcpy(ps->listenChannelAttribute, attributes, size);
+			__aeabi_memcpy(ps->operatingChannelAttribute, attributes, size);
+			ps->configuredMask |= 1u << P2P_ATTR_OPERATING_CHANNEL;
+			break;
+		case P2P_ATTR_GROUP_BSSID:
+			__aeabi_memcpy(ps->groupBssidAttribute, attributes, size);
+			break;
+		case P2P_ATTR_EXTENDED_LISTEN_TIMING:
+			__aeabi_memcpy(ps->extendedListenAttribute, attributes, size);
+			break;
+		case P2P_ATTR_INTENDED_INTERFACE_ADDRESS:
+			__aeabi_memcpy(ps->intendedAddressAttribute, attributes, size);
+			break;
+		case P2P_ATTR_CHANNEL_LIST:
+			__aeabi_memcpy(ps->channelListAttribute, attributes, size);
+			ps->channelListAttribute[5] = 4;
+			break;
+		case P2P_ATTR_NOTICE_OF_ABSENCE:
+			break;
+		case P2P_ATTR_DEVICE_INFO:
+			__aeabi_memcpy(ps->deviceInfoAttribute, attributes, size);
+			break;
+		case P2P_ATTR_GROUP_ID:
+			__aeabi_memcpy(&ps->groupIdType, attributes, size);
+			break;
+		case P2P_ATTR_INTERFACE:
+			__aeabi_memcpy(ps->interfaceAttribute, attributes, size);
+			break;
+		case P2P_ATTR_OPERATING_CHANNEL:
+			__aeabi_memcpy(ps->operatingChannelAttribute, attributes, size);
+			break;
+		default:
+			goto next;
+		}
+		ps->configuredMask |= 1u << attributes[0];
+next:
+		attributes += size;
+		length = (uint16_t)(length - size);
+	}
+}
+
+#define P2P_ATTRIBUTE_LENGTH(attribute)	(((attribute)[2] << 8) | (attribute)[1])
+
+/*
+ * The P2P attributes the host configured, for its custom IE list: after the
+ * entry's 6-byte header, in attribute order. (For the Interface attribute the
+ * firmware reports the Intended Interface Address one.)
+ */
+void p2pHostAttributesGet(struct WlanConnection *connection, uint8_t *entry, uint16_t *length)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	uint8_t *out = entry + 6;
+	unsigned int total = 0;
+	unsigned int id;
+
+	for (id = 0; id < P2P_ATTR_COUNT; id = (uint8_t)(id + 1)) {
+		unsigned int size;
+
+		if (!(ps->configuredMask & (1u << id)))
+			continue;
+		switch (id) {
+		case P2P_ATTR_DEVICE_ID:
+			__aeabi_memcpy(out, ps->deviceIdAttribute, 9);
+			out += 9;
+			total = (uint16_t)(total + 9);
+			continue;
+		case P2P_ATTR_CAPABILITY:
+			__aeabi_memcpy(out, ps->capabilityAttribute, 5);
+			out += 5;
+			total = (uint16_t)(total + 5);
+			continue;
+		case P2P_ATTR_LISTEN_CHANNEL:
+			__aeabi_memcpy(out, ps->listenChannelAttribute, 8);
+			out += 8;
+			total = (uint16_t)(total + 8);
+			continue;
+		case P2P_ATTR_OPERATING_CHANNEL:
+			__aeabi_memcpy(out, ps->operatingChannelAttribute, 8);
+			out += 8;
+			total = (uint16_t)(total + 8);
+			continue;
+		case P2P_ATTR_GO_INTENT: {
+			unsigned int intent = ps->groupOwnerIntentAttribute[3] >> 1;
+
+			__aeabi_memcpy(out, ps->groupOwnerIntentAttribute,
+				       P2P_ATTRIBUTE_LENGTH(ps->groupOwnerIntentAttribute) + 3);
+			out += 3;
+			out[0] = intent;	/* without the tie-breaker */
+			size = P2P_ATTRIBUTE_LENGTH(ps->groupOwnerIntentAttribute);
+			break;
+		}
+		case P2P_ATTR_DEVICE_INFO:
+			__aeabi_memcpy(out, ps->deviceInfoAttribute, P2P_ATTRIBUTE_LENGTH(ps->deviceInfoAttribute) + 3);
+			size = P2P_ATTRIBUTE_LENGTH(ps->deviceInfoAttribute);
+			out += 3;
+			break;
+		case P2P_ATTR_CHANNEL_LIST:
+			__aeabi_memcpy(out, ps->channelListAttribute, P2P_ATTRIBUTE_LENGTH(ps->channelListAttribute) + 3);
+			size = P2P_ATTRIBUTE_LENGTH(ps->channelListAttribute);
+			out += 3;
+			break;
+		case P2P_ATTR_GROUP_ID:
+			__aeabi_memcpy(out, &ps->groupIdType, P2P_ATTRIBUTE_LENGTH(&ps->groupIdType) + 3);
+			size = P2P_ATTRIBUTE_LENGTH(&ps->groupIdType);
+			out += 3;
+			break;
+		case P2P_ATTR_GROUP_BSSID:
+			__aeabi_memcpy(out, ps->groupBssidAttribute, P2P_ATTRIBUTE_LENGTH(ps->groupBssidAttribute) + 3);
+			size = P2P_ATTRIBUTE_LENGTH(ps->groupBssidAttribute);
+			out += 3;
+			break;
+		case P2P_ATTR_INTERFACE:
+			__aeabi_memcpy(out, ps->intendedAddressAttribute,
+				       P2P_ATTRIBUTE_LENGTH(ps->intendedAddressAttribute) + 3);
+			size = P2P_ATTRIBUTE_LENGTH(ps->intendedAddressAttribute);
+			out += 3;
+			break;
+		default:
+			continue;
+		}
+		out += size;
+		total = (uint16_t)(total + 3 + size);
+	}
+	*length = total;
+}
+
+/* The attributes of a WPS element (big endian type and length), by WPS_SLOT_*. */
+void wpsAttributesParse(const uint8_t *data, unsigned int length, uint8_t **attributes)
+{
+	unsigned int offset = 0;
+
+	while (offset < length) {
+		unsigned int type = (uint16_t)((((data[1] << 8) | data[0]) << 8) | (((data[1] << 8) | data[0]) >> 8));
+		unsigned int size;
+
+		switch (type) {
+		case 0x104a:
+			attributes[WPS_SLOT_VERSION] = (uint8_t *)data;
+			break;
+		case 0x1044:
+			attributes[WPS_SLOT_WPS_STATE] = (uint8_t *)data;
+			break;
+		case 0x103a:
+			attributes[WPS_SLOT_REQUEST_TYPE] = (uint8_t *)data;
+			break;
+		case 0x103b:
+			attributes[WPS_SLOT_RESPONSE_TYPE] = (uint8_t *)data;
+			break;
+		case 0x1008:
+			attributes[WPS_SLOT_CONFIG_METHODS] = (uint8_t *)data;
+			break;
+		case 0x1047:
+			attributes[WPS_SLOT_UUID_E] = (uint8_t *)data;
+			break;
+		case 0x1054:
+			attributes[WPS_SLOT_PRIMARY_DEVICE_TYPE] = (uint8_t *)data;
+			break;
+		case 0x103c:
+			attributes[WPS_SLOT_RF_BANDS] = (uint8_t *)data;
+			break;
+		case 0x1002:
+			attributes[WPS_SLOT_ASSOCIATION_STATE] = (uint8_t *)data;
+			break;
+		case 0x1009:
+			attributes[WPS_SLOT_CONFIGURATION_ERROR] = (uint8_t *)data;
+			break;
+		case 0x1012:
+			attributes[WPS_SLOT_DEVICE_PASSWORD_ID] = (uint8_t *)data;
+			break;
+		case 0x1011:
+			attributes[WPS_SLOT_DEVICE_NAME] = (uint8_t *)data;
+			break;
+		case 0x1021:
+			attributes[WPS_SLOT_MANUFACTURER] = (uint8_t *)data;
+			break;
+		case 0x1024:
+			attributes[WPS_SLOT_MODEL_NUMBER] = (uint8_t *)data;
+			break;
+		case 0x1023:
+			attributes[WPS_SLOT_MODEL_NAME] = (uint8_t *)data;
+			break;
+		case 0x1042:
+			attributes[WPS_SLOT_SERIAL_NUMBER] = (uint8_t *)data;
+			break;
+		}
+		size = (uint16_t)((((data[3] << 8) | data[2]) << 8) | (((data[3] << 8) | data[2]) >> 8));
+		offset = (uint16_t)(offset + size + 4);
+		data += size + 4;
+	}
+}
+
+/*
+ * Host command 0x00f4 sends a P2P frame: after the command header, the peer's
+ * address, the frame's category, and its subtype and dialog token at 12 and 13.
+ */
+
+/* A P2P action frame the host asks for: a presence request. */
+int p2pActionCommand(struct WlanConnection *connection, const uint8_t *command)
+{
+	const uint8_t *request = command + 8;
+
+	switch (request[12]) {
+	case 0:
+		break;
+	case 1:		/* presence request */
+		p2pVendorActionSend(connection, request, request[6], request[13], request[11], 1);
+		break;
+	}
+	return 0;
+}
+
+/*
+ * A P2P public action the host asks for: the device waits for the peer's probe
+ * to start a GO negotiation (ten seconds) or an invitation, or searches for it
+ * to send a provision discovery or device discoverability request.
+ */
+int p2pPublicActionCommand(struct WlanConnection *connection, const uint8_t *command)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	const uint8_t *request = command + 8;
+
+	ps->dialogToken = request[13];
+	switch (request[12]) {
+	case 0:		/* GO negotiation request */
+		ps->p2pFlags |= 0x01;
+		p2pDeviceConnection = connection;
+		__aeabi_memcpy(ps->eventPeerAddress, request, 6);
+		if (ps->negotiationTimer != 0) {
+			osaCancelTimer(ps->negotiationTimer);
+			ps->negotiationTimer = 0;
+		}
+		osaCreateTimer(p2pListenTimerExpired, (uint32_t)connection, 10000000, &ps->negotiationTimer, 0);
+		break;
+	case 3:		/* invitation request */
+		__aeabi_memcpy(ps->p2pDeviceAddress, request, 6);
+		ps->p2pFlags |= 0x02;
+		p2pDeviceConnection = connection;
+		p2pDeviceStateSave(connection);
+		connection->mode = 1;
+		macMgmtScheduleTable(1);
+		p2pDiscoveryResume(connection);
+		break;
+	case 5:		/* device discoverability request */
+		p2pDeviceConnection = connection;
+		__aeabi_memcpy(ps->discoveryDeviceAddress, request, 6);
+		ps->p2pFlags |= 0x04;
+		break;
+	case 7:		/* provision discovery request */
+		ps->p2pFlags |= 0x08;
+		p2pDeviceConnection = connection;
+		p2pDeviceStateSave(connection);
+		__aeabi_memcpy(ps->eventPeerAddress, request, 6);
+		break;
+	}
+	return 0;
+}
+
+int hostCmd00f4(struct WlanConnection *connection, uint8_t *command)
+{
+	if (command[14] == WLAN_ACTION_CATEGORY_PUBLIC)
+		p2pPublicActionCommand(connection, command);
+	else if (command[14] == P2P_FRAME_ACTION)
+		p2pActionCommand(connection, command);
 	return 0;
 }

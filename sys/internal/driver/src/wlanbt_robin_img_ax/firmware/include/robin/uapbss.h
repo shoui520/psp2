@@ -73,7 +73,27 @@ unsigned int p2pPresenceResponseBuild(struct WlanConnection *connection, uint8_t
 int p2pVendorActionSend(struct WlanConnection *connection, const uint8_t *destination, unsigned int kind,
 			unsigned int dialogToken, unsigned int unused, unsigned int subtype);	/* SQRAM 0xc000c512 */
 int p2pPresenceRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c5c0 */
-void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8c, not converted yet */
+int p2pActionFrameReceive(struct WlanConnection *connection, const uint8_t *frame, unsigned int kind);	/* SQRAM 0xc000c622 */
+int p2pSqramRecordContext(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000dda6, not converted yet */
+void p2pSqramFilterContext(struct WlanConnection *connection, const uint8_t *frame,
+			   uint32_t setting);					/* SQRAM 0xc000e05a, not converted yet */
+int p2pActionFrameRoute(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c82a, veneer 0x53244 */
+void p2pPublicActionSent(struct WlanConnection *connection, unsigned int subtype);	/* SQRAM 0xc000c848 */
+void p2pActionSent(struct WlanConnection *connection, unsigned int subtype);	/* SQRAM 0xc000c8ac */
+void p2pConfirmationAcked(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c8da */
+struct WlanConnection *p2pActionFrameConnection(const struct OsaBuffer *buffer, uint32_t *forUs);	/* SQRAM 0xc000c92c */
+int p2pServiceDiscoverySend(struct WlanConnection *connection, const uint8_t *request, unsigned int length);	/* SQRAM 0xc000c9c2 */
+void p2pFrameSent(struct OsaBuffer *buffer, int acknowledged);		/* SQRAM 0xc000cac0 */
+void p2pScanResultFound(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000cb66, veneer 0x53a04 */
+int p2pDiscoveryActive(struct WlanConnection *connection);		/* SQRAM 0xc000cbbc, veneer 0x539fc */
+void p2pHostAttributesSet(struct WlanConnection *connection, const uint8_t *attributes,
+			  unsigned int length);					/* SQRAM 0xc000cc1c, veneer 0x52e0c */
+void p2pHostAttributesGet(struct WlanConnection *connection, uint8_t *entry, uint16_t *length);	/* SQRAM 0xc000cd36, veneer 0x52e1c */
+int p2pActionCommand(struct WlanConnection *connection, const uint8_t *command);	/* SQRAM 0xc000cf5a */
+int p2pPublicActionCommand(struct WlanConnection *connection, const uint8_t *command);	/* SQRAM 0xc000cf7e */
+int hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
+void p2pSqramScheduleContext(uint32_t timer, uint32_t argument);	/* SQRAM 0xc000d80c, not converted yet */
+void wpsAttributesParse(const uint8_t *data, unsigned int length, uint8_t **attributes);	/* SQRAM 0xc000ce8c */
 uint8_t *p2pSqramTrackContext(struct WlanConnection *connection, uint32_t *invitation);	/* SQRAM 0xc000da82, not converted yet */
 void p2pSqramReleaseContext(struct WlanConnection *connection, uint32_t invitation, uint8_t *address,
 			    struct WlanDirectContext *peer);			/* SQRAM 0xc000db0c, not converted yet */

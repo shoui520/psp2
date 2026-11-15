@@ -45,7 +45,6 @@
 #define WLAN_SM_BEACON			3
 #define WLAN_SM_PROBE_RESPONSE		6
 #define WLAN_SM_PROBE_REQUEST		42
-#define WLAN_SM_STATE_NO_PROBES		0x48	/* byte offset of the state that ignores probe requests */
 
 #define AMP_PAL_IOCTL_PEER_TIMESTAMP	0x54
 #define WLAN_HOST_EVENT_BLOCK_ACK_REQUEST 5
@@ -73,7 +72,6 @@ void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);		/* 0x37c72 *
 void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */
-struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConnection *connection); /* 0x1dc8c */
 void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
@@ -121,7 +119,7 @@ int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument)
 	case WLAN_SUBTYPE_ACTION:
 		channel = 0;
 		if (connection == NULL) {
-			connection = p2pSqramCheckContext(buffer, &channel);
+			connection = p2pActionFrameConnection(buffer, &channel);
 			buffer->context = connection;
 			if (connection == NULL)
 				break;
