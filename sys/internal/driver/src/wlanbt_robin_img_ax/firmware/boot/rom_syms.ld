@@ -935,3 +935,35 @@ PROVIDE(btLinkRxBufferHook           = 0x0400f158);
 PROVIDE(btLcoRomApplyContext         = 0x03f1f9bd);
 PROVIDE(btLcoRomInspectContext       = 0x03f2000f);
 PROVIDE(btLcoRomFormatContext        = 0x03f1ffe7);
+
+/* The ROM's hooks btLmpLcValidateContext() installs (bt/lccontext.c). */
+PROVIDE(btLmpLcRecordStateHook       = 0x0400f424);
+PROVIDE(btSbcPrepareContextHook      = 0x0400f414);
+PROVIDE(btSbcDispatchContextHook     = 0x0400f418);
+PROVIDE(btSbcBuildContextHook        = 0x0400f420);
+PROVIDE(btSbcParseContextHook        = 0x0400f41c);
+PROVIDE(btSbcReleaseContextHook      = 0x0400f5a0);
+PROVIDE(btSbcInspectContextHook      = 0x0400f5a4);
+PROVIDE(btSbcTrackContextHook        = 0x0400f5a8);
+PROVIDE(btSbcManageContextHook       = 0x0400f5ac);
+PROVIDE(btSbcAcquireContextHook      = 0x0400f5b0);
+PROVIDE(btSbcHandleEntryHook         = 0x0400f5b4);
+PROVIDE(btSbcProcessEntryHook        = 0x0400f5c0);
+PROVIDE(btSbcUpdateEntryHook         = 0x0400f5c4);
+PROVIDE(btSbcConfigureEntryHook      = 0x0400f5c8);
+PROVIDE(hctDeliverAclToHostHook      = 0x0400f4b4);
+PROVIDE(hctSendAclDataHook           = 0x0400f4b8);
+PROVIDE(btLmpLcProcessContextHook    = 0x0400ece0);
+PROVIDE(socHookNop3Hook              = 0x0400f5b8);
+PROVIDE(uapPrepareEntryHook          = 0x0400f5bc);
+PROVIDE(btLmpLcUpdateContextHook     = 0x0400ef88);
+PROVIDE(hctHandleLinkDataHook        = 0x0400f47c);
+PROVIDE(hctCreditReturnedHook        = 0x0400f484);
+PROVIDE(hctTransferDoneHook          = 0x0400f480);
+PROVIDE(hctSendAclToHostHook         = 0x0400f468);
+PROVIDE(hctCompleteTransferHook      = 0x0400f464);
+
+/* The SBC task (bt/sbcinit.c): its handlers in the ROM's SQRAM, its creation and its loop. */
+PROVIDE(sbcTaskHandlers              = 0xc0033000);
+PROVIDE(btSbcRomProcessState         = 0x03f357ef);
+PROVIDE(btSbcRomHandleState          = 0x03f357c7);

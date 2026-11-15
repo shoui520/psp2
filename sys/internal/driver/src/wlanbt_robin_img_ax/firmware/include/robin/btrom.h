@@ -216,6 +216,8 @@ void btLdaRomFormatState(void);
 void btHccRomQueryState(unsigned int link);
 void btLscRomFormatState(uint32_t event, uint32_t value);
 /* The FM settings code of the ROM (0x03f373c1..), for bt/fm.c. */
+int btSbcRomProcessState(void *stack, uint32_t size, uint32_t priority, void (*entry)(void)); /* creates the SBC task */
+void btSbcRomHandleState(void);					/* the SBC task's loop */
 int btSbcRomApplyContext(void *stack, uint32_t size, uint32_t priority, void (*entry)(void)); /* creates the FM task */
 int btSbcRomResolveContext(void);
 int btSbcRomScheduleContext(void);

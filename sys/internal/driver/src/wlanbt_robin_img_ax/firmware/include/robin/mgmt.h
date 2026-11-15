@@ -82,7 +82,7 @@ void wlanCustomIeRemoveBss(unsigned int interfaceType, unsigned int bssNumber);
 int wlanCustomIeReset(void);
 void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
 		       uint8_t offset);
-void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length);
+int wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length);
 int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
 			uint16_t *size);
 unsigned int wlanFrameClass(unsigned int interfaceType, const WlanWirelessFrame *frame);

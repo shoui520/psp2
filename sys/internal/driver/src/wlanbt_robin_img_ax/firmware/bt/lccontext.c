@@ -5,17 +5,24 @@
  */
 #include <stddef.h>
 #include "robin/btbuffer.h"
+#include "robin/btconfig.h"
 #include "robin/btcontext.h"
+#include "robin/btpool.h"
+#include "robin/btpower.h"
 #include "robin/btrom.h"
 #include "robin/clock.h"
 #include "robin/amp.h"
 #include "robin/eventpower.h"
 #include "robin/eventroute.h"
+#include "robin/fm.h"
 #include "robin/hct.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
+#include "robin/sbc.h"
 #include "robin/sys.h"
 #include "robin/socpower.h"
 #include "robin/soc.h"
+#include "robin/vendor.h"
 
 struct BtLcContext btLmpLcContext __attribute__((section(".itcm.rw"))) = {
 	.node = 5,
@@ -24,6 +31,37 @@ struct BtLcContext btLmpLcContext __attribute__((section(".itcm.rw"))) = {
 };
 uint32_t btLmpLcEntryCount[8] __attribute__((section(".itcm.bss")));		/* 0x59ea8 */
 struct BtLcTarget btLmpLcTarget[2] __attribute__((section(".itcm.bss")));		/* 0x59ec8 */
+uint32_t btHctReferenceClock __attribute__((section(".itcm.bss")));		/* 0x55278: the reference clock, 100 Hz */
+uint8_t btHctTaskControl[8] __attribute__((section(".itcm.bss")));		/* 0x5527c: what the ROM keeps of the "hct" task */
+uint8_t btHctPool[128] __attribute__((section(".itcm.bss")));			/* 0x5d794: the memory of ROM pool 28 */
+
+/* The ROM's hooks btLmpLcValidateContext() points at this firmware's code (DTCM, ROM data). */
+extern uint8_t *btLinkRxBufferBase;						/* 0x400f988 */
+extern __typeof__(btLmpLcRecordState) *btLmpLcRecordStateHook;			/* 0x400f424 */
+extern __typeof__(btSbcPrepareContext) *btSbcPrepareContextHook;		/* 0x400f414 */
+extern __typeof__(btSbcDispatchContext) *btSbcDispatchContextHook;		/* 0x400f418 */
+extern __typeof__(btSbcBuildContext) *btSbcBuildContextHook;			/* 0x400f420 */
+extern __typeof__(btSbcParseContext) *btSbcParseContextHook;			/* 0x400f41c */
+extern __typeof__(btSbcReleaseContext) *btSbcReleaseContextHook;		/* 0x400f5a0 */
+extern __typeof__(btSbcInspectContext) *btSbcInspectContextHook;		/* 0x400f5a4 */
+extern __typeof__(btSbcTrackContext) *btSbcTrackContextHook;			/* 0x400f5a8 */
+extern __typeof__(btSbcManageContext) *btSbcManageContextHook;			/* 0x400f5ac */
+extern __typeof__(btSbcAcquireContext) *btSbcAcquireContextHook;		/* 0x400f5b0 */
+extern __typeof__(btSbcHandleEntry) *btSbcHandleEntryHook;			/* 0x400f5b4 */
+extern __typeof__(btSbcProcessEntry) *btSbcProcessEntryHook;			/* 0x400f5c0 */
+extern __typeof__(btSbcUpdateEntry) *btSbcUpdateEntryHook;			/* 0x400f5c4 */
+extern __typeof__(btSbcConfigureEntry) *btSbcConfigureEntryHook;		/* 0x400f5c8 */
+extern __typeof__(hctDeliverAclToHost) *hctDeliverAclToHostHook;		/* 0x400f4b4 */
+extern __typeof__(hctSendAclData) *hctSendAclDataHook;				/* 0x400f4b8 */
+extern __typeof__(btLmpLcProcessContext) *btLmpLcProcessContextHook;		/* 0x400ece0 */
+extern __typeof__(socHookNop3) *socHookNop3Hook;				/* 0x400f5b8 */
+extern __typeof__(uapPrepareEntry) *uapPrepareEntryHook;			/* 0x400f5bc */
+extern __typeof__(btLmpLcUpdateContext) *btLmpLcUpdateContextHook;		/* 0x400ef88 */
+extern __typeof__(hctHandleLinkData) *hctHandleLinkDataHook;			/* 0x400f47c */
+extern __typeof__(hctCreditReturned) *hctCreditReturnedHook;			/* 0x400f484 */
+extern __typeof__(hctTransferDone) *hctTransferDoneHook;			/* 0x400f480 */
+extern __typeof__(hctSendAclToHost) *hctSendAclToHostHook;			/* 0x400f468 */
+extern __typeof__(hctCompleteTransfer) *hctCompleteTransferHook;		/* 0x400f464 */
 
 /* The controller is not running: every clock request is withdrawn (0 kHz). */
 unsigned int btLmpLcHandleContext(void)
@@ -101,6 +139,76 @@ int btLmpLcConfigureContext(void)
 unsigned int btLmpLcCheckContext(void)
 {
 	return (hostCmd0003Version() >> 24) + 17152;
+}
+
+/*
+ * 0x00042cf8: the ROM's controller calls this firmware's HCI transport,
+ * vendor commands, configuration store and link code through its hooks. The
+ * receive buffers are in the 64 KiB of SQRAM the table pool's memory is in.
+ */
+void btLmpLcValidateContext(void)
+{
+	btLinkRxBufferBase = (uint8_t *)((uintptr_t)btPoolHeaderMemory & 0xffff0000);
+	btLmpLcRecordStateHook = btLmpLcRecordState;
+	btSbcPrepareContextHook = btSbcPrepareContext;
+	btSbcDispatchContextHook = btSbcDispatchContext;
+	btSbcBuildContextHook = btSbcBuildContext;
+	btSbcParseContextHook = btSbcParseContext;
+	btSbcReleaseContextHook = btSbcReleaseContext;
+	btSbcInspectContextHook = btSbcInspectContext;
+	btSbcTrackContextHook = btSbcTrackContext;
+	btSbcManageContextHook = btSbcManageContext;
+	btSbcAcquireContextHook = btSbcAcquireContext;
+	btSbcHandleEntryHook = btSbcHandleEntry;
+	btSbcProcessEntryHook = btSbcProcessEntry;
+	btSbcUpdateEntryHook = btSbcUpdateEntry;
+	btSbcConfigureEntryHook = btSbcConfigureEntry;
+	hctDeliverAclToHostHook = hctDeliverAclToHost;
+	hctSendAclDataHook = hctSendAclData;
+	btLmpLcProcessContextHook = btLmpLcProcessContext;
+	socHookNop3Hook = socHookNop3;
+	uapPrepareEntryHook = uapPrepareEntry;
+	btLmpLcUpdateContextHook = btLmpLcUpdateContext;
+	hctHandleLinkDataHook = hctHandleLinkData;
+	hctCreditReturnedHook = hctCreditReturned;
+	hctTransferDoneHook = hctTransferDone;
+	hctSendAclToHostHook = hctSendAclToHost;
+	hctCompleteTransferHook = hctCompleteTransfer;
+}
+
+/*
+ * 0x00042d9a, an init table entry: brings the Bluetooth controller up: its
+ * clock, the SCO interrupt, the link controller, the buffer pools, the ROM's
+ * hooks, the configuration store and the transport's baud rate (115200
+ * unless the store has another), then creates the "hct" task.
+ */
+int btHctInit(void)
+{
+	btHctReferenceClock = rfCalibrationTable[3 + sysRefClockProfile()];
+	btSbcReleaseState();
+	btLmpLcConfigureContext();
+	btLmpLcResolveEntry();
+	btLmpLcRecordContext();
+	mdevRomSyncState(28, btHctPool, sizeof(btHctPool));
+	btLmpLcValidateContext();
+	btSbcRecordState();
+	romHctCoexMode = 115200;
+	btSbcFilterState(BT_CONFIG_ITEM_BAUD_RATE, (uint8_t *)&romHctCoexMode);
+	__aeabi_memclr(btHctTaskControl, sizeof(btHctTaskControl));
+	btBdhRomHandleState(btVendorTaskState, 8004, btHctTaskControl, (const char *)btTaskTable);
+	btSbcSetupState();
+	btAudioPathModesClear();
+	btLmpLcScheduleContext();
+	return 0;
+}
+
+/* 0x00042e00, an init table entry: the ROM's SBC, link controller and audio path hooks. */
+int btRomHooksInit(void)
+{
+	btSbcConvertState();
+	btLmpLcConvertHeader();
+	btAudioPathHooksInit();
+	return 0;
 }
 
 void btLmpLcPrepareContext(void)

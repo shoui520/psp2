@@ -733,9 +733,11 @@ void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessF
 /*
  * Sets custom IEs from the host. While an IBSS or station interface is
  * running, its beacon and probe response templates are rebuilt with them.
+ * Gives back wlanCustomIeConfigure()'s result.
  */
-void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length)
+int wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length)
 {
+	int result;
 	int running = 0;
 	OsaBuffer *beacon = connection->beaconBuffer;
 	WlanWirelessFrame *beaconFrame =
@@ -749,11 +751,12 @@ void wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int
 		wlanCustomIeApply(connection, 0, beaconFrame, WLAN_BEACON_IE_OFFSET);
 		wlanCustomIeApply(connection, 0, probeResponse, WLAN_BEACON_IE_OFFSET);
 	}
-	wlanCustomIeConfigure(connection, list, length);
+	result = wlanCustomIeConfigure(connection, list, length);
 	if (running) {
 		wlanCustomIeApply(connection, 1, beaconFrame, WLAN_BEACON_IE_OFFSET);
 		wlanCustomIeApply(connection, 1, probeResponse, WLAN_BEACON_IE_OFFSET);
 	}
+	return result;
 }
 
 /*

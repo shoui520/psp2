@@ -51,6 +51,9 @@ uint8_t *btLmpLcProcessContext(uint8_t *record);		/* 0x42b8a */
 int btLmpLcUpdateContext(void);					/* 0x42b98 */
 int btLmpLcConfigureContext(void);				/* 0x42ba0 */
 unsigned int btLmpLcCheckContext(void);				/* 0x42ce8 */
+void btLmpLcValidateContext(void);			/* 0x42cf8 */
+int btHctInit(void);					/* 0x42d9a */
+int btRomHooksInit(void);				/* 0x42e00 */
 void btLmpLcPrepareContext(void);			/* 0x42f30 */
 int btLmpLcDispatchContext(void);				/* 0x42f38 */
 uint8_t *btLmpLcParseContext(void);				/* 0x42f46 */
@@ -58,7 +61,7 @@ int btLmpLcBuildContext(uint32_t *remaining);			/* 0x42f4e */
 void btLmpLcComputeContext(void);				/* 0x42f94 */
 void btLmpLcApplyContext(void);					/* 0x430d0 */
 int btLmpLcResolveContext(void);				/* 0x431ee */
-int btLmpLcScheduleContext(void);				/* 0x43208 */
+int btLmpLcScheduleContext(void) __attribute__((noinline));	/* 0x43208 */
 int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length);	/* 0x4324c */
 void btLmpLcInspectContext(int link, int notify);		/* 0x432ea */
 int btLmpLcTrackContext(int link);				/* 0x43348 */

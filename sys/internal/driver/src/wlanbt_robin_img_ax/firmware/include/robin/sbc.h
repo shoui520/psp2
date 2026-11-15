@@ -386,6 +386,9 @@ void btSbcTrackBuffer(unsigned int reg, unsigned int value);	/* 0x51598 */
 void btSbcPcmStreamHandler(const uint32_t *config);	/* 0x515bc: the PCM port's format words */
 int btSbcPcmDmaCallback(uintptr_t device, uintptr_t buffer, uintptr_t argument, unsigned int status);	/* 0x51764 */
 
+/* bt/sbcinit.c */
+int btSbcInit(void);					/* 0x4241c */
+
 /* bt/sbc.c */
 void fmCoexFilterBuffer(void);				/* 0x4cee0 */
 void fmCoexHandlePacket(void);				/* 0x4cf4c */

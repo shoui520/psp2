@@ -61,4 +61,6 @@ int hctRegisterDriver(void);
 int hctTransportReady(int transport);
 void hctTask(void);
 
+extern uint32_t romHctCoexMode;			/* 0x400f448: the transport's baud rate */
+
 #endif /* ROBIN_HCT_H */

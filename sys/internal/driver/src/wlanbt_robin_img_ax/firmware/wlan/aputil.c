@@ -6,15 +6,13 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/apconfig.h"
 #include "robin/conn.h"
 #include "robin/esatypes.h"
 #include "robin/ie.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/txpower.h"
-
-/* What the association event's TLVs are typed (Marvell's TLV numbers). */
-#define WLAN_TLV_PKT_FWD_CTL	0x0136
 
 /* The WMM TLV's value: a parameter element's 24 bytes, whatever its length says. */
 #define WLAN_TLV_WMM_VALUE	24

@@ -21,7 +21,6 @@
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
-extern uint32_t romHctCoexMode;
 
 /*
  * The clock rates the Bluetooth side needs during coexistence (0x56e40), set

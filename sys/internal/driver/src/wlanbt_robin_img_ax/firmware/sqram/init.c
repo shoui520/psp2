@@ -15,17 +15,16 @@
 #include "robin/osa.h"
 #include "robin/soc.h"
 #include "robin/socpower.h"
+#include "robin/btcontext.h"
+#include "robin/sbc.h"
 
 typedef int (*SysInitFunc)(void);
 
-int btRomHooksInit(void);	/* 0x00042e00, not converted */
 int wlanInit(void);		/* 0x0001bdc4, not converted */
 int rfCalibInitStage(void);	/* 0xc0007506 */
 int clockInit(void);	/* 0xc0007540 */
 int bufferPoolsInit(void);	/* 0x0001bcce, not converted */
-int btHctInit(void);		/* 0x00042d9a, not converted; creates thread "hct" */
 int fmInit(void);		/* 0x0004966a, not converted; creates event flags "FmFlags" */
-int btSbcInit(void);		/* 0x0004241c, not converted */
 int socPinInit(void);	/* 0xc0007562 */
 
 static SysInitFunc sysInitTable[] __attribute__((section(".sqram1.rw"))) = {
