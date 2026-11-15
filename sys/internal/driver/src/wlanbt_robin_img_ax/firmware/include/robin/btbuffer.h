@@ -48,8 +48,10 @@ struct BtHostPolicy {
 	uint8_t link;
 	uint8_t role;
 	uint8_t reserved30[2];
-	uint32_t flags;				/* bit 17, bit 19: the ROM's role flags */
-	uint8_t reserved36[4];
+	uint32_t flags;				/* bit n: step n of the role switch is done here */
+	uint8_t reserved36;
+	int8_t step;				/* the step of the role switch */
+	uint8_t reserved38[2];
 	uint8_t busy;
 	uint8_t reserved41[3];
 };
@@ -69,6 +71,11 @@ _Static_assert(sizeof(struct BtDeviceContext) == 80, "BtDeviceContext");
 extern struct BtRateHistory btRateHistory[8];			/* 0x59f08 */
 extern struct BtHostPolicy btHostPolicy;			/* 0x400bb80 */
 extern struct BtDeviceContext btDeviceContext;			/* 0x400c7b4 */
+extern uint32_t btPeerPolicy;					/* 0x400f62c: the peer's flags of the role switch */
+extern uint32_t (*btRoleSource)(uint32_t source);		/* 0x400f03c */
+extern uint32_t (*btRoleRecord)(uint8_t *record);		/* 0x400f038 */
+extern void (*btRoleUpdate)(uint32_t from, uint32_t to);	/* 0x400f050 */
+extern int (*btRoleAllowed)(void);				/* 0x400f014 */
 extern uint16_t btLinkPendingRate;				/* 0x400f812: 0xffff: none */
 extern void (*btNextRate)(int kind, int value);			/* 0x400ed34 */
 extern void (*btNextBitmap)(int kind, uint32_t queue, int value, uint8_t frame, uint16_t packet,
@@ -117,5 +124,6 @@ void btLmpLcScheduleBuffer(int link, uint16_t interval);	/* 0x4591a */
 int btLmpLcNotifyBuffer(uint8_t *message);			/* 0x45926 */
 int btLmpLcFormatBuffer(const uint8_t *flags);			/* 0x45a56 */
 void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
+int btLmpLcTrackBuffer(void);					/* 0x45c00 */
 
 #endif /* ROBIN_BTBUFFER_H */

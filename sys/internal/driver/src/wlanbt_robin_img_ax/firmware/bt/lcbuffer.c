@@ -800,3 +800,97 @@ void btLmpLcInspectBuffer(unsigned int link, unsigned int role)
 	if (role == 1)
 		btHostPolicy.flags &= ~(role << 17);
 }
+
+/*
+ * One step of the ROM's role switch (btHostPolicy.step): a pending restart (step 16) or abort
+ * (step 12) is taken first; then the steps run while the local and the peer's flag of the step
+ * agree, steps 2 and 3 also settling the role bits. Returns the local flag of the step it ended at.
+ */
+int btLmpLcTrackBuffer(void)
+{
+	uint32_t source = btLcoRomRecordState();
+	uint8_t *record = btLcoRomFilterState();
+	uint32_t from;
+	uint32_t to;
+	int step;
+	unsigned int local;
+	unsigned int peer;
+
+	if (record[11] == 1) {
+		record[11] = 0;
+		if (btHostPolicy.state != 0x37) {
+			btHostPolicy.step = 16;
+			return 1;
+		}
+	}
+	if (record[12] != 0) {
+		btHostPolicy.step = 12;
+		record[12] = 0;
+		return 1;
+	}
+	from = btRoleSource(source);
+	to = btRoleRecord(record);
+	btRoleUpdate(from, to);
+	for (;;) {
+		unsigned int hold;
+		unsigned int allowed;
+		int same;
+
+		step = btHostPolicy.step;
+		if (step == 3 && !(btHostPolicy.flags & 0x80000) && (btPeerPolicy & 0x80000))
+			btPeerPolicy &= ~0x80000;
+		if (step == 2) {
+			uint32_t flags = btHostPolicy.flags;
+			uint32_t other = btPeerPolicy;
+			unsigned int flag3 = (flags >> 3) & 1;
+			unsigned int flag2 = (flags >> 2) & 1;
+			unsigned int flag19 = (flags >> 19) & 1;
+			unsigned int peer2 = (other >> 2) & 1;
+			unsigned int peer3 = (other >> 3) & 1;
+			unsigned int peer19 = (other >> 19) & 1;
+
+			if (flag3 && peer3 && !peer2) {
+				if (!flag2) {
+					if (flag19 && !peer19 && btRoleAllowed()) {
+						btHostPolicy.flags = (btHostPolicy.flags & ~8) | 4;
+						btPeerPolicy |= 0x80000;
+						btHostPolicy.step++;
+					}
+				} else if (!flag19 && peer19 && btRoleAllowed()) {
+					btHostPolicy.flags &= ~8;
+					btPeerPolicy &= ~0x80000;
+					btHostPolicy.step++;
+				}
+			} else if (!(flag3 | peer3 | peer2) && flag2 && flag19 && peer19) {
+				btPeerPolicy = other & ~0x80000;
+			}
+		}
+		step = btHostPolicy.step;
+		local = (btHostPolicy.flags >> step) & 1;
+		peer = (btPeerPolicy >> step) & 1;
+		hold = 0;
+		if (step == 11)
+			hold = (btHostPolicy.flags >> 17) & 1;
+		allowed = 0;
+		if (step == 4 || step == 5 || step == 6) {
+			allowed = (btHostPolicy.flags >> 18) & 1;
+			if (local != peer)
+				hold = allowed;
+		}
+		if (local == 1 && peer == 0 && allowed == 1) {
+			btHostPolicy.busy = 0;
+			btRoleUpdate(from, to);
+		} else {
+			btHostPolicy.step = step - 1;
+		}
+		same = local == peer;
+		if (same && local != 0 && step == 11)
+			same = 0;
+		if (hold != 1 && same != 1)
+			break;
+	}
+	btHostPolicy.step = (int8_t)(btHostPolicy.step + 1);
+	if (record[2] == 1 && btHostPolicy.step < 14)
+		record[3] = 0;
+	return local;
+}
