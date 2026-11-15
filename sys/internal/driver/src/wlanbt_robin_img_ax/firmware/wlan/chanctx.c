@@ -54,8 +54,6 @@ void hostCmd003c(int timing, int carrier);						/* 0x2e9cc */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
-void p2pSqramDispatchState(struct WlanDirectContext *attributes, uint32_t flags,
-			   struct WlanPsPeerState *ps);					/* SQRAM */
 
 /* The automatic frequency control (hostcmd.c: host command 60), which hostCmd003c() is a stub of here. */
 uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
@@ -366,7 +364,7 @@ void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *fram
 			    memcmp(direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, ps->p2pGroupId, 6) == 0) {
 				ps->p2pChannel = wlanOperatingChannel();
 				ps->p2pBssActive = 1;
-				p2pSqramDispatchState(direct, flags, ps);
+				p2pDiscoverabilityCheck(direct, flags, ps);
 			}
 		}
 	}

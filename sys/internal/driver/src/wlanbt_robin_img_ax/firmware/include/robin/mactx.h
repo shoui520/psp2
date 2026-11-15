@@ -35,7 +35,7 @@ struct WlanPsPeerState {
 	uint16_t stage;			/* 1 when the group starts (inferred: the negotiation's stage) */
 	uint16_t stageLimit;		/* 3 */
 	uint8_t reserved28[2];
-	uint8_t p2pFlags;		/* bit 1: the P2P element names the device address; bit 2: a P2P group owner's beacon carries the P2P element */
+	uint8_t p2pFlags;		/* what waits for the peer to be heard (p2pPeerFound()): bit 0 a GO negotiation, bit 1 an invitation (the P2P element names the device address), bit 2 a discoverability request (a P2P group owner's beacon carries the P2P element), bit 3 a provision discovery, bit 4 the pending frame */
 	uint8_t tieBreaker;		/* rand() & 1 when the group starts (the GO Intent tie-breaker bit) */
 	uint8_t reserved32[9];
 	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
@@ -48,7 +48,10 @@ struct WlanPsPeerState {
 	uint8_t channelShared;		/* an infrastructure connection or an access point is up: the group shares its channel */
 	uint8_t reserved49[3];
 	uint32_t directLinkTimer;	/* osaCreateTimer() handle: the delay wlanDirectLinkSend() waits for */
-	uint8_t reserved56[16];
+	uint32_t provisionTimer;		/* osaCreateTimer() handle: the provision discovery request's 200 ms */
+	uint32_t negotiationTimer;	/* osaCreateTimer() handle: the GO negotiation request's 10 s */
+	uint8_t reserved64[4];
+	uint32_t discoverabilityTimer;	/* osaCreateTimer() handle: the device discoverability request's 2 s */
 	uint32_t p2pGroupActive;	/* nonzero while the P2P group is up (inferred: the state machine reads it when it enters or leaves a state) */
 	struct {
 		uint8_t id;		/* 11: the Channel List attribute of the channels both sides support */
@@ -128,7 +131,7 @@ struct WlanPsPeerState {
 	uint8_t reserved1180[8];
 	uint8_t p2pBssActive;		/* 1: the channel of the group owner is the one the radio is on */
 	uint8_t reserved1189;
-	uint8_t groupStarted;		/* cleared when the group starts */
+	uint8_t discoverabilityPending;	/* a device discoverability request is out (p2pDiscoverabilityCheck()); cleared by its timer and when the group starts */
 	uint8_t reserved1191;
 	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on; 255: none */
 	uint8_t reserved1193[15];
@@ -145,14 +148,15 @@ struct WlanPsPeerState {
 		uint8_t *customIe[19];	/* the attributes the host gave the group, by P2P_SLOT_* (struct WlanDirectContext) */
 	};
 	uint8_t eventPeerAddress[6];	/* the peer the listen channel's event (type 2) names (p2pListenTimerExpired()) */
-	uint8_t reserved1314[6];
+	uint8_t discoveryDeviceAddress[6];	/* the client the host wants discovered: its group owner gets a device discoverability request */
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
-	uint8_t reserved1326[14];
+	uint8_t reserved1326[13];
+	uint8_t dialogToken;		/* the dialog token of the P2P public action frames sent */
 	uint32_t groupSettingE;		/* 1 when the group starts */
 	uint32_t groupSettingF;		/* 256 */
 	uint32_t groupSettingG;		/* 5 */
 	uint32_t groupSettingH;		/* 1 */
-	uint8_t p2pGroupId[6];		/* the group owner a beacon names */
+	uint8_t p2pGroupId[6];		/* the group owner a beacon names: the one the discoverability request went to */
 };
 
 _Static_assert(offsetof(struct WlanPsPeerState, commonChannels) == 76, "P2P common channels");
@@ -178,7 +182,7 @@ _Static_assert(offsetof(struct WlanPsPeerState, groupIdType) == 1069, "P2P group
 _Static_assert(offsetof(struct WlanPsPeerState, groupSsid) == 1078, "P2P group SSID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupAddress) == 1160, "P2P group address");
 _Static_assert(offsetof(struct WlanPsPeerState, groupSettingD) == 1176, "P2P group setting");
-_Static_assert(offsetof(struct WlanPsPeerState, groupStarted) == 1190, "P2P group started");
+_Static_assert(offsetof(struct WlanPsPeerState, discoverabilityPending) == 1190, "P2P discoverability request");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
 _Static_assert(offsetof(struct WlanPsPeerState, ssidFixed) == 1220, "P2P fixed SSID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupChannel) == 1228, "P2P group channel");

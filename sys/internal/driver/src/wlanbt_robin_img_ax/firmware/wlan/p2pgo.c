@@ -29,6 +29,8 @@ void p2pSqramHandleEntry(struct WlanPsPeerState *ps);				/* 0xc000e1f0 */
 int p2pSqramConvertContext(struct WlanConnection *connection, uint8_t *type, uint8_t *tail, uint8_t *ssid,
 			   unsigned int mode, unsigned int flag);			/* 0xc000dc2e */
 
+uint32_t p2pFrameDataMissing __attribute__((section(".itcm.rw")));	/* 0x55254: frames p2pActionFrameAlloc() got without data */
+struct WlanConnection *p2pDeviceConnection __attribute__((section(".itcm.rw")));	/* 0x55258 */
 struct WlanConnection *p2pGroupConnection __attribute__((section(".itcm.rw")));
 const char *p2pDirectSsidPrefix __attribute__((section(".itcm.rw"))) = "DIRECT-";
 
@@ -178,7 +180,7 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	ps->p2pChannel = 255;
 	ps->ssidPending = 1;
 	ps->ssidFixed = 0;
-	ps->groupStarted = 0;
+	ps->discoverabilityPending = 0;
 	ps->groupSettingD = 255;
 	ps->p2pBssActive = 0;
 	ps->pendingFrame = NULL;

@@ -17,6 +17,25 @@ struct WlanWmmSlot;
 /* The bits of WlanPsPeerState.configuredMask that must be set before the group can start. */
 #define P2P_GROUP_REQUIRED	0x3abfcu
 
+/* What the group owner negotiation decides (p2pGroupRoleDecide()); the roles are the connection's modes. */
+enum {
+	P2P_ROLE_FAILED = 1,		/* both sides want to be the group owner (intent 15) */
+	P2P_ROLE_GROUP_OWNER = 2,
+	P2P_ROLE_CLIENT = 3,
+	P2P_ROLE_UNKNOWN = 4,		/* the peer sent no GO Intent attribute */
+};
+
+/* The GO negotiation frames p2pGoNegotiationBuild() answers with. */
+enum {
+	P2P_GO_NEG_REQUEST = 0,
+	P2P_GO_NEG_RESPONSE = 1,
+	P2P_GO_NEG_CONFIRM = 2,
+};
+
+/* The frames p2pActionFrameAlloc() starts. */
+#define P2P_FRAME_PUBLIC_ACTION		9	/* a public action frame (category 4, vendor specific action 9) */
+#define P2P_FRAME_ACTION		127	/* a P2P action frame (vendor specific category 127) */
+
 /* The P2P attributes a frame carries, or is built with: one pointer per attribute ID of the P2P specification. */
 enum {
 	P2P_ATTR_STATUS = 0,
@@ -84,6 +103,8 @@ struct WlanDirectContext {
 extern const uint8_t wlanWpsOui[4];			/* 0x53f86: the OUI and type of the WPS element */
 extern const uint8_t wlanP2pOui[4];			/* SQRAM 0xc000faa3: the OUI and type of the P2P element */
 
+extern uint32_t p2pFrameDataMissing;			/* 0x55254 */
+extern struct WlanConnection *p2pDeviceConnection;	/* 0x55258: the P2P device's connection (hostCmd00ea()) */
 extern struct WlanConnection *p2pGroupConnection;	/* 0x55260: the group owner's connection once it is set up */
 extern const char *p2pDirectSsidPrefix;			/* 0x55240: "DIRECT-" */
 

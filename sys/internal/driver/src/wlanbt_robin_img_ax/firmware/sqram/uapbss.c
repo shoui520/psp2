@@ -22,6 +22,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/scan.h"
+#include "robin/sys.h"
 #include "robin/txpower.h"
 #include "robin/uapbss.h"
 #include "robin/wapiie.h"
@@ -354,9 +355,9 @@ void p2pBssTimerExpired(uint32_t timer, uint32_t argument)
 	p2pDiscoveryResume(connection);
 }
 
-void p2pGroupStartTimerExpired(uint32_t timer, uint32_t argument)
+void p2pDiscoverabilityTimerExpired(uint32_t timer, uint32_t argument)
 {
-	wlanConnectionPsState((struct WlanConnection *)argument)->groupStarted = 0;
+	wlanConnectionPsState((struct WlanConnection *)argument)->discoverabilityPending = 0;
 }
 
 /*
@@ -410,4 +411,719 @@ void p2pGroupSsidUpdate(struct WlanConnection *connection, const uint8_t *frame)
 int p2pBssActiveGet(struct WlanConnection *connection)
 {
 	return wlanConnectionPsState(connection)->p2pBssActive;
+}
+
+/* Sets the P2P state of a connection that is in discovery (mode 1). */
+void p2pConnectionStateSet(struct WlanConnection *connection, unsigned int state)
+{
+	if (connection != NULL && connection->mode == 1)
+		connection->p2pState = state;
+}
+
+/*
+ * The group owner negotiation: the higher GO intent becomes the group owner,
+ * the peer's tie-breaker bit decides equal ones, and two intents of 15 fail.
+ */
+unsigned int p2pGroupRoleDecide(const struct WlanDirectContext *peer, unsigned int intent)
+{
+	const uint8_t *attribute;
+	unsigned int peerIntent;
+	unsigned int tieBreaker;
+
+	if (peer == NULL || (attribute = peer->attributes[P2P_SLOT_GO_INTENT]) == NULL)
+		return P2P_ROLE_UNKNOWN;
+	peerIntent = attribute[3] >> 1;
+	tieBreaker = attribute[3] & 1;
+	if (peerIntent < intent)
+		return P2P_ROLE_GROUP_OWNER;
+	if (peerIntent > intent)
+		return P2P_ROLE_CLIENT;
+	if (peerIntent == 15 && intent == 15)
+		return P2P_ROLE_FAILED;
+	if (tieBreaker)
+		return P2P_ROLE_CLIENT;
+	return P2P_ROLE_GROUP_OWNER;
+}
+
+/*
+ * Takes the role the negotiation gave: a group owner makes its group's SSID,
+ * a client takes the peer's group (its device address and BSSID). A persistent
+ * group is recorded with its Group ID.
+ */
+void p2pGroupRoleApply(struct WlanConnection *connection, struct WlanDirectContext *peer, unsigned int role)
+{
+	struct WlanPsPeerState *ps;
+	const uint8_t *deviceAddress = NULL;
+	uint8_t groupBssid[9];
+	uint8_t groupId[22];
+	const uint8_t *groupIdAttribute;
+	const uint8_t *bssid;
+
+	ps = wlanConnectionPsState(connection);
+	if (role == P2P_ROLE_GROUP_OWNER) {
+		connection->mode = P2P_ROLE_GROUP_OWNER;
+		ps->p2pOptions |= 0x01;			/* group capability: P2P group owner */
+		ps->capabilityAttribute[3] |= 0x10;	/* device capability: P2P device limit */
+		__aeabi_memcpy(ps->groupSsid, "DIRECT-", 7);
+		p2pDirectReleaseState(ps->groupSsid + 7);
+		ps->groupIdLength = 15;
+		wlanConnectionInfo(connection)->updatePassPhrase = 1;
+		ps->ssidPending = 0;
+		if (!(ps->p2pOptions & 0x02))		/* not a persistent group */
+			return;
+		groupIdAttribute = &ps->groupIdType;
+		deviceAddress = peer->attributes[P2P_SLOT_DEVICE_INFO] + 3;
+	} else if (role == P2P_ROLE_CLIENT) {
+		connection->mode = P2P_ROLE_CLIENT;
+		__aeabi_memcpy(ps->groupDeviceAddress, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3,
+			       sizeof(ps->groupDeviceAddress));
+		__aeabi_memcpy(ps->groupSsid, "DIRECT-", 7);
+		ps->groupIdLength = 13;
+		bssid = peer->attributes[P2P_SLOT_GROUP_BSSID];
+		if (bssid == NULL) {
+			groupBssid[0] = P2P_ATTR_GROUP_BSSID;
+			groupBssid[1] = 6;
+			groupBssid[2] = 0;
+			__aeabi_memclr(groupBssid + 3, 6);
+			bssid = groupBssid;
+		}
+		__aeabi_memcpy(ps->groupBssidAttribute, bssid, 9);
+		if (!(peer->attributes[P2P_SLOT_CAPABILITY][4] & 0x02))	/* the peer's group is not persistent */
+			return;
+		groupId[0] = P2P_ATTR_GROUP_ID;
+		groupId[1] = 13;
+		groupId[2] = 13 >> 8;
+		__aeabi_memcpy(groupId + 3, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+		__aeabi_memcpy(groupId + 9, "DIRECT-", 7);
+		groupIdAttribute = groupId;
+	} else {
+		return;
+	}
+	p2pSqramConvertContext(connection, groupIdAttribute, ps->groupBssidAttribute, ps->groupSsid,
+			       connection->mode, deviceAddress);
+}
+
+/* Adds a P2P element with the Device ID attribute of address to the frame. */
+void p2pDeviceIdAppend(uint8_t *frame, const uint8_t *address)
+{
+	uint8_t *element = p2pDirectFilterState(frame);
+	uint8_t deviceId[9];
+	unsigned int added;
+
+	deviceId[0] = P2P_ATTR_DEVICE_ID;
+	deviceId[1] = 6;
+	deviceId[2] = 0;
+	__aeabi_memcpy(deviceId + 3, address, 6);
+	added = p2pDirectConfigureContext(element, deviceId);
+	added += (frame[1] << 8) | frame[0];
+	frame[0] = added;
+	frame[1] = added >> 8;
+}
+
+/*
+ * Starts a P2P public action or action frame to destination, with the P2P
+ * OUI and subtype. A group owner sends from its P2P interface address, unless
+ * the peer is associated (state 3), in the group's BSS; other modes use the
+ * wildcard BSSID. 0, the frame in *frame; -1: no buffer.
+ */
+int p2pActionFrameAlloc(struct WlanConnection *connection, OsaBuffer **frame, const uint8_t *destination,
+			unsigned int kind, uint8_t subtype)
+{
+	static const uint8_t wildcard[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 };
+	uint8_t bssidAny[8];
+	struct WlanPsPeerState *ps;
+	unsigned int peerState = 0;
+	OsaBuffer *buffer;
+	uint8_t *data;
+	uint8_t *body;
+	const uint8_t *source;
+	const uint8_t *bssid;
+	unsigned int length;
+
+	__builtin_memcpy(bssidAny, wildcard, sizeof(bssidAny));
+	ps = wlanConnectionPsState(connection);
+	buffer = wlanMgmtAllocFrame(connection, 400);
+	if (buffer == NULL)
+		return -1;
+	if (connection->mode == P2P_ROLE_GROUP_OWNER) {
+		struct WlanConnection *peer = wlanConnectionFindByPeer(destination);
+
+		if (peer != NULL) {
+			wlanConnectionInfo(peer);
+			peerState = wlanConnectionInfoSlot(peer)->state;
+		}
+	}
+	buffer->context = connection;
+	data = (uint8_t *)buffer + buffer->dataOffset;
+	if (data == NULL) {
+		p2pFrameDataMissing++;
+		return -1;
+	}
+	bssid = connection->mode == P2P_ROLE_GROUP_OWNER ? connection->localAddress : bssidAny;
+	source = connection->interfaceAddress;
+	if (connection->mode == P2P_ROLE_GROUP_OWNER && peerState != 3)
+		source = ps->interfaceAddress;
+	wlanMgmtBuildFrame(buffer, source, destination, 13, bssid);
+	buffer->dataOffset = 176;
+	if (kind == P2P_FRAME_PUBLIC_ACTION) {
+		body = data + 32;
+		body[0] = 4;			/* public action */
+		body[1] = 9;			/* vendor specific */
+		__aeabi_memcpy(body + 2, wlanP2pOui, 4);
+		body[6] = subtype;
+		length = ((data[1] << 8) | data[0]) + 8;
+	} else if (kind == P2P_FRAME_ACTION) {
+		body = data + 32;
+		body[0] = P2P_FRAME_ACTION;	/* vendor specific category */
+		__aeabi_memcpy(body + 1, wlanP2pOui, 3);
+		body[4] = 9;			/* the P2P OUI type */
+		body[5] = subtype;
+		length = ((data[1] << 8) | data[0]) + 7;
+	} else {
+		goto done;
+	}
+	data[0] = length;
+	data[1] = length >> 8;
+done:
+	*frame = buffer;
+	return 0;
+}
+
+/* Sends a device discoverability request for the wanted client to its group owner, and waits 2 s for the answer. */
+int p2pDiscoverabilityRequestSend(struct WlanConnection *connection, const uint8_t *destination)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	OsaBuffer *buffer;
+	uint8_t *data;
+
+	if (p2pActionFrameAlloc(connection, &buffer, destination, P2P_FRAME_PUBLIC_ACTION, 5) != 0)
+		return -1;
+	data = (uint8_t *)buffer + buffer->dataOffset;
+	p2pDeviceIdAppend(data, ps->discoveryDeviceAddress);
+	data[32 + 7] = ps->dialogToken;
+	if (wlanMgmtSendFrame(buffer) != 0)
+		return -1;
+	osaCreateTimer(p2pDiscoverabilityTimerExpired, (uint32_t)connection, 2000, &ps->discoverabilityTimer, 0);
+	return 0;
+}
+
+/*
+ * A group owner's beacon (chanctx.c): when its Group Info attribute lists the
+ * client the host wants discovered, the group owner is sent a device
+ * discoverability request, once.
+ */
+void p2pDiscoverabilityCheck(struct WlanDirectContext *peer, uint32_t changed, struct WlanPsPeerState *ps)
+{
+	uint8_t *pending = &ps->discoverabilityPending;
+	uint8_t groupInfo[716];
+	const uint8_t *clients;
+	unsigned int i;
+
+	if (*pending) {
+		p2pDiscoverabilityRequestSend(p2pDeviceConnection, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3);
+		ps->p2pFlags &= ~0x04;
+	}
+	if (peer == NULL || peer->attributes[P2P_SLOT_GROUP_INFO] == NULL ||
+	    peer->attributes[P2P_SLOT_DEVICE_INFO] == NULL)
+		return;
+	if (changed & (1u << P2P_ATTR_GROUP_INFO))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_GROUP_INFO], groupInfo, -1,
+				     &peer->attributes[P2P_SLOT_GROUP_INFO]);
+	clients = peer->attributes[P2P_SLOT_GROUP_INFO] + 3;
+	for (i = 0; i <= (unsigned int)((peer->attributes[P2P_SLOT_GROUP_INFO][2] << 8) |
+					 peer->attributes[P2P_SLOT_GROUP_INFO][1]);
+	     i = (uint16_t)(i + clients[i] + 1)) {
+		/* a client info descriptor: its length, then the client's device address */
+		if (memcmp(clients + i + 1, ps->discoveryDeviceAddress, 6) == 0) {
+			p2pDiscoverabilityRequestSend(p2pDeviceConnection, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3);
+			ps->p2pFlags &= ~0x04;
+			__aeabi_memcpy(ps->p2pGroupId, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+			*pending = 1;
+			return;
+		}
+	}
+}
+
+/*
+ * Adds the WPS element of attributes 0 and 11 the host gave, with the second
+ * one's value (bytes 4 and 5, big endian) set from groupSettingG for this
+ * frame only, while groupSettingE is set.
+ */
+unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	uint8_t *attribute = ps->customIe[11];
+	uint8_t saved[2] = { 0, 0 };
+	uint32_t value = 0;
+	unsigned int result;
+
+	if (attribute != NULL && ps->groupSettingE != 0) {
+		saved[0] = attribute[4];
+		saved[1] = attribute[5];
+		value = (ps->groupSettingG << 8) | ((ps->groupSettingG >> 8) & 0xff);
+		attribute[4] = ((uint8_t *)&value)[0];
+		attribute[5] = ((uint8_t *)&value)[1];
+	}
+	result = p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
+	if (ps->customIe[11] != NULL && ps->groupSettingE != 0) {
+		attribute[4] = saved[0];
+		attribute[5] = saved[1];
+	}
+	return result;
+}
+
+/*
+ * Chooses the group's operating channel from the channels both sides
+ * support: the peer's operating channel, else the one the host asked for,
+ * else the first common one. p2pStatus.value says why it failed (4: invalid
+ * parameters, 7: no common channels).
+ */
+void p2pOperatingChannelSelect(struct WlanConnection *connection, const struct WlanDirectContext *peer)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	const uint8_t *list = peer->attributes[P2P_SLOT_CHANNEL_LIST];
+	const uint8_t *operating;
+	unsigned int count;
+	unsigned int i;
+	int peerChannel;
+	int requested;
+	unsigned int channel;
+
+	if (list == NULL) {
+		ps->p2pStatus.value = 4;
+		return;
+	}
+	if (peer->attributes[P2P_SLOT_OPERATING_CHANNEL] != NULL) {
+		ps->p2pStatus.value = 4;
+		count = list[7];
+		for (i = 0; i < count; i = (uint8_t)(i + 1)) {
+			if (list[8 + i] == peer->attributes[P2P_SLOT_OPERATING_CHANNEL][7]) {
+				ps->p2pStatus.value = 0;
+				goto common;
+			}
+		}
+	}
+	if (ps->p2pStatus.value != 0)
+		return;
+common:
+	p2pDirectUpdateContext(connection, peer->attributes[P2P_SLOT_CHANNEL_LIST],
+			       peer->attributes[P2P_SLOT_CHANNEL_LIST][7], ps->channelListAttribute,
+			       ps->channelListAttribute[7]);
+	count = ps->commonChannels.count;
+	if (count == 0) {
+		ps->p2pStatus.value = 7;
+		return;
+	}
+	peerChannel = 0;
+	requested = 0;
+	for (i = 0; i < count; i = (uint8_t)(i + 1)) {
+		operating = peer->attributes[P2P_SLOT_OPERATING_CHANNEL];
+		if (operating != NULL && ps->commonChannels.channels[i] == operating[7])
+			peerChannel = 1;
+		if (ps->commonChannels.channels[i] == ps->requestedChannel)
+			requested = 1;
+	}
+	if (peerChannel == 1) {
+		channel = peer->attributes[P2P_SLOT_OPERATING_CHANNEL][7];
+	} else if (requested == 1) {
+		ps->groupChannel = ps->requestedChannel;
+		return;
+	} else {
+		channel = ps->commonChannels.channels[0];
+	}
+	ps->groupChannel = channel;
+	ps->requestedChannel = channel;
+}
+
+/*
+ * Builds the P2P element of a GO negotiation request (kind 0), response (1)
+ * or confirmation (2) after the peer's frame: the negotiation's result is in
+ * p2pStatus.value (1: the host is not ready, 2: incompatible parameters,
+ * 4: invalid parameters, 7: no common channels, 9: both want to be the group
+ * owner). While a station is associated the group is offered its channel
+ * only. -1: the peer's confirmation reports a failure.
+ */
+int p2pGoNegotiationBuild(struct WlanConnection *connection, const uint8_t *request, uint8_t *response,
+			  unsigned int kind)
+{
+	struct WlanDirectContext *peer = NULL;
+	unsigned int given = 0;
+	unsigned int include = 0;
+	unsigned int first = 0;
+	unsigned int changed = 0;
+	int concurrent = 0;
+	struct WlanPsPeerState *ps;
+	struct WlanConnection *station;
+	struct WlanConnection *accessPoint;
+	struct WlanDirectContext attributes;
+	uint8_t statusCopy[4];
+	uint8_t channelListCopy[44];
+	uint8_t operatingCopy[8];
+	uint8_t intentCopy[4];
+	uint8_t channelList[44];
+	uint8_t operating[8];
+	uint8_t band;
+	uint32_t channel;
+	unsigned int role;
+	unsigned int length;
+
+	ps = wlanConnectionPsState(connection);
+	if (request != NULL)
+		peer = p2pDirectScheduleContext(request, 1, &first, &changed, &attributes);
+	if (kind == P2P_GO_NEG_CONFIRM && peer->attributes[P2P_SLOT_STATUS][3] != 0)
+		return -1;
+	if (changed & (1u << P2P_ATTR_GO_INTENT))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_GO_INTENT], intentCopy, 4,
+				     &peer->attributes[P2P_SLOT_GO_INTENT]);
+	if (changed & (1u << P2P_ATTR_OPERATING_CHANNEL))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_OPERATING_CHANNEL], operatingCopy, 8,
+				     &peer->attributes[P2P_SLOT_OPERATING_CHANNEL]);
+	if (changed & (1u << P2P_ATTR_CHANNEL_LIST))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_CHANNEL_LIST], channelListCopy, 43,
+				     &peer->attributes[P2P_SLOT_CHANNEL_LIST]);
+	if (changed & (1u << P2P_ATTR_STATUS))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_STATUS], statusCopy, 4,
+				     &peer->attributes[P2P_SLOT_STATUS]);
+
+	ps->p2pStatus.value = 0;
+	ps->p2pStatus.length[0] = 1;
+	ps->p2pStatus.length[1] = 0;
+	station = wlanConnectionFirst(0);
+	accessPoint = wlanConnectionFirst(2);
+	if (station != NULL && (station->flags2 & WLAN_CONN2_ASSOCIATED)) {
+		unsigned int listLength;
+
+		/* the station's channel is the only one offered */
+		p2pDirectHandleContext(ps->channelListAttribute, channelList);
+		macMgmtPrepareContext(&band, &channel);
+		channelList[8] = channel;
+		channelList[7] = 1;
+		listLength = ((channelList[2] << 8) | channelList[1]) + 1;
+		channelList[1] = listLength;
+		channelList[2] = listLength >> 8;
+		concurrent = 1;
+	}
+	if (wlanConnectionBssStarted(accessPoint) == 1 || concurrent) {
+		struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+
+		p2pDirectProcessContext(P2P_ATTR_OPERATING_CHANNEL, ps->operatingChannelAttribute, operating);
+		operating[7] = role->channel;
+		given = 1u << P2P_ATTR_OPERATING_CHANNEL;
+		peer->attributes[P2P_SLOT_OPERATING_CHANNEL] = operating;
+	}
+
+	if (kind == P2P_GO_NEG_REQUEST) {
+		/* length 0: this clears nothing, as the original's arguments are */
+		__aeabi_memset4(&ps->commonChannels, 0,
+				((ps->commonChannels.length[1] << 8) | ps->commonChannels.length[0]) + 2);
+		p2pDirectManageContext(connection);
+		ps->groupOwnerIntentAttribute[3] = (ps->groupOwnerIntentAttribute[3] & ~1) | (ps->tieBreaker & 1);
+		if (concurrent) {
+			peer->attributes[P2P_SLOT_CHANNEL_LIST] = channelList;
+			given |= 1u << P2P_ATTR_CHANNEL_LIST;
+		}
+		goto attributes;
+	}
+
+	if (ps->groupSettingH == 0) {
+		ps->p2pStatus.value = 1;
+	} else if (ps->p2pStatus.value == 0) {
+		const uint8_t *firstList;
+		const uint8_t *secondList;
+		unsigned int firstCount;
+		unsigned int secondCount;
+
+		if (concurrent) {
+			firstList = channelList;
+			secondList = peer->attributes[P2P_SLOT_CHANNEL_LIST];
+			secondCount = secondList[7];
+			firstCount = channelList[7];
+		} else {
+			secondCount = ps->channelListAttribute[7];
+			firstCount = peer->attributes[P2P_SLOT_CHANNEL_LIST][7];
+			secondList = ps->channelListAttribute;
+			firstList = peer->attributes[P2P_SLOT_CHANNEL_LIST];
+		}
+		p2pDirectUpdateContext(connection, firstList, firstCount, secondList, secondCount);
+		if (ps->commonChannels.count == 0)
+			ps->p2pStatus.value = 7;
+	}
+
+	/* the attributes the peer's frame must carry */
+	if (kind == P2P_GO_NEG_RESPONSE) {
+		if (peer == NULL)
+			goto decide;
+		if (peer->attributes[P2P_SLOT_CONFIGURATION_TIMEOUT] == NULL ||
+		    peer->attributes[P2P_SLOT_CHANNEL_LIST] == NULL ||
+		    peer->attributes[P2P_SLOT_CAPABILITY] == NULL ||
+		    peer->attributes[P2P_SLOT_LISTEN_CHANNEL] == NULL ||
+		    peer->attributes[P2P_SLOT_INTENDED_INTERFACE_ADDRESS] == NULL ||
+		    peer->attributes[P2P_SLOT_DEVICE_INFO] == NULL ||
+		    peer->attributes[P2P_SLOT_OPERATING_CHANNEL] == NULL ||
+		    peer->attributes[P2P_SLOT_GO_INTENT] == NULL)
+			goto invalid;
+	} else if (kind == P2P_GO_NEG_CONFIRM && peer != NULL) {
+		if (peer->attributes[P2P_SLOT_CONFIGURATION_TIMEOUT] == NULL ||
+		    peer->attributes[P2P_SLOT_CHANNEL_LIST] == NULL ||
+		    peer->attributes[P2P_SLOT_STATUS] == NULL ||
+		    peer->attributes[P2P_SLOT_CAPABILITY] == NULL ||
+		    peer->attributes[P2P_SLOT_INTENDED_INTERFACE_ADDRESS] == NULL ||
+		    peer->attributes[P2P_SLOT_DEVICE_INFO] == NULL ||
+		    peer->attributes[P2P_SLOT_GO_INTENT] == NULL)
+			goto invalid;
+	}
+decide:
+	if (ps->p2pStatus.value == 0) {
+		role = p2pGroupRoleDecide(peer, ps->groupOwnerIntentAttribute[3] >> 1);
+		if (role == P2P_ROLE_FAILED) {
+			ps->p2pStatus.value = 9;
+		} else if (role == P2P_ROLE_UNKNOWN) {
+			goto invalid;
+		} else if (role == P2P_ROLE_CLIENT && peer->attributes[P2P_SLOT_CAPABILITY] != NULL &&
+			   (peer->attributes[P2P_SLOT_CAPABILITY][4] & 0x02) && !(ps->p2pOptions & 0x02)) {
+			/* the peer's group is persistent, ours is not */
+			ps->p2pStatus.value = 2;
+		} else if (ps->p2pStatus.value == 0) {
+			p2pGroupRoleApply(connection, peer, (uint8_t)role);
+		}
+	}
+	goto reply;
+invalid:
+	ps->p2pStatus.value = 4;
+reply:
+	if (peer->attributes[P2P_SLOT_GO_INTENT] != NULL && kind == P2P_GO_NEG_RESPONSE)
+		/* the tie-breaker of a response is the opposite of the request's */
+		ps->groupOwnerIntentAttribute[3] = (ps->groupOwnerIntentAttribute[3] & ~1) |
+			!(peer->attributes[P2P_SLOT_GO_INTENT][3] & 1);
+	response[32 + 7] = request[32 + 7];	/* the dialog token */
+	if (concurrent) {
+		if (ps->commonChannels.count != 0) {
+			uint8_t only = ps->commonChannels.channels[0];
+
+			ps->groupChannel = only;
+			ps->requestedChannel = only;
+		}
+		peer->attributes[P2P_SLOT_CHANNEL_LIST] = (uint8_t *)&ps->commonChannels;
+		given |= 1u << P2P_ATTR_CHANNEL_LIST;
+	} else if (connection->mode == P2P_ROLE_GROUP_OWNER) {
+		p2pOperatingChannelSelect(connection, peer);
+	}
+	if (ps->p2pStatus.value != 0) {
+		connection->mode = 1;
+		connection->p2pState = 3;
+		macMgmtValidateTable(0);
+	}
+	if (connection->mode == P2P_ROLE_GROUP_OWNER) {
+		p2pDirectProcessContext(P2P_ATTR_OPERATING_CHANNEL, ps->operatingChannelAttribute, operating);
+		operating[6] = ps->commonChannels.operatingClass;
+		operating[7] = ps->groupChannel;
+		peer->attributes[P2P_SLOT_OPERATING_CHANNEL] = operating;
+		given |= (1u << P2P_ATTR_OPERATING_CHANNEL) | (1u << P2P_ATTR_CHANNEL_LIST);
+	}
+	if (kind == P2P_GO_NEG_CONFIRM) {
+		given = (1u << P2P_ATTR_OPERATING_CHANNEL) | (1u << P2P_ATTR_CHANNEL_LIST);
+		include = (connection->mode == P2P_ROLE_GROUP_OWNER ? 0x8000 : 0) | 0x0005;
+		goto check;
+	}
+	if (kind == P2P_GO_NEG_RESPONSE) {
+		include = 0x2235;
+		if (connection->mode == P2P_ROLE_GROUP_OWNER) {
+			include = 0xa235;
+			goto check;
+		}
+		if (!(given & (1u << P2P_ATTR_OPERATING_CHANNEL)))
+			include = 0x22235;
+		if (given & (1u << P2P_ATTR_CHANNEL_LIST))
+			goto check;
+		include |= 1u << P2P_ATTR_CHANNEL_LIST;
+		goto check;
+	}
+	if (kind != P2P_GO_NEG_REQUEST)
+		goto check;
+attributes:
+	include = 0x2374;
+	if (!(given & (1u << P2P_ATTR_CHANNEL_LIST)))
+		include = 0x2b74;
+	if (!(given & (1u << P2P_ATTR_OPERATING_CHANNEL)))
+		include |= 1u << P2P_ATTR_OPERATING_CHANNEL;
+check:
+	length = (uint16_t)p2pDirectCheckContext(connection, (WlanWirelessFrame *)response, peer, include, given);
+	length += (response[1] << 8) | response[0];
+	response[0] = length;
+	response[1] = length >> 8;
+	if (kind != P2P_GO_NEG_CONFIRM)
+		p2pWpsConfigAppend(connection, response);
+	return 0;
+}
+
+/*
+ * Sends the GO negotiation request to the peer the host named, on the
+ * peer's channel when it is known, and gives the answer 10 s.
+ */
+int p2pGoNegotiationRequestSend(struct WlanConnection *connection)
+{
+	struct WlanPsPeerState *ps;
+	OsaBuffer *buffer;
+	uint8_t *data;
+	uint8_t flags[4];
+
+	wlanCurrentChannelFlags(flags);
+	ps = wlanConnectionPsState(connection);
+	connection->p2pState = 2;
+	macMgmtValidateTable(0);
+	if (ps->p2pChannel != 255)
+		wlanSetChannel(ps->p2pChannel, flags, 1);
+	connection->p2pState = 4;
+	if (p2pActionFrameAlloc(connection, &buffer, ps->eventPeerAddress, P2P_FRAME_PUBLIC_ACTION, 0) != 0)
+		return -1;
+	data = (uint8_t *)buffer + buffer->dataOffset;
+	p2pGoNegotiationBuild(connection, NULL, data, P2P_GO_NEG_REQUEST);
+	data[32 + 7] = ps->dialogToken;
+	if (wlanMgmtSendFrame(buffer) != 0)
+		return -1;
+	if (ps->negotiationTimer != 0) {
+		osaCancelTimer(ps->negotiationTimer);
+		ps->negotiationTimer = 0;
+	}
+	osaCreateTimer(p2pListenTimerExpired, (uint32_t)connection, 10000000, &ps->negotiationTimer, 0);
+	return 0;
+}
+
+/* Adds the WPS element of attribute 4 the host gave, with its value (bytes 4 and 5) set to configMethods for this frame only. */
+void p2pWpsConfigMethodsAppend(struct WlanConnection *connection, uint8_t *frame, const uint8_t *configMethods)
+{
+	uint8_t *attribute = wlanConnectionPsState(connection)->customIe[4];
+	uint8_t saved[2];
+
+	if (attribute == NULL)
+		return;
+	saved[0] = attribute[4];
+	saved[1] = attribute[5];
+	attribute[4] = configMethods[0];
+	attribute[5] = configMethods[1];
+	p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x10);
+	attribute[4] = saved[0];
+	attribute[5] = saved[1];
+}
+
+/*
+ * The P2P element of a provision discovery request (with the group's Group ID
+ * when one is given) and its WPS element, whose config methods are
+ * groupSettingF.
+ */
+void p2pProvisionDiscoveryBuild(struct WlanConnection *connection, uint8_t *frame, uint8_t *groupId)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	struct WlanDirectContext attributes;
+	struct WlanDirectContext *given;
+	unsigned int exclude;
+	unsigned int length;
+	uint32_t configMethods;
+
+	if (groupId != NULL) {
+		attributes.attributes[P2P_SLOT_GROUP_ID] = groupId;
+		exclude = 1u << P2P_ATTR_GROUP_ID;
+		given = &attributes;
+	} else {
+		exclude = 0;
+		given = NULL;
+	}
+	length = (uint16_t)p2pDirectCheckContext(connection, (WlanWirelessFrame *)frame, given, 0x2004, exclude);
+	length += (frame[1] << 8) | frame[0];
+	frame[0] = length;
+	frame[1] = length >> 8;
+	configMethods = (ps->groupSettingF << 8) | ((ps->groupSettingF >> 8) & 0xff);
+	p2pWpsConfigMethodsAppend(connection, frame, (const uint8_t *)&configMethods);
+}
+
+/* Sends a provision discovery request; without an answer in 200 ms discovery goes on. */
+int p2pProvisionDiscoveryRequestSend(struct WlanConnection *connection, const uint8_t *destination, uint8_t *groupId)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	OsaBuffer *buffer;
+	uint8_t *data;
+
+	if (p2pActionFrameAlloc(connection, &buffer, destination, P2P_FRAME_PUBLIC_ACTION, 7) == 0) {
+		data = (uint8_t *)buffer + buffer->dataOffset;
+		p2pProvisionDiscoveryBuild(connection, data, groupId);
+		data[32 + 7] = ps->dialogToken;
+		if (wlanMgmtSendFrame(buffer) == 0) {
+			if (ps->provisionTimer != 0) {
+				osaCancelTimer(ps->provisionTimer);
+				ps->provisionTimer = 0;
+			}
+			osaCreateTimer(p2pBssTimerExpired, (uint32_t)connection, 200000, &ps->provisionTimer, 0);
+			return 0;
+		}
+	}
+	p2pDiscoveryResume(connection);
+	return -1;
+}
+
+/*
+ * The peer discovery waits for was heard (its frame names it in the Device
+ * Info attribute): the radio stays on its channel, and the first of the
+ * pending actions (p2pFlags) is done. Without an invitation pending, the
+ * original copies the peer's address to address 0 and compares it there;
+ * this is kept as it is.
+ */
+void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsigned int pending)
+{
+	struct WlanPsPeerState *ps;
+	struct WlanDirectContext attributes;
+	struct WlanDirectContext *direct;
+	uint8_t groupIdAttribute[44];
+	uint8_t deviceInfo[12];
+	uint32_t invitation = (uint32_t)-1;
+	unsigned int changed;
+	uint8_t *address = NULL;
+
+	ps = wlanConnectionPsState(p2pDeviceConnection);
+	if (pending == 0)
+		return;
+	direct = p2pDirectScheduleContext(frame, 0, NULL, &changed, &attributes);
+	if (changed & (1u << P2P_ATTR_DEVICE_INFO))
+		p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], deviceInfo, 9,
+				     &direct->attributes[P2P_SLOT_DEVICE_INFO]);
+	if (pending & 0x02)
+		address = p2pSqramTrackContext(connection, &invitation);
+	else
+		__aeabi_memcpy(address, ps->eventPeerAddress, 6);
+	if (direct->attributes[P2P_SLOT_DEVICE_INFO] == NULL ||
+	    memcmp(direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, address, 6) != 0)
+		return;
+	ps->p2pChannel = wlanOperatingChannel();
+	ps->p2pBssActive = 1;
+	if (pending & 0x08) {
+		const uint8_t *ssid = frame + 44;
+		uint8_t *groupId = NULL;
+
+		/* a group owner is asked with its group's Group ID */
+		if (direct != NULL && (direct->attributes[P2P_SLOT_CAPABILITY][4] & 0x01) &&
+		    direct->attributes[P2P_SLOT_DEVICE_INFO] != NULL) {
+			unsigned int length = ssid[1] + 6;
+
+			groupIdAttribute[0] = P2P_ATTR_GROUP_ID;
+			groupIdAttribute[1] = length;
+			groupIdAttribute[2] = length >> 8;
+			__aeabi_memcpy(groupIdAttribute + 3, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+			__aeabi_memcpy(groupIdAttribute + 9, ssid + 2, ssid[1]);
+			groupId = groupIdAttribute;
+		}
+		p2pProvisionDiscoveryRequestSend(p2pDeviceConnection, ps->eventPeerAddress, groupId);
+		ps->p2pFlags &= ~0x08;
+	} else if (pending & 0x01) {
+		macMgmtAdjustEntry(connection);
+		p2pGoNegotiationRequestSend(connection);
+		ps->p2pFlags &= ~0x01;
+	} else if (pending & 0x10) {
+		p2pPendingFrameSend(connection);
+		ps->p2pFlags &= ~0x10;
+	} else if (pending & 0x04) {
+		p2pDiscoverabilityCheck(direct, changed, ps);
+	} else if ((pending & 0x02) && address != NULL) {
+		ps->groupSettingD = invitation;
+		p2pSqramReleaseContext(connection, invitation, address, direct);
+		ps->p2pFlags &= ~0x02;
+	}
 }
