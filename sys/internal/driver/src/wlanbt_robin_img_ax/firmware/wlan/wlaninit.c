@@ -44,6 +44,7 @@
 #include "robin/apps.h"
 #include "robin/assocAp.h"
 #include "robin/hostcmd.h"
+#include "robin/session.h"
 #include "robin/softtimer.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
@@ -170,10 +171,10 @@ void wlanPsApplyPacket(void);								/* 0x3d06c */
 void macMgmtHandleHeader(void);								/* 0x3b120 */
 void macMgmtValidateHeader(void);							/* 0x3b1e2 */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
-void uapSqramConvertContext(void);							/* SQRAM 0xc00089b6 */
-void uapSqramSelectContext(void);							/* SQRAM 0xc00089ee */
-void uapSqramVerifyContext(void);							/* SQRAM 0xc00089e6 */
-void wlanPsConvertDescriptor(void);							/* 0x3ed8a */
+int uapSqramConvertContext(void);							/* SQRAM 0xc00089b6: opens the storage */
+int uapSqramSelectContext(unsigned int offset, uint32_t *value);			/* SQRAM 0xc00089ee */
+int uapSqramVerifyContext(void);							/* SQRAM 0xc00089e6 */
+int wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
 void macTxNotifyManagePacket(void *queue);						/* 0x32a6a */
 int cbProcProcessBuffer(void);								/* 0x1d52e */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
@@ -422,30 +423,17 @@ int bufferPoolsInit(void)
 	return failed;
 }
 
-/*
- * The hooks the supplicant's functions call through, set to the AP, power
- * save and management routines (the SQRAM ones and the ROM's host event
- * send).
- */
-struct WlanSessionOps {
-	void (*uapConvert)(void);
-	void (*uapSelect)(void);
-	void (*uapVerify)(void);
-	int (*hostEventSend)(struct WlanConnection *connection, uint16_t event);
-	void (*mgmtPrepare)(uint8_t *band, uint32_t *extra);
-	void (*psConvert)(void);
-};
-
+/* The hooks the host command code calls through (include/robin/session.h). */
 struct WlanSessionOps wlanSessionOps __attribute__((section(".itcm.bss")));	/* 0x54ea8 */
 
 void wlanSessionOpsInit(void)
 {
-	wlanSessionOps.uapConvert = uapSqramConvertContext;
-	wlanSessionOps.uapSelect = uapSqramSelectContext;
-	wlanSessionOps.uapVerify = uapSqramVerifyContext;
+	wlanSessionOps.eepromOpen = uapSqramConvertContext;
+	wlanSessionOps.eepromRead = uapSqramSelectContext;
+	wlanSessionOps.eepromClose = uapSqramVerifyContext;
 	wlanSessionOps.hostEventSend = wlanHostEventSendPlain;
 	wlanSessionOps.mgmtPrepare = macMgmtPrepareContext;
-	wlanSessionOps.psConvert = wlanPsConvertDescriptor;
+	wlanSessionOps.supplicantClearPMK = wlanPsConvertDescriptor;
 }
 
 /* The WLAN part's own tables, hooks and callbacks. */

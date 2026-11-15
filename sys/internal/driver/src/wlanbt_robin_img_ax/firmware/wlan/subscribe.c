@@ -5,7 +5,9 @@
  */
 #include <stddef.h>
 #include "robin/conn.h"
+#include "robin/mactx.h"
 #include "robin/rom.h"
+#include "robin/session.h"
 #include "robin/signal.h"
 #include "robin/ie.h"
 #include "robin/subscribe.h"
@@ -524,4 +526,31 @@ void wlanSubscribeApplyThresholds(struct WlanConnection *connection)
 	}
 	connection->beaconMissThreshold = events->beaconMissed.value;
 	connection->preBeaconLostThreshold = events->preBeaconLost.value;
+}
+
+/* The host event of each subscribed event that was met. */
+void wlanSubscribeEventsSend(struct WlanConnection *connection, unsigned int events)
+{
+	if (events & BITMASK_SNR_LOW)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_SNR_LOW);
+	if (events & BITMASK_RSSI_LOW)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_RSSI_LOW);
+	if (events & BITMASK_RSSI_HIGH)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_RSSI_HIGH);
+	if (events & BITMASK_FAILCOUNT)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_MAX_FAIL);
+	if (events & BITMASK_SNR_HIGH)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_SNR_HIGH);
+	if (events & BITMASK_BCN_SNR_LOW)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_DATA_SNR_LOW);
+	if (events & BITMASK_BCN_RSSI_LOW)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_DATA_RSSI_LOW);
+	if (events & BITMASK_BCN_SNR_HIGH)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_DATA_SNR_HIGH);
+	if (events & BITMASK_BCN_RSSI_HIGH)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_DATA_RSSI_HIGH);
+	if (events & BITMASK_LINK_QUALITY)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_LINK_QUALITY);
+	if (events & BITMASK_PRE_BEACON_LOST)
+		wlanSessionOps.hostEventSend(connection, WLAN_HOST_EVENT_PRE_BEACON_LOST);
 }

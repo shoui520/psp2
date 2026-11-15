@@ -60,8 +60,8 @@ uint16_t wlanPsSleepSequence __attribute__((section(".itcm.rw")));		/* 0x54b84 *
 extern uint8_t btHciWlanAsleep;				/* 0x04000c90 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 uint16_t macMgmtDispatchDescriptor(void);		/* 0x3bc6e */
-int wpaSuppSyncQueue(const uint8_t *packet);		/* 0x2c972 */
-int wpaSuppApplyQueue(const uint8_t *packet);		/* 0x2c9a6 */
+int hostCmdIsHostSleepConfigure(const uint8_t *packet);		/* 0x2c972 */
+int hostCmdIsHostSleepActivate(const uint8_t *packet);		/* 0x2c9a6 */
 
 /* 0x17144: the host sent traffic during its session. */
 int wlanPsNoteHostActive(OsaBuffer *buffer)
@@ -315,14 +315,14 @@ int wlanPsHciTraffic(OsaBuffer *buffer)
 	struct WlanConnection *connection = buffer->context;
 	const uint8_t *packet = (const uint8_t *)buffer + buffer->dataOffset;
 
-	if (wpaSuppSyncQueue(packet)) {
+	if (hostCmdIsHostSleepConfigure(packet)) {
 		if (wlanPsGetOverride() &&
 		    (wlanConnectionPhase == WLAN_PHASE_OFF || wlanConnectionPhase == WLAN_PHASE_SUSPENDED))
 			wlanPostConnectionEvent(connection, WLAN_EVENT_HOST_TRAFFIC);
 		if ((wlanRoleOtherOnly() || wlanHasApRole()) && wlanPsEnabled())
 			wlanPsPostEvent(WLAN_PS_EVENT_TRAFFIC);
 	}
-	if (wpaSuppApplyQueue(packet))
+	if (hostCmdIsHostSleepActivate(packet))
 		return mdevIoctl(wlanSdioDev, SDIO_IOCTL_QUEUE_DRAINED, 0);
 	return 0;
 }

@@ -124,6 +124,7 @@ extern struct WlanLinkQualityState wlanLinkQuality;
 extern struct WlanSubscribeEvents wlanSubscribeEventsDefault;
 
 void wlanSubscribeEventsInit(struct WlanSubscribeEvents *events);
+void wlanSubscribeEventsSend(struct WlanConnection *connection, unsigned int events);	/* 0x2ceb4 */
 int wlanSubscribeEventsPending(const struct WlanConnection *connection);
 void wlanSubscribeEventsConfigure(struct WlanConnection *connection, const uint8_t *command,
 				  unsigned int length, unsigned int action);

@@ -141,6 +141,7 @@ _Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
 
 /* Events to the host (the event numbers of Marvell's host interface, as Linux's mwifiex names them). */
 #define WLAN_HOST_EVENT_LINK_LOST		0x03
+#define WLAN_HOST_EVENT_LINK_SENSED		0x04
 #define WLAN_HOST_EVENT_DEAUTHENTICATED		0x08
 #define WLAN_HOST_EVENT_DISASSOCIATED		0x09
 #define WLAN_HOST_EVENT_PS_AWAKE		0x0a
@@ -150,6 +151,21 @@ _Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
 #define WLAN_HOST_EVENT_DEEP_SLEEP_AWAKE	0x10
 #define WLAN_HOST_EVENT_HOST_SLEEP_AWAKE	0x12
 #define WLAN_HOST_EVENT_WMM_STATUS		0x17
+#define WLAN_HOST_EVENT_RSSI_LOW		0x19	/* the subscribed events: wlan/subscribe.c */
+#define WLAN_HOST_EVENT_SNR_LOW			0x1a
+#define WLAN_HOST_EVENT_MAX_FAIL		0x1b
+#define WLAN_HOST_EVENT_RSSI_HIGH		0x1c
+#define WLAN_HOST_EVENT_SNR_HIGH		0x1d
+#define WLAN_HOST_EVENT_IBSS_COALESCED		0x1e
+#define WLAN_HOST_EVENT_DATA_RSSI_LOW		0x24
+#define WLAN_HOST_EVENT_DATA_SNR_LOW		0x25
+#define WLAN_HOST_EVENT_DATA_RSSI_HIGH		0x26
+#define WLAN_HOST_EVENT_DATA_SNR_HIGH		0x27
+#define WLAN_HOST_EVENT_LINK_QUALITY		0x28
+#define WLAN_HOST_EVENT_EVENT_41		0x29	/* no Marvell name known */
+#define WLAN_HOST_EVENT_PORT_RELEASE		0x2b
+#define WLAN_HOST_EVENT_PRE_BEACON_LOST		0x31
+#define WLAN_HOST_EVENT_HS_ACT_REQ		0x47
 #define WLAN_HOST_EVENT_UAP_MIC_COUNTERMEASURES_END	0x4c	/* the access point's TKIP countermeasures ended (inferred) */
 #define WLAN_HOST_EVENT_RSN_CONNECT		0x51	/* MICRO_AP_EV_ID_RSN_CONNECT: a station's handshake is done */
 #define WLAN_HOST_EVENT_IBSS_PEER_SILENT	0x21	/* the IBSS's peer missed three link checks (inferred) */

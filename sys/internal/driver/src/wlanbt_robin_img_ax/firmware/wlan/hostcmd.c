@@ -397,7 +397,7 @@ int hostCmdNeedsRadio(unsigned int command)
 struct WlanTxRateStats;
 struct WlanDriverQueue;
 
-int hostCmdUsesRole(const uint8_t *command);					/* 0x2c940 */
+int hostCmdIsSleepConfirm(const uint8_t *command);				/* 0x2c940 */
 void hostCmd0003Fill(uint8_t *body, int caps, unsigned int primary, unsigned int secondary,
 		     int extra);							/* 0x2cf42 */
 unsigned int hostCmd0003Version(void);						/* 0x27de0 */
@@ -637,7 +637,7 @@ int hostCmdProcess(void)
 		release = NULL;
 		buffer = osa_MsgQueueRecv(&wlanDriverQueue1);
 		hdr = (uint8_t *)buffer + buffer->dataOffset;
-		if (!hostCmdUsesRole(hdr) || wlanRoleMaskIs(0)) {
+		if (!hostCmdIsSleepConfirm(hdr) || wlanRoleMaskIs(0)) {
 			connection = wlanConnectionFind(hdr[5] >> 4, hdr[5] & 15);
 		} else {
 			connection = wlanConnectionByRole(wlanHasApRole() ? 2 : 0);

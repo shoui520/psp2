@@ -24,6 +24,7 @@
 #include "robin/pssm.h"
 #include "robin/psctl.h"
 #include "robin/rom.h"
+#include "robin/session.h"
 #include "robin/runtime.h"
 #include "robin/sleep.h"
 #include "robin/soc.h"
@@ -97,8 +98,6 @@ void wlanPsVerifyTable(void);								/* 0x3c07c */
 void wlanPsApplyBuffer(void);								/* 0x3c686 */
 void wlanPsApplyHeader(void);								/* 0x3e0c0 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
-void wpaSuppClearQueue(struct WlanConnection *connection, unsigned int events);	/* 0x2ceb4 */
-void wpaSuppResolveQueue(struct WlanConnection *connection, unsigned int event);	/* 0x2c9ce */
 void macMgmtSyncHeader(struct WlanConnection *connection);				/* 0x3b4d2 */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
@@ -384,6 +383,45 @@ static void cbProcHostSleepEnter(struct WlanConnection *connection)
 	wlanPsPhaseArm(connection);
 }
 
+/* Events of the control task that are host events: the connection state the host is told of. */
+#define CBPROC_EVENT_LINK_SENSED	0x00000400
+#define CBPROC_EVENT_HS_ACT_REQ		0x00040000
+#define CBPROC_EVENT_WMM_STATUS		0x40000000
+#define CBPROC_EVENT_IBSS_COALESCED	0x80000000u
+#define CBPROC_EVENT_STATUS_41		0x00000010
+#define CBPROC_EVENT_PORT_RELEASE	0x00000040
+
+/* The host event of an event the control task has no case for; 0 when it is none of them. */
+int cbProcEventToHost(struct WlanConnection *connection, unsigned int event)
+{
+	unsigned int hostEvent;
+
+	switch (event) {
+	case CBPROC_EVENT_LINK_SENSED:
+		hostEvent = WLAN_HOST_EVENT_LINK_SENSED;
+		break;
+	case CBPROC_EVENT_HS_ACT_REQ:
+		hostEvent = WLAN_HOST_EVENT_HS_ACT_REQ;
+		break;
+	case CBPROC_EVENT_WMM_STATUS:
+		hostEvent = WLAN_HOST_EVENT_WMM_STATUS;
+		break;
+	case CBPROC_EVENT_IBSS_COALESCED:
+		hostEvent = WLAN_HOST_EVENT_IBSS_COALESCED;
+		break;
+	case CBPROC_EVENT_STATUS_41:
+		hostEvent = WLAN_HOST_EVENT_EVENT_41;
+		break;
+	case CBPROC_EVENT_PORT_RELEASE:
+		hostEvent = WLAN_HOST_EVENT_PORT_RELEASE;
+		break;
+	default:
+		return 0;
+	}
+	wlanSessionOps.hostEventSend(connection, hostEvent);
+	return 1;
+}
+
 /* The task of the host's commands and the events of power save and host sleep. */
 void cbProcTaskMain(ULONG input)
 {
@@ -478,7 +516,7 @@ void cbProcTaskMain(ULONG input)
 		case WLAN_EVENT_SUBSCRIBED:
 			if (wlanSubscribeEventsPending(connection) && wlanPsAsleep() != 0) {
 				events = wlanSubscribeEventsTake(connection);
-				wpaSuppClearQueue(connection, events);
+				wlanSubscribeEventsSend(connection, events);
 				if (events & 0x800)
 					wlanSubscribePreBeaconLostDone();
 				if ((int)events < 0)
@@ -486,7 +524,7 @@ void cbProcTaskMain(ULONG input)
 			}
 			break;
 		default:
-			wpaSuppResolveQueue(connection, event);
+			cbProcEventToHost(connection, event);
 			break;
 		}
 		osa_BufferFree(buffer);
