@@ -2694,3 +2694,122 @@ int btLmpLcApplyFrame(const uint8_t *message)
 	}
 	return 1;
 }
+
+/*
+ * HCI Set Event Filter (parameters: filter type, condition type, condition; length says which).
+ * Inquiry result filters (type 1) go to the link controller (message 0x1e), refused (0x0c) while
+ * btTableProfile is 1; type 0 clears every filter. Connection setup filters (type 2) are kept in
+ * btEventFilters: a class of 0 means every device, which drops the class filters and sets the
+ * answer for all. The command completes with 0, 0x07 (no room) or 0x12 (invalid parameters).
+ */
+void btLmpLcResolveFrame(unsigned int length, const uint8_t *parameters)
+{
+	unsigned int type = parameters[0];
+	unsigned int status;
+
+	if (type == 0 || type == 1) {
+		uint8_t *message;
+		uint8_t *destination;
+		const uint8_t *source;
+		unsigned int count;
+
+		if (btTableProfile == 1) {
+			status = 0x0c;
+			goto complete;
+		}
+		if (type == 0) {
+			btEventFilterCount = 0;
+			btEventFilterAccept = 1;
+			btTableInquiryFilterClear();
+		} else if (length == 2) {
+			if (parameters[1] != 0)
+				goto invalid;
+			btTableInquiryFilterClear();
+		} else {
+			if (length != 8)
+				goto invalid;
+			if (parameters[1] == 1) {
+				message = osa_MsgAlloc(20);
+				*(BtWord *)message = 0x1e;
+				message[4] = 1;
+				__aeabi_memcpy(message + 5, parameters + 2, 3);
+				destination = message + 8;
+				source = parameters + 5;
+				count = 3;
+			} else if (parameters[1] == 2) {
+				message = osa_MsgAlloc(20);
+				*(BtWord *)message = 0x1e;
+				message[4] = 2;
+				destination = message + 11;
+				source = parameters + 2;
+				count = 6;
+			} else {
+				goto invalid;
+			}
+			__aeabi_memcpy(destination, source, count);
+			osa_MsgSend((void **)&message, romQueueLcp);
+		}
+		btBdhRomPrepareContext(1, 0);
+		btTableProfile = 1;
+		return;
+invalid:
+		status = 0x12;
+		goto complete;
+	}
+
+	status = 0x12;
+	if (type != 2)
+		goto complete;
+	if (length == 3) {
+		unsigned int accept;
+
+		if (parameters[1] != 0)
+			goto complete;
+		accept = parameters[2];
+		if (accept == 1 || accept == 2 || accept == 3) {
+			btEventFilterCount = 0;
+			btEventFilterAccept = parameters[2];
+			status = 0;
+		}
+	} else if (length == 9) {
+		unsigned int condition = parameters[1];
+		unsigned int accept;
+
+		if (condition != 1 && condition != 2)
+			goto complete;
+		accept = parameters[8];
+		if (accept != 1 && accept != 2 && accept != 3)
+			goto complete;
+		if (condition == 1 && parameters[2] == 0 && parameters[3] == 0 && parameters[4] == 0) {
+			uint8_t kept = btEventFilterCount;
+			uint8_t seen;
+			uint8_t index = 0;
+
+			for (seen = 0; seen < btEventFilterCount; seen++) {
+				if (btEventFilters[index].byAddress == 0) {
+					int move;
+
+					kept--;
+					for (move = index; move < btEventFilterCount - 1; move = (uint8_t)(move + 1))
+						btEventFilters[move] = btEventFilters[move + 1];
+				} else {
+					index++;
+				}
+			}
+			btEventFilterAccept = parameters[8];
+			btEventFilterCount = kept;
+		} else {
+			if (btEventFilterCount >= BT_EVENT_FILTERS) {
+				status = 7;
+				goto complete;
+			}
+			btEventFilters[btEventFilterCount].byAddress = condition == 1 ? 0 : 1;
+			__aeabi_memcpy(btEventFilters[btEventFilterCount].address, parameters + 2, 6);
+			btEventFilters[btEventFilterCount].autoAccept = parameters[8];
+			btEventFilterCount++;
+		}
+		status = 0;
+	}
+complete:
+	btBdhRomCheckContext(4, status, 3, 5);
+}

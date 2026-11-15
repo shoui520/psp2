@@ -58,6 +58,7 @@ int (*btTableConnectCheck)(const uint8_t *, unsigned int, unsigned int, uint8_t 
 	__attribute__((section(".itcm.rw"))) = btBdhRomComputeContext;	/* 0x552ec */
 void (*btTableConnectQuery)(const uint8_t *, uint32_t *, uint32_t *, uint8_t *)
 	__attribute__((section(".itcm.rw"))) = btBdhRomQueryContext;		/* 0x552f0 */
+void (*btTableInquiryFilterClear)(void) __attribute__((section(".itcm.rw"))) = romLibAdjustEntry;	/* 0x552f4 */
 /* The clock the mode buffer was set at (btLmpLcAcquirePacket()). */
 uint32_t btTableModeClock __attribute__((section(".itcm.rw")));		/* 0x55300 */
 /* The clock the target's slots run out at (btLmpLcParsePacket()). */

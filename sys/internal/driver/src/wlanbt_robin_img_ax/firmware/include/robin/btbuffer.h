@@ -223,6 +223,7 @@ extern int (*btTableConnectCheck)(const uint8_t *address, unsigned int linkType,
 				  uint8_t *slot);			/* 0x552ec */
 extern void (*btTableConnectQuery)(const uint8_t *address, uint32_t *linkType, uint32_t *result,
 				   uint8_t *slot);			/* 0x552f0 */
+extern void (*btTableInquiryFilterClear)(void);		/* 0x552f4 */
 extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
 extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
@@ -388,6 +389,7 @@ void btLmpLcQueryFrame(const uint8_t *event);			/* 0x47b1e */
 int btLmpLcResetFrame(const uint8_t *event);			/* 0x47ca0 */
 void btLmpLcSyncFrame(uint16_t handle, const uint8_t *address);	/* 0x47cb8 */
 int btLmpLcApplyFrame(const uint8_t *message);			/* 0x47ce8 */
+void btLmpLcResolveFrame(unsigned int length, const uint8_t *parameters);	/* 0x47d30 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
