@@ -8,7 +8,7 @@
 
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K, which switches only the
    dongle's (P13.0) */
-#define BOARD_HOST_OUTPUT	(ERNIE_HW != 0x00414000)
+#define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000)
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
    0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa) */

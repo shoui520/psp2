@@ -1,3 +1,7 @@
 # Board 0x00415200: certainly DEM-3000P (IRT-002), supports FW 0.996.070-3.680.011, Product Sub Code 0xC probably
 # Firmware versions with an update patch: 0x00090903 0x01000104 0x01000107 0x01000109 0x0100010A 0x0100010B 0x01000306 0x0100060B 0x0100060D
 HW_ID := 0x00415200
+# NEC D79F0109, as on DEM-3000L (0x00415000): the same IRT-002 board family
+CHIP := f1030a0
+# 0x00090903: DEM-3000L's image (0x00415000's), but for its hardware ID
+BOARD_0x00090903 := 0x00415000
