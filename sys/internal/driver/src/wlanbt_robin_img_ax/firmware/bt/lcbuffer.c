@@ -12,6 +12,7 @@
 #include "robin/bttable.h"
 #include "robin/eventpower.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
 
 #define LINK_HALF(offset)	(*(BtHalf *)(btLinkContext + (offset)))
 /* The due clock each link's slot was last taken at (btLmpLcAdjustBuffer()). */
@@ -1387,4 +1388,35 @@ void btLmpLcProcessPacket(unsigned int link, uint32_t argument)
 		}
 	}
 	btLcoRomValidateContext(link, argument);
+}
+
+/* The ROM's context update runs until a link record reached state 3 or 4. */
+void btLmpLcUpdatePacket(void)
+{
+	if (btLinkReleaseSeen == 0)
+		btLcoRomUpdateContext();
+}
+
+/*
+ * The image's part of two link commands: 0xa4 (its address is a link's already: the link's record
+ * kind is cleared) and 0x212 (for the matched peer's address, the link context handler of link 1).
+ * Returns 1 when the command was handled here.
+ */
+int btLmpLcConfigurePacket(uint32_t *command)
+{
+	const uint8_t *address = (const uint8_t *)(command + 1);
+	uint16_t link;
+
+	if (command[0] == 0xa4) {
+		btLcoRomBuildContext(command);
+		if (btLinkAddressHook(address, &link) == 0 && btLcoRomConfigureContext(address, &link) != 0)
+			btHccRomApplyState()[120 * link + 1] = 0;
+		return 1;
+	}
+	if (command[0] == 0x212 && btLinkMatchEnabled == 1 && (btLinkMatchFirst == 1 || btLinkMatchSecond == 1) &&
+	    memcmp(address, btLinkMatchPeer + 4, 6) == 0) {
+		btLmpLcProcessPacket(1, (uint32_t)(uintptr_t)address);
+		return 1;
+	}
+	return 0;
 }
