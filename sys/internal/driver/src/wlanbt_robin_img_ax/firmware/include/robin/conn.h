@@ -165,7 +165,9 @@ _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 #define WLAN_RATE_FLAG_HT_OBSS		0x20	/* HT protection for another BSS's stations */
 
 struct WlanConnectionInfo {
-	uint8_t reserved0[14];
+	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
+	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
+	uint8_t reserved8[6];
 	uint8_t rates[14];		/* the BSS's rate set (supported rates, with the basic bit) */
 	uint8_t reserved28[2];
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
@@ -184,7 +186,10 @@ struct WlanConnectionInfo {
 	uint8_t reserved128[104];
 	apRsnConfig_t apRsn;		/* the access point's RSN settings */
 	uint8_t ready;
-	uint8_t reserved357[184];
+	uint8_t reserved357[139];
+	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
+	uint8_t reserved498[42];
+	uint8_t ht20Only;		/* nonzero: no 40 MHz channel width */
 	uint8_t protectionFlags;	/* bit 0: protection forced on */
 	uint8_t reserved542;
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
@@ -214,7 +219,7 @@ struct WlanConnectionInfo {
 	uint8_t challengePending;	/* a challenge is outstanding (one at a time) */
 	uint8_t reserved737[3];
 	uint8_t aidBitmap[4];		/* association IDs in use, bit n: AID n + 1 */
-	uint8_t reserved744[16];
+	uint8_t peerTable[16];		/* what rfCalibRecordQueue() keeps per peer (inferred) */
 	uint8_t bssStarted;		/* 1: the BSS of a station or access point role is up */
 	uint8_t reserved761[3];
 	uint32_t dozingStations;	/* peers in power save */

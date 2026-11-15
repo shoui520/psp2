@@ -11,7 +11,9 @@
 #include "robin/apsta.h"
 #include "robin/assocAp.h"
 #include "robin/conn.h"
+#include "robin/domain.h"
 #include "robin/hostps.h"
+#include "robin/htba.h"
 #include "robin/ie.h"
 #include "robin/macentry.h"
 #include "robin/stream.h"
@@ -28,6 +30,16 @@
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
 
 /* Not converted yet; provisional names. */
+void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
+void rfCalibFilterQueue(unsigned int wpa, void *keyData);				/* 0x2b764 */
+void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *length); /* 0x2b774 */
+void rfCalibProcessTimer(unsigned int value, uint8_t **cursor, uint8_t *length);	/* 0x2b7b6 */
+void rfCalibUpdateTimer(const uint8_t *wmm, uint8_t **cursor, uint8_t *length);	/* 0x2b7ea */
+void cbProcCheckFrame(struct WlanConnection *connection);				/* 0x1ea08 */
+void romLibNotifyContext(void);								/* ROM veneer 0x532e4 */
+int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
+int rfCalibRecordQueue(struct WlanConnection *connection, unsigned int a, unsigned int b,
+		       unsigned int maxStations, uint8_t *table);			/* 0x2b4c0 */
 int fmCoexRecordBuffer(struct WlanConnectionInfo *info, const uint8_t *element, uint16_t *status);	/* 0x4bf6a */
 void rfCalibAdjustQueue(struct WlanConnection *connection, const WlanIePointers *elements,
 			unsigned int channel, uint8_t *erpInfo, uint8_t *olbcActive,
@@ -313,4 +325,175 @@ int macMgmtResolvePacket(struct WlanConnection *connection)
 	if (info->qosEnabled == 1)
 		info->pktFwdCtl &= ~1;
 	return 1;
+}
+
+/* The channel of the BSS and its secondary channel (the channel flags: bits 4-5 the offset). out[0]: flags, out[1]: channel. */
+void macMgmtNotifyPacket(struct WlanConnection *connection, uint8_t *out)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	uint32_t band;
+	uint8_t index;
+
+	if (macMgmtSchedulePacket() == 1) {
+		out[0] = role->channelFlags;
+		out[1] = role->channel;
+		return;
+	}
+	macMgmtPrepareContext(out, &band);
+	connection->channel = (uint8_t)band;
+	out[1] = (uint8_t)band;
+	role->channel = (uint8_t)band;
+	if ((role->channelFlags >> 4) & 3) {
+		if (((out[0] >> 4) & 3) == 0) {
+			int both = wlanDomainChannelIndex(12, &index);
+
+			wlanSetSecondaryChannel(out, connection->channel, info->htOperation, both);
+		}
+		role->channelFlags = (role->channelFlags & 0xcf) | (((out[0] >> 4) & 3) << 4);
+	}
+}
+
+/*
+ * The BSS is started (an access point's connection, or a P2P group owner's): its channel, security,
+ * rates, HT operation and beacon and probe response templates are set, the MAC is given the BSS's
+ * address and beacon timing and the host is sent the BSS's configuration (event 46). 1: started.
+ */
+int macMgmtFormatPacket(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	struct WlanPsSleep *sleep = &info->sleep;
+	uint8_t channelOut[2];
+	OsaBuffer *buffer = NULL;
+	WlanTxDescriptor *descriptor;
+	uint8_t *cursor;
+	unsigned int ratesLength;
+	unsigned int bitmap;
+	uint8_t contextFlags, contextChannel;
+
+	if (connection->interfaceType != 2 && (connection->interfaceType != 3 || connection->mode == 0))
+		return 0;
+	macMgmtNotifyPacket(connection, channelOut);
+	if (macMgmtResolvePacket(connection) != 1)
+		return 0;
+	if (wlanSessionId != 0) {
+		wlanPsCancelHostModeTimer();
+		wlanPsHostModeExit();
+	}
+	romLibResolveState();
+	uapSqramUpdateState(wlanConnectionCommandPrepare(2, 0));
+	MAC_REG(0x824) |= 4;
+	wlanTxPowerUpdateConnection(connection, channelOut[1], 1);
+	if (info->securityMode.wpa || info->securityMode.wpa2)
+		KeyMgmtInit(connection);
+	keyApi_ApUpdateKeyMaterial(connection, 1);
+	rfCalibFilterQueue(info->securityMode.wpa, (uint8_t *)info + 796);
+	wlanBaTablesChangedHandler();
+	SOC_MAC_EVENT_CONTROL |= 0x20;
+	if (wlanP2pConnection(connection) != 0) {
+		contextFlags = role->channelFlags;
+		contextChannel = role->channel;
+	} else {
+		contextFlags = channelOut[0];
+		contextChannel = channelOut[1];
+	}
+	macMgmtUpdateContext(contextFlags, contextChannel);
+	macMgmtCheckContext();
+	ratesLength = (uint8_t)romStringLength(info->rates, 14);
+	bitmap = wlanRateBitmapAll(info->rates, ratesLength, 0, 0, (const WlanHtCapabilityIe *)connection->htCapability);
+	macMgmtQueryContext(connection, info->rates, ratesLength, bitmap);
+	wlanApOlbcClear(connection);
+	wlanApNonErpGone(connection);
+	wlanApLongSlotGone(connection);
+	macMgmtComputePacket(info, info->htOperation, info->htCapability, role, connection->beaconPeriod);
+	if (info->ht20Only != 0 || !(info->htCapability[2] & 0x02)) {
+		info->htOperation[3] &= 0xf8;
+	} else {
+		info->htOperation[3] |= 4;
+		info->htOperation[3] = (info->htOperation[3] & 0xfc) | ((role->channelFlags >> 4) & 3);
+	}
+	wlanConnectionIncrement();
+	connection->dtimHold = 0;
+	if (wlanConnectionSlotAttach(connection) != 0)
+		for (;;)
+			;
+	connection->probeResponseBuffer->allocatorTag = 1;
+	connection->beaconBuffer->dataOffset = 176;
+	macMgmtScheduleFrame(connection, 8);
+	connection->probeResponseBuffer->dataOffset = 176;
+	macMgmtScheduleFrame(connection, 5);
+	info->uapBusy = 0;
+	wlanBssSelectAddress(2, connection->localAddress);
+	wlanMacAddressApply();
+	sleep->beaconPeriod = connection->beaconPeriod;
+	sleep->beaconInterval = connection->beaconPeriod << 10;
+	wlanMacOperationModeSet(1);
+	MAC_REG(0x824) |= 4;
+	MAC_REG(0x300) |= 0x2000;
+	if (info->psStaAgeout != 0) {
+		unsigned int beacon = ((unsigned int)info->beaconPeriod << 7) / 125;
+
+		info->listenIntervalPs = (beacon + 100 * info->psStaAgeout - 1) / beacon;
+	} else {
+		info->listenIntervalPs = 0;
+	}
+	if (info->staAgeout != 0) {
+		unsigned int beacon = ((unsigned int)info->beaconPeriod << 7) / 125;
+
+		info->listenInterval = (beacon + 100 * info->staAgeout - 1) / beacon;
+	} else {
+		info->listenInterval = 0;
+	}
+	cbProcCheckFrame(connection);
+	romLibNotifyContext();
+	uapSqramConfigureState(wlanConnectionCommandCheck(2, 0));
+	wlanConnectionCommandPrepare(2, 1);
+	romLibApplyState();
+	if (wlanTxAllocFrame(&buffer, &descriptor, 0x190, 46) != 0) {
+		uint8_t *length = (uint8_t *)descriptor + 10;
+
+		cursor = (uint8_t *)descriptor + 24;
+		if (info->htEnabled == 1)
+			rfCalibHandleTimer(info->htCapability, &cursor, length);
+		rfCalibProcessTimer(info->pktFwdCtl, &cursor, length);
+		if (info->qosEnabled == 1)
+			rfCalibUpdateTimer((const uint8_t *)info->wmmRecords, &cursor, length);
+		wlanHostEventSendWithAddress(connection, connection->localAddress, buffer);
+	}
+	return 1;
+}
+
+int macMgmtInspectPacket(struct WlanConnection *connection, unsigned int a, unsigned int b)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	unsigned int posture = sysIrqDisable();
+
+	rfCalibRecordQueue(connection, a, b, info->maxStations, info->peerTable);
+	return sysIrqRestore(posture);
+}
+
+/* An action frame of the peer: Block Ack (3), spectrum / 20/40 BSS coexistence (4) and vendor specific (127). */
+int macMgmtTrackPacket(OsaBuffer *buffer, uintptr_t argument)
+{
+	const uint8_t *frame = (const uint8_t *)buffer + buffer->dataOffset;
+	const uint8_t *body = frame + 32;
+	struct WlanConnection *connection = buffer->context;
+
+	unsigned int category;
+
+	if (body[0] == 3)
+		return wlanBaActionReceived(connection, body, frame, (int)argument);
+	if (body[0] == 4) {
+		if (body[1] == 0)
+			return wlanBssCoexFrameReceived(connection, body, frame, (int)argument);
+		if (body[1] != 9 || connection == NULL || connection->interfaceType != 3)
+			return (int)(uintptr_t)connection;
+		category = 9;
+	} else {
+		if (body[0] != 127 || connection == NULL || connection->interfaceType != 3)
+			return (int)(uintptr_t)connection;
+		category = 127;
+	}
+	return p2pSqramFilterState(connection, frame, category);
 }

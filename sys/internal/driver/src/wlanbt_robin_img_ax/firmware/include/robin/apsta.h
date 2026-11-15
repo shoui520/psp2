@@ -65,6 +65,11 @@ int macMgmtSyncPacket(struct WlanConnection *connection);				/* 0x39b98 */
 int macMgmtApplyPacket(void);								/* 0x39bca */
 int macMgmtResolvePacket(struct WlanConnection *connection);				/* 0x39bd2 */
 
+void macMgmtNotifyPacket(struct WlanConnection *connection, uint8_t *out);		/* 0x39d08 */
+int macMgmtFormatPacket(struct WlanConnection *connection);				/* 0x39d82 */
+int macMgmtInspectPacket(struct WlanConnection *connection, unsigned int a, unsigned int b); /* 0x3a06e */
+int macMgmtTrackPacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3a0a6 */
+
 /* The management task's message queue (wlan/tasks.c). */
 OsaBuffer *macMgmtHandleState(struct WlanConnection *connection);			/* 0x34778 */
 int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
