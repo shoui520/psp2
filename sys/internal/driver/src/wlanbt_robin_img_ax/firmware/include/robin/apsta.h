@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/esatypes.h"
+#include "robin/ie.h"
 #include "robin/wlan.h"
 #include "robin/mactx.h"
 #include "robin/wlanrx.h"
@@ -44,13 +46,31 @@ void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument);		/* 0x38cc4 */
 unsigned int macMgmtRecordBuffer(struct WlanConnection *connection);			/* 0x38db8 */
 void macMgmtFilterBuffer(struct WlanConnection *connection);				/* 0x38e14 */
 void fmCoexUpdateTable(uint8_t *text);							/* 0x4bcb6 */
+int fmCoexConfigureTable(WlanWirelessFrame *frame, const WlanWirelessFrame *request,
+			 const WlanIePointers *ies, const Cipher_t *cipher,
+			 const uint8_t *htCapability);					/* 0x4bcea */
+int fmCoexCheckTable(WlanWirelessFrame *frame, const WlanIePointers *ies, int unparsed,
+		     const void *ssid, unsigned int length);				/* 0x4bd26 */
+int fmCoexValidateTable(WlanWirelessFrame *frame, const WlanIePointers *ies, const uint8_t *bssRates,
+			uint8_t *rates, uint8_t *count, uint8_t *extended);		/* 0x4bd50 */
+int fmCoexPrepareTable(const WlanWirelessFrame *request);				/* 0x4bdb2 */
+int fmCoexDispatchTable(const WlanWirelessFrame *request);				/* 0x4bdc2 */
+void fmCoexParseTable(const WlanIePointers *ies, const uint8_t *htCapability);		/* 0x4bdd2 */
+int fmCoexBuildTable(const WlanIePointers *ies);					/* 0x4be00 */
+const uint8_t *fmCoexComputeTable(WlanWirelessFrame *frame, const WlanWirelessFrame *request,
+				  const uint8_t **elements, int *length);		/* 0x4be30 */
+int fmCoexQueryTable(const WlanIePointers *ies);					/* 0x4be7a */
+int fmCoexResetTable(const WlanIePointers *ies);					/* 0x4be8a */
+unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv);	/* 0x4ce1a */
 void fmCoexScheduleTable(uint8_t *frame, uint16_t algorithm, uint16_t sequence,
 			 uint16_t status, const void *challenge);			/* 0x4bebe */
 
 /* wlan/apassoc.c */
 int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3902c */
-int macMgmtUpdatePacket(struct WlanConnection *connection, int wps, const void *rsn,
+int macMgmtUpdatePacket(struct WlanConnection *connection, const uint8_t *wps, const void *rsn,
 			const void *wpa, const uint8_t *wapi, uint16_t *status);	/* 0x390a2 */
+int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWirelessFrame *request,
+			   unsigned int status);						/* 0x3916c */
 int macMgmtCheckPacket(OsaBuffer *buffer);						/* 0x39898 */
 void macMgmtPreparePacket(struct WlanConnection *connection);				/* 0x398c4 */
 void macMgmtDispatchPacket(OsaBuffer *buffer);						/* 0x39954 */

@@ -14,7 +14,9 @@
 #include <stddef.h>
 #include "robin/apps.h"
 #include "robin/conn.h"
+#include "robin/esatypes.h"
 #include "robin/htba.h"
+#include "robin/ie.h"
 #include "robin/ieee80211.h"
 #include "robin/keyMgmtAp.h"
 #include "robin/mactx.h"
@@ -524,6 +526,150 @@ void fmCoexUpdateTable(uint8_t *text)
 		value = rand();
 		__aeabi_memcpy(text + offset, &value, 4);
 	}
+}
+
+/*
+ * What an association response carries, and what the request is checked against (the helpers of
+ * macMgmtConfigurePacket()). The response frame is built as the request's reply: its status is the
+ * second halfword of its body.
+ */
+#define WLAN_STATUS_ASSOC_DENIED	12	/* the association is refused for a reason of the BSS's */
+#define WLAN_STATUS_BASIC_RATES		18	/* the peer does not support the BSS's basic rates */
+#define WLAN_STATUS_HT_WITH_TKIP	42	/* HT capabilities with a TKIP pairwise cipher */
+
+/* The HT capabilities of the BSS go into the response, unless the peer is HT and uses TKIP (refused). */
+int fmCoexConfigureTable(WlanWirelessFrame *frame, const WlanWirelessFrame *request,
+			 const WlanIePointers *ies, const Cipher_t *cipher,
+			 const uint8_t *htCapability)
+{
+	if (ies->pHtCap != NULL) {
+		if ((ies->pWpa != NULL || ies->pRsn != NULL) && cipher != NULL && cipher->tkip) {
+			PUT_U16(frame->body + 2, WLAN_STATUS_HT_WITH_TKIP);
+			return 1;
+		}
+		wlanAppendIe(frame, 0x2d, htCapability + 2, 0x1a);
+	}
+	return 0;
+}
+
+/* The request is for this BSS: its elements could be read, and its SSID is the BSS's. */
+int fmCoexCheckTable(WlanWirelessFrame *frame, const WlanIePointers *ies, int unparsed,
+		     const void *ssid, unsigned int length)
+{
+	int result = 0;
+
+	if (unparsed != 0 || (result = memcmp(ies->pSsid + 2, ssid, length)) != 0) {
+		PUT_U16(frame->body + 2, WLAN_STATUS_ASSOC_DENIED);
+		return 1;
+	}
+	return result;
+}
+
+/*
+ * The rates the peer shares with the BSS go into the response (the first eight in the supported
+ * rates element, the others in *extended's count of the extended supported rates one); a peer
+ * that shares none, or lacks a basic rate, is refused.
+ */
+int fmCoexValidateTable(WlanWirelessFrame *frame, const WlanIePointers *ies, const uint8_t *bssRates,
+			uint8_t *rates, uint8_t *count, uint8_t *extended)
+{
+	uint8_t extra = 0;
+	unsigned int first;
+	int shared;
+
+	__aeabi_memclr(rates, 14);
+	shared = wlanRatesSelect(bssRates, ies->pSupportedRates, ies->pExtSupportedRates, rates, count);
+	if (*count <= 8) {
+		first = *count;
+	} else {
+		extra = *count - 8;
+		first = 8;
+	}
+	if (shared != 0 && *count != 0) {
+		wlanAppendIe(frame, 1, rates, first);
+		*extended = extra;
+		return 0;
+	}
+	PUT_U16(frame->body + 2, WLAN_STATUS_BASIC_RATES);
+	return 1;
+}
+
+/* The request supports the short preamble. */
+int fmCoexPrepareTable(const WlanWirelessFrame *request)
+{
+	return (request->body[0] & 0x20) != 0;
+}
+
+/* The request supports the short slot time. */
+int fmCoexDispatchTable(const WlanWirelessFrame *request)
+{
+	return (request->body[1] & 0x04) != 0;
+}
+
+/* The peer's MCS set and channel width are cut down to what the BSS has (in the request's element). */
+void fmCoexParseTable(const WlanIePointers *ies, const uint8_t *htCapability)
+{
+	WlanHtCapabilityIe *peer = (WlanHtCapabilityIe *)ies->pHtCap;
+	uint8_t *capabilities = (uint8_t *)&peer->capabilities;
+	int i;
+
+	for (i = 0; i < 16; i++)
+		peer->mcsSet[i] &= htCapability[5 + i];
+	capabilities[0] &= (uint8_t)(((htCapability[2] & WLAN_HT_CAP_40MHZ) != 0) << 1) | 0xfd;
+}
+
+/* The peer has an OFDM rate (in either rates element). */
+int fmCoexBuildTable(const WlanIePointers *ies)
+{
+	const uint8_t *rates = ies->pSupportedRates;
+
+	if (rates == NULL || wlanRatesHaveOfdm(rates + 2, rates[1]) == 0) {
+		rates = ies->pExtSupportedRates;
+		if (rates == NULL || wlanRatesHaveOfdm(rates + 2, rates[1]) == 0)
+			return 0;
+	}
+	return 1;
+}
+
+/*
+ * The response is made the reply of the request: a reassociation request (subtype 2) is answered with a
+ * reassociation response (subtype 3); the association ID starts as 0xc000 and the body as its three
+ * halfwords. The request's elements (after its capability, listen interval and, for a reassociation,
+ * the old access point's address) are given back with their length.
+ */
+const uint8_t *fmCoexComputeTable(WlanWirelessFrame *frame, const WlanWirelessFrame *request,
+				  const uint8_t **elements, int *length)
+{
+	int remaining;
+	const uint8_t *first;
+
+	if (request->frameControl[0] >> 4 == 2)
+		frame->frameControl[0] = (frame->frameControl[0] & 0x0f) + 0x30;
+	frame->body[4] = 0;
+	frame->body[5] = 0xc0;
+	frame->bodyLength[0] = 6;
+	frame->bodyLength[1] = 0;
+	remaining = U16(request->bodyLength) - 4;
+	first = request->body + 4;
+	if (request->frameControl[0] >> 4 == 2) {
+		first = request->body + 10;
+		remaining = U16(request->bodyLength) - 10;
+	}
+	*elements = first;
+	*length = remaining;
+	return first;
+}
+
+/* The peer's HT capabilities say it can send greenfield frames. */
+int fmCoexQueryTable(const WlanIePointers *ies)
+{
+	return (ies->pHtCap->capabilities & 0x0010) != 0;
+}
+
+/* The peer's HT capabilities say it supports 40 MHz. */
+int fmCoexResetTable(const WlanIePointers *ies)
+{
+	return (ies->pHtCap->capabilities & WLAN_HT_CAP_40MHZ) != 0;
 }
 
 /*

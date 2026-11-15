@@ -69,8 +69,6 @@ void macTxNotifyConfigureHeader(OsaBuffer *buffer);				/* 0x33eb6 */
 void macTxNotifyCheckHeader(OsaBuffer *buffer);					/* 0x33ef8 */
 int macMgmtDispatchState(OsaBuffer *buffer, uintptr_t argument, uint32_t channel); /* 0x348c4 */
 void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);		/* 0x37c72 */
-void macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWirelessFrame *frame,
-			    int reassociation);					/* 0x3916c */
 void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */

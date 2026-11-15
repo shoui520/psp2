@@ -202,7 +202,7 @@ int wlanIeBufferFree(struct WlanIeBuffer *ies);				/* 0x2a850 */
 int wlanIeBufferAlloc(struct WlanIeBuffer *ies);				/* 0x2a866 */
 void wlanIeBufferInit(void);							/* 0x34c78: the buffers' pool */
 int cbProcRecordBuffer(int first, int argument);				/* 0x1e12a */
-void wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc */
+int wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc: the bytes left over; nonzero: the list was cut short */
 int wlanWmmElementType(const uint8_t *oui);					/* 0x2c21c */
 int wlanWpaElementType(const uint8_t *oui);					/* 0x2c276 */
 int wlanIePointersRecord(const uint8_t *ie, WlanIePointers *ies);		/* 0x2c294 */

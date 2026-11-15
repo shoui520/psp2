@@ -164,6 +164,25 @@ _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 #define WLAN_RATE_FLAG_PROTECTION	0x10
 #define WLAN_RATE_FLAG_HT_OBSS		0x20	/* HT protection for another BSS's stations */
 
+/* The body of the overlapping BSS scan parameters element (802.11n 7.3.2.60). */
+struct WlanObssScanParameters {
+	uint16_t passiveDwell;
+	uint16_t activeDwell;
+	uint16_t triggerScanInterval;	/* BSS channel width trigger scan interval, s */
+	uint16_t passiveTotalPerChannel;
+	uint16_t activeTotalPerChannel;
+	uint16_t widthTransitionDelayFactor;	/* times the trigger scan interval, the time the 40 MHz width is held off */
+	uint16_t activityThreshold;
+};
+
+_Static_assert(sizeof(struct WlanObssScanParameters) == 14, "overlapping BSS scan parameters");
+
+/* What a WAPI access point keeps for the host (partial). */
+struct WlanWapiContext {
+	uint8_t reserved0[74];
+	uint8_t data[16];		/* reported to the host, byte-reversed */
+};
+
 struct WlanConnectionInfo {
 	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
 	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
@@ -176,23 +195,31 @@ struct WlanConnectionInfo {
 	SecurityMode_t securityMode;	/* the BSS's security: noRsn is the open system (the privacy bit stays clear) */
 	uint8_t reserved35;
 	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
-	uint8_t reserved40[10];
-	uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
+	uint8_t reserved40[2];
+	union {
+		uint8_t wmmParameter[24];	/* the WMM Parameter element's body, as the BSS sends it */
+		struct {
+			uint8_t reserved42[8];	/* OUI, type, subtype, version, QoS Info, reserved */
+			uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
+		};
+	};
 	uint8_t reserved66[2];
 	uint32_t htEnabled;		/* nonzero: the access point's HT elements apply */
 	uint8_t htCapability[28];	/* the access point's HT capability element */
 	uint8_t htOperation[24];	/* its HT operation element */
 	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
-	uint8_t reserved128[104];
+	const struct WlanWapiContext *wapiContext;	/* a WAPI BSS: what the host is told with an association (TLV 103) */
+	uint8_t reserved132[100];
 	apRsnConfig_t apRsn;		/* the access point's RSN settings */
 	uint8_t ready;
-	uint8_t reserved357[139];
+	uint8_t reserved357[3];
+	uint32_t uapsdEnabled;		/* 1: the access point supports U-APSD: a peer's QoS Info can request it (inferred) */
+	uint8_t reserved364[132];
 	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
-	uint8_t reserved498[22];
-	uint16_t coexDelayFactor;	/* 20/40 coexistence: times its scan interval, the time the 40 MHz width is held off (inferred) */
-	uint8_t reserved522[4];
-	uint16_t coexScanInterval;
-	uint8_t reserved528[8];
+	uint8_t reserved498[18];
+	struct WlanObssScanParameters obssScan;	/* the overlapping BSS scan parameters element's body */
+	uint8_t reserved530[2];
+	uint8_t extCapability[4];	/* the extended capabilities element's body */
 	uint32_t mgmtForwardMask;	/* bit n: management frames of subtype n are handed to the host */
 	uint8_t ht2040Managed;		/* nonzero: the BSS starts at 20 MHz and macMgmtManagePacket() widens it */
 	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: broadcast SSID probe requests are answered */
@@ -244,7 +271,21 @@ struct WlanConnectionInfo {
 };
 
 struct WlanSubscribeEvents;
-struct WlanUapContext;
+/* The access point's association context: its first block is set up with the connection. */
+struct WlanUapContext {
+	uint8_t reserved0[28];
+	struct {
+		uint8_t reserved0[6];
+		uint8_t mode;
+		uint8_t options;
+		uint8_t reserved8[2];
+		uint8_t control;		/* bit 0: the context applies */
+		uint8_t reserved11[73];
+	} params;
+};
+_Static_assert(sizeof(((struct WlanUapContext *)0)->params) == 84, "access point context parameters");
+
+struct WlanUapContext *uapSqramUpdateContext(int unused);				/* SQRAM 0xc000824c */
 
 /*
  * The block of a station (at stationInfo) or access point (at apInfo)
@@ -347,7 +388,9 @@ struct __attribute__((may_alias)) WlanHtElements {
 #define WLAN_CONN_JOIN_OPEN		0x02	/* the join ended without privacy */
 #define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
 #define WLAN_CONN_WAPI			0x10
-#define WLAN_CONN_HT			0x20	/* the peer is HT capable */
+#define WLAN_CONN_HT			0x20	/* the peer is HT capable: its capabilities are recorded and counted in the BSS's HT stations */
+#define WLAN_CONN_HT_ENABLED		0x40	/* the HT elements apply to the connection */
+#define WLAN_CONN_HT40			0x80	/* the peer supports 40 MHz */
 
 /*
  * WlanConnectionInfo.pktFwdCtl of an access point (Marvell's pkt_fwd_ctl; the
@@ -556,6 +599,12 @@ _Static_assert(offsetof(struct WlanConnectionInfo, GNonce) == 852, "info group n
 _Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS machine");
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
 _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");
+_Static_assert(offsetof(struct WlanConnectionInfo, wmmRecords) == 50, "info WMM records");
+_Static_assert(offsetof(struct WlanConnectionInfo, wapiContext) == 128, "info WAPI context");
+_Static_assert(offsetof(struct WlanConnectionInfo, uapsdEnabled) == 360, "info U-APSD");
+_Static_assert(offsetof(struct WlanConnectionInfo, obssScan) == 516, "info overlapping BSS scan");
+_Static_assert(offsetof(struct WlanConnectionInfo, extCapability) == 532, "info extended capabilities");
+_Static_assert(offsetof(struct WlanConnectionInfo, mgmtForwardMask) == 536, "info management forwarding");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, stationCount) == 584, "info station count");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");

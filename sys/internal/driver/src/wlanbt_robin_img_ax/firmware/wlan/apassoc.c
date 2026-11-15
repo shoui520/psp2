@@ -27,14 +27,29 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
+#include "robin/wapi.h"
 #include "robin/wlan.h"
 
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
+#define WLAN_STATUS_ASSOC_DENIED		12
+#define WLAN_HT_CAP_40MHZ_INTOLERANT		0x4000
+#define WLAN_HT_CAP_GREENFIELD			0x0010
+
+#define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
+#define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
 /* Not converted yet; provisional names. */
 void macMgmtReleaseFrame(struct WlanConnection *connection);				/* 0x3b0d8 */
 void wlanPsAcquirePacket(struct WlanConnection *connection);				/* 0x3d1f4 */
-void macTxNotifyApplyFrame(struct WlanConnection *connection);				/* 0x33550 */
+void macTxNotifyApplyFrame(struct WlanConnection *connection);				/* 0x3360a */
+void macTxNotifyQueryFrame(struct WlanConnection *connection);				/* 0x33570 */
+void macTxNotifyDispatchFrame(struct WlanConnection *connection);			/* 0x3351c */
+void wlanPsReleasePacket(struct WlanConnection *connection, uint32_t rateSet);		/* 0x3d286 */
+unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
+				   const void *attributes, unsigned int include,
+				   unsigned int exclude);				/* 0x402ea */
+uint8_t *p2pDirectReleaseContext(struct WlanConnection *connection,
+				 const WlanWirelessFrame *request);			/* 0x40e20 */
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);					/* SQRAM */
@@ -72,8 +87,8 @@ int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument)
  * The security elements of an association request against the BSS's: 0: acceptable, -1: not, with the
  * status code 45 (or 0 where the WAPI element is checked). wps: the request carries a WPS element.
  */
-int macMgmtUpdatePacket(struct WlanConnection *connection, int wps, const void *rsn, const void *wpa,
-			const uint8_t *wapi, uint16_t *status)
+int macMgmtUpdatePacket(struct WlanConnection *connection, const uint8_t *wps, const void *rsn,
+			const void *wpa, const uint8_t *wapi, uint16_t *status)
 {
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
@@ -103,6 +118,268 @@ int macMgmtUpdatePacket(struct WlanConnection *connection, int wps, const void *
 		}
 	}
 	return 0;
+}
+
+/*
+ * An association (or reassociation) request, answered with the response frame built here; status
+ * is a refusal the caller has decided on already. The request is refused (the response goes out
+ * through macMgmtHandlePacket(), which lets the peer go) when it is not for this BSS, when
+ * the peer's security elements do not fit the BSS's, when the TKIP countermeasures are on, when the
+ * rates do not fit, when HT is used with TKIP, or when no association ID or P2P slot is left. Else the
+ * peer is associated: the BSS's elements go into the response, the peer's HT, ERP, preamble and
+ * slot time capabilities are counted in the BSS (and the 20/40 coexistence managed when the first
+ * 40 MHz intolerant peer comes or the last one goes), the host is told in event 45 with the request,
+ * the response's fixed part and, for WAPI, the WAPI context.
+ */
+int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWirelessFrame *request,
+			   unsigned int status)
+{
+	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	const uint8_t *peerAddress = connection->peerAddress;
+	OsaBuffer *response = wlanMgmtAllocFrame(connection, 0x190);
+	WlanWirelessFrame *frame;
+	uint8_t *body;
+	OsaBuffer *event;
+	struct WlanHostEventFrame *eventFrame;
+	WlanIePointers ies;
+	uint8_t rates[14];
+	uint8_t ratesCount = 0;
+	uint8_t extendedCount;
+	uint16_t code;
+	const uint8_t *elements;
+	int length;
+	int fresh = 0;
+	uint8_t previous0;
+	uint8_t previous1;
+
+	if (response == NULL) {
+		macMgmtDispatchBuffer(connection, peerAddress, 5);
+		return -1;
+	}
+	frame = (WlanWirelessFrame *)((uint8_t *)response + response->dataOffset);
+	wlanMgmtBuildFrame(response, connection->interfaceAddress, peerAddress, 1, connection->localAddress);
+	body = frame->body;
+	body[2] = 0;
+	body[3] = 0;
+	fmCoexComputeTable(frame, request, &elements, &length);
+	if (status != 0) {
+		PUT_U16(body + 2, status);
+		return macMgmtHandlePacket(response, 0);
+	}
+	length = wlanParseIes(elements, length, &ies);
+	if (fmCoexCheckTable(frame, &ies, length, connection->networkSsid, connection->networkSsidLength) != 0)
+		return macMgmtHandlePacket(response, 0);
+	if (macMgmtUpdatePacket(connection, ies.pWps, ies.pRsn, ies.pWpa, ies.pWapi, &code) == -1) {
+		PUT_U16(body + 2, code);
+		return macMgmtHandlePacket(response, 0);
+	}
+	if (info->apMicError.disableStaAsso != 0)
+		goto denied;
+	if (fmCoexValidateTable(frame, &ies, info->rates, rates, &ratesCount, &extendedCount) != 0 ||
+	    (info->htEnabled != 0 &&
+	     fmCoexConfigureTable(frame, request, &ies, &role->keyMgmt.staUcstCipher, info->htCapability) != 0))
+		return macMgmtHandlePacket(response, 0);
+	if (extendedCount != 0)
+		wlanAppendIe(frame, 0x32, rates + 8, extendedCount);
+	if (info->htEnabled == 1 && ies.pHtCap != NULL)
+		wlanAppendIe(frame, 0x3d, info->htOperation + 2, 22);
+	if (info->securityMode.wapi)
+		wlanAppendIe(frame, 0x44, ies.pWapi + 2, ies.pWapi[1]);
+	if (info->htEnabled == 1 && ies.pHtCap != NULL) {
+		if (info->phyMode != 2 && (info->htCapability[2] & 0x02))
+			wlanAppendIe(frame, 0x4a, &info->obssScan, 14);
+		wlanAppendIe(frame, 0x7f, info->extCapability, 4);
+	}
+	if (info->qosEnabled == 1 && ies.pWmmInfo != NULL)
+		wlanAppendIe(frame, 0xdd, info->wmmParameter, 24);
+	if (ies.pVendor != NULL && wlanP2pConnection(connection) != 0) {
+		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+		ps->p2pStatus.value = ps->p2pAuthCount >= 8 ? 3 : 0;
+		ps->p2pStatus.length[0] = 1;
+		ps->p2pStatus.length[1] = 0;
+		length = (uint8_t)p2pDirectCheckContext(connection, frame, NULL,
+							(((ps->p2pOptions >> 1) & 1) << 8) + 1, 0);
+		PUT_U16(frame->bodyLength, U16(frame->bodyLength) + length);
+	}
+	if (connection->associationId == 0) {
+		macMgmtRecordBuffer(connection);
+		fresh = 1;
+		if (connection->associationId == 0)
+			goto denied;
+	}
+	if (U16(body + 2) == 0 && wlanP2pConnection(connection) != 0) {
+		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+		if (ies.pVendor != NULL) {
+			if (ps->p2pAuthCount >= 8)
+				goto denied;
+			role->p2pContext = p2pDirectReleaseContext(connection, request);
+		} else if (++ps->p2pAuthCount > 8) {
+			ps->p2pAuthCount--;
+			goto denied;
+		}
+	}
+	wlanCustomIeApply(connection, 1, frame, 6);
+	connection->flags &= ~(WLAN_CONN_ENCRYPTED | WLAN_CONN_JOIN_OPEN);
+	if (info->securityMode.noRsn) {
+		connection->flags |= WLAN_CONN_ENCRYPTED | WLAN_CONN_JOIN_OPEN;
+	} else if (info->securityMode.wepStatic) {
+		if (info->uapContext->params.control & 1)
+			connection->flags |= WLAN_CONN_ENCRYPTED | WLAN_CONN_JOIN_OPEN;
+	} else if ((info->securityMode.wpa || info->securityMode.wpa2) &&
+		   wlanInterfaceNeedsSecurity(connection) != 0) {
+		if (connection->keyBlocks[1] != NULL)
+			__aeabi_memclr4(connection->keyBlocks[1] + 28, 84);
+		else
+			connection->keyBlocks[1] = (uint8_t *)uapSqramUpdateContext(0);
+	}
+	if (info->qosEnabled == 1 &&
+	    (ies.pWmmInfo != NULL || (info->htEnabled == 1 && ies.pHtCap != NULL))) {
+		wlanConnectionSetActiveFlag(connection, 1);
+		if (ies.pWmmInfo != NULL) {
+			role->uapsd.qosInfo = ies.pWmmInfo[8];
+			role->uapsd.triggerEnabled = ies.pWmmInfo[8];
+			role->uapsd.deliveryEnabled = ies.pWmmInfo[8];
+			connection->qosPeer = info->uapsdEnabled == 1 && (ies.pWmmInfo[8] & 0x0f) != 0;
+		}
+	} else {
+		wlanConnectionSetActiveFlag(connection, 0);
+	}
+	PUT_U16(body + 4, connection->associationId | 0xc000);
+	role->state = 3;
+	role->peerPowerSave = 0;
+	wlanConnectionUpdateListenInterval(connection);
+	body[2] = 0;
+	body[3] = 0;
+
+	/*
+	 * The BSS counts its HT peers by kind; a peer's earlier capabilities (the connection's, still
+	 * those of its last association) are taken out of the counts and the new ones put in.
+	 */
+	if (info->htEnabled == 1) {
+		int htNow = ies.pHtCap != NULL;
+		int htWas = (connection->flags & WLAN_CONN_HT) != 0;
+		int greenfieldWas = (connection->htCapability[2] & 0x10) != 0;
+		int widthWas = (connection->htCapability[2] & 0x02) != 0;
+		int intolerantWas = (connection->htCapability[3] & 0x40) != 0;
+
+		if (!htNow) {
+			if (fresh == 1 || htWas)
+				info->htMixedStations++;
+		} else if (fresh == 0 && !htWas) {
+			info->htMixedStations--;
+		}
+		if (fresh == 0 && !greenfieldWas && htWas && (!htNow || fmCoexQueryTable(&ies)))
+			info->htNonGreenfieldStations--;
+		if (htNow && !fmCoexQueryTable(&ies) && (fresh == 1 || greenfieldWas || !htWas))
+			info->htNonGreenfieldStations++;
+		if (!widthWas && htWas && fresh == 0 && (!htNow || fmCoexResetTable(&ies)))
+			info->ht20MhzStations--;
+		if (htNow) {
+			if (!fmCoexResetTable(&ies) && (fresh == 1 || !htWas || widthWas))
+				info->ht20MhzStations++;
+			if ((ies.pHtCap->capabilities & WLAN_HT_CAP_40MHZ_INTOLERANT) &&
+			    (fresh == 1 || (htWas && !intolerantWas))) {
+				info->ht40IntolerantStations++;
+				if (role->info->ht40IntolerantStations == 1)
+					macMgmtManagePacket(connection, 0);
+			}
+		}
+		if (fresh == 0 && htWas && intolerantWas && htNow &&
+		    !(ies.pHtCap->capabilities & WLAN_HT_CAP_40MHZ_INTOLERANT)) {
+			info->ht40IntolerantStations--;
+			if (role->info->ht40IntolerantStations == 0)
+				macMgmtManagePacket(connection, 1);
+		}
+		if (htNow) {
+			fmCoexParseTable(&ies, info->htCapability);
+			connection->flags = (connection->flags & 0x7f) | (fmCoexResetTable(&ies) << 7) |
+					    WLAN_CONN_HT | WLAN_CONN_HT_ENABLED;
+			__aeabi_memcpy(connection->htCapability, ies.pHtCap, 28);
+		}
+	}
+	wlanSecurityRefresh(connection);
+	{
+		uint32_t rateSet = wlanRateBitmapAll(rates, ratesCount, NULL, 0,
+						     (connection->flags & WLAN_CONN_HT) ?
+						     (const WlanHtCapabilityIe *)connection->htCapability : NULL);
+
+		connection->supportedRatesLength = ratesCount;
+		__aeabi_memcpy4(connection->supportedRates, rates, 14);
+		wlanPsReleasePacket(connection, rateSet);
+	}
+	macTxNotifyApplyFrame(connection);
+	macTxNotifyQueryFrame(connection);
+	macTxNotifyDispatchFrame(connection);
+	previous0 = connection->bssCapability[0];
+	previous1 = connection->bssCapability[1];
+	if (info->phyMode == 2) {
+		role->erpCapable = 2;
+	} else {
+		/* Peers without an OFDM rate, without the short preamble and without the short slot time are counted. */
+		if (fmCoexBuildTable(&ies)) {
+			if (fresh == 0 && role->erpCapable == 0 && --info->erpInfo == 0)
+				wlanApErpUpdate(connection);
+			role->erpCapable = 1;
+		} else {
+			if ((fresh == 1 || role->erpCapable != 0) && ++info->erpInfo == 1)
+				wlanApErpUpdate(connection);
+			role->erpCapable = 0;
+		}
+		if (fmCoexPrepareTable(request)) {
+			if (fresh == 0 && !(previous0 & 0x20) && --info->nonErpStations == 0)
+				wlanApUpdateProtection(connection);
+		} else if ((fresh == 1 || (previous0 & 0x20)) && ++info->nonErpStations == 1) {
+			wlanApUpdateProtection(connection);
+		}
+		if (!fmCoexDispatchTable(request)) {
+			if ((fresh == 1 || (previous1 & 0x04)) && ++info->longSlotStations == 1)
+				wlanApUpdateSlotTime(connection);
+		} else if (fresh == 0 && !(previous1 & 0x04) && --info->longSlotStations == 0) {
+			wlanApUpdateSlotTime(connection);
+		}
+	}
+	connection->bssCapability[0] = request->body[0];
+	connection->bssCapability[1] = request->body[1];
+	body[0] = info->capability[0];
+	body[1] = info->capability[1];
+	if (wlanTxAllocFrame(&event, (WlanTxDescriptor **)&eventFrame, 0x190, 45) != 0) {
+		uint8_t *start = (uint8_t *)eventFrame + 24;
+		uint8_t *cursor = start;
+
+		cursor += fmCoexAdjustBuffer(info, cursor);
+		cursor += wlanTlvFrameDataAppend(cursor, (const uint8_t *)request, U16(request->bodyLength));
+		cursor += wlanTlvFrameDataAppend(cursor, (const uint8_t *)frame, 6);
+		eventFrame->length = (uint16_t)(cursor - start);
+		wlanHostEventSendWithAddress(connection, peerAddress, event);
+	}
+	return wlanMgmtSendFrame(response);
+
+denied:
+	PUT_U16(body + 2, WLAN_STATUS_ASSOC_DENIED);
+	return macMgmtHandlePacket(response, 0);
+}
+
+/* The WAPI context goes to the host as TLV 103 (byte-reversed); a BSS without WAPI adds nothing. Returns the TLV's size. */
+unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv)
+{
+	uint8_t data[16];
+
+	if (!info->securityMode.wapi)
+		return 0;
+	tlv[0] = 103;
+	tlv[1] = 1;
+	tlv[2] = 16;
+	tlv[3] = 0;
+	if (info->wapiContext != NULL) {
+		wlanReverseBytes(data, info->wapiContext->data, 16);
+		__aeabi_memcpy(tlv + 4, data, 16);
+	} else {
+		__aeabi_memclr(tlv + 4, 16);
+	}
+	return U16(tlv + 2) + 4;
 }
 
 /* The peer is deauthenticated (reason 2: its authentication is no longer valid). */
@@ -531,7 +808,7 @@ void macMgmtManagePacket(struct WlanConnection *connection, int want)
 	} else if (want == 0) {
 		struct WlanConnectionInfo *same = wlanConnectionInfo(connection);
 
-		same->olbcTimeout = (1000000 * same->coexDelayFactor * same->coexScanInterval) /
+		same->olbcTimeout = (1000000 * same->obssScan.triggerScanInterval * same->obssScan.widthTransitionDelayFactor) /
 				    ((unsigned int)connection->beaconPeriod << 10) + 1;
 	}
 	sysIrqRestore(posture);

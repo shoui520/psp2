@@ -88,21 +88,6 @@ int wlanStaRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfdb2 */
 void macMgmtSetupContext(struct WlanConnection *connection);					/* 0x35da6 */
 int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb70 */
 int wlanApRxControl(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb1c */
-struct WlanUapContext *uapSqramUpdateContext(int unused);					/* SQRAM 0xc000824c */
-
-/* The access point's association context: its first block is set up with the connection. */
-struct WlanUapContext {
-	uint8_t reserved0[28];
-	struct {
-		uint8_t reserved0[6];
-		uint8_t mode;
-		uint8_t options;
-		uint8_t reserved8[2];
-		uint8_t control;
-		uint8_t reserved11[73];
-	} params;
-};
-_Static_assert(sizeof(((struct WlanUapContext *)0)->params) == 84, "access point context parameters");
 
 /* Finds the connection of a BSS type and number. */
 struct WlanConnection *wlanConnectionFind(unsigned int bssType, unsigned int bssNumber)
