@@ -153,7 +153,4 @@ extern struct OsaMsgList wlanHostEventQueue;
 
 void sdioDevicesInit(void);
 
-/* Not converted yet; the names are provisional. Addresses are those of the 4.00 image. */
-void uapSqramAdjustEntry(unsigned int pin, unsigned int mask);	/* SQRAM 0xc0009b38, via the veneer at 0x53064 */
-
 #endif /* ROBIN_SDIODEV_H */

@@ -9,6 +9,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/led.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/txhold.h"
@@ -83,7 +84,6 @@
 #define MGMT_EVENT_QUEUE_A	0x00000200
 
 /* Not converted yet; provisional names. */
-void uapSqramFilterEntry(int enable);								/* SQRAM 0xc0009ba0 */
 uint32_t wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t *tim);		/* 0x3e98a */
 void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);					/* 0x03f3abf7 */
 void clockHostSetMax(void);								/* 0x26ae0 */
@@ -233,7 +233,7 @@ void wlanMacEvents(int line, uint32_t pending)
 							if (wlanPsFilterState == 0 && wlanIbssPsLimit != (uint32_t)-1) {
 								wlanPostConnectionEvent(connection, 1024);
 								wlanPsFilterState = 1;
-								uapSqramFilterEntry(2);
+								ledFirmwareStateSet(2);
 							}
 						}
 					} else {

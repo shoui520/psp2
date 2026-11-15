@@ -25,6 +25,9 @@ PROVIDE(tx_thread_identify = 0x03f044b9);
 PROVIDE(tx_thread_relinquish = 0x03f0499d);
 /* Genuine RAM veneer supplies this external timestamp entry address. */
 PROVIDE(romGetTimerTimestamp = 0x03f3a6c5);
+/* The MAC event mask the channel report saves and restores (inferred). */
+PROVIDE(romMacEventMaskGet = 0x03f3a8ad);
+PROVIDE(romMacEventMaskSet = 0x03f3a8a7);
 /* 32x32 -> 64-bit multiply (low word in r0, high in r1), reached through the veneer at 0x52d4c. */
 PROVIDE(romMul32x32 = 0x03f3f3b4);
 PROVIDE(_tx_thread_system_state = 0x0400fc78);

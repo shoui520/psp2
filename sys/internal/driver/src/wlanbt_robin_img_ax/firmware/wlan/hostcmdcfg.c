@@ -1,9 +1,8 @@
 /*
  * Host commands that carry configuration as TLVs (0x3eb24 - 0x3f400): the keys (0x5e), the
- * security profile (0xc5), the rate tables (0x4e, whose handlers the SQRAM code calls), the
- * vendor element table (0xf5), the time sharing of the radio (0xe0), the power-save timings
- * (0xe4) and the rate lists of 0xd6. The firmware's placeholder names, "wlanPs*Descriptor",
- * are kept for the table handlers; the filename is inferred.
+ * security profile (0xc5), the LED TLVs (0x4e, whose handlers the SQRAM code calls, led.h),
+ * the vendor element table (0xf5), the time sharing of the radio (0xe0), the power-save
+ * timings (0xe4) and the rate lists of 0xd6. The filename is inferred.
  */
 #include <stddef.h>
 #include "robin/conn.h"
@@ -11,6 +10,7 @@
 #include "robin/esa.h"
 #include "robin/hostps.h"
 #include "robin/ie.h"
+#include "robin/led.h"
 #include "robin/protection.h"
 #include "robin/pspoll.h"
 #include "robin/rom.h"
@@ -42,26 +42,7 @@ enum {
 	TLV_SLEEP_INACTIVITY = 0x16b,
 	TLV_SESSION_TIMEOUT = 0x171,
 	TLV_PS_HOST_CONFIG = 0x172,
-	TLV_TABLE_MODES = 0x108,
-	TLV_TABLE_VALUES = 0x109,
 };
-
-/* The groups of the rate tables of 0x4e, and the entries of each. */
-#define WLAN_TABLE_GROUPS	3
-#define WLAN_TABLE_ENTRIES	9
-
-struct WlanTableEntry {
-	uint8_t reserved0;
-	uint8_t mode;
-	uint8_t low;
-	uint8_t high;
-};
-
-struct WlanTableGroup {
-	struct WlanTableEntry entries[WLAN_TABLE_ENTRIES];
-};
-
-_Static_assert(sizeof(struct WlanTableGroup) == 36, "table group");
 
 extern uint16_t wlanPsSessionTimeout;							/* 0x568cc */
 extern struct WlanPsHostConfig wlanPsHostConfig;					/* 0x568be */
@@ -75,9 +56,9 @@ void *mdevRomComputeState(void *table, int next);					/* ROM 0x03f065a2 */
 /* The ROM expires the software timers through this one (0x54e98). */
 extern void (*wlanSoftTimerExpireHook)(struct WlanSoftTimer *timer);			/* 0x54e98 */
 
-/* The 0x108 TLV of 0x4e: the mode of every entry of a group; calls changed() when a group's mode changes. */
-unsigned int wlanPsSetupDescriptor(const uint8_t *tlv, uint16_t length, struct WlanTableGroup *table,
-				   void (*changed)(void))
+/* TLV_LED_GPIO: each LED's pin, for every state; release() frees a pin the LED gives up. */
+unsigned int ledGpioTlvParse(const uint8_t *tlv, uint16_t length, struct LedConfig *config,
+			     void (*release)(unsigned int pin))
 {
 	unsigned int size = TLV_LENGTH(tlv);
 	unsigned int remaining;
@@ -88,87 +69,87 @@ unsigned int wlanPsSetupDescriptor(const uint8_t *tlv, uint16_t length, struct W
 	remaining = (uint16_t)(length - 4);
 	item = tlv + 4;
 	while (remaining >= 2 && size >= 2) {
-		unsigned int group = item[0];
-		const uint8_t *mode = item + 1;
+		unsigned int led = item[0];
+		const uint8_t *gpio = item + 1;
 
-		if (group < 4 && group != 0) {
-			struct WlanTableGroup *entries = &table[group - 1];
-			unsigned int current = entries->entries[0].mode;
+		if (led < LED_COUNT + 1 && led != 0) {
+			struct LedConfig *states = &config[led - 1];
+			unsigned int current = states->behavior[0].gpio;
 			unsigned int i;
 
-			if (current != 18) {
-				if (*mode == 18 || current != *mode)
-					changed();
+			if (current != LED_GPIO_NONE) {
+				if (*gpio == LED_GPIO_NONE || current != *gpio)
+					release(current);
 			}
-			for (i = 0; i < WLAN_TABLE_ENTRIES; i = (uint8_t)(i + 1))
-				entries->entries[i].mode = *mode;
+			for (i = 0; i < LED_FIRMWARE_STATES; i = (uint8_t)(i + 1))
+				states->behavior[i].gpio = *gpio;
 		}
-		item = mode + 1;
+		item = gpio + 1;
 		remaining = (uint16_t)(remaining - 2);
 		size = (uint16_t)(size - 2);
 	}
 	return (uint16_t)(TLV_LENGTH(tlv) + 4);
 }
 
-/* The 0x109 TLV of 0x4e: the two values of an entry of a group. */
-unsigned int wlanPsReleaseDescriptor(const uint8_t *tlv, int length, struct WlanTableGroup *table)
+/* TLV_LED_BEHAVIOR: what one LED does in one firmware state. */
+unsigned int ledBehaviorTlvParse(const uint8_t *tlv, int length, struct LedConfig *config)
 {
 	if (TLV_LENGTH(tlv) == 4) {
-		unsigned int entry = tlv[4];
+		unsigned int state = tlv[4];
 
-		if (entry < WLAN_TABLE_ENTRIES) {
-			unsigned int group = tlv[5];
+		if (state < LED_FIRMWARE_STATES) {
+			unsigned int led = tlv[5];
 
-			if (group - 1 < WLAN_TABLE_GROUPS) {
-				table[group - 1].entries[entry].low = tlv[6];
-				table[group - 1].entries[entry].high = tlv[7];
+			if (led - 1 < LED_COUNT) {
+				config[led - 1].behavior[state].state = tlv[6];
+				config[led - 1].behavior[state].argument = tlv[7];
 			}
 		}
 	}
 	return (uint16_t)(TLV_LENGTH(tlv) + 4);
 }
 
-/* The answer to 0x4e: the modes of the groups, then every entry's values. */
-unsigned int wlanPsClearDescriptor(uint8_t *out, const struct WlanTableGroup *table)
+/* The answer to 0x4e: each LED's pin, then its behaviour in every state. */
+unsigned int ledControlTlvsPut(uint8_t *out, const struct LedConfig *config)
 {
-	unsigned int group;
-	unsigned int entry;
+	unsigned int led;
+	unsigned int state;
 	uint16_t size = 4;
 
-	out[0] = TLV_TABLE_MODES & 0xff;
-	out[1] = TLV_TABLE_MODES >> 8;
+	out[0] = TLV_LED_GPIO & 0xff;
+	out[1] = TLV_LED_GPIO >> 8;
 	out[2] = 6;
 	out[3] = 0;
 	out += 4;
-	group = 0;
+	led = 0;
 	do {
-		const struct WlanTableGroup *entries = &table[group];
+		const struct LedConfig *states = &config[led];
 
-		group = (uint8_t)(group + 1);
-		*out++ = group;
-		*out++ = entries->entries[0].mode;
+		led = (uint8_t)(led + 1);
+		*out++ = led;
+		*out++ = states->behavior[0].gpio;
 		size += 2;
-	} while (group < WLAN_TABLE_GROUPS);
-	group = 0;
+	} while (led < LED_COUNT);
+	led = 0;
 	do {
-		const struct WlanTableGroup *entries = &table[group];
+		const struct LedConfig *states = &config[led];
 
-		group = (uint8_t)(group + 1);
-		entry = 0;
+		led = (uint8_t)(led + 1);
+		state = 0;
 		do {
-			out[0] = TLV_TABLE_VALUES & 0xff;
-			out[1] = TLV_TABLE_VALUES >> 8;
+			out[0] = TLV_LED_BEHAVIOR & 0xff;
+			out[1] = TLV_LED_BEHAVIOR >> 8;
 			out[2] = 4;
 			out[3] = 0;
-			out[4] = entry;
-			out[5] = group;
-			out[6] = entries->entries[entry].low;
-			out[7] = entries->entries[entry].high;
+			out[4] = state;
+			out[5] = led;
+			out[6] = states->behavior[state].state;
+			out[7] = states->behavior[state].argument;
 			out += 8;
 			size += 8;
-			entry = (uint8_t)(entry + 1);
-		} while (entry < WLAN_TABLE_ENTRIES);
-	} while (group < WLAN_TABLE_GROUPS);
+			state = (uint8_t)(state + 1);
+		} while (state < LED_FIRMWARE_STATES);
+	} while (led < LED_COUNT);
 	return (uint16_t)(wlanTlvTerminate(out) + size);
 }
 

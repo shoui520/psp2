@@ -24,6 +24,7 @@
 #include "robin/eventpower.h"
 #include "robin/hostcmd.h"
 #include "robin/hostps.h"
+#include "robin/led.h"
 #include "robin/mactx.h"
 #include "robin/phy.h"
 #include "robin/psctl.h"
@@ -928,7 +929,7 @@ allocate:
 		sdioWakeLine.polarity = wake->line.polarity;
 		sdioWakeLine.width = wake->line.width;
 		if (wake->line.pin != 0xffff) {
-			uapSqramAdjustEntry((uint8_t)wake->line.pin, 0xffff);
+			ledGpioRelease((uint8_t)wake->line.pin, 0xffff);
 			gpioPinWrite((sdioWakeLine.pin), (sdioWakeLine.polarity));
 			gpioPinSelect((uint8_t)sdioWakeLine.pin, 1);
 		}

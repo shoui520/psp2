@@ -9,6 +9,7 @@
 #include "robin/clock.h"
 #include "robin/coex.h"
 #include "robin/conn.h"
+#include "robin/led.h"
 #include "robin/psctl.h"
 #include "robin/mac.h"
 #include "robin/osa.h"
@@ -70,8 +71,6 @@ uint32_t sysGetBusClock(void);					/* 0x23b0a, in Hz */
 void sysSleepAllow(uint32_t votes);				/* 0x23d64 */
 void sysSleepForbid(uint32_t votes);				/* 0x23dea */
 int sysEnableEventSources(uint32_t sources);			/* 0x351c */
-void uapSqramFilterEntry(int enable);				/* SQRAM 0xc0009ba0 */
-int uapSqramHandleTable(void);					/* SQRAM 0xc00099e5 */
 
 uint32_t sleepWakeLatency __attribute__((section(".itcm.bss")));
 uint8_t sleepKeepWakeTiming __attribute__((section(".itcm.bss")));
@@ -306,7 +305,7 @@ void sleepExit(void)
 	romMacSleepNotify();
 	MAC_514_SLEEP_MODE = sleepSavedMode;
 	MAC_650_OPERATION &= ~MAC_OPERATION_ASLEEP;
-	uapSqramFilterEntry(wlanAnyConnectionFlags2Bit4() ? 2 : uapSqramHandleTable());
+	ledFirmwareStateSet(wlanAnyConnectionFlags2Bit4() ? 2 : ledLinkStateGet());
 	osaResumeTimers();
 }
 
@@ -417,10 +416,10 @@ int sleepEnter(const uint64_t *deadline, uint32_t margin, uint32_t minimum, uint
 	if (deadline != NULL)
 		elapsed = sleepElapsedUs();
 	if (elapsed != 0) {
-		uapSqramFilterEntry(3);
+		ledFirmwareStateSet(3);
 		wake |= 0x01;
 	} else {
-		uapSqramFilterEntry(4);
+		ledFirmwareStateSet(4);
 	}
 	clockHostApplyTarget();
 	if (wake & 0x01)

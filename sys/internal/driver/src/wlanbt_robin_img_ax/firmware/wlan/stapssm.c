@@ -15,6 +15,7 @@
 #include "robin/conn.h"
 #include "robin/autotx.h"
 #include "robin/dmaring.h"
+#include "robin/led.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
@@ -125,7 +126,6 @@ void macMgmtValidateTable(int reason);			/* 0x3726c */
 int wlanPsProcessHeader(void);				/* 0x3dd26 */
 uint32_t wlanPsParseHeader(uint64_t *wake, uint16_t *margin);	/* 0x3defe */
 void wlanPsPrepareHeader(uint64_t *next);		/* 0x3dd98 */
-void uapSqramFilterEntry(int enable);			/* SQRAM 0xc0009ba0 */
 
 static inline __attribute__((always_inline)) void wlanStaPsRestartTimer(TX_TIMER *timer, ULONG ticks)
 {
@@ -1350,7 +1350,7 @@ void wlanPsPeriodRetryExpired(uint32_t timer, uint32_t argument)
 		return;
 	wlanPsRetries = 0;
 	wlanPsRetryTimer = 0;
-	uapSqramFilterEntry(2);
+	ledFirmwareStateSet(2);
 	wlanRaiseEvent(3);
 }
 
@@ -1674,7 +1674,7 @@ request:
 retry:
 	sysIrqRestore(irq);
 	wlanPsRetries = 15;
-	uapSqramFilterEntry(3);
+	ledFirmwareStateSet(3);
 	wlanPsArmRetryTimer((uint16_t)wlanPsPeriodSleepTime, wlanPsPeriodRetryExpired);
 	wlanPsIeeeFlag = 0;
 	wlanPsIeeeFlagAtSleep = 0;

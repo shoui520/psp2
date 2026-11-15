@@ -1,5 +1,5 @@
 /*
- * The calibration data the host loads (uapSqramParseTable decodes it into
+ * The calibration data the host loads (sqram/caldata.c decodes it into
  * these tables, one per band index): values by kind, each held in a slot
  * with a validity mask, so that a lookup can tell "not loaded" from zero.
  * The names are inferred from use; the filename is too.
@@ -10,7 +10,7 @@
 #include "robin/mef.h"
 #include "robin/runtime.h"
 
-#define WLAN_CALIB_BANDS		2	/* the band index of uapSqramBuildEntry() */
+#define WLAN_CALIB_BANDS		2	/* the band index of calDataBandIndex() */
 #define WLAN_CALIB_POWER_LEVELS		21	/* transmit powers 2 to 22 dBm */
 #define WLAN_CALIB_POWER_FIRST		2
 #define WLAN_CALIB_RANGES		4
@@ -23,6 +23,10 @@ uint8_t wlanCalibFlags[2] __attribute__((section(".itcm.rw")));		/* 0x54e3c */
 uint8_t wlanCalibValue1[5] __attribute__((section(".itcm.rw")));		/* 0x54e3e */
 uint8_t wlanCalibValue0[5] __attribute__((section(".itcm.rw")));		/* 0x54e43 */
 uint8_t wlanCalibValue2[5] __attribute__((section(".itcm.rw")));		/* 0x54e48 */
+
+const uint8_t *calDataImage __attribute__((section(".itcm.rw")));		/* 0x54e50 */
+const uint16_t *calDataImageOffset __attribute__((section(".itcm.rw")));	/* 0x54e54 */
+unsigned int (*calDataFlagsHook)(int index) __attribute__((section(".itcm.rw")));	/* 0x54e58 */
 
 uint8_t wlanCalibSignal[9] __attribute__((section(".itcm.bss")));		/* 0x5ee8c */
 uint8_t wlanCalibBlock[17] __attribute__((section(".itcm.bss")));		/* 0x5ee95 */

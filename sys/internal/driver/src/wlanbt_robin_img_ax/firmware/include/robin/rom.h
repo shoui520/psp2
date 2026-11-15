@@ -67,6 +67,9 @@ unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the 
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */
 uint64_t romGetTimerTimestamp(void);
+/* The MAC event mask, saved and restored around a channel measurement (sqram/chanrpt.c; inferred). */
+uint32_t romMacEventMaskGet(void);		/* 0x03f3a8ad */
+void romMacEventMaskSet(uint32_t mask);		/* 0x03f3a8a7 */
 uint32_t romGetMicroseconds(void);		/* 0x03f3a7cb: the MAC's clock, low word, microseconds */
 uint64_t romLibRecordState(uint32_t reference);	/* 0x03f3a76f: the current 64-bit time */
 void romLibProcessContext(void *timing);	/* 0x03f3a7e3 */

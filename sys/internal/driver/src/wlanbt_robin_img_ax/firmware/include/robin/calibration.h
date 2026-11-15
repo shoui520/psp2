@@ -49,7 +49,8 @@ struct WlanTxPowerRequest {
 
 /* The transmit power record of a band (22 bytes). */
 struct WlanTxPowerRecord {
-	uint8_t reserved0[4];
+	uint16_t frequencyLow;		/* MHz: the band index covers frequencyLow..frequencyHigh */
+	uint16_t frequencyHigh;
 	uint8_t ranges;			/* power ranges in rangeHigh/rangeLow */
 	uint8_t channels;		/* channels in channelList */
 	uint8_t minimum;		/* dBm */
@@ -63,7 +64,7 @@ _Static_assert(sizeof(struct WlanTxPowerRecord) == 22, "transmit power record");
 
 /* The power levels of a transmit power lookup. */
 struct WlanTxPowerLevels {
-	uint8_t reserved;
+	uint8_t index;			/* the level's transmit power index (calibration data annex 16) */
 	uint8_t first;
 	uint8_t second;
 	uint8_t third;			/* bits 0-6; bit 7 kept */
@@ -158,5 +159,33 @@ int wlanCalibRangeAdjustSet(unsigned int index, int mode, unsigned int range, un
 int wlanCalibRangeAdjustGet(unsigned int index, int mode, unsigned int range, unsigned int channel,
 			    struct WlanCalibAdjust *adjust);			/* 0x2a182 */
 void wlanCalibRangeAdjustClear(void);							/* 0x2a1e6 */
+
+/*
+ * Where the calibration data is read from (sys/calibdata.c; the decoder, sqram/caldata.c,
+ * sets them): the image, the image offset its first byte has, and the hook that gives the
+ * flags the type 14 and 37 entries keep.
+ */
+extern const uint8_t *calDataImage;			/* 0x54e50 */
+extern const uint16_t *calDataImageOffset;		/* 0x54e54 */
+extern unsigned int (*calDataFlagsHook)(int index);	/* 0x54e58 */
+
+/* The calibration data decoder (sqram/caldata.c). */
+int calDataChecksumOk(const uint8_t *data, unsigned int length);
+int calDataRead(int fromHost, void *buffer, unsigned int offset, unsigned int length);
+int16_t calDataInterpolate(int low, int high, int lowPoint, int highPoint, int point);
+void calDataChannelBase(unsigned int channel, unsigned int band, uint16_t *base);
+uint16_t calDataChannelFrequency(unsigned int band, unsigned int channel);
+unsigned int calDataChannelNumber(unsigned int band, unsigned int channel);
+unsigned int calDataBandIndex(unsigned int band, unsigned int channel);
+unsigned int calDataSecondaryIndex(unsigned int secondary);
+int calDataLoadAnnex14(int fromHost, unsigned int offset);
+int calDataLoadAnnex16(int fromHost, unsigned int offset);
+int calDataLoadAnnex18(int fromHost, unsigned int offset);
+int calDataLoadAnnex31(int fromHost, unsigned int offset);
+int calDataLoadAnnex42(int fromHost, unsigned int offset);
+int calDataLoadAnnex49(int fromHost, unsigned int offset);
+int calDataLoadAnnex52(int fromHost, unsigned int offset);
+int calDataLoadAnnex53(int fromHost, unsigned int offset);
+int calDataLoadAnnex54(int fromHost, unsigned int offset);
 
 #endif /* ROBIN_CALIBRATION_H */

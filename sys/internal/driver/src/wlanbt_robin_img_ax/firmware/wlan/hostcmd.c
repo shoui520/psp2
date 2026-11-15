@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/led.h"
 #include "robin/osa.h"
 #include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
@@ -69,7 +70,6 @@
 
 /* Not converted yet; provisional names. */
 unsigned int clockCurrentRate(void);				/* 0x2761a */
-void uapSqramFilterEntry(int enable);					/* SQRAM 0xc0009ba0 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 extern uint16_t hostCmdRateDefault;					/* SQRAM 0xc0011ba8 */
 extern uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS];			/* SQRAM 0xc0011b8a */
@@ -341,7 +341,7 @@ int wlanPsHostModeExit(void)
 		wlanPsPostEvent(2);
 		result = 0;
 		if (wlanConnectionExists(1))
-			uapSqramFilterEntry(wlanPsFilterState != 0 ? 2 : 5);
+			ledFirmwareStateSet(wlanPsFilterState != 0 ? 2 : 5);
 	}
 	return result;
 }
@@ -424,8 +424,6 @@ void hostCmd0020Setup(unsigned int value);					/* SQRAM 0xc000a3d4 */
 void hostCmd0024(struct WlanConnection *connection, uint8_t *body);		/* 0x341aa */
 void hostCmd0036(uint8_t *body, int authenticator, uint8_t *state);		/* 0x2cc7e */
 void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
-void hostCmd004eSet(uint8_t *body, unsigned int length);			/* SQRAM 0xc0009bea */
-unsigned int hostCmd004eGet(uint8_t *body);					/* SQRAM 0xc0009c50 */
 unsigned int hostCmd005d(uint8_t *body);					/* 0x418d4 */
 unsigned int hostCmd005e(struct WlanConnection *connection, uint8_t *data, uint8_t *end); /* 0x3eb24 */
 unsigned int hostCmd005eGet(struct WlanConnection *connection, uint8_t *data);	/* 0x3ebe2 */
@@ -963,7 +961,7 @@ int hostCmdProcess(void)
 			goto done;
 
 		case 43:	/* HostCmd_CMD_802_11_AD_HOC_START */
-			uapSqramFilterEntry(5);
+			ledFirmwareStateSet(5);
 			__aeabi_uwrite4(0, wlanIbssJoinState);
 			wlanIbssConnection = connection;
 			wlanPsFilterState = 0;
@@ -972,7 +970,7 @@ int hostCmdProcess(void)
 			goto quiet;
 
 		case 44:	/* HostCmd_CMD_802_11_AD_HOC_JOIN */
-			uapSqramFilterEntry(2);
+			ledFirmwareStateSet(2);
 			__aeabi_uwrite4(0, wlanIbssJoinState);
 			wlanIbssConnection = connection;
 			wlanPsFilterState = 0;

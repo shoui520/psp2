@@ -8,6 +8,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/led.h"
 #include "robin/ratesel.h"
 #include "robin/buffer.h"
 #include "robin/txhold.h"
@@ -92,7 +93,6 @@ void macMgmtValidateTable(int reason);							/* 0x3726c */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
 void wlanMacFlush(void);									/* 0x1c840 */
-void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
 extern uint8_t wlanScanRequested;							/* 0x54c80 */
 extern uint16_t wlanIbssAtimWindow;							/* 0x54b94 */
 extern uint8_t *hostCmdResponseData;						/* 0x54bbc */
@@ -308,7 +308,7 @@ static void cbProcReportMgmt(struct WlanConnection *connection)
 		}
 		wlanMgmtReport.code = 0;
 	} else {
-		uapSqramFilterEntry(5);
+		ledFirmwareStateSet(5);
 		wlanHostEventSendPlain(connection, 17);
 	}
 }

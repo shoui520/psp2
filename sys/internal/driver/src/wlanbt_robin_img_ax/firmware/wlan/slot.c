@@ -2,6 +2,7 @@
  * Channel-time request scheduler. The filename is inferred; no source
  * filename survives.
  */
+#include "robin/led.h"
 #include "robin/mgmt.h"
 #include "robin/slot.h"
 #include "robin/rom.h"
@@ -18,8 +19,6 @@ static uint32_t wlanSlotLastHandle __attribute__((section(".dtcm.bss")));
 
 /* Unconverted callees. */
 int macMgmtSyncContext(struct WlanConnection *connection);				/* 0x3576a */
-void uapSqramRecordEntry(unsigned int posture);						/* SQRAM via 0x52d3c */
-void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
 
 #define SCHED	wlanSlotScheduler
 
@@ -211,7 +210,7 @@ int wlanSlotRun(void)
 		wlanReleaseStateSemaphore();
 		break;
 	case 3:
-		uapSqramFilterEntry(1);
+		ledFirmwareStateSet(1);
 		SCHED.current->phase = 4;
 		wlanSlotBegin();
 		return WLAN_SLOT_OK;
@@ -340,7 +339,8 @@ int wlanSlotFinish(void)
 	SCHED.current->handle = 0;
 	wlanSlotUnlock();
 	SCHED.current = wlanSlotPopNext();
-	uapSqramRecordEntry(sysIrqRestore(posture));
+	sysIrqRestore(posture);
+	ledStateRefresh();
 	if (SCHED.current != NULL)
 		osaCreateTimer((OsaTimerCallback)wlanSlotStart, (uint32_t)SCHED.current, 100000,
 			       &SCHED.current->timer, SCHED.current->timerFlags);

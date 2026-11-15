@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/led.h"
 #include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
@@ -144,7 +145,6 @@ static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((sec
 void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
-void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
@@ -153,7 +153,6 @@ void macMgmtResetFrame(void);								/* 0x3abf6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
-void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
 void p2pDirectCheckState(void);								/* 0x3f34c */
@@ -171,7 +170,7 @@ static int wlanTxNotifyIdle(void)
 {
 	int result = wlanTxInFlightWatchdog();
 
-	uapSqramSelectEntry();
+	ledIdle();
 	return result;
 }
 
@@ -226,7 +225,7 @@ static int wlanInitStageRadio(void)
 	}
 	bbpInit();
 	rfInitStage(0);
-	uapSqramVerifyEntry();
+	ledInit();
 	hostCmd0074Reset();
 	hostCmd0074Arm();
 	MAC_REG(0x514) = 0x9e12a8bf;

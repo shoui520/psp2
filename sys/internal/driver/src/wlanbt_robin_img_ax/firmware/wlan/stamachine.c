@@ -9,6 +9,7 @@
  * hands it events (macMgmtSetupContext(), wlan/chanctx.c).
  */
 #include <stddef.h>
+#include "robin/led.h"
 #include "robin/p2pgo.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
@@ -89,7 +90,6 @@ extern WlanWirelessFrame *wlanIbssProbeResponseFrame;		/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;			/* 0x54c2c */
 
 int wlanSlotCancelFlag0(void);							/* 0xb984 */
-void uapSqramFilterEntry(int enable);						/* SQRAM 0xc0009ba0 */
 
 struct WlanMgmtReport wlanMgmtReport __attribute__((section(".itcm.bss")));		/* 0x57832 */
 uint8_t wlanProbeRates[14] __attribute__((section(".itcm.bss")));			/* 0x57824 */
@@ -380,7 +380,7 @@ void macMgmtScheduleState(struct WlanConnection *connection)
 	__aeabi_memclr(connection->peerAddress, 6);
 	macMgmtConfigureEntry(NULL, NULL, NULL, NULL, NULL);
 	wlanSlotCancelFlag0();
-	uapSqramFilterEntry(0);
+	ledFirmwareStateSet(0);
 	if (!(connection->hostFlags & WLAN_CONN_HOST_FLAG_8)) {
 		UINT posture = sysIrqDisable();
 

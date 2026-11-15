@@ -20,9 +20,6 @@
 #define WLAN_SECONDARY_BELOW		3
 
 /* Not converted yet; provisional names. */
-unsigned int uapSqramBuildEntry(unsigned int band, unsigned int channel);	/* 0xc0008f81 */
-int uapSqramValidateEntry(int low, int high, int lowPoint, int highPoint, int point); /* 0xc0008ef3 */
-unsigned int uapSqramComputeEntry(unsigned int secondary);			/* 0xc0008fbb */
 void uapSqramCheckTable(const uint8_t *data, unsigned int offset, unsigned int length,
 			unsigned int action);					/* 0xc0009cc5 */
 int uapSqramNotifyTable(const uint8_t *data, unsigned int offset, unsigned int length,
@@ -71,7 +68,7 @@ unsigned int wlanTxPowerMax(unsigned int channel, unsigned int band)
 {
 	struct WlanTxPowerRecord record;
 
-	if (wlanCalibPowerGet(uapSqramBuildEntry(band, channel), &record))
+	if (wlanCalibPowerGet(calDataBandIndex(band, channel), &record))
 		return record.maximum;
 	return WLAN_TX_POWER_DEFAULT_MAX;
 }
@@ -81,7 +78,7 @@ unsigned int wlanTxPowerMin(unsigned int channel, unsigned int band)
 {
 	struct WlanTxPowerRecord record;
 
-	if (wlanCalibPowerGet(uapSqramBuildEntry(band, channel), &record))
+	if (wlanCalibPowerGet(calDataBandIndex(band, channel), &record))
 		return record.minimum;
 	return 0;
 }
@@ -316,7 +313,7 @@ int wlanTxPowerLookup(struct WlanCalibrationKey key, struct WlanTxPowerRequest r
 	struct WlanCalibAdjust adjust, other;
 	unsigned int index, mode, power, secondary, channel;
 
-	index = uapSqramBuildEntry(key.band, key.channel);
+	index = calDataBandIndex(key.band, key.channel);
 	if (!wlanCalibPowerGet(index, &record))
 		return 0;
 	if (request.power > record.maximum)
@@ -353,15 +350,15 @@ int wlanTxPowerLookup(struct WlanCalibrationKey key, struct WlanTxPowerRequest r
 			highPoint = high + WLAN_CHANNEL_WRAP;
 		if (channel < low)
 			channel += WLAN_CHANNEL_WRAP;
-		adjust.value[0] = uapSqramValidateEntry(adjust.value[0], other.value[0], low, highPoint, channel);
-		adjust.value[1] = uapSqramValidateEntry(adjust.value[1], other.value[1], low, highPoint, channel);
+		adjust.value[0] = calDataInterpolate(adjust.value[0], other.value[0], low, highPoint, channel);
+		adjust.value[1] = calDataInterpolate(adjust.value[1], other.value[1], low, highPoint, channel);
 	}
 	base.first += adjust.value[1];
 	base.second += adjust.value[1];
 	base.third = ((base.third + adjust.value[0]) & 0x7f) | (base.third & 0x80);
 
 	if (request.bandwidth == WLAN_BANDWIDTH_40) {
-		if (!wlanCalibSecondaryGet(index, uapSqramComputeEntry(secondary), &other))
+		if (!wlanCalibSecondaryGet(index, calDataSecondaryIndex(secondary), &other))
 			return 0;
 		base.first += other.value[0];
 		base.second += other.value[0];
@@ -377,7 +374,7 @@ int wlanCalibrationLookupBlock(struct WlanCalibrationKey key, void *block)
 {
 	uint8_t buffer[8];
 
-	if (!wlanCalibBlockGet(uapSqramBuildEntry(key.band, key.channel), buffer))
+	if (!wlanCalibBlockGet(calDataBandIndex(key.band, key.channel), buffer))
 		return 0;
 	__aeabi_memcpy(block, buffer, sizeof(buffer));
 	return 1;
@@ -387,7 +384,7 @@ int wlanCalibrationLookupQuad(struct WlanCalibrationKey key, void *values)
 {
 	uint32_t buffer;
 
-	if (!macTxNotifyScheduleFrame(uapSqramBuildEntry(key.band, key.channel), &buffer))
+	if (!macTxNotifyScheduleFrame(calDataBandIndex(key.band, key.channel), &buffer))
 		return 0;
 	__aeabi_memcpy(values, &buffer, sizeof(buffer));
 	return 1;
@@ -412,7 +409,7 @@ int wlanCalibrationLookupInterpolated(struct WlanCalibrationKey key, uint8_t *va
 	unsigned int index, channel = key.channel;
 	uint16_t value;
 
-	index = uapSqramBuildEntry(key.band, key.channel);
+	index = calDataBandIndex(key.band, key.channel);
 	if (!macTxNotifyFormatFrame(index, &buffer) ||
 	    !wlanCalibPowerGet(index, &record) ||
 	    !wlanCalibrationChannelBracket(record.channelList, record.channels, channel,
@@ -439,7 +436,7 @@ int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value)
 {
 	uint16_t result;
 
-	if (!wlanCalibValue1Get(uapSqramBuildEntry(key.band, key.channel), &result))
+	if (!wlanCalibValue1Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
 	*value = result;
 	return 1;
@@ -449,7 +446,7 @@ int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value)
 {
 	uint16_t result;
 
-	if (!wlanCalibValue0Get(uapSqramBuildEntry(key.band, key.channel), &result))
+	if (!wlanCalibValue0Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
 	*value = result;
 	return 1;
@@ -459,7 +456,7 @@ int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value)
 {
 	uint16_t result;
 
-	if (!wlanCalibValue2Get(uapSqramBuildEntry(key.band, key.channel), &result))
+	if (!wlanCalibValue2Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
 	*value = result;
 	return 1;
@@ -483,7 +480,7 @@ int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values)
 	struct WlanCalibSignal signal;
 	int8_t *buffer = signal.value;
 
-	if (!wlanCalibSignalGet(uapSqramBuildEntry(key.band, key.channel), &signal))
+	if (!wlanCalibSignalGet(calDataBandIndex(key.band, key.channel), &signal))
 		return 0;
 	if (buffer[3] == buffer[2])
 		buffer[0] = buffer[1];
