@@ -180,6 +180,9 @@ enum {
 #define RFBUS_STATUS		REG16(0x9000081c)
 #define RFBUS_DATA		REG8(0x90000824)
 #define RFBUS_ADDRESS		REG16(0x90000828)
+#define RFBUS_BUSY		REG8(0x9000081c)	/* bit 0: a transfer is under way */
+#define RFBUS_DATA16		REG16(0x90000824)	/* the data register written as a halfword */
+#define RFBUS_MODE		REG16(0x90000830)
 #define RFBUS_STATUS_BUSY	0x1c7
 #define SOC_IRQ_LINE_FATAL	23
 

@@ -15,7 +15,7 @@ int macResetAssert(void);
 int macResetRelease(void);
 uint8_t *macRadioPowerCycle(void);
 void rfBusSettle(void);
-void socHookNop(void);
+void socHookNop(int argument);
 uint8_t *rfRestart(void);
 unsigned int socClockSetDivider(char divider);
 unsigned int socClockSetMode(void);
@@ -37,11 +37,22 @@ void rfRegSequenceB(void);
 void rfRegSequenceC(void);
 void rfRegSequenceInit(void);
 int socStrapIsSet(void);
-void uapSelectEntry(void);
-uint32_t uapActiveEntryGet(void);
+void sleepClockSelect(void);
+uint32_t sleepClockRateGet(void);
 void sysDelayHookInit(void);
 unsigned int sysPendingEventPolicyIsEnabled(void);
 int wlanPsSetupEntry(void);
+void socHookNop2(void);
+void socHookNop3(void);
+void socHookNop4(int argument);
+
+/* The radio's power-up, run first by the init stage rfCalibInitStage() (sqram/rfpower.c). */
+int rfPowerOn(void);
+
+/* The sleep clock's source; each returns the sleep clock rate, 32768 Hz (sqram/rfpower.c). */
+#define SLEEP_CLOCK_RATE	0x8000
+uint32_t sleepClockUseInternal(void);	/* SQRAM 0xc0008d7e, via the veneer at 0x5307c */
+uint32_t sleepClockUseExternal(void);	/* SQRAM 0xc0008e2e, via the veneer at 0x53074 */
 
 int rfEventTransitionActive(void);
 int rfBlock0Set(int on);
@@ -65,8 +76,6 @@ extern uint32_t sysMacVersion;				/* 0x040089dc */
 /* Not converted yet; provisional names. Addresses are those of the 4.00 image. */
 void macTxNotifyResetPacket(void);			/* 0x32940 */
 int wlanPsSetupHeader(void);				/* 0x3e29c */
-uint32_t uapSqramUpdateEntry(void);			/* SQRAM 0xc0008e2e, via the veneer at 0x53074 */
-uint32_t uapSqramProcessEntry(void);			/* SQRAM 0xc0008d7e, via the veneer at 0x5307c */
 int p2pSqramPrepareEntry(uint8_t entry, int mode);	/* SQRAM 0xc000e290, via the veneer at 0x5306c */
 
 #endif /* ROBIN_SOCPOWER_H */

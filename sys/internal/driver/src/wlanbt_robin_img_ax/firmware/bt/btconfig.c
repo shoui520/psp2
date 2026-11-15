@@ -34,14 +34,14 @@ int btSbcVerifyState(unsigned int type, struct BtConfigHeader *record, unsigned 
 	unsigned int i;
 	uint8_t sum;
 
-	uapSqramConvertContext();
-	uapSqramSelectContext(0, &node);
+	nvramOpen();
+	nvramRead(0, &node);
 	if (node == NVRAM_MAGIC) {
-		uapSqramSelectContext(BT_CONFIG_LIST_HEAD, &node);
+		nvramRead(BT_CONFIG_LIST_HEAD, &node);
 		while (node != 0xffffffff) {
-			uapSqramSelectContext(node + 4, &entry);
+			nvramRead(node + 4, &entry);
 			if (entry != 0xffffffff) {
-				uapSqramSelectContext(entry, &word);
+				nvramRead(entry, &word);
 				if ((uint8_t)word == type) {
 					found = entry;
 					break;
@@ -50,14 +50,14 @@ int btSbcVerifyState(unsigned int type, struct BtConfigHeader *record, unsigned 
 			node = entry;
 		}
 	}
-	uapSqramVerifyContext();
+	nvramClose();
 	if (found != 0) {
 		data = (uint32_t *)record;
-		uapSqramConvertContext();
+		nvramOpen();
 		words = length >> 2;
 		for (i = 0; i < words; i++)
-			uapSqramSelectContext(found + 4 * i, data++);
-		uapSqramVerifyContext();
+			nvramRead(found + 4 * i, data++);
+		nvramClose();
 		sum = 0;
 		for (i = 0; i < record->length; i++)
 			sum += ((uint8_t *)record)[i];
@@ -79,11 +79,11 @@ void btSbcSelectState(struct BtConfigHeader *record, unsigned int length, uint32
 	for (i = 0; i < length; i++)
 		sum += ((uint8_t *)record)[i];
 	record->checksum = BT_CONFIG_CHECKSUM - sum;
-	uapSqramConvertContext();
-	uapSqramRecordContext(1, 0);
-	uapSqramAdjustContext(offset, *(uint32_t *)record);
-	uapSqramRecordContext(0, 0);
-	uapSqramVerifyContext();
+	nvramOpen();
+	nvramControl(NVRAM_CONTROL_WRITE_ENABLE, 0, NULL);
+	nvramWrite(offset, *(uint32_t *)record);
+	nvramControl(NVRAM_CONTROL_WRITE_DISABLE, 0, NULL);
+	nvramClose();
 }
 
 /* Makes the BD_ADDR from two values, unless one was stored. */
@@ -195,15 +195,15 @@ int btSbcHandleContext(unsigned int item, const uint8_t *value, int set)
 		word = (uint32_t *)keys->key;
 		__aeabi_memcpy(keys->key, value, 16);
 		if (btConfigStore.keyFound != 0) {
-			uapSqramConvertContext();
+			nvramOpen();
 			for (i = 0; i < 4; i++) {
-				uapSqramRecordContext(1, 0);
-				uapSqramAdjustContext(btConfigStore.keyOffset + place, *word);
-				uapSqramRecordContext(0, 0);
+				nvramControl(NVRAM_CONTROL_WRITE_ENABLE, 0, NULL);
+				nvramWrite(btConfigStore.keyOffset + place, *word);
+				nvramControl(NVRAM_CONTROL_WRITE_DISABLE, 0, NULL);
 				place += 4;
 				word++;
 			}
-			uapSqramVerifyContext();
+			nvramClose();
 			btSbcSelectState(&keys->header, sizeof(*keys), btConfigStore.keyOffset);
 		}
 		return 16;
@@ -225,23 +225,23 @@ int btSbcHandleContext(unsigned int item, const uint8_t *value, int set)
 		keys->linkKeyMask &= ~(1u << (item - btLinkKeyFirstItem));
 	}
 	if (btConfigStore.keyFound != 0) {
-		uapSqramConvertContext();
-		uapSqramRecordContext(1, 0);
-		uapSqramAdjustContext(btConfigStore.keyOffset + 24, keys->linkKeyMask);
-		uapSqramRecordContext(0, 0);
+		nvramOpen();
+		nvramControl(NVRAM_CONTROL_WRITE_ENABLE, 0, NULL);
+		nvramWrite(btConfigStore.keyOffset + 24, keys->linkKeyMask);
+		nvramControl(NVRAM_CONTROL_WRITE_DISABLE, 0, NULL);
 		/* The words that hold the entry; the mask's word too when it starts one. */
 		place = BT_LINK_KEY_ENTRY * slot + 26;
 		if (item & 1)
 			place -= 2;
 		word = (uint32_t *)((uint8_t *)keys + place);
 		for (i = 0; i < 6; i++) {
-			uapSqramRecordContext(1, 0);
-			uapSqramAdjustContext(btConfigStore.keyOffset + place, *word);
-			uapSqramRecordContext(0, 0);
+			nvramControl(NVRAM_CONTROL_WRITE_ENABLE, 0, NULL);
+			nvramWrite(btConfigStore.keyOffset + place, *word);
+			nvramControl(NVRAM_CONTROL_WRITE_DISABLE, 0, NULL);
 			place += 4;
 			word++;
 		}
-		uapSqramVerifyContext();
+		nvramClose();
 		btSbcSelectState(&keys->header, sizeof(*keys), btConfigStore.keyOffset);
 	}
 	return set;

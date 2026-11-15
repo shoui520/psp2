@@ -783,9 +783,9 @@ void sysIdleWait(void)
 
 	if (sysIdleTime != 0)
 		start = osaGetHardwareTime();
-	fmCoexAdjustState();
+	serialBusIdleEnter();
 	robinCpuWaitForInterrupt();
-	fmCoexRecordState();
+	serialBusIdleLeave();
 	if (sysIdleTime != 0)
 		sysIdleTime += osaGetHardwareTime() - start;
 }
@@ -986,7 +986,7 @@ void sysEventEngineInit(void)
 	sysInitializeEventRegisters();
 	upper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingA[sysRefClockProfile()]) /
 			   1000000 + 1);
-	lower = (uint16_t)(romMul32x32(uapActiveEntryGet(), rfCalibrationTable[13 + sysRefClockProfile()]) /
+	lower = (uint16_t)(romMul32x32(sleepClockRateGet(), rfCalibrationTable[13 + sysRefClockProfile()]) /
 			   1000000 + 1);
 	sysSetEventPrimaryTiming(lower, upper);
 	secondaryUpper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingB[sysRefClockProfile()]) /
@@ -1097,7 +1097,7 @@ uint32_t sysEventClockNow(void)
 uint32_t sysEventClockElapsedUs(uint32_t since)
 {
 	uint32_t elapsed = sysReadEventClock() - since;
-	uint32_t frequency = uapActiveEntryGet();
+	uint32_t frequency = sleepClockRateGet();
 
 	return romMul32x32(elapsed, 1000000) / frequency;
 }

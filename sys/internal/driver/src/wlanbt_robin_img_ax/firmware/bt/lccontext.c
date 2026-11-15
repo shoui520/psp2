@@ -83,7 +83,7 @@ int btLmpLcConfigureContext(void)
 	SOC_REG(0x9c) &= ~0x80000u;
 	if ((SOC_REG(0x18) & 0xff) != 0)
 		SOC_REG(0x9c) &= ~4u;
-	rate = uapActiveEntryGet();
+	rate = sleepClockRateGet();
 	if (rate == 3200) {
 		SOC_REG(0x44) |= 0x3000000;
 	} else if (rate == 32000) {

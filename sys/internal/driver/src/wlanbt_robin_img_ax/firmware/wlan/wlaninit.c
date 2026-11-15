@@ -53,6 +53,7 @@
 #include "robin/apps.h"
 #include "robin/assocAp.h"
 #include "robin/hostcmd.h"
+#include "robin/nvram.h"
 #include "robin/session.h"
 #include "robin/softtimer.h"
 #include "robin/macentry.h"
@@ -414,9 +415,9 @@ struct WlanSessionOps wlanSessionOps __attribute__((section(".itcm.bss")));	/* 0
 
 void wlanSessionOpsInit(void)
 {
-	wlanSessionOps.eepromOpen = uapSqramConvertContext;
-	wlanSessionOps.eepromRead = uapSqramSelectContext;
-	wlanSessionOps.eepromClose = uapSqramVerifyContext;
+	wlanSessionOps.eepromOpen = nvramOpen;
+	wlanSessionOps.eepromRead = nvramRead;
+	wlanSessionOps.eepromClose = nvramClose;
 	wlanSessionOps.hostEventSend = wlanHostEventSendPlain;
 	wlanSessionOps.mgmtPrepare = macMgmtPrepareContext;
 	wlanSessionOps.supplicantClearPMK = wlanPsConvertDescriptor;

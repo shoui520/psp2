@@ -27,7 +27,7 @@ uint8_t flashMode __attribute__((section(".itcm.rw")));		/* 0x553e0 */
 uint8_t flashId __attribute__((section(".itcm.rw")));			/* 0x553e1 */
 
 /* Reads count of the one-time programmable bytes from offset on; 1 for a bad request. */
-int fmCoexSetupState(unsigned int offset, uint8_t *buffer, unsigned int count)
+int otpRead(unsigned int offset, uint8_t *buffer, unsigned int count)
 {
 	UINT posture;
 	unsigned int bank;
@@ -38,7 +38,7 @@ int fmCoexSetupState(unsigned int offset, uint8_t *buffer, unsigned int count)
 	if (count == 0 || buffer == NULL || offset >= OTP_BYTES)
 		return 1;
 	posture = sysIrqDisable();
-	fmCoexClearState();
+	otpClockOpen();
 	OTP_COMMAND = 0;
 	for (bank = 0; bank < 1; bank++) {
 		control = 0xfc;
@@ -67,19 +67,19 @@ int fmCoexSetupState(unsigned int offset, uint8_t *buffer, unsigned int count)
 	}
 	if (count == 1)
 		*buffer = OTP_DATA(offset >> 1);
-	fmCoexConvertState();
+	otpClockClose();
 	sysIrqRestore(posture);
 	return 0;
 }
 
 /* Opens the one-time programmable store's clock. */
-__attribute__((noinline)) void fmCoexClearState(void)
+__attribute__((noinline)) void otpClockOpen(void)
 {
 	SOC_EVENT_CONTROL = SOC_EVENT_CONTROL;
 	SOC_SLEEP_MEASURE_CONTROL |= 4;
 }
 
-__attribute__((noinline)) void fmCoexConvertState(void)
+__attribute__((noinline)) void otpClockClose(void)
 {
 	SOC_EVENT_CONTROL = SOC_EVENT_CONTROL;
 	SOC_SLEEP_MEASURE_CONTROL &= ~4;
@@ -99,7 +99,7 @@ static inline void eepromSendAddress(unsigned int mode, uint32_t address)
 }
 
 /* Whether bytes 1..3 of the EEPROM hold the ID word's. */
-int fmCoexVerifyState(void)
+int eepromProbe(void)
 {
 	int match = 1;
 	int stopped;
@@ -138,14 +138,14 @@ int fmCoexVerifyState(void)
 }
 
 /* Whether a flash with the ID word is fitted; in mode 2 it is woken and unprotected. */
-int fmCoexSelectState(void)
+int flashProbe(void)
 {
 	int found = 0;
 	uint8_t id;
 
 	if (flashMode != 1 && flashMode != 2)
 		return 0;
-	if (fmCoexPrepareContext(0) == NVRAM_MAGIC)
+	if (flashReadWord(0) == NVRAM_MAGIC)
 		found = 1;
 	if (flashMode == 2 && found == 1) {
 		SERIAL_TRANSFER_WORD = 0x4c2;
@@ -154,21 +154,21 @@ int fmCoexSelectState(void)
 		SERIAL_DATA_WORD = 0;
 		SERIAL_DATA_WORD = 1;
 		id = SERIAL_DATA_WORD;
-		fmCoexProcessContext();
+		serialTransferWait();
 		if (id == 0xff) {
 			found = 0;
 		} else {
 			flashId = id;
-			fmCoexUpdateContext();
-			fmCoexCheckContext(0);
-			fmCoexValidateContext();
+			flashWriteEnable();
+			flashWriteStatus(0);
+			flashWriteDisable();
 		}
 	}
 	return found;
 }
 
 /* Before the idle wait: the bus clock drops to the idle client's vote. */
-void fmCoexAdjustState(void)
+void serialBusIdleEnter(void)
 {
 	uint32_t bus = clockRequestedBus(CLOCK_CLIENT_IDLE);
 	uint32_t vote = clockRequestedVote(CLOCK_CLIENT_IDLE);
@@ -178,7 +178,7 @@ void fmCoexAdjustState(void)
 }
 
 /* After the idle wait: the bus clock comes back. */
-void fmCoexRecordState(void)
+void serialBusIdleLeave(void)
 {
 	uint32_t bus = clockRequestedBus(CLOCK_CLIENT_IDLE);
 
@@ -187,7 +187,7 @@ void fmCoexRecordState(void)
 }
 
 /* Writes a word to the EEPROM, waits for it to finish and returns what a dummy read gives. */
-uint32_t fmCoexFilterState(uint32_t address, uint32_t value)
+uint32_t eepromWriteWord(uint32_t address, uint32_t value)
 {
 	unsigned int mode;
 
@@ -216,7 +216,7 @@ uint32_t fmCoexFilterState(uint32_t address, uint32_t value)
 }
 
 /* Reads a big-endian word of the EEPROM. */
-uint32_t fmCoexHandleContext(uint32_t address)
+uint32_t eepromReadWord(uint32_t address)
 {
 	uint32_t value = 0;
 	short i;
@@ -235,7 +235,7 @@ uint32_t fmCoexHandleContext(uint32_t address)
 }
 
 /* Waits for the serial transfer; returns the polls left. */
-__attribute__((noinline)) unsigned int fmCoexProcessContext(void)
+__attribute__((noinline)) unsigned int serialTransferWait(void)
 {
 	unsigned int polls = SERIAL_TRANSFER_POLLS;
 
@@ -245,35 +245,35 @@ __attribute__((noinline)) unsigned int fmCoexProcessContext(void)
 	return polls;
 }
 
-__attribute__((noinline)) unsigned int fmCoexUpdateContext(void)
+__attribute__((noinline)) unsigned int flashWriteEnable(void)
 {
 	SERIAL_TRANSFER = 0x420;
 	RFBUS_DATA = FLASH_WRITE_ENABLE;
-	return fmCoexProcessContext();
+	return serialTransferWait();
 }
 
 /* The flash's status register. */
-__attribute__((noinline)) uint8_t fmCoexConfigureContext(void)
+__attribute__((noinline)) uint8_t flashReadStatus(void)
 {
 	uint8_t status;
 
 	SERIAL_TRANSFER = 0x408;
 	RFBUS_DATA = FLASH_READ_STATUS;
 	status = RFBUS_DATA;
-	fmCoexProcessContext();
+	serialTransferWait();
 	return status;
 }
 
 /* Writes the flash's status register; 0xff when it stays busy. */
-int fmCoexCheckContext(uint8_t status)
+int flashWriteStatus(uint8_t status)
 {
 	uint32_t timeout = flashConfig.statusTimeout;
 
 	SERIAL_TRANSFER = 0x404;
 	RFBUS_DATA = FLASH_WRITE_STATUS;
 	RFBUS_DATA = status;
-	fmCoexProcessContext();
-	while (fmCoexConfigureContext() & FLASH_STATUS_BUSY) {
+	serialTransferWait();
+	while (flashReadStatus() & FLASH_STATUS_BUSY) {
 		sysDelayHook(FLASH_POLL_US);
 		if (timeout-- == 0)
 			return 0xff;
@@ -281,11 +281,11 @@ int fmCoexCheckContext(uint8_t status)
 	return 0;
 }
 
-__attribute__((noinline)) unsigned int fmCoexValidateContext(void)
+__attribute__((noinline)) unsigned int flashWriteDisable(void)
 {
 	SERIAL_TRANSFER = 0x410;
 	RFBUS_DATA = FLASH_WRITE_DISABLE;
-	return fmCoexProcessContext();
+	return serialTransferWait();
 }
 
 /* The flash address, in as many bytes as the flash takes. */
@@ -300,7 +300,7 @@ static inline void flashSendAddress(unsigned int bytes, uint32_t address)
 }
 
 /* Reads a big-endian word of the flash. */
-uint32_t fmCoexPrepareContext(uint32_t address)
+uint32_t flashReadWord(uint32_t address)
 {
 	unsigned int bytes = flashConfig.addressBytes;
 	uint32_t value = 0;
@@ -309,14 +309,14 @@ uint32_t fmCoexPrepareContext(uint32_t address)
 	SERIAL_TRANSFER = ((bytes + 3) << 6) | 0x402;
 	RFBUS_DATA = FLASH_READ;
 	flashSendAddress(bytes, address);
-	fmCoexProcessContext();
+	serialTransferWait();
 	for (i = 0; i < 4; i++)
 		value = value << 8 | RFBUS_DATA;
 	return value;
 }
 
 /* Programs a big-endian word of the flash and waits for it. */
-void fmCoexDispatchContext(uint32_t address, uint32_t value)
+void flashWriteWord(uint32_t address, uint32_t value)
 {
 	unsigned int bytes = flashConfig.addressBytes;
 	uint32_t timeout = flashConfig.programTimeout;
@@ -328,8 +328,8 @@ void fmCoexDispatchContext(uint32_t address, uint32_t value)
 	RFBUS_DATA = value >> 16;
 	RFBUS_DATA = value >> 8;
 	RFBUS_DATA = value;
-	fmCoexProcessContext();
-	while (fmCoexConfigureContext() & FLASH_STATUS_BUSY) {
+	serialTransferWait();
+	while (flashReadStatus() & FLASH_STATUS_BUSY) {
 		sysDelayHook(FLASH_POLL_US);
 		if (timeout-- == 0)
 			return;
@@ -337,7 +337,7 @@ void fmCoexDispatchContext(uint32_t address, uint32_t value)
 }
 
 /* Erases a 64 KiB sector of the flash and waits for it. */
-void fmCoexParseContext(uint16_t sector)
+void flashEraseSector(uint16_t sector)
 {
 	uint32_t address = (uint32_t)sector << 16;
 	unsigned int bytes;
@@ -351,8 +351,8 @@ void fmCoexParseContext(uint16_t sector)
 		RFBUS_DATA = address >> 16;
 	RFBUS_DATA = address >> 8;
 	RFBUS_DATA = address;
-	fmCoexProcessContext();
-	while (fmCoexConfigureContext() & FLASH_STATUS_BUSY) {
+	serialTransferWait();
+	while (flashReadStatus() & FLASH_STATUS_BUSY) {
 		sysDelayHook(FLASH_POLL_US);
 		if (timeout-- == 0)
 			return;

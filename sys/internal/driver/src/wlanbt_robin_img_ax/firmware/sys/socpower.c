@@ -33,7 +33,7 @@
 
 static int8_t socSensorOffset __attribute__((section(".sqram1.rw"))) = SENSOR_OFFSET_UNREAD;
 /* What the entry the strap picked returned. */
-static uint32_t uapActiveEntry __attribute__((section(".sqram1.rw"))) = 0x8000;
+static uint32_t sleepClockRate __attribute__((section(".sqram1.rw"))) = SLEEP_CLOCK_RATE;
 /* The delay routine the Mask ROM calls. */
 int (*sysDelayHook)(uint32_t microseconds) __attribute__((section(".itcm.rw")));
 
@@ -122,7 +122,7 @@ void rfBusSettle(void)
 	rfBusWaitIdle();
 }
 
-void socHookNop(void)
+void socHookNop(int argument)
 {
 }
 
@@ -258,7 +258,7 @@ int socSensorCalibration(void)
 
 	if (socSensorOffset == SENSOR_OFFSET_UNREAD) {
 		socSensorOffset = 0;
-		if (fmCoexSetupState(10, (uint8_t *)&value, 1) == 0 && (value & 0x80)) {
+		if (otpRead(10, (uint8_t *)&value, 1) == 0 && (value & 0x80)) {
 			socSensorOffset = value & 0x3f;
 			if (value & 0x40)
 				socSensorOffset = -(value & 0x3f);
@@ -362,7 +362,7 @@ void rfCalibrateTrim(void)
 	int trim;
 	uint8_t status;
 
-	if (fmCoexSetupState(0, (uint8_t *)&state, 1) != 0 || !(state & 0x40)) {
+	if (otpRead(0, (uint8_t *)&state, 1) != 0 || !(state & 0x40)) {
 		rfRegBegin();
 		rfRegClearBits(31, 32);
 		rfRegClearBits(52, 26);
@@ -442,7 +442,7 @@ void rfRegSequenceInit(void)
 	macTxNotifyResetPacket();
 }
 
-void socHookNop4(void)
+void socHookNop4(int argument)
 {
 }
 
@@ -452,21 +452,21 @@ int socStrapIsSet(void)
 	return (SOC_REG(0) & 0x10) != 0;
 }
 
-/* The entry the SQRAM code gives, by the strap. */
-void uapSelectEntry(void)
+/* The sleep clock: the external one when the strap is set, else the internal oscillator. */
+void sleepClockSelect(void)
 {
-	uint32_t entry;
+	uint32_t rate;
 
 	if (socStrapIsSet())
-		entry = uapSqramUpdateEntry();
+		rate = sleepClockUseExternal();
 	else
-		entry = uapSqramProcessEntry();
-	uapActiveEntry = entry;
+		rate = sleepClockUseInternal();
+	sleepClockRate = rate;
 }
 
-uint32_t uapActiveEntryGet(void)
+uint32_t sleepClockRateGet(void)
 {
-	return uapActiveEntry;
+	return sleepClockRate;
 }
 
 void sysDelayHookInit(void)

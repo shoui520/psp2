@@ -378,7 +378,7 @@ int btSbcReleaseEntry(void)
 uint32_t btSbcSetupEntry(uint32_t clock)
 {
 	if (socStrapIsSet() != 0)
-		return uapActiveEntryGet();
+		return sleepClockRateGet();
 	FM_REGISTER(0x3e4) = 2;
 	if (clock != 0)
 		return clock;
