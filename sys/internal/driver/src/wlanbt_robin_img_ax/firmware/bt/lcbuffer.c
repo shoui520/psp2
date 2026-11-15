@@ -14,6 +14,7 @@
 #include "robin/rfbus.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sys.h"
 #include "robin/threadx.h"
 
 #define LINK_HALF(offset)	(*(BtHalf *)(btLinkContext + (offset)))
@@ -2947,4 +2948,59 @@ void btLmpLcAcquireFrame(unsigned int link)
 	    (*(volatile uint16_t *)&btLinkControlWord[2] | 1u << (kind + 4)) == 0)
 		return;
 	btLinkControlWord[2] &= ~(1u << (kind + 4));
+}
+
+/* The control word's bit for the link's kind follows the record's mask, then the ROM's step. */
+int btLmpLcReleaseFrame(unsigned int link)
+{
+	unsigned int flags = *(BtHalf *)(btLtsRomValidateState(0) + link * 40 + 6);
+	unsigned int kind = flags & 3;
+
+	if ((1u << kind) & ((flags >> 10) & 0xf))
+		btLinkControlWord[2] |= 1u << (kind + 4);
+	else
+		btLinkControlWord[2] &= ~(1u << (kind + 4));
+	return btLtsRomHandleState(link);
+}
+
+/*
+ * HCI Read Clock (parameters: handle, which clock). The local clock (which 0) is the ROM's clock
+ * with two bits below it from the time since btTableClockStart (1250 us a tick); a piconet clock
+ * needs a connected handle (state 2), else the command completes with 0x02.
+ */
+void btLmpLcSetupFrame(const uint8_t *parameters)
+{
+	unsigned int status = 0;
+	unsigned int handle = parameters[0] | parameters[1] << 8;
+	uint32_t clock = 0;
+
+	if (parameters[2] == 0) {
+		clock = (sysEventClockElapsedUs(btTableClockStart) * 4 / 1250) & 3;
+		clock |= btLtsRomParseState(0) << 2;
+	} else if (btHccRomApplyState()[handle * 120] == 2) {
+		clock = btLtsRomParseState(romHctHostSlot[handle][4]) << 2;
+	} else {
+		status = 2;
+	}
+	btHciReturnParameters[4] = handle;
+	btHciReturnParameters[5] = handle >> 8;
+	btHciReturnParameters[6] = clock;
+	btHciReturnParameters[7] = clock >> 8;
+	btHciReturnParameters[8] = clock >> 16;
+	btHciReturnParameters[9] = clock >> 24;
+	btHciReturnParameters[10] = 0;
+	btHciReturnParameters[11] = 0;
+	btBdhRomCheckContext(12, status, 5, 7);
+}
+
+/* A scan with a window starts the clock HCI Read Clock counts from. */
+int btLmpLcClearFrame(void)
+{
+	unsigned int window = *(BtHalf *)(btLinkScanWindow + 32);
+
+	if (window != 0) {
+		btTableClockStart = sysReadEventClock();
+		btLdrRomCheckState(window);
+	}
+	return btLdrRomValidateState(0);
 }

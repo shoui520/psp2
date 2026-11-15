@@ -38,6 +38,8 @@ void (*btTableRadioWrite)(uint16_t reg, uint32_t value) __attribute__((section("
 	btLdaRomCheckState;							/* 0x552b4 */
 /* The ROM's per-handle busy bytes (btLmpLcInspectPacket()). */
 const uint8_t *btTablePeerBusy __attribute__((section(".itcm.rw"))) = btPeerBusy;	/* 0x552b8 */
+/* The event clock btLmpLcClearFrame() started the scan at; HCI Read Clock counts from it. */
+uint32_t btTableClockStart __attribute__((section(".itcm.rw")));		/* 0x552bc */
 /* The ROM's record of the last host request's slots. */
 struct BtSlotRequest *btTableSlotRequest __attribute__((section(".itcm.rw"))) = &btSlotRequest;	/* 0x552c0 */
 /* The link states (bit n: state n) whose slots may be cut short (btLmpLcManagePacket()). */

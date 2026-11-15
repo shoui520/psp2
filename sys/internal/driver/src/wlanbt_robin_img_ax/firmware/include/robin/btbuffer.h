@@ -228,6 +228,9 @@ extern void (*btTableConnectFail)(const uint8_t *message);	/* 0x552f8 */
 extern uint16_t btTargetCounts[8];				/* 0x400de60: per host slot, 0xffff: none */
 extern uint32_t btTargetLinkClocks[4];				/* 0x400de70: per link */
 extern uint32_t btTargetLastClock;				/* 0x400f990 */
+extern uint8_t btHciReturnParameters[];			/* 0x400b294: a command complete's return parameters */
+extern uint8_t *btLinkScanWindow;				/* 0x400f90c: halfword 32 the scan window */
+extern uint32_t btTableClockStart;				/* 0x552bc: the event clock the scan started at */
 extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
 extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
@@ -401,6 +404,9 @@ int btLmpLcInspectFrame(void);					/* 0x47f7e */
 void btLmpLcTrackFrame(void);					/* 0x47fc4 */
 int btLmpLcManageFrame(uint32_t features);			/* 0x4809c */
 void btLmpLcAcquireFrame(unsigned int link);			/* 0x480be */
+int btLmpLcReleaseFrame(unsigned int link);			/* 0x48108 */
+void btLmpLcSetupFrame(const uint8_t *parameters);		/* 0x4814a */
+int btLmpLcClearFrame(void);					/* 0x481ca */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
