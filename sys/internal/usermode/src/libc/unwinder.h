@@ -110,6 +110,7 @@ void _Unwind_DeleteException(_Unwind_Control_Block *ucbp);
 #define _UAARG_ENDING_CPP_BADOPCODE		4
 #define _UAARG_ENDING_UNWINDER_LOOKUPFAILED	5
 #define _UAARG_ENDING_UNWINDER_BUFFERFAILED	6
+void _Unwind_DebugHook(void);
 void _Unwind_Activity(_Unwind_Control_Block *ucbp, unsigned int reason, unsigned int arg);
 
 #ifdef __cplusplus

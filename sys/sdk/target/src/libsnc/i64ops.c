@@ -1,6 +1,6 @@
 /*
  * The 64-bit helpers of SNC's runtime library (libsnc i64div.o, u64div.o,
- * i64mod.o, u64mod.o, a64shl.o, l64shr.o, i64utils.o): SNC calls them for
+ * u64mod.o, a64shl.o, l64shr.o, i64utils.o; i64mod.o is i64mod.c): SNC calls them for
  * 64-bit "/", "%" and shifts by a variable count.  Division is restoring
  * shift-and-subtract on the normalised divisor; divisions that fit 32 bits
  * go to __udivsi3 / __divsi3.
@@ -161,9 +161,4 @@ long long __divdi3(long long n, long long d)
 unsigned long long __umoddi3(unsigned long long n, unsigned long long d)
 {
 	return n - __udivdi3(n, d) * d;
-}
-
-long long __moddi3(long long n, long long d)
-{
-	return n - __divdi3(n, d) * d;
 }

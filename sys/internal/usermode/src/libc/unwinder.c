@@ -189,6 +189,10 @@ _Unwind_VRS_Result _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClas
 	return _UVRSR_FAILED;
 }
 
+void _Unwind_DebugHook(void)
+{	/* an empty debugger hook nothing calls, kept in the library */
+}
+
 void _Unwind_Activity(_Unwind_Control_Block *ucbp, unsigned int reason, unsigned int arg)
 {	/* a hook for debuggers: unwinding reached a point of interest */
 }
