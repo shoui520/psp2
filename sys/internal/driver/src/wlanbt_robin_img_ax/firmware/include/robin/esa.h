@@ -464,6 +464,19 @@ uint8_t pmkCacheGetHexNibble(uint8_t nibble);
 void pmkCacheGeneratePSK(uint8_t *pSsid, uint8_t ssidLen, char *pPassphrase,
 			 uint8_t *pPSK);
 
+/*
+ * pmkCache.c: the host's SUPPLICANT_PMK command (0x00c4) on the cache. The command body is a
+ * run of TLVs (SSID, BSSID, passphrase, PMK); a query appends its answer to the run, whose
+ * length is passed by pointer. The firmware's versions take the TLVs where Marvell's driver
+ * has an mlan_ds_passphrase.
+ */
+extern void (*ramHook_supplicantEnable)(void);					/* 0x54ea0 */
+extern uint8_t *(*ramHook_pmkCacheFindPSK)(uint8_t *pSsid, uint8_t ssidLen);	/* 0x54ea4 */
+extern uint8_t *ramHook_PSKPassPhrase;						/* 0x548a8 */
+unsigned int SupplicantSetPassphrase(const uint8_t *buffer, int length);	/* 0x2c688 */
+unsigned int SupplicantQueryPassphrase(uint8_t *buffer, uint16_t *length);	/* 0x2c790 */
+int SupplicantClearPMK_internal(const uint8_t *buffer, int length);		/* 0x2c88a */
+
 void supplicantGenerateRand(uint8_t *dataOut, uint32_t length);
 void ComputeEAPOL_MIC(EAPOL_KeyMsg_t *pKeyMsg, uint16_t data_length,
 		      uint8_t *MIC_Key, uint8_t MIC_Key_length,
