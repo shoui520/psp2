@@ -86,7 +86,6 @@
 static uint32_t cbProcCommandRetries __attribute__((section(".itcm.rw")));		/* 0x54ba0 */
 
 /* Not converted yet; provisional names. */
-void wlanPsApplyBuffer(void);								/* 0x3c686 */
 void wlanPsApplyHeader(void);								/* 0x3e0c0 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */

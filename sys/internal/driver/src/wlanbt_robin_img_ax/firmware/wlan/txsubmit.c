@@ -311,7 +311,7 @@ OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status)
 
 					status->rate = rate;
 					status->finalRate = rate;
-					status->reserved22 = ((const uint8_t *)done)[42] & 0xf;
+					status->rateOption = ((const uint8_t *)done)[42] & 0xf;
 					rateInfo = 0;
 				} else {
 					rateInfo = __aeabi_uread4(done->rateInfo);

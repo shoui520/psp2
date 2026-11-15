@@ -90,8 +90,6 @@ extern uint32_t wlanIbssPsActive;			/* 0x593d4 */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 int sysRefClockProfile(void);			/* 0x26842 */
 void clockHostSetMax(void);			/* 0x26ae0 */
-void wlanPsResolveBuffer(void);				/* 0x3c68e */
-void wlanPsSyncBuffer(void);				/* 0x3c65a */
 
 /* 0x168e0: the AP role is the only one present. */
 int wlanHasApRole(void)

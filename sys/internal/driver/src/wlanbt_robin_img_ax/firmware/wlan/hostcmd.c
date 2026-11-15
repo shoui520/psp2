@@ -499,7 +499,6 @@ extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
 extern uint8_t *wlanAntennaProfile;						/* 0x040088ca, unaligned */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
-extern struct WlanConnection *wlanIbssConnection;				/* 0x000596d0 */
 extern uint16_t wlanAmsduSize;							/* 0x04001004 */
 extern uint16_t wlanAmsduEnabled;						/* 0x04000ff8 */
 extern uint32_t wlanTxRateDefault;						/* 0x0400100c */

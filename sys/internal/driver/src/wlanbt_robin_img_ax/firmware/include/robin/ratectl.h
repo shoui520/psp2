@@ -45,17 +45,25 @@ struct WlanRateSlot {
 
 /* What the supervision of a peer's rate counts (32 bytes at WlanRateControl.window). */
 struct WlanRateWindow {
-	uint8_t reserved0[16];
+	uint8_t rate;			/* the rate counted (fmCoexAdjustTable()); bit 7: it is a probe */
+	uint8_t reserved1[3];
+	uint32_t exchanges;		/* the frame exchanges the statuses reported (fmCoexVerifyTable()) */
+	uint32_t sent;			/* the transmissions at the rate */
+	uint32_t delivered;		/* ... that were acknowledged */
 	uint32_t age;			/* milliseconds, up to 1000 (wlanPsValidateFrame()) */
 	uint32_t validated;		/* the transmit statistics added since: macTxStatsAddValidated() */
 	uint32_t prepared;		/* macTxStatsAddPrepared() */
 	uint32_t checked;		/* macTxStatsAddChecked(), at most 16 */
 };
 
-/* The level of the rate in use; wlanPsConfigureFrame() maps it: 0 to 2: 0, 3 to 4: 1, above: 2 (3 bytes). */
+/*
+ * How the rate in use fares (3 bytes), counted by fmCoexClearTable() from the transmit statuses;
+ * wlanPsConfigureFrame() maps the count of dropped frames: 0 to 2: level 0, 3 to 4: 1, above: 2.
+ */
 struct WlanRateLevel {
-	uint8_t reserved0[2];
-	uint8_t level;
+	uint8_t ackedRate;		/* the rate the last acknowledged frame was sent at */
+	uint8_t ackedRepeats;		/* the frames acknowledged in a row at it */
+	uint8_t dropped;		/* the frames dropped, with no transmission left, since one was acknowledged */
 };
 
 /* WlanConnection.rateControl (228 bytes). */
@@ -63,8 +71,9 @@ struct WlanRateControl {
 	uint32_t elapsed;		/* milliseconds since the last decision, 10 per supervision tick */
 	uint32_t frames;		/* the frames sent since: the prepared counts */
 	uint32_t timeout;		/* 1000: nothing decided yet */
-	uint8_t reserved12[8];
-	uint8_t anchor;			/* the index of rates[] the supervision started at */
+	uint32_t peerMask;		/* the rates the peer supports: one bit per rate index */
+	uint32_t rateMask;		/* the ones in use: peerMask less what the configuration excludes */
+	uint8_t last;			/* the last index of rates[]: the fastest */
 	uint8_t reserved21[7];
 	uint32_t highest;		/* the last index of rates[] in use */
 	uint32_t lowest;		/* the first one */
@@ -87,7 +96,7 @@ struct WlanRateControl {
 };
 
 _Static_assert(sizeof(struct WlanRateControl) == 228, "rate control");
-_Static_assert(offsetof(struct WlanRateControl, anchor) == 20, "rate anchor");
+_Static_assert(offsetof(struct WlanRateControl, last) == 20, "rate last");
 _Static_assert(offsetof(struct WlanRateControl, highest) == 28, "rate highest");
 _Static_assert(offsetof(struct WlanRateControl, window) == 60, "rate window");
 _Static_assert(offsetof(struct WlanRateControl, level) == 92, "rate level");
@@ -98,8 +107,8 @@ _Static_assert(offsetof(struct WlanRateControl, slot) == 188, "rate slot");
 _Static_assert(offsetof(struct WlanRateControl, rates) == 192, "rate index list");
 _Static_assert(offsetof(struct WlanRateControl, peerStatus) == 224, "rate peer status");
 
-/* The timeout of a rate index (microseconds, inferred): 0x04000f7c. */
-extern uint16_t wlanRateTimeoutTable[];
+/* The timeout of a rate index (microseconds, inferred): the table at 0x04001034, set by wlanPsApplyPacket(). */
+extern uint16_t *wlanRateTimeoutTable;			/* 0x04000f7c */
 
 /* The rates' words (wlanRatePolicy[]) and their weights (wlanRateWeight[]), by index. */
 extern const uint32_t wlanRatePolicy[WLAN_RATE_COUNT];		/* 0x53f8c */

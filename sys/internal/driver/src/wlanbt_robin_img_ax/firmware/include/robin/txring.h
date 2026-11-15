@@ -92,15 +92,25 @@ struct WlanTxStatus {
 	uint32_t result;		/* 0: acknowledged */
 	uint8_t rate;			/* rate index the frame was first sent at */
 	uint8_t finalRate;		/* rate index of the last transmission */
-	uint8_t reserved22;
+	uint8_t rateOption;		/* bits 16 to 19 of the rate word of the last transmission */
 	uint8_t retryBlocked;		/* the frame must not be sent again */
-	uint8_t reserved24;
+	uint8_t exchanges;		/* the frame exchanges the transmissions made (fmCoexConvertTable()) */
 	uint8_t retries;		/* transmissions after the first */
+	uint8_t acknowledged;		/* the last transmission was acknowledged */
+	uint8_t dataRetries;
+	uint8_t rtsTries;		/* the same, counted for the RTS exchange */
+	uint8_t rtsAcknowledged;
+	uint8_t rtsRetries;
+	uint8_t reserved31;
+	uint8_t ctsToSelf;		/* exchanges when the CTS-to-self protection was used */
+	uint8_t attempts[31];		/* the transmissions at each rate index */
 };
 
 _Static_assert(offsetof(struct WlanTxStatus, result) == 16, "transmit result");
 _Static_assert(offsetof(struct WlanTxStatus, retryBlocked) == 23, "retry blocked");
 _Static_assert(offsetof(struct WlanTxStatus, retries) == 25, "retries");
+_Static_assert(offsetof(struct WlanTxStatus, attempts) == 33, "attempts");
+_Static_assert(sizeof(struct WlanTxStatus) == 64, "transmit status");
 
 extern struct OsaBufferPool wlanBlockPool7;
 extern struct OsaBufferPool wlanBlockPool28;

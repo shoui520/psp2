@@ -45,6 +45,21 @@ unsigned int romRateIndex(unsigned int rate);	/* 0x03f3ab4f */
 unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order rates */
 struct WlanRateControl;
 unsigned int romLibNotifyEntry(unsigned int rate, struct WlanRateControl *rc, unsigned int limit); /* 0x03f3adfa */
+/*
+ * The ROM's rate tables: BuildEntry orders the rate indexes (the key wlanPsInspectBuffer() sorts by),
+ * ComputeEntry gives the rate in Mbit/s, and the next six give the thresholds the rate selection
+ * compares the transmissions of a window with: the fewest it needs, and the success percentages that
+ * decide to move up or down (fmCoexReleaseTable()). All take a rate index, 255 and 0 where a limit is
+ * asked for.
+ */
+unsigned int romLibBuildEntry(unsigned int rate);				/* 0x03f3ad62 */
+unsigned int romLibComputeEntry(unsigned int rate);				/* 0x03f3ad9a */
+unsigned int romLibApplyEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3add0 */
+unsigned int romLibQueryEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3ada8 */
+unsigned int romLibResolveEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3adde */
+unsigned int romLibResetEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3adb4 */
+unsigned int romLibScheduleEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3adec */
+unsigned int romLibSyncEntry(unsigned int rate, unsigned int limit, unsigned int flag);	/* 0x03f3adc2 */
 unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the link rate threshold */
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */

@@ -42,23 +42,46 @@ extern uint16_t wlanPsNullWindow;
 extern uint32_t wlanPendingEvents[2];
 
 /*
- * The IBSS power-save machine (0x5963c), made by the IBSS power-save code
- * (0x3c65a, not converted yet); only what wlan/psctl.c and wlan/hostps.c use.
+ * The IBSS power-save machine (0x5963c, wlan/ibsspsm.c): the reduced form of the station's
+ * (robin/stapssm.h). Off: power save is off. PowerSave and the states below it: Confirm waits for
+ * the host's confirmation of the sleep ("SleepConfirmTmr"), Enter prepares it, Sleep is power save
+ * proper. Ieee drives the 802.11 power-management null frames, IeeeHold below it. The names are
+ * inferred from use; the handlers keep the firmware's placeholder names (wlanPs*Buffer).
  */
 struct WlanIbssPsMachine {
 	struct RomHsmState *state;	/* current state */
 	struct RomHsmState root;
 	struct RomHsmState off;		/* the state romHsmStart() enters */
-	struct RomHsmState reserved28[3];
+	struct RomHsmState powerSave;
+	struct RomHsmState confirm;
+	struct RomHsmState enter;
 	struct RomHsmState sleep;
-	struct RomHsmState reserved76[2];
+	struct RomHsmState ieee;
+	struct RomHsmState ieeeHold;
 	TX_TIMER confirmTimer;		/* "SleepConfirmTmr" */
+	uint32_t awakeReported;		/* the host was told the station is awake */
+	struct WlanConnection *connection;	/* the IBSS (wlanIbssConnection) */
+	struct RomHsmState *resume;	/* the state IeeeHold returns to */
+	uint32_t wakeBits;		/* macTxAcquireWakeBit() while in IeeeHold */
 };
 
+_Static_assert(offsetof(struct WlanIbssPsMachine, off) == 16, "IBSS PS off state");
+_Static_assert(offsetof(struct WlanIbssPsMachine, confirm) == 40, "IBSS PS confirm state");
 _Static_assert(offsetof(struct WlanIbssPsMachine, sleep) == 64, "IBSS PS sleep state");
 _Static_assert(offsetof(struct WlanIbssPsMachine, confirmTimer) == 100, "IBSS PS confirm timer");
-
+_Static_assert(offsetof(struct WlanIbssPsMachine, ieeeHold) == 88, "IBSS PS IEEE hold state");
+_Static_assert(offsetof(struct WlanIbssPsMachine, awakeReported) == 144, "IBSS PS awake flag");
+_Static_assert(offsetof(struct WlanIbssPsMachine, connection) == 148, "IBSS PS connection");
+_Static_assert(offsetof(struct WlanIbssPsMachine, wakeBits) == 156, "IBSS PS wake bits");
+_Static_assert(sizeof(struct WlanIbssPsMachine) == 160, "IBSS PS machine");
 extern struct WlanIbssPsMachine wlanIbssPsMachine;
+#define wlanIbssConnection	(wlanIbssPsMachine.connection)
+
+int wlanPsCheckBuffer(void);				/* 0x3c20c */
+void wlanPsScheduleBuffer(struct WlanIbssPsMachine *machine);	/* 0x3c69c */
+int wlanPsSyncBuffer(void);				/* 0x3c65a */
+int wlanPsApplyBuffer(void);				/* 0x3c686 */
+void wlanPsResolveBuffer(void);				/* 0x3c68e */
 
 uint32_t wlanPsGetOverride(void);
 int wlanPsSessionOpen(void);

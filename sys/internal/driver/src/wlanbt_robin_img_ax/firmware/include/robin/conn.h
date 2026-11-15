@@ -585,7 +585,7 @@ struct WlanConnection {
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
 	uint16_t associationId;		/* AID the access point assigned */
-	uint8_t anchorRate;		/* rateControl.rates[rateControl.anchor] (macTxNotifyFilterPacket()) */
+	uint8_t anchorRate;		/* rateControl.rates[rateControl.last] (macTxNotifyFilterPacket()) */
 	uint8_t firstRate;		/* rateControl.rates[0] */
 	uint8_t probeRate;		/* the rate in use */
 	uint8_t currentRate;		/* the same: what HostCmd 0x7f reports while dataRate is 254 */

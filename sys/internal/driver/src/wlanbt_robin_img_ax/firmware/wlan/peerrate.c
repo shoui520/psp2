@@ -37,7 +37,7 @@ __attribute__((noinline)) int macTxNotifyFilterPacket(struct WlanConnection *con
 
 	connection->probeRate = current;
 	connection->currentRate = current;
-	connection->anchorRate = connection->peerLink.rateControl.rates[connection->peerLink.rateControl.anchor];
+	connection->anchorRate = connection->peerLink.rateControl.rates[connection->peerLink.rateControl.last];
 	connection->firstRate = connection->peerLink.rateControl.rates[0];
 	return 1;
 }
