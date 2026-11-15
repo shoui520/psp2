@@ -2019,3 +2019,44 @@ void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, u
 	btTargetFits = fits;
 	btTargetLongest = longest;
 }
+
+#define SLOT_REGISTER(link, offset)	(*(BtHalf *)(btLinkSlotRegisters + (link) * 32 + (offset)))
+
+/*
+ * The ROM's slot setup, with the link's slot registers held (bit 10) and the control word's bit 9
+ * clear while it runs: bit 8 follows the link state mask unless the link's record is of kind 3;
+ * an active link (state 1) drops bits 11-12 unless the mask keeps them and sets bit 7 of the link
+ * controller's register at 388 from the mask; an idle one (state 0) sets the control word's bit 9.
+ */
+void btLmpLcVerifyPacket(unsigned int slot, uint32_t first, uint32_t second)
+{
+	uint8_t *records = btLtsRomValidateState(0);
+	unsigned int state = btLtsRomCheckState();
+	unsigned int link = romHctHostSlot[slot][5];
+	uint8_t *record;
+	uint8_t mask;
+
+	btLtsRomConfigureState(slot, first, second);
+	SLOT_REGISTER(link, 0) &= ~0x400;
+	*btLinkControlWord &= ~0x200;
+	record = records + link * 40;
+	mask = btLinkStateMask;
+	if ((1u << state) & mask && (record[38] & 3) != 3)
+		SLOT_REGISTER(link, 2) |= 0x100;
+	else
+		SLOT_REGISTER(link, 2) &= ~0x100;
+	if (record[5] == 1) {
+		if (state == 0)
+			goto done;
+		if (!(mask & 4))
+			SLOT_REGISTER(link, 0) &= ~0x1800;
+		if (mask & 8)
+			LINK_HALF(388) |= 0x80;
+		else
+			LINK_HALF(388) &= ~0x80;
+	}
+	if (record[5] == 0)
+		*btLinkControlWord |= 0x200;
+done:
+	SLOT_REGISTER(link, 0) |= 0x400;
+}

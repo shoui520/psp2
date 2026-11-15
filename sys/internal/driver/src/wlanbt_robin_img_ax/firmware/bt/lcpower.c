@@ -93,6 +93,11 @@ uint16_t btPowerMaskEntry[BT_POWER_MASKS] __attribute__((section(".itcm.rw"))) =
 	0x0113, 0x0114, 0x0115, 0x0116, 0x0117, 0x0118, 0x0119, 0x012a,
 	0x0132, 0x0133, 0x0134, 0x0135,
 };
+/*
+ * Bits 0-1: the link states whose slot register keeps bit 8 set; bit 2: the registers of an
+ * active link keep bits 11-12; bit 3: bit 7 of the link controller's register at 388 is set.
+ */
+uint8_t btLinkStateMask __attribute__((section(".itcm.rw"))) = 1;		/* 0x55678 */
 uint8_t btPowerValueRecord __attribute__((section(".itcm.rw")));			/* 0x5578c */
 uint8_t btPowerLevelState[BT_POWER_PROFILES] __attribute__((section(".itcm.rw"))) = {	/* 0x5578d */
 	0, 1, 2, 7, 3, 4, 5, 7, 7, 6,

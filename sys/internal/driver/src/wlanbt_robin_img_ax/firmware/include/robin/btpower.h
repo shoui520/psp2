@@ -58,6 +58,7 @@ extern uint8_t btPowerLevelContext;				/* 0x55797: 7 when the level is fixed */
 extern uint8_t btPowerIndexCommand[8];				/* 0x55468 */
 extern uint8_t btPowerMaskContext[BT_POWER_MASKS][7];		/* 0x5557c */
 extern uint16_t btPowerMaskEntry[BT_POWER_MASKS];		/* 0x55640 */
+extern uint8_t btLinkStateMask;					/* 0x55678 */
 extern uint8_t btPowerValueRecord;				/* 0x5578c */
 extern uint8_t btPowerLevelState[BT_POWER_PROFILES];		/* 0x5578d */
 extern uint8_t btPowerLevelEntry;				/* 0x55798 */
