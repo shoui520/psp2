@@ -335,8 +335,10 @@ unsigned char powerResume(union PowerRequest *request)
 		break;
 	default:
 		P91 = 0;
+#if BOARD_POWER_P92_P15
 		P92 = 0;
 		P1.5 = 0;
+#endif
 		dly_tsk(1);
 		P1.7 = 1;
 #if FW_SINCE(0x01000306)
@@ -538,8 +540,10 @@ unsigned char powerShutdown(void)
 	P5.6 = 0;
 	powerPendingClear(4);
 	P91 = 0;
+#if BOARD_POWER_P92_P15
 	P92 = 0;
 	P1.5 = 0;
+#endif
 	dly_tsk(1);
 	P1.7 = 0;
 	dly_tsk(1);
@@ -593,8 +597,10 @@ unsigned char powerCut(void)
 	P5.6 = 0;
 	powerPendingClear(4);
 	P91 = 0;
+#if BOARD_POWER_P92_P15
 	P92 = 0;
 	P1.5 = 0;
+#endif
 	dly_tsk(1);
 	P1.7 = 0;
 	dly_tsk(1);

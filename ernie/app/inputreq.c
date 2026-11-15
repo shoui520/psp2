@@ -1213,7 +1213,7 @@ static void touchRequestUnlock0(void)
 		break;
 	case 1:
 		if (--inputRequests.touchTimer != 0) {
-			if (!P7.5) {
+			if (!BOARD_TOUCH_CHG_PIN) {
 				touchBootloaderStatus0(inputRequests.touchAnswer);
 				touchRequest.answerLength = 1;
 				inputRequests.touchPending = 0;
@@ -1360,7 +1360,7 @@ static void touchRequestFlash0(void)
 		break;
 	case 1:
 		if (--inputRequests.touchTimer != 0) {
-			if (!P7.5) {
+			if (!BOARD_TOUCH_CHG_PIN) {
 				touchBootloaderStatus0(&inputRequests.touchAnswer[2]);
 				inputRequests.touchPhase = 2;
 				inputRequests.touchTimer = 50;
@@ -1372,7 +1372,7 @@ static void touchRequestFlash0(void)
 		break;
 	case 2:
 		if (--inputRequests.touchTimer != 0) {
-			if (!P7.5) {
+			if (!BOARD_TOUCH_CHG_PIN) {
 				touchBootloaderStatus0(&inputRequests.touchAnswer[2]);
 				inputRequests.touchPhase = 3;
 				inputRequests.touchTimer = 50;
@@ -1384,7 +1384,7 @@ static void touchRequestFlash0(void)
 		}
 		break;
 	case 3:
-		if (inputRequests.touchTimer == 0 || !P7.5) {
+		if (inputRequests.touchTimer == 0 || !BOARD_TOUCH_CHG_PIN) {
 			inputRequests.touchAnswer[0] = inputRequests.touchData[0];
 			inputRequests.touchAnswer[1] = inputRequests.touchData[1];
 			inputRequests.touchPending = 0;

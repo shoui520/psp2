@@ -28,11 +28,20 @@
 
 extern unsigned char intp11Low(void);
 
-/* level less trim, or 0 when that is 0x40 or more */
+/* level less trim, or 0 when that is 0x40 or more; on IRS-1001 level plus trim, held to its
+   regulators' 0x48-0x87 */
 unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
 	unsigned char result;
 
+#if BOARD_IRS1001
+	result = level + trim;
+	if (result < 0x48)
+		result = 0x48;
+	if (result >= 0x88)
+		result = 0x87;
+	return result;
+#else
 #if FW_SINCE(0x0100060B)
 	/* Sony's adds the negated trim, and tests for a level below 0 too */
 	result = -trim + level;
@@ -44,6 +53,7 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 	if (result >= 0x40)
 		result = 0;
 	return result;
+#endif
 }
 
 #if BOARD_SERIAL2

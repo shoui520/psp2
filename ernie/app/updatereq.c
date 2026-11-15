@@ -16,6 +16,7 @@
 
 #include "ernie.h"
 #include "aes.h"
+#include "board.h"
 #include "command.h"
 #include "config.h"
 #include "downloader.h"
@@ -57,7 +58,19 @@ static unsigned char updaterExecProgramming(unsigned long sum);
 static unsigned char updaterExecFinalize(unsigned char *data);
 static unsigned char updaterWriteDlFlags(unsigned char flags);
 
-/* the updater key and IV (the PS Dev Wiki's "Ernie Updater AES128CBC Key") */
+/* the updater key and IV (the PS Dev Wiki's "Ernie Updater AES128CBC Key"; the IRS-1001 boards
+   have the 0x60 one) */
+#if BOARD_IRS1001
+const unsigned char updaterCryptoKey[16] = {
+	0x70, 0x14, 0xbe, 0xe6, 0x13, 0x67, 0x25, 0xb9,
+	0xff, 0xbe, 0x9a, 0x86, 0x14, 0xdd, 0x5c, 0x2a,
+};
+
+const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
+	0xfb, 0xd1, 0x1d, 0xf2, 0xe0, 0xaa, 0xee, 0x0b,
+	0x9c, 0x37, 0x38, 0x16, 0x3c, 0xb8, 0xb6, 0xbd,
+};
+#else
 const unsigned char updaterCryptoKey[16] = {
 	0xea, 0xe4, 0x3a, 0x1c, 0x48, 0xcd, 0x32, 0xa5,
 	0x65, 0xe2, 0xca, 0x7d, 0x8f, 0x90, 0x18, 0xdc,
@@ -67,6 +80,7 @@ const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
 	0xc9, 0xd9, 0x61, 0x9c, 0xa1, 0x51, 0x34, 0x2d,
 	0x04, 0x60, 0x2e, 0xcf, 0x0b, 0x8d, 0x6e, 0x33,
 };
+#endif
 
 /* 0x1185's signature is the syscon's identity XORed with this */
 const unsigned char updaterSignatureMask[24] = {

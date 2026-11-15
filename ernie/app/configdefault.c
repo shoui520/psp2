@@ -96,8 +96,14 @@ const struct ConfigBank configDefault = {
 #else
 		0x04, 0x01,	/* paramSetting1, paramSetting2: the charge LED's blink */
 #endif
+#if BOARD_IRS1001
+		{ 0x23, 0x23, 0x23, 0x23, 0x0b, 0x08, 0x05, 0x00, 0x00, 0x00 },	/* reserved41: PCH-1000's
+										   levels, unused */
+#else
 		0x23, 0x23, 0x23, 0x23,	/* voltage81-84 */
-#if ERNIE_BOARD == 0x00406000 && FW_SINCE(0x0100060B)
+#endif
+#if BOARD_IRS1001
+#elif ERNIE_BOARD == 0x00406000 && FW_SINCE(0x0100060B)
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
 		{ 0x00, 0x00, 0x00 },	/* reserved7 */
 #elif ERNIE_BOARD == 0x00406000
@@ -179,7 +185,12 @@ const struct ConfigBank configDefault = {
 		0x28, 0x08, 0x00,	/* touchDelaySelect, touchDelayByte, touchDelayDeselect */
 		0x03, 0x02, 0x00,	/* touchWriteTries, touchWriteReads, reserved6 */
 		0x04e2, 0x003e, 0x0001,	/* hostBusyLimit, hostIdleLimit, hostPause */
+#if BOARD_IRS1001
+		0x5f, 0x5f, 0x5f, 0x5f,	/* voltage81-84 */
+		0x08, 0x05,	/* reserved42, voltageTrim */
+#else
 		{ 0x5f, 0x5f, 0x5f, 0x5f, 0x08, 0x05 },	/* reserved28 */
+#endif
 		0x5aa5,	/* offTransitionBlock */
 		1, 0,	/* offTransition18, reserved29 */
 #endif

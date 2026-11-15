@@ -164,11 +164,14 @@ static void powerJobResume(void)
 	batteryBLLineOff();
 #if FW_SINCE(0x01000104)
 	powerResumed = 1;
+#if !BOARD_IRS1001
+	/* not on IRS-1001: the power LED's PWM restarted */
 	if (elmoRegA6 & 0x8000) {
 		powerLedSetPwm(0);
 		powerSleep(4);
 		powerLedSetPwm(1);
 	}
+#endif
 #else
 	powerLedFadeStart(0);
 	powerSleep(4);

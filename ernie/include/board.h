@@ -10,6 +10,27 @@
    ERNIE_BOARD), with what it keeps of the DEM boards' */
 #define BOARD_CEM3000NE2	(HW_IS(0x00404600) || HW_IS(0x00404800))
 
+/* the IRS-1001 boards (0x006xxxxx): PCH-1000's code (its ERNIE_BOARD) for a board with another
+   Elmo wiring and power steps */
+#define BOARD_IRS1001		((ERNIE_HW & 0x00ff0000) == 0x00600000)
+
+/* input 1's bit 7 and the touch panels' CHG line: P14.5 and P7.5, on IRS-1001 the other way
+   round */
+#if BOARD_IRS1001
+#define BOARD_INPUT1_BIT7_PIN	P7.5
+#define BOARD_TOUCH_CHG_PIN	P14.5
+#else
+#define BOARD_INPUT1_BIT7_PIN	P14.5
+#define BOARD_TOUCH_CHG_PIN	P7.5
+#endif
+
+/* P9.2 and P1.5 cleared with P9.1 by a resume's other requests, a shutdown and a cut: not on
+   0x00603000, which clears them only for an off */
+#define BOARD_POWER_P92_P15	(!HW_IS(0x00603000))
+
+/* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
+#define BOARD_POWER_STEPS	(BOARD_IRS1001 ? 4 : 3)
+
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K, which switches only the
    dongle's (P13.0) */
 #define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000)

@@ -21,17 +21,17 @@ void boardNone(int value)
 /* the Elmo mask steps of the resume (powerJob's), off and suspend sequences */
 unsigned char boardResumeSteps(void)
 {
-	return 3;
+	return BOARD_POWER_STEPS;
 }
 
 unsigned char boardOffSteps(void)
 {
-	return 3;
+	return BOARD_POWER_STEPS;
 }
 
 unsigned char boardSuspendSteps(void)
 {
-	return 3;
+	return BOARD_POWER_STEPS;
 }
 #endif
 

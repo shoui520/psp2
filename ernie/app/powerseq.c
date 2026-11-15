@@ -52,6 +52,27 @@ unsigned char elmoCommand[12];
 #define POWER_A2_HDMI		0x0000
 #endif
 
+#if BOARD_IRS1001
+/* IRS-1001's: four steps each */
+static const struct PowerStep powerResumeSteps[4] = {
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
+	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 4 },
+	{ { 0x7980, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x0a },
+	{ { 0x0002, 0x0000, 0x0100, 0x0000, 0x0000, 0x0000 }, 8 },
+};
+static const struct PowerStep powerOffSteps[4] = {
+	{ { 0x0013, 0x0000, 0x1180, 0x0200, 0x8000, 0x0000 }, 0x5c },
+	{ { 0x7980, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x7c },
+};
+static const struct PowerStep powerSuspendSteps[4] = {
+	{ { 0x0003, 0x0000, 0x0180, 0x0200, 0x8000, 0x0000 }, 0x5c },
+	{ { 0x7100, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x7c },
+};
+#else
 static const struct PowerStep powerResumeSteps[3] = {
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 4 },
@@ -67,6 +88,7 @@ static const struct PowerStep powerSuspendSteps[3] = {
 	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x70 },
 };
+#endif
 
 /* the versions and the battery's identity (0xff and 0xffff where none answered) */
 void powerSeqOn(void)
@@ -194,6 +216,17 @@ void powerSeqLevels(void)
 		elmoWrite(elmoCommand, 3);
 	} else
 #endif
+#if BOARD_IRS1001
+	/* IRS-1001's Elmo: register 0x38 to 3 and 0x23 to 1 */
+	elmoCommand[0] = 0x38;
+	elmoCommand[1] = 0x03;
+	elmoCommand[2] = 0x00;
+	elmoWrite(elmoCommand, 3);
+	elmoCommand[0] = 0x23;
+	elmoCommand[1] = 0x01;
+	elmoCommand[2] = 0x00;
+	elmoWrite(elmoCommand, 3);
+#else
 	if (deviceVersions.elmo[1] == 0x90) {
 		elmoCommand[0] = 0x50;
 		elmoCommand[1] = 0xff;
@@ -207,6 +240,7 @@ void powerSeqLevels(void)
 	elmoCommand[1] = 0x01;
 	elmoCommand[2] = 0x00;
 	elmoWrite(elmoCommand, 3);
+#endif
 	trim = configGet()->voltageTrim;
 	level = configGet()->voltage81;
 	elmoCommand[0] = 0x81;
@@ -537,6 +571,15 @@ unsigned char powerBbmcRestart(void)
 }
 #endif
 
+/* a regulator's levels: 0-0x3f, on IRS-1001 0x48-0x87 */
+#if BOARD_IRS1001
+#define POWER_LEVEL_MIN		0x48
+#define POWER_LEVEL_MAX		0x87
+#else
+#define POWER_LEVEL_MIN		0
+#define POWER_LEVEL_MAX		0x3f
+#endif
+
 /* a regulator's level (0x81-0x84); the result is not set for another register */
 unsigned char powerSetVoltage(unsigned char regulator, unsigned char level)
 {
@@ -545,10 +588,10 @@ unsigned char powerSetVoltage(unsigned char regulator, unsigned char level)
 	if (regulator >= 0x81 && regulator < 0x85) {
 		elmoCommand[0] = regulator;
 #if FW_SINCE(0x0100060B)
-		if (level < 0)
-			level = 0;
-		if (level >= 0x40)
-			level = 0x3f;
+		if (level < POWER_LEVEL_MIN)
+			level = POWER_LEVEL_MIN;
+		if (level > POWER_LEVEL_MAX)
+			level = POWER_LEVEL_MAX;
 		elmoCommand[1] = level;
 #else
 		elmoCommand[1] = level & 0x3f;
@@ -607,22 +650,33 @@ unsigned char powerCookieClear(void)
 	return result;
 }
 
+/* the RMR's power: the Elmo's register 0xaa bit 15, on IRS-1001 its register 0xa1 bit 13 */
+#if BOARD_IRS1001
+#define POWER_RMR_ELMO_REG	0xa1
+#define POWER_RMR_REG		elmoStatusMask.reg[1]
+#define POWER_RMR_BIT		0x2000
+#else
+#define POWER_RMR_ELMO_REG	0xaa
+#define POWER_RMR_REG		elmoRegAA
+#define POWER_RMR_BIT		0x8000
+#endif
+
 unsigned char powerRmrOn(void)
 {
 	unsigned char result;
 	unsigned int mask;
 
-	if (elmoRegAA & 0x8000) {
+	if (POWER_RMR_REG & POWER_RMR_BIT) {
 		result = 0;
 	} else {
 		powerWaitTimers(0x1000);
-		mask = elmoRegAA | 0x8000;
-		elmoCommand[0] = 0xaa;
+		mask = POWER_RMR_REG | POWER_RMR_BIT;
+		elmoCommand[0] = POWER_RMR_ELMO_REG;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
 		elmoCommand[2] = (unsigned char)mask;
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
-			elmoRegAA = mask;
+			POWER_RMR_REG = mask;
 			powerSleep(0x0d);
 		}
 	}
@@ -635,15 +689,15 @@ unsigned char powerRmrOff(void)
 	unsigned int mask;
 
 #if FW_SINCE(0x01000306)
-	if (elmoRegAA & 0x8000) {
+	if (POWER_RMR_REG & POWER_RMR_BIT) {
 #endif
-		mask = elmoRegAA & 0x7fff;
-		elmoCommand[0] = 0xaa;
+		mask = POWER_RMR_REG & ~POWER_RMR_BIT;
+		elmoCommand[0] = POWER_RMR_ELMO_REG;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
 		elmoCommand[2] = (unsigned char)mask;
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
-			elmoRegAA = mask;
+			POWER_RMR_REG = mask;
 			powerStartTimer(0x1000, TIMER(0x0d), 0x4b);
 		}
 #if FW_SINCE(0x01000306)
@@ -1091,22 +1145,34 @@ unsigned char powerNone3Off(void)
 #endif
 
 /* 0x0899: the headphone remote's power (Elmo register 0xa2's bit 11) */
+/* the headphone remote's power: the Elmo's register 0xa2 bit 11, on IRS-1001 its register 0xa3
+   bit 9 */
+#if BOARD_IRS1001
+#define POWER_HPREMOTE_ELMO_REG	0xa3
+#define POWER_HPREMOTE_REG	elmoStatusMask.reg[3]
+#define POWER_HPREMOTE_BIT	0x0200
+#else
+#define POWER_HPREMOTE_ELMO_REG	0xa2
+#define POWER_HPREMOTE_REG	elmoStatusMask.reg[2]
+#define POWER_HPREMOTE_BIT	0x0800
+#endif
+
 unsigned char powerHpremoteOn(void)
 {
 	unsigned char result;
 	unsigned int mask;
 
-	if (elmoStatusMask.reg[2] & 0x0800) {
+	if (POWER_HPREMOTE_REG & POWER_HPREMOTE_BIT) {
 		result = 0;
 	} else {
 		powerWaitTimers(0x800);
-		mask = elmoStatusMask.reg[2] | 0x0800;
-		elmoCommand[0] = 0xa2;
+		mask = POWER_HPREMOTE_REG | POWER_HPREMOTE_BIT;
+		elmoCommand[0] = POWER_HPREMOTE_ELMO_REG;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
 		elmoCommand[2] = (unsigned char)mask;
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
-			elmoStatusMask.reg[2] = mask;
+			POWER_HPREMOTE_REG = mask;
 			sleepFactorSet1(1);
 			powerSleep(4);
 		}
@@ -1119,14 +1185,14 @@ unsigned char powerHpremoteOff(void)
 	unsigned char result;
 	unsigned int mask;
 
-	if (elmoStatusMask.reg[2] & 0x0800) {
-		mask = elmoStatusMask.reg[2] & 0xf7ff;
-		elmoCommand[0] = 0xa2;
+	if (POWER_HPREMOTE_REG & POWER_HPREMOTE_BIT) {
+		mask = POWER_HPREMOTE_REG & ~POWER_HPREMOTE_BIT;
+		elmoCommand[0] = POWER_HPREMOTE_ELMO_REG;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
 		elmoCommand[2] = (unsigned char)mask;
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
-			elmoStatusMask.reg[2] = mask;
+			POWER_HPREMOTE_REG = mask;
 			sleepFactorSet1(0);
 			powerStartTimer(0x800, TIMER(0x0c), 0x19);
 		}

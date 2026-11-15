@@ -639,7 +639,7 @@ void sampleInputs1(void)
 	inputRaw1.5 = P2.0;
 	inputRaw1.6 = P11.5;
 #if BOARD_INPUT1_BIT7_POLL
-	inputRaw1.7 = P14.5;
+	inputRaw1.7 = BOARD_INPUT1_BIT7_PIN;
 #endif
 	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
@@ -1594,14 +1594,14 @@ void levelMonitor2Poll(void)
 	}
 }
 
-/* the RTC's interrupt (state 0x0010), after a shutdown is marked: P14.5 as input 1's bit 7 */
+/* the RTC's interrupt (state 0x0010), after a shutdown is marked: P14.5 (IRS-1001: P7.5) as input 1's bit 7 */
 void input1Bit7Poll(void)
 {
 #if BOARD_INPUT1_BIT7_POLL
 	STATE_TRANSITION_EVENT
 
 	if (inputShutdownMarked != 0) {
-		inputRaw1.7 = P14.5;
+		inputRaw1.7 = BOARD_INPUT1_BIT7_PIN;
 		if (inputState1.7 != inputRaw1.7 && (inputGroup1.prev & 0x80) == (inputRaw1 & 0x80)) {
 			inputState1.7 = inputRaw1.7;
 			if (!inputState1.7)

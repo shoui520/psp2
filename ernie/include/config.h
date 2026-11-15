@@ -8,6 +8,7 @@
 
 #include "ernie.h"
 #include "analog.h"
+#include "board.h"
 #include "charge.h"
 #include "watchdog.h"
 
@@ -116,12 +117,17 @@ struct ConfigBlock {
 	} keep;					/* kept across a new layout */
 	unsigned char	paramSetting1;		/* the parameter block's, for the host */
 	unsigned char	paramSetting2;
+#if BOARD_IRS1001
+	unsigned char	reserved41[0xf8 - 0xee];	/* IRS-1001 keeps its levels at 0x1bc */
+#else
 	unsigned char	voltage81;		/* the Elmo's regulators 0x81-0x84: their levels at a
 						   resume */
 	unsigned char	voltage82;
 	unsigned char	voltage83;
 	unsigned char	voltage84;
-#if ERNIE_BOARD == 0x00406000
+#endif
+#if BOARD_IRS1001
+#elif ERNIE_BOARD == 0x00406000
 	unsigned char	reserved22[2];		/* PCH-1000's layout: the trim a byte later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0xf8 - 0xf5];
@@ -216,7 +222,17 @@ struct ConfigBlock {
 	unsigned int	hostBusyLimit;		/* the host link's busy time before a pause */
 	unsigned int	hostIdleLimit;		/* the idle time that clears the busy time */
 	unsigned int	hostPause;		/* the pause, in ticks */
+#if BOARD_IRS1001
+	unsigned char	voltage81;		/* IRS-1001's regulators 0x81-0x84: their levels at a
+						   resume */
+	unsigned char	voltage82;
+	unsigned char	voltage83;
+	unsigned char	voltage84;
+	unsigned char	reserved42;
+	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
+#else
 	unsigned char	reserved28[0x1c2 - 0x1bc];
+#endif
 	unsigned int	offTransitionBlock;	/* not 0: no transition 0x18 (offTransition18) */
 	unsigned char	offTransition18:1;	/* set: the off state entered by transition 0x31
 						   runs transition 0x18 */

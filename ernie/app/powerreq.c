@@ -872,7 +872,10 @@ static void powerRequestCtrlVoltage(void)
 			result = 3;
 			goto done;
 		}
-#if FW_SINCE(0x0100060B)
+#if BOARD_IRS1001
+		/* IRS-1001's regulators take 0x48-0x87 */
+		if (powerRequestData[1] < 0x48 || powerRequestData[1] >= 0x88) {
+#elif FW_SINCE(0x0100060B)
 		/* Sony's tests the level against a lowest level of 0 too */
 		if (powerRequestData[1] < 0 || powerRequestData[1] >= 0x40) {
 #else
