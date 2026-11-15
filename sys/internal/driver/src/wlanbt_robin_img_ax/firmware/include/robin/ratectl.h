@@ -37,10 +37,14 @@ struct WlanRateHistory {
 	uint32_t value;
 };
 
-/* A slot of a rate table that is free while its first word is zero (12 bytes). */
+/*
+ * A slot of the hardware rate tables, one per connection (12 bytes); free while used is zero. The
+ * chains are rows of wlanRateGroupChains[] and wlanRateUnicastChains[] (robin/ratesel.h).
+ */
 struct WlanRateSlot {
 	uint32_t used;
-	uint32_t reserved[2];
+	uint32_t *groupChain;		/* 8 rate words: the chain of the frames to a group address */
+	uint32_t *unicastChain;		/* 3 rate words, the last at the first rate of the peer */
 };
 
 /* What the supervision of a peer's rate counts (32 bytes at WlanRateControl.window). */

@@ -20,6 +20,8 @@
 #define MAC_014_QUEUE_TAIL	MAC_REG(0x014)
 #define MAC_090_POLICY_MASK	MAC_REG(0x090)
 #define MAC_13C_CONFIG		MAC_REG(0x13c)
+/* Bit 0: the rate chains of the slots changed (wlanPsSyncFrame()). */
+#define MAC_194_PENDING_CONTROL	MAC_REG(0x194)
 /* Bits requested pending by software, and the hardware's answer. */
 #define MAC_254_PENDING_REQUEST	MAC_REG(0x254)
 #define MAC_258_PENDING_STATUS	MAC_REG(0x258)

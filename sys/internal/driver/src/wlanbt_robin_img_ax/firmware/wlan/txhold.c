@@ -41,8 +41,6 @@ static struct WlanTxHoldItem *wlanTxHoldFree __attribute__((section(".itcm.bss")
 struct WlanTxHoldMachine wlanTxHoldMachine __attribute__((section(".itcm.bss")));	/* 0x595f0 */
 
 uint32_t wlanPsWakeCycle __attribute__((section(".itcm.rw")));				/* 0x562b4 */
-static volatile uint32_t wlanLinkCheckInterval __attribute__((section(".dtcm.bss")));		/* 0x4003268 */
-static volatile uint16_t wlanPsCheckCount __attribute__((section(".dtcm.bss")));			/* 0x400326c */
 
 /* The ROM's time and link routines the table of the window uses. */
 uint64_t romLibSelectState(void);							/* 0x03f3a6ec */
@@ -704,12 +702,3 @@ int wlanPsConfigureBuffer(void)
 	return wlanPsWakeCycle > (uint32_t)cycles + 1000;
 }
 
-__attribute__((noinline)) uint32_t wlanLinkCheckPeriod(void)
-{
-	return wlanLinkCheckInterval;
-}
-
-__attribute__((noinline)) unsigned int wlanPsCheckHeader(void)
-{
-	return wlanPsCheckCount;
-}

@@ -150,14 +150,56 @@ void fmCoexAdjustTable(struct WlanRateControl *rc);					/* 0x4c3e4 */
 
 const uint8_t *wlanTlvNextOfType(unsigned int type, const uint8_t *tlv);		/* 0x2be78 */
 
-/* The rate selection's other half (0x3d4ea to 0x3dd00, not converted yet). */
-void wlanPsSyncFrame(struct WlanConnection *connection, unsigned int rate, struct WlanRateControl *rc); /* 0x3d5b0 */
+/*
+ * The rate words the MAC sends with (SQRAM 0xc0011d70 to 0xc0011f24, 0xc00324fc to 0xc0032f00,
+ * wlan/ratetab.c). A rate's words are a chain of up to 8, the first used at the first attempt;
+ * wlanRateChains.byRate[] points at the chain of each rate index (wlanRateTable points at it).
+ */
+struct WlanRateChains {
+	uint32_t defaultUnicast[8];	/* what wlanPsComputeFrame() puts in every unicast row */
+	uint32_t *byRate[WLAN_RATE_COUNT];
+};
+
+extern struct WlanRateChains wlanRateChains;			/* SQRAM 0xc0011e88 */
+extern uint32_t wlanRateWordsCck[4];				/* SQRAM 0xc0011e3c: rates 0 to 3, last first */
+extern uint32_t wlanRateWordsOfdm[8];				/* SQRAM 0xc0011e00: rates 5 to 12 */
+extern uint32_t wlanRateWordsHt20[9];				/* SQRAM 0xc0011dc0: rates 14 to 21, from word 8 down */
+extern uint32_t wlanRateWordsHt40[9];				/* SQRAM 0xc0011d7c: rates 23 to 30 */
+extern uint32_t wlanRateWordsMcs32[1];				/* SQRAM 0xc0011da0: rate 22 */
+extern uint32_t wlanRateDefaultGroup[8];			/* SQRAM 0xc0011e68: what every group row starts as */
+extern uint32_t wlanRateChainLength;				/* SQRAM 0xc0011d78: 32 */
+extern uint32_t wlanRateGroupChains[19][8];			/* SQRAM 0xc00324fc: the rows of the slots */
+extern uint32_t wlanRateUnicastChains[19][8];			/* SQRAM 0xc003275c */
+extern uint8_t wlanRateBlocks[0x45c];				/* SQRAM 0xc0032aa0: wlanRateBlockBuild()'s blocks */
+
+void wlanPsBuildFrame(void);								/* 0x3d4ea */
+void wlanPsComputeFrame(void);								/* 0x3d510 */
 unsigned int wlanPsQueryFrame(uint8_t mode);						/* 0x3d570 */
+uint32_t *wlanPsResetFrame(unsigned int rate, uint32_t rateMask);			/* 0x3d580 */
+void wlanPsSyncFrame(struct WlanConnection *connection, unsigned int rate,
+		     struct WlanRateControl *rc);					/* 0x3d5b0 */
+void wlanPsApplyFrame(struct WlanConnection *connection, int update, unsigned int shortPreamble); /* 0x3d6d0 */
 void wlanPsScheduleFrame(struct WlanConnection *connection);				/* 0x3d758 */
-void wlanPsNotifyFrame(const void *entry, int count);					/* 0x3d77c */
-unsigned int wlanPsInspectFrame(void);								/* 0x3d7c4 */
+void wlanPsNotifyFrame(const uint8_t *items, int count);				/* 0x3d77c */
+uint32_t *wlanPsFormatFrame(struct WlanConnection *connection, unsigned int multicast); /* 0x3d78c */
+unsigned int wlanPsInspectFrame(void);							/* 0x3d7c4 */
 void wlanPsTrackFrame(void);								/* 0x3d852 */
 void wlanPsManageFrame(void *destination, const void *source, unsigned int length);	/* 0x3d860 */
+void wlanPsAcquireFrame(void);								/* 0x3d896 */
+
+/* The window's counting hooks (wlan/ratewin.c). */
+struct WlanRateWindowState {
+	uint32_t ageLimit;		/* milliseconds a window may age before its few samples decide */
+	uint32_t reportEnabled;		/* fmCoexReleaseTable() reports the counts */
+	uint32_t *reportDelivered;
+	uint32_t *reportSent;
+	void (*count)(const struct WlanRateWindow *window, unsigned int *sent, unsigned int *delivered);
+};
+extern struct WlanRateWindowState wlanRateWindowState;		/* 0x553f8 */
+
+int fmCoexSetupTable(const struct WlanTxStatus *status);				/* 0x4c1fc */
+void fmCoexClearTable(struct WlanRateWindow *window, const struct WlanTxStatus *status); /* 0x4c218 */
+unsigned int fmCoexVerifyTable(struct WlanRateWindow *window, const struct WlanTxStatus *status); /* 0x4c374 */
 unsigned int fmCoexSelectTable(struct WlanRateWindow *window, const struct WlanTxStatus *status); /* 0x4c3be */
 void fmCoexConvertTable(struct WlanTxStatus *status);					/* 0x4c246 */
 
