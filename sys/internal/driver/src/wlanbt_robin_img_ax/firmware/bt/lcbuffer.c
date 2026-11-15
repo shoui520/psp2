@@ -2416,3 +2416,24 @@ void btLmpLcPrepareFrame(unsigned int link, unsigned int event, uint32_t unused,
 		btLinkContextDoneHook(context);
 	}
 }
+
+/*
+ * While a link release was seen, the link controller events btLmpLcPrepareFrame() handles (0, 1,
+ * 3 and 0x34) of a message marked 1 go to it through the ROM; returns 1 for those.
+ */
+int btLmpLcDispatchFrame(const uint8_t *message)
+{
+	int taken = 0;
+
+	if (message[12] == 1 && btLinkReleaseSeen == 1) {
+		unsigned int event = message[4];
+
+		if (event == 0 || event == 1 || event == 3 || event == 0x34) {
+			btLcoRomSetupState(event, *(const BtHalf *)(message + 6),
+					   (const uint8_t *)(uintptr_t)*(const BtWord *)(message + 8),
+					   (void (*)(void))btLmpLcPrepareFrame);
+			taken = 1;
+		}
+	}
+	return taken;
+}
