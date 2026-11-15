@@ -44,13 +44,14 @@ typedef struct AvatarImageJob {
 	void *option;
 } AvatarImageJob;
 
-static __attribute__((noinline)) int npIdJob(void *worker, int type, void *job);
-static __attribute__((noinline)) int userProfileJob(void *worker, int type, void *job);
-static __attribute__((noinline)) int avatarImageJob(void *worker, int type, void *job);
-static __attribute__((noinline)) int npIdDone(void *worker, int type, void *job, int arg, int result);
-static __attribute__((noinline)) int userProfileDone(void *worker, int type, void *job, int arg,
+static __attribute__((noinline)) int npIdJob(SceUID thread, int arg, void *job, int flags);
+static __attribute__((noinline)) int userProfileJob(SceUID thread, int arg, void *job, int flags);
+static __attribute__((noinline)) int avatarImageJob(SceUID thread, int arg, void *job, int flags);
+static __attribute__((noinline)) int npIdDone(SceUID thread, int arg, void *job,
+						     int flags, int result);
+static __attribute__((noinline)) int userProfileDone(SceUID thread, int arg, void *job, int flags,
 						     int result);
-static __attribute__((noinline)) int avatarImageDone(void *worker, int type, void *job, int arg,
+static __attribute__((noinline)) int avatarImageDone(SceUID thread, int arg, void *job, int flags,
 						     int result);
 
 static const NpLookupJobHandler s_jobHandlers[] = {
@@ -782,7 +783,7 @@ out:
 	return ret;
 }
 
-static int npIdJob(void *worker, int type, void *job)
+static int npIdJob(SceUID thread, int arg, void *job, int flags)
 {
 	NpIdJob *request = job;
 	int ret;
@@ -796,7 +797,7 @@ static int npIdJob(void *worker, int type, void *job)
 	return ret;
 }
 
-static int userProfileJob(void *worker, int type, void *job)
+static int userProfileJob(SceUID thread, int arg, void *job, int flags)
 {
 	UserProfileJob *request = job;
 	int ret;
@@ -813,7 +814,7 @@ static int userProfileJob(void *worker, int type, void *job)
 	return ret;
 }
 
-static int avatarImageJob(void *worker, int type, void *job)
+static int avatarImageJob(SceUID thread, int arg, void *job, int flags)
 {
 	AvatarImageJob *request = job;
 
@@ -823,7 +824,7 @@ static int avatarImageJob(void *worker, int type, void *job)
 				     request->option);
 }
 
-static int npIdDone(void *worker, int type, void *job, int arg, int result)
+static int npIdDone(SceUID thread, int arg, void *job, int flags, int result)
 {
 	NpIdJob *request = job;
 	int ret = 0;
@@ -837,7 +838,7 @@ static int npIdDone(void *worker, int type, void *job, int arg, int result)
 	return ret;
 }
 
-static int userProfileDone(void *worker, int type, void *job, int arg, int result)
+static int userProfileDone(SceUID thread, int arg, void *job, int flags, int result)
 {
 	UserProfileJob *request = job;
 	int ret = 0;
@@ -851,7 +852,7 @@ static int userProfileDone(void *worker, int type, void *job, int arg, int resul
 	return ret;
 }
 
-static int avatarImageDone(void *worker, int type, void *job, int arg, int result)
+static int avatarImageDone(SceUID thread, int arg, void *job, int flags, int result)
 {
 	AvatarImageJob *request = job;
 	int ret = 0;

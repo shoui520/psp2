@@ -20,6 +20,7 @@ struct NpLookupServer;
 struct NpLookupTitle;
 struct NpLookupTrans;
 struct NpLookupJobHandler;
+struct NpLookupWorker;
 
 /* lookup.c: sceNpLookupUserProfile and its asynchronous form with the N avatar sizes */
 int SceNpUtilityAvatarN_4A989C1C(SceInt32 reqId, SceInt32 avatarSizeType, const SceNpId *npId,
@@ -121,12 +122,14 @@ int SceNpUtility_3A1BA624(char **dst, const void *src, SceSize size, int service
 void SceNpUtility_450C80FB(char *version);
 
 /* worker.c: the worker thread of the asynchronous requests */
-int SceNpUtility_6EB4C8FE(void *worker, int priority, SceSize stackSize, int cpuAffinityMask,
-			  int queueSize, void *(*alloc)(SceSize size), void (*free)(void *ptr));
-int SceNpUtility_5631E596(void *worker);
-int SceNpUtility_575BBBC4(void *worker, int count, const struct NpLookupJobHandler *handlers);
-int SceNpUtility_F73C4411(void *worker);
-int SceNpUtility_44FE1097(void *worker, int type, int arg, void *job, int flags);
+int SceNpUtility_6EB4C8FE(struct NpLookupWorker *worker, int priority, SceSize stackSize,
+			  int cpuAffinityMask, SceUInt32 queueSize, void *(*alloc)(SceSize size),
+			  void (*free)(void *ptr));
+int SceNpUtility_5631E596(struct NpLookupWorker *worker);
+int SceNpUtility_575BBBC4(struct NpLookupWorker *worker, int count,
+			  const struct NpLookupJobHandler *handlers);
+int SceNpUtility_F73C4411(struct NpLookupWorker *worker);
+int SceNpUtility_44FE1097(struct NpLookupWorker *worker, int type, int arg, void *job, int flags);
 
 #ifdef __cplusplus
 }

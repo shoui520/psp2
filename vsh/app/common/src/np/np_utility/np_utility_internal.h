@@ -165,12 +165,38 @@ typedef struct NpLookupTransList {
 	NpLookupTrans head;			/* 0x14: its next is the first transaction */
 } NpLookupTransList;
 
-/* a job type the worker runs, and what it calls when the job ends */
+/* a job type the worker runs, and what it calls with the result when the job ends */
 typedef struct NpLookupJobHandler {
 	int type;
-	int (*run)(void *worker, int type, void *job);
-	int (*done)(void *worker, int type, void *job, int arg, int result);
+	int (*run)(SceUID thread, int arg, void *job, int flags);
+	int (*done)(SceUID thread, int arg, void *job, int flags, int result);
 } NpLookupJobHandler;
+
+/* a queued job */
+typedef struct NpLookupJob {
+	int type;				/* 0x00: its handler's */
+	int arg;				/* 0x04 */
+	void *job;				/* 0x08 */
+	int flags;				/* 0x0C */
+} NpLookupJob;
+
+/* the worker's event flag bits */
+#define NP_LOOKUP_WORKER_EVENT_JOB	0x1	/* a job was queued */
+#define NP_LOOKUP_WORKER_EVENT_STOP	0x2
+
+/* the worker thread of a service's asynchronous requests and its job queue */
+typedef struct NpLookupWorker {
+	SceUID thread;				/* 0x00 */
+	SceUID eventFlag;			/* 0x04 */
+	NpLookupJob *queue;			/* 0x08 */
+	SceUInt32 queueSize;			/* 0x0C */
+	SceUInt32 count;			/* 0x10: the jobs queued */
+	void *(*alloc)(SceSize size);		/* 0x14 */
+	void (*free)(void *ptr);		/* 0x18 */
+	int handlerCount;			/* 0x1C */
+	const NpLookupJobHandler *handlers;	/* 0x20 */
+	SceUID mutex;				/* 0x24 */
+} NpLookupWorker;
 
 /* the transaction ID's service by its ID range, -1 when no service's */
 #define NP_LOOKUP_TRANS_SERVICE(id)						\

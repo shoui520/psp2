@@ -29,10 +29,13 @@ typedef struct SanitizeJob {
 
 static __attribute__((noinline)) int censorComment(int reqId, const char *comment, void *option);
 static __attribute__((noinline)) int sanitizeComment(int reqId, const char *comment, char *sanitizedComment, void *option);
-static __attribute__((noinline)) int censorCommentJob(void *worker, int type, void *job);
-static __attribute__((noinline)) int sanitizeCommentJob(void *worker, int type, void *job);
-static __attribute__((noinline)) int censorCommentDone(void *worker, int type, void *job, int arg, int result);
-static __attribute__((noinline)) int sanitizeCommentDone(void *worker, int type, void *job, int arg, int result);
+static __attribute__((noinline)) int censorCommentJob(SceUID thread, int arg, void *job, int flags);
+static __attribute__((noinline)) int sanitizeCommentJob(SceUID thread, int arg, void *job,
+						     int flags);
+static __attribute__((noinline)) int censorCommentDone(SceUID thread, int arg, void *job,
+						     int flags, int result);
+static __attribute__((noinline)) int sanitizeCommentDone(SceUID thread, int arg, void *job,
+						     int flags, int result);
 
 static const NpLookupJobHandler s_jobHandlers[] = {
 	{ 0, censorCommentJob, censorCommentDone },
@@ -699,7 +702,7 @@ out:
 	return ret;
 }
 
-static int censorCommentJob(void *worker, int type, void *job)
+static int censorCommentJob(SceUID thread, int arg, void *job, int flags)
 {
 	CensorJob *request = job;
 	int ret;
@@ -712,7 +715,7 @@ static int censorCommentJob(void *worker, int type, void *job)
 	return ret;
 }
 
-static int sanitizeCommentJob(void *worker, int type, void *job)
+static int sanitizeCommentJob(SceUID thread, int arg, void *job, int flags)
 {
 	SanitizeJob *request = job;
 	int ret;
@@ -726,7 +729,7 @@ static int sanitizeCommentJob(void *worker, int type, void *job)
 	return ret;
 }
 
-static int censorCommentDone(void *worker, int type, void *job, int arg, int result)
+static int censorCommentDone(SceUID thread, int arg, void *job, int flags, int result)
 {
 	CensorJob *request = job;
 	int ret = 0;
@@ -740,7 +743,7 @@ static int censorCommentDone(void *worker, int type, void *job, int arg, int res
 	return ret;
 }
 
-static int sanitizeCommentDone(void *worker, int type, void *job, int arg, int result)
+static int sanitizeCommentDone(SceUID thread, int arg, void *job, int flags, int result)
 {
 	SanitizeJob *request = job;
 	int ret = 0;
