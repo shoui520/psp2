@@ -213,6 +213,11 @@ extern uint8_t btSyncLimitActive;				/* 0x400f8cf */
 extern uint8_t *btTableSyncLimits;				/* 0x552cc */
 extern uint8_t (*btTablePendingAddresses)[6];			/* 0x552d0 */
 extern uint8_t *btTableHostSettings;				/* 0x552d4 */
+extern uint8_t *btHeldConnectEvent;				/* 0x400f56c: a connection request held back */
+extern uint8_t **btTableHeldEvent;				/* 0x552d8 */
+extern int (*btTableEventCheck)(const uint8_t *event);		/* 0x552dc */
+extern void (*btTableConnectClear)(const uint8_t *message);	/* 0x552e0 */
+extern int (*btTableConnectDone)(unsigned int status, const uint8_t *address);	/* 0x552e4 */
 extern void (*btTableConnectReply)(const uint8_t *address, unsigned int reason, unsigned int role);	/* 0x552e8 */
 extern int (*btTableConnectCheck)(const uint8_t *address, unsigned int linkType, unsigned int roleSwitch,
 				  uint8_t *slot);			/* 0x552ec */
@@ -380,6 +385,9 @@ int btLmpLcParseFrame(void **slot);				/* 0x478de */
 void btLmpLcBuildFrame(const uint8_t *message);		/* 0x47a1c */
 int btLmpLcComputeFrame(void **slot);				/* 0x47a4c */
 void btLmpLcQueryFrame(const uint8_t *event);			/* 0x47b1e */
+int btLmpLcResetFrame(const uint8_t *event);			/* 0x47ca0 */
+void btLmpLcSyncFrame(uint16_t handle, const uint8_t *address);	/* 0x47cb8 */
+int btLmpLcApplyFrame(const uint8_t *message);			/* 0x47ce8 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

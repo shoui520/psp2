@@ -2654,3 +2654,43 @@ found:
 reject:
 	btTableConnectReply(address, 13, 0);
 }
+
+/* A connection request the ROM does not take itself is filtered by btLmpLcQueryFrame(). */
+int btLmpLcResetFrame(const uint8_t *event)
+{
+	if (btTableEventCheck(event) == 0)
+		btLmpLcQueryFrame(event);
+	return 1;
+}
+
+/* Tells the host controller (message 0x140f) that the handle's connection to address is done. */
+void btLmpLcSyncFrame(uint16_t handle, const uint8_t *address)
+{
+	uint8_t *message = osa_MsgAlloc(12);
+
+	if (message == NULL)
+		return;
+	*(BtWord *)message = 0x140f;
+	*(BtHalf *)(message + 4) = handle;
+	__aeabi_memcpy(message + 6, address, 6);
+	osa_MsgSend((void **)&message, romQueueHct);
+}
+
+/*
+ * A connection is complete (message: address at 4, handle at 10, status at 12). When the ROM says
+ * a request was held back for it, that request is filtered now and freed.
+ */
+int btLmpLcApplyFrame(const uint8_t *message)
+{
+	if (btTableConnectDone(message[12], message + 4) == 0) {
+		btTableConnectClear(message);
+		btLmpLcSyncFrame(*(const BtHalf *)(message + 10), message + 4);
+	} else {
+		btTableConnectClear(message);
+		btLmpLcSyncFrame(*(const BtHalf *)(message + 10), message + 4);
+		btLmpLcQueryFrame(*btTableHeldEvent);
+		osa_MsgFree((void **)btTableHeldEvent);
+		*btTableHeldEvent = NULL;
+	}
+	return 1;
+}

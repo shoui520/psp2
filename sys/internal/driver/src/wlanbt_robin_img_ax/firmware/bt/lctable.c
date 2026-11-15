@@ -47,6 +47,11 @@ uint32_t btTableModeSlot __attribute__((section(".itcm.rw")));		/* 0x552c8 */
 uint8_t *btTableSyncLimits __attribute__((section(".itcm.rw"))) = btHostSyncLimits;	/* 0x552cc */
 uint8_t (*btTablePendingAddresses)[6] __attribute__((section(".itcm.rw"))) = btPendingAddresses;	/* 0x552d0 */
 uint8_t *btTableHostSettings __attribute__((section(".itcm.rw"))) = btHostSettings;	/* 0x552d4 */
+uint8_t **btTableHeldEvent __attribute__((section(".itcm.rw"))) = &btHeldConnectEvent;	/* 0x552d8 */
+int (*btTableEventCheck)(const uint8_t *) __attribute__((section(".itcm.rw"))) = btHccRomProcessState;	/* 0x552dc */
+void (*btTableConnectClear)(const uint8_t *) __attribute__((section(".itcm.rw"))) = btBdhRomSyncContext;	/* 0x552e0 */
+int (*btTableConnectDone)(unsigned int, const uint8_t *) __attribute__((section(".itcm.rw"))) =
+	btHccRomUpdateState;							/* 0x552e4 */
 void (*btTableConnectReply)(const uint8_t *, unsigned int, unsigned int) __attribute__((section(".itcm.rw"))) =
 	romLibRecordEntry;							/* 0x552e8 */
 int (*btTableConnectCheck)(const uint8_t *, unsigned int, unsigned int, uint8_t *)
