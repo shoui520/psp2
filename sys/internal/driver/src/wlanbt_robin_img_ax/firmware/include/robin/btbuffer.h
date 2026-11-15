@@ -184,5 +184,6 @@ void btLmpLcSelectBuffer(struct BtSlotQueue *queue, uint32_t clock);	/* 0x46436 
 void btLmpLcAdjustBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile);	/* 0x46494 */
 int btLmpLcRecordBuffer(uint32_t clock);				/* 0x464ca */
 void btLmpLcFilterBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x46516 */
+void btLmpLcHandlePacket(void);					/* 0x465d8 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -1320,3 +1320,40 @@ void btLmpLcFilterBuffer(struct BtSlotEvent *event, uint32_t clock)
 	profile->adjust = 0;
 	btLtsRomApplyState(profile, btLtsRomNotifyState(profile, clock), event->state);
 }
+
+/* Gives the ROM's slot states their queues and the image's hooks, and starts the slot tables over. */
+void btLmpLcHandlePacket(void)
+{
+	btStateHooks[1].enter = (void (*)(void))btLmpLcFormatEntry;
+	btStateHooks[1].due = btLmpLcFilterBuffer;
+	btStateHooks[2].enter = (void (*)(void))btLmpLcAdjustBuffer;
+	btStateHooks[4].enter = (void (*)(void))btLmpLcAdjustBuffer;
+	btStateHooks[2].due = (void (*)(struct BtSlotEvent *, uint32_t))btLmpLcSelectBuffer;
+	btStateHooks[4].due = (void (*)(struct BtSlotEvent *, uint32_t))btLmpLcSelectBuffer;
+	btSlotQueueIndex[4] = 1;
+	btSlotQueueIndex[6] = 2;
+	btSlotQueueIndex[1] = 3;
+	btSlotQueueIndex[2] = 4;
+	btSlotQueueIndex[3] = 5;
+	btSlotQueueIndex[5] = 6;
+	btSlotQueueIndex[8] = 9;
+	btSlotQueueIndex[10] = 8;
+	btStateHooks[9].enter = (void (*)(void))btLmpLcResolveTable;
+	btStateHooks[6].enter = (void (*)(void))btLmpLcResolveTable;
+	btStateHooks[9].due = (void (*)(struct BtSlotEvent *, uint32_t))btLmpLcQueryTable;
+	btStateHooks[6].due = (void (*)(struct BtSlotEvent *, uint32_t))btLmpLcQueryTable;
+	__aeabi_memclr4(btRateHistory, sizeof(btRateHistory));
+	__builtin_memset(btTableLinkModes, 0, sizeof(btTableLinkModes));
+	btTableEnabled = 1;
+	btStateHooks[5].enter = (void (*)(void))btLmpLcScheduleTable;
+	btStateHooks[5].due = (void (*)(struct BtSlotEvent *, uint32_t))btLmpLcNotifyTable;
+	btStateHooks[11].due = btLmpLcClearBuffer;
+	btStateHooks[7].enter = (void (*)(void))btLmpLcConvertBuffer;
+	btStateHooks[7].due = btLmpLcClearBuffer;
+	btStateHooks[10].due = btLmpLcReleaseBuffer;
+	btTableModeBuffer = 0;
+	btLmpLcManageEntry();
+	btTableModeSlot = 0;
+	btTableModeEntry = 0xff;
+	btLtsRomClearState();
+}

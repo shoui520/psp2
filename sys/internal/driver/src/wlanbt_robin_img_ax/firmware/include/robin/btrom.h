@@ -155,6 +155,7 @@ void btLtsRomSetupState(struct BtSlotQueue *queue, struct BtDeviceProfile *profi
 void btLtsRomAcquireState(struct BtSlotQueue *queue, struct BtDeviceProfile *profile);
 void btLtsRomInspectState(struct BtDeviceProfile *profile);
 void btLtsRomComputeState(struct BtDeviceProfile *profile);
+void btLtsRomClearState(void);
 int btLdrRomResolveState(unsigned int link);
 void btLcoRomSetupState(int event, unsigned int link, const uint8_t *message, void (*payload)(void));
 void btHccRomResolveState(unsigned int link, unsigned int kind);

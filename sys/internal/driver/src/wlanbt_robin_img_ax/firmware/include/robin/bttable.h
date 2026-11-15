@@ -58,6 +58,16 @@ extern const uint16_t romStateActiveTable[];			/* ROM 0x03f419e0: the slots of e
 extern uint8_t btLinkPacketType;				/* 0x400f710 */
 extern uint8_t btSlotQueueIndex[];				/* 0x400f99c: the queue of each state */
 extern struct BtSlotQueue btSlotQueues[];			/* 0x400dcdc */
+
+/*
+ * The ROM's hooks of a slot state: enter as a profile joins its queue (its arguments depend on the
+ * state), due when the queue's first slot is due.
+ */
+struct BtStateHooks {
+	void (*enter)(void);
+	void (*due)(struct BtSlotEvent *event, uint32_t clock);
+};
+extern struct BtStateHooks btStateHooks[12];			/* 0x400f9ac */
 extern const uint8_t *btPacketTypes;				/* 0x400f968: 12 bytes per type, halfword 4 its length */
 extern uint8_t btTargetStatus;					/* 0x400de53 */
 extern uint16_t btTargetNode;					/* 0x400de56 */
