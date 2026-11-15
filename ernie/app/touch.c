@@ -671,7 +671,7 @@ unsigned char touchSetPower1(unsigned char interval)
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
    changed (before 0x01000109 task3 reads them after touchIdentify) */
 /* PDEL's 0x01000104 and 0x01000107 read the modes of a changed configuration before it keeps the version */
-#define TOUCH_MODES_BEFORE_VERSION	(HW_IS(0x00416000) && !FW_SINCE(0x01000109))
+#define TOUCH_MODES_BEFORE_VERSION	(BOARD_IS(0x00416000) && !FW_SINCE(0x01000109))
 
 unsigned char touchReadConfigVersion0(unsigned char *data)
 {
