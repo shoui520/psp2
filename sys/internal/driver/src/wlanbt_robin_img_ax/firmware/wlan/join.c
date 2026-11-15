@@ -29,6 +29,7 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 #include "robin/htba.h"
+#include "robin/stamachine.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
@@ -93,12 +94,10 @@ extern uint8_t wlanJoinWmmIe[9];					/* DTCM 0x04008fc0 */
 extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
-void macMgmtResolveState(struct WlanConnection *connection, unsigned int security); /* 0x34cc4 */
 void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
 			uint32_t sameBss, int unused);			/* 0x1e8ba */
 void macMgmtClearContext(struct WlanConnection *connection);		/* 0x35dc0 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
-void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
 int cbProcSetupEntry(void);						/* 0x1cb00 */
 int cbProcVerifyEntry(void);						/* 0x1cb1a */
 void macMgmtFilterPacket(int filter, int kind);				/* 0x3a5aa */

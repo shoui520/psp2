@@ -47,6 +47,23 @@ extern struct OsaMessageQueue *macMgmt80211Queue;
 extern struct OsaMessageQueue *macMgmtSmeQueue;
 extern struct OsaMessageQueue *timerCbQueue;
 
+/* The events of the MAC management task (macMgmtTaskMain()), and the event flags modes. */
+#define MGMT_EVENT_RING_A	0x001
+#define MGMT_EVENT_RING_B	0x002
+#define MGMT_EVENT_COMMANDS	0x004
+#define MGMT_EVENT_LINK_CHECK	0x008
+#define MGMT_EVENT_SLOT_POLL	0x010
+#define MGMT_EVENT_TIMERS	0x020
+#define MGMT_EVENT_SLOT_RUN	0x040
+#define MGMT_EVENT_SLOT_TICK	0x080
+#define MGMT_EVENT_RING_C	0x200
+#define MGMT_EVENT_PEER_CHECK	0x800
+#define MGMT_EVENT_POST_RECEIVED	0x4000
+#define MGMT_EVENT_POST_RELEASE	0x8000
+
+#define MGMT_EVENT_SET_OR	7
+#define MGMT_EVENT_WAIT_OR_CLEAR	8
+
 extern struct WlanTaskHandles wlanTaskHandles;				/* 0x57814 */
 extern WlanQueueObject macMgmtLinkCheckQueue;				/* 0x5772c */
 extern WlanQueueObject macMgmtPeerCheckQueue;				/* 0x577a0 */

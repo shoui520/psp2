@@ -76,6 +76,7 @@ enum {
 };
 
 extern uint8_t wlanBroadcastAddress[6];
+extern uint8_t wlanNullAddress[8];			/* 0x55150: zeros */
 
 /* the 802.11 header builder (0x2a414) */
 void wlanBuildMgmtHeader(WlanWirelessFrame *frame, const uint8_t *source,

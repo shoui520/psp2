@@ -28,13 +28,11 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
+#include "robin/stamachine.h"
 
 /* Not converted yet; provisional names. */
 void macMgmtManagePacket(struct WlanConnection *connection, int enable);			/* 0x3a100 */
 int p2pDirectBuildTable(unsigned int tid);							/* 0x4205a */
-void wlanHostDelbaReply(struct WlanConnection *connection, const uint8_t *body, int success,
-			const uint8_t *peer);							/* 0x34fba */
-void wlanHostCoexistenceReply(struct WlanConnection *connection, const uint8_t *body);		/* 0x34fe4 */
 
 /* The HT configuration the host set (HostCmd_CMD_11N_CFG), and the Block Ack state kept in SQRAM. */
 extern uint8_t wlanHtTxCapability[2];				/* SQRAM 0xc0011bc1 */

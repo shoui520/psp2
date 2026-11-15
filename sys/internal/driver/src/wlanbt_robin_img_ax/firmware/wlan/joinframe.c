@@ -30,6 +30,7 @@
 #include "robin/wapi.h"
 #include "robin/wlan.h"
 #include "robin/wmm.h"
+#include "robin/stamachine.h"
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
@@ -52,7 +53,6 @@
 #define WLAN_TX_TAG_LEAVE		19
 
 extern int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
-extern void macMgmtFormatState(struct WlanConnection *connection, const uint8_t *event);	/* 0x34dae */
 extern uint8_t wlanAssocHtCapability[28];			/* SQRAM 0xc0032170: the copy of it for the association */
 unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
 				   const void *attributes, unsigned int include,

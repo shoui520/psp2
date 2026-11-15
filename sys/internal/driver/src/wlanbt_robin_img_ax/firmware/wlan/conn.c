@@ -20,6 +20,7 @@
 #include "robin/sys.h"
 #include "robin/htba.h"
 #include "robin/peerrate.h"
+#include "robin/stamachine.h"
 
 struct WlanConnection *wlanConnectionList __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionFreeList __attribute__((section(".sqram1.rw")));
@@ -37,7 +38,6 @@ struct WlanConnection *wlanConnectionSlots[WLAN_CONNECTION_SLOTS] __attribute__(
 extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc0031d64 */
 extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
 void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
-void macMgmtFilterState(const uint8_t **machine);						/* 0x354cc */
 uint64_t wlanSignalTimeNow(void);								/* 0x2a4fc */
 void clockHostSelectPreset0(void);								/* 0x26b78 */
 void clockHostSelectPreset1(void);								/* 0x26baa */
@@ -1385,7 +1385,7 @@ void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *sou
 		return;
 	copy->mode = source->mode;
 	copy->interfaceType = source->interfaceType;
-	macMgmtFilterState(&copy->smState);
+	macMgmtFilterState(&copy->machine);
 	copy->owner = copy;
 	copy->smState = copy->smStates + 36;
 	__aeabi_memcpy4(&copy->bssCapability, &source->bssCapability, 60);

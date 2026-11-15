@@ -38,7 +38,9 @@ struct WlanPsPeerState {
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t noaMode;		/* 1: the Notice of Absence has a CTWindow, 2: it has absence periods */
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
-	uint8_t reserved46[107];
+	uint8_t reserved46[26];
+	uint32_t p2pGroupActive;	/* nonzero while the P2P group is up (inferred: the state machine reads it when it enters or leaves a state) */
+	uint8_t reserved76[77];
 	uint8_t noaAttribute[31];	/* the Notice of Absence attribute of the last beacon: ID, length, index, CTWindow, descriptors */
 	uint8_t reserved184[4];
 	uint8_t p2pOptions;		/* bit 1: the Extended Listen Timing attribute goes into the P2P element */

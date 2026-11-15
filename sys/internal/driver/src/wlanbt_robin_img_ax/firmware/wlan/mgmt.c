@@ -33,6 +33,7 @@
 #include "robin/wlantask.h"
 #include "robin/macentry.h"
 #include "robin/htba.h"
+#include "robin/stamachine.h"
 
 #define LE16(p)			((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -114,8 +115,6 @@ void p2pSqramBuildContext(struct WlanConnection *connection, const uint8_t *ies,
 void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
 			    uint32_t *length);				/* SQRAM 0xc000cd37 */
 void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8d */
-void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
-			 unsigned int reason, int unused);			/* 0x34f7c */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */

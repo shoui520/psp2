@@ -36,6 +36,7 @@
 #include "robin/threadx.h"
 #include "robin/btrom.h"
 #include "robin/wlantask.h"
+#include "robin/stamachine.h"
 
 /* The events of the control task's queue (wlanPostConnectionEvent()). */
 #define CBPROC_EVENT_SLEEP_TIMEOUT	0x00000001	/* the host sleep timeout of the power save ran out */
@@ -79,15 +80,6 @@
 
 #define CBPROC_U16(p)		((uint16_t)((p)[0] | (p)[1] << 8))
 
-/* The status of the management exchange the SME started, as macMgmtInspectState() (0x34e06) leaves it. */
-struct WlanMgmtReport {
-	uint8_t code;
-	uint8_t reserved1;
-	uint16_t reason;
-	uint8_t peer[6];
-};
-
-struct WlanMgmtReport wlanMgmtReport __attribute__((section(".itcm.bss")));		/* 0x57832 */
 /* The host's commands the task found nothing to run for. */
 static uint32_t cbProcCommandRetries __attribute__((section(".itcm.rw")));		/* 0x54ba0 */
 

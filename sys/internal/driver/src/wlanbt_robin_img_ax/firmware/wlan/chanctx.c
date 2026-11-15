@@ -20,6 +20,7 @@
 #include "robin/mgmt.h"
 #include "robin/protection.h"
 #include "robin/rom.h"
+#include "robin/stamachine.h"
 
 struct WlanChannelContext {
 	uint8_t reserved0;
@@ -33,7 +34,6 @@ struct WlanChannelContext {
 };
 
 /* Not converted yet; provisional names. */
-void macMgmtParseState(const uint8_t *rates, unsigned int count);			/* 0x34960 */
 void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
 void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x3218c */
 void macTxNotifyResolveBuffer(unsigned int rate);					/* 0x32294 */
@@ -42,6 +42,7 @@ void wlanPsApplyFrame(struct WlanConnection *connection, int a, unsigned int b);
 int p2pSqramHandleState(struct WlanConnection *connection);				/* SQRAM */
 extern int (*wlanChannelValidateHook)(void);						/* 0x5f1a0 */
 
+uint8_t wlanNullAddress[8] __attribute__((section(".itcm.rw")));				/* 0x55150 */
 struct WlanChannelContext wlanChannelContext __attribute__((section(".itcm.rw")));	/* 0x55158 */
 
 /* 0x355b0: the channel's secondary channel is set from the HT operation element of the connection. */

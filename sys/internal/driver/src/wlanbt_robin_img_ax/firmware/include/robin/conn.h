@@ -601,7 +601,9 @@ struct WlanConnection {
 	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */
-	uint8_t reserved694[14];
+	uint8_t bssid[6];		/* the IBSS's BSSID the host is told (macMgmtTrackState()) */
+	uint8_t bssChannel[7];		/* the channel and its flags the radio was on then */
+	uint8_t reserved707;
 	uint16_t txSequence[8];		/* the next sequence number of each TID towards the peer */
 	int32_t txPowerLimit;		/* dBm from the channel power table; 255: none */
 	uint32_t qosPeer;		/* 1: the peer associated with WMM (QoS) */

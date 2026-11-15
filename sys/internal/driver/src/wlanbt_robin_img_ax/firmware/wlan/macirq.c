@@ -42,6 +42,7 @@
 #include "robin/wlanrx.h"
 #include "robin/wlantask.h"
 #include "robin/macentry.h"
+#include "robin/stamachine.h"
 
 /* The MAC's event word and the registers the handler looks at. */
 #define MAC_510_EVENTS		MAC_REG(0x510)	/* pending events; a bit is acknowledged by writing 0 to it */
@@ -94,7 +95,6 @@ void wlanPsAdjustFrame(struct WlanConnection *connection, const uint8_t *body);	
 void wlanPsRecordFrame(void);									/* 0x3dc46 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body,
 			  unsigned int length);							/* 0x35ac2 */
-void macMgmtConfigureState(struct WlanConnection *connection);					/* 0x347e8 */
 void wlanApOlbcSelect(struct WlanConnection *connection, uint8_t *olbcActive,
 			uint8_t *erpInfo);							/* 0x2b680 */
 void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *olbcCount,

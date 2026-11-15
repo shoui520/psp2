@@ -17,6 +17,7 @@
 #include "robin/sys.h"
 #include "robin/wlan.h"
 #include "robin/peerrate.h"
+#include "robin/stamachine.h"
 
 #define WLAN_FC0_TYPE(fc0)		(((fc0) >> 2) & 3)
 #define WLAN_FC0_SUBTYPE(fc0)		((fc0) >> 4)
@@ -65,7 +66,6 @@ struct __attribute__((packed)) WlanBarHostEvent {
 };
 
 /* Not converted yet; provisional names. */
-int macMgmtDispatchState(OsaBuffer *buffer, uintptr_t argument, uint32_t channel); /* 0x348c4 */
 void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);		/* 0x37c72 */
 void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
