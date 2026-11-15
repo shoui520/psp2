@@ -140,6 +140,14 @@ struct BtLinkSession {
 	uint8_t reserved2[6];
 };
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
+extern uint32_t btTargetDeadline;				/* 0x400de5c: the clock target state 5 ends at */
+extern void (*btTargetExpireHook)(void);			/* 0x400edbc */
+
+/* A link controller message about a link handle. */
+struct BtHandleMessage {
+	uint32_t id;
+	uint16_t handle;
+};
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -219,6 +227,8 @@ int btLmpLcValidatePacket(unsigned int link, uint32_t first, uint32_t second, ui
 void btLmpLcPreparePacket(unsigned int value);			/* 0x4687a */
 void btLmpLcDispatchPacket(uint8_t *request);			/* 0x46926 */
 unsigned int btLmpLcParsePacket(uint32_t clock, unsigned int count, unsigned int limit, uint8_t *flag);	/* 0x4699c */
+int btLmpLcBuildPacket(uint16_t handle);			/* 0x46a90 */
+void btLmpLcComputePacket(void);				/* 0x46ac8 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

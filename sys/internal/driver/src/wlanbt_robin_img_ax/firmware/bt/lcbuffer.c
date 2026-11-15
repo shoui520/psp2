@@ -1563,3 +1563,35 @@ unsigned int btLmpLcParsePacket(uint32_t clock, unsigned int count, unsigned int
 	btLinkSessions[btTableModeHeader].active = 1;
 	return want;
 }
+
+/* Posts messages 0xc05 and 0xc03 about the link handle to the link controller's queue. */
+int btLmpLcBuildPacket(uint16_t handle)
+{
+	struct BtHandleMessage *message;
+
+	message = osa_MsgAlloc(8);
+	message->id = 0xc05;
+	message->handle = handle;
+	osa_MsgSend((void **)&message, romQueueLcp);
+	message = osa_MsgAlloc(8);
+	message->id = 0xc03;
+	message->handle = handle;
+	osa_MsgSend((void **)&message, romQueueLcp);
+	return 1;
+}
+
+/*
+ * The ROM's target context handler, wrapped: a target in state 5 whose deadline is still ahead is
+ * expired first (state 5 again, mode header 0); the target's entry starts over.
+ */
+void btLmpLcComputePacket(void)
+{
+	if (romTargetTable == 5 &&
+	    (int32_t)(btTargetDeadline - btLtsRomScheduleState(btLtsRomParseState(0)) - 1) > 0) {
+		btTargetExpireHook();
+		romTargetTable = 5;
+		btTableModeHeader = 0;
+	}
+	btLtsRomHandleContext();
+	btTargetEntry = 0;
+}

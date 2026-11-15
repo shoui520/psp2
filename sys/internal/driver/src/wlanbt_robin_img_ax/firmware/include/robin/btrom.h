@@ -159,6 +159,7 @@ void btLtsRomClearState(void);
 uint8_t *btLcoRomDispatchContext(unsigned int link);
 void btLcoRomValidateContext(unsigned int link, uint32_t argument);
 void btLcoRomUpdateContext(void);
+void btLtsRomHandleContext(void);
 int btHccRomCheckState(unsigned int link, uint32_t first, uint32_t second, uint8_t *out);
 void btLcoRomFormatState(unsigned int event, unsigned int handle);
 void btHccRomConfigureState(unsigned int value);
