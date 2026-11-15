@@ -670,6 +670,9 @@ unsigned char touchSetPower1(unsigned char interval)
 
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
    changed (before 0x01000109 task3 reads them after touchIdentify) */
+/* PDEL's 0x01000104 and 0x01000107 read the modes of a changed configuration before it keeps the version */
+#define TOUCH_MODES_BEFORE_VERSION	(HW_IS(0x00416000) && !FW_SINCE(0x01000109))
+
 unsigned char touchReadConfigVersion0(unsigned char *data)
 {
 #if FW_SINCE(0x01000104)
@@ -685,6 +688,9 @@ unsigned char touchReadConfigVersion0(unsigned char *data)
 	result = touchRead(touch.panel[0].objects.userData, data, 2, 0);
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[0].configVersion != version) {
+#if TOUCH_MODES_BEFORE_VERSION
+		touchReadModes0();
+#endif
 		touch.panel[0].configVersion = version;
 #if FW_SINCE(0x01000109)
 		touchReadModes0();
@@ -712,6 +718,9 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 	result = touchRead(touch.panel[1].objects.userData, data, 2, 1);
 	version = (unsigned int)data[0] << 8 | data[1];
 	if (touch.panel[1].configVersion != version) {
+#if TOUCH_MODES_BEFORE_VERSION
+		touchReadModes1();
+#endif
 		touch.panel[1].configVersion = version;
 #if FW_SINCE(0x01000109)
 		touchReadModes1();
