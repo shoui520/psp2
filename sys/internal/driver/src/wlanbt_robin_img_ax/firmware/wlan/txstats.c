@@ -6,6 +6,7 @@
  * those counters clear on read and are added in when the host asks.
  */
 #include <stddef.h>
+#include "robin/ratesel.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/signal.h"
@@ -27,7 +28,6 @@
 #define WLAN_FC1_TO_DS		0x01
 
 /* Not converted yet; provisional names. */
-void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);	/* 0x3cfd2 */
 
 HostCmd_DS_802_11_GET_LOG wlanTxStatistics __attribute__((section(".dtcm.bss")));
 struct WlanTxRateStats wlanTxRateStatistics[WLAN_TX_RATE_COUNT] __attribute__((section(".dtcm.bss")));

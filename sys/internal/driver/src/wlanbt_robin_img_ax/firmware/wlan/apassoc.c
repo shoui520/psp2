@@ -6,6 +6,7 @@
  * placeholder names, kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
@@ -40,8 +41,6 @@
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
 /* Not converted yet; provisional names. */
-void wlanPsAcquirePacket(struct WlanConnection *connection);				/* 0x3d1f4 */
-void wlanPsReleasePacket(struct WlanConnection *connection, uint32_t rateSet);		/* 0x3d286 */
 unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
 				   const void *attributes, unsigned int include,
 				   unsigned int exclude);				/* 0x402ea */

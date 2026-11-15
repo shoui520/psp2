@@ -6,6 +6,7 @@
  * filename survives.
  */
 #include <stdint.h>
+#include "robin/ratesel.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
 #include "robin/conn.h"
@@ -70,7 +71,6 @@ void btLmpLcHandleState(int state);					/* 0x42488 */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
-void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */

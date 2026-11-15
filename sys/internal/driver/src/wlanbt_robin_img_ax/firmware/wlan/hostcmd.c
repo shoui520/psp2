@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
 #include "robin/txhold.h"
 #include "robin/txpower.h"
@@ -457,9 +458,6 @@ void hostCmd00c5(unsigned int action, uint8_t *data, unsigned int *length);	/* 0
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */
 int hostCmd00d6Parse(uint8_t *data, unsigned int length, uint8_t **rates0, uint8_t **rates1,
 		     uint8_t **rates2);						/* 0x3f35a */
-int hostCmd00d6Apply(struct WlanConnection *connection, uint8_t *rates0, uint8_t *rates1,
-		     uint8_t *rates2);						/* 0x3ce42 */
-unsigned int hostCmd00d6Get(struct WlanConnection *connection, uint8_t *data, uint32_t rate); /* 0x3cea6 */
 int hostCmd00dd(struct WlanConnection *connection, uint8_t *body, unsigned int length); /* SQRAM 0xc0009a76 */
 int hostCmd00e0(unsigned int action, uint8_t *data, unsigned int length);	/* 0x3f06e */
 unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *data);	/* 0x3f2c0 */
@@ -477,9 +475,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 					       int policy, void *driver);		/* 0x1d604 */
 int hostCmdMisc(uint16_t *result, uint8_t *body, struct WlanConnection *connection); /* 0x2ccb6 */
 void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
-void wlanPsFormatBuffer(struct WlanConnection *connection, unsigned int rate);	/* 0x3c7b8 */
-void wlanPsQueryPacket(void);							/* 0x3d006 */
-int wlanPsFormatPacket(struct WlanConnection *connection);			/* 0x3d0e4 */
 void wlanHostWakeGpioSet(unsigned int gpio, int enable);			/* 0x28142 */
 void osaFormatVersionBanner(unsigned int selector, char *text);			/* 0x27c36 */
 void macMgmtValidateTable(int reason);						/* 0x3726c */
@@ -499,9 +494,6 @@ extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
 extern uint8_t *wlanAntennaProfile;						/* 0x040088ca, unaligned */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
-extern uint16_t wlanAmsduSize;							/* 0x04001004 */
-extern uint16_t wlanAmsduEnabled;						/* 0x04000ff8 */
-extern uint32_t wlanTxRateDefault;						/* 0x0400100c */
 extern struct WlanConnection *wlanAssociateConnection;				/* 0x04004e9c */
 extern uint8_t wlanAfcEnabled;							/* 0x00054f18 */
 extern uint8_t wlanAfcAuto;							/* 0x00054f1e */
@@ -1690,7 +1682,7 @@ int hostCmdProcess(void)
 					}
 				}
 			}
-			PUT16(hdr + 2, hostCmd00d6Get(connection, body + 4, wlanTxRateDefault) + 12);
+			PUT16(hdr + 2, hostCmd00d6Get(connection, body + 4, wlanRateSelection.txRateMask) + 12);
 			goto done;
 		}
 
@@ -1722,12 +1714,12 @@ int hostCmdProcess(void)
 
 		case 223:
 			if (action == 1) {
-				wlanAmsduSize = HOSTCMD_U16(body + 2);
+				wlanRateSelection.amsduEnable = HOSTCMD_U16(body + 2);
 				wlanPsQueryPacket();
 				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->peerLink.rateControl));
 			}
-			PUT16(body + 2, wlanAmsduSize);
-			PUT16(body + 4, wlanAmsduEnabled);
+			PUT16(body + 2, wlanRateSelection.amsduEnable);
+			PUT16(body + 4, wlanRateSelection.amsduBufferSize);
 			goto done;
 
 		case 224:

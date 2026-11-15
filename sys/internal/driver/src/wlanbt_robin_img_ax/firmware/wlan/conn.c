@@ -2,6 +2,7 @@
  * Connection control block list: lookups and release. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
 #include "robin/btrom.h"
 #include "robin/calibration.h"
@@ -45,7 +46,6 @@ void clockHostSelectPreset1(void);								/* 0x26baa */
 void clockHostSelectPreset2(void);									/* 0x26bdc */
 void clockHostSelectPreset3(void);								/* 0x26c0e */
 int macMgmtSelectContext(struct WlanConnection *connection);					/* 0x35f7c */
-void wlanPsSetupPacket(void *state, int argument);						/* 0x3d29e */
 void macTxNotifyReleaseBuffer(void);								/* 0x3239c */
 void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, unsigned int beaconPeriodA,
 			    unsigned int beaconPeriodB);						/* 0x323f8 */

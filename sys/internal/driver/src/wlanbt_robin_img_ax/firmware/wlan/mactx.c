@@ -3,6 +3,7 @@
  * and the 802.11 data header. The filename is inferred; no source filename
  * survives.
  */
+#include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/autotx.h"
 #include "robin/stapssm.h"
@@ -595,7 +596,6 @@ void macTxAdvanceStage(void)
 
 
 /* Not converted yet; provisional names. */
-uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused); /* 0x3d2f8 */
 void wlanPsTriggerSent(void);					/* 0x2eade */
 int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
@@ -846,7 +846,6 @@ void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
-int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
 int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
 extern struct OsaDevice ampWlanDriver;					/* 0x04009860 */
 extern struct OsaMessageQueue wlanDriverQueue15;			/* 0x04004a18 */

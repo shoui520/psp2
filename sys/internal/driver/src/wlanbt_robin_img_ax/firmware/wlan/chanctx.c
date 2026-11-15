@@ -6,6 +6,7 @@
  * placeholder names (macMgmt*Context), kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/ratesel.h"
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
 #include "robin/calibration.h"
@@ -48,7 +49,6 @@ _Static_assert(sizeof(struct WlanDirectAttributes) == 76, "P2P attributes");
 void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
 void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x3218c */
 void macTxNotifyResolveBuffer(unsigned int rate);					/* 0x32294 */
-void wlanPsReleasePacket(struct WlanConnection *connection, uint32_t rateSet);		/* 0x3d286 */
 void wlanPsApplyFrame(struct WlanConnection *connection, int a, unsigned int b);	/* 0x3d6d0 */
 int p2pSqramHandleState(struct WlanConnection *connection);				/* SQRAM */
 extern int (*wlanChannelValidateHook)(void);						/* 0x5f1a0 */
@@ -60,7 +60,6 @@ void hostCmd003c(int timing, int carrier);						/* 0x2e9cc */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void uapSqramClearTable(void);								/* SQRAM 0xc000a3f6 */
 void uapSqramSetupTable(void);								/* SQRAM, via the veneer at 0x52e7c */
-void wlanPsBuildPacket(void);								/* 0x3cfe4 */
 void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 void btLmpLcHandleState(int state);							/* 0x42488 */

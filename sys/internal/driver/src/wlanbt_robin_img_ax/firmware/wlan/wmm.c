@@ -3,6 +3,7 @@
  * and the host commands for them. See robin/wmm.h. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/ratesel.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
@@ -516,8 +517,6 @@ uint8_t wlanWmmParameterElement[26] __attribute__((section(".sqram1.bss")));		/*
 
 extern void wlanTspecTrack(void);						/* 0x4190a */
 extern void wlanTspecManage(void);						/* 0x41940 */
-extern void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);	/* 0x3cfd2 */
-extern uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused);		/* 0x3d2f8 */
 
 /* The connection's QoS flag (the association used WMM). */
 __attribute__((noinline)) int wlanConnectionQosEnabled(struct WlanConnection *connection)

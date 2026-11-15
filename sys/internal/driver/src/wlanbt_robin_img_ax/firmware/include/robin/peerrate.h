@@ -41,15 +41,6 @@ int macTxNotifyFormatFrame(unsigned int index, struct WlanCalibrationChannelValu
 void macTxNotifyInspectFrame(void);							/* 0x33692 */
 void macTxNotifyTrackFrame(void);							/* 0x336a0 */
 
-/* The rate selection that decides (0x3c03c to 0x3d4c6, not converted yet). */
-int wlanPsAcquireBuffer(struct WlanConnection *connection);				/* 0x3c97c */
-int wlanPsManageBuffer(struct WlanConnection *connection);				/* 0x3c97a */
-unsigned int wlanPsReleaseBuffer(void);						/* 0x3c9ba */
-int wlanPsHandlePacket(struct WlanConnection *connection);				/* 0x3cc48 */
-int wlanPsProcessPacket(struct WlanRateControl *rateControl, struct WlanTxStatus *status); /* 0x3cd54 */
-unsigned int wlanPsComputePacket(void);						/* 0x3cff4 */
-int wlanPsUpdateFrame(unsigned int rate, uint8_t *wide, uint8_t *index);		/* 0x3d402 */
-int wlanPsConfigureFrame(const struct WlanRateLevel *level);				/* 0x3d45c */
-void wlanPsValidateFrame(struct WlanRateWindow *window);				/* 0x3d480 */
+#include "robin/ratesel.h"
 
 #endif /* ROBIN_PEERRATE_H */

@@ -9,6 +9,7 @@
  * and the fields' are inferred.
  */
 #include <stddef.h>
+#include "robin/ratesel.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
@@ -59,7 +60,6 @@ unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirele
 				   unsigned int exclude);				/* 0x402ea */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 int rfCalibSyncDescriptor(void);						/* 0x2a20c */
-void wlanPsQueryPacket(void);							/* 0x3d006 */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */
 void btLmpLcHandleState(int state);						/* 0x42488 */
 extern uint8_t ampScanChannel;					/* amp/wlanif.c */
