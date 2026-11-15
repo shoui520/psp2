@@ -55,6 +55,11 @@ extern struct BtSlotQueue btSlotQueues[];			/* 0x400dcdc */
 extern const uint8_t *btPacketTypes;				/* 0x400f968: 12 bytes per type, halfword 4 its length */
 extern uint8_t btTargetStatus;					/* 0x400de53 */
 extern uint16_t btTargetNode;					/* 0x400de56 */
+extern uint8_t btDeviceWindow;					/* 0x400cd28 */
+extern uint8_t btDeviceBitmap;					/* 0x400cd2c */
+/* The ROM's handler of a due slot, which btLmpLcResolveTable() wraps. */
+extern int (*btNextPayload)(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
+			    uint32_t argument, unsigned int burst, unsigned int limit);	/* 0x400ed84 */
 extern uint8_t btTargetSlot;					/* 0x400de58: the retries a link is allowed */
 
 void btLmpLcHandleTable(int link, uint16_t length);		/* 0x4414e */
@@ -70,5 +75,22 @@ void btLmpLcParseTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned
 int btLmpLcBuildTable(struct BtDeviceProfile *profile, uint32_t clock);	/* 0x4438e */
 void btLmpLcComputeTable(struct BtDeviceProfile *profile, uint32_t clock, unsigned int kind);	/* 0x44426 */
 void btLmpLcQueryTable(const struct BtSlotEvent *event, uint32_t clock);	/* 0x44524 */
+void btLmpLcResetTable(void);					/* 0x4459c */
+void btLmpLcSyncTable(int set, int link);			/* 0x4459e */
+void btLmpLcApplyTable(struct BtDeviceProfile *profile, uint8_t shortWindow, uint8_t offset, uint8_t longWindow,
+		       uint8_t extra);				/* 0x445b6 */
+int btLmpLcResolveTable(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
+			uint32_t argument);			/* 0x44616 */
+int btLmpLcScheduleTable(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
+			 uint32_t argument);			/* 0x447ae */
+void btLmpLcNotifyTable(const struct BtSlotEvent *event, uint32_t clock);	/* 0x447b0 */
+void btLmpLcFormatTable(int link, uint32_t a1, uint32_t a2);	/* 0x447b2 */
+int btLmpLcInspectTable(int link);				/* 0x44802 */
+void btLmpLcTrackTable(uint8_t *command, uint8_t *result, uint32_t argument);	/* 0x44814 */
+void btLmpLcManageTable(uint8_t *value, uint8_t *previous);	/* 0x44856 */
+
+/* Not converted yet. */
+uint8_t btLmpLcAdjustHeader(int link);				/* 0x48f28: the ROM's rate setting of the second ring */
+uint8_t btLmpLcRecordHeader(int link);				/* 0x48f3a: the same for the first ring */
 
 #endif /* ROBIN_BTTABLE_H */

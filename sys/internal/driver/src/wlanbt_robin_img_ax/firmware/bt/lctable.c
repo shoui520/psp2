@@ -11,6 +11,7 @@
 #include "robin/bttable.h"
 
 typedef uint16_t __attribute__((may_alias)) BtHalf;
+typedef uint32_t __attribute__((may_alias)) BtWord;
 
 uint8_t btTableEnabled __attribute__((section(".itcm.rw"))) = 1;		/* 0x55294 */
 uint8_t btTableLinkMask __attribute__((section(".itcm.rw")));			/* 0x55295 */
@@ -303,5 +304,193 @@ void btLmpLcQueryTable(const struct BtSlotEvent *event, uint32_t clock)
 		if (profile->state == event->state && owner != profile &&
 		    btLmpLcInspectEntry(btTableModeMask, profile->index) != 0)
 			btLmpLcComputeTable(profile, clock, event->state);
+	}
+}
+
+void btLmpLcResetTable(void)
+{
+}
+
+/* Puts the link in (set) or takes it out of the mode 0 mask. */
+void btLmpLcSyncTable(int set, int link)
+{
+	unsigned int bit = 1 << link;
+
+	if (set != 0)
+		btTableLinkMask |= bit;
+	else
+		btTableLinkMask &= ~bit;
+}
+
+/*
+ * Sets the windows of the profile. Outside mode 1 a link with a host slot has no offset (its offset
+ * is its long window), and when the queue's head of state 9 is another link with a host slot the
+ * offset grows by extra.
+ */
+void btLmpLcApplyTable(struct BtDeviceProfile *profile, uint8_t shortWindow, uint8_t offset, uint8_t longWindow,
+		       uint8_t extra)
+{
+	struct BtDeviceProfile *head;
+
+	profile->shortWindow = shortWindow;
+	profile->offset = offset;
+	profile->longWindow = longWindow;
+	if (btTableLinkModes[profile->index] == 1)
+		return;
+	if (romHctHostSlot[profile->index][4] != 0) {
+		profile->offset = 0;
+		profile->longWindow = offset;
+	}
+	head = btSlotQueues[btSlotQueueIndex[9]].head;
+	if (head != NULL && head != profile && romHctHostSlot[head->index][4] != 0)
+		profile->offset += extra;
+}
+
+/*
+ * The slot of the profile is taken (the ROM's handler btNextPayload does it): first the link's
+ * settings and window are taken from its rings or its state, and given back afterwards.
+ */
+int btLmpLcResolveTable(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
+			uint32_t argument)
+{
+	unsigned int burst = 8;
+	int active = btLcoRomManageContext(profile->index);
+	uint8_t secondSetting = profile->secondSetting;
+	uint8_t firstSetting = profile->firstSetting;
+	unsigned int state;
+	unsigned int flags;
+	int result;
+
+	if (profile->adjust == 0) {
+		if (btTableLinkModes[profile->index] == 1 && profile->active == 0) {
+			btLmpLcSelectEntry(profile->index, clock);
+			if (btSource.header & (1 << profile->index))
+				profile->firstSetting = btLmpLcRecordHeader(profile->index);
+			else
+				profile->firstSetting = 1;
+			btLmpLcVerifyEntry(profile->index, clock);
+			if (((btSource.frame & (1 << profile->index)) | active) != 0) {
+				profile->secondSetting = btLmpLcAdjustHeader(profile->index);
+			} else {
+				burst = 4;
+				profile->secondSetting = 1;
+			}
+		} else {
+			profile->due = clock;
+		}
+		profile->adjust = 1;
+		state = event->state;
+		if (state == 9 || state == 5) {
+			if (btLmpLcDispatchTable(profile->index) != 0 &&
+			    btLmpLcInspectEntry(btSource.packet, profile->index) == 0)
+				goto limit;
+			if (profile->active != 0) {
+				profile->window = profile->span;
+			} else {
+				int late;
+
+				if (btLmpLcInspectEntry(btSource.packet, profile->index) != 0)
+					late = btLmpLcSelectEntry(profile->index, clock) < btSource.queue ||
+					       (btLmpLcInspectEntry(btTableLinkMask, profile->index) == 0 &&
+						btLmpLcVerifyEntry(profile->index, clock) < btSource.queue);
+				else
+					late = (int32_t)(profile->since + btTargetNode - clock) >= 0;
+				if ((active | late) != 0) {
+					burst = 8;
+					profile->window = profile->rate;
+				} else {
+					burst = 1;
+					profile->window = 1;
+				}
+			}
+		} else if (profile->active != 0) {
+			profile->window = profile->span > 21 ? 21 : profile->span;
+		} else {
+			profile->window = profile->rate;
+		}
+limit:
+		profile->limit = profile->window;
+	}
+	profile->queued = clock;
+	if (profile->limit != 0)
+		profile->limit--;
+	state = event->state;
+	flags = profile->flags & ~3u;
+	if (state == 6 || state == 5 ||
+	    *(const BtHalf *)(btPacketTypes + 12 * romHctHostSlot[profile->index][2] + 4) > 72)
+		profile->flags = flags + 1;
+	else
+		profile->flags = btDeviceWindow | btDeviceBitmap | flags;
+	result = btNextPayload(event, profile, clock, argument, burst, 0xffff);
+	profile->secondSetting = secondSetting;
+	profile->firstSetting = firstSetting;
+	return result;
+}
+
+int btLmpLcScheduleTable(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
+			 uint32_t argument)
+{
+	return btLmpLcResolveTable(event, profile, clock, argument);
+}
+
+void btLmpLcNotifyTable(const struct BtSlotEvent *event, uint32_t clock)
+{
+	btLmpLcQueryTable(event, clock);
+}
+
+/* The link holds its slots: one tick windows, and outside mode 1 it goes into mode 3. */
+void btLmpLcFormatTable(int link, uint32_t a1, uint32_t a2)
+{
+	struct BtDeviceProfile *profile = &btDeviceProfile[link];
+
+	profile->hold = 1;
+	profile->span = btTableRegister;
+	profile->rate = 0;
+	profile->window = btTableRegister;
+	btLmpLcApplyTable(profile, btTableRegister, (uint8_t)a2, 0, 1);
+	btLtsRomUpdateContext(link, a1, a2);
+	if (btTableLinkModes[link] != 1) {
+		btTableModeMask |= 1 << link;
+		btTableLinkModes[link] = 3;
+	}
+}
+
+int btLmpLcInspectTable(int link)
+{
+	btDeviceProfile[link].hold = 0;
+	return 0;
+}
+
+/*
+ * The host's command 0x0c48: a count over the length the command allows (less two) is cleared for
+ * the ROM's handler, and given back to the command and its result.
+ */
+void btLmpLcTrackTable(uint8_t *command, uint8_t *result, uint32_t argument)
+{
+	unsigned int count;
+	int length;
+
+	if (*(const BtWord *)command != 0xc48) {
+		btLcoRomReleaseState(command, result, argument);
+		return;
+	}
+	count = (command[10] << 8) | command[9];
+	length = ((command[12] << 8) | command[11]) - 2;
+	if ((int)count > length) {
+		command[9] = 0;
+		command[10] = 0;
+	}
+	btLcoRomReleaseState(command, result, argument);
+	command[9] = count;
+	command[10] = count >> 8;
+	*(BtHalf *)(result + 2) = count;
+}
+
+/* A value over 1 is moved out and replaced by 1. */
+void btLmpLcManageTable(uint8_t *value, uint8_t *previous)
+{
+	if (*value > 1) {
+		*previous = *value;
+		*value = 1;
 	}
 }

@@ -56,7 +56,8 @@ struct BtSourceState {
 struct BtDeviceProfile {
 	struct BtDeviceProfile *next;		/* the next profile in its slot queue */
 	uint32_t connection;			/* non-zero: the link is up */
-	uint8_t reserved8[6];
+	uint8_t reserved8[4];
+	uint16_t flags;				/* the ROM's slot flags: bits 0-1 the slot's kind */
 	uint16_t index;				/* its record in btSourceBuffer */
 	uint16_t interval;			/* the link's own timing, in ticks */
 	uint16_t span;				/* the ticks the active link is given */
