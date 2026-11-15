@@ -61,11 +61,11 @@ int wlanCcmDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t lengt
 int wlanCcmEncrypt(const WlanWirelessFrame *frame, uint32_t length, const uint32_t *key,
 		   uint8_t *source, uint32_t priority, uint32_t block);
 
-int wlanAesBlock(const uint8_t *key, const uint8_t *input, uint8_t *output);
-void wlanAesXor128(const uint8_t *left, const uint8_t *right, uint8_t *output);
-void wlanAesShiftLeft1(const uint8_t *input, uint8_t *output);
-void wlanAesCmacSubkeys(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2);
-void wlanAesCmacPad(const uint8_t *input, uint8_t *output, int length);
+int mrvl_aes_128(const uint8_t *key, const uint8_t *input, uint8_t *output);
+void xor_128(const uint8_t *left, const uint8_t *right, uint8_t *output);
+void leftshift_onebit(const uint8_t *input, uint8_t *output);
+void generate_subkey(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2);
+void padding(const uint8_t *input, uint8_t *output, int length);
 
 /* SQRAM 0xc00076a6, not converted: one block through the AES unit (mode 2: encrypt). */
 int wlanSqramAes(const uint8_t *key, int mode, const uint8_t *input, uint8_t *output);

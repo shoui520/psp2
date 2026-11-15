@@ -13,6 +13,8 @@
 
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
+#include "robin/md5.h"
+#include "robin/sha1.h"
 
 #define MAX_PMK_SIZE		32
 #define BSSID_FLAG		0xff	/* pmkElement_t.length of a PMK keyed by BSSID */
@@ -399,9 +401,7 @@ typedef struct TkipPtk_t {
 } TkipPtk_t;
 
 
-/* sha1.c (0x2dc5c), mrvl_sha256_crypto.c (0x2e7c8) */
-void Mrvl_PRF(unsigned char *key, int key_len, unsigned char *prefix, int prefix_len,
-	      unsigned char *data, int data_len, unsigned char *output, int len);
+/* sha1.c (robin/sha1.h: Mrvl_PRF 0x2dc5c), mrvl_sha256_crypto.c (0x2e7c8) */
 void mrvl_sha256_crypto_kdf(uint8_t *pKey, uint8_t key_len, char *label,
 			    uint8_t label_len, uint8_t *pContext, uint16_t context_len,
 			    uint8_t *pOutput, uint16_t output_len);
@@ -493,12 +493,8 @@ void supplicantParseRsnIe(IEEEtypes_RSNElement_t *pRsnIe, SecurityMode_t *pWpaTy
 			  IEEEtypes_RSNCapability_t *pRsnCapOut,
 			  Cipher_t *pGrpMgmtCipherOut);
 
-/* the MIC algorithms: hmac_sha1.c (0x2db58), aes_cmac_rom.c (0x2d636), hmac_md5.c (0x2da70) */
-void Mrvl_hmac_sha1(uint8_t **ppText, int *pTextLen, int textNum, uint8_t *key,
-		    int key_len, uint8_t *output, int outputLen);
+/* the MIC algorithms: hmac_sha1.c (0x2db58), aes_cmac_rom.c (0x2d636), hmac_md5.c (0x2da70; robin/md5.h) */
 void mrvl_aes_cmac(const uint8_t *key, const uint8_t *input, int length, uint8_t *mac);		/* 0x2d636 */
-void Mrvl_hmac_md5(uint8_t *text_data, int text_len, uint8_t *key, int key_len,
-		   uint8_t *digest);
 
 /* keyMgmtSta_rom.c */
 void supplicantSetAssocRsn_internal(RSNConfig_t *pRsnConfig,

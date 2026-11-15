@@ -17,7 +17,7 @@ static ROBIN_PATCH_SLOT(wlanCcmDecryptOverride);	/* 0x00055c18 */
 static ROBIN_PATCH_SLOT(wlanCcmEncryptOverride);	/* 0x00055c1c */
 
 /* Rb of AES-CMAC (RFC 4493): the constant the subkey derivation xors in. */
-static uint8_t wlanAesCmacRb[16] __attribute__((section(".itcm.rw"))) = {
+static uint8_t const_Rb[16] __attribute__((section(".itcm.rw"))) = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x87,
 };								/* 0x00054ec4 */
 
@@ -262,7 +262,7 @@ int wlanCcmEncrypt(const WlanWirelessFrame *frame, uint32_t length, const uint32
 }
 
 /* One AES block, through a patch or the AES unit; returns nonzero when the patch handled it. */
-int wlanAesBlock(const uint8_t *key, const uint8_t *input, uint8_t *output)
+int mrvl_aes_128(const uint8_t *key, const uint8_t *input, uint8_t *output)
 {
 	int result = wlanAesBlockOverride(key, input, output);
 
@@ -271,7 +271,7 @@ int wlanAesBlock(const uint8_t *key, const uint8_t *input, uint8_t *output)
 	return result;
 }
 
-void wlanAesXor128(const uint8_t *left, const uint8_t *right, uint8_t *output)
+void xor_128(const uint8_t *left, const uint8_t *right, uint8_t *output)
 {
 	int i;
 
@@ -280,7 +280,7 @@ void wlanAesXor128(const uint8_t *left, const uint8_t *right, uint8_t *output)
 }
 
 /* output = input << 1 over the 128 bits, most significant byte first. */
-void wlanAesShiftLeft1(const uint8_t *input, uint8_t *output)
+void leftshift_onebit(const uint8_t *input, uint8_t *output)
 {
 	uint8_t carry = 0;
 	int i;
@@ -292,29 +292,29 @@ void wlanAesShiftLeft1(const uint8_t *input, uint8_t *output)
 }
 
 /* Derives the two AES-CMAC subkeys of `key` (RFC 4493 section 2.3). */
-void wlanAesCmacSubkeys(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2)
+void generate_subkey(const uint8_t *key, uint8_t *subkey1, uint8_t *subkey2)
 {
 	uint8_t shifted[16];
 	uint8_t zero[16] = { 0 };
 	uint8_t l[16];
 
-	wlanAesBlock(key, zero, l);
+	mrvl_aes_128(key, zero, l);
 	if (l[0] & 0x80) {
-		wlanAesShiftLeft1(l, shifted);
-		wlanAesXor128(shifted, wlanAesCmacRb, subkey1);
+		leftshift_onebit(l, shifted);
+		xor_128(shifted, const_Rb, subkey1);
 	} else {
-		wlanAesShiftLeft1(l, subkey1);
+		leftshift_onebit(l, subkey1);
 	}
 	if (subkey1[0] & 0x80) {
-		wlanAesShiftLeft1(subkey1, shifted);
-		wlanAesXor128(shifted, wlanAesCmacRb, subkey2);
+		leftshift_onebit(subkey1, shifted);
+		xor_128(shifted, const_Rb, subkey2);
 	} else {
-		wlanAesShiftLeft1(subkey1, subkey2);
+		leftshift_onebit(subkey1, subkey2);
 	}
 }
 
 /* Pads the last block: `length` bytes of input, then 0x80 and zeros. */
-void wlanAesCmacPad(const uint8_t *input, uint8_t *output, int length)
+void padding(const uint8_t *input, uint8_t *output, int length)
 {
 	int i;
 
@@ -344,7 +344,7 @@ void mrvl_aes_cmac(const uint8_t *key, const uint8_t *data, int length, uint8_t 
 
 	if (mrvlAesCmacOverride(key, data, length, mac))
 		return;
-	wlanAesCmacSubkeys(key, subkey1, subkey2);
+	generate_subkey(key, subkey1, subkey2);
 	blocks = (length + 15) / 16;
 	if (blocks != 0 && (length & 15) == 0) {
 		tail = data + 16 * blocks - 16;
@@ -352,17 +352,17 @@ void mrvl_aes_cmac(const uint8_t *key, const uint8_t *data, int length, uint8_t 
 	} else {
 		if (blocks == 0)
 			blocks = 1;
-		wlanAesCmacPad(data + 16 * blocks - 16, padded, length - 16 * (length / 16));
+		padding(data + 16 * blocks - 16, padded, length - 16 * (length / 16));
 		subkey = subkey2;
 		tail = padded;
 	}
-	wlanAesXor128(tail, subkey, last);
+	xor_128(tail, subkey, last);
 	for (i = 0; i < blocks - 1; i++) {
-		wlanAesXor128(chain, data + 16 * i, block);
-		wlanAesBlock(key, block, chain);
+		xor_128(chain, data + 16 * i, block);
+		mrvl_aes_128(key, block, chain);
 	}
-	wlanAesXor128(chain, last, block);
-	wlanAesBlock(key, block, chain);
+	xor_128(chain, last, block);
+	mrvl_aes_128(key, block, chain);
 	for (i = 0; i < 16; i++)
 		mac[i] = chain[i];
 }

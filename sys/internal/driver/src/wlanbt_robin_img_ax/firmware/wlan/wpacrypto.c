@@ -12,8 +12,6 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 
-#define A_SHA_DIGEST_LEN	20
-
 typedef struct rc4_key {
 	uint8_t state[256];
 	uint8_t x;

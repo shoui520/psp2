@@ -212,3 +212,10 @@ PROVIDE(romLibParseContext  = 0x03f3a8d7);
 PROVIDE(romLibBuildContext  = 0x03f3a8e1);
 /* 64-bit signed divide (ARM), reached through the veneer at 0x5311c. */
 PROVIDE(__aeabi_ldivmod    = 0x03f3eb70);
+
+/* MD5 (ARM entry points), reached through the veneers at 0x531d4, 0x531dc and 0x531e4. */
+PROVIDE(wpa_MD5Init   = 0x03f3ae09);
+PROVIDE(wpa_MD5Update = 0x03f3b511);
+PROVIDE(wpa_MD5Final  = 0x03f3b58d);
+/* Signed 32-bit divide, reached through the veneer at 0x52cf4. */
+PROVIDE(__aeabi_idiv  = 0x03f3f240);
