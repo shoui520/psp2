@@ -165,12 +165,14 @@ _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 #define WLAN_RATE_FLAG_HT_OBSS		0x20	/* HT protection for another BSS's stations */
 
 struct WlanConnectionInfo {
-	uint8_t reserved0[30];
+	uint8_t reserved0[14];
+	uint8_t rates[14];		/* the BSS's rate set (supported rates, with the basic bit) */
+	uint8_t reserved28[2];
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
 	uint8_t maxStations;		/* stations an access point admits */
-	uint8_t securityFlags;		/* WLAN_INFO_SEC_*: what the BSS's security is (inferred) */
-	uint8_t reserved34[2];
+	SecurityMode_t securityMode;	/* the BSS's security: noRsn is the open system (the privacy bit stays clear) */
+	uint8_t reserved35;
 	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
 	uint8_t reserved40[10];
 	uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
@@ -205,7 +207,7 @@ struct WlanConnectionInfo {
 	uint8_t ht40IntolerantStations;	/* associated HT stations that are 40 MHz intolerant */
 	uint8_t olbcActive;
 	uint8_t olbcCount;
-	uint8_t reserved599;
+	uint8_t uapBusy;		/* nonzero while the SQRAM access point code still handles the BSS being stopped */
 	uint32_t olbcTimeout;		/* beacon intervals in 5 s, plus one */
 	uint32_t challengeTimer;	/* osaCreateTimer() handle: the shared key challenge's expiry */
 	uint8_t challengeText[128];	/* the challenge sent to the station that is authenticating */
@@ -336,12 +338,6 @@ struct __attribute__((may_alias)) WlanHtElements {
 #define WLAN_CONN_PRIVACY		0x04	/* WPA or RSN */
 #define WLAN_CONN_WAPI			0x10
 #define WLAN_CONN_HT			0x20	/* the peer is HT capable */
-
-/* WlanConnectionInfo.securityFlags (inferred from the access point's start and station removal). */
-#define WLAN_INFO_SEC_OPEN		0x01	/* no privacy: the capability's privacy bit is clear */
-#define WLAN_INFO_SEC_WPA		0x08
-#define WLAN_INFO_SEC_RSN		0x20
-#define WLAN_INFO_SEC_WAPI		0x80
 
 /*
  * WlanConnectionInfo.pktFwdCtl of an access point (Marvell's pkt_fwd_ctl; the

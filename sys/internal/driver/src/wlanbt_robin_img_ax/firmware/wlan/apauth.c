@@ -236,7 +236,7 @@ int hostCmd00b1(struct WlanConnection *connection)
 	if (connection->interfaceType == 3 && connection->mode != 2)
 		return 4;
 	uapSqramConfigureBuffer(connection, NULL, NULL);
-	if (info->securityFlags & WLAN_INFO_SEC_OPEN)
+	if (info->securityMode.noRsn)
 		info->capability[0] &= ~0x10;
 	else
 		info->capability[0] |= 0x10;
@@ -707,13 +707,13 @@ __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connec
 		if (--info->longSlotStations == 0)
 			wlanApUpdateSlotTime(connection);
 	}
-	if ((info->securityFlags & WLAN_INFO_SEC_WPA) || (info->securityFlags & WLAN_INFO_SEC_RSN)) {
+	if (info->securityMode.wpa || info->securityMode.wpa2) {
 		if (connection->keyBlocks[1] != NULL) {
 			uapSqramConfigureContext(connection->keyBlocks[1]);
 			connection->keyBlocks[1] = NULL;
 		}
 	}
-	if ((info->securityFlags & WLAN_INFO_SEC_WAPI) && connection->keyBlocks[1] != NULL) {
+	if (info->securityMode.wapi && connection->keyBlocks[1] != NULL) {
 		uapSqramResolveContext(&connection->keyBlocks[1]);
 		connection->flags &= ~WLAN_CONN_WAPI;
 		connection->keyBlocks[0] = NULL;

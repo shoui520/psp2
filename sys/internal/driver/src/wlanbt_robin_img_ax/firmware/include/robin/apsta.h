@@ -47,6 +47,24 @@ void fmCoexUpdateTable(uint8_t *text);							/* 0x4bcb6 */
 void fmCoexScheduleTable(uint8_t *frame, uint16_t algorithm, uint16_t sequence,
 			 uint16_t status, const void *challenge);			/* 0x4bebe */
 
+/* wlan/apassoc.c */
+int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3902c */
+int macMgmtUpdatePacket(struct WlanConnection *connection, int wps, const void *rsn,
+			const void *wpa, const uint8_t *wapi, uint16_t *status);	/* 0x390a2 */
+int macMgmtCheckPacket(OsaBuffer *buffer);						/* 0x39898 */
+void macMgmtPreparePacket(struct WlanConnection *connection);				/* 0x398c4 */
+void macMgmtDispatchPacket(OsaBuffer *buffer);						/* 0x39954 */
+void macMgmtParsePacket(struct WlanConnection *connection, int value, int code);	/* 0x399a8 */
+void macMgmtBuildPacket(unsigned int interfaceType, unsigned int bssNumber);		/* 0x399b4 */
+void macMgmtComputePacket(struct WlanConnectionInfo *info, uint8_t *element,
+			  const uint8_t *htCapability, const struct WlanConnectionRole *role,
+			  unsigned int beaconPeriod);					/* 0x399bc */
+void macMgmtQueryPacket(struct WlanConnection *connection);				/* 0x39a06 */
+int macMgmtResetPacket(struct WlanConnection *connection, int flushAll);		/* 0x39b06 */
+int macMgmtSyncPacket(struct WlanConnection *connection);				/* 0x39b98 */
+int macMgmtApplyPacket(void);								/* 0x39bca */
+int macMgmtResolvePacket(struct WlanConnection *connection);				/* 0x39bd2 */
+
 /* The management task's message queue (wlan/tasks.c). */
 OsaBuffer *macMgmtHandleState(struct WlanConnection *connection);			/* 0x34778 */
 int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
