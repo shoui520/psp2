@@ -14,6 +14,7 @@
 #include "robin/softtimer.h"
 
 struct WlanWirelessFrame;
+struct WlanP2pClient;
 #include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
@@ -390,7 +391,7 @@ struct WlanConnectionRole {
 	uint8_t state;			/* 802.11 state: 1 unauthenticated, 2 authenticated, 3 associated */
 	uint8_t erpCapable;		/* the peer supports ERP (else it counts in WlanConnectionInfo.erpInfo) */
 	uint16_t eventCode;		/* the host event code the peer's leaving is reported with (bit 15: none) */
-	uint8_t *p2pContext;		/* a P2P group owner's peer: its P2P context (p2pDirectSetupContext()) */
+	struct WlanP2pClient *p2pContext;		/* a P2P group owner's peer: its P2P context (p2pDirectSetupContext()) */
 	struct WlanApPsQueue uapsdQueue;	/* frames of delivery-enabled access categories */
 	uint8_t reserved108[4];
 	struct {

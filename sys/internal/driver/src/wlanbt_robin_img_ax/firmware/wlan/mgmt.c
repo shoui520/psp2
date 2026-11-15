@@ -10,6 +10,7 @@
  * No Marvell source names these; the names say what the code does.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
 #include "robin/txpower.h"
@@ -104,7 +105,6 @@ struct __attribute__((packed)) WlanCustomIeTable {
 /* Not converted yet; provisional names. */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
 int cbProcResetPacket(void);							/* 0x1e42e */
-int p2pDirectTrackContext(const WlanWirelessFrame *frame);			/* 0x40dd6 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 void p2pSqramBuildContext(struct WlanConnection *connection, const uint8_t *ies,

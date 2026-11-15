@@ -51,7 +51,7 @@ unsigned int p2pDirectNotifyState(struct WlanConnection *connection)
 	connection->mode = 0;
 	connection->p2pState = 0;
 	ps->p2pAuthCount = 0;
-	ps->p2pStartedPeers = 0;
+	ps->groupClientCount = 0;
 	wlanIbssProbeResponseFrame = NULL;
 	wlanIbssBeaconFrame = NULL;
 	return 0;
@@ -173,7 +173,7 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	ps->stageLimit = 3;
 	ps->stage = 1;
 	ps->p2pAuthCount = 0;
-	ps->p2pStartedPeers = 0;
+	ps->groupClientCount = 0;
 	ps->groupSettingA = 1;
 	ps->groupSettingB = 1;
 	ps->p2pChannel = 255;

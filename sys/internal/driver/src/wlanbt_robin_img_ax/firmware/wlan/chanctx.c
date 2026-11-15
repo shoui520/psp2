@@ -6,6 +6,7 @@
  * placeholder names (macMgmt*Context), kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
@@ -35,15 +36,6 @@
 
 
 /* The P2P attributes of a beacon or probe response the direct code picked out (76 bytes). */
-struct WlanDirectAttributes {
-	uint8_t reserved0[24];
-	uint8_t *noticeOfAbsence;	/* the Notice of Absence attribute: ID, length[2], index, CTWindow, descriptors */
-	uint8_t reserved28[4];
-	uint8_t *groupId;		/* the P2P Group ID attribute: ID, length[2], device address[6], SSID */
-	uint8_t reserved36[40];
-};
-
-_Static_assert(sizeof(struct WlanDirectAttributes) == 76, "P2P attributes");
 
 /* Not converted yet; provisional names. */
 void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
@@ -63,12 +55,8 @@ void uapSqramSetupTable(void);								/* SQRAM, via the veneer at 0x52e7c */
 void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 void btLmpLcHandleState(int state);							/* 0x42488 */
-void p2pSqramDispatchState(struct WlanDirectAttributes *attributes, uint32_t flags,
+void p2pSqramDispatchState(struct WlanDirectContext *attributes, uint32_t flags,
 			   struct WlanPsPeerState *ps);					/* SQRAM */
-struct WlanDirectAttributes *p2pDirectScheduleContext(const uint8_t *frame, int unused, uint32_t *first,
-						       uint32_t *second,
-						       struct WlanDirectAttributes *attributes);	/* 0x40b16 */
-void p2pDirectSyncContext(uint8_t *attribute, uint8_t *buffer, int kind, uint8_t **pointer);	/* 0x406ca */
 
 /* The automatic frequency control (hostcmd.c: host command 60), which hostCmd003c() is a stub of here. */
 uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
@@ -366,17 +354,17 @@ void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *fram
 		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 
 		if (ps->p2pFlags & 4) {
-			struct WlanDirectAttributes attributes[1];
+			struct WlanDirectContext attributes[1];
 			uint8_t buffer[32];
 			uint32_t first = 0;
 			uint32_t flags = 0;
-			struct WlanDirectAttributes *direct;
+			struct WlanDirectContext *direct;
 
 			direct = p2pDirectScheduleContext(frame, 0, &first, &flags, attributes);
 			if (flags & 0x2000)
-				p2pDirectSyncContext(direct->groupId, buffer, 9, &direct->groupId);
-			if (direct->groupId != NULL &&
-			    memcmp(direct->groupId + 3, ps->p2pGroupId, 6) == 0) {
+				p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], buffer, 9, &direct->attributes[P2P_SLOT_DEVICE_INFO]);
+			if (direct->attributes[P2P_SLOT_DEVICE_INFO] != NULL &&
+			    memcmp(direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, ps->p2pGroupId, 6) == 0) {
 				ps->p2pChannel = wlanOperatingChannel();
 				ps->p2pBssActive = 1;
 				p2pSqramDispatchState(direct, flags, ps);
@@ -447,11 +435,11 @@ void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *fra
 
 	if (connection->interfaceType == 3) {
 		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-		struct WlanDirectAttributes attributes[1];
+		struct WlanDirectContext attributes[1];
 		uint8_t buffer[32];
 		uint32_t first = 0;
 		uint32_t flags = 0;
-		struct WlanDirectAttributes *direct;
+		struct WlanDirectContext *direct;
 		uint64_t timestamp;
 
 		__aeabi_memcpy(ps->beaconTimestamp, frame + 32, 8);
@@ -460,12 +448,12 @@ void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *fra
 		ps->beaconTimerHigh = timestamp >> 32;
 		direct = p2pDirectScheduleContext(frame, 0, &first, &flags, attributes);
 		if (flags & 0x1000)
-			p2pDirectSyncContext(direct->noticeOfAbsence, buffer, -1, &direct->noticeOfAbsence);
-		if (direct == NULL || direct->noticeOfAbsence == NULL) {
+			p2pDirectSyncContext(direct->attributes[P2P_SLOT_NOTICE_OF_ABSENCE], buffer, -1, &direct->attributes[P2P_SLOT_NOTICE_OF_ABSENCE]);
+		if (direct == NULL || direct->attributes[P2P_SLOT_NOTICE_OF_ABSENCE] == NULL) {
 			__aeabi_memclr(ps->noaAttribute, sizeof(ps->noaAttribute));
 			ps->noaMode = 0;
 		} else {
-			const uint8_t *attribute = direct->noticeOfAbsence;
+			const uint8_t *attribute = direct->attributes[P2P_SLOT_NOTICE_OF_ABSENCE];
 			unsigned int length = attribute[1] | (attribute[2] << 8);
 			unsigned int window = attribute[4] & 0x7f;
 

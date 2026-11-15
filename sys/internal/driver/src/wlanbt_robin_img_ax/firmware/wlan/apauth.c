@@ -12,6 +12,7 @@
  * 0 free, 1 leaving (the deauthentication was sent), 2 authenticated, 3 associated.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/apps.h"
 #include "robin/conn.h"
 #include "robin/esatypes.h"

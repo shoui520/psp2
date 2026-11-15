@@ -183,7 +183,6 @@ int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 
 /* Not converted yet; provisional names. */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int type);			/* 0x41250 */
-void p2pDirectSetupContext(struct WlanConnection *connection, uint8_t *context);	/* 0x40f46 */
 void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
 			     const uint8_t *address);					/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);				/* 0x41228 */

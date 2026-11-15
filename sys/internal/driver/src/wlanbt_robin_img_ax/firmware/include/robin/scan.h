@@ -223,7 +223,6 @@ int p2pSqramScheduleState(struct WlanConnection *connection, uint32_t slot);	/* 
 void p2pSqramProcessState(struct WlanConnection *connection, unsigned int state, uintptr_t argument,
 			  int event);					/* SQRAM, veneer 0x5328c */
 int p2pSqramNotifyState(void);						/* SQRAM, veneer 0x53294 */
-int p2pDirectFormatContext(struct WlanConnection *connection);		/* 0x40da2 */
 unsigned int fmCoexConvertEntry(unsigned int type, const uint8_t *tlv, uint8_t *ssid, uint8_t *count,
 			unsigned int maximum);				/* 0x4ba8e */
 void fmCoexFormatBuffer(uintptr_t frame, uint8_t *body, uintptr_t argument, struct WlanScan *scan,

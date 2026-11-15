@@ -12,8 +12,15 @@
 #include "robin/p2pgo.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/sys.h"
 
 extern void abort(void);
+extern uint8_t wlanBssTargetCounter[0x558];		/* 0x59718 */
+extern uint8_t wlanBssTargetBitmap[0xd2];		/* 0x59c70 */
+extern void __aeabi_memclr4(void *dest, size_t n);
+void p2pSqramHandleEntry(struct WlanPsPeerState *ps);	/* 0xc000e1f0 */
+
+struct WlanInitStage p2pDirectInitStage __attribute__((section(".itcm.rw")));
 
 /* The Channel List attribute: its header and the first channel run of the list. */
 unsigned int p2pDirectHandleContext(const uint8_t *list, uint8_t *attribute)
@@ -197,7 +204,7 @@ unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirele
 				attribute = own ? ps->deviceInfoAttribute : attributes[P2P_SLOT_DEVICE_INFO];
 				break;
 			case 1u << P2P_ATTR_GROUP_INFO:
-				attribute = own ? ps->groupInfoAttribute : attributes[P2P_SLOT_GROUP_INFO];
+				attribute = own ? (uint8_t *)&ps->groupInfoAttribute : attributes[P2P_SLOT_GROUP_INFO];
 				break;
 			case 1u << P2P_ATTR_GROUP_ID:
 				attribute = own ? &ps->groupIdType : attributes[P2P_SLOT_GROUP_ID];
@@ -433,4 +440,419 @@ void p2pDirectSyncContext(const uint8_t *source, uint8_t *destination, int limit
 			body += 6;
 		done = (uint16_t)(done + 1);
 	}
+}
+
+/*
+ * The Probe Response or Association attributes of a peer, merged into the frame being built: the
+ * elements in the received frame with the OUI are copied into elements of at most 255 bytes, a P2P
+ * attribute that is the last of its element is joined with the next one, and the Group Info
+ * attribute is dropped. The result is bounded by 900 bytes (limit is what the frame already holds).
+ * The length of the elements built.
+ */
+unsigned int p2pDirectApplyContext(uint8_t *out, const void *oui, unsigned int size, const uint8_t *in,
+				   uint16_t limit)
+{
+	uint16_t frameLength = 0;
+	uint8_t *length = out + 1;
+	uint8_t *dst = out + 2;
+	uint16_t remaining;
+	const uint8_t *element = in;
+	uint16_t left;
+
+	out[0] = 0xdd;
+	__aeabi_memcpy(dst, oui, size);
+	remaining = size;
+	dst += size;
+	while (memcmp(element + 2, oui, size) == 0) {
+		const uint8_t *body = element + size;
+		const uint8_t *attribute = body + 2;
+
+		if (memcmp(element + 2, wlanP2pOui, size) == 0 &&
+		    p2pDirectBuildContext(attribute, (uint8_t)(element[1] - size)) != 0) {
+			unsigned int bytes = (uint8_t)(element[1] - size);
+
+			element = body + 2;
+			left = bytes;
+			for (;;) {
+				unsigned int attributeLength;
+				unsigned int used;
+
+				if (left == 0)
+					break;
+				attributeLength = (element[2] << 8) | element[1];
+				used = (uint16_t)(remaining + 3);
+				if (attributeLength + limit + used >= 900) {
+					*length = remaining;
+					return remaining;
+				}
+				if (*element == P2P_ATTR_GROUP_INFO) {
+					element = p2pDirectParseContext(element, &left);
+					continue;
+				}
+				if (attributeLength + 3 >= left) {
+					if (attributeLength + used >= 255)
+						p2pDirectQueryContext(&dst, &length, &remaining, size, &limit, &frameLength,
+								      wlanP2pOui);
+					if ((unsigned int)(((element[2] << 8) | element[1]) + 3) <= 251) {
+						p2pDirectSyncContext(element, dst, -1, NULL);
+						remaining = ((element[2] << 8) | element[1]) + remaining + 3;
+						dst += ((element[2] << 8) | element[1]) + 3;
+					}
+					element = p2pDirectParseContext(element, &left);
+					continue;
+				}
+				if (attributeLength + used >= 255)
+					p2pDirectQueryContext(&dst, &length, &remaining, size, &limit, &frameLength, wlanP2pOui);
+				__aeabi_memcpy(dst, element, ((element[2] << 8) | element[1]) + 3);
+				dst += ((element[2] << 8) | element[1]) + 3;
+				remaining = ((element[2] << 8) | element[1]) + remaining + 3;
+				attributeLength = (element[2] << 8) | element[1];
+				element += attributeLength + 3;
+				left = (uint16_t)(left - attributeLength - 3);
+			}
+			continue;
+		}
+		if ((int)(limit + remaining + element[1] - size) >= 900)
+			break;
+		if ((int)(element[1] + remaining - size) >= 255)
+			p2pDirectQueryContext(&dst, &length, &remaining, size, &limit, &frameLength, oui);
+		__aeabi_memcpy(dst, body + 2, element[1] - size);
+		remaining = element[1] - size + remaining;
+		dst += element[1] - size;
+		element += element[1] + 2;
+	}
+	*length = remaining;
+	return (uint16_t)(frameLength + remaining + 2);
+}
+
+/*
+ * Reads the attributes of the P2P elements that start at element into context (one pointer per slot)
+ * and sets bit n of mask for the attribute n found; changed gets the bits that were new while an
+ * attribute went on into the next element. length is what the frame holds from the element on.
+ */
+void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed, int length,
+			     struct WlanDirectContext *context)
+{
+	static const uint8_t slots[19] = {
+		P2P_SLOT_STATUS, P2P_SLOT_MINOR_REASON, P2P_SLOT_CAPABILITY, P2P_SLOT_DEVICE_ID,
+		P2P_SLOT_GO_INTENT, P2P_SLOT_CONFIGURATION_TIMEOUT, P2P_SLOT_LISTEN_CHANNEL,
+		P2P_SLOT_GROUP_BSSID, P2P_SLOT_EXTENDED_LISTEN_TIMING, P2P_SLOT_INTENDED_INTERFACE_ADDRESS,
+		P2P_SLOT_MANAGEABILITY, P2P_SLOT_CHANNEL_LIST, P2P_SLOT_NOTICE_OF_ABSENCE,
+		P2P_SLOT_DEVICE_INFO, P2P_SLOT_GROUP_INFO, P2P_SLOT_GROUP_ID, P2P_SLOT_INTERFACE,
+		P2P_SLOT_OPERATING_CHANNEL, P2P_SLOT_INVITATION_FLAGS,
+	};
+	uint16_t left = 0;
+	uint16_t consumed;
+	const uint8_t *position;
+
+	*changed = 0;
+	*mask = 0;
+	if (element == NULL)
+		return;
+	position = element;
+	while (memcmp(position + 2, wlanP2pOui, 4) == 0) {
+		unsigned int bytes = position[1];
+
+		position += 6;
+		consumed = bytes + 2;
+		left = bytes - 4;
+		for (;;) {
+			unsigned int before;
+			unsigned int next;
+
+			if (left == 0)
+				break;
+			before = *mask;
+			if (*position > 18)
+				return;
+			context->attributes[slots[*position]] = (uint8_t *)position;
+			*mask |= 1u << *position;
+			next = (uint16_t)(((position[2] << 8) | position[1]) + 3);
+			if (next <= left) {
+				position += next;
+				left = left - next;
+				continue;
+			}
+			*changed |= *mask ^ before;
+			{
+				const uint8_t *start = position;
+
+				position = p2pDirectParseContext(position, &left);
+				if (position == NULL)
+					return;
+				length = (int16_t)(length - (position - start));
+			}
+			if (left == 0 || length == 0) {
+				consumed = 0;
+				goto element_done;
+			}
+			return;
+		}
+		element_done:
+		length = (int16_t)(length - consumed);
+		if ((int16_t)length <= 0 || position == NULL)
+			return;
+	}
+}
+
+/*
+ * Finds the P2P elements of a frame (body: they start at its fixed offset 40; else by their OUI)
+ * and reads their attributes into context. Returns the context.
+ */
+struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int body, unsigned int *mask,
+						   unsigned int *changed, struct WlanDirectContext *context)
+{
+	unsigned int found = 0;
+	unsigned int fresh = 0;
+	const uint8_t *element;
+
+	if (body != 0)
+		element = frame + 40;
+	else
+		element = p2pDirectDispatchContext((WlanWirelessFrame *)(uintptr_t)frame, 1, wlanP2pOui, 4);
+	if (element != NULL) {
+		int length = (int16_t)((((frame[1] << 8) | frame[0]) - (uint16_t)(element - frame)) + 32);
+
+		__aeabi_memclr4(context, sizeof(*context));
+		p2pDirectResolveContext(element, &found, &fresh, length, context);
+		if (mask != NULL)
+			*mask = found;
+		if (changed != NULL)
+			*changed = fresh;
+	}
+	return context;
+}
+
+/*
+ * An event for the host about a peer's frame: the peer's address, the event type and value, the
+ * group's setting for types 3 and 4, and the P2P and WPS elements of the frame (types above 8),
+ * with a Group ID attribute added to a probe response of a group owner.
+ */
+unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
+				    unsigned int type, uint16_t value)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	struct WlanDirectContext context;
+	uint8_t groupId[40];
+	uint8_t deviceInfoCopy[12];
+	uint8_t capabilityCopy[8];
+	unsigned int mask;
+	unsigned int length = 0;
+	unsigned int used;
+	unsigned int count;
+	uint8_t *out;
+
+	event[0] = 2;
+	event[1] = 0;
+	__aeabi_memcpy(event + 6, frame + 12, 6);
+	*(uint16_t *)event += 6;
+	*(uint16_t *)(event + 2) = type;
+	*(uint16_t *)(event + 4) = value;
+	*(uint16_t *)event += 4;
+	out = event + 12;
+	if (type == 3 || type == 4) {
+		*(uint32_t *)out = ps->groupSettingD;
+		out = event + 16;
+		*(uint16_t *)event += 4;
+	}
+	count = (frame[1] << 8) | frame[0];
+	if (count > 32) {
+		unsigned int added;
+
+		if (type > 8) {
+			const uint8_t *p2p = p2pDirectDispatchContext((WlanWirelessFrame *)(uintptr_t)frame, 1, wlanP2pOui, 4);
+			const uint8_t *wps = p2pDirectDispatchContext((WlanWirelessFrame *)(uintptr_t)frame, 1, wlanWpsOui, 4);
+			unsigned int before = (event[1] << 8) | event[0];
+
+			*(uint16_t *)event = p2pDirectApplyContext(out, wlanP2pOui, 4, p2p, before) + before;
+			used = (uint16_t)(((event[1] << 8) | event[0]) - before);
+			if (p2p != NULL && (frame[2] >> 4) == 5) {
+				mask = 0;
+				p2pDirectScheduleContext(frame, 0, NULL, &mask, &context);
+				if (mask & 0x2000)
+					p2pDirectSyncContext(context.attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, 9,
+							     &context.attributes[P2P_SLOT_DEVICE_INFO]);
+				if (mask & 4)
+					p2pDirectSyncContext(context.attributes[P2P_SLOT_CAPABILITY], capabilityCopy, 5,
+							     &context.attributes[P2P_SLOT_CAPABILITY]);
+				if (context.attributes[P2P_SLOT_CAPABILITY] != NULL &&
+				    (context.attributes[P2P_SLOT_CAPABILITY][4] & 1) != 0) {
+					unsigned int size;
+
+					groupId[0] = P2P_ATTR_GROUP_ID;
+					if (context.attributes[P2P_SLOT_DEVICE_INFO] != NULL)
+						__aeabi_memcpy(groupId + 3, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+					__aeabi_memcpy(groupId + 9, frame + 46, frame[45]);
+					size = frame[45] + 6;
+					groupId[1] = size;
+					groupId[2] = size >> 8;
+					if (((event[1] << 8) | event[0]) <= 900) {
+						uint8_t *header;
+
+						length = (uint16_t)(size + 3);
+						p2pDirectRecordState(&out[used]);
+						used = (uint16_t)(used + 6);
+						*(uint16_t *)event += 6;
+						header = &out[used];
+						__aeabi_memcpy(header, groupId, length);
+						*(uint16_t *)event += length;
+						header[-5] += length;
+					}
+				}
+			}
+			added = p2pDirectApplyContext(&out[used + length], wlanWpsOui, 4, wps, (event[1] << 8) | event[0]);
+		} else {
+			added = p2pDirectApplyContext(out, wlanP2pOui, 4, frame + 40, (event[1] << 8) | event[0]);
+		}
+		*(uint16_t *)event += added;
+		count = event[1];
+	}
+	return count;
+}
+
+/* A random wait of 100 ms times a number between the group's two limits. */
+int p2pDirectFormatContext(struct WlanConnection *connection)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+	return 100 * (rand() % (ps->stageLimit - ps->stage + 1) + ps->stage);
+}
+
+int p2pDirectInspectContext(WlanWirelessFrame *frame)
+{
+	return p2pDirectDispatchContext(frame, 1, wlanP2pOui, 4) != NULL;
+}
+
+int p2pDirectTrackContext(const WlanWirelessFrame *frame)
+{
+	return frame->body[1] == 0;
+}
+
+/* The tie-breaker bit counts up: 1 or 2. */
+void p2pDirectManageContext(struct WlanConnection *connection)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+	ps->tieBreaker = (ps->tieBreaker & 1) + 1;
+}
+
+/* The group's state is cleared when the firmware starts, and again when the init stage runs. */
+int p2pDirectAcquireContext(void)
+{
+	__aeabi_memclr4(wlanBssTargetCounter, sizeof(wlanBssTargetCounter));
+	__aeabi_memclr(wlanBssTargetBitmap, sizeof(wlanBssTargetBitmap));
+	p2pSqramHandleEntry((struct WlanPsPeerState *)wlanBssTargetCounter);
+	p2pDirectInitStage.run = p2pDirectAcquireContext;
+	wlanInitStageRegister(&p2pDirectInitStage);
+	return 0;
+}
+
+/*
+ * Adds the sender of an association request to the Group Info attribute's clients (or finds it
+ * there): its device address and capability from the request's P2P attributes, its interface
+ * address, and its Device Info. NULL when the request has no Device Info or Capability.
+ */
+struct WlanP2pClient *p2pDirectReleaseContext(struct WlanConnection *connection, const WlanWirelessFrame *request)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	struct WlanDirectContext context;
+	struct WlanP2pClient *client;
+	unsigned int mask = 0;
+	unsigned int changed = 0;
+	unsigned int count = 0;
+	uint8_t deviceInfoCopy[84];
+	uint8_t capabilityCopy[8];
+	unsigned int length;
+	unsigned int irq;
+
+	p2pDirectScheduleContext((const uint8_t *)request, 0, &changed, &mask, &context);
+	if (context.attributes[P2P_SLOT_CAPABILITY] == NULL || context.attributes[P2P_SLOT_DEVICE_INFO] == NULL)
+		return NULL;
+	(void)changed;
+	if (mask & 0x2000)
+		p2pDirectSyncContext(context.attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, -1,
+				     &context.attributes[P2P_SLOT_DEVICE_INFO]);
+	if (mask & 4)
+		p2pDirectSyncContext(context.attributes[P2P_SLOT_CAPABILITY], capabilityCopy, -1,
+				     &context.attributes[P2P_SLOT_CAPABILITY]);
+	client = (struct WlanP2pClient *)ps->groupInfoAttribute.clients;
+	while (ps->groupClientCount > count) {
+		if (memcmp(client->deviceAddress, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6) == 0)
+			return client;
+		client = (struct WlanP2pClient *)((uint8_t *)client + client->length + 1);
+		count = (uint8_t)(count + 1);
+	}
+	irq = sysIrqDisable();
+	__aeabi_memclr(client, 0x59);
+	client->capability = context.attributes[P2P_SLOT_CAPABILITY][3];
+	__aeabi_memcpy(client->deviceAddress, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+	__aeabi_memcpy(client->interfaceAddress, (const uint8_t *)request + 12, 6);
+	length = (context.attributes[P2P_SLOT_DEVICE_INFO][2] << 8) | context.attributes[P2P_SLOT_DEVICE_INFO][1];
+	__aeabi_memcpy(client->information, context.attributes[P2P_SLOT_DEVICE_INFO] + 9, length - 6);
+	client->length = context.attributes[P2P_SLOT_DEVICE_INFO][1] + 7;
+	ps->groupInfoAttribute.id = P2P_ATTR_GROUP_INFO;
+	length = ((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) + length + 8;
+	ps->groupInfoAttribute.length[0] = length;
+	ps->groupInfoAttribute.length[1] = length >> 8;
+	ps->groupClientCount++;
+	ps->p2pAuthCount++;
+	sysIrqRestore(irq);
+	macMgmtScheduleFrame(connection, 5);
+	return client;
+}
+
+/* Removes the client from the Group Info attribute, closing the gap and pointing its peers' roles at the moved entries. */
+int p2pDirectSetupContext(struct WlanConnection *connection, struct WlanP2pClient *client)
+{
+	struct WlanPsPeerState *ps;
+	struct WlanP2pClient *entry;
+	unsigned int size;
+	unsigned int index = 0;
+	unsigned int irq;
+
+	if (client == NULL)
+		return 0;
+	ps = wlanConnectionPsState(connection);
+	size = (uint8_t)(client->length + 1);
+	if (((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) < (int)size)
+		return 0;
+	entry = (struct WlanP2pClient *)ps->groupInfoAttribute.clients;
+	while (ps->groupClientCount > index && memcmp(entry->deviceAddress, client->deviceAddress, 6) != 0) {
+		entry = (struct WlanP2pClient *)((uint8_t *)entry + entry->length + 1);
+		index = (uint8_t)(index + 1);
+	}
+	irq = sysIrqDisable();
+	if ((int)ps->groupClientCount - 1 > (int)index) {
+		struct WlanP2pClient *next = (struct WlanP2pClient *)((uint8_t *)entry + entry->length + 1);
+
+		while ((int)ps->groupClientCount - 1 > (int)index) {
+			unsigned int bytes = (uint8_t)(next->length + 1);
+			struct WlanConnection *peer;
+
+			if (entry != next)
+				__aeabi_memcpy(entry, next, bytes);
+			peer = wlanConnectionFindByPeer(entry->deviceAddress);
+			if (peer != NULL) {
+				struct WlanConnectionRole *role = wlanConnectionInfoSlot(peer);
+
+				if (role->p2pContext == NULL)
+					return 0;
+				role->p2pContext = entry;
+			}
+			entry = (struct WlanP2pClient *)((uint8_t *)entry + bytes);
+			next = (struct WlanP2pClient *)((uint8_t *)next + bytes);
+			index = (uint8_t)(index + 1);
+		}
+	}
+	{
+		unsigned int length = ((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) - size;
+
+		ps->groupInfoAttribute.length[0] = length;
+		ps->groupInfoAttribute.length[1] = length >> 8;
+	}
+	ps->groupClientCount--;
+	ps->p2pAuthCount--;
+	sysIrqRestore(irq);
+	macMgmtScheduleFrame(connection, 5);
+	return 1;
 }

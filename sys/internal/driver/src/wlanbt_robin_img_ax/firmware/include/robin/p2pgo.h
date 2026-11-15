@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include "robin/wlan.h"
+#include "robin/wlantask.h"
 
 struct WlanConnection;
 struct WlanConnectionInfo;
@@ -39,6 +40,17 @@ enum {
 	P2P_ATTR_COUNT = 19,
 };
 
+/* A client of the group as its Group Info attribute lists it (WlanPsPeerState.groupInfoAttribute). */
+struct WlanP2pClient {
+	uint8_t length;			/* the bytes that follow */
+	uint8_t deviceAddress[6];
+	uint8_t interfaceAddress[6];
+	uint8_t capability;		/* the Device Capability bitmap */
+	uint8_t information[];		/* the Device Info attribute after its device address */
+};
+
+extern struct WlanInitStage p2pDirectInitStage;		/* 0x55244 */
+
 /* The slots of WlanDirectContext.attributes (and of WlanPsPeerState.customIe), which the firmware does not order by attribute ID. */
 enum {
 	P2P_SLOT_CAPABILITY = 0,
@@ -47,10 +59,13 @@ enum {
 	P2P_SLOT_LISTEN_CHANNEL = 3,
 	P2P_SLOT_OPERATING_CHANNEL = 4,
 	P2P_SLOT_CHANNEL_LIST = 5,
+	P2P_SLOT_NOTICE_OF_ABSENCE = 6,
 	P2P_SLOT_GROUP_INFO = 7,
 	P2P_SLOT_DEVICE_INFO = 8,
 	P2P_SLOT_GROUP_ID = 9,
 	P2P_SLOT_GROUP_BSSID = 10,
+	P2P_SLOT_MANAGEABILITY = 11,
+	P2P_SLOT_MINOR_REASON = 12,
 	P2P_SLOT_EXTENDED_LISTEN_TIMING = 13,
 	P2P_SLOT_DEVICE_ID = 14,
 	P2P_SLOT_INTERFACE = 15,
@@ -106,5 +121,20 @@ uint8_t *p2pDirectQueryContext(uint8_t **next, uint8_t **length, uint16_t *remai
 			       uint16_t *total, uint16_t *frameLength, const void *oui);	/* 0x40652 */
 uint8_t *p2pDirectResetContext(uint8_t *position);					/* 0x406a6 */
 void p2pDirectSyncContext(const uint8_t *source, uint8_t *destination, int limit, uint8_t **mark);	/* 0x406ca */
+unsigned int p2pDirectApplyContext(uint8_t *out, const void *oui, unsigned int size, const uint8_t *in,
+				   uint16_t limit);					/* 0x407a4 */
+void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed, int length,
+			     struct WlanDirectContext *context);			/* 0x40992 */
+struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int body, unsigned int *mask,
+						   unsigned int *changed, struct WlanDirectContext *context); /* 0x40b16 */
+unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
+				    unsigned int type, uint16_t value);			/* 0x40b88 */
+int p2pDirectFormatContext(struct WlanConnection *connection);				/* 0x40da2 */
+int p2pDirectInspectContext(WlanWirelessFrame *frame);					/* 0x40dc2 */
+int p2pDirectTrackContext(const WlanWirelessFrame *frame);				/* 0x40dd6 */
+void p2pDirectManageContext(struct WlanConnection *connection);				/* 0x40de4 */
+int p2pDirectAcquireContext(void);							/* 0x40df6 */
+struct WlanP2pClient *p2pDirectReleaseContext(struct WlanConnection *connection, const WlanWirelessFrame *request); /* 0x40e20 */
+int p2pDirectSetupContext(struct WlanConnection *connection, struct WlanP2pClient *client);	/* 0x40f46 */
 
 #endif /* ROBIN_P2PGO_H */

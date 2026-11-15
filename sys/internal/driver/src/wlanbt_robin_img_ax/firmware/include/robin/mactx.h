@@ -39,7 +39,7 @@ struct WlanPsPeerState {
 	uint8_t tieBreaker;		/* rand() & 1 when the group starts (the GO Intent tie-breaker bit) */
 	uint8_t reserved32[9];
 	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
-	uint8_t p2pStartedPeers;	/* cleared when the group starts */
+	uint8_t groupClientCount;	/* the clients groupInfoAttribute lists */
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t noaMode;		/* 1: the Notice of Absence has a CTWindow, 2: it has absence periods */
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
@@ -92,7 +92,11 @@ struct WlanPsPeerState {
 	};
 	uint8_t groupOwnerIntentAttribute[4];
 	uint8_t channelListAttribute[43];
-	uint8_t groupInfoAttribute[715];	/* the P2P Group Info attribute */
+	struct {
+		uint8_t id;		/* 14: the P2P Group Info attribute */
+		uint8_t length[2];
+		uint8_t clients[712];	/* struct WlanP2pClient, one after the other */
+	} groupInfoAttribute;
 	uint8_t deviceInfoAttribute[84];	/* the P2P Device Info attribute */
 	uint8_t groupIdType;			/* the P2P Group ID attribute: its id, ... */
 	uint16_t groupIdLength;			/* ... its length (15: the device address and "DIRECT-" with two characters), ... */

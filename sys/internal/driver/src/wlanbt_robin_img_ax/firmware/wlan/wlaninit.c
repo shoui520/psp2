@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
 #include "robin/txhold.h"
@@ -152,7 +153,6 @@ void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
 void uapSqramParseState(void);							/* SQRAM 0xc00074d4 */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
-void p2pDirectAcquireContext(void);							/* 0x40df6 */
 void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */

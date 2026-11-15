@@ -41,8 +41,6 @@
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
-uint8_t *p2pDirectReleaseContext(struct WlanConnection *connection,
-				 const WlanWirelessFrame *request);			/* 0x40e20 */
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);					/* SQRAM */
