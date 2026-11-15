@@ -6,6 +6,10 @@
 #ifndef ERNIE_BOARD_H
 #define ERNIE_BOARD_H
 
+/* CEM-3000NE2 (0x00404600, and 0x00404800, whose image is the same): PCH-1000's code (its
+   ERNIE_BOARD), with what it keeps of the DEM boards' */
+#define BOARD_CEM3000NE2	(HW_IS(0x00404600) || HW_IS(0x00404800))
+
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K, which switches only the
    dongle's (P13.0) */
 #define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000)
@@ -25,7 +29,7 @@
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
    after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 or PDEL */
-#define BOARD_TOUCH_RESET	(!BOARD_IS(0x00406000) && !BOARD_IS(0x00416000))
+#define BOARD_TOUCH_RESET	((!BOARD_IS(0x00406000) || BOARD_CEM3000NE2) && !BOARD_IS(0x00416000))
 
 /* timer 0x1f, started and stopped by chargeUpdate (the settings' chargeTimer1f), and the
    charge's transition 0x16 with the AC on (offWakeUnmask22): PCH-1000's; the others keep

@@ -24,6 +24,12 @@ int hangLimitReached(void)
 }
 
 #if !FW_SINCE(0x01000104)
+#elif BOARD_HANG_PINS && BOARD_CEM3000NE2
+/* a hang: P11.5 and P4.6 both low (CEM-3000NE2 tests only these two) */
+int hangDetected(void)
+{
+	return !P11.5 && !P4.6;
+}
 #elif BOARD_HANG_PINS
 /* a hang: P11.5, P4.6, P5.0 and P5.3 all low */
 int hangDetected(void)
