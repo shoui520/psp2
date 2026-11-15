@@ -177,7 +177,7 @@ int btLmpLcBuildContext(uint32_t *remaining);		/* 0x42f4e */
 int btLmpLcUpdateDescriptor(void);			/* 0x49376 */
 void btLmpLcSyncContext(void);				/* 0x43030 */
 int btHccRomHandleState(void);				/* ROM, via 0x52c54 */
-void btLtsRomParseState(int a1);			/* ROM, via 0x52c5c */
+uint32_t btLtsRomParseState(int which);		/* ROM, via 0x52c5c */
 int fmCoexPrepareState(uint32_t *state);		/* 0x49bc2 */
 int fmCoexDispatchState(void);				/* 0x49be2 */
 int fmCoexValidateState(uint32_t *state);		/* 0x49bba */

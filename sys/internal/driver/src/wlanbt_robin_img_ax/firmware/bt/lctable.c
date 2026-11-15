@@ -9,6 +9,7 @@
 #include "robin/btrom.h"
 #include "robin/btsource.h"
 #include "robin/bttable.h"
+#include "robin/eventpower.h"
 
 typedef uint16_t __attribute__((may_alias)) BtHalf;
 typedef uint32_t __attribute__((may_alias)) BtWord;
@@ -33,6 +34,9 @@ uint16_t btTableModeDescriptor __attribute__((section(".itcm.rw"))) = 4;	/* 0x55
 uint16_t btTableModeQueue __attribute__((section(".itcm.rw")));			/* 0x552a6 */
 uint16_t btTablePacketType __attribute__((section(".itcm.rw")));		/* 0x552a8 */
 uint16_t btTablePacketLength __attribute__((section(".itcm.rw")));		/* 0x552aa */
+/* The hook the ROM writes radio registers through. */
+void (*btTableRadioWrite)(uint16_t reg, uint32_t value) __attribute__((section(".itcm.rw"))) =
+	btLdaRomCheckState;							/* 0x552b4 */
 /* Each rate class's slot windows (btLmpLcSetupTable() passes them to btLmpLcApplyTable()). */
 uint8_t btTableOffsets[8] __attribute__((section(".itcm.rw"))) = { 7, 7, 7, 7, 7, 7, 0, 0 };	/* 0x55308 */
 uint8_t btTableShortWindows[8] __attribute__((section(".itcm.rw"))) = { 4, 7, 10, 10, 13, 13, 13, 13 };	/* 0x55310 */
@@ -493,7 +497,7 @@ void btLmpLcTrackTable(uint8_t *command, uint8_t *result, uint32_t argument)
 }
 
 /* A value over 1 is moved out and replaced by 1. */
-void btLmpLcManageTable(uint8_t *value, uint8_t *previous)
+__attribute__((noinline)) void btLmpLcManageTable(uint8_t *value, uint8_t *previous)
 {
 	if (*value > 1) {
 		*previous = *value;
@@ -605,4 +609,124 @@ void btLmpLcSetupTable(void)
 			}
 		}
 	}
+}
+
+/*
+ * The ROM's slot tracking of a link, wrapped: while the link waits in mode 2 with a mode 1 or 3
+ * link elsewhere, its rate settings over 1 are taken down to 1 for the ROM and put back after. A
+ * tracked slot about to be due goes to the ROM's link handler at once.
+ */
+int btLmpLcClearTable(uint32_t event, struct BtDeviceProfile *profile, uint32_t clock, uint32_t argument,
+		      uint32_t burst, uint32_t limit)
+{
+	uint32_t second = 0;
+	uint32_t first = 0;
+	int result;
+
+	if (btLmpLcReleaseTable() && !btLmpLcDispatchTable(profile->index) &&
+	    btDeviceProfile[profile->index].state == 2) {
+		btLmpLcManageTable(&profile->secondSetting, (uint8_t *)&second);
+		btLmpLcManageTable(&profile->firstSetting, (uint8_t *)&first);
+	}
+	result = btLtsRomTrackState(event, profile, clock, argument, burst, limit);
+	if (profile->tracked == 1 &&
+	    (int)(profile->due - profile->guard - btLtsRomScheduleState(btLtsRomParseState(0))) < 2)
+		btLdaRomVerifyState(profile->active, btLdrRomScheduleState(profile->index));
+	if ((uint8_t)first != 0)
+		profile->firstSetting = first;
+	if ((uint8_t)second != 0)
+		profile->secondSetting = second;
+	return result;
+}
+
+int btLmpLcConvertTable(int link)
+{
+	btBdhRomReleaseState(link);
+	return btLmpLcValidateDescriptor(link);
+}
+
+/*
+ * A host request the ROM checks: a request of kind 36 whose link is in use (or not, with bit 0 of
+ * the packet's flags clear) is kept while the coexistence allows it; every other goes back to the ROM.
+ */
+void btLmpLcVerifyTable(uint32_t *request)
+{
+	const uint8_t *links = btHccRomApplyState();
+	const uint8_t *packet = (const uint8_t *)(uintptr_t)*request;
+	uint32_t kind;
+
+	btLdrRomDispatchState(packet + 7, &kind, 0);
+	if ((uint16_t)kind != 36) {
+		btHccRomSyncState(request);
+		return;
+	}
+	if (links[120 * *(const BtHalf *)(packet + 4) + 3] != 0) {
+		unsigned int mode = (packet[8] >> 3) & 3;
+
+		if (mode == 0)
+			return;
+		if (mode != 1) {
+			btHccRomSyncState(request);
+			return;
+		}
+	} else if (packet[8] & 1) {
+		btHccRomSyncState(request);
+		return;
+	}
+	if (btCoexParam() == 0 && btLinkPayloadCount <= 1)
+		btHccRomSyncState(request);
+}
+
+/* A host slot's message is freed before the ROM takes the request, and taken again for a session. */
+int btLmpLcSelectTable(uint16_t *request)
+{
+	int result;
+
+	if (*(BtWord *)&romHctHostSlot[*request][16] != 0)
+		osa_MsgFree((void **)&romHctHostSlot[*request][16]);
+	result = btLdaRomValidateState(request);
+	if (result != 0 && (btHostFlags & 1) && btHostSession != 0 && *(BtWord *)&romHctHostSlot[*request][16] == 0)
+		*(BtWord *)&romHctHostSlot[*request][16] = (uint32_t)(uintptr_t)osa_MsgAlloc(242);
+	return result;
+}
+
+/* Frees the messages of every host slot and resets the ROM's host state. */
+int btLmpLcAdjustTable(void)
+{
+	unsigned int slot;
+
+	for (slot = 0; slot < 11; slot = (uint8_t)(slot + 1)) {
+		if (*(BtWord *)&romHctHostSlot[slot][16] != 0)
+			osa_MsgFree((void **)&romHctHostSlot[slot][16]);
+	}
+	btLdaRomComputeState();
+	btHostBitmap = 0xffff;
+	btTableModeTable = 0;
+	return 0;
+}
+
+/* With the link controller's mode bits set, the host link's radio registers 0x6080 and 0x2000. */
+__attribute__((noinline)) void btLmpLcRecordTable(void)
+{
+	unsigned int value;
+
+	if (((*(const BtHalf *)(btLinkContext + 34) >> 4) & 3) == 0)
+		return;
+	value = romHctHostSlot[btLinkHostIndex][4];
+	btTableRadioWrite((value << 5) | 0x6080, 0);
+	btTableRadioWrite((value << 11) | 0x2000, 0);
+}
+
+void btLmpLcFilterTable(void)
+{
+	int scanning = btLinkScanState != 0;
+
+	btLdaRomApplyState(btLinkScanState);
+	if (!scanning)
+		return;
+	osa_LockAcquire();
+	*(BtHalf *)(btLinkScanSlot + 36) = (*(BtHalf *)(btLinkScanSlot + 36) >> 12) << 12;
+	osa_LockRelease();
+	if (btLinkScanFlags & 2)
+		btLmpLcRecordTable();
 }

@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 
+struct BtDeviceProfile;
+
 /* Messages are allocated by the ROM, begin with a 32-bit message identifier, and are
  * passed by the address of the pointer, which the ROM clears. */
 void *osa_MsgAlloc(uint32_t size);
@@ -97,6 +99,19 @@ int btLtsRomManageState(int link, uint8_t *record);
 int btLtsRomScheduleState(uint32_t clock);
 int btLcoRomManageContext(int link);
 void btLtsRomFilterState(void);
+int btLtsRomTrackState(uint32_t event, struct BtDeviceProfile *profile, uint32_t clock, uint32_t argument,
+		       uint32_t burst, uint32_t limit);
+uint32_t btLdrRomScheduleState(int link);
+void btLdaRomVerifyState(uint8_t device, uint32_t state);
+void btBdhRomReleaseState(int link);
+void btLdrRomDispatchState(const uint8_t *field, uint32_t *value, int flags);
+void btHccRomSyncState(uint32_t *request);
+int btLdaRomValidateState(uint16_t *request);
+void btLdaRomComputeState(void);
+void btLdaRomApplyState(uint8_t state);
+void btLdaRomCheckState(uint16_t reg, uint32_t value);
+void osa_LockAcquire(void);
+void osa_LockRelease(void);
 struct BtDeviceProfile;
 void btLtsRomQueryState(struct BtDeviceProfile *profile);
 void btLtsRomApplyState(struct BtDeviceProfile *profile, uint32_t clock, uint32_t mode);

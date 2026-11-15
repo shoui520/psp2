@@ -71,7 +71,8 @@ struct BtDeviceProfile {
 	uint8_t reserved32[8];
 	uint32_t since;				/* the event clock the link last went active at */
 	uint16_t window;			/* the ticks of the link's current window */
-	uint8_t reserved46[2];
+	uint8_t guard;				/* the ticks a tracked slot is taken before it is due */
+	uint8_t tracked;			/* 1: the ROM's slot is followed (btLmpLcClearTable()) */
 	uint8_t offset;				/* the ticks from the clock to a mode 5 slot */
 	uint8_t shortWindow;			/* the window of a mode 5 slot */
 	uint8_t longWindow;			/* the window of a mode 9 slot */
