@@ -13,6 +13,7 @@
 #include "robin/calibration.h"
 #include "robin/rom.h"
 #include "robin/util.h"
+#include "caldata.h"
 
 #define CAL_DATA_BAND_INDEXES	2
 #define CAL_DATA_NO_INDEX	0xff
@@ -20,16 +21,6 @@
 #define CAL_DATA_RANGES		4
 #define CAL_DATA_CHANNELS	6
 #define CAL_DATA_POWER_LEVELS	21
-
-/* The header every annex starts with. */
-struct CalDataHeader {
-	uint8_t type;
-	uint8_t reserved;
-	uint16_t length;	/* the annex's bytes, the header's included */
-	uint32_t next;		/* image offset of the next annex; 0xffffffff ends the chain */
-};
-
-_Static_assert(sizeof(struct CalDataHeader) == 8, "annex header");
 
 /* Annexes 14 and 37: the 2.4 GHz channels' power ranges, for the first and the second path. */
 struct CalDataAnnex14 {
@@ -89,19 +80,6 @@ struct CalDataAnnex31 {
 
 _Static_assert(sizeof(struct CalDataAnnex31) == 20, "annex 31");
 
-/* One entry of annex 42; the bytes that go into a block (see calDataLoadAnnex42()). */
-struct CalDataAnnex42Entry {
-	uint8_t bytes[12];		/* byte 0, bits 0-3: 0 for band index 0, 2 for both */
-};
-
-/* Annex 42: up to five entries of the transmit limit curve (wlanCalibBlock). */
-struct CalDataAnnex42 {
-	struct CalDataHeader header;
-	struct CalDataAnnex42Entry entries[5];
-};
-
-_Static_assert(sizeof(struct CalDataAnnex42) == 68, "annex 42");
-
 /*
  * Annex 49: band index 0 as one table: its channels, the power range
  * adjustments of both paths, and up to four transmit power levels (highest
@@ -135,9 +113,6 @@ struct CalDataAnnexValue {
 };
 
 _Static_assert(sizeof(struct CalDataAnnexValue) == 20, "annexes 52 to 54");
-
-#define CAL_DATA_ANNEX42_BAND_INDEX0	0
-#define CAL_DATA_ANNEX42_BOTH		2
 
 /* An annex is good when its bytes add up to 1. */
 __attribute__((noinline)) int calDataChecksumOk(const uint8_t *data, unsigned int length)

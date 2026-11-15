@@ -2,6 +2,7 @@
 #ifndef ROBIN_EVENT_H
 #define ROBIN_EVENT_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 struct MacEventPolicy {
@@ -29,26 +30,36 @@ typedef char MacEventPathConfigurationSize[
 	(sizeof(struct MacEventPathConfiguration) == 9) ? 1 : -1];
 
 /*
- * State of the MAC event engine. Only the fields the readers use are named;
- * the state is 13 once the engine runs.
+ * State of the MAC event engine: the calibration data's main annex (type 12,
+ * or 13 once the engine runs), 64 bytes loaded by calDataHeaderLoad()
+ * (sqram/caltable.c). Only the fields the readers use are named.
  */
 struct MacEventState {
-	uint8_t state;
-	uint8_t reserved0[10];
+	uint8_t state;			/* the annex type */
+	uint8_t reserved1;
+	uint16_t length;
+	uint32_t next;			/* image offset of the next annex */
+	uint8_t reserved8[3];
 	uint8_t level;			/* reported while both paths are in state 3 */
-	uint8_t reserved0b;
+	uint8_t pathFlags;		/* bit 0: path 0's calibration flag, bit 4: path 1's (calDataFlagsGet()) */
 	uint8_t mode;
-	uint8_t reserved1[3];
-	uint8_t payload;		/* bit 0: pattern pending, bits 4-5: payload mode */
+	uint8_t reserved14[2];
+	uint8_t regionCode;		/* the region code GET_HW_SPEC reports */
+	uint8_t payload;		/* bit 0: pattern pending, bits 4-5: payload mode, bit 6: calibration flag */
 	uint8_t pathStates;		/* primary path in the low nibble, secondary in the high */
 	uint8_t reserved2;
 	uint8_t flags;
 	uint8_t policyPathStates;
 	struct MacEventPathConfiguration configuration;
+	uint8_t reserved31[24];
+	uint8_t regionVersion;		/* bits 2-5: calRegionMinor, bits 6-7: calRegionMajor */
+	uint8_t reserved56[8];
 };
 
-_Static_assert(sizeof(struct MacEventState) == 31, "event engine state");
+_Static_assert(offsetof(struct MacEventState, configuration) == 22, "event engine state");
+_Static_assert(sizeof(struct MacEventState) == 64, "event engine state");
 
+#define MAC_EVENT_STATE_LOADED		12
 #define MAC_EVENT_STATE_RUNNING		13
 #define MAC_EVENT_PATH_STATE_UNKNOWN	3
 #define MAC_EVENT_LEVEL_DEFAULT		0x51

@@ -9,6 +9,7 @@
  * and of the file are inferred from use.
  */
 #include <stddef.h>
+#include "robin/antdiv.h"
 #include "robin/calibration.h"
 #include "robin/txpower.h"
 #include "robin/conn.h"
@@ -21,8 +22,6 @@
 #include "robin/softtimer.h"
 #include "robin/sys.h"
 
-void uapSqramClearTable(void);								/* SQRAM 0xc000a3f6, via the veneer at 0x52e74 */
-int uapSqramRecordTable(struct WlanConnection *connection);				/* SQRAM 0xc000a5ea, via the veneer at 0x5322c */
 void *rfCalibBuildHeader(void *slot);							/* 0x29e20: clears 9 bytes */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 int wlanRateProbingAt(const struct WlanRateControl *rc, int index);			/* ratectl.h */
@@ -58,7 +57,7 @@ int macTxNotifyProcessFrame(struct WlanConnection *connection)
 	if (rc->idleTime < 10000 && wlanPsConfigureFrame(&rc->level) < 2)
 		return 0;
 	wlanPsManageBuffer(connection);
-	uapSqramClearTable();
+	antDivStart();
 	rc->idleTime = 0;
 	rc->peerStatus = 0;
 	return 1;
@@ -75,7 +74,7 @@ int macTxNotifyUpdateFrame(struct WlanConnection *connection)
 	if (result != 0)
 		return result;
 	if (status == 0 || status == 2) {
-		status = uapSqramRecordTable(connection);
+		status = antDivRecord(connection);
 		if (status == 0) {
 			if (!(wlanTxRateFlags & 0x40))
 				status = wlanPsHandlePacket(connection);
@@ -201,7 +200,7 @@ void macTxNotifyBuildFrame(uint32_t argument)
 
 unsigned int macTxNotifyComputeFrame(void)
 {
-	uapSqramClearTable();
+	antDivStart();
 	wlanPsComputePacket();
 	macMgmtComputeHeader();
 	return wlanPsReleaseBuffer();

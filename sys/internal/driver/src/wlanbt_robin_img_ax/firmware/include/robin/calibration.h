@@ -32,6 +32,16 @@ _Static_assert(offsetof(struct WlanRadioConfig, primaryDiversity) == 0xdd, "radi
 
 extern struct WlanRadioConfig *wlanRadioConfig;			/* 0x040089c8 */
 
+/* The antenna profile (0x040088ca points to it, unaligned). */
+struct WlanAntennaProfile {
+	uint8_t reserved0[3];
+	uint8_t antennaSetup;		/* bits 0-1: the primary antenna setup, bits 2-3: the secondary */
+	uint8_t reserved4[28];
+	uint8_t regionCode[2];		/* GET_HW_SPEC's region code */
+};
+
+extern struct WlanAntennaProfile *wlanAntennaProfile;		/* 0x040088ca, unaligned */
+
 /* The key of a calibration lookup, passed by value. */
 struct WlanCalibrationKey {
 	uint8_t band;
@@ -98,9 +108,9 @@ unsigned int wlanRegionTableIndex(unsigned int code);
 int wlanCalibrationLookupByte(unsigned int index, uint8_t *value);
 void wlanRfApplyEventContext(unsigned int index);
 int wlanRfEventRefresh(void);
-int wlanCalibrationTableUpdate(const uint8_t *data, unsigned int offset, unsigned int length,
+int wlanCalibrationTableUpdate(uint8_t *data, unsigned int offset, unsigned int length,
 			       unsigned int action);			/* 0xe85a */
-int wlanCalibrationTableQuery(uint8_t *data, uint16_t *length);	/* 0xe880 */
+int wlanCalibrationTableQuery(uint8_t *data, unsigned int *length);	/* 0xe880 */
 int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, unsigned int channel,
 				  uint8_t *low, uint8_t *high, uint8_t *lowIndex,
 				  uint8_t *highIndex);
@@ -187,5 +197,40 @@ int calDataLoadAnnex49(int fromHost, unsigned int offset);
 int calDataLoadAnnex52(int fromHost, unsigned int offset);
 int calDataLoadAnnex53(int fromHost, unsigned int offset);
 int calDataLoadAnnex54(int fromHost, unsigned int offset);
+
+/* The calibration data's sources and its chain (sqram/caltable.c). */
+#define CAL_DATA_BUFFER_SIZE	700
+
+/* The 6-byte header the host may put before its calibration data. */
+struct CalDataHostHeader {
+	uint8_t version;		/* 0 or 1 */
+	uint8_t reserved1;		/* 0 */
+	uint8_t reserved2[2];
+	uint8_t length[2];		/* the data's length, set by the firmware */
+};
+
+extern uint8_t calRegionMinor;					/* 0x040007af, sys/version.c */
+extern uint8_t calRegionMajor;					/* 0x040007b0, sys/version.c */
+extern uint8_t wlanCalibrationType60Present;			/* 0x040007ad, sys/macevent.c */
+extern uint8_t calDataHeaderPresent;				/* 0x040007ae */
+extern uint16_t calDataOffset;					/* 0x040007b2 */
+extern struct CalDataHostHeader calDataHeader;			/* 0x040007b4 */
+extern uint8_t calDataBuffer[CAL_DATA_BUFFER_SIZE];		/* 0x04002ec4 */
+
+unsigned int calDataFlagsGet(int index);
+void calDataSourceInit(void);
+int calDataLoadAnnex42Params(int fromHost, unsigned int offset);
+int calDataLoadAnnex60(int fromHost, unsigned int offset);
+int calDataHeaderApply(void);
+int calDataParse(int fromHost, unsigned int offset);
+void calDataHeaderClear(void);
+int calDataHeaderLoad(int fromHost, unsigned int offset, uint32_t *next);
+int calDataQuery(uint8_t *data, unsigned int *length);
+void calDataMacAddressSet(uint32_t low, uint32_t high);
+int calDataMacAddressDefault(void);
+int calDataImageLoadNvram(void);
+int calDataLoadNvram(void);
+int calDataLoadHost(const uint8_t *data, unsigned int offset, unsigned int length);
+int calDataUpdate(uint8_t *data, unsigned int offset, unsigned int length, unsigned int action);
 
 #endif /* ROBIN_CALIBRATION_H */

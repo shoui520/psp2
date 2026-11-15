@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/antdiv.h"
 #include "robin/led.h"
 #include "robin/p2pgo.h"
 #include "robin/ratesel.h"
@@ -71,7 +72,6 @@ struct WlanHwInfo {
 };
 extern struct WlanHwInfo wlanHwInfo;							/* 0x040088ac */
 extern uint8_t wlanDtcmState[0xef];							/* 0x040087ec: wlanHwInfo's block */
-extern uint8_t *wlanAntennaProfile;							/* 0x040088ca, unaligned */
 extern uint8_t wlanPrimaryEvents;							/* 0x04008828 */
 extern uint8_t wlanSavedMgmtPriority;							/* 0x040088da */
 extern uint8_t wlanAntennaProfileDefault[];						/* SQRAM 0xc0031b40 */
@@ -146,7 +146,6 @@ void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
-void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
@@ -265,7 +264,7 @@ static int wlanTablesInit(void)
 	wlanPsReleaseHeader();
 	macMgmtUpdateContext(0, 6);
 	macMgmtCheckContext();
-	uapSqramClearTable();
+	antDivStart();
 	cbProcConfigureFrame();
 	macMgmtAdjustHeader();
 	wlanTaskHandlesInit(&handles);

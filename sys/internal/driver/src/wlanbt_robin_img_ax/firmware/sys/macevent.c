@@ -20,20 +20,14 @@
 #define WLAN_SECONDARY_BELOW		3
 
 /* Not converted yet; provisional names. */
-void uapSqramCheckTable(const uint8_t *data, unsigned int offset, unsigned int length,
-			unsigned int action);					/* 0xc0009cc5 */
-int uapSqramNotifyTable(const uint8_t *data, unsigned int offset, unsigned int length,
-			unsigned int action);					/* 0xc000a225 */
-int uapSqramQueryTable(uint8_t *data, uint16_t *length);			/* 0xc0009fb9 */
 void macMgmtSyncHeader(int unused);						/* 0x3b4d2 */
 void macMgmtQueryHeader(int kind, int count, void *value);			/* 0x3b384 */
 void wlanPsConvertHeader(void);							/* 0x3e32e */
 void rfCalibComputeContext(unsigned int value);					/* 0x26984 */
-extern uint8_t *wlanAntennaProfile;	/* 0x040088ca, unaligned; byte 3: bits 0-1 primary, 2-3 secondary */
 
-struct MacEventState macEventState __attribute__((section(".dtcm.bss")));
+struct MacEventState macEventState __attribute__((section(".dtcm.bss"), aligned(4)));
 uint8_t macEventProfileActive __attribute__((section(".dtcm.rw")));
-/* Set when the calibration data carried a type 60 entry (uapSqramParseTable). */
+/* Set when the calibration data carried a type 60 entry (calDataParse()). */
 uint8_t wlanCalibrationType60Present __attribute__((section(".dtcm.rw")));
 
 /* State of the secondary path, or 3 while no profile is active. */
@@ -96,7 +90,7 @@ uint8_t wlanCalibrationType60Loaded(void)
 /* Choose the primary antenna: by the path state with diversity, else as configured. */
 void wlanAntennaSelectPrimary(void)
 {
-	if ((((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[3] & 2) != 0) {
+	if ((((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 2) != 0) {
 		wlanRadioConfig->primaryDiversity = 1;
 		switch (macGetEventPrimaryPathState()) {
 		case 3:
@@ -111,14 +105,14 @@ void wlanAntennaSelectPrimary(void)
 	} else {
 		wlanRadioConfig->primaryDiversity = 0;
 		wlanRadioConfig->primaryAntenna =
-			((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[3] & 1;
+			((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 1;
 	}
 }
 
 /* The same for the secondary antenna (profile bits 2-3). */
 void wlanAntennaSelectSecondary(void)
 {
-	if ((((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[3] & 8) != 0) {
+	if ((((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 8) != 0) {
 		wlanRadioConfig->secondaryDiversity = 1;
 		switch (macGetEventSecondaryPathState()) {
 		case 3:
@@ -133,7 +127,7 @@ void wlanAntennaSelectSecondary(void)
 	} else {
 		wlanRadioConfig->secondaryDiversity = 0;
 		wlanRadioConfig->secondaryAntenna =
-			(((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[3] >> 2) & 1;
+			(((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup >> 2) & 1;
 	}
 }
 
@@ -229,19 +223,19 @@ int wlanRfEventRefresh(void)
 }
 
 /* HostCmd_CMD_CFG_DATA, the calibration table: writes the host's data into it. */
-int wlanCalibrationTableUpdate(const uint8_t *data, unsigned int offset, unsigned int length,
+int wlanCalibrationTableUpdate(uint8_t *data, unsigned int offset, unsigned int length,
 			       unsigned int action)
 {
-	uapSqramCheckTable(data, offset, length, action);
-	if (!uapSqramNotifyTable(data, offset, length, action))
+	calDataSourceInit();
+	if (!calDataUpdate(data, offset, length, action))
 		wlanRfEventRefresh();
 	return 0;
 }
 
 /* HostCmd_CMD_CFG_DATA, the calibration table: copies it out with its length. */
-int wlanCalibrationTableQuery(uint8_t *data, uint16_t *length)
+int wlanCalibrationTableQuery(uint8_t *data, unsigned int *length)
 {
-	return uapSqramQueryTable(data, length);
+	return calDataQuery(data, length);
 }
 
 /*

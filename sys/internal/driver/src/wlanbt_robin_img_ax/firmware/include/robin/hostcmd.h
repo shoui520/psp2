@@ -12,6 +12,9 @@ int hostCmdProcess(void);
 int hostCmdRespond(struct WlanConnection *connection, int (*release)(OsaBuffer *buffer));
 void hostCmdUnlock(void);
 int hostCmdIsNodeSet(const uint8_t *command);
+int hostCmd0003Caps(void);							/* 0x1b820 */
+void hostCmd0003CapsSet(uint32_t caps);						/* 0x1b82a */
+unsigned int hostCmd0020Set(unsigned int secondary, unsigned int antenna);	/* 0x262c0, wlan/hostcmdext.c */
 uint16_t hostCmdNodeGet(void);
 uint16_t hostCmdNode(const uint8_t *body);
 unsigned int hostCmdCurrentCode(void);

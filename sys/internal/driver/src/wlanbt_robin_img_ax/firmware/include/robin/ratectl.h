@@ -95,7 +95,7 @@ struct WlanRateControl {
 	uint32_t idleTime;		/* milliseconds the supervision found nothing to count, up to 10000 */
 	struct WlanRateSlot *slot;	/* the rate table's slot of this peer */
 	uint8_t rates[32];		/* rate indexes, slowest first */
-	uint8_t peerStatus;		/* what uapSqramRecordTable() / wlanPsHandlePacket() last said (0 to 2, 6) */
+	uint8_t peerStatus;		/* what antDivRecord() / wlanPsHandlePacket() last said (0 to 2, 6) */
 	uint8_t reserved225[3];
 };
 

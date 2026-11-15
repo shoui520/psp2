@@ -3,6 +3,7 @@
  * host reads with the extended version command. The filename is inferred.
  */
 #include <stddef.h>
+#include "robin/calibration.h"
 #include "robin/osa.h"
 #include "robin/rf.h"
 #include "robin/rom.h"

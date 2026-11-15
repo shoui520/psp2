@@ -8,6 +8,7 @@
 #include "robin/clock.h"
 #include "robin/event.h"
 #include "robin/eventpower.h"
+#include "robin/hostcmd.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
 #include "robin/socpower.h"

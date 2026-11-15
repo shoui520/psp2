@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/antdiv.h"
 #include "robin/led.h"
 #include "robin/osa.h"
 #include "robin/ratesel.h"
@@ -418,9 +419,6 @@ unsigned int hostCmd0019Parse(void);						/* 0x23e3e */
 int hostCmd001cResolve(void);							/* 0x37966 */
 void hostCmd001eChannel(uint8_t *channel);					/* 0x356c6 */
 int hostCmd0020(uint8_t *body, unsigned int action, uint16_t *result, uint8_t *antenna); /* 0x2ce5e */
-unsigned int hostCmd0020Set(unsigned int secondary, unsigned int antenna);	/* 0x262c0 */
-void hostCmd0020Clear(unsigned int value);					/* SQRAM 0xc000a3f6 */
-void hostCmd0020Setup(unsigned int value);					/* SQRAM 0xc000a3d4 */
 void hostCmd0024(struct WlanConnection *connection, uint8_t *body);		/* 0x341aa */
 void hostCmd0036(uint8_t *body, int authenticator, uint8_t *state);		/* 0x2cc7e */
 void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
@@ -488,7 +486,6 @@ extern uint16_t wlanRxFrameTypeMask;
 unsigned int bbpReadVersionRegister(unsigned int reg);				/* 0xc308 */
 extern struct OsaBufferPool hostCmdResponsePool;				/* 0x04000e24 */
 extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
-extern uint8_t *wlanAntennaProfile;						/* 0x040088ca, unaligned */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
 extern struct WlanConnection *wlanAssociateConnection;				/* 0x04004e9c */
@@ -556,7 +553,7 @@ static int hostCmdNeedsLock(unsigned int command)
 /* The byte at antenna profile + 3: bits 0-1 the primary, bits 2-3 the secondary antenna setup. */
 static inline unsigned int hostCmdAntennaProfile(void)
 {
-	return ((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[3];
+	return ((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup;
 }
 
 /*
@@ -665,8 +662,8 @@ int hostCmdProcess(void)
 			}
 			body[6] = 64;
 			body[7] = 0;
-			body[14] = ((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[32];
-			body[15] = ((const uint8_t *)__aeabi_uread4(&wlanAntennaProfile))[33];
+			body[14] = ((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->regionCode[0];
+			body[15] = ((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->regionCode[1];
 			__aeabi_uwrite4(hostCmd0003Version(), body + 18);
 			hostCmd0003Fill(body, hostCmd0003Caps(), hostCmdAntennaProfile() & 3,
 					(hostCmdAntennaProfile() >> 2) & 3, 0);
@@ -904,7 +901,7 @@ int hostCmdProcess(void)
 						goto failed;
 					if (wlanRadioConfig->secondaryDiversity == 0)
 						goto failed;
-					hostCmd0020Clear(wlanRadioConfig->secondaryDiversity);
+					antDivStart();
 					wlanRadioConfig->primaryDiversity = 1;
 				} else {
 					a = (uint8_t)(body[2] - 1);
@@ -912,7 +909,8 @@ int hostCmdProcess(void)
 					if (!(b & 2) && (b & 3) != a)
 						goto failed;
 					wlanRadioConfig->primaryAntenna = a;
-					hostCmd0020Setup(hostCmd0020Set(1, a));
+					hostCmd0020Set(1, a);
+					antDivReset();
 					wlanRadioConfig->primaryDiversity = 0;
 				}
 				goto done;
@@ -923,7 +921,7 @@ int hostCmdProcess(void)
 						goto failed;
 					if (!(b & 2))
 						goto failed;
-					hostCmd0020Clear(b << 30);
+					antDivStart();
 					wlanRadioConfig->secondaryDiversity = 1;
 					wlanRadioConfig->primaryDiversity = 1;
 					goto done;
@@ -936,7 +934,7 @@ int hostCmdProcess(void)
 						wlanRadioConfig->primaryAntenna = a;
 						hostCmd0020Set(1, a);
 						wlanRadioConfig->primaryDiversity = 0;
-						hostCmd0020Setup((uintptr_t)wlanRadioConfig + 192);
+						antDivReset();
 						wlanRadioConfig->secondaryAntenna = a;
 						hostCmd0020Set(0, a);
 						wlanRadioConfig->secondaryDiversity = 0;
@@ -1339,7 +1337,7 @@ int hostCmdProcess(void)
 				goto done;
 			case 2:
 			{
-				uint16_t length;
+				unsigned int length;
 				UINT posture;
 
 				if (action == 0) {
