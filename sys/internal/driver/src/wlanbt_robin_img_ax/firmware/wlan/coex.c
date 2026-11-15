@@ -260,9 +260,9 @@ void wlanCoexPollTimerExpired(uint32_t timer, uint32_t argument)
 	}
 }
 
-void wlanCoexStartPoll(void)
+int wlanCoexStartPoll(void)
 {
-	osaCreateTimer(wlanCoexPollTimerExpired, 0, wlanCoex.pollInterval, &wlanCoex.pollTimer, 8);
+	return osaCreateTimer(wlanCoexPollTimerExpired, 0, wlanCoex.pollInterval, &wlanCoex.pollTimer, 8);
 }
 
 /* Arms the cycle timer for the next period boundary of the MAC timer (TU). */

@@ -20,12 +20,6 @@
 #define BT_COEX_LINK_ACTIVE	2
 #define BT_COEX_LINK_IDLE	3	/* had traffic, none any more */
 
-/* Bits of the profile word. */
-#define BT_COEX_PROFILE_POLLING		0x0001
-#define BT_COEX_PROFILE_SLAVE_ONLY	0x0002
-#define BT_COEX_PROFILE_WINDOW		0x0008
-#define BT_COEX_PROFILE_NO_POLL		0x4000
-
 #define BT_COEX_LINK_TIMEOUT_US		3000000
 #define BT_COEX_SLOT_US			625
 
@@ -88,7 +82,7 @@ void btCoexSetProfile(uint16_t profile)
 
 	btCoex.profile = profile;
 	btCoexUpdateLink();
-	wpaSuppQueryParam(previous, btCoex.profile);
+	btCoexProfileChanged(previous, btCoex.profile);
 }
 
 /* 0x24486 */

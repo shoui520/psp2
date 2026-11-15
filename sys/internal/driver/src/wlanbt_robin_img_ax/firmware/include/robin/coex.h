@@ -47,11 +47,19 @@ struct WlanConnection;
 #define WLAN_EVENT_COEX_SUSPEND		22
 #define WLAN_EVENT_SLEEP_REFUSED	24
 #define WLAN_EVENT_COEX_REQUEST		34
+#define WLAN_EVENT_COEX_SLEEP_READY	35	/* nothing holds the triggers back and the station may sleep */
+#define WLAN_EVENT_COEX_PROFILE_CHANGED	36	/* Bluetooth now wants the medium on a schedule */
 #define WLAN_EVENT_COEX_GUARD		37
 #define WLAN_EVENT_COEX_WINDOW		38
 #define WLAN_EVENT_COEX_UPDATE		49
 #define WLAN_EVENT_COEX_END_WINDOW	50
 #define WLAN_EVENT_COEX_BT_WAKE		51
+
+/* Bits of the Bluetooth profile word (sys/btcoex.c). */
+#define BT_COEX_PROFILE_POLLING		0x0001
+#define BT_COEX_PROFILE_SLAVE_ONLY	0x0002
+#define BT_COEX_PROFILE_WINDOW		0x0008
+#define BT_COEX_PROFILE_NO_POLL		0x4000
 
 #define WLAN_COEX_PROFILES		2	/* 0: WLAN modes, 1: Bluetooth modes */
 #define WLAN_COEX_BT_STATES		2	/* Bluetooth link idle, active */
@@ -155,7 +163,7 @@ int wlanCoexActive(void);
 void wlanCoexCycleTimerExpired(uint32_t timer, uint32_t connection);
 void wlanCoexGuardTimerExpired(uint32_t timer, uint32_t argument);
 void wlanCoexPollTimerExpired(uint32_t timer, uint32_t argument);
-void wlanCoexStartPoll(void);
+int wlanCoexStartPoll(void);
 void wlanCoexStartCycleTimer(struct WlanConnection *connection);
 void wlanCoexCancelTimers(void);
 void wlanCoexRequestSleep(void);

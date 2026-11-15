@@ -192,6 +192,6 @@ extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 void wlanMacRestart(void);				/* 0x1c92e */
 void wlanMacSleepExit(void);				/* 0x1c870 */
 int ampHciIsIdle(void);					/* 0x20f00 */
-void wpaSuppQueryParam(uint32_t previous, uint32_t profile);	/* 0x2ec2a */
+void btCoexProfileChanged(uint32_t previous, uint32_t profile);	/* 0x2ec2a */
 
 #endif /* ROBIN_EVENTPOWER_H */
