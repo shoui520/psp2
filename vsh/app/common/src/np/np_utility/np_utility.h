@@ -16,6 +16,7 @@ extern "C" {
 #endif
 
 struct NpLookupClient;
+struct NpLookupServer;
 struct NpLookupTitle;
 struct NpLookupTrans;
 struct NpLookupJobHandler;
@@ -98,6 +99,26 @@ int SceNpUtility_16954FFF(void);
 void SceNpUtility_5D6FC99E(int state);
 SceBool SceNpUtility_2835BC9B(void);
 void SceNpUtility_191D314C(void);
+
+/* util.c: numbers as text, the online ID check, the response and the conversions */
+void SceNpUtility_4D52A224(char *str, int value);
+void SceNpUtility_2E4D8BCF(char *str, SceUInt64 value);
+void SceNpUtility_FF9F1571(char *str, SceInt64 value);
+SceInt64 SceNpUtility_BDFC2D58(const char *str);
+SceBool SceNpUtility_475B35A8(const char *onlineId);
+int SceNpUtility_A3E828ED(struct NpLookupTrans *trans, void *buf, SceSize size, SceSize *read);
+int SceNpUtility_4FAC4566(struct NpLookupTrans *trans, int *statusCode, SceUInt64 *contentLength,
+			  int *hasContentLength, SceUInt32 *infoLength, SceUInt8 *signature,
+			  int operation);
+void SceNpUtility_72FC55A7(int reqId, SceUInt32 infoLength);
+int SceNpUtility_54C48F92(SceNpId *npId, const char *str, int service);
+int SceNpUtility_14437509(char **str, const SceNpId *npId, int service);
+int SceNpUtility_B8DFA4D1(char **dst, const char *src, int service);
+int SceNpUtility_15D37FB1(char **dst, const char *src, int service);
+int SceNpUtility_89484A9C(void *arg, int value);
+int SceNpUtility_E916C86A(struct NpLookupServer *server, int service);
+int SceNpUtility_3A1BA624(char **dst, const void *src, SceSize size, int service);
+void SceNpUtility_450C80FB(char *version);
 
 /* worker.c: the worker thread of the asynchronous requests */
 int SceNpUtility_6EB4C8FE(void *worker, int priority, SceSize stackSize, int cpuAffinityMask,

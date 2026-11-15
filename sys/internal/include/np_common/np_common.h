@@ -57,6 +57,9 @@ int SceNpCommon_650D111B(NpXmlParser *parser, const NpXmlSchema *schema,
 			 NpXmlCallback callback, void *arg);
 int SceNpCommon_88B18A5B(NpXmlParser *parser, const char *data, int size);
 
+/* strtol.c: strtol and strtoul */
+int SceNpCommon_4C4AA451(const char *str, const char **end, int base);
+unsigned int SceNpCommon_5B770B80(const char *str, const char **end, int base);
 /* strtol.c: a communication ID from its text, and its text ("NPWR00000_00") */
 int SceNpCommon_5BC54899(SceNpCommunicationId *commId, const char *str);
 int SceNpCommon_E426FEE8(const SceNpCommunicationId *commId, char *str, SceSize size);
@@ -64,11 +67,39 @@ int SceNpCommon_E426FEE8(const SceNpCommunicationId *commId, char *str, SceSize 
 /* jid.c: the NP environment's name ("np" on the retail network) */
 int sceNpCommonGetNpEnviroment(char *environment);
 
+/* a Jabber ID, node@domain/resource, its parts pointing into one buffer */
+typedef struct NpJid {
+	const char *node;		/* 0x00: the online ID */
+	const char *domain;		/* 0x04: "xx.yy.<environment>.playstation.net" */
+	const char *resource;		/* 0x08: the platform */
+	SceUInt32 reserved;		/* 0x0C */
+} NpJid;
+
+/* jid.c: a JID's parts and text, the NP ID it names and the JID of an NP ID; without jid or buf
+   they only measure (*required gets the buffer size they need) */
+int SceNpCommon_D2B9BCA8(NpJid *jid, const char *str, char *buf, SceSize bufSize,
+			 SceSize *required);
+int SceNpCommon_85699AE2(const NpJid *jid, char *buf, SceSize bufSize, SceSize *required);
+int SceNpCommon_9B7CAA67(SceNpId *npId, const NpJid *jid);
+int SceNpCommon_40CC4D15(NpJid *jid, const SceNpId *npId, char *buf, SceSize bufSize,
+			 SceSize *required);
+
+/* xml.c: XML text escaped and unescaped; without dst they only measure */
+int SceNpCommon_C2BF5C1F(char *dst, SceSize dstSize, const SceUInt8 *src, SceSize srcSize,
+			 SceSize *required);
+int SceNpCommon_389F8C14(char *dst, SceSize dstSize, const SceUInt8 *src, SceSize srcSize,
+			 SceSize *required);
+
+/* base64.c */
+SceSize sceNpCommonBase64Encode(const SceUInt8 *src, char *dst, SceSize size);
+
 /* util.c: SceNpCommon's heap */
 void *sceNpCommonMallocNpServerName(SceSize size);
 void sceNpCommonFreeNpServerName(void *ptr);
 /* util.c: NP full test (the registry's on a test or development unit, else the settings') */
 SceBool SceNpCommon_BBC13621(void);
+/* util.c: the system software version as "major.minor" */
+void SceNpCommon_0624AE44(char *version);
 
 #ifdef __cplusplus
 }

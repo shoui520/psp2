@@ -33,6 +33,9 @@ extern int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags);
 extern int sceHttpSetAcceptEncodingGZIPEnabled(int id, SceBool enable);
 extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 
+/* the lookup server answered 404 to a request it names a user by (operation 10) */
+#define NP_LOOKUP_ERROR_NOT_FOUND	-2141911160	/* 0x80550788 */
+
 /* the services, each with its own heap and lists */
 #define NP_LOOKUP_SERVICE_INT		0
 #define NP_LOOKUP_SERVICE_LOOKUP	1
@@ -61,6 +64,13 @@ typedef struct NpLookupAllocation {
 	struct NpLookupAllocation *next;
 } NpLookupAllocation;
 
+/* a server of a client's list (the request code reads it), each freed by the client */
+typedef struct NpLookupServer {
+	const char *name;			/* 0x00 */
+	SceUInt8 reserved[8];			/* 0x04 */
+	struct NpLookupServer *next;		/* 0x0C */
+} NpLookupServer;
+
 /* a client: the HTTP template of one NP ID */
 typedef struct NpLookupClient {
 	int id;					/* 0x00 */
@@ -71,7 +81,7 @@ typedef struct NpLookupClient {
 	SceUID mutex;				/* 0x24 */
 	char environment[16];			/* 0x28 */
 	SceUInt8 platform[8];			/* 0x38: opt[2..3] of the NP ID */
-	SceUInt8 reserved[4];			/* 0x40 */
+	NpLookupServer *servers;		/* 0x40 */
 	SceUInt32 service;			/* 0x44: compared unsigned */
 	NpLookupAllocation *allocations;	/* 0x48 */
 	struct NpLookupClient *next;		/* 0x4C */
