@@ -70,7 +70,7 @@ struct BtPowerHooks btPowerHooks __attribute__((section(".dtcm.bss")));			/* 0x4
 unsigned int (*btPowerThresholdBitmap)(void) __attribute__((section(".dtcm.bss")));	/* 0x400f364 */
 uint8_t *(*btPowerThresholdRate)(uint8_t a1) __attribute__((section(".dtcm.bss")));	/* 0x400f368 */
 
-/* Posts the state to the controller's thread (message 0x1400). */
+/* Posts the state to the host transport's queue (message 0x1400). */
 void btLmpLcHandleState(int state)
 {
 	uint32_t *message;
@@ -80,7 +80,7 @@ void btLmpLcHandleState(int state)
 	if (message != NULL) {
 		message[0] = 0x1400;
 		message[1] = state;
-		osa_MsgSend((void **)&message, 0xef000000);
+		osa_MsgSend((void **)&message, romQueueHct);
 	}
 }
 

@@ -173,12 +173,10 @@ extern uint8_t *btLinkContext;				/* 0x400f954: the link controller's state */
 extern const uint8_t rfCalibTimingA[];			/* 0x53d7e, per clock index */
 extern const uint8_t rfCalibTimingB[];			/* 0x53d92 */
 extern const uint8_t rfCalibTimingC[];			/* 0x53d88 */
-void *btLmpLcFormatContext(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4);	/* 0x432bc */
 int btLmpLcBuildContext(uint32_t *remaining);		/* 0x42f4e */
 int btLmpLcManageContext(int link);			/* 0x433f0 */
 int btLmpLcUpdateDescriptor(void);			/* 0x49376 */
 void btLmpLcSyncContext(void);				/* 0x43030 */
-unsigned int btLmpLcResetEntry(void);			/* 0x438b0 */
 int btHccRomHandleState(void);				/* ROM, via 0x52c54 */
 void btLtsRomParseState(int a1);			/* ROM, via 0x52c5c */
 int fmCoexPrepareState(uint32_t *state);		/* 0x49bc2 */

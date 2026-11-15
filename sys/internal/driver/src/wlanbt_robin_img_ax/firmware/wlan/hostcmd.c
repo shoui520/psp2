@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/osa.h"
 #include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
 #include "robin/txhold.h"
@@ -476,7 +477,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 int hostCmdMisc(uint16_t *result, uint8_t *body, struct WlanConnection *connection); /* 0x2ccb6 */
 void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
 void wlanHostWakeGpioSet(unsigned int gpio, int enable);			/* 0x28142 */
-void osaFormatVersionBanner(unsigned int selector, char *text);			/* 0x27c36 */
 void macMgmtValidateTable(int reason);						/* 0x3726c */
 void macMgmtScheduleTable(int value);						/* 0x3796e */
 void macMgmtNotifyTable(void);							/* 0x3797a */

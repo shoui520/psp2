@@ -8,6 +8,7 @@
 #define ROBIN_BTCONTEXT_H
 
 #include <stdint.h>
+#include "robin/osa.h"
 
 /* 0x55284: the coexistence state of the controller. */
 struct BtLcContext {
@@ -16,7 +17,27 @@ struct BtLcContext {
 	uint8_t window;		/* cleared by the dispatch and parse hooks */
 	uint8_t activeCount;	/* the link count (3 at reset), 1 when the controller has one */
 	uint8_t bitmap;		/* set (1) by event 0xf1, cleared by 0xf2 */
+	uint8_t reserved5;
+	uint16_t rate;		/* the profile the coexistence code was told last (btLmpLcApplyContext) */
+	struct OsaIdleHook idleHook;	/* 0x5528c: btLmpLcResolveContext, from btLmpLcScheduleContext */
 };
+
+/* The state of one of the controller's two targets (0 the Bluetooth device, 1 the AMP), 16 bytes. */
+struct BtLcTarget {
+	uint8_t reserved0;
+	uint8_t flag;			/* cleared once the target was released */
+	uint8_t reserved2[2];
+	uint8_t mode;			/* 0xff: the target is released without power-save handshake */
+	uint8_t delay;			/* milliseconds the target needs, 0xff: none */
+	uint8_t reserved6[2];
+	uint32_t since;			/* the event clock when the delay began */
+	uint8_t phase;			/* 3: released, waiting for btLmpLcInspectContext() */
+	uint8_t reserved13[3];
+};
+extern struct BtLcTarget btLmpLcTarget[2];			/* 0x59ec8 */
+extern uint8_t btLinkIndexRecord;				/* 0x400f7fd */
+extern uint8_t btLinkMaskState;					/* 0x400f7fe */
+extern uint8_t btDeviceEntry;					/* 0x400c7b8 */
 extern struct BtLcContext btLmpLcContext;			/* 0x55284 */
 #define btLmpLcActiveCount	(btLmpLcContext.activeCount)	/* 0x55287 */
 
@@ -35,15 +56,22 @@ int btLmpLcDispatchContext(void);				/* 0x42f38 */
 uint8_t *btLmpLcParseContext(void);				/* 0x42f46 */
 int btLmpLcBuildContext(uint32_t *remaining);			/* 0x42f4e */
 void btLmpLcComputeContext(void);				/* 0x42f94 */
+void btLmpLcApplyContext(void);					/* 0x430d0 */
+int btLmpLcResolveContext(void);				/* 0x431ee */
+int btLmpLcScheduleContext(void);				/* 0x43208 */
+int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length);	/* 0x4324c */
+void btLmpLcInspectContext(int link, int notify);		/* 0x432ea */
+int btLmpLcTrackContext(int link);				/* 0x43348 */
 int btLmpLcQueryContext(int link, const uint8_t *event);	/* 0x42f96 */
 int btLmpLcResetContext(int link, const uint8_t *event);	/* 0x42ff2 */
 void btLmpLcSyncContext(void);					/* 0x43030 */
 void btLmpLcRecordState(void);					/* 0x42b3c */
 
+int btLmpLcFormatContext(int link, int kind, int type, int value);	/* 0x432bc */
+
 /* Not converted yet, or in another file. */
 unsigned int btLmpLcTrackFrame(void);				/* 0x47fc4 */
 unsigned int hostCmd0003Version(void);				/* 0x27de0 */
-void *btLmpLcFormatContext(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4);	/* 0x432bc */
 unsigned int btLmpLcResetEntry(void);				/* 0x438b0 */
 
 #endif

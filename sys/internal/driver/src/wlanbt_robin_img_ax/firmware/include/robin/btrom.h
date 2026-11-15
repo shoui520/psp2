@@ -85,6 +85,9 @@ uint32_t btLdrRomUpdateState(uint32_t a1);
 uint8_t *btLcoRomResetContext(uint32_t link);
 int btLdaRomPrepareState(uint32_t a1);
 
+uint8_t *btLcoRomProcessState(uint32_t index);
+uint8_t *btLdrRomReleaseState(void);
+
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);
 uint8_t *btLcoRomVerifyState(uint32_t link);

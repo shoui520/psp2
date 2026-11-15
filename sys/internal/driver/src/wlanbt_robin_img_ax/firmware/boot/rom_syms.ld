@@ -259,3 +259,5 @@ PROVIDE(btLtsRomPrepareContext  = 0x03f35513);
 PROVIDE(btLdrRomUpdateState     = 0x03f259b9);
 PROVIDE(btLcoRomResetContext    = 0x03f1f6e5);
 PROVIDE(btLdaRomPrepareState    = 0x03f21d67);
+PROVIDE(btLcoRomProcessState    = 0x03f14a65);
+PROVIDE(btLdrRomReleaseState    = 0x03f2aa65);

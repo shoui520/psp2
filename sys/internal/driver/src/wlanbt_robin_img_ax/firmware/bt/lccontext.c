@@ -7,7 +7,12 @@
 #include "robin/btcontext.h"
 #include "robin/btrom.h"
 #include "robin/clock.h"
+#include "robin/amp.h"
 #include "robin/eventpower.h"
+#include "robin/eventroute.h"
+#include "robin/hct.h"
+#include "robin/rom.h"
+#include "robin/sys.h"
 #include "robin/socpower.h"
 #include "robin/soc.h"
 
@@ -20,6 +25,10 @@ uint16_t *btLinkRate __attribute__((section(".dtcm.bss")));			/* 0x400f934 */
 uint8_t btLinkMaskContext __attribute__((section(".dtcm.bss")));			/* 0x400f7ff */
 int32_t btLinkMaskHeader __attribute__((section(".dtcm.bss")));			/* 0x400f8c8 */
 uint32_t btLmpLcEntryCount[8] __attribute__((section(".itcm.bss")));		/* 0x59ea8 */
+struct BtLcTarget btLmpLcTarget[2] __attribute__((section(".itcm.bss")));		/* 0x59ec8 */
+uint8_t btLinkIndexRecord __attribute__((section(".dtcm.bss")));			/* 0x400f7fd */
+uint8_t btLinkMaskState __attribute__((section(".dtcm.bss")));				/* 0x400f7fe */
+uint8_t btDeviceEntry __attribute__((section(".dtcm.bss")));				/* 0x400c7b8 */
 
 /* The controller is not running: every clock request is withdrawn (0 kHz). */
 unsigned int btLmpLcHandleContext(void)
@@ -236,4 +245,167 @@ void btLmpLcSyncContext(void)
 	}
 	if (entry < 8)
 		btLmpLcEntryCount[entry]++;
+}
+
+/*
+ * Tells the coexistence code the profile of the links in use: bit 0 a link of the Bluetooth device, bit 1
+ * a link of the AMP, bits 4-6 the packet type class, bits 7-13 the smallest interval, bit 14 all links
+ * of the device are in sniff or hold, and the bits 2 and 3 the device's flags. It is told only when the
+ * profile changed.
+ */
+void btLmpLcApplyContext(void)
+{
+	uint16_t profile = 0x3f80;
+	unsigned int links = 0;
+	unsigned int idle = 0;
+	unsigned int slot;
+
+	if ((btLinkMaskState | btLinkIndexRecord) != 0)
+		profile |= 8;
+	if (btDeviceEntry != 0)
+		profile |= 4;
+	for (slot = 1; slot < 11; slot = (uint16_t)(slot + 1)) {
+		unsigned int state = romHctHostSlot[slot][0];
+
+		if (state != 5 && state != 7)
+			continue;
+		if (slot < 8) {
+			unsigned int mode = btLdrRomReleaseState()[116 * slot + 68];
+
+			links = (uint8_t)(links + 1);
+			if (mode == 3 || mode == 1)
+				idle = (uint8_t)(idle + 1);
+			profile |= 1;
+		} else {
+			const uint8_t *amp = btLcoRomProcessState(slot - 8) + 30 * (uint16_t)(slot - 8);
+			unsigned int type;
+
+			if (amp[5] < ((profile >> 7) & 0x7f))
+				profile = (profile & 0xc07f) | ((amp[5] << 7) & 0x3fff);
+			type = amp[9];
+			if (type == 44 || type == 61 || type == 13 || type == 12)
+				profile = (profile & 0xff8f) + 0x60;
+			else if (((profile >> 4) & 7) == 0)
+				profile = (profile & 0xff8f) + 0x20;
+			profile |= 2;
+		}
+	}
+	if (links != 0 && links == idle)
+		profile |= 0x4000;
+	if (profile != btLmpLcContext.rate) {
+		btLmpLcContext.rate = profile;
+		btCoexSetProfile(profile);
+	}
+}
+
+/* The idle hook: the coexistence profile is refreshed while the chip may not sleep. */
+int btLmpLcResolveContext(void)
+{
+	if (!sysSleepVotesAllowed(1)) {
+		btLmpLcSyncContext();
+		btLmpLcApplyContext();
+	}
+	hctCoexTick();
+	return 0;
+}
+
+int btLmpLcScheduleContext(void)
+{
+	btLmpLcContext.idleHook.function = btLmpLcResolveContext;
+	return osaAddIdleHook(&btLmpLcContext.idleHook);
+}
+
+/*
+ * Posts an event of the link (message 5100, or 5099 without type) with the data to the host transport's
+ * queue; the AMP's untyped event goes to the host as a vendor event instead. 1 when no message was free.
+ */
+int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length)
+{
+	uint8_t *message;
+
+	message = osa_MsgAlloc(length + 13);
+	if (message == NULL)
+		return 1;
+	if (type != 0) {
+		*(uint32_t *)message = 5100;
+		message[8] = type;
+		*(uint32_t *)(message + 4) = link;
+	} else {
+		*(uint32_t *)message = 5099;
+		message[8] = 0xff;
+	}
+	message[9] = length;
+	__aeabi_memcpy(message + 10, data, length);
+	if (link == 1 && type == 0) {
+		ampHciSendEvent(0xff, 0, "Vm", data, length);
+		osa_MsgFree((void **)&message);
+	} else {
+		osa_MsgSend((void **)&message, romQueueHct);
+	}
+	return 0;
+}
+
+/* A two byte event: the bytes kind 1 gives, or the halfword value under the type. */
+int btLmpLcFormatContext(int link, int kind, int type, int value)
+{
+	uint8_t data[4];
+
+	if (kind == 1) {
+		data[0] = type;
+		data[1] = value;
+		type = 0;
+	} else {
+		data[0] = value;
+		data[1] = value >> 8;
+	}
+	return btLmpLcNotifyContext(link, type, data, 2);
+}
+
+/* A target that was released is taken off the event routing, and the controller is told if asked. */
+void btLmpLcInspectContext(int link, int notify)
+{
+	unsigned int released = 0;
+	UINT posture = sysIrqDisable();
+	struct BtLcTarget *target = &btLmpLcTarget[link];
+
+	if (target->phase == 3) {
+		target->phase = 0;
+		target->flag = 0;
+		sysEventRouteSetMasked(sysEventRouteDevice(link == 1 ? 3 : 0), 0);
+		released = 1;
+	}
+	sysIrqRestore(posture);
+	if (released != 0 && notify != 0)
+		btLmpLcFormatContext(link, 1, 32, 2);
+}
+
+/*
+ * Releases a target: waits out the delay it asked for (mode 0xff: after the event clock's elapsed
+ * time), then hands the device over through mdevIoctl() 0xb, or 0x61 with the Bluetooth device.
+ */
+int btLmpLcTrackContext(int link)
+{
+	struct BtLcTarget *target = &btLmpLcTarget[link];
+
+	if (target->mode == 0xff) {
+		if (target->delay != 0 && target->delay != 0xff) {
+			unsigned int elapsed = sysEventClockElapsedUs(target->since);
+			unsigned int limit = 1000 * target->delay;
+
+			if (elapsed < limit && limit - elapsed > 1)
+				sysDelayUs(limit - elapsed);
+		}
+		mdevIoctl(link == 1 ? ampSdioDev : btSdioActiveHandle, 0xb, 0);
+		btLmpLcInspectContext(link, 1);
+		target->flag = 0;
+		return 0;
+	}
+	mdevIoctl(btSdioActiveHandle, 0x61, 1);
+	if (target->delay == 0xff)
+		return mdevIoctl(link == 1 ? ampSdioDev : btSdioActiveHandle, 0xb, 0);
+	if (target->delay != 0)
+		sysDelayUs(1000 * target->delay);
+	mdevIoctl(btSdioActiveHandle, 0x61, 0);
+	btLmpLcInspectContext(link, 1);
+	return 0;
 }
