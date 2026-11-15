@@ -64,6 +64,19 @@ int mdevRegisterDriver(void *driver, void *reserved);
 /* Next message of the calling task. */
 uint32_t *mdevReceiveMessage(void);
 
+/* The controller's temperature-controlled transmit level (bt/lcpower.c); roles are inferred. */
+void btBdhRomConfigureState(uint32_t value, uint32_t flag);
+uint8_t *btLcoRomComputeContext(uint32_t link);
+void btBdhRomBuildState(uint32_t a, uint32_t b);
+void btLscRomScheduleState(uint32_t mode, uint32_t value);
+void btBdhRomCheckState(uint8_t *context);
+void btBdhRomValidateState(uint32_t a, uint32_t b, void *buffer);
+void btBdhRomParseState(void);
+void btLdaRomNotifyState(void);
+void btBdhRomDispatchState(uint8_t *command);
+uint8_t btBdhRomProcessState(uint32_t reg, uint32_t flag);
+void btBdhRomUpdateState(uint32_t reg, uint32_t value);
+
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);
 uint8_t *btLcoRomVerifyState(uint32_t link);

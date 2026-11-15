@@ -6,6 +6,7 @@
  * placeholder names (macMgmt*Context), kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/btpower.h"
 #include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/adhoc.h"
@@ -54,7 +55,6 @@ void uapSqramClearTable(void);								/* SQRAM 0xc000a3f6 */
 void uapSqramSetupTable(void);								/* SQRAM, via the veneer at 0x52e7c */
 void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
-void btLmpLcHandleState(int state);							/* 0x42488 */
 void p2pSqramDispatchState(struct WlanDirectContext *attributes, uint32_t flags,
 			   struct WlanPsPeerState *ps);					/* SQRAM */
 

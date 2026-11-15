@@ -176,7 +176,6 @@ extern const uint8_t rfCalibTimingC[];			/* 0x53d88 */
 void *btLmpLcFormatContext(uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4);	/* 0x432bc */
 int btLmpLcBuildContext(uint32_t *remaining);		/* 0x42f4e */
 int btLmpLcManageContext(int link);			/* 0x433f0 */
-void btLmpLcClearState(void);				/* 0x429fc */
 int btLmpLcUpdateDescriptor(void);			/* 0x49376 */
 void btLmpLcSyncContext(void);				/* 0x43030 */
 unsigned int btLmpLcResetEntry(void);			/* 0x438b0 */

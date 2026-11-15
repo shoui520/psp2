@@ -113,6 +113,17 @@ PROVIDE(btBdhRomConvertState    = 0x03f07fdb);
 PROVIDE(btBdhRomAdjustState     = 0x03f08169);
 PROVIDE(btBdhRomInspectState    = 0x03f07c5d);
 PROVIDE(btBdhRomManageState     = 0x03f07d5f);
+PROVIDE(btBdhRomConfigureState  = 0x03f06d67);
+PROVIDE(btLcoRomComputeContext  = 0x03f1ee8d);
+PROVIDE(btBdhRomBuildState      = 0x03f070b7);
+PROVIDE(btLscRomScheduleState   = 0x03f31e11);
+PROVIDE(btBdhRomCheckState      = 0x03f06d8b);
+PROVIDE(btBdhRomValidateState   = 0x03f06dfd);
+PROVIDE(btBdhRomParseState      = 0x03f0705d);
+PROVIDE(btLdaRomNotifyState     = 0x03f23043);
+PROVIDE(btBdhRomDispatchState   = 0x03f06ff3);
+PROVIDE(btBdhRomProcessState    = 0x03f06af3);
+PROVIDE(btBdhRomUpdateState     = 0x03f06bf1);
 
 /* ROM data: message queue handles, and the Bluetooth controller's RAM state. */
 PROVIDE(romQueueHct             = 0x03f41740);

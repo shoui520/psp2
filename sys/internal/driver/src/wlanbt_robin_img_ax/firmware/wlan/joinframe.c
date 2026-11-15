@@ -9,6 +9,7 @@
  * and the fields' are inferred.
  */
 #include <stddef.h>
+#include "robin/btpower.h"
 #include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/apsta.h"
@@ -59,7 +60,6 @@ extern uint8_t wlanAssocHtCapability[28];			/* SQRAM 0xc0032170: the copy of it 
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 int rfCalibSyncDescriptor(void);						/* 0x2a20c */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */
-void btLmpLcHandleState(int state);						/* 0x42488 */
 extern uint8_t ampScanChannel;					/* amp/wlanif.c */
 
 /* The capability sent in the last (re)association request, and the rates it announced as a bitmap. */

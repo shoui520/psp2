@@ -12,6 +12,7 @@
  * what the code does, and the register offsets are the hardware's.
  */
 #include <stddef.h>
+#include "robin/btpower.h"
 #include "robin/amp.h"
 #include "robin/eventpower.h"
 #include "robin/eventroute.h"

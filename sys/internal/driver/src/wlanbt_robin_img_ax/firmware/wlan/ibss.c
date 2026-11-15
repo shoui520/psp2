@@ -6,6 +6,7 @@
  * filename survives.
  */
 #include <stdint.h>
+#include "robin/btpower.h"
 #include "robin/ratesel.h"
 #include "robin/adhoc.h"
 #include "robin/txhold.h"
@@ -67,7 +68,6 @@ void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
 int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
-void btLmpLcHandleState(int state);					/* 0x42488 */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
