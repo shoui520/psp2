@@ -33,13 +33,6 @@ struct WlanHostResponse {
 #define MAC_ADDRESS_LOW		(*(volatile uint32_t *)0x8000a530)
 #define MAC_ADDRESS_HIGH	(*(volatile uint32_t *)0x8000a534)
 
-/* The elements the host's TLVs became (HT Capabilities, HT Information, 20/40 BSS Coexistence, OBSS Scan Parameters). */
-struct WlanHtTlvElements {
-	uint8_t *capability;
-	uint8_t *information;
-	uint8_t *coexistence;
-	uint8_t *obssScan;
-};
 
 /* The power limits of a Power Capability element, set by the host (0x54e70). */
 struct WlanPowerCapability {

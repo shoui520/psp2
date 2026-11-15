@@ -17,6 +17,7 @@
 #include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
+#include "robin/mgmtentry.h"
 #include "robin/protection.h"
 #include "robin/pspoll.h"
 #include "robin/rom.h"
@@ -75,8 +76,6 @@ void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); 
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
-void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *third,
-			  uint8_t *fourth, uint32_t a, uint32_t b, uint32_t c);	/* 0x364be */
 void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
 

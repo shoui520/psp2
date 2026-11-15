@@ -25,6 +25,7 @@
 #include "robin/runtime.h"
 #include "robin/task.h"
 #include "robin/stamachine.h"
+#include "robin/mgmtentry.h"
 #include "robin/swcrypto.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
@@ -87,8 +88,6 @@ void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *fra
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);
 void uapSqramApplyContext(struct WlanConnection *connection, int apply);		/* SQRAM 0xc000a3f6 */
-void macMgmtConfigureEntry(uint32_t first, uint32_t second, uint32_t third, uint32_t fourth,
-			   uint32_t fifth);						/* 0x36420 */
 int macMgmtResetEntry(struct WlanConnection *connection);				/* 0x3699a */
 int macMgmtQueryEntry(struct WlanConnection *connection);				/* 0x3691c */
 void macMgmtScheduleEntry(struct WlanConnection *connection);				/* 0x36a56 */
@@ -395,7 +394,7 @@ void macMgmtScheduleState(struct WlanConnection *connection)
 	connection->state = 0;
 	connection->flags2 &= ~0x10;
 	__aeabi_memclr(connection->peerAddress, 6);
-	macMgmtConfigureEntry(0, 0, 0, 0, 0);
+	macMgmtConfigureEntry(NULL, NULL, NULL, NULL, NULL);
 	wlanSlotCancelFlag0();
 	uapSqramFilterEntry(0);
 	if (!(connection->hostFlags & WLAN_CONN_HOST_FLAG_8)) {

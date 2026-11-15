@@ -32,16 +32,6 @@
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
 
-struct WlanChannelContext {
-	uint8_t trackBeacons;		/* beacons since the frequency tracker last evaluated (macMgmtReleaseContext()) */
-	uint8_t savedFlags;		/* the flags macMgmtCheckContext() found the radio on */
-	uint8_t linkPowerLimit;		/* wlanTxPowerGetLinkLimit() then */
-	uint8_t flags;			/* the flags the radio is on */
-	uint32_t triggerCount;		/* the transmit task was woken for a trigger frame that many times */
-	uint32_t beaconMisses;		/* beacons in a row on another channel than the access point's (0x55160) */
-	uint32_t savedChannel;		/* 0: none yet */
-	uint32_t channel;		/* the channel the radio is on */
-};
 
 /* The P2P attributes of a beacon or probe response the direct code picked out (76 bytes). */
 struct WlanDirectAttributes {

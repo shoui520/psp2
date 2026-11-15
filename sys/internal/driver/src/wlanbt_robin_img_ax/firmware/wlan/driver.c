@@ -20,6 +20,7 @@
 #include "robin/wlanrx.h"
 #include "robin/wlantask.h"
 #include "robin/stamachine.h"
+#include "robin/mgmtentry.h"
 
 /* Messages for the "MAC Tx" task, one ROM queue per message kind. */
 struct WlanDriverQueue {
@@ -39,7 +40,6 @@ static struct MdevDriver wlanDriver __attribute__((section(".dtcm.bss")));
 uint16_t wlanRxFrameTypeMask __attribute__((section(".dtcm.rw")));
 
 /* Command handlers of the driver, not converted yet. */
-void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236, command 0x58 */
 uint16_t ampPalFrameDataOffset(void);						/* 0x236ea */
 extern struct OsaDevice ampWlanDriver;						/* 0x04009860 */
 

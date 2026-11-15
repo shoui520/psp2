@@ -759,7 +759,12 @@ struct WlanBssTiming {
 	uint32_t next[2];		/* 64-bit time of the next target; 0: none yet */
 	uint32_t reserved16[2];
 	uint32_t interval;		/* the target's period */
+	uint32_t reserved28;
+	uint32_t dtimPeriod;		/* beacons per DTIM (macMgmtUpdateEntry()) */
+	uint32_t reserved36[3];
 };
+
+_Static_assert(sizeof(struct WlanBssTiming) == 48, "BSS timing record");
 
 extern uint32_t wlanConnectionCount;
 extern uint8_t wlanChannelInUse[1];

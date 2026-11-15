@@ -118,8 +118,8 @@ struct MacTxQueueStats {
 struct WlanLocalState {
 	uint8_t reserved0[4];
 	uint8_t powerSave;
-	uint8_t reserved1[3];
-	uint8_t reserved8[16];
+	uint8_t rates[14];		/* the rates of a Bluetooth AMP link's IBSS, 0-terminated */
+	uint8_t reserved19[5];
 	uint32_t mibOid17;		/* HostCmd_CMD_802_11_SNMP_MIB's object 17: its value; non-zero starts macMgmtScheduleHeader() */
 };
 _Static_assert(offsetof(struct WlanLocalState, mibOid17) == 24, "SNMP MIB object 17");

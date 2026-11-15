@@ -186,6 +186,15 @@ unsigned int wlanRateBitmapBasic(const uint8_t *rates, unsigned int count);
 unsigned int wlanRateBitmap(const uint8_t *rates, unsigned int count);
 int wlanTimeDelta(unsigned int now, unsigned int last);
 
+/* The elements the host's TLVs became (HT Capabilities, HT Information, 20/40 BSS Coexistence, OBSS Scan Parameters). */
+struct WlanHtTlvElements {
+	uint8_t *capability;
+	uint8_t *information;
+	uint8_t *coexistence;
+	uint8_t *obssScan;
+	uint8_t *reserved16;		/* stored with the others by macMgmtConfigureEntry(); nothing reads it */
+};
+
 /* A growing run of elements in a pool buffer (wlan/iebuffer.c). */
 struct WlanIeBuffer {
 	OsaBuffer *buffer;
