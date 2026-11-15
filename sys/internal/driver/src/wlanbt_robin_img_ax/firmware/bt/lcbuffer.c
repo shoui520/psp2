@@ -1267,3 +1267,56 @@ void btLmpLcAdjustBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *prof
 	else
 		profile->span = btLinkDefaultSpan;
 }
+
+/*
+ * Whether the link of state 9's queue is busy at clock: its packet type takes more than half the
+ * target's time, or half of it has passed since its slot was due.
+ */
+__attribute__((noinline)) int btLmpLcRecordBuffer(uint32_t clock)
+{
+	const struct BtDeviceProfile *head = btSlotQueues[btSlotQueueIndex[9]].head;
+	unsigned int half;
+
+	if (head == NULL)
+		return 0;
+	half = btTargetConfig >> 1;
+	if (*(const BtHalf *)(btPacketTypes + 12 * romHctHostSlot[head->index][2] + 4) > half)
+		return 1;
+	return (int32_t)(clock - head->due) >= (int)half;
+}
+
+/*
+ * The ROM's slot hook of mode 1: at the end of the link's window, every queued link whose window
+ * ran out is scheduled again, and the link's slot, extended by a mode 8 slot on btExtendProfile
+ * where it asks for one and the state 9 link is not busy.
+ */
+void btLmpLcFilterBuffer(struct BtSlotEvent *event, uint32_t clock)
+{
+	struct BtDeviceProfile *profile = event->profile;
+	uint32_t due = profile->due;
+	struct BtDeviceProfile *node;
+
+	if ((int32_t)(clock - (profile->window + due)) < 0)
+		return;
+	if (event->state != 1) {
+		btLtsRomQueryState(profile);
+		return;
+	}
+	btLtsRomQueryState(profile);
+	while ((node = event->profile) != NULL && (int32_t)(clock - (node->due + node->window)) >= 0) {
+		btLtsRomQueryState(node);
+		btLtsRomApplyState(node, btLtsRomNotifyState(node, clock), event->state);
+	}
+	if (profile->extend != 0 && profile->extendWindow != 0 && btLmpLcFilterHeader() == 0 &&
+	    btLmpLcRecordBuffer(clock) == 0) {
+		unsigned int average = (profile->secondSetting + profile->firstSetting) >> 1;
+
+		btLtsRomQueryState(&btExtendProfile);
+		__aeabi_memcpy4(&btExtendProfile, profile, sizeof(btExtendProfile));
+		btLtsRomComputeState(&btExtendProfile);
+		btExtendProfile.window = profile->extendWindow - average + 1;
+		btLtsRomApplyState(&btExtendProfile, due + average, 8);
+	}
+	profile->adjust = 0;
+	btLtsRomApplyState(profile, btLtsRomNotifyState(profile, clock), event->state);
+}

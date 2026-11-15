@@ -88,6 +88,11 @@ struct BtDeviceProfile {
 			uint16_t peer;		/* the link a slot is shared with, 0xffff: none */
 			uint32_t queued;	/* the event clock the profile was queued at */
 		};
+		struct {			/* mode 1: btLmpLcFilterBuffer() */
+			uint16_t extendWindow;	/* the ticks a mode 8 slot extends the link's slot by */
+			uint8_t extend;		/* non-zero: the slot is extended */
+			uint8_t reserved51;
+		};
 		struct {			/* modes 7 and 11: the slot hooks of bt/lcbuffer.c */
 			uint32_t anchor;	/* the event clock the link's slots are counted from */
 			uint16_t repeatLimit;	/* the mode 11 slots a link may repeat */
@@ -109,6 +114,7 @@ _Static_assert(sizeof(struct BtSourceRecord) == 68, "link record");
 _Static_assert(sizeof(struct BtDeviceProfile) == 72, "device profile");
 
 extern struct BtDeviceProfile btDeviceProfile[8];		/* 0x400d814 */
+extern struct BtDeviceProfile btExtendProfile;			/* 0x400dc94: the copy a mode 8 slot runs on */
 extern uint32_t btDeviceRecord;					/* 0x400dde8: the event clock of the next slot */
 extern uint16_t btTargetConfig;					/* 0x400de50 */
 extern struct BtSourceRecord btSourceBuffer[BT_SOURCE_LINKS];	/* 0x5a054 */
