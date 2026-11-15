@@ -72,7 +72,14 @@ extern uint16_t btPeerPacket;					/* 0x400adaa */
 extern uint32_t btPeerFrame;					/* 0x400ae0c */
 extern uint8_t btPeerBuffer[];					/* 0x400ada0 */
 extern uint8_t btDevicePolicy[BT_POWER_DEVICES];		/* 0x400d610 */
-extern uint8_t btDeviceRate[BT_POWER_DEVICES];			/* 0x400d5a0 */
+/*
+ * The rate steps of the devices' links (0x400d5a0): each link's step, a second copy of it from
+ * BT_DEVICE_RATE_COPY, the device's own step and the highest step there is.
+ */
+#define BT_DEVICE_RATE_COPY	BT_POWER_DEVICES
+#define BT_DEVICE_RATE_OWN	(2 * BT_POWER_DEVICES)
+#define BT_DEVICE_RATE_TOP	(2 * BT_POWER_DEVICES + 1)
+extern uint8_t btDeviceRate[2 * BT_POWER_DEVICES + 2];		/* 0x400d5a0 */
 extern uint8_t btThresholdPayload;				/* 0x400f429 */
 extern int8_t btThresholdRegister;				/* 0x400f42b */
 extern uint8_t btThresholdRecord;				/* 0x400f430 */

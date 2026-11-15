@@ -88,6 +88,9 @@ extern uint8_t btTargetContext;					/* 0x400ddf4: the target's device */
 extern uint8_t btTargetEntry;					/* 0x400ddf5 */
 extern uint8_t btTargetUsed;					/* 0x400ddf7: the target's slots taken */
 extern uint8_t btTargetSlots;					/* 0x400ddf8: the slots it has */
+extern uint8_t (*btTableHostLinks)[40];			/* 0x552fc */
+/* The ROM's host link records, 40 bytes each: byte 1 is the link's rate class. */
+extern uint8_t btHostLinks[][40];				/* DTCM 0x400c25c */
 extern uint32_t btTableModeClock;				/* 0x55300 */
 extern uint32_t btTableTargetClock;				/* 0x55304 */
 extern uint8_t btLinkDefaultSpan;				/* 0x400f818 */

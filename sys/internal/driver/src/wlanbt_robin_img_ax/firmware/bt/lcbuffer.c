@@ -328,8 +328,7 @@ void btLmpLcQueryBuffer(int link, uint32_t held)
 		clock = btLtsRomParseState(0);
 	} else if (record[68] == 1 && held == 0) {
 		btNextControl(15, link);
-		btLtsRomNotifyState(profile, btLtsRomScheduleState(btLtsRomParseState(0)));
-		clock = btLtsRomResolveState();
+		clock = btLtsRomResolveState(btLtsRomNotifyState(profile, btLtsRomScheduleState(btLtsRomParseState(0))));
 	} else {
 		btLdrRomInspectState(link, held);
 		return;
@@ -3029,4 +3028,820 @@ int btLmpLcConvertFrame(void **slot)
 		}
 	}
 	return btLcoRomDispatchState(slot);
+}
+
+/* A link context with neither byte 29 nor byte 14 set goes to btLinkIdleHook, others to the ROM. */
+int btLmpLcVerifyFrame(unsigned int link, uint32_t argument)
+{
+	const uint8_t *context = btLcoRomVerifyState(0) + link * 30;
+
+	if (context[29] == 0 && context[14] == 0)
+		return btLinkIdleHook(link, argument);
+	return btLcoRomConvertState(link, argument);
+}
+
+/* A context without byte 20 set has its handle sent as message 0xcd2 before the ROM's check. */
+int btLmpLcSelectFrame(unsigned int link)
+{
+	uint8_t *context = btLcoRomDispatchContext(link);
+
+	if (context[20] == 0) {
+		uint8_t *message = osa_MsgAlloc(8);
+
+		*(BtWord *)message = 0xcd2;
+		*(BtHalf *)(message + 4) = *(BtHalf *)(context + 6);
+		osa_MsgSend((void **)&message, romQueueSlot);
+	}
+	return btLcoRomCheckContext();
+}
+
+/*
+ * A target slot (state 5) ends; once the device record's clock has come, the ROM's timer runs the
+ * ticks past it and calls btLtsRomDispatchContext().
+ */
+void btLmpLcAdjustFrame(void)
+{
+	int32_t late;
+
+	if (romTargetTable != 5)
+		return;
+	late = btLtsRomScheduleState(btLtsRomParseState(0)) - btDeviceRecord;
+	romTargetTable = 0;
+	if (late < 0)
+		return;
+	btLdrRomConfigureState(0, late);
+	btLdrRomProcessState(0, 1, btLtsRomDispatchContext);
+}
+
+/*
+ * A vendor command that sets (first byte not 0) and reads back the rate classes' slot windows:
+ * btTableOffsets, btTableShortWindows and btTableLongWindows, eight bytes each. It takes 25 bytes
+ * and returns 25; another length is invalid (0x12).
+ */
+void btLmpLcRecordFrame(unsigned int length, const uint8_t *parameters, uint8_t *returnLength,
+			uint8_t *status, uint8_t *returnParameters)
+{
+	uint8_t set;
+
+	if (length != 25) {
+		*returnLength = 0;
+		*status = 0x12;
+		return;
+	}
+	set = parameters[0];
+	if (set != 0) {
+		__aeabi_memcpy(btTableShortWindows, parameters + 1, 8);
+		__aeabi_memcpy(btTableOffsets, parameters + 9, 8);
+		__aeabi_memcpy(btTableLongWindows, parameters + 17, 8);
+	}
+	returnParameters[0] = set;
+	__aeabi_memcpy(returnParameters + 1, btTableShortWindows, 8);
+	__aeabi_memcpy(returnParameters + 9, btTableOffsets, 8);
+	__aeabi_memcpy(returnParameters + 17, btTableLongWindows, 8);
+	*returnLength = 25;
+	*status = 0;
+}
+
+/*
+ * Sends the host controller command 15 and waits for its reply: the messages that come before it
+ * go on to the link controller's queue, the reply is freed.
+ */
+void btLmpLcFilterFrame(uint32_t argument)
+{
+	uint32_t events = 0xc86;
+	void *message;
+	void *other;
+
+	btHccRomComputeState(argument, 15, 0, 0, 0);
+	message = mdevRomResolveState(&events, 1);
+	while (*(BtHalf *)((uint8_t *)message + 8) != 15) {
+		other = message;
+		message = mdevRomResolveState(&events, 1);
+		osa_MsgSend(&other, romQueueLcp);
+	}
+	osa_MsgFree(&message);
+}
+
+/*
+ * The link's state controller record takes the value: in state 0 and 14 (then state 11) after the
+ * host controller command 15 has been done; in any other state the ROM takes it.
+ */
+void btLmpLcHandleHeader(unsigned int link, uint8_t value)
+{
+	uint8_t *record = btLscRomParseState(0);
+	uint32_t handle = btLscRomHandleState(link);
+
+	record += link * 248 + 96;
+	if (record[23] == 0) {
+		record[24] = value;
+		btLmpLcFilterFrame(link);
+		btLinkStateIdleHook(link, 0);
+	} else if (record[23] == 14) {
+		record[24] = value;
+		btLmpLcFilterFrame(link);
+		btHccRomScheduleState(link);
+		btLdrRomResetState(link, 0, 1, 15, "ib", handle, 0);
+		record[23] = 11;
+	} else {
+		btLscRomProcessState(link, value);
+	}
+}
+
+/*
+ * Like btLmpLcHandleHeader(), for a link in state 0 whose record is in mode 12 or 13: the record
+ * takes the value and the handle, and goes to state 2 (no handle) or 6 once the host controller
+ * command 15 has been done. Any other link goes to the ROM.
+ */
+void btLmpLcProcessHeader(unsigned int link, uint8_t value)
+{
+	uint8_t *record = btLscRomParseState(0);
+	uint32_t handle = btLscRomHandleState(link);
+	uint8_t *state;
+
+	record += link * 248;
+	state = record + 96;
+	if (state[23] == 0 && (record[18] == 13 || record[18] == 12)) {
+		state[24] = value;
+		state[28] = btLscRomHandleState(link);
+		btLmpLcFilterFrame(link);
+		btHccRomScheduleState(link);
+		btLdrRomResetState(link, 0, 1, 15, "ib", handle, 1);
+		state[23] = handle == 0 ? 2 : 6;
+		return;
+	}
+	btLscRomUpdateState(link, value);
+}
+
+/*
+ * A link in state 1 without a handle, given 0, takes 1, has the host controller command 15 done
+ * and goes to state 3 with command 16; anything else goes to the ROM.
+ */
+void btLmpLcUpdateHeader(unsigned int link, uint8_t value)
+{
+	uint8_t *record = btLscRomParseState(0);
+
+	if (value == 0 && btLscRomHandleState(link) == 0) {
+		record += link * 248 + 96;
+		if (record[23] == 1) {
+			record[28] = 1;
+			btLmpLcFilterFrame(link);
+			btLdrRomBuildState(link, (int8_t)record[28], 15);
+			btHccRomScheduleState(link);
+			btLdrRomResetState(link, 0, 1, 16, "ib", record[28], btLinkResetValue);
+			record[23] = 3;
+			return;
+		}
+	}
+	btLscRomConfigureState(link, value);
+}
+
+/* A link that btSbcAdjustContext() marks refuses the request (LMP 11, reason 0x24). */
+void btLmpLcConfigureHeader(unsigned int link, uint32_t transaction, uint32_t value)
+{
+	if (btSbcAdjustContext(link))
+		btLdrRomComputeState(link, (int8_t)value, 11, 0x24);
+	else
+		btLscRomCheckState(link, transaction, value);
+}
+
+/*
+ * An LMP message (kind 2) for a link: an accepted or not accepted reply (opcode 15) for a link in
+ * state 0 whose record is in mode 12 or 13 runs its host controller command 15 (state 7 with a
+ * handle, else state 3 with command 16), or goes to btLinkMessageCopyHook when the link's host
+ * controller record asks for it; opcode 11 goes to btLmpLcConfigureHeader(); opcode 9 marks a link
+ * in mode 9 that btLinkStateCheckHook() accepts. 1 when the message was taken.
+ */
+int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, uint32_t opcode)
+{
+	unsigned int handle = ((const BtHalf *)message)[2];
+	uint8_t *links = btHccRomApplyState();
+	uint8_t *records = btLscRomParseState(0);
+	uint8_t reason;
+
+	if (kind != 2)
+		return 0;
+	if ((uint16_t)opcode == 15) {
+		uint8_t *link = links + handle * 120;
+		const uint8_t *answer;
+
+		if (link[0] == 0 || link[21] == 14)
+			return 0;
+		answer = btLdrRomDispatchState((const uint8_t *)message + 7, &opcode, &reason);
+		if (*answer == 1 || *answer == 2) {
+			uint8_t *record = records + handle * 248;
+			uint8_t *state = record + 96;
+
+			if (state[23] == 0 && (record[18] == 13 || record[18] == 12)) {
+				if (link[34] != 0) {
+					void *copy = osa_MsgAlloc(24);
+
+					__aeabi_memcpy4(copy, message, 24);
+					btLinkMessageCopyHook(copy);
+				} else {
+					uint32_t hold = btLscRomHandleState(handle);
+
+					state[24] = 4;
+					btLmpLcFilterFrame(handle);
+					btLdrRomBuildState(handle, (int8_t)reason, 15);
+					if (hold != 0) {
+						state[28] = 0;
+						state[23] = 7;
+					} else {
+						uint8_t *settings = btLscRomBuildState();
+						uint8_t value;
+
+						state[28] = 1;
+						btHccRomScheduleState(handle);
+						if (record[141] == 7 || record[141] == 6)
+							value = settings[150 + romHctHostSlot[handle][4]];
+						else
+							value = btLinkResetValue;
+						btLdrRomResetState(handle, 0, 1, 16, "ib", state[28], value);
+						state[23] = 3;
+					}
+				}
+				return 1;
+			}
+		}
+	}
+	if ((uint16_t)opcode == 11) {
+		const uint8_t *transaction = btLdrRomDispatchState((const uint8_t *)message + 7, &opcode, &reason);
+
+		btLmpLcConfigureHeader(handle, (uint32_t)(uintptr_t)transaction, reason);
+		return 1;
+	}
+	if ((uint16_t)opcode == 9) {
+		uint8_t *record = records + handle * 248;
+
+		if (record[64] == 9 && record[117] == 0 && btLinkStateCheckHook(handle))
+			record[243] = 6;
+	}
+	return 0;
+}
+
+/*
+ * The message 0xc48 of kind 0: the link context takes the halfword of extra (and its byte 3 when
+ * the link's host controller record is in mode 1); a reply to the LMP opcode 42 is handed to the
+ * ROM in context state 2. Any other message goes to the ROM.
+ */
+void btLmpLcValidateHeader(uint32_t kind, uint32_t argument, unsigned int link, const void *message,
+			   const void *extra)
+{
+	uint8_t *context;
+	uint8_t *links;
+	uint8_t saved;
+	uint32_t opcode;
+	uint8_t reason;
+
+	if (*(const BtWord *)message != 0xc48 || kind != 0) {
+		btLcoRomTrackState(kind, argument, link, message, extra);
+		return;
+	}
+	context = btLcoRomVerifyState(kind);
+	links = btHccRomApplyState();
+	context += link * 30;
+	saved = context[24];
+	btLdrRomDispatchState((const uint8_t *)message + 7, &opcode, &reason);
+	*(BtHalf *)(context + 20) = *(const BtHalf *)extra;
+	if (links[link * 120 + 20] == 1)
+		context[26] = ((const uint8_t *)extra)[3];
+	if ((uint16_t)opcode == 42) {
+		btLdrRomBuildState(link, (int8_t)reason, 42);
+		context[24] = 2;
+	}
+	btLinkFeatureReplyHook(link);
+	context[24] = saved;
+	btLcoRomAcquireState(0, link, 55);
+}
+
+/*
+ * The host controller's answer to a message: a message 0xe9 the ROM takes (1) for a link whose host
+ * controller record asks for it goes to btLinkMessageCopyHook instead, and is not the ROM's (0).
+ */
+int btLmpLcPrepareHeader(void *message, const void *header)
+{
+	BtWord code = *(BtWord *)message;
+	int taken = btHccRomParseState(message, header);
+
+	if (code == 0xe9 && taken == 1 && btHccRomApplyState()[*(const BtHalf *)header * 120 + 34] != 0) {
+		btLinkMessageCopyHook(message);
+		taken = 0;
+	}
+	return taken;
+}
+
+/*
+ * The LMP message for an opcode: the extended opcode 11 (escape 127) to a link whose host
+ * controller record is in mode 1 is built here, as message 0xc92 with the parameter 0x1f; the ROM
+ * builds every other.
+ */
+void *btLmpLcDispatchHeader(unsigned int link, uint32_t transaction, unsigned int opcode)
+{
+	uint8_t *links = btHccRomApplyState();
+	uint8_t *message;
+	uint8_t *end;
+
+	if (opcode != 0xb7f || links[link * 120] != 1)
+		return btLdrRomParseState(link, transaction, opcode);
+	message = osa_MsgAlloc(32);
+	*(BtWord *)message = 0xc92;
+	*(BtHalf *)(message + 4) = link;
+	end = btLdrRomPrepareState(message + 7, 0x27f, transaction);
+	*end++ = opcode & 0x7f;
+	*end++ = opcode >> 8;
+	*end++ = 0x1f;
+	message[6] = end - message - 7;
+	return message;
+}
+
+/* For the message 30 the link context's byte 25 is the message's first parameter while the ROM runs. */
+int btLmpLcParseHeader(uint32_t kind, unsigned int link, const void *message, uint32_t a3, uint32_t a4)
+{
+	uint8_t saved = 0xff;
+	uint8_t *contexts = btLcoRomVerifyState(0);
+	uint8_t *context = contexts + link * 30;
+	int result;
+
+	if (kind == 30) {
+		saved = context[25];
+		context[25] = ((const uint8_t *)message)[7];
+	}
+	result = btLcoRomApplyState(kind, link, message, a3, a4);
+	if (kind == 30)
+		context[25] = saved;
+	return result;
+}
+
+/*
+ * After the ROM, the link's slot status takes the length of its slots: 32 (mode 7) or 12 without a
+ * kind, else the link's timing: ten times its count per slot pair (or per slot for the slot field 3
+ * of the mode) and 6, at most SYNC_RING.
+ */
+void btLmpLcBuildHeader(uint32_t which, unsigned int link, unsigned int mode, unsigned int kind, uint32_t a4)
+{
+	unsigned int length;
+	uint8_t *status;
+
+	btLtsRomUpdateState(which, link, mode, kind, a4);
+	if (kind == 0) {
+		length = mode == 7 ? 32 : 12;
+	} else {
+		const uint8_t *timing = btLtsRomValidateState(0);
+		unsigned int slots = (mode >> 2) & 3;
+
+		if (slots != 3)
+			slots = 1;
+		timing += link * 40;
+		length = (uint16_t)(*(const BtHalf *)(timing + 36) * (slots * 10) + 6 + *(const BtHalf *)(timing + 32));
+		if (length > SYNC_RING)
+			length = SYNC_RING;
+	}
+	status = btLinkSlotStatus + link * 32;
+	*(BtHalf *)(status + 4) = length;
+	*(BtHalf *)(status + 10) = length;
+}
+
+/*
+ * An opcode of 0xff takes the opcode of the current handle's record; the opcodes 12, 13, 44 and 61
+ * are four bytes shorter.
+ */
+void btLmpLcComputeHeader(uint32_t which, unsigned int opcode, uint8_t length)
+{
+	if (which != 0 && opcode == 0xff) {
+		const uint8_t *record = btLcoRomUpdateState(*(const BtHalf *)(btLcoRomAdjustState(which) + 8));
+
+		if (record != NULL)
+			opcode = record[8];
+	}
+	if (opcode == 12 || opcode == 13 || opcode == 44 || opcode == 61)
+		length -= 4;
+	btLcoRomScheduleState(which, opcode, length);
+}
+
+/* The messages 0xc0d and 0xc23 without a reason take the reason 3 before the ROM sees them. */
+int btLmpLcQueryHeader(uint32_t *record)
+{
+	if ((record[3] == 0xc0d || record[3] == 0xc23) && record[2] == 0)
+		record[2] = 3;
+	return btLscRomResetState(record);
+}
+
+/* The ROM runs with the link context's flag at -220 clear; the flag is put back afterwards. */
+int btLmpLcResetHeader(unsigned int link, uint32_t a1, uint32_t a2, uint32_t a3)
+{
+	uint8_t *flag = btLcoRomProcessState(link) + link * 30 - 220;
+	uint8_t saved = *flag;
+	int result;
+
+	*flag = 0;
+	result = btLcoRomResolveState(link, a1, 0, a3);
+	*flag = saved;
+	return result;
+}
+
+/*
+ * A device link's slots start at the clock: its profile is counted from there, its record and flags
+ * come from btTableRecord (and the mode setting of the payload register's state), and it is marked
+ * set up here (option bit 7) once the ROM has configured it.
+ */
+void btLmpLcSyncHeader(unsigned int index, uint32_t clock, uint32_t a2, uint32_t a3, uint32_t a4)
+{
+	struct BtDeviceProfile *profile = &btDeviceProfile[index];
+	unsigned int record;
+
+	btLtsRomQueryState(profile);
+	profile->anchor = btLtsRomScheduleState(clock);
+	record = btTableRecord;
+	profile->index = record - 1;
+	profile->flags = (btLinkPayloadRegister != 0 ? btTableModeContext : btTableModeState) + record;
+	btLtsRomConfigureContext(index, clock, a2, a3, a4);
+	profile->options |= 0x80;
+}
+
+/* The opcodes 12, 13, 44 and 61 with a length of 8 to 108 bytes. */
+__attribute__((noinline)) int btLmpLcApplyHeader(unsigned int opcode, unsigned int length)
+{
+	if (opcode == 12 || opcode == 13 || opcode == 44 || opcode == 61)
+		return length >= 8 && length <= 108;
+	return 0;
+}
+
+/*
+ * While a role switch step is 15, the indexes 8 to 10 the ROM has, and the current one when the
+ * switch is busy, must all hold such an opcode and length (1) or the check fails (0); the ROM
+ * decides otherwise.
+ */
+int btLmpLcResolveHeader(void)
+{
+	const uint8_t *source = btLcoRomRecordState();
+	const uint8_t *state = btLcoRomAdjustState((int)(uintptr_t)source);
+	unsigned int index;
+
+	if (source[2] != 15 && source[3] != 15 && state[0] != 15)
+		return btLcoRomSyncState();
+	for (index = 8; index <= 10; index = (uint16_t)(index + 1)) {
+		if (btLcoRomBuildState(index) &&
+		    !btLmpLcApplyHeader(btLcoRomComputeState(index), btLcoRomParseState(index)))
+			return 0;
+	}
+	if (state[0] == 0)
+		return 1;
+	index = btLinkCurrentIndexHook();
+	if (btLmpLcApplyHeader(btLcoRomComputeState(index), btLcoRomParseState(index)))
+		return 1;
+	return 0;
+}
+
+/* After the ROM, a host link rate state of 1 becomes 3. */
+void btLmpLcScheduleHeader(void)
+{
+	btLdaRomManageState();
+	if (btHostRate == 1)
+		btHostRate = 3;
+}
+
+/*
+ * A power level for a link (handle 0: the device's own): the highest rate step from the top down whose
+ * level is not above it is taken, and the link controller is told (message 0x101); a level outside
+ * the steps' levels is refused (message 0x102, reason 0x11).
+ */
+void btLmpLcNotifyHeader(const uint8_t *command)
+{
+	unsigned int handle = *(const BtHalf *)(command + 4);
+	int level = (int8_t)command[6];
+	uint8_t *message;
+
+	if (btPowerHooks.reg(btDeviceRate[BT_DEVICE_RATE_TOP]) < level || btPowerHooks.reg(1) > level) {
+		message = osa_MsgAlloc(8);
+		*(BtWord *)message = 0x102;
+		*(BtHalf *)(message + 4) = handle;
+		message[6] = 0x11;
+	} else {
+		unsigned int step = btDeviceRate[BT_DEVICE_RATE_TOP];
+
+		while (btPowerHooks.reg(step) > level)
+			step = (uint8_t)(step - 1);
+		if (handle == 0) {
+			btDeviceRate[BT_DEVICE_RATE_OWN] = step;
+			btPowerHooks.table(step);
+		} else {
+			unsigned int slot = romHctHostSlot[handle][2];
+			uint8_t other;
+
+			btDeviceRate[slot] = step;
+			btDeviceRate[slot + BT_DEVICE_RATE_COPY] = step;
+			btPowerHooks.entry(slot, btDeviceRate[slot]);
+			if (btLdaRomUpdateState(handle, &other) == 1)
+				btPowerHooks.entry(other, btDeviceRate[slot]);
+		}
+		message = osa_MsgAlloc(8);
+		*(BtWord *)message = 0x101;
+		*(BtHalf *)(message + 4) = handle;
+	}
+	osa_MsgSend((void **)&message, btQueueLcCommand);
+}
+
+/* The power level command (0xc70) is answered here, every other by the ROM. */
+void btLmpLcFormatHeader(const uint8_t *message)
+{
+	if (*(const BtWord *)message == 0xc70)
+		btLmpLcNotifyHeader(message);
+	else
+		btLscRomQueryState(message);
+}
+
+/*
+ * The link's packet length is set again from its record's level, with the slots of packet type 3,
+ * after the ROM has resolved the link's context.
+ */
+void btLmpLcInspectHeader(unsigned int link)
+{
+	const uint8_t *records = btLcoRomResetContext(0);
+	const uint8_t *record = (const uint8_t *)(uintptr_t)*(const BtWord *)(records + btHostWindow[link] * 52 + 32);
+
+	btLcoRomResolveContext(link);
+	btLmpLcClearEntry(link, 0, (int8_t)record[6], romStateActiveTable[3]);
+}
+
+/* In target state 2 the mode buffer is set at the clock (btTableModeClock) before the ROM runs. */
+int btLmpLcTrackHeader(uint32_t clock)
+{
+	if (romTargetTable == 2) {
+		btTableModeBuffer = 1;
+		btTableModeClock = btLtsRomResolveState(clock);
+	}
+	return btLtsRomRecordState(clock);
+}
+
+/*
+ * After the ROM, a message for the host's link marks it gone (btHostBitmap 0xffff); for any other
+ * link the host link's rate state is kept as it was.
+ */
+void btLmpLcManageHeader(const uint8_t *message)
+{
+	uint8_t rate = btHostRate;
+
+	btLdaRomScheduleState(message);
+	if (*(const BtHalf *)(message + 4) == btHostBitmap)
+		btHostBitmap = 0xffff;
+	else
+		btHostRate = rate;
+}
+
+void btLmpLcAcquireHeader(unsigned int link)
+{
+	btLdaRomConvertState(link);
+	btLmpLcCheckBuffer(link);
+}
+
+/*
+ * The ROM's step after the host link's rate changes. Without a rate state it runs only when the
+ * session two before the one read next is in kind 8 and there is no mode table.
+ */
+void btLmpLcReleaseHeader(void)
+{
+	if (btHostRate == 0) {
+		const struct BtModeControl *control = btLinkModeControl;
+		uint8_t session = (control->current + control->sessions - 2) % control->sessions;
+
+		if ((btLinkSessions[session].active & 0xf) != 8 || btTableModeTable != 0)
+			return;
+	}
+	btLdaRomFormatState();
+}
+
+/* Tells the link controller (message code) the link's device address and its byte 20. */
+void btLmpLcSetupHeader(unsigned int link, uint32_t code)
+{
+	const uint8_t *record = btHccRomApplyState() + link * 120;
+	uint8_t *message = osa_MsgAlloc(12);
+
+	*(BtWord *)message = code;
+	__aeabi_memcpy(message + 4, record + 7, 6);
+	message[10] = record[20];
+	osa_MsgSend((void **)&message, btQueueLcCommand);
+}
+
+/*
+ * Before the ROM clears a link, the link controller is told (message 0x51) of a link in mode 2 of
+ * its byte 34 with byte 40 set whose byte 94 is not 2.
+ */
+void btLmpLcClearHeader(unsigned int link)
+{
+	const uint8_t *record = btHccRomApplyState() + link * 120;
+
+	if (record[21] == 0 && record[34] == 2 && record[40] == 1 && record[94] != 2)
+		btLmpLcSetupHeader(link, 0x51);
+	btHccRomQueryState(link);
+}
+
+/* The ROM's hooks btLmpLcConvertHeader() points at this firmware's link controller. */
+extern __typeof__(btLmpLcConvertTable) *btLmpLcConvertTableHook;	/* DTCM 0x400f338 */
+extern __typeof__(btLmpLcVerifyTable) *btLmpLcVerifyTableHook;	/* DTCM 0x400ea88 */
+extern __typeof__(btLmpLcAdjustTable) *btLmpLcAdjustTableHook;	/* DTCM 0x400f198 */
+extern __typeof__(btLmpLcSelectTable) *btLmpLcSelectTableHook;	/* DTCM 0x400f1cc */
+extern __typeof__(btLmpLcValidateBuffer) *btLmpLcValidateBufferHook;	/* DTCM 0x400f1a0 */
+extern __typeof__(btLmpLcUpdateBuffer) *btLmpLcUpdateBufferHook;	/* DTCM 0x400ebf0 */
+extern __typeof__(btLmpLcPrepareBuffer) *btLmpLcPrepareBufferHook;	/* DTCM 0x400eda0 */
+extern __typeof__(btLmpLcDispatchBuffer) *btLmpLcDispatchBufferHook;	/* DTCM 0x400f0bc */
+extern __typeof__(btLmpLcNotifyBuffer) *btLmpLcNotifyBufferHook;	/* DTCM 0x400f234 */
+extern __typeof__(btLmpLcTrackBuffer) *btLmpLcTrackBufferHook;	/* DTCM 0x400f058 */
+extern __typeof__(btLmpLcManageBuffer) *btLmpLcManageBufferHook;	/* DTCM 0x400f0b4 */
+extern __typeof__(btLmpLcHandlePacket) *btLmpLcHandlePacketHook;	/* DTCM 0x400ed10 */
+extern __typeof__(btLmpLcConfigurePacket) *btLmpLcConfigurePacketHook;	/* DTCM 0x400eae4 */
+extern __typeof__(btLmpLcValidatePacket) *btLmpLcValidatePacketHook;	/* DTCM 0x400ea9c */
+extern __typeof__(btLmpLcPreparePacket) *btLmpLcPreparePacketHook;	/* DTCM 0x400ef50 */
+extern __typeof__(btLmpLcDispatchPacket) *btLmpLcDispatchPacketHook;	/* DTCM 0x400f1c0 */
+extern __typeof__(btLmpLcBuildPacket) *btLmpLcBuildPacketHook;	/* DTCM 0x400f22c */
+extern __typeof__(btLmpLcQueryPacket) *btLmpLcQueryPacketHook;	/* DTCM 0x400f218 */
+extern __typeof__(btLmpLcComputePacket) *btLmpLcComputePacketHook;	/* DTCM 0x400edc8 */
+extern __typeof__(btLmpLcResetPacket) *btLmpLcResetPacketHook;	/* DTCM 0x400f1e8 */
+extern __typeof__(btLmpLcApplyPacket) *btLmpLcApplyPacketHook;	/* DTCM 0x400f1ac */
+extern __typeof__(btLmpLcSchedulePacket) *btLmpLcSchedulePacketHook;	/* DTCM 0x400f1bc */
+extern __typeof__(btLmpLcNotifyPacket) *btLmpLcNotifyPacketHook;	/* DTCM 0x400f7c4 */
+extern __typeof__(btLmpLcFormatPacket) *btLmpLcFormatPacketHook;	/* DTCM 0x400f7c8 */
+extern __typeof__(btLmpLcInspectTable) *btLmpLcInspectTableHook;	/* DTCM 0x400ed18 */
+extern __typeof__(btLmpLcTrackTable) *btLmpLcTrackTableHook;	/* DTCM 0x400f114 */
+extern __typeof__(btLmpLcAcquirePacket) *btLmpLcAcquirePacketHook;	/* DTCM 0x400ede0 */
+extern __typeof__(btLmpLcManagePacket) *btLmpLcManagePacketHook;	/* DTCM 0x400edd4 */
+extern __typeof__(btLmpLcSetupPacket) *btLmpLcSetupPacketHook;	/* DTCM 0x400edb8 */
+extern __typeof__(btLmpLcClearPacket) *btLmpLcClearPacketHook;	/* DTCM 0x400edb4 */
+extern __typeof__(btLmpLcConvertPacket) *btLmpLcConvertPacketHook;	/* DTCM 0x400ed38 */
+extern __typeof__(btLmpLcVerifyPacket) *btLmpLcVerifyPacketHook;	/* DTCM 0x400f2e0 */
+extern __typeof__(btLmpLcSelectPacket) *btLmpLcSelectPacketHook;	/* DTCM 0x400ece4 */
+extern __typeof__(btLmpLcAdjustPacket) *btLmpLcAdjustPacketHook;	/* DTCM 0x400f260 */
+extern __typeof__(btLmpLcFilterPacket) *btLmpLcFilterPacketHook;	/* DTCM 0x400efcc */
+extern __typeof__(btLmpLcUpdateFrame) *btLmpLcUpdateFrameHook;	/* DTCM 0x400f174 */
+extern __typeof__(btLmpLcConfigureFrame) *btLmpLcConfigureFrameHook;	/* DTCM 0x400ec68 */
+extern __typeof__(btLmpLcComputeFrame) *btLmpLcComputeFrameHook;	/* DTCM 0x400f144 */
+extern __typeof__(btLmpLcProcessBuffer) *btLmpLcProcessBufferHook;	/* DTCM 0x400ed8c */
+extern __typeof__(btLmpLcFormatFrame) *btLmpLcFormatFrameHook;	/* DTCM 0x400eb10 */
+extern __typeof__(btLmpLcInspectFrame) *btLmpLcInspectFrameHook;	/* DTCM 0x400f7c0 */
+extern __typeof__(btLmpLcAcquireFrame) *btLmpLcAcquireFrameHook;	/* DTCM 0x400f2d8 */
+extern __typeof__(btLmpLcReleaseFrame) *btLmpLcReleaseFrameHook;	/* DTCM 0x400f2d0 */
+extern __typeof__(btLmpLcQueryBuffer) *btLmpLcQueryBufferHook;	/* DTCM 0x400ec0c */
+extern __typeof__(btLmpLcConvertFrame) *btLmpLcConvertFrameHook;	/* DTCM 0x400eac8 */
+extern __typeof__(btLmpLcUpdateTable) *btLmpLcUpdateTableHook;	/* DTCM 0x400f17c */
+extern __typeof__(btLmpLcVerifyFrame) *btLmpLcVerifyFrameHook;	/* DTCM 0x400ea38 */
+extern __typeof__(btLmpLcSelectFrame) *btLmpLcSelectFrameHook;	/* DTCM 0x400f134 */
+extern __typeof__(btLmpLcUpdatePacket) *btLmpLcUpdatePacketHook;	/* DTCM 0x400f7bc */
+extern __typeof__(btLmpLcParseFrame) *btLmpLcParseFrameHook;	/* DTCM 0x400eadc */
+extern __typeof__(btLmpLcAdjustFrame) *btLmpLcAdjustFrameHook;	/* DTCM 0x400edc0 */
+extern __typeof__(btLmpLcHandleHeader) *btLmpLcHandleHeaderHook;	/* DTCM 0x400f2b0 */
+extern __typeof__(btLmpLcProcessHeader) *btLmpLcProcessHeaderHook;	/* DTCM 0x400f2b4 */
+extern __typeof__(btLmpLcUpdateHeader) *btLmpLcUpdateHeaderHook;	/* DTCM 0x400f290 */
+extern __typeof__(btLmpLcCheckHeader) *btLmpLcCheckHeaderHook;	/* DTCM 0x400ea0c */
+extern __typeof__(btLmpLcValidateHeader) *btLmpLcValidateHeaderHook;	/* DTCM 0x400f0b8 */
+extern __typeof__(btLmpLcPrepareHeader) *btLmpLcPrepareHeaderHook;	/* DTCM 0x400efb8 */
+extern __typeof__(btLmpLcDispatchHeader) *btLmpLcDispatchHeaderHook;	/* DTCM 0x400eb50 */
+extern __typeof__(btLmpLcHandleTable) *btLmpLcHandleTableHook;	/* DTCM 0x400eaf4 */
+extern __typeof__(btLmpLcProcessTable) *btLmpLcProcessTableHook;	/* DTCM 0x400f14c */
+extern __typeof__(btLmpLcParseHeader) *btLmpLcParseHeaderHook;	/* DTCM 0x400f028 */
+extern __typeof__(btLmpLcHandleBuffer) *btLmpLcHandleBufferHook;	/* DTCM 0x400eda4 */
+extern __typeof__(btLmpLcBuildHeader) *btLmpLcBuildHeaderHook;	/* DTCM 0x400f2dc */
+extern __typeof__(btLmpLcComputeHeader) *btLmpLcComputeHeaderHook;	/* DTCM 0x400ea54 */
+extern __typeof__(btLmpLcQueryHeader) *btLmpLcQueryHeaderHook;	/* DTCM 0x400f2c8 */
+extern __typeof__(btLmpLcResetHeader) *btLmpLcResetHeaderHook;	/* DTCM 0x400f024 */
+extern __typeof__(btLmpLcSyncHeader) *btLmpLcSyncHeaderHook;	/* DTCM 0x400ed2c */
+extern __typeof__(btLmpLcResolveHeader) *btLmpLcResolveHeaderHook;	/* DTCM 0x400f018 */
+extern __typeof__(btLmpLcInspectHeader) *btLmpLcInspectHeaderHook;	/* DTCM 0x400f170 */
+extern __typeof__(btLmpLcFormatHeader) *btLmpLcFormatHeaderHook;	/* DTCM 0x400ecd4 */
+extern __typeof__(btLmpLcTrackHeader) *btLmpLcTrackHeaderHook;	/* DTCM 0x400edd8 */
+extern __typeof__(btLmpLcManageHeader) *btLmpLcManageHeaderHook;	/* DTCM 0x400f1a4 */
+extern __typeof__(btLmpLcAcquireHeader) *btLmpLcAcquireHeaderHook;	/* DTCM 0x400eb20 */
+extern __typeof__(btLmpLcReleaseHeader) *btLmpLcReleaseHeaderHook;	/* DTCM 0x400f7ac */
+extern __typeof__(btLmpLcClearHeader) *btLmpLcClearHeaderHook;	/* DTCM 0x400efa0 */
+extern __typeof__(btLmpLcScheduleHeader) *btLmpLcScheduleHeaderHook;	/* DTCM 0x400eb40 */
+extern int16_t btLinkPatchValue;	/* DTCM 0x400f6ce */
+
+/*
+ * Installs the link controller of this firmware: every ROM hook it replaces points at its C function,
+ * btLinkPatchValue becomes -226 and the ROM word at 0x03f15c7c is patched.
+ */
+void btLmpLcConvertHeader(void)
+{
+	btLmpLcConvertTableHook = btLmpLcConvertTable;
+	btLmpLcVerifyTableHook = btLmpLcVerifyTable;
+	btLmpLcAdjustTableHook = btLmpLcAdjustTable;
+	btLmpLcSelectTableHook = btLmpLcSelectTable;
+	btLmpLcValidateBufferHook = btLmpLcValidateBuffer;
+	btLmpLcUpdateBufferHook = btLmpLcUpdateBuffer;
+	btLmpLcPrepareBufferHook = btLmpLcPrepareBuffer;
+	btLmpLcDispatchBufferHook = btLmpLcDispatchBuffer;
+	btLmpLcNotifyBufferHook = btLmpLcNotifyBuffer;
+	btRoleCommand = (__typeof__(btRoleCommand))btLmpLcAcquireBuffer;
+	btRoleRecord = (__typeof__(btRoleRecord))btLmpLcFormatBuffer;
+	btRoleUpdate = btLmpLcInspectBuffer;
+	btLmpLcTrackBufferHook = btLmpLcTrackBuffer;
+	btLmpLcManageBufferHook = btLmpLcManageBuffer;
+	btLmpLcHandlePacketHook = btLmpLcHandlePacket;
+	btLmpLcConfigurePacketHook = btLmpLcConfigurePacket;
+	btNextBitmap = (__typeof__(btNextBitmap))btLmpLcCheckPacket;
+	btLmpLcValidatePacketHook = btLmpLcValidatePacket;
+	btLmpLcPreparePacketHook = btLmpLcPreparePacket;
+	btLmpLcDispatchPacketHook = btLmpLcDispatchPacket;
+	btSlotFillHook = btLmpLcParsePacket;
+	btLmpLcBuildPacketHook = btLmpLcBuildPacket;
+	btLmpLcQueryPacketHook = btLmpLcQueryPacket;
+	btLmpLcComputePacketHook = btLmpLcComputePacket;
+	btLmpLcResetPacketHook = btLmpLcResetPacket;
+	btLmpLcApplyPacketHook = btLmpLcApplyPacket;
+	btLmpLcSchedulePacketHook = btLmpLcSchedulePacket;
+	btLmpLcNotifyPacketHook = btLmpLcNotifyPacket;
+	btLmpLcFormatPacketHook = btLmpLcFormatPacket;
+	btLmpLcInspectTableHook = btLmpLcInspectTable;
+	btLmpLcTrackTableHook = btLmpLcTrackTable;
+	btNextWindow = btLmpLcFormatTable;
+	btSlotNeedHook = (__typeof__(btSlotNeedHook))btLmpLcAcquireTable;
+	btNextPayload = (__typeof__(btNextPayload))btLmpLcClearTable;
+	btLmpLcAcquirePacketHook = btLmpLcAcquirePacket;
+	btLmpLcManagePacketHook = btLmpLcManagePacket;
+	btTargetExpireHook = btLmpLcReleasePacket;
+	btLmpLcSetupPacketHook = btLmpLcSetupPacket;
+	btLmpLcClearPacketHook = btLmpLcClearPacket;
+	btLmpLcConvertPacketHook = btLmpLcConvertPacket;
+	btLmpLcVerifyPacketHook = btLmpLcVerifyPacket;
+	btLmpLcSelectPacketHook = btLmpLcSelectPacket;
+	btLmpLcAdjustPacketHook = btLmpLcAdjustPacket;
+	btLinkStepHook = (__typeof__(btLinkStepHook))btLmpLcRecordPacket;
+	btLmpLcFilterPacketHook = btLmpLcFilterPacket;
+	btLmpLcUpdateFrameHook = btLmpLcUpdateFrame;
+	btLmpLcConfigureFrameHook = btLmpLcConfigureFrame;
+	btLmpLcComputeFrameHook = btLmpLcComputeFrame;
+	btLinkPatchValue = -226;
+	btLmpLcProcessBufferHook = btLmpLcProcessBuffer;
+	btLmpLcFormatFrameHook = btLmpLcFormatFrame;
+	btLmpLcInspectFrameHook = btLmpLcInspectFrame;
+	btLinkEventHook = (__typeof__(btLinkEventHook))btLmpLcManageFrame;
+	btLmpLcAcquireFrameHook = btLmpLcAcquireFrame;
+	btLmpLcReleaseFrameHook = btLmpLcReleaseFrame;
+	btLmpLcQueryBufferHook = btLmpLcQueryBuffer;
+	btLmpLcConvertFrameHook = btLmpLcConvertFrame;
+	btLmpLcUpdateTableHook = btLmpLcUpdateTable;
+	btLmpLcVerifyFrameHook = btLmpLcVerifyFrame;
+	btLmpLcSelectFrameHook = btLmpLcSelectFrame;
+	romPatchInstall(0x03f15c7c, 0xe023d909);
+	btLmpLcUpdatePacketHook = btLmpLcUpdatePacket;
+	btLmpLcParseFrameHook = btLmpLcParseFrame;
+	btLmpLcAdjustFrameHook = btLmpLcAdjustFrame;
+	btLmpLcHandleHeaderHook = btLmpLcHandleHeader;
+	btLmpLcProcessHeaderHook = btLmpLcProcessHeader;
+	btLmpLcUpdateHeaderHook = btLmpLcUpdateHeader;
+	btLmpLcCheckHeaderHook = btLmpLcCheckHeader;
+	btLmpLcValidateHeaderHook = btLmpLcValidateHeader;
+	btLmpLcPrepareHeaderHook = btLmpLcPrepareHeader;
+	btLmpLcDispatchHeaderHook = btLmpLcDispatchHeader;
+	btLmpLcHandleTableHook = btLmpLcHandleTable;
+	btLmpLcProcessTableHook = btLmpLcProcessTable;
+	btLmpLcParseHeaderHook = btLmpLcParseHeader;
+	btLinkEndHook = btLmpLcFilterTable;
+	btLmpLcHandleBufferHook = btLmpLcHandleBuffer;
+	btLmpLcBuildHeaderHook = btLmpLcBuildHeader;
+	btLmpLcComputeHeaderHook = btLmpLcComputeHeader;
+	btLmpLcQueryHeaderHook = btLmpLcQueryHeader;
+	btLmpLcResetHeaderHook = btLmpLcResetHeader;
+	btLmpLcSyncHeaderHook = btLmpLcSyncHeader;
+	btLmpLcResolveHeaderHook = btLmpLcResolveHeader;
+	btLmpLcInspectHeaderHook = btLmpLcInspectHeader;
+	btLmpLcFormatHeaderHook = btLmpLcFormatHeader;
+	btLmpLcTrackHeaderHook = btLmpLcTrackHeader;
+	btLmpLcManageHeaderHook = btLmpLcManageHeader;
+	btLmpLcAcquireHeaderHook = btLmpLcAcquireHeader;
+	btLmpLcReleaseHeaderHook = btLmpLcReleaseHeader;
+	btLmpLcClearHeaderHook = btLmpLcClearHeader;
+	btLmpLcScheduleHeaderHook = btLmpLcScheduleHeader;
+}
+
+/* A link the host controller record marks (byte 34 is 1) is handed to the ROM, then unmarked. */
+void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason)
+{
+	uint8_t *record = btHccRomApplyState() + handle * 120;
+
+	if (record[34] != 1)
+		return;
+	btLdaRomHandleState(handle, enable, reason);
+	record[34] = 0;
+}
+
+/*
+ * The link's rate class: its host link record's class goes into its history, and the mean of the
+ * last eight is the class, at most 7.
+ */
+unsigned int btLmpLcSelectHeader(int link)
+{
+	struct BtRateHistory *history = &btRateHistory[link];
+	unsigned int total = 0;
+	unsigned int i;
+	uint8_t rate;
+
+	btTableHostLinks = btHostLinks;
+	rate = btHostLinks[link][1];
+	history->samples[history->head] = rate;
+	history->head = (history->head + 1) & 7;
+	for (i = 0; i < 8; i = (uint8_t)(i + 1))
+		total = (uint8_t)(total + history->samples[i]);
+	total >>= 3;
+	if (total >= 8)
+		total = 7;
+	return total;
 }

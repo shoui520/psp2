@@ -62,6 +62,8 @@ void (*btTableConnectQuery)(const uint8_t *, uint32_t *, uint32_t *, uint8_t *)
 	__attribute__((section(".itcm.rw"))) = btBdhRomQueryContext;		/* 0x552f0 */
 void (*btTableInquiryFilterClear)(void) __attribute__((section(".itcm.rw"))) = romLibAdjustEntry;	/* 0x552f4 */
 void (*btTableConnectFail)(const uint8_t *) __attribute__((section(".itcm.rw"))) = btBdhRomResetContext;	/* 0x552f8 */
+/* The ROM's host link records, as btLmpLcSelectHeader() last found them. */
+uint8_t (*btTableHostLinks)[40] __attribute__((section(".itcm.rw")));		/* 0x552fc */
 /* The clock the mode buffer was set at (btLmpLcAcquirePacket()). */
 uint32_t btTableModeClock __attribute__((section(".itcm.rw")));		/* 0x55300 */
 /* The clock the target's slots run out at (btLmpLcParsePacket()). */

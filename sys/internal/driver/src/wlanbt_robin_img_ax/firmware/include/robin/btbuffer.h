@@ -231,6 +231,17 @@ extern uint32_t btTargetLastClock;				/* 0x400f990 */
 extern uint8_t btHciReturnParameters[];			/* 0x400b294: a command complete's return parameters */
 extern uint8_t *btLinkScanWindow;				/* 0x400f90c: halfword 32 the scan window */
 extern uint32_t btTableClockStart;				/* 0x552bc: the event clock the scan started at */
+extern int (*btLinkIdleHook)(unsigned int link, uint32_t argument);	/* 0x400ed70 */
+/* Called with the link and 0 once a link in state 0 has had its host controller command 15 done. */
+extern void (*btLinkStateIdleHook)(unsigned int link, uint32_t value);	/* DTCM 0x400f274 */
+/* The last value btLdrRomResetState() is given by btLmpLcUpdateHeader(). */
+extern uint8_t btLinkResetValue;					/* DTCM 0x400f78f */
+/* Takes a copy of an LMP message that btLmpLcCheckHeader() does not answer itself. */
+extern void (*btLinkMessageCopyHook)(void *message);			/* DTCM 0x400efb0 */
+/* Called with the link by btLmpLcValidateHeader() once the message 0xc48 is handled. */
+extern void (*btLinkFeatureReplyHook)(unsigned int link);		/* DTCM 0x400f0c4 */
+/* The index btLmpLcResolveHeader() checks when the role switch state is busy. */
+extern unsigned int (*btLinkCurrentIndexHook)(void);			/* DTCM 0x400f05c */
 extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
 extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
@@ -408,6 +419,41 @@ int btLmpLcReleaseFrame(unsigned int link);			/* 0x48108 */
 void btLmpLcSetupFrame(const uint8_t *parameters);		/* 0x4814a */
 int btLmpLcClearFrame(void);					/* 0x481ca */
 int btLmpLcConvertFrame(void **slot);				/* 0x481ec */
+int btLmpLcVerifyFrame(unsigned int link, uint32_t argument);	/* 0x48244 */
+int btLmpLcSelectFrame(unsigned int link);			/* 0x482bc */
+void btLmpLcAdjustFrame(void);					/* 0x482ea */
+void btLmpLcRecordFrame(unsigned int length, const uint8_t *parameters, uint8_t *returnLength,
+			uint8_t *status, uint8_t *returnParameters);	/* 0x48320 */
+void btLmpLcFilterFrame(uint32_t argument);			/* 0x4839c */
+void btLmpLcHandleHeader(unsigned int link, uint8_t value);		/* 0x483e4 */
+void btLmpLcProcessHeader(unsigned int link, uint8_t value);		/* 0x48454 */
+void btLmpLcUpdateHeader(unsigned int link, uint8_t value);		/* 0x484c6 */
+void btLmpLcConfigureHeader(unsigned int link, uint32_t transaction, uint32_t value);	/* 0x48532 */
+uint8_t btSbcAdjustContext(unsigned int link);			/* 0x4ef68 */
+int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, uint32_t opcode);	/* 0x4855e */
+void btLmpLcValidateHeader(uint32_t kind, uint32_t argument, unsigned int link, const void *message,
+			   const void *extra);			/* 0x486f8 */
+int btLmpLcPrepareHeader(void *message, const void *header);	/* 0x48780 */
+void *btLmpLcDispatchHeader(unsigned int link, uint32_t transaction, unsigned int opcode);	/* 0x487b8 */
+int btLmpLcParseHeader(uint32_t kind, unsigned int link, const void *message, uint32_t a3, uint32_t a4);	/* 0x4881c */
+void btLmpLcBuildHeader(uint32_t which, unsigned int link, unsigned int mode, unsigned int kind, uint32_t a4);	/* 0x48858 */
+void btLmpLcComputeHeader(uint32_t which, unsigned int opcode, uint8_t length);	/* 0x488ba */
+int btLmpLcQueryHeader(uint32_t *record);				/* 0x488fc */
+int btLmpLcResetHeader(unsigned int link, uint32_t a1, uint32_t a2, uint32_t a3);	/* 0x48920 */
+void btLmpLcSyncHeader(unsigned int index, uint32_t clock, uint32_t a2, uint32_t a3, uint32_t a4);	/* 0x48948 */
+int btLmpLcApplyHeader(unsigned int opcode, unsigned int length);	/* 0x4899a */
+int btLmpLcResolveHeader(void);						/* 0x489bc */
+void btLmpLcScheduleHeader(void);					/* 0x48a40 */
+void btLmpLcNotifyHeader(const uint8_t *command);			/* 0x48a54 */
+void btLmpLcFormatHeader(const uint8_t *message);			/* 0x48b4a */
+void btLmpLcInspectHeader(unsigned int link);				/* 0x48b62 */
+int btLmpLcTrackHeader(uint32_t clock);					/* 0x48b96 */
+void btLmpLcManageHeader(const uint8_t *message);			/* 0x48bb8 */
+void btLmpLcAcquireHeader(unsigned int link);				/* 0x48bd8 */
+void btLmpLcReleaseHeader(void);					/* 0x48be8 */
+void btLmpLcSetupHeader(unsigned int link, uint32_t code);		/* 0x48c24 */
+void btLmpLcClearHeader(unsigned int link);				/* 0x48c5a */
+void btLmpLcConvertHeader(void);					/* 0x48c96 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
