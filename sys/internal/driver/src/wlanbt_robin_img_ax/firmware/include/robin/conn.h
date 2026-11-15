@@ -174,9 +174,9 @@ struct WlanConnectionInfo {
 	uint8_t reserved40[10];
 	uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
 	uint8_t reserved66[2];
-	uint32_t securityEnabled;	/* nonzero: securityParams apply */
-	uint8_t securityParams[28];
-	uint8_t securityState[24];
+	uint32_t htEnabled;		/* nonzero: the access point's HT elements apply */
+	uint8_t htCapability[28];	/* the access point's HT capability element */
+	uint8_t htOperation[24];	/* its HT operation element */
 	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
 	uint8_t reserved128[104];
 	apRsnConfig_t apRsn;		/* the access point's RSN settings */
@@ -235,7 +235,8 @@ struct WlanConnectionRole {
 	struct WlanConnectionInfo *info;
 	OsaBuffer *infoBuffer;		/* the buffer the information block is in */
 	uint8_t channelFlags;		/* WlanChannelFlags of the role's channel: the band is in bits 0-1 */
-	uint8_t reserved9[3];
+	uint8_t channel;		/* the primary channel */
+	uint8_t reserved10[2];
 	uint32_t listenInterval;
 	uint8_t reserved16[4];
 	struct WlanApPsQueue psQueue;	/* the peer's frames while it dozes */
@@ -312,12 +313,12 @@ struct WlanLinkMonitor {
 _Static_assert(sizeof(struct WlanSignalFilter) == 20, "signal filter");
 _Static_assert(sizeof(struct WlanLinkMonitor) == 24, "link monitor");
 
-/* The pointers a station, IBSS or AMP link keeps to its SQRAM state (at its own place in the connection). */
-struct WlanSqramState {
-	const void *erpPending;
-	const void *dataPendingStatus;
+/* The pointers a station, IBSS or AMP link keeps to the HT elements it sends (at its own place in the connection). */
+struct __attribute__((may_alias)) WlanHtElements {
+	const uint8_t *htOperation;	/* the HT operation element (24 bytes) */
+	const uint8_t *htCoexistence;	/* the 20/40 BSS coexistence element (3 bytes) */
 	const void *reserved8;
-	const void *currentState;
+	const uint8_t *overlapScan;	/* the overlapping BSS scan parameters element (16 bytes) */
 };
 
 /* WlanConnection.flags */
@@ -514,7 +515,7 @@ _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscri
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
 _Static_assert(offsetof(struct WlanConnectionInfo, smState) == 552, "info state machine");
-_Static_assert(offsetof(struct WlanConnectionInfo, securityEnabled) == 68, "info security");
+_Static_assert(offsetof(struct WlanConnectionInfo, htEnabled) == 68, "info HT enabled");
 _Static_assert(offsetof(struct WlanConnectionInfo, protectionFlags) == 541, "info protection");
 _Static_assert(offsetof(struct WlanConnectionInfo, pktFwdCtl) == 544, "info packet forwarding");
 _Static_assert(offsetof(struct WlanConnectionInfo, capability) == 580, "info capability");
@@ -614,7 +615,7 @@ void wlanConnectionSetupType3Info(struct WlanConnection *connection);			/* 0x1d2
 void wlanConnectionSetupType2(struct WlanConnection *connection);			/* 0x1d2fc */
 void wlanConnectionDtimHold(struct WlanConnection *connection);		/* 0x1d39c */
 void wlanConnectionDtimRelease(struct WlanConnection *connection);		/* 0x1d3d2 */
-struct WlanSqramState *wlanConnectionTypeBlock(struct WlanConnection *connection);	/* 0x1d3f2 */
+struct WlanHtElements *wlanConnectionTypeBlock(struct WlanConnection *connection);	/* 0x1d3f2 */
 void wlanConnectionSetupType3(struct WlanConnection *connection);		/* 0x1d412 */
 void wlanConnectionSetupType0(struct WlanConnection *connection);		/* 0x1d452 */
 void wlanConnectionSetupType1(struct WlanConnection *connection);		/* 0x1d486 */
@@ -738,7 +739,7 @@ int wlanRatesHaveOfdm(const uint8_t *rates, unsigned int count);			/* 0x2a62c */
 int wlanRatesHaveCck(const uint8_t *rates, unsigned int count);			/* 0x2a664 */
 unsigned int wlanTlvFrameDataAppend(uint8_t *tlv, const uint8_t *frame, uint16_t length); /* 0x2a68e */
 void wlanHtOperationUpdate(struct WlanConnection *connection, uint8_t *erpInfo,
-			   const uint8_t *params, uint8_t *securityState);		/* 0x2a6de */
+			   const uint8_t *params, uint8_t *htOperation);		/* 0x2a6de */
 void wlanApHtStationsForget(uint8_t *erpInfo);						/* 0x2a778 */
 
 #endif /* ROBIN_CONN_H */

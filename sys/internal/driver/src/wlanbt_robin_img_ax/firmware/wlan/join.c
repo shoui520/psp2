@@ -27,6 +27,7 @@
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
+#include "robin/htba.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
@@ -100,16 +101,12 @@ int macTxNotifyReleaseFrame(struct WlanConnection *connection,
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 void macTxNotifyBuildHeader(struct WlanConnection *connection, const struct WlanJoinBss *peer,
 			    int kind, const void *unused, uint32_t timeout);	/* 0x34094 */
-void macTxNotifyResolveContext(struct WlanConnection *connection,
-			       const struct WlanJoinBss *previous);	/* 0x308e8 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
 void macMgmtResolveState(struct WlanConnection *connection, unsigned int security); /* 0x34cc4 */
 void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
 			uint32_t sameBss, int unused);			/* 0x1e8ba */
 void macMgmtClearContext(struct WlanConnection *connection);		/* 0x35dc0 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
-OsaBuffer *macMgmtApplyState(struct WlanConnection *connection);	/* 0x34c94 */
-void macMgmtNotifyState(OsaBuffer *buffer);				/* 0x34d80 */
 void macTxNotifyClearFrame(OsaBuffer *rx);				/* 0x338e2 */
 void macTxNotifyUpdateHeader(OsaBuffer *rx);				/* 0x33dee */
 void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
@@ -246,7 +243,7 @@ void wlanJoinFinish(uint8_t result)
 	}
 	if (wlanJoin.result == WLAN_JOIN_OK) {
 		wlanJoinClosePort();
-		macTxNotifyResolveContext(wlanJoin.connection, &wlanJoin.previous);
+		wlanBaSessionsDelete(wlanJoin.connection, wlanJoin.previous.bssid);
 		wlanPsPhaseSuspend();
 		if (wlanJoin.reassociationRequest)
 			wlanJoin.associatedAt = 0;
@@ -391,14 +388,14 @@ int wlanJoinSlotEvent(uint32_t handle, int event, uint32_t argument)
 		wlanJoin.slot = 0;
 		wlanJoin.active = 0;
 		if (!ampPalOwnsConnection(connection)) {
-			buffer = macMgmtApplyState(wlanJoin.connection);
+			buffer = wlanHostMessageAlloc(wlanJoin.connection);
 			if (buffer != NULL) {
 				data = (uint8_t *)buffer + buffer->dataOffset;
 				data[0] = HostCmd_RET_802_11_ASSOCIATE & 0xff;
 				data[1] = HostCmd_RET_802_11_ASSOCIATE >> 8;
 				data[6] = 0;
 				data[7] = 0;
-				macMgmtNotifyState(buffer);
+				wlanHostMessagePost(buffer);
 			}
 		}
 		wlanJoinFilterIdle();

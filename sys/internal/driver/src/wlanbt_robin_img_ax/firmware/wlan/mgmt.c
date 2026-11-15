@@ -31,6 +31,7 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 #include "robin/macentry.h"
+#include "robin/htba.h"
 
 #define LE16(p)			((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -115,8 +116,6 @@ void p2pSqramComputeContext(struct WlanConnection *connection, uint8_t *ies,
 void p2pSqramQueryContext(const uint8_t *ies, unsigned int length, void *state);	/* SQRAM 0xc000ce8d */
 void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
 			 unsigned int reason, int unused);			/* 0x34f7c */
-int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
-void wlanPsResolveFrame(struct WlanConnection *connection, int update, int state); /* 0x3d712 */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
@@ -964,7 +963,7 @@ void wlanPsRefreshBss(struct WlanConnection *connection)
 
 	for (peer = wlanConnectionFind(connection->bssType, connection->bssNumber); peer != NULL;
 	     peer = wlanConnectionNextByBss(peer, peer->bssType, peer->bssNumber))
-		wlanPsResolveFrame(peer, 1, macTxNotifyConvertState(peer));
+		wlanRateGreenfieldSet(peer, 1, wlanHtGreenfieldWanted(peer));
 	sysIrqRestore(posture);
 }
 
@@ -972,9 +971,9 @@ void wlanSecurityRefresh(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
-	if (info->securityEnabled != 0)
-		wlanHtOperationUpdate(connection, &info->erpInfo, info->securityParams,
-				    info->securityState);
+	if (info->htEnabled != 0)
+		wlanHtOperationUpdate(connection, &info->erpInfo, info->htCapability,
+				    info->htOperation);
 }
 
 /* Restarts the overlapping legacy BSS detection for a beacon interval in TU. */

@@ -29,9 +29,9 @@ enum {
 	WLAN_PROTECTION_DSSS_ONLY,	/* a station with DSSS/CCK rates only */
 	WLAN_PROTECTION_NO_SHORT_PREAMBLE, /* a station without the Short Preamble capability */
 	WLAN_PROTECTION_NON_GREENFIELD,	/* an HT element said Non-Greenfield STAs Present */
-	WLAN_PROTECTION_TIMER7,		/* timers 7-9: set by code not converted yet */
-	WLAN_PROTECTION_TIMER8,
-	WLAN_PROTECTION_TIMER9,
+	WLAN_PROTECTION_OBSS_NON_HT,	/* an HT element said OBSS Non-HT STAs Present */
+	WLAN_PROTECTION_NO_GREENFIELD_BSS, /* the BSS's own station cannot do greenfield */
+	WLAN_PROTECTION_NO_GREENFIELD_PEER, /* a station of another BSS cannot (wlanHtProtectionObserve()) */
 	WLAN_PROTECTION_NON_WMM_PEER,	/* an IBSS peer without WMM */
 	WLAN_PROTECTION_DSSS_PEER_LINK,	/* the same, for a peer link; never runs out by reaching 0 exactly */
 	WLAN_PROTECTION_TIMERS

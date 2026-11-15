@@ -333,9 +333,9 @@ void wlanMacEvents(int line, uint32_t pending)
 
 				if (info->phyMode != 0) {
 					wlanApOlbcSelect(connection, &info->olbcActive, &info->erpInfo);
-					if (info->securityEnabled != 0) {
+					if (info->htEnabled != 0) {
 						macMgmtAcquirePacket(connection, &info->olbcCount, &info->erpInfo);
-						if (info->securityParams[2] & 2)
+						if (info->htCapability[2] & 2)
 							macMgmtClearPacket(connection);
 					}
 				}

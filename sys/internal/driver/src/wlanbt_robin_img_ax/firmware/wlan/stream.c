@@ -254,18 +254,23 @@ int wlanRxBaHwSlot(unsigned int tid, const uint8_t *peer, uint8_t *hwSlot,
 	return found;
 }
 
-/* Compares the peer against every active session and keeps no result. */
-void wlanTxBaProbe(unsigned int tid, const uint8_t *peer,
-		   struct WlanTxBaSession *sessions)
+/* 1 when a transmit session of the peer for the TID is active. */
+int wlanTxBaProbe(unsigned int tid, const uint8_t *peer,
+		  struct WlanTxBaSession *sessions)
 {
 	unsigned int i;
+	int found = 0;
+	int result;
 
-	if (wlanTxBaProbeOverride(tid, (uintptr_t)peer, 0, 0))
-		return;
+	if (wlanTxBaProbeOverride(tid, (uintptr_t)peer, (uintptr_t)sessions, (uintptr_t)&result))
+		return result;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
-		if (sessions[i].active)
-			memcmp(peer, sessions[i].peer, 6);
+		if (!sessions[i].active)
+			continue;
+		if (memcmp(peer, sessions[i].peer, 6) == 0 && sessions[i].tid == tid)
+			found = 1;
 	}
+	return found;
 }
 
 /* Returns 1 and the index of the active transmit session of the peer. */

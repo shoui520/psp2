@@ -34,7 +34,7 @@ struct WlanHostResponse {
 #define MAC_ADDRESS_HIGH	(*(volatile uint32_t *)0x8000a534)
 
 /* The elements the host's TLVs became (HT Capabilities, HT Information, 20/40 BSS Coexistence, OBSS Scan Parameters). */
-struct WlanHtElements {
+struct WlanHtTlvElements {
 	uint8_t *capability;
 	uint8_t *information;
 	uint8_t *coexistence;
@@ -155,7 +155,7 @@ void wlanHostResponse8040Build(OsaBuffer *buffer, unsigned int result)
  * type is replaced by the element's ID, the value is kept in elements and the
  * TLV goes on into the buffer of extra elements. Returns 0 for another type.
  */
-int wlanHtTlvApply(struct WlanHtElements *elements, struct WlanIeBuffer *ies, uint8_t *tlv)
+int wlanHtTlvApply(struct WlanHtTlvElements *elements, struct WlanIeBuffer *ies, uint8_t *tlv)
 {
 	unsigned int type = LE16(tlv);
 	uint8_t *element;

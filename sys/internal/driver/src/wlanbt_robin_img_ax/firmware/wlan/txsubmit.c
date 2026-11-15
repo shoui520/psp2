@@ -23,10 +23,9 @@
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wmm.h"
+#include "robin/htba.h"
 
 /* Not converted yet; provisional names. */
-int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
-int macTxNotifyVerifyState(struct WlanConnection *connection, unsigned int rate);	/* 0x302ce */
 uint32_t *wlanPsFormatFrame(struct WlanConnection *connection, unsigned int multicast); /* 0x3d78c */
 int macMgmtUpdateDescriptor(void);						/* 0x3bae4 */
 
@@ -217,8 +216,8 @@ void wlanTxRateSelect(struct WlanConnection *connection, uint8_t *data, struct W
 	unsigned int rate = TX_DATA_RATE(data);
 
 	if (REQUEST_FLAGS(request) & MAC_TX_FLAG_RATE_TABLE) {
-		int converted = macTxNotifyConvertState(connection);
-		int verified = macTxNotifyVerifyState(connection, rate);
+		int converted = wlanHtGreenfieldWanted(connection);
+		int verified = wlanHtShortGiWanted(connection, rate);
 
 		wlanTxRequestRateSet(request, rate, verified, converted, (wlanProtection.flags >> 5) & 1);
 	} else {

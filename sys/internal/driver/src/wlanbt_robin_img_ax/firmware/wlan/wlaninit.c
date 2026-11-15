@@ -49,6 +49,7 @@
 #include "robin/session.h"
 #include "robin/softtimer.h"
 #include "robin/macentry.h"
+#include "robin/htba.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
 struct WlanHwInfo {
@@ -147,7 +148,6 @@ int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
 void uapSqramParseState(void);							/* SQRAM 0xc00074d4 */
-void macTxNotifyFormatContext(void);							/* 0x309ac */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
 void p2pDirectAcquireContext(void);							/* 0x40df6 */
 void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
@@ -158,7 +158,6 @@ void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
 void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
-void macTxNotifyAcquireContext(void);							/* 0x30c0e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void macMgmtSyncEntry(void);								/* 0x36a1c */
@@ -311,7 +310,7 @@ static int wlanInitStageDevice(void)
 	osaSemaphoreInit(&macTxNotifySemaphore, 1, 12);
 	wlanInitializeDevice();
 	uapSqramParseState();
-	macTxNotifyFormatContext();
+	wlanHtInitStageRegister();
 	wlanWindowPoolInit(wlanTxWindowIds);
 	wlanPsComputeFrame();
 	wlanTxNotifyIdleHook.function = wlanTxNotifyIdle;
@@ -450,7 +449,7 @@ int wlanInit(void)
 	wlanMefInit();
 	wlanTxRingOpsInit();
 	cbProcDispatchFrame();
-	macTxNotifyAcquireContext();
+	wlanBaTimeoutOpsInit();
 	wlanSessionOpsInit();
 	wlanPsAcquireFrame();
 	wlanPsBuildFrame();

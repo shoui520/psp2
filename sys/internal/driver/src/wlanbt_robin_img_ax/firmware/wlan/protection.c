@@ -70,9 +70,9 @@ void wlanProtectionAgeMode1(WlanProtection *protection, unsigned int now)
 	WlanProtectionTimer *last = &protection->timers[WLAN_PROTECTION_DSSS_PEER_LINK];
 
 	timerAgeRunning(protection, WLAN_PROTECTION_NON_GREENFIELD, now);
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER7, now);
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER8, now);
-	timerAgeRunning(protection, WLAN_PROTECTION_TIMER9, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_OBSS_NON_HT, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_NO_GREENFIELD_BSS, now);
+	timerAgeRunning(protection, WLAN_PROTECTION_NO_GREENFIELD_PEER, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_DSSS_PEER, now);
 	timerAgeRunning(protection, WLAN_PROTECTION_NON_WMM_PEER, now);
 	if (timerRemaining(last) > 0 && timerAge(last, now) == 0)

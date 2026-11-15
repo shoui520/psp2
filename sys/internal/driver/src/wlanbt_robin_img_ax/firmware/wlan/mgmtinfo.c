@@ -168,10 +168,10 @@ unsigned int wlanTlvFrameDataAppend(uint8_t *tlv, const uint8_t *frame, uint16_t
  * the third flag) from the stations seen, and tells the hooks when it changed.
  */
 void wlanHtOperationUpdate(struct WlanConnection *connection, uint8_t *erpInfo,
-			   const uint8_t *params, uint8_t *securityState)
+			   const uint8_t *params, uint8_t *htOperation)
 {
 	struct WlanConnectionInfo *info = WLAN_ERP_INFO(erpInfo);
-	uint8_t *state = &securityState[4];
+	uint8_t *state = &htOperation[4];
 	unsigned int value = *state;
 	unsigned int protection = value & 3;
 	unsigned int nonGreenfield = (value >> 2) & 1;

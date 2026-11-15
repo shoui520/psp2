@@ -18,6 +18,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
+#include "robin/htba.h"
 
 struct WlanConnection *wlanConnectionList __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionFreeList __attribute__((section(".sqram1.rw")));
@@ -71,9 +72,6 @@ extern uint8_t wlanBlockPool1Control[], wlanBlockPool1Memory[];					/* 0x04004ff
 extern uint8_t wlanBlockPool2Control[], wlanBlockPool2Memory[];					/* 0x04000f08, 0x04007dc0 */
 uint32_t wlanConnectionSlotsFree __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
 struct OsaIdleHook wlanConnectionIdleHook __attribute__((section(".sqram1.rw")));		/* 0xc0011b00 */
-extern uint8_t wlanIbssErpPending[];								/* SQRAM 0xc0031f00 */
-extern uint8_t wlanDataPendingStatus;								/* SQRAM 0xc0011bc5 */
-extern uint8_t wlanBssCurrentState[];								/* SQRAM 0xc0031f18 */
 /* The device's address and the SNMP defaults a connection starts with (the pointer is at 0x54a7c). */
 struct WlanDeviceConfig {
 	uint8_t address[6];
@@ -83,9 +81,6 @@ struct WlanDeviceConfig {
 	uint8_t fragThreshold[2];
 };
 extern const struct WlanDeviceConfig *wlanDeviceAddress;					/* 0x54a7c */
-extern uint32_t wlanBssTargetCounter;								/* 0x59718 */
-int wlanPsDispatchPacket(struct WlanConnection *connection, int enable, int state);		/* 0x3cfb2 */
-int macTxNotifySelectState(struct WlanConnection *connection);				/* 0x302fc */
 void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a */
 int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
 int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */
@@ -1002,13 +997,13 @@ void wlanConnectionDtimRelease(struct WlanConnection *connection)
 }
 
 /* The block a connection of the type keeps its link in (type 0: the local name's; type 3: the second timer's). */
-struct WlanSqramState *wlanConnectionTypeBlock(struct WlanConnection *connection)
+struct WlanHtElements *wlanConnectionTypeBlock(struct WlanConnection *connection)
 {
 	if (connection != NULL) {
 		if (connection->interfaceType == 0)
-			return (struct WlanSqramState *)&connection->localName;
+			return (struct WlanHtElements *)(void *)&connection->localName;
 		if (connection->interfaceType == 3)
-			return (struct WlanSqramState *)&connection->secondTimerHandle;
+			return (struct WlanHtElements *)(void *)&connection->secondTimerHandle;
 	}
 	return NULL;
 }
@@ -1016,7 +1011,7 @@ struct WlanSqramState *wlanConnectionTypeBlock(struct WlanConnection *connection
 /* A station connection takes its handlers and the pointers to its SQRAM state. */
 void wlanConnectionSetupType3(struct WlanConnection *connection)
 {
-	struct WlanSqramState *state;
+	struct WlanHtElements *state;
 
 	if (connection == NULL)
 		return;
@@ -1028,9 +1023,9 @@ void wlanConnectionSetupType3(struct WlanConnection *connection)
 			wlanConnectionActivate(connection);
 			connection->rxManagement = wlanStaRxManagement;
 			connection->rxControl = wlanStaRxControl;
-			state->erpPending = wlanIbssErpPending;
-			state->dataPendingStatus = &wlanDataPendingStatus;
-			state->currentState = wlanBssCurrentState;
+			state->htOperation = wlanHtOperationIe;
+			state->htCoexistence = wlanHtCoexIe;
+			state->overlapScan = wlanHtOverlapScanIe;
 			wlanSubscribeApplyThresholds(connection);
 		}
 	}
@@ -1039,7 +1034,7 @@ void wlanConnectionSetupType3(struct WlanConnection *connection)
 /* The same for a connection that becomes a station's (mode 3). */
 void wlanConnectionSetupType0(struct WlanConnection *connection)
 {
-	struct WlanSqramState *state = wlanConnectionTypeBlock(connection);
+	struct WlanHtElements *state = wlanConnectionTypeBlock(connection);
 
 	if (state != NULL) {
 		connection->mode = 3;
@@ -1047,9 +1042,9 @@ void wlanConnectionSetupType0(struct WlanConnection *connection)
 		wlanConnectionActivate(connection);
 		connection->rxManagement = wlanStaRxManagement;
 		connection->rxControl = wlanStaRxControl;
-		state->erpPending = wlanIbssErpPending;
-		state->dataPendingStatus = &wlanDataPendingStatus;
-		state->currentState = wlanBssCurrentState;
+		state->htOperation = wlanHtOperationIe;
+		state->htCoexistence = wlanHtCoexIe;
+		state->overlapScan = wlanHtOverlapScanIe;
 		wlanSubscribeApplyThresholds(connection);
 	}
 }
@@ -1057,14 +1052,14 @@ void wlanConnectionSetupType0(struct WlanConnection *connection)
 /* A connection becomes an IBSS's (mode 4): it keeps the SQRAM state's pointers and merges with other networks. */
 void wlanConnectionSetupType1(struct WlanConnection *connection)
 {
-	struct WlanSqramState *state = (struct WlanSqramState *)&connection->localName;
+	struct WlanHtElements *state = (struct WlanHtElements *)(void *)&connection->localName;
 
 	connection->mode = 4;
 	if (connection->flags2 & 4)
 		wlanConnectionActivate(connection);
-	state->erpPending = wlanIbssErpPending;
-	state->dataPendingStatus = &wlanDataPendingStatus;
-	state->currentState = wlanBssCurrentState;
+	state->htOperation = wlanHtOperationIe;
+	state->htCoexistence = wlanHtCoexIe;
+	state->overlapScan = wlanHtOverlapScanIe;
 	connection->stationFlags = (connection->stationFlags & 0xffffff3c) | 1;
 	wlanSubscribeApplyThresholds(connection);
 }
@@ -1227,7 +1222,7 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 			__aeabi_memcpy(connection->localAddress, local, 6);
 		connection->flags &= 0x3f;
 		wlanSignalInit(connection);
-		wlanPsDispatchPacket(connection, 1, macTxNotifySelectState(connection));
+		wlanRateChannelWidthSet(connection, 1, wlanHtChannelWidth(connection));
 	}
 	connection->rtsThreshold[0] = wlanDeviceAddress->rtsThreshold[0];
 	connection->rtsThreshold[1] = wlanDeviceAddress->rtsThreshold[1];
@@ -1250,14 +1245,14 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		wlanConnectionSetupType2(connection);
 		break;
 	case 3:
-		((struct WlanSqramState *)&connection->localName)->dataPendingStatus = &wlanBssTargetCounter;
+		((struct WlanHtElements *)(void *)&connection->localName)->htCoexistence = wlanApHtCoexIe;
 		wlanConnectionSetupType3(connection);
 		wlanConnectionSetupType3Info(connection);
 		connection->rxManagement = wlanStaRxManagement;
 		connection->rxControl = wlanStaRxControl;
 		break;
 	case 4: {
-		struct WlanSqramState *state;
+		struct WlanHtElements *state;
 
 		if (wlanConnectionSlotAttach(connection) != 0) {
 			wlanConnectionIndexRelease(connection);
@@ -1272,10 +1267,10 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		connection->rxManagement = wlanAmpRxManagement;
 		connection->flags |= 4;
 		wlanConnectionSetActiveFlag(connection, 1);
-		state = (struct WlanSqramState *)&connection->rsnElement[47];
-		state->erpPending = wlanIbssErpPending;
-		state->dataPendingStatus = &wlanDataPendingStatus;
-		state->currentState = wlanBssCurrentState;
+		state = (struct WlanHtElements *)(void *)&connection->rsnElement[47];
+		state->htOperation = wlanHtOperationIe;
+		state->htCoexistence = wlanHtCoexIe;
+		state->overlapScan = wlanHtOverlapScanIe;
 		connection->transmitBusy = 0;
 		ampPalCopySupportedRates(connection);
 		break;
@@ -1329,7 +1324,7 @@ int wlanConnectionReconfigure(struct WlanConnection *connection, int interfaceTy
 	if (local != NULL)
 		__aeabi_memcpy(connection->localAddress, local, 6);
 	wlanSignalInit(connection);
-	wlanPsDispatchPacket(connection, 1, macTxNotifySelectState(connection));
+	wlanRateChannelWidthSet(connection, 1, wlanHtChannelWidth(connection));
 	switch (connection->interfaceType) {
 	case 0:
 		wlanConnectionSetupType0(connection);
@@ -1339,12 +1334,12 @@ int wlanConnectionReconfigure(struct WlanConnection *connection, int interfaceTy
 		break;
 	case 3:
 		if (mode == 0) {
-			struct WlanSqramState *state = (struct WlanSqramState *)&connection->secondTimerHandle;
+			struct WlanHtElements *state = (struct WlanHtElements *)(void *)&connection->secondTimerHandle;
 
 			wlanConnectionActivate(connection);
-			state->erpPending = wlanIbssErpPending;
-			state->dataPendingStatus = &wlanDataPendingStatus;
-			state->currentState = wlanBssCurrentState;
+			state->htOperation = wlanHtOperationIe;
+			state->htCoexistence = wlanHtCoexIe;
+			state->overlapScan = wlanHtOverlapScanIe;
 			connection->rxManagement = wlanStaRxManagement;
 			connection->rxControl = wlanStaRxControl;
 			wlanSubscribeApplyThresholds(connection);

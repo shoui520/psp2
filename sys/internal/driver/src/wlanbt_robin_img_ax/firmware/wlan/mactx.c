@@ -32,6 +32,7 @@
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
 #include "robin/macentry.h"
+#include "robin/htba.h"
 
 struct WlanTxWindowQueue wlanTxWindowQueues[2] __attribute__((section(".dtcm.bss")));
 uint32_t wlanTxWindowFlags __attribute__((section(".itcm.bss")));
@@ -606,9 +607,6 @@ struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection)
 unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
 extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
-void wlanTxRingMovePending(unsigned int window, unsigned int queue);	/* 0x30eec */
-void wlanTxRingMoveToWindow(unsigned int window, unsigned int queue, unsigned int tid,
-			    const uint8_t *peer);			/* 0x30efe */
 void wlanBaNotifyAdded(struct WlanConnection *connection, unsigned int hwSlot,
 		       const uint8_t *peer);				/* 0x333f6 */
 void wlanBaNotifyDeleted(struct WlanConnection *connection, unsigned int hwSlot,

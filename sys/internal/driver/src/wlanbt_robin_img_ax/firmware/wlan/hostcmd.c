@@ -50,6 +50,7 @@
 #include "robin/txstats.h"
 #include "robin/mactx.h"
 #include "robin/macentry.h"
+#include "robin/htba.h"
 
 #define HOSTCMD_U16(p)		((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -456,11 +457,6 @@ int hostCmd00b3(struct WlanConnection *connection, uint8_t *command);		/* 0x3880
 int hostCmd00b5(struct WlanConnection *connection, uint8_t *command);		/* 0x38564 */
 void hostCmd00c5(unsigned int action, uint8_t *data, unsigned int *length);	/* 0x3ed9e */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */
-void hostCmd00cdSet(struct WlanConnection *connection, uint8_t *body);		/* 0x3089c */
-void hostCmd00cdGet(uint8_t *body);						/* 0x308d4 */
-int hostCmd00ce(uint8_t *body, unsigned int length);				/* 0x3058e */
-void hostCmd00cf(uint8_t *body, unsigned int length);				/* 0x306ca */
-int hostCmd00d0(uint8_t *body, unsigned int length);				/* 0x30728 */
 int hostCmd00d1Set(struct WlanConnection *connection, uint8_t *body);		/* 0x3b5d8 */
 unsigned int hostCmd00d1Get(uint8_t *body);					/* 0x3b6a2 */
 int hostCmd00d6Parse(uint8_t *data, unsigned int length, uint8_t **rates0, uint8_t **rates1,
@@ -472,7 +468,6 @@ int hostCmd00dd(struct WlanConnection *connection, uint8_t *body, unsigned int l
 int hostCmd00e0(unsigned int action, uint8_t *data, unsigned int length);	/* 0x3f06e */
 unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *data);	/* 0x3f2c0 */
 int hostCmd00e4Check(struct WlanConnection *connection, uint8_t *data, unsigned int length); /* 0x3f1f6 */
-int hostCmd00e9(struct WlanConnection *connection, uint8_t *body, unsigned int length); /* 0x307d2 */
 int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d086 */
 void hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
 int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t *data,

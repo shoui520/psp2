@@ -98,8 +98,8 @@ void wlanTxBaAdd(uintptr_t owner, const struct WlanBaRequest *request,
 		 struct WlanTxBaSession *sessions);
 int wlanRxBaHwSlot(unsigned int tid, const uint8_t *peer, uint8_t *hwSlot,
 		   struct WlanRxBaSession *sessions);
-void wlanTxBaProbe(unsigned int tid, const uint8_t *peer,
-		   struct WlanTxBaSession *sessions);
+int wlanTxBaProbe(unsigned int tid, const uint8_t *peer,
+		  struct WlanTxBaSession *sessions);
 int wlanTxBaFind(unsigned int tid, const uint8_t *peer, uint8_t *index,
 		 struct WlanTxBaSession *sessions);
 void wlanTxBaArmTimeouts(uintptr_t owner, struct WlanTxBaSession *sessions);

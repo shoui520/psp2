@@ -25,6 +25,7 @@
 #include "robin/sys.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
+#include "robin/htba.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
@@ -53,11 +54,7 @@ extern struct WlanMacTxRequest *wlanIbssBeaconRequest;		/* 0x54bc4 */
 extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;	/* 0x54bc8 */
 extern uint8_t *wlanBeaconRatesEnd;				/* 0x54a9c */
 extern uint8_t *wlanProbeRatesEnd;				/* 0x54aa0 */
-extern uint8_t wlanIbssErpPending[];				/* SQRAM 0xc0031f00 */
-void macTxNotifyReleaseState(struct WlanConnection *connection);	/* 0x301b0 */
-int macTxNotifyHandleContext(struct WlanConnection *connection, int ieId,
-			     uint8_t *buffer);				/* 0x3033e */
-int macTxNotifyRecordState(struct WlanConnection *connection);		/* 0x30324 */
+extern uint8_t wlanHtOperationIe[];				/* SQRAM 0xc0031f00 */
 void cbProcTrackPacket(void);						/* 0x1e570 */
 int macMgmtRecordTable(const uint8_t *address, uint8_t *buffer);	/* 0x37d02 */
 uint32_t rfCalibInspectTimer(unsigned int rate);			/* 0x2bc6c */
@@ -92,10 +89,10 @@ void wlanIbssTemplateSetProtection(WlanWirelessFrame *frame, int protection)
 {
 	WlanIePointers ies;
 
-	macTxNotifyReleaseState(wlanConnectionFindByTypeNumber(WLAN_IF_IBSS, 0));
+	wlanConnectionHtOperation(wlanConnectionFindByTypeNumber(WLAN_IF_IBSS, 0));
 	wlanParseIes(frame->body + WLAN_BEACON_FIXED_LENGTH,
 		     LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH, &ies);
-	wlanSetErpProtection(&ies, &wlanProtection, wlanIbssErpPending, protection);
+	wlanSetErpProtection(&ies, &wlanProtection, wlanHtOperationIe, protection);
 }
 
 /* Both templates protect while a DSSS-only station is around. */
@@ -161,16 +158,16 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 			barker = 1;
 		end += wlanPutErpIe(end, nonErp, useProtection, barker);
 	}
-	end += macTxNotifyHandleContext(connection, 45, end);
+	end += wlanHtElementGet(connection, 45, end);
 	copyStart = end;
 	if (connection->flags & 4)
 		end += wlanCopyIes(IE_RSN, copyStart, subtype, (uint8_t *)frame, bodyOffset,
 				   start->extraIes, start->extraIesLength);
 	end += wlanPutRatesIe(start->dataRate, end, 1);
-	end += macTxNotifyHandleContext(connection, 61, end);
-	end += macTxNotifyHandleContext(connection, 72, end);
-	end += macTxNotifyHandleContext(connection, 74, end);
-	if (macTxNotifyRecordState(connection)) {
+	end += wlanHtElementGet(connection, 61, end);
+	end += wlanHtElementGet(connection, 72, end);
+	end += wlanHtElementGet(connection, 74, end);
+	if (wlanConnectionIsHt(connection)) {
 		wlanPutWmmParameterIe(&end);
 		cbProcTrackPacket();
 	}
