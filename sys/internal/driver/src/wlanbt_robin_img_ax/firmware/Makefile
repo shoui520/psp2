@@ -32,7 +32,7 @@ O ?= build
 
 ARCH_FLAGS := -march=armv5te -mthumb-interwork -mfloat-abi=soft
 # The image fills the chip's ITCM, DTCM and SQRAM as Marvell built it (the
-# heap base is fixed at 0x5f800), so it is built for size.
+# heap base is 0x5f800 in the original, 0x63800 here), so it is built for size.
 OPT ?= -Os
 CFLAGS := $(ARCH_FLAGS) -mthumb $(OPT) -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
 	-Iinclude -I$(ROOT)/sys/internal/include -I$(O)/radio
@@ -113,6 +113,17 @@ $(O)/radio/wlan_radio.inc: radio/radioimage.py $(O)/radio/wlan/wlanradio.ihx
 	python3 -I radio/radioimage.py $@ $(O)/radio/wlan/wlanradio.ihx 0
 
 $(O)/wlan/wlaninit.o: $(O)/radio/wlan_radio.inc
+
+# The Bluetooth radio's program runs from 0x100 (its 8051 vectors are there) with
+# the stack from 0x74, and fills the 8051's whole internal RAM.
+$(O)/radio/bt/btradio.ihx: radio/bt/btradio.c radio/bt/btradio_hw.h
+	@mkdir -p $(dir $@)
+	$(SDCC) -mmcs51 --model-small --std-c99 --iram-size 256 --code-loc 0x100 -Iradio/bt $< -o $(dir $@)
+
+$(O)/radio/bt_radio.inc: radio/radioimage.py $(O)/radio/bt/btradio.ihx
+	python3 -I radio/radioimage.py $@ $(O)/radio/bt/btradio.ihx 0x100
+
+$(O)/bt/lcpool.o: $(O)/radio/bt_radio.inc
 
 $(O)/robin.elf: $(OBJS) $(SCRIPTS)
 	$(LD) -EL -n --no-warn-mismatch --use-blx -T robin.ld -o $@ $(OBJS)

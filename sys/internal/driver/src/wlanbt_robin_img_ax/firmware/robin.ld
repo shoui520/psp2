@@ -29,19 +29,23 @@ wlanWmmReferenceBits	= wlanWmmIe + 0x11;		/* 0x04008fe3 */
 wlanWmmSessionBits	= wlanWmmIe + 0x1a;		/* 0x04008fec */
 wlanDataEnd		= wlanCommandScanWindow + 0x2bc;	/* 0x00057e9a */
 
+/*
+ * The original's sections sit at fixed addresses because RVCT made them that
+ * size. GCC 4.8 makes the code larger (ITCM code by 0x3df0 bytes, SQRAM1 code by
+ * 0x5e0), so the sections that follow it are not at the original's addresses:
+ * ITCM holds code, data and BSS in sequence and ends at the heap base
+ * (__user_initial_stackheap, boot/reset.S), SQRAM1 holds code, data and BSS.
+ * DTCM and SQRAM0 keep the original's addresses.
+ */
 MEMORY
 {
-	itcm_ro    (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00054764
-	itcm_rw    (rw)  : ORIGIN = 0x00054764, LENGTH = 0x000014e8
-	itcm_bss   (rw)  : ORIGIN = 0x00055c4c, LENGTH = 0x0009e5f4
+	itcm       (rwx) : ORIGIN = 0x00000000, LENGTH = 0x00063800
 	dtcm_rw    (rw)  : ORIGIN = 0x04000100, LENGTH = 0x00000f70
 	dtcm_bss   (rw)  : ORIGIN = 0x04001070, LENGTH = 0x0000ef90
 	sqram0_b0  (rw)  : ORIGIN = 0xc0000000, LENGTH = 0x00001100
 	sqram0_rw  (rw)  : ORIGIN = 0xc0001100, LENGTH = 0x00004e64
 	sqram0_b1  (rw)  : ORIGIN = 0xc0005f64, LENGTH = 0x00001250
-	sqram1_ro  (rx)  : ORIGIN = 0xc0007200, LENGTH = 0x000088a8
-	sqram1_rw  (rw)  : ORIGIN = 0xc000faa8, LENGTH = 0x000024ec
-	sqram1_bss (rw)  : ORIGIN = 0xc0011f94, LENGTH = 0x0002e06c
+	sqram1     (rwx) : ORIGIN = 0xc0007200, LENGTH = 0x00038e00
 }
 
 ENTRY(bootReset)
@@ -52,7 +56,7 @@ SECTIONS
 		*sqram/*.o(.text .text.* .rodata .rodata.*)
 		*(.sqram1.ro .sqram1.ro.*)
 		. = ALIGN(4);
-	} > sqram1_ro
+	} > sqram1
 
 	.itcm.ro 0x00000000 : {
 		KEEP(*(.boot.vectors))
@@ -66,19 +70,20 @@ SECTIONS
 		KEEP(*(.rodata.region_table))
 		__region_table_end = .;
 		. = ALIGN(4);
-	} > itcm_ro
+	} > itcm
 
-	.itcm.rw 0x00054764 : {
+	.itcm.rw : {
 		*(.itcm.rw .itcm.rw.*)
 		*(.data .data.*)
 		. = ALIGN(4);
-	} > itcm_rw
+	} > itcm
 
-	.itcm.bss 0x00055c4c (NOLOAD) : {
+	.itcm.bss (NOLOAD) : {
 		*(.itcm.bss .itcm.bss.*)
 		*(.bss .bss.* COMMON)
 		. = ALIGN(4);
-	} > itcm_bss
+		__itcm_end = .;
+	} > itcm
 
 	.dtcm.rw 0x04000100 : {
 		*(.dtcm.rw .dtcm.rw.*)
@@ -105,15 +110,21 @@ SECTIONS
 		. = ALIGN(4);
 	} > sqram0_b1
 
-	.sqram1.rw 0xc000faa8 : {
+	.sqram1.rw : {
 		*(.sqram1.rw .sqram1.rw.*)
 		. = ALIGN(4);
-	} > sqram1_rw
+	} > sqram1
 
-	.sqram1.bss 0xc0011f94 (NOLOAD) : {
+	.sqram1.bss (NOLOAD) : {
 		*(.sqram1.bss .sqram1.bss.*)
 		. = ALIGN(4);
-	} > sqram1_bss
+	} > sqram1
+
+	/*
+ * The initial stack sits between the BSS and the heap base (0x63800): the
+ * original leaves 0xa65 bytes there.
+ */
+	ASSERT(__itcm_end + 0xa65 <= 0x63800, "ITCM image runs into the initial stack and the heap base")
 
 	/DISCARD/ : {
 		*(.ARM.exidx* .ARM.extab* .ARM.attributes .comment .note*)

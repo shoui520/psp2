@@ -61,8 +61,10 @@ union BtPoolFrameMemory btPoolFrameMemory __attribute__((section(".sqram0.rw"), 
 	},
 };
 
-/* PLACEHOLDER: the radio's 8051 program (0x2b54 bytes, loaded at 0x8000) is not rebuilt yet; zero. */
-uint8_t btPoolHeaderMemory[BT_POOL_AREA_SIZE] __attribute__((section(".sqram0.rw"), aligned(4)));	/* 0xc00022f4 */
+/* The Bluetooth radio's 8051 program (radio/bt, loaded at 0x8000 by btLmpLcSyncEntry), then zeros: the pool takes the area over. */
+uint8_t btPoolHeaderMemory[BT_POOL_AREA_SIZE] __attribute__((section(".sqram0.rw"), aligned(4))) = {
+#include "bt_radio.inc"
+};	/* 0xc00022f4 */
 
 uint8_t btTablePoolControl[4 * BT_TABLE_POOL_BLOCKS] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0005f64 */
 uint8_t btPacketPoolControl[4 * BT_PACKET_POOL_BLOCKS] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0005fe4 */

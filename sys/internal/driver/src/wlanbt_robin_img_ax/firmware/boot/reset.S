@@ -338,7 +338,8 @@ __rt_locale_desc_hook:
 	.word	__libspace_start + 0x20
 
 /*
- * __user_initial_stackheap (0x00052826): heap base 0x5f800 (the initial stack's top), heap
+ * __user_initial_stackheap (0x00052826): heap base 0x5f800 in the original, 0x63800 here (the
+ * initial stack's top; GCC's code is 0x3df0 bytes larger than RVCT's), heap
  * limit from robinQueryHeapLimit(); returned in r0-r3 (__value_in_regs).
  */
 	.thumb
@@ -352,8 +353,8 @@ __user_initial_stackheap:
 	movs	r4, r1
 	mov	r0, sp
 	stmia	r0!, {r1-r4}
-	movs	r0, #0xbf
-	lsls	r0, r0, #11		/* 0x0005f800 */
+	movs	r0, #0xc7
+	lsls	r0, r0, #11		/* 0x00063800: the original's 0x5f800 moved up by the larger code */
 	str	r0, [sp]
 	bl	robinQueryHeapLimit
 	str	r0, [sp, #4]

@@ -85,7 +85,6 @@ extern struct OsaEventFlags *ampEventFlags;
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
-/* PLACEHOLDER: cryptographic routine, deferred (link key cache, 0x6632 and 0x66b0). */
 extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
 
 uint8_t ampLocalFrameAddress[6] __attribute__((section(".itcm.rw")));
