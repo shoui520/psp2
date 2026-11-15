@@ -92,10 +92,6 @@ void macMgmtConfigureEntry(uint32_t first, uint32_t second, uint32_t third, uint
 int macMgmtResetEntry(struct WlanConnection *connection);				/* 0x3699a */
 int macMgmtQueryEntry(struct WlanConnection *connection);				/* 0x3691c */
 void macMgmtScheduleEntry(struct WlanConnection *connection);				/* 0x36a56 */
-void macMgmtConvertContext(struct WlanConnection *connection);				/* 0x35e14 */
-void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *frame,
-			   uintptr_t argument);						/* 0x35ac6 */
-void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame);	/* 0x359fa */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);

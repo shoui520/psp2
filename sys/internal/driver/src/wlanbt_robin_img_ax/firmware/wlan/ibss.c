@@ -77,8 +77,6 @@ void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
 void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *third,
 			  uint8_t *fourth, uint32_t a, uint32_t b, uint32_t c);	/* 0x364be */
-void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
-			  uint8_t *ssidLength);				/* 0x35558 */
 void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
 

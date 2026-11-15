@@ -132,6 +132,15 @@ unsigned int macMgmtInspectContext(struct WlanConnection *connection, const uint
 				   struct WlanIePointers *elements);		/* 0x35962 */
 void macMgmtTrackContext(const uint8_t *capability, unsigned int rates, const uint8_t *erp,
 			 unsigned int now);					/* 0x359a6 */
+void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
+			  uint8_t *ssidLength);					/* 0x35558 */
+void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame);	/* 0x359fa */
+void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *frame,
+			   uintptr_t argument);					/* 0x35ac6 */
+int macMgmtSetupContext(struct WlanConnection *connection);			/* 0x35da6 */
+void macMgmtClearContext(struct WlanConnection *connection);			/* 0x35dc0 */
+void macMgmtConvertContext(struct WlanConnection *connection);			/* 0x35e14 */
+void macMgmtRecordContext(void);						/* 0x35fca */
 int macMgmtVerifyContext(void);							/* 0x35f74 */
 int macMgmtSelectContext(struct WlanConnection *connection);			/* 0x35f7c */
 int wlanStaSmLinked(const struct WlanConnection *connection);			/* 0x35faa */

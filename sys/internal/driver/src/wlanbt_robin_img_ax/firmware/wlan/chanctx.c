@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
+#include "robin/calibration.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
 #include "robin/htba.h"
@@ -16,22 +17,42 @@
 #include "robin/ie.h"
 #include "robin/macentry.h"
 #include "robin/mac.h"
+#include "robin/macrate.h"
 #include "robin/mactx.h"
 #include "robin/mgmt.h"
+#include "robin/peerrate.h"
 #include "robin/protection.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
+#include "robin/signal.h"
 #include "robin/stamachine.h"
+#include "robin/psctl.h"
+#include "robin/stapssm.h"
+#include "robin/sync.h"
+#include "robin/wlantask.h"
+#include "robin/wmm.h"
 
 struct WlanChannelContext {
-	uint8_t reserved0;
+	uint8_t trackBeacons;		/* beacons since the frequency tracker last evaluated (macMgmtReleaseContext()) */
 	uint8_t savedFlags;		/* the flags macMgmtCheckContext() found the radio on */
 	uint8_t linkPowerLimit;		/* wlanTxPowerGetLinkLimit() then */
 	uint8_t flags;			/* the flags the radio is on */
-	uint8_t reserved4[4];
+	uint32_t triggerCount;		/* the transmit task was woken for a trigger frame that many times */
 	uint32_t beaconMisses;		/* beacons in a row on another channel than the access point's (0x55160) */
 	uint32_t savedChannel;		/* 0: none yet */
 	uint32_t channel;		/* the channel the radio is on */
 };
+
+/* The P2P attributes of a beacon or probe response the direct code picked out (76 bytes). */
+struct WlanDirectAttributes {
+	uint8_t reserved0[24];
+	uint8_t *noticeOfAbsence;	/* the Notice of Absence attribute: ID, length[2], index, CTWindow, descriptors */
+	uint8_t reserved28[4];
+	uint8_t *groupId;		/* the P2P Group ID attribute: ID, length[2], device address[6], SSID */
+	uint8_t reserved36[40];
+};
+
+_Static_assert(sizeof(struct WlanDirectAttributes) == 76, "P2P attributes");
 
 /* Not converted yet; provisional names. */
 void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
@@ -41,9 +62,60 @@ void wlanPsReleasePacket(struct WlanConnection *connection, uint32_t rateSet);		
 void wlanPsApplyFrame(struct WlanConnection *connection, int a, unsigned int b);	/* 0x3d6d0 */
 int p2pSqramHandleState(struct WlanConnection *connection);				/* SQRAM */
 extern int (*wlanChannelValidateHook)(void);						/* 0x5f1a0 */
+int wlanPsHandleHeader(struct WlanConnection *connection, const uint8_t *body, unsigned int length,
+		       const uint8_t *tim, unsigned int flags);				/* 0x3dc5c */
+void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);			/* 0x37c72 */
+int wlanFrequencyTrackingStub(void);							/* 0x2e9c8 */
+void hostCmd003c(int timing, int carrier);						/* 0x2e9cc */
+void romLibSyncContext(unsigned int mask);						/* ROM */
+void uapSqramClearTable(void);								/* SQRAM 0xc000a3f6 */
+void uapSqramSetupTable(void);								/* SQRAM, via the veneer at 0x52e7c */
+void wlanPsBuildPacket(void);								/* 0x3cfe4 */
+void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
+int rfCalibSyncDescriptor(void);							/* 0x2a20c */
+void btLmpLcHandleState(int state);							/* 0x42488 */
+void p2pSqramDispatchState(struct WlanDirectAttributes *attributes, uint32_t flags,
+			   struct WlanPsPeerState *ps);					/* SQRAM */
+struct WlanDirectAttributes *p2pDirectScheduleContext(const uint8_t *frame, int unused, uint32_t *first,
+						       uint32_t *second,
+						       struct WlanDirectAttributes *attributes);	/* 0x40b16 */
+void p2pDirectSyncContext(uint8_t *attribute, uint8_t *buffer, int kind, uint8_t **pointer);	/* 0x406ca */
+
+/* The automatic frequency control (hostcmd.c: host command 60), which hostCmd003c() is a stub of here. */
+uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
+int16_t wlanAfcTimingOffset __attribute__((section(".itcm.rw")));		/* 0x54f1a: the sum, then the mean */
+int16_t wlanAfcCarrierOffset __attribute__((section(".itcm.rw")));		/* 0x54f1c */
+uint8_t wlanAfcAuto __attribute__((section(".itcm.rw")));			/* 0x54f1e: the carrier error that is reported */
+uint8_t wlanAfcThreshold __attribute__((section(".itcm.rw")));			/* 0x54f1f: the beacons that are summed */
+uint8_t wlanAfcSamples __attribute__((section(".itcm.rw")));			/* 0x54f20: the beacons summed so far */
+/* The TSF of the last beacon the connection took (hostcmd.c reports it). */
+uint8_t wlanBeaconTimestamp[8] __attribute__((section(".dtcm.bss")));		/* 0x040088d2 */
+/* The WEP ICV errors the IBSS remembers. */
+WepIcvErrEntry wlanIbssIcvErrEntries[WEP_ICV_ERR_ENTRIES] __attribute__((section(".itcm.rw")));	/* 0x5f130 */
+/* A counter block the connection's conversion clears (0x4004aa4). */
+uint8_t wlanBssCounters[16] __attribute__((section(".dtcm.bss")));
 
 uint8_t wlanNullAddress[8] __attribute__((section(".itcm.rw")));				/* 0x55150 */
 struct WlanChannelContext wlanChannelContext __attribute__((section(".itcm.rw")));	/* 0x55158 */
+
+/* 0x35558: the IBSS to join: the MAC takes its address, the connection its BSSID and SSID. */
+void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
+			  uint8_t *ssidLength)
+{
+	unsigned int length;
+
+	if (join == NULL)
+		return;
+	wlanTxSetSharedRadio(join->capability & 1);
+	wlanMacAddressSet(join->bssid);
+	__aeabi_memcpy(bssid, join->bssid, 6);
+	length = romStringLength(join->ssid, 32);
+	romStringCopy(ssid, join->ssid, length);
+	*ssidLength = length;
+	wlanMacAddressApply();
+	wlanIbssRecordJoin(join);
+	wlanIbssTimersControl(1);
+}
 
 /* 0x355b0: the channel's secondary channel is set from the HT operation element of the connection. */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel, unsigned int number)
@@ -291,10 +363,229 @@ void macMgmtTrackContext(const uint8_t *capability, unsigned int rates, const ui
 	wlanIbssUpdateProtection();
 }
 
+/* 0x359fa: a beacon of the P2P group's owner, or of the IBSS, the state machine was handed. */
+void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame)
+{
+	WlanIePointers elements;
+	unsigned int rates;
+	unsigned int now;
+
+	if (!wlanConnectionHasLocalAddress(connection, frame + 18))
+		return;
+	rates = macMgmtInspectContext(connection, frame, &elements);
+	if (connection->interfaceType == 3) {
+		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+		if (ps->p2pFlags & 4) {
+			struct WlanDirectAttributes attributes[1];
+			uint8_t buffer[32];
+			uint32_t first = 0;
+			uint32_t flags = 0;
+			struct WlanDirectAttributes *direct;
+
+			direct = p2pDirectScheduleContext(frame, 0, &first, &flags, attributes);
+			if (flags & 0x2000)
+				p2pDirectSyncContext(direct->groupId, buffer, 9, &direct->groupId);
+			if (direct->groupId != NULL &&
+			    memcmp(direct->groupId + 3, ps->p2pGroupId, 6) == 0) {
+				ps->p2pChannel = wlanOperatingChannel();
+				ps->p2pBssActive = 1;
+				p2pSqramDispatchState(direct, flags, ps);
+			}
+		}
+	}
+	now = romGetMicroseconds();
+	macMgmtNotifyContext(connection, now);
+	macMgmtTrackContext(frame + 42, rates, elements.pErpInfo, now);
+	macMgmtScheduleContext();
+	macMgmtResolveContext(connection, connection->probeRate);
+	wlanWmmUpdate(connection, elements.pWmmInfo, elements.pWmmParam);
+}
+
 /* 0x35ac2 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body, unsigned int length)
 {
 	return 1;
+}
+
+/* 0x35ac6: a beacon (or probe response) on the connection's channel: protection, the automatic frequency
+   control, the power save state and the P2P group's schedule follow what it says. */
+void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *frame, uintptr_t argument)
+{
+	WlanIePointers elements;
+	unsigned int rates;
+	unsigned int now;
+	int dtim;
+
+	if ((connection->interfaceType == 3 || connection->interfaceType == 0) &&
+	    !wlanConnectionHasLocalAddress(connection, frame + 18))
+		return;
+	rates = macMgmtInspectContext(connection, frame, &elements);
+	now = romGetMicroseconds();
+	macMgmtNotifyContext(connection, now);
+	macMgmtTrackContext(frame + 42, rates, elements.pErpInfo, now);
+	macMgmtScheduleContext();
+	macMgmtResolveContext(connection, connection->probeRate);
+	wlanHtBeaconApply(connection, &elements, frame + 18);
+	macMgmtAdjustTable((const WlanWirelessFrame *)frame, 8);
+
+	if (wlanChannelContext.trackBeacons >= wlanAfcThreshold) {
+		int carrier;
+
+		wlanChannelContext.trackBeacons = 0;
+		if (wlanAfcSamples != 0) {
+			wlanAfcTimingOffset = wlanAfcTimingOffset / wlanAfcSamples;
+			wlanAfcCarrierOffset = wlanAfcCarrierOffset / wlanAfcSamples;
+		}
+		if (wlanAfcEnabled != 0) {
+			carrier = (int8_t)(1102 * wlanAfcCarrierOffset / 1000);
+			if (carrier >= wlanAfcAuto || carrier <= -wlanAfcAuto)
+				hostCmd003c(wlanAfcTimingOffset, wlanAfcCarrierOffset);
+		}
+		wlanAfcSamples = 0;
+		wlanAfcTimingOffset = 0;
+		wlanAfcCarrierOffset = 0;
+	}
+	wlanFrequencyTrackingStub();
+	wlanChannelContext.trackBeacons++;
+
+	if (elements.pTim != NULL)
+		connection->dtimPeriod = elements.pTim[3];
+	connection->beaconPeriod = frame[40] | (frame[41] << 8);
+	dtim = wlanPsHandleHeader(connection, frame + 32, frame[0] | (frame[1] << 8), elements.pTim,
+				  wlanChannelContext.savedFlags & 3);
+	__aeabi_memcpy(wlanBeaconTimestamp, frame + 32, 8);
+
+	if (connection->interfaceType == 3) {
+		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+		struct WlanDirectAttributes attributes[1];
+		uint8_t buffer[32];
+		uint32_t first = 0;
+		uint32_t flags = 0;
+		struct WlanDirectAttributes *direct;
+		uint64_t timestamp;
+
+		__aeabi_memcpy(ps->beaconTimestamp, frame + 32, 8);
+		timestamp = romGetTimerTimestamp();
+		ps->beaconTimerLow = (uint32_t)timestamp;
+		ps->beaconTimerHigh = timestamp >> 32;
+		direct = p2pDirectScheduleContext(frame, 0, &first, &flags, attributes);
+		if (flags & 0x1000)
+			p2pDirectSyncContext(direct->noticeOfAbsence, buffer, -1, &direct->noticeOfAbsence);
+		if (direct == NULL || direct->noticeOfAbsence == NULL) {
+			__aeabi_memclr(ps->noaAttribute, sizeof(ps->noaAttribute));
+			ps->noaMode = 0;
+		} else {
+			const uint8_t *attribute = direct->noticeOfAbsence;
+			unsigned int length = attribute[1] | (attribute[2] << 8);
+			unsigned int window = attribute[4] & 0x7f;
+
+			__aeabi_memcpy(ps->noaAttribute, attribute, length + 3);
+			if ((attribute[4] >> 7) && window) {
+				wlanPsWakeBeacons = window >> 1;
+				ps->noaMode = 1;
+			} else if (length > 2 && (ps->noaAttribute[6] | ps->noaAttribute[7] |
+						  ps->noaAttribute[8] | ps->noaAttribute[9]) &&
+				   (ps->noaAttribute[10] | ps->noaAttribute[11] |
+				    ps->noaAttribute[12] | ps->noaAttribute[13])) {
+				ps->noaMode = 2;
+			}
+		}
+		if (ps->triggerPending) {
+			wlanChannelContext.triggerCount++;
+			osaEventFlagsSet(macTxEventFlags, 1, 7);
+		}
+	}
+
+	if (connection->interfaceType == 1) {
+		wlanIbssBeaconReceived(connection, (const WlanWirelessFrame *)frame, (const void *)argument,
+				       &elements, rates);
+		return;
+	}
+	if (wlanConnectionIsHt(connection) && elements.pHtCap != NULL)
+		macMgmtApplyContext(connection, (uint8_t *)elements.pHtInfo);
+	wlanStaPsBeaconSeen(connection, elements.pTim, dtim);
+	wlanWmmUpdate(connection, elements.pWmmInfo, elements.pWmmParam);
+	if (elements.pDsParam != NULL && wlanOperatingChannel() != elements.pDsParam[2]) {
+		if (++wlanChannelContext.beaconMisses >= 3) {
+			wlanReportEvent(connection, NULL, 7);
+			wlanChannelContext.beaconMisses = 0;
+		}
+	} else {
+		wlanChannelContext.beaconMisses = 0;
+		if (rates < 0x20)
+			wlanProtection.flags = (wlanProtection.flags | 8) & ~7;
+		else
+			wlanProtection.flags = (wlanProtection.flags & ~(8 | 7)) | 2;
+	}
+}
+
+/* 0x35da6: the machine is set up and started in its first state. */
+int macMgmtSetupContext(struct WlanConnection *connection)
+{
+	macMgmtFilterState(&connection->machine);
+	romHsmStart(&connection->machine, &wlanIbssStates.verify);
+	return 0;
+}
+
+/* 0x35dc0: the protection's preamble kind is applied. */
+void macMgmtClearContext(struct WlanConnection *connection)
+{
+	wlanPsApplyFrame(connection, 0, (wlanProtection.flags >> 5) & 1);
+	wlanMacSlotConfigure((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) != 0);
+}
+
+/* 0x35e14: the connection is put back to what it was before it joined or started a network. */
+void macMgmtConvertContext(struct WlanConnection *connection)
+{
+	const uint8_t *rates = wlanRadioConfig->rates;
+	unsigned int count;
+
+	macTxSetPowerSave(0);
+	romLibSyncContext(0xc00);
+	wlanClearBodyLength((uint16_t *)connection->bssCapability);
+	if (connection->interfaceType == 3 && connection->p2pState == 3) {
+		__aeabi_memclr4(connection->localAddress, 6);
+		__aeabi_memclr4(connection->networkSsid, 32);
+		connection->networkSsidLength = 0;
+		connection->dtimPeriod = 0;
+		connection->beaconPeriod = 0;
+	}
+	macTxFlushConnection(connection);
+	wlanHtElementsReset(connection);
+	__aeabi_memclr(connection->peerAddress, 6);
+	connection->associationId = 0;
+	rfCalibSyncDescriptor();
+	wlanBssSelectAddress(1, NULL);
+	wlanSetSlotTime(1);
+	wlanBssAllowStart(0);
+	wlanBssAllowStart(3);
+	wlanConnectionCommandCheck(1, 1);
+	wlanConnectionCommandPrepare(1, 0);
+	macTxNotifyParseFrame(connection);
+	macTxNotifyConfigureFrame(connection);
+	if (wlanRadioConfig->primaryDiversity)
+		uapSqramClearTable();
+	else
+		uapSqramSetupTable();
+	wlanSignalReset(connection);
+	count = romStringLength(rates, 14);
+	wlanPsBuildPacket();
+	macMgmtQueryContext(connection, rates, count, wlanRateBitmapAll(rates, count, 0, 0, NULL));
+	macTxNotifyApplyFrame(connection);
+	cbProcRecordPacket(connection, 0, 0);
+	btLmpLcHandleState(0);
+	connection->flags &= ~(0x10 | 0x04);
+	connection->dtimPeriod = 0;
+	connection->beaconPeriod = 100;
+	connection->beaconRssiLast = -98;
+	connection->noiseLast = -98;
+	__aeabi_memclr(wlanBssCounters, sizeof(wlanBssCounters));
+	__aeabi_memclr(&wlanProtection, 0x62);
+	wlanProtection.flags |= WLAN_PROTECTION_LONG_PREAMBLE;
+	macMgmtClearContext(connection);
+	wlanWepIcvErrInit(wlanIbssIcvErrEntries, &wlanIbssIcvErrList);
+	wlanTxPowerSetConnectionLimit(&connection->txPowerLimit, 255, 1);
 }
 
 /* 0x35f74 */
@@ -310,7 +601,7 @@ int macMgmtSelectContext(struct WlanConnection *connection)
 	if (connection->mode == 2) {
 		if ((connection->flags2 & 0x10) == 0)
 			return 0;
-	} else if (connection->smState == connection->smStates + 72 &&
+	} else if (connection->machine.state == &wlanIbssStates.hold &&
 		   wlanOperatingChannel() != wlanChannelContext.savedChannel) {
 		return 0;
 	}
@@ -320,8 +611,15 @@ int macMgmtSelectContext(struct WlanConnection *connection)
 /* 0x35faa: the station machine is in one of the linked states. */
 int wlanStaSmLinked(const struct WlanConnection *connection)
 {
-	const uint8_t *state = connection->smState;
-	const uint8_t *states = connection->smStates;
+	const struct RomHsmState *state = connection->machine.state;
 
-	return state == states + 48 || state == states + 36 || state == states + 60;
+	return state == &wlanIbssStates.select || state == &wlanIbssStates.adjust ||
+	       state == &wlanIbssStates.record;
+}
+
+/* 0x35fca: the IBSS the machine is in is dropped; the beacons it missed are forgotten. */
+void macMgmtRecordContext(void)
+{
+	wlanChannelContext.beaconMisses = 0;
+	wlanIbssReset();
 }

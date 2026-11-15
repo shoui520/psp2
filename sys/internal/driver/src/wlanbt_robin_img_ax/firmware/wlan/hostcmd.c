@@ -507,7 +507,7 @@ extern struct OsaBufferPool hostCmdResponsePool;				/* 0x04000e24 */
 extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
 extern uint8_t *wlanAntennaProfile;						/* 0x040088ca, unaligned */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
-extern uint8_t wlanRssiInfoMarks[8];						/* 0x040088d2 */
+extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
 extern struct WlanConnection *wlanIbssConnection;				/* 0x000596d0 */
 extern uint16_t wlanAmsduSize;							/* 0x04001004 */
 extern uint16_t wlanAmsduEnabled;						/* 0x04000ff8 */
@@ -1493,7 +1493,7 @@ int hostCmdProcess(void)
 				PUT16(body + 4, 1 << connection->dataRssiShift);
 				hdr[2] = 38;
 				hdr[3] = 0;
-				__aeabi_memcpy(body + 22, wlanRssiInfoMarks, 8);
+				__aeabi_memcpy(body + 22, wlanBeaconTimestamp, 8);
 				PUT16(body + 8, connection->noise);
 				PUT16(body + 6, connection->beaconRssi);
 				rssi = wlanBeaconRssi(connection);

@@ -14,7 +14,9 @@
  * converted code reads are named; the rest is used by files not converted yet.
  */
 struct WlanRadioConfig {
-	uint8_t reserved0[24];
+	uint8_t reserved0[5];
+	uint8_t rates[14];		/* the rates a started network offers, 0-terminated (macMgmtConvertContext()) */
+	uint8_t reserved19[5];
 	uint32_t regionPowerTable;	/* nonzero: the region's power table limits transmit power */
 	uint8_t params[15];		/* a connection's SNMP values; cleared when one is configured */
 	uint8_t reserved43[160 - 43];

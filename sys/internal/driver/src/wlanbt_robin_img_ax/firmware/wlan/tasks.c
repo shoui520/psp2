@@ -84,7 +84,6 @@ void macTxNotifyTaskMain(ULONG input);		/* 0x2f42c */
 void cbProcTaskMain(ULONG input);		/* 0x1aeae */
 int macMgmtConfigureBuffer(void);		/* 0x37d74 */
 int uapSqramValidateContext(void);		/* SQRAM via ROM veneer 0x52eb4 */
-void macMgmtRecordContext(void);		/* 0x35fca */
 int tx_queue_create_words(void *queue, void *name, unsigned int words, void *start, unsigned int size);
 
 /* Appends a stage to the chain unless it is empty or already present. */

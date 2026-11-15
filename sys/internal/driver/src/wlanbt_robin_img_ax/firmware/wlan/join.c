@@ -96,7 +96,6 @@ void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 void wpaSuppScheduleDescriptor(struct WlanConnection *connection);	/* 0x18c0a */
 void cbProcFilterPacket(struct WlanConnection *connection, const WlanIePointers *ies,
 			uint32_t sameBss, int unused);			/* 0x1e8ba */
-void macMgmtClearContext(struct WlanConnection *connection);		/* 0x35dc0 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
 int cbProcSetupEntry(void);						/* 0x1cb00 */
 int cbProcVerifyEntry(void);						/* 0x1cb1a */

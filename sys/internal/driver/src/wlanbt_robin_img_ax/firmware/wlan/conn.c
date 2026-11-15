@@ -83,7 +83,6 @@ void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a 
 int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
 int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */
 int wlanStaRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);					/* 0xfdb2 */
-void macMgmtSetupContext(struct WlanConnection *connection);					/* 0x35da6 */
 int wlanApRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfb70 */
 int wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);					/* 0xfb1c */
 
