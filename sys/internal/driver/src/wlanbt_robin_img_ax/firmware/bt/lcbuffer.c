@@ -2388,3 +2388,31 @@ int btLmpLcValidateFrame(uint8_t kind, const uint8_t *address, int direct)
 	__aeabi_memcpy(message + 5, address, 6);
 	return osa_MsgSend((void **)&message, btQueueLcCommand);
 }
+
+/*
+ * Link controller events: 0 and 1 reset the ROM's kind 3 state for every handle; 3 and 0x34 take
+ * the link's context, clear btLinkReleaseSeen and pass its device address on (event 3 as kind 2,
+ * with the event message marked 2 and freed; 0x34 with the context's own kind).
+ */
+void btLmpLcPrepareFrame(unsigned int link, unsigned int event, uint32_t unused, void *message)
+{
+	uint8_t *context;
+
+	if (event == 0 || event == 1) {
+		btLcoRomResetState(3, 0xffff, 0, 1);
+	} else if (event == 3) {
+		context = btLcoRomDispatchContext(link);
+		btLinkReleaseSeen = 0;
+		btLcoRomProcessContext(context[2], 0, context + 8);
+		((uint8_t *)message)[4] = 2;
+		btLmpLcValidateFrame(2, context + 8, context[2]);
+		btLinkContextDoneHook(context);
+		osa_MsgFree(&message);
+	} else if (event == 0x34) {
+		context = btLcoRomDispatchContext(link);
+		btLinkReleaseSeen = 0;
+		btLcoRomProcessContext(context[2], 0, context + 8);
+		btLmpLcValidateFrame(context[33], context + 8, context[2]);
+		btLinkContextDoneHook(context);
+	}
+}
