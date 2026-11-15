@@ -33,6 +33,8 @@ _Static_assert(offsetof(HostCmd_DS_802_11_ASSOCIATE, tlvBuffer) == 13, "associat
 #define TLV_TYPE_RATES			0x0001
 #define TLV_TYPE_PHY_DS			0x0003
 #define TLV_TYPE_HT_CAPABILITY_IE	0x002d	/* an 802.11 element passed through */
+#define TLV_TYPE_HT_INFORMATION_IE	0x003d
+#define TLV_TYPE_OBSS_SCAN_PARAM_IE	0x004a
 #define TLV_TYPE_RSN_IE			0x0030
 #define TLV_TYPE_2040BSS_COEX_IE	0x0048
 #define TLV_TYPE_EXTCAP_IE		0x007f
@@ -42,7 +44,10 @@ _Static_assert(offsetof(HostCmd_DS_802_11_ASSOCIATE, tlvBuffer) == 13, "associat
 #define TLV_TYPE_TSFTIMESTAMP		0x0113
 #define TLV_TYPE_AUTH_TYPE		0x011f
 #define TLV_TYPE_HT_CAPABILITY		0x014a
+#define TLV_TYPE_HT_INFORMATION		0x014b
 #define TLV_TYPE_2040BSS_COEX		0x014d
+#define TLV_TYPE_OBSS_SCAN_PARAM	0x014e
+#define TLV_TYPE_POWER_CAPABILITY_IE	0x0021
 #define TLV_TYPE_EXTCAP			0x014f
 #define TLV_TYPE_WAPI_IE		0x015e
 

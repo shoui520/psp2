@@ -47,10 +47,6 @@
 /* The host command response posted when a join ends without a result. */
 #define HostCmd_RET_802_11_ASSOCIATE	0x8012
 
-/* 802.11 element IDs this file writes. */
-#define IE_HT_CAPABILITY		45
-#define IE_POWER_CAPABILITY		33
-
 /* HT Capabilities Information, low byte: 20/40 MHz supported. */
 #define WLAN_HT_CAP_40MHZ		0x02
 

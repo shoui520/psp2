@@ -100,7 +100,7 @@ void macMgmtValidateTable(int reason);							/* 0x3726c */
 void wpaSuppClearQueue(struct WlanConnection *connection, unsigned int events);	/* 0x2ceb4 */
 void wpaSuppResolveQueue(struct WlanConnection *connection, unsigned int event);	/* 0x2c9ce */
 void macMgmtSyncHeader(struct WlanConnection *connection);				/* 0x3b4d2 */
-void rfCalibBuildQueue(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
+void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);					/* 0x3bc5a */
 void wlanMacFlush(void);									/* 0x1c840 */
@@ -236,7 +236,7 @@ static void cbProcRespondSme(void)
 			wlanAnyConnectionHostFlag8();
 			romLibScheduleState();
 			sysIssuePrimaryBbpCommand((uint32_t)response, (uint32_t)command, CBPROC_U16(command + 2));
-			rfCalibBuildQueue(response, command);
+			wlanAdHocResponseBssid(response, command);
 			if (command[19] == 0 || command[8] == 0) {
 				macMgmtPrepareDescriptor(wlanIbssAtimWindow);
 				if (wlanIbssAtimWindow != 0)
