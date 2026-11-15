@@ -9,22 +9,50 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 
-extern uint8_t btPoolHeaderMemory[0x3c70];		/* SQRAM 0xc00022f4: the memory of the table pool */
-extern uint8_t btPoolFrameMemory[0x11a0];		/* SQRAM 0xc0001154: the memory of the event pool */
-extern uint8_t btPoolDescriptorMemory[];		/* SQRAM 0xc0003c04: the memory of the packet pool */
+/* The pools' blocks: the table pool has three sizes, the packet and event pools one. */
+#define BT_TABLE_POOL_CLASSES	3
+#define BT_TABLE_POOL_BLOCKS	32	/* 12 + 8 + 12 */
+#define BT_PACKET_POOL_BLOCKS	8
+#define BT_EVENT_POOL_BLOCKS	4
+#define BT_POOL_AREA_SIZE	0x3c70	/* the table pool's blocks, then the packet pool's */
+#define BT_PACKET_POOL_OFFSET	0x1910	/* (0x4c + 4) * 12 + (0x9c + 4) * 8 + (0x158 + 4) * 12 */
+#define BT_EVENT_POOL_SIZE	0x11a0	/* (0x464 + 4) * 4 */
+#define BT_RECORD_BUFFERS	3
+#define BT_RECORD_SIZE		752
+
+/*
+ * What btLmpLcResolveEntry() writes into the radio through btLmpLcSyncEntry(): the length in bytes,
+ * the words, and the word that starts the radio on them. The pools take the memory over afterwards.
+ */
+#define BT_RADIO_TABLE_WORDS	128
+struct BtRadioTable {
+	uint16_t length;
+	uint16_t words[BT_RADIO_TABLE_WORDS];
+	uint16_t start;
+};
+
+/* SQRAM 0xc0001154: the event pool's blocks, holding the radio's table at 0xc000 until then. */
+union BtPoolFrameMemory {
+	uint8_t bytes[BT_EVENT_POOL_SIZE];
+	struct BtRadioTable radioTable;
+};
+
+extern uint8_t btPoolHeaderMemory[BT_POOL_AREA_SIZE];	/* SQRAM 0xc00022f4: the table pool's blocks, then the packet pool's */
+#define btPoolDescriptorMemory	(&btPoolHeaderMemory[BT_PACKET_POOL_OFFSET])	/* SQRAM 0xc0003c04 */
+extern union BtPoolFrameMemory btPoolFrameMemory;
 extern struct OsaBufferPool btTablePool;		/* SQRAM 0xc0001118 */
-extern struct OsaPoolConfig btTablePoolConfig;			/* SQRAM 0xc0001124 */
-extern uint8_t btTablePoolControl[];			/* SQRAM 0xc0005f64 */
+extern struct OsaPoolConfig btTablePoolConfig[BT_TABLE_POOL_CLASSES];	/* SQRAM 0xc0001124 */
+extern uint8_t btTablePoolControl[4 * BT_TABLE_POOL_BLOCKS];		/* SQRAM 0xc0005f64 */
 extern struct OsaBufferPool btPacketPool;		/* SQRAM 0xc000113c */
 extern struct OsaPoolConfig btPacketPoolConfig;			/* SQRAM 0xc0001108 */
-extern uint8_t btPacketPoolControl[];			/* SQRAM 0xc0005fe4 */
+extern uint8_t btPacketPoolControl[4 * BT_PACKET_POOL_BLOCKS];	/* SQRAM 0xc0005fe4 */
 extern struct OsaBufferPool btEventPool;		/* SQRAM 0xc0001148 */
 extern struct OsaPoolConfig btEventPoolConfig;			/* SQRAM 0xc0001110 */
-extern uint8_t btEventPoolControl[];			/* SQRAM 0xc0006004 */
+extern uint8_t btEventPoolControl[4 * BT_EVENT_POOL_BLOCKS];		/* SQRAM 0xc0006004 */
 extern uint32_t btEventPoolFailures;			/* SQRAM 0xc0001100: allocations the event pool refused */
 extern uint32_t btPacketPoolFailures;			/* SQRAM 0xc0001104 */
-extern uint8_t btRecordBuffers[][752];			/* SQRAM 0xc0006014 */
-extern uint8_t btContextBuffers[][752];			/* SQRAM 0xc00068e4 */
+extern uint8_t btRecordBuffers[BT_RECORD_BUFFERS][BT_RECORD_SIZE];	/* SQRAM 0xc0006014 */
+extern uint8_t btContextBuffers[BT_RECORD_BUFFERS][BT_RECORD_SIZE];	/* SQRAM 0xc00068e4 */
 extern int (*btLimitParam)(uint8_t *packet);		/* 0x400f154 */
 
 /* The hooks btLmpLcQueryEntry() installs in the ROM (0x400eb88 - 0x400eb9x, ROM data). */

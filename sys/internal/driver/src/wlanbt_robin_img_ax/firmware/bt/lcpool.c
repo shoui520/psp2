@@ -21,13 +21,62 @@
 /* Where a buffer's data begins: after the allocator's header and the controller's own. */
 #define POOL_DATA_OFFSET	40
 
+/* The pools and their memory in SQRAM0 (0xc0001100 - 0xc00071b4). */
+uint32_t btEventPoolFailures __attribute__((section(".sqram0.rw")));			/* 0xc0001100 */
+uint32_t btPacketPoolFailures __attribute__((section(".sqram0.rw")));			/* 0xc0001104 */
+struct OsaPoolConfig btPacketPoolConfig __attribute__((section(".sqram0.rw"))) = { 0, 0x468, BT_PACKET_POOL_BLOCKS };	/* 0xc0001108 */
+struct OsaPoolConfig btEventPoolConfig __attribute__((section(".sqram0.rw"))) = { 0, 0x464, BT_EVENT_POOL_BLOCKS };	/* 0xc0001110 */
+struct OsaBufferPool btTablePool __attribute__((section(".sqram0.rw"))) = { { { BT_TABLE_POOL_CLASSES, 0, 0 } } };	/* 0xc0001118 */
+struct OsaPoolConfig btTablePoolConfig[BT_TABLE_POOL_CLASSES] __attribute__((section(".sqram0.rw"))) = {	/* 0xc0001124 */
+	{ 0, 0x4c, 12 }, { 0, 0x9c, 8 }, { 0, 0x158, 12 },
+};
+struct OsaBufferPool btPacketPool __attribute__((section(".sqram0.rw"))) = { { { 1, 0, 0 } } };	/* 0xc000113c */
+struct OsaBufferPool btEventPool __attribute__((section(".sqram0.rw"))) = { { { 1, 0, 0 } } };	/* 0xc0001148 */
+
+/* A signed 14-bit value of the radio's table. */
+#define S14(value)	((uint16_t)((value) & 0x3fff))
+
+union BtPoolFrameMemory btPoolFrameMemory __attribute__((section(".sqram0.rw"), aligned(4))) = {	/* 0xc0001154 */
+	.radioTable = {
+		.length = 2 * BT_RADIO_TABLE_WORDS,
+		.words = {
+			S14(26), S14(-52), S14(-112), S14(-157), S14(-191), S14(-215), S14(-232), S14(-244),
+			S14(-251), S14(-254), S14(-255), S14(-255), S14(-253), S14(-250), S14(-247), S14(-244),
+			S14(-241), S14(-238), S14(-235), S14(-232), S14(-230), S14(-227), S14(-225), S14(-222),
+			S14(-220), S14(-218), S14(-216), S14(-213), S14(-211), S14(-208), S14(-205), S14(-202),
+			S14(-198), S14(-195), S14(-191), S14(-187), S14(-182), S14(-178), S14(-173), S14(-168),
+			S14(-163), S14(-158), S14(-153), S14(-148), S14(-143), S14(-138), S14(-132), S14(-127),
+			S14(-122), S14(-117), S14(-112), S14(-107), S14(-102), S14(-97), S14(-92), S14(-87),
+			S14(-83), S14(-78), S14(-73), S14(-68), S14(-64), S14(-59), S14(-54), S14(-49),
+			S14(-44), S14(-39), S14(-34), S14(-29), S14(-24), S14(-19), S14(-14), S14(-8),
+			S14(-3), S14(3), S14(8), S14(14), S14(19), S14(25), S14(31), S14(37),
+			S14(42), S14(48), S14(54), S14(60), S14(65), S14(71), S14(77), S14(82),
+			S14(88), S14(93), S14(99), S14(104), S14(109), S14(115), S14(120), S14(125),
+			S14(131), S14(136), S14(141), S14(147), S14(152), S14(158), S14(164), S14(169),
+			S14(175), S14(181), S14(187), S14(193), S14(199), S14(206), S14(212), S14(218),
+			S14(224), S14(230), S14(236), S14(241), S14(247), S14(252), S14(257), S14(262),
+			S14(267), S14(271), S14(276), S14(282), S14(288), S14(296), S14(305), S14(317),
+		},
+		.start = 0x4643,
+	},
+};
+
+/* PLACEHOLDER: the radio's 8051 program (0x2b54 bytes, loaded at 0x8000) is not rebuilt yet; zero. */
+uint8_t btPoolHeaderMemory[BT_POOL_AREA_SIZE] __attribute__((section(".sqram0.rw"), aligned(4)));	/* 0xc00022f4 */
+
+uint8_t btTablePoolControl[4 * BT_TABLE_POOL_BLOCKS] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0005f64 */
+uint8_t btPacketPoolControl[4 * BT_PACKET_POOL_BLOCKS] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0005fe4 */
+uint8_t btEventPoolControl[4 * BT_EVENT_POOL_BLOCKS] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0006004 */
+uint8_t btRecordBuffers[BT_RECORD_BUFFERS][BT_RECORD_SIZE] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc0006014 */
+uint8_t btContextBuffers[BT_RECORD_BUFFERS][BT_RECORD_SIZE] __attribute__((section(".sqram0.bss1"), aligned(4)));	/* 0xc00068e4 */
+
 int btLmpLcRecordContext(void)
 {
 	__aeabi_memclr(btPoolHeaderMemory, sizeof(btPoolHeaderMemory));
-	__aeabi_memclr(btPoolFrameMemory, sizeof(btPoolFrameMemory));
-	osa_BlockPoolCreate(&btTablePool, &btTablePoolConfig, btTablePoolControl, btPoolHeaderMemory, osaPoolEntryCreate);
+	__aeabi_memclr(&btPoolFrameMemory, sizeof(btPoolFrameMemory));
+	osa_BlockPoolCreate(&btTablePool, btTablePoolConfig, btTablePoolControl, btPoolHeaderMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&btPacketPool, &btPacketPoolConfig, btPacketPoolControl, btPoolDescriptorMemory, osaPoolEntryCreate);
-	return osa_BlockPoolCreate(&btEventPool, &btEventPoolConfig, btEventPoolControl, btPoolFrameMemory, osaPoolEntryCreate);
+	return osa_BlockPoolCreate(&btEventPool, &btEventPoolConfig, btEventPoolControl, &btPoolFrameMemory, osaPoolEntryCreate);
 }
 
 void btLmpLcFilterContext(void)
@@ -256,7 +305,7 @@ int btLmpLcResolveEntry(void)
 	btPowerLevelEntry = rfRegRead(1);
 	rfBusLeave1350();
 	if (btLmpLcSyncEntry(0x8000, (const uint16_t *)btPoolHeaderMemory, 32) == 0 ||
-	    btLmpLcSyncEntry(0xc000, (const uint16_t *)btPoolFrameMemory, 64) == 0)
+	    btLmpLcSyncEntry(0xc000, &btPoolFrameMemory.radioTable.length, 64) == 0)
 		for (;;)
 			;
 	btSbcApplyContext();

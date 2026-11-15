@@ -904,25 +904,8 @@ PROVIDE(btLinkMaskContext            = 0x0400f7ff);
 PROVIDE(btLinkMaskHeader             = 0x0400f8c8);
 PROVIDE(btLinkIndexRecord            = 0x0400f7fd);
 PROVIDE(btLinkMaskState              = 0x0400f7fe);
-/* The controller's pools below the image's SQRAM (0xc0001100 - 0xc0006fff), outside its scatter regions. */
-PROVIDE(btPoolHeaderMemory           = 0xc00022f4);
-PROVIDE(btPoolFrameMemory            = 0xc0001154);
-PROVIDE(btPoolDescriptorMemory       = 0xc0003c04);
-PROVIDE(btTablePool                  = 0xc0001118);
-PROVIDE(btTablePoolConfig            = 0xc0001124);
-PROVIDE(btTablePoolControl           = 0xc0005f64);
-PROVIDE(btPacketPool                 = 0xc000113c);
-PROVIDE(btPacketPoolConfig           = 0xc0001108);
-PROVIDE(btPacketPoolControl          = 0xc0005fe4);
-PROVIDE(btEventPool                  = 0xc0001148);
-PROVIDE(btEventPoolConfig            = 0xc0001110);
-PROVIDE(btEventPoolControl           = 0xc0006004);
-PROVIDE(btEventPoolFailures          = 0xc0001100);
-PROVIDE(btPacketPoolFailures         = 0xc0001104);
-PROVIDE(btRecordBuffers              = 0xc0006014);
 PROVIDE(btLimitParam                 = 0x0400f154);
 PROVIDE(btEntryHooks                = 0x0400eb88);
-PROVIDE(btContextBuffers            = 0xc00068e4);
 
 /* ThreadX's interrupt context save and restore (vectorIrq, sysIrqHook). */
 PROVIDE(_tx_thread_context_save = 0x03f05124);
