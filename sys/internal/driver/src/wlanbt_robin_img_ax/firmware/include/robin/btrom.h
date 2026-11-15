@@ -159,6 +159,8 @@ void btLtsRomClearState(void);
 uint8_t *btLcoRomDispatchContext(unsigned int link);
 void btLcoRomValidateContext(unsigned int link, uint32_t argument);
 void btLcoRomUpdateContext(void);
+void btLtsRomCheckContext(unsigned int link, uint32_t clock, unsigned int kind, uint32_t argument,
+			  unsigned int interval, uint32_t extra);
 void btLcoRomBuildContext(uint32_t *command);
 int btLcoRomConfigureContext(const uint8_t *address, uint16_t *link);
 void btLdrRomQueryState(unsigned int handle, int power, unsigned int reason, uint32_t timeout, int flags);

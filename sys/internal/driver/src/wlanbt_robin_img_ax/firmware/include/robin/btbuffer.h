@@ -123,6 +123,7 @@ extern uint8_t btLinkMatchEnabled;				/* 0x400f6d2 */
 extern uint8_t btLinkMatchFirst;				/* 0x400f6d3 */
 extern uint8_t btLinkMatchSecond;				/* 0x400f6d4 */
 extern const uint8_t *btLinkMatchPeer;				/* 0x400f6e8: its address at 4 */
+extern uint32_t (*btLinkClockHook)(void);			/* 0x400eb38 */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -154,6 +155,7 @@ extern struct BtSlotRequest btSlotRequest;			/* 0x400cd10 */
 extern struct BtSlotRequest *btTableSlotRequest;		/* 0x552c0 */
 extern const uint32_t romQueueLcp;				/* ROM 0x03f41a40 */
 extern const uint32_t romQueueLc;				/* ROM 0x03f41a44 */
+extern const uint32_t romQueueSlot;				/* ROM 0x03f41a48: the slot requests made in interrupts */
 extern const uint32_t romQueueLsc;				/* ROM 0x03f41a4c */
 
 void btLmpLcHandleBuffer(void);					/* 0x44ca6 */
@@ -195,6 +197,8 @@ void btLmpLcHandlePacket(void);					/* 0x465d8 */
 void btLmpLcProcessPacket(unsigned int link, uint32_t argument);	/* 0x46660 */
 void btLmpLcUpdatePacket(void);					/* 0x466e8 */
 int btLmpLcConfigurePacket(uint32_t *command);			/* 0x466f8 */
+void btLmpLcCheckPacket(unsigned int link, uint32_t clock, unsigned int kind, uint32_t argument,
+			unsigned int interval, uint32_t extra);		/* 0x46776 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -13,6 +13,7 @@
 #include "robin/eventpower.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/threadx.h"
 
 #define LINK_HALF(offset)	(*(BtHalf *)(btLinkContext + (offset)))
 /* The due clock each link's slot was last taken at (btLmpLcAdjustBuffer()). */
@@ -1419,4 +1420,39 @@ int btLmpLcConfigurePacket(uint32_t *command)
 		return 1;
 	}
 	return 0;
+}
+
+/*
+ * Sets a link's mode 7 slots up: the slots it may repeat follow from its interval. Called in an
+ * interrupt or the timer thread, it only takes the next slot clock of the second slot kind and
+ * posts message 0xccf to the link controller.
+ */
+void btLmpLcCheckPacket(unsigned int link, uint32_t clock, unsigned int kind, uint32_t argument,
+			unsigned int interval, uint32_t extra)
+{
+	struct BtDeviceProfile *profile;
+
+	if (_tx_thread_system_state != 0 || _tx_thread_current_ptr == &_tx_timer_thread) {
+		unsigned int period = btDeviceContext.timings[1].buffer;
+		uint32_t base;
+		uint32_t *message;
+
+		if (period > 0x200)
+			period = 0x200;
+		else if (period < 0x40)
+			period = 0x40;
+		base = btLtsRomParseState(0);
+		btDeviceContext.queue = base + btLinkClockHook() % period;
+		message = osa_MsgAlloc(4);
+		*message = 0xccf;
+		osa_MsgSend((void **)&message, romQueueSlot);
+		return;
+	}
+	profile = &btDeviceProfile[link];
+	profile->repeatLimit = (int)(interval - 9) / 9 + interval / 9;
+	profile->repeats = 0;
+	if (kind == 2 && (btDeviceContext.entry & 1) && btDeviceContext.timings[1].frame == 1)
+		clock += 9;
+	btLtsRomCheckContext(link, clock, kind, argument, interval, extra);
+	profile->options |= 0x80;
 }

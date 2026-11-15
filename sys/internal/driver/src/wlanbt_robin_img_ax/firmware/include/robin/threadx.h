@@ -114,5 +114,7 @@ UINT tx_timer_change(TX_TIMER *timer, ULONG initial_ticks, ULONG reschedule_tick
 
 /* ThreadX kernel state kept by the ROM in DTCM; nonzero while in an ISR. */
 extern volatile ULONG _tx_thread_system_state;
+extern TX_THREAD *volatile _tx_thread_current_ptr;
+extern TX_THREAD _tx_timer_thread;
 
 #endif /* ROBIN_THREADX_H */

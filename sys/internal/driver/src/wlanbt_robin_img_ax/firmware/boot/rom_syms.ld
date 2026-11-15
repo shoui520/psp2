@@ -28,6 +28,8 @@ PROVIDE(romGetTimerTimestamp = 0x03f3a6c5);
 /* 32x32 -> 64-bit multiply (low word in r0, high in r1), reached through the veneer at 0x52d4c. */
 PROVIDE(romMul32x32 = 0x03f3f3b4);
 PROVIDE(_tx_thread_system_state = 0x0400fc78);
+PROVIDE(_tx_thread_current_ptr  = 0x0400fe60);
+PROVIDE(_tx_timer_thread        = 0x0400fdc8);
 
 /* mdev device framework */
 PROVIDE(mdevInterrupt         = 0x03f06301);
@@ -392,6 +394,8 @@ PROVIDE(btLinkMatchEnabled           = 0x0400f6d2);
 PROVIDE(btLinkMatchFirst             = 0x0400f6d3);
 PROVIDE(btLinkMatchSecond            = 0x0400f6d4);
 PROVIDE(btLinkMatchPeer              = 0x0400f6e8);
+PROVIDE(btLinkClockHook              = 0x0400eb38);
+PROVIDE(btLtsRomCheckContext    = 0x03f3540f);
 PROVIDE(btLinkReleaseSeen            = 0x0400f6cb);
 PROVIDE(btLinkReleaseHeld            = 0x0400f6cc);
 PROVIDE(btStateHooks                 = 0x0400f9ac);
@@ -402,6 +406,7 @@ PROVIDE(btLinkSpanEnabled            = 0x0400f7f2);
 PROVIDE(btLinkPayloadRegister        = 0x0400f7fc);
 PROVIDE(btLinkLimitHook              = 0x0400f1d0);
 PROVIDE(romQueueLc                   = 0x03f41a44);
+PROVIDE(romQueueSlot                 = 0x03f41a48);
 PROVIDE(romQueueLsc                  = 0x03f41a4c);
 PROVIDE(btTargetConfig               = 0x0400de50);
 PROVIDE(btSlotQueues                 = 0x0400dcdc);
