@@ -608,7 +608,6 @@ int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
 extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
-uint32_t wlanRateTimeoutValue(uint8_t *rateControl, uint32_t timeout, unsigned int shift); /* 0x2bd4a */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
 void wlanTxRingMovePending(unsigned int window, unsigned int queue);	/* 0x30eec */
 void wlanTxRingMoveToWindow(unsigned int window, unsigned int queue, unsigned int tid,
@@ -859,7 +858,6 @@ OsaBuffer *macTxNotifyNextFrame(void);					/* 0x2fe92 */
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
-unsigned int wlanRateSelect(uint8_t *rateControl);			/* 0x2be18 */
 unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
 int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
 uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int *drop, int *eapol,
@@ -1174,7 +1172,7 @@ found:
 				forced = 1;
 				macTxSetFlags(request, 0x1000, 0);
 			} else {
-				macTxSetRate(request, wlanRateSelect(connection->rateControl));
+				macTxSetRate(request, wlanRateSelect(&connection->rateControl));
 				if (forced != 0 ||
 				    (((WlanWirelessFrame *)__aeabi_uread4(request->frame))->address1[0] & 1))
 					macTxSetFlags(request, 0x1000, 0);
@@ -1674,7 +1672,7 @@ void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
 /* Block Ack timeout of a session in the units of the rate control of its connection. */
 uint32_t wlanTxBaTimeoutRegister(uintptr_t owner, uint32_t timeout)
 {
-	return wlanRateTimeoutValue(((struct WlanConnection *)owner)->rateControl, timeout, 14);
+	return wlanRateTimeoutValue(&((struct WlanConnection *)owner)->rateControl, timeout, 14);
 }
 
 /*

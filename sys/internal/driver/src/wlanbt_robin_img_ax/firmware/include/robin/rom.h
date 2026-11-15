@@ -40,6 +40,8 @@ void romLibTrackContext(void);			/* 0x03f3a9e5 */
 void romLibUpdateContext(void *timing);		/* 0x03f3a831: fills a station TSF record */
 unsigned int romRateIndex(unsigned int rate);	/* 0x03f3ab4f */
 unsigned int romRateValue(unsigned int index);	/* 0x03f3abc5: compared to order rates */
+struct WlanRateControl;
+unsigned int romLibNotifyEntry(unsigned int rate, struct WlanRateControl *rc, unsigned int limit); /* 0x03f3adfa */
 unsigned int romRateBitrate(unsigned int index);	/* 0x03f3a2ab: compared to the link rate threshold */
 unsigned int romStringLength(const void *string, unsigned int limit);
 /* Callable 64-bit clock result; its absent ROM implementation is opaque. */

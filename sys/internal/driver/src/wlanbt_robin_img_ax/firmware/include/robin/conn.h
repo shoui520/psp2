@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/ratectl.h"
 #include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
@@ -423,7 +424,7 @@ struct WlanConnection {
 		uint8_t peerLinkState[240];	/* cleared when the connection takes a new peer */
 		struct {
 			uint8_t reserved396[12];
-			uint8_t rateControl[228];	/* rate adaptation state (not converted yet) */
+			struct WlanRateControl rateControl;	/* rate adaptation state */
 		};
 	};
 	uint8_t reserved636[28];

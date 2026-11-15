@@ -268,3 +268,17 @@ unsigned int wlanEventMaskIndex(int event)
 		return 0;
 	}
 }
+
+/* The TLV behind tlv, if it has the type (the value of tlv has a length of its own); NULL otherwise. */
+const uint8_t *wlanTlvNextOfType(unsigned int type, const uint8_t *tlv)
+{
+	unsigned int length = LE16(tlv + 2);
+	const uint8_t *next;
+
+	if (length == 0)
+		return NULL;
+	next = tlv + (uint16_t)(length + 4);
+	if (LE16(next) != type)
+		return NULL;
+	return next;
+}

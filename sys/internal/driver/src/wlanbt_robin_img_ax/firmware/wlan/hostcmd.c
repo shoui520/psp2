@@ -498,7 +498,6 @@ void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
 void wlanPsFormatBuffer(struct WlanConnection *connection, unsigned int rate);	/* 0x3c7b8 */
 void wlanPsReleaseBuffer(void);							/* 0x3c9ba */
 void wlanPsQueryPacket(void);							/* 0x3d006 */
-unsigned int wlanRateSelect(uint8_t *rateControl);				/* 0x2be18 */
 int wlanPsFormatPacket(struct WlanConnection *connection);			/* 0x3d0e4 */
 void wlanHostWakeGpioSet(unsigned int gpio, int enable);			/* 0x28142 */
 void osaFormatVersionBanner(unsigned int selector, char *text);			/* 0x27c36 */
@@ -1722,7 +1721,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				wlanTxBufSizeSet((uint16_t *)(body + 2));
 				wlanPsQueryPacket();
-				wlanPsFormatBuffer(connection, wlanRateSelect(connection->rateControl));
+				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->rateControl));
 				wlanPsReleaseBuffer();
 				wlanTxBaArmTimeouts((uintptr_t)connection, wlanTxBaSessions);
 				body[4] = wlanTxBufferCount;
@@ -1748,7 +1747,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				wlanAmsduSize = HOSTCMD_U16(body + 2);
 				wlanPsQueryPacket();
-				wlanPsFormatBuffer(connection, wlanRateSelect(connection->rateControl));
+				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->rateControl));
 			}
 			PUT16(body + 2, wlanAmsduSize);
 			PUT16(body + 4, wlanAmsduEnabled);
