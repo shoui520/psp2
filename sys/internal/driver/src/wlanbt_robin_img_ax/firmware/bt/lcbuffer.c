@@ -2813,3 +2813,29 @@ invalid:
 complete:
 	btBdhRomCheckContext(4, status, 3, 5);
 }
+
+/* The inquiry ends (btTableProfile back to 0) and its command completes with status. */
+int btLmpLcScheduleFrame(unsigned int status)
+{
+	btBdhRomPrepareContext(0xffffffff, 0);
+	btTableProfile = 0;
+	btBdhRomCheckContext(4, status, 3, 5);
+	return 1;
+}
+
+/*
+ * A connection failed (message as for btLmpLcApplyFrame()); a request held back for it is
+ * filtered now and freed.
+ */
+int btLmpLcNotifyFrame(const uint8_t *message)
+{
+	if (btTableConnectDone(message[12], message + 4) == 0) {
+		btTableConnectFail(message);
+	} else {
+		btTableConnectFail(message);
+		btLmpLcQueryFrame(*btTableHeldEvent);
+		osa_MsgFree((void **)btTableHeldEvent);
+		*btTableHeldEvent = NULL;
+	}
+	return 1;
+}

@@ -437,6 +437,7 @@ PROVIDE(btLtsRomSyncState       = 0x03f3308b);
 PROVIDE(btLcoRomTrackContext    = 0x03f201c3);
 PROVIDE(btLtsRomDispatchState   = 0x03f32ed3);
 PROVIDE(btLtsRomVerifyState     = 0x03f3458f);
+PROVIDE(btBdhRomResetContext    = 0x03f09be9);
 PROVIDE(btBdhRomPrepareContext  = 0x03f08add);
 PROVIDE(btBdhRomCheckContext    = 0x03f08a03);
 PROVIDE(romLibAdjustEntry       = 0x03f3fb71);
