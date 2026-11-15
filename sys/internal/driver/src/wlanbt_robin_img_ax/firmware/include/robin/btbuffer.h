@@ -196,6 +196,10 @@ struct BtLinkSession {
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
 extern struct BtSyncFrameCounts btSyncFrameCounts;		/* 0x552ac */
 extern void (*btSyncFrameDoneHook)(unsigned int link, uint32_t buffer);	/* 0x400ece8 */
+extern void (*btLinkHostSlotAllocHook)(uint16_t *slot);	/* 0x400f1c8 */
+extern uint16_t *btLinkCommand;				/* 0x400f950 */
+extern uint8_t *btLinkChannelMap;			/* 0x400f978: the hopping channel map, 10 bytes */
+extern uint8_t btLinkChannelBase;			/* 0x400f7ed */
 extern uint32_t btQueueLcCommand;				/* 0x400f6e0: where message 4 goes */
 extern void (*btLinkContextDoneHook)(uint8_t *context);	/* 0x400f13c */
 extern int (*btLinkStateCheckHook)(unsigned int handle);	/* 0x400ec84 */

@@ -59,12 +59,6 @@ struct BtRfTestMessage {
 	uint16_t payloadLength;
 };
 
-/* The ROM's link controller data the test uses (DTCM). */
-extern void (*btLinkHostSlotAllocHook)(uint16_t *slot);	/* 0x400f1c8 */
-extern uint16_t *btLinkCommand;				/* 0x400f950 */
-extern uint8_t *btLinkChannelMap;			/* 0x400f978 */
-extern uint8_t btLinkChannelBase;			/* 0x400f7ed */
-
 /* Not converted, in ROM. */
 uint16_t btLdaRomSetupState(uint8_t packetType);	/* 0x3f23c44: the slots a packet of the type takes */
 void btLdaRomParseState(uint8_t *clock);		/* 0x3f21dfa */

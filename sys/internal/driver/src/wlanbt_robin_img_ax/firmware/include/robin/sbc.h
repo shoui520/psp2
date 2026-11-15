@@ -435,8 +435,6 @@ int btSbcRomValidateContext(void);
 void btSbcRomUpdateState(void);
 
 /* The SQRAM code the audio interrupt runs, not converted yet; provisional names. */
-extern uint8_t p2pSqramTableActive;			/* 0x5576a */
-void p2pSqramUpdateTable(void);				/* SQRAM, veneer 0x53acc */
 
 /* A hook the ROM calls when the audio clock changes; set to btSbcTrackState(). */
 extern int (*sbcClockHook)(void);			/* DTCM 0x400edf4 */

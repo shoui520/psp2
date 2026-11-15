@@ -47,9 +47,9 @@ uint8_t *btLmpLcHandleEntry(void)
 	return NULL;
 }
 
-int btLmpLcProcessEntry(void)
+int btLmpLcProcessEntry(uint8_t *packet)
 {
-	return btLimitParam();
+	return btLimitParam(packet);
 }
 
 /* A packet buffer. */

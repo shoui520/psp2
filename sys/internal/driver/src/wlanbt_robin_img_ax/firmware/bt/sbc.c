@@ -14,6 +14,7 @@
 #include "robin/hct.h"
 #include "robin/eventpower.h"
 #include "robin/rom.h"
+#include "robin/btrxtest.h"
 #include "robin/bttest.h"
 #include "robin/sbc.h"
 #include "robin/soc.h"
@@ -998,8 +999,8 @@ int btSbcAcquireState(int line, uint32_t pending)
 	(void)line;
 	(void)pending;
 	SOC_IRQ_ENABLE_CLEAR = 1u << SBC_SCO_IRQ_LINE;
-	if (p2pSqramTableActive != 0) {
-		p2pSqramUpdateTable();
+	if (btRxTest.active != 0) {
+		btRxTestInterrupt();
 	} else if (btRfTest.active != 0) {
 		btRfTestInterrupt();
 	} else {

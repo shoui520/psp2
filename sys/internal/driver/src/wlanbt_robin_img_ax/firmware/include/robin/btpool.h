@@ -25,12 +25,12 @@ extern uint32_t btEventPoolFailures;			/* SQRAM 0xc0001100: allocations the even
 extern uint32_t btPacketPoolFailures;			/* SQRAM 0xc0001104 */
 extern uint8_t btRecordBuffers[][752];			/* SQRAM 0xc0006014 */
 extern uint8_t btContextBuffers[][752];			/* SQRAM 0xc00068e4 */
-extern int (*btLimitParam)(void);			/* 0x400f154 */
+extern int (*btLimitParam)(uint8_t *packet);		/* 0x400f154 */
 
 /* The hooks btLmpLcQueryEntry() installs in the ROM (0x400eb88 - 0x400eb9x, ROM data). */
 struct BtEntryHooks {
 	uint8_t *(*config)(void);		/* 0x400eb88: an event buffer */
-	int (*release)(void);			/* 0x400eb8c */
+	int (*release)(uint8_t *packet);	/* 0x400eb8c: frees an event buffer */
 	uint8_t *(*control)(void);		/* 0x400eb90: a packet buffer */
 	int (*acquire)(uint8_t *packet);	/* 0x400eb94: frees a packet buffer */
 	void (*node)(void);			/* 0x400eb98 */
@@ -45,7 +45,7 @@ extern struct BtEntryHooks btEntryHooks;
 
 void btLmpLcFilterContext(void);			/* 0x4377a */
 uint8_t *btLmpLcHandleEntry(void);			/* 0x4377c */
-int btLmpLcProcessEntry(void);				/* 0x437b2 */
+int btLmpLcProcessEntry(uint8_t *packet);		/* 0x437b2 */
 uint8_t *btLmpLcUpdateEntry(void);			/* 0x437b8 */
 int btLmpLcConfigureEntry(uint8_t *packet);		/* 0x437e0 */
 uint8_t *btLmpLcCheckEntry(int index);			/* 0x437ea */

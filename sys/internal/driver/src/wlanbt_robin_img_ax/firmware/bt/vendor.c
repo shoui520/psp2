@@ -12,6 +12,7 @@
 #include "robin/mdev.h"
 #include "robin/btrom.h"
 #include "robin/btsource.h"
+#include "robin/btrxtest.h"
 #include "robin/bttable.h"
 #include "robin/bttest.h"
 #include "robin/eventpower.h"
@@ -249,7 +250,7 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		*returnLength = 8;
 		return;
 	case 24:
-		*status = p2pSqramHandleTable(length, parameters);
+		*status = btRxTestCommand(length, parameters);
 		return;
 	case 30:
 		btLmpLcRecordFrame(length, parameters, returnLength, status, returnParameters);
@@ -548,7 +549,7 @@ int btSbcRecordContext(uint8_t *message)
 			btHandleStates[*(uint16_t *)(message + 4)].flags = 1;
 		return 0;
 	case BT_MESSAGE_P2P_TABLE:
-		p2pSqramCheckTable();
+		btRxTestPacketReceived(message);
 		return 0;
 	case BT_MESSAGE_LINK_PACKET:
 		taken = btLmpLcInspectPacket(message);

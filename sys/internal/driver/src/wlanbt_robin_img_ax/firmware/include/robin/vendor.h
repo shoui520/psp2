@@ -78,7 +78,6 @@ extern uint16_t romLcDescriptor;			/* DTCM 0x400f562 */
 int btLdaRomQueryState(unsigned int length, const uint8_t *parameters);
 uint32_t mdevRomValidateState(void);
 uint8_t mdevRomScheduleState(uint8_t *reply, void *state, const void *tasks);
-uint8_t p2pSqramHandleTable(unsigned int length, const uint8_t *parameters);	/* SQRAM 0xc000edbc */
 
 void btSbcTrackContext(unsigned int opcode, unsigned int length, const uint8_t *command);	/* 0x4ec50 */
 int btSbcManageContext(uintptr_t first, uintptr_t second, uintptr_t third, uintptr_t fourth, uintptr_t fifth,
@@ -182,7 +181,6 @@ void btLdaRomBuildState(uint8_t *out, const uint8_t *in);
 void btLdaRomConfigureState(uint8_t *record, const uint8_t *data, unsigned int length);
 void btBdhRomResetState(const uint8_t *settings);
 unsigned int btHccRomResetState(unsigned int handle);
-void p2pSqramCheckTable(void);										/* SQRAM 0xc000f0ea */
 
 #define BT_MESSAGE_LINK_REQUEST	80
 
