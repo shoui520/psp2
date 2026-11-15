@@ -52,6 +52,11 @@ $(O)/runtime/unaligned.o: runtime/unaligned.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
 
+# The library's memmove, strncpy and strcmp are ARM too.
+$(O)/runtime/stringarm.o: runtime/stringarm.c $(HEADERS)
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+
 # The concealment's DSP loops are ARM in the original, like the runtime above.
 $(O)/bt/plcdsp.o: bt/plcdsp.c $(HEADERS)
 	@mkdir -p $(dir $@)

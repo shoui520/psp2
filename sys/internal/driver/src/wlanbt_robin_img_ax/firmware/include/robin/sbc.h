@@ -463,12 +463,9 @@ extern uint8_t *(*romLmpAcquireHook)(void);		/* DTCM 0x400eb30 */
 extern int (*romSbcRecordHook)(uint8_t *message);	/* DTCM 0x400ef34 */
 extern int (*romSbcFilterHook)(const uint8_t *message);	/* DTCM 0x400ef38 */
 extern void (*romSbcProcessHook)(void);			/* DTCM 0x400f19c */
-extern void (*romSbcUpdateHook)(void);			/* DTCM 0x400f2c0 */
+extern void (*romSbcUpdateHook)(const uint8_t *message);	/* DTCM 0x400f2c0 */
 void btBdhRomComputeState(void);
 
-/* The code they point at, not converted yet; the prototypes are provisional. */
-void btSbcProcessPacket(void);				/* 0x51c64 */
-void btSbcUpdatePacket(void);				/* 0x51c98 */
-void btSbcPreparePacket(void);				/* 0x51d20 */
+/* The code they point at is in bt/hcihook.c (robin/vendor.h). */
 
 #endif /* ROBIN_SBC_H */

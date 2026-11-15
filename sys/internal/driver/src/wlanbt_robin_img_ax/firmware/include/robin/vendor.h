@@ -150,7 +150,7 @@ extern uint8_t btScoDisconnectLinks[];			/* DTCM 0x400f567: the ACL handle of SC
 extern uint8_t btVendorPolicyFlag;			/* DTCM 0x400f8cc: vendor command 29; 0 adds bits 7..4 of the control word */
 extern uint8_t btVendorEventMode;			/* DTCM 0x400f534: 3: report commands the role switch ends */
 extern uint8_t btLocalFeatureMode;			/* DTCM 0x400f537: below 4, two local features are hidden */
-extern void (*btVendorKeyHook)(unsigned int kind, unsigned int length, uint8_t *out);	/* DTCM 0x400ed5c */
+extern int (*btVendorKeyHook)(unsigned int kind, unsigned int length, uint8_t *out);	/* DTCM 0x400ed5c */
 extern uint8_t *btVendorP2pRecords;			/* DTCM 0x400f958: two records of 76 bytes */
 
 int btSbcRecordContext(uint8_t *message);						/* 0x4ef6e */
@@ -192,7 +192,38 @@ uint8_t p2pSqramReleaseEntry(unsigned int length, const uint8_t *parameters);			
 /* The ROM's command completion: status and the opcode answered. */
 int btBdhRomValidateContext(unsigned int status, unsigned int opcode);
 
-/* Not converted yet; provisional names and prototypes. */
+/*
+ * bt/hcihook.c: the hooks of the Bluetooth host interface installed at
+ * start, and vendor command 0xe0's subcommands, each a hook of its own.
+ */
+#define BT_VENDOR_SUBCOMMANDS		7
+#define BT_STATUS_UNSUPPORTED		17	/* HCI status: unsupported feature or parameter value */
+#define BT_VENDOR_SUBCOMMAND_GROUP	0xe0
+#define BT_EVENT_COMMAND_COMPLETE	14
+
+/* By subcommand 1..7: 0x400ee94, 0x400ee98, 0x400ee90, 0x400ee84, 0x400ee88, 0x400ee80, 0x400ee8c. */
+extern int (*btVendorSubcommandHooks[BT_VENDOR_SUBCOMMANDS])(const uint8_t *command);	/* DTCM 0x400ee80 */
+extern void (*btLdaResetHook)(void);			/* DTCM 0x400ed50: called while the baseband is reset */
+extern void (*btConfigClearHook)(void);			/* DTCM 0x400ea14 */
+extern int (*btConfigWriteHook)(unsigned int item, unsigned int length, const uint8_t *value);	/* DTCM 0x400ed60 */
+extern int (*btConfigItemHook)(unsigned int item);	/* DTCM 0x400ed58 */
+
+/* The radio registers btSbcProcessPacket() keeps across a reset. */
+#define BT_RADIO_KEPT_FIRST	REG16(0x90010a1a)
+#define BT_RADIO_KEPT_SECOND	REG16(0x90010a24)
+#define BT_RADIO_KEPT_THIRD	REG16(0x90010a1e)
+#define SOC_CONTROL_BT_RESET	0x2		/* SOC_CONTROL bit 1, cleared and set again */
+
+void btLdaRomSelectState(void);
+void btLscRomComputeState(const uint8_t *message);
+
+void btSbcProcessPacket(void);								/* 0x51c64 */
+void btSbcUpdatePacket(const uint8_t *message);						/* 0x51c98 */
+int btSbcConfigurePacket(unsigned int item, unsigned int length, uint8_t *value);		/* 0x51cfc */
+int btSbcCheckPacket(unsigned int item, unsigned int length, const uint8_t *value);		/* 0x51d0a */
+int btSbcValidatePacket(unsigned int item);						/* 0x51d18 */
+void btSbcPreparePacket(void);								/* 0x51d20 */
+int btSbcDispatchPacket(const uint8_t *command);					/* 0x51d5c */
 int btSbcParsePacket(uintptr_t first, uintptr_t second, uintptr_t third, uintptr_t fourth, uintptr_t fifth,
 		     uintptr_t sixth);							/* 0x51da0 */
 extern uint8_t btVendorTaskState[];			/* 0x5b850 */

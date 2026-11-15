@@ -10,40 +10,6 @@
 	.arm
 
 /*
- * strcmp (0x0005248c): standard byte-by-byte string compare.
- */
-	.global robinStrcmp
-robinStrcmp:
-1:
-	ldrb	r2, [r0], #1
-	ldrb	r3, [r1], #1
-	cmp	r2, #1
-	cmpcs	r2, r3
-	bne	2f
-	ldrb	r2, [r0], #1
-	ldrb	r3, [r1], #1
-	cmp	r2, #1
-	cmpcs	r2, r3
-	beq	1b
-2:
-	sub	r0, r2, r3
-	bx	lr
-
-/*
- * __aeabi_uwrite4 (0x000524c0): unaligned 32-bit little-endian store of r0 to [r1].
- */
-	.global __aeabi_uwrite4
-__aeabi_uwrite4:
-	mov	r2, r0, lsr #8
-	strb	r0, [r1]
-	strb	r2, [r1, #1]
-	mov	r2, r0, lsr #16
-	strb	r2, [r1, #2]
-	mov	r2, r0, lsr #24
-	strb	r2, [r1, #3]
-	bx	lr
-
-/*
  * __rt_entry (0x000524e0): post-scatterload runtime entry. Sets up the C
  * library state and stack/heap, then enters main() in Thumb mode.
  */
@@ -62,10 +28,10 @@ __rt_entry:
 	bx	r12
 
 /*
- * __aeabi_memmove (0x0005254c): overlapping-safe memory copy (r0=dst, r1=src, r2=len).
+ * __aeabi_memmove4 (0x00052544): memmove of word-aligned buffers (r0=dst, r1=src, r2=len).
  */
-	.global __aeabi_memmove
-__aeabi_memmove:
+	.global __aeabi_memmove4
+__aeabi_memmove4:
 	subs	r3, r0, r1
 	cmpcs	r2, r3
 	bls	__aeabi_memcpy4

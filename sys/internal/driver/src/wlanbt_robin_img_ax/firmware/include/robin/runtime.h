@@ -5,19 +5,16 @@
 #include <stddef.h>
 
 int __aeabi_uwrite4(int value, void *address);
-/* RVCT library routine in ITCM (0x00052360); not converted. */
+/* RVCT library routines in ITCM (runtime/string.c, runtime/stringarm.c, runtime/rand.c). */
 char *strcpy(char *destination, const char *source);
-/* RVCT library routine in ITCM (0x00052234); not converted. */
 int memcmp(const void *left, const void *right, size_t size);
 
-/* RVCT library routine in ITCM (0x000523b0); not converted. */
 char *strncpy(char *destination, const char *source, size_t size);
 
-/* RVCT library routine in ITCM (0x00052420); not converted. */
 int strcmp(const char *left, const char *right);
 
-/* RVCT library routines in ITCM (0x000521bc, 0x000521ea); not converted. */
 void srand(unsigned int seed);
 int rand(void);
+void robinInitHeapPool(void);
 
 #endif /* ROBIN_RUNTIME_H */
