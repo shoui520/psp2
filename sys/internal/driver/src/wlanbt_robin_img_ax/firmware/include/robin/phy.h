@@ -20,6 +20,11 @@ struct WlanSignalCalibration {
 #define WLAN_RATE_INDEX_INVALID	0xff
 
 uint32_t bbpReadVersionRegister(uint32_t index);
+extern uint8_t opRegionMinor;					/* 0x549e1 */
+extern uint8_t opRegionMajor;					/* 0x549e2 */
+extern struct PhyRegisterEntry bbpInitRegisters[];		/* 0x040002d8 */
+extern struct PhyRegisterEntry bbpBandTable24[];		/* 0x040002dc */
+extern struct PhyRegisterEntry bbpBandTable5[];		/* 0x04000450 */
 void bbpWriteTable(const struct PhyRegisterEntry *table);
 void bbpWriteRegister(unsigned int reg, unsigned int value);
 void bbpSetRegisterBits(unsigned int reg, unsigned int mask);

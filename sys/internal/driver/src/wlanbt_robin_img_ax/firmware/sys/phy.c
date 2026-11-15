@@ -63,7 +63,7 @@ static const int8_t bbpNoiseHistogramLevels[20] = {
 };
 
 /* Written at start-up (the host may patch it); ends with 0xffff, 0xff. */
-static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.rw"))) = {
+struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.rw"))) = {
 	{ 0xffff, 0xff, 0 },
 };
 
@@ -99,8 +99,6 @@ void wlanPsFilterHeader(unsigned int band, uint32_t channel, unsigned int bandwi
 extern struct PhyRegisterEntry bbpChannel14Registers[];		/* 0x0400070c */
 /* 0x04000668: payload mode 1 writes the first entry too. */
 extern struct PhyRegisterEntry bbpPayloadModeRegisters[];
-extern uint8_t opRegionMinor;
-extern uint8_t opRegionMajor;
 
 void bbpWriteTable(const struct PhyRegisterEntry *table)
 {

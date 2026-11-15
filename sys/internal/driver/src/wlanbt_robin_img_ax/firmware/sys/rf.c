@@ -56,11 +56,11 @@ static uint32_t rfLockInterrupts __attribute__((section(".itcm.rw")));
 /* Register tables (DTCM, so the host can patch them); each ends with 0xffff, 0xff. */
 #define RF_TABLE_END	{ 0xffff, 0xff, 0 }
 
-struct PhyRegisterEntry rfRegisterPatches[] __attribute__((section(".dtcm.rw"))) = {
+struct PhyRegisterEntry rfRegisterPatches[31] __attribute__((section(".dtcm.rw"))) = {
 	RF_TABLE_END,
 };
 
-static struct PhyRegisterEntry rfBand2gRegisters[] __attribute__((section(".dtcm.rw"))) = {
+struct PhyRegisterEntry rfBand2gRegisters[] __attribute__((section(".dtcm.rw"))) = {
 	{ 0x008, 0x51, 0 }, { 0x009, 0x1c, 0 }, { 0x02e, 0x0f, 0 }, { 0x02f, 0x45, 0 },
 	{ 0x030, 0x6e, 0 }, { 0x032, 0x08, 0 }, { 0x033, 0x35, 0 }, { 0x034, 0xc7, 0 },
 	{ 0x035, 0x04, 0 }, { 0x036, 0x10, 0 }, { 0x03b, 0x05, 0 }, { 0x04f, 0x26, 0 },
@@ -88,7 +88,7 @@ static struct PhyRegisterEntry rfMode2g2Registers[] __attribute__((section(".dtc
 static struct PhyRegisterEntry rfMode2g3Registers[] __attribute__((section(".dtcm.rw"))) = {
 	RF_TABLE_END,
 };
-static struct PhyRegisterEntry rfBand5gRegisters[] __attribute__((section(".dtcm.rw"))) = {
+struct PhyRegisterEntry rfBand5gRegisters[] __attribute__((section(".dtcm.rw"))) = {
 	RF_TABLE_END,
 };
 static struct PhyRegisterEntry rfMode5g1Registers[] __attribute__((section(".dtcm.rw"))) = {

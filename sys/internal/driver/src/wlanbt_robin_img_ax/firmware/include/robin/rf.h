@@ -19,7 +19,9 @@
 
 extern uint8_t rfVersion;
 extern uint8_t rfSubVersion;
-extern struct PhyRegisterEntry rfRegisterPatches[];
+extern struct PhyRegisterEntry rfRegisterPatches[];		/* 0x04000184: 31 entries */
+extern struct PhyRegisterEntry rfBand2gRegisters[];		/* 0x04000200 */
+extern struct PhyRegisterEntry rfBand5gRegisters[];		/* 0x040002c4 */
 
 void rfPathClearBits(int path, uint16_t reg, uint8_t mask);
 void rfPowerDown(void);

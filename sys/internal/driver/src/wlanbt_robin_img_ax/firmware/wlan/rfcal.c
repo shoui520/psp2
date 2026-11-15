@@ -1,7 +1,8 @@
 /*
- * Baseband tables for a channel and the radio's calibration (0x325ec - 0x32d30): the register
+ * Baseband tables for a channel and the radio's calibration (0x325ec - 0x33084): the register
  * tables written when the channel changes (bbpLoadBandwidthTables), the hold on the MAC while
- * the synthesizer settles, and the "macTxNotify*Packet" functions, which are not about packets:
+ * the synthesizer settles, the host's patches to the radio and baseband tables (host command
+ * 0x8f), and the "macTxNotify*Packet" functions, which are not about packets:
  * they talk to a second client of the serial bus (0x90000800: registers 5, 7, 18, 25, 64, 65, 71,
  * 176, 178, 179, 196, microcode written to 0x8000..) and run the radio's start-up calibration
  * through the baseband and radio registers. Marvell published no source for it; the names are the
@@ -14,11 +15,14 @@
 #include "robin/rf.h"
 #include "robin/rfbus.h"
 #include "robin/rfcal.h"
+#include "robin/event.h"
 #include "robin/rom.h"
 #include "robin/soc.h"
 #include "robin/socpower.h"
 
 extern const uint16_t romRfChannelTable[];		/* ROM 0x03f42130 */
+extern const uint16_t romRfChannelTable5G[];		/* ROM 0x03f4214c: 5 GHz frequencies, by wlanChannelIndex */
+extern uint8_t wlanPrimaryEvents;			/* 0x04008828, bit 5: no rate below index 5 */
 int fmCoexSyncBuffer(void);				/* 0x4c93c */
 
 /* The serial controller's own registers; the second user of the bus the radio sits on. */
@@ -39,6 +43,9 @@ int fmCoexSyncBuffer(void);				/* 0x4c93c */
 #define SOC_REG_CLOCK_GATE	SOC_REG(0x0c)
 #define SOC_REG_PENDING		SOC_REG(0x7c)
 #define SOC_REG_TUNE		SOC_REG(0x60)
+
+#define MAC_824_TUNE_HOLD	0x00002000u	/* MAC_824_CONTROL */
+#define MAC_828_TUNE_CLEAR	0x00000180u	/* MAC_828_CONTROL */
 
 #define MAC_710_TUNE_HOLD	MAC_REG(0x710)
 #define MAC_710_TUNE_MASK	0xfffc03ffu
@@ -105,6 +112,32 @@ struct PhyRegisterEntry bbpModeTable5[] __attribute__((section(".dtcm.rw"))) = {
 	{ 0x008, 0x2c, 0 }, { 0x0fb, 0x83, 0 }, { 0x2cf, 0x60, 0 }, { 0xffff, 0xff, 0 },
 };
 
+/* The index of a 5 GHz channel number in the ROM's frequency table; 0xff where there is no channel. */
+uint8_t wlanChannelIndex[256] __attribute__((section(".dtcm.rw"))) = {	/* 0x04000568 */
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x20, 0x21, 0xff, 0xff, 0x22,
+	0x23, 0xff, 0xff, 0xff, 0x24, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x25, 0xff,
+	0x00, 0xff, 0x26, 0xff, 0x01, 0xff, 0x27, 0xff, 0x02, 0xff, 0x28, 0xff,
+	0x03, 0xff, 0xff, 0xff, 0x04, 0xff, 0x29, 0xff, 0x05, 0xff, 0xff, 0xff,
+	0x06, 0xff, 0x2a, 0xff, 0x07, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0x08, 0xff, 0x2b, 0xff, 0x09, 0xff, 0xff, 0xff,
+	0x0a, 0xff, 0x2c, 0xff, 0x0b, 0xff, 0xff, 0xff, 0x0c, 0xff, 0x2d, 0xff,
+	0x0d, 0xff, 0xff, 0xff, 0x0e, 0xff, 0x2e, 0xff, 0x0f, 0xff, 0xff, 0xff,
+	0x10, 0xff, 0x2f, 0xff, 0x11, 0xff, 0xff, 0xff, 0x12, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0x13, 0xff, 0x30, 0xff, 0x14, 0xff, 0xff,
+	0xff, 0x15, 0xff, 0x31, 0xff, 0x16, 0xff, 0xff, 0xff, 0x17, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0x18, 0x19, 0x1a, 0xff, 0x1b, 0x1c, 0x1d, 0xff, 0xff,
+	0x1e, 0xff, 0xff, 0xff, 0x1f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff,
+};
+
 /* Per band; per band and mode (index 0: modes 2 and 3, 1: mode 0, 2: mode 4; none for the rest). */
 static const struct PhyRegisterEntry *bbpBandTables[2] __attribute__((section(".itcm.rw"))) = {	/* 0x54fa0 */
 	bbpBandTable24, bbpBandTable5,
@@ -117,6 +150,16 @@ static const struct PhyRegisterEntry *bbpModeTables[2][3] __attribute__((section
 
 /* Baseband register 658 as measured under selectors 1 and 2, held for rfTunePrepare to write back. */
 static uint8_t bbpSavedReading[2] __attribute__((section(".itcm.rw")));	/* 0x54fc0 */
+
+/* How long each step of the calibration waits (microseconds). */
+static struct {
+	uint32_t switching;
+	uint32_t configuring;
+	uint32_t tuning;
+	uint32_t starting;
+} rfCalibrationDelay __attribute__((section(".itcm.rw"))) = {	/* 0x54fc4 */
+	10, 10, 10, 700,
+};
 
 /*
  * What the start-up calibration measured, the registers its save and restore walk (twelve of the
@@ -505,4 +548,295 @@ void macTxNotifyVerifyPacket(void)
 		rfBusWrite(wlanRfCalibration.rfRegisters[i], rfSavedRegisters[i]);
 	for (i = 0; i < 12; i++)
 		bbpWriteRegister(wlanRfCalibration.bbpRegisters[i], rfSavedRegisters[i + 12]);
+}
+
+/*
+ * Measures the radio's level (the calibration's last step): switches the radio to its measuring
+ * state, runs the baseband's measurement (registers 949..953, result in 968..970) and returns the
+ * value macTxNotifyClearPacket gives for the level and its scale, with every register the
+ * calibration touched restored.
+ */
+unsigned int macTxNotifySelectPacket(void)
+{
+	unsigned int band;
+	unsigned int channel;
+	unsigned int frequency = 0;
+	unsigned int level;
+	unsigned int scale;
+	unsigned int high;
+	unsigned int low;
+	uint8_t value;
+
+	rfBusLock();
+	MAC_828_CONTROL &= ~MAC_828_TUNE_CLEAR;
+	MAC_824_CONTROL |= MAC_824_TUNE_HOLD;
+	macTxNotifyConvertPacket();
+	macTuneHoldStart();
+	rfBusClearBits(7, 2);
+	rfBusSetBits(71, 8);
+	rfBusSetBits(71, 32);
+	rfBusClearBits(71, 32);
+	rfBusSetBits(71, 4);
+	sysDelayUs(rfCalibrationDelay.switching);
+	rfBusClearBits(71, 8);
+	sysDelayUs(rfCalibrationDelay.switching);
+	rfBusSetBits(71, 2);
+	sysDelayUs(rfCalibrationDelay.switching);
+	rfBusSetBits(71, 1);
+	sysDelayUs(rfCalibrationDelay.switching);
+	rfBusClearBits(71, 4);
+	sysDelayUs(rfCalibrationDelay.switching);
+	rfBusWrite(431, 15);
+	bbpWriteRegister(79, 161);
+	rfBusWrite(341, 255);
+	rfBusWrite(342, 9);
+	rfBusWrite(343, 210);
+	bbpWriteRegister(379, 0);
+	bbpWriteRegister(377, 224);
+	sysDelayUs(rfCalibrationDelay.configuring);
+	band = rfGetBand();
+	if (band == 0) {
+		rfBusWrite(427, 2);
+		rfBusWrite(428, 1);
+		rfBusClearBits(423, 3);
+		rfBusWrite(344, 10);
+		rfBusWrite(432, 54);
+		rfBusWrite(433, 1);
+	} else if (band == 1) {
+		channel = rfGetChannel();
+		frequency = romRfChannelTable5G[wlanChannelIndex[channel]];
+		rfBusSetBits(260, 64);
+		rfBusWrite(427, 2);
+		rfBusWrite(428, 3);
+		value = rfBusRead(418);
+		if (channel - 36 > 0x1c) {
+			if (channel - 100 > 0x28) {
+				if (channel >= 149)
+					value &= 0x3f;
+			} else {
+				value = (value & 0x7f) | 64;
+			}
+		} else {
+			value = (value & 0xbf) | 0x80;
+		}
+		rfBusWrite(418, value);
+		if (frequency >= 5170) {
+			rfBusWrite(344, 10);
+			rfBusWrite(432, 50);
+			rfBusWrite(433, 0);
+		} else {
+			rfBusWrite(344, 12);
+			rfBusWrite(432, 50);
+			rfBusWrite(433, 1);
+		}
+	}
+	sysDelayUs(rfCalibrationDelay.tuning);
+	bbpWriteRegister(8, 8);
+	bbpSetRegisterBits(90, 0x80);
+	bbpClearRegisterBits(516, 0x80);
+	bbpClearRegisterBits(646, 4);
+	sysDelayUs(1);
+	bbpSetRegisterBits(646, 4);
+	bbpWriteRegister(45, 192);
+	bbpWriteRegister(46, 16);
+	bbpWriteRegister(45, 64);
+	sysDelayUs(rfCalibrationDelay.starting);
+	bbpWriteRegister(949, 1);
+	bbpWriteRegister(950, 0);
+	bbpWriteRegister(952, 24);
+	bbpWriteRegister(953, 162);
+	sysDelayUs(2);
+	bbpWriteRegister(960, 0);
+	bbpWriteRegister(961, 0);
+	bbpWriteRegister(951, 128);
+	while ((bbpReadVersionRegister(952) & 0x80) == 0)
+		sysDelayUs(2);
+	scale = bbpReadVersionRegister(968);
+	high = bbpReadVersionRegister(969);
+	low = bbpReadVersionRegister(970);
+	level = macTxNotifyClearPacket(((high << 8) & 0xfff) | low, scale & 0x3f);
+	bbpWriteRegister(951, 0);
+	bbpWriteRegister(949, 0);
+	bbpWriteRegister(950, 0);
+	bbpWriteRegister(952, 0);
+	bbpWriteRegister(953, 0);
+	rfBusClearBits(71, 3);
+	macTxNotifyTrackPacket(1);
+	macTxNotifyVerifyPacket();
+	rfBusClearBits(7, 1);
+	macTuneHoldEnd();
+	MAC_824_CONTROL &= ~MAC_824_TUNE_HOLD;
+	rfBusUnlock();
+	return level;
+}
+
+/* A register of the MAC's block set to a value under a mask when the MAC starts. */
+struct MacRegisterDefault {
+	uint16_t offset;	/* 0xffff ends the table */
+	uint16_t reserved;
+	uint32_t mask;
+	uint32_t value;
+};
+
+static struct MacRegisterDefault macEventRegisterDefaults[] __attribute__((section(".itcm.rw"))) = {	/* 0x5508c */
+	{ 0x073c, 0, 0x0000ffff, 0x00000081 },
+	{ 0x07f4, 0, 0x4000ffff, 0x40000ea6 },
+	{ 0xffff, 0, 0xffffffff, 0xffffffff },
+};
+
+uint32_t macApplyEventRegisterDefaults(volatile void *registerBase)
+{
+	uint32_t i;
+
+	for (i = 0; macEventRegisterDefaults[i].offset != 0xffff; i++) {
+		volatile uint32_t *reg = (volatile uint32_t *)((volatile uint8_t *)registerBase +
+			macEventRegisterDefaults[i].offset);
+
+		*reg = macEventRegisterDefaults[i].value | (*reg & ~macEventRegisterDefaults[i].mask);
+	}
+	return i;
+}
+
+/*
+ * Host command 0x8f: patches to the radio's and the baseband's register tables, a chain of chunks.
+ * A chunk's type is 0 for the radio and 1 for the baseband; a table is replaced as a whole (the
+ * first selector) or its values are kept as a second set for another band (selector 8). Entries are
+ * a register number and a value, four to a group; a table that is not a multiple of four entries
+ * long ends with an entry that is all ones.
+ */
+struct WlanPatchChunk {
+	uint8_t opRegionMinor;		/* the first chunk's */
+	uint8_t opRegionMajor;		/* the first chunk's */
+	uint8_t subVersion;		/* of the radio; the first chunk's */
+	uint8_t length;			/* bytes to the next chunk */
+	uint8_t flags;			/* bits 0..2: type, 3..6: selector */
+	uint8_t reserved5;
+	uint16_t next;			/* 0xffff in the last chunk */
+	uint16_t present;		/* 0xffff when the chunk carries a table */
+	uint8_t reserved10;
+	uint8_t count;			/* entries */
+	uint8_t entries[];
+};
+
+#define WLAN_PATCH_NONE		0xffff
+#define WLAN_PATCH_TYPE_RF	0
+#define WLAN_PATCH_TYPE_BBP	1
+#define WLAN_PATCH_TYPE_HANG	3
+#define WLAN_PATCH_SELECTOR_BAND	8
+#define WLAN_PATCH_GROUP	4
+#define WLAN_PATCH_RF_MAX	31
+#define WLAN_PATCH_RF_BAND_MAX	10
+#define WLAN_PATCH_BBP_MAX	128
+#define WLAN_PATCH_BBP_BAND_MAX	12
+
+enum PatchMerge {
+	PATCH_MERGE_NONE,
+	PATCH_MERGE_RF,
+	PATCH_MERGE_BBP,
+};
+
+static uint8_t opRegionMinorPrevious __attribute__((section(".itcm.rw")));	/* 0x54a2f */
+static uint8_t opRegionMajorPrevious __attribute__((section(".itcm.rw")));	/* 0x54a30 */
+
+/* Copies a chunk's entries into a table, and for a band table folds them into the first set. */
+static inline __attribute__((always_inline)) void hostCmd008fLoad(struct PhyRegisterEntry *table,
+	const uint8_t *entries, unsigned int count, enum PatchMerge merge)
+{
+	uint8_t group = 0;
+	unsigned int slot;
+
+	do {
+		slot = 0;
+		for (;;) {
+			unsigned int index = group + slot;
+			unsigned int search;
+
+			if (index >= count) {
+				table[index].reg = 0xff;
+				table[index].value = 0xff;
+				break;
+			}
+			table[index].reg = entries[2 * slot];
+			table[index].value = entries[2 * slot + 1];
+			if (merge == PATCH_MERGE_RF) {
+				for (search = (uint8_t)index; search < WLAN_PATCH_RF_MAX; search = (uint8_t)(search + 1)) {
+					if (rfBand2gRegisters[index].reg == rfRegisterPatches[search].reg) {
+						rfBand2gRegisters[index].value = rfRegisterPatches[search].value;
+						break;
+					}
+				}
+			} else if (merge == PATCH_MERGE_BBP) {
+				for (search = (uint8_t)index; search < WLAN_PATCH_RF_MAX; search = (uint8_t)(search + 1)) {
+					if (bbpBandTable24[index].reg == bbpInitRegisters[search].reg) {
+						bbpBandTable24[index].value = bbpInitRegisters[search].value;
+						if (wlanPrimaryEvents & 0x20)
+							bbpInitRegisters[search].value = entries[2 * slot + 1];
+						break;
+					}
+				}
+			}
+			slot = (uint8_t)(slot + 1);
+			if (slot >= WLAN_PATCH_GROUP)
+				break;
+		}
+		group = (uint8_t)(group + WLAN_PATCH_GROUP);
+		entries += 2 * WLAN_PATCH_GROUP;
+	} while ((int)(group + slot - WLAN_PATCH_GROUP) < (int)count);
+}
+
+int hostCmd008fWrite(void *command, const uint8_t *data)
+{
+	const struct WlanPatchChunk *chunk = (const struct WlanPatchChunk *)data;
+
+	if (chunk == NULL)
+		return 1;
+	opRegionMinorPrevious = opRegionMinor;
+	opRegionMajorPrevious = opRegionMajor;
+	opRegionMinor = chunk->opRegionMinor;
+	opRegionMajor = chunk->opRegionMajor;
+	if (chunk->subVersion != rfSubVersion)
+		return 1;
+	do {
+		unsigned int selector = (chunk->flags >> 3) & 0xf;
+
+		switch (chunk->flags & 7) {
+		case WLAN_PATCH_TYPE_RF:
+			if (chunk->present != WLAN_PATCH_NONE)
+				break;
+			if (selector == 0) {
+				if (chunk->count > WLAN_PATCH_RF_MAX)
+					return 1;
+				hostCmd008fLoad(rfRegisterPatches, chunk->entries, chunk->count, PATCH_MERGE_NONE);
+			} else if (selector == WLAN_PATCH_SELECTOR_BAND) {
+				if (chunk->count > WLAN_PATCH_RF_BAND_MAX)
+					return 1;
+				hostCmd008fLoad(rfBand5gRegisters, chunk->entries, chunk->count, PATCH_MERGE_RF);
+			}
+			break;
+		case WLAN_PATCH_TYPE_BBP:
+			if (chunk->present != WLAN_PATCH_NONE)
+				break;
+			if (selector == 0) {
+				if (chunk->count > WLAN_PATCH_BBP_MAX)
+					return 1;
+				hostCmd008fLoad(bbpInitRegisters, chunk->entries, chunk->count, PATCH_MERGE_NONE);
+			} else if (selector == WLAN_PATCH_SELECTOR_BAND) {
+				if (chunk->count > WLAN_PATCH_BBP_BAND_MAX)
+					return 1;
+				hostCmd008fLoad(bbpBandTable5, chunk->entries, chunk->count, PATCH_MERGE_BBP);
+			}
+			break;
+		case 2:
+			break;
+		case WLAN_PATCH_TYPE_HANG:
+			for (;;)
+				;
+		default:
+			return 1;
+		}
+		if (chunk->next == WLAN_PATCH_NONE)
+			break;
+		chunk = (const struct WlanPatchChunk *)((const uint8_t *)chunk + chunk->length);
+	} while (chunk != NULL);
+	return 0;
 }
