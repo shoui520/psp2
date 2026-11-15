@@ -24,6 +24,7 @@
 #include "robin/txhold.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
+#include "robin/macdefaults.h"
 
 /* The events the machine is sent. */
 #define WLAN_IBSS_PS_EVENT_SLEEP	1	/* no traffic: sleep */
@@ -36,8 +37,6 @@
 #define WLAN_IBSS_PS_CONFIRM_TICKS	4
 
 /* Not converted yet. */
-int fmCoexComputeBuffer(void);							/* 0x4c8ec */
-int fmCoexQueryBuffer(void);							/* 0x4c906 */
 
 struct WlanIbssPsMachine wlanIbssPsMachine __attribute__((section(".itcm.bss")));	/* 0x5963c */
 

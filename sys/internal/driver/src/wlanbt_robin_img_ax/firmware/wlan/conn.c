@@ -71,14 +71,6 @@ extern uint8_t wlanBlockPool2Control[], wlanBlockPool2Memory[];					/* 0x04000f0
 uint32_t wlanConnectionSlotsFree __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
 struct OsaIdleHook wlanConnectionIdleHook __attribute__((section(".sqram1.rw")));		/* 0xc0011b00 */
 /* The device's address and the SNMP defaults a connection starts with (the pointer is at 0x54a7c). */
-struct WlanDeviceConfig {
-	uint8_t address[6];
-	uint8_t rtsThreshold[2];
-	uint8_t shortRetryLimit;
-	uint8_t longRetryLimit;
-	uint8_t fragThreshold[2];
-};
-extern const struct WlanDeviceConfig *wlanDeviceAddress;					/* 0x54a7c */
 void ampPalCopySupportedRates(struct WlanConnection *connection);				/* 0x2372a */
 int wlanAmpRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xfa20 */
 int wlanStaRxManagement(OsaBuffer *buffer, uintptr_t argument);					/* 0xf96c */

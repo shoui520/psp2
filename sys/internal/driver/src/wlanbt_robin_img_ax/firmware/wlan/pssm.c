@@ -55,7 +55,6 @@ extern uint32_t wlanPsSleepTimerEnd;			/* SQRAM 0xc000fb00 */
 extern uint64_t wlanPsSleepTimerStart;			/* SQRAM 0xc000fb08 */
 extern uint32_t wlanPsAnnounceLimit;			/* 0x7ff0 */
 extern const uint8_t wlanPsBroadcast[6];		/* 0x53d4a */
-extern uint8_t (*wlanDeviceAddress)[6];			/* 0x54a7c */
 void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 int cbProcBuildPacket(struct WlanConnection *connection);	/* 0x1e38e */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
@@ -401,7 +400,7 @@ void wlanPsAnnounceSleep(struct WlanConnection *connection)
 	request->frame = frame->bodyLength;
 	request->descriptor.control = 0x1500;
 	TX_DATA_TAG(data) = 20;
-	wlanInitMgmtHeader(frame, 2, 4, wlanPsBroadcast, *wlanDeviceAddress, *wlanDeviceAddress);
+	wlanInitMgmtHeader(frame, 2, 4, wlanPsBroadcast, wlanDeviceAddress->address, wlanDeviceAddress->address);
 	frame->frameControl[1] |= 2;
 	frame->duration[0] = (uint8_t)info->sleep.sleepDuration;
 	frame->duration[1] = (uint8_t)(info->sleep.sleepDuration >> 8);

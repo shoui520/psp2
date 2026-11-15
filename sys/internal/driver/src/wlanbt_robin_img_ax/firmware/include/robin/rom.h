@@ -94,6 +94,9 @@ int romLibCheckState(int a, int b, int c, int d, int e);		/* 0x03f3a347 */
 void romLibPrepareState(uint32_t low, uint32_t high, uint32_t limit);	/* 0x03f3a36f */
 void romLibSelectContext(unsigned int mode);				/* 0x03f3ab21 */
 void romLibConvertContext(unsigned int rate, unsigned int response);	/* 0x03f3aaf1 */
+void romLibSetupContext(unsigned int rate, unsigned int code);		/* 0x03f3aac9 */
+void romLibReleaseContext(unsigned int rate, unsigned int antenna, unsigned int value);	/* 0x03f3aa85 */
+void romLibVerifyContext(unsigned int rate, unsigned int value);		/* 0x03f3ab07 */
 unsigned int romLibHandleState(unsigned int index);			/* 0x03f3a2a5: the rate code of an index */
 void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb */
 /*

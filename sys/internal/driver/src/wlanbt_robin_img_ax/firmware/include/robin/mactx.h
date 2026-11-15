@@ -232,14 +232,63 @@ struct MacTxQueueStats {
 };
 
 /* Mode block of the local station; byte 4 is the power-save mode. */
+/* A WEP default key as the local state keeps it (wlanLocalStateInit()). */
+struct WlanLocalWepKey {
+	uint8_t index;			/* 1..4 */
+	uint8_t length;			/* 0: not set */
+	uint8_t key[13];
+};
+
+_Static_assert(sizeof(struct WlanLocalWepKey) == 15, "local WEP key");
+
+/* The station's MIB values the host sets (wlanDeviceAddress points here). */
+struct WlanDeviceConfig {
+	uint8_t address[6];
+	uint8_t rtsThreshold[2];	/* 2347: off */
+	uint8_t shortRetryLimit;	/* 9 */
+	uint8_t longRetryLimit;		/* 4 */
+	uint8_t fragThreshold[2];	/* 2346: off */
+	uint32_t parameters[2];		/* 512 and 96 at start; readers not converted yet */
+	uint16_t timeouts[4];		/* 500 each at start; readers not converted yet */
+};
+
+_Static_assert(sizeof(struct WlanDeviceConfig) == 28, "device configuration");
+
+/* The local station's state (fmCoexScheduleBuffer() sets its defaults). */
 struct WlanLocalState {
-	uint8_t reserved0[4];
+	uint8_t mode;			/* 0xff at start */
+	uint8_t reserved1;
+	uint16_t sequence;		/* 0 at start */
 	uint8_t powerSave;
 	uint8_t rates[14];		/* the rates of a Bluetooth AMP link's IBSS, 0-terminated */
 	uint8_t reserved19[5];
 	uint32_t mibOid17;		/* HostCmd_CMD_802_11_SNMP_MIB's object 17: its value; non-zero starts macMgmtScheduleHeader() */
+	struct WlanLocalWepKey wepKeys[4];	/* 28 */
+	uint32_t keyFlags;		/* 88 */
+	uint8_t keyAddress[6];		/* 92 */
+	uint8_t keyIndex;		/* 98 */
+	uint8_t keyData[12];		/* 99 */
+	uint8_t reserved111;
+	uint8_t keyValid;		/* 112 */
+	uint8_t reserved113[3];
+	uint8_t linkFlags[2];		/* 116 */
+	uint8_t reserved118[2];
+	uint32_t linkLimit;		/* 120: 10 at start */
+	uint8_t linkState;		/* 124 */
+	uint8_t reserved125[3];
+	uint32_t linkCounters[2];	/* 128 */
+	uint8_t linkActive;		/* 136 */
+	uint8_t reserved137[3];
+	struct WlanDeviceConfig device;	/* 140 */
+	uint8_t reserved168[14];
+	uint16_t enabled;		/* 182: 1 at start */
+	uint8_t reserved184[4];
+	uint8_t context[];		/* 188: wlanLocalContext points here */
 };
 _Static_assert(offsetof(struct WlanLocalState, mibOid17) == 24, "SNMP MIB object 17");
+_Static_assert(offsetof(struct WlanLocalState, device) == 140, "local device configuration");
+_Static_assert(offsetof(struct WlanLocalState, enabled) == 182, "local state enabled");
+_Static_assert(offsetof(struct WlanLocalState, context) == 188, "local context");
 
 /* Bits of wlanTxWindowFlags, one set per window (shifted by the window number). */
 #define WLAN_TX_WINDOW_OPEN		0x001u
@@ -252,6 +301,8 @@ extern uint32_t wlanTxWindowFlags;
 extern struct MacTxQueueStats macTxQueueStats[];
 extern uint16_t wlanSessionId;
 extern struct WlanLocalState *wlanLocalState;
+extern struct WlanDeviceConfig *wlanDeviceAddress;		/* 0x54a7c */
+extern uint8_t *wlanLocalContext;				/* 0x54a84 */
 extern uint32_t macTxMaxWait;
 extern uint8_t macTxDrainWaits;
 extern WlanTxDescriptor macTxDescriptor;

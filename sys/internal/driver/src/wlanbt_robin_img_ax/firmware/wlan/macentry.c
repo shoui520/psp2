@@ -26,14 +26,10 @@
 #include "robin/wep.h"
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
+#include "robin/macdefaults.h"
 
 /* Not converted yet; provisional names. */
 void *p2pDirectProcessEntry(unsigned int role);			/* 0x41250 */
-void fmCoexParseBuffer(void);					/* 0x4c85c */
-void fmCoexDispatchBuffer(void);				/* 0x4c850 */
-int fmCoexCheckBuffer(int value);				/* 0x4c80c */
-void fmCoexApplyBuffer(int first, int second);			/* 0x4c942 */
-void fmCoexBuildBuffer(volatile uint32_t *registers);		/* 0x4c8bc */
 
 extern struct OsaSemaphore *macTxNotifySemaphore;		/* 0x54bd8 */
 

@@ -89,7 +89,6 @@ _Static_assert(sizeof(struct WlanTsfRecord) == 48, "TSF record");
 struct WlanJoin wlanJoin __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
-extern IEEEtypes_MacAddr_t *wlanDeviceAddress;				/* 0x54a7c */
 extern uint8_t wlanJoinWmmIe[9];					/* DTCM 0x04008fc0 */
 extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
@@ -272,7 +271,7 @@ void wlanJoinFinish(uint8_t result)
 				supplicantInitSession(wlanJoin.connection, wlanJoin.bss.ssid,
 						      wlanJoin.bss.ssidLength,
 						      (IEEEtypes_MacAddr_t *)wlanJoin.bss.bssid,
-						      wlanDeviceAddress);
+						      (IEEEtypes_MacAddr_t *)wlanDeviceAddress->address);
 		}
 		cbProcFilterPacket(wlanJoin.connection, &wlanJoin.ies, wlanJoin.sameBss, 0);
 		wlanSetSlotTime((wlanJoin.connection->bssCapability[1] >> 2) & 1);
@@ -667,7 +666,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			supplicantSetAssocRsn(wpaType, &wpaMulticast, &wpaUnicast, wpaAkm,
 					      rsnCapability, NULL);
 		if (keyMgmtFormatWpaRsnIe(rsnIe, (IEEEtypes_MacAddr_t *)command->peerStaAddr,
-					  wlanDeviceAddress, NULL, 0)) {
+					  (IEEEtypes_MacAddr_t *)wlanDeviceAddress->address, NULL, 0)) {
 			wlanJoin.privacy = 1;
 			wlanIeBufferAppend(&wlanJoin.ieBuffer, rsnIe, rsnIe[1] + 2);
 		}

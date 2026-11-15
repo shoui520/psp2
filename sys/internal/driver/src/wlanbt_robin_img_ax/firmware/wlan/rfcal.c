@@ -19,11 +19,11 @@
 #include "robin/rom.h"
 #include "robin/soc.h"
 #include "robin/socpower.h"
+#include "robin/macdefaults.h"
 
 extern const uint16_t romRfChannelTable[];		/* ROM 0x03f42130 */
 extern const uint16_t romRfChannelTable5G[];		/* ROM 0x03f4214c: 5 GHz frequencies, by wlanChannelIndex */
 extern uint8_t wlanPrimaryEvents;			/* 0x04008828, bit 5: no rate below index 5 */
-int fmCoexSyncBuffer(void);				/* 0x4c93c */
 
 /* The serial controller's own registers; the second user of the bus the radio sits on. */
 #define SERIAL_ENABLE		REG16(0x90000000)
@@ -669,14 +669,6 @@ unsigned int macTxNotifySelectPacket(void)
 	rfBusUnlock();
 	return level;
 }
-
-/* A register of the MAC's block set to a value under a mask when the MAC starts. */
-struct MacRegisterDefault {
-	uint16_t offset;	/* 0xffff ends the table */
-	uint16_t reserved;
-	uint32_t mask;
-	uint32_t value;
-};
 
 static struct MacRegisterDefault macEventRegisterDefaults[] __attribute__((section(".itcm.rw"))) = {	/* 0x5508c */
 	{ 0x073c, 0, 0x0000ffff, 0x00000081 },

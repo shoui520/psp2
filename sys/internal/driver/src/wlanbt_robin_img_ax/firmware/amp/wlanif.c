@@ -18,6 +18,7 @@
 #include "robin/wlan.h"
 #include "robin/sleep.h"
 #include "robin/eventpower.h"
+#include "robin/mactx.h"
 
 /* Link-control messages the AMP side sends through the "btamp_pal" device. */
 enum {
@@ -127,11 +128,9 @@ void ampPalSetLocalAddress(const uint8_t *address, int reversed)
 	__aeabi_memcpy4(&ampLocalAssoc, ampLocalFrameAddress, 6);
 }
 
-extern const uint8_t *wlanDeviceAddress;	/* 0x54a7c */
-
 void ampPalLoadLocalAddress(void)
 {
-	__aeabi_memcpy4(ampLocalFrameAddress, wlanDeviceAddress, 6);
+	__aeabi_memcpy4(ampLocalFrameAddress, wlanDeviceAddress->address, 6);
 }
 
 int ampPalQueryLocalAddress(void)
