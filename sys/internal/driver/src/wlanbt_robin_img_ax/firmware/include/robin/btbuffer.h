@@ -337,6 +337,7 @@ int btLmpLcValidateFrame(uint8_t kind, const uint8_t *address, int direct);	/* 0
 void btLmpLcPrepareFrame(unsigned int link, unsigned int event, uint32_t unused,
 			 void *message);				/* 0x4781e */
 int btLmpLcDispatchFrame(const uint8_t *message);		/* 0x478a6 */
+int btLmpLcParseFrame(void **slot);				/* 0x478de */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

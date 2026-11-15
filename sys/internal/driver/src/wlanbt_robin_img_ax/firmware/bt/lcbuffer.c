@@ -2437,3 +2437,74 @@ int btLmpLcDispatchFrame(const uint8_t *message)
 	}
 	return taken;
 }
+
+/*
+ * The link controller's look at a message before the ROM's. While a link release was seen, 0xbda
+ * is answered with 0xbfe (to the LSC queue) and 0xbda and 0xbdb reset the ROM's kind 3 state;
+ * otherwise 0x210 goes to the AMP context of its address or to btLmpLcProcessPacket(). Those are
+ * freed here (returns 1). Any other message goes to the ROM; 0xbf9 and 0xc18 name a handle whose
+ * connection, once up, is taken down here after it, and 0xc18 first ends the link's mode.
+ */
+int btLmpLcParseFrame(void **slot)
+{
+	uint8_t *message = *slot;
+	unsigned int handle = 0xffff;
+	int result;
+
+	if (btLinkReleaseSeen == 1) {
+		uint32_t id = *(BtWord *)message;
+
+		if (id == 0xbda) {
+			uint8_t *reply = osa_MsgAlloc(8);
+
+			*(BtWord *)reply = 0xbfe;
+			*(BtHalf *)(reply + 4) = *(BtHalf *)(message + 4);
+			osa_MsgSend((void **)&reply, romQueueLsc);
+		} else if (id != 0xbdb) {
+			goto rom;
+		}
+		btLcoRomResetState(3, 0xffff, 0, 1);
+		goto taken;
+	}
+	if (*(BtWord *)message == 0x210) {
+		uint16_t link;
+
+		if (btLinkAddressHook(message + 4, &link) != 0)
+			btLcoRomProcessContext(0, 11, message + 4);
+		else
+			btLmpLcProcessPacket(0, (uint32_t)(uintptr_t)(message + 4));
+		goto taken;
+	}
+	goto rom;
+
+taken:
+	result = 1;
+	if (slot != NULL) {
+		osa_MsgFree(slot);
+		return result;
+	}
+rom:
+	if (**(BtWord **)slot == 0xbf9)
+		handle = *(BtHalf *)(message + 4);
+	if (*(BtWord *)message == 0xc18) {
+		uint8_t *context = btLcoRomDispatchContext(*(BtWord *)message);
+
+		handle = *(BtHalf *)(message + 4);
+		if (*(BtHalf *)(context + 6) == handle && context[1] == 1 && context[32] != 14)
+			btLmpLcVerifyHeader(handle, 1, 0x22);
+	}
+	result = btLcoRomPrepareContext(slot);
+	if (handle != 0xffff) {
+		uint8_t *links = btHccRomApplyState();
+
+		if (links[handle * 120] == 1) {
+			uint8_t *record = links + handle * 120;
+
+			btHccRomValidateState(record + 102);
+			btHccRomNotifyState(handle);
+			btLcoRomHandleState(handle, 0);
+			record[34] = 0;
+		}
+	}
+	return result;
+}
