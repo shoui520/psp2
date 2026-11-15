@@ -2,6 +2,7 @@
  * The Bluetooth vendor commands and the radio set-up around them
  * (include/robin/vendor.h).
  */
+#include <stddef.h>
 #include <stdint.h>
 #include "robin/btbuffer.h"
 #include "robin/btconfig.h"
@@ -10,6 +11,8 @@
 #include "robin/fm.h"
 #include "robin/mdev.h"
 #include "robin/btrom.h"
+#include "robin/btsource.h"
+#include "robin/bttable.h"
 #include "robin/eventpower.h"
 #include "robin/btcontext.h"
 #include "robin/hct.h"
@@ -327,7 +330,7 @@ unknown:
 	*status = BT_STATUS_UNKNOWN;
 }
 
-struct BtLinkRequests btLinkRequests __attribute__((section(".itcm.rw")));
+struct BtRoleSwitches btRoleSwitches __attribute__((section(".itcm.rw")));
 
 /* An FM command the host sends as a vendor command: passed to the "fm" device whole. */
 void btSbcTrackContext(unsigned int opcode, unsigned int length, const uint8_t *command)
@@ -362,19 +365,19 @@ void btSbcReleaseContext(void)
 	fmDevice = mdevOpenDevice("fm", 0);
 }
 
-/* Sends a link request's address and value to the link controller. */
-void btSbcSetupContext(const uint8_t *address, uint8_t value)
+/* Asks the link controller to switch a link's role. */
+void btSbcSetupContext(const uint8_t *address, uint8_t role)
 {
 	uint8_t *message;
 
 	message = osa_MsgAlloc(12);
 	*(uint32_t *)message = BT_MESSAGE_LINK_REQUEST;
 	__aeabi_memcpy(message + 4, address, 6);
-	message[10] = value;
+	message[10] = role;
 	osa_MsgSend((void **)&message, BT_QUEUE_VENDOR_POWER);
 }
 
-/* A link's request ended (event kind 1): reports it to the host, with its value, and forgets it. */
+/* A link went down (event kind 1) during a role switch: reports the switch with the role asked for. */
 void btSbcClearContext(const uint8_t *event)
 {
 	unsigned int link;
@@ -382,9 +385,440 @@ void btSbcClearContext(const uint8_t *event)
 	if (event[12] != 1)
 		return;
 	link = *(const uint16_t *)(event + 10);
-	if (btLinkRequests.state[link] == BT_LINK_REQUEST_IDLE)
+	if (btRoleSwitches.state[link] == BT_ROLE_SWITCH_IDLE)
 		return;
 	btBdhRomPrepareContext(-1, 0);
-	btBdhRomConfigureContext(18, 0x202, "bmb", 12, event + 4, 6, btLinkRequests.value[link]);
-	btLinkRequests.state[link] = BT_LINK_REQUEST_IDLE;
+	btBdhRomConfigureContext(BT_EVENT_ROLE_CHANGE, 0x202, "bmb", 12, event + 4, 6, btRoleSwitches.role[link]);
+	btRoleSwitches.state[link] = BT_ROLE_SWITCH_IDLE;
+}
+
+/*
+ * Encryption Change: reported to the host, and the next step of a role
+ * switch: the switch once encryption is paused, the Role Change event once
+ * it is resumed.
+ */
+void btSbcConvertContext(unsigned int status, unsigned int link, unsigned int enabled)
+{
+	uint8_t *records;
+	uint8_t *record;
+	unsigned int state;
+
+	records = btHccRomApplyState();
+	btBdhRomConfigureContext(BT_EVENT_ENCRYPTION_CHANGE, 0x80, "bhb", status, link, enabled);
+	state = btRoleSwitches.state[link];
+	record = records + BT_LINK_RECORD * link;
+	if (state == BT_ROLE_SWITCH_PAUSING) {
+		btSbcSetupContext(record + BT_LINK_RECORD_ADDRESS, btRoleSwitches.role[link]);
+		btRoleSwitches.state[link] = status == 0 ? BT_ROLE_SWITCH_RUNNING : BT_ROLE_SWITCH_IDLE;
+	} else if (state == BT_ROLE_SWITCH_RESUMING) {
+		btBdhRomPrepareContext(-1, 0);
+		if (btRoleSwitches.status[link] != 0)
+			status = btRoleSwitches.status[link];
+		btBdhRomConfigureContext(BT_EVENT_ROLE_CHANGE, 0x202, "bmb", status, record + BT_LINK_RECORD_ADDRESS, 6,
+					 btRoleSwitches.role[link]);
+		btSbcDispatchEntry(BT_EVENT_ROLE_CHANGE);
+		btRoleSwitches.state[link] = BT_ROLE_SWITCH_IDLE;
+	} else {
+		btBdhRomPrepareContext(-1, link);
+		btSbcDispatchEntry(BT_EVENT_ENCRYPTION_CHANGE);
+	}
+}
+
+/*
+ * HCI Switch_Role (a BD_ADDR and the role): pauses the link's encryption
+ * first when the link can switch, else asks for the switch at once.
+ */
+void btSbcVerifyContext(const uint8_t *command)
+{
+	const uint8_t *address = command + 7;
+	unsigned int opcode = *(const uint16_t *)(command + 4);
+	unsigned int role;
+	uint8_t *records;
+	uint8_t *record;
+	uint16_t slot;
+	unsigned int link;
+
+	if (command[6] != 7 || (role = address[6]) >= 2) {
+		btBdhRomValidateContext(BT_STATUS_INVALID, opcode);
+		return;
+	}
+	records = btHccRomApplyState();
+	link = 0xffff;
+	if (btLinkAddressHook(address, &slot) != 0 && btLscRomPrepareState(slot) != 0 &&
+	    btLdrRomHandleState(records + BT_LINK_RECORD * slot + 22, 43) == 0 &&
+	    btLscRomValidateState(slot) == 0) {
+		record = records + BT_LINK_RECORD * slot;
+		if (*(uint16_t *)(record + 30) == 0 && record[BT_LINK_RECORD_ROLE] != role &&
+		    btLdrRomApplyState(slot, record[BT_LINK_RECORD_ROLE], 0) == 0)
+			link = slot;
+	}
+	if (link != 0xffff) {
+		btRoleSwitches.state[link] = BT_ROLE_SWITCH_PAUSING;
+		btRoleSwitches.role[link] = address[6];
+		btSbcPrepareEntry(BT_LMP_PAUSE_ENCRYPTION, link, 0);
+	} else {
+		/* The original clears the state of "link" 0xffff too, 64 KiB past the table. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+		btRoleSwitches.state[link] = BT_ROLE_SWITCH_IDLE;
+#pragma GCC diagnostic pop
+		btSbcSetupContext(address, address[6]);
+	}
+	btBdhRomPrepareContext(1, 0);
+	btBdhRomValidateContext(0, opcode);
+}
+
+/* The link controller switched a link's role: resumes encryption first when it was paused. */
+void btSbcSelectContext(unsigned int status, const uint8_t *address, unsigned int role)
+{
+	uint16_t slot;
+	unsigned int state = BT_ROLE_SWITCH_IDLE;
+
+	btHccRomApplyState();
+	if (btLinkAddressHook(address, &slot) != 0)
+		state = btRoleSwitches.state[slot];
+	if (state == BT_ROLE_SWITCH_RUNNING) {
+		btSbcPrepareEntry(BT_LMP_PAUSE_ENCRYPTION, slot, 1);
+		btRoleSwitches.state[slot] = BT_ROLE_SWITCH_RESUMING;
+		btRoleSwitches.role[slot] = role;
+		btRoleSwitches.status[slot] = status;
+		return;
+	}
+	btBdhRomPrepareContext(-1, 0);
+	btBdhRomConfigureContext(BT_EVENT_ROLE_CHANGE, 0x202, "bmb", status, address, 6, role);
+	btSbcDispatchEntry(BT_EVENT_ROLE_CHANGE);
+}
+
+uint8_t btSbcAdjustContext(unsigned int link)
+{
+	return btRoleSwitches.state[link];
+}
+
+/* The vendor task's messages: 1 when the message was taken (and freed). */
+int btSbcRecordContext(uint8_t *message)
+{
+	const uint8_t *parameters;
+	unsigned int opcode;
+	unsigned int group;
+	unsigned int command;
+	unsigned int length;
+	uint32_t status;
+	uint8_t key[8];
+	uint8_t record[12];
+	int taken = 0;
+
+	switch (*(uint32_t *)message) {
+	case 5:
+		taken = btLmpLcResetFrame(message);
+		break;
+	case 19:
+		taken = btLmpLcNotifyFrame(message);
+		break;
+	case 21:
+		btSbcClearContext(message);
+		taken = btLmpLcApplyFrame(message);
+		break;
+	case 31:
+		taken = btLmpLcScheduleFrame(0);
+		break;
+	case 32:
+		taken = btLmpLcScheduleFrame(message[4]);
+		break;
+	case 34:
+		if (btHostSettings[11] != 2 && *(void **)(message + 20) != NULL) {
+			romHctReleaseBuffer(*(void **)(message + 20));
+			*(void **)(message + 20) = NULL;
+		}
+		return 0;
+	case 68:
+		btSbcConvertContext(0, *(uint16_t *)(message + 4), message[6]);
+		goto taken;
+	case 69:
+		btSbcConvertContext(message[4], *(uint16_t *)(message + 6), message[8]);
+		goto taken;
+	case 81:
+		btSbcSelectContext(0, message + 4, message[10]);
+		goto taken;
+	case 82:
+		btSbcSelectContext(message[4], message + 5, message[11]);
+		goto taken;
+	case 86:
+		if (btHandleStates[*(uint16_t *)(message + 4)].flags == 2)
+			btHandleStates[*(uint16_t *)(message + 4)].flags = 1;
+		return 0;
+	case BT_MESSAGE_P2P_TABLE:
+		p2pSqramCheckTable();
+		return 0;
+	case BT_MESSAGE_LINK_PACKET:
+		taken = btLmpLcInspectPacket(message);
+		break;
+	case BT_MESSAGE_HCI_COMMAND:
+		opcode = *(uint16_t *)(message + BT_COMMAND_OPCODE);
+		length = message[BT_COMMAND_LENGTH];
+		parameters = message + BT_COMMAND_PARAMETERS;
+		group = opcode >> 10;
+		command = opcode & 0x3ff;
+		switch (group) {
+		case 1:
+			if (command != 6)
+				return 0;
+			taken = btSbcParseEntry(message);
+			break;
+		case 2:
+			if (command != 11)
+				return 0;
+			btSbcVerifyContext(message);
+			goto taken;
+		case 3:
+			if (command == 3) {
+				p2pSqramAcquireEntry(message, 1, parameters, length);
+			} else if (command == 5) {
+				btLmpLcResolveFrame(length, parameters);
+				goto taken;
+			} else if (command == 51 && (unsigned int)(message[7] | message[8] << 8) > 0x3fd) {
+				message[7] = 0xfd;
+				message[8] = 3;
+			}
+			return 0;
+		case 5:
+			if (command != 7)
+				return 0;
+			btLmpLcSetupFrame(parameters);
+			goto taken;
+		case 63:
+			switch (command) {
+			case 25:
+				btBdhRomCheckContext(4, p2pSqramReleaseEntry(length, parameters), group, command);
+				goto taken;
+			case 29:
+				btVendorPolicyFlag = parameters[0] == 0 ? 1 : 0;
+				return 0;
+			case 34:
+				status = 0;
+				btBdhRomQueryState(parameters, &status);
+				if ((uint8_t)status == 0) {
+					btLdaRomDispatchState(0);
+					btVendorKeyHook(0xfe, 6, key);
+					btLdaRomBuildState(record, key);
+					btLdaRomConfigureState(btVendorP2pRecords, record, sizeof(record));
+					btLdaRomConfigureState(btVendorP2pRecords + 76, record, sizeof(record));
+				}
+				btBdhRomCheckContext(4, (uint8_t)status, 63, 34);
+				goto taken;
+			case 97:
+				if (btSbcUpdateContext(parameters) != 0) {
+					btBdhRomCheckContext(4, BT_STATUS_INVALID, 63, 97);
+					goto taken;
+				}
+				romVendorPending = btSbcNotifyContext;
+				btSbcScheduleContext();
+				goto taken;
+			default:
+				return 0;
+			}
+		default:
+			return 0;
+		}
+		break;
+	default:
+		return 0;
+	}
+	if (taken == 0)
+		return 0;
+	goto free;
+taken:
+	taken = 1;
+free:
+	osa_MsgFree((void **)&message);
+	return taken;
+}
+
+int btSbcFilterContext(const uint8_t *message)
+{
+	(void)message;
+	return 0;
+}
+
+/* The controller's reset: the ROM's default settings, and the link timing records' words. */
+void btSbcHandleEntry(void)
+{
+	struct __attribute__((packed)) {
+		uint8_t kind;
+		uint32_t first;
+		uint32_t second;
+		uint8_t third;
+		uint32_t fourth;
+		uint8_t fifth;
+		uint32_t sixth;
+	} settings;
+	uint8_t *timing;
+
+	timing = btLtsRomValidateState(0);
+	settings.kind = 2;
+	settings.first = 0xf0000;
+	settings.second = 0;
+	settings.third = 1;
+	settings.fourth = 1;
+	settings.fifth = 1;
+	settings.sixth = 1;
+	btBdhRomResetState((const uint8_t *)&settings);
+	btLmpLcPrepareState();
+	btEventFilterCount = 0;
+	btEventFilterAccept = 1;
+	btTableProfile = 0;
+	if (btVendorPolicyFlag == 0)
+		btLinkControlWord[2] |= 0xf0;
+	*(BtHalf *)(timing + 6) = 0x3c04;
+	*(BtHalf *)(timing + 46) = 0x3c45;
+	*(BtHalf *)(timing + 86) = 0x3c86;
+}
+
+/* A command complete's return parameters, patched before they go to the host. */
+int btSbcProcessEntry(unsigned int status, const uint8_t *parameters, unsigned int group, unsigned int command)
+{
+	unsigned int version;
+
+	(void)status;
+	(void)parameters;
+	if (group == 4) {
+		if (command == 2) {
+			if (btLocalFeatureMode < 4) {
+				btHciReturnParameters[24] &= 0xef;
+				btHciReturnParameters[28] &= ~1;
+			}
+		} else if (command == 1) {
+			version = btLmpLcCheckContext();
+			btHciReturnParameters[10] = version;
+			btHciReturnParameters[11] = version >> 8;
+		}
+	} else if (group == 63 && command == 9) {
+		return 1;
+	}
+	return 0;
+}
+
+int btSbcUpdateEntry(void)
+{
+	return 0;
+}
+
+int btSbcConfigureEntry(void)
+{
+	return 0;
+}
+
+/* Vendor command 107: a message for the HCT task. */
+void btSbcCheckEntry(unsigned int length, const uint8_t *parameters, uint8_t *status, uint8_t *returnLength,
+		     uint8_t *returnParameters)
+{
+	uint8_t *message = NULL;
+
+	(void)returnLength;
+	(void)returnParameters;
+	*status = 0;
+	if (length - 1 > 21) {
+		*status = BT_STATUS_INVALID;
+		return;
+	}
+	message = osa_MsgAlloc(28);
+	if (message == NULL) {
+		*status = 7;
+		return;
+	}
+	*(uint32_t *)message = BT_MESSAGE_VENDOR_COMMAND;
+	message[8] = parameters[0];
+	message[9] = 0;
+	if (parameters[0] != 0 && length > 1) {
+		if (length < 7 || parameters[5] > 16) {
+			*status = BT_STATUS_INVALID;
+			osa_MsgFree((void **)&message);
+		} else {
+			*(uint16_t *)(message + 4) = parameters[1] | parameters[2] << 8;
+			*(uint16_t *)(message + 6) = parameters[3] | parameters[4] << 8;
+			message[9] = parameters[5];
+			__aeabi_memcpy(message + 10, parameters + 6, parameters[5]);
+		}
+	}
+	if (*status == 0)
+		osa_MsgSend((void **)&message, romQueueHct);
+}
+
+/* Vendor command 91: asks the link controller, and reports its answer as a vendor event. */
+void btSbcValidateEntry(unsigned int length, const uint8_t *parameters, uintptr_t argument,
+			uint8_t *returnLength, uint8_t *status, uint8_t *returnParameters)
+{
+	unsigned int result = 0;
+
+	(void)argument;
+	(void)returnParameters;
+	switch (btLmpLcResetContext(length, parameters)) {
+	case 2:
+		result = 12;
+		/* fall through */
+	case 0:
+		if (length == 3)
+			btBdhRomConfigureContext(0xff, 0, "Vbbbbb", 91, parameters[0], parameters[1], parameters[2],
+						 result);
+		else
+			btBdhRomConfigureContext(0xff, 0, "Vbbbb", 91, parameters[0], result, 0);
+		break;
+	default:
+		break;
+	}
+	*returnLength = 0;
+	*status = result;
+}
+
+/* A message to the link controller's task. */
+void btSbcPrepareEntry(unsigned int request, unsigned int link, unsigned int value)
+{
+	uint8_t *message;
+
+	message = osa_MsgAlloc(8);
+	*(uint32_t *)message = request;
+	*(uint16_t *)(message + 4) = link;
+	message[6] = value;
+	osa_MsgSend((void **)&message, romQueueLcp);
+}
+
+/* After an event the role switch or a disconnection sends: a Command Status for no command. */
+__attribute__((noinline)) void btSbcDispatchEntry(unsigned int event)
+{
+	(void)event;
+	if (btVendorEventMode == 3)
+		btBdhRomConfigureContext(15, 0x140, "bRh", 0, 0);
+}
+
+/*
+ * HCI Disconnect (a handle and the reason): marks the handle disconnecting,
+ * and asks the link controller to drop a SCO link that rides on it first.
+ */
+int btSbcParseEntry(const uint8_t *command)
+{
+	unsigned int opcode = *(const uint16_t *)(command + BT_COMMAND_OPCODE);
+	const uint8_t *parameters = command + BT_COMMAND_PARAMETERS;
+	unsigned int handle = parameters[0] | parameters[1] << 8;
+	unsigned int reason;
+	unsigned int kind;
+	unsigned int sco;
+
+	if (command[BT_COMMAND_LENGTH] != 3 || handle >= 0xf00)
+		return 0;
+	if (btHandleStates[handle].state == 2 || btHandleStates[handle].state == 0)
+		return 0;
+	reason = parameters[2];
+	if (handle >= 8 || reason == 0)
+		return 0;
+	kind = btHccRomBuildState(handle);
+	sco = btHccRomResetState(handle);
+	if (kind == 7 || kind == 11 || sco < 8 || sco >= 11)
+		return 0;
+	btScoDisconnectLinks[sco - 8] = handle;
+	if (btHandleStates[sco].state != 2 && btHandleStates[sco].state != 0)
+		btSbcPrepareEntry(0x12, sco, reason);
+	btHandlePending[handle] = reason;
+	btHandleStates[handle].state = 2;
+	btBdhRomPrepareContext(1, handle);
+	btBdhRomValidateContext(0, opcode);
+	return 1;
 }

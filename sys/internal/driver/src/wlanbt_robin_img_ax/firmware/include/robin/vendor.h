@@ -43,8 +43,8 @@ struct BtRateDefault {
 extern const struct BtRateDefault btRateDefaults[BT_RATE_DEFAULTS];	/* 0x542a0 */
 extern const uint16_t btRadioDefaults[BT_RADIO_DEFAULTS];		/* 0x542c0 */
 
-/* The ROM's flag that a vendor command 97 is waiting (DTCM). */
-extern uint8_t romVendorPending;			/* DTCM 0x400f590 */
+/* What completes a vendor command 97 that is waiting, or NULL (DTCM). */
+extern void (*romVendorPending)(void);			/* DTCM 0x400f590 */
 
 /* The queues the vendor messages go to; the values are the original's literals. */
 #define BT_QUEUE_VENDOR_LINK	0xe1302d1eu
@@ -90,24 +90,88 @@ void btSbcSetupContext(const uint8_t *address, uint8_t value);				/* 0x4ecc4 */
 void btSbcClearContext(const uint8_t *event);						/* 0x4ed68 */
 
 /*
- * The links' requests (0x55679): each of the 8 links' state, the value its
- * request carried and the reason it was refused with (btSbcConvertContext()
- * and the functions after it).
+ * The role switches of the 8 links (0x55679), HCI Switch_Role: encryption is
+ * paused around the switch. A link's state, the role asked for, and the
+ * status of a switch whose Role Change event waits for encryption to resume.
  */
 #define BT_LINK_REQUESTS	8
 
-struct BtLinkRequests {
-	uint8_t state[BT_LINK_REQUESTS];	/* BT_LINK_REQUEST_* */
-	uint8_t value[BT_LINK_REQUESTS];
-	uint8_t reason[BT_LINK_REQUESTS];
+struct BtRoleSwitches {
+	uint8_t state[BT_LINK_REQUESTS];	/* BT_ROLE_SWITCH_* */
+	uint8_t role[BT_LINK_REQUESTS];
+	uint8_t status[BT_LINK_REQUESTS];
 };
 
-#define BT_LINK_REQUEST_IDLE	0
-#define BT_LINK_REQUEST_PENDING	1
-#define BT_LINK_REQUEST_OPEN	2
-#define BT_LINK_REQUEST_CLOSING	3
+#define BT_ROLE_SWITCH_IDLE	0
+#define BT_ROLE_SWITCH_PAUSING	1	/* encryption is being paused */
+#define BT_ROLE_SWITCH_RUNNING	2	/* the link controller switches */
+#define BT_ROLE_SWITCH_RESUMING	3	/* encryption is being resumed */
 
-extern struct BtLinkRequests btLinkRequests;		/* 0x55679 */
+extern struct BtRoleSwitches btRoleSwitches;		/* 0x55679 */
+
+/* HCI events the role switch sends. */
+#define BT_EVENT_ENCRYPTION_CHANGE	0x08
+#define BT_EVENT_ROLE_CHANGE		0x12
+#define BT_LMP_PAUSE_ENCRYPTION		0x43	/* btSbcPrepareEntry()'s request; inferred */
+#define BT_LINK_RECORD			120	/* a link's record (btHccRomApplyState()) */
+#define BT_LINK_RECORD_ADDRESS		7
+#define BT_LINK_RECORD_ROLE		20
+
+void btSbcConvertContext(unsigned int status, unsigned int link, unsigned int enabled);	/* 0x4eda4 */
+void btSbcVerifyContext(const uint8_t *command);					/* 0x4ee3e */
+void btSbcSelectContext(unsigned int status, const uint8_t *address, unsigned int role);	/* 0x4eefc */
+uint8_t btSbcAdjustContext(unsigned int link);						/* 0x4ef68 */
+
+int btLscRomPrepareState(unsigned int link);
+int btLdrRomHandleState(const uint8_t *record, unsigned int kind);
+int btLscRomValidateState(unsigned int link);
+int btLdrRomApplyState(unsigned int link, unsigned int role, unsigned int argument);
+
+/*
+ * The vendor task's messages (btSbcRecordContext()): the first word is the
+ * message's kind. An HCI command (BT_MESSAGE_HCI_COMMAND) carries its opcode
+ * at +4, its parameter length at +6 and its parameters from +7.
+ */
+#define BT_MESSAGE_HCI_COMMAND		5010
+#define BT_MESSAGE_P2P_TABLE		5092
+#define BT_MESSAGE_LINK_PACKET		5105
+#define BT_COMMAND_OPCODE		4
+#define BT_COMMAND_LENGTH		6
+#define BT_COMMAND_PARAMETERS		7
+
+/* A connection handle's states (two bytes per handle). */
+struct BtHandleState {
+	uint8_t state;		/* 0: none, 2: disconnecting */
+	uint8_t flags;
+};
+
+extern struct BtHandleState btHandleStates[];		/* DTCM 0x400b53a */
+extern uint8_t btScoDisconnectLinks[];			/* DTCM 0x400f567: the ACL handle of SCO links 8..10 */
+extern uint8_t btVendorPolicyFlag;			/* DTCM 0x400f8cc: vendor command 29; 0 adds bits 7..4 of the control word */
+extern uint8_t btVendorEventMode;			/* DTCM 0x400f534: 3: report commands the role switch ends */
+extern uint8_t btLocalFeatureMode;			/* DTCM 0x400f537: below 4, two local features are hidden */
+extern void (*btVendorKeyHook)(unsigned int kind, unsigned int length, uint8_t *out);	/* DTCM 0x400ed5c */
+extern uint8_t *btVendorP2pRecords;			/* DTCM 0x400f958: two records of 76 bytes */
+
+int btSbcRecordContext(uint8_t *message);						/* 0x4ef6e */
+int btSbcFilterContext(const uint8_t *message);						/* 0x4f1b0 */
+void btSbcHandleEntry(void);								/* 0x4f1c2 */
+int btSbcProcessEntry(unsigned int status, const uint8_t *parameters, unsigned int group, unsigned int command); /* 0x4f246 */
+int btSbcUpdateEntry(void);								/* 0x4f28c */
+int btSbcConfigureEntry(void);								/* 0x4f290 */
+void btSbcPrepareEntry(unsigned int request, unsigned int link, unsigned int value);	/* 0x4f36a */
+void btSbcDispatchEntry(unsigned int event);						/* 0x4f38c */
+int btSbcParseEntry(const uint8_t *command);						/* 0x4f3aa */
+
+void btBdhRomQueryState(const uint8_t *parameters, uint32_t *status);
+void btLdaRomDispatchState(unsigned int kind);
+void btLdaRomBuildState(uint8_t *out, const uint8_t *in);
+void btLdaRomConfigureState(uint8_t *record, const uint8_t *data, unsigned int length);
+void btBdhRomResetState(const uint8_t *settings);
+unsigned int btHccRomResetState(unsigned int handle);
+void p2pSqramCheckTable(void);										/* SQRAM 0xc000f0ea */
+void p2pSqramAcquireEntry(uint8_t *message, unsigned int argument, const uint8_t *parameters, unsigned int length);	/* SQRAM 0xc000e86c */
+uint8_t p2pSqramReleaseEntry(unsigned int length, const uint8_t *parameters);				/* SQRAM 0xc000e8bc */
 
 #define BT_MESSAGE_LINK_REQUEST	80
 
@@ -123,5 +187,6 @@ void btSbcCheckEntry(unsigned int length, const uint8_t *parameters, uint8_t *st
 		     uint8_t *returnParameters);					/* 0x4f294 */
 void btSbcValidateEntry(unsigned int length, const uint8_t *parameters, uintptr_t argument,
 			uint8_t *returnLength, uint8_t *status, uint8_t *returnParameters);	/* 0x4f318 */
+#define BT_MESSAGE_VENDOR_COMMAND	0x140e	/* btSbcCheckEntry()'s message to the HCT task */
 
 #endif /* ROBIN_VENDOR_H */

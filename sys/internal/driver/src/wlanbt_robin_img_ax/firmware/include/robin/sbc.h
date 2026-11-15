@@ -405,15 +405,13 @@ extern void (*romLmpPrepareHook)(void);			/* DTCM 0x400ec18 */
 extern int (*romLmpDispatchHook)(void);			/* DTCM 0x400ec10 */
 extern uint8_t *(*romLmpParseHook)(void);		/* DTCM 0x400ec14 */
 extern uint8_t *(*romLmpAcquireHook)(void);		/* DTCM 0x400eb30 */
-extern void (*romSbcRecordHook)(void);			/* DTCM 0x400ef34 */
-extern void (*romSbcFilterHook)(void);			/* DTCM 0x400ef38 */
+extern int (*romSbcRecordHook)(uint8_t *message);	/* DTCM 0x400ef34 */
+extern int (*romSbcFilterHook)(const uint8_t *message);	/* DTCM 0x400ef38 */
 extern void (*romSbcProcessHook)(void);			/* DTCM 0x400f19c */
 extern void (*romSbcUpdateHook)(void);			/* DTCM 0x400f2c0 */
 void btBdhRomComputeState(void);
 
 /* The code they point at, not converted yet; the prototypes are provisional. */
-void btSbcRecordContext(void);				/* 0x4ef6e */
-void btSbcFilterContext(void);				/* 0x4f1b0 */
 void btSbcProcessPacket(void);				/* 0x51c64 */
 void btSbcUpdatePacket(void);				/* 0x51c98 */
 void btSbcPreparePacket(void);				/* 0x51d20 */

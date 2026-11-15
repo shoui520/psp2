@@ -17,6 +17,7 @@
 #include "robin/sbc.h"
 #include "robin/soc.h"
 #include "robin/sys.h"
+#include "robin/vendor.h"
 
 uint32_t sbcTimestamp __attribute__((section(".itcm.rw")));
 struct SbcMsbcState sbcMsbc __attribute__((section(".itcm.rw"))) = {
