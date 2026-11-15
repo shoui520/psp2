@@ -17,23 +17,20 @@
 #include "robin/sleep.h"
 #include "robin/soc.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 
-extern uint8_t wlanBssTargetCounter[0x558];		/* 0x59718: the BSS table of the group */
 extern WlanWirelessFrame *wlanIbssProbeResponseFrame;	/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;		/* 0x54c2c */
 extern void __aeabi_memclr4(void *dest, size_t n);
 extern void __aeabi_memcpy4(void *dest, const void *source, size_t n);
 
-/* SQRAM: the context the group's frames are parsed with and built from. */
-void p2pSqramHandleEntry(struct WlanPsPeerState *ps);				/* 0xc000e1f0 */
-int p2pSqramConvertContext(struct WlanConnection *connection, uint8_t *type, uint8_t *tail, uint8_t *ssid,
-			   unsigned int mode, unsigned int flag);			/* 0xc000dc2e */
 
 uint8_t p2pBroadcastAddress[6] __attribute__((section(".itcm.rw"), aligned(4))) = {	/* 0x5524c */
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 };
 uint32_t p2pFrameDataMissing __attribute__((section(".itcm.rw")));	/* 0x55254: frames p2pActionFrameAlloc() got without data */
 struct WlanConnection *p2pDeviceConnection __attribute__((section(".itcm.rw")));	/* 0x55258 */
+uint32_t p2pModeElevenSet __attribute__((section(".itcm.rw")));	/* 0x5525c */
 struct WlanConnection *p2pGroupConnection __attribute__((section(".itcm.rw")));
 const char *p2pDirectSsidPrefix __attribute__((section(".itcm.rw"))) = "DIRECT-";
 
@@ -45,11 +42,11 @@ unsigned int p2pDirectNotifyState(struct WlanConnection *connection)
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 
 	wlanConnectionCommandCheck(15, 1);
-	__aeabi_memclr4(wlanBssTargetCounter, sizeof(wlanBssTargetCounter));
+	__aeabi_memclr4(p2pPeerStateStorage, sizeof(p2pPeerStateStorage));
 	__aeabi_memclr4(ps->wpsAttributes, sizeof(ps->wpsAttributes));
 	__aeabi_memclr4(connection->networkSsid, sizeof(connection->networkSsid));
 	connection->networkSsidLength = 0;
-	p2pSqramHandleEntry(ps);
+	p2pPersistentGroupsInit(ps);
 	if (connection->mode == 2)
 		romLibDispatchContext(0);
 	connection->mode = 0;
@@ -174,8 +171,8 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 			return 1;
 	}
 	ps->tieBreaker = rand() & 1;
-	ps->stageLimit = 3;
-	ps->stage = 1;
+	ps->maxDiscoveryPeriod = 3;
+	ps->minDiscoveryPeriod = 1;
 	ps->p2pAuthCount = 0;
 	ps->groupClientCount = 0;
 	ps->groupSettingA = 1;
@@ -184,12 +181,12 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	ps->ssidPending = 1;
 	ps->ssidFixed = 0;
 	ps->discoverabilityPending = 0;
-	ps->groupSettingD = 255;
+	ps->persistentGroupIndex = 255;
 	ps->p2pBssActive = 0;
 	ps->pendingFrame = NULL;
-	ps->groupSettingE = 1;
+	ps->provisioningAction = 1;
 	ps->wpsConfigMethod = 256;
-	ps->groupSettingH = 1;
+	ps->wpsParamsAction = 1;
 	ps->wpsDevicePasswordId = 5;
 	if (p2pDirectInspectState() != 0)
 		ps->channelShared = 1;
@@ -236,7 +233,7 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-	const uint8_t *selected;
+	const struct WlanP2pPersistentGroup *selected;
 	uint8_t *ssid;
 	unsigned int length;
 
@@ -246,7 +243,7 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 	connection->p2pState = 2;
 	ps->p2pOptions = (ps->p2pOptions & 0xfa) | 1;
 	if (ps->p2pOptions & 2) {
-		selected = p2pSqramSelectContext(connection, ps->groupDeviceAddress, ps->groupSsid,
+		selected = p2pPersistentGroupLookup(connection, ps->groupDeviceAddress, ps->groupSsid,
 						 (uint8_t)(ps->groupIdLength - 6));
 		if (ps->p2pOptions & 2) {
 			if (ps->ssidPending == 1) {
@@ -257,7 +254,7 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 				}
 			} else if (selected == NULL) {
 convert:
-				p2pSqramConvertContext(connection, &ps->groupIdType, ps->groupBssidAttribute, ps->groupSsid, 2, 0);
+				p2pPersistentGroupStore(connection, &ps->groupIdType, ps->groupBssidAttribute, ps->groupSsid, 2, NULL);
 				ps->ssidPending = 0;
 				goto made;
 			}

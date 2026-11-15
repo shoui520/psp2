@@ -22,6 +22,7 @@
 #include "robin/runtime.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 
@@ -376,8 +377,8 @@ void KeyMgmtInit(struct WlanConnection *connPtr)
 	if (info->updatePassPhrase == 1) {
 		pmkCacheGeneratePSK(connPtr->networkSsid, connPtr->networkSsidLength,
 				    (char *)info->apRsn.PSKPassPhrase, info->apRsn.PSKValue);
-		uapSqramPskUpdated(connPtr, connPtr->localAddress, connPtr->networkSsid,
-				   connPtr->networkSsidLength);
+		p2pPersistentGroupPskSave(connPtr, connPtr->localAddress, connPtr->networkSsid,
+					  connPtr->networkSsidLength);
 		info->updatePassPhrase = 0;
 	}
 	KeyMgmtStartGrpRekeyTimer(connPtr);

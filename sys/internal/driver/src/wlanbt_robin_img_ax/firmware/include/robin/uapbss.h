@@ -74,9 +74,6 @@ int p2pVendorActionSend(struct WlanConnection *connection, const uint8_t *destin
 			unsigned int dialogToken, unsigned int unused, unsigned int subtype);	/* SQRAM 0xc000c512 */
 int p2pPresenceRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c5c0 */
 int p2pActionFrameReceive(struct WlanConnection *connection, const uint8_t *frame, unsigned int kind);	/* SQRAM 0xc000c622 */
-int p2pSqramRecordContext(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000dda6, not converted yet */
-void p2pSqramFilterContext(struct WlanConnection *connection, const uint8_t *frame,
-			   uint32_t setting);					/* SQRAM 0xc000e05a, not converted yet */
 int p2pActionFrameRoute(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000c82a, veneer 0x53244 */
 void p2pPublicActionSent(struct WlanConnection *connection, unsigned int subtype);	/* SQRAM 0xc000c848 */
 void p2pActionSent(struct WlanConnection *connection, unsigned int subtype);	/* SQRAM 0xc000c8ac */
@@ -92,14 +89,35 @@ void p2pHostAttributesGet(struct WlanConnection *connection, uint8_t *entry, uin
 int p2pActionCommand(struct WlanConnection *connection, const uint8_t *command);	/* SQRAM 0xc000cf5a */
 int p2pPublicActionCommand(struct WlanConnection *connection, const uint8_t *command);	/* SQRAM 0xc000cf7e */
 int hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
-void p2pSqramScheduleContext(uint32_t timer, uint32_t argument);	/* SQRAM 0xc000d80c, not converted yet */
+int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d086 */
 void wpsAttributesParse(const uint8_t *data, unsigned int length, uint8_t **attributes);	/* SQRAM 0xc000ce8c */
-uint8_t *p2pSqramTrackContext(struct WlanConnection *connection, uint32_t *invitation);	/* SQRAM 0xc000da82, not converted yet */
-void p2pSqramReleaseContext(struct WlanConnection *connection, uint32_t invitation, uint8_t *address,
-			    struct WlanDirectContext *peer);			/* SQRAM 0xc000db0c, not converted yet */
-void p2pSqramConvertContext(struct WlanConnection *connection, const uint8_t *groupId,
-			    const uint8_t *groupBssid, const uint8_t *ssid, unsigned int mode,
-			    const uint8_t *deviceAddress);			/* SQRAM 0xc000dc2e, not converted yet */
+void p2pInvitationTimerExpired(uint32_t timer, uint32_t argument);	/* SQRAM 0xc000d80c */
+int p2pInvitationInvokesGroup(struct WlanConnection *connection);	/* SQRAM 0xc000d83a */
+struct WlanP2pPersistentGroup;
+void p2pInvitationRequestBuild(struct WlanConnection *connection, uint8_t *frame,
+			       struct WlanP2pPersistentGroup *group, unsigned int mode,
+			       struct WlanDirectContext *context);		/* SQRAM 0xc000d8ae */
+void p2pInvitationResponseBuild(struct WlanConnection *connection, uint8_t *frame,
+				struct WlanP2pPersistentGroup *group, struct WlanDirectContext *peer,
+				unsigned int mode);				/* SQRAM 0xc000d986 */
+uint8_t *p2pInvitationTargetGet(struct WlanConnection *connection, uint32_t *index);	/* SQRAM 0xc000da82 */
+int p2pPersistentGroupClientFind(const struct WlanP2pPersistentGroup *group, const uint8_t *address);	/* SQRAM 0xc000da9c */
+int p2pInvitationListFind(struct WlanConnection *connection, const uint8_t *address);	/* SQRAM 0xc000dad6 */
+int p2pInvitationRequestSend(struct WlanConnection *connection, uint32_t index, const uint8_t *address,
+			     struct WlanDirectContext *peer);			/* SQRAM 0xc000db0c */
+int p2pPersistentGroupFind(struct WlanConnection *connection, const uint8_t *groupId);	/* SQRAM 0xc000dbb0 */
+int p2pPersistentGroupFreeSlot(struct WlanConnection *connection);	/* SQRAM 0xc000dbf0 */
+void p2pPersistentGroupStore(struct WlanConnection *connection, const uint8_t *groupId,
+			     const uint8_t *groupBssid, const uint8_t *ssid, unsigned int role,
+			     const uint8_t *deviceAddress);			/* SQRAM 0xc000dc2e */
+int p2pPersistentGroupClientAdd(struct WlanP2pPersistentGroup *group, const uint8_t *address);	/* SQRAM 0xc000dc90 */
+struct WlanP2pPersistentGroup *p2pPersistentGroupLookup(struct WlanConnection *connection, const uint8_t *deviceAddress,
+							const uint8_t *ssid, unsigned int ssidLength);	/* SQRAM 0xc000dcce, veneer 0x5334c */
+int p2pInvitationRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000dda6 */
+int p2pInvitationResponseAnswer(struct WlanConnection *connection, const uint8_t *frame, uint32_t index);	/* SQRAM 0xc000e05a */
+int p2pPersistentGroupPskSave(struct WlanConnection *connection, const uint8_t *deviceAddress,
+			      const uint8_t *ssid, unsigned int ssidLength);	/* SQRAM 0xc000dd60, veneer 0x52f5c */
+void p2pPersistentGroupsInit(struct WlanPsPeerState *ps);		/* SQRAM 0xc000e1f0 */
 
 void p2pSqramResetEntry(uint8_t *rates);				/* SQRAM 0xc000e5a8: the 12 802.11g rates, 1, 2, 5.5 and 11 basic */
 void p2pSqramSyncEntry(uint8_t *capability);				/* SQRAM 0xc000e5da: ESS, short preamble, short slot time */

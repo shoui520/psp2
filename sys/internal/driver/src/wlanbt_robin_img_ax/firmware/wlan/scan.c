@@ -678,8 +678,8 @@ int macMgmtPrepareTable(void)
 		} else {
 			ps = wlanConnectionPsState(connection);
 			p2pConnectionStateSet(connection, 2);
-			if (ps->p2pWindowValid != 0)
-				interval = (uint16_t)(ps->p2pWindowEnd - ps->p2pWindowStart);
+			if (ps->extendedListenEnabled != 0)
+				interval = (uint16_t)(ps->availabilityInterval - ps->availabilityPeriod);
 			else
 				interval = p2pDirectFormatContext(connection);
 		}
@@ -786,8 +786,8 @@ int macMgmtBuildTable(unsigned int slot, const uint8_t *command, int length)
 			connection = wlanBackgroundScanState.connection;
 			if (connection->interfaceType == WLAN_IF_AP) {
 				ps = wlanConnectionPsState(connection);
-				if (ps->p2pWindowValid != 0) {
-					window = (uint16_t)(ps->p2pWindowEnd - ps->p2pWindowStart);
+				if (ps->extendedListenEnabled != 0) {
+					window = (uint16_t)(ps->availabilityInterval - ps->availabilityPeriod);
 					config->probes = 1;
 					if (window / config->channelCount <= 4) {
 						extra = 0;

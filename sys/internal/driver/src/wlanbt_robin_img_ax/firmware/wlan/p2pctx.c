@@ -13,12 +13,10 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 
 extern void abort(void);
-extern uint8_t wlanBssTargetCounter[0x558];		/* 0x59718 */
-extern uint8_t wlanBssTargetBitmap[0xd2];		/* 0x59c70 */
 extern void __aeabi_memclr4(void *dest, size_t n);
-void p2pSqramHandleEntry(struct WlanPsPeerState *ps);	/* 0xc000e1f0 */
 
 struct WlanInitStage p2pDirectInitStage __attribute__((section(".itcm.rw")));
 
@@ -651,7 +649,7 @@ unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uin
 	*(uint16_t *)event += 4;
 	out = event + 12;
 	if (type == 3 || type == 4) {
-		*(uint32_t *)out = ps->groupSettingD;
+		*(uint32_t *)out = ps->persistentGroupIndex;
 		out = event + 16;
 		*(uint16_t *)event += 4;
 	}
@@ -710,12 +708,12 @@ unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uin
 	return count;
 }
 
-/* A random wait of 100 ms times a number between the group's two limits. */
+/* A random listen period: 100 ms times a number between the shortest and the longest discovery period. */
 int p2pDirectFormatContext(struct WlanConnection *connection)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 
-	return 100 * (rand() % (ps->stageLimit - ps->stage + 1) + ps->stage);
+	return 100 * (rand() % (ps->maxDiscoveryPeriod - ps->minDiscoveryPeriod + 1) + ps->minDiscoveryPeriod);
 }
 
 int p2pDirectInspectContext(WlanWirelessFrame *frame)
@@ -739,9 +737,9 @@ void p2pDirectManageContext(struct WlanConnection *connection)
 /* The group's state is cleared when the firmware starts, and again when the init stage runs. */
 int p2pDirectAcquireContext(void)
 {
-	__aeabi_memclr4(wlanBssTargetCounter, sizeof(wlanBssTargetCounter));
-	__aeabi_memclr(wlanBssTargetBitmap, sizeof(wlanBssTargetBitmap));
-	p2pSqramHandleEntry((struct WlanPsPeerState *)wlanBssTargetCounter);
+	__aeabi_memclr4(p2pPeerStateStorage, sizeof(p2pPeerStateStorage));
+	__aeabi_memclr(p2pPersistentGroupStorage, sizeof(p2pPersistentGroupStorage));
+	p2pPersistentGroupsInit((struct WlanPsPeerState *)p2pPeerStateStorage);
 	p2pDirectInitStage.run = p2pDirectAcquireContext;
 	wlanInitStageRegister(&p2pDirectInitStage);
 	return 0;

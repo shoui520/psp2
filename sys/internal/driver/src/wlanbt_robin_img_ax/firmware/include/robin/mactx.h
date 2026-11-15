@@ -30,18 +30,48 @@ _Static_assert(offsetof(struct WlanTxWindowQueue, count) == 136, "window queue c
 #define NOA_MODE_CTWINDOW	1
 #define NOA_MODE_ABSENCE	2
 
+/*
+ * A persistent group the host stored (MRVL_WFD_PERSISTENT_GROUP_TLV,
+ * hostCmd00ea()): its Group ID and Group BSSID attributes, the PSK, and the
+ * clients a group owner keeps.
+ */
+struct WlanP2pPersistentGroup {
+	struct {
+		uint8_t id;			/* 15: the P2P Group ID attribute */
+		uint8_t length[2];		/* 6 and the SSID's length */
+		uint8_t deviceAddress[6];	/* the group owner's device address; zero: the slot is free */
+		uint8_t ssid[32];
+	} groupId;
+	struct {
+		uint8_t id;			/* 7: the P2P Group BSSID attribute */
+		uint8_t length[2];
+		uint8_t bssid[6];
+	} groupBssid;
+	uint8_t pskLength;
+	uint8_t psk[40];
+	uint8_t clients[2][6];			/* a group owner's clients */
+	uint8_t clientCount;
+	uint8_t role;				/* 2: the group owner, 3: a client */
+};
+
+_Static_assert(sizeof(struct WlanP2pPersistentGroup) == 105, "P2P persistent group");
+_Static_assert(offsetof(struct WlanP2pPersistentGroup, clients) == 91, "P2P persistent group clients");
+
+extern struct WlanP2pPersistentGroup p2pPersistentGroupStorage[2];	/* 0x59c70: the persistent groups (p2pPersistentGroupsInit()) */
+
 struct WlanPsPeerState {
 	uint8_t beaconTimestamp[8];	/* the TSF of the last beacon heard (a P2P group owner's) */
 	uint32_t beaconTimerLow;	/* the MAC timer when it was heard */
 	uint32_t beaconTimerHigh;
 	uint32_t configuredMask;	/* what the host has configured of the group; the group starts when every bit p2pDirectAcquireState() requires is set */
-	uint8_t reserved20[4];
-	uint16_t stage;			/* 1 when the group starts (inferred: the negotiation's stage) */
-	uint16_t stageLimit;		/* 3 */
-	uint8_t reserved28[2];
+	uint32_t discoveryParamsSet;	/* the discovery parameters the host set (hostCmd00ea()): bit 0 the discovery period, 1 scan enable, 2 the peer device ID, 3 the requested device type, 4 the device state */
+	uint16_t minDiscoveryPeriod;	/* Marvell's MRVL_WFD_DISC_PERIOD_TLV: the listen state's shortest ... */
+	uint16_t maxDiscoveryPeriod;	/* ... and longest period (100 TU units); 1 and 3 when the group starts */
+	uint16_t deviceState;		/* MRVL_WFD_DEVICE_STATE_TLV, as the host set it */
 	uint8_t p2pFlags;		/* what waits for the peer to be heard (p2pPeerFound()): bit 0 a GO negotiation, bit 1 an invitation (the P2P element names the device address), bit 2 a discoverability request (a P2P group owner's beacon carries the P2P element), bit 3 a provision discovery, bit 4 the pending frame */
 	uint8_t tieBreaker;		/* rand() & 1 when the group starts (the GO Intent tie-breaker bit) */
-	uint8_t reserved32[9];
+	uint8_t scanEnable;		/* MRVL_WFD_SCAN_ENABLE_TLV */
+	uint8_t requestedDeviceType[8];	/* MRVL_WFD_REQ_DEVICE_TYPE_TLV: the WPS primary device type searched for */
 	uint8_t p2pAuthCount;		/* authentications under way with a P2P peer that has no context (decremented when one ends) */
 	uint8_t groupClientCount;	/* the clients groupInfoAttribute lists */
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
@@ -54,7 +84,7 @@ struct WlanPsPeerState {
 	uint32_t directLinkTimer;	/* osaCreateTimer() handle: the delay wlanDirectLinkSend() waits for */
 	uint32_t provisionTimer;		/* osaCreateTimer() handle: the provision discovery request's 200 ms */
 	uint32_t negotiationTimer;	/* osaCreateTimer() handle: the GO negotiation request's 10 s */
-	uint32_t invitationTimer;	/* osaCreateTimer() handle: the invitation's 120 ms */
+	uint32_t invitationTimer;	/* osaCreateTimer() handle: 120 ms after an invitation frame was sent, 1 s after an invitation request (p2pInvitationTimerExpired()) */
 	uint32_t discoverabilityTimer;	/* osaCreateTimer() handle: the device discoverability request's 2 s */
 	OsaBuffer *deferredFrame;	/* a P2P action frame that came while the device was busy: p2pActionFrameReceive() takes it up when the group owner's channel is back */
 	struct {
@@ -81,7 +111,7 @@ struct WlanPsPeerState {
 		uint8_t id;		/* the attribute the P2P element of a probe request carries, when its length is not 0 */
 		uint8_t length[2];
 	} p2pAttribute;
-	uint8_t reserved192[6];
+	uint8_t scanPeerDeviceId[6];	/* MRVL_WFD_SCAN_PEER_DEVICE_ID_TLV: the device the probe requests ask for (p2pAttribute is its Device ID attribute) */
 	union {
 		uint8_t deviceIdAttribute[9];	/* the P2P Device ID attribute */
 		struct {
@@ -117,8 +147,8 @@ struct WlanPsPeerState {
 	uint8_t groupSsid[32];			/* ... and the SSID: "DIRECT-xy..." */
 	uint8_t groupBssidAttribute[13];	/* the P2P Group BSSID attribute */
 	uint8_t extendedListenAttribute[3];	/* the Extended Listen Timing attribute's header; the period and interval follow */
-	uint16_t p2pWindowStart;	/* inferred: the start of the group owner's window the scan engine measures a dwell against (TU) */
-	uint16_t p2pWindowEnd;		/* inferred: its end; the dwell is the difference */
+	uint16_t availabilityPeriod;	/* the Extended Listen Timing attribute: how long the device stays on its listen channel (ms) ... */
+	uint16_t availabilityInterval;	/* ... and how often (ms); the scan engine dwells away for the difference */
 	uint8_t interfaceAttribute[22];		/* the P2P Interface attribute */
 	uint8_t configTimeoutAttribute[5];	/* the Configuration Timeout attribute */
 	union {
@@ -135,8 +165,8 @@ struct WlanPsPeerState {
 	} p2pStatus;
 	uint8_t invitationFlagsAttribute[4];
 	uint8_t reserved1174[2];
-	uint32_t groupSettingD;		/* 255 when the group starts */
-	uint8_t reserved1180[8];
+	uint32_t persistentGroupIndex;	/* the persistent group an invitation is for (MRVL_WFD_PERSISTENT_GROUP_TLV with only the index); 255: none, when the group starts */
+	struct WlanP2pPersistentGroup *persistentGroups[2];	/* the persistent groups the host stored */
 	uint8_t p2pBssActive;		/* 1: the channel of the group owner is the one the radio is on */
 	uint8_t clientDiscoverabilityPending;	/* a GO discoverability request went to a client for a device discoverability request (p2pDiscoverabilityRequestAnswer()) */
 	uint8_t discoverabilityPending;	/* a device discoverability request is out (p2pDiscoverabilityCheck()); cleared by its timer and when the group starts */
@@ -150,18 +180,19 @@ struct WlanPsPeerState {
 	uint32_t ssidFixed;		/* nonzero: the host supplied the group's SSID, which is not generated */
 	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
 	uint8_t groupChannel;		/* the channel the group is on */
-	uint8_t p2pWindowValid;		/* inferred: nonzero while p2pWindowStart and p2pWindowEnd hold a window */
+	uint8_t extendedListenEnabled;	/* Wi-Fi Direct mode 9 sets it, mode 6 clears it: availabilityPeriod and availabilityInterval apply */
 	uint8_t reserved1230[2];
 	uint8_t *wpsAttributes[19];	/* the attributes of the WPS element the host gave (custom IE slot 1), by WPS_SLOT_* (wpsAttributesParse()) */
 	uint8_t eventPeerAddress[6];	/* the peer the listen channel's event (type 2) names (p2pListenTimerExpired()) */
 	uint8_t discoveryDeviceAddress[6];	/* the client the host wants discovered: its group owner gets a device discoverability request */
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
-	uint8_t reserved1326[13];
+	uint8_t invitationList[2][6];	/* MRVL_WFD_INVITATION_LIST_TLV: the devices whose invitations are accepted */
+	uint8_t invitationCount;
 	uint8_t dialogToken;		/* the dialog token of the P2P public action frames sent */
-	uint32_t groupSettingE;		/* 1 when the group starts */
+	uint32_t provisioningAction;	/* MRVL_WIFI_DIRECT_PROVISIONING_PARAMS_TLV's action: nonzero, the config method goes into the provision discovery frames; 1 when the group starts */
 	uint32_t wpsConfigMethod;		/* the WPS config method provisioning uses (256: keypad) */
 	uint32_t wpsDevicePasswordId;	/* its WPS device password ID (5: registrar specified) */
-	uint32_t groupSettingH;		/* 1 */
+	uint32_t wpsParamsAction;	/* MRVL_WIFI_DIRECT_WPS_PARAMS_TLV's action; 1 when the group starts */
 	uint8_t p2pGroupId[6];		/* the group owner a beacon names: the one the discoverability request went to */
 };
 
@@ -187,13 +218,15 @@ _Static_assert(offsetof(struct WlanPsPeerState, requestedChannel) == 222, "P2P r
 _Static_assert(offsetof(struct WlanPsPeerState, groupIdType) == 1069, "P2P group ID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupSsid) == 1078, "P2P group SSID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupAddress) == 1160, "P2P group address");
-_Static_assert(offsetof(struct WlanPsPeerState, groupSettingD) == 1176, "P2P group setting");
+_Static_assert(offsetof(struct WlanPsPeerState, persistentGroupIndex) == 1176, "P2P persistent group index");
+_Static_assert(offsetof(struct WlanPsPeerState, invitationCount) == 1338, "P2P invitation list");
+_Static_assert(offsetof(struct WlanPsPeerState, availabilityPeriod) == 1126, "P2P availability period");
 _Static_assert(offsetof(struct WlanPsPeerState, discoverabilityPending) == 1190, "P2P discoverability request");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
 _Static_assert(offsetof(struct WlanPsPeerState, ssidFixed) == 1220, "P2P fixed SSID");
 _Static_assert(offsetof(struct WlanPsPeerState, groupChannel) == 1228, "P2P group channel");
 _Static_assert(offsetof(struct WlanPsPeerState, wpsAttributes) == 1232, "WPS attributes");
-_Static_assert(offsetof(struct WlanPsPeerState, groupSettingE) == 1340, "P2P group setting E");
+_Static_assert(offsetof(struct WlanPsPeerState, provisioningAction) == 1340, "P2P provisioning action");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pOptions) == 188, "P2P options");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pAttribute) == 189, "P2P attribute");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pStatus) == 1166, "P2P status");

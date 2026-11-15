@@ -28,6 +28,7 @@
 #include "robin/scan.h"
 #include "robin/slot.h"
 #include "robin/sys.h"
+#include "robin/task.h"
 #include "robin/txpower.h"
 #include "robin/txring.h"
 #include "robin/uapbss.h"
@@ -381,7 +382,7 @@ void p2pGroupSsidUpdate(struct WlanConnection *connection, const uint8_t *frame)
 	unsigned int changed = 0;
 	struct WlanDirectContext *direct;
 	const uint8_t *ssid;
-	uint8_t *client;
+	struct WlanP2pPersistentGroup *client;
 
 	ps = wlanConnectionPsState(connection);
 	if (frame == NULL)
@@ -396,15 +397,15 @@ void p2pGroupSsidUpdate(struct WlanConnection *connection, const uint8_t *frame)
 	if (changed & 0x2000)
 		p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], deviceInfo, 9,
 				     &direct->attributes[P2P_SLOT_DEVICE_INFO]);
-	client = p2pSqramSelectContext(connection, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, NULL, 0);
-	if (client != NULL && ((client[2] << 8) | client[1]) == 13 &&
+	client = p2pPersistentGroupLookup(connection, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, NULL, 0);
+	if (client != NULL && ((client->groupId.length[1] << 8) | client->groupId.length[0]) == 13 &&
 	    memcmp(elements.pSsid + 2, "DIRECT-", 7) == 0) {
 		unsigned int length;
 
-		__aeabi_memcpy(client + 9, elements.pSsid + 2, elements.pSsid[1]);
+		__aeabi_memcpy(client->groupId.ssid, elements.pSsid + 2, elements.pSsid[1]);
 		length = elements.pSsid[1] + 6;
-		client[1] = length;
-		client[2] = length >> 8;
+		client->groupId.length[0] = length;
+		client->groupId.length[1] = length >> 8;
 	}
 	if (ps->groupIdLength == 13 && memcmp(elements.pSsid + 2, "DIRECT-", 7) == 0 &&
 	    memcmp(direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, ps->groupDeviceAddress, 6) == 0) {
@@ -505,7 +506,7 @@ void p2pGroupRoleApply(struct WlanConnection *connection, struct WlanDirectConte
 	} else {
 		return;
 	}
-	p2pSqramConvertContext(connection, groupIdAttribute, ps->groupBssidAttribute, ps->groupSsid,
+	p2pPersistentGroupStore(connection, groupIdAttribute, ps->groupBssidAttribute, ps->groupSsid,
 			       connection->mode, deviceAddress);
 }
 
@@ -653,7 +654,7 @@ void p2pDiscoverabilityCheck(struct WlanDirectContext *peer, uint32_t changed, s
 /*
  * Adds the WPS element of attributes 0 and 11 the host gave, with the second
  * one's value (bytes 4 and 5, big endian) set from wpsDevicePasswordId for this
- * frame only, while groupSettingE is set.
+ * frame only, while provisioningAction is set.
  */
 unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
 {
@@ -663,7 +664,7 @@ unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *fram
 	uint32_t value = 0;
 	unsigned int result;
 
-	if (attribute != NULL && ps->groupSettingE != 0) {
+	if (attribute != NULL && ps->provisioningAction != 0) {
 		saved[0] = attribute[4];
 		saved[1] = attribute[5];
 		value = (ps->wpsDevicePasswordId << 8) | ((ps->wpsDevicePasswordId >> 8) & 0xff);
@@ -671,7 +672,7 @@ unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *fram
 		attribute[5] = ((uint8_t *)&value)[1];
 	}
 	result = p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
-	if (ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID] != NULL && ps->groupSettingE != 0) {
+	if (ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID] != NULL && ps->provisioningAction != 0) {
 		attribute[4] = saved[0];
 		attribute[5] = saved[1];
 	}
@@ -831,7 +832,7 @@ int p2pGoNegotiationBuild(struct WlanConnection *connection, const uint8_t *requ
 		goto attributes;
 	}
 
-	if (ps->groupSettingH == 0) {
+	if (ps->wpsParamsAction == 0) {
 		ps->p2pStatus.value = 1;
 	} else if (ps->p2pStatus.value == 0) {
 		const uint8_t *firstList;
@@ -1092,7 +1093,7 @@ void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsig
 		p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], deviceInfo, 9,
 				     &direct->attributes[P2P_SLOT_DEVICE_INFO]);
 	if (pending & 0x02)
-		address = p2pSqramTrackContext(connection, &invitation);
+		address = p2pInvitationTargetGet(connection, &invitation);
 	else
 		__aeabi_memcpy(address, ps->eventPeerAddress, 6);
 	if (direct->attributes[P2P_SLOT_DEVICE_INFO] == NULL ||
@@ -1128,8 +1129,8 @@ void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsig
 	} else if (pending & 0x04) {
 		p2pDiscoverabilityCheck(direct, changed, ps);
 	} else if ((pending & 0x02) && address != NULL) {
-		ps->groupSettingD = invitation;
-		p2pSqramReleaseContext(connection, invitation, address, direct);
+		ps->persistentGroupIndex = invitation;
+		p2pInvitationRequestSend(connection, invitation, address, direct);
 		ps->p2pFlags &= ~0x02;
 	}
 }
@@ -1265,8 +1266,8 @@ int p2pListenSlotStart(struct WlanConnection *connection, uint32_t slot)
 		return wlanSlotAbort(slot, 6);
 	}
 	p2pConnectionStateSet(connection, 2);
-	if (ps->p2pWindowValid)
-		duration = 1000 * (ps->p2pWindowEnd - ps->p2pWindowStart);
+	if (ps->extendedListenEnabled)
+		duration = 1000 * (ps->availabilityInterval - ps->availabilityPeriod);
 	else
 		duration = 1000 * p2pDirectFormatContext(device);
 	wlanCurrentChannelFlags((uint8_t *)&flags);
@@ -1853,11 +1854,11 @@ public_action:
 		ps->p2pBssActive = 0;
 		return result;
 	case 3:		/* invitation request */
-		result = p2pSqramRecordContext(connection, frame);
+		result = p2pInvitationRequestAnswer(connection, frame);
 		ps->p2pBssActive = 0;
 		return result;
 	case 4:		/* invitation response */
-		p2pSqramFilterContext(connection, frame, ps->groupSettingD);
+		p2pInvitationResponseAnswer(connection, frame, ps->persistentGroupIndex);
 		ps->p2pBssActive = 0;
 		return 0;
 	case 5:		/* device discoverability request */
@@ -1928,7 +1929,7 @@ void p2pPublicActionSent(struct WlanConnection *connection, unsigned int subtype
 			osaCancelTimer(ps->invitationTimer);
 			ps->invitationTimer = 0;
 		}
-		callback = p2pSqramScheduleContext;
+		callback = p2pInvitationTimerExpired;
 		delay = 120000;
 		timer = &ps->invitationTimer;
 		break;
@@ -2456,4 +2457,974 @@ int hostCmd00f4(struct WlanConnection *connection, uint8_t *command)
 	else if (command[14] == P2P_FRAME_ACTION)
 		p2pActionCommand(connection, command);
 	return 0;
+}
+
+/* Marvell's TLV IDs (esa's tlv.h): the P2P parameters hostCmd00ea() sets and gets. */
+#define MRVL_WFD_DISC_PERIOD_TLV_ID			0x17c
+#define MRVL_WFD_SCAN_ENABLE_TLV_ID			0x17d
+#define MRVL_WFD_SCAN_PEER_DEVICE_ID_TLV_ID		0x17e
+#define MRVL_WFD_REQ_DEVICE_TYPE_TLV_ID			0x17f
+#define MRVL_WFD_DEVICE_STATE_TLV_ID			0x180
+#define MRVL_WFD_INTENT_TLV_ID				0x181
+#define MRVL_WFD_CAPABILITY_TLV_ID			0x182
+#define MRVL_WFD_INVITATION_LIST_TLV_ID			0x185
+#define MRVL_WFD_LISTEN_CHANNEL_TLV_ID			0x186
+#define MRVL_WFD_OPERATING_CHANNEL_TLV_ID		0x187
+#define MRVL_WFD_PERSISTENT_GROUP_TLV_ID		0x188
+#define MRVL_WIFI_DIRECT_EXTENDED_LISTEN_TIME_TLV_ID	0x18e
+#define MRVL_WIFI_DIRECT_PROVISIONING_PARAMS_TLV_ID	0x18f
+#define MRVL_WIFI_DIRECT_WPS_PARAMS_TLV_ID		0x190
+
+/* mlan's host commands (mlan_fw.h); 0xec, the service discovery frame, is not in mlan. */
+#define HOST_CMD_P2P_PARAMS_CONFIG		0xea
+#define HOST_CMD_WIFI_DIRECT_MODE_CONFIG	0xeb
+#define HOST_CMD_WIFI_DIRECT_SERVICE_DISCOVERY	0xec
+
+#define TLV_U16(bytes)			((bytes)[1] << 8 | (bytes)[0])
+#define TLV_PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
+
+/*
+ * The P2P host commands: 0xea sets (action 1) or gets (action 0) the P2P
+ * parameters, as Marvell's TLVs; 0xeb sets or gets the Wi-Fi Direct mode
+ * (mlan's 0 disable, 1 listen, 2 group owner, 3 client, 4 find, 5 stop find,
+ * and 6-11 of Robin's own); 0xec sends a service discovery frame. Returns 1
+ * for a command it does not know and for a mode that cannot start.
+ *
+ * As the original: a persistent group TLV that carries only the index is
+ * recognised by the command's remaining length (5), its client is looked up
+ * with the client address's first byte for an address, and its PSK and
+ * client fields are measured against the command's remaining length too.
+ */
+int hostCmd00ea(struct WlanConnection *connection, uint8_t *command)
+{
+	int result = 0;
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int length = (uint16_t)(TLV_U16(command + 2) - 8);
+	uint8_t *body = command + 8;
+	uint8_t *tlv;
+	uint8_t *out;
+
+	switch (command[0]) {
+	case HOST_CMD_P2P_PARAMS_CONFIG:
+		if (TLV_U16(body) == 1) {
+			unsigned int remaining = (uint16_t)(length - 2);
+
+			for (tlv = body + 2; remaining != 0;) {
+				unsigned int size;
+
+				switch (TLV_U16(tlv)) {
+				case MRVL_WFD_DISC_PERIOD_TLV_ID:
+					ps->minDiscoveryPeriod = TLV_U16(tlv + 4);
+					ps->maxDiscoveryPeriod = TLV_U16(tlv + 6);
+					ps->discoveryParamsSet |= 0x01;
+					break;
+				case MRVL_WFD_SCAN_ENABLE_TLV_ID:
+					ps->scanEnable = TLV_U16(tlv + 4);
+					ps->discoveryParamsSet |= 0x02;
+					break;
+				case MRVL_WFD_SCAN_PEER_DEVICE_ID_TLV_ID:
+					__aeabi_memcpy(ps->scanPeerDeviceId, tlv + 4, 6);
+					ps->p2pAttribute.id = P2P_ATTR_DEVICE_ID;
+					ps->p2pAttribute.length[0] = 6;
+					ps->p2pAttribute.length[1] = 0;
+					ps->discoveryParamsSet |= 0x04;
+					break;
+				case MRVL_WFD_REQ_DEVICE_TYPE_TLV_ID:
+					__aeabi_memcpy(ps->requestedDeviceType, tlv + 4, 8);
+					ps->discoveryParamsSet |= 0x08;
+					break;
+				case MRVL_WFD_DEVICE_STATE_TLV_ID:
+					ps->deviceState = TLV_U16(tlv + 4);
+					ps->discoveryParamsSet |= 0x10;
+					break;
+				case MRVL_WFD_INTENT_TLV_ID:
+					ps->groupOwnerIntentAttribute[0] = P2P_ATTR_GO_INTENT;
+					ps->groupOwnerIntentAttribute[3] = (ps->groupOwnerIntentAttribute[3] & 1) | (tlv[4] << 1);
+					break;
+				case MRVL_WFD_CAPABILITY_TLV_ID:
+					ps->capabilityAttribute[0] = P2P_ATTR_CAPABILITY;
+					ps->capabilityAttribute[3] = tlv[4];	/* device capability */
+					ps->p2pOptions = tlv[5];		/* group capability */
+					break;
+				case MRVL_WFD_INVITATION_LIST_TLV_ID: {
+					unsigned int count = ps->invitationCount;
+
+					if (p2pInvitationListFind(connection, tlv + 4) == -1) {
+						__aeabi_memcpy(ps->invitationList[count & 1], tlv + 4, 6);
+						if (ps->invitationCount < 2)
+							ps->invitationCount++;
+					}
+					break;
+				}
+				case MRVL_WFD_LISTEN_CHANNEL_TLV_ID:
+					ps->listenChannelAttribute[0] = P2P_ATTR_LISTEN_CHANNEL;
+					__aeabi_memcpy(&ps->defaultChannel, tlv + 4, TLV_U16(tlv + 2));
+					wlanConnectionInfo(connection);
+					wlanConnectionInfoSlot(connection)->channel = ps->defaultChannel;
+					connection->channel = ps->defaultChannel;
+					macMgmtScheduleFrame(connection, 5);
+					break;
+				case MRVL_WFD_OPERATING_CHANNEL_TLV_ID:
+					ps->operatingChannelAttribute[0] = P2P_ATTR_OPERATING_CHANNEL;
+					__aeabi_memcpy(&ps->requestedChannel, tlv + 4, TLV_U16(tlv + 2));
+					break;
+				case MRVL_WFD_PERSISTENT_GROUP_TLV_ID: {
+					struct WlanP2pPersistentGroup *group;
+					uint8_t clients[12];
+					unsigned int index = tlv[4];
+					unsigned int clientCount;
+					unsigned int offset;
+					unsigned int pskLength;
+
+					if (remaining == 5) {
+						if (index >= 2)
+							index = 255;
+						ps->persistentGroupIndex = index;
+						break;
+					}
+					if (index >= 2)
+						break;
+					group = ps->persistentGroups[index];
+					__aeabi_memcpy(clients, group->clients, sizeof(clients));
+					clientCount = group->clientCount;
+					__aeabi_memclr(group, sizeof(*group));
+					__aeabi_memcpy(group->clients, clients, sizeof(clients));
+					group->clientCount = clientCount;
+					group->role = tlv[5] == 1 ? 2 : 3;
+					group->groupBssid.id = P2P_ATTR_GROUP_BSSID;
+					group->groupBssid.length[0] = 6;
+					group->groupBssid.length[1] = 0;
+					__aeabi_memcpy(group->groupBssid.bssid, tlv + 6, 6);
+					group->groupId.id = P2P_ATTR_GROUP_ID;
+					TLV_PUT_U16(group->groupId.length, tlv[18] + 6);
+					__aeabi_memcpy(group->groupId.deviceAddress, tlv + 12, 6);
+					__aeabi_memcpy(group->groupId.ssid, tlv + 19, tlv[18]);
+					offset = (uint8_t)(tlv[18] + 19);
+					pskLength = tlv[offset];
+					group->pskLength = pskLength;
+					offset = (uint8_t)(offset + 1);
+					__aeabi_memcpy(group->psk, tlv + offset, pskLength);
+					offset = (uint8_t)(offset + pskLength);
+					if (remaining <= offset)
+						break;
+					offset = (uint8_t)(offset + 1);
+					if ((remaining - offset) % 6 != 0 ||
+					    p2pPersistentGroupClientFind(group, (const uint8_t *)(uintptr_t)tlv[offset]) != -1)
+						break;
+					if (group->clientCount < 2) {
+						__aeabi_memcpy(group->clients[group->clientCount], tlv + offset, 6);
+						group->clientCount++;
+					}
+					break;
+				}
+				case MRVL_WIFI_DIRECT_EXTENDED_LISTEN_TIME_TLV_ID:
+					ps->extendedListenAttribute[0] = P2P_ATTR_EXTENDED_LISTEN_TIMING;
+					ps->availabilityPeriod = TLV_U16(tlv + 4);
+					ps->availabilityInterval = TLV_U16(tlv + 6);
+					break;
+				case MRVL_WIFI_DIRECT_PROVISIONING_PARAMS_TLV_ID:
+					if (TLV_U16(tlv + 6) == 0xffff && TLV_U16(tlv + 8) == 0xffff) {
+						ps->provisioningAction = 0;
+						ps->wpsConfigMethod = 0xffff;
+						ps->wpsDevicePasswordId = 0xffff;
+					} else {
+						ps->provisioningAction = TLV_U16(tlv + 4);
+						ps->wpsConfigMethod = TLV_U16(tlv + 6);
+						ps->wpsDevicePasswordId = TLV_U16(tlv + 8);
+					}
+					break;
+				case MRVL_WIFI_DIRECT_WPS_PARAMS_TLV_ID:
+					ps->wpsParamsAction = TLV_U16(tlv + 4);
+					break;
+				}
+				size = TLV_U16(tlv + 2);
+				tlv += size + 4;
+				remaining = (uint16_t)(remaining - size - 4);
+			}
+		} else if (TLV_U16(body) == 0) {
+			tlv = body + 2;
+			out = tlv;
+			if (length == 2) {
+				/* no TLV asked for: scan enable, the discovery period and the device state */
+				TLV_PUT_U16(out, MRVL_WFD_SCAN_ENABLE_TLV_ID);
+				TLV_PUT_U16(out + 2, 1);
+				out[4] = ps->scanEnable;
+				out += 5;
+				TLV_PUT_U16(out, MRVL_WFD_DISC_PERIOD_TLV_ID);
+				TLV_PUT_U16(out + 2, 4);
+				out[4] = (uint8_t)ps->minDiscoveryPeriod;
+				out[5] = (uint8_t)(ps->minDiscoveryPeriod >> 8);
+				out[6] = (uint8_t)ps->maxDiscoveryPeriod;
+				out[7] = (uint8_t)(ps->maxDiscoveryPeriod >> 8);
+				out += 8;
+				TLV_PUT_U16(out, MRVL_WFD_DEVICE_STATE_TLV_ID);
+				TLV_PUT_U16(out + 2, 2);
+				out[4] = (uint8_t)ps->deviceState;
+				out[5] = (uint8_t)(ps->deviceState >> 8);
+				out += 6;
+			} else {
+				switch (TLV_U16(tlv)) {
+				case MRVL_WFD_DISC_PERIOD_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 4);
+					out = tlv + 4;
+					out[0] = (uint8_t)ps->minDiscoveryPeriod;
+					out[1] = (uint8_t)(ps->minDiscoveryPeriod >> 8);
+					out[2] = (uint8_t)ps->maxDiscoveryPeriod;
+					out[3] = (uint8_t)(ps->maxDiscoveryPeriod >> 8);
+					out += 4;
+					break;
+				case MRVL_WFD_SCAN_ENABLE_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 1);
+					out = tlv + 4;
+					*out++ = ps->scanEnable;
+					break;
+				case MRVL_WFD_SCAN_PEER_DEVICE_ID_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 6);
+					out = tlv + 4;
+					__aeabi_memcpy(out, ps->scanPeerDeviceId, 6);
+					out += 6;
+					break;
+				case MRVL_WFD_REQ_DEVICE_TYPE_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 8);
+					out = tlv + 4;
+					__aeabi_memcpy(out, ps->requestedDeviceType, 8);
+					out += 8;
+					break;
+				case MRVL_WFD_DEVICE_STATE_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 2);
+					out = tlv + 4;
+					out[0] = (uint8_t)ps->deviceState;
+					out[1] = (uint8_t)(ps->deviceState >> 8);
+					out += 2;
+					break;
+				case MRVL_WFD_INTENT_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 1);
+					out = tlv + 4;
+					*out++ = ps->groupOwnerIntentAttribute[3] >> 1;
+					break;
+				case MRVL_WFD_CAPABILITY_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 2);
+					out = tlv + 4;
+					out[0] = ps->capabilityAttribute[3];
+					out[1] = ps->p2pOptions;
+					out += 2;
+					break;
+				case MRVL_WFD_INVITATION_LIST_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 12);
+					out = tlv + 4;
+					__aeabi_memcpy(out, ps->invitationList, 12);
+					out += 12;
+					break;
+				case MRVL_WFD_LISTEN_CHANNEL_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 1);
+					out = tlv + 4;
+					*out++ = ps->defaultChannel;
+					break;
+				case MRVL_WFD_OPERATING_CHANNEL_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 1);
+					out = tlv + 4;
+					*out++ = ps->requestedChannel;
+					break;
+				case MRVL_WFD_PERSISTENT_GROUP_TLV_ID: {
+					unsigned int index = 0;
+
+					out = tlv + 4;
+					if (TLV_U16(tlv + 2) != 0)
+						index = out[0];
+					for (; index < 2; index = (uint8_t)(index + 1)) {
+						uint32_t zero[2] = { 0, 0 };
+						struct WlanP2pPersistentGroup *group = ps->persistentGroups[index];
+						unsigned int ssidLength;
+						unsigned int i;
+
+						if (memcmp(group->groupId.deviceAddress, zero, 6) == 0)
+							continue;
+						*out++ = index;
+						*out++ = group->role == 2 ? 1 : 2;
+						__aeabi_memcpy(out, group->groupBssid.bssid, 6);
+						out += 6;
+						__aeabi_memcpy(out, group->groupId.deviceAddress, 6);
+						out += 6;
+						if (TLV_U16(group->groupId.length) > 6) {
+							*out++ = group->groupId.length[0] - 6;
+							__aeabi_memcpy(out, group->groupId.ssid, TLV_U16(group->groupId.length) - 6);
+						}
+						ssidLength = TLV_U16(group->groupId.length) - 6;
+						out += (int)ssidLength;
+						*out++ = group->pskLength;
+						__aeabi_memcpy(out, group->psk, group->pskLength);
+						out += group->pskLength;
+						if (group->role == 2) {
+							*out++ = group->clientCount;
+							for (i = 0; i < group->clientCount; i = (uint8_t)(i + 1)) {
+								__aeabi_memcpy(out, group->clients[i], 6);
+								out += 6;
+							}
+						}
+						if (TLV_U16(tlv + 2) != 0)
+							break;
+					}
+					TLV_PUT_U16(tlv + 2, out - body - 6);
+					break;
+				}
+				case MRVL_WIFI_DIRECT_EXTENDED_LISTEN_TIME_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 4);
+					out = tlv + 4;
+					*(uint16_t *)out = ps->availabilityPeriod;
+					*(uint16_t *)(out + 2) = ps->availabilityInterval;
+					out += 4;
+					break;
+				case MRVL_WIFI_DIRECT_PROVISIONING_PARAMS_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 6);
+					out = tlv + 4;
+					*(uint16_t *)out = ps->provisioningAction;
+					*(uint16_t *)(out + 2) = ps->wpsConfigMethod;
+					*(uint16_t *)(out + 4) = ps->wpsDevicePasswordId;
+					out += 6;
+					break;
+				case MRVL_WIFI_DIRECT_WPS_PARAMS_TLV_ID:
+					TLV_PUT_U16(tlv + 2, 2);
+					out = tlv + 4;
+					*(uint16_t *)out = ps->wpsParamsAction;
+					out += 2;
+					break;
+				}
+			}
+			TLV_PUT_U16(command + 2, out - body + 8);
+		}
+		break;
+	case HOST_CMD_WIFI_DIRECT_MODE_CONFIG:
+		if (TLV_U16(body) == 1) {
+			unsigned int mode = (uint8_t)TLV_U16(body + 2);
+			unsigned int started;
+
+			switch (mode) {
+			case 0:
+			case 1:
+			case 2:
+			case 3:
+				if (mode == 1)
+					started = p2pDirectAcquireState(connection);
+				else if (mode == 0)
+					started = p2pDirectNotifyState(connection);
+				else if (mode == 2)
+					started = p2pDirectCheckSsidPrefix(connection);
+				else
+					started = p2pDirectSetupState(connection);
+				if (started == 1)
+					result = 1;
+				else
+					macMgmtScheduleTable(0);
+				break;
+			case 4:		/* find */
+				if (connection->mode == 0) {
+					result = 1;
+					break;
+				}
+				connection->p2pState = 3;
+				macMgmtScheduleTable(1);
+				macMgmtValidateTable(0);
+				break;
+			case 5:		/* stop find */
+				if (connection->mode == 0) {
+					result = 1;
+					break;
+				}
+				connection->p2pState = 2;
+				macMgmtValidateTable(0);
+				macMgmtScheduleTable(0);
+				break;
+			case 6:
+				ps->extendedListenEnabled = 0;
+				break;
+			case 9:
+				ps->extendedListenEnabled = 1;
+				break;
+			case 10:
+				ps->ssidFixed = 1;
+				break;
+			case 11:
+				p2pModeElevenSet = 1;
+				break;
+			}
+		} else if (TLV_U16(body) == 0) {
+			TLV_PUT_U16(body + 2, connection->mode);
+		}
+		break;
+	case HOST_CMD_WIFI_DIRECT_SERVICE_DISCOVERY:
+		p2pServiceDiscoverySend(connection, body, TLV_U16(command + 2) - 8);
+		break;
+	default:
+		return 1;
+	}
+	return result;
+}
+
+/*
+ * The invitation's timer (argument: the connection): the device goes back to
+ * the role and channel it had before (p2pDeviceStateSave()) and waits for the
+ * peer's probe to invite it again.
+ */
+void p2pInvitationTimerExpired(uint32_t timer, uint32_t argument)
+{
+	struct WlanConnection *connection = (struct WlanConnection *)argument;
+	struct WlanPsPeerState *ps;
+	uint8_t flags[4];
+
+	wlanCurrentChannelFlags(flags);
+	ps = wlanConnectionPsState(connection);
+	p2pDeviceStateRestore(connection);
+	ps->p2pFlags |= 0x02;
+	wlanSetChannel(ps->savedChannel, flags, 1);
+}
+
+/*
+ * Whether the invitation reinvokes the persistent group it is for: the device
+ * invited is the group's owner (the group is a client's) or one of its
+ * clients (the group is an owner's). An index of 2 or more becomes 255, none.
+ */
+int p2pInvitationInvokesGroup(struct WlanConnection *connection)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	int index = ps->persistentGroupIndex;
+	struct WlanP2pPersistentGroup *group;
+	unsigned int i;
+
+	if (index == 255)
+		return 0;
+	if (index >= 2) {
+		ps->persistentGroupIndex = 255;
+		return 0;
+	}
+	group = ps->persistentGroups[index];
+	if (group->role == 3) {
+		if (memcmp(ps->p2pDeviceAddress, group->groupId.deviceAddress, 6) == 0)
+			return 1;
+	} else if (group->role == 2) {
+		for (i = 0; i < group->clientCount; i = (uint8_t)(i + 1)) {
+			if (memcmp(group->clients[i], ps->p2pDeviceAddress, 6) == 0)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+/*
+ * The P2P element of an invitation request: the Invitation Flags, the
+ * persistent group's Group ID (and a group owner's Group BSSID) or ours, and
+ * the operating channel: the group's when the device is a client (mode 3),
+ * the one asked for otherwise; a group owner or client gives its Group BSSID.
+ */
+void p2pInvitationRequestBuild(struct WlanConnection *connection, uint8_t *frame,
+			       struct WlanP2pPersistentGroup *group, unsigned int mode,
+			       struct WlanDirectContext *context)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int include = 0;
+	unsigned int given = 0;
+	unsigned int length;
+	uint8_t operating[8];
+
+	ps->invitationFlagsAttribute[0] = P2P_ATTR_INVITATION_FLAGS;
+	ps->invitationFlagsAttribute[3] = p2pInvitationInvokesGroup(connection);
+	ps->invitationFlagsAttribute[1] = 1;
+	ps->invitationFlagsAttribute[2] = 0;
+	if (group != NULL) {
+		given = 1u << P2P_ATTR_GROUP_ID;
+		context->attributes[P2P_SLOT_GROUP_ID] = &group->groupId.id;
+		if (group->role == 2) {
+			context->attributes[P2P_SLOT_GROUP_BSSID] = &group->groupBssid.id;
+			given = (1u << P2P_ATTR_GROUP_ID) | (1u << P2P_ATTR_GROUP_BSSID);
+		}
+	} else {
+		include = 1u << P2P_ATTR_GROUP_ID;
+	}
+	operating[0] = P2P_ATTR_OPERATING_CHANNEL;
+	operating[1] = 5;
+	operating[2] = 0;
+	operating[6] = ps->listenChannelAttribute[6];
+	__aeabi_memcpy(operating + 3, ps->operatingChannelAttribute + 3, 3);
+	if (mode == 3) {
+		operating[7] = ps->groupChannel;
+		include |= 1u << P2P_ATTR_GROUP_BSSID;
+	} else {
+		operating[7] = ps->requestedChannel;
+		if (mode == 2)
+			include |= 1u << P2P_ATTR_GROUP_BSSID;
+	}
+	context->attributes[P2P_SLOT_OPERATING_CHANNEL] = operating;
+	length = p2pDirectCheckContext(connection, (WlanWirelessFrame *)frame, context,
+				       include | (1u << P2P_ATTR_INVITATION_FLAGS) | (1u << P2P_ATTR_EXTENDED_LISTEN_TIMING) |
+				       (1u << P2P_ATTR_CHANNEL_LIST) | (1u << P2P_ATTR_CONFIGURATION_TIMEOUT),
+				       given | (1u << P2P_ATTR_OPERATING_CHANNEL));
+	length += (frame[1] << 8) | frame[0];
+	frame[0] = length;
+	frame[1] = length >> 8;
+}
+
+/*
+ * The P2P element of an invitation response: the Status (7, no common
+ * channels, when the request's Channel List and ours share none) and the
+ * channels both support; a group owner (or a device becoming one, mode 2)
+ * gives its operating channel, and a persistent group owner its Group BSSID.
+ */
+void p2pInvitationResponseBuild(struct WlanConnection *connection, uint8_t *frame,
+				struct WlanP2pPersistentGroup *group, struct WlanDirectContext *peer,
+				unsigned int mode)
+{
+	struct WlanPsPeerState *ps;
+	struct WlanDirectContext context;
+	unsigned int include = 0;
+	unsigned int exclude = 0;
+	unsigned int length;
+	uint8_t operating[8];
+
+	ps = wlanConnectionPsState(connection);
+	ps->p2pStatus.length[0] = 1;
+	ps->p2pStatus.length[1] = 0;
+	if (group != NULL) {
+		p2pDirectUpdateContext(connection, peer->attributes[P2P_SLOT_CHANNEL_LIST],
+				       peer->attributes[P2P_SLOT_CHANNEL_LIST][7], ps->channelListAttribute,
+				       ps->channelListAttribute[7]);
+		if (ps->commonChannels.count != 0) {
+			exclude = 1u << P2P_ATTR_CHANNEL_LIST;
+			context.attributes[P2P_SLOT_CHANNEL_LIST] = &ps->commonChannels.id;
+		} else {
+			ps->p2pStatus.value = 7;
+		}
+		if (group->role == 2)
+			goto operating;
+	} else {
+		include = 1u << P2P_ATTR_CHANNEL_LIST;
+	}
+	if (mode != 2) {
+		include |= 1u << P2P_ATTR_OPERATING_CHANNEL;
+		goto build;
+	}
+operating:
+	p2pOperatingChannelSelect(connection, peer);
+	operating[0] = P2P_ATTR_OPERATING_CHANNEL;
+	operating[1] = 5;
+	operating[2] = 0;
+	operating[6] = ps->commonChannels.operatingClass;
+	__aeabi_memcpy(operating + 3, ps->operatingChannelAttribute + 3, 3);
+	operating[7] = ps->groupChannel;
+	context.attributes[P2P_SLOT_OPERATING_CHANNEL] = operating;
+	exclude |= 1u << P2P_ATTR_OPERATING_CHANNEL;
+build:
+	if (group != NULL && group->role == 2) {
+		exclude |= 1u << P2P_ATTR_GROUP_BSSID;
+		context.attributes[P2P_SLOT_GROUP_BSSID] = &group->groupBssid.id;
+	}
+	length = p2pDirectCheckContext(connection, (WlanWirelessFrame *)frame, &context,
+				       include | (1u << P2P_ATTR_STATUS) | (1u << P2P_ATTR_CONFIGURATION_TIMEOUT), exclude);
+	length += (frame[1] << 8) | frame[0];
+	frame[0] = length;
+	frame[1] = length >> 8;
+}
+
+/* The device an invitation goes to, and (in *index) the persistent group it is for. */
+__attribute__((noinline)) uint8_t *p2pInvitationTargetGet(struct WlanConnection *connection, uint32_t *index)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+
+	*index = ps->persistentGroupIndex;
+	return ps->p2pDeviceAddress;
+}
+
+/* The client of a persistent group with that address: its index, or -1. */
+int p2pPersistentGroupClientFind(const struct WlanP2pPersistentGroup *group, const uint8_t *address)
+{
+	unsigned int i;
+
+	if (group == NULL)
+		return -1;
+	for (i = 0; i < group->clientCount; i = (uint8_t)(i + 1)) {
+		if (memcmp(group->clients[i], address, 6) == 0)
+			return i;
+	}
+	return -1;
+}
+
+/* The entry of the invitation list with that address: its index, or -1. */
+int p2pInvitationListFind(struct WlanConnection *connection, const uint8_t *address)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int i;
+
+	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
+		if (memcmp(ps->invitationList[i], address, 6) == 0)
+			return i;
+	}
+	return -1;
+}
+
+/*
+ * Sends an invitation request to the device at that address, for the
+ * persistent group of that index (-1: our own group); the answer is waited
+ * for one second (p2pInvitationTimerExpired()). As the original, an index of
+ * 255 (no persistent group) is used as one.
+ */
+int p2pInvitationRequestSend(struct WlanConnection *connection, uint32_t index, const uint8_t *address,
+			     struct WlanDirectContext *peer)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	struct WlanP2pPersistentGroup *group;
+	OsaBuffer *buffer;
+	uint8_t *data;
+
+	connection->p2pState = 2;
+	macMgmtValidateTable(0);
+	if (p2pActionFrameAlloc(connection, &buffer, address, P2P_FRAME_PUBLIC_ACTION, 3) != 0)
+		return -1;
+	data = (uint8_t *)buffer + buffer->dataOffset;
+	if (index == (uint32_t)-1)
+		group = NULL;
+	else
+		group = ps->persistentGroups[index];
+	p2pInvitationRequestBuild(connection, data, group, ps->savedMode, peer);
+	data[32 + 7] = ps->dialogToken;
+	__aeabi_memcpy(data + 18, address, 6);
+	if (wlanMgmtSendFrame(buffer) != 0)
+		return -1;
+	osaCreateTimer(p2pInvitationTimerExpired, (uint32_t)connection, 1000000, &ps->invitationTimer, 0);
+	return 0;
+}
+
+/* The persistent group with that Group ID attribute: its index, or -1. */
+int p2pPersistentGroupFind(struct WlanConnection *connection, const uint8_t *groupId)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int i;
+
+	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
+		struct WlanP2pPersistentGroup *group = ps->persistentGroups[i];
+
+		if (memcmp(group, groupId, TLV_U16(group->groupId.length) + 3) == 0)
+			return i;
+	}
+	return -1;
+}
+
+/* A free persistent group slot (no device address): its index, or 2 when both are used. */
+int p2pPersistentGroupFreeSlot(struct WlanConnection *connection)
+{
+	uint32_t zero[2] = { 0, 0 };
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int i;
+
+	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
+		if (memcmp(ps->persistentGroups[i]->groupId.deviceAddress, zero, 6) == 0)
+			return i;
+	}
+	return 2;
+}
+
+/*
+ * Stores a persistent group (its Group ID and Group BSSID attributes, and
+ * our role in it, 2 owner or 3 client) in a free slot, unless it is stored
+ * already or both slots are used. The SSID and the device address are not
+ * used.
+ */
+void p2pPersistentGroupStore(struct WlanConnection *connection, const uint8_t *groupId,
+			     const uint8_t *groupBssid, const uint8_t *ssid, unsigned int role,
+			     const uint8_t *deviceAddress)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	int index;
+
+	if (p2pPersistentGroupFind(connection, groupId) != -1)
+		return;
+	index = p2pPersistentGroupFreeSlot(connection);
+	if (index == 2)
+		return;
+	__aeabi_memcpy(ps->persistentGroups[index], groupId, TLV_U16(groupId + 1) + 3);
+	__aeabi_memcpy(&ps->persistentGroups[index]->groupBssid, groupBssid, TLV_U16(groupBssid + 1) + 3);
+	ps->persistentGroups[index]->role = role;
+}
+
+/* Adds a client to a persistent group, unless it is there already; 1: no group, or it is full. */
+int p2pPersistentGroupClientAdd(struct WlanP2pPersistentGroup *group, const uint8_t *address)
+{
+	unsigned int count;
+
+	if (group == NULL)
+		return 1;
+	count = group->clientCount;
+	if (count == 2)
+		return 1;
+	if (p2pPersistentGroupClientFind(group, address) == -1) {
+		__aeabi_memcpy(group->clients[count], address, 6);
+		group->clientCount++;
+	}
+	return 0;
+}
+
+/*
+ * The persistent group of that group owner (and, unless ssid is NULL, of
+ * that SSID), looked up with interrupts off; NULL: none.
+ */
+struct WlanP2pPersistentGroup *p2pPersistentGroupLookup(struct WlanConnection *connection, const uint8_t *deviceAddress,
+							const uint8_t *ssid, unsigned int ssidLength)
+{
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	unsigned int i = 0;
+	UINT posture;
+
+	if (ps == NULL)
+		return NULL;
+	posture = sysIrqDisable();
+	do {
+		struct WlanP2pPersistentGroup *group = ps->persistentGroups[i];
+
+		if (memcmp(group->groupId.deviceAddress, deviceAddress, 6) == 0 &&
+		    (ssid == NULL || (memcmp(group->groupId.ssid, ssid, ssidLength) == 0 &&
+				      (unsigned int)(TLV_U16(group->groupId.length) - 6) == ssidLength))) {
+			sysIrqRestore(posture);
+			return ps->persistentGroups[i];
+		}
+		i = (uint8_t)(i + 1);
+	} while (i < 2);
+	sysIrqRestore(posture);
+	return NULL;
+}
+
+/*
+ * A group owner's PSK was made again from its pass phrase (keyMgmtAp.c): the
+ * persistent group of that device address and SSID keeps it. 1: kept.
+ */
+int p2pPersistentGroupPskSave(struct WlanConnection *connection, const uint8_t *deviceAddress,
+			      const uint8_t *ssid, unsigned int ssidLength)
+{
+	struct WlanP2pPersistentGroup *group;
+	const uint8_t *psk;
+	UINT posture;
+
+	if (connection->interfaceType != 3)
+		return 0;
+	group = p2pPersistentGroupLookup(connection, deviceAddress, ssid, ssidLength);
+	if (group == NULL)
+		return 0;
+	psk = wlanConnectionInfo(connection)->apRsn.PSKValue;
+	posture = sysIrqDisable();
+	__aeabi_memcpy(group->psk, psk, 32);
+	group->pskLength = 32;
+	sysIrqRestore(posture);
+	return 1;
+}
+
+/*
+ * The value of the invitation events to the host (p2pEventSendPeer() type 3
+ * for a request, 4 for a response): bits 0-1 our role in the persistent group
+ * (1 owner, 2 client), bits 2-4 the stage (1 a persistent group, 2 our own
+ * group, 4 answered, 3 the group starts), bit 5 the group is reinvoked.
+ */
+#define P2P_INVITATION_ROLE(value, role)	(((value) & ~0x03u) | (role))
+#define P2P_INVITATION_STAGE(value, stage)	(((value) & ~0x1cu) | ((stage) << 2))
+#define P2P_INVITATION_INVOKE			0x20u
+
+/*
+ * An invitation request: answered with Status 4 (invalid parameters) when
+ * an attribute is missing, 1 (information unavailable) when the group is
+ * not a persistent group of ours and the device is not on the invitation
+ * list, 8 (unknown group) when a group owner does not know the device;
+ * otherwise the persistent group starts in the role we have in it. The host
+ * hears of the request and of its outcome.
+ */
+int p2pInvitationRequestAnswer(struct WlanConnection *connection, const uint8_t *frame)
+{
+	struct WlanP2pPersistentGroup *group = NULL;
+	unsigned int changed = 0;
+	int index = -1;
+	unsigned int mask = 0;
+	struct WlanPsPeerState *ps;
+	struct WlanDirectContext attributes;
+	struct WlanDirectContext *peer;
+	uint8_t operating[8];
+	uint8_t channelList[44];
+	uint8_t groupBssid[12];
+	uint8_t flags[4];
+	const uint8_t *source;
+	OsaBuffer *buffer;
+	uint8_t *data;
+	unsigned int event;
+	unsigned int value;
+
+	p2pDeviceStateSave(connection);
+	connection->p2pState = 2;
+	macMgmtValidateTable(0);
+	ps = wlanConnectionPsState(connection);
+	value = P2P_INVITATION_STAGE(0u, 2);
+	source = frame + 12;
+	if (p2pActionFrameAlloc(connection, &buffer, source, P2P_FRAME_PUBLIC_ACTION, 4) != 0)
+		return -1;
+	data = (uint8_t *)buffer + buffer->dataOffset;
+	data[32 + 7] = frame[32 + 7];		/* the dialog token */
+	ps->p2pStatus.value = 0;
+	peer = p2pDirectScheduleContext(frame, 1, &mask, &changed, &attributes);
+	if (changed & (1u << P2P_ATTR_OPERATING_CHANNEL))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_OPERATING_CHANNEL], operating, 8,
+				     &peer->attributes[P2P_SLOT_OPERATING_CHANNEL]);
+	if (changed & (1u << P2P_ATTR_CHANNEL_LIST))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_CHANNEL_LIST], channelList, 43,
+				     &peer->attributes[P2P_SLOT_CHANNEL_LIST]);
+	if (changed & (1u << P2P_ATTR_GROUP_BSSID))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_GROUP_BSSID], groupBssid, 9,
+				     &peer->attributes[P2P_SLOT_GROUP_BSSID]);
+	if (changed & (1u << P2P_ATTR_INVITATION_FLAGS))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_INVITATION_FLAGS], flags, 4,
+				     &peer->attributes[P2P_SLOT_INVITATION_FLAGS]);
+	if (peer == NULL) {
+		ps->p2pStatus.value = 4;
+	} else {
+		if (peer->attributes[P2P_SLOT_CONFIGURATION_TIMEOUT] == NULL ||
+		    peer->attributes[P2P_SLOT_CHANNEL_LIST] == NULL || peer->attributes[P2P_SLOT_GROUP_ID] == NULL ||
+		    peer->attributes[P2P_SLOT_DEVICE_INFO] == NULL || peer->attributes[P2P_SLOT_INVITATION_FLAGS] == NULL)
+			ps->p2pStatus.value = 4;
+		if (peer->attributes[P2P_SLOT_INVITATION_FLAGS] != NULL)
+			value = P2P_INVITATION_STAGE(0u, 2) | (peer->attributes[P2P_SLOT_INVITATION_FLAGS][3] & 1) << 5;
+		if (peer->attributes[P2P_SLOT_GROUP_ID] != NULL) {
+			index = p2pPersistentGroupFind(connection, peer->attributes[P2P_SLOT_GROUP_ID]);
+			if (index != -1) {
+				ps->persistentGroupIndex = index;
+				value = P2P_INVITATION_ROLE(value, ps->persistentGroups[index]->role == 2 ? 1u : 2u);
+				value = P2P_INVITATION_STAGE(value, 1);
+			}
+		}
+	}
+	event = (uint16_t)value;
+	while (p2pEventSendPeer(connection, frame, 3, event) == 1)
+		osaTaskSleep(1);
+	value = P2P_INVITATION_STAGE(P2P_INVITATION_ROLE(event, 0), 4);
+	if (index == -1) {
+		if (ps->p2pStatus.value != 0)
+			goto respond;
+		if (peer->attributes[P2P_SLOT_INVITATION_FLAGS][3] != 0 ||
+		    p2pInvitationListFind(connection, peer->attributes[P2P_SLOT_DEVICE_INFO] + 3) == -1) {
+			ps->p2pStatus.value = 1;
+			goto respond;
+		}
+		value = P2P_INVITATION_STAGE(value, 3);
+	} else {
+		group = ps->persistentGroups[index];
+		if (group->role == 2 && p2pPersistentGroupClientFind(group, source) == -1) {
+			ps->p2pStatus.value = 8;
+			goto respond;
+		}
+	}
+	if (ps->p2pStatus.value == 0) {
+		if (peer->attributes[P2P_SLOT_INVITATION_FLAGS][3] == 0 && peer->attributes[P2P_SLOT_GROUP_BSSID] == NULL)
+			ps->p2pStatus.value = 8;
+		else if (index != -1)
+			connection->mode = group->role;
+	}
+respond:
+	p2pInvitationResponseBuild(connection, data, group, peer, ps->savedMode);
+	if (wlanMgmtSendFrame(buffer) != 0)
+		return -1;
+	if (ps->p2pStatus.value != 0 || index == -1) {
+		p2pDeviceStateRestore(connection);
+	} else {
+		value = P2P_INVITATION_STAGE(value, 3);
+		if (group->role == 2) {
+			connection->mode = 2;
+			p2pPersistentGroupClientAdd(group, source);
+			__aeabi_memcpy(&ps->groupIdType, group, TLV_U16(group->groupId.length) + 3);
+			if (ps->groupSettingB == 0)
+				macMgmtFormatPacket(connection);
+			value = P2P_INVITATION_ROLE(value, 1);
+		} else if (group->role == 3) {
+			p2pDirectSetupState(connection);
+			value = P2P_INVITATION_ROLE(value, 2);
+		}
+	}
+	event = (uint16_t)value;
+	while (p2pEventSendPeer(connection, frame, 3, event) == 1)
+		osaTaskSleep(1);
+	return 0;
+}
+
+/*
+ * An invitation response, for the persistent group of that index (-1: our
+ * own group): with Status 0 or 1 the persistent group starts in the role we
+ * have in it; otherwise, or for our own group, the device goes back to the
+ * role it had. The host hears of the response and of its outcome.
+ */
+int p2pInvitationResponseAnswer(struct WlanConnection *connection, const uint8_t *frame, uint32_t index)
+{
+	unsigned int changed = 0;
+	unsigned int mask = 0;
+	unsigned int value = 0;
+	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
+	struct WlanP2pPersistentGroup *group = ps->persistentGroups[index];
+	struct WlanDirectContext attributes;
+	struct WlanDirectContext *peer;
+	uint8_t status[4];
+	unsigned int event;
+	int result;
+
+	if (index == (uint32_t)-1) {
+		value = P2P_INVITATION_STAGE(0u, 2);
+	} else {
+		value = P2P_INVITATION_INVOKE | (group->role == 2 ? 1u : 2u);
+		value = P2P_INVITATION_STAGE(value, 1);
+	}
+	event = (uint16_t)value;
+	while (p2pEventSendPeer(connection, frame, 4, event) == 1)
+		osaTaskSleep(1);
+	value = P2P_INVITATION_STAGE(P2P_INVITATION_ROLE(event, 0), 4);
+	if (ps->invitationTimer != 0) {
+		osaCancelTimer(ps->invitationTimer);
+		ps->invitationTimer = 0;
+	}
+	peer = p2pDirectScheduleContext(frame, 1, &mask, &changed, &attributes);
+	ps->p2pFlags &= ~0x02;
+	if (peer == NULL) {
+		ps->p2pStatus.value = 4;
+		goto restore;
+	}
+	if (peer->attributes[P2P_SLOT_CONFIGURATION_TIMEOUT] == NULL || peer->attributes[P2P_SLOT_CHANNEL_LIST] == NULL ||
+	    peer->attributes[P2P_SLOT_STATUS] == NULL) {
+		ps->p2pStatus.value = 4;
+		if (peer->attributes[P2P_SLOT_STATUS] == NULL)
+			goto restore;
+	}
+	if (changed & (1u << P2P_ATTR_STATUS))
+		p2pDirectSyncContext(peer->attributes[P2P_SLOT_STATUS], status, 4, &peer->attributes[P2P_SLOT_STATUS]);
+	if ((peer->attributes[P2P_SLOT_STATUS][3] != 0 && peer->attributes[P2P_SLOT_STATUS][3] != 1) ||
+	    index == (uint32_t)-1)
+		goto restore;
+	if (group->role == 3) {
+		connection->mode = 3;
+		macMgmtValidateTable(0);
+		p2pDirectSetupState(connection);
+		value = P2P_INVITATION_STAGE(P2P_INVITATION_ROLE(value, 2), 3);
+	} else if (group->role == 2) {
+		connection->mode = 2;
+		p2pPersistentGroupClientAdd(group, ps->p2pDeviceAddress);
+		p2pOperatingChannelSelect(connection, peer);
+		__aeabi_memcpy(&ps->groupIdType, group, TLV_U16(group->groupId.length) + 3);
+		if (ps->groupSettingB == 0)
+			macMgmtFormatPacket(connection);
+		value = P2P_INVITATION_STAGE(P2P_INVITATION_ROLE(value, 1), 3);
+	}
+	goto send;
+restore:
+	p2pDeviceStateRestore(connection);
+send:
+	event = (uint16_t)value;
+	while ((result = p2pEventSendPeer(connection, frame, 4, event)) == 1)
+		osaTaskSleep(1);
+	return result;
+}
+
+/* Points the P2P state's two persistent group slots at their storage. */
+void p2pPersistentGroupsInit(struct WlanPsPeerState *ps)
+{
+	unsigned int i = 0;
+
+	do {
+		ps->persistentGroups[i] = &p2pPersistentGroupStorage[i];
+		i = (uint8_t)(i + 1);
+	} while (i < 2);
 }

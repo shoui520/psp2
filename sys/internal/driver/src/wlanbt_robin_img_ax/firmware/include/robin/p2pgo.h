@@ -124,9 +124,11 @@ struct WlanDirectContext {
 extern const uint8_t wlanWpsOui[4];			/* 0x53f86: the OUI and type of the WPS element */
 extern const uint8_t wlanP2pOui[4];			/* SQRAM 0xc000faa3: the OUI and type of the P2P element */
 
+extern uint8_t p2pPeerStateStorage[0x558];		/* 0x59718: the P2P device's struct WlanPsPeerState (wlanConnectionPsState()) */
 extern uint8_t p2pBroadcastAddress[6];			/* 0x5524c */
 extern uint32_t p2pFrameDataMissing;			/* 0x55254 */
 extern struct WlanConnection *p2pDeviceConnection;	/* 0x55258: the P2P device's connection (hostCmd00ea()) */
+extern uint32_t p2pModeElevenSet;			/* 0x5525c: Wi-Fi Direct mode 11 sets it (hostCmd00ea()); nothing reads it */
 extern struct WlanConnection *p2pGroupConnection;	/* 0x55260: the group owner's connection once it is set up */
 extern const char *p2pDirectSsidPrefix;			/* 0x55240: "DIRECT-" */
 
@@ -173,8 +175,6 @@ struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int bod
 						   unsigned int *changed, struct WlanDirectContext *context); /* 0x40b16 */
 unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
 				    unsigned int type, uint16_t value);			/* 0x40b88 */
-uint8_t *p2pSqramSelectContext(struct WlanConnection *connection, const uint8_t *deviceAddress,
-			       const uint8_t *ssid, unsigned int ssidLength);	/* SQRAM 0xc000dcce: the group client entry of the device (and SSID) */
 int p2pDirectFormatContext(struct WlanConnection *connection);				/* 0x40da2 */
 int p2pDirectInspectContext(WlanWirelessFrame *frame);					/* 0x40dc2 */
 int p2pDirectTrackContext(const WlanWirelessFrame *frame);				/* 0x40dd6 */
