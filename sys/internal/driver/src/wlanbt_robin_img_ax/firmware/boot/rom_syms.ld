@@ -252,3 +252,10 @@ PROVIDE(__aeabi_idiv  = 0x03f3f240);
 /* SHA-256 (Thumb), reached through the veneers at 0x531ec and 0x531f4. */
 PROVIDE(sha256_vector       = 0x03f059bd);
 PROVIDE(hmac_sha256_vector  = 0x03f05a1b);
+PROVIDE(btHccRomPrepareState    = 0x03f0f401);
+PROVIDE(mdevRomSyncState        = 0x03f06749);
+PROVIDE(btBdhRomHandleState     = 0x03f06a25);
+PROVIDE(btLtsRomPrepareContext  = 0x03f35513);
+PROVIDE(btLdrRomUpdateState     = 0x03f259b9);
+PROVIDE(btLcoRomResetContext    = 0x03f1f6e5);
+PROVIDE(btLdaRomPrepareState    = 0x03f21d67);

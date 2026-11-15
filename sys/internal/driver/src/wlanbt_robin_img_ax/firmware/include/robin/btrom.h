@@ -77,6 +77,14 @@ void btBdhRomDispatchState(uint8_t *command);
 uint8_t btBdhRomProcessState(uint32_t reg, uint32_t flag);
 void btBdhRomUpdateState(uint32_t reg, uint32_t value);
 
+int btHccRomPrepareState(void);
+int mdevRomSyncState(uint32_t a1, void *a2, uint32_t a3);
+int btBdhRomHandleState(void *a1, uint32_t a2, void *a3, const char *name);
+void *btLtsRomPrepareContext(void *node, uint32_t a2);
+uint32_t btLdrRomUpdateState(uint32_t a1);
+uint8_t *btLcoRomResetContext(uint32_t link);
+int btLdaRomPrepareState(uint32_t a1);
+
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);
 uint8_t *btLcoRomVerifyState(uint32_t link);

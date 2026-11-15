@@ -8,6 +8,7 @@
 #define ROBIN_EVENTPOWER_H
 
 #include <stdint.h>
+#include "robin/btcontext.h"
 #include "robin/clock.h"
 #include "robin/gpio.h"
 #include "robin/rfreg.h"
@@ -169,7 +170,6 @@ void btSdioSetEnabled(int enabled);
  * written. Addresses are those of the 4.00 image.
  */
 extern uint8_t *btLinkContext;				/* 0x400f954: the link controller's state */
-extern uint8_t btLmpLcActiveCount;			/* 0x55287 */
 extern const uint8_t rfCalibTimingA[];			/* 0x53d7e, per clock index */
 extern const uint8_t rfCalibTimingB[];			/* 0x53d92 */
 extern const uint8_t rfCalibTimingC[];			/* 0x53d88 */
