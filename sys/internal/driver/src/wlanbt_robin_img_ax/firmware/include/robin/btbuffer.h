@@ -11,6 +11,31 @@ struct BtDeviceProfile;
 struct BtSlotEvent;
 struct BtSlotQueue;
 
+/* The parameters of HCI Setup Synchronous Connection, as the host controller passes them on. */
+struct BtSyncSetup {
+	uint8_t reserved0[4];
+	uint16_t handle;			/* the ACL link */
+	uint8_t reserved6[2];
+	uint32_t transmitBandwidth;		/* bytes per second */
+	uint32_t receiveBandwidth;
+	uint16_t maxLatency;			/* milliseconds */
+	uint16_t voiceSetting;			/* bits 0-1: the air coding format */
+	uint16_t packetType;			/* the eSCO packet types allowed */
+	uint8_t retransmissionEffort;		/* 0, 1, 2 or 0xff: don't care */
+	uint8_t reserved23;
+};
+
+/* An eSCO packet type (12 bytes). */
+struct BtEscoPacket {
+	uint16_t type;				/* its bit in the HCI packet types */
+	uint16_t length;			/* its payload, in bytes */
+	uint32_t bandwidth;			/* the most it carries, bytes per second */
+	uint8_t code;				/* the LMP packet type */
+	uint8_t retransmission;			/* the slots a retransmission takes */
+	uint8_t interval;			/* the shortest eSCO interval, in slots */
+	uint8_t reserved11;
+};
+
 /* The host link's timing in the ROM (0x400c5f0), scaled with the radio's rate. */
 struct BtHostTiming {
 	uint8_t enabled;			/* 1: the timing follows the rate */
@@ -144,6 +169,12 @@ struct BtLinkSession {
 	uint8_t reserved6[2];
 };
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
+extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
+extern uint8_t btSyncLatency;					/* 0x400bb02: the latency allowed, in slots (126 at most) */
+extern uint8_t btSyncRetransmission;				/* 0x400bb03 */
+extern uint16_t btSyncPacketTypes;				/* 0x400bb04: the packet types left to try */
+extern uint8_t btSyncRetryPending;				/* 0x400f5e5: 1: btSyncRetryRequest is to be tried again */
+extern struct BtSyncSetup *btSyncRetryRequest;			/* 0x400f60c: the request with the types left */
 extern uint8_t *btLinkSlotRegisters;				/* 0x400f93c: 32 bytes of registers per link */
 extern uint16_t *btLinkControlWord;				/* 0x400f940 */
 extern uint8_t *btLinkSlotStatus;				/* 0x400f944: 32 bytes of status registers per link */
@@ -284,6 +315,7 @@ void btLmpLcSelectPacket(unsigned int link);			/* 0x47336 */
 void btLmpLcAdjustPacket(uint32_t first, uint8_t *record, uint32_t third, uint32_t fourth,
 			 uint32_t fifth);				/* 0x473ea */
 void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step);	/* 0x47402 */
+int btLmpLcFilterPacket(struct BtSyncSetup *setup);		/* 0x47414 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

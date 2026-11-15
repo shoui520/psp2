@@ -2122,3 +2122,102 @@ void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step)
 	record[24] = 0;
 	*(BtWord *)record = (*(BtWord *)record + ticks) & 0x3ffffff;
 }
+
+/* The eSCO packet types, the ones that carry the most first, one slot before three. */
+const struct BtEscoPacket btEscoPackets[7] = {			/* 0x5424c */
+	{ 0x0080,  90,  36000, 0x37, 2, 6, 0 },		/* 3-EV3 */
+	{ 0x0040,  60,  24000, 0x26, 2, 6, 0 },		/* 2-EV3 */
+	{ 0x0008,  30,   8000, 0x07, 2, 6, 0 },		/* EV3 */
+	{ 0x0200, 540, 108000, 0x3d, 6, 8, 0 },		/* 3-EV5 */
+	{ 0x0100, 360,  72000, 0x2c, 6, 8, 0 },		/* 2-EV5 */
+	{ 0x0010, 120,  24000, 0x0c, 6, 8, 0 },		/* EV4 */
+	{ 0x0020, 180,  36000, 0x0d, 6, 8, 0 },		/* EV5 */
+};
+
+/*
+ * Checks the parameters of a synchronous connection and picks its eSCO packet type: the type an
+ * AMP link already uses when the request allows it, else the first allowed type that carries the
+ * bandwidth and that the ROM can place. The types left are kept for a retry. Returns 0, 0x11
+ * (unsupported parameter value) or 0x12 (invalid parameters).
+ */
+int btLmpLcFilterPacket(struct BtSyncSetup *setup)
+{
+	uint8_t *links = btHccRomApplyState();
+	uint8_t *amp = btLcoRomProcessState((uint32_t)(uintptr_t)links);
+	unsigned int link = *(BtHalf *)(links + setup->handle * 120 + 30);
+	unsigned int slot = (uint16_t)(link - 8);
+	unsigned int effort = setup->retransmissionEffort;
+	unsigned int types;
+	unsigned int slots = 0;
+	unsigned int retransmission;
+	unsigned int window;
+	unsigned int latency;
+	int i;
+
+	if (effort != 0 && effort != 1 && effort != 2 && effort != 0xff)
+		return 0x12;
+	btSyncRetransmission = effort;
+	if (setup->transmitBandwidth != setup->receiveBandwidth ||
+	    setup->transmitBandwidth - 1000 >= 0x1a1f9)
+		return 0x11;
+	types = setup->packetType;
+	if (link != 0 && amp[slot * 30 + 18] == 1) {
+		unsigned int code = amp[slot * 30 + 21];
+
+		for (i = 0; i < 7; i++) {
+			if (code != btEscoPackets[i].code)
+				continue;
+			if (btEscoPackets[i].type & types) {
+				types &= ~btEscoPackets[i].type;
+				setup->packetType = btEscoPackets[i].type;
+				slots = btLcoRomValidateState(setup, btEscoPackets[i].type);
+				if (slots != 0)
+					goto accepted;
+			}
+			break;
+		}
+	}
+	for (i = 0; i < 7; i++) {
+		const struct BtEscoPacket *packet = &btEscoPackets[i];
+
+		if (!(packet->type & types))
+			continue;
+		if (setup->transmitBandwidth > packet->bandwidth) {
+			types &= ~packet->type;
+			continue;
+		}
+		types &= ~packet->type;
+		setup->packetType = packet->type;
+		slots = btLcoRomValidateState(setup, packet->bandwidth);
+		if (slots != 0)
+			goto accepted;
+	}
+	setup->packetType = types;
+	return 0x12;
+
+accepted:
+	if (types != 0) {
+		btSyncRetryPending = 1;
+		btSyncRetryRequest = osa_MsgAlloc(24);
+		__aeabi_memcpy4(btSyncRetryRequest, setup, 24);
+		btSyncRetryRequest->packetType = types;
+	}
+	btSyncPacketTypes = types;
+	amp[100] = btLcoRomCheckState(setup->voiceSetting & 3);
+	window = setup->transmitBandwidth * slots / 1600;
+	*(BtHalf *)(amp + 114) = window;
+	*(BtHalf *)(amp + 116) = window;
+	retransmission = setup->retransmissionEffort * btEscoPackets[i].retransmission;
+	amp[110] = retransmission;
+	window = btLcoRomConfigureState(setup->packetType, retransmission);
+	amp[111] = window;
+	amp[112] = window;
+	amp[95] = slots;
+	amp[108] = 1;
+	latency = setup->maxLatency * 1000;
+	if (latency > 0x1360e)
+		btSyncLatency = 126;
+	else
+		btSyncLatency = latency / 625;
+	return 0;
+}

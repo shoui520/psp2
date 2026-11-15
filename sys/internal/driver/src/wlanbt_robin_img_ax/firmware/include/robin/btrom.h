@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 
+struct BtSyncSetup;
+
 struct BtDeviceProfile;
 
 /* Messages are allocated by the ROM, begin with a 32-bit message identifier, and are
@@ -173,6 +175,9 @@ void btLtsRomSyncState(struct BtDeviceProfile *profile, struct BtLinkSession *se
 int btLcoRomTrackContext(unsigned int index);
 void btLtsRomDispatchState(void);
 void btLtsRomVerifyState(uint32_t clock);
+unsigned int btLcoRomValidateState(struct BtSyncSetup *setup, uint32_t limit);
+uint8_t btLcoRomCheckState(unsigned int airCoding);
+uint8_t btLcoRomConfigureState(unsigned int packetType, unsigned int retransmission);
 void btLdrRomManageState(uint32_t first, uint8_t *record, uint32_t third, uint32_t fourth, uint32_t fifth);
 uint8_t *btLtsRomValidateState(uint32_t which);
 unsigned int btLtsRomCheckState(void);
