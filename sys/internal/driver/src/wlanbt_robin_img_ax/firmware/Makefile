@@ -12,14 +12,21 @@
 ROOT := $(abspath ../../../../../..)
 # The project's GCC 4.8 through tools/gcc48.sh, which runs it as this host needs
 # (natively, in Lima or in WSL2); GCC=<prefix> uses another compiler directly.
-# The linker is vitasdk's (VITASDK must be set).
+# The linker is the project's binutils 2.27, the GCC 4.8 build's (toolchains/build-binutils.sh),
+# run through tools/host.py like the compiler; BINUTILS=<prefix> uses another directly. Its
+# Thumb-to-ROM veneers are the original's 8-byte ldr pc ones (vitasdk's ld makes 12-byte PIC ones).
 ifneq ($(origin GCC),undefined)
 CC := $(GCC)gcc
 else
 CC := $(ROOT)/tools/gcc48.sh
 endif
-BINUTILS ?= $(VITASDK)/bin/arm-vita-eabi-
+PSP2_TOOLCHAINS ?= $(ROOT)/toolchains/install
+GCC48_TOOLCHAIN ?= csl-4.8-2014.05-strong-strd
+ifneq ($(origin BINUTILS),undefined)
 LD := $(BINUTILS)ld
+else
+LD := python3 -I $(ROOT)/tools/host.py linux -- $(PSP2_TOOLCHAINS)/$(GCC48_TOOLCHAIN)/bin/arm-none-eabi-ld
+endif
 
 O ?= build
 
