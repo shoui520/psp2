@@ -961,7 +961,14 @@ static void powerRequestCtrlLED(void)
 #if FW_SINCE(0x01000306)
 			ledSetOff(0);
 #endif
-#if LED_REQUESTS
+#if BOARD_POWER_LED_ELMO
+			if (powerRequestData[0] & 0x80)
+				elmoLed |= 0x8000;
+			else
+				elmoLed &= ~0x8000;
+		}
+		{
+#elif LED_REQUESTS
 			if (powerRequestData[0] & 0x80) {
 				powerLedSetMode(POWER_LED_SET_OFF);
 				result = 0;
@@ -978,7 +985,9 @@ static void powerRequestCtrlLED(void)
 				result = powerResult(powerLedSetPwm(0));
 			}
 #endif
+#if !BOARD_POWER_LED_ELMO
 		} else {
+#endif
 			if (powerRequestData[0] & 0x20) {
 				if (powerRequestData[0] & 0x80)
 					elmoLed |= 0x4000;

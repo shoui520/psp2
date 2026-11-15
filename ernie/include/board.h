@@ -10,6 +10,11 @@
    dongle's (P13.0) */
 #define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000)
 
+/* the power LED: DEM-3000K's is the Elmo's LED register's bit 15 (powerLedSet) for a suspend
+   and sceSysconCtrlLED's 0x40, which goes on to the other LEDs' bits; the others' the LED
+   driver's (powerLedSetMode) */
+#define BOARD_POWER_LED_ELMO	(ERNIE_BOARD == 0x00414000)
+
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
    0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa) */
 #define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000)

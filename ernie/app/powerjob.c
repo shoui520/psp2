@@ -7,6 +7,7 @@
 #include "ernie.h"
 #include "battery.h"
 #include "bbmc.h"
+#include "board.h"
 #include "charge.h"
 #include "config.h"
 #include "cookie.h"
@@ -308,7 +309,11 @@ static void powerJobSuspend(void)
 	}
 	POWER_JOB_MODE();
 	if (!powerLedGetKeep())
+#if BOARD_POWER_LED_ELMO
+		powerLedSet(0);
+#else
 		powerLedSetMode(POWER_LED_SET_ON);
+#endif
 #if FW_SINCE(0x0100060B)
 	if (sleepFactorGet() & 0x00080000) {
 		if (input1Bit7Active())
