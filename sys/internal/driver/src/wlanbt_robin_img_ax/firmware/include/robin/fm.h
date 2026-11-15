@@ -75,15 +75,15 @@ struct FmSettings {
 	uint32_t reserved0;
 	uint32_t spacing;	/* kHz between the channels a search steps through */
 	uint32_t frequency;	/* kHz, the frequency tuned to (btSbcAcquireEntry()) */
-	uint32_t reserved9;
+	uint32_t deviation;	/* the transmitter's total deviation, 22500..100000 (btSbcFormatBuffer()) */
 	uint32_t eventStatus;	/* bit 7: an RDS group matched block A (btSbcClearTable()) */
 	uint32_t eventMask;	/* events the host wants (fmCoexApplyState()) */
 	uint32_t frequencyOffset;	/* kHz, added before the local oscillator is set */
 	uint16_t searchThreshold;	/* 15: how far a channel must stand above a neighbour */
 	uint16_t reserved10;
 	uint32_t features;	/* bits 4, 5 and 13 are read here */
-	uint8_t reserved2;
-	uint8_t audioSetting;	/* 99 once the radio is started: what btFmApplyHook() is given */
+	uint8_t audioLimit;	/* the highest level btSbcScheduleBuffer() raises audioSetting to */
+	uint8_t audioSetting;	/* the transmit level, 99 once the radio is started: what btFmApplyHook() is given */
 	uint16_t reserved18;
 	uint32_t tuneFlags;	/* FM_TUNE_* */
 	uint32_t levelFlags;	/* bit 14: the level reads 56 high (btSbcParseTable()) */
@@ -158,9 +158,10 @@ struct FmTuner {
 	uint32_t rdsLastClock;		/* the event clock at the last RDS group */
 	uint32_t searchCalibrate;	/* 1: a search calibrates the offset at the first station */
 	uint32_t measureScale;		/* 1 after btSbcClearEntry(): which scale btSbcUpdateTable() uses */
-	uint8_t band;			/* 30 after btSbcClearEntry(), given to the ROM */
-	uint8_t levelMode;
-	uint8_t reserved7[2];		/* 1 and 0 after btSbcClearEntry() */
+	uint8_t levelBase;		/* 30 after btSbcClearEntry(): subtracted from register 0x2b0, at least 2 */
+	uint8_t levelMode;		/* 1: the gain is fixed at its highest (btSbcValidateBuffer()) */
+	uint8_t antennaScan;		/* 1 after btSbcClearEntry(): btSbcCheckBuffer() scans register 0x160 */
+	uint8_t antennaOffset;		/* at most 17: added to the frequency step's setting */
 	uint32_t searchCount;
 	uint32_t rdsMissed;		/* searches that saw no RDS group */
 	uint32_t rdsReceived;		/* searches that saw one */
@@ -194,8 +195,8 @@ void btSbcVerifyEntry(void);					/* 0x4fc02 */
 extern uint16_t fmRdsBlocks[256];				/* SQRAM 0xc00334f8: not converted yet */
 void btSbcFilterTable(void);					/* 0x50e62 */
 int btSbcRomConvertEntry(uint32_t event);
-int btSbcCheckBuffer(uint32_t frequency);			/* 0x50f56: not converted yet */
-int btSbcApplyBuffer(uint32_t value, int swap);			/* 0x511d6: not converted yet */
+void btSbcCheckBuffer(uint32_t frequency);			/* 0x50f56 */
+void btSbcApplyBuffer(uint32_t value, int swap);		/* 0x511d6 */
 extern uint8_t btFmLevelThreshold;				/* 0x55740: not converted yet */
 void btSbcRomSetupContext(uint32_t clock);
 void btSbcRomAcquireEntry(unsigned int band, uint8_t *out);
@@ -204,14 +205,14 @@ extern uint16_t (*btFmClockHook)(uint32_t value);		/* DTCM 0x400ef08 */
 extern void (*btFmTimerHook)(uint32_t value);			/* DTCM 0x400ef24 */
 extern int (*btFmStereoHook)(int enable);			/* DTCM 0x400eef4 */
 extern int (*btFmWaitHook)(int search);				/* DTCM 0x400ef28 */
-extern int (*btFmApplyHook)(uint32_t value, int swap);			/* DTCM 0x400eee4 */
+extern void (*btFmApplyHook)(uint32_t value, int swap);			/* DTCM 0x400eee4 */
 extern int (*btFmFrequencyHook)(uint32_t frequency);		/* DTCM 0x400eef8: sets the oscillator */
 
 /* The intermediate frequency (Hz) the local oscillator sits above or below the station. */
 #define FM_INTERMEDIATE		132300
 #define FM_VCO_LIMIT		1550000000u
 
-int btSbcUpdateBuffer(uint32_t frequency);			/* 0x50f2c: not converted yet */
+void btSbcUpdateBuffer(uint32_t frequency);			/* 0x50f2c */
 void btSbcRecordTable(int enable);				/* 0x50e4c */
 void btSbcRomHandleEntry(uint32_t value);
 int btSbcRomCheckEntry(uint32_t vco);
@@ -225,7 +226,7 @@ extern int (*btFmPllLockHook)(uint32_t tuned);					/* DTCM 0x400ef1c */
 extern void (*btFmMixerHook)(uint32_t oscillator, unsigned int mode);		/* DTCM 0x400eef0 */
 int btSbcRomNotifyContext(struct FmReply *reply, unsigned int length, unsigned int kind);
 uint32_t btSbcRomAdjustContext(uint32_t mask, int set);
-extern int (*btFmSearchHook)(uint32_t frequency);		/* DTCM 0x400eedc: btSbcCheckBuffer() */
+extern void (*btFmSearchHook)(uint32_t frequency);		/* DTCM 0x400eedc: btSbcCheckBuffer() */
 extern int (*btFmTuneHook)(uint32_t frequency);		/* DTCM 0x400ef20: btSbcAcquireEntry() */
 extern const uint8_t romFmTable[];			/* ROM 0x03f42070 */
 
@@ -256,7 +257,7 @@ void btSbcResetTable(uint8_t *tolerance, uint8_t *calibratedTolerance, uint8_t *
 void btSbcSyncTable(uint8_t gain, uint8_t time, uint32_t scale);	/* 0x5036a */
 void btSbcApplyTable(uint8_t *gain, uint8_t *time, uint8_t *scale);	/* 0x50374 */
 void btSbcResolveTable(int enable);				/* 0x50386 */
-void btSbcBuildBuffer(void);					/* 0x510ba: not converted yet */
+void btSbcBuildBuffer(void);					/* 0x510ba */
 
 /* fmSettings.tuneFlags */
 #define FM_TUNE_OFFSET		0x80000000u	/* the frequency offset is calibrated */
@@ -273,8 +274,8 @@ extern const struct FmBand romFmBands[];			/* ROM 0x03f42050 */
 void btSbcRomConfigureEntry(unsigned int mode);
 void btSbcRomProcessEntry(unsigned int level);
 void btSbcProcessTable(int enable);				/* 0x4ff0e */
-void btSbcResolveBuffer(void);					/* 0x51264: not converted yet */
-void btSbcScheduleBuffer(void);					/* 0x512c2: not converted yet */
+void btSbcResolveBuffer(void);					/* 0x51264 */
+void btSbcScheduleBuffer(void);					/* 0x512c2 */
 void btSbcRomTrackEntry(void);
 int btSbcRomFilterContext(void);
 int btSbcScheduleTable(uint32_t frequency, uint32_t *station, uint8_t mode);	/* 0x503b4 */
@@ -311,7 +312,7 @@ void btSbcRomScheduleEntry(int enable);
 void btSbcRomReleaseEntry(unsigned int scheduled, uint32_t mode);
 void btSbcRomClearEntry(void);
 void p2pSqramComputeEntry(unsigned int value);			/* SQRAM 0xc000e9e6 */
-void btSbcSyncBuffer(uint32_t first, uint32_t second);		/* 0x511ac: not converted yet */
+void btSbcSyncBuffer(uint32_t value, int raise);		/* 0x511ac */
 int btSbcInspectTable(uint32_t value, uint8_t mode);		/* 0x50be2 */
 int btSbcTrackTable(uint16_t *value, uint8_t *active);		/* 0x50c16 */
 int btSbcAcquireTable(uint16_t *value, uint8_t *active);	/* 0x50c84 */
@@ -323,15 +324,57 @@ int btSbcVerifyTable(void);					/* 0x50e22 */
 uint32_t btSbcSelectTable(uint32_t frequency);			/* 0x50e28 */
 uint16_t btSbcManageTable(void);				/* 0x50c60 */
 void btSbcAdjustTable(uint8_t value);				/* 0x50e46 */
-void btSbcHandleBuffer(int mode);				/* 0x50ea4 */
-void btSbcConfigureBuffer(uint8_t first, uint8_t second);	/* 0x50f44 */
-void btSbcValidateBuffer(uint8_t value);			/* 0x51036 */
+int btSbcHandleBuffer(int mode);				/* 0x50ea4 */
+void btSbcConfigureBuffer(uint8_t scan, uint8_t offset);	/* 0x50f44 */
+int btSbcValidateBuffer(uint8_t value);			/* 0x51036 */
 uint8_t btSbcPrepareBuffer(void);				/* 0x5106e */
-void btSbcDispatchBuffer(uint8_t value);			/* 0x51086 */
+int btSbcDispatchBuffer(uint8_t value);			/* 0x51086 */
 uint8_t btSbcParseBuffer(void);					/* 0x510b4 */
-void btSbcComputeBuffer(uint32_t value);			/* 0x510f2 */
+void btSbcComputeBuffer(uint32_t limit);			/* 0x510f2 */
 int btSbcQueryBuffer(uint8_t *data, uint8_t *length);		/* 0x51100 */
 int btSbcNotifyBuffer(uint8_t value);				/* 0x5135e */
-void btSbcFormatBuffer(uint32_t first, uint32_t second, uint32_t third, uint32_t fourth); /* 0x513f0 */
+int btSbcFormatBuffer(uint32_t first, uint32_t second, uint32_t third, uint32_t tone);	/* 0x513f0 */
+
+/*
+ * The gain steps (0x556d8): the gain register 0x2b0's level, less
+ * fmTuner.levelBase, picks the first step whose high end is not below it.
+ */
+struct FmGainStep {
+	uint32_t low : 8;
+	uint32_t high : 8;
+	uint32_t gain : 7;		/* given to the ROM */
+	uint32_t reserved : 9;
+};
+#define FM_GAIN_STEPS		17
+extern struct FmGainStep fmGainSteps[FM_GAIN_STEPS];		/* 0x556d8 */
+
+/* The frequency steps (0x5571c): the first whose limit is not below the frequency. */
+struct FmFrequencyStep {
+	uint16_t limit : 14;		/* the frequency in 8 kHz units */
+	uint16_t reserved0 : 2;
+	uint16_t setting : 5;		/* what btSbcResetBuffer() sets register 0x160 to */
+	uint16_t reserved1 : 11;
+};
+#define FM_FREQUENCY_STEPS	9
+extern struct FmFrequencyStep fmFrequencySteps[FM_FREQUENCY_STEPS];	/* 0x5571c */
+
+/*
+ * The transmit levels 125 down to 99 (0x543f0, btSbcInspectBuffer()): four
+ * output bytes for registers 0x398 and 0x39c, and the settings of registers
+ * 0x394 (bits 4..0), 0x390 (bits 9..5 and 18..16) and 0x38c (bits 15..10).
+ */
+struct FmLevelStep {
+	uint32_t outputs;
+	uint32_t settings;
+};
+#define FM_LEVEL_HIGH		125
+#define FM_LEVEL_LOW		99
+extern const struct FmLevelStep fmLevelSteps[FM_LEVEL_HIGH - FM_LEVEL_LOW + 1];	/* 0x543f0 */
+
+const struct FmFrequencyStep *btSbcProcessBuffer(uint32_t frequency);	/* 0x50f14 */
+void btSbcResetBuffer(unsigned int setting);			/* 0x51164 */
+const struct FmLevelStep *btSbcInspectBuffer(uint32_t level);	/* 0x51552 */
+void btSbcRomPrepareEntry(uint32_t low, uint32_t high, uint32_t base);
+void btSbcRomDispatchEntry(uint32_t first, uint32_t second);
 
 #endif /* ROBIN_FM_H */

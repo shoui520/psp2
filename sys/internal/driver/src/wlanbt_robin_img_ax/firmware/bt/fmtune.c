@@ -22,6 +22,21 @@ struct FmTuner fmTuner __attribute__((section(".itcm.rw"))) = {	/* 0x55694 */
 	.searchLimit = 0x71,
 };
 
+struct FmGainStep fmGainSteps[FM_GAIN_STEPS] __attribute__((section(".itcm.rw"))) = {	/* 0x556d8 */
+	{ 0x00, 0x50, 0x7f, 0 }, { 0x51, 0x53, 0x7b, 0 }, { 0x54, 0x55, 0x78, 0 },
+	{ 0x56, 0x58, 0x74, 0 }, { 0x59, 0x5b, 0x6f, 0 }, { 0x5c, 0x5d, 0x6c, 0 },
+	{ 0x5e, 0x60, 0x69, 0 }, { 0x61, 0x65, 0x64, 0 }, { 0x66, 0x6c, 0x5c, 0 },
+	{ 0x6d, 0x73, 0x4e, 0 }, { 0x74, 0x77, 0x3a, 0 }, { 0x78, 0x79, 0x2c, 0 },
+	{ 0x7a, 0x7c, 0x25, 0 }, { 0x7d, 0x7d, 0x1d, 0 }, { 0x7e, 0x80, 0x14, 0 },
+	{ 0x81, 0x81, 0x0a, 0 }, { 0x82, 0xff, 0x00, 0 },
+};
+
+struct FmFrequencyStep fmFrequencySteps[FM_FREQUENCY_STEPS] __attribute__((section(".itcm.rw"))) = {	/* 0x5571c */
+	{ 0x2710, 0, 14, 0 }, { 0x2904, 0, 12, 0 }, { 0x2af8, 0, 10, 0 },
+	{ 0x2cec, 0, 8, 0 }, { 0x2ee0, 0, 6, 0 }, { 0x30d4, 0, 4, 0 },
+	{ 0x32c8, 0, 2, 0 }, { 0x34bc, 0, 0, 0 }, { 0x3539, 0, 0, 0 },
+};
+
 const struct FmClockCode fmClockCodes[FM_CLOCK_CODES] = {
 	{ 0x253b, 8, 0 }, { 0x25be, 6, 0 }, { 0x263b, 7, 0 }, { 0x26be, 6, 0 },
 	{ 0x26c5, 8, 0 }, { 0x273b, 7, 0 }, { 0x27bf, 6, 0 }, { 0x282f, 8, 0 },
@@ -34,6 +49,36 @@ const struct FmClockCode fmClockCodes[FM_CLOCK_CODES] = {
 	{ 0x313e, 7, 0 }, { 0x31bb, 6, 0 }, { 0x31da, 8, 0 }, { 0x323e, 7, 0 },
 	{ 0x32bb, 6, 0 }, { 0x32fa, 8, 0 }, { 0x3338, 7, 0 }, { 0x33bb, 6, 0 },
 	{ 0x341f, 7, 0 }, { 0x3438, 8, 0 }, { 0x34bc, 6, 0 },
+};
+
+const struct FmLevelStep fmLevelSteps[FM_LEVEL_HIGH - FM_LEVEL_LOW + 1] = {	/* 0x543f0 */
+	{ 0x9b96918c, 0x014576fb },	/* 125 */
+	{ 0xa5a09b96, 0x014476b9 },
+	{ 0x96918c87, 0x01447656 },
+	{ 0xa09b9691, 0x014375f4 },
+	{ 0x8c87827d, 0x01435552 },
+	{ 0xa09b9691, 0x0142540c },	/* 120 */
+	{ 0x8c87827d, 0x0142540c },
+	{ 0xaaa5a09b, 0x01412c0c },
+	{ 0x96918c87, 0x01412c06 },
+	{ 0x87827d78, 0x01412c06 },
+	{ 0x78736e69, 0x01412c06 },	/* 115 */
+	{ 0xaaa5a09b, 0x00a02c06 },
+	{ 0x96918c87, 0x00a02c06 },
+	{ 0x89847f7a, 0x00a02c06 },
+	{ 0x7d78736e, 0x00502c06 },
+	{ 0x6e69645f, 0x00282c06 },	/* 110 */
+	{ 0x625d5853, 0x00282c06 },
+	{ 0x55504b46, 0x00282c06 },
+	{ 0x4d4a4542, 0x00282c06 },
+	{ 0x41403b3a, 0x00282c06 },
+	{ 0x37363130, 0x00281406 },	/* 105 */
+	{ 0x32312d2c, 0x00281406 },
+	{ 0x2f2e2b2a, 0x00281406 },
+	{ 0x28252423, 0x00281406 },
+	{ 0x2322201f, 0x00281406 },
+	{ 0x201f1c1b, 0x00280c06 },	/* 100 */
+	{ 0x1c1b1817, 0x00280c06 },	/* 99 */
 };
 
 /* Sends an FM reply or event once the secondary core is out of its alternate mode. */
@@ -337,8 +382,8 @@ int btSbcClearEntry(uint8_t clock)
 {
 	btSbcResetEntry();
 	btSbcRomSetupContext(btSbcSetupEntry(clock));
-	fmTuner.band = 30;
-	btSbcRomAcquireEntry(30, &fmTuner.band);
+	fmTuner.levelBase = 30;
+	btSbcRomAcquireEntry(30, &fmTuner.levelBase);
 	sbcPcmStreamHook = btSbcPcmStreamHandler;
 	btSbcRomReleaseContext();
 	btSbcSyncEntry();
@@ -354,8 +399,8 @@ int btSbcClearEntry(uint8_t clock)
 	btFmLevelThreshold = 125;
 	fmSettings.features |= 0x1000;
 	fmSettings.searchThreshold = 15;
-	fmTuner.reserved7[0] = 1;
-	fmTuner.reserved7[1] = 0;
+	fmTuner.antennaScan = 1;
+	fmTuner.antennaOffset = 0;
 	fmTuner.quietSearch = 0;
 	fmTuner.measureTolerance = 20;
 	fmTuner.measureSpread = 15;
@@ -1407,4 +1452,402 @@ void btSbcFilterTable(void)
 	tx_event_flags_set((TX_EVENT_FLAGS_GROUP *)fmFlags, 0x10, TX_OR);
 	btSbcRomConvertContext(0x10);
 	fmSettings.rdsFlags &= ~FM_RDS_RECEIVING;
+}
+
+/*
+ * Sets the receiver's gain from the level register 0x2b0 reads, less
+ * levelBase: mode 0 the highest gain, mode 3 none, otherwise the gain step the
+ * level falls in, whose ends the ROM then watches.
+ */
+int btSbcHandleBuffer(int mode)
+{
+	const struct FmGainStep *step;
+	unsigned int level, high, low;
+
+	level = (uint8_t)(FM_REGISTER(0x2b0) - fmTuner.levelBase);
+	for (step = fmGainSteps; step->high < level; step++)
+		;
+	if (mode == 0 || mode == 3) {
+		btSbcRomComputeEntry(mode == 0 ? 0x7f : 0);
+	} else {
+		btSbcRomComputeEntry(step->gain);
+		high = (uint8_t)(step->high + fmTuner.levelBase + 1);
+		if (step->high > high)
+			high = 0xff;
+		low = (uint8_t)(step->low + fmTuner.levelBase - 1);
+		if (step->low > low)
+			low = 0xff;
+		btSbcRomPrepareEntry(low, high, step->low);
+	}
+	return 0;
+}
+
+__attribute__((noinline)) const struct FmFrequencyStep *btSbcProcessBuffer(uint32_t frequency)
+{
+	const struct FmFrequencyStep *step;
+
+	for (step = fmFrequencySteps; step->limit < frequency >> 3; step++)
+		;
+	return step;
+}
+
+/* Sets register 0x160 for a frequency. */
+void btSbcUpdateBuffer(uint32_t frequency)
+{
+	btSbcResetBuffer(btSbcProcessBuffer(frequency)->setting + fmTuner.antennaOffset);
+}
+
+void btSbcConfigureBuffer(uint8_t scan, uint8_t offset)
+{
+	fmTuner.antennaScan = scan;
+	if (offset > 17)
+		offset = 17;
+	fmTuner.antennaOffset = offset;
+}
+
+/*
+ * After a search (btFmSearchHook): with the offset calibrated, a strong
+ * enough station and the scan on, tries the 32 settings of register 0x160 and
+ * keeps the mean of those that read the highest level.
+ */
+void btSbcCheckBuffer(uint32_t frequency)
+{
+	uint16_t sum = 0, best = 0, ties = 0, index, saved;
+	unsigned int enabled, rate, level, setting;
+
+	(void)frequency;
+	enabled = FM_REGISTER(0x05c) & 1;
+	btSbcRomHandleEntry(enabled);
+	if ((fmSettings.tuneFlags & FM_TUNE_OFFSET) != 0 && fmTuner.antennaScan != 0) {
+		saved = FM_REGISTER(0x22c) & 0xf;
+		FM_REGISTER(0x22c) = (FM_REGISTER(0x22c) & ~0xf) + 8;
+		rate = FM_REGISTER(0x12c) >> 7 & 0xf;
+		if (btSbcParseTable() > 50) {
+			for (index = 0; index < 32; index++) {
+				FM_REGISTER(0x160) = (((FM_REGISTER(0x160) & ~0x1f) | index) & ~0x3e0) | index << 5;
+				btSbcApplyEntry(33);
+				level = btSbcParseTable();
+				if (level > best) {
+					best = level;
+					sum = index;
+					ties = 1;
+				} else if (level == best) {
+					sum += index;
+					ties++;
+				}
+			}
+			setting = sum / ties;
+			if (rate != 8 && setting < 30)
+				setting = (uint16_t)(setting + 2);
+			btSbcResetBuffer(setting);
+		}
+		FM_REGISTER(0x22c) = (FM_REGISTER(0x22c) & ~0xf) | saved;
+	}
+	btSbcApplyEntry(33);
+	btSbcParseTable();
+	btSbcRomResetEntry();
+	if (enabled != 0)
+		btSbcTrackEntry(1000);
+}
+
+/* Vendor command: 1 turns the level events off, 2 fixes the gain, others go to the ROM. */
+int btSbcValidateBuffer(uint8_t value)
+{
+	int mode;
+
+	fmSettings.policy |= 0x20000;
+	fmTuner.levelMode = 0;
+	if (value == 1) {
+		fmSettings.policy &= ~0x20000;
+		mode = 0;
+	} else if (value == 2) {
+		fmTuner.levelMode = 1;
+		mode = 3;
+	} else {
+		mode = btSbcRomParseEntry(value);
+	}
+	btSbcHandleBuffer(mode);
+	return 0;
+}
+
+/* What btSbcValidateBuffer() was given: 0 (the ROM's), 1 or 2. */
+uint8_t btSbcPrepareBuffer(void)
+{
+	return fmTuner.levelMode * 2 + 1 - (fmSettings.policy >> 17 & 1);
+}
+
+int btSbcDispatchBuffer(uint8_t value)
+{
+	int mode = 0;
+
+	if (value < 2)
+		value = 2;
+	fmTuner.levelBase = value;
+	if (fmTuner.levelMode != 0)
+		mode = 3;
+	else if ((fmSettings.policy & 0x20000) != 0)
+		mode = btSbcRomParseEntry(0);
+	btSbcHandleBuffer(mode);
+	return 0;
+}
+
+uint8_t btSbcParseBuffer(void)
+{
+	return fmTuner.levelBase;
+}
+
+/* Sets the gain up again after the receiver starts. */
+void btSbcBuildBuffer(void)
+{
+	int mode = 0;
+
+	btSbcRomDispatchEntry(0x5f, 0x5f);
+	btSbcRomAdjustContext(0xcc0, 1);
+	if (fmTuner.levelMode != 0)
+		mode = 3;
+	else if ((fmSettings.policy & 0x20000) != 0)
+		mode = btSbcRomParseEntry(fmSettings.policy << 14);
+	btSbcHandleBuffer(mode);
+}
+
+/* Starts counting the searches that see an RDS group, up to limit. */
+void btSbcComputeBuffer(uint32_t limit)
+{
+	fmTuner.searchCount = 0;
+	fmTuner.rdsMissed = 0;
+	fmTuner.rdsReceived = 0;
+	fmTuner.searchLimit = limit;
+}
+
+/*
+ * The RDS count's result: the groups received and missed, the groups
+ * expected and the percentage received. 23 without RDS, 1 while counting.
+ */
+int btSbcQueryBuffer(uint8_t *data, uint8_t *length)
+{
+	uint16_t expected;
+
+	expected = fmTuner.searchLimit * 10000 / 875;
+	*length = 0;
+	if ((fmSettings.features >> 4 & 1) == 0)
+		return 23;
+	if (fmTuner.searchCount <= fmTuner.searchLimit)
+		return 1;
+	((uint16_t *)data)[0] = fmTuner.rdsReceived;
+	((uint16_t *)data)[1] = fmTuner.rdsMissed;
+	((uint16_t *)data)[2] = expected;
+	data[6] = fmTuner.rdsReceived * 100 / expected;
+	*length = 7;
+	return 0;
+}
+
+/* Register 0x160: the setting in bits 9..5 and, from 2 up, the setting less 2 in bits 4..0. */
+__attribute__((noinline)) void btSbcResetBuffer(unsigned int setting)
+{
+	uint16_t value;
+
+	value = (FM_REGISTER(0x160) & ~0x3e0) | setting << 5;
+	if (setting >= 2)
+		value = (value & ~0x1f) | (setting - 2);
+	else
+		value &= ~0x1f;
+	FM_REGISTER(0x160) = value;
+}
+
+/* Register 0x394's step for a transmit level, one higher when raising. */
+void btSbcSyncBuffer(uint32_t value, int raise)
+{
+	unsigned int step;
+
+	step = btSbcInspectBuffer(value)->settings & 0x1f;
+	if (raise != 0)
+		step++;
+	FM_REGISTER(0x394) = (FM_REGISTER(0x394) & ~0x3e) | step << 1;
+}
+
+/*
+ * Sets the transmitter's registers for a level (btFmApplyHook). Register
+ * 0x398 takes one output byte before and the other after the rest, in the
+ * order swap gives.
+ */
+void btSbcApplyBuffer(uint32_t value, int swap)
+{
+	const struct FmLevelStep *step;
+
+	step = btSbcInspectBuffer(value);
+	if (swap != 0)
+		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff) | (step->outputs >> 24) << 8;
+	else
+		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff00) | (step->outputs & 0xff);
+	FM_REGISTER(0x39c) = (step->outputs >> 8 & 0xff) | (step->outputs >> 16 & 0xff) << 8;
+	FM_REGISTER(0x38c) = (FM_REGISTER(0x38c) & ~0x3f) | (step->settings >> 10 & 0x3f);
+	FM_REGISTER(0x390) = (FM_REGISTER(0x390) & ~0x7) | (step->settings >> 16 & 0x7);
+	FM_REGISTER(0x390) = (FM_REGISTER(0x390) & 0x7ff) | (step->settings >> 5 & 0x1f) << 11;
+	if (swap != 0)
+		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff00) | (step->outputs & 0xff);
+	else
+		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff) | (step->outputs >> 24) << 8;
+}
+
+/* Moves the level threshold until register 0x394's bit 6 changes. */
+void btSbcResolveBuffer(void)
+{
+	if ((FM_REGISTER(0x394) & 0x40) != 0) {
+		if (btFmLevelThreshold < FM_LEVEL_HIGH) {
+			do {
+				btSbcSyncBuffer(++btFmLevelThreshold, 1);
+				btSbcApplyEntry(1);
+			} while ((FM_REGISTER(0x394) & 0x40) != 0);
+			btSbcSyncBuffer(--btFmLevelThreshold, 0);
+		}
+	} else {
+		do {
+			btSbcSyncBuffer(--btFmLevelThreshold, 0);
+			btSbcApplyEntry(1);
+		} while ((FM_REGISTER(0x394) & 0x40) == 0);
+	}
+}
+
+/*
+ * Steps the transmit level: down to the threshold, down when the output
+ * overloads, up towards audioLimit while it is quiet.
+ */
+void btSbcScheduleBuffer(void)
+{
+	unsigned int level, limit, count;
+	int raise = 0;
+
+	level = fmSettings.audioSetting;
+	limit = btFmLevelThreshold;
+	if (level > limit) {
+		fmSettings.audioSetting = limit;
+	} else if ((FM_REGISTER(0x3b8) & 0x4000) != 0) {
+		if (level <= 100)
+			return;
+		fmSettings.audioSetting = level - 1;
+	} else {
+		if ((FM_REGISTER(0x38c) >> 6 & 0x3f) > 40) {
+			count = FM_REGISTER(0x3a4) & 0x7f;
+			if (count > 120) {
+				fmSettings.audioSetting = level - 1;
+				goto apply;
+			}
+			if (count >= 100)
+				return;
+		}
+		if (fmSettings.audioLimit < limit)
+			limit = fmSettings.audioLimit;
+		if (level >= limit)
+			return;
+		raise = 1;
+		fmSettings.audioSetting = level + 1;
+	}
+apply:
+	btFmApplyHook(fmSettings.audioSetting, raise);
+}
+
+/*
+ * Vendor command: the highest transmit level, 99..125 (117 with level flag
+ * 8). A transmitter that is on moves to it at once.
+ */
+int btSbcNotifyBuffer(uint8_t value)
+{
+	unsigned int limit = value;
+	int raise;
+
+	if (limit < FM_LEVEL_LOW)
+		limit = FM_LEVEL_LOW;
+	else if (limit > FM_LEVEL_HIGH)
+		limit = FM_LEVEL_HIGH;
+	if ((fmSettings.levelFlags & 0x100) != 0 && limit > 117)
+		limit = 117;
+	if (fmSettings.audioLimit != limit) {
+		btSbcRomHandleEntry(fmSettings.audioLimit);
+		fmSettings.audioLimit = limit;
+		if ((fmSettings.features & 0x2000) != 0 && (fmSettings.features & 0x40) != 0) {
+			if (fmSettings.audioSetting >= fmSettings.audioLimit) {
+				fmSettings.audioSetting = fmSettings.audioLimit;
+				raise = 0;
+			} else {
+				limit = btFmLevelThreshold;
+				if (fmSettings.audioLimit <= limit)
+					limit = fmSettings.audioLimit;
+				raise = 1;
+				fmSettings.audioSetting = limit;
+			}
+			btFmApplyHook(fmSettings.audioSetting, raise);
+			FM_REGISTER(0x3a8) |= 0x1000;
+			FM_REGISTER(0x3a8) &= ~0x1000;
+		}
+		btSbcTrackEntry(100);
+	}
+	return 0;
+}
+
+/*
+ * Vendor command: the transmitter's deviations. Their total (the tone's
+ * counts 5.67 times) is kept to 22500..100000; the gain that brings the
+ * largest to full scale, 50..255, and each deviation's share of it, rounded,
+ * go to registers 0x318..0x320. A transmitter that is on is retuned.
+ */
+int btSbcFormatBuffer(uint32_t first, uint32_t second, uint32_t third, uint32_t tone)
+{
+	uint32_t total, largest, gain, scale, shares[3], toneShare;
+	uint16_t level;
+	int error;
+
+	total = tone * 567 / 100 + first + second + third;
+	if (total > 100000)
+		total = 100000;
+	else if (total < 22500)
+		total = 22500;
+	largest = 0;
+	if (first == 0 || second == 0 || third == 0 || tone == 0)
+		largest = total;
+	if (largest <= first)
+		largest = first;
+	if (largest <= second)
+		largest = second;
+	if (largest <= third)
+		largest = third;
+	if (largest <= tone)
+		largest = tone;
+	gain = (largest << 7) / total;
+	scale = tone * 72576 / 100 / total;
+	level = gain > scale ? gain : scale;
+	if (level > 0xff)
+		gain = 0xff;
+	else if (level < 50)
+		gain = 50;
+	else
+		gain = level;
+	scale = total * gain;
+	shares[0] = romMulAdd32x32(scale, first, 0xff00) / (2 * scale);
+	shares[1] = romMulAdd32x32(scale, second, 0xff00) / (2 * scale);
+	shares[2] = romMulAdd32x32(scale, third, 0xff00) / (2 * scale);
+	toneShare = romMulAdd32x32(100 * scale, tone, 0x234c900) / (200 * scale);
+	FM_REGISTER(0x300) |= 0x40;
+	FM_REGISTER(0x318) = shares[0] << 8 | shares[1];
+	level = (FM_REGISTER(0x31c) & 0xff) | shares[2] << 8;
+	FM_REGISTER(0x31c) = (level & ~0xff) | toneShare;
+	FM_REGISTER(0x320) = (FM_REGISTER(0x320) & 0xff00) | gain;
+	fmSettings.deviation = total;
+	if ((fmSettings.features & 0x2000) != 0) {
+		error = btSbcCheckTable();
+		if (error != 0)
+			return error;
+		btFmFrequencyHook(fmSettings.frequency);
+		btSbcRomRecordContext(1);
+	}
+	return 0;
+}
+
+/* The level step of a transmit level, clamped to 99..125. */
+__attribute__((noinline)) const struct FmLevelStep *btSbcInspectBuffer(uint32_t level)
+{
+	if (level < FM_LEVEL_LOW)
+		level = FM_LEVEL_LOW;
+	else if (level > FM_LEVEL_HIGH)
+		level = FM_LEVEL_HIGH;
+	return &fmLevelSteps[FM_LEVEL_HIGH - level];
 }
