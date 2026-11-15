@@ -318,7 +318,11 @@ unsigned char powerSeqSuspend(void)
 		if (powerLedGetStatus() & configGet()->suspendLedMask)
 			powerLedFadeStart(1);
 		else
+#if BOARD_POWER_LED_ELMO
+			powerLedSet(0);
+#else
 			powerLedFadeStart(0);
+#endif
 	}
 #endif
 	sleepFactorSet2(0);
