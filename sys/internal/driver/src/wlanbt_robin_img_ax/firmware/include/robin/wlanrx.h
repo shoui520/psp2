@@ -65,7 +65,6 @@ int wlanRxTkipMicCheck(uint8_t *frame, const uint8_t *data, OsaBuffer *buffer,
 		       const cipher_key_t *key, const uint32_t *expected);
 void wlanRxKeySetReplayCounter(cipher_key_t *key, uint16_t low, uint32_t high);
 int wlanRxReplayCheck(const uint8_t *iv, const cipher_key_t *key, uint16_t *low, uint32_t *high);
-/* Not converted yet. */
 void wlanMichaelMic(const uint8_t *frame, const uint8_t *key, const uint8_t *data,
 		    uint32_t *mic);	/* 0x2e8d4 */
 
