@@ -592,7 +592,7 @@ struct WlanConnection *wlanIbssFindMerge(const WlanWirelessFrame *frame)
 	length = (uint16_t)(LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH);
 	rsn = wlanIeFind(IE_RSN, body + WLAN_BEACON_FIXED_LENGTH, length);
 	wpa = wlanIeFind(IE_VENDOR, body + WLAN_BEACON_FIXED_LENGTH, length);
-	if (wpaSuppAdjustDescriptor(wpa + 4) != 3)
+	if (wlanWpaElementType(wpa + 4) != WLAN_VENDOR_WPA)
 		wpa = NULL;
 	macMgmtDispatchEntry(rsn, wpa, third, fourth, 0, 0, 0);
 	if (memcmp(fourth, &connection->securitySuites[0], 1) ||

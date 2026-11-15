@@ -64,10 +64,6 @@
 /* The fixed fields ahead of an association response's elements. */
 #define WLAN_ASSOC_RESPONSE_FIXED	6
 
-/* The supplicant's results for a vendor element. */
-#define WPA_SUPP_OUI_WMM		1
-#define WPA_SUPP_OUI_WPA		3
-
 /* The MAC's filters while joining and otherwise. */
 #define WLAN_JOIN_FILTER_SAME_CHANNEL	40
 #define WLAN_JOIN_FILTER_OTHER_CHANNEL	46
@@ -606,12 +602,12 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			wlanIeBufferAppendTlv(&wlanJoin.ieBuffer, tlv);
 			break;
 		case TLV_TYPE_VENDOR_IE:
-			if (wpaSuppSelectDescriptor(tlv + 4) == WPA_SUPP_OUI_WMM) {
+			if (wlanWmmElementType(tlv + 4) == WLAN_VENDOR_WMM_INFORMATION) {
 				wlanJoinWmmIe[0] = tlv[0];
 				wlanJoinWmmIe[1] = tlv[2];
 				__aeabi_memcpy(&wlanJoinWmmIe[2], tlv + 4, LE16(tlv + 2));
 			}
-			if (wpaSuppAdjustDescriptor(tlv + 4) != WPA_SUPP_OUI_WPA)
+			if (wlanWpaElementType(tlv + 4) != WLAN_VENDOR_WPA)
 				break;
 			wlanJoin.privacy = 1;
 			if (!supplicantIsEnabled()) {
@@ -622,7 +618,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 					     &wpaMulticast, &wpaUnicast, wpaAkm, 5);
 			break;
 		case TLV_TYPE_CHANLIST:
-			wpaSuppConfigureQueue(tlv, channels, NULL);
+			wlanTlvChannelListParse(tlv, channels, NULL);
 			wlanJoin.channel = channels[1];
 			wlanJoin.band = channels[0];
 			break;

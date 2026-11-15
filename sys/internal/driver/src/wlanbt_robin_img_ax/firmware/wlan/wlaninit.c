@@ -44,6 +44,7 @@
 #include "robin/apps.h"
 #include "robin/assocAp.h"
 #include "robin/hostcmd.h"
+#include "robin/softtimer.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
 struct WlanHwInfo {
@@ -146,7 +147,6 @@ void macMgmtResetFrame(void);								/* 0x3abf6 */
 int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */
 void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
-int wpaSuppVerifyDescriptor(uint32_t index, uint32_t argument);			/* 0x2c1ba */
 void uapSqramParseState(void);							/* SQRAM 0xc00074d4 */
 void macTxNotifyFormatContext(void);							/* 0x309ac */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
@@ -308,7 +308,7 @@ static int wlanInitStageDevice(void)
 	macMgmtRecordEntry();
 	wlanJoinInit();
 	macMgmtSyncTable();
-	wlanSlotTimer = sysTimerSlotAcquire(wpaSuppVerifyDescriptor, 0);
+	wlanSlotTimer = sysTimerSlotAcquire(wlanSoftTimerTick, 0);
 	if (wlanSlotTimer != NULL)
 		sysTimerStart(wlanSlotTimer->index, 1, 1);
 	macTxNotifySemaphore = (struct OsaSemaphore *)&macTxNotifySemaphoreObject;

@@ -40,6 +40,7 @@ _Static_assert(offsetof(HostCmd_DS_802_11_ASSOCIATE, tlvBuffer) == 13, "associat
 #define TLV_TYPE_EXTCAP_IE		0x007f
 #define TLV_TYPE_VENDOR_IE		0x00dd
 #define TLV_TYPE_CHANLIST		0x0101
+#define TLV_TYPE_NUMPROBES		0x0102
 #define TLV_TYPE_PASSTHROUGH		0x010a
 #define TLV_TYPE_TSFTIMESTAMP		0x0113
 #define TLV_TYPE_AUTH_TYPE		0x011f

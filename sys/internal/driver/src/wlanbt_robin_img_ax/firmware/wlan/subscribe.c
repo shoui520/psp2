@@ -7,6 +7,7 @@
 #include "robin/conn.h"
 #include "robin/rom.h"
 #include "robin/signal.h"
+#include "robin/ie.h"
 #include "robin/subscribe.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
@@ -17,8 +18,6 @@
 	{ .type = (tlvType), .length = 2 }
 
 /* Not converted yet; provisional names. */
-unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *threshold, uint8_t *count); /* 0x2c60e */
-unsigned int wlanTlvCopyValue(const uint8_t *tlv, void *value);			/* 0x2c662 */
 
 struct WlanLinkQualityState wlanLinkQuality __attribute__((section(".dtcm.rw")));
 

@@ -132,3 +132,20 @@ void Mrvl_F(char *password, uint8_t *ssid, int ssidlength, int iterations, int c
 			output[j] ^= digest[j];
 	}
 }
+
+/*
+ * password - ascii string up to 63 characters in length
+ * ssid - octet string up to 32 octets
+ * ssidlength - length of ssid in octets
+ * output must be 32 octets in length and outputs 256 bits of key
+ */
+int Mrvl_PasswordHash(char *password, uint8_t *ssid, int ssidlength, uint8_t *output)
+{
+	if (strlen(password) > 63 || ssidlength > 32)
+		return 0;
+
+	Mrvl_F(password, ssid, ssidlength, 4096, 2, output);
+	__aeabi_memcpy(output + A_SHA_DIGEST_LEN, output, 12);
+	Mrvl_F(password, ssid, ssidlength, 4096, 1, output);
+	return 1;
+}

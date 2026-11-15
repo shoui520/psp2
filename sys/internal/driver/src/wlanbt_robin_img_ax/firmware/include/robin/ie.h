@@ -14,6 +14,7 @@ enum {
 	IE_CF_PARAMETER_SET = 4,
 	IE_TIM = 5,
 	IE_IBSS_PARAMETER = 6,
+	IE_COUNTRY = 7,
 	IE_POWER_CAPABILITY = 33,
 	IE_ERP_INFORMATION = 42,
 	IE_HT_CAPABILITY = 45,
@@ -22,8 +23,21 @@ enum {
 	IE_HT_INFORMATION = 61,
 	IE_20_40_BSS_COEXISTENCE = 72,
 	IE_OBSS_SCAN_PARAMETERS = 74,
+	IE_EXTENDED_CAPABILITIES = 127,
 	IE_VENDOR = 221,
 };
+
+/* The kind of a vendor element wlanWmmElementType() and wlanWpaElementType() name. */
+enum {
+	WLAN_VENDOR_NONE = 0,
+	WLAN_VENDOR_WMM_INFORMATION = 1,
+	WLAN_VENDOR_WMM_PARAMETER = 2,
+	WLAN_VENDOR_WPA = 3,
+	WLAN_VENDOR_WMM_TSPEC = 5,
+};
+
+/* The largest association ID a TIM element covers. */
+enum { WLAN_AID_MAX = 2007 };
 
 enum {
 	WLAN_FRAME_PROBE_REQUEST = 4,
@@ -102,6 +116,32 @@ typedef struct WlanIePointers {
 
 _Static_assert(sizeof(WlanIePointers) == 92, "element pointers");
 
+/*
+ * The elements a station keeps of its access point's frames, filled by the
+ * parser at 0x3e94a; the pointers share the names of WlanIePointers.
+ */
+typedef struct WlanBeaconIePointers {
+	const uint8_t *pSsid;
+	const uint8_t *pDsParam;
+	const uint8_t *pCountry;
+	const uint8_t *pApChannelReport;	/* element 51, set by the parser itself */
+	const uint8_t *reserved4;
+	const uint8_t *pSupportedRates;
+	const uint8_t *pExtSupportedRates;
+	const uint8_t *pWpa;
+	const uint8_t *pWmmInfo;
+	const uint8_t *pWmmParam;
+	const uint8_t *reserved10;
+	const uint8_t *pRsn;
+	const uint8_t *pHtInfo;
+	const WlanHtCapabilityIe *pHtCap;
+	const uint8_t *p2040Coexist;
+	const uint8_t *pHtScanParam;
+	const uint8_t *pExtCap;
+} WlanBeaconIePointers;
+
+_Static_assert(sizeof(WlanBeaconIePointers) == 68, "beacon element pointers");
+
 /* ERP Information element flags */
 enum {
 	WLAN_ERP_NON_ERP_PRESENT = 1 << 0,
@@ -163,10 +203,23 @@ int wlanIeBufferAlloc(struct WlanIeBuffer *ies);				/* 0x2a866 */
 void wlanIeBufferInit(void);							/* 0x34c78: the buffers' pool */
 int cbProcRecordBuffer(int first, int argument);				/* 0x1e12a */
 void wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc */
-int wpaSuppSelectDescriptor(const uint8_t *oui);				/* 0x2c21c */
-int wpaSuppAdjustDescriptor(const uint8_t *oui);				/* 0x2c276 */
-unsigned int wpaSuppConfigureQueue(const uint8_t *tlv, uint8_t *channels,
-				   uint32_t *channel);				/* 0x2c4c6 */
+int wlanWmmElementType(const uint8_t *oui);					/* 0x2c21c */
+int wlanWpaElementType(const uint8_t *oui);					/* 0x2c276 */
+int wlanIePointersRecord(const uint8_t *ie, WlanIePointers *ies);		/* 0x2c294 */
+int wlanBeaconIePointersRecord(const uint8_t *ie, WlanBeaconIePointers *ies);	/* 0x2c342 */
+int wlanTimCheck(const uint8_t *tim, uint16_t aid, int *groupTraffic,
+		 int *unicastTraffic);						/* 0x2c400 */
+unsigned int wlanTlvChannelListParse(const uint8_t *tlv, uint8_t *channels,
+				     uint32_t *channel);			/* 0x2c4c6 */
+
+/* The TLV parsers of the host commands (wlan/hostcmdtlv.c). */
+unsigned int wlanTlvCopyOfType(unsigned int type, const uint8_t *tlv, void *destination,
+			       unsigned int maximum);				/* 0x2c480 */
+unsigned int wlanTlvNumProbesParse(const uint8_t *tlv, uint8_t *numProbes);	/* 0x2c534 */
+unsigned int wlanTlvTerminate(uint8_t *out);					/* 0x2c5a0 */
+unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *threshold,
+				   uint8_t *frequency);				/* 0x2c60e */
+unsigned int wlanTlvCopyValue(const uint8_t *tlv, void *value);			/* 0x2c662 */
 
 /* The first element with the id in ies[0..length) (0x2c3d8), or NULL. */
 const uint8_t *wlanIeFind(int id, const uint8_t *ies, unsigned int length);

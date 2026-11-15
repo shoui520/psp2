@@ -414,6 +414,11 @@ int MRVL_AesWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *plain,
 void RC4_Encrypt(uint8_t *Encr_Key, uint8_t *IV, uint16_t iv_length, uint8_t *Data,
 		 uint16_t data_length, uint16_t skipBytes);
 
+/* pass_phrase.c (0x2bfc0, 0x2c068): the pre-shared key of a pass phrase and an SSID */
+void Mrvl_F(char *password, uint8_t *ssid, int ssidlength, int iterations, int count,
+	    uint8_t *output);
+int Mrvl_PasswordHash(char *password, uint8_t *ssid, int ssidlength, uint8_t *output);
+
 /* keyMgmtApStaCommon.c */
 extern const uint8_t wpa_oui[3];
 extern const uint8_t kde_oui[3];

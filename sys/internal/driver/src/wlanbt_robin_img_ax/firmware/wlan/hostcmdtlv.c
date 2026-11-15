@@ -9,6 +9,7 @@
 #include "robin/buffer.h"
 #include "robin/ie.h"
 #include "robin/join.h"
+#include "robin/patch.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/wep.h"
@@ -49,6 +50,16 @@ struct WlanPowerCapability {
 
 extern struct WlanPowerCapability *wlanPowerCapability;				/* 0x54e70 */
 unsigned int wlanTlvPowerCapabilityParse(const uint8_t *tlv, struct WlanPowerCapability *capability); /* 0x2c5b4 */
+
+/*
+ * Override slots of the TLV parsers (0x55bf0..0x55c00): each gets the arguments of its
+ * parser and a pointer to the length it returns, and returns nonzero when it handled the TLV.
+ */
+static ROBIN_PATCH_SLOT(wlanTlvChannelListOverride);		/* 0x55bf0 */
+static ROBIN_PATCH_SLOT(wlanTlvThresholdOverride);		/* 0x55bf4 */
+ROBIN_PATCH_SLOT(wlanTlvOverride55bf8);				/* 0x55bf8, used by no function of this file */
+static ROBIN_PATCH_SLOT(wlanTlvNumProbesOverride);		/* 0x55bfc */
+static ROBIN_PATCH_SLOT(wlanTlvPowerCapabilityOverride);	/* 0x55c00 */
 
 /* The ad-hoc start response carries the station's own address as the BSSID. */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command)
@@ -215,7 +226,7 @@ int wlanHostTlvResolve(struct WlanIeBuffer *ies, uint8_t *tlv, uint8_t *channels
 		return 1;
 	}
 	if (type == TLV_TYPE_CHANLIST) {
-		wpaSuppConfigureQueue(tlv, channels, NULL);
+		wlanTlvChannelListParse(tlv, channels, NULL);
 		return 1;
 	}
 	if (type == TLV_TYPE_PASSTHROUGH) {
@@ -281,4 +292,128 @@ const uint8_t *wlanTlvNextOfType(unsigned int type, const uint8_t *tlv)
 	if (LE16(next) != type)
 		return NULL;
 	return next;
+}
+
+/* Copies the value of a TLV of the type, at most maximum bytes of it; returns the TLV's size, 0 for another type or a value too long. */
+unsigned int wlanTlvCopyOfType(unsigned int type, const uint8_t *tlv, void *destination,
+			       unsigned int maximum)
+{
+	unsigned int length;
+
+	if (LE16(tlv) != type)
+		return 0;
+	length = LE16(tlv + 2);
+	if (length > maximum)
+		return 0;
+	if (length == 0)
+		return 4;
+	__aeabi_memcpy(destination, tlv + 4, (uint8_t)tlv[2]);
+	return (uint16_t)(LE16(tlv + 2) + 4);
+}
+
+/* TLV_TYPE_CHANLIST: the channel entries (7 bytes each, Marvell's ChanScanParamSet_t); a single one sets *channel too. */
+unsigned int wlanTlvChannelListParse(const uint8_t *tlv, uint8_t *channels, uint32_t *channel)
+{
+	unsigned int count;
+
+	if (wlanTlvChannelListOverride(tlv, channels, channel, &count) != 0)
+		return (uint16_t)count;
+	if (LE16(tlv) != TLV_TYPE_CHANLIST)
+		return 0;
+	if (LE16(tlv + 2) == 0)
+		return 4;
+	count = LE16(tlv + 2) / 7;
+	__aeabi_memcpy(channels, tlv + 4, 7 * count);
+	if ((uint16_t)count == 1 && channel != NULL)
+		*channel = channels[1];
+	return (uint16_t)(LE16(tlv + 2) + 4);
+}
+
+/* TLV_TYPE_NUMPROBES: the number of probes of a scan (16 bits) into two bytes, 1 for zero. */
+unsigned int wlanTlvNumProbesParse(const uint8_t *tlv, uint8_t *numProbes)
+{
+	unsigned int count = 0;
+	unsigned int probes;
+
+	if (wlanTlvNumProbesOverride(tlv, numProbes, &count) != 0)
+		return (uint16_t)count;
+	if (LE16(tlv) != TLV_TYPE_NUMPROBES)
+		return 0;
+	if (LE16(tlv + 2) == 2) {
+		count = tlv[4];
+		probes = count | (tlv[5] << 8);
+		count = probes;
+		if (probes != 0) {
+			numProbes[0] = probes;
+			numProbes[1] = probes >> 8;
+		} else {
+			numProbes[0] = 1;
+			numProbes[1] = 0;
+		}
+	}
+	return (uint16_t)(LE16(tlv + 2) + 4);
+}
+
+/* An empty TLV of type 0xffff into out; returns its size. */
+unsigned int wlanTlvTerminate(uint8_t *out)
+{
+	out[0] = 0xff;
+	out[1] = 0xff;
+	out[2] = 0;
+	out[3] = 0;
+	return 4;
+}
+
+/* TLV_TYPE_POWER_CAPABILITY_IE: the minimum and maximum power a Power Capability element gives; an empty one clears them. */
+unsigned int wlanTlvPowerCapabilityParse(const uint8_t *tlv, struct WlanPowerCapability *capability)
+{
+	unsigned int length;
+
+	if (wlanTlvPowerCapabilityOverride(tlv, capability, &length) != 0)
+		return (uint16_t)length;
+	if (LE16(tlv) != TLV_TYPE_POWER_CAPABILITY_IE)
+		return 0;
+	if (LE16(tlv + 2) == 0) {
+		capability->present = 0;
+		capability->minimum = 0;
+		capability->maximum = 0;
+		capability->present = 0;
+		return 4;
+	}
+	capability->minimum = tlv[4];
+	capability->maximum = tlv[5];
+	capability->present = 1;
+	return (uint16_t)(LE16(tlv + 2) + 4);
+}
+
+/*
+ * The threshold and frequency of an RSSI or SNR TLV (Marvell's MrvlIEtypes_RssiParamSet_t, a
+ * value byte and a frequency byte) into out; *frequency gets the frequency, 1 for zero.
+ */
+unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *out, uint8_t *frequency)
+{
+	uint16_t length;
+	uint8_t dummy;
+	uint8_t value;
+
+	if (wlanTlvThresholdOverride(tlv, out, frequency, &length) != 0)
+		return length;
+	if (frequency == NULL)
+		frequency = &dummy;
+	if (LE16(tlv + 2) == 2) {
+		out[0] = tlv[4];
+		value = tlv[5];
+		if (value == 0)
+			value = 1;
+		*frequency = value;
+		out[1] = tlv[5];
+	}
+	return (uint16_t)(LE16(tlv + 2) + 4);
+}
+
+/* Copies the value of a TLV to destination; returns the TLV's size. */
+unsigned int wlanTlvCopyValue(const uint8_t *tlv, void *destination)
+{
+	__aeabi_memcpy(destination, tlv + 4, LE16(tlv + 2));
+	return (uint16_t)(LE16(tlv + 2) + 4);
 }

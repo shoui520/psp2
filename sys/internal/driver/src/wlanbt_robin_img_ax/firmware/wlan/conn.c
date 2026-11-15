@@ -53,7 +53,6 @@ struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);				/* 0x333ce */
 void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
-int wpaSuppConvertDescriptor(void *descriptor);						/* 0x2c17c */
 int macMgmtApplyEntry(void);									/* 0x36a2a */
 void btLmpLcHandleState(int state);								/* 0x42488 */
 void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
@@ -838,7 +837,7 @@ void wlanConnectionReset(struct WlanConnection *connection)
 /* Forgets what was heard of the peer's security. */
 void wlanConnectionClearSecurity(struct WlanConnection *connection)
 {
-	wpaSuppConvertDescriptor(connection->reserved636);
+	wlanSoftTimerStop(&connection->softTimer);
 	macTxNotifyParseFrame(connection);
 	__aeabi_memclr(connection->peerAddress, 6);
 }
@@ -1860,7 +1859,7 @@ int wlanConnectionTeardownType0(struct WlanConnection *connection)
 {
 	osaCancelTimer(connection->link.timer);
 	__aeabi_memclr4(&connection->link, 24);
-	return wpaSuppConvertDescriptor(connection->reserved636);
+	return wlanSoftTimerStop(&connection->softTimer);
 }
 
 /* The same for a station connection in mode 3. */
@@ -1868,5 +1867,5 @@ int wlanConnectionTeardownStation(struct WlanConnection *connection)
 {
 	osaCancelTimer(connection->link.timer);
 	__aeabi_memclr4(&connection->link, 24);
-	return wpaSuppConvertDescriptor(connection->reserved636);
+	return wlanSoftTimerStop(&connection->softTimer);
 }

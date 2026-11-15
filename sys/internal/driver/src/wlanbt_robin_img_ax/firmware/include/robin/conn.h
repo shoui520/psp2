@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/ratectl.h"
+#include "robin/softtimer.h"
 #include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
@@ -427,7 +428,8 @@ struct WlanConnection {
 			struct WlanRateControl rateControl;	/* rate adaptation state */
 		};
 	};
-	uint8_t reserved636[28];
+	struct WlanSoftTimer softTimer;	/* the connection's timeout */
+	uint32_t reserved660;
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
 	uint8_t *snmpBssParams[2];	/* [0]: HostCmd 0x37's, [1]: 0x36's and 0x5e's; each +28 is its block */
