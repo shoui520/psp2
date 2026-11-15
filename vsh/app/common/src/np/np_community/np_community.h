@@ -15,10 +15,10 @@ extern "C" {
 /* how the community gets its memory */
 #define NP_COMMUNITY_INIT_DEFAULT	0
 #define NP_COMMUNITY_INIT_ALLOCATOR	1
-#define NP_COMMUNITY_INIT_PARAM		2
+#define NP_COMMUNITY_INIT_PARAM		2	/* an mspace on the caller's memory */
 
 int npCommunityInit(SceUInt32 type, void *(*alloc)(SceSize size), void (*free)(void *ptr),
-		    int arg1, int arg2);
+		    SceSize size, void *memblock);
 int npCommunityInitWithAllocator(void *(*alloc)(SceSize size), void (*free)(void *ptr));
 int npCommunityTerm(void);
 

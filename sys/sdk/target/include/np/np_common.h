@@ -49,6 +49,44 @@ typedef struct SceNpAvatarUrl {
 	char term;
 } SceNpAvatarUrl;
 
+#define SCE_NP_ABOUT_ME_MAX_LENGTH		63
+#define SCE_NP_AVATAR_IMAGE_MAX_SIZE_LARGE	(200 * 1024U)
+#define SCE_NP_AVATAR_IMAGE_MAX_SIZE_MIDDLE	(100 * 1024U)
+#define SCE_NP_AVATAR_IMAGE_MAX_SIZE_SMALL	(10 * 1024U)
+#define SCE_NP_AVATAR_IMAGE_MAX_SIZE		SCE_NP_AVATAR_IMAGE_MAX_SIZE_LARGE
+
+/* NP USER INFO */
+typedef struct SceNpUserInformation {
+	SceNpId userId;
+	SceNpAvatarUrl icon;		/* Avatar URL */
+	SceUChar8 reserved[52];
+} SceNpUserInformation;
+
+/* My Languages */
+typedef struct SceNpMyLanguages {
+	SceInt32 language1;		/* It will always be set */
+	SceInt32 language2;		/* Negative when not set */
+	SceInt32 language3;		/* Negative when not set */
+	SceUChar8 padding[4];
+} SceNpMyLanguages;
+
+/* NP Avatar Image(for Large Size) */
+typedef struct SceNpAvatarImage {
+	SceUChar8 data[SCE_NP_AVATAR_IMAGE_MAX_SIZE];
+	SceSize size;
+	SceUChar8 reserved[12];
+} SceNpAvatarImage;
+
+typedef enum {
+	SCE_NP_AVATAR_SIZE_LARGE,
+	SCE_NP_AVATAR_SIZE_MIDDLE,
+	SCE_NP_AVATAR_SIZE_SMALL
+} SceNpAvatarSizeType;
+
+typedef struct SceNpAboutMe {
+	char data[SCE_NP_ABOUT_ME_MAX_LENGTH + 1];
+} SceNpAboutMe;
+
 typedef SceInt32 SceNpPlatformType;
 #define SCE_NP_PLATFORM_TYPE_NONE		0
 #define SCE_NP_PLATFORM_TYPE_PS3		1

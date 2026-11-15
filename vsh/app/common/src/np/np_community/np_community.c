@@ -2,13 +2,14 @@
  * The NP community helper (np_community.h): SceNpUtility's community, started in three steps
  * and undone in reverse when a step fails.
  */
+#include <stddef.h>
 #include <scetypes.h>
 #include <np/np_error.h>
 #include "../np_utility/np_utility.h"
 #include "np_community.h"
 
 int npCommunityInit(SceUInt32 type, void *(*alloc)(SceSize size), void (*free)(void *ptr),
-		    int arg1, int arg2)
+		    SceSize size, void *memblock)
 {
 	int ret;
 
@@ -22,7 +23,7 @@ int npCommunityInit(SceUInt32 type, void *(*alloc)(SceSize size), void (*free)(v
 		SceNpUtility_4A3FDD3B(0, alloc, free);
 		break;
 	case NP_COMMUNITY_INIT_PARAM:
-		SceNpUtility_B5711AF9(0, arg1, arg2);
+		SceNpUtility_B5711AF9(0, size, memblock);
 		break;
 	default:
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
@@ -48,7 +49,7 @@ undo_first:
 
 int npCommunityInitWithAllocator(void *(*alloc)(SceSize size), void (*free)(void *ptr))
 {
-	return npCommunityInit(NP_COMMUNITY_INIT_ALLOCATOR, alloc, free, 0, 0);
+	return npCommunityInit(NP_COMMUNITY_INIT_ALLOCATOR, alloc, free, 0, NULL);
 }
 
 int npCommunityTerm(void)
