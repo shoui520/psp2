@@ -26,6 +26,7 @@ unsigned int romStringCopy(void *destination, const void *source, unsigned int l
  * (wlan/mgmt.c); their ROM bodies are not available, so the names are
  * provisional.
  */
+unsigned int romLibAcquireState(unsigned int a, unsigned int b, unsigned int index);	/* 0x03f3a60f: the rate of a rate index (inferred from wlanTxCompletionFetch) */
 void romLibResolveState(void);			/* 0x03f3a521: before the radio is retuned */
 int romLibScheduleState(void);			/* 0x03f3a52d: after the host changes the connection's keys or rates */
 int romLibApplyState(void);			/* 0x03f3a515: after it */

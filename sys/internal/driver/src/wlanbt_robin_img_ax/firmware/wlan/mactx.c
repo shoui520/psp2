@@ -598,10 +598,6 @@ void macTxAdvanceStage(void)
 #define TX_LOOPBACK_KIND(info)	((info)[7])
 
 /* Not converted yet; provisional names. */
-int wlanTxQueueMgmtFrame(OsaBuffer *buffer);			/* 0x32038 */
-
-
-
 uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused); /* 0x3d2f8 */
 uint8_t wlanTxLowRate(struct WlanConnection *connection, unsigned int limit); /* 0x31db0 */
 void wlanPsTriggerSent(void);					/* 0x2eade */
@@ -864,11 +860,6 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 			  int reserved, unsigned int packetType, int ampdu,
 			  const uint8_t **loopback, int qos);		/* 0x2ed44 */
 int wlanPsLifetimeWanted(void);						/* 0x3dfa0 */
-void wlanTxPrepareRequest(struct WlanReplyFrame *data, struct WlanMacTxRequest *request); /* 0x31ab0 */
-void wlanTxSetSecurity(struct WlanConnection *connection, struct WlanReplyFrame *data,
-		       struct WlanMacTxRequest *request);		/* 0x31798 */
-void wlanTxSetRetry(struct WlanConnection *connection, struct WlanReplyFrame *data,
-		    struct WlanMacTxRequest *request);			/* 0x31a3a */
 extern struct OsaDevice ampWlanDriver;					/* 0x04009860 */
 extern struct OsaMessageQueue wlanDriverQueue15;			/* 0x04004a18 */
 extern struct OsaMessageQueue wlanDriverQueue4;				/* 0x04004a04 */
@@ -1282,7 +1273,7 @@ queued:
 								__aeabi_uread4(&tx.descriptor.priority), 14),
 							&tx.descriptor.priority);
 			}
-			wlanTxPrepareRequest(&tx, request);
+			wlanTxPrepareRequest((uint8_t *)&tx, request);
 			if (ampdu == 1) {
 				wlanTrace(0xbbbbbbbb, 0x77777777);
 				wlanTxBaCountFrame(baIndex, wlanTxBaSessions);
@@ -1290,7 +1281,7 @@ queued:
 				request->mode = 10;
 			} else {
 				wlanTrace(0xbbbbbbbb, 0x88888888);
-				wlanTxSetSecurity(connection, &tx, request);
+				wlanTxRatesInit(connection, (uint8_t *)&tx, request);
 			}
 			if (macTxDescriptor.flags & 8) {
 				macTxAdvanceStage();
@@ -1299,7 +1290,7 @@ queued:
 			tx.descriptor.control = __aeabi_uread4(request->flags);
 			tx.sequence[0] = request->sequence[0];
 			tx.sequence[1] = request->sequence[1];
-			wlanTxSetRetry(connection, &tx, request);
+			wlanTxRateSelect(connection, (uint8_t *)&tx, request);
 			__aeabi_uwrite4((int)(__aeabi_uread4(request->flags) & 0x0fffffff), request->flags);
 			request->type = tx.descriptor.header.bssType;
 			request->info = tx.descriptor.header.bssNumber;

@@ -78,7 +78,11 @@ _Static_assert(offsetof(struct WlanMacTxRequest, host) == 64, "request host desc
 /* What the transmit-done task learns of a finished frame (partial). */
 struct WlanTxStatus {
 	uint8_t *data;			/* buffer data of the frame */
-	uint8_t reserved4[12];
+	uint32_t flags;			/* WlanMacTxRequest.flags of the request that finished */
+	uint32_t rateInfo;		/* WlanMacTxRequest.rateInfo, or 0 when the MAC chose the rate */
+	uint8_t type;			/* the request's mode byte as the MAC left it */
+	uint8_t info;
+	uint8_t reserved14[2];
 	uint32_t result;		/* 0: acknowledged */
 	uint8_t rate;			/* rate index the frame was first sent at */
 	uint8_t finalRate;		/* rate index of the last transmission */
@@ -134,6 +138,28 @@ OsaBuffer *wlanTxBufferAlloc(struct OsaBufferPool *pool, uint32_t size, uint32_t
 unsigned int wlanTxBufferQueue(const OsaBuffer *buffer);
 int wlanTxQuotaRelease(OsaBuffer *buffer);		/* OsaBuffer.release of a charged buffer; 0x18894 */
 int wlanTxBufferRecharge(OsaBuffer *buffer, unsigned int queue);
+
+/* wlan/txsubmit.c */
+int wlanTxRatesInit(struct WlanConnection *connection, uint8_t *data, struct WlanMacTxRequest *request);
+int wlanTxUsesRts(struct WlanConnection *connection, unsigned int length, const uint8_t *peer);
+void wlanTxRequestSetup(struct WlanConnection *connection, uint8_t *data);
+int wlanTxRequestBuild(struct WlanConnection *connection, uint8_t *data);
+unsigned int wlanTxWindowFreeCount(unsigned int window);
+int wlanTxWindowPush(struct WlanMacTxRequest *request, unsigned int length, unsigned int window);
+int wlanTxWindowSubmit(OsaBuffer *buffer);
+int wlanTxWindowResubmit(OsaBuffer *buffer);
+void wlanTxRateSelect(struct WlanConnection *connection, uint8_t *data, struct WlanMacTxRequest *request);
+void wlanTxPrepareRequest(uint8_t *data, struct WlanMacTxRequest *request);
+OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status);	/* 0x31c76 */
+int wlanTxQueueMgmtFrame(OsaBuffer *buffer);			/* 0x32038 */
+int wlanTxQueueFrame(OsaBuffer *buffer);			/* 0x32094 */
+int wlanTxReleaseFrame(OsaBuffer *buffer);			/* 0x319d0 */
+void wlanTxRingClearCounters(void);				/* 0x31f30 */
+int wlanTxRingsPending(void);					/* 0x31fd6 */
+int wlanTxRingsDrained(void);					/* 0x31ffe */
+int wlanTxFramesOutsideRings(void);				/* 0x3200e */
+int wlanTxRingPublishNext(void);				/* 0x320bc */
+void wlanTxRingsFlush(void);					/* 0x32134 */
 
 /* Not converted yet; provisional names. */
 int wlanTxSubmit(OsaBuffer *buffer);

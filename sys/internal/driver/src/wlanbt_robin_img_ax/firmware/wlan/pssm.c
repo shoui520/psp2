@@ -60,8 +60,6 @@ void cbProcAdjustContext(struct WlanConnection *connection);	/* 0x1b5ce */
 int cbProcBuildPacket(struct WlanConnection *connection);	/* 0x1e38e */
 unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int wlanWmmEnabled(void);				/* 0x41cb8 */
-int macTxNotifyScheduleTable(struct WlanConnection *connection, void *data); /* 0x31ae8 */
-int macTxNotifyQueryTable(OsaBuffer *buffer);		/* 0x3199e */
 
 static inline __attribute__((always_inline)) struct WlanPsSleep *wlanPsSleepOf(struct WlanConnection *connection)
 {
@@ -409,8 +407,8 @@ void wlanPsAnnounceSleep(struct WlanConnection *connection)
 	frame->duration[1] = (uint8_t)(info->sleep.sleepDuration >> 8);
 	if (info->sleep.mode == WLAN_PS_SLEEP_DTIM) {
 		TX_DATA_RING(data) = 12;
-		macTxNotifyScheduleTable(connection, data);
-		result = macTxNotifyQueryTable(buffer);
+		wlanTxRequestBuild(connection, data);
+		result = wlanTxWindowResubmit(buffer);
 	} else {
 		ring = 0;
 		if (info->qosEnabled == 1 || wlanWmmEnabled())

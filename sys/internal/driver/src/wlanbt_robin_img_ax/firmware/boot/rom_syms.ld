@@ -159,6 +159,7 @@ PROVIDE(romEdcaSetCwMax = 0x03f3a643);
 PROVIDE(romEdcaSetAifsn = 0x03f3a665);
 PROVIDE(romEdcaSetTxop  = 0x03f3a64d);
 PROVIDE(romLibApplyState      = 0x03f3a515);
+PROVIDE(romLibAcquireState    = 0x03f3a60f);
 PROVIDE(romLibResolveState    = 0x03f3a521);
 PROVIDE(romLibScheduleState   = 0x03f3a52d);
 PROVIDE(romLibResolveContext  = 0x03f3a963);

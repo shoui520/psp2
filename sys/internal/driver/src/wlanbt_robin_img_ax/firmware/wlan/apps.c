@@ -74,9 +74,9 @@ static struct RobinList wlanApPsUsed __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
 void macMgmtInspectPacket(struct WlanConnection *connection, unsigned int aid, int set); /* 0x3a06e */
-unsigned int macTxNotifyParseTable(unsigned int ring);			/* 0x318cc */
-int macTxNotifyQueryTable(OsaBuffer *buffer);				/* 0x3199e */
-int macTxNotifyComputeTable(OsaBuffer *buffer);				/* 0x31952 */
+
+
+
 int wpaSuppPrepareDescriptor(OsaBuffer *buffer);			/* 0x1891a */
 void cbProcPrepareFrame(struct WlanConnection *connection, unsigned int more,
 			unsigned int tid);				/* 0x1ea6c */
@@ -317,9 +317,9 @@ int wlanApPsSendNext(struct WlanConnection *connection, struct WlanApPsQueue *qu
 		frame->frameControl[1] &= ~WLAN_FC1_MORE_DATA;
 	if (TX_DATA_RING(data) == WLAN_TX_RING_GROUP) {
 		if (WLAN_FC_TYPE(frame->frameControl[0]) != 0)
-			result = macTxNotifyQueryTable(buffer);
+			result = wlanTxWindowResubmit(buffer);
 		else
-			result = macTxNotifyComputeTable(buffer);
+			result = wlanTxWindowSubmit(buffer);
 		if (queue->count == 0)
 			macMgmtInspectPacket(connection, 0, 0);
 	} else {
@@ -367,7 +367,7 @@ void wlanApPsSendGroup(struct WlanConnection *connection, int dtim)
 				markLast = 1;
 			}
 		}
-		room = macTxNotifyParseTable(connection->groupRing);
+		room = wlanTxWindowFreeCount(connection->groupRing);
 		ring = WLAN_TX_RING_GROUP;
 	} else {
 		ring = wlanAccessCategoryToQueue(0);

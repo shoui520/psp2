@@ -8,6 +8,7 @@
 #include "robin/ieee80211.h"
 #include "robin/mac.h"
 #include "robin/mef.h"
+#include "robin/pspoll.h"
 #include "robin/mactx.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
@@ -560,9 +561,6 @@ int wlanTxCheckRing(struct WlanConnection *connection, struct WlanMacTxRequest *
 	return 1;
 }
 
-/* Builds the transmit request of a frame; not converted yet. */
-int macTxNotifyScheduleTable(struct WlanConnection *connection, void *data);	/* 0x31ae8 */
-
 
 /* Sends a frame again, waiting a tick at a time while its ring is full. */
 int wlanTxResubmit(OsaBuffer *buffer)
@@ -594,7 +592,7 @@ int wlanTxSubmit(OsaBuffer *buffer)
 		return 0;
 	posture = sysIrqDisable();
 	wlanTxInFlightAdd(buffer);
-	macTxNotifyScheduleTable(connection, data);
+	wlanTxRequestBuild(connection, data);
 	while (wlanTxCheckRing(connection, TX_DATA_REQUEST(data), TX_DATA_RING(data)) == 0) {
 		wlanTxInFlightRemove(buffer);
 		sysIrqRestore(posture);
@@ -604,4 +602,146 @@ int wlanTxSubmit(OsaBuffer *buffer)
 	}
 	sysIrqRestore(posture);
 	return 1;
+}
+
+/* Forgets the filled entries of the shadowed rings. */
+void wlanTxRingClearCounters(void)
+{
+	unsigned int posture = sysIrqDisable();
+	unsigned int ring;
+
+	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++) {
+		wlanTxRingPending[ring] = 0;
+		wlanTxRingPublished[ring] = 0;
+		wlanTxRingFilled[ring] = 0;
+	}
+	sysIrqRestore(posture);
+}
+
+/* Whether any shadowed ring has entries not yet published. */
+int wlanTxRingsPending(void)
+{
+	unsigned int posture = sysIrqDisable();
+	unsigned int ring;
+
+	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++) {
+		if (wlanTxRingPending[ring] != 0) {
+			sysIrqRestore(posture);
+			return 1;
+		}
+	}
+	sysIrqRestore(posture);
+	return 0;
+}
+
+/* Whether the MAC has read every entry that was published (the write and read indexes agree). */
+int wlanTxRingsDrained(void)
+{
+	return wlanHalfwordsEqual((const uint16_t *const *)wlanTxRingWriteIndex,
+				  (const uint16_t *const *)wlanTxRingReadIndex, WLAN_TX_RING_SHADOWED);
+}
+
+/* Whether frames are in flight that are not on a shadowed ring (the MAC has them). */
+int wlanTxFramesOutsideRings(void)
+{
+	uint8_t pending = 0;
+	unsigned int ring;
+
+	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++)
+		pending = wlanTxRingPending[ring] + pending;
+	return (int)(wlanTxInFlightFrames() - pending) > 0;
+}
+
+/* Puts the request of a management frame on its ring (the highest priority for a beacon). */
+int wlanTxQueueMgmtFrame(OsaBuffer *buffer)
+{
+	struct WlanConnection *connection = buffer->context;
+	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
+	unsigned int ring;
+
+	if (TX_DATA_FRAME(data) == 0)
+		return 0;
+	wlanTxRequestSetup(connection, data);
+	if ((((const uint8_t *)__aeabi_uread4(TX_DATA_REQUEST(data)->frame))[2] >> 4) == 9)
+		ring = 1;
+	else
+		ring = TX_DATA_RING(data);
+	return wlanTxRingFill(TX_DATA_REQUEST(data), ring);
+}
+
+/* Builds the request of a data frame and puts it on its ring. */
+int wlanTxQueueFrame(OsaBuffer *buffer)
+{
+	struct WlanConnection *connection = buffer->context;
+	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
+
+	if (TX_DATA_FRAME(data) == 0)
+		return 0;
+	wlanTxRequestBuild(connection, data);
+	return wlanTxRingFill(TX_DATA_REQUEST(data), TX_DATA_RING(data));
+}
+
+/*
+ * The rings in the order they publish in, how many entries of each go out
+ * per round (reloaded when a round finds none) and what is left of this
+ * round's. The ring 4 is not counted.
+ */
+extern uint8_t wlanTxRingOrder[WLAN_TX_RING_SHADOWED];		/* SQRAM 0xc0011c08 */
+extern uint8_t wlanTxRingShare[WLAN_TX_RING_SHADOWED];		/* SQRAM 0xc0011c0f */
+extern uint8_t wlanTxRingBudget[WLAN_TX_RING_SHADOWED];	/* SQRAM 0xc0011c16 */
+
+/* Publishes the entries of the first ring in the order that has some and a share left; 0 if none. */
+int wlanTxRingPublishNext(void)
+{
+	int published = 0;
+	unsigned int rounds = 0;
+	unsigned int posture = sysIrqDisable();
+
+	do {
+		unsigned int i = 0;
+
+		while (published == 0) {
+			unsigned int ring = wlanTxRingOrder[i];
+
+			if (wlanTxRingPending[ring] != 0 && (wlanTxRingBudget[ring] != 0 || ring == 4)) {
+				wlanTxRingPublish(ring);
+				if (ring != 4) {
+					wlanTxRingBudget[ring]--;
+					wlanTxDataRing = ring;
+				}
+				published = 1;
+			}
+			if (++i >= WLAN_TX_RING_SHADOWED) {
+				if (published == 0)
+					__aeabi_memcpy(wlanTxRingBudget, wlanTxRingShare, WLAN_TX_RING_SHADOWED);
+				break;
+			}
+		}
+		rounds++;
+	} while (rounds < 2 && published == 0);
+	sysIrqRestore(posture);
+	return published;
+}
+
+/* Hands every ring's filled entries to the MAC at once. */
+void wlanTxRingsFlush(void)
+{
+	unsigned int posture = sysIrqDisable();
+	unsigned int i = 0;
+
+	do {
+		unsigned int ring = wlanTxRingOrder[i];
+
+		if (wlanTxRingPending[ring] != 0) {
+			if (wlanWindowOwner(ring, wlanWindowOwners) == 1) {
+				while (wlanTxRingPending[ring] != 0)
+					wlanTxRingPublish(ring);
+			} else {
+				wlanTxRingPending[ring] = 0;
+				*wlanTxRingWriteIndex[ring] = wlanTxRingFilled[ring] & 0x1ff;
+			}
+		}
+		i++;
+	} while (i < WLAN_TX_RING_SHADOWED);
+	sysIrqRestore(posture);
 }
