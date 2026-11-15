@@ -175,6 +175,9 @@ void btLtsRomSyncState(struct BtDeviceProfile *profile, struct BtLinkSession *se
 int btLcoRomTrackContext(unsigned int index);
 void btLtsRomDispatchState(void);
 void btLtsRomVerifyState(uint32_t clock);
+void btLdaRomHandleState(unsigned int handle, uint32_t enable, unsigned int value);
+void btLcoRomQueryContext(const uint8_t *message);
+void btHccRomDispatchState(const uint8_t *message);
 int btLcoRomPrepareContext(void **message);
 void btHccRomValidateState(uint8_t *state);
 void btHccRomNotifyState(unsigned int handle);

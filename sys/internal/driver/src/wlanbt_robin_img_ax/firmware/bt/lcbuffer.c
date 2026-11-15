@@ -2508,3 +2508,70 @@ rom:
 	}
 	return result;
 }
+
+/* Message 0x12: a link of state 5 with no AMP slot and its connection up gets the ROM's value. */
+void btLmpLcBuildFrame(const uint8_t *message)
+{
+	unsigned int handle = *(const BtHalf *)(message + 4);
+	uint8_t *link = btHccRomApplyState() + handle * 120;
+
+	if (link[21] == 5 && *(BtHalf *)(link + 30) == 0 && link[34] != 0)
+		btLdaRomHandleState(handle, 1, message[6]);
+}
+
+/*
+ * The host controller's look at a message before the ROM's; returns 1, with the message freed,
+ * for the ones taken here: 0x40 while the link has a timeout running, 0xbbc as
+ * btLmpLcDispatchFrame() takes it, 0xc11 always (its link's mode ends first), 0xc88 unless the
+ * link's connection byte is 1, 0xc8d unless it is set. 0x12 and 0x39 are looked at only.
+ */
+int btLmpLcComputeFrame(void **slot)
+{
+	uint8_t *message = *slot;
+	int taken = 0;
+	uint8_t *links = btHccRomApplyState();
+
+	switch ((int)*(BtWord *)message) {
+	case 0x40:
+		taken = btLmpLcCheckFrame(*(BtHalf *)(message + 4));
+		break;
+	case 0x12:
+		btLmpLcBuildFrame(message);
+		return 0;
+	case 0x39: {
+		unsigned int handle = *(BtHalf *)(message + 4);
+		uint8_t *record = btLscRomParseState(0) + handle * 248;
+
+		if (record[64] == 9 && record[117] == 0 && btLinkStateCheckHook(handle) != 0)
+			record[243] = 6;
+		return 0;
+	}
+	case 0xbbc:
+		taken = btLmpLcDispatchFrame(message);
+		break;
+	case 0xc11: {
+		unsigned int handle = *(BtHalf *)(message + 4);
+
+		btLcoRomQueryContext(message);
+		btLmpLcVerifyHeader(handle, 1, 8);
+		btHccRomDispatchState(message);
+		taken = 1;
+		break;
+	}
+	case 0xc88:
+		taken = 1;
+		if (links[*(BtHalf *)(message + 4) * 120 + 34] == 1)
+			taken = 0;
+		break;
+	case 0xc8d:
+		taken = 1;
+		if (links[*(BtHalf *)(message + 4) * 120 + 34] != 0)
+			taken = 0;
+		break;
+	default:
+		return 0;
+	}
+	if (taken != 0)
+		osa_MsgFree(slot);
+	return taken;
+}
