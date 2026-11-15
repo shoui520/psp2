@@ -88,9 +88,6 @@ void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *fra
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);
 void uapSqramApplyContext(struct WlanConnection *connection, int apply);		/* SQRAM 0xc000a3f6 */
-int macMgmtResetEntry(struct WlanConnection *connection);				/* 0x3699a */
-int macMgmtQueryEntry(struct WlanConnection *connection);				/* 0x3691c */
-void macMgmtScheduleEntry(struct WlanConnection *connection);				/* 0x36a56 */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);
@@ -627,12 +624,12 @@ static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *mac
 		wlanIbssJoin(connection, (const WlanAdHocBssDesc *)data->request);
 		return NULL;
 	case WLAN_STA_EVENT_RESET_ENTRY:
-		if (macMgmtResetEntry(connection) != 0)
+		if (macMgmtResetEntry(connection, (const struct WlanHostCompletion *)data->message) != 0)
 			return NULL;
 		target = &states(machine)->adjust;
 		break;
 	case WLAN_STA_EVENT_QUERY_ENTRY:
-		if (macMgmtQueryEntry(connection) != 0)
+		if (macMgmtQueryEntry(connection, (const struct WlanHostCompletion *)data->message) != 0)
 			return NULL;
 		target = &states(machine)->adjust;
 		break;

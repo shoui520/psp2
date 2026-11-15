@@ -2,6 +2,7 @@
  * Connection control block list: lookups and release. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/mgmtentry.h"
 #include "robin/btrom.h"
 #include "robin/calibration.h"
 #include "robin/conn.h"
@@ -52,7 +53,6 @@ void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, u
 /* Not converted yet; provisional names. */
 struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
-int macMgmtApplyEntry(void);									/* 0x36a2a */
 void btLmpLcHandleState(int state);								/* 0x42488 */
 void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
 /* The pools: of connections, of beacon and probe response templates, of information blocks. */

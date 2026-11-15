@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/mgmtentry.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
@@ -419,8 +420,6 @@ unsigned int hostCmd0020Set(unsigned int secondary, unsigned int antenna);	/* 0x
 void hostCmd0020Clear(unsigned int value);					/* SQRAM 0xc000a3f6 */
 void hostCmd0020Setup(unsigned int value);					/* SQRAM 0xc000a3d4 */
 void hostCmd0024(struct WlanConnection *connection, uint8_t *body);		/* 0x341aa */
-void hostCmd002bStart(struct WlanConnection *connection, uint8_t *command);	/* 0x365aa */
-void hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command);	/* 0x3675e */
 void hostCmd0036(uint8_t *body, int authenticator, uint8_t *state);		/* 0x2cc7e */
 void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
 void hostCmd004eSet(uint8_t *body, unsigned int length);			/* SQRAM 0xc0009bea */
@@ -494,7 +493,6 @@ void macMgmtNotifyTable(void);							/* 0x3797a */
 void macMgmtApplyTable(void);							/* 0x3795a */
 void macMgmtPrepareDescriptor(uint16_t atimWindow);				/* 0x3bc5a */
 void wlanPsAdjustTable(struct WlanConnection *connection);			/* 0x3c0aa */
-void macMgmtNotifyEntry(struct WlanConnection *connection);			/* 0x36a78 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 extern uint8_t hostCmd0096Tracking;						/* 0x54f9c */

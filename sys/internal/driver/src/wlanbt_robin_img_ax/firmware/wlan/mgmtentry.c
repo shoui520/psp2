@@ -6,6 +6,8 @@
  */
 #include <stddef.h>
 #include "robin/adhoc.h"
+#include "robin/hostps.h"
+#include "robin/htba.h"
 #include "robin/amp.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
@@ -41,8 +43,10 @@ void romLibTrackState(unsigned int mask);
 struct WlanHtTlvElements wlanIbssTlvElements __attribute__((section(".itcm.rw")));	/* 0x57890 */
 struct WlanIeBuffer wlanIbssIeBuffer __attribute__((section(".itcm.bss")));		/* 0x55170 */
 int (*wlanSecurityQueryHook)(void) __attribute__((section(".itcm.bss")));		/* 0x54e74 */
-void (*wlanSecurityRecordHook)(uint32_t mode, uint8_t *mcast, uint8_t *ucast, uint8_t *akmList,
-			       uint32_t first, uint32_t second) __attribute__((section(".itcm.bss"))); /* 0x54e78 */
+void (*wlanSecurityRecordHook)(SecurityMode_t mode, Cipher_t *mcast, Cipher_t *ucast, AkmSuite_t *akmList,
+			       IEEEtypes_RSNCapability_t *rsnCapability,
+			       Cipher_t *groupManagementCipher) __attribute__((section(".itcm.bss"))); /* 0x54e78 */
+uint32_t wlanIbssPowerLimit __attribute__((section(".itcm.bss")));			/* 0x5516c */
 extern uint8_t ampScanChannel;							/* 0x54cc1 */
 extern OsaBuffer *wlanIbssBeaconBuffer;						/* 0x54c20 */
 extern OsaBuffer *wlanIbssProbeResponseBuffer;					/* 0x54c24 */
@@ -223,7 +227,7 @@ void macMgmtUpdateEntry(uintptr_t argument)
 }
 
 /* 0x36420: the elements the host's TLVs became are kept. */
-void macMgmtConfigureEntry(uint8_t *capability, uint8_t *information, uint8_t *coexistence,
+__attribute__((noinline)) void macMgmtConfigureEntry(uint8_t *capability, uint8_t *information, uint8_t *coexistence,
 			   uint8_t *obssScan, uint8_t *reserved)
 {
 	wlanIbssTlvElements.capability = capability;
@@ -274,38 +278,38 @@ void macMgmtPrepareEntry(void)
 
 /* 0x364be: the security a beacon's or the host's RSN or WPA element offers. */
 __attribute__((noinline)) void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *ucast, uint8_t *mcast,
-			  uint8_t *mode, int unused, int skipHeader)
+			  SecurityMode_t *mode, int unused, int skipHeader)
 {
-	uint8_t modeBuffer[4];
+	SecurityMode_t modeBuffer;
 	AkmSuite_t akm[5];
 
 	if (rsn == NULL && wpa == NULL)
 		return;
 	if (mode == NULL)
-		mode = modeBuffer;
+		mode = &modeBuffer;
 	*ucast = 0;
 	*mcast = 0;
-	mode[0] = 0;
-	mode[1] = 0;
+	((uint8_t *)mode)[0] = 0;
+	((uint8_t *)mode)[1] = 0;
 	if (rsn != NULL) {
 		if (skipHeader)
 			rsn += 2;
-		supplicantParseRsnIe((IEEEtypes_RSNElement_t *)rsn, (SecurityMode_t *)modeBuffer,
+		supplicantParseRsnIe((IEEEtypes_RSNElement_t *)rsn, &modeBuffer,
 				     (Cipher_t *)mcast, (Cipher_t *)ucast, akm, 5, NULL, NULL);
 	} else if (wpa != NULL) {
 		if (skipHeader)
 			wpa += 2;
-		supplicantParseWpaIe((IEEEtypes_WPAElement_t *)wpa, (SecurityMode_t *)modeBuffer,
+		supplicantParseWpaIe((IEEEtypes_WPAElement_t *)wpa, &modeBuffer,
 				     (Cipher_t *)mcast, (Cipher_t *)ucast, akm, 5);
 	}
 }
 
 /* 0x3652a: the host's WPA and RSN elements are kept and their security is worked out. */
-void macMgmtParseEntry(int unused, const uint8_t *wpa, const uint8_t *rsn, struct WlanIeBuffer *ies,
+__attribute__((noinline)) void macMgmtParseEntry(int unused, const uint8_t *wpa, const uint8_t *rsn, struct WlanIeBuffer *ies,
 		       uint8_t *present, uint8_t *mcast, uint8_t *ucast)
 {
-	uint32_t mode;
-	uint8_t akm[20];
+	SecurityMode_t mode;
+	AkmSuite_t akm[5];
 
 	if (rsn == NULL && wpa == NULL)
 		return;
@@ -315,9 +319,270 @@ void macMgmtParseEntry(int unused, const uint8_t *wpa, const uint8_t *rsn, struc
 	if (wpa != NULL)
 		wlanIeBufferAppendTlv(ies, wpa);
 	if (wlanSecurityQueryHook() != 0) {
-		macMgmtDispatchEntry(rsn, wpa, ucast, mcast, (uint8_t *)&mode, (int)(intptr_t)akm, 1);
-		wlanSecurityRecordHook(mode, mcast, ucast, akm, 0, 0);
+		macMgmtDispatchEntry(rsn, wpa, ucast, mcast, &mode, (int)(intptr_t)akm, 1);
+		wlanSecurityRecordHook(mode, (Cipher_t *)mcast, (Cipher_t *)ucast, akm, NULL, NULL);
 	} else {
 		macMgmtDispatchEntry(rsn, wpa, ucast, mcast, NULL, 0, 1);
 	}
+}
+
+/* 0x3691c: the IBSS the host started is up: the supplicant's keys, the state and the answer to the host. */
+int macMgmtQueryEntry(struct WlanConnection *connection, const struct WlanHostCompletion *completion)
+{
+	OsaBuffer *message;
+	int result;
+
+	wlanIeBufferFree(&wlanIbssIeBuffer);
+	if (completion->status != 0) {
+		result = -1;
+	} else {
+		wlanPsPhaseSuspend();
+		macMgmtResolveState(connection, (connection->flags & 4) != 0 && supplicantIsEnabled() == 0);
+		supplicantInstallWpaNoneKeys(connection);
+		connection->flags2 |= 0x10;
+		connection->state = 6;
+		if (wlanSessionId != 0)
+			wlanPsStartHostModeTimer(connection);
+		result = 0;
+	}
+	message = wlanHostMessageAlloc(connection);
+	if (message != NULL) {
+		wlanHostResponseBuild(message, 0x802b, completion->status, completion->sequence);
+		wlanHostMessagePost(message);
+	}
+	return result;
+}
+
+/* 0x3699a: the same for the IBSS the host joined, which is dropped when it did not work. */
+int macMgmtResetEntry(struct WlanConnection *connection, const struct WlanHostCompletion *completion)
+{
+	OsaBuffer *message;
+	int result = -1;
+
+	wlanIeBufferFree(&wlanIbssIeBuffer);
+	if (completion->status != 0) {
+		macMgmtScheduleState(connection);
+	} else {
+		wlanPsPhaseSuspend();
+		macMgmtResolveState(connection, (connection->flags & 4) != 0 && supplicantIsEnabled() == 0);
+		supplicantInstallWpaNoneKeys(connection);
+		connection->flags2 |= 0x10;
+		connection->state = 6;
+		if (wlanSessionId != 0)
+			wlanPsStartHostModeTimer(connection);
+		result = 0;
+	}
+	message = wlanHostMessageAlloc(connection);
+	if (message != NULL) {
+		wlanHostResponseBuild(message, 0x802c, completion->status, completion->sequence);
+		wlanHostMessagePost(message);
+	}
+	return result;
+}
+
+/* 0x36a1c: the security elements go to the supplicant. */
+void macMgmtSyncEntry(void)
+{
+	wlanSecurityQueryHook = supplicantIsEnabled;
+	wlanSecurityRecordHook = supplicantSetAssocRsn;
+}
+
+/* 0x36a2a */
+int macMgmtApplyEntry(void)
+{
+	return wlanIbssPowerLimit;
+}
+
+/* 0x36a32: the transmit power of the connection is updated; the IBSS is held to its limit when it has one. */
+void macMgmtResolveEntry(struct WlanConnection *connection, unsigned int channel, int limited)
+{
+	wlanTxPowerUpdateConnection(connection, channel, 1);
+	wlanIbssPowerLimit = limited ? connection->txPowerLimit : 255;
+}
+
+/* 0x36a56: the IBSS is left; the host is told. */
+void macMgmtScheduleEntry(struct WlanConnection *connection)
+{
+	OsaBuffer *message;
+
+	macMgmtScheduleState(connection);
+	message = wlanHostMessageAlloc(connection);
+	if (message != NULL) {
+		wlanHostResponse8040Build(message, 0);
+		wlanHostMessagePost(message);
+	}
+}
+
+/* 0x36a78: the host's request to stop the IBSS goes to the state machine; if it cannot, the IBSS is dropped here. */
+void macMgmtNotifyEntry(struct WlanConnection *connection)
+{
+	OsaBuffer *message = macMgmtHandleState(connection);
+	int sent = 0;
+
+	if (message != NULL) {
+		((uint8_t *)message)[message->dataOffset + offsetof(OsaBuffer, allocationMetadata)] = WLAN_STA_EVENT_STOP;
+		if (macMgmtProcessState(message) == 1)
+			osa_BufferFree(message);
+		else
+			sent = 1;
+	}
+	if (!sent) {
+		macMgmtSetupContext(connection);
+		macMgmtScheduleEntry(connection);
+	}
+}
+
+/*
+ * The TLVs after the fixed part of an AD_HOC_START or AD_HOC_JOIN command: the WPA and RSN
+ * elements are kept for macMgmtParseEntry(), the elements it passes on go into the IBSS's
+ * element buffer and the HT ones are checked. Join takes the vendor and the HT TLVs
+ * differently than start does.
+ */
+struct WlanIbssTlvs {
+	const uint8_t *wpa;
+	const uint8_t *rsn;
+};
+
+static inline __attribute__((always_inline)) void wlanIbssParseTlvs(struct WlanConnection *connection, const uint8_t *cursor, unsigned int length,
+			      uint8_t *channels, int start, struct WlanIbssTlvs *found)
+{
+	for (;;) {
+		uint8_t *tlv = (uint8_t *)cursor;
+		unsigned int size;
+		unsigned int type;
+
+		if ((uint16_t)length < 4)
+			break;
+		length = (uint16_t)(length - 4);
+		size = tlv[2] | (tlv[3] << 8);
+		if (size > length)
+			break;
+		type = tlv[0] | (tlv[1] << 8);
+		if (type == 221) {
+			if (wlanWpaElementType(tlv + 4) == WLAN_VENDOR_WPA)
+				found->wpa = tlv;
+			else
+				wlanIeBufferAppendTlv(&wlanIbssIeBuffer, tlv);
+			if (start)
+				macMgmtCheckEntry(connection, tlv, channels);
+		} else if (type <= 221) {
+			switch (type) {
+			case 33:
+				break;
+			case 48:
+				found->rsn = tlv;
+				break;
+			case 127:
+				wlanIeBufferAppendTlv(&wlanIbssIeBuffer, tlv);
+				break;
+			default:
+				macMgmtCheckEntry(connection, tlv, channels);
+				break;
+			}
+		} else if (type == 335) {
+			tlv[0] = 127;	/* the host's TLV 335 is the Extended Capabilities element */
+			tlv[1] = 0;
+			wlanIeBufferAppendTlv(&wlanIbssIeBuffer, tlv);
+		} else if (type == 448) {
+			if (start ? tlv[4] == 1 : tlv[4] != 0)
+				connection->stationFlags |= 0x80;
+			else
+				connection->stationFlags &= ~0x80u;
+		} else {
+			macMgmtCheckEntry(connection, tlv, channels);
+		}
+		length = (uint16_t)length - size;
+		cursor = tlv + size + 4;
+	}
+}
+
+/* The message the state machine is sent for the host's start or join request: the event, the command's header and the parameters. */
+struct __attribute__((packed)) WlanIbssStartMessage {
+	uint8_t event;			/* WLAN_STA_EVENT_START */
+	uint8_t command[8];
+	WlanAdHocStart start;
+};
+
+struct __attribute__((packed)) WlanIbssJoinMessage {
+	uint8_t event;			/* WLAN_STA_EVENT_JOIN */
+	uint8_t command[8];
+	WlanAdHocBssDesc join;
+};
+
+/* 0x365aa: HostCmd_CMD_802_11_AD_HOC_START: the request, with its elements, goes to the state machine. */
+OsaBuffer *hostCmd002bStart(struct WlanConnection *connection, uint8_t *command)
+{
+	struct WlanIbssTlvs found = { NULL, NULL };
+	struct WlanIbssStartMessage *message;
+	OsaBuffer *buffer;
+	uint16_t tlvLength = 0;
+	uint8_t *extraIes;
+	uint8_t present = 0;
+	int failed = 0;
+
+	macMgmtPrepareEntry();
+	if (connection->state != 0 || romStringLength(command + 8, 32) == 0)
+		failed = 1;
+	macMgmtConfigureEntry(connection->htCapability, wlanHtOperationIe, wlanHtCoexIe, wlanHtOverlapScanIe,
+			      NULL);
+	if (failed)
+		return macMgmtValidateEntry(connection, command, 0x802b);
+	wlanIeBufferAlloc(&wlanIbssIeBuffer);
+	wlanIbssPowerLimit = 255;
+	buffer = macMgmtHandleState(connection);
+	if (buffer == NULL)
+		return macMgmtValidateEntry(connection, command, 0x802b);
+	message = (struct WlanIbssStartMessage *)((uint8_t *)buffer + buffer->dataOffset);
+	wlanAdHocStartParse(&message->start, command, wlanLocalState->rates, &tlvLength,
+			    connection->beaconPeriod);
+	message->event = WLAN_STA_EVENT_START;
+	__aeabi_memcpy(message->command, command, 8);
+	wlanIbssParseTlvs(connection, command + 77, tlvLength, message->start.reserved2, 1, &found);
+	macMgmtParseEntry(0, found.wpa, found.rsn, &wlanIbssIeBuffer, &present, &connection->securitySuites[0],
+			  &connection->securitySuites[1]);
+	connection->flags = (connection->flags & 0xfb) | ((4 * present) & 7);
+	message->start.extraIesLength = wlanIeBufferGet(&wlanIbssIeBuffer, &extraIes);
+	message->start.extraIes = extraIes;
+	if (macMgmtProcessState(buffer) == 1) {
+		osa_BufferFree(buffer);
+		return macMgmtValidateEntry(connection, command, 0x802b);
+	}
+	return NULL;
+}
+
+/* 0x3675e: HostCmd_CMD_802_11_AD_HOC_JOIN, the same for an IBSS to join. */
+OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
+{
+	struct WlanIbssTlvs found = { NULL, NULL };
+	struct WlanIbssJoinMessage *message;
+	OsaBuffer *buffer;
+	uint16_t tlvLength = 0;
+	uint8_t *extraIes;
+	uint8_t present = 0;
+
+	macMgmtPrepareEntry();
+	macMgmtConfigureEntry(connection->htCapability, wlanHtOperationIe, wlanHtCoexIe, wlanHtOverlapScanIe,
+			      NULL);
+	if (connection->state != 0)
+		return macMgmtValidateEntry(connection, command, 0x802c);
+	wlanIeBufferAlloc(&wlanIbssIeBuffer);
+	buffer = macMgmtHandleState(connection);
+	if (buffer == NULL)
+		return macMgmtValidateEntry(connection, command, 0x802c);
+	message = (struct WlanIbssJoinMessage *)((uint8_t *)buffer + buffer->dataOffset);
+	wlanAdHocJoinParse(&message->join, command, &tlvLength);
+	wlanIbssPowerLimit = 255;
+	message->event = WLAN_STA_EVENT_JOIN;
+	wlanIbssParseTlvs(connection, command + 101, tlvLength, message->join.reserved, 0, &found);
+	macMgmtParseEntry(0, found.wpa, found.rsn, &wlanIbssIeBuffer, &present, &connection->securitySuites[0],
+			  &connection->securitySuites[1]);
+	connection->flags = (connection->flags & 0xfb) | ((4 * present) & 7);
+	message->join.extraIesLength = wlanIeBufferGet(&wlanIbssIeBuffer, &extraIes);
+	message->join.extraIes = extraIes;
+	if (macMgmtProcessState(buffer) == 1) {
+		osa_BufferFree(buffer);
+		return macMgmtValidateEntry(connection, command, 0x802c);
+	}
+	connection->state = 2;
+	return NULL;
 }

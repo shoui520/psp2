@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/mgmtentry.h"
 #include "robin/buffer.h"
 #include "robin/rfcal.h"
 #include "robin/domain.h"
@@ -160,7 +161,6 @@ void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
-void macMgmtSyncEntry(void);								/* 0x36a1c */
 void wlanPsApplyPacket(void);								/* 0x3d06c */
 void macMgmtHandleHeader(void);								/* 0x3b120 */
 void macMgmtValidateHeader(void);							/* 0x3b1e2 */
