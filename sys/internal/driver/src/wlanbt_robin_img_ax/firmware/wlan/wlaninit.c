@@ -161,7 +161,6 @@ void uapSqramProcessContext(void);							/* SQRAM 0xc0008204 */
 void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
 void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
-void macMgmtSyncState(void);								/* 0x34c78 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void macTxNotifyAcquireContext(void);							/* 0x30c0e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
@@ -464,7 +463,7 @@ int wlanInit(void)
 	p2pDirectResetTable();
 	uapSqramTrackContext();
 	wlanIeInit();
-	macMgmtSyncState();
+	wlanIeBufferInit();
 	wlanMefInit();
 	wlanTxRingOpsInit();
 	cbProcDispatchFrame();
