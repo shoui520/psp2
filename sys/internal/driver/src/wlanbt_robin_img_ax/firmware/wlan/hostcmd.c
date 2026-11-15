@@ -425,7 +425,7 @@ void hostCmd003c(int offset, int frequency);					/* 0x2e9cc */
 void hostCmd004eSet(uint8_t *body, unsigned int length);			/* SQRAM 0xc0009bea */
 unsigned int hostCmd004eGet(uint8_t *body);					/* SQRAM 0xc0009c50 */
 unsigned int hostCmd005d(uint8_t *body);					/* 0x418d4 */
-void hostCmd005e(struct WlanConnection *connection, uint8_t *data, uint8_t *end); /* 0x3eb24 */
+unsigned int hostCmd005e(struct WlanConnection *connection, uint8_t *data, uint8_t *end); /* 0x3eb24 */
 unsigned int hostCmd005eGet(struct WlanConnection *connection, uint8_t *data);	/* 0x3ebe2 */
 int hostCmd006bSet(struct WlanConnection *connection, unsigned int action, uint8_t *data,
 		   unsigned int length);					/* 0x378b0 */
@@ -454,7 +454,7 @@ int hostCmd00b1(struct WlanConnection *connection);				/* 0x3876e */
 int hostCmd00b2(struct WlanConnection *connection);				/* 0x3861c */
 int hostCmd00b3(struct WlanConnection *connection, uint8_t *command);		/* 0x38808 */
 int hostCmd00b5(struct WlanConnection *connection, uint8_t *command);		/* 0x38564 */
-void hostCmd00c5(unsigned int action, uint8_t *data, unsigned int *length);	/* 0x3ed9e */
+void hostCmd00c5(unsigned int action, uint8_t *data, uint16_t *length);		/* 0x3ed9e */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */
 int hostCmd00d6Parse(uint8_t *data, unsigned int length, uint8_t **rates0, uint8_t **rates1,
 		     uint8_t **rates2);						/* 0x3f35a */
@@ -465,7 +465,7 @@ int hostCmd00e4Check(struct WlanConnection *connection, uint8_t *data, unsigned 
 int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d086 */
 void hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
 int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t *data,
-		unsigned int *length);						/* 0x3f002 */
+		uint16_t *length);						/* 0x3f002 */
 void hostCmd0102(unsigned int enable);						/* 0x32538 */
 unsigned int hostCmd01ff(void);							/* 0x3e88e */
 void wlanConnectionSetBssMode(struct WlanConnection *connection, unsigned int mode,
@@ -1618,7 +1618,7 @@ int hostCmdProcess(void)
 
 		case 197:
 		{
-			unsigned int length = bodyLength - 4;
+			uint16_t length = bodyLength - 4;
 
 			hostCmd00c5(action, body + 4, &length);
 			PUT16(hdr + 2, length + 12);
@@ -1870,7 +1870,7 @@ int hostCmdProcess(void)
 
 		case 245:
 		{
-			unsigned int length = bodyLength - 2;
+			uint16_t length = bodyLength - 2;
 
 			result = hostCmd00f5(connection, action, body + 2, &length);
 			PUT16(hdr + 2, (int16_t)length + 10);

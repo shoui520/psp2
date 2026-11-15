@@ -25,7 +25,7 @@ static struct OsaPoolConfig wlanVendorIePoolConfigs[3] __attribute__((section(".
 };
 static uint32_t wlanVendorIePoolControl[16] __attribute__((section(".itcm.bss")));		/* 0x592ac */
 static OsaBuffer *wlanVendorIeBlocks[3] __attribute__((section(".itcm.bss")));			/* 0x592ec */
-static struct WlanVendorIeTable wlanVendorIeTable __attribute__((section(".itcm.bss")));	/* 0x592f8 */
+struct WlanVendorIeTable wlanVendorIeTable __attribute__((section(".itcm.bss")));	/* 0x592f8 */
 
 /* 0x379f4: tells the host the table is full (16 buffers in use) or has changed (32): an event with the class. */
 void macMgmtTrackTable(struct WlanConnection *connection, unsigned int classes)

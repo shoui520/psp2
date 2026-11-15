@@ -43,6 +43,7 @@ struct WlanVendorIeTable {
 _Static_assert(sizeof(struct WlanVendorIeTable) == 56, "vendor element table");
 
 extern struct WlanVendorIeFilter wlanVendorIeFilter;		/* 0x55184 */
+extern struct WlanVendorIeTable wlanVendorIeTable;		/* 0x592f8 */
 
 void macMgmtTrackTable(struct WlanConnection *connection, unsigned int classes);	/* 0x379f4 */
 int macMgmtManageTable(struct WlanVendorIeEntry *entry, uint8_t *link);		/* 0x37a34 */

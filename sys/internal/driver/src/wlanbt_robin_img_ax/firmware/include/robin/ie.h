@@ -15,12 +15,17 @@ enum {
 	IE_TIM = 5,
 	IE_IBSS_PARAMETER = 6,
 	IE_COUNTRY = 7,
+	IE_EDCA_PARAMETER_SET = 12,
 	IE_POWER_CAPABILITY = 33,
 	IE_ERP_INFORMATION = 42,
 	IE_HT_CAPABILITY = 45,
+	IE_QOS_CAPABILITY = 46,
 	IE_RSN = 48,
+	IE_AP_CHANNEL_REPORT = 51,
+	IE_MOBILITY_DOMAIN = 54,
 	IE_EXTENDED_RATES = 50,
 	IE_HT_INFORMATION = 61,
+	IE_WAPI = 68,
 	IE_20_40_BSS_COEXISTENCE = 72,
 	IE_OBSS_SCAN_PARAMETERS = 74,
 	IE_EXTENDED_CAPABILITIES = 127,
@@ -212,6 +217,12 @@ int wlanIeBufferAlloc(struct WlanIeBuffer *ies);				/* 0x2a866 */
 void wlanIeBufferInit(void);							/* 0x34c78: the buffers' pool */
 int cbProcRecordBuffer(int first, int argument);				/* 0x1e12a */
 int wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc: the bytes left over; nonzero: the list was cut short */
+int wlanPsBuildDescriptor(const uint8_t *oui);					/* 0x3e8b0: 4 for a Simple Configuration element */
+int wlanPsParseDescriptor(const uint8_t *oui);					/* 0x3e894: 7 for a Wi-Fi Direct element */
+int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
+struct WlanConnection;
+unsigned int wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t *tim);	/* 0x3e98a */
+void wlanPsSyncDescriptor(void);						/* 0x3e9d4 */
 int wlanWmmElementType(const uint8_t *oui);					/* 0x2c21c */
 int wlanWpaElementType(const uint8_t *oui);					/* 0x2c276 */
 int wlanIePointersRecord(const uint8_t *ie, WlanIePointers *ies);		/* 0x2c294 */
