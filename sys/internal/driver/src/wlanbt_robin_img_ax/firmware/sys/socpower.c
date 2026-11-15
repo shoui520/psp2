@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include "robin/clock.h"
 #include "robin/event.h"
+#include "robin/fm.h"
 #include "robin/hct.h"
 #include "robin/nvram.h"
 #include "robin/rfbus.h"
@@ -349,10 +350,10 @@ void socHookNop3(void)
 {
 }
 
-/* Passes the entry to the SQRAM code that prepares it for the third mode. */
-int uapPrepareEntry(uint8_t entry)
+/* Switches the audio clock on for mode 3 when the argument is nonzero. */
+void uapPrepareEntry(uint8_t entry)
 {
-	return p2pSqramPrepareEntry(entry, 3);
+	btAudioPathClockHook(entry, 3);
 }
 
 /* Calibrates the oscillator trim of the radio against the one the FM state holds. */

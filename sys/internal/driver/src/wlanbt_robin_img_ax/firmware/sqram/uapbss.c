@@ -123,7 +123,7 @@ void uapBssDefaults(struct WlanConnection *connection)
 	}
 	__aeabi_memcpy4(wlanDeviceAddress->address, info->macAddress, sizeof(wlanDeviceAddress->address));
 
-	p2pSqramResetEntry(info->rates);
+	uapDefaultRatesSet(info->rates);
 	info->authAlgorithm = 0;
 	info->unicastRate = 0;
 	info->txRate = 0;
@@ -132,7 +132,7 @@ void uapBssDefaults(struct WlanConnection *connection)
 	info->staAgeout = 1800;
 	info->psStaAgeout = 400;
 	macMgmtProcessHeader(info);
-	p2pSqramSyncEntry(info->capability);
+	uapDefaultCapabilitySet(info->capability);
 	/* short preamble unless protection is forced */
 	info->capability[0] = (info->capability[0] & ~0x20) | (!(info->protectionFlags & 1) << 5);
 	macMgmtBuildPacket(connection->interfaceType, connection->bssNumber);
@@ -151,7 +151,7 @@ void uapBssDefaults(struct WlanConnection *connection)
 
 	info->htEnabled = 1;
 	info->ht2040Managed = 1;
-	p2pSqramApplyEntry(info->htCapability);
+	uapDefaultHtCapabilitySet(info->htCapability);
 	info->htCapability[2] &= ~0x10;
 	uapObssScanInit(&info->obssScan.id);
 	uapExtCapabilityInit(&info->extCapability.id);

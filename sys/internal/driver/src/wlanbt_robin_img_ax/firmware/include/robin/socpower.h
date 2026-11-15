@@ -30,7 +30,7 @@ int socSensorSample(void);
 unsigned int socClockFilter(void);
 unsigned int socPowerPreset(void);
 void socEnableBlockA(void);
-int uapPrepareEntry(uint8_t entry);
+void uapPrepareEntry(uint8_t entry);
 void rfCalibrateTrim(void);
 void rfRegSequenceA(void);
 void rfRegSequenceB(void);
@@ -76,6 +76,5 @@ extern uint32_t sysMacVersion;				/* 0x040089dc */
 /* Not converted yet; provisional names. Addresses are those of the 4.00 image. */
 void macTxNotifyResetPacket(void);			/* 0x32940 */
 int wlanPsSetupHeader(void);				/* 0x3e29c */
-int p2pSqramPrepareEntry(uint8_t entry, int mode);	/* SQRAM 0xc000e290, via the veneer at 0x5306c */
 
 #endif /* ROBIN_SOCPOWER_H */

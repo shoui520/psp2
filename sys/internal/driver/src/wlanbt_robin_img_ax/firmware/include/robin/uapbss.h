@@ -119,8 +119,9 @@ int p2pPersistentGroupPskSave(struct WlanConnection *connection, const uint8_t *
 			      const uint8_t *ssid, unsigned int ssidLength);	/* SQRAM 0xc000dd60, veneer 0x52f5c */
 void p2pPersistentGroupsInit(struct WlanPsPeerState *ps);		/* SQRAM 0xc000e1f0 */
 
-void p2pSqramResetEntry(uint8_t *rates);				/* SQRAM 0xc000e5a8: the 12 802.11g rates, 1, 2, 5.5 and 11 basic */
-void p2pSqramSyncEntry(uint8_t *capability);				/* SQRAM 0xc000e5da: ESS, short preamble, short slot time */
-void p2pSqramApplyEntry(uint8_t *htCapability);				/* SQRAM 0xc000e5e4: the default HT capability element */
+/* sqram/uapdefault.c */
+void uapDefaultRatesSet(uint8_t *rates);				/* SQRAM 0xc000e5a8 */
+void uapDefaultCapabilitySet(uint8_t *capability);			/* SQRAM 0xc000e5da */
+void uapDefaultHtCapabilitySet(uint8_t *htCapability);			/* SQRAM 0xc000e5e4 */
 
 #endif /* ROBIN_UAPBSS_H */

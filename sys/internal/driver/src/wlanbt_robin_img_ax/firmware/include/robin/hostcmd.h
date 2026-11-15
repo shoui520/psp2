@@ -109,6 +109,11 @@ extern struct HostCmdCryptoEntry hostCmd0078Handlers[2][HOSTCMD_CRYPTO_ALGORITHM
 #define HOSTCMD_CRYPTO_BAD_NONCE	0x0800u
 #define HOSTCMD_CRYPTO_BAD_AAD		0x1000u
 
+/* The crypto test's hooks (sqram/hooks.c, SQRAM 0xc000e21c..0xc000e274). */
+int cryptoTestEnter(void);
+void cryptoTestLeave(int lock);
+void hostCmd0078HooksInit(void);
+
 int hostCmd0078Parse(uint32_t *status, uint8_t *body, struct HostCmdCryptoRequest *request,
 		     int8_t *lengthChange);						/* SQRAM 0xc00078d6 */
 

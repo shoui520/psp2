@@ -216,7 +216,19 @@ void btSbcUpdateBuffer(uint32_t frequency);			/* 0x50f2c */
 void btSbcRecordTable(int enable);				/* 0x50e4c */
 void btSbcRomHandleEntry(uint32_t value);
 int btSbcRomCheckEntry(uint32_t vco);
+extern void (*btAudioPresetHook)(int enable, unsigned int mode);			/* DTCM 0x400f2f8 */
+extern void (*btAudioClockHook)(int enable, unsigned int mode);			/* DTCM 0x400f2fc */
 extern void (*btFmEnableHook)(int enable, unsigned int kind);			/* DTCM 0x400f300 */
+
+/* The audio path (sqram/hooks.c, SQRAM 0xc000e274..0xc000e5a8). */
+void btAudioPathModesClear(void);						/* via the veneer at 0x533d4 */
+void btAudioPathPresetHook(int enable, unsigned int mode);
+void btAudioPathClockHook(int enable, unsigned int mode);			/* via the veneer at 0x5306c */
+void btAudioPathEnable(int enable, unsigned int kind);
+void btAudioPathHooksInit(void);						/* via the veneer at 0x533dc */
+uint8_t btAudioPathModesSet(unsigned int length, const uint8_t *parameters);
+void btAudioPathDataInvert(unsigned int clear);					/* via the veneer at 0x53c04 */
+void btAudioPathPresetApply(unsigned int mode);
 extern void (*btFmInjectionHook)(uint32_t frequency, uint32_t *config);	/* DTCM 0x400eeec */
 extern int (*btFmPllSetupHook)(uint32_t vco, unsigned int highSide, uint32_t *tuned);	/* DTCM 0x400ef18 */
 extern int (*btFmPllDividerHook)(uint32_t tuned);				/* DTCM 0x400ef10 */
@@ -311,7 +323,6 @@ void btSbcRomResetEntry(void);
 void btSbcRomScheduleEntry(int enable);
 void btSbcRomReleaseEntry(unsigned int scheduled, uint32_t mode);
 void btSbcRomClearEntry(void);
-void p2pSqramComputeEntry(unsigned int value);			/* SQRAM 0xc000e9e6 */
 void btSbcSyncBuffer(uint32_t value, int raise);		/* 0x511ac */
 int btSbcInspectTable(uint32_t value, uint8_t mode);		/* 0x50be2 */
 int btSbcTrackTable(uint16_t *value, uint8_t *active);		/* 0x50c16 */

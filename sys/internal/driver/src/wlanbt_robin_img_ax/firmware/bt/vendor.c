@@ -13,6 +13,7 @@
 #include "robin/btrom.h"
 #include "robin/btsource.h"
 #include "robin/bttable.h"
+#include "robin/bttest.h"
 #include "robin/eventpower.h"
 #include "robin/btcontext.h"
 #include "robin/hct.h"
@@ -265,7 +266,7 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		btSbcFormatContext(length, parameters, status);
 		return;
 	case 42:
-		*status = p2pSqramBuildEntry(length, parameters);
+		*status = btAudioPathModesSet(length, parameters);
 		return;
 	case 61:
 		btSbcFilterState(BT_CONFIG_ITEM_KEY, returnParameters);
@@ -571,7 +572,7 @@ int btSbcRecordContext(uint8_t *message)
 			goto taken;
 		case 3:
 			if (command == 3) {
-				p2pSqramAcquireEntry(message, 1, parameters, length);
+				btRfTestStop();
 			} else if (command == 5) {
 				btLmpLcResolveFrame(length, parameters);
 				goto taken;
@@ -588,7 +589,7 @@ int btSbcRecordContext(uint8_t *message)
 		case 63:
 			switch (command) {
 			case 25:
-				btBdhRomCheckContext(4, p2pSqramReleaseEntry(length, parameters), group, command);
+				btBdhRomCheckContext(4, btRfTestCommand(length, parameters), group, command);
 				goto taken;
 			case 29:
 				btVendorPolicyFlag = parameters[0] == 0 ? 1 : 0;

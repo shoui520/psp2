@@ -189,7 +189,7 @@ extern struct BtModeControl *btLinkModeControl;			/* 0x400f8f4 */
 /* One of the ROM's 14 link sessions. */
 struct BtLinkSession {
 	uint16_t active;
-	uint8_t reserved2[2];
+	uint16_t link;				/* the link group (bits 14-15) and link */
 	uint16_t flags;
 	uint8_t reserved6[2];
 };
@@ -412,6 +412,7 @@ void btLmpLcResolveFrame(unsigned int length, const uint8_t *parameters);	/* 0x4
 int btLmpLcScheduleFrame(unsigned int status);			/* 0x47f0e */
 int btLmpLcNotifyFrame(const uint8_t *message);			/* 0x47f30 */
 int btLmpLcFormatFrame(unsigned int link, uint32_t second);	/* 0x47f68 */
+extern int (*btLmpLcFormatFrameHook)(unsigned int link, uint32_t second);	/* DTCM 0x400eb10 */
 int btLmpLcInspectFrame(void);					/* 0x47f7e */
 void btLmpLcTrackFrame(void);					/* 0x47fc4 */
 int btLmpLcManageFrame(uint32_t features);			/* 0x4809c */

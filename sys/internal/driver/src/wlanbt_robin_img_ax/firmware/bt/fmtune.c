@@ -1192,7 +1192,7 @@ int btSbcFormatTable(uint8_t mode)
 		btSbcNotifyTable(config);
 		config[0] = (config[0] & ~0xff00000) | (uint32_t)((fmSettings.policy >> 18 & 1) == 0) << 20;
 		sbcPcmStreamHook(config);
-		p2pSqramComputeEntry(fmSettings.policy >> 18 & 1);
+		btAudioPathDataInvert(fmSettings.policy >> 18 & 1);
 	}
 	if ((mode & FM_MODE_TRANSMIT) != 0) {
 		kind = 6;

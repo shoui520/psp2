@@ -3676,7 +3676,6 @@ extern __typeof__(btLmpLcUpdateFrame) *btLmpLcUpdateFrameHook;	/* DTCM 0x400f174
 extern __typeof__(btLmpLcConfigureFrame) *btLmpLcConfigureFrameHook;	/* DTCM 0x400ec68 */
 extern __typeof__(btLmpLcComputeFrame) *btLmpLcComputeFrameHook;	/* DTCM 0x400f144 */
 extern __typeof__(btLmpLcProcessBuffer) *btLmpLcProcessBufferHook;	/* DTCM 0x400ed8c */
-extern __typeof__(btLmpLcFormatFrame) *btLmpLcFormatFrameHook;	/* DTCM 0x400eb10 */
 extern __typeof__(btLmpLcInspectFrame) *btLmpLcInspectFrameHook;	/* DTCM 0x400f7c0 */
 extern __typeof__(btLmpLcAcquireFrame) *btLmpLcAcquireFrameHook;	/* DTCM 0x400f2d8 */
 extern __typeof__(btLmpLcReleaseFrame) *btLmpLcReleaseFrameHook;	/* DTCM 0x400f2d0 */

@@ -135,7 +135,7 @@ static struct WlanInitStage wlanRadioStage __attribute__((section(".itcm.rw")));
 static struct WlanInitStage wlanTablesStage __attribute__((section(".itcm.rw")));
 static struct OsaIdleHook wlanTxNotifyIdleHook __attribute__((section(".itcm.rw")));	/* 0x54be8 */
 static uint32_t macTxNotifySetupDone __attribute__((section(".itcm.rw")));		/* 0x54bd0 */
-static struct OsaSemaphore *macTxNotifySemaphore __attribute__((section(".itcm.rw")));	/* 0x54bd8 */
+struct OsaSemaphore *macTxNotifySemaphore __attribute__((section(".itcm.rw")));	/* 0x54bd8 */
 static struct SysTimerSlotNode *wlanSlotTimer;						/* SQRAM 0xc0011ae0 */
 struct OsaEventFlags *wlanHostSleepFlags __attribute__((section(".itcm.rw")));	/* 0x54bdc */
 static struct { uint32_t words[7]; } macTxNotifySemaphoreObject __attribute__((section(".itcm.bss")));
@@ -153,7 +153,6 @@ void macMgmtRecordEntry(void);								/* 0x3719a */
 void macMgmtSyncTable(void);								/* 0x37944 */
 void wlanPsComputeFrame(void);								/* 0x3d510 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
-void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
 void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
@@ -430,7 +429,7 @@ int wlanInit(void)
 	wlanCcmSetup();
 	wlanRomServicesInit();
 	wlanBaTablesInit();
-	p2pSqramConfigureEntry();
+	hostCmd0078HooksInit();
 	pmkCacheRamInit();
 	p2pDirectCheckState();
 	p2pDirectResetTable();
