@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/rfcal.h"
 #include "robin/domain.h"
 #include "robin/autotx.h"
 #include "robin/btrom.h"
@@ -135,7 +136,6 @@ static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((sec
 void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
-void macTxNotifySetupPacket(void);							/* 0x32c16 */
 void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
@@ -169,7 +169,6 @@ int uapSqramConvertContext(void);							/* SQRAM 0xc00089b6: opens the storage *
 int uapSqramSelectContext(unsigned int offset, uint32_t *value);			/* SQRAM 0xc00089ee */
 int uapSqramVerifyContext(void);							/* SQRAM 0xc00089e6 */
 int wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
-void macTxNotifyManagePacket(void *queue);						/* 0x32a6a */
 int cbProcProcessBuffer(void);								/* 0x1d52e */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
 

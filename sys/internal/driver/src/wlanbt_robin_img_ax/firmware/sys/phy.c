@@ -91,14 +91,7 @@ static struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.
 #define MAC_2D0_ENABLE		0x0008u
 
 /* Not converted yet; provisional names. */
-uint32_t bbpReadVersionRegister(uint32_t index);
-void rfTunePrepare(unsigned int band, uint32_t channel);			/* 0x32b82 */
-void bbpLoadBandwidthTables(unsigned int band, unsigned int bandwidth, uint8_t channel); /* 0x325ec */
-void bbpFmCoexAdjust(void);						/* 0x326a8 */
 void macTxRefreshQueues(void);						/* 0x30dd6 */
-void bbpLoadPathTable(unsigned int band, int enabled);			/* 0x326bc */
-void macTuneHoldStart(void);						/* 0x326ec */
-void macTuneHoldEnd(void);						/* 0x32710 */
 int phyChannelPowerCheck(unsigned int band);				/* 0x31e88 */
 void phyChannelPowerLoad(unsigned int band, uint32_t channel);		/* 0x31eec */
 void phyChannelPowerApply(unsigned int band, uint32_t channel);		/* 0x31f0e */
