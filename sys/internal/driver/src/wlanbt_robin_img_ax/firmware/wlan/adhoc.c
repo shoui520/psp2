@@ -16,7 +16,7 @@ static ROBIN_PATCH_SLOT(wlanSetSecondaryChannelOverride);
 uint8_t wlanBroadcastAddress[6] __attribute__((section(".itcm.rw"))) = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 /* Returns the WMM parameter element the access point and IBSS beacons carry (0x2d248). */
-void wlanGetWmmParameterIe(WlanWmmParameterIe *ie);
+void wlanWmmFillParameterElement(uint8_t *ie);
 
 /*
  * Builds the header, beacon period, capability, SSID and supported rates of
@@ -181,7 +181,7 @@ void wlanPutWmmParameterIe(uint8_t **cursor)
 	unsigned int queue;
 	int i;
 
-	wlanGetWmmParameterIe(&ie);
+	wlanWmmFillParameterElement((uint8_t *)&ie);
 	__aeabi_memcpy(*cursor, &ie, sizeof(ie));
 	*cursor += sizeof(ie);
 	for (i = 0; i < 4; i++) {

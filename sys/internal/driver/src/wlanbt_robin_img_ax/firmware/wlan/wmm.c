@@ -222,6 +222,195 @@ int wlanWmmEnabled(void)
 	return wlanWmm.enabled;
 }
 
+/*
+ * A TSPEC's TS Info (802.11 8.4.2.32: three bytes) as these routines read it:
+ * the traffic direction is bits 5-6 of the first byte, the U-APSD flag bit 10 and
+ * the user priority bits 11-13 (bits 2 and 3-5 of the second byte).
+ */
+#define TSINFO_DIRECTION(tsInfo)	(((tsInfo)[0] >> 5) & 3)
+#define TSINFO_APSD(tsInfo)		(((tsInfo)[1] >> 2) & 1)
+#define TSINFO_USER_PRIORITY(tsInfo)	(((tsInfo)[1] >> 3) & 7)
+
+/* The flow direction codes of Marvell's HostCmd_DS_WMM_TS_STATUS: uplink 1, downlink 2, both 3. */
+enum {
+	WLAN_TSPEC_UPLINK = 1,
+	WLAN_TSPEC_DOWNLINK = 2,
+	WLAN_TSPEC_BIDIRECTIONAL = 3,
+};
+
+/* 0x2cfbc: TS Info direction 0 is uplink, 1 downlink, 3 both; 2 is reserved and gives 0. */
+unsigned int wlanTspecDirection(const uint8_t *tsInfo, uint8_t *directions)
+{
+	unsigned int direction = TSINFO_DIRECTION(tsInfo);
+
+	*directions = 0;
+	if (direction == 0)
+		*directions = WLAN_TSPEC_UPLINK;
+	else if (direction == 1)
+		*directions = WLAN_TSPEC_DOWNLINK;
+	else if (direction == 3)
+		*directions = WLAN_TSPEC_BIDIRECTIONAL;
+	return direction;
+}
+
+/* 0x2cfde: the bit of a user priority's access category in the U-APSD flags (AC_VO 0, AC_VI 1, AC_BK 2, AC_BE 3). */
+int wlanTspecUapsdBit(int userPriority)
+{
+	switch (userPriority) {
+	case 1:
+	case 2:
+		return 2;
+	case 4:
+	case 5:
+		return 1;
+	case 6:
+	case 7:
+		return 0;
+	default:
+		return 3;
+	}
+}
+
+/*
+ * 0x2d000: the TSPEC's access category takes (action 1, with U-APSD set; without it, the bit
+ * is cleared) or gives back (action 0, to the value in *reference) its U-APSD bit in the
+ * bitmap of each direction the TSPEC covers.
+ */
+int wlanTspecApplyBits(int action, uint8_t *uplink, uint8_t *downlink, const uint8_t *reference,
+		       const uint8_t *tspec, const uint8_t *directions)
+{
+	unsigned int bit = wlanTspecUapsdBit(TSINFO_USER_PRIORITY(tspec));
+	unsigned int mask = 1 << bit;
+
+	if (action == 1) {
+		if (TSINFO_APSD(tspec)) {
+			if (*directions & WLAN_TSPEC_DOWNLINK)
+				*downlink |= mask;
+			if (*directions & WLAN_TSPEC_UPLINK)
+				*uplink |= mask;
+		} else {
+			if (*directions & WLAN_TSPEC_DOWNLINK)
+				*downlink &= ~mask;
+			if (*directions & WLAN_TSPEC_UPLINK)
+				*uplink &= ~mask;
+		}
+	} else if (action == 0) {
+		if (*directions & WLAN_TSPEC_DOWNLINK)
+			*downlink = (*downlink & ~mask) | (*reference & mask);
+		if (*directions & WLAN_TSPEC_UPLINK)
+			*uplink = (*uplink & ~mask) | (*reference & mask);
+	}
+	return action;
+}
+
+/* The WMM TSPEC element's header: vendor element (61 bytes), Microsoft OUI, type 2, subtype 2, version 1. */
+static const uint8_t wlanWmmTspecHeader[8] = { 0xdd, 0x3d, 0x00, 0x50, 0xf2, 0x02, 0x02, 0x01 };
+
+/*
+ * 0x2d092: the body of a WMM ADDTS Request action frame (the category byte is the caller's):
+ * action 0, the dialog token, status 0, the TSPEC element's header and the length bytes of the
+ * TSPEC itself. Returns the body.
+ */
+uint8_t *wlanTspecBuildAddts(OsaBuffer *buffer, const uint8_t *tspec, unsigned int length,
+			     unsigned int dialogToken)
+{
+	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	uint8_t *body = frame->body;
+
+	body[1] = 0;
+	body[2] = dialogToken;
+	body[3] = 0;
+	__aeabi_memcpy(body + 4, wlanWmmTspecHeader, 8);
+	__aeabi_memcpy(body + 12, tspec, length);
+	length += 12;
+	frame->bodyLength[0] = length;
+	frame->bodyLength[1] = length >> 8;
+	return body;
+}
+
+/*
+ * 0x2d0ca: the response to HostCmd_CMD_WMM_ADDTS_REQ (Marvell's HostCmd_DS_WMM_ADDTS_REQ): a timeout
+ * without the access point's ADDTS Response frame, otherwise the response's dialog token, status code
+ * and TSPEC (the elements after its four-byte header, length bytes in all).
+ */
+void wlanWmmAddtsResult(uint8_t *command, const uint8_t *response, unsigned int length)
+{
+	command[0] = 0x6e;
+	command[1] = 0x80;
+	command[6] = 0;
+	command[7] = 0;
+	command[4] = 0;		/* the sequence number's low byte; its high byte keeps the BSS type and number */
+	command[2] = 9;
+	command[3] = 0;
+	if (response == NULL) {
+		command[8] = 2;	/* MLAN_CMD_RESULT_TIMEOUT */
+		return;
+	}
+	command[8] = 0;
+	length -= 4;
+	command[2] = length + 15;
+	command[3] = (length + 15) >> 8;
+	command[13] = response[2];
+	command[14] = response[3];
+	__aeabi_memcpy(command + 15, response + 4, length);
+}
+
+/*
+ * 0x2d10c: the body of a WMM DELTS action frame: action 2, token 0, status 0 and the 63 bytes of
+ * the TSPEC element. Its length is 4 + 63.
+ */
+void wlanTspecBuildDelts(OsaBuffer *buffer, const uint8_t *tspecElement)
+{
+	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	uint8_t *body = frame->body;
+
+	body[1] = 2;
+	body[2] = 0;
+	body[3] = 0;
+	__aeabi_memcpy(body + 4, tspecElement, 63);
+	frame->bodyLength[0] = 67;
+	frame->bodyLength[1] = 0;
+}
+
+/* HostCmd_DS_WMM_TS_STATUS (Marvell's name) */
+struct __attribute__((packed)) WlanWmmTsStatus {
+	uint8_t tid;
+	uint8_t valid;
+	uint8_t accessCategory;		/* the queue of the stream's access category */
+	uint8_t userPriority;
+	uint8_t psb;			/* 0 legacy, 1 U-APSD */
+	uint8_t flowDirection;
+	uint16_t mediumTime;
+};
+
+/*
+ * 0x2d164: one traffic stream's status, from its TS Info (tsInfo), the flow direction (*direction)
+ * and the medium time at offset 53 of its TSPEC. The stream's index is the record's first byte and
+ * has to be under 8. Returns the record's size, 0 for a stream that does not exist.
+ */
+unsigned int wlanWmmTsStatus(uint8_t *body, const uint8_t *tsInfo, const uint8_t *direction, int valid)
+{
+	struct WlanWmmTsStatus *status = (struct WlanWmmTsStatus *)body;
+	unsigned int tid = status->tid;
+	unsigned int priority;
+
+	__aeabi_memclr(status, 8);
+	status->tid = tid;
+	if (tid >= 8)
+		return 0;
+	if (tsInfo == NULL || direction == NULL)
+		return 8;
+	if (valid)
+		status->valid = 1;
+	priority = TSINFO_USER_PRIORITY(tsInfo);
+	status->userPriority = priority;
+	status->psb = TSINFO_APSD(tsInfo);
+	status->flowDirection = *direction;
+	status->mediumTime = tsInfo[53] | (tsInfo[54] << 8);
+	status->accessCategory = wlanAccessCategoryToQueue(wlanTidToAccessCategory(priority));
+	return 8;
+}
+
 /* The bit (in the flow and session bitmaps) of a queue. */
 int wlanWmmQueueBit(int queue)
 {

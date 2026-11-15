@@ -146,9 +146,14 @@ void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *statu
 void wlanWmmBuildParameterElement(uint8_t *ie);			/* 0x2d220 */
 void wlanWmmFillParameterElement(uint8_t *ie);			/* 0x2d248 */
 unsigned int wlanTspecDirection(const uint8_t *tsInfo, uint8_t *directions);	/* 0x2cfbc */
-int wlanTspecQueue(int tid);					/* 0x2cfde */
+int wlanTspecUapsdBit(int userPriority);			/* 0x2cfde */
 int wlanTspecApplyBits(int action, uint8_t *uplink, uint8_t *downlink, const uint8_t *reference,
 		       const uint8_t *tspec, const uint8_t *directions);	/* 0x2d000 */
+uint8_t *wlanTspecBuildAddts(OsaBuffer *buffer, const uint8_t *tspec, unsigned int length,
+			     unsigned int dialogToken);				/* 0x2d092 */
+void wlanWmmAddtsResult(uint8_t *command, const uint8_t *response, unsigned int length);	/* 0x2d0ca */
+void wlanTspecBuildDelts(OsaBuffer *buffer, const uint8_t *tspecElement);			/* 0x2d10c */
+unsigned int wlanWmmTsStatus(uint8_t *body, const uint8_t *tsInfo, const uint8_t *direction, int valid);	/* 0x2d164 */
 int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *policed);	/* 0x2d3d0 */
 int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
 			 uint16_t *times, unsigned int cwMin, unsigned int cwMax);	/* 0x2d4e4 */

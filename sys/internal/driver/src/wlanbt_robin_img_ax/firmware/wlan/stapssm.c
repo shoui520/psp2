@@ -132,7 +132,6 @@ int macTxNotifyBuildState(void);			/* 0x2fbe8 */
 int wlanPsProcessHeader(void);				/* 0x3dd26 */
 uint32_t wlanPsParseHeader(uint64_t *wake, uint16_t *margin);	/* 0x3defe */
 void wlanPsPrepareHeader(uint64_t *next);		/* 0x3dd98 */
-unsigned int wpaSuppSelectQueue(unsigned int ac);	/* 0x2cfde */
 void uapSqramFilterEntry(int enable);			/* SQRAM 0xc0009ba0 */
 
 static inline __attribute__((always_inline)) void wlanStaPsRestartTimer(TX_TIMER *timer, ULONG ticks)
@@ -1332,7 +1331,7 @@ int wlanPsAcLegacy(unsigned int ac)
 {
 	if (wlanPsUapsdPartial() != 1)
 		return 0;
-	return ((1u << wpaSuppSelectQueue(ac)) & wlanPsRoleMask) == 0;
+	return ((1u << wlanTspecUapsdBit(ac)) & wlanPsRoleMask) == 0;
 }
 
 /* 0x15ac2 */
