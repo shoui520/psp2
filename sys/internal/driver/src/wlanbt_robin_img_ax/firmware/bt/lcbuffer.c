@@ -2284,3 +2284,68 @@ void btLmpLcHandleFrame(const uint8_t *message)
 	}
 	btSyncFrameDoneHook(link, *(const BtWord *)(message + 8));
 }
+
+/*
+ * An LMP PDU on its way out (its opcode in byte 7, escaped opcodes extended by byte 8): the eSCO
+ * link requests 0x25 and 0x26 carry the link controller's current value in bytes 11-12.
+ */
+void btLmpLcProcessFrame(uint8_t *pdu)
+{
+	unsigned int opcode = pdu[7] >> 1;
+
+	if (opcode >= 0x7c)
+		opcode |= pdu[8] << 8;
+	if (opcode == 0x25 || opcode == 0x26) {
+		unsigned int value = btLmpLcCheckContext();
+
+		pdu[11] = value;
+		pdu[12] = value >> 8;
+	}
+}
+
+/*
+ * The link controller's look at a message before the ROM's: synchronous data (0x1f6) is taken here
+ * and freed (returns 1); 0xc42 marks the link's context, 0xc92 is an LMP PDU, and 0xc93, while
+ * synchronous links are set up here, reports a link whose context has no connection yet.
+ */
+int btLmpLcUpdateFrame(void *message)
+{
+	int taken = 0;
+
+	switch (*(BtWord *)message) {
+	case 0x1f6:
+		btLmpLcHandleFrame(message);
+		taken = 1;
+		osa_MsgFree(&message);
+		break;
+	case 0xc42: {
+		uint8_t *context = btLcoRomResetContext(*(BtHalf *)((uint8_t *)message + 4));
+
+		if (context[8] == 0)
+			context[8] = 1;
+		break;
+	}
+	case 0xc92:
+		btLmpLcProcessFrame(message);
+		break;
+	case 0xc93:
+		if (btSyncMode == 1 || btSyncMode == 3) {
+			uint8_t *sync = btLcoRomSyncContext();
+			unsigned int handle;
+			uint8_t *context;
+			uint8_t *connection;
+
+			if (sync[1] == 0xff || sync[1] == 0)
+				break;
+			handle = *(BtHalf *)((uint8_t *)message + 4);
+			context = btLcoRomResetContext(handle);
+			if (sync[0] == 0)
+				break;
+			connection = (uint8_t *)(uintptr_t)*(BtWord *)(context + 32);
+			if (connection != NULL && *(BtWord *)(connection + 28) == 0)
+				btSyncLinkUpHook(romHctHostSlot[handle][2]);
+		}
+		break;
+	}
+	return taken;
+}

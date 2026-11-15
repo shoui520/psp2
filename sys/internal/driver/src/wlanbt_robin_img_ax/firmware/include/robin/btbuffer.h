@@ -177,6 +177,8 @@ struct BtLinkSession {
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
 extern struct BtSyncFrameCounts btSyncFrameCounts;		/* 0x552ac */
 extern void (*btSyncFrameDoneHook)(unsigned int link, uint32_t buffer);	/* 0x400ece8 */
+extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
+extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
 extern uint8_t btSyncLatency;					/* 0x400bb02: the latency allowed, in slots (126 at most) */
 extern uint8_t btSyncRetransmission;				/* 0x400bb03 */
@@ -325,6 +327,8 @@ void btLmpLcAdjustPacket(uint32_t first, uint8_t *record, uint32_t third, uint32
 void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step);	/* 0x47402 */
 int btLmpLcFilterPacket(struct BtSyncSetup *setup);		/* 0x47414 */
 void btLmpLcHandleFrame(const uint8_t *message);		/* 0x475e0 */
+void btLmpLcProcessFrame(uint8_t *pdu);				/* 0x476dc */
+int btLmpLcUpdateFrame(void *message);				/* 0x47706 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

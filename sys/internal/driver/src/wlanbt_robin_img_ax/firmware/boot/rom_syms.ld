@@ -313,6 +313,8 @@ PROVIDE(btLcoRomReleaseState    = 0x03f1afe9);
 PROVIDE(romStateActiveTable     = 0x03f419e0);
 /* The controller's variables in the ROM's DTCM (0x0400a700 - 0x0400fc00); the image only reads and hooks them. */
 PROVIDE(btSyncFrameDoneHook          = 0x0400ece8);
+PROVIDE(btSyncMode                   = 0x0400f714);
+PROVIDE(btSyncLinkUpHook             = 0x0400f184);
 PROVIDE(btSyncLatency                = 0x0400bb02);
 PROVIDE(btSyncRetransmission         = 0x0400bb03);
 PROVIDE(btSyncPacketTypes            = 0x0400bb04);
@@ -422,6 +424,7 @@ PROVIDE(btLtsRomSyncState       = 0x03f3308b);
 PROVIDE(btLcoRomTrackContext    = 0x03f201c3);
 PROVIDE(btLtsRomDispatchState   = 0x03f32ed3);
 PROVIDE(btLtsRomVerifyState     = 0x03f3458f);
+PROVIDE(btLcoRomSyncContext     = 0x03f1f6ef);
 PROVIDE(btLcoRomValidateState   = 0x03f14bc1);
 PROVIDE(btLcoRomCheckState      = 0x03f14ba3);
 PROVIDE(btLcoRomConfigureState  = 0x03f14b91);
