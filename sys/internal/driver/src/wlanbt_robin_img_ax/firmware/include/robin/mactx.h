@@ -48,7 +48,10 @@ struct WlanPsPeerState {
 		uint8_t id;		/* the attribute the P2P element of a probe request carries, when its length is not 0 */
 		uint8_t length[2];
 	} p2pAttribute;
-	uint8_t reserved192[974];
+	uint8_t reserved192[934];
+	uint16_t p2pWindowStart;	/* inferred: the start of the group owner's window the scan engine measures a dwell against (TU) */
+	uint16_t p2pWindowEnd;		/* inferred: its end; the dwell is the difference */
+	uint8_t reserved1130[36];
 	struct {
 		uint8_t id;			/* 0: the Status attribute */
 		uint8_t length[2];
@@ -60,7 +63,9 @@ struct WlanPsPeerState {
 	uint8_t p2pChannel;		/* the channel the group owner's beacon was heard on */
 	uint8_t reserved1193[31];
 	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
-	uint8_t reserved1228[4];
+	uint8_t reserved1228;
+	uint8_t p2pWindowValid;		/* inferred: nonzero while p2pWindowStart and p2pWindowEnd hold a window */
+	uint8_t reserved1230[2];
 	uint8_t p2pIeState[4];		/* kept by the P2P code from custom IE slot 1 */
 	uint8_t reserved1236[84];
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
