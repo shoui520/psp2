@@ -1946,3 +1946,76 @@ void btLmpLcSetupPacket(uint32_t clock)
 	if (romTargetTable == 1 && profile->tracked != 0 && (int32_t)(clock - btTargetStart + 1) >= 0)
 		btLdaRomVerifyState(profile->active, btLdrRomScheduleState(profile->index));
 }
+
+/*
+ * With no target set up, the links' intervals fitting and nothing holding it, a target slot
+ * (state 5) is taken while the first slot due on the other queues (the queues of states 1 and 8
+ * left out, a queued link of state 1 required) is further away than the longest interval and
+ * extra. A slot already due ends the search; the deadline is the nearest one's.
+ */
+void btLmpLcClearPacket(uint32_t clock, uint32_t extra)
+{
+	unsigned int first;
+	unsigned int second;
+	unsigned int queue;
+	int nearest;
+
+	if (romTargetTable != 0 || btTargetFits == 0 || btTargetHold != 0)
+		return;
+	first = btSlotQueueIndex[1];
+	if (btSlotQueues[first].head == NULL)
+		return;
+	second = btSlotQueueIndex[8];
+	nearest = 0xffff;
+	for (queue = 0; queue < 13; queue = (uint8_t)(queue + 1)) {
+		struct BtDeviceProfile *profile;
+		uint32_t start;
+		int distance;
+
+		if (queue == first || queue == second)
+			continue;
+		profile = btSlotQueues[queue].head;
+		if (profile == NULL)
+			continue;
+		start = profile->due - profile->guard;
+		distance = (int)(start - clock);
+		if (distance <= 0)
+			return;
+		if (distance < nearest) {
+			nearest = distance;
+			btTargetDeadline = start;
+		}
+	}
+	if (btTargetLongest + extra < (unsigned int)nearest)
+		romTargetTable = 5;
+}
+
+/*
+ * The ROM's slot count step, followed by the check of the links queued for state 1: their
+ * intervals fit when none is over 13 and each one is a multiple of the slots, or below them and
+ * sharing no bit with them. The longest interval (at least the slots) is kept.
+ */
+void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, uint32_t fourth,
+			  uint32_t fifth)
+{
+	struct BtDeviceProfile *profile;
+	unsigned int longest;
+	uint8_t fits;
+
+	btLtsRomProcessContext(first, second, slots, fourth, fifth);
+	btTargetFits = 0;
+	fits = 1;
+	longest = slots;
+	for (profile = btSlotQueues[btSlotQueueIndex[1]].head; profile != NULL && fits != 0;
+	     profile = profile->next) {
+		unsigned int interval = profile->interval;
+
+		if (interval > 13 || (interval >= slots && interval % slots != 0) ||
+		    (interval < slots && (interval & slots) != 0))
+			fits = 0;
+		if (interval >= longest)
+			longest = interval;
+	}
+	btTargetFits = fits;
+	btTargetLongest = longest;
+}

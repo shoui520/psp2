@@ -144,6 +144,9 @@ struct BtLinkSession {
 	uint8_t reserved6[2];
 };
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
+extern uint16_t btTargetHold;					/* 0x400de10: non-zero: no target slot is taken (set by the ROM) */
+extern uint8_t btTargetFits;					/* 0x400de59: 1: the queued links' intervals fit the slots */
+extern uint16_t btTargetLongest;				/* 0x400de5a: the longest interval of the queued links */
 extern uint32_t btTargetDeadline;				/* 0x400de5c: the clock target state 5 ends at */
 extern void (*btTargetExpireHook)(void);			/* 0x400edbc */
 
@@ -267,6 +270,9 @@ uint32_t btLmpLcManagePacket(unsigned int argument);		/* 0x46cf4 */
 int btLmpLcAcquirePacket(uint32_t unused, uint16_t flags, struct BtDeviceProfile *profile, uint8_t entry);	/* 0x46f7c */
 void btLmpLcReleasePacket(void);				/* 0x47066 */
 void btLmpLcSetupPacket(uint32_t clock);			/* 0x470d4 */
+void btLmpLcClearPacket(uint32_t clock, uint32_t extra);	/* 0x4712e */
+void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, uint32_t fourth,
+			  uint32_t fifth);				/* 0x471f2 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
