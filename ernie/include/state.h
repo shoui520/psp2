@@ -5,6 +5,7 @@
 #ifndef ERNIE_STATE_H
 #define ERNIE_STATE_H
 
+#include "ernie.h"
 #include "kernel.h"
 
 /* the request powerResume runs (stateRequest), and the wakeup factor it leaves: the mode picks

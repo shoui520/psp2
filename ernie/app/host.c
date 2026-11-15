@@ -410,7 +410,9 @@ void hostRequestSetStateChecked(struct HostRequest *request, unsigned char state
 }
 
 /* the answer to a request: HOST_REQUEST_ANSWER with its status and length,
-   HOST_REQUEST_ERROR, or HOST_REQUEST_UNKNOWN */
+   HOST_REQUEST_ERROR, or HOST_REQUEST_UNKNOWN (since 0x0100060D every state answers: an error
+   with status 0x39, any other state with status 1; the request's state is set with dispatching
+   disabled) */
 void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 		       unsigned char status, unsigned char length)
 {
@@ -428,22 +430,42 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 		case HOST_REQUEST_ERROR:
 			request->answerLength = 0;
 			request->status = 0x39;
+#if FW_SINCE(0x0100060D)
+			state = HOST_REQUEST_ANSWER;
+#endif
 			break;
 		default:
 			request->answerLength = 0;
+#if FW_SINCE(0x0100060D)
+			request->status = 1;
+			state = HOST_REQUEST_ANSWER;
+#else
 			state = HOST_REQUEST_ERROR;
+#endif
 			break;
 		}
+#if FW_SINCE(0x0100060D)
+		dis_dsp();
+#endif
 		request->state = state;
 		hostLink.flags.bits.answer = 1;
+#if FW_SINCE(0x0100060D)
+		ena_dsp();
+#endif
 	}
 }
 
 /* a request's answer is ready (state: the request's state) */
 void hostRequestAnswerReady(unsigned char *state)
 {
+#if FW_SINCE(0x0100060D)
+	dis_dsp();
+#endif
 	*state = HOST_REQUEST_ANSWER;
 	hostLink.flags.bits.answer = 1;
+#if FW_SINCE(0x0100060D)
+	ena_dsp();
+#endif
 }
 
 /* the frame's first two bytes: the link's status and flags out, the command's word in */
