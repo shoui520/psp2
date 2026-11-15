@@ -168,7 +168,7 @@ int macMgmtAcquireEntry(uint32_t handle, uint32_t event, OsaBuffer *buffer, uint
 		if (p2pSqramCheckContext(buffer, &channel) != NULL)
 			macMgmtDispatchState(buffer, argument, channel);
 	} else if (subtype == 5 || subtype == 8) {
-		fmCoexFormatBuffer((uintptr_t)buffer->context, (uint8_t *)frame, argument, wlanScanState.scan,
+		fmCoexFormatBuffer((uintptr_t)buffer->context, (WlanWirelessFrame *)frame, argument, wlanScanState.scan,
 				   wlanScanState.scan->channelIndex);
 		return 1;
 	}

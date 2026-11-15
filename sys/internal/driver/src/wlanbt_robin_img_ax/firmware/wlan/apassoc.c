@@ -11,6 +11,7 @@
 #include "robin/apps.h"
 #include "robin/adhoc.h"
 #include "robin/apsta.h"
+#include "robin/wapiie.h"
 #include "robin/assocAp.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
@@ -52,7 +53,6 @@ void cbProcCheckFrame(struct WlanConnection *connection);				/* 0x1ea08 */
 int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
 int rfCalibRecordQueue(struct WlanConnection *connection, unsigned int a, unsigned int b,
 		       unsigned int maxStations, uint8_t *table);			/* 0x2b4c0 */
-int fmCoexRecordBuffer(struct WlanConnectionInfo *info, const uint8_t *element, uint16_t *status);	/* 0x4bf6a */
 void rfCalibAdjustQueue(struct WlanConnection *connection, const WlanIePointers *elements,
 			unsigned int channel, uint8_t *erpInfo, uint8_t *olbcActive,
 			unsigned int beaconPeriod, int add);			/* 0x2b45c */
@@ -347,65 +347,6 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 denied:
 	PUT_U16(body + 2, WLAN_STATUS_ASSOC_DENIED);
 	return macMgmtHandlePacket(response, 0);
-}
-
-/* The WAPI information element of the BSS (ID 68): its version, the one suite of each kind and no capabilities. Returns its size, 0 when the BSS is not a WAPI one. */
-unsigned int fmCoexSetupBuffer(const struct WlanConnectionInfo *info, uint8_t *ie, unsigned int size)
-{
-	uint32_t oui = 0x721400;
-	uint8_t *cursor = ie;
-
-	if (ie != NULL && info->wapiConfigured != 0 && size >= 24) {
-		__aeabi_memclr(ie, size);
-		ie[0] = 68;
-		ie[1] = 0;
-		ie[2] = info->wapiVersion;
-		ie[4] = 1;
-		cursor = ie + 6;
-		__aeabi_memcpy(cursor, &oui, 3);
-		cursor += 3;
-		*cursor = info->wapiAkm;
-		cursor++;
-		*cursor = 1;
-		cursor += 2;
-		__aeabi_memcpy(cursor, &oui, 3);
-		cursor += 3;
-		*cursor = info->wapiUnicastCipher;
-		cursor++;
-		__aeabi_memcpy(cursor, &oui, 3);
-		cursor += 3;
-		*cursor = info->wapiMulticastCipher;
-		cursor += 3;
-		ie[1] = (uint8_t)(cursor - ie - 2);
-	}
-	return (uint8_t)(cursor - ie);
-}
-
-unsigned int fmCoexSelectBuffer(const struct WlanConnectionInfo *info, uint8_t *ie)
-{
-	if (info->securityMode.wapi)
-		return fmCoexSetupBuffer(info, ie, 0xff);
-	return 0;
-}
-
-/* The WAPI context goes to the host as TLV 103 (byte-reversed); a BSS without WAPI adds nothing. Returns the TLV's size. */
-unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv)
-{
-	uint8_t data[16];
-
-	if (!info->securityMode.wapi)
-		return 0;
-	tlv[0] = 103;
-	tlv[1] = 1;
-	tlv[2] = 16;
-	tlv[3] = 0;
-	if (info->wapiContext != NULL) {
-		wlanReverseBytes(data, info->wapiContext->data, 16);
-		__aeabi_memcpy(tlv + 4, data, 16);
-	} else {
-		__aeabi_memclr(tlv + 4, 16);
-	}
-	return U16(tlv + 2) + 4;
 }
 
 /* The peer is deauthenticated (reason 2: its authentication is no longer valid). */

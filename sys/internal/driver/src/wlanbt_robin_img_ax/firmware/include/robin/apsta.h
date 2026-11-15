@@ -61,9 +61,6 @@ const uint8_t *fmCoexComputeTable(WlanWirelessFrame *frame, const WlanWirelessFr
 				  const uint8_t **elements, int *length);		/* 0x4be30 */
 int fmCoexQueryTable(const WlanIePointers *ies);					/* 0x4be7a */
 int fmCoexResetTable(const WlanIePointers *ies);					/* 0x4be8a */
-unsigned int fmCoexSetupBuffer(const struct WlanConnectionInfo *info, uint8_t *ie, unsigned int size); /* 0x4ccb0 */
-unsigned int fmCoexSelectBuffer(const struct WlanConnectionInfo *info, uint8_t *ie);	/* 0x4ce06 */
-unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv);	/* 0x4ce1a */
 int fmCoexSyncTable(uint8_t *destination, const uint8_t *htCapability);		/* 0x4be9a */
 int fmCoexApplyTable(uint8_t *destination, const uint8_t *htOperation);		/* 0x4bea6 */
 int fmCoexResolveTable(uint8_t *destination, const uint8_t *wmmElement);		/* 0x4beb2 */

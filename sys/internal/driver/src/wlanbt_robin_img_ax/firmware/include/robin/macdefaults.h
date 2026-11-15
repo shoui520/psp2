@@ -65,7 +65,6 @@ uint32_t fmCoexSyncBuffer(void);				/* 0x4c93c */
 void fmCoexApplyBuffer(int enable, uint32_t value);		/* 0x4c942 */
 uint32_t fmCoexResolveBuffer(void);				/* 0x4c96e */
 int fmCoexScheduleBuffer(struct WlanLocalState *state);		/* 0x4c9d4 */
-int fmCoexNotifyBuffer(uint32_t capability, unsigned int bssType, int p2p);	/* 0x4cb10 */
 
 /* Not written yet. */
 uint32_t macTxNotifySyncTable(void);				/* 0x31a32 */

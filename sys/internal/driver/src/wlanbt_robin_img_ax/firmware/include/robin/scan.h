@@ -255,8 +255,13 @@ int p2pSqramScheduleState(struct WlanConnection *connection, uint32_t slot);	/* 
 void p2pSqramProcessState(struct WlanConnection *connection, unsigned int state, uintptr_t argument,
 			  int event);					/* SQRAM, veneer 0x5328c */
 int p2pSqramNotifyState(void);						/* SQRAM, veneer 0x53294 */
-void fmCoexFormatBuffer(uintptr_t frame, uint8_t *body, uintptr_t argument, struct WlanScan *scan,
-			unsigned int channelIndex);			/* 0x4cb36 */
-int fmCoexVerifyBuffer(struct WlanConnectionInfo *info, const uint8_t *tlv);	/* 0x4cdde */
+int p2pSqramParseContext(uintptr_t context);				/* SQRAM, veneer 0x539fc */
+void p2pSqramDispatchContext(uintptr_t context, const WlanWirelessFrame *frame);	/* SQRAM, veneer 0x53a04 */
+
+/* wlan/scanbeacon.c */
+extern uint8_t wlanScanWpsOui[4];					/* 0x55419 */
+int fmCoexNotifyBuffer(uint32_t capability, unsigned int bssType, int p2p);	/* 0x4cb10 */
+void fmCoexFormatBuffer(uintptr_t context, WlanWirelessFrame *frame, uintptr_t argument,
+			struct WlanScan *scan, unsigned int channelIndex);	/* 0x4cb36 */
 
 #endif /* ROBIN_SCAN_H */

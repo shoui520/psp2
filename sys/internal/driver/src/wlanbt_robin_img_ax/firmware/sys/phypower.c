@@ -8,14 +8,13 @@
 #include "robin/calibration.h"
 #include "robin/rf.h"
 #include "robin/rfbus.h"
+#include "robin/rssibias.h"
 #include "robin/socpower.h"
 #include "robin/soc.h"
 
 /* Not converted yet; provisional names. */
 void wlanPsCheckDescriptor(int enable);				/* 0x3e82c */
 void wlanPsValidateDescriptor(const void *block);		/* 0x3e86a: keeps the 8 bytes */
-void fmCoexAcquireBuffer(int enable);				/* 0x4cc5c */
-void fmCoexReleaseBuffer(const void *block);			/* 0x4cc90: keeps the 4 bytes */
 
 extern uint8_t wlanPhyBand;					/* SQRAM 0xc0011bd5: the band the state is for */
 extern uint8_t wlanPhyPowerMode;				/* SQRAM 0xc0011bd6: 0 on, 1 off, from the calibration flags */

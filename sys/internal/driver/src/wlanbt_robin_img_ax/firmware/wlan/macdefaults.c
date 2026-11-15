@@ -268,18 +268,3 @@ int fmCoexScheduleBuffer(struct WlanLocalState *state)
 	btSbcAcquireBuffer(state);
 	return 1;
 }
-
-/* Whether a BSS's capability fits the BSS type a scan asks for. */
-int fmCoexNotifyBuffer(uint32_t capability, unsigned int bssType, int p2p)
-{
-	switch (bssType) {
-	case 1:
-		return (capability & 1) != 0;
-	case 2:
-		return (capability & 2) != 0;
-	case 3:
-		return (capability & 3) != 0 || p2p == 1;
-	default:
-		return 0;
-	}
-}

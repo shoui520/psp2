@@ -7,6 +7,7 @@
 #include "robin/osa.h"
 #include "robin/power.h"
 #include "robin/rom.h"
+#include "robin/sbc.h"
 #include "robin/sys.h"
 
 /* ThreadX status 10 is TX_QUEUE_EMPTY and 16 TX_NO_MEMORY; others fold into 1. */
@@ -333,8 +334,6 @@ const uint8_t *osaFindTlv(const uint8_t *data, int type, int length)
 /* Driver registrations run once at start-up; the names below are provisional. */
 int btSdioHciScheduleHeader(void);	/* 0x00026224 */
 int btSdioHciAdjustState(void);		/* 0x00020e2c */
-int fmCoexFilterBuffer(void);		/* 0x0004cee0 */
-int fmCoexHandlePacket(void);		/* 0x0004cf4c */
 int btSbcUpdateState(void);		/* 0x0004d548 */
 int btSbcBuildEntry(void);		/* 0x0004f490 */
 int btSdioHciFormatBuffer(void);	/* 0x0002366c */

@@ -239,6 +239,17 @@ struct WlanIbssMachine {
 
 _Static_assert(sizeof(struct WlanIbssMachine) == 28, "IBSS machine");
 
+/* What a WAPI information element (ID 68) carries, as the firmware keeps it (wlan/wapiie.c). */
+struct WlanWapiSettings {
+	uint8_t configured;		/* nonzero: the BSS is a WAPI one */
+	uint8_t version;
+	uint8_t akm;			/* the authentication and key management suite's type: 1 or 2 */
+	uint8_t unicastCipher;		/* the one unicast suite's type */
+	uint8_t multicastCipher;
+};
+
+_Static_assert(sizeof(struct WlanWapiSettings) == 5, "WAPI settings");
+
 struct WlanConnectionInfo {
 	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
 	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
@@ -299,11 +310,7 @@ struct WlanConnectionInfo {
 	uint8_t reserved542;
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
-	uint8_t wapiConfigured;		/* nonzero: the BSS is a WAPI one; the bytes after it are what its element carries */
-	uint8_t wapiVersion;
-	uint8_t wapiAkm;		/* the authentication and key management suite's type */
-	uint8_t wapiUnicastCipher;
-	uint8_t wapiMulticastCipher;
+	struct WlanWapiSettings wapi;	/* 545: the BSS's WAPI element, when it is a WAPI one */
 	uint8_t reserved550[2];
 	union {
 		struct {
@@ -716,7 +723,7 @@ _Static_assert(offsetof(struct WlanConnectionInfo, obssScan) == 514, "info overl
 _Static_assert(offsetof(struct WlanConnectionInfo, extCapability) == 530, "info extended capabilities");
 _Static_assert(offsetof(struct WlanConnectionInfo, tim) == 744, "info TIM element");
 _Static_assert(offsetof(struct WlanConnectionInfo, timPosition) == 756, "info TIM position");
-_Static_assert(offsetof(struct WlanConnectionInfo, wapiConfigured) == 545, "info WAPI");
+_Static_assert(offsetof(struct WlanConnectionInfo, wapi) == 545, "info WAPI");
 _Static_assert(offsetof(struct WlanConnectionInfo, mgmtForwardMask) == 536, "info management forwarding");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, stationCount) == 584, "info station count");
