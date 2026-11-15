@@ -63,3 +63,14 @@ struct SysTimerSlotNode *sysTimerSlotAcquire(SysTimerCallback callback, uint32_t
 	sysTimerRegister(node->index, callback, arg);
 	return node;
 }
+
+/* The slot's timer is the system timer of its index. */
+UINT sysTimerSlotStart(uint32_t index, ULONG initialTicks, ULONG rescheduleTicks)
+{
+	return sysTimerStart(index, initialTicks, rescheduleTicks);
+}
+
+UINT sysTimerSlotStop(uint32_t index)
+{
+	return sysTimerStop(index);
+}

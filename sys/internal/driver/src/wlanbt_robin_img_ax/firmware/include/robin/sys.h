@@ -181,6 +181,8 @@ struct SysTimerSlotNode {
 
 struct SysTimerSlotNode *sysTimerSlotAcquire(SysTimerCallback callback, uint32_t arg);
 int sysTimerSlotInit(void);
+UINT sysTimerSlotStart(uint32_t index, ULONG initialTicks, ULONG rescheduleTicks);	/* 0x00027f90 */
+UINT sysTimerSlotStop(uint32_t index);						/* 0x00027f98 */
 
 /* sys/trace.c */
 void sysLogStatistic(unsigned int id, uint32_t value, uint32_t extra);

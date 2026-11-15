@@ -9,6 +9,7 @@
 #define ROBIN_AMP_H
 
 #include <stdint.h>
+#include "robin/btrom.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include <wlanbt/wlanbt_protocol.h>
@@ -22,10 +23,13 @@
 #define AMP_HCI_SUCCESS			0x00
 #define AMP_HCI_UNKNOWN_COMMAND		0x01
 #define AMP_HCI_UNKNOWN_CONNECTION	0x02
+#define AMP_HCI_AUTHENTICATION_FAILURE	0x05
 #define AMP_HCI_MEMORY_CAPACITY		0x07
+#define AMP_HCI_CONNECTION_TIMEOUT	0x08
 #define AMP_HCI_CONNECTION_LIMIT	0x09
 #define AMP_HCI_COMMAND_DISALLOWED	0x0c
 #define AMP_HCI_LIMITED_RESOURCES	0x0d
+#define AMP_HCI_CONNECTION_ACCEPT_TIMEOUT	0x10
 #define AMP_HCI_INVALID_PARAMETERS	0x12
 #define AMP_HCI_QOS_UNACCEPTABLE	0x2c
 #define AMP_HCI_QOS_REJECTED		0x2d
@@ -104,13 +108,55 @@ struct AmpQueue {
 	uint32_t words[5];
 };
 
-/* State machine object of one physical link (80 bytes), driven through the ROM. */
+/*
+ * State machine of one physical link (80 bytes), driven by the Mask ROM's
+ * hierarchical state machine code: the ROM keeps the current state in the
+ * first word, followed by the six states, and the handlers keep the state
+ * numbers and the link they work on after them. State and event names are
+ * inferred from what the handlers do (amp/link.c).
+ */
+enum AmpLinkState {
+	AMP_LINK_IDLE,
+	AMP_LINK_WAIT_ASSOC,		/* Create or Accept was accepted; the remote AMP_ASSOC is awaited */
+	AMP_LINK_STARTING,		/* the PAL driver chose the channel and starts the link */
+	AMP_LINK_SECURING,
+	AMP_LINK_CONNECTED,
+	AMP_LINK_DISCONNECTING,
+};
+
 struct AmpLinkMachine {
-	uint32_t words[19];
-	uint8_t state;
-	uint8_t reserved[3];
+	uint32_t current;
+	struct RomHsmState idle;
+	struct RomHsmState waitAssoc;
+	struct RomHsmState starting;
+	struct RomHsmState securing;
+	struct RomHsmState connected;
+	struct RomHsmState disconnecting;
+	uint8_t state;			/* enum AmpLinkState of the current state */
+	uint8_t previousState;
+	uint8_t link;			/* index of the physical link, AMP_PHYSICAL_LINKS when none */
+	uint8_t reserved;
 };
 _Static_assert(sizeof(struct AmpLinkMachine) == 80, "AMP link state machine");
+
+/* The events of a link state machine (the numbers ampLinkPostEvent() is given). */
+enum AmpLinkEventCode {
+	AMP_LINK_EVENT_CREATE_PHYSICAL_LINK = 1,
+	AMP_LINK_EVENT_ACCEPT_PHYSICAL_LINK,
+	AMP_LINK_EVENT_WRITE_REMOTE_ASSOC,	/* the whole remote AMP_ASSOC has arrived */
+	AMP_LINK_EVENT_DISCONNECT_PHYSICAL_LINK,
+	AMP_LINK_EVENT_SHORT_RANGE_MODE,
+	AMP_LINK_EVENT_TIMEOUT,			/* the connection accept timer expired */
+	AMP_LINK_EVENT_PAL_CHANNEL = 7,		/* PAL driver messages 1 and 2 */
+	AMP_LINK_EVENT_PAL_NO_RESOURCES,	/* PAL driver message 3 */
+	AMP_LINK_EVENT_PAL_STARTED,		/* PAL driver message 4 */
+	AMP_LINK_EVENT_PAL_START_TIMEOUT,	/* PAL driver message 5 */
+	AMP_LINK_EVENT_PAL_SECURITY_FAILED = 12,
+	AMP_LINK_EVENT_PAL_SECURED,		/* PAL driver messages 6 and 7 */
+	AMP_LINK_EVENT_PAL_LOST,		/* PAL driver message 8 */
+	AMP_LINK_EVENT_PHYSICAL_LINK_GONE,	/* PAL driver message 13 */
+	AMP_LINK_EVENT_ASSOC_FAILED,		/* the remote AMP_ASSOC was refused */
+};
 
 /* Event record handed to a link state machine (12 bytes). */
 struct AmpLinkEvent {
@@ -174,6 +220,8 @@ int ampHciDisallowCommand(uint16_t opcode, int status, int finished);
 int ampHciSendCommandComplete(uint16_t opcode, int status, int finished);
 int ampHciSendCommandStatus(uint16_t opcode, int status);
 int ampHciSendNopCommandStatus(void);
+int ampHciPhysicalLinkComplete(int status, int physicalHandle);
+int ampHciDisconnectPhysicalLinkComplete(int status, int physicalHandle);
 int ampHciProcessCommands(void);
 void ampPalNotifyDisconnect(unsigned int index);
 
@@ -191,6 +239,8 @@ unsigned int ampLogicalLinkFindByFlowSpec(uint32_t flowSpecId);
 int ampLogicalLinkServiceType(uint32_t logicalHandle);
 int ampLogicalLinkRemove(int logicalHandle, int reason);
 int ampLinkPostEvent(unsigned int index, uint32_t event, const void *record);
+void ampLinkMachineInit(struct AmpLinkMachine *machine);
+extern uint16_t ampConnectionAcceptTimeout;
 void ampPhysicalLinksInit(void);
 int ampHciResetState(void);
 unsigned int ampAssocBuild(uint8_t *out, unsigned int physicalIndex);

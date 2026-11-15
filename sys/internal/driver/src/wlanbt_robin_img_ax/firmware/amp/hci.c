@@ -50,7 +50,7 @@ static uint32_t ampMaxFlushTimeout __attribute__((section(".itcm.bss")));
 static uint32_t ampBestEffortFlushTimeout __attribute__((section(".itcm.bss")));
 
 /* Timeouts and the location data. */
-static uint16_t ampConnectionAcceptTimeout __attribute__((section(".itcm.bss")));
+uint16_t ampConnectionAcceptTimeout __attribute__((section(".itcm.bss")));
 static uint16_t ampLinkSupervisionTimeout __attribute__((section(".itcm.bss")));
 static uint16_t ampLogicalLinkAcceptTimeout __attribute__((section(".itcm.bss")));
 uint8_t ampDisconnectReason __attribute__((section(".itcm.bss")));
@@ -1087,8 +1087,6 @@ int ampHciVendorFc23(uint16_t opcode, OsaBuffer *command)
 /* ---- Physical and logical link commands --------------------------------------- */
 
 extern struct AmpQueue ampLinkQueues[];
-extern int fmCoexAcquireState(struct AmpLinkMachine *machine);
-extern void osa_SemaphoreCreate(void *semaphore, void *config);
 
 /* 0x00021ee4: empties the link tables and rearms the link state machines. */
 void ampPhysicalLinksInit(void)
@@ -1106,8 +1104,8 @@ void ampPhysicalLinksInit(void)
 			link->logicalLinks[slot].pending = 0;
 			link->logicalLinks[slot].failedContactCounter = 0;
 		}
-		fmCoexAcquireState(&ampLinkMachines[i]);
-		osa_SemaphoreCreate(&ampLinkMachines[i], &ampLinkMachines[i].words[1]);
+		ampLinkMachineInit(&ampLinkMachines[i]);
+		romHsmStart(&ampLinkMachines[i], &ampLinkMachines[i].idle);
 	}
 	if (ampRemoteAssocBuffer != NULL) {
 		osa_BufferFree(ampRemoteAssocBuffer);
@@ -1374,7 +1372,7 @@ int ampHciCreateLogicalLink(uint16_t opcode, OsaBuffer *command)
 	ampHciAdjustCommandCount(-1);
 	if (physical >= AMP_PHYSICAL_LINKS) {
 		status = 2;
-	} else if (ampLinkMachines[physical].state == 4) {
+	} else if (ampLinkMachines[physical].state == AMP_LINK_CONNECTED) {
 		if (data[5] != 2 || (interArrival = __aeabi_uread4(data + 8)) == 0xffffffff ||
 		    (interArrival != 0 &&
 		     ampMaxGuaranteedBandwidth >=
@@ -1385,7 +1383,7 @@ int ampHciCreateLogicalLink(uint16_t opcode, OsaBuffer *command)
 		} else {
 			status = AMP_HCI_QOS_REJECTED;
 		}
-	} else if (ampLinkMachines[physical].state == 2) {
+	} else if (ampLinkMachines[physical].state == AMP_LINK_STARTING) {
 		status = AMP_HCI_COMMAND_DISALLOWED;
 	} else {
 		status = 2;
