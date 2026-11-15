@@ -396,4 +396,26 @@ struct SbcIrqHandler {
 
 extern struct SbcIrqHandler sbcIrqHandlers[];	/* 0x55450 */
 
+void btSbcSetupState(void);				/* 0x4e11a: nothing */
+void btSbcClearState(void);				/* 0x4e11c */
+void btSbcConvertState(void);				/* 0x4e13c */
+
+/* The ROM's hooks btSbcConvertState() sets (ROM data); provisional names. */
+extern void (*romLmpPrepareHook)(void);			/* DTCM 0x400ec18 */
+extern int (*romLmpDispatchHook)(void);			/* DTCM 0x400ec10 */
+extern uint8_t *(*romLmpParseHook)(void);		/* DTCM 0x400ec14 */
+extern uint8_t *(*romLmpAcquireHook)(void);		/* DTCM 0x400eb30 */
+extern void (*romSbcRecordHook)(void);			/* DTCM 0x400ef34 */
+extern void (*romSbcFilterHook)(void);			/* DTCM 0x400ef38 */
+extern void (*romSbcProcessHook)(void);			/* DTCM 0x400f19c */
+extern void (*romSbcUpdateHook)(void);			/* DTCM 0x400f2c0 */
+void btBdhRomComputeState(void);
+
+/* The code they point at, not converted yet; the prototypes are provisional. */
+void btSbcRecordContext(void);				/* 0x4ef6e */
+void btSbcFilterContext(void);				/* 0x4f1b0 */
+void btSbcProcessPacket(void);				/* 0x51c64 */
+void btSbcUpdatePacket(void);				/* 0x51c98 */
+void btSbcPreparePacket(void);				/* 0x51d20 */
+
 #endif /* ROBIN_SBC_H */

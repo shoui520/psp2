@@ -164,9 +164,6 @@ void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
-int uapSqramConvertContext(void);							/* SQRAM 0xc00089b6: opens the storage */
-int uapSqramSelectContext(unsigned int offset, uint32_t *value);			/* SQRAM 0xc00089ee */
-int uapSqramVerifyContext(void);							/* SQRAM 0xc00089e6 */
 int wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
 int cbProcProcessBuffer(void);								/* 0x1d52e */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */

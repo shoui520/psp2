@@ -35,6 +35,7 @@ struct OsaBuffer {
 	union {
 		uint16_t ringEnd;
 		uint16_t poolMetadata;
+		uint16_t replyLength;	/* of a reply buffer (bt/btconfig.c) */
 	};
 	uint8_t packetClass;
 	uint8_t flags;

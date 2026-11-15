@@ -22,4 +22,11 @@ struct WlanSessionOps {
 
 extern struct WlanSessionOps wlanSessionOps;
 
+/* The SQRAM code that reaches the host's EEPROM. */
+int uapSqramConvertContext(void);					/* SQRAM 0xc00089b6: opens the storage */
+int uapSqramSelectContext(unsigned int offset, uint32_t *value);	/* SQRAM 0xc00089ee: reads a word */
+int uapSqramVerifyContext(void);					/* SQRAM 0xc00089e6: closes it */
+int uapSqramRecordContext(unsigned int enable, unsigned int argument);	/* SQRAM 0xc0008a1c: write enable */
+int uapSqramAdjustContext(unsigned int offset, uint32_t value);		/* SQRAM 0xc0008a00: writes a word */
+
 #endif /* ROBIN_SESSION_H */

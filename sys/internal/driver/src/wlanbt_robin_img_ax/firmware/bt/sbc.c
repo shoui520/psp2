@@ -6,6 +6,7 @@
  */
 #include <stdint.h>
 #include "robin/btpool.h"
+#include "robin/btpower.h"
 #include "robin/btbuffer.h"
 #include "robin/btsource.h"
 #include "robin/btcontext.h"
@@ -1019,4 +1020,31 @@ void btSbcReleaseState(void)
 
 	for (entry = sbcIrqHandlers; entry->handler != NULL; entry++)
 		sysIrqRegister(entry->line, entry->handler);
+}
+
+void btSbcSetupState(void)
+{
+}
+
+/* Unmasks the SCO line's interrupt. */
+void btSbcClearState(void)
+{
+	SOC_IRQ_ENABLE_SET |= 1u << SBC_SCO_IRQ_LINE;
+}
+
+/* Points the ROM's link controller and SBC hooks at the image's code. */
+void btSbcConvertState(void)
+{
+	romLmpPrepareHook = btLmpLcPrepareContext;
+	romLmpDispatchHook = btLmpLcDispatchContext;
+	romLmpParseHook = btLmpLcParseContext;
+	romLmpAcquireHook = btLmpLcAcquireState;
+	btLmpLcQueryEntry();
+	btLmpLcManageState();
+	btSbcPreparePacket();
+	romSbcRecordHook = btSbcRecordContext;
+	romSbcFilterHook = btSbcFilterContext;
+	btBdhRomComputeState();
+	romSbcProcessHook = btSbcProcessPacket;
+	romSbcUpdateHook = btSbcUpdatePacket;
 }
