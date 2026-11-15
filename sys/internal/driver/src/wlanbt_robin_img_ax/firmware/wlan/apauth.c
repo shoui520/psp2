@@ -672,6 +672,25 @@ int fmCoexResetTable(const WlanIePointers *ies)
 	return (ies->pHtCap->capabilities & WLAN_HT_CAP_40MHZ) != 0;
 }
 
+/* Elements of the BSS go into a frame as they are kept: the HT capabilities, the HT operation and the WMM parameter ones; each returns its size. */
+int fmCoexSyncTable(uint8_t *destination, const uint8_t *htCapability)
+{
+	__aeabi_memcpy(destination, htCapability, 28);
+	return 28;
+}
+
+int fmCoexApplyTable(uint8_t *destination, const uint8_t *htOperation)
+{
+	__aeabi_memcpy(destination, htOperation, 24);
+	return 24;
+}
+
+int fmCoexResolveTable(uint8_t *destination, const uint8_t *wmmElement)
+{
+	__aeabi_memcpy(destination, wmmElement, 26);
+	return 26;
+}
+
 /*
  * The authentication frame's body: algorithm, sequence, status and, when the
  * challenge is sent, the challenge text element (ID 16, 128 bytes), the frame's

@@ -39,7 +39,6 @@
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
 /* Not converted yet; provisional names. */
-void macMgmtReleaseFrame(struct WlanConnection *connection);				/* 0x3b0d8 */
 void wlanPsAcquirePacket(struct WlanConnection *connection);				/* 0x3d1f4 */
 void macTxNotifyApplyFrame(struct WlanConnection *connection);				/* 0x3360a */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);				/* 0x33570 */
@@ -53,7 +52,6 @@ uint8_t *p2pDirectReleaseContext(struct WlanConnection *connection,
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);					/* SQRAM */
-void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
 void rfCalibFilterQueue(unsigned int wpa, void *keyData);				/* 0x2b764 */
 void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *length); /* 0x2b774 */
 void rfCalibProcessTimer(unsigned int value, uint8_t **cursor, uint8_t *length);	/* 0x2b7b6 */
@@ -188,11 +186,11 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 		wlanAppendIe(frame, 0x44, ies.pWapi + 2, ies.pWapi[1]);
 	if (info->htEnabled == 1 && ies.pHtCap != NULL) {
 		if (info->phyMode != 2 && (info->htCapability[2] & 0x02))
-			wlanAppendIe(frame, 0x4a, &info->obssScan, 14);
-		wlanAppendIe(frame, 0x7f, info->extCapability, 4);
+			wlanAppendIe(frame, 0x4a, &info->obssScan.parameters, 14);
+		wlanAppendIe(frame, 0x7f, info->extCapability.capability, 4);
 	}
 	if (info->qosEnabled == 1 && ies.pWmmInfo != NULL)
-		wlanAppendIe(frame, 0xdd, info->wmmParameter, 24);
+		wlanAppendIe(frame, 0xdd, info->wmmElement + 2, 24);
 	if (ies.pVendor != NULL && wlanP2pConnection(connection) != 0) {
 		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 
@@ -360,6 +358,45 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 denied:
 	PUT_U16(body + 2, WLAN_STATUS_ASSOC_DENIED);
 	return macMgmtHandlePacket(response, 0);
+}
+
+/* The WAPI information element of the BSS (ID 68): its version, the one suite of each kind and no capabilities. Returns its size, 0 when the BSS is not a WAPI one. */
+unsigned int fmCoexSetupBuffer(const struct WlanConnectionInfo *info, uint8_t *ie, unsigned int size)
+{
+	uint32_t oui = 0x721400;
+	uint8_t *cursor = ie;
+
+	if (ie != NULL && info->wapiConfigured != 0 && size >= 24) {
+		__aeabi_memclr(ie, size);
+		ie[0] = 68;
+		ie[1] = 0;
+		ie[2] = info->wapiVersion;
+		ie[4] = 1;
+		cursor = ie + 6;
+		__aeabi_memcpy(cursor, &oui, 3);
+		cursor += 3;
+		*cursor = info->wapiAkm;
+		cursor++;
+		*cursor = 1;
+		cursor += 2;
+		__aeabi_memcpy(cursor, &oui, 3);
+		cursor += 3;
+		*cursor = info->wapiUnicastCipher;
+		cursor++;
+		__aeabi_memcpy(cursor, &oui, 3);
+		cursor += 3;
+		*cursor = info->wapiMulticastCipher;
+		cursor += 3;
+		ie[1] = (uint8_t)(cursor - ie - 2);
+	}
+	return (uint8_t)(cursor - ie);
+}
+
+unsigned int fmCoexSelectBuffer(const struct WlanConnectionInfo *info, uint8_t *ie)
+{
+	if (info->securityMode.wapi)
+		return fmCoexSetupBuffer(info, ie, 0xff);
+	return 0;
 }
 
 /* The WAPI context goes to the host as TLV 103 (byte-reversed); a BSS without WAPI adds nothing. Returns the TLV's size. */
@@ -612,6 +649,26 @@ int macMgmtResolvePacket(struct WlanConnection *connection)
 	return 1;
 }
 
+/* No peer is associated, no access point BSS is started and the P2P group owner's connection (if there is one) is free. */
+int macMgmtSchedulePacket(void)
+{
+	int idle = wlanAnyConnectionFlags2Bit4() == 0;
+	struct WlanConnection *connection;
+	struct WlanConnection *owner;
+
+	for (connection = wlanConnectionFirst(2); idle && connection != NULL;
+	     connection = wlanConnectionNextFlagged(connection, connection->interfaceType)) {
+		if (wlanConnectionBssStarted(connection) == 1) {
+			idle = 0;
+			break;
+		}
+	}
+	owner = p2pDirectProcessEntry(2);
+	if (idle && owner != NULL)
+		return owner->state == 0;
+	return idle;
+}
+
 /* The channel of the BSS and its secondary channel (the channel flags: bits 4-5 the offset). out[0]: flags, out[1]: channel. */
 void macMgmtNotifyPacket(struct WlanConnection *connection, uint8_t *out)
 {
@@ -754,7 +811,7 @@ int macMgmtInspectPacket(struct WlanConnection *connection, unsigned int a, unsi
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	unsigned int posture = sysIrqDisable();
 
-	rfCalibRecordQueue(connection, a, b, info->maxStations, info->peerTable);
+	rfCalibRecordQueue(connection, a, b, info->maxStations, info->tim);
 	return sysIrqRestore(posture);
 }
 
@@ -808,7 +865,7 @@ void macMgmtManagePacket(struct WlanConnection *connection, int want)
 	} else if (want == 0) {
 		struct WlanConnectionInfo *same = wlanConnectionInfo(connection);
 
-		same->olbcTimeout = (1000000 * same->obssScan.triggerScanInterval * same->obssScan.widthTransitionDelayFactor) /
+		same->olbcTimeout = (1000000 * same->obssScan.parameters.triggerScanInterval * same->obssScan.parameters.widthTransitionDelayFactor) /
 				    ((unsigned int)connection->beaconPeriod << 10) + 1;
 	}
 	sysIrqRestore(posture);

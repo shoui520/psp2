@@ -195,11 +195,10 @@ struct WlanConnectionInfo {
 	SecurityMode_t securityMode;	/* the BSS's security: noRsn is the open system (the privacy bit stays clear) */
 	uint8_t reserved35;
 	uint32_t qosEnabled;		/* 1: frames go out with WMM queues */
-	uint8_t reserved40[2];
 	union {
-		uint8_t wmmParameter[24];	/* the WMM Parameter element's body, as the BSS sends it */
+		uint8_t wmmElement[26];		/* the WMM Parameter element (id, length, body) as the BSS sends it */
 		struct {
-			uint8_t reserved42[8];	/* OUI, type, subtype, version, QoS Info, reserved */
+			uint8_t reserved40[10];	/* id, length, OUI, type, subtype, version, QoS Info, reserved */
 			uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
 		};
 	};
@@ -216,17 +215,29 @@ struct WlanConnectionInfo {
 	uint32_t uapsdEnabled;		/* 1: the access point supports U-APSD: a peer's QoS Info can request it (inferred) */
 	uint8_t reserved364[132];
 	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
-	uint8_t reserved498[18];
-	struct WlanObssScanParameters obssScan;	/* the overlapping BSS scan parameters element's body */
-	uint8_t reserved530[2];
-	uint8_t extCapability[4];	/* the extended capabilities element's body */
+	uint8_t reserved498[16];
+	struct {
+		uint8_t id;		/* 74 */
+		uint8_t length;		/* 14 */
+		struct WlanObssScanParameters parameters;
+	} obssScan;			/* the overlapping BSS scan parameters element, as the BSS sends it */
+	struct {
+		uint8_t id;		/* 127 */
+		uint8_t length;		/* 4 */
+		uint8_t capability[4];
+	} extCapability;		/* the extended capabilities element */
 	uint32_t mgmtForwardMask;	/* bit n: management frames of subtype n are handed to the host */
 	uint8_t ht2040Managed;		/* nonzero: the BSS starts at 20 MHz and macMgmtManagePacket() widens it */
-	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: broadcast SSID probe requests are answered */
+	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: the SSID is broadcast: beacons carry it and probe requests without one are answered (clear: hidden) */
 	uint8_t reserved542;
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
-	uint8_t reserved545[7];
+	uint8_t wapiConfigured;		/* nonzero: the BSS is a WAPI one; the bytes after it are what its element carries */
+	uint8_t wapiVersion;
+	uint8_t wapiAkm;		/* the authentication and key management suite's type */
+	uint8_t wapiUnicastCipher;
+	uint8_t wapiMulticastCipher;
+	uint8_t reserved550[2];
 	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
 	uint8_t reserved556[20];
 	struct WlanConnection *connection;	/* the connection that owns this block */
@@ -234,7 +245,7 @@ struct WlanConnectionInfo {
 	uint8_t reserved582[2];
 	uint32_t stationCount;		/* stations associated with the access point; data frames go out only when nonzero */
 	uint8_t phyMode;		/* 0, 1, 2: 802.11b only */
-	uint8_t erpInfo;		/* the ERP information element's value */
+	uint8_t erpInfo;		/* 802.11b-only peers associated (a count; nonzero: legacy stations around) */
 	uint8_t nonErpStations;		/* nonzero: protection needed */
 	uint8_t longSlotStations;	/* nonzero: the long slot time is needed */
 	uint8_t rateFlags;		/* WLAN_RATE_FLAG_* */
@@ -251,7 +262,8 @@ struct WlanConnectionInfo {
 	uint8_t challengePending;	/* a challenge is outstanding (one at a time) */
 	uint8_t reserved737[3];
 	uint8_t aidBitmap[4];		/* association IDs in use, bit n: AID n + 1 */
-	uint8_t peerTable[16];		/* what rfCalibRecordQueue() keeps per peer (inferred) */
+	uint8_t tim[12];		/* the TIM element the beacon carries (macMgmtScheduleFrame() builds it) */
+	uint8_t *timPosition;		/* where the TIM element goes in the beacon template */
 	uint8_t bssStarted;		/* 1: the BSS of a station or access point role is up */
 	uint8_t reserved761[3];
 	uint32_t dozingStations;	/* peers in power save */
@@ -602,8 +614,11 @@ _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS"
 _Static_assert(offsetof(struct WlanConnectionInfo, wmmRecords) == 50, "info WMM records");
 _Static_assert(offsetof(struct WlanConnectionInfo, wapiContext) == 128, "info WAPI context");
 _Static_assert(offsetof(struct WlanConnectionInfo, uapsdEnabled) == 360, "info U-APSD");
-_Static_assert(offsetof(struct WlanConnectionInfo, obssScan) == 516, "info overlapping BSS scan");
-_Static_assert(offsetof(struct WlanConnectionInfo, extCapability) == 532, "info extended capabilities");
+_Static_assert(offsetof(struct WlanConnectionInfo, obssScan) == 514, "info overlapping BSS scan");
+_Static_assert(offsetof(struct WlanConnectionInfo, extCapability) == 530, "info extended capabilities");
+_Static_assert(offsetof(struct WlanConnectionInfo, tim) == 744, "info TIM element");
+_Static_assert(offsetof(struct WlanConnectionInfo, timPosition) == 756, "info TIM position");
+_Static_assert(offsetof(struct WlanConnectionInfo, wapiConfigured) == 545, "info WAPI");
 _Static_assert(offsetof(struct WlanConnectionInfo, mgmtForwardMask) == 536, "info management forwarding");
 _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit power limit");
 _Static_assert(offsetof(struct WlanConnectionInfo, stationCount) == 584, "info station count");

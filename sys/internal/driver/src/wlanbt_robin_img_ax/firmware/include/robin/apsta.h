@@ -61,7 +61,38 @@ const uint8_t *fmCoexComputeTable(WlanWirelessFrame *frame, const WlanWirelessFr
 				  const uint8_t **elements, int *length);		/* 0x4be30 */
 int fmCoexQueryTable(const WlanIePointers *ies);					/* 0x4be7a */
 int fmCoexResetTable(const WlanIePointers *ies);					/* 0x4be8a */
+unsigned int fmCoexSetupBuffer(const struct WlanConnectionInfo *info, uint8_t *ie, unsigned int size); /* 0x4ccb0 */
+unsigned int fmCoexSelectBuffer(const struct WlanConnectionInfo *info, uint8_t *ie);	/* 0x4ce06 */
 unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv);	/* 0x4ce1a */
+int fmCoexSyncTable(uint8_t *destination, const uint8_t *htCapability);		/* 0x4be9a */
+int fmCoexApplyTable(uint8_t *destination, const uint8_t *htOperation);		/* 0x4bea6 */
+int fmCoexResolveTable(uint8_t *destination, const uint8_t *wmmElement);		/* 0x4beb2 */
+
+/* wlan/aptemplate.c: the beacon and probe response templates. */
+struct WlanMacTxRequest;
+uint8_t *fmCoexSelectEntry(OsaBuffer *buffer, const uint8_t *source, const uint8_t *bssid,
+			   unsigned int subtype, int broadcastSsid, const uint8_t *ssid);	/* 0x4bb3c */
+uint8_t *fmCoexAdjustEntry(uint8_t *cursor, const uint8_t *rates, int dsParameter, uint8_t channel); /* 0x4bb84 */
+uint8_t *fmCoexRecordEntry(uint8_t *tim, unsigned int stations, uint8_t dtimPeriod, uint8_t *copy); /* 0x4bbaa */
+void fmCoexFilterEntry(struct WlanMacTxRequest *request, unsigned int subtype,
+		       WlanWirelessFrame *frame, uint8_t *tim);				/* 0x4bbec */
+void fmCoexHandleTable(struct WlanMacTxRequest *request, int nonErp, int protection, int barker); /* 0x4bc24 */
+void fmCoexProcessTable(struct WlanMacTxRequest *request, const uint8_t *htOperation);	/* 0x4bc5e */
+void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
+void macMgmtNotifyFrame(struct WlanConnection *connection, struct WlanMacTxRequest *request); /* 0x3af22 */
+void macMgmtFormatFrame(struct WlanConnection *connection);				/* 0x3af46 */
+void macMgmtInspectFrame(struct WlanConnection *connection);				/* 0x3af64 */
+void macMgmtTrackFrame(struct WlanMacTxRequest *request, uint8_t *htOperation);		/* 0x3af74 */
+void macMgmtManageFrame(struct WlanConnection *connection, struct WlanMacTxRequest *request); /* 0x3aff8 */
+void macMgmtAcquireFrame(struct WlanConnection *connection);				/* 0x3b016 */
+void macMgmtReleaseFrame(struct WlanConnection *connection);				/* 0x3b034 */
+void macMgmtSetupFrame(uint16_t capability, struct WlanMacTxRequest *beacon,
+		       struct WlanMacTxRequest *probe);					/* 0x3b044 */
+void macMgmtClearFrame(struct WlanConnection *connection);				/* 0x3b068 */
+void macMgmtConvertFrame(struct WlanConnection *connection);				/* 0x3b084 */
+void macMgmtVerifyFrame(const uint8_t *ie, struct WlanMacTxRequest *beacon,
+			struct WlanMacTxRequest *probe);				/* 0x3b094 */
+void macMgmtSelectFrame(struct WlanConnection *connection);				/* 0x3b0d0 */
 void fmCoexScheduleTable(uint8_t *frame, uint16_t algorithm, uint16_t sequence,
 			 uint16_t status, const void *challenge);			/* 0x4bebe */
 
@@ -71,6 +102,7 @@ int macMgmtUpdatePacket(struct WlanConnection *connection, const uint8_t *wps, c
 			const void *wpa, const uint8_t *wapi, uint16_t *status);	/* 0x390a2 */
 int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWirelessFrame *request,
 			   unsigned int status);						/* 0x3916c */
+int macMgmtSchedulePacket(void);							/* 0x39cb2 */
 int macMgmtCheckPacket(OsaBuffer *buffer);						/* 0x39898 */
 void macMgmtPreparePacket(struct WlanConnection *connection);				/* 0x398c4 */
 void macMgmtDispatchPacket(OsaBuffer *buffer);						/* 0x39954 */
@@ -113,7 +145,9 @@ int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 /* Not converted yet; provisional names. */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);			/* 0x333ce */
 void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
-int macMgmtSchedulePacket(void);							/* 0x39cb2 */
+unsigned int p2pDirectAdjustState(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x40094 */
+unsigned int p2pDirectVerifyState(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x4008c */
+int p2pDirectValidateContext(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x404be */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int type);			/* 0x41250 */
 void p2pDirectSetupContext(struct WlanConnection *connection, uint8_t *context);	/* 0x40f46 */
 void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
