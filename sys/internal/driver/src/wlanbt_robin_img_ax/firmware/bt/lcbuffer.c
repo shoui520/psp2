@@ -11,6 +11,7 @@
 #include "robin/btsource.h"
 #include "robin/bttable.h"
 #include "robin/eventpower.h"
+#include "robin/hct.h"
 #include "robin/rfbus.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
@@ -3844,4 +3845,178 @@ unsigned int btLmpLcSelectHeader(int link)
 	if (total >= 8)
 		total = 7;
 	return total;
+}
+
+/* The ROM's rate setting of a link's second sample ring. */
+__attribute__((noinline)) uint8_t btLmpLcAdjustHeader(int link)
+{
+	return btLdrRomReleaseState()[link * 116 + 12];
+}
+
+/* The same for the first ring. */
+__attribute__((noinline)) uint8_t btLmpLcRecordHeader(int link)
+{
+	return btLdrRomReleaseState()[link * 116 + 13];
+}
+
+/* Whether more than one payload is in use: the payload register's count, or its links. */
+__attribute__((noinline)) int btLmpLcFilterHeader(void)
+{
+	if (btLinkPayloadRegister == 1)
+		return btLinkPayloadCount > 1;
+	return btLinkPayloadRegister > 1;
+}
+
+/* A step of the slot kind flips its phase. */
+__attribute__((noinline)) void btLmpLcHandleDescriptor(struct BtStepRecord *step)
+{
+	step->phase = step->phase == 1 ? 0 : 1;
+}
+
+struct BtL2capLink btL2capLinks[BT_L2CAP_LINKS] __attribute__((section(".itcm.bss")));	/* 0x5a27c */
+/* 1 while the ROM's timer of the L2CAP streams is set (btLmpLcPrepareDescriptor()). */
+uint8_t btL2capTimerSet __attribute__((section(".itcm.rw")));			/* 0x55340 */
+
+/*
+ * An L2CAP signalling packet of a link: a connection request for AVDTP (PSM 0x19) opens a channel
+ * pair, its response completes it (and counts it open when it succeeded), a disconnection request
+ * closes it. direction says which side's channel identifiers the packet gives.
+ */
+void btLmpLcProcessDescriptor(unsigned int handle, const uint8_t *signal, unsigned int direction)
+{
+	struct BtL2capLink *link = &btL2capLinks[handle];
+	unsigned int first = (signal[9] << 8) | signal[8];
+	unsigned int second = (signal[11] << 8) | signal[10];
+	unsigned int other;
+	unsigned int i;
+
+	if (link->open >= 4 && link->state != 0)
+		return;
+	switch (signal[4]) {
+	case 2:
+		if (first != 0x19)
+			return;
+		if (link->state == 0) {
+			__aeabi_memclr(link, sizeof(*link));
+		} else {
+			for (i = 1; i < 4; i = (uint8_t)(i + 1)) {
+				if (link->channels[i][0] == 0 && link->channels[i][1] == 0) {
+					link->current = i;
+					break;
+				}
+			}
+		}
+		link->channels[link->current][direction] = second;
+		link->state = 1;
+		break;
+	case 3:
+		other = direction == 0 ? 1 : 0;
+		if (link->channels[link->current][other] != second)
+			return;
+		if (link->state == 1)
+			link->state = 2;
+		if (btCoexParam() && link->current == 0)
+			btLmpLcPrepareDescriptor();
+		if (signal[12] == 0 && signal[13] == 0)
+			link->open++;
+		link->channels[link->current][direction] = first;
+		break;
+	case 6:
+		other = direction == 0 ? 1 : 0;
+		for (i = 0; i < 4; i = (uint8_t)(i + 1)) {
+			if (link->channels[i][direction] == second && link->channels[i][other] == first) {
+				link->channels[i][0] = 0;
+				link->channels[i][1] = 0;
+				link->open--;
+				break;
+			}
+		}
+		if (i == 0)
+			link->state = 0;
+		break;
+	}
+}
+
+/* How many ACL links are up with an AVDTP channel being set up or open. */
+int btLmpLcUpdateDescriptor(void)
+{
+	unsigned int count = 0;
+	unsigned int handle;
+
+	for (handle = 0; handle < BT_L2CAP_LINKS; handle = (uint16_t)(handle + 1)) {
+		if (hctLinkActive(handle))
+			count = (uint8_t)(count + (btL2capLinks[handle].state != 0));
+	}
+	return count;
+}
+
+void btLmpLcConfigureDescriptor(void)
+{
+	btL2capTimerSet = 0;
+}
+
+/*
+ * An ACL packet of a link (data: its L2CAP header): a start fragment on the signalling channel
+ * goes to btLmpLcProcessDescriptor(), one on an AVDTP channel marks the link streaming. A change
+ * of that is passed on, and the coexistence code learns the link's capacity and load.
+ */
+void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t direction)
+{
+	struct BtL2capLink *link;
+	unsigned int streaming;
+	unsigned int length;
+	unsigned int channel;
+
+	if (handle >= BT_L2CAP_LINKS)
+		return;
+	link = &btL2capLinks[handle];
+	streaming = link->streaming;
+	length = (data[1] << 8) | data[0];
+	channel = (data[3] << 8) | data[2];
+	if ((type & 3) != 1) {
+		link->streaming = 0;
+		if (channel == 1) {
+			btLmpLcProcessDescriptor(handle, data, direction);
+		} else {
+			const BtHalf *channels = (const BtHalf *)link;
+			unsigned int other = direction == 0 ? 1 : 0;
+			unsigned int i;
+
+			channel = (data[3] << 8) | data[2];
+			for (i = 0; i <= 4; i = (uint8_t)(i + 1)) {
+				if (channels[i * 2 + other] == channel) {
+					link->streaming = 1;
+					break;
+				}
+			}
+		}
+	}
+	if (link->streaming != streaming)
+		btLmpLcSyncTable(link->streaming == 1 ? 1 : 0, handle);
+	if (btCoexParam()) {
+		if (link->streaming == 1)
+			btCoexSetLinkCapacity(romHctHostSlot[handle][4] != 0, romCoexPrimaryFlag != 0);
+		btCoexSetLoad(length);
+	}
+}
+
+/* A link's channels are forgotten; with no AVDTP link left the streams' timer is stopped. */
+void btLmpLcValidateDescriptor(int link)
+{
+	if ((unsigned int)link >= BT_L2CAP_LINKS)
+		return;
+	if (btLmpLcUpdateDescriptor() == 0 && btL2capTimerSet != 0) {
+		btLscRomFormatState(0x13f3, 0);
+		btL2capTimerSet = 0;
+	}
+	__aeabi_memclr(&btL2capLinks[link], sizeof(btL2capLinks[link]));
+}
+
+/* Starts the ROM's timer of the L2CAP streams (event 0x13f3, 1000) once. */
+void btLmpLcPrepareDescriptor(void)
+{
+	if (btL2capTimerSet != 0)
+		return;
+	btL2capTimerSet = 1;
+	btLscRomNotifyState(1000, 0x13f3, 0);
 }

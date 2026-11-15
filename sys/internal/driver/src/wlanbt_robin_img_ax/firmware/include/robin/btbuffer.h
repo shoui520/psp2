@@ -124,7 +124,8 @@ _Static_assert(sizeof(struct BtSlotTiming) == 6, "BtSlotTiming");
 struct BtStepRecord {
 	uint8_t reserved0[20];
 	uint32_t steps;				/* 9 or more: the kind's mode 7 slot may move */
-	uint8_t reserved24[4];
+	uint8_t phase;				/* 0 or 1, flipped by each step */
+	uint8_t reserved25[3];
 };
 _Static_assert(sizeof(struct BtStepRecord) == 28, "BtStepRecord");
 
@@ -453,6 +454,28 @@ void btLmpLcAcquireHeader(unsigned int link);				/* 0x48bd8 */
 void btLmpLcReleaseHeader(void);					/* 0x48be8 */
 void btLmpLcSetupHeader(unsigned int link, uint32_t code);		/* 0x48c24 */
 void btLmpLcClearHeader(unsigned int link);				/* 0x48c5a */
+/*
+ * The L2CAP channels of a link (0x5a27c, one per ACL handle): up to four channel pairs, the
+ * channel identifiers each side gave (index 0 for data the host sent, 1 for data it received),
+ * the AVDTP setup state, whether the last packet was on one of them, how many are open and the
+ * pair being set up.
+ */
+struct BtL2capLink {
+	uint16_t channels[4][2];
+	uint8_t state;				/* 1: connection requested, 2: answered */
+	uint8_t streaming;
+	uint8_t open;
+	uint8_t current;
+};
+_Static_assert(sizeof(struct BtL2capLink) == 20, "BtL2capLink");
+#define BT_L2CAP_LINKS	8
+extern struct BtL2capLink btL2capLinks[BT_L2CAP_LINKS];		/* 0x5a27c */
+extern uint8_t btL2capTimerSet;					/* 0x55340 */
+
+void btLmpLcProcessDescriptor(unsigned int handle, const uint8_t *signal, unsigned int direction);	/* 0x49264 */
+void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t direction);	/* 0x493be */
+void btLmpLcPrepareDescriptor(void);				/* 0x494c2 */
+void btLmpLcConfigureDescriptor(void);				/* 0x493ac */
 void btLmpLcConvertHeader(void);					/* 0x48c96 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 

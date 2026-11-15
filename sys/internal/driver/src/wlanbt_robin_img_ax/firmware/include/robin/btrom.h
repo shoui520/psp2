@@ -214,6 +214,37 @@ void btLdaRomScheduleState(const void *message);
 void btLdaRomConvertState(unsigned int link);
 void btLdaRomFormatState(void);
 void btHccRomQueryState(unsigned int link);
+void btLscRomFormatState(uint32_t event, uint32_t value);
+/* The FM settings code of the ROM (0x03f373c1..), for bt/fm.c. */
+int btSbcRomApplyContext(void *stack, uint32_t size, uint32_t priority, void (*entry)(void)); /* creates the FM task */
+int btSbcRomResolveContext(void);
+int btSbcRomScheduleContext(void);
+void btSbcRomFormatContext(const uint8_t *command);	/* answers a command bt/fm.c does not know */
+int btSbcRomInspectContext(unsigned int index);
+int btSbcRomTrackContext(unsigned int index);
+int btSbcRomManageContext(unsigned int index);
+int btSbcRomAcquireContext(unsigned int index);
+uint32_t btSbcRomClearContext(void);
+void btSbcRomConvertContext(uint32_t value);
+void btSbcRomVerifyContext(uint32_t value);
+int btSbcRomSelectContext(void);
+void btSbcRomRecordContext(uint32_t value);
+uint32_t btSbcRomUpdateEntry(void);
+uint8_t btSbcRomValidateEntry(void);
+int btSbcRomParseEntry(int value);
+int btSbcRomBuildEntry(uint8_t value);
+void btSbcRomComputeEntry(uint32_t value);
+int btSbcRomQueryEntry(uint8_t first, uint8_t second, uint8_t third);
+void btSbcRomSyncEntry(uint8_t value);
+void btSbcRomApplyEntry(uint32_t value);
+uint8_t btSbcRomResolveEntry(void);
+int btSbcRomNotifyEntry(uint8_t value);
+int btSbcRomFormatEntry(uint8_t first, uint8_t second);
+void btSbcRomInspectEntry(uint8_t value);
+void btSbcRomManageEntry(uint8_t value);
+void btSbcRomSetupEntry(void);
+void btSbcRomVerifyEntry(void);
+int btSbcRomSelectEntry(uint8_t *data, uint32_t *count);
 void btLcoRomTrackState(uint32_t kind, uint32_t argument, unsigned int link, const void *message, const void *extra);
 int btLcoRomConvertState(unsigned int link, uint32_t argument);
 int btLcoRomCheckContext(void);

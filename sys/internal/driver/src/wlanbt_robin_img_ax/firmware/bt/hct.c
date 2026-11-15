@@ -37,12 +37,11 @@ extern uint32_t cbProcWindow;
 int rfBlock4Get(void);
 extern uint32_t cbProcSecondaryCounter;
 extern uint32_t romHctCoexMode;
-extern uint32_t romCoexPrimaryFlag;
 
 /* BT link controller RAM patches (bt/lmp, not converted). */
 void *btLmpLcComputeEntry(uint32_t a1);
-void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t a4);
 void btLmpLcConfigureDescriptor(void);
+void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t direction);
 void btLmpLcResetTable(void);
 
 /* AMP controller callbacks (amp, not converted). */

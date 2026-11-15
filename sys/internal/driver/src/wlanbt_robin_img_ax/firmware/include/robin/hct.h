@@ -52,6 +52,7 @@ int hctSendAfhMap(void);
 int hctEnableHost(void);
 int hctSdioIdle(void);
 int hctLinkActive(unsigned int handle);
+extern uint32_t romCoexPrimaryFlag;
 int hctRegisterDriver(void);
 int hctTransportReady(int transport);
 void hctTask(void);

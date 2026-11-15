@@ -136,7 +136,7 @@ int btLmpLcReleaseTable(void);					/* 0x44956 */
 void btLmpLcSetupTable(void);					/* 0x44994 */
 int btLmpLcClearTable(uint32_t event, struct BtDeviceProfile *profile, uint32_t clock, uint32_t argument,
 		      uint32_t burst, uint32_t limit);		/* 0x44a8c */
-int btLmpLcConvertTable(int link);				/* 0x44b34 */
+void btLmpLcConvertTable(int link);				/* 0x44b34 */
 void btLmpLcVerifyTable(uint32_t *request);			/* 0x44b44 */
 int btLmpLcSelectTable(uint16_t *request);			/* 0x44b9e */
 int btLmpLcAdjustTable(void);					/* 0x44bf2 */
@@ -148,6 +148,6 @@ uint8_t btLmpLcAdjustHeader(int link);				/* 0x48f28: the ROM's rate setting of 
 uint8_t btLmpLcRecordHeader(int link);				/* 0x48f3a: the same for the first ring */
 unsigned int btLmpLcSelectHeader(int link);			/* 0x48edc: the link's rate class, 0 to 7 */
 int btLmpLcFilterHeader(void);					/* 0x48f4c */
-int btLmpLcValidateDescriptor(int link);			/* 0x4948e */
+void btLmpLcValidateDescriptor(int link);			/* 0x4948e */
 
 #endif /* ROBIN_BTTABLE_H */

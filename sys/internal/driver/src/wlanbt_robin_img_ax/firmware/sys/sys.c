@@ -127,7 +127,7 @@ int sysInit(void)
 }
 
 /* Installs a line handler; a bad line or a taken line halts (0x00000458). */
-void sysIrqRegister(uint32_t line, SysIrqHandler handler)
+int sysIrqRegister(uint32_t line, SysIrqHandler handler)
 {
 	if (line >= SOC_IRQ_LINE_COUNT)
 		for (;;)
@@ -136,6 +136,7 @@ void sysIrqRegister(uint32_t line, SysIrqHandler handler)
 		for (;;)
 			;
 	sysIrqHandlers[line] = handler;
+	return 0;
 }
 
 int sysIrqUnregister(uint32_t line)

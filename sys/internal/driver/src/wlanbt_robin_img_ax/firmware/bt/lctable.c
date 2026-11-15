@@ -670,10 +670,10 @@ int btLmpLcClearTable(uint32_t event, struct BtDeviceProfile *profile, uint32_t 
 	return result;
 }
 
-int btLmpLcConvertTable(int link)
+void btLmpLcConvertTable(int link)
 {
 	btBdhRomReleaseState(link);
-	return btLmpLcValidateDescriptor(link);
+	btLmpLcValidateDescriptor(link);
 }
 
 /*
