@@ -1595,3 +1595,59 @@ void btLmpLcComputePacket(void)
 	btLtsRomHandleContext();
 	btTargetEntry = 0;
 }
+
+/*
+ * The slots a link at the rate needs, wrapped: for a link record in state 3 (substate 1 or 2: with
+ * the host slot's timing, otherwise 20 and 20 ticks) the image counts them, 0 for 10 ticks or less;
+ * otherwise the ROM does.
+ */
+unsigned int btLmpLcQueryPacket(unsigned int link, unsigned int rate)
+{
+	const uint8_t *record = btLdrRomReleaseState() + 116 * link + 64;
+	unsigned int span;
+	unsigned int extra;
+	unsigned int hold;
+	unsigned int ticks;
+
+	if (record[4] != 3)
+		return btLdrRomTrackState(link, rate);
+	if (record[5] == 1 || record[5] == 2) {
+		span = (uint16_t)(btLinkRateBase + romHctHostSlot[link][12]);
+		hold = romHctHostSlot[link][13];
+		extra = btLinkRateExtra;
+	} else {
+		span = 40;
+		extra = 0;
+		hold = 0;
+	}
+	ticks = ((rate * 5) >> 2) * span / 1000 + extra + hold;
+	if (ticks <= 10)
+		return 0;
+	return (uint16_t)(ticks * 2 / 625 + 1);
+}
+
+/* The ROM's link sync, except for kind 5 on a link record of kind 14. */
+void btLmpLcResetPacket(unsigned int link, unsigned int kind)
+{
+	if (btHccRomApplyState()[120 * link + 21] == 14 && kind == 5)
+		return;
+	btLdrRomSyncState(link, kind);
+}
+
+/* With a link record, bit 2 of the scan slot's flags at 0x22 is set. */
+__attribute__((noinline)) void btLmpLcSyncPacket(void)
+{
+	if (btLinkIndexRecord != 0) {
+		osa_LockAcquire();
+		*(BtHalf *)(btLinkScanSlot + 0x22) |= 4;
+		osa_LockRelease();
+	}
+}
+
+/* The ROM's release, then the scan flag, and every host bitmap bit set. */
+void btLmpLcApplyPacket(void)
+{
+	btLdaRomReleaseState();
+	btLmpLcSyncPacket();
+	btHostBitmap = 0xffff;
+}

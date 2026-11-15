@@ -148,6 +148,8 @@ struct BtHandleMessage {
 	uint32_t id;
 	uint16_t handle;
 };
+extern uint16_t btLinkRateBase;				/* 0x400f7e8: the ticks a rate step is counted on */
+extern uint16_t btLinkRateExtra;				/* 0x400f7ea: the ticks added to a link's rate slots */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -229,6 +231,10 @@ void btLmpLcDispatchPacket(uint8_t *request);			/* 0x46926 */
 unsigned int btLmpLcParsePacket(uint32_t clock, unsigned int count, unsigned int limit, uint8_t *flag);	/* 0x4699c */
 int btLmpLcBuildPacket(uint16_t handle);			/* 0x46a90 */
 void btLmpLcComputePacket(void);				/* 0x46ac8 */
+unsigned int btLmpLcQueryPacket(unsigned int link, unsigned int rate);	/* 0x46b02 */
+void btLmpLcResetPacket(unsigned int link, unsigned int kind);	/* 0x46b7e */
+void btLmpLcSyncPacket(void);					/* 0x46ba2 */
+void btLmpLcApplyPacket(void);					/* 0x46bc2 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
