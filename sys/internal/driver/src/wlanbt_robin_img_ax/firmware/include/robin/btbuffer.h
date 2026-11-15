@@ -259,7 +259,7 @@ void btLmpLcNotifyPacket(void);					/* 0x46c66 */
 void btLmpLcFormatPacket(void);					/* 0x46c74 */
 int btLmpLcInspectPacket(const uint8_t *request);		/* 0x46c82 */
 unsigned int btLmpLcTrackPacket(void);				/* 0x46cb6 */
-uint32_t btLmpLcManagePacket(void);				/* 0x46cf4 */
+uint32_t btLmpLcManagePacket(unsigned int argument);		/* 0x46cf4 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

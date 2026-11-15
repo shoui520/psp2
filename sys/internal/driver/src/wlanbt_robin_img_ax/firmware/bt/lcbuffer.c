@@ -1751,13 +1751,14 @@ unsigned int btLmpLcTrackPacket(void)
 /*
  * Hands out the free target sessions' slots from the device record's clock: each round walks the
  * 13 slot queues, giving the first queue whose link fits its slots there, else filling the gap up
- * to the nearest link. Returns the clock it got to.
+ * to the nearest link. Returns the clock it got to. The ROM's argument is where the fill hook says
+ * to stop (the original keeps it in the argument's stack slot, so its low byte is the start value).
  */
-uint32_t btLmpLcManagePacket(void)
+uint32_t btLmpLcManagePacket(unsigned int argument)
 {
 	uint32_t clock;
 	uint16_t remaining;
-	uint8_t stop;
+	uint8_t stop = (uint8_t)argument;
 
 	btLinkModeControl->header = btTableModeHeader;
 	clock = btDeviceRecord;
