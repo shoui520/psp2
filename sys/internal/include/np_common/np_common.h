@@ -60,6 +60,9 @@ int SceNpCommon_88B18A5B(NpXmlParser *parser, const char *data, int size);
 /* strtol.c: strtol and strtoul */
 int SceNpCommon_4C4AA451(const char *str, const char **end, int base);
 unsigned int SceNpCommon_5B770B80(const char *str, const char **end, int base);
+/* strtol.c: strtoull, and the decimal text's int */
+SceUInt64 SceNpCommon_CF843378(const char *str, const char **end, int base);
+int SceNpCommon_CC8E6AC6(const char *str);
 /* strtol.c: a communication ID from its text, and its text ("NPWR00000_00") */
 int SceNpCommon_5BC54899(SceNpCommunicationId *commId, const char *str);
 int SceNpCommon_E426FEE8(const SceNpCommunicationId *commId, char *str, SceSize size);
@@ -83,6 +86,10 @@ int SceNpCommon_85699AE2(const NpJid *jid, char *buf, SceSize bufSize, SceSize *
 int SceNpCommon_9B7CAA67(SceNpId *npId, const NpJid *jid);
 int SceNpCommon_40CC4D15(NpJid *jid, const SceNpId *npId, char *buf, SceSize bufSize,
 			 SceSize *required);
+
+/* xml.c: the first character of escaped XML text */
+int SceNpCommon_38B54F30(char *dst, SceSize dstSize, const char *src, SceSize srcSize, SceSize *size,
+			 SceSize *used);
 
 /* xml.c: XML text escaped and unescaped; without dst they only measure */
 int SceNpCommon_C2BF5C1F(char *dst, SceSize dstSize, const SceUInt8 *src, SceSize srcSize,

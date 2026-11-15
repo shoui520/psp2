@@ -125,6 +125,7 @@ unsigned long long __udivdi3(unsigned long long n, unsigned long long d)
 	return q.v;
 }
 
+#ifndef LIBSNC_OMIT_SIGNED_DIVISION
 long long __divdi3(long long n, long long d)
 {
 	u64parts nn, dd;
@@ -157,6 +158,7 @@ long long __divdi3(long long n, long long d)
 		q = -q;
 	return q;
 }
+#endif
 
 unsigned long long __umoddi3(unsigned long long n, unsigned long long d)
 {

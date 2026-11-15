@@ -561,7 +561,7 @@ __attribute__((noinline)) int SceNpUtility_8857763D(NpLookupTrans *trans, int op
 				    &infoLength, signature, operation);
 	if (ret < 0)
 		goto error;
-	if (operation == NP_LOOKUP_OPERATION_PROFILES && contentLength == 0 && hasContentLength) {
+	if (operation == NP_LOOKUP_RESPONSE_USER && contentLength == 0 && hasContentLength) {
 		ret = NP_LOOKUP_ERROR_NOT_FOUND;
 		goto error;
 	}

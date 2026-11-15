@@ -46,6 +46,8 @@ unsigned int __udivsi3(unsigned int n, unsigned int d)
 	return (unsigned int)((double)n / (double)d);
 }
 
+/* a module that links only __udivsi3 (SNC's libsnc keeps each in its own object) omits the rest */
+#ifndef LIBSNC_OMIT_SIGNED_DIVISION
 int __divsi3(int n, int d)
 {
 	int sign = n ^ d;
@@ -81,6 +83,7 @@ int __modsi3(int n, int d)
 		q = -q;
 	return n - q * d;
 }
+#endif
 
 #ifndef __SNC__
 unsigned int __aeabi_uidiv(unsigned int n, unsigned int d)

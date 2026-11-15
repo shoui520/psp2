@@ -23,6 +23,13 @@ struct NpLookupTrans;
 struct NpLookupJobHandler;
 struct NpLookupWorker;
 struct NpLookupProfile;
+struct NpLookupXmlParser;
+struct NpXmlSchema;
+struct NpLookupProfileParse;
+struct NpLookupProfilesParse;
+struct NpLookupJidParse;
+struct NpLookupCensorParse;
+struct NpLookupServersParse;
 
 /* lookup.c: sceNpLookupUserProfile and its asynchronous form with the N avatar sizes */
 int SceNpUtilityAvatarN_4A989C1C(SceInt32 reqId, SceInt32 avatarSizeType, const SceNpId *npId,
@@ -83,12 +90,55 @@ int SceNpUtility_23414285(struct NpLookupTitle *title, int operation, const void
 int SceNpUtility_B4423DAF(int titleId, SceUInt32 service);
 int SceNpUtility_C63A0F6B(int reqId);
 int SceNpUtility_B418204E(int reqId, SceNpId *npId);
-int SceNpUtility_7BC7E7F7(int reqId, const SceNpId *npId, SceInt32 avatarSizeType, int count,
-			  struct NpLookupProfile *profile);
+int SceNpUtility_7BC7E7F7(int reqId, const SceNpId *npId, SceInt32 avatarSizeType,
+			  int panelSizeType, struct NpLookupProfile *profile);
 int SceNpUtility_08893FA1(int reqId, const SceNpAvatarUrl *url, SceSize *size, SceSize maxSize,
 			  void *data, void *option);
 int SceNpUtility_C9283605(int reqId, const SceNpId *npId, const char *comment,
 			  char *sanitizedComment, int sanitize);
+int SceNpUtility_1392F18F(struct NpLookupTrans *trans, struct NpLookupProfile *profile,
+			  SceInt32 *ptlp, SceInt32 *update, SceRtcTick *date, SceSize size);
+int SceNpUtility_9EEDD7F8(struct NpLookupTrans *trans, struct NpLookupProfile *profiles,
+			  SceInt32 *results, SceUInt32 count, SceUInt32 requested, SceSize size);
+int SceNpUtility_C2598A46(int reqId, const SceNpId *npIds, SceUInt32 count,
+			  SceInt32 avatarSizeType, SceInt32 panelSizeType,
+			  struct NpLookupProfile *profiles, SceInt32 *results);
+int SceNpUtility_E64B4101(int reqId, const char *url, SceSize *outSize, SceSize maxSize,
+			  void *data, void *option);
+int SceNpUtility_4B30CAEF(struct NpLookupTrans *trans, const char *comment, char *sanitized,
+			  int sanitize, int *passed, SceSize size);
+int SceNpUtility_8951DA6B(char *buf, SceSize bufSize, const SceNpId *npId,
+			  SceUInt32 avatarSizeType, SceUInt32 panelSizeType, int service);
+int SceNpUtility_DFFF438A(char **body, const SceNpId *npIds, SceUInt32 count,
+			  const SceInt32 *results, SceSize *answered, SceUInt32 avatarSizeType,
+			  SceUInt32 panelSizeType, int service);
+int SceNpUtility_83445FED(char *buf, SceSize bufSize, const char *onlineId);
+int SceNpUtility_60D70B4A(char *buf, SceSize bufSize, const SceNpCommunicationId *commId,
+			  const SceNpId *npId, const char *comment, char *sanitizedComment,
+			  int sanitize, int service);
+
+/* xml.c: the parser of the servers' XML and its handlers */
+int SceNpUtility_31423835(struct NpLookupXmlParser *parser, const struct NpXmlSchema *schema,
+			  int (*handler)(struct NpLookupXmlParser *, int, SceUInt32, SceUInt32,
+					 const char *, const char *, void *),
+			  void *arg);
+int SceNpUtility_C01F7C6A(struct NpLookupXmlParser *parser, const char *buf, int size);
+int SceNpUtility_E2135903(struct NpLookupXmlParser *parser, const char *buf, int size);
+int SceNpUtility_E9544993(int event, SceUInt32 depth, SceUInt32 element, const char *name,
+			  const char *value);
+int SceNpUtility_C02139E5(int event, const char *name, const char *value, char *url, int *id,
+			  SceUInt32 *flags, int *count);
+int SceNpUtility_15227842(struct NpLookupXmlParser *parser, int type, int reserved,
+			  struct NpLookupServersParse *state);
+int SceNpUtility_AB499EA4(struct NpLookupServersParse *state);
+int SceNpUtility_2580CDAF(struct NpLookupXmlParser *parser, struct NpLookupJidParse *state);
+int SceNpUtility_5D75C414(struct NpLookupJidParse *state);
+int SceNpUtility_839F805E(struct NpLookupXmlParser *parser, int mode, struct NpLookupProfileParse *state);
+int SceNpUtility_F32ED701(struct NpLookupProfileParse *state);
+int SceNpUtility_04AA56CB(struct NpLookupXmlParser *parser, struct NpLookupProfilesParse *state);
+int SceNpUtility_A3767D45(struct NpLookupProfilesParse *state);
+int SceNpUtility_67147C73(struct NpLookupXmlParser *parser, struct NpLookupCensorParse *state);
+int SceNpUtility_A9D5542A(struct NpLookupCensorParse *state);
 
 /* memory.c: the services' heaps */
 void *SceNpUtility_8CA24D19(SceSize size, int service);

@@ -17,6 +17,8 @@
 #include <kernel/sysmem.h>
 #include <libkernel/libkernel.h>
 #include <libhttp.h>
+#include <rtc.h>
+#include <kernel/openpsid.h>
 #include <np/np_common.h>
 #include <np/np_error.h>
 #include <np/np_word_filter.h>
@@ -26,6 +28,7 @@
 #include "np_utility.h"
 
 /* the imports SceNpUtility takes from libraries the tree has no header of yet */
+extern int sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId);
 extern int SceNpManager_96DF1B76(SceNpCommunicationConfig *commConf);
 extern void SceNpManager_9554802B(const void *data1, const void *data2, const void *data3);
 extern int sceHttpsEnableOptionPrivate(int id, SceUInt32 sslFlags);
@@ -35,6 +38,12 @@ extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 
 /* the lookup server answered 404 to a request it names a user by (operation 10) */
 #define NP_LOOKUP_ERROR_NOT_FOUND	-2141911160	/* 0x80550788 */
+
+/* a profile of a multiple request the server did not answer */
+#define NP_LOOKUP_ERROR_PENDING		-2141911159	/* 0x80550789 */
+
+/* a servers' list was asked for a type it does not know */
+#define NP_LOOKUP_ERROR_UNKNOWN_SERVERS	-2141911166	/* 0x80550782 */
 
 /* a server name and the domain did not fit in a URL of 256 bytes */
 #define NP_LOOKUP_ERROR_URL_TOO_LONG	-2141911167	/* 0x80550781 */
@@ -53,7 +62,13 @@ extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 #define NP_LOOKUP_OPERATION_PROFILE	1
 #define NP_LOOKUP_OPERATION_NP_ID	3
 #define NP_LOOKUP_OPERATION_AVATAR	4
-#define NP_LOOKUP_OPERATION_PROFILES	10
+#define NP_LOOKUP_OPERATION_URL		5
+#define NP_LOOKUP_OPERATION_CENSOR	6
+#define NP_LOOKUP_OPERATION_SANITIZE	7
+#define NP_LOOKUP_OPERATION_PROFILES	8
+
+/* the response kind 8857763D reads a missing user's 404 for */
+#define NP_LOOKUP_RESPONSE_USER		10
 
 /* a request's type: its server and path (request.c's table) */
 #define NP_LOOKUP_REQUEST_NONE		0
@@ -77,6 +92,19 @@ typedef struct NpLookupRequestType {
 	const char *reserved;			/* 0x18: "" in every type, never read */
 } NpLookupRequestType;
 
+/* what a transaction's data holds while a download is read in parts */
+typedef struct NpLookupDownload {
+	int state;				/* 0x00: NP_LOOKUP_DOWNLOAD_* */
+	SceSize size;				/* 0x04 */
+	SceSize left;				/* 0x08 */
+	int result;				/* 0x0C: the error that ended it */
+} NpLookupDownload;
+
+#define NP_LOOKUP_DOWNLOAD_IDLE		0
+#define NP_LOOKUP_DOWNLOAD_READING	1
+#define NP_LOOKUP_DOWNLOAD_DONE		2
+#define NP_LOOKUP_DOWNLOAD_FAILED	3
+
 /* a user's profile as the getprof server describes it */
 typedef struct NpLookupProfile {
 	SceNpId npId;				/* 0x000 */
@@ -87,8 +115,18 @@ typedef struct NpLookupProfile {
 	SceNpMyLanguages languages;		/* 0x0DC */
 	int iconId;				/* 0x0EC */
 	SceNpAboutMe aboutMe;			/* 0x0F0 */
-	SceUInt64 color;			/* 0x130 */
-	SceUInt8 reserved2[0x90];		/* 0x138 */
+	union {
+		SceUInt64 ucbgp;		/* 0x130 */
+		struct {
+			SceUInt32 bgColor;	/* 0x130 */
+			SceInt32 type;		/* 0x134: 2 when the panel is named */
+		} panel;
+	} color;
+	SceUInt32 panelId;			/* 0x138 */
+	char panelUrl[128];			/* 0x13C */
+	SceUInt8 reserved2[4];			/* 0x1BC */
+	SceInt32 plusIcon;			/* 0x1C0 */
+	SceUInt8 reserved3[4];			/* 0x1C4 */
 } NpLookupProfile;
 
 /* the services, each with its own heap and lists */
@@ -122,9 +160,14 @@ typedef struct NpLookupAllocation {
 /* a server of a client's list (the request code reads it), each freed by the client */
 typedef struct NpLookupServer {
 	const char *name;			/* 0x00 */
-	SceUInt8 reserved[8];			/* 0x04 */
+	SceUInt16 port;				/* 0x04 */
+	SceUInt16 id;				/* 0x06 */
+	int status;				/* 0x08: NP_LOOKUP_SERVER_STATUS_* */
 	struct NpLookupServer *next;		/* 0x0C */
 } NpLookupServer;
+
+#define NP_LOOKUP_SERVER_STATUS_ALIVE		3
+#define NP_LOOKUP_SERVER_STATUS_MAINTENANCE	4
 
 /* a client: the HTTP template of one NP ID */
 typedef struct NpLookupClient {
@@ -272,5 +315,104 @@ static inline int npLookupWorkerError(int ret)
 	}
 	return ret;
 }
+
+/*
+ * The XML the servers answer in is read by SceNpCommon's parser (np_common/np_common.h), its
+ * schema and its events; this module links a build of it whose text buffer holds 0x400
+ * characters, and with it the parser's callback and state.
+ */
+#define NP_LOOKUP_XML_STATE_TEXT_OUTSIDE	0
+#define NP_LOOKUP_XML_STATE_TAG			1
+#define NP_LOOKUP_XML_STATE_ATTRIBUTES		2
+#define NP_LOOKUP_XML_STATE_TEXT		3
+#define NP_LOOKUP_XML_STATE_END_TAG		4
+#define NP_LOOKUP_XML_STATE_ATTRIBUTE_NAME	5
+#define NP_LOOKUP_XML_STATE_ATTRIBUTE_VALUE	6
+
+#define NP_LOOKUP_XML_FLAG_STARTED		1	/* the attribute's value has begun */
+#define NP_LOOKUP_XML_FLAG_QUOTED		2	/* inside its quotes */
+
+#define NP_LOOKUP_XML_NAME_MAX			0x100
+#define NP_LOOKUP_XML_VALUE_MAX			0x401
+#define NP_LOOKUP_XML_DEPTH_MAX			6
+
+struct NpLookupXmlParser;
+
+typedef int (*NpLookupXmlHandler)(struct NpLookupXmlParser *parser, int event, SceUInt32 depth,
+				  SceUInt32 index, const char *name, const char *value,
+				  void *arg);
+
+typedef struct NpLookupXmlParser {
+	const NpXmlSchema *schema;		/* 0x000 */
+	char name[NP_LOOKUP_XML_NAME_MAX];	/* 0x004: the element or attribute name */
+	char value[NP_LOOKUP_XML_VALUE_MAX];	/* 0x104: the attribute value or element text */
+	char pending[7];			/* 0x505: a character split between two buffers */
+	SceSize pendingLength;			/* 0x50C */
+	SceSize pendingNeeded;			/* 0x510: the bytes it still needs */
+	SceUInt32 depth;			/* 0x514 */
+	SceUInt32 index[NP_LOOKUP_XML_DEPTH_MAX]; /* 0x518: the schema element at each depth */
+	SceUInt32 state;			/* 0x530 */
+	SceUInt32 flags;			/* 0x534 */
+	SceSize length;				/* 0x538: of name or value */
+	int closed;				/* 0x53C: the element ends in this tag */
+	NpLookupXmlHandler handler;		/* 0x540 */
+	void *arg;				/* 0x544 */
+} NpLookupXmlParser;			/* 0x548 */
+
+/* the profile response's state while it is parsed */
+typedef struct NpLookupProfileParse {
+	int mode;				/* 0x00: 1 with the user's JID, 2 without */
+	NpLookupProfile *profile;		/* 0x04 */
+	SceInt32 update;			/* 0x08 */
+	SceInt32 ptlp;				/* 0x0C */
+	SceUInt32 flags;			/* 0x10 */
+	SceUInt8 reserved[4];			/* 0x14 */
+	SceRtcTick date;			/* 0x18 */
+	SceUInt32 service;			/* 0x20 */
+	SceUInt8 reserved2[4];			/* 0x24 */
+} NpLookupProfileParse;			/* 0x28 */
+
+/* the response to several profiles at once while it is parsed */
+typedef struct NpLookupProfilesParse {
+	NpLookupProfile *profiles;		/* 0x00 */
+	SceInt32 *results;			/* 0x04 */
+	SceUInt32 count;			/* 0x08 */
+	SceUInt32 answered;			/* 0x0C */
+	SceUInt32 requested;			/* 0x10 */
+	SceUInt32 flags;			/* 0x14 */
+	SceUInt32 service;			/* 0x18 */
+	int inProfile;				/* 0x1C */
+	SceInt32 index;				/* 0x20 */
+} NpLookupProfilesParse;			/* 0x24 */
+
+/* the response to an online ID's search while it is parsed */
+typedef struct NpLookupJidParse {
+	SceNpId *npId;				/* 0x00 */
+	SceUInt32 flags;			/* 0x04 */
+	SceUInt32 service;			/* 0x08 */
+} NpLookupJidParse;				/* 0x0C */
+
+/* the response to the check of a comment while it is parsed */
+typedef struct NpLookupCensorParse {
+	char *text;				/* 0x00: the comment sent */
+	char *sanitized;			/* 0x04 */
+	int sanitize;				/* 0x08 */
+	int passed;				/* 0x0C */
+	SceUInt32 flags;			/* 0x10 */
+	SceUInt32 service;			/* 0x14 */
+} NpLookupCensorParse;				/* 0x18 */
+
+/* the response to the servers' list while it is parsed */
+typedef struct NpLookupServersParse {
+	int type;				/* 0x00: 1 searchjid, 2 matching2 and agent */
+	int reserved;				/* 0x04 */
+	NpLookupServer **head;			/* 0x08 */
+	NpLookupServer *tail;			/* 0x0C */
+	int status;				/* 0x10 */
+	SceUInt16 id;				/* 0x14 */
+	SceUInt16 port;				/* 0x16 */
+	SceUInt32 flags;			/* 0x18 */
+	SceUInt32 service;			/* 0x1C */
+} NpLookupServersParse;				/* 0x20 */
 
 #endif
