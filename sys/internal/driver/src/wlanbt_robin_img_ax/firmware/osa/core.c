@@ -334,7 +334,6 @@ const uint8_t *osaFindTlv(const uint8_t *data, int type, int length)
 /* Driver registrations run once at start-up; the names below are provisional. */
 int btSdioHciScheduleHeader(void);	/* 0x00026224 */
 int btSdioHciAdjustState(void);		/* 0x00020e2c */
-int btSbcUpdateState(void);		/* 0x0004d548 */
 int btSbcBuildEntry(void);		/* 0x0004f490 */
 int btSdioHciFormatBuffer(void);	/* 0x0002366c */
 int ampPalBuildState(void);		/* 0x00002782 */
