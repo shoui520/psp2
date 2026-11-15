@@ -335,3 +335,162 @@ void btLmpLcResetBuffer(uint8_t *command)
 	*(BtHalf *)(record + 4) = (*(const BtHalf *)(command + 6) + 1) >> 1;
 	records[116 * *(const BtHalf *)(command + 4) + 1] = command[8];
 }
+
+/* The slots a packet kind takes: 3 for the kinds 16, 32, 256 and 512, else 1. */
+static inline unsigned int btLinkKindSlots(unsigned int kind)
+{
+	if (kind == 16 || kind == 32 || kind == 256 || kind == 512)
+		return 3;
+	return 1;
+}
+
+/*
+ * Looks for a free slot for a new link from *slot on (the clock counting with it), against every
+ * link the ROM runs on the same host device: a link in mode 1 holds the slots its clock and its
+ * packets take, any other link those of its interval within the guard. The first free slot (or the
+ * one the search ended at) is given back in *slot, with the link it stopped at in *link.
+ */
+void btLmpLcSyncBuffer(uint16_t *linkOut, uint8_t *slotOut, int clock, const uint8_t *request)
+{
+	const uint8_t *records = btLdrRomReleaseState();
+	unsigned int slot = *slotOut;
+	unsigned int self = *(const BtHalf *)(request + 4);
+	unsigned int kind = *(const BtHalf *)(request + 12);
+	int period = request[9] >> 1;
+	unsigned int mark = request[10];
+	unsigned int extra = request[15] >> 1;
+	unsigned int device = romHctHostSlot[*(const BtHalf *)(request + 6)][4];
+	unsigned int start = slot;
+	unsigned int factor = btLinkSlotFactor;
+	unsigned int guard;
+	unsigned int link;
+	int free;
+
+	if (factor == 0)
+		factor = 1;
+	guard = (uint16_t)((int)(factor * 2) / 2);
+	do {
+		link = 1;
+		free = 1;
+		while (records[116 * link] == 0 && link < 11)
+			link = (uint16_t)(link + 1);
+		while (link != 11) {
+			const uint8_t *record;
+			const uint8_t *host;
+			unsigned int interval;
+			unsigned int count;
+			unsigned int span;
+			unsigned int length;
+			unsigned int hits;
+			unsigned int round;
+			int window;
+			int next;
+
+			if (free != 1)
+				goto advance;
+			record = records + 116 * link;
+			if (btLinkSessionCheck(link) && link != self && romHctHostSlot[link][4] == device) {
+				if (record[28] == 1) {
+					if (clock % period == *(const int *)(const void *)(record + 32) % period)
+						goto advance;
+				} else {
+					unsigned int mine;
+					unsigned int theirs;
+					unsigned int own = btLinkKindSlots(kind);
+					unsigned int other = btLinkKindSlots(*(const BtHalf *)(record + 40));
+
+					if (*(const int *)(const void *)(record + 36) < period)
+						window = (uint8_t)*(const int *)(const void *)(record + 36);
+					else
+						window = period;
+					mine = (uint8_t)(own + extra);
+					theirs = (uint8_t)(record[47] + other);
+					while (own + other <= (unsigned int)window && mine + theirs > (unsigned int)window) {
+						if (theirs > other)
+							theirs = (uint8_t)(theirs - 1);
+						else if (mine > own)
+							mine = (uint8_t)(mine - 1);
+						else
+							break;
+					}
+					while (free == 1 && mine >= 1) {
+						unsigned int k;
+
+						for (k = theirs; free == 1 && k >= 1; k = (uint8_t)(k - 1)) {
+							int otherClock = *(const int *)(const void *)(record + 32) + k - 1;
+
+							if ((int)(clock + mine - 1) % window == otherClock % window) {
+								free = 0;
+								clock = otherClock;
+								if (otherClock >= 0x2000000)
+									otherClock -= 0x2000000;
+								slot = (uint8_t)(otherClock % period);
+							}
+						}
+						mine = (uint8_t)(mine - 1);
+					}
+					if (free != 1)
+						goto advance;
+				}
+			} else if (free != 1) {
+				goto advance;
+			}
+			if (record[68] == 0 || record[68] == 4)
+				goto next_link;
+			interval = *(const BtHalf *)(record + 84);
+			if (interval % period != 0 && period % interval != 0)
+				goto next_link;
+			host = romHctHostSlot[link];
+			if (host[4] == 0 && btLinkPayloadRegister != 0)
+				goto next_link;
+			if (device != 0 && host[4] == device && (record[69] == 4 || record[69] == 3) &&
+			    (int)(btLinkPayloadCount - btLinkPayloadRegister) > 0)
+				goto next_link;
+			window = interval < (unsigned int)period ? (uint8_t)interval : period;
+			count = btLinkKindSlots(kind);
+			next = btNextSession(link);
+			if (device == 0 && host[4] != 0)
+				count = (uint8_t)(count + 1);
+			span = btLinkSpanEnabled ? *(const BtHalf *)(record + 90) : 1;
+			length = (uint16_t)(guard + span - 1);
+			hits = 0;
+			for (round = 1; round <= count; ) {
+				unsigned int missed = 0;
+				int base = clock + round;
+				unsigned int j;
+
+				for (j = 1; j <= length; j = (uint16_t)(j + 1)) {
+					if ((base - 1) % window == (int)(next + j - 1) % window) {
+						hits = (uint16_t)(hits + 1);
+						free = 0;
+						if ((int)(length - j) < (int)(guard + (uint8_t)(count - round))) {
+							if (missed >= guard)
+								free = 1;
+						} else if (mark != 0xf8 || j > guard) {
+							free = 1;
+						}
+						break;
+					}
+					missed = (uint16_t)(missed + 1);
+				}
+				round = (uint8_t)(round + 1);
+				if (hits != 0)
+					break;
+			}
+			if (free != 1)
+				goto advance;
+next_link:
+			do
+				link = (uint16_t)(link + 1);
+			while (records[116 * link] == 0 && link < 11);
+		}
+		break;
+advance:
+		clock++;
+		slot = (uint8_t)(slot + 1);
+		if ((int)slot == period)
+			slot = 0;
+	} while (slot != start);
+	*linkOut = link;
+	*slotOut = slot;
+}

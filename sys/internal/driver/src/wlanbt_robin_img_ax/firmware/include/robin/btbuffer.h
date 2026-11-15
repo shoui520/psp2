@@ -29,6 +29,11 @@ extern void (*btLinkEndHook)(void);				/* 0x400edac */
 extern void (*btLinkLimitHook)(uint8_t first, uint8_t second);	/* 0x400f1d0 */
 extern void (*btNextWindow)(int link, uint32_t clock, uint32_t interval);	/* 0x400ed24 */
 extern void (*btNextControl)(int kind, int link);		/* 0x400ecfc */
+extern int (*btLinkSessionCheck)(int link);			/* 0x400f268 */
+extern int (*btNextSession)(int link);				/* 0x400ed04: the clock of the link's next slot */
+extern uint8_t btLinkSlotFactor;				/* 0x400f617 */
+extern uint8_t btLinkSpanEnabled;				/* 0x400f7f2 */
+extern uint8_t btLinkPayloadRegister;				/* 0x400f7fc */
 extern const uint32_t romQueueLc;				/* ROM 0x03f41a44 */
 extern const uint32_t romQueueLsc;				/* ROM 0x03f41a4c */
 
@@ -47,5 +52,6 @@ void btLmpLcBuildBuffer(int link);				/* 0x4514a */
 void btLmpLcComputeBuffer(int link, uint32_t clock, unsigned int next, uint32_t interval);	/* 0x45220 */
 void btLmpLcQueryBuffer(int link, uint32_t held);		/* 0x45246 */
 void btLmpLcResetBuffer(uint8_t *command);			/* 0x452c2 */
+void btLmpLcSyncBuffer(uint16_t *linkOut, uint8_t *slotOut, int clock, const uint8_t *request);	/* 0x45300 */
 
 #endif /* ROBIN_BTBUFFER_H */
