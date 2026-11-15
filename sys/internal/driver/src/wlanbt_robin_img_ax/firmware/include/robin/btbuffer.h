@@ -399,6 +399,8 @@ int btLmpLcNotifyFrame(const uint8_t *message);			/* 0x47f30 */
 int btLmpLcFormatFrame(unsigned int link, uint32_t second);	/* 0x47f68 */
 int btLmpLcInspectFrame(void);					/* 0x47f7e */
 void btLmpLcTrackFrame(void);					/* 0x47fc4 */
+int btLmpLcManageFrame(uint32_t features);			/* 0x4809c */
+void btLmpLcAcquireFrame(unsigned int link);			/* 0x480be */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

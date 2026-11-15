@@ -2916,3 +2916,35 @@ void btLmpLcTrackFrame(void)
 			*(BtHalf *)(type + 4) = (*(BtHalf *)(type + 6) & 0x7fff) - 1;
 	}
 }
+
+/* The features the ROM sets are cut to what its level allows: below 5 bits 0-11, below 3 no 8-11. */
+int btLmpLcManageFrame(uint32_t features)
+{
+	unsigned int level = btLcoRomSelectState(features);
+
+	if (level < 5)
+		features &= 0xfff;
+	if (level < 3)
+		features &= ~0xf00;
+	return btLcoRomClearState(features);
+}
+
+/*
+ * After the ROM's link step, the control word's bit for the link's kind (4 + bits 0-1 of its
+ * record's halfword 6) is cleared. The original reads the word first when the kind is not in the
+ * record's mask (bits 10-13) and tests it with the bit set, a test that never holds.
+ */
+void btLmpLcAcquireFrame(unsigned int link)
+{
+	uint8_t *records = btLtsRomValidateState(0);
+	unsigned int flags;
+	unsigned int kind;
+
+	btLtsRomProcessState(link);
+	flags = *(BtHalf *)(records + link * 40 + 6);
+	kind = flags & 3;
+	if (!((1u << kind) & ((flags >> 10) & 0xf)) &&
+	    (*(volatile uint16_t *)&btLinkControlWord[2] | 1u << (kind + 4)) == 0)
+		return;
+	btLinkControlWord[2] &= ~(1u << (kind + 4));
+}
