@@ -73,7 +73,11 @@ struct FmEventHandler {
 	uint32_t mask;
 };
 
+struct OsaBufferPool;
+
 extern struct FmReply fmReply;					/* SQRAM 0xc0033328 */
+extern void *fmDevice;						/* 0x5534c: the "fm" device the vendor commands write to */
+extern struct OsaBufferPool fmPool;				/* 0x55360: the FM commands' buffers */
 extern struct FmSettings fmSettings;				/* SQRAM 0xc0033490 */
 /* The controller's event sender, set by btSbcQueryEntry(). */
 extern void (*fmEventSend)(struct FmReply *reply, unsigned int length, unsigned int kind); /* DTCM 0x400f2f4 */

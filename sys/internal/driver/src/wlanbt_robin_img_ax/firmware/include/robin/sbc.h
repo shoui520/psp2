@@ -270,7 +270,7 @@ extern OsaBuffer *sbcReceivedPacket;			/* DTCM 0x400fa28: the A2DP packet being 
 extern uint8_t sbcDevicesOpen;				/* DTCM 0x400fa18 */
 extern uint8_t sbcHeld;					/* DTCM 0x400fa34: the stream is not started */
 extern uint32_t sbcReceiveEmpty;			/* DTCM 0x400fa3c: decoder frames without a packet */
-extern int (*sbcPcmStreamHook)(void);			/* DTCM 0x400ef30 */
+extern int (*sbcPcmStreamHook)(const uint32_t *config);	/* DTCM 0x400ef30 */
 extern struct OsaMsgList sbcReceiveQueue;		/* SQRAM 0xc003303c: the received A2DP packets */
 extern struct SbcFrame sbcDecoderFrame;			/* SQRAM 0xc0033194 */
 extern struct MdevDriver sbcAudioDriver;		/* SQRAM 0xc0033204 */
@@ -328,7 +328,7 @@ void mdevRomUpdateState(void *device, OsaBuffer *buffer, uintptr_t argument, uns
 void btSbcRomComputeContext(uint8_t *frame);		/* decodes the H2 header's frame */
 
 /* Not converted yet; provisional prototype. */
-int btSbcPcmStreamHandler(void);			/* 0x515bc */
+int btSbcPcmStreamHandler(const uint32_t *config);	/* 0x515bc: the PCM port's format words, not converted yet */
 void btSbcPcmDmaCallback(void);				/* 0x51764 */
 
 /* bt/sbc.c */

@@ -31,10 +31,10 @@
 static uint8_t fmGatePending __attribute__((section(".itcm.rw")));		/* 0x55344 */
 static uint8_t fmLevel __attribute__((section(".itcm.rw")));			/* 0x55345 */
 static const char *fmDriverName __attribute__((section(".itcm.rw"))) = "fm";	/* 0x55348 */
-static void *fmDevice __attribute__((section(".itcm.rw")));			/* 0x5534c */
+void *fmDevice __attribute__((section(".itcm.rw")));			/* 0x5534c */
 static struct OsaPoolConfig fmPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x118, 2 }; /* 0x55350 */
 static uint32_t fmPoolControl[2] __attribute__((section(".itcm.rw")));		/* 0x55358 */
-static struct OsaBufferPool fmPool __attribute__((section(".itcm.rw"))) = { { { 1, 0, 0 } } }; /* 0x55360 */
+struct OsaBufferPool fmPool __attribute__((section(".itcm.rw"))) = { { { 1, 0, 0 } } }; /* 0x55360 */
 static struct FmEventHandler fmEventHandlers[] __attribute__((section(".itcm.rw"))) = { /* 0x5536c */
 	{ fmCoexConfigureState, 0x0001 },
 	{ fmCoexParseState, 0x0008 },

@@ -64,6 +64,28 @@ extern uint8_t btPowerLevelState[BT_POWER_PROFILES];		/* 0x5578d */
 extern uint8_t btPowerLevelEntry;				/* 0x55798 */
 extern struct BtPowerWord btPowerLevelPacket[BT_POWER_WORDS];	/* 0x557aa */
 
+/* A change to a list of radio words: its new value, or BT_POWER_SKIP to drop the word. */
+struct BtPowerUpdate {
+	uint16_t reg;			/* 0xfff ends the list */
+	uint16_t value;
+};
+
+#define BT_POWER_END		0xfff
+#define BT_POWER_SKIP		0xffe
+#define BT_POWER_FIXED_WORDS	12
+
+/*
+ * The level tables of the fixed level (btPowerLevelContext 7), which btSbcApplyContext() puts in
+ * place of the defaults: register 33's command word, two rows and a column of the mask table, the
+ * changes to the radio words, and the levels' register and record words.
+ */
+extern uint8_t btPowerFixedCommand;					/* 0x5579a */
+extern uint8_t btPowerFixedRows[2][7];					/* 0x5579b */
+extern struct BtPowerUpdate btPowerFixedWords[BT_POWER_FIXED_WORDS];	/* 0x558da */
+extern uint8_t btPowerFixedColumn[BT_POWER_MASKS];			/* 0x5590a */
+extern uint16_t btPowerFixedRegister[BT_POWER_LEVELS];			/* 0x55926 */
+extern uint16_t btPowerFixedRecord[BT_POWER_LEVELS];			/* 0x559ac */
+
 extern uint8_t *btLinkRecord;					/* 0x400f95c */
 extern uint8_t *btLinkEvent;					/* 0x400f948 */
 extern uint16_t *btLinkStatus;					/* 0x400f8f0 */
@@ -146,7 +168,6 @@ int btLmpLcNotifyEntry(void);					/* 0x43b94 */
 
 /* Not converted yet. */
 void btSbcApplyContext(void);					/* 0x4e85c */
-unsigned int btSbcSyncContext(void);				/* 0x4e7c4 */
-int btSbcFilterState(int selector, uint8_t *value);		/* 0x4e35e */
+void btSbcSyncContext(void);					/* 0x4e7c4 */
 
 #endif
