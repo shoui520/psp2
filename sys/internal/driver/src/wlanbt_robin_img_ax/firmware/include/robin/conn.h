@@ -391,7 +391,11 @@ struct WlanConnection {
 	OsaBuffer *beaconBuffer;	/* the beacon template; the frame at its data offset */
 	struct WlanMacTxRequest *probeResponseRequest;
 	OsaBuffer *probeResponseBuffer;	/* the probe response template, from wlanMgmtAllocFrame() */
-	uint8_t reserved192[8];
+	uint32_t rateSet;		/* bit n: rate index n is in the BSS's rate set (wlanRateSetLimits()) */
+	uint8_t ofdmHigh;		/* the highest and lowest rate index of each class in it */
+	uint8_t ofdmLow;
+	uint8_t cckHigh;
+	uint8_t cckLow;
 	/* The signal of the data frames and the beacons (wlan/signal.c), dBm. */
 	int16_t dataNoiseFloor;		/* the last data frame's */
 	int16_t dataRssi;
@@ -529,6 +533,8 @@ _Static_assert(offsetof(struct WlanConnection, txPowerLimit) == 724, "transmit p
 _Static_assert(offsetof(struct WlanConnectionInfo, dataAllowed) == 584, "info data allowed");
 _Static_assert(offsetof(struct WlanConnectionInfo, rateFlags) == 592, "info rate flags");
 _Static_assert(offsetof(struct WlanConnection, channel) == 172, "channel");
+_Static_assert(offsetof(struct WlanConnection, rateSet) == 192, "rate set");
+_Static_assert(offsetof(struct WlanConnection, cckLow) == 199, "CCK low rate");
 _Static_assert(offsetof(struct WlanConnection, beaconBuffer) == 180, "beacon template");
 _Static_assert(offsetof(struct WlanConnection, probeResponseBuffer) == 188, "probe response template");
 _Static_assert(offsetof(struct WlanConnection, noise) == 206, "noise");

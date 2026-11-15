@@ -49,6 +49,7 @@
 #include "robin/subscribe.h"
 #include "robin/txstats.h"
 #include "robin/mactx.h"
+#include "robin/macentry.h"
 
 #define HOSTCMD_U16(p)		((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -432,8 +433,6 @@ int hostCmd006e(struct WlanConnection *connection, char *body, int length);	/* 0
 void hostCmd006f(uint8_t *body, int length);					/* 0x41838 */
 unsigned int hostCmd0070(uint8_t *body);					/* 0x1e826 */
 unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e782 */
-void hostCmd0074Reset(void);							/* 0x311d0 */
-void hostCmd0074Arm(void);							/* 0x311ee */
 void hostCmd0078Parse(uint32_t *status, uint8_t *body, uint32_t *type, uint32_t *extra); /* SQRAM 0xc00078d6 */
 extern void (*hostCmd0078Handlers[])(uint32_t *type, uint32_t *failed);		/* SQRAM 0xc0011f34 */
 void hostCmd007f(struct WlanConnection *connection, uint32_t *rate, uint32_t *flags); /* 0x335b0 */
@@ -443,15 +442,11 @@ void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x42
 void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
 		 uint16_t *wakeDtims, uint16_t *listenBeacons);				/* 0x2cdfc */
 int hostCmd008fWrite(unsigned int length, uint8_t *data);			/* 0x33084 */
-int hostCmd008fApply(void);							/* 0x31224 */
 unsigned int hostCmd008fResolve(uint8_t *body);					/* 0x26fdc */
 void hostCmd0096Enable(void);							/* 0x26c58 */
 void hostCmd0096Disable(void);							/* 0x26c5a */
 unsigned int hostCmd0096Get(void);						/* 0x26c5c */
-void hostCmd0096Track(void);							/* 0x31222 */
 int hostCmd00a9Shutdown(void);							/* 0x1be44 */
-void pmicRegWrite(uint8_t reg, uint8_t value);					/* 0x3121c */
-uint8_t pmicRegRead(uint8_t reg);						/* 0x3121e */
 int hostCmd00af(struct WlanConnection *connection);				/* 0x38608 */
 int hostCmd00b0Set(struct WlanConnection *connection, uint8_t *command);	/* 0x37eb8 */
 int hostCmd00b0Get(struct WlanConnection *connection, uint8_t *command);	/* 0x382b8 */

@@ -48,6 +48,7 @@
 #include "robin/hostcmd.h"
 #include "robin/session.h"
 #include "robin/softtimer.h"
+#include "robin/macentry.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
 struct WlanHwInfo {
@@ -133,11 +134,8 @@ static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((sec
 void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
-void macTxNotifyProcessTable(uint32_t descriptor, uint32_t first, uint32_t second);	/* 0x31450 */
 void macTxNotifySetupPacket(void);							/* 0x32c16 */
 void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
-void hostCmd0074Reset(void);								/* 0x311d0 */
-void hostCmd0074Arm(void);								/* 0x311ee */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
@@ -154,7 +152,6 @@ void wlanPsComputeFrame(void);								/* 0x3d510 */
 void p2pDirectAcquireContext(void);							/* 0x40df6 */
 void uapSqramSelectEntry(void);								/* SQRAM 0xc0009b36 */
 void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
-void macTxNotifyApplyEntry(void);							/* 0x31156 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
 void uapSqramProcessContext(void);							/* SQRAM 0xc0008204 */
 void p2pDirectCheckState(void);								/* 0x3f34c */
@@ -229,8 +226,8 @@ static int wlanInitStageRadio(void)
 
 	wlanCalibrationTableUpdate(NULL, 0, 0, 0);
 	clockHostApplyTarget();
-	macTxNotifyProcessTable(__aeabi_uread4(wlanBssLocalDescriptor), macTxNotifyState[9],
-				macTxNotifyState[13]);
+	wlanMacBringUp(__aeabi_uread4(wlanBssLocalDescriptor),
+		       (const struct MacRegionProvider *)macTxNotifyState[9], macTxNotifyState[13]);
 	if (macTxNotifySetupDone == 0) {
 		macTxNotifySetupDone = 1;
 		macTxNotifySetupPacket();
@@ -439,7 +436,7 @@ int wlanInit(void)
 {
 	ramHook_encrPoolConfig = &wlanEncrPool;
 	wlanPsTrackDescriptor();
-	macTxNotifyApplyEntry();
+	wlanCryptoOpsInit();
 	wlanCcmSetup();
 	wlanRomServicesInit();
 	wlanBaTablesInit();

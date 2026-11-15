@@ -41,6 +41,7 @@
 #include "robin/wlan.h"
 #include "robin/wlanrx.h"
 #include "robin/wlantask.h"
+#include "robin/macentry.h"
 
 /* The MAC's event word and the registers the handler looks at. */
 #define MAC_510_EVENTS		MAC_REG(0x510)	/* pending events; a bit is acknowledged by writing 0 to it */
@@ -103,14 +104,12 @@ void macMgmtCheckDescriptor(void);								/* 0x3bc28 */
 void wlanPsConvertTable(uint32_t activeFrame);							/* 0x3c054 */
 void macMgmtFormatContext(void);								/* 0x35936 */
 void clockHostApplyTarget(void);								/* 0x26b48 */
-void macTxNotifyUpdateTable(void);								/* 0x31596 */
 void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */
 int wlanPsSleepBlocked(void);									/* 0x2ea5c */
 extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
 extern struct OsaEventFlags *macMgmtEventFlags;							/* 0x55138 */
 extern struct OsaEventFlags *macTxNotifyEventFlags;						/* 0x04000180 */
 
-void hostCmd0074Arm(void);									/* 0x311ee */
 void wlanMacSleepDone(void);									/* 0x1caa6 */
 void wlanMacReset(void);									/* 0x1ca28 */
 extern uint8_t wlanPrimaryEvents;								/* 0x04008828, bit 0: radio on */
@@ -485,7 +484,7 @@ void wlanMacResume(unsigned int reason)
 	if (reason == 0)
 		wlanDmaRingsDrain();
 	posture = sysIrqDisable();
-	macTxNotifyUpdateTable();
+	wlanMacDmaRestart();
 	wlanDmaRingClearPending();
 	wlanMacEventMasksSet();
 	if (reason == 0)

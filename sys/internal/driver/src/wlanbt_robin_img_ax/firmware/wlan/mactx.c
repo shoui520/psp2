@@ -31,6 +31,7 @@
 #include "robin/task.h"
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
+#include "robin/macentry.h"
 
 struct WlanTxWindowQueue wlanTxWindowQueues[2] __attribute__((section(".dtcm.bss")));
 uint32_t wlanTxWindowFlags __attribute__((section(".itcm.bss")));
@@ -599,7 +600,6 @@ void macTxAdvanceStage(void)
 
 /* Not converted yet; provisional names. */
 uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused); /* 0x3d2f8 */
-uint8_t wlanTxLowRate(struct WlanConnection *connection, unsigned int limit); /* 0x31db0 */
 void wlanPsTriggerSent(void);					/* 0x2eade */
 int wlanPsUapsdActive(struct WlanConnection *connection);	/* 0x4123c */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
@@ -854,7 +854,6 @@ void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t message); /
 void macTxBeginFrame(void);						/* 0x0f662 */
 unsigned int cbProcNullPriority(void);					/* 0x1e9ba */
 int wlanPsTriggerWanted(void);						/* 0x2ea82 */
-unsigned int wlanTxApGroupRate(struct WlanConnection *connection);	/* 0x31e42 */
 int wlanRateAmpduAllowed(unsigned int rate);				/* 0x3d2e2 */
 uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int *drop, int *eapol,
 			  int reserved, unsigned int packetType, int ampdu,

@@ -21,6 +21,7 @@
 #include "robin/txstats.h"
 #include "robin/wlanrx.h"
 #include "robin/wmm.h"
+#include "robin/macentry.h"
 
 struct WlanWmm wlanWmm __attribute__((section(".dtcm.bss")));					/* 0x04008c4c */
 struct WlanWmmSlot wlanWmmSlots[WLAN_WMM_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x04008ca0 */
@@ -515,8 +516,6 @@ uint8_t wlanWmmParameterElement[26] __attribute__((section(".sqram1.bss")));		/*
 
 extern void wlanTspecTrack(void);						/* 0x4190a */
 extern void wlanTspecManage(void);						/* 0x41940 */
-extern int macTxNotifyReleaseEntry(struct WlanConnection *connection, unsigned int rate,
-				   uint32_t control);				/* 0x3125c */
 extern void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);	/* 0x3cfd2 */
 extern uint8_t wlanTxDataRate(struct WlanConnection *connection, int unused);		/* 0x3d2f8 */
 
@@ -1024,7 +1023,7 @@ uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *s
 			int time = romLibConfigureState(rate, (uint16_t)*(uint32_t *)(status->data + 8),
 							(frame[1] << 8) | frame[0], wlanWmm.enabled);
 
-			airtime += time + macTxNotifyReleaseEntry(connection, rate, *(uint32_t *)(status->data + 8));
+			airtime += time + wlanConnectionAckTime(connection, rate, *(uint32_t *)(status->data + 8));
 			attempts[rate]--;
 		}
 	}

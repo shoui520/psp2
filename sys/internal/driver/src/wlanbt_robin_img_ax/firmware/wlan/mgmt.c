@@ -30,6 +30,7 @@
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
+#include "robin/macentry.h"
 
 #define LE16(p)			((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -97,14 +98,11 @@ struct __attribute__((packed)) WlanCustomIeTable {
 
 /* Not converted yet; provisional names. */
 void macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x38a18 */
-void macTxNotifyConvertTable(int table);					/* 0x31dfe */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
 int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b784 */
 int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b73e */
 void macMgmtResetHeader(int unused, unsigned int channel);			/* 0x3b4b6 */
 int cbProcResetPacket(void);							/* 0x1e42e */
-int macTxNotifySetupTable(uint32_t timeout, uint32_t *status);			/* 0x31dd2 */
-void macTxNotifyClearTable(void);						/* 0x31de8 */
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
 				int broadcast);					/* 0x3d3f0 */
 int p2pDirectTrackContext(const WlanWirelessFrame *frame);			/* 0x40dd6 */
@@ -121,7 +119,6 @@ int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
 void wlanPsResolveFrame(struct WlanConnection *connection, int update, int state); /* 0x3d712 */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
-void macTxNotifyConvertEntry(unsigned int interfaceType, unsigned int lowRate);	/* 0x3128c */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
 void macTxNotifyFilterBuffer(int shared);					/* 0x32510 */
 /* Connection hooks called by code not converted yet. */
@@ -218,10 +215,10 @@ void wlanSetSlotTime(int shortSlot)
 
 	macMgmtPrepareContext((uint8_t *)&flags, NULL);
 	if (flags & 3) {
-		macTxNotifyConvertTable(2);
+		wlanSlotTableSize(2);
 		slotTime = WLAN_SLOT_TIME_SHORT;
 	} else {
-		macTxNotifyConvertTable(1);
+		wlanSlotTableSize(1);
 		slotTime = shortSlot == 1 ? WLAN_SLOT_TIME_SHORT : WLAN_SLOT_TIME_LONG;
 	}
 	romLibScheduleContext();
@@ -380,18 +377,18 @@ int wlanSetChannel(uint32_t channel, const uint8_t *flags, int wait)
 
 	wlanChannelFlagsDecode(flags, &band, &bandwidth);
 	romLibResolveState();
-	if (wait && macTxNotifySetupTable(WLAN_CHANNEL_SWITCH_TIMEOUT, &status) == 0) {
+	if (wait && wlanMacOperationWait(WLAN_CHANNEL_SWITCH_TIMEOUT, &status) == 0) {
 		wlanChannelSwitchHolds++;
 		if (!(status & 0x20))
 			wlanMacResume(0);
 		if (!(status & 0x10))
 			wlanMacFlush();
 		romLibResolveState();
-		macTxNotifySetupTable(0, &status);
+		wlanMacOperationWait(0, &status);
 	}
 	rfSetChannel(band, channel, bandwidth);
 	wlanTxPowerApply();
-	macTxNotifyClearTable();
+	wlanMacOperationRestore();
 	return romLibApplyState();
 }
 
@@ -998,7 +995,7 @@ void wlanApErpUpdate(struct WlanConnection *connection)
 	if (info->phyMode != 0 && (role->channelFlags & WLAN_CHANNEL_BAND_MASK) == WLAN_CHANNEL_BAND_2GHZ) {
 		wlanApRateFlagsUpdate(info->phyMode, &info->erpInfo);
 		macMgmtInspectFrame(connection);
-		macTxNotifyConvertEntry(connection->interfaceType,
+		wlanContentionWindowUpdate(connection->interfaceType,
 					(info->rateFlags & WLAN_RATE_FLAG_LOW_NULL) != 0);
 	}
 }
