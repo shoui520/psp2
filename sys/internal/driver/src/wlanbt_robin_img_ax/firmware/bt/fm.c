@@ -518,8 +518,8 @@ int fmCoexBuildState(unsigned int index)
 	UINT posture;
 
 	posture = tx_interrupt_control(TX_INT_DISABLE);
-	if (btSbcSearchCount <= btSbcSearchLimit)
-		btSbcSearchCount++;
+	if (fmTuner.searchCount <= fmTuner.searchLimit)
+		fmTuner.searchCount++;
 	tx_interrupt_control(posture);
 	btSbcTrackTable(&handle, active);
 	if (fmSettings.eventMask & 0x4) {
@@ -562,7 +562,7 @@ int fmCoexQueryState(unsigned int index)
 {
 	int mode = 0;
 
-	if (btSbcLevelMode != 0)
+	if (fmTuner.levelMode != 0)
 		mode = 3;
 	else if (fmSettings.policy & 0x20000)
 		mode = btSbcRomParseEntry(0);

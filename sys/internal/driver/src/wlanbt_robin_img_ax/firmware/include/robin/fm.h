@@ -56,9 +56,14 @@ _Static_assert(sizeof(struct FmReply) == 252, "FM reply");
  * is written.
  */
 struct FmSettings {
-	uint32_t reserved0[7];
+	uint32_t referenceClock;	/* btSbcInspectEntry() */
+	uint32_t reserved0[3];
+	uint32_t frequency;	/* kHz, the frequency tuned to (btSbcAcquireEntry()) */
+	uint32_t reserved9[2];
 	uint32_t eventMask;	/* events the host wants (fmCoexApplyState()) */
-	uint32_t reserved1[2];
+	uint32_t frequencyOffset;	/* kHz, added before the local oscillator is set */
+	uint16_t reserved1;		/* 15 after btSbcClearEntry() */
+	uint16_t reserved10;
 	uint32_t features;	/* bits 4, 5 and 13 are read here */
 	uint32_t reserved2[4];
 	uint32_t policy;	/* bits 7..4: when the interrupt is rearmed, bit 17: level events */
@@ -80,7 +85,7 @@ extern void *fmDevice;						/* 0x5534c: the "fm" device the vendor commands writ
 extern struct OsaBufferPool fmPool;				/* 0x55360: the FM commands' buffers */
 extern struct FmSettings fmSettings;				/* SQRAM 0xc0033490 */
 /* The controller's event sender, set by btSbcQueryEntry(). */
-extern void (*fmEventSend)(struct FmReply *reply, unsigned int length, unsigned int kind); /* DTCM 0x400f2f4 */
+extern int (*fmEventSend)(struct FmReply *reply, unsigned int length, unsigned int kind); /* DTCM 0x400f2f4 */
 
 /* bt/fm.c */
 int btLmpLcDispatchDescriptor(int line, uint32_t pending);	/* 0x494f4 */
@@ -101,16 +106,96 @@ int fmCoexSyncState(unsigned int index);			/* 0x49d1a */
 int fmCoexApplyState(uint32_t mask);				/* 0x49d26 */
 
 /*
+ * The FM tuner's state (bt/fmtune.c, 0x55694). The fields whose readers are
+ * not converted yet are "reserved" until they are.
+ */
+struct FmTuner {
+	uint8_t reserved0;		/* 0 after btSbcClearEntry() */
+	uint8_t reserved9[4];
+	uint8_t reserved10;		/* 2 after btSbcClearEntry() */
+	uint8_t reserved11;		/* 10 after btSbcClearEntry() */
+	uint8_t reserved12;
+	uint16_t reserved1[3];
+	uint16_t reserved13[3];		/* 20, 15 and 10 after btSbcClearEntry() */
+	uint8_t reserved2[4];		/* 0x0f, 0x17, 0x1f */
+	uint32_t reserved3;		/* 1 */
+	uint32_t tuneDone;		/* set when a tune or search completes */
+	const uint32_t (*filters)[3];	/* ROM: 16 sets of filter words, by frequency */
+	uint32_t reserved5;
+	uint32_t reserved14;		/* 1 after btSbcClearEntry() */
+	uint32_t reserved15;		/* 1 after btSbcClearEntry() */
+	uint8_t band;			/* 30 after btSbcClearEntry(), given to the ROM */
+	uint8_t levelMode;
+	uint8_t reserved7[2];		/* 1 and 0 after btSbcClearEntry() */
+	uint32_t searchCount;
+	uint32_t reserved8[2];
+	uint32_t searchLimit;
+};
+
+_Static_assert(sizeof(struct FmTuner) == 0x44, "FM tuner state");
+
+extern struct FmTuner fmTuner;					/* 0x55694 */
+
+/* The FM block's registers, by their offset from 0x9000d800. */
+#define FM_REGISTER(offset)	REG16(0x9000d800 + (offset))
+#define FM_TUNE_POLLS		500	/* of 66 clock ticks */
+#define FM_TUNE_TIMEOUT		42
+
+/* bt/fmtune.c */
+int btSbcComputeEntry(struct FmReply *reply, unsigned int length, unsigned int kind);	/* 0x4f4fc */
+void btSbcSyncEntry(void);					/* 0x4f544 */
+int btSbcApplyEntry(uint32_t ticks);				/* 0x4f5d0 */
+int btSbcResolveEntry(int search);				/* 0x4f5e4 */
+void btSbcScheduleEntry(int enable);				/* 0x4f686 */
+int btSbcNotifyEntry(int enable);				/* 0x4f734 */
+int btSbcFormatEntry(uint32_t frequency);			/* 0x4f752 */
+uint16_t btSbcInspectEntry(uint32_t value);			/* 0x4f7a6 */
+void btSbcTrackEntry(uint32_t value);				/* 0x4f7ca */
+int btSbcManageEntry(uint32_t vco);				/* 0x4f804 */
+int btSbcAcquireEntry(uint32_t frequency);			/* 0x4f87c */
+uint32_t btSbcSetupEntry(uint32_t clock);			/* 0x4fa7e */
+int btSbcCheckBuffer(uint32_t frequency);			/* 0x50f56: not converted yet */
+int btSbcApplyBuffer(uint32_t value);				/* 0x511d6: not converted yet */
+extern uint8_t btFmLevelThreshold;				/* 0x55740: not converted yet */
+void btSbcRomSetupContext(uint32_t clock);
+void btSbcRomAcquireEntry(unsigned int band, uint8_t *out);
+void btSbcRomReleaseContext(void);
+extern uint16_t (*btFmClockHook)(uint32_t value);		/* DTCM 0x400ef08 */
+extern void (*btFmTimerHook)(uint32_t value);			/* DTCM 0x400ef24 */
+extern int (*btFmStereoHook)(int enable);			/* DTCM 0x400eef4 */
+extern int (*btFmWaitHook)(int search);				/* DTCM 0x400ef28 */
+extern int (*btFmApplyHook)(uint32_t value);			/* DTCM 0x400eee4 */
+
+/* The intermediate frequency (Hz) the local oscillator sits above or below the station. */
+#define FM_INTERMEDIATE		132300
+#define FM_VCO_LIMIT		1550000000u
+
+int btSbcUpdateBuffer(uint32_t frequency);			/* 0x50f2c: not converted yet */
+void btSbcRecordTable(int enable);				/* 0x50e4c: not converted yet */
+void btSbcRomHandleEntry(uint32_t value);
+int btSbcRomCheckEntry(uint32_t vco);
+extern void (*btFmEnableHook)(int enable, unsigned int kind);			/* DTCM 0x400f300 */
+extern void (*btFmInjectionHook)(uint32_t frequency, uint32_t *config);	/* DTCM 0x400eeec */
+extern int (*btFmPllSetupHook)(uint32_t vco, unsigned int highSide, uint32_t *tuned);	/* DTCM 0x400ef18 */
+extern int (*btFmPllDividerHook)(uint32_t tuned);				/* DTCM 0x400ef10 */
+extern int (*btFmPllFractionHook)(uint32_t tuned);				/* DTCM 0x400ef14 */
+extern int (*btFmFilterHook)(uint32_t tuned);					/* DTCM 0x400ef0c: btSbcFormatEntry() */
+extern int (*btFmPllLockHook)(uint32_t tuned);					/* DTCM 0x400ef1c */
+extern void (*btFmMixerHook)(uint32_t oscillator, unsigned int mode);		/* DTCM 0x400eef0 */
+int btSbcRomNotifyContext(struct FmReply *reply, unsigned int length, unsigned int kind);
+void btSbcRomAdjustContext(uint32_t mask, int set);
+extern int (*btFmSearchHook)(uint32_t frequency);		/* DTCM 0x400eedc: btSbcCheckBuffer() */
+extern int (*btFmTuneHook)(uint32_t frequency);		/* DTCM 0x400ef20: btSbcAcquireEntry() */
+extern const uint8_t romFmTable[];			/* ROM 0x03f42070 */
+
+/*
  * The FM settings code, not converted yet; the names are provisional until
  * its file is written. Addresses are those of the 4.00 image.
  */
-extern uint32_t btSbcSearchCount;				/* 0x556c8 */
-extern uint32_t btSbcSearchLimit;				/* 0x556d4 */
-extern uint8_t btSbcLevelMode;					/* 0x556c5 */
 void btSbcQueryEntry(void);					/* 0x4f514 */
-void btSbcResetEntry(void);					/* 0x4f524 */
-void btSbcReleaseEntry(void);					/* 0x4fa4a */
-int btSbcClearEntry(uint8_t mode);				/* 0x4faae */
+int btSbcResetEntry(void);					/* 0x4f524 */
+int btSbcReleaseEntry(void);					/* 0x4fa4a */
+int btSbcClearEntry(uint8_t clock);				/* 0x4faae */
 void btSbcConvertEntry(void);					/* 0x4fb62 */
 void btSbcSelectEntry(void);					/* 0x4fd42 */
 void btSbcAdjustEntry(void);					/* 0x4fd7c */

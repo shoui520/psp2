@@ -822,3 +822,23 @@ int btSbcParseEntry(const uint8_t *command)
 	btBdhRomValidateContext(0, opcode);
 	return 1;
 }
+
+/* Registers the two ROM drivers. */
+void btSbcBuildEntry(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < 2; i++) {
+		btSbcDriverStates[i] = 0;
+		btSbcDrivers[i].index = i;
+		btSbcDrivers[i].name = btSbcDriverNames[i];
+		btSbcDrivers[i].callbacks[0] = btSbcRomAdjustEntry;
+		btSbcDrivers[i].callbacks[1] = btSbcRomRecordEntry;
+		btSbcDrivers[i].callbacks[2] = btSbcRomFilterEntry;
+		btSbcDrivers[i].callbacks[3] = btSbcRomHandleTable;
+		btSbcDrivers[i].callbacks[4] = btSbcRomProcessTable;
+		btSbcDrivers[i].callbacks[5] = btSbcRomConfigureTable;
+		btSbcDrivers[i].callbacks[6] = btSbcRomUpdateTable;
+		mdevRegisterDriver(&btSbcDrivers[i], btSbcRomUpdateTable);
+	}
+}

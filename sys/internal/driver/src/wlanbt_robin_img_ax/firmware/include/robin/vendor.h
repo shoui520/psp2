@@ -162,6 +162,20 @@ int btSbcConfigureEntry(void);								/* 0x4f290 */
 void btSbcPrepareEntry(unsigned int request, unsigned int link, unsigned int value);	/* 0x4f36a */
 void btSbcDispatchEntry(unsigned int event);						/* 0x4f38c */
 int btSbcParseEntry(const uint8_t *command);						/* 0x4f3aa */
+void btSbcBuildEntry(void);								/* 0x4f490 */
+
+/* Two mdev drivers whose callbacks are all in ROM (DTCM descriptors). */
+struct MdevDriver;
+extern struct MdevDriver btSbcDrivers[2];		/* DTCM 0x400df10 */
+extern uint32_t btSbcDriverStates[2];			/* DTCM 0x400fb38 */
+extern const char *btSbcDriverNames[2];			/* DTCM 0x400fb40 */
+int btSbcRomAdjustEntry(void);
+int btSbcRomRecordEntry(void);
+int btSbcRomFilterEntry(void);
+int btSbcRomHandleTable(void);
+int btSbcRomProcessTable(void);
+int btSbcRomConfigureTable(void);
+int btSbcRomUpdateTable(void);
 
 void btBdhRomQueryState(const uint8_t *parameters, uint32_t *status);
 void btLdaRomDispatchState(unsigned int kind);
