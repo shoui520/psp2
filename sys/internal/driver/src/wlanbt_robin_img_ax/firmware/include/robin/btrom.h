@@ -99,6 +99,10 @@ int btLcoRomManageContext(int link);
 struct BtDeviceProfile;
 void btLtsRomQueryState(struct BtDeviceProfile *profile);
 void btLtsRomApplyState(struct BtDeviceProfile *profile, uint32_t clock, uint32_t mode);
+void btLtsRomResetState(struct BtDeviceProfile *profile, struct BtDeviceProfile **link);
+uint16_t btLcoRomScheduleContext(int link);
+void btLcoRomNotifyContext(int link);
+void btLcoRomSetupContext(int link);
 
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);

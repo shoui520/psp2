@@ -62,7 +62,6 @@ extern uint8_t btPowerValueRecord;				/* 0x5578c */
 extern uint8_t btPowerLevelState[BT_POWER_PROFILES];		/* 0x5578d */
 extern uint8_t btPowerLevelEntry;				/* 0x55798 */
 extern struct BtPowerWord btPowerLevelPacket[BT_POWER_WORDS];	/* 0x557aa */
-extern uint8_t btThresholdPolicy;				/* 0x55295 */
 
 extern uint8_t *btLinkRecord;					/* 0x400f95c */
 extern uint8_t *btLinkEvent;					/* 0x400f948 */

@@ -8,6 +8,7 @@
 #include "robin/btpower.h"
 #include "robin/btrom.h"
 #include "robin/btsource.h"
+#include "robin/bttable.h"
 
 /* A halfword of a record the ROM keeps. */
 typedef uint16_t __attribute__((may_alias)) BtHalf;
@@ -187,7 +188,7 @@ unsigned int btLmpLcAdjustEntry(struct BtDeviceProfile *profile, unsigned int fi
 {
 	struct BtSourceRecord *record = &btSourceBuffer[profile->index];
 	const uint8_t *table = btLdrRomReleaseState();
-	int policy = btLmpLcInspectEntry(btThresholdPolicy, profile->index);
+	int policy = btLmpLcInspectEntry(btTableLinkMask, profile->index);
 	unsigned int firstShort = btSource.queue > first;
 	unsigned int secondShort = btSource.queue > second;
 	uint8_t value = 1;
@@ -255,7 +256,7 @@ void btLmpLcRecordEntry(void)
 		if ((late | lateSecond) == 0)
 			goto next;
 		due = (int32_t)(profile->due - btDeviceRecord) > 0;
-		policy = btLmpLcInspectEntry(btThresholdPolicy, link);
+		policy = btLmpLcInspectEntry(btTableLinkMask, link);
 		if (due || (profile->active != 0 && policy != 0 && profile->state == 9)) {
 			btLtsRomQueryState(profile);
 			btLtsRomApplyState(profile, due ? btDeviceRecord : profile->due, policy != 0 ? 5 : profile->state);
@@ -273,7 +274,7 @@ void btLmpLcFilterEntry(struct BtDeviceProfile *profile, unsigned int clock)
 	unsigned int second = btLmpLcSelectEntry(index, clock);
 	unsigned int first = btLmpLcVerifyEntry(index, clock);
 	struct BtSourceRecord *record = &btSourceBuffer[index];
-	int policy = btLmpLcInspectEntry(btThresholdPolicy, index);
+	int policy = btLmpLcInspectEntry(btTableLinkMask, index);
 	int fresh;
 	int late;
 	unsigned int average;

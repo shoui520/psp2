@@ -54,7 +54,7 @@ struct BtSourceState {
  * and writes; the rest is the ROM's.
  */
 struct BtDeviceProfile {
-	uint32_t reserved0;
+	struct BtDeviceProfile *next;		/* the next profile in its slot queue */
 	uint32_t connection;			/* non-zero: the link is up */
 	uint8_t reserved8[6];
 	uint16_t index;				/* its record in btSourceBuffer */
@@ -69,7 +69,9 @@ struct BtDeviceProfile {
 	uint32_t due;				/* the event clock the link's next slot is due at */
 	uint8_t reserved32[20];
 	uint8_t limit;				/* non-zero: the ticks to give the link instead */
-	uint8_t reserved53[15];
+	uint8_t reserved53[3];
+	uint32_t priority;			/* the queue order among profiles due at once */
+	uint8_t reserved60[8];
 	uint8_t state;				/* 5 or 9: the link's mode */
 	uint8_t reserved69[3];
 };
