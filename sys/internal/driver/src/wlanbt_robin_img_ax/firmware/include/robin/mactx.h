@@ -43,10 +43,12 @@ struct WlanPsPeerState {
 	uint8_t triggerPending;		/* set by the transmit task before a direct-link frame */
 	uint8_t noaMode;		/* 1: the Notice of Absence has a CTWindow, 2: it has absence periods */
 	uint8_t powerManagement;	/* the PM bit of the last null frame */
-	uint8_t reserved46;
+	uint8_t noaPresent;		/* wlanDirectLinkPoll(): 1 outside the absence periods of the Notice of Absence, 0 inside one */
 	uint8_t ssidPending;		/* 1: the group's SSID is still to be made ("DIRECT-" and two random characters) */
 	uint8_t channelShared;		/* an infrastructure connection or an access point is up: the group shares its channel */
-	uint8_t reserved49[23];
+	uint8_t reserved49[3];
+	uint32_t directLinkTimer;	/* osaCreateTimer() handle: the delay wlanDirectLinkSend() waits for */
+	uint8_t reserved56[16];
 	uint32_t p2pGroupActive;	/* nonzero while the P2P group is up (inferred: the state machine reads it when it enters or leaves a state) */
 	struct {
 		uint8_t id;		/* 11: the Channel List attribute of the channels both sides support */
@@ -191,6 +193,8 @@ _Static_assert(offsetof(struct WlanPsPeerState, noaAttribute) == 153, "Notice of
 _Static_assert(offsetof(struct WlanPsPeerState, p2pBssActive) == 1188, "P2P BSS active");
 _Static_assert(offsetof(struct WlanPsPeerState, p2pChannel) == 1192, "P2P channel");
 _Static_assert(offsetof(struct WlanPsPeerState, noaMode) == 44, "Notice of Absence mode");
+_Static_assert(offsetof(struct WlanPsPeerState, noaPresent) == 46, "Notice of Absence verdict");
+_Static_assert(offsetof(struct WlanPsPeerState, directLinkTimer) == 52, "direct link timer");
 
 /*
  * What the transmit task hands the frame builder (wlanTxBuildFrame())

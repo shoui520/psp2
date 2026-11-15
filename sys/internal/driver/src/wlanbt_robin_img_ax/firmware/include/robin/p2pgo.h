@@ -12,6 +12,7 @@
 
 struct WlanConnection;
 struct WlanConnectionInfo;
+struct WlanWmmSlot;
 
 /* The bits of WlanPsPeerState.configuredMask that must be set before the group can start. */
 #define P2P_GROUP_REQUIRED	0x3abfcu
@@ -136,5 +137,21 @@ void p2pDirectManageContext(struct WlanConnection *connection);				/* 0x40de4 */
 int p2pDirectAcquireContext(void);							/* 0x40df6 */
 struct WlanP2pClient *p2pDirectReleaseContext(struct WlanConnection *connection, const WlanWirelessFrame *request); /* 0x40e20 */
 int p2pDirectSetupContext(struct WlanConnection *connection, struct WlanP2pClient *client);	/* 0x40f46 */
+
+/* The direct link and the TSPECs of the group (wlan/p2pdirect.c). */
+int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *delay);			/* 0x41050 */
+void wlanDirectLinkTrigger(void);								/* 0x41184 */
+void p2pDirectVerifyContext(void);								/* 0x411a8 */
+void p2pDirectSelectContext(uint32_t timer, uint32_t argument);					/* 0x411be */
+void p2pDirectAdjustContext(struct WlanConnection *connection);					/* 0x411ee */
+void wlanDirectLinkSend(struct WlanConnection *connection, uintptr_t delay);			/* 0x41202 */
+int wlanPsUapsdActive(struct WlanConnection *connection);					/* 0x4123c */
+unsigned int p2pDirectUpdateEntry(struct WlanConnection *connection, unsigned int unused);	/* 0x41268 */
+unsigned int p2pDirectConfigureEntry(void);							/* 0x412d8 */
+unsigned int p2pDirectCheckEntry(void);								/* 0x41304 */
+int p2pDirectValidateEntry(uint8_t *admitted);							/* 0x41338 */
+void p2pDirectPrepareEntry(struct WlanWmmSlot *session, int action);				/* 0x4137e */
+int p2pDirectDispatchEntry(unsigned int slot);							/* 0x413ac */
+void p2pDirectParseEntry(uint32_t timer, uint32_t argument);					/* 0x413e4 */
 
 #endif /* ROBIN_P2PGO_H */

@@ -90,7 +90,7 @@ void clockHostSetMax(void);								/* 0x26ae0 */
 int macTxNotifyUpdatePacket(void);								/* 0x32584 */
 int wlanStaSmLinked(const struct WlanConnection *connection);					/* 0x35faa */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);		/* 0x1d1f6 */
-void p2pDirectUpdateEntry(struct WlanConnection *connection, int kind);			/* 0x41268 */
+unsigned int p2pDirectUpdateEntry(struct WlanConnection *connection, unsigned int unused);			/* 0x41268 */
 void wlanPsAdjustFrame(struct WlanConnection *connection, const uint8_t *body);			/* 0x3db1a */
 void wlanPsRecordFrame(void);									/* 0x3dc46 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body,

@@ -504,7 +504,9 @@ int wlanWmmAppendIe(uint8_t *body, const uint8_t *element)
 
 /* The WMM state of the BSS and its stand-in for a BSS without WMM. */
 uint8_t wlanBssWmmIe[9] __attribute__((section(".dtcm.bss")));				/* 0x04008fc9 */
+struct WlanWmmSlot *wlanWmmSessions[WLAN_WMM_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x04008fa0 */
 uint8_t wlanWmmIe[3][9] __attribute__((section(".dtcm.bss")));				/* 0x04008fd2 */
+uint32_t wlanWmmPolicingTimer __attribute__((section(".dtcm.bss")));				/* 0x04009014 */
 uint16_t wlanWmmPoliced __attribute__((section(".dtcm.bss")));				/* 0x0400900a */
 struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009018 */
 struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009038 */

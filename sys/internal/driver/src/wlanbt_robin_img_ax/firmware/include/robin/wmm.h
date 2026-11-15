@@ -18,7 +18,12 @@
 
 /* A transmit queue's state in the MAC: only the part the WMM code sets (96 bytes, one per TID). */
 struct WlanWmmSlot {
-	uint8_t reserved0[85];
+	uint8_t tspec[53];		/* the TSPEC: TS Info first (wlanTspecApplyBits() reads the user priority and U-APSD from it) */
+	uint8_t mediumTime[2];		/* the TSPEC's medium time (unaligned) */
+	uint8_t state;			/* 0: free; 1: admitted; 4: active */
+	uint8_t reserved56;
+	uint8_t reserved57[27];
+	uint8_t directions;		/* the directions the TSPEC covers (WLAN_TSPEC_UPLINK, WLAN_TSPEC_DOWNLINK) */
 	uint8_t ownQueue;		/* the queue that normally uses the slot */
 	uint8_t fallbackQueue;		/* the queue it falls back to when admission control rules the queue out */
 	uint8_t activeQueue;		/* the queue using it now */
@@ -49,6 +54,8 @@ struct WlanWmmQueue {
 };
 
 _Static_assert(sizeof(struct WlanWmmSlot) == 96, "WMM slot");
+_Static_assert(offsetof(struct WlanWmmSlot, state) == 55, "WMM slot state");
+_Static_assert(offsetof(struct WlanWmmSlot, directions) == 84, "WMM slot directions");
 _Static_assert(sizeof(struct WlanWmmEdca) == 4, "EDCA parameters");
 _Static_assert(sizeof(struct WlanWmmQueue) == 20, "WMM queue");
 
@@ -87,13 +94,16 @@ struct WlanTspecRequest;
 
 extern struct WlanWmm wlanWmm;					/* 0x04008c4c */
 extern struct WlanWmmSlot wlanWmmSlots[WLAN_WMM_SLOTS];		/* 0x04008ca0 */
+extern struct WlanWmmSlot *wlanWmmSessions[WLAN_WMM_SLOTS];	/* 0x04008fa0: the TSPECs admitted, by slot */
 extern uint8_t wlanBssWmmIe[9];				/* 0x04008fc9: the parameter element's header */
 extern uint8_t wlanWmmIe[3][9];					/* 0x04008fd2: the information elements in use */
 extern uint8_t wlanWmmCurrentSlot;				/* 0x04009007 */
+extern uint32_t wlanWmmPolicingTimer;				/* 0x04009014: osaCreateTimer() handle of the medium time's second */
 extern uint16_t wlanWmmPoliced;					/* 0x0400900a */
 extern struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES];	/* 0x04009018 */
 extern struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES];	/* 0x04009038 */
 extern uint8_t wlanWmmFlowBits;					/* 0x04008fda */
+extern uint8_t wlanWmmReferenceBits;				/* 0x04008fe3 */
 extern uint8_t wlanWmmSessionBits;				/* 0x04008fec */
 extern uint8_t wlanWmmElement[26];				/* 0x04008fed: the parameter element, ID 221 */
 extern uint16_t wlanWmmDefaultTime;				/* 0x00054ec0 */
