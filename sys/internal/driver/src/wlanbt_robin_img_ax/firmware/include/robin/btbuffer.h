@@ -139,7 +139,9 @@ extern struct BtModeControl *btLinkModeControl;			/* 0x400f8f4 */
 /* One of the ROM's 14 link sessions. */
 struct BtLinkSession {
 	uint16_t active;
-	uint8_t reserved2[6];
+	uint8_t reserved2[2];
+	uint16_t flags;
+	uint8_t reserved6[2];
 };
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
 extern uint32_t btTargetDeadline;				/* 0x400de5c: the clock target state 5 ends at */
@@ -168,6 +170,8 @@ extern uint32_t btTargetStart;					/* 0x400de00 */
 extern uint16_t btTargetWindow;					/* 0x400ddfa */
 extern uint16_t btTargetIndex;					/* 0x400de04 */
 extern uint8_t btTargetMode;					/* 0x400de06 */
+extern uint8_t btSlotSessionFlags;				/* 0x400cd29 */
+extern struct BtLinkSession *btTargetSession;			/* 0x400ddec */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -260,6 +264,7 @@ void btLmpLcFormatPacket(void);					/* 0x46c74 */
 int btLmpLcInspectPacket(const uint8_t *request);		/* 0x46c82 */
 unsigned int btLmpLcTrackPacket(void);				/* 0x46cb6 */
 uint32_t btLmpLcManagePacket(unsigned int argument);		/* 0x46cf4 */
+int btLmpLcAcquirePacket(uint32_t unused, uint16_t flags, struct BtDeviceProfile *profile, uint8_t entry);	/* 0x46f7c */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

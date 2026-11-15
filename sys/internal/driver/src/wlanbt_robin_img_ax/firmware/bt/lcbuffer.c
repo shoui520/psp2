@@ -1853,3 +1853,53 @@ next:
 	}
 	return clock;
 }
+
+/*
+ * Opens the next target session (the ring wraps at its size) for the profile, or an empty one; the
+ * device record's clock moves on and the session and profile become the target's.
+ */
+int btLmpLcAcquirePacket(uint32_t unused, uint16_t flags, struct BtDeviceProfile *profile, uint8_t entry)
+{
+	int restarted = 0;
+	uint32_t now;
+	uint32_t later;
+	struct BtLinkSession *session;
+	unsigned int header;
+
+	btTargetEnterHook(2);
+	now = btLtsRomParseState(0);
+	if (btLinkModeControl->current == btTableModeHeader) {
+		btLtsRomPrepareState();
+		restarted = 1;
+	}
+	header = btTableModeHeader;
+	session = &btLinkSessions[header];
+	header = (uint8_t)(header + 1);
+	btTableModeHeader = header;
+	if (btLinkModeControl->sessions <= header)
+		btTableModeHeader = 0;
+	if (profile != NULL) {
+		btLtsRomSyncState(profile, session);
+		if ((profile->state == 9 || profile->state == 5) && btLcoRomTrackContext(profile->index) != 0)
+			session->flags |= btSlotSessionFlags;
+		session->active |= flags;
+		btTargetContext = profile->active;
+		btTargetUsed = 0;
+	} else {
+		session->active = flags;
+		btTargetContext = 0;
+		btTargetUsed = btTargetUsed + 1;
+	}
+	later = btLtsRomParseState(0);
+	if ((btTableModeBuffer != 0 && later != btTableModeClock) || (restarted && later != now))
+		btTableModeHeader = btLinkModeControl->current;
+	btTableModeBuffer = 0;
+	if (restarted)
+		btLtsRomDispatchState();
+	btDeviceRecord = btDeviceRecord + 1;
+	btTargetSession = session;
+	btTargetState = (uint32_t)(uintptr_t)profile;
+	btTargetEntry = entry;
+	btTargetLeaveHook(2);
+	return 1;
+}

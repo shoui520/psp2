@@ -42,6 +42,8 @@ struct BtSlotRequest *btTableSlotRequest __attribute__((section(".itcm.rw"))) = 
 /* The link states (bit n: state n) whose slots may be cut short (btLmpLcManagePacket()). */
 uint32_t btTableShortStates __attribute__((section(".itcm.rw"))) = 0x116;	/* 0x552c4 */
 uint32_t btTableModeSlot __attribute__((section(".itcm.rw")));		/* 0x552c8 */
+/* The clock the mode buffer was set at (btLmpLcAcquirePacket()). */
+uint32_t btTableModeClock __attribute__((section(".itcm.rw")));		/* 0x55300 */
 /* The clock the target's slots run out at (btLmpLcParsePacket()). */
 uint32_t btTableTargetClock __attribute__((section(".itcm.rw")));		/* 0x55304 */
 /* Each rate class's slot windows (btLmpLcSetupTable() passes them to btLmpLcApplyTable()). */
