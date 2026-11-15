@@ -33,6 +33,12 @@ uint16_t btTableModeDescriptor __attribute__((section(".itcm.rw"))) = 4;	/* 0x55
 uint16_t btTableModeQueue __attribute__((section(".itcm.rw")));			/* 0x552a6 */
 uint16_t btTablePacketType __attribute__((section(".itcm.rw")));		/* 0x552a8 */
 uint16_t btTablePacketLength __attribute__((section(".itcm.rw")));		/* 0x552aa */
+/* Each rate class's slot windows (btLmpLcSetupTable() passes them to btLmpLcApplyTable()). */
+uint8_t btTableOffsets[8] __attribute__((section(".itcm.rw"))) = { 7, 7, 7, 7, 7, 7, 0, 0 };	/* 0x55308 */
+uint8_t btTableShortWindows[8] __attribute__((section(".itcm.rw"))) = { 4, 7, 10, 10, 13, 13, 13, 13 };	/* 0x55310 */
+uint8_t btTableLongWindows[8] __attribute__((section(".itcm.rw")));	/* 0x55318 */
+uint8_t btTableExtras[8] __attribute__((section(".itcm.rw"))) = { 4, 4, 4, 1, 1, 1, 1, 1 };	/* 0x55320 */
+uint8_t btTableHoldWindows[8] __attribute__((section(".itcm.rw"))) = { 0, 3, 6, 9, 12, 12, 12, 12 };	/* 0x55328 */
 uint8_t btTableRetries[8] __attribute__((section(".itcm.rw")));			/* 0x55330 */
 uint8_t btTableLinkModes[8] __attribute__((section(".itcm.rw")));		/* 0x55338 */
 
@@ -492,5 +498,111 @@ void btLmpLcManageTable(uint8_t *value, uint8_t *previous)
 	if (*value > 1) {
 		*previous = *value;
 		*value = 1;
+	}
+}
+
+/*
+ * What a link's slot setting is against the target link of the ROM: *other is 1 when the target is
+ * another device, *entry the target's entry unless the target is this link; *setting the mean of the
+ * link's two rate settings (in mode 1, those its rings would give), *active whether the link is in
+ * use. A second link on the same device gives setting 1 and inactive.
+ */
+int btLmpLcAcquireTable(struct BtDeviceProfile *profile, const struct BtDeviceProfile *second, uint8_t *other,
+			uint8_t *entry, uint8_t *setting, uint8_t *active)
+{
+	*other = 0;
+	*entry = btTargetEntry;
+	if (btTargetState != 0) {
+		if (btTargetContext != 0) {
+			if (btTargetContext != profile->active)
+				*other = 1;
+			else
+				*entry = 0;
+		} else if (btTargetState == (uint32_t)(uintptr_t)profile) {
+			*entry = 0;
+		}
+		if (profile->state == 11 || profile->state == 10)
+			*entry = 0;
+	}
+	if (profile->active == 0 && btTableLinkModes[profile->index] == 1 &&
+	    (profile->state == 5 || profile->state == 9)) {
+		uint8_t secondSetting = profile->secondSetting;
+		uint8_t firstSetting = profile->firstSetting;
+
+		if (btSource.header & (1 << profile->index))
+			profile->firstSetting = btLmpLcRecordHeader(profile->index);
+		else
+			profile->firstSetting = 1;
+		if (btSource.frame & (1 << profile->index))
+			profile->secondSetting = btLmpLcAdjustHeader(profile->index);
+		else
+			profile->secondSetting = 1;
+		*setting = (profile->secondSetting + profile->firstSetting) >> 1;
+		*active = 0;
+		profile->secondSetting = secondSetting;
+		profile->firstSetting = firstSetting;
+	} else {
+		*setting = (profile->secondSetting + profile->firstSetting) >> 1;
+		*active = profile->active != 0;
+	}
+	if (second != NULL && profile->active != 0 && profile->active == second->active) {
+		*active = 0;
+		*setting = 1;
+		return 1;
+	}
+	return second != NULL ? profile->active : 0;
+}
+
+/* Some link runs in mode 1 or 3, or has a mask. */
+__attribute__((noinline)) int btLmpLcReleaseTable(void)
+{
+	return (btTableLinkMask | btTableModeMask) != 0;
+}
+
+/* Gives each link in use (1 to 7) its slot windows, unless the ROM's target is busy. */
+void btLmpLcSetupTable(void)
+{
+	const uint8_t *links = btLdrRomReleaseState();
+	unsigned int link;
+
+	btLtsRomFilterState();
+	if (romTargetTable != 0 && romTargetTable != 5)
+		return;
+	btLmpLcRecordEntry();
+	if (romTargetTable != 0)
+		return;
+	for (link = 1; link < 8; link = (uint16_t)(link + 1)) {
+		const uint8_t *record = links + 116 * link;
+		struct BtDeviceProfile *profile;
+
+		if (record[0] == 0 || record[68] != 0 || record[52] != 0)
+			continue;
+		profile = &btDeviceProfile[link];
+		if (btLmpLcDispatchTable(link)) {
+			unsigned int rate = btLmpLcSelectHeader(link);
+
+			if (profile->hold != 0) {
+				unsigned int interval = profile->interval;
+				unsigned int window = btTableRegister;
+				int offset = btTableHoldWindows[rate];
+
+				if (interval < window)
+					window = interval;
+				if ((int)(interval - window) < offset)
+					offset = interval - window;
+				btLmpLcApplyTable(profile, window, interval - offset - btTableRegister, offset, 1);
+			} else {
+				btLmpLcApplyTable(profile, btTableShortWindows[rate], btTableOffsets[rate],
+						  btTableLongWindows[rate], btTableExtras[rate]);
+			}
+		} else if (romHctHostSlot[link][4] != 0) {
+			if (btLcoRomManageContext(link) == 0 && btLmpLcReleaseTable() && btLmpLcFilterHeader()) {
+				profile->span = 22;
+				profile->interval = 16;
+			} else {
+				profile->span = btLinkDefaultSpan;
+				profile->interval = 1;
+			}
+		}
 	}
 }

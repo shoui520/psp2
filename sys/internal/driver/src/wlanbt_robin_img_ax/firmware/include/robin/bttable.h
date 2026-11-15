@@ -37,6 +37,11 @@ extern uint16_t btTableModeDescriptor;				/* 0x552a4 */
 extern uint16_t btTableModeQueue;				/* 0x552a6 */
 extern uint16_t btTablePacketType;				/* 0x552a8: index into romStateActiveTable */
 extern uint16_t btTablePacketLength;				/* 0x552aa */
+extern uint8_t btTableOffsets[8];			/* 0x55308 */
+extern uint8_t btTableShortWindows[8];			/* 0x55310 */
+extern uint8_t btTableLongWindows[8];			/* 0x55318 */
+extern uint8_t btTableExtras[8];				/* 0x55320 */
+extern uint8_t btTableHoldWindows[8];			/* 0x55328 */
 extern uint8_t btTableRetries[8];				/* 0x55330: each link's missed slots */
 extern uint8_t btTableLinkModes[8];				/* 0x55338: each link's mode, 0 to 3 */
 extern uint32_t btTableModeSlot;				/* 0x552c8: the clock of the next mode 9 slot */
@@ -60,6 +65,10 @@ extern uint8_t btDeviceBitmap;					/* 0x400cd2c */
 /* The ROM's handler of a due slot, which btLmpLcResolveTable() wraps. */
 extern int (*btNextPayload)(const struct BtSlotEvent *event, struct BtDeviceProfile *profile, uint32_t clock,
 			    uint32_t argument, unsigned int burst, unsigned int limit);	/* 0x400ed84 */
+extern uint32_t btTargetState;					/* 0x400ddf0: the ROM's target link */
+extern uint8_t btTargetContext;					/* 0x400ddf4: the target's device */
+extern uint8_t btTargetEntry;					/* 0x400ddf5 */
+extern uint8_t btLinkDefaultSpan;				/* 0x400f818 */
 extern uint8_t btTargetSlot;					/* 0x400de58: the retries a link is allowed */
 
 void btLmpLcHandleTable(int link, uint16_t length);		/* 0x4414e */
@@ -88,9 +97,15 @@ void btLmpLcFormatTable(int link, uint32_t a1, uint32_t a2);	/* 0x447b2 */
 int btLmpLcInspectTable(int link);				/* 0x44802 */
 void btLmpLcTrackTable(uint8_t *command, uint8_t *result, uint32_t argument);	/* 0x44814 */
 void btLmpLcManageTable(uint8_t *value, uint8_t *previous);	/* 0x44856 */
+int btLmpLcAcquireTable(struct BtDeviceProfile *profile, const struct BtDeviceProfile *second, uint8_t *other,
+			uint8_t *entry, uint8_t *setting, uint8_t *active);	/* 0x44864 */
+int btLmpLcReleaseTable(void);					/* 0x44956 */
+void btLmpLcSetupTable(void);					/* 0x44994 */
 
 /* Not converted yet. */
 uint8_t btLmpLcAdjustHeader(int link);				/* 0x48f28: the ROM's rate setting of the second ring */
 uint8_t btLmpLcRecordHeader(int link);				/* 0x48f3a: the same for the first ring */
+unsigned int btLmpLcSelectHeader(int link);			/* 0x48edc: the link's rate class, 0 to 7 */
+int btLmpLcFilterHeader(void);					/* 0x48f4c */
 
 #endif /* ROBIN_BTTABLE_H */

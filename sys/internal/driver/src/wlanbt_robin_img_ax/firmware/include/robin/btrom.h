@@ -96,6 +96,7 @@ uint8_t *btLdrRomReleaseState(void);
 int btLtsRomManageState(int link, uint8_t *record);
 int btLtsRomScheduleState(uint32_t clock);
 int btLcoRomManageContext(int link);
+void btLtsRomFilterState(void);
 struct BtDeviceProfile;
 void btLtsRomQueryState(struct BtDeviceProfile *profile);
 void btLtsRomApplyState(struct BtDeviceProfile *profile, uint32_t clock, uint32_t mode);
