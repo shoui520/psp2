@@ -541,7 +541,7 @@ static int censorCommentAsync(int reqId, const char *comment, void *option)
 				ret = SceNpUtility_44FE1097(s_worker, 0, 0, job, 0);
 				if (ret >= 0)
 					return ret;
-				trans->state = NP_LOOKUP_TRANS_RUNNING;
+				trans->state = NP_LOOKUP_TRANS_IDLE;
 				ret = npLookupWorkerError(ret);
 				goto release;
 			}
@@ -674,7 +674,7 @@ static int sanitizeCommentAsync(int reqId, const char *comment, char *sanitizedC
 				ret = SceNpUtility_44FE1097(s_worker, 1, 0, job, 0);
 				if (ret >= 0)
 					return ret;
-				trans->state = NP_LOOKUP_TRANS_RUNNING;
+				trans->state = NP_LOOKUP_TRANS_IDLE;
 				ret = npLookupWorkerError(ret);
 				goto release;
 			}

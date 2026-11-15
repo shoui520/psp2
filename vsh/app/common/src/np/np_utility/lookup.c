@@ -576,7 +576,7 @@ static int npIdAsync(SceInt32 reqId, const SceNpOnlineId *onlineId, SceNpId *npI
 				ret = SceNpUtility_44FE1097(s_worker, 0, 0, job, 0);
 				if (ret >= 0)
 					return ret;
-				trans->state = NP_LOOKUP_TRANS_RUNNING;
+				trans->state = NP_LOOKUP_TRANS_IDLE;
 				ret = npLookupWorkerError(ret);
 				goto release;
 			}
@@ -672,7 +672,7 @@ static int userProfileAsync(SceInt32 reqId, SceInt32 avatarSizeType, const SceNp
 	ret = SceNpUtility_44FE1097(s_worker, 1, 0, job, 0);
 	if (ret >= 0)
 		return ret;
-	trans->state = NP_LOOKUP_TRANS_RUNNING;
+	trans->state = NP_LOOKUP_TRANS_IDLE;
 	ret = npLookupWorkerError(ret);
 	goto release;
 
@@ -757,7 +757,7 @@ static int avatarImageAsync(SceInt32 reqId, const SceNpAvatarUrl *avatarUrl,
 	ret = SceNpUtility_44FE1097(s_worker, 2, 0, job, 0);
 	if (ret >= 0)
 		return ret;
-	trans->state = NP_LOOKUP_TRANS_RUNNING;
+	trans->state = NP_LOOKUP_TRANS_IDLE;
 	ret = npLookupWorkerError(ret);
 	goto release;
 

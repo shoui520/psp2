@@ -14,6 +14,7 @@
 #include <kernel/error.h>
 #include <kernel/libkernel.h>
 #include <kernel/threadmgr.h>
+#include <kernel/sysmem.h>
 #include <libkernel/libkernel.h>
 #include <libhttp.h>
 #include <np/np_common.h>
@@ -43,10 +44,9 @@ extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 #define NP_LOOKUP_HEAP_MEMBLOCK		1	/* an mspace on a memory block of its own */
 #define NP_LOOKUP_HEAP_CALLBACK		2	/* the caller's allocator */
 #define NP_LOOKUP_HEAP_NP_COMMON	3	/* SceNpCommon's heap */
-#define NP_LOOKUP_HEAP_NONE		4	/* no service: nothing is allocated */
 
 typedef struct NpLookupHeap {
-	int type;				/* 0x00: NP_LOOKUP_HEAP_* */
+	SceUInt32 type;				/* 0x00: NP_LOOKUP_HEAP_* */
 	SceUID memblock;			/* 0x04 */
 	void *mspace;				/* 0x08 */
 	void *(*malloc)(SceSize size);		/* 0x0C */
@@ -72,7 +72,7 @@ typedef struct NpLookupClient {
 	char environment[16];			/* 0x28 */
 	SceUInt8 platform[8];			/* 0x38: opt[2..3] of the NP ID */
 	SceUInt8 reserved[4];			/* 0x40 */
-	int service;				/* 0x44 */
+	SceUInt32 service;			/* 0x44: compared unsigned */
 	NpLookupAllocation *allocations;	/* 0x48 */
 	struct NpLookupClient *next;		/* 0x4C */
 	struct NpLookupClient *prev;		/* 0x50 */
@@ -98,9 +98,9 @@ typedef struct NpLookupTitle {
 } NpLookupTitle;
 
 /* a transaction's state */
-#define NP_LOOKUP_TRANS_RUNNING		0
-#define NP_LOOKUP_TRANS_QUEUED		1
-#define NP_LOOKUP_TRANS_DONE		2
+#define NP_LOOKUP_TRANS_IDLE		0	/* made, or back from a failed queueing */
+#define NP_LOOKUP_TRANS_QUEUED		1	/* on the worker's queue */
+#define NP_LOOKUP_TRANS_DONE		2	/* its result is set */
 
 /* a transaction: one request of a title context */
 typedef struct NpLookupTrans {
@@ -109,7 +109,7 @@ typedef struct NpLookupTrans {
 	int deleted;				/* 0x08 */
 	int connection;				/* 0x0C */
 	int request;				/* 0x10 */
-	int service;				/* 0x14 */
+	SceUInt32 service;			/* 0x14: compared unsigned */
 	int aborted;				/* 0x18 */
 	NpLookupAllocation *allocations;	/* 0x1C */
 	NpLookupTitle *title;			/* 0x20 */
@@ -121,7 +121,7 @@ typedef struct NpLookupTrans {
 	struct NpLookupTrans *next;		/* 0x38 */
 	struct NpLookupTrans *prev;		/* 0x3C */
 	int result;				/* 0x40 */
-	int state;				/* 0x44: NP_LOOKUP_TRANS_* */
+	SceUInt32 state;			/* 0x44: NP_LOOKUP_TRANS_* */
 	int operation;				/* 0x48: the request it runs, 0 for none yet */
 	void *data;				/* 0x4C */
 	SceUInt8 reserved[4];			/* 0x50 */

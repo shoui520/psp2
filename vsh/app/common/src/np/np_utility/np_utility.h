@@ -58,11 +58,10 @@ int SceNpUtility_B2FD5E9D(SceInt32 reqId, const SceNpAvatarUrl *avatarUrl,
 int SceNpUtility_23414285(struct NpLookupTitle *title, int arg, const SceNpId *npId,
 			  int titleId, int service);
 int SceNpUtility_B4423DAF(int reqId, int service);
+void SceNpUtility_866D737A(struct NpLookupTrans *trans);
 int SceNpUtility_C63A0F6B(int reqId);
 int SceNpUtility_C9283605(int reqId, const SceNpId *npId, const char *comment,
 			  char *sanitizedComment, int sanitize);
-int SceNpUtility_2835BC9B(void);
-void SceNpUtility_191D314C(void);
 
 /* memory.c: the services' heaps */
 void *SceNpUtility_8CA24D19(SceSize size, int service);
@@ -74,13 +73,13 @@ void SceNpUtility_5FC4B7D5(int service);
 void SceNpUtility_418E1324(int service);
 
 /* title.c: a service's title contexts */
-int SceNpUtility_E38548AB(int service);
-void SceNpUtility_485F368A(struct NpLookupTitle *title, int service);
-int SceNpUtility_B9FFB253(int titleId, struct NpLookupTitle **title, int service);
-int SceNpUtility_4013244C(int titleId, int service);
-int SceNpUtility_26B4AC00(int service);
+int SceNpUtility_E38548AB(SceUInt32 service);
+void SceNpUtility_485F368A(struct NpLookupTitle *title, SceUInt32 service);
+int SceNpUtility_B9FFB253(int titleId, struct NpLookupTitle **title, SceUInt32 service);
+int SceNpUtility_4013244C(int titleId, SceUInt32 service);
+int SceNpUtility_26B4AC00(SceUInt32 service);
 int SceNpUtility_44A2F444(const SceNpCommunicationId *commId, const SceNpId *npId, int clientId,
-			  int service);
+			  SceUInt32 service);
 int SceNpUtility_D03605CD(int titleId, struct NpLookupTitle **title);
 
 /* trans.c: a service's transactions */
@@ -88,15 +87,17 @@ int SceNpUtility_9F142A92(int service);
 int SceNpUtility_200BBAC5(int service);
 void SceNpUtility_31D3542E(struct NpLookupTrans *trans);
 int SceNpUtility_25D26B6F(int reqId, struct NpLookupTrans **trans);
-int SceNpUtility_D5BB8464(int reqId, int service);
+int SceNpUtility_D5BB8464(int reqId, SceUInt32 service);
 int SceNpUtility_6DF884DA(int service);
 int SceNpUtility_46543307(struct NpLookupTrans *trans, void *ptr);
-int SceNpUtility_A48B44C9(struct NpLookupClient *client, int operation, int service,
+int SceNpUtility_A48B44C9(struct NpLookupClient *client, int operation, SceUInt32 service,
 			  void **data, int titleId);
 int SceNpUtility_F5086697(int reqId, int result);
 int SceNpUtility_8904FE15(int reqId, int *result);
 int SceNpUtility_16954FFF(void);
 void SceNpUtility_5D6FC99E(int state);
+SceBool SceNpUtility_2835BC9B(void);
+void SceNpUtility_191D314C(void);
 
 /* worker.c: the worker thread of the asynchronous requests */
 int SceNpUtility_6EB4C8FE(void *worker, int priority, SceSize stackSize, int cpuAffinityMask,

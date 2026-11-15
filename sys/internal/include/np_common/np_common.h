@@ -64,6 +64,12 @@ int SceNpCommon_E426FEE8(const SceNpCommunicationId *commId, char *str, SceSize 
 /* jid.c: the NP environment's name ("np" on the retail network) */
 int sceNpCommonGetNpEnviroment(char *environment);
 
+/* util.c: SceNpCommon's heap */
+void *sceNpCommonMallocNpServerName(SceSize size);
+void sceNpCommonFreeNpServerName(void *ptr);
+/* util.c: NP full test (the registry's on a test or development unit, else the settings') */
+SceBool SceNpCommon_BBC13621(void);
+
 #ifdef __cplusplus
 }
 #endif
