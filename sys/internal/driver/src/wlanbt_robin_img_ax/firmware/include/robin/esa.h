@@ -229,12 +229,15 @@ _Static_assert(sizeof(key_MgtMaterial_t) == 56, "key material");
 
 
 
-/* keyCommonDef.h: the header of a key the MAC installed */
+/*
+ * keyCommonDef.h: the header of a key the MAC installed. Marvell's splits the
+ * byte after keyDirection into keyType:4 and version:4; this firmware reads
+ * and writes it as one byte, the key type.
+ */
 typedef struct cipher_key_hdr_t {
 	IEEEtypes_MacAddr_t macAddr;
 	uint8_t keyDirection;
-	uint8_t keyType : 4;
-	uint8_t version : 4;
+	uint8_t keyType;
 	uint16_t keyLen;
 	uint8_t keyState;
 	uint8_t keyInfo;
@@ -246,12 +249,25 @@ _Static_assert(sizeof(cipher_key_hdr_t) == 12, "cipher key header");
 #define KEY_STATE_ENABLE			0x01
 #define KEY_STATE_FORCE_EAPOL_UNENCRYPTED	0x02
 
+/* keyApiStaTypes.h: cipher_key_hdr_t.keyInfo */
+#define KEY_INFO_PWK				0x01
+#define KEY_INFO_GWK				0x02
+#define KEY_INFO_KEY_MAPPING_KEY		0x04
+#define KEY_INFO_WEP_SUBTYPE			0x08	/* a WEP key of 104 bits */
+#define KEY_INFO_GLOBAL				0x10
+
+struct WlanKeyBuffer;
+
 /*
  * The key data union (ckd) follows the header. TKIP and AES keep their key
  * with the receive and send counters (the next packet number to send is
  * txIv32:txIv16); WAPI keeps two keys, the packet number step and the send
- * and receive packet numbers, least significant byte first, and a pointer
- * to the key that replaces it. The layout is read off the frame paths.
+ * and receive packet numbers, least significant byte first, and a copy of
+ * the key it replaced (Marvell's pLastKey: "keep the orig cipher_key_t
+ * pointer"). WEP keeps the four default keys (wl_mib_rom.h's
+ * MIB_WEP_DEFAULT_KEYS) and the index of the one frames are sent with; an
+ * access point's pairwise key holds the handshake's data until the key is
+ * installed. The layout is read off the frame paths.
  */
 typedef struct __attribute__((packed)) cipher_key_wapi_t {
 	uint8_t keyIndex;
@@ -260,8 +276,25 @@ typedef struct __attribute__((packed)) cipher_key_wapi_t {
 	uint8_t pnStep;			/* 2 for a unicast key, 1 for a group key */
 	uint8_t txPn[16];
 	uint8_t rxPn[16];
-	uint32_t replacement;		/* key to use next, or 0 (unaligned) */
+	struct WlanKeyBuffer *pLastKey;	/* the key this one replaced, or NULL (unaligned) */
 } cipher_key_wapi_t;
+
+/* wl_mib_rom.h */
+typedef struct MIB_WepDefaultKeys_s {
+	uint8_t WepDefaultKeyIdx;
+	uint8_t WepDefaultKeyType;	/* 1: 104 bits */
+	uint8_t WepDefaultKeyValue[13];
+} MIB_WEP_DEFAULT_KEYS;
+
+#define MAX_WEP_KEYS	4
+
+/* keyCommonDef.h */
+typedef struct wep_key_data_t {
+	MIB_WEP_DEFAULT_KEYS WepDefaultKeys[MAX_WEP_KEYS];
+	uint8_t default_key_idx;
+	uint8_t keyCfg;
+	uint8_t Reserved;
+} wep_key_data_t;
 
 typedef struct __attribute__((packed)) cipher_key_aes_t {
 	uint8_t key[16];
@@ -281,13 +314,17 @@ typedef struct __attribute__((packed)) cipher_key_t {
 	union __attribute__((packed)) {
 		cipher_key_aes_t aes;		/* also TKIP */
 		cipher_key_wapi_t wapi;
+		wep_key_data_t wep;
+		eapolHskData_t hskData;
 	} ckd;
 } cipher_key_t;
 
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.txIv32) == 52, "send counter");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.decryptState) == 60, "decryption state");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.rxPn) == 62, "WAPI receive packet number");
-_Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.replacement) == 78, "WAPI replacement key");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.pLastKey) == 78, "WAPI previous key");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.wep.default_key_idx) == 72, "WEP default key");
+_Static_assert(__builtin_offsetof(cipher_key_t, ckd.hskData.pwsKeyData) == 44, "handshake key data");
 
 /* A key the MAC installed, in a buffer of the key pools: the buffer's header, then the key (wlanKeyBufferAlloc()). */
 struct WlanKeyBuffer {
@@ -305,6 +342,7 @@ void wlanKeyBufferFree(struct WlanKeyBuffer *key);				/* SQRAM 0xc0008292 */
 int wlanKeyPoolsInit(void);							/* SQRAM 0xc00082bc */
 
 #define KEY_DIRECTION_RX	0x02	/* cipher_key_hdr_t.keyDirection: the key decrypts received frames (inferred) */
+#define KEY_DIRECTION_RXTX	0x03	/* keyApiStaTypes.h */
 
 typedef struct keyMgmtInfoSta_t {
 	uint8_t ANonce[NONCE_SIZE];
@@ -667,8 +705,52 @@ int keyMgmtKeyPairAndGroupTxDone(OsaBuffer *pBufDesc);
 void SendMICFailReport_sta(struct WlanConnection *connPtr, keyMgmtInfoSta_t *pKeyMgmtInfoSta,
 			   BOOLEAN isUnicast);
 
-/* keyApi (SQRAM, 0xc000869e) */
-uint32_t keyApi_UpdateKeyMaterial(struct WlanConnection *connPtr, key_MgtMaterial_t *keyMgtData_p);
+/*
+ * The key API: the firmware's half of what Marvell's host port keeps as
+ * keyApi_UpdateKeyMaterial() and keyApi_ApUpdateKeyMaterial() (keyMgmtSta.c,
+ * keyMgmtAp.c of the 8977's, whose firmware-only lines are comments there).
+ * The installing half is in ITCM (esa/keyApiSta_rom.c), the rest in SQRAM
+ * (sqram/keyapi.c). Names other than Marvell's are inferred.
+ */
+typedef void (*keyApiSta_ConnHook_t)(struct WlanConnection *connPtr, BOOLEAN enable);
+
+/* The RAM hooks the ITCM half calls through (0x54ef8 .. 0x54f14; keyApiSta_RomInit()). */
+extern void (*ramHook_keyApi_PalladiumHook1)(struct WlanConnection *connPtr);
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_setConnStaticWepEnabled;	/* WLAN_CONN_HOST_FLAG_8 */
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_setConnExcludeUnencrypted;	/* txOptions bit 2: an unprotected frame is dropped */
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_setConnCurPktTxEnabled;	/* WLAN_CONN_ENCRYPTED */
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_setConnDataTrafficEnabled;	/* WLAN_CONN_JOIN_OPEN */
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_nullHook;
+extern BOOLEAN (*ramHook_keyApiSta_isConnStaticWepEnabled)(struct WlanConnection *connPtr);
+extern keyApiSta_ConnHook_t ramHook_keyApiSta_setConnWapiEnabled;		/* WLAN_CONN_WAPI */
+
+/* esa/keyApiSta_rom.c */
+void keyApiSta_DisableKeys(struct WlanConnection *connPtr, cipher_key_t *pwkey, cipher_key_t *gwkey,
+			   BOOLEAN pairwise, BOOLEAN group);					/* 0x2e2dc */
+uint32_t keyApiSta_UpdateKeyMaterial(struct WlanConnection *connPtr, cipher_key_t *pwkey,
+				     cipher_key_t *gwkey, key_MgtMaterial_t *keyMgtData_p);	/* 0x2e33c */
+uint16_t keyApiSta_GetKeyMaterial(cipher_key_t *pwkey, cipher_key_t *gwkey,
+				  key_MgtMaterial_t *keyMgtData_p, BOOLEAN pairwise);	/* 0x2e602 */
+void keyApiSta_SetKeyFromKeyData(BOOLEAN groupKey, cipher_key_t *key, Cipher_t *cipher,
+				 KeyData_t *keyData);						/* 0x2e726 */
+
+/* sqram/keyapi.c */
+void keyApi_PalladiumHook1(struct WlanConnection *connPtr);				/* SQRAM 0xc0008304 */
+void keyApiSta_NullHook(struct WlanConnection *connPtr, BOOLEAN enable);		/* SQRAM 0xc0008306 */
+BOOLEAN keyApiSta_isConnStaticWepEnabled(struct WlanConnection *connPtr);		/* SQRAM 0xc0008308 */
+void keyApiSta_setConnStaticWepEnabled(struct WlanConnection *connPtr, BOOLEAN enable);	/* SQRAM 0xc0008316 */
+void keyApiSta_setConnExcludeUnencrypted(struct WlanConnection *connPtr, BOOLEAN enable);	/* SQRAM 0xc000832c */
+void keyApiSta_setConnCurPktTxEnabled(struct WlanConnection *connPtr, BOOLEAN enable);	/* SQRAM 0xc0008342 */
+void keyApiSta_setConnDataTrafficEnabled(struct WlanConnection *connPtr, BOOLEAN enable);	/* SQRAM 0xc0008356 */
+void keyApiSta_setConnWapiEnabled(struct WlanConnection *connPtr, BOOLEAN enable);	/* SQRAM 0xc000836a */
+void keyApi_DisableKeys(struct WlanConnection *connPtr, BOOLEAN pairwise, BOOLEAN group);	/* SQRAM 0xc000837e */
+void keyApi_FreeKey(struct WlanKeyBuffer **keyBuffer);					/* SQRAM 0xc00083b0 */
+uint32_t keyApi_UpdateKeyMaterial(struct WlanConnection *connPtr, key_MgtMaterial_t *keyMgtData_p);	/* SQRAM 0xc000869e */
+uint16_t keyApi_GetKeyMaterial(struct WlanConnection *connPtr, key_MgtMaterial_t *keyMgtData_p,
+			       BOOLEAN pairwise);						/* SQRAM 0xc0008718 */
+void keyApiSta_RomInit(void);								/* SQRAM 0xc0008754 */
+struct WlanConnectionInfo;
+void keyApi_ApReleaseGroupKey(struct WlanConnectionInfo *info);				/* SQRAM 0xc0008854 */
 
 /* Network byte order; the EAPOL-Key fields are big-endian. */
 static inline uint32_t ntohl(uint32_t x)

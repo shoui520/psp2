@@ -78,7 +78,6 @@ int p2pSqramHandleState(struct WlanConnection *connection);
 void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *frame, int unused);
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);
-void uapSqramApplyContext(struct WlanConnection *connection, int apply);		/* SQRAM 0xc000a3f6 */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);
@@ -89,7 +88,6 @@ extern OsaBuffer *wlanIbssProbeResponseBuffer;			/* 0x54c24 */
 extern WlanWirelessFrame *wlanIbssProbeResponseFrame;		/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;			/* 0x54c2c */
 
-int hostCmdConnectionChanged(void);						/* 0x18c0a */
 int wlanSlotCancelFlag0(void);							/* 0xb984 */
 void uapSqramFilterEntry(int enable);						/* SQRAM 0xc0009ba0 */
 
@@ -353,7 +351,7 @@ OsaBuffer *wlanHostMessageAlloc(struct WlanConnection *connection)
 }
 
 /*
- * The security of the connection changed: the key table is applied; a connection without privacy
+ * The security of the connection changed: its keys are disabled; a connection without privacy
  * is marked open, and its pairwise key stops being held back for the EAPOL exchange.
  */
 int macMgmtResolveState(struct WlanConnection *connection, unsigned int security)
@@ -363,7 +361,7 @@ int macMgmtResolveState(struct WlanConnection *connection, unsigned int security
 	if (connection->keyBlocks[1] != NULL)
 		key = &connection->keyBlocks[1]->key;
 	if (security != 0 || !(connection->bssCapability[0] & 0x10)) {
-		uapSqramApplyContext(connection, 1);
+		keyApi_DisableKeys(connection, 1, 1);
 		if (!(connection->bssCapability[0] & 0x10)) {
 			connection->flags |= 3;
 			if (key != NULL)
@@ -389,7 +387,7 @@ void macMgmtScheduleState(struct WlanConnection *connection)
 		wlanCryptoTxDrain(&wlanCryptoTxRing);
 		wlanCryptoRxDrain(&wlanCryptoRxRing);
 		sysIrqRestore(posture);
-		uapSqramApplyContext(connection, 1);
+		keyApi_DisableKeys(connection, 1, 1);
 	}
 	supplicantSmeResetNotification();
 }

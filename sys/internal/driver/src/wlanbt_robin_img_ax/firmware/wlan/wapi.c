@@ -96,34 +96,33 @@ int wlanWapiSend(uint8_t *frame, int unused, unsigned int priority, cipher_key_t
 
 /*
  * Passes a received WAPI frame to the engine if its key index and its
- * packet number are good. A frame with the index of the key's replacement
- * switches to the replacement; one with the current index drops a
- * replacement that is still waiting. Returns 1 if the engine has it.
+ * packet number are good. A frame with the index of the key this one
+ * replaced (pLastKey) is decrypted with that key; one with the current index
+ * drops that key. Returns 1 if the engine has it.
  */
 int wlanWapiReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t *key)
 {
 	struct WlanConnection *connection = buffer->context;
 	uint8_t *frame = (uint8_t *)__aeabi_uread4(status->frame);
 	cipher_key_wapi_t *keyData = KEY_WAPI(key);
-	uint32_t replacement;
+	struct WlanKeyBuffer *lastKey;
 	unsigned int priority;
 
 	if (!(frame[3] & 0x40) || ((frame[1] << 8) | frame[0]) <= 0x82)
 		return 0;
-	replacement = __aeabi_uread4(&keyData->replacement);
+	lastKey = (struct WlanKeyBuffer *)__aeabi_uread4(&keyData->pLastKey);
 	if (frame[2 + 34] == keyData->keyIndex) {
-		if (replacement != 0) {
-			wlanKeyBufferFree((struct WlanKeyBuffer *)replacement);
-			__aeabi_uwrite4(0, &keyData->replacement);
+		if (lastKey != NULL) {
+			wlanKeyBufferFree(lastKey);
+			__aeabi_uwrite4(0, &keyData->pLastKey);
 		}
 	} else {
-		/* The replacement key's data starts 40 bytes in. */
-		if (replacement == 0 || *(uint8_t *)(replacement + 40) != frame[2 + 34]) {
+		if (lastKey == NULL || lastKey->key.ckd.wapi.keyIndex != frame[2 + 34]) {
 			wlanWapiCounters.unknownKeys++;
 			return 0;
 		}
-		keyData = (cipher_key_wapi_t *)(replacement + 40);
-		wlanWapiCounters.replacementKeys++;
+		keyData = &lastKey->key.ckd.wapi;
+		wlanWapiCounters.lastKeyFrames++;
 	}
 	if (!wlanWapiCheckPacketNumber(connection->mode != 2, keyData, frame + 2 + 36)) {
 		wlanWapiCounters.replays++;

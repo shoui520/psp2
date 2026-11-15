@@ -19,7 +19,7 @@
 /* Counts kept for the receive path (0x0400105c..0x04001070). */
 struct WlanWapiCounters {
 	uint32_t replays;		/* frames whose packet number was not newer */
-	uint32_t replacementKeys;	/* frames that switched to the replacement key */
+	uint32_t lastKeyFrames;	/* frames decrypted with the key the current one replaced */
 	uint32_t unknownKeys;		/* frames with a key index no key has */
 	uint32_t frames;
 	uint32_t qosFrames;

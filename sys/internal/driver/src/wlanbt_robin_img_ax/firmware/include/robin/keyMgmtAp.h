@@ -112,8 +112,10 @@ void handleFailedHSK(struct WlanConnection *connPtr, uint16_t reason);			/* 0x1f
 KEYMGMT_CALL void incrementReplayCounter(apKeyMgmtInfoSta_t *pKeyMgmtInfo);				/* 0x1fd4c */
 int isValidReplayCount(apKeyMgmtInfoSta_t *pKeyMgmtInfo, uint8_t *pRxReplayCount);	/* 0x1fd5c */
 
+/* sqram/keyapi.c */
+uint32_t keyApi_ApUpdateKeyMaterial(struct WlanConnection *connPtr, int updateGrpKey);	/* SQRAM 0xc000878c */
+
 /* not converted */
-uint32_t keyApi_ApUpdateKeyMaterial(struct WlanConnection *connPtr, int updateGrpKey);	/* SQRAM, veneer 0x52f54 */
 void uapSqramPskUpdated(struct WlanConnection *connPtr, const uint8_t *localAddress,
 			const uint8_t *ssid, unsigned int ssidLength);			/* SQRAM, veneer 0x52f5c (inferred) */
 uint64_t romMul32x32(uint32_t a, uint32_t b);						/* 0x03f3f3b4 */

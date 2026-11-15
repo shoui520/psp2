@@ -182,11 +182,6 @@ struct WlanObssScanParameters {
 _Static_assert(sizeof(struct WlanObssScanParameters) == 14, "overlapping BSS scan parameters");
 
 /* What a WAPI access point keeps for the host (partial). */
-struct WlanWapiContext {
-	uint8_t reserved0[74];
-	uint8_t data[16];		/* reported to the host, byte-reversed */
-};
-
 /* One channel an access point may start on: the band's flags, the channel, and how long its load is measured (TU). */
 struct WlanApChannel {
 	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
@@ -276,7 +271,7 @@ struct WlanConnectionInfo {
 	uint8_t htCapability[28];	/* the access point's HT capability element */
 	uint8_t htOperation[24];	/* its HT operation element */
 	struct WlanKeyBuffer *bssKey;	/* the access point's own key: its static WEP key */
-	const struct WlanWapiContext *wapiContext;	/* a WAPI BSS: what the host is told with an association (TLV 103) */
+	struct WlanKeyBuffer *groupKey;	/* a WPA, WPA2 or WAPI access point's group key (keyApi_UpdateKeyMaterial()) */
 	uint8_t channelCount;		/* the channels the access point may start on: 0 none, 1 the one given, more: the least loaded of them (automatic selection) */
 	uint8_t macFilterPolicy;	/* the host's MAC filter (hostCmd 0x..): 0 off, 1 only the listed stations are admitted, 2 the listed ones are refused */
 	uint8_t macFilterCount;		/* the addresses in the list */
@@ -599,7 +594,7 @@ struct WlanConnection {
 	struct WlanKeyBuffer *keyBlocks[2];	/* [0]: the group key (HostCmd 0x37's), [1]: the pairwise key (0x36's and 0x5e's) */
 	union {
 		uint8_t *radioParams;	/* the radio configuration's block this connection's SNMP values use */
-		eapolHskData_t *hskData;	/* an access point's peer: the handshake's nonce and key */
+		struct WlanKeyBuffer *hskKey;	/* an access point's peer: the buffer whose key data holds the handshake's nonce and key */
 	};
 	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
@@ -703,7 +698,7 @@ _Static_assert(offsetof(struct WlanConnectionInfo, psMachine) == 892, "info PS m
 _Static_assert(offsetof(struct WlanConnectionInfo, sleep) == 1144, "info sleep parameters");
 _Static_assert(offsetof(struct WlanConnectionInfo, qosEnabled) == 36, "info QoS");
 _Static_assert(offsetof(struct WlanConnectionInfo, wmmRecords) == 50, "info WMM records");
-_Static_assert(offsetof(struct WlanConnectionInfo, wapiContext) == 128, "info WAPI context");
+_Static_assert(offsetof(struct WlanConnectionInfo, groupKey) == 128, "info group key");
 _Static_assert(offsetof(struct WlanConnectionInfo, uapsdEnabled) == 360, "info U-APSD");
 _Static_assert(offsetof(struct WlanConnectionInfo, obssScan) == 514, "info overlapping BSS scan");
 _Static_assert(offsetof(struct WlanConnectionInfo, extCapability) == 530, "info extended capabilities");

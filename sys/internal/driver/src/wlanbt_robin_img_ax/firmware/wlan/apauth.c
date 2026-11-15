@@ -881,7 +881,7 @@ __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connec
 		}
 	}
 	if (info->securityMode.wapi && connection->keyBlocks[1] != NULL) {
-		uapSqramResolveContext(&connection->keyBlocks[1]);
+		keyApi_FreeKey(&connection->keyBlocks[1]);
 		connection->flags &= ~WLAN_CONN_WAPI;
 		connection->keyBlocks[0] = NULL;
 	}

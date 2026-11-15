@@ -106,16 +106,16 @@ typedef struct apKeyMgmtInfoSta_t {
 _Static_assert(sizeof(apKeyMgmtInfoSta_t) == 52, "access point station key management");
 
 /*
- * What an access point keeps of one station for the handshake's keys: the
- * pointer the station's connection holds to it (conn.h).
+ * keyCommonDef.h: what an access point keeps of one station's handshake, in
+ * the key data of a key buffer (cipher_key_t.ckd.hskData; the station's
+ * connection holds the buffer, conn.h).
  */
 typedef struct eapolHskData_t {
-	uint8_t reserved0[40];
 	uint8_t ANonce[NONCE_SIZE];
 	KeyData_t pwsKeyData;		/* the pairwise key being derived */
 } eapolHskData_t;
 
-_Static_assert(sizeof(eapolHskData_t) == 112, "handshake data");
+_Static_assert(sizeof(eapolHskData_t) == 72, "handshake data");
 
 /* authenticator.h: the access point's RSN settings; this build's has no replay protection flag. */
 typedef struct Operation_t {

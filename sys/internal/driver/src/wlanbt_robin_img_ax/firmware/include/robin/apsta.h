@@ -184,6 +184,5 @@ void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConne
 			     const uint8_t *address);					/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);				/* 0x41228 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);	/* 0x1d1f6 */
-void uapSqramResolveContext(struct WlanKeyBuffer **keyBlock);			/* SQRAM */
 
 #endif /* ROBIN_APSTA_H */

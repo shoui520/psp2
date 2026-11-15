@@ -169,7 +169,7 @@ int GeneratePWKMsg3(struct WlanConnection *connPtr)
 	role = wlanConnectionInfoSlot(connPtr);
 	info = wlanConnectionInfo(connPtr);
 	pKeyMgmtInfo = &role->keyMgmt;
-	pHskData = connPtr->hskData;
+	pHskData = &connPtr->hskKey->key.ckd.hskData;
 
 	incrementReplayCounter(pKeyMgmtInfo);
 
@@ -227,7 +227,7 @@ int GeneratePWKMsg1(struct WlanConnection *connPtr)
 		return 1;
 
 	pKeyMgmtInfo = &role->keyMgmt;
-	pHskData = connPtr->hskData;
+	pHskData = &connPtr->hskKey->key.ckd.hskData;
 
 	incrementReplayCounter(pKeyMgmtInfo);
 	replay_cnt[0] = pKeyMgmtInfo->counterHi;
@@ -393,7 +393,7 @@ int ProcessPWKMsg2(OsaBuffer *pmbuf)
 	struct WlanConnection *connPtr = pmbuf->context;
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connPtr);
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connPtr);
-	eapolHskData_t *pHskData = connPtr->hskData;
+	eapolHskData_t *pHskData = &connPtr->hskKey->key.ckd.hskData;
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo = &role->keyMgmt;
 	EAPOL_KeyMsg_t *rx_eapol_ptr = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
 	WlanIePointers iePointers;
@@ -466,7 +466,7 @@ int ProcessPWKMsg4(OsaBuffer *pmbuf)
 	struct WlanConnection *connPtr = pmbuf->context;
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connPtr);
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo = &role->keyMgmt;
-	eapolHskData_t *pHskData = connPtr->hskData;
+	eapolHskData_t *pHskData = &connPtr->hskKey->key.ckd.hskData;
 	EAPOL_KeyMsg_t *rx_eapol_ptr = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
 
 	if (!IsEAPOL_MICValid(rx_eapol_ptr, pKeyMgmtInfo->EAPOL_MIC_Key))

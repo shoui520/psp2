@@ -448,7 +448,7 @@ void macMgmtQueryPacket(struct WlanConnection *connection)
 	}
 	connection->keyBlocks[0] = NULL;
 	if (info->securityMode.wapi && connection->keyBlocks[1] != NULL)
-		uapSqramResolveContext(&connection->keyBlocks[1]);
+		keyApi_FreeKey(&connection->keyBlocks[1]);
 	else
 		connection->keyBlocks[1] = NULL;
 	connection->flags &= ~WLAN_CONN_PRIVACY;

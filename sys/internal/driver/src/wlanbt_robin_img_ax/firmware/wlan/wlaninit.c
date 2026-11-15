@@ -157,7 +157,6 @@ void wlanPsTrackDescriptor(void);							/* 0x3eb14 */
 void p2pSqramConfigureEntry(void);							/* SQRAM 0xc000e23a */
 void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
-void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
@@ -436,7 +435,7 @@ int wlanInit(void)
 	pmkCacheRamInit();
 	p2pDirectCheckState();
 	p2pDirectResetTable();
-	uapSqramTrackContext();
+	keyApiSta_RomInit();
 	wlanIeInit();
 	wlanIeBufferInit();
 	wlanMefInit();

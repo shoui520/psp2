@@ -906,9 +906,8 @@ void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 			for (;;)
 				;
 		__aeabi_memclr4(key->keyData, 84);
-		key->key.hdr.keyDirection = 3;
-		key->key.hdr.keyType = 0;
-		key->key.hdr.version = 0;
+		key->key.hdr.keyDirection = KEY_DIRECTION_RXTX;
+		key->key.hdr.keyType = KEY_TYPE_WEP;
 		key->key.hdr.keyState &= ~1;
 	}
 }
@@ -938,9 +937,8 @@ void wlanConnectionSetupType2(struct WlanConnection *connection)
 			for (;;)
 				;
 		__aeabi_memclr4(key->keyData, 84);
-		key->key.hdr.keyDirection = 3;
-		key->key.hdr.keyType = 0;
-		key->key.hdr.version = 0;
+		key->key.hdr.keyDirection = KEY_DIRECTION_RXTX;
+		key->key.hdr.keyType = KEY_TYPE_WEP;
 		key->key.hdr.keyState &= ~1;
 	}
 }
@@ -1456,7 +1454,7 @@ int wlanIbssSecurityActive(void)
 		if (connection->interfaceType == 1 && !(connection->flags & 4)) {
 			struct WlanKeyBuffer *block = connection->keyBlocks[0];
 
-			if (block != NULL && block->key.hdr.keyType == 2 && block->key.hdr.version == 0 &&
+			if (block != NULL && block->key.hdr.keyType == KEY_TYPE_AES &&
 			    (block->key.hdr.keyState & 1)) {
 				sysIrqRestore(posture);
 				return 1;

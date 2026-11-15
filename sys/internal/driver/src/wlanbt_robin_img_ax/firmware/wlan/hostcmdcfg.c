@@ -70,7 +70,6 @@ extern WlanWirelessFrame *wlanIbssProbeResponseFrame;					/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;						/* 0x54c2c */
 extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;				/* 0x54bc8 */
 extern struct WlanMacTxRequest *wlanIbssBeaconRequest;					/* 0x54bc4 */
-int uapSqramInspectContext(struct WlanConnection *connection, uint8_t *buffer, int pairwise);	/* SQRAM 0xc0008718 */
 void *mdevRomComputeState(void *table, int next);					/* ROM 0x03f065a2 */
 
 /* The ROM expires the software timers through this one (0x54e98). */
@@ -255,12 +254,12 @@ unsigned int hostCmd005eGet(struct WlanConnection *connection, uint8_t *out)
 
 	out[0] = TLV_KEY_MATERIAL & 0xff;
 	out[1] = TLV_KEY_MATERIAL >> 8;
-	size = uapSqramInspectContext(connection, out + 4, 1);
+	size = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)(out + 4), 1);
 	*(uint16_t *)(out + 2) = size;
 	tlv = (uint16_t *)(out + size + 4);
 	used = (int16_t)(size + 4);
 	*tlv = TLV_KEY_MATERIAL;
-	second = uapSqramInspectContext(connection, (uint8_t *)(tlv + 2), 0);
+	second = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)(tlv + 2), 0);
 	tlv[1] = second;
 	return (uint16_t)(wlanTlvTerminate((uint8_t *)tlv + second + 4) + second + used + 4);
 }

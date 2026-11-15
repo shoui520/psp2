@@ -138,7 +138,7 @@ unsigned int fmCoexSelectBuffer(const struct WlanConnectionInfo *info, uint8_t *
 	return 0;
 }
 
-/* The WAPI context goes to the host as TLV 103 (byte-reversed); a BSS without WAPI adds nothing. Returns the TLV's size. */
+/* The group key's send packet number goes to the host as TLV 103 (byte-reversed); a BSS without WAPI adds nothing. Returns the TLV's size. */
 unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *tlv)
 {
 	uint8_t data[16];
@@ -149,8 +149,8 @@ unsigned int fmCoexAdjustBuffer(const struct WlanConnectionInfo *info, uint8_t *
 	tlv[1] = 1;
 	tlv[2] = 16;
 	tlv[3] = 0;
-	if (info->wapiContext != NULL) {
-		wlanReverseBytes(data, info->wapiContext->data, 16);
+	if (info->groupKey != NULL) {
+		wlanReverseBytes(data, info->groupKey->key.ckd.wapi.txPn, 16);
 		__aeabi_memcpy(tlv + 4, data, 16);
 	} else {
 		__aeabi_memclr(tlv + 4, 16);
