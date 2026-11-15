@@ -276,3 +276,62 @@ settings:
 	profile->secondSetting = btLmpLcAdjustHeader(profile->index);
 	profile->firstSetting = btLmpLcRecordHeader(profile->index);
 }
+
+/* A link's slots from the clock: those of the mode 1 link it shares, or the ROM's. */
+void btLmpLcComputeBuffer(int link, uint32_t clock, unsigned int next, uint32_t interval)
+{
+	if (btTableLinkModes[link] == 1) {
+		btLmpLcBuildBuffer(link);
+		return;
+	}
+	if (next != 0)
+		btNextWindow(link, clock, interval);
+	else
+		btLtsRomValidateContext(link, clock, interval);
+}
+
+/*
+ * The ROM's link record decides a link's slots: a record in mode 0 starts from the clock, one in
+ * mode 1 (unless held) from the ROM's next control slot; a link on a host device, and every other
+ * record, goes to the ROM.
+ */
+void btLmpLcQueryBuffer(int link, uint32_t held)
+{
+	unsigned int device = romHctHostSlot[link][4];
+	uint8_t *records = btLdrRomReleaseState();
+	struct BtDeviceProfile *profile = &btDeviceProfile[link];
+	const uint8_t *record;
+	uint32_t clock;
+
+	if (device != 0) {
+		btLdrRomInspectState(link, held);
+		return;
+	}
+	record = records + 116 * link;
+	if (record[68] == 0) {
+		btLtsRomConvertState(15);
+		clock = btLtsRomParseState(0);
+	} else if (record[68] == 1 && held == 0) {
+		btNextControl(15, link);
+		btLtsRomNotifyState(profile, btLtsRomScheduleState(btLtsRomParseState(0)));
+		clock = btLtsRomResolveState();
+	} else {
+		btLdrRomInspectState(link, held);
+		return;
+	}
+	btLmpLcComputeBuffer(link, clock, record[1], *(const BtHalf *)(record + 4));
+}
+
+/* The host's command for a link the ROM does not run yet sets its interval (in halves) and kind. */
+void btLmpLcResetBuffer(uint8_t *command)
+{
+	uint8_t *records = btLdrRomReleaseState();
+	uint8_t *record = records + 116 * *(const BtHalf *)(command + 4);
+
+	if (record[68] == 0 && record[52] == 0) {
+		btLdrRomFormatState(command);
+		return;
+	}
+	*(BtHalf *)(record + 4) = (*(const BtHalf *)(command + 6) + 1) >> 1;
+	records[116 * *(const BtHalf *)(command + 4) + 1] = command[8];
+}

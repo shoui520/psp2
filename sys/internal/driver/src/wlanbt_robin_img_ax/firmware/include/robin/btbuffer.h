@@ -27,6 +27,8 @@ extern uint8_t *btLinkSlotTable;				/* 0x400f914: 8 bytes per slot */
 extern uint16_t *btLinkSlotMask;				/* 0x400f904 */
 extern void (*btLinkEndHook)(void);				/* 0x400edac */
 extern void (*btLinkLimitHook)(uint8_t first, uint8_t second);	/* 0x400f1d0 */
+extern void (*btNextWindow)(int link, uint32_t clock, uint32_t interval);	/* 0x400ed24 */
+extern void (*btNextControl)(int kind, int link);		/* 0x400ecfc */
 extern const uint32_t romQueueLc;				/* ROM 0x03f41a44 */
 extern const uint32_t romQueueLsc;				/* ROM 0x03f41a4c */
 
@@ -42,5 +44,8 @@ int btLmpLcDispatchBuffer(uint8_t *command, const uint16_t *count, uint32_t a2, 
 struct BtDeviceProfile;
 void btLmpLcParseBuffer(struct BtDeviceProfile *profile, const struct BtDeviceProfile *source);	/* 0x45116 */
 void btLmpLcBuildBuffer(int link);				/* 0x4514a */
+void btLmpLcComputeBuffer(int link, uint32_t clock, unsigned int next, uint32_t interval);	/* 0x45220 */
+void btLmpLcQueryBuffer(int link, uint32_t held);		/* 0x45246 */
+void btLmpLcResetBuffer(uint8_t *command);			/* 0x452c2 */
 
 #endif /* ROBIN_BTBUFFER_H */

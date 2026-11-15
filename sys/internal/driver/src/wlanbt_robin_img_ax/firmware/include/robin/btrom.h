@@ -111,6 +111,12 @@ void btLdaRomComputeState(void);
 void btLdaRomApplyState(uint8_t state);
 void btLdaRomCheckState(uint16_t reg, uint32_t value);
 void btLdaRomSyncState(void);
+void btLtsRomValidateContext(int link, uint32_t clock, uint32_t interval);
+void btLtsRomConvertState(int kind);
+void btLtsRomNotifyState(struct BtDeviceProfile *profile, uint32_t clock);
+uint32_t btLtsRomResolveState(void);
+void btLdrRomInspectState(int link, uint32_t held);
+void btLdrRomFormatState(uint8_t *command);
 void btLdaRomResetState(void);
 int btLcoRomManageState(uint8_t *command, const uint16_t *count, uint32_t a2, uint32_t a3, uint32_t a4,
 			uint32_t a5);
