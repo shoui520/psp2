@@ -494,3 +494,137 @@ advance:
 	*linkOut = link;
 	*slotOut = slot;
 }
+
+/*
+ * A host's request for a new link's slots: the search starts where the request says (or, for mark
+ * 0xf8, after the link it continues or the ROM's last links), counted from the device's clock. A
+ * free slot is sent to the link controller as message 0x0c62 and kept in btTableSlotRequest;
+ * otherwise message 0x0c63 refuses the request (0x1b, or 0x34 for a request of mode 1).
+ */
+void btLmpLcApplyBuffer(uint8_t *request)
+{
+	const uint8_t *records = btLdrRomReleaseState();
+	unsigned int link = *(const BtHalf *)(request + 4);
+	unsigned int host = *(const BtHalf *)(request + 6);
+	int period = request[9] >> 1;
+	unsigned int wrap = request[10];
+	unsigned int refusal = 1;
+	unsigned int extra;
+	unsigned int device;
+	uint32_t now;
+	uint32_t native;
+	uint16_t found;
+	uint8_t slot;
+	unsigned int offset;
+	unsigned int start;
+	uint8_t *message;
+
+	if (request[14] == 1)
+		refusal = 0;
+	else
+		request[15] = 0;
+	extra = request[15] >> 1;
+	device = romHctHostSlot[host][4];
+	if (device == 0)
+		now = native = btLtsRomParseState(device);
+	else
+		btLtsRomBuildState(device, &now, &native);
+	if (wrap == 0xf8) {
+		int clock;
+
+		if (btLinkSessionCheck(link) == 1) {
+			clock = *(const int *)(const void *)(records + 116 * link + 32);
+			if (device != 0 && clock > (int)now)
+				clock = native + clock - now;
+		} else if (btLdrRomAcquireState() != 0) {
+			uint16_t other;
+
+			clock = native;
+			for (other = 8; other <= 10; other++) {
+				if (btLinkSessionCheck(other) == 1) {
+					const uint8_t *record = records + 116 * other;
+
+					clock = *(const int *)(const void *)(record + 32) + record[47] +
+						btLinkKindSlots(*(const BtHalf *)(record + 40));
+				}
+			}
+		} else {
+			clock = native;
+		}
+		if (clock >= 0x2000000) {
+			wrap = 2;
+			slot = (clock - 0x2000000) % period;
+		} else {
+			wrap = 0;
+			slot = clock % period;
+		}
+	} else {
+		slot = request[8] >> 1;
+	}
+	if (btLinkWrapCheck(wrap))
+		start = (uint8_t)((int)native % period);
+	else
+		start = (uint8_t)((int)(native ^ 0x2000000) % period);
+	if (slot > start)
+		offset = (uint8_t)(slot - start + period);
+	else
+		offset = (uint8_t)(slot - start);
+	btLmpLcSyncBuffer(&found, &slot, now + offset, request);
+	if (found == 11) {
+		struct BtSlotRequest *pending;
+
+		message = osa_MsgAlloc(12);
+		*(BtWord *)message = 0xc62;
+		*(BtHalf *)(message + 4) = host;
+		message[6] = slot * 2;
+		message[7] = wrap;
+		*(BtHalf *)(message + 8) = *(const BtHalf *)(request + 12);
+		message[10] = request[14];
+		pending = btTableSlotRequest;
+		pending->active = 1;
+		pending->link = host;
+		pending->offset = slot * 2;
+		pending->period = period * 2;
+		pending->wrap = wrap;
+		pending->packet = *(const BtHalf *)(request + 12);
+		pending->mode = request[14];
+		pending->extra = extra * 2;
+	} else {
+		message = osa_MsgAlloc(8);
+		*(BtWord *)message = 0xc63;
+		*(BtHalf *)(message + 4) = host;
+		message[6] = refusal == 1 ? 0x1b : 0x34;
+		message[7] = request[14];
+	}
+	osa_MsgSend((void **)&message, romQueueLcp);
+}
+
+/* A link's mode changes: links in mode 1 or 3 (or held in mode 0 or 2) are marked in the mode mask. */
+void btLmpLcResolveBuffer(int link, unsigned int mode)
+{
+	struct BtDeviceProfile *profile = &btDeviceProfile[link];
+	unsigned int bit = 1 << link;
+	unsigned int mask = btTableModeMask;
+	unsigned int set = (uint8_t)(bit | mask);
+
+	btTableLinkModes[link] = mode;
+	switch (mode) {
+	case 0:
+	case 2:
+		if (profile->hold != 0) {
+			btTableModeMask = set;
+			btTableLinkModes[link] = 3;
+		} else {
+			btTableModeMask = mask & ~bit;
+		}
+		break;
+	case 1:
+		if ((profile->state == 5 || profile->state == 9) && profile->active == 0)
+			btLmpLcBuildBuffer(link);
+		btTableModeMask |= bit;
+		break;
+	case 3:
+		btTableModeMask = set;
+		break;
+	}
+}

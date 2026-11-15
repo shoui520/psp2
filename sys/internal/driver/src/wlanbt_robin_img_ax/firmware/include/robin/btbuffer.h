@@ -19,6 +19,21 @@ struct BtHostTiming {
 };
 _Static_assert(sizeof(struct BtHostTiming) == 32, "BtHostTiming");
 
+/* A link's slots, as the last host request was given them (0x400cd10). */
+struct BtSlotRequest {
+	uint8_t active;
+	uint8_t reserved1;
+	uint16_t link;				/* the host link */
+	uint8_t offset;				/* the first slot, in half slots */
+	uint8_t period;				/* in half slots */
+	uint8_t wrap;				/* 2: the clock had wrapped past 0x2000000 */
+	uint8_t reserved7;
+	uint16_t packet;			/* the packet kinds */
+	uint8_t mode;
+	uint8_t extra;				/* the extra slots, in halves */
+};
+_Static_assert(sizeof(struct BtSlotRequest) == 12, "BtSlotRequest");
+
 extern struct BtHostTiming btHostTiming;			/* 0x400c5f0 */
 extern uint8_t btLinkChannelState;				/* 0x400f72f */
 extern uint8_t btLinkPendingSlot;				/* 0x400f72c: a slot to give back, 0: none */
@@ -34,6 +49,10 @@ extern int (*btNextSession)(int link);				/* 0x400ed04: the clock of the link's 
 extern uint8_t btLinkSlotFactor;				/* 0x400f617 */
 extern uint8_t btLinkSpanEnabled;				/* 0x400f7f2 */
 extern uint8_t btLinkPayloadRegister;				/* 0x400f7fc */
+extern int (*btLinkWrapCheck)(unsigned int wrap);		/* 0x400f264 */
+extern struct BtSlotRequest btSlotRequest;			/* 0x400cd10 */
+extern struct BtSlotRequest *btTableSlotRequest;		/* 0x552c0 */
+extern const uint32_t romQueueLcp;				/* ROM 0x03f41a40 */
 extern const uint32_t romQueueLc;				/* ROM 0x03f41a44 */
 extern const uint32_t romQueueLsc;				/* ROM 0x03f41a4c */
 
@@ -53,5 +72,7 @@ void btLmpLcComputeBuffer(int link, uint32_t clock, unsigned int next, uint32_t 
 void btLmpLcQueryBuffer(int link, uint32_t held);		/* 0x45246 */
 void btLmpLcResetBuffer(uint8_t *command);			/* 0x452c2 */
 void btLmpLcSyncBuffer(uint16_t *linkOut, uint8_t *slotOut, int clock, const uint8_t *request);	/* 0x45300 */
+void btLmpLcApplyBuffer(uint8_t *request);			/* 0x456da */
+void btLmpLcResolveBuffer(int link, unsigned int mode);		/* 0x458b2 */
 
 #endif /* ROBIN_BTBUFFER_H */
