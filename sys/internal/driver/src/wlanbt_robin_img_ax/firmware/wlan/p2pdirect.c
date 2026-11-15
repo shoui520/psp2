@@ -243,11 +243,11 @@ unsigned int p2pDirectCheckEntry(void)
 	return queue;
 }
 
-/* The TSPECs in use: how many, and in *admitted how many are admitted. */
-int p2pDirectValidateEntry(uint8_t *admitted)
+/* The TSPECs in use: how many, and in *toRequest how many are still to be requested (state 1). */
+int p2pDirectValidateEntry(uint8_t *toRequest)
 {
 	int count = 0;
-	uint8_t admittedCount = 0;
+	uint8_t requestCount = 0;
 	unsigned int slot;
 
 	for (slot = 0; slot < WLAN_WMM_SLOTS; slot = (uint8_t)(slot + 1)) {
@@ -256,11 +256,11 @@ int p2pDirectValidateEntry(uint8_t *admitted)
 		if (session != NULL && session->state != 0) {
 			count = (uint8_t)(count + 1);
 			if (session->state == 1)
-				admittedCount++;
+				requestCount++;
 		}
 	}
-	if (admitted != NULL)
-		*admitted = admittedCount;
+	if (toRequest != NULL)
+		*toRequest = requestCount;
 	return count;
 }
 
@@ -278,8 +278,8 @@ int p2pDirectDispatchEntry(unsigned int slot)
 	struct WlanWmmSlot **session = &wlanWmmSessions[slot];
 
 	__aeabi_memclr(*session, 0x37);
-	__aeabi_memclr((*session)->reserved57, 0x1b);
-	(*session)->reserved56 = 0;
+	__aeabi_memclr((*session)->tail, 0x1b);
+	(*session)->tailLength = 0;
 	(*session)->directions = 0;
 	(*session)->state = 0;
 	*session = NULL;

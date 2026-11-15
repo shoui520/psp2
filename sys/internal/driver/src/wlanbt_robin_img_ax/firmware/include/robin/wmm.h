@@ -20,9 +20,9 @@
 struct WlanWmmSlot {
 	uint8_t tspec[53];		/* the TSPEC: TS Info first (wlanTspecApplyBits() reads the user priority and U-APSD from it) */
 	uint8_t mediumTime[2];		/* the TSPEC's medium time (unaligned) */
-	uint8_t state;			/* 0: free; 1: admitted; 4: active */
-	uint8_t reserved56;
-	uint8_t reserved57[27];
+	uint8_t state;			/* 0: free; 1: to be requested; 2: requested; 4: admitted; 5: admitted, suspended */
+	uint8_t tailLength;		/* the bytes of tail the ADDTS request carries after the TSPEC */
+	uint8_t tail[27];		/* what follows the TSPEC in the request (the host's elements) */
 	uint8_t directions;		/* the directions the TSPEC covers (WLAN_TSPEC_UPLINK, WLAN_TSPEC_DOWNLINK) */
 	uint8_t ownQueue;		/* the queue that normally uses the slot */
 	uint8_t fallbackQueue;		/* the queue it falls back to when admission control rules the queue out */
