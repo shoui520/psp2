@@ -9,6 +9,7 @@
  * and the fields' are inferred.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"
@@ -55,9 +56,6 @@
 
 extern int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
 extern uint8_t wlanAssocHtCapability[28];			/* SQRAM 0xc0032170: the copy of it for the association */
-unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
-				   const void *attributes, unsigned int include,
-				   unsigned int exclude);				/* 0x402ea */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 int rfCalibSyncDescriptor(void);						/* 0x2a20c */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */

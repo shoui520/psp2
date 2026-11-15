@@ -6,6 +6,7 @@
  * placeholder names, kept, and the file name is inferred.
  */
 #include <stddef.h>
+#include "robin/p2pgo.h"
 #include "robin/ratesel.h"
 #include "robin/apps.h"
 #include "robin/adhoc.h"
@@ -40,10 +41,6 @@
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 
-/* Not converted yet; provisional names. */
-unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
-				   const void *attributes, unsigned int include,
-				   unsigned int exclude);				/* 0x402ea */
 uint8_t *p2pDirectReleaseContext(struct WlanConnection *connection,
 				 const WlanWirelessFrame *request);			/* 0x40e20 */
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */

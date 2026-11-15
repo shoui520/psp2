@@ -69,15 +69,6 @@ extern uint8_t wlanNullAddress[8];
 /* The SQRAM's HT capability element of the association (wlan/joinframe.c). */
 extern uint8_t wlanAssocHtCapability[28];
 
-/* The data of the P2P direct code, not converted yet; provisional names. */
-struct WlanDirectContext {
-	uint8_t reserved0[56];
-	const uint8_t *attributes;	/* the attributes of the probe request's P2P element */
-};
-
-unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
-				   const void *attributes, unsigned int include,
-				   unsigned int exclude);				/* 0x402ea */
 const void *p2pDirectFormatTable(uint8_t *length);					/* 0x42374 */
 int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
@@ -244,10 +235,10 @@ int macMgmtBuildState(struct WlanConnection *connection, const uint8_t *peer, co
 			deviceId[1] = 6;
 			deviceId[2] = 0;
 			__aeabi_memcpy(&deviceId[3], ps->p2pDeviceAddress, 6);
-			context->attributes = deviceId;
+			context->attributes[P2P_SLOT_DEVICE_ID] = deviceId;
 			exclude = 8;
 		} else if (GET_U16(ps->p2pAttribute.length) != 0) {
-			context->attributes = (const uint8_t *)&ps->p2pAttribute;
+			context->attributes[P2P_SLOT_DEVICE_ID] = (uint8_t *)&ps->p2pAttribute;
 			exclude = 8;
 		}
 		include = (connection->mode == 2 ? 0x20000 : 0) | 0x144;

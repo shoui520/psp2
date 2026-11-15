@@ -33,7 +33,7 @@ int p2pSqramConvertContext(struct WlanConnection *connection, uint8_t *type, uin
 struct WlanConnection *p2pGroupConnection __attribute__((section(".itcm.rw")));
 const char *p2pDirectSsidPrefix __attribute__((section(".itcm.rw"))) = "DIRECT-";
 
-static const uint8_t wlanWpsOui[4] = { 0x00, 0x50, 0xf2, 0x04 };	/* the WPS element's OUI and type */
+const uint8_t wlanWpsOui[4] = { 0x00, 0x50, 0xf2, 0x04 };	/* the WPS element's OUI and type */
 
 /* Tears the group down: the connection goes back to no role. */
 unsigned int p2pDirectNotifyState(struct WlanConnection *connection)
@@ -147,7 +147,7 @@ static void p2pDirectSsidMake(struct WlanPsPeerState *ps)
 {
 	__aeabi_memcpy(ps->groupSsid, "DIRECT-", 7);
 	p2pDirectReleaseState(ps->groupSsid + 7);
-	ps->groupInfoLength = 15;
+	ps->groupIdLength = 15;
 }
 
 /* Starts the group owner: its state, a channel, the address and the MAC's events; 1 when the host has not set it up. */
@@ -242,7 +242,7 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 	connection->p2pState = 2;
 	ps->p2pOptions = (ps->p2pOptions & 0xfa) | 1;
 	if (ps->p2pOptions & 2) {
-		selected = p2pSqramSelectContext(connection, ps->reserved1072);
+		selected = p2pSqramSelectContext(connection, ps->groupDeviceAddress);
 		if (ps->p2pOptions & 2) {
 			if (ps->ssidPending == 1) {
 				if (selected == NULL) {
@@ -252,7 +252,7 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 				}
 			} else if (selected == NULL) {
 convert:
-				p2pSqramConvertContext(connection, &ps->groupInfoType, ps->reserved1110, ps->groupSsid, 2, 0);
+				p2pSqramConvertContext(connection, &ps->groupIdType, ps->groupBssidAttribute, ps->groupSsid, 2, 0);
 				ps->ssidPending = 0;
 				goto made;
 			}
@@ -271,7 +271,7 @@ made:
 	if (ssid == NULL)
 		return 1;
 	if (ps->ssidFixed != 0)
-		length = (uint8_t)(ps->groupInfoLength - 6);
+		length = (uint8_t)(ps->groupIdLength - 6);
 	else
 		length = 9;
 	if (memcmp(ps->interfaceAddress, ps->groupAddress, 4) == 0) {
@@ -387,7 +387,7 @@ unsigned int p2pDirectAdjustState(struct WlanConnection *connection, WlanWireles
 }
 
 /* The header of a P2P element: id, length 4 and the OUI and type of Wi-Fi Direct. */
-__attribute__((noinline)) void p2pDirectRecordState(uint8_t *element)
+__attribute__((noinline)) uint8_t *p2pDirectRecordState(uint8_t *element)
 {
 	element[1] = 4;
 	element[0] = 0xdd;
@@ -395,13 +395,15 @@ __attribute__((noinline)) void p2pDirectRecordState(uint8_t *element)
 	element[3] = 0x6f;
 	element[4] = 0x9a;
 	element[5] = 9;
+	return element;
 }
 
 /* Appends the header of a P2P element to the frame body in buffer. */
-void p2pDirectFilterState(uint8_t *buffer)
+uint8_t *p2pDirectFilterState(uint8_t *buffer)
 {
 	uint8_t *element = &buffer[((buffer[1] << 8) | buffer[0]) + 32];
 
 	p2pDirectRecordState(element);
 	*(uint16_t *)buffer = ((buffer[1] << 8) | buffer[0]) + element[1] + 2;
+	return element;
 }

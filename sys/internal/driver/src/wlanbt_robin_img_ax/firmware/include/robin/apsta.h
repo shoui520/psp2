@@ -182,7 +182,6 @@ OsaBuffer *macMgmtHandleState(struct WlanConnection *connection);			/* 0x34778 *
 int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 
 /* Not converted yet; provisional names. */
-int p2pDirectValidateContext(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x404be */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int type);			/* 0x41250 */
 void p2pDirectSetupContext(struct WlanConnection *connection, uint8_t *context);	/* 0x40f46 */
 void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
