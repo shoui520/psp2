@@ -35,7 +35,7 @@ ARCH_FLAGS := -march=armv5te -mthumb-interwork -mfloat-abi=soft
 # heap base is fixed at 0x5f800), so it is built for size.
 OPT ?= -Os
 CFLAGS := $(ARCH_FLAGS) -mthumb $(OPT) -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
-	-Iinclude -I$(ROOT)/sys/internal/include
+	-Iinclude -I$(ROOT)/sys/internal/include -I$(O)/radio
 ASFLAGS := $(ARCH_FLAGS) -g -Iinclude
 
 BOOT_SRCS := $(wildcard boot/*.S)
@@ -99,6 +99,20 @@ $(O)/%.o: %.S $(HEADERS)
 $(O)/libgcc/thumb1_case_%.o: $(LIB1FUNCS)
 	@mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) -mthumb -DL_thumb1_case_$* -c $< -o $@
+
+# The radio controllers' 8051 programs, built with SDCC (4.6.0) and embedded as the
+# images the ARM side loads (radio/radioimage.py: length, code, byte sum).
+SDCC ?= sdcc
+SDCCFLAGS := -mmcs51 --model-small --std-c99 --iram-size 128 -Iradio/include
+
+$(O)/radio/wlan/wlanradio.ihx: radio/wlan/wlanradio.c radio/include/radio8051.h
+	@mkdir -p $(dir $@)
+	$(SDCC) $(SDCCFLAGS) $< -o $(dir $@)
+
+$(O)/radio/wlan_radio.inc: radio/radioimage.py $(O)/radio/wlan/wlanradio.ihx
+	python3 -I radio/radioimage.py $@ $(O)/radio/wlan/wlanradio.ihx 0
+
+$(O)/wlan/wlaninit.o: $(O)/radio/wlan_radio.inc
 
 $(O)/robin.elf: $(OBJS) $(SCRIPTS)
 	$(LD) -EL -n --no-warn-mismatch --use-blx -T robin.ld -o $@ $(OBJS)

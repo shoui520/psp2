@@ -101,12 +101,13 @@ uint8_t wlanBlockPool28Control[4 * 28] __attribute__((section(".dtcm.bss")));		/
 uint8_t wlanBlockPool28Memory[28 * (0x7f4 + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc001b600 */
 uint8_t wlanPacketBufferPoolControl[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004f10 */
 /*
- * PLACEHOLDER: the original's copy of this memory starts with a microcode image
- * (length 0x1384, then the code) that macTxNotifyManagePacket() loads through
- * the serial window before the pool takes the memory over. Not rebuilt yet
- * (DEFERRED.md); zero here.
+ * The memory starts with the WLAN radio controller's program (radio/wlan, built
+ * with SDCC), which macTxNotifyManagePacket() loads through the serial window
+ * before the pool takes the memory over.
  */
-uint8_t wlanPacketBufferPoolMemory[4 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc000fb20 */
+uint8_t wlanPacketBufferPoolMemory[4 * (0x7ec + 4)] __attribute__((section(".sqram1.rw"))) = {	/* SQRAM 0xc000fb20 */
+#include "wlan_radio.inc"
+};
 uint8_t wlanReplyFramePoolControl[4 * 3] __attribute__((section(".dtcm.bss")));		/* 0x04004f7c */
 uint8_t wlanReplyFramePoolMemory[3 * (0x7ec + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002dfe0 */
 uint8_t wlanMgmtTaskPoolControl[4 * 1] __attribute__((section(".dtcm.bss")));		/* 0x04000f04 */
