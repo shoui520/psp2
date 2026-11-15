@@ -1651,3 +1651,58 @@ void btLmpLcApplyPacket(void)
 	btLmpLcSyncPacket();
 	btHostBitmap = 0xffff;
 }
+
+/* The ROM's acquire in the mode, once the scan slot's bits 8-9 asked for it (they and bits 2-3 are cleared). */
+__attribute__((noinline)) void btLmpLcResolvePacket(unsigned int mode)
+{
+	BtHalf *flags;
+
+	osa_LockAcquire();
+	flags = (BtHalf *)(btLinkScanSlot + 0x22);
+	if (((*flags >> 8) & 3) == 0) {
+		osa_LockRelease();
+		return;
+	}
+	*flags &= ~0x30c;
+	osa_LockRelease();
+	btLdaRomAcquireState(mode);
+}
+
+/*
+ * The ROM's request tracking, wrapped: in rate state 3 a request for the host link's handle
+ * acquires in mode 0 instead (state 2); in state 1, a request of kind 1 while the host bitmap is
+ * empty posts message 0xc44 with the request's value first.
+ */
+void btLmpLcSchedulePacket(uint8_t *request)
+{
+	unsigned int handle = *(BtHalf *)(request + 4);
+
+	if (btHostRate == 3) {
+		btHostRate = 2;
+		if (btHostBitmap == handle)
+			btLmpLcResolvePacket(0);
+		return;
+	}
+	if (btHostRate == 1 && btHostBitmap != handle && btHostBitmap == 0xffff && request[6] == 1) {
+		struct BtHandleMessage *message = osa_MsgAlloc(8);
+
+		message->id = 0xc44;
+		message->handle = handle;
+		message->value = request[7];
+		osa_MsgSend((void **)&message, romQueueLcp);
+	}
+	btLdaRomTrackState(request);
+	btLmpLcSyncPacket();
+}
+
+void btLmpLcNotifyPacket(void)
+{
+	btLmpLcResolvePacket(1);
+	btLmpLcSyncPacket();
+}
+
+void btLmpLcFormatPacket(void)
+{
+	btLmpLcResolvePacket(0);
+	btLmpLcSyncPacket();
+}
