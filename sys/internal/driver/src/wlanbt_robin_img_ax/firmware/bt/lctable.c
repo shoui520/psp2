@@ -37,6 +37,8 @@ void (*btTableRadioWrite)(uint16_t reg, uint32_t value) __attribute__((section("
 	btLdaRomCheckState;							/* 0x552b4 */
 /* The ROM's record of the last host request's slots. */
 struct BtSlotRequest *btTableSlotRequest __attribute__((section(".itcm.rw"))) = &btSlotRequest;	/* 0x552c0 */
+/* The clock the target's slots run out at (btLmpLcParsePacket()). */
+uint32_t btTableTargetClock __attribute__((section(".itcm.rw")));		/* 0x55304 */
 /* Each rate class's slot windows (btLmpLcSetupTable() passes them to btLmpLcApplyTable()). */
 uint8_t btTableOffsets[8] __attribute__((section(".itcm.rw"))) = { 7, 7, 7, 7, 7, 7, 0, 0 };	/* 0x55308 */
 uint8_t btTableShortWindows[8] __attribute__((section(".itcm.rw"))) = { 4, 7, 10, 10, 13, 13, 13, 13 };	/* 0x55310 */

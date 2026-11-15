@@ -11,6 +11,7 @@
 #include "robin/btsource.h"
 #include "robin/bttable.h"
 #include "robin/eventpower.h"
+#include "robin/rfbus.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/threadx.h"
@@ -1455,4 +1456,110 @@ void btLmpLcCheckPacket(unsigned int link, uint32_t clock, unsigned int kind, ui
 		clock += 9;
 	btLtsRomCheckContext(link, clock, kind, argument, interval, extra);
 	profile->options |= 0x80;
+}
+
+/*
+ * The ROM's check of a link's request, wrapped: the image's hook runs first; for a link record of
+ * kind 0 the ROM decides, otherwise the hook's answer is passed on and the request is accepted.
+ */
+int btLmpLcValidatePacket(unsigned int link, uint32_t first, uint32_t second, uint8_t *out)
+{
+	uint8_t *links = btHccRomApplyState();
+	int result = 1;
+	uint8_t answer;
+
+	btLinkValidateHook(link, first, second, &answer);
+	if (links[120 * link + 20] == 0)
+		result = btHccRomCheckState(link, first, second, out);
+	else if (out != NULL)
+		*out = answer;
+	return result;
+}
+
+/* The ROM's configuration of a value, wrapped: a non-zero value first reports event 0x32 once. */
+void btLmpLcPreparePacket(unsigned int value)
+{
+	if (value != 0 && btPeerReport == 1) {
+		btPeerReport = 0;
+		btLcoRomFormatState(0x32, 0xffff);
+		return;
+	}
+	btHccRomConfigureState(value);
+}
+
+/*
+ * The ROM's request clear, wrapped: a request with a link (byte 6 neither 0 nor 0xff) marks the
+ * link controller, sets radio register 0x157 and the level of register 0xfa, keeping both; without
+ * one, both are put back.
+ */
+void btLmpLcDispatchPacket(uint8_t *request)
+{
+	btLdaRomClearState(request);
+	if (request[6] != 0 && request[6] != 0xff) {
+		uint8_t value;
+
+		LINK_HALF(0x6a) |= 0x80;
+		rfBusAcquire();
+		value = rfBusRead(0x157);
+		btTableModePacket = value;
+		rfBusWrite(0x157, (value & 0xe3) + 0x14);
+		rfBusRelease();
+		btTablePayload = btBdhRomProcessState(0xfa, 1);
+		btBdhRomUpdateState(0xfa, 0xa8);
+		return;
+	}
+	btBdhRomUpdateState(0xfa, btTablePayload);
+	btTablePayload = 0;
+	rfBusAcquire();
+	rfBusWrite(0x157, btTableModePacket);
+	rfBusRelease();
+}
+
+/*
+ * The slots to give a request of count slots at clock (at most limit, or 1 where *flag is set),
+ * from the target's: when the target's slots are full and their clock has run out, the ROM selects
+ * them and every session starts over.
+ */
+unsigned int btLmpLcParsePacket(uint32_t clock, unsigned int count, unsigned int limit, uint8_t *flag)
+{
+	unsigned int want = *flag != 0 ? 1 : limit;
+	unsigned int used = btTargetUsed;
+	int full = used + count >= btTargetSlots;
+	unsigned int entry;
+	unsigned int take;
+	unsigned int i;
+
+	if (used == 0)
+		btTableTargetClock = btTargetEntry + clock;
+	if (full) {
+		int8_t left = (int8_t)(btTableTargetClock - clock + 1);
+
+		btTargetEntry = left < 0 ? 0 : left;
+		if (*flag == 0 &&
+		    (int32_t)(btLtsRomScheduleState(btLtsRomParseState(0)) - btTableTargetClock) >= 0) {
+			unsigned int result;
+
+			btLinkModeControl->header = btTableModeHeader;
+			result = btLtsRomSelectState(clock, count, want, flag);
+			for (i = 1; i < 14; i = (uint8_t)(i + 1))
+				btLinkSessions[i].active = 1;
+			btTableModeBuffer = 0;
+			return result;
+		}
+	}
+	if (want >= count)
+		want = count;
+	if (full) {
+		if (btTargetEntry <= want)
+			want = btTargetEntry;
+		want = want > 1 ? want : 1;
+		*flag = 1;
+	}
+	entry = btTargetEntry;
+	take = entry < want ? entry : want;
+	btTargetEntry = entry - take;
+	for (i = 0; i < want; i = (uint8_t)(i + 1))
+		btLtsRomFormatState(clock, 1, 0, btTargetEntry);
+	btLinkSessions[btTableModeHeader].active = 1;
+	return want;
 }

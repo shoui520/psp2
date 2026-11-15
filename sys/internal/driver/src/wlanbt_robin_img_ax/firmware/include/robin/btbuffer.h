@@ -124,6 +124,22 @@ extern uint8_t btLinkMatchFirst;				/* 0x400f6d3 */
 extern uint8_t btLinkMatchSecond;				/* 0x400f6d4 */
 extern const uint8_t *btLinkMatchPeer;				/* 0x400f6e8: its address at 4 */
 extern uint32_t (*btLinkClockHook)(void);			/* 0x400eb38 */
+extern int (*btLinkValidateHook)(unsigned int link, uint32_t first, uint32_t second, uint8_t *out);	/* 0x400eaa4 */
+extern uint8_t btPeerReport;					/* 0x400b557: 1: report event 0x32 once */
+
+/* The ROM's mode control, whose header byte btLmpLcParsePacket() sets. */
+struct BtModeControl {
+	uint8_t reserved0[4];
+	uint8_t header;
+};
+extern struct BtModeControl *btLinkModeControl;			/* 0x400f8f4 */
+
+/* One of the ROM's 14 link sessions. */
+struct BtLinkSession {
+	uint16_t active;
+	uint8_t reserved2[6];
+};
+extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -199,6 +215,10 @@ void btLmpLcUpdatePacket(void);					/* 0x466e8 */
 int btLmpLcConfigurePacket(uint32_t *command);			/* 0x466f8 */
 void btLmpLcCheckPacket(unsigned int link, uint32_t clock, unsigned int kind, uint32_t argument,
 			unsigned int interval, uint32_t extra);		/* 0x46776 */
+int btLmpLcValidatePacket(unsigned int link, uint32_t first, uint32_t second, uint8_t *out);	/* 0x46830 */
+void btLmpLcPreparePacket(unsigned int value);			/* 0x4687a */
+void btLmpLcDispatchPacket(uint8_t *request);			/* 0x46926 */
+unsigned int btLmpLcParsePacket(uint32_t clock, unsigned int count, unsigned int limit, uint8_t *flag);	/* 0x4699c */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -79,6 +79,9 @@ extern int (*btNextPayload)(const struct BtSlotEvent *event, struct BtDeviceProf
 extern uint32_t btTargetState;					/* 0x400ddf0: the ROM's target link */
 extern uint8_t btTargetContext;					/* 0x400ddf4: the target's device */
 extern uint8_t btTargetEntry;					/* 0x400ddf5 */
+extern uint8_t btTargetUsed;					/* 0x400ddf7: the target's slots taken */
+extern uint8_t btTargetSlots;					/* 0x400ddf8: the slots it has */
+extern uint32_t btTableTargetClock;				/* 0x55304 */
 extern uint8_t btLinkDefaultSpan;				/* 0x400f818 */
 extern uint8_t btLinkScanFlags;					/* 0x400f72d: bit 1: the radio registers follow */
 extern uint8_t btLinkScanState;					/* 0x400f72e */
