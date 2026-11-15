@@ -121,7 +121,7 @@ struct ConfigBlock {
 	unsigned char	voltage82;
 	unsigned char	voltage83;
 	unsigned char	voltage84;
-#if ERNIE_HW == 0x00406000
+#if ERNIE_BOARD == 0x00406000
 	unsigned char	reserved22[2];		/* PCH-1000's layout: the trim a byte later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0xf8 - 0xf5];

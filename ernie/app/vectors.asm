@@ -24,7 +24,7 @@
 $_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	EXTRN	_csi01Interrupt, _tm01Interrupt, _tm11Interrupt
 $ENDIF
-$_IF (ERNIE_HW!=0x00406000)	; BOARD_SERIAL4: PCH-1000 has no UART4
+$_IF (ERNIE_BOARD!=0x00406000)	; BOARD_SERIAL4: PCH-1000 has no UART4
 	EXTRN	_uart4ErrorInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
 $ENDIF
 
@@ -69,7 +69,7 @@ _vector_INTST1:
 	DW	LOWW(_csi10Interrupt)	; 24H
 	DW	0			; 26H
 _vector_INTSRE1:
-$_IF (ERNIE_HW!=0x00406000)
+$_IF (ERNIE_BOARD!=0x00406000)
 	DW	LOWW(_uart4ErrorInterrupt)	; 28H
 $ELSE
 	DW	0			; 28H
@@ -125,13 +125,13 @@ _vector_INTSRE2:
 	DW	LOWW(_uart2ErrorInterrupt)	; 5CH
 	DW	0			; 5EH
 _vector_INTST4:
-$_IF (ERNIE_HW!=0x00406000)
+$_IF (ERNIE_BOARD!=0x00406000)
 	DW	LOWW(_uart4SendInterrupt)	; 60H
 $ELSE
 	DW	0			; 60H
 $ENDIF
 _vector_INTSR4:
-$_IF (ERNIE_HW!=0x00406000)
+$_IF (ERNIE_BOARD!=0x00406000)
 	DW	LOWW(_uart4ReceiveInterrupt)	; 62H
 $ELSE
 	DW	0			; 62H
@@ -152,7 +152,7 @@ $ENDIF
 	DW	0			; 7EH
 	DS	40H			; the CALLT table, unused
 _option_bytes:
-$_IF (ERNIE_HW==0x00406000)	; BOARD_WDT: PCH-1000's watchdog runs
+$_IF (ERNIE_BOARD==0x00406000)	; BOARD_WDT: PCH-1000's watchdog runs
 	DB	7FH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging
 $ELSE
 	DB	6EH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging

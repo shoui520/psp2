@@ -97,10 +97,10 @@ const struct ConfigBank configDefault = {
 		0x04, 0x01,	/* paramSetting1, paramSetting2: the charge LED's blink */
 #endif
 		0x23, 0x23, 0x23, 0x23,	/* voltage81-84 */
-#if ERNIE_HW == 0x00406000 && FW_SINCE(0x0100060B)
+#if ERNIE_BOARD == 0x00406000 && FW_SINCE(0x0100060B)
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
 		{ 0x00, 0x00, 0x00 },	/* reserved7 */
-#elif ERNIE_HW == 0x00406000
+#elif ERNIE_BOARD == 0x00406000
 		{ 0x0b, 0x08 }, 0x05,	/* reserved22, voltageTrim */
 		{ 0x07, 0x00, 0x00 },	/* reserved7 */
 #else

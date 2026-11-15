@@ -23,8 +23,10 @@ FW ?= 0x01000306
 PROGRAM ?= app
 
 include hw/$(HW).mk
+# the board whose code it runs (hw/<id>.mk sets BOARD where it is another board's)
+BOARD ?= $(HW)
 
-CFLAGS := -DERNIE_HW=$(HW) -DERNIE_FW=$(FW) -Iinclude
+CFLAGS := -DERNIE_HW=$(HW) -DERNIE_BOARD=$(BOARD) -DERNIE_FW=$(FW) -Iinclude
 # the updater's build: the headers' declarations of what it has in a form of its own
 ifeq ($(PROGRAM),updater)
 CFLAGS += -DERNIE_UPDATER

@@ -1,6 +1,7 @@
 /*
- * Build selection: the board (hardware ID, as in KBL Param's hardware info) and the
- * firmware version, both given by the Makefile (-DERNIE_HW=..., -DERNIE_FW=...).
+ * Build selection: the board (hardware ID, as in KBL Param's hardware info), the board whose
+ * code it runs and the firmware version, given by the Makefile (-DERNIE_HW=..., -DERNIE_BOARD=...,
+ * -DERNIE_FW=...).
  */
 #ifndef ERNIE_H
 #define ERNIE_H
@@ -11,6 +12,14 @@
 #ifndef ERNIE_FW
 #error "ERNIE_FW (firmware version) not set"
 #endif
+
+/* the board whose code the build is: the hardware ID, or the board another one's image is
+   built from (hw/<id>.mk's BOARD: the DEX boards 0x00405000 and 0x00405200 run PCH-1000's,
+   differing only in their ID and nvsHostOffsetMin) */
+#ifndef ERNIE_BOARD
+#define ERNIE_BOARD		ERNIE_HW
+#endif
+#define BOARD_IS(id)		(ERNIE_BOARD == (id))
 
 /* board family: the hardware ID's top byte (0x00 1x/3x prototypes, 0x004 IRT/IRS, 0x006
  * IRS-1001, 0x007 DOL (PS TV), 0x008 USS (PCH-2000)) */
@@ -23,7 +32,7 @@
    transition's result read as a byte, a 60-tick AC delay after an off or a suspend), by the
    0x00090903 compiler */
 #define FW_RETAIL_10X		(FW_SINCE(0x01000104) && !FW_SINCE(0x01000306) && \
-				 (HW_IS(0x00406000) || HW_IS(0x00416000)))
+				 (BOARD_IS(0x00406000) || HW_IS(0x00416000)))
 
 /* tables 0x00090804 keeps in initialised RAM (@@INITL, copied by cstart) and later versions
    in the constants */

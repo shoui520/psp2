@@ -53,7 +53,7 @@ OBJECT	iica.c
 OBJECT	powerjob.c
 OBJECT	elmo.c
 OBJECT	serial2.c
-OBJECT	uart4.c		IF ERNIE_HW!=0x00406000	# BOARD_SERIAL4
+OBJECT	uart4.c		IF ERNIE_BOARD!=0x00406000	# BOARD_SERIAL4
 OBJECT	interrupt.c
 OBJECT	serial4.c
 OBJECT	task6.c
@@ -188,10 +188,10 @@ AT	0x0f692		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000107
 AT	0x0f67a		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x01000104
 AT	0x0f6e0		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090903
 AT	0x0f57a		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090804
-AT	0x0f592		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x01000306
-AT	0x0f52c		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100010B
-AT	0x0f488		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100060B
-AT	0x0f488		IF ERNIE_HW==0x00406000&&ERNIE_FW==0x0100060D
+AT	0x0f592		IF ERNIE_BOARD==0x00406000&&ERNIE_FW==0x01000306
+AT	0x0f52c		IF ERNIE_BOARD==0x00406000&&ERNIE_FW==0x0100010B
+AT	0x0f488		IF ERNIE_BOARD==0x00406000&&ERNIE_FW==0x0100060B
+AT	0x0f488		IF ERNIE_BOARD==0x00406000&&ERNIE_FW==0x0100060D
 AT	0x0f6f6		IF ERNIE_HW==0x00414000&&ERNIE_FW==0x01000306
 SEG	@@R_INIT
 SEG	@@R_INIS
@@ -208,12 +208,12 @@ SEG	@@CODEL		csi01.c motion.c IF ERNIE_FW<0x0100060B
 SEG	@@CODEL		util.c inputbits.c serial.c adc.c analog.c scratchpad.c
 SEG	@@CODEL		nvsreq.c serial1.c updatereq.c sha1.c powerreq.c task5.c serialauth.c nvs.c power.c timer.c
 SEG	@@CODEL		iica.c powerjob.c elmo.c serial2.c
-SEG	@@CODEL		uart4.c IF ERNIE_HW!=0x00406000
+SEG	@@CODEL		uart4.c IF ERNIE_BOARD!=0x00406000
 SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c trace.c board.c powerseq.c battery.c charge.c cookie.c powerwait.c state.c
 # The original initialization leaves a return-address byte on the stack that the
 # host handshake passes to rel_mpf when its first allocation fails. Preserve it.
 AT	0x2b48d		IF ERNIE_HW==0x00415000
-AT	0x29ced		IF ERNIE_HW==0x00406000
+AT	0x29ced		IF ERNIE_BOARD==0x00406000
 SEG	@@CODEL		handshake.c
 SEG	@@CODEL		serial1op.c param.c
 SEG	@@CODEL
@@ -231,7 +231,7 @@ SEG	@@INIS		IF ERNIE_FW!=0x01000306
 AT	0xfdcde		IF ERNIE_HW==0x00415000&&ERNIE_FW>=0x01000306
 AT	0xfdcd4		IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306&&ERNIE_FW!=0x00090804
 AT	0xfdcd0		IF ERNIE_HW==0x00415000&&ERNIE_FW==0x00090804
-AT	0xfdcde		IF ERNIE_HW==0x00406000
+AT	0xfdcde		IF ERNIE_BOARD==0x00406000
 SEG	@@DATA		handshake.c cstartend.asm
 SEG	@@FSLDAT
 # the startup's (empty) saddr initialised data, where Sony's link has it

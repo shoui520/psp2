@@ -1455,7 +1455,7 @@ static unsigned char serial1Command0950(struct SerialBuffer *request, struct Ser
 	}
 	paramGetBase(&base);
 	step = level - base;
-#if ERNIE_HW == 0x00406000 || !FW_SINCE(0x01000306)
+#if ERNIE_BOARD == 0x00406000 || !FW_SINCE(0x01000306)
 	/* PCH-1000's build and the builds before 0x01000306 multiply in 16 bits; the others'
 	   take the product's low byte */
 	value.value = 1400 - (unsigned int)step * 10;
