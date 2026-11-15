@@ -16,6 +16,7 @@
 #include "robin/calibration.h"
 #include "robin/conn.h"
 #include "robin/mac.h"
+#include "robin/macrate.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
 #include "robin/mgmt.h"
@@ -148,7 +149,6 @@ void rfCalibConvertDescriptor(uint8_t *erpInfo);				/* 0x2a53c */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyConvertEntry(unsigned int interfaceType, unsigned int lowRate);	/* 0x3128c */
-void rfCalibFilterBuffer(void);							/* 0x2897c */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
 void macTxNotifyFilterBuffer(int shared);					/* 0x32510 */
 /* Connection hooks called by code not converted yet. */
@@ -1043,12 +1043,13 @@ void wlanApOlbcClear(struct WlanConnection *connection)
 void wlanApUpdateProtection(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	int protect = 1;
 
 	if (info->phyMode == WLAN_PHY_MODE_B) {
 		info->rateFlags &= ~WLAN_RATE_FLAG_PROTECTION;
 		info->capability[0] &= ~WLAN_CAPABILITY0_SHORT_PREAMBLE;
 	} else {
-		int protect = (info->protectionFlags & 1) || info->nonErpStations != 0;
+		protect = (info->protectionFlags & 1) || info->nonErpStations != 0;
 
 		info->rateFlags = (info->rateFlags & ~WLAN_RATE_FLAG_PROTECTION) |
 				  (protect ? WLAN_RATE_FLAG_PROTECTION : 0);
@@ -1059,7 +1060,7 @@ void wlanApUpdateProtection(struct WlanConnection *connection)
 	}
 	macMgmtInspectFrame(connection);
 	macMgmtConvertFrame(connection);
-	rfCalibFilterBuffer();
+	wlanMacSlotConfigure(protect);
 }
 
 void wlanApNonErpGone(struct WlanConnection *connection)

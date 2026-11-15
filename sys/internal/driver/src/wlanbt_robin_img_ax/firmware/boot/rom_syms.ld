@@ -194,3 +194,14 @@ PROVIDE(romEdcaSetTxop     = 0x03f3a64d);
 PROVIDE(romLibDispatchEntry = 0x03f3acf3);
 PROVIDE(romLibParseEntry   = 0x03f3ad03);
 PROVIDE(romLibConfigureState = 0x03f3a2d1);
+PROVIDE(romLibManageContext = 0x03f3aa0b);
+PROVIDE(romMacEntryRead    = 0x03f3acbf);
+PROVIDE(romLibHandleState  = 0x03f3a2a5);
+PROVIDE(romLibClearContext = 0x03f3aadb);
+PROVIDE(romLibUpdateState  = 0x03f3a2b9);
+PROVIDE(romLibCheckState   = 0x03f3a347);
+PROVIDE(romLibPrepareState = 0x03f3a36f);
+PROVIDE(romLibSelectContext = 0x03f3ab21);
+PROVIDE(romLibConvertContext = 0x03f3aaf1);
+/* 64-bit signed divide (ARM), reached through the veneer at 0x5311c. */
+PROVIDE(__aeabi_ldivmod    = 0x03f3eb70);

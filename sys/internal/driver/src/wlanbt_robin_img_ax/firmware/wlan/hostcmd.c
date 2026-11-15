@@ -16,6 +16,7 @@
 #include "robin/pssm.h"
 #include "robin/psctl.h"
 #include "robin/rom.h"
+#include "robin/util.h"
 #include "robin/runtime.h"
 #include "robin/sdiodev.h"
 #include "robin/stapssm.h"
@@ -444,7 +445,6 @@ void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x42
 void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
 		 uint16_t *wakeDtims, uint16_t *listenBeacons);				/* 0x2cdfc */
 int hostCmd008fWrite(unsigned int length, uint8_t *data);			/* 0x33084 */
-void hostCmd008fConfigure(uint8_t *data, unsigned int length);			/* 0x283cc */
 int hostCmd008fApply(void);							/* 0x31224 */
 unsigned int hostCmd008fResolve(uint8_t *body);					/* 0x26fdc */
 void hostCmd0096Enable(void);							/* 0x26c58 */
@@ -1393,7 +1393,7 @@ int hostCmdProcess(void)
 			case 3:
 				if (action != 1)
 					goto unsupported;
-				hostCmd008fConfigure(body + 6, HOSTCMD_U16(body + 4));
+				util_SwapBuffer(body + 6, HOSTCMD_U16(body + 4));
 				result = hostCmd008fApply();
 				goto done;
 			case 4:

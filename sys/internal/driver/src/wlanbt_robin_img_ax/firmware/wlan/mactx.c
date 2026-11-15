@@ -24,6 +24,7 @@
 #include "robin/runtime.h"
 #include "robin/soc.h"
 #include "robin/stream.h"
+#include "robin/baslot.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
 #include "robin/task.h"
@@ -609,11 +610,6 @@ unsigned int wlanTxRingLastQueue(void);				/* 0x32448 */
 extern uint8_t wlanTxRateFlags;				/* 0x040088a6, bit 6: no low rate for null frames */
 uint32_t wlanRateTimeoutValue(uint8_t *rateControl, uint32_t timeout, unsigned int shift); /* 0x2bd4a */
 void cbProcSetBaWindow(unsigned int tid, unsigned int ring, unsigned int hwSlot); /* 0x1e9c2 */
-void wlanBaSlotDetach(unsigned int queue, unsigned int hwSlot);	/* 0x2931c */
-void wlanBaSlotClear(unsigned int hwSlot);			/* 0x2940e */
-int wlanBaSlotSetup(const struct WlanBaRequest *request, unsigned int windowId,
-		    unsigned int hwSlot);					/* 0x29264 */
-void wlanRxBaHwRelease(const uint8_t *peer, unsigned int tid);	/* 0x296f6 */
 void wlanTxRingMovePending(unsigned int window, unsigned int queue);	/* 0x30eec */
 void wlanTxRingMoveToWindow(unsigned int window, unsigned int queue, unsigned int tid,
 			    const uint8_t *peer);			/* 0x30efe */

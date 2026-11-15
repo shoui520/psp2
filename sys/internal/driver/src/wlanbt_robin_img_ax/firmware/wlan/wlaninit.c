@@ -13,6 +13,8 @@
 #include "robin/ie.h"
 #include "robin/join.h"
 #include "robin/mac.h"
+#include "robin/baslot.h"
+#include "robin/macrate.h"
 #include "robin/mactx.h"
 #include "robin/mdev.h"
 #include "robin/mef.h"
@@ -160,7 +162,6 @@ void p2pDirectCheckState(void);								/* 0x3f34c */
 void p2pDirectResetTable(void);								/* 0x42188 */
 void uapSqramTrackContext(void);							/* SQRAM 0xc0008754 */
 void macMgmtSyncState(void);								/* 0x34c78 */
-void macTxNotifyBuildEntry(void);							/* 0x310a0 */
 void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void macTxNotifyAcquireContext(void);							/* 0x30c0e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
@@ -176,7 +177,6 @@ void uapSqramVerifyContext(void);							/* SQRAM 0xc00089e6 */
 void wlanPsConvertDescriptor(void);							/* 0x3ed8a */
 void macTxNotifyManagePacket(void *queue);						/* 0x32a6a */
 int cbProcProcessBuffer(void);								/* 0x1d52e */
-void rfCalibFilterBuffer(void);								/* 0x2897c */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
 
 /* The idle hook of the transmit notification. */
@@ -207,7 +207,7 @@ static void wlanHwInfoInit(void)
 	}
 	wlanPrimaryEvents |= 1;
 	wlanProtection.flags |= 0x20;
-	rfCalibFilterBuffer();
+	wlanMacSlotConfigure(1);
 	version = REG16(0x80002018);
 	wlanHwInfo.version[0] = version;
 	wlanHwInfo.version[1] = version >> 8;
@@ -466,7 +466,7 @@ int wlanInit(void)
 	wlanIeInit();
 	macMgmtSyncState();
 	wlanMefInit();
-	macTxNotifyBuildEntry();
+	wlanTxRingOpsInit();
 	cbProcDispatchFrame();
 	macTxNotifyAcquireContext();
 	wlanSessionOpsInit();

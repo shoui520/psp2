@@ -60,6 +60,19 @@ int romLibParseEntry(unsigned int queue);
 /* The airtime in microseconds of a frame at a rate (0x03f3a2d1); arguments inferred from wlanTxAirtime(). */
 unsigned int romLibConfigureState(unsigned int rate, unsigned int sequence, unsigned int length,
 				  unsigned int wmm);
+/*
+ * The rate and timing routines of the ROM the transmit path calls (names
+ * inferred from the callers: wlan/macrate.c); the arguments are what the
+ * callers pass.
+ */
+unsigned int romLibManageContext(unsigned int rate, uint32_t rateSet);	/* 0x03f3aa0b */
+unsigned int romLibUpdateState(unsigned int rate);			/* 0x03f3a2b9 */
+int romLibCheckState(int a, int b, int c, int d, int e);		/* 0x03f3a347 */
+void romLibPrepareState(uint32_t low, uint32_t high, uint32_t limit);	/* 0x03f3a36f */
+void romLibSelectContext(unsigned int mode);				/* 0x03f3ab21 */
+void romLibConvertContext(unsigned int rate, unsigned int response);	/* 0x03f3aaf1 */
+unsigned int romLibHandleState(unsigned int index);			/* 0x03f3a2a5: the rate code of an index */
+void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb */
 /* The MAC's wake and sleep requests (0x03f3a917, 0x03f3a907); no argument. */
 void romMacWakeRequest(void);
 void romMacSleepNotify(void);

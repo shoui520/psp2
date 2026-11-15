@@ -654,7 +654,7 @@ static __attribute__((noinline, noclone)) void sdioWakeHandler(void)
 
 	SDIO_CLOCK_REQUEST = (SDIO_CLOCK_REQUEST & ~SDIO_CLOCK_REQUEST_MASK) | SDIO_CLOCK_REQUEST_ACTIVE;
 	sdioClockRequest = 0;
-	rfCalibReleaseTable(sdioSleepConfig.param, 0);
+	gpioPinWrite(sdioSleepConfig.param, 0);
 	sdioWakePending = 1;
 	for (i = 0; i < SDIO_FUNCTIONS; i++) {
 		if (i == SDIO_FUNCTION_WLAN) {
@@ -928,8 +928,8 @@ allocate:
 		sdioWakeLine.width = wake->line.width;
 		if (wake->line.pin != 0xffff) {
 			uapSqramAdjustEntry((uint8_t)wake->line.pin, 0xffff);
-			rfCalibReleaseTable((sdioWakeLine.pin), (sdioWakeLine.polarity));
-			rfCalibAcquireTable((uint8_t)sdioWakeLine.pin, 1);
+			gpioPinWrite((sdioWakeLine.pin), (sdioWakeLine.polarity));
+			gpioPinSelect((uint8_t)sdioWakeLine.pin, 1);
 		}
 		return 0;
 	}
@@ -1049,7 +1049,7 @@ holdData:
 		for (i = 0; dev->index == i || (uint8_t)(uintptr_t)argument != sdioChannel[i]; ) {
 			if (++i >= SDIO_FUNCTIONS) {
 				sysIrqRestore(posture);
-				rfCalibReleaseTable(sdioChannel[dev->index], 1);
+				gpioPinWrite(sdioChannel[dev->index], 1);
 				return 0;
 			}
 		}
@@ -1083,7 +1083,7 @@ holdData:
 		if (noMatch || release) {
 			if (!noMatch && argument != NULL)
 				sdioRegs[dev->index]->dmaState = 1;
-			rfCalibReleaseTable(sdioChannel[dev->index], argument == NULL);
+			gpioPinWrite(sdioChannel[dev->index], argument == NULL);
 		}
 		sdioChannelHeld[dev->index] = (uint32_t)(uintptr_t)argument;
 		sysIrqRestore(posture);
@@ -1160,7 +1160,7 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 	uint32_t status, flags;
 
 	if (sdioWakePending != 0) {
-		rfCalibReleaseTable(sdioSleepConfig.param, 1);
+		gpioPinWrite(sdioSleepConfig.param, 1);
 		sdioWakePending = 0;
 	}
 	for (i = 0; i < SDIO_FUNCTIONS; i++) {

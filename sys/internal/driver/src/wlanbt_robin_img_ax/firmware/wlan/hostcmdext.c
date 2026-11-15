@@ -44,16 +44,16 @@ unsigned int hostCmd0020Set(unsigned int secondary, unsigned int antenna)
 	if (level == 1) {
 		SOC_REG(0x200) |= 0x28;
 		if (antenna == 1) {
-			rfCalibManageTable(3, 0);
-			rfCalibAcquireTable(3, 1);
+			gpioPinWriteLow(3, 0);
+			gpioPinSelect(3, 1);
 			value = 1;
 		} else {
-			rfCalibManageTable(3, 1);
-			rfCalibAcquireTable(3, 1);
+			gpioPinWriteLow(3, 1);
+			gpioPinSelect(3, 1);
 			value = 0;
 		}
-		rfCalibManageTable(5, value);
-		rfCalibAcquireTable(5, 1);
+		gpioPinWriteLow(5, value);
+		gpioPinSelect(5, 1);
 	}
 	return sysIrqRestore(posture);
 }

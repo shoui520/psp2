@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include "robin/clock.h"
+#include "robin/gpio.h"
 #include "robin/rfreg.h"
 #include "robin/socpower.h"
 
@@ -186,9 +187,6 @@ int fmCoexDispatchState(void);				/* 0x49be2 */
 int fmCoexValidateState(uint32_t *state);		/* 0x49bba */
 void fmCoexAdjustState(void);				/* 0x4a570 */
 void fmCoexRecordState(void);				/* 0x4a58a */
-void rfCalibReleaseTable(unsigned int channel, int flag);	/* 0x281d0 */
-void rfCalibManageTable(unsigned int channel, int flag);	/* 0x2812c */
-void rfCalibAcquireTable(unsigned int channel, int flag);	/* 0x28142 */
 extern struct OsaEventFlags *wlanHostSleepFlags;		/* 0x54bdc */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 void wlanMacRestart(void);				/* 0x1c92e */

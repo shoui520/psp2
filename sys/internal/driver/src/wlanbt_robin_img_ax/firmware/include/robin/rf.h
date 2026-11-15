@@ -41,6 +41,7 @@ void rfLoadBandRegisters(int band, int mode);
 void rfChannelHookBefore(void);
 void rfChannelHookAfter(void);
 void rfCalibrateChannel(int unused, unsigned int channel);
+int rfSynthesizerSet(uint32_t frequency, uint32_t reference, int doubled);	/* 0x28496 */
 int rfBusEnable(void);
 void rfLockInterrupt(void);
 

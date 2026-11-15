@@ -17,6 +17,8 @@
 #include "robin/hostcmd.h"
 #include "robin/ibss.h"
 #include "robin/mac.h"
+#include "robin/baslot.h"
+#include "robin/macrate.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
 #include "robin/mgmt.h"
@@ -101,12 +103,8 @@ void macMgmtCheckDescriptor(void);								/* 0x3bc28 */
 void wlanPsConvertTable(uint32_t activeFrame);							/* 0x3c054 */
 void macMgmtFormatContext(void);								/* 0x35936 */
 void clockHostApplyTarget(void);								/* 0x26b48 */
-void rfCalibAcquireBuffer(void);								/* 0x28722 */
 void macTxNotifyUpdateTable(void);								/* 0x31596 */
-void rfCalibTrackBuffer(void);									/* 0x28706 */
-void rfCalibManageBuffer(void);									/* 0x28716 */
 void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */
-void rfCalibAcquirePacket(void);								/* 0x28f30 */
 int macTxNotifyValidateState(void);								/* 0x2fa22 */
 int wpaSuppFilterChannel(void);									/* 0x2ea5c */
 extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
@@ -483,17 +481,17 @@ void wlanMacResume(unsigned int reason)
 	UINT posture;
 
 	romLibResolveState();
-	rfCalibAcquireBuffer();
+	wlanMacE80Bit2Clear();
 	sysDelayUs(20);
 	if (reason == 0)
 		wlanDmaRingsDrain();
 	posture = sysIrqDisable();
 	macTxNotifyUpdateTable();
 	wlanDmaRingClearPending();
-	rfCalibTrackBuffer();
+	wlanMacEventMasksSet();
 	if (reason == 0)
 		romLibApplyState();
-	rfCalibManageBuffer();
+	wlanMacE80Bit2Set();
 	sysIrqRestore(posture);
 }
 
@@ -597,7 +595,7 @@ void wlanMacReset(void)
 	rfSleepHook();
 	wlanSetChannel(wlanCurrentChannel(), flags, 0);
 	wlanAmpTxPacketsAdjust();
-	rfCalibAcquirePacket();
+	wlanBaHwReset();
 	macTxNotifyValidateState();
 	macTxBaResyncSequences();
 	wlanTxWindowsClearPending();

@@ -39,7 +39,8 @@ struct WlanBaRequest {
 	uint8_t reserved0[3];
 	uint8_t tid[4];		/* unaligned word, low byte used */
 	uint8_t timeout[4];	/* unaligned word, in Block Ack timeout units */
-	uint8_t reserved1[8];
+	uint8_t windowSize[4];	/* unaligned word, the frames the window holds */
+	uint8_t reserved16[4];
 	uint8_t peer[6];
 	uint8_t startSequence[2];
 };

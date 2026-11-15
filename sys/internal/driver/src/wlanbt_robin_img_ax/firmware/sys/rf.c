@@ -36,7 +36,6 @@ extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
 extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
 void wlanPsSelectHeader(unsigned int band, uint32_t channel);	/* 0x3e3aa */
 int sysRefClockProfile(void);				/* 0x26842 */
-void rfCalibQueryBuffer(uint16_t channel, uint16_t value, int flags);	/* 0x28496 */
 void macTxNotifyFilterContext(int enable);			/* 0x30dec */
 extern uint32_t rfBusEnabled;
 extern volatile uint32_t macPendingParam;			/* 0x8000a138, bit 4: 40 MHz */
@@ -329,7 +328,7 @@ void rfCalibrateChannel(int unused, unsigned int channel)
 {
 	int index = sysRefClockProfile();
 
-	rfCalibQueryBuffer(romRfChannelTable[channel], rfCalibrationTable[3 + index], 0);
+	rfSynthesizerSet(romRfChannelTable[channel], rfCalibrationTable[3 + index], 0);
 }
 
 /* Lets the accessors touch the bus. */

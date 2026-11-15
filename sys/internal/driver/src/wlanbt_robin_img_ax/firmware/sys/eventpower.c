@@ -244,9 +244,9 @@ void sysHandleMappedEventSource(uint32_t device, uint32_t dispatch)
 	}
 	if (dispatch == 0 && sysEventRouteState(device) != 0) {
 		if (channel == 8)
-			rfCalibReleaseTable(sysEventRoutes[route].flags >> 3, 0);
+			gpioPinWrite(sysEventRoutes[route].flags >> 3, 0);
 		else if (channel == 9)
-			rfCalibReleaseTable(16, 0);
+			gpioPinWrite(16, 0);
 	}
 	sysEventRoutesHold(device);
 }
@@ -290,9 +290,9 @@ void sysEventRouteConfigure(unsigned int route, int device, int source)
 		}
 	}
 	if (channel == 8)
-		rfCalibReleaseTable(sysEventRoutes[route].flags >> 3, 1);
+		gpioPinWrite(sysEventRoutes[route].flags >> 3, 1);
 	else if (channel == 9)
-		rfCalibReleaseTable(16, 1);
+		gpioPinWrite(16, 1);
 	sysEventRoutesRelease(device);
 }
 
@@ -1110,7 +1110,7 @@ int sysSetEventSourceHandler(uint32_t source, SysEventSourceHandler handler)
 	if (source != 10 && source != 11) {
 		if (source != 12)
 			return 0;
-		rfCalibAcquireTable(4, 0);
+		gpioPinSelect(4, 0);
 		PERIPH_REG(0x214) &= ~0x10u;
 		PERIPH_REG(0x218) &= ~0x10u;
 	}
@@ -1229,12 +1229,12 @@ int sysEventRouteChannelUpdate(int route, int device, int source, int hold)
 		channel = sysEventRoutes[route].flags >> 3;
 		if (!sysChannelQuiesce(channel))
 			return 0;
-		rfCalibReleaseTable(channel, 1);
-		rfCalibAcquireTable(channel, 1);
+		gpioPinWrite(channel, 1);
+		gpioPinSelect(channel, 1);
 		sysChannelClearSources(channel);
 	} else if (source == 9 && hold == 0) {
-		rfCalibReleaseTable(16, 1);
-		rfCalibAcquireTable(16, 1);
+		gpioPinWrite(16, 1);
+		gpioPinSelect(16, 1);
 		PERIPH_REG(0x270) &= ~1u;
 		PERIPH_REG(0x274) &= ~1u;
 	}
@@ -1258,8 +1258,8 @@ int sysChannelReset(unsigned int channel)
 {
 	if (!sysChannelQuiesce(channel))
 		return 0;
-	rfCalibReleaseTable(channel, 1);
-	rfCalibAcquireTable(channel, 1);
+	gpioPinWrite(channel, 1);
+	gpioPinSelect(channel, 1);
 	sysChannelClearSources(channel);
 	return 1;
 }
@@ -1355,7 +1355,7 @@ __attribute__((noinline)) void sysEventRouteAdjust(int route, int device, int so
 {
 	if (source != 12 || flag != 0)
 		return;
-	rfCalibAcquireTable(4, 0);
+	gpioPinSelect(4, 0);
 	PERIPH_REG(0x214) &= ~0x10u;
 	PERIPH_REG(0x218) &= ~0x10u;
 }

@@ -174,12 +174,12 @@ void wlanTxRequestReset(struct WlanMacTxRequest *request)
 	request->hwStatus = 0;
 	request->hwRetries = 0;
 	request->hwFlags = 0;
-	__aeabi_uwrite4(0, &request->reserved16[0]);
-	__aeabi_uwrite4(0, &request->reserved16[4]);
-	request->reserved16[8] = 0;
-	request->reserved16[9] = 0;
-	request->reserved16[10] = 0;
-	request->reserved16[11] = 0;
+	__aeabi_uwrite4(0, &request->expiry[0]);
+	__aeabi_uwrite4(0, &request->expiry[4]);
+	request->reserved24[0] = 0;
+	request->reserved24[1] = 0;
+	request->reserved24[2] = 0;
+	request->reserved24[3] = 0;
 	request->type = 0;
 	request->info = 0;
 }

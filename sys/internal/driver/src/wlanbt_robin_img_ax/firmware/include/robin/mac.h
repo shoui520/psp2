@@ -86,6 +86,7 @@
 /* ROM routines behind the MAC's indexed entries. */
 int romMacEntryCheck(unsigned int index, uint32_t value);			/* 0x03f3ac3d */
 int romMacEntryWrite(unsigned int index, uint32_t first, uint32_t second);	/* 0x03f3ac8b */
+int romMacEntryRead(unsigned int index, uint32_t *first, uint32_t *second);	/* 0x03f3acbf */
 
 struct MacRegionProvider {
 	uint32_t reserved;

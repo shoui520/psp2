@@ -39,7 +39,8 @@ struct WlanMacTxRequest {
 			uint8_t templateLength[2];
 		};
 	};
-	uint8_t reserved16[12];
+	uint8_t expiry[8];	/* unaligned 64-bit time the frame's lifetime ends */
+	uint8_t reserved24[4];
 	uint8_t flags[4];	/* unaligned word; bit 13 marks a frame sent without publishing */
 	uint8_t type;		/* bits 0-2 */
 	uint8_t info;		/* byte 1 of the data */
