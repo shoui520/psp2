@@ -110,7 +110,11 @@ public:
 		return Insert(intrusive_ptr<SharedStringBody>(new SharedStringBody(str)));
 	}
 
-	/* The string str by the set's order (first character, then sce_paf_strcmp), else end(). */
+	/* The string str by the set's order (first character, then sce_paf_strcmp), else end().
+	   A module that links libpaf calls it out of line (dbutil's ColumnValue constructor). */
+#ifndef PAF_LIBRARY_BUILD
+	__attribute__((noinline))
+#endif
 	iterator find(const char *const &str)
 	{
 		if (head == NULL)
@@ -126,7 +130,7 @@ public:
 			else
 				node = node->right;
 		}
-		return iterator(head);
+		return iterator(node);
 	}
 
 private:

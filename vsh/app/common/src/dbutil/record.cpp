@@ -13,6 +13,9 @@
 #include "record.h"
 #include "value.h"
 
+/* Sony's two Record constructors call the rows' push_back */
+PAF_VECTOR_NOINLINE_PUSH_BACK(dbutil::Record::Row, paf::allocator<dbutil::Record::Row>)
+
 namespace dbutil {
 
 Record::Record()

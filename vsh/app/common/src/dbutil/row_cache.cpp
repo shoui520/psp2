@@ -16,6 +16,15 @@
 #include "value.h"
 #include "row_cache.h"
 
+/* Sony calls these out of line: the values' push_back from ReadRow, the rows' clear and
+   push_back from Load */
+PAF_VECTOR_NOINLINE_PUSH_BACK(dbutil::RefPtr<dbutil::ColumnValue>,
+			      dbutil::Allocator<dbutil::RefPtr<dbutil::ColumnValue> >)
+PAF_VECTOR_NOINLINE_PUSH_BACK(paf::common::SharedPtr<dbutil::CachedRow>,
+			      dbutil::Allocator<paf::common::SharedPtr<dbutil::CachedRow> >)
+PAF_VECTOR_NOINLINE_CLEAR(paf::common::SharedPtr<dbutil::CachedRow>,
+			  dbutil::Allocator<paf::common::SharedPtr<dbutil::CachedRow> >)
+
 using paf::common::SharedPtr;
 
 namespace dbutil {
@@ -55,6 +64,26 @@ struct ColumnNameMatch {
 
 	const ColumnName &m_name;
 };
+
+}
+
+namespace paf {
+
+/* Sony's ColumnValueList::Find calls it out of line */
+template<>
+inline __attribute__((noinline)) dbutil::ColumnValueList::iterator
+find_if(dbutil::ColumnValueList::iterator _First, dbutil::ColumnValueList::iterator _Last,
+	dbutil::ColumnNameMatch _Pred)
+{
+	for (; _First != _Last; ++_First)
+		if (_Pred(*_First))
+			break;
+	return _First;
+}
+
+}
+
+namespace dbutil {
 
 RefPtr<ColumnValue> ColumnValueList::Find(const ColumnName &name)
 {

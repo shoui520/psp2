@@ -62,11 +62,6 @@ int ColumnValue::Release()
 	return count;
 }
 
-int ColumnValue::AddRef()
-{
-	return sceAtomicIncrement32AcqRel(&m_refCount) + 1;
-}
-
 /* frees what the value owned, then copies value's name, text and blob onto heap */
 void OwnedValue::Assign(const Value &value, void *heap)
 {

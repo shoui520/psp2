@@ -9,6 +9,7 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <sce_atomic.h>
 #include <std/string>
 #include <std/memory>
 #include <common/shared_string.h>
@@ -118,7 +119,12 @@ public:
 	~ColumnValue();
 
 	int Release();
-	int AddRef();
+	/* exported, and inlined by every caller in Sony's build */
+	__declspec(dllexport) int AddRef()
+	{
+		return sceAtomicIncrement32AcqRel(&m_refCount) + 1;
+	}
+
 	bool operator==(const ColumnValue &other);
 	bool operator!=(const ColumnValue &other);
 	void GetColumnName(ColumnName *name);

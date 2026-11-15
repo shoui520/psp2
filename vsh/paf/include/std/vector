@@ -547,6 +547,38 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 	} \
 	}
 
+/* vector<T, A>::push_back out of line, at namespace scope after T and before its first use:
+   Sony calls it for these element types where it inlines the rest */
+#define PAF_VECTOR_NOINLINE_PUSH_BACK(T, A) \
+	namespace paf { \
+	template<> inline __attribute__((noinline)) int vector<T, A >::push_back(const T &val) \
+	{ \
+		int result; \
+		if (count + 1 <= limit || (result = reserve(limit + 10)) != 0) { \
+			new (&ptr[count]) T(val); \
+			result = ++count; \
+		} \
+		return result; \
+	} \
+	}
+
+/* vector<T, A>::clear out of line, the same way */
+#define PAF_VECTOR_NOINLINE_CLEAR(T, A) \
+	namespace paf { \
+	template<> inline __attribute__((noinline)) void vector<T, A >::clear() \
+	{ \
+		typedef T _Elem; \
+		if (ptr != NULL) { \
+			for (size_type i = 0; i < count; ++i) \
+				ptr[i].~_Elem(); \
+			alloc.deallocate(ptr, limit); \
+			ptr = NULL; \
+			count = 0; \
+			limit = 0; \
+		} \
+	} \
+	}
+
 /* vector<T>::operator= out of line, at namespace scope after T: Sony keeps it out of line for
    these element types and inlines it for the rest */
 #define PAF_VECTOR_NOINLINE_ASSIGN(T) \

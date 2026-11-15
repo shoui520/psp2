@@ -85,3 +85,8 @@ set_source_files_properties(rowid_result.cpp PROPERTIES COMPILE_OPTIONS -Xautoin
 set_source_files_properties(statement.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(collation.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 set_source_files_properties(../../../../../sys/internal/usermode/src/ces/libces/src/JIS/jis2004_row16_84.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=400)
+# Sony linked with psp2ld --strip-unused, which drops what nothing calls (the inline destructors
+# and container members SNC also emits out of line, libsnc's and libces's unused helpers): each
+# SNC function in its own section, and the link collects the unreferenced ones.
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
