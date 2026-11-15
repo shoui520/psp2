@@ -58,7 +58,6 @@
 extern int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
 extern uint8_t wlanAssocHtCapability[28];			/* SQRAM 0xc0032170: the copy of it for the association */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
-int rfCalibSyncDescriptor(void);						/* 0x2a20c */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */
 extern uint8_t ampScanChannel;					/* amp/wlanif.c */
 
@@ -89,7 +88,7 @@ __attribute__((noinline)) void macTxNotifyManageFrame(struct WlanConnection *con
 	connection->bssCapability[1] = (uint8_t)(capability >> 8);
 	connection->associationId = associationId;
 	__aeabi_memcpy(connection->peerAddress, peer, 6);
-	rfCalibSyncDescriptor();
+	wlanAssociationChanged();
 }
 
 /*
@@ -698,6 +697,13 @@ void macTxNotifyComputeHeader(int status, const uint8_t *address)
 	__aeabi_memcpy(event, address, 6);
 	event[6] = (uint8_t)status;
 	macMgmtFormatState(wlanLeave.connection, event);
+}
+
+/* HostCmd_CMD_802_11_DEAUTHENTICATE: the peer's address and the reason code. */
+void hostCmd0024(struct WlanConnection *connection, uint8_t *body)
+{
+	macTxNotifyBuildHeader(connection, body, body[6] | body[7] << 8,
+			       (int (*)(int, const uint8_t *))macTxNotifyComputeHeader, 0);
 }
 
 __attribute__((noinline)) void macTxNotifyResetHeader(int status, const uint8_t *address)

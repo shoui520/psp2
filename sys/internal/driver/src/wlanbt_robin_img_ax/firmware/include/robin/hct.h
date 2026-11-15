@@ -23,6 +23,9 @@ extern OsaBuffer *hctPending;
 
 void hctComputeCoexIntervals(void);
 void hctCoexTick(void);
+int hctClockCheckRequirements(void);
+int hctClockApply(void);
+int hctClockRequirementSet(int selector, uint32_t value);
 uint32_t *hctEnableCoexScheduling(void);
 void hctFlushPending(void);
 void hctQueuePending(OsaBuffer *buffer);
@@ -30,6 +33,7 @@ void hctDeliverToHost(uint8_t *payload, uint32_t event);
 void hctCompleteTransfer(uint32_t handle, uint32_t flag);
 int hctRxCallback(OsaBuffer *buffer);
 void hctDropPending(uint32_t key, const void *address);
+void hctDeliverAclToHost(uint8_t *payload);
 void hctReleaseLinkContext(struct HctReleaseMessage *message);
 void hctSendAclToHost(struct HctLinkMessage *message);
 int hctRouteMessage(struct HctLinkMessage *message);

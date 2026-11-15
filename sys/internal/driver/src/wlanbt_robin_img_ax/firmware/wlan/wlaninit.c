@@ -77,8 +77,7 @@ extern uint8_t wlanSavedMgmtPriority;							/* 0x040088da */
 extern uint8_t wlanAntennaProfileDefault[];						/* SQRAM 0xc0031b40 */
 
 /* The state of the transmit notification the stages configure. */
-extern uint32_t *macTxNotifyState;							/* 0x54bd4 */
-extern uint8_t wlanBssLocalDescriptor[];						/* 0x040089ac */
+extern struct WlanMacDescriptor *macTxNotifyState;					/* 0x54bd4 */
 
 /* The buffer pools (descriptor, then the configuration osa_BlockPoolCreate(, osaPoolEntryCreate) reads). */
 #define POOL(name, kind, size, count)								\
@@ -142,7 +141,6 @@ static struct { uint32_t words[7]; } macTxNotifySemaphoreObject __attribute__((s
 static struct { uint32_t words[8]; } wlanHostSleepFlagsObject __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
-void *macTxNotifyConfigurePacket(int enable);						/* 0x3258e */
 void sysChipIdRead(void);								/* 0x26ab4 */
 void clockHostApplyTarget(void);							/* 0x26b48 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
@@ -202,7 +200,7 @@ static int wlanInitStageHwInfo(void)
 {
 	wlanHwInfoInit();
 	sysChipIdRead();
-	macTxNotifyState = macTxNotifyConfigurePacket(1);
+	macTxNotifyState = wlanMacDescriptorInit(1);
 	wlanHwInfoStage.run = wlanInitStageHwInfo;
 	wlanInitStageRegister(&wlanHwInfoStage);
 	return 0;
@@ -215,8 +213,8 @@ static int wlanInitStageRadio(void)
 
 	wlanCalibrationTableUpdate(NULL, 0, 0, 0);
 	clockHostApplyTarget();
-	wlanMacBringUp(__aeabi_uread4(wlanBssLocalDescriptor),
-		       (const struct MacRegionProvider *)macTxNotifyState[9], macTxNotifyState[13]);
+	wlanMacBringUp(__aeabi_uread4(&wlanMacDescriptor.descriptor), macTxNotifyState->provider,
+		       macTxNotifyState->dmaContext);
 	if (macTxNotifySetupDone == 0) {
 		macTxNotifySetupDone = 1;
 		macTxNotifySetupPacket();

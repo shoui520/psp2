@@ -135,8 +135,6 @@ uint32_t wlanLinkCheckPeriod(void);						/* 0x3dd46 */
 unsigned int wlanPsCheckHeader(void);						/* 0x3dd4c */
 
 /* Not written yet. */
-int macTxGetContext(void);							/* 0xaa74 */
-void macTxSetContext(int context);						/* 0xaa7a */
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
 				int broadcast);					/* 0x3d3f0 */
 extern uint32_t wlanPsWakeCycle;		/* 0x562b4 */

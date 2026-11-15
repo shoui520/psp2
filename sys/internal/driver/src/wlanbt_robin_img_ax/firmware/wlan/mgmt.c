@@ -113,7 +113,6 @@ void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
 void macTxNotifyFilterBuffer(int shared);					/* 0x32510 */
 /* Connection hooks called by code not converted yet. */
-extern void (*wlanApErpUpdateHook)(struct WlanConnection *connection);		/* 0x00054e80 */
 extern void (*wlanPsRefreshHook)(struct WlanConnection *connection);		/* 0x00054e60 */
 extern void (*wlanSecurityRefreshHook)(struct WlanConnection *connection);	/* 0x00054e88 */
 

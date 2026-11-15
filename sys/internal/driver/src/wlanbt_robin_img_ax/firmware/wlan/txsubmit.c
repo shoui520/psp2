@@ -25,9 +25,11 @@
 #include "robin/wlan.h"
 #include "robin/wmm.h"
 #include "robin/htba.h"
+#include "robin/macdefaults.h"
 
 /* Not converted yet; provisional names. */
 uint32_t *wlanPsFormatFrame(struct WlanConnection *connection, unsigned int multicast); /* 0x3d78c */
+extern uint32_t wlanMacEntrySelect;				/* SQRAM 0xc0011be8 */
 
 /* Fields of the descriptor (the buffer data) the request is made from. */
 #define TX_DATA_TYPE(data)	((data)[0])
@@ -206,6 +208,12 @@ int wlanTxReleaseFrame(OsaBuffer *buffer)
 		osaTaskSleep(1);
 	}
 	return 1;
+}
+
+/* 0x00031a32: which of the MAC's entry tables is in use. */
+uint32_t wlanMacEntrySelectGet(void)
+{
+	return wlanMacEntrySelect;
 }
 
 /* Gives the request the rate (or the rate table) its frame goes out at. */

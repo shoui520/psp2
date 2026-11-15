@@ -41,6 +41,7 @@ extern uint8_t wlanTxPowerIncludeFirst;		/* 0x5541d: hostCmd00d1Get() starts at 
 /* The hooks the template and the MAC filter code are installed in. */
 extern void (*wlanSqramFrameHook)(struct WlanConnection *connection);		/* SQRAM 0xc0011bb0 */
 extern void (*wlanHtOperationHook)(struct WlanConnection *connection);		/* 0x54e64 */
+extern void (*wlanApErpUpdateHook)(struct WlanConnection *connection);		/* 0x54e80 */
 extern void (*wlanApTemplateHook)(struct WlanConnection *connection);		/* 0x54e84 */
 extern void *(*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out); /* SQRAM 0xc0011bb8 */
 extern void *(*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in); /* SQRAM 0xc0011bbc */
@@ -72,10 +73,16 @@ unsigned int hostCmd00d1Get(uint8_t *body);					/* 0x3b6a2 */
 int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate);	/* 0x3b73e */
 int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate);	/* 0x3b784 */
 
-/* Not written yet. */
-void macTxNotifyClearContext(unsigned int index, int32_t value);		/* 0x30c70 */
-unsigned int macTxNotifyAdjustContext(unsigned int index);			/* 0x30cfa */
-int macTxNotifySetupContext(unsigned int index);				/* 0x30c5e */
-uint8_t macTxNotifyReleaseContext(uint32_t index);				/* 0x30c58 */
+/* wlan/txpowerrf.c: the power classes of the rates, and the RF levels they are given. */
+extern uint8_t wlanTxPowerRfEnabled;
+uint8_t wlanTxPowerRateClass(uint32_t index);
+int wlanTxPowerClassMaximumGet(unsigned int class);
+int wlanTxPowerClassMaximumSet(unsigned int class, int32_t value);
+void wlanTxPowerLevel0Write(unsigned int path, unsigned int class, uint8_t value);
+void wlanTxPowerLevel1Write(unsigned int path, unsigned int class, uint8_t value);
+void wlanTxPowerLevel2Write(unsigned int path, unsigned int class, uint8_t value);
+void wlanTxPowerClassApply(unsigned int class);
+void wlanTxPowerClassesApply(void);
+void wlanTxPowerRfEnable(int enable);
 
 #endif /* ROBIN_TXPOWER_H */

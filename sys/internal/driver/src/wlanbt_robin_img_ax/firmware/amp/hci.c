@@ -1321,6 +1321,14 @@ int ampHciEnhancedFlushComplete(uint16_t opcode, OsaBuffer *command)
 	return 0;
 }
 
+/* 0x00022a18: how many logical links a physical link carries; 0 for no link. */
+int ampPhysicalLinkLogicalCount(unsigned int physicalIndex)
+{
+	if (physicalIndex >= AMP_PHYSICAL_LINKS)
+		return 0;
+	return ampPhysicalLinks[physicalIndex].logicalLinkCount;
+}
+
 /* 0x00022a2e: Number Of Completed Data Blocks event for one logical link. */
 int ampHciNumberOfCompletedDataBlocks(int logicalHandle, int completedPackets, int completedBlocks)
 {

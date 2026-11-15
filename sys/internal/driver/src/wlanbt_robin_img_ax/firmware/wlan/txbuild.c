@@ -61,8 +61,8 @@ int romLibCheckState(int a, int b, int c, int d, int e);		/* 0x03f3a347 */
 int wlanTxEncryptWepFragment(uint8_t *fragment, uint32_t length, const WlanWepHostConfig *config)
 {
 	uint8_t seed[16];
-	unsigned int keyIndex = config->defaultKey;
-	const WlanWepHostKey *key = &config->keys[keyIndex];
+	unsigned int keyIndex = config->keys.defaultKey;
+	const WlanWepHostKey *key = &config->keys.key[keyIndex];
 	unsigned int size = 8;
 	unsigned int is104 = 0;
 	unsigned int i;

@@ -53,7 +53,6 @@ int wlanFrequencyTrackingStub(void);							/* 0x2e9c8 */
 void hostCmd003c(int timing, int carrier);						/* 0x2e9cc */
 void romLibSyncContext(unsigned int mask);						/* ROM */
 void cbProcRecordPacket(struct WlanConnection *connection, int first, int second);	/* 0x1e868 */
-int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 
 /* The automatic frequency control (hostcmd.c: host command 60), which hostCmd003c() is a stub of here. */
 uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
@@ -529,7 +528,7 @@ void macMgmtConvertContext(struct WlanConnection *connection)
 	wlanHtElementsReset(connection);
 	__aeabi_memclr(connection->peerAddress, 6);
 	connection->associationId = 0;
-	rfCalibSyncDescriptor();
+	wlanAssociationChanged();
 	wlanBssSelectAddress(1, NULL);
 	wlanSetSlotTime(1);
 	wlanBssAllowStart(0);

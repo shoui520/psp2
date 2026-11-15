@@ -91,8 +91,8 @@ int romMacEntryWrite(unsigned int index, uint32_t first, uint32_t second);	/* 0x
 int romMacEntryRead(unsigned int index, uint32_t *first, uint32_t *second);	/* 0x03f3acbf */
 
 struct MacRegionProvider {
-	uint32_t reserved;
-	uint32_t (*lookup)(unsigned int region);
+	void (*prepare)(void);		/* not called by this firmware */
+	void *(*lookup)(unsigned int region);	/* a region's base; NULL: none */
 };
 
 int wlanMacPollOperation(unsigned int limit, uint32_t *status, void (*step)(int));

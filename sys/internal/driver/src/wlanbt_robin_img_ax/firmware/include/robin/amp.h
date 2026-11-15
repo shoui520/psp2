@@ -238,6 +238,7 @@ unsigned int ampLogicalLinkAllocate(uint32_t physicalHandle);
 unsigned int ampLogicalLinkFind(uint32_t logicalHandle);
 unsigned int ampLogicalLinkFindByFlowSpec(uint32_t flowSpecId);
 int ampLogicalLinkServiceType(uint32_t logicalHandle);
+int ampPhysicalLinkLogicalCount(unsigned int physicalIndex);
 int ampLogicalLinkRemove(int logicalHandle, int reason);
 int ampLinkPostEvent(unsigned int index, uint32_t event, const void *record);
 void ampLinkMachineInit(struct AmpLinkMachine *machine);

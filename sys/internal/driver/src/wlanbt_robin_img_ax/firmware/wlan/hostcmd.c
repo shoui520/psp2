@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/apconfig.h"
 #include "robin/antdiv.h"
 #include "robin/led.h"
 #include "robin/osa.h"
@@ -445,11 +446,8 @@ void hostCmd0096Disable(void);							/* 0x26c5a */
 unsigned int hostCmd0096Get(void);						/* 0x26c5c */
 int hostCmd00a9Shutdown(void);							/* 0x1be44 */
 int hostCmd00af(struct WlanConnection *connection);				/* 0x38608 */
-int hostCmd00b0Set(struct WlanConnection *connection, uint8_t *command);	/* 0x37eb8 */
-int hostCmd00b0Get(struct WlanConnection *connection, uint8_t *command);	/* 0x382b8 */
 int hostCmd00b1(struct WlanConnection *connection);				/* 0x3876e */
 int hostCmd00b2(struct WlanConnection *connection);				/* 0x3861c */
-int hostCmd00b3(struct WlanConnection *connection, uint8_t *command);		/* 0x38808 */
 int hostCmd00b5(struct WlanConnection *connection, uint8_t *command);		/* 0x38564 */
 void hostCmd00c5(unsigned int action, uint8_t *data, uint16_t *length);		/* 0x3ed9e */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */

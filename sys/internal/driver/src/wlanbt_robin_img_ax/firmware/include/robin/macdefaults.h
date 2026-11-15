@@ -38,7 +38,7 @@ union MacTxControl {
 		uint32_t format : 2;	/* 1 */
 		uint32_t priority : 2;	/* 0 */
 		uint32_t last : 1;	/* 1 */
-		uint32_t antenna : 4;	/* macTxNotifyReleaseContext(14) */
+		uint32_t antenna : 4;	/* wlanTxPowerRateClass(14) */
 		uint32_t flagA : 1;	/* 0 */
 		uint32_t kept : 1;	/* left as it was */
 		uint32_t flagB : 1;	/* 0 */
@@ -66,8 +66,8 @@ void fmCoexApplyBuffer(int enable, uint32_t value);		/* 0x4c942 */
 uint32_t fmCoexResolveBuffer(void);				/* 0x4c96e */
 int fmCoexScheduleBuffer(struct WlanLocalState *state);		/* 0x4c9d4 */
 
-/* Not written yet. */
-uint32_t macTxNotifySyncTable(void);				/* 0x31a32 */
+/* wlan/txsubmit.c */
+uint32_t wlanMacEntrySelectGet(void);				/* 0x31a32 */
 
 /* The 14 channels' bytes of MAC register 0x8000a100 (one per word), copied by btSbcManageBuffer(). */
 #define WLAN_CHANNELS		14

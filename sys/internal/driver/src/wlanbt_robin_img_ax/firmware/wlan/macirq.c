@@ -87,7 +87,6 @@
 uint32_t wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t *tim);		/* 0x3e98a */
 void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);					/* 0x03f3abf7 */
 void clockHostSetMax(void);								/* 0x26ae0 */
-int macTxNotifyUpdatePacket(void);								/* 0x32584 */
 int wlanStaSmLinked(const struct WlanConnection *connection);					/* 0x35faa */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);		/* 0x1d1f6 */
 unsigned int p2pDirectUpdateEntry(struct WlanConnection *connection, unsigned int unused);			/* 0x41268 */
@@ -95,8 +94,6 @@ void wlanPsAdjustFrame(struct WlanConnection *connection, const uint8_t *body);	
 void wlanPsRecordFrame(void);									/* 0x3dc46 */
 int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body,
 			  unsigned int length);							/* 0x35ac2 */
-void wlanApOlbcSelect(struct WlanConnection *connection, uint8_t *olbcActive,
-			uint8_t *erpInfo);							/* 0x2b680 */
 void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *olbcCount,
 			  uint8_t *erpInfo);							/* 0x3a204 */
 void macMgmtClearPacket(struct WlanConnection *connection);					/* 0x3a2fa */
@@ -178,14 +175,14 @@ void wlanMacEvents(int line, uint32_t pending)
 	if (events & MAC_EVENT_ACK_ONLY_17)
 		MAC_510_EVENTS = ~MAC_EVENT_ACK_ONLY_17;
 	if (events & MAC_EVENT_QUEUE_A) {
-		if (macTxNotifyUpdatePacket() != 0)
+		if (wlanMacAcceptAllActive() != 0)
 			macTxPostEvent(4);
 		else
 			post = MGMT_EVENT_QUEUE_A;
 		MAC_510_EVENTS = 0x7fffffff;
 	}
 	if (events & MAC_EVENT_QUEUE_B) {
-		if (macTxNotifyUpdatePacket() != 0)
+		if (wlanMacAcceptAllActive() != 0)
 			macTxPostEvent(4);
 		else
 			post |= MGMT_EVENT_QUEUE_B;
@@ -193,7 +190,7 @@ void wlanMacEvents(int line, uint32_t pending)
 	}
 
 	if (events & MAC_EVENT_RECEIVE) {
-		if (macTxNotifyUpdatePacket() != 0) {
+		if (wlanMacAcceptAllActive() != 0) {
 			macTxPostEvent(4);
 			MAC_510_EVENTS = ~MAC_EVENT_RECEIVE;
 			events &= ~MAC_EVENT_RECEIVE;
@@ -330,7 +327,7 @@ void wlanMacEvents(int line, uint32_t pending)
 				struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
 				if (info->phyMode != 0) {
-					wlanApOlbcSelect(connection, &info->olbcActive, &info->erpInfo);
+					wlanApOlbcExpire(connection, &info->olbcActive, &info->erpInfo);
 					if (info->htEnabled != 0) {
 						macMgmtAcquirePacket(connection, &info->olbcCount, &info->erpInfo);
 						if (info->htCapability[2] & 2)

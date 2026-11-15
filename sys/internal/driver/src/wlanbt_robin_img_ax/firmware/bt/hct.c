@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include "robin/btcontext.h"
 #include "robin/btrom.h"
+#include "robin/clock.h"
 #include "robin/hct.h"
 #include "robin/mdev.h"
 #include "robin/osa.h"
@@ -16,27 +17,47 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
+#include "robin/socpower.h"
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
-/* Coexistence interval table and its helpers (rf/coex, not converted). */
-int cbProcFilterHeader(int selector, uint32_t value);
-uint32_t clockReferenceRate(void);
-uint32_t clockBaseRate(void);
-uint32_t clockSlowestRateGet(void);
-int rfBlock3Get(void);
-int rfBlock2Get(void);
-int rfEventTransitionActive(void);
-int rfBlock3Set(int enable);
-int rfBlock2Set(int enable);
-int rfEventTransitionSet(int enable);
-uint32_t clockRequestedCore(int a1);
-uint32_t clockRequestCore(uint32_t a1, int a2);
-extern uint8_t cbProcPolicy;
-extern uint32_t cbProcWindow;
-int rfBlock4Get(void);
-extern uint32_t cbProcSecondaryCounter;
 extern uint32_t romHctCoexMode;
+
+/*
+ * The clock rates the Bluetooth side needs during coexistence (0x56e40), set
+ * by hctClockRequirementSet(). A policy bit says the chip's rate meets one
+ * of them; while it does, the RF block that goes with it stays on.
+ */
+#define HCT_CLOCK_REFERENCE_MET	0x01	/* rfBlock0 */
+#define HCT_CLOCK_BASE_MET	0x02	/* rfBlock1 */
+#define HCT_CLOCK_SLOWEST_MET	0x04	/* rfBlock4 */
+#define HCT_CLOCK_SCHEDULING	0x08	/* hctEnableCoexScheduling() */
+
+/* hctClockRequirementSet()'s selectors; bit 31 applies the requirements at once. */
+enum {
+	HCT_CLOCK_NONE = 0,
+	HCT_CLOCK_REFERENCE = 1,
+	HCT_CLOCK_CORE = 2,
+	HCT_CLOCK_AUX = 3,
+	HCT_CLOCK_BASE = 4,
+	HCT_CLOCK_MODE = 5,
+	HCT_CLOCK_BUS = 6,
+	HCT_CLOCK_VOTE = 7,
+};
+#define HCT_CLOCK_APPLY		0x80000000
+
+struct HctClockRequirements {
+	uint32_t referenceRate;		/* 32000 while mode is above 1 */
+	uint32_t coreRate;
+	uint32_t auxRate;
+	uint32_t busRate;
+	uint32_t voteRate;
+	uint8_t mode;
+	uint8_t policy;			/* HCT_CLOCK_* */
+	uint8_t reserved[2];
+};
+
+static struct HctClockRequirements hctClock __attribute__((section(".itcm.bss")));	/* 0x56e40 */
 
 /* BT link controller RAM patches (bt/lmp, not converted). */
 void *btLmpLcComputeEntry(uint32_t a1);
@@ -93,6 +114,141 @@ struct HctLinkMessage {
 	uint32_t extra;
 };
 
+/*
+ * 0x0001fdc4: drops the policy bit of a requirement the chip's rates no
+ * longer meet. 1: a bit was dropped, so the caller checks again.
+ */
+int hctClockCheckRequirements(void)
+{
+	int changed = 0;
+	uint32_t slowest;
+
+	if (hctClock.mode > 1)
+		hctClock.referenceRate = 32000;
+	if ((hctClock.policy & HCT_CLOCK_REFERENCE_MET) &&
+	    clockReferenceRate() < hctClock.referenceRate) {
+		changed = 1;
+		hctClock.policy &= ~HCT_CLOCK_REFERENCE_MET;
+	}
+	if (!(hctClock.policy & HCT_CLOCK_SLOWEST_MET))
+		return changed;
+	slowest = clockSlowestRateGet();
+	if (hctClock.coreRate > slowest || hctClock.busRate > slowest ||
+	    (!rfEventTransitionActive() &&
+	     (clockRequestedCore(3) > slowest || clockRequestedBus(3) > slowest)) ||
+	    clockRequestedCore(5) > slowest || clockRequestedBus(5) > slowest ||
+	    clockRequestedCore(1) > slowest || clockRequestedBus(1) > slowest ||
+	    clockRequestedCore(2) > slowest || clockRequestedBus(2) > slowest ||
+	    !(hctClock.policy & HCT_CLOCK_REFERENCE_MET) ||
+	    !(hctClock.policy & HCT_CLOCK_BASE_MET)) {
+		changed = 1;
+		hctClock.policy &= ~HCT_CLOCK_SLOWEST_MET;
+	}
+	return changed;
+}
+
+/* 0x0001fe7a: switches the RF blocks the policy bits keep on, and asks for the rates. */
+int hctClockApply(void)
+{
+	int state = sysIrqDisable();
+
+	while (hctClockCheckRequirements())
+		;
+	if ((hctClock.policy & HCT_CLOCK_REFERENCE_MET) && !rfBlock0Get())
+		rfBlock0Set(1);
+	if ((hctClock.policy & HCT_CLOCK_BASE_MET) && !rfBlock1Get())
+		rfBlock1Set(1);
+	if (hctClock.policy & HCT_CLOCK_SLOWEST_MET) {
+		if (!rfBlock4Get())
+			rfBlock4Set(1);
+	}
+	if (!(hctClock.policy & HCT_CLOCK_SLOWEST_MET)) {
+		if (rfBlock4Get())
+			rfBlock4Set(0);
+	}
+	if (!(hctClock.policy & HCT_CLOCK_BASE_MET) && rfBlock1Get())
+		rfBlock1Set(0);
+	if (!(hctClock.policy & HCT_CLOCK_REFERENCE_MET) && rfBlock0Get())
+		rfBlock0Set(0);
+	clockRequestCore(hctClock.coreRate, 0);
+	clockRequestAux(hctClock.auxRate, 0);
+	if (!(hctClock.policy & HCT_CLOCK_REFERENCE_MET))
+		clockSelectSource(hctClock.referenceRate == 32000);
+	clockRequestBus(hctClock.busRate, 0);
+	clockRequestVote(hctClock.voteRate, 0);
+	hctCoexDirty = 0;
+	sysIrqRestore(state);
+	return 0;
+}
+
+/* Sets the policy bit of a requirement the rate meets. */
+static inline void hctClockSlowestMet(uint32_t value)
+{
+	if (clockSlowestRateGet() >= value)
+		hctClock.policy |= HCT_CLOCK_SLOWEST_MET;
+	else
+		hctClock.policy &= ~HCT_CLOCK_SLOWEST_MET;
+}
+
+/*
+ * 0x0001ff4e: sets one clock requirement (HCT_CLOCK_*), and applies them all
+ * when HCT_CLOCK_APPLY is set. 1: coexistence scheduling is off.
+ */
+int hctClockRequirementSet(int selector, uint32_t value)
+{
+	struct HctClockRequirements previous;
+	int apply = 0;
+
+	__aeabi_memcpy4(&previous, &hctClock, sizeof(previous));
+	if (!(hctClock.policy & HCT_CLOCK_SCHEDULING))
+		return 1;
+	if (selector < 0) {
+		selector &= ~HCT_CLOCK_APPLY;
+		apply = 1;
+	}
+	switch (selector) {
+	case HCT_CLOCK_REFERENCE:
+		if (clockReferenceRate() >= value)
+			hctClock.policy |= HCT_CLOCK_REFERENCE_MET;
+		else
+			hctClock.policy &= ~HCT_CLOCK_REFERENCE_MET;
+		hctClock.referenceRate = value;
+		break;
+	case HCT_CLOCK_CORE:
+		hctClockSlowestMet(value);
+		hctClock.coreRate = value;
+		break;
+	case HCT_CLOCK_AUX:
+		hctClockSlowestMet(value);
+		hctClock.auxRate = value;
+		break;
+	case HCT_CLOCK_BUS:
+		hctClockSlowestMet(value);
+		hctClock.busRate = value;
+		break;
+	case HCT_CLOCK_VOTE:
+		hctClockSlowestMet(value);
+		hctClock.voteRate = value;
+		break;
+	case HCT_CLOCK_BASE:
+		if (clockBaseRate() >= value)
+			hctClock.policy |= HCT_CLOCK_BASE_MET;
+		else
+			hctClock.policy &= ~HCT_CLOCK_BASE_MET;
+		break;
+	case HCT_CLOCK_MODE:
+		hctClock.mode = value;
+		break;
+	default:
+		break;
+	}
+	if (memcmp(&previous, &hctClock, sizeof(previous)) != 0)
+		hctCoexDirty = 1;
+	if (apply)
+		hctClockApply();
+	return 0;
+}
+
 /* 0x00020044: chooses the coexistence intervals from the state of the ACL links. */
 void hctComputeCoexIntervals(void)
 {
@@ -131,9 +287,9 @@ void hctComputeCoexIntervals(void)
 		slow = interval;
 		fast = 16000;
 	}
-	cbProcFilterHeader(1, 16000);
-	cbProcFilterHeader(3, fast);
-	cbProcFilterHeader(2, slow);
+	hctClockRequirementSet(HCT_CLOCK_REFERENCE, 16000);
+	hctClockRequirementSet(HCT_CLOCK_AUX, fast);
+	hctClockRequirementSet(HCT_CLOCK_CORE, slow);
 }
 
 /* 0x00020112: once per coexistence tick, refreshes the scheduling state. */
@@ -145,25 +301,25 @@ void hctCoexTick(void)
 	if (hctCoexTickCount < 5 || (SOC_EVENT_STATE & 4) != 0) {
 		if (hctCoexTickCount < 5)
 			hctCoexTickCount++;
-		if ((cbProcPolicy & 8) != 0) {
+		if ((hctClock.policy & HCT_CLOCK_SCHEDULING) != 0) {
 			if (rfBlock3Get() == 0)
 				rfBlock3Set(1);
 			if (rfBlock2Get() == 0)
 				rfBlock2Set(1);
 			if (!rfEventTransitionActive())
 				rfEventTransitionSet(1);
-			cbProcFilterHeader(4, romHctCoexMode);
+			hctClockRequirementSet(HCT_CLOCK_BASE, romHctCoexMode);
 			hctComputeCoexIntervals();
 			slow = 4000;
 			fast = 4000;
-			if (cbProcSecondaryCounter > 16000) {
+			if (hctClock.coreRate > 16000) {
 				fast = 16000;
 				slow = 16000;
 			}
-			cbProcFilterHeader(7, slow);
-			cbProcFilterHeader(6, fast);
+			hctClockRequirementSet(HCT_CLOCK_VOTE, slow);
+			hctClockRequirementSet(HCT_CLOCK_BUS, fast);
 			if (hctCoexDirty != 0)
-				cbProcFilterHeader(0x80000000, 0);
+				hctClockRequirementSet(HCT_CLOCK_APPLY | HCT_CLOCK_NONE, 0);
 		}
 	}
 }
@@ -171,11 +327,11 @@ void hctCoexTick(void)
 /* 0x000201a2: lowers the coexistence deadline when the programmed one is later. */
 uint32_t sysUpdateEventDeadline(void)
 {
-	uint32_t result = (uint32_t)cbProcPolicy << 28;
+	uint32_t result = (uint32_t)hctClock.policy << 28;
 	uint32_t interval;
 	uint32_t parsed;
 
-	if ((cbProcPolicy & 8) != 0) {
+	if ((hctClock.policy & HCT_CLOCK_SCHEDULING) != 0) {
 		interval = 16000;
 		parsed = clockRequestedCore(6);
 		result = rfBlock4Get();
@@ -197,8 +353,8 @@ uint32_t sysUpdateEventDeadline(void)
 /* 0x000201f6 */
 uint32_t *hctEnableCoexScheduling(void)
 {
-	cbProcPolicy |= 8;
-	return &cbProcWindow;
+	hctClock.policy |= HCT_CLOCK_SCHEDULING;
+	return &hctClock.referenceRate;
 }
 
 /* 0x00020294: hands every queued packet to the SDIO device. */
@@ -376,6 +532,12 @@ struct HctReleaseMessage {
 	uint8_t reserved2;
 	uint16_t second;
 };
+
+/* 0x000204ba: the ROM's hook for ACL data (H4 packet type 2) to the host. */
+void hctDeliverAclToHost(uint8_t *payload)
+{
+	hctDeliverToHost(payload, 2);
+}
 
 /* 0x000204be */
 void hctReleaseLinkContext(struct HctReleaseMessage *message)

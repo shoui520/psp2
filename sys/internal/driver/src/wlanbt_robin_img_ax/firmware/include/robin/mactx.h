@@ -8,6 +8,7 @@
 #include "robin/conn.h"
 #include "robin/threadx.h"
 #include "robin/wlan.h"
+#include "robin/mac.h"
 
 /* Queue of frames waiting in one hardware window (144 bytes, two windows). */
 struct WlanTxWindowQueue {
@@ -345,6 +346,33 @@ extern uint32_t wlanTxWindowFlags;
 extern struct MacTxQueueStats macTxQueueStats[];
 extern uint16_t wlanSessionId;
 extern struct WlanLocalState *wlanLocalState;
+
+/* The local station's state and what follows it (DTCM 0x040089ec). */
+struct WlanLocalArea {
+	struct WlanLocalState state;
+	uint8_t context[36];		/* state.context */
+	uint32_t regionTable[2];	/* 224 */
+	struct MacRegionProvider provider;	/* 232 */
+};
+_Static_assert(offsetof(struct WlanLocalArea, provider) == 232, "local area provider");
+
+/* What the MAC is brought up with (DTCM 0x040089ac), set by wlanMacDescriptorInit(). */
+struct WlanMacDescriptor {
+	uint32_t descriptor;		/* wlanMacBringUp()'s first argument */
+	uint32_t clockKhz[6];		/* 80000, 32000, 32000, 32000, 0, 80000 */
+	struct WlanLocalArea *localArea;
+	uint32_t *regionTable;
+	struct MacRegionProvider *provider;
+	uint32_t reserved40[3];
+	uint32_t dmaContext;		/* wlanMacBringUp()'s third argument */
+	uint32_t reserved56[2];
+};
+_Static_assert(sizeof(struct WlanMacDescriptor) == 64, "MAC descriptor");
+
+extern struct WlanMacDescriptor wlanMacDescriptor;	/* DTCM 0x040089ac */
+extern struct WlanLocalArea wlanLocalArea;		/* DTCM 0x040089ec */
+uint32_t wlanMacAcceptAllActive(void);
+struct WlanMacDescriptor *wlanMacDescriptorInit(uint32_t descriptor);
 extern struct WlanDeviceConfig *wlanDeviceAddress;		/* 0x54a7c */
 extern uint8_t *wlanLocalContext;				/* 0x54a84 */
 extern uint32_t macTxMaxWait;

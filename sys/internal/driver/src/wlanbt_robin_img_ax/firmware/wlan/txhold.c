@@ -285,7 +285,7 @@ int wlanIbssTxFrame(OsaBuffer *buffer, int transmit)
 		MAC_090_POLICY_MASK &= ~0x10u;
 		return wlanTxReleaseFrame(buffer);
 	}
-	context = macTxGetContext();
+	context = macTxGetDrainWaits();
 	if (context != 0) {
 		if (context == 1) {
 			result = 0;
@@ -428,7 +428,7 @@ static const int32_t *macMgmtComputeDescriptor(struct WlanTxHoldMachine *machine
 	case ROM_HSM_EXIT:
 		return NULL;
 	case ROM_HSM_ENTRY:
-		macTxSetContext(0);
+		macTxSetDrainWaits(0);
 		return NULL;
 	default:
 		return event;
@@ -443,7 +443,7 @@ static const int32_t *macMgmtQueryDescriptor(struct WlanTxHoldMachine *machine, 
 		return NULL;
 	if (*event == ROM_HSM_ENTRY) {
 		wlanTxHold.active = 0;
-		macTxSetContext(1);
+		macTxSetDrainWaits(1);
 		wlanTxHold.windowCount = 0;
 		wlanTxHold.windowDivisor = 4;
 		return NULL;

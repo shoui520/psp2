@@ -122,7 +122,7 @@ __attribute__((noinline)) uint32_t fmCoexPrepareBuffer(void)
 {
 	uint32_t value = (MAC_13C_CONFIG >> 1 << 1) & ~0xc09c06u;
 
-	MAC_13C_CONFIG = (macTxNotifySyncTable() << 11) | value;
+	MAC_13C_CONFIG = (wlanMacEntrySelectGet() << 11) | value;
 	return wlanMacConfigApply(3);
 }
 
@@ -142,7 +142,7 @@ void fmCoexParseBuffer(void)
 	for (rate = 0; rate < MAC_RATES; rate++) {
 		romLibSetupContext(rate, wlanRateCode(rate));
 		romLibConvertContext(rate, responseRate(rate));
-		romLibReleaseContext(rate, (uint8_t)macTxNotifySyncTable(), 0);
+		romLibReleaseContext(rate, (uint8_t)wlanMacEntrySelectGet(), 0);
 		romLibVerifyContext(rate, 0);
 	}
 	MAC_824_CONTROL &= ~0x8000u;
@@ -212,7 +212,7 @@ __attribute__((noinline)) uint32_t fmCoexResolveBuffer(void)
 	control.bits.format = 1;
 	control.bits.priority = 0;
 	control.bits.last = 1;
-	control.bits.antenna = macTxNotifyReleaseContext(14);
+	control.bits.antenna = wlanTxPowerRateClass(14);
 	control.bits.flagA = 0;
 	control.bits.flagB = 0;
 	control.bits.flagC = 0;

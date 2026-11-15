@@ -9,6 +9,7 @@
 #include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/soc.h"
+#include "robin/txpower.h"
 
 #define RF_REG_VERSION		0x000
 #define RF_REG_SUBVERSION	0x001
@@ -36,7 +37,6 @@ extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
 extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
 void wlanPsSelectHeader(unsigned int band, uint32_t channel);	/* 0x3e3aa */
 int sysRefClockProfile(void);				/* 0x26842 */
-void macTxNotifyFilterContext(int enable);			/* 0x30dec */
 extern uint32_t rfBusEnabled;
 extern volatile uint32_t macPendingParam;			/* 0x8000a138, bit 4: 40 MHz */
 
@@ -242,7 +242,7 @@ void rfInit(int unused)
 int rfInitStage(int unused)
 {
 	rfInit(unused);
-	macTxNotifyFilterContext(1);
+	wlanTxPowerRfEnable(1);
 	return 1;
 }
 

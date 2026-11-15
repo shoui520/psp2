@@ -27,6 +27,7 @@ extern int32_t wlanTxPowerLinkLimit;
 extern uint32_t wlanChannelSwitchHolds;
 extern uint16_t wlanCustomIeMask;
 
+int wlanAssociationChanged(void);
 int wlanSmPost(struct WlanConnection *connection, const struct WlanSmMessage *message);
 void wlanSmPostCommand(OsaBuffer *buffer);
 void wlanSetSlotTime(int shortSlot);

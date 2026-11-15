@@ -234,25 +234,28 @@ int wlanHostTlvResolve(struct WlanIeBuffer *ies, uint8_t *tlv, uint8_t *channels
  * index, whether it is the one to send with and the key itself). The
  * original tests the table for NULL after using it.
  */
-void wlanWepHostKeySet(WlanWepHostConfig *config, const uint8_t *tlv, int keyType)
+void wlanWepHostKeySet(WlanWepHostConfig *config, WlanWepHostKeys *keys, const uint8_t *tlv,
+		       int keyType)
 {
 	unsigned int index = tlv[0];
-	WlanWepHostKey *entry = &config->keys[index];
+	WlanWepHostKey *entry = &keys->key[index];
 
 	config->flags |= 1;
 	entry->index = index;
 	if (keyType == 2) {
 		entry->isWep104 = 1;
 		config->keyLength = 13;
-		config->keyFlags |= 8;
+		if (config != NULL)
+			config->keyFlags |= 8;
 	} else {
 		entry->isWep104 = 0;
 		config->keyLength = 5;
-		config->keyFlags &= ~8;
+		if (config != NULL)
+			config->keyFlags &= ~8;
 	}
 	__aeabi_memcpy(entry->key, tlv + 2, config->keyLength);
 	if (tlv[1] != 0)
-		config->defaultKey = index;
+		keys->defaultKey = index;
 }
 
 /* Which of the host's event masks (by bit) an event code belongs to; 0 for none. */

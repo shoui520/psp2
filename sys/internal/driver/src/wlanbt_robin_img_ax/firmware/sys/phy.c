@@ -14,6 +14,7 @@
 #include "robin/soc.h"
 #include "robin/sys.h"
 #include "robin/wlanrx.h"
+#include "robin/txpower.h"
 
 /*
  * The receive diversity (wlanUpdateAntennaDiversity()): the RSSI above which
@@ -91,7 +92,6 @@ struct PhyRegisterEntry bbpInitRegisters[] __attribute__((section(".dtcm.rw"))) 
 #define MAC_2D0_ENABLE		0x0008u
 
 /* Not converted yet; provisional names. */
-void macTxRefreshQueues(void);						/* 0x30dd6 */
 int phyChannelPowerCheck(unsigned int band);				/* 0x31e88 */
 void phyChannelPowerLoad(unsigned int band, uint32_t channel);		/* 0x31eec */
 void phyChannelPowerApply(unsigned int band, uint32_t channel);		/* 0x31f0e */
@@ -483,7 +483,7 @@ int rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth)
 
 	rfBusAcquire();
 	rfLoadBandRegisters(band, bandwidth);
-	macTxRefreshQueues();
+	wlanTxPowerClassesApply();
 	center = wlanHt40CenterChannel(band, channel8, bandwidth);
 	rfChannelHookAfter();
 	bbpLoadPathTable(band, sysEventPathIsEnabled(band));

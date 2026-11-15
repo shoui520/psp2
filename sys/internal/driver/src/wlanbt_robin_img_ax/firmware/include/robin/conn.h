@@ -15,6 +15,8 @@
 #include "robin/softtimer.h"
 
 struct WlanWirelessFrame;
+struct WlanPsPeerState;
+struct WlanIePointers;
 struct WlanP2pClient;
 #include "robin/btrom.h"
 #include "robin/buffer.h"
@@ -642,7 +644,10 @@ struct WlanConnection {
 			const char *name;
 		} localName;			/* AMP link */
 		struct WlanConnectionInfo *stationInfo;	/* station */
-		uint8_t p2pState;		/* a P2P group owner's connection (interface type 3): 1 and 3 build probe requests with the P2P element, 3 is a connection being torn down, 4 started again */
+		struct {
+			uint8_t p2pState;	/* a P2P group owner's connection (interface type 3): 1 and 3 build probe requests with the P2P element, 3 is a connection being torn down, 4 started again */
+			struct WlanPsPeerState *psState;	/* ... and its peers' power-save (NoA) state (wlanConnectionPsState()) */
+		};
 	};
 	union {
 		char ssid[32];			/* AMP link */
@@ -694,6 +699,7 @@ _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local addr
 _Static_assert(offsetof(struct WlanConnection, peerLink.rateControl) == 408, "rate control");
 _Static_assert(offsetof(struct WlanConnection, rtsThreshold) == 158, "SNMP MIB values");
 _Static_assert(offsetof(struct WlanConnection, localName) == 744, "AMP link name");
+_Static_assert(offsetof(struct WlanConnection, psState) == 748, "P2P power-save state");
 _Static_assert(offsetof(struct WlanConnection, keyBlocks) == 672, "SNMP BSS parameters");
 _Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beacon miss threshold");
 _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
@@ -951,6 +957,17 @@ unsigned int wlanRaiseEvent(unsigned int bit);
 /* wlan/mgmtinfo.c: the ERP and HT state of an access point; erpInfo points to WlanConnectionInfo.erpInfo. */
 void wlanApRateFlagsUpdate(unsigned int phyMode, uint8_t *erpInfo);			/* 0x2a50e */
 void wlanApOlbcForget(uint8_t *erpInfo);						/* 0x2a53c */
+/* wlan/aputil.c */
+void wlanApOlbcExpire(struct WlanConnection *connection, uint8_t *olbcActive, uint8_t *erpInfo);
+void wlanApOlbcDetect(struct WlanConnection *connection, const struct WlanIePointers *elements,
+		      unsigned int channel, uint8_t *erpInfo, uint8_t *olbcActive,
+		      unsigned int beaconPeriod, unsigned int seconds);
+void wlanApTimSet(struct WlanConnection *connection, unsigned int aid, unsigned int set,
+		  unsigned int maxStations, uint8_t *tim);
+void wlanApMicErrorInit(unsigned int wpa, MIC_Error_t *micError);
+void wlanTlvAppendElement(const uint8_t *element, uint8_t **cursor, uint8_t *length);
+void wlanTlvAppendPktFwdCtl(unsigned int value, uint8_t **cursor, uint8_t *length);
+void wlanTlvAppendWmm(const uint8_t *wmm, uint8_t **cursor, uint8_t *length);
 int wlanRatesSelect(const uint8_t *rates, const uint8_t *first, const uint8_t *second,
 		    uint8_t *out, uint8_t *count);					/* 0x2a594 */
 int wlanFrameHasWpsIe(const uint8_t *request);						/* 0x2a5e2 */

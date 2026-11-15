@@ -85,17 +85,22 @@ typedef struct __attribute__((packed)) WlanWepHostKey {
 	uint8_t key[13];
 } WlanWepHostKey;
 
+/* The four keys and which of them frames are sent with. */
+typedef struct __attribute__((packed)) WlanWepHostKeys {
+	WlanWepHostKey key[4];
+	uint8_t defaultKey;		/* the index of the key frames are sent with */
+} WlanWepHostKeys;
+
 typedef struct __attribute__((packed)) WlanWepHostConfig {
 	uint8_t reserved0[8];
 	uint16_t keyLength;		/* 5 or 13: the length of the last key set */
 	uint8_t flags;			/* bit 0: keys were set */
 	uint8_t keyFlags;		/* bit 3: the last key has 104 bits */
-	WlanWepHostKey keys[4];
-	uint8_t defaultKey;		/* the index of the key frames are sent with */
+	WlanWepHostKeys keys;
 } WlanWepHostConfig;
 
 _Static_assert(sizeof(WlanWepHostKey) == 15, "host WEP key");
-_Static_assert(offsetof(WlanWepHostConfig, defaultKey) == 72, "host WEP default key");
+_Static_assert(offsetof(WlanWepHostConfig, keys.defaultKey) == 72, "host WEP default key");
 
 typedef struct WlanWepKeyTable {
 	uint8_t reserved[13];
@@ -107,7 +112,8 @@ _Static_assert(sizeof(WlanWepKeyTable) == 73, "WEP key table");
 
 extern WlanCryptoOps wlanCryptoOps;
 
-void wlanWepHostKeySet(WlanWepHostConfig *config, const uint8_t *tlv, int keyType);	/* 0x2aad8 */
+void wlanWepHostKeySet(WlanWepHostConfig *config, WlanWepHostKeys *keys, const uint8_t *tlv,
+		       int keyType);	/* 0x2aad8 */
 
 void wlanWepBuildSeed(const uint8_t *iv, const WlanWepKeyTable *table, uint8_t *seed,
 		      uint8_t *isWep104, uint8_t *keyIndex);

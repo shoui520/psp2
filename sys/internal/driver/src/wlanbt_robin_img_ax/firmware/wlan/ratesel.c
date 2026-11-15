@@ -641,7 +641,7 @@ int wlanPsSchedulePacket(struct WlanConnection *connection, struct WlanTxStatus 
 	int result;
 
 	fmCoexConvertTable(status);
-	result = macTxNotifySetupContext(status->rateOption);
+	result = wlanTxPowerClassMaximumGet(status->rateOption);
 	if (!((*(const uint8_t *const *)(status->data + 96))[6] & 1))
 		macTxNotifyResetFrame(connection, status);
 	return result;

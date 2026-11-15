@@ -7,8 +7,11 @@
 #include <stddef.h>
 #include "robin/ie.h"
 #include "robin/mac.h"
+#include "robin/hostcmd.h"
+#include "robin/macdefaults.h"
 #include "robin/macentry.h"
 #include "robin/macrate.h"
+#include "robin/mactx.h"
 #include "robin/mgmt.h"
 #include "robin/protection.h"
 #include "robin/rom.h"
@@ -324,4 +327,32 @@ void hostCmd0102(unsigned int on)
 		wlanMacPendingEntry = 0;
 		wlanMacPendingTable = 0;
 	}
+}
+
+/* 0x00032584: the MAC accepts every frame (hostCmd0102() set MAC_300_MODE's bit 5). */
+uint32_t wlanMacAcceptAllActive(void)
+{
+	return MAC_300_MODE & 0x20;
+}
+
+/* 0x0003258e: the MAC descriptor's defaults, and the local station's state. */
+struct WlanMacDescriptor *wlanMacDescriptorInit(uint32_t descriptor)
+{
+	struct WlanMacDescriptor *mac = &wlanMacDescriptor;
+	struct WlanLocalArea *local = &wlanLocalArea;
+
+	mac->clockKhz[1] = 32000;
+	mac->clockKhz[2] = 32000;
+	mac->clockKhz[0] = 80000;
+	mac->clockKhz[3] = 32000;
+	mac->clockKhz[5] = 80000;
+	mac->clockKhz[4] = 0;
+	mac->descriptor = descriptor;
+	mac->regionTable = local->regionTable;
+	mac->localArea = local;
+	mac->provider = &local->provider;
+	local->provider.prepare = macTxNotifyPrepareNothing;
+	local->provider.lookup = macTxNotifyBufferBase;
+	fmCoexScheduleBuffer(&local->state);
+	return mac;
 }

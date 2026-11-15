@@ -41,6 +41,12 @@ struct WlanIbssRecord {
 
 _Static_assert(sizeof(struct WlanIbssRecord) == 48, "IBSS record");
 
+/* 0x0002a20c: the association changed (set or cleared); tells the ROM. */
+int wlanAssociationChanged(void)
+{
+	return romLibComputeState();
+}
+
 /* Sets the address the MAC uses (six bytes), or clears it. */
 void wlanMacAddressSet(const uint8_t *address)
 {

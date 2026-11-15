@@ -169,15 +169,15 @@ int wlanMacLoadRegions(const struct MacRegionProvider *provider)
 	uint32_t base;
 	unsigned int i;
 
-	base = provider->lookup(0);
+	base = (uint32_t)provider->lookup(0);
 	if (base == 0)
 		return 0;
 	MAC_000_REGION_A = base;
-	base = provider->lookup(1);
+	base = (uint32_t)provider->lookup(1);
 	if (base == 0)
 		return 0;
 	MAC_004_REGION_B = base;
-	base = provider->lookup(6);
+	base = (uint32_t)provider->lookup(6);
 	if (base == 0)
 		return 0;
 	MAC_008_REGION_C = base;

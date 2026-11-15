@@ -185,7 +185,7 @@ int ampPalDataToHost(OsaBuffer *buffer, unsigned int physicalIndex)
 	uint8_t *header;
 	uint32_t word;
 
-	if (ampLogicalLinkServiceType(physicalIndex) != 0) {
+	if (ampPhysicalLinkLogicalCount(physicalIndex) != 0) {
 		buffer->dataOffset -= 4;
 		header = (uint8_t *)buffer + buffer->dataOffset;
 		word = (((header[1] << 8) >> 12) << 12) | ampPhysicalLinks[physicalIndex].handle;

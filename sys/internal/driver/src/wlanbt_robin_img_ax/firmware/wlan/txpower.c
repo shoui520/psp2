@@ -161,8 +161,8 @@ void macMgmtComputeHeader(void)
 	unsigned int i;
 
 	for (i = 0; i < WLAN_TX_POWER_RATES; i = (uint8_t)(i + 1)) {
-		macTxNotifyClearContext(i, __aeabi_uread4(&wlanTxPower.limit[i].maximum));
-		macTxNotifyAdjustContext(i);
+		wlanTxPowerClassMaximumSet(i, __aeabi_uread4(&wlanTxPower.limit[i].maximum));
+		wlanTxPowerClassApply(i);
 	}
 }
 
@@ -246,7 +246,7 @@ int macMgmtApplyHeader(void)
 	unsigned int i;
 
 	for (i = 0; i < WLAN_TX_POWER_RATES; i = (uint8_t)(i + 1)) {
-		int value = macTxNotifySetupContext(i);
+		int value = wlanTxPowerClassMaximumGet(i);
 
 		if (highest >= value)
 			value = highest;
@@ -298,8 +298,8 @@ void hostCmd0016Oid17(void)
 		__aeabi_uwrite4(power, &limit->maximum);
 		if ((int)__aeabi_uread4(&limit->minimum) > power)
 			__aeabi_uwrite4(power, &limit->minimum);
-		macTxNotifyClearContext((uint8_t)i, power);
-		macTxNotifyAdjustContext((uint8_t)i);
+		wlanTxPowerClassMaximumSet((uint8_t)i, power);
+		wlanTxPowerClassApply((uint8_t)i);
 	}
 }
 
@@ -329,7 +329,7 @@ int hostCmd00d1Set(struct WlanConnection *connection, uint8_t *body)
 					index = wlanRateIndexHt40(record[0], j);
 				else
 					index = wlanRateIndexOf(record[0], j);
-				request = &wlanTxPower.request[macTxNotifyReleaseContext(index)];
+				request = &wlanTxPower.request[wlanTxPowerRateClass(index)];
 				__aeabi_uwrite4((int8_t)record[5], &request->maximum);
 				__aeabi_uwrite4((int8_t)record[4], &request->minimum);
 				__aeabi_uwrite4((int8_t)record[3], &request->spread);
@@ -363,7 +363,7 @@ unsigned int hostCmd00d1Get(uint8_t *body)
 			record[6] = 1;
 			index = wlanRateIndexHt40(rate[0], rate[1]);
 		}
-		limit = &wlanTxPower.limit[macTxNotifyReleaseContext(index)];
+		limit = &wlanTxPower.limit[wlanTxPowerRateClass(index)];
 		record[5] = __aeabi_uread4(&limit->maximum);
 		record[4] = __aeabi_uread4(&limit->minimum);
 		record[3] = __aeabi_uread4(&limit->spread);

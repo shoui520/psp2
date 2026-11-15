@@ -243,5 +243,5 @@ void wlanPsManageFrame(void *destination, const void *source, unsigned int lengt
 void wlanPsAcquireFrame(void)
 {
 	wlanRateTable = wlanRateChains.byRate;
-	wlanRateParameterHook = (int (*)(unsigned int))macTxNotifyReleaseContext;
+	wlanRateParameterHook = (int (*)(unsigned int))wlanTxPowerRateClass;
 }

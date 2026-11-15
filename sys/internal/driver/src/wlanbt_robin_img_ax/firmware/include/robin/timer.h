@@ -49,7 +49,6 @@ typedef int (*OsaTimerDeadlineOverride)(uint64_t *deadline, uint32_t flagMask,
 typedef int (*OsaTimerExpireOverride)(uint32_t threshold, int *result);
 extern OsaTimerDeadlineOverride osaTimerDeadlineOverride;
 extern OsaTimerExpireOverride osaTimerExpireOverride;
-int robinNoOverride(void);
 int osaPauseTimers(void);
 int osaResumeTimers(void);
 uint32_t osaGetNextTimerDeadline(uint64_t *deadline, uint32_t flagMask,

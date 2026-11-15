@@ -100,6 +100,7 @@ void romLibSelectContext(unsigned int mode);				/* 0x03f3ab21 */
 void romLibConvertContext(unsigned int rate, unsigned int response);	/* 0x03f3aaf1 */
 void romLibSetupContext(unsigned int rate, unsigned int code);		/* 0x03f3aac9 */
 void romLibReleaseContext(unsigned int rate, unsigned int antenna, unsigned int value);	/* 0x03f3aa85 */
+int romLibComputeState(void);	/* 0x03f3a4b1 */
 void romLibVerifyContext(unsigned int rate, unsigned int value);		/* 0x03f3ab07 */
 unsigned int romLibHandleState(unsigned int index);			/* 0x03f3a2a5: the rate code of an index */
 void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb */

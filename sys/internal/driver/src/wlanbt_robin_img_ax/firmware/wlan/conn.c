@@ -884,6 +884,14 @@ finish:
 	}
 }
 
+/* A P2P group owner's connection: its peers' power-save state. */
+struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection)
+{
+	if (connection == NULL || connection->interfaceType != 3)
+		return NULL;
+	return connection->psState;
+}
+
 /* Sets up an access point connection: the info block's back pointers, its handlers, its rate and association context. */
 void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 {

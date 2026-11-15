@@ -4,6 +4,7 @@
 #include "robin/timer.h"
 #include "robin/rom.h"
 #include "robin/osa.h"
+#include "robin/patch.h"
 
 static volatile uint32_t osaTimerOverflowCount __attribute__((section(".itcm.rw"))) = 0;
 static volatile uint32_t osaTimerLastCounter __attribute__((section(".itcm.rw"))) = 0;

@@ -10,10 +10,10 @@
 #include "robin/mac.h"
 #include "robin/socpower.h"
 #include "robin/sys.h"
+#include "robin/txpower.h"
 
 /* Not converted yet; provisional names. */
 int macMgmtParseContext(void);					/* 0x356b4 */
-uint8_t macTxNotifyReleaseContext(uint32_t value);		/* 0x30c58 */
 
 /* MAC_650_OPERATION bit 2 as it was before wlanMacOperationWait() (SQRAM 0xc0011c04). */
 extern uint32_t wlanMacOperationSaved;
@@ -63,7 +63,7 @@ int wlanSlotTableSize(int table)
 
 uint32_t wlanMacConfigApply(uint32_t value)
 {
-	uint8_t config = macTxNotifyReleaseContext(value);
+	uint8_t config = wlanTxPowerRateClass(value);
 
 	return wlanMacProgramConfig(value, config);
 }

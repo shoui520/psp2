@@ -11,6 +11,8 @@
 int hostCmdProcess(void);
 int hostCmdRespond(struct WlanConnection *connection, int (*release)(OsaBuffer *buffer));
 void hostCmdUnlock(void);
+void *macTxNotifyBufferBase(unsigned int kind);
+void macTxNotifyPrepareNothing(void);
 int hostCmdIsNodeSet(const uint8_t *command);
 int hostCmd0003Caps(void);							/* 0x1b820 */
 void hostCmd0003CapsSet(uint32_t caps);						/* 0x1b82a */

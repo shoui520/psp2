@@ -169,6 +169,7 @@ PROVIDE(romStringLength = 0x03f0672b);
 PROVIDE(romRateIndex     = 0x03f3ab4f);
 PROVIDE(romRateValue     = 0x03f3abc5);
 PROVIDE(romRateBitrate   = 0x03f3a2ab);
+PROVIDE(romLibComputeState = 0x03f3a4b1);
 PROVIDE(romLibNotifyEntry = 0x03f3adfb);
 PROVIDE(romLibBuildEntry    = 0x03f3ad63);
 PROVIDE(romLibComputeEntry  = 0x03f3ad9b);

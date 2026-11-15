@@ -23,7 +23,6 @@
 #include "robin/sys.h"
 
 void *rfCalibBuildHeader(void *slot);							/* 0x29e20: clears 9 bytes */
-int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 int wlanRateProbingAt(const struct WlanRateControl *rc, int index);			/* ratectl.h */
 
 /* The statistics macTxStatsAdd*() last read of each hardware block acknowledgement slot: prepared, checked, validated. */

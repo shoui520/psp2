@@ -13,6 +13,7 @@
  */
 #include <stddef.h>
 #include "robin/p2pgo.h"
+#include "robin/apconfig.h"
 #include "robin/apps.h"
 #include "robin/conn.h"
 #include "robin/esatypes.h"
@@ -25,6 +26,7 @@
 #include "robin/osa.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/signal.h"
 #include "robin/softtimer.h"
 #include "robin/stream.h"
 #include "robin/sys.h"
@@ -281,6 +283,36 @@ int hostCmd00b5(struct WlanConnection *connection, uint8_t *command)
 		osa_BufferFree(message);
 	}
 	return 1;
+}
+
+/*
+ * HostCmd 0xb3 (UAP_STA_LIST): the stations associated with the access
+ * point, a STA_INFO TLV each (address, power save, signal strength).
+ */
+int hostCmd00b3(struct WlanConnection *connection, uint8_t *command)
+{
+	uint8_t *count = command + 8;
+	uint8_t *tlv;
+	struct WlanConnectionRole *role;
+
+	if (connection == NULL)
+		return 1;
+	PUT_U16(count, 0);
+	PUT_U16(command + 2, U16(command + 2) + 2);
+	tlv = command + 10;
+	do {
+		role = wlanConnectionInfoSlot(connection);
+		if (connection->flags2 & 0x10) {
+			PUT_U16(count, U16(count) + 1);
+			wlanTlvStaInfoSet(tlv, tlv + 4, connection->peerAddress);
+			tlv[10] = role->peerPowerSave;
+			tlv[11] = wlanBeaconRssi(connection);
+			PUT_U16(command + 2, U16(command + 2) + 12);
+			tlv += 12;
+		}
+		connection = wlanConnectionNextByBss(connection, connection->bssType, connection->bssNumber);
+	} while (connection != NULL);
+	return 0;
 }
 
 /* The station's authentication is over, whatever way: its state is dropped and the peer forgotten. */
