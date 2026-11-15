@@ -111,6 +111,8 @@ void btLdaRomComputeState(void);
 void btLdaRomApplyState(uint8_t state);
 void btLdaRomCheckState(uint16_t reg, uint32_t value);
 void btLdaRomSyncState(void);
+void btLdrRomNotifyState(uint8_t *message);
+void btLcoRomNotifyState(unsigned int link, unsigned int role);
 void btLtsRomBuildState(unsigned int device, uint32_t *now, uint32_t *native);
 int btLdrRomAcquireState(void);
 void btLtsRomValidateContext(int link, uint32_t clock, uint32_t interval);

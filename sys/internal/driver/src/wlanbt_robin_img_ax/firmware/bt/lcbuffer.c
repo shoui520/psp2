@@ -11,8 +11,12 @@
 #include "robin/btsource.h"
 #include "robin/bttable.h"
 #include "robin/eventpower.h"
+#include "robin/rom.h"
 
 #define LINK_HALF(offset)	(*(BtHalf *)(btLinkContext + (offset)))
+
+/* Each link's last eight rate classes (btLmpLcSelectHeader()). */
+struct BtRateHistory btRateHistory[8] __attribute__((section(".itcm.bss")));	/* 0x59f08 */
 
 __attribute__((noinline)) void btLmpLcHandleBuffer(void)
 {
@@ -627,4 +631,172 @@ void btLmpLcResolveBuffer(int link, unsigned int mode)
 		btTableModeMask = set;
 		break;
 	}
+}
+
+__attribute__((noinline)) void btLmpLcScheduleBuffer(int link, uint16_t interval)
+{
+	btDeviceProfile[link].interval = interval;
+}
+
+/*
+ * The link controller's messages to the slot code: links leaving (0x0bf7) and all of them
+ * (0x0c19), slot requests (0x0c64), interval changes (0x0c1e, 0x0c74, 0x0cd2), mode changes
+ * (0x0cd3) and the ROM's rate and device events. Returns 1 for a message taken and freed.
+ */
+int btLmpLcNotifyBuffer(uint8_t *message)
+{
+	int taken = 0;
+	uint8_t *reply;
+
+	switch (*(const BtWord *)message) {
+	case 0xbf7: {
+		unsigned int link = *(const BtHalf *)(message + 4);
+		unsigned int bit;
+
+		if (link >= 8)
+			return taken;
+		bit = 1 << link;
+		btTableLinkMask &= ~bit;
+		btTableModeMask &= ~bit;
+		btTableLinkModes[link] = 0;
+		return taken;
+	}
+	case 0xc19:
+		__builtin_memset(btTableRetries, 0, sizeof(btTableRetries));
+		__aeabi_memclr4(btRateHistory, sizeof(btRateHistory));
+		btTableLinkMask = 0;
+		__builtin_memset(btTableLinkModes, 0, sizeof(btTableLinkModes));
+		btTableModeMask = 0;
+		return taken;
+	case 0xc1e:
+		btLdrRomNotifyState(message);
+		btLmpLcScheduleBuffer(*(const BtHalf *)(message + 4), btTableModeDescriptor);
+		break;
+	case 0xc23:
+		if (btLinkPendingRate != 0xffff) {
+			btLtsRomConvertState(btLinkPendingRate);
+			btLinkPendingRate = 0xffff;
+			btNextRate(1, 0);
+			reply = osa_MsgAlloc(4);
+			*(BtWord *)reply = 0xc22;
+			osa_MsgSend((void **)&reply, romQueueLcp);
+		}
+		break;
+	case 0xc5a:
+		break;
+	case 0xc64:
+		btLmpLcApplyBuffer(message);
+		break;
+	case 0xc74:
+		btLmpLcResetBuffer(message);
+		break;
+	case 0xcc8:
+		btLmpLcSetupTable();
+		break;
+	case 0xccf:
+		btNextBitmap(12, btDeviceContext.queue, 1, btDeviceContext.frame, btDeviceContext.packet,
+			     btDeviceContext.buffer);
+		break;
+	case 0xcd2: {
+		const uint8_t *records = btLdrRomReleaseState();
+		unsigned int link = *(const BtHalf *)(message + 4);
+
+		btDeviceProfile[link].interval = *(const BtHalf *)(records + 116 * link + 4);
+		break;
+	}
+	case 0xcd3:
+		btLmpLcResolveBuffer(*(const BtHalf *)(message + 4), message[6]);
+		break;
+	default:
+		return taken;
+	}
+	taken = 1;
+	osa_MsgFree((void **)&message);
+	return taken;
+}
+
+/* The class of a link's packet flags: one of 15 combinations the ROM knows, else 14. */
+int btLmpLcFormatBuffer(const uint8_t *flags)
+{
+	unsigned int mask = 0;
+
+	if (flags[13] == 1 || flags[12] != 0)
+		mask = 0x800;
+	if (flags[1] == 1)
+		mask |= 1;
+	if (flags[2] == 1)
+		mask |= 2;
+	if (flags[0] == 1)
+		mask |= 4;
+	if (flags[10] == 1)
+		mask |= 8;
+	if (flags[4] == 1)
+		mask |= 0x10;
+	if (flags[3] == 1)
+		mask |= 0x20;
+	if (flags[8] != 0)
+		mask |= 0x40;
+	if (flags[9] != 0)
+		mask |= 0x80;
+	if (flags[7] == 1)
+		mask |= 0x100;
+	if (flags[5] == 1)
+		mask |= 0x200;
+	if (flags[6] == 1)
+		mask |= 0x400;
+	if (mask != 4 && mask != 12)
+		mask &= ~4;
+	switch (mask) {
+	case 0:
+		return 0;
+	case 4:
+	case 0xc:
+		return 1;
+	case 0x20:
+		return 2;
+	case 0x22:
+		return 3;
+	case 0x32:
+		return 4;
+	case 2:
+	case 0x12:
+		return 5;
+	case 1:
+	case 9:
+		return 6;
+	case 0x201:
+		return 7;
+	case 0x400:
+		return 9;
+	case 0x100:
+		return 10;
+	case 0x40:
+		return 11;
+	case 0x80:
+	case 0x209:
+		return 12;
+	default:
+		return 14;
+	}
+}
+
+/*
+ * The ROM's role change of a link, unless it is the one the host policy already runs: a link
+ * taking role 1 marks the policy (bit 19), which stays only in the states 10, 11, 12 and 55.
+ */
+void btLmpLcInspectBuffer(unsigned int link, unsigned int role)
+{
+	unsigned int flags;
+
+	if (btHostPolicy.link == link && btHostPolicy.role == role && btHostPolicy.busy != 0)
+		return;
+	btLcoRomNotifyState(link, role);
+	if (role == 1)
+		btHostPolicy.flags |= 0x80000;
+	flags = btHostPolicy.flags;
+	if ((flags & 0x80000) && btHostPolicy.state != 10 && btHostPolicy.state != 11 &&
+	    btHostPolicy.state != 12 && btHostPolicy.state != 55)
+		btHostPolicy.flags = flags & ~0x80000;
+	if (role == 1)
+		btHostPolicy.flags &= ~(role << 17);
 }

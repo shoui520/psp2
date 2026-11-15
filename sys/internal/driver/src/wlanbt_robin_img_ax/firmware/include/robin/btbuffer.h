@@ -34,6 +34,45 @@ struct BtSlotRequest {
 };
 _Static_assert(sizeof(struct BtSlotRequest) == 12, "BtSlotRequest");
 
+/* A link's last eight rate classes, in a ring (0x59f08). */
+struct BtRateHistory {
+	uint8_t head;
+	uint8_t samples[8];
+};
+
+/* The ROM's host link policy (0x400bb80). */
+struct BtHostPolicy {
+	uint8_t reserved0[16];
+	uint8_t state;
+	uint8_t reserved17[11];
+	uint8_t link;
+	uint8_t role;
+	uint8_t reserved30[2];
+	uint32_t flags;				/* bit 17, bit 19: the ROM's role flags */
+	uint8_t reserved36[4];
+	uint8_t busy;
+	uint8_t reserved41[3];
+};
+_Static_assert(sizeof(struct BtHostPolicy) == 44, "BtHostPolicy");
+
+/* The ROM's device context (0x400c7b4) whose bitmap event btLmpLcNotifyBuffer() passes on. */
+struct BtDeviceContext {
+	uint8_t reserved0[12];
+	uint16_t buffer;
+	uint16_t packet;
+	uint8_t frame;
+	uint8_t reserved17[59];
+	uint32_t queue;
+};
+_Static_assert(sizeof(struct BtDeviceContext) == 80, "BtDeviceContext");
+
+extern struct BtRateHistory btRateHistory[8];			/* 0x59f08 */
+extern struct BtHostPolicy btHostPolicy;			/* 0x400bb80 */
+extern struct BtDeviceContext btDeviceContext;			/* 0x400c7b4 */
+extern uint16_t btLinkPendingRate;				/* 0x400f812: 0xffff: none */
+extern void (*btNextRate)(int kind, int value);			/* 0x400ed34 */
+extern void (*btNextBitmap)(int kind, uint32_t queue, int value, uint8_t frame, uint16_t packet,
+			    uint16_t buffer);			/* 0x400ed30 */
 extern struct BtHostTiming btHostTiming;			/* 0x400c5f0 */
 extern uint8_t btLinkChannelState;				/* 0x400f72f */
 extern uint8_t btLinkPendingSlot;				/* 0x400f72c: a slot to give back, 0: none */
@@ -74,5 +113,9 @@ void btLmpLcResetBuffer(uint8_t *command);			/* 0x452c2 */
 void btLmpLcSyncBuffer(uint16_t *linkOut, uint8_t *slotOut, int clock, const uint8_t *request);	/* 0x45300 */
 void btLmpLcApplyBuffer(uint8_t *request);			/* 0x456da */
 void btLmpLcResolveBuffer(int link, unsigned int mode);		/* 0x458b2 */
+void btLmpLcScheduleBuffer(int link, uint16_t interval);	/* 0x4591a */
+int btLmpLcNotifyBuffer(uint8_t *message);			/* 0x45926 */
+int btLmpLcFormatBuffer(const uint8_t *flags);			/* 0x45a56 */
+void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
 
 #endif /* ROBIN_BTBUFFER_H */
