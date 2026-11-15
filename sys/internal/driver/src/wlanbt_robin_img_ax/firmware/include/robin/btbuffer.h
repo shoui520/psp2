@@ -7,6 +7,10 @@
 
 #include <stdint.h>
 
+struct BtDeviceProfile;
+struct BtSlotEvent;
+struct BtSlotQueue;
+
 /* The host link's timing in the ROM (0x400c5f0), scaled with the radio's rate. */
 struct BtHostTiming {
 	uint8_t enabled;			/* 1: the timing follows the rate */
@@ -110,6 +114,8 @@ extern void (*btLinkRegisterHook)(unsigned int link);		/* 0x400f0a8 */
 extern int (*btLinkRecordHook)(unsigned int link);		/* 0x400f0ac */
 extern void (*btLinkStepHook)(struct BtStepRecord *step, const struct BtSlotTiming *timing, uint32_t clock,
 			      int flags);				/* 0x400f250 */
+extern uint32_t (*btLinkPlaceHook)(struct BtDeviceProfile *profile, uint32_t clock, int flags);	/* 0x400ede8 */
+extern uint32_t btLinkTakenClock[8];				/* 0x59ee8: the due clock each link's slot was taken at */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -152,7 +158,6 @@ int btLmpLcValidateBuffer(uint8_t *message);			/* 0x44f2c */
 void btLmpLcPrepareBuffer(void);				/* 0x45066 */
 int btLmpLcDispatchBuffer(uint8_t *command, const uint16_t *count, uint32_t a2, uint32_t a3, uint32_t a4,
 			  uint32_t a5);				/* 0x4507e */
-struct BtDeviceProfile;
 void btLmpLcParseBuffer(struct BtDeviceProfile *profile, const struct BtDeviceProfile *source);	/* 0x45116 */
 void btLmpLcBuildBuffer(int link);				/* 0x4514a */
 void btLmpLcComputeBuffer(int link, uint32_t clock, unsigned int next, uint32_t interval);	/* 0x45220 */
@@ -168,12 +173,14 @@ void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
 int btLmpLcTrackBuffer(void);					/* 0x45c00 */
 void btLmpLcManageBuffer(int step);				/* 0x45dd4 */
 int btLmpLcAcquireBuffer(int limit, int apply);			/* 0x45ed4 */
-struct BtSlotEvent;
 void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x46100 */
-struct BtDeviceProfile;
 void btLmpLcSetupBuffer(struct BtDeviceProfile *profile, uint32_t clock, struct BtStepRecord *step,
 			const struct BtSlotTiming *timing, unsigned int kind);	/* 0x4618c */
 void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x461f0 */
 void btLmpLcHandleDescriptor(struct BtStepRecord *step);		/* 0x49254 */
+void btLmpLcConvertBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile);	/* 0x462d2 */
+void btLmpLcVerifyBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile, uint32_t clock);	/* 0x462f4 */
+void btLmpLcSelectBuffer(struct BtSlotQueue *queue, uint32_t clock);	/* 0x46436 */
+void btLmpLcAdjustBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile);	/* 0x46494 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -14,6 +14,8 @@
 #include "robin/rom.h"
 
 #define LINK_HALF(offset)	(*(BtHalf *)(btLinkContext + (offset)))
+/* The due clock each link's slot was last taken at (btLmpLcAdjustBuffer()). */
+uint32_t btLinkTakenClock[8] __attribute__((section(".itcm.bss")));		/* 0x59ee8 */
 
 /* Each link's last eight rate classes (btLmpLcSelectHeader()). */
 struct BtRateHistory btRateHistory[8] __attribute__((section(".itcm.bss")));	/* 0x59f08 */
@@ -1181,4 +1183,87 @@ restart:
 apply:
 	btLtsRomQueryState(profile);
 	btLtsRomApplyState(profile, clock, 11);
+}
+
+/* The ROM's queue hook: the profile joins the queue, and its slot kind counts a step. */
+void btLmpLcConvertBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile)
+{
+	btLtsRomSetupState(queue, profile);
+	if (profile->stepKind == 1)
+		btDeviceContext.steps[1].steps++;
+	else
+		btDeviceContext.steps[0].steps++;
+}
+
+/*
+ * Places the profile's slot near clock: at the first multiple of its interval from the place the
+ * ROM gives where it does not overlap a queued link's slot, or, where the queued link was taken
+ * later, ahead of it, which then moves that link behind its own.
+ */
+void btLmpLcVerifyBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile, uint32_t clock)
+{
+	unsigned int step = 0;
+	struct BtDeviceProfile *node;
+	uint32_t base;
+	int mode;
+
+	if (btLmpLcReleaseTable() && btLmpLcDispatchTable(profile->index) == 0 && profile->interval < 9)
+		base = btLinkPlaceHook(profile, profile->interval + clock, 0);
+	else
+		base = btLinkPlaceHook(profile, clock, 0);
+
+	for (node = queue->head; node != NULL; node = node->next) {
+		uint32_t start = profile->interval * step + base - profile->guard;
+		uint32_t end = profile->baseWindow + ((profile->secondSetting + profile->firstSetting) >> 1) + start - 2;
+		uint32_t nodeStart = node->due - node->guard;
+		uint32_t nodeEnd = node->baseWindow + node->guard +
+				   (((node->secondSetting + node->firstSetting) >> 1) + nodeStart) - 2;
+
+		if (((int32_t)(start - nodeStart) >= 0 && (int32_t)(nodeEnd - start) >= 0) ||
+		    ((int32_t)(nodeStart - start) >= 0 && (int32_t)(end - nodeStart) >= 0)) {
+			if (start - btLinkTakenClock[profile->index] > nodeStart - btLinkTakenClock[node->index]) {
+				btLtsRomQueryState(node);
+				btLmpLcVerifyBuffer(queue, node, nodeEnd);
+				break;
+			}
+			step = (uint8_t)(step + 1);
+		}
+	}
+	profile->adjust = 0;
+	profile->window = profile->baseWindow;
+	mode = btLmpLcFilterHeader() != 0 && btLdrRomResolveState(profile->index) != 0;
+	btLtsRomApplyState(profile, profile->interval * step + base, mode ? 4 : 2);
+}
+
+/* Every queued link whose window ran out by clock is placed again. */
+void btLmpLcSelectBuffer(struct BtSlotQueue *queue, uint32_t clock)
+{
+	struct BtDeviceProfile *profile;
+
+	while ((profile = queue->head) != NULL) {
+		unsigned int window = (uint16_t)(profile->window + (profile->adjust == 3 ? 1 : 0));
+		int limit;
+
+		if (profile->span <= window)
+			window = profile->span;
+		limit = profile->interval - ((profile->secondSetting + profile->firstSetting) >> 1);
+		if (limit <= (int)window)
+			window = limit;
+		if ((int32_t)(clock - ((uint16_t)window + profile->due)) < 0)
+			return;
+		btLtsRomQueryState(profile);
+		btLmpLcVerifyBuffer(queue, profile, clock);
+		btLtsRomInspectState(profile);
+	}
+}
+
+/* The ROM's queue hook: the profile's slot is taken; its span is 2 while other links are masked. */
+void btLmpLcAdjustBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *profile)
+{
+	btLtsRomAcquireState(queue, profile);
+	btLinkTakenClock[profile->index] = profile->due;
+	if (profile->active == 0 && btTableLinkMask != 0 && (btTableLinkMask & ~(1u << profile->index)) != 0)
+		profile->span = 2;
+	else
+		profile->span = btLinkDefaultSpan;
 }

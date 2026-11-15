@@ -98,7 +98,8 @@ struct BtDeviceProfile {
 			uint8_t reserved59;
 		};
 	};
-	uint8_t reserved60[8];
+	uint16_t baseWindow;			/* the window a placed slot starts with */
+	uint8_t reserved62[6];
 	uint8_t state;				/* 5 or 9: the link's mode */
 	uint8_t reserved69[3];
 };
