@@ -23,6 +23,11 @@ uint32_t btLinkTakenClock[8] __attribute__((section(".itcm.bss")));		/* 0x59ee8 
 /* Each link's last eight rate classes (btLmpLcSelectHeader()). */
 struct BtRateHistory btRateHistory[8] __attribute__((section(".itcm.bss")));	/* 0x59f08 */
 
+/* The host's connection setup event filters (btLmpLcQueryFrame()). */
+struct BtEventFilter btEventFilters[BT_EVENT_FILTERS] __attribute__((section(".itcm.bss")));	/* 0x59f50 */
+uint8_t btEventFilterCount __attribute__((section(".itcm.bss")));		/* 0x5a050 */
+uint8_t btEventFilterAccept __attribute__((section(".itcm.bss")));		/* 0x5a051 */
+
 __attribute__((noinline)) void btLmpLcHandleBuffer(void)
 {
 	btLdaRomSyncState();
@@ -2574,4 +2579,78 @@ int btLmpLcComputeFrame(void **slot)
 	if (taken != 0)
 		osa_MsgFree(slot);
 	return taken;
+}
+
+/*
+ * HCI Connection Request (event: address at 4, class of device at 10, link type at 13). A
+ * synchronous request (types 0 and 2) is refused once the links left for it are taken. The newest
+ * event filter that matches the address or the masked class gives the answer (none matching:
+ * refused); without filters, btEventFilterAccept does. Accepted at once (2, or 3 with a role
+ * switch), or reported to the host with the page timeout running; refused with reason 13.
+ */
+void btLmpLcQueryFrame(const uint8_t *event)
+{
+	uint8_t address[8] __attribute__((aligned(4)));
+	uint8_t deviceClass[4] __attribute__((aligned(4)));
+	uint32_t linkType;
+	uint32_t result;
+	uint8_t slot;
+	unsigned int accept;
+	int i;
+
+	*(BtWord *)address = *(const BtWord *)(event + 4);
+	*(BtWord *)(address + 4) = *(const BtWord *)(event + 8);
+	*(BtHalf *)deviceClass = *(const BtHalf *)(event + 10);
+	*(BtHalf *)(deviceClass + 2) = *(const BtHalf *)(event + 12);
+	linkType = event[13];
+	if (linkType == 0) {
+		btConnectSco = 1;
+	} else {
+		btConnectSco = 0;
+		btConnectScoRequest = 0;
+	}
+	if (btConnectRejectAll != 0)
+		goto reject;
+	if ((linkType == 0 || linkType == 2) && btSyncLimitActive == 1 &&
+	    btSyncLinkMax - btTableSyncLimits[12] == btSyncLinkCount)
+		goto reject;
+	if (btEventFilterCount == 0) {
+		accept = btEventFilterAccept;
+	} else {
+		for (i = btEventFilterCount - 1; i >= 0; i--) {
+			const struct BtEventFilter *filter = &btEventFilters[i];
+
+			if (filter->byAddress != 0) {
+				if (memcmp(address, filter->address, 6) == 0)
+					goto found;
+			} else if (!((deviceClass[0] ^ filter->deviceClass[0]) & filter->classMask[0]) &&
+				   !((deviceClass[1] ^ filter->deviceClass[1]) & filter->classMask[1]) &&
+				   !((deviceClass[2] ^ filter->deviceClass[2]) & filter->classMask[2])) {
+				goto found;
+			}
+		}
+		goto reject;
+found:
+		accept = btEventFilters[i].autoAccept;
+	}
+	if (accept == 2 || accept == 3) {
+		if (btTableConnectCheck(address, linkType, 1, &slot) == 0)
+			goto reject;
+		btTableConnectReply(address, 0, accept == 2 ? 1 : 0);
+		if (linkType == 0 || linkType == 2)
+			btSyncLinkCount++;
+		return;
+	}
+	if (btTableConnectCheck(address, linkType, 0, &slot) == 0)
+		goto reject;
+	if (btBdhRomConfigureContext(4, 8, "mmb", address, 6, deviceClass, 3, linkType) != 0) {
+		if (linkType == 0 || linkType == 2)
+			btSyncLinkCount++;
+		__aeabi_memcpy(btTablePendingAddresses[slot], address, 6);
+		btLscRomNotifyState((*(BtHalf *)(btTableHostSettings + 8) * 5u) >> 3, 0x13e3, slot);
+		return;
+	}
+	btTableConnectQuery(address, &linkType, &result, &slot);
+reject:
+	btTableConnectReply(address, 13, 0);
 }

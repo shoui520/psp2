@@ -175,6 +175,10 @@ void btLtsRomSyncState(struct BtDeviceProfile *profile, struct BtLinkSession *se
 int btLcoRomTrackContext(unsigned int index);
 void btLtsRomDispatchState(void);
 void btLtsRomVerifyState(uint32_t clock);
+int btBdhRomConfigureContext(unsigned int module, unsigned int event, const char *format, ...);
+void romLibRecordEntry(const uint8_t *address, unsigned int reason, unsigned int role);
+int btBdhRomComputeContext(const uint8_t *address, unsigned int linkType, unsigned int roleSwitch, uint8_t *slot);
+void btBdhRomQueryContext(const uint8_t *address, uint32_t *linkType, uint32_t *result, uint8_t *slot);
 void btLdaRomHandleState(unsigned int handle, uint32_t enable, unsigned int value);
 void btLcoRomQueryContext(const uint8_t *message);
 void btHccRomDispatchState(const uint8_t *message);

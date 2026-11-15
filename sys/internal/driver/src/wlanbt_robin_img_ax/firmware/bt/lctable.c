@@ -43,6 +43,16 @@ struct BtSlotRequest *btTableSlotRequest __attribute__((section(".itcm.rw"))) = 
 /* The link states (bit n: state n) whose slots may be cut short (btLmpLcManagePacket()). */
 uint32_t btTableShortStates __attribute__((section(".itcm.rw"))) = 0x116;	/* 0x552c4 */
 uint32_t btTableModeSlot __attribute__((section(".itcm.rw")));		/* 0x552c8 */
+/* What btLmpLcQueryFrame() reaches the ROM's connection setup through. */
+uint8_t *btTableSyncLimits __attribute__((section(".itcm.rw"))) = btHostSyncLimits;	/* 0x552cc */
+uint8_t (*btTablePendingAddresses)[6] __attribute__((section(".itcm.rw"))) = btPendingAddresses;	/* 0x552d0 */
+uint8_t *btTableHostSettings __attribute__((section(".itcm.rw"))) = btHostSettings;	/* 0x552d4 */
+void (*btTableConnectReply)(const uint8_t *, unsigned int, unsigned int) __attribute__((section(".itcm.rw"))) =
+	romLibRecordEntry;							/* 0x552e8 */
+int (*btTableConnectCheck)(const uint8_t *, unsigned int, unsigned int, uint8_t *)
+	__attribute__((section(".itcm.rw"))) = btBdhRomComputeContext;	/* 0x552ec */
+void (*btTableConnectQuery)(const uint8_t *, uint32_t *, uint32_t *, uint8_t *)
+	__attribute__((section(".itcm.rw"))) = btBdhRomQueryContext;		/* 0x552f0 */
 /* The clock the mode buffer was set at (btLmpLcAcquirePacket()). */
 uint32_t btTableModeClock __attribute__((section(".itcm.rw")));		/* 0x55300 */
 /* The clock the target's slots run out at (btLmpLcParsePacket()). */

@@ -31,6 +31,24 @@ struct BtSyncFrameCounts {
 	uint8_t partial[3];			/* taken, but too short to be handed on */
 };
 
+/*
+ * An HCI connection setup event filter (8 bytes): by device address, or by class of device under
+ * a mask.
+ */
+struct BtEventFilter {
+	union {
+		uint8_t address[6];
+		struct {
+			uint8_t deviceClass[3];
+			uint8_t classMask[3];
+		};
+	};
+	uint8_t byAddress;			/* non-zero: match address */
+	uint8_t autoAccept;			/* 1: no, 2: yes, 3: yes, with a role switch */
+};
+
+#define BT_EVENT_FILTERS	32
+
 /* An eSCO packet type (12 bytes). */
 struct BtEscoPacket {
 	uint16_t type;				/* its bit in the HCI packet types */
@@ -180,6 +198,26 @@ extern void (*btSyncFrameDoneHook)(unsigned int link, uint32_t buffer);	/* 0x400
 extern uint32_t btQueueLcCommand;				/* 0x400f6e0: where message 4 goes */
 extern void (*btLinkContextDoneHook)(uint8_t *context);	/* 0x400f13c */
 extern int (*btLinkStateCheckHook)(unsigned int handle);	/* 0x400ec84 */
+extern struct BtEventFilter btEventFilters[BT_EVENT_FILTERS];	/* 0x59f50 */
+extern uint8_t btEventFilterCount;				/* 0x5a050 */
+extern uint8_t btEventFilterAccept;				/* 0x5a051: autoAccept with no filter */
+extern uint8_t btHostSettings[];				/* 0x400b280: bytes 8-9 the page timeout, in slots */
+extern uint8_t btHostSyncLimits[];				/* 0x400b42a: byte 12 the synchronous links kept free */
+extern uint8_t btConnectScoRequest;				/* 0x400f535 */
+extern uint8_t btConnectSco;					/* 0x400f536: 1: the connection request is for SCO */
+extern uint8_t btSyncLinkMax;					/* 0x400f544 */
+extern uint8_t btSyncLinkCount;					/* 0x400f545 */
+extern uint8_t btConnectRejectAll;				/* 0x400f546 */
+extern uint8_t btPendingAddresses[][6];				/* 0x400f578: the addresses being connected, per slot */
+extern uint8_t btSyncLimitActive;				/* 0x400f8cf */
+extern uint8_t *btTableSyncLimits;				/* 0x552cc */
+extern uint8_t (*btTablePendingAddresses)[6];			/* 0x552d0 */
+extern uint8_t *btTableHostSettings;				/* 0x552d4 */
+extern void (*btTableConnectReply)(const uint8_t *address, unsigned int reason, unsigned int role);	/* 0x552e8 */
+extern int (*btTableConnectCheck)(const uint8_t *address, unsigned int linkType, unsigned int roleSwitch,
+				  uint8_t *slot);			/* 0x552ec */
+extern void (*btTableConnectQuery)(const uint8_t *address, uint32_t *linkType, uint32_t *result,
+				   uint8_t *slot);			/* 0x552f0 */
 extern uint8_t btSyncMode;					/* 0x400f714: 1 and 3: synchronous links are set up here */
 extern void (*btSyncLinkUpHook)(unsigned int link);		/* 0x400f184 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
@@ -341,6 +379,7 @@ int btLmpLcDispatchFrame(const uint8_t *message);		/* 0x478a6 */
 int btLmpLcParseFrame(void **slot);				/* 0x478de */
 void btLmpLcBuildFrame(const uint8_t *message);		/* 0x47a1c */
 int btLmpLcComputeFrame(void **slot);				/* 0x47a4c */
+void btLmpLcQueryFrame(const uint8_t *event);			/* 0x47b1e */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
