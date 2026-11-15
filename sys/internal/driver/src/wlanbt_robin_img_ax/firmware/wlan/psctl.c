@@ -7,6 +7,7 @@
  */
 #include <stdint.h>
 #include "robin/coex.h"
+#include "robin/txhold.h"
 #include "robin/hostcmd.h"
 #include "robin/hostps.h"
 #include "robin/conn.h"
@@ -91,7 +92,6 @@ int sysRefClockProfile(void);			/* 0x26842 */
 void clockHostSetMax(void);			/* 0x26ae0 */
 void wlanPsResolveBuffer(void);				/* 0x3c68e */
 void wlanPsSyncBuffer(void);				/* 0x3c65a */
-void macMgmtResolveDescriptor(void);			/* 0x3bfa0 */
 
 /* 0x168e0: the AP role is the only one present. */
 int wlanHasApRole(void)

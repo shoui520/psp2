@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/txhold.h"
+#include "robin/txpower.h"
 #include "robin/conn.h"
 #include "robin/coex.h"
 #include "robin/esa.h"
@@ -84,16 +86,11 @@
 static uint32_t cbProcCommandRetries __attribute__((section(".itcm.rw")));		/* 0x54ba0 */
 
 /* Not converted yet; provisional names. */
-void wlanPsClearTable(struct WlanConnection *connection, int phase);			/* 0x3c03c */
-int macMgmtClearHeader(void);								/* 0x3b8a2 */
-void wlanPsVerifyTable(void);								/* 0x3c07c */
 void wlanPsApplyBuffer(void);								/* 0x3c686 */
 void wlanPsApplyHeader(void);								/* 0x3e0c0 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
-void macMgmtSyncHeader(struct WlanConnection *connection);				/* 0x3b4d2 */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command);			/* 0x2a8b0 */
 unsigned int macMgmtClearEntry(uint8_t *response, const uint8_t *scan);			/* 0x36e08 */
-void macMgmtPrepareDescriptor(uint16_t atimWindow);					/* 0x3bc5a */
 void wlanMacFlush(void);									/* 0x1c840 */
 extern uint16_t wlanAmsduEnabled;							/* 0x04000ff8 */
 void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */

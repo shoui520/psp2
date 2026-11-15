@@ -69,7 +69,7 @@ struct WlanTxHold {
 	uint32_t flushPending;		/* 1: the held frames wait for the next window */
 	uint8_t groupBit;		/* bit 4 of the descriptor's byte 3 (macMgmtCheckDescriptor()) */
 	uint8_t reserved5[1];
-	uint16_t interval;		/* the ATIM window (macMgmtPrepareDescriptor(), IBSS only) */
+	uint16_t atimWindow;		/* the ATIM window (macMgmtPrepareDescriptor(), IBSS only) */
 	uint32_t sending;		/* 1: an ATIM frame is being sent */
 	uint8_t reserved12[4];
 	uint8_t phase;			/* 0: nothing held, 1: unicast frames held, 2: group frames held too */
@@ -115,18 +115,18 @@ int macMgmtUpdateDescriptor(void);						/* 0x3bae4 */
 int wlanIbssTxFrame(OsaBuffer *buffer, int transmit);				/* 0x3baec */
 void macMgmtCheckDescriptor(void);						/* 0x3bc28 */
 void macMgmtValidateDescriptor(uint8_t enabled);				/* 0x3bc52 */
-void macMgmtPrepareDescriptor(uint16_t interval);				/* 0x3bc5a */
+void macMgmtPrepareDescriptor(uint16_t atimWindow);				/* 0x3bc5a */
 unsigned int macMgmtDispatchDescriptor(void);					/* 0x3bc6e */
 int macMgmtParseDescriptor(void);						/* 0x3bc80 */
 void macMgmtResolveDescriptor(void);						/* 0x3bfa0 */
 
-int wlanPsClearTable(uintptr_t context, unsigned int event);			/* 0x3c03c */
+int wlanPsClearTable(struct WlanConnection *connection, unsigned int event);			/* 0x3c03c */
 int wlanPsConvertTable(int enabled);						/* 0x3c054 */
 void wlanPsVerifyTable(void);							/* 0x3c07c */
 int wlanPsSelectTable(void);							/* 0x3c09c */
-int wlanPsAdjustTable(uintptr_t context);					/* 0x3c0aa */
+int wlanPsAdjustTable(struct WlanConnection *connection);					/* 0x3c0aa */
 void wlanPsRecordTable(void);							/* 0x3c0ae */
-int wlanPsFilterTable(uintptr_t context);					/* 0x3c108 */
+int wlanPsFilterTable(struct WlanConnection *connection);					/* 0x3c108 */
 void wlanPsHandleBuffer(uint8_t divisor);					/* 0x3c124 */
 void wlanPsProcessBuffer(struct WlanTxHoldList *list, struct WlanTxHoldItem *item);	/* 0x3c12c */
 int wlanPsUpdateBuffer(struct WlanTxHoldItem **item);				/* 0x3c18a */

@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/apps.h"
+#include "robin/txhold.h"
 #include "robin/autotx.h"
 #include "robin/buffer.h"
 #include "robin/coex.h"
@@ -86,7 +87,6 @@ uint32_t wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t 
 void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);					/* 0x03f3abf7 */
 void clockHostSetMax(void);								/* 0x26ae0 */
 int macTxNotifyUpdatePacket(void);								/* 0x32584 */
-void macMgmtVerifyHeader(void);									/* 0x3b904 */
 int wlanStaSmLinked(const struct WlanConnection *connection);					/* 0x35faa */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);		/* 0x1d1f6 */
 void p2pDirectUpdateEntry(struct WlanConnection *connection, int kind);			/* 0x41268 */
@@ -100,8 +100,6 @@ void wlanApOlbcSelect(struct WlanConnection *connection, uint8_t *olbcActive,
 void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *olbcCount,
 			  uint8_t *erpInfo);							/* 0x3a204 */
 void macMgmtClearPacket(struct WlanConnection *connection);					/* 0x3a2fa */
-void macMgmtCheckDescriptor(void);								/* 0x3bc28 */
-void wlanPsConvertTable(uint32_t activeFrame);							/* 0x3c054 */
 void macMgmtFormatContext(void);								/* 0x35936 */
 void clockHostApplyTarget(void);								/* 0x26b48 */
 void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */

@@ -7,6 +7,7 @@
  */
 #include <stdint.h>
 #include "robin/adhoc.h"
+#include "robin/txhold.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
 #include "robin/hostps.h"
@@ -66,13 +67,8 @@ void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
 void btLmpLcHandleState(int state);					/* 0x42488 */
-void macMgmtPrepareDescriptor(uint16_t atimWindow);			/* 0x3bc5a */
-uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
-void wlanPsClearTable(struct WlanConnection *connection, int value);	/* 0x3c03c */
-void wlanPsAdjustTable(struct WlanConnection *connection);		/* 0x3c0aa */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
-void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
 void wlanPsQueryPacket(void);						/* 0x3d006 */
 extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */

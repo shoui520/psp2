@@ -8,6 +8,7 @@
  */
 #include <stddef.h>
 #include "robin/apps.h"
+#include "robin/txhold.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"
 #include "robin/coex.h"
@@ -63,7 +64,6 @@ _Static_assert(offsetof(struct WlanConnectionInfo, sleep) + 4 == 1148, "sleep mo
 /* Not converted yet; provisional names. */
 uint16_t wlanPsSchedulePacket(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x3d09c */
 void p2pDirectPrepareTable(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x41f6a */
-void macMgmtFilterHeader(void);							/* 0x3b99e */
 void p2pSqramPrepareContext(OsaBuffer *buffer, int acknowledged);			/* SQRAM 0xc000cac0 */
 void macMgmtConvertPacket(struct WlanConnection *connection);			/* inferred */
 extern uint32_t wlanPsPollSkips;

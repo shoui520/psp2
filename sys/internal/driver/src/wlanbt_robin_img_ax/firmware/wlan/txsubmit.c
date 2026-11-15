@@ -7,6 +7,7 @@
  */
 #include <stddef.h>
 #include "robin/coex.h"
+#include "robin/txhold.h"
 #include "robin/ieee80211.h"
 #include "robin/mac.h"
 #include "robin/macrate.h"
@@ -27,7 +28,6 @@
 
 /* Not converted yet; provisional names. */
 uint32_t *wlanPsFormatFrame(struct WlanConnection *connection, unsigned int multicast); /* 0x3d78c */
-int macMgmtUpdateDescriptor(void);						/* 0x3bae4 */
 
 /* Fields of the descriptor (the buffer data) the request is made from. */
 #define TX_DATA_TYPE(data)	((data)[0])

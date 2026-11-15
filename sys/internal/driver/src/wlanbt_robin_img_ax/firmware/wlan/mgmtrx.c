@@ -5,6 +5,8 @@
  */
 #include <stddef.h>
 #include "robin/pssm.h"
+#include "robin/txhold.h"
+#include "robin/txpower.h"
 #include "robin/apps.h"
 #include "robin/ibss.h"
 #include "robin/amp.h"
@@ -70,14 +72,12 @@ void macMgmtAdjustTable(const WlanWirelessFrame *frame, int kind);		/* 0x37c72 *
 void macMgmtSetupPacket(OsaBuffer *buffer);					/* 0x3a2ba */
 void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 			 uintptr_t argument);					/* 0x3a4e2 */
-void macMgmtConvertHeader(void);						/* 0x3b8fc */
 struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConnection *connection); /* 0x1dc8c */
 void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
 unsigned int cbProcComputePacket(unsigned int mode);				/* 0x1e3cc */
 unsigned int cbProcUpdateBuffer(struct WlanConnection *connection);		/* 0x1d5ba */
-int macMgmtCheckHeader(struct WlanConnection *connection, const uint8_t *address); /* 0x3b18c */
 void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
 			     const uint8_t *address);				/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */

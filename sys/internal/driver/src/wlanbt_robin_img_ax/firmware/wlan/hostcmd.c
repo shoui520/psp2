@@ -8,6 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/mgmtentry.h"
+#include "robin/txhold.h"
+#include "robin/txpower.h"
 #include "robin/buffer.h"
 #include "robin/conn.h"
 #include "robin/domain.h"
@@ -65,9 +67,7 @@
 /* Not converted yet; provisional names. */
 unsigned int clockCurrentRate(void);				/* 0x2761a */
 void uapSqramFilterEntry(int enable);					/* SQRAM 0xc0009ba0 */
-void wlanPsHandleBuffer(unsigned int count);				/* 0x3c124 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
-uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
 extern uint16_t hostCmdRateDefault;					/* SQRAM 0xc0011ba8 */
 extern uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS];			/* SQRAM 0xc0011b8a */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
@@ -410,7 +410,6 @@ unsigned int hostCmd0003Version(void);						/* 0x27de0 */
 int hostCmd0006(struct WlanConnection *connection, int bgScan, uint8_t *body, int length); /* 0x370f2 */
 void hostCmd000a(uint8_t *body, unsigned int channel, int psState, unsigned int radioOn); /* 0x2cba4 */
 void hostCmd0010(uint8_t *body, uint16_t *count);				/* 0x2cad0 */
-void hostCmd0016Oid17(void);							/* 0x3b55c */
 void hostCmd0019Build(void);							/* 0x23e90 */
 unsigned int hostCmd0019Parse(void);						/* 0x23e3e */
 int hostCmd001cResolve(void);							/* 0x37966 */
@@ -456,8 +455,6 @@ int hostCmd00b3(struct WlanConnection *connection, uint8_t *command);		/* 0x3880
 int hostCmd00b5(struct WlanConnection *connection, uint8_t *command);		/* 0x38564 */
 void hostCmd00c5(unsigned int action, uint8_t *data, unsigned int *length);	/* 0x3ed9e */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */
-int hostCmd00d1Set(struct WlanConnection *connection, uint8_t *body);		/* 0x3b5d8 */
-unsigned int hostCmd00d1Get(uint8_t *body);					/* 0x3b6a2 */
 int hostCmd00d6Parse(uint8_t *data, unsigned int length, uint8_t **rates0, uint8_t **rates1,
 		     uint8_t **rates2);						/* 0x3f35a */
 int hostCmd00d6Apply(struct WlanConnection *connection, uint8_t *rates0, uint8_t *rates1,
@@ -471,8 +468,6 @@ int hostCmd00ea(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 
 void hostCmd00f4(struct WlanConnection *connection, uint8_t *command);		/* SQRAM 0xc000d06c */
 int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t *data,
 		unsigned int *length);						/* 0x3f002 */
-int hostCmd00fb(struct WlanConnection *connection, unsigned int action, uint8_t *data,
-		unsigned int *length);						/* 0x3b338 */
 void hostCmd0102(unsigned int enable);						/* 0x32538 */
 unsigned int hostCmd01ff(void);							/* 0x3e88e */
 void wlanConnectionSetBssMode(struct WlanConnection *connection, unsigned int mode,
@@ -491,8 +486,6 @@ void macMgmtValidateTable(int reason);						/* 0x3726c */
 void macMgmtScheduleTable(int value);						/* 0x3796e */
 void macMgmtNotifyTable(void);							/* 0x3797a */
 void macMgmtApplyTable(void);							/* 0x3795a */
-void macMgmtPrepareDescriptor(uint16_t atimWindow);				/* 0x3bc5a */
-void wlanPsAdjustTable(struct WlanConnection *connection);			/* 0x3c0aa */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
 extern uint8_t hostCmd0096Tracking;						/* 0x54f9c */
@@ -1899,7 +1892,7 @@ int hostCmdProcess(void)
 
 		case 251:
 		{
-			unsigned int length;
+			uint16_t length;
 
 			if (action == 1) {
 				length = bodyLength - 4;

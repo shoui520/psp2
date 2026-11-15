@@ -10,6 +10,7 @@
  */
 #include <stdint.h>
 #include "robin/buffer.h"
+#include "robin/txhold.h"
 #include "robin/conn.h"
 #include "robin/dmaring.h"
 #include "robin/hostcmd.h"
@@ -59,7 +60,6 @@ uint16_t wlanPsSleepSequence __attribute__((section(".itcm.rw")));		/* 0x54b84 *
 /* Not converted yet; provisional names. */
 extern uint8_t btHciWlanAsleep;				/* 0x04000c90 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
-uint16_t macMgmtDispatchDescriptor(void);		/* 0x3bc6e */
 int hostCmdIsHostSleepConfigure(const uint8_t *packet);		/* 0x2c972 */
 int hostCmdIsHostSleepActivate(const uint8_t *packet);		/* 0x2c9a6 */
 

@@ -346,16 +346,16 @@ void macMgmtValidateDescriptor(uint8_t enabled)
 	wlanTxHold.groupBit = enabled;
 }
 
-void macMgmtPrepareDescriptor(uint16_t interval)
+void macMgmtPrepareDescriptor(uint16_t atimWindow)
 {
 	if (wlanRoleIbssOnly() != 0)
-		wlanTxHold.interval = interval;
+		wlanTxHold.atimWindow = atimWindow;
 }
 
 unsigned int macMgmtDispatchDescriptor(void)
 {
 	if (wlanRoleIbssOnly() != 0)
-		return wlanTxHold.interval;
+		return wlanTxHold.atimWindow;
 	return 0;
 }
 
@@ -575,7 +575,7 @@ void macMgmtResolveDescriptor(void)
 }
 
 /* The events the machine is sent by the power-save code. */
-__attribute__((noinline)) int wlanPsClearTable(uintptr_t context, unsigned int event)
+__attribute__((noinline)) int wlanPsClearTable(struct WlanConnection *connection, unsigned int event)
 {
 	int result = wlanRoleOtherOnly();
 
@@ -609,9 +609,9 @@ int wlanPsSelectTable(void)
 	return wlanPostConnectionEvent(NULL, 0x8000);
 }
 
-int wlanPsAdjustTable(uintptr_t context)
+int wlanPsAdjustTable(struct WlanConnection *connection)
 {
-	return wlanPsClearTable(context, 1);
+	return wlanPsClearTable(connection, 1);
 }
 
 /* Brings the timers into step: the link check's time and the beacon period. */
@@ -628,12 +628,12 @@ void wlanPsRecordTable(void)
 	sysIrqRestore(posture);
 }
 
-int wlanPsFilterTable(uintptr_t context)
+int wlanPsFilterTable(struct WlanConnection *connection)
 {
 	wlanPsRecordTable();
-	if (wlanTxHold.interval != 0)
-		return wlanPsClearTable(context, 0);
-	return wlanTxHold.interval;
+	if (wlanTxHold.atimWindow != 0)
+		return wlanPsClearTable(connection, 0);
+	return wlanTxHold.atimWindow;
 }
 
 void wlanPsHandleBuffer(uint8_t divisor)

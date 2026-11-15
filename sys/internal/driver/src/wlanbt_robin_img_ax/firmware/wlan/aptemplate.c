@@ -24,6 +24,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
+#include "robin/txpower.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
 
@@ -359,4 +360,31 @@ void macMgmtSelectFrame(struct WlanConnection *connection)
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
 	__aeabi_memcpy(info->timPosition, info->tim, info->tim[1] + 2);
+}
+
+/* The hooks of the template code: the TIM element is moved, an element is replaced in the templates. */
+void macMgmtAdjustFrame(struct WlanConnection *connection)
+{
+	wlanConnectionInfo(connection);
+	macMgmtSelectFrame(connection);
+}
+
+void macMgmtRecordFrame(struct WlanConnection *connection)
+{
+	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+
+	macMgmtVerifyFrame(info->wmmElement, connection->beaconRequest, connection->probeResponseRequest);
+}
+
+void macMgmtFilterFrame(struct WlanConnection *connection)
+{
+	wlanConnectionInfo(connection);
+	macMgmtRecordFrame(connection);
+}
+
+void macMgmtHandleHeader(void)
+{
+	wlanSqramFrameHook = macMgmtFilterFrame;
+	wlanHtOperationHook = macMgmtReleaseFrame;
+	wlanApTemplateHook = macMgmtAdjustFrame;
 }

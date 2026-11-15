@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/coex.h"
+#include "robin/txhold.h"
 #include "robin/conn.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
@@ -39,7 +40,6 @@
 
 /* Not converted yet; provisional names. */
 int romSignalFilterNoise(struct WlanConnection *connection, const struct WlanRxStatus *status); /* 0xc000a431 */
-uint32_t wlanLinkCheckPeriod(void);					/* 0x3dd46 */
 uint64_t wlanSignalTimeNow(void);					/* 0x2a4fc */
 int wlanStaSmLinked(const struct WlanConnection *connection);		/* 0x35faa */
 unsigned int wlanPsDiscountMissed(uint8_t *missed);			/* 0x3dfc4 */

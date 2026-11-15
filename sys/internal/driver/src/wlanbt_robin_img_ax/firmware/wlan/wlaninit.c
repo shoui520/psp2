@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "robin/mgmtentry.h"
+#include "robin/txhold.h"
+#include "robin/txpower.h"
 #include "robin/buffer.h"
 #include "robin/rfcal.h"
 #include "robin/domain.h"
@@ -142,7 +144,6 @@ void uapSqramVerifyEntry(void);								/* SQRAM 0xc0009b34 */
 void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
-void macMgmtAdjustHeader(void);								/* 0x3b93a */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
 int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */
@@ -162,8 +163,6 @@ void cbProcDispatchFrame(void);								/* 0x1eb4e */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void wlanPsApplyPacket(void);								/* 0x3d06c */
-void macMgmtHandleHeader(void);								/* 0x3b120 */
-void macMgmtValidateHeader(void);							/* 0x3b1e2 */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
 int uapSqramConvertContext(void);							/* SQRAM 0xc00089b6: opens the storage */
 int uapSqramSelectContext(unsigned int offset, uint32_t *value);			/* SQRAM 0xc00089ee */

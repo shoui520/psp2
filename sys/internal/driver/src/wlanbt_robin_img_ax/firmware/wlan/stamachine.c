@@ -10,6 +10,7 @@
  */
 #include <stddef.h>
 #include "robin/adhoc.h"
+#include "robin/txhold.h"
 #include "robin/apsta.h"
 #include "robin/conn.h"
 #include "robin/esa.h"
@@ -98,8 +99,6 @@ extern OsaBuffer *wlanIbssProbeResponseBuffer;			/* 0x54c24 */
 extern WlanWirelessFrame *wlanIbssProbeResponseFrame;		/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;			/* 0x54c2c */
 
-unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
-				int broadcast);						/* 0x3d3f0 */
 int hostCmdConnectionChanged(void);						/* 0x18c0a */
 int wlanSlotCancelFlag0(void);							/* 0xb984 */
 void uapSqramFilterEntry(int enable);						/* SQRAM 0xc0009ba0 */

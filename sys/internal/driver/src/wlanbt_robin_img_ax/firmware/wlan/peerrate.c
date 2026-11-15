@@ -10,6 +10,7 @@
  */
 #include <stddef.h>
 #include "robin/calibration.h"
+#include "robin/txpower.h"
 #include "robin/conn.h"
 #include "robin/htba.h"
 #include "robin/mactx.h"
@@ -22,7 +23,6 @@
 
 void uapSqramClearTable(void);								/* SQRAM 0xc000a3f6, via the veneer at 0x52e74 */
 int uapSqramRecordTable(struct WlanConnection *connection);				/* SQRAM 0xc000a5ea, via the veneer at 0x5322c */
-void macMgmtComputeHeader(void);							/* 0x3b35a */
 void *rfCalibBuildHeader(void *slot);							/* 0x29e20: clears 9 bytes */
 int rfCalibSyncDescriptor(void);							/* 0x2a20c */
 int wlanRateProbingAt(const struct WlanRateControl *rc, int index);			/* ratectl.h */

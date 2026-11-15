@@ -264,7 +264,10 @@ struct WlanConnectionInfo {
 	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
 	const struct WlanWapiContext *wapiContext;	/* a WAPI BSS: what the host is told with an association (TLV 103) */
 	uint8_t channelCount;		/* the channels the access point may start on: 0 none, 1 the one given, more: the least loaded of them (automatic selection) */
-	uint8_t reserved133[99];
+	uint8_t macFilterPolicy;	/* the host's MAC filter (hostCmd 0x..): 0 off, 1 only the listed stations are admitted, 2 the listed ones are refused */
+	uint8_t macFilterCount;		/* the addresses in the list */
+	uint8_t macFilterList[16][6];
+	uint8_t reserved231[1];
 	apRsnConfig_t apRsn;		/* the access point's RSN settings */
 	uint8_t ready;
 	uint8_t reserved357[3];

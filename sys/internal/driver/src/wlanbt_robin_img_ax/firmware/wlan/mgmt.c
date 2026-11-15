@@ -11,6 +11,8 @@
  */
 #include <stddef.h>
 #include "robin/adhoc.h"
+#include "robin/txhold.h"
+#include "robin/txpower.h"
 #include "robin/btrom.h"
 #include "robin/ie.h"
 #include "robin/calibration.h"
@@ -101,12 +103,7 @@ struct __attribute__((packed)) WlanCustomIeTable {
 
 /* Not converted yet; provisional names. */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
-int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b784 */
-int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b73e */
-void macMgmtResetHeader(int unused, unsigned int channel);			/* 0x3b4b6 */
 int cbProcResetPacket(void);							/* 0x1e42e */
-unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
-				int broadcast);					/* 0x3d3f0 */
 int p2pDirectTrackContext(const WlanWirelessFrame *frame);			/* 0x40dd6 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
@@ -305,7 +302,7 @@ uint8_t wlanCurrentChannelFlags(uint8_t *flags)
 /* Applies the transmit power limits to the current channel. */
 void wlanTxPowerApply(void)
 {
-	macMgmtResetHeader(0, wlanCurrentChannel());
+	macMgmtResetHeader(0, wlanCurrentChannel(), 0);
 }
 
 void wlanTxPowerSetHostLimit(int32_t limit, int apply)
