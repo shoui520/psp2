@@ -373,6 +373,7 @@ PROVIDE(btLinkRegisterHook           = 0x0400f0a8);
 PROVIDE(btLinkRecordHook             = 0x0400f0ac);
 PROVIDE(btLcoRomSetupState      = 0x03f1b8cb);
 PROVIDE(btHccRomResolveState    = 0x03f13189);
+PROVIDE(btLtsRomReleaseState    = 0x03f33a93);
 PROVIDE(btLinkSpanEnabled            = 0x0400f7f2);
 PROVIDE(btLinkPayloadRegister        = 0x0400f7fc);
 PROVIDE(btLinkLimitHook              = 0x0400f1d0);

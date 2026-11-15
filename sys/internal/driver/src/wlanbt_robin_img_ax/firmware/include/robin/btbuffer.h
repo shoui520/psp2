@@ -144,5 +144,7 @@ void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
 int btLmpLcTrackBuffer(void);					/* 0x45c00 */
 void btLmpLcManageBuffer(int step);				/* 0x45dd4 */
 int btLmpLcAcquireBuffer(int limit, int apply);			/* 0x45ed4 */
+struct BtSlotEvent;
+void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x46100 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -77,10 +77,15 @@ struct BtDeviceProfile {
 	uint16_t window;			/* the ticks of the link's current window */
 	uint8_t guard;				/* the ticks a tracked slot is taken before it is due */
 	uint8_t tracked;			/* 1: the ROM's slot is followed (btLmpLcClearTable()) */
-	uint8_t offset;				/* the ticks from the clock to a mode 5 slot */
-	uint8_t shortWindow;			/* the window of a mode 5 slot */
-	uint8_t longWindow;			/* the window of a mode 9 slot */
-	uint8_t hold;				/* non-zero: a mode 5 slot waits for the link's interval */
+	union {
+		struct {
+			uint8_t offset;		/* the ticks from the clock to a mode 5 slot */
+			uint8_t shortWindow;	/* the window of a mode 5 slot */
+			uint8_t longWindow;	/* the window of a mode 9 slot */
+			uint8_t hold;		/* non-zero: a mode 5 slot waits for the link's interval */
+		};
+		uint32_t windows;		/* the four, as the due clock btLmpLcReleaseBuffer() lends the ROM */
+	};
 	uint8_t limit;				/* non-zero: the ticks to give the link instead */
 	uint8_t reserved53;
 	uint16_t peer;				/* the link a slot is shared with, 0xffff: none */

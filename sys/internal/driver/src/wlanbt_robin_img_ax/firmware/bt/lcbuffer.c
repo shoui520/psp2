@@ -1054,3 +1054,32 @@ int btLmpLcAcquireBuffer(int limit, int apply)
 	btPeerLimitPending = 1;
 	return 0;
 }
+
+/*
+ * The ROM's slot hook: the link's slot is released with its windows as the due clock. Then, while
+ * the mask or the record wants it and the link of state 9's queue is not held, not masked and has a
+ * ring in use, a link whose span ran out before clock is scheduled again.
+ */
+void btLmpLcReleaseBuffer(struct BtSlotEvent *event, uint32_t clock)
+{
+	struct BtDeviceProfile *profile = event->profile;
+	uint32_t due = profile->due;
+	struct BtDeviceProfile *head;
+
+	profile->due = profile->windows;
+	btLtsRomReleaseState(event);
+	profile->due = due;
+	if (btLinkMaskState != 1 && btLinkIndexRecord != 1)
+		return;
+	head = btSlotQueues[btSlotQueueIndex[9]].head;
+	if (head == NULL || head->hold != 0)
+		return;
+	if (btLmpLcInspectEntry(btTableLinkMask, head->index) != 0)
+		return;
+	if (!(btSource.frame & (1u << head->index)) && !(btSource.header & (1u << head->index)))
+		return;
+	if ((int32_t)(clock - (profile->span + due)) <= 0)
+		return;
+	btLtsRomQueryState(profile);
+	btLtsRomApplyState(profile, btLtsRomNotifyState(profile, clock), event->state);
+}

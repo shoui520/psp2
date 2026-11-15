@@ -121,7 +121,7 @@ void btLtsRomBuildState(unsigned int device, uint32_t *now, uint32_t *native);
 int btLdrRomAcquireState(void);
 void btLtsRomValidateContext(int link, uint32_t clock, uint32_t interval);
 void btLtsRomConvertState(int kind);
-void btLtsRomNotifyState(struct BtDeviceProfile *profile, uint32_t clock);
+uint32_t btLtsRomNotifyState(struct BtDeviceProfile *profile, uint32_t clock);
 uint32_t btLtsRomResolveState(void);
 void btLdrRomInspectState(int link, uint32_t held);
 void btLdrRomFormatState(uint8_t *command);
@@ -148,6 +148,8 @@ void btLcoRomReleaseState(uint8_t *command, uint8_t *result, uint32_t argument);
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);
 uint8_t *btLcoRomVerifyState(uint32_t link);
+struct BtSlotEvent;
+void btLtsRomReleaseState(struct BtSlotEvent *event);
 void btLcoRomSetupState(int event, unsigned int link, const uint8_t *message, void (*payload)(void));
 void btHccRomResolveState(unsigned int link, unsigned int kind);
 
