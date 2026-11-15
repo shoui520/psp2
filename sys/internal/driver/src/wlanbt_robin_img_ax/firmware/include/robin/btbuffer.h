@@ -25,6 +25,12 @@ struct BtSyncSetup {
 	uint8_t reserved23;
 };
 
+/* The synchronous frames btLmpLcHandleFrame() could not take, per synchronous link. */
+struct BtSyncFrameCounts {
+	uint8_t dropped[3];			/* no room in the ring, or no data */
+	uint8_t partial[3];			/* taken, but too short to be handed on */
+};
+
 /* An eSCO packet type (12 bytes). */
 struct BtEscoPacket {
 	uint16_t type;				/* its bit in the HCI packet types */
@@ -169,6 +175,8 @@ struct BtLinkSession {
 	uint8_t reserved6[2];
 };
 extern struct BtLinkSession *btLinkSessions;			/* 0x400f8fc */
+extern struct BtSyncFrameCounts btSyncFrameCounts;		/* 0x552ac */
+extern void (*btSyncFrameDoneHook)(unsigned int link, uint32_t buffer);	/* 0x400ece8 */
 extern const struct BtEscoPacket btEscoPackets[7];		/* 0x5424c */
 extern uint8_t btSyncLatency;					/* 0x400bb02: the latency allowed, in slots (126 at most) */
 extern uint8_t btSyncRetransmission;				/* 0x400bb03 */
@@ -316,6 +324,7 @@ void btLmpLcAdjustPacket(uint32_t first, uint8_t *record, uint32_t third, uint32
 			 uint32_t fifth);				/* 0x473ea */
 void btLmpLcRecordPacket(uint8_t *record, const uint16_t *step);	/* 0x47402 */
 int btLmpLcFilterPacket(struct BtSyncSetup *setup);		/* 0x47414 */
+void btLmpLcHandleFrame(const uint8_t *message);		/* 0x475e0 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

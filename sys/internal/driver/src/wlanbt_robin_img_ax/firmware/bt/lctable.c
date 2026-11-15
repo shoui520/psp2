@@ -32,6 +32,7 @@ uint16_t btTableModeDescriptor __attribute__((section(".itcm.rw"))) = 4;	/* 0x55
 uint16_t btTableModeQueue __attribute__((section(".itcm.rw")));			/* 0x552a6 */
 uint16_t btTablePacketType __attribute__((section(".itcm.rw")));		/* 0x552a8 */
 uint16_t btTablePacketLength __attribute__((section(".itcm.rw")));		/* 0x552aa */
+struct BtSyncFrameCounts btSyncFrameCounts __attribute__((section(".itcm.rw")));	/* 0x552ac */
 /* The hook the ROM writes radio registers through. */
 void (*btTableRadioWrite)(uint16_t reg, uint32_t value) __attribute__((section(".itcm.rw"))) =
 	btLdaRomCheckState;							/* 0x552b4 */

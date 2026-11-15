@@ -2221,3 +2221,66 @@ accepted:
 		btSyncLatency = latency / 625;
 	return 0;
 }
+
+/* The ring the synchronous data of a link is gathered in, and its fill that is handed on. */
+#define SYNC_RING	0x2d2
+#define SYNC_HANDOFF	0x78
+
+/*
+ * A synchronous frame from the host (message: handle at 4, offset at 6, buffer at 8) is copied
+ * into its link's ring as far as the ring has room. Once at least SYNC_HANDOFF bytes are gathered,
+ * or the ring was not empty, the link's write position moves on past them. The buffer goes back
+ * through btSyncFrameDoneHook either way.
+ */
+void btLmpLcHandleFrame(const uint8_t *message)
+{
+	unsigned int link = romHctHostSlot[*(const BtHalf *)(message + 4)][5];
+	uint8_t *record = btLtsRomValidateState(0) + link * 40;
+	const uint8_t *frame;
+	uint8_t *registers;
+	unsigned int length;
+	unsigned int used;
+	unsigned int room;
+
+	if (record[0] != 1)
+		return;
+	frame = (const uint8_t *)(uintptr_t)*(const BtWord *)(message + 8) + *(const BtHalf *)(message + 6);
+	length = frame[2];
+	registers = btLinkSlotRegisters + link * 32;
+	used = (uint16_t)((int)(*(BtHalf *)(registers + 22) - *(BtHalf *)(registers + 24) + SYNC_RING) % SYNC_RING);
+	room = (uint16_t)(SYNC_RING - 2 - used);
+	if (room < length)
+		length = room;
+	if (length == 0) {
+		btSyncFrameCounts.dropped[link]++;
+	} else {
+		unsigned int position = (unsigned int)(*(BtHalf *)(registers + 22) + record[17]) % SYNC_RING;
+		const uint8_t *source = frame + 3;
+		unsigned int count = length;
+		uint8_t *destination;
+		uint8_t fill;
+
+		if (position + length < SYNC_RING) {
+			destination = (uint8_t *)(uintptr_t)*(BtWord *)(record + 24) + position;
+		} else {
+			unsigned int first = SYNC_RING - position;
+
+			if (first != 0)
+				__aeabi_memcpy((uint8_t *)(uintptr_t)*(BtWord *)(record + 24) + position, source, first);
+			destination = (uint8_t *)(uintptr_t)*(BtWord *)(record + 24);
+			source = frame + first + 3;
+			count = length - first;
+		}
+		__aeabi_memcpy(destination, source, count);
+		fill = record[17] + length;
+		record[17] = fill;
+		if (used != 0 || fill >= SYNC_HANDOFF) {
+			registers = btLinkSlotRegisters + link * 32;
+			*(BtHalf *)(registers + 22) = (unsigned int)(*(BtHalf *)(registers + 22) + fill) % SYNC_RING;
+			record[17] = 0;
+		} else {
+			btSyncFrameCounts.partial[link]++;
+		}
+	}
+	btSyncFrameDoneHook(link, *(const BtWord *)(message + 8));
+}
