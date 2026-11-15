@@ -21,14 +21,8 @@ struct BtLcContext btLmpLcContext __attribute__((section(".itcm.rw"))) = {
 	.slot = 4,
 	.activeCount = 3,
 };
-uint16_t *btLinkRate __attribute__((section(".dtcm.bss")));			/* 0x400f934 */
-uint8_t btLinkMaskContext __attribute__((section(".dtcm.bss")));			/* 0x400f7ff */
-int32_t btLinkMaskHeader __attribute__((section(".dtcm.bss")));			/* 0x400f8c8 */
 uint32_t btLmpLcEntryCount[8] __attribute__((section(".itcm.bss")));		/* 0x59ea8 */
 struct BtLcTarget btLmpLcTarget[2] __attribute__((section(".itcm.bss")));		/* 0x59ec8 */
-uint8_t btLinkIndexRecord __attribute__((section(".dtcm.bss")));			/* 0x400f7fd */
-uint8_t btLinkMaskState __attribute__((section(".dtcm.bss")));				/* 0x400f7fe */
-uint8_t btDeviceEntry __attribute__((section(".dtcm.bss")));				/* 0x400c7b8 */
 
 /* The controller is not running: every clock request is withdrawn (0 kHz). */
 unsigned int btLmpLcHandleContext(void)

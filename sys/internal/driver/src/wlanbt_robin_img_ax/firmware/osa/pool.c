@@ -4,6 +4,7 @@
  */
 #include <stddef.h>
 #include "robin/osa.h"
+#include "robin/btrom.h"
 #include "robin/rom.h"
 
 /* Name of the system pool; the anonymous pools use the same empty string. */
@@ -99,6 +100,10 @@ int osaCreatePoolEntry(struct OsaPoolEntry **handle, uint32_t type, void *start,
 	*handle = entry;
 	return status;
 }
+
+/* The ROM's pool creation calls this back; the image passes it to osa_BlockPoolCreate(). */
+int (*osaPoolEntryCreate)(struct OsaPoolEntry **handle, uint32_t type, void *start, uint32_t size,
+			  uint32_t blockSize) __attribute__((section(".itcm.rw"))) = osaCreatePoolEntry;
 
 /* Deletes a pool made by osaCreatePoolEntry() and returns its entry to the free list. */
 int osaDeletePoolEntry(struct OsaPoolEntry *entry)

@@ -77,7 +77,7 @@ extern uint8_t wlanAntennaProfileDefault[];						/* SQRAM 0xc0031b40 */
 extern uint32_t *macTxNotifyState;							/* 0x54bd4 */
 extern uint8_t wlanBssLocalDescriptor[];						/* 0x040089ac */
 
-/* The buffer pools (descriptor, then the configuration osa_BlockPoolCreate() reads). */
+/* The buffer pools (descriptor, then the configuration osa_BlockPoolCreate(, osaPoolEntryCreate) reads). */
 #define POOL(name, kind, size, count)								\
 	struct OsaBufferPool name __attribute__((section(".dtcm.rw"))) = { { { kind, 0, 0 } } };	\
 	static struct OsaPoolConfig name##Config __attribute__((section(".dtcm.rw"))) = { 0, size, count }
@@ -367,7 +367,7 @@ void wlanTxBufSizeSet(uint16_t *size)
 	}
 	wlanTxQuotaSet(0, 4, quota);
 	osa_BlockPoolCreate(&wlanBlockPool28, &wlanBlockPool28Config, wlanBlockPool28Control,
-			    wlanBlockPool28Memory);
+			    wlanBlockPool28Memory, osaPoolEntryCreate);
 	request[0] = 4;
 	mdevIoctl(wlanSdioDev, 0x42, (uintptr_t)request);
 }
@@ -382,26 +382,26 @@ int bufferPoolsInit(void)
 	wlanInitStageHead = NULL;
 	wlanInitStageTail = NULL;
 	osa_BlockPoolCreate(&wlanBlockPool28, &wlanBlockPool28Config, wlanBlockPool28Control,
-			    wlanBlockPool28Memory);
+			    wlanBlockPool28Memory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanPacketBufferPool, &wlanPacketBufferPoolConfig,
-			    wlanPacketBufferPoolControl, wlanPacketBufferPoolMemory);
+			    wlanPacketBufferPoolControl, wlanPacketBufferPoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanReplyFramePool, &wlanReplyFramePoolConfig, wlanReplyFramePoolControl,
-			    wlanReplyFramePoolMemory);
+			    wlanReplyFramePoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanMgmtTaskPool, &wlanMgmtTaskPoolConfig, wlanMgmtTaskPoolControl,
-			    wlanMgmtTaskPoolMemory);
+			    wlanMgmtTaskPoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanMgmtFramePool, &wlanMgmtFramePoolConfig, wlanMgmtFramePoolControl,
-			    wlanMgmtFramePoolMemory);
+			    wlanMgmtFramePoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanBlockPool7, &wlanBlockPool7Config, wlanBlockPool7Control,
-			    wlanBlockPool7Memory);
+			    wlanBlockPool7Memory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanEncrPool, &wlanEncrPoolConfig, wlanEncrPoolControl,
-			    wlanEncrPoolMemory);
-	osa_BlockPoolCreate(&wlanHciPool, &wlanHciPoolConfig, wlanHciPoolControl, wlanHciPoolMemory);
+			    wlanEncrPoolMemory, osaPoolEntryCreate);
+	osa_BlockPoolCreate(&wlanHciPool, &wlanHciPoolConfig, wlanHciPoolControl, wlanHciPoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&hostCmdResponsePool, &hostCmdResponsePoolConfig, hostCmdResponsePoolControl,
-			    hostCmdResponsePoolMemory);
+			    hostCmdResponsePoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&wlanTxFramePool, &wlanTxFramePoolConfig, wlanTxFramePoolControl,
-			    wlanTxFramePoolMemory);
+			    wlanTxFramePoolMemory, osaPoolEntryCreate);
 	if (osa_BlockPoolCreate(&wlanEventPool, &wlanEventPoolConfig, wlanEventPoolControl,
-				wlanEventPoolMemory) != 0)
+				wlanEventPoolMemory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
 	if (cbProcProcessBuffer() != 0)

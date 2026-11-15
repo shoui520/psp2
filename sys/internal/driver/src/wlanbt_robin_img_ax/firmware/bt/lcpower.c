@@ -49,26 +49,6 @@ uint16_t btPowerIndexRecord[BT_POWER_LEVELS] __attribute__((section(".itcm.rw"))
 uint8_t btPowerLevelHeader __attribute__((section(".itcm.rw"))) = 1;			/* 0x55a32 */
 uint8_t btPowerLevelContext __attribute__((section(".itcm.rw")));			/* 0x55797 */
 
-uint8_t *btLinkContext __attribute__((section(".dtcm.bss")));				/* 0x400f954 */
-uint8_t *btLinkRecord __attribute__((section(".dtcm.bss")));				/* 0x400f95c */
-uint8_t *btLinkEvent __attribute__((section(".dtcm.bss")));				/* 0x400f948 */
-uint16_t *btLinkStatus __attribute__((section(".dtcm.bss")));				/* 0x400f8f0 */
-struct BtPowerValue *btLinkValues __attribute__((section(".dtcm.bss")));		/* 0x400f960 */
-uint16_t btPeerPacket __attribute__((section(".dtcm.bss")));				/* 0x400adaa */
-uint32_t btPeerFrame __attribute__((section(".dtcm.bss")));				/* 0x400ae0c */
-uint8_t btPeerBuffer[10] __attribute__((section(".dtcm.bss")));				/* 0x400ada0 */
-uint8_t btDevicePolicy[BT_POWER_DEVICES] __attribute__((section(".dtcm.bss")));	/* 0x400d610 */
-uint8_t btDeviceRate[BT_POWER_DEVICES] __attribute__((section(".dtcm.bss")));		/* 0x400d5a0 */
-uint8_t btThresholdPayload __attribute__((section(".dtcm.bss")));			/* 0x400f429 */
-int8_t btThresholdRegister __attribute__((section(".dtcm.bss")));			/* 0x400f42b */
-uint8_t btThresholdRecord __attribute__((section(".dtcm.bss")));			/* 0x400f430 */
-int8_t btModeState __attribute__((section(".dtcm.bss")));				/* 0x400f431 */
-uint8_t btModeContext __attribute__((section(".dtcm.bss")));				/* 0x400f432 */
-uint8_t btMaskPacket __attribute__((section(".dtcm.bss")));				/* 0x400f8c0 */
-uint8_t btMaskFrame __attribute__((section(".dtcm.bss")));				/* 0x400f8c1 */
-struct BtPowerHooks btPowerHooks __attribute__((section(".dtcm.bss")));			/* 0x400ebbc */
-unsigned int (*btPowerThresholdBitmap)(void) __attribute__((section(".dtcm.bss")));	/* 0x400f364 */
-uint8_t *(*btPowerThresholdRate)(uint8_t a1) __attribute__((section(".dtcm.bss")));	/* 0x400f368 */
 
 /* Posts the state to the host transport's queue (message 0x1400). */
 void btLmpLcHandleState(int state)

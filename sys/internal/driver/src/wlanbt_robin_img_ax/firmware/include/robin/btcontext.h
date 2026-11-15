@@ -79,9 +79,10 @@ void btLmpLcRecordState(void);					/* 0x42b3c */
 
 int btLmpLcFormatContext(int link, int kind, int type, int value);	/* 0x432bc */
 
+unsigned int btLmpLcResetEntry(void);				/* 0x438b0 */
+
 /* Not converted yet, or in another file. */
 unsigned int btLmpLcTrackFrame(void);				/* 0x47fc4 */
 unsigned int hostCmd0003Version(void);				/* 0x27de0 */
-unsigned int btLmpLcResetEntry(void);				/* 0x438b0 */
 
 #endif

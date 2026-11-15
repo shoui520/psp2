@@ -708,9 +708,9 @@ int ampPalSdioControlCallback(void *device, OsaBuffer *buffer, uint16_t length, 
 /* 0x00002782: creates the buffer pools and registers the driver with the mdev framework. */
 int ampDriverInit(void)
 {
-	osa_BlockPoolCreate(&ampHciPool, &ampHciPoolConfig, ampHciPoolControl, ampHciPoolMemory);
+	osa_BlockPoolCreate(&ampHciPool, &ampHciPoolConfig, ampHciPoolControl, ampHciPoolMemory, osaPoolEntryCreate);
 	osa_BlockPoolCreate(&ampTransmitPool, &ampTransmitPoolConfig, ampTransmitPoolControl,
-			    ampTransmitPoolMemory);
+			    ampTransmitPoolMemory, osaPoolEntryCreate);
 	__aeabi_memclr4(&ampCommandQueue, 20);
 	__aeabi_memclr4(&ampEventQueue, 20);
 	__aeabi_memclr4(&ampDataQueue, 20);

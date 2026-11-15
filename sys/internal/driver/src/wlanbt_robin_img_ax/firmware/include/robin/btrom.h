@@ -58,7 +58,13 @@ int mdevRomProcessState(void *device);
 void *osa_MsgQueuePeek(void *queue);		/* the first message, left in the list */
 struct OsaPoolEntry;
 /* A pool of fixed blocks: its descriptor, its configuration (struct OsaPoolConfig), its control block and its memory. */
-int osa_BlockPoolCreate(void *pool, void *config, void *control, void *memory);
+/* The last argument is the image's own pool entry creator, which the ROM calls back (osaPoolEntryCreate). */
+struct OsaPoolEntry;
+extern int (*osaPoolEntryCreate)(struct OsaPoolEntry **handle, uint32_t type, void *start, uint32_t size,
+				 uint32_t blockSize);					/* 0x547f4 */
+int osa_BlockPoolCreate(void *pool, void *config, void *control, void *memory,
+			int (*entry)(struct OsaPoolEntry **handle, uint32_t type, void *start, uint32_t size,
+				     uint32_t blockSize));
 int osa_BlockPoolDelete(void *pool, int (*release)(struct OsaPoolEntry *entry));
 int mdevRegisterDriver(void *driver, void *reserved);
 /* Next message of the calling task. */

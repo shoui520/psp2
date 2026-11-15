@@ -1093,19 +1093,19 @@ int wlanConnectionsInit(void)
 	for (slot = 0; slot < WLAN_CONNECTION_SLOTS; slot = (uint8_t)(slot + 1))
 		wlanConnectionSlots[slot] = NULL;
 	if (osa_BlockPoolCreate(&wlanConnectionPool, &wlanConnectionPoolConfig, wlanConnectionPoolControl,
-				wlanConnectionPoolMemory) != 0)
+				wlanConnectionPoolMemory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
 	if (osa_BlockPoolCreate(&wlanBlockPool0, &wlanBlockPool0Config, wlanBlockPool0Control,
-				wlanBlockPool0Memory) != 0)
+				wlanBlockPool0Memory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
 	if (osa_BlockPoolCreate(&wlanBlockPool1, &wlanBlockPool1Config, wlanBlockPool1Control,
-				wlanBlockPool1Memory) != 0)
+				wlanBlockPool1Memory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
 	if (osa_BlockPoolCreate(&wlanBlockPool2, &wlanBlockPool2Config, wlanBlockPool2Control,
-				wlanBlockPool2Memory) != 0)
+				wlanBlockPool2Memory, osaPoolEntryCreate) != 0)
 		for (;;)
 			;
 	wlanConnectionIdleHook.function = wlanConnectionFreeListClean;

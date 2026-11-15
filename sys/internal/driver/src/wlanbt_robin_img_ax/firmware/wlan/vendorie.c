@@ -103,7 +103,7 @@ OsaBuffer *macMgmtSetupTable(void)
 				break;
 			if (osa_BlockPoolCreate(&wlanVendorIePools[created], &wlanVendorIePoolConfigs[created],
 						&wlanVendorIePoolControl[controlIndex],
-						(uint8_t *)memory + memory->dataOffset) != 0) {
+						(uint8_t *)memory + memory->dataOffset, osaPoolEntryCreate) != 0) {
 				if (wlanVendorIeBlocks[created] != NULL) {
 					osa_BufferFree(wlanVendorIeBlocks[created]);
 					wlanVendorIeBlocks[created] = NULL;
