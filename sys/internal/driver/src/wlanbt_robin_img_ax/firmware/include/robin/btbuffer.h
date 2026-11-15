@@ -80,6 +80,13 @@ extern void (*btLinkLimitPacket)(void);				/* 0x400f0e0 */
 extern void (*btLinkLimitFrame)(void);				/* 0x400f0e4 */
 extern uint8_t btPeerPending;					/* 0x400f614 */
 extern uint8_t btPeerLimit;					/* 0x400f616 */
+extern uint8_t btPeerLimitPending;				/* 0x400f615: a link did not settle at the limit */
+extern unsigned int (*btLinkPolicyHook)(unsigned int link, unsigned int limit);	/* 0x400f080 */
+extern void (*btLinkProfileHook)(unsigned int link);		/* 0x400f084 */
+extern unsigned int (*btLinkEventHook)(unsigned int policy);	/* 0x400f088 */
+extern void (*btLinkPayloadHook)(void);				/* 0x400f0a0 */
+extern void (*btLinkRegisterHook)(unsigned int link);		/* 0x400f0a8 */
+extern int (*btLinkRecordHook)(unsigned int link);		/* 0x400f0ac */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
 extern uint8_t btHostRoleWanted;				/* 0x400bd4f */
@@ -136,5 +143,6 @@ int btLmpLcFormatBuffer(const uint8_t *flags);			/* 0x45a56 */
 void btLmpLcInspectBuffer(unsigned int link, unsigned int role);	/* 0x45ba4 */
 int btLmpLcTrackBuffer(void);					/* 0x45c00 */
 void btLmpLcManageBuffer(int step);				/* 0x45dd4 */
+int btLmpLcAcquireBuffer(int limit, int apply);			/* 0x45ed4 */
 
 #endif /* ROBIN_BTBUFFER_H */

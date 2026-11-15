@@ -951,3 +951,106 @@ void btLmpLcManageBuffer(int step)
 		btLcoRomInspectState(step);
 	}
 }
+
+/*
+ * The peer's limit changes to limit (apply 1; otherwise it is only recorded): each connected link
+ * (state 2, not kind 6) is moved to the new limit, down or up. Returns 0 when a link is still
+ * moving, and marks the change pending.
+ */
+int btLmpLcAcquireBuffer(int limit, int apply)
+{
+	uint8_t *states = btLcoRomVerifyState(0);
+	uint8_t *links = btHccRomApplyState();
+	int settled = 1;
+	int notify;
+	int direction;
+	unsigned int floor;
+	unsigned int link;
+
+	if (apply != 1) {
+		btPeerLimit = limit;
+		return 1;
+	}
+	if (limit == 0) {
+		notify = 1;
+		direction = btPeerLimit == 1 ? 0 : 1;
+	} else if (limit == 1) {
+		notify = btPeerLimit == 0 ? -1 : 0;
+		direction = btPeerLimit == 0 ? 0 : 1;
+	} else {
+		direction = btPeerLimit > limit ? 1 : -1;
+		notify = btPeerLimit == 0 ? -1 : 0;
+	}
+	btPeerLimit = limit;
+	floor = (uint8_t)(limit != 0 ? limit : 1);
+
+	for (link = 0; link < 11; link = (uint16_t)(link + 1)) {
+		const uint8_t *entry = &links[120 * link];
+		uint8_t *state;
+
+		if (entry[0] != 2 || entry[21] == 6)
+			continue;
+		state = &states[30 * link];
+		if (direction == -1) {
+			if (state[8] <= btPeerLimit) {
+				if (state[16] != 1 && state[8] > state[6]) {
+					uint8_t message[3];
+
+					message[0] = 0;
+					message[1] = btPeerLimit;
+					message[2] = 0;
+					btLcoRomSetupState(29, link, message, btLinkPayloadHook);
+				}
+				state[8] = 0;
+			}
+		} else if (direction == 1) {
+			unsigned int current = state[6];
+
+			if (current > floor) {
+				state[15] = 1;
+				if (state[16] == 0) {
+					state[8] = current;
+					state[6] = floor;
+					btHccRomResolveState(link, entry[20]);
+				}
+			}
+		}
+
+		if (direction == -1) {
+			unsigned int target = btLinkEventHook(btLinkPolicyHook(link, btPeerLimit));
+
+			if (state[4] != target) {
+				uint8_t message[3];
+
+				message[0] = target;
+				message[1] = 0;
+				message[2] = 1;
+				btLcoRomSetupState(29, link, message, btLinkPayloadHook);
+			}
+		} else if (direction == 1) {
+			unsigned int pending = state[5];
+
+			if (pending > floor || (pending == 0 && state[4] > floor)) {
+				state[11] = 1;
+				if (state[10] == 0 && state[12] == 0 && pending == 0) {
+					state[5] = floor;
+					if (btLinkRecordHook(link) == 1)
+						btLinkProfileHook(link);
+				}
+			} else if (pending == 0 && state[4] == floor && *btLcoRomAdjustState(floor) != 0) {
+				state[11] = 1;
+				if (state[10] == 0 && state[12] == 0)
+					btLinkRecordHook(link);
+			}
+		}
+
+		if (state[15] == 1 || state[11] == 1)
+			settled = 0;
+		if (state[11] == 0 && notify != 0)
+			btLinkRegisterHook(link);
+	}
+	if (settled == 1)
+		return 1;
+	btPeerLimitPending = 1;
+	return 0;
+}
