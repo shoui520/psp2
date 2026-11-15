@@ -642,7 +642,7 @@ void chargeSetPowerStatus(void)
 				chargeControl.0 = 1;
 		} else {
 			chargeControl.0 = 0;
-#if !FW_SINCE(0x01000104) || FW_RETAIL_10X
+#if !FW_SINCE(0x01000104) || FW_RETAIL_10X && BOARD_IS(0x00406000)
 			if (stateGet() & 0x000c)
 				charge.acDelay = 60;
 #endif

@@ -45,8 +45,8 @@ unsigned int powerCutRegs[3];		/* registers 0xb0-0xb2 of elmoRead's device, read
 #else
 #define POWER_JOB_AC_DELAY()	(charge.acDelay = 10)
 #endif
-/* after an off or a suspend: 60 in the retail boards' 0x010001xx */
-#if FW_RETAIL_10X
+/* after an off or a suspend: 60 in PCH-1000's 0x010001xx */
+#if FW_RETAIL_10X && BOARD_IS(0x00406000)
 #define POWER_JOB_AC_DELAY_DOWN()	(charge.acDelay = 0x3c)
 #else
 #define POWER_JOB_AC_DELAY_DOWN()	POWER_JOB_AC_DELAY()
