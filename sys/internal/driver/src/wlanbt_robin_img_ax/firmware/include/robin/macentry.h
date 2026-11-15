@@ -48,4 +48,27 @@ uint32_t wlanMacConfigApply(uint32_t value);			/* 0x31e0a */
 uint8_t wlanTxControlRate(struct WlanConnection *connection);	/* 0x31e1c */
 unsigned int wlanTxApGroupRate(struct WlanConnection *connection); /* 0x31e42 */
 
+/* wlan/mactxbuf.c */
+void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int start);	/* 0x3218c */
+unsigned int macTxNotifySyncBuffer(unsigned int index, uint32_t rates);		/* 0x321aa */
+void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
+void macTxNotifyResolveBuffer(unsigned int rate);					/* 0x32294 */
+void macTxNotifyFormatBuffer(void);							/* 0x322c0 */
+void macTxNotifyInspectBuffer(void);							/* 0x322cc */
+void macTxNotifyTrackBuffer(void);							/* 0x322da */
+unsigned int macTxNotifyManageBuffer(void);						/* 0x322e8 */
+int macTxNotifyAcquireBuffer(int enable, const uint8_t *address, unsigned int slot, int valid); /* 0x322f2 */
+void macTxNotifyReleaseBuffer(void);							/* 0x3239c */
+void macTxNotifySetupBuffer(void);							/* 0x323ce */
+void macTxNotifyClearBuffer(unsigned int ring, unsigned int session, int enable, uint32_t event,
+			    uint32_t cipher);					/* 0x323f8 */
+void macTxNotifyConvertBuffer(unsigned int state);					/* 0x3243c */
+unsigned int wlanTxRingLastQueue(void);						/* 0x32448 */
+void macTxNotifySelectBuffer(void);							/* 0x32454 */
+void macTxNotifyAdjustBuffer(void);							/* 0x324a8 */
+void macTxNotifyRecordBuffer(int shared);						/* 0x324f4 */
+void macTxNotifyFilterBuffer(int shared);						/* 0x32510 */
+void macTxNotifyHandlePacket(void);							/* 0x3252c */
+void hostCmd0102(unsigned int on);							/* 0x32538 */
+
 #endif /* ROBIN_MACENTRY_H */
