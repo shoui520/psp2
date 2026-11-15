@@ -102,7 +102,7 @@ int macMgmtHandleFrame(struct WlanConnection *connection)
 
 	role->channel = wlanApBestChannel;
 	connection->channel = wlanApBestChannel;
-	role->channelFlags = (role->channelFlags & 0xc) | (wlanApBestFlags & 3);
+	role->channelFlags = (role->channelFlags & 0xcc) | (wlanApBestFlags & 3);
 	if (info->htEnabled == 1 && (info->htCapability[2] & 2)) {
 		htOperation[3] = (htOperation[3] & ~3) | 1;
 		macMgmtProcessContext(connection, &role->channelFlags, role->channel);

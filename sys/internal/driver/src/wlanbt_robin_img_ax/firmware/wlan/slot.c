@@ -17,7 +17,6 @@ static uint32_t wlanSlotLockObject[7] __attribute__((section(".dtcm.bss")));
 static uint32_t wlanSlotLastHandle __attribute__((section(".dtcm.bss")));
 
 /* Unconverted callees. */
-void macMgmtValidateContext(void);							/* 0x3565e */
 int macMgmtSyncContext(struct WlanConnection *connection);				/* 0x3576a */
 void uapSqramRecordEntry(unsigned int posture);						/* SQRAM via 0x52d3c */
 void uapSqramFilterEntry(int enable);							/* SQRAM 0xc0009ba0 */
