@@ -1146,9 +1146,11 @@ int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argum
 	return 0;
 }
 
-/* 0x00021fde: Accept_Physical_Link has no handler of its own. */
-void ampHciAcceptPhysicalLinkStub(void)
+/* 0x00021fde: Accept_Physical_Link jumps into the Create_Physical_Link handler. */
+int ampHciAcceptPhysicalLinkStub(uint16_t opcode, OsaBuffer *command, uint32_t argument0,
+				 uint32_t argument1)
 {
+	return ampHciCreatePhysicalLink(opcode, command, argument0, argument1);
 }
 
 /* 0x00021fe0: Disconnect_Physical_Link. */
@@ -1409,9 +1411,10 @@ int ampHciCreateLogicalLink(uint16_t opcode, OsaBuffer *command)
 	return status;
 }
 
-/* 0x0002278a: Accept_Logical_Link has no handler of its own. */
-void ampHciAcceptLogicalLinkStub(void)
+/* 0x0002278a: Accept_Logical_Link jumps into the Create_Logical_Link handler. */
+int ampHciAcceptLogicalLinkStub(uint16_t opcode, OsaBuffer *command)
 {
+	return ampHciCreateLogicalLink(opcode, command);
 }
 
 /* 0x000227a2: Disconnect_Logical_Link. */
@@ -1730,8 +1733,10 @@ static int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 	case AMP_OGF_LINK_CONTROL:
 		switch ((uint8_t)opcode) {
 		case 0x35:
-		case 0x36:
 			ampHciCreatePhysicalLink(opcode, command, 0, ocf - 0x35);
+			return 1;
+		case 0x36:
+			ampHciAcceptPhysicalLinkStub(opcode, command, 0, ocf - 0x35);
 			return 1;
 		case 0x37:
 			ampHciDisconnectPhysicalLink(opcode, command, 0, ocf - 0x35);
@@ -1740,7 +1745,7 @@ static int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 			ampHciCreateLogicalLink(opcode, command);
 			return 1;
 		case 0x39:
-			ampHciAcceptLogicalLinkStub();
+			ampHciAcceptLogicalLinkStub(opcode, command);
 			return 1;
 		case 0x3a:
 			ampHciDisconnectLogicalLink(opcode, command);
