@@ -9,6 +9,7 @@
 #include "robin/clock.h"
 #include "robin/eventpower.h"
 #include "robin/fm.h"
+#include "robin/macdefaults.h"
 #include "robin/rom.h"
 #include "robin/sbc.h"
 #include "robin/soc.h"
@@ -35,6 +36,13 @@ struct FmFrequencyStep fmFrequencySteps[FM_FREQUENCY_STEPS] __attribute__((secti
 	{ 0x2710, 0, 14, 0 }, { 0x2904, 0, 12, 0 }, { 0x2af8, 0, 10, 0 },
 	{ 0x2cec, 0, 8, 0 }, { 0x2ee0, 0, 6, 0 }, { 0x30d4, 0, 4, 0 },
 	{ 0x32c8, 0, 2, 0 }, { 0x34bc, 0, 0, 0 }, { 0x3539, 0, 0, 0 },
+};
+
+uint8_t btFmLevelThreshold __attribute__((section(".itcm.rw")));	/* 0x55740 */
+
+/* btSbcManageBuffer()'s copy of the channels' bytes (wlan/macdefaults.c); it follows here. */
+uint8_t wlanChannelBytes[WLAN_CHANNELS] __attribute__((section(".itcm.rw"))) = {	/* 0x55741 */
+	0x02, 0x04, 0x0b, 0x16, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c, 0x2c, 0x90,
 };
 
 const struct FmClockCode fmClockCodes[FM_CLOCK_CODES] = {

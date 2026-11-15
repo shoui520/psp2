@@ -743,8 +743,8 @@ consumed:
 		sbcDecoderPacket->allocationMetadata = (uint32_t)sbcMsbc.silentFrame;
 	}
 	mdevForwardEvent(sbcDevices.decoder, sbcDecoderPacket, 1, 5);
-	if (sbcMsbc.frameGood == 0 && sbcPlcPending == 0)
-		sbcPlcStatus = btSbcSetupBuffer(sbcPlcState);
+	if (sbcMsbc.frameGood == 0 && sbcPlc.badFrames == 0)
+		sbcPlc.length = btSbcSetupBuffer(&sbcPlc);
 	mdevRomUpdateState(sbcDevices.decoder, sbcDecoderPacket, 1, 5);
 
 	if (deliver != 0) {
@@ -777,11 +777,11 @@ encode:
 	sbcMsbc.count++;
 	if (sbcMsbc.plcEnable != 0) {
 		if (sbcMsbc.frameGood == 1) {
-			btSbcRecordBuffer(sbcPlcState, samples, samples);
+			btSbcRecordBuffer(&sbcPlc, samples, samples);
 		} else {
 			if (sbcMsbc.silentFrame != NULL)
 				osa_BufferFree(sbcMsbc.silentFrame);
-			btSbcAdjustBuffer(sbcPlcState, samples, samples);
+			btSbcAdjustBuffer(&sbcPlc, samples, samples);
 		}
 	}
 	mdevForwardEvent(sbcDevices.pcm, sbcDecoderPacket, sbcDecoderFrame.samples, 8);
@@ -846,7 +846,7 @@ int btSbcResolveState(void)
 	sbcHeld = 1;
 	sbcReceiveEmpty = 0;
 	sbcMediaDropped = 0;
-	btSbcReleaseBuffer(sbcPlcState);
+	btSbcReleaseBuffer(&sbcPlc);
 	sbcMsbc.count = 0;
 	return 0;
 }

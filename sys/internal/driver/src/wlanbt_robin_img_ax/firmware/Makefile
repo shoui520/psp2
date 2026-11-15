@@ -52,6 +52,11 @@ $(O)/runtime/unaligned.o: runtime/unaligned.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
 
+# The concealment's DSP loops are ARM in the original, like the runtime above.
+$(O)/bt/plcdsp.o: bt/plcdsp.c $(HEADERS)
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+
 # SQRAM code compiles into .sqram1.ro so the linker places it in 0xc0007200..0xc000faa8
 $(O)/sqram/%.o: sqram/%.c $(HEADERS)
 	@mkdir -p $(dir $@)

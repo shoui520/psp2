@@ -5,6 +5,7 @@
  */
 #include <stdint.h>
 #include "robin/beacontrack.h"
+#include "robin/btsource.h"
 #include "robin/macdefaults.h"
 #include "robin/macentry.h"
 #include "robin/mactx.h"
@@ -266,5 +267,48 @@ int fmCoexScheduleBuffer(struct WlanLocalState *state)
 	device->fragThreshold[0] = 2346 & 0xff;
 	device->fragThreshold[1] = 2346 >> 8;
 	btSbcAcquireBuffer(state);
+	return 1;
+}
+
+/* The channel list of the local context: each channel's number and its byte of register 0x8000a100. */
+__attribute__((noinline)) void btSbcManageBuffer(struct WlanLocalState *state)
+{
+	uint8_t *channels = state->context;
+	unsigned int i;
+
+	for (i = 0; i < WLAN_CHANNELS; i++) {
+		wlanChannelBytes[i] = MAC_CHANNEL_REGISTER(i);
+		channels[2 * i + 1] = wlanChannelBytes[i];
+		channels[2 * i] = i;
+	}
+}
+
+/* The local station's rates, channels and address. */
+int btSbcAcquireBuffer(struct WlanLocalState *state)
+{
+	struct WlanDeviceConfig *device = &state->device;
+
+	state->rates[0] = 0x82;
+	state->rates[1] = 0x84;
+	state->rates[2] = 0x8b;
+	state->rates[3] = 0x96;
+	state->rates[4] = 12;
+	state->rates[5] = 18;
+	state->rates[6] = 24;
+	state->rates[7] = 36;
+	state->rates[8] = 48;
+	state->rates[9] = 72;
+	state->rates[10] = 96;
+	state->rates[11] = 108;
+	state->rates[12] = 0;
+	state->rates[13] = 0;
+	btSbcManageBuffer(state);
+	if (MAC_ADDRESS_LOW == 0xffffffff || MAC_ADDRESS_LOW == 0) {
+		*(BtWord *)device->address = WLAN_DEFAULT_ADDRESS_LOW;
+		*(BtHalf *)&device->address[4] = WLAN_DEFAULT_ADDRESS_HIGH;
+	} else {
+		*(BtWord *)device->address = MAC_ADDRESS_LOW;
+		*(BtHalf *)&device->address[4] = MAC_ADDRESS_HIGH;
+	}
 	return 1;
 }

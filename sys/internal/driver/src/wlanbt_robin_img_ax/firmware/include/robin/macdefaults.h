@@ -68,6 +68,20 @@ int fmCoexScheduleBuffer(struct WlanLocalState *state);		/* 0x4c9d4 */
 
 /* Not written yet. */
 uint32_t macTxNotifySyncTable(void);				/* 0x31a32 */
-void btSbcAcquireBuffer(struct WlanLocalState *state);		/* 0x516ec */
+
+/* The 14 channels' bytes of MAC register 0x8000a100 (one per word), copied by btSbcManageBuffer(). */
+#define WLAN_CHANNELS		14
+#define MAC_CHANNEL_REGISTER(n)	REG8(0x8000a100 + 4 * (n))
+/* The station's address the MAC holds (0 or all ones: none). */
+#define MAC_ADDRESS_LOW		REG32(0x8000a528)
+#define MAC_ADDRESS_HIGH	REG16(0x8000a52c)
+/* The address taken when the MAC holds none: 00:50:43:02:fe:01, Marvell's OUI. */
+#define WLAN_DEFAULT_ADDRESS_LOW	0x02435000u
+#define WLAN_DEFAULT_ADDRESS_HIGH	0x01fe
+
+extern uint8_t wlanChannelBytes[WLAN_CHANNELS];			/* 0x55741 */
+
+void btSbcManageBuffer(struct WlanLocalState *state);		/* 0x516c8 */
+int btSbcAcquireBuffer(struct WlanLocalState *state);		/* 0x516ec */
 
 #endif /* ROBIN_MACDEFAULTS_H */

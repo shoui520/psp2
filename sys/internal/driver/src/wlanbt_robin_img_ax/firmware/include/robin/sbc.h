@@ -15,6 +15,7 @@
 #include "robin/buffer.h"
 #include "robin/mdev.h"
 #include "robin/sys.h"
+#include "robin/threadx.h"
 
 #define SBC_DRIVERS		2
 
@@ -242,14 +243,52 @@ _Static_assert(sizeof(struct SbcMsbcState) == 32, "mSBC receive state");
 extern struct SbcMsbcState sbcMsbc;			/* 0x55430 */
 extern const uint8_t sbcMsbcSilentFrame[SBC_MSBC_FRAME_LENGTH];	/* 0x545bc */
 
-/* The packet loss concealment code, not converted yet; provisional names. */
-extern uint8_t sbcPlcState[];				/* 0x5a998 */
-extern uint16_t sbcPlcStatus;				/* 0x5ac86 */
-extern uint32_t sbcPlcPending;				/* 0x5ac8c */
-uint16_t btSbcSetupBuffer(void *state);			/* 0x517a8 */
-void btSbcReleaseBuffer(void *state);			/* 0x51790: resets it */
-void btSbcAdjustBuffer(void *state, int16_t *input, int16_t *output);	/* 0x51ae2: a lost frame */
-void btSbcRecordBuffer(void *state, int16_t *input, int16_t *output);	/* 0x51bae: a good frame */
+/*
+ * The packet loss concealment of mSBC frames (bt/plc.c, bt/plcdsp.c): the
+ * last samples are kept; a lost frame repeats the stretch that follows the
+ * best match of the newest 64 samples, overlapped and faded out.
+ */
+#define SBC_PLC_HISTORY		374
+#define SBC_PLC_FRAME		120
+#define SBC_PLC_TEMPLATE	64	/* the samples matched */
+#define SBC_PLC_LAGS		256	/* the lags tried */
+#define SBC_PLC_OVERLAP		16
+#define SBC_PLC_FADE		54	/* the attenuation's step per sample, frames 4 to 8 */
+
+struct SbcPlcState {
+	int16_t history[SBC_PLC_HISTORY];
+	int16_t lag;			/* 748: where the repeated stretch starts */
+	int16_t length;			/* 750: the match's lag, then the stretch's length */
+	int16_t position;		/* 752: in the stretch */
+	int16_t attenuation;		/* 754: 0x7fff after a good frame */
+	int32_t badFrames;		/* 756: lost frames in a row */
+};
+_Static_assert(sizeof(struct SbcPlcState) == 760, "PLC state");
+
+extern struct SbcPlcState sbcPlc;			/* 0x5a998 */
+extern const int16_t sbcPlcOverlap[SBC_PLC_OVERLAP];	/* 0x5459c: the fade-out of the overlap */
+
+int16_t robinClz16(uint32_t value);			/* 0x53c64 (boot/reset.S) */
+
+void btSbcReleaseBuffer(struct SbcPlcState *state);					/* 0x51790 */
+int16_t btSbcSetupBuffer(const struct SbcPlcState *state);				/* 0x517a8 */
+int btSbcClearBuffer(const struct SbcPlcState *state);					/* 0x5188e */
+void btSbcConvertBuffer(const int16_t *first, const int16_t *second, int16_t *output);	/* 0x518de */
+int btSbcVerifyBuffer(struct SbcPlcState *state, int16_t *output, int count);		/* 0x51966 */
+void btSbcSelectBuffer(struct SbcPlcState *state, int16_t *output, int scale);		/* 0x519c6 */
+void btSbcAdjustBuffer(struct SbcPlcState *state, int16_t *input, int16_t *output);	/* 0x51ae2: a lost frame */
+int btSbcRecordBuffer(struct SbcPlcState *state, int16_t *input, int16_t *output);	/* 0x51bae: a good frame */
+int16_t btSbcFilterBuffer(int value);							/* 0x51c1c */
+void btSbcHandlePacket(struct SbcPlcState *state, const int16_t *input, int16_t *output);	/* 0x51c30 */
+
+/* bt/plcdsp.c (ARM). */
+void btSbcBuildPacket(const int16_t *signal, const int16_t *pattern, int32_t correlations[4], int count);	/* 0x51e10 */
+void btSbcComputePacket(const int16_t *input, int16_t *output, int shift, int count);	/* 0x51f98 */
+void btSbcQueryPacket(const int16_t *input, int16_t *output, int count);		/* 0x52078 */
+uint32_t btSbcResetPacket(const int16_t *signal);					/* 0x520d0 */
+uint32_t btSbcSyncPacket(const int16_t *signal);					/* 0x5211c */
+void btSbcApplyPacket(const int16_t *first, const int16_t *second, int count, int32_t *firstSum,
+		      int32_t *secondSum);						/* 0x5214c */
 /* The ROM's variables (boot/rom_syms.ld). */
 extern uint8_t sbcPcmPortConfig;			/* DTCM 0x400f8d3 */
 extern uint8_t sbcPcmSlotConfig;			/* DTCM 0x400f8d5 */
@@ -270,7 +309,7 @@ extern OsaBuffer *sbcReceivedPacket;			/* DTCM 0x400fa28: the A2DP packet being 
 extern uint8_t sbcDevicesOpen;				/* DTCM 0x400fa18 */
 extern uint8_t sbcHeld;					/* DTCM 0x400fa34: the stream is not started */
 extern uint32_t sbcReceiveEmpty;			/* DTCM 0x400fa3c: decoder frames without a packet */
-extern int (*sbcPcmStreamHook)(const uint32_t *config);	/* DTCM 0x400ef30 */
+extern void (*sbcPcmStreamHook)(const uint32_t *config);	/* DTCM 0x400ef30 */
 extern struct OsaMsgList sbcReceiveQueue;		/* SQRAM 0xc003303c: the received A2DP packets */
 extern struct SbcFrame sbcDecoderFrame;			/* SQRAM 0xc0033194 */
 extern struct MdevDriver sbcAudioDriver;		/* SQRAM 0xc0033204 */
@@ -327,9 +366,25 @@ void btSbcRomResetContext(uint8_t *frames, unsigned int sequence, unsigned int n
 void mdevRomUpdateState(void *device, OsaBuffer *buffer, uintptr_t argument, unsigned int event);
 void btSbcRomComputeContext(uint8_t *frame);		/* decodes the H2 header's frame */
 
-/* Not converted yet; provisional prototype. */
-int btSbcPcmStreamHandler(const uint32_t *config);	/* 0x515bc: the PCM port's format words, not converted yet */
-void btSbcPcmDmaCallback(void);				/* 0x51764 */
+/* bt/codec.c: the PCM port's codec, behind the serial bus at device address 0x34. */
+#define SBC_CODEC_ADDRESS	0x34
+#define SBC_CODEC_SETTINGS	26
+#define SBC_CODEC_POWER		REG32(0x8000216c)	/* inferred: bit 14 is held while the codec is written */
+#define SBC_CODEC_POWER_HOLD	0x4000
+#define SBC_PCM_CODEC_CLOCKS	1	/* format word 0, bits 19..18: the codec clocks the port */
+
+struct SbcCodecSetting {
+	uint8_t reg;
+	uint8_t reserved;
+	uint16_t value;			/* 9 bits */
+};
+
+extern const struct SbcCodecSetting sbcCodecSettings[2][SBC_CODEC_SETTINGS];	/* 0x544cc */
+extern TX_EVENT_FLAGS_GROUP sbcPcmEvents;		/* SQRAM 0xc0033164: the PCM port's DMA events */
+
+void btSbcTrackBuffer(unsigned int reg, unsigned int value);	/* 0x51598 */
+void btSbcPcmStreamHandler(const uint32_t *config);	/* 0x515bc: the PCM port's format words */
+int btSbcPcmDmaCallback(uintptr_t device, uintptr_t buffer, uintptr_t argument, unsigned int status);	/* 0x51764 */
 
 /* bt/sbc.c */
 void fmCoexFilterBuffer(void);				/* 0x4cee0 */

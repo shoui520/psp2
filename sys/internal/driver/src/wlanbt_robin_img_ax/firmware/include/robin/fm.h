@@ -197,7 +197,7 @@ void btSbcFilterTable(void);					/* 0x50e62 */
 int btSbcRomConvertEntry(uint32_t event);
 void btSbcCheckBuffer(uint32_t frequency);			/* 0x50f56 */
 void btSbcApplyBuffer(uint32_t value, int swap);		/* 0x511d6 */
-extern uint8_t btFmLevelThreshold;				/* 0x55740: not converted yet */
+extern uint8_t btFmLevelThreshold;				/* 0x55740: the level btSbcResolveBuffer() finds */
 void btSbcRomSetupContext(uint32_t clock);
 void btSbcRomAcquireEntry(unsigned int band, uint8_t *out);
 void btSbcRomReleaseContext(void);
