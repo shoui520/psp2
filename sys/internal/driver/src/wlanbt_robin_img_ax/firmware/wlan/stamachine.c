@@ -69,7 +69,7 @@ extern uint8_t wlanNullAddress[8];
 /* The SQRAM's HT capability element of the association (wlan/joinframe.c). */
 extern uint8_t wlanAssocHtCapability[28];
 
-const void *p2pDirectFormatTable(uint8_t *length);					/* 0x42374 */
+__attribute__((noinline)) const void *p2pDirectFormatTable(uint8_t *length);					/* 0x42374 */
 int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
 void macMgmtFilterTable(WlanWirelessFrame *frame, const uint8_t *address);		/* 0x37d26 */
@@ -874,4 +874,19 @@ void macMgmtFilterState(struct WlanIbssMachine *machine)
 	romHsmStateInit(&wlanIbssStates.adjust, &wlanIbssStates.convert, (RomHsmHandler)macMgmtAdjustState);
 	romHsmStateInit(&wlanIbssStates.record, &wlanIbssStates.convert, (RomHsmHandler)macMgmtRecordState);
 	romHsmStateInit(&wlanIbssStates.hold, &wlanIbssStates.convert, (RomHsmHandler)macMgmtHoldState);
+}
+
+/* The last event of the target the host is told of: its bytes, and how many there are. */
+uint8_t wlanTargetEvent[256] __attribute__((section(".itcm.bss")));		/* 0x59da4 */
+uint8_t wlanTargetEventLength __attribute__((section(".itcm.bss")));		/* 0x59ea4 */
+
+__attribute__((noinline)) const void *p2pDirectFormatTable(uint8_t *length)
+{
+	*length = wlanTargetEventLength;
+	return wlanTargetEvent;
+}
+
+/* Nothing is reset (the hook the initialisation calls stays empty). */
+__attribute__((noinline)) void p2pDirectResetTable(void)
+{
 }

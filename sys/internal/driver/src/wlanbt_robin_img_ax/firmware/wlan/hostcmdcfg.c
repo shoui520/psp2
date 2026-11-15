@@ -16,6 +16,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/scan.h"
+#include "robin/soc.h"
 #include "robin/sleep.h"
 #include "robin/stamachine.h"
 #include "robin/stapssm.h"
@@ -652,4 +653,40 @@ unsigned int hostCmd01ff(void)
 /* The ROM does nothing here (a hook of the ROM's, kept as the firmware has it). */
 void wlanPsApplyDescriptor(void)
 {
+}
+
+/* The MAC timer register a set of the templates parks (the value it had before). */
+uint32_t wlanTemplateTimerSaved __attribute__((section(".itcm.rw")));				/* 0x55264 */
+
+/*
+ * HostCmd 0x84: the vendor elements (TLV 0x11c for the IBSS beacon, 0x11d for its probe response) that
+ * go into the templates. The TLV is turned into the element, ID 0xdd, in place. The register is parked
+ * at 1 for a get (action 0) and given back for a set.
+ */
+void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size)
+{
+	unsigned int remaining = (uint16_t)(size - 10);
+
+	while (remaining != 0) {
+		unsigned int type = (data[1] << 8) | data[0];
+		unsigned int length = (uint16_t)(((data[3] << 8) | data[2]) + 4);
+
+		if (type == 0x11c) {
+			data[3] = data[2];
+			data[2] = 0xdd;
+			wlanTemplateSetIe(8, wlanIbssBeaconFrame, wlanIbssBeaconRequest, data + 2);
+		} else if (type == 0x11d) {
+			data[3] = data[2];
+			data[2] = 0xdd;
+			wlanTemplateSetIe(5, wlanIbssProbeResponseFrame, wlanIbssProbeResponseRequest, data + 2);
+		}
+		remaining = (uint16_t)(remaining - length);
+		data += length;
+	}
+	if (action != 0) {
+		MAC_REG(0x0e0) = wlanTemplateTimerSaved;
+	} else {
+		wlanTemplateTimerSaved = MAC_REG(0x0e0);
+		MAC_REG(0x0e0) = 1;
+	}
 }
