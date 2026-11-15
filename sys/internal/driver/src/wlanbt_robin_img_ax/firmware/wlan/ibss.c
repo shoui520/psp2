@@ -81,7 +81,6 @@ void macTxNotifyDispatchFrame(struct WlanConnection *connection);	/* 0x3351c */
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */
-const uint8_t *wpaSuppHandleQueue(int ieId, const uint8_t *ies, unsigned int length); /* 0x2c3d8 */
 void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *third,
 			  uint8_t *fourth, uint32_t a, uint32_t b, uint32_t c);	/* 0x364be */
 void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
@@ -542,7 +541,7 @@ struct WlanConnection *wlanIbssMatchBeacon(const WlanWirelessFrame *frame, const
 	connection = cbProcResetBuffer(body + WLAN_BEACON_FIXED_LENGTH);
 	if (connection == NULL || !(connection->stationFlags & 1))
 		return NULL;
-	ds = wpaSuppHandleQueue(IE_DS_PARAMETER, body + WLAN_BEACON_FIXED_LENGTH,
+	ds = wlanIeFind(IE_DS_PARAMETER, body + WLAN_BEACON_FIXED_LENGTH,
 				LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH);
 	if (ds == NULL || wlanOperatingChannel() != ds[2])
 		return NULL;
@@ -591,8 +590,8 @@ struct WlanConnection *wlanIbssFindMerge(const WlanWirelessFrame *frame)
 	if (!(connection->bssCapability[0] & 0x10))	/* capability: Privacy */
 		return connection;
 	length = (uint16_t)(LE16(frame->bodyLength) - WLAN_BEACON_FIXED_LENGTH);
-	rsn = wpaSuppHandleQueue(IE_RSN, body + WLAN_BEACON_FIXED_LENGTH, length);
-	wpa = wpaSuppHandleQueue(IE_VENDOR, body + WLAN_BEACON_FIXED_LENGTH, length);
+	rsn = wlanIeFind(IE_RSN, body + WLAN_BEACON_FIXED_LENGTH, length);
+	wpa = wlanIeFind(IE_VENDOR, body + WLAN_BEACON_FIXED_LENGTH, length);
 	if (wpaSuppAdjustDescriptor(wpa + 4) != 3)
 		wpa = NULL;
 	macMgmtDispatchEntry(rsn, wpa, third, fourth, 0, 0, 0);

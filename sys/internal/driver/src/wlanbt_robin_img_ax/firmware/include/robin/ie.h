@@ -165,4 +165,7 @@ int wpaSuppAdjustDescriptor(const uint8_t *oui);				/* 0x2c276 */
 unsigned int wpaSuppConfigureQueue(const uint8_t *tlv, uint8_t *channels,
 				   uint32_t *channel);				/* 0x2c4c6 */
 
+/* The first element with the id in ies[0..length) (0x2c3d8), or NULL. */
+const uint8_t *wlanIeFind(int id, const uint8_t *ies, unsigned int length);
+
 #endif /* ROBIN_IE_H */

@@ -15,6 +15,7 @@
 #include "robin/conn.h"
 #include "robin/dmaring.h"
 #include "robin/hostcmd.h"
+#include "robin/ie.h"
 #include "robin/ibss.h"
 #include "robin/mac.h"
 #include "robin/baslot.h"
@@ -86,7 +87,6 @@ void macMgmtVerifyHeader(void);									/* 0x3b904 */
 int wlanStaSmLinked(const struct WlanConnection *connection);					/* 0x35faa */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);		/* 0x1d1f6 */
 void p2pDirectUpdateEntry(struct WlanConnection *connection, int kind);			/* 0x41268 */
-const uint8_t *wpaSuppHandleQueue(int ieId, const uint8_t *ies, unsigned int length);		/* 0x2c3d8 */
 void wlanPsResolvePacket(struct WlanConnection *connection, struct WlanRxStatus *status);	/* 0x3d08c */
 void wlanPsAdjustFrame(struct WlanConnection *connection, const uint8_t *body);			/* 0x3db1a */
 void wlanPsRecordFrame(void);									/* 0x3dc46 */
@@ -94,7 +94,7 @@ int macMgmtAcquireContext(struct WlanConnection *connection, const uint8_t *body
 			  unsigned int length);							/* 0x35ac2 */
 int macTxNotifyResolveState(struct WlanConnection *connection);					/* 0x2ff0c */
 void macMgmtConfigureState(struct WlanConnection *connection);					/* 0x347e8 */
-void rfCalibSelectQueue(struct WlanConnection *connection, uint8_t *olbcActive,
+void wlanApOlbcSelect(struct WlanConnection *connection, uint8_t *olbcActive,
 			uint8_t *erpInfo);							/* 0x2b680 */
 void macMgmtAcquirePacket(struct WlanConnection *connection, uint8_t *olbcCount,
 			  uint8_t *erpInfo);							/* 0x3a204 */
@@ -249,7 +249,7 @@ void wlanMacEvents(int line, uint32_t pending)
 							sleep->tbttReference = romGetTimerTimestamp();
 							sleep->tsfReference = *(const uint64_t *)body;
 							sleep->dtimCount =
-								wpaSuppHandleQueue(5, body + 12, bodyLength - 12)[2];
+								wlanIeFind(5, body + 12, bodyLength - 12)[2];
 						}
 						wlanLinkQualityEndPeriod();
 					}
@@ -270,7 +270,7 @@ void wlanMacEvents(int line, uint32_t pending)
 					    !wlanHasApRole() && (wlanHostSleepArmed() || wlanPsSessionOpen())) {
 						if (wlanPsSleepTimeout == 1 ||
 						    (wlanSessionId != 0 && wlanPsSleepSequence != 0)) {
-							const uint8_t *tim = wpaSuppHandleQueue(5, body + 12, bodyLength - 12);
+							const uint8_t *tim = wlanIeFind(5, body + 12, bodyLength - 12);
 							uint32_t flags;
 
 							if ((unsigned int)tim[1] - 4 >= 0xfb || tim[3] == 0)
@@ -334,7 +334,7 @@ void wlanMacEvents(int line, uint32_t pending)
 				struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
 				if (info->phyMode != 0) {
-					rfCalibSelectQueue(connection, &info->olbcActive, &info->erpInfo);
+					wlanApOlbcSelect(connection, &info->olbcActive, &info->erpInfo);
 					if (info->securityEnabled != 0) {
 						macMgmtAcquirePacket(connection, &info->olbcCount, &info->erpInfo);
 						if (info->securityParams[2] & 2)

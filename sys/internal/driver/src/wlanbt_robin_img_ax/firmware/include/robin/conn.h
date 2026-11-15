@@ -154,6 +154,14 @@ _Static_assert(offsetof(struct WlanPsSleep, sleepTimer) == 68, "PS sleep timer")
 _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 
 /* Per-association information of a station or access point connection (partial). */
+/* WlanConnectionInfo.rateFlags (names inferred from use) */
+#define WLAN_RATE_FLAG_OLBC		0x01	/* an overlapping legacy BSS is around */
+#define WLAN_RATE_FLAG_OLBC_ERP		0x02
+#define WLAN_RATE_FLAG_ERP		0x04	/* the ERP element is not zero */
+#define WLAN_RATE_FLAG_LOW_NULL		0x08	/* send null frames at a low rate */
+#define WLAN_RATE_FLAG_PROTECTION	0x10
+#define WLAN_RATE_FLAG_HT_OBSS		0x20	/* HT protection for another BSS's stations */
+
 struct WlanConnectionInfo {
 	uint8_t reserved0[30];
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
@@ -186,8 +194,10 @@ struct WlanConnectionInfo {
 	uint8_t erpInfo;		/* the ERP information element's value */
 	uint8_t nonErpStations;		/* nonzero: protection needed */
 	uint8_t longSlotStations;	/* nonzero: the long slot time is needed */
-	uint8_t rateFlags;		/* bit 3: send null frames at a low rate; bit 4: protection */
-	uint8_t reserved593[3];
+	uint8_t rateFlags;		/* WLAN_RATE_FLAG_* */
+	uint8_t htMixedStations;	/* what the HT operating mode is derived from (inferred): non-HT stations */
+	uint8_t htNonGreenfieldStations;
+	uint8_t ht20MhzStations;
 	uint8_t olbcDetected;		/* an overlapping legacy BSS was seen */
 	uint8_t olbcActive;
 	uint8_t olbcCount;
@@ -708,5 +718,18 @@ int wlanPsEnabled(void);
 int wlanIbssPsEnabled(void);
 int wlanApPsEnabled(void);
 unsigned int wlanRaiseEvent(unsigned int bit);
+
+/* wlan/mgmtinfo.c: the ERP and HT state of an access point; erpInfo points to WlanConnectionInfo.erpInfo. */
+void wlanApRateFlagsUpdate(unsigned int phyMode, uint8_t *erpInfo);			/* 0x2a50e */
+void wlanApOlbcForget(uint8_t *erpInfo);						/* 0x2a53c */
+int wlanRatesSelect(const uint8_t *rates, const uint8_t *first, const uint8_t *second,
+		    uint8_t *out, uint8_t *count);					/* 0x2a594 */
+int wlanFrameHasWpsIe(const uint8_t *request);						/* 0x2a5e2 */
+int wlanRatesHaveOfdm(const uint8_t *rates, unsigned int count);			/* 0x2a62c */
+int wlanRatesHaveCck(const uint8_t *rates, unsigned int count);			/* 0x2a664 */
+unsigned int wlanTlvFrameDataAppend(uint8_t *tlv, const uint8_t *frame, uint16_t length); /* 0x2a68e */
+void wlanHtOperationUpdate(struct WlanConnection *connection, uint8_t *erpInfo,
+			   const uint8_t *params, uint8_t *securityState);		/* 0x2a6de */
+void wlanApHtStationsForget(uint8_t *erpInfo);						/* 0x2a778 */
 
 #endif /* ROBIN_CONN_H */

@@ -128,11 +128,6 @@ void macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer,
 			 unsigned int reason, int unused);			/* 0x34f7c */
 int macTxNotifyConvertState(struct WlanConnection *connection);			/* 0x3028c */
 void wlanPsResolveFrame(struct WlanConnection *connection, int update, int state); /* 0x3d712 */
-void rfCalibProcessQueue(struct WlanConnection *connection, uint8_t *erpInfo,
-			 uint8_t *params, uint8_t *state);			/* 0x2a6de */
-void rfCalibUpdateQueue(uint8_t *erpInfo);					/* 0x2a778 */
-void rfCalibClearDescriptor(unsigned int phyMode, uint8_t *erpInfo);		/* 0x2a50e */
-void rfCalibConvertDescriptor(uint8_t *erpInfo);				/* 0x2a53c */
 void macMgmtInspectFrame(struct WlanConnection *connection);			/* 0x3af64 */
 void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyConvertEntry(unsigned int interfaceType, unsigned int lowRate);	/* 0x3128c */
@@ -990,14 +985,14 @@ void wlanSecurityRefresh(struct WlanConnection *connection)
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
 	if (info->securityEnabled != 0)
-		rfCalibProcessQueue(connection, &info->erpInfo, info->securityParams,
+		wlanHtOperationUpdate(connection, &info->erpInfo, info->securityParams,
 				    info->securityState);
 }
 
 /* Restarts the overlapping legacy BSS detection for a beacon interval in TU. */
 void wlanApOlbcReset(struct WlanConnectionInfo *info, unsigned int beaconInterval)
 {
-	rfCalibUpdateQueue(&info->erpInfo);
+	wlanApHtStationsForget(&info->erpInfo);
 	info->olbcDetected = 0;
 	info->olbcCount = 0;
 	info->olbcTimeout = 5000000 / (beaconInterval << 10) + 1;
@@ -1010,7 +1005,7 @@ void wlanApErpUpdate(struct WlanConnection *connection)
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 
 	if (info->phyMode != 0 && (role->securityFlags & 3) == 0) {
-		rfCalibClearDescriptor(info->phyMode, &info->erpInfo);
+		wlanApRateFlagsUpdate(info->phyMode, &info->erpInfo);
 		macMgmtInspectFrame(connection);
 		macTxNotifyConvertEntry(connection->interfaceType,
 					(info->rateFlags & WLAN_RATE_FLAG_LOW_NULL) != 0);
@@ -1022,7 +1017,7 @@ void wlanApOlbcClear(struct WlanConnection *connection)
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 
 	info->olbcActive = 0;
-	rfCalibConvertDescriptor(&info->erpInfo);
+	wlanApOlbcForget(&info->erpInfo);
 	wlanApErpUpdate(connection);
 }
 
