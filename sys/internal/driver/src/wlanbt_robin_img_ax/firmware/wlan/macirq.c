@@ -106,7 +106,7 @@ void clockHostApplyTarget(void);								/* 0x26b48 */
 void macTxNotifyUpdateTable(void);								/* 0x31596 */
 void wlanAmpTxPacketsAdjust(void);								/* 0x1e84a */
 int macTxNotifyValidateState(void);								/* 0x2fa22 */
-int wpaSuppFilterChannel(void);									/* 0x2ea5c */
+int wlanPsSleepBlocked(void);									/* 0x2ea5c */
 extern uint8_t wlanIbssJoinState[4];								/* 0x040088ce, unaligned */
 extern struct OsaEventFlags *macMgmtEventFlags;							/* 0x55138 */
 extern struct OsaEventFlags *macTxNotifyEventFlags;						/* 0x04000180 */
@@ -561,7 +561,7 @@ void wlanMacRestart(void)
 	if (wlanRoleOtherOnly() && wlanPsEnabled() && (wlanHostSleepArmed() || wlanPsSessionOpen()) &&
 	    !wlanApPsEnabled()) {
 		if (wlanPsHostWakeDue != 0 || wlanSubscribeEventsPending(wlanConnectionByRole(0)) ||
-		    wpaSuppFilterChannel() != 0 || mdevIoctl(wlanSdioDev, 27, 0) != 0) {
+		    wlanPsSleepBlocked() != 0 || mdevIoctl(wlanSdioDev, 27, 0) != 0) {
 			wlanPsSleepTimeout = 0;
 			wlanPsSleepSequence = 0;
 			wlanRaiseEvent(3);

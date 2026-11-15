@@ -102,6 +102,8 @@ int wlanCryptoSendTable(OsaBuffer *buffer);				/* 0x4221a */
 int wlanCryptoReceiveTable(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key);	/* 0x4226e */
 int wlanCcmpSend(uint8_t *frame, int unused, unsigned int priority, cipher_key_t *key, unsigned int keyId);	/* 0x4218c */
 int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t *key);	/* 0x422b0 */
+int wlanCcmpEncryptKey(uint8_t *frame, uint32_t priority, cipher_key_t *key, unsigned int keyId);	/* 0x2e858 */
+int wlanTxEncryptCcmp(uint8_t *frame, uint32_t priority, cipher_key_t *key, unsigned int keyId);	/* 0x2ed3c */
 
 /* Holds the SoC's event paths while the crypto engine or a host command works (bits 8, 9, 14 and 26 of SOC_EVENT_CONTROL). */
 WLAN_CRYPTO_CALL void socEventsHold(void);						/* 0x26c40 */

@@ -139,11 +139,11 @@ static inline void wlanCryptoClearStatus(void)
 }
 
 void wlanCcmpEncrypt(const WlanWirelessFrame *frame, uint8_t *output, uint32_t pnHigh,
-		     uint16_t pnLow, uint8_t *mic, const uint32_t *config, const uint8_t *key)
+		     uint16_t pnLow, uint32_t priority, const uint32_t *config, const uint8_t *key)
 {
 	uint32_t token;
 
-	if (wlanCcmpEncryptOverride(frame, output, pnHigh, pnLow, mic, config, key))
+	if (wlanCcmpEncryptOverride(frame, output, pnHigh, pnLow, priority, config, key))
 		return;
 	token = wlanCryptoOps.enter();
 	wlanCryptoLoadKey(config, key);
@@ -154,7 +154,7 @@ void wlanCcmpEncrypt(const WlanWirelessFrame *frame, uint8_t *output, uint32_t p
 	CRYPTO_LENGTH = le16(frame->bodyLength);
 	CRYPTO_OUTPUT = (uint32_t)output;
 	wlanCryptoLoadHeader(frame);
-	CRYPTO_MIC_ADDRESS = (uint32_t)mic;
+	CRYPTO_MIC_ADDRESS = priority;
 	if (!(frame->frameControl[1] & WLAN_FC1_MORE_FRAG))
 		CRYPTO_MODE = CRYPTO_MODE_LAST_FRAGMENT;
 	CRYPTO_PN_LOW = pnHigh << 16 | pnLow;

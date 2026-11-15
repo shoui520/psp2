@@ -435,6 +435,34 @@ int wlanCcmpSend(uint8_t *frame, int unused, unsigned int priority, cipher_key_t
 	return result;
 }
 
+/*
+ * 0x2e858: encrypts a frame with CCMP in the crypto unit (wlanCcmpEncrypt()): the unit writes the CCMP
+ * header (the key id in its fourth byte) and the data after it. The key's send counter counts up
+ * and the frame grows by the 12 bytes of the header and MIC.
+ */
+int wlanCcmpEncryptKey(uint8_t *frame, uint32_t priority, cipher_key_t *key, unsigned int keyId)
+{
+	uint8_t *header = frame + 32;
+	unsigned int length;
+
+	wlanCcmpEncrypt((const WlanWirelessFrame *)frame, header, key->ckd.aes.txIv32, key->ckd.aes.txIv16,
+			priority, (const uint32_t *)key->ckd.aes.txMicKey, key->ckd.aes.key);
+	header[3] |= keyId << 6;
+	key->ckd.aes.txIv16++;
+	if (key->ckd.aes.txIv16 == 0)
+		key->ckd.aes.txIv32++;
+	length = ((frame[1] << 8) | frame[0]) + 12;
+	frame[0] = length;
+	frame[1] = length >> 8;
+	return 1;
+}
+
+/* 0x2ed3c: the transmit path's entry to the above. */
+int wlanTxEncryptCcmp(uint8_t *frame, uint32_t priority, cipher_key_t *key, unsigned int keyId)
+{
+	return wlanCcmpEncryptKey(frame, priority, key, keyId);
+}
+
 /* Starts decrypting a CCMP frame; the engine writes the plaintext over the CCMP header. */
 int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t *key)
 {

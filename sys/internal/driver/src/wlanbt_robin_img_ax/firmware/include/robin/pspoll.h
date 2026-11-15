@@ -121,10 +121,7 @@ void wlanPsPollFrameDone(void);
 int wlanTxDiscardFrame(OsaBuffer *buffer);
 int wlanTxSendFrame(OsaBuffer *buffer);
 
-/*
- * Not converted yet. The names say what this file uses them for and are
- * provisional until their own files are written.
- */
+/* wlan/pscoex.c */
 int wlanPsPollUsesMacTimer(void);			/* 0x2e9d0, always 1 */
 int wlanPsTriggerEnabled(void);				/* 0x2e9d4 */
 int wlanCoexPsPollForced(void);				/* 0x2ea3a */

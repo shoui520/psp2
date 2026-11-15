@@ -121,12 +121,6 @@ unsigned int cbProcNullPriority(void);			/* 0x1e9ba */
 int p2pDirectReleaseEntry(void);			/* 0x419a6 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */
 void macMgmtValidateTable(int reason);			/* 0x3726c */
-int wpaSuppAdjustChannel(void);				/* 0x2ea18 */
-int wpaSuppProcessParam(void);				/* 0x2ea96 */
-int wpaSuppPrepareParam(void);				/* 0x2eab6 */
-int wpaSuppBuildParam(void);				/* 0x2eaf6 */
-void wlanPsTriggerSent(void);				/* 0x2eade */
-int wlanPsTriggerWanted(void);				/* 0x2ea82 */
 int macTxNotifyApplyState(void);			/* 0x2fefa */
 int macTxNotifyBuildState(void);			/* 0x2fbe8 */
 int wlanPsProcessHeader(void);				/* 0x3dd26 */
@@ -217,7 +211,7 @@ void wlanPsListenTimerExpired(uint32_t timer, uint32_t argument)
 int wlanStaPsIdle(void)
 {
 	return macTxPoolsIdle() && wlanHostQueueDepth(0) == 0 && wlanHostQueueDepth(0) == 0 &&
-	       wlanSlotHasCurrent() == 0 && wpaSuppBuildParam() && wlanStaPs.btShare != 2 &&
+	       wlanSlotHasCurrent() == 0 && wlanPsIdle() && wlanStaPs.btShare != 2 &&
 	       mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) == 0 && !p2pDirectReleaseEntry();
 }
 
@@ -736,7 +730,7 @@ void wlanPsEnterSleep(struct WlanConnection *connection, int urgent)
 {
 	int sent;
 
-	if (wpaSuppAdjustChannel()) {
+	if (wlanPsBtHoldWanted()) {
 		wlanPsSetBtHold(1);
 		if (!wlanPsPollUsesMacTimer()) {
 			wlanPsPollStartRetryTimer();
@@ -836,7 +830,7 @@ const int32_t *wlanStaPsSleep(struct WlanStaPsMachine *machine, const int32_t *e
 			machine->btShare = 1;
 			wlanPsEvaluate(connection, 2);
 			if (wlanPsBtShareMode != 1) {
-				machine->btShare = wpaSuppPrepareParam();
+				machine->btShare = wlanPsBtShareAllowed();
 				if (machine->btShare == 0)
 					machine->uapsd = 1;
 			}
@@ -963,7 +957,7 @@ resendNull:
 			return NULL;
 		machine->btShare = 1;
 		wlanPsEvaluate(connection, 2);
-		machine->btShare = wpaSuppPrepareParam();
+		machine->btShare = wlanPsBtShareAllowed();
 		if (machine->btShare != 0)
 			return NULL;
 		machine->uapsd = 1;
@@ -1042,7 +1036,7 @@ triggerSent:
 		wlanPsPollHandleEvent(connection, *event);
 		return NULL;
 	case 34:
-		if (machine->uapsd == 0 || wpaSuppProcessParam() == 0)
+		if (machine->uapsd == 0 || wlanPsCoexWindowEnd() == 0)
 			return NULL;
 		tx_timer_deactivate(&machine->nullTimer);
 		machine->servicePeriod = 1;
@@ -1775,7 +1769,7 @@ const int32_t *wlanStaPsPeriodic(struct WlanStaPsMachine *machine, const int32_t
 		return NULL;
 	case 21:
 		ieeeFlag = wlanPsIeeeFlag;
-		if (ieeeFlag == 0 || wlanPsDataPending == 0 || !wpaSuppBuildParam() ||
+		if (ieeeFlag == 0 || wlanPsDataPending == 0 || !wlanPsIdle() ||
 		    wlanPsConfirmArmed != 1 || wlanStaPsTxIdle() != 1 || wlanDmaRingsHaveRoom() == 1 ||
 		    wlanPsNullSuppressed != 0) {
 			wlanPsTriggerSent();
@@ -1804,7 +1798,7 @@ sleep:
 		if (wlanPsNullSuppressed != 0 || macTxPathReady() != 1)
 			return NULL;
 		wlanPsConfirmArmed = 1;
-		if (!wlanCoexUseStationMode() || wlanPsLastTxComplete == 0 || !wpaSuppBuildParam())
+		if (!wlanCoexUseStationMode() || wlanPsLastTxComplete == 0 || !wlanPsIdle())
 			return NULL;
 		break;
 	case 26:
@@ -1812,7 +1806,7 @@ sleep:
 			return NULL;
 		wlanPsLastTxComplete = 1;
 		wlanPsEvaluate(connection, 4);
-		if (wlanPsConfirmArmed == 0 || !wpaSuppBuildParam())
+		if (wlanPsConfirmArmed == 0 || !wlanPsIdle())
 			return NULL;
 		break;
 	case 32:
@@ -1820,7 +1814,7 @@ sleep:
 		wlanPsPollHandleEvent(connection, *event);
 		return NULL;
 	case 34:
-		if (wpaSuppProcessParam() == 0)
+		if (wlanPsCoexWindowEnd() == 0)
 			return NULL;
 		wlanPsCancelRetryTimer();
 		wlanPsIeeeFlagAtSleep = wlanPsIeeeFlag;

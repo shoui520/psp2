@@ -203,6 +203,14 @@ unsigned int btCoexLinkCapacity(void);			/* 0x245a6 */
 uint32_t wlanHostQueueDepth(unsigned int queue);	/* 0x1ebe8 */
 int wlanCoexBtNeedsSharing(void);			/* 0x2e9ee */
 void wlanPsSetBtHold(int hold);				/* 0x2eaa4 */
+void wlanPsSetPollEnabled(uint8_t mode);		/* 0x2eab0 */
+int wlanPsBtHoldWanted(void);				/* 0x2ea18 */
+int wlanPsSleepBlocked(void);				/* 0x2ea5c */
+int wlanPsCoexWindowEnd(void);				/* 0x2ea96 */
+int wlanPsBtShareAllowed(void);				/* 0x2eab6 */
+int wlanPsIdle(void);					/* 0x2eaf6 */
+int wlanPsTriggerWanted(void);				/* 0x2ea82 */
+void wlanPsTriggerSent(void);				/* 0x2eade */
 void wlanPsBeginBtHold(void);				/* 0x2ead0 */
 int wlanPsEvaluate(struct WlanConnection *connection, int reason);	/* 0x2eb18 */
 int wlanCoexUpdateEstimate(uint64_t start, uint64_t now, uint32_t maxSample, int32_t *mean,
