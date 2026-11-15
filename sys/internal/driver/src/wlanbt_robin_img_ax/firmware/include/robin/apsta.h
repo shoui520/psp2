@@ -145,12 +145,12 @@ void macMgmtDispatchPacket(OsaBuffer *buffer);						/* 0x39954 */
 void macMgmtParsePacket(struct WlanConnection *connection, int value, int code);	/* 0x399a8 */
 void macMgmtBuildPacket(unsigned int interfaceType, unsigned int bssNumber);		/* 0x399b4 */
 void macMgmtComputePacket(struct WlanConnectionInfo *info, uint8_t *element,
-			  const uint8_t *htCapability, const struct WlanConnectionRole *role,
+			  const uint8_t *htCapability, const struct WlanBandChannel *band,
 			  unsigned int beaconPeriod);					/* 0x399bc */
 void macMgmtQueryPacket(struct WlanConnection *connection);				/* 0x39a06 */
 int macMgmtResetPacket(struct WlanConnection *connection, int flushAll);		/* 0x39b06 */
 int macMgmtSyncPacket(struct WlanConnection *connection);				/* 0x39b98 */
-int macMgmtApplyPacket(void);								/* 0x39bca */
+void macMgmtApplyPacket(struct WlanConnection *connection);			/* 0x39bca */
 int macMgmtResolvePacket(struct WlanConnection *connection);				/* 0x39bd2 */
 
 void macMgmtNotifyPacket(struct WlanConnection *connection, uint8_t *out);		/* 0x39d08 */
@@ -180,8 +180,6 @@ int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 
 /* Not converted yet; provisional names. */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int type);			/* 0x41250 */
-void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
-			     const uint8_t *address);					/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);				/* 0x41228 */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection);	/* 0x1d1f6 */
 

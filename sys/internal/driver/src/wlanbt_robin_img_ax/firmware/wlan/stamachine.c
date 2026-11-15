@@ -32,6 +32,7 @@
 #include "robin/swcrypto.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
 
@@ -75,7 +76,6 @@ int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
 void macMgmtFilterTable(WlanWirelessFrame *frame, const uint8_t *address);		/* 0x37d26 */
 int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
-int p2pSqramHandleState(struct WlanConnection *connection);
 void p2pSqramHandleContext(struct WlanConnection *connection, const uint8_t *frame, int unused);
 void p2pSqramMatchDirectSsid(struct WlanConnection *connection, const uint8_t *frame,
 			     uintptr_t argument);
@@ -584,7 +584,7 @@ static inline __attribute__((always_inline)) void macMgmtDirectResume(struct Wla
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	uint8_t flags[4];
 
-	if (p2pSqramHandleState(connection) == 0 || ps->p2pGroupActive == 0)
+	if (p2pBssActiveGet(connection) == 0 || ps->p2pGroupActive == 0)
 		return;
 	if (ps->p2pChannel != 255) {
 		wlanCurrentChannelFlags(flags);

@@ -33,6 +33,7 @@
 #include "robin/psctl.h"
 #include "robin/stapssm.h"
 #include "robin/sync.h"
+#include "robin/uapbss.h"
 #include "robin/wlantask.h"
 #include "robin/wmm.h"
 
@@ -44,7 +45,6 @@ void macTxNotifyApplyBuffer(struct WlanConnection *connection);			/* 0x32204 */
 void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x3218c */
 void macTxNotifyResolveBuffer(unsigned int rate);					/* 0x32294 */
 void wlanPsApplyFrame(struct WlanConnection *connection, int a, unsigned int b);	/* 0x3d6d0 */
-int p2pSqramHandleState(struct WlanConnection *connection);				/* SQRAM */
 extern int (*wlanChannelValidateHook)(void);						/* 0x5f1a0 */
 int wlanPsHandleHeader(struct WlanConnection *connection, const uint8_t *body, unsigned int length,
 		       const uint8_t *tim, unsigned int flags);				/* 0x3dc5c */
@@ -220,7 +220,7 @@ int macMgmtSyncContext(struct WlanConnection *connection)
 	unsigned int bitmap;
 
 	wlanTxPowerSetLinkLimit(wlanChannelContext.linkPowerLimit, 0);
-	if (connection->interfaceType != 3 || p2pSqramHandleState(connection) == 0)
+	if (connection->interfaceType != 3 || p2pBssActiveGet(connection) == 0)
 		macMgmtUpdateContext(wlanChannelContext.savedFlags, wlanChannelContext.savedChannel);
 	adhoc = 0;
 	if (connection->interfaceType == 1)

@@ -18,6 +18,7 @@
 #include "robin/stream.h"
 #include "robin/subscribe.h"
 #include "robin/txring.h"
+#include "robin/uapbss.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sys.h"
@@ -51,7 +52,6 @@ void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, u
 /* Not converted yet; provisional names. */
 struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
-void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
 /* The pools: of connections, of beacon and probe response templates, of information blocks. */
 #define POOL(name, size, count)									\
 	struct OsaBufferPool name __attribute__((section(".dtcm.rw"))) = { { { 1, 0, 0 } } };	\
@@ -748,7 +748,7 @@ int wlanConnectionInfoAttach(struct WlanConnection *connection)
 				return 1;
 			role->infoBuffer = buffer;
 			role->info = (struct WlanConnectionInfo *)((uint8_t *)buffer + buffer->dataOffset);
-			uapSqramUpdateBuffer(connection);
+			uapBssInit(connection);
 		}
 	} else {
 		struct WlanConnection *first = wlanConnectionFind(connection->bssType, connection->bssNumber);

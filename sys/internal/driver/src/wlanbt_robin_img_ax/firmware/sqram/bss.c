@@ -15,6 +15,7 @@
 #include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/txring.h"
+#include "robin/uapbss.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 
@@ -25,7 +26,6 @@ uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48] __attribute__((s
 /* The stage that starts the supplicant again after a reset (uapSqramParseState()). */
 struct WlanInitStage esaInitStage __attribute__((section(".itcm.rw")));				/* 0x547d4 */
 
-int uapSqramProcessBuffer(struct WlanConnection *connection);					/* 0xc000a704 */
 int romLibApplyContext(unsigned int count);							/* 0x03f3a94e */
 
 /*
@@ -133,7 +133,7 @@ int uapSqramConfigureState(int value)
 
 /*
  * 0xc00073a6: starts the connections again after a reset: a station or access point runs
- * uapSqramProcessBuffer(), any other gets the device's address back. Returns 1 when a
+ * uapBssDefaults(), any other gets the device's address back. Returns 1 when a
  * connection was not set up.
  */
 int uapSqramCheckState(void)
@@ -148,7 +148,7 @@ int uapSqramCheckState(void)
 			continue;
 		}
 		if (connection->interfaceType == WLAN_IF_STATION || connection->interfaceType == WLAN_IF_AP) {
-			uapSqramProcessBuffer(connection);
+			uapBssDefaults(connection);
 		} else {
 			__aeabi_memcpy4(connection->interfaceAddress, wlanDeviceAddress->address, 6);
 			macTxNotifyAcquireBuffer(2, connection->interfaceAddress, connection->interfaceIndex, 1);

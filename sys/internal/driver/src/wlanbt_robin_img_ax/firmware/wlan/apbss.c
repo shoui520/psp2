@@ -308,7 +308,7 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtParsePacket(connection, result, WLAN_AP_EVENT_STOPPED);
 		return NULL;
 	case WLAN_AP_EVENT_STOPPED:
-		macMgmtApplyPacket();
+		macMgmtApplyPacket(connection);
 		macMgmtResetBuffer(connection, event->data->argument, WLAN_AP_EVENT_STOPPED, 1);
 		return NULL;
 	case WLAN_AP_EVENT_CONFIGURE:
@@ -360,7 +360,7 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtParsePacket(connection, result, WLAN_AP_EVENT_STOPPED);
 		return NULL;
 	case WLAN_AP_EVENT_STOPPED:
-		macMgmtApplyPacket();
+		macMgmtApplyPacket(connection);
 		if (macMgmtResetBuffer(connection, event->data->argument, 34, 1) != 0)
 			return NULL;
 		romHsmTransition(machine, &apStates(machine)->parse);

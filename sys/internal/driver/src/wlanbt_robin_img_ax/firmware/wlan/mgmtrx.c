@@ -17,6 +17,7 @@
 #include "robin/mgmt.h"
 #include "robin/rom.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 #include "robin/wlan.h"
 #include "robin/peerrate.h"
 #include "robin/stamachine.h"
@@ -78,8 +79,6 @@ struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConn
 void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
 unsigned int cbProcComputePacket(unsigned int mode);				/* 0x1e3cc */
 unsigned int cbProcUpdateBuffer(struct WlanConnection *connection);		/* 0x1d5ba */
-void uapSqramConfigureBuffer(struct WlanConnection *connection, struct WlanConnection *peer,
-			     const uint8_t *address);				/* SQRAM, veneer 0x52dcc */
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
 
 /* Management frames of a station. */
@@ -340,7 +339,7 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 			if (info->maxStations > cbProcUpdateBuffer(connection) && kind < 10) {
 				peer = wlanConnectionFindDirectPeer(connection, frame->address2);
 				if (peer != NULL) {
-					uapSqramConfigureBuffer(connection, peer, frame->address2);
+					uapBssApply(connection, peer, frame->address2);
 					wlanRxManagementTo(peer, buffer, argument);
 				}
 				break;

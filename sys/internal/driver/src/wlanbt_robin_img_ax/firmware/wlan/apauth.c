@@ -28,6 +28,7 @@
 #include "robin/softtimer.h"
 #include "robin/stream.h"
 #include "robin/sys.h"
+#include "robin/uapbss.h"
 #include "robin/wlan.h"
 #include "robin/hostps.h"
 #include "robin/apsta.h"
@@ -239,7 +240,7 @@ int hostCmd00b1(struct WlanConnection *connection)
 		return 2;
 	if (connection->interfaceType == 3 && connection->mode != 2)
 		return 4;
-	uapSqramConfigureBuffer(connection, NULL, NULL);
+	uapBssApply(connection, NULL, NULL);
 	if (info->securityMode.noRsn)
 		info->capability[0] &= ~0x10;
 	else

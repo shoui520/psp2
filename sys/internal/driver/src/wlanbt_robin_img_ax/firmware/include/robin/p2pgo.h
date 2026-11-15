@@ -130,6 +130,8 @@ struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int bod
 						   unsigned int *changed, struct WlanDirectContext *context); /* 0x40b16 */
 unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
 				    unsigned int type, uint16_t value);			/* 0x40b88 */
+uint8_t *p2pSqramSelectContext(struct WlanConnection *connection, const uint8_t *deviceAddress,
+			       const uint8_t *ssid, unsigned int ssidLength);	/* SQRAM 0xc000dcce: the group client entry of the device (and SSID) */
 int p2pDirectFormatContext(struct WlanConnection *connection);				/* 0x40da2 */
 int p2pDirectInspectContext(WlanWirelessFrame *frame);					/* 0x40dc2 */
 int p2pDirectTrackContext(const WlanWirelessFrame *frame);				/* 0x40dd6 */

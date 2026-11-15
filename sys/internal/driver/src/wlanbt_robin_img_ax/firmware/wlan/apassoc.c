@@ -33,6 +33,7 @@
 #include "robin/wapi.h"
 #include "robin/wlan.h"
 #include "robin/peerrate.h"
+#include "robin/uapbss.h"
 
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
 #define WLAN_STATUS_ASSOC_DENIED		12
@@ -56,7 +57,6 @@ int rfCalibRecordQueue(struct WlanConnection *connection, unsigned int a, unsign
 void rfCalibAdjustQueue(struct WlanConnection *connection, const WlanIePointers *elements,
 			unsigned int channel, uint8_t *erpInfo, uint8_t *olbcActive,
 			unsigned int beaconPeriod, int add);			/* 0x2b45c */
-int uapSqramProcessBuffer(void);						/* SQRAM */
 
 /* The association request goes back with the BSS's own elements (custom ones too) as a response, after the station is let go of. */
 int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument)
@@ -421,16 +421,16 @@ void macMgmtBuildPacket(unsigned int interfaceType, unsigned int bssNumber)
 
 /* The HT Information element of the BSS (ID 61, 22 bytes): its primary channel, secondary channel offset and 40 MHz permission. */
 void macMgmtComputePacket(struct WlanConnectionInfo *info, uint8_t *element, const uint8_t *htCapability,
-			  const struct WlanConnectionRole *role, unsigned int beaconPeriod)
+			  const struct WlanBandChannel *band, unsigned int beaconPeriod)
 {
 	wlanApOlbcReset(info, beaconPeriod);
 	__aeabi_memclr(element, 0x18);
 	element[0] = 61;
 	element[1] = 22;
-	element[2] = role->channel;
+	element[2] = band->channel;
 	element[3] |= 0x08;
 	element[3] = (element[3] & 0xfb) | ((htCapability[2] & 0x02) << 1);
-	element[3] = (element[3] & 0xfc) | ((role->channelFlags >> 4) & 3);
+	element[3] = (element[3] & 0xfc) | ((band->channelFlags >> 4) & 3);
 }
 
 /* The BSS is stopped: keys, the SQRAM context, the radio and the connection's slot are given back. */
@@ -458,7 +458,7 @@ void macMgmtQueryPacket(struct WlanConnection *connection)
 	romLibResolveState();
 	uapSqramUpdateState(wlanConnectionCommandPrepare(2, 0));
 	wlanConnectionDecrement();
-	macMgmtComputePacket(info, info->htOperation, info->htCapability, role, connection->beaconPeriod);
+	macMgmtComputePacket(info, info->htOperation, info->htCapability, &role->band, connection->beaconPeriod);
 	if (wlanConnectionSlotDetach(connection) != 0) {
 		sysIrqDisable();
 		for (;;)
@@ -528,9 +528,9 @@ int macMgmtSyncPacket(struct WlanConnection *connection)
 	return result;
 }
 
-int macMgmtApplyPacket(void)
+void macMgmtApplyPacket(struct WlanConnection *connection)
 {
-	return uapSqramProcessBuffer();
+	uapBssDefaults(connection);
 }
 
 /*
@@ -678,7 +678,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	wlanApOlbcClear(connection);
 	wlanApNonErpGone(connection);
 	wlanApLongSlotGone(connection);
-	macMgmtComputePacket(info, info->htOperation, info->htCapability, role, connection->beaconPeriod);
+	macMgmtComputePacket(info, info->htOperation, info->htCapability, &role->band, connection->beaconPeriod);
 	if (info->ht2040Managed != 0 || !(info->htCapability[2] & 0x02)) {
 		info->htOperation[3] &= 0xf8;
 	} else {

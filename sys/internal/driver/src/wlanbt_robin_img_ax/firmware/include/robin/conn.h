@@ -169,6 +169,13 @@ _Static_assert(sizeof(struct WlanPsSleep) == 100, "PS sleep parameters");
 #define WLAN_RATE_FLAG_HT_OBSS		0x20	/* HT protection for another BSS's stations */
 
 /* The body of the overlapping BSS scan parameters element (802.11n 7.3.2.60). */
+/* An access category's parameter record in the WMM Parameter element. */
+struct WlanWmmAcParameters {
+	uint8_t aciAifsn;
+	uint8_t ecw;			/* ECWmax << 4 | ECWmin */
+	uint16_t txopLimit;		/* 32 us units */
+};
+
 struct WlanObssScanParameters {
 	uint16_t passiveDwell;
 	uint16_t activeDwell;
@@ -186,7 +193,8 @@ _Static_assert(sizeof(struct WlanObssScanParameters) == 14, "overlapping BSS sca
 struct WlanApChannel {
 	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
 	uint8_t channel;
-	uint8_t reserved2[3];
+	uint8_t scanFlags;		/* bits 0-1: scanned actively and passively (uapBssDefaults()) */
+	uint8_t scanTime[2];		/* little endian, TU: at most 110 */
 	uint8_t measureTime[2];		/* little endian, TU */
 };
 
@@ -249,9 +257,9 @@ _Static_assert(sizeof(struct WlanWapiSettings) == 5, "WAPI settings");
 struct WlanConnectionInfo {
 	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
 	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
-	uint8_t reserved8[6];
+	uint8_t macAddress[6];		/* the device's address, the BSSID the BSS starts with */
 	uint8_t rates[14];		/* the BSS's rate set (supported rates, with the basic bit) */
-	uint8_t reserved28;
+	uint8_t authAlgorithm;		/* the authentication algorithm a station's peer connection expects (uapBssApply()); 0: open system */
 	uint8_t rateCount;		/* 13 for a P2P group */
 	uint8_t unicastRate;		/* fixed rate code for unicast data frames; 0: chosen per frame */
 	uint8_t txRate;			/* fixed rate code for data frames; 0: chosen per frame */
@@ -264,6 +272,10 @@ struct WlanConnectionInfo {
 		struct {
 			uint8_t reserved40[10];	/* id, length, OUI, type, subtype, version, QoS Info, reserved */
 			uint8_t wmmRecords[4][4];	/* the AP's WMM parameter records of the four access categories (info, contention, TXOP) */
+		};
+		struct {
+			uint8_t reserved40b[10];
+			struct WlanWmmAcParameters acParameters[4];	/* the same records, BE, BK, VI, VO */
 		};
 	};
 	uint8_t reserved66[2];
@@ -289,7 +301,9 @@ struct WlanConnectionInfo {
 	uint8_t bssid[6];		/* the BSS's address (a P2P group's: the P2P interface address) */
 	uint16_t rtsThreshold;		/* the RTS threshold the BSS starts with (2347: off) */
 	uint16_t fragThreshold;		/* the fragmentation threshold (2346) */
-	uint8_t reserved508[6];
+	uint8_t shortRetryLimit;
+	uint8_t longRetryLimit;
+	uint8_t reserved510[4];
 	struct {
 		uint8_t id;		/* 74 */
 		uint8_t length;		/* 14 */
@@ -303,7 +317,7 @@ struct WlanConnectionInfo {
 	uint32_t mgmtForwardMask;	/* bit n: management frames of subtype n are handed to the host */
 	uint8_t ht2040Managed;		/* nonzero: the BSS starts at 20 MHz and macMgmtManagePacket() widens it */
 	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: the SSID is broadcast: beacons carry it and probe requests without one are answered (clear: hidden) */
-	uint8_t reserved542;
+	uint8_t protectionFlagsHigh;	/* bit 0: the top bit of the 16-bit flags protectionFlags starts (bits 6-8 cleared together by uapBssDefaults()) */
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
 	struct WlanWapiSettings wapi;	/* 545: the BSS's WAPI element, when it is a WAPI one */
@@ -358,6 +372,13 @@ struct WlanConnectionInfo {
 };
 
 struct WlanSubscribeEvents;
+
+/* A channel and its band, as the roles keep them. */
+struct WlanBandChannel {
+	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
+	uint8_t channel;
+};
+
 /* The access point's association context: its first block is set up with the connection. */
 /*
  * The block of a station (at stationInfo) or access point (at apInfo)
@@ -366,8 +387,13 @@ struct WlanSubscribeEvents;
 struct WlanConnectionRole {
 	struct WlanConnectionInfo *info;
 	OsaBuffer *infoBuffer;		/* the buffer the information block is in */
-	uint8_t channelFlags;		/* WlanChannelFlags of the role's channel: the band is in bits 0-1 */
-	uint8_t channel;		/* the primary channel */
+	union {
+		struct {
+			uint8_t channelFlags;	/* WlanChannelFlags of the role's channel: the band is in bits 0-1 */
+			uint8_t channel;	/* the primary channel */
+		};
+		struct WlanBandChannel band;
+	};
 	uint8_t reserved10[2];
 	uint32_t listenInterval;
 	uint8_t reserved16[4];
@@ -474,6 +500,7 @@ struct __attribute__((may_alias)) WlanHtElements {
 #define WLAN_PKT_FWD_DROP_INTER_BSS	0x08	/* frames for a station of another BSS are dropped */
 
 /* WlanConnection.flags2 */
+#define WLAN_CONN2_DOMAIN		0x01	/* 802.11d: the regulatory domain's channels and powers apply (inferred) */
 #define WLAN_CONN2_QOS			0x08	/* the peer uses QoS (inferred) */
 #define WLAN_CONN2_ASSOCIATED		0x10	/* the peer is associated */
 #define WLAN_CONN2_HOLD			0x04	/* the connection stays when its peer leaves (inferred) */

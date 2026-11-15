@@ -26,7 +26,6 @@ extern void __aeabi_memcpy4(void *dest, const void *source, size_t n);
 
 /* SQRAM: the context the group's frames are parsed with and built from. */
 void p2pSqramHandleEntry(struct WlanPsPeerState *ps);				/* 0xc000e1f0 */
-const uint8_t *p2pSqramSelectContext(struct WlanConnection *connection, uint8_t *body);	/* 0xc000dcce */
 int p2pSqramConvertContext(struct WlanConnection *connection, uint8_t *type, uint8_t *tail, uint8_t *ssid,
 			   unsigned int mode, unsigned int flag);			/* 0xc000dc2e */
 
@@ -182,7 +181,7 @@ unsigned int p2pDirectAcquireState(struct WlanConnection *connection)
 	ps->groupStarted = 0;
 	ps->groupSettingD = 255;
 	ps->p2pBssActive = 0;
-	ps->groupSettingC = 0;
+	ps->pendingFrame = NULL;
 	ps->groupSettingE = 1;
 	ps->groupSettingF = 256;
 	ps->groupSettingH = 1;
@@ -242,7 +241,8 @@ unsigned int p2pDirectCheckSsidPrefix(struct WlanConnection *connection)
 	connection->p2pState = 2;
 	ps->p2pOptions = (ps->p2pOptions & 0xfa) | 1;
 	if (ps->p2pOptions & 2) {
-		selected = p2pSqramSelectContext(connection, ps->groupDeviceAddress);
+		selected = p2pSqramSelectContext(connection, ps->groupDeviceAddress, ps->groupSsid,
+						 (uint8_t)(ps->groupIdLength - 6));
 		if (ps->p2pOptions & 2) {
 			if (ps->ssidPending == 1) {
 				if (selected == NULL) {

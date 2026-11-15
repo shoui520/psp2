@@ -24,6 +24,7 @@
 #include "robin/soc.h"
 #include "robin/stamachine.h"
 #include "robin/sync.h"
+#include "robin/uapbss.h"
 #include "robin/wlantask.h"
 
 #define SCAN_LE16(p)	((p)[0] | ((p)[1] << 8))
@@ -53,7 +54,7 @@ __attribute__((noinline)) int macMgmtFormatEntry(void)
 	int result;
 
 	if (connection->interfaceType == WLAN_IF_AP && connection->mode == 1) {
-		if (p2pSqramHandleState(connection) != 0)
+		if (p2pBssActiveGet(connection) != 0)
 			return wlanSlotAbort(scan->slot, 6);
 		if (p2pDirectInspectState() != 0 && macMgmtFormatTable(scan) &&
 		    !macMgmtInspectTable(scan->channelIndex))

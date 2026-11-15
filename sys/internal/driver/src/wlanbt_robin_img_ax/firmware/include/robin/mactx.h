@@ -134,7 +134,7 @@ struct WlanPsPeerState {
 	uint8_t reserved1193[15];
 	uint32_t groupSettingA;		/* 1 when the group starts */
 	uint32_t groupSettingB;		/* 1 */
-	uint32_t groupSettingC;		/* 0 */
+	OsaBuffer *pendingFrame;	/* a frame p2pPendingFrameSend() queues later (a retry or a timer's) */
 	uint32_t ssidFixed;		/* nonzero: the host supplied the group's SSID, which is not generated */
 	uint32_t p2pEntryPending;	/* a direct-link entry waits for the next beacon (macirq.c) */
 	uint8_t groupChannel;		/* the channel the group is on */
@@ -144,7 +144,8 @@ struct WlanPsPeerState {
 		uint8_t p2pIeState[4];	/* kept by the P2P code from custom IE slot 1 */
 		uint8_t *customIe[19];	/* the attributes the host gave the group, by P2P_SLOT_* (struct WlanDirectContext) */
 	};
-	uint8_t reserved1308[12];
+	uint8_t eventPeerAddress[6];	/* the peer the listen channel's event (type 2) names (p2pListenTimerExpired()) */
+	uint8_t reserved1314[6];
 	uint8_t p2pDeviceAddress[6];	/* the P2P Device ID attribute of a probe request */
 	uint8_t reserved1326[14];
 	uint32_t groupSettingE;		/* 1 when the group starts */
@@ -385,6 +386,7 @@ _Static_assert(sizeof(struct WlanHostEventFrame) == 24, "host event frame");
 #define WLAN_HOST_EVENT_PORT_RELEASE		0x2b
 #define WLAN_HOST_EVENT_PRE_BEACON_LOST		0x31
 #define WLAN_HOST_EVENT_HS_ACT_REQ		0x47
+#define WLAN_HOST_EVENT_WIFIDIRECT_GENERIC	0x49	/* mlan's EVENT_WIFIDIRECT_GENERIC_EVENT: a P2P peer's frame (p2pDirectNotifyContext()) */
 #define WLAN_HOST_EVENT_UAP_MIC_COUNTERMEASURES_END	0x4c	/* the access point's TKIP countermeasures ended (inferred) */
 #define WLAN_HOST_EVENT_RSN_CONNECT		0x51	/* MICRO_AP_EV_ID_RSN_CONNECT: a station's handshake is done */
 #define WLAN_HOST_EVENT_IBSS_PEER_SILENT	0x21	/* the IBSS's peer missed three link checks (inferred) */
