@@ -111,6 +111,10 @@ void btLdaRomComputeState(void);
 void btLdaRomApplyState(uint8_t state);
 void btLdaRomCheckState(uint16_t reg, uint32_t value);
 void btLdaRomSyncState(void);
+void btLdaRomResetState(void);
+int btLcoRomManageState(uint8_t *command, const uint16_t *count, uint32_t a2, uint32_t a3, uint32_t a4,
+			uint32_t a5);
+void btLdaRomResolveState(uint8_t *message, uint16_t rate);
 void btLscRomSyncState(int kind, uint32_t value, uint32_t a2, uint32_t a3, uint32_t queue);
 void btLdaRomProcessState(uint8_t *list, uint8_t id);
 void btBdhRomPrepareState(int which, uint8_t id);
