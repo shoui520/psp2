@@ -81,14 +81,6 @@
 /* What wlanBssBit() returns: one bit per BSS, eight per interface type. */
 #define WLAN_BSS_BIT(type, number)	((1u << (number)) << (8 * (type)))
 
-/* A message posted to a connection's state machine (20 bytes). */
-struct WlanSmMessage {
-	uint32_t event;
-	uint32_t reserved4[2];
-	uint8_t value;
-	uint8_t reserved13[7];
-};
-
 /* One custom IE as the host sends it, after its slot index. */
 struct __attribute__((packed)) WlanCustomIe {
 	uint16_t mask;			/* management subtypes it goes into */
@@ -111,19 +103,14 @@ struct WlanChannelPowerTable {
 };
 
 /* Not converted yet; provisional names. */
-int wlanEventMessageBuild(struct WlanSmMessage *message, int code, const void *data); /* 0x2a49a */
 void macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int value);	/* 0x38a18 */
 void macTxNotifyConvertTable(int table);					/* 0x31dfe */
 unsigned int p2pDirectDispatchTable(unsigned int queue);			/* 0x42030 */
-void rfCalibScheduleDescriptor(const uint8_t *local, const uint8_t *peer);	/* 0x2a25c */
-int rfCalibNotifyDescriptor(const void *parameters);					/* 0x2a2e6 */
-void rfCalibInspectDescriptor(int value);					/* 0x2a3ca */
 int macMgmtTrackHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b784 */
 int macMgmtInspectHeader(unsigned int channel, unsigned int band, unsigned int rate); /* 0x3b73e */
 void macMgmtResetHeader(int unused, unsigned int channel);			/* 0x3b4b6 */
 int cbProcResetPacket(void);							/* 0x1e42e */
 int macTxNotifyScheduleState(unsigned int channel, uint8_t *index);		/* 0x2ff3c */
-int rfCalibTrackDescriptor(const uint8_t *config, uint8_t *bandwidth);		/* 0x2a3ec */
 int macTxNotifySetupTable(uint32_t timeout, uint32_t *status);			/* 0x31dd2 */
 void macTxNotifyClearTable(void);						/* 0x31de8 */
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int subtype,
@@ -258,17 +245,17 @@ void wlanSetSlotTime(int shortSlot)
 }
 
 /* Starts a calibration against the connection's peer. */
-int wlanCalibrationStart(struct WlanConnection *connection, const void *parameters)
+int wlanIbssTimingStart(struct WlanConnection *connection, const void *parameters)
 {
-	rfCalibScheduleDescriptor(connection->localAddress, connection->interfaceAddress);
+	wlanIbssAddressGenerate(connection->localAddress, connection->interfaceAddress);
 	romLibFormatContext();
-	rfCalibResolveDescriptor();
-	return rfCalibNotifyDescriptor(parameters);
+	wlanMacAddressApply();
+	return wlanIbssRecordStart(parameters);
 }
 
-void wlanCalibrationEnd(void)
+void wlanIbssTimingEnd(void)
 {
-	rfCalibInspectDescriptor(0);
+	wlanIbssTimersControl(0);
 	romLibInspectContext(cbProcPrepareTable(6, 0));
 	cbProcDispatchTable(6, 1);
 	romLibTrackContext();
@@ -392,7 +379,7 @@ void wlanTxPowerUpdateConnection(struct WlanConnection *connection, unsigned int
 int wlanChannelFlagsDecode(const uint8_t *flags, uint8_t *band, uint8_t *bandwidth)
 {
 	*band = *flags & WLAN_CHANNEL_BAND_MASK;
-	return rfCalibTrackDescriptor(flags, bandwidth);
+	return wlanChannelWidthSelect(flags, bandwidth);
 }
 
 /*
@@ -563,7 +550,7 @@ int wlanReportEvent(struct WlanConnection *connection, const void *data, int cod
 		case 47:
 			break;
 		case 30:
-			message.value = *(const uint8_t *)data;
+			message.value[0] = *(const uint8_t *)data;
 			break;
 		default:
 			return -1;

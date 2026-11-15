@@ -78,9 +78,9 @@ enum {
 extern uint8_t wlanBroadcastAddress[6];
 
 /* the 802.11 header builder (0x2a414) */
-void *wlanBuildMgmtHeader(WlanWirelessFrame *frame, const uint8_t *source,
-			  const uint8_t *destination, const uint8_t *bssid,
-			  unsigned int subtype, unsigned int powerManagement);
+void wlanBuildMgmtHeader(WlanWirelessFrame *frame, const uint8_t *source,
+			 const uint8_t *destination, const uint8_t *bssid,
+			 unsigned int subtype, unsigned int powerManagement);
 
 uint8_t *wlanBuildIbssBeacon(const WlanAdHocStart *start, const uint8_t *source,
 			     const uint8_t *bssid, unsigned int subtype,

@@ -322,7 +322,7 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 		macMgmtQueryContext(connection, start->dataRate, count, rates);
 		macTxNotifyApplyFrame(connection);
 		connection->interfaceType = WLAN_IF_IBSS;
-		wlanCalibrationStart(connection, start);
+		wlanIbssTimingStart(connection, start);
 		if (supplicantIsEnabled() && (connection->flags & 4))
 			supplicantInitSession(connection, connection->networkSsid,
 					      connection->networkSsidLength,

@@ -65,7 +65,17 @@ struct WlanTxPowerLevels {
 	uint8_t first;
 	uint8_t second;
 	uint8_t third;			/* bits 0-6; bit 7 kept */
-};
+} __attribute__((aligned(4)));
+
+/* An adjustment of the levels, a signed offset for each of two kinds. */
+struct WlanCalibAdjust {
+	int8_t value[2];
+} __attribute__((aligned(2)));
+
+/* The four signal values of a band index. */
+struct WlanCalibSignal {
+	int8_t value[4];
+} __attribute__((aligned(4)));
 
 /* Per-channel values of a lookup: a header and one value per measured channel. */
 struct WlanCalibrationChannelValues {
@@ -103,5 +113,48 @@ int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value);
 int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value);
 int wlanCalibrationLookupFlags(unsigned int index, uint8_t *flags);
 int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values);
+
+/*
+ * The calibration data tables (sys/calibdata.c). Each kind has a Set for the code that
+ * decodes the host's data, a Get for the lookups and a Clear for a new load; every Set and
+ * Get returns 0 for an index (or entry) that is out of range or was not loaded.
+ */
+int wlanCalibContextSet(unsigned int index, const uint8_t *value);			/* 0x29e90 */
+int wlanCalibContextGet(unsigned int index, uint8_t *value);				/* 0x29e9a */
+void wlanCalibContextClear(void);							/* 0x29ea4 */
+int wlanCalibFlagsSet(unsigned int index, const uint8_t *value);			/* 0x29e76 */
+int wlanCalibFlagsGet(unsigned int index, uint8_t *value);				/* 0x29e7e */
+void wlanCalibFlagsClear(void);								/* 0x29e86 */
+int wlanCalibValue1Set(unsigned int index, const uint16_t *value);			/* 0x29eb0 */
+int wlanCalibValue1Get(unsigned int index, uint16_t *value);				/* 0x29eba */
+void wlanCalibValue1Clear(void);							/* 0x29ec4 */
+int wlanCalibValue0Set(unsigned int index, const uint16_t *value);			/* 0x29ed2 */
+int wlanCalibValue0Get(unsigned int index, uint16_t *value);				/* 0x29edc */
+void wlanCalibValue0Clear(void);							/* 0x29ee6 */
+int wlanCalibValue2Set(unsigned int index, const uint16_t *value);			/* 0x29ef4 */
+int wlanCalibValue2Get(unsigned int index, uint16_t *value);				/* 0x29efe */
+void wlanCalibValue2Clear(void);							/* 0x29f08 */
+int wlanCalibSignalSet(unsigned int index, const struct WlanCalibSignal *values);			/* 0x29f16 */
+int wlanCalibSignalGet(unsigned int index, struct WlanCalibSignal *values);				/* 0x29f1e */
+void wlanCalibSignalClear(void);							/* 0x29f26 */
+int wlanCalibBlockSet(unsigned int index, const void *block);				/* 0x29f32 */
+int wlanCalibBlockGet(unsigned int index, void *block);					/* 0x29f3c */
+void wlanCalibBlockClear(void);								/* 0x29f46 */
+int wlanCalibPowerSet(unsigned int index, const struct WlanTxPowerRecord *record);	/* 0x29f54 */
+int wlanCalibPowerGet(unsigned int index, struct WlanTxPowerRecord *record);		/* 0x29f7e */
+void wlanCalibPowerClear(void);								/* 0x29fae */
+int wlanCalibSecondarySet(unsigned int index, unsigned int secondary, const struct WlanCalibAdjust *adjust); /* 0x29fbc */
+int wlanCalibSecondaryGet(unsigned int index, unsigned int secondary, struct WlanCalibAdjust *adjust); /* 0x29fee */
+void wlanCalibSecondaryClear(void);							/* 0x2a022 */
+int wlanCalibLevelsSet(unsigned int index, int mode, unsigned int power,
+		       const struct WlanTxPowerLevels *levels); /* 0x2a030 */
+int wlanCalibLevelsGet(unsigned int index, int mode, unsigned int power,
+		       struct WlanTxPowerLevels *levels); /* 0x2a0ac */
+void wlanCalibLevelsClear(void);							/* 0x2a10a */
+int wlanCalibRangeAdjustSet(unsigned int index, int mode, unsigned int range, unsigned int channel,
+			    const struct WlanCalibAdjust *adjust);		/* 0x2a120 */
+int wlanCalibRangeAdjustGet(unsigned int index, int mode, unsigned int range, unsigned int channel,
+			    struct WlanCalibAdjust *adjust);			/* 0x2a182 */
+void wlanCalibRangeAdjustClear(void);							/* 0x2a1e6 */
 
 #endif /* ROBIN_CALIBRATION_H */

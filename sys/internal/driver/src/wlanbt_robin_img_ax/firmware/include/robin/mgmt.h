@@ -8,12 +8,19 @@
 #define ROBIN_MGMT_H
 
 #include <stdint.h>
+#include "robin/adhoc.h"
 #include "robin/buffer.h"
 #include "robin/wlan.h"
 
 struct WlanConnection;
 struct WlanReplyFrame;
-struct WlanSmMessage;
+
+/* A message posted to a connection's state machine (20 bytes). */
+struct WlanSmMessage {
+	uint32_t event;
+	uint32_t reserved4[2];
+	uint8_t value[8];
+};
 
 extern int32_t wlanTxPowerHostLimit;
 extern int32_t wlanTxPowerLinkLimit;
@@ -23,8 +30,20 @@ extern uint16_t wlanCustomIeMask;
 int wlanSmPost(struct WlanConnection *connection, const struct WlanSmMessage *message);
 void wlanSmPostCommand(OsaBuffer *buffer);
 void wlanSetSlotTime(int shortSlot);
-int wlanCalibrationStart(struct WlanConnection *connection, const void *parameters);
-void wlanCalibrationEnd(void);
+int wlanIbssTimingStart(struct WlanConnection *connection, const void *parameters);
+void wlanIbssTimingEnd(void);
+
+/* wlan/mgmtutil.c */
+void wlanMacAddressSet(const uint8_t *address);			/* 0x2a214 */
+void wlanMacAddressApply(void);					/* 0x2a254 */
+void wlanIbssAddressGenerate(uint8_t *address, const uint8_t *source);	/* 0x2a25c */
+int wlanIbssRecordStart(const WlanAdHocStart *start);		/* 0x2a2e6 */
+int wlanIbssRecordJoin(const WlanAdHocBssDesc *join);		/* 0x2a358 */
+void wlanIbssTimersControl(int start);				/* 0x2a3ca */
+int wlanChannelWidthSelect(const uint8_t *config, uint8_t *width);	/* 0x2a3ec */
+int wlanEventMessageBuild(struct WlanSmMessage *message, int code, const void *data); /* 0x2a49a */
+uint64_t wlanSignalTimeNow(void);				/* 0x2a4fc */
+int wlanMacEntryEnable(unsigned int index);			/* 0x2a504 */
 unsigned int wlanTxPowerMinimum(unsigned int channel, unsigned int band);
 int wlanTxPowerAllowed(unsigned int channel, unsigned int band, unsigned int rate);
 uint8_t wlanCurrentChannel(void);
@@ -99,7 +118,6 @@ int wlanPsVerifyFrame(int reason);						/* 0x3dac6 */
 void macMgmtQueryContext(struct WlanConnection *connection, const uint8_t *rates,
 			 unsigned int count, unsigned int bitmap);		/* 0x356f6 */
 void cbProcSelectBuffer(int kind, const uint8_t *bssid);			/* 0x1e064 */
-void rfCalibResolveDescriptor(void);						/* 0x2a254 */
 extern uint8_t wlanPsHostMode;							/* 0x55130 */
 
 #endif /* ROBIN_MGMT_H */

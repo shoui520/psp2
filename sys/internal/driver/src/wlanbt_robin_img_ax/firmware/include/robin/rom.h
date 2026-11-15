@@ -73,6 +73,17 @@ void romLibSelectContext(unsigned int mode);				/* 0x03f3ab21 */
 void romLibConvertContext(unsigned int rate, unsigned int response);	/* 0x03f3aaf1 */
 unsigned int romLibHandleState(unsigned int index);			/* 0x03f3a2a5: the rate code of an index */
 void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb */
+/*
+ * The MAC's address and timer registers (names inferred from the callers in wlan/mgmtutil.c):
+ * romLibResetState() writes the 48-bit address a station uses (high halfword first), romLibQueryState()
+ * takes the address in an eight-byte buffer, romLibVerifyState() reads the 64-bit TSF.
+ */
+void romLibQueryState(const void *address);					/* 0x03f3a4c9 */
+void romLibResetState(uint32_t high, uint32_t low);				/* 0x03f3a4db */
+void romLibBuildState(void);							/* 0x03f3a417 */
+void romLibComputeContext(uint32_t mask);					/* 0x03f3a8ff */
+void romLibParseContext(uint32_t mask);						/* 0x03f3a8d7 */
+void romLibBuildContext(uint32_t mask);						/* 0x03f3a8e1 */
 /* The MAC's wake and sleep requests (0x03f3a917, 0x03f3a907); no argument. */
 void romMacWakeRequest(void);
 void romMacSleepNotify(void);

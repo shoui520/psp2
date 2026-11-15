@@ -36,7 +36,6 @@ extern uint8_t wlanBssBeaconRequests[WLAN_CONNECTION_SLOTS][48];				/* SQRAM 0xc
 extern uint8_t wlanBssProbeResponseRequests[WLAN_CONNECTION_SLOTS][48];			/* SQRAM 0xc0031e24 */
 void uapSqramHandleState(struct WlanConnection *connection);					/* SQRAM 0xc0007200 */
 void macMgmtFilterState(const uint8_t **machine);						/* 0x354cc */
-void rfCalibApplyDescriptor(const void *descriptor);						/* 0x2a214 */
 uint64_t wlanSignalTimeNow(void);								/* 0x2a4fc */
 void clockHostSelectPreset0(void);								/* 0x26b78 */
 void clockHostSelectPreset1(void);								/* 0x26baa */
@@ -1566,7 +1565,7 @@ int wlanBssSelectAddress(unsigned int kind, const void *descriptor)
 		/* fall through */
 	case 2:
 		if (allowed == 1)
-			rfCalibApplyDescriptor(descriptor);
+			wlanMacAddressSet(descriptor);
 		break;
 	case 3: {
 		struct WlanConnection *connection = p2pDirectProcessEntry(3);
@@ -1575,7 +1574,7 @@ int wlanBssSelectAddress(unsigned int kind, const void *descriptor)
 			if (connection->flags2 & 0x10)
 				descriptor = connection->peerAddress;
 		}
-		rfCalibApplyDescriptor(descriptor);
+		wlanMacAddressSet(descriptor);
 		break;
 	}
 	default:
