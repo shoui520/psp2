@@ -265,6 +265,8 @@ int btLmpLcInspectPacket(const uint8_t *request);		/* 0x46c82 */
 unsigned int btLmpLcTrackPacket(void);				/* 0x46cb6 */
 uint32_t btLmpLcManagePacket(unsigned int argument);		/* 0x46cf4 */
 int btLmpLcAcquirePacket(uint32_t unused, uint16_t flags, struct BtDeviceProfile *profile, uint8_t entry);	/* 0x46f7c */
+void btLmpLcReleasePacket(void);				/* 0x47066 */
+void btLmpLcSetupPacket(uint32_t clock);			/* 0x470d4 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

@@ -409,6 +409,7 @@ PROVIDE(btLtsRomPrepareState    = 0x03f32ec3);
 PROVIDE(btLtsRomSyncState       = 0x03f3308b);
 PROVIDE(btLcoRomTrackContext    = 0x03f201c3);
 PROVIDE(btLtsRomDispatchState   = 0x03f32ed3);
+PROVIDE(btLtsRomVerifyState     = 0x03f3458f);
 PROVIDE(btSlotSessionFlags           = 0x0400cd29);
 PROVIDE(btTargetSession              = 0x0400ddec);
 PROVIDE(btSlotNeedHook               = 0x0400edb0);

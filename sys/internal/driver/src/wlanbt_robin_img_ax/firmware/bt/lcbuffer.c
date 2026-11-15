@@ -1903,3 +1903,46 @@ int btLmpLcAcquirePacket(uint32_t unused, uint16_t flags, struct BtDeviceProfile
 	btTargetLeaveHook(2);
 	return 1;
 }
+
+/*
+ * Once the clock reached the device record's, the target's sessions start over from the next
+ * tick with the mode buffer set; the target has 0x2a slots while a sample ring is in use, else 14.
+ */
+void btLmpLcReleasePacket(void)
+{
+	uint32_t now = btLtsRomParseState(0);
+	uint32_t clock = btLtsRomScheduleState(now);
+
+	if ((int32_t)(clock - btDeviceRecord) >= 0) {
+		struct BtModeControl *control;
+
+		btTargetLeaveHook(0x100);
+		btTableModeHeader = 0;
+		control = btLinkModeControl;
+		control->sessions = btTargetSessions;
+		control->current = 0;
+		btDeviceRecord = clock + 1;
+		btTableModeBuffer = 1;
+		btTableModeClock = now;
+		btSlotDoneHook(clock + 1);
+		romTargetTable = 0;
+		btTargetEnterHook(0x100);
+	}
+	btTargetSlots = (btSource.frame != 0 || btSource.header != 0) ? 0x2a : 14;
+}
+
+/*
+ * The ROM's slot check at clock, wrapped: a target set up by btLmpLcManagePacket() (state 1) that
+ * has started ends the mode header unless its profile is in adjust state 4; a tracked one hands
+ * its device the link's next state once its start is a tick away.
+ */
+void btLmpLcSetupPacket(uint32_t clock)
+{
+	struct BtDeviceProfile *profile = &btDeviceProfile[btTargetIndex];
+
+	if (romTargetTable == 1 && (int32_t)(clock - btTargetStart) >= 0 && profile->adjust != 4)
+		btTableModeHeader = 0;
+	btLtsRomVerifyState(clock);
+	if (romTargetTable == 1 && profile->tracked != 0 && (int32_t)(clock - btTargetStart + 1) >= 0)
+		btLdaRomVerifyState(profile->active, btLdrRomScheduleState(profile->index));
+}
