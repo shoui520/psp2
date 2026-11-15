@@ -18,6 +18,7 @@
 #include "robin/task.h"
 #include "robin/wlan.h"
 #include "robin/sleep.h"
+#include "robin/txring.h"
 #include "robin/eventpower.h"
 #include "robin/mactx.h"
 
@@ -81,8 +82,6 @@ struct AmpLinkRequest {
 
 /* Provisional names of unconverted callees. */
 extern struct OsaEventFlags *ampEventFlags;
-extern struct OsaBufferPool wlanFramePool;
-OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t a, uint32_t b);
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);	/* 0x1d604 */
@@ -92,7 +91,7 @@ extern uint32_t wlanPrimaryEvents;			/* 0x4008828 */
 uint8_t ampLocalFrameAddress[6] __attribute__((section(".itcm.rw")));
 const char *ampPalDriverName __attribute__((section(".itcm.rw"))) = "btamp_pal";
 uint32_t ampLinkSupervisionInterval __attribute__((section(".itcm.rw"))) = 10000000;
-uint8_t ampScanParameter __attribute__((section(".itcm.rw"))) = 1;
+uint8_t ampActivityReports __attribute__((section(".itcm.rw"))) = 1;	/* nonzero: send Activity Reports */
 uint8_t ampScanChannel __attribute__((section(".itcm.rw"))) = 1;
 uint8_t ampActivityPayloadLength __attribute__((section(".itcm.rw")));
 uint8_t ampSupportedRates[12] __attribute__((section(".itcm.rw"))) = {
@@ -165,7 +164,7 @@ void ampPalStartLink(struct WlanConnection *connection)
 	unsigned int ssidLength;
 	unsigned int size;
 
-	buffer = wlanAllocateFrame(&wlanFramePool, 0x100, 0, 3);
+	buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0x100, 0, 3);
 	if (!buffer)
 		return;
 	buffer->context = connection;
@@ -379,7 +378,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 			break;
 		}
 		case AMP_WLAN_SCAN_SETTINGS:
-			ampScanParameter = message->first[1];
+			ampActivityReports = message->first[1];
 			ampScanChannel = message->first[2];
 			ampScanEnabled = ampScanChannel != 0;
 			break;

@@ -221,8 +221,26 @@ void btSbcPreparePacket(void);								/* 0x51d20 */
 int btSbcDispatchPacket(const uint8_t *command);					/* 0x51d5c */
 int btSbcParsePacket(uintptr_t first, uintptr_t second, uintptr_t third, uintptr_t fourth, uintptr_t fifth,
 		     uintptr_t sixth);							/* 0x51da0 */
-extern uint8_t btVendorTaskState[];			/* 0x5b850 */
-extern const uint8_t btTaskTable[];			/* 0x54634: the tasks, "hct" first */
+/* A Bluetooth task: what btBdhRomHandleState() creates it with. */
+struct BtTask {
+	char name[4];
+	void (*entry)(void);
+	uint16_t stackSize;
+	uint8_t priority;
+	uint8_t index;
+};
+#define BT_TASKS		8
+#define BT_TASK_STACK_SIZE	8004	/* the tasks' stacks, one after another */
+extern uint8_t btTaskStacks[BT_TASK_STACK_SIZE];	/* 0x5b850 */
+extern const struct BtTask btTaskTable[BT_TASKS];	/* 0x54634: the tasks, "hct" first */
+/* The ROM's task bodies. */
+void btLcoRomTask(void);
+void btLdaRomTask(void);
+void btLscRomTask(void);
+void btLdrRomTask(void);
+void btLtsRomTask(void);
+void btBdhRomTask(void);
+void btHccRomTask(void);
 void btSbcCheckEntry(unsigned int length, const uint8_t *parameters, uint8_t *status, uint8_t *returnLength,
 		     uint8_t *returnParameters);					/* 0x4f294 */
 void btSbcValidateEntry(unsigned int length, const uint8_t *parameters, uintptr_t argument,

@@ -57,8 +57,8 @@ void romLibSyncContext(unsigned int mask);						/* ROM */
 uint8_t wlanAfcEnabled __attribute__((section(".itcm.rw")));			/* 0x54f18 */
 int16_t wlanAfcTimingOffset __attribute__((section(".itcm.rw")));		/* 0x54f1a: the sum, then the mean */
 int16_t wlanAfcCarrierOffset __attribute__((section(".itcm.rw")));		/* 0x54f1c */
-uint8_t wlanAfcAuto __attribute__((section(".itcm.rw")));			/* 0x54f1e: the carrier error that is reported */
-uint8_t wlanAfcThreshold __attribute__((section(".itcm.rw")));			/* 0x54f1f: the beacons that are summed */
+uint8_t wlanAfcAuto __attribute__((section(".itcm.rw"))) = 0x0a;			/* 0x54f1e: the carrier error that is reported */
+uint8_t wlanAfcThreshold __attribute__((section(".itcm.rw"))) = 4;			/* 0x54f1f: the beacons that are summed */
 uint8_t wlanAfcSamples __attribute__((section(".itcm.rw")));			/* 0x54f20: the beacons summed so far */
 /* The TSF of the last beacon the connection took (hostcmd.c reports it). */
 uint8_t wlanBeaconTimestamp[8] __attribute__((section(".dtcm.bss")));		/* 0x040088d2 */

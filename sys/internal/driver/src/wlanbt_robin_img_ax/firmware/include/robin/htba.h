@@ -127,9 +127,6 @@ extern struct WlanBaTimeout *wlanBaTimeoutTable;
 extern int (*wlanTxBaDeleteHook)(struct WlanConnection *connection, const uint8_t *peer, unsigned int tid);
 extern int (*wlanRxBaDeleteHook)(const uint8_t *peer, unsigned int tid);
 extern int (*wlanTxBaAddHook)(struct WlanConnection *connection, const struct WlanBaRequest *request);
-/* Tells the host of an event of a connection (0x548c0). */
-extern void (*wlanHostEventPost)(struct WlanConnection *connection, unsigned int event,
-				 const void *data, unsigned int length);
 
 /* The HT configuration the host set (HostCmd_CMD_11N_CFG 0xcd): the HT capability and the transmit information. */
 extern uint8_t wlanHtTxCapability[2];
@@ -141,7 +138,6 @@ extern uint8_t wlanHtCoexIe[3];				/* SQRAM 0xc0011bc5: the 20/40 BSS coexistenc
 extern uint32_t wlanDelbaCount;				/* SQRAM 0xc0011bc8: DELBA timers that ran */
 extern uint8_t wlanHtOperationIe[24];			/* SQRAM 0xc0031f00: the HT operation element of the BSS */
 extern uint8_t wlanHtOverlapScanIe[16];			/* SQRAM 0xc0031f18: the overlapping BSS scan parameters */
-extern uint8_t wlanApHtCoexIe[3];			/* 0x59718: an access point's coexistence element */
 
 /* The rate selection's HT state (not converted yet): greenfield frames and the channel width in use. */
 void wlanRateGreenfieldSet(struct WlanConnection *connection, int update, int greenfield);	/* 0x3d712 */

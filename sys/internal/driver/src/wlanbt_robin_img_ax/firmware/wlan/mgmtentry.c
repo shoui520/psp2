@@ -47,7 +47,7 @@ int (*wlanSecurityQueryHook)(void) __attribute__((section(".itcm.bss")));		/* 0x
 void (*wlanSecurityRecordHook)(SecurityMode_t mode, Cipher_t *mcast, Cipher_t *ucast, AkmSuite_t *akmList,
 			       IEEEtypes_RSNCapability_t *rsnCapability,
 			       Cipher_t *groupManagementCipher) __attribute__((section(".itcm.bss"))); /* 0x54e78 */
-uint32_t wlanIbssPowerLimit __attribute__((section(".itcm.bss")));			/* 0x5516c */
+uint32_t wlanIbssPowerLimit __attribute__((section(".itcm.rw"))) = 0x000000ff;			/* 0x5516c */
 extern uint8_t ampScanChannel;							/* 0x54cc1 */
 extern OsaBuffer *wlanIbssBeaconBuffer;						/* 0x54c20 */
 extern OsaBuffer *wlanIbssProbeResponseBuffer;					/* 0x54c24 */

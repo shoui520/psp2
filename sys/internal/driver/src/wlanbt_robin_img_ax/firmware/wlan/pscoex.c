@@ -35,7 +35,7 @@ enum {
 	WLAN_PS_EVALUATE_NONE,
 };
 
-uint8_t wlanPsPollMode __attribute__((section(".itcm.rw")));	/* 0x54f24: 1: the radio is shared with Bluetooth */
+uint8_t wlanPsPollMode __attribute__((section(".itcm.rw"))) = 1;	/* 0x54f24: 1: the radio is shared with Bluetooth */
 int wlanPsBtHold __attribute__((section(".itcm.rw")));		/* 0x54f28: the null frame and PS-Poll triggers wait for Bluetooth */
 
 /* Stubs of the automatic frequency control (host command 60) and of the hook that follows it in macMgmtReleaseContext. */

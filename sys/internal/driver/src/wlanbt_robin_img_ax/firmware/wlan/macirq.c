@@ -119,7 +119,7 @@ uint32_t wlanMacCount10 __attribute__((section(".itcm.rw")));				/* 0x54c44 */
 uint32_t wlanMacCount20 __attribute__((section(".itcm.rw")));				/* 0x54c48 */
 uint32_t wlanMacFlushCount __attribute__((section(".itcm.rw")));			/* 0x54c5c */
 /* The IBSS power save window: its limit (-1: none), and whether a PS buffer was posted. */
-uint32_t wlanIbssPsLimit __attribute__((section(".itcm.rw")));				/* 0x54bc0 */
+uint32_t wlanIbssPsLimit __attribute__((section(".itcm.rw"))) = 0x0000003c;				/* 0x54bc0 */
 uint32_t wlanIbssPsBuffered __attribute__((section(".itcm.rw")));			/* 0x593cc */
 uint32_t wlanIbssPsActive __attribute__((section(".itcm.rw")));				/* 0x593d4 */
 /* Set while the host sleep is on (0), the power save waits to sleep again (1). */

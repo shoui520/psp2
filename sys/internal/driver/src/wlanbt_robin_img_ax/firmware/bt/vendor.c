@@ -280,7 +280,7 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		*status = btLdaRomQueryState(length, parameters);
 		return;
 	case 85:
-		*returnLength = mdevRomScheduleState(returnParameters, btVendorTaskState, btTaskTable);
+		*returnLength = mdevRomScheduleState(returnParameters, btTaskStacks, btTaskTable);
 		return;
 	case 87:
 		btLmpLcValidateState((uint8_t *)parameters);

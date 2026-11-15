@@ -16,7 +16,7 @@
 int macMgmtParseContext(void);					/* 0x356b4 */
 
 /* MAC_650_OPERATION bit 2 as it was before wlanMacOperationWait() (SQRAM 0xc0011c04). */
-extern uint32_t wlanMacOperationSaved;
+uint32_t wlanMacOperationSaved __attribute__((section(".sqram1.bss")));			/* 0xc0011c04 */
 
 /* Takes a new rate set and finds the limits of its classes. */
 void wlanConnectionRateSetUpdate(struct WlanConnection *connection, uint32_t rateSet)

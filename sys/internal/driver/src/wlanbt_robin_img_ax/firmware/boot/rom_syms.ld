@@ -1005,3 +1005,11 @@ PROVIDE(fmRdsBlocks                  = 0xc00334f8);
 
 /* MAC registers. */
 PROVIDE(macPendingParam              = 0x8000a138);
+/* The Bluetooth tasks' bodies (btTaskTable). */
+PROVIDE(btLcoRomTask            = 0x03f13615);
+PROVIDE(btLdaRomTask            = 0x03f20e11);
+PROVIDE(btLscRomTask            = 0x03f2aa69);
+PROVIDE(btLdrRomTask            = 0x03f25353);
+PROVIDE(btLtsRomTask            = 0x03f31ea1);
+PROVIDE(btBdhRomTask            = 0x03f07685);
+PROVIDE(btHccRomTask            = 0x03f0b4ad);

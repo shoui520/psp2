@@ -24,6 +24,18 @@
 #include "robin/soc.h"
 #include "robin/vendor.h"
 
+const struct BtTask btTaskTable[BT_TASKS] = {					/* 0x54634 */
+	{ "hct", hctTask,	0x1f4, 4, 0 },
+	{ "lco", btLcoRomTask,	0x5c8, 8, 1 },
+	{ "lda", btLdaRomTask,	0x230, 4, 2 },
+	{ "lsc", btLscRomTask,	0x280, 2, 3 },
+	{ "ldr", btLdrRomTask,	0x1f0, 7, 4 },
+	{ "lts", btLtsRomTask,	0x160, 3, 5 },
+	{ "bdh", btBdhRomTask,	0xb40, 12, 6 },
+	{ "hcc", btHccRomTask,	0x448, 11, 7 },
+};
+uint8_t btTaskStacks[BT_TASK_STACK_SIZE] __attribute__((section(".itcm.bss"), aligned(4)));	/* 0x5b850 */
+
 struct BtLcContext btLmpLcContext __attribute__((section(".itcm.rw"))) = {
 	.node = 5,
 	.slot = 4,
@@ -195,7 +207,7 @@ int btHctInit(void)
 	romHctCoexMode = 115200;
 	btSbcFilterState(BT_CONFIG_ITEM_BAUD_RATE, (uint8_t *)&romHctCoexMode);
 	__aeabi_memclr(btHctTaskControl, sizeof(btHctTaskControl));
-	btBdhRomHandleState(btVendorTaskState, 8004, btHctTaskControl, (const char *)btTaskTable);
+	btBdhRomHandleState(btTaskStacks, BT_TASK_STACK_SIZE, btHctTaskControl, (const char *)btTaskTable);
 	btSbcSetupState();
 	btAudioPathModesClear();
 	btLmpLcScheduleContext();

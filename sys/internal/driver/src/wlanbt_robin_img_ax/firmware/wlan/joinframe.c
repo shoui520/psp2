@@ -35,6 +35,9 @@
 #include "robin/wmm.h"
 #include "robin/stamachine.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanJoinHtCapability[28] __attribute__((section(".sqram1.bss")));		/* 0xc0032154 */
+
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
 #define BUFFER_FRAME(buffer)	((WlanWirelessFrame *)((uint8_t *)(buffer) + (buffer)->dataOffset))
@@ -56,7 +59,7 @@
 #define WLAN_TX_TAG_LEAVE		19
 
 extern int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
-extern uint8_t wlanAssocHtCapability[28];			/* SQRAM 0xc0032170: the copy of it for the association */
+uint8_t wlanAssocHtCapability[28] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0032170: the copy of it for the association */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */
 extern uint8_t ampScanChannel;					/* amp/wlanif.c */

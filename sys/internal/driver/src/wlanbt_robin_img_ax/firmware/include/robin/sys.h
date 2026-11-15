@@ -158,15 +158,13 @@ uint32_t sysStopEventEngine(void);
 extern uint32_t sysForceEventDispatch;
 
 uint32_t sysSubmitBbpCommand(uint32_t target, uint32_t value, uint32_t command);
-int sysIssueBbpCommand(uint32_t target, uint32_t value, uint32_t command);
+void sysIssueBbpCommand(uint32_t target, uint32_t value, uint32_t command);
 int sysAcknowledgeEvents(uint32_t events);
 typedef volatile uint32_t *(*SysBbpCompletionHook)(void);
 volatile uint32_t *sysWaitForBbpCommand(void);
 SysBbpCompletionHook socEventHookInit(void);
 extern SysBbpCompletionHook sysBbpCompletionHook;
-int bbpIssueSecondaryCommand(uint32_t target, uint32_t value, uint32_t command);
-int bbpIssuePrimaryCommand(uint32_t target, uint32_t value, uint32_t command);
-int sysIssuePrimaryBbpCommand(uint32_t target, uint32_t value, uint32_t command);
+void sysIssuePrimaryBbpCommand(uint32_t target, uint32_t value, uint32_t command);
 extern void *wlanSdioDev;			/* mdev "sdio" handle (0x547ac) */
 extern void *btSdioDev;				/* mdev "bt_sdio" handle (0x54c90) */
 

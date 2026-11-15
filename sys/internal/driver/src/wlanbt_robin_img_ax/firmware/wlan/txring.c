@@ -15,6 +15,7 @@
 #include "robin/stream.h"
 #include "robin/sys.h"
 #include "robin/task.h"
+#include "robin/txhold.h"
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
@@ -335,15 +336,14 @@ static uint16_t wlanTxInFlightMisses __attribute__((section(".itcm.bss")));		/* 
 static uint32_t wlanTxInFlightIdle __attribute__((section(".itcm.bss")));		/* 0x54f34: the MAC went idle with frames out */
 static uint32_t wlanTxInFlightChecked __attribute__((section(".itcm.bss")));		/* 0x54f38: when the table was last looked at */
 
-extern OsaBuffer wlanStaticBuffer;
 extern struct OsaBufferPool wlanBlockPool1;
 extern struct OsaBufferPool wlanReplyFramePool;
 extern struct OsaBufferPool ampTransmitPool;
 
-/* False for the one statically allocated buffer. */
+/* False for the one statically allocated frame, the ATIM frame. */
 int wlanBufferIsPooled(const OsaBuffer *buffer)
 {
-	return buffer != &wlanStaticBuffer;
+	return (const void *)buffer != &wlanAtimBuffer.frame;
 }
 
 /*
@@ -686,9 +686,9 @@ int wlanTxQueueFrame(OsaBuffer *buffer)
  * per round (reloaded when a round finds none) and what is left of this
  * round's. The ring 4 is not counted.
  */
-extern uint8_t wlanTxRingOrder[WLAN_TX_RING_SHADOWED];		/* SQRAM 0xc0011c08 */
-extern uint8_t wlanTxRingShare[WLAN_TX_RING_SHADOWED];		/* SQRAM 0xc0011c0f */
-extern uint8_t wlanTxRingBudget[WLAN_TX_RING_SHADOWED];	/* SQRAM 0xc0011c16 */
+uint8_t wlanTxRingOrder[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.rw"))) = { 4, 5, 6, 3, 2, 1, 0 };	/* 0xc0011c08 */
+uint8_t wlanTxRingShare[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.rw"))) = { 0xff, 0x0a, 0x0a, 1, 1, 1, 1 };	/* 0xc0011c0f */
+uint8_t wlanTxRingBudget[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.rw"))) = { 0xff, 0x0a, 0x0a, 1, 1, 1, 1 };	/* 0xc0011c16 */
 
 /* Publishes the entries of the first ring in the order that has some and a share left; 0 if none. */
 int wlanTxRingPublishNext(void)

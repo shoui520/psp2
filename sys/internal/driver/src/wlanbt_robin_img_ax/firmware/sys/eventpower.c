@@ -30,6 +30,11 @@
 #include "robin/sys.h"
 #include "robin/wlantask.h"
 
+/* The calibration timings, 60 for every reference clock. */
+const uint8_t rfCalibTimingA[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d7e */
+const uint8_t rfCalibTimingC[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d88 */
+const uint8_t rfCalibTimingB[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d92 */
+
 /* Registers of the event paths; the names say what the code does with them. */
 #define EVENT_PATH_PENDING_TIMER	SOC_REG(0x040)
 #define EVENT_PATH_PENDING_CHANNEL	SOC_REG(0x044)	/* bit 1: a path was entered */

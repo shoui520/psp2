@@ -9,6 +9,9 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+WepIcvErrList wlanIbssIcvErrList __attribute__((section(".itcm.bss")));			/* 0x5f124 */
+
 struct WlanRomServices wlanRomServices __attribute__((section(".itcm.rw")));
 
 ROBIN_PATCH_SLOT(wlanWepIcvErrInitOverride);

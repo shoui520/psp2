@@ -85,6 +85,15 @@ int wlanConvertDataFrame(OsaBuffer *buffer, WlanPacketHeader *header,
 int wlanPrepareAmsduFrame(OsaBuffer *buffer, WlanPacketHeader *header);
 void wlanDefaultReceiveError(void *context);
 struct OsaBufferPool *wlanInitializeReceiveErrorHandler(void);
+/* The hardware information block in wlanDtcmState (0x040088ac). */
+struct WlanHwInfo {
+	uint8_t reserved0[5];
+	uint8_t version[2];		/* the hardware version, from the SoC (HostCmd_DS_GET_HW_SPEC) */
+	uint8_t reserved7[4];
+	uint8_t txPowerLevel[2];	/* HostCmd_CMD_RF_TX_POWER's current level */
+	uint8_t txPowerSteps[16];	/* the levels it can be set to, 16-bit each */
+};
+extern struct WlanHwInfo wlanHwInfo;			/* 0x040088ac */
 extern struct OsaBufferPool wlanEventPool;				/* 0x04000eac: the events to the host (wlan/wlaninit.c) */
 void wlanForwardEventPacket(OsaBuffer *buffer);
 void wlanSetEventPacketLength(OsaBuffer *buffer, uint32_t length);

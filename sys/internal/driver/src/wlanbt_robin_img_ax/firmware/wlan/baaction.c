@@ -9,6 +9,7 @@
 #include "robin/baslot.h"
 #include "robin/conn.h"
 #include "robin/htba.h"
+#include "robin/icverr.h"
 #include "robin/ie.h"
 #include "robin/mactx.h"
 #include "robin/protection.h"
@@ -161,7 +162,7 @@ void wlanBaTimeoutExpired(struct WlanConnection *connection, const uint8_t *reco
 		event[0] = tid;
 		__aeabi_memcpy(&event[1], record, 6);
 		event[7] = initiator;
-		wlanHostEventPost(connection, WLAN_EVENT_BA_STREAM_TIMEOUT, event, 8);
+		wlanRomServices.sendHostEvent(connection, WLAN_EVENT_BA_STREAM_TIMEOUT, event, 8);
 	}
 	wlanBaTimeoutStart(connection, U16(record + 8), record, record[6], record[7], callback);
 }
@@ -225,7 +226,7 @@ void wlanBaAddbaEventPost(const uint8_t *peer, const uint8_t *request, struct Wl
 	event.paramSet[1] = request[4];
 	put16(event.timeout, U16(request + 5));
 	put16(event.startSequence, U16(request + 7) >> 4);
-	wlanHostEventPost(connection, WLAN_EVENT_ADDBA, &event, sizeof(event));
+	wlanRomServices.sendHostEvent(connection, WLAN_EVENT_ADDBA, &event, sizeof(event));
 }
 
 /* A DELBA arrived: the session it names is deleted, and the host is told (EVENT_DELBA). */
@@ -248,7 +249,7 @@ void wlanBaDelbaReceived(struct WlanConnection *connection, const uint8_t *peer,
 	event.reason[0] = body[4];
 	event.reason[1] = body[5];
 	event.result = 0;
-	wlanHostEventPost(connection, WLAN_EVENT_DELBA, &event, sizeof(event));
+	wlanRomServices.sendHostEvent(connection, WLAN_EVENT_DELBA, &event, sizeof(event));
 }
 
 /* The response of HostCmd 0xce: the peer's ADDBA response (its body: category, action, token, status, parameter set, timeout). */

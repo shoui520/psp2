@@ -42,7 +42,7 @@ struct WlanPowerCapability {
 	uint8_t maximum;
 };
 
-extern struct WlanPowerCapability *wlanPowerCapability;				/* 0x54e70 */
+struct WlanPowerCapability *wlanPowerCapability __attribute__((section(".itcm.bss")));				/* 0x54e70 */
 unsigned int wlanTlvPowerCapabilityParse(const uint8_t *tlv, struct WlanPowerCapability *capability); /* 0x2c5b4 */
 
 /*

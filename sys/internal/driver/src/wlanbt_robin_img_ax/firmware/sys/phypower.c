@@ -16,8 +16,8 @@
 void wlanPsCheckDescriptor(int enable);				/* 0x3e82c */
 void wlanPsValidateDescriptor(const void *block);		/* 0x3e86a: keeps the 8 bytes */
 
-extern uint8_t wlanPhyBand;					/* SQRAM 0xc0011bd5: the band the state is for */
-extern uint8_t wlanPhyPowerMode;				/* SQRAM 0xc0011bd6: 0 on, 1 off, from the calibration flags */
+uint8_t wlanPhyBand __attribute__((section(".sqram1.rw"))) = 0xff;				/* 0xc0011bd5 */
+uint8_t wlanPhyPowerMode __attribute__((section(".sqram1.bss")));			/* 0xc0011bd6 */
 
 /* Clears the two power bits of the SoC. */
 void socRfPowerClear(void)

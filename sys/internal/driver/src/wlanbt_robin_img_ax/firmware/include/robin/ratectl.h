@@ -112,7 +112,6 @@ _Static_assert(offsetof(struct WlanRateControl, rates) == 192, "rate index list"
 _Static_assert(offsetof(struct WlanRateControl, peerStatus) == 224, "rate peer status");
 
 /* The timeout of a rate index (microseconds, inferred): the table at 0x04001034, set by wlanPsApplyPacket(). */
-extern uint16_t *wlanRateTimeoutTable;			/* 0x04000f7c */
 
 /* The rates' words (wlanRatePolicy[]) and their weights (wlanRateWeight[]), by index. */
 extern const uint32_t wlanRatePolicy[WLAN_RATE_COUNT];		/* 0x53f8c */
@@ -146,7 +145,7 @@ void wlanRateHistoryTarget(struct WlanRateControl *rc, unsigned int rate, int di
 int wlanRateHistoryClear(struct WlanRateControl *rc, int count);		/* 0x2bcf8 */
 unsigned int wlanRateStepDown(unsigned int limit, struct WlanRateControl *rc);	/* 0x2bd0e */
 unsigned int wlanRateStepUp(unsigned int limit, struct WlanRateControl *rc);	/* 0x2bd2e */
-int wlanRateCounterReset(uint32_t *counter);					/* 0x2bd3a */
+int wlanRateCounterReset(struct WlanRateControl *rc);					/* 0x2bd3a */
 uint32_t wlanRateTimeoutValue(struct WlanRateControl *rc, uint32_t timeout, unsigned int shift); /* 0x2bd4a */
 unsigned int wlanRateAdvance(struct WlanRateControl *rc);			/* 0x2bd6a */
 int wlanRateHistoryFull(const uint32_t *window);				/* 0x2bd84 */

@@ -115,9 +115,9 @@ uint64_t wlanPsHeaderDeadline __attribute__((section(".itcm.rw")));		/* 0x54b40 
 extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
 extern struct OsaBufferPool wlanTxFramePool;
 extern uint16_t wlanPsHeaderSpacing;			/* 0x562b0 */
-extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
+struct WlanPsHostConfig wlanPsHostConfig __attribute__((section(".itcm.bss")));		/* 0x568be */
 int wlanPsResetDescriptor(struct WlanConnection *connection, const void *beacon); /* 0x3e98a */
-extern volatile uint32_t wlanPsEventCounts[6];		/* 0x56888 */
+volatile uint32_t wlanPsEventCounts[6] __attribute__((section(".itcm.bss")));		/* 0x56888 */
 extern uint8_t wlanSavedMgmtPriority;			/* 0x040088da */
 int p2pDirectReleaseEntry(void);			/* 0x419a6 */
 int wlanDirectLinkPoll(struct WlanConnection *connection, uintptr_t *message); /* 0x41050 */

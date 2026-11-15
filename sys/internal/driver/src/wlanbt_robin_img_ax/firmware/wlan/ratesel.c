@@ -5,6 +5,7 @@
  * firmware's placeholders. See robin/ratesel.h.
  */
 #include <stddef.h>
+#include "robin/protection.h"
 #include "robin/btrom.h"
 #include "robin/conn.h"
 #include "robin/calibration.h"
@@ -23,6 +24,44 @@
 #include "robin/subscribe.h"
 #include "robin/txpower.h"
 #include "robin/txring.h"
+
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanRateBlocks[0x45c] __attribute__((section(".sqram1.bss")));			/* 0xc0032aa0 */
+uint32_t wlanRateChainLength __attribute__((section(".sqram1.bss")));			/* 0xc0011d78 */
+struct WlanRateChains wlanRateChains __attribute__((section(".sqram1.rw"))) = {		/* 0xc0011e88 */
+	.defaultUnicast = { 0x0f010800, 0x0f010800, 0x0f010800, 0x0f010800,
+			    0x0f010800, 0x0f010800, 0x0f010800, 0x0f010800 },
+	.byRate = {
+		&wlanRateWordsCck[3], &wlanRateWordsCck[2], &wlanRateWordsCck[1], &wlanRateWordsCck[0],
+		&wlanRateWordsCck[0], &wlanRateWordsOfdm[7], &wlanRateWordsOfdm[6], &wlanRateWordsOfdm[5],
+		&wlanRateWordsOfdm[4], &wlanRateWordsOfdm[3], &wlanRateWordsOfdm[2], &wlanRateWordsOfdm[1],
+		&wlanRateWordsOfdm[0], &wlanRateWordsOfdm[0], &wlanRateWordsHt20[8], &wlanRateWordsHt20[7],
+		&wlanRateWordsHt20[6], &wlanRateWordsHt20[5], &wlanRateWordsHt20[4], &wlanRateWordsHt20[3],
+		&wlanRateWordsHt20[2], &wlanRateWordsHt20[1], &wlanRateWordsMcs32[0], &wlanRateWordsHt40[8],
+		&wlanRateWordsHt40[7], &wlanRateWordsHt40[6], &wlanRateWordsHt40[5], &wlanRateWordsHt40[4],
+		&wlanRateWordsHt40[3], &wlanRateWordsHt40[2], &wlanRateWordsHt40[1],
+	},
+};
+uint32_t wlanRateDefaultGroup[8] __attribute__((section(".sqram1.rw"))) = {		/* 0xc0011e68 */
+	0x0f040801, 0x0f040801, 0x0f040801, 0x0f040801, 0x0f040801, 0x0f040801, 0x0f040801, 0x0f040801,
+};
+uint32_t wlanRateGroupChains[19][8] __attribute__((section(".sqram1.bss")));		/* 0xc00324fc */
+uint8_t wlanRateResponseContext __attribute__((section(".sqram1.bss")));		/* 0xc0011d70 */
+uint32_t wlanRateUnicastChains[19][8] __attribute__((section(".sqram1.bss")));		/* 0xc003275c */
+struct WlanRateSlot wlanRateSlots[19] __attribute__((section(".sqram1.bss")));		/* 0xc00329bc */
+uint32_t wlanRateWordsCck[4] __attribute__((section(".sqram1.rw"))) = { 0x02010818, 0x02010810, 0x02010808, 0x02010800 };			/* 0xc0011e3c */
+uint32_t wlanRateWordsHt20[9] __attribute__((section(".sqram1.rw"))) = {			/* 0xc0011dc0 */
+	0x0102083b, 0x02020839, 0x02020831, 0x02020829, 0x02030821, 0x02030819, 0x02040811, 0x02040809,
+	0x02040801,
+};
+uint32_t wlanRateWordsHt40[9] __attribute__((section(".sqram1.rw"))) = {			/* 0xc0011d7c */
+	0x0105483f, 0x0205483d, 0x02054835, 0x0205482d, 0x02064825, 0x0206481d, 0x02074815, 0x0207480d,
+	0x02074805,
+};
+uint32_t wlanRateWordsMcs32[1] __attribute__((section(".sqram1.rw"))) = { 0x02074905 };			/* 0xc0011da0 */
+uint32_t wlanRateWordsOfdm[8] __attribute__((section(".sqram1.rw"))) = {			/* 0xc0011e00 */
+	0x02020860, 0x02020858, 0x02030850, 0x02030848, 0x02040840, 0x02040838, 0x02040830, 0x02040828,
+};
 
 #define PUT16(p, v)	do { (p)[0] = (uint8_t)(v); (p)[1] = (uint8_t)((v) >> 8); } while (0)
 
@@ -287,7 +326,7 @@ __attribute__((noinline)) int wlanPsSetupBuffer(struct WlanConnection *connectio
 	struct WlanRateControl *rc = &connection->peerLink.rateControl;
 
 	rc->current = index;
-	wlanRateCounterReset(&rc->elapsed);
+	wlanRateCounterReset(rc);
 	wlanPsSyncFrame(connection, rc->rates[index], rc);
 	wlanTxBaArmTimeouts((uintptr_t)connection, wlanTxBaSessions);
 	return index;
@@ -752,7 +791,7 @@ __attribute__((noinline)) int wlanPsAcquirePacket(struct WlanConnection *connect
 	} else {
 		if (wlanHtChannelWidth(connection) == 0)
 			widthMask = WLAN_RATE_DEFAULT_MASK;
-		if (__aeabi_uread4(wlanRateRestriction) != 0)
+		if (__aeabi_uread4(wlanProtection.timers[WLAN_PROTECTION_DSSS_PEER].remaining) != 0)
 			cckMask = 15;
 		chosen[0] = selection->fixedRate;
 		selection->allowedRates = widthMask & cckMask & rc->peerMask & selection->txRateMask
@@ -867,7 +906,7 @@ int wlanPsFilterPacket(struct WlanConnection *connection)
 	} else {
 		if (wlanHtChannelWidth(connection) == 0)
 			widthMask = WLAN_RATE_DEFAULT_MASK;
-		if (__aeabi_uread4(wlanRateRestriction) != 0)
+		if (__aeabi_uread4(wlanProtection.timers[WLAN_PROTECTION_DSSS_PEER].remaining) != 0)
 			cckMask = 15;
 		mask = widthMask & cckMask & connection->peerLink.rateControl.peerMask & selection->txRateMask;
 		allowed = wlanRateModeMask[selection->fixedRate];

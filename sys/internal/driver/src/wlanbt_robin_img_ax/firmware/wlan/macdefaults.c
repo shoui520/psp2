@@ -25,7 +25,7 @@
 
 #define MAC_RATES		13	/* the rate indices the ROM keeps tables for */
 
-extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
+uint32_t wlanPsWakeAdvance __attribute__((section(".itcm.bss")));			/* 0x56260 */
 
 struct MacRegisterDefault macRegisterDefaults[MAC_REGISTER_DEFAULTS]
 	__attribute__((section(".dtcm.rw"))) = {

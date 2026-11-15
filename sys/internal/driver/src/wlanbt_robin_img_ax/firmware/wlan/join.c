@@ -33,6 +33,9 @@
 #include "robin/htba.h"
 #include "robin/stamachine.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint16_t wlanAssocListenInterval __attribute__((section(".itcm.rw"))) = 0x000a;			/* 0x55a34 */
+
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
 /* WlanConnection.state */
@@ -81,7 +84,7 @@
 struct WlanJoin wlanJoin __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
-extern uint8_t wlanJoinWmmIe[9];					/* DTCM 0x04008fc0 */
+uint8_t wlanJoinWmmIe[9] __attribute__((section(".dtcm.bss")));				/* 0x4008fc0 */
 extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */

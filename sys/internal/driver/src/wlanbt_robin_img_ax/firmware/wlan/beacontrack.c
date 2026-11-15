@@ -12,6 +12,9 @@
 #include "robin/sleep.h"
 #include "robin/sys.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint16_t wlanPsHeaderSpacing __attribute__((section(".itcm.bss")));			/* 0x562b0 */
+
 
 struct WlanBeaconTracker wlanBeaconTracker __attribute__((section(".dtcm.bss")));	/* 0x40031c0 */
 

@@ -37,6 +37,11 @@
 #include "robin/htba.h"
 #include "robin/txbuild.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+struct WlanP2pPersistentGroup p2pPersistentGroupStorage[2] __attribute__((section(".itcm.bss")));	/* 0x59c70 */
+struct WlanLocalArea wlanLocalArea __attribute__((section(".dtcm.bss")));		/* 0x40089ec */
+struct WlanMacDescriptor wlanMacDescriptor __attribute__((section(".dtcm.bss")));	/* 0x40089ac */
+
 struct WlanTxWindowQueue wlanTxWindowQueues[2] __attribute__((section(".dtcm.bss")));
 uint32_t wlanTxWindowFlags __attribute__((section(".itcm.bss")));
 /* One bit per user that needs the MAC awake; the MAC may sleep when none is set. */

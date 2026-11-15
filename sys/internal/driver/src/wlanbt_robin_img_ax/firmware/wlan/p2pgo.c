@@ -19,6 +19,9 @@
 #include "robin/sys.h"
 #include "robin/uapbss.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t p2pPeerStateStorage[0x558] __attribute__((section(".itcm.bss")));		/* 0x59718 */
+
 extern WlanWirelessFrame *wlanIbssProbeResponseFrame;	/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;		/* 0x54c2c */
 extern void __aeabi_memclr4(void *dest, size_t n);

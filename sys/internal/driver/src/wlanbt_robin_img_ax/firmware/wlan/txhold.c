@@ -23,6 +23,10 @@
 #include "robin/txring.h"
 #include "robin/wlanrx.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t *wlanAtimData __attribute__((section(".sqram1.bss")));				/* 0xc0011d74 */
+struct WlanAtimBuffer wlanAtimBuffer __attribute__((section(".sqram1.bss"), aligned(4)));	/* 0xc0032294 */
+
 /* Not converted yet. */
 
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");

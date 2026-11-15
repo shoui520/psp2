@@ -14,7 +14,7 @@
 #include "robin/runtime.h"
 
 /* The ROM's parser of a frame body calls this one through the hook at 0x54e9c. */
-extern int (*wlanIeParseHook)(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x54e9c */
+int (*wlanIeParseHook)(const uint8_t *ies, int length, WlanIePointers *out) __attribute__((section(".itcm.bss")));	/* 0x54e9c */
 
 /* The kind of a WMM vendor element from the OUI that starts its body (0 when it is none). */
 int wlanWmmElementType(const uint8_t *oui)

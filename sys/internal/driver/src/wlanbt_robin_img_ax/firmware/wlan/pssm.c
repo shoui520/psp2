@@ -54,10 +54,10 @@
 #define WLAN_PS_ANNOUNCE_SIZE	300
 
 /* Not converted yet; provisional names. */
-extern uint32_t wlanPsSleepTimerEnd;			/* SQRAM 0xc000fb00 */
-extern uint64_t wlanPsSleepTimerStart;			/* SQRAM 0xc000fb08 */
-extern uint32_t wlanPsAnnounceLimit;			/* 0x7ff0 */
-extern const uint8_t wlanPsBroadcast[6];		/* 0x53d4a */
+uint32_t wlanPsSleepTimerEnd __attribute__((section(".sqram1.bss")));			/* SQRAM 0xc000fb00 */
+uint64_t wlanPsSleepTimerStart __attribute__((section(".sqram1.bss")));		/* SQRAM 0xc000fb08 */
+#define WLAN_PS_SLEEP_DURATION_MAX	0x7ff0	/* the longest sleep a peer may announce */
+static const uint8_t wlanPsBroadcast[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };	/* 0x53d4a */
 int wlanWmmEnabled(void);				/* 0x41cb8 */
 
 static inline __attribute__((always_inline)) struct WlanPsSleep *wlanPsSleepOf(struct WlanConnection *connection)
@@ -524,7 +524,7 @@ const int32_t *wlanPsMachineConfirm(struct WlanPsMachine *machine, const int32_t
 			wlanPsRestartTimer(&machine->confirmTimer, WLAN_PS_CONFIRM_TICKS);
 		}
 		if (machine->sleepBlocked != 0 || sleep->mode == WLAN_PS_SLEEP_DTIM ||
-		    (sleep->control & 1) == 0 || sleep->sleepDuration > wlanPsAnnounceLimit ||
+		    (sleep->control & 1) == 0 || sleep->sleepDuration > WLAN_PS_SLEEP_DURATION_MAX ||
 		    info->stationCount == 0)
 			machine->announced = 1;
 		else

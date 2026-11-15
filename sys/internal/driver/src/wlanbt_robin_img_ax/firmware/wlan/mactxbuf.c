@@ -45,12 +45,20 @@ uint64_t romLibHandleContext(uint32_t low, uint32_t high);				/* ROM veneer 0x53
 void romLibSyncState(unsigned int a, uint32_t value, uint32_t mask);			/* ROM veneer */
 extern uint32_t wlanMacEntrySelect;							/* SQRAM 0xc0011be8 */
 extern uint32_t wlanMacEntries100[32];						/* SQRAM 0xc0011cc0 */
-extern uint32_t wlanResponseRates[];							/* SQRAM 0xc0011d40: the rates, a byte each (0..12), then words */
-extern uint8_t wlanMacAddressTable[6][16];						/* SQRAM 0xc00321e0 */
-extern uint32_t wlanMacPendingState;							/* SQRAM 0xc0011bf4 */
-extern uint32_t wlanMacPendingFilter;							/* SQRAM 0xc0011bf8 */
-extern uint32_t wlanMacPendingEntry;							/* SQRAM 0xc0011bfc */
-extern uint32_t wlanMacPendingTable;							/* SQRAM 0xc0011c00 */
+/*
+ * SQRAM 0xc0011d40: the response rate of rates 0 to 12, a byte each; macTxNotifyApplyBuffer() reads the
+ * MAC's rate words from the same array, by word.
+ */
+uint32_t wlanResponseRates[12] __attribute__((section(".sqram1.rw"))) = {
+	0x03020100, 0x07050503, 0x09090907, 0x00000909,
+	0x55040828, 0x66040830, 0x77040838, 0x88040840,
+	0x99030848, 0xaa030850, 0xbb020858, 0xcc020860,
+};
+uint8_t wlanMacAddressTable[6][16] __attribute__((section(".sqram1.bss")));		/* 0xc00321e0 */
+uint32_t wlanMacPendingState __attribute__((section(".sqram1.bss")));			/* 0xc0011bf4 */
+uint32_t wlanMacPendingFilter __attribute__((section(".sqram1.bss")));			/* 0xc0011bf8 */
+uint32_t wlanMacPendingEntry __attribute__((section(".sqram1.bss")));			/* 0xc0011bfc */
+uint32_t wlanMacPendingTable __attribute__((section(".sqram1.bss")));			/* 0xc0011c00 */
 
 /* 0x3218c: the response rate for the rates from start up, programmed into the MAC. */
 void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int start)

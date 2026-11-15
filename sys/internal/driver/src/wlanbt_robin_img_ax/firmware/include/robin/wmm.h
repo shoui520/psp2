@@ -107,7 +107,7 @@ extern uint8_t wlanWmmReferenceBits;				/* 0x04008fe3 */
 extern uint8_t wlanWmmSessionBits;				/* 0x04008fec */
 extern uint8_t wlanWmmElement[26];				/* 0x04008fed: the parameter element, ID 221 */
 extern uint16_t wlanWmmDefaultTime;				/* 0x00054ec0 */
-extern const uint8_t wlanWmmRings[];				/* SQRAM 0xc000fa9b */
+extern const uint8_t wlanWmmRings[8];				/* SQRAM 0xc000fa9b: two rings per access category */
 
 int wlanWmmEnable(void);					/* 0x1e570 */
 int wlanWmmEnabled(void);					/* 0x41cb8 */

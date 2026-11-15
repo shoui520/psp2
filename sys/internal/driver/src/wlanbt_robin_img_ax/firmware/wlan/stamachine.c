@@ -80,10 +80,10 @@ void macTxNotifyQueryFrame(struct WlanConnection *connection);
 void macTxNotifyDispatchFrame(struct WlanConnection *connection);
 void macTxNotifyParseFrame(struct WlanConnection *connection);
 extern struct OsaBufferPool wlanMgmtFramePool;			/* 0x04000de0 */
-extern OsaBuffer *wlanIbssBeaconBuffer;				/* 0x54c20 */
-extern OsaBuffer *wlanIbssProbeResponseBuffer;			/* 0x54c24 */
-extern WlanWirelessFrame *wlanIbssProbeResponseFrame;		/* 0x54c28 */
-extern WlanWirelessFrame *wlanIbssBeaconFrame;			/* 0x54c2c */
+OsaBuffer *wlanIbssBeaconBuffer __attribute__((section(".itcm.bss")));			/* 0x54c20 */
+OsaBuffer *wlanIbssProbeResponseBuffer __attribute__((section(".itcm.bss")));		/* 0x54c24 */
+WlanWirelessFrame *wlanIbssProbeResponseFrame __attribute__((section(".itcm.bss")));	/* 0x54c28 */
+WlanWirelessFrame *wlanIbssBeaconFrame __attribute__((section(".itcm.bss")));		/* 0x54c2c */
 
 int wlanSlotCancelFlag0(void);							/* 0xb984 */
 

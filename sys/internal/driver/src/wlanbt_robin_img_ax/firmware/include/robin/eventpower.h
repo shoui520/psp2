@@ -170,9 +170,10 @@ void btSdioSetEnabled(int enabled);
  * written. Addresses are those of the 4.00 image.
  */
 extern uint8_t *btLinkContext;				/* 0x400f954: the link controller's state */
-extern const uint8_t rfCalibTimingA[];			/* 0x53d7e, per clock index */
-extern const uint8_t rfCalibTimingB[];			/* 0x53d92 */
-extern const uint8_t rfCalibTimingC[];			/* 0x53d88 */
+#define RF_CALIB_CLOCK_PROFILES	10	/* sysRefClockProfile()'s values */
+extern const uint8_t rfCalibTimingA[RF_CALIB_CLOCK_PROFILES];	/* 0x53d7e, per clock index */
+extern const uint8_t rfCalibTimingB[RF_CALIB_CLOCK_PROFILES];	/* 0x53d92 */
+extern const uint8_t rfCalibTimingC[RF_CALIB_CLOCK_PROFILES];	/* 0x53d88 */
 int btLmpLcBuildContext(uint32_t *remaining);		/* 0x42f4e */
 int btLmpLcUpdateDescriptor(void);			/* 0x49376 */
 void btLmpLcSyncContext(void);				/* 0x43030 */

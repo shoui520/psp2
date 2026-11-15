@@ -25,6 +25,9 @@
 #include "robin/txring.h"
 #include "robin/wlantask.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanTxDataRing __attribute__((section(".sqram1.bss")));				/* 0xc0011bd4 */
+
 #define MAC_PS_POLL_TIMER_ENABLE (1u << 31)	/* MAC_7F4_TIMING_LOW */
 
 #define PS_POLL_COUNTDOWN	30

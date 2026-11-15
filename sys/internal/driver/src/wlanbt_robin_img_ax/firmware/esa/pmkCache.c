@@ -27,8 +27,8 @@ static ROBIN_PATCH_SLOT(SupplicantQueryPassphraseOverride);
 static ROBIN_PATCH_SLOT(SupplicantClearPMKOverride);
 
 /* Set by the ROM: the supplicant's switch on, and the search of the PSK of an SSID. */
-extern void (*ramHook_supplicantEnable)(void);
-extern uint8_t *(*ramHook_pmkCacheFindPSK)(uint8_t *pSsid, uint8_t ssidLen);
+void (*ramHook_supplicantEnable)(void) __attribute__((section(".itcm.bss")));				/* 0x54ea0 */
+uint8_t *(*ramHook_pmkCacheFindPSK)(uint8_t *pSsid, uint8_t ssidLen) __attribute__((section(".itcm.bss")));	/* 0x54ea4 */
 
 /*
  * The cache itself and the passphrase for networks the host named no SSID for, which

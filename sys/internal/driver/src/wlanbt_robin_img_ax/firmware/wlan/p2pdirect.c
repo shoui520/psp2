@@ -18,7 +18,7 @@
 
 extern void __aeabi_memclr(void *destination, size_t length);
 extern void __aeabi_memcpy(void *destination, const void *source, size_t length);
-extern const uint8_t wlanP2pOui[4];					/* SQRAM 0xc000faa3 */
+const uint8_t wlanP2pOui[4] __attribute__((section(".sqram1.ro"))) = { 0x50, 0x6f, 0x9a, 0x09 };	/* SQRAM 0xc000faa3: Wi-Fi Alliance, type 9 */
 
 /* How often the group owner was away and present when wlanDirectLinkPoll() looked. */
 unsigned int wlanDirectLinkPresences __attribute__((section(".itcm.rw")));	/* 0x55238 */

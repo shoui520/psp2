@@ -19,7 +19,9 @@
 #include "robin/vendorie.h"
 
 struct WlanVendorIeFilter wlanVendorIeFilter __attribute__((section(".itcm.rw"))) = { .matchLength = 6 };	/* 0x55184 */
-static struct OsaBufferPool wlanVendorIePools[3] __attribute__((section(".itcm.rw")));		/* 0x5518c */
+static struct OsaBufferPool wlanVendorIePools[3] __attribute__((section(".itcm.rw"))) = {
+	{ { { 1, 0, 0 } } }, { { { 1, 0, 0 } } }, { { { 1, 0, 0 } } },
+};		/* 0x5518c */
 static struct OsaPoolConfig wlanVendorIePoolConfigs[3] __attribute__((section(".itcm.rw"))) = {	/* 0x551b0 */
 	{ 0, 300, 5 }, { 0, 300, 5 }, { 0, 300, 6 },
 };

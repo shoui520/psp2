@@ -8,6 +8,7 @@
  */
 #include <stddef.h>
 #include "robin/coex.h"
+#include "robin/dma.h"
 #include "robin/rom.h"
 #include "robin/soc.h"
 #include "robin/sys.h"
@@ -586,14 +587,16 @@ SysBbpCompletionHook socEventHookInit(void)
 	return sysWaitForBbpCommand;
 }
 
-int sysIssueBbpCommand(uint32_t target, uint32_t value, uint32_t command)
+/* A copy on DMA engine B: to target, from value, command bytes. */
+void sysIssueBbpCommand(uint32_t target, uint32_t value, uint32_t command)
 {
-	return bbpIssueSecondaryCommand(target, value, command);
+	wlanDmaStartCopyB((uint8_t *)target, (const uint8_t *)value, command);
 }
 
-int sysIssuePrimaryBbpCommand(uint32_t target, uint32_t value, uint32_t command)
+/* A copy on DMA engine A. */
+void sysIssuePrimaryBbpCommand(uint32_t target, uint32_t value, uint32_t command)
 {
-	return bbpIssuePrimaryCommand(target, value, command);
+	wlanDmaMoveForward((uint8_t *)target, (const uint8_t *)value, command);
 }
 
 int sysPendingEventIsArmed(void)

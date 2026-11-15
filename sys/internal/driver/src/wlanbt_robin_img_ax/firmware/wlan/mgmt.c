@@ -40,6 +40,9 @@
 #include "robin/stamachine.h"
 #include "robin/uapbss.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanPsHostMode __attribute__((section(".itcm.bss")));				/* 0x55130 */
+
 #define LE16(p)			((uint16_t)((p)[0] | (p)[1] << 8))
 
 /* Host commands that drive the association state machine (WlanConnectionInfo.smState). */
@@ -112,8 +115,8 @@ void macMgmtConvertFrame(struct WlanConnection *connection);			/* 0x3b084 */
 void macTxNotifyRecordBuffer(int shared);					/* 0x324f4 */
 void macTxNotifyFilterBuffer(int shared);					/* 0x32510 */
 /* Connection hooks called by code not converted yet. */
-extern void (*wlanPsRefreshHook)(struct WlanConnection *connection);		/* 0x00054e60 */
-extern void (*wlanSecurityRefreshHook)(struct WlanConnection *connection);	/* 0x00054e88 */
+void (*wlanPsRefreshHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));		/* 0x00054e60 */
+void (*wlanSecurityRefreshHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x00054e88 */
 
 /* Power limits in dBm; WLAN_TX_POWER_NONE: no limit. */
 int32_t wlanTxPowerHostLimit __attribute__((section(".itcm.rw"))) = WLAN_TX_POWER_NONE;

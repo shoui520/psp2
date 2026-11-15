@@ -34,14 +34,24 @@ void *p2pDirectProcessEntry(unsigned int role);			/* 0x41250 */
 extern struct OsaSemaphore *macTxNotifySemaphore;		/* 0x54bd8 */
 
 /* The MAC's indexed entries kept in SQRAM, written by wlanMacEntryTablesWrite() (0xc0011c20..0xc0011cc0). */
-extern uint32_t wlanMacEntries000[32];				/* SQRAM 0xc0011c30: entries 0..15 */
-extern uint32_t wlanMacEntries040[4];				/* SQRAM 0xc0011c20: entry 64 */
-extern uint32_t wlanMacEntries100[32];				/* SQRAM 0xc0011cc0: entries 256..271 */
-extern uint32_t wlanMacEntries140[4];				/* SQRAM 0xc0011cb0: entry 320 */
-extern uint32_t wlanMacEntrySelect;				/* SQRAM 0xc0011be8 */
-extern uint16_t wlanContentionWindowSet;			/* SQRAM 0xc0011bd8 */
-extern uint32_t wlanMacProvider;				/* SQRAM 0xc0011be0 */
-extern uint32_t wlanMacPowered;					/* SQRAM 0xc0011be4: the radio was powered once */
+uint32_t wlanMacEntries000[32] __attribute__((section(".sqram1.rw"))) = {			/* 0xc0011c30 */
+	0x004513b1, 0x004511b9, 0x0075097b, 0x00750888, 0x004709d8, 0x004708dc, 0x007704bd, 0x00770444,
+	0x00470690, 0x004705e8, 0x00770329, 0x007702d8, 0x003904ec, 0x0039046e, 0x0069025e, 0x00690222,
+	0x00390348, 0x003902f4, 0x00690194, 0x0069016c, 0x00290276, 0x00290237, 0x0059012f, 0x00590111,
+	0x00290230, 0x002901f8, 0x0059010d, 0x005900f2, 0x002901f8, 0x002901c5, 0x005900f2, 0x005900da,
+};
+uint32_t wlanMacEntries040[4] __attribute__((section(".sqram1.rw"))) = { 0x00451555, 0x00451333, 0x00751555, 0x00751333 };			/* 0xc0011c20 */
+uint32_t wlanMacEntries100[32] __attribute__((section(".sqram1.rw"))) = {			/* 0xc0011cc0 */
+	0x55040828, 0x55040828, 0x77044838, 0x77044838, 0x77040838, 0x77040838, 0x99034848, 0x99034848,
+	0x77040838, 0x77040838, 0x99034848, 0x99034848, 0x99030848, 0x99030848, 0x99034848, 0x99034848,
+	0x99030848, 0x99030848, 0x99034848, 0x99034848, 0x99030848, 0x99030848, 0x99034848, 0x99034848,
+	0x99030848, 0x99030848, 0x99034848, 0x99034848, 0x99030848, 0x99030848, 0x99034848, 0x99034848,
+};
+uint32_t wlanMacEntries140[4] __attribute__((section(".sqram1.rw"))) = { 0x55040828, 0x55040828, 0x55044828, 0x55044828 };			/* 0xc0011cb0 */
+uint32_t wlanMacEntrySelect __attribute__((section(".sqram1.rw"))) = 1;			/* 0xc0011be8 */
+uint16_t wlanContentionWindowSet __attribute__((section(".sqram1.rw"))) = 0xffff;		/* 0xc0011bd8 */
+uint32_t wlanMacProvider __attribute__((section(".sqram1.bss")));			/* 0xc0011be0 */
+uint32_t wlanMacPowered __attribute__((section(".sqram1.bss")));			/* 0xc0011be4 */
 
 /* Waits until the crypto engine is idle, then takes the semaphore the host commands hold. */
 uint32_t wlanCryptoEnter(void)

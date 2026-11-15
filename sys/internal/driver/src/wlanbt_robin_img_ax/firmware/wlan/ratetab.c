@@ -24,7 +24,7 @@ extern int (*wlanRateParameterHook)(unsigned int rate);	/* 0x54e90 */
 
 /* What the last wlanPsApplyFrame() and wlanRateGreenfieldSet() set up, and the block mode. */
 static uint8_t wlanRateBlockMode __attribute__((section(".dtcm.bss")));		/* 0x4001056 */
-static uint8_t wlanRateShortPreamble __attribute__((section(".dtcm.bss")));	/* 0x4001057 */
+static uint8_t wlanRateShortPreamble __attribute__((section(".dtcm.rw"))) = 1;	/* 0x4001057 */
 static uint8_t wlanRateGreenfield __attribute__((section(".dtcm.bss")));	/* 0x4001058 */
 
 /* The window's counting hook, and the age after which a window with few samples is judged. */

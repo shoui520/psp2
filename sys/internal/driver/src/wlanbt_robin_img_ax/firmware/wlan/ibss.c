@@ -56,17 +56,19 @@ extern OsaBuffer *wlanIbssBeaconBuffer;				/* 0x54c20 */
 extern OsaBuffer *wlanIbssProbeResponseBuffer;			/* 0x54c24 */
 extern WlanWirelessFrame *wlanIbssProbeResponseFrame;		/* 0x54c28 */
 extern WlanWirelessFrame *wlanIbssBeaconFrame;			/* 0x54c2c */
-extern struct WlanMacTxRequest *wlanIbssBeaconRequest;		/* 0x54bc4 */
-extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;	/* 0x54bc8 */
-extern uint8_t *wlanBeaconRatesEnd;				/* 0x54a9c */
-extern uint8_t *wlanProbeRatesEnd;				/* 0x54aa0 */
+struct WlanMacTxRequest *wlanIbssBeaconRequest __attribute__((section(".itcm.rw"))) =
+	(struct WlanMacTxRequest *)wlanBssBeaconRequests[0];				/* 0x54bc4 */
+struct WlanMacTxRequest *wlanIbssProbeResponseRequest __attribute__((section(".itcm.rw"))) =
+	(struct WlanMacTxRequest *)wlanBssProbeResponseRequests[0];			/* 0x54bc8 */
+uint8_t *wlanBeaconRatesEnd __attribute__((section(".itcm.bss")));				/* 0x54a9c */
+uint8_t *wlanProbeRatesEnd __attribute__((section(".itcm.bss")));				/* 0x54aa0 */
 extern uint8_t wlanHtOperationIe[];				/* SQRAM 0xc0031f00 */
 int macMgmtRecordTable(const uint8_t *address, uint8_t *buffer);	/* 0x37d02 */
 void wlanPsFilterFrame(uint16_t beaconPeriod);				/* 0x3dc4e */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);			/* 0x34b82 */
-extern uint32_t wlanIbssTsfOffset;					/* 0x54a98 */
+uint32_t wlanIbssTsfOffset __attribute__((section(".itcm.rw"))) = 5000;			/* 0x54a98 */
 
 /* Sets the ERP element of a template to the protection the BSS state asks for. */
 void wlanIbssTemplateSetProtection(WlanWirelessFrame *frame, int protection)

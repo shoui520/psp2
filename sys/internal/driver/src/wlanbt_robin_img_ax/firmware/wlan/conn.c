@@ -2,6 +2,7 @@
  * Connection control block list: lookups and release. The filename is
  * inferred; no source filename survives.
  */
+#include "robin/p2pgo.h"
 #include "robin/btpower.h"
 #include "robin/ratesel.h"
 #include "robin/mgmtentry.h"
@@ -61,10 +62,14 @@ POOL(wlanConnectionPool, 0x3cc, 12);								/* 0x04000e98 */
 POOL(wlanBlockPool0, 0x41c, 4);									/* 0x04000ec0 */
 POOL(wlanBlockPool1, 0x41c, 4);									/* 0x04000ed4 */
 POOL(wlanBlockPool2, 0x4fc, 2);									/* 0x04000ee8 */
-extern uint8_t wlanConnectionPoolControl[], wlanConnectionPoolMemory[];				/* 0x04004f88, 0x04005000 */
-extern uint8_t wlanBlockPool0Control[], wlanBlockPool0Memory[];					/* 0x04004fe0, SQRAM 0xc002fa40 */
-extern uint8_t wlanBlockPool1Control[], wlanBlockPool1Memory[];					/* 0x04004ff0, SQRAM 0xc0030ac0 */
-extern uint8_t wlanBlockPool2Control[], wlanBlockPool2Memory[];					/* 0x04000f08, 0x04007dc0 */
+uint8_t wlanConnectionPoolControl[4 * 12] __attribute__((section(".dtcm.bss")));		/* 0x04004f88 */
+uint8_t wlanConnectionPoolMemory[12 * (0x3cc + 4)] __attribute__((section(".dtcm.bss")));	/* 0x04005000 */
+uint8_t wlanBlockPool0Control[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004fe0 */
+uint8_t wlanBlockPool0Memory[4 * (0x41c + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc002fa40 */
+uint8_t wlanBlockPool1Control[4 * 4] __attribute__((section(".dtcm.bss")));		/* 0x04004ff0 */
+uint8_t wlanBlockPool1Memory[4 * (0x41c + 4)] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0030ac0 */
+uint8_t wlanBlockPool2Control[4 * 2] __attribute__((section(".dtcm.bss")));		/* 0x04000f08 */
+uint8_t wlanBlockPool2Memory[2 * (0x4fc + 4)] __attribute__((section(".dtcm.bss")));	/* 0x04007dc0 */
 /* The greatest common divisor of the slots' beacon periods (uapSqramProcessState()). */
 uint32_t wlanBeaconPeriodGcd __attribute__((section(".dtcm.bss")));			/* 0x040088ec */
 struct OsaIdleHook wlanConnectionIdleHook __attribute__((section(".sqram1.rw")));		/* 0xc0011b00 */
@@ -1225,7 +1230,7 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		wlanConnectionSetupType2(connection);
 		break;
 	case 3:
-		((struct WlanHtElements *)(void *)&connection->localName)->htCoexistence = wlanApHtCoexIe;
+		((struct WlanHtElements *)(void *)&connection->localName)->htCoexistence = p2pPeerStateStorage;
 		wlanConnectionSetupType3(connection);
 		wlanConnectionSetupType3Info(connection);
 		connection->rxManagement = wlanStaRxManagement;

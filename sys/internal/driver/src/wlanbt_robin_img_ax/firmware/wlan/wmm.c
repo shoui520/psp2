@@ -25,6 +25,13 @@
 #include "robin/wmm.h"
 #include "robin/macentry.h"
 
+uint16_t wlanWmmDefaultTime __attribute__((section(".itcm.bss")));				/* 0x00054ec0 */
+const uint8_t wlanWmmRings[8] __attribute__((section(".sqram1.ro"))) = { 1, 2, 0, 3, 4, 5, 6, 7 };	/* SQRAM 0xc000fa9b */
+
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanWmmCurrentSlot __attribute__((section(".dtcm.bss")));			/* 0x4009007 */
+uint8_t wlanWmmElement[26] __attribute__((section(".dtcm.bss")));			/* 0x4008fed */
+
 struct WlanWmm wlanWmm __attribute__((section(".dtcm.bss")));					/* 0x04008c4c */
 struct WlanWmmSlot wlanWmmSlots[WLAN_WMM_SLOTS] __attribute__((section(".dtcm.bss")));	/* 0x04008ca0 */
 

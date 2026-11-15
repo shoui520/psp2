@@ -14,8 +14,40 @@
 #include "robin/runtime.h"
 #include "robin/txpower.h"
 
-struct WlanTxPowerState wlanTxPower __attribute__((section(".dtcm.bss")));	/* 0x40007ba */
+struct WlanTxPowerState wlanTxPower __attribute__((section(".dtcm.rw"))) = {	/* 0x40007ba */
+	.channel = 0xff,
+	.policy = { 3, 0, 3, 2, 1, 9, 8, 7, 0xff, 0xff, 6, 5, 4, 0xff, 0xff, 0xff },
+	.rates = {
+		{ 7, 7, 7 }, { 3, 0, 3 }, { 7, 6, 7 }, { 7, 4, 5 }, { 7, 0, 3 }, { 8, 5, 7 },
+		{ 8, 3, 4 }, { 8, 0, 2 }, { 8, 5, 7 }, { 8, 3, 4 }, { 8, 0, 2 },
+	},
+	.limit = { [0 ... WLAN_TX_POWER_RATES - 1] = { .maximum = 18, .minimum = 18, .spread = 0 } },
+	.request = { [0 ... WLAN_TX_POWER_RATES - 1] = { .maximum = 18, .minimum = 18, .spread = 0 } },
+	.defaults = { [0 ... WLAN_TX_POWER_RATES - 1] = { .maximum = 18, .minimum = 18, .spread = 0 } },
+	.table = {
+		{ 1, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 2, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 3, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 4, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 5, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 6, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 7, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 8, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 9, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 10, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 11, 18, 18, 16, 14, 18, 16, 14, 17, 15, 13 },
+		{ 12, 16, 16, 16, 14, 16, 16, 14, 17, 15, 13 },
+		{ 13, 16, 16, 16, 14, 16, 16, 14, 17, 15, 13 },
+		{ 14, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12 },
+	},
+};
 uint8_t wlanTxPowerIncludeFirst __attribute__((section(".itcm.bss")));		/* 0x5541d */
+void (*wlanHtOperationHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x54e64 */
+void (*wlanApErpUpdateHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x54e80 */
+void (*wlanApTemplateHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x54e84 */
+void (*wlanSqramFrameHook)(struct WlanConnection *connection) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb0 */
+void *(*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb8 */
+void *(*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bbc */
 
 /* The MAC filter of a connection: whether a station's frames are refused (1) or not (0). */
 int macMgmtCheckHeader(struct WlanConnection *connection, const uint8_t *address)

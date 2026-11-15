@@ -12,6 +12,23 @@
  */
 INCLUDE boot/rom_syms.ld
 
+/*
+ * Objects the original keeps inside others and addresses on their own: the
+ * members of the block init clears, the WMM bits in the last byte of each
+ * copy of the WMM element, and the initial stack's top (__user_initial_stackheap).
+ */
+wlanPrimaryEvents	= wlanDtcmState + 0x3c;		/* 0x04008828 */
+wlanProtection		= wlanDtcmState + 0x58;		/* 0x04008844 */
+wlanTxRateFlags		= wlanDtcmState + 0xba;		/* 0x040088a6 */
+wlanHwInfo		= wlanDtcmState + 0xc0;		/* 0x040088ac */
+wlanAntennaProfile	= wlanDtcmState + 0xde;		/* 0x040088ca */
+wlanIbssJoinState	= wlanDtcmState + 0xe2;		/* 0x040088ce */
+wlanSavedMgmtPriority	= wlanDtcmState + 0xee;		/* 0x040088da */
+wlanWmmFlowBits		= wlanWmmIe + 0x08;		/* 0x04008fda */
+wlanWmmReferenceBits	= wlanWmmIe + 0x11;		/* 0x04008fe3 */
+wlanWmmSessionBits	= wlanWmmIe + 0x1a;		/* 0x04008fec */
+wlanDataEnd		= wlanCommandScanWindow + 0x2bc;	/* 0x00057e9a */
+
 MEMORY
 {
 	itcm_ro    (rx)  : ORIGIN = 0x00000000, LENGTH = 0x00054764

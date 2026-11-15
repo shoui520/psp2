@@ -78,7 +78,6 @@ extern const uint8_t wlanRateModeFixed[28];			/* 0x54230: the rate of each frame
 
 /* The rates a connection has no hardware rate table slot for (SQRAM 0xc00329bc, 19 slots). */
 extern struct WlanRateSlot wlanRateSlots[19];
-extern uint8_t wlanRateRestriction[4];				/* DTCM 0x0400885e: nonzero: the BSS is legacy-only (CCK rates) */
 extern uint8_t wlanRateResponseContext;				/* SQRAM 0xc0011d70: the highest rate of the last connection */
 
 int wlanPsInspectBuffer(struct WlanConnection *connection);			/* 0x3c800 */

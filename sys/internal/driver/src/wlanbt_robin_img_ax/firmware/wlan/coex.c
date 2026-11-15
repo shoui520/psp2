@@ -22,6 +22,9 @@
 #include "robin/sys.h"
 #include "robin/txring.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanHostSleepPending __attribute__((section(".dtcm.bss")));			/* 0x4000d40 */
+
 WlanCoexConfig wlanCoexConfig __attribute__((section(".itcm.bss")));
 WlanCoex wlanCoex __attribute__((section(".itcm.bss")));
 WlanCoexLast wlanCoexLast __attribute__((section(".itcm.rw"))) = {

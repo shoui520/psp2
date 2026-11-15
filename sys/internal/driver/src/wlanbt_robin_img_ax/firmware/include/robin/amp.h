@@ -174,6 +174,7 @@ extern struct AmpLinkMachine ampLinkMachines[AMP_PHYSICAL_LINKS];
 extern struct AmpLocalAssoc ampLocalAssoc;
 extern int8_t ampHciCommandCount;
 extern void *ampSdioDev;
+extern uint8_t ampActivityReports;		/* 0x54cc0: nonzero: send Activity Reports */
 extern void *ampHciDev;
 extern void *ampPalDevice;
 extern struct OsaBufferPool ampHciPool;

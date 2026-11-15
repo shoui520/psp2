@@ -30,19 +30,26 @@
 #include "robin/wmm.h"
 #include "robin/stamachine.h"
 
+/* Zero-initialised at load; the addresses are the original's. */
+uint8_t wlanAddbaDialogToken __attribute__((section(".sqram1.bss")));			/* 0xc0011bc0 */
+uint32_t wlanDelbaCount __attribute__((section(".sqram1.bss")));			/* 0xc0011bc8 */
+uint8_t wlanHtCoexIe[3] __attribute__((section(".sqram1.bss")));			/* 0xc0011bc5 */
+uint8_t wlanHtOperationIe[24] __attribute__((section(".sqram1.bss")));			/* 0xc0031f00 */
+uint8_t wlanHtOverlapScanIe[16] __attribute__((section(".sqram1.bss")));		/* 0xc0031f18 */
+
 /* Not converted yet; provisional names. */
 void macMgmtManagePacket(struct WlanConnection *connection, int enable);			/* 0x3a100 */
 
 /* The HT configuration the host set (HostCmd_CMD_11N_CFG), and the Block Ack state kept in SQRAM. */
-extern uint8_t wlanHtTxCapability[2];				/* SQRAM 0xc0011bc1 */
-extern uint8_t wlanHtTxInfo[2];					/* SQRAM 0xc0011bc3 */
-extern struct WlanInitStage wlanHtInitStage;			/* SQRAM 0xc0011bcc */
-extern struct WlanBaTimeout wlanBaTimeouts[12];			/* SQRAM 0xc0031f28 */
-extern struct WlanSoftTimer wlanAddbaTimer;			/* SQRAM 0xc003218c: the ADDBA request's timeout */
-extern struct WlanAddbaPending wlanAddbaPending;		/* SQRAM 0xc00321a4 */
-extern struct WlanSoftTimer wlanDelbaTimer;			/* SQRAM 0xc00321b8: the DELBA's timeout */
-extern struct WlanDelbaPending wlanDelbaPending;		/* SQRAM 0xc00321d0 */
-extern uint8_t wlanHtCapabilityCache[28];			/* SQRAM 0xc0032170 */
+uint8_t wlanHtTxCapability[2] __attribute__((section(".sqram1.bss")));		/* SQRAM 0xc0011bc1 */
+uint8_t wlanHtTxInfo[2] __attribute__((section(".sqram1.bss")));			/* SQRAM 0xc0011bc3 */
+struct WlanInitStage wlanHtInitStage __attribute__((section(".sqram1.bss")));		/* 0xc0011bcc */
+struct WlanBaTimeout wlanBaTimeouts[12] __attribute__((section(".sqram1.bss")));	/* 0xc0031f28 */
+struct WlanSoftTimer wlanAddbaTimer __attribute__((section(".sqram1.bss")));		/* 0xc003218c */
+struct WlanAddbaPending wlanAddbaPending __attribute__((section(".sqram1.bss")));	/* 0xc00321a4 */
+struct WlanSoftTimer wlanDelbaTimer __attribute__((section(".sqram1.bss")));		/* 0xc00321b8 */
+struct WlanDelbaPending wlanDelbaPending __attribute__((section(".sqram1.bss")));	/* 0xc00321d0 */
+uint8_t wlanHtCapabilityCache[28] __attribute__((section(".sqram1.bss")));		/* 0xc0032170 */
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 

@@ -10,8 +10,8 @@
 #include "robin/softtimer.h"
 #include "robin/threadx.h"
 
-extern struct WlanSoftTimer *wlanSoftTimerList;				/* 0x54e94 */
-extern void (*wlanSoftTimerExpireHook)(struct WlanSoftTimer *timer);	/* 0x54e98 */
+struct WlanSoftTimer *wlanSoftTimerList __attribute__((section(".itcm.bss")));				/* 0x54e94 */
+void (*wlanSoftTimerExpireHook)(struct WlanSoftTimer *timer) __attribute__((section(".itcm.bss")));	/* 0x54e98 */
 
 void wlanSoftTimerInit(struct WlanSoftTimer *timer)
 {

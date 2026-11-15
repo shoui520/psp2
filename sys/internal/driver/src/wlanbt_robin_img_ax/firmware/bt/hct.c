@@ -8,8 +8,10 @@
  */
 #include <stddef.h>
 #include "robin/btcontext.h"
+#include "robin/btpool.h"
 #include "robin/btrom.h"
 #include "robin/clock.h"
+#include "robin/eventpower.h"
 #include "robin/hct.h"
 #include "robin/mdev.h"
 #include "robin/osa.h"
@@ -59,16 +61,12 @@ struct HctClockRequirements {
 static struct HctClockRequirements hctClock __attribute__((section(".itcm.bss")));	/* 0x56e40 */
 
 /* BT link controller RAM patches (bt/lmp, not converted). */
-void *btLmpLcComputeEntry(uint32_t a1);
 void btLmpLcConfigureDescriptor(void);
 void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t direction);
 void btLmpLcResetTable(void);
 
 /* AMP controller callbacks (amp, not converted). */
-int ampPalConvertContext(void);
-int ampPalParseContext(void);
 
-extern struct OsaBufferPool hctRxPool;	/* SQRAM pool of 0x118-byte buffers */
 
 #define HCT_LINK_COUNT		11
 #define HCT_ACL_LINKS		7
@@ -618,11 +616,12 @@ void hctSendAclToHost(struct HctLinkMessage *message)
 }
 
 /* 0x00020648: events for the AMP controller are routed by their opcode. */
-int hctRouteMessage(struct HctLinkMessage *message)
+void hctRouteMessage(struct HctLinkMessage *message)
 {
 	if (message->handle == 0xfe80)
-		return ampPalConvertContext();
-	return ampPalParseContext();
+		sysEnterSecondaryEvent();
+	else
+		sysEnterPrimaryEvent();
 }
 
 /* 0x0002065e: posts a received HCI packet to the transport thread (message 510). */
@@ -656,7 +655,7 @@ int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument, unsign
 	case 8:
 		message = osa_MsgAlloc(12);
 		if (message != NULL) {
-			ampPalParseContext();
+			sysEnterPrimaryEvent();
 			message[0] = 5097;
 			*(uint16_t *)&message[1] = packet[0] | (packet[1] << 8);
 			message[2] = (uint32_t)buffer;
@@ -666,12 +665,12 @@ int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument, unsign
 		break;
 	case 2:
 	case 10:
-		ampPalParseContext();
+		sysEnterPrimaryEvent();
 		if (hctPostPacket(packet, 0) != 0)
 			osa_BufferFree(buffer);
 		return 0;
 	case 17:
-		ampPalParseContext();
+		sysEnterPrimaryEvent();
 		hctPostPacket(packet, 1);
 		return 0;
 	case 1:
@@ -708,7 +707,7 @@ void hctReceiveEvent(struct HctLinkMessage *message)
 	uint8_t *destination;
 	uint8_t *rest;
 
-	buffer = osa_BufferAlloc(&hctRxPool, 0x118, 0);
+	buffer = osa_BufferAlloc(&btTablePool, 0x118, 0);
 	if (buffer == NULL)
 		return;
 	handle = message->handle & 0xfff;

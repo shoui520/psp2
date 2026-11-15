@@ -9,12 +9,14 @@
 #include "robin/hct.h"
 #include "robin/mdev.h"
 #include "robin/task.h"
+#include "robin/txring.h"
 #include "robin/osa.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/sync.h"
 #include "robin/sys.h"
 #include "robin/wlan.h"
+#include "robin/wlantask.h"
 
 /* A message from the PAL driver: a 16-bit code, a 16-bit length and a body. */
 struct AmpPalMessage {
@@ -37,7 +39,6 @@ extern struct AmpQueue ampCommandQueue;
 extern struct AmpQueue ampEventQueue;
 extern struct AmpQueue ampDataQueue;
 extern struct OsaEventFlags *ampEventFlags;
-extern struct OsaEventFlags *ampDataEventFlags;
 extern TX_THREAD *ampTaskThread;
 extern uint8_t ampPalUsers;
 
@@ -216,9 +217,6 @@ int ampPalDropPacket(OsaBuffer *buffer)
 /* ---- Notifications to the PAL driver ("lamphci") ------------------------------- */
 
 /* WLAN stack (not converted). */
-extern struct OsaBufferPool wlanFramePool;
-extern struct OsaBufferPool wlanControlFramePool;
-OsaBuffer *wlanAllocateFrame(struct OsaBufferPool *pool, uint32_t size, uint32_t a, uint32_t b);
 extern uint32_t ampLinkSupervisionInterval;
 
 /* Message body: a 16-bit code, a 16-bit length, then the value bytes. */
@@ -330,7 +328,6 @@ int ampPalNotifyCode11(int first, int second)
 
 extern int clockApplyCore(uint32_t value);
 int ampPalSdioDataCallback(OsaBuffer *buffer);
-extern uint32_t ampActivityReports;		/* nonzero: send Activity Reports */
 extern uint8_t ampLocalFrameAddress[6];		/* source address of AMP frames */
 
 /* LLC/SNAP prefix of the Bluetooth SIG (organization 00:19:58). */
@@ -391,7 +388,7 @@ int ampPalTransmit(OsaBuffer *buffer, uint32_t length, int priority, int kind)
 /* 0x00023844: sends a frame without payload, for example a link supervision request. */
 OsaBuffer *ampPalSendEmptyFrame(int kind, struct WlanConnection *context)
 {
-	OsaBuffer *buffer = osa_BufferAlloc(&wlanControlFramePool, 0x12c, 0);
+	OsaBuffer *buffer = osa_BufferAlloc(&wlanBlockPool7, 0x12c, 0);
 
 	if (buffer == NULL)
 		return buffer;
@@ -474,7 +471,6 @@ int ampPalPrepareTxHeader(struct WlanConnection *context)
 }
 
 /* WLAN buffer allocator (not converted). */
-extern struct OsaBufferPool wlanFramePool;
 
 extern uint8_t ampActivityPayload[2];
 extern uint8_t ampActivityPayloadLength;
@@ -488,7 +484,7 @@ int ampPalNotifySecured(int link)
 /* 0x00022edc: sends an Activity Report with the payload prepared by the caller. */
 int ampPalSendActivityReport(struct WlanConnection *context)
 {
-	OsaBuffer *buffer = wlanAllocateFrame(&wlanFramePool, 0x100, 0, 3);
+	OsaBuffer *buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0x100, 0, 3);
 	uint32_t headroom;
 
 	if (buffer == NULL)
@@ -559,7 +555,6 @@ static uint32_t ampEventFlagsStorage[8] __attribute__((section(".itcm.bss")));
 static uint8_t ampTaskStack[1024] __attribute__((section(".itcm.bss")));
 
 /* Event flags of the data path the control callback signals (not converted). */
-extern struct OsaEventFlags *ampDataEventFlags;
 
 /* 0x00002582: gives the SDIO device its next buffer. */
 int ampPalAckSdio(void)
@@ -698,7 +693,7 @@ int ampPalSdioControlCallback(void *device, OsaBuffer *buffer, uint16_t length, 
 		break;
 	case 2:
 		osa_MsgQueueSend(&ampDataQueue, buffer);
-		osaEventFlagsSet(ampDataEventFlags, 1, 7);
+		osaEventFlagsSet(macTxEventFlags, 1, 7);
 		break;
 	}
 	sysIrqRestore(posture);

@@ -53,15 +53,15 @@
 #define WLAN_PS_WAKE_BEACONS		50
 #define WLAN_PS_IDLE_WAKE_DELAY		5000
 
-uint32_t wlanPsOverride __attribute__((section(".itcm.rw")));			/* 0x54b48 */
-uint32_t wlanPsSleepLeft __attribute__((section(".itcm.rw")));			/* 0x54b4c */
+uint32_t wlanPsOverride __attribute__((section(".itcm.rw"))) = 1;			/* 0x54b48 */
+uint32_t wlanPsSleepLeft __attribute__((section(".itcm.rw"))) = 1;			/* 0x54b4c */
 uint32_t wlanPsIeeeActive __attribute__((section(".itcm.rw")));		/* 0x54b50 */
-uint32_t wlanPsDtimPolicy __attribute__((section(".itcm.rw")));		/* 0x54b54 */
-uint32_t wlanPsSavedDtimPolicy __attribute__((section(".itcm.rw")));		/* 0x54b58 */
+uint32_t wlanPsDtimPolicy __attribute__((section(".itcm.rw"))) = 1;		/* 0x54b54 */
+uint32_t wlanPsSavedDtimPolicy __attribute__((section(".itcm.rw"))) = 1;		/* 0x54b58 */
 struct OsaSemaphore *wlanPsResetDone __attribute__((section(".itcm.rw")));	/* 0x54b5c */
 uint32_t wlanPsWakeTimer __attribute__((section(".itcm.rw")));			/* 0x54b60 */
 struct WlanInitStage wlanPsInitStage __attribute__((section(".itcm.rw")));	/* 0x54b64 */
-uint16_t wlanPsNullWindow __attribute__((section(".itcm.rw")));		/* 0x54b6c */
+uint16_t wlanPsNullWindow __attribute__((section(".itcm.rw"))) = 0x000a;		/* 0x54b6c */
 
 uint32_t wlanPendingEvents[2] __attribute__((section(".itcm.bss")));		/* 0x56280 */
 uint16_t wlanPsBeaconInterval __attribute__((section(".itcm.bss")));		/* 0x56288 */
@@ -80,12 +80,12 @@ uint32_t wlanPsParameter __attribute__((section(".itcm.bss")));		/* 0x562a4 */
 static TX_SEMAPHORE wlanPsResetDoneStorage __attribute__((section(".itcm.bss")));	/* 0x568a0 */
 
 /* Not converted yet; provisional names. */
-extern uint16_t wlanPsSessionTimeout;			/* 0x568cc: s, set by the host */
+uint16_t wlanPsSessionTimeout __attribute__((section(".itcm.bss")));			/* 0x568cc */
 extern uint32_t wlanPsWakeAdvance;			/* 0x56260 */
 extern struct WlanPsHostConfig wlanPsHostConfig;	/* 0x568be */
-extern uint16_t sleepHostWakeCount;			/* 0x5622e */
-extern uint32_t sleepHostWakeMargin;			/* 0x56234 */
-extern uint32_t sleepHostClockParameter;		/* 0x5623c */
+uint16_t sleepHostWakeCount __attribute__((section(".itcm.bss")));			/* 0x5622e */
+uint32_t sleepHostWakeMargin __attribute__((section(".itcm.bss")));			/* 0x56234 */
+uint32_t sleepHostClockParameter __attribute__((section(".itcm.bss")));			/* 0x5623c */
 extern uint32_t wlanIbssPsActive;			/* 0x593d4 */
 extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
 int sysRefClockProfile(void);			/* 0x26842 */

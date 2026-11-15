@@ -36,7 +36,7 @@ void hctDropPending(uint32_t key, const void *address);
 void hctDeliverAclToHost(uint8_t *payload);
 void hctReleaseLinkContext(struct HctReleaseMessage *message);
 void hctSendAclToHost(struct HctLinkMessage *message);
-int hctRouteMessage(struct HctLinkMessage *message);
+void hctRouteMessage(struct HctLinkMessage *message);
 int hctPostPacket(uint8_t *packet, uint32_t flag);
 int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument,
 		     unsigned int event);

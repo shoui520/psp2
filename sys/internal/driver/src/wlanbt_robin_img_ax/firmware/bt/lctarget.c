@@ -15,7 +15,6 @@
 #include "robin/sys.h"
 #include "robin/amp.h"
 
-extern void abort(void);
 
 /* The route's device index of the target: 3 for the AMP (link 1), else 0. */
 #define TARGET_DEVICE(link)	((link) == 1 ? 3 : 0)
@@ -128,8 +127,6 @@ void btLmpLcReleaseContext(int link, int event, int argument)
 		if (target->flag != 0)
 			btLmpLcTrackContext(link);
 		return;
-	case 13:
-		abort();
 	default:
 		return;
 	}

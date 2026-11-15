@@ -6,6 +6,7 @@
  */
 #include <stddef.h>
 #include <stdint.h>
+#include "robin/ratesel.h"
 #include "robin/baslot.h"
 #include "robin/ratectl.h"
 #include "robin/rom.h"
@@ -27,7 +28,6 @@ const uint32_t wlanRateWeight[WLAN_RATE_COUNT] = {
 	0x61a8, 0x9088, 0xbb80, 0x10d88, 0x15ba8, 0x182b8, 0x1a5e0,
 };
 
-extern void fmCoexAdjustTable(uint32_t *entry);					/* 0x4c3e4 */
 
 uint32_t **wlanRateTable __attribute__((section(".itcm.rw")));			/* 0x54e8c */
 
@@ -396,11 +396,12 @@ unsigned int wlanRateStepUp(unsigned int limit, struct WlanRateControl *rc)
 	return rc->highest;
 }
 
-int wlanRateCounterReset(uint32_t *counter)
+/* Starts the rate's window over and the counts of the next decision afresh. */
+int wlanRateCounterReset(struct WlanRateControl *rc)
 {
-	fmCoexAdjustTable(counter);
-	counter[1] = 0;
-	counter[0] = 0;
+	fmCoexAdjustTable(rc);
+	rc->frames = 0;
+	rc->elapsed = 0;
 	return 0;
 }
 
@@ -412,7 +413,7 @@ uint32_t wlanRateTimeoutValue(struct WlanRateControl *rc, uint32_t timeout, unsi
 
 	if (rate < shift)
 		return 0;
-	result = wlanRateTimeoutTable[rate - shift];
+	result = wlanRateBurstTable[rate - shift];
 	if (result > timeout)
 		return timeout;
 	return result;

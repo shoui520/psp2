@@ -74,10 +74,13 @@
 /* Not converted yet; provisional names. */
 unsigned int clockCurrentRate(void);				/* 0x2761a */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
-extern uint16_t hostCmdRateDefault;					/* SQRAM 0xc0011ba8 */
-extern uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS];			/* SQRAM 0xc0011b8a */
+uint16_t hostCmdRateDefault __attribute__((section(".sqram1.rw"))) = 0x00a0;			/* 0xc0011ba8 */
+uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS] __attribute__((section(".sqram1.rw"))) = {	/* 0xc0011b8a */
+	4, 8, 0x0010, 0x0014, 0x0020, 0x0020, 0x0028, 0x0028,
+	0x0040, 0x0050, 0x0050, 0x006a, 0x0080, 0x008e, 0x00a0, 0x00a0,
+};
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
-extern uint32_t hostCmdRateLimits[4];					/* 0x040089b0 */
+uint32_t hostCmdRateLimits[4] __attribute__((section(".dtcm.bss")));			/* 0x40089b0 */
 extern struct WlanMacTxRequest *wlanIbssBeaconRequest;			/* 0x54bc4 */
 extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;		/* 0x54bc8 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh); /* 0x322f2 */
@@ -208,7 +211,7 @@ int hostCmd004d(struct WlanConnection *connection, uint8_t *body)
 }
 
 /* The capability byte HostCmd_DS_GET_HW_SPEC reports. */
-static uint32_t hostCmdHwCaps __attribute__((section(".itcm.rw")));		/* 0x54bcc */
+static uint32_t hostCmdHwCaps __attribute__((section(".itcm.rw"))) = 1;		/* 0x54bcc */
 
 int hostCmd0003Caps(void)
 {
@@ -459,8 +462,6 @@ int hostCmd00f5(struct WlanConnection *connection, unsigned int action, uint8_t 
 		uint16_t *length);						/* 0x3f002 */
 void hostCmd0102(unsigned int enable);						/* 0x32538 */
 unsigned int hostCmd01ff(void);							/* 0x3e88e */
-void wlanConnectionSetBssMode(struct WlanConnection *connection, unsigned int mode,
-			      uint8_t *body0, uint8_t *body1);				/* 0x1d934 */
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int policy, void *driver);		/* 0x1d604 */
@@ -472,7 +473,7 @@ void macMgmtNotifyTable(void);							/* 0x3797a */
 void macMgmtApplyTable(void);							/* 0x3795a */
 struct WlanPsPeerState *wlanConnectionPsState(struct WlanConnection *connection); /* 0x1d1f6 */
 struct WlanConnection *p2pDirectProcessEntry(unsigned int interfaceType);	/* 0x41250 */
-extern uint8_t hostCmd0096Tracking;						/* 0x54f9c */
+uint8_t hostCmd0096Tracking __attribute__((section(".itcm.bss")));						/* 0x54f9c */
 
 extern struct WlanDriverQueue wlanDriverQueue1;
 extern struct WlanPsHostConfig wlanPsHostConfig;				/* 0x568be */
@@ -482,14 +483,14 @@ extern struct OsaBufferPool hostCmdResponsePool;				/* 0x04000e24 */
 extern uint8_t wlanPrimaryEvents;						/* 0x04008828, bit 0: radio on */
 extern uint8_t wlanIbssJoinState[4];						/* 0x040088ce, unaligned */
 extern uint8_t wlanBeaconTimestamp[8];						/* 0x040088d2 */
-extern struct WlanConnection *wlanAssociateConnection;				/* 0x04004e9c */
+struct WlanConnection *wlanAssociateConnection __attribute__((section(".dtcm.bss")));	/* 0x4004e9c */
 extern uint8_t wlanAfcEnabled;							/* 0x00054f18 */
 extern uint8_t wlanAfcAuto;							/* 0x00054f1e */
 extern uint8_t wlanAfcThreshold;						/* 0x00054f1f */
 extern int16_t wlanAfcTimingOffset;						/* 0x00054f1a */
 extern int16_t wlanAfcCarrierOffset;						/* 0x00054f1c */
 extern uint8_t wlanAfcSamples;							/* 0x00054f20 */
-extern uint8_t wlanScanRequested;						/* 0x00054c80 */
+uint8_t wlanScanRequested __attribute__((section(".itcm.bss")));						/* 0x00054c80 */
 extern uint32_t wlanPsWakeAdvance;						/* 0x56260 */
 extern uint16_t sleepHostWakeCount;						/* 0x5622e */
 extern uint32_t sleepHostWakeMargin;						/* 0x56234 */
@@ -497,13 +498,6 @@ extern uint32_t sleepHostClockParameter;					/* 0x5623c */
 extern uint16_t wlanPsAltModeActive;						/* 0x562a0 */
 extern uint16_t wlanPsAltModeRequest;						/* 0x562a2 */
 
-struct WlanHwInfo {
-	uint8_t reserved0[5];
-	uint8_t version[2];		/* HostCmd_DS_GET_HW_SPEC's hardware version */
-	uint8_t reserved7[4];
-	uint8_t txPowerLevel[2];	/* HostCmd_CMD_802_11_RF_TX_POWER's current level */
-};
-extern struct WlanHwInfo wlanHwInfo;						/* 0x040088ac */
 
 uint16_t wlanMgmtFrameSize __attribute__((section(".itcm.rw"))) = 1860;	/* 0x54b8e */
 uint16_t wlanMulticastCount __attribute__((section(".itcm.rw")));		/* 0x54b90 */
@@ -697,7 +691,7 @@ int hostCmdProcess(void)
 
 		case 18:	/* HostCmd_CMD_802_11_AUTHENTICATE */
 		case 80:	/* HostCmd_CMD_802_11_ASSOCIATE */
-			wlanConnectionSetBssMode(connection, 0, body, body);
+			wlanConnectionReconfigure(connection, 0, body, body);
 			wlanAssociateConnection = connection;
 			if (!wlanJoinAssociate(connection, (HostCmd_DS_802_11_ASSOCIATE *)body, (uint16_t)bodyLength))
 				goto failed;
@@ -1867,7 +1861,7 @@ int hostCmdProcess(void)
 		}
 
 		case 247:
-			wlanConnectionSetBssMode(connection, body[0], NULL, NULL);
+			wlanConnectionReconfigure(connection, body[0], NULL, NULL);
 			goto done;
 
 		case 251:
