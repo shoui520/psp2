@@ -1147,7 +1147,7 @@ found:
 				forced = 1;
 				macTxSetFlags(request, 0x1000, 0);
 			} else {
-				macTxSetRate(request, wlanRateSelect(&connection->rateControl));
+				macTxSetRate(request, wlanRateSelect(&connection->peerLink.rateControl));
 				if (forced != 0 ||
 				    (((WlanWirelessFrame *)__aeabi_uread4(request->frame))->address1[0] & 1))
 					macTxSetFlags(request, 0x1000, 0);
@@ -1647,7 +1647,7 @@ void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
 /* Block Ack timeout of a session in the units of the rate control of its connection. */
 uint32_t wlanTxBaTimeoutRegister(uintptr_t owner, uint32_t timeout)
 {
-	return wlanRateTimeoutValue(&((struct WlanConnection *)owner)->rateControl, timeout, 14);
+	return wlanRateTimeoutValue(&((struct WlanConnection *)owner)->peerLink.rateControl, timeout, 14);
 }
 
 /*

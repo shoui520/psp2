@@ -37,25 +37,66 @@ struct WlanRateHistory {
 	uint32_t value;
 };
 
+/* A slot of a rate table that is free while its first word is zero (12 bytes). */
+struct WlanRateSlot {
+	uint32_t used;
+	uint32_t reserved[2];
+};
+
+/* What the supervision of a peer's rate counts (32 bytes at WlanRateControl.window). */
+struct WlanRateWindow {
+	uint8_t reserved0[16];
+	uint32_t age;			/* milliseconds, up to 1000 (wlanPsValidateFrame()) */
+	uint32_t validated;		/* the transmit statistics added since: macTxStatsAddValidated() */
+	uint32_t prepared;		/* macTxStatsAddPrepared() */
+	uint32_t checked;		/* macTxStatsAddChecked(), at most 16 */
+};
+
+/* The level of the rate in use; wlanPsConfigureFrame() maps it: 0 to 2: 0, 3 to 4: 1, above: 2 (3 bytes). */
+struct WlanRateLevel {
+	uint8_t reserved0[2];
+	uint8_t level;
+};
+
 /* WlanConnection.rateControl (228 bytes). */
 struct WlanRateControl {
-	uint8_t reserved0[28];
+	uint32_t elapsed;		/* milliseconds since the last decision, 10 per supervision tick */
+	uint32_t frames;		/* the frames sent since: the prepared counts */
+	uint32_t timeout;		/* 1000: nothing decided yet */
+	uint8_t reserved12[8];
+	uint8_t anchor;			/* the index of rates[] the supervision started at */
+	uint8_t reserved21[7];
 	uint32_t highest;		/* the last index of rates[] in use */
 	uint32_t lowest;		/* the first one */
 	uint32_t target;		/* the index the next change moves to */
 	uint32_t current;		/* the index in use */
 	uint8_t historyCount;		/* records pushed since wlanRateHistoryClear() */
 	uint8_t probing;		/* the current rate is a probe */
-	uint8_t reserved46[50];
+	uint8_t reserved46[14];
+	struct WlanRateWindow window;
+	struct WlanRateLevel level;
+	uint8_t reserved95;
 	struct WlanRateHistory history[7];
 	uint8_t historyCursor;
-	uint8_t reserved181[11];
-	uint8_t rates[36];		/* rate indexes, slowest first */
+	uint8_t reserved181[3];
+	uint32_t idleTime;		/* milliseconds the supervision found nothing to count, up to 10000 */
+	struct WlanRateSlot *slot;	/* the rate table's slot of this peer */
+	uint8_t rates[32];		/* rate indexes, slowest first */
+	uint8_t peerStatus;		/* what uapSqramRecordTable() / wlanPsHandlePacket() last said (0 to 2, 6) */
+	uint8_t reserved225[3];
 };
 
 _Static_assert(sizeof(struct WlanRateControl) == 228, "rate control");
+_Static_assert(offsetof(struct WlanRateControl, anchor) == 20, "rate anchor");
+_Static_assert(offsetof(struct WlanRateControl, highest) == 28, "rate highest");
+_Static_assert(offsetof(struct WlanRateControl, window) == 60, "rate window");
+_Static_assert(offsetof(struct WlanRateControl, level) == 92, "rate level");
 _Static_assert(offsetof(struct WlanRateControl, history) == 96, "rate history");
+_Static_assert(offsetof(struct WlanRateControl, historyCursor) == 180, "rate history cursor");
+_Static_assert(offsetof(struct WlanRateControl, idleTime) == 184, "rate idle time");
+_Static_assert(offsetof(struct WlanRateControl, slot) == 188, "rate slot");
 _Static_assert(offsetof(struct WlanRateControl, rates) == 192, "rate index list");
+_Static_assert(offsetof(struct WlanRateControl, peerStatus) == 224, "rate peer status");
 
 /* The timeout of a rate index (microseconds, inferred): 0x04000f7c. */
 extern uint16_t wlanRateTimeoutTable[];
@@ -83,12 +124,6 @@ void wlanRateTableShortGi(uint32_t *first, uint32_t *second, int enable);	/* 0x2
 void wlanRateTableHtShortGi(uint8_t *table, int enable, int mode);		/* 0x2ba26 */
 void wlanRateBlockBuild(const uint8_t *items, int count, uint8_t *blocks,
 			uint32_t **table);					/* 0x2ba7e */
-/* A slot of a rate table that is free while its first word is zero (12 bytes). */
-struct WlanRateSlot {
-	uint32_t used;
-	uint32_t reserved[2];
-};
-
 struct WlanRateSlot *wlanRateSlotAlloc(struct WlanRateSlot *slots, unsigned int count); /* 0x2bc3c */
 uint32_t *wlanRateTableLookup(unsigned int index);				/* 0x2bc6c */
 void wlanRateHistoryRecord(struct WlanRateControl *rc, const int *value);	/* 0x2bc84 */

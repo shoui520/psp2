@@ -10,6 +10,7 @@
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
+#include "robin/peerrate.h"
 
 #define WLAN_TX_POWER_DEFAULT_MAX	20	/* dBm, without a record */
 #define WLAN_CHANNEL_WRAP		200	/* channel numbers wrap past 200 */
@@ -27,8 +28,6 @@ void uapSqramCheckTable(const uint8_t *data, unsigned int offset, unsigned int l
 int uapSqramNotifyTable(const uint8_t *data, unsigned int offset, unsigned int length,
 			unsigned int action);					/* 0xc000a225 */
 int uapSqramQueryTable(uint8_t *data, uint16_t *length);			/* 0xc0009fb9 */
-int macTxNotifyScheduleFrame(unsigned int index, uint8_t *values);		/* 0x3362a */
-int macTxNotifyFormatFrame(unsigned int index, struct WlanCalibrationChannelValues *values); /* 0x33662 */
 void macMgmtSyncHeader(int unused);						/* 0x3b4d2 */
 void macMgmtQueryHeader(int kind, int count, void *value);			/* 0x3b384 */
 void wlanPsConvertHeader(void);							/* 0x3e32e */
@@ -386,11 +385,11 @@ int wlanCalibrationLookupBlock(struct WlanCalibrationKey key, void *block)
 
 int wlanCalibrationLookupQuad(struct WlanCalibrationKey key, void *values)
 {
-	uint8_t buffer[4];
+	uint32_t buffer;
 
-	if (!macTxNotifyScheduleFrame(uapSqramBuildEntry(key.band, key.channel), buffer))
+	if (!macTxNotifyScheduleFrame(uapSqramBuildEntry(key.band, key.channel), &buffer))
 		return 0;
-	__aeabi_memcpy(values, buffer, sizeof(buffer));
+	__aeabi_memcpy(values, &buffer, sizeof(buffer));
 	return 1;
 }
 

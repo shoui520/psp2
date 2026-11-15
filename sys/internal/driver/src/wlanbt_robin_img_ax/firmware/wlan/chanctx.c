@@ -255,7 +255,7 @@ void macMgmtFormatContext(void)
 	if (connection != NULL) {
 		macMgmtNotifyContext(connection, romGetMicroseconds());
 		macMgmtScheduleContext();
-		macMgmtResolveContext(connection, connection->reserved4[2]);
+		macMgmtResolveContext(connection, connection->probeRate);
 	}
 }
 

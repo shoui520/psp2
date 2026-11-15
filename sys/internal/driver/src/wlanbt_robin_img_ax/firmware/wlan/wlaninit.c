@@ -51,6 +51,7 @@
 #include "robin/softtimer.h"
 #include "robin/macentry.h"
 #include "robin/htba.h"
+#include "robin/peerrate.h"
 
 /* The hardware's description the host reads (HostCmd_CMD_GET_HW_SPEC, RF_TX_POWER). */
 struct WlanHwInfo {
@@ -141,7 +142,6 @@ void wlanPsReleaseHeader(void);								/* 0x3e280 */
 void uapSqramClearTable(void);						/* SQRAM 0xc000a3f6 */
 void cbProcConfigureFrame(void);							/* 0x1e9f2 */
 void macMgmtAdjustHeader(void);								/* 0x3b93a */
-void macTxNotifyComputeFrame(void);							/* 0x3355c */
 void wlanPsApplyDescriptor(void);							/* 0x3e9f0 */
 void macMgmtResetFrame(void);								/* 0x3abf6 */
 int uapSqramCheckState(void);							/* SQRAM 0xc00073a6 */

@@ -26,6 +26,7 @@
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/htba.h"
+#include "robin/peerrate.h"
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
@@ -61,7 +62,6 @@ uint32_t rfCalibInspectTimer(unsigned int rate);			/* 0x2bc6c */
 void wlanPsFilterFrame(uint16_t beaconPeriod);				/* 0x3dc4e */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);			/* 0x355b0 */
-void macTxNotifyApplyFrame(struct WlanConnection *connection);		/* 0x3360a */
 void macMgmtResolveEntry(struct WlanConnection *connection, unsigned int channel,
 			 int start);					/* 0x36a32 */
 int cbProcAdjustEntry(struct WlanConnection *connection);		/* 0x1cbce */
@@ -72,8 +72,6 @@ uint16_t macMgmtDispatchDescriptor(void);				/* 0x3bc6e */
 void wlanPsClearTable(struct WlanConnection *connection, int value);	/* 0x3c03c */
 void wlanPsAdjustTable(struct WlanConnection *connection);		/* 0x3c0aa */
 void cbProcUpdatePacket(struct WlanConnection *connection, unsigned int rates); /* 0x1e220 */
-void macTxNotifyQueryFrame(struct WlanConnection *connection);		/* 0x33570 */
-void macTxNotifyDispatchFrame(struct WlanConnection *connection);	/* 0x3351c */
 void cbProcParsePacket(struct WlanConnection *peer);			/* 0x1e378 */
 void wlanPsFilterTable(struct WlanConnection *connection);		/* 0x3c108 */
 struct WlanConnection *cbProcResetBuffer(const uint8_t *ies);		/* 0x1ddd6 */

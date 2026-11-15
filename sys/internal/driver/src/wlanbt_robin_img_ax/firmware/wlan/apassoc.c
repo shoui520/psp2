@@ -29,6 +29,7 @@
 #include "robin/sys.h"
 #include "robin/wapi.h"
 #include "robin/wlan.h"
+#include "robin/peerrate.h"
 
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
 #define WLAN_STATUS_ASSOC_DENIED		12
@@ -40,9 +41,6 @@
 
 /* Not converted yet; provisional names. */
 void wlanPsAcquirePacket(struct WlanConnection *connection);				/* 0x3d1f4 */
-void macTxNotifyApplyFrame(struct WlanConnection *connection);				/* 0x3360a */
-void macTxNotifyQueryFrame(struct WlanConnection *connection);				/* 0x33570 */
-void macTxNotifyDispatchFrame(struct WlanConnection *connection);			/* 0x3351c */
 void wlanPsReleasePacket(struct WlanConnection *connection, uint32_t rateSet);		/* 0x3d286 */
 unsigned int p2pDirectCheckContext(struct WlanConnection *connection, WlanWirelessFrame *frame,
 				   const void *attributes, unsigned int include,

@@ -19,6 +19,7 @@
 #include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/htba.h"
+#include "robin/peerrate.h"
 
 struct WlanConnection *wlanConnectionList __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionFreeList __attribute__((section(".sqram1.rw")));
@@ -44,7 +45,6 @@ void clockHostSelectPreset2(void);									/* 0x26bdc */
 void clockHostSelectPreset3(void);								/* 0x26c0e */
 int macMgmtSelectContext(struct WlanConnection *connection);					/* 0x35f7c */
 void wlanPsSetupPacket(void *state, int argument);						/* 0x3d29e */
-int macTxNotifyApplyFrame(struct WlanConnection *connection);					/* 0x3360a */
 void macTxNotifyReleaseBuffer(void);								/* 0x3239c */
 void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, unsigned int beaconPeriodA,
 			    unsigned int beaconPeriodB);						/* 0x323f8 */
@@ -52,8 +52,6 @@ void macTxNotifyClearBuffer(unsigned int ring, unsigned int index, int enable, u
 /* Not converted yet; provisional names. */
 struct WlanConnection *p2pDirectProcessEntry(int kind);					/* 0x41250 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh);	/* 0x322f2 */
-void macTxNotifyConfigureFrame(struct WlanConnection *connection);				/* 0x333ce */
-void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
 int macMgmtApplyEntry(void);									/* 0x36a2a */
 void btLmpLcHandleState(int state);								/* 0x42488 */
 void uapSqramUpdateBuffer(struct WlanConnection *connection);					/* SQRAM 0xc000a9ba */
@@ -1404,7 +1402,7 @@ void wlanConnectionDuplicateIbss(const uint8_t *peer, struct WlanConnection *sou
 	copy->longRetryLimit = source->longRetryLimit;
 	__aeabi_memcpy(copy->peerAddress, peer, 6);
 	__aeabi_memcpy4(copy->interfaceAddress, wlanDeviceAddress->address, 6);
-	__aeabi_memclr4(copy->peerLinkState, 240);
+	__aeabi_memclr4(&copy->peerLink, sizeof(copy->peerLink));
 	copy->rxManagement = source->rxManagement;
 	COPY_BITS(copy->txOptions, source->txOptions, 0x10);
 	COPY_BITS(copy->hostFlags, source->hostFlags, 0x08);
@@ -1651,7 +1649,7 @@ done:
 /* The peer's address and state of the link check are cleared and the connection's peer state gets the argument. */
 int wlanConnectionUpdatePeer(struct WlanConnection *connection, int argument)
 {
-	wlanPsSetupPacket(connection->peerLinkState, argument);
+	wlanPsSetupPacket(&connection->peerLink, argument);
 	return macTxNotifyApplyFrame(connection);
 }
 

@@ -173,8 +173,6 @@ OsaBuffer *macMgmtHandleState(struct WlanConnection *connection);			/* 0x34778 *
 int macMgmtProcessState(OsaBuffer *message);						/* 0x34794 */
 
 /* Not converted yet; provisional names. */
-void macTxNotifyConfigureFrame(struct WlanConnection *connection);			/* 0x333ce */
-void macTxNotifyParseFrame(struct WlanConnection *connection);				/* 0x33528 */
 unsigned int p2pDirectAdjustState(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x40094 */
 unsigned int p2pDirectVerifyState(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x4008c */
 int p2pDirectValidateContext(struct WlanConnection *connection, WlanWirelessFrame *frame);	/* 0x404be */

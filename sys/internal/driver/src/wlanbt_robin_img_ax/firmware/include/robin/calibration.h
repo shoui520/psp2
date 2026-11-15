@@ -80,10 +80,10 @@ struct WlanCalibSignal {
 /* Per-channel values of a lookup: a header and one value per measured channel. */
 struct WlanCalibrationChannelValues {
 	uint8_t header[6];
-	uint16_t values[5];
+	uint16_t values[6];
 };
 
-_Static_assert(sizeof(struct WlanCalibrationChannelValues) == 16, "per-channel values");
+_Static_assert(sizeof(struct WlanCalibrationChannelValues) == 18, "per-channel values");
 
 unsigned int wlanTxPowerMax(unsigned int channel, unsigned int band);
 unsigned int wlanTxPowerMin(unsigned int channel, unsigned int band);

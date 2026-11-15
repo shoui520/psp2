@@ -51,6 +51,7 @@
 #include "robin/mactx.h"
 #include "robin/macentry.h"
 #include "robin/htba.h"
+#include "robin/peerrate.h"
 
 #define HOSTCMD_U16(p)		((uint16_t)((p)[0] | (p)[1] << 8))
 
@@ -436,7 +437,6 @@ unsigned int hostCmd0070(uint8_t *body);					/* 0x1e826 */
 unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e782 */
 void hostCmd0078Parse(uint32_t *status, uint8_t *body, uint32_t *type, uint32_t *extra); /* SQRAM 0xc00078d6 */
 extern void (*hostCmd0078Handlers[])(uint32_t *type, uint32_t *failed);		/* SQRAM 0xc0011f34 */
-void hostCmd007f(struct WlanConnection *connection, uint32_t *rate, uint32_t *flags); /* 0x335b0 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */
 void hostCmd0083(unsigned int bssType, unsigned int bssNumber, unsigned int value); /* SQRAM 0xc0007406 */
 void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
@@ -484,7 +484,6 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 int hostCmdMisc(uint16_t *result, uint8_t *body, struct WlanConnection *connection); /* 0x2ccb6 */
 void wlanTxBufSizeSet(uint16_t *size);						/* 0x1bb40 */
 void wlanPsFormatBuffer(struct WlanConnection *connection, unsigned int rate);	/* 0x3c7b8 */
-void wlanPsReleaseBuffer(void);							/* 0x3c9ba */
 void wlanPsQueryPacket(void);							/* 0x3d006 */
 int wlanPsFormatPacket(struct WlanConnection *connection);			/* 0x3d0e4 */
 void wlanHostWakeGpioSet(unsigned int gpio, int enable);			/* 0x28142 */
@@ -1282,8 +1281,8 @@ int hostCmdProcess(void)
 
 		case 127:
 		{
-			uint32_t rate;
-			uint32_t flags;
+			uint8_t rate;
+			uint8_t flags;
 
 			hostCmd007f(connection, &rate, &flags);
 			hdr[2] = 10;
@@ -1709,7 +1708,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				wlanTxBufSizeSet((uint16_t *)(body + 2));
 				wlanPsQueryPacket();
-				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->rateControl));
+				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->peerLink.rateControl));
 				wlanPsReleaseBuffer();
 				wlanTxBaArmTimeouts((uintptr_t)connection, wlanTxBaSessions);
 				body[4] = wlanTxBufferCount;
@@ -1735,7 +1734,7 @@ int hostCmdProcess(void)
 			if (action == 1) {
 				wlanAmsduSize = HOSTCMD_U16(body + 2);
 				wlanPsQueryPacket();
-				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->rateControl));
+				wlanPsFormatBuffer(connection, wlanRateSelect(&connection->peerLink.rateControl));
 			}
 			PUT16(body + 2, wlanAmsduSize);
 			PUT16(body + 4, wlanAmsduEnabled);

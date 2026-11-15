@@ -457,6 +457,15 @@ struct __attribute__((may_alias)) WlanHtElements {
 #define WLAN_CONN2_ASSOCIATED		0x10	/* the peer is associated */
 #define WLAN_CONN2_HOLD			0x04	/* the connection stays when its peer leaves (inferred) */
 
+/* What a connection keeps of its link to the peer (240 bytes at WlanConnection.peerLink). */
+struct WlanPeerLink {
+	uint32_t reserved0;			/* cleared with the two below for an IBSS peer and a station */
+	uint32_t baActive[2];			/* 1: the block acknowledgement agreement of hardware slot 0, 1 is up */
+	struct WlanRateControl rateControl;	/* rate adaptation state */
+};
+
+_Static_assert(sizeof(struct WlanPeerLink) == 240, "peer link");
+
 struct WlanConnection {
 	struct WlanConnection *next;
 	uint8_t interfaceType;
@@ -545,16 +554,15 @@ struct WlanConnection {
 	uint8_t peerAddress[6];
 	uint8_t reserved4a;
 	uint16_t associationId;		/* AID the access point assigned */
-	uint8_t reserved4[6];
-	union {
-		uint8_t peerLinkState[240];	/* cleared when the connection takes a new peer */
-		struct {
-			uint8_t reserved396[12];
-			struct WlanRateControl rateControl;	/* rate adaptation state */
-		};
-	};
+	uint8_t anchorRate;		/* rateControl.rates[rateControl.anchor] (macTxNotifyFilterPacket()) */
+	uint8_t firstRate;		/* rateControl.rates[0] */
+	uint8_t probeRate;		/* the rate in use */
+	uint8_t currentRate;		/* the same: what HostCmd 0x7f reports while dataRate is 254 */
+	uint8_t reserved394[2];
+	struct WlanPeerLink peerLink;	/* cleared when the connection takes a new peer */
 	struct WlanSoftTimer softTimer;	/* the connection's timeout */
-	uint32_t reserved660;
+	uint8_t rateHold;		/* 1: macTxNotifyBuildFrame() does not supervise the rate */
+	uint8_t reserved661[3];
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
 	uint8_t *keyBlocks[2];		/* [0]: the group key's (HostCmd 0x37's), [1]: the pairwise key's (0x36's and 0x5e's); each +28 is its cipher_key_t */
@@ -619,14 +627,14 @@ struct WlanConnection {
 _Static_assert(offsetof(struct WlanConnection, device) == 12, "device");
 _Static_assert(offsetof(struct WlanConnection, smStates) == 24, "state machine states");
 _Static_assert(offsetof(struct WlanConnection, rxManagement) == 44, "management handler");
-_Static_assert(offsetof(struct WlanConnection, peerLinkState) == 396, "peer link state");
+_Static_assert(offsetof(struct WlanConnection, peerLink) == 396, "peer link state");
 _Static_assert(offsetof(struct WlanConnection, dataRate) == 52, "data rate");
 _Static_assert(offsetof(struct WlanConnection, hostFlags) == 54, "host flags");
 _Static_assert(offsetof(struct WlanConnection, state) == 380, "state");
 _Static_assert(offsetof(struct WlanConnection, stationFlags) == 760, "station flags");
 _Static_assert(offsetof(struct WlanConnection, supportedRates) == 64, "rates");
 _Static_assert(offsetof(struct WlanConnection, localAddress) == 152, "local address");
-_Static_assert(offsetof(struct WlanConnection, rateControl) == 408, "rate control");
+_Static_assert(offsetof(struct WlanConnection, peerLink.rateControl) == 408, "rate control");
 _Static_assert(offsetof(struct WlanConnection, rtsThreshold) == 158, "SNMP MIB values");
 _Static_assert(offsetof(struct WlanConnection, localName) == 744, "AMP link name");
 _Static_assert(offsetof(struct WlanConnection, keyBlocks) == 672, "SNMP BSS parameters");

@@ -15,6 +15,7 @@
 #include "robin/rom.h"
 #include "robin/sys.h"
 #include "robin/wlan.h"
+#include "robin/peerrate.h"
 
 #define WLAN_FC0_TYPE(fc0)		(((fc0) >> 2) & 3)
 #define WLAN_FC0_SUBTYPE(fc0)		((fc0) >> 4)
@@ -75,7 +76,6 @@ void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer,
 void macMgmtConvertHeader(void);						/* 0x3b8fc */
 struct WlanConnection *p2pSqramCheckContext(OsaBuffer *buffer, uint32_t *channel); /* SQRAM, veneer 0x52dc4 */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
-void macTxNotifyConfigureFrame(struct WlanConnection *connection);		/* 0x333ce */
 struct WlanConnection *cbProcParseBuffer(const uint8_t *address, struct WlanConnection *connection); /* 0x1dc8c */
 void cbProcParsePacket(struct WlanConnection *peer);				/* 0x1e378 */
 unsigned int cbProcComputePacket(unsigned int mode);				/* 0x1e3cc */
@@ -264,7 +264,7 @@ struct WlanConnection *wlanConnectionFindDirectPeer(struct WlanConnection *conne
 		return cbProcParseBuffer(address, connection);
 	__aeabi_memcpy(connection->peerAddress, address, 6);
 	macTxNotifyConfigureFrame(connection);
-	__aeabi_memclr4(connection->peerLinkState, sizeof(connection->peerLinkState));
+	__aeabi_memclr4(&connection->peerLink, sizeof(connection->peerLink));
 	return connection;
 }
 

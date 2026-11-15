@@ -30,6 +30,7 @@
 #include "robin/wlan.h"
 #include "robin/hostps.h"
 #include "robin/apsta.h"
+#include "robin/peerrate.h"
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
