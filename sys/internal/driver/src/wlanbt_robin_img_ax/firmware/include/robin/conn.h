@@ -183,6 +183,38 @@ struct WlanWapiContext {
 	uint8_t data[16];		/* reported to the host, byte-reversed */
 };
 
+/* One channel an access point may start on: the band's flags, the channel, and how long its load is measured (TU). */
+struct WlanApChannel {
+	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
+	uint8_t channel;
+	uint8_t reserved2[3];
+	uint8_t measureTime[2];		/* little endian, TU */
+};
+
+/*
+ * The access point's BSS machine (macMgmtResetFrame(), 0x59330): the
+ * ROM's hierarchical state machine with a root and four states, kept in
+ * ITCM; macMgmtApplyFrame() starts it in the connection's info block.
+ */
+struct WlanApMachine {
+	struct RomHsmState *state;	/* the current state */
+	uint32_t reserved4;
+	struct RomHsmState *root;	/* wlanApStates.root */
+	uint8_t reserved12[12];
+	struct WlanConnection *connection;
+};
+
+/* The states of the machine; each has the handler that names it. */
+struct WlanApStates {
+	struct RomHsmState root;
+	struct RomHsmState reserved12;
+	struct RomHsmState parse;	/* stopped: waiting for the BSS to be started */
+	struct RomHsmState reserved36;
+	struct RomHsmState build;	/* the channel is chosen or the BSS is coming up */
+	struct RomHsmState query;
+	struct RomHsmState compute;	/* the BSS is up */
+};
+
 struct WlanConnectionInfo {
 	uint32_t staAgeout;		/* the host's station age-out time, 100 ms (listenInterval is it in beacons) */
 	uint32_t psStaAgeout;		/* ... for stations in power save (listenIntervalPs) */
@@ -208,12 +240,14 @@ struct WlanConnectionInfo {
 	uint8_t htOperation[24];	/* its HT operation element */
 	struct WlanUapContext *uapContext;	/* the SQRAM context of the access point's association table */
 	const struct WlanWapiContext *wapiContext;	/* a WAPI BSS: what the host is told with an association (TLV 103) */
-	uint8_t reserved132[100];
+	uint8_t channelCount;		/* the channels the access point may start on: 0 none, 1 the one given, more: the least loaded of them (automatic selection) */
+	uint8_t reserved133[99];
 	apRsnConfig_t apRsn;		/* the access point's RSN settings */
 	uint8_t ready;
 	uint8_t reserved357[3];
 	uint32_t uapsdEnabled;		/* 1: the access point supports U-APSD: a peer's QoS Info can request it (inferred) */
-	uint8_t reserved364[132];
+	struct WlanApChannel channels[18];	/* the channels to start on */
+	uint8_t reserved490[6];
 	uint16_t beaconPeriod;		/* the BSS's beacon interval, TU */
 	uint8_t reserved498[16];
 	struct {
@@ -238,9 +272,14 @@ struct WlanConnectionInfo {
 	uint8_t wapiUnicastCipher;
 	uint8_t wapiMulticastCipher;
 	uint8_t reserved550[2];
-	const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
-	uint8_t reserved556[20];
-	struct WlanConnection *connection;	/* the connection that owns this block */
+	union {
+		struct {
+			const uint8_t *smState;		/* the association state machine (mdevRomQueryState) */
+			uint8_t reserved556[20];
+			struct WlanConnection *connection;	/* the connection that owns this block */
+		};
+		struct WlanApMachine machine;	/* the access point's BSS machine (macMgmtApplyFrame()) */
+	};
 	uint8_t capability[2];		/* bit 5: short preamble; bit 10: short slot time */
 	uint8_t reserved582[2];
 	uint32_t stationCount;		/* stations associated with the access point; data frames go out only when nonzero */
@@ -595,6 +634,12 @@ _Static_assert(offsetof(struct WlanConnection, beaconMissThreshold) == 85, "beac
 _Static_assert(offsetof(struct WlanConnection, subscribeEvents) == 688, "subscribed events");
 _Static_assert(offsetof(struct WlanConnection, subscribeTriggered) == 692, "subscribed events met");
 _Static_assert(offsetof(struct WlanConnectionInfo, ready) == 356, "info ready");
+_Static_assert(offsetof(struct WlanConnectionInfo, channelCount) == 132, "info channel count");
+_Static_assert(offsetof(struct WlanConnectionInfo, channels) == 364, "info channels");
+_Static_assert(sizeof(struct WlanApChannel) == 7, "access point channel");
+_Static_assert(offsetof(struct WlanConnectionInfo, connection) == 576, "info connection");
+_Static_assert(offsetof(struct WlanConnectionInfo, machine.root) == 560, "machine root");
+_Static_assert(offsetof(struct WlanConnectionInfo, machine.connection) == 576, "machine connection");
 _Static_assert(offsetof(struct WlanConnectionInfo, smState) == 552, "info state machine");
 _Static_assert(offsetof(struct WlanConnectionInfo, htEnabled) == 68, "info HT enabled");
 _Static_assert(offsetof(struct WlanConnectionInfo, protectionFlags) == 541, "info protection");

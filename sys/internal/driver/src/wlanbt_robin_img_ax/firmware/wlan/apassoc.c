@@ -57,7 +57,6 @@ void rfCalibHandleTimer(const uint8_t *htCapability, uint8_t **cursor, uint8_t *
 void rfCalibProcessTimer(unsigned int value, uint8_t **cursor, uint8_t *length);	/* 0x2b7b6 */
 void rfCalibUpdateTimer(const uint8_t *wmm, uint8_t **cursor, uint8_t *length);	/* 0x2b7ea */
 void cbProcCheckFrame(struct WlanConnection *connection);				/* 0x1ea08 */
-void romLibNotifyContext(void);								/* ROM veneer 0x532e4 */
 int p2pSqramFilterState(struct WlanConnection *connection, const uint8_t *frame, unsigned int category);
 int rfCalibRecordQueue(struct WlanConnection *connection, unsigned int a, unsigned int b,
 		       unsigned int maxStations, uint8_t *table);			/* 0x2b4c0 */
@@ -65,8 +64,6 @@ int fmCoexRecordBuffer(struct WlanConnectionInfo *info, const uint8_t *element, 
 void rfCalibAdjustQueue(struct WlanConnection *connection, const WlanIePointers *elements,
 			unsigned int channel, uint8_t *erpInfo, uint8_t *olbcActive,
 			unsigned int beaconPeriod, int add);			/* 0x2b45c */
-void uapSqramUpdateState(int value);						/* SQRAM */
-void uapSqramConfigureState(int value);						/* SQRAM */
 int uapSqramProcessBuffer(void);						/* SQRAM */
 
 /* The association request goes back with the BSS's own elements (custom ones too) as a response, after the station is let go of. */

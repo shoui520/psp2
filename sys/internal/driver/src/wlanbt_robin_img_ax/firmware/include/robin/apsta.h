@@ -78,6 +78,36 @@ void fmCoexFilterEntry(struct WlanMacTxRequest *request, unsigned int subtype,
 		       WlanWirelessFrame *frame, uint8_t *tim);				/* 0x4bbec */
 void fmCoexHandleTable(struct WlanMacTxRequest *request, int nonErp, int protection, int barker); /* 0x4bc24 */
 void fmCoexProcessTable(struct WlanMacTxRequest *request, const uint8_t *htOperation);	/* 0x4bc5e */
+/* The BSS machine (wlan/apbss.c). */
+struct WlanApMachine;
+struct WlanApEvent;
+struct RomHsmState;
+int macMgmtHandleFrame(struct WlanConnection *connection);				/* 0x3a5d6 */
+int macMgmtProcessFrame(struct WlanConnection *connection);				/* 0x3a636 */
+int macMgmtUpdateFrame(struct WlanConnection *unused, OsaBuffer *buffer);		/* 0x3a6a4 */
+void macMgmtConfigureFrame(struct WlanConnection *connection);				/* 0x3a712 */
+void macMgmtCheckFrame(struct WlanConnection *connection);				/* 0x3a778 */
+int macMgmtValidateFrame(struct WlanConnection *connection);				/* 0x3a796 */
+void macMgmtPrepareFrame(struct WlanConnection *connection);				/* 0x3a876 */
+const int32_t *macMgmtDispatchFrame(struct WlanApMachine *machine, const int32_t *event); /* 0x3a9a8 */
+const int32_t *macMgmtParseFrame(struct WlanApMachine *machine,
+				 const struct WlanApEvent *event);			/* 0x3a9bc */
+const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine,
+				 const struct WlanApEvent *event);			/* 0x3aa8c */
+const int32_t *macMgmtComputeFrame(struct WlanApMachine *machine,
+				   const struct WlanApEvent *event);			/* 0x3ab68 */
+const int32_t *macMgmtQueryFrame(struct WlanApMachine *machine, const int32_t *event); /* 0x3abce */
+void macMgmtResetFrame(void);								/* 0x3abf6 */
+void macMgmtSyncFrame(struct RomHsmState *root, struct RomHsmState *parent,
+		      const int32_t *(*handler)(void *machine, const int32_t *event)); /* 0x3abfc */
+void macMgmtApplyFrame(struct WlanConnectionInfo *info);				/* 0x3ac34 */
+void macMgmtResolveFrame(struct WlanConnectionInfo *info);				/* 0x3ac50 */
+void macMgmtValidateTable(int reason);							/* 0x3726c */
+void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
+			   unsigned int number);					/* 0x355b0 */
+void uapSqramUpdateState(int value);							/* SQRAM */
+void uapSqramConfigureState(int value);						/* SQRAM */
+void romLibNotifyContext(void);								/* ROM veneer 0x532e4 */
 void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */
 void macMgmtNotifyFrame(struct WlanConnection *connection, struct WlanMacTxRequest *request); /* 0x3af22 */
 void macMgmtFormatFrame(struct WlanConnection *connection);				/* 0x3af46 */
