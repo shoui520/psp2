@@ -15,6 +15,7 @@
 #include "robin/esatypes.h"
 #include "robin/md5.h"
 #include "robin/sha1.h"
+#include "robin/sha256.h"
 
 #define MAX_PMK_SIZE		32
 #define BSSID_FLAG		0xff	/* pmkElement_t.length of a PMK keyed by BSSID */
@@ -401,10 +402,7 @@ typedef struct TkipPtk_t {
 } TkipPtk_t;
 
 
-/* sha1.c (robin/sha1.h: Mrvl_PRF 0x2dc5c), mrvl_sha256_crypto.c (0x2e7c8) */
-void mrvl_sha256_crypto_kdf(uint8_t *pKey, uint8_t key_len, char *label,
-			    uint8_t label_len, uint8_t *pContext, uint16_t context_len,
-			    uint8_t *pOutput, uint16_t output_len);
+/* sha1.c (robin/sha1.h: Mrvl_PRF 0x2dc5c), mrvl_sha256_crypto.c (robin/sha256.h) */
 
 /* crypt_new_rom.c, rc4.c */
 int MRVL_AesUnWrap(uint8_t *kek, uint8_t kekLen, uint32_t n, uint8_t *cipher,
@@ -576,8 +574,6 @@ int supplicantGetPmkid(IEEEtypes_MacAddr_t *pBssid, IEEEtypes_MacAddr_t *pStaAdd
 struct OsaBufferPool;
 extern struct OsaBufferPool *ramHook_encrPoolConfig;
 
-/* mrvl_sha256_crypto.c (0x2e790) */
-int mrvl_sha256_crypto_vector(int num_elem, uint8_t *addr[], int *len, uint8_t *mac);
 
 /* pass_phrase.c (0x2c068) */
 int Mrvl_PasswordHash(char *password, uint8_t *ssid, int ssidlength,

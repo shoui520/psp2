@@ -219,3 +219,7 @@ PROVIDE(wpa_MD5Update = 0x03f3b511);
 PROVIDE(wpa_MD5Final  = 0x03f3b58d);
 /* Signed 32-bit divide, reached through the veneer at 0x52cf4. */
 PROVIDE(__aeabi_idiv  = 0x03f3f240);
+
+/* SHA-256 (Thumb), reached through the veneers at 0x531ec and 0x531f4. */
+PROVIDE(sha256_vector       = 0x03f059bd);
+PROVIDE(hmac_sha256_vector  = 0x03f05a1b);
