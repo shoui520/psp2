@@ -162,9 +162,9 @@ int SceNpUtility_F4B21646(const SceNpOnlineId *onlineId, const SceNpId *npId, in
 	if (ret < 0)
 		goto error;
 	sceClibMemcpy_safe(client->environment, environment, sizeof(client->environment));
-	sceClibMemset(client->platform, 0, sizeof(client->platform));
-	client->platform[0] = npId->opt[2];
-	client->platform[1] = npId->opt[3];
+	sceClibMemset(client->region, 0, sizeof(client->region));
+	client->region[0] = npId->opt[2];
+	client->region[1] = npId->opt[3];
 
 	ret = sceKernelCreateMutex("SceNpLookupClient", SCE_KERNEL_MUTEX_ATTR_RECURSIVE, 0, NULL);
 	if (ret >= 0)

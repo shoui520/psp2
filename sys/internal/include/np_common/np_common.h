@@ -93,6 +93,9 @@ int SceNpCommon_389F8C14(char *dst, SceSize dstSize, const SceUInt8 *src, SceSiz
 /* base64.c */
 SceSize sceNpCommonBase64Encode(const SceUInt8 *src, char *dst, SceSize size);
 
+/* util.c: the system time in microseconds, always 0 */
+int SceNpCommon_55F7FCF7(SceUInt64 *time);
+
 /* util.c: SceNpCommon's heap */
 void *sceNpCommonMallocNpServerName(SceSize size);
 void sceNpCommonFreeNpServerName(void *ptr);

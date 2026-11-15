@@ -4,10 +4,12 @@ psp2_module(vs0_sys_external_np_utility KIND user COMPILER snc PARTIAL SOURCES
 	word_filter.c
 	lookup.c
 	client.c
+	request.c
 	memory.c
 	title.c
 	trans.c
 	util.c
 	worker.c
+	bandwidth_test.c
 	../../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )

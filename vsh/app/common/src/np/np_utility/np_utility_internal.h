@@ -36,6 +36,61 @@ extern int SceThreadmgrCoredumpTime_sceKernelExitThread(int status);
 /* the lookup server answered 404 to a request it names a user by (operation 10) */
 #define NP_LOOKUP_ERROR_NOT_FOUND	-2141911160	/* 0x80550788 */
 
+/* a server name and the domain did not fit in a URL of 256 bytes */
+#define NP_LOOKUP_ERROR_URL_TOO_LONG	-2141911167	/* 0x80550781 */
+
+/* the largest response body or signed information read */
+#define NP_LOOKUP_RESPONSE_MAX_SIZE	0x18000
+
+/* the avatar size of the N sizes (SceNpUtilityAvatarN), next to the SDK's three */
+#define NP_LOOKUP_AVATAR_SIZE_N		3
+
+/* the auth callback's argument: the community servers' realm, or none */
+#define NP_LOOKUP_AUTH_NONE		1
+#define NP_LOOKUP_AUTH_COMMUNITY	2
+
+/* a transaction's operation, the request it runs (0 for none yet) */
+#define NP_LOOKUP_OPERATION_PROFILE	1
+#define NP_LOOKUP_OPERATION_NP_ID	3
+#define NP_LOOKUP_OPERATION_AVATAR	4
+#define NP_LOOKUP_OPERATION_PROFILES	10
+
+/* a request's type: its server and path (request.c's table) */
+#define NP_LOOKUP_REQUEST_NONE		0
+#define NP_LOOKUP_REQUEST_PROFILE	1	/* getprof.<region>.<environment> */
+#define NP_LOOKUP_REQUEST_SEARCH_SERVERS 2	/* the searchjid servers' list */
+#define NP_LOOKUP_REQUEST_SEARCH_JID	3	/* one of the searchjid servers */
+#define NP_LOOKUP_REQUEST_AVATAR	4	/* an avatar's URL */
+#define NP_LOOKUP_REQUEST_URL		5
+#define NP_LOOKUP_REQUEST_CENSOR	6	/* filter.<region>.<environment> */
+#define NP_LOOKUP_REQUEST_SANITIZE	7
+#define NP_LOOKUP_REQUEST_PROFILES	8
+#define NP_LOOKUP_REQUEST_NUM		9
+
+typedef struct NpLookupRequestType {
+	int withUrl;				/* 0x00: the server's name is a URL */
+	int needsName;				/* 0x04: the caller names the server */
+	const char *scheme;			/* 0x08 */
+	int method;				/* 0x0C: SCE_HTTP_METHOD_* */
+	const char *host;			/* 0x10: before the server's name */
+	const char *path;			/* 0x14 */
+	const char *reserved;			/* 0x18: "" in every type, never read */
+} NpLookupRequestType;
+
+/* a user's profile as the getprof server describes it */
+typedef struct NpLookupProfile {
+	SceNpId npId;				/* 0x000 */
+	char onlineName[48];			/* 0x024 */
+	SceUInt8 reserved1[4];			/* 0x054 */
+	SceNpAvatarUrl icon;			/* 0x058 */
+	SceNpCountryCode countryCode;		/* 0x0D8 */
+	SceNpMyLanguages languages;		/* 0x0DC */
+	int iconId;				/* 0x0EC */
+	SceNpAboutMe aboutMe;			/* 0x0F0 */
+	SceUInt64 color;			/* 0x130 */
+	SceUInt8 reserved2[0x90];		/* 0x138 */
+} NpLookupProfile;
+
 /* the services, each with its own heap and lists */
 #define NP_LOOKUP_SERVICE_INT		0
 #define NP_LOOKUP_SERVICE_LOOKUP	1
@@ -80,7 +135,7 @@ typedef struct NpLookupClient {
 	int httpTemplate;			/* 0x20 */
 	SceUID mutex;				/* 0x24 */
 	char environment[16];			/* 0x28 */
-	SceUInt8 platform[8];			/* 0x38: opt[2..3] of the NP ID */
+	char region[8];				/* 0x38: opt[2..3] of the NP ID */
 	NpLookupServer *servers;		/* 0x40 */
 	SceUInt32 service;			/* 0x44: compared unsigned */
 	NpLookupAllocation *allocations;	/* 0x48 */

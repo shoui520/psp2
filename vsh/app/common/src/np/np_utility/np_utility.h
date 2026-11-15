@@ -10,6 +10,7 @@
 #include <scetypes.h>
 #include <np/np_common.h>
 #include <np/np_lookup.h>
+#include <libhttp.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +22,7 @@ struct NpLookupTitle;
 struct NpLookupTrans;
 struct NpLookupJobHandler;
 struct NpLookupWorker;
+struct NpLookupProfile;
 
 /* lookup.c: sceNpLookupUserProfile and its asynchronous form with the N avatar sizes */
 int SceNpUtilityAvatarN_4A989C1C(SceInt32 reqId, SceInt32 avatarSizeType, const SceNpId *npId,
@@ -47,7 +49,7 @@ int SceNpUtility_944FE83C(int reqId);
 int SceNpUtility_A0991531(int id, int resolveRetry, SceUInt32 resolveTimeout,
 			  SceUInt32 connectTimeout, SceUInt32 sendTimeout, SceUInt32 recvTimeout);
 
-/* the requests */
+/* request.c: the requests and their XML responses */
 int SceNpUtility_23B387A5(SceInt32 reqId, const SceNpOnlineId *onlineId, SceNpId *npId,
 			  void *option);
 int SceNpUtility_9D8E0730(SceInt32 reqId, SceInt32 avatarSizeType, const SceNpId *npId,
@@ -57,11 +59,34 @@ int SceNpUtility_9D8E0730(SceInt32 reqId, SceInt32 avatarSizeType, const SceNpId
 			  SceSize *avatarImageDataSize, int avatarN, void *option);
 int SceNpUtility_B2FD5E9D(SceInt32 reqId, const SceNpAvatarUrl *avatarUrl,
 			  SceNpAvatarImage *avatarImage, void *option);
-int SceNpUtility_23414285(struct NpLookupTitle *title, int arg, const SceNpId *npId,
-			  int titleId, int service);
-int SceNpUtility_B4423DAF(int reqId, int service);
-void SceNpUtility_866D737A(struct NpLookupTrans *trans);
+int SceNpUtility_60CC5AFB(SceInt32 request, SceHttpAuthType authType, const char *realm,
+			  char *username, char *password, SceBool needEntity,
+			  SceUChar8 **entityBody, SceSize *entitySize, SceBool *save, void *userArg);
+int SceNpUtility_01C44B07(int withUrl, struct NpLookupTrans *trans, const char *server,
+			  const char *scheme, SceUShort16 port);
+int SceNpUtility_A08E60BA(int withUrl, struct NpLookupTrans *trans, int method, const char *path,
+			  SceULong64 contentLength);
+int SceNpUtility_C4FE3A57(struct NpLookupTrans *trans, SceUInt32 type, const char *name,
+			  SceSize contentLength);
+int SceNpUtility_34B42669(struct NpLookupTrans *trans, const void *data, SceSize size);
+int SceNpUtility_866D737A(struct NpLookupTrans *trans);
+int SceNpUtility_37AD71B9(void);
+int SceNpUtility_8857763D(struct NpLookupTrans *trans, int operation, SceUInt64 *rest,
+			  SceSize *size, int unused, SceUInt8 *signature, int whole);
+int SceNpUtility_89C8F74E(struct NpLookupTrans *trans, int operation, SceUInt64 *rest,
+			  SceSize *size, SceUInt8 *signature, int whole);
+int SceNpUtility_548625FC(struct NpLookupTitle *title, int operation, const void *data,
+			  int titleId);
+int SceNpUtility_4A479D1D(int titleId);
+int SceNpUtility_23414285(struct NpLookupTitle *title, int operation, const void *data,
+			  int titleId, SceUInt32 service);
+int SceNpUtility_B4423DAF(int titleId, SceUInt32 service);
 int SceNpUtility_C63A0F6B(int reqId);
+int SceNpUtility_B418204E(int reqId, SceNpId *npId);
+int SceNpUtility_7BC7E7F7(int reqId, const SceNpId *npId, SceInt32 avatarSizeType, int count,
+			  struct NpLookupProfile *profile);
+int SceNpUtility_08893FA1(int reqId, const SceNpAvatarUrl *url, SceSize *size, SceSize maxSize,
+			  void *data, void *option);
 int SceNpUtility_C9283605(int reqId, const SceNpId *npId, const char *comment,
 			  char *sanitizedComment, int sanitize);
 
@@ -130,6 +155,10 @@ int SceNpUtility_575BBBC4(struct NpLookupWorker *worker, int count,
 			  const struct NpLookupJobHandler *handlers);
 int SceNpUtility_F73C4411(struct NpLookupWorker *worker);
 int SceNpUtility_44FE1097(struct NpLookupWorker *worker, int type, int arg, void *job, int flags);
+
+/* bandwidth_test.c: the bandwidth test's upload or download alone */
+int SceNpUtility_D46E45DE(SceInt32 initPriority, SceInt32 cpuAffinityMask);
+int SceNpUtility_B7A52202(SceInt32 initPriority, SceInt32 cpuAffinityMask);
 
 #ifdef __cplusplus
 }
