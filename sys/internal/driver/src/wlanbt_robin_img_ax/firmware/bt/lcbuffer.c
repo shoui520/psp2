@@ -1357,3 +1357,34 @@ void btLmpLcHandlePacket(void)
 	btTableModeEntry = 0xff;
 	btLtsRomClearState();
 }
+
+/*
+ * The ROM's link context handler, wrapped: the first time a link's record reaches state 3 or 4
+ * this is noted, and a record in state 4 is detached (reason 0x13) and set to state 14.
+ */
+void btLmpLcProcessPacket(unsigned int link, uint32_t argument)
+{
+	uint8_t *record = btLcoRomDispatchContext(link);
+
+	if (record[2] == link && btLinkReleaseSeen == 0 && btLinkReleaseHeld == 0) {
+		uint8_t *state = &record[32];
+
+		if (state[0] == 3) {
+			btLinkReleaseSeen = 1;
+			return;
+		}
+		if (state[0] == 4) {
+			btLinkReleaseSeen = 1;
+			if (record[1] == 1)
+				btLscRomResolveState(0xc18, *(BtHalf *)(record + 6));
+			if (record[2] == 0)
+				btLmpLcVerifyHeader(*(BtHalf *)(record + 6), 1, 0x13);
+			btLdrRomQueryState(*(BtHalf *)(record + 6), (int8_t)record[20], 0x13, 0x5dc0, 0);
+			btLscRomApplyState(0x94, 0xbf9, *(BtHalf *)(record + 6), record[20]);
+			state[1] = 2;
+			state[0] = 14;
+			return;
+		}
+	}
+	btLcoRomValidateContext(link, argument);
+}

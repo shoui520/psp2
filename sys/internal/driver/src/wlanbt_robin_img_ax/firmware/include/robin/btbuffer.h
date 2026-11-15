@@ -116,6 +116,8 @@ extern void (*btLinkStepHook)(struct BtStepRecord *step, const struct BtSlotTimi
 			      int flags);				/* 0x400f250 */
 extern uint32_t (*btLinkPlaceHook)(struct BtDeviceProfile *profile, uint32_t clock, int flags);	/* 0x400ede8 */
 extern uint32_t btLinkTakenClock[8];				/* 0x59ee8: the due clock each link's slot was taken at */
+extern uint8_t btLinkReleaseSeen;				/* 0x400f6cb: a link record reached state 3 or 4 */
+extern uint8_t btLinkReleaseHeld;				/* 0x400f6cc */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -185,5 +187,7 @@ void btLmpLcAdjustBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *prof
 int btLmpLcRecordBuffer(uint32_t clock);				/* 0x464ca */
 void btLmpLcFilterBuffer(struct BtSlotEvent *event, uint32_t clock);	/* 0x46516 */
 void btLmpLcHandlePacket(void);					/* 0x465d8 */
+void btLmpLcProcessPacket(unsigned int link, uint32_t argument);	/* 0x46660 */
+void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */
