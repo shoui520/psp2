@@ -10,6 +10,9 @@ char *strcpy(char *destination, const char *source);
 /* RVCT library routine in ITCM (0x00052234); not converted. */
 int memcmp(const void *left, const void *right, size_t size);
 
+/* RVCT library routine in ITCM (0x000523b0); not converted. */
+char *strncpy(char *destination, const char *source, size_t size);
+
 /* RVCT library routine in ITCM (0x00052420); not converted. */
 int strcmp(const char *left, const char *right);
 

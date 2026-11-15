@@ -128,7 +128,7 @@ __attribute__((noinline)) int macMgmtManageEntry(void)
 	if (wlanScanState.ssidIndex < count) {
 		if (broadcast == 0 || wlanScanState.broadcastSent != 0) {
 			while (wlanScanState.ssidIndex < count) {
-				if (scan->ssids[wlanScanState.ssidIndex].wildcard == 0) {
+				if (scan->ssids[wlanScanState.ssidIndex].maxLength == 0) {
 					ssid = &scan->ssids[wlanScanState.ssidIndex];
 					break;
 				}
@@ -382,7 +382,7 @@ uint32_t macMgmtVerifyEntry(struct WlanConnection *connection, struct WlanScan *
 	if (scan->channelCount == 0)
 		return 0;
 	for (i = 0; i < scan->ssidCount; i++) {
-		if (scan->ssids[i].wildcard != 0) {
+		if (scan->ssids[i].maxLength != 0) {
 			scan->broadcast = 1;
 			break;
 		}

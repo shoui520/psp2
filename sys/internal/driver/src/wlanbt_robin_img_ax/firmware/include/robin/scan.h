@@ -35,10 +35,14 @@ struct WlanScanChannel {
 
 _Static_assert(sizeof(struct WlanScanChannel) == 7, "scan channel");
 
-/* The SSID of a directed probe request: the first byte is 0 for one, nonzero for the wildcard. */
+/*
+ * An SSID the scan looks for: a directed one (TLV 0x0000, maxLength 0), or one of Marvell's
+ * wildcard SSID TLV (0x0112) with its maximum length: 255 matches with '?' and '*', another value
+ * above 32 makes that byte match any one character (fmCoexInspectEntry()).
+ */
 struct WlanScanSsid {
-	uint8_t wildcard;
-	uint8_t ssid[32];		/* an element: its id, length and bytes as the host sent it */
+	uint8_t maxLength;
+	uint8_t ssid[32];		/* the SSID's bytes, NUL-padded */
 };
 
 _Static_assert(sizeof(struct WlanScanSsid) == 33, "scan SSID");
@@ -60,8 +64,7 @@ struct WlanScan {
 	uint16_t probes;		/* 484: the probe requests sent on a channel (the number of probes TLV); 1 */
 	uint8_t broadcast;		/* 486: a probe request with the wildcard SSID is sent on every channel */
 	uint8_t reserved487;
-	uint8_t policy;			/* 488: set by the background scan's configuration (flags bit 1) */
-	uint8_t reserved489[3];
+	uint32_t policy;		/* 488: 0: results ranked by RSSI, 1: by SNR (the configuration's progress bit 1) */
 	uint8_t channelIndex;		/* 492: the channel the loop is on */
 	uint8_t channelCount;		/* 493: the channels in the list */
 	uint8_t reserved494[2];
@@ -78,12 +81,24 @@ _Static_assert(offsetof(struct WlanScan, channelIndex) == 492, "scan channel ind
 _Static_assert(offsetof(struct WlanScan, slot) == 496, "scan slot");
 _Static_assert(offsetof(struct WlanScan, results) == 512, "scan results");
 
+/*
+ * A BSS descriptor as the host gets it (Marvell's BSSDescriptor): its length (the bytes after the
+ * field), the BSSID, the RSSI and the beacon or probe response body, a DS parameter element added
+ * when the frame had none.
+ */
+struct WlanScanDescriptor {
+	uint8_t length[2];
+	uint8_t bssid[6];
+	uint8_t rssi;			/* a magnitude: the lower, the stronger */
+	uint8_t body[];
+};
+
 /* What a scan found, as far as the host is told (258 bytes): the records and the end callback. */
 struct WlanScanRecord {
-	uint8_t reserved0[4];
-	uint8_t timestamp[8];		/* the TSF of the beacon or probe response (TLV 0x0113) */
-	uint8_t reserved12;
-	uint8_t channelBand[2];		/* the channel and its band (TLV 0x012a) */
+	uint8_t descriptor[4];		/* unaligned: the record's WlanScanDescriptor in the results' data */
+	uint8_t timestamp[8];		/* the local time the frame was seen (TLV 0x0113) */
+	uint8_t snr;
+	uint8_t channelBand[2];		/* the band and the channel (TLV 0x012a) */
 };
 
 _Static_assert(sizeof(struct WlanScanRecord) == 15, "scan record");
@@ -217,19 +232,31 @@ int macMgmtNotifyTable(void);						/* 0x3797a */
 int macMgmtFormatTable(const struct WlanScan *scan);			/* 0x37998 */
 int macMgmtInspectTable(unsigned int channelIndex);			/* 0x379a8 */
 
+/* The scan results (wlan/scanresult.c). */
+extern const uint8_t wlanScanAnyBssid[6];				/* 0x53f80 */
+void fmCoexNotifyEntry(struct WlanScanResults *results, unsigned int index);	/* 0x4b538 */
+int fmCoexFormatEntry(const uint8_t *pattern, const uint8_t *string, const uint8_t *anyChar,
+		      const uint8_t *starChar, int patternLength, int stringLength);	/* 0x4b60a */
+void fmCoexInspectEntry(const WlanWirelessFrame *frame, const struct WlanScan *scan, int *found); /* 0x4b6ce */
+unsigned int fmCoexTrackEntry(const struct WlanScanRecord *record, uint32_t mode);	/* 0x4b7ae */
+int fmCoexManageEntry(unsigned int value, unsigned int threshold, uint32_t mode);	/* 0x4b7c0 */
+unsigned int fmCoexAcquireEntry(const struct WlanScanResults *results, int best, uint32_t mode); /* 0x4b7d6 */
+unsigned int fmCoexReleaseEntry(const struct WlanScanResults *results, uint32_t mode);	/* 0x4b840 */
+void fmCoexSetupEntry(WlanWirelessFrame *frame, uintptr_t argument, struct WlanScan *scan,
+		      unsigned int channelIndex, unsigned int snr, unsigned int rssi);	/* 0x4b846 */
+int fmCoexClearEntry(const uint8_t *bssid, const uint8_t *wanted);		/* 0x4ba4e */
+unsigned int fmCoexConvertEntry(unsigned int type, const uint8_t *tlv, uint8_t *ssid, uint8_t *count,
+				unsigned int maximum);			/* 0x4ba8e */
+unsigned int fmCoexVerifyEntry(const struct WlanScanResults *results, uint32_t mode);	/* 0x4bb2c */
+
 /* Provisional prototypes of what is not converted yet (their addresses). */
 int p2pSqramHandleState(struct WlanConnection *connection);		/* SQRAM, veneer 0x53254 */
 int p2pSqramScheduleState(struct WlanConnection *connection, uint32_t slot);	/* SQRAM, veneer 0x53284 */
 void p2pSqramProcessState(struct WlanConnection *connection, unsigned int state, uintptr_t argument,
 			  int event);					/* SQRAM, veneer 0x5328c */
 int p2pSqramNotifyState(void);						/* SQRAM, veneer 0x53294 */
-unsigned int fmCoexConvertEntry(unsigned int type, const uint8_t *tlv, uint8_t *ssid, uint8_t *count,
-			unsigned int maximum);				/* 0x4ba8e */
 void fmCoexFormatBuffer(uintptr_t frame, uint8_t *body, uintptr_t argument, struct WlanScan *scan,
 			unsigned int channelIndex);			/* 0x4cb36 */
 int fmCoexVerifyBuffer(struct WlanConnectionInfo *info, const uint8_t *tlv);	/* 0x4cdde */
-unsigned int fmCoexVerifyEntry(struct WlanScanResults *results, int mode);	/* 0x4bb2c */
-unsigned int fmCoexTrackEntry(void *record, int mode);			/* 0x4b7ae */
-int fmCoexManageEntry(unsigned int record, unsigned int threshold, int mode);	/* 0x4b7c0 */
 
 #endif /* ROBIN_SCAN_H */
