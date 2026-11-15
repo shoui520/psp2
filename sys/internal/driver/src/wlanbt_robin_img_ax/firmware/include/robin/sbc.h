@@ -268,7 +268,7 @@ _Static_assert(sizeof(struct SbcPlcState) == 760, "PLC state");
 extern struct SbcPlcState sbcPlc;			/* 0x5a998 */
 extern const int16_t sbcPlcOverlap[SBC_PLC_OVERLAP];	/* 0x5459c: the fade-out of the overlap */
 
-int16_t robinClz16(uint32_t value);			/* 0x53c64 (boot/reset.S) */
+int16_t robinClz16(uint32_t value);			/* 0x53c64 (runtime/rtlibarm.c) */
 
 void btSbcReleaseBuffer(struct SbcPlcState *state);					/* 0x51790 */
 int16_t btSbcSetupBuffer(const struct SbcPlcState *state);				/* 0x517a8 */

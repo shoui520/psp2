@@ -910,3 +910,7 @@ PROVIDE(btRecordBuffers              = 0xc0006014);
 PROVIDE(btLimitParam                 = 0x0400f154);
 PROVIDE(btEntryHooks                = 0x0400eb88);
 PROVIDE(btContextBuffers            = 0xc00068e4);
+
+/* ThreadX's interrupt context save and restore (vectorIrq, sysIrqHook). */
+PROVIDE(_tx_thread_context_save = 0x03f05124);
+PROVIDE(_tx_thread_context_restore = 0x03f05019);

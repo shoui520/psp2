@@ -52,7 +52,11 @@ $(O)/runtime/unaligned.o: runtime/unaligned.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
 
-# The library's memmove, strncpy and strcmp are ARM too.
+# The library's memmove, strncpy, strcmp and errno code are ARM too.
+$(O)/runtime/rtlibarm.o: runtime/rtlibarm.c $(HEADERS)
+	@mkdir -p $(dir $@)
+	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+
 $(O)/runtime/stringarm.o: runtime/stringarm.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
