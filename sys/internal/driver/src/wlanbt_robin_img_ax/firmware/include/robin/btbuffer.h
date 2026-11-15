@@ -129,8 +129,10 @@ extern uint8_t btPeerReport;					/* 0x400b557: 1: report event 0x32 once */
 
 /* The ROM's mode control, whose header byte btLmpLcParsePacket() sets. */
 struct BtModeControl {
-	uint8_t reserved0[4];
-	uint8_t header;
+	uint8_t reserved0[3];
+	uint8_t sessions;			/* the ring's size */
+	uint8_t header;				/* the session written next */
+	uint8_t current;			/* the session read next */
 };
 extern struct BtModeControl *btLinkModeControl;			/* 0x400f8f4 */
 
@@ -153,6 +155,7 @@ extern uint16_t btLinkRateBase;				/* 0x400f7e8: the ticks a rate step is counte
 extern uint16_t btLinkRateExtra;				/* 0x400f7ea: the ticks added to a link's rate slots */
 extern uint8_t btHostRate;					/* 0x400c4f1: the host link's rate state, 1 to 3 */
 extern uint8_t btHandlePending[];				/* 0x400f586: per handle */
+extern uint8_t btTargetSessions;				/* 0x400de55 */
 extern uint8_t btTargetRepeat;					/* 0x400de4f: cleared when a mode 11 slot repeats */
 extern uint8_t btHostSetting;					/* 0x400bd43 */
 extern uint8_t btHostRoleNow;					/* 0x400bd4e */
@@ -243,6 +246,7 @@ void btLmpLcSchedulePacket(uint8_t *request);			/* 0x46c06 */
 void btLmpLcNotifyPacket(void);					/* 0x46c66 */
 void btLmpLcFormatPacket(void);					/* 0x46c74 */
 int btLmpLcInspectPacket(const uint8_t *request);		/* 0x46c82 */
+unsigned int btLmpLcTrackPacket(void);				/* 0x46cb6 */
 void btLmpLcVerifyHeader(unsigned int handle, int enable, unsigned int reason);	/* 0x48eb2 */
 
 #endif /* ROBIN_BTBUFFER_H */

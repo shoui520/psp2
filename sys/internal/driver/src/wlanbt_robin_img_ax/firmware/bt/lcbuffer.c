@@ -1726,3 +1726,24 @@ int btLmpLcInspectPacket(const uint8_t *request)
 	btHandlePending[handle] = 0;
 	return 1;
 }
+
+/*
+ * The sessions free in the mode control's ring of the target's sessions; with the mode buffer
+ * set, a full ring counts as all but one free.
+ */
+unsigned int btLmpLcTrackPacket(void)
+{
+	struct BtModeControl *control = btLinkModeControl;
+	unsigned int sessions = btTargetSessions;
+	int8_t used;
+	unsigned int free;
+
+	control->sessions = sessions;
+	used = (int8_t)(btTableModeHeader - control->current);
+	if (used < 0)
+		used = (int8_t)(used + sessions);
+	free = (uint8_t)(sessions - used - 1);
+	if (btTableModeBuffer != 0 && free == 0)
+		free = (uint8_t)(btTargetSessions - 1);
+	return free;
+}

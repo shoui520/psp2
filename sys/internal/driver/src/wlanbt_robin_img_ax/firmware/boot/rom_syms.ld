@@ -403,6 +403,7 @@ PROVIDE(btHostRate                   = 0x0400c4f1);
 PROVIDE(btHccRomBuildState      = 0x03f102ab);
 PROVIDE(btPeerBusy                   = 0x0400b393);
 PROVIDE(btHandlePending              = 0x0400f586);
+PROVIDE(btTargetSessions             = 0x0400de55);
 PROVIDE(btLinkRateBase               = 0x0400f7e8);
 PROVIDE(btLinkRateExtra              = 0x0400f7ea);
 PROVIDE(btTargetDeadline             = 0x0400de5c);
