@@ -175,3 +175,39 @@ int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libC
 	}
 	return npWebApiLibContextUnlock(libCtx);
 }
+
+int npWebApiRequestIdGetUserContextId(SceInt64 requestId)
+{
+	return (int)(requestId >> 32);
+}
+
+unsigned int npWebApiRequestIdGetLibContextId(SceInt64 requestId)
+{
+	return (unsigned int)(requestId >> 32) >> 16;
+}
+
+int npWebApiRequestGetKind(NpWebApiRequest *request)
+{
+	return request->kind;
+}
+
+int npWebApiRequestGetBusy(NpWebApiRequest *request)
+{
+	return request->busy;
+}
+
+NpWebApiRequest *npWebApiRequestSetBusy(NpWebApiRequest *request, char value)
+{
+	request->busy = value;
+	return request;
+}
+
+int npWebApiRequestGetField232(NpWebApiRequest *request)
+{
+	return request->field232;
+}
+
+int npWebApiRequestGetHttpRequestId(NpWebApiRequest *request)
+{
+	return request->httpRequestId;
+}
