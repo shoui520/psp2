@@ -274,3 +274,266 @@ NP_COMMERCE2_SEND_PLAIN(npCommerce2Send_8101C224)
 NP_COMMERCE2_SEND_PLAIN(npCommerce2Send_8101C3E2)
 NP_COMMERCE2_SEND_PLAIN(npCommerce2Send_8101CF56)
 NP_COMMERCE2_SEND_PLAIN(npCommerce2Send_81018C7A)
+
+/* the URI escaping of a text (the original takes the length of the text too and does not use it) */
+__attribute__((noinline))
+int npCommerce2UriEscape(char *out, SceSize prepare, const char *in, int length, SceSize *require)
+{
+	return sceHttpUriEscape(out, require, prepare, in);
+}
+
+/* adds a cookie to the requests of the template and the connection */
+int npCommerce2AddCookie(int httpTemplate, int httpConnection, const char *cookie)
+{
+	if (sceHttpAddRequestHeader(httpTemplate, "Cookie", cookie, 0) >= 0)
+		sceHttpAddRequestHeader(httpConnection, "Cookie", cookie, 0);
+	return 0;
+}
+
+/* one field of the body, "<key><text>" after an "&" unless it is the first: the number of bytes it takes
+ * (when not sending), or sends it to the request */
+__attribute__((noinline))
+int npCommerce2WriteTextField(int sending, int httpRequest, int key, const char *text, int notFirst)
+{
+	int ret;
+
+	if (sending != 1)
+		return g_queryKeys[key].length + sceClibStrnlen(text, 0x400) + (notFirst == 1);
+	if (notFirst != 1 || (ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text, g_queryKeys[0].length)) >= 0) {
+		ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[key].text, g_queryKeys[key].length);
+		if (ret >= 0) {
+			SceSize length = sceClibStrnlen(text, 0x400);
+
+			return npCommerce2SendHttpRequest(httpRequest, text, length);
+		}
+	}
+	return ret;
+}
+
+/* the same for a field whose value is a number */
+__attribute__((noinline))
+int npCommerce2WriteNumberField(int sending, int httpRequest, int key, SceUInt32 value, int notFirst)
+{
+	char text[16];
+	int size;
+	int ret;
+
+	if (sending == 1) {
+		if (notFirst != 1 || (ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text, g_queryKeys[0].length)) >= 0) {
+			ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[key].text, g_queryKeys[key].length);
+			if (ret >= 0) {
+				if (sceClibSnprintf(text, 16, "%u", value) < 16) {
+					size = sceClibStrnlen(text, 0x400);
+					ret = npCommerce2SendHttpRequest(httpRequest, text, size);
+				} else {
+					ret = SCE_NP_COMMERCE2_ERROR_REQUEST_BUF_TOO_SMALL;
+				}
+			}
+		}
+	} else {
+		int base = (notFirst == 1) + g_queryKeys[key].length;
+		int written = sceClibSnprintf(text, 16, "%u", value);
+
+		ret = written + base;
+		if (written >= 16)
+			ret = SCE_NP_COMMERCE2_ERROR_REQUEST_BUF_TOO_SMALL;
+	}
+	return ret;
+}
+
+/* a request with the SKU ID as its one field */
+int npCommerce2Send_8101940E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *text)
+{
+	char escaped[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+		if (ret >= 0) {
+			ret = npCommerce2WriteTextField(sending, handle, 14, escaped, 0);
+			if (ret >= 0) {
+				if (!sending)
+					length = (SceULong64)(SceInt64)ret;
+				ret = 0;
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the payment type as its one field, only for argument 0 */
+int npCommerce2Send_810198B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     int argument)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		if (argument != 0) {
+			ret = NP_COMMERCE2_ERROR_UNSUPPORTED_ARGUMENT;
+		} else {
+			ret = npCommerce2WriteTextField(sending, *httpRequest, 25, "CC", 0);
+			if (ret >= 0) {
+				if (!sending)
+					length = (SceULong64)(SceInt64)ret;
+				ret = 0;
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with an optional text and two flags as fields */
+int npCommerce2Send_8101961A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *text, int flagA, int flagB)
+{
+	char escaped[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 total;
+	SceULong64 first;
+	int pass = 0;
+	int sending;
+	int notFirst;
+	int handle;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		notFirst = 0;
+		handle = *httpRequest;
+		first = 0;
+		if (text != NULL && *text != '\0') {
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret < 0)
+				goto done;
+			ret = npCommerce2WriteTextField(sending, handle, 4, escaped, notFirst);
+			if (ret < 0)
+				goto done;
+			first = (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+		ret = npCommerce2WriteTextField(sending, handle, 18, flagA == 1 ? "true" : "false", notFirst);
+		if (ret >= 0) {
+			total = first + (SceULong64)(SceInt64)ret;
+			ret = npCommerce2WriteTextField(sending, handle, 63, flagB == 1 ? "true" : "false", 1);
+			if (ret >= 0) {
+				if (sending != 1)
+					length = total + (SceULong64)(SceInt64)ret;
+				ret = 0;
+			}
+		}
+done:
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with the Edy receipt ID and its result as fields */
+int npCommerce2Send_8101A688(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *text, int result)
+{
+	char escaped[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 first;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+		if (ret >= 0) {
+			ret = npCommerce2WriteTextField(sending, handle, 23, escaped, 0);
+			if (ret >= 0) {
+				first = (SceULong64)(SceInt64)ret;
+				ret = npCommerce2WriteTextField(sending, handle, 24, result == 1 ? "OK" : "NG", 1);
+				if (ret >= 0) {
+					if (sending != 1)
+						length = first + (SceULong64)(SceInt64)ret;
+					ret = 0;
+				}
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}

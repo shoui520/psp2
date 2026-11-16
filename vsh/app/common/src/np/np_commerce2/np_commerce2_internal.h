@@ -316,19 +316,15 @@ typedef struct NpCommerce2Context {
 #define NP_COMMERCE2_CONTEXT_FLAG_REMOVED	0x1
 
 /* the request starters (start_request.c) and the senders of each operation */
-extern int npCommerce2Send_8101940E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101950A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_81019592(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101961A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3, int x4);
 extern int npCommerce2Send_810197A6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101982E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_810198B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_81019BEC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101A378(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101A43E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101A53A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101A5C2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
-extern int npCommerce2Send_8101A688(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101A9D6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3, int x4);
 extern int npCommerce2Send_8101AFE4(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101B2A8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
@@ -1427,6 +1423,20 @@ struct NpCommerce2QueryKey {
 	const char *text;
 };
 extern const struct NpCommerce2QueryKey g_queryKeys[87];
+#define NP_COMMERCE2_ERROR_UNSUPPORTED_ARGUMENT	-2141909118	/* 0x80550f82 */
+extern SceInt32 sceHttpUriEscape(char *out, SceSize *require, SceSize prepare, const char *in);
+extern int npCommerce2UriEscape(char *out, SceSize prepare, const char *in, int length, SceSize *require);
+extern int npCommerce2AddCookie(int httpTemplate, int httpConnection, const char *cookie);
+extern int npCommerce2WriteTextField(int sending, int httpRequest, int key, const char *text, int notFirst);
+extern int npCommerce2WriteNumberField(int sending, int httpRequest, int key, SceUInt32 value, int notFirst);
+extern int npCommerce2Send_8101940E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text);
+extern int npCommerce2Send_810198B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    int argument);
+extern int npCommerce2Send_8101961A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text, int flagA, int flagB);
+extern int npCommerce2Send_8101A688(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text, int result);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,
