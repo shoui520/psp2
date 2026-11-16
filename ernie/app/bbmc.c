@@ -36,6 +36,13 @@
 #define BBMC_ANSWER_START	0xa5	/* an answer's */
 #define BBMC_NVS_MODE		0x2e	/* bbmcRegs.r.mode in NVS area 1 */
 
+/* the link timeout's timer: 0x00090206 gives it timer 0x13, its first RTC timer */
+#if FW_SINCE(0x00090804)
+#define BBMC_LINK_TIMER		TIMER(0x13)
+#else
+#define BBMC_LINK_TIMER		0x13
+#endif
+
 /* bbmcNvsDone's commands */
 #define BBMC_NVS_LOAD		1	/* the mode was read at the start */
 #define BBMC_NVS_SAVE		2	/* the host wrote the mode */
@@ -105,7 +112,7 @@ void bbmcInit(void)
 	handler.handler = bbmcPostRxTimeout;
 	result = timerSetHandler(2, &handler);
 	handler.handler = bbmcPostLinkTimeout;
-	result = timerSetHandler(TIMER(0x13), &handler);
+	result = timerSetHandler(BBMC_LINK_TIMER, &handler);
 	handler.handler = bbmcPostStart;
 	result = timerSetHandler(TIMER_RTC(0x15), &handler);
 	handler.handler = bbmcPostMode;
@@ -160,9 +167,9 @@ unsigned char bbmcPowerOn(void)
 		break;
 	default:
 #if FW_SINCE(0x01000104)
-		timerStart(TIMER(0x13), 5000);
+		timerStart(BBMC_LINK_TIMER, 5000);
 #else
-		timerStart(TIMER(0x13), 0x28);
+		timerStart(BBMC_LINK_TIMER, 0x28);
 #endif
 		timerStart(TIMER_RTC(0x15), 0xa0);
 		break;
@@ -187,7 +194,7 @@ unsigned char bbmcPowerOff(void)
 	bbmc.state = 1;
 	bbmc.transition = 0;
 #endif
-	timerStop(TIMER(0x13));
+	timerStop(BBMC_LINK_TIMER);
 	timerStop(TIMER_RTC(0x15));
 	bbmcWriteRegs(3, 1, bbmcZero12, BBMC_WRITE_RESET);
 #if FW_SINCE(0x01000104)
@@ -399,9 +406,9 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		intp8Enable(0);
 		uart2Open();
 #if FW_SINCE(0x01000104)
-		timerStart(TIMER(0x13), 5000);
+		timerStart(BBMC_LINK_TIMER, 5000);
 #else
-		timerStart(TIMER(0x13), 0x28);
+		timerStart(BBMC_LINK_TIMER, 0x28);
 #endif
 	}
 #if !FW_SINCE(0x01000104)
@@ -468,7 +475,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		case 0x8008:
 			if (bbmcIsOn()) {
-				timerStart(TIMER(0x13), 5000);
+				timerStart(BBMC_LINK_TIMER, 5000);
 				bbmc.transition = 0;
 			}
 			powerReady(6);
@@ -575,7 +582,7 @@ void bbmcReceive(void)
 		if (bbmc.rxLength >= 5 && bbmc.rx.length + 2 == bbmc.rxLength) {
 			timerStop(2);
 #if FW_SINCE(0x01000104)
-			timerStart(TIMER(0x13), 5000);
+			timerStart(BBMC_LINK_TIMER, 5000);
 			bbmcTrace("RX", (unsigned char *)&bbmc.rx);
 			if (bbmc.rx.data[bbmc.rx.length - 3] == bbmcChecksum((unsigned char *)&bbmc.rx)) {
 				if (bbmc.rx.sequence == bbmc.lastSequence) {
@@ -590,7 +597,7 @@ void bbmcReceive(void)
 #else
 			/* before 0x01000104 a packet is answered whatever its checksum and its
 			   repeats */
-			timerStart(TIMER(0x13), 0x28);
+			timerStart(BBMC_LINK_TIMER, 0x28);
 			bbmcTrace("RX", (unsigned char *)&bbmc.rx);
 			if (bbmc.rx.data[bbmc.rx.length - 3] == bbmcChecksum((unsigned char *)&bbmc.rx))
 				;

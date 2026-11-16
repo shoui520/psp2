@@ -42,14 +42,6 @@ struct LevelMonitor {
 	unsigned char	enable;
 };
 
-/* the scan timer: mode 1 runs timer 3, mode 2 timer 0x16, every interval; hold ticks of
-   timer 3 first (inputScanHold) */
-struct InputScan {
-	unsigned char	mode;
-	unsigned int	interval;
-	unsigned int	hold;
-};
-
 /* a button's presses (the pin monitor's handler counts them) */
 struct ButtonPress {
 	unsigned char	count;		/* presses */

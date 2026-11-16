@@ -180,7 +180,12 @@ void timerTick(void)
 
 	DI();
 	timerTicks++;
+#if FW_SINCE(0x00090804)
 	for (i = 0; i < TIMER_RTC_FIRST; i++) {
+#else
+	/* 0x00090206 runs every timer, the RTC's too, by these ticks */
+	for (i = 0; i < TIMER_COUNT; i++) {
+#endif
 		if (timers[i].state == 1 && timers[i].time == timerTicks) {
 			timers[i].state = 0;
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)

@@ -77,6 +77,7 @@ int csi10Transfer(struct Csi10Transfer *transfer)
 	return 1;
 }
 
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no NoLock forms */
 /* csi10Transfer, for a caller that has disabled the interrupts */
 int csi10TransferNoLock(struct Csi10Transfer *transfer)
 {
@@ -96,6 +97,7 @@ int csi10TransferNoLock(struct Csi10Transfer *transfer)
 	}
 	return 1;
 }
+#endif
 
 int csi10Cancel(void)
 {
@@ -184,7 +186,9 @@ void csi10Interrupt(void)
 			if (touch.flags & TOUCH_PANEL0) {
 				P0.1 = 0;
 				touchFrames[touch.frame].time0 = TCR02;
+#if FW_SINCE(0x00090804)
 				touchFrames[touch.frame].state0 = touch.state.value;
+#endif
 				for (i = 0; i < TOUCH_DELAY_SELECT; i++)
 					NOP();
 				touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;

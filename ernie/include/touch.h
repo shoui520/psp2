@@ -30,13 +30,13 @@ struct TouchFrame {
 	unsigned char	panel[2][TOUCH_PANEL_SIZE];
 	unsigned int	time0;
 	unsigned int	time1;
-#if !FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x00090903)
 	unsigned char	state0;		/* Touch.state at panel 0's command */
 	unsigned char	state1;		/* and at panel 1's */
 #endif
 };
 
-/* Touch.state at panel p's command, in frame f */
+/* Touch.state at panel p's command, in frame f (0x00090206 keeps none) */
 #if FW_SINCE(0x00090903)
 #define TOUCH_FRAME_STATE(f, p)	touchFrames[f].panel[p][TOUCH_PANEL_STATE]
 #else
@@ -68,12 +68,14 @@ struct TouchObjects {
 	unsigned int	reset;		/* T6 (command processor): its RESET */
 	unsigned int	backup;		/* T6's BACKUPNV */
 	unsigned int	power;		/* T7 (power configuration) */
+#if FW_SINCE(0x00090804)	/* 0x00090206 keeps only the five above */
 	unsigned int	selfTest;	/* T25 */
 	unsigned int	userData;	/* T38 */
 	unsigned int	t34;
 	unsigned int	noise;		/* T22 (noise suppression) */
 	unsigned int	touchScreen;	/* T9 (multiple touch screen) */
 	unsigned int	t51;
+#endif
 #if FW_SINCE(0x00090903)
 	unsigned int	status;		/* T34's byte 0x54: read after a frame's report */
 	unsigned int	grip;		/* T20 (grip and face suppression) */
@@ -124,7 +126,9 @@ struct TouchPanel {
 					   as touchReadGripEdges last read them */
 #endif
 	struct TouchObjects objects;
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no modes */
 	struct TouchMode modes[TOUCH_MODES];
+#endif
 };
 
 /* Touch.flags: which panels a frame reads, and its end */

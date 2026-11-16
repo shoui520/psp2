@@ -55,8 +55,16 @@ void tm03Interrupt(void)
 /* P4.6 low: the scan held long */
 void intp1Interrupt(void)
 {
+#if FW_SINCE(0x00090804)
 	if (!P4.6)
 		inputScanHold(0x754);
+#else
+	/* in 0x00090206 the interrupt is turned off and the scan runs in mode 1 */
+	if (!P4.6) {
+		intp1Enable(0);
+		inputScanMode1(1);
+	}
+#endif
 }
 
 #if BOARD_INPUTS_102603
@@ -111,6 +119,22 @@ void intp7Interrupt(void)
 void intp4Interrupt(void)
 {
 }
+#elif !FW_SINCE(0x00090804)
+/* in 0x00090206 the pin monitors' interrupts are turned off at the edge, and the scan is
+   held only while it does not run in mode 1 */
+void intp4Interrupt(void)
+{
+	if (!P3.1) {
+		intp4Enable(0);
+		if (pinMonitors.pin[3].config.reload != 0) {
+			pinMonitor3Enable(1);
+			pinMonitors.pin[3].last = 0;
+			if (inputScan.mode != 1)
+				inputScanHold(0x1a);
+		} else
+			pinMonitors.pin[3].config.handler();
+	}
+}
 #else
 /* before 0x01000104 INTP4 (P3.1 falling, with no WLAN line) runs pin monitor 3, or its
    handler at once when it has no ticks */
@@ -131,9 +155,15 @@ void intp4Interrupt(void)
 void intp3Interrupt(void)
 {
 	if (!P3.0) {
+#if !FW_SINCE(0x00090804)
+		intp3Enable(0);
+#endif
 		if (pinMonitors.pin[4].config.reload != 0) {
 			pinMonitor4Enable(1);
 			pinMonitors.pin[4].last = 0;
+#if !FW_SINCE(0x00090804)
+			if (inputScan.mode != 1)
+#endif
 			inputScanHold(0x1a);
 		} else
 			pinMonitors.pin[4].config.handler();
@@ -144,9 +174,15 @@ void intp3Interrupt(void)
 void intp10Interrupt(void)
 {
 	if (!P7.6) {
+#if !FW_SINCE(0x00090804)
+		intp10Enable(0);
+#endif
 		if (pinMonitors.pin[5].config.reload != 0) {
 			pinMonitor5Enable(1);
 			pinMonitors.pin[5].last = 0;
+#if !FW_SINCE(0x00090804)
+			if (inputScan.mode != 1)
+#endif
 			inputScanHold(0x1a);
 		} else
 			pinMonitors.pin[5].config.handler();
@@ -156,7 +192,8 @@ void intp10Interrupt(void)
 /* P7.4 high: pin monitor 6 */
 void intp8Interrupt(void)
 {
-#if !BOARD_INPUTS_102603
+	/* nothing in 0x00090206 */
+#if !BOARD_INPUTS_102603 && FW_SINCE(0x00090804)
 	if (P7.4) {
 		if (pinMonitors.pin[6].config.reload != 0) {
 			pinMonitor6Enable(1);
@@ -183,15 +220,25 @@ void tm04Interrupt(void)
 {
 	TT0L = 0x10;
 	if (inputKeys.state & 0x000c)
+#if FW_SINCE(0x00090804)
 		touchStartFrameNoLock();
+#else
+		touchStartFrame();
+#endif
 }
 
 /* P11.5 low: bit 0 of input group 1 taken as changed, and the scan held long */
 void sre0Interrupt(void)
 {
 	if (!P11.5) {
+#if FW_SINCE(0x00090804)
 		inputGroup1.prev &= ~0x01;
 		inputScanHold(0x754);
+#else
+		intp13Enable(0);
+		inputGroup1.prev &= ~0x01;
+		inputScanMode1(1);
+#endif
 	}
 }
 

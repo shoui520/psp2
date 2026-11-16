@@ -57,8 +57,17 @@ void touchClearPanels(void)
 	touch.panel[0].gripEdges[0] = 0;
 	touch.panel[0].gripEdges[1] = 0;
 #endif
+#if FW_SINCE(0x00090804)
 	memset(&touch.panel[0].objects, 0, sizeof(touch.panel[0].objects));
 	memset(touch.panel[0].modes, 0, sizeof(touch.panel[0].modes));
+#else
+	/* 0x00090206 clears its five objects one by one */
+	touch.panel[0].objects.report = 0;
+	touch.panel[0].objects.numTouch = 0;
+	touch.panel[0].objects.reset = 0;
+	touch.panel[0].objects.backup = 0;
+	touch.panel[0].objects.power = 0;
+#endif
 	touch.panel[1].family = 0;
 	touch.panel[1].variant = 0;
 	touch.panel[1].version = 0;
@@ -70,9 +79,20 @@ void touchClearPanels(void)
 	touch.panel[1].gripEdges[0] = 0;
 	touch.panel[1].gripEdges[1] = 0;
 #endif
+#if FW_SINCE(0x00090804)
 	memset(&touch.panel[1].objects, 0, sizeof(touch.panel[1].objects));
 	memset(touch.panel[1].modes, 0, sizeof(touch.panel[1].modes));
+#else
+	/* 0x00090206 clears its five objects one by one */
+	touch.panel[1].objects.report = 0;
+	touch.panel[1].objects.numTouch = 0;
+	touch.panel[1].objects.reset = 0;
+	touch.panel[1].objects.backup = 0;
+	touch.panel[1].objects.power = 0;
+#endif
+#if FW_SINCE(0x00090804)
 	touch.state.value = 0;
+#endif
 }
 
 /* opens the link, with no panel enabled */
@@ -88,7 +108,9 @@ void touchOpen(void)
 	touch.rate = 0;
 	memset(&touch.panel[0], 0, 4);
 	memset(&touch.panel[1], 0, 4);
+#if FW_SINCE(0x00090804)
 	touch.state.value = 0;
+#endif
 	touchBuffer.frame = 0;
 	touchBuffer.end = 0;
 	touchBuffer.data = touchBufferData;
@@ -170,10 +192,14 @@ void touchStartFrame(void)
 		touch.frame = next;
 		if (touch.flags & TOUCH_PANEL1) {
 			touchFrames[touch.frame].time1 = TCR02;
+#if FW_SINCE(0x00090804)
 			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
+#endif
 		} else if (touch.flags & TOUCH_PANEL0) {
 			touchFrames[touch.frame].time0 = TCR02;
+#if FW_SINCE(0x00090804)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
+#endif
 		}
 		touchDelaySelect();
 		transfer.receive = (unsigned char *)&touchReply;
@@ -184,6 +210,7 @@ void touchStartFrame(void)
 	}
 }
 
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no NoLock forms */
 /* touchStartFrame, for a caller that has disabled the interrupts */
 void touchStartFrameNoLock(void)
 {
@@ -211,10 +238,14 @@ void touchStartFrameNoLock(void)
 		touch.frame = next;
 		if (touch.flags & TOUCH_PANEL1) {
 			touchFrames[touch.frame].time1 = TCR02;
+#if FW_SINCE(0x00090804)
 			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
+#endif
 		} else if (touch.flags & TOUCH_PANEL0) {
 			touchFrames[touch.frame].time0 = TCR02;
+#if FW_SINCE(0x00090804)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
+#endif
 		}
 		touchDelaySelect();
 		transfer.receive = (unsigned char *)&touchReply;
@@ -224,6 +255,7 @@ void touchStartFrameNoLock(void)
 		csi10TransferNoLock(&transfer);
 	}
 }
+#endif
 
 /* enables panel 0 when it is present (inputKeys.state's bit 0x0004) */
 void touchEnable0(void)
@@ -668,6 +700,7 @@ unsigned char touchSetPower1(unsigned char interval)
 	return touchWriteVerified(touch.panel[1].objects.power, data, 2, 1);
 }
 
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
    changed (before 0x01000109 task3 reads them after touchIdentify) */
 /* PDEL's 0x01000104 and 0x01000107 read the modes of a changed configuration before it keeps the version */
@@ -836,6 +869,7 @@ unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
 		*pass = 0xff;
 	return result;
 }
+#endif
 
 /* after a chip select */
 void touchDelaySelect(void)
@@ -869,19 +903,23 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 				break;
 			case 9:
 				objects->numTouch = TOUCH_OBJECT_ADDRESS(table[i]) + 0x0e;
+#if FW_SINCE(0x00090804)
 				objects->touchScreen = TOUCH_OBJECT_ADDRESS(table[i]);
+#endif
 				break;
 #if FW_SINCE(0x00090903)
 			case 20:
 				objects->grip = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
 #endif
+#if FW_SINCE(0x00090804)
 			case 22:
 				objects->noise = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
 			case 25:
 				objects->selfTest = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#endif
 #if FW_SINCE(0x01000109)
 			case 28:
 				objects->cte = TOUCH_OBJECT_ADDRESS(table[i]);
@@ -896,19 +934,24 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 #else
 				objects->report *= 2;
 #endif
+#if FW_SINCE(0x00090804)
 				objects->t34 = TOUCH_OBJECT_ADDRESS(table[i]);
+#endif
 				break;
+#if FW_SINCE(0x00090804)
 			case 38:
 				objects->userData = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
 			case 51:
 				objects->t51 = TOUCH_OBJECT_ADDRESS(table[i]);
 				break;
+#endif
 			}
 		}
 	}
 }
 
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
 /* writes mode's settings to both controllers */
 void touchSetMode(unsigned char mode)
 {
@@ -1119,6 +1162,7 @@ void touchUpdateState(void)
 #endif
 	}
 }
+#endif
 
 #if FW_SINCE(0x00090903)
 /* enables panel 0's grip status (T20), which each frame then reads */

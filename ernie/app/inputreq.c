@@ -804,7 +804,7 @@ void touchStream0301Prepare(void)
 	age = touchFrames[block].time0 - age;
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
-#if !FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x00090903)
 	touchFrames[block].panel[0][TOUCH_PANEL_STATE] = touchFrames[block].state0;
 #endif
 }
@@ -821,7 +821,7 @@ void touchStream0302Prepare(void)
 	age = touchFrames[block].time1 - age;
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
-#if !FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x00090903)
 	touchFrames[block].panel[1][TOUCH_PANEL_STATE] = touchFrames[block].state1;
 #endif
 }
@@ -839,13 +839,13 @@ void touchStream0300Prepare(void)
 	age = touchFrames[block].time0 - now;
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[0][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
-#if !FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x00090903)
 	touchFrames[block].panel[0][TOUCH_PANEL_STATE] = touchFrames[block].state0;
 #endif
 	age = touchFrames[block].time1 - now;
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE] = (unsigned char)(age & 0xff);
 	touchFrames[block].panel[1][TOUCH_PANEL_AGE + 1] = (unsigned char)(age >> 8);
-#if !FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x00090903)
 	touchFrames[block].panel[1][TOUCH_PANEL_STATE] = touchFrames[block].state1;
 #endif
 }

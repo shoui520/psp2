@@ -28,7 +28,9 @@ struct Timer {
    so the timers from 0x0c up are two later (TIMER()), the RTC's from 0x15 one later, and there
    are no 0x1e and 0x1f. Since 0x0100060B power bits 0 and 3 have no timer, so the timers from
    0x0c up are two earlier (TIMER(), POWER_TIMER()), and two new ones (0x15, power bit 14, and
-   0x16) put the RTC's at 0x17-0x21 */
+   0x16) put the RTC's at 0x17-0x21.
+   0x00090206 counts the clock from timer 0x13 (TIMER(0x11)) on, and has no power LED
+   timer 0x1c: its RTC timers 0x14-0x1b are 0x13-0x1a, each one below its number */
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #define TIMER_RTC_FIRST		0x17
 #define TIMER_RTC(id)		((id) + 2)
@@ -38,9 +40,12 @@ struct Timer {
 #elif FW_SINCE(0x01000104)
 #define TIMER_RTC_FIRST		0x14
 #define TIMER_RTC(id)		((id) - 1)
-#else
+#elif FW_SINCE(0x00090804)
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		((id) + 1)
+#else
+#define TIMER_RTC_FIRST		0x13
+#define TIMER_RTC(id)		((id) - 1)
 #endif
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #define TIMER(id)		((id) - 2)
@@ -55,8 +60,11 @@ struct Timer {
 #define TIMER_COUNT		(TIMER_RTC(0x1f) + 1)
 #elif FW_SINCE(0x00090903)
 #define TIMER_COUNT		0x1f
-#else
+#elif FW_SINCE(0x00090804)
 #define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
+#else
+#define TIMER_COUNT		0x1b	/* 0x00090206: no power timers 9 and 10 (TIMER()), and
+					   the RTC's end at 0x1c (TIMER_RTC()) */
 #endif
 
 extern __near struct Timer timers[TIMER_COUNT];

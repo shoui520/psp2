@@ -105,6 +105,23 @@ extern unsigned char button2HoldReached(unsigned char ticks);
 extern void button2HoldReset(void);
 #endif
 extern void inputScanHold(unsigned int ticks);
+/* the scan timer: mode 1 runs timer 3, mode 2 timer 0x16, every interval; hold ticks of
+   timer 3 first (inputScanHold) */
+struct InputScan {
+	unsigned char	mode;
+	unsigned int	interval;
+	unsigned int	hold;
+};
+
+#if !FW_SINCE(0x00090804)
+extern struct InputScan inputScan;
+extern void inputScanMode1(unsigned int interval);
+extern void intp1Enable(unsigned char enable);
+extern void intp13Enable(unsigned char enable);
+extern void intp4Enable(unsigned char enable);
+extern void intp3Enable(unsigned char enable);
+extern void intp10Enable(unsigned char enable);
+#endif
 extern unsigned char input3Bit0High(void);
 #if !FW_SINCE(0x01000104) || BOARD_INPUTS_102603
 extern void pinMonitor3Enable(unsigned char enable);
