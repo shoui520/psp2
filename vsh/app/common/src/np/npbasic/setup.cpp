@@ -17,6 +17,12 @@
 #define NP_BASIC_ERROR_BUSY_SENDER		NP_BASIC_ERROR_BUSY
 #define NP_BASIC_ERROR_NOT_READY_TO_COMMUNICATE	-2141905654	/* 0x80551d0a */
 #define NP_BASIC_ERROR_NO_JOIN_GAME_ACK_HANDLER	-2141905646	/* 0x80551d12 */
+/* the SDK version this firmware's library carries (what a handler struct with none is given) */
+#if FW_SINCE(0x03650000)
+#define NP_BASIC_SDK_VERSION_DEFAULT	0x3650011
+#else
+#define NP_BASIC_SDK_VERSION_DEFAULT	0x3630011
+#endif
 #define NP_BASIC_SDK_VERSION_1_50		0x1500000
 #define NP_BASIC_SDK_VERSION_1_60		0x1600000
 #define NP_BASIC_SDK_VERSION_2_00		0x2000000
@@ -31,6 +37,18 @@ static NpBasicSender *npBasicSenderInit(NpBasicSender *sender, int interval)
 	sender->interval = interval;
 	return sender;
 }
+
+/* two functions of the state's class that nothing calls; both give 9 */
+int npBasicStateGetConstantA(void)
+{
+	return 9;
+}
+
+int npBasicStateGetConstantB(void)
+{
+	return 9;
+}
+
 
 NpBasicState::NpBasicState()
 {
@@ -957,7 +975,7 @@ int sceNpBasicRegisterInGameDataMessageHandler(
 	NpBasicHandlerFlags flags;
 	sceClibMemset(flags.flags, 0, sizeof(flags.flags));
 	sceClibMemset(&handlers, 0, sizeof(handlers));
-	handlers.sdkVersion = 0x3650011;
+	handlers.sdkVersion = NP_BASIC_SDK_VERSION_DEFAULT;
 	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
 	if (handler == NULL)
@@ -1079,7 +1097,7 @@ static int npBasicSenderThread(SceSize argSize, void *argp)
 									npBasicRequest_9000D(client, &partyCopy);
 								}
 								sceClibMemset(&sender->presence, 0, sizeof(sender->presence));
-								sender->presence.sdkVersion = 0x3650011;
+								sender->presence.sdkVersion = NP_BASIC_SDK_VERSION_DEFAULT;
 								sender->presence.type = SCE_NP_BASIC_IN_GAME_PRESENCE_TYPE_DEFAULT;
 								sceClibMemset(&sender->partyPresence, 0, sizeof(sender->partyPresence));
 								sender->partyPresence.version = 1;
