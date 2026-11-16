@@ -199,3 +199,20 @@ int npCommerce2StartShellSlot_8101884A(int slotId, void *request)
 {
 	return npCommerce2StartShellSlot(slotId, request);
 }
+
+/* the calls of a function the library may not be linked with: 9 when it is missing */
+extern int npCommerce2WeakCall(int a, int b, int c, int flag) __attribute__((weak));
+
+int npCommerce2WeakCall_8101EC24(int a, int b, int c)
+{
+	if (npCommerce2WeakCall != 0)
+		return npCommerce2WeakCall(a, b, c, 0);
+	return 9;
+}
+
+int npCommerce2WeakCall_8101EC42(int a, int b, int c)
+{
+	if (npCommerce2WeakCall != 0)
+		return npCommerce2WeakCall(a, b, c, 1);
+	return 9;
+}
