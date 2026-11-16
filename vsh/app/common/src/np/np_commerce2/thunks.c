@@ -84,3 +84,18 @@ int npCommerce2ReadRecord0x30_8101690C(int a1, int a2)
 {
 	return npCommerce2ReadRecord0x30((const NpCommerce2Item *)a1, (NpCommerce2Record0x30 *)a2);
 }
+
+int npCommerce2ReadCountedText0x37_81011D84(int a1, int a2, int a3)
+{
+	return npCommerce2ReadCountedText0x37((const NpCommerce2Item *)a1, a2, (NpCommerce2CountedText *)a3);
+}
+
+int npCommerce2ReadCountedText0x37_81014A92(int a1, int a2, int a3)
+{
+	return npCommerce2ReadCountedText0x37((const NpCommerce2Item *)a1, a2, (NpCommerce2CountedText *)a3);
+}
+
+int npCommerce2ReadCountedText0x37_810168FC(int a1, int a2, int a3)
+{
+	return npCommerce2ReadCountedText0x37((const NpCommerce2Item *)a1, a2, (NpCommerce2CountedText *)a3);
+}

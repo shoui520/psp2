@@ -709,3 +709,82 @@ int npCommerce2ReadRecord0x30(const NpCommerce2Item *result, NpCommerce2Record0x
 	}
 	return ret;
 }
+
+/* the record of tag 0x37 at an index, found where the result's records start: its text and the count of
+ * records of tag 0x3b */
+int npCommerce2ReadCountedText0x37(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2CountedText *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt16 found;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x37, 0x49, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x68);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->recordId = record;
+		rest = record + 65;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->text = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 65, 0x36, 0, &found);
+		if (ret >= 0 && found != 0)
+			item->text = rest + ret;
+		if (ret >= 0)
+			ret = npCommerce2FindNestedRecordWhole(rest, length - 65, 0x3B, NULL, &item->count);
+	}
+	return ret;
+}
+
+/* the record of tag 0x3b at an index: its text */
+int npCommerce2ReadTextItem0x3b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 found;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x3B, 0x45, index,
+					   &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->textA = record;
+		rest = record + 65;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->textB = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 65, 0x3A, 0, &found);
+		if (ret >= 0 && found != 0)
+			item->textB = rest + ret;
+	}
+	return ret;
+}

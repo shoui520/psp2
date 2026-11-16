@@ -1225,7 +1225,7 @@ int SceNpCommerce2_B70BF176(int a1, void *a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a2 != NULL && a3 != 0)
-		return npCommerce2_81011C2C(a1, a2, a3);
+		return npCommerce2InitResult0x37((NpCommerce2Item *)a1, (const char *)a2, a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1234,7 +1234,7 @@ int SceNpCommerce2_C3B1179E(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_81011D84(a1, a2, a3);
+		return npCommerce2ReadCountedText0x37_81011D84(a1, a2, a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1243,7 +1243,7 @@ int SceNpCommerce2_F682B145(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_81011D8C(a1, a2, a3);
+		return npCommerce2ReadTextItem0x3b((const NpCommerce2Item *)a1, a2, (NpCommerce2TextItem2 *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1275,7 +1275,7 @@ int SceNpCommerce2_62BBC725(int a1, void *a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a2 != NULL && a3 != 0)
-		return npCommerce2_81011E42(a1, a2, a3);
+		return npCommerce2InitResult0x39((NpCommerce2Item *)a1, (const char *)a2, a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2501,7 +2501,7 @@ int SceNpCommerce2_17DF6D62(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_81014A92(a1, a2, a3);
+		return npCommerce2ReadCountedText0x37_81014A92(a1, a2, a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3459,7 +3459,7 @@ int SceNpCommerce2_0FA01B8E(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810168FC(a1, a2, a3);
+		return npCommerce2ReadCountedText0x37_810168FC(a1, a2, a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
