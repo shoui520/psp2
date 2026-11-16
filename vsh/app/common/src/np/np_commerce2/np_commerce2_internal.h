@@ -541,6 +541,71 @@ extern int npCommerce2ReadExtra0x4a(const SceNpCommerce2CommonData *detail, SceU
 				    SceUInt32 *extraA, SceUInt32 *extraB, SceUInt32 *extraC);
 extern int npCommerce2ReadDetail0x4b(SceUInt32 version, const SceUChar8 *bufHead, const char *data,
 				     SceSize size, const char *records, NpCommerce2Detail *detail);
+/* where the SKU record reader stores what it reads: a table of pointers into the caller's item;
+ * an optional value has no pointer (NULL) when the caller does not want it */
+typedef struct NpCommerce2SkuOutputs {
+	const SceUChar8 *head;
+	SceUInt32 mask;
+	SceUInt32 *flags;
+	const char **skuId;
+	SceUInt32 *skuType;
+	SceUInt32 *count;
+	SceUInt32 *time;
+	SceUInt32 *purchasability;
+	SceUInt32 *annotation;
+	SceUInt32 *downloadable;
+	SceUInt32 *price;
+	SceUInt32 *valueA;
+	SceUInt32 *valueB;
+	SceUInt32 *valueC;
+	SceUInt32 *valueD;
+	SceUInt32 *valueE;
+	SceUInt64 *dateA;
+	SceUInt64 *dateB;
+	SceUInt64 *dateC;
+	SceUInt64 *dateD;
+	SceUInt64 *dateE;
+	SceUInt32 *valueF;
+	SceUInt64 *valueG;
+} NpCommerce2SkuOutputs;
+
+/* a SKU of a response */
+typedef struct NpCommerce2SkuItem {
+	SceNpCommerce2CommonData commonData;
+	const char *skuId;
+	SceUInt32 skuType;
+	SceUInt32 count;
+	SceUInt32 time;
+	SceUInt32 purchasability;
+	SceUInt32 annotation;
+	SceUInt32 downloadable;
+	SceUInt32 price;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 padding;
+	SceUInt64 dateC;
+	SceUInt64 dateD;
+	SceUInt64 dateE;
+	SceUInt32 valueF;
+	SceUInt32 padding2;
+	SceUInt64 valueG;
+	SceUInt32 valueE;
+	SceUInt32 padding3;
+	SceUInt64 dateA;
+	SceUInt64 dateB;
+	const char *text;
+	SceUInt32 countOfRewards;
+	SceUInt32 countOfEntitlements;
+	SceUInt32 flags;
+	const char *description;
+	SceUInt32 padding4;
+} NpCommerce2SkuItem;
+
+extern int npCommerce2ReadSkuValues(const char *buf, const NpCommerce2SkuOutputs *out, int detail, int unused);
+extern int npCommerce2ReadSkuRecord(const char *buf, const NpCommerce2SkuOutputs *out);
+extern int npCommerce2ReadSkuItem(const NpCommerce2Item *result, NpCommerce2SkuItem *item, int kind);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -594,7 +659,6 @@ extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result,
 extern int npCommerce2GetEnvironment(void);
 extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
 				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
-extern int npCommerce2_8100ED8C(int a1, void *a2, int a3);
 extern int npCommerce2_8101059C(int a1, int a2, int a3);
 extern int npCommerce2_810102FC(int a1, int a2, int a3);
 extern int npCommerce2_81010620(int a1, int a2, int a3);
