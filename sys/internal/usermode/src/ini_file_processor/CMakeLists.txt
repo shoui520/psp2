@@ -1,4 +1,9 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_ini_file_processor KIND user SKELETON SOURCES
-	ini_file_processor.c
+enable_language(CXX)
+# SceIniFileProcessor (vs0:sys/external/ini_file_processor.suprx), built by Sony with SNC 3.57 in C++. No debug
+# record names its files; they are split where its parts are (ours).
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+	memory.cpp
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
+	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
