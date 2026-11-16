@@ -505,11 +505,17 @@ typedef struct NpBasicHandlerFlags {
 
 	NpBasicHandlerFlags()
 	{
+		unsigned char *first;
+		unsigned char *second;
 		int i;
 
+		first = flags;
+		second = flags;
 		for (i = 0; i < 7; i++) {
-			flags[2 * i] = 0;
-			flags[2 * i + 1] = 0;
+			first[0] = 0;
+			second[1] = 0;
+			second += 2;
+			first += 2;
 		}
 	}
 } NpBasicHandlerFlags;
@@ -579,7 +585,6 @@ static inline int npBasicCreateMemBlockAndMspace(void)
 static inline int npBasicCreateMemBlockAndMspaceInternal(int mode) __attribute__((always_inline));
 static inline int npBasicCreateMemBlockAndMspaceInternal(int mode)
 {
-	SceKernelMemBlockType type;
 	void *base;
 	int result;
 
@@ -587,10 +592,9 @@ static inline int npBasicCreateMemBlockAndMspaceInternal(int mode)
 	if (g_state.memBlock != 0)
 		NP_BASIC_SETUP_ASSERT_FAILED(652, "create_mem_block_and_mspace_internal");
 	if (mode == 1)
-		type = (SceKernelMemBlockType)0xE20D060;
+		result = sceKernelAllocMemBlock("SceNpBasicMemBlock", (SceKernelMemBlockType)0xE20D060, 0x1000, NULL);
 	else
-		type = (SceKernelMemBlockType)0xC20D060;
-	result = sceKernelAllocMemBlock("SceNpBasicMemBlock", type, 0x1000, NULL);
+		result = sceKernelAllocMemBlock("SceNpBasicMemBlock", (SceKernelMemBlockType)0xC20D060, 0x1000, NULL);
 	if (result >= 0) {
 		g_state.memBlock = result;
 		result = sceKernelGetMemBlockBase(result, &base);
@@ -728,10 +732,10 @@ int sceNpBasicTerm(void)
 int sceNpBasicRegisterHandler(const NpBasicEventHandlers *handlers, const SceNpCommunicationId *commId, void *arg)
 {
 	const SceNpCommunicationId *src[3];
-	NpBasicHandlerFlags flags;
 	int result;
 
 	sceClibMemset(src, 0, sizeof(src));
+	NpBasicHandlerFlags flags;
 	sceClibMemset(flags.flags, 0, sizeof(flags.flags));
 	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -898,8 +902,6 @@ int SceNpBasic_999CC1E9(const int *mode)
 	if (g_state.initialized != 0) {
 		result = NP_BASIC_ERROR_ALREADY_INITIALIZED;
 	} else {
-		config.msgQueue[0].msgSize = 256;
-		config.msgQueue[0].msgCount = 8;
 		npBasicStateReset(&g_state);
 		first = *mode;
 		sceClibStrncpy(config.name, "SceNpImpsUtil", sizeof(config.name));
@@ -948,11 +950,11 @@ int sceNpBasicRegisterInGameDataMessageHandler(
 	void (*handler)(const void *message, const void *data, void *arg), const SceNpCommunicationId *commId, void *arg)
 {
 	const SceNpCommunicationId *src[3];
-	NpBasicHandlerFlags flags;
 	NpBasicEventHandlers handlers;
 	int result;
 
 	sceClibMemset(src, 0, sizeof(src));
+	NpBasicHandlerFlags flags;
 	sceClibMemset(flags.flags, 0, sizeof(flags.flags));
 	sceClibMemset(&handlers, 0, sizeof(handlers));
 	handlers.sdkVersion = 0x3650011;
