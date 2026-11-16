@@ -1407,6 +1407,10 @@ typedef struct NpCommerce2BigRow {
 } NpCommerce2BigRow;
 
 extern int npCommerce2ReadTableRowBig0x2b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2BigRow *item);
+extern int npCommerce2SetHeaderLocale(char *header, SceSize size, const char *currencyCode, const char *countryCode);
+extern int npCommerce2SetHeaderStatus(char *header, SceSize size, SceUInt32 dataLength, SceUInt32 status);
+extern int npCommerce2StoreResponse(NpCommerce2Context *ctx, NpCommerce2Request *req, void *buf, SceSize bufSize,
+				    SceSize length);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
