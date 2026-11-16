@@ -1222,6 +1222,34 @@ typedef struct NpCommerce2DatedPair {
 
 extern int npCommerce2ReadDatedItem0x70(const NpCommerce2Item *result, NpCommerce2DatedItem *item);
 extern int npCommerce2ReadDatedPair0x6f(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatedPair *item);
+typedef struct NpCommerce2NegatedItem {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	SceUInt64 valueA;
+	SceUInt64 valueB;
+	SceUInt32 negatedA;
+	SceUInt32 negatedB;
+	SceUInt32 negatedC;
+	const char *textA;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	const char *textB;
+	const char *textC;
+	const char *textD;
+	SceUInt32 padding;
+} NpCommerce2NegatedItem;
+
+typedef struct NpCommerce2TextValuesItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 valueA;
+	const char *text;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+} NpCommerce2TextValuesItem;
+
+extern int npCommerce2ReadNegatedItem0x6d(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2NegatedItem *item);
+extern int npCommerce2ReadTextValuesItem(const NpCommerce2Item *result, NpCommerce2TextValuesItem *item, int kind);
+extern int npCommerce2InitTableResult0x71(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1353,11 +1381,8 @@ extern int npCommerce2_810096BA(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqRemPay(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetTranHist(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetTranDetail(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81015606(int a1, int a2, int a3);
-extern int npCommerce2_81015818(int a1, int a2, int a3);
 extern int npCommerce2_810097E0(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2CreateReqGetSrvs(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8101591C(int a1, void *a2, int a3);
 extern int npCommerce2_810159E8(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetSrvDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81015BCE(int a1, void *a2, int a3);
