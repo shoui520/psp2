@@ -2,7 +2,6 @@
  * allocator.cpp: the allocator of the library's ops, file and directory handles and chunks
  * (fios2_internal.h). Sony's file name; the method names but AtomicToggleBits are ours.
  */
-#include <algorithm>
 #include <sce_atomic.h>
 #include "fios2_internal.h"
 
@@ -143,8 +142,8 @@ bool Allocator::AtomicToggleBits(uint32_t index, uint32_t count, int set)
 	uint32_t word;
 
 	for (word = index & ~63; word < end; word += 64) {
-		uint32_t firstBit = std::max(word, std::min(word + 63, index)) & 63;
-		uint32_t lastBit = std::max(word, std::min(end - 1, word + 63)) & 63;
+		uint32_t firstBit = fiosMax(word, fiosMin(word + 63, index)) & 63;
+		uint32_t lastBit = fiosMax(word, fiosMin(end - 1, word + 63)) & 63;
 		volatile uint64_t *pWord = (volatile uint64_t *)(m_pBitmap + word / 8);
 		uint64_t old, desired;
 

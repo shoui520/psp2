@@ -26,6 +26,20 @@
 #include "wws_platform.h"
 
 /*
+ * min and max as <algorithm>'s, by reference. Sony's allocator, api and zlib_codec do not
+ * include <algorithm>: its empty static initializer is only in chunk.cpp (0x8100d3ba).
+ */
+template <class T> inline const T &fiosMin(const T &a, const T &b)
+{
+	return b < a ? b : a;
+}
+
+template <class T> inline const T &fiosMax(const T &a, const T &b)
+{
+	return a < b ? b : a;
+}
+
+/*
  * The library's own string and memory routines (0x81017930..): it defines sceClibMemcpy,
  * sceClibMemset, sceClibMemcmp, sceClibStrcmp and the others itself (kernel/libkernel.h's
  * prototypes) rather than importing SceLibKernel's, and the SDK's deflate.o, which calls

@@ -321,7 +321,8 @@ SceFiosSize sceFiosFileReadSync(const SceFiosOpAttr *pAttr, const char *pPath, v
 	SceFiosSize result;
 	int err;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFileReadSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFileReadSync",
+		   pBuf, length);
 	if (g_FiosParams.initialized) {
 		SceFiosOpAttr attr;
 
@@ -491,7 +492,8 @@ SceFiosSize sceFiosFHReadSync(const SceFiosOpAttr *pAttr, SceFiosFH fh, void *pB
 {
 	SceFiosSize result;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFHReadSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFHReadSync",
+		   pBuf, length);
 	if (length < 0)
 		return SCE_FIOS_ERROR_BAD_SIZE;
 	if (isDirectFH(fh)) {
@@ -514,7 +516,8 @@ SceFiosSize sceFiosFHWriteSync(const SceFiosOpAttr *pAttr, SceFiosFH fh, const v
 {
 	SceFiosSize result;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFHWriteSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFHWriteSync",
+		   pBuf, length);
 	if (length < 0)
 		return SCE_FIOS_ERROR_BAD_SIZE;
 	if (isDirectFH(fh)) {
@@ -596,7 +599,8 @@ SceFiosSize sceFiosFHPreadSync(const SceFiosOpAttr *pAttr, SceFiosFH fh, void *p
 {
 	SceFiosSize result;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFHPreadSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFHPreadSync",
+		   pBuf, length);
 	if (length < 0)
 		return SCE_FIOS_ERROR_BAD_SIZE;
 	if (isDirectFH(fh)) {
@@ -619,7 +623,8 @@ SceFiosSize sceFiosFHPwriteSync(const SceFiosOpAttr *pAttr, SceFiosFH fh, const 
 {
 	SceFiosSize result;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFHPwriteSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFHPwriteSync",
+		   pBuf, length);
 	if (length < 0)
 		return SCE_FIOS_ERROR_BAD_SIZE;
 	if (isDirectFH(fh)) {

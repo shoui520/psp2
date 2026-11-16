@@ -4,7 +4,6 @@
  * inflating with libSceDeflt and, where the caller asked for a window of the output in
  * another buffer, copying that window out.
  */
-#include <algorithm>
 #include <libdeflt.h>
 #include "fios2_internal.h"
 
@@ -188,9 +187,9 @@ static void zlibThread(uintptr_t index)
 				job->size = job->result;
 				job->result = 0;
 				if (job->pCopyDst != NULL && job->pDst != job->pCopyDst) {
-					start = std::min(job->copyOffset, job->size);
+					start = fiosMin(job->copyOffset, job->size);
 					end = job->copyOffset + job->copyLength;
-					end = std::min(end, job->size);
+					end = fiosMin(end, job->size);
 					sceClibMemcpy(job->pCopyDst, (uint8_t *)job->pDst + start, end - start);
 				}
 			}

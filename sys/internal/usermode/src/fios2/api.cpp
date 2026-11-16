@@ -4,7 +4,6 @@
  * to the scheduler.
  */
 #include <alloca.h>
-#include <algorithm>
 #include <sce_atomic.h>
 #include "fios2_internal.h"
 
@@ -1008,7 +1007,7 @@ SceFiosOp sceFiosFileRead(const SceFiosOpAttr *pAttr, const char *pPath, void *p
 	pOp->bufferCount = 1;
 	pOp->buffers[0].pPtr = pBuf;
 	pOp->offset = offset;
-	pOp->buffers[0].length = std::max<SceFiosSize>(std::min<SceFiosSize>(length, 0xFFFFFFFF), 0);
+	pOp->buffers[0].length = fiosMax<SceFiosSize>(fiosMin<SceFiosSize>(length, 0xFFFFFFFF), 0);
 	return submitPathIO(pOp, pPath, SCE_FIOS_O_READ, false);
 }
 
@@ -1030,7 +1029,7 @@ SceFiosOp sceFiosFileWrite(const SceFiosOpAttr *pAttr, const char *pPath, const 
 	pOp->buffers[0].pPtr = (void *)pBuf;
 	pOp->bufferCount = 1;
 	pOp->offset = offset;
-	pOp->buffers[0].length = std::max<SceFiosSize>(std::min<SceFiosSize>(length, 0xFFFFFFFF), 0);
+	pOp->buffers[0].length = fiosMax<SceFiosSize>(fiosMin<SceFiosSize>(length, 0xFFFFFFFF), 0);
 	return submitPathIO(pOp, pPath, SCE_FIOS_O_WRITE | SCE_FIOS_O_CREAT, true);
 }
 

@@ -4,6 +4,7 @@
  * quotes are the ones the profiling messages give ("Allocate", "Link", "Defer", ...); the
  * rest are ours.
  */
+#include <algorithm>
 #include <sce_atomic.h>
 #include "fios2_internal.h"
 
