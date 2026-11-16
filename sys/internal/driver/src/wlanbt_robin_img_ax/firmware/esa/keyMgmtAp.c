@@ -445,7 +445,7 @@ void sendEventRsnConnect(struct WlanConnection *connPtr, apKeyMgmtInfoSta_t *pKe
 	uint8_t *tlv;
 	uint16_t length;
 
-	if (wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, WLAN_HOST_EVENT_RSN_CONNECT) != 0) {
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&frame, 400, WLAN_HOST_EVENT_RSN_CONNECT) != 0) {
 		info = wlanConnectionInfo(connPtr);
 		ie = (uint8_t *)frame + 26;
 		tlv = (uint8_t *)frame + 24;

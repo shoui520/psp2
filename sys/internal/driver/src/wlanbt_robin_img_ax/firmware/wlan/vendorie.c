@@ -36,7 +36,7 @@ void macMgmtTrackTable(struct WlanConnection *connection, unsigned int classes)
 	WlanTxDescriptor *descriptor;
 	uint8_t *data;
 
-	if (wlanTxAllocFrame(&buffer, &descriptor, 0x64, 77) == 0)
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&descriptor, 0x64, 77) == 0)
 		return;
 	data = (uint8_t *)descriptor;
 	__aeabi_memcpy(data + 16, &classes, 4);

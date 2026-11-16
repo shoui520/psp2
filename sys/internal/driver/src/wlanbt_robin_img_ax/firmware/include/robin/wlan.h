@@ -19,6 +19,15 @@ typedef struct WlanEthernetSnapFrame {
 	WlanSnapHeader snap;
 } WlanEthernetSnapFrame;
 
+/*
+ * A frame's sequence control field as the firmware writes it in place: packed bit-fields, read
+ * and written a byte at a time (WlanWirelessFrame.sequenceControl).
+ */
+typedef struct __attribute__((packed)) WlanFrameSequence {
+	uint16_t fragment : 4;
+	uint16_t number : 12;
+} WlanFrameSequence;
+
 /* Firmware's fixed four-address MAC header, preceded by the body length. */
 typedef struct WlanWirelessFrame {
 	uint8_t bodyLength[2];

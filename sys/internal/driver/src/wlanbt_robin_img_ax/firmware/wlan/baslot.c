@@ -181,16 +181,16 @@ void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, uint16_t sequence,
 }
 
 /* Sets the window's starting sequence number in a transmit slot and the entry that follows it. */
-void wlanBaSlotSetSequence(int slot, uint16_t sequence)
+void wlanBaSlotSetSequence(int slot, WlanSequenceControl sequence)
 {
 	volatile struct MacBaSlot *regs = MAC_BA_SLOT(slot);
-	uint32_t info;
+	WlanSequenceControl info = sequence;
 
-	regs->sequence = sequence;
-	info = (sequence & 0xf) | (((sequence >> 4) - 1) << 4);
-	info = (info & ~0xfu) | 0;
-	regs->sequenceInfo = (uint16_t)info;
-	romMacEntryWrite(2 * slot + BA_ENTRY_TX_SEQUENCE, sequence, 0);
+	regs->sequence = sequence.value;
+	info.number = info.number - 1;
+	info.fragment = 0;
+	regs->sequenceInfo = info.value;
+	romMacEntryWrite(2 * slot + BA_ENTRY_TX_SEQUENCE, sequence.value, 0);
 }
 
 /* Programs a transmit slot for a session (window is the hardware window it belongs to). */
@@ -208,7 +208,7 @@ int wlanBaSlotSetup(const struct WlanBaRequest *request, unsigned int window, un
 	sequence = request->startSequence[0] | (request->startSequence[1] << 8);
 	wlanBaEntryRecord((uint8_t)__aeabi_uread4(request->tid), request->peer, sequence, 0, slot);
 	sequence = request->startSequence[0] | (request->startSequence[1] << 8);
-	wlanBaSlotSetSequence(slot, sequence);
+	wlanBaSlotSetSequence(slot, (WlanSequenceControl){ .value = sequence });
 	regs->timeout = __aeabi_uread4(request->timeout) - 1;
 	regs->windowSize = __aeabi_uread4(request->windowSize) - 1;
 	regs->buffer = wlanTxRingOps.bufferAddress();

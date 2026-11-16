@@ -284,7 +284,7 @@ static int chanRptSendEvent(int status, OsaBuffer *buffer)
 	uint8_t *data, *tlv;
 	unsigned int length;
 
-	if (wlanTxAllocFrame(&event, (WlanTxDescriptor **)&frame, CHAN_RPT_EVENT_SIZE,
+	if (wlanTxAllocFrame(&event, (struct WlanHostEventFrame **)&frame, CHAN_RPT_EVENT_SIZE,
 			     EVENT_CHANNEL_REPORT_RDY) == 0)
 		return 0;
 	data = (uint8_t *)&frame->code;

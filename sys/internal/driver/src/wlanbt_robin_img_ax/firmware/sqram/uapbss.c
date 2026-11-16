@@ -280,7 +280,7 @@ int p2pEventSend(struct WlanConnection *connection, const uint8_t *frame, uint16
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *eventFrame;
 
-	if (wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&eventFrame, type == 14 ? 900 : 200, event) == 0)
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&eventFrame, type == 14 ? 900 : 200, event) == 0)
 		return 1;
 	p2pDirectNotifyContext(connection, frame, (uint8_t *)&eventFrame->code, type, value);
 	eventFrame->length = eventFrame->code;

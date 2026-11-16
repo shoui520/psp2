@@ -404,18 +404,20 @@ int macWaitBasebandStable(uint32_t mask, uint32_t *iterations, uint32_t samples)
 extern uint64_t macWaitElapsed;
 int macTxPostEvent(uint32_t events);
 int macTxWakeup(void);
-int macTxMeasureWait(unsigned int mask);
+void macTxMeasureWait(unsigned int mask);
 int macTxPathReady(void);
 void macTxAdvanceStage(void);
-int wlanTxAllocFrame(OsaBuffer **buffer, WlanTxDescriptor **descriptor, uint32_t size,
-		     uint16_t priority);
+struct WlanHostEventFrame;
+int wlanTxAllocFrame(OsaBuffer **buffer, struct WlanHostEventFrame **frame, uint32_t size,
+		     uint16_t event);
 OsaBuffer *wlanTxAllocFrameType2(uint16_t priority, int (*release)(OsaBuffer *buffer));
 
 /*
  * An event frame for the host, as wlanTxAllocFrame() lays it out with the
- * event as its priority. The data (code, address, or any data) follows.
+ * event as its priority. The data (code, address, or any data) follows. Packed: the
+ * firmware reads and writes every field a byte at a time.
  */
-struct WlanHostEventFrame {
+struct __attribute__((packed)) WlanHostEventFrame {
 	WlanPacketHeader header;
 	uint16_t kind;			/* WLAN_HOST_FRAME_EVENT: the TX descriptor's control word */
 	uint16_t length;		/* bytes of data, from code on */
@@ -519,8 +521,8 @@ void macTxPsPollReleased(void);
 int macTxSendPsPoll(struct WlanConnection *connection, int urgent);
 void wlanTxWindowFlush(unsigned int ring);
 void macTxFlushConnection(struct WlanConnection *connection);
-int macTxGetDrainWaits(void);
-void macTxSetDrainWaits(int value);
+int macTxGetContext(void);
+void macTxSetContext(int value);
 int macTxHardwareIdle(void);
 int macTxIdle(void);
 int macTxPoolsIdle(void);

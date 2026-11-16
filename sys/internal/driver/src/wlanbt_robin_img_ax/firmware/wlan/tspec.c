@@ -241,7 +241,7 @@ int p2pDirectScheduleEntry(struct WlanConnection *connection, const uint8_t *sou
 	struct WlanHostEventFrame *event;
 	uint8_t *tlv;
 
-	if (wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&event, 0x190, WLAN_HOST_EVENT_WMM_STATUS) == 0)
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&event, 0x190, WLAN_HOST_EVENT_WMM_STATUS) == 0)
 		return 0;
 	event->length = wlanWmmQueueStatus(connection, (uint8_t *)&event->code);
 	tlv = (uint8_t *)event + 72;

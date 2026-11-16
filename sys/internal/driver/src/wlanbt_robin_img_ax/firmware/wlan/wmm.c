@@ -188,7 +188,7 @@ int wlanWmmReportStatus(struct WlanConnection *connection)
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *frame;
 
-	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, WLAN_HOST_EVENT_WMM_STATUS))
+	if (!wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&frame, 400, WLAN_HOST_EVENT_WMM_STATUS))
 		return 0;
 	frame->length = hostCmd0071(connection, (char *)&frame->code);
 	return wlanHostEventSend(connection, buffer);

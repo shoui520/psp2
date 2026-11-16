@@ -321,7 +321,7 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 	connection->bssCapability[1] = request->body[1];
 	body[0] = info->capability[0];
 	body[1] = info->capability[1];
-	if (wlanTxAllocFrame(&event, (WlanTxDescriptor **)&eventFrame, 0x190, 45) != 0) {
+	if (wlanTxAllocFrame(&event, (struct WlanHostEventFrame **)&eventFrame, 0x190, 45) != 0) {
 		uint8_t *start = (uint8_t *)eventFrame + 24;
 		uint8_t *cursor = start;
 
@@ -711,7 +711,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	uapSqramConfigureState(wlanConnectionCommandCheck(2, 0));
 	wlanConnectionCommandPrepare(2, 1);
 	romLibApplyState();
-	if (wlanTxAllocFrame(&buffer, &descriptor, 0x190, 46) != 0) {
+	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&descriptor, 0x190, 46) != 0) {
 		uint8_t *length = (uint8_t *)descriptor + 10;
 
 		cursor = (uint8_t *)descriptor + 24;

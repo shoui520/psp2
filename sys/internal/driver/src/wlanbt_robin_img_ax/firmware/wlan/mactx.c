@@ -54,6 +54,9 @@ struct WlanLocalState *wlanLocalState __attribute__((section(".itcm.bss")));
 uint32_t macTxMaxWait __attribute__((section(".itcm.bss")));
 /* Loops macTxWaitIdle() spent waiting for the host side. */
 uint8_t macTxDrainWaits __attribute__((section(".sqram1.rw")));
+/* A byte wlan/txhold.c keeps here (macTxGetContext(), macTxSetContext()): 1 while an ATIM
+ * window holds frames back. */
+static uint8_t macTxContext __attribute__((section(".sqram1.rw")));
 /* Null frames not sent while the previous one was still queued. */
 static uint32_t macTxNullDeferred __attribute__((section(".sqram1.rw")));
 /* An exclusive null frame (macTxSendNullFrame()) is in flight. */
@@ -69,7 +72,7 @@ static uint32_t macTxSemaphoreObject[7] __attribute__((section(".itcm.bss")));
 uint8_t macTxBuildOverride __attribute__((section(".itcm.bss")));
 
 /* Hardware counters read through the ROM (queue number in, running count out). */
-int romMacStatValidate(unsigned int queue, int a, int b, int c);	/* 0x03f3acdb */
+int romMacStatValidate(unsigned int queue);			/* 0x03f3acdb */
 int romMacStatPrepare(unsigned int queue);				/* 0x03f3ace7 */
 int romMacStatCheck(unsigned int queue);				/* 0x03f3accf */
 
@@ -157,20 +160,14 @@ int macTxWakeup(void)
 }
 
 /* Remembers the longest time macWaitPendingClear() has taken. */
-int macTxMeasureWait(unsigned int mask)
+void macTxMeasureWait(unsigned int mask)
 {
 	uint64_t start = osaGetHardwareTime();
-	uint64_t end;
-	uint32_t elapsed;
-	int result;
+	uint64_t elapsed;
 
 	macWaitPendingClear(mask, 0xffff);
-	end = osaGetHardwareTime();
-	elapsed = (uint32_t)(end - start);
-	result = macTxMaxWait - elapsed;
-	if (macTxMaxWait < elapsed)
-		macTxMaxWait = elapsed;
-	return result;
+	elapsed = osaGetHardwareTime() - start;
+	macTxMaxWait = macTxMaxWait < elapsed ? (uint32_t)elapsed : macTxMaxWait;
 }
 
 /* Runs one baseband wait for the wake sequence and keeps statistics about it. */
@@ -188,10 +185,10 @@ void macWakeSettle(uint32_t mask)
 	macWakeStats.meanElapsed = ((uint64_t)(macWakeStats.meanElapsed * macWakeStats.samples) +
 				    elapsed) / (macWakeStats.samples + 1);
 	++macWakeStats.samples;
-	if ((uint64_t)macWakeStats.maxElapsed < elapsed)
-		macWakeStats.maxElapsed = (uint32_t)elapsed;
-	if (macWakeStats.iterations > macWakeStats.maxIterations)
-		macWakeStats.maxIterations = macWakeStats.iterations;
+	macWakeStats.maxElapsed = macWakeStats.maxElapsed < elapsed ? (uint32_t)elapsed
+								   : macWakeStats.maxElapsed;
+	macWakeStats.maxIterations = macWakeStats.iterations > macWakeStats.maxIterations ?
+				     macWakeStats.iterations : macWakeStats.maxIterations;
 	sysLogStatistic(0x11, macWakeStats.maxElapsed, macWakeStats.failures);
 }
 
@@ -256,11 +253,10 @@ int wlanHostEventSend(struct WlanConnection *connection, OsaBuffer *buffer)
 	if (buffer == NULL)
 		return 1;
 	frame = (struct WlanHostEventFrame *)((uint8_t *)buffer + buffer->dataOffset);
+	if (frame->kind == WLAN_HOST_FRAME_EVENT && frame->event == WLAN_HOST_EVENT_LINK_LOST &&
+	    connection != NULL && !wlanSubscribeBeaconMissEnabled(connection))
+		goto drop;
 	if (connection != NULL) {
-		if (frame->kind == WLAN_HOST_FRAME_EVENT &&
-		    frame->event == WLAN_HOST_EVENT_LINK_LOST &&
-		    !wlanSubscribeBeaconMissEnabled(connection))
-			goto drop;
 		frame->bssNumber = connection->bssNumber;
 		frame->bssType = connection->bssType;
 	}
@@ -280,20 +276,18 @@ extern struct OsaBufferPool wlanTxFramePool;
  * Allocates a buffer for a frame to be sent and sets up its TX descriptor
  * at buffer + 32. Returns 0 when the pool is empty.
  */
-int wlanTxAllocFrame(OsaBuffer **buffer, WlanTxDescriptor **descriptor, uint32_t size,
-		     uint16_t priority)
+int wlanTxAllocFrame(OsaBuffer **buffer, struct WlanHostEventFrame **frame, uint32_t size,
+		     uint16_t event)
 {
-	OsaBuffer *allocated = osa_BufferAlloc(&wlanTxFramePool, size, 0);
-
-	*buffer = allocated;
-	if (allocated == NULL)
+	*buffer = osa_BufferAlloc(&wlanTxFramePool, size, 0);
+	if (*buffer == NULL)
 		return 0;
-	allocated->packetClass = 2;
-	allocated->dataOffset = 32;
-	*descriptor = (WlanTxDescriptor *)(allocated->data + 4);
-	(*descriptor)->control = 1;
-	(*descriptor)->priority = priority;
-	(*descriptor)->flags = priority >> 8;
+	(*buffer)->packetClass = 2;
+	(*buffer)->dataOffset = 32;
+	*frame = (struct WlanHostEventFrame *)((uint8_t *)*buffer + 32);
+	(*frame)->kind = WLAN_HOST_FRAME_EVENT;
+	(*frame)->event = event;
+	(*frame)->length = 0;
 	return 1;
 }
 
@@ -304,16 +298,15 @@ int wlanTxAllocFrame(OsaBuffer **buffer, WlanTxDescriptor **descriptor, uint32_t
 OsaBuffer *wlanTxAllocFrameType2(uint16_t priority, int (*release)(OsaBuffer *buffer))
 {
 	OsaBuffer *buffer;
-	WlanTxDescriptor *descriptor;
+	struct WlanHostEventFrame *frame;
 
-	if (wlanTxAllocFrame(&buffer, &descriptor, 100, priority) != 0) {
-		((uint8_t *)(descriptor + 1))[0] = 0;
-		((uint8_t *)(descriptor + 1))[1] = 0;
+	if (wlanTxAllocFrame(&buffer, &frame, 100, priority) != 0) {
+		frame->code = 0;
 		if (release != NULL) {
 			buffer->flags |= 1;
 			buffer->release = release;
 		}
-		descriptor->control = (descriptor->control & 0xffff) | (2u << 16);
+		frame->length = 2;
 	}
 	return buffer;
 }
@@ -340,7 +333,7 @@ int wlanHostEventSendCode(struct WlanConnection *connection, uint16_t event, uin
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *frame;
 
-	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 100, event))
+	if (!wlanTxAllocFrame(&buffer, &frame, 100, event))
 		return 0;
 	frame->code = code;
 	frame->length = 2;
@@ -354,7 +347,7 @@ int wlanHostEventSendAddress(struct WlanConnection *connection, uint16_t event,
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *frame;
 
-	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, event))
+	if (!wlanTxAllocFrame(&buffer, &frame, 400, event))
 		return 0;
 	frame->code = 0;
 	__aeabi_memcpy(frame->address, address, 6);
@@ -369,7 +362,7 @@ int wlanHostEventSendData(struct WlanConnection *connection, uint16_t event, con
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *frame;
 
-	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 400, event))
+	if (!wlanTxAllocFrame(&buffer, &frame, 400, event))
 		return 0;
 	__aeabi_memcpy(&frame->code, data, length);
 	frame->length = length;
@@ -383,7 +376,7 @@ int wlanHostEventSendCodeAddress(struct WlanConnection *connection, uint16_t eve
 	OsaBuffer *buffer;
 	struct WlanHostEventFrame *frame;
 
-	if (!wlanTxAllocFrame(&buffer, (WlanTxDescriptor **)&frame, 100, event))
+	if (!wlanTxAllocFrame(&buffer, &frame, 100, event))
 		return 0;
 	frame->code = code;
 	__aeabi_memcpy(frame->address, address, 6);
@@ -574,10 +567,11 @@ int wlanHostEventNotify(unsigned int classes, OsaBuffer *buffer)
 void macTxReleaseWakeBits(uint32_t *bits)
 {
 	unsigned int posture = sysIrqDisable();
+	uint32_t remaining = macTxWakeBits & ~*bits;
 
-	macTxWakeBits &= ~*bits;
+	macTxWakeBits = remaining;
 	*bits = 0;
-	if (macTxWakeBits == 0) {
+	if (remaining == 0) {
 		macTxMeasureWait(111);
 		romMacSleepNotify();
 		macTxPostEvent(1);
@@ -709,11 +703,12 @@ void macTxSendDataFrame(OsaBuffer *buffer)
 int macTxDequeue(unsigned int window, uint32_t *entry)
 {
 	struct WlanTxWindowQueue *queue = &wlanTxWindowQueues[window];
+	unsigned int head = queue->head;
 
-	if (queue->tail == queue->head)
+	if (queue->tail == head)
 		return 1;
-	*entry = queue->entries[queue->head];
-	queue->head = (queue->head + 1) & 0x1f;
+	*entry = queue->entries[head];
+	queue->head = (head + 1) & 0x1f;
 	--queue->count;
 	return 0;
 }
@@ -786,7 +781,7 @@ int macTxBlockAckWindow(struct WlanConnection *connection, int operation, unsign
 			if (flags & enabled)
 				goto send;
 			if (queue->pending == 0) {
-				wlanBaSlotSetSequence(slot, *(uint16_t *)(request->frame + 24));
+				wlanBaSlotSetSequence(slot, *(WlanSequenceControl *)(request->frame + 24));
 				wlanBaSlotApply(slot, request->queue);
 				wlanTxWindowFlags |= enabled;
 				goto send;
@@ -962,7 +957,8 @@ void macTxTaskMain(ULONG input)
 				wlanTxWindowFlags &= ~(WLAN_TX_WINDOW_DRAINING << window);
 				if (wlanTxWindowFlags & (WLAN_TX_WINDOW_ENABLED << window)) {
 					wlanTrace(0xbbbbbbbb, 0x11111111);
-					wlanBaSlotSetSequence(queue->slot, queue->startSequence);
+					wlanBaSlotSetSequence(queue->slot,
+								      (WlanSequenceControl){ .value = queue->startSequence });
 					wlanBaSlotApply(queue->slot, window + 5);
 				} else {
 					wlanTrace(0xbbbbbbbb, 0x22222222);
@@ -1407,21 +1403,21 @@ unsigned int macTxActivateWindow(unsigned int window)
 
 	if ((uint8_t)index < 2) {
 		__aeabi_memclr4(&wlanTxWindowQueues[(uint8_t)index], sizeof(wlanTxWindowQueues[0]));
-		wlanTxWindowFlags = ((16 << (uint8_t)index) | (1 << (uint8_t)index) |
-				     wlanTxWindowFlags) & ~(256 << (uint8_t)index);
+		wlanTxWindowFlags = (((wlanTxWindowFlags | (1 << (uint8_t)index)) |
+				      (16 << (uint8_t)index))) & ~(256 << (uint8_t)index);
 		return 256 << (uint8_t)index;
 	}
 	return index;
 }
 
-int macTxGetDrainWaits(void)
+int macTxGetContext(void)
 {
-	return macTxDrainWaits;
+	return macTxContext;
 }
 
-void macTxSetDrainWaits(int value)
+void macTxSetContext(int value)
 {
-	macTxDrainWaits = value;
+	macTxContext = value;
 }
 
 /* Release callback of an exclusive null frame. */
@@ -1600,11 +1596,10 @@ void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
 
 		*info = (*info >> 3 << 3) | (wlanWmmTid(priority) & 7);
 		sequence = wlanNextSequence(connection, *info & 7);
-		sequence = ((frame->sequenceControl[1] << 8 | frame->sequenceControl[0]) & 0xf) |
-			   sequence << 4;
-		frame->sequenceControl[0] = (uint8_t)sequence;
-		frame->sequenceControl[1] = (uint8_t)(sequence >> 8);
-		frame->sequenceControl[0] = frame->sequenceControl[0] >> 4 << 4;
+		/* through the request's frame pointer, read again for each field */
+		((WlanFrameSequence *)((WlanWirelessFrame *)request->frame)->sequenceControl)->number =
+			sequence;
+		((WlanFrameSequence *)((WlanWirelessFrame *)request->frame)->sequenceControl)->fragment = 0;
 		*info &= 0x9f;
 	}
 	wlanWmmSetQueue(connection, buffer->data, priority, 0);
@@ -1614,7 +1609,7 @@ void macTxSendNullFrame(struct WlanConnection *connection, int powerManagement,
 		request->descriptor.header.wire.packetLength[0] = wlanTxControlRate(connection);
 		request->descriptor.control |= 0x1000;
 	} else {
-		uint8_t rate = wlanTxDataRate(connection, 0);
+		unsigned int rate = wlanTxDataRate(connection, 0);
 
 		request->descriptor.header.wire.packetLength[0] = rate;
 		if (rate > 3 &&
@@ -1743,7 +1738,7 @@ int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *re
 	uint32_t wakeBit;
 	UINT posture;
 
-	if (((request->flags << 28) >> 29) != 0)
+	if ((((unsigned int)request->flags << 28) >> 29) != 0)
 		return 0;
 	hwSlot = wlanTxBaFindFreeHwSlot();
 	if (hwSlot == 2)
@@ -1786,7 +1781,7 @@ void macTxBaResyncSequences(void)
 	for (index = 0; index < WLAN_TX_BA_MAX; index = (uint8_t)(index + 1)) {
 		struct WlanTxBaSession *session = &wlanTxBaSessions[index];
 		struct WlanConnection *connection;
-		unsigned int sequence;
+		WlanSequenceControl sequence;
 
 		if (session->active == 0)
 			continue;
@@ -1794,10 +1789,11 @@ void macTxBaResyncSequences(void)
 		if (connection != NULL &&
 		    (connection->interfaceType == WLAN_IF_IBSS ||
 		     connection->interfaceType == WLAN_IF_STATION || wlanP2pConnection(connection)))
-			sequence = wlanPeerNextSequence(connection, session->tid, 0);
+			sequence.number = wlanPeerNextSequence(connection, session->tid, 0);
 		else
-			sequence = wlanGroupNextSequence(session->tid);
-		wlanBaSlotSetSequence(session->hwSlot, (uint16_t)(sequence << 4));
+			sequence.number = wlanGroupNextSequence(session->tid);
+		sequence.fragment = 0;
+		wlanBaSlotSetSequence(session->hwSlot, sequence);
 	}
 }
 
@@ -1819,7 +1815,7 @@ void macTxStatsReset(unsigned int queue)
 	macTxQueueStats[queue].prepared = 0;
 	macTxQueueStats[queue].checked = 0;
 	macTxQueueStats[queue].validated = 0;
-	romMacStatValidate(queue, 0, 0, 0);
+	romMacStatValidate(queue);
 	romMacStatPrepare(queue);
 	romMacStatCheck(queue);
 }
@@ -1828,19 +1824,21 @@ void macTxStatsReset(unsigned int queue)
 int macTxStatsAddPrepared(unsigned int queue, int *last)
 {
 	int total = romMacStatPrepare(queue) + macTxQueueStats[queue].prepared;
-	int previous = *last;
+	int previous;
 
 	macTxQueueStats[queue].prepared = total;
+	previous = *last;
 	*last = total;
 	return total - previous;
 }
 
 int macTxStatsAddValidated(unsigned int queue, int *last)
 {
-	int total = romMacStatValidate(queue, 0, 0, 0) + macTxQueueStats[queue].validated;
-	int previous = *last;
+	int total = romMacStatValidate(queue) + macTxQueueStats[queue].validated;
+	int previous;
 
 	macTxQueueStats[queue].validated = total;
+	previous = *last;
 	*last = total;
 	return total - previous;
 }
@@ -1848,9 +1846,10 @@ int macTxStatsAddValidated(unsigned int queue, int *last)
 int macTxStatsAddChecked(unsigned int queue, int *last)
 {
 	int total = romMacStatCheck(queue) + macTxQueueStats[queue].checked;
-	int previous = *last;
+	int previous;
 
 	macTxQueueStats[queue].checked = total;
+	previous = *last;
 	*last = total;
 	return total - previous;
 }
@@ -1872,7 +1871,13 @@ int wlanClampNoise(int value)
 		value = 0;
 	else if (value < -102)
 		value = -102;
-	return -(int8_t)value;
+	return (int8_t)-value;
+}
+
+/* The packet type in a descriptor's wire header, read where it is used. */
+static inline unsigned int macTxPacketType(const WlanTxDescriptor *descriptor)
+{
+	return descriptor->header.wire.packetType[0] | (descriptor->header.wire.packetType[1] << 8);
 }
 
 /*
@@ -1884,13 +1889,11 @@ void macTxBuildDataHeader(struct WlanConnection *connection, WlanTxDescriptor *d
 			  WlanWirelessFrame *frame, const uint8_t *addresses, int qos)
 {
 	uint8_t address4[6] = { 0 };
-	unsigned int packetType = descriptor->header.wire.packetType[0] |
-				  (descriptor->header.wire.packetType[1] << 8);
 	uint16_t control;
 	const uint8_t *third;
 
-	control = wlanDataFrameControl(qos, descriptor->flags & 1, packetType == 233);
-	if (packetType == 234)
+	control = wlanDataFrameControl(qos, descriptor->flags & 1, macTxPacketType(descriptor) == 233);
+	if (macTxPacketType(descriptor) == 234)
 		descriptor->flags |= 8;
 	if (connection->interfaceType == WLAN_IF_IBSS) {
 		wlanSetHeaderAddresses(frame, addresses, connection->interfaceAddress,
@@ -1911,7 +1914,7 @@ void macTxBuildDataHeader(struct WlanConnection *connection, WlanTxDescriptor *d
 			control |= IEEE80211_FC1_FROMDS << 8;
 			goto store;
 		}
-		third = packetType == 230 ? connection->localAddress : addresses;
+		third = macTxPacketType(descriptor) == 230 ? connection->localAddress : addresses;
 		wlanSetHeaderAddresses(frame, connection->localAddress,
 				       connection->interfaceAddress, third);
 		control |= IEEE80211_FC1_TODS << 8;
@@ -1919,7 +1922,6 @@ void macTxBuildDataHeader(struct WlanConnection *connection, WlanTxDescriptor *d
 	if (wlanLocalState->powerSave)
 		control |= IEEE80211_FC1_PWR_MGT << 8;
 store:
-	frame->frameControl[0] = control;
-	frame->frameControl[1] = control >> 8;
+	*(uint16_t *)frame->frameControl = control;
 	__aeabi_memcpy(frame->address4, address4, 6);
 }

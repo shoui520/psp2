@@ -239,7 +239,7 @@ int ampLinkQuality(void);						/* 0x230b8 */
 int ampRssi(void);							/* 0x230bc */
 unsigned int ampPhysicalLinkFindByLogical(uint32_t logicalHandle);
 int ampPhysicalLinkReset(unsigned int index);
-unsigned int ampLogicalLinkAllocate(uint32_t physicalHandle);
+unsigned int ampLogicalLinkAllocate(uint8_t physicalHandle);
 unsigned int ampLogicalLinkFind(uint32_t logicalHandle);
 unsigned int ampLogicalLinkFindByFlowSpec(uint32_t flowSpecId);
 int ampLogicalLinkServiceType(uint32_t logicalHandle);

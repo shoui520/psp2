@@ -138,8 +138,21 @@ int wlanBaSlotRelease(int slot, int window);
 void wlanBaWindowCounterReset(int window);
 void wlanMacE80Select(void);
 
+/*
+ * An 802.11 sequence control field, passed by value: the firmware writes the fields of its copy
+ * and hands the 16 bits to the hardware.
+ */
+typedef union WlanSequenceControl {
+	uint16_t value;
+	struct {
+		uint16_t fragment : 4;
+		uint16_t number : 12;
+	};
+} WlanSequenceControl;
+
+void wlanBaSlotSetSequence(int slot, WlanSequenceControl sequence);	/* 0x2921e */
+
 /* Not converted yet; provisional names. */
-void wlanBaSlotSetSequence(int slot, uint16_t sequence);	/* 0x2921e */
 void wlanBaSlotFlush(int slot, int window);		/* 0x29640: release, retry what is left */
 
 #endif /* ROBIN_MAC_H */

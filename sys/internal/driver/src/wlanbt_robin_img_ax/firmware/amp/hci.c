@@ -361,7 +361,7 @@ int ampPhysicalLinkReset(unsigned int index)
 }
 
 /* 0x00021298: claims a logical link slot on the physical link with this handle. */
-unsigned int ampLogicalLinkAllocate(uint32_t physicalHandle)
+unsigned int ampLogicalLinkAllocate(uint8_t physicalHandle)
 {
 	struct AmpPhysicalLink *link = &ampPhysicalLinks[ampPhysicalLinkFind(physicalHandle)];
 	unsigned int slot = 0;
