@@ -1233,7 +1233,7 @@ void chargeSetAcDelay(void)
 		break;
 	case 0x0004:
 	case 0x0008:
-#if BOARD_CHARGE_TIMER1F
+#if BOARD_CHARGE_TIMER1F || HW_IS(0x00411000)
 		charge.acDelay = 60;
 #else
 		charge.acDelay = 10;

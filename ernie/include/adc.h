@@ -5,12 +5,19 @@
 #ifndef ERNIE_ADC_H
 #define ERNIE_ADC_H
 
+#include "ernie.h"
+
+/* 0x00411000 starts from channel 8 */
+#if HW_IS(0x00411000)
+#define ADC_FIRST_CHANNEL	0x08
+#else
 #define ADC_FIRST_CHANNEL	0x0b
-#define ADC_CHANNELS		5
+#endif
+#define ADC_CHANNELS		(0x10 - ADC_FIRST_CHANNEL)
 #define ADC_RESULT_MASK		0xffc0	/* ADCR: the result in its 10 high bits */
 
-/* adcStart's mask: bit 3 for channel 11 up to bit 7 for channel 15 */
-#define ADC_CHANNEL_BIT(channel)	(1 << ((channel) - ADC_FIRST_CHANNEL + 3))
+/* adcStart's mask: bit 0 for channel 8 up to bit 7 for channel 15 */
+#define ADC_CHANNEL_BIT(channel)	(1 << ((channel) - 8))
 
 extern __near unsigned int adcResults[ADC_CHANNELS];	/* channel 15 first */
 

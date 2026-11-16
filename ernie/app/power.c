@@ -159,12 +159,59 @@ void powerSequence(void)
 void powerErrorClear(void)
 {
 	powerError = 0;
+#if BOARD_POWER_TEST_PINS
+	P2.6 = 0;
+	P1.7 = 0;
+	P2.4 = 0;
+#endif
 }
 
+#if BOARD_POWER_TEST_PINS
+/* the steps of the test, one a tick: P2.7 low, P2.6 up, P1.7 and P2.4 up, P2.5 high, P2.6
+   down; 0x80 for a step it does not know, where it stays */
+unsigned char powerErrorGet(void)
+{
+	if (powerError == 0)
+		powerError = 1;
+	else
+		powerError = 0x80;
+	while (powerError != 0) {
+		switch (powerError) {
+		case 1:
+			if (!P2.7)
+				powerError++;
+			break;
+		case 2:
+			P2.6 = 1;
+			powerError++;
+			break;
+		case 3:
+			P1.7 = 1;
+			P2.4 = 1;
+			powerError++;
+			break;
+		case 4:
+			if (P2.5)
+				powerError++;
+			break;
+		case 5:
+			P2.6 = 0;
+			powerError = 0;
+			break;
+		default:
+			powerError = 0x80;
+			break;
+		}
+		dly_tsk(1);
+	}
+	return powerError;
+}
+#else
 unsigned char powerErrorGet(void)
 {
 	return powerError;
 }
+#endif
 
 unsigned char powerFaulty(void)
 {

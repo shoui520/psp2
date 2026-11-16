@@ -209,6 +209,8 @@ unsigned char serialCommands1Count(void)
 {
 #if FW_SINCE(0x0100060B)
 	return 0x37;
+#elif BOARD_KERNEL_COMMANDS
+	return 0x38;
 #else
 	return 0x31;
 #endif
@@ -227,7 +229,9 @@ unsigned char serialNotifies1Count(void)
    and 0x0910-0x0916) */
 unsigned char serialCommands1Count(void)
 {
-#if FW_SINCE(0x00090903)
+#if BOARD_KERNEL_COMMANDS && FW_SINCE(0x00090903)
+	return 0x34;
+#elif FW_SINCE(0x00090903)
 	return 0x2d;
 #else
 	return 0x31;
@@ -1205,8 +1209,8 @@ static unsigned char serial1Command0901(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if !FW_SINCE(0x00090903)
-/* 0x0910-0x0916 (0x00090804): the kernel's objects (a status of 0x33 for an ID it has none
+#if BOARD_KERNEL_COMMANDS
+/* 0x0910-0x0916 (0x00090804, 0x00411000): the kernel's objects (a status of 0x33 for an ID it has none
    of): tasks and event flags 1-6, memory pools 1-2, mailbox 1 and cyclic handler 7 */
 #define SERIAL1_KERNEL_TASKS		6
 #define SERIAL1_KERNEL_FLAGS		6
@@ -1577,7 +1581,7 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0301, serial1Command0301, 0 },
 	{ 0x0900, serial1Command0900, SERIAL1_NVS_KEY3 },
 	{ 0x0901, serial1Command0901, SERIAL1_NVS_KEY3 },
-#if !FW_SINCE(0x00090903)
+#if BOARD_KERNEL_COMMANDS
 	{ 0x0910, serial1Command0910, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0911, serial1Command0911, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0912, serial1Command0912, SERIAL1_KEY | SERIAL1_NVS_KEY3 },

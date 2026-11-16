@@ -27,6 +27,13 @@ static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 
 struct Param param;
 
+/* serial1Command0950's base step at a reset: 0x00411000's 0x0b */
+#if HW_IS(0x00411000)
+#define PARAM_BASE_DEFAULT	0x0b
+#else
+#define PARAM_BASE_DEFAULT	7
+#endif
+
 #if FW_SINCE(0x01000104)
 int paramInit(void)
 {
@@ -38,7 +45,7 @@ int paramInit(void)
 	param.levels[1] = 0x23;
 	param.levels[2] = 0x23;
 	param.levels[3] = 0x23;
-	param.base = 7;
+	param.base = PARAM_BASE_DEFAULT;
 #endif
 	param.adjust = 0;
 	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
@@ -68,7 +75,7 @@ int paramInit(void)
 	param.levels[1] = 0x23;
 	param.levels[2] = 0x23;
 	param.levels[3] = 0x23;
-	param.base = 7;
+	param.base = PARAM_BASE_DEFAULT;
 	param.adjust = 0;
 	param.setting1 = configGet()->paramSetting1;
 	param.setting2 = configGet()->paramSetting2;

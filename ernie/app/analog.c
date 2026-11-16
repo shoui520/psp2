@@ -67,11 +67,12 @@ __near unsigned char analogSticks1[ANALOG_AXES];
 static __near struct AnalogCalibration analogCalibration;
 __near unsigned char analogFlags;
 
-/* inputKeys.state's bit 0x0080 (analogStart80, never called): only reset */
+/* inputKeys.state's bit 0x0080 (analogStart80, never called): only reset, except where
+   BOARD_ANALOG_CHANNEL8 converts it (channel 8's level, analogLevels5) */
 static struct {
 	unsigned char	input;
-	unsigned char	previous;
-	unsigned char	reported;
+	unsigned char	level;		/* of the last reading */
+	unsigned char	previous;	/* of the one before */
 } analogInput80;
 
 /* a reading against 0x3d, reported when two agree (analogLatchUpdate, never called) */
@@ -310,8 +311,8 @@ void analogCalibrationGet(unsigned char *out)
 void analogInput80Reset(void)
 {
 	analogSuspend = 0xff;
+	analogInput80.level = 0xff;
 	analogInput80.previous = 0xff;
-	analogInput80.reported = 0xff;
 	analogInput80.input = 0;
 }
 
@@ -348,6 +349,10 @@ unsigned char analogStart(unsigned int inputs)
 		mask |= 0x08;
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
+#if BOARD_ANALOG_CHANNEL8
+	if (inputs & 0x0080)
+		mask |= 0x01;
+#endif
 #if FW_SINCE(0x0100060B)
 	busy = adcStart(mask, skip);
 	if (busy)
@@ -404,6 +409,20 @@ void analogEvent(unsigned int inputs)
 	}
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
+#if BOARD_ANALOG_CHANNEL8
+	/* a level two readings agree on stops the sticks' samples, or (0xff) lets them go on */
+	if (inputs & 0x0080) {
+		analogInput80.input = ANALOG_HIGH(adcResults[7]);
+		analogInput80.level = analogLevelFind(analogInput80.input, analogLevels5,
+						      LENGTH(analogLevels5));
+		if (analogInput80.level == analogInput80.previous &&
+		    analogInput80.level != analogSuspend) {
+			analogSuspend = analogInput80.level;
+			analogStop80();
+		}
+		analogInput80.previous = analogInput80.level;
+	}
+#endif
 }
 
 void analogLatchUpdate(unsigned char value)
@@ -923,6 +942,36 @@ void analogScale31(unsigned int position)
 /* the sets' values as reported: axis 1 inverted, axis 0, axis 3, axis 2 inverted */
 void analogReport(void)
 {
+#if BOARD_ANALOG_CHANNEL8
+	/* channel 8's level 2: the axes as they are, otherwise each turned over */
+	if (analogSuspend == 2) {
+		if (analogFlags & ANALOG_SET0) {
+			analogSticks0[0] = analogAxes[0].output[0].value;
+			analogSticks0[1] = analogAxes[1].output[0].value;
+			analogSticks0[2] = analogAxes[2].output[0].value;
+			analogSticks0[3] = analogAxes[3].output[0].value;
+		}
+		if (analogFlags & ANALOG_SET1) {
+			analogSticks1[0] = analogAxes[0].output[1].value;
+			analogSticks1[1] = analogAxes[1].output[1].value;
+			analogSticks1[2] = analogAxes[2].output[1].value;
+			analogSticks1[3] = analogAxes[3].output[1].value;
+		}
+	} else {
+		if (analogFlags & ANALOG_SET0) {
+			analogSticks0[0] = 0xff - analogAxes[0].output[0].value;
+			analogSticks0[1] = 0xff - analogAxes[1].output[0].value;
+			analogSticks0[2] = 0xff - analogAxes[2].output[0].value;
+			analogSticks0[3] = 0xff - analogAxes[3].output[0].value;
+		}
+		if (analogFlags & ANALOG_SET1) {
+			analogSticks1[0] = 0xff - analogAxes[0].output[1].value;
+			analogSticks1[1] = 0xff - analogAxes[1].output[1].value;
+			analogSticks1[2] = 0xff - analogAxes[2].output[1].value;
+			analogSticks1[3] = 0xff - analogAxes[3].output[1].value;
+		}
+	}
+#else
 	if (analogFlags & ANALOG_SET0) {
 		analogSticks0[0] = 0xff - analogAxes[1].output[0].value;
 		analogSticks0[1] = analogAxes[0].output[0].value;
@@ -935,6 +984,7 @@ void analogReport(void)
 		analogSticks1[2] = analogAxes[3].output[1].value;
 		analogSticks1[3] = 0xff - analogAxes[2].output[1].value;
 	}
+#endif
 }
 
 /* the median of three samples (never called) */

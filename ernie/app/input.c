@@ -360,7 +360,7 @@ void inputInit(void)
 #if BOARD_MOTION
 	inputDelays.motionInfo = 0;
 #endif
-	inputDelays.reserved = 0;
+	inputDelays.analog80 = 0;
 	inputDelays.latchOn = 0;
 	inputKeys.state = 0;
 	inputKeys.events = 0;
@@ -674,6 +674,11 @@ void sampleInputs3(void)
 #if BOARD_INPUT3_PINS
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.7;
+#endif
+#if BOARD_INPUT3_PORT2
+	inputRaw3.2 = P2.3;
+	inputRaw3.3 = P2.7;
+	inputRaw3.4 = P2.5;
 #endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
 	if (inputGroup3.changed) {
@@ -1550,6 +1555,12 @@ void inputScanTimer(void)
 	} else {
 		timerStart(3, inputScan.interval);
 	}
+#if BOARD_ANALOG_CHANNEL8
+	if (inputDelays.analog80 != 0) {
+		if (--inputDelays.analog80 == 0)
+			analogStart80();
+	}
+#endif
 #if BOARD_MOTION
 	if (inputDelays.motionInfo != 0) {
 		if (--inputDelays.motionInfo == 0)

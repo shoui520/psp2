@@ -36,7 +36,11 @@ void adcOpen(void)
 		adcChannel = ADC_FIRST_CHANNEL;
 		ADCEN = 1;
 		ADCE = 1;
+#if HW_IS(0x00411000) && !FW_SINCE(0x0100010B)
+		ADPC = 0x08;
+#else
 		ADPC = 0x0b;
+#endif
 		ADM = 0x03;
 		ADIF = 0;
 		ADMK = 0;

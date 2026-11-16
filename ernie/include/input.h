@@ -22,7 +22,8 @@ struct InputDelays {
 #if BOARD_MOTION
 	unsigned char	motionInfo;	/* starts reading the motion sensor's information */
 #endif
-	unsigned char	reserved;	/* cleared by inputInit, otherwise unused */
+	unsigned char	analog80;	/* calls analogStart80 (BOARD_ANALOG_CHANNEL8; otherwise
+					   only cleared) */
 	unsigned char	latchOn;	/* calls analogLatchOn */
 };
 
