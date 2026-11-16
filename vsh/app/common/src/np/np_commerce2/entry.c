@@ -150,3 +150,114 @@ int npCommerce2ReadDetail0x4b(SceUInt32 version, const SceUChar8 *bufHead, const
 	}
 	return ret;
 }
+
+/* the detail record of tag 0x91: two values, a text and the extra record */
+int npCommerce2ReadDetail0x91(SceUInt32 version, const SceUChar8 *bufHead, const char *data,
+			      SceSize size, const char *records, NpCommerce2Detail0x91 *detail)
+{
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt32 netValue;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(records, size - (records - data), 0x91, 8, &length);
+	if (ret >= 0) {
+		SceSize dataSize;
+
+		sceClibMemset(detail, 0, 0x78);
+		dataSize = length;
+		sceClibMemset(detail, 0, 0x5C);
+		detail->commonData.version = version;
+		detail->commonData.buf_head = bufHead;
+		detail->commonData.data = (const SceUChar8 *)records + ret;
+		detail->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&netValue, records + ret, 4);
+		detail->valueA = sceNetNtohl(netValue);
+		sceClibMemcpy_safe(&netValue, records + ret + 4, 4);
+		detail->valueB = sceNetNtohl(netValue);
+		rest = records + ret + 8;
+		detail->commonData.data2 = (const SceUChar8 *)rest;
+		detail->text = NP_COMMERCE2_EMPTY_TEXT(detail);
+		ret = npCommerce2FindRecordWhole(rest, length - 8, 0x92, 0, &found);
+		if (ret >= 0 && found != 0)
+			detail->text = rest + ret;
+		if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+			ret = npCommerce2ReadExtra0x4a(&detail->commonData, &detail->hasExtra, &detail->extraA,
+						       &detail->extraB, &detail->extraC);
+			if (ret >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* the detail records of a result, read where the result's records are */
+int npCommerce2ReadDetailOf0x4b(const NpCommerce2Item *result, NpCommerce2Detail *detail)
+{
+	return npCommerce2ReadDetail0x4b(result->commonData.version, result->commonData.buf_head,
+					 (const char *)result->commonData.data, result->commonData.data_size,
+					 (const char *)result->commonData.data2, detail);
+}
+
+int npCommerce2ReadDetailOf0x91(const NpCommerce2Item *result, NpCommerce2Detail0x91 *detail)
+{
+	return npCommerce2ReadDetail0x91(result->commonData.version, result->commonData.buf_head,
+					 (const char *)result->commonData.data, result->commonData.data_size,
+					 (const char *)result->commonData.data2, detail);
+}
+
+/* a result with no record of its own: the response header and where the records start */
+int npCommerce2InitPlainResult(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x7C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
+/* the record of tag 0x29, found where the result's records start */
+int npCommerce2ReadItem0x29(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 netValue;
+	SceUInt32 version;
+	const SceUChar8 *head;
+	SceSize dataSize;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x29, 4, &length);
+	if (ret >= 0) {
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&netValue, data + ret, 4);
+		item->value[0] = sceNetNtohl(netValue);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}

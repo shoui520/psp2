@@ -20,12 +20,19 @@ int npCommerce2ReadItem0x28(const NpCommerce2Item *result, NpCommerce2Item *item
 	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
 					 (data - (const char *)result->commonData.data), 0x28, 4, &length);
 	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
 		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
 		sceClibMemset(item, 0, 0x5C);
-		item->commonData.version = result->commonData.version;
-		item->commonData.buf_head = result->commonData.buf_head;
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
 		item->commonData.data = (const SceUChar8 *)data + ret;
-		item->commonData.data_size = length;
+		item->commonData.data_size = dataSize;
 		sceClibMemcpy_safe(&netValue, data + ret, 4);
 		item->value[0] = sceNetNtohl(netValue);
 		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
