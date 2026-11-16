@@ -135,7 +135,7 @@ int IniProcessor::clear()
 	return 0;
 }
 
-void IniProcessor::removeAll()
+__attribute__((always_inline)) void IniProcessor::removeAll()
 {
 	do {
 		IniEntry *entry = m_head.prev;
@@ -154,7 +154,7 @@ void IniProcessor::removeAll()
 }
 
 /* puts an entry with a copy of the key and of the value at the end of the ring */
-void IniProcessor::addEntry(const IniString *key, const IniString *value)
+__attribute__((always_inline)) void IniProcessor::addEntry(const IniString *key, const IniString *value)
 {
 	IniAllocatorOps *ops;
 	void *context;
@@ -184,7 +184,7 @@ void IniProcessor::addEntry(const IniString *key, const IniString *value)
 }
 
 /* the entry of a key (the head when there is none); the entry found becomes the current one */
-IniEntry *IniProcessor::find(const char *key, const IniString *keyString)
+__attribute__((always_inline)) IniEntry *IniProcessor::find(const char *key, const IniString *keyString)
 {
 	IniEntry *entry;
 
@@ -709,7 +709,7 @@ int IniProcessor::freeText()
 }
 
 /* reads the lines of the input and makes entries of the ones of the form key=value */
-int IniProcessor::scanBuffer(IniInput *input, SceSize limit)
+__attribute__((always_inline)) int IniProcessor::scanBuffer(IniInput *input, SceSize limit)
 {
 	IniScanner scanner;
 	IniToken token;

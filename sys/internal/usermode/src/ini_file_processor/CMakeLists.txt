@@ -15,8 +15,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	../../../../../sys/sdk/target/src/libsnc/i64shr.c
 	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
-	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
+# SNC writes inline functions out of line as well; Sony's linker kept only what is called
 target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
 # the C++ runtime of the module is ScePafStdc's: its imports serve under the names the compiler asks for
 target_link_options(${PSP2_TARGET} PRIVATE
@@ -25,3 +25,5 @@ target_link_options(${PSP2_TARGET} PRIVATE
 	-Wl,--defsym,__aeabi_atexit=ScePafStdc_C95732BB
 	-Wl,--defsym,__cxa_pure_virtual=ScePafStdc_2730262C
 	-Wl,--defsym,_ZdlPv=ScePafStdc_1B77082E)
+# Sony's psp2ld --strip-unused dropped what nothing references
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)

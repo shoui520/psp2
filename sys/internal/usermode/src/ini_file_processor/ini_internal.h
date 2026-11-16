@@ -256,6 +256,13 @@ public:
 	SceSize m_capacity;
 };
 
+__attribute__((always_inline)) inline IniBufferedFile::IniBufferedFile(IniAllocatorRef *allocator, SceSize capacity) : IniTempFile(allocator)
+{
+	m_capacity = capacity;
+	m_buffer = NULL;
+	m_used = 0;
+}
+
 /* one key and its value; the entries are a ring through the processor's head entry */
 struct IniEntry {
 	IniString key;

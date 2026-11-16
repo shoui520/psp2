@@ -240,27 +240,28 @@ SceOff IniFile::tell()
 	return position;
 }
 
-/* a string with nothing in it, made when it is first needed */
-struct IniEmptyString : IniString {
-	IniEmptyString()
-	{
-		data = g_iniEmptyString;
-		length = 0;
-		ops = iniDefaultAllocator();
-		context = iniDefaultAllocator();
-	}
-	~IniEmptyString()
-	{
-		iniStringDestroy(this);
-	}
-};
+/* a string with nothing in it, made when it is first needed and destroyed at exit (the C++ runtime's
+ * guard and atexit, spelled out: the compiler's own destructor stub would stand between the two) */
+extern "C" int __cxa_guard_acquire(long long *guard);
+extern "C" void __cxa_guard_release(long long *guard);
+extern "C" int __aeabi_atexit(void *object, void *(*destroy)(void *), void *handle);
+extern "C" void *__dso_handle;
 
 const IniString *IniFile::pathOf()
 {
-	static IniEmptyString s_empty;
+	static long long s_guard;
+	static IniString s_empty;
 
 	if (m_fd >= 0)
 		return &m_path;
+	if (!(s_guard & 1) && __cxa_guard_acquire(&s_guard)) {
+		s_empty.data = g_iniEmptyString;
+		s_empty.length = 0;
+		s_empty.ops = iniDefaultAllocator();
+		s_empty.context = iniDefaultAllocator();
+		__aeabi_atexit(&s_empty, (void *(*)(void *))iniStringDestroy, &__dso_handle);
+		__cxa_guard_release(&s_guard);
+	}
 	return &s_empty;
 }
 

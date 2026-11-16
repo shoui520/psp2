@@ -4,13 +4,6 @@
 
 #include "ini_internal.h"
 
-IniBufferedFile::IniBufferedFile(IniAllocatorRef *allocator, SceSize capacity) : IniTempFile(allocator)
-{
-	m_capacity = capacity;
-	m_buffer = NULL;
-	m_used = 0;
-}
-
 IniBufferedFile::~IniBufferedFile()
 {
 	if (m_buffer != NULL) {
