@@ -139,3 +139,13 @@ int npCommerce2ReadTextItem0x39_81016904(const NpCommerce2Item *result, SceUInt3
 {
 	return npCommerce2ReadTextItem0x39(result, index, item);
 }
+
+int npCommerce2ReadItem0x58Of_810118A2(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadItem0x58(&result->commonData, (const char *)result->commonData.data, result->commonData.data_size, item);
+}
+
+int npCommerce2ReadItem0x58Of_810119B0(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadItem0x58(&result->commonData, (const char *)result->commonData.data, result->commonData.data_size, item);
+}

@@ -1195,3 +1195,57 @@ int npCommerce2InitBareResult_81016B50(NpCommerce2Item *result, const char *data
 	return ret;
 }
 
+
+/* a result with only the header fields (the copy in an eleventh of Sony's source files) */
+int npCommerce2InitBareResult_81014AAA(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x5C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
+
+/* a result with only the header fields (the copy in a twelfth of Sony's source files) */
+int npCommerce2InitBareResult_81014BCE(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x5C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
