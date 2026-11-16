@@ -71,7 +71,7 @@ fail:
 
 /* finds the library context, makes a handle to its user context, and when asked gives the user
    context its user and its setup; the result is the user context's ID */
-int npWebApiPrepareUserContext(int libCtxId, unsigned char setup)
+int npWebApiResolveUserContext(int libCtxId, unsigned char setup)
 {
 	NpWebApiLibContext *libCtx;
 	NpWebApiUserContextHandle *handle;
@@ -115,11 +115,11 @@ out:
 	return result;
 }
 
-int npWebApiPrepareAndDeleteUserContext(int libCtxId)
+int npWebApiStopLibContext(int libCtxId)
 {
 	int result;
 
-	result = npWebApiPrepareUserContext(libCtxId, 0);
+	result = npWebApiResolveUserContext(libCtxId, 0);
 	if (result >= 0)
 		return npWebApiDeleteUserContextObject(result);
 	return result;

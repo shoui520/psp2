@@ -107,6 +107,8 @@ extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 extern int SceNpCommon_0624AE44(char *version);	/* the library's version text */
 extern int sceClibSnprintf(char *dst, SceSize size, const char *fmt, ...);
 extern int SceNpManager_E45E4003(void *buffer);
+extern int SceNpCommonPs4_FB63A152(void);
+extern int SceNpCommonPs4_CF591432(void);
 extern int SceNpCommon_8C21F489(const SceNpOnlineId *a, const SceNpOnlineId *b);	/* compare online IDs */
 extern int SceNpCommonPs4_38CC9AF5(void *pool, void *block);
 extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
@@ -150,6 +152,26 @@ typedef struct NpWebApiHeapBlock {
 	unsigned char poolObject[20];
 } NpWebApiHeapBlock;
 
+/* a handle: its ID, its state bits (2: aborted) and how many are using it */
+typedef struct NpWebApiHandle {
+	int id;
+	int reserved4;
+	unsigned int state;
+	int refCount;
+} NpWebApiHandle;
+
+typedef struct NpWebApiHandleNode {
+	struct NpWebApiHandleNode *prev;
+	struct NpWebApiHandleNode *next;
+	NpWebApiHandle *handle;
+} NpWebApiHandleNode;
+
+typedef struct NpWebApiHandleList {
+	NpWebApiHandleNode *sentinel;
+	int count;
+	void *allocator;
+} NpWebApiHandleList;
+
 /* a library context (176 bytes); the contexts of the process are a list (g_libContexts) */
 typedef struct NpWebApiLibContext {
 	const void *vtable;
@@ -162,8 +184,8 @@ typedef struct NpWebApiLibContext {
 	struct NpWebApiUserContext *userContextHead;
 	int userContextCount;
 	void *pushEventObject;
-	void *requestList;
-	unsigned char reserved1[44];
+	NpWebApiHandleList handles;
+	unsigned char reserved1[36];
 	int reserved116;
 	unsigned char aborted;
 	unsigned char flag121;
@@ -177,6 +199,9 @@ typedef char NpWebApiLibContextSizeCheck[sizeof(NpWebApiLibContext) == 176 ? 1 :
 extern NpWebApiMutex g_globalLock;		/* 0x81010048 */
 extern NpWebApiLibContext *g_libContexts;	/* 0x81010014 */
 
+extern void npWebApiHandleListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiHandle **pHandle) __attribute__((noinline));
+extern int npWebApiLibContextCreateHandle(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextLock(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextUnlock(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextRelease(NpWebApiLibContext *ctx);
@@ -430,8 +455,6 @@ extern const void *g_userObjectVtable[];	/* 0x8100edcc */
 extern NpWebApiUserContextHandle *npWebApiLibContextCreateUserContextHandle(NpWebApiLibContext *libCtx);
 extern NpWebApiUserObject *npWebApiUserObjectConstruct(NpWebApiUserObject *object, NpWebApiLibContext *libCtx,
 	NpWebApiUserContext *userCtx);
-extern int npWebApiPrepareUserContext(int libCtxId, unsigned char setup);
-extern int npWebApiPrepareAndDeleteUserContext(int libCtxId);
 extern int npWebApiUserContextSetup(NpWebApiUserContext *userCtx);
 extern NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx);
 extern NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
