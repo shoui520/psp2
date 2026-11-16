@@ -98,6 +98,37 @@ int checkWaitThreadInfoList(const SceUltWaitThreadInfo *list, uint32_t max);
 #define ULT_UTIL_ASSERT(line, cond) \
 	ULT_ASSERT_AT("ult_util.h", line, #cond, cond)
 
+/* a count that never goes below zero (each file its own out-of-line copy) */
+class AtomicCounter {
+public:
+	volatile int32_t m_count;
+
+	ULT_INLINE void initialize()
+	{
+		m_count = 0;
+	}
+
+	inline __attribute__((noinline)) void increment()
+	{
+		int32_t c;
+
+		do {
+			c = __ldrex(&m_count);
+			ULT_UTIL_ASSERT(255, c >= 0);
+		} while (__strex(c + 1, &m_count) != 0);
+	}
+
+	inline __attribute__((noinline)) void decrement()
+	{
+		int32_t c;
+
+		do {
+			c = __ldrex(&m_count);
+			ULT_UTIL_ASSERT(266, c > 0);
+		} while (__strex(c - 1, &m_count) != 0);
+	}
+};
+
 /* a count of users up to a limit; -1 once closed to them */
 class BoundedCounter {
 public:

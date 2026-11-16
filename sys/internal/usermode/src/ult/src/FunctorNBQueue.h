@@ -52,6 +52,12 @@ struct NBQueueEntry2 {
 	uint32_t reserved[5];
 };
 
+/* the address word of an entry's link, read alone (the objects' infos) */
+inline uint32_t nextAddress(const NBQueueEntry2 *entry)
+{
+	return ((const uint32_t *)&entry->mNext)[1];
+}
+
 inline NBQueueEntry2 *asPtr(NBQueueID id)
 {
 	return (NBQueueEntry2 *)(idAddress(id) & ~1u);

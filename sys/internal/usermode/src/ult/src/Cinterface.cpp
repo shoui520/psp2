@@ -206,15 +206,6 @@ uint32_t sceUltQueueDataResourcePoolGetWorkAreaSize(uint32_t numData, uint32_t d
 	       2 * sizeof(NBQueueEntry2);
 }
 
-struct QueueDataResourcePoolObject {
-	UltObjectHeader header;
-	uint32_t numData;
-	uint32_t numQueueObject;
-	QueueDataResourcePoolInternal internal;
-	SceUltWaitingQueueResourcePool *waitingQueueResourcePool;
-	uint32_t ulobjId;
-};
-
 int _sceUltQueueDataResourcePoolCreate(SceUltQueueDataResourcePool *pool, const char *name,
 				       uint32_t numData, uint32_t dataSize, uint32_t numQueueObject,
 				       SceUltWaitingQueueResourcePool *waitingQueueResourcePool,
@@ -286,6 +277,121 @@ int32_t sceUltGetQueueDataResourcePoolInfo(const SceUltQueueDataResourcePool *po
 	if (ret < 0)
 		return ret;
 	pInfo->numQueueObjects = ret;
+	return SCE_OK;
+}
+
+/* SceUltQueue */
+int _sceUltQueueCreate(SceUltQueue *queue, const char *name, uint32_t dataSize,
+		       SceUltWaitingQueueResourcePool *waitingQueueResourcePool,
+		       SceUltQueueDataResourcePool *queueDataResourcePool,
+		       const SceUltQueueOptParam *optParam, uint32_t buildVersion)
+{
+	Queue *obj = (Queue *)queue;
+
+	int ret = obj->initialize(name, dataSize, internalOf(waitingQueueResourcePool),
+				  internalOf(queueDataResourcePool), optParam, false, buildVersion);
+	if (ret == SCE_OK) {
+		obj->queueDataResourcePool = queueDataResourcePool;
+		obj->waitingQueueResourcePool = waitingQueueResourcePool;
+	}
+	return ret;
+}
+
+int sceUltQueuePush(SceUltQueue *queue, const void *data)
+{
+	if (queue == NULL)
+		return SCE_ULT_ERROR_NULL;
+	return ((Queue *)queue)->push(data);
+}
+
+int sceUltQueueTryPush(SceUltQueue *queue, const void *data)
+{
+	if (queue == NULL)
+		return SCE_ULT_ERROR_NULL;
+	return ((Queue *)queue)->tryPush(data);
+}
+
+int sceUltQueuePop(SceUltQueue *queue, void *data)
+{
+	if (queue == NULL)
+		return SCE_ULT_ERROR_NULL;
+	return ((Queue *)queue)->pop(data);
+}
+
+int sceUltQueueTryPop(SceUltQueue *queue, void *data)
+{
+	if (queue == NULL)
+		return SCE_ULT_ERROR_NULL;
+	return ((Queue *)queue)->tryPop(data);
+}
+
+int sceUltQueueDestroy(SceUltQueue *queue)
+{
+	return ((Queue *)queue)->destroy();
+}
+
+int32_t sceUltGetQueueInfo(const SceUltQueue *queue, SceUltQueueInfo *info,
+			   SceUltWaitThreadInfo *waitThreadInfoList, uint32_t numWaitThreadInfo)
+{
+	const Queue *obj = (const Queue *)queue;
+
+	if (obj == NULL || info == NULL)
+		return SCE_ULT_ERROR_NULL;
+	if (!isAligned8(obj) || !isAligned8(info) || !isAligned8(waitThreadInfoList))
+		return SCE_ULT_ERROR_ALIGNMENT;
+	if (info->size != sizeof(*info))
+		return SCE_ULT_ERROR_INVALID;
+	int32_t ret = checkWaitThreadInfoList(waitThreadInfoList, numWaitThreadInfo);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(info, 0, sizeof(*info));
+	info->queueId = (uint32_t)obj;
+	info->size = sizeof(*info);
+	getName(obj->header.name, info->name);
+	SceUltQueueDataResourcePool *queueDataResourcePool = obj->queueDataResourcePool;
+	info->waitingQueueResourcePoolId = (uint32_t)obj->waitingQueueResourcePool;
+	info->queueDataResourcePoolId = (uint32_t)queueDataResourcePool;
+	info->dataSize = obj->m_dataSize;
+
+	/* the data queued: the entries behind the head's dummy */
+	uint32_t numData = 0;
+	uint32_t entry = obj->m_queue.headAddress() & ~7u;
+	if (entry != 0)
+		entry = nextAddress((const NBQueueEntry2 *)entry) & ~7u;
+	for (; entry != 0; entry = nextAddress((const NBQueueEntry2 *)entry) & ~7u)
+		numData++;
+	info->numData = numData;
+
+	/* the pushes wait on the pool's free data, the pops on the queue's */
+	int32_t numPush;
+	if (queueDataResourcePool != NULL) {
+		numPush = getWaitThreadInfoByCause(
+			internalOf(queueDataResourcePool)->m_semaphore.headAddress(),
+			waitThreadInfoList, numWaitThreadInfo, obj);
+		if (numPush < 0)
+			return numPush;
+	} else {
+		numPush = 0;
+	}
+	info->numPushWaitThreads = numPush;
+	uint32_t n = 0;
+	if (waitThreadInfoList != NULL) {
+		n = (uint32_t)numPush > numWaitThreadInfo ? numWaitThreadInfo : numPush;
+		for (int32_t i = n; i > 0; i--)
+			waitThreadInfoList[n - i].operation = SCE_ULT_THREAD_OPERATION_QUEUE_PUSH;
+		ret = getWaitThreadInfo(obj->m_semaphore.headAddress(), waitThreadInfoList + n,
+					numWaitThreadInfo - n);
+	} else {
+		ret = getWaitThreadInfo(obj->m_semaphore.headAddress(), NULL, 0);
+	}
+	if (ret < 0)
+		return ret;
+	info->numPopWaitThreads = ret;
+	if (waitThreadInfoList != NULL) {
+		int32_t m = (uint32_t)ret > numWaitThreadInfo ? numWaitThreadInfo : ret;
+		for (SceUltWaitThreadInfo *p = waitThreadInfoList + n; m > 0; m--, p++)
+			p->operation = SCE_ULT_THREAD_OPERATION_QUEUE_POP;
+	}
 	return SCE_OK;
 }
 
