@@ -16,6 +16,13 @@
 #undef DEFLATE_ASSERT_NAME_
 #endif
 
+/* GCC 4.8 at -Os (Sony's flags for the library) keeps static inline helpers out of line */
+#ifdef __SNC__
+#define DEFLATE_INLINE static inline
+#else
+#define DEFLATE_INLINE static inline __attribute__((always_inline))
+#endif
+
 typedef struct {
 	uint32_t next;
 	uint32_t word;
@@ -24,19 +31,19 @@ typedef struct {
 } DeflateInput;
 
 /* The native reader fetches a word even when only its low half is needed. */
-static inline uint32_t DeflateLoadWord(uint32_t address)
+DEFLATE_INLINE uint32_t DeflateLoadWord(uint32_t address)
 {
 	return *(const volatile uint32_t *)(uintptr_t)address;
 }
 
-static inline uint32_t DeflateWindow(const DeflateInput *input)
+DEFLATE_INLINE uint32_t DeflateWindow(const DeflateInput *input)
 {
 	unsigned int shift = (unsigned int)input->position & 31;
 
 	return (input->word >> shift) | (input->word << ((32 - shift) & 31));
 }
 
-static inline void DeflateRefill(DeflateInput *input)
+DEFLATE_INLINE void DeflateRefill(DeflateInput *input)
 {
 	if (input->position > 0) {
 		input->word = DeflateLoadWord(input->next);
@@ -45,20 +52,20 @@ static inline void DeflateRefill(DeflateInput *input)
 	}
 }
 
-static inline void DeflateAdvance(DeflateInput *input, unsigned int count)
+DEFLATE_INLINE void DeflateAdvance(DeflateInput *input, unsigned int count)
 {
 	input->position += count;
 	DeflateRefill(input);
 }
 
-static inline uint32_t DeflateShiftRight(uint32_t value, unsigned int count)
+DEFLATE_INLINE uint32_t DeflateShiftRight(uint32_t value, unsigned int count)
 {
 	count &= 255;
 	return count < 32 ? value >> count : 0;
 }
 
 /* A repeat crossing the alphabet boundary retains the count cursor index. */
-static inline uint32_t *DeflateHistogram(deflateInternalData_t *pW,
+DEFLATE_INLINE uint32_t *DeflateHistogram(deflateInternalData_t *pW,
 					unsigned int index)
 {
 	if (index < 16)
@@ -66,7 +73,7 @@ static inline uint32_t *DeflateHistogram(deflateInternalData_t *pW,
 	return (uint32_t *)&pW->u.s.count[index - 16].i;
 }
 
-static inline void DeflateStoreLength(deflateInternalData_t *pW,
+DEFLATE_INLINE void DeflateStoreLength(deflateInternalData_t *pW,
 				     unsigned int index, unsigned int length)
 {
 	if (index < sizeof(pW->u.s.len))

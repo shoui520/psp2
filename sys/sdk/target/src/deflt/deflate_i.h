@@ -4,6 +4,19 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef __SNC__
+/* SNC's intrinsics, as Sony's GCC 4.8 build of the library computes them */
+#define __clz(x) ((unsigned int)__builtin_clz(x))
+
+static inline unsigned int __rbit(unsigned int x)
+{
+	unsigned int r;
+
+	__asm__("rbit %0, %1" : "=r" (r) : "r" (x));
+	return r;
+}
+#endif
+
 typedef union {
 	uint16_t *p;
 	int i;
@@ -55,7 +68,7 @@ enum {
 
 extern const uint8_t _sceDeflateLengthOrder[19];
 
-uint32_t _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW);
+unsigned int _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW);
 int _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW);
 void _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW, int prevflag);
 

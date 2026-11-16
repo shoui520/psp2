@@ -5,6 +5,10 @@
 #ifndef SCE_LIBDEFLT_H
 #define SCE_LIBDEFLT_H
 
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+extern "C" {
+#endif
+
 struct SceDeflatePartialInputParam;
 
 /* asked for more input once the decompressor reaches pBufEnd */
@@ -23,5 +27,17 @@ typedef struct SceDeflatePartialInputParam {
 #define SCE_DEFLATE_ERROR_NOT_SUPPORTED		-2141847294	/* 0x80560102 */
 #define SCE_DEFLATE_ERROR_INVALID_POINTER	-2141847293	/* 0x80560103 */
 #define SCE_DEFLATE_ERROR_INVALID_CBINFO	-2141847292	/* 0x80560104 */
+
+/* RFC1950 */
+int sceZlibIsValid(const void *pSrcZlib);
+int sceZlibGetInfo(const void *pSrcZlib, unsigned char *pbCmf, unsigned char *pbFlg,
+		   unsigned int *puiDictId, const void **ppvData);
+const void *sceZlibGetCompressedData(const void *pSrcZlib);
+int sceZlibDecompress(void *pDst, unsigned int uiBufSize, const void *pSrcZlib,
+		      unsigned int *puiAdler32);
+
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+}
+#endif
 
 #endif /* SCE_LIBDEFLT_H */

@@ -15,213 +15,257 @@ const uint8_t _sceDeflateLengthOrder[19] = {
 	16, 19, 23, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 };
 
-uint32_t _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW)
+/*
+ * The code-length code's fast table: flags[1..7] hold one bit per symbol of each length 7..1
+ * (the top bit first); every symbol fills the entries of its bit-reversed code. A shift by 32
+ * (the last bit of a word) is the ARM register shift's, which gives 0.
+ */
+unsigned int _sceDeflateMakeHuffmanTableLength(deflateInternalData_t *pW)
 {
-	uint32_t code = 0;
-	int order;
+	signed char *tbl = pW->sym.len;
+	unsigned int *p0 = &pW->u.s.flags[1];
+	unsigned int code = 0;
+	unsigned int k = 6;
+	int ii;
+	int j;
 
-	for (order = 6; order >= 0; order--) {
-		uint32_t bits = pW->u.s.flags[7 - order];
-		uint8_t descriptor = (uint8_t)~order;
+	do {
+		unsigned int flags = *p0++;
 
-		if (!bits)
-			continue;
-		while (bits) {
-			uint32_t skip = __clz(bits) + 1;
-			uint32_t index = __rbit(code) >> 25;
-
-			bits = skip < 32 ? bits << skip : 0;
-			descriptor += 8 * skip;
+		if (flags) {
+			ii = 128 >> k;
+			j = ~k;
 			do {
-				pW->sym.len[index] = descriptor;
-				index += 128u >> order;
-			} while (index <= 127);
-			code += 1u << order;
+				int jj;
+				unsigned int count = __clz(flags) + 1;
+
+				jj = __rbit(code) >> 25;
+				flags <<= count;
+				j += count * 8;
+				do {
+					tbl[jj] = j;
+					jj += ii;
+				} while ((unsigned int)jj <= 127);
+				code += 1 << k;
+			} while (flags);
+			p0[-1] = flags;
 		}
-		pW->u.s.flags[7 - order] = 0;
-	}
+	} while (k--);
 	return code;
 }
 
-int32_t _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW)
+/*
+ * The distance code: flags[1..15] hold one bit per distance symbol of each length (the top bit
+ * first). Sorts the symbols into distsym, records each length's limit, and returns the
+ * code space left over (0 when the code is complete, or has at most one symbol).
+ */
+static inline int makeHuffmanTableDistance(deflateInternalData_t *pW)
 {
-	uint32_t count = 0, space = 0, bits, first;
-	uint32_t minLiteralBits = 0, total = 0;
-	uint32_t code, end, canonical, index, symbol;
-	uint16_t *symbols;
+	unsigned int *p0 = &pW->u.s.flags[0];
+	unsigned int pos = 0;
+	unsigned int code = 0;
+	unsigned int i;
 
-	for (bits = 1; bits <= 15; bits++) {
-		uint32_t bitmap = pW->u.s.flags[bits];
+	for (i = 1; i < 16; i++) {
+		/* the first symbol of this length less its first code: 0 for the shortest */
+		unsigned int lendiff = pos - (code >> (15 - i));
+		unsigned int flags = *++p0;
 
-		first = count - (space >> (15 - bits));
-		while (bitmap) {
-			uint32_t distance = __clz(bitmap);
+		while (flags) {
+			int j = __clz(flags);
 
-			count++;
-			bitmap -= 0x80000000u >> distance;
-			space += 1u << (15 - bits);
-			pW->distsym[count - 1] =
-				((const uint8_t *)(s_fixhuffcodes + 32))[distance];
+			flags -= 0x80000000u >> j;
+			pW->distsym[pos++] = ((const unsigned char *)(s_fixhuffcodes + 32))[j];
+			code += 1 << (15 - i);
 		}
-		if (bits <= 5) {
-			if (!first)
-				pW->v.w.distminlen = bits;
-			pW->distmaxcode[bits - 1] = space >> 10;
+		if (i > 5) {
+			pW->distmaxinfo[i - 6] = (code << 17) +
+				((lendiff + DEFLATE_DISTANCE_SYMBOL_BASE) | 0xffff0000u);
 		} else {
-			pW->distmaxinfo[bits - 6] = (space << 17) +
-				(0xffff0000u | (uint16_t)(first + DEFLATE_DISTANCE_SYMBOL_BASE));
+			if (!lendiff)
+				pW->v.w.distminlen = i;
+			pW->distmaxcode[i - 1] = code >> 10;
 		}
 	}
-	if (count <= 1) {
+	if (pos <= 1) {
 		pW->distmaxcode[0] = 32;
-		pW->v.w.distminlen = count;
-		pW->distsym[count] = 0;
-		if (count)
-			space *= 2;
+		pW->v.w.distminlen = pos;
+		pW->distsym[pos] = 0;
+		if (!pos)
+			return 0;
+		code <<= 1;
 	}
-	if (count && space != 0x8000)
-		return (int32_t)(space - 0x8000);
+	return code - 0x8000;
+}
 
-	space = 0;
-	for (bits = 1; bits <= 15; bits++) {
-		count = pW->u.s.count[bits - 1].i;
-		if (count) {
-			uint16_t *next = &pW->sym.lit[total];
+/* The literal/length fast table, from the sorted symbols, lengths hlen..8; then the longer codes */
+static inline void makeFastDecodeTable(deflateInternalData_t *pW, unsigned int hlen)
+{
+	unsigned int code = 0;
+	unsigned short *pSym = pW->sym.lit;
 
-			total += count;
-			if (!minLiteralBits)
-				minLiteralBits = bits;
-			pW->u.s.count[bits - 1].p = next;
-			space += count << (15 - bits);
-		}
-		if (bits <= 8) {
-			pW->v.w.litmaxcode[bits - 1] =
-				((int32_t)space >> 7) - 1;
-		} else {
-			first = total + DEFLATE_LITERAL_SYMBOL_BASE -
-				(uint32_t)((int32_t)space >> (15 - bits));
-			pW->litmaxinfo[15 - bits] = (space << 17) +
-				(0xffff0000u | (uint16_t)first);
-		}
-	}
-	if (space != 0x8000)
-		return (int32_t)(space - 0x8000);
-	for (symbol = 0; symbol < 286; symbol++) {
-		bits = pW->u.s.len[symbol];
-		if (bits) {
-			uint16_t *next = pW->u.s.count[bits - 1].p;
-
-			pW->u.s.count[bits - 1].p = next + 1;
-			*next = symbol < 256 ? symbol : s_fixhuffcodes[symbol - 256];
-		}
-	}
-
-	symbols = pW->sym.lit;
-	bits = minLiteralBits;
-	code = 0;
 	for (;;) {
-		uint32_t descriptor = *symbols++;
-		uint32_t extra = descriptor & 7;
-		uint32_t mask;
+		unsigned int val = *pSym++;
+		unsigned int end = code + (256u >> hlen);
+		unsigned int exbits;
 
-		end = code + (256u >> bits);
-		if ((descriptor & 0x400) && extra && extra + bits <= 8) {
-			descriptor = (((descriptor >> 8) & 7) << extra) +
-				((extra + bits) << 12) + 0x803;
-			mask = (1u << extra) - 1;
+		if ((val & 0x400) && (exbits = val & 7) != 0 && exbits + hlen <= 8) {
+			/* a length whose extra bits fit: one entry per value of them */
+			val = (((val >> 8) & 7) << exbits) + ((exbits + hlen) << 12) + 0x803;
 		} else {
-			descriptor += bits << 12;
-			mask = 0;
+			val += hlen << 12;
+			exbits = 0;
 		}
 		do {
-			index = __rbit(code++ << 24);
-			pW->u.ft[index] =
-				((index >> bits) & mask) + descriptor;
+			unsigned int revcode = __rbit(code++ << 24);
+
+			pW->u.ft[revcode] = ((revcode >> hlen) & ((1 << exbits) - 1)) + val;
 		} while (code != end);
-		while (end > pW->v.w.litmaxcode[bits - 1]) {
-			if (++bits > 8)
-				goto long_literals;
+		while (end > pW->v.w.litmaxcode[hlen - 1]) {
+			if (++hlen > 8) {
+				code = end;
+				goto longer8;
+			}
 		}
 		code = end;
 	}
-long_literals:
-	canonical = end << 24;
-	index = 24;
-	while (canonical) {
-		while (canonical >= pW->litmaxinfo[index - 18])
-			index--;
-		pW->u.ft[__rbit(canonical)] = index;
-		canonical += 0x01000000;
+longer8:
+	code <<= 24;
+	hlen = 24;
+	while (code) {
+		while (code >= pW->litmaxinfo[hlen - 18])
+			hlen--;
+		pW->u.ft[__rbit(code)] = hlen;
+		code += 0x01000000;
 	}
+}
 
-	bits = pW->v.w.distminlen;
-	code = 0;
-	index = 0;
+/*
+ * The distance fast table, lengths distminlen..5; then the longer codes. With no distance codes
+ * (distminlen 0) the limit read is the byte in front of distmaxcode, distmaxinfo[9]'s top byte.
+ */
+static inline void makeFastDecodeDistance(deflateInternalData_t *pW)
+{
+	unsigned int code = 0;
+	unsigned char *pSym = pW->distsym;
+	int hlen = pW->v.w.distminlen;
+
 	for (;;) {
-		uint16_t descriptor = pW->distsym[index++] + (bits << 12);
-		uint32_t limit;
+		int val = *pSym++ + (hlen << 12);
+		unsigned int end = code + (32u >> hlen);
 
-		end = code + (32u >> bits);
 		do {
-			pW->v.ftdist[__rbit(code++) >> 27] = descriptor;
+			unsigned int revcode = __rbit(code++) >> 27;
+
+			pW->v.ftdist[revcode] = val;
 		} while (code != end);
-		for (;;) {
-			/* With no distance codes, the preceding packed record supplies the limit. */
-			limit = bits ? pW->distmaxcode[bits - 1] :
-				pW->distmaxinfo[9] >> 24;
-			if (end < limit)
-				break;
-			if (++bits > 5)
-				goto long_distances;
+		while (end >= pW->distmaxcode[hlen - 1]) {
+			if (++hlen > 5) {
+				code = end;
+				goto longer5;
+			}
 		}
 		code = end;
 	}
-long_distances:
-	canonical = end << 27;
-	while (canonical) {
-		while (canonical >= pW->distmaxinfo[bits - 6])
-			bits++;
-		pW->v.ftdist[__rbit(canonical)] =
-			(bits << 12) - 0x800;
-		canonical += 0x08000000;
+longer5:
+	code <<= 27;
+	while (code) {
+		while (code >= pW->distmaxinfo[hlen - 6])
+			hlen++;
+		pW->v.ftdist[__rbit(code)] = (hlen << 12) - 0x800;
+		code += 0x08000000;
 	}
+}
+
+int _sceDeflateMakeHuffmanTable(deflateInternalData_t *pW)
+{
+	count_t *count = pW->u.s.count;
+	unsigned char *pLen = pW->u.s.len;
+	int pos = 0;
+	int code;
+	unsigned int i;
+	unsigned int minlen;
+
+	code = makeHuffmanTableDistance(pW);
+	if (code)
+		return code;
+
+	code = 0;
+	minlen = 0;
+	for (i = 1; i < 16; i++) {
+		int c = count[i - 1].i;
+
+		if (c) {
+			count[i - 1].p = &pW->sym.lit[pos];
+			pos += c;
+			if (!minlen)
+				minlen = i;
+			code += c << (15 - i);
+		}
+		if (i > 8) {
+			pW->litmaxinfo[15 - i] = (code << 17) +
+				((pos + DEFLATE_LITERAL_SYMBOL_BASE - (code >> (15 - i))) | 0xffff0000u);
+		} else {
+			pW->v.w.litmaxcode[i - 1] = (code >> 7) - 1;
+		}
+	}
+	code -= 0x8000;
+	if (code)
+		return code;
+
+	/* the literals in length order, then the length symbols' descriptors */
+	for (i = 0; i < 256; i++) {
+		int j = pLen[i];
+
+		if (j)
+			*count[j - 1].p++ = i;
+	}
+	for (i = 0; i < 30; i++) {
+		int j = pLen[256 + i];
+
+		if (j)
+			*count[j - 1].p++ = s_fixhuffcodes[i];
+	}
+	makeFastDecodeTable(pW, minlen);
+	makeFastDecodeDistance(pW);
 	return 0;
 }
 
 void _sceDeflateMakeHuffmanFixcode(deflateInternalData_t *pW, int prevflag)
 {
-	uint32_t code, index;
+	const unsigned short *pSrc = s_fixhuffcodes;
+	unsigned int i;
 
-	if ((((uint32_t)prevflag >> 18) & 3) == 1)
+	if ((((unsigned int)prevflag >> 18) & 3) == 1)
 		return;
-	for (code = 0; code < 32; code++) {
-		pW->u.ft[code * 8 + 7] = 24;
-		pW->u.ft[code * 8 + 3] = 24;
-		pW->v.ftdist[__rbit(code) >> 27] =
-			((const uint8_t *)(s_fixhuffcodes + 32))[code] + (5u << 12);
+	for (i = 0; i < 32; i++) {
+		pW->u.ft[i * 8 + 7] = 24;
+		pW->u.ft[i * 8 + 3] = 24;
+		pW->v.ftdist[__rbit(i) >> 27] =
+			((const unsigned char *)(pSrc + 32))[i] + (5 << 12);
 	}
-	for (code = 0; code < 24; code++) {
-		uint32_t descriptor = s_fixhuffcodes[code];
-		uint16_t lower, upper;
+	for (i = 0; i < 24; i++) {
+		unsigned int code = pSrc[i];
+		unsigned int code2;
+		unsigned int pos = __rbit(i) >> 25;
 
-		index = __rbit(code) >> 25;
-		if ((uint8_t)descriptor == 1) {
-			lower = (8u << 12) + 0x803 + (((descriptor >> 8) & 7) << 1);
-			upper = lower + 1;
+		if ((unsigned char)code == 1) {
+			/* a length with one extra bit: both of its codes, the bit in place */
+			code = (code >> 7) + 0x87f3;
+			code2 = code + 1;
 		} else {
-			lower = descriptor + (7u << 12);
-			upper = lower;
+			code += 7 << 12;
+			code2 = code;
 		}
-		pW->u.ft[index] = lower;
-		pW->u.ft[index + 128] = upper;
+		pW->u.ft[pos] = code;
+		pW->u.ft[pos + 128] = code2;
 	}
-	for (code = 48; code < 192; code++)
-		pW->u.ft[__rbit(code) >> 24] = (8u << 12) + code - 48;
-	for (; code < 200; code++)
-		pW->u.ft[__rbit(code) >> 24] =
-			s_fixhuffcodes[code - 168] + (8u << 12);
+	for (i = 48; i < 192; i++)
+		pW->u.ft[__rbit(i) >> 24] = (8 << 12) + i - 48;
+	for (; i < 200; i++)
+		pW->u.ft[__rbit(i) >> 24] = pSrc[i - 168] - (8 << 12);
 	/* Fixed nine-bit literals occupy sorted-symbol slots 8 through 119. */
-	for (code = 144; code < 256; code++)
-		pW->sym.lit[8 + code - 144] = code;
+	for (i = 144; i < 256; i++)
+		pW->sym.lit[8 + i - 144] = i;
 	pW->litmaxinfo[6] = DEFLATE_LITERAL_SYMBOL_BASE + 8 - 0x190;
 }
