@@ -977,17 +977,18 @@ int sceNpBasicRegisterInGameDataMessageHandler(
 	g_state.callbackTable.friendContextArg = arg;
 	g_state.callbackTable.friendRequest = handlers.friendRequest;
 	g_state.callbackTable.friendRequestArg = arg;
-	if (commId == NULL) {
+	if (commId != NULL) {
+		sceClibMemcpy_safe(&g_state.commId, commId, sizeof(g_state.commId));
+	} else {
 		result = SceNpManager_96DF1B76(&src[0]);
 		if (result < 0)
 			goto fail;
-		commId = src[0];
-		if (commId == NULL) {
+		if (src[0] == NULL) {
 			result = NP_BASIC_ERROR_NO_COMM_ID_SUPPLIED;
 			goto fail;
 		}
+		sceClibMemcpy_safe(&g_state.commId, src[0], sizeof(g_state.commId));
 	}
-	sceClibMemcpy_safe(&g_state.commId, commId, sizeof(g_state.commId));
 	npBasicSetHandlerFlags(flags.flags, &handlers);
 	result = npBasicRegisterHandler(SceIpmi_9EE9496B(g_state.client), flags.flags);
 	if (result >= 0) {
@@ -1208,6 +1209,9 @@ int sceNpBasicSendInGameDataMessage(const SceNpId *to, const SceNpBasicInGameDat
 	int result;
 	int ret;
 	unsigned int i;
+	unsigned char *base;
+	SceUInt64 *slot;
+	int offset;
 
 	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
@@ -1222,16 +1226,23 @@ int sceNpBasicSendInGameDataMessage(const SceNpId *to, const SceNpBasicInGameDat
 	result = npBasicStateLock(&g_state);
 	ret = result;
 	if (result >= 0) {
-		for (i = 0; i < 20; i++) {
-			if (g_state.sendTimes[i] == 0) {
-				g_state.sendTimes[i] = now;
+		base = (unsigned char *)g_state.sendTimes;
+		offset = 0;
+		slot = g_state.sendTimes;
+		i = 0;
+		do {
+			if (*slot == 0) {
+				*(SceUInt64 *)(base + offset) = now;
 				goto found;
 			}
-			if (now > g_state.sendTimes[i] + 60000000LL) {
-				g_state.sendTimes[i] = now;
+			if (now > *slot + 60000000LL) {
+				*(SceUInt64 *)(base + offset) = now;
 				goto found;
 			}
-		}
+			i++;
+			slot++;
+			offset += 8;
+		} while (i < 20);
 		ret = NP_BASIC_ERROR_BUSY;
 found:
 		result = ret;
