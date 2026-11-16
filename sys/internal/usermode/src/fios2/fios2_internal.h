@@ -175,13 +175,20 @@ struct FiosDH {
 	void *pArchiver;		/* the dearchiver whose archive holds the directory, or NULL */
 	uint32_t archiveID;
 	int32_t entryIndex;		/* the archive's manifest entry read last; -1 before the first */
-	uint32_t reserved1[3];
+	uint32_t reserved1;
+	uint64_t entriesRead;		/* the native directory's entries read */
 	void *pBuf;			/* the caller's buffer for the entries */
 	size_t bufSize;
 	uint32_t flags;			/* FIOS_DH_* */
 	uint32_t reserved2[3];
 	FiosPath path;
 };
+
+/* SceAppMgr: the owner's permission bits decide for a game, owner's or others' for the rest */
+#define STAT_MODE_OWNER_READ	0400
+#define STAT_MODE_OWNER_WRITE	0200
+#define STAT_MODE_OTHERS_READ	0004
+#define STAT_MODE_OTHERS_WRITE	0002
 
 #define FIOS_DH_EOF	0x4		/* a dearchiver's directory has no more entries */
 
@@ -674,7 +681,7 @@ int fiosPlatformGetDevice(char *pDevice, const char *pPath, size_t size);
 int fiosPlatformSync(const char *pPath, int flag);
 int fiosPlatformRemove(const char *pPath);
 int fiosPlatformRename(const char *pOldPath, const char *pNewPath);
-int fiosPlatformTruncate(const char *pPath, SceOff size);
+int fiosPlatformTruncate(const char *pPath, SceFiosNativeFH fd, SceOff size);
 int fiosPlatformMkdir(const char *pPath, SceIoMode mode);
 int fiosPlatformRmdir(const char *pPath);
 int fiosPlatformDevctl(const char *pDevice, int cmd, const void *pArg, SceSize argSize,
@@ -834,6 +841,11 @@ struct ArchiveRead {
 	int CreateBlockRead(SceFiosOffset block, uint16_t decompressID, uint16_t readID);
 };
 
+/* execution.cpp: a chunk type's executor, and a chunk's run through a scheduler's table */
+typedef int (*ExecuteFunc)(FiosChunk *pChunk);
+
+int Execute(uint16_t chunkID, ExecuteFunc *pTable);
+
 /* scheduler.cpp: the scheduler that runs the chunks */
 class Scheduler {
 public:
@@ -890,7 +902,27 @@ SceFiosFH sceFiosFilenoToFH(SceFiosNativeFH fd);
 int sceFiosDeallocatePassthruFH(SceFiosFH fh);
 }
 
-/* sync.cpp: a SceIoStat in FIOS2's terms */
+/* a SceIoStat in FIOS2's terms (sync.cpp's fiosStatFromIoStat, and execution.cpp's stat) */
+static inline void statFromIoStat(const SceIoStat *pIoStat, SceFiosStat *pStat)
+{
+	pStat->fileSize = pIoStat->st_size;
+	pStat->mode = pIoStat->st_mode;
+	pStat->accessDate = fiosPlatformDateTimeToDate(&pIoStat->st_atime);
+	pStat->modificationDate = fiosPlatformDateTimeToDate(&pIoStat->st_mtime);
+	pStat->creationDate = fiosPlatformDateTimeToDate(&pIoStat->st_ctime);
+	pStat->statFlags = 0;
+	if (SCE_STM_ISDIR(pIoStat->st_mode))
+		pStat->statFlags = SCE_FIOS_STATUS_DIRECTORY;
+	if ((sceAppMgrIsGameProgram() && (pIoStat->st_mode & STAT_MODE_OWNER_WRITE)) ||
+	    (!sceAppMgrIsGameProgram() && ((pIoStat->st_mode & STAT_MODE_OWNER_WRITE) ||
+					   (pIoStat->st_mode & STAT_MODE_OTHERS_WRITE))))
+		pStat->statFlags |= SCE_FIOS_STATUS_WRITABLE;
+	if ((sceAppMgrIsGameProgram() && (pIoStat->st_mode & STAT_MODE_OWNER_READ)) ||
+	    (!sceAppMgrIsGameProgram() && ((pIoStat->st_mode & STAT_MODE_OWNER_READ) ||
+					   (pIoStat->st_mode & STAT_MODE_OTHERS_READ))))
+		pStat->statFlags |= SCE_FIOS_STATUS_READABLE;
+}
+
 void fiosStatFromIoStat(const SceIoStat *pIoStat, SceFiosStat *pStat);
 
 #endif

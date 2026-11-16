@@ -15,6 +15,7 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	chunk.cpp
 	chunker.cpp
 	dearchiver.cpp
+	execution.cpp
 	handletable.cpp
 	wws_cond.cpp
 	wws_mutex.cpp

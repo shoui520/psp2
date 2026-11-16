@@ -262,30 +262,9 @@ int sceFiosResolveSync(const SceFiosOpAttr *pAttr, const SceFiosTuple *pInTuple,
 	return 0;
 }
 
-/* SceAppMgr: the owner's permission bits decide for a game, owner's or others' for the rest */
-#define STAT_MODE_OWNER_READ	0400
-#define STAT_MODE_OWNER_WRITE	0200
-#define STAT_MODE_OTHERS_READ	0004
-#define STAT_MODE_OTHERS_WRITE	0002
-
 void fiosStatFromIoStat(const SceIoStat *pIoStat, SceFiosStat *pStat)
 {
-	pStat->fileSize = pIoStat->st_size;
-	pStat->mode = pIoStat->st_mode;
-	pStat->accessDate = fiosPlatformDateTimeToDate(&pIoStat->st_atime);
-	pStat->modificationDate = fiosPlatformDateTimeToDate(&pIoStat->st_mtime);
-	pStat->creationDate = fiosPlatformDateTimeToDate(&pIoStat->st_ctime);
-	pStat->statFlags = 0;
-	if (SCE_STM_ISDIR(pIoStat->st_mode))
-		pStat->statFlags = SCE_FIOS_STATUS_DIRECTORY;
-	if ((sceAppMgrIsGameProgram() && (pIoStat->st_mode & STAT_MODE_OWNER_WRITE)) ||
-	    (!sceAppMgrIsGameProgram() && ((pIoStat->st_mode & STAT_MODE_OWNER_WRITE) ||
-					   (pIoStat->st_mode & STAT_MODE_OTHERS_WRITE))))
-		pStat->statFlags |= SCE_FIOS_STATUS_WRITABLE;
-	if ((sceAppMgrIsGameProgram() && (pIoStat->st_mode & STAT_MODE_OWNER_READ)) ||
-	    (!sceAppMgrIsGameProgram() && ((pIoStat->st_mode & STAT_MODE_OWNER_READ) ||
-					   (pIoStat->st_mode & STAT_MODE_OTHERS_READ))))
-		pStat->statFlags |= SCE_FIOS_STATUS_READABLE;
+	statFromIoStat(pIoStat, pStat);
 }
 
 int sceFiosStatSync(const SceFiosOpAttr *pAttr, const char *pPath, SceFiosStat *pOutStatus)
@@ -406,7 +385,7 @@ int sceFiosFileTruncateSync(const SceFiosOpAttr *pAttr, const char *pPath, SceFi
 		getSyncOpAttr(&attr, pAttr);
 		return sceFiosOpSyncWait(sceFiosFileTruncate(&attr, pPath, length));
 	}
-	err = fiosPlatformTruncate(pPath, length);
+	err = fiosPlatformTruncate(pPath, SCE_FIOS_NATIVEFH_INVALID, length);
 	if (err != 0)
 		err = fiosPlatformTranslateError(err);
 	return err;

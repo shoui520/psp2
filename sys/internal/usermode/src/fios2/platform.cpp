@@ -210,7 +210,8 @@ int fiosPlatformRename(const char *pOldPath, const char *pNewPath)
 	return sceIoRename(pOldPath, pNewPath);
 }
 
-int fiosPlatformTruncate(const char *pPath, SceOff size)
+/* the native handle is not used: the path's file is truncated */
+int fiosPlatformTruncate(const char *pPath, SceFiosNativeFH fd, SceOff size)
 {
 	SceIoStat stat;
 
