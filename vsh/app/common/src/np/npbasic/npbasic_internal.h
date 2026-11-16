@@ -15,6 +15,8 @@
 #include <libkernel/libkernel.h>
 #include <np/np_common.h>
 #include <np/np_basic.h>
+#include <np/np_manager.h>
+#include <rtc.h>
 #include "../../../../../lowlayer/src/ipmi_wrapper/ipmi_wrapper_client.h"
 
 /* SCE_NP_BASIC_ERROR_* (SDK np/np_basic.h), as signed values */
@@ -32,8 +34,6 @@
 #define NP_BASIC_ERROR_NO_NP_COMM_ID_IN_PARAM_SFO	-2141905650	/* 0x80551d0e */
 
 /* the IPMI client the library talks to the NP service through, the library's state */
-extern unsigned char g_initialized;		/* 0x81007018 */
-extern int g_ipmiClient;		/* 0x81007028 */
 
 /* the NP service's client object (0 when there is none) */
 typedef struct NpBasicClient NpBasicClient;
@@ -79,7 +79,6 @@ typedef struct NpBasicFriendInfo {
 } NpBasicFriendInfo;
 
 /* the communication ID of the title, set when the handler is registered */
-extern SceNpCommunicationId g_commId;	/* 0x8100702d */
 
 /* an IPMI error of the service as the error of the library */
 extern int npBasicConvertError(int error);
@@ -144,7 +143,7 @@ extern int npBasicRequest_9003C(NpBasicClient *client, int *a2, void *a3);
 extern int npBasicRequest_9003D(NpBasicClient *client, const void *a2, int *a3);
 extern int npBasicRequest_9003E(NpBasicClient *client, const void *a2, int a3, void *a4);
 
-/* npbasic/jga_response.cpp: the join game ack messages (SceNpJgaIpcCallbackFn) */
+/* npbasic/jga_ipc.cpp: the join game ack messages of the raw message queue */
 #define NP_BASIC_JGA_ERROR_MESSAGE_TOO_LARGE	-2141874686	/* 0x80559602 */
 #define NP_BASIC_JGA_ERROR_INVALID_ARGUMENT	-2141873663	/* 0x80559a01 */
 
@@ -178,7 +177,7 @@ typedef struct NpBasicJgaEvent {
 	int dataSize;
 } NpBasicJgaEvent;
 
-typedef int (*NpBasicJgaCallback)(const NpBasicJgaEvent *event);
+typedef void (*NpBasicJgaCallback)(const NpBasicJgaEvent *event);
 
 extern NpBasicJgaCallback g_jgaCallback;	/* 0x81007000 */
 
@@ -188,5 +187,59 @@ extern int npBasicJgaSendMessage(int requestId, const SceNpId *self, const SceNp
 				 SceSize dataSize);
 extern int npBasicJgaPoll(void);
 extern void npBasicJgaIpcCallback(const NpBasicJgaMessage *message);
+
+/* the join game requests being answered: 8 entries (the library state) */
+#define NP_BASIC_JOIN_GAME_ENTRY_MAX		8
+
+#define NP_BASIC_JGA_ERROR_INVALID_HANDLER	-2141874172	/* 0x80559804 */
+#define NP_BASIC_ERROR_JOIN_GAME_ACK_REQUEST_TIMEDOUT	-2141905649	/* 0x80551d0f */
+#define NP_BASIC_ERROR_JOIN_GAME_ACK_REQUEST_CANCELED	-2141905648	/* 0x80551d10 */
+#define NP_BASIC_ERROR_JOIN_GAME_ACK_REQUEST_INVALID	-2141905647	/* 0x80551d11 */
+
+typedef struct NpBasicJoinGameEntry {
+	SceNpId npId;
+	int requestId;
+	SceUInt64 deadline;
+	unsigned char used;
+	unsigned char canceled;
+	unsigned char timedOut;
+	unsigned char reserved[5];
+} NpBasicJoinGameEntry;
+
+typedef struct NpBasicJgaRequestHeader {
+	int kind;
+	int reserved;
+	SceUInt64 deadline;
+} NpBasicJgaRequestHeader;
+
+
+/* the library's state (0x81007018): one object Sony's code reaches every part of through its base */
+typedef struct NpBasicState {
+	unsigned char initialized;
+	int memBlock;
+	int mspace;
+	int ipcBuffer;
+	int client;
+	unsigned char handlerRegistered;
+	SceNpCommunicationId commId;
+	unsigned char reserved0[3];
+	unsigned char callbackTable[112];
+	unsigned char reserved1[828];
+	unsigned char reserved2[32];
+	unsigned char reserved3[8];
+	unsigned char reserved4[160];
+	unsigned char reserved5[8];
+	NpBasicJoinGameEntry joinGameEntries[NP_BASIC_JOIN_GAME_ENTRY_MAX];
+	SceNpBasicJoinGameAckRequestEventHandler joinGameAckHandler;
+	void *joinGameAckArg;
+	int joinGameAckMode;
+} NpBasicState;
+
+extern NpBasicState g_state;		/* 0x81007018 */
+
+extern int npBasicJgaRequestReceived(int requestId, SceNpId npId, SceUInt64 deadline) __attribute__((noinline));
+extern int npBasicJgaCancelAll(void) __attribute__((noinline));
+extern int npBasicJgaCheckTimeouts(void) __attribute__((noinline));
+extern void npBasicJgaEventCallback(const NpBasicJgaEvent *event);
 
 #endif

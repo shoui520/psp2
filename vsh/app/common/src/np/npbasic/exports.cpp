@@ -12,9 +12,9 @@ int sceNpBasicGetFriendOnlineStatus(const void *a1, int *a2)
 	NpBasicClient *client;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -33,9 +33,9 @@ int sceNpBasicGetFriendContextState(const void *a1, int *a2)
 	unsigned char own[12];
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -46,8 +46,8 @@ int sceNpBasicGetFriendContextState(const void *a1, int *a2)
 	sceClibMemset(none, 0, sizeof(none));
 	if (sceClibMemcmp(none, &record.commId, sizeof(none)) != 0) {
 		sceClibMemset(own, 0, sizeof(own));
-		if (sceClibMemcmp(&g_commId, &record.commId, sizeof(g_commId)) != 0
-		    || sceClibMemcmp(own, &g_commId, sizeof(g_commId)) == 0)
+		if (sceClibMemcmp(&g_state.commId, &record.commId, sizeof(g_state.commId)) != 0
+		    || sceClibMemcmp(own, &g_state.commId, sizeof(g_state.commId)) == 0)
 			*a2 = 1;
 		else
 			*a2 = 2;
@@ -63,9 +63,9 @@ int sceNpBasicGetGamePresenceOfFriend(const void *a1, SceNpBasicGamePresence *a2
 	NpBasicPresenceRecord record;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -85,9 +85,9 @@ int sceNpBasicGetFriendListEntryCount(int *a1)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL)
@@ -109,9 +109,9 @@ int sceNpBasicGetFriendListEntries(unsigned int a1, void *a2, int a3, int *a4)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
@@ -136,9 +136,9 @@ int sceNpBasicGetFriendRequestEntryCount(int *a1)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL)
@@ -160,9 +160,9 @@ int sceNpBasicGetFriendRequestEntries(unsigned int a1, void *a2, int a3, int *a4
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
@@ -187,9 +187,9 @@ int sceNpBasicGetRequestedFriendRequestEntryCount(int *a1)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL)
@@ -211,9 +211,9 @@ int sceNpBasicGetRequestedFriendRequestEntries(unsigned int a1, void *a2, int a3
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
@@ -238,9 +238,9 @@ int sceNpBasicGetBlockListEntryCount(int *a1)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL)
@@ -262,9 +262,9 @@ int sceNpBasicGetBlockListEntries(unsigned int a1, void *a2, int a3, int *a4)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a2 == NULL || a3 == 0 || a4 == NULL || a1 >= 100)
@@ -286,9 +286,9 @@ int SceNpBasic_0C9BAF57(const void *a1, NpBasicPresenceTail *a2)
 	NpBasicPresenceRecord record;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -306,9 +306,9 @@ int SceNpBasic_B93ADCDA(const void *a1, NpBasicFriendInfo *a2)
 	NpBasicPresenceRecord record;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -332,9 +332,9 @@ int sceNpBasicCheckIfPlayerIsBlocked(const void *a1, unsigned char *a2)
 	unsigned char found;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -355,9 +355,9 @@ int sceNpBasicGetGameJoiningPresence(const void *a1, void *a2)
 	NpBasicClient *client;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	if (a1 == NULL || a2 == NULL)
@@ -375,9 +375,9 @@ int SceNpBasic_375EABF2(int *a1, NpBasicFriendInfo *a2, NpBasicPresenceTail *a3)
 	int state;
 	int result;
 
-	if (g_initialized == 0)
+	if (g_state.initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	client = SceIpmi_9EE9496B(g_ipmiClient);
+	client = SceIpmi_9EE9496B(g_state.client);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
 	sceClibMemset(&record, 0, sizeof(record));
