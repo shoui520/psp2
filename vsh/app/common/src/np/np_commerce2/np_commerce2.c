@@ -7,5 +7,4 @@
 #include <skeleton.h>
 
 STUB(sceNpCommerce2StartEmptyStoreCheck)
-STUB(SceNpCommerce2_785095D9)
 STUB(SceNpCommerce2_F9DE9CDF)
