@@ -186,3 +186,65 @@ int npCommerce2ReadItem0x15(const NpCommerce2Item *result, SceUInt32 index, NpCo
 	}
 	return ret;
 }
+
+/* the record of tag 0x78 at an index: two values */
+int npCommerce2ReadItem0x78(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 120, 8, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		item->value[0] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, data + ret + 4, 4);
+		item->value[1] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 8;
+	}
+	return ret;
+}
+
+/* the record of tag 0x57: whether its value is not zero */
+int npCommerce2ReadItem0x57(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x57, 4, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		item->value[0] = sceNetNtohl(net) != 0;
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}

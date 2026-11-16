@@ -1264,6 +1264,7 @@ typedef struct NpCommerce2DatedRow {
 
 extern int npCommerce2ReadTableRowDated0x71(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatedRow *item);
 extern int npCommerce2InitTableResult0x72(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
+extern int npCommerce2ReadEntry0x16_8100D8E4(int a1, int a2, int a3);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1306,17 +1307,11 @@ extern int npCommerce2AbortRequest(SceUInt32 reqId);
 extern int npCommerce2DestroyAllContextsLocked(void);
 
 /* request builders and result readers not understood well enough to name yet; named by address */
-extern int npCommerce2_8100D4EC(int a1, void *a2, int a3);
-extern int npCommerce2_8100D61A(int a1, int a2, int a3);
 extern int npCommerce2_81005E40(int type, SceUInt32 reqId, void *buf, SceSize bufLen,
 				SceSize *fillSize);
 extern int npCommerce2_810062FA(SceUInt32 reqId, const char *id, int a3, int a4, int a5, int a6);
 extern int npCommerce2GetResultData(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize);
-extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result, void *buf,
-				SceSize bufLen);
 extern int npCommerce2GetEnvironment(void);
-extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
-				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
@@ -1453,10 +1448,6 @@ extern int npCommerce2_8100B372(int a1, int a2);
 extern int npCommerce2_8100B41A(int a1, const char *a2);
 extern int npCommerce2_8100B7A0(SceUInt32 ctxId, SceInt32 *shortfall);
 extern int npCommerce2_8100B7F4(SceUInt32 ctxId, SceInt32 *shortfall);
-extern int npCommerce2_8100D6BC(int a1, void *a2, int a3);
-extern int npCommerce2_8100D8E4(int a1, int a2, int a3);
-extern int npCommerce2_8100D8EC(int a1, int a2);
-extern int npCommerce2_8100D980(int a1, int a2, int a3);
 extern int npCommerce2_810060C0(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810060CE(SceUInt32 reqId);
 extern int npCommerce2_810062EC(SceUInt32 ctxId, SceUInt32 *reqId);

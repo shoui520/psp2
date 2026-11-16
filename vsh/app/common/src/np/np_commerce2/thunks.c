@@ -124,3 +124,8 @@ int npCommerce2ReadCount0x33_81013A2A(const NpCommerce2Item *result, NpCommerce2
 {
 	return npCommerce2ReadCount0x33(result, item);
 }
+
+int npCommerce2ReadEntry0x16_8100D8E4(int a1, int a2, int a3)
+{
+	return npCommerce2ReadEntry0x16((const NpCommerce2Item *)a1, a2, (NpCommerce2Entry *)a3);
+}
