@@ -212,7 +212,7 @@ void inputInit(void)
 	/* before 0x01000104 every start is cold, and the settings' wlanLine picks the WLAN's
 	   line: P3.1 driven low, or P6.7 */
 	coldStart = 1;
-	if (configGet()->wlanLine) {
+	if (configGet()->CONFIG_WLAN_LINE) {
 		PM3.0 = 1;
 		PM3.1 = 0;
 		P3.1 = 0;
@@ -544,7 +544,7 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
-#if BOARD_INPUTS_102603
+#if BOARD_PIN3_102603
 	if ((flags & 0x00000020) == 0) {
 		intp4Enable(1);
 		if (!P3.1) {
@@ -555,7 +555,7 @@ void inputSuspend(void)
 	}
 #elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 P3.1 wakes too, unless it drives the WLAN's line */
-	if ((flags & 0x00000020) == 0 && configGet()->wlanLine == 0) {
+	if ((flags & 0x00000020) == 0 && configGet()->CONFIG_WLAN_LINE == 0) {
 		intp4Enable(1);
 		if (!P3.1) {
 			pinMonitor3Enable(1);
@@ -834,7 +834,7 @@ void pinMonitorPoll(void)
 #endif
 		}
 		if (pinMonitors.mask & 0x08) {
-#if BOARD_INPUTS_102603
+#if BOARD_PIN3_102603
 			level = P3.1;
 			if (pinMonitors.pin[3].last == level) {
 				if (pinMonitors.pin[3].count-- == 0) {
@@ -846,7 +846,7 @@ void pinMonitorPoll(void)
 			}
 			pinMonitors.pin[3].last = level;
 #elif !FW_SINCE(0x01000104)
-			if (configGet()->wlanLine == 0) {
+			if (configGet()->CONFIG_WLAN_LINE == 0) {
 				level = P3.1;
 				if (pinMonitors.pin[3].last == level) {
 					if (pinMonitors.pin[3].count-- == 0) {
@@ -1420,7 +1420,7 @@ void intp4Enable(unsigned char enable)
 		PMK4 = 1;
 		PIF4 = 0;
 	}
-#if BOARD_INPUTS_102603
+#if BOARD_PIN3_102603
 	else {
 		EGP0.4 = 0;
 		EGN0.4 = 1;
@@ -1429,7 +1429,7 @@ void intp4Enable(unsigned char enable)
 	}
 #elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 P3.1's falling edge, unless P3.1 drives the WLAN's line */
-	else if (configGet()->wlanLine == 0) {
+	else if (configGet()->CONFIG_WLAN_LINE == 0) {
 		EGP0.4 = 0;
 		EGN0.4 = 1;
 		PIF4 = 0;
@@ -1448,14 +1448,14 @@ void pinMonitor3Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x08;
-#if BOARD_INPUTS_102603
+#if BOARD_PIN3_102603
 	else {
 		pinMonitors.pin[3].last = P3.1;
 		pinMonitors.pin[3].count = pinMonitors.pin[3].config.reload;
 		pinMonitors.mask |= 0x08;
 	}
 #elif !FW_SINCE(0x01000104)
-	else if (configGet()->wlanLine == 0) {
+	else if (configGet()->CONFIG_WLAN_LINE == 0) {
 		pinMonitors.pin[3].last = P3.1;
 		pinMonitors.pin[3].count = pinMonitors.pin[3].config.reload;
 		pinMonitors.mask |= 0x08;

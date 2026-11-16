@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "board.h"
 #include "kernel.h"
 #include "serial.h"
 #include "serial2.h"
@@ -271,7 +272,7 @@ unsigned char serial4Open2(int baud)
 	uart4Open(baud);
 	serial4Start(2);
 	serial2SetLink(1);
-#if !FW_SINCE(0x01000104)
+#if !FW_SINCE(0x01000104) && !BOARD_102603
 	dly_tsk(13);
 #endif
 	serial2SetP71(0);
@@ -487,3 +488,11 @@ void serial4StartTimers(void)
 	handler.handler = serial4PostTimeout3;
 	timerSetHandler(TIMER(0x10), &handler);
 }
+
+#if !FW_SINCE(0x01000104)
+/* the 0x0009xxxx builds carry a table of user names after this file's constants, which
+   nothing reads */
+const char serial4Users[5][12] = {
+	"USR_KERMIT", "USR_WWAN", "USR_ERNIE", "USR_SUPER", "USR_DBGR"
+};
+#endif

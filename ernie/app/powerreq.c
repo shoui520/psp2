@@ -624,12 +624,14 @@ static void powerRequestCtrlWirelessPower(void)
 static void powerRequest088B(void)
 {
 	powerRequestDone(5);
+	return;
 }
 
 /* 0x088c (SceSysconForDriver_B872E904): not on this syscon */
 static void powerRequest088C(void)
 {
 	powerRequestDone(6);
+	return;
 }
 
 /* 0x0899 (sceSysconCtrlHpremote, the wiki's guess) */
@@ -1256,12 +1258,14 @@ static void powerRequestBatteryStartBLMode(void)
 {
 	batteryBLLineOn();
 	powerRequestDone(0);
+	return;
 }
 
 /* 0x08c0 (sceSysconCtrlManualChargeMode): nothing to do */
 static void powerRequestCtrlManualChargeMode(void)
 {
 	powerRequestDone(0);
+	return;
 }
 
 /* 0x08c1 (sceSysconCtrlBatteryCharge) */

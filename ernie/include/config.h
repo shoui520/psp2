@@ -37,6 +37,14 @@ struct ConfigWakeMasks {
 	unsigned long	suspendOn;
 };
 
+/* the WLAN line's setting the code reads: 0x00102603 before 0x01000104 reads the byte after
+   wlanLine (wlanLineExtra, 0x129) */
+#if HW_IS(0x00102603) && !FW_SINCE(0x01000104)
+#define CONFIG_WLAN_LINE	wlanLineExtra
+#else
+#define CONFIG_WLAN_LINE	wlanLine
+#endif
+
 /* PLACEHOLDER: only the fields read so far */
 struct ConfigBlock {
 	struct AnalogCalibration analogCalibration;	/* the sticks' default calibration */

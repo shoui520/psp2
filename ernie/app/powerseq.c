@@ -30,13 +30,13 @@
 #include "state.h"
 #include "timer.h"
 
-#if BOARD_102603
+#if BOARD_WLAN_102603
 #define POWER_SET_WLAN_LINE(level)	(P6.7 = (level))
 #elif FW_SINCE(0x01000104)
 #define POWER_SET_WLAN_LINE(level)	(P31 = (level))
 #else
 /* before 0x01000104 P3.1 is driven only when the config says the WLAN's line is there */
-#define POWER_SET_WLAN_LINE(level)	do { if (configGet()->wlanLine) P31 = (level); } while (0)
+#define POWER_SET_WLAN_LINE(level)	do { if (configGet()->CONFIG_WLAN_LINE) P31 = (level); } while (0)
 #endif
 
 extern unsigned char input2Bit0Get(void);
@@ -294,11 +294,11 @@ void powerSeqLevels(void)
 /* P3.1 low until P6.7 goes low, at most six waits */
 void powerSeqWaitP67(void)
 {
-#if !BOARD_102603
+#if !BOARD_WLAN_102603
 	unsigned char i;
 
 #if !FW_SINCE(0x01000104)
-	if (!configGet()->wlanLine)
+	if (!configGet()->CONFIG_WLAN_LINE)
 		return;
 #endif
 	P31 = 0;
@@ -323,6 +323,9 @@ unsigned char powerSeqOff(void)
 	P6.3 = 0;
 	P13.1 = 0;
 	POWER_SET_WLAN_LINE(0);
+#if BOARD_102603 && !BOARD_WLAN_102603
+	P6.7 = 0;
+#endif
 	P37 = 0;
 	clockOutputStop();
 	powerMultiCnOff();
@@ -448,7 +451,7 @@ unsigned char powerSdOff(void)
 			elmoStatusMask.reg[0] = mask;
 			timerStop(TIMER(0x12));
 			sleepFactorSet10(0);
-			powerStartTimer(0x0008, TIMER(0x07), 0x25);
+			powerStartTimer(0x0008, POWER_TIMER(0x07), 0x25);
 		}
 	} else {
 		result = 0;
@@ -546,7 +549,7 @@ unsigned char powerOnWlan(void)
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(1);
 			powerSleep(2);
-#if !BOARD_102603
+#if !BOARD_WLAN_102603
 			POWER_SET_WLAN_LINE(1);
 #endif
 		}
@@ -562,9 +565,13 @@ unsigned char powerOffWlan(void)
 
 	if (elmoStatusMask.reg[0] & 0x0010) {
 		P13.1 = 0;
-#if BOARD_102603
+#if BOARD_WLAN_102603
 		POWER_SET_WLAN_LINE(0);
 		clockOutputStop();
+#elif BOARD_102603
+		P6.7 = 0;
+		clockOutputStop();
+		POWER_SET_WLAN_LINE(0);
 #else
 		clockOutputStop();
 		POWER_SET_WLAN_LINE(0);
@@ -607,9 +614,15 @@ unsigned char powerBbmcCycle(void)
 	P125 = 0;
 	if (bbmcGetMode()) {
 		bbmcSetOff();
+#if BOARD_102603
+		P33 = 1;
+		powerSleep(0x0e74);
+		P33 = 0;
+#else
 		P33 = 1;
 		powerWaitInput(1, 0x4e2);
 		P33 = 0;
+#endif
 		if (input2Bit0Get() == 0)
 			return 0;
 		return 2;

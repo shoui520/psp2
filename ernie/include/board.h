@@ -146,6 +146,11 @@
    (P3.1) and 2 (P14.1, a transition 3); INTP8 and pin monitor 6 only ever disabled; the
    WLAN's line on P6.7 (P3.1 an input) */
 #define BOARD_INPUTS_102603	BOARD_102603
+/* its own pin monitor 3 (P3.1, no WLAN line on it) from 0x01000104; before, the others' */
+#define BOARD_PIN3_102603	(BOARD_INPUTS_102603 && FW_SINCE(0x01000104))
+/* its WLAN's line on P6.7 (the power sequences', powerJobCut's) from 0x01000104; before, P3.1
+   as the others' */
+#define BOARD_WLAN_102603	(BOARD_102603 && FW_SINCE(0x01000104))
 
 /* P9.5, driven high at a resume and low at an off or a suspend (powerseq.c): not on
    0x00102603, whose WLAN line is P6.7 and whose SD power comes first, retimed, with no RMR or

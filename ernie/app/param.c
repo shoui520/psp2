@@ -14,7 +14,11 @@
 static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+#if FW_SINCE(0x01000104)
 	0x00, 0x0c, 0x12,
+#else
+	0x00, 0x06, 0x0a,
+#endif
 };
 
 #if FW_SINCE(0x01000306)

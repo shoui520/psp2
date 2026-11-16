@@ -478,7 +478,7 @@ allowed:
 #if FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = P6.7;
 #else
-			if (configGet()->wlanLine)
+			if (configGet()->CONFIG_WLAN_LINE)
 				commandRequestAnswer[0] = P6.7;
 			else
 				commandRequestAnswer[0] = 0;

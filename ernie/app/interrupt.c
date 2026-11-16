@@ -82,6 +82,7 @@ void intp7Interrupt(void)
 	}
 }
 
+#if BOARD_PIN3_102603
 /* P3.1 low: pin monitor 3 */
 void intp4Interrupt(void)
 {
@@ -94,6 +95,7 @@ void intp4Interrupt(void)
 			pinMonitors.pin[3].config.handler();
 	}
 }
+#endif
 #else
 void intp2Interrupt(void)
 {
@@ -104,7 +106,7 @@ void intp7Interrupt(void)
 }
 #endif
 
-#if BOARD_INPUTS_102603
+#if BOARD_PIN3_102603
 #elif FW_SINCE(0x01000104)
 void intp4Interrupt(void)
 {
@@ -114,7 +116,7 @@ void intp4Interrupt(void)
    handler at once when it has no ticks */
 void intp4Interrupt(void)
 {
-	if (configGet()->wlanLine == 0 && !P3.1) {
+	if (configGet()->CONFIG_WLAN_LINE == 0 && !P3.1) {
 		if (pinMonitors.pin[3].config.reload != 0) {
 			pinMonitor3Enable(1);
 			pinMonitors.pin[3].last = 0;
