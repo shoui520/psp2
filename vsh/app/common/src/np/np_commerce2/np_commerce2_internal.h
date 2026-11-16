@@ -1505,6 +1505,12 @@ extern int npCommerce2Send_81019254(int mode, int httpTemplate, int *httpConnect
 				    SceUInt32 rewardCount);
 extern int npCommerce2Send_8101A7BE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *voucherCode, const char *text1, const char *text2, int flag);
+extern int npCommerce2Send_8101B06C(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *first, const char *second, SceUInt32 number, const char *text,
+				    int textLength);
+extern int npCommerce2Send_8101B70C(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *first, int firstLength, const char *second, int secondLength,
+				    const char *third, const char *fourth, int sex);
 /* a search condition: the index of the field it names and its value with the length */
 typedef struct NpCommerce2SearchEntry {
 	SceUInt32 field;
