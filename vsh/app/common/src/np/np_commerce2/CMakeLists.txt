@@ -2,5 +2,6 @@
 # record names its files: they are split where its parts are (ours).
 psp2_module(vs0_sys_external_np_commerce2 KIND user COMPILER snc PARTIAL SOURCES
 	commerce2.c
+	library.c
 	np_commerce2.c
 )

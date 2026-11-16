@@ -12,11 +12,18 @@
 #include <kernel/error.h>
 #include <kernel/libkernel.h>
 #include <kernel/threadmgr.h>
+#include <kernel/sysmem.h>
 #include <libkernel/libkernel.h>
 #include <libhttp.h>
 #include <np/np_common.h>
 #include <np/np_error.h>
 #include <np/np_commerce2.h>
+#include <np_common/np_common.h>
+
+/* the libkernel mspace calls the tree has no header of yet */
+typedef void *SceClibMspace;
+extern SceClibMspace sceClibMspaceCreate(void *base, SceSize size);
+extern int sceClibMspaceDestroy(SceClibMspace mspace);
 
 /* the imports SceNpCommerce2 takes from libraries the tree has no header of yet */
 extern void SceNpManager_9554802B(const void *data1, const void *data2, const void *data3);
@@ -37,6 +44,44 @@ extern void SceNpManager_9554802B(const void *data1, const void *data2, const vo
 
 /* a name did not fit the buffer it was copied to */
 #define NP_COMMERCE2_ERROR_BUF_TOO_SMALL	-2141909116	/* 0x80550f84 */
+
+extern int SceNpCommon_F585C86C(void);
+extern int SceNpCommon_187C0A8D(int *value);
+
+/* the library's memory: a 8 KiB memory block with an mspace over it */
+#define NP_COMMERCE2_HEAP_SIZE		0x2000
+#define NP_COMMERCE2_HEAP_MEMTYPE	0x0C20D060
+
+/* what the session result's accessor (export 64E27331) reads out of the response */
+typedef struct NpCommerce2SessionData {
+	SceNpCommerce2CommonData commonData;
+	const char *currencyCode;
+	const char *currencySymbol;
+	SceUInt16 decimals;
+	SceUInt16 padding1;
+	SceUInt32 reserved1[3];
+	SceUInt32 symbolPosition;
+	SceUInt32 symbolWithSpace;
+	SceUInt32 reserved2;
+	const char *thousandSeparator;
+	const char *decimalLetter;
+} NpCommerce2SessionData;
+
+extern int g_libInitialized;
+extern SceUID g_heapMemBlock;
+extern SceClibMspace g_heap;
+extern int npCommerce2_8100009C(const char *environment, int a2, int a3);
+extern void npCommerce2_81000126(void);
+
+/* exports the library's own exports call (commerce2.c) */
+extern int SceNpCommerce2_1BFF9C73(int a1, void *a2, int a3);
+extern int SceNpCommerce2_64E27331(int a1, int a2, int a3);
+extern int SceNpCommerce2_F6A4FC50(int a1, int a2);
+extern int SceNpCommerce2_EC09FF89(int a1, int a2);
+extern int SceNpCommerce2_9E082DB2(int a1, int a2);
+extern int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *result,
+				   SceNpCommerce2GameProductInfo *gameProductInfo);
+extern int SceNpCommerce2_C4CC8E22(int a1, int a2, int a3);
 
 /* set by Init, cleared by Term */
 extern int g_initialized;
