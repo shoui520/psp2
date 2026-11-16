@@ -6,4 +6,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	exports.cpp
 	error.cpp
 	ipmi_client.cpp
+	../impsutility/raw_message_client.cpp
 )

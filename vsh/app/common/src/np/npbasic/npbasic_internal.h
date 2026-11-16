@@ -15,6 +15,7 @@
 #include <libkernel/libkernel.h>
 #include <np/np_common.h>
 #include <np/np_basic.h>
+#include "../../../../../lowlayer/src/ipmi_wrapper/ipmi_wrapper_client.h"
 
 /* SCE_NP_BASIC_ERROR_* (SDK np/np_basic.h), as signed values */
 #define NP_BASIC_ERROR_UNKNOWN			-2141905663	/* 0x80551d01 */
@@ -42,6 +43,11 @@ typedef struct NpBasicClient NpBasicClient;
 extern "C" {
 #endif
 extern NpBasicClient *SceIpmi_9EE9496B(int client);
+extern SceSize SceIpmi_006EFA9D(const IpmiWrapper::Client::Config *pConfig);
+extern int SceIpmi_22625598(IpmiWrapper::Client **ppClient, const IpmiWrapper::Client::Config *pConfig, void *pMemory);
+extern int SceIpmi_B56BAC7F(IpmiWrapper::Client *pClient);
+extern int SceIpmi_B943F5D9(IpmiWrapper::Client *pClient);
+extern int SceIpmi_D73C03D2(IpmiWrapper::Client *pClient);
 #ifdef __cplusplus
 }
 #endif
@@ -95,6 +101,8 @@ typedef struct NpBasicClientVtbl {
 	void *slots[5];
 	int (*invoke)(NpBasicClient *client, int command, const NpBasicIpmiIn *in, int inNum, int *result,
 		NpBasicIpmiOut *out, int outNum);
+	void *slots2[8];
+	int (*receive)(NpBasicClient *client, int type, void *buffer, void *received, int size);
 } NpBasicClientVtbl;
 
 struct NpBasicClient {
