@@ -26,6 +26,7 @@ public:
 	void Lock();
 	bool TryLock();
 	void Unlock();
+	SceUID GetOwner();
 };
 
 /* a lightweight condition variable on one mutex */

@@ -26,6 +26,10 @@
  */
 size_t fiosStrlen(const char *s);
 size_t fiosStrlcpy(char *dst, const char *src, size_t size);
+int fiosStrcmp(const char *s1, const char *s2);
+int fiosStrncmp(const char *s1, const char *s2, size_t n);
+int fiosStrcasecmp(const char *s1, const char *s2);
+int fiosStrncasecmp(const char *s1, const char *s2, size_t n);
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -121,7 +125,10 @@ struct FiosFH {
 	uint32_t isOpen;		/* "file not open yet" while 0 */
 	volatile int32_t pendingIO;	/* "m_pendingIO": its chunks prepared and not done */
 	SceFiosNativeFH nativeFH;	/* SCE_FIOS_NATIVEFH_INVALID while it is not open */
-	uint32_t reserved1[4];
+	void *pArchiver;		/* the dearchiver whose archive holds the file, or NULL */
+	uint32_t archiveID;		/* that archive's ArchiveTracker id */
+	uint32_t entryIndex;		/* the file's TOC entry */
+	uint32_t reserved1;
 	SceFiosOffset offset;
 	SceFiosSize size;
 	SceFiosOpenParams openParams;
@@ -134,7 +141,9 @@ struct FiosDH {
 	uint32_t isOpen;		/* "dir not open yet" while 0 */
 	volatile int32_t pendingIO;
 	SceFiosNativeDH nativeDH;
-	uint32_t reserved1[6];
+	void *pArchiver;		/* the dearchiver whose archive holds the directory, or NULL */
+	uint32_t archiveID;
+	uint32_t reserved1[4];
 	void *pBuf;			/* the caller's buffer for the entries */
 	size_t bufSize;
 	uint32_t reserved2[4];
@@ -625,10 +634,60 @@ typedef struct FiosCodec {
 	uint32_t maxOutput;
 	uint32_t reserved0;
 	uint32_t reserved1;
-	uint32_t blockSize;
+	uint16_t reserved2;
+	uint16_t flags;			/* what fiosDearchiverFindCodec asks for */
 } FiosCodec;
 
 extern FiosCodec g_fiosZlibCodec;
+
+/*
+ * A PSARC archive's header, in host order once mounted, and what the TOC lookups derive
+ * from it. The TOC entries (tocEntrySize bytes each) are big-endian: a 16-byte path hash,
+ * the first block's index (4 bytes), the file's size (5 bytes) and offset (5 bytes).
+ */
+#define PSARC_FLAG_IGNORE_CASE	0x1
+#define PSARC_FLAG_ABSOLUTE	0x2
+
+struct PsarcHeader {
+	uint32_t magic;			/* "PSAR" */
+	uint32_t version;
+	uint32_t compression;		/* "zlib" */
+	uint32_t tocLength;
+	uint32_t tocEntrySize;
+	uint32_t numFiles;		/* the manifest included */
+	uint32_t blockSize;
+	uint32_t archiveFlags;		/* PSARC_FLAG_* */
+	uint32_t reserved0[4];
+	uint8_t blockSizeBytes;		/* the bytes of each block size entry */
+	bool sorted;			/* the TOC is sorted by hash: binary search */
+	uint8_t reserved1[6];
+
+	const uint8_t *FindEntry(const uint8_t *pTOC, const char *pPath);
+	uint64_t GetFileSize(const uint8_t *pTOC, const uint8_t *pEntry);
+};
+
+/* a mounted archive ("ArchiveTracker") */
+struct ArchiveTracker {
+	ArchiveTracker *pNext;
+	uint32_t reserved0;
+	PsarcHeader header;
+	SceFiosFH fh;			/* the archive file */
+	uint32_t id;
+	uint32_t reserved1[2];
+	SceFiosStat stat;		/* the archive file's, for its directories */
+	uint32_t reserved2;
+	uint32_t manifestPaths;
+	size_t mountPointLength;
+	char *pMountPoint;
+	uint32_t reserved3;
+	const uint8_t *pTOC;
+	char **manifest;		/* the files' paths, sorted */
+};
+
+/* dearchiver.cpp: the codecs the dearchiver decompresses with */
+int fiosDearchiverRegisterCodec(FiosCodec *pCodec);
+bool fiosDearchiverUnregisterCodec(FiosCodec *pCodec);
+FiosCodec *fiosDearchiverFindCodec(uint32_t codec, uint16_t flags);
 
 
 /* the byte range an I/O filter's cache command is about */

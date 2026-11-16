@@ -30,7 +30,8 @@ FiosCodec g_fiosZlibCodec = {
 	0x7fffffff,
 	0,
 	0,
-	0x40000,
+	0,
+	4,
 };
 
 static Mutex s_mutex = { {}, -1, 0 };
