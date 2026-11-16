@@ -197,8 +197,8 @@ SceUID Mutex::GetOwner()
 	return owner;
 }
 
-/* an assertion's report, with its arguments */
-static __attribute__((used)) bool reportAssertion(const char *file, int line, bool stop, const char *format, ...)
+/* an assertion's report, with its arguments: nothing calls it (Sony's binary keeps it) */
+bool reportMutexAssertion(const char *file, int line, bool stop, const char *format, ...)
 {
 	va_list args;
 

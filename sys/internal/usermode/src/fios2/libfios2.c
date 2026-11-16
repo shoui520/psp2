@@ -10,7 +10,6 @@ STUB_MAIN(module_exit)
 STUB_MAIN(module_start)
 STUB_MAIN(module_stop)
 
-STUB(sceFiosIOFilterPsarcDearchiver)
 STUB(sceFiosDateFromComponents)
 STUB(sceFiosTimeIntervalFromNanoseconds)
 STUB(sceFiosTimeIntervalToNanoseconds)

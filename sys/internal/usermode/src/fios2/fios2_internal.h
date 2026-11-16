@@ -11,11 +11,17 @@
 #include <fw.h>
 #include <scetypes.h>
 #include <stdarg.h>
+#include <string.h>
 #include <sceerror.h>
 #include <time.h>
 #include <rtc.h>
 #include <kernel.h>
+/* the SDK keeps the I/O filter callbacks' arguments private: ours are declared below */
+#define sceFiosIOFilterPsarcDearchiver	fiosSdkIOFilterPsarcDearchiver
+#define sceFiosIOFilterCache		fiosSdkIOFilterCache
 #include <fios2.h>
+#undef sceFiosIOFilterPsarcDearchiver
+#undef sceFiosIOFilterCache
 #include <libkernel/libkernel.h>
 #include "wws_platform.h"
 
@@ -74,6 +80,12 @@ struct FiosPath {
 	char path[4];
 
 	char *GetPath() { return path[g_FiosParams.pathMax - 1] ? *(char **)path : path; }
+	void Init()					/* empty, no hash */
+	{
+		memset(hash, 0, sizeof(hash));
+		path[0] = 0;
+		path[g_FiosParams.pathMax - 1] = 0;
+	}
 	bool Set(const char *pPath, bool verbose);	/* normalized and hashed; false when it does not fit */
 	bool SetPointer(const char *pPath);		/* the caller's path itself, hashed */
 	void Clear();
@@ -172,6 +184,9 @@ struct FiosDH {
 };
 
 #define FIOS_DH_EOF	0x4		/* a dearchiver's directory has no more entries */
+
+/* a chunk callback's result: it started more work under itself and runs again after it */
+#define FIOS_CALLBACK_AGAIN	((int)0x80820024)
 
 /*
  * allocator.cpp: fixed-size units in a caller's buffer, the units first and a bitmap of the
@@ -321,6 +336,8 @@ uint16_t fiosChunkGetChild(uint16_t chunkID, int index);
 #define FIOS_CHUNK_MAGIC	0x2b	/* the low six bits of an allocated chunk's first byte */
 #define FIOS_CHUNK_PIECE_SIZE	0x10000	/* a read or write completes in pieces of this size */
 
+struct ArchiveTracker;
+
 struct FiosChunk {
 	uint8_t magic : 6;		/* FIOS_CHUNK_MAGIC while allocated */
 	uint8_t reservedMagic : 2;
@@ -336,7 +353,7 @@ struct FiosChunk {
 	int8_t priority;
 	uint16_t parent;
 	uint16_t child[2];
-	uint16_t reserved0;		/* CHUNKID_INVALID */
+	uint16_t bufferChunk;		/* a dearchiver read's BufferCallback, else CHUNKID_INVALID */
 	uint32_t pieces;		/* the pieces not done yet */
 	SceFiosTime deadline;
 	union {
@@ -354,6 +371,8 @@ struct FiosChunk {
 			SceFiosHandle h;
 			FiosPath *pPath;
 			int32_t nativeMode;	/* -1: the open a path op makes */
+			uint32_t reserved;
+			SceFiosDate date;	/* a dearchiver's open: the archive's modification date */
 		} open;
 		struct {			/* CHUNK_DIR_CREATE */
 			int32_t nativeMode;
@@ -411,6 +430,39 @@ struct FiosChunk {
 			int flag;
 			FiosPath *pPath;
 		} sync;
+		struct {			/* CHUNK_CALLBACK: an archive block's decompression */
+			int (*pCallback)(FiosChunk *pChunk, int run);
+			int err;
+			uint16_t submitted : 1;	/* its job went to the codec */
+			uint16_t skip : 15;	/* the bytes read before the block, to start on a sector */
+			uint16_t bufferChunk;	/* its read's BufferCallback, or CHUNKID_INVALID */
+			struct FiosCodec *pCodec;
+			struct FiosZlibJob *pJob;
+			uint32_t blockLength;	/* the block's bytes once decompressed */
+			uint32_t copyLength;	/* the bytes of it the read wants */
+			SceFiosSize *pActCount;
+			struct ArchiveRead *pRead;
+			uint16_t jobChunk;	/* the CHUNK_BUFFER that holds pJob */
+		} decompress;
+		struct {			/* CHUNK_CALLBACK: an archive mount's last step */
+			int (*pCallback)(FiosChunk *pChunk, int run);
+			int err;
+			SceFiosSize actCount;	/* the manifest's bytes read */
+			uint8_t *pHeader;	/* the archive's header as read */
+			ArchiveTracker *pTracker;	/* in the caller's mount buffer */
+			class PsarcDearchiver *pDearchiver;
+			uint16_t closeChunk;	/* closes the archive file if the mount fails */
+		} archiveMount;
+		struct {			/* CHUNK_CALLBACK: the buffers an archive block's read needs */
+			int (*pCallback)(FiosChunk *pChunk, int run);
+			int err;
+			uint32_t buffers : 2;	/* BLOCK_BUFFER_* */
+			uint32_t reserved0 : 30;
+			uint32_t reserved1;
+			uint16_t readChunk;
+			uint16_t decompressChunk;
+			class PsarcDearchiver *pDearchiver;
+		} blockBuffer;
 		struct {			/* CHUNK_ROOT, the reads, writes, closes, ... */
 			union {
 				SceFiosOp op;		/* CHUNK_ROOT's op */
@@ -431,6 +483,12 @@ extern uint16_t s_nullChunk;
 static inline FiosChunk *fiosChunkAt(uint16_t chunkID)
 {
 	return (FiosChunk *)((uint8_t *)g_FiosParams.chunkStorage.pPtr + chunkID * 8);
+}
+
+/* a chunk's ID: fiosChunkAt's inverse */
+static inline uint16_t fiosChunkID(FiosChunk *pChunk)
+{
+	return (uint16_t)(((uint8_t *)pChunk - (uint8_t *)g_FiosParams.chunkStorage.pPtr) / 8);
 }
 
 /* chunk.cpp; a Locked one takes s_chunkMutex itself */
@@ -645,7 +703,7 @@ typedef struct FiosZlibJob {
 	void *pDst;
 	void *pCopyDst;			/* where the window of the output goes, or NULL */
 	void (*pCallback)(struct FiosZlibJob *job);	/* NULL: the waiters are woken */
-	uint32_t reserved2;
+	uint32_t srcSize;		/* the input's size */
 	uint32_t size;			/* the output buffer's size, then the output's */
 	uint32_t copyOffset;		/* the window copied to pCopyDst */
 	uint32_t copyLength;
@@ -667,9 +725,15 @@ typedef struct FiosCodec {
 	uint32_t maxOutput;
 	uint32_t reserved0;
 	uint32_t reserved1;
-	uint16_t reserved2;
-	uint16_t flags;			/* what fiosDearchiverFindCodec asks for */
+	uint8_t alignShift;		/* log2 of the alignment its in-place input needs */
+	uint8_t reserved2;
+	uint16_t flags;			/* FIOS_CODEC_*; what fiosDearchiverFindCodec asks for */
 } FiosCodec;
+
+/* what a codec can do */
+#define FIOS_CODEC_IN_PLACE		0x10	/* decompress its input at the end of the output */
+#define FIOS_CODEC_PARTIAL		0x100	/* output a window of a block */
+#define FIOS_CODEC_NEEDS_BUFFER		0x200	/* decompress into a buffer of its own */
 
 extern FiosCodec g_fiosZlibCodec;
 
@@ -681,6 +745,9 @@ extern FiosCodec g_fiosZlibCodec;
 #define PSARC_FLAG_IGNORE_CASE	0x1
 #define PSARC_FLAG_ABSOLUTE	0x2
 
+/* the archive header's bytes in the file, up to the TOC's offset and size */
+#define PSARC_HEADER_SIZE	48
+
 struct PsarcHeader {
 	uint32_t magic;			/* "PSAR" */
 	uint32_t version;
@@ -690,13 +757,24 @@ struct PsarcHeader {
 	uint32_t numFiles;		/* the manifest included */
 	uint32_t blockSize;
 	uint32_t archiveFlags;		/* PSARC_FLAG_* */
-	uint32_t reserved0[4];
+	SceFiosOffset tocOffset;	/* where the TOC is read from */
+	SceFiosSize tocSize;		/* the TOC's bytes in the file */
 	uint8_t blockSizeBytes;		/* the bytes of each block size entry */
 	bool sorted;			/* the TOC is sorted by hash: binary search */
 	uint8_t reserved1[6];
 
 	const uint8_t *FindEntry(const uint8_t *pTOC, const char *pPath);
 	uint64_t GetFileSize(const uint8_t *pTOC, const uint8_t *pEntry);
+	bool GetBlock(const uint8_t *pTOC, const uint8_t *pEntry, const uint8_t *pBlockSizes,
+		      uint32_t block, uint32_t blockSize, uint64_t *pSize, SceFiosOffset *pOffset,
+		      bool *pCompressed);
+	bool IsStored(const uint8_t *pTOC, const uint8_t *pEntry, const uint8_t *pBlockSizes,
+		      SceFiosOffset offset, SceFiosSize length);
+	bool IsValid();
+	void Parse(const uint8_t *pData);
+	uint32_t PackBlockSizes(const uint8_t *pTOC, uint8_t *pBlockSizes, uint32_t blockSize);
+	bool SortTOC(uint8_t *pTOC);
+	const uint8_t *FindManifest(const uint8_t *pTOC);
 };
 
 /* a mounted archive ("ArchiveTracker") */
@@ -706,16 +784,53 @@ struct ArchiveTracker {
 	PsarcHeader header;
 	SceFiosFH fh;			/* the archive file */
 	uint32_t id;
-	uint32_t reserved1[2];
+	SceFiosOffset baseOffset;	/* where the archive starts in its file */
 	SceFiosStat stat;		/* the archive file's, for its directories */
-	uint32_t reserved2;
+	uint32_t manifestLength;
 	uint32_t manifestPaths;
 	size_t mountPointLength;
 	char *pMountPoint;
-	uint32_t reserved3;
+	const uint8_t *pBlockSizes;	/* the block size table */
 	const uint8_t *pTOC;
 	char **manifest;		/* the files' paths, sorted */
+	char *pManifestData;		/* the manifest as read */
+	uint32_t reserved[12];
+
+	bool IsValid();
+	void Dump();
 };
+
+/* the buffers a compressed block's read needs */
+#define BLOCK_BUFFER_INPUT	0x1	/* its input does not fit at the end of the output */
+#define BLOCK_BUFFER_OUTPUT	0x2	/* its output does not go straight to the caller's buffer */
+
+/* a read of a compressed entry: its blocks are read and decompressed a few at a time */
+struct ArchiveRead {
+	FiosCodec *pCodec;
+	uint32_t reserved0;
+	SceFiosOffset lastBlock;
+	uint64_t blockSize;
+	SceFiosOffset nextBlock;	/* the next block to read */
+	SceFiosSize fileSize;
+	ArchiveTracker *pTracker;
+	const uint8_t *pEntry;
+	SceFiosOffset start;		/* the range read */
+	SceFiosOffset end;
+	uint8_t *pBuf;
+	SceFiosSize *pActCount;
+	class PsarcDearchiver *pDearchiver;
+	uint32_t reserved1;
+
+	int CreateBlockRead(SceFiosOffset block, uint16_t decompressID, uint16_t readID);
+};
+
+/* scheduler.cpp: the scheduler that runs the chunks */
+class Scheduler {
+public:
+	void Kick();
+};
+
+extern Scheduler g_fiosScheduler;
 
 /* dearchiver.cpp: the codecs the dearchiver decompresses with */
 int fiosDearchiverRegisterCodec(FiosCodec *pCodec);
@@ -730,9 +845,19 @@ struct FiosCacheRange {
 	SceFiosSize length;
 };
 
-/* the cache commands fiosIOFiltersCall passes to the filters */
+/* the commands fiosIOFiltersCall passes to the filters */
+#define FIOS_FILTER_CHUNK		(-1)	/* the chunk ID the argument points to */
+#define FIOS_FILTER_INIT		0
+#define FIOS_FILTER_TERM		1
+#define FIOS_FILTER_DESCRIBE		2	/* a 256-byte description */
 #define FIOS_FILTER_CACHE_CONTAINS	3
 #define FIOS_FILTER_CACHE_FLUSH		4
+
+/* the I/O filters: SceFiosIOFilterCallback's real form */
+extern "C" {
+int sceFiosIOFilterPsarcDearchiver(SceFiosPsarcDearchiverContext *pContext, int command,
+				   void *pArgs);
+}
 
 /* exports the SDK's headers no longer declare */
 extern "C" {

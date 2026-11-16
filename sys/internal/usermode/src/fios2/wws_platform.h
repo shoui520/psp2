@@ -171,6 +171,9 @@ int GetCurrentThreadCpuAffinityMask();
 
 /* the system time as "seconds.microseconds" */
 int FormatSystemTime(char *pBuf, size_t size);
+/* the assertion reports of wws_cond.cpp and wws_mutex.cpp, which nothing calls */
+bool reportCondAssertion(const char *file, int line, bool stop, const char *format, ...);
+bool reportMutexAssertion(const char *file, int line, bool stop, const char *format, ...);
 
 } /* namespace Platform */
 } /* namespace Wws */
