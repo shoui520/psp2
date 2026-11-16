@@ -6,6 +6,11 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	scanner.cpp
 	string.cpp
 	file.cpp
+	temp_file.cpp
+	../../../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../../../sys/sdk/target/src/libsnc/i64ops.c
+	../../../../../sys/sdk/target/src/libsnc/i64shr.c
+	../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )

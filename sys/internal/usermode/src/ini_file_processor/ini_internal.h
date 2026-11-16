@@ -11,6 +11,7 @@
 #include <kernel/sysmem/memblock.h>
 #include <libkernel/libkernel.h>
 #include <kernel/iofilemgr.h>
+#include <rtc.h>
 
 /* the libkernel mspace calls the tree has no header of yet */
 typedef void *SceClibMspace;
@@ -204,3 +205,16 @@ public:
 	SceUID m_fd;
 	int m_reserved;
 };
+
+/* a file the processor writes to first and then puts in the place of the real one: it has a name of its own
+ * (made from the real name and the time) and is removed when it is closed, unless asked to stay */
+class IniTempFile : public IniFile {
+public:
+	IniTempFile(IniAllocatorRef *allocator);
+	virtual ~IniTempFile();
+	virtual int open(const char *path, int mode, int flags);
+
+	bool m_autoDelete;
+};
+
+extern int iniMakeTempName(IniFileBase *file, const char *path, IniString *name);
