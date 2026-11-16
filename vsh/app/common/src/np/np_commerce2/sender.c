@@ -1209,3 +1209,234 @@ int npCommerce2Send_8101BD76(int mode, int httpTemplate, int *httpConnection, in
 	} while (pass < 2);
 	return 0;
 }
+
+/* a 64-bit number as text, in decimal or as 16 hexadecimal digits */
+__attribute__((noinline))
+int npCommerce2FormatU64(char *buf, SceSize size, SceUInt32 high, SceUInt32 low, int decimal)
+{
+	SceUInt64 value = ((SceUInt64)high << 32) | low;
+
+	if (decimal == 1)
+		return sceClibSnprintf(buf, size, "%llu", value);
+	return sceClibSnprintf(buf, size, "%16llx", value);
+}
+
+/* a request with a 64-bit transaction number as its field */
+int npCommerce2Send_8101C818(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int unused, SceUInt32 high, SceUInt32 low)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		{
+			char number[32];
+
+			npCommerce2FormatU64(number, 32, high, low, 1);
+			ret = npCommerce2WriteTextField(sending, *httpRequest, 72, number, 0);
+			if (ret >= 0) {
+				if (!sending)
+					length = (SceULong64)(SceInt64)ret;
+				ret = 0;
+			}
+		}
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with a start position and a count as fields */
+int npCommerce2Send_8101C8F4(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, SceUInt32 startPosition, SceUInt32 maxCount)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		{
+			int handle = *httpRequest;
+			SceULong64 first;
+
+			ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, 0);
+			if (ret >= 0) {
+				first = (SceULong64)(SceInt64)ret;
+				ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+				if (ret >= 0) {
+					if (sending != 1)
+						length = first + (SceULong64)(SceInt64)ret;
+					ret = 0;
+				}
+			}
+		}
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with a service ID, a start position and a count as fields */
+int npCommerce2Send_8101C9F2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const char *text, SceUInt32 startPosition, SceUInt32 maxCount)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		{
+			char escaped[0x304];
+			int handle = *httpRequest;
+			SceULong64 first;
+			SceULong64 second;
+
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WriteTextField(sending, handle, 73, escaped, 0);
+				if (ret >= 0) {
+					first = (SceULong64)(SceInt64)ret;
+					ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, 1);
+					if (ret >= 0) {
+						second = first + (SceULong64)(SceInt64)ret;
+						ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+						if (ret >= 0) {
+							if (sending != 1)
+								length = second + (SceULong64)(SceInt64)ret;
+							ret = 0;
+						}
+					}
+				}
+			}
+		}
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with a service ID, a start position and a count as fields */
+int npCommerce2Send_8101CB3C(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const char *text, SceUInt32 startPosition, SceUInt32 maxCount)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		{
+			char escaped[0x304];
+			int handle = *httpRequest;
+			SceULong64 first;
+			SceULong64 second;
+
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WriteTextField(sending, handle, 73, escaped, 0);
+				if (ret >= 0) {
+					first = (SceULong64)(SceInt64)ret;
+					ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, 1);
+					if (ret >= 0) {
+						second = first + (SceULong64)(SceInt64)ret;
+						ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+						if (ret >= 0) {
+							if (sending != 1)
+								length = second + (SceULong64)(SceInt64)ret;
+							ret = 0;
+						}
+					}
+				}
+			}
+		}
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with an address and the save flag */
+int npCommerce2Send_8101CE02(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const NpCommerce2Address *address, int flag)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		ret = npCommerce2WriteAddressFields(sending, *httpRequest, &length, 0, address, 1, flag);
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
