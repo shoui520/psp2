@@ -110,7 +110,7 @@ int npWebApiRequestClearListB(NpWebApiRequest *request, NpWebApiLibContext *libC
 	if (head != NULL)
 		node = head->next;
 	for (; node != head; node = node->next) {
-		npWebApiLibContextDestroyPool(libCtx);
+		npWebApiLibContextDestroyPool(libCtx, (void *)node->value8);
 		head = request->listBHead;
 	}
 	if (head != NULL) {
@@ -120,7 +120,7 @@ int npWebApiRequestClearListB(NpWebApiRequest *request, NpWebApiLibContext *libC
 			do {
 				next = node->next;
 				if (allocator != NULL) {
-					SceNpCommonPs4_6B428829(allocator);
+					SceNpCommonPs4_6B428829(allocator, node);
 					allocator = request->listBAllocator;
 					head = request->listBHead;
 				}
@@ -128,7 +128,7 @@ int npWebApiRequestClearListB(NpWebApiRequest *request, NpWebApiLibContext *libC
 			} while (next != head);
 		}
 		if (allocator != NULL)
-			SceNpCommonPs4_6B428829(allocator);
+			SceNpCommonPs4_6B428829(allocator, node);
 		request->listBHead = NULL;
 		request->listBCount = 0;
 	}
@@ -149,9 +149,9 @@ int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libC
 		node = head->next;
 	for (; node != head; node = node->next) {
 		if (node->value8 != 0)
-			npWebApiLibContextDestroyPool(libCtx);
+			npWebApiLibContextDestroyPool(libCtx, (void *)node->value8);
 		if (node->value12 != 0)
-			npWebApiLibContextDestroyPool(libCtx);
+			npWebApiLibContextDestroyPool(libCtx, (void *)node->value12);
 		head = request->listAHead;
 	}
 	if (head != NULL) {
@@ -161,7 +161,7 @@ int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libC
 			do {
 				next = node->next;
 				if (allocator != NULL) {
-					SceNpCommonPs4_6B428829(allocator);
+					SceNpCommonPs4_6B428829(allocator, node);
 					allocator = request->listAAllocator;
 					head = request->listAHead;
 				}
@@ -169,7 +169,7 @@ int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libC
 			} while (next != head);
 		}
 		if (allocator != NULL)
-			SceNpCommonPs4_6B428829(allocator);
+			SceNpCommonPs4_6B428829(allocator, node);
 		request->listAHead = NULL;
 		request->listACount = 0;
 	}

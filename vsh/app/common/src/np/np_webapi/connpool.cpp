@@ -46,7 +46,7 @@ int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool)
 				sceHttpDeleteConnection(conn->connId);
 				conn->connId = 0;
 			}
-			npWebApiLibContextDestroyPool(pool->libContext);
+			npWebApiLibContextDestroyPool(pool->libContext, conn);
 			node = pool->head;
 			conn = next;
 		} while (next != NULL);

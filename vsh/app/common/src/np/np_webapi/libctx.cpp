@@ -186,9 +186,9 @@ void *npWebApiLibContextGetPool(NpWebApiLibContext *ctx)
 	return ctx->heapBlock->poolObject;
 }
 
-int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx)
+int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx, void *block)
 {
-	return SceNpCommonPs4_38CC9AF5(ctx->heapBlock->poolObject);
+	return SceNpCommonPs4_38CC9AF5(ctx->heapBlock->poolObject, block);
 }
 
 void *npWebApiLibContextGetPool2(NpWebApiLibContext *ctx)

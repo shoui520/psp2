@@ -103,18 +103,18 @@ extern int SceNpCommonPs4_F5840D6E(NpWebApiMutex *mutex);	/* lock */
 extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
 extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 extern int SceNpCommon_8C21F489(const SceNpOnlineId *a, const SceNpOnlineId *b);	/* compare online IDs */
-extern int SceNpCommonPs4_38CC9AF5(void *pool);
+extern int SceNpCommonPs4_38CC9AF5(void *pool, void *block);
 extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
 extern int SceNpCommonPs4_31DB2D97(void *pool);
 extern const void *g_userContextVtable[];	/* 0x8100eddc */
 extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
-extern const void *g_baseVtable[];		/* 0x8100eb8c */
+extern const void *g_baseVtable[];		/* 0x8100eb6c */
 extern int SceNpCommonPs4_BB5282C8(void *object);
 extern int SceNpCommonPs4_9AC24306(void);
 extern int SceNpCommonPs4_68D08C92(...);
 extern int SceNpManager_737B2820(void);
 extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
-extern int SceNpCommonPs4_6B428829(void *allocator);
+extern int SceNpCommonPs4_6B428829(void *allocator, void *node);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
 #ifdef __cplusplus
 }
@@ -256,18 +256,22 @@ typedef struct NpWebApiListNode {
 struct NpWebApiRequest;
 
 typedef struct NpWebApiRequest {
-	unsigned char reserved0[4];
+	const void *const *vtable;
 	NpWebApiLibContext *libContext;
 	int refCount;
 	unsigned char reserved1[4];
 	SceInt64 requestId;
-	unsigned char reserved2a[16];
+	char *path;
+	char *query;
+	SceSize queryLength;
+	unsigned int method;
 	int totalSize;
-	unsigned char reserved2a2[4];
+	char *contentType;
 	struct NpWebApiListNode *listAHead;
 	int listACount;
 	void *listAAllocator;
-	unsigned char reserved2b[4];
+	unsigned char multipart;
+	unsigned char reserved2b[3];
 	struct NpWebApiListNode *listBHead;
 	int listBCount;
 	void *listBAllocator;
@@ -276,12 +280,13 @@ typedef struct NpWebApiRequest {
 	unsigned char busy;
 	unsigned char reserved2d[3];
 	int httpRequestId;
-	unsigned char reserved2e[8];
+	int field220;
+	int field224;
 	int field228;
 	int field232;
 	int field236;
 	struct NpWebApiRequest *next;
-	unsigned char reserved3a[4];
+	void *extraData;
 	unsigned char data[64];
 	int field312;
 	int field316;
@@ -311,7 +316,7 @@ extern int npWebApiRequestGetFlag389(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestSetFlag389(NpWebApiRequest *request, char value);
 extern void *npWebApiRequestGetObject280(NpWebApiRequest *request);
 extern void *npWebApiLibContextGetPool(NpWebApiLibContext *ctx);
-extern int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx, void *block);
 extern void *npWebApiLibContextGetPool2(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextPoolAlloc(NpWebApiLibContext *ctx, int size);
 extern int npWebApiLibContextGetId(NpWebApiLibContext *ctx);
@@ -369,6 +374,14 @@ extern int npWebApiRequestGetField236(NpWebApiRequest *request);
 extern SceSize npWebApiRequestReadBuffered(NpWebApiRequest *request, void *dst, SceSize len);
 extern int npWebApiRequestIsSendComplete(NpWebApiRequest *request);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
+extern void npWebApiRequestDestruct(NpWebApiRequest *request);
+extern void npWebApiRequestDelete(NpWebApiRequest *request);
+extern void npWebApiRequestDestroy(NpWebApiRequest *request, int *pHttpRequestId);
+extern int npWebApiRequestCreate(NpWebApiUserContext *userCtx, const char *path, const char *query,
+	unsigned int method, const SceNpWebApiContentParameter *content, const void *extraData,
+	NpWebApiRequest **pRequest, unsigned char multipart);
+extern const void *g_requestVtable[];		/* 0x8100edac */
 extern SceInt64 npWebApiRequestGetId(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestNext(NpWebApiRequest *request);
 extern int npWebApiRequestAddRef(NpWebApiRequest *request);

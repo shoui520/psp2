@@ -92,7 +92,7 @@ NpWebApiObjectList *npWebApiObjectListDestruct(NpWebApiObjectList *list)
 	if (node != NULL) {
 		do {
 			next = node->next;
-			npWebApiLibContextDestroyPool(libCtx);
+			npWebApiLibContextDestroyPool(libCtx, node);
 			libCtx = list->libContext;
 			node = next;
 		} while (next != NULL);
@@ -117,7 +117,7 @@ int npWebApiObjectListDeleteThis(NpWebApiObjectList *list)
 	if (node != NULL) {
 		do {
 			next = node->next;
-			npWebApiLibContextDestroyPool(libCtx);
+			npWebApiLibContextDestroyPool(libCtx, node);
 			libCtx = list->libContext;
 			node = next;
 		} while (next != NULL);
