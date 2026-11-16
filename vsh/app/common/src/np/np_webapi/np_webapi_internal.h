@@ -40,6 +40,7 @@ extern "C" {
 #define NP_WEBAPI_ERROR_MULTIPART_NOT_ALLOWED	-2141902570	/* 0x80552916 */
 #define NP_WEBAPI_ERROR_INVALID_CONTENT_TYPE	-2141902568	/* 0x80552918 */
 #define NP_WEBAPI_ERROR_HEADER_NOT_ALLOWED	-2141902562	/* 0x8055291e */
+#define NP_WEBAPI_ERROR_REQUEST_REFERENCED	-2141902573	/* 0x80552913 */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -439,6 +440,7 @@ extern int npWebApiRequestGetField236(NpWebApiRequest *request);
 extern SceSize npWebApiRequestReadBuffered(NpWebApiRequest *request, void *dst, SceSize len);
 extern int npWebApiRequestIsSendComplete(NpWebApiRequest *request);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
+extern int npWebApiDeleteHttpRequest(int httpRequestId) __attribute__((noinline));
 
 /* a ring list's header: its sentinel, its size and the allocator its nodes come from */
 typedef struct NpWebApiList {
