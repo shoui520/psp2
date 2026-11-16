@@ -8,6 +8,7 @@ psp2_module(vs0_sys_external_np_commerce2 KIND user COMPILER snc PARTIAL SOURCES
 	context.c
 	create_request.c
 	object_table.c
+	start_request.c
 	request_table.c
 	settings.c
 	shell_events.c
