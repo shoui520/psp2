@@ -1201,3 +1201,174 @@ int npCommerce2ReadValuesItem0x5e(const NpCommerce2Item *result, NpCommerce2Valu
 	}
 	return ret;
 }
+
+/* the record of tag 0x9b, found where the result's records start: where it starts and the text 6 bytes
+ * into it */
+int npCommerce2ReadTextRecord0x9b(const NpCommerce2Item *result, NpCommerce2TextItem2 *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	const char *record;
+	int ret;
+	int out;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), 0x9B, 0x47, &length);
+	out = ret;
+	if (ret >= 0) {
+		SceSize dataSize;
+		SceUInt32 version;
+		const SceUChar8 *head;
+
+		record = data + ret;
+		dataSize = length;
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		out = 0;
+		sceClibMemset(item, 0, 0x64);
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->textA = record;
+		item->textB = record + 6;
+		item->commonData.data2 = (const SceUChar8 *)record + 71;
+	}
+	return out;
+}
+
+/* the record of tag 0x93 at an index, found where the result's records start */
+int npCommerce2ReadItem0x93At(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x93, 4, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		item->value[0] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}
+
+/* a result with only the header fields (the copy in a fourth of Sony's source files) */
+int npCommerce2InitBareResult_81014250(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x5C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
+/* the record of tag 0x5f, found where the result's records start: sixteen big-endian values, the fifth of
+ * which is mapped from the fourth (8 gives 1, 4 gives 2, 1 gives 3, 0 gives 0) */
+int npCommerce2ReadValueRecord0x5f(const NpCommerce2Item *result, NpCommerce2ValueRecord *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	SceUInt32 kind;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x5F, 60, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x9C);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->values[0] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->values[1] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 8, 4);
+		item->values[2] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 12, 4);
+		kind = sceNetNtohl(net);
+		item->values[3] = kind;
+		switch (kind) {
+		case 8:
+			item->values[4] = 1;
+			break;
+		case 4:
+			item->values[4] = 2;
+			break;
+		case 1:
+			item->values[4] = 3;
+			break;
+		case 0:
+			item->values[4] = 0;
+			break;
+		default:
+			break;
+		}
+		sceClibMemcpy_safe(&net, record + 16, 4);
+		item->values[5] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 20, 4);
+		item->values[6] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 24, 4);
+		item->values[7] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 28, 4);
+		item->values[8] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 32, 4);
+		item->values[9] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 36, 4);
+		item->values[10] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 40, 4);
+		item->values[11] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 44, 4);
+		item->values[12] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 48, 4);
+		item->values[13] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 52, 4);
+		item->values[14] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 56, 4);
+		item->values[15] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 60;
+	}
+	return ret;
+}
