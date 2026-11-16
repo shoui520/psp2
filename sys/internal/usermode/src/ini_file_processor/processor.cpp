@@ -811,3 +811,7 @@ IniProcessor::~IniProcessor()
 	if (m_head.key.data != g_iniEmptyString)
 		m_head.key.ops->free(m_head.key.data, m_head.key.context);
 }
+
+IniProcessorBase::~IniProcessorBase()
+{
+}

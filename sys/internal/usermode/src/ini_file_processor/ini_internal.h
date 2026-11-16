@@ -57,6 +57,9 @@ struct IniConfig {
 /* placement new, which the library defines itself */
 void *operator new(size_t size, void *place);
 
+extern "C" void *ScePafStdc_FC5CD359(SceSize size);	/* allocate */
+extern "C" void ScePafStdc_1B77082E(void *ptr);		/* free */
+
 extern int g_poolsCreated;	/* 0x81005010 */
 extern int g_poolsDestroyed;	/* 0x81005014 */
 
@@ -271,8 +274,32 @@ struct IniEntry {
 #define INI_MODE_UNOPENED	32
 #define INI_MODE_WRITABLE	1
 
+/* what the library's users call: the processor's methods, which the implementation fills in */
+class IniProcessorBase {
+public:
+	virtual ~IniProcessorBase();
+	virtual int setConfig(const IniConfig *config) = 0;
+	virtual int clear() = 0;
+	virtual int open(const char *path, const char *mode, int flags) = 0;
+	virtual int create(const char *path) = 0;
+	virtual int rewind() = 0;
+	virtual int flush() = 0;
+	virtual int close() = 0;
+	virtual int get(const char *key, char *buf, SceSize size, SceSize offset) = 0;
+	virtual int next(char *key, char *value, SceSize size) = 0;
+	virtual int set(const char *key, const char *value) = 0;
+	virtual int add(const char *key, const char *value) = 0;
+	virtual int remove(const char *key) = 0;
+	virtual int unused14() = 0;
+	virtual int lastError() = 0;
+	virtual SceSize count() = 0;
+	virtual int text(void **buf, int *length) = 0;
+	virtual int parse(const char *buf, SceSize size) = 0;
+	virtual int freeText() = 0;
+};
+
 /* the processor: the entries of an INI file, read from it, changed, and written back through a temporary file */
-class IniProcessor {
+class IniProcessor : public IniProcessorBase {
 public:
 	IniProcessor(IniAllocatorRef *allocator, const IniConfig *config);
 	virtual ~IniProcessor();
@@ -291,7 +318,6 @@ public:
 	virtual int unused14();
 	virtual int lastError();
 	virtual SceSize count();
-	virtual int measure(char *buf, int *length);
 	virtual int text(void **buf, int *length);
 	virtual int parse(const char *buf, SceSize size);
 	virtual int freeText();
@@ -314,6 +340,7 @@ public:
 private:
 	int load();
 	int save();
+	int measure(char *buf, int *length);
 	int scanBuffer(IniInput *input, SceSize limit);
 	void removeAll();
 	IniEntry *find(const char *key, const IniString *keyString);

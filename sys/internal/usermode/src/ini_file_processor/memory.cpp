@@ -5,9 +5,6 @@
 
 #include "ini_internal.h"
 
-extern "C" void *ScePafStdc_FC5CD359(SceSize size);	/* allocate */
-extern "C" void ScePafStdc_1B77082E(void *ptr);		/* free */
-
 int g_poolsCreated;
 int g_poolsDestroyed;
 
