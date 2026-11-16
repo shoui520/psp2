@@ -36,6 +36,7 @@ extern "C" {
 #define NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND	-2141902587	/* 0x80552905 */
 #define NP_WEBAPI_ERROR_USER_CONTEXT_ALREADY_EXISTS	-2141902582	/* 0x8055290a */
 #define NP_WEBAPI_ERROR_REQUEST_NOT_FOUND	-2141902586	/* 0x80552906 */
+#define NP_WEBAPI_ERROR_REQUEST_BUSY		-2141902583	/* 0x80552909 */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -424,6 +425,7 @@ extern int npWebApiRequestIdGetUserContextId(SceInt64 requestId);
 extern unsigned int npWebApiRequestIdGetLibContextId(SceInt64 requestId);
 extern int npWebApiRequestGetKind(NpWebApiRequest *request);
 extern int npWebApiRequestGetBusy(NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiRequestSetKind(NpWebApiRequest *request, int value);
 extern NpWebApiRequest *npWebApiRequestSetBusy(NpWebApiRequest *request, char value);
 extern int npWebApiRequestGetField232(NpWebApiRequest *request);
 extern int npWebApiRequestGetHttpRequestId(NpWebApiRequest *request);

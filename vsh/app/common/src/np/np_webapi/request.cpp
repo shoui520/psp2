@@ -249,3 +249,9 @@ int npWebApiRequestIsSendComplete(NpWebApiRequest *request)
 {
 	return request->sentSize == request->totalSize;
 }
+
+NpWebApiRequest *npWebApiRequestSetKind(NpWebApiRequest *request, int value)
+{
+	request->kind = value;
+	return request;
+}

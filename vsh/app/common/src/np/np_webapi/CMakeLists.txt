@@ -22,4 +22,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	push_notify.cpp
 	userctx_setup.cpp
 	handle.cpp
+	request_io.cpp
 )
