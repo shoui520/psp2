@@ -719,6 +719,38 @@ extern int npCommerce2GetGameSkuInfoOf(const SceNpCommerce2GameProductInfo *prod
 extern int npCommerce2ReadRecord0x23(const NpCommerce2Item *result, SceUInt32 index, const char **record);
 extern int npCommerce2ReadTextItem0x24(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item);
 extern int npCommerce2ReadTextItem0x25(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem3 *item);
+/* more records read at an index (reward.c) */
+typedef struct NpCommerce2RewardItem {
+	SceNpCommerce2CommonData commonData;
+	const char *rewardId;
+	SceUInt32 valueA;
+	const char *textA;
+	const char *textB;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	const char *textC;
+	SceUInt32 valueE;
+	SceUInt64 date;
+	SceUInt32 valueF;
+	const char *name;
+	const char *description;
+} NpCommerce2RewardItem;
+
+typedef struct NpCommerce2ValueItem {
+	SceNpCommerce2CommonData commonData;
+	const char *valueId;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 padding;
+	SceUInt64 valueD;
+	SceUInt64 valueE;
+} NpCommerce2ValueItem;
+
+extern int npCommerce2ReadRewardItem0x80(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2RewardItem *item);
+extern int npCommerce2ReadTextItem0x96(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item);
+extern int npCommerce2ReadValueItem0x9c(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ValueItem *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -772,10 +804,7 @@ extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result,
 extern int npCommerce2GetEnvironment(void);
 extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
 				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
-extern int npCommerce2_8101059C(int a1, int a2, int a3);
 extern int npCommerce2_810102FC(int a1, int a2, int a3);
-extern int npCommerce2_81010620(int a1, int a2, int a3);
-extern int npCommerce2_810100C2(int a1, int a2, int a3);
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
