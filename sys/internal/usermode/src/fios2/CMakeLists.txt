@@ -36,7 +36,7 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc SOURCES
 	../../../../sdk/target/src/libsnc/unwind_pr2.c
 	../../../../sdk/target/src/libsnc/aeabi_div0.c
 	../../../../sdk/target/src/deflt/zlibhdr.c
-	../../../../sdk/target/src/deflt/deflate.c
+	../../../../sdk/target/src/deflt/deflate.S
 	../../../../sdk/target/src/deflt/deflate_common.c
 )
 if(TARGET vs0_sys_external_libfios2)
@@ -53,17 +53,13 @@ set_source_files_properties(../../../../sdk/target/src/libsnc/unwind_pr0.c
 	../../../../sdk/target/src/libsnc/unwind_pr1.c
 	../../../../sdk/target/src/libsnc/unwind_pr2.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)
 # the SDK's libSceDeflt.a, which Sony built with GCC 4.8 as its objects' DWARF records:
-# -Os -funwind-tables -ffunction-sections -fdata-sections, none of the kernel's code flags
+# -Os -funwind-tables -ffunction-sections -fdata-sections, none of the kernel's code flags;
+# its deflate.o is Sony's assembly (deflate.S, GNU AS), calling sceClibMemcpy
 set(fios2_deflt_options -Os -fno-stack-protector -foptimize-sibling-calls
 	-fdelete-null-pointer-checks -fsection-anchors -fshrink-wrap -funwind-tables
 	-ffunction-sections -fdata-sections)
 set_source_files_properties(../../../../sdk/target/src/deflt/zlibhdr.c
-	../../../../sdk/target/src/deflt/deflate.c
 	../../../../sdk/target/src/deflt/deflate_common.c PROPERTIES
 	COMPILE_DEFINITIONS PSP2_COMPILER_GCC48 COMPILE_OPTIONS "${fios2_deflt_options}")
-# deflate.o calls sceClibMemcpy (Sony's name for NID 2E3B02A1, the tree's sceClibMemcpy_safe);
-# here it binds to the library's own sceClibMemcpy
-set_property(SOURCE ../../../../sdk/target/src/deflt/deflate.c APPEND PROPERTY
-	COMPILE_DEFINITIONS sceClibMemcpy_safe=sceClibMemcpy)
 # md5_digest.c: md5_init is inlined into fiosMD5 and md5_finish is called, as with this budget
 set_source_files_properties(md5_digest.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)
