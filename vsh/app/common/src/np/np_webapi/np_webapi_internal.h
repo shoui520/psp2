@@ -92,6 +92,7 @@ extern "C" {
 extern int SceNpCommonPs4_4858EFB6(NpWebApiMutex *mutex, const char *name, int recursive);
 extern int SceNpCommonPs4_F5840D6E(NpWebApiMutex *mutex);	/* lock */
 extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
+extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 #ifdef __cplusplus
 }
 #endif
@@ -134,6 +135,16 @@ extern int npWebApiLibContextIsStarted(void *unused, NpWebApiLibContext *ctx);
 extern int npWebApiLibContextSetStarted(void *unused, NpWebApiLibContext *ctx);
 extern NpWebApiLibContext *npWebApiLibContextSetFlag121(NpWebApiLibContext *ctx, char value);
 extern int npWebApiLibContextGetFlag121(NpWebApiLibContext *ctx);
+/* the library's heap: an mspace over a 0x2000-byte buffer, made at module start */
+extern void *npWebApiHeapMspace(void);
+extern int npWebApiGlobalLockDestroy(void);
+extern void *npWebApiMspaceAlloc(SceSize size, void *mspace);
+extern void npWebApiMspaceFree(void *ptr, void *mspace);
+extern void *npWebApiMspaceRealloc(void *ptr, SceSize size, void *mspace);
+extern void npWebApiMspaceGetStats(void *mspace, SceSize *stats);
+extern int npWebApiHeapCreate(void);
+extern void npWebApiHeapDestroy(void);
+extern int npWebApiHeapGet(void **pMspace);
 extern int npWebApiGlobalLockCreate(void);
 extern int npWebApiGlobalLock(void);
 extern int npWebApiGlobalUnlock(void);
