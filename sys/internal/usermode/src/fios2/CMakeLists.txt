@@ -22,6 +22,7 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	string.cpp
 	op.cpp
 	psarc.cpp
+	ramcache.cpp
 	wws_cond.cpp
 	wws_mutex.cpp
 	wws_thread.cpp

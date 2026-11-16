@@ -119,6 +119,19 @@ static inline const char *fiosPathGet(FiosPath *pPath)
 	return pPath != NULL ? pPath->GetPath() : NULL;
 }
 
+/* a string's length, counted inline */
+static inline size_t stringLength(const char *s)
+{
+	const char *p = s;
+
+	while (*p != 0)
+		p++;
+	return p - s;
+}
+
+/* the overlay orders a process may resolve through */
+#define OVERLAY_ORDER_USER_MAX	127
+
 /* an op flag the SDK does not name: a Sync call's op, its caller waits on it */
 #define FIOS_OPFLAG_SYNC	0x100
 
@@ -481,6 +494,26 @@ struct FiosChunk {
 			uint16_t decompressChunk;
 			class PsarcDearchiver *pDearchiver;
 		} blockBuffer;
+		struct {			/* CHUNK_CALLBACK: a RAM cache's copies once a buffered read is in */
+			int (*pCallback)(FiosChunk *pChunk, int run);
+			int err;
+			struct RamCacheHeader *pCache;
+			uint32_t dstOffset;	/* the read's buffer moves on by this much */
+			uint16_t readChunk;
+			int16_t copyCount;
+			struct RamCacheFill *pFill;	/* the block a read fills for it, or NULL */
+			struct RamCacheCopy *pCopies;
+		} ramCachePreExec;
+		struct {			/* CHUNK_CALLBACK: a read's copy from a block another read fills */
+			int (*pCallback)(FiosChunk *pChunk, int run);
+			int err;
+			struct RamCacheHeader *pCache;
+			uint8_t *pDst;
+			int32_t block;
+			uint32_t offset;	/* in the block */
+			uint32_t length;
+			SceFiosSize *pActCount;
+		} ramCacheLinkedFill;
 		struct {			/* CHUNK_ROOT, the reads, writes, closes, ... */
 			union {
 				SceFiosOp op;		/* CHUNK_ROOT's op */
@@ -565,12 +598,16 @@ char *fiosDebugDumpIOFilter(SceFiosIOFilterCallback pFilterCallback, void *pFilt
 
 /* a cache entry as the cache's messages print it */
 struct FiosCacheEntry {
-	SceFiosDate accessDate;
-	SceFiosDate modificationDate;
+	SceFiosDate accessDate;		/* its last hit */
+	SceFiosDate modificationDate;	/* the file's, when the block was filled */
 	uint64_t reserved0;
-	SceFiosOffset offset;
-	uint32_t length;
-	uint32_t reserved1[7];
+	SceFiosOffset offset;		/* in the file, a multiple of the block size */
+	uint32_t length;		/* the bytes the block holds */
+	int32_t refCount;		/* the reads that copy from it and the fill under way */
+	uint16_t state;			/* RAMCACHE_BLOCK_* */
+	uint16_t fillChunk;		/* the callback chunk filling it, or CHUNKID_INVALID */
+	uint32_t reserved1;
+	uint64_t hash[2];		/* the file's path's digest */
 };
 
 char *fiosDebugDumpCacheEntry(FiosCacheEntry entry, char *pBuffer, size_t bufferSize);
@@ -907,6 +944,7 @@ struct FiosCacheRange {
 extern "C" {
 int sceFiosIOFilterPsarcDearchiver(SceFiosPsarcDearchiverContext *pContext, int command,
 				   void *pArgs);
+int sceFiosIOFilterCache(SceFiosRamCacheContext *pContext, int command, void *pArgs);
 }
 
 /* exports the SDK's headers no longer declare */

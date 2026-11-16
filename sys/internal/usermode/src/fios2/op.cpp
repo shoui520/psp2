@@ -13,8 +13,7 @@
 /* the op flags an op may have: the SDK's and FIOS2's own */
 #define FIOS_OPFLAGS_ALL	0x3ff
 
-/* the overlay orders a process may resolve through: the user's, and all of them for the system */
-#define OVERLAY_ORDER_USER_MAX	127
+/* the overlay orders the system may resolve through: all of them */
 #define OVERLAY_ORDER_MAX	255
 
 /* how sceFiosPathNormalize reads a path */
@@ -321,16 +320,6 @@ void fiosOverlaysTerm(SceUID pid)
 uint8_t *fiosHash(const void *pData, int size, uint8_t *pDigest)
 {
 	return fiosMD5(pData, size, pDigest);
-}
-
-/* a string's length, counted here */
-static inline size_t stringLength(const char *s)
-{
-	const char *p = s;
-
-	while (*p != 0)
-		p++;
-	return p - s;
 }
 
 /* a path this platform never allocates has nothing to free */
