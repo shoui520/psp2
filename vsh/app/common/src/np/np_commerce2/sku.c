@@ -275,3 +275,227 @@ int npCommerce2ReadSkuListItem(const NpCommerce2Item *result, SceUInt32 index, N
 		ret = 0;
 	return ret;
 }
+
+/* a game SKU record as the SDK's SceNpCommerce2GameSkuInfo: the values, the texts, five counts for the
+ * normal data type, the dates and the charge model */
+int npCommerce2ReadGameSkuInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+			       SceUInt32 version, int dataType, SceNpCommerce2GameSkuInfo *info)
+{
+	SceUChar8 headerCopy[0x64];
+	NpCommerce2SkuOutputs out;
+	SceUInt16 found;
+	SceUInt16 foundText;
+	const char *rest;
+	SceSize left;
+	int ret;
+
+	sceClibMemcpy_safe(headerCopy, bufHead, 0x64);
+	sceClibMemset(info, 0, 0xE0);
+	sceClibMemset(info, 0, 0x5C);
+	info->commonData.version = version;
+	info->commonData.buf_head = bufHead;
+	info->commonData.data = (const SceUChar8 *)data;
+	info->commonData.data_size = length;
+	info->dataType = dataType;
+	sceClibMemset(&out, 0, 0x48);
+	out.head = headerCopy;
+	out.mask = 7;
+	out.flags = &info->skuAttr;
+	out.skuId = &info->skuId;
+	out.skuType = &info->skuType;
+	out.count = &info->countUntilExpiration;
+	out.time = &info->timeUntilExpiration;
+	out.purchasability = &info->purchasabilityFlag;
+	out.annotation = &info->annotation;
+	out.downloadable = (SceUInt32 *)&info->downloadable;
+	out.price = &info->price;
+	out.valueC = &info->salesType;
+	out.valueD = &info->firstPlayExpiration;
+	out.valueE = &info->chargeModel;
+	out.dateA = (SceUInt64 *)&info->playableDate;
+	out.dateB = (SceUInt64 *)&info->chargeDate;
+	ret = npCommerce2ReadSkuValues(data, &out, 0, 0);
+	if (ret >= 0) {
+		rest = data + ret + 36;
+		info->commonData.data2 = (const SceUChar8 *)rest;
+		left = length - (ret + 36);
+		if (dataType == 0) {
+			info->skuName = NP_COMMERCE2_EMPTY_TEXT(info);
+			ret = npCommerce2FindRecordWhole(rest, left, 8, 0, &found);
+			if (ret >= 0 && found != 0)
+				info->skuName = rest + ret;
+			if (ret < 0)
+				return ret;
+		} else if (dataType == 1) {
+			ret = npCommerce2ReadListTexts(&info->commonData, rest, left, info->skuType, &info->skuName,
+						       &info->productId, &info->contentLinkUrl);
+			if (ret < 0)
+				return ret;
+		}
+		left = length - (rest - data);
+		ret = npCommerce2FindNestedRecordWhole(rest, left, 0x80, NULL, &info->countOfRewardInfo);
+		if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+			return ret;
+		ret = npCommerce2FindNestedRecordWhole(rest, left, 0x95, NULL, &info->countOfApplicableRewardInfo);
+		if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+			return ret;
+		if (dataType == 1) {
+			ret = npCommerce2FindNestedRecordWhole(rest, left, 0x9C, NULL,
+							       &info->countOfGameSkuEntitlementInfo);
+			if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+				return ret;
+		}
+		info->augmentedDescription = NP_COMMERCE2_EMPTY_TEXT(info);
+		ret = npCommerce2FindRecordWhole(rest, left, 0xA6, 0, &foundText);
+		if (ret >= 0 && foundText != 0)
+			info->augmentedDescription = rest + ret;
+		if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+			ret = 0;
+	}
+	return ret;
+}
+
+/* the SKU of a game product at an index (the data type 1) or the one SKU (the data type 0) */
+int npCommerce2GetGameSkuInfoOf(const SceNpCommerce2GameProductInfo *productInfo, int dataType,
+				SceUInt32 index, SceNpCommerce2GameSkuInfo *info)
+{
+	const char *data = (const char *)productInfo->commonData.data2;
+	SceUInt16 length;
+	int ret;
+	int type;
+
+	if (dataType == 1) {
+		ret = npCommerce2FindIndexedRecord(data, productInfo->commonData.data_size -
+						   (data - (const char *)productInfo->commonData.data), 0x1D, 0xA5,
+						   index, &length);
+		if (ret < 0)
+			return ret;
+		type = 1;
+	} else {
+		ret = npCommerce2FindRecordWhole(data, productInfo->commonData.data_size -
+						 (data - (const char *)productInfo->commonData.data), 0x1C, 0xA5,
+						 &length);
+		if (ret < 0)
+			return ret;
+		type = 0;
+	}
+	return npCommerce2ReadGameSkuInfo(data + ret, length, productInfo->commonData.buf_head,
+					  productInfo->commonData.version, type, info);
+}
+
+/* the record of tag 0x23 at an index */
+int npCommerce2ReadRecord0x23(const NpCommerce2Item *result, SceUInt32 index, const char **record)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x23, 0, index,
+					   &length);
+	if (ret >= 0)
+		*record = data + ret;
+	return ret;
+}
+
+/* the record of tag 0x24 at an index: two texts */
+int npCommerce2ReadTextItem0x24(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x24, 0, index,
+					   &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->commonData.data2 = (const SceUChar8 *)record;
+		item->textA = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(record, length, 0x42, 0, &foundA);
+		if (ret >= 0 && foundA != 0)
+			item->textA = record + ret;
+		if (ret >= 0) {
+			item->textB = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(record, length, 0x43, 0, &foundB);
+			if (ret >= 0 && foundB != 0)
+				item->textB = record + ret;
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* the record of tag 0x25 at an index: a value and three texts */
+int npCommerce2ReadTextItem0x25(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem3 *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt16 foundC;
+	SceUInt32 netValue;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x25, 4, index,
+					   &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x6C);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&netValue, record, 4);
+		item->value = sceNetNtohl(netValue);
+		rest = record + 4;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->textA = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 4, 0x3F, 0, &foundA);
+		if (ret >= 0 && foundA != 0)
+			item->textA = rest + ret;
+		if (ret >= 0) {
+			item->textB = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(rest, length - 4, 0x40, 0, &foundB);
+			if (ret >= 0 && foundB != 0)
+				item->textB = rest + ret;
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+				item->textC = NP_COMMERCE2_EMPTY_TEXT(item);
+				ret = npCommerce2FindRecordWhole(rest, length - 4, 0x41, 0, &foundC);
+				if (ret >= 0 && foundC != 0)
+					item->textC = rest + ret;
+				if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+					ret = 0;
+			}
+		}
+	}
+	return ret;
+}

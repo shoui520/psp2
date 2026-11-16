@@ -695,6 +695,30 @@ typedef struct NpCommerce2ProductItemLong {
 } NpCommerce2ProductItemLong;
 
 extern int npCommerce2ReadProductItemLong(const NpCommerce2Item *result, NpCommerce2ProductItemLong *item, int kind);
+/* items made of a few texts */
+typedef struct NpCommerce2TextItem2 {
+	SceNpCommerce2CommonData commonData;
+	const char *textA;
+	const char *textB;
+	SceUInt32 padding;
+} NpCommerce2TextItem2;
+
+typedef struct NpCommerce2TextItem3 {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 value;
+	const char *textA;
+	const char *textB;
+	const char *textC;
+	SceUInt32 padding;
+} NpCommerce2TextItem3;
+
+extern int npCommerce2ReadGameSkuInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+				      SceUInt32 version, int dataType, SceNpCommerce2GameSkuInfo *info);
+extern int npCommerce2GetGameSkuInfoOf(const SceNpCommerce2GameProductInfo *productInfo, int dataType,
+				       SceUInt32 index, SceNpCommerce2GameSkuInfo *info);
+extern int npCommerce2ReadRecord0x23(const NpCommerce2Item *result, SceUInt32 index, const char **record);
+extern int npCommerce2ReadTextItem0x24(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item);
+extern int npCommerce2ReadTextItem0x25(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem3 *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -765,14 +789,9 @@ extern int npCommerce2ReadListTexts(const SceNpCommerce2CommonData *item, const 
 				    int kind, const char **textA, const char **textB, const char **textC);
 extern int npCommerce2_8101144E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_810114C6(int a1, int a2, int a3);
-extern int npCommerce2_8100FE34(int a1, int a2, int a3);
-extern int npCommerce2_8100FE7C(int a1, int a2, int a3);
-extern int npCommerce2_8100FF6E(int a1, int a2, int a3);
 extern int npCommerce2_81010B14(int a1, int a2);
 extern int npCommerce2_81010BEC(int a1, int a2);
 extern int npCommerce2_81010DD8(int a1, int a2, int a3, int a4);
-extern int npCommerce2_8100FDBC(const SceNpCommerce2GameProductInfo *gameProductInfo, int dataType,
-				SceUInt32 idx, SceNpCommerce2GameSkuInfo *gameSkuInfo);
 extern int npCommerce2CreateReqAddCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810065DA(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81010938(int a1, void *a2, int a3);
