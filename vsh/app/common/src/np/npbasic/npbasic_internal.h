@@ -144,4 +144,49 @@ extern int npBasicRequest_9003C(NpBasicClient *client, int *a2, void *a3);
 extern int npBasicRequest_9003D(NpBasicClient *client, const void *a2, int *a3);
 extern int npBasicRequest_9003E(NpBasicClient *client, const void *a2, int a3, void *a4);
 
+/* npbasic/jga_response.cpp: the join game ack messages (SceNpJgaIpcCallbackFn) */
+#define NP_BASIC_JGA_ERROR_MESSAGE_TOO_LARGE	-2141874686	/* 0x80559602 */
+#define NP_BASIC_JGA_ERROR_INVALID_ARGUMENT	-2141873663	/* 0x80559a01 */
+
+/* a message of the service (received) */
+typedef struct NpBasicJgaMessage {
+	int type;
+	int requestId;
+	SceNpId npIdA;
+	SceNpId npIdB;
+	int dataSize;
+	unsigned char data[172];
+} NpBasicJgaMessage;
+
+/* a message to the service (sent) */
+typedef struct NpBasicJgaSendMessage {
+	int type;
+	int reserved;
+	int requestId;
+	SceNpId peer;
+	SceNpId self;
+	int dataSize;
+	unsigned char data[168];
+} NpBasicJgaSendMessage;
+
+typedef struct NpBasicJgaEvent {
+	int type;
+	int requestId;
+	const void *peer;
+	const void *self;
+	const void *data;
+	int dataSize;
+} NpBasicJgaEvent;
+
+typedef int (*NpBasicJgaCallback)(const NpBasicJgaEvent *event);
+
+extern NpBasicJgaCallback g_jgaCallback;	/* 0x81007000 */
+
+extern int npBasicJgaStart(NpBasicJgaCallback callback);
+extern int npBasicJgaStop(void);
+extern int npBasicJgaSendMessage(int requestId, const SceNpId *self, const SceNpId *peer, const void *data,
+				 SceSize dataSize);
+extern int npBasicJgaPoll(void);
+extern void npBasicJgaIpcCallback(const NpBasicJgaMessage *message);
+
 #endif
