@@ -390,6 +390,7 @@ extern int npCommerce2Start_810060CE(SceUInt32 reqId);
 extern int npCommerce2Start_81007DC4(SceUInt32 reqId);
 extern int npCommerce2Start_810097E0(SceUInt32 reqId, int a2, const char *a3, int a4, int a5, int a6, int a7, int a8,
 				     int a9, int a10);
+extern int npCommerce2WriteCurrency(const SceNpCommerce2SessionInfo *info, char *place, SceSize size);
 extern int npCommerce2GetApiVersion(NpCommerce2Context *ctx, int *apiVersion);
 extern int npCommerce2GetNpId(NpCommerce2Context *ctx, void *npId, int unused1, int unused2);
 extern int npCommerce2GetOnlineId(NpCommerce2Context *ctx, void *onlineId);
