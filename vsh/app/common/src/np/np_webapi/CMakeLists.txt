@@ -3,5 +3,6 @@ enable_language(CXX)
 # np_webapi/webapi_lang.cpp, and the np_push and np_ipc2 client code it carries; the rest has no name,
 # its files are split where its parts are (ours).
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+	globals.cpp
 	exports.cpp
 )

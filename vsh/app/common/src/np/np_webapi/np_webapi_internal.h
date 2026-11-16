@@ -29,11 +29,12 @@
 
 /* the library's own firmware number, read from libkernel at start (0x03650011 for 3.65) */
 extern SceUInt32 g_sdkVersion;
+extern SceUInt32 npWebApiGetSdkVersion(void);
 
 /* the library's global state */
-extern int g_initState;		/* 0x81010000 */
-extern int g_initCount;		/* 0x81010004 */
-extern int g_defaultLibCtxId;	/* 0x81010008 */
+extern volatile int g_initState;		/* 0x81010000 */
+extern volatile int g_initCount;		/* 0x81010004 */
+extern volatile int g_defaultLibCtxId;	/* 0x81010008 */
 
 /* the library context, the user context and the request, by the IDs the exports take */
 extern int npWebApiIsShellMode(void);
