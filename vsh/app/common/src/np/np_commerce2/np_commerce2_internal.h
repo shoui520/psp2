@@ -412,6 +412,16 @@ typedef struct NpCommerce2Item {
 	SceUInt32 value[2];
 } NpCommerce2Item;
 
+/* a bigger item: eleven values after the common part */
+typedef struct NpCommerce2LargeItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 value[11];
+} NpCommerce2LargeItem;
+
+extern int npCommerce2ReadItem0x15(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item);
+extern int npCommerce2ReadLargeItem0x16(const NpCommerce2Item *result, SceUInt32 index,
+					NpCommerce2LargeItem *item);
+
 /* the Init...Result exports and the items read out of a response (response.c) */
 extern int npCommerce2InitResult0x78(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2InitResult0x16(NpCommerce2Item *result, const char *data, SceSize size);
@@ -434,6 +444,7 @@ extern int npCommerce2FindNestedRecordWhole(const char *data, SceSize size, SceU
 					    SceUInt16 *length, SceUInt32 *count);
 extern int npCommerce2FindIndexedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
 					SceUInt32 index, SceUInt16 *length);
+extern SceUInt32 sceNetNtohl(SceUInt32 net32);
 extern SceUInt16 sceNetNtohs(SceUInt16 net16);
 
 /* the object table (object_table.c, request_table.c) */

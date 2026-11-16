@@ -109,3 +109,30 @@ int npCommerce2InitResult0x16(NpCommerce2Item *result, const char *data, SceSize
 	}
 	return ret;
 }
+
+/* the item of tag 0x15 at an index of an item's records */
+int npCommerce2ReadItem0x15(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt32 netValue;
+	SceUInt32 version;
+	const SceUChar8 *head;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size - (data - (const char *)result->commonData.data),
+					   0x15, 4, index, &length);
+	if (ret >= 0) {
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = length;
+		sceClibMemcpy_safe(&netValue, data + ret, 4);
+		item->value[0] = sceNetNtohl(netValue);
+	}
+	return ret;
+}
