@@ -2343,3 +2343,127 @@ int npCommerce2ReadTextRecord0x61(const NpCommerce2Item *result, NpCommerce2Valu
 		ret = npCommerce2ReadTextItem0x61Fields(&result->commonData, data + ret, data + ret, length, item);
 	return ret;
 }
+
+/* a result whose first record, the container of tag 0x28, may be cut off: how many it holds */
+int npCommerce2InitCountResult0x28(NpCommerce2CountResult28 *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x80);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.ov = status;
+		ret = npCommerce2FindNestedRecord(data + ret, dataLength, 0x28, NULL, &result->countOfA, status);
+		if (ret >= 0)
+			ret = 0;
+	}
+	return ret;
+}
+
+/* the record of tag 0x28 at an index, found where the result's records start; the container may be cut off */
+int npCommerce2ReadItem0x28Partial(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecordPartial(data, result->commonData.data_size, 0x28, 4, index, &length,
+						  result->commonData.ov);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		item->value[0] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}
+
+/* a result with an optional text of tag 0x94 and then the table of tag 0x28 (rows of at least 4 bytes) */
+int npCommerce2InitTableTextResult0x28(NpCommerce2TableTextResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	SceUInt16 length;
+	SceUInt16 found;
+	const char *records;
+	SceUInt32 i;
+	int ret;
+	int r;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x8C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		result->commonData.ov = status;
+		result->text = NP_COMMERCE2_EMPTY_TEXT(result);
+		ret = npCommerce2FindRecordWhole(records, dataLength, 0x94, 0, &found);
+		if (ret >= 0 && found != 0)
+			result->text = records + ret;
+		if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+			ret = npCommerce2FindTableRecord(records, dataLength, 0x28, NULL, &result->table, status);
+			if (ret >= 0) {
+				r = 0;
+				if (result->table.rows != 0) {
+					i = 0;
+					for (;;) {
+						r = npCommerce2FindTableRow((const char *)result->commonData.data,
+									    result->commonData.data_size, 0x28, 4, i,
+									    &length, result->commonData.ov);
+						if (r < 0)
+							break;
+						if (++i >= result->table.rows)
+							goto done;
+					}
+					if (i != 0) {
+						r = 0;
+						result->table.rows = i;
+					}
+				}
+done:
+				ret = r;
+				if (r >= 0)
+					ret = 0;
+			}
+		}
+	}
+	return ret;
+}
