@@ -1325,7 +1325,7 @@ int SceNpCommerce2_D5E21C19(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_8101209C(a1, a2, a3);
+		return npCommerce2ReadTableRowBig0x2b((const NpCommerce2Item *)a1, a2, (NpCommerce2BigRow *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
