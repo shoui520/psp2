@@ -256,6 +256,8 @@ _Static_assert(sizeof(UlobjUltRuntimeInfo) == 0x30, "UlobjUltRuntimeInfo");
 int _sceUlobjMgrStartSupportingUserlevelObject(SceUInt32 numEntries, SceUInt32 sdkVersion,
 					       void **pUserBase);
 int _sceUlobjMgrStopSupportingUserlevelObject(void);
+/* the system call libult tells the kernel its object layouts' revision with */
+int _sceUlobjMgrRegisterLibultProtocolRevision(SceUInt32 revision);
 
 int sceUlobjMgrRetainInfoArray(SceUID pid, UlobjInfoArray **pInfoArray,
 				  UlobjInfoArrayParam **pParam, UlobjProcCB **pProcCB);

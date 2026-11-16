@@ -106,6 +106,11 @@ SceUID sceKernelRegisterThreadEventHandler(const char *name, SceUID id, SceInt32
 /* SceThreadmgr: the user syscall that removes it */
 int sceKernelUnregisterThreadEventHandler(SceUID uid);
 
+/* sleep until another thread signals this one (thread_misc.c) */
+int sceKernelWaitSignal(SceUInt64 value, SceUInt *timeout);
+/* SceThreadmgr: the user syscall that signals a thread */
+int sceKernelSendSignal(SceUID threadId);
+
 /* run the module_exit functions of the calling process's modules (lifecycle.c) */
 void sceKernelCallModuleExit(int type);
 
