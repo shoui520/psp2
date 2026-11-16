@@ -53,12 +53,12 @@ uint32_t bbpGetVersionPatch(void)
 }
 
 
-static void versionAppendByte(char *buffer, uint32_t value)
+static inline void versionAppendByte(char *buffer, uint32_t value)
 {
 	osaFormatHexByte(value, buffer + strlen(buffer));
 }
 
-static void versionAppendChar(char *buffer, char c)
+static inline void versionAppendChar(char *buffer, char c)
 {
 	char *end = buffer + strlen(buffer);
 

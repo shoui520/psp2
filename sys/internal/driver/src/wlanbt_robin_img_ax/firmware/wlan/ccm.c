@@ -55,25 +55,31 @@ void wlanCcmInputRelease(void)
 /* Waits until a bit of the engine's status is set; returns the status. */
 uint32_t wlanCcmWaitSet(uint32_t mask, uint32_t block)
 {
+	uint32_t status;
+
 	do {
 		uint32_t i;
 
 		for (i = 0; i < wlanCcmPollLoops; i++)
 			;
-	} while ((CCM_STATUS(block) & mask) == 0);
-	return CCM_STATUS(block);
+		status = CCM_STATUS(block);
+	} while ((status & mask) == 0);
+	return status;
 }
 
 /* Waits until the bits of the engine's status are clear; returns the status. */
 uint32_t wlanCcmWaitClear(uint32_t mask, uint32_t block)
 {
+	uint32_t status;
+
 	do {
 		uint32_t i;
 
 		for (i = 0; i < wlanCcmPollLoops; i++)
 			;
-	} while ((CCM_STATUS(block) & mask) != 0);
-	return CCM_STATUS(block);
+		status = CCM_STATUS(block);
+	} while ((status & mask) != 0);
+	return status;
 }
 
 /* Fixes the engine's parameters and hooks at start-up (called from wlanInit()). */
@@ -187,7 +193,7 @@ int wlanCcmDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t lengt
 	uint32_t aadLength;
 	uint8_t scratch[16];
 
-	if (wlanCcmDecryptOverride(frame, data, length, key, priority, block, &result))
+	if (wlanCcmDecryptOverride(frame, data, length, key, priority, &result))
 		return result;
 	CRYPTO_MODE = 0;
 	ccmCopy16(CCM_KEY(block), key);
@@ -229,7 +235,7 @@ int wlanCcmEncrypt(const WlanWirelessFrame *frame, uint32_t length, const uint32
 	uint32_t aadLength;
 	uint8_t scratch[16];
 
-	if (wlanCcmEncryptOverride(frame, length, key, source, priority, block, &result))
+	if (wlanCcmEncryptOverride(frame, length, key, source, priority, &result))
 		return result;
 	type = frame->frameControl[0];
 	flags = frame->frameControl[1];

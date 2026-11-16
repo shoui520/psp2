@@ -238,7 +238,7 @@ void wlanRateTableHtShortGi(uint8_t *table, int enable, int mode)
  * The word of a rate a block's first entry holds: the rate's word, the
  * parameter the ROM gives it and the retry count of the item.
  */
-static uint32_t wlanRateItemWord(unsigned int rate, unsigned int retries)
+static inline uint32_t wlanRateItemWord(unsigned int rate, unsigned int retries)
 {
 	uint32_t policy = wlanRatePolicy[rate];
 

@@ -293,7 +293,7 @@ static void cbProcPostPendingEvents(void)
 }
 
 /* The events 0x200 (a peer's report): the status of the management exchange goes to the host. */
-static void cbProcReportMgmt(struct WlanConnection *connection)
+static inline void cbProcReportMgmt(struct WlanConnection *connection)
 {
 	if (connection->mode == 3 || connection->mode == 1) {
 		if (wlanMgmtReport.code == 3) {
@@ -328,7 +328,7 @@ static void cbProcHostAwake(struct WlanConnection *connection)
 }
 
 /* The host's sleep: the phase, announced to the host with PS_SLEEP. */
-static void cbProcHostSleep(struct WlanConnection *connection)
+static inline void cbProcHostSleep(struct WlanConnection *connection)
 {
 	if (wlanConnectionPhase == 0 || wlanConnectionPhase == 6) {
 		if (wlanSessionId == 0)
@@ -352,7 +352,7 @@ static void cbProcHostSleep(struct WlanConnection *connection)
 }
 
 /* The host's sleep is about to start: the DTIM policy follows it, the MAC and the radio rest. */
-static void cbProcHostSleepEnter(struct WlanConnection *connection)
+static inline void cbProcHostSleepEnter(struct WlanConnection *connection)
 {
 	wlanPsSavedDtimPolicy = wlanPsDtimPolicy;
 	wlanPsDtimPolicy = 0xffff;

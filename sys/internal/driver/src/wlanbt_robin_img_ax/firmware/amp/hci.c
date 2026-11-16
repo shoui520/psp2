@@ -291,7 +291,7 @@ int ampHciSendNopCommandStatus(void)
 }
 
 /* Command Complete with a status and an optional pair of values; used by many handlers. */
-static void ampHciComplete(uint16_t opcode, int status)
+static inline void ampHciComplete(uint16_t opcode, int status)
 {
 	ampHciSendEvent(AMP_EVENT_COMMAND_COMPLETE, 0, "Rhb", opcode, status);
 }
@@ -1667,7 +1667,7 @@ enum {
 extern struct AmpQueue ampCommandQueue;
 
 /* Handles one queued HCI command; unknown opcodes are rejected. */
-static int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
+static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 {
 	uint32_t ogf = ((ampHciParameters(command)[1] << 8) >> 10);
 	uint32_t ocf = opcode & 0x3ff;

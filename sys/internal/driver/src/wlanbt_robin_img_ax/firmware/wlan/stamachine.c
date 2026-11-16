@@ -818,7 +818,7 @@ static const struct WlanStaEvent *macMgmtRecordState(struct WlanIbssMachine *mac
 }
 
 /* Reached from the Record state: it keeps the report, and returns to where the machine was. */
-static const struct WlanStaEvent *macMgmtHoldState(struct WlanIbssMachine *machine,
+static inline const struct WlanStaEvent *macMgmtHoldState(struct WlanIbssMachine *machine,
 						   const struct WlanStaEvent *event)
 {
 	struct WlanConnection *connection = machine->connection;

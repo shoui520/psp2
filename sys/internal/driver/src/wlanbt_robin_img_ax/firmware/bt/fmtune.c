@@ -249,10 +249,10 @@ int btSbcFormatEntry(uint32_t frequency)
 /* A value in reference clock periods per 1000. */
 __attribute__((noinline)) uint16_t btSbcInspectEntry(uint32_t value)
 {
-	uint32_t clock;
+	int strap = socStrapIsSet();
+	uint32_t clock = fmSettings.referenceClock;
 
-	clock = fmSettings.referenceClock;
-	if (socStrapIsSet() == 0)
+	if (strap == 0)
 		clock >>= 12;
 	return clock * value / 1000;
 }
@@ -1631,6 +1631,10 @@ void btSbcComputeBuffer(uint32_t limit)
  * The RDS count's result: the groups received and missed, the groups
  * expected and the percentage received. 23 without RDS, 1 while counting.
  */
+/* A 16-bit value at any byte, the high byte first. */
+#define FM_PUT16(p, v)	do { (p)[1] = (v) >> 8; (p)[0] = (v); } while (0)
+
+/* The RDS block counts: received, missed and expected (16-bit each), and the percentage received. */
 int btSbcQueryBuffer(uint8_t *data, uint8_t *length)
 {
 	uint16_t expected;
@@ -1641,9 +1645,9 @@ int btSbcQueryBuffer(uint8_t *data, uint8_t *length)
 		return 23;
 	if (fmTuner.searchCount <= fmTuner.searchLimit)
 		return 1;
-	((uint16_t *)data)[0] = fmTuner.rdsReceived;
-	((uint16_t *)data)[1] = fmTuner.rdsMissed;
-	((uint16_t *)data)[2] = expected;
+	FM_PUT16(data, fmTuner.rdsReceived);
+	FM_PUT16(data + 2, fmTuner.rdsMissed);
+	FM_PUT16(data + 4, expected);
 	data[6] = fmTuner.rdsReceived * 100 / expected;
 	*length = 7;
 	return 0;

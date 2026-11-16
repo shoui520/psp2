@@ -84,7 +84,7 @@ __attribute__((noinline)) int wlanIeBufferFree(struct WlanIeBuffer *ies)
 /* Takes a buffer, waiting for one to be free. */
 int wlanIeBufferAlloc(struct WlanIeBuffer *ies)
 {
-	int result = wlanIeBufferAllocOverride();
+	int result = wlanIeBufferAllocOverride(ies);
 	OsaBuffer *buffer;
 
 	if (result == 0) {

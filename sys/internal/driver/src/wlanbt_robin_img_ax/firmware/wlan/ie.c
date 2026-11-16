@@ -14,8 +14,8 @@
 /* Set by the management code to the DMA copy routines. */
 WlanMoveFn wlanIeMoveForward __attribute__((section(".itcm.rw"))) = NULL;
 WlanMoveFn wlanIeMoveBackward __attribute__((section(".itcm.rw"))) = NULL;
-uint16_t wlanIeLimitProbe __attribute__((section(".itcm.rw"))) = 0;
 uint16_t wlanIeLimitBeacon __attribute__((section(".itcm.rw"))) = 0;
+uint16_t wlanIeLimitProbe __attribute__((section(".itcm.rw"))) = 0;
 /* Where the bodies of the beacon and probe response templates end. */
 uint8_t *wlanBeaconTemplateEnd __attribute__((section(".itcm.rw"))) = NULL;
 uint8_t *wlanProbeTemplateEnd __attribute__((section(".itcm.rw"))) = NULL;
@@ -35,12 +35,12 @@ static ROBIN_PATCH_SLOT(wlanRateBitmapOverride);
 static ROBIN_PATCH_SLOT(wlanRateBitmapAllOverride);
 static ROBIN_PATCH_SLOT(wlanTimeDeltaOverride);
 
-static unsigned int bodyLengthOf(const WlanWirelessFrame *frame)
+static inline unsigned int bodyLengthOf(const WlanWirelessFrame *frame)
 {
 	return frame->bodyLength[0] | (frame->bodyLength[1] << 8);
 }
 
-static void addBodyLength(WlanWirelessFrame *frame, int delta)
+static inline void addBodyLength(WlanWirelessFrame *frame, int delta)
 {
 	unsigned int length = bodyLengthOf(frame) + delta;
 
@@ -58,10 +58,10 @@ uint8_t *wlanFindIe(WlanWirelessFrame *frame, int ieId, int frameKind,
 	uint8_t *ie;
 	unsigned int length;
 	unsigned int offset;
-	int result = 0;
+	uint8_t *result;
 
-	if (wlanFindIeOverride((uintptr_t)frame, ieId, (uintptr_t)&result, 0))
-		return (uint8_t *)(uintptr_t)result;
+	if (wlanFindIeOverride(frame, ieId, frameKind, match, matchLength, &result))
+		return result;
 	if (!frame)
 		return NULL;
 	length = bodyLengthOf(frame);
@@ -101,7 +101,7 @@ void wlanSetIe(WlanWirelessFrame *frame, const uint8_t *ie, uint8_t *end,
 	uint8_t *position;
 	UINT posture;
 
-	if (wlanSetIeOverride((uintptr_t)frame, (uintptr_t)ie, (uintptr_t)end, 0))
+	if (wlanSetIeOverride(frame, ie, end, removed, added))
 		return;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	if (id == IE_VENDOR) {
@@ -201,16 +201,17 @@ unsigned int wlanInsertIeSorted(const uint8_t *ie, uint8_t *start, uint8_t *end)
 {
 	unsigned int id = ie[0];
 	unsigned int length = ie[1];
-	unsigned int compare = length < 4 ? length : 4;
+	unsigned int compare;
 	uint8_t *position = start;
 	uint8_t *last;
 	uint8_t *target;
-	int result = 0;
+	unsigned int result;
 
-	if (wlanInsertIeOverride((uintptr_t)ie, (uintptr_t)start, (uintptr_t)&result, 0))
+	if (wlanInsertIeOverride(ie, start, end, &result))
 		return result;
+	compare = length < 4 ? length : 4;
 	while (position < end) {
-		if (id == IE_VENDOR && position[0] == IE_VENDOR) {
+		if (position[0] == IE_VENDOR && id == IE_VENDOR) {
 			unsigned int n = position[1] < compare ? position[1] : compare;
 
 			if (memcmp(ie + 2, position + 2, n) < 0)
@@ -238,14 +239,14 @@ unsigned int wlanCopyIes(int ieId, uint8_t *destination, int frameKind,
 			 uint8_t *base, int ieOffset, const uint8_t *source,
 			 unsigned int sourceLength)
 {
-	unsigned int written = 0;
+	unsigned int written;
 	unsigned int limit;
 	int room;
-	unsigned int length;
 	unsigned int n;
-	int result = 0;
+	unsigned int result;
 
-	if (wlanCopyIesOverride(ieId, (uintptr_t)destination, (uintptr_t)source, (uintptr_t)&result))
+	if (wlanCopyIesOverride(ieId, destination, frameKind, base, ieOffset, source,
+				sourceLength, &result))
 		return result;
 	if (sourceLength == 0)
 		return 0;
@@ -258,44 +259,47 @@ unsigned int wlanCopyIes(int ieId, uint8_t *destination, int frameKind,
 	room = limit - (destination - base);
 	if (room <= 0)
 		return 0;
+	written = 0;
 	while (sourceLength >= 2) {
-		length = source[1];
-		if ((int)length > (int)sourceLength - 2)
+		sourceLength -= 2;
+		if ((int)source[1] > (int)sourceLength)
 			break;
 		if (source[0] == ieId) {
-			if (ieId == IE_RSN) {
-				written = length + 2;
+			if (source[0] == IE_RSN) {
+				written = source[1] + 2;
 				if ((int)written > room)
-					return 0;
-				__aeabi_memcpy(destination, source, written);
-				return written;
+					written = 0;
+				else
+					__aeabi_memcpy(destination, source, written);
+				break;
 			}
-			if (ieId == IE_VENDOR) {
-				if ((int)(length + 2) > room)
-					return written;
+			if (source[0] == IE_VENDOR) {
+				if ((int)(source[1] + 2) > room)
+					break;
 				n = (uint16_t)wlanInsertIeSorted(source, base + ieOffset,
 								 destination + written);
 				written = (uint16_t)(written + n);
 				room -= n;
 			}
 		}
-		sourceLength -= length + 2;
-		source += length + 2;
+		sourceLength -= source[1];
+		source += source[1] + 2;
 	}
 	return written;
 }
 
-/* Appends one element to the body; the data may be omitted. */
-void wlanAppendIe(WlanWirelessFrame *frame, uint8_t id, const void *data, unsigned int length)
+/* Appends one element to the body; the data may be omitted. Returns its size. */
+unsigned int wlanAppendIe(WlanWirelessFrame *frame, uint8_t id, const void *data,
+			  unsigned int length)
 {
 	uint8_t *position;
 	unsigned int size = 2;
-	int result = 0;
+	unsigned int result;
 
-	if (wlanAppendIeOverride((uintptr_t)frame, id, (uintptr_t)data, (uintptr_t)&result))
-		return;
+	if (wlanAppendIeOverride(frame, id, data, length, &result))
+		return result;
 	if (!frame)
-		return;
+		return 0;
 	position = frame->body + bodyLengthOf(frame);
 	position[0] = id;
 	position[1] = length;
@@ -304,6 +308,7 @@ void wlanAppendIe(WlanWirelessFrame *frame, uint8_t id, const void *data, unsign
 		size = (uint8_t)(length + 2);
 	}
 	addBodyLength(frame, size);
+	return size;
 }
 
 /* Inserts every element of a list into the body; returns the bytes added. */
@@ -312,17 +317,17 @@ unsigned int wlanAppendIeList(WlanWirelessFrame *frame, int offset,
 {
 	const uint8_t *end = ies + length;
 	uint8_t *start = frame->body + offset;
-	unsigned int total = (uintptr_t)ies;
+	unsigned int total;
 	unsigned int n;
 
-	if (wlanAppendIeListOverride((uintptr_t)frame, offset, (uintptr_t)ies, 0))
+	if (wlanAppendIeListOverride(frame, offset, ies, length, &total))
 		return total;
 	total = 0;
 	while (ies < end) {
 		n = wlanInsertIeSorted(ies, start, frame->body + bodyLengthOf(frame));
 		addBodyLength(frame, n);
-		ies += n;
 		total += n;
+		ies += n;
 	}
 	return total;
 }
@@ -335,13 +340,13 @@ unsigned int wlanRemoveIe(const uint8_t *ie, uint8_t *start, uint8_t *end)
 	uint8_t *position = start;
 	uint8_t *tail;
 	unsigned int size;
-	int result = 0;
+	unsigned int result;
 
-	if (wlanRemoveIeOverride((uintptr_t)ie, (uintptr_t)start, (uintptr_t)end, (uintptr_t)&result))
+	if (wlanRemoveIeOverride(ie, start, end, &result))
 		return result;
 	while (position < end) {
 		if (position[0] == id && position[1] == length &&
-		    (id != IE_VENDOR || memcmp(position + 2, ie + 2, length) == 0))
+		    (id != IE_VENDOR || memcmp(position + 2, ie + 2, position[1]) == 0))
 			break;
 		position += position[1] + 2;
 	}
@@ -360,11 +365,12 @@ unsigned int wlanRemoveIeList(WlanWirelessFrame *frame, int offset,
 {
 	const uint8_t *end = ies + length;
 	uint8_t *start = frame->body + offset;
-	unsigned int total = 0;
+	unsigned int total;
 	unsigned int n;
 
-	if (wlanRemoveIeListOverride((uintptr_t)frame, offset, (uintptr_t)ies, 0))
+	if (wlanRemoveIeListOverride(frame, offset, ies, length, &total))
 		return total;
+	total = 0;
 	while (ies < end) {
 		n = wlanRemoveIe(ies, start, frame->body + bodyLengthOf(frame));
 		addBodyLength(frame, -(int)n);
@@ -376,7 +382,7 @@ unsigned int wlanRemoveIeList(WlanWirelessFrame *frame, int offset,
 
 int wlanClearBodyLength(uint16_t *length)
 {
-	int result = wlanClearBodyOverride(0, 0, 0, 0);
+	int result = wlanClearBodyOverride(length);
 
 	if (result == 0 && length)
 		*length = 0;
@@ -389,7 +395,7 @@ unsigned int wlanRateBitmapBasic(const uint8_t *rates, unsigned int count)
 	unsigned int i;
 	int bitmap = 0;
 
-	if (wlanRateBitmapBasicOverride((uintptr_t)rates, count, (uintptr_t)&bitmap, 0))
+	if (wlanRateBitmapBasicOverride(rates, count, &bitmap))
 		return bitmap;
 	for (i = 0; i < count; i = (uint8_t)(i + 1)) {
 		if ((rates[i] & 0x80) && (rates[i] & 0x7f))
@@ -405,12 +411,12 @@ unsigned int wlanRateBitmapBasic(const uint8_t *rates, unsigned int count)
  */
 unsigned int wlanHtRateBitmap(const WlanHtCapabilityIe *ht)
 {
-	unsigned int bitmap = 0;
+	unsigned int bitmap;
 
-	if (wlanHtRateBitmapOverride((uintptr_t)ht, (uintptr_t)&bitmap))
+	if (wlanHtRateBitmapOverride(ht, &bitmap))
 		return bitmap;
 	bitmap = ht->mcsSet[0] << 14;
-	if (ht->capabilities & WLAN_HT_CAP_40MHZ) {
+	if (ht->capability.supportedChannelWidth) {
 		bitmap |= ht->mcsSet[0] << 23;
 		if (ht->mcsSet[4] & 1)
 			bitmap |= 1 << 22;
@@ -423,7 +429,7 @@ unsigned int wlanRateBitmap(const uint8_t *rates, unsigned int count)
 	unsigned int i = 0;
 	int bitmap = 0;
 
-	if (wlanRateBitmapOverride((uintptr_t)rates, count, (uintptr_t)&bitmap, 0))
+	if (wlanRateBitmapOverride(rates, count, &bitmap))
 		return bitmap;
 	while (i < count) {
 		if (rates[i] & 0x7f)
@@ -440,8 +446,8 @@ unsigned int wlanRateBitmapAll(const uint8_t *rates, unsigned int count,
 {
 	unsigned int bitmap = 0;
 
-	if (wlanRateBitmapAllOverride((uintptr_t)rates, count, (uintptr_t)extendedRates,
-				      extendedCount, (uintptr_t)ht, (uintptr_t)&bitmap))
+	if (wlanRateBitmapAllOverride(rates, count, extendedRates, extendedCount, ht,
+				      &bitmap))
 		return bitmap;
 	if (rates)
 		bitmap |= wlanRateBitmap(rates, count);
@@ -455,10 +461,10 @@ unsigned int wlanRateBitmapAll(const uint8_t *rates, unsigned int count,
 /* Difference of two wrapping counters; the counter wraps at 0xffffffff. */
 int wlanTimeDelta(unsigned int now, unsigned int last)
 {
-	int result = 0;
+	int result;
 	int delta;
 
-	if (wlanTimeDeltaOverride(now, last, (uintptr_t)&result, 0))
+	if (wlanTimeDeltaOverride(now, last, &result))
 		return result;
 	delta = now - last;
 	if (now < last)
@@ -485,8 +491,8 @@ int wlanChannelHooksInit(void)
 /* IE init stage: the size limits of probe and beacon bodies, the DMA moves and the hooks. */
 int wlanIeInit(void)
 {
-	wlanIeLimitProbe = 1024;
 	wlanIeLimitBeacon = 1024;
+	wlanIeLimitProbe = 1024;
 	wlanIeMoveForward = (WlanMoveFn)wlanDmaMoveForward;
 	wlanIeMoveBackward = (WlanMoveFn)wlanDmaMoveBackward;
 	wlanFrameRecordHook = wlanFrameRecordDefault;

@@ -58,7 +58,25 @@ enum {
 typedef struct __attribute__((packed)) WlanHtCapabilityIe {
 	uint8_t id;
 	uint8_t length;
-	uint16_t capabilities;
+	union {
+		uint16_t capabilities;
+		struct __attribute__((packed)) {	/* 802.11n 7.3.2.56.2 */
+			uint16_t ldpcCoding : 1;
+			uint16_t supportedChannelWidth : 1;	/* WLAN_HT_CAP_40MHZ */
+			uint16_t smPowerSave : 2;
+			uint16_t greenfield : 1;
+			uint16_t shortGi20 : 1;
+			uint16_t shortGi40 : 1;
+			uint16_t txStbc : 1;
+			uint16_t rxStbc : 2;
+			uint16_t delayedBlockAck : 1;
+			uint16_t maxAmsduLength : 1;
+			uint16_t dsssCck40 : 1;
+			uint16_t reserved : 1;
+			uint16_t fortyMhzIntolerant : 1;
+			uint16_t lsigTxopProtection : 1;
+		} capability;
+	};
 	uint8_t ampduParameters;
 	uint8_t mcsSet[16];
 	uint16_t extendedCapabilities;
@@ -180,7 +198,8 @@ unsigned int wlanInsertIeSorted(const uint8_t *ie, uint8_t *start, uint8_t *end)
 unsigned int wlanCopyIes(int ieId, uint8_t *destination, int frameKind,
 			 uint8_t *base, int ieOffset, const uint8_t *source,
 			 unsigned int sourceLength);
-void wlanAppendIe(WlanWirelessFrame *frame, uint8_t id, const void *data, unsigned int length);
+unsigned int wlanAppendIe(WlanWirelessFrame *frame, uint8_t id, const void *data,
+			  unsigned int length);
 unsigned int wlanAppendIeList(WlanWirelessFrame *frame, int offset,
 			      const uint8_t *ies, unsigned int length);
 unsigned int wlanRemoveIe(const uint8_t *ie, uint8_t *start, uint8_t *end);

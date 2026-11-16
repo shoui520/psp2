@@ -14,16 +14,18 @@
 #include "robin/wlan.h"
 
 /* Register block of the engine; `block` is the byte offset of the block (always 0 here). */
-#define CCM_REG(block, offset)		REG32(SOC_MAC_REGISTER_BASE + (block) + (offset))
+#define CCM_BASE			0x9000a000u
+#define CCM_REG(block, offset)		REG32(CCM_BASE + (block) + (offset))
 #define CCM_CONTROL(block)		CCM_REG(block, 0x00)	/* bit 0: start; bits 8-9: input pending; bit 3: failed */
 #define CCM_MODE(block)			CCM_REG(block, 0x04)	/* the length in bits 16-31, the mode below */
-#define CCM_KEY(block)			((volatile uint32_t *)(SOC_MAC_REGISTER_BASE + (block) + 0x08))
-#define CCM_KEY2(block)			((volatile uint32_t *)(SOC_MAC_REGISTER_BASE + (block) + 0x18))
+#define CCM_KEY(block)			((volatile uint32_t *)(CCM_BASE + (block) + 0x08))
+#define CCM_KEY2(block)			((volatile uint32_t *)(CCM_BASE + (block) + 0x18))
 #define CCM_SOURCE(block)		CCM_REG(block, 0x38)
 #define CCM_DESTINATION(block)		CCM_REG(block, 0x3c)
-#define CCM_BLOCK0(block)		((volatile uint32_t *)(SOC_MAC_REGISTER_BASE + (block) + 0x40))	/* B0 */
-#define CCM_BLOCK1(block)		((volatile uint32_t *)(SOC_MAC_REGISTER_BASE + (block) + 0x50))	/* first AAD block */
-#define CCM_BLOCK2(block)		((volatile uint8_t *)(SOC_MAC_REGISTER_BASE + (block) + 0x60))	/* second AAD block */
+#define CCM_BLOCK0(block)		((volatile uint32_t *)(CCM_BASE + (block) + 0x40))	/* B0 */
+#define CCM_BLOCK1(block)		((volatile uint32_t *)(CCM_BASE + (block) + 0x50))	/* first AAD block */
+#define CCM_BLOCK2(block)		((volatile uint8_t *)(CCM_BASE + (block) + 0x60))	/* second AAD block */
+#define CCM_BLOCK3(block)		((volatile uint8_t *)(CCM_BASE + (block) + 0x80))	/* third AAD block (WAPI) */
 #define CCM_STATUS(block)		CCM_REG(block, 0x70)
 
 #define CCM_CONTROL_START		0x01u

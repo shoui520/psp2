@@ -359,11 +359,12 @@ int osaExpireTimerWithin(uint32_t threshold)
 {
 	struct OsaTimerEntry **link = NULL;
 	struct OsaTimerEntry *entry;
-	int found = 0;
+	int found;
 	UINT posture;
 
 	if (osaTimerExpireOverride(threshold, &found))
 		return found;
+	found = 0;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	entry = osaTimers->active;
 	while (entry && !found) {

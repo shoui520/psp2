@@ -210,13 +210,13 @@ int fmInit(void)
 	return 0;
 }
 
-static void fmReplyError(int error)
+static inline void fmReplyError(int error)
 {
 	fmReply.status = -1;
 	fmReply.result = error;
 }
 
-static void fmReplyWord(uint32_t value)
+static inline void fmReplyWord(uint32_t value)
 {
 	fmReply.data[0] = value;
 	fmReply.data[1] = value >> 8;

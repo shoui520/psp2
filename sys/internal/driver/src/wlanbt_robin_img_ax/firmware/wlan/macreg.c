@@ -294,7 +294,7 @@ static ROBIN_PATCH_SLOT(wlanMacModeResetDone);
 /* Changes bits of the mode register for a station that is (on) or is not up. */
 int wlanMacMode300Apply(int on)
 {
-	int result = wlanMacModeApplyOverride(on, 0, 0, 0);
+	int result = wlanMacModeApplyOverride(on);
 
 	if (result != 0)
 		return result;
@@ -304,7 +304,7 @@ int wlanMacMode300Apply(int on)
 	} else {
 		MAC_300_MODE |= 0x4640;
 		MAC_300_MODE &= ~0xb9b7u;
-		MAC_300_MODE = ((MAC_300_MODE >> 4) << 4) | 0xa;
+		MAC_300_MODE = (MAC_300_MODE & ~0xfu) | 0xa;
 		MAC_300_MODE = MAC_300_MODE | 0x8000000;
 	}
 	MAC_300_MODE = MAC_300_MODE | 0x800000;
@@ -312,17 +312,17 @@ int wlanMacMode300Apply(int on)
 		MAC_300_MODE |= 0x80000000;
 		MAC_300_MODE |= 0x20000;
 	}
-	return wlanMacModeApplyDone(on, 0, 0, 0);
+	return wlanMacModeApplyDone(on);
 }
 
 /* The mode register for no station. */
 int wlanMacMode300Reset(void)
 {
-	int result = wlanMacModeResetOverride(0, 0, 0, 0);
+	int result = wlanMacModeResetOverride();
 
 	if (result != 0)
 		return result;
-	MAC_300_MODE = ((MAC_300_MODE >> 4) << 4) | 0xa;
+	MAC_300_MODE = (MAC_300_MODE & ~0xfu) | 0xa;
 	MAC_300_MODE |= 0x200;
 	MAC_300_MODE &= ~0x100u;
 	MAC_300_MODE |= 0x8000000;
@@ -331,7 +331,7 @@ int wlanMacMode300Reset(void)
 		MAC_300_MODE |= 0x80000000;
 		MAC_300_MODE |= 0x20000;
 	}
-	return wlanMacModeResetDone(0, 0, 0, 0);
+	return wlanMacModeResetDone();
 }
 
 /* Applies the mode and moves the event engine and the ROM entries to match. */

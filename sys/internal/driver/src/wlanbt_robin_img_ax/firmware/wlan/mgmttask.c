@@ -95,7 +95,7 @@ int wlanLinkCheckPost(struct WlanConnection *connection)
 }
 
 /* The frames of ring C: the control frames; each goes to the handler of the connection of its sender. */
-static int macMgmtTakeRingC(void)
+static inline int macMgmtTakeRingC(void)
 {
 	int taken;
 
@@ -134,7 +134,7 @@ static int macMgmtTakeRingC(void)
 }
 
 /* Ring A: the management frames a station sent the access point's role; its power save state is kept. */
-static int macMgmtTakeRingA(void)
+static inline int macMgmtTakeRingA(void)
 {
 	OsaBuffer *buffer = osa_BufferAlloc(&wlanMgmtTaskPool, 2000, 0);
 	struct WlanRxStatus *status;
@@ -199,7 +199,7 @@ static int macMgmtTakeRingA(void)
 }
 
 /* Ring B: the frames the hardware received for no connection (probe requests, beacons); everyone is offered them. */
-static int macMgmtTakeRingB(void)
+static inline int macMgmtTakeRingB(void)
 {
 	OsaBuffer *buffer = osa_BufferAlloc(&wlanMgmtTaskPool, 2000, 0);
 	struct WlanRxStatus *status;

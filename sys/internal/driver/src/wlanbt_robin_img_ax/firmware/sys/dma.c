@@ -23,7 +23,7 @@ void wlanDmaMoveForward(uint8_t *destination, const uint8_t *source, uint32_t le
 {
 	unsigned int posture;
 
-	if (wlanDmaMoveForwardOverride((uintptr_t)destination, (uintptr_t)source, length, 0))
+	if (wlanDmaMoveForwardOverride(destination, source, length))
 		return;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	while (DMA_A_CONTROL & DMA_CONTROL_BUSY)
@@ -57,7 +57,7 @@ void wlanDmaMoveBackward(uint8_t *destination, const uint8_t *source, uint32_t l
 	uint32_t tail;
 	uint32_t i;
 
-	if (wlanDmaMoveBackwardOverride((uintptr_t)destination, (uintptr_t)source, length, 0))
+	if (wlanDmaMoveBackwardOverride(destination, source, length))
 		return;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	while (DMA_A_CONTROL & DMA_CONTROL_BUSY)

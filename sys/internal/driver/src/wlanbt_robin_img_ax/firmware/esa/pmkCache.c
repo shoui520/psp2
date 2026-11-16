@@ -180,7 +180,7 @@ unsigned int SupplicantQueryPassphrase(uint8_t *buffer, uint16_t *length)
 			remaining = (int16_t)(remaining - LE16(tlv + 2) - 4);
 		}
 		pmkTlv = end;
-		answer = buffer + 4 + *length;
+		answer = end + 4;
 		if (pBssid != NULL) {
 			pPMK = pmkCacheFindPMK((IEEEtypes_MacAddr_t *)pBssid);
 		} else if (pSsid != NULL) {

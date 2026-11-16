@@ -64,7 +64,7 @@ _Static_assert(offsetof(typeof(wlanLimit), channelScale) == 0x48, "limit channel
 
 static struct WlanSoftTimer wlanLimitTimer __attribute__((section(".itcm.bss")));	/* 0x596dc */
 
-static unsigned int wlanLimitClamp(int limit)
+static inline unsigned int wlanLimitClamp(int limit)
 {
 	if (limit > WLAN_LIMIT_MAX)
 		return WLAN_LIMIT_MAX;

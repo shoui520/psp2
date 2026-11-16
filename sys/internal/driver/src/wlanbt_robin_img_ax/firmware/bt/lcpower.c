@@ -334,7 +334,7 @@ int btLmpLcQueryState(uint8_t a1)
 }
 
 /* The device's record of the level at the index. */
-static uint16_t *btPowerFillValue(int link, int index)
+static inline uint16_t *btPowerFillValue(int link, int index)
 {
 	struct BtPowerValue *value = &btLinkValues[link];
 

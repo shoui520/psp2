@@ -147,7 +147,7 @@ void p2pDirectReleaseState(uint8_t *suffix)
 }
 
 /* Makes the group's SSID: "DIRECT-" and two random characters. */
-static void p2pDirectSsidMake(struct WlanPsPeerState *ps)
+static inline void p2pDirectSsidMake(struct WlanPsPeerState *ps)
 {
 	__aeabi_memcpy(ps->groupSsid, "DIRECT-", 7);
 	p2pDirectReleaseState(ps->groupSsid + 7);

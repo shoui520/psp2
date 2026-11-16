@@ -142,7 +142,7 @@ int ampPalNoop(void)
 	return 0;
 }
 
-static unsigned int get16(const uint8_t *p)
+static inline unsigned int get16(const uint8_t *p)
 {
 	return p[0] | (p[1] << 8);
 }

@@ -391,7 +391,7 @@ int wlanSlotClearTimer(uint32_t handle)
 typedef int (*WlanSlotRunningCallback)(uint32_t handle, uint32_t event, uint32_t first,
 				       uint32_t second, uint32_t third, uint32_t argument);
 
-static int wlanSlotCallRunning(uint32_t event, uint32_t first, uint32_t second, uint32_t third)
+static inline int wlanSlotCallRunning(uint32_t event, uint32_t first, uint32_t second, uint32_t third)
 {
 	uint32_t context = 0;
 	uint32_t handle = 0;

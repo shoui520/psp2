@@ -426,7 +426,7 @@ static uint8_t wlanTxFrameControl(const uint8_t *data)
 }
 
 /* The frame is a probe response (management, subtype 5). */
-static int wlanTxFrameIsProbeResponse(const uint8_t *data)
+static inline int wlanTxFrameIsProbeResponse(const uint8_t *data)
 {
 	uint8_t control = wlanTxFrameControl(data);
 

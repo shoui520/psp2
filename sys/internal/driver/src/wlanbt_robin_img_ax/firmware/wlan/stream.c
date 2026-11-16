@@ -53,10 +53,9 @@ int wlanBaAnyActive(struct WlanTxBaSession *txSessions,
 		    struct WlanRxBaSession *rxSessions)
 {
 	unsigned int i;
-	int result = 0;
+	int result;
 
-	if (wlanBaActiveOverride((uintptr_t)txSessions, (uintptr_t)rxSessions,
-				 (uintptr_t)&result, 0))
+	if (wlanBaActiveOverride(txSessions, rxSessions, &result))
 		return result;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		if (txSessions[i].active)
@@ -84,7 +83,7 @@ void wlanTxBaTouch(unsigned int tid, const uint8_t *peer,
 {
 	unsigned int i;
 
-	if (wlanTxBaTouchOverride(tid, (uintptr_t)peer, (uintptr_t)sessions, 0))
+	if (wlanTxBaTouchOverride(tid, peer, sessions))
 		return;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		if (sessions[i].active && sessions[i].tid == tid &&
@@ -100,10 +99,9 @@ unsigned int wlanRxBaFind(const uint8_t *peer, unsigned int tid,
 			  struct WlanRxBaSession *sessions)
 {
 	unsigned int i;
-	int result = 0;
+	int result;
 
-	if (wlanRxBaFindOverride((uintptr_t)peer, tid, (uintptr_t)sessions,
-				 (uintptr_t)&result))
+	if (wlanRxBaFindOverride(peer, tid, sessions, &result))
 		return (uint8_t)result;
 	for (i = 0; i < wlanRxBaCount; i = (uint8_t)(i + 1)) {
 		if (sessions[i].state == 1 && sessions[i].tid == tid &&
@@ -118,7 +116,7 @@ void wlanRxBaResetCount(unsigned int tid, const uint8_t *peer,
 {
 	unsigned int index;
 
-	if (wlanRxBaResetOverride(tid, (uintptr_t)peer, (uintptr_t)sessions, 0))
+	if (wlanRxBaResetOverride(tid, peer, sessions))
 		return;
 	index = wlanRxBaFind(peer, tid, sessions);
 	if (index < wlanRxBaCount)
@@ -130,10 +128,9 @@ int wlanTxBaIdleCount(unsigned int tid, const uint8_t *peer,
 		      struct WlanTxBaSession *sessions)
 {
 	unsigned int i;
-	int result = 0;
+	int result;
 
-	if (wlanTxBaIdleOverride(tid, (uintptr_t)peer, (uintptr_t)sessions,
-				 (uintptr_t)&result))
+	if (wlanTxBaIdleOverride(tid, peer, sessions, &result))
 		return result;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		if (sessions[i].active == 1 && sessions[i].tid == tid &&
@@ -150,10 +147,9 @@ int wlanRxBaFrameCount(unsigned int tid, const uint8_t *peer,
 		       struct WlanRxBaSession *sessions)
 {
 	unsigned int index;
-	int result = 0;
+	int result;
 
-	if (wlanRxBaFrameCountOverride(tid, (uintptr_t)peer, (uintptr_t)sessions,
-				       (uintptr_t)&result))
+	if (wlanRxBaFrameCountOverride(tid, peer, sessions, &result))
 		return result;
 	index = wlanRxBaFind(peer, tid, sessions);
 	if (index >= wlanRxBaCount)
@@ -167,7 +163,7 @@ void wlanRxBaAdd(const struct WlanBaRequest *request, unsigned int hwSlot,
 	struct WlanRxBaSession *session;
 	unsigned int i;
 
-	if (wlanRxBaAddOverride((uintptr_t)request, hwSlot, (uintptr_t)sessions, 0))
+	if (wlanRxBaAddOverride(request, hwSlot, sessions))
 		return;
 	for (i = 0; i < wlanRxBaCount; i = (uint8_t)(i + 1)) {
 		if (sessions[i].state)
@@ -207,7 +203,7 @@ void wlanTxBaAdd(uintptr_t owner, const struct WlanBaRequest *request,
 	uint32_t timeout;
 	unsigned int i;
 
-	if (wlanTxBaAddOverride(owner, (uintptr_t)request, hwSlot, windowId))
+	if (wlanTxBaAddOverride(owner, request, hwSlot, windowId, sessions))
 		return;
 	limit = 1u << (wlanBaTimeoutShift(owner) + 13);
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
@@ -239,9 +235,9 @@ int wlanRxBaHwSlot(unsigned int tid, const uint8_t *peer, uint8_t *hwSlot,
 {
 	unsigned int i;
 	int found = 0;
-	int result = 0;
+	int result;
 
-	if (wlanRxBaHwSlotOverride(tid, (uintptr_t)peer, (uintptr_t)hwSlot, 0))
+	if (wlanRxBaHwSlotOverride(tid, peer, hwSlot, sessions, &result))
 		return result;
 	for (i = 0; i < wlanRxBaCount; i = (uint8_t)(i + 1)) {
 		if (!sessions[i].state)
@@ -262,7 +258,7 @@ int wlanTxBaProbe(unsigned int tid, const uint8_t *peer,
 	int found = 0;
 	int result;
 
-	if (wlanTxBaProbeOverride(tid, (uintptr_t)peer, (uintptr_t)sessions, (uintptr_t)&result))
+	if (wlanTxBaProbeOverride(tid, peer, sessions, &result))
 		return result;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		if (!sessions[i].active)
@@ -279,9 +275,9 @@ int wlanTxBaFind(unsigned int tid, const uint8_t *peer, uint8_t *index,
 {
 	unsigned int i;
 	int found = 0;
-	int result = 0;
+	int result;
 
-	if (wlanTxBaFindOverride(tid, (uintptr_t)peer, (uintptr_t)index, 0))
+	if (wlanTxBaFindOverride(tid, peer, index, sessions, &result))
 		return result;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		if (!sessions[i].active)
@@ -327,7 +323,7 @@ void wlanWindowPoolInit(struct WlanWindowId *pool)
 {
 	unsigned int i;
 
-	if (wlanWindowPoolOverride(0, 0, 0, 0))
+	if (wlanWindowPoolOverride(pool))
 		return;
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {
 		pool[i].id = i + WLAN_WINDOW_ID_BASE;
@@ -367,8 +363,7 @@ void wlanTxBaRemove(const uint8_t *peer, unsigned int tid, uint8_t *windowId,
 	UINT posture;
 	unsigned int i;
 
-	if (wlanTxBaRemoveOverride((uintptr_t)peer, tid, (uintptr_t)windowId,
-				   (uintptr_t)hwSlot))
+	if (wlanTxBaRemoveOverride(peer, tid, windowId, hwSlot, sessions))
 		return;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	for (i = 0; i < wlanTxBaCount; i = (uint8_t)(i + 1)) {

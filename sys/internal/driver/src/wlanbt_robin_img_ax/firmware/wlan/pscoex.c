@@ -165,7 +165,7 @@ void wlanPsSyncPacket(struct WlanConnection *connection)
 }
 
 /* The MAC stops reporting events for the triggers, and the 0x6f trigger bits go out. */
-static void wlanPsReleaseMacTriggers(void)
+static inline void wlanPsReleaseMacTriggers(void)
 {
 	MAC_REG(0x2fc) &= ~MAC_COEX_TRIGGER_BITS;
 	MAC_REG(0x708) &= ~MAC_EVENT_ENABLE_BT_HOLD;

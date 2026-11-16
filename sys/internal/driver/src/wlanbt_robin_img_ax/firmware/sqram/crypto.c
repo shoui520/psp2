@@ -43,7 +43,7 @@ void (*ramHook_cryptoTestLeave)(int lock) __attribute__((section(".itcm.rw")));	
 /* Where the key wrap leaves its result before it goes back over the data (36 bytes, 0x55ff4). */
 static uint8_t cryptoWrapScratch[36] __attribute__((section(".itcm.bss")));
 
-static int aesKeyLengthValid(unsigned int length)
+static inline int aesKeyLengthValid(unsigned int length)
 {
 	return length == 16 || length == 24 || length == 32;
 }
@@ -333,7 +333,7 @@ static int wlanWapiRunEngine(int decrypt, int qos, const uint8_t *packetNumber, 
 	volatile uint8_t *packetNumberRegisters = (volatile uint8_t *)CCM_BLOCK0(0);
 	volatile uint8_t *aad1Registers = (volatile uint8_t *)CCM_BLOCK1(0);
 	volatile uint8_t *aad2Registers = CCM_BLOCK2(0);
-	volatile uint8_t *aad3Registers = (volatile uint8_t *)(SOC_MAC_REGISTER_BASE + 0x80);
+	volatile uint8_t *aad3Registers = CCM_BLOCK3(0);
 	uint32_t mode = 0x40;
 	int result;
 	int i;

@@ -35,7 +35,7 @@ static int ampLinkTimeout(uint32_t index, uint32_t argument)
 	return ampLinkPostEvent(ampLinkPending, AMP_LINK_EVENT_TIMEOUT, NULL);
 }
 
-static void ampLinkEnter(struct AmpLinkMachine *machine, enum AmpLinkState state)
+static inline void ampLinkEnter(struct AmpLinkMachine *machine, enum AmpLinkState state)
 {
 	machine->previousState = machine->state;
 	machine->state = state;
@@ -59,7 +59,7 @@ static void ampLinkFail(struct AmpLinkMachine *machine, int status)
 }
 
 /* Disconnect_Physical_Link of a link that is already up: the PAL driver is told. */
-static void ampLinkDisconnect(struct AmpLinkMachine *machine, const struct AmpLinkEvent *record)
+static inline void ampLinkDisconnect(struct AmpLinkMachine *machine, const struct AmpLinkEvent *record)
 {
 	ampLinkTimerStop();
 	ampHciAdjustCommandCount(-1);

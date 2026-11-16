@@ -153,7 +153,7 @@ int wlanWapiLoadEngine(int decrypt, int qos, const uint8_t *packetNumber, const 
 	volatile uint8_t *packetNumberRegisters = (volatile uint8_t *)CCM_BLOCK0(block);
 	volatile uint8_t *aad1Registers = (volatile uint8_t *)CCM_BLOCK1(block);
 	volatile uint8_t *aad2Registers = (volatile uint8_t *)CCM_BLOCK2(block);
-	volatile uint8_t *aad3Registers = (volatile uint8_t *)(SOC_MAC_REGISTER_BASE + block + 0x80);
+	volatile uint8_t *aad3Registers = CCM_BLOCK3(block);
 	int i;
 
 	for (i = 0; i < 16; i++) {
