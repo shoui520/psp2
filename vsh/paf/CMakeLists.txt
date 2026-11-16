@@ -467,7 +467,7 @@ psp2_module(vs0_sys_external_libpaf KIND user COMPILER snc SOURCES
 	../../sys/sdk/target/src/libsnc/unwind_pr1.c
 	../../sys/sdk/target/src/deflt/crc.S
 	../../sys/sdk/target/src/deflt/zlibhdr.c
-	../../sys/sdk/target/src/deflt/deflate.c
+	../../sys/sdk/target/src/deflt/deflate.S
 	../../sys/sdk/target/src/deflt/deflate_common.c
 	${paf_sas_SOURCES}
 	${paf_libgcc_SOURCES}
@@ -490,6 +490,13 @@ target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--gc-sections)
 # libsas passes floats in VFP registers (-mfloat-abi=hard) and the rest of libpaf does not;
 # psp2ld does not compare the objects' float ABI attributes, GNU ld does unless told not to
 target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--no-warn-mismatch)
+
+# libSceDeflt (the SDK's deflate, built from sys/sdk/target/src/deflt) was built with GCC 4.8 like
+# the SDK's other libraries; deflate.S is sceDeflateDecompress as Sony's assembly has it
+set_source_files_properties(
+	../../sys/sdk/target/src/deflt/zlibhdr.c ../../sys/sdk/target/src/deflt/deflate_common.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_OPTIONS "-Os;-funwind-tables;-ffunction-sections;-fdata-sections")
 
 # the SceVshBridge stub library's wrapper, which Sony built with GCC 4.8 and without a stack
 # guard, like the SDK's libraries in libhttp (2026-11-02)
