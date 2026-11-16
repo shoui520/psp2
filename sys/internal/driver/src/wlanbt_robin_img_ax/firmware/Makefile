@@ -3,7 +3,13 @@
 # Thumb-1 with ARM exception/CP15 glue and on-chip Mask
 # ROM calls (0x03f00000 .. 0x03f48000).
 #
-#   make [GCC=<gcc prefix>] [BINUTILS=<binutils prefix>] [O=<build dir>] [image|objects]
+#   make [COMPILER=rvct|gcc] [GCC=<gcc prefix>] [BINUTILS=<binutils prefix>] [O=<build dir>] [image|objects]
+#
+# Marvell built the firmware with ARM's RVCT 4.0 (the original's __ARM_common_switch8,
+# shared literal pools and RVCT LZ77 RW data say so): COMPILER=rvct compiles the C with
+# its armcc ($(RVCT)/bin/armcc.exe, run through tools/host.py, natively on Windows or
+# under Wine; its licence comes from ARMLMD_LICENSE_FILE). COMPILER=gcc builds with the
+# project's GCC 4.8 instead. The assembly is GNU's either way.
 #
 # The firmware links into $(O)/robin.elf (robin.ld + boot/rom_syms.ld), and
 # pack.py compresses the four RW data segments with RVCT LZ77 and wraps the four
@@ -20,6 +26,7 @@ CC := $(GCC)gcc
 else
 CC := $(ROOT)/tools/gcc48.sh
 endif
+AS := $(CC)
 PSP2_TOOLCHAINS ?= $(ROOT)/toolchains/install
 GCC48_TOOLCHAIN ?= csl-4.8-2014.05-strong-strd
 ifneq ($(origin BINUTILS),undefined)
@@ -29,14 +36,32 @@ LD := python3 -I $(ROOT)/tools/host.py linux -- $(PSP2_TOOLCHAINS)/$(GCC48_TOOLC
 endif
 
 O ?= build
+COMPILER ?= rvct
+RVCT ?= $(PSP2_TOOLCHAINS)/rvct-4.0
 
 ARCH_FLAGS := -march=armv5te -mthumb-interwork -mfloat-abi=soft
+ifeq ($(COMPILER),rvct)
+# armcc for the ARM926EJ-S, built for size; inline functions are inlined as Marvell's are
+# (le32()), and C11's _Static_assert, which RVCT 4.0 lacks, is checked by GCC builds only
+CC := python3 -I $(ROOT)/tools/host.py windows -- $(RVCT)/bin/armcc.exe
+CFLAGS := --cpu=ARM926EJ-S -Ospace --gnu --c99 --forceinline -g --no_depend_system_headers \
+	--diag_suppress=1,68,111,177,186,188,550,1207,1293,2803 '-D_Static_assert(e,m)=' \
+	-J$(RVCT)/include -Iinclude -I$(ROOT)/sys/internal/include -I$(O)/radio
+THUMB := --thumb
+ARM := --arm
+SPLIT := --split_sections
+ASFLAGS := $(ARCH_FLAGS) -g -Iinclude -DROBIN_RVCT
+else
 # The image fills the chip's ITCM, DTCM and SQRAM as Marvell built it (the
 # heap base is 0x5f800 in the original, 0x63800 here), so it is built for size.
 OPT ?= -Os
-CFLAGS := $(ARCH_FLAGS) -mthumb $(OPT) -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
+CFLAGS := $(ARCH_FLAGS) $(OPT) -g -std=gnu99 -Wall -Wextra -Wno-unused-parameter -ffreestanding -fno-builtin \
 	-Iinclude -I$(ROOT)/sys/internal/include -I$(O)/radio
+THUMB := -mthumb
+ARM := -marm
+SPLIT := -ffunction-sections -fdata-sections
 ASFLAGS := $(ARCH_FLAGS) -g -Iinclude
+endif
 
 BOOT_SRCS := $(wildcard boot/*.S)
 SYS_SRCS := $(wildcard sys/*.c)
@@ -50,6 +75,9 @@ ESA_SRCS := $(wildcard esa/*.c)
 
 SRCS := $(BOOT_SRCS) $(SYS_SRCS) $(OSA_SRCS) $(WLAN_SRCS) $(BT_SRCS) $(AMP_SRCS) $(RUNTIME_SRCS) $(SQRAM_SRCS) $(ESA_SRCS)
 HEADERS := $(wildcard include/*.h include/robin/*.h)
+# objects of one build directory come from one compiler: a change of COMPILER rebuilds them
+STAMP := $(O)/compiler.stamp
+HEADERS += $(STAMP)
 SCRIPTS := robin.ld boot/rom_syms.ld
 OBJS := $(patsubst %,$(O)/%.o,$(basename $(SRCS)))
 
@@ -57,48 +85,53 @@ OBJS := $(patsubst %,$(O)/%.o,$(basename $(SRCS)))
 # from the pinned GCC's lib1funcs.S. Only these two: libgcc's other members would
 # take the place of the ROM's run-time functions.
 LIB1FUNCS := $(ROOT)/contrib/gcc-4.8-2014.05/libgcc/config/arm/lib1funcs.S
+ifneq ($(COMPILER),rvct)
 LIBGCC_OBJS := $(O)/libgcc/thumb1_case_uqi.o $(O)/libgcc/thumb1_case_uhi.o
 OBJS += $(LIBGCC_OBJS)
+endif
 
-.PHONY: image objects clean
+.PHONY: image objects clean FORCE
+$(STAMP): FORCE
+	@mkdir -p $(dir $@)
+	@echo $(COMPILER) | cmp -s - $@ || echo $(COMPILER) > $@
 image: $(O)/wlanbt_robin_img_ax.bin
 objects: $(OBJS)
 
 # The original unaligned-access runtime family is ARM, unlike driver C.
 $(O)/runtime/unaligned.o: runtime/unaligned.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 
 # The library's memmove, strncpy, strcmp and errno code are ARM too.
 $(O)/runtime/rtlibarm.o: runtime/rtlibarm.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 
 $(O)/runtime/stringarm.o: runtime/stringarm.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 
 # The concealment's DSP loops are ARM in the original, like the runtime above.
 $(O)/bt/plcdsp.o: bt/plcdsp.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(filter-out -mthumb,$(CFLAGS)) -marm -c $< -o $@
+	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 
 # SQRAM code compiles into .sqram1.ro so the linker places it in 0xc0007200..0xc000faa8
 $(O)/sqram/%.o: sqram/%.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -ffunction-sections -fdata-sections -c $< -o $@
+	$(CC) $(CFLAGS) $(THUMB) $(SPLIT) -c $< -o $@
 
 $(O)/%.o: %.c $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(THUMB) -c $< -o $@
 
 $(O)/%.o: %.S $(HEADERS)
 	@mkdir -p $(dir $@)
-	$(CC) $(ASFLAGS) -c $< -o $@
+	$(AS) $(ASFLAGS) -c $< -o $@
 
 $(O)/libgcc/thumb1_case_%.o: $(LIB1FUNCS)
 	@mkdir -p $(dir $@)
-	$(CC) $(ASFLAGS) -mthumb -DL_thumb1_case_$* -c $< -o $@
+	$(AS) $(ASFLAGS) -mthumb -DL_thumb1_case_$* -c $< -o $@
 
 # The radio controllers' 8051 programs, built with SDCC (4.6.0) and embedded as the
 # images the ARM side loads (radio/radioimage.py: length, code, byte sum).

@@ -17,7 +17,7 @@
 /* The stack: bytes are pushed after the length. */
 struct WlanMefStack {
 	uint16_t length;
-	uint8_t data[];
+	uint8_t data[100];
 };
 
 /* The frame being matched. */
@@ -71,8 +71,7 @@ _Static_assert(sizeof(struct WlanSnapArp) == 36, "SNAP ARP");
 struct WlanMefEntry {
 	uint8_t modes;
 	uint8_t flags;
-	struct WlanMefStack stack;	/* 2 length bytes and up to 100 of data */
-	uint8_t data[100];
+	struct WlanMefStack stack;
 };
 
 _Static_assert(sizeof(struct WlanMefEntry) == 104, "MEF entry");

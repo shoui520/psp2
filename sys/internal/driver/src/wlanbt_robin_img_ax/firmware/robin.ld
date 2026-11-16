@@ -53,18 +53,19 @@ ENTRY(bootReset)
 SECTIONS
 {
 	.sqram1.ro 0xc0007200 : {
-		*sqram/*.o(.text .text.* .rodata .rodata.*)
+		*sqram/*.o(.text .text.* .rodata .rodata.* i.* .constdata .conststring .conststrlit)
 		*(.sqram1.ro .sqram1.ro.*)
 		. = ALIGN(4);
 	} > sqram1
 
 	.itcm.ro 0x00000000 : {
 		KEEP(*(.boot.vectors))
-		*(EXCLUDE_FILE(*sqram/*.o) .text EXCLUDE_FILE(*sqram/*.o) .text.*)
+		*(EXCLUDE_FILE(*sqram/*.o) .text EXCLUDE_FILE(*sqram/*.o) .text.* EXCLUDE_FILE(*sqram/*.o) i.*)
 		*(.text.boot)
 		*(.glue_7 .glue_7t .vfp11_veneer .v4_bx)
 		. = ALIGN(4);
 		*(EXCLUDE_FILE(*sqram/*.o) .rodata EXCLUDE_FILE(*sqram/*.o) .rodata.*)
+		*(EXCLUDE_FILE(*sqram/*.o) .constdata EXCLUDE_FILE(*sqram/*.o) .conststring EXCLUDE_FILE(*sqram/*.o) .conststrlit)
 		. = ALIGN(4);
 		__region_table_start = .;
 		KEEP(*(.rodata.region_table))

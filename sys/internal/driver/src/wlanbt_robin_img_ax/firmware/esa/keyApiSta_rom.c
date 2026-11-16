@@ -18,7 +18,11 @@
 					: (key)->hdr.keyState & ~KEY_STATE_ENABLE)
 
 /* The key buffers are word-aligned: their keys are copied word by word, without a call. */
+#ifdef __ARMCC_VERSION
+#define KEY_WORDS(field)	((void *)(field))
+#else
 #define KEY_WORDS(field)	__builtin_assume_aligned(field, 4)
+#endif
 
 /* The RAM hooks, 0x54ef8 .. 0x54f14 (keyApiSta_RomInit()). */
 void (*ramHook_keyApi_PalladiumHook1)(struct WlanConnection *connPtr) __attribute__((section(".itcm.rw")));

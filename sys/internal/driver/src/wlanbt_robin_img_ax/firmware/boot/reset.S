@@ -639,6 +639,7 @@ sysRegisterRomHooks:
  * __ARM_common_switch8 (0x00052ad4): the compiler's Thumb switch over a table of byte offsets
  * after the call; the last entry is the default.
  */
+#ifndef ROBIN_RVCT	/* RVCT emits it with the switches that call it */
 	.global __ARM_common_switch8
 __ARM_common_switch8:
 	ldrb	ip, [lr, #-1]
@@ -647,6 +648,7 @@ __ARM_common_switch8:
 	ldrbcs	r3, [lr, ip]
 	add	ip, lr, r3, lsl #1
 	bx	ip
+#endif
 
 .Lmode_stacks:
 	.word	0x0005f330		/* the mode stacks start here */
