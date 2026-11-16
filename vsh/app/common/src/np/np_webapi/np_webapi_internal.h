@@ -339,4 +339,15 @@ extern int npWebApiRequestAddRef(NpWebApiRequest *request);
 extern int npWebApiRequestHasOtherRefs(NpWebApiRequest *request);
 extern void *npWebApiUserContextSetOnlineId(NpWebApiUserContext *userCtx, const SceNpOnlineId *onlineId);
 
+/* the push notification library context: one object, made at start (np_push/src) */
+typedef struct NpPushLibContext {
+	const void **vtable;
+} NpPushLibContext;
+
+extern NpPushLibContext *g_pushLibContext;	/* 0x81010038 */
+extern void npPushLibContextDelete(void);
+extern NpPushLibContext *npPushLibContextGet(void);
+extern int npPushSetCallbackParam(const int *param);
+extern const char *npPushFilterName(const unsigned char *filter);
+
 #endif

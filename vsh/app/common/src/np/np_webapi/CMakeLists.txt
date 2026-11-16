@@ -11,4 +11,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	userctx.cpp
 	request.cpp
 	connpool.cpp
+	push.cpp
 )
