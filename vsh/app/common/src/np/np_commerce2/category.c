@@ -75,3 +75,32 @@ int npCommerce2ReadCategoryInfo(const char *data, SceSize length, const SceUChar
 	}
 	return 0;
 }
+
+/* the category record of a result of the category list */
+int npCommerce2GetCategoryOfResult(const NpCommerce2Item *result, SceNpCommerce2CategoryInfo *info)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x1B, 0x55, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadCategoryInfo(data + ret, length, result->commonData.buf_head,
+						  result->commonData.version, 1, info);
+	return ret;
+}
+
+/* the category record of a content item */
+int npCommerce2GetCategoryOfContent(const NpCommerce2Item *content, SceNpCommerce2CategoryInfo *info)
+{
+	const char *data = (const char *)content->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, content->commonData.data_size -
+					 (data - (const char *)content->commonData.data), 0x1A, 0x4D, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadCategoryInfo(data + ret, length, content->commonData.buf_head,
+						  content->commonData.version, 0, info);
+	return ret;
+}

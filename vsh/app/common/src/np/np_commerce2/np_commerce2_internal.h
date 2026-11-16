@@ -452,6 +452,8 @@ extern int npCommerce2FindTableRow(const char *data, SceSize size, SceUInt16 tag
 				   SceUInt32 index, SceUInt16 *length, int partial);
 extern int npCommerce2ReadCategoryInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
 				       SceUInt32 version, int dataType, SceNpCommerce2CategoryInfo *info);
+extern int npCommerce2GetCategoryOfResult(const NpCommerce2Item *result, SceNpCommerce2CategoryInfo *info);
+extern int npCommerce2GetCategoryOfContent(const NpCommerce2Item *content, SceNpCommerce2CategoryInfo *info);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -502,13 +504,9 @@ extern int npCommerce2_810062FA(SceUInt32 reqId, const char *id, int a3, int a4,
 extern int npCommerce2GetResultData(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize);
 extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result, void *buf,
 				SceSize bufLen);
-extern int npCommerce2_8100DD78(const SceNpCommerce2GetCategoryContentsResult *result,
-				SceNpCommerce2CategoryInfo *categoryInfo);
 extern int npCommerce2GetEnvironment(void);
 extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
 				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
-extern int npCommerce2_8100DE5C(const SceNpCommerce2ContentInfo *contentInfo,
-				SceNpCommerce2CategoryInfo *categoryInfo);
 extern int npCommerce2_8100DEB4(int a1, int a2);
 extern int npCommerce2_8100E272(int a1, void *a2, int a3);
 extern int npCommerce2_8100E5FA(int a1, int a2);

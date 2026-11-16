@@ -365,7 +365,7 @@ int sceNpCommerce2GetCategoryInfo(const SceNpCommerce2GetCategoryContentsResult 
 	if (result == NULL || categoryInfo == NULL)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
-	ret = npCommerce2_8100DD78(result, categoryInfo);
+	ret = npCommerce2GetCategoryOfResult(result, categoryInfo);
 	if (ret >= 0 && npCommerce2GetEnvironment() == 2) {
 		categoryInfo->countOfSubCategory = 0;
 		categoryInfo->countOfProduct = 0;
@@ -389,7 +389,7 @@ int sceNpCommerce2GetCategoryInfoFromContentInfo(const SceNpCommerce2ContentInfo
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (contentInfo != NULL && categoryInfo != NULL)
-		return npCommerce2_8100DE5C(contentInfo, categoryInfo);
+		return npCommerce2GetCategoryOfContent(contentInfo, categoryInfo);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
