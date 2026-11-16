@@ -2841,7 +2841,7 @@ int SceNpCommerce2_8BB68957(SceUInt32 reqId)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2Start_8100999A(reqId);
+	return npCommerce2Start_8100999A(reqId, SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
 }
 
 int SceNpCommerce2_3EFF3363(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize)
@@ -3310,7 +3310,7 @@ int SceNpCommerce2_536DA1DA(SceUInt32 reqId)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2Start_8100A83A(reqId);
+	return npCommerce2Start_8100A83A(reqId, SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
 }
 
 int SceNpCommerce2_2AD3766D(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize)
@@ -3494,7 +3494,7 @@ int SceNpCommerce2_917646A1(SceUInt32 reqId)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2Start_8100A83A(reqId);
+	return npCommerce2Start_8100A83A(reqId, SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
 }
 
 int SceNpCommerce2_C3765C32(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize)
