@@ -12,5 +12,6 @@ psp2_module(vs0_sys_external_np_commerce2 KIND user COMPILER snc PARTIAL SOURCES
 	request_table.c
 	settings.c
 	shell_events.c
+	shell_slot.c
 	np_commerce2.c
 )

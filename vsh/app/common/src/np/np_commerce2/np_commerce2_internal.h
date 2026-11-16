@@ -211,6 +211,24 @@ extern int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *res
 				   SceNpCommerce2GameProductInfo *gameProductInfo);
 extern int SceNpCommerce2_C4CC8E22(int a1, int a2, int a3);
 
+#define NP_COMMERCE2_ERROR_NO_SHELL_SLOT	-2141909072	/* 0x80550fb0 */
+#define NP_COMMERCE2_ERROR_NO_SUCH_SHELL_SLOT	-2141909071	/* 0x80550fb1 */
+#define NP_COMMERCE2_SHELL_SLOT_NUM	16
+
+typedef struct NpCommerce2ShellSlot {
+	int used;
+	int notified;
+	int aborted;
+	int waiting;
+	int type;
+	SceUID semaphore;
+	int shellRequest;
+} NpCommerce2ShellSlot;
+
+extern NpCommerce2ShellSlot g_shellSlots[NP_COMMERCE2_SHELL_SLOT_NUM];
+extern int npCommerce2CreateShellSlot(int type, int *slotId);
+extern int npCommerce2WaitShellSlot(int slotId);
+extern int npCommerce2_8101EAE6(int shell, int request);
 extern int g_shellReady;
 extern int g_shellLockReady;
 extern SceKernelLwMutexWork g_shellLock;

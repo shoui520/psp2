@@ -20,7 +20,6 @@ static const int s_disableEvents[NP_COMMERCE2_SHELL_EVENT_NUM] = {	/* 0x81026060
 };
 
 SceKernelLwMutexWork g_shellLock;		/* 0x810270B8 */
-char g_shellState[0x1C0];			/* 0x810270D8 */
 
 int npCommerce2_81017DCC(void)
 {
@@ -31,7 +30,7 @@ int npCommerce2_81017DCC(void)
 		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
 
 	g_shellLockReady = 0;
-	sceClibMemset(g_shellState, 0, sizeof(g_shellState));
+	sceClibMemset(g_shellSlots, 0, sizeof(g_shellSlots));
 	ret = sceKernelCreateLwMutex(&g_shellLock, "SceNpCommerce2", 2, 0, NULL);
 	if (ret >= 0) {
 		g_shellLockReady = 1;
