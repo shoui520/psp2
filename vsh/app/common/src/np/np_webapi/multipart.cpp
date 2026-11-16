@@ -92,3 +92,160 @@ int npWebApiRequestSendMultipartPart(NpWebApiRequest *request, const void *data,
 	}
 	return result;
 }
+
+/* the part list's insert: the handle list's, for a list of parts */
+void npWebApiPartListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list, NpWebApiMultipartPart **pPart)
+{
+	NpWebApiHandleNode *sentinel;
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *result;
+	void *memory;
+	NpWebApiMultipartPart *part;
+	void *allocator;
+	unsigned long count;
+
+	allocator = list->allocator;
+	if (list->sentinel == NULL) {
+		sentinel = NULL;
+		if (allocator != NULL) {
+			memory = SceNpCommonPs4_AA980113(allocator, 12);
+			if (memory != NULL) {
+				node = (NpWebApiHandleNode *)operator new(12, memory);
+				if (node != NULL) {
+					node->handle = NULL;
+					sentinel = node;
+				}
+			}
+		}
+		list->sentinel = sentinel;
+		if (sentinel == NULL) {
+			*pResult = NULL;
+			return;
+		}
+		sentinel->prev = sentinel;
+		sentinel->next = sentinel;
+		allocator = list->allocator;
+	}
+	part = *pPart;
+	if (allocator != NULL) {
+		memory = SceNpCommonPs4_AA980113(allocator, 12);
+		if (memory != NULL) {
+			result = (NpWebApiHandleNode *)operator new(12, memory);
+			if (result != NULL) {
+				result->handle = (NpWebApiHandle *)part;
+				result->prev = list->sentinel->prev;
+				node = list->sentinel;
+				result->next = node;
+				node->prev->next = result;
+				count = list->count + 1;
+				list->sentinel->prev = result;
+				list->count = count;
+				*pResult = result;
+				return;
+			}
+		}
+	}
+	*pResult = NULL;
+}
+
+int npWebApiRequestAddMultipartPart(NpWebApiRequest *request, const SceNpWebApiMultipartPartParameter *param, int *pIndex)
+{
+	NpWebApiHandleNode *node;
+	NpWebApiLibContext *libCtx;
+	NpWebApiMultipartPart *part;
+	SceSize remaining;
+	int position;
+	unsigned int i;
+	int offset;
+	const char *name;
+	int written;
+	int result;
+
+	part = NULL;
+	if (param->headerNum != 0 && param->pHeaders == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	part = (NpWebApiMultipartPart *)npWebApiLibContextPoolAlloc(request->libContext, 1036);
+	if (part == NULL)
+		goto fail;
+	sceClibMemset(part, 0, 0x40C);
+	remaining = 1023;
+	part->contentLength = param->contentLength;
+	position = 0;
+	if (param->headerNum != 0) {
+		offset = 0;
+		i = 0;
+		position = 0;
+		remaining = 1023;
+		do {
+			name = *(const char **)((char *)param->pHeaders + offset);
+			if (name != NULL && *(const char **)((char *)param->pHeaders + offset + 4) != NULL) {
+				if (sceClibStrncmp(name, "Content-Length", sceClibStrnlen("Content-Length", 0xFFFFFFFF)) != 0) {
+					position += sceClibSnprintf(&part->header[position], remaining, "%s: %s\r\n",
+						*(const char **)((char *)param->pHeaders + offset),
+						*(const char **)((char *)param->pHeaders + offset + 4));
+					remaining = 1023 - position;
+				}
+			}
+			i++;
+			offset += 8;
+		} while (i < param->headerNum);
+	}
+	written = sceClibSnprintf(&part->header[position], remaining, "Content-Length: %d\r\n", param->contentLength);
+	sceClibSnprintf(&part->header[position + written], 1023 - (position + written), "\r\n");
+	npWebApiLibContextLock(request->libContext);
+	npWebApiPartListInsert(&node, (NpWebApiHandleList *)&request->listBHead, &part);
+	libCtx = request->libContext;
+	if (node == NULL) {
+		npWebApiLibContextUnlock(libCtx);
+		goto fail;
+	}
+	part->partId = request->listBCount;
+	if (pIndex != NULL)
+		*pIndex = part->partId;
+	npWebApiLibContextUnlock(libCtx);
+	return 0;
+fail:
+	result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+	if (part != NULL)
+		npWebApiLibContextDestroyPool(request->libContext, part);
+	return result;
+}
+
+int npWebApiAddMultipartPart(SceInt64 requestId, const SceNpWebApiMultipartPartParameter *param, int *pIndex)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	NpWebApiRequest *request;
+	unsigned int libCtxId;
+	int userCtxId;
+	int result;
+
+	libCtxId = npWebApiRequestIdGetLibContextId(requestId);
+	userCtxId = npWebApiRequestIdGetUserContextId(requestId);
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx != NULL) {
+		userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
+		if (userCtx != NULL) {
+			request = npWebApiUserContextFindRequest(userCtx, requestId);
+			if (request != NULL) {
+				if (npWebApiRequestGetMultipart(request) != 0 && npWebApiRequestGetFlag204(request) == 0)
+					result = npWebApiRequestAddMultipartPart(request, param, pIndex);
+				else
+					result = NP_WEBAPI_ERROR_MULTIPART_NOT_ALLOWED;
+			} else {
+				result = NP_WEBAPI_ERROR_REQUEST_NOT_FOUND;
+			}
+			if (request != NULL)
+				npWebApiRequestRelease(request);
+		} else {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+		}
+		if (userCtx != NULL)
+			npWebApiUserContextRelease(userCtx);
+	} else {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	}
+	if (libCtx != NULL)
+		npWebApiLibContextRelease(libCtx);
+	return result;
+}

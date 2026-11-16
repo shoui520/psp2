@@ -111,6 +111,7 @@ extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
 extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 extern int SceNpCommon_0624AE44(char *version);	/* the library's version text */
 extern int sceClibSnprintf(char *dst, SceSize size, const char *fmt, ...);
+extern int sceClibStrncmp(const char *s1, const char *s2, SceSize len);
 extern int sceClibStrncasecmp(const char *s1, const char *s2, SceSize len);
 extern int SceNpManager_E45E4003(void *buffer);
 extern int SceNpCommonPs4_FB63A152(void);
@@ -469,6 +470,14 @@ typedef struct NpWebApiMultipartPart {
 	int sentLength;
 } NpWebApiMultipartPart;
 
+extern void npWebApiPartListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiMultipartPart **pPart) __attribute__((noinline));
+extern int npWebApiRequestAddMultipartPart(NpWebApiRequest *request, const SceNpWebApiMultipartPartParameter *param,
+	int *pIndex) __attribute__((noinline));
+extern int npWebApiRequestGetResponseHeaderValue(NpWebApiRequest *request, const char *fieldStr, void *buffer,
+	SceSize size, SceSize *pLength) __attribute__((noinline));
+extern int npWebApiAddMultipartPart(SceInt64 requestId, const SceNpWebApiMultipartPartParameter *param, int *pIndex);
+extern int npWebApiGetHttpResponseHeader(SceInt64 requestId, const char *name, char *value, SceSize size, SceSize *pLength);
 extern int npWebApiRequestSendMultipartPart(NpWebApiRequest *request, const void *data, SceSize size, int partId);
 /* the 12-byte handle the user context creation hands out: it names the user context the library
    context has at hand (the library context's field at +56) */

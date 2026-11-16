@@ -114,3 +114,72 @@ int npWebApiReadData(SceInt64 requestId, void *data, SceSize size)
 		npWebApiLibContextRelease(libCtx);
 	return result;
 }
+
+int npWebApiRequestGetResponseHeaderValue(NpWebApiRequest *request, const char *fieldStr, void *buffer, SceSize size,
+	SceSize *pLength)
+{
+	const char *header;
+	SceSize headerLength;
+	const char *fieldValue;
+	SceSize valueLength;
+	SceSize copyLength;
+	SceSize length;
+	int result;
+
+	header = (const char *)request->field220;
+	headerLength = request->field224;
+	fieldValue = NULL;
+	valueLength = 0;
+	result = sceHttpParseResponseHeader(header, headerLength, fieldStr, &fieldValue, &valueLength);
+	if (result >= 0) {
+		length = valueLength;
+		if (npWebApiGetSdkVersion() >= NP_WEBAPI_SDK_3_50)
+			result = 0;
+		if (buffer != NULL) {
+			copyLength = size;
+			if (valueLength <= size)
+				copyLength = valueLength;
+			sceClibMemcpy_safe(buffer, fieldValue, copyLength);
+			length = valueLength;
+		}
+		if (pLength != NULL)
+			*pLength = length;
+	}
+	return result;
+}
+
+int npWebApiGetHttpResponseHeader(SceInt64 requestId, const char *name, char *value, SceSize size, SceSize *pLength)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	NpWebApiRequest *request;
+	unsigned int libCtxId;
+	int userCtxId;
+	int result;
+	int libCtxSaved;
+
+	libCtxId = npWebApiRequestIdGetLibContextId(requestId);
+	userCtxId = npWebApiRequestIdGetUserContextId(requestId);
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx != NULL) {
+		userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
+		if (userCtx != NULL) {
+			request = npWebApiUserContextFindRequest(userCtx, requestId);
+			libCtxSaved = NP_WEBAPI_ERROR_REQUEST_NOT_FOUND;
+			if (request != NULL)
+				libCtxSaved = npWebApiRequestGetResponseHeaderValue(request, name, value, size, pLength);
+			result = libCtxSaved;
+			if (request != NULL)
+				npWebApiRequestRelease(request);
+		} else {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+		}
+		if (userCtx != NULL)
+			npWebApiUserContextRelease(userCtx);
+	} else {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	}
+	if (libCtx != NULL)
+		npWebApiLibContextRelease(libCtx);
+	return result;
+}
