@@ -419,4 +419,25 @@ extern int npWebApiUserContextHasBusyRequests(NpWebApiUserContext *userCtx);
 extern int npWebApiUserContextAbortRequests(NpWebApiUserContext *userCtx);
 extern int npWebApiDeleteUserContextObject(int userCtxId);
 
+/* a list of objects hung off a library context; each node's next is at +168 */
+typedef struct NpWebApiObjectNode {
+	unsigned char reserved0[168];
+	struct NpWebApiObjectNode *next;
+} NpWebApiObjectNode;
+
+typedef struct NpWebApiObjectList {
+	const void *vtable;
+	NpWebApiLibContext *libContext;
+	NpWebApiObjectNode *head;
+	int count;
+} NpWebApiObjectList;
+
+extern int npWebApiConvertHttpError(int id, int error);
+extern int npWebApiIsUserProfileService(const char *service);
+extern int npWebApiIsAccountsService(const char *service);
+extern NpWebApiObjectList *npWebApiObjectListConstruct(NpWebApiObjectList *list, NpWebApiLibContext *libCtx);
+extern NpWebApiObjectList *npWebApiObjectListDestruct(NpWebApiObjectList *list);
+extern int npWebApiObjectListDeleteThis(NpWebApiObjectList *list);
+extern const void *g_objectListVtable[];	/* 0x8100ef60 */
+
 #endif
