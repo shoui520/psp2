@@ -194,11 +194,19 @@ void stateInit(void)
 	stateRequest.byte[0] = 0x7f;
 	stateRequest.byte[1] = 0xff;
 	stateWakeupFactor.word = stateRequest.word;
+#if FW_SINCE(0x00090804)
 	mask = 0xffffffff;
 	mask |= configGet()->BOARD_WAKE_MASKS.on;
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
+#else
+	/* 0x00090206's configuration has no wake masks */
+	if (configGet()->start.bits.wakeUnmask22)
+		mask = ~0x00400000UL;
+	else
+		mask = 0xffffffff;
+#endif
 #if FW_SINCE(0x01000104)
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
@@ -352,7 +360,7 @@ static int stateOffEnter(void)
 		logEvent(0x18);
 		break;
 	}
-#else
+#elif FW_SINCE(0x00090804)	/* 0x00090206 has no log */
 	if (stateCause == 0x31)
 		logEvent(5);
 #endif
@@ -391,15 +399,19 @@ static int stateOffEnter(void)
 
 static int stateResumeEnter(void)
 {
+#if FW_SINCE(0x00090804)
 	union PowerRequest *factor;
 
+#endif
 	serial4Answer0205();
 	serialAnswer0105();
+#if FW_SINCE(0x00090804)
 	factor = stateGetWakeupFactor();
 	if (factor->bits.notify)
 		logEvent(2);
 	else
 		logEvent(1);
+#endif
 	return 0;
 }
 
@@ -437,8 +449,10 @@ static int stateCutEnter(void)
 	inputStateCut();
 	tau0PowerOff();
 	stateCheck();
+#if FW_SINCE(0x00090804)
 	if (stateCause == 0x41)
 		logEvent(8);
+#endif
 	return 0;
 }
 
@@ -526,8 +540,14 @@ static int stateOffHandle(struct StateEvent *event)
 			stateRequest.bits.mode = event->transition & 0x7f;
 		}
 		stateRequest.bits.notify = 0;
+#if FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.on;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.off;
+#else
+		/* 0x00090206 has the masks in its code */
+		stateWakeMask |= 0xffa0057cUL;
+		stateWakeMask &= ~0x001e7a01UL;
+#endif
 #if FW_SINCE(0x01000104)
 		if (configGet()->state.bits.offWakeUnmask22)
 			stateWakeMask &= ~0x00400000UL;
@@ -633,6 +653,7 @@ static int stateSuspendHandle(struct StateEvent *event)
 		stateNext = STATE_RESUME;
 		stateRequest.bits.mode = event->transition & 0x7f;
 		stateRequest.bits.notify = 1;
+#if FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.suspendOn;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.suspendOff;
 		if (stateRequest.bits.mode != 0 &&
@@ -645,6 +666,17 @@ static int stateSuspendHandle(struct StateEvent *event)
 #endif
 			stateNext = 0;
 	}
+#else
+	}
+	/* 0x00090206 sets the masks and checks the request at every event */
+	stateWakeMask |= 0xffa21c10UL;
+	stateWakeMask &= ~0x001c6001UL;
+	if (stateRequest.bits.mode != 0 &&
+	    ((1UL << stateRequest.bits.mode) & stateWakeMask))
+		stateNext = 0;
+	if (!(unsigned char)chargeMayStart())
+		stateNext = 0;
+#endif
 	return 0;
 }
 
@@ -658,10 +690,12 @@ static int stateShutdownHandle(struct StateEvent *event)
 		if (levelMonitor1High())
 			stateNext = STATE_ON;
 		break;
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no transition 0x62 */
 	case 0x62:
 		if (input1Bit7Active())
 			stateNext = STATE_ON;
 		break;
+#endif
 	}
 	return 0;
 }
@@ -831,8 +865,10 @@ void stateInputWake1(void)
 unsigned char stateSerialUnlock(void)
 {
 	STATE_TRANSITION_EVENT
+#if FW_SINCE(0x00090804)	/* 0x00090206 starts from any state */
 	if (stateGet() != STATE_OFF)
 		return 1;
+#endif
 	return (unsigned char)STATE_TRANSITION_NOMASK(0x0c);
 }
 
