@@ -351,7 +351,8 @@ SceFiosSize sceFiosFileWriteSync(const SceFiosOpAttr *pAttr, const char *pPath, 
 	SceUID fd;
 	SceFiosSize result;
 
-	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosFileWriteSync");
+	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s (buf=0x%p,length=%lld)", "sceFiosFileWriteSync",
+		   pBuf, length);
 	if (g_FiosParams.initialized) {
 		SceFiosOpAttr attr;
 
