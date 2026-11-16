@@ -144,3 +144,91 @@ int npCommerce2FindIndexedRecord(const char *data, SceSize size, SceUInt16 tag, 
 	}
 	return ret;
 }
+
+/* finds a table record (tag 2, an eight-byte header of four 16-bit words) of a tag; its three
+ * header words after the tag go to table */
+__attribute__((noinline)) int npCommerce2FindTableRecord(const char *data, SceSize size, SceUInt16 tag,
+							SceUInt16 *length, NpCommerce2TableHeader *table,
+							int partial)
+{
+	const char *p = data;
+	SceUInt16 recordTag;
+	SceUInt16 recordLength;
+	SceUInt16 cells;
+	SceUInt16 rowSize;
+	SceUInt16 containerLength;
+	SceSize offset = 0;
+	int ret;
+	int found;
+
+	for (;;) {
+		ret = npCommerce2FindRecord(p, size - offset, 2, 8, &containerLength, partial);
+		found = ret;
+		if (ret < 0)
+			break;
+		p += ret;
+		sceClibMemcpy_safe(&recordTag, p, 2);
+		recordTag = sceNetNtohs(recordTag) & 0xFFF;
+		sceClibMemcpy_safe(&recordLength, p + 2, 2);
+		recordLength = sceNetNtohs(recordLength);
+		sceClibMemcpy_safe(&cells, p + 4, 2);
+		cells = sceNetNtohs(cells);
+		sceClibMemcpy_safe(&rowSize, p + 6, 2);
+		rowSize = sceNetNtohs(rowSize);
+		if (recordTag == tag) {
+			found = p - data + 8;
+			if (length != NULL)
+				*length = containerLength - 8;
+			if (table != NULL) {
+				sceClibMemset(table, 0, sizeof(*table));
+				table->cells = cells;
+				table->rows = recordLength;
+				table->rowSize = rowSize;
+			}
+			break;
+		}
+		p += containerLength;
+		offset = p - data;
+		if (size < offset) {
+			found = NP_COMMERCE2_ERROR_RECORD_NOT_FOUND;
+			break;
+		}
+	}
+	return found;
+}
+
+/* finds the row of a table record of a tag: skips index rows of the same kind */
+int npCommerce2FindTableRow(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+			    SceUInt32 index, SceUInt16 *length, int partial)
+{
+	NpCommerce2TableHeader table;
+	SceUInt16 rowLength;
+	const char *p;
+	SceUInt32 i;
+	int ret;
+
+	ret = npCommerce2FindTableRecord(data, size, tag, NULL, &table, partial);
+	if (ret >= 0) {
+		p = data + ret;
+		if (table.rows > index) {
+			i = 0;
+			for (;;) {
+				if (i != 0)
+					p += rowLength;
+				ret = npCommerce2FindRecordWhole(p, size - (p - data), tag, minLength, &rowLength);
+				if (ret < 0)
+					break;
+				i++;
+				p += ret;
+				if (i > index) {
+					ret = p - data;
+					*length = rowLength;
+					break;
+				}
+			}
+		} else {
+			ret = NP_COMMERCE2_ERROR_RECORD_INDEX;
+		}
+	}
+	return ret;
+}

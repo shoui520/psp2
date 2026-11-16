@@ -438,6 +438,21 @@ extern int npCommerce2FindRecord(const char *data, SceSize size, SceUInt16 tag, 
 extern int npCommerce2FindRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
 				      SceUInt16 *length);
 #define NP_COMMERCE2_ERROR_RECORD_INDEX		-2141909242	/* 0x80550f06 */
+/* what a table record's header holds */
+typedef struct NpCommerce2TableHeader {
+	SceUInt32 cells;
+	SceUInt32 rows;
+	SceUInt32 rowSize;
+	char reserved[0x20];
+} NpCommerce2TableHeader;
+
+extern int npCommerce2FindTableRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
+				      NpCommerce2TableHeader *table, int partial);
+extern int npCommerce2FindTableRow(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+				   SceUInt32 index, SceUInt16 *length, int partial);
+extern int npCommerce2ReadCategoryInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+				       SceUInt32 version, int dataType, SceNpCommerce2CategoryInfo *info);
+extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
 extern int npCommerce2FindNestedRecordWhole(const char *data, SceSize size, SceUInt16 tag,
