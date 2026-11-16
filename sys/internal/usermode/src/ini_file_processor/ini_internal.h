@@ -62,3 +62,64 @@ extern int iniAllocatorRefCreatePool(IniAllocatorRef *ref, SceSize size);
 extern void *iniAlloc(IniAllocatorRef *ref, SceSize size);
 extern void iniFree(IniAllocatorRef *ref, void *ptr);
 extern IniAllocatorOps *iniDefaultAllocator(void);
+
+/* the text a scanner reads: its bytes, where to start, whether a byte order mark may open it, and its kind */
+struct IniInput {
+	const char *data;
+	SceSize size;
+	SceSize offset;
+	bool checkBom;
+	int kind;		/* 2: a value without a key, read whole */
+};
+
+/* what the scanner found: the kind of line, how it went, and where its parts are */
+enum {
+	INI_LINE_BLANK = 0,	/* spaces, a tab or an equals sign opens it */
+	INI_LINE_PAIR = 1,	/* key = value */
+	INI_LINE_EMPTY = 2,	/* nothing before the line ends */
+	INI_LINE_COMMENT = 3,	/* ';' */
+	INI_LINE_SECTION = 4	/* '[' */
+};
+
+struct IniToken {
+	int line;		/* INI_LINE_* */
+	int error;		/* 1: no end of key, 2: no end of value */
+	SceSize offset;		/* where the token's line begins in the text */
+	const char *key;
+	SceSize keyLength;
+	const char *value;
+	SceSize valueLength;
+	const char *newline;	/* the line end that was read: "\n", "\r" or "\r\n" */
+	SceSize newlineLength;
+	SceSize position;	/* where the scanner stopped */
+	SceSize carry;
+};
+
+/* the scanner's steps */
+enum {
+	INI_STEP_START = 0,
+	INI_STEP_BOM = 1,
+	INI_STEP_LINE = 2,
+	INI_STEP_KEY = 3,
+	INI_STEP_VALUE = 4,
+	INI_STEP_NEWLINE_BEGIN = 5,
+	INI_STEP_END = 6,
+	INI_STEP_NEWLINE = 7
+};
+
+#define INI_RESULT_END			8650754		/* 0x840002: the text ended */
+#define INI_RESULT_BAD_ENCODING		-2138832892	/* 0x80840004: a UTF-16 byte order mark */
+#define INI_RESULT_TEXT_TOO_SHORT	-2138832888	/* 0x80840008 */
+
+struct IniScanner {
+	const void *vtable;
+	const unsigned char *cursor;
+	const unsigned char *end;
+	IniToken token;
+	SceSize bomKind;	/* 1: none, 2: UTF-8, 3 and 4: UTF-16 */
+	SceSize step;
+};
+
+extern IniInput *iniInputInit(IniInput *input);
+extern int iniScannerScan(IniScanner *scanner, const IniInput *input, IniToken *out);
+extern IniToken *iniTokenReset(IniToken *token);

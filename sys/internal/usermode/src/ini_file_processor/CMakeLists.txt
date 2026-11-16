@@ -3,6 +3,7 @@ enable_language(CXX)
 # record names its files; they are split where its parts are (ours).
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	memory.cpp
+	scanner.cpp
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 	../../../../../sys/sdk/target/src/libsnc/unwind_pr1.c
 )
