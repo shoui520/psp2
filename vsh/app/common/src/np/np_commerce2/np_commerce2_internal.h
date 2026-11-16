@@ -27,6 +27,9 @@ extern void sceClibMspaceFree(SceClibMspace mspace, void *ptr);
 extern SceClibMspace sceClibMspaceCreate(void *base, SceSize size);
 extern int sceClibMspaceDestroy(SceClibMspace mspace);
 
+extern int sceHttpsEnableOptionPrivate(int id, SceUInt32 sslFlags);
+extern int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags);
+
 /* the imports SceNpCommerce2 takes from libraries the tree has no header of yet */
 extern void SceNpManager_9554802B(const void *data1, const void *data2, const void *data3);
 
@@ -119,6 +122,71 @@ extern int npCommerce2SetNpCommonValue(int value);
 extern int npCommerce2SetEnvironmentType(int type);
 extern void *npCommerce2Alloc(SceSize size);
 extern void npCommerce2Free(void *ptr);
+
+/* a request of a context: the HTTP request it runs and the shell slot it reports to */
+typedef struct NpCommerce2Request {
+	struct NpCommerce2Request *next;
+	int refCount;
+	SceUInt32 id;			/* the context's ID in the high half */
+	SceUInt32 flags;		/* NP_COMMERCE2_REQUEST_FLAG_* */
+	int httpRequest;
+	SceUInt16 type;
+	SceUInt16 reserved1;
+	int shellSlot;
+} NpCommerce2Request;
+
+#define NP_COMMERCE2_REQUEST_FLAG_REMOVED	0x1
+#define NP_COMMERCE2_REQUEST_FLAG_ABORTED	0x2
+
+/* a context: the HTTP template and connection its requests run on, and their list */
+typedef struct NpCommerce2Context {
+	struct NpCommerce2Context *next;
+	int refCount;
+	SceUInt32 version;
+	SceUInt32 id;
+	SceUInt32 flags;		/* NP_COMMERCE2_CONTEXT_FLAG_* */
+	SceUInt32 reserved1;
+	int httpTemplate;
+	int httpConnection;
+	NpCommerce2Request *requests;
+	char text[0x100];
+	char response[0x400];
+	SceUInt32 responseSize;
+	SceUInt32 mode;
+	SceUInt32 reserved2[3];
+	SceUInt32 kind;			/* 0: the context of the library, 1: the shell's */
+	SceUInt32 reserved3;
+	char currencyCode[4];
+	char countryCode[4];
+	SceUInt32 sslCreated;
+	SceInt32 sslShortfall;
+	SceInt32 httpShortfall;
+	SceUInt32 responseKind;
+	SceUInt32 reserved4;
+} NpCommerce2Context;
+
+#define NP_COMMERCE2_CONTEXT_FLAG_REMOVED	0x1
+
+/* the object table (object_table.c, request_table.c) */
+extern int npCommerce2AddContext(SceKernelLwMutexWork *lock, NpCommerce2Context *ctx, SceUInt32 *ctxId, int kind);
+extern int npCommerce2GetContext(SceKernelLwMutexWork *lock, SceUInt32 ctxId, NpCommerce2Context **ctx, int notRemoved);
+extern int npCommerce2ReleaseContext(SceKernelLwMutexWork *lock, NpCommerce2Context *ctx);
+extern int npCommerce2UnlinkContext(SceKernelLwMutexWork *lock, SceUInt32 ctxId);
+extern int npCommerce2DestroyAllContexts(SceKernelLwMutexWork *lock);
+extern int npCommerce2CreateHttpTemplate(int *httpTemplate, int *httpConnection);
+extern int npCommerce2DeleteHttpTemplate(int httpTemplate, int httpConnection);
+extern int npCommerce2GetRequest(SceKernelLwMutexWork *lock, SceUInt32 reqId, NpCommerce2Request **req);
+extern void npCommerce2ReleaseRequest(SceKernelLwMutexWork *lock, NpCommerce2Request *req);
+extern int npCommerce2RemoveRequest(SceKernelLwMutexWork *lock, SceUInt32 reqId);
+extern int npCommerce2RemoveAllRequests(SceKernelLwMutexWork *lock, SceUInt32 ctxId);
+extern int npCommerce2DeleteHttpRequest(int httpRequest);
+extern int npCommerce2AbortHttpRequest(int httpRequest);
+extern int npCommerce2DeleteShellSlot(int slot);
+extern int npCommerce2AbortShellSlot(int slot);
+extern NpCommerce2Context *g_contextList;
+extern SceUInt32 g_lastContextId;
+
+#define NP_COMMERCE2_ERROR_CTX_MAX_REACHED	SCE_NP_COMMERCE2_ERROR_CTX_MAX
 
 /* set by Init, cleared by Term */
 extern int g_initialized;
