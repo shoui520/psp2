@@ -427,7 +427,7 @@ char *fiosDebugDumpChunk(uint16_t chunkID, char *pBuffer, size_t bufferSize)
 		bogus = chunkID > s_chunkAllocator.m_count;
 	if (!(invalid | bogus))
 		deleted = !(s_chunkAllocator.IsAllocatedIndex(chunkID, 1) &&
-			    (pChunk->magic & 0x3f) == FIOS_CHUNK_MAGIC);
+			    pChunk->magic == FIOS_CHUNK_MAGIC);
 	*pBuffer = '\0';
 	if (invalid) {
 		appendf(pBuffer, bufferSize, "CHUNKID_INVALID");

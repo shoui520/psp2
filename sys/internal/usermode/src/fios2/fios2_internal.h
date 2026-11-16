@@ -116,7 +116,8 @@ struct FiosOp {
 /* a file handle: unit of the FH table */
 struct FiosFH {
 	SceFiosFH h;
-	uint32_t reserved0[2];
+	uint32_t isOpen;		/* "file not open yet" while 0 */
+	volatile int32_t pendingIO;	/* "m_pendingIO": its chunks prepared and not done */
 	SceFiosNativeFH nativeFH;	/* SCE_FIOS_NATIVEFH_INVALID while it is not open */
 	uint32_t reserved1[4];
 	SceFiosOffset offset;
@@ -128,7 +129,8 @@ struct FiosFH {
 /* a directory handle: unit of the DH table */
 struct FiosDH {
 	SceFiosDH h;
-	uint32_t reserved0[2];
+	uint32_t isOpen;		/* "dir not open yet" while 0 */
+	volatile int32_t pendingIO;
 	SceFiosNativeDH nativeDH;
 	uint32_t reserved1[6];
 	void *pBuf;			/* the caller's buffer for the entries */
@@ -232,6 +234,7 @@ extern Wws::Platform::Mutex s_chunkMutex;		/* "SceFiosChunk", recursive */
 extern Wws::Platform::Rwlock s_ioFilterLock;		/* "SceFiosIOFilter" */
 extern Wws::Platform::Mutex s_dhMutex;			/* "SceFiosDirHandle" */
 extern int s_overlayCount;				/* the process's overlays at start */
+extern bool s_libraryInitialized;			/* fiosLibraryInit has run */
 extern Allocator s_chunkAllocator;			/* the chunk storage */
 
 /* op.cpp: an op's life */
@@ -265,30 +268,116 @@ uint16_t fiosChunkGetChild(uint16_t chunkID, int index);
 
 /*
  * A chunk: one or more 8-byte units of g_FiosParams.chunkStorage, its ID the first unit's
- * index. The fields past the type are the ones the chunk dump reads.
+ * index; a 24-byte header, then what its type needs (s_chunkSizes). A chunk has a parent
+ * and two children in its header; more of them go to CHUNK_PARENT and CHUNK_CHILD lists,
+ * chunks whose links hold them: a CHUNK_PARENT list keeps four parents in links[0..3], the
+ * first the next list when there is one; a CHUNK_CHILD list keeps ten children in child[]
+ * and links[0..7], the last the next list when there is one. A list's parent field names
+ * the chunk it belongs to.
  */
 #define FIOS_CHUNK_MAGIC	0x2b	/* the low six bits of an allocated chunk's first byte */
+#define FIOS_CHUNK_PIECE_SIZE	0x10000	/* a read or write completes in pieces of this size */
 
 struct FiosChunk {
-	int8_t magic;
+	uint8_t magic : 6;		/* FIOS_CHUNK_MAGIC while allocated */
+	uint8_t reservedMagic : 2;
 	uint8_t scheduled : 1;
 	uint8_t prepared : 1;
 	uint8_t completed : 1;
 	uint8_t cancelled : 1;
-	uint8_t reservedFlags0 : 2;
+	uint8_t split : 1;		/* a read or write counted in FIOS_CHUNK_PIECE_SIZE pieces */
+	uint8_t reservedFlags : 1;
 	uint8_t executing : 1;
-	uint8_t reservedFlags1 : 1;
+	uint8_t whole : 1;		/* a read or write ChunkTree does not cut up */
 	uint8_t type;			/* CHUNK_* */
-	uint8_t reserved0[21];
+	int8_t priority;
+	uint16_t parent;
+	uint16_t child[2];
+	uint16_t reserved0;		/* CHUNKID_INVALID */
+	uint32_t pieces;		/* the pieces not done yet */
+	SceFiosTime deadline;
 	union {
-		SceFiosOp op;		/* CHUNK_ROOT's op */
-		SceFiosHandle h;	/* the file or directory handle it works on */
+		uint16_t links[8];	/* CHUNK_PARENT, CHUNK_CHILD */
+		struct {			/* CHUNK_BUFFER */
+			uint64_t size;
+			uint8_t data[];
+		} buffer;
+		struct {			/* CHUNK_CALLBACK */
+			uint32_t reserved;
+			int err;
+		} callback;
+		struct {			/* CHUNK_TRUNCATE */
+			SceFiosSize length;
+			SceFiosFH fh;
+			const char *pPath;
+		} truncate;
+		struct {			/* CHUNK_STAT */
+			SceFiosHandle h;
+			uint32_t reserved;
+			const char *pPath;
+		} stat;
+		struct {			/* the other path chunks: CHUNK_DIR_EXISTS, ... */
+			const char *pPath;
+		} path;
+		struct {
+			union {
+				SceFiosOp op;		/* CHUNK_ROOT's op */
+				SceFiosHandle h;	/* the file or directory handle it works on */
+			};
+			const char *pPath;	/* CHUNK_FH_OPEN, CHUNK_DH_OPEN, ... */
+			SceFiosOffset offset;
+			SceFiosSize reqCount;
+			SceFiosSize *pActCount;
+			uint8_t *pBuf;
+		};
 	};
-	uint32_t reserved1;
-	SceFiosOffset offset;
-	SceFiosSize reqCount;
-	SceFiosSize *pActCount;
 };
+
+extern const uint8_t s_chunkSizes[];
+extern uint16_t s_nullChunk;
+
+static inline FiosChunk *fiosChunkAt(uint16_t chunkID)
+{
+	return (FiosChunk *)((uint8_t *)g_FiosParams.chunkStorage.pPtr + chunkID * 8);
+}
+
+/* chunk.cpp; a Locked one takes s_chunkMutex itself */
+uint16_t fiosChunkAllocate(uint8_t type, uint32_t size);
+uint16_t fiosChunkAllocateType(uint8_t type);
+uint16_t fiosChunkTryAllocate(uint8_t type);
+void fiosChunkDeallocate(uint16_t chunkID);
+void fiosChunkFree(uint16_t chunkID);
+bool fiosChunkLink(uint16_t parentID, uint16_t childID);
+uint16_t fiosChunkAllocateChild(uint16_t parentID, uint8_t type);
+uint16_t fiosChunkAllocateChildLocked(uint16_t parentID, uint8_t type);
+void *fiosChunkAllocateBuffer(uint16_t parentID, uint32_t size);
+void *fiosChunkAllocateBufferLocked(uint16_t parentID, uint32_t size);
+uint16_t fiosChunkGetListChild(uint16_t listID, int index);
+uint16_t fiosChunkGetListParent(uint16_t listID, int index);
+void fiosChunkUnlink(uint16_t parentID, uint16_t childID);
+void fiosChunkRelease(uint16_t chunkID, uint16_t parentID);
+void fiosChunkDelete(uint16_t chunkID);
+void fiosChunkDeleteLocked(uint16_t chunkID);
+void fiosChunkReleaseLocked(uint16_t chunkID, uint16_t parentID);
+bool fiosChunkLinkLocked(uint16_t parentID, uint16_t childID);
+void fiosChunkUnlinkLocked(uint16_t parentID, uint16_t childID);
+void fiosChunkReplace(uint16_t oldChunkID, uint16_t newChunkID);
+void fiosChunkReplaceLocked(uint16_t oldChunkID, uint16_t newChunkID);
+uint16_t fiosChunkGetChildLocked(uint16_t chunkID, int index);
+uint16_t fiosChunkGetParentLocked(uint16_t chunkID, int index);
+SceFiosHandle fiosChunkGetHandle(uint16_t chunkID);
+SceFiosHandle fiosChunkGetHandleLocked(uint16_t chunkID);
+const char *fiosChunkGetPath(uint16_t chunkID);
+const char *fiosChunkGetPathLocked(uint16_t chunkID);
+bool fiosChunkIsReady(uint16_t chunkID, bool force);
+bool fiosChunkIsReadyLocked(uint16_t chunkID, bool force);
+bool fiosChunkChildrenComplete(uint16_t chunkID);
+void fiosChunkSetError(uint16_t chunkID, int err, bool force);
+bool fiosChunkMarkComplete(uint16_t chunkID, int err);
+bool fiosChunkComplete(uint16_t chunkID, int err);
+void fiosChunkSetErrorLocked(uint16_t chunkID, int err);
+void fiosChunkPrepare(uint16_t chunkID, SceFiosPriority priority, SceFiosTime deadline);
+void fiosChunkPrepareLocked(uint16_t chunkID, SceFiosPriority priority, SceFiosTime deadline);
 
 /* debug.cpp: the dumps the SDK does not export */
 char *fiosDebugDumpChunk(uint16_t chunkID, char *pBuffer, size_t bufferSize);

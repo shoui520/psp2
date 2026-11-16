@@ -14,7 +14,7 @@ Wws::Platform::Rwlock s_defaultOpAttrLock;
 static SceFiosOpAttr s_globalDefaultOpAttr;
 static volatile int s_suspendCount;
 static bool s_autoInitialized;
-static bool s_libraryInitialized;
+bool s_libraryInitialized;
 static bool s_libraryInitializedByFios;
 static bool s_hasGlobalDefaultOpAttr;
 Wws::Platform::Mutex s_opWaitMutex;
