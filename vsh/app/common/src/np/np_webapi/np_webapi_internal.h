@@ -110,6 +110,9 @@ extern const void *g_userContextVtable[];	/* 0x8100eddc */
 extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
 extern const void *g_baseVtable[];		/* 0x8100eb8c */
 extern int SceNpCommonPs4_BB5282C8(void *object);
+extern int SceNpCommonPs4_9AC24306(void);
+extern int SceNpCommonPs4_68D08C92(...);
+extern int SceNpManager_737B2820(void);
 extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
 extern int SceNpCommonPs4_6B428829(void *allocator);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
@@ -337,6 +340,15 @@ typedef struct NpWebApiConnectionPool {
 	int count;
 } NpWebApiConnectionPool;
 
+/* the library context's push event object (np_push): its library context and its requests */
+typedef struct NpWebApiPushObject {
+	const void *vtable;
+	NpWebApiLibContext *libContext;
+} NpWebApiPushObject;
+
+extern int npWebApiConnectionPoolAbortRequest(NpWebApiConnectionPool *pool, NpWebApiRequest *request,
+	unsigned char flag);
+extern int npWebApiPushObjectAbortRequest(NpWebApiPushObject *object, NpWebApiRequest *request);
 extern int npWebApiDestroyObject(void *object);
 extern int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool);
 extern NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectionPool *pool, NpWebApiUserContext *userCtx);

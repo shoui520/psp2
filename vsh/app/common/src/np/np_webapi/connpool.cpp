@@ -91,3 +91,35 @@ int npWebApiConnectionPoolDeleteThis(NpWebApiConnectionPool *pool)
 	pool->vtable = g_baseVtable;
 	return SceNpCommonPs4_BB5282C8(pool);
 }
+
+/* stops what a request of this pool is waiting for, by what it waits on */
+int npWebApiConnectionPoolAbortRequest(NpWebApiConnectionPool *pool, NpWebApiRequest *request,
+	unsigned char flag)
+{
+	int result;
+
+	result = 0;
+	npWebApiLibContextLock(pool->libContext);
+	if (npWebApiRequestGetField236(request) != 0) {
+		if (flag != 0)
+			result = SceNpCommonPs4_9AC24306();
+		else
+			result = SceNpCommonPs4_68D08C92();
+	}
+	if (npWebApiRequestGetField228(request) > 0)
+		result = SceNpManager_737B2820();
+	npWebApiLibContextUnlock(pool->libContext);
+	return result;
+}
+
+int npWebApiPushObjectAbortRequest(NpWebApiPushObject *object, NpWebApiRequest *request)
+{
+	int result;
+
+	result = 0;
+	npWebApiLibContextLock(object->libContext);
+	if (npWebApiRequestGetField236(request) != 0)
+		result = SceNpCommonPs4_68D08C92(npWebApiRequestGetField236(request));
+	npWebApiLibContextUnlock(object->libContext);
+	return result;
+}
