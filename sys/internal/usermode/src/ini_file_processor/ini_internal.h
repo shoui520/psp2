@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include <kernel/sysmem/memblock.h>
 #include <libkernel/libkernel.h>
+#include <kernel/iofilemgr.h>
 
 /* the libkernel mspace calls the tree has no header of yet */
 typedef void *SceClibMspace;
@@ -143,3 +144,63 @@ extern IniString *iniStringAppend(IniString *string, const void *text, SceSize l
 extern IniString *iniStringSubstr(IniString *result, const IniString *source, SceSize position, SceSize length);
 extern SceSize iniPathDeviceLength(const char *path);
 extern const char *iniPathFileName(const char *path);
+
+#define SCE_INI_FILE_PROCESSOR_ERROR_NO_FILE_NAME	-2138832887	/* 0x80840009 */
+
+/* what the processor asks of a file: the base keeps the name, the mode and the last error */
+class IniFileBase {
+public:
+	IniFileBase(IniAllocatorRef *allocator);
+	virtual ~IniFileBase();
+	virtual int open(const char *path, int mode, int flags) = 0;
+	virtual int read(void *buf, SceSize size, SceSSize *readSize) = 0;
+	virtual int write(const void *buf, SceSize size) = 0;
+	virtual int seek(SceOff offset, int origin) = 0;
+	virtual int close() = 0;
+	virtual int sync() = 0;
+	virtual int stat() = 0;
+	virtual int rewind() = 0;
+	virtual int replace(IniFileBase *source) = 0;
+	virtual SceOff size() = 0;
+	virtual SceOff tell() = 0;
+	virtual const IniString *pathOf() = 0;
+	virtual int unused14() = 0;
+	virtual int unused15() = 0;
+	virtual const IniString *path();
+	virtual int openMode();
+	virtual int errorCode();
+	virtual int reopen() = 0;
+	virtual void unused20();
+	virtual void onError(int error);
+
+	IniString m_path;
+	int m_mode;
+	IniAllocatorRef *m_allocator;
+	int m_error;
+	int m_flags;
+};
+
+/* a file on the system */
+class IniFile : public IniFileBase {
+public:
+	IniFile(IniAllocatorRef *allocator);
+	virtual ~IniFile();
+	virtual int open(const char *path, int mode, int flags);
+	virtual int read(void *buf, SceSize size, SceSSize *readSize);
+	virtual int write(const void *buf, SceSize size);
+	virtual int seek(SceOff offset, int origin);
+	virtual int close();
+	virtual int sync();
+	virtual int stat();
+	virtual int rewind();
+	virtual int replace(IniFileBase *source);
+	virtual SceOff size();
+	virtual SceOff tell();
+	virtual const IniString *pathOf();
+	virtual int unused14();
+	virtual int unused15();
+	virtual int reopen();
+
+	SceUID m_fd;
+	int m_reserved;
+};
