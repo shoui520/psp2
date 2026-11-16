@@ -177,14 +177,21 @@ typedef struct NpWebApiUserContext {
 	int refCount;
 	int id;
 	SceNpOnlineId onlineId;
-	unsigned char reserved1[4];
+	int httpTemplateId;
 	void *requests;
-	unsigned char reserved2[4];
+	void *object44;
 	struct NpWebApiUserContext *next;
-	unsigned char reserved3[106];
-	unsigned char flag158;
+	void *requestHead;
+	unsigned char reserved3[40];
+	unsigned char flag96;
 	unsigned char reserved4[1];
+	unsigned char flag98;
+	unsigned char reserved5[59];
+	unsigned char flag158;
+	unsigned char reserved6[9];
 } NpWebApiUserContext;
+
+typedef char NpWebApiUserContextSizeCheck[sizeof(NpWebApiUserContext) == 168 ? 1 : -1];
 
 extern volatile int g_systemParam;		/* 0x81010010 */
 extern int npWebApiConvertError(int error);
@@ -196,6 +203,9 @@ extern NpWebApiUserContext *npWebApiUserContextSetNext(NpWebApiUserContext *user
 extern SceNpOnlineId *npWebApiUserContextOnlineId(NpWebApiUserContext *userCtx);
 extern int npWebApiUserContextAddRef(NpWebApiUserContext *userCtx);
 extern int npWebApiUserContextFlag158(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextRelease(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextHasOtherRefs(NpWebApiUserContext *userCtx);
+extern NpWebApiUserContext *npWebApiUserContextSetFlag158(NpWebApiUserContext *userCtx, char value);
 extern int npWebApiIsShellProcess(void);
 
 #endif

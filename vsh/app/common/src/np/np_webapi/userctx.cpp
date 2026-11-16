@@ -44,3 +44,31 @@ int npWebApiUserContextFlag158(NpWebApiUserContext *userCtx)
 {
 	return userCtx->flag158;
 }
+
+int npWebApiUserContextRelease(NpWebApiUserContext *userCtx)
+{
+	NpWebApiLibContext *libCtx;
+
+	npWebApiLibContextLock(userCtx->libContext);
+	libCtx = userCtx->libContext;
+	userCtx->refCount--;
+	return npWebApiLibContextUnlock(libCtx);
+}
+
+int npWebApiUserContextHasOtherRefs(NpWebApiUserContext *userCtx)
+{
+	NpWebApiLibContext *libCtx;
+	int others;
+
+	npWebApiLibContextLock(userCtx->libContext);
+	others = userCtx->refCount > 1;
+	libCtx = userCtx->libContext;
+	npWebApiLibContextUnlock(libCtx);
+	return others;
+}
+
+NpWebApiUserContext *npWebApiUserContextSetFlag158(NpWebApiUserContext *userCtx, char value)
+{
+	userCtx->flag158 = value;
+	return userCtx;
+}
