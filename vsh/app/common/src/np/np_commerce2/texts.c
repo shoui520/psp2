@@ -538,3 +538,68 @@ int npCommerce2InitResult0x31x3(NpCommerce2DateItem *result, const char *data, S
 	}
 	return ret;
 }
+
+/* a result whose records are texts: 0x4f, 0x50, 0x51, 0x52, 0x36, 0x54 */
+int npCommerce2InitTextsResult0x4f_81013A32(NpCommerce2Texts6Result *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt16 found;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x74);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		result->textA = NP_COMMERCE2_EMPTY_TEXT(result);
+		ret = npCommerce2FindRecordWhole(records, dataLength, 0x4F, 0, &found);
+		if (ret >= 0 && found != 0)
+			result->textA = records + ret;
+		if (ret >= 0) {
+			result->textB = NP_COMMERCE2_EMPTY_TEXT(result);
+			ret = npCommerce2FindRecordWhole(records, dataLength, 0x50, 0, &found);
+			if (ret >= 0 && found != 0)
+				result->textB = records + ret;
+			if (ret >= 0) {
+				result->textC = NP_COMMERCE2_EMPTY_TEXT(result);
+				ret = npCommerce2FindRecordWhole(records, dataLength, 0x51, 0, &found);
+				if (ret >= 0 && found != 0)
+					result->textC = records + ret;
+				if (ret >= 0) {
+					result->textD = NP_COMMERCE2_EMPTY_TEXT(result);
+					ret = npCommerce2FindRecordWhole(records, dataLength, 0x52, 0, &found);
+					if (ret >= 0 && found != 0)
+						result->textD = records + ret;
+					if (ret >= 0) {
+						result->textE = NP_COMMERCE2_EMPTY_TEXT(result);
+						ret = npCommerce2FindRecordWhole(records, dataLength, 0x36, 0, &found);
+						if (ret >= 0 && found != 0)
+							result->textE = records + ret;
+						if (ret >= 0) {
+							result->textF = NP_COMMERCE2_EMPTY_TEXT(result);
+							ret = npCommerce2FindRecordWhole(records, dataLength, 0x54, 0, &found);
+							if (ret >= 0 && found != 0)
+								result->textF = records + ret;
+							if (ret >= 0)
+								ret = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
+
