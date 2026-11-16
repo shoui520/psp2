@@ -94,6 +94,10 @@ struct SerialNotify {
 /* the modes' commands and notifications: mode 1's in app/serial1.c, mode 2's in
    app/serial2.c */
 extern const struct SerialCommand serialCommands2[];
+#if !FW_SINCE(0x00090804)
+extern const struct SerialCommand serialCommands1[];	/* 0x00090206: no flags */
+extern unsigned char serialCommands1Count(void);
+#endif
 extern const struct SerialNotify serialNotifies1[];
 extern const struct SerialNotify serialNotifies2[];
 extern unsigned int serialCommands2Count(void);

@@ -50,6 +50,16 @@ struct ConfigHash {
 	unsigned char	unhashed;		/* set: records written since the last digest */
 };
 
+#if !FW_SINCE(0x00090804)
+/* 0x00090206's record: a write, with no type */
+struct ConfigWriteRecord {
+	unsigned char	length;
+	unsigned char	offsetHigh;
+	unsigned char	offsetLow;
+	unsigned char	data[1];
+};
+#endif
+
 /* a record: its length (of what follows it), its type and its bytes */
 struct ConfigRecord {
 	unsigned char	length;
@@ -90,11 +100,13 @@ extern const struct ConfigBank configDefault;
 
 struct ConfigBank configBuffer;			/* the open copy, and the updater's output */
 static struct Config config;
+#if FW_SINCE(0x00090804)
 static struct ConfigHash configHash;
 static struct ConfigRecords configRecords;
 
 static char configApplyRecords(unsigned char *records, unsigned int length,
 			       unsigned char check);
+#endif
 static unsigned char configMerge(unsigned char from, unsigned char to);
 static unsigned char configCheck(unsigned char bank);
 static unsigned char configNewerVersion(void);
@@ -107,7 +119,9 @@ int configInit(void)
 	unsigned char result0;
 	unsigned char result1;
 
+#if FW_SINCE(0x00090804)
 	memset(&configRecords, 0, sizeof(configRecords));
+#endif
 #if FW_SINCE(0x00090903)
 	configHash.expected = (unsigned char __near *)updater.expected;
 	configHash.w = (unsigned long __near *)updater.shaW;
@@ -196,8 +210,10 @@ unsigned char configOpen(void)
 #endif
 	if (config.state == CONFIG_COMMITTING)
 		return 2;
+#if FW_SINCE(0x00090804)
 	configHash.unhashed = 0;
 	configRecords.count = 0;
+#endif
 	memcpy(&configBuffer, &configBanks[config.bank], sizeof(configBuffer));
 	config.state = CONFIG_OPEN;
 	return 0;
@@ -216,6 +232,7 @@ unsigned char configCommit(void)
 	sum = 0;
 	if (config.state != CONFIG_OPEN)
 		return 2;
+#if FW_SINCE(0x00090804)
 	if (configHash.unhashed != 0)
 		return 6;
 	if (configRecords.count != 0) {
@@ -224,6 +241,7 @@ unsigned char configCommit(void)
 		if (result != 0)
 			return result;
 	}
+#endif
 	config.state = CONFIG_COMMITTING;
 	bank = &configBuffer;
 	memcpy(&bank->magic[0], magic, sizeof(magic));
@@ -248,6 +266,7 @@ unsigned char configCommit(void)
 	return result;
 }
 
+#if FW_SINCE(0x00090804)
 /* records for the open copy (check 0), or to compare with the bank used (check 1), from
    offset 0 on: hashed and applied 64 bytes at a time */
 unsigned char configWriteRecords(unsigned int offset, unsigned char size, unsigned char *data,
@@ -360,6 +379,34 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	}
 	return left == 0 ? 0 : 6;
 }
+#else
+/* 0x00090206: each record its length (of what follows it), the offset (high byte first) and
+   the bytes to write there in the open copy; no types and no digest */
+unsigned char configWriteRecords(unsigned char *records, int length)
+{
+	struct ConfigWriteRecord *record;
+	struct ConfigBank *bank;
+	unsigned int offset;
+	unsigned char size;
+
+	if (config.state != CONFIG_OPEN)
+		return 2;
+	bank = &configBuffer;
+	while (length > 0) {
+		record = (struct ConfigWriteRecord *)records;
+		if (record->length >= 3) {
+			offset = (unsigned int)record->offsetHigh << 8 | record->offsetLow;
+			size = record->length - 2;
+			if (offset + size > CONFIG_SIZE)
+				return 6;
+			memcpy((unsigned char *)&bank->block + offset, record->data, size);
+		}
+		length -= (unsigned char)(record->length + 1);
+		records += (unsigned char)(record->length + 1);
+	}
+	return length == 0 ? 0 : 6;
+}
+#endif
 
 unsigned char configClose(void)
 {
@@ -452,8 +499,8 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.analogCalibration = kept->block.analogCalibration;
 	copy->block.board.value = kept->block.board.value;
 	copy->block.start.value = kept->block.start.value;
-#if !FW_SINCE(0x01000104)
-	/* before 0x01000104 the WLAN's line and the byte after it are kept too */
+#if FW_SINCE(0x00090804) && !FW_SINCE(0x01000104)
+	/* before 0x01000104 the WLAN's line and the byte after it are kept too (not 0x00090206) */
 	copy->block.wlanLine = kept->block.wlanLine;
 	copy->block.wlanLineExtra = kept->block.wlanLineExtra;
 #endif
@@ -583,6 +630,7 @@ close:
 #endif
 }
 
+#if FW_SINCE(0x00090804)	/* none in 0x00090206 */
 /* the open copy set to the defaults and committed */
 unsigned char configRestoreDefaults(void)
 {
@@ -608,6 +656,7 @@ unsigned char configRestoreDefaults(void)
 	result = configClose();
 	return result;
 }
+#endif
 
 /* 0 when the bank is valid: the magic, the size, a version and a count, the state, and the
    checksum (but for the defaults, count 1) */

@@ -22,8 +22,10 @@ union ConfigRequestOffset {
 unsigned char configRequestAnswer[0x20];
 #if FW_SINCE(0x01000104)
 unsigned char configRequestData[3 + 0x40];	/* the offset, the size, the data or records */
-#else
+#elif FW_SINCE(0x00090804)
 unsigned char configRequestData[0x40];
+#else
+unsigned char configRequestData[0x20];
 #endif
 struct HostRequest configRequest;
 
@@ -51,7 +53,9 @@ void configRequestEvent(FLGPTN ptn)
 	unsigned char result;
 	union ConfigRequestOffset offset;
 	unsigned char size;
+#if FW_SINCE(0x00090804)
 	unsigned char length;
+#endif
 
 	if (ptn & 0x4000) {
 		if (!handshakeUnlocked11()) {
@@ -61,8 +65,13 @@ void configRequestEvent(FLGPTN ptn)
 			switch (configRequest.command) {
 			case 0x1380:		/* read */
 				if (configRequest.length == 3) {
+#if FW_SINCE(0x00090804)
 					offset.bytes.low = configRequestData[0];
 					offset.bytes.high = configRequestData[1];
+#else
+					offset.value = configRequestData[0] |
+						       (unsigned int)configRequestData[1] << 8;
+#endif
 					size = configRequestData[2];
 					result = configRead(offset.value, size, configRequestAnswer);
 					hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result,
@@ -73,8 +82,13 @@ void configRequestEvent(FLGPTN ptn)
 				break;
 			case 0x1381:		/* write */
 				if (configRequest.length >= 4) {
+#if FW_SINCE(0x00090804)
 					offset.bytes.low = configRequestData[0];
 					offset.bytes.high = configRequestData[1];
+#else
+					offset.value = configRequestData[0] |
+						       (unsigned int)configRequestData[1] << 8;
+#endif
 					size = configRequestData[2];
 					result = configWrite(offset.value, size, &configRequestData[3]);
 					hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
@@ -94,6 +108,7 @@ void configRequestEvent(FLGPTN ptn)
 				result = configCommit();
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
+#if FW_SINCE(0x00090804)	/* 0x00090206 takes no records from the host */
 			case 0x1385:		/* records */
 				/* a short command is answered, and still run */
 				if (configRequest.length < 4)
@@ -121,6 +136,9 @@ void configRequestEvent(FLGPTN ptn)
 					result = 0x3c;
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
+#else
+			case 0x1385:	/* 0x00090206: the records' number, answered as unknown */
+#endif
 			default:
 				hostRequestAnswer(&configRequest, HOST_REQUEST_UNKNOWN, 0, 0);
 				break;

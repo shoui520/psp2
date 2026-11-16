@@ -291,6 +291,7 @@ unsigned char serialDispatch(void)
 	} else if ((serial.mode & SERIAL_MODE) == 1) {
 		if (serial.status != 0)
 			goto answer;
+#if FW_SINCE(0x00090804)
 		request.data = &serialFrame[SERIAL_FRAME_DATA];
 		request.length = serial.length;
 		serial.status = serialCommand1(serial.command, &request, &response);
@@ -299,6 +300,23 @@ unsigned char serialDispatch(void)
 		if (serial.state == SERIAL_ANSWER)
 			serialPostAnswer();
 		return serial.status;
+#else
+		/* 0x00090206 searches mode 1's commands as mode 2's */
+		i = serialCommands1Count();
+		while (i--) {
+			if (serialCommands1[i].command == serial.command) {
+				request.data = &serialFrame[SERIAL_FRAME_DATA];
+				request.length = serial.length;
+				serial.status = serialCommands1[i].handler(&request, &response);
+				serial.data = response.data;
+				serial.dataLength = response.length;
+				if (serial.state == SERIAL_ANSWER)
+					serialPostAnswer();
+				return serial.status;
+			}
+		}
+		serial.status = SERIAL_UNKNOWN;
+#endif
 	}
 answer:
 	serial.data = NULL;

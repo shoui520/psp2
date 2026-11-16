@@ -301,8 +301,13 @@ extern unsigned char configRead(unsigned int offset, unsigned char size, unsigne
 extern unsigned char configWrite(unsigned int offset, unsigned char size, unsigned char *data);
 extern unsigned char configOpen(void);
 extern unsigned char configCommit(void);
+#if FW_SINCE(0x00090804)
 extern unsigned char configWriteRecords(unsigned int offset, unsigned char size,
 					unsigned char *data, unsigned char check);
+#else
+/* 0x00090206: write records applied to the open copy as they come, no digest */
+extern unsigned char configWriteRecords(unsigned char *records, int length);
+#endif
 extern unsigned char configClose(void);
 extern unsigned char configPrepareUpdate(void);
 extern unsigned int configUpdateSegment(void);

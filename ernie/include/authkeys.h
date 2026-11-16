@@ -1,6 +1,8 @@
 #ifndef ERNIE_AUTHKEYS_H
 #define ERNIE_AUTHKEYS_H
 
+#include "ernie.h"
+
 /* Expanded factory handshake key: 15 AES-256 round keys. */
 extern const unsigned long factoryRoundKeys[60];
 
@@ -19,8 +21,10 @@ extern const unsigned char serialKey0Check[16];
 extern const unsigned char serialKey1First[16];
 extern const unsigned char serialKey1Second[16];
 extern const unsigned char serialKey1Check[16];
+#if FW_SINCE(0x00090804)
 extern const unsigned char serialKey2First[16];
 extern const unsigned char serialKey2Second[16];
 extern const unsigned char serialKey2Check[16];
+#endif
 
 #endif
