@@ -1190,6 +1190,24 @@ extern int npCommerce2ReadFlagsItem0x69(const NpCommerce2Item *result, NpCommerc
 extern int npCommerce2InitCountsResult0x16(NpCommerce2CountsResult *result, const char *data, SceSize size);
 extern int npCommerce2ReadFlagsItem0x64(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2FlagsItem *item);
 extern int npCommerce2ReadValue0x58At(const NpCommerce2Item *result, SceUInt32 index, SceUInt32 *value);
+typedef struct NpCommerce2DatedItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 padding;
+	SceUInt64 valueA;
+	SceUInt64 valueB;
+	SceUInt64 date;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 valueE;
+	SceUInt32 valueF;
+	SceUInt32 flag;
+	const char *textA;
+	const char *textB;
+} NpCommerce2DatedItem;
+
+extern int npCommerce2InitResult0x6b(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadDatedItem0x6b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatedItem *item);
+extern int npCommerce2InitBareResult_810151B8(NpCommerce2Item *result, const char *data, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1320,10 +1338,7 @@ extern int npCommerce2CreateReqAuthenticate(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810096BA(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqRemPay(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetTranHist(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81014F08(int a1, void *a2, int a3);
-extern int npCommerce2_81014F92(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetTranDetail(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810151B8(int a1, void *a2, int a3);
 extern int npCommerce2_8101522E(int a1, int a2);
 extern int npCommerce2_8101545C(int a1, int a2, int a3);
 extern int npCommerce2_81015606(int a1, int a2, int a3);
