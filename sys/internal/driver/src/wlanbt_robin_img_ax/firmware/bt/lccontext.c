@@ -196,7 +196,7 @@ void btLmpLcValidateContext(void)
  */
 int btHctInit(void)
 {
-	btHctReferenceClock = rfCalibrationTable[3 + sysRefClockProfile()];
+	btHctReferenceClock = rfCalibrationTable[sysRefClockProfile()];
 	btSbcReleaseState();
 	btLmpLcConfigureContext();
 	btLmpLcResolveEntry();

@@ -63,7 +63,7 @@
 
 /* Not converted yet; provisional names. */
 extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 0: radio relock */
-extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
+extern const uint16_t rfCalibrationTable[];			/* 0x53d56 */
 extern uint32_t wlanPendingEvents[2];				/* wlan/connctl.c */
 extern struct OsaEventFlags *wlanHostSleepFlags;		/* 0x54bdc */
 extern uint8_t sysSleepShortWake;				/* 0x54cf1 */
@@ -89,7 +89,7 @@ static uint32_t sleepSavedMode __attribute__((section(".itcm.bss")));
 static uint32_t sleepSavedEventSources __attribute__((section(".itcm.bss")));
 uint64_t sleepWakeDeadline __attribute__((section(".itcm.bss")));
 
-struct SleepStats sleepStats __attribute__((section(".itcm.rw")));
+struct SleepStats sleepStats __attribute__((section(".itcm.rw"))) = { .mode = 1 };
 
 void sleepClockInit(void)
 {
@@ -130,7 +130,7 @@ void sleepCalibrationStart(uint32_t cycles)
 	sleepCalibrating = 1;
 	SOC_SLEEP_MEASURE_CONTROL |= SOC_SLEEP_MEASURING;
 	SOC_SLEEP_CLOCK_CONTROL |= SOC_SLEEP_CALIBRATION;
-	sleepCalibrationClockRate = rfCalibrationTable[3 + sysRefClockProfile()] * 100;
+	sleepCalibrationClockRate = rfCalibrationTable[sysRefClockProfile()] * 100;
 	sysStartEventMeasurement(sleepCalibrationClockRate * cycles);
 }
 
@@ -190,7 +190,7 @@ void sleepCalibrationRestart(uint32_t cycles)
 
 	sleepCalibrating = 1;
 	SOC_SLEEP_MEASURE_CONTROL |= SOC_SLEEP_MEASURING;
-	sleepCalibrationClockRate = rfCalibrationTable[3 + sysRefClockProfile()] * 100;
+	sleepCalibrationClockRate = rfCalibrationTable[sysRefClockProfile()] * 100;
 	if (cycles != 0)
 		extent = sleepCalibrationClockRate * cycles;
 	else

@@ -24,11 +24,10 @@
 
 /*
  * The rates, in units of 100 kHz, of the reference clock of each profile
- * (index 3..12) and a second per-profile table (13..22); the table the
- * firmware shares with its sleep code (rfCalibrationTable).
+ * (index 0..9) and a second per-profile table (10..19); the table the
+ * firmware shares with its sleep code (rfCalibrationTable, 0x53d56).
  */
-const uint16_t rfCalibrationTable[23] = {
-	0xaaaa, 0x0003, 0x5819,
+const uint16_t rfCalibrationTable[20] = {
 	0x0078, 0x0082, 0x00c0, 0x00c8, 0x00f0, 0x0104, 0x0180, 0x0190, 0x01b8, 0x0208,
 	0x0fa0, 0x0fa0, 0x0dac, 0x0e10, 0x0dac, 0x0dac, 0x0bb8, 0x0bb8, 0x0bb8, 0x0bb8,
 };
@@ -228,7 +227,7 @@ uint32_t clockReferenceRate(void)
 	if (clockReferenceCache == 0) {
 		profile = sysRefClockProfile();
 		index = sysRefClockProfile();
-		clockReferenceCache = (100 * rfCalibrationTable[3 + index]) /
+		clockReferenceCache = (100 * rfCalibrationTable[index]) /
 				      ((clockPllWords[profile][0] >> 31) + 1);
 	}
 	return clockReferenceCache;
@@ -358,7 +357,7 @@ uint32_t clockCurrentRate(void)
 		field = clockDividers[(CLOCK_SOURCE_REG >> 8) & 7];
 		if (field != 0)
 			divider = field;
-		rate = (100 * rfCalibrationTable[3 + sysRefClockProfile()]) / divider;
+		rate = (100 * rfCalibrationTable[sysRefClockProfile()]) / divider;
 	}
 	sysIrqRestore(posture);
 	return rate;
@@ -382,7 +381,7 @@ uint32_t clockSetCore(uint32_t khz)
 		divider = clockDividers[clockDividerRowSelect()[index]];
 		if (divider == 0)
 			divider = 1;
-		rate = (100 * rfCalibrationTable[3 + sysRefClockProfile()]) / divider;
+		rate = (100 * rfCalibrationTable[sysRefClockProfile()]) / divider;
 	}
 	sysClockFrequency = ((rate << 10) / 1000 - 1) / 5 + 1;
 	sysIrqRestore(posture);
@@ -435,7 +434,7 @@ int clockSetBus(int khz)
 		divider = clockDividers[row];
 		if (divider == 0)
 			divider = 1;
-		khz = (100 * rfCalibrationTable[3 + sysRefClockProfile()]) / divider;
+		khz = (100 * rfCalibrationTable[sysRefClockProfile()]) / divider;
 	}
 	tableC = clockDividerRows[0][index];
 	if (mode == 3)
@@ -452,7 +451,7 @@ uint32_t clockSlowestRate(void)
 
 	if (clockBaseRateCache == 0) {
 		divider = clockDividers[clockDividerRowSelect()[15]];
-		clockBaseRateCache = (100 * rfCalibrationTable[3 + sysRefClockProfile()]) / divider;
+		clockBaseRateCache = (100 * rfCalibrationTable[sysRefClockProfile()]) / divider;
 	}
 	return clockBaseRateCache;
 }

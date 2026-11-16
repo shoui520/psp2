@@ -27,7 +27,7 @@
 int8_t ampHciCommandCount __attribute__((section(".itcm.bss")));
 static uint8_t ampHciIdleFlag __attribute__((section(".itcm.bss")));
 uint8_t ampFlowControlMode __attribute__((section(".itcm.bss")));
-uint8_t ampBufferCount __attribute__((section(".itcm.bss")));
+int8_t ampBufferCount __attribute__((section(".itcm.bss")));
 static uint16_t ampBufferCountCopy __attribute__((section(".itcm.bss")));
 static uint16_t ampAclPacketLength __attribute__((section(".itcm.bss")));
 static uint16_t ampDataBlockLength __attribute__((section(".itcm.bss")));
@@ -37,7 +37,7 @@ static uint8_t ampEventMaskPage1[8] __attribute__((section(".itcm.bss")));
 static uint8_t ampEventMaskPage2[8] __attribute__((section(".itcm.bss")));
 
 /* Values reported by Read_Local_AMP_Info. */
-static uint8_t ampStatus __attribute__((section(".itcm.bss")));
+static int8_t ampStatus __attribute__((section(".itcm.bss")));
 static uint8_t ampControllerType __attribute__((section(".itcm.bss")));
 static uint16_t ampPalCapabilities __attribute__((section(".itcm.bss")));
 static uint16_t ampMaxAssocLength __attribute__((section(".itcm.bss")));
@@ -317,7 +317,7 @@ unsigned int ampPhysicalLinkAllocate(uint32_t handle)
 }
 
 /* 0x0002120a */
-unsigned int ampPhysicalLinkFind(uint32_t handle)
+unsigned int ampPhysicalLinkFind(uint8_t handle)
 {
 	unsigned int i;
 
@@ -750,21 +750,23 @@ int ampHciReadLocalAmpInfo(uint16_t opcode)
 }
 
 /* 0x0002181e: Read_Local_AMP_ASSOC. */
-void ampHciReadLocalAmpAssoc(uint16_t opcode, OsaBuffer *command)
+int ampHciReadLocalAmpAssoc(uint16_t opcode, OsaBuffer *command)
 {
-	uint8_t *data = ampHciParameters(command);
+	uint8_t *data;
 	int status = 0;
 	unsigned int link;
 	unsigned int length;
 
 	ampHciSendHostEvent(0, 0, "bw", 0, (uint32_t)&ampHciCommandCount);
 	ampHciAdjustCommandCount(-1);
+	data = ampHciParameters(command);
 	link = ampPhysicalLinkFind(data[3]);
 	if (link >= AMP_PHYSICAL_LINKS && data[3] != 0)
 		status = 2;
 	length = ampAssocBuild(ampSupportedCommands, link);
 	ampHciSendEvent(AMP_EVENT_COMMAND_COMPLETE, 0, "Rhbbhm", opcode, status, data[3],
 			length, ampSupportedCommands, length);
+	return status;
 }
 
 /* 0x0002187e: Set_Event_Mask and Set_Event_Mask_Page_2. */
@@ -795,7 +797,7 @@ int ampHciReadTimeout(uint16_t opcode, OsaBuffer *command)
 		break;
 	case 54:
 		data = ampHciParameters(command);
-		if (ampPhysicalLinkFind(data[3]) < AMP_PHYSICAL_LINKS)
+		if (ampPhysicalLinkFind((data[4] << 8) | data[3]) < AMP_PHYSICAL_LINKS)
 			timeout = ampLinkSupervisionTimeout;
 		else
 			status = AMP_HCI_INVALID_PARAMETERS;
@@ -830,7 +832,8 @@ int ampHciWriteTimeout(uint16_t opcode, OsaBuffer *command)
 		ampHciComplete(opcode, status);
 		return status;
 	case 55:
-		link = ampPhysicalLinkFind(data[3]);
+		data = ampHciParameters(command);
+		link = ampPhysicalLinkFind((data[4] << 8) | data[3]);
 		timeout = (data[6] << 8) | data[5];
 		if (timeout - 1 < 0xb540 && link < AMP_PHYSICAL_LINKS) {
 			ampLinkSupervisionTimeout = timeout;
@@ -907,10 +910,12 @@ int ampHciReadLocationData(uint16_t opcode)
 int ampHciWriteLocationData(uint16_t opcode, OsaBuffer *command)
 {
 	const uint8_t *data = ampHciParameters(command);
+	unsigned int domain;
 
 	ampLocationDomainAware = data[3];
-	ampLocationDomain[0] = data[4];
-	ampLocationDomain[1] = data[5];
+	domain = (data[5] << 8) | data[4];
+	ampLocationDomain[0] = domain;
+	ampLocationDomain[1] = domain >> 8;
 	ampLocationDomainOptions = data[6];
 	ampLocationOptions = data[7];
 	ampHciAdjustCommandCount(-1);
@@ -1054,7 +1059,8 @@ int ampHciVendorFc5b(uint16_t opcode, OsaBuffer *command)
 		btLmpLcFormatContext(1, 0, 2, 0);
 		ampHciSendEvent(0xff, 0, "Vbbbb", 0x5b, 0xf2, 0, 1);
 	}
-	ampHciSendEvent(AMP_EVENT_COMMAND_COMPLETE, 0, "Rhbb", opcode, 0, 0);
+	/* Marvell's passes one byte fewer than the format names */
+	ampHciSendEvent(AMP_EVENT_COMMAND_COMPLETE, 0, "Rhbb", opcode, 0);
 	return 0;
 }
 
@@ -1334,7 +1340,7 @@ int ampPhysicalLinkLogicalCount(unsigned int physicalIndex)
 /* 0x00022a2e: Number Of Completed Data Blocks event for one logical link. */
 int ampHciNumberOfCompletedDataBlocks(int logicalHandle, int completedPackets, int completedBlocks)
 {
-	ampHciSendEvent(0x48, 0x101, "hbhhh", (int8_t)ampBufferCount, 1, logicalHandle,
+	ampHciSendEvent(0x48, 0x101, "hbhhh", ampBufferCount, 1, logicalHandle,
 			completedPackets, completedBlocks);
 	return 0;
 }
@@ -1495,12 +1501,13 @@ int ampHciFlowSpecModify(uint16_t opcode, OsaBuffer *command)
 /* 0x00022452: Write_Best_Effort_Flush_Timeout. */
 int ampHciWriteBestEffortFlushTimeout(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	unsigned int physical;
 	unsigned int slot;
 
 	ampHciAdjustCommandCount(-1);
+	data = ampHciParameters(command);
 	physical = ampPhysicalLinkFindByLogical((data[4] << 8) | data[3]);
 	slot = ampLogicalLinkFind((data[4] << 8) | data[3]);
 	if (physical == AMP_PHYSICAL_LINKS || slot == AMP_LOGICAL_LINKS)
@@ -1515,13 +1522,14 @@ int ampHciWriteBestEffortFlushTimeout(uint16_t opcode, OsaBuffer *command)
 /* 0x000224b6: Read_Best_Effort_Flush_Timeout. */
 int ampHciReadBestEffortFlushTimeout(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	uint32_t timeout;
 	unsigned int physical;
 	unsigned int slot;
 
 	ampHciAdjustCommandCount(-1);
+	data = ampHciParameters(command);
 	physical = ampPhysicalLinkFindByLogical((data[4] << 8) | data[3]);
 	slot = ampLogicalLinkFind((data[4] << 8) | data[3]);
 	if (physical == AMP_PHYSICAL_LINKS || slot == AMP_LOGICAL_LINKS) {
@@ -1561,7 +1569,7 @@ int ampHciEnhancedFlush(uint16_t opcode, OsaBuffer *command)
 /* 0x00022516: Read_Failed_Contact_Counter (reads and clears). */
 int ampHciReadFailedContactCounter(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	uint32_t counter = 0;
 	unsigned int slot;
@@ -1569,6 +1577,7 @@ int ampHciReadFailedContactCounter(uint16_t opcode, OsaBuffer *command)
 	struct AmpLogicalLink *logical;
 
 	ampHciAdjustCommandCount(-1);
+	data = ampHciParameters(command);
 	slot = ampLogicalLinkFind((data[4] << 8) | data[3]);
 	physical = ampPhysicalLinkFindByLogical((data[4] << 8) | data[3]);
 	if (physical == AMP_PHYSICAL_LINKS || slot == AMP_LOGICAL_LINKS) {
@@ -1586,12 +1595,13 @@ int ampHciReadFailedContactCounter(uint16_t opcode, OsaBuffer *command)
 /* 0x00022586: Reset_Failed_Contact_Counter. */
 int ampHciResetFailedContactCounter(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	unsigned int slot;
 	unsigned int physical;
 
 	ampHciAdjustCommandCount(-1);
+	data = ampHciParameters(command);
 	slot = ampLogicalLinkFind((data[4] << 8) | data[3]);
 	physical = ampPhysicalLinkFindByLogical((data[4] << 8) | data[3]);
 	if (physical == AMP_PHYSICAL_LINKS || slot == AMP_LOGICAL_LINKS)
@@ -1605,27 +1615,16 @@ int ampHciResetFailedContactCounter(uint16_t opcode, OsaBuffer *command)
 
 /* 0x00022b4e ... */
 
-/* 0x000230b8: link quality reported by Read_Link_Quality (fixed in the firmware). */
-int ampLinkQuality(void)
-{
-	return 102;
-}
-
-/* 0x000230bc: RSSI reported by Read_RSSI, -120 dBm. */
-int ampRssi(void)
-{
-	return 136;
-}
-
 /* 0x000225ee: Read_Link_Quality. */
 int ampHciReadLinkQuality(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	int quality = 0;
 
 	ampHciAdjustCommandCount(-1);
-	if (ampPhysicalLinkFind(data[3]) < AMP_PHYSICAL_LINKS)
+	data = ampHciParameters(command);
+	if (ampPhysicalLinkFind((data[4] << 8) | data[3]) < AMP_PHYSICAL_LINKS)
 		quality = ampLinkQuality();
 	else
 		status = 2;
@@ -1637,12 +1636,13 @@ int ampHciReadLinkQuality(uint16_t opcode, OsaBuffer *command)
 /* 0x0002263e: Read_RSSI. */
 int ampHciReadRssi(uint16_t opcode, OsaBuffer *command)
 {
-	const uint8_t *data = ampHciParameters(command);
+	const uint8_t *data;
 	int status = 0;
 	int rssi = 0;
 
 	ampHciAdjustCommandCount(-1);
-	if (ampPhysicalLinkFind(data[3]) < AMP_PHYSICAL_LINKS)
+	data = ampHciParameters(command);
+	if (ampPhysicalLinkFind((data[4] << 8) | data[3]) < AMP_PHYSICAL_LINKS)
 		rssi = ampRssi();
 	else
 		status = 2;
@@ -1859,4 +1859,16 @@ int ampHciProcessCommands(void)
 		mdevIoctl(ampSdioDev, 0x14, 0);
 	} while (osa_MsgQueuePeek(&ampCommandQueue) != 0);
 	return 1;
+}
+
+/* 0x000230b8: link quality reported by Read_Link_Quality (fixed in the firmware). */
+__attribute__((noinline)) int ampLinkQuality(void)
+{
+	return 102;
+}
+
+/* 0x000230bc: RSSI reported by Read_RSSI, -120 dBm. */
+__attribute__((noinline)) int ampRssi(void)
+{
+	return 136;
 }

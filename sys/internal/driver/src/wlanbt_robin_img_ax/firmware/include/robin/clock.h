@@ -60,6 +60,6 @@ extern uint32_t hostClockPreset[4];	/* DTCM 0x040089b0 */
 
 /* The reference clock profile, a strap of SOC_REG(0): an index into the tables. */
 int sysRefClockProfile(void);
-extern const uint16_t rfCalibrationTable[];	/* 0x53d50 */
+extern const uint16_t rfCalibrationTable[];	/* 0x53d56 */
 
 #endif /* ROBIN_CLOCK_H */

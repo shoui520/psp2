@@ -26,6 +26,7 @@
 #include "robin/mgmt.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
+#include "robin/scan.h"
 #include "robin/task.h"
 #include "robin/stamachine.h"
 #include "robin/mgmtentry.h"
@@ -130,6 +131,9 @@ int macMgmtPostRelease(void)
 	return macMgmtWake(MGMT_EVENT_POST_RELEASE);
 }
 
+/* The broadcast address an action frame may be sent to (0x540f4). */
+static const uint8_t macMgmtBroadcastAddress[6] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
 /*
  * The action frames of ring C's connection: Block Ack and 20/40 coexistence, the public action
  * frames of P2P and the vendor-specific ones. `matched` is set when the P2P context has already
@@ -145,7 +149,7 @@ int macMgmtDispatchState(OsaBuffer *buffer, uintptr_t argument, int matched)
 	if (!matched &&
 	    (frame->frameControl[0] >> 4 != WLAN_SUBTYPE_ACTION ||
 	     (memcmp(connection->interfaceAddress, frame->address1, 6) != 0 &&
-	      memcmp(wlanBroadcastAddress, frame->address1, 6) != 0)))
+	      memcmp(macMgmtBroadcastAddress, frame->address1, 6) != 0)))
 		return 0;
 	switch (frame->body[0]) {
 	case WLAN_ACTION_CATEGORY_BLOCK_ACK:
@@ -205,7 +209,7 @@ int macMgmtBuildState(struct WlanConnection *connection, const uint8_t *peer, co
 	if (buffer == NULL)
 		return -1;
 	frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
-	destination = peer != NULL ? peer : wlanBroadcastAddress;
+	destination = peer != NULL ? peer : wlanScanAnyBssid;
 	wlanMgmtBuildFrame(buffer, connection->interfaceAddress, destination, 4, destination);
 	frame->bodyLength[0] = 0;
 	frame->bodyLength[1] = 0;

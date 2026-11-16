@@ -34,7 +34,7 @@
 /* Not converted yet; provisional names. */
 extern uint8_t wlanPrimaryEvents;				/* 0x04008828, bit 5: no rate below index 5 */
 extern const uint16_t romRfChannelTable[];			/* ROM 0x03f42130 */
-extern const uint16_t rfCalibrationTable[];			/* 0x53d50 */
+extern const uint16_t rfCalibrationTable[];			/* 0x53d56 */
 void wlanPsSelectHeader(unsigned int band, uint32_t channel);	/* 0x3e3aa */
 int sysRefClockProfile(void);				/* 0x26842 */
 extern uint32_t rfBusEnabled;
@@ -328,7 +328,7 @@ void rfCalibrateChannel(int unused, unsigned int channel)
 {
 	int index = sysRefClockProfile();
 
-	rfSynthesizerSet(romRfChannelTable[channel], rfCalibrationTable[3 + index], 0);
+	rfSynthesizerSet(romRfChannelTable[channel], rfCalibrationTable[index], 0);
 }
 
 /* Lets the accessors touch the bus. */

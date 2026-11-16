@@ -39,6 +39,7 @@
 #include "robin/wlantask.h"
 #include "robin/btrom.h"
 #include "robin/calibration.h"
+#include "robin/clock.h"
 #include "robin/amp.h"
 #include "robin/dmaring.h"
 #include "robin/coex.h"
@@ -80,7 +81,6 @@ uint16_t hostCmdRateSteps[HOSTCMD_RATE_STEPS] __attribute__((section(".sqram1.rw
 	0x0040, 0x0050, 0x0050, 0x006a, 0x0080, 0x008e, 0x00a0, 0x00a0,
 };
 int wlanP2pConnection(struct WlanConnection *connection);			/* 0x41228 */
-uint32_t hostCmdRateLimits[4] __attribute__((section(".dtcm.bss")));			/* 0x40089b0 */
 extern struct WlanMacTxRequest *wlanIbssBeaconRequest;			/* 0x54bc4 */
 extern struct WlanMacTxRequest *wlanIbssProbeResponseRequest;		/* 0x54bc8 */
 int macTxNotifyAcquireBuffer(int kind, const uint8_t *address, unsigned int index, int fresh); /* 0x322f2 */
@@ -156,13 +156,13 @@ int hostCmdRateStepsSet(uint8_t *body)
 		unsigned int step = hostCmdRateSteps[i];
 
 		if (HOSTCMD_U16(body + 8) == step)
-			hostCmdRateLimits[0] = step * 1000;
+			hostClockPreset[0] = step * 1000;
 		if (HOSTCMD_U16(body + 10) == step)
-			hostCmdRateLimits[1] = step * 1000;
+			hostClockPreset[1] = step * 1000;
 		if (HOSTCMD_U16(body + 12) == step)
-			hostCmdRateLimits[2] = step * 1000;
+			hostClockPreset[2] = step * 1000;
 		if (HOSTCMD_U16(body + 14) == step)
-			hostCmdRateLimits[3] = step * 1000;
+			hostClockPreset[3] = step * 1000;
 	}
 	wlanBaTablesChangedHandler();
 	return 1;
@@ -315,10 +315,10 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 		body[13] = hostCmdRateDefault >> 8;
 		body[14] = hostCmdRateDefault;
 		body[15] = hostCmdRateDefault >> 8;
-		HOSTCMD_RATE_STEP(body + 8, hostCmdRateLimits[0]);
-		HOSTCMD_RATE_STEP(body + 10, hostCmdRateLimits[1]);
-		HOSTCMD_RATE_STEP(body + 12, hostCmdRateLimits[2]);
-		HOSTCMD_RATE_STEP(body + 14, hostCmdRateLimits[3]);
+		HOSTCMD_RATE_STEP(body + 8, hostClockPreset[0]);
+		HOSTCMD_RATE_STEP(body + 10, hostClockPreset[1]);
+		HOSTCMD_RATE_STEP(body + 12, hostClockPreset[2]);
+		HOSTCMD_RATE_STEP(body + 14, hostClockPreset[3]);
 		*size = 24;
 	}
 	if (HOSTCMD_U16(body + 4) == 1) {

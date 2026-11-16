@@ -32,15 +32,15 @@ struct WlanAtimBuffer wlanAtimBuffer __attribute__((section(".sqram1.bss"), alig
 _Static_assert(offsetof(struct WlanConnection, interfaceAddress) == 732, "interface address");
 
 static struct WlanTxHold wlanTxHold __attribute__((section(".itcm.bss")));			/* 0x59384 */
+static struct WlanTxHoldItem *wlanTxHoldCursor __attribute__((section(".itcm.rw")));	/* 0x551d0 */
 static struct OsaSemaphore *wlanTxHoldItemsLock __attribute__((section(".itcm.rw")));	/* 0x551d4 */
 static struct OsaSemaphore *wlanTxHoldListsLock __attribute__((section(".itcm.rw")));	/* 0x551d8 */
-static struct WlanTxHoldItem *wlanTxHoldCursor __attribute__((section(".itcm.rw")));	/* 0x551d0 */
 static uint32_t wlanTxHoldItemsLockStorage[7] __attribute__((section(".itcm.bss")));	/* 0x593d8 */
 static uint32_t wlanTxHoldListsLockStorage[7] __attribute__((section(".itcm.bss")));	/* 0x593f4 */
 static struct WlanTxHoldList wlanTxHoldGroup __attribute__((section(".itcm.bss")));	/* 0x59410 */
 static struct WlanTxHoldList wlanTxHoldSlot __attribute__((section(".itcm.bss")));	/* 0x5941c */
 static struct WlanTxHoldItem wlanTxHoldItems[WLAN_TX_HOLD_ITEMS] __attribute__((section(".itcm.bss"))); /* 0x59428 */
-static uint32_t wlanTxHoldFreeCount __attribute__((section(".itcm.bss")));		/* 0x595e8 */
+static uint8_t wlanTxHoldFreeCount __attribute__((section(".itcm.bss")));		/* 0x595e8 */
 static struct WlanTxHoldItem *wlanTxHoldFree __attribute__((section(".itcm.bss")));	/* 0x595ec */
 struct WlanTxHoldMachine wlanTxHoldMachine __attribute__((section(".itcm.bss")));	/* 0x595f0 */
 
@@ -50,7 +50,6 @@ uint32_t wlanPsWakeCycle __attribute__((section(".itcm.rw")));				/* 0x562b4 */
 uint64_t romLibSelectState(void);							/* 0x03f3a6ec */
 int romLibAdjustState(uint64_t time, uint32_t period);					/* 0x03f3a700 */
 int romLibApplyContext(unsigned int count);						/* 0x03f3a94e */
-uint64_t __aeabi_uldivmod(uint64_t numerator, uint64_t denominator);
 
 static inline __attribute__((always_inline)) WlanWirelessFrame *wlanTxHoldFrame(OsaBuffer *buffer)
 {
@@ -105,7 +104,7 @@ __attribute__((noinline)) int macMgmtReleaseHeader(struct WlanTxHoldItem *item)
 }
 
 /* Puts a frame in a list; 0 when no item is free. */
-int macMgmtSetupHeader(struct WlanTxHoldList *list, OsaBuffer *frame, uint8_t mode)
+int macMgmtSetupHeader(struct WlanTxHoldList *list, OsaBuffer *frame, unsigned int mode)
 {
 	struct WlanTxHoldItem *item;
 	const uint8_t *address;
@@ -216,9 +215,9 @@ int macMgmtHandleDescriptor(OsaBuffer *frame)
 	wlanTxHold.sending = 1;
 	wlanInitMgmtHeader(&wlanAtimBuffer.frame, 0, 9, address, connection->interfaceAddress,
 			   connection->localAddress);
-	wlanAtimBuffer.frame.duration[0] = 2;
-	wlanAtimBuffer.frame.duration[1] = 1;
-	wlanAtimBuffer.frame.bodyLength[0] = 0;
+	/* the duration (258) and the body length are written as halfwords */
+	*(uint16_t *)wlanAtimBuffer.frame.duration = 0x0102;
+	*(uint16_t *)wlanAtimBuffer.frame.bodyLength = 0;
 	wlanAtimBuffer.frame.frameControl[1] = (wlanAtimBuffer.frame.frameControl[1] & 0xef) |
 					       ((16 * wlanLocalState->powerSave) & 0x1f);
 	wlanAtimBuffer.buffer.context = connection;
@@ -278,8 +277,9 @@ int macMgmtUpdateDescriptor(void)
 /* Takes a frame of the IBSS to the list of the window, or sends it straight away. */
 int wlanIbssTxFrame(OsaBuffer *buffer, int transmit)
 {
-	WlanWirelessFrame *frame = wlanTxHoldFrame(buffer);
-	const uint8_t *address = frame->address1;
+	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
+	WlanWirelessFrame *frame = (WlanWirelessFrame *)TX_DATA_FRAME(data);
+	const uint8_t *address;
 	int context;
 	int group;
 	int result;
@@ -296,6 +296,8 @@ int wlanIbssTxFrame(OsaBuffer *buffer, int transmit)
 			osaSemaphoreWait(wlanTxHoldListsLock, 0xffffffff);
 			if (wlanTxHold.flushPending != 0)
 				macMgmtProcessDescriptor();
+			/* the frame's address is read again after the call */
+			address = ((WlanWirelessFrame *)TX_DATA_FRAME(data))->address1;
 			group = 1;
 			if ((((const uint16_t *)address)[0] != 0xffff || ((const uint16_t *)address)[1] != 0xffff ||
 			     ((const uint16_t *)address)[2] != 0xffff) && !(address[0] & 1))
@@ -699,10 +701,12 @@ int wlanPsUpdateBuffer(struct WlanTxHoldItem **item)
 	return 0;
 }
 
+/* Whether the time into the current link check period is still 1000 short of the wake point. */
 int wlanPsConfigureBuffer(void)
 {
-	uint64_t cycles = __aeabi_uldivmod(romGetTimerTimestamp(), wlanLinkCheckPeriod());
+	uint64_t now = romGetTimerTimestamp();
+	uint32_t phase = now % wlanLinkCheckPeriod();
 
-	return wlanPsWakeCycle > (uint32_t)cycles + 1000;
+	return wlanPsWakeCycle > phase + 1000;
 }
 

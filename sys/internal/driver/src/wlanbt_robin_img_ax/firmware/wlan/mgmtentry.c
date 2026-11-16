@@ -27,6 +27,7 @@
 #include "robin/soc.h"
 #include "robin/stamachine.h"
 #include "robin/txring.h"
+#include "robin/scan.h"
 
 /* Marvell's name for this element is not known; it is the EDCA Parameter Set (ID 12) of 802.11e. */
 static const uint8_t wlanAmpEdcaParameterSet[20] = {
@@ -76,7 +77,7 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 	int hasExtended = 0;
 
 	__aeabi_memcpy4(edca, wlanAmpEdcaParameterSet, sizeof(edca));
-	wlanMgmtBuildFrame(buffer, connection->interfaceAddress, wlanBroadcastAddress, subtype,
+	wlanMgmtBuildFrame(buffer, connection->interfaceAddress, wlanScanAnyBssid, subtype,
 			   connection->interfaceAddress);
 	frame = (WlanWirelessFrame *)((uint8_t *)buffer + 176);
 	buffer->dataOffset = 176;
@@ -163,7 +164,7 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 		wlanBeaconTemplateEnd = cursor;
 	else
 		wlanProbeTemplateEnd = cursor;
-	__aeabi_memcpy(frame->address1, wlanBroadcastAddress, 6);
+	__aeabi_memcpy(frame->address1, wlanScanAnyBssid, 6);
 }
 
 /* 0x36236: the host started an AMP link's IBSS: the radio, the timing and the templates are set. */

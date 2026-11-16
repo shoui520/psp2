@@ -70,7 +70,8 @@ struct WlanTxHold {
 	uint8_t groupBit;		/* bit 4 of the descriptor's byte 3 (macMgmtCheckDescriptor()) */
 	uint8_t reserved5[1];
 	uint16_t atimWindow;		/* the ATIM window (macMgmtPrepareDescriptor(), IBSS only) */
-	uint32_t sending;		/* 1: an ATIM frame is being sent */
+	uint8_t sending;		/* 1: an ATIM frame is being sent */
+	uint8_t reserved9[3];
 	uint8_t reserved12[4];
 	uint8_t phase;			/* 0: nothing held, 1: unicast frames held, 2: group frames held too */
 	uint8_t windowCount;		/* calls of macMgmtClearHeader() since the window opened */
@@ -101,7 +102,7 @@ extern struct WlanTxHoldMachine wlanTxHoldMachine;	/* 0x595f0 */
 
 int macMgmtAcquireHeader(struct WlanTxHoldList *list, struct WlanTxHoldList *other);	/* 0x3b7d6 */
 int macMgmtReleaseHeader(struct WlanTxHoldItem *item);				/* 0x3b81a */
-int macMgmtSetupHeader(struct WlanTxHoldList *list, OsaBuffer *frame, uint8_t mode);	/* 0x3b85c */
+int macMgmtSetupHeader(struct WlanTxHoldList *list, OsaBuffer *frame, unsigned int mode);	/* 0x3b85c */
 int macMgmtClearHeader(void);							/* 0x3b8a2 */
 int macMgmtConvertHeader(void);							/* 0x3b8fc */
 int macMgmtVerifyHeader(void);							/* 0x3b904 */

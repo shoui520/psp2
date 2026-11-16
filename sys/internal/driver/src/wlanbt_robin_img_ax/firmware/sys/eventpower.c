@@ -934,7 +934,7 @@ uint32_t sysEventEngineSleepPeriod(void)
 /* 0x23b0a: the bus clock in Hz. */
 uint32_t sysGetBusClock(void)
 {
-	uint32_t clock = rfCalibrationTable[3 + sysRefClockProfile()] * 100000;
+	uint32_t clock = rfCalibrationTable[sysRefClockProfile()] * 100000;
 
 	switch (EVENT_PATH_BUS_CLOCK & 0xf) {
 	case 0:
@@ -991,7 +991,7 @@ void sysEventEngineInit(void)
 	sysInitializeEventRegisters();
 	upper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingA[sysRefClockProfile()]) /
 			   1000000 + 1);
-	lower = (uint16_t)(romMul32x32(sleepClockRateGet(), rfCalibrationTable[13 + sysRefClockProfile()]) /
+	lower = (uint16_t)(romMul32x32(sleepClockRateGet(), rfCalibrationTable[10 + sysRefClockProfile()]) /
 			   1000000 + 1);
 	sysSetEventPrimaryTiming(lower, upper);
 	secondaryUpper = (uint16_t)(romMul32x32(sysGetBusClock(), rfCalibTimingB[sysRefClockProfile()]) /

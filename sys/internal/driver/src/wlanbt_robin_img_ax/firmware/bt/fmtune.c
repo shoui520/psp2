@@ -382,7 +382,7 @@ uint32_t btSbcSetupEntry(uint32_t clock)
 	FM_REGISTER(0x3e4) = 2;
 	if (clock != 0)
 		return clock;
-	return rfCalibrationTable[3 + sysRefClockProfile()] * 100000;
+	return rfCalibrationTable[sysRefClockProfile()] * 100000;
 }
 
 /* Resets the FM block and the tuner's state for a reference clock. */

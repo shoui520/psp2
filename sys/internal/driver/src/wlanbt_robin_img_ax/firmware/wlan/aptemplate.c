@@ -29,6 +29,7 @@
 #include "robin/txring.h"
 #include "robin/wlan.h"
 #include "robin/wapiie.h"
+#include "robin/scan.h"
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 #define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
@@ -51,7 +52,7 @@ uint8_t *fmCoexSelectEntry(OsaBuffer *buffer, const uint8_t *source, const uint8
 	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
 	uint8_t *cursor = frame->body + WLAN_TEMPLATE_BODY_FIXED;
 
-	wlanBuildMgmtHeader(frame, source, wlanBroadcastAddress, bssid, subtype, 0);
+	wlanBuildMgmtHeader(frame, source, wlanScanAnyBssid, bssid, subtype, 0);
 	if (subtype != WLAN_FRAME_BEACON || broadcastSsid != 0)
 		return cursor + wlanPutSsidIe(ssid, cursor);
 	frame->body[12] = 0;
@@ -104,7 +105,7 @@ void fmCoexFilterEntry(struct WlanMacTxRequest *request, unsigned int subtype, W
 	length = U16(frame->bodyLength) + 28;
 	request->templateLength[0] = (uint8_t)length;
 	request->templateLength[1] = length >> 8;
-	__aeabi_memcpy(frame->address1, wlanBroadcastAddress, 6);
+	__aeabi_memcpy(frame->address1, wlanScanAnyBssid, 6);
 }
 
 /* The ERP element of a template says what the BSS's rate flags do. */

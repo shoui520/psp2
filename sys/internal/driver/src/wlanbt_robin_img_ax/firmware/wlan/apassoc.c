@@ -35,6 +35,7 @@
 #include "robin/wlan.h"
 #include "robin/peerrate.h"
 #include "robin/uapbss.h"
+#include "robin/scan.h"
 
 #define WLAN_STATUS_INVALID_PAIRWISE_CIPHER	45
 #define WLAN_STATUS_ASSOC_DENIED		12
@@ -489,7 +490,7 @@ int macMgmtResetPacket(struct WlanConnection *connection, int flushAll)
 			macMgmtScheduleBuffer(peer);
 			wlanConnectionRelease(peer);
 		}
-		wlanMgmtSendDeauth(connection, wlanBroadcastAddress, connection->localAddress, 3, 0);
+		wlanMgmtSendDeauth(connection, wlanScanAnyBssid, connection->localAddress, 3, 0);
 	}
 	sysIrqRestore(posture);
 	while (info->uapBusy != 0)
@@ -894,7 +895,7 @@ int macMgmtVerifyPacket(struct WlanConnection *connection, const uint8_t *frame)
 			goto done;
 		answer = 1;
 	}
-	if (memcmp(frame + 18, connection->localAddress, 6) == 0 || memcmp(wlanBroadcastAddress, frame + 18, 6) == 0) {
+	if (memcmp(frame + 18, connection->localAddress, 6) == 0 || memcmp(wlanScanAnyBssid, frame + 18, 6) == 0) {
 		if (memcmp(connection->localAddress, frame + 6, 6) == 0)
 			local = 1;
 	} else {

@@ -87,7 +87,7 @@ uint16_t sleepHostWakeCount __attribute__((section(".itcm.bss")));			/* 0x5622e 
 uint32_t sleepHostWakeMargin __attribute__((section(".itcm.bss")));			/* 0x56234 */
 uint32_t sleepHostClockParameter __attribute__((section(".itcm.bss")));			/* 0x5623c */
 extern uint32_t wlanIbssPsActive;			/* 0x593d4 */
-extern const uint16_t rfCalibrationTable[];		/* 0x53d50 */
+extern const uint16_t rfCalibrationTable[];		/* 0x53d56 */
 int sysRefClockProfile(void);			/* 0x26842 */
 void clockHostSetMax(void);			/* 0x26ae0 */
 
@@ -181,7 +181,7 @@ int wlanPsInit(void)
 	wlanHostSleepEndOnWake = 0;
 	wlanPsHostActive = 0;
 	wlanPsWakeAdvance = 345;
-	sleepWakeLatency = rfCalibrationTable[13 + sysRefClockProfile()];
+	sleepWakeLatency = rfCalibrationTable[10 + sysRefClockProfile()];
 	sleepCalibrating = 0;
 	sleepCalibrationCycles = 1;
 	sleepCalibrationSamples = 1;

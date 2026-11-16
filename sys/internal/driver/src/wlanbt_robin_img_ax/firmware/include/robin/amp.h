@@ -230,11 +230,13 @@ int ampHciProcessCommands(void);
 void ampPalNotifyDisconnect(unsigned int index);
 
 extern uint8_t ampFlowControlMode;
-extern uint8_t ampBufferCount;
+extern int8_t ampBufferCount;
 extern uint8_t ampDisconnectReason;
 
 unsigned int ampPhysicalLinkAllocate(uint32_t handle);
-unsigned int ampPhysicalLinkFind(uint32_t handle);
+unsigned int ampPhysicalLinkFind(uint8_t handle);
+int ampLinkQuality(void);						/* 0x230b8 */
+int ampRssi(void);							/* 0x230bc */
 unsigned int ampPhysicalLinkFindByLogical(uint32_t logicalHandle);
 int ampPhysicalLinkReset(unsigned int index);
 unsigned int ampLogicalLinkAllocate(uint32_t physicalHandle);
