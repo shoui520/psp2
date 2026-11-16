@@ -42,6 +42,28 @@ public:
 	void Broadcast();
 };
 
+/* a readers-writer lock on a mutex and two condition variables */
+class Rwlock {
+public:
+	Mutex mutex;
+	Cond readCond;
+	Cond writeCond;
+	int waitingReaders;
+	int readers;
+	int waitingWriters;
+	int writers;
+
+	void Init(const char *name);
+	void Init();
+	void Term();
+	void ReadLock();
+	bool TryReadLock();
+	void ReadUnlock();
+	void WriteLock();
+	bool TryWriteLock();
+	void WriteUnlock();
+};
+
 /* what a thread is created with: zero fields take the defaults */
 struct ThreadParams {
 	SceSize stackSize;
@@ -64,6 +86,8 @@ public:
 };
 
 SceUID GetCurrentThreadId();
+/* the system time as "seconds.microseconds" */
+int FormatSystemTime(char *pBuf, size_t size);
 bool ThreadIdEqual(SceUID a, SceUID b);
 
 } /* namespace Platform */

@@ -54,9 +54,9 @@ static int zlibInit(uint8_t threadCount)
 	if (s_initCount++ == 0) {
 		ThreadParams params = { 0, 0, 0, 0, "" };
 
-		params.stackSize = g_fiosParams.threadStackSize[SCE_FIOS_DECOMPRESSOR_THREAD];
-		params.priority = g_fiosParams.threadPriority[SCE_FIOS_DECOMPRESSOR_THREAD];
-		params.cpuAffinityMask = g_fiosParams.threadAffinity[SCE_FIOS_DECOMPRESSOR_THREAD];
+		params.stackSize = g_FiosParams.threadStackSize[SCE_FIOS_DECOMPRESSOR_THREAD];
+		params.priority = g_FiosParams.threadPriority[SCE_FIOS_DECOMPRESSOR_THREAD];
+		params.cpuAffinityMask = g_FiosParams.threadAffinity[SCE_FIOS_DECOMPRESSOR_THREAD];
 		if (threadCount <= 0 || threadCount > SCE_FIOS_DECOMPRESSOR_THREAD_COUNT_MAX)
 			threadCount = SCE_FIOS_DECOMPRESSOR_THREAD_COUNT_MAX;
 		s_threadCount = threadCount;

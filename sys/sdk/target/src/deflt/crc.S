@@ -14,10 +14,14 @@
 
 	.section .text.sceGzipCrc32, "ax", %progbits
 	.p2align 1
+	.type sceGzipCrc32Bytes, %function
 	.thumb_func
+/* the tail for fewer than 16 bytes, its own function in the unwind table (name ours) */
+sceGzipCrc32Bytes:
 .Lbytes:
 	cmp r2, #0
 	b.n .L7
+	.size sceGzipCrc32Bytes, .-sceGzipCrc32Bytes
 
 	.global sceGzipCrc32
 	.type sceGzipCrc32, %function
