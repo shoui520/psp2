@@ -9,4 +9,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	heap.cpp
 	util.cpp
 	userctx.cpp
+	request.cpp
 )

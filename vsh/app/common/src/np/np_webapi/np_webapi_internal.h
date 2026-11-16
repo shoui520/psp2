@@ -208,4 +208,23 @@ extern int npWebApiUserContextHasOtherRefs(NpWebApiUserContext *userCtx);
 extern NpWebApiUserContext *npWebApiUserContextSetFlag158(NpWebApiUserContext *userCtx, char value);
 extern int npWebApiIsShellProcess(void);
 
+/* a request: the library context it belongs to, its reference count and its 64-bit ID (the library
+   context's ID is in the upper half) */
+typedef struct NpWebApiRequest {
+	unsigned char reserved0[4];
+	NpWebApiLibContext *libContext;
+	int refCount;
+	unsigned char reserved1[4];
+	SceInt64 requestId;
+	unsigned char reserved2[216];
+	struct NpWebApiRequest *next;
+} NpWebApiRequest;
+
+extern int npWebApiRequestRelease(NpWebApiRequest *request);
+extern SceInt64 npWebApiRequestGetId(NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiRequestNext(NpWebApiRequest *request);
+extern int npWebApiRequestAddRef(NpWebApiRequest *request);
+extern int npWebApiRequestHasOtherRefs(NpWebApiRequest *request);
+extern void *npWebApiUserContextSetOnlineId(NpWebApiUserContext *userCtx, const SceNpOnlineId *onlineId);
+
 #endif

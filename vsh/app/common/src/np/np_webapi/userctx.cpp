@@ -72,3 +72,10 @@ NpWebApiUserContext *npWebApiUserContextSetFlag158(NpWebApiUserContext *userCtx,
 	userCtx->flag158 = value;
 	return userCtx;
 }
+
+void *npWebApiUserContextSetOnlineId(NpWebApiUserContext *userCtx, const SceNpOnlineId *onlineId)
+{
+	if (onlineId != NULL)
+		return sceClibMemcpy_safe(&userCtx->onlineId, onlineId, sizeof(userCtx->onlineId));
+	return userCtx;
+}
