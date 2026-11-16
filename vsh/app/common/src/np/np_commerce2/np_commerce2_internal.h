@@ -812,6 +812,25 @@ extern int npCommerce2FindIndexedRecordPartial(const char *data, SceSize size, S
 extern int npCommerce2InitResult0x2d(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2ReadDateItem0x2c(const NpCommerce2Item *result, NpCommerce2DateItem *item);
 extern int npCommerce2ReadCountItem0x2f(const NpCommerce2Item *result, NpCommerce2CountItem *item);
+typedef struct NpCommerce2ListItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 valueE;
+	SceUInt32 valueF;
+	SceUInt32 hasExtra;
+	SceUInt32 valueG;
+	SceUInt32 padding;
+} NpCommerce2ListItem;
+
+extern int npCommerce2ReadListItem0x2e(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ListItem *item);
+extern int npCommerce2ReadItem0x4e(const NpCommerce2Item *result, int indexed, SceUInt32 index, NpCommerce2Item *item);
+extern int npCommerce2ReadSkuTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
+				   int kind, const char **textA, const char **textB, const char **textC,
+				   const char **textD, const char **textE, const char **textF, SceUInt32 *countOfA,
+				   const char **description);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -880,10 +899,8 @@ extern int npCommerce2_8101144E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_810114C6(int a1, int a2, int a3);
 extern int npCommerce2_81010B14(int a1, int a2);
 extern int npCommerce2_81010BEC(int a1, int a2);
-extern int npCommerce2_81010DD8(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqAddCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810065DA(int a1, int a2, int a3, int a4);
-extern int npCommerce2_81010C98(int a1, int a2, int a3);
 extern int npCommerce2_81010FFA(int a1, int a2);
 extern int npCommerce2_8101117E(int a1, void *a2, int a3);
 extern int npCommerce2CreateReqRemCart(SceUInt32 ctxId, SceUInt32 *reqId);
