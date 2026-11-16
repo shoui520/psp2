@@ -27,6 +27,7 @@
 #define NP_BASIC_ERROR_DATA_NOT_FOUND		-2141905656	/* 0x80551d08 */
 #define NP_BASIC_ERROR_BUSY			-2141905655	/* 0x80551d09 */
 #define NP_BASIC_ERROR_NO_COMM_ID_SUPPLIED	-2141905653	/* 0x80551d0b */
+#define NP_BASIC_ERROR_NO_RESULT		-2141905651	/* 0x80551d0d, not in the SDK */
 #define NP_BASIC_ERROR_NO_NP_COMM_ID_IN_PARAM_SFO	-2141905650	/* 0x80551d0e */
 
 /* the IPMI client the library talks to the NP service through, the library's state */
@@ -44,6 +45,35 @@ extern NpBasicClient *SceIpmi_9EE9496B(int client);
 #ifdef __cplusplus
 }
 #endif
+
+/* the record the service answers a presence or own-information request with (1016 bytes) */
+typedef struct NpBasicPresenceTail {
+	int data[115];
+} NpBasicPresenceTail;
+
+typedef struct NpBasicPresenceRecord {
+	unsigned char reserved0[12];
+	char title[SCE_NP_BASIC_TITLE_SIZE_MAX];
+	SceNpCommunicationId friendCommId;
+	SceNpCommunicationId commId;
+	unsigned char block[48];
+	SceNpCommunicationId extraCommId;
+	SceNpBasicInGamePresence inGamePresence;
+	NpBasicPresenceTail tail;
+} NpBasicPresenceRecord;
+
+/* what the friend information exports give back (552 bytes) */
+typedef struct NpBasicFriendInfo {
+	SceSize size;
+	SceNpCommunicationId friendCommId;
+	unsigned char block[48];
+	SceNpCommunicationId commId;
+	SceNpCommunicationId extraCommId;
+	SceNpBasicGamePresence gamePresence;
+} NpBasicFriendInfo;
+
+/* the communication ID of the title, set when the handler is registered */
+extern SceNpCommunicationId g_commId;	/* 0x8100702d */
 
 /* an IPMI error of the service as the error of the library */
 extern int npBasicConvertError(int error);
