@@ -463,6 +463,40 @@ extern int npCommerce2InitCategoryContentsResult(NpCommerce2TableResult *result,
 extern int npCommerce2ReadTableItem(const NpCommerce2TableResult *result, SceUInt32 index, NpCommerce2LargeItem *item);
 extern int npCommerce2GetCategoryOfResult(const NpCommerce2Item *result, SceNpCommerce2CategoryInfo *info);
 extern int npCommerce2GetCategoryOfContent(const NpCommerce2Item *content, SceNpCommerce2CategoryInfo *info);
+
+/* the product record of a response, read out of its records (product.c) */
+typedef struct NpCommerce2ProductItem {
+	SceNpCommerce2CommonData commonData;
+	const char *productId;
+	SceUInt32 skuCount;
+	SceUInt32 padding;
+	SceUInt64 releaseDate;
+	SceUInt32 status;
+	SceUInt32 kind;
+	SceUInt32 downloadable;
+	SceUInt32 price;
+	SceUInt32 annotation;
+	const char *name;
+	const char *shortDescription;
+	const char *imageUrl;
+	const char *spName;
+	SceUInt32 countOfRewards;
+	const char *rewards;
+	const char *contentRatings;
+} NpCommerce2ProductItem;
+
+extern int npCommerce2ReadItem0x28(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadRecord0x11(const NpCommerce2Item *result, SceUInt32 index, const char **record);
+extern int npCommerce2ReadProductId(const char *buf, const char **productId, SceUInt32 *skuCount,
+				    SceUInt64 *releaseDate);
+extern int npCommerce2ReadProductValues(const SceUChar8 *header, const char *buf, const char **productId,
+					SceUInt32 *skuCount, SceUInt64 *releaseDate, SceUInt32 *status,
+					SceUInt32 *kind, SceUInt32 *downloadable, SceUInt32 *price,
+					SceUInt32 *annotation);
+extern int npCommerce2ReadProductTexts(NpCommerce2ProductItem *item, const char *buf, SceUInt16 length,
+				       const char **name, const char **shortDescription,
+				       const char **imageUrl, const char **spName);
+extern int npCommerce2ReadProductItem(const NpCommerce2Item *result, NpCommerce2ProductItem *item, int kind);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
