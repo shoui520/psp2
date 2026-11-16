@@ -1411,6 +1411,13 @@ extern int npCommerce2SetHeaderLocale(char *header, SceSize size, const char *cu
 extern int npCommerce2SetHeaderStatus(char *header, SceSize size, SceUInt32 dataLength, SceUInt32 status);
 extern int npCommerce2StoreResponse(NpCommerce2Context *ctx, NpCommerce2Request *req, void *buf, SceSize bufSize,
 				    SceSize length);
+/* reading the store's HTTP responses (http.c) */
+#define NP_COMMERCE2_ERROR_CONTENT_TOO_LONG	-2141909104	/* 0x80550f90 */
+extern int npCommerce2GetResponseStatus(int httpRequest, int *nativeBuildVersion);
+extern int npCommerce2ReadResponseData(int httpRequest, char *data, SceSize size);
+extern int npCommerce2ReadResponseBody(int httpRequest, const char *base, char *data, SceSize size, int *tooLong,
+				       int skip);
+extern int npCommerce2ForwardCookie(int httpTemplate, int httpConnection, int httpRequest, char *buf, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
