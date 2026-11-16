@@ -1890,7 +1890,7 @@ int SceNpCommerce2_98345A30(int a1, SceUInt32 a2, int a3, int a4, const SceUInt3
 			return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 		entry += 3;
 	}
-	return npCommerce2Start_81007C5A(a1, a2, a3, a4, (int)a5, 1, a7);
+	return npCommerce2Start_81007C5A(a1, a2, a3, a4, (int)a5, a6, a7);
 }
 
 int SceNpCommerce2_771C582F(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize)
