@@ -146,3 +146,31 @@ int IniTempFile::open(const char *path, int mode, int flags)
 		file.ops->free(file.data, file.context);
 	return result;
 }
+
+/* copies what the stream has into the file, through the buffer, in at most limit bytes of chunks */
+int IniTempFile::copyFrom(IniFileBase *source, SceOff offset, SceSize limit, IniBuffer *buffer)
+{
+	int result = source->seek(offset, 0);
+	SceSize count = 0;
+	SceSSize got;
+
+	if (result == 0) {
+		SceSize size = buffer->size();
+		void *data = buffer->data();
+
+		for (;;) {
+			result = source->read(data, size, &got);
+			if (result == INI_RESULT_STREAM_END) {
+				result = 0;
+				break;
+			}
+			if (result == 0 && got != 0) {
+				result = write(data, got);
+				if (result == 0 && ++count <= limit / size)
+					continue;
+			}
+			break;
+		}
+	}
+	return result;
+}

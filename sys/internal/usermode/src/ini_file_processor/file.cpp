@@ -269,7 +269,7 @@ int IniFile::unused14()
 	return 0;
 }
 
-int IniFile::unused15()
+int IniFile::copyFrom(IniFileBase *source, SceOff offset, SceSize limit, IniBuffer *buffer)
 {
 	return -2138832877;
 }

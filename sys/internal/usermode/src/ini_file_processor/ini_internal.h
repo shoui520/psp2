@@ -148,6 +148,20 @@ extern const char *iniPathFileName(const char *path);
 
 #define SCE_INI_FILE_PROCESSOR_ERROR_NO_FILE_NAME	-2138832887	/* 0x80840009 */
 
+class IniBuffer;
+/* the buffer a copy goes through (its other methods are not known yet) */
+class IniBuffer {
+public:
+	virtual ~IniBuffer();
+	virtual int unused2();
+	virtual int unused3();
+	virtual int unused4();
+	virtual void *data();
+	virtual SceSize size();
+};
+
+#define INI_RESULT_STREAM_END	8650753		/* 0x840001 */
+
 /* what the processor asks of a file: the base keeps the name, the mode and the last error */
 class IniFileBase {
 public:
@@ -166,7 +180,7 @@ public:
 	virtual SceOff tell() = 0;
 	virtual const IniString *pathOf() = 0;
 	virtual int unused14() = 0;
-	virtual int unused15() = 0;
+	virtual int copyFrom(IniFileBase *source, SceOff offset, SceSize limit, IniBuffer *buffer) = 0;
 	virtual const IniString *path();
 	virtual int openMode();
 	virtual int errorCode();
@@ -199,7 +213,7 @@ public:
 	virtual SceOff tell();
 	virtual const IniString *pathOf();
 	virtual int unused14();
-	virtual int unused15();
+	virtual int copyFrom(IniFileBase *source, SceOff offset, SceSize limit, IniBuffer *buffer);
 	virtual int reopen();
 
 	SceUID m_fd;
@@ -213,6 +227,7 @@ public:
 	IniTempFile(IniAllocatorRef *allocator);
 	virtual ~IniTempFile();
 	virtual int open(const char *path, int mode, int flags);
+	virtual int copyFrom(IniFileBase *source, SceOff offset, SceSize limit, IniBuffer *buffer);
 
 	bool m_autoDelete;
 };
