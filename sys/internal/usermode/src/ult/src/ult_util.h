@@ -16,6 +16,12 @@
 
 extern "C" {
 #include <libkernel/libkernel.h>
+
+/*
+ * SceThreadmgrCoredumpTime's sceKernelExitThread, the one libult imports (its link name has the
+ * library prefix: SceLibKernel exports the name too)
+ */
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int exitStatus);
 }
 
 /* what Sony's build inlines wherever it is used */
@@ -49,6 +55,20 @@ static inline int ultAssertEqual(const char *where, const char *what, int actual
 	return actual;
 }
 
+/* the copies Sony's build calls out of line where its inliner stopped (each file its own) */
+static inline __attribute__((noinline)) void ultAssertOutOfLine(const char *where, const char *what,
+								int cond)
+{
+	ultAssert(where, what, cond);
+}
+
+static inline __attribute__((noinline)) int ultAssertEqualOutOfLine(const char *where,
+								    const char *what, int actual,
+								    int expected)
+{
+	return ultAssertEqual(where, what, actual, expected);
+}
+
 /*
  * Each file's checks: XX_ASSERT(line, cond) and XX_ASSERT_EQUAL(line, actual, expected), the
  * condition's text taken before any macro in it is expanded.
@@ -57,6 +77,10 @@ static inline int ultAssertEqual(const char *where, const char *what, int actual
 	ultAssert(ULT_WHERE(file, line), text, (cond))
 #define ULT_ASSERT_EQUAL_AT(file, line, text, actual, expected) \
 	ultAssertEqual(ULT_WHERE(file, line), text, (actual), (expected))
+#define ULT_ASSERT_OUT_OF_LINE_AT(file, line, text, cond) \
+	ultAssertOutOfLine(ULT_WHERE(file, line), text, (cond))
+#define ULT_ASSERT_EQUAL_OUT_OF_LINE_AT(file, line, text, actual, expected) \
+	ultAssertEqualOutOfLine(ULT_WHERE(file, line), text, (actual), (expected))
 
 /* the build version every object's creation takes is the SDK's, from this one on */
 #define ULT_BUILD_VERSION_MIN	0x00910000

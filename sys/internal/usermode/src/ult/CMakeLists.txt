@@ -3,7 +3,7 @@
 # (mutex, condition variable, semaphore, reader-writer lock, queue) over non-blocking
 # queues, at Sony's paths (internal/usermode/src/ult/src in the SDK's build paths).
 enable_language(CXX)
-psp2_module(vs0_sys_external_libult KIND user COMPILER snc PARTIAL SOURCES
+psp2_module(vs0_sys_external_libult KIND user COMPILER snc SOURCES
 	src/AbstractThread.cpp
 	src/Cinterface.cpp
 	src/CinterfaceInternal.cpp

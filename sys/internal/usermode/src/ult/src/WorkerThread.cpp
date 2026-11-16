@@ -16,7 +16,7 @@ static int32_t threadEntry(SceSize argSize, void *argp)
 
 	int ret = sceFiberRun(&worker->m_fiber, 0, &argOnRun);
 	WORKER_THREAD_ASSERT_EQUAL(88, "ret==SCE_OK", ret, SCE_OK);
-	sceKernelExitThread(argOnRun);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(argOnRun);
 	return SCE_OK;
 }
 

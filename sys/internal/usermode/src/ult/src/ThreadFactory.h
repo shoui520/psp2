@@ -160,7 +160,7 @@ public:
 	{
 		StrArg *strArg = (StrArg *)pArgBlock;
 
-		sceKernelExitThread(strArg->entry(strArg->arg));
+		SceThreadmgrCoredumpTime_sceKernelExitThread(strArg->entry(strArg->arg));
 		return SCE_OK;
 	}
 

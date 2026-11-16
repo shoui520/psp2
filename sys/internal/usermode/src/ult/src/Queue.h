@@ -5,11 +5,18 @@
 #define QUEUE_H
 
 #include "Semaphore.h"
+#include "DataWaiterQueue.h"
+#include "Waiter.h"
 
 #define QUEUE_ASSERT(line, text, cond) \
 	ULT_ASSERT_AT("Queue.h", line, text, cond)
 #define QUEUE_ASSERT_EQUAL(line, text, actual, expected) \
 	ULT_ASSERT_EQUAL_AT("Queue.h", line, text, actual, expected)
+/* where Sony's build calls the check out of line */
+#define QUEUE_ASSERT_OUT_OF_LINE(line, text, cond) \
+	ULT_ASSERT_OUT_OF_LINE_AT("Queue.h", line, text, cond)
+#define QUEUE_ASSERT_EQUAL_OUT_OF_LINE(line, text, actual, expected) \
+	ULT_ASSERT_EQUAL_OUT_OF_LINE_AT("Queue.h", line, text, actual, expected)
 
 /*
  * A queue data resource pool (SceUltQueueDataResourcePool from offset 48): the data's entries,
@@ -125,6 +132,93 @@ static inline QueueDataResourcePoolInternal *internalOf(SceUltQueueDataResourceP
 		return NULL;
 	return &((QueueDataResourcePoolObject *)pool)->internal;
 }
+
+/*
+ * The queue of Sony's first design (Queue.cpp), which nothing creates any more: it keeps its
+ * buffers, its waiters' entries and its data in its own work area. Its free buffers and its
+ * data are DataWaiterQueues, so a push that finds no free buffer waits in the queue of free
+ * buffers, and a pop that finds no data waits in the queue of data.
+ */
+class ImplQueue {
+public:
+	char name[SCE_ULT_MAX_NAME_LENGTH + 1];
+	NBQueue3 m_waiterEntryQueue;		/* free entries for the waiters */
+	DataWaiterQueue m_freeQueue;		/* free buffers, or pushes waiting for one */
+	DataWaiterQueue m_dataQueue;		/* data, or pops waiting for one */
+	uint32_t queueDepth;
+	uint32_t waitingQueueLength;
+	uint32_t dataSize;
+	void *dataBuffer;
+	void *workArea;
+
+	/* three dummies, an entry per waiter and per buffer, then the buffers */
+	static uint32_t getWorkAreaSize(uint32_t queueDepth, uint32_t dataSize,
+					uint32_t waitingQueueLength)
+	{
+		return sizeof(NBQueueEntry2) * (queueDepth + waitingQueueLength) +
+		       3 * sizeof(NBQueueEntry2) + dataSize * queueDepth;
+	}
+
+	int initialize(const char *name, uint32_t queueDepth, uint32_t dataSize,
+		       uint32_t waitingQueueLength, void *workArea,
+		       const SceUltQueueOptParam *optParam, uint32_t buildVersion);
+	int push(const void *data);
+	int pop(void *data);
+
+	/* a free buffer: SCE_ULT_ERROR_AGAIN when there is none */
+	ULT_INLINE int tryPush(const void *data)
+	{
+		NBQueueEntry2 *entry;
+
+		if (data == NULL || this == NULL)
+			return SCE_ULT_ERROR_NULL;
+		if (m_freeQueue.tryPop(entry) != SCE_OK)
+			return SCE_ULT_ERROR_AGAIN;
+		__builtin_dmb();
+		sceClibMemcpy_safe((void *)entry->data, data, dataSize);
+		__builtin_dmb();
+		NBQueueEntry2 *waiterEntry = m_dataQueue.pushOrPopWaiter(entry);
+		if (waiterEntry != NULL) {
+			/* a pop waits: the datum is handed to it */
+			Waiter *waiter = (Waiter *)waiterEntry->data;
+			waiterEntry->data = 0;
+			__builtin_dmb();
+			int ret = m_waiterEntryQueue.push(waiterEntry);
+			QUEUE_ASSERT_EQUAL(469, "ret==0", ret, 0);
+			__builtin_dmb();
+			ret = waiter->signal(entry, this);
+			QUEUE_ASSERT_EQUAL(472, "ret==0", ret, 0);
+		}
+		return SCE_OK;
+	}
+
+	/* a datum: SCE_ULT_ERROR_AGAIN when there is none */
+	ULT_INLINE int tryPop(void *data)
+	{
+		NBQueueEntry2 *entry;
+
+		if (data == NULL || this == NULL)
+			return SCE_ULT_ERROR_NULL;
+		if (m_dataQueue.tryPop(entry) != SCE_OK)
+			return SCE_ULT_ERROR_AGAIN;
+		__builtin_dmb();
+		sceClibMemcpy_safe(data, (const void *)entry->data, dataSize);
+		__builtin_dmb();
+		NBQueueEntry2 *waiterEntry = m_freeQueue.pushOrPopWaiter(entry);
+		if (waiterEntry != NULL) {
+			/* a push waits: the buffer is handed to it */
+			Waiter *waiter = (Waiter *)waiterEntry->data;
+			waiterEntry->data = 0;
+			__builtin_dmb();
+			int ret = m_waiterEntryQueue.push(waiterEntry);
+			QUEUE_ASSERT_EQUAL(505, "ret==0", ret, 0);
+			__builtin_dmb();
+			ret = waiter->signal(entry, this);
+			QUEUE_ASSERT_EQUAL(508, "ret==0", ret, 0);
+		}
+		return SCE_OK;
+	}
+};
 
 /*
  * SceUltQueue: a semaphore counts the data queued, the pool's semaphore the free data; a push
@@ -252,7 +346,7 @@ public:
 	{
 		if (m_queueDataResourcePool->m_semaphore.m_pool == NULL)
 			return SCE_ULT_ERROR_STATE;
-		if (!AbstractThread::canWait())
+		if (!AbstractThread::canWaitOutOfLine())
 			return SCE_ULT_ERROR_PERMISSION;
 		int ret = tryPush(data);
 		if (ret != SCE_ULT_ERROR_AGAIN)
@@ -264,21 +358,21 @@ public:
 			return ret;
 		}
 		NBQueueEntry2 *packet = m_queueDataResourcePool->m_dataQueue.pop();
-		QUEUE_ASSERT(751, "packet != NULL", packet != NULL);
+		QUEUE_ASSERT_OUT_OF_LINE(751, "packet != NULL", packet != NULL);
 		sceClibMemcpy_safe((void *)packet->data, data, m_dataSize);
 		ret = m_queue.push(packet);
 		if (ret != SCE_OK) {
-			QUEUE_ASSERT_EQUAL(756, "ret==SCE_ULT_ERROR_STATE", ret, SCE_ULT_ERROR_STATE);
+			QUEUE_ASSERT_EQUAL_OUT_OF_LINE(756, "ret==SCE_ULT_ERROR_STATE", ret, SCE_ULT_ERROR_STATE);
 			int ret2 = m_queueDataResourcePool->freeData(packet);
-			QUEUE_ASSERT_EQUAL(759, "ret2==SCE_OK", ret2, SCE_OK);
+			QUEUE_ASSERT_EQUAL_OUT_OF_LINE(759, "ret2==SCE_OK", ret2, SCE_OK);
 			ret2 = m_queueDataResourcePool->m_semaphore.release(1, this);
-			QUEUE_ASSERT_EQUAL(762, "ret2==SCE_OK", ret2, SCE_OK);
+			QUEUE_ASSERT_EQUAL_OUT_OF_LINE(762, "ret2==SCE_OK", ret2, SCE_OK);
 			m_numPushWaiters.decrement();
 			return ret;
 		}
 		__builtin_dmb();
 		ret = m_semaphore.release(1, this);
-		QUEUE_ASSERT_EQUAL(771, "ret==SCE_OK", ret, SCE_OK);
+		QUEUE_ASSERT_EQUAL_OUT_OF_LINE(771, "ret==SCE_OK", ret, SCE_OK);
 		m_numPushWaiters.decrement();
 		return SCE_OK;
 	}

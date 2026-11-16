@@ -53,6 +53,27 @@ public:
 		__builtin_dmb();
 		return AbstractThread::sendSignal(m_id);
 	}
+
+	/* the same, where Sony's build calls them out of line (ImplQueue's push and pop) */
+	__attribute__((noinline)) int initializeOutOfLine(void *cause)
+	{
+		return initialize(cause);
+	}
+
+	__attribute__((noinline)) void *waitOutOfLine(void *cause)
+	{
+		return wait(cause);
+	}
+
+	__attribute__((noinline)) void finalizeOutOfLine()
+	{
+		finalize();
+	}
+
+	__attribute__((noinline)) int signalOutOfLine(void *value, void *cause)
+	{
+		return signal(value, cause);
+	}
 };
 
 #endif

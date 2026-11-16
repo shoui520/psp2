@@ -94,6 +94,12 @@ public:
 		return true;
 	}
 
+	/* canWait, where Sony's build calls it out of line (a queue's push) */
+	static __attribute__((noinline)) bool canWaitOutOfLine()
+	{
+		return canWait();
+	}
+
 	ULT_INLINE static int waitSignal(uint32_t id, void *cause)
 	{
 		if (isKernelThread(id))
