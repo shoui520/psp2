@@ -1786,3 +1786,180 @@ next:
 	} while (pass < 2);
 	return 0;
 }
+
+/* a request with the version as its one field */
+int npCommerce2Send_8101AF1E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     SceUInt32 version)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		ret = npCommerce2WriteNumberField(sending, *httpRequest, 2, version, 0);
+		if (ret >= 0) {
+			if (!sending)
+				length = (SceULong64)(SceInt64)ret;
+			ret = 0;
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the mode, a list of SKU IDs and, when there are as many, a list of reward IDs */
+int npCommerce2Send_81019254(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char * const *skuIds, SceUInt32 skuCount, const char * const *rewardIds,
+			     SceUInt32 rewardCount)
+{
+	char text[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	SceUInt32 i;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sceClibSnprintf(text, 0x301, "%u", mode);
+		ret = npCommerce2WriteTextField(sending, handle, 10, text, 0);
+		if (ret >= 0) {
+			ret = npCommerce2WriteListField(sending, handle, 14, skuIds, skuCount, text, 0x301, 0, 1);
+			if (ret >= 0) {
+				sum = (SceULong64)(SceInt64)ret;
+				if (rewardIds != NULL && rewardCount != 0 && skuCount == rewardCount) {
+					const char * const *entry = rewardIds;
+
+					i = 0;
+					do {
+						if (*entry != NULL && **entry != '\0')
+							break;
+						i++;
+						entry++;
+					} while (i < rewardCount);
+					if (i != rewardCount) {
+						ret = npCommerce2WriteListField(sending, handle, 76, rewardIds, rewardCount,
+										text, 0x301, 0, 1);
+						if (ret < 0)
+							return ret;
+						sum += (SceULong64)(SceInt64)ret;
+					}
+				}
+				if (sending != 1)
+					length = sum;
+				ret = 0;
+			}
+		}
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with a voucher code and two more texts as prefixed fields, and a flag */
+int npCommerce2Send_8101A7BE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *voucherCode, const char *text1, const char *text2, int flag)
+{
+	char escaped[0x304];
+	const char *prefixes[1];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sceClibMemset(prefixes, 0, 4);
+		prefixes[0] = "voucherCode";
+		ret = npCommerce2UriEscape(escaped, 0x301, voucherCode, sceClibStrnlen(voucherCode, 0x301), NULL);
+		if (ret >= 0) {
+			ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 20, escaped,
+							    sceClibStrnlen(escaped, 0x400), 0);
+			if (ret >= 0) {
+				sum = (SceULong64)(SceInt64)ret;
+				ret = npCommerce2UriEscape(escaped, 0x301, text1, sceClibStrnlen(text1, 0x301), NULL);
+				if (ret >= 0) {
+					ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 21, escaped,
+									    sceClibStrnlen(escaped, 0x400), 1);
+					if (ret >= 0) {
+						sum += (SceULong64)(SceInt64)ret;
+						ret = npCommerce2UriEscape(escaped, 0x301, text2,
+									   sceClibStrnlen(text2, 0x301), NULL);
+						if (ret >= 0) {
+							ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 22,
+											    escaped,
+											    sceClibStrnlen(escaped, 0x400), 1);
+							if (ret >= 0) {
+								sum += (SceULong64)(SceInt64)ret;
+								ret = npCommerce2WriteTextField(sending, handle, 63,
+												flag == 1 ? "true" : "false", 1);
+								if (ret >= 0) {
+									if (sending != 1)
+										length = sum + (SceULong64)(SceInt64)ret;
+									ret = 0;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}

@@ -1498,6 +1498,13 @@ extern int npCommerce2Send_81018D02(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_81018EF8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *categoryId, const char *productId, const char * const *rewardIds,
 				    int hasRewards);
+extern int npCommerce2Send_8101AF1E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    SceUInt32 version);
+extern int npCommerce2Send_81019254(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char * const *skuIds, SceUInt32 skuCount, const char * const *rewardIds,
+				    SceUInt32 rewardCount);
+extern int npCommerce2Send_8101A7BE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *voucherCode, const char *text1, const char *text2, int flag);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,
