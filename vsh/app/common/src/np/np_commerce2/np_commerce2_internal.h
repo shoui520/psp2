@@ -493,10 +493,21 @@ extern int npCommerce2ReadProductValues(const SceUChar8 *header, const char *buf
 					SceUInt32 *skuCount, SceUInt64 *releaseDate, SceUInt32 *status,
 					SceUInt32 *kind, SceUInt32 *downloadable, SceUInt32 *price,
 					SceUInt32 *annotation);
-extern int npCommerce2ReadProductTexts(NpCommerce2ProductItem *item, const char *buf, SceUInt16 length,
+extern int npCommerce2ReadProductTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
 				       const char **name, const char **shortDescription,
 				       const char **imageUrl, const char **spName);
 extern int npCommerce2ReadProductItem(const NpCommerce2Item *result, NpCommerce2ProductItem *item, int kind);
+extern int npCommerce2ReadGameProductInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+					  SceUInt32 version, int dataType, SceNpCommerce2GameProductInfo *info);
+extern int npCommerce2ReadContentRatingInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+					    SceUInt32 version, SceNpCommerce2ContentRatingInfo *info);
+extern int npCommerce2GetGameProductInfoOfItem(const NpCommerce2Item *item, SceNpCommerce2GameProductInfo *info);
+extern int npCommerce2GetContentRatingInfoOfItem(const NpCommerce2Item *item,
+						 SceNpCommerce2ContentRatingInfo *info);
+extern int npCommerce2GetContentRatingInfoAt(const NpCommerce2Item *item, SceUInt32 index,
+					     SceNpCommerce2ContentRatingInfo *info);
+extern int npCommerce2ReadContentRatingDescriptor(const NpCommerce2Item *info, SceUInt32 index,
+						  SceNpCommerce2ContentRatingDescriptor *descriptor);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -550,12 +561,6 @@ extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result,
 extern int npCommerce2GetEnvironment(void);
 extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
 				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
-extern int npCommerce2_8100DEB4(int a1, int a2);
-extern int npCommerce2_8100E272(int a1, void *a2, int a3);
-extern int npCommerce2_8100E5FA(int a1, int a2);
-extern int npCommerce2_8100E6F4(const void *info, SceNpCommerce2ContentRatingInfo *contentRatingInfo);
-extern int npCommerce2_8100E746(int a1, int a2, int a3);
-extern int npCommerce2_8100E868(int a1, int a2, int a3);
 extern int npCommerce2_8100ED8C(int a1, void *a2, int a3);
 extern int npCommerce2_8101059C(int a1, int a2, int a3);
 extern int npCommerce2_810102FC(int a1, int a2, int a3);
@@ -772,7 +777,6 @@ extern int npCommerce2_81016914(SceNpCommerce2GetProductInfoListResult *result, 
 				SceSize bufLen);
 extern int npCommerce2CreateReqGetMasterResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetProdList(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100DF44(int a1, int a2, int a3);
 extern int npCommerce2CreateReqRecomProds(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100AACE(int a1, int a2, int a3, int a4, SceUInt32 a5, SceUInt32 a6);
 extern int npCommerce2_81016A3A(int a1, void *a2, int a3);

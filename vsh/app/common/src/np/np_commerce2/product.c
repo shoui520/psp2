@@ -5,6 +5,7 @@
 #include "np_commerce2_internal.h"
 
 #define NP_COMMERCE2_EMPTY_TEXT(item)	((item) != NULL ? (const char *)(item)->commonData.buf_head + 4 : NULL)
+#define NP_COMMERCE2_EMPTY_TEXT_OF(common)	((common) != NULL ? (const char *)(common)->buf_head + 4 : NULL)
 
 #define NP_COMMERCE2_UNIX_EPOCH_TICKS	62135596800000000LL
 
@@ -120,29 +121,29 @@ int npCommerce2ReadProductValues(const SceUChar8 *header, const char *buf, const
 /* the name, description, image and provider texts of a product record; those it lacks point
  * at the empty string the response starts with */
 __attribute__((noinline))
-int npCommerce2ReadProductTexts(NpCommerce2ProductItem *item, const char *buf, SceUInt16 length,
+int npCommerce2ReadProductTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
 				const char **name, const char **shortDescription,
 				const char **imageUrl, const char **spName)
 {
 	SceUInt16 found;
 	int ret;
 
-	*name = NP_COMMERCE2_EMPTY_TEXT(item);
+	*name = NP_COMMERCE2_EMPTY_TEXT_OF(item);
 	ret = npCommerce2FindRecordWhole(buf, length, 7, 0, &found);
 	if (ret >= 0 && found != 0)
 		*name = buf + ret;
 	if (ret >= 0) {
-		*shortDescription = NP_COMMERCE2_EMPTY_TEXT(item);
+		*shortDescription = NP_COMMERCE2_EMPTY_TEXT_OF(item);
 		ret = npCommerce2FindRecordWhole(buf, length, 0xC, 0, &found);
 		if (ret >= 0 && found != 0)
 			*shortDescription = buf + ret;
 		if (ret >= 0) {
-			*imageUrl = NP_COMMERCE2_EMPTY_TEXT(item);
+			*imageUrl = NP_COMMERCE2_EMPTY_TEXT_OF(item);
 			ret = npCommerce2FindRecordWhole(buf, length, 0x10, 0, &found);
 			if (ret >= 0 && found != 0)
 				*imageUrl = buf + ret;
 			if (ret >= 0) {
-				*spName = NP_COMMERCE2_EMPTY_TEXT(item);
+				*spName = NP_COMMERCE2_EMPTY_TEXT_OF(item);
 				ret = npCommerce2FindRecordWhole(buf, length, 4, 0, &found);
 				if (ret >= 0 && found != 0)
 					*spName = buf + ret;
@@ -185,7 +186,7 @@ int npCommerce2ReadProductItem(const NpCommerce2Item *result, NpCommerce2Product
 	head = ret;
 	rest = (const char *)item->commonData.data + ret;
 	item->commonData.data2 = (const SceUChar8 *)rest;
-	ret = npCommerce2ReadProductTexts(item, rest, (SceUInt16)(length - head), &item->name,
+	ret = npCommerce2ReadProductTexts(&item->commonData, rest, (SceUInt16)(length - head), &item->name,
 					  &item->shortDescription, &item->imageUrl, &item->spName);
 	if (ret < 0)
 		return ret;
@@ -211,5 +212,192 @@ int npCommerce2ReadProductItem(const NpCommerce2Item *result, NpCommerce2Product
 		item->rewards = rest + ret;
 	if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
 		ret = 0;
+	return ret;
+}
+
+/* a game product record: the fixed part, the texts, and for the normal data type the long and the
+ * legal description */
+int npCommerce2ReadGameProductInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+				   SceUInt32 version, int dataType, SceNpCommerce2GameProductInfo *info)
+{
+	SceUChar8 headerCopy[0x64];
+	SceUInt32 netFlags;
+	SceUInt32 netDate;
+	SceUInt32 flags;
+	SceUInt32 attr;
+	SceUInt16 found;
+	SceUInt16 foundLegal;
+	const char *p;
+	const char *texts;
+	SceSize left;
+	int ret;
+
+	sceClibMemcpy_safe(headerCopy, bufHead, 0x64);
+	sceClibMemset(info, 0, 0xE0);
+	sceClibMemset(info, 0, 0x5C);
+	info->commonData.version = version;
+	info->commonData.buf_head = bufHead;
+	info->commonData.data = (const SceUChar8 *)data;
+	info->commonData.data_size = length;
+	info->dataType = dataType;
+	ret = npCommerce2ReadProductId(data, &info->productId, &info->countOfSku,
+				       (SceUInt64 *)&info->releaseDate);
+	if (ret >= 0) {
+		p = data + ret;
+		sceClibMemcpy_safe(&netFlags, p + 12, 4);
+		flags = sceNetNtohl(netFlags);
+		sceClibMemcpy_safe(&netDate, p + 16, 4);
+		attr = sceNetNtohl(netDate);
+		texts = p + 20;
+		if (flags & 0x80000000)
+			info->productAttr |= 1;
+		if (flags & 0x40000000)
+			info->productAttr |= 2;
+		if (flags & 0x20000000)
+			info->productAttr |= 4;
+		if (attr != 0)
+			info->productAttr |= 8;
+		info->commonData.data2 = (const SceUChar8 *)texts;
+		left = length - (texts - data);
+		ret = npCommerce2ReadProductTexts(&info->commonData, texts, left, &info->productName,
+						  &info->productShortDescription, &info->imageUrl,
+						  &info->spName);
+		if (ret >= 0 && dataType == 1) {
+			info->productLongDescription = NP_COMMERCE2_EMPTY_TEXT(info);
+			ret = npCommerce2FindRecordWhole(texts, left, 0xD, 0, &found);
+			if (ret >= 0 && found != 0)
+				info->productLongDescription = texts + ret;
+			if (ret >= 0) {
+				info->legalDescription = NP_COMMERCE2_EMPTY_TEXT(info);
+				ret = npCommerce2FindRecordWhole(texts, left, 0x77, 0, &foundLegal);
+				if (ret >= 0 && foundLegal != 0)
+					info->legalDescription = texts + ret;
+				if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+					ret = 0;
+			}
+		}
+	}
+	return ret;
+}
+
+/* a content rating record: its system id, its image URL and how many descriptors it holds */
+int npCommerce2ReadContentRatingInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
+				     SceUInt32 version, SceNpCommerce2ContentRatingInfo *info)
+{
+	SceUInt16 found;
+	int ret;
+
+	sceClibMemset(info, 0, 0x88);
+	sceClibMemset(info, 0, 0x5C);
+	info->commonData.version = version;
+	info->commonData.buf_head = bufHead;
+	info->commonData.data = (const SceUChar8 *)data;
+	info->commonData.data_size = length;
+	info->ratingSystemId = data;
+	info->commonData.data2 = (const SceUChar8 *)data + 17;
+	info->imageUrl = NP_COMMERCE2_EMPTY_TEXT(info);
+	ret = npCommerce2FindRecordWhole(data + 17, length - 17, 0x10, 0, &found);
+	if (ret >= 0 && found != 0)
+		info->imageUrl = data + 17 + ret;
+	if (ret >= 0)
+		ret = npCommerce2FindNestedRecordWhole(data + 17, length - 17, 0x17, NULL,
+						       &info->countOfContentRatingDescriptor);
+	return ret;
+}
+
+/* the game product record of a result's records */
+int npCommerce2GetGameProductInfoOfItem(const NpCommerce2Item *item, SceNpCommerce2GameProductInfo *info)
+{
+	const char *data = (const char *)item->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, item->commonData.data_size -
+					 (data - (const char *)item->commonData.data), 0x21, 0x61, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadGameProductInfo(data + ret, length, item->commonData.buf_head,
+						     item->commonData.version, 0, info);
+	return ret;
+}
+
+/* the content rating record of a result's records */
+int npCommerce2GetContentRatingInfoOfItem(const NpCommerce2Item *item, SceNpCommerce2ContentRatingInfo *info)
+{
+	const char *data = (const char *)item->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, item->commonData.data_size -
+					 (data - (const char *)item->commonData.data), 0x18, 0x19, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadContentRatingInfo(data + ret, length, item->commonData.buf_head,
+						       item->commonData.version, info);
+	return ret;
+}
+
+/* the content rating record at an index */
+int npCommerce2GetContentRatingInfoAt(const NpCommerce2Item *item, SceUInt32 index,
+				      SceNpCommerce2ContentRatingInfo *info)
+{
+	const char *data = (const char *)item->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, item->commonData.data_size -
+					   (data - (const char *)item->commonData.data), 0x18, 0x19, index,
+					   &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadContentRatingInfo(data + ret, length, item->commonData.buf_head,
+						       item->commonData.version, info);
+	return ret;
+}
+
+/* a descriptor of a content rating: an icon (the image URL) or a text */
+int npCommerce2ReadContentRatingDescriptor(const NpCommerce2Item *info, SceUInt32 index,
+					   SceNpCommerce2ContentRatingDescriptor *descriptor)
+{
+	const char *data = (const char *)info->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt32 netType;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, info->commonData.data_size -
+					   (data - (const char *)info->commonData.data), 0x17, 8, index,
+					   &length);
+	if (ret >= 0) {
+		sceClibMemset(descriptor, 0, 0x88);
+		sceClibMemset(descriptor, 0, 0x5C);
+		descriptor->commonData.version = info->commonData.version;
+		descriptor->commonData.buf_head = info->commonData.buf_head;
+		record = data + ret;
+		descriptor->commonData.data = (const SceUChar8 *)record;
+		descriptor->commonData.data_size = length;
+		descriptor->imageUrl = NP_COMMERCE2_EMPTY_TEXT(info);
+		descriptor->contentRatingDescription = descriptor->imageUrl;
+		sceClibMemcpy_safe(&netType, record, 4);
+		descriptor->descriptorType = sceNetNtohl(netType);
+		rest = record + 4;
+		descriptor->commonData.data2 = (const SceUChar8 *)rest;
+		if (descriptor->descriptorType > 1) {
+			if (descriptor->descriptorType <= 2) {
+				SceUInt32 left = length - 4;
+
+				descriptor->contentRatingDescription = NP_COMMERCE2_EMPTY_TEXT(descriptor);
+				ret = npCommerce2FindRecordWhole(rest, left, 0xE, 0, &found);
+				if (ret >= 0 && found != 0)
+					descriptor->contentRatingDescription = rest + ret;
+			}
+		} else if (descriptor->descriptorType != 0) {
+			SceUInt32 left = length - 4;
+
+			descriptor->imageUrl = NP_COMMERCE2_EMPTY_TEXT(descriptor);
+			ret = npCommerce2FindRecordWhole(rest, left, 0x10, 0, &found);
+			if (ret >= 0 && found != 0)
+				descriptor->imageUrl = rest + ret;
+		}
+	}
 	return ret;
 }
