@@ -818,3 +818,159 @@ int npCommerce2InitCountsTextsResult(NpCommerce2CountsTextsResult *result, const
 	}
 	return ret;
 }
+
+/* the record of tag 0x69: two values, each stored as 1 when zero and 2 otherwise */
+int npCommerce2ReadFlagsItem0x69(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	SceUInt32 value;
+	const char *record;
+	int first;
+	int second;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x69, 8, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		value = sceNetNtohl(net);
+		first = 2;
+		second = 2;
+		if (value == 0)
+			first = 1;
+		item->value[0] = first;
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		if (sceNetNtohl(net) == 0)
+			second = 1;
+		item->value[1] = second;
+		item->commonData.data2 = (const SceUChar8 *)record + 8;
+	}
+	return ret;
+}
+
+/* a result with the counts of the containers of tags 0x16, 0x64 and 0x58 (each optional) and the text of
+ * tag 0x5c */
+int npCommerce2InitCountsResult0x16(NpCommerce2CountsResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt16 found;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x70);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x16, NULL, &result->countOfA);
+		if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+			ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x64, NULL, &result->countOfB);
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+				ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x58, NULL, &result->countOfC);
+				if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+					result->text = NP_COMMERCE2_EMPTY_TEXT(result);
+					ret = npCommerce2FindRecordWhole(records, dataLength, 0x5C, 0, &found);
+					if (ret >= 0 && found != 0)
+						result->text = records + ret;
+					if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+						ret = 0;
+				}
+			}
+		}
+	}
+	return ret;
+}
+
+/* the record of tag 0x64 at an index: a value, four flags, the value of its tag 0x58 record and a text */
+int npCommerce2ReadFlagsItem0x64(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2FlagsItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	NpCommerce2Item inner;
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt32 net;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x64, 0x18, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x78);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->value = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->flagA = sceNetNtohl(net) != 0;
+		sceClibMemcpy_safe(&net, record + 8, 4);
+		item->flagB = sceNetNtohl(net) != 0;
+		sceClibMemcpy_safe(&net, record + 12, 4);
+		item->flagC = sceNetNtohl(net) != 0;
+		sceClibMemcpy_safe(&net, record + 16, 4);
+		item->flagD = sceNetNtohl(net) != 0;
+		rest = record + 20;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		ret = npCommerce2ReadItem0x58(&item->commonData, rest, length - 20, &inner);
+		if (ret >= 0) {
+			item->valueB = inner.value[0];
+			item->text = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(rest, length - 20, 0x5D, 0, &found);
+			if (ret >= 0 && found != 0)
+				item->text = rest + ret;
+		}
+	}
+	return ret;
+}
+
+/* the value of the record of tag 0x58 at an index */
+int npCommerce2ReadValue0x58At(const NpCommerce2Item *result, SceUInt32 index, SceUInt32 *value)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x58, 8, index, &length);
+	if (ret >= 0) {
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		*value = sceNetNtohl(net);
+	}
+	return ret;
+}
