@@ -465,6 +465,7 @@ typedef struct NpWebApiIpmiClient {
 } NpWebApiIpmiClient;
 
 extern int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data);
+extern int npPushIpcRegisterId(NpWebApiIpmiClient *client, const void *data);
 extern int npPushRegisterUser(SceNpOnlineId *onlineId);	/* 0x8100987a, not written yet */
 extern int npPushUnregisterUser(SceNpOnlineId *onlineId);	/* 0x810098d4, not written yet */
 extern int npWebApiUserContextReleaseResources(NpWebApiUserContext *userCtx);

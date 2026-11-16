@@ -55,3 +55,19 @@ int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data)
 		result = ret;
 	return result;
 }
+
+/* tells the service (command 0x10000) the 20-byte ID a user registers with */
+int npPushIpcRegisterId(NpWebApiIpmiClient *client, const void *data)
+{
+	NpWebApiIpmiIn in[1];
+	int ret;
+	int result;
+
+	ret = 0;
+	in[0].data = data;
+	in[0].size = 20;
+	result = client->vtbl->invoke(client, 0x10000, in, 1, &ret, NULL, 0);
+	if (result == 0)
+		result = ret;
+	return result;
+}
