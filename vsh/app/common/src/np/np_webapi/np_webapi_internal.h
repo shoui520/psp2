@@ -152,9 +152,10 @@ extern void npWebApiMspaceGetStats(void *mspace, SceSize *stats);
 extern int npWebApiHeapCreate(void);
 extern void npWebApiHeapDestroy(void);
 extern int npWebApiHeapGet(void **pMspace);
+extern NpWebApiLibContext *npWebApiFindLibContext(int libCtxId, unsigned char allowDeleting);
 extern int npWebApiGlobalLockCreate(void);
-extern int npWebApiGlobalLock(void);
-extern int npWebApiGlobalUnlock(void);
+extern int npWebApiGlobalLock(void) __attribute__((noinline));
+extern int npWebApiGlobalUnlock(void) __attribute__((noinline));
 
 /* a node of the maps the library keeps its contexts in: the value it holds and the next node */
 typedef struct NpWebApiMapNode {

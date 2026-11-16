@@ -40,6 +40,47 @@ int npWebApiLibContextIsDeleting(NpWebApiLibContext *ctx)
 	return deleting;
 }
 
+/* the context of an ID, with a reference taken; none when it is not there or being deleted */
+NpWebApiLibContext *npWebApiFindLibContext(int libCtxId, unsigned char allowDeleting)
+{
+	NpWebApiLibContext *ctx;
+	int deleting;
+
+	npWebApiGlobalLock();
+	ctx = g_libContexts;
+	if (ctx != NULL) {
+		for (;;) {
+			if (npWebApiGetSdkVersion() >= NP_WEBAPI_SDK_3_30) {
+				if (ctx->id == libCtxId) {
+					if (allowDeleting == 0) {
+						SceNpCommonPs4_F5840D6E(&ctx->lock);
+						deleting = ctx->deleting;
+						SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+						if (deleting != 0) {
+							npWebApiGlobalUnlock();
+							return NULL;
+						}
+					}
+					goto found;
+				}
+			} else if (ctx->id == libCtxId) {
+				goto found;
+			}
+			ctx = ctx->next;
+			if (ctx == NULL)
+				break;
+		}
+	}
+	npWebApiGlobalUnlock();
+	return ctx;
+found:
+	SceNpCommonPs4_F5840D6E(&ctx->lock);
+	ctx->refCount++;
+	SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	npWebApiGlobalUnlock();
+	return ctx;
+}
+
 int npWebApiGlobalLockCreate(void)
 {
 	return SceNpCommonPs4_4858EFB6(&g_globalLock, "SceNpWebApiGlobalLock", 1);
