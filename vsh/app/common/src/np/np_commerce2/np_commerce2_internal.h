@@ -603,6 +603,50 @@ typedef struct NpCommerce2SkuItem {
 	SceUInt32 padding4;
 } NpCommerce2SkuItem;
 
+/* a SKU of a list in a response */
+typedef struct NpCommerce2SkuListItem {
+	SceNpCommerce2CommonData commonData;
+	const char *skuId;
+	SceUInt32 skuType;
+	SceUInt32 count;
+	SceUInt32 time;
+	SceUInt32 purchasability;
+	SceUInt32 annotation;
+	SceUInt32 downloadable;
+	SceUInt32 price;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 padding;
+	SceUInt64 dateC;
+	SceUInt64 dateD;
+	SceUInt64 dateE;
+	SceUInt32 valueF;
+	SceUInt32 padding2;
+	SceUInt64 valueG;
+	SceUInt32 valueE;
+	SceUInt32 padding3;
+	SceUInt64 dateA;
+	SceUInt64 dateB;
+	const char *textA;
+	const char *textB;
+	const char *textC;
+	const char *textD;
+	SceUInt32 countOfA;
+	SceUInt32 countOfB;
+	SceUInt32 countOfC;
+	SceUInt32 countOfD;
+	SceUInt32 countOfE;
+	SceUInt32 flags;
+	const char *description;
+	SceUInt32 padding4;
+} NpCommerce2SkuListItem;
+
+extern int npCommerce2ReadSkuListItem(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2SkuListItem *item,
+				      int kind);
+
+
 extern int npCommerce2ReadSkuValues(const char *buf, const NpCommerce2SkuOutputs *out, int detail, int unused);
 extern int npCommerce2ReadSkuRecord(const char *buf, const NpCommerce2SkuOutputs *out);
 extern int npCommerce2ReadSkuItem(const NpCommerce2Item *result, NpCommerce2SkuItem *item, int kind);
@@ -719,7 +763,6 @@ extern int npCommerce2GetContentRatingInfoAtOfProduct(const NpCommerce2Item *ite
 						      SceNpCommerce2ContentRatingInfo *info);
 extern int npCommerce2ReadListTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
 				    int kind, const char **textA, const char **textB, const char **textC);
-extern int npCommerce2_8100F8D8(int a1, int a2, void *a3, int a4);
 extern int npCommerce2_8101144E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_810114C6(int a1, int a2, int a3);
 extern int npCommerce2_8100FE34(int a1, int a2, int a3);

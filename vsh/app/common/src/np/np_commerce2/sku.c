@@ -182,3 +182,96 @@ int npCommerce2ReadSkuItem(const NpCommerce2Item *result, NpCommerce2SkuItem *it
 		ret = 0;
 	return ret;
 }
+
+/* the SKU at an index of a list: the fixed part through the table of outputs, then the texts and counts */
+int npCommerce2ReadSkuListItem(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2SkuListItem *item,
+			       int kind)
+{
+	const char *data = (const char *)result->commonData.data2;
+	NpCommerce2SkuOutputs out;
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt16 foundText;
+	SceUInt16 tag;
+	const char *start;
+	const char *rest;
+	int ret;
+	int head;
+
+	tag = kind == 3 ? 137 : 31;
+	sceClibMemset(item, 0, 0x100);
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), tag, 0xA5, index,
+					   &length);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = result->commonData.version;
+	item->commonData.buf_head = result->commonData.buf_head;
+	start = data + ret;
+	item->commonData.data = (const SceUChar8 *)start;
+	item->commonData.data_size = length;
+	sceClibMemset(&out, 0, 0x5C);
+	sceClibMemset(&out, 0, 0x48);
+	out.head = result->commonData.buf_head;
+	out.mask = 7;
+	out.flags = &item->flags;
+	out.skuId = &item->skuId;
+	out.skuType = &item->skuType;
+	out.count = &item->count;
+	out.time = &item->time;
+	out.purchasability = &item->purchasability;
+	out.annotation = &item->annotation;
+	out.downloadable = &item->downloadable;
+	out.price = &item->price;
+	out.valueA = &item->valueA;
+	out.valueB = &item->valueB;
+	out.valueC = &item->valueC;
+	out.valueD = &item->valueD;
+	out.valueE = &item->valueE;
+	out.dateA = &item->dateA;
+	out.dateB = &item->dateB;
+	out.dateC = &item->dateC;
+	out.dateD = &item->dateD;
+	out.dateE = &item->dateE;
+	out.valueF = &item->valueF;
+	out.valueG = &item->valueG;
+	ret = npCommerce2ReadSkuRecord(start, &out);
+	if (ret < 0)
+		return ret;
+	head = ret;
+	rest = start + ret;
+	item->commonData.data2 = (const SceUChar8 *)rest;
+	ret = npCommerce2ReadListTexts(&item->commonData, rest, length - head, item->skuType, &item->textA,
+				       &item->textB, &item->textC);
+	if (ret < 0)
+		return ret;
+	item->textD = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x3C, 0, &found);
+	if (ret >= 0 && found != 0)
+		item->textD = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x3D, NULL, &item->countOfA);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x3E, NULL, &item->countOfB);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x80, NULL, &item->countOfC);
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x85, NULL, &item->countOfD);
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x95, NULL, &item->countOfE);
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	item->description = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0xA6, 0, &foundText);
+	if (ret >= 0 && foundText != 0)
+		item->description = rest + ret;
+	if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+		ret = 0;
+	return ret;
+}
