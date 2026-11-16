@@ -28,9 +28,9 @@ NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibC
 	request->listAAllocator = (void *)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool2(libCtx));
 	request->listBAllocator = (void *)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool2(libCtx));
 	request->multipart = 0;
-	sceClibMemset(&request->reserved2c[64], 0, 0x40);
-	sceClibMemset(&request->reserved2c[0], 0, 0x40);
-	request->reserved2c[128] = 0;
+	sceClibMemset(request->boundary, 0, 0x40);
+	sceClibMemset(request->buffer76, 0, 0x40);
+	request->flag204 = 0;
 	request->kind = 0;
 	request->busy = 0;
 	request->httpRequestId = 0;

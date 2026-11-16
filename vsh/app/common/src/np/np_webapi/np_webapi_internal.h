@@ -27,6 +27,8 @@ extern "C" {
 #endif
 
 /* the errors the exports return (SCE_NP_WEBAPI_ERROR_*, SDK doc NpWebApi-Reference) */
+#define NP_WEBAPI_ERROR_MULTIPART_PART_NOT_FOUND	-2141902569	/* 0x80552917 */
+#define NP_WEBAPI_HTTP_ERROR_SSL	-2143088523	/* 0x80431075, SCE_HTTP_ERROR_SSL */
 #define NP_WEBAPI_ERROR_OUT_OF_MEMORY		-2141902591	/* 0x80552901 */
 #define NP_WEBAPI_ERROR_INVALID_ARGUMENT	-2141902590	/* 0x80552902 */
 #define NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND	-2141902588	/* 0x80552904 */
@@ -195,6 +197,8 @@ extern int npWebApiGlobalLock(void) __attribute__((noinline));
 extern int npWebApiGlobalUnlock(void) __attribute__((noinline));
 
 /* a user context: the library context it belongs to, its reference count, its ID and its user */
+struct NpWebApiListNode;
+
 typedef struct NpWebApiUserContext {
 	const void *vtable;
 	NpWebApiLibContext *libContext;
@@ -207,15 +211,15 @@ typedef struct NpWebApiUserContext {
 	struct NpWebApiUserContext *next;
 	struct NpWebApiRequest *requestHead;
 	int requestCount;
-	int field60;
-	int field64;
-	int containerA;
-	int field72;
-	int field76;
-	int containerB;
-	int field84;
-	int field88;
-	int containerC;
+	struct NpWebApiListNode *listAHead;
+	int listACount;
+	void *listAAllocator;
+	struct NpWebApiListNode *listBHead;
+	int listBCount;
+	void *listBAllocator;
+	struct NpWebApiListNode *listCHead;
+	int listCCount;
+	void *listCAllocator;
 	unsigned char flag96;
 	unsigned char flag97;
 	unsigned char flag98;
@@ -275,7 +279,10 @@ typedef struct NpWebApiRequest {
 	struct NpWebApiListNode *listBHead;
 	int listBCount;
 	void *listBAllocator;
-	unsigned char reserved2c[132];
+	char buffer76[64];
+	char boundary[64];
+	unsigned char flag204;
+	unsigned char reserved2c[3];
 	int kind;
 	unsigned char busy;
 	unsigned char reserved2d[3];
@@ -374,6 +381,17 @@ extern int npWebApiRequestGetField236(NpWebApiRequest *request);
 extern SceSize npWebApiRequestReadBuffered(NpWebApiRequest *request, void *dst, SceSize len);
 extern int npWebApiRequestIsSendComplete(NpWebApiRequest *request);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
+/* a part of a multipart request: its ID, its header text and the number of bytes it announced and
+   has sent */
+typedef struct NpWebApiMultipartPart {
+	int partId;
+	char header[1024];
+	int contentLength;
+	int sentLength;
+} NpWebApiMultipartPart;
+
+extern int npWebApiRequestSendMultipartPart(NpWebApiRequest *request, const void *data, SceSize size, int partId);
+extern NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx);
 extern NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
 extern void npWebApiRequestDestruct(NpWebApiRequest *request);
 extern void npWebApiRequestDelete(NpWebApiRequest *request);

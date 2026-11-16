@@ -16,4 +16,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	request_abort.cpp
 	http.cpp
 	request_create.cpp
+	userctx_destruct.cpp
+	multipart.cpp
 )
