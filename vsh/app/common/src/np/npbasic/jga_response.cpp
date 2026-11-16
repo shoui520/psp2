@@ -266,3 +266,19 @@ void npBasicJgaEventCallback(const NpBasicJgaEvent *event)
 	}
 	NP_BASIC_JGA_ASSERT_FAILED(58, "SceNpJgaIpcCallbackFn");
 }
+
+extern "C" int SceNpBasic_A1C1A8E2(int a1)
+{
+	NpBasicClient *client;
+	int result;
+
+	if (g_state.initialized == 0)
+		return NP_BASIC_ERROR_NOT_INITIALIZED;
+	client = SceIpmi_9EE9496B(g_state.client);
+	if (client == NULL)
+		return NP_BASIC_ERROR_UNKNOWN;
+	result = npBasicRequest_9003B(client, a1);
+	if (result < 0)
+		return npBasicConvertError(result);
+	return result;
+}

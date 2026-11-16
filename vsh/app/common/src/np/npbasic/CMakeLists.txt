@@ -7,6 +7,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	error.cpp
 	ipmi_client.cpp
 	jga_response.cpp
+	setup.cpp
 	jga_ipc.cpp
 	../impsutility/raw_message_client.cpp
 	../impsutility_ipc/np_imps_utility_ipc_message_client.cpp

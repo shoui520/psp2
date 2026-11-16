@@ -17,6 +17,7 @@
 #include <np/np_basic.h>
 #include <np/np_manager.h>
 #include <rtc.h>
+#include <kernel/threadmgr.h>
 #include "../../../../../lowlayer/src/ipmi_wrapper/ipmi_wrapper_client.h"
 #include "../impsutility_ipc/np_imps_utility_ipc_message_client.h"
 
@@ -44,6 +45,10 @@ typedef struct NpBasicClient NpBasicClient;
 extern "C" {
 #endif
 extern NpBasicClient *SceIpmi_9EE9496B(int client);
+extern SceUInt32 SceLibKernel_9F793F84(void);
+extern SceInt32 sceKernelGetSystemTime(SceKernelSysClock *pClock);
+extern int sceNpBasicUnregisterJoinGameAckHandler(void);
+extern int SceNpManager_96DF1B76(const SceNpCommunicationId **ppCommId);
 extern SceSize SceIpmi_006EFA9D(const IpmiWrapper::Client::Config *pConfig);
 extern int SceIpmi_22625598(IpmiWrapper::Client **ppClient, const IpmiWrapper::Client::Config *pConfig, void *pMemory);
 extern int SceIpmi_B56BAC7F(IpmiWrapper::Client *pClient);
@@ -214,6 +219,26 @@ typedef struct NpBasicJgaRequestHeader {
 } NpBasicJgaRequestHeader;
 
 
+/* what the title is told it may not yet send: pending presence for the rate limited sender */
+typedef struct NpBasicPartyPresence {
+	int size;
+	int version;
+	unsigned char data[452];
+} NpBasicPartyPresence;
+
+/* the sender thread's object: presence updates go out at most 6 in a row, one more every 60 s */
+typedef struct NpBasicSender {
+	SceInt64 interval;
+	unsigned char tokens;
+	SceUID thread;
+	unsigned char stopRequested;
+	SceUID timer;
+	SceNpBasicInGamePresence presence;
+	NpBasicPartyPresence partyPresence;
+	int presenceState;
+	int partyPresenceState;
+} NpBasicSender;
+
 /* the library's state (0x81007018): one object Sony's code reaches every part of through its base */
 typedef struct NpBasicState {
 	unsigned char initialized;
@@ -225,15 +250,18 @@ typedef struct NpBasicState {
 	SceNpCommunicationId commId;
 	unsigned char reserved0[3];
 	NpImpsUtilityIpcCallbacks callbackTable;
-	unsigned char reserved1[828];
-	unsigned char reserved2[32];
-	unsigned char reserved3[8];
-	unsigned char reserved4[160];
+	NpBasicSender sender;
+	SceKernelLwMutexWork mutex;
+	unsigned char altHandlerRegistered;
+	unsigned char reserved3[7];
+	SceUInt64 sendTimes[20];
 	unsigned char reserved5[8];
 	NpBasicJoinGameEntry joinGameEntries[NP_BASIC_JOIN_GAME_ENTRY_MAX];
 	SceNpBasicJoinGameAckRequestEventHandler joinGameAckHandler;
 	void *joinGameAckArg;
 	int joinGameAckMode;
+
+	NpBasicState();
 } NpBasicState;
 
 extern NpBasicState g_state;		/* 0x81007018 */
@@ -242,5 +270,35 @@ extern int npBasicJgaRequestReceived(int requestId, SceNpId npId, SceUInt64 dead
 extern int npBasicJgaCancelAll(void) __attribute__((noinline));
 extern int npBasicJgaCheckTimeouts(void) __attribute__((noinline));
 extern void npBasicJgaEventCallback(const NpBasicJgaEvent *event);
+
+/* the event handlers a title registers (sceNpBasicRegisterHandler) */
+typedef struct NpBasicEventHandlers {
+	SceUInt32 sdkVersion;
+	void (*friendList)(int count, const void *entries, void *arg);
+	void (*friendOnlineStatus)(const void *message, int status, void *arg);
+	void (*blockList)(int count, const void *entries, void *arg);
+	void (*friendGamePresence)(const void *message, const SceNpBasicGamePresence *presence, void *arg);
+	void (*inGameDataMessage)(const void *message, const void *data, void *arg);
+	void (*friendContext)(const void *message, int state, void *arg);
+	void (*friendRequest)(int count, const void *entries, void *arg);
+} NpBasicEventHandlers;
+
+/* the event handlers of SceNpBasic_6F1B58F9 */
+typedef struct NpBasicEventHandlers2 {
+	void (*myOnlineStatus)(int status, void *arg);
+	void (*friendList)(int count, const void *entries, void *arg);
+	void (*friendOnlineStatus)(const void *message, int status, void *arg);
+	void (*blockList)(int count, const void *entries, void *arg);
+	void (*friendPartyPresence)(const void *message, const void *presence, void *arg);
+	void (*friendGamePresenceDetail)(const void *message, const void *detail, void *arg);
+	void (*myGamePresenceDetail)(const void *message, void *arg);
+	void (*friendRequest)(int count, const void *entries, void *arg);
+} NpBasicEventHandlers2;
+
+extern int npBasicSenderTakeToken(NpBasicSender *sender) __attribute__((noinline));
+extern int npBasicSenderSetPresence(NpBasicSender *sender, const SceNpBasicInGamePresence *presence) __attribute__((noinline));
+extern int npBasicSenderClearPresence(NpBasicSender *sender) __attribute__((noinline));
+extern int npBasicSenderSetPartyPresence(NpBasicSender *sender, const NpBasicPartyPresence *presence) __attribute__((noinline));
+extern int npBasicSenderClearPartyPresence(NpBasicSender *sender) __attribute__((noinline));
 
 #endif

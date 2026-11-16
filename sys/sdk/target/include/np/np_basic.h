@@ -7,6 +7,7 @@
 
 #include <scetypes.h>
 #include <np/np_common.h>
+#include <rtc.h>
 
 #define SCE_NP_BASIC_TITLE_SIZE_MAX			128
 
@@ -58,5 +59,33 @@ typedef struct SceNpBasicJoinGameAckResponse {
 	SceNpBasicJoinGameAckResponseType type;
 	char denyReason[SCE_NP_BASIC_JOIN_GAME_ACK_RESPONSE_DENY_REASON_SIZE_MAX];
 } SceNpBasicJoinGameAckResponse;
+
+#define SCE_NP_BASIC_PLAY_SESSION_DESCRIPTION_SIZE_MAX	512
+
+typedef struct SceNpBasicPlaySessionLogDescription {
+	char text[SCE_NP_BASIC_PLAY_SESSION_DESCRIPTION_SIZE_MAX];
+} SceNpBasicPlaySessionLogDescription;
+
+typedef struct SceNpBasicPlaySessionLog {
+	SceRtcTick date;
+	SceNpId withWhom;
+	SceNpCommunicationId commId;
+	char title[SCE_NP_BASIC_TITLE_SIZE_MAX];
+	SceNpBasicPlaySessionLogDescription description;
+} SceNpBasicPlaySessionLog;
+
+typedef enum {
+	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_INVALID = -1,
+	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_ALL = 0,
+	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_BY_NP_COMM_ID = 1,
+	SCE_NP_BASIC_PLAY_SESSION_LOG_TYPE_MAX = 2
+} SceNpBasicPlaySessionLogType;
+
+#define SCE_NP_BASIC_IN_GAME_MESSAGE_SIZE_MAX	512
+
+typedef struct SceNpBasicInGameDataMessage {
+	SceUInt8 data[SCE_NP_BASIC_IN_GAME_MESSAGE_SIZE_MAX];
+	SceSize dataSize;
+} SceNpBasicInGameDataMessage;
 
 #endif /* _SCE_NP_BASIC_H_ */
