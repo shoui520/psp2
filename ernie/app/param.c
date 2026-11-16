@@ -28,7 +28,7 @@ static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 struct Param param;
 
 /* serial1Command0950's base step at a reset: 0x00411000's 0x0b */
-#if HW_IS(0x00411000)
+#if BOARD_IS(0x00411000)
 #define PARAM_BASE_DEFAULT	0x0b
 #else
 #define PARAM_BASE_DEFAULT	7

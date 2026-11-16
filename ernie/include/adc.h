@@ -8,7 +8,7 @@
 #include "ernie.h"
 
 /* 0x00411000 starts from channel 8 */
-#if HW_IS(0x00411000)
+#if BOARD_IS(0x00411000)
 #define ADC_FIRST_CHANNEL	0x08
 #else
 #define ADC_FIRST_CHANNEL	0x0b

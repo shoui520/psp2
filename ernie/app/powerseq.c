@@ -164,7 +164,7 @@ void powerSeqOn(void)
 	}
 	cookieCtrlBatteryCharge(1);
 #if !FW_SINCE(0x01000104)
-	elmoPowerOnStage = HW_IS(0x00411000) ? 0x0b : 7;
+	elmoPowerOnStage = BOARD_IS(0x00411000) ? 0x0b : 7;
 #endif
 	chargeInit();
 }

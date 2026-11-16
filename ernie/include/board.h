@@ -48,30 +48,30 @@
 
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K and 0x00411000, which
    switch only the dongle's (P13.0) */
-#define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000 && !HW_IS(0x00411000))
+#define BOARD_HOST_OUTPUT	(ERNIE_BOARD != 0x00414000 && !BOARD_IS(0x00411000))
 
 /* the power LED: DEM-3000K's and 0x00411000's is the Elmo's LED register's bit 15 (powerLedSet) for a suspend
    and sceSysconCtrlLED's 0x40, which goes on to the other LEDs' bits; the others' the LED
    driver's (powerLedSetMode) */
-#define BOARD_POWER_LED_ELMO	(ERNIE_BOARD == 0x00414000 || HW_IS(0x00411000))
+#define BOARD_POWER_LED_ELMO	(ERNIE_BOARD == 0x00414000 || BOARD_IS(0x00411000))
 
 /* the serial commands 0x0910-0x0916 on the kernel's objects: 0x00090804's, kept by 0x00411000,
    which keeps that kernel */
-#define BOARD_KERNEL_COMMANDS	(!FW_SINCE(0x00090903) || HW_IS(0x00411000))
+#define BOARD_KERNEL_COMMANDS	(!FW_SINCE(0x00090903) || BOARD_IS(0x00411000))
 
 /* the power-on test (resume mode 0x0d, powerErrorGet) steps P2.4-P2.7 and P1.7 */
-#define BOARD_POWER_TEST_PINS	HW_IS(0x00411000)
+#define BOARD_POWER_TEST_PINS	BOARD_IS(0x00411000)
 
 /* inputKeys.state's bit 0x0080 converts channel 8 (ANI8), taken by analogEvent */
-#define BOARD_ANALOG_CHANNEL8	HW_IS(0x00411000)
+#define BOARD_ANALOG_CHANNEL8	BOARD_IS(0x00411000)
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
    0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa) */
-#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00411000))
+#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !BOARD_IS(0x00411000))
 
 /* the settings stand in for a battery that does not answer (its temperature, capacities, ...);
    PCH-1000 always asks the battery */
-#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00411000))
+#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !BOARD_IS(0x00411000))
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
    after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 or PDEL */
@@ -115,7 +115,7 @@
 
 /* the configuration's wake masks the board reads (ConfigBlock.wakeMasks0-2): 0x00601000's and
    0x00411000's the first set, DEM-3000L's the second, PCH-1000's the third */
-#if HW_IS(0x00601000) || HW_IS(0x00411000)
+#if HW_IS(0x00601000) || BOARD_IS(0x00411000)
 #define BOARD_WAKE_MASKS	wakeMasks0
 #elif ERNIE_BOARD == 0x00406000
 #define BOARD_WAKE_MASKS	wakeMasks2
@@ -128,7 +128,7 @@
 #define BOARD_INPUT3_PINS	(ERNIE_BOARD != 0x00406000 || HW_IS(0x00601000))
 
 /* input 3's bits 2-4 from P2.3, P2.7 and P2.5 (sampleInputs3) */
-#define BOARD_INPUT3_PORT2	HW_IS(0x00411000)
+#define BOARD_INPUT3_PORT2	BOARD_IS(0x00411000)
 
 /* the serial link's mode 2 (app/serial2.c: its commands, notifications and test area, P7.1,
    its request and link inputs): not on PCH-1000, whose link answers mode 2 with no data */

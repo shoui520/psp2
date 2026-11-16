@@ -131,7 +131,7 @@ struct ConfigBlock {
 	unsigned char	reserved22[2];		/* PCH-1000's layout: the trim a byte later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0xf8 - 0xf5];
-#elif HW_IS(0x00411000)
+#elif BOARD_IS(0x00411000)
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
 	unsigned char	reserved7[0xf8 - 0xf3];
 #else

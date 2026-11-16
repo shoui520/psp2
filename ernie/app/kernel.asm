@@ -19,7 +19,7 @@
 	PUBLIC	_ena_dsp, _ext_tsk, _get_mpf, _pget_mpf, _tget_mpf, _rcv_mbx, _prcv_mbx
 	PUBLIC	_trcv_mbx, _ref_flg, _ref_mbx, _rel_mpf, _ret_int, _iset_flg, _set_flg
 	PUBLIC	_snd_mbx, _sta_cyc, _isig_tim, _wai_flg, _pol_flg, _twai_flg
-$_IF (ERNIE_FW<=0x00090804||ERNIE_HW==0x00411000)
+$_IF (ERNIE_FW<=0x00090804||ERNIE_BOARD==0x00411000)
 	PUBLIC	_ref_cyc, _ref_mpf, _ref_tsk, _ref_ver
 $ENDIF
 	PUBLIC	__kernel_int_entry, _kernelStart
@@ -34,7 +34,7 @@ $ENDIF
 
 ; the configuration (page 0), where the link puts kernelcfg.asm's: first the kernel's version
 ; (ref_ver's T_RVER), then the objects' tables
-$_IF (ERNIE_FW<=0x00090804||ERNIE_HW==0x00411000)
+$_IF (ERNIE_FW<=0x00090804||ERNIE_BOARD==0x00411000)
 CONFIG		EQU	0D878H
 $ELSE
 CONFIG		EQU	0D5FEH
@@ -902,7 +902,7 @@ _trcv_mbx:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
-$_IF (ERNIE_FW<=0x00090804||ERNIE_HW==0x00411000)
+$_IF (ERNIE_FW<=0x00090804||ERNIE_BOARD==0x00411000)
 ; ER ref_cyc(ID cycid, T_RCYC *pk_rcyc): its state, and the ticks to its next start (the
 ; counts of the timeout queue up to it, when it is on the queue)
 _ref_cyc:
@@ -1046,7 +1046,7 @@ _ref_mbx:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
-$_IF (ERNIE_FW<=0x00090804||ERNIE_HW==0x00411000)
+$_IF (ERNIE_FW<=0x00090804||ERNIE_BOARD==0x00411000)
 ; ER ref_mpf(ID mpfid, T_RMPF *pk_rmpf): the task waiting first, or the free blocks' count
 _ref_mpf:
 	PUSH	PSW
