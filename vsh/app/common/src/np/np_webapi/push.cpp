@@ -71,3 +71,37 @@ int npPushIpcRegisterId(NpWebApiIpmiClient *client, const void *data)
 		result = ret;
 	return result;
 }
+
+/* starts the notifications of a user; the library context must exist */
+int npPushRegisterUser(SceNpOnlineId *onlineId)
+{
+	NpPushLibContext *ctx;
+	NpPushKey key;
+	int result;
+
+	ctx = npPushLibContextGet();
+	if (ctx == NULL)
+		return -2141871614;
+	result = npPushLibContextStartNotification(ctx, SceNpCommonPs4_D0787194(&key, onlineId));
+	SceNpCommonPs4_1543D7EE(&key);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+/* stops them */
+int npPushUnregisterUser(SceNpOnlineId *onlineId)
+{
+	NpPushLibContext *ctx;
+	NpPushKey key;
+	int result;
+
+	ctx = npPushLibContextGet();
+	if (ctx == NULL)
+		return -2141871614;
+	result = npPushLibContextStopNotification(ctx, SceNpCommonPs4_D0787194(&key, onlineId));
+	SceNpCommonPs4_1543D7EE(&key);
+	if (result >= 0)
+		return 0;
+	return result;
+}

@@ -104,6 +104,9 @@ extern int SceNpCommonPs4_4858EFB6(NpWebApiMutex *mutex, const char *name, int r
 extern int SceNpCommonPs4_F5840D6E(NpWebApiMutex *mutex);	/* lock */
 extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
 extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
+extern int SceNpCommon_0624AE44(char *version);	/* the library's version text */
+extern int sceClibSnprintf(char *dst, SceSize size, const char *fmt, ...);
+extern int SceNpManager_E45E4003(void *buffer);
 extern int SceNpCommon_8C21F489(const SceNpOnlineId *a, const SceNpOnlineId *b);	/* compare online IDs */
 extern int SceNpCommonPs4_38CC9AF5(void *pool, void *block);
 extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
@@ -427,6 +430,9 @@ extern const void *g_userObjectVtable[];	/* 0x8100edcc */
 extern NpWebApiUserContextHandle *npWebApiLibContextCreateUserContextHandle(NpWebApiLibContext *libCtx);
 extern NpWebApiUserObject *npWebApiUserObjectConstruct(NpWebApiUserObject *object, NpWebApiLibContext *libCtx,
 	NpWebApiUserContext *userCtx);
+extern int npWebApiPrepareUserContext(int libCtxId, unsigned char setup);
+extern int npWebApiPrepareAndDeleteUserContext(int libCtxId);
+extern int npWebApiUserContextSetup(NpWebApiUserContext *userCtx);
 extern NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx);
 extern NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
 extern void npWebApiRequestDestruct(NpWebApiRequest *request);
@@ -473,7 +479,7 @@ typedef struct NpPushLibContext {
 
 extern NpPushLibContext *g_pushLibContext;	/* 0x81010038 */
 extern void npPushLibContextDelete(void);
-extern NpPushLibContext *npPushLibContextGet(void);
+extern NpPushLibContext *npPushLibContextGet(void) __attribute__((noinline));
 extern int npPushSetCallbackParam(const int *param);
 typedef struct NpPushUserValue {
 	NpPushKey key;
