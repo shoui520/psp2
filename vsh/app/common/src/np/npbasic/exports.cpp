@@ -7,23 +7,25 @@
 
 extern "C" {
 
-int sceNpBasicGetFriendOnlineStatus(int a1, int a2)
+int sceNpBasicGetFriendOnlineStatus(const void *a1, int *a2)
 {
+	NpBasicClient *client;
 	int result;
 
 	if (g_initialized == 0)
 		return NP_BASIC_ERROR_NOT_INITIALIZED;
-	if (SceIpmi_9EE9496B(g_ipmiClient) == 0)
+	client = SceIpmi_9EE9496B(g_ipmiClient);
+	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a1 == 0 || a2 == 0)
+	if (a1 == NULL || a2 == NULL)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
-	result = npBasicGetFriendOnlineStatus(a1, a2, 0);
+	result = npBasicGetFriendOnlineStatus(client, a1, a2);
 	if (result < 0)
 		return npBasicConvertError(result);
 	return result;
 }
 
-int sceNpBasicGetFriendListEntryCount(int a1)
+int sceNpBasicGetFriendListEntryCount(int *a1)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -34,7 +36,7 @@ int sceNpBasicGetFriendListEntryCount(int a1)
 	client = SceIpmi_9EE9496B(g_ipmiClient);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a1 == 0)
+	if (a1 == NULL)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
 	found = 0;
 	result = npBasicGetFriendListEntryCount(client, a1, &found);
@@ -47,7 +49,7 @@ int sceNpBasicGetFriendListEntryCount(int a1)
 	return -2141905651;
 }
 
-int sceNpBasicGetFriendRequestEntryCount(int a1)
+int sceNpBasicGetFriendRequestEntryCount(int *a1)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -58,7 +60,7 @@ int sceNpBasicGetFriendRequestEntryCount(int a1)
 	client = SceIpmi_9EE9496B(g_ipmiClient);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a1 == 0)
+	if (a1 == NULL)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
 	found = 0;
 	result = npBasicGetFriendRequestEntryCount(client, a1, &found);
@@ -71,7 +73,7 @@ int sceNpBasicGetFriendRequestEntryCount(int a1)
 	return -2141905651;
 }
 
-int sceNpBasicGetRequestedFriendRequestEntryCount(int a1)
+int sceNpBasicGetRequestedFriendRequestEntryCount(int *a1)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -82,7 +84,7 @@ int sceNpBasicGetRequestedFriendRequestEntryCount(int a1)
 	client = SceIpmi_9EE9496B(g_ipmiClient);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a1 == 0)
+	if (a1 == NULL)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
 	found = 0;
 	result = npBasicGetRequestedFriendRequestEntryCount(client, a1, &found);
@@ -95,7 +97,7 @@ int sceNpBasicGetRequestedFriendRequestEntryCount(int a1)
 	return -2141905651;
 }
 
-int sceNpBasicGetBlockListEntryCount(int a1)
+int sceNpBasicGetBlockListEntryCount(int *a1)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -106,7 +108,7 @@ int sceNpBasicGetBlockListEntryCount(int a1)
 	client = SceIpmi_9EE9496B(g_ipmiClient);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a1 == 0)
+	if (a1 == NULL)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
 	found = 0;
 	result = npBasicGetBlockListEntryCount(client, a1, &found);
@@ -119,7 +121,7 @@ int sceNpBasicGetBlockListEntryCount(int a1)
 	return -2141905651;
 }
 
-int sceNpBasicGetFriendListEntries(unsigned int a1, int a2, int a3, int a4)
+int sceNpBasicGetFriendListEntries(unsigned int a1, void *a2, int a3, int *a4)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -132,7 +134,7 @@ int sceNpBasicGetFriendListEntries(unsigned int a1, int a2, int a3, int a4)
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
 	found = 0;
-	if (a2 == 0 || a3 == 0 || a4 == 0 || a1 >= 100)
+	if (a2 == NULL || a3 == 0 || a4 == NULL || a1 >= 100)
 		result = NP_BASIC_ERROR_INVALID_ARGUMENT;
 	if (result >= 0) {
 		result = npBasicGetFriendListEntries(client, a1, a2, a3, a4, &found);
@@ -146,7 +148,7 @@ int sceNpBasicGetFriendListEntries(unsigned int a1, int a2, int a3, int a4)
 	return result;
 }
 
-int sceNpBasicGetFriendRequestEntries(unsigned int a1, int a2, int a3, int a4)
+int sceNpBasicGetFriendRequestEntries(unsigned int a1, void *a2, int a3, int *a4)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -159,7 +161,7 @@ int sceNpBasicGetFriendRequestEntries(unsigned int a1, int a2, int a3, int a4)
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
 	found = 0;
-	if (a2 == 0 || a3 == 0 || a4 == 0 || a1 >= 100)
+	if (a2 == NULL || a3 == 0 || a4 == NULL || a1 >= 100)
 		result = NP_BASIC_ERROR_INVALID_ARGUMENT;
 	if (result >= 0) {
 		result = npBasicGetFriendRequestEntries(client, a1, a2, a3, a4, &found);
@@ -173,7 +175,7 @@ int sceNpBasicGetFriendRequestEntries(unsigned int a1, int a2, int a3, int a4)
 	return result;
 }
 
-int sceNpBasicGetRequestedFriendRequestEntries(unsigned int a1, int a2, int a3, int a4)
+int sceNpBasicGetRequestedFriendRequestEntries(unsigned int a1, void *a2, int a3, int *a4)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -186,7 +188,7 @@ int sceNpBasicGetRequestedFriendRequestEntries(unsigned int a1, int a2, int a3, 
 		return NP_BASIC_ERROR_UNKNOWN;
 	result = 0;
 	found = 0;
-	if (a2 == 0 || a3 == 0 || a4 == 0 || a1 >= 100)
+	if (a2 == NULL || a3 == 0 || a4 == NULL || a1 >= 100)
 		result = NP_BASIC_ERROR_INVALID_ARGUMENT;
 	if (result >= 0) {
 		result = npBasicGetRequestedFriendRequestEntries(client, a1, a2, a3, a4, &found);
@@ -200,7 +202,7 @@ int sceNpBasicGetRequestedFriendRequestEntries(unsigned int a1, int a2, int a3, 
 	return result;
 }
 
-int sceNpBasicGetBlockListEntries(unsigned int a1, int a2, int a3, int a4)
+int sceNpBasicGetBlockListEntries(unsigned int a1, void *a2, int a3, int *a4)
 {
 	NpBasicClient *client;
 	unsigned char found;
@@ -211,7 +213,7 @@ int sceNpBasicGetBlockListEntries(unsigned int a1, int a2, int a3, int a4)
 	client = SceIpmi_9EE9496B(g_ipmiClient);
 	if (client == NULL)
 		return NP_BASIC_ERROR_UNKNOWN;
-	if (a2 == 0 || a3 == 0 || a4 == 0 || a1 >= 100)
+	if (a2 == NULL || a3 == 0 || a4 == NULL || a1 >= 100)
 		return NP_BASIC_ERROR_INVALID_ARGUMENT;
 	found = 0;
 	result = npBasicGetBlockListEntries(client, a1, a2, a3, a4, &found);
