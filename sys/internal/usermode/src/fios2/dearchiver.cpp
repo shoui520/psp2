@@ -448,7 +448,7 @@ int PsarcDearchiver::LookupPath(FiosPath *pPath, ArchiveTracker **ppOutTracker,
 			*ppOutEntry = NULL;
 			break;
 		}
-		pEntry = pTracker->header.FindEntry(pTracker->pTOC, rest);
+		pEntry = pTracker->header.FindEntry(pTracker->pTOC, p);
 		if (pEntry != NULL) {
 			result = FINDRESULT_FILE;
 			*ppOutEntry = pEntry;
@@ -1847,8 +1847,6 @@ int MountHeaderCallback(FiosChunk *pChunk, int run)
 		pTOC = (uint8_t *)pTracker + blockSizesEnd;
 	} else {
 		readLength = header.tocEntrySize;
-		if (readLength > 0xffffffff)
-			return SCE_FIOS_ERROR_CANT_ALLOCATE_CHUNK;
 		pTOC = (uint8_t *)fiosChunkAllocateBufferLocked(fiosChunkID(pChunk),
 								(uint32_t)readLength);
 		if (pTOC == NULL)
