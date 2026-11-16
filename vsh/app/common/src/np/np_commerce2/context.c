@@ -34,3 +34,104 @@ int npCommerce2TermTable(void)
 	npCommerce2_8101D9AC(&g_tableLock);
 	return sceKernelDeleteLwMutex(&g_tableLock);
 }
+
+/* makes a context: its HTTP template and its place in the table; kind 1 is the shell's */
+int npCommerce2CreateContext(SceUInt32 version, SceUInt32 *ctxId, int kind)
+{
+	NpCommerce2Context *ctx;
+	SceUInt32 mode;
+	int ret;
+
+	if (version > 2)
+		return SCE_NP_COMMERCE2_ERROR_UNSUPPORTED_VERSION;
+	if (ctxId == NULL)
+		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
+
+	ctx = npCommerce2Alloc(sizeof(*ctx));
+	if (ctx == NULL) {
+		ret = SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+	} else {
+		sceClibMemset(ctx, 0, sizeof(*ctx));
+		mode = ctx->kind;
+		ctx->version = version;
+		if (mode == 1)
+			mode = 1;
+		else
+			mode = 3;
+		ctx->mode = mode;
+		ret = npCommerce2CreateHttpTemplate(&ctx->httpTemplate, &ctx->httpConnection);
+		if (ret >= 0) {
+			ret = npCommerce2AddContext(&g_tableLock, ctx, ctxId, kind);
+			if (ret >= 0)
+				return ret;
+		}
+	}
+	if (ctx != NULL) {
+		if (ctx->httpTemplate != 0)
+			npCommerce2DeleteHttpTemplate(ctx->httpTemplate, ctx->httpConnection);
+		npCommerce2Free(ctx);
+	}
+	return ret;
+}
+
+int npCommerce2DestroyAllContextsLocked(void)
+{
+	return npCommerce2DestroyAllContexts(&g_tableLock);
+}
+
+int npCommerce2DestroyContext(SceUInt32 ctxId)
+{
+	NpCommerce2Context *ctx = NULL;
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, ctxId, &ctx, 1);
+	if (ret >= 0)
+		ret = npCommerce2UnlinkContext(&g_tableLock, ctxId);
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}
+
+int npCommerce2DestroyRequest(SceUInt32 reqId)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Request *req = NULL;
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &ctx, 1);
+	if (ret >= 0) {
+		ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);
+		if (ret >= 0) {
+			npCommerce2RemoveRequest(&g_tableLock, reqId);
+			ret = 0;
+		}
+	}
+	if (req != NULL)
+		npCommerce2ReleaseRequest(&g_tableLock, req);
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}
+
+int npCommerce2AbortRequest(SceUInt32 reqId)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Request *req = NULL;
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &ctx, 1);
+	if (ret >= 0) {
+		ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);
+		if (ret >= 0) {
+			npCommerce2AbortHttpRequest(req->httpRequest);
+			npCommerce2AbortShellSlot(req->shellSlot);
+			ret = 0;
+			req->flags |= NP_COMMERCE2_REQUEST_FLAG_ABORTED;
+		}
+	}
+	if (req != NULL)
+		npCommerce2ReleaseRequest(&g_tableLock, req);
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}

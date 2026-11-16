@@ -163,6 +163,7 @@ typedef struct NpCommerce2Context {
 	SceInt32 httpShortfall;
 	SceUInt32 responseKind;
 	SceUInt32 reserved4;
+	SceUInt32 reserved5;
 } NpCommerce2Context;
 
 #define NP_COMMERCE2_CONTEXT_FLAG_REMOVED	0x1
@@ -196,7 +197,7 @@ extern int npCommerce2CreateContext(SceUInt32 version, SceUInt32 *ctxId, int she
 extern int npCommerce2DestroyContext(SceUInt32 ctxId);
 extern int npCommerce2DestroyRequest(SceUInt32 reqId);
 extern int npCommerce2AbortRequest(SceUInt32 reqId);
-extern int npCommerce2UnlockTable(void);
+extern int npCommerce2DestroyAllContextsLocked(void);
 
 /* request builders and result readers not understood well enough to name yet; named by address */
 extern int npCommerce2_8100D4EC(int a1, void *a2, int a3);

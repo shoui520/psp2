@@ -82,7 +82,7 @@ int SceNpCommerce2_B45A7935(void)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2UnlockTable();
+	return npCommerce2DestroyAllContextsLocked();
 }
 
 int sceNpCommerce2DestroyCtx(SceUInt32 ctxId)
