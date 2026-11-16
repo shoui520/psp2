@@ -104,3 +104,23 @@ int npCommerce2ReadTextItem0x39_81011FC8(const NpCommerce2Item *result, SceUInt3
 {
 	return npCommerce2ReadTextItem0x39(result, index, item);
 }
+
+int npCommerce2ReadItem0x32_81012F80(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadItem0x32(result, item);
+}
+
+int npCommerce2ReadCount0x33_81013012(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadCount0x33(result, item);
+}
+
+int npCommerce2ReadItem0x32_81013A22(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadItem0x32(result, item);
+}
+
+int npCommerce2ReadCount0x33_81013A2A(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	return npCommerce2ReadCount0x33(result, item);
+}

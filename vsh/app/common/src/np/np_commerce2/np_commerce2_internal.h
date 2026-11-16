@@ -1001,6 +1001,24 @@ extern int npCommerce2InitTextsResult0x4f(NpCommerce2Texts6Result *result, const
 extern int npCommerce2InitTextsResult0x4f3(NpCommerce2Texts3Result *result, const char *data, SceSize size);
 extern int npCommerce2InitBareResult_81012B60(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2InitResult0x15x2d3(NpCommerce2ValuesResult *result, const char *data, SceSize size);
+typedef struct NpCommerce2ValueTextItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	const char *textA;
+	const char *textB;
+	SceUInt32 padding;
+} NpCommerce2ValueTextItem;
+
+extern int npCommerce2InitBareResult_81012CF0(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadValueText0x34(const NpCommerce2Item *result, NpCommerce2ValueTextItem *item);
+extern int npCommerce2InitResult0x31(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadItem0x32(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadCount0x33(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadItem0x32_81012F80(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadCount0x33_81013012(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadItem0x32_81013A22(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadCount0x33_81013A2A(const NpCommerce2Item *result, NpCommerce2Item *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1086,21 +1104,14 @@ extern int npCommerce2CreateReqGetAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetWal(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqTopupCC(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqTopEdy(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81012CF0(int a1, void *a2, int a3);
-extern int npCommerce2_81012D66(int a1, int a2);
 extern int npCommerce2CreateReqTopEdyRes(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqVchrRedPrev(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810079A4(int a1, int a2, int a3, int a4);
-extern int npCommerce2_81012E3C(int a1, void *a2, int a3);
-extern int npCommerce2_81012F80(int a1, int a2);
-extern int npCommerce2_81013012(int a1, int a2);
 extern int npCommerce2_8101301A(int a1, int a2, int a3);
 extern int npCommerce2_81013362(int a1, void *a2, int a3);
 extern int npCommerce2_81013432(int a1, int a2, int a3);
 extern int npCommerce2CreateReqVchrRed(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81013952(int a1, void *a2, int a3);
-extern int npCommerce2_81013A22(int a1, int a2);
-extern int npCommerce2_81013A2A(int a1, int a2);
 extern int npCommerce2CreateReqGetResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81013A32(int a1, void *a2, int a3);
 extern int npCommerce2CreateReqEventLog(SceUInt32 ctxId, SceUInt32 *reqId);
