@@ -102,11 +102,25 @@ extern int SceNpCommonPs4_F5840D6E(NpWebApiMutex *mutex);	/* lock */
 extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
 extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 extern int SceNpCommon_8C21F489(const SceNpOnlineId *a, const SceNpOnlineId *b);	/* compare online IDs */
+extern int SceNpCommonPs4_38CC9AF5(void *pool);
+extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
+extern int SceNpCommonPs4_31DB2D97(void *pool);
+extern const void *g_userContextVtable[];	/* 0x8100eddc */
 #ifdef __cplusplus
 }
 #endif
 
 struct NpWebApiUserContext;
+
+/* what a library context's pool is made of (0x28 bytes): its memory block, its mspace, and the pool
+   object the SceNpCommonPs4 containers allocate from */
+typedef struct NpWebApiHeapBlock {
+	SceUID memBlock;
+	void *mspace;
+	void *owner;
+	unsigned char reserved0[8];
+	unsigned char poolObject[20];
+} NpWebApiHeapBlock;
 
 /* a library context (176 bytes); the contexts of the process are a list (g_libContexts) */
 typedef struct NpWebApiLibContext {
@@ -115,7 +129,7 @@ typedef struct NpWebApiLibContext {
 	unsigned int state;
 	int refCount;
 	int id;
-	void *heapBlock;
+	NpWebApiHeapBlock *heapBlock;
 	NpWebApiMutex lock;
 	struct NpWebApiUserContext *userContextHead;
 	int userContextCount;
@@ -172,7 +186,7 @@ extern int npWebApiGlobalUnlock(void) __attribute__((noinline));
 
 /* a user context: the library context it belongs to, its reference count, its ID and its user */
 typedef struct NpWebApiUserContext {
-	unsigned char reserved0[4];
+	const void *vtable;
 	NpWebApiLibContext *libContext;
 	int refCount;
 	int id;
@@ -181,8 +195,17 @@ typedef struct NpWebApiUserContext {
 	void *requests;
 	void *object44;
 	struct NpWebApiUserContext *next;
-	void *requestHead;
-	unsigned char reserved3[40];
+	struct NpWebApiRequest *requestHead;
+	int requestCount;
+	int field60;
+	int field64;
+	int containerA;
+	int field72;
+	int field76;
+	int containerB;
+	int field84;
+	int field88;
+	int containerC;
 	unsigned char flag96;
 	unsigned char flag97;
 	unsigned char flag98;
@@ -212,6 +235,8 @@ extern int npWebApiIsShellProcess(void);
 
 /* a request: the library context it belongs to, its reference count and its 64-bit ID (the library
    context's ID is in the upper half) */
+struct NpWebApiRequest;
+
 typedef struct NpWebApiRequest {
 	unsigned char reserved0[4];
 	NpWebApiLibContext *libContext;
@@ -248,6 +273,21 @@ extern NpWebApiRequest *npWebApiRequestSetFlag328(NpWebApiRequest *request, char
 extern int npWebApiRequestGetFlag389(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestSetFlag389(NpWebApiRequest *request, char value);
 extern void *npWebApiRequestGetObject280(NpWebApiRequest *request);
+extern void *npWebApiLibContextGetPool(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx);
+extern void *npWebApiLibContextGetPool2(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextPoolAlloc(NpWebApiLibContext *ctx, int size);
+extern int npWebApiLibContextGetId(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextZero(void);
+extern void *npWebApiLibContextGetPushEventObject(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextGetField116(NpWebApiLibContext *ctx);
+extern NpWebApiUserContext *npWebApiUserContextConstruct(NpWebApiUserContext *userCtx, NpWebApiLibContext *libCtx,
+	const SceNpOnlineId *onlineId);
+extern int npWebApiUserContextAssignId(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextAddRequest(NpWebApiUserContext *userCtx, NpWebApiRequest *request);
+extern int npWebApiUserContextRemoveRequest(NpWebApiUserContext *userCtx, NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiUserContextFindRequest(NpWebApiUserContext *userCtx, SceInt64 requestId);
+extern NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiRequest *next);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
 extern SceInt64 npWebApiRequestGetId(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestNext(NpWebApiRequest *request);

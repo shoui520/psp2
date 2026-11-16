@@ -181,6 +181,46 @@ done:
 	return node;
 }
 
+void *npWebApiLibContextGetPool(NpWebApiLibContext *ctx)
+{
+	return ctx->heapBlock->poolObject;
+}
+
+int npWebApiLibContextDestroyPool(NpWebApiLibContext *ctx)
+{
+	return SceNpCommonPs4_38CC9AF5(ctx->heapBlock->poolObject);
+}
+
+void *npWebApiLibContextGetPool2(NpWebApiLibContext *ctx)
+{
+	return ctx->heapBlock->poolObject;
+}
+
+int npWebApiLibContextPoolAlloc(NpWebApiLibContext *ctx, int size)
+{
+	return SceNpCommonPs4_299ADFC3(ctx->heapBlock->poolObject, size);
+}
+
+int npWebApiLibContextGetId(NpWebApiLibContext *ctx)
+{
+	return ctx->id;
+}
+
+int npWebApiLibContextZero(void)
+{
+	return 0;
+}
+
+void *npWebApiLibContextGetPushEventObject(NpWebApiLibContext *ctx)
+{
+	return ctx->pushEventObject;
+}
+
+int npWebApiLibContextGetField116(NpWebApiLibContext *ctx)
+{
+	return ctx->reserved116;
+}
+
 int npWebApiGlobalLockCreate(void)
 {
 	return SceNpCommonPs4_4858EFB6(&g_globalLock, "SceNpWebApiGlobalLock", 1);

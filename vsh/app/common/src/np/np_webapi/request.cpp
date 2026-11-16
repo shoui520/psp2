@@ -89,3 +89,9 @@ void *npWebApiRequestGetObject280(NpWebApiRequest *request)
 {
 	return request->object280;
 }
+
+NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiRequest *next)
+{
+	request->next = next;
+	return request;
+}
