@@ -83,6 +83,17 @@ extern int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *res
 				   SceNpCommerce2GameProductInfo *gameProductInfo);
 extern int SceNpCommerce2_C4CC8E22(int a1, int a2, int a3);
 
+extern int g_shellReady;
+extern SceUInt32 g_checkCtxId;
+extern SceUInt32 g_checkReqId;
+extern int g_checkAborted;
+extern int SceShellSvc_B31E7F1C(void);
+extern int npCommerce2_8101EB8E(int a1, int a2);
+extern int npCommerce2_8101EBDE(int a1);
+extern int npCommerce2_81017F7A(void);
+extern int npCommerce2_81017F9C(void);
+extern int npCommerce2_81017FC2(int a1);
+
 /* set by Init, cleared by Term */
 extern int g_initialized;
 

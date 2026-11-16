@@ -156,3 +156,39 @@ int sceNpCommerce2GetContentRatingDescriptor(const SceNpCommerce2ContentRatingIn
 {
 	return SceNpCommerce2_C4CC8E22((int)contentRatingInfo, (int)idx, (int)descriptor);
 }
+
+int SceNpCommerce2_624B7A50(void)
+{
+	return npCommerce2_81017F7A();
+}
+
+int SceNpCommerce2_145137BE(void)
+{
+	return npCommerce2_81017F9C();
+}
+
+int SceNpCommerce2_BC89C4D3(int a1)
+{
+	int mode;
+
+	switch (a1) {
+	case 1:
+		mode = 2;
+		break;
+	case 2:
+		mode = 3;
+		break;
+	case 3:
+		mode = 4;
+		break;
+	case 4:
+		mode = 9;
+		break;
+	case 5:
+		mode = 10;
+		break;
+	default:
+		return NP_COMMERCE2_ERROR_INVALID_VERSION;
+	}
+	return npCommerce2_81017FC2(mode);
+}
