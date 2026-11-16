@@ -38,6 +38,125 @@ extern void SceNpManager_9554802B(const void *data1, const void *data2, const vo
 #define NP_COMMERCE2_VERSION_2		1
 #define NP_COMMERCE2_VERSION_3		2
 
+/* the operations of the store API (the library's strings name them): the type of a request */
+enum {
+	NP_COMMERCE2_OP_CR_SESS = 1,
+	NP_COMMERCE2_OP_DEL_SESS = 2,
+	NP_COMMERCE2_OP_GET_CAT = 3,
+	NP_COMMERCE2_OP_GET_PROD = 4,
+	NP_COMMERCE2_OP_SRCH_PROD = 5,
+	NP_COMMERCE2_OP_GET_WAL = 6,
+	NP_COMMERCE2_OP_GET_DRM = 7,
+	NP_COMMERCE2_OP_PUR_PREV = 8,
+	NP_COMMERCE2_OP_PURCH = 9,
+	NP_COMMERCE2_OP_GET_C_C = 10,
+	NP_COMMERCE2_OP_TOPUP_C_C = 11,
+	NP_COMMERCE2_OP_VCHR_RED_PREV = 12,
+	NP_COMMERCE2_OP_VCHR_RED = 13,
+	NP_COMMERCE2_OP_TOP_EDY = 14,
+	NP_COMMERCE2_OP_TOP_EDY_RES = 15,
+	NP_COMMERCE2_OP_ADD_CART = 16,
+	NP_COMMERCE2_OP_REM_CART = 17,
+	NP_COMMERCE2_OP_CLEAR_CART = 18,
+	NP_COMMERCE2_OP_GET_CART = 19,
+	NP_COMMERCE2_OP_GET_PROV = 20,
+	NP_COMMERCE2_OP_GET_PAY = 21,
+	NP_COMMERCE2_OP_GET_BILL = 22,
+	NP_COMMERCE2_OP_REG_C_C = 23,
+	NP_COMMERCE2_OP_GET_ADDR = 24,
+	NP_COMMERCE2_OP_GET_RES_ADDR = 25,
+	NP_COMMERCE2_OP_EVENT_LOG = 26,
+	NP_COMMERCE2_OP_GET_COUNTRIES = 27,
+	NP_COMMERCE2_OP_BIND_ACCOUNT = 28,
+	NP_COMMERCE2_OP_START_REG = 29,
+	NP_COMMERCE2_OP_GET_SEC_Q = 30,
+	NP_COMMERCE2_OP_SET_CRED = 31,
+	NP_COMMERCE2_OP_SET_LID = 32,
+	NP_COMMERCE2_OP_UPD_PASS = 33,
+	NP_COMMERCE2_OP_VERIFY_OID = 34,
+	NP_COMMERCE2_OP_SET_OID = 35,
+	NP_COMMERCE2_OP_GET_NAME = 36,
+	NP_COMMERCE2_OP_SET_NAME = 37,
+	NP_COMMERCE2_OP_SET_RES_ADDR = 38,
+	NP_COMMERCE2_OP_SET_RRN = 39,
+	NP_COMMERCE2_OP_GET_OPT_IN = 40,
+	NP_COMMERCE2_OP_SET_OPT_IN = 41,
+	NP_COMMERCE2_OP_AUTH_MASTER = 42,
+	NP_COMMERCE2_OP_GET_BILL_INFO = 43,
+	NP_COMMERCE2_OP_SET_SUB_CTRL = 44,
+	NP_COMMERCE2_OP_RESET_SUB_PASS = 45,
+	NP_COMMERCE2_OP_GET_WAL_OPT = 46,
+	NP_COMMERCE2_OP_SET_WAL_OPT = 47,
+	NP_COMMERCE2_OP_SUBMIT_REG = 48,
+	NP_COMMERCE2_OP_AUTHENTICATE = 49,
+	NP_COMMERCE2_OP_REM_PAY = 50,
+	NP_COMMERCE2_OP_GET_TRAN_HIST = 51,
+	NP_COMMERCE2_OP_GET_TRAN_DETAIL = 52,
+	NP_COMMERCE2_OP_GET_SRVS = 53,
+	NP_COMMERCE2_OP_GET_SRV_DETAIL = 54,
+	NP_COMMERCE2_OP_GET_SUBSCR = 55,
+	NP_COMMERCE2_OP_GET_SUBSCR_PLAN = 56,
+	NP_COMMERCE2_OP_CHANGE_SUBSCR = 57,
+	NP_COMMERCE2_OP_CANCEL_SUBSCR = 58,
+	NP_COMMERCE2_OP_GET_CNSL_ACT = 59,
+	NP_COMMERCE2_OP_ACPT_EULA = 60,
+	NP_COMMERCE2_OP_VERIFY_DOB = 61,
+	NP_COMMERCE2_OP_VERIFY_SEC_ANS = 62,
+	NP_COMMERCE2_OP_SEND_PASS_RESET_MAIL = 63,
+	NP_COMMERCE2_OP_VERIFY_MASTER_BILL = 64,
+	NP_COMMERCE2_OP_GET_EPW = 65,
+	NP_COMMERCE2_OP_CR_GUEST_SESS = 66,
+	NP_COMMERCE2_OP_RESET_PASS = 67,
+	NP_COMMERCE2_OP_GET_MASTER_BILL = 68,
+	NP_COMMERCE2_OP_SEND_CONSENT_MAIL = 69,
+	NP_COMMERCE2_OP_GET_MASTER_RES_ADDR = 70,
+	NP_COMMERCE2_OP_GET_PROD_LIST = 71,
+	NP_COMMERCE2_OP_GET_SKU_LIST = 72,
+	NP_COMMERCE2_OP_GET_REWARD = 73,
+	NP_COMMERCE2_OP_SET_SEC_Q = 74,
+	NP_COMMERCE2_OP_SUBMIT_UPGRADE = 75,
+	NP_COMMERCE2_OP_RECOM_PRODS = 76,
+	NP_COMMERCE2_OP_VERIFY_BILL = 77,
+	NP_COMMERCE2_OP_REG_DEVICE = 78,
+	NP_COMMERCE2_OP_DEREG_DEVICE = 79,
+	NP_COMMERCE2_OP_GET_PROD_IDS = 80,
+	NP_COMMERCE2_OP_CR_SESS_TICKET = 81,
+	NP_COMMERCE2_OP_GET_USERS_FROM_C_I_D = 82,
+	NP_COMMERCE2_OP_GET_ACT_CODE = 83,
+	NP_COMMERCE2_OP_SET_ACCOUNT_LANG = 84,
+	NP_COMMERCE2_OP_GET_PIVOT_FOR_PROD = 85,
+	NP_COMMERCE2_OP_GET_PROD_FOR_PIVOT = 86,
+	NP_COMMERCE2_OP_CANCEL_ORDER = 87,
+	NP_COMMERCE2_OP_CHECK_ACCOUNT_EULA = 88,
+	NP_COMMERCE2_OP_USE_ENTLMT = 89,
+	NP_COMMERCE2_OP_OP90 = 90,
+	NP_COMMERCE2_OP_OP91 = 91,
+	NP_COMMERCE2_OP_OP92 = 92,
+	NP_COMMERCE2_OP_OP93 = 93,
+	NP_COMMERCE2_OP_OP94 = 94,
+	NP_COMMERCE2_OP_OP95 = 95,
+	NP_COMMERCE2_OP_GET_ENT_STATE = 96,
+	NP_COMMERCE2_OP_ESN_DUID = 97,
+	NP_COMMERCE2_OP_CR_SESS_EXP_TICKET = 98,
+	NP_COMMERCE2_OP_OP99 = 99,
+	NP_COMMERCE2_OP_SEND_EMAIL_VER = 100,
+	NP_COMMERCE2_OP_HE_REGISTRATION = 101,
+	NP_COMMERCE2_OP_GET_ENT_REV = 102,
+	NP_COMMERCE2_OP_CR_SESS_BY_TICK_LITE = 103,
+	NP_COMMERCE2_OP_CR_SESS_EXP_TICK_LITE = 104,
+	NP_COMMERCE2_OP_CR_SESS_BY_ACCESS_TOKEN = 105,
+	NP_COMMERCE2_OP_OP106 = 106,
+	NP_COMMERCE2_OP_OP107 = 107,
+	NP_COMMERCE2_OP_OP108 = 108,
+	NP_COMMERCE2_OP_OP109 = 109,
+	NP_COMMERCE2_OP_OP110 = 110,
+	NP_COMMERCE2_OP_OP111 = 111,
+	NP_COMMERCE2_OP_CR_SESS_BY_ACCESS_TOKEN_LITE = 112,
+	NP_COMMERCE2_OP_VERIFY_ACCOUNT_PASS = 113,
+};
+
+extern int npCommerce2CreateRequest(SceUInt32 ctxId, int type, SceUInt32 *reqId, int version);
+
 /* a request kind the operation does not have */
 #define NP_COMMERCE2_ERROR_INVALID_VERSION	-2141909100	/* 0x80550f94 */
 
@@ -229,7 +348,7 @@ extern int npCommerce2_810100C2(int a1, int a2, int a3);
 extern int npCommerce2_8100F1D6(int a1, int a2);
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
-extern int npCommerce2_8100646C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100647A(SceUInt32 reqId, const char *categoryId, const char *productId,
 				int a4, int a5);
 extern int npCommerce2_8100F316(SceNpCommerce2GetProductInfoResult *result, void *buf,
@@ -250,75 +369,75 @@ extern int npCommerce2_81010BEC(int a1, int a2);
 extern int npCommerce2_81010DD8(int a1, int a2, int a3, int a4);
 extern int npCommerce2_8100FDBC(const SceNpCommerce2GameProductInfo *gameProductInfo, int dataType,
 				SceUInt32 idx, SceNpCommerce2GameSkuInfo *gameSkuInfo);
-extern int npCommerce2_810065CC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqAddCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810065DA(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81010938(int a1, void *a2, int a3);
 extern int npCommerce2_81010C98(int a1, int a2, int a3);
 extern int npCommerce2_81010FFA(int a1, int a2);
 extern int npCommerce2_8101117E(int a1, void *a2, int a3);
 extern int npCommerce2_81010710(int a1, int a2, void *a3, int a4);
-extern int npCommerce2_8100672C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqRemCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100673A(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8101150E(int a1, void *a2, int a3);
 extern int npCommerce2_810115FC(int a1, int a2);
 extern int npCommerce2_81011604(int a1, int a2);
-extern int npCommerce2_81006872(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqClearCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81006880(int a1, int a2);
-extern int npCommerce2_810069B2(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810069C0(SceUInt32 reqId);
 extern int npCommerce2_8101160C(int a1, void *a2, int a3);
 extern int npCommerce2_810116FA(int a1, int a2);
 extern int npCommerce2_81011702(int a1, int a2);
-extern int npCommerce2_81006AF2(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqPurPrev(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81006B0E(SceUInt32 a1, void *a2, SceSize a3, SceSize *a4);
 extern int npCommerce2_8101170A(int a1, void *a2, int a3);
 extern int npCommerce2_810117FC(int a1, int a2);
 extern int npCommerce2_810118B0(int a1, int a2);
 extern int npCommerce2_810118A2(int a1, int a2);
-extern int npCommerce2_81006B00(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqPurch(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810118B8(int a1, void *a2, int a3);
 extern int npCommerce2_810119A0(int a1, int a2);
 extern int npCommerce2_810119A8(int a1, int a2);
 extern int npCommerce2_810119B0(int a1, int a2);
-extern int npCommerce2_81006C56(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetCC(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81006C64(SceUInt32 reqId);
 extern int npCommerce2_810119BE(int a1, void *a2, int a3);
 extern int npCommerce2_81011C24(int a1, int a2);
-extern int npCommerce2_81006D96(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetProv(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81006DA4(SceUInt32 reqId);
 extern int npCommerce2_81011C2C(int a1, void *a2, int a3);
 extern int npCommerce2_81011D84(int a1, int a2, int a3);
 extern int npCommerce2_81011D8C(int a1, int a2, int a3);
-extern int npCommerce2_81006ED6(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetPay(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81006F00(int a1, int a2, int a3);
 extern int npCommerce2_81011E42(int a1, void *a2, int a3);
 extern int npCommerce2_81011FC8(int a1, int a2, int a3);
-extern int npCommerce2_81007038(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetDrm(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007046(int a1, int a2, int a3, int a4, int a5);
 extern int npCommerce2_81011FD0(int a1, void *a2, int a3);
 extern int npCommerce2_8101209C(int a1, int a2, int a3);
 extern int npCommerce2_8101284E(int a1, int a2, int a3);
-extern int npCommerce2_810071C0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetBill(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810071EA(SceUInt32 reqId);
 extern int npCommerce2_810128C8(int a1, void *a2, int a3);
-extern int npCommerce2_8100731C(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81007462(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqRegCC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007470(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81012A5C(int a1, void *a2, int a3);
-extern int npCommerce2_810075A8(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetWal(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810075B6(SceUInt32 reqId);
 extern int npCommerce2_81012B60(int a1, void *a2, int a3);
 extern int npCommerce2_81012BD6(int a1, int a2);
 extern int npCommerce2_8100732A(int a1, const int *a2);
-extern int npCommerce2_810076E8(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqTopupCC(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007704(int a1, int a2);
 extern int npCommerce2_81012BDE(int a1, void *a2, int a3);
 extern int npCommerce2_81012CE8(int a1, int a2);
-extern int npCommerce2_810076F6(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqTopEdy(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81012CF0(int a1, void *a2, int a3);
 extern int npCommerce2_81012D66(int a1, int a2);
-extern int npCommerce2_8100783C(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81007988(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqTopEdyRes(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVchrRedPrev(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100784A(int a1, int a2, int a3);
 extern int npCommerce2_810079A4(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81012E3C(int a1, void *a2, int a3);
@@ -327,93 +446,93 @@ extern int npCommerce2_81013012(int a1, int a2);
 extern int npCommerce2_8101301A(int a1, int a2, int a3);
 extern int npCommerce2_81013362(int a1, void *a2, int a3);
 extern int npCommerce2_81013432(int a1, int a2, int a3);
-extern int npCommerce2_81007996(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVchrRed(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81013952(int a1, void *a2, int a3);
 extern int npCommerce2_81013A22(int a1, int a2);
 extern int npCommerce2_81013A2A(int a1, int a2);
-extern int npCommerce2_810071CE(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81013A32(int a1, void *a2, int a3);
-extern int npCommerce2_81007AF6(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqEventLog(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007B04(SceUInt32 a1, void *a2, SceSize a3, SceSize *a4);
-extern int npCommerce2_81007C4C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSrchProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007C5A(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81013BC6(int a1, void *a2, int a3);
 extern int npCommerce2_81013C92(int a1, int a2, int a3);
-extern int npCommerce2_81007DB6(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetCountries(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007DC4(SceUInt32 reqId);
 extern int npCommerce2_81013D24(int a1, void *a2, int a3);
 extern int npCommerce2_81013DAE(int a1, int a2, int a3);
 extern int npCommerce2_81013E86(int a1, int a2, int a3);
 extern int npCommerce2_81013ECE(int a1, int a2, int a3);
 extern int npCommerce2_8101413A(int a1, int a2);
-extern int npCommerce2_81007ECC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqBindAccount(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007EDA(int a1, int a2, int a3);
 extern int npCommerce2_81013F58(int a1, void *a2, int a3);
 extern int npCommerce2_810141C2(int a1, int a2, int a3);
-extern int npCommerce2_81007FB0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqStartReg(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81014250(int a1, void *a2, int a3);
-extern int npCommerce2_810080A0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetSecQ(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810080AE(SceUInt32 reqId);
 extern int npCommerce2_810144A0(int a1, void *a2, int a3);
 extern int npCommerce2_810145CE(int a1, int a2, int a3);
-extern int npCommerce2_810081E0(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100834A(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetCred(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetLid(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007FBE(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2_810081EE(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2_81008358(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81008490(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810085DC(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810085EA(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqUpdPass(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifyAccountPass(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifyOid(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81008606(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810085F8(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100873E(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetOid(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetName(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100849E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_8100874C(SceUInt32 reqId);
 extern int npCommerce2_8101461E(int a1, void *a2, int a3);
 extern int npCommerce2_81014694(int a1, int a2);
-extern int npCommerce2_8100887E(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810089FC(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81008B42(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetName(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetRrn(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81008B50(int a1, int a2, int a3);
-extern int npCommerce2_81008C8E(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetOptIn(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81008C9C(SceUInt32 reqId);
 extern int npCommerce2_8100888C(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81008A0A(int a1, const int *a2);
 extern int npCommerce2_8101478E(int a1, void *a2, int a3);
 extern int npCommerce2_81014804(int a1, int a2);
-extern int npCommerce2_81008DCE(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetOptIn(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81008DDC(int a1, int a2, int a3);
-extern int npCommerce2_81008F1A(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqAuthMaster(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81008F28(int a1, int a2, int a3);
-extern int npCommerce2_81006EE4(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetBillInfo(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810148A2(int a1, void *a2, int a3);
 extern int npCommerce2_81014A92(int a1, int a2, int a3);
 extern int npCommerce2_81014A9A(int a1, int a2, int a3);
 extern int npCommerce2_81014AA2(int a1, int a2);
-extern int npCommerce2_81009066(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetSubCtrl(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81009074(int a1, int a2, int a3, int a4);
-extern int npCommerce2_810091D0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqResetSubPass(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810091DE(int a1, int a2, int a3);
-extern int npCommerce2_810092E0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetWalOpt(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810092EE(SceUInt32 reqId);
 extern int npCommerce2_81014AAA(int a1, void *a2, int a3);
 extern int npCommerce2_81014B20(int a1, int a2);
-extern int npCommerce2_81009420(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetWalOpt(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100942E(int a1, int a2, int a3);
-extern int npCommerce2_8100956C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSubmitReg(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100957A(SceUInt32 reqId);
 extern int npCommerce2_81014BCE(int a1, void *a2, int a3);
-extern int npCommerce2_810096AC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqAuthenticate(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81014C44(int a1, void *a2, int a3);
 extern int npCommerce2_81014D62(int a1, int a2, int a3);
 extern int npCommerce2_81014D6A(int a1, int a2, int a3);
 extern int npCommerce2_81014EB4(int a1, int a2, int a3);
 extern int npCommerce2_810096BA(int a1, int a2, int a3, int a4);
-extern int npCommerce2_810097C4(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810097D2(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqRemPay(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetTranHist(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81014F08(int a1, void *a2, int a3);
 extern int npCommerce2_81014F92(int a1, int a2, int a3);
-extern int npCommerce2_8100998C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetTranDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100999A(SceUInt32 reqId);
 extern int npCommerce2_810151B8(int a1, void *a2, int a3);
 extern int npCommerce2_8101522E(int a1, int a2);
@@ -422,75 +541,75 @@ extern int npCommerce2_81015606(int a1, int a2, int a3);
 extern int npCommerce2_81015818(int a1, int a2, int a3);
 extern int npCommerce2_810097E0(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2_8100F2F6(int a1, int a2);
-extern int npCommerce2_81009AD4(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetSrvs(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81009AE2(int a1, int a2, int a3);
 extern int npCommerce2_8101591C(int a1, void *a2, int a3);
 extern int npCommerce2_810159E8(int a1, int a2, int a3);
-extern int npCommerce2_81009C20(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetSrvDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81009C2E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81015BCE(int a1, void *a2, int a3);
 extern int npCommerce2_81015C9A(int a1, int a2, int a3);
-extern int npCommerce2_81009D76(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81009D84(int a1, int a2, int a3, int a4);
 extern int npCommerce2_81015EB4(int a1, void *a2, int a3);
 extern int npCommerce2_81015F80(int a1, int a2, int a3);
 extern int npCommerce2_810162BA(int a1, int a2, int a3);
-extern int npCommerce2_81009ECC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqChangeSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81009EDA(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A012(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqCancelSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A020(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A158(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetCnslAct(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A166(SceUInt32 reqId);
 extern int npCommerce2_810163AC(int a1, void *a2, int a3);
 extern int npCommerce2_81016436(int a1, int a2, int a3);
-extern int npCommerce2_8100A298(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A2A6(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqAcptEula(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifyDob(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8101652E(int a1, void *a2, int a3);
 extern int npCommerce2_810165A4(int a1, int a2);
-extern int npCommerce2_8100A380(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifySecAns(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810165F0(int a1, void *a2, int a3);
 extern int npCommerce2_8100AECA(int a1, int a2);
 extern int npCommerce2_8100A2B4(int a1, int a2, int a3, int a4, int a5);
 extern int npCommerce2_8100A38E(int a1, int a2, int a3, int a4);
-extern int npCommerce2_8100A49A(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSendPassResetMail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A83A(SceUInt32 reqId);
-extern int npCommerce2_8100A4A8(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A5F4(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifyMasterBill(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetEpw(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A602(SceUInt32 reqId);
 extern int npCommerce2_81016666(int a1, void *a2, int a3);
-extern int npCommerce2_8100B174(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSendEmailVer(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B182(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A734(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqCrGuestSess(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A4B6(int a1, const int *a2, int a3);
-extern int npCommerce2_8100A81E(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81006EF2(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqResetPass(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetMasterBill(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8101670C(int a1, void *a2, int a3);
 extern int npCommerce2_810168FC(int a1, int a2, int a3);
 extern int npCommerce2_81016904(int a1, int a2, int a3);
 extern int npCommerce2_8101690C(int a1, int a2);
-extern int npCommerce2_8100A82C(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSendConsentMail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A742(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2_810169A8(int a1, int a2, void *a3);
 extern int npCommerce2_8100A982(int a1, const char **a2, int a3);
 extern int npCommerce2_81016914(SceNpCommerce2GetProductInfoListResult *result, void *buf,
 				SceSize bufLen);
-extern int npCommerce2_810071DC(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100A974(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetMasterResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetProdList(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100DF44(int a1, int a2, int a3);
-extern int npCommerce2_8100AAC0(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqRecomProds(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100AACE(int a1, int a2, int a3, int a4, SceUInt32 a5, SceUInt32 a6);
 extern int npCommerce2_81016A3A(int a1, void *a2, int a3);
-extern int npCommerce2_8100AC2A(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqVerifyBill(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100AC38(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81016B50(int a1, void *a2, int a3);
-extern int npCommerce2_8100AD70(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetProdIds(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81016BC6(int a1, void *a2, int a3);
 extern int npCommerce2_81016C50(int a1, int a2, int a3);
-extern int npCommerce2_8100AEBC(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqSetAccountLang(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100AD7E(int a1, int a2, int a3);
-extern int npCommerce2_8100B002(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqCancelOrder(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B010(SceUInt32 reqId);
-extern int npCommerce2_8100B166(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqCheckAccountEula(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B238(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B3C6(int a1, int a2);
 extern int npCommerce2_8100B292(int a1, int a2, int a3, int a4);

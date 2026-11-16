@@ -543,7 +543,7 @@ int sceNpCommerce2GetProductInfoCreateReq(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100646C(ctxId, reqId);
+		return npCommerce2CreateReqGetProd(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -785,7 +785,7 @@ int SceNpCommerce2_0985546A(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810065CC(ctxId, reqId);
+		return npCommerce2CreateReqAddCart(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -918,7 +918,7 @@ int SceNpCommerce2_ACABE7E1(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100672C(ctxId, reqId);
+		return npCommerce2CreateReqRemCart(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -970,7 +970,7 @@ int SceNpCommerce2_DF504EEF(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006872(ctxId, reqId);
+		return npCommerce2CreateReqClearCart(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -986,7 +986,7 @@ int SceNpCommerce2_4C30AF39(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810069B2(ctxId, reqId);
+		return npCommerce2CreateReqGetCart(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1043,7 +1043,7 @@ int SceNpCommerce2_1AF7FC73(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006AF2(ctxId, reqId);
+		return npCommerce2CreateReqPurPrev(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1102,7 +1102,7 @@ int SceNpCommerce2_C8844157(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006B00(ctxId, reqId);
+		return npCommerce2CreateReqPurch(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1161,7 +1161,7 @@ int SceNpCommerce2_2FEC7ABC(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006C56(ctxId, reqId);
+		return npCommerce2CreateReqGetCC(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1202,7 +1202,7 @@ int SceNpCommerce2_F8D3F362(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006D96(ctxId, reqId);
+		return npCommerce2CreateReqGetProv(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1252,7 +1252,7 @@ int SceNpCommerce2_94AB4446(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006ED6(ctxId, reqId);
+		return npCommerce2CreateReqGetPay(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1293,7 +1293,7 @@ int sceNpCommerce2GetDrmContentInfoCreateReq(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007038(ctxId, reqId);
+		return npCommerce2CreateReqGetDrm(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1352,7 +1352,7 @@ int SceNpCommerce2_4A6B0527(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810071C0(ctxId, reqId);
+		return npCommerce2CreateReqGetBill(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1384,7 +1384,7 @@ int SceNpCommerce2_E4DEA05E(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100731C(ctxId, reqId);
+		return npCommerce2CreateReqRegCC(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1400,7 +1400,7 @@ int SceNpCommerce2_984036CB(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007462(ctxId, reqId);
+		return npCommerce2CreateReqGetAddr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1434,7 +1434,7 @@ int SceNpCommerce2_95F62CC5(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810075A8(ctxId, reqId);
+		return npCommerce2CreateReqGetWal(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1486,7 +1486,7 @@ int SceNpCommerce2_C0ECF440(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810076E8(ctxId, reqId);
+		return npCommerce2CreateReqTopupCC(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1527,7 +1527,7 @@ int SceNpCommerce2_72ABB589(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810076F6(ctxId, reqId);
+		return npCommerce2CreateReqTopEdy(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1568,7 +1568,7 @@ int SceNpCommerce2_B5D6F4AF(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100783C(ctxId, reqId);
+		return npCommerce2CreateReqTopEdyRes(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1584,7 +1584,7 @@ int SceNpCommerce2_142EAC1B(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007988(ctxId, reqId);
+		return npCommerce2CreateReqVchrRedPrev(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1762,7 +1762,7 @@ int SceNpCommerce2_BDA95C6D(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007996(ctxId, reqId);
+		return npCommerce2CreateReqVchrRed(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1814,7 +1814,7 @@ int SceNpCommerce2_CAC11D21(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810071CE(ctxId, reqId);
+		return npCommerce2CreateReqGetResAddr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1846,7 +1846,7 @@ int SceNpCommerce2_9B4811DF(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007AF6(ctxId, reqId);
+		return npCommerce2CreateReqEventLog(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1869,7 +1869,7 @@ int SceNpCommerce2_B98EE069(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007C4C(ctxId, reqId);
+		return npCommerce2CreateReqSrchProd(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1922,7 +1922,7 @@ int SceNpCommerce2_749C8571(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007DB6(ctxId, reqId);
+		return npCommerce2CreateReqGetCountries(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1990,7 +1990,7 @@ int SceNpCommerce2_4C406B2A(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007ECC(ctxId, reqId);
+		return npCommerce2CreateReqBindAccount(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2042,7 +2042,7 @@ int SceNpCommerce2_5A1ACD90(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81007FB0(ctxId, reqId);
+		return npCommerce2CreateReqStartReg(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2069,7 +2069,7 @@ int SceNpCommerce2_95C185B5(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810080A0(ctxId, reqId);
+		return npCommerce2CreateReqGetSecQ(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2110,7 +2110,7 @@ int SceNpCommerce2_B7D151D1(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810081E0(ctxId, reqId);
+		return npCommerce2CreateReqSetCred(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2126,7 +2126,7 @@ int SceNpCommerce2_F764DBA5(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100834A(ctxId, reqId);
+		return npCommerce2CreateReqSetLid(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2176,7 +2176,7 @@ int SceNpCommerce2_F4DD3FD8(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81008490(ctxId, reqId);
+		return npCommerce2CreateReqUpdPass(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2192,7 +2192,7 @@ int SceNpCommerce2_9C1C168D(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810085DC(ctxId, reqId);
+		return npCommerce2CreateReqVerifyAccountPass(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2208,7 +2208,7 @@ int SceNpCommerce2_8AA18E16(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810085EA(ctxId, reqId);
+		return npCommerce2CreateReqVerifyOid(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2233,7 +2233,7 @@ int SceNpCommerce2_6E0F1699(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810085F8(ctxId, reqId);
+		return npCommerce2CreateReqSetOid(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2258,7 +2258,7 @@ int SceNpCommerce2_27E08EFA(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100873E(ctxId, reqId);
+		return npCommerce2CreateReqGetName(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2317,7 +2317,7 @@ int SceNpCommerce2_693EAE89(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100887E(ctxId, reqId);
+		return npCommerce2CreateReqSetName(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2333,7 +2333,7 @@ int SceNpCommerce2_4E4A2898(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810089FC(ctxId, reqId);
+		return npCommerce2CreateReqSetResAddr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2349,7 +2349,7 @@ int SceNpCommerce2_65743DF2(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81008B42(ctxId, reqId);
+		return npCommerce2CreateReqSetRrn(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2374,7 +2374,7 @@ int SceNpCommerce2_AC9457D4(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81008C8E(ctxId, reqId);
+		return npCommerce2CreateReqGetOptIn(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2435,7 +2435,7 @@ int SceNpCommerce2_1729CBC6(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81008DCE(ctxId, reqId);
+		return npCommerce2CreateReqSetOptIn(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2458,7 +2458,7 @@ int SceNpCommerce2_DACD1180(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81008F1A(ctxId, reqId);
+		return npCommerce2CreateReqAuthMaster(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2483,7 +2483,7 @@ int SceNpCommerce2_EA4A4CAE(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006EE4(ctxId, reqId);
+		return npCommerce2CreateReqGetBillInfo(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2542,7 +2542,7 @@ int SceNpCommerce2_5402711A(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009066(ctxId, reqId);
+		return npCommerce2CreateReqSetSubCtrl(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2567,7 +2567,7 @@ int SceNpCommerce2_9A24EB17(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810091D0(ctxId, reqId);
+		return npCommerce2CreateReqResetSubPass(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2592,7 +2592,7 @@ int SceNpCommerce2_2EBD25FF(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810092E0(ctxId, reqId);
+		return npCommerce2CreateReqGetWalOpt(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2633,7 +2633,7 @@ int SceNpCommerce2_48171860(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009420(ctxId, reqId);
+		return npCommerce2CreateReqSetWalOpt(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2656,7 +2656,7 @@ int SceNpCommerce2_E0B222F3(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100956C(ctxId, reqId);
+		return npCommerce2CreateReqSubmitReg(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2697,7 +2697,7 @@ int SceNpCommerce2_B75D54D3(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810096AC(ctxId, reqId);
+		return npCommerce2CreateReqAuthenticate(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2776,7 +2776,7 @@ int SceNpCommerce2_2AF9CC74(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810097C4(ctxId, reqId);
+		return npCommerce2CreateReqRemPay(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2799,7 +2799,7 @@ int SceNpCommerce2_A9DFEF68(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810097D2(ctxId, reqId);
+		return npCommerce2CreateReqGetTranHist(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2833,7 +2833,7 @@ int SceNpCommerce2_F1E443C9(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100998C(ctxId, reqId);
+		return npCommerce2CreateReqGetTranDetail(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2937,7 +2937,7 @@ int SceNpCommerce2_ED1A7FD1(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009AD4(ctxId, reqId);
+		return npCommerce2CreateReqGetSrvs(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -2978,7 +2978,7 @@ int SceNpCommerce2_42DB888A(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009C20(ctxId, reqId);
+		return npCommerce2CreateReqGetSrvDetail(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3030,7 +3030,7 @@ int SceNpCommerce2_6F3A7FEF(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009D76(ctxId, reqId);
+		return npCommerce2CreateReqGetSubscr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3091,7 +3091,7 @@ int SceNpCommerce2_0BF3C1C4(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81009ECC(ctxId, reqId);
+		return npCommerce2CreateReqChangeSubscr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3116,7 +3116,7 @@ int SceNpCommerce2_907BC19E(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A012(ctxId, reqId);
+		return npCommerce2CreateReqCancelSubscr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3141,7 +3141,7 @@ int SceNpCommerce2_FB35C43D(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A158(ctxId, reqId);
+		return npCommerce2CreateReqGetCnslAct(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3182,7 +3182,7 @@ int SceNpCommerce2_76DA0D80(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A298(ctxId, reqId);
+		return npCommerce2CreateReqAcptEula(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3198,7 +3198,7 @@ int SceNpCommerce2_E1C27906(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A2A6(ctxId, reqId);
+		return npCommerce2CreateReqVerifyDob(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3225,7 +3225,7 @@ int SceNpCommerce2_DB8BA72E(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A380(ctxId, reqId);
+		return npCommerce2CreateReqVerifySecAns(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3302,7 +3302,7 @@ int SceNpCommerce2_4615377F(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A49A(ctxId, reqId);
+		return npCommerce2CreateReqSendPassResetMail(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3325,7 +3325,7 @@ int SceNpCommerce2_4C5EA07A(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A4A8(ctxId, reqId);
+		return npCommerce2CreateReqVerifyMasterBill(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3341,7 +3341,7 @@ int SceNpCommerce2_07C16199(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A5F4(ctxId, reqId);
+		return npCommerce2CreateReqGetEpw(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3373,7 +3373,7 @@ int SceNpCommerce2_9FD5705B(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100B174(ctxId, reqId);
+		return npCommerce2CreateReqSendEmailVer(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3391,7 +3391,7 @@ int SceNpCommerce2_4D00AA32(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A734(ctxId, reqId);
+		return npCommerce2CreateReqCrGuestSess(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3418,7 +3418,7 @@ int SceNpCommerce2_901E6455(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A81E(ctxId, reqId);
+		return npCommerce2CreateReqResetPass(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3434,7 +3434,7 @@ int SceNpCommerce2_577F8BF3(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_81006EF2(ctxId, reqId);
+		return npCommerce2CreateReqGetMasterBill(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3486,7 +3486,7 @@ int SceNpCommerce2_4D7B5ACE(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A82C(ctxId, reqId);
+		return npCommerce2CreateReqSendConsentMail(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3541,7 +3541,7 @@ int SceNpCommerce2_0C33B954(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_810071DC(ctxId, reqId);
+		return npCommerce2CreateReqGetMasterResAddr(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3573,7 +3573,7 @@ int sceNpCommerce2GetProductInfoListCreateReq(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100A974(ctxId, reqId);
+		return npCommerce2CreateReqGetProdList(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3924,7 +3924,7 @@ int SceNpCommerce2_2CCC62DD(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100AAC0(ctxId, reqId);
+		return npCommerce2CreateReqRecomProds(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3977,7 +3977,7 @@ int SceNpCommerce2_F88D6E68(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100AC2A(ctxId, reqId);
+		return npCommerce2CreateReqVerifyBill(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4020,7 +4020,7 @@ int SceNpCommerce2_FDB807AC(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100AD70(ctxId, reqId);
+		return npCommerce2CreateReqGetProdIds(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4054,7 +4054,7 @@ int SceNpCommerce2_E324B61B(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100AEBC(ctxId, reqId);
+		return npCommerce2CreateReqSetAccountLang(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4088,7 +4088,7 @@ int SceNpCommerce2_2511F962(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100B002(ctxId, reqId);
+		return npCommerce2CreateReqCancelOrder(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4111,7 +4111,7 @@ int SceNpCommerce2_24257016(SceUInt32 ctxId, SceUInt32 *reqId)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (reqId != NULL)
-		return npCommerce2_8100B166(ctxId, reqId);
+		return npCommerce2CreateReqCheckAccountEula(ctxId, reqId);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
