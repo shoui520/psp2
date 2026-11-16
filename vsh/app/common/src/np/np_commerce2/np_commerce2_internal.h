@@ -419,8 +419,6 @@ typedef struct NpCommerce2LargeItem {
 } NpCommerce2LargeItem;
 
 extern int npCommerce2ReadItem0x15(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item);
-extern int npCommerce2ReadLargeItem0x16(const NpCommerce2Item *result, SceUInt32 index,
-					NpCommerce2LargeItem *item);
 
 /* the Init...Result exports and the items read out of a response (response.c) */
 extern int npCommerce2InitResult0x78(NpCommerce2Item *result, const char *data, SceSize size);
@@ -508,6 +506,41 @@ extern int npCommerce2GetContentRatingInfoAt(const NpCommerce2Item *item, SceUIn
 					     SceNpCommerce2ContentRatingInfo *info);
 extern int npCommerce2ReadContentRatingDescriptor(const NpCommerce2Item *info, SceUInt32 index,
 						  SceNpCommerce2ContentRatingDescriptor *descriptor);
+/* a listed entry (tag 0x16) and a detail record (tag 0x4b) of a response (entry.c) */
+typedef struct NpCommerce2Entry {
+	SceNpCommerce2CommonData commonData;
+	const char *entryId;
+	const char *name;
+	SceUInt16 kind;
+	SceUInt16 padding;
+	SceUInt32 attrA;
+	SceUInt32 attrB;
+	SceUInt32 countOfChildren;
+	SceUInt32 attrC;
+	SceUInt32 attrD;
+	SceUInt32 attrE;
+	const char *description;
+	const char *imageUrl;
+} NpCommerce2Entry;
+
+typedef struct NpCommerce2Detail {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	const char *textA;
+	const char *textB;
+	const char *textC;
+	SceUInt32 hasExtra;
+	SceUInt32 extraA;
+	SceUInt32 extraB;
+	SceUInt32 extraC;
+} NpCommerce2Detail;
+
+extern int npCommerce2ReadEntry0x16(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Entry *entry);
+extern int npCommerce2ReadExtra0x4a(const SceNpCommerce2CommonData *detail, SceUInt32 *hasExtra,
+				    SceUInt32 *extraA, SceUInt32 *extraB, SceUInt32 *extraC);
+extern int npCommerce2ReadDetail0x4b(SceUInt32 version, const SceUChar8 *bufHead, const char *data,
+				     SceSize size, const char *records, NpCommerce2Detail *detail);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
