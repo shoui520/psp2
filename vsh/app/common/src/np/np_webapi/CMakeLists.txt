@@ -23,4 +23,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	userctx_setup.cpp
 	handle.cpp
 	request_io.cpp
+	request_header.cpp
 )

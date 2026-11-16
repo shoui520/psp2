@@ -37,6 +37,9 @@ extern "C" {
 #define NP_WEBAPI_ERROR_USER_CONTEXT_ALREADY_EXISTS	-2141902582	/* 0x8055290a */
 #define NP_WEBAPI_ERROR_REQUEST_NOT_FOUND	-2141902586	/* 0x80552906 */
 #define NP_WEBAPI_ERROR_REQUEST_BUSY		-2141902583	/* 0x80552909 */
+#define NP_WEBAPI_ERROR_MULTIPART_NOT_ALLOWED	-2141902570	/* 0x80552916 */
+#define NP_WEBAPI_ERROR_INVALID_CONTENT_TYPE	-2141902568	/* 0x80552918 */
+#define NP_WEBAPI_ERROR_HEADER_NOT_ALLOWED	-2141902562	/* 0x8055291e */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -108,6 +111,7 @@ extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
 extern int SceNpCommonPs4_29895EBB(NpWebApiMutex *mutex);	/* destroy */
 extern int SceNpCommon_0624AE44(char *version);	/* the library's version text */
 extern int sceClibSnprintf(char *dst, SceSize size, const char *fmt, ...);
+extern int sceClibStrncasecmp(const char *s1, const char *s2, SceSize len);
 extern int SceNpManager_E45E4003(void *buffer);
 extern int SceNpCommonPs4_FB63A152(void);
 extern int SceNpCommonPs4_CF591432(void);
@@ -434,6 +438,28 @@ extern int npWebApiRequestGetField236(NpWebApiRequest *request);
 extern SceSize npWebApiRequestReadBuffered(NpWebApiRequest *request, void *dst, SceSize len);
 extern int npWebApiRequestIsSendComplete(NpWebApiRequest *request);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
+
+/* a ring list's header: its sentinel, its size and the allocator its nodes come from */
+typedef struct NpWebApiList {
+	NpWebApiListNode *sentinel;
+	unsigned long count;
+	void *allocator;
+} NpWebApiList;
+
+typedef struct NpWebApiListPair {
+	int first;
+	int second;
+} NpWebApiListPair;
+
+extern void npWebApiPairListInsert(NpWebApiListNode **pResult, NpWebApiList *list,
+	const NpWebApiListPair *pair) __attribute__((noinline));
+extern int npWebApiRequestGetMultipart(NpWebApiRequest *request) __attribute__((noinline));
+extern int npWebApiRequestGetFlag204(NpWebApiRequest *request) __attribute__((noinline));
+extern int npWebApiRequestSetMultipartContentType(NpWebApiRequest *request, const char *contentType,
+	const char *boundary) __attribute__((noinline));
+extern int npWebApiRequestAddHttpHeader(NpWebApiRequest *request, const char *name, const char *value)
+	__attribute__((noinline));
+extern int npWebApiSetMultipartContentType(SceInt64 requestId, const char *contentType, const char *boundary);
 /* a part of a multipart request: its ID, its header text and the number of bytes it announced and
    has sent */
 typedef struct NpWebApiMultipartPart {
