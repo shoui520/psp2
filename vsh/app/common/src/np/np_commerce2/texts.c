@@ -630,3 +630,191 @@ int npCommerce2InitBareResult_8101461E(NpCommerce2Item *result, const char *data
 	return ret;
 }
 
+
+/* a result with only the header fields (the copy in a sixth of Sony's source files) */
+int npCommerce2InitBareResult_8101478E(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x5C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
+
+/* the record of tag 0x67, found where the result's records start: a value, two texts at fixed places and
+ * two texts of tags 0x65 and 0x66 */
+int npCommerce2ReadTextsRecord0x67(const NpCommerce2Item *result, NpCommerce2TextsRecord *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt32 net;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x67, 0x46, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x70);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->value = sceNetNtohl(net);
+		item->textA = record + 4;
+		item->textB = record + 37;
+		rest = record + 70;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->textC = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 70, 0x65, 0, &foundA);
+		if (ret >= 0 && foundA != 0)
+			item->textC = rest + ret;
+		if (ret >= 0) {
+			item->textD = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(rest, length - 70, 0x66, 0, &foundB);
+			if (ret >= 0 && foundB != 0)
+				item->textD = rest + ret;
+		}
+	}
+	return ret;
+}
+
+/* the record of tag 0x68: two values */
+int npCommerce2ReadItem0x68(const NpCommerce2Item *result, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x68, 8, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->value[0] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->value[1] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 8;
+	}
+	return ret;
+}
+
+/* a result with the counts of the containers of tags 0x37 and 0x39, six texts, and whether a record of tag
+ * 0x30 follows */
+int npCommerce2InitCountsTextsResult(NpCommerce2CountsTextsResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt16 found;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x80);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x37, NULL, &result->countOfA);
+		if (ret >= 0)
+			ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x39, NULL, &result->countOfB);
+		if (ret >= 0) {
+			result->textA = NP_COMMERCE2_EMPTY_TEXT(result);
+			ret = npCommerce2FindRecordWhole(records, dataLength, 0x4F, 0, &found);
+			if (ret >= 0 && found != 0)
+				result->textA = records + ret;
+			if (ret >= 0) {
+				result->textB = NP_COMMERCE2_EMPTY_TEXT(result);
+				ret = npCommerce2FindRecordWhole(records, dataLength, 0x50, 0, &found);
+				if (ret >= 0 && found != 0)
+					result->textB = records + ret;
+				if (ret >= 0) {
+					result->textC = NP_COMMERCE2_EMPTY_TEXT(result);
+					ret = npCommerce2FindRecordWhole(records, dataLength, 0x51, 0, &found);
+					if (ret >= 0 && found != 0)
+						result->textC = records + ret;
+					if (ret >= 0) {
+						result->textD = NP_COMMERCE2_EMPTY_TEXT(result);
+						ret = npCommerce2FindRecordWhole(records, dataLength, 0x52, 0, &found);
+						if (ret >= 0 && found != 0)
+							result->textD = records + ret;
+						if (ret >= 0) {
+							result->textE = NP_COMMERCE2_EMPTY_TEXT(result);
+							ret = npCommerce2FindRecordWhole(records, dataLength, 0x36, 0, &found);
+							if (ret >= 0 && found != 0)
+								result->textE = records + ret;
+							if (ret >= 0) {
+								result->textF = NP_COMMERCE2_EMPTY_TEXT(result);
+								ret = npCommerce2FindRecordWhole(records, dataLength, 0x54, 0, &found);
+								if (ret >= 0 && found != 0)
+									result->textF = records + ret;
+								if (ret >= 0) {
+									ret = npCommerce2FindRecordWhole(records, dataLength, 0x30, 0x19, NULL);
+									if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND) {
+										result->hasExtra = 0;
+										ret = 0;
+									} else if (ret >= 0) {
+										result->hasExtra = 1;
+										ret = 0;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
