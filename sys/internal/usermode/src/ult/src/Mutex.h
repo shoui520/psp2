@@ -51,7 +51,7 @@ struct MutexCallback {
 /* a mutex's lock */
 struct InternalMutex {
 	volatile uint32_t ownerId;		/* the owner's thread ID (AbstractThread::getID2) */
-	int32_t recursiveLockCount;
+	volatile int32_t recursiveLockCount;
 	CondWaiterQ<MutexCallback> waitQ;
 	NBQueueEntry2 *ownerWaiter;		/* the owner's entry */
 	uint32_t recursive;			/* SCE_ULT_MUTEX_ATTRIBUTE_RECURSIVE */
