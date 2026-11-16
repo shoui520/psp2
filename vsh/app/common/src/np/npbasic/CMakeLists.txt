@@ -9,4 +9,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	jga_response.cpp
 	jga_ipc.cpp
 	../impsutility/raw_message_client.cpp
+	../impsutility_ipc/np_imps_utility_ipc_message_client.cpp
 )

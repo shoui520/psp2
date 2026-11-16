@@ -18,6 +18,7 @@
 #include <np/np_manager.h>
 #include <rtc.h>
 #include "../../../../../lowlayer/src/ipmi_wrapper/ipmi_wrapper_client.h"
+#include "../impsutility_ipc/np_imps_utility_ipc_message_client.h"
 
 /* SCE_NP_BASIC_ERROR_* (SDK np/np_basic.h), as signed values */
 #define NP_BASIC_ERROR_UNKNOWN			-2141905663	/* 0x80551d01 */
@@ -223,7 +224,7 @@ typedef struct NpBasicState {
 	unsigned char handlerRegistered;
 	SceNpCommunicationId commId;
 	unsigned char reserved0[3];
-	unsigned char callbackTable[112];
+	NpImpsUtilityIpcCallbacks callbackTable;
 	unsigned char reserved1[828];
 	unsigned char reserved2[32];
 	unsigned char reserved3[8];

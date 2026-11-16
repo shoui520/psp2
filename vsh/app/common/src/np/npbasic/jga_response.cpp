@@ -14,6 +14,14 @@
 		*(volatile int *)0 = 0;							\
 	} while (0)
 
+extern "C" int sceNpBasicCheckCallback(void)
+{
+	if (g_state.initialized == 0)
+		return NP_BASIC_ERROR_NOT_INITIALIZED;
+	npImpsUtilityIpcTryGetMessages(g_state.client, &g_state.callbackTable, &g_state.commId);
+	return npBasicJgaCheckTimeouts();
+}
+
 int npBasicJgaRequestReceived(int requestId, SceNpId npId, SceUInt64 deadline)
 {
 	SceNpId self;
