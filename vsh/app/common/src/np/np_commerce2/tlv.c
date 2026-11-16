@@ -232,3 +232,39 @@ int npCommerce2FindTableRow(const char *data, SceSize size, SceUInt16 tag, SceUI
 	}
 	return ret;
 }
+
+/* the record at an index of a container; the container's record may be cut off when partial */
+int npCommerce2FindIndexedRecordPartial(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+					SceUInt32 index, SceUInt16 *length, int partial)
+{
+	SceUInt16 recordLength;
+	SceUInt32 count;
+	const char *p;
+	SceUInt32 i;
+	int ret;
+
+	ret = npCommerce2FindNestedRecord(data, size, tag, NULL, &count, partial);
+	if (ret >= 0) {
+		p = data + ret;
+		if (count > index) {
+			i = 0;
+			for (;;) {
+				if (i != 0)
+					p += recordLength;
+				ret = npCommerce2FindRecordWhole(p, size - (p - data), tag, minLength, &recordLength);
+				if (ret < 0)
+					break;
+				i++;
+				p += ret;
+				if (i > index) {
+					ret = p - data;
+					*length = recordLength;
+					break;
+				}
+			}
+		} else {
+			ret = NP_COMMERCE2_ERROR_RECORD_INDEX;
+		}
+	}
+	return ret;
+}

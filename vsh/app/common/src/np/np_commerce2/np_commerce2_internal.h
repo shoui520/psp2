@@ -793,6 +793,25 @@ typedef struct NpCommerce2OfferItem {
 extern int npCommerce2ReadGrantItem0x95(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2GrantItem *item);
 extern int npCommerce2ReadOfferItem(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2OfferItem *item,
 				    int kind);
+typedef struct NpCommerce2DateItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 value;
+	SceUInt64 date;
+} NpCommerce2DateItem;
+
+typedef struct NpCommerce2CountItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 countOfA;
+} NpCommerce2CountItem;
+
+extern int npCommerce2FindIndexedRecordPartial(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+					       SceUInt32 index, SceUInt16 *length, int partial);
+extern int npCommerce2InitResult0x2d(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadDateItem0x2c(const NpCommerce2Item *result, NpCommerce2DateItem *item);
+extern int npCommerce2ReadCountItem0x2f(const NpCommerce2Item *result, NpCommerce2CountItem *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -864,7 +883,6 @@ extern int npCommerce2_81010BEC(int a1, int a2);
 extern int npCommerce2_81010DD8(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqAddCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810065DA(int a1, int a2, int a3, int a4);
-extern int npCommerce2_81010938(int a1, void *a2, int a3);
 extern int npCommerce2_81010C98(int a1, int a2, int a3);
 extern int npCommerce2_81010FFA(int a1, int a2);
 extern int npCommerce2_8101117E(int a1, void *a2, int a3);

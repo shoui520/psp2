@@ -261,3 +261,130 @@ int npCommerce2ReadItem0x29(const NpCommerce2Item *result, NpCommerce2Item *item
 	}
 	return ret;
 }
+
+/* a result whose first records are the values of tags 0x2d and 0x15 */
+int npCommerce2InitResult0x2d(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	SceUInt32 value;
+	SceUInt32 net;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x64);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		result->commonData.ov = status;
+		ret = npCommerce2FindRecordWhole(records, dataLength, 0x2D, 4, NULL);
+		if (ret >= 0) {
+			sceClibMemcpy_safe(&value, records + ret, 4);
+			value = sceNetNtohl(value);
+			sceClibMemcpy_safe(&result->value[0], &value, 4);
+		}
+		if (ret >= 0) {
+			ret = npCommerce2FindRecordWhole(records, dataLength, 0x15, 4, NULL);
+			if (ret >= 0) {
+				sceClibMemcpy_safe(&net, records + ret, 4);
+				result->value[1] = sceNetNtohl(net);
+			}
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* the record of tag 0x2c with a value and a date */
+int npCommerce2ReadDateItem0x2c(const NpCommerce2Item *result, NpCommerce2DateItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	SceUInt64 netDate;
+	SceUInt64 ms;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x2C, 0xC, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x68);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->value = sceNetNtohl(net);
+		sceClibMemcpy_safe(&netDate, record + 4, 8);
+		ms = sceNetNtohll(netDate);
+		if (ms != 0) {
+			netDate = 1000 * ms;
+			item->date = netDate + 62135596800000000LL;
+		} else {
+			netDate = 0;
+			sceClibMemset(&item->date, 0, 8);
+		}
+		item->commonData.data2 = (const SceUChar8 *)record + 12;
+	}
+	return ret;
+}
+
+/* the record of tag 0x2f: three values and how many records of tag 0x2e follow */
+int npCommerce2ReadCountItem0x2f(const NpCommerce2Item *result, NpCommerce2CountItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x2F, 0x10, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x6C);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->valueA = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->valueB = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 8, 4);
+		item->valueC = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 12;
+		ret = npCommerce2FindNestedRecord(record + 12, length - 12, 0x2E, NULL, &item->countOfA,
+						  result->commonData.ov);
+	}
+	return ret;
+}
