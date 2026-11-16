@@ -345,10 +345,19 @@ unsigned char analogStart(unsigned int inputs)
 		P97 = 1;
 		skip = 2;
 	}
+#if BOARD_102603
+	if (inputs & 0x0020)
+		mask |= 0x0c;
+	if (inputs & 0x0001) {
+		P12 &= (unsigned char)~0x80;
+		mask |= 0x02;
+	}
+#else
 	if (inputs & 0x0020)
 		mask |= 0x08;
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
+#endif
 #if BOARD_ANALOG_CHANNEL8
 	if (inputs & 0x0080)
 		mask |= 0x01;
@@ -368,6 +377,11 @@ unsigned char analogStart(unsigned int inputs)
    connector's level reported when two readings agree on a new one */
 void analogEvent(unsigned int inputs)
 {
+#if BOARD_102603
+	unsigned char high;
+	unsigned char low;
+
+#endif
 #if FW_SINCE(0x0100010B)
 	if ((inputs & 0x0002) && analogSuspend != 0xff && (inputKeys.state & 0x0002)) {
 #else
@@ -392,8 +406,18 @@ void analogEvent(unsigned int inputs)
 	if (inputs & 0x0020) {
 #endif
 		analogMultiCnInput = ANALOG_HIGH(adcResults[4]);
+#if BOARD_102603
+		/* two connector lines: channel 4's level in the high nibble, channel 5's in the low */
+		analogMultiCnReserved = ANALOG_HIGH(adcResults[5]);
+		high = analogLevelFind(analogMultiCnInput, analogMultiCnLevels,
+				       LENGTH(analogMultiCnLevels));
+		low = analogLevelFind(analogMultiCnReserved, analogMultiCnLevels,
+				      LENGTH(analogMultiCnLevels));
+		analogMultiCn = (high << 4) | (low & 0x0f);
+#else
 		analogMultiCn = analogLevelFind(analogMultiCnInput, analogMultiCnLevels,
 						LENGTH(analogMultiCnLevels));
+#endif
 		if (analogMultiCn == analogMultiCnPrevious && analogMultiCn != analogMultiCnReported) {
 			analogMultiCnReported = analogMultiCn;
 			analogMultiCnStop();
@@ -407,8 +431,15 @@ void analogEvent(unsigned int inputs)
 		}
 		analogMultiCnPrevious = analogMultiCn;
 	}
+#if BOARD_102603
+	if (inputs & 0x0001) {
+		P12 |= 0x80;
+		analogLatchUpdate(ANALOG_HIGH(adcResults[6]));
+	}
+#else
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
+#endif
 #if BOARD_ANALOG_CHANNEL8
 	/* a level two readings agree on stops the sticks' samples, or (0xff) lets them go on */
 	if (inputs & 0x0080) {
@@ -1135,8 +1166,15 @@ unsigned char analogLatchIsSet(void)
 
 void analogLatchOn(void)
 {
+#if BOARD_102603
+	inputKeys.state |= 1;
+	analogLatchInit();
+#endif
 }
 
 void analogLatchOff(void)
 {
+#if BOARD_102603
+	inputKeys.state &= ~1;
+#endif
 }

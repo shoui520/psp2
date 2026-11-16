@@ -359,6 +359,9 @@ static void powerJobCut(void)
 	P0.5 = 0;
 	P6.3 = 0;
 	P13.1 = 0;
+#if BOARD_102603
+	P6.7 = 0;
+#endif
 	reg = 0xb0;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[0]);
 	reg = 0xb1;

@@ -472,6 +472,50 @@ static void powerRequest0884(void)
 }
 
 /* 0x0885 (SceSysconForDriver_79E6DD8B) */
+#if BOARD_102603
+/* Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12: bit 14 (data bit 1 to set,
+   bit 2 to clear) must be on, or already on, for bit 15 (data bit 2 to set, bit 1 to clear),
+   0x3c otherwise */
+static void powerRequest0885(void)
+{
+	unsigned char result;
+	unsigned char on2 = 0;
+	unsigned char on1 = 0;
+	unsigned char on0 = 0;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] & 0x80) {
+			if ((powerRequestData[0] & 0x02) || (elmoStatusMask.reg[3] & 0x4000))
+				on1 = 1;
+			else if (powerRequestData[0] & 0x04) {
+				result = 0x3c;
+				goto out;
+			}
+			if (powerRequestData[0] & 0x01)
+				on0 = 1;
+			if (powerRequestData[0] & 0x04)
+				on2 = 1;
+			result = powerElmoA0Set2(on2, on1, on0);
+		} else {
+			if ((powerRequestData[0] & 0x04) || (elmoStatusMask.reg[3] & 0x4000))
+				on2 = 1;
+			else if (powerRequestData[0] & 0x02) {
+				result = 0x3c;
+				goto out;
+			}
+			if (powerRequestData[0] & 0x01)
+				on0 = 1;
+			if (powerRequestData[0] & 0x02)
+				on2 = 1;
+			result = powerElmoA0Clear2(on2, on1, on0);
+		}
+		result = powerResult(result);
+	} else
+		result = 0x3b;
+out:
+	powerRequestDone(result);
+}
+#else
 static void powerRequest0885(void)
 {
 	unsigned char result;
@@ -494,6 +538,7 @@ static void powerRequest0885(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x0886 (sceSysconCtrlHdmiCecPower) */
 static void powerRequestCtrlHdmiCecPower(void)
@@ -695,6 +740,14 @@ static void powerRequest088D(void)
 }
 
 /* 0x089b (sceSysconCtrlRMRPower) */
+#if BOARD_102603
+/* nothing to power on 0x00102603 */
+static void powerRequestCtrlRMRPower(void)
+{
+	powerRequestDone(0);
+	return;
+}
+#else
 static void powerRequestCtrlRMRPower(void)
 {
 	unsigned char result;
@@ -709,8 +762,17 @@ static void powerRequestCtrlRMRPower(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x089c (sceSysconCtrlMultiCnPower) */
+#if BOARD_102603
+/* nothing to power on 0x00102603 */
+static void powerRequestCtrlMultiCnPower(void)
+{
+	powerRequestDone(0);
+	return;
+}
+#else
 static void powerRequestCtrlMultiCnPower(void)
 {
 	unsigned char result;
@@ -725,6 +787,7 @@ static void powerRequestCtrlMultiCnPower(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /*
  * 0x089d (sceSysconCtrlLedPwmBlink). With data[1] 0x80 and the LED module busy, the LED

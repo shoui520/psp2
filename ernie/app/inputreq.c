@@ -629,8 +629,9 @@ static void controlsRequest0180(void)
 		analogSetMode(controlsRequest.data[0]);
 #endif
 		controlsRequest.status = 0;
-	} else
+	} else {
 		controlsRequest.status = 0x3b;
+	}
 	controlsRequest.answerLength = 0;
 	hostRequestAnswerReady(&controlsRequest.state);
 	return;
@@ -721,7 +722,11 @@ static void controlsRequest0185(void)
 	inputRequests.controlsAnswer.word[2] = 0x0100;
 	inputRequests.controlsAnswer.word[3] = 0x00ff;
 #endif
+#if BOARD_102603
+	inputRequests.controlsAnswer.word[4] = 0x0001;
+#else
 	inputRequests.controlsAnswer.word[4] = 0x0002;
+#endif
 	inputRequests.controlsAnswer.word[5] = 0x0000;
 	controlsRequest.status = 0;
 	controlsRequest.answerLength = 12;
@@ -745,10 +750,18 @@ static void controlsRequest0190(void)
 
 static void controlsRequest01A0(void)
 {
-	if (controlsRequest.length == 1)
+	if (controlsRequest.length == 1) {
+#if BOARD_102603
+		/* 0x00102603 drives P5.4 from the command's byte */
+		if (controlsRequest.data[0] == 0)
+			P5.4 = 0;
+		else
+			P5.4 = 1;
+#endif
 		controlsRequest.status = 0;
-	else
+	} else {
 		controlsRequest.status = 0x3b;
+	}
 	controlsRequest.answerLength = 0;
 	hostRequestAnswerReady(&controlsRequest.state);
 	return;
@@ -1786,7 +1799,7 @@ static void motionRequest0484(void)
 			inputRequests.motionPhase = 3;
 			break;
 		case 3:
-			if (!P7.2) {
+			if (!BOARD_MOTION_READY) {
 				memset(motionSend, 0, MOTION_FRAME_SIZE);
 				motionPacketFinish();
 				motionTransfer(motionSend, inputRequests.motionAnswer);
@@ -1818,7 +1831,7 @@ static void motionRequest0485(void)
 			inputRequests.motionPhase = 1;
 			break;
 		case 1:
-			if (!P7.2) {
+			if (!BOARD_MOTION_READY) {
 				memset(motionSend, 0, MOTION_FRAME_SIZE);
 				motionPacketFinish();
 				motionTransfer(motionSend, inputRequests.motionAnswer);
@@ -1866,7 +1879,7 @@ static void motionRequest0486(void)
 			}
 			break;
 		case 1:
-			if (!P7.2) {
+			if (!BOARD_MOTION_READY) {
 				memset(motionSend, 0, MOTION_FRAME_SIZE);
 				motionPacketFinish();
 				motionTransfer(motionSend, inputRequests.motionAnswer);
@@ -1912,7 +1925,7 @@ static void motionRequest0487(void)
 			}
 			break;
 		case 1:
-			if (!P7.2) {
+			if (!BOARD_MOTION_READY) {
 				memset(motionSend, 0, MOTION_FRAME_SIZE);
 				motionPacketFinish();
 				motionTransfer(motionSend, inputRequests.motionAnswer);
@@ -1958,7 +1971,7 @@ static void motionRequest0488(void)
 			}
 			break;
 		case 1:
-			if (!P7.2) {
+			if (!BOARD_MOTION_READY) {
 				memset(motionSend, 0, MOTION_FRAME_SIZE);
 				motionPacketFinish();
 				motionTransfer(motionSend, inputRequests.motionAnswer);

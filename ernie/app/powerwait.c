@@ -5,6 +5,7 @@
  */
 #pragma sfr
 
+#include "board.h"
 #include "ernie.h"
 #include "input.h"
 #include "kernel.h"
@@ -16,7 +17,7 @@
 #include "tau.h"
 #include "timer.h"
 
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !BOARD_102603
 #define POWER_DEVICE_JOBS	9
 #else
 #define POWER_DEVICE_JOBS	11
@@ -29,7 +30,10 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0008, powerHpremoteOff },
 	{ 0x0010, powerMultiCnOn },
 	{ 0x0020, powerMultiCnOff },
-#if !FW_SINCE(0x0100060B)
+#if BOARD_102603
+	{ 0x0040, powerSdOn },
+	{ 0x0080, powerSdOff },
+#elif !FW_SINCE(0x0100060B)
 	{ 0x0040, powerNoneOn },
 	{ 0x0080, powerNoneOff },
 #endif

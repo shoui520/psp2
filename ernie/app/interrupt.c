@@ -59,6 +59,42 @@ void intp1Interrupt(void)
 		inputScanHold(0x754);
 }
 
+#if BOARD_INPUTS_102603
+/* P4.7 high: bit 4 of input group 1 taken as changed, and the scan held */
+void intp2Interrupt(void)
+{
+	if (P4.7) {
+		inputGroup1.prev &= ~0x10;
+		inputScanHold(0x1a);
+	}
+}
+
+/* P14.1 low: pin monitor 2 */
+void intp7Interrupt(void)
+{
+	if (!P14.1) {
+		if (pinMonitors.pin[2].config.reload != 0) {
+			pinMonitor2Enable(1);
+			pinMonitors.pin[2].last = 0;
+			inputScanHold(0x1a);
+		} else
+			pinMonitors.pin[2].config.handler();
+	}
+}
+
+/* P3.1 low: pin monitor 3 */
+void intp4Interrupt(void)
+{
+	if (!P3.1) {
+		if (pinMonitors.pin[3].config.reload != 0) {
+			pinMonitor3Enable(1);
+			pinMonitors.pin[3].last = 0;
+			inputScanHold(0x1a);
+		} else
+			pinMonitors.pin[3].config.handler();
+	}
+}
+#else
 void intp2Interrupt(void)
 {
 }
@@ -66,8 +102,10 @@ void intp2Interrupt(void)
 void intp7Interrupt(void)
 {
 }
+#endif
 
-#if FW_SINCE(0x01000104)
+#if BOARD_INPUTS_102603
+#elif FW_SINCE(0x01000104)
 void intp4Interrupt(void)
 {
 }
@@ -116,6 +154,7 @@ void intp10Interrupt(void)
 /* P7.4 high: pin monitor 6 */
 void intp8Interrupt(void)
 {
+#if !BOARD_INPUTS_102603
 	if (P7.4) {
 		if (pinMonitors.pin[6].config.reload != 0) {
 			pinMonitor6Enable(1);
@@ -124,6 +163,7 @@ void intp8Interrupt(void)
 		} else
 			pinMonitors.pin[6].config.handler();
 	}
+#endif
 }
 
 /* P7.7's edges: the level kept, and the serial link's input told */

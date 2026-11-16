@@ -135,12 +135,18 @@ void bbmcInit(void)
 	bbmcInputHandlerWake.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	bbmcInputHandlerWake.handler = bbmcPostWake;
 	P33 = 0;
+#if BOARD_102603
+	/* the modem taken as there whenever the board says it detects one */
+	if (configGet()->board.bits.bbmcDetect)
+		setHardwareInfoFlags(0x02);
+#else
 	if (configGet()->board.bits.bbmcDetect) {
 		level = P3.2;
 		dly_tsk(1);
 		if (P3.2 == level && level == 0)
 			setHardwareInfoFlags(0x02);
 	}
+#endif
 }
 
 unsigned char bbmcPowerOn(void)

@@ -30,7 +30,9 @@
 #include "state.h"
 #include "timer.h"
 
-#if FW_SINCE(0x01000104)
+#if BOARD_102603
+#define POWER_SET_WLAN_LINE(level)	(P6.7 = (level))
+#elif FW_SINCE(0x01000104)
 #define POWER_SET_WLAN_LINE(level)	(P31 = (level))
 #else
 /* before 0x01000104 P3.1 is driven only when the config says the WLAN's line is there */
@@ -71,6 +73,26 @@ static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x7100, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x7c },
+};
+#elif BOARD_102603
+/* 0x00102603's: four steps each */
+static const struct PowerStep powerResumeSteps[4] = {
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
+	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 4 },
+	{ { 0x7103, 0x0000, 0x0140, 0xc000, 0x0000, 0x0000 }, 4 },
+	{ { 0x0000, 0x0000, 0x0200, 0x0000, 0x0000, 0x0000 }, 8 },
+};
+static const struct PowerStep powerOffSteps[4] = {
+	{ { 0x0011, 0x8000, 0x1a80, 0x0000, 0x8000, 0x0000 }, 0x78 },
+	{ { 0x7102, 0x0000, 0x19c0, 0xc000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x74 },
+};
+static const struct PowerStep powerSuspendSteps[4] = {
+	{ { 0x0001, 0x8000, 0x0280, 0x0000, 0x8000, 0x0000 }, 0x78 },
+	{ { 0x7102, 0x0000, 0x0140, 0xc000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x74 },
 };
 #else
 static const struct PowerStep powerResumeSteps[3] = {
@@ -181,7 +203,9 @@ unsigned char powerSeqResume(void)
 #if !FW_SINCE(0x0100060B)
 	powerWaitTimers(1);
 #endif
+#if BOARD_P95
 	P95 = 1;
+#endif
 	powerWaitInit();
 	for (i = 0; i < boardResumeSteps(); i++) {
 		length = elmoSetMasks((struct ElmoMasks *)&powerResumeSteps[i].masks, elmoCommand);
@@ -190,9 +214,13 @@ unsigned char powerSeqResume(void)
 			goto out;
 		powerWaitMs(powerResumeSteps[i].delay);
 	}
+#if BOARD_102603
+	sleepFactorSet10(1);
+#else
 	mode = *stateGetWakeupFactor();
 	if (mode.bits.mode == 0x0c)
 		powerSdOn();
+#endif
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
 out:
@@ -236,10 +264,12 @@ void powerSeqLevels(void)
 		elmoCommand[5] = 0x00;
 		elmoWrite(elmoCommand, 6);
 	}
+#if !BOARD_102603
 	elmoCommand[0] = 0x0f;
 	elmoCommand[1] = 0x01;
 	elmoCommand[2] = 0x00;
 	elmoWrite(elmoCommand, 3);
+#endif
 #endif
 	trim = configGet()->voltageTrim;
 	level = configGet()->voltage81;
@@ -264,6 +294,7 @@ void powerSeqLevels(void)
 /* P3.1 low until P6.7 goes low, at most six waits */
 void powerSeqWaitP67(void)
 {
+#if !BOARD_102603
 	unsigned char i;
 
 #if !FW_SINCE(0x01000104)
@@ -277,6 +308,7 @@ void powerSeqWaitP67(void)
 			break;
 	}
 	P31 = 1;
+#endif
 }
 
 /* the lines low, the devices off, then the off sequence's Elmo steps */
@@ -303,7 +335,9 @@ unsigned char powerSeqOff(void)
 			goto out;
 		powerWaitMs(powerOffSteps[i].delay);
 	}
+#if BOARD_P95
 	P95 = 0;
+#endif
 	powerLedSet(0);
 	sleepFactorSet0(0);
 	sleepFactorSet2(0);
@@ -345,8 +379,10 @@ unsigned char powerSeqSuspend(void)
 			goto out;
 		powerWaitMs(powerSuspendSteps[i].delay);
 	}
+#if BOARD_P95
 	if (!(elmoStatusMask.reg[0] & 0x10))
 		P95 = 0;
+#endif
 #if !FW_SINCE(0x01000104)
 	if (!configGet()->suspendLedKeep) {
 		if (powerLedGetStatus() & configGet()->suspendLedMask)
@@ -373,7 +409,53 @@ out:
 	return result;
 }
 
-#if !FW_SINCE(0x0100060B)
+#if BOARD_102603
+/* 0x00102603's SD power: its own wait mask (8) and off timer (7, 0x25) */
+unsigned char powerSdOn(void)
+{
+	unsigned char result;
+	unsigned int mask;
+
+	if (elmoStatusMask.reg[0] & 0x0001) {
+		result = 0;
+	} else {
+		powerWaitTimers(0x0008);
+		mask = elmoStatusMask.reg[0] | 0x0001;
+		elmoCommand[0] = 0xa0;
+		elmoCommand[1] = ((unsigned char *)&mask)[1];
+		elmoCommand[2] = (unsigned char)mask;
+		result = elmoWrite(elmoCommand, 3);
+		if (result == 0) {
+			elmoStatusMask.reg[0] = mask;
+			timerStart(TIMER(0x12), 1);
+		}
+	}
+	return result;
+}
+
+unsigned char powerSdOff(void)
+{
+	unsigned char result;
+	unsigned int mask;
+
+	if (elmoStatusMask.reg[0] & 0x0001) {
+		mask = elmoStatusMask.reg[0] & 0xfffe;
+		elmoCommand[0] = 0xa0;
+		elmoCommand[1] = ((unsigned char *)&mask)[1];
+		elmoCommand[2] = (unsigned char)mask;
+		result = elmoWrite(elmoCommand, 3);
+		if (result == 0) {
+			elmoStatusMask.reg[0] = mask;
+			timerStop(TIMER(0x12));
+			sleepFactorSet10(0);
+			powerStartTimer(0x0008, TIMER(0x07), 0x25);
+		}
+	} else {
+		result = 0;
+	}
+	return result;
+}
+#elif !FW_SINCE(0x0100060B)
 /* a device this board does not have (not in 0x0100060B's device jobs) */
 unsigned char powerNoneOn(void)
 {
@@ -464,7 +546,9 @@ unsigned char powerOnWlan(void)
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(1);
 			powerSleep(2);
+#if !BOARD_102603
 			POWER_SET_WLAN_LINE(1);
+#endif
 		}
 	}
 	return result;
@@ -478,8 +562,13 @@ unsigned char powerOffWlan(void)
 
 	if (elmoStatusMask.reg[0] & 0x0010) {
 		P13.1 = 0;
+#if BOARD_102603
+		POWER_SET_WLAN_LINE(0);
+		clockOutputStop();
+#else
 		clockOutputStop();
 		POWER_SET_WLAN_LINE(0);
+#endif
 		mask0 = elmoStatusMask.reg[0] & 0xffef;
 		mask2 = elmoStatusMask.reg[2] & 0xefff;
 		elmoCommand[0] = 0xa0;
@@ -495,8 +584,10 @@ unsigned char powerOffWlan(void)
 			sleepFactorSet0(0);
 			powerStartTimer(0x20, POWER_TIMER(9), 0x64);
 #if FW_SINCE(0x01000104)
+#if BOARD_P95
 			if (stateGet() & 0x080c)
 				P95 = 0;
+#endif
 #endif
 		}
 	} else {
@@ -650,6 +741,56 @@ unsigned char powerCookieClear(void)
 	return result;
 }
 
+#if BOARD_102603
+/* no RMR, no multi-connector power; and a device it does not have */
+unsigned char powerRmrOn(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+
+unsigned char powerRmrOff(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+
+unsigned char powerNoneOn(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+
+unsigned char powerNoneOff(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+
+unsigned char powerMultiCnOn(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+
+unsigned char powerMultiCnOff(void)
+{
+	unsigned char result;
+
+	result = 0;
+	return result;
+}
+#else
 /* the RMR's power: the Elmo's register 0xaa bit 15, on IRS-1001 its register 0xa1 bit 13 */
 #if BOARD_IRS1001
 #define POWER_RMR_ELMO_REG	0xa1
@@ -790,6 +931,7 @@ unsigned char powerMultiCnOff(void)
 	}
 	return result;
 }
+#endif
 
 /* timer 0x11 (powerAccOn) */
 void powerAccTimer(void)
@@ -871,9 +1013,13 @@ unsigned char powerBbmcOn(void)
 	unsigned char result;
 
 	if (bbmcGetMode()) {
+#if BOARD_102603
+		powerBbmcPulse();
+#else
 		P33 = 1;
 		powerWaitInput(1, 0x4e2);
 		P33 = 0;
+#endif
 		if (input2Bit0Get() == 0)
 			return 0;
 		return 2;
@@ -962,6 +1108,66 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	return result;
 }
 
+#if BOARD_102603
+/* 0x0885: Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12 set, one per
+   argument */
+unsigned char powerElmoA0Set2(unsigned char bit15, unsigned char bit14, unsigned char bit12)
+{
+	unsigned char result;
+	unsigned int mask3;
+	unsigned int mask0;
+
+	powerWaitTimers(0x80);
+	if (bit15)
+		mask3 = elmoStatusMask.reg[3] | 0x8000;
+	if (bit14)
+		mask3 = elmoStatusMask.reg[3] | 0x4000;
+	if (bit12)
+		mask0 = elmoStatusMask.reg[0] | 0x1000;
+	elmoCommand[0] = 0xa0;
+	elmoCommand[1] = ((unsigned char *)&mask0)[1];
+	elmoCommand[2] = (unsigned char)mask0;
+	elmoCommand[3] = 0xa3;
+	elmoCommand[4] = ((unsigned char *)&mask3)[1];
+	elmoCommand[5] = (unsigned char)mask3;
+	result = elmoWrite(elmoCommand, 6);
+	if (result == 0) {
+		elmoStatusMask.reg[0] = mask0;
+		elmoStatusMask.reg[3] = mask3;
+		powerSleep(2);
+	}
+	return result;
+}
+
+/* and clear */
+unsigned char powerElmoA0Clear2(unsigned char bit15, unsigned char bit14, unsigned char bit12)
+{
+	unsigned char result;
+	unsigned int mask3;
+	unsigned int mask0;
+
+	powerWaitTimers(0x80);
+	if (bit15)
+		mask3 = elmoStatusMask.reg[3] & 0x7fff;
+	if (bit14)
+		mask3 = elmoStatusMask.reg[3] & 0xbfff;
+	if (bit12)
+		mask0 = elmoStatusMask.reg[0] & 0xefff;
+	elmoCommand[0] = 0xa0;
+	elmoCommand[1] = ((unsigned char *)&mask0)[1];
+	elmoCommand[2] = (unsigned char)mask0;
+	elmoCommand[3] = 0xa3;
+	elmoCommand[4] = ((unsigned char *)&mask3)[1];
+	elmoCommand[5] = (unsigned char)mask3;
+	result = elmoWrite(elmoCommand, 6);
+	if (result == 0) {
+		elmoStatusMask.reg[0] = mask0;
+		elmoStatusMask.reg[3] = mask3;
+		powerStartTimer(0x80, POWER_TIMER(0x0b), 0x1e);
+	}
+	return result;
+}
+#else
 /* 0x0885: Elmo register 0xa0's bit 12 set; the other two are not used */
 unsigned char powerElmoA0Set2(unsigned char bit12, unsigned char unused1, unsigned char unused0)
 {
@@ -1001,6 +1207,7 @@ unsigned char powerElmoA0Clear2(unsigned char bit12, unsigned char unused1, unsi
 	}
 	return result;
 }
+#endif
 
 /* 0x0886: HDMI CEC's power (Elmo register 0xa1's bit 15) */
 unsigned char powerHdmiCecOn(void)
@@ -1073,7 +1280,7 @@ unsigned char powerMotionOn(void)
 			elmoStatusMask.reg[2] = mask;
 			powerSleep(3);
 #if BOARD_MOTION
-			if (P7.2)
+			if (BOARD_MOTION_READY)
 				motionOpen();
 			else
 				motionSetAbsent();

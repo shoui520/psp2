@@ -197,10 +197,17 @@ void inputInit(void)
 #if FW_SINCE(0x01000104)
 	if ((getResetCause() & 0xf0) == 0)
 		coldStart = 1;
+#if BOARD_INPUTS_102603
+	PM3.0 = 1;
+	PM3.1 = 1;
+	PM6.7 = 0;
+	P6.7 = 0;
+#else
 	PM3.0 = 1;
 	PM3.1 = 0;
 	P3.1 = 0;
 	PM6.7 = 1;
+#endif
 #else
 	/* before 0x01000104 every start is cold, and the settings' wlanLine picks the WLAN's
 	   line: P3.1 driven low, or P6.7 */
@@ -251,7 +258,7 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
-#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000	/* 0x00601000: PCH-1000's, with the pins */
+#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && !BOARD_INPUTS_102603	/* 0x00601000: PCH-1000's, with the pins */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 #else
@@ -401,7 +408,13 @@ void inputResumeOpen(void)
 	analogInit();
 #endif
 	adcOpenForBoard();
+#if BOARD_INPUTS_102603
+	P12 |= 0x80;
+#endif
 	inputGroup1.pending |= 0x08;
+#if BOARD_INPUTS_102603
+	inputDelays.latchOn = 0x1c;
+#endif
 #if BOARD_MOTION
 	if (elmoVersion0() == 0xff)
 		motionOpen();
@@ -434,6 +447,10 @@ void inputPowerOff(void)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#if BOARD_INPUTS_102603
+	P12 &= (unsigned char)~0x80;
+	P5.4 = 0;
+#endif
 #else
 	adcCloseForBoard();
 	inputKeysClose();
@@ -523,7 +540,16 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
-#if !FW_SINCE(0x01000104)
+#if BOARD_INPUTS_102603
+	if ((flags & 0x00000020) == 0) {
+		intp4Enable(1);
+		if (!P3.1) {
+			pinMonitor3Enable(1);
+			pinMonitors.pin[3].last = 0;
+			inputScanHold(0x1a);
+		}
+	}
+#elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 P3.1 wakes too, unless it drives the WLAN's line */
 	if ((flags & 0x00000020) == 0 && configGet()->wlanLine == 0) {
 		intp4Enable(1);
@@ -535,6 +561,14 @@ void inputSuspend(void)
 	}
 #endif
 	if ((flags & 0x00000008) == 0) {
+#if BOARD_INPUTS_102603
+		intp7Enable(1);
+		if (!P14.1) {
+			pinMonitor2Enable(1);
+			pinMonitors.pin[2].last = 0;
+			inputScanHold(0x1a);
+		}
+#endif
 	}
 	if ((flags & 0x00010000) == 0) {
 		intp10Enable(1);
@@ -552,6 +586,9 @@ void inputSuspend(void)
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
+#if BOARD_INPUTS_102603
+	P12 &= (unsigned char)~0x80;
+#endif
 #else
 	adcCloseForBoard();
 	inputKeysClose();
@@ -642,6 +679,9 @@ void inputProcess(void)
 
 void sampleInputs1(void)
 {
+#if BOARD_INPUTS_102603
+	inputRaw1.1 = P4.7;
+#endif
 	inputRaw1.3 = P14.2;
 	inputRaw1.4 = P4.6;
 	inputRaw1.5 = P2.0;
@@ -649,8 +689,10 @@ void sampleInputs1(void)
 #if BOARD_INPUT1_BIT7_POLL
 	inputRaw1.7 = BOARD_INPUT1_BIT7_PIN;
 #endif
+#if !BOARD_INPUTS_102603
 	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
+#endif
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
 	if (inputGroup1.changed) {
 	}
@@ -671,7 +713,10 @@ void sampleInputs2(void)
 
 void sampleInputs3(void)
 {
-#if BOARD_INPUT3_PINS
+#if BOARD_INPUTS_102603
+	inputRaw3.0 = P7.3;
+	inputRaw3.1 = P7.2;
+#elif BOARD_INPUT3_PINS
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.7;
 #endif
@@ -679,6 +724,9 @@ void sampleInputs3(void)
 	inputRaw3.2 = P2.3;
 	inputRaw3.3 = P2.7;
 	inputRaw3.4 = P2.5;
+#endif
+#if BOARD_INPUTS_102603
+	inputRaw3.5 = P2.1;
 #endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
 	if (inputGroup3.changed) {
@@ -765,9 +813,32 @@ void pinMonitorPoll(void)
 			pinMonitors.pin[1].last = level;
 		}
 		if (pinMonitors.mask & 0x04) {
+#if BOARD_INPUTS_102603
+			level = P14.1;
+			if (pinMonitors.pin[2].last == level) {
+				if (pinMonitors.pin[2].count-- == 0) {
+					pinMonitor2Enable(0);
+					pinMonitors.pin[2].config.handler();
+				}
+			} else {
+				pinMonitor2Enable(0);
+			}
+			pinMonitors.pin[2].last = level;
+#endif
 		}
 		if (pinMonitors.mask & 0x08) {
-#if !FW_SINCE(0x01000104)
+#if BOARD_INPUTS_102603
+			level = P3.1;
+			if (pinMonitors.pin[3].last == level) {
+				if (pinMonitors.pin[3].count-- == 0) {
+					pinMonitor3Enable(0);
+					pinMonitors.pin[3].config.handler();
+				}
+			} else {
+				pinMonitor3Enable(0);
+			}
+			pinMonitors.pin[3].last = level;
+#elif !FW_SINCE(0x01000104)
 			if (configGet()->wlanLine == 0) {
 				level = P3.1;
 				if (pinMonitors.pin[3].last == level) {
@@ -806,6 +877,7 @@ void pinMonitorPoll(void)
 			}
 			pinMonitors.pin[5].last = level;
 		}
+#if !BOARD_INPUTS_102603
 		if (pinMonitors.mask & 0x40) {
 			level = P7.4;
 			if (pinMonitors.pin[6].last == level) {
@@ -818,6 +890,7 @@ void pinMonitorPoll(void)
 			}
 			pinMonitors.pin[6].last = level;
 		}
+#endif
 	}
 }
 
@@ -920,6 +993,14 @@ void intp2Enable(unsigned char enable)
 		PMK2 = 1;
 		PIF2 = 0;
 	}
+#if BOARD_INPUTS_102603
+	else {
+		EGP0.2 = 1;
+		EGN0.2 = 0;
+		PIF2 = 0;
+		PMK2 = 0;
+	}
+#endif
 }
 
 void intp1Enable(unsigned char enable)
@@ -1287,6 +1368,14 @@ void intp7Enable(unsigned char enable)
 		PMK7 = 1;
 		PIF7 = 0;
 	}
+#if BOARD_INPUTS_102603
+	else {
+		EGP0.7 = 0;
+		EGN0.7 = 1;
+		PIF7 = 0;
+		PMK7 = 0;
+	}
+#endif
 }
 
 void pinMonitor2Set(struct PinConfig *config)
@@ -1299,10 +1388,21 @@ void pinMonitor2Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x04;
+#if BOARD_INPUTS_102603
+	else {
+		pinMonitors.pin[2].last = P14.1;
+		pinMonitors.pin[2].count = pinMonitors.pin[2].config.reload;
+		pinMonitors.mask |= 0x04;
+	}
+#endif
 }
 
 void pinMonitor2Expired(void)
 {
+#if BOARD_INPUTS_102603
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(3);
+#endif
 }
 
 void intp4Enable(unsigned char enable)
@@ -1313,7 +1413,14 @@ void intp4Enable(unsigned char enable)
 		PMK4 = 1;
 		PIF4 = 0;
 	}
-#if !FW_SINCE(0x01000104)
+#if BOARD_INPUTS_102603
+	else {
+		EGP0.4 = 0;
+		EGN0.4 = 1;
+		PIF4 = 0;
+		PMK4 = 0;
+	}
+#elif !FW_SINCE(0x01000104)
 	/* before 0x01000104 P3.1's falling edge, unless P3.1 drives the WLAN's line */
 	else if (configGet()->wlanLine == 0) {
 		EGP0.4 = 0;
@@ -1334,7 +1441,13 @@ void pinMonitor3Enable(unsigned char enable)
 {
 	if (enable == 0)
 		pinMonitors.mask &= ~0x08;
-#if !FW_SINCE(0x01000104)
+#if BOARD_INPUTS_102603
+	else {
+		pinMonitors.pin[3].last = P3.1;
+		pinMonitors.pin[3].count = pinMonitors.pin[3].config.reload;
+		pinMonitors.mask |= 0x08;
+	}
+#elif !FW_SINCE(0x01000104)
 	else if (configGet()->wlanLine == 0) {
 		pinMonitors.pin[3].last = P3.1;
 		pinMonitors.pin[3].count = pinMonitors.pin[3].config.reload;
@@ -1441,12 +1554,15 @@ void intp8Enable(unsigned char enable)
 		EGN1.0 = 0;
 		PMK8 = 1;
 		PIF8 = 0;
-	} else {
+	}
+#if !BOARD_INPUTS_102603
+	else {
 		EGP1.0 = 1;
 		EGN1.0 = 0;
 		PIF8 = 0;
 		PMK8 = 0;
 	}
+#endif
 }
 
 void pinMonitor6Set(struct PinConfig *config)
@@ -1459,7 +1575,9 @@ void pinMonitor6Enable(unsigned char enable)
 {
 	if (enable == 0) {
 		pinMonitors.mask &= ~0x40;
-	} else {
+	}
+#if !BOARD_INPUTS_102603
+	else {
 #if FW_SINCE(0x0100060B)
 		pinMonitors.pin[6].last = 1;
 #else
@@ -1468,6 +1586,7 @@ void pinMonitor6Enable(unsigned char enable)
 		pinMonitors.pin[6].count = pinMonitors.pin[6].config.reload;
 		pinMonitors.mask |= 0x40;
 	}
+#endif
 }
 
 void pinMonitor6Expired(void)
@@ -1499,7 +1618,7 @@ void inputMultiCnChanged(void)
 #if FW_SINCE(0x0100010B)
 		analogMultiCnStop();
 #endif
-		powerDeviceSetPending(0x20);
+		powerDeviceSetPending(BOARD_INPUTS_102603 ? 2 : 0x20);
 		sleepFactorSet5(0);
 		analogMultiCnInit();
 	}
@@ -1508,6 +1627,7 @@ void inputMultiCnChanged(void)
 
 void input1Bit0Changed(void)
 {
+#if !BOARD_INPUTS_102603
 	if (input1Bit0Active() == 1) {
 		sleepFactorSet15(1);
 	} else {
@@ -1515,6 +1635,7 @@ void input1Bit0Changed(void)
 		sleepFactorSet15(0);
 	}
 	set_flg(2, 0x0100);
+#endif
 }
 
 /* timer 3 run ticks times first (the inputs held at a power-on) */

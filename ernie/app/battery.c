@@ -7,6 +7,7 @@
 #include <stddef.h>
 
 #include "ernie.h"
+#include "board.h"
 #include "battery.h"
 #include "charge.h"
 #include "chip.h"
@@ -343,12 +344,16 @@ unsigned char batterySWReset(void)
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {
+#if !BOARD_102603
 	P96 = 1;
+#endif
 }
 
 void batteryBLLineOff(void)
 {
+#if !BOARD_102603
 	P96 = 0;
+#endif
 }
 
 /* at the power-off: the gauge's control command 0x0011 (its hibernation), from version 0x0408 */

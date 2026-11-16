@@ -8,6 +8,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "board.h"
 #include "chip.h"
 #include "clockout.h"
 #include "config.h"
@@ -57,6 +58,7 @@ extern void inputShutdown(void);
 extern void inputCut(void);
 extern void inputReset(void);
 extern unsigned char input2Bit0Get(void);
+extern unsigned char input3Bit5High(void);
 
 static unsigned char powerError;
 
@@ -213,10 +215,18 @@ unsigned char powerErrorGet(void)
 }
 #endif
 
+#if BOARD_102603
+/* its fault line: input 3's bit 5 */
+int powerFaulty(void)
+{
+	return input3Bit5High();
+}
+#else
 unsigned char powerFaulty(void)
 {
 	return 0;
 }
+#endif
 
 /* a part reports itself: its bit in event flag 5 */
 unsigned char powerReady(unsigned char id)

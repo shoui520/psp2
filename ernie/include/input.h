@@ -106,8 +106,11 @@ extern void button2HoldReset(void);
 #endif
 extern void inputScanHold(unsigned int ticks);
 extern unsigned char input3Bit0High(void);
-#if !FW_SINCE(0x01000104)
+#if !FW_SINCE(0x01000104) || BOARD_INPUTS_102603
 extern void pinMonitor3Enable(unsigned char enable);
+#endif
+#if BOARD_INPUTS_102603
+extern void pinMonitor2Enable(unsigned char enable);
 #endif
 extern void pinMonitor0Enable(unsigned char enable);
 extern void pinMonitor1Enable(unsigned char enable);

@@ -16,6 +16,10 @@
    Elmo wiring and power steps */
 #define BOARD_IRS1001		((ERNIE_HW & 0x00ff0000) == 0x00600000)
 
+/* 0x00102603: 0x00411000's code (its ERNIE_BOARD) for a board with another Elmo wiring, ports
+   and multi-connector switch */
+#define BOARD_102603		HW_IS(0x00102603)
+
 /* input 1's bit 7 and the touch panels' CHG line: P14.5 and P7.5, on IRS-1001 (but 0x00601000)
    the other way round */
 #if BOARD_IRS1001 && !HW_IS(0x00601000)
@@ -36,7 +40,7 @@
 
 /* the off and suspend states wake by INTP1 and INTP13 (and INTP11), the inputs scanned in mode 2:
    not on 0x00601000, whose inputs keep scanning in mode 1 */
-#define BOARD_OFF_WAKE		(!HW_IS(0x00601000))
+#define BOARD_OFF_WAKE		(!HW_IS(0x00601000) && !BOARD_102603)
 
 /* the probe pins show the power state (debugPinReserved: 1 off, 2 suspend, 3 resume, else 0) and
    a resume's mode (debugPinCode), and P4.0 toggles at each of task 2's ticks (not task 3's scans):
@@ -44,7 +48,14 @@
 #define BOARD_DEBUG_PINS_POWER	HW_IS(0x00601000)
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
-#define BOARD_POWER_STEPS	(BOARD_IRS1001 ? 4 : 3)
+#define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 ? 4 : 3)
+
+/* the multi-connector's switch: the output's bits 0 and 1 are P13.0 and P2.2, set at once
+   (0x00102603); the others' a mode, with a wait between the two pins */
+#define BOARD_MULTICN_BITS	BOARD_102603
+
+/* the multi-connector's level that is a dongle (analogGetMultiCn) */
+#define BOARD_MULTICN_DONGLE_ID	(BOARD_102603 ? 0x51 : 2)
 
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K and 0x00411000, which
    switch only the dongle's (P13.0) */
@@ -80,7 +91,7 @@
 /* timer 0x1f, started and stopped by chargeUpdate (the settings' chargeTimer1f), and the
    charge's transition 0x16 with the AC on (offWakeUnmask22): PCH-1000's; the others keep
    chargeTimer1fStart and chargeTimer1fStop empty */
-#define BOARD_CHARGE_TIMER1F	(ERNIE_BOARD == 0x00406000)
+#define BOARD_CHARGE_TIMER1F	(ERNIE_BOARD == 0x00406000 || BOARD_102603)
 
 /* the NVS's data blocks (app/nvs.c), each kept with a copy, the rest of its 16 blocks spares:
    PCH-1000's NVS holds 0xba0 bytes, the others' 0xf80 */
@@ -94,11 +105,11 @@
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others
    keep input1Bit7Poll empty */
-#define BOARD_INPUT1_BIT7_POLL	(ERNIE_BOARD == 0x00406000)
+#define BOARD_INPUT1_BIT7_POLL	(ERNIE_BOARD == 0x00406000 || BOARD_102603)
 
 /* INTP11 (P7.7, intp11Level): not on PCH-1000, whose intp11Enable does nothing and whose
    handler is empty */
-#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000)
+#define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && !BOARD_102603)
 
 /* the hardware watchdog (WDTE): PCH-1000's runs, kicked by the tasks, the NVS and the
    configuration's flash writes; the others' never */
@@ -130,6 +141,25 @@
 /* input 3's bits 2-4 from P2.3, P2.7 and P2.5 (sampleInputs3) */
 #define BOARD_INPUT3_PORT2	BOARD_IS(0x00411000)
 
+/* 0x00102603's inputs: input 1's bit 1 (P4.7) and input 3's bits 1 (P7.2, not P7.7) and 5
+   (P2.1); the wake inputs INTP2 (rising), INTP4 and INTP7 (falling) and their pin monitors 3
+   (P3.1) and 2 (P14.1, a transition 3); INTP8 and pin monitor 6 only ever disabled; the
+   WLAN's line on P6.7 (P3.1 an input) */
+#define BOARD_INPUTS_102603	BOARD_102603
+
+/* P9.5, driven high at a resume and low at an off or a suspend (powerseq.c): not on
+   0x00102603, whose WLAN line is P6.7 and whose SD power comes first, retimed, with no RMR or
+   multi-connector power */
+#define BOARD_P95		(!BOARD_102603)
+
+/* the motion sensor's ready line, read by inputreq.c's 0x0484-0x0488 and powerMotionOn: P7.2;
+   0x00102603's P7.7 (its input 3 takes P7.2) */
+#if BOARD_102603
+#define BOARD_MOTION_READY	P7.7
+#else
+#define BOARD_MOTION_READY	P7.2
+#endif
+
 /* the serial link's mode 2 (app/serial2.c: its commands, notifications and test area, P7.1,
    its request and link inputs): not on PCH-1000, whose link answers mode 2 with no data */
 #define BOARD_SERIAL2		(ERNIE_BOARD != 0x00406000 || HW_IS(0x00601000))
@@ -146,6 +176,14 @@
    and P9.3 */
 #define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
+/* and 0x00102603's own */
+#define BOARD_PM2		(BOARD_102603 ? 0xab : 0x01)
+#define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
+#define BOARD_PM6		(BOARD_102603 ? 0x12 : 0x92)
+#define BOARD_PM11		(BOARD_102603 ? 0xf2 : 0xf1)
+#define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
+#define BOARD_PM14		(BOARD_102603 ? 0xe6 : 0xe4)
+#define BOARD_PM15		(BOARD_102603 ? 0xff : 0xf8)
 
 /* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
 #define BOARD_BBMC_INIT_PULSE	(ERNIE_BOARD != 0x00406000)
