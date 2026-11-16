@@ -95,3 +95,83 @@ NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiReques
 	request->next = next;
 	return request;
 }
+
+/* free the second list's nodes (each gives back its pool object) and its ring */
+int npWebApiRequestClearListB(NpWebApiRequest *request, NpWebApiLibContext *libCtx)
+{
+	NpWebApiListNode *head;
+	NpWebApiListNode *node;
+	NpWebApiListNode *next;
+	void *allocator;
+
+	npWebApiLibContextLock(libCtx);
+	head = request->listBHead;
+	node = NULL;
+	if (head != NULL)
+		node = head->next;
+	for (; node != head; node = node->next) {
+		npWebApiLibContextDestroyPool(libCtx);
+		head = request->listBHead;
+	}
+	if (head != NULL) {
+		node = head->next;
+		allocator = request->listBAllocator;
+		if (node != head) {
+			do {
+				next = node->next;
+				if (allocator != NULL) {
+					SceNpCommonPs4_6B428829(allocator);
+					allocator = request->listBAllocator;
+					head = request->listBHead;
+				}
+				node = next;
+			} while (next != head);
+		}
+		if (allocator != NULL)
+			SceNpCommonPs4_6B428829(allocator);
+		request->listBHead = NULL;
+		request->listBCount = 0;
+	}
+	return npWebApiLibContextUnlock(libCtx);
+}
+
+int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libCtx)
+{
+	NpWebApiListNode *head;
+	NpWebApiListNode *node;
+	NpWebApiListNode *next;
+	void *allocator;
+
+	npWebApiLibContextLock(libCtx);
+	head = request->listAHead;
+	node = NULL;
+	if (head != NULL)
+		node = head->next;
+	for (; node != head; node = node->next) {
+		if (node->value8 != 0)
+			npWebApiLibContextDestroyPool(libCtx);
+		if (node->value12 != 0)
+			npWebApiLibContextDestroyPool(libCtx);
+		head = request->listAHead;
+	}
+	if (head != NULL) {
+		node = head->next;
+		allocator = request->listAAllocator;
+		if (node != head) {
+			do {
+				next = node->next;
+				if (allocator != NULL) {
+					SceNpCommonPs4_6B428829(allocator);
+					allocator = request->listAAllocator;
+					head = request->listAHead;
+				}
+				node = next;
+			} while (next != head);
+		}
+		if (allocator != NULL)
+			SceNpCommonPs4_6B428829(allocator);
+		request->listAHead = NULL;
+		request->listACount = 0;
+	}
+	return npWebApiLibContextUnlock(libCtx);
+}

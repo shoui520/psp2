@@ -109,6 +109,7 @@ extern const void *g_userContextVtable[];	/* 0x8100eddc */
 extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
 extern const void *g_baseVtable[];		/* 0x8100eb8c */
 extern int SceNpCommonPs4_BB5282C8(void *object);
+extern int SceNpCommonPs4_6B428829(void *allocator);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
 #ifdef __cplusplus
 }
@@ -239,6 +240,14 @@ extern int npWebApiIsShellProcess(void);
 
 /* a request: the library context it belongs to, its reference count and its 64-bit ID (the library
    context's ID is in the upper half) */
+/* a node of the request's lists (a ring around the head node) */
+typedef struct NpWebApiListNode {
+	unsigned char reserved0[4];
+	struct NpWebApiListNode *next;
+	int value8;
+	int value12;
+} NpWebApiListNode;
+
 struct NpWebApiRequest;
 
 typedef struct NpWebApiRequest {
@@ -247,7 +256,15 @@ typedef struct NpWebApiRequest {
 	int refCount;
 	unsigned char reserved1[4];
 	SceInt64 requestId;
-	unsigned char reserved2[216];
+	unsigned char reserved2a[24];
+	struct NpWebApiListNode *listAHead;
+	int listACount;
+	void *listAAllocator;
+	unsigned char reserved2b[4];
+	struct NpWebApiListNode *listBHead;
+	int listBCount;
+	void *listBAllocator;
+	unsigned char reserved2c[164];
 	struct NpWebApiRequest *next;
 	unsigned char reserved3[36];
 	unsigned char object280[32];
@@ -313,6 +330,8 @@ extern NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectio
 extern NpWebApiConnectionPool *npWebApiConnectionPoolDestruct(NpWebApiConnectionPool *pool);
 extern int npWebApiConnectionPoolDeleteThis(NpWebApiConnectionPool *pool);
 
+extern int npWebApiRequestClearListB(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
+extern int npWebApiRequestClearListA(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
 extern SceInt64 npWebApiRequestGetId(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestNext(NpWebApiRequest *request);
