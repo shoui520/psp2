@@ -393,6 +393,17 @@ extern int npCommerce2GetSystemTime(SceUInt64 *time);
 extern int npCommerce2RenewConnection(int httpTemplate, int *httpConnection, int timeout);
 #define NP_COMMERCE2_ERROR_SHELL_CHANGED	-2141909099	/* 0x80550f95 */
 
+/* the store's response records (tlv.c) */
+#define NP_COMMERCE2_ERROR_RECORD_NOT_FOUND	-2141909113	/* 0x80550f87 */
+#define NP_COMMERCE2_ERROR_RECORD_CUT_OFF	-2141909112	/* 0x80550f88 */
+#define NP_COMMERCE2_ERROR_RECORD_TOO_SHORT	-2141909111	/* 0x80550f89 */
+#define NP_COMMERCE2_ERROR_RECORD_TRUNCATED	-2141909110	/* 0x80550f8a */
+extern int npCommerce2FindRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+				 SceUInt16 *length, int partial);
+extern int npCommerce2FindRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+				      SceUInt16 *length);
+extern SceUInt16 sceNetNtohs(SceUInt16 net16);
+
 /* the object table (object_table.c, request_table.c) */
 extern int npCommerce2AddContext(SceKernelLwMutexWork *lock, NpCommerce2Context *ctx, SceUInt32 *ctxId, int kind);
 extern int npCommerce2GetContext(SceKernelLwMutexWork *lock, SceUInt32 ctxId, NpCommerce2Context **ctx, int notRemoved);
