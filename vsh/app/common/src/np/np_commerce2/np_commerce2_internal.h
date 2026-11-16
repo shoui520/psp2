@@ -713,9 +713,12 @@ extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100647A(SceUInt32 reqId, const char *categoryId, const char *productId,
 				int a4, int a5);
-extern int npCommerce2_8100F740(const SceNpCommerce2GetProductInfoResult *result,
-				SceNpCommerce2GameProductInfo *gameProductInfo);
-extern int npCommerce2_8100F798(int a1, int a2, int a3);
+extern int npCommerce2GetGameProductInfoOfProductResult(const SceNpCommerce2GetProductInfoResult *result,
+							SceNpCommerce2GameProductInfo *gameProductInfo);
+extern int npCommerce2GetContentRatingInfoAtOfProduct(const NpCommerce2Item *item, SceUInt32 index,
+						      SceNpCommerce2ContentRatingInfo *info);
+extern int npCommerce2ReadListTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
+				    int kind, const char **textA, const char **textB, const char **textC);
 extern int npCommerce2_8100F8D8(int a1, int a2, void *a3, int a4);
 extern int npCommerce2_8101144E(int a1, int a2, int a3, int a4);
 extern int npCommerce2_810114C6(int a1, int a2, int a3);

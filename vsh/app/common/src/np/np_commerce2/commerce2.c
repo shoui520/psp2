@@ -625,7 +625,7 @@ int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *result,
 	if (result == NULL || gameProductInfo == NULL)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 
-	ret = npCommerce2_8100F740(result, gameProductInfo);
+	ret = npCommerce2GetGameProductInfoOfProductResult(result, gameProductInfo);
 	if (ret >= 0 && npCommerce2GetEnvironment() == 1) {
 		gameProductInfo->productLongDescription = g_longText;
 		gameProductInfo->legalDescription = g_longText;
@@ -638,7 +638,7 @@ int SceNpCommerce2_A88EA64B(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_8100F798(a1, a2, a3);
+		return npCommerce2GetContentRatingInfoAtOfProduct((const NpCommerce2Item *)a1, a2, (SceNpCommerce2ContentRatingInfo *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3834,7 +3834,7 @@ int SceNpCommerce2_2EB4B433(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_8100F798(a1, a2, a3);
+		return npCommerce2GetContentRatingInfoAtOfProduct((const NpCommerce2Item *)a1, a2, (SceNpCommerce2ContentRatingInfo *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 

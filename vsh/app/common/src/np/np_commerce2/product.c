@@ -502,3 +502,71 @@ int npCommerce2ReadProductItemLong(const NpCommerce2Item *result, NpCommerce2Pro
 	(void)foundD;
 	return ret;
 }
+
+/* the game product of a product result, with the normal data type */
+int npCommerce2GetGameProductInfoOfProductResult(const SceNpCommerce2GetProductInfoResult *result,
+						 SceNpCommerce2GameProductInfo *gameProductInfo)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), 0x22, 0x65, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadGameProductInfo(data + ret, length, result->commonData.buf_head,
+						     result->commonData.version, 1, gameProductInfo);
+	return ret;
+}
+
+/* the content rating record at an index, as the product result's copy of the reader */
+int npCommerce2GetContentRatingInfoAtOfProduct(const NpCommerce2Item *item, SceUInt32 index,
+					       SceNpCommerce2ContentRatingInfo *info)
+{
+	const char *data = (const char *)item->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, item->commonData.data_size -
+					   (data - (const char *)item->commonData.data), 0x18, 0x19, index,
+					   &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadContentRatingInfo(data + ret, length, item->commonData.buf_head,
+						       item->commonData.version, info);
+	return ret;
+}
+
+/* three texts of a listed record; the last is read only for kind 2 */
+int npCommerce2ReadListTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
+			     int kind, const char **textA, const char **textB, const char **textC)
+{
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt16 foundC;
+	int ret;
+
+	*textA = NP_COMMERCE2_EMPTY_TEXT_OF(item);
+	ret = npCommerce2FindRecordWhole(buf, length, 8, 0, &foundA);
+	if (ret >= 0 && foundA != 0)
+		*textA = buf + ret;
+	if (ret >= 0) {
+		*textB = NP_COMMERCE2_EMPTY_TEXT_OF(item);
+		ret = npCommerce2FindRecordWhole(buf, length, 0x38, 0, &foundB);
+		if (ret >= 0 && foundB != 0)
+			*textB = buf + ret;
+		if (ret >= 0) {
+			*textC = NP_COMMERCE2_EMPTY_TEXT_OF(item);
+			if (kind != 2) {
+				ret = 0;
+			} else {
+				*textC = NP_COMMERCE2_EMPTY_TEXT_OF(item);
+				ret = npCommerce2FindRecordWhole(buf, length, 0x12, 0, &foundC);
+				if (ret >= 0 && foundC != 0)
+					*textC = buf + ret;
+				if (ret >= 0)
+					ret = 0;
+			}
+		}
+	}
+	return ret;
+}
