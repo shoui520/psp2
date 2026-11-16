@@ -159,3 +159,13 @@ int npCommerce2ForwardCookie(int httpTemplate, int httpConnection, int httpReque
 	}
 	return 0;
 }
+
+int npCommerce2DeleteHttpRequest(int httpRequest)
+{
+	return sceHttpDeleteRequest(httpRequest);
+}
+
+int npCommerce2AbortHttpRequest(int httpRequest)
+{
+	return sceHttpAbortRequest(httpRequest);
+}

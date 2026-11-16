@@ -241,7 +241,7 @@ started:
 }
 
 /* gives the buffers of the shell request of the slot's type the results of the operation */
-int npCommerce2GetShellSlotResult(int slotId, int *a2, int *a3, int *a4, int a5, int *a6, int *a7, int a8, int *a9)
+int npCommerce2GetShellSlotResult(int slotId, void *a2, void *a3, void *a4, int a5, void *a6, void *a7, int a8, void *a9)
 {
 	NpCommerce2ShellSlot *slot;
 	NpCommerce2Ipc *shell;

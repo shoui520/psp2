@@ -31,7 +31,7 @@ int npCommerce2InitTable(const char *environment, int npCommonValue, int environ
 /* Term: every object is released, then the lock goes */
 int npCommerce2TermTable(void)
 {
-	npCommerce2_8101D9AC(&g_tableLock);
+	npCommerce2DestroyAllContexts(&g_tableLock);
 	return sceKernelDeleteLwMutex(&g_tableLock);
 }
 
@@ -150,14 +150,14 @@ int npCommerce2SetMode(SceUInt32 ctxId, SceUInt32 mode)
 	return ret;
 }
 
-int npCommerce2GetUserValue(SceUInt32 ctxId, SceUInt32 *value)
+int npCommerce2GetNativeBuildVersion(SceUInt32 ctxId, SceUInt32 *value)
 {
 	NpCommerce2Context *ctx = NULL;
 	int ret;
 
 	ret = npCommerce2GetContext(&g_tableLock, ctxId, &ctx, 1);
 	if (ret >= 0)
-		*value = ctx->userValue;
+		*value = ctx->nativeBuildVersion;
 	if (ctx != NULL)
 		npCommerce2ReleaseContext(&g_tableLock, ctx);
 	return ret;
@@ -213,13 +213,57 @@ int npCommerce2CopyResponse(SceUInt32 ctxId, SceUInt32 targetId, void *buf, SceS
 				target->text[255] = '\0';
 				httpTemplate = target->httpTemplate;
 				httpConnection = target->httpConnection;
-				target->userValue = ctx->userValue;
+				target->nativeBuildVersion = ctx->nativeBuildVersion;
 				ret = npCommerce2AddCookie(httpTemplate, httpConnection, target->text);
 			}
 		}
 	}
 	if (target != NULL)
 		npCommerce2ReleaseContext(&g_tableLock, target);
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}
+
+/* the API version the account's context needs (only the second kind of context has one) */
+int npCommerce2GetApiVersion(NpCommerce2Context *ctx, int *apiVersion)
+{
+	if (ctx->version != 2)
+		return NP_COMMERCE2_ERROR_NO_API_VERSION;
+	*apiVersion = 25;
+	return 0;
+}
+
+/* the ID of the signed in account */
+int npCommerce2GetNpId(NpCommerce2Context *ctx, void *npId, int unused1, int unused2)
+{
+	return SceNpManager_DDF30B0E(npId, 0, unused2);
+}
+
+/* the account's online ID (32 bytes) */
+__attribute__((noinline))
+int npCommerce2GetOnlineId(NpCommerce2Context *ctx, void *onlineId)
+{
+	char id[32];
+	int ret;
+
+	ret = SceNpManager_CFAEB050(id);
+	if (ret >= 0) {
+		sceClibMemset(onlineId, 0, 4);
+		sceClibMemcpy_safe(onlineId, id, 0x20);
+	}
+	return ret;
+}
+
+/* the account's online ID of a context's account */
+int npCommerce2GetOnlineIdOfContext(SceUInt32 ctxId, void *onlineId)
+{
+	NpCommerce2Context *ctx = NULL;
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, ctxId, &ctx, 1);
+	if (ret >= 0)
+		ret = npCommerce2GetOnlineId(ctx, onlineId);
 	if (ctx != NULL)
 		npCommerce2ReleaseContext(&g_tableLock, ctx);
 	return ret;

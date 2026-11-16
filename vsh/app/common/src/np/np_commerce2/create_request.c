@@ -380,3 +380,125 @@ int npCommerce2CreateReqSendEmailVer(SceUInt32 ctxId, SceUInt32 *reqId)
 {
 	return npCommerce2CreateRequest(ctxId, NP_COMMERCE2_OP_SEND_EMAIL_VER, reqId, 0);
 }
+
+/* makes a request of a type on a context; the types the shell answers get a slot for their kind */
+int npCommerce2CreateRequest(SceUInt32 ctxId, int type, SceUInt32 *reqId, int version)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Request *req;
+	int *slotId;
+	int slotType;
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, ctxId, &ctx, 1);
+	if (ret < 0)
+		goto done;
+	req = npCommerce2Alloc(0x1c);
+	if (req == NULL) {
+		ret = SCE_NP_COMMERCE2_ERROR_OUT_OF_MEMORY;
+		goto failed;
+	}
+	sceClibMemset(req, 0, 0x1c);
+	req->type = type;
+	if (type != 100 && type != 66 && type != 61 && type != 49 && type != 29 && type != 28 && type != 2 &&
+	    type != 1)
+		goto add;
+	if (type == 1) {
+		if (version <= 0) {
+			if (version >= 0) {
+				slotType = 1;
+			} else {
+				ret = NP_COMMERCE2_ERROR_INVALID_VERSION;
+				goto failed;
+			}
+		} else if (version <= 1) {
+			slotType = 2;
+		} else {
+			if (version > 2) {
+				ret = NP_COMMERCE2_ERROR_INVALID_VERSION;
+				goto failed;
+			}
+			slotType = 11;
+		}
+	} else if (type == 66) {
+		slotType = 3;
+	} else if (type == 49) {
+		slotType = 9;
+		if (ctx->mode != 8) {
+			slotType = 4;
+			if (ctx->mode == 7)
+				slotType = 10;
+		}
+	} else if (type == 29) {
+		slotType = 5;
+	} else if (type == 28) {
+		slotType = 6;
+	} else if (type == 61) {
+		slotType = 7;
+	} else if (type == 100) {
+		slotType = 12;
+	} else {
+		if (ctx->shellSlot == 0)
+			goto add;
+		slotType = 8;
+	}
+	slotId = &req->shellSlot;
+	ret = npCommerce2CreateShellSlot(slotType, slotId);
+	if (ret < 0)
+		goto failed;
+add:
+	ret = npCommerce2AddRequest(&g_tableLock, req, ctxId, reqId);
+	if (ret >= 0)
+		goto done;
+failed:
+	if (req != NULL) {
+		npCommerce2DeleteShellSlot(req->shellSlot);
+		npCommerce2Free(req);
+	}
+done:
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}
+
+/* the session of the library's own sign in, made with the version of the API that is asked for */
+int npCommerce2CreateSessionRequest(SceUInt32 ctxId, SceUInt32 *reqId, int version)
+{
+	return npCommerce2CreateRequest(ctxId, NP_COMMERCE2_OP_CR_SESS, reqId, version);
+}
+
+int npCommerce2CreateReqDelSess(SceUInt32 ctxId, SceUInt32 *reqId)
+{
+	return npCommerce2CreateRequest(ctxId, NP_COMMERCE2_OP_DEL_SESS, reqId, 0);
+}
+
+int npCommerce2CreateReqGetCat(SceUInt32 ctxId, SceUInt32 *reqId)
+{
+	return npCommerce2CreateRequest(ctxId, NP_COMMERCE2_OP_GET_CAT, reqId, 0);
+}
+
+/* hands the shell the session request of the slot */
+int npCommerce2StartSessionRequest(SceUInt32 reqId)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Request *req = NULL;
+	SceUInt32 request[1];
+	int ret;
+
+	ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &ctx, 1);
+	if (ret >= 0)
+		ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);
+	if (ret >= 0) {
+		sceClibMemset(request, 0, 4);
+		request[0] = 4;
+		ret = npCommerce2StartShellSlot_8101848C(req->shellSlot, request);
+	}
+	if (req != NULL) {
+		if ((req->flags & NP_COMMERCE2_REQUEST_FLAG_ABORTED) != 0)
+			ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
+		npCommerce2ReleaseRequest(&g_tableLock, req);
+	}
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}

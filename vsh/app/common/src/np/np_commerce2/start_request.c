@@ -11,8 +11,9 @@
 #define NP_COMMERCE2_ARGS(...)	, __VA_ARGS__
 #define NP_COMMERCE2_NO_ARGS
 #define NP_COMMERCE2_UNPAREN(...)	__VA_ARGS__
-#define NP_COMMERCE2_START_REQUEST_EX(name, send, firstArg, precond, shellCheck, extra, after)			\
+#define NP_COMMERCE2_START_REQUEST_X(name, send, firstArg, precond, shellCheck, locals, pre, mid, extra, after)	\
 {												\
+	locals											\
 	NpCommerce2Context *ctx = NULL;								\
 	NpCommerce2Request *req = NULL;								\
 	SceUInt64 now;										\
@@ -23,9 +24,13 @@
 	if (ret >= 0) {										\
 		ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);				\
 		if (ret >= 0) {									\
-			ret = (precond) ? npCommerce2CheckRequest(ctx, req) : SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT; \
+			pre;									\
+			if (ret >= 0)								\
+				ret = (precond) ? npCommerce2CheckRequest(ctx, req) : SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT; \
 			if (ret >= 0) {								\
 				NpCommerce2Context *c = ctx;					\
+				mid;								\
+				if (ret >= 0) {							\
 												\
 				linked = 0;							\
 				if ((shellCheck) && c->shellSlot != 0) {					\
@@ -55,6 +60,7 @@
 					if (ret >= 0)						\
 						{ npCommerce2GetSystemTime(&ctx->lastRequestTime); after }	\
 				}								\
+				}								\
 			}									\
 		}										\
 	}											\
@@ -67,6 +73,9 @@
 		npCommerce2ReleaseContext(&g_tableLock, ctx);					\
 	return ret;										\
 }
+
+#define NP_COMMERCE2_START_REQUEST_EX(name, send, firstArg, precond, shellCheck, extra, after)			\
+	NP_COMMERCE2_START_REQUEST_X(name, send, firstArg, precond, shellCheck, , , , extra, after)
 
 /* the common starter: the sender gets the context's mode */
 #define NP_COMMERCE2_START_REQUEST(name, send, extra, after)					\
@@ -241,3 +250,109 @@ NP_COMMERCE2_START_REQUEST_EX(npCommerce2Start_8100A38E, npCommerce2Send_8101CC8
 
 int npCommerce2Start_8100B010(SceUInt32 reqId, int a2, SceUInt64 a3, SceUInt64 a4)
 NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100B010, npCommerce2Send_8101D604, NP_COMMERCE2_ARGS(a2, a3, a4), )
+
+/* the starter of the session request: the shell's when the context talks to it, the store's otherwise */
+int npCommerce2Start_810060CE(SceUInt32 reqId)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Context *c;
+	NpCommerce2Request *req;
+	struct {
+		SceUInt32 size;
+		SceUInt32 shellSlot;
+	} request;
+	SceUInt64 now;
+	int linked;
+	int ret;
+	int r;
+
+	ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &ctx, 1);
+	if (ret >= 0) {
+		if (ctx->shellSlot != 0) {
+			NpCommerce2Context *shellCtx = NULL;
+
+			req = NULL;
+			ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &shellCtx, 1);
+			if (ret >= 0)
+				ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);
+			if (ret >= 0) {
+				c = shellCtx;
+				linked = 0;
+				if (c->shellSlot != 0) {
+					r = npCommerce2ShellOp03(c->shellSlot, &linked);
+					if (r >= 0) {
+						if (linked != c->shellCounter) {
+							c->text[0] = '\0';
+							r = NP_COMMERCE2_ERROR_SHELL_CHANGED;
+						}
+						ret = r;
+					} else {
+						ret = 0;
+					}
+				} else {
+					ret = 0;
+				}
+				if (ret >= 0) {
+					sceClibMemset(&request, 0, 8);
+					request.size = 8;
+					request.shellSlot = shellCtx->shellSlot;
+					ret = npCommerce2StartShellSlot_8101884A(req->shellSlot, &request);
+					if (ret >= 0)
+						shellCtx->responseSize = 0;
+				}
+			}
+			if (req != NULL) {
+				if ((req->flags & NP_COMMERCE2_REQUEST_FLAG_ABORTED) != 0)
+					ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
+				npCommerce2ReleaseRequest(&g_tableLock, req);
+			}
+			if (shellCtx != NULL)
+				npCommerce2ReleaseContext(&g_tableLock, shellCtx);
+		} else {
+			NpCommerce2Context *plain = NULL;
+
+			req = NULL;
+			ret = npCommerce2GetContext(&g_tableLock, reqId >> 16, &plain, 1);
+			if (ret >= 0)
+				ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);
+			if (ret >= 0)
+				ret = npCommerce2CheckRequest(plain, req);
+			if (ret >= 0) {
+				c = plain;
+				if (npCommerce2GetSystemTime(&now) >= 0 && now - c->lastRequestTime >= 10000000)
+					npCommerce2RenewConnection(c->httpTemplate, &c->httpConnection, 10000000);
+				ret = npCommerce2Send_81018C7A(plain->mode, plain->httpTemplate, &plain->httpConnection,
+							       req->type, &req->httpRequest);
+				if (ret >= 0) {
+					npCommerce2GetSystemTime(&plain->lastRequestTime);
+					plain->responseSize = 0;
+				}
+			}
+			if (req != NULL) {
+				if ((req->flags & NP_COMMERCE2_REQUEST_FLAG_ABORTED) != 0)
+					ret = SCE_NP_COMMERCE2_ERROR_ABORTED;
+				npCommerce2ReleaseRequest(&g_tableLock, req);
+			}
+			if (plain != NULL)
+				npCommerce2ReleaseContext(&g_tableLock, plain);
+		}
+	}
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(&g_tableLock, ctx);
+	return ret;
+}
+
+/* the starter of the request that names the API version the account needs */
+int npCommerce2Start_81007DC4(SceUInt32 reqId)
+NP_COMMERCE2_START_REQUEST_X(npCommerce2Start_81007DC4, npCommerce2Send_8101AF1E, ctx->mode, 1, 0,
+			     int apiVersion;, , ret = npCommerce2GetApiVersion(ctx, &apiVersion),
+			     (NP_COMMERCE2_ARGS(apiVersion)), )
+
+/* the starter of the request that tells the account's name; without a name it asks the account */
+int npCommerce2Start_810097E0(SceUInt32 reqId, int a2, const char *a3, int a4, int a5, int a6, int a7, int a8,
+			      int a9, int a10)
+NP_COMMERCE2_START_REQUEST_X(npCommerce2Start_810097E0, npCommerce2Send_8101C722, ctx->mode, 1, 1,
+			     char npId[68]; const char *name;,
+			     if (a2 != 0) name = a3; else { ret = npCommerce2GetNpId(ctx, npId, 0, 0); name = npId; },
+			     ,
+			     (NP_COMMERCE2_ARGS(name, a4, a5, a6, a7, a8, a9, a10)), )

@@ -149,3 +149,76 @@ int npCommerce2RemoveAllRequests(SceKernelLwMutexWork *lock, SceUInt32 ctxId)
 	}
 	return ret;
 }
+
+static SceUInt32 g_lastRequestNumber;	/* 0x8102600C: the number the last request got */
+
+/* puts a new request into its context's list under the next number the context does not use yet */
+int npCommerce2AddRequest(SceKernelLwMutexWork *lock, NpCommerce2Request *req, SceUInt32 ctxId, SceUInt32 *reqId)
+{
+	NpCommerce2Context *ctx = NULL;
+	NpCommerce2Context *other;
+	NpCommerce2Request *it;
+	SceUInt32 count;
+	SceUInt32 number;
+	SceUInt32 last;
+	int ret;
+	int locked;
+	int found;
+
+	locked = sceKernelLockLwMutex(lock, 1, NULL);
+	ret = npCommerce2GetContext(lock, ctxId, &ctx, 1);
+	if (ret >= 0) {
+		it = ctx->requests;
+		if (it != NULL) {
+			count = 0;
+			do {
+				it = it->next;
+				count++;
+			} while (it != NULL);
+			if (count >= 8) {
+				ret = SCE_NP_COMMERCE2_ERROR_REQ_MAX;
+				goto done;
+			}
+		}
+		last = g_lastRequestNumber;
+		number = 1;
+		if (last != 0xffff)
+			number = last + 1;
+		if (number != last) {
+			do {
+				other = NULL;
+				found = npCommerce2GetContext(lock, ctxId, &other, 0);
+				if (found >= 0) {
+					for (it = other->requests; it != NULL; it = it->next) {
+						if ((SceUInt16)it->id == (SceUInt16)number)
+							break;
+					}
+					if (it == NULL)
+						found = SCE_NP_COMMERCE2_ERROR_REQ_NOT_FOUND;
+				}
+				if (other != NULL)
+					npCommerce2ReleaseContext(lock, other);
+				last = g_lastRequestNumber;
+				if (found < 0)
+					break;
+				number = (number != 0xffff) ? number + 1 : 1;
+			} while (number != g_lastRequestNumber);
+		}
+		if (number == last) {
+			ret = SCE_NP_COMMERCE2_ERROR_REQID_NOT_AVAILABLE;
+		} else {
+			req->next = ctx->requests;
+			ctx->requests = req;
+			g_lastRequestNumber = number;
+			ret = 0;
+			req->id = (SceUInt16)number | ((SceUInt16)ctxId << 16);
+			*reqId = req->id;
+		}
+	}
+done:
+	if (ctx != NULL)
+		npCommerce2ReleaseContext(lock, ctx);
+	if (locked == 0)
+		sceKernelUnlockLwMutex(lock, 1);
+	return ret;
+}

@@ -208,7 +208,6 @@ extern int npCommerce2Finalize(void);
 extern int npCommerce2InitTable(const char *environment, int npCommonValue, int environmentType);
 extern int npCommerce2TermTable(void);
 extern SceKernelLwMutexWork g_tableLock;
-extern int npCommerce2_8101D9AC(SceKernelLwMutexWork *lock);
 
 /* exports the library's own exports call (commerce2.c) */
 extern int SceNpCommerce2_1BFF9C73(int a1, void *a2, int a3);
@@ -260,7 +259,7 @@ extern int npCommerce2StartShellSlot_810184BC(int slotId, void *request);
 extern int npCommerce2StartShellSlot_810184C4(int slotId, void *request);
 extern int npCommerce2StartShellSlot_810184CC(int slotId, void *request);
 extern int npCommerce2StartShellSlot_8101884A(int slotId, void *request);
-extern int npCommerce2GetShellSlotResult(int slotId, int *a2, int *a3, int *a4, int a5, int *a6, int *a7, int a8, int *a9);
+extern int npCommerce2GetShellSlotResult(int slotId, void *a2, void *a3, void *a4, int a5, void *a6, void *a7, int a8, void *a9);
 extern int npCommerce2NotifyShellSlots(int event, int enabled);
 extern int npCommerce2ShellEnabled(int event);
 extern int npCommerce2ShellDisabled(int event);
@@ -315,7 +314,7 @@ typedef struct NpCommerce2Context {
 	SceUInt32 reserved2;
 	SceUInt64 lastRequestTime;
 	SceUInt32 kind;			/* 0: the context of the library, 1: the shell's */
-	SceUInt32 userValue;		/* given back by 71ADF5A6, moves with the text in 2F0645A6 */
+	SceUInt32 nativeBuildVersion;	/* the store's X-NativeBuildVersion of its last response */
 	char currencyCode[4];
 	char countryCode[4];
 	SceUInt32 sslCreated;
@@ -387,6 +386,21 @@ extern int npCommerce2Start_8100A982(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_8100AC38(SceUInt32 reqId, int a2);
 extern int npCommerce2Start_8100AD7E(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_8100AECA(SceUInt32 reqId, int a2);
+extern int npCommerce2Start_810060CE(SceUInt32 reqId);
+extern int npCommerce2Start_81007DC4(SceUInt32 reqId);
+extern int npCommerce2Start_810097E0(SceUInt32 reqId, int a2, const char *a3, int a4, int a5, int a6, int a7, int a8,
+				     int a9, int a10);
+extern int npCommerce2GetApiVersion(NpCommerce2Context *ctx, int *apiVersion);
+extern int npCommerce2GetNpId(NpCommerce2Context *ctx, void *npId, int unused1, int unused2);
+extern int npCommerce2GetOnlineId(NpCommerce2Context *ctx, void *onlineId);
+extern int npCommerce2GetOnlineIdOfContext(SceUInt32 ctxId, void *onlineId);
+extern int npCommerce2CreateReqDelSess(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2CreateReqGetCat(SceUInt32 ctxId, SceUInt32 *reqId);
+extern int npCommerce2AddRequest(SceKernelLwMutexWork *lock, NpCommerce2Request *req, SceUInt32 ctxId,
+				 SceUInt32 *reqId);
+extern int SceNpManager_DDF30B0E(void *npId, int a2, int a3);
+extern int SceNpManager_CFAEB050(void *onlineId);
+#define NP_COMMERCE2_ERROR_NO_API_VERSION	-2141909117	/* 0x80550f83 */
 extern int npCommerce2Start_81007EDA(SceUInt32 reqId, const char *a2, const char *a3);
 extern int npCommerce2Start_81007FBE(SceUInt32 reqId, const char *a2, const char *a3, int a4, int a5, int a6, int a7);
 extern int npCommerce2Start_810096BA(SceUInt32 reqId, int a2, const char *a3, const char *a4, int a5);
@@ -394,7 +408,7 @@ extern int npCommerce2Start_8100A2B4(SceUInt32 reqId, const char *a2, int a3, in
 extern int npCommerce2Start_8100A742(SceUInt32 reqId, const char *a2, const char *a3, int a4, int a5, int a6);
 extern int npCommerce2Start_8100B182(SceUInt32 reqId, const char *a2);
 extern int npCommerce2SetMode(SceUInt32 ctxId, SceUInt32 mode);
-extern int npCommerce2GetUserValue(SceUInt32 ctxId, SceUInt32 *value);
+extern int npCommerce2GetNativeBuildVersion(SceUInt32 ctxId, SceUInt32 *value);
 extern int npCommerce2GetSslShortfall(SceUInt32 ctxId, SceInt32 *shortfall);
 extern int npCommerce2GetHttpShortfall(SceUInt32 ctxId, SceInt32 *shortfall);
 extern int npCommerce2CopyResponse(SceUInt32 ctxId, SceUInt32 targetId, void *buf, SceSize bufLen, SceSize *fillSize);
@@ -1633,9 +1647,10 @@ extern int npCommerce2AbortRequest(SceUInt32 reqId);
 extern int npCommerce2DestroyAllContextsLocked(void);
 
 /* request builders and result readers not understood well enough to name yet; named by address */
-extern int npCommerce2_81005E40(int type, SceUInt32 reqId, void *buf, SceSize bufLen,
-				SceSize *fillSize);
 extern int npCommerce2GetResultData(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize);
+extern int npCommerce2GetResultByContext(int type, SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize);
+extern int npCommerce2ReadResponseHead(NpCommerce2Context *ctx, int httpRequest, int type, char *status, char *buf,
+				       SceUInt32 bufSize, SceSize *headLength);
 extern int npCommerce2GetEnvironment(void);
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
@@ -1669,7 +1684,6 @@ extern int npCommerce2CreateReqGetResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqEventLog(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqSrchProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetCountries(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81007DC4(SceUInt32 reqId);
 extern int npCommerce2CreateReqBindAccount(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqStartReg(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSecQ(SceUInt32 ctxId, SceUInt32 *reqId);
@@ -1696,7 +1710,6 @@ extern int npCommerce2CreateReqAuthenticate(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqRemPay(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetTranHist(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetTranDetail(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810097E0(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2CreateReqGetSrvs(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSrvDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
@@ -1722,10 +1735,6 @@ extern int npCommerce2CreateReqGetProdIds(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqSetAccountLang(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCancelOrder(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCheckAccountEula(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100B238(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810060C0(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810060CE(SceUInt32 reqId);
-extern int npCommerce2_810062EC(SceUInt32 ctxId, SceUInt32 *reqId);
 
 /* the session requests (CreateSession) */
 extern int npCommerce2CreateSessionRequest(SceUInt32 ctxId, SceUInt32 *reqId, int version);
