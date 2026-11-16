@@ -10,7 +10,8 @@
 /* one request starter */
 #define NP_COMMERCE2_ARGS(...)	, __VA_ARGS__
 #define NP_COMMERCE2_NO_ARGS
-#define NP_COMMERCE2_START_REQUEST(name, send, extra, after)						\
+#define NP_COMMERCE2_UNPAREN(...)	__VA_ARGS__
+#define NP_COMMERCE2_START_REQUEST_EX(name, send, firstArg, precond, shellCheck, extra, after)			\
 {												\
 	NpCommerce2Context *ctx = NULL;								\
 	NpCommerce2Request *req = NULL;								\
@@ -22,12 +23,12 @@
 	if (ret >= 0) {										\
 		ret = npCommerce2GetRequest(&g_tableLock, reqId, &req);				\
 		if (ret >= 0) {									\
-			ret = npCommerce2CheckRequest(ctx, req);				\
+			ret = (precond) ? npCommerce2CheckRequest(ctx, req) : SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT; \
 			if (ret >= 0) {								\
 				NpCommerce2Context *c = ctx;					\
 												\
 				linked = 0;							\
-				if (c->shellSlot != 0) {					\
+				if ((shellCheck) && c->shellSlot != 0) {					\
 					int r = npCommerce2_81017FE8(c->shellSlot, &linked);	\
 												\
 					if (r >= 0) {						\
@@ -49,8 +50,8 @@
 						npCommerce2RenewConnection(c->httpTemplate,	\
 									   &c->httpConnection,	\
 									   10000000);		\
-					ret = send(ctx->mode, ctx->httpTemplate, &ctx->httpConnection,	\
-						   req->type, &req->httpRequest extra);	\
+					ret = send(firstArg, ctx->httpTemplate, &ctx->httpConnection,	\
+						   req->type, &req->httpRequest NP_COMMERCE2_UNPAREN extra);	\
 					if (ret >= 0)						\
 						{ npCommerce2GetSystemTime(&ctx->lastRequestTime); after }	\
 				}								\
@@ -66,6 +67,10 @@
 		npCommerce2ReleaseContext(&g_tableLock, ctx);					\
 	return ret;										\
 }
+
+/* the common starter: the sender gets the context's mode */
+#define NP_COMMERCE2_START_REQUEST(name, send, extra, after)					\
+	NP_COMMERCE2_START_REQUEST_EX(name, send, ctx->mode, 1, 1, (extra), after)
 
 int npCommerce2Start_8100673A(SceUInt32 reqId, int a2)
 NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100673A, npCommerce2Send_8101940E, NP_COMMERCE2_ARGS(a2), )
@@ -190,3 +195,39 @@ NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100AD7E, npCommerce2Send_8101D376, 
 
 int npCommerce2Start_8100AECA(SceUInt32 reqId, int a2)
 NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100AECA, npCommerce2Send_8101D4B6, NP_COMMERCE2_ARGS(a2), )
+
+/* starters of operations that carry their arguments on to the sender */
+int npCommerce2Start_810062FA(SceUInt32 reqId, int a2, int a3, int a4, int a5, SceUInt32 a6)
+NP_COMMERCE2_START_REQUEST_EX(npCommerce2Start_810062FA, npCommerce2Send_81018D02, ctx->mode,
+			      ctx->kind != 0 || a6 <= 0x3c, 1, (NP_COMMERCE2_ARGS(a2, a3, a4, a5, a6)), )
+
+int npCommerce2Start_8100647A(SceUInt32 reqId, int a2, int a3, int a4, int a5)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100647A, npCommerce2Send_81018EF8, NP_COMMERCE2_ARGS(a2, a3, a4, a5), )
+
+int npCommerce2Start_810065DA(SceUInt32 reqId, int a2, int a3, int a4, int a5)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_810065DA, npCommerce2Send_81019254, NP_COMMERCE2_ARGS(a2, a3, a4, a5), )
+
+int npCommerce2Start_81007046(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_81007046, npCommerce2Send_81019998,
+			   NP_COMMERCE2_ARGS(a2, a3, a4, a5, a6, a7, a8, a9), )
+
+int npCommerce2Start_810079A4(SceUInt32 reqId, int a2, int a3, int a4, int a5)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_810079A4, npCommerce2Send_8101A7BE, NP_COMMERCE2_ARGS(a2, a3, a4, a5), )
+
+int npCommerce2Start_81007C5A(SceUInt32 reqId, SceUInt32 a2, int a3, int a4, int a5, int a6, int a7)
+NP_COMMERCE2_START_REQUEST_EX(npCommerce2Start_81007C5A, npCommerce2Send_8101AE3E, a2, 1, 1,
+			      (NP_COMMERCE2_ARGS(a3, a4, a5, a6, a7)), )
+
+int npCommerce2Start_810081EE(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_810081EE, npCommerce2Send_8101B06C, NP_COMMERCE2_ARGS(a2, a3, a4, a5, a6), )
+
+int npCommerce2Start_8100888C(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6, int a7, int a8)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100888C, npCommerce2Send_8101B70C,
+			   NP_COMMERCE2_ARGS(a2, a3, a4, a5, a6, a7, a8), )
+
+int npCommerce2Start_81009074(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_81009074, npCommerce2Send_8101BEBC, NP_COMMERCE2_ARGS(a2, a3, a4, a5, a6), )
+
+int npCommerce2Start_810091DE(SceUInt32 reqId, int a2, int a3)
+NP_COMMERCE2_START_REQUEST_EX(npCommerce2Start_810091DE, npCommerce2Send_8101C0B4, ctx->mode, 1, 0,
+			      (NP_COMMERCE2_ARGS(a2, a3)), )
