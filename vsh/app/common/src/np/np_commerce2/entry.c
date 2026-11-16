@@ -914,3 +914,156 @@ int npCommerce2ReadDetailRecord(const NpCommerce2Item *result, void *detail, int
 	}
 	return ret;
 }
+
+/* a result whose first record is the table of tag 0x28; the rows after the first bad one are dropped */
+int npCommerce2InitTableResult0x28(NpCommerce2SmallTableResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	SceUInt16 length;
+	SceUInt32 i;
+	int ret;
+	int r;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x88);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.ov = status;
+		ret = npCommerce2FindTableRecord(data + ret, dataLength, 0x28, NULL, &result->table, status);
+		if (ret >= 0) {
+			r = 0;
+			if (result->table.rows != 0) {
+				i = 0;
+				for (;;) {
+					r = npCommerce2FindTableRow((const char *)result->commonData.data,
+								    result->commonData.data_size, 0x28, 4, i,
+								    &length, result->commonData.ov);
+					if (r < 0)
+						break;
+					if (++i >= result->table.rows)
+						goto done;
+				}
+				if (i != 0) {
+					r = 0;
+					result->table.rows = i;
+				}
+			}
+done:
+			ret = r;
+			if (r >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+
+/* the row of the table of tag 0x28 at an index */
+int npCommerce2ReadTableRowItem0x28(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindTableRow(data, result->commonData.data_size, 0x28, 4, index, &length,
+				      result->commonData.ov);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x60);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, data + ret, 4);
+		item->value[0] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}
+
+/* a result whose first record is the container of tag 0x5b */
+int npCommerce2InitResult0x5b(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x60);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.data_size = savedLength;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		ret = npCommerce2FindNestedRecordWhole(data + ret, dataLength, 0x5B, NULL, &result->value[0]);
+		if (ret >= 0)
+			ret = 0;
+	}
+	return ret;
+}
+
+/* the record of tag 0x5b at an index, found where the result's records start: two values and the
+ * counts of records of tags 0x5c and 0x9b */
+int npCommerce2ReadCountedItem0x5b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2CountedPair *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x5B, 0xF, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x70);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->recordId = record;
+		sceClibMemcpy_safe(&net, record + 3, 4);
+		item->valueA = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 7, 4);
+		item->valueB = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 11;
+		ret = npCommerce2FindNestedRecordWhole(record + 11, length - 11, 0x5C, NULL, &item->countOfA);
+		if (ret >= 0)
+			ret = npCommerce2FindNestedRecordWhole(record + 11, length - 11, 0x9B, NULL, &item->countOfB);
+	}
+	return ret;
+}

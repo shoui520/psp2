@@ -1080,6 +1080,20 @@ typedef struct NpCommerce2PackageItem {
 
 extern int npCommerce2ReadPackageItem(const NpCommerce2Item *result, NpCommerce2PackageItem *item, int kind);
 extern int npCommerce2InitTextsResult0x4f_81013A32(NpCommerce2Texts6Result *result, const char *data, SceSize size);
+typedef struct NpCommerce2CountedPair {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	SceUInt32 valueA;
+	SceUInt32 countOfA;
+	SceUInt32 valueB;
+	SceUInt32 countOfB;
+	SceUInt32 padding;
+} NpCommerce2CountedPair;
+
+extern int npCommerce2InitTableResult0x28(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
+extern int npCommerce2ReadTableRowItem0x28(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item);
+extern int npCommerce2InitResult0x5b(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadCountedItem0x5b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2CountedPair *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1173,12 +1187,8 @@ extern int npCommerce2CreateReqGetResAddr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqEventLog(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqSrchProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007C5A(int a1, int a2, int a3, int a4);
-extern int npCommerce2_81013BC6(int a1, void *a2, int a3);
-extern int npCommerce2_81013C92(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetCountries(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007DC4(SceUInt32 reqId);
-extern int npCommerce2_81013D24(int a1, void *a2, int a3);
-extern int npCommerce2_81013DAE(int a1, int a2, int a3);
 extern int npCommerce2_81013E86(int a1, int a2, int a3);
 extern int npCommerce2_81013ECE(int a1, int a2, int a3);
 extern int npCommerce2_8101413A(int a1, int a2);
