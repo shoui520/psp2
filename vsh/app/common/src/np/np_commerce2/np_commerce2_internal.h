@@ -15,6 +15,7 @@
 #include <kernel/sysmem.h>
 #include <libkernel/libkernel.h>
 #include <libhttp.h>
+#include <libssl.h>
 #include <np/np_common.h>
 #include <np/np_error.h>
 #include <np/np_commerce2.h>
@@ -32,6 +33,14 @@ extern int sceHttpsDisableOptionPrivate(int id, SceUInt32 sslFlags);
 
 /* the imports SceNpCommerce2 takes from libraries the tree has no header of yet */
 extern void SceNpManager_9554802B(const void *data1, const void *data2, const void *data3);
+extern int SceNpManager_B24FC028(int *value);
+extern int SceNpManager_A775A452(void);
+extern SceUInt32 SceLibKernel_9F793F84(void);
+extern SceInt32 sceHttpSslIsCtxCreated(int tmplId, int *created);
+
+#define NP_COMMERCE2_ERROR_NP_NOT_READY		-2141909134	/* 0x80550f72 */
+#define NP_COMMERCE2_ERROR_SSL_MEMORY		-2141909135	/* 0x80550f71 */
+#define NP_COMMERCE2_ERROR_HTTP_MEMORY		-2141909136	/* 0x80550f70 */
 
 /* the request kinds the Start and GetResult exports of one operation come in */
 #define NP_COMMERCE2_VERSION_1		0
