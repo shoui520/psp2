@@ -233,3 +233,16 @@ public:
 };
 
 extern int iniMakeTempName(IniFileBase *file, const char *path, IniString *name);
+
+/* a temporary file that gathers what is written in a buffer and writes it in blocks */
+class IniBufferedFile : public IniTempFile {
+public:
+	IniBufferedFile(IniAllocatorRef *allocator, SceSize capacity);
+	virtual ~IniBufferedFile();
+	virtual int write(const void *buf, SceSize size);
+	virtual int sync();
+
+	char *m_buffer;
+	SceSize m_used;
+	SceSize m_capacity;
+};
