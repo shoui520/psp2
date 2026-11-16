@@ -1280,6 +1280,37 @@ typedef struct NpCommerce2DatesRow {
 
 extern int npCommerce2ReadTableRowDates0x72(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatesRow *item);
 extern int npCommerce2InitTableResult0x73(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
+typedef struct NpCommerce2DatesRow3 {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	const char *textA;
+	SceUInt32 valueA;
+	SceUInt64 dateA;
+	SceUInt32 valueB;
+	SceUInt32 flag;
+	SceUInt64 dateB;
+	SceUInt64 dateC;
+	const char *textB;
+	const char *textC;
+	const char *textD;
+	SceUInt32 countOfA;
+	SceUInt32 countOfB;
+	SceUInt32 padding;
+} NpCommerce2DatesRow3;
+
+typedef struct NpCommerce2ThreeValuesText {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	const char *text;
+	SceUInt32 padding;
+} NpCommerce2ThreeValuesText;
+
+extern int npCommerce2ReadTableRowDates0x73(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatesRow3 *item);
+extern int npCommerce2ReadTextValuesItem0x7b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ThreeValuesText *item);
+extern int npCommerce2InitResult0x74(NpCommerce2Item *result, const char *data, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1409,12 +1440,9 @@ extern int npCommerce2_810097E0(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2CreateReqGetSrvs(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSrvDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81015F80(int a1, int a2, int a3);
-extern int npCommerce2_810162BA(int a1, int a2, int a3);
 extern int npCommerce2CreateReqChangeSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCancelSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetCnslAct(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810163AC(int a1, void *a2, int a3);
 extern int npCommerce2_81016436(int a1, int a2, int a3);
 extern int npCommerce2CreateReqAcptEula(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqVerifyDob(SceUInt32 ctxId, SceUInt32 *reqId);
