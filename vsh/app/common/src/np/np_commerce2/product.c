@@ -408,3 +408,97 @@ int npCommerce2ReadContentRatingDescriptor(const NpCommerce2Item *info, SceUInt3
 	}
 	return ret;
 }
+
+/* a product record with all its parts: the fixed part, the texts, five counts, and the texts after them */
+int npCommerce2ReadProductItemLong(const NpCommerce2Item *result, NpCommerce2ProductItemLong *item, int kind)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt16 foundRatings;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt16 foundC;
+	SceUInt16 foundD;
+	SceUInt16 tag;
+	const char *rest;
+	SceUInt32 left;
+	int ret;
+	int head;
+
+	tag = kind == 3 ? 140 : 39;
+	sceClibMemset(item, 0, 0xB8);
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), tag, 0x6D, &length);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = result->commonData.version;
+	item->commonData.buf_head = result->commonData.buf_head;
+	item->commonData.data = (const SceUChar8 *)data + ret;
+	item->commonData.data_size = length;
+	ret = npCommerce2ReadProductValues(result->commonData.buf_head, (const char *)item->commonData.data,
+					   &item->productId, &item->skuCount, &item->releaseDate,
+					   &item->status, &item->kind, &item->downloadable,
+					   &item->price, &item->annotation);
+	if (ret < 0)
+		return ret;
+	head = ret;
+	rest = (const char *)item->commonData.data + ret;
+	item->commonData.data2 = (const SceUChar8 *)rest;
+	ret = npCommerce2ReadProductTexts(&item->commonData, rest, length - head, &item->name,
+					  &item->shortDescription, &item->imageUrl, &item->spName);
+	if (ret < 0)
+		return ret;
+	left = length - head;
+	if (kind == 3) {
+		ret = npCommerce2FindNestedRecordWhole(rest, left, 0x11, NULL, (SceUInt32 *)&item->contentRatings);
+		if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+			return ret;
+	} else {
+		item->contentRatings = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, left, 0x11, 0, &foundRatings);
+		if (ret >= 0 && foundRatings != 0)
+			item->contentRatings = rest + ret;
+		if (ret < 0)
+			return ret;
+	}
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x18, NULL, &item->countOfRewards);
+	if (ret < 0)
+		return ret;
+	item->longDescription = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0xD, 0, &found);
+	if (ret >= 0 && found != 0)
+		item->longDescription = rest + ret;
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x23, NULL, &item->countOfA);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x24, NULL, &item->countOfB);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x25, NULL, &item->countOfC);
+	if (ret < 0)
+		return ret;
+	item->rewards = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x44, 0, &foundA);
+	if (ret >= 0 && foundA != 0)
+		item->rewards = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	item->textA = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x45, 0, &foundB);
+	if (ret >= 0 && foundB != 0)
+		item->textA = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	item->legalDescription = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x77, 0, &foundC);
+	if (ret >= 0 && foundC != 0)
+		item->legalDescription = rest + ret;
+	if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+		ret = 0;
+	(void)foundD;
+	return ret;
+}

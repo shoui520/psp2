@@ -623,6 +623,34 @@ extern int npCommerce2ReadDetailOf0x4b(const NpCommerce2Item *result, NpCommerce
 extern int npCommerce2ReadDetailOf0x91(const NpCommerce2Item *result, NpCommerce2Detail0x91 *detail);
 extern int npCommerce2InitPlainResult(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2ReadItem0x29(const NpCommerce2Item *result, NpCommerce2Item *item);
+/* the longer product record */
+typedef struct NpCommerce2ProductItemLong {
+	SceNpCommerce2CommonData commonData;
+	const char *productId;
+	SceUInt32 kind;
+	SceUInt32 skuCount;
+	SceUInt64 releaseDate;
+	SceUInt32 status;
+	SceUInt32 downloadable;
+	SceUInt32 price;
+	SceUInt32 annotation;
+	const char *name;
+	const char *shortDescription;
+	const char *imageUrl;
+	const char *spName;
+	SceUInt32 countOfRewards;
+	const char *longDescription;
+	SceUInt32 countOfA;
+	SceUInt32 countOfB;
+	SceUInt32 countOfC;
+	const char *rewards;
+	const char *textA;
+	const char *legalDescription;
+	const char *contentRatings;
+	SceUInt32 padding;
+} NpCommerce2ProductItemLong;
+
+extern int npCommerce2ReadProductItemLong(const NpCommerce2Item *result, NpCommerce2ProductItemLong *item, int kind);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -685,7 +713,6 @@ extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100647A(SceUInt32 reqId, const char *categoryId, const char *productId,
 				int a4, int a5);
-extern int npCommerce2_8100F416(int a1, void *a2, int a3);
 extern int npCommerce2_8100F740(const SceNpCommerce2GetProductInfoResult *result,
 				SceNpCommerce2GameProductInfo *gameProductInfo);
 extern int npCommerce2_8100F798(int a1, int a2, int a3);
