@@ -281,14 +281,15 @@ void btLmpLcBuildBuffer(int link)
 		if (profile != source && (source->state == 5 || source->state == 9) &&
 		    btTableLinkModes[other] == 1) {
 			btLmpLcParseBuffer(profile, source);
-			goto settings;
+			break;
 		}
 	}
-	btLtsRomQueryState(profile);
-	btLtsRomApplyState(profile, btLtsRomScheduleState(btLtsRomParseState(0)), 5);
-	btLmpLcApplyTable(profile, btTableShortWindows[0], btTableOffsets[0], btTableLongWindows[0], 0);
-	profile->window = profile->shortWindow;
-settings:
+	if (other >= 8) {
+		btLtsRomQueryState(profile);
+		btLtsRomApplyState(profile, btLtsRomScheduleState(btLtsRomParseState(0)), 5);
+		btLmpLcApplyTable(profile, btTableShortWindows[0], btTableOffsets[0], btTableLongWindows[0], 0);
+		profile->window = profile->shortWindow;
+	}
 	profile->secondSetting = btLmpLcAdjustHeader(profile->index);
 	profile->firstSetting = btLmpLcRecordHeader(profile->index);
 }
@@ -777,6 +778,8 @@ int btLmpLcFormatBuffer(const uint8_t *flags)
 		return 6;
 	case 0x201:
 		return 7;
+	case 0x209:
+		return 8;
 	case 0x400:
 		return 9;
 	case 0x100:
@@ -784,7 +787,6 @@ int btLmpLcFormatBuffer(const uint8_t *flags)
 	case 0x40:
 		return 11;
 	case 0x80:
-	case 0x209:
 		return 12;
 	default:
 		return 14;
@@ -1407,7 +1409,7 @@ void btLmpLcUpdatePacket(void)
 
 /*
  * The image's part of two link commands: 0xa4 (its address is a link's already: the link's record
- * kind is cleared) and 0x212 (for the matched peer's address, the link context handler of link 1).
+ * kind is cleared) and 0x112 (for the matched peer's address, the link context handler of link 1).
  * Returns 1 when the command was handled here.
  */
 int btLmpLcConfigurePacket(uint32_t *command)
@@ -1421,7 +1423,7 @@ int btLmpLcConfigurePacket(uint32_t *command)
 			btHccRomApplyState()[120 * link + 1] = 0;
 		return 1;
 	}
-	if (command[0] == 0x212 && btLinkMatchEnabled == 1 && (btLinkMatchFirst == 1 || btLinkMatchSecond == 1) &&
+	if (command[0] == 0x112 && btLinkMatchEnabled == 1 && (btLinkMatchFirst == 1 || btLinkMatchSecond == 1) &&
 	    memcmp(address, btLinkMatchPeer + 4, 6) == 0) {
 		btLmpLcProcessPacket(1, (uint32_t)(uintptr_t)address);
 		return 1;
@@ -1661,10 +1663,10 @@ void btLmpLcApplyPacket(void)
 /* The ROM's acquire in the mode, once the scan slot's bits 8-9 asked for it (they and bits 2-3 are cleared). */
 __attribute__((noinline)) void btLmpLcResolvePacket(unsigned int mode)
 {
-	BtHalf *flags;
+	volatile BtHalf *flags;
 
 	osa_LockAcquire();
-	flags = (BtHalf *)(btLinkScanSlot + 0x22);
+	flags = (volatile BtHalf *)(btLinkScanSlot + 0x22);
 	if (((*flags >> 8) & 3) == 0) {
 		osa_LockRelease();
 		return;
@@ -2447,7 +2449,7 @@ int btLmpLcDispatchFrame(const uint8_t *message)
 /*
  * The link controller's look at a message before the ROM's. While a link release was seen, 0xbda
  * is answered with 0xbfe (to the LSC queue) and 0xbda and 0xbdb reset the ROM's kind 3 state;
- * otherwise 0x210 goes to the AMP context of its address or to btLmpLcProcessPacket(). Those are
+ * otherwise 0x110 goes to the AMP context of its address or to btLmpLcProcessPacket(). Those are
  * freed here (returns 1). Any other message goes to the ROM; 0xbf9 and 0xc18 name a handle whose
  * connection, once up, is taken down here after it, and 0xc18 first ends the link's mode.
  */
@@ -2455,14 +2457,15 @@ int btLmpLcParseFrame(void **slot)
 {
 	uint8_t *message = *slot;
 	unsigned int handle = 0xffff;
+	uint8_t *reply;
+	uint16_t link;
 	int result;
 
 	if (btLinkReleaseSeen == 1) {
 		uint32_t id = *(BtWord *)message;
 
 		if (id == 0xbda) {
-			uint8_t *reply = osa_MsgAlloc(8);
-
+			reply = osa_MsgAlloc(8);
 			*(BtWord *)reply = 0xbfe;
 			*(BtHalf *)(reply + 4) = *(BtHalf *)(message + 4);
 			osa_MsgSend((void **)&reply, romQueueLsc);
@@ -2472,9 +2475,7 @@ int btLmpLcParseFrame(void **slot)
 		btLcoRomResetState(3, 0xffff, 0, 1);
 		goto taken;
 	}
-	if (*(BtWord *)message == 0x210) {
-		uint16_t link;
-
+	if (*(BtWord *)message == 0x110) {
 		if (btLinkAddressHook(message + 4, &link) != 0)
 			btLcoRomProcessContext(0, 11, message + 4);
 		else
@@ -2545,8 +2546,9 @@ int btLmpLcComputeFrame(void **slot)
 		btLmpLcBuildFrame(message);
 		return 0;
 	case 0x39: {
+		uint8_t *records = btLscRomParseState(0);
 		unsigned int handle = *(BtHalf *)(message + 4);
-		uint8_t *record = btLscRomParseState(0) + handle * 248;
+		uint8_t *record = records + handle * 248;
 
 		if (record[64] == 9 && record[117] == 0 && btLinkStateCheckHook(handle) != 0)
 			record[243] = 6;
@@ -2762,12 +2764,9 @@ invalid:
 	if (type != 2)
 		goto complete;
 	if (length == 3) {
-		unsigned int accept;
-
 		if (parameters[1] != 0)
 			goto complete;
-		accept = parameters[2];
-		if (accept == 1 || accept == 2 || accept == 3) {
+		if (parameters[2] == 1 || parameters[2] == 2 || parameters[2] == 3) {
 			btEventFilterCount = 0;
 			btEventFilterAccept = parameters[2];
 			status = 0;
@@ -3477,18 +3476,22 @@ int btLmpLcResolveHeader(void)
 	const uint8_t *source = btLcoRomRecordState();
 	const uint8_t *state = btLcoRomAdjustState((int)(uintptr_t)source);
 	unsigned int index;
+	unsigned int opcode;
 
 	if (source[2] != 15 && source[3] != 15 && state[0] != 15)
 		return btLcoRomSyncState();
 	for (index = 8; index <= 10; index = (uint16_t)(index + 1)) {
-		if (btLcoRomBuildState(index) &&
-		    !btLmpLcApplyHeader(btLcoRomComputeState(index), btLcoRomParseState(index)))
+		if (!btLcoRomBuildState(index))
+			continue;
+		opcode = btLcoRomComputeState(index);
+		if (!btLmpLcApplyHeader(opcode, btLcoRomParseState(index)))
 			return 0;
 	}
 	if (state[0] == 0)
 		return 1;
 	index = btLinkCurrentIndexHook();
-	if (btLmpLcApplyHeader(btLcoRomComputeState(index), btLcoRomParseState(index)))
+	opcode = btLcoRomComputeState(index);
+	if (btLmpLcApplyHeader(opcode, btLcoRomParseState(index)))
 		return 1;
 	return 0;
 }
@@ -3510,13 +3513,13 @@ void btLmpLcNotifyHeader(const uint8_t *command)
 {
 	unsigned int handle = *(const BtHalf *)(command + 4);
 	int level = (int8_t)command[6];
-	uint8_t *message;
+	struct BtHandleMessage *message;
 
 	if (btPowerHooks.reg(btDeviceRate[BT_DEVICE_RATE_TOP]) < level || btPowerHooks.reg(1) > level) {
 		message = osa_MsgAlloc(8);
-		*(BtWord *)message = 0x102;
-		*(BtHalf *)(message + 4) = handle;
-		message[6] = 0x11;
+		message->id = 0x102;
+		message->handle = handle;
+		message->value = 0x11;
 	} else {
 		unsigned int step = btDeviceRate[BT_DEVICE_RATE_TOP];
 
@@ -3536,8 +3539,8 @@ void btLmpLcNotifyHeader(const uint8_t *command)
 				btPowerHooks.entry(other, btDeviceRate[slot]);
 		}
 		message = osa_MsgAlloc(8);
-		*(BtWord *)message = 0x101;
-		*(BtHalf *)(message + 4) = handle;
+		message->id = 0x101;
+		message->handle = handle;
 	}
 	osa_MsgSend((void **)&message, btQueueLcCommand);
 }
@@ -3862,7 +3865,7 @@ __attribute__((noinline)) uint8_t btLmpLcRecordHeader(int link)
 __attribute__((noinline)) int btLmpLcFilterHeader(void)
 {
 	if (btLinkPayloadRegister == 1)
-		return btLinkPayloadCount > 1;
+		return btLinkPayloadCount - 1 > 0;
 	return btLinkPayloadRegister > 1;
 }
 
@@ -3993,9 +3996,12 @@ void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint3
 	if (link->streaming != streaming)
 		btLmpLcSyncTable(link->streaming == 1 ? 1 : 0, handle);
 	if (btCoexParam()) {
+		unsigned int remote = romHctHostSlot[handle][4] != 0;
+		unsigned int primary = romCoexPrimaryFlag != 0;
+
 		if (link->streaming == 1)
-			btCoexSetLinkCapacity(romHctHostSlot[handle][4] != 0, romCoexPrimaryFlag != 0);
-		btCoexSetLoad(length);
+			btCoexSetLinkCapacity(remote, primary);
+		btCoexSetLoad(length, link->streaming);
 	}
 }
 

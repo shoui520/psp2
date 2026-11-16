@@ -108,8 +108,11 @@ void btCoexSetScheduled(uint32_t scheduled)
 	}
 }
 
-/* 0x244bc: a load above 100 means the link is busy; the start timeout no longer matters. */
-void btCoexSetLoad(uint32_t load)
+/*
+ * 0x244bc: a load above 100 means the link is busy; the start timeout no longer matters. The
+ * caller also passes whether the link streams, which is not used.
+ */
+void btCoexSetLoad(uint32_t load, uint32_t streaming)
 {
 	if (load > 100) {
 		btCoex.linkLoaded = 1;

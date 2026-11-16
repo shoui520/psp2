@@ -147,7 +147,7 @@ void btCoexSetProfile(uint16_t profile);
 void btCoexActivityStarted(void);
 void btCoexActivityStopped(void);
 void btCoexSetScheduled(uint32_t scheduled);
-void btCoexSetLoad(uint32_t load);
+void btCoexSetLoad(uint32_t load, uint32_t streaming);
 void btCoexSetLinkCapacity(uint32_t first, uint32_t second);
 void btCoexPollTiming(uint32_t *interval, uint32_t *window);
 uint32_t btCoexProfileBit1(void);

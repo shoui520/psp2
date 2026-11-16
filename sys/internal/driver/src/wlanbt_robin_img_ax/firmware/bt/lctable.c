@@ -74,8 +74,8 @@ uint8_t btTableShortWindows[8] __attribute__((section(".itcm.rw"))) = { 4, 7, 10
 uint8_t btTableLongWindows[8] __attribute__((section(".itcm.rw")));	/* 0x55318 */
 uint8_t btTableExtras[8] __attribute__((section(".itcm.rw"))) = { 4, 4, 4, 1, 1, 1, 1, 1 };	/* 0x55320 */
 uint8_t btTableHoldWindows[8] __attribute__((section(".itcm.rw"))) = { 0, 3, 6, 9, 12, 12, 12, 12 };	/* 0x55328 */
-uint8_t btTableRetries[8] __attribute__((section(".itcm.rw")));			/* 0x55330 */
-uint8_t btTableLinkModes[8] __attribute__((section(".itcm.rw")));		/* 0x55338 */
+uint8_t btTableRetries[8] __attribute__((section(".itcm.rw"), aligned(4)));		/* 0x55330 */
+uint8_t btTableLinkModes[8] __attribute__((section(".itcm.rw"), aligned(4)));		/* 0x55338 */
 
 /* A packet was sent on the link: its type (from the ROM) and length are kept for btLmpLcProcessTable(). */
 void btLmpLcHandleTable(int link, uint16_t length)
