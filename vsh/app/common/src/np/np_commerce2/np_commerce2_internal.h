@@ -329,7 +329,6 @@ extern int npCommerce2Send_8101BBB8(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_8101C224(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101C3E2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101CF56(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101D4B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 
 extern int npCommerce2Start_8100673A(SceUInt32 reqId, int a2);
 extern int npCommerce2Start_81006880(SceUInt32 reqId, int a2);
@@ -358,7 +357,7 @@ extern int npCommerce2Start_81008F28(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_810092EE(SceUInt32 reqId);
 extern int npCommerce2Start_8100942E(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_8100957A(SceUInt32 reqId);
-extern int npCommerce2Start_8100999A(SceUInt32 reqId, int a2);
+extern int npCommerce2Start_8100999A(SceUInt32 reqId, int a2, int a3, int a4);
 extern int npCommerce2Start_81009AE2(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_81009C2E(SceUInt32 reqId, int a2, int a3, int a4);
 extern int npCommerce2Start_81009D84(SceUInt32 reqId, int a2, int a3, int a4);
@@ -1521,6 +1520,16 @@ extern int npCommerce2WriteTransactionCriteria(int sending, int httpRequest, Sce
 extern int npCommerce2Send_8101C722(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *text, SceUInt32 number1, SceUInt32 number2, SceUInt32 number3,
 				    SceUInt32 number4, SceUInt32 number5, SceUInt32 number6, int number7);
+extern int npCommerce2Send_8101D10A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char * const *list, SceUInt32 count, SceUInt32 startPosition,
+				    SceUInt32 maxCount, SceUInt32 number);
+extern int npCommerce2Send_8101D4B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *accountName);
+extern int npCommerce2Send_8101D604(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    int unused, SceUInt64 first, SceUInt64 second);
+extern int npCommerce2Send_81019998(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char * const *list, SceUInt32 count, const char *text1, const char *text2,
+				    SceUInt32 startPosition, SceUInt32 maxCount, SceUInt32 number, int flag);
 /* a search condition: the index of the field it names and its value with the length */
 typedef struct NpCommerce2SearchEntry {
 	SceUInt32 field;

@@ -2837,11 +2837,11 @@ int SceNpCommerce2_F1E443C9(SceUInt32 ctxId, SceUInt32 *reqId)
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
-int SceNpCommerce2_8BB68957(SceUInt32 reqId)
+int SceNpCommerce2_8BB68957(SceUInt32 reqId, int a2, int a3, int a4)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2Start_8100999A(reqId, SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED);
+	return npCommerce2Start_8100999A(reqId, SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED, a3, a4);
 }
 
 int SceNpCommerce2_3EFF3363(SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize)

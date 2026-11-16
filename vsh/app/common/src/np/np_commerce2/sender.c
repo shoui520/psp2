@@ -2537,3 +2537,266 @@ int npCommerce2Send_8101C722(int mode, int httpTemplate, int *httpConnection, in
 	}
 	return ret;
 }
+
+/* a request with the mode, a list of texts and three numbers */
+int npCommerce2Send_8101D10A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char * const *list, SceUInt32 count, SceUInt32 startPosition,
+			     SceUInt32 maxCount, SceUInt32 number)
+{
+	char text[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sceClibSnprintf(text, 0x301, "%u", mode);
+		ret = npCommerce2WriteTextField(sending, handle, 10, text, 0);
+		if (ret >= 0) {
+			sum = (SceULong64)(SceInt64)ret;
+			if (list != NULL && count != 0) {
+				ret = npCommerce2WriteListField(sending, handle, 77, list, count, text, 0x301, 0, 0);
+				if (ret < 0)
+					goto checked;
+				sum += (SceULong64)(SceInt64)ret;
+			}
+			ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, 1);
+			if (ret >= 0) {
+				sum += (SceULong64)(SceInt64)ret;
+				ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+				if (ret >= 0) {
+					sum += (SceULong64)(SceInt64)ret;
+					ret = npCommerce2WriteNumberField(sending, handle, 78, number, 1);
+					if (ret >= 0) {
+						if (sending != 1)
+							length = sum + (SceULong64)(SceInt64)ret;
+						ret = 0;
+					}
+				}
+			}
+		}
+checked:
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with an account name (at most 16 characters), written in lower case */
+int npCommerce2Send_8101D4B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *accountName)
+{
+	char lower[16];
+	const char *prefixes[2];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceSize i;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sceClibMemset(prefixes, 0, 8);
+		prefixes[0] = "account.";
+		for (i = 0; i < sceClibStrnlen(accountName, 0x10) && i < 0x10; i++)
+			lower[i] = sceClibTolower(accountName[i]);
+		if (i == 0x10)
+			lower[15] = '\0';
+		else
+			lower[i] = '\0';
+		ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 42, lower,
+						    sceClibStrnlen(lower, 0x400), 0);
+		if (ret >= 0) {
+			if (sending != 1)
+				length = (SceULong64)(SceInt64)ret;
+			ret = 0;
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with two numbers of 64 bits */
+int npCommerce2Send_8101D604(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     int unused, SceUInt64 first, SceUInt64 second)
+{
+	char number[32];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int handle;
+	int notFirst;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sum = 0;
+		notFirst = 0;
+		if (first != 0) {
+			npCommerce2FormatU64(number, 32, (SceUInt32)first, (SceUInt32)(first >> 32), 1);
+			ret = npCommerce2WriteTextField(sending, handle, 72, number, notFirst);
+			if (ret < 0)
+				goto checked;
+			sum = (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+		if (second != 0) {
+			npCommerce2FormatU64(number, 32, (SceUInt32)second, (SceUInt32)(second >> 32), 1);
+			ret = npCommerce2WriteTextField(sending, handle, 82, number, notFirst);
+			if (ret < 0)
+				goto checked;
+			sum += (SceULong64)(SceInt64)ret;
+		}
+		if (sending != 1)
+			length = sum;
+		ret = 0;
+checked:
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with a list of texts, two texts, three numbers and a flag */
+int npCommerce2Send_81019998(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char * const *list, SceUInt32 count, const char *text1, const char *text2,
+			     SceUInt32 startPosition, SceUInt32 maxCount, SceUInt32 number, int flag)
+{
+	char escaped[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int notFirst;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sum = 0;
+		notFirst = 0;
+		if (list != NULL && count != 0) {
+			ret = npCommerce2WriteListField(sending, handle, 15, list, count, escaped, 0x301, 0, 0);
+			if (ret < 0)
+				goto checked;
+			sum = (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+		if (text1 != NULL && *text1 != '\0') {
+			ret = npCommerce2UriEscape(escaped, 0x301, text1, sceClibStrnlen(text1, 0x301), NULL);
+			if (ret < 0)
+				goto checked;
+			ret = npCommerce2WriteTextField(sending, handle, 73, escaped, notFirst);
+			if (ret < 0)
+				goto checked;
+			sum += (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+		if (text2 != NULL) {
+			ret = npCommerce2UriEscape(escaped, 0x301, text2, sceClibStrnlen(text2, 0x301), NULL);
+			if (ret < 0)
+				goto checked;
+			ret = npCommerce2WriteTextField(sending, handle, 76, escaped, notFirst);
+			if (ret < 0)
+				goto checked;
+			sum += (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+		ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, notFirst);
+		if (ret >= 0) {
+			sum += (SceULong64)(SceInt64)ret;
+			ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+			if (ret >= 0) {
+				sum += (SceULong64)(SceInt64)ret;
+				ret = npCommerce2WriteNumberField(sending, handle, 17, number, 1);
+				if (ret >= 0) {
+					sum += (SceULong64)(SceInt64)ret;
+					ret = npCommerce2WriteTextField(sending, handle, 81, flag == 1 ? "true" : "false", 1);
+					if (ret >= 0) {
+						if (sending != 1)
+							length = sum + (SceULong64)(SceInt64)ret;
+						ret = 0;
+					}
+				}
+			}
+		}
+checked:
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}

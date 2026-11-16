@@ -148,8 +148,8 @@ NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100942E, npCommerce2Send_8101C2AC, 
 int npCommerce2Start_8100957A(SceUInt32 reqId)
 NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100957A, npCommerce2Send_8101C3E2, NP_COMMERCE2_NO_ARGS, )
 
-int npCommerce2Start_8100999A(SceUInt32 reqId, int a2)
-NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100999A, npCommerce2Send_8101C818, NP_COMMERCE2_ARGS(a2), )
+int npCommerce2Start_8100999A(SceUInt32 reqId, int a2, int a3, int a4)
+NP_COMMERCE2_START_REQUEST(npCommerce2Start_8100999A, npCommerce2Send_8101C818, NP_COMMERCE2_ARGS(a2, a3, a4), )
 
 int npCommerce2Start_81009AE2(SceUInt32 reqId, int a2, int a3)
 NP_COMMERCE2_START_REQUEST(npCommerce2Start_81009AE2, npCommerce2Send_8101C8F4, NP_COMMERCE2_ARGS(a2, a3), )
