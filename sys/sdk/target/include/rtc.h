@@ -48,6 +48,7 @@ int sceRtcGetCurrentTick(SceRtcTick *pTick);
 int sceRtcGetCurrentClock(SceDateTime *pTime, int iTimeZone);
 int sceRtcGetCurrentClockLocalTime(SceDateTime *pTime);
 int sceRtcGetCurrentNetworkTick(SceRtcTick *pTick);
+unsigned int sceRtcGetTickResolution(void);
 int sceRtcConvertUtcToLocalTime(const SceRtcTick *pUtc, SceRtcTick *pLocalTime);
 int sceRtcConvertLocalTimeToUtc(const SceRtcTick *pLocalTime, SceRtcTick *pUtc);
 int sceRtcIsLeapYear(int year);

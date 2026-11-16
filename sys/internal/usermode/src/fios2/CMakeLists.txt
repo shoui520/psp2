@@ -16,6 +16,9 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	chunker.cpp
 	dearchiver.cpp
 	handletable.cpp
+	wws_cond.cpp
+	wws_mutex.cpp
+	wws_thread.cpp
 	libfios2.c
 	../../../../sdk/target/src/libsnc/i64ops.c
 	../../../../sdk/target/src/libsnc/i64mod.c
