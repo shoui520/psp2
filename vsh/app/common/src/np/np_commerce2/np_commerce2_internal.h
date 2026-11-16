@@ -328,10 +328,7 @@ extern int npCommerce2Send_8101B684(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_8101BBB8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101C224(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101C3E2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101CECC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101CF56(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
-extern int npCommerce2Send_8101D2B0(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101D376(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101D4B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 
@@ -1487,6 +1484,13 @@ extern int npCommerce2Send_8101CB3C(int mode, int httpTemplate, int *httpConnect
 				    const char *text, SceUInt32 startPosition, SceUInt32 maxCount);
 extern int npCommerce2Send_8101CE02(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const NpCommerce2Address *address, int flag);
+extern int npCommerce2WriteListField(int sending, int httpRequest, int key, const char * const *list, SceUInt32 count,
+				     char *buf, SceSize maxLength, int repeatFirst, int notFirst);
+extern int npCommerce2Send_8101CECC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
+extern int npCommerce2Send_8101D2B0(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const NpCommerce2Address *address);
+extern int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char * const *list, SceUInt32 count);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,

@@ -1440,3 +1440,153 @@ int npCommerce2Send_8101CE02(int mode, int httpTemplate, int *httpConnection, in
 	} while (pass < 2);
 	return 0;
 }
+
+/* a field whose value is a list of texts, written with commas between (all the first text when repeatFirst) */
+__attribute__((noinline))
+int npCommerce2WriteListField(int sending, int httpRequest, int key, const char * const *list, SceUInt32 count,
+			      char *buf, SceSize maxLength, int repeatFirst, int notFirst)
+{
+	const char * const *entry;
+	const char *item;
+	SceUInt32 i;
+	int size;
+	int ret;
+
+	if (sending == 1) {
+		if (notFirst != 1 || (ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text,
+								      g_queryKeys[0].length)) >= 0) {
+			ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[key].text, g_queryKeys[key].length);
+			if (ret >= 0) {
+				i = 0;
+				if (count != 0) {
+					entry = list;
+					do {
+						if (i != 0) {
+							ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[1].text,
+											 g_queryKeys[1].length);
+							if (ret < 0)
+								break;
+						}
+						item = repeatFirst == 1 ? *list : *entry;
+						if (item != NULL && *item != '\0') {
+							ret = npCommerce2UriEscape(buf, maxLength, item,
+										   sceClibStrnlen(item, maxLength), NULL);
+							if (ret < 0)
+								break;
+							ret = npCommerce2SendHttpRequest(httpRequest, buf,
+											 sceClibStrnlen(buf, 0x400));
+							if (ret < 0)
+								break;
+						}
+						i++;
+						entry++;
+					} while (i < count);
+				}
+			}
+		}
+		return ret;
+	}
+	size = (notFirst == 1) + g_queryKeys[key].length;
+	i = 0;
+	if (count != 0) {
+		entry = list;
+		do {
+			if (i != 0)
+				size++;
+			item = repeatFirst == 1 ? *list : *entry;
+			if (item != NULL && *item != '\0') {
+				ret = npCommerce2UriEscape(buf, maxLength, item, sceClibStrnlen(item, maxLength), NULL);
+				if (ret < 0)
+					return ret;
+				size += sceClibStrnlen(buf, maxLength);
+			}
+			i++;
+			entry++;
+		} while (i < count);
+	}
+	return size;
+}
+
+NP_COMMERCE2_SEND_PLAIN(npCommerce2Send_8101CECC)
+
+/* a request with an address as its fields */
+int npCommerce2Send_8101D2B0(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const NpCommerce2Address *address)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		ret = npCommerce2WriteAddressFields(sending, *httpRequest, &length, 0, address, 0, 0);
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the mode and a list of IDs as fields */
+int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char * const *list, SceUInt32 count)
+{
+	char text[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+	SceULong64 first;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		sceClibSnprintf(text, 0x301, "%u", mode);
+		ret = npCommerce2WriteTextField(sending, handle, 10, text, 0);
+		if (ret >= 0) {
+			first = (SceULong64)(SceInt64)ret;
+			ret = npCommerce2WriteListField(sending, handle, 77, list, count, text, 0x301, 0, 1);
+			if (ret >= 0) {
+				if (sending != 1)
+					length = first + (SceULong64)(SceInt64)ret;
+				ret = 0;
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
