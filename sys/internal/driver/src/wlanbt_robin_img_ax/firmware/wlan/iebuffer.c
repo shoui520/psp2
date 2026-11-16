@@ -43,18 +43,17 @@ unsigned int wlanIeBufferAppend(struct WlanIeBuffer *ies, const void *data, int 
 /* Appends a TLV (type and length as little-endian halfwords, then the value) as a one-byte-type element. */
 unsigned int wlanIeBufferAppendTlv(struct WlanIeBuffer *ies, const uint8_t *tlv)
 {
+	const struct MrvlIEtypesHeader *header = (const struct MrvlIEtypesHeader *)tlv;
+	uint8_t element[2];
 	int result = 0;
-	uint8_t header[2];
-	int length;
 
 	if (wlanIeBufferAppendTlvOverride(ies, tlv, &result) == 0) {
-		length = (tlv[3] << 8) | tlv[2];
-		if (ies->size - ies->length > length + 2) {
-			header[0] = tlv[0];
-			header[1] = tlv[2];
-			result = wlanIeBufferAppend(ies, header, 2);
-			length = wlanIeBufferAppend(ies, tlv + 4, (tlv[3] << 8) | tlv[2]);
-			return (uint16_t)(length + result);
+		if (ies->size - ies->length > (tlv[2] | tlv[3] << 8) + 2) {
+			/* the low bytes of the type and the length */
+			element[0] = (uint8_t)header->type;
+			element[1] = (uint8_t)header->length;
+			result = wlanIeBufferAppend(ies, element, 2);
+			result += wlanIeBufferAppend(ies, tlv + 4, tlv[2] | tlv[3] << 8);
 		}
 	}
 	return (uint16_t)result;

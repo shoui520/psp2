@@ -24,14 +24,18 @@ static uint8_t const_Rb[16] __attribute__((section(".itcm.rw"))) = {
 
 uint32_t wlanCcmAadLength __attribute__((section(".itcm.rw")));		/* 0x00054ed4 */
 uint32_t wlanCcmAadLengthQos __attribute__((section(".itcm.rw")));	/* 0x00054ed8 */
+/* Space in front of a received frame that holds the offload headers. */
+uint32_t wlanOffloadHeadroom __attribute__((section(".itcm.rw")));	/* 0x00054edc */
 uint32_t wlanCcmIvLow __attribute__((section(".itcm.rw")));		/* 0x00054ee0 */
 uint32_t wlanCcmIvHigh __attribute__((section(".itcm.rw")));		/* 0x00054ee4 */
-void (*wlanCcmHookPrepare)(void) __attribute__((section(".itcm.rw")));	/* 0x00054ee8 */
+void (*wlanCcmHookPrepare)(uint8_t *data, const uint32_t *key, uint32_t length,
+			   const WlanWirelessFrame *frame) __attribute__((section(".itcm.rw")));	/* 0x00054ee8 */
 void (*wlanCcmHookStart)(void) __attribute__((section(".itcm.rw")));	/* 0x00054eec */
 uint32_t wlanCcmPollLoops __attribute__((section(".itcm.rw")));		/* 0x00054ef0 */
 
 /* The default prepare hook: nothing to do. */
-void wlanCcmPrepare(void)
+void wlanCcmPrepare(uint8_t *data, const uint32_t *key, uint32_t length,
+		    const WlanWirelessFrame *frame)
 {
 }
 
@@ -101,17 +105,6 @@ static __attribute__((noinline)) void ccmCopy16(volatile uint32_t *destination, 
 	destination[3] = source[3];
 }
 
-static __attribute__((noinline)) void ccmCopy16Block(volatile uint8_t *destination, const uint8_t *source)
-{
-	uint32_t *words = (uint32_t *)source;
-	volatile uint32_t *target = (volatile uint32_t *)destination;
-
-	target[0] = words[0];
-	target[1] = words[1];
-	target[2] = words[2];
-	target[3] = words[3];
-}
-
 static __attribute__((noinline)) void ccmCopy6(uint8_t *destination, const uint8_t *source)
 {
 	uint16_t *to = (uint16_t *)destination;
@@ -125,19 +118,23 @@ static __attribute__((noinline)) void ccmCopy6(uint8_t *destination, const uint8
 /*
  * B0 of CCM for CCMP (flags 0x59: AAD present, M = 8, L = 2), the nonce of
  * the priority, the transmitter address and the packet number from the CCMP
- * header at frame + 32, and the length of the data, as 802.11 lays it out.
+ * header at frame + headroom + 32 (the received frame's offload headroom;
+ * 0 when encrypting), and the length of the data, as 802.11 lays it out.
  */
-static __attribute__((noinline)) void ccmBlock0(uint8_t *block, const WlanWirelessFrame *frame, uint32_t length, uint8_t priority)
+static __attribute__((noinline)) void ccmBlock0(uint8_t *block, const WlanWirelessFrame *frame, uint32_t length, uint32_t priority,
+						uint8_t headroom)
 {
-	const uint8_t *iv = (const uint8_t *)frame + 32;
-	uint32_t pnHigh = *(const uint32_t *)(iv + 4);
-	uint16_t pnLow = *(const uint16_t *)iv;
+	const uint8_t *iv = (const uint8_t *)frame + headroom + 32;
+	uint32_t pnHigh;
+	uint16_t pnLow;
 
 	block[0] = 0x59;
 	block[1] = priority;
 	ccmCopy6(block + 2, frame->address2);
+	pnHigh = *(const uint32_t *)(iv + 4);
 	*(uint32_t *)(block + 8) = (pnHigh << 24) + ((pnHigh & 0xff00) << 8) +
 				   ((pnHigh & 0xff0000) >> 8) + (pnHigh >> 24);
+	pnLow = *(const uint16_t *)iv;
 	*(uint16_t *)(block + 12) = (uint16_t)((pnLow << 8) | (pnLow >> 8));
 	*(uint16_t *)(block + 14) = (uint16_t)((length << 8) | (length >> 8));
 }
@@ -186,12 +183,12 @@ static __attribute__((noinline)) void ccmAad2(uint8_t *block, const WlanWireless
 int wlanCcmDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t length,
 		   const uint32_t *key, uint32_t priority, uint32_t block)
 {
-	int result = 1;
+	uint8_t scratch[16];
 	uint32_t qos = 0;
+	int result = 1;
 	uint8_t type = frame->frameControl[0];
 	uint8_t flags = frame->frameControl[1];
-	uint32_t aadLength;
-	uint8_t scratch[16];
+	uint8_t aadLength;
 
 	if (wlanCcmDecryptOverride(frame, data, length, key, priority, &result))
 		return result;
@@ -207,13 +204,13 @@ int wlanCcmDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t lengt
 	}
 	if ((flags & 1) && (flags & 2))
 		aadLength += 6;
-	wlanCcmHookPrepare();
-	ccmBlock0(scratch, frame, length, priority);
+	wlanCcmHookPrepare(data, key, length, frame);
+	ccmBlock0(scratch, frame, length, priority, wlanOffloadHeadroom);
 	ccmCopy16((volatile uint32_t *)CCM_BLOCK0(block), (const uint32_t *)scratch);
 	ccmAad1(scratch, frame, aadLength);
 	ccmCopy16((volatile uint32_t *)CCM_BLOCK1(block), (const uint32_t *)scratch);
 	ccmAad2(scratch, frame, qos);
-	ccmCopy16Block(CCM_BLOCK2(block), scratch);
+	ccmCopy16((volatile uint32_t *)CCM_BLOCK2(block), (const uint32_t *)scratch);
 	CCM_SOURCE(block) = (uint32_t)(uintptr_t)data + 8;
 	CCM_DESTINATION(block) = (uint32_t)(uintptr_t)data;
 	CRYPTO_MODE |= CRYPTO_MODE_CCM_ENGINE;
@@ -228,12 +225,12 @@ int wlanCcmDecrypt(const WlanWirelessFrame *frame, uint8_t *data, uint32_t lengt
 int wlanCcmEncrypt(const WlanWirelessFrame *frame, uint32_t length, const uint32_t *key,
 		   uint8_t *source, uint32_t priority, uint32_t block)
 {
-	int result;
-	uint32_t qos;
+	uint8_t scratch[16];
 	uint8_t type;
 	uint8_t flags;
-	uint32_t aadLength;
-	uint8_t scratch[16];
+	int result;
+	uint32_t qos;
+	uint8_t aadLength;
 
 	if (wlanCcmEncryptOverride(frame, length, key, source, priority, &result))
 		return result;
@@ -252,13 +249,12 @@ int wlanCcmEncrypt(const WlanWirelessFrame *frame, uint32_t length, const uint32
 	}
 	if ((flags & 1) && (flags & 2))
 		aadLength += 6;
-	wlanCcmHookPrepare();
-	ccmBlock0(scratch, frame, length, priority);
+	ccmBlock0(scratch, frame, length, priority, 0);
 	ccmCopy16((volatile uint32_t *)CCM_BLOCK0(block), (const uint32_t *)scratch);
 	ccmAad1(scratch, frame, aadLength);
 	ccmCopy16((volatile uint32_t *)CCM_BLOCK1(block), (const uint32_t *)scratch);
 	ccmAad2(scratch, frame, qos);
-	ccmCopy16Block(CCM_BLOCK2(block), scratch);
+	ccmCopy16((volatile uint32_t *)CCM_BLOCK2(block), (const uint32_t *)scratch);
 	CCM_SOURCE(block) = (uint32_t)(uintptr_t)source;
 	CCM_DESTINATION(block) = wlanCcmIvLow + wlanCcmIvHigh + (uint32_t)(uintptr_t)frame + 32;
 	CRYPTO_MODE |= CRYPTO_MODE_CCM_ENGINE;

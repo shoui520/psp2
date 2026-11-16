@@ -228,6 +228,12 @@ struct WlanIeBuffer {
 
 unsigned int wlanIeBufferAppend(struct WlanIeBuffer *ies, const void *data,
 				int length);				/* 0x2a790 */
+/* A host command TLV's header (Marvell's MrvlIEtypesHeader_t), little-endian and unaligned. */
+struct __attribute__((packed)) MrvlIEtypesHeader {
+	uint16_t type;
+	uint16_t length;
+};
+
 unsigned int wlanIeBufferAppendTlv(struct WlanIeBuffer *ies, const uint8_t *tlv); /* 0x2a7d2 */
 unsigned int wlanIeBufferGet(struct WlanIeBuffer *ies, uint8_t **data);	/* 0x2a83e */
 void wlanIeBufferReset(struct WlanIeBuffer *ies);				/* 0x2a84a */

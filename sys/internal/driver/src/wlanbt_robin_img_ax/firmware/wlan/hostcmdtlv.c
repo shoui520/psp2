@@ -389,8 +389,8 @@ unsigned int wlanTlvPowerCapabilityParse(const uint8_t *tlv, struct WlanPowerCap
  */
 unsigned int wlanTlvParseThreshold(const uint8_t *tlv, uint8_t *out, uint8_t *frequency)
 {
-	uint16_t length;
 	uint8_t dummy;
+	uint16_t length;
 	uint8_t value;
 
 	if (wlanTlvThresholdOverride(tlv, out, frequency, &length) != 0)

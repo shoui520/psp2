@@ -77,6 +77,8 @@ SECTIONS
 		*(.itcm.rw .itcm.rw.*)
 		*(.data .data.*)
 		. = ALIGN(4);
+		*(.itcm.patch)
+		. = ALIGN(4);
 	} > itcm
 
 	.itcm.bss (NOLOAD) : {

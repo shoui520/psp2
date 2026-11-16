@@ -16,8 +16,6 @@
 uint16_t wlanMefStackLimit __attribute__((section(".itcm.bss")));
 uint16_t wlanMefDepthLimit __attribute__((section(".itcm.bss")));
 uint8_t wlanMefDepth __attribute__((section(".itcm.bss")));
-/* Space in front of a received frame that holds the offload headers. */
-uint32_t wlanOffloadHeadroom __attribute__((section(".itcm.bss")));
 
 int wlanMefStackPush(struct WlanMefStack *stack, unsigned int count, const void *source)
 {

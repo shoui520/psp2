@@ -49,13 +49,15 @@ extern uint32_t wlanCcmAadLength;	/* 22: the AAD without the QoS control */
 extern uint32_t wlanCcmAadLengthQos;	/* 24 */
 extern uint32_t wlanCcmIvLow;		/* 4 */
 extern uint32_t wlanCcmIvHigh;		/* 4: the 8-byte CCMP header is these two */
-extern void (*wlanCcmHookPrepare)(void);
+extern void (*wlanCcmHookPrepare)(uint8_t *data, const uint32_t *key, uint32_t length,
+				  const WlanWirelessFrame *frame);
 extern void (*wlanCcmHookStart)(void);
 extern uint32_t wlanCcmPollLoops;	/* delay loops between two status reads */
 
 void wlanCcmSetup(void);
 void wlanCcmHooksInit(void);
-void wlanCcmPrepare(void);
+void wlanCcmPrepare(uint8_t *data, const uint32_t *key, uint32_t length,
+		    const WlanWirelessFrame *frame);
 void wlanCcmStart(void);
 void wlanCcmInputHold(void);
 void wlanCcmInputRelease(void);

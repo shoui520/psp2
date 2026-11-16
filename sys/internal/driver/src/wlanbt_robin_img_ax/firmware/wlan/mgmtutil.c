@@ -67,8 +67,8 @@ void wlanMacAddressApply(void)
  */
 void wlanIbssAddressGenerate(uint8_t *address, const uint8_t *source)
 {
-	uint32_t word[2];
 	uint32_t zero[2] = { 0, 0 };
+	uint32_t word[2];
 	uint32_t tsfLow;
 
 	if (wlanIbssAddressGenerateOverride(address, source) != 0)

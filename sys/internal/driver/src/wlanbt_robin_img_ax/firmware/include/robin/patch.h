@@ -16,8 +16,9 @@ typedef int (*RobinPatchHook)();
 
 int robinNoOverride(void);
 
+/* The slots form one table in ITCM, after the initialized data (robin.ld). */
 #define ROBIN_PATCH_SLOT(name) \
-	RobinPatchHook name __attribute__((section(".itcm.rw"))) = \
+	RobinPatchHook name __attribute__((section(".itcm.patch"))) = \
 		(RobinPatchHook)robinNoOverride
 
 #endif /* ROBIN_PATCH_H */
