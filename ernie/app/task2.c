@@ -119,6 +119,7 @@ void task2MultiCnEvent(FLGPTN ptn)
 				case 1:
 					break;
 				}
+#if FW_SINCE(0x00090804)
 			} else if (boardMultiCnIsDebug()) {
 				serialClose1();
 				serialOpen3(3);
@@ -133,6 +134,15 @@ void task2MultiCnEvent(FLGPTN ptn)
 			serialClose1();
 			boardMultiCnStop();
 		}
+#else
+			}
+		} else {
+			/* 0x00090206: the multi-connector's line back to serial 3 */
+			serialClose1();
+			serialOpen3(3);
+			boardSetMultiCnOutput(0);
+		}
+#endif
 	}
 	if (ptn & 0x0100) {
 		if (intp11Low())
@@ -211,7 +221,9 @@ unsigned char task2On(void)
 		task2SetFlag(3, 0x0040);
 #endif
 	serial1Reset();
+#if FW_SINCE(0x00090804)
 	boardMultiCnOutputOff();
+#endif
 	watchdogSet(&configGet()->watchdog);
 	watchdogStop();
 	return ret;
@@ -230,10 +242,14 @@ unsigned char task2Off(void)
 	serialAuthInit();
 	serialRequestInit();
 	serial4StartTimers();
+#if FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
 		boardMultiCnStop();
+#else
+	boardSetMultiCnOutput(0);
+#endif
 	updaterRequestInit();
 	configRequestInit();
 	watchdogStop();
@@ -286,10 +302,14 @@ unsigned char task2Suspend(void)
 
 	ret = 0;
 	serialAuthInit();
+#if FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
 		boardMultiCnStop();
+#else
+	boardSetMultiCnOutput(0);
+#endif
 	watchdogStop();
 	return ret;
 }
@@ -300,7 +320,11 @@ unsigned char task2Shutdown(void)
 
 	ret = 0;
 	serial4Close2();
+#if FW_SINCE(0x00090804)
 	boardMultiCnStop();
+#else
+	boardSetMultiCnOutput(0);
+#endif
 	serialClose1();
 	serial1Reset();
 	watchdogStop();
@@ -313,7 +337,11 @@ unsigned char task2Cut(void)
 
 	ret = 0;
 	serial4Close2();
+#if FW_SINCE(0x00090804)
 	boardMultiCnStop();
+#else
+	boardSetMultiCnOutput(0);
+#endif
 	serialClose1();
 	serial1Reset();
 	watchdogStop();
@@ -371,7 +399,9 @@ unsigned char task2Tick(void)
 	if (state != 0x0010 && (clock & 3) == 3)
 		nvsJobService();
 #endif
+#if FW_SINCE(0x00090804)
 	logUpdate();
+#endif
 	if (state != 0x0004 && state != 0x0008)
 		taskHookStandby();
 	taskHookTick();

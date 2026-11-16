@@ -62,7 +62,7 @@ void task3(VP_INT exinf)
 				touchIdentify0();
 #if FW_SINCE(0x01000109)
 				touchReadConfigVersion0(data);
-#else
+#elif FW_SINCE(0x00090804)
 				touchReadModes0();
 #endif
 			} else if (ptn & 0x0080) {
@@ -70,15 +70,17 @@ void task3(VP_INT exinf)
 				touchIdentify1();
 #if FW_SINCE(0x01000109)
 				touchReadConfigVersion1(data);
-#else
+#elif FW_SINCE(0x00090804)
 				touchReadModes1();
 #endif
 			}
 #endif
+#if FW_SINCE(0x00090804)
 			if (ptn & 0x0100) {
 				clr_flg(2, ~0x0100);
 				touchUpdateState();
 			}
+#endif
 		}
 		task3Idle();
 	}

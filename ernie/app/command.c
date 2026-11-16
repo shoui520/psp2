@@ -214,8 +214,12 @@ unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 #else
 	commandPins.bits.p31 = P3.1;
 #endif
+#if FW_SINCE(0x00090804)
 	commandPins.bits.p76 = P7.6;
 	*out = commandPins.value & 0x0f;
+#else
+	*out = commandPins.value & 0x07;	/* 0x00090206 has not P7.6 */
+#endif
 	*length = 1;
 	return 0;
 }
@@ -369,6 +373,7 @@ allowed:
 			result = (unsigned char)watchdogKick();
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, 0);
 			break;
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no log */
 		case 0x0086:		/* the log: sceSysconGetLogInfo */
 		case 0x0087:		/* sceSysconLogStart */
 #if FW_SINCE(0x00090903)
@@ -377,6 +382,7 @@ allowed:
 			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
 			break;
+#endif
 		case 0x0090:		/* sceSysconReadScratchPad */
 			if (commandRequest.length != 3) {
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
@@ -474,6 +480,7 @@ allowed:
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
+#if FW_SINCE(0x00090804)	/* not in 0x00090206 */
 		case 0x00b3:		/* P6.7 */
 #if FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = P6.7;
@@ -485,6 +492,7 @@ allowed:
 #endif
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 1);
 			break;
+#endif
 #if FW_SINCE(0x0100060B)
 		case 0x00b4:		/* P3.1, P6.7 and P3.0 */
 			word.pins.state.value = 0;
@@ -636,12 +644,14 @@ allowed:
 void commandRequestRun(void)
 {
 	switch (commandRequest.command) {
+#if FW_SINCE(0x00090804)
 	case 0x0086:
 		commandLogInfo(commandRequestData, 0x86, commandLogDone);
 		break;
 	case 0x0087:
 		commandLogStart(commandRequestData, 0x87, commandLogDone);
 		break;
+#endif
 #if FW_SINCE(0x00090903)
 	case 0x0088:
 		commandLogRead(commandRequestData, commandRequestAnswer, 0x88, commandLogDone);
@@ -695,6 +705,7 @@ void commandHandshakeDone(unsigned char command, unsigned char result)
 		hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x10, 0);
 }
 
+#if FW_SINCE(0x00090804)
 /* 0x0087 (sceSysconLogStart) */
 int commandLogStart(unsigned char *data, unsigned char command, CommandDone done)
 {
@@ -715,6 +726,7 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 	return 0;
 }
 
+#endif
 #if FW_SINCE(0x00090903)
 /* 0x0088 (sceSysconLogReadData): the log's data from the offset the host gives */
 int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
@@ -737,6 +749,7 @@ int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char com
 }
 #endif
 
+#if FW_SINCE(0x00090804)
 void commandLogDone(unsigned char command, unsigned char result)
 {
 	unsigned char status;
@@ -765,6 +778,7 @@ void commandLogDone(unsigned char command, unsigned char result)
 	}
 	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, status, length);
 }
+#endif
 
 #if FW_SINCE(0x00090903)
 /* 0x00d0: the handshake before the SNVS; its 0x28 bytes are answered back */

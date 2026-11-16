@@ -51,6 +51,10 @@ void standbyPrepare(void)
 
 void standbyResume(void)
 {
+#if !FW_SINCE(0x00090804)
+	serialReset(3);
+	serialOpen3(4);
+#endif
 	tickStart();
 	return;
 }

@@ -52,7 +52,9 @@ void task1(VP_INT exinf)
 void systemInit(void)
 {
 	struct TimerHandler timer;
+#if FW_SINCE(0x00090804)
 	unsigned char cause;
+#endif
 #if BOARD_DL_SCRATCHPAD
 	union {
 		unsigned long	value;
@@ -84,6 +86,7 @@ void systemInit(void)
 	timer.handler = stateCheck;
 	timerSetHandler(TIMER_RTC(0x1a), &timer);
 	versionInit();
+#if FW_SINCE(0x00090804)
 	cause = getResetCause() & 0xf0;
 #if BOARD_DL_SCRATCHPAD
 	if (cause == 0) {
@@ -117,6 +120,7 @@ void systemInit(void)
 			logEvent(6);
 		}
 	}
+#endif
 #endif
 	stateEnter();
 #if FW_SINCE(0x0100060B)
