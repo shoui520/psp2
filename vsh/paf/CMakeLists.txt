@@ -492,7 +492,10 @@ target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--gc-sections)
 target_link_options(vs0_sys_external_libpaf PRIVATE -Wl,--no-warn-mismatch)
 
 # libSceDeflt (the SDK's deflate, built from sys/sdk/target/src/deflt) was built with GCC 4.8 like
-# the SDK's other libraries; deflate.S is sceDeflateDecompress as Sony's assembly has it
+# the SDK's other libraries; deflate.S is sceDeflateDecompress as Sony's assembly has it (libpaf's
+# copy calls the _safe memcpy import)
+set_source_files_properties(../../sys/sdk/target/src/deflt/deflate.S
+	PROPERTIES COMPILE_DEFINITIONS DEFLATE_MEMCPY=sceClibMemcpy_safe)
 set_source_files_properties(
 	../../sys/sdk/target/src/deflt/zlibhdr.c ../../sys/sdk/target/src/deflt/deflate_common.c
 	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48

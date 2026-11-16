@@ -8,6 +8,11 @@
  * SceSysmem builds the same code into its .text (DEFLATE_SYSMEM), with its own
  * table builders and without unwind information.
  */
+/* the memcpy the library links: libfios2's copy calls sceClibMemcpy, libpaf's sceClibMemcpy_safe */
+#ifndef DEFLATE_MEMCPY
+#define DEFLATE_MEMCPY sceClibMemcpy
+#endif
+
 	.syntax unified
 	.arch	armv7-a
 	.thumb
@@ -385,7 +390,7 @@ sceDeflateDecompress:
 	cmp	r4, r5
 	bhi.n	.errorOverrun
 	add.w	r8, r1, r2
-	bl	sceClibMemcpy
+	bl	DEFLATE_MEMCPY
 	ldr.w	r9, [r8], #2
 	subs	r6, #16
 	b.n	.nextBlock
