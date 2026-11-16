@@ -5,5 +5,8 @@ psp2_module(vs0_sys_external_np_commerce2 KIND user COMPILER snc PARTIAL SOURCES
 	library.c
 	empty_store_check.c
 	store_icon.c
+	context.c
+	settings.c
+	shell_events.c
 	np_commerce2.c
 )

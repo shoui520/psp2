@@ -4421,3 +4421,41 @@ int sceNpCommerce2GetShortfallOfLibhttpPool(SceUInt32 ctxId, SceInt32 *shortfall
 		return npCommerce2_8100B7F4(ctxId, shortfall);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
+
+/* the library's start: the shell events and the object table, and in the test
+ * environment the placeholder texts the products carry */
+int npCommerce2Initialize(const char *environment, int npCommonValue, int environmentType)
+{
+	int ret;
+
+	if (g_initialized != 0)
+		return SCE_NP_COMMERCE2_ERROR_ALREADY_INITIALIZED;
+
+	ret = npCommerce2_81017DCC();
+	if (ret >= 0) {
+		ret = npCommerce2InitTable(environment, npCommonValue, environmentType);
+		if (ret >= 0) {
+			if (npCommerce2GetEnvironment() == 1) {
+				sceClibMemset(g_shortText, 'Z', 0x39);
+				g_shortText[0x38] = '\0';
+				sceClibMemset(g_longText, 'Z', 0xFA1);
+				sceClibMemcpy_safe(&g_longText[0xF99], "----END", 8);
+			}
+			g_initialized = 1;
+			return 0;
+		}
+	}
+	return ret;
+}
+
+int npCommerce2Finalize(void)
+{
+	int ret;
+
+	if (g_initialized != 0) {
+		ret = npCommerce2TermTable();
+		npCommerce2_81017EF8(ret);
+		g_initialized = 0;
+	}
+	return 0;
+}

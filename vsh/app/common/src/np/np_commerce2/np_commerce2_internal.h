@@ -22,6 +22,8 @@
 
 /* the libkernel mspace calls the tree has no header of yet */
 typedef void *SceClibMspace;
+extern void *sceClibMspaceMalloc(SceClibMspace mspace, SceSize size);
+extern void sceClibMspaceFree(SceClibMspace mspace, void *ptr);
 extern SceClibMspace sceClibMspaceCreate(void *base, SceSize size);
 extern int sceClibMspaceDestroy(SceClibMspace mspace);
 
@@ -70,8 +72,12 @@ typedef struct NpCommerce2SessionData {
 extern int g_libInitialized;
 extern SceUID g_heapMemBlock;
 extern SceClibMspace g_heap;
-extern int npCommerce2_8100009C(const char *environment, int a2, int a3);
-extern void npCommerce2_81000126(void);
+extern int npCommerce2Initialize(const char *environment, int npCommonValue, int environmentType);
+extern int npCommerce2Finalize(void);
+extern int npCommerce2InitTable(const char *environment, int npCommonValue, int environmentType);
+extern int npCommerce2TermTable(void);
+extern SceKernelLwMutexWork g_tableLock;
+extern int npCommerce2_8101D9AC(SceKernelLwMutexWork *lock);
 
 /* exports the library's own exports call (commerce2.c) */
 extern int SceNpCommerce2_1BFF9C73(int a1, void *a2, int a3);
@@ -84,6 +90,14 @@ extern int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *res
 extern int SceNpCommerce2_C4CC8E22(int a1, int a2, int a3);
 
 extern int g_shellReady;
+extern int g_shellLockReady;
+extern SceKernelLwMutexWork g_shellLock;
+extern int SceShellSvc_D943CE15(int event, int (*callback)(int), int arg);
+extern int SceShellSvc_7CBF442B(int event);
+extern int npCommerce2_81018A7E(int a1);
+extern int npCommerce2_81018A88(int a1);
+extern int npCommerce2_81017DCC(void);
+extern void npCommerce2_81017EF8(int a1);
 extern SceUInt32 g_checkCtxId;
 extern SceUInt32 g_checkReqId;
 extern int g_checkAborted;
@@ -93,6 +107,18 @@ extern int npCommerce2_8101EBDE(int a1);
 extern int npCommerce2_81017F7A(void);
 extern int npCommerce2_81017F9C(void);
 extern int npCommerce2_81017FC2(int a1);
+
+/* Init's settings and the heap (settings.c) */
+#define NP_COMMERCE2_ERROR_NO_ENVIRONMENT	-2141909109	/* 0x80550f8b */
+#define NP_COMMERCE2_ERROR_ENVIRONMENT_TOO_LONG	-2141909108	/* 0x80550f8c */
+extern int g_npCommonValue;
+extern int g_environmentType;
+extern char g_npEnvironment[17];
+extern int npCommerce2SetNpEnvironment(const char *environment);
+extern int npCommerce2SetNpCommonValue(int value);
+extern int npCommerce2SetEnvironmentType(int type);
+extern void *npCommerce2Alloc(SceSize size);
+extern void npCommerce2Free(void *ptr);
 
 /* set by Init, cleared by Term */
 extern int g_initialized;

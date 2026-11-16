@@ -33,7 +33,7 @@ int sceNpCommerce2Init(void)
 					if (ret >= 0) {
 						a2 = SceNpCommon_F585C86C();
 						SceNpCommon_187C0A8D(&value);
-						ret = npCommerce2_8100009C(environment, a2, value);
+						ret = npCommerce2Initialize(environment, a2, value);
 						if (ret >= 0) {
 							g_libInitialized = 1;
 							result = 0;
@@ -61,7 +61,7 @@ int sceNpCommerce2Term(void)
 {
 	if (g_libInitialized == 0)
 		return 0;
-	npCommerce2_81000126();
+	npCommerce2Finalize();
 	if (g_heap != NULL) {
 		sceClibMspaceDestroy(g_heap);
 		g_heap = NULL;
