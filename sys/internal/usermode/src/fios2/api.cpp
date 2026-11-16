@@ -407,9 +407,9 @@ void sceFiosStatisticsGet(FiosStatistics *pStats)
 	sceClibMemset(pStats, 0, sizeof(*pStats));
 	if (!g_FiosParams.initialized)
 		return;
-	getStorageStatistics(&pStats->op, s_pOpTable);
-	getStorageStatistics(&pStats->fh, s_pFHTable);
-	getStorageStatistics(&pStats->dh, s_pDHTable);
+	getStorageStatistics(&pStats->op, &s_pOpTable->m_allocator);
+	getStorageStatistics(&pStats->fh, &s_pFHTable->m_allocator);
+	getStorageStatistics(&pStats->dh, &s_pDHTable->m_allocator);
 	getStorageStatistics(&pStats->chunk, &s_chunkAllocator);
 	fiosSchedulersGetStatistics(pStats);
 }
@@ -418,9 +418,9 @@ void sceFiosStatisticsReset()
 {
 	if (!g_FiosParams.initialized)
 		return;
-	s_pOpTable->m_maxAllocated = s_pOpTable->m_allocated;
-	s_pFHTable->m_maxAllocated = s_pFHTable->m_allocated;
-	s_pDHTable->m_maxAllocated = s_pDHTable->m_allocated;
+	s_pOpTable->m_allocator.m_maxAllocated = s_pOpTable->m_allocator.m_allocated;
+	s_pFHTable->m_allocator.m_maxAllocated = s_pFHTable->m_allocator.m_allocated;
+	s_pDHTable->m_allocator.m_maxAllocated = s_pDHTable->m_allocator.m_allocated;
 	s_chunkAllocator.m_maxAllocated = s_chunkAllocator.m_allocated;
 	fiosSchedulersResetStatistics();
 }

@@ -8,6 +8,7 @@
 #define FIOS2_INTERNAL_H
 
 #define SCE_FIOS_LINKAGE
+#include <fw.h>
 #include <scetypes.h>
 #include <stdarg.h>
 #include <sceerror.h>
@@ -30,6 +31,7 @@ int fiosStrcmp(const char *s1, const char *s2);
 int fiosStrncmp(const char *s1, const char *s2, size_t n);
 int fiosStrcasecmp(const char *s1, const char *s2);
 int fiosStrncasecmp(const char *s1, const char *s2, size_t n);
+size_t fiosStrlcat(char *dst, const char *src, size_t size);
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -73,7 +75,24 @@ struct FiosPath {
 
 	char *GetPath() { return path[g_FiosParams.pathMax - 1] ? *(char **)path : path; }
 	bool Set(const char *pPath, bool verbose);	/* normalized and hashed; false when it does not fit */
+	bool SetPointer(const char *pPath);		/* the caller's path itself, hashed */
+	void Clear();
 };
+
+/* a FiosPath with room for the longest path */
+struct FiosPathBuffer {
+	FiosPath path;
+	char storage[SCE_FIOS_PATH_MAX - sizeof(((FiosPath *)0)->path)];
+};
+
+size_t fiosPathNormalize(char *pOut, const char *pPath, size_t size);
+
+/* where Sony's sources were built: the assertions name their files from there */
+#if FW_SINCE(0x03650000)
+#define FIOS_SOURCE_DIR	"W:\\Build\\J01509655\\sdk-internal-step2\\internal\\usermode\\src\\fios2\\"
+#else
+#define FIOS_SOURCE_DIR	"W:\\Build\\J01508048\\sdk-internal-step2\\internal\\usermode\\src\\fios2\\"
+#endif
 
 static inline const char *fiosPathGet(FiosPath *pPath)
 {
@@ -143,12 +162,16 @@ struct FiosDH {
 	SceFiosNativeDH nativeDH;
 	void *pArchiver;		/* the dearchiver whose archive holds the directory, or NULL */
 	uint32_t archiveID;
-	uint32_t reserved1[4];
+	int32_t entryIndex;		/* the archive's manifest entry read last; -1 before the first */
+	uint32_t reserved1[3];
 	void *pBuf;			/* the caller's buffer for the entries */
 	size_t bufSize;
-	uint32_t reserved2[4];
+	uint32_t flags;			/* FIOS_DH_* */
+	uint32_t reserved2[3];
 	FiosPath path;
 };
+
+#define FIOS_DH_EOF	0x4		/* a dearchiver's directory has no more entries */
 
 /*
  * allocator.cpp: fixed-size units in a caller's buffer, the units first and a bitmap of the
@@ -216,8 +239,11 @@ static inline bool fiosIsPassthruFH(SceFiosFH fh)
 	return ((fh >> 16) & 0x7fff) == 0x7fff && FIOS_HANDLE_TABLE(fh) == 1;
 }
 
-class HandleTable : public Allocator {
+/* a handle table: an Allocator whose units start with their handle */
+class HandleTable {
 public:
+	Allocator m_allocator;
+
 	int Init(SceFiosBuffer buffer, size_t alignment, size_t unitSize);
 	int Term();
 	SceFiosHandle Allocate();
@@ -225,13 +251,19 @@ public:
 	void Free(SceFiosHandle h);
 	void *GetUnit(SceFiosHandle h);
 	uint32_t GetAll(SceFiosHandle *pHandles, uint32_t max);
+
+	/* the unit at an index: its handle first */
+	SceFiosHandle *Unit(uint32_t index)
+	{
+		return (SceFiosHandle *)(m_allocator.m_pBase + index * m_allocator.m_unitSize);
+	}
 };
 
 /* the op, file handle and directory handle tables */
 extern HandleTable s_handleTables[3];
-extern HandleTable *const s_pOpTable;
-extern HandleTable *const s_pFHTable;
-extern HandleTable *const s_pDHTable;
+extern HandleTable *s_pOpTable;
+extern HandleTable *s_pFHTable;
+extern HandleTable *s_pDHTable;
 
 /* api.cpp: the library's state that lives from module_start to module_stop */
 void fiosLibraryInit();
@@ -297,7 +329,7 @@ struct FiosChunk {
 	uint8_t completed : 1;
 	uint8_t cancelled : 1;
 	uint8_t split : 1;		/* a read or write counted in FIOS_CHUNK_PIECE_SIZE pieces */
-	uint8_t reservedFlags : 1;
+	uint8_t filtered : 1;		/* a dearchiver made it: its filter does not run on it again */
 	uint8_t executing : 1;
 	uint8_t whole : 1;		/* a read or write ChunkTree does not cut up */
 	uint8_t type;			/* CHUNK_* */
@@ -313,9 +345,10 @@ struct FiosChunk {
 			uint64_t size;
 			uint8_t data[8];
 		} buffer;
-		struct {			/* CHUNK_CALLBACK */
-			uint32_t reserved;
+		struct {			/* CHUNK_CALLBACK: pCallback runs when its children are done */
+			int (*pCallback)(FiosChunk *pChunk, int run);
 			int err;
+			void *pData;
 		} callback;
 		struct {			/* CHUNK_FH_OPEN, CHUNK_DH_OPEN */
 			SceFiosHandle h;
