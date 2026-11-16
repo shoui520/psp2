@@ -25,8 +25,12 @@
 #endif
 
 /* P9.2 and P1.5 cleared with P9.1 by a resume's other requests, a shutdown and a cut: not on
-   0x00603000, which clears them only for an off */
-#define BOARD_POWER_P92_P15	(!HW_IS(0x00603000))
+   0x00603000 and 0x00603200, which clear them only for an off */
+#define BOARD_POWER_P92_P15	(!HW_IS(0x00603000) && !HW_IS(0x00603200))
+
+/* sleepFactorGetOffInfo's bits 0 and 1 from the settings' offInfoBit0 and offInfoBit1, and bit 2
+   always: not on 0x00603200, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2 never */
+#define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200))
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
 #define BOARD_POWER_STEPS	(BOARD_IRS1001 ? 4 : 3)

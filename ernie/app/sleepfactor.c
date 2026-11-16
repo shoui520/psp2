@@ -289,9 +289,14 @@ void sleepFactorGetOffInfo(unsigned char *info)
 	unsigned char flags = 0;
 
 	flags |= configGet()->offTransitionBlock == 0x5aa5 ? 0x08 : 0;
+#if BOARD_OFF_INFO_BITS
 	flags |= configGet()->offInfoBit0 != 0 ? 0x01 : 0;
 	flags |= configGet()->offInfoBit1 != 0 ? 0x02 : 0;
 	flags |= 0x04;
+#else
+	flags |= configGet()->offInfo2 != 0 ? 0x01 : 0;
+	flags |= configGet()->offInfo3 != 0 ? 0x02 : 0;
+#endif
 	switch (flags) {
 	case 3:
 	case 4:
