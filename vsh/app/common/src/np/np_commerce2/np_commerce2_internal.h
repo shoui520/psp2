@@ -322,7 +322,7 @@ extern int npCommerce2Send_8101C9F2(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_8101CB3C(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3, int x4);
 extern int npCommerce2Send_8101CE02(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101CECC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101CF56(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
+extern int npCommerce2Send_8101CF56(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101D2B0(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101D376(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
