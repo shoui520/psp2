@@ -2459,3 +2459,81 @@ int npCommerce2Send_8101C0B4(int mode, int httpTemplate, int *httpConnection, in
 	}
 	return ret;
 }
+
+/* the transaction search criteria: an escaped text and seven numbers, all under "transactionSearchCriteria." */
+#define CRITERIA_NUMBER(key, format, value)							\
+	do {											\
+		sceClibSnprintf(escaped, 0x301, format, value);					\
+		ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, 1, key, escaped,	\
+						    sceClibStrnlen(escaped, 0x400), 1);		\
+		if (ret < 0)									\
+			goto done;								\
+		sum += (SceULong64)(SceInt64)ret;						\
+	} while (0)
+
+int npCommerce2WriteTransactionCriteria(int sending, int httpRequest, SceUInt64 *total, const char *text,
+					SceUInt32 number1, SceUInt32 number2, SceUInt32 number3,
+					SceUInt32 number4, SceUInt32 number5, SceUInt32 number6, int number7)
+{
+	char escaped[0x304];
+	const char *prefixes[2];
+	SceULong64 sum;
+	int ret;
+
+	sceClibMemset(prefixes, 0, 8);
+	prefixes[0] = "transactionSearchCriteria.";
+	ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+	if (ret >= 0) {
+		ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, 1, 46, escaped,
+						    sceClibStrnlen(escaped, 0x400), 0);
+		if (ret >= 0) {
+			sum = (SceULong64)(SceInt64)ret;
+			CRITERIA_NUMBER(65, "%u", number1);
+			CRITERIA_NUMBER(66, "%u", number2);
+			CRITERIA_NUMBER(67, "%u", number3);
+			CRITERIA_NUMBER(68, "%u", number4);
+			CRITERIA_NUMBER(69, "%u", number5);
+			CRITERIA_NUMBER(70, "%u", number6);
+			CRITERIA_NUMBER(71, "%d", number7);
+			if (sending != 1)
+				*total = sum;
+			ret = 0;
+		}
+	}
+done:
+	return ret;
+}
+
+/* a transaction search request */
+int npCommerce2Send_8101C722(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *text, SceUInt32 number1, SceUInt32 number2, SceUInt32 number3,
+			     SceUInt32 number4, SceUInt32 number5, SceUInt32 number6, int number7)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int ret;
+
+	for (;;) {
+		ret = npCommerce2WriteTransactionCriteria(pass != 0, *httpRequest, &length, text, number1, number2,
+							  number3, number4, number5, number6, number7);
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}

@@ -1515,6 +1515,12 @@ extern int npCommerce2Send_8101BEBC(int mode, int httpTemplate, int *httpConnect
 				    const char *text, int flagA, int flagB, int flagC, SceUInt32 number);
 extern int npCommerce2Send_8101C0B4(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *text, const char *account);
+extern int npCommerce2WriteTransactionCriteria(int sending, int httpRequest, SceUInt64 *total, const char *text,
+					       SceUInt32 number1, SceUInt32 number2, SceUInt32 number3,
+					       SceUInt32 number4, SceUInt32 number5, SceUInt32 number6, int number7);
+extern int npCommerce2Send_8101C722(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text, SceUInt32 number1, SceUInt32 number2, SceUInt32 number3,
+				    SceUInt32 number4, SceUInt32 number5, SceUInt32 number6, int number7);
 /* a search condition: the index of the field it names and its value with the length */
 typedef struct NpCommerce2SearchEntry {
 	SceUInt32 field;
