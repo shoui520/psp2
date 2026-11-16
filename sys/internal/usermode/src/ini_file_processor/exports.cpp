@@ -26,15 +26,27 @@ void *__dso_handle;	/* 0x81005008 */
 
 extern "C" {
 
-int module_start(SceSize arglen, const void *argp)
+__attribute__((noinline)) static void *iniModuleStart(void)
 {
 	__dso_handle = &__dso_handle;
+	return &__dso_handle + 1;
+}
+
+__attribute__((noinline)) static int iniModuleStop(void)
+{
+	ScePafStdc_F36BABE3(&__dso_handle);
+	return 0;
+}
+
+int module_start(SceSize arglen, const void *argp)
+{
+	iniModuleStart();
 	return 0;
 }
 
 int module_stop(SceSize arglen, const void *argp)
 {
-	ScePafStdc_F36BABE3(&__dso_handle);
+	iniModuleStop();
 	return 0;
 }
 

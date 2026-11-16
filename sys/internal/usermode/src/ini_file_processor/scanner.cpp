@@ -5,8 +5,9 @@
 
 #include "ini_internal.h"
 
-/* a token with nothing in it, except the line kind and how it went, which a scan sets */
-IniToken *iniTokenReset(IniToken *token)
+/* the token's line, parts and position set to nothing (two copies the original has, with their stores in
+ * another order) */
+__attribute__((noinline)) static IniToken *iniTokenClear(IniToken *token)
 {
 	token->line = 0;
 	token->error = 0;
@@ -18,6 +19,28 @@ IniToken *iniTokenReset(IniToken *token)
 	token->newline = NULL;
 	token->newlineLength = 0;
 	token->position = 0;
+	return token;
+}
+
+__attribute__((noinline)) static IniToken *iniTokenClearScan(IniToken *token)
+{
+	token->line = 0;
+	token->error = 0;
+	token->offset = 0;
+	token->key = NULL;
+	token->position = 0;
+	token->newlineLength = 0;
+	token->keyLength = 0;
+	token->value = NULL;
+	token->valueLength = 0;
+	token->newline = NULL;
+	return token;
+}
+
+/* a token with nothing in it */
+IniToken *iniTokenReset(IniToken *token)
+{
+	iniTokenClear(token);
 	token->carry = 0;
 	return token;
 }
@@ -243,7 +266,7 @@ int IniScanner::scan(const IniInput *input, IniToken *out)
 
 	if (data != NULL && size > offset) {
 		scanner->m_token.carry = 0;
-		iniTokenReset(&scanner->m_token);
+		iniTokenClearScan(&scanner->m_token);
 		data = input->data;
 		size = input->size;
 		offset = input->offset;
@@ -288,9 +311,9 @@ IniScanner::IniScanner()
 {
 	m_cursor = NULL;
 	m_end = NULL;
-	iniTokenReset(&m_token);
+	iniTokenClear(&m_token);
+	m_token.carry = 0;
 	m_bomKind = 0;
-	m_step = 0;
 }
 
 IniScanner::~IniScanner()
