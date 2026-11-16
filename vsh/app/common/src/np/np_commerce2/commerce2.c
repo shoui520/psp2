@@ -4144,15 +4144,15 @@ int SceNpCommerce2_71ADF5A6(int a1, int a2)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
-	return npCommerce2_8100B3C6(a1, a2);
+	return npCommerce2GetUserValue(a1, (SceUInt32 *)a2);
 }
 
-int SceNpCommerce2_2F0645A6(int a1, int a2, int a3, int a4)
+int SceNpCommerce2_2F0645A6(int a1, int a2, int a3, int a4, int a5)
 {
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a3 != 0 && a4 != 0)
-		return npCommerce2_8100B292(a1, a2, a3, a4);
+		return npCommerce2CopyResponse(a1, a2, (void *)a3, a4, (SceSize *)a5);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4161,7 +4161,7 @@ int SceNpCommerce2_8ECAE666(int a1, SceUInt32 a2)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a2 != 0 && a2 < 9)
-		return npCommerce2_8100B372(a1, a2);
+		return npCommerce2SetMode(a1, a2);
 	return NP_COMMERCE2_ERROR_INVALID_TARGET_TYPE;
 }
 
@@ -4172,7 +4172,7 @@ int SceNpCommerce2_60187EF1(int a1, const char *a2, int *a3)
 	if (a2 == NULL || a3 == NULL)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 	*a3 = 0;
-	return npCommerce2_8100B41A(a1, a2);
+	return npCommerce2CheckInput(a1, a2, (SceUInt32 *)a3);
 }
 
 /* the SKU ID's text ends at its third part: cuts off what follows the second '-' */
@@ -4280,7 +4280,7 @@ int SceNpCommerce2_34CDA223(int a1, const SceUInt16 *a2, int *flags)
 	if (n == 0x100)
 		return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 	text[n] = '\0';
-	return npCommerce2_8100B41A(a1, text);
+	return npCommerce2CheckInput(a1, text, (SceUInt32 *)flags);
 }
 
 /* the title ID's store label of the content's category (1 to 5), its SKU ID's prefix */
@@ -4409,7 +4409,7 @@ int sceNpCommerce2GetShortfallOfLibsslPool(SceUInt32 ctxId, SceInt32 *shortfall)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (shortfall != NULL)
-		return npCommerce2_8100B7A0(ctxId, shortfall);
+		return npCommerce2GetSslShortfall(ctxId, shortfall);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -4418,7 +4418,7 @@ int sceNpCommerce2GetShortfallOfLibhttpPool(SceUInt32 ctxId, SceInt32 *shortfall
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (shortfall != NULL)
-		return npCommerce2_8100B7F4(ctxId, shortfall);
+		return npCommerce2GetHttpShortfall(ctxId, shortfall);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 

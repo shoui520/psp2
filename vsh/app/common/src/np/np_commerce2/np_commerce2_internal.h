@@ -302,7 +302,7 @@ typedef struct NpCommerce2Context {
 	SceUInt32 reserved2;
 	SceUInt64 lastRequestTime;
 	SceUInt32 kind;			/* 0: the context of the library, 1: the shell's */
-	SceUInt32 reserved3;
+	SceUInt32 userValue;		/* given back by 71ADF5A6, moves with the text in 2F0645A6 */
 	char currencyCode[4];
 	char countryCode[4];
 	SceUInt32 sslCreated;
@@ -374,6 +374,12 @@ extern int npCommerce2Start_8100A982(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_8100AC38(SceUInt32 reqId, int a2);
 extern int npCommerce2Start_8100AD7E(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2Start_8100AECA(SceUInt32 reqId, int a2);
+extern int npCommerce2SetMode(SceUInt32 ctxId, SceUInt32 mode);
+extern int npCommerce2GetUserValue(SceUInt32 ctxId, SceUInt32 *value);
+extern int npCommerce2GetSslShortfall(SceUInt32 ctxId, SceInt32 *shortfall);
+extern int npCommerce2GetHttpShortfall(SceUInt32 ctxId, SceInt32 *shortfall);
+extern int npCommerce2CopyResponse(SceUInt32 ctxId, SceUInt32 targetId, void *buf, SceSize bufLen, SceSize *fillSize);
+extern int npCommerce2CheckInput(int kind, const char *text, SceUInt32 *flags);
 extern int npCommerce2Start_8100AACE(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2Start_8100A38E(SceUInt32 reqId, int a2, int a3, int a4);
 extern int npCommerce2Start_8100B010(SceUInt32 reqId, int a2, SceUInt64 a3, SceUInt64 a4);
@@ -1403,6 +1409,7 @@ extern int npCommerce2SetHeaderStatus(char *header, SceSize size, SceUInt32 data
 extern int npCommerce2StoreResponse(NpCommerce2Context *ctx, NpCommerce2Request *req, void *buf, SceSize bufSize,
 				    SceSize length);
 /* reading the store's HTTP responses (http.c) */
+#define NP_COMMERCE2_ERROR_NO_RESPONSE		-2141909103	/* 0x80550f91 */
 #define NP_COMMERCE2_ERROR_CONTENT_TOO_LONG	-2141909104	/* 0x80550f90 */
 extern int npCommerce2GetResponseStatus(int httpRequest, int *nativeBuildVersion);
 extern int npCommerce2ReadResponseData(int httpRequest, char *data, SceSize size);
@@ -1704,12 +1711,6 @@ extern int npCommerce2CreateReqSetAccountLang(SceUInt32 ctxId, SceUInt32 *reqId)
 extern int npCommerce2CreateReqCancelOrder(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCheckAccountEula(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B238(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8100B3C6(int a1, int a2);
-extern int npCommerce2_8100B292(int a1, int a2, int a3, int a4);
-extern int npCommerce2_8100B372(int a1, int a2);
-extern int npCommerce2_8100B41A(int a1, const char *a2);
-extern int npCommerce2_8100B7A0(SceUInt32 ctxId, SceInt32 *shortfall);
-extern int npCommerce2_8100B7F4(SceUInt32 ctxId, SceInt32 *shortfall);
 extern int npCommerce2_810060C0(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810060CE(SceUInt32 reqId);
 extern int npCommerce2_810062EC(SceUInt32 ctxId, SceUInt32 *reqId);
