@@ -87,7 +87,7 @@ NpWebApiRequest *npWebApiRequestSetFlag389(NpWebApiRequest *request, char value)
 
 void *npWebApiRequestGetObject280(NpWebApiRequest *request)
 {
-	return request->object280;
+	return request->data + 32;
 }
 
 NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiRequest *next)
@@ -210,4 +210,42 @@ int npWebApiRequestGetField232(NpWebApiRequest *request)
 int npWebApiRequestGetHttpRequestId(NpWebApiRequest *request)
 {
 	return request->httpRequestId;
+}
+
+int npWebApiRequestGetField228(NpWebApiRequest *request)
+{
+	return request->field228;
+}
+
+int npWebApiRequestGetField236(NpWebApiRequest *request)
+{
+	return request->field236;
+}
+
+/* gives out what the request has buffered, up to len bytes */
+SceSize npWebApiRequestReadBuffered(NpWebApiRequest *request, void *dst, SceSize len)
+{
+	int size;
+	int offset;
+	SceSize left;
+	SceSize count;
+
+	size = request->field316;
+	if (size == 0)
+		return 0;
+	offset = request->readOffset;
+	if (size == offset)
+		return 0;
+	left = size - offset;
+	count = len;
+	if (left < len)
+		count = left;
+	sceClibMemcpy_safe(dst, (unsigned char *)request + offset + 248, count);
+	request->readOffset += count;
+	return count;
+}
+
+int npWebApiRequestIsSendComplete(NpWebApiRequest *request)
+{
+	return request->sentSize == request->totalSize;
 }
