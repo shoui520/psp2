@@ -149,3 +149,53 @@ int npCommerce2ReadItem0x58Of_810119B0(const NpCommerce2Item *result, NpCommerce
 {
 	return npCommerce2ReadItem0x58(&result->commonData, (const char *)result->commonData.data, result->commonData.data_size, item);
 }
+
+int npCommerce2StartShellSlot_8101848C(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_81018494(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_8101849C(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184A4(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184AC(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184B4(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184BC(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184C4(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_810184CC(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}
+
+int npCommerce2StartShellSlot_8101884A(int slotId, void *request)
+{
+	return npCommerce2StartShellSlot(slotId, request);
+}

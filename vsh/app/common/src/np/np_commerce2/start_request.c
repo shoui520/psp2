@@ -29,7 +29,7 @@
 												\
 				linked = 0;							\
 				if ((shellCheck) && c->shellSlot != 0) {					\
-					int r = npCommerce2_81017FE8(c->shellSlot, &linked);	\
+					int r = npCommerce2ShellOp03(c->shellSlot, &linked);	\
 												\
 					if (r >= 0) {						\
 						if (linked != c->shellCounter) {		\

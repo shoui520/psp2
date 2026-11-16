@@ -11,7 +11,7 @@ int sceNpCommerce2ShowPsStoreIcon(int iconDisp)
 	if (g_shellReady == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	shell = SceShellSvc_B31E7F1C();
-	return npCommerce2_8101EB8E(shell, iconDisp);
+	return npCommerce2IpcOp1E((NpCommerce2Ipc *)shell, iconDisp);
 }
 
 int sceNpCommerce2HidePsStoreIcon(void)
@@ -21,5 +21,5 @@ int sceNpCommerce2HidePsStoreIcon(void)
 	if (g_shellReady == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	shell = SceShellSvc_B31E7F1C();
-	return npCommerce2_8101EBDE(shell);
+	return npCommerce2IpcOp1F((NpCommerce2Ipc *)shell);
 }

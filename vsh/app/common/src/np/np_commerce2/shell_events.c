@@ -35,12 +35,12 @@ int npCommerce2_81017DCC(void)
 	if (ret >= 0) {
 		g_shellLockReady = 1;
 		for (i = 0; i < NP_COMMERCE2_SHELL_EVENT_NUM; i++) {
-			ret = SceShellSvc_D943CE15(s_enableEvents[i], npCommerce2_81018A7E, 0);
+			ret = SceShellSvc_D943CE15(s_enableEvents[i], npCommerce2ShellEnabled, 0);
 			if (ret < 0)
 				goto fail;
 		}
 		for (i = 0; i < NP_COMMERCE2_SHELL_EVENT_NUM; i++) {
-			ret = SceShellSvc_D943CE15(s_disableEvents[i], npCommerce2_81018A88, 0);
+			ret = SceShellSvc_D943CE15(s_disableEvents[i], npCommerce2ShellDisabled, 0);
 			if (ret < 0)
 				goto fail;
 		}

@@ -221,6 +221,7 @@ extern int SceNpCommerce2_F988A255(const SceNpCommerce2GetProductInfoResult *res
 extern int SceNpCommerce2_C4CC8E22(int a1, int a2, int a3);
 
 #define NP_COMMERCE2_ERROR_NO_SHELL_SLOT	-2141909072	/* 0x80550fb0 */
+#define NP_COMMERCE2_ERROR_NO_SHELL_QUERY	-2141909070	/* 0x80550fb2 */
 #define NP_COMMERCE2_ERROR_NO_SUCH_SHELL_SLOT	-2141909071	/* 0x80550fb1 */
 #define NP_COMMERCE2_SHELL_SLOT_NUM	16
 
@@ -237,25 +238,37 @@ typedef struct NpCommerce2ShellSlot {
 extern NpCommerce2ShellSlot g_shellSlots[NP_COMMERCE2_SHELL_SLOT_NUM];
 extern int npCommerce2CreateShellSlot(int type, int *slotId);
 extern int npCommerce2WaitShellSlot(int slotId);
-extern int npCommerce2_8101EAE6(int shell, int request);
 extern int g_shellReady;
 extern int g_shellLockReady;
 extern SceKernelLwMutexWork g_shellLock;
 extern int SceShellSvc_D943CE15(int event, int (*callback)(int), int arg);
 extern int SceShellSvc_7CBF442B(int event);
-extern int npCommerce2_81018A7E(int a1);
-extern int npCommerce2_81018A88(int a1);
 extern int npCommerce2_81017DCC(void);
 extern void npCommerce2_81017EF8(int a1);
 extern SceUInt32 g_checkCtxId;
 extern SceUInt32 g_checkReqId;
 extern int g_checkAborted;
 extern int SceShellSvc_B31E7F1C(void);
-extern int npCommerce2_8101EB8E(int a1, int a2);
-extern int npCommerce2_8101EBDE(int a1);
-extern int npCommerce2_81017F7A(void);
-extern int npCommerce2_81017F9C(void);
-extern int npCommerce2_81017FC2(int a1);
+extern int npCommerce2StartShellSlot(int slotId, void *request);
+extern int npCommerce2StartShellSlot_8101848C(int slotId, void *request);
+extern int npCommerce2StartShellSlot_81018494(int slotId, void *request);
+extern int npCommerce2StartShellSlot_8101849C(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184A4(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184AC(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184B4(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184BC(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184C4(int slotId, void *request);
+extern int npCommerce2StartShellSlot_810184CC(int slotId, void *request);
+extern int npCommerce2StartShellSlot_8101884A(int slotId, void *request);
+extern int npCommerce2GetShellSlotResult(int slotId, int *a2, int *a3, int *a4, int a5, int *a6, int *a7, int a8, int *a9);
+extern int npCommerce2NotifyShellSlots(int event, int enabled);
+extern int npCommerce2ShellEnabled(int event);
+extern int npCommerce2ShellDisabled(int event);
+extern int npCommerce2ShellOp00(void);
+extern int npCommerce2ShellOp01(int a1);
+extern int npCommerce2ShellOp02(int mode);
+extern int npCommerce2ShellOp03(int slot, int *counter);
+
 
 /* Init's settings and the heap (settings.c) */
 #define NP_COMMERCE2_ERROR_NO_ENVIRONMENT	-2141909109	/* 0x80550f8b */
@@ -394,7 +407,6 @@ extern int npCommerce2Start_8100888C(SceUInt32 reqId, int a2, int a3, int a4, in
 extern int npCommerce2Start_81009074(SceUInt32 reqId, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2Start_810091DE(SceUInt32 reqId, int a2, int a3);
 extern int npCommerce2CheckRequest(NpCommerce2Context *ctx, NpCommerce2Request *req);
-extern int npCommerce2_81017FE8(int slot, int *counter);
 extern int npCommerce2GetSystemTime(SceUInt64 *time);
 extern int npCommerce2RenewConnection(int httpTemplate, int *httpConnection, int timeout);
 #define NP_COMMERCE2_ERROR_SHELL_CHANGED	-2141909099	/* 0x80550f95 */
@@ -1721,6 +1733,39 @@ extern int npCommerce2StartSessionRequest(SceUInt32 reqId);
 extern int npCommerce2GetResult(int type, SceUInt32 reqId, void *buf, SceSize bufLen,
 				SceSize *fillSize);
 
+/* the requests to the shell: their first word is their size */
+typedef struct NpCommerce2ShellRequestNames {		/* 524 */
+	SceUInt32 size;
+	char first[259];
+	char second[261];
+} NpCommerce2ShellRequestNames;
+
+typedef struct NpCommerce2ShellRequestText {		/* 276 */
+	SceUInt32 size;
+	char text[260];
+	int values[3];
+} NpCommerce2ShellRequestText;
+
+typedef struct NpCommerce2ShellRequestCodes {		/* 28 and 24 */
+	SceUInt32 size;
+	char first[4];
+	char second[4];
+	int values[4];
+} NpCommerce2ShellRequestCodes;
+
+typedef struct NpCommerce2ShellRequestPair {		/* 532 */
+	SceUInt32 size;
+	int value;
+	char first[259];
+	char second[261];
+	int last;
+} NpCommerce2ShellRequestPair;
+
+typedef struct NpCommerce2ShellRequestOne {		/* 264 */
+	SceUInt32 size;
+	char text[260];
+} NpCommerce2ShellRequestOne;
+
 /* the shell's store service: an object with a table of functions */
 struct NpCommerce2Ipc;
 typedef struct NpCommerce2IpcInput {
@@ -1771,5 +1816,6 @@ extern int npCommerce2IpcOp1B(NpCommerce2Ipc *service, void *out0, void *out1, i
 extern int npCommerce2IpcOp1C(NpCommerce2Ipc *service, int value);
 extern int npCommerce2IpcOp1D(NpCommerce2Ipc *service, int value, void *result);
 extern int npCommerce2IpcOp1E(NpCommerce2Ipc *service, int value);
+extern int npCommerce2IpcOp1F(NpCommerce2Ipc *service);
 
 #endif

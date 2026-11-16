@@ -609,3 +609,12 @@ int npCommerce2IpcOp1E(NpCommerce2Ipc *service, int value)
 	NP_COMMERCE2_IPC_CALL(service, 30, in, 1, NULL, 0);
 	return ret;
 }
+
+/* operation 0x1f of the shell service */
+int npCommerce2IpcOp1F(NpCommerce2Ipc *service)
+{
+	int ret;
+
+	NP_COMMERCE2_IPC_CALL(service, 31, NULL, 0, NULL, 0);
+	return ret;
+}

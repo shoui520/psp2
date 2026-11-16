@@ -159,12 +159,12 @@ int sceNpCommerce2GetContentRatingDescriptor(const SceNpCommerce2ContentRatingIn
 
 int SceNpCommerce2_624B7A50(void)
 {
-	return npCommerce2_81017F7A();
+	return npCommerce2ShellOp00();
 }
 
-int SceNpCommerce2_145137BE(void)
+int SceNpCommerce2_145137BE(int a1)
 {
-	return npCommerce2_81017F9C();
+	return npCommerce2ShellOp01(a1);
 }
 
 int SceNpCommerce2_BC89C4D3(int a1)
@@ -190,5 +190,5 @@ int SceNpCommerce2_BC89C4D3(int a1)
 	default:
 		return NP_COMMERCE2_ERROR_INVALID_VERSION;
 	}
-	return npCommerce2_81017FC2(mode);
+	return npCommerce2ShellOp02(mode);
 }
