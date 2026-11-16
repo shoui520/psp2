@@ -22,7 +22,8 @@ void debugPinInit(void)
 #endif
 }
 
-/* never called; on IRS-1001 bits 1 and 0 of value to P12.7 and P4.2 */
+/* on IRS-1001 bits 1 and 0 of value to P12.7 and P4.2 (BOARD_DEBUG_PINS_POWER: the power
+   state); the others never call it */
 void debugPinReserved(unsigned int value)
 {
 #if BOARD_IRS1001
@@ -43,3 +44,15 @@ void debugPinSet(unsigned int level)
 	P4.0 = level & 1;
 #endif
 }
+
+#if BOARD_DEBUG_PINS_POWER
+/* bits 4-0 of code to P4.3, P4.4, P4.5, P5.4 and P5.5 */
+void debugPinCode(unsigned int code)
+{
+	P4.3 = ((unsigned char)code & 0x10) ? 1 : 0;
+	P4.4 = ((unsigned char)code & 0x08) ? 1 : 0;
+	P4.5 = ((unsigned char)code & 0x04) ? 1 : 0;
+	P5.4 = ((unsigned char)code & 0x02) ? 1 : 0;
+	P5.5 = ((unsigned char)code & 0x01) ? 1 : 0;
+}
+#endif

@@ -37,7 +37,9 @@ void task3(VP_INT exinf)
 				inputProcess();
 				if (stateGet() == 0x0020)
 					devicesRequestRun();
-#if FW_SINCE(0x0100060B)
+#if BOARD_DEBUG_PINS_POWER
+				/* toggled by task 2's ticks instead */
+#elif FW_SINCE(0x0100060B)
 				debugPinSet((unsigned char)(P4.0 ^ 1));
 #else
 				if (P4.0)

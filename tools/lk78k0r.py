@@ -26,8 +26,9 @@ a comment; paths are relative to the link file's folder:
 Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only when the -D
 definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
 objects and places. `<`, `<=`, `>` and `>=` compare numbers (a firmware version's own places),
-and several conditions joined by `&&` must all hold (`IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306`).
-An assembly source's `$_IF (NAME op VALUE)` blocks, with the same operators,
+several conditions joined by `&&` must all hold (`IF ERNIE_HW==0x00415000&&ERNIE_FW<0x01000306`),
+and of groups joined by `||` one must (`&&` binding first; no spaces).
+An assembly source's `$_IF (NAME op VALUE)` blocks, with the same operators and joins,
 each with an optional `$ELSE`, to their `$ENDIF`, are decided the same way (RA78K0R's own
 conditional assembly cannot see a -D definition).
 
@@ -86,7 +87,21 @@ def holds(values, name, op, text):
 	return {'<': a < b, '<=': a <= b, '>': a > b, '>=': a >= b}[op]
 
 
-CONDITION = re.compile(r'\s*\$_IF\s*\(\s*(\w+)\s*(==|!=|<=|>=|<|>)\s*([^\s)]+)\s*\)\s*(;.*)?$', re.I)
+TEST = re.compile(r'\s*(\w+)\s*(==|!=|<=|>=|<|>)\s*(\S+?)\s*')
+
+
+def expression(values, text):
+	"""tests joined by && and ||, && binding first; None when it does not parse"""
+	groups = []
+	for group in text.split('||'):
+		tests = [TEST.fullmatch(t) for t in group.split('&&')]
+		if not all(tests):
+			return None
+		groups.append(all(holds(values, *m.groups()) for m in tests))
+	return any(groups)
+
+
+CONDITION = re.compile(r'\s*\$_IF\s*\(([^)]*)\)\s*(;.*)?$', re.I)
 ELSE = re.compile(r'\s*\$ELSE\s*(;.*)?$', re.I)
 ENDIF = re.compile(r'\s*\$ENDIF\s*(;.*)?$', re.I)
 
@@ -98,7 +113,10 @@ def conditions(text, values):
 	for line in text.splitlines():
 		m = CONDITION.match(line)
 		if m:
-			taking.append(taking[-1] and holds(values, m.group(1), m.group(2), m.group(3)))
+			result = expression(values, m.group(1))
+			if result is None:
+				raise LinkError(f'cannot decide {line.strip()}')
+			taking.append(taking[-1] and result)
 		elif ELSE.match(line) and len(taking) > 1:
 			taking[-1] = taking[-2] and not taking[-1]
 		elif ENDIF.match(line) and len(taking) > 1:
@@ -120,11 +138,10 @@ class LinkFile:
 		for no, line in enumerate(Path(path).read_text().splitlines(), 1):
 			words = line.split('#', 1)[0].split()
 			if len(words) > 2 and words[-2].upper() == 'IF':
-				tests = [re.fullmatch(r'(\w+)(==|!=|<=|>=|<|>)(\S+)', t)
-					 for t in words[-1].split('&&')]
-				if not all(tests):
+				result = expression(values, words[-1])
+				if result is None:
 					raise LinkError(f'{path}:{no}: {line.strip()}')
-				if not all(holds(values, *m.groups()) for m in tests):
+				if not result:
 					continue
 				words = words[:-2]
 			if not words:

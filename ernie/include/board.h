@@ -6,6 +6,8 @@
 #ifndef ERNIE_BOARD_H
 #define ERNIE_BOARD_H
 
+#include "ernie.h"
+
 /* CEM-3000NE2 (0x00404600, and 0x00404800, whose image is the same): PCH-1000's code (its
    ERNIE_BOARD), with what it keeps of the DEM boards' */
 #define BOARD_CEM3000NE2	(HW_IS(0x00404600) || HW_IS(0x00404800))
@@ -14,9 +16,9 @@
    Elmo wiring and power steps */
 #define BOARD_IRS1001		((ERNIE_HW & 0x00ff0000) == 0x00600000)
 
-/* input 1's bit 7 and the touch panels' CHG line: P14.5 and P7.5, on IRS-1001 the other way
-   round */
-#if BOARD_IRS1001
+/* input 1's bit 7 and the touch panels' CHG line: P14.5 and P7.5, on IRS-1001 (but 0x00601000)
+   the other way round */
+#if BOARD_IRS1001 && !HW_IS(0x00601000)
 #define BOARD_INPUT1_BIT7_PIN	P7.5
 #define BOARD_TOUCH_CHG_PIN	P14.5
 #else
@@ -31,6 +33,15 @@
 /* sleepFactorGetOffInfo's bits 0 and 1 from the settings' offInfoBit0 and offInfoBit1, and bit 2
    always: not on 0x00603200, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2 never */
 #define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200))
+
+/* the off and suspend states wake by INTP1 and INTP13 (and INTP11), the inputs scanned in mode 2:
+   not on 0x00601000, whose inputs keep scanning in mode 1 */
+#define BOARD_OFF_WAKE		(!HW_IS(0x00601000))
+
+/* the probe pins show the power state (debugPinReserved: 1 off, 2 suspend, 3 resume, else 0) and
+   a resume's mode (debugPinCode), and P4.0 toggles at each of task 2's ticks (not task 3's scans):
+   0x00601000's */
+#define BOARD_DEBUG_PINS_POWER	HW_IS(0x00601000)
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
 #define BOARD_POWER_STEPS	(BOARD_IRS1001 ? 4 : 3)
@@ -92,9 +103,11 @@
    commands 0x0886 do nothing */
 #define BOARD_HDMI		(ERNIE_BOARD != 0x00406000)
 
-/* the configuration's wake masks the board reads (ConfigBlock.wakeMasks0-2): DEM-3000L's the
-   second set, PCH-1000's the third */
-#if ERNIE_BOARD == 0x00406000
+/* the configuration's wake masks the board reads (ConfigBlock.wakeMasks0-2): 0x00601000's the
+   first set, DEM-3000L's the second, PCH-1000's the third */
+#if HW_IS(0x00601000)
+#define BOARD_WAKE_MASKS	wakeMasks0
+#elif ERNIE_BOARD == 0x00406000
 #define BOARD_WAKE_MASKS	wakeMasks2
 #else
 #define BOARD_WAKE_MASKS	wakeMasks1
@@ -102,15 +115,15 @@
 
 /* input 3's pins (P7.3, P7.7: sampleInputs3); PCH-1000 samples none, its input 3 keeps the
    value inputInit gives it */
-#define BOARD_INPUT3_PINS	(ERNIE_BOARD != 0x00406000)
+#define BOARD_INPUT3_PINS	(ERNIE_BOARD != 0x00406000 || HW_IS(0x00601000))
 
 /* the serial link's mode 2 (app/serial2.c: its commands, notifications and test area, P7.1,
    its request and link inputs): not on PCH-1000, whose link answers mode 2 with no data */
-#define BOARD_SERIAL2		(ERNIE_BOARD != 0x00406000)
+#define BOARD_SERIAL2		(ERNIE_BOARD != 0x00406000 || HW_IS(0x00601000))
 
 /* the command link on UART4 (app/uart4.c, app/serial4.c): not on PCH-1000, whose serial4Event
    steps UART3's link only */
-#define BOARD_SERIAL4		(ERNIE_BOARD != 0x00406000)
+#define BOARD_SERIAL4		(ERNIE_BOARD != 0x00406000 || HW_IS(0x00601000))
 
 /* the keys' pins on port 5 (inputKeysOpen, inputKeysClose): P5.0-P5.3; PCH-1000's P5.1 and P5.2
    (its PM5 still opened with 0x0f) */
@@ -132,7 +145,7 @@
 #define BOARD_HANG_PINS		(ERNIE_BOARD == 0x00406000)
 
 /* standby may stop the clock when nothing needs it (taskStandbyHalt); the others always halt */
-#define BOARD_STANDBY_STOP	(ERNIE_BOARD == 0x00406000)
+#define BOARD_STANDBY_STOP	(ERNIE_BOARD == 0x00406000 && !HW_IS(0x00601000))
 
 /* boardSetMultiCnOutput's and boardGetMultiCnOutput's outputs */
 /* the motion sensor (CSI01, its frame timer TM01, request 4 and stream 0x0400) and timer 11's

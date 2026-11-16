@@ -12,6 +12,7 @@
 #include "clockout.h"
 #include "config.h"
 #include "csi.h"
+#include "debugpin.h"
 #include "host.h"
 #include "keepram.h"
 #include "kernel.h"
@@ -127,8 +128,18 @@ void powerSequence(void)
 	if (result == 0) {
 		powerState &= 0x7fff;
 		statePhase = 2;
-#if FW_SINCE(0x0100060B)
-		/* Sony's tests off, suspend and resume here and does nothing */
+#if BOARD_DEBUG_PINS_POWER
+		if (powerState & STATE_OFF)
+			debugPinReserved(1);
+		else if (powerState & STATE_SUSPEND)
+			debugPinReserved(2);
+		else if (powerState & STATE_RESUME)
+			debugPinReserved(3);
+		else
+			debugPinReserved(0);
+#elif FW_SINCE(0x0100060B)
+		/* Sony's tests off, suspend and resume here and does nothing (0x00601000 shows the
+		   state on its probe pins there) */
 		if ((powerState & STATE_OFF) || (powerState & STATE_SUSPEND) ||
 		    (powerState & STATE_RESUME))
 			;
@@ -296,6 +307,9 @@ unsigned char powerResume(union PowerRequest *request)
 	sleepFactorSet20(0);
 #endif
 	stateWakeupFactor.word = request->word;
+#if BOARD_DEBUG_PINS_POWER
+	debugPinCode(stateWakeupFactor.bits.mode);
+#endif
 	inputResumePrepare();
 	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);

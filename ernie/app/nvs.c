@@ -75,7 +75,11 @@ static unsigned char nvsDataBlocks[NVS_DATA_BLOCKS];
 static unsigned char nvsCopyBlocks[NVS_DATA_BLOCKS];
 static unsigned char nvsSpareBlocks[NVS_SPARE_BLOCKS];
 static unsigned char nvsRecord[NVS_RECORD_SIZE];
-static unsigned char nvsBuffer[2 * NVS_RECORD_SIZE];
+/* two records, word-aligned (0x00601000's follows nvsRecord at an odd address) */
+static union {
+	unsigned int	words[NVS_RECORD_SIZE];
+	unsigned char	bytes[2 * NVS_RECORD_SIZE];
+} nvsBuffer;
 
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
 extern void FSL_Open(void);
@@ -142,9 +146,9 @@ unsigned char nvsRead(unsigned int offset, unsigned int size, unsigned char *dat
 	index = offset >> 5;
 	start = (unsigned char)offset & 0x1f;
 	count = (size + start + NVS_RECORD_SIZE - 1) >> 5;
-	result = nvsReadRecords(nvsBuffer, index, (unsigned char)count);
+	result = nvsReadRecords(nvsBuffer.bytes, index, (unsigned char)count);
 	if (result == 0)
-		memcpy(data, &nvsBuffer[start], size);
+		memcpy(data, &nvsBuffer.bytes[start], size);
 	return result;
 }
 
@@ -174,11 +178,11 @@ unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *da
 	index = offset >> 5;
 	start = (unsigned char)offset & 0x1f;
 	count = (size + start + NVS_RECORD_SIZE - 1) >> 5;
-	result = nvsReadRecords(nvsBuffer, index, (unsigned char)count);
+	result = nvsReadRecords(nvsBuffer.bytes, index, (unsigned char)count);
 	if (result == 0) {
-		memcpy(&nvsBuffer[start], data, size);
+		memcpy(&nvsBuffer.bytes[start], data, size);
 		do {
-			result = nvsWriteRecords(nvsBuffer, index, (unsigned char)count);
+			result = nvsWriteRecords(nvsBuffer.bytes, index, (unsigned char)count);
 			if (result != 7)
 				break;
 			result = nvsMove();

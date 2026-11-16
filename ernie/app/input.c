@@ -251,7 +251,7 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
-#if BOARD_INPUT3_PINS
+#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000	/* 0x00601000: PCH-1000's, with the pins */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 #else
@@ -447,6 +447,7 @@ void inputStateOff(void)
 	intp7Enable(0);
 	intp4Enable(0);
 	intp3Enable(0);
+#if BOARD_OFF_WAKE
 	intp13Enable(1);
 	intp1Enable(1);
 #if BOARD_INTP11
@@ -456,6 +457,9 @@ void inputStateOff(void)
 		inputScanHold(0x754);
 	else
 		inputScanMode2(1);
+#else
+	inputScanMode1(1);
+#endif
 	coldStart = 0;
 }
 
@@ -557,9 +561,13 @@ void inputSuspend(void)
 
 void inputStateSuspend(void)
 {
+#if BOARD_OFF_WAKE
 	intp1Enable(1);
 	intp13Enable(1);
 	inputScanMode2(1);
+#else
+	inputScanMode1(1);
+#endif
 }
 
 void inputReset(void)

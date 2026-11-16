@@ -71,6 +71,10 @@ void systemInit(void)
 #if FW_SINCE(0x0100060B)
 	debugPinInit();
 #endif
+#if BOARD_DEBUG_PINS_POWER
+	debugPinReserved(0);
+	debugPinCode(0x7f);
+#endif
 	resetFlags = RESF;
 	configInit();
 	timerInit();

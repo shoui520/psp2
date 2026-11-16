@@ -9,6 +9,7 @@
 #include "board.h"
 #include "command.h"
 #include "config.h"
+#include "debugpin.h"
 #include "configreq.h"
 #include "handshake.h"
 #include "kernel.h"
@@ -374,5 +375,8 @@ unsigned char task2Tick(void)
 	if (state != 0x0004 && state != 0x0008)
 		taskHookStandby();
 	taskHookTick();
+#if BOARD_DEBUG_PINS_POWER
+	debugPinSet((unsigned char)(P4.0 ^ 1));	/* toggled at each tick */
+#endif
 	return ret;
 }

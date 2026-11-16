@@ -11,5 +11,6 @@
 extern void debugPinInit(void);
 extern void debugPinReserved(unsigned int value);
 extern void debugPinSet(unsigned int level);
+extern void debugPinCode(unsigned int code);
 
 #endif
