@@ -1372,3 +1372,73 @@ int npCommerce2ReadValueRecord0x5f(const NpCommerce2Item *result, NpCommerce2Val
 	}
 	return ret;
 }
+
+/* a result whose first record is the container of tag 0x61 */
+int npCommerce2InitResult0x61(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x60);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.data_size = savedLength;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		ret = npCommerce2FindNestedRecordWhole(data + ret, dataLength, 0x61, NULL, &result->value[0]);
+		if (ret >= 0)
+			ret = 0;
+	}
+	return ret;
+}
+
+
+/* the fields of a record of tag 0x61: a value and the text of tag 0x60 after it */
+int npCommerce2ReadTextItem0x61Fields(const SceNpCommerce2CommonData *result, const char *base,
+				      const char *record, SceUInt16 length, NpCommerce2ValueTextItem2 *item)
+{
+	SceUInt16 found;
+	SceUInt32 net;
+	SceUInt32 version;
+	const SceUChar8 *head;
+	int ret;
+
+	sceClibMemset(item, 0, 0x64);
+	version = result->version;
+	head = result->buf_head;
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = version;
+	item->commonData.buf_head = head;
+	item->commonData.data = (const SceUChar8 *)record;
+	item->commonData.data_size = length;
+	sceClibMemcpy_safe(&net, record, 4);
+	item->value = sceNetNtohl(net);
+	item->commonData.data2 = (const SceUChar8 *)record + 4;
+	item->text = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(record + 4, length - (record + 4 - base), 0x60, 0, &found);
+	if (ret >= 0 && found != 0)
+		item->text = record + 4 + ret;
+	return ret;
+}
+
+/* the record of tag 0x61 at an index, found where the result's records start */
+int npCommerce2ReadTextItem0x61At(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ValueTextItem2 *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x61, 8, index, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadTextItem0x61Fields(&result->commonData, data + ret, data + ret, length, item);
+	return ret;
+}
