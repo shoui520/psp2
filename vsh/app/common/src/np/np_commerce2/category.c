@@ -104,3 +104,83 @@ int npCommerce2GetCategoryOfContent(const NpCommerce2Item *content, SceNpCommerc
 						  content->commonData.version, 0, info);
 	return ret;
 }
+
+/* the result of the category list: the table of tag 0x2a, and how many of its rows are whole */
+int npCommerce2InitCategoryContentsResult(NpCommerce2TableResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 status;
+	SceUInt32 dataLength = 0;
+	SceUInt32 i;
+	int ret;
+	int r;
+
+	version = 0;
+	status = 0;
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		sceClibMemset(result, 0, 0xA8);
+		sceClibMemset(result, 0, sizeof(result->commonData));
+		result->commonData.version = version;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = dataLength;
+		result->commonData.ov = status;
+		ret = npCommerce2FindTableRecord(data + ret, dataLength, 42, NULL, &result->table, 0);
+		if (ret >= 0) {
+			r = 0;
+			if (result->table.rows != 0) {
+				i = 0;
+				for (;;) {
+					SceUInt16 length;
+
+					r = npCommerce2FindTableRow((const char *)result->commonData.data,
+								    result->commonData.data_size, 42, 4, i,
+								    &length, result->commonData.ov);
+					if (r < 0)
+						break;
+					if (++i >= result->table.rows)
+						goto done;
+				}
+				if (i != 0) {
+					r = 0;
+					result->table.rows = i;
+				}
+			}
+done:
+			ret = r;
+			if (r >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* a row of the category list table */
+int npCommerce2ReadTableItem(const NpCommerce2TableResult *result, SceUInt32 index, NpCommerce2LargeItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 netValue;
+	const SceUChar8 *head;
+	SceUInt32 version;
+	int ret;
+
+	ret = npCommerce2FindTableRow(data, result->commonData.data_size, 42, 4, index, &length,
+				      result->commonData.ov);
+	if (ret >= 0) {
+		sceClibMemset(item, 0, 0x80);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		item->commonData.data = (const SceUChar8 *)data + ret;
+		item->commonData.data_size = length;
+		sceClibMemcpy_safe(&netValue, data + ret, 4);
+		item->value[0] = sceNetNtohl(netValue);
+		item->commonData.data2 = (const SceUChar8 *)data + ret + 4;
+	}
+	return ret;
+}

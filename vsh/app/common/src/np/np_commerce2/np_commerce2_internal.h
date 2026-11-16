@@ -452,6 +452,15 @@ extern int npCommerce2FindTableRow(const char *data, SceSize size, SceUInt16 tag
 				   SceUInt32 index, SceUInt16 *length, int partial);
 extern int npCommerce2ReadCategoryInfo(const char *data, SceSize length, const SceUChar8 *bufHead,
 				       SceUInt32 version, int dataType, SceNpCommerce2CategoryInfo *info);
+/* a result whose records are a table */
+typedef struct NpCommerce2TableResult {
+	SceNpCommerce2CommonData commonData;
+	NpCommerce2TableHeader table;
+	char reserved[0x20];
+} NpCommerce2TableResult;
+
+extern int npCommerce2InitCategoryContentsResult(NpCommerce2TableResult *result, const char *data, SceSize size);
+extern int npCommerce2ReadTableItem(const NpCommerce2TableResult *result, SceUInt32 index, NpCommerce2LargeItem *item);
 extern int npCommerce2GetCategoryOfResult(const NpCommerce2Item *result, SceNpCommerce2CategoryInfo *info);
 extern int npCommerce2GetCategoryOfContent(const NpCommerce2Item *content, SceNpCommerce2CategoryInfo *info);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
