@@ -128,15 +128,20 @@ const struct ConfigBank configDefault = {
 		{ 0x00127e01, 0xff2001fc, 0x001c6201, 0xff221890 },	/* wakeMasks0-2: off, on, */
 		{ 0x00125e01, 0xff2021fc, 0x001c4201, 0xff223890 },	/* suspendOff, suspendOn */
 		{ 0x00121e00, 0xff2061fc, 0x001c0201, 0xff227890 },
-#else
+#elif FW_SINCE(0x00090903)
 		{ 0x00127a01, 0xffa005fc, 0x001c6201, 0xffa21c90 },	/* wakeMasks0-2: off, on, */
 		{ 0x00125a01, 0xffa025fc, 0x001c4201, 0xffa23c90 },	/* suspendOff, suspendOn */
 		{ 0x00121a00, 0xffa065fc, 0x001c0201, 0xffa27c90 },
+#else
+		{ 0x00127a01, 0xffa0057c, 0x001c6201, 0xffa21c10 },	/* wakeMasks0-2: off, on, */
+		{ 0x00125a01, 0xffa0257c, 0x001c4201, 0xffa23d10 },	/* suspendOff, suspendOn */
+		{ 0x00121a00, 0xffa0657c, 0x001c0201, 0xffa27c10 },
 #endif
 		0x01,		/* wlanLine */
 		0x00,		/* wlanLineExtra */
 		0, 0,		/* suspendLedKeep */
 		0x00,		/* suspendLedMask */
+#if FW_SINCE(0x00090903)
 		{	/* chargeAlarmLimits: high, low, holdOn, holdOff, bicTemp */
 			{ 0x0d7c, 0x0d04, 0x0000, 0x0078, 0x01 },
 #if FW_SINCE(0x01000104)
@@ -150,6 +155,12 @@ const struct ConfigBank configDefault = {
 		},
 		0x0078, 0x0028,	/* chargeAlarm0Delay, chargeTempInterval */
 		0x50, 0x00,	/* chargeAlarm2Setting, reserved24 */
+#else
+		/* the 0x0010 layout ends at wlanLine */
+		{ { 0 } },	/* chargeAlarmLimits */
+		0, 0,	/* chargeAlarm0Delay, chargeTempInterval */
+		0, 0,	/* chargeAlarm2Setting, reserved24 */
+#endif
 #if FW_SINCE(0x01000104)
 		0x04e2,	/* bbmcPowerDelay */
 		{	/* chargeAlarmLimits3G: high, low, holdOn, holdOff, bicTemp */

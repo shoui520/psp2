@@ -23,8 +23,10 @@
 #define CONFIG_VERSION		0x28	/* (the charge timer's delay 0x168) */
 #elif FW_SINCE(0x01000104)
 #define CONFIG_VERSION		0x26	/* (the charge LED's counted blinks) */
-#else
+#elif FW_SINCE(0x00090903)
 #define CONFIG_VERSION		0x12	/* (nothing after chargeAlarm2Setting) */
+#else
+#define CONFIG_VERSION		0x10
 #endif
 #define CONFIG_WRITTEN		0x5a5a
 
