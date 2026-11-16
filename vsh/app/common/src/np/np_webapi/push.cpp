@@ -39,3 +39,19 @@ const char *npPushFilterName(const unsigned char *filter)
 		return name;
 	return NULL;
 }
+
+/* tells the service (command 0x10001) the 20-byte ID the library listens for */
+int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data)
+{
+	NpWebApiIpmiIn in[1];
+	int ret;
+	int result;
+
+	ret = 0;
+	in[0].data = data;
+	in[0].size = 20;
+	result = client->vtbl->invoke(client, 0x10001, in, 1, &ret, NULL, 0);
+	if (result == 0)
+		result = ret;
+	return result;
+}

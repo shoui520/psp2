@@ -350,4 +350,30 @@ extern NpPushLibContext *npPushLibContextGet(void);
 extern int npPushSetCallbackParam(const int *param);
 extern const char *npPushFilterName(const unsigned char *filter);
 
+/* the NP service's IPMI client: slot 5 of its table makes a synchronous call */
+typedef struct NpWebApiIpmiIn {
+	const void *data;
+	SceSize size;
+} NpWebApiIpmiIn;
+
+typedef struct NpWebApiIpmiOut {
+	void *data;
+	SceSize size;
+	SceSize actualSize;
+} NpWebApiIpmiOut;
+
+struct NpWebApiIpmiClient;
+
+typedef struct NpWebApiIpmiClientVtbl {
+	void *slots[5];
+	int (*invoke)(struct NpWebApiIpmiClient *client, int command, const NpWebApiIpmiIn *in, int inNum, int *result,
+		NpWebApiIpmiOut *out, int outNum);
+} NpWebApiIpmiClientVtbl;
+
+typedef struct NpWebApiIpmiClient {
+	const NpWebApiIpmiClientVtbl *vtbl;
+} NpWebApiIpmiClient;
+
+extern int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data);
+
 #endif
