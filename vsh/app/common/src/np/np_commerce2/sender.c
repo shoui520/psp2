@@ -48,6 +48,17 @@ static const char * const g_operationNames[114] = {
 	"verifyAccountPass",
 };
 
+/* the names of the fields searches may name, by the kind of search (native, game, comic) */
+static const char * const g_nativeSearchFields[7] = {
+	"nativeText", "genre", "actor", "writer", "nativeTitle", "nativeDirectorProducer", "nativeDescription",
+};
+static const char * const g_gameSearchFields[7] = {
+	"gameAll", "XXX", "XXX", "XXX", "gameTitle", "XXX", "gameDescription",
+};
+static const char * const g_comicSearchFields[7] = {
+	"comicAll", "XXX", "XXX", "XXX", "comicTitle", "XXX", "XXX",
+};
+
 /* the headers every request carries: content type, the shell's credentials, media information, languages */
 static const char * const g_requestHeaders[8] = {
 	"Content-Type", "application/x-www-form-urlencoded",
@@ -1944,6 +1955,180 @@ int npCommerce2Send_8101A7BE(int mode, int httpTemplate, int *httpConnection, in
 				}
 			}
 		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* the search fields: the mode, the range, then the names of the fields searched ("queryKey=a,b") and their
+ * values ("queryValue=x,y") */
+int npCommerce2WriteSearchFields(int sending, int httpRequest, SceUInt64 *total, SceUInt32 mode,
+				 SceUInt32 startPosition, SceUInt32 maxCount,
+				 const NpCommerce2SearchEntry *entries, SceUInt32 count)
+{
+	char text[0x304];
+	const char * const *names;
+	const NpCommerce2SearchEntry *entry;
+	SceULong64 sum;
+	SceULong64 first;
+	SceUInt32 i;
+	int size;
+	int ret;
+
+	sceClibSnprintf(text, 0x301, "%u", mode);
+	ret = npCommerce2WriteTextField(sending, httpRequest, 10, text, 0);
+	if (ret < 0)
+		return ret;
+	first = (SceULong64)(SceInt64)ret;
+	ret = npCommerce2WriteNumberField(sending, httpRequest, 7, startPosition, 1);
+	if (ret < 0)
+		return ret;
+	sum = first + (SceULong64)(SceInt64)ret;
+	ret = npCommerce2WriteNumberField(sending, httpRequest, 8, maxCount, 1);
+	if (ret < 0)
+		return ret;
+	sum += (SceULong64)(SceInt64)ret;
+	if (mode <= 2) {
+		if (mode != 1)
+			names = g_nativeSearchFields;
+		else
+			names = g_gameSearchFields;
+	} else if (mode > 3) {
+		if (mode > 4)
+			names = g_nativeSearchFields;
+		else
+			names = g_comicSearchFields;
+	} else {
+		names = g_gameSearchFields;
+	}
+	if (sending == 1) {
+		ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text, g_queryKeys[0].length);
+		if (ret >= 0) {
+			ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[11].text, g_queryKeys[11].length);
+			if (ret >= 0 && count != 0) {
+				entry = entries;
+				for (i = 0; i < count; i++) {
+					if (i != 0) {
+						ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[1].text, g_queryKeys[1].length);
+						if (ret < 0)
+							break;
+					}
+					ret = npCommerce2UriEscape(text, 0x301, names[entry->field],
+								   sceClibStrnlen(names[entry->field], 0x301), NULL);
+					if (ret < 0)
+						break;
+					ret = npCommerce2SendHttpRequest(httpRequest, text, sceClibStrnlen(text, 0x400));
+					if (ret < 0)
+						break;
+					entry++;
+				}
+			}
+		}
+	} else {
+		size = g_queryKeys[11].length + 1;
+		ret = size;
+		if (count != 0) {
+			entry = entries;
+			i = 0;
+			do {
+				if (i != 0)
+					size++;
+				ret = npCommerce2UriEscape(text, 0x301, names[entry->field],
+							   sceClibStrnlen(names[entry->field], 0x301), NULL);
+				if (ret < 0)
+					break;
+				i++;
+				size += sceClibStrnlen(text, 0x301);
+				entry++;
+				ret = size;
+			} while (i < count);
+		}
+	}
+	if (ret < 0)
+		return ret;
+	sum += (SceULong64)(SceInt64)ret;
+	if (sending == 1) {
+		ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text, g_queryKeys[0].length);
+		if (ret >= 0) {
+			ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[12].text, g_queryKeys[12].length);
+			if (ret >= 0 && count != 0) {
+				entry = entries;
+				i = 0;
+				do {
+					if (i != 0) {
+						ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[1].text, g_queryKeys[1].length);
+						if (ret < 0)
+							break;
+					}
+					ret = npCommerce2UriEscape(text, 0x301, entry->value, entry->valueLength, NULL);
+					if (ret < 0)
+						break;
+					ret = npCommerce2SendHttpRequest(httpRequest, text, sceClibStrnlen(text, 0x400));
+					if (ret < 0)
+						break;
+					i++;
+					entry++;
+				} while (i < count);
+			}
+		}
+	} else {
+		size = g_queryKeys[12].length + 1;
+		ret = size;
+		if (count != 0) {
+			entry = entries;
+			i = 0;
+			do {
+				if (i != 0)
+					size++;
+				ret = npCommerce2UriEscape(text, 0x301, entry->value, entry->valueLength, NULL);
+				if (ret < 0)
+					break;
+				i++;
+				size += sceClibStrnlen(text, 0x301);
+				entry++;
+				ret = size;
+			} while (i < count);
+		}
+	}
+	if (ret >= 0) {
+		if (sending != 1)
+			*total = sum + (SceULong64)(SceInt64)ret;
+		ret = 0;
+	}
+	return ret;
+}
+
+/* a search request */
+int npCommerce2Send_8101AE3E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     SceUInt32 startPosition, SceUInt32 maxCount, const NpCommerce2SearchEntry *entries,
+			     SceUInt32 count, int unused)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		ret = npCommerce2WriteSearchFields(sending, *httpRequest, &length, mode, startPosition, maxCount,
+						   entries, count);
 		if (ret < 0)
 			break;
 		if (pass == 0) {

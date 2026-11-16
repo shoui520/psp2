@@ -1505,6 +1505,19 @@ extern int npCommerce2Send_81019254(int mode, int httpTemplate, int *httpConnect
 				    SceUInt32 rewardCount);
 extern int npCommerce2Send_8101A7BE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *voucherCode, const char *text1, const char *text2, int flag);
+/* a search condition: the index of the field it names and its value with the length */
+typedef struct NpCommerce2SearchEntry {
+	SceUInt32 field;
+	const char *value;
+	int valueLength;
+} NpCommerce2SearchEntry;
+
+extern int npCommerce2WriteSearchFields(int sending, int httpRequest, SceUInt64 *total, SceUInt32 mode,
+					SceUInt32 startPosition, SceUInt32 maxCount,
+					const NpCommerce2SearchEntry *entries, SceUInt32 count);
+extern int npCommerce2Send_8101AE3E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    SceUInt32 startPosition, SceUInt32 maxCount, const NpCommerce2SearchEntry *entries,
+				    SceUInt32 count, int unused);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,
