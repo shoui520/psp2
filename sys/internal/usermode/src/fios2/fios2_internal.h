@@ -39,6 +39,7 @@ int fiosStrcasecmp(const char *s1, const char *s2);
 int fiosStrncasecmp(const char *s1, const char *s2, size_t n);
 size_t fiosStrlcat(char *dst, const char *src, size_t size);
 char *fiosStrchr(const char *s, int c);
+extern uint8_t s_upperCase[256];	/* string.cpp: each byte's upper case */
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -77,7 +78,7 @@ enum FiosChunkCommand {
  * of those bytes is set ("pointer-type paths").
  */
 struct FiosPath {
-	uint8_t hash[16];
+	uint64_t hash[2];				/* the normalized path's MD5 digest */
 	char path[4];
 
 	char *GetPath() { return path[g_FiosParams.pathMax - 1] ? *(char **)path : path; }
@@ -89,6 +90,9 @@ struct FiosPath {
 	}
 	bool Set(const char *pPath, bool verbose);	/* normalized and hashed; false when it does not fit */
 	bool SetPointer(const char *pPath);		/* the caller's path itself, hashed */
+	bool SetAllocated(const char *pPath);		/* an allocated copy: always fails here */
+	bool IsAllocated() const;
+	void Free();
 	void Clear();
 };
 
@@ -99,6 +103,9 @@ struct FiosPathBuffer {
 };
 
 size_t fiosPathNormalize(char *pOut, const char *pPath, size_t size);
+size_t fiosPathNormalizeStyle(char *pOut, const char *pPath, size_t size, int style);
+void fiosPathPrintError(const char *pPath);
+extern "C" size_t sceFiosPathNormalize(char *pBuffer, const char *pPath, size_t bufferSize);
 
 /* where Sony's sources were built: the assertions name their files from there */
 #if FW_SINCE(0x03650000)
@@ -146,7 +153,8 @@ struct FiosOp {
 	};
 	int err;
 	volatile int done;
-	uint32_t reserved1[2];
+	volatile int32_t waiters;	/* threads in fiosOpWait or fiosOpWaitUntil */
+	uint32_t reserved1;
 	SceFiosOpAttr attr;
 	FiosPath path;
 };
@@ -294,21 +302,23 @@ void fiosLibraryTerm();
 
 /* the library's locks (api.cpp) */
 extern Wws::Platform::Rwlock s_defaultOpAttrLock;	/* "SceFiosDefaultOpAttr" */
-extern Wws::Platform::Mutex s_opWaitMutex;		/* "SceFiosOpWait" */
-extern Wws::Platform::Cond s_opWaitCond;
 extern Wws::Platform::Mutex s_chunkMutex;		/* "SceFiosChunk", recursive */
 extern Wws::Platform::Rwlock s_ioFilterLock;		/* "SceFiosIOFilter" */
 extern Wws::Platform::Mutex s_dhMutex;			/* "SceFiosDirHandle" */
-extern int s_overlayCount;				/* the process's overlays at start */
 extern bool s_libraryInitialized;			/* fiosLibraryInit has run */
 extern Allocator s_chunkAllocator;			/* the chunk storage */
 
 /* op.cpp: an op's life */
+extern Wws::Platform::Mutex s_opWaitMutex;		/* "SceFiosOpWait" */
+extern Wws::Platform::Cond s_opWaitCond;
+extern int s_overlayCount;				/* the process's overlays at start */
 FiosOp *fiosOpAllocate(const SceFiosOpAttr *pAttr, uint16_t what);
 SceFiosOp *fiosGetCallbackOp();
 SceFiosOp fiosOpCallback(FiosOp *pOp, SceFiosOpEvent event);
 SceFiosOp fiosOpCompleteWithError(FiosOp *pOp, int err);
 SceFiosOp fiosOpComplete(FiosOp *pOp);
+SceFiosOp fiosOpFinishWithError(FiosOp *pOp, int err);
+SceFiosOp fiosOpFinish(FiosOp *pOp);
 SceFiosOp fiosOpSubmit(FiosOp *pOp);
 SceFiosOp fiosOpSubmitPath(FiosOp *pOp, const char *pPath, bool resolve);
 int fiosOpWait(FiosOp *pOp);
@@ -601,6 +611,7 @@ int fiosOverlayCopy(const SceFiosOverlay *pOverlay, SceFiosOverlay *pOut);
 
 /* md5_digest.c: the MD5 digest of a buffer */
 extern "C" uint8_t *fiosMD5(const void *pData, int size, uint8_t *pDigest);
+uint8_t *fiosHash(const void *pData, int size, uint8_t *pDigest);	/* op.cpp */
 
 /*
  * An overlay as the system keeps it (sceFiosOverlayGetInfoForProcess02): the SDK's
@@ -765,6 +776,15 @@ extern FiosCodec g_fiosZlibCodec;
  */
 #define PSARC_FLAG_IGNORE_CASE	0x1
 #define PSARC_FLAG_ABSOLUTE	0x2
+#define PSARC_FLAG_SORTED	0x4	/* the TOC is sorted by digest already */
+
+/* a TOC entry, big-endian */
+struct PsarcTOCEntry {
+	uint8_t hash[16];		/* the path's MD5 digest */
+	uint8_t firstBlock[4];		/* in the block size table; -1: stored whole */
+	uint8_t size[5];
+	uint8_t offset[5];
+};
 
 /* the archive header's bytes in the file, up to the TOC's offset and size */
 #define PSARC_HEADER_SIZE	48
@@ -793,9 +813,12 @@ struct PsarcHeader {
 		      SceFiosOffset offset, SceFiosSize length);
 	bool IsValid();
 	void Parse(const uint8_t *pData);
-	uint32_t PackBlockSizes(const uint8_t *pTOC, uint8_t *pBlockSizes, uint32_t blockSize);
+	uint64_t GetFileOffset(const uint8_t *pTOC, const uint8_t *pEntry);
+	void PackBlockSizes(const uint8_t *pTOC, uint8_t *pBlockSizes, uint32_t blockSize);
 	bool SortTOC(uint8_t *pTOC);
+	const uint8_t *FindEntryByHash(const uint8_t *pTOC, const uint8_t *pHash);
 	const uint8_t *FindManifest(const uint8_t *pTOC);
+	bool IsUncompressed(const uint8_t *pTOC, const uint8_t *pEntry);
 };
 
 /* a mounted archive ("ArchiveTracker") */
@@ -811,7 +834,7 @@ struct ArchiveTracker {
 	uint32_t manifestPaths;
 	size_t mountPointLength;
 	char *pMountPoint;
-	const uint8_t *pBlockSizes;	/* the block size table */
+	const uint8_t *pBlockSizes;	/* every sixteenth block's offset (PackBlockSizes) */
 	const uint8_t *pTOC;
 	char **manifest;		/* the files' paths, sorted */
 	char *pManifestData;		/* the manifest as read */

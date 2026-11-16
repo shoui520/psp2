@@ -20,6 +20,8 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	md5_digest.c
 	iofilter.cpp
 	string.cpp
+	op.cpp
+	psarc.cpp
 	wws_cond.cpp
 	wws_mutex.cpp
 	wws_thread.cpp

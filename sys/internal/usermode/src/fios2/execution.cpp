@@ -172,9 +172,9 @@ static int executeRoot(FiosChunk *pChunk)
 			s_pDHTable->Free(h);
 	}
 	if (pOp->err != SCE_OK)
-		fiosOpCompleteWithError(pOp, pOp->err);
+		fiosOpFinishWithError(pOp, pOp->err);
 	else
-		fiosOpComplete(pOp);
+		fiosOpFinish(pOp);
 	return SCE_OK;
 }
 

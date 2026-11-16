@@ -84,7 +84,7 @@ char *sceFiosDebugDumpError(int err, char *pBuffer, size_t bufferSize)
 		fiosSnprintf(number, sizeof(number), "0x%08X", err);
 		break;
 	}
-	sceClibStrlcpy(pBuffer, pName, bufferSize);
+	fiosStrlcpy(pBuffer, pName, bufferSize);
 	return pBuffer;
 }
 

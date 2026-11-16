@@ -77,6 +77,18 @@ uint8_t s_lowerCase[256] = {
 	LOWER16(0xc0), LOWER16(0xd0), LOWER16(0xe0), LOWER16(0xf0),
 };
 
+#define UPPER(c)	((c) >= 'a' && (c) <= 'z' ? (c) - 'a' + 'A' : (c))
+#define UPPER4(c)	UPPER(c), UPPER((c) + 1), UPPER((c) + 2), UPPER((c) + 3)
+#define UPPER16(c)	UPPER4(c), UPPER4((c) + 4), UPPER4((c) + 8), UPPER4((c) + 12)
+
+/* each byte's upper case, for the paths of an archive that ignores case */
+uint8_t s_upperCase[256] = {
+	UPPER16(0x00), UPPER16(0x10), UPPER16(0x20), UPPER16(0x30),
+	UPPER16(0x40), UPPER16(0x50), UPPER16(0x60), UPPER16(0x70),
+	UPPER16(0x80), UPPER16(0x90), UPPER16(0xa0), UPPER16(0xb0),
+	UPPER16(0xc0), UPPER16(0xd0), UPPER16(0xe0), UPPER16(0xf0),
+};
+
 int fiosStrcasecmp(const char *s1, const char *s2)
 {
 	for (;;) {

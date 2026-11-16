@@ -17,12 +17,9 @@ static bool s_autoInitialized;
 bool s_libraryInitialized;
 static bool s_libraryInitializedByFios;
 static bool s_hasGlobalDefaultOpAttr;
-Wws::Platform::Mutex s_opWaitMutex;
-Wws::Platform::Cond s_opWaitCond;
 Wws::Platform::Mutex s_chunkMutex;
 Wws::Platform::Rwlock s_ioFilterLock;
 Wws::Platform::Mutex s_dhMutex;
-int s_overlayCount;
 
 void fiosLibraryInit()
 {
@@ -479,12 +476,12 @@ size_t sceFiosGetAllOps(SceFiosOp *pOutArray, size_t arraySize)
 
 int sceFiosPathcmp(const char *pA, const char *pB)
 {
-	return sceClibStrcmp(pA, pB);
+	return fiosStrcmp(pA, pB);
 }
 
 int sceFiosPathncmp(const char *pA, const char *pB, size_t n)
 {
-	return sceClibStrncmp(pA, pB, n);
+	return fiosStrncmp(pA, pB, n);
 }
 
 SceFiosOp sceFiosDHOpen(const SceFiosOpAttr *pAttr, SceFiosDH *pOutDH, const char *pPath,
@@ -945,7 +942,7 @@ SceFiosOp sceFiosResolve(const SceFiosOpAttr *pAttr, const SceFiosTuple *pInTupl
 	if (pOutTuple != pInTuple) {
 		pOutTuple->offset = pInTuple->offset;
 		pOutTuple->size = pInTuple->size;
-		sceClibStrlcpy(pOutTuple->path, pInTuple->path, g_FiosParams.pathMax);
+		fiosStrlcpy(pOutTuple->path, pInTuple->path, g_FiosParams.pathMax);
 	}
 	pOp->offset = pInTuple->offset;
 	pOp->length = pInTuple->size;
@@ -965,7 +962,7 @@ SceFiosOp sceFiosRename(const SceFiosOpAttr *pAttr, const char *pOldPath, const 
 		return 0;
 	if (pOldPath == NULL || pNewPath == NULL)
 		return fiosOpCompleteWithError(pOp, SCE_FIOS_ERROR_BAD_PATH);
-	if (sceClibStrcmp(pOldPath, pNewPath) == 0)
+	if (fiosStrcmp(pOldPath, pNewPath) == 0)
 		return fiosOpComplete(pOp);
 	pOp->pPath2 = pNewPath;
 	pOp->bufferCount = 1;
