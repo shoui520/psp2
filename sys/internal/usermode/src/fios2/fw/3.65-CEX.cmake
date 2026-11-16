@@ -1,8 +1,10 @@
 # 3.65-CEX: vs0:sys/external/libfios2.suprx (generated)
 set(MODULE_NID 0x90BA1BE2)
+set(MODULE_AUTH_ID 0x2800000000028026)
 set(MODULE_ATTR 0)
 set(MODULE_EXPORTS exports.yml)
 set(MODULE_SDK_VERSION 0x03650011)
+set(MODULE_EXPORT_ORDER 0x3AD4D630 0x00000000)
 set(MODULE_IMPORT_LIBS
 	0xC2ED82D7:1:0x0
 	0x623DF986:1:0x8
@@ -13,75 +15,74 @@ set(MODULE_IMPORT_LIBS
 	0x5E8D0E22:1:0x0
 	0x8AF17416:1:0x0
 )
-set(MODULE_IMPORT_FUNCS
-	sceFiosOverlayGetList02
-	sceFiosOverlayResolveWithRangeSync02
-	sceFiosOverlayAddForProcess02
-	sceFiosOverlayThreadSetDisabled02
-	sceFiosOverlayGetInfoForProcess02
-	sceFiosOverlayModifyForProcess02
-	sceFiosOverlayRemoveForProcess02
-	sceFiosOverlayGetRecommendedScheduler02
-	sceDbgAssertionHandler
-	sceRtcGetCurrentTick
-	sceRtcGetCurrentClock
-	sceRtcGetTickResolution
-	sceRtcSetTime64_t
-	sceRtcGetTime64_t
-	sceIoDevctl
-	sceKernelGetThreadId
-	sceKernelDeleteLwMutex
-	sceIoChstat
-	__stack_chk_fail
-	sceKernelSignalLwCond
-	__sce_aeabi_idiv0
-	sceKernelLockLwMutex
-	sceKernelCreateLwCond
-	sceIoPread
-	sceIoIoctl
-	sceIoGetstatByFd
-	sceIoOpen
-	sceKernelDeleteLwCond
-	sceKernelGetThreadCpuAffinityMask
-	sceKernelGetThreadInfo
-	sceIoPwrite
-	sceKernelUnlockLwMutex
-	sceIoMkdir
-	sceIoSync
-	sceIoLseek
-	sceIoDread
-	sceKernelTryLockLwMutex
-	sceIoDopen
-	sceKernelGetProcessTimeWide
-	sceKernelGetTLSAddr
-	sceIoGetstat
-	sceKernelGetThreadCurrentPriority
-	sceKernelCreateThread
-	sceKernelCreateLwMutex
-	sceKernelWaitThreadEnd
-	sceKernelWaitLwCond
-	sceIoRemove
-	sceKernelSignalLwCondAll
-	sceIoRmdir
-	sceKernelStartThread
-	sceIoRename
-	sceClibPrintf
-	__sce_aeabi_ldiv0
-	sceIoSyncByFd
-	sceIoWrite
-	sceIoDclose
-	sceIoClose
-	sceIoRead
-	sceKernelChangeThreadCpuAffinityMask
-	sceKernelDeleteThread
-	sceKernelDelayThread
-	sceKernelGetProcessId
-	sceKernelChangeThreadPriority2
-	sceKernelChangeThreadVfpException
-	sceKernelGetSystemTimeWide
-	SceThreadmgrCoredumpTime_sceKernelExitThread
-	sceAppMgrIsGameProgram
-)
-set(MODULE_IMPORT_VARS
-	__stack_chk_guard
+set(MODULE_IMPORT_FORMAT 0x34)
+set(MODULE_IMPORT_NIDS
+	0xC2ED82D7:F:0x1DD808D1
+	0xC2ED82D7:F:0x61C4AAC4
+	0xC2ED82D7:F:0x6C4BE9CD
+	0xC2ED82D7:F:0x70321220
+	0xC2ED82D7:F:0xAB7B4213
+	0xC2ED82D7:F:0xCA388053
+	0xC2ED82D7:F:0xE5D1B6F5
+	0xC2ED82D7:F:0xF5C1F928
+	0x623DF986:F:0x1AF3678B
+	0x6704D3C6:F:0x23F79274
+	0x6704D3C6:F:0x70FDE8F1
+	0x6704D3C6:F:0x811313B3
+	0x6704D3C6:F:0xA6C36B6A
+	0x6704D3C6:F:0xC995DE02
+	0xCAE9ACE6:F:0x04B30CB2
+	0xCAE9ACE6:F:0x0FB972F9
+	0xCAE9ACE6:F:0x244E76D2
+	0xCAE9ACE6:F:0x29482F7F
+	0xCAE9ACE6:F:0x37691BF8
+	0xCAE9ACE6:F:0x3AC63B9A
+	0xCAE9ACE6:F:0x4373B548
+	0xCAE9ACE6:F:0x46E7BE7B
+	0xCAE9ACE6:F:0x48C7EAE6
+	0xCAE9ACE6:F:0x52315AD7
+	0xCAE9ACE6:F:0x54ABACFA
+	0xCAE9ACE6:F:0x57F8CD25
+	0xCAE9ACE6:F:0x6C60AC61
+	0xCAE9ACE6:F:0x721F6CB3
+	0xCAE9ACE6:F:0x8C57AC2A
+	0xCAE9ACE6:F:0x8D9C5461
+	0xCAE9ACE6:F:0x8FFFF5A8
+	0xCAE9ACE6:F:0x91FA6614
+	0xCAE9ACE6:F:0x9670D39F
+	0xCAE9ACE6:F:0x98ACED6D
+	0xCAE9ACE6:F:0x99BA173E
+	0xCAE9ACE6:F:0x9C8B6624
+	0xCAE9ACE6:F:0xA6A2C915
+	0xCAE9ACE6:F:0xA9283DD0
+	0xCAE9ACE6:F:0xB110C123
+	0xCAE9ACE6:F:0xB295EB61
+	0xCAE9ACE6:F:0xBCA5B623
+	0xCAE9ACE6:F:0xC53A9848
+	0xCAE9ACE6:F:0xC5C11EE7
+	0xCAE9ACE6:F:0xDA6EC8EF
+	0xCAE9ACE6:F:0xDDB395A9
+	0xCAE9ACE6:F:0xE1878282
+	0xCAE9ACE6:F:0xE20ED0F3
+	0xCAE9ACE6:F:0xE5241A0C
+	0xCAE9ACE6:F:0xE9F91EC8
+	0xCAE9ACE6:F:0xF08DE149
+	0xCAE9ACE6:F:0xF737E369
+	0xCAE9ACE6:F:0xFA26BC62
+	0xCAE9ACE6:F:0xFB235848
+	0xCAE9ACE6:V:0x93B8AA67
+	0xF2FF276E:F:0x16512F59
+	0xF2FF276E:F:0x34EFD876
+	0xF2FF276E:F:0x422A221A
+	0xF2FF276E:F:0xC70B8886
+	0xF2FF276E:F:0xFDB32293
+	0x859A24B1:F:0x15129174
+	0x859A24B1:F:0x1BBDE3D9
+	0x859A24B1:F:0x4B675D05
+	0x859A24B1:F:0x9DCB4B7A
+	0x859A24B1:F:0xC5FFCA61
+	0x859A24B1:F:0xCC18FBAE
+	0x859A24B1:F:0xF4EE4FA9
+	0x5E8D0E22:F:0x0C8A38E1
+	0x8AF17416:F:0xFFF8F7F0
 )

@@ -443,7 +443,7 @@ uint16_t Chunker::ChunkOp(FiosOp *pOp, bool *pDone)
 		rootID = fiosIOFiltersChunkTree(rootID);
 	if ((rootID != CHUNKID_INVALID && fiosChunkGetChild(rootID, 0) == CHUNKID_INVALID) ||
 	    fiosChunkChildrenComplete(rootID)) {
-		fiosRootComplete(fiosChunkAt(rootID));
+		executeRoot(fiosChunkAt(rootID));
 		fiosChunkDelete(rootID);
 		*pDone = true;
 		return CHUNKID_INVALID;

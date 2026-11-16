@@ -589,8 +589,8 @@ public:
 	static uint16_t ChunkOp(FiosOp *pOp, bool *pDone);
 };
 
-/* the scheduler: an op whose tree is done */
-void fiosRootComplete(FiosChunk *pRootChunk);
+/* execution.cpp: an op whose tree is done (the root chunk's executor) */
+int executeRoot(FiosChunk *pChunk);
 
 /* debug.cpp: the dumps the SDK does not export */
 char *fiosDebugDumpChunk(uint16_t chunkID, char *pBuffer, size_t bufferSize);
@@ -699,6 +699,8 @@ struct FiosStatistics {
 
 /* SceAppMgr's and SceFios2User's calls (driver_us) */
 extern "C" {
+/* sceKernelExitThread, as SceThreadmgrCoredumpTime exports it */
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int exitStatus);
 int sceAppMgrIsGameProgram(void);
 int sceFiosOverlayAddForProcess02(SceUID pid, const SceFiosOverlay *pOverlay,
 				  SceFiosOverlayID *pOutId);

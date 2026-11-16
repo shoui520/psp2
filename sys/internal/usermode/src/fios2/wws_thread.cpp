@@ -186,7 +186,7 @@ static int threadEntry(SceSize argSize, void *pArgBlock)
 	WWS_ASSERT(argSize == sizeof(Thread));
 	WWS_ASSERT(sceKernelChangeThreadVfpException(WWS_THREAD_VFP_EXCEPTIONS, 0) >= 0);
 	pThread->entry(pThread->arg);
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }
 

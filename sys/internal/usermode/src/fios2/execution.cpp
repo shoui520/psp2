@@ -134,7 +134,7 @@ static int executeUnimplemented(FiosChunk *pChunk)
 }
 
 /* an op's root: its tree is done, the file handle moves and the op completes */
-static int executeRoot(FiosChunk *pChunk)
+int executeRoot(FiosChunk *pChunk)
 {
 	FiosOp *pOp = (FiosOp *)s_pOpTable->Lookup(pChunk->op);
 	int16_t flags;
