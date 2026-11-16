@@ -259,3 +259,30 @@ done:
 	npWebApiLibContextUnlock(userCtx->libContext);
 	return node;
 }
+
+/* gives back what a user context holds: the push registration, its two objects and the HTTP template */
+int npWebApiUserContextReleaseResources(NpWebApiUserContext *userCtx)
+{
+	int result;
+	const void **vtable;
+
+	result = 0;
+	if (!npWebApiLibContextIsStopped(userCtx->libContext) && userCtx->flag96 != 0) {
+		result = npPushUnregisterUser(&userCtx->onlineId);
+		userCtx->flag96 = 0;
+	}
+	if (userCtx->object44 != NULL) {
+		vtable = *(const void ***)userCtx->object44;
+		((void (*)(void *))vtable[1])(userCtx->object44);
+		userCtx->object44 = NULL;
+	}
+	if (userCtx->requests != NULL) {
+		vtable = *(const void ***)userCtx->requests;
+		((void (*)(void *))vtable[1])(userCtx->requests);
+		userCtx->requests = NULL;
+	}
+	if (userCtx->httpTemplateId > 0)
+		result = sceHttpDeleteTemplate(userCtx->httpTemplateId);
+	userCtx->flag98 = 0;
+	return result;
+}

@@ -31,6 +31,7 @@ extern "C" {
 #define NP_WEBAPI_ERROR_INVALID_ARGUMENT	-2141902590	/* 0x80552902 */
 #define NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND	-2141902588	/* 0x80552904 */
 #define NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND	-2141902587	/* 0x80552905 */
+#define NP_WEBAPI_ERROR_USER_CONTEXT_ALREADY_EXISTS	-2141902582	/* 0x8055290a */
 #define NP_WEBAPI_ERROR_REQUEST_NOT_FOUND	-2141902586	/* 0x80552906 */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
@@ -109,6 +110,7 @@ extern const void *g_userContextVtable[];	/* 0x8100eddc */
 extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
 extern const void *g_baseVtable[];		/* 0x8100eb8c */
 extern int SceNpCommonPs4_BB5282C8(void *object);
+extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
 extern int SceNpCommonPs4_6B428829(void *allocator);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
 #ifdef __cplusplus
@@ -375,5 +377,9 @@ typedef struct NpWebApiIpmiClient {
 } NpWebApiIpmiClient;
 
 extern int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data);
+extern int npPushRegisterUser(SceNpOnlineId *onlineId);	/* 0x8100987a, not written yet */
+extern int npPushUnregisterUser(SceNpOnlineId *onlineId);	/* 0x810098d4, not written yet */
+extern int npWebApiUserContextReleaseResources(NpWebApiUserContext *userCtx);
+extern int npWebApiCreateUserContextObject(int libCtxId, const SceNpOnlineId *onlineId, unsigned char failIfExists);
 
 #endif
