@@ -12,7 +12,7 @@ SceFiosParams g_FiosParams = SCE_FIOS_PARAMS_INITIALIZER;
 
 Wws::Platform::Rwlock s_defaultOpAttrLock;
 static SceFiosOpAttr s_globalDefaultOpAttr;
-static volatile int s_suspendCount;
+volatile int s_suspendCount;
 static bool s_autoInitialized;
 bool s_libraryInitialized;
 static bool s_libraryInitializedByFios;
@@ -200,7 +200,7 @@ __attribute__((noinline)) void sceFiosTerminate()
 		} while (suspendCount != 0);
 		fiosSchedulersWake();
 	}
-	fiosSchedulersTerm();
+	Scheduler::Shutdown();
 	s_autoInitialized = false;
 	g_FiosParams.initialized = 0;
 	fiosIOFiltersTerm();

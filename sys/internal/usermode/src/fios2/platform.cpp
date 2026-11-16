@@ -365,6 +365,40 @@ int fiosPlatformOverlayResolve(SceUID pid, int resolveFlag, const char *pInPath,
 						    minOrder, maxOrder);
 }
 
+/* the I/O schedulers: the default one, and host0:'s when there are two I/O threads */
+Scheduler g_fiosIOSchedulers[2] = {
+	{ 0, NULL, { {}, -1, 0 }, {}, {}, { { -1 } }, "", 0, {}, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	  false, true, {}, fiosSchedulerOwnsPrefix, s_nativeExecutors },
+	{ 0, NULL, { {}, -1, 0 }, {}, {}, { { -1 } }, "host0:", 0, {}, 0, 0, 0, 0, 0, 0, 0, 0,
+	  0, false, true, {}, fiosPlatformOwnsPath, s_nativeExecutors },
+};
+
+int fiosPlatformSchedulersInit()
+{
+	int err = g_fiosIOSchedulers[0].Initialize();
+
+	if (err == SCE_OK && g_FiosParams.ioThreadCount > 1) {
+		err = g_fiosIOSchedulers[1].Initialize();
+		if (err != SCE_OK)
+			g_fiosIOSchedulers[0].Terminate();
+	}
+	return err;
+}
+
+void fiosPlatformSchedulersTerm()
+{
+	if (g_fiosIOSchedulers[1].m_initialized)
+		g_fiosIOSchedulers[1].Terminate();
+	g_fiosIOSchedulers[0].Terminate();
+}
+
+/* host0:'s scheduler owns the paths the overlays send to the host */
+bool fiosPlatformOwnsPath(Scheduler *pScheduler, FiosPath *pPath, SceFiosOffset offset,
+			  SceFiosSize length)
+{
+	return sceFiosOverlayGetRecommendedScheduler02(2, fiosPathGet(pPath)) == 1;
+}
+
 /* the allocator's last allocated unit: called by Allocator::Init and Term */
 uint32_t Allocator::GetLastIndex() const
 {

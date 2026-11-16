@@ -315,6 +315,7 @@ void fiosLibraryTerm();
 
 /* the library's locks (api.cpp) */
 extern Wws::Platform::Rwlock s_defaultOpAttrLock;	/* "SceFiosDefaultOpAttr" */
+extern volatile int s_suspendCount;		/* sceFiosSuspend's */
 extern Wws::Platform::Mutex s_chunkMutex;		/* "SceFiosChunk", recursive */
 extern Wws::Platform::Rwlock s_ioFilterLock;		/* "SceFiosIOFilter" */
 extern Wws::Platform::Mutex s_dhMutex;			/* "SceFiosDirHandle" */
@@ -351,7 +352,7 @@ int fiosChunkInit(SceFiosBuffer storage);
 void fiosChunkTerm();
 void fiosChunkCancel(uint16_t chunk, bool cancel);
 void fiosChunkReschedule(uint16_t chunkID, SceFiosTime deadline, SceFiosPriority priority);
-void fiosScheduleTree(uint16_t chunkID, int depth, bool reschedule);
+bool fiosScheduleTree(uint16_t chunkID, int opflags, bool fastPath);
 uint16_t fiosChunkGetParent(uint16_t chunkID, int index);
 uint16_t fiosChunkGetChild(uint16_t chunkID, int index);
 
@@ -371,7 +372,7 @@ struct ArchiveTracker;
 
 struct FiosChunk {
 	uint8_t magic : 6;		/* FIOS_CHUNK_MAGIC while allocated */
-	uint8_t reservedMagic : 2;
+	uint8_t scheduler : 2;		/* its scheduler's place in the list, 0 before it has one */
 	uint8_t scheduled : 1;
 	uint8_t prepared : 1;
 	uint8_t completed : 1;
@@ -620,7 +621,6 @@ uint8_t fiosDearchiverGetDecompressorThreadCount();
 
 /* scheduler.cpp: every scheduler */
 int fiosSchedulersInit();
-void fiosSchedulersTerm();
 bool fiosSchedulersIsIdle();
 void fiosSchedulersWake();
 void fiosSchedulersGetStatistics(struct FiosStatistics *pStats);
@@ -713,6 +713,7 @@ int sceFiosOverlayResolveWithRangeSync02(SceUID pid, int resolveFlag, const char
 					 char *pOutPath, SceSize maxPath, SceUInt8 minOrder,
 					 SceUInt8 maxOrder);
 int sceFiosOverlayGetRecommendedScheduler02(int avail, const char *pPartiallyResolvedPath);
+int sceFiosOverlayThreadSetDisabled02(int disabled);
 }
 
 /* platform.cpp: SceIofilemgr's calls in FIOS2's terms */
@@ -909,15 +910,105 @@ struct ArchiveRead {
 typedef int (*ExecuteFunc)(FiosChunk *pChunk);
 
 int Execute(uint16_t chunkID, ExecuteFunc *pTable);
+extern ExecuteFunc s_callbackExecutors[];
+extern ExecuteFunc s_nativeExecutors[];
 
-/* scheduler.cpp: the scheduler that runs the chunks */
+/*
+ * scheduler.cpp: a queue of chunks and the threads that run them. The platform's I/O
+ * schedulers take the chunks whose files their m_pName prefixes (m_pOwnsPath decides), the
+ * callback scheduler the roots and callbacks; a chunk keeps its scheduler's place in the
+ * list (FiosChunk::scheduler). The queue is a ring of QUEUE_SIZE chunk IDs from
+ * m_queuePosition, kept in the order the cost estimate (the m_typeTimes and m_seekTimes
+ * averages) gives.
+ */
+#define QUEUE_SIZE		2048
+#define SCHEDULER_THREADS_MAX	2
+
+/* where a chunk leaves the medium: its handle and the offset after it (h -1: no file) */
+struct SchedulerLocation {
+	SceFiosHandle h;
+	uint32_t reserved;
+	SceFiosOffset offset;
+};
+
 class Scheduler {
 public:
+	typedef bool (*OwnsPathFunc)(Scheduler *pScheduler, FiosPath *pPath, SceFiosOffset offset,
+				     SceFiosSize length);
+
+	int m_threadCount;
+	Scheduler *m_pNext;			/* s_pSchedulers' list */
+	Wws::Platform::Mutex m_mutex;		/* "SceFiosScheduler" */
+	Wws::Platform::Cond m_wakeCond;		/* "SceFiosSchedulerWakeup" */
+	Wws::Platform::Cond m_queueFullCond;	/* "SceFiosSchedulerQueueFull" */
+	Wws::Platform::Thread m_threads[SCHEDULER_THREADS_MAX];
+	const char *m_pName;			/* the path prefix it owns, "" for all */
+	size_t m_nameLength;
+	uint16_t m_queue[QUEUE_SIZE];
+	uint32_t m_queuePosition;		/* the queue's first entry */
+	uint32_t m_queueCount;
+	uint32_t m_queueHighWater;		/* sceFiosStatisticsGet's highWater */
+	uint32_t m_busySkip;			/* the first entries, found busy, NextEligible skips */
+	uint32_t m_kickCount;
+	uint32_t m_bufferBusyCount;		/* the entries skipped for a busy buffer chunk */
+	uint32_t m_lastPosition;		/* where NextEligible took its chunk from */
+	uint32_t m_searchPosition;		/* where RemoveFromSchedule found its chunk */
+	int m_executing;			/* the chunks its threads run */
+	bool m_initialized;
+	bool m_shutdown;
+	uint8_t reserved[2];
+	OwnsPathFunc m_pOwnsPath;
+	ExecuteFunc *m_pExecutors;
+	SchedulerLocation m_location;		/* where the last chunk run left the medium */
+	SceFiosTime m_executeStart;		/* when it started, while two threads run */
+	SceFiosTime m_typeTimes[36];		/* each chunk type's average time */
+	SceFiosTime m_seekTimes[2];		/* a seek's average cost: unknown, per 32 KiB */
+
+	void Terminate();
+	int Initialize();
 	void Kick();
 	static void KickAll(Scheduler *pExcept);	/* every scheduler but this one */
+	static void Shutdown();
+	bool OwnsPath(FiosPath *pPath, SceFiosOffset offset, SceFiosSize length);
+	bool OwnsHandle(SceFiosHandle h, SceFiosOffset offset, SceFiosSize length);
+	static Scheduler *ForChunk(uint16_t chunkID);
+	void PrintQueue();
+	void Shift(uint32_t start, uint32_t length, int shift);
+	void Insert(uint16_t chunkID, uint32_t position);
+	void EstimateCost(uint16_t chunkID, int *pPriority, int priority, int *pHigher,
+			  int *pEqual, int *pLate, SceFiosTime *pTime, SchedulerLocation *pLocation);
+	int ExecuteChunk(uint16_t chunkID, bool fastPath);
+	void RemoveFromSchedule(uint16_t chunkID);
+	uint32_t FindPosition(uint16_t chunkID);
+	uint32_t FindPositionFIFO(uint16_t chunkID);
+	bool AddToSchedule(uint16_t chunkID, int opflags, bool fastPath);
+	uint16_t NextEligible();
+	void Thread();
+	uint32_t FindPositionLIFO(uint16_t chunkID);
+	uint32_t FindPositionPriority(uint16_t chunkID);
+
+	uint16_t &QueueEntry(uint32_t i)
+	{
+		uint32_t index = m_queuePosition + i;
+
+		if (index >= QUEUE_SIZE)
+			index -= QUEUE_SIZE;
+		return m_queue[index];
+	}
 };
 
 extern Scheduler g_fiosScheduler;
+extern Scheduler g_fiosIOSchedulers[2];		/* platform.cpp: "" and "host0:" */
+
+bool fiosSchedulerOwnsPrefix(Scheduler *pScheduler, FiosPath *pPath, SceFiosOffset offset,
+			     SceFiosSize length);
+bool fiosScheduleTreeRecurse(uint16_t chunkID, int opflags, bool fastPath);
+
+/* platform.cpp: the I/O schedulers */
+int fiosPlatformSchedulersInit();
+void fiosPlatformSchedulersTerm();
+bool fiosPlatformOwnsPath(Scheduler *pScheduler, FiosPath *pPath, SceFiosOffset offset,
+			  SceFiosSize length);
 
 /* dearchiver.cpp: the codecs the dearchiver decompresses with */
 int fiosDearchiverRegisterCodec(FiosCodec *pCodec);
