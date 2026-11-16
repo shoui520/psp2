@@ -81,6 +81,106 @@ found:
 	return ctx;
 }
 
+/* the user contexts of a library context are a list, the newest first */
+int npWebApiLibContextAddUserContext(NpWebApiLibContext *ctx, NpWebApiUserContext *userCtx)
+{
+	NpWebApiMutex *lock;
+	int count;
+
+	lock = &ctx->lock;
+	SceNpCommonPs4_F5840D6E(lock);
+	if (ctx->userContextHead != NULL)
+		npWebApiUserContextSetNext(userCtx, ctx->userContextHead);
+	count = ctx->userContextCount + 1;
+	ctx->userContextHead = userCtx;
+	ctx->userContextCount = count;
+	return SceNpCommonPs4_4A1C1C3C(lock);
+}
+
+int npWebApiLibContextRemoveUserContext(NpWebApiLibContext *ctx, NpWebApiUserContext *userCtx)
+{
+	NpWebApiMutex *lock;
+	NpWebApiUserContext *node;
+	NpWebApiUserContext *prev;
+	int count;
+
+	lock = &ctx->lock;
+	SceNpCommonPs4_F5840D6E(lock);
+	node = ctx->userContextHead;
+	for (prev = NULL; node != NULL; node = npWebApiUserContextNext(node)) {
+		if (node == userCtx)
+			break;
+		prev = node;
+	}
+	if (node == NULL)
+		return SceNpCommonPs4_4A1C1C3C(lock);
+	if (prev != NULL) {
+		npWebApiUserContextSetNext(prev, npWebApiUserContextNext(node));
+		count = ctx->userContextCount;
+	} else {
+		NpWebApiUserContext *next;
+
+		next = npWebApiUserContextNext(node);
+		count = ctx->userContextCount;
+		ctx->userContextHead = next;
+	}
+	ctx->userContextCount = count - 1;
+	return SceNpCommonPs4_4A1C1C3C(lock);
+}
+
+NpWebApiUserContext *npWebApiLibContextFindUserContext(NpWebApiLibContext *ctx, int userCtxId)
+{
+	NpWebApiMutex *lock;
+	NpWebApiUserContext *node;
+
+	lock = &ctx->lock;
+	SceNpCommonPs4_F5840D6E(lock);
+	node = ctx->userContextHead;
+	if (node == NULL)
+		goto done;
+	while (npWebApiGetSdkVersion() < NP_WEBAPI_SDK_3_30) {
+		if (npWebApiUserContextGetId(node) == userCtxId)
+			goto found;
+next:
+		node = npWebApiUserContextNext(node);
+		if (node == NULL)
+			goto done;
+	}
+	if (npWebApiUserContextGetId(node) != userCtxId)
+		goto next;
+	if (npWebApiUserContextFlag158(node) != 0) {
+		SceNpCommonPs4_4A1C1C3C(lock);
+		return NULL;
+	}
+found:
+	npWebApiUserContextAddRef(node);
+done:
+	SceNpCommonPs4_4A1C1C3C(lock);
+	return node;
+}
+
+NpWebApiUserContext *npWebApiLibContextFindUserContextByOnlineId(NpWebApiLibContext *ctx,
+	const SceNpOnlineId *onlineId)
+{
+	NpWebApiMutex *lock;
+	NpWebApiUserContext *node;
+
+	lock = &ctx->lock;
+	SceNpCommonPs4_F5840D6E(lock);
+	node = ctx->userContextHead;
+	if (node != NULL) {
+		while (SceNpCommon_8C21F489(npWebApiUserContextOnlineId(node), onlineId) != 0) {
+			node = npWebApiUserContextNext(node);
+			if (node == NULL)
+				goto done;
+		}
+		npWebApiUserContextAddRef(node);
+	}
+done:
+	SceNpCommonPs4_4A1C1C3C(lock);
+	return node;
+}
+
 int npWebApiGlobalLockCreate(void)
 {
 	return SceNpCommonPs4_4858EFB6(&g_globalLock, "SceNpWebApiGlobalLock", 1);
