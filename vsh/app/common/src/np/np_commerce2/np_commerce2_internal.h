@@ -1721,4 +1721,55 @@ extern int npCommerce2StartSessionRequest(SceUInt32 reqId);
 extern int npCommerce2GetResult(int type, SceUInt32 reqId, void *buf, SceSize bufLen,
 				SceSize *fillSize);
 
+/* the shell's store service: an object with a table of functions */
+struct NpCommerce2Ipc;
+typedef struct NpCommerce2IpcInput {
+	const void *data;
+	SceSize size;
+} NpCommerce2IpcInput;
+typedef struct NpCommerce2IpcOutput {
+	void *data;
+	SceSize size;
+	SceSize written;
+} NpCommerce2IpcOutput;
+typedef struct NpCommerce2IpcVtable {
+	void *reserved[5];
+	int (*call)(struct NpCommerce2Ipc *service, SceUInt32 op, const NpCommerce2IpcInput *in, SceUInt32 inCount,
+		    int *result, NpCommerce2IpcOutput *out, SceUInt32 outCount);
+} NpCommerce2IpcVtable;
+typedef struct NpCommerce2Ipc {
+	const NpCommerce2IpcVtable *vtbl;
+} NpCommerce2Ipc;
+extern int npCommerce2IpcOp00(NpCommerce2Ipc *service);
+extern int npCommerce2IpcOp01(NpCommerce2Ipc *service, void *value);
+extern int npCommerce2IpcOp02(NpCommerce2Ipc *service, int value);
+extern int npCommerce2IpcOp03(NpCommerce2Ipc *service, int value, void *result);
+extern int npCommerce2IpcOp04(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp05(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp06(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp07(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp08(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp09(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp0A(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp0B(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp0C(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp0D(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp0E(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp0F(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp10(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp11(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp12(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp13(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp14(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp15(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp16(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp17(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp18(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp19(NpCommerce2Ipc *service, void *out0, void *out1, void *out2, int in0, void *out3, void *out4, int in1, void *out5, void *out6);
+extern int npCommerce2IpcOp1A(NpCommerce2Ipc *service, void *request);
+extern int npCommerce2IpcOp1B(NpCommerce2Ipc *service, void *out0, void *out1, int in0, void *out2);
+extern int npCommerce2IpcOp1C(NpCommerce2Ipc *service, int value);
+extern int npCommerce2IpcOp1D(NpCommerce2Ipc *service, int value, void *result);
+extern int npCommerce2IpcOp1E(NpCommerce2Ipc *service, int value);
+
 #endif
