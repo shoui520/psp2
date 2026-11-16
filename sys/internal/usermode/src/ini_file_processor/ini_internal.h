@@ -123,3 +123,23 @@ struct IniScanner {
 extern IniInput *iniInputInit(IniInput *input);
 extern int iniScannerScan(IniScanner *scanner, const IniInput *input, IniToken *out);
 extern IniToken *iniTokenReset(IniToken *token);
+
+/* a string with its allocator: its bytes (the shared empty string when it has none), their number, and the
+ * functions and context that gave them */
+struct IniString {
+	char *data;
+	SceSize length;
+	IniAllocatorOps *ops;
+	void *context;
+};
+
+extern char g_iniEmptyString[];		/* 0x81005000 */
+
+extern IniString *iniStringAssign(IniString *string, const IniString *source);
+extern IniString *iniStringAssignChars(IniString *string, const char *text, SceSize length);
+extern IniString *iniStringDestroy(IniString *string);
+extern IniString *iniStringInsert(IniString *string, SceSize position, const void *text, SceSize length);
+extern IniString *iniStringAppend(IniString *string, const void *text, SceSize length);
+extern IniString *iniStringSubstr(IniString *result, const IniString *source, SceSize position, SceSize length);
+extern SceSize iniPathDeviceLength(const char *path);
+extern const char *iniPathFileName(const char *path);
