@@ -321,17 +321,11 @@ extern int npCommerce2Send_81019592(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_810197A6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101982E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_81019BEC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101A378(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
-extern int npCommerce2Send_8101A43E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101A53A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101A5C2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101A9D6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3, int x4);
 extern int npCommerce2Send_8101AFE4(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101B2A8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101B3CC(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
-extern int npCommerce2Send_8101B560(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101B684(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101B9B2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 extern int npCommerce2Send_8101BA78(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101BBB8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101BC40(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
@@ -1437,6 +1431,51 @@ extern int npCommerce2Send_8101961A(int mode, int httpTemplate, int *httpConnect
 				    const char *text, int flagA, int flagB);
 extern int npCommerce2Send_8101A688(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char *text, int result);
+/* an address as the requests send it: texts (some with their lengths) and numbers */
+typedef struct NpCommerce2Address {
+	const char *text0;
+	int length0;
+	const char *text1;
+	int length1;
+	const char *text2;
+	SceUInt32 number0;
+	SceUInt32 number1;
+	SceUInt32 number2;
+	SceUInt32 number3;
+	const char *text3;
+	const char *text4;
+	const char *text5;
+	const char *text6;
+	const char *text7;
+	int length7;
+	const char *text8;
+	int length8;
+	const char *text9;
+	int length9;
+	const char *text10;
+	int length10;
+	const char *text11;
+	int length11;
+	const char *text12;
+	int length12;
+} NpCommerce2Address;
+
+extern int npCommerce2WritePrefixedField(int sending, int httpRequest, const char * const *prefixes, SceUInt32 count,
+					 int key, const char *text, int length, int notFirst);
+extern int npCommerce2WriteAddressFields(int sending, int httpRequest, SceUInt64 *total, SceUInt32 kind,
+					 const NpCommerce2Address *address, int hasFlag, int flag);
+extern int npCommerce2Send_8101A378(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const NpCommerce2Address *address);
+extern int npCommerce2Send_8101B9B2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const NpCommerce2Address *address);
+extern int npCommerce2Send_8101A43E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text);
+extern int npCommerce2Send_8101A5C2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    SceUInt32 number);
+extern int npCommerce2Send_8101B2A8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text);
+extern int npCommerce2Send_8101B560(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *text);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,

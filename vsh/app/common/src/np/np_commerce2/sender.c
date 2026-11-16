@@ -355,7 +355,7 @@ int npCommerce2Send_8101940E(int mode, int httpTemplate, int *httpConnection, in
 	int ret;
 
 	for (;;) {
-		sending = pass != 0;
+		sending = pass == 1;
 		handle = *httpRequest;
 		ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
 		if (ret >= 0) {
@@ -518,6 +518,403 @@ int npCommerce2Send_8101A688(int mode, int httpTemplate, int *httpConnection, in
 				}
 			}
 		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* one field of the body with prefixes before its name ("account.", "address." ...) */
+__attribute__((noinline))
+int npCommerce2WritePrefixedField(int sending, int httpRequest, const char * const *prefixes, SceUInt32 count,
+				  int key, const char *text, int length, int notFirst)
+{
+	SceUInt32 i;
+	int ret;
+	int size;
+
+	if (sending == 1) {
+		if (notFirst != 1 || (ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[0].text,
+								      g_queryKeys[0].length)) >= 0) {
+			i = 0;
+			if (count != 0) {
+				for (;;) {
+					const char *prefix = prefixes[i];
+
+					if (prefix != NULL) {
+						ret = npCommerce2SendHttpRequest(httpRequest, prefix,
+										 sceClibStrnlen(prefix, 0x400));
+						if (ret < 0)
+							return ret;
+					}
+					if (++i >= count)
+						break;
+				}
+			}
+			ret = npCommerce2SendHttpRequest(httpRequest, g_queryKeys[key].text, g_queryKeys[key].length);
+			if (ret >= 0)
+				return npCommerce2SendHttpRequest(httpRequest, text, length);
+		}
+		return ret;
+	}
+	size = notFirst == 1;
+	for (i = count; i != 0; i--)
+		size += sceClibStrnlen(*prefixes++, 0x400);
+	return g_queryKeys[key].length + length + size;
+}
+
+/* the fields of an address (and, when asked, the "save" flag), "creditCard." or "account." and
+ * "address." in front of their names; gives their size in total (when not sending) */
+#define ADDRESS_TEXT(field, key, count)							\
+	do {											\
+		const char *value = address->field;						\
+		if (value != NULL && *value != '\0') {						\
+			size = sceClibStrnlen(value, 0x400);					\
+			ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, count, key, value, size, notFirst); \
+			if (ret < 0)								\
+				return ret;							\
+			sum += ret;								\
+			notFirst = 1;								\
+		}										\
+	} while (0)
+
+#define ADDRESS_NUMBER(field, key)								\
+	do {											\
+		if (address->field != 0) {							\
+			ret = SCE_NP_COMMERCE2_ERROR_REQUEST_BUF_TOO_SMALL;			\
+			if (sceClibSnprintf(number, 16, "%u", address->field) < 16) {		\
+				size = sceClibStrnlen(number, 0x400);				\
+				ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, 1, key, number, size, notFirst); \
+			}									\
+			if (ret < 0)								\
+				return ret;							\
+			sum += ret;								\
+			notFirst = 1;								\
+		}										\
+	} while (0)
+
+#define ADDRESS_ESCAPED(field, lengthField, key, count)					\
+	do {											\
+		const char *value = address->field;						\
+		if (value != NULL && *value != '\0' && address->lengthField != 0) {		\
+			ret = npCommerce2UriEscape(escaped, 0x301, value, address->lengthField, NULL); \
+			if (ret < 0)								\
+				return ret;							\
+			size = sceClibStrnlen(escaped, 0x400);					\
+			ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, count, key, escaped, size, notFirst); \
+			if (ret < 0)								\
+				return ret;							\
+			sum += ret;								\
+			notFirst = 1;								\
+		}										\
+	} while (0)
+
+int npCommerce2WriteAddressFields(int sending, int httpRequest, SceUInt64 *total, SceUInt32 kind,
+				  const NpCommerce2Address *address, int hasFlag, int flag)
+{
+	const char *prefixes[8];
+	char escaped[0x304];
+	char number[16];
+	SceUInt64 sum = 0;
+	int notFirst = 0;
+	int size;
+	int ret;
+
+	sceClibMemset(prefixes, 0, 0x20);
+	if (kind != 0) {
+		if (kind <= 1)
+			prefixes[0] = "account.";
+	} else {
+		prefixes[0] = "creditCard.";
+	}
+	prefixes[1] = "address.";
+	prefixes[2] = "address";
+	{
+		const char *value = address->text0;
+
+		if (value != NULL && *value != '\0' && address->length0 != 0) {
+			int length = address->length0;
+
+			if (value[length - 1] == '\0')
+				length--;
+			ret = npCommerce2WritePrefixedField(sending, httpRequest, prefixes, 1, 26, value, length, 0);
+			if (ret < 0)
+				return ret;
+			sum = (SceULong64)(SceInt64)ret;
+			notFirst = 1;
+		}
+	}
+	ADDRESS_ESCAPED(text1, length1, 27, 1);
+	ADDRESS_TEXT(text2, 28, 1);
+	ADDRESS_NUMBER(number0, 29);
+	ADDRESS_NUMBER(number1, 30);
+	ADDRESS_NUMBER(number2, 31);
+	ADDRESS_NUMBER(number3, 32);
+	ADDRESS_TEXT(text3, 33, 1);
+	ADDRESS_TEXT(text4, 34, 1);
+	ADDRESS_TEXT(text5, 84, 1);
+	ADDRESS_TEXT(text6, 85, 1);
+	ADDRESS_ESCAPED(text7, length7, 20, 3);
+	ADDRESS_ESCAPED(text8, length8, 21, 3);
+	ADDRESS_ESCAPED(text9, length9, 22, 3);
+	ADDRESS_ESCAPED(text10, length10, 35, 2);
+	ADDRESS_ESCAPED(text11, length11, 36, 2);
+	ADDRESS_ESCAPED(text12, length12, 37, 2);
+	if (hasFlag == 1) {
+		ret = npCommerce2WriteTextField(sending, httpRequest, 74, flag == 1 ? "true" : "false", notFirst);
+		if (ret < 0)
+			return ret;
+		sum += (SceULong64)(SceInt64)ret;
+	}
+	if (sending != 1)
+		*total = sum;
+	return 0;
+}
+
+/* a request with the postal code as its one field */
+int npCommerce2Send_8101A43E(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const char *text)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass == 1;
+		{
+			char escaped[0x304];
+			int handle = *httpRequest;
+
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WriteTextField(sending, handle, 37, escaped, 0);
+				if (ret >= 0) {
+					if (!sending)
+						length = (SceULong64)(SceInt64)ret;
+					ret = 0;
+				}
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the top-up amount as its one field */
+int npCommerce2Send_8101A5C2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, SceUInt32 number)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass == 1;
+		ret = npCommerce2WriteNumberField(sending, *httpRequest, 19, number, 0);
+		if (ret >= 0) {
+			if (!sending)
+				length = (SceULong64)(SceInt64)ret;
+			ret = 0;
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the login name as its one field */
+int npCommerce2Send_8101B2A8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const char *text)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass == 1;
+		{
+			char escaped[0x304];
+			const char *prefixes[2];
+			int handle = *httpRequest;
+
+			sceClibMemset(prefixes, 0, 8);
+			prefixes[0] = "account.";
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 46, escaped,
+								    sceClibStrnlen(escaped, 0x400), 0);
+				if (ret >= 0) {
+					if (!sending)
+						length = (SceULong64)(SceInt64)ret;
+					ret = 0;
+				}
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the PS handle as its one field */
+int npCommerce2Send_8101B560(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const char *text)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass == 1;
+		{
+			char escaped[0x304];
+			const char *prefixes[2];
+			int handle = *httpRequest;
+
+			sceClibMemset(prefixes, 0, 8);
+			prefixes[0] = "account.";
+			ret = npCommerce2UriEscape(escaped, 0x301, text, sceClibStrnlen(text, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WritePrefixedField(sending, handle, prefixes, 1, 49, escaped,
+								    sceClibStrnlen(escaped, 0x400), 0);
+				if (ret >= 0) {
+					if (!sending)
+						length = (SceULong64)(SceInt64)ret;
+					ret = 0;
+				}
+			}
+		}
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with a credit card address as its fields */
+int npCommerce2Send_8101A378(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const NpCommerce2Address *address)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		ret = npCommerce2WriteAddressFields(sending, *httpRequest, &length, 0, address, 0, 0);
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with an account address as its fields */
+int npCommerce2Send_8101B9B2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, const NpCommerce2Address *address)
+{
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		ret = npCommerce2WriteAddressFields(sending, *httpRequest, &length, 1, address, 0, 0);
 		if (ret < 0)
 			break;
 		if (pass == 0) {
