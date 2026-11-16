@@ -81,4 +81,61 @@ extern int npWebApiGetMemoryPoolStats(int libCtxId, SceNpWebApiMemoryPoolStats *
 #define NP_WEBAPI_SDK_3_50	0x3500000
 #define NP_WEBAPI_SDK_3_55	0x3550000
 
+/* SceNpCommonPs4's mutex (lock object, 0x2c bytes) and its calls, named by their NIDs */
+typedef struct NpWebApiMutex {
+	unsigned char reserved[0x2c];
+} NpWebApiMutex;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpCommonPs4_4858EFB6(NpWebApiMutex *mutex, const char *name, int recursive);
+extern int SceNpCommonPs4_F5840D6E(NpWebApiMutex *mutex);	/* lock */
+extern int SceNpCommonPs4_4A1C1C3C(NpWebApiMutex *mutex);	/* unlock */
+#ifdef __cplusplus
+}
+#endif
+
+/* a library context (176 bytes); the contexts of the process are a list (g_libContexts) */
+typedef struct NpWebApiLibContext {
+	const void *vtable;
+	struct NpWebApiLibContext *next;
+	unsigned int state;
+	int refCount;
+	int id;
+	void *heapBlock;
+	NpWebApiMutex lock;
+	void *userContexts;
+	unsigned char reserved1[48];
+	unsigned char aborted;
+	unsigned char flag121;
+	unsigned char reserved2[51];
+	unsigned char deleting;
+	unsigned char reserved3[2];
+} NpWebApiLibContext;
+
+typedef char NpWebApiLibContextSizeCheck[sizeof(NpWebApiLibContext) == 176 ? 1 : -1];
+
+extern NpWebApiMutex g_globalLock;		/* 0x81010048 */
+extern NpWebApiLibContext *g_libContexts;	/* 0x81010014 */
+
+extern int npWebApiLibContextLock(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextUnlock(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextRelease(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextIsDeleting(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextIsIdle(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextIsStopped(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextHasOtherUsers(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextGetAborted(NpWebApiLibContext *ctx, unsigned char *aborted);
+extern int npWebApiLibContextSetAborted(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextClearAborted(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextSetDeleting(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextIsStarted(void *unused, NpWebApiLibContext *ctx);
+extern int npWebApiLibContextSetStarted(void *unused, NpWebApiLibContext *ctx);
+extern NpWebApiLibContext *npWebApiLibContextSetFlag121(NpWebApiLibContext *ctx, char value);
+extern int npWebApiLibContextGetFlag121(NpWebApiLibContext *ctx);
+extern int npWebApiGlobalLockCreate(void);
+extern int npWebApiGlobalLock(void);
+extern int npWebApiGlobalUnlock(void);
+
 #endif

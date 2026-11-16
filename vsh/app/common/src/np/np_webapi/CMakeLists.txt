@@ -5,4 +5,5 @@ enable_language(CXX)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	globals.cpp
 	exports.cpp
+	libctx.cpp
 )
