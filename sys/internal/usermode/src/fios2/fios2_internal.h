@@ -458,7 +458,7 @@ struct FiosChunk {
 			int err;
 			uint32_t buffers : 2;	/* BLOCK_BUFFER_* */
 			uint32_t reserved0 : 30;
-			uint32_t reserved1;
+			uint8_t *pInput;	/* the work buffer third the read landed in */
 			uint16_t readChunk;
 			uint16_t decompressChunk;
 			class PsarcDearchiver *pDearchiver;
@@ -572,6 +572,16 @@ void fiosSchedulersGetStatistics(struct FiosStatistics *pStats);
 void fiosSchedulersResetStatistics();
 
 /* the I/O filters and overlays */
+#define FIOS_IOFILTER_COUNT	255		/* the filter slots */
+
+typedef int (*FiosIOFilterFunc)(void *pContext, int command, void *pArgs);
+
+struct FiosIOFilter {
+	SceFiosIOFilterCallback pCallback;	/* a FiosIOFilterFunc, or NULL for a free slot */
+	void *pContext;
+};
+
+extern FiosIOFilter s_ioFilters[FIOS_IOFILTER_COUNT];
 extern int s_ioFilterCount;			/* the filters added */
 int fiosIOFiltersCall(int command, void *pArgs);
 uint16_t fiosIOFiltersChunkTree(uint16_t rootID);
@@ -828,6 +838,7 @@ struct ArchiveRead {
 class Scheduler {
 public:
 	void Kick();
+	static void KickAll(Scheduler *pExcept);	/* every scheduler but this one */
 };
 
 extern Scheduler g_fiosScheduler;

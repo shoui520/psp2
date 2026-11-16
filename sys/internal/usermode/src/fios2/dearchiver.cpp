@@ -127,7 +127,8 @@ public:
 	void *pWorkBuffer;
 	intptr_t flags;
 	ArchiveTracker *pArchives;
-	uint32_t reserved[2];
+	uint32_t busyBuffers;		/* the work buffer's thirds in use, a bit each */
+	uint32_t deferred;		/* a block waited for a buffer: kick the schedulers */
 
 	void GetStat(ArchiveTracker *pTracker, const uint8_t *pEntry, SceFiosStat *pOutStat);
 	int FindDirectoryEntry(ArchiveTracker *pTracker, const char *pPath, int index,
@@ -2213,4 +2214,369 @@ readNative:
 	s_chunkMutex.Unlock();
 	fiosScheduleTree(newID, 0, false);
 	return FIOS_CALLBACK_AGAIN;
+}
+
+/*
+ * "BufferAllocate": the work buffer's thirds a compressed block's read needs (an input the
+ * read lands in, an output the codec writes), given out when the read runs and taken back
+ * when it is done or released. A block that finds them busy waits (FIOS_CALLBACK_AGAIN), and
+ * the release that frees them kicks the schedulers.
+ */
+int BufferAllocate(int run, FiosChunk *pBuffer, PsarcDearchiver *pDearchiver, int release,
+		   uint16_t readID, uint16_t decompressID, uint8_t buffers, void *pOutput)
+{
+	uint8_t *bufs[SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS];
+	FiosChunk *pRead, *pDecompress;
+	FiosZlibJob *pJob;
+	uint32_t busy, used, slot, i;
+	int needed, available;
+	bool locked = false, input, output, kick;
+
+	if (run != 0) {
+		s_dearchiverMutex.Lock();
+		locked = true;
+	}
+	input = (buffers & BLOCK_BUFFER_INPUT) != 0;
+	pJob = fiosChunkAt(decompressID)->decompress.pJob;
+	pRead = fiosChunkAt(readID);
+	pDecompress = fiosChunkAt(decompressID);
+	output = (buffers & BLOCK_BUFFER_OUTPUT) != 0;
+	used = 0;
+	busy = pDearchiver->busyBuffers;
+	needed = input + output;
+	for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++)
+		used += ((1 << i) & busy) >> i;
+	available = SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS - used;
+	if (run == 0) {
+		if (release == 0 && available < needed) {
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s busy check: buffers are busy, deferring...", "BufferAllocate");
+			if (!locked)
+				s_dearchiverMutex.Lock();
+			used = 0;
+			for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++)
+				used += ((1 << i) & pDearchiver->busyBuffers) >> i;
+			if ((int)(SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS - used) < needed) {
+				pDearchiver->deferred = 1;
+				s_dearchiverMutex.Unlock();
+				return FIOS_CALLBACK_AGAIN;
+			}
+		} else if (!locked) {
+			return SCE_OK;
+		}
+		s_dearchiverMutex.Unlock();
+		return SCE_OK;
+	}
+	for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++)
+		bufs[i] = (uint8_t *)pDearchiver->pWorkBuffer +
+			  i * (pDearchiver->workBufferSize / SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS);
+	kick = false;
+	if (run == 1 && release == 0) {
+		if (pBuffer->cancelled) {
+			pBuffer->blockBuffer.buffers = 0;
+			if (locked)
+				s_dearchiverMutex.Unlock();
+			return SCE_FIOS_ERROR_CANCELLED;
+		}
+		if (available < needed) {
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s exec check: buffers are busy, deferring...", "BufferAllocate");
+			pDearchiver->deferred = 1;
+			if (locked)
+				s_dearchiverMutex.Unlock();
+			return FIOS_CALLBACK_AGAIN;
+		}
+		if (input) {
+			slot = 0;
+			for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++) {
+				if (!(busy & (1 << i))) {
+					slot = i;
+					break;
+				}
+			}
+			pJob->pSrc = bufs[slot];
+			pRead->pBuf = bufs[slot];
+			pBuffer->blockBuffer.pInput = bufs[slot];
+			busy |= 1 << slot;
+			pJob->pSrc = bufs[slot] + pDecompress->decompress.skip;
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s allocated buffer %p for read chunk %d", "BufferAllocate",
+				   pRead->pBuf, readID);
+		}
+		if (output) {
+			slot = 0;
+			for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++) {
+				if (!(busy & (1 << i))) {
+					slot = i;
+					break;
+				}
+			}
+			pJob->pDst = bufs[slot];
+			busy |= 1 << slot;
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s pJob %p allocated buffer %p for decompression result",
+				   "BufferAllocate", pJob, pJob->pDst);
+		}
+	} else if ((run == 2 && release == 0) || release == 1) {
+		if (input) {
+			uint8_t *pInput = pBuffer->blockBuffer.pInput;
+
+			slot = 0;
+			for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++) {
+				if (bufs[i] == pInput) {
+					slot = i;
+					break;
+				}
+			}
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s releasing buffer %p from read chunk %d", "BufferAllocate", pInput,
+				   readID);
+			busy &= ~(1 << slot);
+		}
+		if (output) {
+			slot = 0;
+			for (i = 0; i < SCE_FIOS_PSARC_DEARCHIVER_TEMP_BUFFERS; i++) {
+				if (bufs[i] == pOutput) {
+					slot = i;
+					break;
+				}
+			}
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s pJob %p releasing decompression result buffer %p",
+				   "BufferAllocate", pJob, pOutput);
+			busy &= ~(1 << slot);
+		}
+		if (run == 1 && pDearchiver->deferred) {
+			pDearchiver->deferred = 0;
+			kick = true;
+		}
+	}
+	pDearchiver->busyBuffers = busy;
+	if (locked)
+		s_dearchiverMutex.Unlock();
+	if (kick) {
+		FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s Kicking scheduler",
+			   "BufferAllocate");
+		Scheduler::KickAll(NULL);
+	} else {
+		FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s Not kicking scheduler",
+			   "BufferAllocate");
+	}
+	return SCE_OK;
+}
+
+/* a block's decompression ends: its buffers go back, unless it has none */
+static inline void releaseBuffers(int run, FiosChunk *pBuffer, void *pOutput)
+{
+	BufferAllocate(run, pBuffer, pBuffer->blockBuffer.pDearchiver, 1,
+		       pBuffer->blockBuffer.readChunk, pBuffer->blockBuffer.decompressChunk,
+		       pBuffer->blockBuffer.buffers, pOutput);
+}
+
+/*
+ * "DecompressCallback": a compressed block is read. Submit it to its codec, wait for the
+ * result, count the bytes, and start the read of the entry's next block in this chunk's
+ * place: a new read chunk the I/O filters after the dearchiver filter too.
+ */
+int DecompressCallback(FiosChunk *pChunk, int run)
+{
+	FiosZlibJob *pJob = pChunk->decompress.pJob;
+	void *pOutput = pJob->pDst;
+	FiosChunk *pBuffer = NULL;
+	ArchiveRead *pRead;
+	FiosIOFilter *pFilter;
+	SceFiosOffset block;
+	uint16_t newID, chunkID, oldID;
+	bool locked;
+	int err, n, i, next;
+
+	if (pJob->srcSize != 0) {
+		FiosCodec *pCodec = pChunk->decompress.pCodec;
+		uint16_t bufferID = pChunk->decompress.bufferChunk;
+		uint32_t blockLength = pChunk->decompress.blockLength;
+		uint32_t copyLength = pChunk->decompress.copyLength;
+
+		if (bufferID != CHUNKID_INVALID)
+			pBuffer = fiosChunkAt(bufferID);
+		if (!pChunk->decompress.submitted) {
+			if (!run)
+				return SCE_OK;
+			err = pChunk->decompress.err;
+			if (err != SCE_OK || pChunk->cancelled) {
+				if (pBuffer != NULL) {
+					releaseBuffers(run, pBuffer, pOutput);
+					err = pChunk->decompress.err;
+				}
+				return pChunk->cancelled ? SCE_FIOS_ERROR_CANCELLED : err;
+			}
+			if (pCodec->submit(pJob) != NULL) {
+				pChunk->decompress.submitted = 1;
+				return FIOS_CALLBACK_AGAIN;
+			}
+			releaseBuffers(run, pBuffer, pOutput);
+			return SCE_FIOS_ERROR_DECOMPRESSION;
+		}
+		if (!pCodec->isDone(pJob))
+			return FIOS_CALLBACK_AGAIN;
+		if (!run)
+			return SCE_OK;
+		err = pJob->result;
+		if (err != 0 || pJob->size != blockLength) {
+			if (pBuffer != NULL) {
+				releaseBuffers(run, pBuffer, pOutput);
+				err = pJob->result;
+			}
+			sceFiosPrintf("FIOS: Decompression failed with eror %d/0x%x for chunk: %s\n", err,
+				      err, fiosDebugDumpChunk(pBuffer->blockBuffer.readChunk, NULL, 0));
+			return SCE_FIOS_ERROR_DECOMPRESSION;
+		}
+		sceAtomicAdd64Relaxed((volatile int64_t *)pChunk->decompress.pActCount, copyLength);
+	} else if (!run) {
+		return SCE_OK;
+	}
+	err = pChunk->decompress.err;
+	newID = CHUNKID_INVALID;
+	if (err != SCE_OK || pChunk->cancelled) {
+		if (pBuffer != NULL) {
+			releaseBuffers(run, pBuffer, pOutput);
+			err = pChunk->decompress.err;
+		}
+		if (err == SCE_OK)
+			err = SCE_FIOS_ERROR_CANCELLED;
+		return err;
+	}
+	pRead = pChunk->decompress.pRead;
+	locked = true;
+	s_chunkMutex.Lock();
+	chunkID = fiosChunkID(pChunk);
+	oldID = fiosChunkGetChild(chunkID, 1);
+	newID = fiosChunkAllocateType(CHUNK_FH_READ);
+	if (newID == CHUNKID_INVALID) {
+		if (pBuffer != NULL)
+			releaseBuffers(run, pBuffer, pOutput);
+		s_chunkMutex.Unlock();
+		return SCE_FIOS_ERROR_CANT_ALLOCATE_CHUNK;
+	}
+	do {
+		block = sceAtomicIncrement64Relaxed((volatile int64_t *)&pRead->nextBlock);
+		if (block > pRead->lastBlock) {
+			if (pBuffer != NULL) {
+				s_chunkMutex.Unlock();
+				releaseBuffers(run, pBuffer, pOutput);
+				s_chunkMutex.Lock();
+			}
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s no more blocks to read",
+				   "DecompressCallback");
+			if (newID != CHUNKID_INVALID)
+				fiosChunkDeallocate(newID);
+			s_chunkMutex.Unlock();
+			return SCE_OK;
+		}
+		err = pRead->CreateBlockRead(block, chunkID, newID);
+		if (err < 0) {
+			if (pBuffer != NULL)
+				releaseBuffers(run, pBuffer, pOutput);
+			fiosChunkDelete(newID);
+			s_chunkMutex.Unlock();
+			return err;
+		}
+	} while (err <= 0);
+	FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s created a dynamic read chunk %d",
+		   "DecompressCallback", newID);
+
+	/* the filters after the dearchiver's own see the new read */
+	n = 0;
+	i = 0;
+	next = 1;
+	while (n < s_ioFilterCount && i < FIOS_IOFILTER_COUNT) {
+		if (s_ioFilters[i].pCallback != NULL) {
+			n++;
+			if (s_ioFilters[i].pContext == pRead->pDearchiver)
+				break;
+		}
+		i = next++;
+	}
+	pFilter = &s_ioFilters[next];
+	for (; next < FIOS_IOFILTER_COUNT && n < s_ioFilterCount; next++, pFilter++) {
+		FiosIOFilterFunc pCallback = (FiosIOFilterFunc)pFilter->pCallback;
+
+		if (pCallback != NULL) {
+			void *pContext = pFilter->pContext;
+
+			n++;
+			if (locked) {
+				s_chunkMutex.Unlock();
+				locked = false;
+			}
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s applying filter %d to dynamic read chunk %d",
+				   "DecompressCallback", next, newID);
+			err = pCallback(pContext, FIOS_FILTER_CHUNK, &newID);
+			if (!locked) {
+				s_chunkMutex.Lock();
+				locked = true;
+			}
+			if (err != SCE_OK && err != SCE_FIOS_ERROR_EVENT_NOT_HANDLED) {
+				sceFiosPrintf("FIOS2 warning: %s returned error %d while filtering chunk tree %s\n",
+					      fiosDebugDumpIOFilter(pFilter->pCallback, pContext, NULL, 0),
+					      err, fiosDebugDumpChunk(newID, NULL, 0));
+				if (pBuffer != NULL)
+					releaseBuffers(run, pBuffer, pOutput);
+				fiosChunkDelete(newID);
+				if (locked)
+					s_chunkMutex.Unlock();
+				return err;
+			}
+		}
+		if (newID == CHUNKID_INVALID) {
+			FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc",
+				   "%-15s filtering eliminated dynamic read", "DecompressCallback");
+			newID = fiosChunkAllocateType(CHUNK_FH_READ);
+			if (newID == CHUNKID_INVALID) {
+				if (pBuffer != NULL)
+					releaseBuffers(run, pBuffer, pOutput);
+				if (locked)
+					s_chunkMutex.Unlock();
+				return SCE_FIOS_ERROR_CANT_ALLOCATE_CHUNK;
+			}
+		}
+	}
+	if (!fiosChunkLink(chunkID, newID)) {
+		if (pBuffer != NULL)
+			releaseBuffers(run, pBuffer, pOutput);
+		fiosChunkDelete(newID);
+		if (locked)
+			s_chunkMutex.Unlock();
+		return SCE_FIOS_ERROR_CANT_ALLOCATE_CHUNK;
+	}
+	FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s scheduling dynamic read chunk %d",
+		   "DecompressCallback", newID);
+	fiosChunkPrepareLocked(newID, pChunk->priority, pChunk->deadline);
+	if (locked) {
+		locked = false;
+		s_chunkMutex.Unlock();
+	}
+	fiosScheduleTree(newID, 0, false);
+	if (pBuffer != NULL)
+		releaseBuffers(run, pBuffer, pOutput);
+	if (!locked) {
+		locked = true;
+		s_chunkMutex.Lock();
+	}
+	FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s Deallocating old read chunk %d",
+		   "DecompressCallback", oldID);
+	fiosChunkDelete(oldID);
+	if (locked)
+		s_chunkMutex.Unlock();
+	return FIOS_CALLBACK_AGAIN;
+}
+
+/* "BufferCallback": a compressed block's read is about to run: its buffers */
+int BufferCallback(FiosChunk *pChunk, int run)
+{
+	FIOS_TRACE(SCE_FIOS_PROFILE_DEARCHIVER, "psarc", "%-15s Chunk %d", "BufferCallback",
+		   fiosChunkID(pChunk));
+	return BufferAllocate(run, pChunk, pChunk->blockBuffer.pDearchiver, 0,
+			      pChunk->blockBuffer.readChunk, pChunk->blockBuffer.decompressChunk,
+			      pChunk->blockBuffer.buffers, NULL);
 }
