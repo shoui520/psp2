@@ -99,3 +99,8 @@ int npCommerce2ReadCountedText0x37_810168FC(int a1, int a2, int a3)
 {
 	return npCommerce2ReadCountedText0x37((const NpCommerce2Item *)a1, a2, (NpCommerce2CountedText *)a3);
 }
+
+int npCommerce2ReadTextItem0x39_81011FC8(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextValueItem *item)
+{
+	return npCommerce2ReadTextItem0x39(result, index, item);
+}

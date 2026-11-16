@@ -952,6 +952,24 @@ extern int npCommerce2ReadTextItem0x3b(const NpCommerce2Item *result, SceUInt32 
 extern int npCommerce2ReadCountedText0x37_81011D84(int a1, int a2, int a3);
 extern int npCommerce2ReadCountedText0x37_81014A92(int a1, int a2, int a3);
 extern int npCommerce2ReadCountedText0x37_810168FC(int a1, int a2, int a3);
+typedef struct NpCommerce2TextValueItem {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	const char *textA;
+	const char *textB;
+	SceUInt32 value;
+} NpCommerce2TextValueItem;
+
+typedef struct NpCommerce2SmallTableResult {
+	SceNpCommerce2CommonData commonData;
+	NpCommerce2TableHeader table;
+} NpCommerce2SmallTableResult;
+
+extern int npCommerce2ReadTextItem0x39(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextValueItem *item);
+extern int npCommerce2ReadTextItem0x39_81011FC8(const NpCommerce2Item *result, SceUInt32 index,
+						NpCommerce2TextValueItem *item);
+extern int npCommerce2InitTableResult0x2b(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
+extern int npCommerce2ReadDetailRecord(const NpCommerce2Item *result, void *detail, int kind);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1028,12 +1046,9 @@ extern int npCommerce2_810119B0(int a1, int a2);
 extern int npCommerce2CreateReqGetCC(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetProv(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetPay(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81011FC8(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetDrm(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_81007046(int a1, int a2, int a3, int a4, int a5);
-extern int npCommerce2_81011FD0(int a1, void *a2, int a3);
 extern int npCommerce2_8101209C(int a1, int a2, int a3);
-extern int npCommerce2_8101284E(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetBill(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810128C8(int a1, void *a2, int a3);
 extern int npCommerce2CreateReqRegCC(SceUInt32 ctxId, SceUInt32 *reqId);

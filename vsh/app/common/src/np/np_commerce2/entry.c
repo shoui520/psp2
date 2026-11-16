@@ -788,3 +788,129 @@ int npCommerce2ReadTextItem0x3b(const NpCommerce2Item *result, SceUInt32 index, 
 	}
 	return ret;
 }
+
+/* the record of tag 0x39 at an index, found where the result's records start: its text, a value and
+ * two more texts */
+int npCommerce2ReadTextItem0x39(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextValueItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt32 net;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x39, 0x1D, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x6C);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->recordId = record;
+		sceClibMemcpy_safe(&net, record + 17, 4);
+		item->value = sceNetNtohl(net);
+		rest = record + 21;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->textA = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 21, 0xF, 0, &foundA);
+		if (ret >= 0 && foundA != 0)
+			item->textA = rest + ret;
+		if (ret >= 0) {
+			item->textB = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(rest, length - 21, 0x10, 0, &foundB);
+			if (ret >= 0 && foundB != 0)
+				item->textB = rest + ret;
+		}
+	}
+	return ret;
+}
+
+/* a result whose first record is the table of tag 0x2b; the rows after the first bad one are dropped */
+int npCommerce2InitTableResult0x2b(NpCommerce2SmallTableResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	SceUInt16 length;
+	SceUInt32 i;
+	int ret;
+	int r;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x88);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.ov = status;
+		ret = npCommerce2FindTableRecord(data + ret, dataLength, 0x2B, NULL, &result->table, status);
+		if (ret >= 0) {
+			r = 0;
+			if (result->table.rows != 0) {
+				i = 0;
+				for (;;) {
+					r = npCommerce2FindTableRow((const char *)result->commonData.data,
+								    result->commonData.data_size, 0x2B, 0x95, i,
+								    &length, result->commonData.ov);
+					if (r < 0)
+						break;
+					if (++i >= result->table.rows)
+						goto done;
+				}
+				if (i != 0) {
+					r = 0;
+					result->table.rows = i;
+				}
+			}
+done:
+			ret = r;
+			if (r >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* the detail record of a result: tag 86 or, for kind 3, tag 141, then the reader for that tag */
+int npCommerce2ReadDetailRecord(const NpCommerce2Item *result, void *detail, int kind)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 tag;
+	const char *record;
+	int ret;
+
+	tag = kind == 3 ? 141 : 86;
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), tag, 0x14, &length);
+	if (ret >= 0) {
+		record = data + ret;
+		if (kind == 3)
+			ret = npCommerce2ReadDetail0x91(result->commonData.version, result->commonData.buf_head, record,
+							length, record + 20, (NpCommerce2Detail0x91 *)detail);
+		else
+			ret = npCommerce2ReadDetail0x4b(result->commonData.version, result->commonData.buf_head, record,
+							length, record + 20, (NpCommerce2Detail *)detail);
+	}
+	return ret;
+}
