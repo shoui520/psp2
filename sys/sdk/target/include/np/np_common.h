@@ -93,6 +93,30 @@ typedef SceInt32 SceNpPlatformType;
 #define SCE_NP_PLATFORM_TYPE_VITA		2
 #define SCE_NP_PLATFORM_TYPE_PS4		3
 
+/* Np Peer Address */
+typedef struct SceNpPeerAddress {
+	SceNpOnlineId onlineId;
+	SceNpPlatformType platform;
+} SceNpPeerAddress;
+
+/* NP title ID */
+#define SCE_NP_TITLE_ID_LEN		12
+typedef struct SceNpTitleId {
+	char id[SCE_NP_TITLE_ID_LEN + 1];
+	SceUChar8 padding[3];
+} SceNpTitleId;
+
+/* NP title secret */
+#define SCE_NP_TITLE_SECRET_SIZE		128
+typedef struct SceNpTitleSecret {
+	SceUChar8 data[SCE_NP_TITLE_SECRET_SIZE];
+} SceNpTitleSecret;
+
+/* NP Service Label */
+typedef SceUInt32 SceNpServiceLabel;
+#define SCE_NP_DEFAULT_SERVICE_LABEL (0x00000000)
+#define SCE_NP_INVALID_SERVICE_LABEL (0xFFFFFFFF)
+
 /* NP Client ID */
 #define SCE_NP_CLIENT_ID_MAX_LEN 128
 typedef struct SceNpClientId {

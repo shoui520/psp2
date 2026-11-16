@@ -1,4 +1,7 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_np_webapi KIND user SKELETON SOURCES
-	np_webapi.c
+enable_language(CXX)
+# SceNpWebApi (vs0:sys/external/np_webapi.suprx), built by Sony with SNC 3.57 in C++. Its strings name
+# np_webapi/webapi_lang.cpp, and the np_push and np_ipc2 client code it carries; the rest has no name,
+# its files are split where its parts are (ours).
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+	exports.cpp
 )
