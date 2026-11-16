@@ -21,5 +21,6 @@ psp2_module(vs0_sys_external_np_commerce2 KIND user COMPILER snc PARTIAL SOURCES
 	sku.c
 	reward.c
 	thunks.c
+	texts.c
 	np_commerce2.c
 )
