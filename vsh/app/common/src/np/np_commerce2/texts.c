@@ -1055,3 +1055,116 @@ int npCommerce2InitBareResult_810165F0(NpCommerce2Item *result, const char *data
 	return ret;
 }
 
+
+/* a result with the counts of the containers of tags 0x37 and 0x39, six texts, and whether a record of tag
+ * 0x30 follows */
+int npCommerce2InitCountsTextsResult_8101670C(NpCommerce2CountsTextsResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt16 found;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x80);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x37, NULL, &result->countOfA);
+		if (ret >= 0)
+			ret = npCommerce2FindNestedRecordWhole(records, dataLength, 0x39, NULL, &result->countOfB);
+		if (ret >= 0) {
+			result->textA = NP_COMMERCE2_EMPTY_TEXT(result);
+			ret = npCommerce2FindRecordWhole(records, dataLength, 0x4F, 0, &found);
+			if (ret >= 0 && found != 0)
+				result->textA = records + ret;
+			if (ret >= 0) {
+				result->textB = NP_COMMERCE2_EMPTY_TEXT(result);
+				ret = npCommerce2FindRecordWhole(records, dataLength, 0x50, 0, &found);
+				if (ret >= 0 && found != 0)
+					result->textB = records + ret;
+				if (ret >= 0) {
+					result->textC = NP_COMMERCE2_EMPTY_TEXT(result);
+					ret = npCommerce2FindRecordWhole(records, dataLength, 0x51, 0, &found);
+					if (ret >= 0 && found != 0)
+						result->textC = records + ret;
+					if (ret >= 0) {
+						result->textD = NP_COMMERCE2_EMPTY_TEXT(result);
+						ret = npCommerce2FindRecordWhole(records, dataLength, 0x52, 0, &found);
+						if (ret >= 0 && found != 0)
+							result->textD = records + ret;
+						if (ret >= 0) {
+							result->textE = NP_COMMERCE2_EMPTY_TEXT(result);
+							ret = npCommerce2FindRecordWhole(records, dataLength, 0x36, 0, &found);
+							if (ret >= 0 && found != 0)
+								result->textE = records + ret;
+							if (ret >= 0) {
+								result->textF = NP_COMMERCE2_EMPTY_TEXT(result);
+								ret = npCommerce2FindRecordWhole(records, dataLength, 0x54, 0, &found);
+								if (ret >= 0 && found != 0)
+									result->textF = records + ret;
+								if (ret >= 0) {
+									ret = npCommerce2FindRecordWhole(records, dataLength, 0x30, 0x19, NULL);
+									if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND) {
+										result->hasExtra = 0;
+										ret = 0;
+									} else if (ret >= 0) {
+										result->hasExtra = 1;
+										ret = 0;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
+
+
+/* a result with one optional text, of tag 0x76 */
+int npCommerce2InitTextResult0x76(NpCommerce2TextResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt16 found;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x60);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		records = data + ret;
+		result->commonData.data = (const SceUChar8 *)records;
+		result->commonData.data_size = savedLength;
+		result->text = NP_COMMERCE2_EMPTY_TEXT(result);
+		ret = npCommerce2FindRecordWhole(records, dataLength, 0x76, 0, &found);
+		if (ret >= 0 && found != 0)
+			result->text = records + ret;
+		if (ret >= 0)
+			ret = 0;
+	}
+	return ret;
+}

@@ -1325,6 +1325,14 @@ extern int npCommerce2ReadKindItem0x74(const NpCommerce2Item *result, SceUInt32 
 extern int npCommerce2InitBareResult_8101652E(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2InitBareResult_810165F0(NpCommerce2Item *result, const char *data, SceSize size);
 extern int npCommerce2ReadTextRecord0x61(const NpCommerce2Item *result, NpCommerce2ValueTextItem2 *item);
+typedef struct NpCommerce2TextResult {
+	SceNpCommerce2CommonData commonData;
+	const char *text;
+	SceUInt32 padding;
+} NpCommerce2TextResult;
+
+extern int npCommerce2InitTextResult0x76(NpCommerce2TextResult *result, const char *data, SceSize size);
+extern int npCommerce2InitCountsTextsResult_8101670C(NpCommerce2CountsTextsResult *result, const char *data, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1465,13 +1473,11 @@ extern int npCommerce2_8100A38E(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqSendPassResetMail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqVerifyMasterBill(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetEpw(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81016666(int a1, void *a2, int a3);
 extern int npCommerce2CreateReqSendEmailVer(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100B182(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCrGuestSess(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqResetPass(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetMasterBill(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8101670C(int a1, void *a2, int a3);
 extern int npCommerce2_81016904(int a1, int a2, int a3);
 extern int npCommerce2CreateReqSendConsentMail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8100A742(int a1, int a2, int a3, int a4, int a5, int a6);
