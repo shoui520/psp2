@@ -43,7 +43,7 @@ static inline void releaseHandle(FiosOp *pOp)
 	}
 }
 
-FiosOp *fiosOpAllocate(const SceFiosOpAttr *pAttr, uint16_t what)
+FiosOp *fiosOpAllocate(const SceFiosOpAttr *pAttr, FiosOpCommand what)
 {
 	SceFiosOp op;
 	FiosOp *pOp;

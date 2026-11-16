@@ -326,7 +326,7 @@ extern Allocator s_chunkAllocator;			/* the chunk storage */
 extern Wws::Platform::Mutex s_opWaitMutex;		/* "SceFiosOpWait" */
 extern Wws::Platform::Cond s_opWaitCond;
 extern int s_overlayCount;				/* the process's overlays at start */
-FiosOp *fiosOpAllocate(const SceFiosOpAttr *pAttr, uint16_t what);
+FiosOp *fiosOpAllocate(const SceFiosOpAttr *pAttr, FiosOpCommand what);
 SceFiosOp *fiosGetCallbackOp();
 SceFiosOp fiosOpCallback(FiosOp *pOp, SceFiosOpEvent event);
 SceFiosOp fiosOpCompleteWithError(FiosOp *pOp, int err);
@@ -339,12 +339,12 @@ int fiosOpWait(FiosOp *pOp);
 int fiosOpWaitUntil(FiosOp *pOp, SceFiosTime deadline);
 void fiosOpDelete(SceFiosOp op, FiosOp *pOp);
 SceFiosOp fiosOpSubmitPathExists(const SceFiosOpAttr *pAttr, const char *pPath, bool *pOutExists,
-				 uint16_t what);
-SceFiosOp fiosOpSubmitFH(const SceFiosOpAttr *pAttr, SceFiosFH fh, uint16_t what);
+				 FiosOpCommand what);
+SceFiosOp fiosOpSubmitFH(const SceFiosOpAttr *pAttr, SceFiosFH fh, FiosOpCommand what);
 SceFiosOp fiosOpSubmitFHIO(const SceFiosOpAttr *pAttr, SceFiosFH fh, const SceFiosBuffer *pIov,
 			   int iovcnt, SceFiosOffset offset, FiosOpCommand what);
 SceFiosOffset fiosFHTell(SceFiosFH fh);
-SceFiosOp fiosOpSubmitPathWithMode(const SceFiosOpAttr *pAttr, const char *pPath, uint16_t what,
+SceFiosOp fiosOpSubmitPathWithMode(const SceFiosOpAttr *pAttr, const char *pPath, FiosOpCommand what,
 				   bool resolve, int32_t nativeMode);
 
 /* chunk.cpp */

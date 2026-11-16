@@ -554,7 +554,7 @@ const char *sceFiosDHGetPath(SceFiosDH dh)
 	return fiosPathGet(&pDH->path);
 }
 
-SceFiosOp fiosOpSubmitPathWithMode(const SceFiosOpAttr *pAttr, const char *pPath, uint16_t what,
+SceFiosOp fiosOpSubmitPathWithMode(const SceFiosOpAttr *pAttr, const char *pPath, FiosOpCommand what,
 				   bool resolve, int32_t nativeMode)
 {
 	FiosOp *pOp = fiosOpAllocate(pAttr, what);
@@ -585,7 +585,7 @@ SceFiosOp sceFiosDirectoryDelete(const SceFiosOpAttr *pAttr, const char *pPath)
 }
 
 SceFiosOp fiosOpSubmitPathExists(const SceFiosOpAttr *pAttr, const char *pPath, bool *pOutExists,
-				 uint16_t what)
+				 FiosOpCommand what)
 {
 	FiosOp *pOp = fiosOpAllocate(pAttr, what);
 
@@ -682,7 +682,7 @@ SceFiosOp sceFiosFHTruncate(const SceFiosOpAttr *pAttr, SceFiosFH fh, SceFiosSiz
 	return fiosOpSubmit(pOp);
 }
 
-SceFiosOp fiosOpSubmitFH(const SceFiosOpAttr *pAttr, SceFiosFH fh, uint16_t what)
+SceFiosOp fiosOpSubmitFH(const SceFiosOpAttr *pAttr, SceFiosFH fh, FiosOpCommand what)
 {
 	FiosOp *pOp = fiosOpAllocate(pAttr, what);
 
@@ -712,7 +712,7 @@ SceFiosOp fiosOpSubmitFHIO(const SceFiosOpAttr *pAttr, SceFiosFH fh, const SceFi
 	pFH = (FiosFH *)s_pFHTable->Lookup(fh);
 	if (pFH == NULL)
 		return fiosOpCompleteWithError(pOp, SCE_FIOS_ERROR_BAD_FH);
-	if (iovcnt <= 0 || iovcnt > 8)
+	if (iovcnt <= 0 || (unsigned int)iovcnt > 8)
 		return fiosOpCompleteWithError(pOp, SCE_FIOS_ERROR_BAD_IOVCNT);
 	if (offset < 0)
 		return fiosOpCompleteWithError(pOp, SCE_FIOS_ERROR_BAD_OFFSET);
@@ -1393,9 +1393,10 @@ int sceFiosOverlayAdd(const SceFiosOverlay *pOverlay, SceFiosOverlayID *pOutID)
 static inline bool isOwnOverlay(const FiosProcessOverlay *pOverlay)
 {
 	SceUID pid = sceKernelGetProcessId();
+	SceUID current = sceKernelGetProcessId();
 
-	return pOverlay->order <= SCE_FIOS_OVERLAY_ORDER_USER_LAST &&
-	       pid == sceKernelGetProcessId() && pOverlay->pid == pid;
+	return pOverlay->order <= SCE_FIOS_OVERLAY_ORDER_USER_LAST && pid == current &&
+	       pOverlay->pid == pid;
 }
 
 int sceFiosOverlayRemove(SceFiosOverlayID id)
