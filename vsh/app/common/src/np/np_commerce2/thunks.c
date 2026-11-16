@@ -64,3 +64,23 @@ int npCommerce2ReadEntry0x16_81014D62(int a1, int a2, int a3)
 {
 	return npCommerce2ReadEntry0x16((const NpCommerce2Item *)a1, a2, (NpCommerce2Entry *)a3);
 }
+
+int npCommerce2ReadRecord0x30_81011C24(int a1, int a2)
+{
+	return npCommerce2ReadRecord0x30((const NpCommerce2Item *)a1, (NpCommerce2Record0x30 *)a2);
+}
+
+int npCommerce2ReadRecord0x30_81012CE8(int a1, int a2)
+{
+	return npCommerce2ReadRecord0x30((const NpCommerce2Item *)a1, (NpCommerce2Record0x30 *)a2);
+}
+
+int npCommerce2ReadRecord0x30_81014AA2(int a1, int a2)
+{
+	return npCommerce2ReadRecord0x30((const NpCommerce2Item *)a1, (NpCommerce2Record0x30 *)a2);
+}
+
+int npCommerce2ReadRecord0x30_8101690C(int a1, int a2)
+{
+	return npCommerce2ReadRecord0x30((const NpCommerce2Item *)a1, (NpCommerce2Record0x30 *)a2);
+}

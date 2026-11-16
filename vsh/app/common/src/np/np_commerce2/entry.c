@@ -526,3 +526,186 @@ int npCommerce2ReadCountItem0x2f(const NpCommerce2Item *result, NpCommerce2Count
 	}
 	return ret;
 }
+
+/* the record of tag 0x58: two values; found in a buffer the caller passes, the header fields come from
+ * the result */
+int npCommerce2ReadItem0x58(const SceNpCommerce2CommonData *result, const char *buf, SceSize size,
+			    NpCommerce2Item *item)
+{
+	SceUInt16 length;
+	SceUInt32 net;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(buf, size, 0x58, 8, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x64);
+		version = result->version;
+		head = result->buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = buf + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		item->value[0] = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->value[1] = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 8;
+	}
+	return ret;
+}
+
+/* a result with a value of tag 0x15 and a raw 64-bit value of tag 3, both optional */
+int npCommerce2InitResult0x15(NpCommerce2DateItem *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 net;
+	SceUInt64 net64;
+	const char *records;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x68);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		records = data + ret;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)records;
+		ret = npCommerce2FindRecordWhole(records, dataLength, 0x15, 4, NULL);
+		if (ret >= 0) {
+			sceClibMemcpy_safe(&net, records + ret, 4);
+			result->value = sceNetNtohl(net);
+		}
+		if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+			ret = npCommerce2FindRecordWhole(records, dataLength, 3, 8, NULL);
+			if (ret >= 0) {
+				sceClibMemcpy_safe(&net64, records + ret, 8);
+				result->date = sceNetNtohll(net64);
+			}
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+/* a result with only the header fields */
+int npCommerce2InitBareResult(NpCommerce2Item *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	int ret;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, NULL);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x5C);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.version = savedVersion;
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + savedLength);
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.data_size = savedLength;
+		ret = 0;
+	}
+	return ret;
+}
+
+/* the record of tag 0x30, found where the result's records start: an id, a text, then a record of tag
+ * 0x63 with four values (optional) and three more texts */
+int npCommerce2ReadRecord0x30(const NpCommerce2Item *result, NpCommerce2Record0x30 *record)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt16 foundC;
+	SceUInt16 foundD;
+	SceUInt32 net;
+	const char *start;
+	const char *rest;
+	const char *inner;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x30, 0x19, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(record, 0, 0x80);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(record, 0, 0x5C);
+		record->commonData.version = version;
+		record->commonData.buf_head = head;
+		start = data + ret;
+		record->commonData.data = (const SceUChar8 *)start;
+		record->commonData.data_size = dataSize;
+		record->recordId = start;
+		rest = start + 21;
+		record->commonData.data2 = (const SceUChar8 *)rest;
+		record->textA = NP_COMMERCE2_EMPTY_TEXT(record);
+		ret = npCommerce2FindRecordWhole(rest, length - 21, 0xF, 0, &foundA);
+		if (ret >= 0 && foundA != 0)
+			record->textA = rest + ret;
+		if (ret >= 0) {
+			ret = npCommerce2FindRecordWhole(rest, length - 21, 0x63, 0x14, NULL);
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND) {
+				ret = 0;
+			} else if (ret >= 0) {
+				inner = rest + ret;
+				sceClibMemcpy_safe(&net, inner, 4);
+				record->valueA = sceNetNtohl(net);
+				sceClibMemcpy_safe(&net, inner + 4, 4);
+				record->valueB = sceNetNtohl(net);
+				sceClibMemcpy_safe(&net, inner + 8, 4);
+				record->valueC = sceNetNtohl(net);
+				sceClibMemcpy_safe(&net, inner + 12, 4);
+				record->valueD = sceNetNtohl(net);
+				inner += 16;
+				record->textB = NP_COMMERCE2_EMPTY_TEXT(record);
+				ret = npCommerce2FindRecordWhole(inner, length - (inner - start), 0x62, 0, &foundB);
+				if (ret >= 0 && foundB != 0)
+					record->textB = inner + ret;
+				if (ret >= 0) {
+					record->textC = NP_COMMERCE2_EMPTY_TEXT(record);
+					ret = npCommerce2FindRecordWhole(inner, length - (inner - start), 0xB7, 0, &foundC);
+					if (ret >= 0 && foundC != 0)
+						record->textC = inner + ret;
+					if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+						record->textD = NP_COMMERCE2_EMPTY_TEXT(record);
+						ret = npCommerce2FindRecordWhole(inner, length - (inner - start), 0xB8, 0,
+										 &foundD);
+						if (ret >= 0 && foundD != 0)
+							record->textD = inner + ret;
+						if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+							ret = 0;
+					}
+				}
+			}
+		}
+	}
+	return ret;
+}
