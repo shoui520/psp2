@@ -17,6 +17,7 @@
 #include <libhttp.h>
 #include <np/np_common.h>
 #include <np/np_webapi.h>
+#include <appmgr.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -157,18 +158,32 @@ extern int npWebApiGlobalLockCreate(void);
 extern int npWebApiGlobalLock(void) __attribute__((noinline));
 extern int npWebApiGlobalUnlock(void) __attribute__((noinline));
 
-/* a node of the maps the library keeps its contexts in: the value it holds and the next node */
-typedef struct NpWebApiMapNode {
-	unsigned char reserved0[40];
-	void *value;
+/* a user context: the library context it belongs to, its reference count, its ID and its user */
+typedef struct NpWebApiUserContext {
+	unsigned char reserved0[4];
+	NpWebApiLibContext *libContext;
+	int refCount;
+	int id;
+	SceNpOnlineId onlineId;
 	unsigned char reserved1[4];
-	struct NpWebApiMapNode *next;
-} NpWebApiMapNode;
+	void *requests;
+	unsigned char reserved2[4];
+	struct NpWebApiUserContext *next;
+	unsigned char reserved3[106];
+	unsigned char flag158;
+	unsigned char reserved4[1];
+} NpWebApiUserContext;
 
 extern volatile int g_systemParam;		/* 0x81010010 */
 extern int npWebApiConvertError(int error);
 extern int npWebApiLoadSystemParam(void);
-extern struct NpWebApiMapNode *npWebApiMapNodeNext(NpWebApiMapNode *node);
-extern void *npWebApiMapNodeValue(NpWebApiMapNode *node);
+extern NpWebApiUserContext *npWebApiUserContextNext(NpWebApiUserContext *userCtx);
+extern void *npWebApiUserContextRequests(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextGetId(NpWebApiUserContext *userCtx);
+extern NpWebApiUserContext *npWebApiUserContextSetNext(NpWebApiUserContext *userCtx, NpWebApiUserContext *next);
+extern SceNpOnlineId *npWebApiUserContextOnlineId(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextAddRef(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextFlag158(NpWebApiUserContext *userCtx);
+extern int npWebApiIsShellProcess(void);
 
 #endif

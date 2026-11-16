@@ -8,4 +8,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	libctx.cpp
 	heap.cpp
 	util.cpp
+	userctx.cpp
 )

@@ -21,12 +21,11 @@ int npWebApiLoadSystemParam(void)
 	return sceRegMgrSystemParamGetInt(226562, (int *)&g_systemParam);
 }
 
-NpWebApiMapNode *npWebApiMapNodeNext(NpWebApiMapNode *node)
+int npWebApiIsShellProcess(void)
 {
-	return node->next;
-}
+	unsigned char status[128];
 
-void *npWebApiMapNodeValue(NpWebApiMapNode *node)
-{
-	return node->value;
+	if (sceAppMgrGetStatusByName(NULL, status) >= 0)
+		return sceClibStrncmp("NPXS19999", (const char *)&status[12], sceClibStrnlen("NPXS19999", 0xFFFFFFFF)) == 0;
+	return 0;
 }
