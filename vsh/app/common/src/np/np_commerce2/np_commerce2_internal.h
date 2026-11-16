@@ -1265,6 +1265,21 @@ typedef struct NpCommerce2DatedRow {
 extern int npCommerce2ReadTableRowDated0x71(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatedRow *item);
 extern int npCommerce2InitTableResult0x72(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
 extern int npCommerce2ReadEntry0x16_8100D8E4(int a1, int a2, int a3);
+typedef struct NpCommerce2DatesRow {
+	SceNpCommerce2CommonData commonData;
+	const char *recordId;
+	const char *textA;
+	SceUInt32 flag;
+	SceUInt64 dateA;
+	SceUInt64 dateB;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	const char *textB;
+	SceUInt32 countOfA;
+} NpCommerce2DatesRow;
+
+extern int npCommerce2ReadTableRowDates0x72(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatesRow *item);
+extern int npCommerce2InitTableResult0x73(NpCommerce2SmallTableResult *result, const char *data, SceSize size);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1393,9 +1408,7 @@ extern int npCommerce2CreateReqGetTranDetail(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810097E0(int a1, int a2, int a3, int a4, int a5, int a6);
 extern int npCommerce2CreateReqGetSrvs(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetSrvDetail(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81015C9A(int a1, int a2, int a3);
 extern int npCommerce2CreateReqGetSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81015EB4(int a1, void *a2, int a3);
 extern int npCommerce2_81015F80(int a1, int a2, int a3);
 extern int npCommerce2_810162BA(int a1, int a2, int a3);
 extern int npCommerce2CreateReqChangeSubscr(SceUInt32 ctxId, SceUInt32 *reqId);

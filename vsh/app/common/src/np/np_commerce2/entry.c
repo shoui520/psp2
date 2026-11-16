@@ -1985,3 +1985,130 @@ int npCommerce2ReadTableRowDated0x71(const NpCommerce2Item *result, SceUInt32 in
 	}
 	return ret;
 }
+
+/* a result whose first record is the table of tag 0x73; the rows after the first bad one are dropped */
+int npCommerce2InitTableResult0x73(NpCommerce2SmallTableResult *result, const char *data, SceSize size)
+{
+	SceUInt32 version = 0;
+	SceUInt32 dataLength = 0;
+	SceUInt32 status;
+	SceUInt16 length;
+	SceUInt32 i;
+	int ret;
+	int r;
+
+	ret = npCommerce2ParseResponseHeader(data, size, &version, &dataLength, &status);
+	if (ret >= 0) {
+		SceUInt32 savedVersion;
+		SceUInt32 savedLength;
+
+		sceClibMemset(result, 0, 0x88);
+		savedVersion = version;
+		savedLength = dataLength;
+		sceClibMemset(result, 0, 0x5C);
+		result->commonData.buf_head = (const SceUChar8 *)data;
+		result->commonData.buf_size = (const SceUChar8 *)(ret + dataLength);
+		result->commonData.version = savedVersion;
+		result->commonData.data_size = savedLength;
+		result->commonData.data = (const SceUChar8 *)data + ret;
+		result->commonData.ov = status;
+		ret = npCommerce2FindTableRecord(data + ret, dataLength, 0x73, NULL, &result->table, status);
+		if (ret >= 0) {
+			r = 0;
+			if (result->table.rows != 0) {
+				i = 0;
+				for (;;) {
+					r = npCommerce2FindTableRow((const char *)result->commonData.data,
+								    result->commonData.data_size, 0x73, 0x9E, i,
+								    &length, result->commonData.ov);
+					if (r < 0)
+						break;
+					if (++i >= result->table.rows)
+						goto done;
+				}
+				if (i != 0) {
+					r = 0;
+					result->table.rows = i;
+				}
+			}
+done:
+			ret = r;
+			if (r >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
+
+
+/* the row of the table of tag 0x72 at an index: strings and a flag at fixed places, two dates, two
+ * values, a text and the count of records of tag 0x80 */
+int npCommerce2ReadTableRowDates0x72(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatesRow *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt16 found;
+	SceUInt32 net;
+	SceUInt64 net64;
+	SceUInt64 ms;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	ret = npCommerce2FindTableRow(data, result->commonData.data_size, 0x72, 0x8A, index, &length,
+				      result->commonData.ov);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x88);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->recordId = record;
+		item->textA = record + 57;
+		sceClibMemcpy_safe(&net, record + 106, 4);
+		item->flag = sceNetNtohl(net) != 0;
+		sceClibMemcpy_safe(&net64, record + 110, 8);
+		ms = sceNetNtohll(net64);
+		if (ms != 0) {
+			net64 = 1000 * ms;
+			item->dateA = net64 + 62135596800000000LL;
+		} else {
+			net64 = 0;
+			sceClibMemset(&item->dateA, 0, 8);
+		}
+		sceClibMemcpy_safe(&net64, record + 118, 8);
+		ms = sceNetNtohll(net64);
+		if (ms != 0) {
+			net64 = 1000 * ms;
+			item->dateB = net64 + 62135596800000000LL;
+		} else {
+			net64 = 0;
+			sceClibMemset(&item->dateB, 0, 8);
+		}
+		sceClibMemcpy_safe(&net, record + 126, 4);
+		item->valueA = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 130, 4);
+		item->valueB = sceNetNtohl(net);
+		rest = record + 134;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		item->textB = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 134, 0x79, 0, &found);
+		if (ret >= 0 && found != 0)
+			item->textB = rest + ret;
+		if (ret >= 0) {
+			ret = npCommerce2FindNestedRecordWhole(rest, length - 134, 0x80, NULL, &item->countOfA);
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+				ret = 0;
+		}
+	}
+	return ret;
+}
