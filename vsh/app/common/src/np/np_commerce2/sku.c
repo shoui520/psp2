@@ -499,3 +499,197 @@ int npCommerce2ReadTextItem0x25(const NpCommerce2Item *result, SceUInt32 index, 
 	}
 	return ret;
 }
+
+/* a SKU detail record of tag 0x4c: the values through the table of outputs, the texts, and the count
+ * of records of tag 0x9c */
+int npCommerce2ReadSkuDetail0x4c(const NpCommerce2Item *result, NpCommerce2SkuDetail *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUChar8 headerCopy[0x64];
+	NpCommerce2SkuOutputs out;
+	SceUInt16 length;
+	const char *start;
+	const char *rest;
+	int head;
+	int ret;
+
+	sceClibMemcpy_safe(headerCopy, result->commonData.buf_head, 0x64);
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), 0x4C, 0xB5, &length);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(item, 0, 0xB8);
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = result->commonData.version;
+	item->commonData.buf_head = result->commonData.buf_head;
+	start = data + ret;
+	item->commonData.data = (const SceUChar8 *)start;
+	item->commonData.data_size = length;
+	sceClibMemset(&out, 0, 0x48);
+	out.head = headerCopy;
+	out.mask = 6;
+	out.flags = &item->flags;
+	out.skuId = &item->skuId;
+	out.skuType = &item->skuType;
+	out.count = &item->count;
+	out.time = &item->time;
+	out.downloadable = &item->downloadable;
+	out.valueC = &item->valueC;
+	out.valueD = &item->valueD;
+	out.valueE = &item->valueE;
+	out.dateA = &item->dateA;
+	out.dateB = &item->dateB;
+	ret = npCommerce2ReadSkuValues(start, &out, 0, 0);
+	if (ret < 0)
+		return ret;
+	head = ret + 36;
+	rest = start + head;
+	item->commonData.data2 = (const SceUChar8 *)rest;
+	ret = npCommerce2ReadSkuTexts(&item->commonData, rest, (SceUInt16)(length - (head - 36)) - 36, item->skuType,
+				      &item->textA, &item->textB, &item->textC, &item->textD, &item->textE,
+				      &item->textF, &item->countOfA, &item->description);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x9C, NULL, &item->countOfB);
+	if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+		ret = 0;
+	return ret;
+}
+
+/* the SKU detail record with all its parts: the values, the texts, texts and counts of further tags and,
+ * for kind 2, whether a record of tag 0x4b follows */
+int npCommerce2ReadSkuDetailLong(const NpCommerce2Item *result, NpCommerce2SkuDetailLong *item, int kind)
+{
+	const char *data = (const char *)result->commonData.data2;
+	NpCommerce2SkuOutputs out;
+	SceUInt16 length;
+	SceUInt16 foundA;
+	SceUInt16 foundB;
+	SceUInt16 tag;
+	SceSize left;
+	const char *start;
+	const char *rest;
+	int head;
+	int ret;
+
+	tag = kind == 3 ? 138 : 77;
+	if (kind == 3)
+		sceClibMemset(item, 0, 0xF8);
+	else
+		sceClibMemset(item, 0, 0x100);
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size -
+					 (data - (const char *)result->commonData.data), tag, 0xC1, &length);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = result->commonData.version;
+	item->commonData.buf_head = result->commonData.buf_head;
+	start = data + ret;
+	item->commonData.data = (const SceUChar8 *)start;
+	item->commonData.data_size = length;
+	sceClibMemset(&out, 0, 0x5C);
+	sceClibMemset(&out, 0, 0x48);
+	out.head = result->commonData.buf_head;
+	out.mask = 6;
+	out.flags = &item->flags;
+	out.skuId = &item->skuId;
+	out.skuType = &item->skuType;
+	out.count = &item->count;
+	out.time = &item->time;
+	out.downloadable = &item->downloadable;
+	out.valueA = &item->valueA;
+	out.valueB = &item->valueB;
+	out.valueC = &item->valueC;
+	out.valueD = &item->valueD;
+	out.valueE = &item->valueE;
+	out.dateA = &item->dateA;
+	out.dateB = &item->dateB;
+	out.dateC = &item->dateC;
+	out.dateD = &item->dateD;
+	out.dateE = &item->dateE;
+	out.valueF = &item->valueF;
+	out.valueG = &item->valueG;
+	ret = npCommerce2ReadSkuRecord(start, &out);
+	if (ret < 0)
+		return ret;
+	head = ret;
+	rest = start + ret;
+	item->commonData.data2 = (const SceUChar8 *)rest;
+	ret = npCommerce2ReadSkuTexts(&item->commonData, rest, length - head, item->skuType, &item->textA,
+				      &item->textB, &item->textC, &item->textD, &item->textE, &item->textF,
+				      &item->countOfC, &item->description);
+	if (ret < 0)
+		return ret;
+	item->textG = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x3C, 0, &foundA);
+	if (ret >= 0 && foundA != 0)
+		item->textG = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x3D, NULL, &item->countOfA);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - head, 0x3E, NULL, &item->countOfB);
+	if (ret < 0)
+		return ret;
+	item->textH = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - head, 0x44, 0, &foundB);
+	if (ret >= 0 && foundB != 0)
+		item->textH = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	left = length - head;
+	if (kind == 2) {
+		if (npCommerce2FindRecordWhole(rest, left, 0x4B, 8, NULL) >= 0)
+			item->rewardKind = 3;
+		else
+			item->rewardKind = 1;
+		left = length - head;
+	}
+	ret = npCommerce2FindNestedRecordWhole(rest, left, 0x85, NULL, &item->countOfD);
+	if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+		ret = 0;
+	return ret;
+}
+
+/* the record of tag 0x3d at an index and, when the record is long enough, the value after its
+ * first three bytes */
+int npCommerce2ReadRecord0x3d(const NpCommerce2Item *result, SceUInt32 index, const char **record,
+			      SceUInt32 *value)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt32 net;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x3D, 3, index,
+					   &length);
+	if (ret >= 0) {
+		*record = data + ret;
+		if (length >= 7) {
+			if (value != NULL) {
+				sceClibMemcpy_safe(&net, data + ret + 3, 4);
+				*value = sceNetNtohl(net);
+			}
+		} else if (value != NULL) {
+			*value = 0;
+		}
+	}
+	return ret;
+}
+
+/* the record of tag 0x3e at an index */
+int npCommerce2ReadRecord0x3e(const NpCommerce2Item *result, SceUInt32 index, const char **record)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x3E, 3, index,
+					   &length);
+	if (ret >= 0)
+		*record = data + ret;
+	return ret;
+}

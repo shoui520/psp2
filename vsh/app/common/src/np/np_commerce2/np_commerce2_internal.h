@@ -831,6 +831,76 @@ extern int npCommerce2ReadSkuTexts(const SceNpCommerce2CommonData *item, const c
 				   int kind, const char **textA, const char **textB, const char **textC,
 				   const char **textD, const char **textE, const char **textF, SceUInt32 *countOfA,
 				   const char **description);
+typedef struct NpCommerce2SkuDetail {
+	SceNpCommerce2CommonData commonData;
+	const char *skuId;
+	SceUInt32 skuType;
+	SceUInt32 count;
+	SceUInt32 time;
+	SceUInt32 downloadable;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 valueE;
+	SceUInt32 padding;
+	SceUInt64 dateA;
+	SceUInt64 dateB;
+	const char *textA;
+	const char *textB;
+	const char *textC;
+	const char *textD;
+	const char *textE;
+	const char *textF;
+	SceUInt32 countOfA;
+	SceUInt32 flags;
+	SceUInt32 countOfB;
+	const char *description;
+	SceUInt32 padding2;
+} NpCommerce2SkuDetail;
+
+typedef struct NpCommerce2SkuDetailLong {
+	SceNpCommerce2CommonData commonData;
+	const char *skuId;
+	SceUInt32 skuType;
+	SceUInt32 count;
+	SceUInt32 time;
+	SceUInt32 downloadable;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt64 dateC;
+	SceUInt64 dateD;
+	SceUInt64 dateE;
+	SceUInt32 valueF;
+	SceUInt32 padding;
+	SceUInt64 valueG;
+	SceUInt32 valueE;
+	SceUInt32 padding2;
+	SceUInt64 dateA;
+	SceUInt64 dateB;
+	const char *textA;
+	const char *textB;
+	const char *textC;
+	const char *textG;
+	SceUInt32 countOfA;
+	SceUInt32 countOfB;
+	const char *textD;
+	const char *textE;
+	const char *textF;
+	const char *textH;
+	SceUInt32 countOfC;
+	SceUInt32 countOfD;
+	SceUInt32 flags;
+	const char *description;
+	SceUInt32 rewardKind;
+	SceUInt32 padding3;
+} NpCommerce2SkuDetailLong;
+
+extern int npCommerce2ReadSkuDetail0x4c(const NpCommerce2Item *result, NpCommerce2SkuDetail *item);
+extern int npCommerce2ReadSkuDetailLong(const NpCommerce2Item *result, NpCommerce2SkuDetailLong *item, int kind);
+extern int npCommerce2ReadRecord0x3d(const NpCommerce2Item *result, SceUInt32 index, const char **record,
+				     SceUInt32 *value);
+extern int npCommerce2ReadRecord0x3e(const NpCommerce2Item *result, SceUInt32 index, const char **record);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -895,14 +965,10 @@ extern int npCommerce2GetContentRatingInfoAtOfProduct(const NpCommerce2Item *ite
 						      SceNpCommerce2ContentRatingInfo *info);
 extern int npCommerce2ReadListTexts(const SceNpCommerce2CommonData *item, const char *buf, SceUInt16 length,
 				    int kind, const char **textA, const char **textB, const char **textC);
-extern int npCommerce2_8101144E(int a1, int a2, int a3, int a4);
-extern int npCommerce2_810114C6(int a1, int a2, int a3);
 extern int npCommerce2_81010B14(int a1, int a2);
 extern int npCommerce2_81010BEC(int a1, int a2);
 extern int npCommerce2CreateReqAddCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_810065DA(int a1, int a2, int a3, int a4);
-extern int npCommerce2_81010FFA(int a1, int a2);
-extern int npCommerce2_8101117E(int a1, void *a2, int a3);
 extern int npCommerce2CreateReqRemCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8101150E(int a1, void *a2, int a3);
 extern int npCommerce2_810115FC(int a1, int a2);
