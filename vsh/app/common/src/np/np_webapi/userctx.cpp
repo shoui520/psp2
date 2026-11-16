@@ -79,3 +79,49 @@ void *npWebApiUserContextSetOnlineId(NpWebApiUserContext *userCtx, const SceNpOn
 		return sceClibMemcpy_safe(&userCtx->onlineId, onlineId, sizeof(userCtx->onlineId));
 	return userCtx;
 }
+
+NpWebApiLibContext *npWebApiUserContextGetLibContext(NpWebApiUserContext *userCtx)
+{
+	return userCtx->libContext;
+}
+
+int npWebApiUserContextGetHttpTemplateId(NpWebApiUserContext *userCtx)
+{
+	return userCtx->httpTemplateId;
+}
+
+void *npWebApiUserContextGetObject44(NpWebApiUserContext *userCtx)
+{
+	return userCtx->object44;
+}
+
+NpWebApiUserContext *npWebApiUserContextSetFlag97(NpWebApiUserContext *userCtx, char value)
+{
+	userCtx->flag97 = value;
+	return userCtx;
+}
+
+int npWebApiUserContextGetFlag97(NpWebApiUserContext *userCtx)
+{
+	return userCtx->flag97;
+}
+
+int npWebApiUserContextGetParam0(NpWebApiUserContext *userCtx)
+{
+	return userCtx->param0;
+}
+
+int npWebApiUserContextGetParam1(NpWebApiUserContext *userCtx)
+{
+	return userCtx->param1;
+}
+
+int npWebApiUserContextUnlockLib(NpWebApiUserContext *userCtx)
+{
+	return npWebApiLibContextUnlock(userCtx->libContext);
+}
+
+int npWebApiUserContextLockLib(NpWebApiUserContext *userCtx)
+{
+	return npWebApiLibContextLock(userCtx->libContext);
+}

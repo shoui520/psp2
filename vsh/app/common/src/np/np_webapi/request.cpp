@@ -46,3 +46,46 @@ int npWebApiRequestHasOtherRefs(NpWebApiRequest *request)
 	npWebApiLibContextUnlock(libCtx);
 	return others;
 }
+
+int npWebApiRequestGetFixedSize(void)
+{
+	return 64;
+}
+
+NpWebApiRequest *npWebApiRequestSetField316(NpWebApiRequest *request, int value)
+{
+	request->field316 = value;
+	return request;
+}
+
+int npWebApiRequestGetField312(NpWebApiRequest *request)
+{
+	return request->field312;
+}
+
+int npWebApiRequestGetFlag328(NpWebApiRequest *request)
+{
+	return request->flag328;
+}
+
+NpWebApiRequest *npWebApiRequestSetFlag328(NpWebApiRequest *request, char value)
+{
+	request->flag328 = value;
+	return request;
+}
+
+int npWebApiRequestGetFlag389(NpWebApiRequest *request)
+{
+	return request->flag389;
+}
+
+NpWebApiRequest *npWebApiRequestSetFlag389(NpWebApiRequest *request, char value)
+{
+	request->flag389 = value;
+	return request;
+}
+
+void *npWebApiRequestGetObject280(NpWebApiRequest *request)
+{
+	return request->object280;
+}
