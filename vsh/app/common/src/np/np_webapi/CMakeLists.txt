@@ -19,4 +19,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	userctx_destruct.cpp
 	multipart.cpp
 	userctx_handle.cpp
+	push_notify.cpp
 )

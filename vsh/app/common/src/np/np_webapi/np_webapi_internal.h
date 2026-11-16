@@ -118,6 +118,19 @@ extern int SceNpManager_737B2820(void);
 extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
 extern int SceNpCommonPs4_6B428829(void *allocator, void *node);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
+struct NpPushKey;
+struct NpWebApiIpmiClient;
+extern void SceNpCommonPs4_B0BAB9BE(struct NpPushKey *key);			/* key: default constructor */
+extern void SceNpCommonPs4_1543D7EE(struct NpPushKey *key);			/* key: destructor */
+extern void SceNpCommonPs4_AEC0DAC5(struct NpPushKey *dst, const struct NpPushKey *src);	/* key: copy */
+extern struct NpPushKey *SceNpCommonPs4_D0787194(struct NpPushKey *key, const void *onlineId);	/* key: from online ID */
+extern int SceNpCommonPs4_21B2C0B7(const struct NpPushKey *a, const struct NpPushKey *b);	/* key: equal */
+extern void *SceNpCommonPs4_AA980113(void *allocator, int size);
+extern int SceNpCommonPs4_A2A8493B(void *mutex);				/* lock */
+extern int SceNpCommonPs4_6BA5A164(void *mutex);				/* unlock */
+extern int SceNpCommonPs4_D84BF4B7(int arg);
+extern struct NpWebApiIpmiClient *SceNpCommonPs4_A0599F24(void);			/* the NP service's IPMI client */
+extern void SceNpCommonPs4_F50BD96A(int result);				/* halt after a failed assertion */
 #ifdef __cplusplus
 }
 #endif
@@ -430,14 +443,54 @@ extern int npWebApiRequestHasOtherRefs(NpWebApiRequest *request);
 extern void *npWebApiUserContextSetOnlineId(NpWebApiUserContext *userCtx, const SceNpOnlineId *onlineId);
 
 /* the push notification library context: one object, made at start (np_push/src) */
+/* a user the library listens for: its key (the 20-byte ID at +4) and how many registered it */
+typedef struct NpPushKey {
+	unsigned char reserved0[4];
+	unsigned char id[20];
+} NpPushKey;
+
+typedef struct NpPushUserNode {
+	struct NpPushUserNode *prev;
+	struct NpPushUserNode *next;
+	NpPushKey key;
+	int refCount;
+} NpPushUserNode;
+
+typedef struct NpPushUserList {
+	NpPushUserNode *sentinel;
+	int count;
+	void *allocator;
+} NpPushUserList;
+
 typedef struct NpPushLibContext {
 	const void **vtable;
+	unsigned char reserved4[12];
+	unsigned char mutex[48];
+	NpPushUserList users;
+	unsigned char reserved76[12];
+	unsigned int flags;
 } NpPushLibContext;
 
 extern NpPushLibContext *g_pushLibContext;	/* 0x81010038 */
 extern void npPushLibContextDelete(void);
 extern NpPushLibContext *npPushLibContextGet(void);
 extern int npPushSetCallbackParam(const int *param);
+typedef struct NpPushUserValue {
+	NpPushKey key;
+	int refCount;
+} NpPushUserValue;
+
+extern void *operator new(unsigned int size, void *where);
+extern void npPushUserListInsert(NpPushUserNode **pResult, NpPushUserList *list,
+	const NpPushUserValue *value) __attribute__((noinline));
+extern int npPushUserListErase(NpPushUserNode **pResult, NpPushUserList *list, NpPushUserNode **pAt)
+	__attribute__((noinline));
+extern int npPushLibContextAcquireUser(NpPushLibContext *ctx, const NpPushKey *key, int *pCount)
+	__attribute__((noinline));
+extern int npPushLibContextReleaseUser(NpPushLibContext *ctx, const NpPushKey *key, int *pCount)
+	__attribute__((noinline));
+extern int npPushLibContextStartNotification(NpPushLibContext *ctx, const NpPushKey *key);
+extern int npPushLibContextStopNotification(NpPushLibContext *ctx, const NpPushKey *key);
 extern const char *npPushFilterName(const unsigned char *filter);
 
 /* the NP service's IPMI client: slot 5 of its table makes a synchronous call */
