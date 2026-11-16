@@ -27,6 +27,7 @@ struct AbstractThreadCallbacks {
 	void *reserved[2];
 	int (*waitSignal)(uint32_t id, void *cause);
 	int (*sendSignal)(uint32_t id);
+	uint32_t reserved2[28];
 };
 
 /* the thread is a kernel thread: its ID is the kernel's shifted left, with bit 0 set */
@@ -110,6 +111,40 @@ public:
 		/* Sony's check is of waitSignal, before it calls sendSignal */
 		ABSTRACT_THREAD_ASSERT(200, t->callbacks->waitSignal != NULL);
 		return t->callbacks->sendSignal(t->id);
+	}
+
+	/* thread starts running on the current thread, which becomes its parent */
+	ULT_INLINE static void enter(AbstractThread *thread)
+	{
+		__builtin_dmb();
+		ULT_ASSERT_EQUAL_AT("AbstractThread.h", 113, "thread->parent==INVALID_ID",
+				    (int)thread->parent, (int)INVALID_ID);
+		thread->parent = *getTLS();
+		*getTLS() = thread;
+		__builtin_dmb();
+	}
+
+	/* thread, which runs on the current thread, gives it back to the one it was switched from */
+	ULT_INLINE static void leave(AbstractThread *thread)
+	{
+		AbstractThread *current = *getTLS();
+
+		ULT_ASSERT_AT("AbstractThread.h", 125, "! isKernelThread(current)",
+			      !isKernelThread((uint32_t)current));
+		thread->previous = current;
+		AbstractThread **tls = getTLS();
+		*tls = thread->parent;
+		thread->parent = (AbstractThread *)INVALID_ID;
+	}
+
+	/* thread runs again on the current thread, back where it left (leave) */
+	ULT_INLINE static void resume(AbstractThread *thread)
+	{
+		ULT_ASSERT_EQUAL_AT("AbstractThread.h", 134, "thread->parent==INVALID_ID",
+				    (int)thread->parent, (int)INVALID_ID);
+		thread->parent = *getTLS();
+		AbstractThread **tls = getTLS();
+		*tls = thread->previous;
 	}
 
 	ULT_INLINE static void releaseID(uint32_t id)

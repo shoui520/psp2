@@ -6,6 +6,7 @@
 #include "Queue.h"
 #include "Rwlock.h"
 #include "Mutex.h"
+#include "Ulthread.h"
 
 /* the revision of the objects' layout the kernel's ulobjmgr reads (the debugger's view) */
 #define ULT_PROTOCOL_REVISION	0x02100002
@@ -325,9 +326,14 @@ int sceUltQueueTryPop(SceUltQueue *queue, void *data)
 	return ((Queue *)queue)->tryPop(data);
 }
 
+/* a user's queue leaves the debugger's table (an ulthread runtime's own were never in it) */
 int sceUltQueueDestroy(SceUltQueue *queue)
 {
-	return ((Queue *)queue)->destroy();
+	int ret = ((Queue *)queue)->destroy();
+	if (ret != SCE_OK)
+		return ret;
+	SceUlobjDbg_F9C0F5DA(((Queue *)queue)->ulobjId);
+	return SCE_OK;
 }
 
 int32_t sceUltGetQueueInfo(const SceUltQueue *queue, SceUltQueueInfo *info,
@@ -733,6 +739,85 @@ int32_t sceUltGetConditionVariableInfo(const SceUltConditionVariable *conditionV
 		return ret;
 	info->numWaitThreads = ret;
 	return SCE_OK;
+}
+
+uint32_t sceUltUlthreadRuntimeGetWorkAreaSize(uint32_t maxNumUlthread, uint32_t numWorkerThread)
+{
+	return UlthreadRuntime::getWorkAreaSize(maxNumUlthread, numWorkerThread);
+}
+
+int32_t _sceUltUlthreadRuntimeCreate(SceUltUlthreadRuntime *runtime, const char *name,
+				     uint32_t maxNumUlthread, uint32_t numWorkerThread,
+				     void *workArea, const SceUltUlthreadRuntimeOptParam *optParam,
+				     uint32_t buildVersion)
+{
+	return ((UlthreadRuntime *)runtime)->initialize(name, maxNumUlthread, numWorkerThread,
+							workArea, optParam, buildVersion);
+}
+
+int32_t sceUltUlthreadRuntimeDestroy(SceUltUlthreadRuntime *runtime)
+{
+	return ((UlthreadRuntime *)runtime)->destroy();
+}
+
+int32_t sceUltGetUlthreadRuntimeInfo(const SceUltUlthreadRuntime *runtime,
+				     SceUltUlthreadRuntimeInfo *pInfo, SceUltUlthread **ulthreadList,
+				     const uint32_t maxNumUlthread, uint32_t *workerThreadIdList,
+				     const uint32_t maxNumWorkerThreadId)
+{
+	return ((const UlthreadRuntime *)runtime)->getInfo(pInfo, ulthreadList, maxNumUlthread,
+							    workerThreadIdList,
+							    maxNumWorkerThreadId);
+}
+
+int32_t _sceUltUlthreadCreate(SceUltUlthread *ulthread, const char *name,
+			      SceUltUlthreadEntry entry, uint32_t arg, void *context,
+			      uint32_t sizeContext, SceUltUlthreadRuntime *runtime,
+			      const SceUltUlthreadOptParam *optParam, uint32_t buildVersion)
+{
+	return ((Ulthread *)ulthread)->initialize(name, entry, arg, context, sizeContext,
+						  (UlthreadRuntime *)runtime, optParam,
+						  buildVersion);
+}
+
+int32_t sceUltUlthreadJoin(SceUltUlthread *ulthread, int32_t *status)
+{
+	return ((Ulthread *)ulthread)->join(status);
+}
+
+int32_t sceUltUlthreadTryJoin(SceUltUlthread *ulthread, int32_t *status)
+{
+	return ((Ulthread *)ulthread)->tryJoin(status);
+}
+
+/* the current ulthread goes back to the ready ones; a one-shot ulthread cannot */
+int32_t sceUltUlthreadYield(void)
+{
+	Ulthread *self = Ulthread::getSelf();
+
+	if (self == NULL)
+		return SCE_ULT_ERROR_PERMISSION;
+	if (self->context == NULL)
+		return SCE_ULT_ERROR_PERMISSION;
+	return self->worker->switchFromUlthread(self, WORKER_REQUEST_YIELD, 0);
+}
+
+int32_t sceUltUlthreadExit(int32_t status)
+{
+	return Ulthread::exit(status);
+}
+
+int32_t sceUltUlthreadGetSelf(SceUltUlthread **ulthread)
+{
+	if (ulthread == NULL)
+		return SCE_ULT_ERROR_NULL;
+	*ulthread = (SceUltUlthread *)Ulthread::getSelf();
+	return SCE_OK;
+}
+
+int32_t sceUltGetUlthreadInfo(const SceUltUlthread *ulthread, SceUltUlthreadInfo *pInfo)
+{
+	return ((const Ulthread *)ulthread)->getInfo(pInfo);
 }
 
 }

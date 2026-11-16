@@ -14,4 +14,11 @@ psp2_module(vs0_sys_external_libult KIND user COMPILER snc PARTIAL SOURCES
 	src/ult_util.cpp
 	src/Ulthread.cpp
 	src/WorkerThread.cpp
+	../../../../sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sdk/target/src/libsnc/unwind_pr1.c
+	../../../../sdk/target/src/libsnc/unwind_pr2.c
 )
+# libsnc's personality routines, Sony's weak copies linked in after the library's objects
+set_source_files_properties(../../../../sdk/target/src/libsnc/unwind_pr0.c
+	../../../../sdk/target/src/libsnc/unwind_pr1.c
+	../../../../sdk/target/src/libsnc/unwind_pr2.c PROPERTIES COMPILE_OPTIONS -Xblxcall=1)

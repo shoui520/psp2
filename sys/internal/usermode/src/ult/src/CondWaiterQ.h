@@ -51,7 +51,7 @@ public:
 		for (uint32_t i = numThreads; i != 0; i--)
 			m_waiterQueue.push(entry++);
 		m_syncObjectQueue.initialize(entry++);
-		for (uint32_t i = numSyncObjects; i != 0; i--)
+		for (uint32_t i = 0; i < numSyncObjects; i++)
 			m_syncObjectQueue.push(entry++);
 		m_workArea = workArea;
 		m_numFreeWaiters = numThreads;

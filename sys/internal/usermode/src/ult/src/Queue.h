@@ -28,13 +28,11 @@ public:
 	 * The work area: a dummy and numData entries, a dummy and numQueueObject entries, then
 	 * the data.
 	 */
-	__attribute__((noinline)) int initialize(const char *name, uint32_t numData, uint32_t dataSize,
-		       uint32_t numQueueObject, SceUltWaitingQueueResourcePool *waitingQueueResourcePool,
+	ULT_INLINE int initializeInline(const char *name, uint32_t numData, uint32_t dataSize,
+		       uint32_t numQueueObject, WaitingQueueResourcePoolInternal *pool,
 		       void *workArea, const SceUltQueueDataResourcePoolOptParam *optParam,
 		       uint32_t buildVersion)
 	{
-		WaitingQueueResourcePoolInternal *pool = internalOf(waitingQueueResourcePool);
-
 		if (optParam != NULL) {
 			int ret = checkOptParam(optParam);
 			if (ret != SCE_OK)
@@ -69,6 +67,27 @@ public:
 			m_queueQueue.push(entry++);
 		m_workArea = workArea;
 		return m_semaphore.initialize(numData, pool, NULL, buildVersion, &m_dummy);
+	}
+
+	/* a user's pool, waiting in a user's waiting queue resource pool */
+	__attribute__((noinline)) int initialize(const char *name, uint32_t numData, uint32_t dataSize,
+		       uint32_t numQueueObject, SceUltWaitingQueueResourcePool *waitingQueueResourcePool,
+		       void *workArea, const SceUltQueueDataResourcePoolOptParam *optParam,
+		       uint32_t buildVersion)
+	{
+		return initializeInline(name, numData, dataSize, numQueueObject,
+					internalOf(waitingQueueResourcePool), workArea, optParam,
+					buildVersion);
+	}
+
+	/* an ulthread runtime's own pool */
+	__attribute__((noinline)) int initialize(const char *name, uint32_t numData, uint32_t dataSize,
+		       uint32_t numQueueObject, WaitingQueueResourcePoolInternal *waitingQueueResourcePool,
+		       void *workArea, const SceUltQueueDataResourcePoolOptParam *optParam,
+		       uint32_t buildVersion)
+	{
+		return initializeInline(name, numData, dataSize, numQueueObject,
+					waitingQueueResourcePool, workArea, optParam, buildVersion);
 	}
 
 	__attribute__((noinline)) int destroy()
@@ -146,7 +165,7 @@ public:
 			return SCE_ULT_ERROR_INVALID;
 		QUEUE_ASSERT(583, "buildVersion >= 0x00910000", buildVersion >= ULT_BUILD_VERSION_MIN);
 		if (optParam == NULL) {
-			_sceUltQueueOptParamInitialize(&defaultOptParam, ULT_VERSION);
+			initializeOptParam(&defaultOptParam, ULT_VERSION);
 			optParam = &defaultOptParam;
 		} else {
 			int ret = checkOptParam(optParam);
@@ -210,7 +229,6 @@ public:
 			QUEUE_ASSERT(711, "ret == SCE_ULT_ERROR_STATE", ret == SCE_ULT_ERROR_STATE);
 		m_queue.mDestroyed = true;
 		__builtin_dmb();
-		SceUlobjDbg_F9C0F5DA(ulobjId);
 		return SCE_OK;
 	}
 
@@ -308,6 +326,9 @@ public:
 		return SCE_OK;
 	}
 
+	/* tryPop, for the one caller Sony's build calls it out of line from */
+	__attribute__((noinline)) int tryPopOutOfLine(void *data);
+
 	ULT_INLINE int tryPop(void *data)
 	{
 		if (data == NULL)
@@ -326,5 +347,10 @@ public:
 		return SCE_OK;
 	}
 };
+
+inline int Queue::tryPopOutOfLine(void *data)
+{
+	return tryPop(data);
+}
 
 #endif

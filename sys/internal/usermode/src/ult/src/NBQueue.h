@@ -20,11 +20,13 @@ public:
 		mDestroyed = false;
 	}
 
+	/* push's body, for the one caller Sony's build inlines it into */
+	ULT_INLINE int pushInline(NBQueueEntry2 *entry);
 	int push(NBQueueEntry2 *entry);
 	NBQueueEntry2 *pop();
 };
 
-inline __attribute__((noinline)) int NBQueue3::push(NBQueueEntry2 *entry)
+inline int NBQueue3::pushInline(NBQueueEntry2 *entry)
 {
 	NBQueueID pushEntry = makeID(0, (uint32_t)entry);
 	HeadReservation r;
@@ -48,6 +50,11 @@ inline __attribute__((noinline)) int NBQueue3::push(NBQueueEntry2 *entry)
 			break;
 	} while (1);
 	return SCE_OK;
+}
+
+inline __attribute__((noinline)) int NBQueue3::push(NBQueueEntry2 *entry)
+{
+	return pushInline(entry);
 }
 
 inline __attribute__((noinline)) NBQueueEntry2 *NBQueue3::pop()

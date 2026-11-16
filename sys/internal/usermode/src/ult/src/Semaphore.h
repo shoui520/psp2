@@ -59,7 +59,7 @@ public:
 			return SCE_ULT_ERROR_ALIGNMENT;
 		SEMAPHORE_ASSERT(141, "buildVersion >= 0x00910000", buildVersion >= ULT_BUILD_VERSION_MIN);
 		if (optParam == NULL) {
-			_sceUltSemaphoreOptParamInitialize(&defaultOptParam, ULT_VERSION);
+			initializeOptParam(&defaultOptParam, ULT_VERSION);
 			optParam = &defaultOptParam;
 		} else {
 			int ret = checkOptParam(optParam);

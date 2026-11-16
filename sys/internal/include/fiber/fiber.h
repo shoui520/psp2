@@ -10,13 +10,14 @@
 #include <sce_fiber.h>
 #include <ulobjmgr/ulobjmgr.h>
 
-/* sceFiberInitialize with ULT_FIBER_FLAG_* options */
+/* sceFiberInitialize with ULT_FIBER_FLAG_* options (libult's; the SDK's version unused) */
 SceInt32 _sceFiberInitializeWithInternalOptionImpl(SceFiber *fiber, const char *name,
 						   SceFiberEntry entry,
 						   SceUInt32 argOnInitialize,
 						   void *addrContext, SceUInt32 sizeContext,
 						   const SceFiberOptParam *optParam,
-						   SceUInt32 internalOption);
+						   SceUInt32 internalOption,
+						   SceUInt32 buildVersion);
 
 /* sceFiberRun and sceFiberSwitch giving a fiber made without one its context area */
 SceInt32 _sceFiberAttachContextAndRun(SceFiber *fiber, void *addrContext, SceUInt32 sizeContext,

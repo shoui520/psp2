@@ -337,7 +337,8 @@ SceInt32 _sceFiberInitializeWithInternalOptionImpl(SceFiber *fiber, const char *
 						   SceUInt32 argOnInitialize,
 						   void *addrContext, SceUInt32 sizeContext,
 						   const SceFiberOptParam *optParam,
-						   SceUInt32 internalOption)
+						   SceUInt32 internalOption,
+						   SceUInt32 buildVersion)
 {
 	return initializeFiber((UltFiber *)fiber, name, entry, argOnInitialize, addrContext,
 			       sizeContext, optParam, internalOption);
