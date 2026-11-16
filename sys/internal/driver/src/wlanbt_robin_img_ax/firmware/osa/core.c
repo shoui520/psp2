@@ -25,8 +25,13 @@ int osaTranslateStatus(int status)
 	return OSA_ERROR;
 }
 
-/* Set to 1 by osaInit() once the workspace exists. */
-uint8_t osaWorkspaceReady __attribute__((section(".dtcm.rw")));
+/* A ThreadX status as OSA's, translated only when it is an error (as the callers test it). */
+static inline int osaReturnStatus(int status)
+{
+	return status != 0 ? osaTranslateStatus(status) : 0;
+}
+
+/* The workspace, once osaGetWorkspace() has handed it out. */
 struct OsaWorkspace *osaWorkspaceHandle __attribute__((section(".dtcm.rw")));
 struct OsaWorkspace osaWorkspace __attribute__((section(".dtcm.bss")));
 
@@ -40,10 +45,9 @@ int osaGetWorkspace(struct OsaWorkspace **workspace)
 	return 0;
 }
 
-void *osaClearWorkspace(void *workspace)
+void osaClearWorkspace(void *workspace)
 {
 	__aeabi_memclr(workspace, sizeof(struct OsaWorkspace));
-	return workspace;
 }
 
 int osaCreateThread(TX_THREAD *thread, void *stack, ULONG stackSize,
@@ -95,7 +99,7 @@ int osaCreateMessageQueue(struct OsaMessageQueue *queue, const char *name,
 			  void *storage, uint32_t allocationClass)
 {
 	uint32_t size = messageSize * capacity;
-	void *memory = storage;
+	void *memory;	/* Marvell's: never set from storage, so a caller's storage is not used */
 	int status;
 
 	if (storage == NULL) {
@@ -116,23 +120,26 @@ int osaCreateMessageQueue(struct OsaMessageQueue *queue, const char *name,
 int osaSendMessageQueue(struct OsaMessageQueue *queue, uint32_t messageSize,
 			uintptr_t message, uint32_t timeout)
 {
-	return osaTranslateStatus(tx_queue_send((TX_QUEUE *)queue, &message,
+	return osaReturnStatus(tx_queue_send((TX_QUEUE *)queue, &message,
 						TX_NO_WAIT));
 }
 
 int osaReceiveMessageQueue(struct OsaMessageQueue *queue, uintptr_t *message,
 			   uint32_t messageSize, uint32_t timeout)
 {
-	return osaTranslateStatus(tx_queue_receive((TX_QUEUE *)queue, message,
+	return osaReturnStatus(tx_queue_receive((TX_QUEUE *)queue, message,
 						   timeout));
 }
+
+/* Pool objects are anonymous: the name is a pointer to an empty string. */
+static char osaPoolName[4] __attribute__((section(".itcm.rw")));
 
 /* Name shared by the event flag groups created through OSA. */
 static const char *osaObjectName __attribute__((section(".itcm.rw"))) = "OSA";
 
 int osaCreateEventFlags(struct OsaEventFlags *flags)
 {
-	return osaTranslateStatus(tx_event_flags_create(
+	return osaReturnStatus(tx_event_flags_create(
 		(TX_EVENT_FLAGS_GROUP *)flags, (CHAR *)osaObjectName));
 }
 
@@ -143,7 +150,7 @@ int osaSetEventFlags(struct OsaEventFlags *flags, uint32_t events, uint32_t mode
 		mode = TX_AND;
 	else if (mode == 7 || mode == 8)
 		mode = TX_OR;
-	return osaTranslateStatus(tx_event_flags_set(
+	return osaReturnStatus(tx_event_flags_set(
 		(TX_EVENT_FLAGS_GROUP *)flags, events, mode));
 }
 
@@ -155,7 +162,7 @@ int osaGetEventFlagsState(TX_EVENT_FLAGS_GROUP *group, uint32_t *flags)
 	ULONG suspendedCount;
 	TX_EVENT_FLAGS_GROUP *nextGroup;
 
-	return osaTranslateStatus(tx_event_flags_info_get(group, &name, (ULONG *)flags,
+	return osaReturnStatus(tx_event_flags_info_get(group, &name, (ULONG *)flags,
 							  &firstSuspended,
 							  &suspendedCount,
 							  &nextGroup));
@@ -202,23 +209,20 @@ int osaWaitEventFlags(struct OsaEventFlags *flags, uint32_t requested,
 
 int osaCreateSemaphore(struct OsaSemaphore *semaphore, uint32_t count)
 {
-	return osaTranslateStatus(tx_semaphore_create(
+	return osaReturnStatus(tx_semaphore_create(
 		(TX_SEMAPHORE *)semaphore, "OSA_Sema", count));
 }
 
 int osaWaitSemaphore(struct OsaSemaphore *semaphore, uint32_t timeout)
 {
-	return osaTranslateStatus(tx_semaphore_get((TX_SEMAPHORE *)semaphore,
+	return osaReturnStatus(tx_semaphore_get((TX_SEMAPHORE *)semaphore,
 						   timeout));
 }
 
 int osaReleaseSemaphore(struct OsaSemaphore *semaphore)
 {
-	return osaTranslateStatus(tx_semaphore_put((TX_SEMAPHORE *)semaphore));
+	return osaReturnStatus(tx_semaphore_put((TX_SEMAPHORE *)semaphore));
 }
-
-/* Pool objects are anonymous: the name is a pointer to an empty string. */
-static char osaPoolName[4] __attribute__((section(".itcm.rw")));
 
 int osaCreatePool(void *pool, uint32_t type, void *start, uint32_t size,
 		  uint32_t blockSize)
@@ -274,12 +278,14 @@ static uint8_t osaIdleStack[0x1cc] __attribute__((section(".itcm.bss")));
 /* Returns 1 if the idle thread could not be created. */
 int osaCreateIdleThread(void)
 {
+	uint8_t status;
+
 	osaIdleHooks = NULL;
-	if ((uint8_t)tx_thread_create(&osaIdleThread, "Idle", osaIdleTask, 0,
-				      osaIdleStack, sizeof(osaIdleStack), 30, 30, 0,
-				      TX_DONT_START) != 0)
-		return 1;
-	return 0;
+	status = tx_thread_create(&osaIdleThread, "Idle", osaIdleTask, 0, osaIdleStack,
+				  sizeof(osaIdleStack), 30, 30, 0, TX_DONT_START);
+	if (status != 0)
+		status = 1;
+	return status;
 }
 
 int osaStartIdleThread(void)

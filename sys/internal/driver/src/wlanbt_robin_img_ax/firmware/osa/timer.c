@@ -326,6 +326,7 @@ uint32_t osaGetNextTimerDeadline(uint64_t *deadline, uint32_t flagMask,
 	struct OsaTimerEntry *entry;
 	uint32_t remaining = 0;
 	uint32_t elapsed;
+	uint32_t ticks;
 	UINT posture;
 
 	if (osaTimerDeadlineOverride(deadline, flagMask, keepPaused, &remaining))
@@ -337,18 +338,18 @@ uint32_t osaGetNextTimerDeadline(uint64_t *deadline, uint32_t flagMask,
 			break;
 		if (flagMask && !(entry->flags & flagMask))
 			continue;
-		remaining = entry->remainingTicks;
-		*deadline = romGetTimerTimestamp() + remaining;
+		ticks = entry->remainingTicks;
+		remaining = ticks;
+		*deadline = romGetTimerTimestamp() + ticks;
 	}
 	tx_interrupt_control(posture);
 	if (!keepPaused)
 		osaResumeTimers();
-	if (!remaining)
-		return remaining;
-	elapsed = osaGetTimerElapsedTicks();
-	if (remaining < elapsed)
-		return 1;
-	return remaining - elapsed;
+	if (remaining) {
+		elapsed = osaGetTimerElapsedTicks();
+		remaining = remaining < elapsed ? 1 : remaining - elapsed;
+	}
+	return remaining;
 }
 
 /*

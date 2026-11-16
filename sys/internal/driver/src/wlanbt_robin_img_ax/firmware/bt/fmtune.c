@@ -917,7 +917,7 @@ __attribute__((noinline)) void btSbcResolveTable(int enable)
 int btSbcScheduleTable(uint32_t frequency, uint32_t *station, uint8_t mode)
 {
 	uint16_t levels[FM_SEARCH_RING + 1];
-	uint8_t probes[FM_SEARCH_PROBES];
+	uint8_t probes[FM_SEARCH_PROBES] = { 0, 1, FM_SEARCH_RING - 2, FM_SEARCH_RING - 1 };
 	int16_t offsets[FM_SEARCH_PROBES];
 	uint32_t features, startFrequency, freq;
 	unsigned int tuneMode, hardware, step, current, i, k;
@@ -937,10 +937,6 @@ int btSbcScheduleTable(uint32_t frequency, uint32_t *station, uint8_t mode)
 	tolerance = fmTuner.measureTolerance;
 	startFrequency = fmSettings.frequency;
 	__aeabi_memclr4(levels, sizeof(levels));
-	probes[0] = 0;
-	probes[1] = 1;
-	probes[2] = FM_SEARCH_RING - 2;
-	probes[3] = FM_SEARCH_RING - 1;
 	current = 4;
 	if ((features & 0x1000) == 0)
 		return 21;

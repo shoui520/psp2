@@ -41,8 +41,8 @@ struct OsaPoolEntry {
 	struct OsaPoolEntry *prev;
 };
 
-struct OsaWorkspace {
-	TX_BYTE_POOL systemPool;
+/* The table of pools; the pool functions work through a pointer to it. */
+struct OsaPoolTable {
 	uint32_t poolCount;
 	TX_SEMAPHORE lock;
 	struct OsaPoolEntry pools[OSA_POOL_COUNT];
@@ -50,9 +50,15 @@ struct OsaWorkspace {
 	struct OsaPoolEntry *freeList;
 };
 
+struct OsaWorkspace {
+	TX_BYTE_POOL systemPool;
+	struct OsaPoolTable table;
+};
+
 _Static_assert(sizeof(struct OsaPoolEntry) == 76, "OSA pool entry");
 _Static_assert(sizeof(struct OsaWorkspace) == 2676, "OSA workspace");
-_Static_assert(offsetof(struct OsaWorkspace, pools) == 84, "OSA pool table");
+_Static_assert(offsetof(struct OsaWorkspace, table) == 52, "OSA pool table");
+_Static_assert(offsetof(struct OsaPoolTable, freeList) == 2620, "OSA free list");
 
 /* Entries on the idle hook list, run in turn by the idle thread. */
 struct OsaIdleHook {
@@ -77,7 +83,7 @@ int osaCreateTask(TX_THREAD **handle, void *stack, ULONG stackSize, UINT priorit
 /* osa/core.c */
 int osaTranslateStatus(int status);
 int osaGetWorkspace(struct OsaWorkspace **workspace);
-void *osaClearWorkspace(void *workspace);
+void osaClearWorkspace(void *workspace);
 int osaCreateThread(TX_THREAD *thread, void *stack, ULONG stackSize,
 		    UINT priority, CHAR *name, void (*entry)(ULONG), ULONG input);
 int osaFreeMemory(struct OsaWorkspace *workspace, uint32_t type, void *memory);

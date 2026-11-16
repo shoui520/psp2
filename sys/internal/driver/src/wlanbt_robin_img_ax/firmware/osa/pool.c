@@ -10,6 +10,9 @@
 /* Name of the system pool; the anonymous pools use the same empty string. */
 extern struct OsaWorkspace osaWorkspace;
 
+/* Set to 1 by osaInit() once the workspace exists. */
+uint8_t osaWorkspaceReady __attribute__((section(".dtcm.rw")));	/* DTCM 0x04000168 */
+
 /* Memory the system byte pool is created over, filled with a guard pattern. */
 static uint8_t osaSystemPoolArea[OSA_SYSTEM_POOL_SIZE] __attribute__((section(".dtcm.bss")));
 
@@ -20,7 +23,10 @@ static uint8_t osaSystemPoolArea[OSA_SYSTEM_POOL_SIZE] __attribute__((section(".
 int osaInit(void)
 {
 	struct OsaWorkspace *workspace = NULL;
-	unsigned int i;
+	struct OsaPoolTable *table;
+	struct OsaPoolEntry *entry;
+	int status;
+	uint8_t i;
 
 	if (osaGetWorkspace(&workspace) != 0)
 		return 0;
@@ -33,15 +39,23 @@ int osaInit(void)
 	if (workspace == NULL)
 		for (;;)
 			;
-	if (osaCreateSemaphore((struct OsaSemaphore *)&workspace->lock, 1) != 0)
+	table = &workspace->table;
+	status = osaCreateSemaphore((struct OsaSemaphore *)&table->lock, 1);
+	if (status != 0)
 		for (;;)
 			;
-	workspace->usedList = NULL;
-	workspace->freeList = &workspace->pools[0];
-	for (i = 0; i < OSA_POOL_COUNT; i++)
-		workspace->pools[i].next = &workspace->pools[i + 1];
-	workspace->pools[OSA_POOL_COUNT - 1].next = NULL;
-	workspace->poolCount = 0;
+	table->usedList = NULL;
+	entry = &table->pools[0];
+	table->freeList = entry;
+	for (i = 0; i < OSA_POOL_COUNT; i++) {
+		if (status != 0)
+			for (;;)
+				;
+		entry->next = entry + 1;
+		entry++;
+	}
+	table->pools[OSA_POOL_COUNT - 1].next = NULL;
+	table->poolCount = 0;
 	return 0;
 }
 
@@ -53,44 +67,47 @@ int osaCreatePoolEntry(struct OsaPoolEntry **handle, uint32_t type, void *start,
 		       uint32_t size, uint32_t blockSize)
 {
 	struct OsaWorkspace *workspace;
+	struct OsaPoolTable *table;
 	struct OsaPoolEntry *entry;
 	int status;
 
 	osaGetWorkspace(&workspace);
-	if (workspace->poolCount == OSA_POOL_COUNT)
+	table = &workspace->table;
+	if (table->poolCount == OSA_POOL_COUNT)
 		return OSA_POOL_TABLE_FULL;
-	osaWaitSemaphore((struct OsaSemaphore *)&workspace->lock, 0xffffffff);
-	entry = workspace->freeList;
+	osaWaitSemaphore((struct OsaSemaphore *)&table->lock, 0xffffffff);
+	entry = table->freeList;
 	if (entry != NULL) {
-		workspace->freeList = entry->next;
+		table->freeList = entry->next;
 		entry->next = NULL;
 	}
 	entry->prev = NULL;
-	if (workspace->usedList == NULL) {
-		workspace->usedList = entry;
+	if (table->usedList == NULL) {
+		table->usedList = entry;
 		entry->next = NULL;
 	} else {
-		workspace->usedList->prev = entry;
-		entry->next = workspace->usedList;
-		workspace->usedList = entry;
+		table->usedList->prev = entry;
+		entry->next = table->usedList;
+		table->usedList = entry;
 	}
-	workspace->poolCount++;
-	osaReleaseSemaphore((struct OsaSemaphore *)&workspace->lock);
+	table->poolCount++;
+	osaReleaseSemaphore((struct OsaSemaphore *)&table->lock);
 	status = osaCreatePool(entry, type, start, size, blockSize);
 	if (status != 0) {
-		osaWaitSemaphore((struct OsaSemaphore *)&workspace->lock, 0xffffffff);
+		osaWaitSemaphore((struct OsaSemaphore *)&table->lock, 0xffffffff);
 		if (entry->prev != NULL)
 			entry->prev->next = entry->next;
 		else
-			workspace->usedList = entry->next;
+			table->usedList = entry->next;
 		if (entry->next != NULL)
 			entry->next->prev = entry->prev;
 		entry->prev = NULL;
 		entry->next = NULL;
-		workspace->poolCount--;
-		entry->next = workspace->freeList;
-		workspace->freeList = entry;
-		osaReleaseSemaphore((struct OsaSemaphore *)&workspace->lock);
+		table->poolCount--;
+		entry->next = NULL;
+		entry->next = table->freeList;
+		table->freeList = entry;
+		osaReleaseSemaphore((struct OsaSemaphore *)&table->lock);
 		return status;
 	}
 	entry->type = type;
@@ -109,28 +126,30 @@ int (*osaPoolEntryCreate)(struct OsaPoolEntry **handle, uint32_t type, void *sta
 int osaDeletePoolEntry(struct OsaPoolEntry *entry)
 {
 	struct OsaWorkspace *workspace;
+	struct OsaPoolTable *table;
 	int status;
 
 	osaGetWorkspace(&workspace);
+	table = &workspace->table;
 	if (entry == NULL)
 		for (;;)
 			;
 	status = osaDeletePool(entry, entry->type);
 	if (status == 0) {
-		osaWaitSemaphore((struct OsaSemaphore *)&workspace->lock, 0xffffffff);
+		osaWaitSemaphore((struct OsaSemaphore *)&table->lock, 0xffffffff);
 		if (entry->prev != NULL)
 			entry->prev->next = entry->next;
 		else
-			workspace->usedList = entry->next;
+			table->usedList = entry->next;
 		if (entry->next != NULL)
 			entry->next->prev = entry->prev;
 		entry->prev = NULL;
 		entry->next = NULL;
-		workspace->poolCount--;
+		table->poolCount--;
 		entry->next = NULL;
-		entry->next = workspace->freeList;
-		workspace->freeList = entry;
-		osaReleaseSemaphore((struct OsaSemaphore *)&workspace->lock);
+		entry->next = table->freeList;
+		table->freeList = entry;
+		osaReleaseSemaphore((struct OsaSemaphore *)&table->lock);
 	}
 	return status;
 }

@@ -421,7 +421,7 @@ int ampPalLinkAlive(struct WlanConnection *context)
 /* 0x00022cd8: writes the SSID "AMP-xx-xx-xx-xx-xx-xx" of a link, returns the end. */
 char *ampPalFormatSsid(char *out, const uint8_t *address)
 {
-	unsigned int i;
+	int i;
 	uint32_t value;
 
 	*out++ = 'A';
