@@ -161,3 +161,160 @@ int npCommerce2ReadValueItem0x9c(const NpCommerce2Item *result, SceUInt32 index,
 	}
 	return ret;
 }
+
+/* the grant record of tag 0x95 at an index: strings and values at fixed places, a date, then a
+ * record of tag 0x83 holding more values, a text (0x97) and the count of records of tag 0x96 */
+int npCommerce2ReadGrantItem0x95(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2GrantItem *item)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 foundName;
+	SceUInt32 net;
+	SceUInt64 net64;
+	SceUInt64 netDate;
+	SceUInt64 ms;
+	const char *record;
+	const char *rest;
+	const char *inner;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), 0x95, 0xF8, index,
+					   &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0xB0);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		item->grantId = record;
+		sceClibMemcpy_safe(&net, record + 49, 4);
+		item->valueA = sceNetNtohl(net);
+		item->textA = record + 110;
+		sceClibMemcpy_safe(&net, record + 159, 4);
+		item->valueB = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 163, 4);
+		item->valueC = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 167, 4);
+		item->valueD = sceNetNtohl(net);
+		item->textB = record + 171;
+		sceClibMemcpy_safe(&net, record + 228, 4);
+		item->valueE = sceNetNtohl(net);
+		sceClibMemcpy_safe(&netDate, record + 232, 8);
+		ms = sceNetNtohll(netDate);
+		if (ms != 0) {
+			netDate = 1000 * ms;
+			item->date = netDate + NP_COMMERCE2_UNIX_EPOCH_TICKS;
+		} else {
+			netDate = 0;
+			sceClibMemset(&item->date, 0, 8);
+		}
+		sceClibMemcpy_safe(&net, record + 240, 4);
+		item->valueF = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 244, 4);
+		item->valueG = sceNetNtohl(net);
+		rest = record + 248;
+		item->commonData.data2 = (const SceUChar8 *)rest;
+		ret = npCommerce2FindRecordWhole(rest, length - 248, 0x83, 0x14, NULL);
+		if (ret >= 0) {
+			inner = rest + ret;
+			sceClibMemcpy_safe(&net, inner, 4);
+			item->valueH = sceNetNtohl(net);
+			sceClibMemcpy_safe(&net64, inner + 4, 8);
+			item->valueI = sceNetNtohll(net64);
+			sceClibMemcpy_safe(&net, inner + 12, 4);
+			item->valueJ = sceNetNtohl(net);
+			sceClibMemcpy_safe(&net, inner + 16, 4);
+			item->valueK = sceNetNtohl(net);
+			item->name = NP_COMMERCE2_EMPTY_TEXT(item);
+			ret = npCommerce2FindRecordWhole(rest, length - 248, 0x97, 0, &foundName);
+			if (ret >= 0 && foundName != 0)
+				item->name = rest + ret;
+			if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0) {
+				ret = npCommerce2FindNestedRecordWhole(rest, length - 248, 0x96, NULL, &item->countOfA);
+				if (ret == NP_COMMERCE2_ERROR_RECORD_NOT_FOUND || ret >= 0)
+					ret = 0;
+			}
+		}
+	}
+	return ret;
+}
+
+/* the offer record at an index: five values and a 64-bit value, then a text and counts */
+int npCommerce2ReadOfferItem(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2OfferItem *item,
+			     int kind)
+{
+	const char *data = (const char *)result->commonData.data2;
+	SceUInt16 length;
+	SceUInt16 foundRef;
+	SceUInt16 foundName;
+	SceUInt16 tag;
+	SceUInt32 net;
+	SceUInt64 net64;
+	const char *record;
+	const char *rest;
+	int ret;
+
+	tag = kind == 3 ? 144 : 133;
+	sceClibMemset(item, 0, 0x90);
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size -
+					   (data - (const char *)result->commonData.data), tag, 0x55, index,
+					   &length);
+	if (ret < 0)
+		return ret;
+	sceClibMemset(item, 0, 0x5C);
+	item->commonData.version = result->commonData.version;
+	item->commonData.buf_head = result->commonData.buf_head;
+	record = data + ret;
+	item->commonData.data = (const SceUChar8 *)record;
+	item->commonData.data_size = length;
+	item->offerId = record;
+	sceClibMemcpy_safe(&net, record + 49, 4);
+	item->valueA = sceNetNtohl(net);
+	sceClibMemcpy_safe(&net, record + 53, 4);
+	item->valueB = sceNetNtohl(net);
+	sceClibMemcpy_safe(&net, record + 57, 4);
+	item->valueC = sceNetNtohl(net);
+	sceClibMemcpy_safe(&net, record + 61, 4);
+	item->valueD = sceNetNtohl(net);
+	sceClibMemcpy_safe(&net, record + 65, 4);
+	item->valueE = sceNetNtohl(net);
+	sceClibMemcpy_safe(&net64, record + 69, 8);
+	item->valueF = sceNetNtohll(net64);
+	rest = record + 77;
+	item->commonData.data2 = (const SceUChar8 *)rest;
+	if (kind == 3) {
+		ret = npCommerce2FindNestedRecordWhole(rest, length - 77, 0x11, NULL, (SceUInt32 *)&item->textOrCount);
+		if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+			return ret;
+	} else {
+		item->textOrCount = NP_COMMERCE2_EMPTY_TEXT(item);
+		ret = npCommerce2FindRecordWhole(rest, length - 77, 0x11, 0, &foundRef);
+		if (ret >= 0 && foundRef != 0)
+			item->textOrCount = rest + ret;
+		if (ret < 0)
+			return ret;
+	}
+	item->name = NP_COMMERCE2_EMPTY_TEXT(item);
+	ret = npCommerce2FindRecordWhole(rest, length - 77, 0x3C, 0, &foundName);
+	if (ret >= 0 && foundName != 0)
+		item->name = rest + ret;
+	if (ret != NP_COMMERCE2_ERROR_RECORD_NOT_FOUND && ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - 77, 0x3D, NULL, &item->countOfA);
+	if (ret < 0)
+		return ret;
+	ret = npCommerce2FindNestedRecordWhole(rest, length - 77, 0x3E, NULL, &item->countOfB);
+	if (ret >= 0)
+		ret = 0;
+	return ret;
+}

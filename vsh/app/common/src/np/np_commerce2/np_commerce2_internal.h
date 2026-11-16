@@ -751,6 +751,48 @@ typedef struct NpCommerce2ValueItem {
 extern int npCommerce2ReadRewardItem0x80(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2RewardItem *item);
 extern int npCommerce2ReadTextItem0x96(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2TextItem2 *item);
 extern int npCommerce2ReadValueItem0x9c(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ValueItem *item);
+typedef struct NpCommerce2GrantItem {
+	SceNpCommerce2CommonData commonData;
+	const char *grantId;
+	SceUInt32 valueA;
+	const char *textA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	const char *textB;
+	SceUInt32 valueE;
+	SceUInt32 padding;
+	SceUInt64 date;
+	SceUInt32 valueF;
+	SceUInt32 valueG;
+	const char *name;
+	SceUInt32 countOfA;
+	SceUInt32 valueH;
+	SceUInt32 padding2;
+	SceUInt64 valueI;
+	SceUInt32 valueJ;
+	SceUInt32 valueK;
+} NpCommerce2GrantItem;
+
+typedef struct NpCommerce2OfferItem {
+	SceNpCommerce2CommonData commonData;
+	const char *offerId;
+	SceUInt32 valueA;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+	SceUInt32 valueD;
+	SceUInt32 valueE;
+	SceUInt32 padding;
+	SceUInt64 valueF;
+	const char *name;
+	SceUInt32 countOfA;
+	SceUInt32 countOfB;
+	const char *textOrCount;
+} NpCommerce2OfferItem;
+
+extern int npCommerce2ReadGrantItem0x95(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2GrantItem *item);
+extern int npCommerce2ReadOfferItem(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2OfferItem *item,
+				    int kind);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -804,7 +846,6 @@ extern int npCommerce2_8100DAB0(SceNpCommerce2GetCategoryContentsResult *result,
 extern int npCommerce2GetEnvironment(void);
 extern int npCommerce2_8100DDCA(const SceNpCommerce2GetCategoryContentsResult *result,
 				SceUInt32 index, SceNpCommerce2ContentInfo *contentInfo);
-extern int npCommerce2_810102FC(int a1, int a2, int a3);
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
@@ -827,7 +868,6 @@ extern int npCommerce2_81010938(int a1, void *a2, int a3);
 extern int npCommerce2_81010C98(int a1, int a2, int a3);
 extern int npCommerce2_81010FFA(int a1, int a2);
 extern int npCommerce2_8101117E(int a1, void *a2, int a3);
-extern int npCommerce2_81010710(int a1, int a2, void *a3, int a4);
 extern int npCommerce2CreateReqRemCart(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2_8101150E(int a1, void *a2, int a3);
 extern int npCommerce2_810115FC(int a1, int a2);

@@ -471,7 +471,7 @@ int SceNpCommerce2_7F6077C9(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810102FC(a1, a2, a3);
+		return npCommerce2ReadGrantItem0x95((const NpCommerce2Item *)a1, a2, (NpCommerce2GrantItem *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -489,7 +489,7 @@ int SceNpCommerce2_F708CC37(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810102FC(a1, a2, a3);
+		return npCommerce2ReadGrantItem0x95((const NpCommerce2Item *)a1, a2, (NpCommerce2GrantItem *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -498,7 +498,7 @@ int SceNpCommerce2_1CCF4344(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810102FC(a1, a2, a3);
+		return npCommerce2ReadGrantItem0x95((const NpCommerce2Item *)a1, a2, (NpCommerce2GrantItem *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -507,7 +507,7 @@ int SceNpCommerce2_B1BB4660(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810102FC(a1, a2, a3);
+		return npCommerce2ReadGrantItem0x95((const NpCommerce2Item *)a1, a2, (NpCommerce2GrantItem *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -516,7 +516,7 @@ int SceNpCommerce2_A3A7C1FC(int a1, int a2, int a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != 0)
-		return npCommerce2_810102FC(a1, a2, a3);
+		return npCommerce2ReadGrantItem0x95((const NpCommerce2Item *)a1, a2, (NpCommerce2GrantItem *)a3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -909,7 +909,7 @@ int SceNpCommerce2_D42FB74B(int a1, int a2, void *a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != NULL)
-		return npCommerce2_81010710(a1, a2, a3, 2);
+		return npCommerce2ReadOfferItem((const NpCommerce2Item *)a1, a2, (NpCommerce2OfferItem *)a3, 2);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -1753,7 +1753,7 @@ int SceNpCommerce2_523F9F84(int a1, int a2, void *a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != NULL)
-		return npCommerce2_81010710(a1, a2, a3, 2);
+		return npCommerce2ReadOfferItem((const NpCommerce2Item *)a1, a2, (NpCommerce2OfferItem *)a3, 2);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
@@ -3789,7 +3789,7 @@ int SceNpCommerce2_C51EA536(int a1, int a2, void *a3)
 	if (g_initialized == 0)
 		return SCE_NP_COMMERCE2_ERROR_NOT_INITIALIZED;
 	if (a1 != 0 && a3 != NULL)
-		return npCommerce2_81010710(a1, a2, a3, 3);
+		return npCommerce2ReadOfferItem((const NpCommerce2Item *)a1, a2, (NpCommerce2OfferItem *)a3, 3);
 	return SCE_NP_COMMERCE2_ERROR_INVALID_ARGUMENT;
 }
 
