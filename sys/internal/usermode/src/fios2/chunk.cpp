@@ -917,7 +917,7 @@ SceFiosHandle fiosChunkGetHandleLocked(uint16_t chunkID)
 }
 
 /* the path the chunk works on */
-const char *fiosChunkGetPath(uint16_t chunkID)
+FiosPath *fiosChunkGetPath(uint16_t chunkID)
 {
 	FiosChunk *pChunk = fiosChunkAt(chunkID);
 
@@ -936,7 +936,7 @@ const char *fiosChunkGetPath(uint16_t chunkID)
 	case CHUNK_FILE_SIZE:
 	case CHUNK_EXISTS:
 	case CHUNK_RENAME:
-		return pChunk->path.pPath;
+		return pChunk->query.pPath;
 	case CHUNK_STAT:
 		return pChunk->stat.pPath;
 	case CHUNK_TRUNCATE:
@@ -946,9 +946,9 @@ const char *fiosChunkGetPath(uint16_t chunkID)
 	}
 }
 
-const char *fiosChunkGetPathLocked(uint16_t chunkID)
+FiosPath *fiosChunkGetPathLocked(uint16_t chunkID)
 {
-	const char *pPath;
+	FiosPath *pPath;
 
 	s_chunkMutex.Lock();
 	pPath = fiosChunkGetPath(chunkID);

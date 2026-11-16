@@ -25,6 +25,7 @@
  * sceClibMemcpy, binds to its copy. SNC does not expand them inline.
  */
 size_t fiosStrlen(const char *s);
+size_t fiosStrlcpy(char *dst, const char *src, size_t size);
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -67,6 +68,7 @@ struct FiosPath {
 	char path[4];
 
 	char *GetPath() { return path[g_FiosParams.pathMax - 1] ? *(char **)path : path; }
+	bool Set(const char *pPath, bool verbose);	/* normalized and hashed; false when it does not fit */
 };
 
 static inline const char *fiosPathGet(FiosPath *pPath)
@@ -297,34 +299,82 @@ struct FiosChunk {
 	uint32_t pieces;		/* the pieces not done yet */
 	SceFiosTime deadline;
 	union {
-		uint16_t links[8];	/* CHUNK_PARENT, CHUNK_CHILD */
-		struct {			/* CHUNK_BUFFER */
+		uint16_t links[8];		/* CHUNK_PARENT, CHUNK_CHILD */
+		struct {			/* CHUNK_BUFFER: size bytes behind it */
 			uint64_t size;
-			uint8_t data[];
+			uint8_t data[8];
 		} buffer;
 		struct {			/* CHUNK_CALLBACK */
 			uint32_t reserved;
 			int err;
 		} callback;
+		struct {			/* CHUNK_FH_OPEN, CHUNK_DH_OPEN */
+			SceFiosHandle h;
+			FiosPath *pPath;
+			int32_t nativeMode;	/* -1: the open a path op makes */
+		} open;
+		struct {			/* CHUNK_DIR_CREATE */
+			int32_t nativeMode;
+			FiosPath *pPath;
+		} create;
+		struct {			/* CHUNK_DIR_EXISTS, CHUNK_FILE_EXISTS, CHUNK_FILE_SIZE, CHUNK_EXISTS */
+			FiosPath *pPath;
+			void *pResult;
+		} query;
+		struct {			/* CHUNK_RENAME */
+			FiosPath *pPath;
+			char *pNewPath;		/* a copy, in a CHUNK_BUFFER child */
+		} rename;
+		struct {			/* CHUNK_STAT */
+			SceFiosHandle h;
+			SceFiosStat *pStatus;
+			FiosPath *pPath;
+		} stat;
 		struct {			/* CHUNK_TRUNCATE */
 			SceFiosSize length;
 			SceFiosFH fh;
-			const char *pPath;
+			FiosPath *pPath;
 		} truncate;
-		struct {			/* CHUNK_STAT */
-			SceFiosHandle h;
+		struct {			/* CHUNK_RESOLVE */
+			SceFiosTuple *pOutTuple;
+			FiosPath *pPath;
+			SceFiosOffset offset;
+			SceFiosSize size;
+		} resolve;
+		struct {			/* CHUNK_ARCHIVE_QUERY, CHUNK_ARCHIVE_MOUNT */
+			SceFiosFH fh;
+			FiosPath *pPath;	/* the archive */
+			char *pMountPoint;	/* a copy, in a CHUNK_BUFFER child; NULL for a query */
+			void *pMountBuffer;
+			size_t mountBufferLength;
+			SceFiosSize *pActCount;
+		} mount;
+		struct {			/* CHUNK_CHSTAT */
 			uint32_t reserved;
-			const char *pPath;
-		} stat;
-		struct {			/* the other path chunks: CHUNK_DIR_EXISTS, ... */
-			const char *pPath;
-		} path;
-		struct {
+			SceFiosStat *pStatus;
+			FiosPath *pPath;
+			int cbit;
+		} chstat;
+		struct {			/* CHUNK_DEVCTL, CHUNK_IOCTL */
+			SceFiosHandle h;
+			FiosPath *pPath;
+			int cmd;
+			void *pArg;
+			uint64_t argLength;
+			void *pBuffer;
+			uint32_t reserved;
+			uint64_t bufferLength;
+		} ioctl;
+		struct {			/* CHUNK_SYNC */
+			int flag;
+			FiosPath *pPath;
+		} sync;
+		struct {			/* CHUNK_ROOT, the reads, writes, closes, ... */
 			union {
 				SceFiosOp op;		/* CHUNK_ROOT's op */
 				SceFiosHandle h;	/* the file or directory handle it works on */
 			};
-			const char *pPath;	/* CHUNK_FH_OPEN, CHUNK_DH_OPEN, ... */
+			FiosPath *pPath;	/* CHUNK_DIR_DELETE, CHUNK_FILE_DELETE, ... */
 			SceFiosOffset offset;
 			SceFiosSize reqCount;
 			SceFiosSize *pActCount;
@@ -367,8 +417,8 @@ uint16_t fiosChunkGetChildLocked(uint16_t chunkID, int index);
 uint16_t fiosChunkGetParentLocked(uint16_t chunkID, int index);
 SceFiosHandle fiosChunkGetHandle(uint16_t chunkID);
 SceFiosHandle fiosChunkGetHandleLocked(uint16_t chunkID);
-const char *fiosChunkGetPath(uint16_t chunkID);
-const char *fiosChunkGetPathLocked(uint16_t chunkID);
+FiosPath *fiosChunkGetPath(uint16_t chunkID);
+FiosPath *fiosChunkGetPathLocked(uint16_t chunkID);
 bool fiosChunkIsReady(uint16_t chunkID, bool force);
 bool fiosChunkIsReadyLocked(uint16_t chunkID, bool force);
 bool fiosChunkChildrenComplete(uint16_t chunkID);
@@ -378,6 +428,17 @@ bool fiosChunkComplete(uint16_t chunkID, int err);
 void fiosChunkSetErrorLocked(uint16_t chunkID, int err);
 void fiosChunkPrepare(uint16_t chunkID, SceFiosPriority priority, SceFiosTime deadline);
 void fiosChunkPrepareLocked(uint16_t chunkID, SceFiosPriority priority, SceFiosTime deadline);
+
+/* an op's chunks ("Chunker::CreateInitialChunks") */
+class Chunker {
+public:
+	static int ChunkTree(uint16_t chunkID);
+	static uint16_t CreateInitialChunks(FiosOp *pOp);
+	static uint16_t ChunkOp(FiosOp *pOp, bool *pDone);
+};
+
+/* the scheduler: an op whose tree is done */
+void fiosRootComplete(FiosChunk *pRootChunk);
 
 /* debug.cpp: the dumps the SDK does not export */
 char *fiosDebugDumpChunk(uint16_t chunkID, char *pBuffer, size_t bufferSize);
@@ -411,7 +472,9 @@ void fiosSchedulersGetStatistics(struct FiosStatistics *pStats);
 void fiosSchedulersResetStatistics();
 
 /* the I/O filters and overlays */
+extern int s_ioFilterCount;			/* the filters added */
 int fiosIOFiltersCall(int command, void *pArgs);
+uint16_t fiosIOFiltersChunkTree(uint16_t rootID);
 int fiosIOFilterAdd(int index, SceFiosIOFilterCallback pFilterCallback, void *pFilterContext);
 int fiosIOFilterGetInfo(int index, SceFiosIOFilterCallback *pOutFilterCallback,
 			void **pOutFilterContext);
