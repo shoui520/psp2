@@ -66,6 +66,33 @@ unsigned char boardMultiCnStop(void)
 	P2.2 = 0;
 	return 0;
 }
+#elif !FW_SINCE(0x00090804)
+/* 0x00090206: the switch is P13.0 alone, the dongle on (1) or off (0) */
+unsigned char boardMultiCnOutputOff(void)
+{
+	P13.0 = 0;
+	return 0;
+}
+
+unsigned char boardGetMultiCnOutput(void)
+{
+	return P13.0 ? 1 : 0;
+}
+
+/* 1 for an output above 1 */
+unsigned char boardSetMultiCnOutput(unsigned char output)
+{
+	if (output >= 2)
+		return 1;
+	P13.0 = (output & 1) ? 1 : 0;
+	return 0;
+}
+
+unsigned char boardMultiCnStop(void)
+{
+	P13.0 = 0;
+	return 0;
+}
 #else
 /* the switch off at the start: P2.2 low, then P13.0 */
 unsigned char boardMultiCnOutputOff(void)
@@ -162,13 +189,23 @@ unsigned char boardMultiCnIsDongle(void)
 }
 #endif
 
+#if FW_SINCE(0x00090804)	/* 0x00090206 has no debug board */
 /* a debug board on the multi-connector (UART3 in its debug mode): never on this board */
 unsigned char boardMultiCnIsDebug(void)
 {
 	return 0;
 }
+#endif
 
 #ifndef ERNIE_UPDATER
+#if !FW_SINCE(0x00090804)
+/* 0x00090206's hdwinit sets the ports through this */
+void boardInit(void)
+{
+	boardPortInit();
+}
+
+#endif
 /* the ports' levels and modes at the start (hdwinit) */
 void boardPortInit(void)
 {
@@ -198,7 +235,13 @@ void boardPortInit(void)
 	PM12 = 0x5f;
 	P13 = 0x00;
 	PM13 = 0xfc;
+#if FW_SINCE(0x00090804)
 	P14 = 0x00;
+#else
+	/* 0x00090206: P14.3 an open-drain output, high */
+	POM14 = 0x08;
+	P14 = 0x08;
+#endif
 	PM14 = BOARD_PM14;
 	P15 = 0x00;
 	PM15 = BOARD_PM15;

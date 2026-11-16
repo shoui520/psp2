@@ -182,13 +182,15 @@
 #define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
 /* and 0x00102603's own */
-#define BOARD_PM2		(BOARD_102603 ? 0xab : 0x01)
+/* (0x00090206's port modes are 0x00102603's on every board, but for PM14) */
+#define BOARD_PORTS_102603		(BOARD_102603 || !FW_SINCE(0x00090804))
+#define BOARD_PM2		(BOARD_PORTS_102603 ? 0xab : 0x01)
 #define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
-#define BOARD_PM6		(BOARD_102603 ? 0x12 : 0x92)
+#define BOARD_PM6		(BOARD_PORTS_102603 ? 0x12 : 0x92)
 #define BOARD_PM11		(BOARD_102603 ? 0xf2 : 0xf1)
 #define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
 #define BOARD_PM14		(BOARD_102603 ? 0xe6 : 0xe4)
-#define BOARD_PM15		(BOARD_102603 ? 0xff : 0xf8)
+#define BOARD_PM15		(BOARD_PORTS_102603 ? 0xff : 0xf8)
 
 /* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
 #define BOARD_BBMC_INIT_PULSE	(ERNIE_BOARD != 0x00406000)
@@ -221,7 +223,12 @@ extern unsigned char boardGetMultiCnOutput(void);
 extern unsigned char boardSetMultiCnOutput(unsigned char output);
 extern unsigned char boardMultiCnStop(void);
 extern unsigned char boardMultiCnIsDongle(void);
+#if FW_SINCE(0x00090804)
 extern unsigned char boardMultiCnIsDebug(void);
+#else
+#define boardMultiCnIsDebug()	0	/* 0x00090206 has no debug board */
+extern void boardInit(void);
+#endif
 extern void boardPortInit(void);
 
 #endif

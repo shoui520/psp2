@@ -57,7 +57,9 @@ extern struct InputHandler inputHandler3Bit2;
 extern struct InputHandler inputHandlerMultiCn;
 extern struct InputHandler inputHandlerWake1;
 extern struct InputHandler inputHandlerCharge;
+#if FW_SINCE(0x00090804)
 extern struct InputHandler inputHandler1Bit7;
+#endif
 extern struct InputHandler inputHandler1Bit3;
 extern struct InputHandler inputHandler1Bit0;
 /* a group of input bits, debounced over two samples */

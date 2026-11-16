@@ -53,7 +53,11 @@ void hdwinit(void)
 		;
 	HIOSTOP = 1;
 	XTSTOP = 0;
+#if FW_SINCE(0x00090804)
 	boardPortInit();
+#else
+	boardInit();
+#endif
 	intInit();
 	tickStart();
 	rtcInit();

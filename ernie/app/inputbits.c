@@ -26,9 +26,13 @@ static struct InputHandler * const inputHandlers1Bit5[] = {
 	&inputHandlerSerial1, &inputHandlerMultiCn
 };
 static struct InputHandler * const inputHandlers1Bit6[] = { &inputHandlerWake1 };
+#if FW_SINCE(0x00090804)
 static struct InputHandler * const inputHandlers1Bit7[] = {
 	&inputHandlerCharge, &inputHandler1Bit7
 };
+#else
+static struct InputHandler * const inputHandlers1Bit7[] = { &inputHandlerCharge };
+#endif
 static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler1Bit3 };
 static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandlerSerial2Request };
 static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2Link };

@@ -11,6 +11,7 @@
 #include "config.h"
 #include "kernel.h"
 #include "sleepfactor.h"
+#include "board.h"
 
 /* not static: the updater's downloaderStart takes them over from the application */
 __sreg union SleepFactor sleepFactor;
@@ -165,6 +166,8 @@ void sleepFactorSet9(unsigned char on)
 	}
 }
 
+/* 0x00090206 of the 0x00411000 board has none */
+#if FW_SINCE(0x00090804) || BOARD_102603
 void sleepFactorSet10(unsigned char on)
 {
 	if (sleepFactor.bits[1].b2 ^ on) {
@@ -174,6 +177,7 @@ void sleepFactorSet10(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif
 
 #if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000104)
 /* the updater's, and before 0x01000104 the application's, which nothing calls */
