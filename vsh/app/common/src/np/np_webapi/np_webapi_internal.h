@@ -17,6 +17,13 @@
 #include <libhttp.h>
 #include <np/np_common.h>
 #include <np/np_webapi.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <regmgr/regmgr.h>
+#ifdef __cplusplus
+}
+#endif
 
 /* the errors the exports return (SCE_NP_WEBAPI_ERROR_*, SDK doc NpWebApi-Reference) */
 #define NP_WEBAPI_ERROR_OUT_OF_MEMORY		-2141902591	/* 0x80552901 */
@@ -148,5 +155,19 @@ extern int npWebApiHeapGet(void **pMspace);
 extern int npWebApiGlobalLockCreate(void);
 extern int npWebApiGlobalLock(void);
 extern int npWebApiGlobalUnlock(void);
+
+/* a node of the maps the library keeps its contexts in: the value it holds and the next node */
+typedef struct NpWebApiMapNode {
+	unsigned char reserved0[40];
+	void *value;
+	unsigned char reserved1[4];
+	struct NpWebApiMapNode *next;
+} NpWebApiMapNode;
+
+extern volatile int g_systemParam;		/* 0x81010010 */
+extern int npWebApiConvertError(int error);
+extern int npWebApiLoadSystemParam(void);
+extern struct NpWebApiMapNode *npWebApiMapNodeNext(NpWebApiMapNode *node);
+extern void *npWebApiMapNodeValue(NpWebApiMapNode *node);
 
 #endif

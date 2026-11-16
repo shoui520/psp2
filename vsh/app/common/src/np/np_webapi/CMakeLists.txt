@@ -7,4 +7,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	exports.cpp
 	libctx.cpp
 	heap.cpp
+	util.cpp
 )
