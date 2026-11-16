@@ -1418,6 +1418,22 @@ extern int npCommerce2ReadResponseData(int httpRequest, char *data, SceSize size
 extern int npCommerce2ReadResponseBody(int httpRequest, const char *base, char *data, SceSize size, int *tooLong,
 				       int skip);
 extern int npCommerce2ForwardCookie(int httpTemplate, int httpConnection, int httpRequest, char *buf, SceSize size);
+/* building and sending a store request (sender.c) */
+#define NP_COMMERCE2_ERROR_INVALID_TYPE		-2141909119	/* 0x80550f81 */
+#define NP_COMMERCE2_ERROR_INVALID_MODE		-2141909098	/* 0x80550f96 */
+#define NP_COMMERCE2_ERROR_TEXT_TOO_LONG	-2141909231	/* 0x80550f11 */
+struct NpCommerce2QueryKey {
+	SceSize length;
+	const char *text;
+};
+extern const struct NpCommerce2QueryKey g_queryKeys[87];
+extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
+extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
+extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,
+					int unused, int *httpConnection, int *httpRequest,
+					SceULong64 contentLength);
+extern int npCommerce2SendHttpRequest(int httpRequest, const void *data, SceSize size);
+extern int npCommerce2Send_81018C7A(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
