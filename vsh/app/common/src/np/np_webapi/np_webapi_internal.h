@@ -106,6 +106,10 @@ extern int SceNpCommonPs4_38CC9AF5(void *pool);
 extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
 extern int SceNpCommonPs4_31DB2D97(void *pool);
 extern const void *g_userContextVtable[];	/* 0x8100eddc */
+extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
+extern const void *g_baseVtable[];		/* 0x8100eb8c */
+extern int SceNpCommonPs4_BB5282C8(void *object);
+extern int SceNpCommonPs4_CE924EB3(int a, void *object);
 #ifdef __cplusplus
 }
 #endif
@@ -288,6 +292,27 @@ extern int npWebApiUserContextAddRequest(NpWebApiUserContext *userCtx, NpWebApiR
 extern int npWebApiUserContextRemoveRequest(NpWebApiUserContext *userCtx, NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiUserContextFindRequest(NpWebApiUserContext *userCtx, SceInt64 requestId);
 extern NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiRequest *next);
+/* a user context's HTTP connections: a list of connections, each one's ID and the next */
+typedef struct NpWebApiConnection {
+	unsigned char reserved0[32];
+	int connId;
+	struct NpWebApiConnection *next;
+} NpWebApiConnection;
+
+typedef struct NpWebApiConnectionPool {
+	const void *vtable;
+	NpWebApiLibContext *libContext;
+	NpWebApiUserContext *userContext;
+	NpWebApiConnection *head;
+	int count;
+} NpWebApiConnectionPool;
+
+extern int npWebApiDestroyObject(void *object);
+extern int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool);
+extern NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectionPool *pool, NpWebApiUserContext *userCtx);
+extern NpWebApiConnectionPool *npWebApiConnectionPoolDestruct(NpWebApiConnectionPool *pool);
+extern int npWebApiConnectionPoolDeleteThis(NpWebApiConnectionPool *pool);
+
 extern int npWebApiRequestRelease(NpWebApiRequest *request);
 extern SceInt64 npWebApiRequestGetId(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestNext(NpWebApiRequest *request);
