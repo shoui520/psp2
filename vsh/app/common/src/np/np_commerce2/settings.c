@@ -29,10 +29,12 @@ int npCommerce2SetNpCommonValue(int value)
 	return 0;
 }
 
+#if FW_DEVKIT
 int npCommerce2GetEnvironment(void)
 {
 	return g_environmentType;
 }
+#endif
 
 int npCommerce2SetEnvironmentType(int type)
 {

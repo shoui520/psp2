@@ -8,6 +8,7 @@
 #define NP_COMMERCE2_INTERNAL_H
 
 #include <stddef.h>
+#include <fw.h>
 #include <scetypes.h>
 #include <kernel/error.h>
 #include <kernel/libkernel.h>
@@ -1652,7 +1653,12 @@ extern int npCommerce2GetResultData(SceUInt32 reqId, void *buf, SceSize bufLen, 
 extern int npCommerce2GetResultByContext(int type, SceUInt32 reqId, void *buf, SceSize bufLen, SceSize *fillSize);
 extern int npCommerce2ReadResponseHead(NpCommerce2Context *ctx, int httpRequest, int type, char *status, char *buf,
 				       SceUInt32 bufSize, SceSize *headLength);
+#if FW_DEVKIT
 extern int npCommerce2GetEnvironment(void);
+#else
+/* the retail build has no function for it: the callers read the setting */
+#define npCommerce2GetEnvironment()	g_environmentType
+#endif
 extern char g_shortText[0x39];
 extern char g_longText[0xFA1];
 extern int npCommerce2CreateReqGetProd(SceUInt32 ctxId, SceUInt32 *reqId);
