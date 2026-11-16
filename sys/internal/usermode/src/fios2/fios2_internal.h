@@ -38,6 +38,7 @@ int fiosStrncmp(const char *s1, const char *s2, size_t n);
 int fiosStrcasecmp(const char *s1, const char *s2);
 int fiosStrncasecmp(const char *s1, const char *s2, size_t n);
 size_t fiosStrlcat(char *dst, const char *src, size_t size);
+char *fiosStrchr(const char *s, int c);
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -579,7 +580,7 @@ void fiosSchedulersGetStatistics(struct FiosStatistics *pStats);
 void fiosSchedulersResetStatistics();
 
 /* the I/O filters and overlays */
-#define FIOS_IOFILTER_COUNT	255		/* the filter slots */
+#define FIOS_IOFILTER_INDEX_MAX	255		/* the last filter slot */
 
 typedef int (*FiosIOFilterFunc)(void *pContext, int command, void *pArgs);
 
@@ -588,7 +589,7 @@ struct FiosIOFilter {
 	void *pContext;
 };
 
-extern FiosIOFilter s_ioFilters[FIOS_IOFILTER_COUNT];
+extern FiosIOFilter s_ioFilters[FIOS_IOFILTER_INDEX_MAX + 1];
 extern int s_ioFilterCount;			/* the filters added */
 int fiosIOFiltersCall(int command, void *pArgs);
 uint16_t fiosIOFiltersChunkTree(uint16_t rootID);
@@ -597,6 +598,9 @@ int fiosIOFilterGetInfo(int index, SceFiosIOFilterCallback *pOutFilterCallback,
 			void **pOutFilterContext);
 int fiosIOFilterRemove(int index);
 int fiosOverlayCopy(const SceFiosOverlay *pOverlay, SceFiosOverlay *pOut);
+
+/* md5_digest.c: the MD5 digest of a buffer */
+extern "C" uint8_t *fiosMD5(const void *pData, int size, uint8_t *pDigest);
 
 /*
  * An overlay as the system keeps it (sceFiosOverlayGetInfoForProcess02): the SDK's

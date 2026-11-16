@@ -2488,7 +2488,7 @@ int DecompressCallback(FiosChunk *pChunk, int run)
 	n = 0;
 	i = 0;
 	next = 1;
-	while (n < s_ioFilterCount && i < FIOS_IOFILTER_COUNT) {
+	while (n < s_ioFilterCount && i < FIOS_IOFILTER_INDEX_MAX) {
 		if (s_ioFilters[i].pCallback != NULL) {
 			n++;
 			if (s_ioFilters[i].pContext == pRead->pDearchiver)
@@ -2497,7 +2497,7 @@ int DecompressCallback(FiosChunk *pChunk, int run)
 		i = next++;
 	}
 	pFilter = &s_ioFilters[next];
-	for (; next < FIOS_IOFILTER_COUNT && n < s_ioFilterCount; next++, pFilter++) {
+	for (; next < FIOS_IOFILTER_INDEX_MAX && n < s_ioFilterCount; next++, pFilter++) {
 		FiosIOFilterFunc pCallback = (FiosIOFilterFunc)pFilter->pCallback;
 
 		if (pCallback != NULL) {

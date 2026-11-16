@@ -24,6 +24,7 @@ upstream. When a build needs another file, add it from the same release.
 | giflib-4.1.6 | GIFLIB 4.1.6 | the decoder (`dgif_lib.c`), `gif_err.c`, `gifalloc.c`, their headers, COPYING, README (`PROVENANCE.md`) | libpaf (`vsh/paf/src/misc/image/giflib`, with Sony's patch) |
 | img-sgx-ddk-1.7.862890 | Imagination SGX DDK for Linux 1.7 | the full import (not trimmed yet) | gpu_es4, gpuinit_es4, gpucoredump_es4 (through the shared SGX headers) |
 | jpeg-8c | IJG libjpeg 8c | the library sources libpaf links, headers, README, change.log | libpaf (`vsh/paf/src/misc/image/libjpeg`, with Sony's patch) |
+| libmd5-rfc-2002-04-13 | L. Peter Deutsch's MD5 (`md5.c` 1.6, 2002-04-13) | `md5.c`, `md5.h` (`PROVENANCE.md`) | libfios2 (`md5_digest.c`, little-endian, `memcpy` bound to its own `sceClibMemcpy`) |
 | libpng-1.5.10 | libpng 1.5.10 | the library sources libpaf links, headers, `arm/filter_neon.S`, LICENSE, README | libpaf (`vsh/paf/src/misc/image/libpng`, with Sony's configuration) |
 | netbsd-2.1, netbsd-3.0 | NetBSD `syssrc` 2.1 and 3.0 | the network stack files and the system headers net_ps reads | net_ps, net_ps_dev, wlanbt (through `net_ps/include`) |
 | rt2860-7bc30c23 | Linux staging rt2860 `cmm_wpa.c` | the file | bootimage wlanbt |

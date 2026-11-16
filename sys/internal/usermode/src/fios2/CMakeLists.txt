@@ -17,6 +17,9 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	dearchiver.cpp
 	execution.cpp
 	handletable.cpp
+	md5_digest.c
+	iofilter.cpp
+	string.cpp
 	wws_cond.cpp
 	wws_mutex.cpp
 	wws_thread.cpp
@@ -39,7 +42,8 @@ if(TARGET vs0_sys_external_libfios2)
 	target_include_directories(vs0_sys_external_libfios2 BEFORE PRIVATE
 		$<$<COMPILE_LANGUAGE:CXX>:$ENV{PSP2_SDK}/target/include>)
 	target_include_directories(vs0_sys_external_libfios2 PRIVATE
-		"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt")
+		"${CMAKE_SOURCE_DIR}/sys/sdk/target/src/deflt"
+		"${CMAKE_SOURCE_DIR}/contrib/libmd5-rfc-2002-04-13")
 endif()
 # SNC's runtime (libsnc): its personality routines call through ip
 set_source_files_properties(../../../../sdk/target/src/libsnc/unwind_pr0.c
@@ -58,3 +62,5 @@ set_source_files_properties(../../../../sdk/target/src/deflt/zlibhdr.c
 # here it binds to the library's own sceClibMemcpy
 set_property(SOURCE ../../../../sdk/target/src/deflt/deflate.c APPEND PROPERTY
 	COMPILE_DEFINITIONS sceClibMemcpy_safe=sceClibMemcpy)
+# md5_digest.c: md5_init is inlined into fiosMD5 and md5_finish is called, as with this budget
+set_source_files_properties(md5_digest.c PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=16)

@@ -87,7 +87,7 @@ uint16_t fiosChunkAllocate(uint8_t type, uint32_t size)
 	pChunk = fiosChunkAt(chunkID);
 	pChunk->magic = FIOS_CHUNK_MAGIC;
 	pChunk->type = type;
-	pChunk->reserved0 = CHUNKID_INVALID;
+	pChunk->bufferChunk = CHUNKID_INVALID;
 	pChunk->child[1] = CHUNKID_INVALID;
 	pChunk->child[0] = CHUNKID_INVALID;
 	pChunk->parent = CHUNKID_INVALID;
