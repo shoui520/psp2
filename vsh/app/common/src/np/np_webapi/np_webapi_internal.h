@@ -381,5 +381,8 @@ extern int npPushRegisterUser(SceNpOnlineId *onlineId);	/* 0x8100987a, not writt
 extern int npPushUnregisterUser(SceNpOnlineId *onlineId);	/* 0x810098d4, not written yet */
 extern int npWebApiUserContextReleaseResources(NpWebApiUserContext *userCtx);
 extern int npWebApiCreateUserContextObject(int libCtxId, const SceNpOnlineId *onlineId, unsigned char failIfExists);
+extern int npWebApiUserContextHasBusyRequests(NpWebApiUserContext *userCtx);
+extern int npWebApiUserContextAbortRequests(NpWebApiUserContext *userCtx);
+extern int npWebApiDeleteUserContextObject(int userCtxId);
 
 #endif

@@ -286,3 +286,47 @@ int npWebApiUserContextReleaseResources(NpWebApiUserContext *userCtx)
 	userCtx->flag98 = 0;
 	return result;
 }
+
+/* is a request of this user context still being used by someone else */
+int npWebApiUserContextHasBusyRequests(NpWebApiUserContext *userCtx)
+{
+	NpWebApiRequest *request;
+	int busy;
+
+	busy = 0;
+	npWebApiLibContextLock(userCtx->libContext);
+	request = userCtx->requestHead;
+	if (request != NULL) {
+		for (;;) {
+			npWebApiRequestAddRef(request);
+			if (npWebApiRequestHasOtherRefs(request) != 0)
+				break;
+			npWebApiRequestRelease(request);
+			request = npWebApiRequestNext(request);
+			if (request == NULL)
+				goto done;
+		}
+		busy = 1;
+		npWebApiRequestRelease(request);
+	}
+done:
+	npWebApiLibContextUnlock(userCtx->libContext);
+	return busy;
+}
+
+int npWebApiUserContextAbortRequests(NpWebApiUserContext *userCtx)
+{
+	NpWebApiRequest *request;
+	NpWebApiRequest *next;
+
+	npWebApiLibContextLock(userCtx->libContext);
+	request = userCtx->requestHead;
+	if (request != NULL) {
+		do {
+			next = npWebApiRequestNext(request);
+			npWebApiAbortRequest(npWebApiRequestGetId(request));
+			request = next;
+		} while (next != NULL);
+	}
+	return npWebApiLibContextUnlock(userCtx->libContext);
+}

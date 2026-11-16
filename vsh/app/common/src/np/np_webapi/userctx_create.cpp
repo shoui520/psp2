@@ -46,3 +46,61 @@ int npWebApiCreateUserContextObject(int libCtxId, const SceNpOnlineId *onlineId,
 		npWebApiLibContextRelease(libCtx);
 	return result;
 }
+
+int npWebApiDeleteUserContextObject(int userCtxId)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	const void **vtable;
+	int result;
+
+	result = 0;
+	libCtx = npWebApiFindLibContext((unsigned int)userCtxId >> 16, 0);
+	if (libCtx == NULL) {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+		goto out;
+	}
+	npWebApiLibContextLock(libCtx);
+	userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
+	if (userCtx == NULL) {
+		result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+		goto release;
+	}
+	if (g_sdkVersion >= NP_WEBAPI_SDK_3_30) {
+		npWebApiUserContextAbortRequests(userCtx);
+		if (npWebApiUserContextFlag158(userCtx) != 0) {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+			goto release;
+		}
+		npWebApiUserContextSetFlag158(userCtx, 1);
+		while (npWebApiUserContextHasOtherRefs(userCtx) != 0 || npWebApiUserContextHasBusyRequests(userCtx) != 0) {
+			npWebApiLibContextUnlock(libCtx);
+			sceKernelDelayThread(50000);
+			npWebApiLibContextLock(libCtx);
+		}
+	} else {
+		if (npWebApiUserContextHasOtherRefs(userCtx) != 0) {
+			result = -2141902574;
+			goto release;
+		}
+		if (npWebApiUserContextHasBusyRequests(userCtx) != 0) {
+			result = -2141902573;
+			goto release;
+		}
+	}
+	npWebApiUserContextReleaseResources(userCtx);
+	npWebApiLibContextRemoveUserContext(libCtx, userCtx);
+	npWebApiUserContextRelease(userCtx);
+	vtable = (const void **)userCtx->vtable;
+	((void (*)(NpWebApiUserContext *))vtable[1])(userCtx);
+	goto out;
+release:
+	if (userCtx != NULL)
+		npWebApiUserContextRelease(userCtx);
+out:
+	if (libCtx != NULL) {
+		npWebApiLibContextUnlock(libCtx);
+		npWebApiLibContextRelease(libCtx);
+	}
+	return result;
+}
