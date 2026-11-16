@@ -546,11 +546,6 @@ SceFiosOp sceFiosDHClose(const SceFiosOpAttr *pAttr, SceFiosDH dh)
 	return fiosOpSubmit(pOp);
 }
 
-static inline const char *getPath(FiosPath *pPath)
-{
-	return pPath != NULL ? pPath->GetPath() : NULL;
-}
-
 const char *sceFiosDHGetPath(SceFiosDH dh)
 {
 	FiosDH *pDH;
@@ -559,7 +554,7 @@ const char *sceFiosDHGetPath(SceFiosDH dh)
 	pDH = (FiosDH *)s_pDHTable->Lookup(dh);
 	if (pDH == NULL)
 		return NULL;
-	return getPath(&pDH->path);
+	return fiosPathGet(&pDH->path);
 }
 
 SceFiosOp fiosOpSubmitPathWithMode(const SceFiosOpAttr *pAttr, const char *pPath, uint16_t what,
@@ -859,7 +854,7 @@ const char *sceFiosFHGetPath(SceFiosFH fh)
 	pFH = (FiosFH *)s_pFHTable->Lookup(fh);
 	if (pFH == NULL)
 		return NULL;
-	return getPath(&pFH->path);
+	return fiosPathGet(&pFH->path);
 }
 
 SceFiosSize sceFiosFHGetSize(SceFiosFH fh)
@@ -1314,7 +1309,7 @@ const char *sceFiosOpGetPath(SceFiosOp op)
 
 	FIOS_TRACE(SCE_FIOS_PROFILE_API, "api", "%-15s ", "sceFiosOpGetPath");
 	pOp = (FiosOp *)s_pOpTable->Lookup(op);
-	return pOp != NULL ? getPath(&pOp->path) : NULL;
+	return pOp != NULL ? fiosPathGet(&pOp->path) : NULL;
 }
 
 void *sceFiosOpGetBuffer(SceFiosOp op)

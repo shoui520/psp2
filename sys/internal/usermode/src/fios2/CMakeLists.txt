@@ -10,6 +10,8 @@ psp2_module(vs0_sys_external_libfios2 KIND user COMPILER snc PARTIAL SOURCES
 	platform.cpp
 	allocator.cpp
 	api.cpp
+	debug.cpp
+	sync.cpp
 	libfios2.c
 	../../../../sdk/target/src/libsnc/i64ops.c
 	../../../../sdk/target/src/libsnc/i64mod.c

@@ -24,6 +24,7 @@
  * prototypes) rather than importing SceLibKernel's, and the SDK's deflate.o, which calls
  * sceClibMemcpy, binds to its copy. SNC does not expand them inline.
  */
+size_t fiosStrlen(const char *s);
 int fiosVsnprintf(char *dst, size_t size, const char *fmt, va_list ap);
 int fiosSnprintf(char *dst, size_t size, const char *fmt, ...);
 
@@ -67,6 +68,14 @@ struct FiosPath {
 
 	char *GetPath() { return path[g_FiosParams.pathMax - 1] ? *(char **)path : path; }
 };
+
+static inline const char *fiosPathGet(FiosPath *pPath)
+{
+	return pPath != NULL ? pPath->GetPath() : NULL;
+}
+
+/* an op flag the SDK does not name: a Sync call's op, its caller waits on it */
+#define FIOS_OPFLAG_SYNC	0x100
 
 /* an op's internal flags */
 #define FIOS_OP_CANCELLED	0x0002	/* sceFiosOpCancel */
@@ -151,6 +160,23 @@ public:
 	int Init(SceFiosBuffer buffer, uint32_t maxCount, size_t unitSize, size_t alignment);
 	void Term();
 	bool IsAllocated(const void *p, uint32_t count) const;
+
+	/* the units index to index + count all allocated */
+	bool IsAllocatedIndex(uint32_t index, uint32_t count) const
+	{
+		uint32_t total = m_count;
+		uint32_t end;
+
+		if (!m_initialized || count > total || index >= total)
+			return false;
+		end = count + index;
+		if (end > total)
+			return false;
+		for (; index < end; index++)
+			if (!(m_pBitmap[index >> 3] & (1 << (7 - (index & 7)))))
+				return false;
+		return true;
+	}
 	bool AtomicToggleBits(uint32_t index, uint32_t count, int set);
 	int Allocate(uint32_t count);
 	void Free(uint32_t index, uint32_t count);
@@ -163,6 +189,19 @@ public:
  */
 #define FIOS_HANDLE_INDEX(h)		((h) & 0x3fff)
 #define FIOS_HANDLE_TABLE(h)		(((uint16_t)(h) >> 14) - 1)
+
+/*
+ * A pass-through file handle (sceFiosFilenoToFH, or a Sync open before sceFiosInitialize):
+ * a native file descriptor in sync.cpp's table, the FH table's number and all of the
+ * generation bits set.
+ */
+#define FIOS_PASSTHRU_FH_MAX		256
+#define FIOS_PASSTHRU_FH(index)		(((index) & 0x3fff) | 0x7fff8000)
+
+static inline bool fiosIsPassthruFH(SceFiosFH fh)
+{
+	return ((fh >> 16) & 0x7fff) == 0x7fff && FIOS_HANDLE_TABLE(fh) == 1;
+}
 
 class HandleTable : public Allocator {
 public:
@@ -221,6 +260,52 @@ void fiosChunkTerm();
 void fiosChunkCancel(uint16_t chunk, bool cancel);
 void fiosChunkReschedule(uint16_t chunkID, SceFiosTime deadline, SceFiosPriority priority);
 void fiosScheduleTree(uint16_t chunkID, int depth, bool reschedule);
+uint16_t fiosChunkGetParent(uint16_t chunkID, int index);
+uint16_t fiosChunkGetChild(uint16_t chunkID, int index);
+
+/*
+ * A chunk: one or more 8-byte units of g_FiosParams.chunkStorage, its ID the first unit's
+ * index. The fields past the type are the ones the chunk dump reads.
+ */
+#define FIOS_CHUNK_MAGIC	0x2b	/* the low six bits of an allocated chunk's first byte */
+
+struct FiosChunk {
+	int8_t magic;
+	uint8_t scheduled : 1;
+	uint8_t prepared : 1;
+	uint8_t completed : 1;
+	uint8_t cancelled : 1;
+	uint8_t reservedFlags0 : 2;
+	uint8_t executing : 1;
+	uint8_t reservedFlags1 : 1;
+	uint8_t type;			/* CHUNK_* */
+	uint8_t reserved0[21];
+	union {
+		SceFiosOp op;		/* CHUNK_ROOT's op */
+		SceFiosHandle h;	/* the file or directory handle it works on */
+	};
+	uint32_t reserved1;
+	SceFiosOffset offset;
+	SceFiosSize reqCount;
+	SceFiosSize *pActCount;
+};
+
+/* debug.cpp: the dumps the SDK does not export */
+char *fiosDebugDumpChunk(uint16_t chunkID, char *pBuffer, size_t bufferSize);
+char *fiosDebugDumpIOFilter(SceFiosIOFilterCallback pFilterCallback, void *pFilterContext,
+			    char *pBuffer, size_t bufferSize);
+
+/* a cache entry as the cache's messages print it */
+struct FiosCacheEntry {
+	SceFiosDate accessDate;
+	SceFiosDate modificationDate;
+	uint64_t reserved0;
+	SceFiosOffset offset;
+	uint32_t length;
+	uint32_t reserved1[7];
+};
+
+char *fiosDebugDumpCacheEntry(FiosCacheEntry entry, char *pBuffer, size_t bufferSize);
 
 /* dearchiver.cpp */
 void fiosDearchiverSetThreadCount(uint8_t count);
@@ -414,6 +499,18 @@ SceFiosOp sceFiosCachePrefetchFH(const SceFiosOpAttr *pAttr, SceFiosFH fh);
 SceFiosOp sceFiosCachePrefetchFHRange(const SceFiosOpAttr *pAttr, SceFiosFH fh,
 				      SceFiosOffset offset, SceFiosSize length);
 void sceFiosCacheFlushSync();
+int sceFiosCachePrefetchFileSync(const SceFiosOpAttr *pAttr, const char *pPath);
+int sceFiosCachePrefetchFileRangeSync(const SceFiosOpAttr *pAttr, const char *pPath,
+				      SceFiosOffset offset, SceFiosSize length);
+int sceFiosCachePrefetchFHSync(const SceFiosOpAttr *pAttr, SceFiosFH fh);
+int sceFiosCachePrefetchFHRangeSync(const SceFiosOpAttr *pAttr, SceFiosFH fh,
+				    SceFiosOffset offset, SceFiosSize length);
+SceFiosNativeFH sceFiosFHToFileno(SceFiosFH fh);
+SceFiosFH sceFiosFilenoToFH(SceFiosNativeFH fd);
+int sceFiosDeallocatePassthruFH(SceFiosFH fh);
 }
+
+/* sync.cpp: a SceIoStat in FIOS2's terms */
+void fiosStatFromIoStat(const SceIoStat *pIoStat, SceFiosStat *pStat);
 
 #endif
