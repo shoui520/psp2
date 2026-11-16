@@ -33,7 +33,7 @@ extern unsigned int elmoRegAA;			/* 0xaa: the RMR's power (bit 15) */
 extern unsigned int elmoRegAB;			/* 0xab: the multi connector's power (bit 15) */
 extern unsigned int elmoReg60;			/* 0x60: the power LED's brightness (bits 12-15) */
 #if !FW_SINCE(0x01000104)
-extern unsigned char elmoPowerOnStage;		/* 7 once powerSeqOn has run; nothing reads it */
+extern unsigned char elmoPowerOnStage;		/* 7 (0x00411000: 0x0b) once powerSeqOn has run; nothing reads it */
 #endif
 
 extern void elmoInitRegs(void);
