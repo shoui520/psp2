@@ -391,6 +391,29 @@ typedef struct NpWebApiMultipartPart {
 } NpWebApiMultipartPart;
 
 extern int npWebApiRequestSendMultipartPart(NpWebApiRequest *request, const void *data, SceSize size, int partId);
+/* the 12-byte handle the user context creation hands out: it names the user context the library
+   context has at hand (the library context's field at +56) */
+typedef struct NpWebApiUserContextHandle {
+	const void *const *vtable;
+	NpWebApiUserContext *userContext;
+	int reserved;
+} NpWebApiUserContextHandle;
+
+/* the 1320-byte object a user context keeps at +44 */
+typedef struct NpWebApiUserObject {
+	const void *const *vtable;
+	NpWebApiLibContext *libContext;
+	SceNpOnlineId *onlineId;
+	unsigned char reserved12[4];
+	unsigned char buffer16[264];
+	unsigned char buffer280[1040];
+} NpWebApiUserObject;
+
+extern const void *g_userContextHandleVtable[];	/* 0x8100eb9c */
+extern const void *g_userObjectVtable[];	/* 0x8100edcc */
+extern NpWebApiUserContextHandle *npWebApiLibContextCreateUserContextHandle(NpWebApiLibContext *libCtx);
+extern NpWebApiUserObject *npWebApiUserObjectConstruct(NpWebApiUserObject *object, NpWebApiLibContext *libCtx,
+	NpWebApiUserContext *userCtx);
 extern NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx);
 extern NpWebApiRequest *npWebApiRequestConstruct(NpWebApiRequest *request, NpWebApiLibContext *libCtx);
 extern void npWebApiRequestDestruct(NpWebApiRequest *request);
