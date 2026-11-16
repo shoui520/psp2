@@ -29,6 +29,7 @@ extern "C" {
 /* the errors the exports return (SCE_NP_WEBAPI_ERROR_*, SDK doc NpWebApi-Reference) */
 #define NP_WEBAPI_ERROR_MULTIPART_PART_NOT_FOUND	-2141902569	/* 0x80552917 */
 #define NP_WEBAPI_HTTP_ERROR_SSL	-2143088523	/* 0x80431075, SCE_HTTP_ERROR_SSL */
+#define NP_WEBAPI_ERROR_HANDLE_NOT_FOUND	-2141902579	/* 0x8055290d */
 #define NP_WEBAPI_ERROR_OUT_OF_MEMORY		-2141902591	/* 0x80552901 */
 #define NP_WEBAPI_ERROR_INVALID_ARGUMENT	-2141902590	/* 0x80552902 */
 #define NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND	-2141902588	/* 0x80552904 */
@@ -73,7 +74,7 @@ extern int npWebApiRegisterPushEventCallback(int userCtxId, int filterId, SceNpW
 extern int npWebApiUnregisterPushEventCallback(int userCtxId, int callbackId);
 extern int npWebApiCreateHandle(int libCtxId);
 extern int npWebApiDeleteHandle(int libCtxId, int handleId);
-extern int npWebApiAbortHandle(int libCtxId, int handleId);
+extern int npWebApiAbortHandle(int libCtxId, int handleId) __attribute__((noinline));
 extern int npWebApiCreateServicePushEventFilter(int libCtxId, int handleId, const char *service, SceNpServiceLabel label,
 	const SceNpWebApiPushEventDataType *types, SceSize num);
 extern int npWebApiDeleteServicePushEventFilter(int libCtxId, int filterId);
@@ -155,7 +156,7 @@ typedef struct NpWebApiHeapBlock {
 /* a handle: its ID, its state bits (2: aborted) and how many are using it */
 typedef struct NpWebApiHandle {
 	int id;
-	int reserved4;
+	int object;
 	unsigned int state;
 	int refCount;
 } NpWebApiHandle;
@@ -168,7 +169,7 @@ typedef struct NpWebApiHandleNode {
 
 typedef struct NpWebApiHandleList {
 	NpWebApiHandleNode *sentinel;
-	int count;
+	unsigned long count;
 	void *allocator;
 } NpWebApiHandleList;
 
@@ -201,7 +202,16 @@ extern NpWebApiLibContext *g_libContexts;	/* 0x81010014 */
 
 extern void npWebApiHandleListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiHandle **pHandle) __attribute__((noinline));
+extern int npWebApiHandleListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiHandleNode **pAt) __attribute__((noinline));
 extern int npWebApiLibContextCreateHandle(NpWebApiLibContext *ctx);
+extern int npWebApiLibContextIsHandleUnusable(NpWebApiLibContext *ctx, NpWebApiHandle *handle)
+	__attribute__((noinline));
+extern int npWebApiLibContextAcquireHandle(NpWebApiLibContext *ctx, int handleId, NpWebApiHandle **pHandle)
+	__attribute__((noinline));
+extern int npWebApiLibContextReleaseHandle(NpWebApiLibContext *ctx, NpWebApiHandle *handle)
+	__attribute__((noinline));
+extern int npWebApiLibContextDeleteHandle(NpWebApiLibContext *ctx, int handleId);
 extern int npWebApiLibContextLock(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextUnlock(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextRelease(NpWebApiLibContext *ctx);
