@@ -329,7 +329,6 @@ extern int npCommerce2Send_8101BBB8(int mode, int httpTemplate, int *httpConnect
 extern int npCommerce2Send_8101C224(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101C3E2(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
 extern int npCommerce2Send_8101CF56(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest);
-extern int npCommerce2Send_8101D376(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2, int x3);
 extern int npCommerce2Send_8101D4B6(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest, int x2);
 
 extern int npCommerce2Start_8100673A(SceUInt32 reqId, int a2);
@@ -1491,6 +1490,14 @@ extern int npCommerce2Send_8101D2B0(int mode, int httpTemplate, int *httpConnect
 				    const NpCommerce2Address *address);
 extern int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
 				    const char * const *list, SceUInt32 count);
+extern int npCommerce2Send_8101D376(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *contentId, const char *fileId);
+extern int npCommerce2Send_81018D02(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *categoryId, const char * const *rewardIds, int hasRewards,
+				    SceUInt32 startPosition, SceUInt32 maxCount);
+extern int npCommerce2Send_81018EF8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+				    const char *categoryId, const char *productId, const char * const *rewardIds,
+				    int hasRewards);
 extern int npCommerce2GetEnvironmentName(char *buf, SceSize len);
 extern int npCommerce2GetRequestPath(SceUInt32 mode, SceUInt16 type, const char **prefix, const char **name);
 extern int npCommerce2CreateHttpRequest(int httpTemplate, int mode, int type, const char *prefix, const char *name,

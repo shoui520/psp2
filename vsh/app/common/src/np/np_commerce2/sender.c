@@ -1590,3 +1590,199 @@ int npCommerce2Send_8101CFDE(int mode, int httpTemplate, int *httpConnection, in
 	}
 	return ret;
 }
+
+/* a request with a content ID, or else a file ID, as its field */
+int npCommerce2Send_8101D376(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *contentId, const char *fileId)
+{
+	char escaped[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		handle = *httpRequest;
+		if (contentId != NULL) {
+			ret = npCommerce2UriEscape(escaped, 0x301, contentId, sceClibStrnlen(contentId, 0x301), NULL);
+			if (ret < 0)
+				return ret;
+			ret = npCommerce2WriteTextField(sending, handle, 79, escaped, 0);
+			if (ret < 0)
+				return ret;
+		} else {
+			ret = npCommerce2UriEscape(escaped, 0x301, fileId, sceClibStrnlen(fileId, 0x301), NULL);
+			if (ret < 0)
+				return ret;
+			ret = npCommerce2WriteTextField(sending, handle, 80, escaped, 0);
+			if (ret < 0)
+				return ret;
+		}
+		if (!sending)
+			length = (SceULong64)(SceInt64)ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
+
+/* a request with the mode (or 1 when rewards are sent), the category, optional reward ID and a range */
+int npCommerce2Send_81018D02(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *categoryId, const char * const *rewardIds, int hasRewards,
+			     SceUInt32 startPosition, SceUInt32 maxCount)
+{
+	char text[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	for (;;) {
+		sending = pass != 0;
+		handle = *httpRequest;
+		if (rewardIds != NULL && hasRewards != 0)
+			sceClibSnprintf(text, 0x301, "%u", 1);
+		else
+			sceClibSnprintf(text, 0x301, "%u", mode);
+		ret = npCommerce2WriteTextField(sending, handle, 10, text, 0);
+		if (ret >= 0) {
+			sum = (SceULong64)(SceInt64)ret;
+			ret = npCommerce2UriEscape(text, 0x301, categoryId, sceClibStrnlen(categoryId, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WriteTextField(sending, handle, 6, text, 1);
+				if (ret >= 0) {
+					sum += (SceULong64)(SceInt64)ret;
+					if (rewardIds != NULL && hasRewards != 0) {
+						ret = npCommerce2UriEscape(text, 0x301, rewardIds[0],
+									   sceClibStrnlen(rewardIds[0], 0x301), NULL);
+						if (ret < 0)
+							goto next;
+						ret = npCommerce2WriteTextField(sending, handle, 75, text, 1);
+						if (ret < 0)
+							goto next;
+						sum += (SceULong64)(SceInt64)ret;
+					}
+					ret = npCommerce2WriteNumberField(sending, handle, 7, startPosition, 1);
+					if (ret >= 0) {
+						sum += (SceULong64)(SceInt64)ret;
+						ret = npCommerce2WriteNumberField(sending, handle, 8, maxCount, 1);
+						if (ret >= 0) {
+							if (sending != 1)
+								length = sum + (SceULong64)(SceInt64)ret;
+							ret = 0;
+						}
+					}
+				}
+			}
+		}
+next:
+		if (ret < 0)
+			break;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				break;
+		}
+		if (++pass >= 2) {
+			ret = 0;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* a request with the mode, the product, optional category and reward IDs as fields */
+int npCommerce2Send_81018EF8(int mode, int httpTemplate, int *httpConnection, int type, int *httpRequest,
+			     const char *categoryId, const char *productId, const char * const *rewardIds,
+			     int hasRewards)
+{
+	char text[0x304];
+	const char *prefix;
+	const char *name;
+	SceULong64 length = 0;
+	SceULong64 sum;
+	int pass = 0;
+	int sending;
+	int handle;
+	int ret;
+
+	do {
+		sending = pass != 0;
+		handle = *httpRequest;
+		if (rewardIds != NULL && hasRewards != 0)
+			sceClibSnprintf(text, 0x301, "%u", 1);
+		else
+			sceClibSnprintf(text, 0x301, "%u", mode);
+		ret = npCommerce2WriteTextField(sending, handle, 10, text, 0);
+		if (ret >= 0) {
+			sum = (SceULong64)(SceInt64)ret;
+			ret = npCommerce2UriEscape(text, 0x301, productId, sceClibStrnlen(productId, 0x301), NULL);
+			if (ret >= 0) {
+				ret = npCommerce2WriteTextField(sending, handle, 9, text, 1);
+				if (ret >= 0) {
+					sum += (SceULong64)(SceInt64)ret;
+					if (categoryId != NULL && *categoryId != '\0') {
+						ret = npCommerce2UriEscape(text, 0x301, categoryId,
+									   sceClibStrnlen(categoryId, 0x301), NULL);
+						if (ret < 0)
+							goto next;
+						ret = npCommerce2WriteTextField(sending, handle, 6, text, 1);
+						if (ret < 0)
+							goto next;
+						sum += (SceULong64)(SceInt64)ret;
+					}
+					if (rewardIds != NULL && hasRewards != 0) {
+						ret = npCommerce2UriEscape(text, 0x301, rewardIds[0],
+									   sceClibStrnlen(rewardIds[0], 0x301), NULL);
+						if (ret < 0)
+							goto next;
+						ret = npCommerce2WriteTextField(sending, handle, 75, text, 1);
+						if (ret < 0)
+							goto next;
+						sum += (SceULong64)(SceInt64)ret;
+					}
+					if (sending != 1)
+						length = sum;
+					ret = 0;
+				}
+			}
+		}
+next:
+		if (ret < 0)
+			return ret;
+		if (pass == 0) {
+			prefix = NULL;
+			name = NULL;
+			ret = npCommerce2GetRequestPath(mode, type, &prefix, &name);
+			if (ret >= 0)
+				ret = npCommerce2CreateHttpRequest(httpTemplate, mode, type, prefix, name, 0,
+								   httpConnection, httpRequest, length);
+			if (ret < 0)
+				return ret;
+		}
+		pass++;
+	} while (pass < 2);
+	return 0;
+}
