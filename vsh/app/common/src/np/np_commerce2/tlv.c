@@ -51,8 +51,96 @@ __attribute__((noinline)) int npCommerce2FindRecord(const char *data, SceSize si
 	return offset;
 }
 
-int npCommerce2FindRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+__attribute__((noinline)) int npCommerce2FindRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
 			       SceUInt16 *length)
 {
 	return npCommerce2FindRecord(data, size, tag, minLength, length, 0);
+}
+
+/* finds, among the records of a tag-1 container, the record of a tag; *length: the value's length,
+ * *count: the record's own length field */
+__attribute__((noinline)) int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag,
+							 SceUInt16 *length, SceUInt32 *count, int partial)
+{
+	const char *p = data;
+	const char *q;
+	SceUInt16 recordTag;
+	SceUInt16 recordLength;
+	SceUInt16 containerLength;
+	int offset = 0;
+	int ret;
+	int len;
+
+	for (;;) {
+		ret = npCommerce2FindRecord(p, size - offset, 1, 4, &containerLength, partial);
+		if (ret < 0)
+			break;
+		q = p + ret;
+		sceClibMemcpy_safe(&recordTag, q, 2);
+		recordTag = sceNetNtohs(recordTag) & 0xFFF;
+		sceClibMemcpy_safe(&recordLength, q + 2, 2);
+		len = sceNetNtohs(recordLength);
+		recordLength = len;
+		if (recordTag == tag) {
+			ret = q - data + 4;
+			if (length != NULL)
+				*length = containerLength - 4;
+			if (count != NULL)
+				*count = len;
+			break;
+		}
+		p = q + containerLength;
+		offset = p - data;
+		if (size < (SceSize)offset) {
+			ret = NP_COMMERCE2_ERROR_RECORD_NOT_FOUND;
+			break;
+		}
+	}
+	return ret;
+}
+
+__attribute__((noinline)) int npCommerce2FindNestedRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
+				     SceUInt32 *count)
+{
+	return npCommerce2FindNestedRecord(data, size, tag, length, count, 0);
+}
+
+/* finds the record of a tag in a container, skipping index records of the same kind */
+int npCommerce2FindIndexedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+				 SceUInt32 index, SceUInt16 *length)
+{
+	SceUInt16 recordLength;
+	SceUInt16 containerLength;
+	SceUInt32 count;
+	const char *p;
+	const char *q;
+	SceUInt32 i;
+	int ret;
+
+	ret = npCommerce2FindNestedRecordWhole(data, size, tag, &containerLength, &count);
+	if (ret >= 0) {
+		p = data + ret;
+		q = p;
+		if (count > index) {
+			i = 0;
+			for (;;) {
+				if (i != 0)
+					p += recordLength;
+				ret = npCommerce2FindRecordWhole(p, containerLength - (p - q), tag, minLength,
+								 &recordLength);
+				if (ret < 0)
+					break;
+				i++;
+				p += ret;
+				if (i > index) {
+					ret = p - data;
+					*length = recordLength;
+					break;
+				}
+			}
+		} else {
+			ret = NP_COMMERCE2_ERROR_RECORD_INDEX;
+		}
+	}
+	return ret;
 }

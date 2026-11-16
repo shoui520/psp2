@@ -393,6 +393,31 @@ extern int npCommerce2GetSystemTime(SceUInt64 *time);
 extern int npCommerce2RenewConnection(int httpTemplate, int *httpConnection, int timeout);
 #define NP_COMMERCE2_ERROR_SHELL_CHANGED	-2141909099	/* 0x80550f95 */
 
+/* the header of a response */
+typedef struct NpCommerce2ResponseHeader {
+	SceUInt32 version;
+	SceUInt32 reserved1;
+	SceUInt32 length;
+	SceUInt32 status;
+	char reserved2[0x54];
+} NpCommerce2ResponseHeader;
+
+extern int npCommerce2ParseResponseHeader(const char *data, SceSize size, SceUInt32 *version,
+					  SceUInt32 *dataLength, SceUInt32 *status);
+extern int npCommerce2ResponseHasRecord78(const char *data, SceSize size, int *has);
+
+/* a result or an item of a response: the common part and what its operation reads out */
+typedef struct NpCommerce2Item {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 value[2];
+} NpCommerce2Item;
+
+/* the Init...Result exports and the items read out of a response (response.c) */
+extern int npCommerce2InitResult0x78(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2InitResult0x16(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadItem0x57(const NpCommerce2Item *result, NpCommerce2Item *item);
+extern int npCommerce2ReadItem0x78(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2Item *item);
+
 /* the store's response records (tlv.c) */
 #define NP_COMMERCE2_ERROR_RECORD_NOT_FOUND	-2141909113	/* 0x80550f87 */
 #define NP_COMMERCE2_ERROR_RECORD_CUT_OFF	-2141909112	/* 0x80550f88 */
@@ -402,6 +427,13 @@ extern int npCommerce2FindRecord(const char *data, SceSize size, SceUInt16 tag, 
 				 SceUInt16 *length, int partial);
 extern int npCommerce2FindRecordWhole(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
 				      SceUInt16 *length);
+#define NP_COMMERCE2_ERROR_RECORD_INDEX		-2141909242	/* 0x80550f06 */
+extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
+				       SceUInt32 *count, int partial);
+extern int npCommerce2FindNestedRecordWhole(const char *data, SceSize size, SceUInt16 tag,
+					    SceUInt16 *length, SceUInt32 *count);
+extern int npCommerce2FindIndexedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 minLength,
+					SceUInt32 index, SceUInt16 *length);
 extern SceUInt16 sceNetNtohs(SceUInt16 net16);
 
 /* the object table (object_table.c, request_table.c) */
