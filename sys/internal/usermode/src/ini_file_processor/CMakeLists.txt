@@ -8,6 +8,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	file.cpp
 	temp_file.cpp
 	buffered_file.cpp
+	processor.cpp
 	../../../../../sys/sdk/target/src/libsnc/i32ops.c
 	../../../../../sys/sdk/target/src/libsnc/i64ops.c
 	../../../../../sys/sdk/target/src/libsnc/i64shr.c

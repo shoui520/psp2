@@ -54,6 +54,9 @@ struct IniConfig {
 	void *context;
 };
 
+/* placement new, which the library defines itself */
+void *operator new(size_t size, void *place);
+
 extern int g_poolsCreated;	/* 0x81005010 */
 extern int g_poolsDestroyed;	/* 0x81005014 */
 
@@ -113,17 +116,20 @@ enum {
 #define INI_RESULT_BAD_ENCODING		-2138832892	/* 0x80840004: a UTF-16 byte order mark */
 #define INI_RESULT_TEXT_TOO_SHORT	-2138832888	/* 0x80840008 */
 
-struct IniScanner {
-	const void *vtable;
-	const unsigned char *cursor;
-	const unsigned char *end;
-	IniToken token;
-	SceSize bomKind;	/* 1: none, 2: UTF-8, 3 and 4: UTF-16 */
-	SceSize step;
+class IniScanner {
+public:
+	IniScanner();
+	virtual ~IniScanner();
+	virtual int scan(const IniInput *input, IniToken *out);
+
+	const unsigned char *m_cursor;
+	const unsigned char *m_end;
+	IniToken m_token;
+	SceSize m_bomKind;	/* 1: none, 2: UTF-8, 3 and 4: UTF-16 */
+	SceSize m_step;
 };
 
 extern IniInput *iniInputInit(IniInput *input);
-extern int iniScannerScan(IniScanner *scanner, const IniInput *input, IniToken *out);
 extern IniToken *iniTokenReset(IniToken *token);
 
 /* a string with its allocator: its bytes (the shared empty string when it has none), their number, and the
@@ -246,3 +252,72 @@ public:
 	SceSize m_used;
 	SceSize m_capacity;
 };
+
+/* one key and its value; the entries are a ring through the processor's head entry */
+struct IniEntry {
+	IniString key;
+	IniString value;
+	IniEntry *prev;
+	IniEntry *next;
+};
+
+#define SCE_INI_FILE_PROCESSOR_ERROR_EMPTY		-2138832891	/* 0x80840005 */
+#define SCE_INI_FILE_PROCESSOR_ERROR_NOT_WRITABLE	-2138832889	/* 0x80840007 */
+#define SCE_INI_FILE_PROCESSOR_ERROR_BAD_KEY		-2138832882	/* 0x8084000e */
+#define SCE_INI_FILE_PROCESSOR_ERROR_BUFFER_TOO_SMALL	-2138832879	/* 0x80840011 */
+#define SCE_INI_FILE_PROCESSOR_ERROR_NO_SUCH_KEY	-2138832880	/* 0x80840010 */
+#define SCE_INI_FILE_PROCESSOR_ERROR_NO_OFFSET		-2138832881	/* 0x8084000f */
+#define SCE_INI_FILE_PROCESSOR_ERROR_TOO_MANY		-2138832876	/* 0x80840014 */
+#define INI_MODE_UNOPENED	32
+#define INI_MODE_WRITABLE	1
+
+/* the processor: the entries of an INI file, read from it, changed, and written back through a temporary file */
+class IniProcessor {
+public:
+	IniProcessor(IniAllocatorRef *allocator, const IniConfig *config);
+	virtual ~IniProcessor();
+	virtual int setConfig(const IniConfig *config);
+	virtual int clear();
+	virtual int open(const char *path, const char *mode, int flags);
+	virtual int create(const char *path);
+	virtual int rewind();
+	virtual int flush();
+	virtual int close();
+	virtual int get(const char *key, char *buf, SceSize size, SceSize offset);
+	virtual int next(char *key, char *value, SceSize size);
+	virtual int set(const char *key, const char *value);
+	virtual int add(const char *key, const char *value);
+	virtual int remove(const char *key);
+	virtual int unused14();
+	virtual int lastError();
+	virtual SceSize count();
+	virtual int measure(char *buf, int *length);
+	virtual int text(void **buf, int *length);
+	virtual int parse(const char *buf, SceSize size);
+	virtual int freeText();
+
+	IniConfig m_config;
+	IniFileBase *m_file;
+	IniFileBase *m_temp;
+	IniEntry m_head;
+	SceSize m_count;
+	IniAllocatorRef *m_entryAllocator;
+	IniEntry *m_current;
+	int m_reserved;
+	int m_mode;
+	bool m_dirty;
+	IniAllocatorRef *m_allocator;
+	char *m_text;
+	SceSize m_textLength;
+	bool m_textValid;
+
+private:
+	int load();
+	int save();
+	int scanBuffer(IniInput *input, SceSize limit);
+	void removeAll();
+	IniEntry *find(const char *key, const IniString *keyString);
+	void addEntry(const IniString *key, const IniString *value);
+};
+
+extern int iniKeyValid(const char *key);

@@ -179,3 +179,9 @@ IniAllocatorOps *iniDefaultAllocator(void)
 
 	return &pool;
 }
+
+/* placement new */
+__attribute__((noinline)) void *operator new(size_t size, void *place)
+{
+	return place;
+}
