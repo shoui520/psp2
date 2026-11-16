@@ -2285,3 +2285,61 @@ int npCommerce2ReadTextValuesItem0x7b(const NpCommerce2Item *result, SceUInt32 i
 	}
 	return ret;
 }
+
+/* the record of tag 0x74 at an index: a kind (1 or 2, else zero), four values and a flag */
+int npCommerce2ReadKindItem0x74(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2KindItem *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	SceUInt32 net;
+	SceUInt32 kind;
+	const char *record;
+	int ret;
+
+	ret = npCommerce2FindIndexedRecord(data, result->commonData.data_size, 0x74, 0x14, index, &length);
+	if (ret >= 0) {
+		SceUInt32 version;
+		const SceUChar8 *head;
+		SceSize dataSize;
+
+		sceClibMemset(item, 0, 0x74);
+		version = result->commonData.version;
+		head = result->commonData.buf_head;
+		dataSize = length;
+		sceClibMemset(item, 0, 0x5C);
+		item->commonData.version = version;
+		item->commonData.buf_head = head;
+		record = data + ret;
+		item->commonData.data = (const SceUChar8 *)record;
+		item->commonData.data_size = dataSize;
+		sceClibMemcpy_safe(&net, record, 4);
+		kind = sceNetNtohl(net);
+		item->kind = kind;
+		item->rawKind = kind;
+		if (kind != 1 && kind != 2)
+			item->kind = 0;
+		sceClibMemcpy_safe(&net, record + 4, 4);
+		item->valueA = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 8, 4);
+		item->flag = sceNetNtohl(net) != 0;
+		sceClibMemcpy_safe(&net, record + 12, 4);
+		item->valueB = sceNetNtohl(net);
+		sceClibMemcpy_safe(&net, record + 16, 4);
+		item->valueC = sceNetNtohl(net);
+		item->commonData.data2 = (const SceUChar8 *)record + 20;
+	}
+	return ret;
+}
+
+/* the record of tag 0x61, found where the result's records start */
+int npCommerce2ReadTextRecord0x61(const NpCommerce2Item *result, NpCommerce2ValueTextItem2 *item)
+{
+	const char *data = (const char *)result->commonData.data;
+	SceUInt16 length;
+	int ret;
+
+	ret = npCommerce2FindRecordWhole(data, result->commonData.data_size, 0x61, 8, &length);
+	if (ret >= 0)
+		ret = npCommerce2ReadTextItem0x61Fields(&result->commonData, data + ret, data + ret, length, item);
+	return ret;
+}

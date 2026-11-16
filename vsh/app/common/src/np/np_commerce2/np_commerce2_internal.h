@@ -1311,6 +1311,20 @@ typedef struct NpCommerce2ThreeValuesText {
 extern int npCommerce2ReadTableRowDates0x73(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2DatesRow3 *item);
 extern int npCommerce2ReadTextValuesItem0x7b(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2ThreeValuesText *item);
 extern int npCommerce2InitResult0x74(NpCommerce2Item *result, const char *data, SceSize size);
+typedef struct NpCommerce2KindItem {
+	SceNpCommerce2CommonData commonData;
+	SceUInt32 kind;
+	SceUInt32 rawKind;
+	SceUInt32 valueA;
+	SceUInt32 flag;
+	SceUInt32 valueB;
+	SceUInt32 valueC;
+} NpCommerce2KindItem;
+
+extern int npCommerce2ReadKindItem0x74(const NpCommerce2Item *result, SceUInt32 index, NpCommerce2KindItem *item);
+extern int npCommerce2InitBareResult_8101652E(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2InitBareResult_810165F0(NpCommerce2Item *result, const char *data, SceSize size);
+extern int npCommerce2ReadTextRecord0x61(const NpCommerce2Item *result, NpCommerce2ValueTextItem2 *item);
 extern SceUInt64 sceNetNtohll(SceUInt64 net64);
 extern int npCommerce2FindNestedRecord(const char *data, SceSize size, SceUInt16 tag, SceUInt16 *length,
 				       SceUInt32 *count, int partial);
@@ -1443,13 +1457,9 @@ extern int npCommerce2CreateReqGetSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqChangeSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqCancelSubscr(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqGetCnslAct(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_81016436(int a1, int a2, int a3);
 extern int npCommerce2CreateReqAcptEula(SceUInt32 ctxId, SceUInt32 *reqId);
 extern int npCommerce2CreateReqVerifyDob(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_8101652E(int a1, void *a2, int a3);
-extern int npCommerce2_810165A4(int a1, int a2);
 extern int npCommerce2CreateReqVerifySecAns(SceUInt32 ctxId, SceUInt32 *reqId);
-extern int npCommerce2_810165F0(int a1, void *a2, int a3);
 extern int npCommerce2_8100A2B4(int a1, int a2, int a3, int a4, int a5);
 extern int npCommerce2_8100A38E(int a1, int a2, int a3, int a4);
 extern int npCommerce2CreateReqSendPassResetMail(SceUInt32 ctxId, SceUInt32 *reqId);
