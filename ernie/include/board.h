@@ -90,8 +90,8 @@
 
 /* timer 0x1f, started and stopped by chargeUpdate (the settings' chargeTimer1f), and the
    charge's transition 0x16 with the AC on (offWakeUnmask22): PCH-1000's; the others keep
-   chargeTimer1fStart and chargeTimer1fStop empty */
-#define BOARD_CHARGE_TIMER1F	(ERNIE_BOARD == 0x00406000 || BOARD_102603)
+   chargeTimer1fStart and chargeTimer1fStop empty (0x00102603 from 0x01000109) */
+#define BOARD_CHARGE_TIMER1F	(ERNIE_BOARD == 0x00406000 || BOARD_102603 && FW_SINCE(0x01000109))
 
 /* the NVS's data blocks (app/nvs.c), each kept with a copy, the rest of its 16 blocks spares:
    PCH-1000's NVS holds 0xba0 bytes, the others' 0xf80 */

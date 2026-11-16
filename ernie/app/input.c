@@ -454,6 +454,10 @@ void inputPowerOff(void)
 #else
 	adcCloseForBoard();
 	inputKeysClose();
+#if BOARD_INPUTS_102603
+	P12 &= (unsigned char)~0x80;
+	P5.4 = 0;
+#endif
 #endif
 	analogLatchInit();
 	return;
@@ -592,6 +596,9 @@ void inputSuspend(void)
 #else
 	adcCloseForBoard();
 	inputKeysClose();
+#if BOARD_INPUTS_102603
+	P12 &= (unsigned char)~0x80;
+#endif
 #endif
 	return;
 }
