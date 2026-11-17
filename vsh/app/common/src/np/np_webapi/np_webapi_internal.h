@@ -1625,8 +1625,8 @@ typedef struct NpPushPeer {
 	SceNpPeerAddress address;
 } NpPushPeer;
 
-extern NpWebApiLibContext *npWebApiGetFirstLibContext(void);
-extern NpWebApiLibContext *npWebApiLibContextNext(NpWebApiLibContext *ctx);
+extern NpWebApiLibContext *npWebApiGetFirstLibContext(void) __attribute__((noinline));
+extern NpWebApiLibContext *npWebApiLibContextNext(NpWebApiLibContext *ctx) __attribute__((noinline));
 extern int npWebApiUserContextHandleHasNext(NpWebApiUserContextHandle *handle) __attribute__((noinline));
 extern NpWebApiUserContext *npWebApiUserContextHandleNext(NpWebApiUserContextHandle *handle) __attribute__((noinline));
 extern int npPushFilterContainsType(const NpWebApiPushFilter *filter, const char *dataType) __attribute__((noinline));

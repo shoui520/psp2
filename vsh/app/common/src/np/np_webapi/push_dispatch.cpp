@@ -75,37 +75,40 @@ int npWebApiServiceFilterMatches(const NpWebApiServiceFilter *filter, const char
 {
 	const NpWebApiHandleNode *sentinel;
 	const NpWebApiHandleNode *node;
-	unsigned int i;
+	unsigned int count;
 	int offset;
 	const char *type;
+	int result;
 
+	result = 0;
 	if (filter->all == 0) {
 		sentinel = filter->list.sentinel;
 		node = NULL;
 		if (sentinel != NULL)
 			node = sentinel->next;
 		if (node == sentinel)
-			return 0;
+			return result;
 		while (sceClibStrncmp((const char *)node + 8, service, 9) != 0 ||
 			((const unsigned char *)node)[18] != ((const unsigned char *)service)[10]) {
 			node = node->next;
 			if (node == filter->list.sentinel)
-				return 0;
+				return result;
 		}
 	}
-	i = 0;
+	count = 0;
 	if (filter->typeCount != 0) {
 		offset = 0;
-		for (;; offset += 65) {
+		do {
 			type = (const char *)filter->types + offset;
-			if (sceClibStrncmp(type, dataType, sceClibStrnlen(type, 0xFFFFFFFF)) == 0)
+			if (sceClibStrncmp(type, dataType, sceClibStrnlen(type, 0xFFFFFFFF)) == 0) {
+				result = 1;
 				break;
-			if (++i >= filter->typeCount)
-				return 0;
-		}
-		return 1;
+			}
+			offset += 65;
+			count++;
+		} while (count < filter->typeCount);
 	}
-	return 0;
+	return result;
 }
 
 /* the same for an extended filter: the record of the data type is given back */
@@ -144,16 +147,17 @@ int npWebApiExtdFilterMatches(const NpWebApiExtdFilter *filter, const char *serv
 	i = 0;
 	if (filter->recordCount != 0) {
 		offset = 0;
-		for (;; offset += 80) {
+		do {
 			type = (const char *)filter->records + offset;
-			if (sceClibStrncmp(type, dataType, sceClibStrnlen(type, 0xFFFFFFFF)) == 0)
+			if (sceClibStrncmp(type, dataType, sceClibStrnlen(type, 0xFFFFFFFF)) == 0) {
+				found = 1;
+				if (pRecord != NULL)
+					*pRecord = (NpWebApiExtdFilterRecord *)((char *)filter->records + offset);
 				break;
-			if (++i >= filter->recordCount)
-				return found;
-		}
-		found = 1;
-		if (pRecord != NULL)
-			*pRecord = (NpWebApiExtdFilterRecord *)((char *)filter->records + offset);
+			}
+			offset += 80;
+			i++;
+		} while (i < filter->recordCount);
 	}
 	return found;
 }
@@ -283,10 +287,18 @@ int npWebApiUserContextCallLegacyCallback(NpWebApiLibContext *ctx, NpWebApiUserC
 	argument = npWebApiUserContextGetParam1(userCtx);
 	result = argument;
 	if (callback != NULL) {
-		if (to != NULL)
-			toCopy = npWebApiPeerCopy(ctx, to);
-		if (from != NULL)
-			fromCopy = npWebApiPeerCopy(ctx, from);
+		if (to != NULL) {
+			toCopy = (SceNpPeerAddress *)npWebApiLibContextPoolAlloc(ctx, 24);
+			sceClibMemset(toCopy, 0, 24);
+			sceClibMemcpy_safe(toCopy, &to->address.onlineId, 20);
+			toCopy->platform = to->address.platform;
+		}
+		if (from != NULL) {
+			fromCopy = (SceNpPeerAddress *)npWebApiLibContextPoolAlloc(ctx, 24);
+			sceClibMemset(fromCopy, 0, 24);
+			sceClibMemcpy_safe(fromCopy, &from->address.onlineId, 20);
+			fromCopy->platform = from->address.platform;
+		}
 		if (dataType != NULL) {
 			typeCopy = (char *)npWebApiLibContextPoolAlloc(ctx, 65);
 			sceClibMemset(typeCopy, 0, 65);
@@ -435,14 +447,14 @@ void npWebApiUserContextDispatchPushEventLocked(NpWebApiUserContext *userCtx, Sc
 		if (sentinel != NULL)
 			node = sentinel->next;
 		if (node != sentinel) {
-			while (node->state != 1) {
+			do {
+				if (node->state == 1) {
+					node->state = 2;
+					break;
+				}
 				node = node->next;
-				if (node == sentinel)
-					goto found;
-			}
-			node->state = 2;
+			} while (node != sentinel);
 		}
-found:
 		npWebApiLibContextUnlock(libCtx);
 		libCtx = userCtx->libContext;
 		if (node == userCtx->pushCallbacks.sentinel)
@@ -475,10 +487,10 @@ void npWebApiUserContextDispatchServiceEvent(NpWebApiUserContext *userCtx, const
 			filter = (NpWebApiServiceFilter *)npWebApiLibContextHasServicePushEventFilter(libCtx, node->filterId);
 			if (filter != NULL && npWebApiServiceFilterMatches(filter, service, dataType) != 0) {
 				if (node->callback != NULL)
-					((ServiceEventCallbackFn)node->callback)(node->id, filter->name, filter->handle, to, from,
+					((ServiceEventCallbackFn)node->callback)(node->id, npWebApiServiceFilterGetName(filter), npWebApiServiceFilterGetHandle(filter), to, from,
 						dataType, data, dataLength, node->argument);
 				if (node->callbackEx != NULL)
-					((ServiceEventCallbackExFn)node->callbackEx)(node->id, filter->name, filter->handle,
+					((ServiceEventCallbackExFn)node->callbackEx)(node->id, npWebApiServiceFilterGetName(filter), npWebApiServiceFilterGetHandle(filter),
 						service, to, from, dataType, data, dataLength, node->argument);
 			}
 			node = node->next;
@@ -519,14 +531,14 @@ void npWebApiUserContextDispatchServiceEventLocked(NpWebApiUserContext *userCtx,
 		if (sentinel != NULL)
 			node = sentinel->next;
 		if (node != sentinel) {
-			while (node->state != 1) {
+			do {
+				if (node->state == 1) {
+					node->state = 2;
+					break;
+				}
 				node = node->next;
-				if (node == sentinel)
-					goto found;
-			}
-			node->state = 2;
+			} while (node != sentinel);
 		}
-found:
 		npWebApiLibContextUnlock(libCtx);
 		libCtx = userCtx->libContext;
 		if (node == userCtx->serviceCallbacks.sentinel)
@@ -534,10 +546,10 @@ found:
 		filter = (NpWebApiServiceFilter *)npWebApiLibContextHasServicePushEventFilter(libCtx, node->filterId);
 		if (filter != NULL && npWebApiServiceFilterMatches(filter, service, dataType) != 0) {
 			if (node->callback != NULL)
-				((ServiceEventCallbackFn)node->callback)(node->id, filter->name, filter->handle, to, from,
+				((ServiceEventCallbackFn)node->callback)(node->id, npWebApiServiceFilterGetName(filter), npWebApiServiceFilterGetHandle(filter), to, from,
 					dataType, data, dataLength, node->argument);
 			if (node->callbackEx != NULL)
-				((ServiceEventCallbackExFn)node->callbackEx)(node->id, filter->name, filter->handle, service, to,
+				((ServiceEventCallbackExFn)node->callbackEx)(node->id, npWebApiServiceFilterGetName(filter), npWebApiServiceFilterGetHandle(filter), service, to,
 					from, dataType, data, dataLength, node->argument);
 		}
 		npWebApiLibContextLock(userCtx->libContext);
@@ -596,7 +608,7 @@ void npWebApiUserContextDispatchExtdEvent(NpWebApiUserContext *userCtx, const ch
 						&extdCount) >= 0) {
 						if (node->callback != NULL)
 							((ExtdEventCallbackFn)node->callback)(node->id, npPushFilterName((const unsigned char *)filter),
-								filter->handle, to, from, dataType, data, dataLength, extd, extdCount,
+								npWebApiExtdFilterGetHandle(filter), to, from, dataType, data, dataLength, extd, extdCount,
 								node->argument);
 						npWebApiExtdDataFree(userCtx->libContext, extd, extdCount);
 					}
@@ -647,14 +659,14 @@ void npWebApiUserContextDispatchExtdEventLocked(NpWebApiUserContext *userCtx, co
 		if (sentinel != NULL)
 			node = sentinel->next;
 		if (node != sentinel) {
-			while (node->state != 1) {
+			do {
+				if (node->state == 1) {
+					node->state = 2;
+					break;
+				}
 				node = node->next;
-				if (node == sentinel)
-					goto found;
-			}
-			node->state = 2;
+			} while (node != sentinel);
 		}
-found:
 		npWebApiLibContextUnlock(libCtx);
 		libCtx = userCtx->libContext;
 		if (node == userCtx->extdCallbacks.sentinel)
@@ -669,7 +681,7 @@ found:
 					0) {
 					if (node->callback != NULL)
 						((ExtdEventCallbackFn)node->callback)(node->id, npPushFilterName((const unsigned char *)filter),
-							filter->handle, to, from, dataType, data, dataLength, extd, extdCount,
+							npWebApiExtdFilterGetHandle(filter), to, from, dataType, data, dataLength, extd, extdCount,
 							node->argument);
 					npWebApiExtdDataFree(userCtx->libContext, extd, extdCount);
 				}
@@ -695,6 +707,11 @@ void npPushDispatch(const NpPushPeer *to, const NpPushPeer *from, const char *se
 	SceSize lengthCopy;
 	int libCtxId;
 	int userCtxId;
+	SceNpPeerAddress *toCopy2;
+	SceNpPeerAddress *fromCopy2;
+	char *typeCopy2;
+	void *dataCopy2;
+	SceSize lengthCopy2;
 
 	if (npWebApiGetSdkVersion() < NP_WEBAPI_SDK_3_50) {
 		toCopy = NULL;
@@ -749,6 +766,11 @@ void npPushDispatch(const NpPushPeer *to, const NpPushPeer *from, const char *se
 		}
 		npWebApiGlobalUnlock();
 	} else {
+		toCopy2 = NULL;
+		fromCopy2 = NULL;
+		typeCopy2 = NULL;
+		dataCopy2 = NULL;
+		lengthCopy2 = 0;
 		npWebApiGlobalLock();
 		for (current = npWebApiGetFirstLibContext(); current != NULL; current = npWebApiLibContextNext(current))
 			npWebApiLibContextSetFlag121(current, 1);
@@ -780,13 +802,13 @@ next:
 				if (handle != NULL)
 					((void (*)(void *))handle->vtable[1])(handle);
 				npWebApiLibContextUnlock(libCtx);
-				toCopy = NULL;
-				fromCopy = NULL;
-				typeCopy = NULL;
-				dataCopy = NULL;
-				lengthCopy = 0;
-				if (npWebApiLibContextCopyPeers(libCtx, to, from, dataType, data, dataLength, &toCopy, &fromCopy,
-					&typeCopy, &dataCopy, &lengthCopy) >= 0) {
+				toCopy2 = NULL;
+				fromCopy2 = NULL;
+				typeCopy2 = NULL;
+				dataCopy2 = NULL;
+				lengthCopy2 = 0;
+				if (npWebApiLibContextCopyPeers(libCtx, to, from, dataType, data, dataLength, &toCopy2, &fromCopy2,
+					&typeCopy2, &dataCopy2, &lengthCopy2) >= 0) {
 					while (1) {
 						userCtxId = 0;
 						npWebApiLibContextLock(libCtx);
@@ -807,29 +829,29 @@ next:
 						userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
 						if (userCtx != NULL) {
 							if (SceNpCommon_8C21F489(&to->address.onlineId, npWebApiUserContextOnlineId(userCtx)) == 0) {
-								npWebApiUserContextDispatchExtdEventLocked(userCtx, service, toCopy, fromCopy,
-									typeCopy, dataCopy, lengthCopy, exData, exDataNum);
+								npWebApiUserContextDispatchExtdEventLocked(userCtx, service, toCopy2, fromCopy2,
+									typeCopy2, dataCopy2, lengthCopy2, exData, exDataNum);
 								if (service != NULL) {
-									npWebApiUserContextDispatchServiceEventLocked(userCtx, service, toCopy,
-										fromCopy, typeCopy, dataCopy, lengthCopy);
+									npWebApiUserContextDispatchServiceEventLocked(userCtx, service, toCopy2,
+										fromCopy2, typeCopy2, dataCopy2, lengthCopy2);
 								} else {
 									npWebApiUserContextCallLegacyCallback(libCtx, userCtx, to, from, dataType,
 										data, dataLength);
-									npWebApiUserContextDispatchPushEventLocked(userCtx, toCopy, fromCopy,
-										typeCopy, dataCopy, lengthCopy);
+									npWebApiUserContextDispatchPushEventLocked(userCtx, toCopy2, fromCopy2,
+										typeCopy2, dataCopy2, lengthCopy2);
 								}
 							}
 							npWebApiUserContextRelease(userCtx);
 						}
 					}
-					if (toCopy != NULL)
-						npWebApiLibContextDestroyPool(libCtx, toCopy);
-					if (fromCopy != NULL)
-						npWebApiLibContextDestroyPool(libCtx, fromCopy);
-					if (typeCopy != NULL)
-						npWebApiLibContextDestroyPool(libCtx, typeCopy);
-					if (dataCopy != NULL)
-						npWebApiLibContextDestroyPool(libCtx, dataCopy);
+					if (toCopy2 != NULL)
+						npWebApiLibContextDestroyPool(libCtx, toCopy2);
+					if (fromCopy2 != NULL)
+						npWebApiLibContextDestroyPool(libCtx, fromCopy2);
+					if (typeCopy2 != NULL)
+						npWebApiLibContextDestroyPool(libCtx, typeCopy2);
+					if (dataCopy2 != NULL)
+						npWebApiLibContextDestroyPool(libCtx, dataCopy2);
 					npWebApiLibContextRelease(libCtx);
 				}
 			}
