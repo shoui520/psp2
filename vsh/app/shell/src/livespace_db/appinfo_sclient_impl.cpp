@@ -40,7 +40,7 @@ int AppInfoSClientImpl::MoveIcons(paf::vector<int> *fromPages,
 	return AppInfoDaemon::GetInstance()->MoveIcons(fromPages, fromPositions, toPages, toPositions);
 }
 
-int AppInfoSClientImpl::GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<LsdbDbBlob> *image)
+int AppInfoSClientImpl::GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<DbBlob> *image)
 {
 	return AppInfoDaemon::GetInstance()->GetIconImage(rowid, image);
 }
@@ -101,10 +101,10 @@ int AppInfoSClientImpl::HasAppInfo(const paf::string *titleId)
 	return AppInfoDaemon::GetInstance()->HasAppInfo(titleId);
 }
 
-int AppInfoSClientImpl::SetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value,
-	bool replace)
+int AppInfoSClientImpl::FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, int *pageNo,
+	bool theme)
 {
-	return AppInfoDaemon::GetInstance()->SetAppInfoValue(titleId, key, value, replace);
+	return AppInfoDaemon::GetInstance()->FindTitleIcon(titleId, icon, pageNo, theme);
 }
 
 int AppInfoSClientImpl::GetFolderIcon(const int *folderId, int *pageNo, const LsdbIconPtr *icon)

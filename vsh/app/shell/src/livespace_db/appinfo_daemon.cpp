@@ -17,7 +17,7 @@ const char *g_lsdbAppDbPath = "ur0:shell/db/app.db";
 /* the key of an application's install path ("ux0:..." when it is on the memory card) */
 #define LSDB_KEY_PATH		0x9A9B3542u
 
-static int AppInfoDaemonTransaction(int op, void *arg, int reserved,
+static int AppInfoDaemonTransaction(int op, bool readOnly, void *arg,
 	ActivityDbConnection **connection);
 
 __attribute__((noinline)) AppInfoDaemon::AppInfoDaemon()
@@ -370,13 +370,13 @@ end:
 	return result;
 }
 
-int AppInfoDaemon::GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<LsdbDbBlob> *image)
+int AppInfoDaemon::GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<DbBlob> *image)
 {
 	int result = 0;
 
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	*image = LsdbDbBlobOpen("main", "tbl_appinfo_icon", "reserved05", *rowid, 0,
+	*image = DbBlobOpen("main", "tbl_appinfo_icon", "reserved05", *rowid, 0,
 		AppInfoDaemonTransaction, this, &result);
 	return result;
 }
@@ -595,15 +595,15 @@ int AppInfoDaemon::HasAppInfo(const paf::string *titleId)
 	return result;
 }
 
-int AppInfoDaemon::SetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value,
-	bool replace)
+int AppInfoDaemon::FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, int *pageNo,
+	bool theme)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
-	int result = AppDbSetAppInfoValue(connection, titleId, key, value, replace);
+	int result = AppDbFindTitleIcon(connection, titleId, icon, pageNo, theme);
 	SceActivityDb_11D77056(m_access, result);
 	return result;
 }
@@ -1108,21 +1108,21 @@ int AppInfoDaemon::GetThemeCount()
 	return result;
 }
 
-/* the transaction an icon's image is read in (LsdbDbBlobOpen): 0 begins it, 1 ends it */
-static int AppInfoDaemonTransaction(int op, void *arg, int reserved,
+/* the transaction an icon's image is read in (DbBlobOpen) */
+static int AppInfoDaemonTransaction(int op, bool readOnly, void *arg,
 	ActivityDbConnection **connection)
 {
 	AppInfoDaemon *daemon = AppInfoDaemon::GetInstance();
 
 	if (daemon->m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	if (op == 0) {
+	if (op == DB_BLOB_TRANSACTION_BEGIN) {
 		*connection = SceActivityDb_82B45E74(daemon->m_access);
 		if (*connection == NULL)
 			return LSDB_ERROR_NOT_READY;
 		return 0;
 	}
-	if (op == 1)
+	if (op == DB_BLOB_TRANSACTION_END)
 		return SceActivityDb_11D77056(daemon->m_access, 0);
 	return 0;
 }

@@ -18,7 +18,10 @@
 #include <std/vector>
 #include <std/algorithm>
 #include <common/shared_ptr.h>
+#include <file/file.h>
+#include <rtc/rtc.h>
 #include <thread/thread.h>
+#include <plugin.h>
 #include "livespace_db.h"
 #include "lsdb_keys.h"
 #include <activity_db/activity_db.h>
@@ -32,8 +35,10 @@
 #define LSDB_ERROR_REBUILD		0x801010F3	/* the database was rebuilt */
 #define LSDB_ERROR_PAGE_RANGE		0x8010100B	/* a page number past the last page */
 #define LSDB_ERROR_POSITION_USED	0x8010100C	/* an icon where the page has one */
-#define LSDB_ERROR_EXISTS		0x80101004	/* a page deleted with its icons, a row inserted twice */
-#define LSDB_ERROR_NO_KEY		0x80101011	/* a key of 0, or one a bits update may not set */
+/* a page deleted with its icons, a row inserted twice */
+#define LSDB_ERROR_EXISTS		0x80101004
+/* a key of 0, or one a bits update may not set */
+#define LSDB_ERROR_NO_KEY		0x80101011
 
 /* dbutil's error for SQLite's SQLITE_CONSTRAINT */
 #define LSDB_DBUTIL_ERROR_CONSTRAINT	0x80103213
@@ -63,6 +68,9 @@ struct ActivityDbAccess;
 namespace dbutil {
 class Connection;
 }
+typedef struct sqlite3_blob sqlite3_blob;
+typedef struct sqlite3_context sqlite3_context;
+typedef struct Mem sqlite3_value;
 
 /* the records the application database hands out; laid out with their readers (appdb.cpp) */
 /* a folder icon's folder */
@@ -152,7 +160,8 @@ struct LsdbValue {
 		if (type == LSDB_VALUE_INTEGER)
 			integer = other.integer;
 		else if (type == LSDB_VALUE_TEXT)
-			text = other.text != NULL ? new paf::string(*other.text) : new paf::string("");
+			text = other.text != NULL ? new paf::string(
+				*other.text) : new paf::string("");
 	}
 
 	~LsdbValue()
@@ -389,7 +398,7 @@ typedef char LsdbThemeInfoSizeCheck[sizeof(LsdbThemeInfo) == 1456 &&
 #define LSDB_SET_PAGE_THEME_ICONS	0x1
 #define LSDB_SET_PAGE_THEME_PAGES	0x2
 
-struct LsdbDbBlob;
+class DbBlob;
 
 typedef void (*LsdbAppInfoListener)(int event, void *arg, unsigned int userData);
 typedef void (*LsdbAppInfoVisitor)(LsdbAppInfoPtr *info, void *arg);
@@ -398,11 +407,13 @@ typedef void (*LsdbAppInfoVisitor)(LsdbAppInfoPtr *info, void *arg);
 int AppDbCreateTables(ActivityDbConnection *connection, int version);
 int AppDbSetConfigString(ActivityDbConnection *connection, int key, const char *value);
 int AppDbUpdateConfigBits(ActivityDbConnection *connection, int key, SceInt64 bits, SceInt64 mask);
-paf::string AppDbGetConfigString(ActivityDbConnection *connection, int key, const char *defaultValue);
+paf::string AppDbGetConfigString(ActivityDbConnection *connection, int key,
+	const char *defaultValue);
 SceInt64 AppDbGetConfigInt64(ActivityDbConnection *connection, int key, SceInt64 defaultValue);
 int AppDbGetIcons(ActivityDbConnection *connection, int pageNo, unsigned int count,
 	LsdbPageIconLists *pages);
-int AppDbGetPage(ActivityDbConnection *connection, int pageNo, unsigned int count, LsdbPageList *pages);
+int AppDbGetPage(ActivityDbConnection *connection, int pageNo, unsigned int count,
+	LsdbPageList *pages);
 int AppDbReplacePageIcons(ActivityDbConnection *connection, paf::vector<int> *pageNos,
 	LsdbPageIconLists *lists);
 int AppDbUpdateIcon(ActivityDbConnection *connection, int pageNo, const LsdbIconPtr *icon,
@@ -414,7 +425,8 @@ int AppDbAddIcon(ActivityDbConnection *connection, int pageNo, const LsdbIconPtr
 int AppDbDeleteTitleIcons(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbMoveIcons(ActivityDbConnection *connection, paf::vector<int> *fromPages,
 	paf::vector<int> *fromPositions, paf::vector<int> *toPages, paf::vector<int> *toPositions);
-int AppDbUpdatePage(ActivityDbConnection *connection, paf::vector<int> *pageNos, LsdbPageList *pages);
+int AppDbUpdatePage(ActivityDbConnection *connection, paf::vector<int> *pageNos,
+	LsdbPageList *pages);
 int AppDbAddPage(ActivityDbConnection *connection, int pageNo, LsdbIconList *icons, LsdbPage *page,
 	int create);
 int AppDbDeletePage(ActivityDbConnection *connection, int pageNo);
@@ -469,10 +481,9 @@ int AppDbCountIcons(ActivityDbConnection *connection, int pageNo, unsigned int p
 int AppDbCountUserIcons(ActivityDbConnection *connection, int *count);
 int AppDbFindFolders(ActivityDbConnection *connection, const paf::string *title,
 	paf::vector<int> *folderIds);
-int AppDbGetAppInfo(ActivityDbConnection *connection, const paf::string *titleId, LsdbAppInfoPtr *info);
+int AppDbGetAppInfo(ActivityDbConnection *connection, const paf::string *titleId,
+	LsdbAppInfoPtr *info);
 int AppDbHasAppInfo(ActivityDbConnection *connection, const paf::string *titleId);
-int AppDbSetAppInfoValue(ActivityDbConnection *connection, const paf::string *titleId,
-	unsigned int key, LsdbValue *value, bool replace);
 int AppDbReplaceAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info);
 int AppDbMergeAppInfo(ActivityDbConnection *connection, LsdbAppInfoPtr *app, bool main);
 int AppDbUpdateUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app);
@@ -528,21 +539,121 @@ const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
 int SceLsdb_41019D89(const LsdbAppInfoPtr *app);
 }
 
+/* 1 for a title the PSP compatibility layer runs (SceCompatForVsh) */
+extern "C" int SceCompatForVsh_70997F92(const char *titleId);
+
+/* the game plugin's interface (Plugin::GetInterface(1) of "game_plugin"), as SceLsdb uses it */
+struct LsdbGamePluginInterface {
+	int (*getType)(const LsdbAppInfoPtr *app, int *type);
+	int (*getSubType)(const LsdbAppInfoPtr *app, int *type);
+	void *reserved[47];
+	int (*getMode)(void);
+};
+
+/* the game plugin's interface, NULL without the plugin */
+static inline LsdbGamePluginInterface *LsdbGamePlugin(void)
+{
+	paf::Plugin *plugin = paf::Plugin::Find("game_plugin");
+
+	if (plugin == NULL)
+		return NULL;
+	return (LsdbGamePluginInterface *)plugin->GetInterface(1);
+}
+
 /* SceLsdb_C36501F7 without telling the listeners (appinfo_daemon_api.cpp) */
 int LsdbUpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits,
 	SceInt64 mask);
 
-/* a blob of a database row, read through its own transaction (dbblob.cpp) */
-typedef int (*LsdbDbBlobTransaction)(int op, void *arg, int reserved,
+/*
+ * A blob of a database row, read and written as a paf::File (dbblob.cpp). With a transaction
+ * function, each access begins a transaction (op 0) for the blob and ends it (op 1);
+ * readOnly says the transaction has nothing to commit. Without one, the blob stays open.
+ */
+#define DB_BLOB_TRANSACTION_BEGIN	0
+#define DB_BLOB_TRANSACTION_END		1
+#define DB_BLOB_FILE_TYPE		0x102	/* its paf::File type */
+
+typedef int (*DbBlobTransaction)(int op, bool readOnly, void *arg,
 	ActivityDbConnection **connection);
-paf::common::SharedPtr<LsdbDbBlob> LsdbDbBlobOpen(const char *database, const char *table,
-	const char *column, SceInt64 rowid, int flags, LsdbDbBlobTransaction transaction, void *arg,
+
+class DbBlob : public paf::File {
+public:
+	/* what Open takes: the blob's database, table, column and row */
+	class OpenArg : public paf::File::OpenArg {
+	public:
+		OpenArg(const char *database, const char *table, const char *column,
+			SceInt64 rowid, int flags, DbBlobTransaction transaction, void *arg) :
+			database(database), table(table), column(column), rowid(rowid),
+			flags(flags), transaction(transaction), arg(arg)
+		{
+			file_type = DB_BLOB_FILE_TYPE;
+		}
+
+		paf::string database;
+		paf::string table;
+		paf::string column;
+		SceInt64 rowid;
+		int flags;			/* 1: writable */
+		DbBlobTransaction transaction;
+		void *arg;			/* the transaction's */
+	};
+
+	DbBlob() : m_mutex("SceLsdbDbBlob", 0), m_arg(NULL), m_connection(NULL), m_blob(NULL),
+		m_offset(0)
+	{
+	}
+
+	virtual ~DbBlob();
+	virtual int32_t GetFileType() const;
+	virtual int32_t GetCapability() const;
+	virtual int64_t GetFileSize() const;
+	virtual int32_t Open(const paf::File::OpenArg *param);
+	virtual int32_t OpenAsync(const paf::File::OpenArg *param);
+	virtual int32_t Close();
+	virtual int32_t CloseAsync();
+	virtual bool IsOpened() const;
+	virtual bool IsEof();
+	virtual int32_t Abort();
+	virtual int32_t Read(void *buf, size_t nbyte);
+	virtual int32_t ReadAsync(void *buf, size_t nbyte);
+	virtual int32_t Write(const void *buf, size_t nbyte);
+	virtual int32_t WriteAsync(const void *buf, size_t nbyte);
+	virtual int64_t Seek(int64_t offset, int32_t whence);
+	virtual int32_t SeekAsync(int64_t offset, int32_t whence);
+	virtual int32_t Flush();
+	virtual int32_t FlushAsync();
+	virtual int32_t WaitAsync(int64_t *result);
+	virtual int32_t PollAsync(int64_t *result);
+
+private:
+	int BeginTransaction(bool readOnly);
+	void EndTransaction(bool readOnly);
+
+	paf::thread::RMutex m_mutex;
+	OpenArg *m_arg;			/* NULL while closed */
+	ActivityDbConnection *m_connection;
+	sqlite3_blob *m_blob;		/* NULL outside a transaction */
+	int m_offset;
+};
+
+paf::common::SharedPtr<DbBlob> DbBlobOpen(const char *database, const char *table,
+	const char *column, SceInt64 rowid, int flags, DbBlobTransaction transaction, void *arg,
 	int *result);
 
-/* the shell's registry settings (shell_config.cpp) */
+/* the registry settings the database reads (dbblob.cpp) */
 int LsdbGetAppDbRebuildFlag(void);
 int LsdbSetAppDbRebuildFlag(int flag);
 int LsdbGetRegion(void);
+
+/* makes and frees the time exports' object (with the network tick exports) */
+void LsdbTimeInit(void);
+void LsdbTimeTerm(void);
+
+/* a language code's system language (the LiveArea's language table) */
+int LsdbLanguageFromCode(const paf::string *code);
+
+/* the network time, paf's when the debug network time is not set */
+extern "C" int SceLsdb_76C1997A(paf::rtc::Tick *tick);
 
 /* the application database's path */
 extern const char *g_lsdbAppDbPath;
@@ -578,7 +689,7 @@ public:
 	int DeleteTitleIcons(const paf::string *titleId);
 	int MoveIcons(paf::vector<int> *fromPages, paf::vector<int> *fromPositions,
 		paf::vector<int> *toPages, paf::vector<int> *toPositions);
-	int GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<LsdbDbBlob> *image);
+	int GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<DbBlob> *image);
 	int UpdatePage(paf::vector<int> *pageNos, LsdbPageList *pages);
 	int AddPage(int pageNo, LsdbIconList *icons, LsdbPage *page);
 	int DeletePage(int pageNo);
@@ -591,17 +702,18 @@ public:
 	int GetAppInfo(const paf::string *titleId, LsdbAppInfoPtr *info);
 	int GetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value);
 	int HasAppInfo(const paf::string *titleId);
-	int SetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value,
-		bool replace);
+	int FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, int *pageNo, bool theme);
 	int GetFolderIcon(const int *folderId, int *pageNo, const LsdbIconPtr *icon);
 	void NotifyListeners(int event, LsdbAppInfoPtr *info);
 	int RegisterApp(LsdbAppInfoPtr *app, int pageNo, const LsdbIconPtr *icon,
 		paf::vector<LsdbAppInfoPtr> *related);
 	int UnregisterApp(const paf::string *titleId, bool removeFolder, int *pageNo);
-	int UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, paf::vector<LsdbAppInfoPtr> *related);
+	int UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
+		paf::vector<LsdbAppInfoPtr> *related);
 	int RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, unsigned int fields,
 		paf::vector<LsdbAppInfoPtr> *related, bool notify);
-	int UpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits, SceInt64 mask, bool notify);
+	int UpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits,
+		SceInt64 mask, bool notify);
 	int ForEachAppInfo(LsdbAppInfoVisitor visitor, void *arg);
 	int UpdateIconTitles(int language);
 	int FindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *titleIds,
@@ -611,7 +723,8 @@ public:
 	int GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags);
 	int GetSchemeUris(const char **schemes, unsigned int count, paf::vector<paf::string> *uris);
 	int SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *theme, unsigned int flags);
-	int SetTheme(const LsdbTheme *theme, const LsdbThemeText *title, const LsdbThemeText *provider);
+	int SetTheme(const LsdbTheme *theme, const LsdbThemeText *title,
+		const LsdbThemeText *provider);
 	int DeleteTheme(const paf::string *id);
 	int DeleteAllThemes();
 	int GetThemeCount();
@@ -637,7 +750,7 @@ public:
 	int DeleteTitleIcons(const paf::string *titleId);
 	int MoveIcons(paf::vector<int> *fromPages, paf::vector<int> *fromPositions,
 		paf::vector<int> *toPages, paf::vector<int> *toPositions);
-	int GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<LsdbDbBlob> *image);
+	int GetIconImage(const SceInt64 *rowid, paf::common::SharedPtr<DbBlob> *image);
 	int UpdatePage(paf::vector<int> *pageNos, LsdbPageList *pages);
 	int AddPage(int pageNo, LsdbIconList *icons, LsdbPage *page);
 	int DeletePage(int pageNo);
@@ -650,16 +763,17 @@ public:
 	int GetAppInfo(const paf::string *titleId, LsdbAppInfoPtr *info);
 	int GetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value);
 	int HasAppInfo(const paf::string *titleId);
-	int SetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value,
-		bool replace);
+	int FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, int *pageNo, bool theme);
 	int GetFolderIcon(const int *folderId, int *pageNo, const LsdbIconPtr *icon);
 	int RegisterApp(LsdbAppInfoPtr *app, int pageNo, const LsdbIconPtr *icon,
 		paf::vector<LsdbAppInfoPtr> *related);
 	int UnregisterApp(const paf::string *titleId, bool removeFolder, int *pageNo);
-	int UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, paf::vector<LsdbAppInfoPtr> *related);
+	int UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
+		paf::vector<LsdbAppInfoPtr> *related);
 	int RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, unsigned int fields,
 		paf::vector<LsdbAppInfoPtr> *related);
-	int UpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits, SceInt64 mask);
+	int UpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits,
+		SceInt64 mask);
 	int ForEachAppInfo(LsdbAppInfoVisitor visitor, void *arg);
 	int BeginTransaction();
 	int EndTransaction(int state);
@@ -674,7 +788,8 @@ public:
 	int SetConfigString(int key, const char *value);
 	int UpdateConfigBits(int key, SceInt64 bits, SceInt64 mask);
 	int SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *theme, unsigned int flags);
-	int SetTheme(const LsdbTheme *theme, const LsdbThemeText *title, const LsdbThemeText *provider);
+	int SetTheme(const LsdbTheme *theme, const LsdbThemeText *title,
+		const LsdbThemeText *provider);
 	int DeleteTheme(const paf::string *id);
 	int DeleteAllThemes();
 	int GetThemeCount();
@@ -730,6 +845,185 @@ struct AppInfoQClient {
 	AppInfoQClientImpl *m_impl;
 };
 
+/*
+ * The new-event daemon (Sony's SceLsdbNeDaemon: tbl_newevent) and the LiveArea daemon
+ * (SceLsdbLiDaemon: tbl_livearea and its frames), each one per process like AppInfoDaemon.
+ */
+/* the transaction's end that keeps nothing */
+#define LSDB_TRANSACTION_ROLLBACK	-1
+
+#define LSDB_ERROR_NO_EVENT_KEY		0x80101008	/* an event without its IDs or rowid */
+
+/* a new event's row: by its rowid, else by its title's and item's IDs */
+struct LsdbNewEventKey {
+	LsdbNewEventKey() : rowid(0)
+	{
+	}
+
+	paf::string titleId;		/* id_title_id */
+	paf::string itemId;		/* id_item_id */
+	SceInt64 rowid;
+};
+
+PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbNewEventKey, paf::allocator<LsdbNewEventKey>)
+
+/* a row of tbl_newevent */
+struct LsdbNewEvent : LsdbNewEventKey {
+	LsdbNewEvent()
+		: msgType(256), actType(0), newFlag(false), popupNo(true), iconData(NULL),
+		  iconDataSize(0), execMode(0), seId(0), seVolume(0), hash(0), notifyFlags(0)
+	{
+	}
+
+	SceInt64 msgType;
+	int actType;			/* act_type's low word */
+	bool newFlag;
+	bool popupNo;			/* to pop up */
+	paf::string iconPath;		/* empty for an application's own icon0.png in vs0 */
+	const void *iconData;		/* the icon_data to write; NULL when read */
+	int iconDataSize;		/* length(icon_data) */
+	paf::string msgArg[9];
+	paf::string title;
+	paf::string desc;
+	int execMode;
+	paf::string execTitleId;
+	paf::string execArg;
+	paf::string timeUpdated;	/* "YYYY-MM-DD HH:MM:SS" */
+	int seId;
+	float seVolume;
+	int hash;
+	unsigned int notifyFlags;	/* act_type's high word */
+};
+
+typedef paf::common::SharedPtr<LsdbNewEvent> LsdbNewEventPtr;
+PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbNewEventPtr, paf::allocator<LsdbNewEventPtr>)
+PAF_VECTOR_NOINLINE_CLEAR(LsdbNewEventPtr, paf::allocator<LsdbNewEventPtr>)
+
+/* an event's notifications (notifyFlags): all three, by default and without the accessor */
+#define LSDB_NOTIFY_ALL		0x0E
+
+/* a listener of the new-event daemon: called with its userData on each change */
+typedef void (*NeDaemonListener)(void *userData);
+
+class NeDaemon {
+public:
+	NeDaemon();
+	static NeDaemon *Instance();
+	static NeDaemon *GetInstance();
+	static int Upgrade(ActivityDbConnection *connection, int version);
+
+	int Open(ActivityDbAccess *access);
+	int Close();
+	void NotifyListeners();
+	int ResetPopupCount();
+	int ClearPopups();
+	ActivityDbConnection *BeginTransaction();
+	int EndTransaction(int result);
+	int AddListener(NeDaemonListener listener, void *userData);
+	void RemoveListener(void *userData);
+	int DeleteEvents(bool all);
+	unsigned int GetNotifyFlags(const LsdbNewEvent *event, SceInt64 msgType);
+	int Insert(LsdbNewEvent *event, bool popup);
+	int Update(LsdbNewEventPtr *events, int count, unsigned int fields, bool deleted,
+		bool keepNew);
+	int DeleteKeys(const LsdbNewEventKey *keys, int count);
+	int Delete(const LsdbNewEventKey *keys, int count);
+	int ClearNewFlags();
+	int GetPopupCount();
+	int DeleteTitleEvents(const char *titleId);
+	int UpdateRow(ActivityDbConnection *connection, SceUInt64 changes,
+		const LsdbNewEvent *event, SceInt64 *rowid, int *hash);
+
+	/* the SQL functions tbl_newevent's triggers and inserts call */
+	static void IncrementPopupNum(sqlite3_context *context, int argc,
+		sqlite3_value **argv);
+	static void DecrementPopupNum(sqlite3_context *context, int argc,
+		sqlite3_value **argv);
+	static void GetNextPopupNo(sqlite3_context *context, int argc,
+		sqlite3_value **argv);
+
+	ActivityDbAccess *m_access;
+	int m_reserved;
+	paf::thread::RMutex m_mutex;
+	paf::map<unsigned int, NeDaemonListener> m_listeners;
+	int m_eventCount;		/* -1 until counted */
+	volatile int32_t m_popupCount;
+};
+
+/*
+ * The new-event accessor's implementation (Sony's SceShellLsdbNewEvtAccImpl; the accessor is
+ * Sony's newevent::NewEventAccessor): each request goes to the daemon.
+ */
+class NewEventAccessorImpl {
+public:
+	NewEventAccessorImpl();
+	~NewEventAccessorImpl();
+
+	int Open();
+	void Close();
+	static int Insert(LsdbNewEvent *event, bool popup);
+	static int Update(LsdbNewEventPtr *events, int count, unsigned int fields, bool keepNew);
+	static int Update(LsdbNewEventPtr *events, int count, unsigned int fields);
+	static int Delete(const LsdbNewEventKey *keys, int count);
+	static int DeleteAll(bool all);
+	int GetEvent(LsdbNewEvent *event);
+	void ClearChanged();
+	int GetEvents(paf::vector<LsdbNewEventPtr> *events, int max, int *count, int *newCount,
+		bool clear);
+	int GetIcon(const SceInt64 *rowid, paf::common::SharedPtr<DbBlob> *icon);
+	bool IsChanged();
+	int GetPopup(LsdbNewEvent *event);
+	int ClearPopup(const SceInt64 *rowid);
+	int ClearPopups();
+	int GetPopupCount();
+	int UpdateNewFlags(LsdbNewEventPtr *events, int count);
+	int ClearNewFlags();
+	unsigned int GetNotifyFlags(const LsdbNewEvent *event);
+
+	volatile int32_t m_changed;
+};
+
+/* the accessor the exports are methods of */
+struct NewEventAccessor {
+	NewEventAccessorImpl *m_impl;
+};
+
+class LiDaemon {
+public:
+	static LiDaemon *GetInstance();
+	static int Upgrade(ActivityDbConnection *connection, int version);
+
+	int Open(ActivityDbAccess *access);
+	int Close();
+	int UpdateTitles(const paf::string &titleId, int language, bool notify);
+};
+
+/* the listener of application events the LiveArea keeps its titles with */
+int LsdbTitleListenerInit(void);
+int LsdbTitleListenerTerm(void);
+
+/* the application database: the activity database's access object, one per process */
+class LsdbDatabase {
+public:
+	LsdbDatabase() : m_access(NULL)
+	{
+	}
+
+	static LsdbDatabase *GetInstance();
+	static int Upgrade(ActivityDbConnection *connection, int version);
+
+	int Open(int state, bool inMemory);
+	int Close();
+	int SetLanguage(int language);
+	int GetLanguage();
+	int ResetEvents();
+	int GetOpenResult();
+	int GetConfigText(paf::string *text);
+	int SetConfigText(const paf::string *text);
+
+	ActivityDbAccess *m_access;
+};
+
 /* the client exports the shell's theme code calls (appinfo_sclient.cpp, appinfo_qclient.cpp) */
 extern "C" {
 int SceLsdb_6F73E332(AppInfoSClient *client, const paf::common::SharedPtr<LsdbThemeInfo> *theme,
@@ -742,6 +1036,9 @@ AppInfoQClient *SceLsdb_A6D8772C(AppInfoQClient *client);
 int SceLsdb_DEF5C3F9(AppInfoQClient *client);
 AppInfoQClient *SceLsdb_E2101B03(AppInfoQClient *client);
 int SceLsdb_E90B81CD(AppInfoQClient *client);
+int SceLsdb_65ECEF39(AppInfoQClient *client, const paf::string *titleId, unsigned int key,
+	LsdbValue *value);
+SceInt64 SceLsdb_61F17FDA(AppInfoQClient *client, int key, SceInt64 defaultValue);
 int SceLsdb_64DD44C2(AppInfoQClient *client, const paf::string *id, int language,
 	LsdbTheme *theme);
 }

@@ -14,6 +14,10 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	appinfo_qclient_impl.cpp
 	appinfo_daemon_api.cpp
 	appinfo_accessor.cpp
+	appinfo_util.cpp
+	lsdb_database.cpp
+	dbblob.cpp
+	newevent.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf"

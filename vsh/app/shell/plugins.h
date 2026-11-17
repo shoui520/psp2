@@ -131,6 +131,7 @@ struct TelephonyModemVtable {
 	int (*getNetworkName)(TelephonyModem *self, char *name);			/* +0x1C */
 	void *reserved1[6];
 	int (*getState)(TelephonyModem *self, int *query);				/* +0x38 */
+	int (*getCountryCode)(TelephonyModem *self, paf::string *country);		/* +0x3C */
 };
 struct TelephonyModem {
 	const TelephonyModemVtable *vtable;

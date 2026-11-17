@@ -5,15 +5,6 @@
  */
 #include "livespace_db_internal.h"
 #include "lsdb_keys.h"
-#include <plugin.h>
-
-/* the game plugin's interface (Plugin::GetInterface(1) of "game_plugin"), as SceLsdb uses it */
-struct LsdbGamePluginInterface {
-	int (*getType)(const LsdbAppInfoPtr *app, int *type);
-	int (*getSubType)(const LsdbAppInfoPtr *app, int *type);
-	void *reserved[47];
-	int (*getMode)(void);
-};
 
 /* ATTRIBUTE's low word, as the exports read its bits */
 union LsdbAttribute {
@@ -46,15 +37,6 @@ static inline SceInt64 LsdbAppInfoInteger(const LsdbAppInfoPtr *app, unsigned in
 	if (it == info->end())
 		return notFound;
 	return it->second.type == LSDB_VALUE_INTEGER ? it->second.integer : 0;
-}
-
-static inline LsdbGamePluginInterface *LsdbGamePlugin(void)
-{
-	paf::Plugin *plugin = paf::Plugin::Find("game_plugin");
-
-	if (plugin == NULL)
-		return NULL;
-	return (LsdbGamePluginInterface *)plugin->GetInterface(1);
 }
 
 /* the TITLE_<nn> key of a language, TITLE without one */

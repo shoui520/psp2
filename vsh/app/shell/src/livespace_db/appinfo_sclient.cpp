@@ -86,10 +86,10 @@ int SceLsdb_BF7AFB42(AppInfoSClient *client, paf::vector<int> *fromPages,
 }
 
 /* the icon's image, as a shared blob; the result goes to *pResult */
-paf::common::SharedPtr<LsdbDbBlob> SceLsdb_41185388(AppInfoSClient *client, const SceInt64 *rowid,
+paf::common::SharedPtr<DbBlob> SceLsdb_41185388(AppInfoSClient *client, const SceInt64 *rowid,
 	int *pResult)
 {
-	paf::common::SharedPtr<LsdbDbBlob> image;
+	paf::common::SharedPtr<DbBlob> image;
 	int result = LSDB_ERROR_NOT_READY;
 
 	if (client->m_impl != NULL)
@@ -156,10 +156,10 @@ int SceLsdb_76EC65E3(AppInfoSClient *client, const paf::string *titleId)
 	return client->m_impl->HasAppInfo(titleId);
 }
 
-int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *titleId, unsigned int key, LsdbValue *value,
-	bool replace)
+int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *titleId, LsdbIconPtr *icon,
+	int *pageNo, bool theme)
 {
-	return client->m_impl->SetAppInfoValue(titleId, key, value, replace);
+	return client->m_impl->FindTitleIcon(titleId, icon, pageNo, theme);
 }
 
 int SceLsdb_7F53B3B6(AppInfoSClient *client, const int *folderId, int *pageNo, const LsdbIconPtr *icon)

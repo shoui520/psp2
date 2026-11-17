@@ -4,9 +4,6 @@
  */
 #include "livespace_db_internal.h"
 
-/* the transaction's end that keeps nothing */
-#define LSDB_TRANSACTION_ROLLBACK	-1
-
 AppInfoQClientImpl::AppInfoQClientImpl() : m_changed(0)
 {
 }

@@ -12,6 +12,7 @@
 #include <common/string_util.h>
 #include <dbutil/statement.h>
 #include "livespace_db_internal.h"
+#include "lsdb_statement.h"
 
 using dbutil::RefPtr;
 using dbutil::Statement;
@@ -22,72 +23,6 @@ static unsigned int s_fixedKeys[] = {
 	LsdbKeyHash("_fg_title_id"),
 	LsdbKeyHash("_bg_title_id"),
 };
-
-/* the value to bind: SQLite's integer, text, blob or NULL */
-static inline int AppDbBindInt(RefPtr<Statement> *statement, int index, SceInt64 integer)
-{
-	dbutil::Value value;
-
-	memset(&value, 0, sizeof(value));
-	value.type = SQLITE_INTEGER;
-	value.data.integer = integer;
-	return (*statement)->Bind(index, &value, false);
-}
-
-static inline int AppDbBindNull(RefPtr<Statement> *statement, int index)
-{
-	dbutil::Value value;
-
-	memset(&value, 0, sizeof(value));
-	value.type = SQLITE_NULL;
-	return (*statement)->Bind(index, &value, false);
-}
-
-/* text of size bytes (to its NUL with a negative size); NULL for none */
-static inline int AppDbBindText(RefPtr<Statement> *statement, int index, const char *text,
-	int size)
-{
-	if (text != NULL && *text != '\0' && size != 0) {
-		dbutil::Value value;
-
-		memset(&value, 0, sizeof(value));
-		value.type = SQLITE_TEXT;
-		if (size < 0)
-			size = sce_paf_strlen(text);
-		value.size = size;
-		value.data.text = text;
-		return (*statement)->Bind(index, &value, false);
-	}
-	return AppDbBindNull(statement, index);
-}
-
-static inline int AppDbBindString(RefPtr<Statement> *statement, int index, const paf::string *text)
-{
-	return AppDbBindText(statement, index, text->c_str(), text->size());
-}
-
-/* a column of the row a statement stepped to: its integer (0 for another type), its text */
-static inline SceInt64 AppDbColumnInt(RefPtr<Statement> *statement, int column)
-{
-	dbutil::Value value;
-
-	memset(&value, 0, sizeof(value));
-	(*statement)->GetValue(column, &value);
-	return value.type == SQLITE_INTEGER ? value.data.integer : 0;
-}
-
-static inline paf::string AppDbColumnString(RefPtr<Statement> *statement, int column)
-{
-	dbutil::Value value;
-
-	memset(&value, 0, sizeof(value));
-	(*statement)->GetValue(column, &value);
-	paf::string text;
-
-	if (value.type == SQLITE_TEXT)
-		text.assign(value.data.text, value.size);
-	return text;
-}
 
 /* the number of pages, the folders' pages left out */
 int AppDbGetPageCount(ActivityDbConnection *connection, int *count)
