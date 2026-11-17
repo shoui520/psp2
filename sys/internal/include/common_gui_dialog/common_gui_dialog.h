@@ -289,6 +289,8 @@ int SceCommonGuiDialog_273A476A(int dialogId, const paf::wstring &text);
 paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
 /* called on a dialog just opened with a resource ID (the trophy setup dialog's 0xE0D9F918) */
 int SceCommonGuiDialog_D3F78BA5(int dialogId, SceUInt32 id);
+/* called by the shell once its start job is done, with 38 (not written in C yet) */
+int SceCommonGuiDialog_5057376C(int value);
 
 /*
  * The library's layouts, by their parts (1: the text, 2: a second text, 12 to 14: the buttons,

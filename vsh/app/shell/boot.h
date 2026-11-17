@@ -12,5 +12,6 @@ bool shellBootArePluginsLoaded(void);
 bool shellBootHasAppStack(void);
 int shellBootGetDatabaseState(void);
 void shellBootLoadColdbootPlugin(void);
+void shellBootStartSystemEntry(void);
 
 #endif

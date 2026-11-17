@@ -98,6 +98,33 @@ int shellTelephonyStartSetup(int type, const char *param);
 /* the application events: sends one to its listeners (0x81241230) */
 int shellAppEventSend(int event, const void *data, int flags);
 
+/* the shell's start (start.cpp): its time, the services started by its start job, and the
+   error the start ended with (0x81004AE4) */
+int shellStart(void);
+SceUInt64 shellStartGetTime(void);			/* (0x81004C4C) */
+int shellStartAppDataMount(void);			/* ux0 application data, id 105 (0x81004C1E) */
+int shellStartAppDataUmount(void);			/* (0x81004C3C) */
+int shellStartupInit(void);				/* the startup settings read (0x81004EC6) */
+int shellSvcServerCreate(void);				/* SceShellSvc's IPMI server (0x811B7538) */
+int shellSvcServerStart(void);				/* its thread (0x811B7550) */
+int shellClosedCaptionMigrate(void);			/* (0x810A7760) */
+int shellTriggerMgrStart(void);				/* (0x81006C60) */
+int shellNpStart(void);					/* SceNpSystem, /CONFIG/NP env (0x81003F90) */
+int shellNpServicesStart(void);				/* (0x8100463C) */
+int shellNpNotifyStart(void);				/* (0x81004608) */
+int shellShutterSoundInit(void);			/* (0x81004D38) */
+int shellNoticeServiceStart(void);			/* (0x81005204) */
+int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
+int shellIsComTestMode(int *error);			/* id storage leaf 2 says test (0x81132AA2) */
+int shellThemeLoad(void);				/* the current theme (0x810053D0) */
+int shellConsoleInfoRecord(int type, SceInt64 tick, int arg);	/* ur0:ci, tick -1: now (0x81376B74) */
+int shellStateWatcherCreate(void);			/* (0x8124D6BA) */
+int shellAccessibilityMgrCreate(void);			/* (0x810A7616) */
+int shellHandlerTableCreate(void);			/* (0x81248BB4) */
+int shellUtilServerMgrCreate(void);			/* (0x8124BB02) */
+int shellMainThreadPollerCreate(void);			/* (0x8121CFE2) */
+int shellErrorDialogShow(int type, int error, const void *message, int flags);	/* (0x810FB45E) */
+
 /* the application in front, as the shell's screens follow it (0x810E17EE) */
 int shellAppSetForeground(int type, const char *name, int flags);
 
