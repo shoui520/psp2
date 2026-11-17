@@ -27,6 +27,7 @@ extern "C" {
 #define NP_COMMON_PS4_ERROR_80559E03	-2141872637
 #define NP_COMMON_PS4_ERROR_80559E0C	-2141872628
 #define NP_COMMON_PS4_ERROR_80559E0D	-2141872627
+#define NP_COMMON_PS4_ERROR_80559E0E	-2141872626
 #define NP_COMMON_PS4_ERROR_80559E11	-2141872623
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
 #define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80558005 */
@@ -254,7 +255,7 @@ struct NpCommonPs4JsonTextData {
 struct NpCommonPs4JsonValue *SceNpCommonPs4_D309C0B3(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool, int type);
 int SceNpCommonPs4_413D4254(struct NpCommonPs4JsonValue *array, struct NpCommonPs4JsonValue *item);
 int SceNpCommonPs4_7833EEC2(struct NpCommonPs4JsonValue *object, const char *name, struct NpCommonPs4JsonValue *value);
-int SceNpCommonPs4_AE224009(struct NpCommonPs4JsonValue *value, char boolean);
+int SceNpCommonPs4_AE224009(struct NpCommonPs4JsonValue *value, SceUInt8 boolean);
 int SceNpCommonPs4_943736E5(struct NpCommonPs4JsonValue *value, const char *number);
 int SceNpCommonPs4_CAD8A67F(struct NpCommonPs4JsonValue *value, const char *string);
 int SceNpCommonPs4_9C3F1645(struct NpCommonPs4JsonValue *object);
@@ -358,7 +359,7 @@ int SceNpCommonPs4_93DA3594(const char *data, int length);
 void SceNpCommonPs4_0A7044DA(const unsigned char *data, SceSize size);
 int SceNpCommonPs4_F50BD96A(int printed);
 int SceNpCommonPs4_BB5282C8(void *object);
-void SceNpCommonPs4_31DB2D97(void);
+struct NpCommonPs4Allocator *SceNpCommonPs4_31DB2D97(struct NpCommonPs4Allocator *pool);
 int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer);
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);
 int SceNpCommonPs4_6B428829(struct NpCommonPs4Allocator *allocator, void *pointer);

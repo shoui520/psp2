@@ -119,8 +119,9 @@ int SceNpCommonPs4_F50BD96A(int printed)
 	return 0;
 }
 
-void SceNpCommonPs4_31DB2D97(void)
+struct NpCommonPs4Allocator *SceNpCommonPs4_31DB2D97(struct NpCommonPs4Allocator *pool)
 {
+	return pool;
 }
 
 int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer)
