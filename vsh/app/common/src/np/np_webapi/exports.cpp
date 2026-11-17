@@ -416,27 +416,27 @@ int sceNpWebApiDeleteRequest(SceInt64 requestId)
 
 int sceNpWebApiSendRequest(SceInt64 requestId, const void *pData, SceSize dataSize, int *pHttpStatus)
 {
-	return npWebApiSend(requestId, 0, pData, dataSize, 0, pHttpStatus);
+	return npWebApiRequestSend(requestId, 0, pData, dataSize, 0, (NpWebApiResponseBuffer *)pHttpStatus);
 }
 
 int sceNpWebApiSendMultipartRequest(SceInt64 requestId, int partIndex, const void *pData, SceSize dataSize)
 {
 	if (partIndex > 0 && pData != NULL && dataSize != 0)
-		return npWebApiSend(requestId, partIndex, pData, dataSize, 0, NULL);
+		return npWebApiRequestSend(requestId, partIndex, pData, dataSize, 0, NULL);
 	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 }
 
 int sceNpWebApiSendRequest2(SceInt64 requestId, const void *pData, SceSize dataSize,
 	SceNpWebApiResponseInformationOption *pRespInfoOption)
 {
-	return npWebApiSend(requestId, 0, pData, dataSize, 1, pRespInfoOption);
+	return npWebApiRequestSend(requestId, 0, pData, dataSize, 1, (NpWebApiResponseBuffer *)pRespInfoOption);
 }
 
 int sceNpWebApiSendMultipartRequest2(SceInt64 requestId, int partIndex, const void *pData, SceSize dataSize,
 	SceNpWebApiResponseInformationOption *pRespInfoOption)
 {
 	if (partIndex > 0 && pData != NULL && dataSize != 0)
-		return npWebApiSend(requestId, partIndex, pData, dataSize, 1, pRespInfoOption);
+		return npWebApiRequestSend(requestId, partIndex, pData, dataSize, 1, (NpWebApiResponseBuffer *)pRespInfoOption);
 	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 }
 

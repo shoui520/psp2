@@ -89,8 +89,6 @@ extern int npWebApiCreateRequestInternal(unsigned int userCtxId, const char *pat
 	unsigned char multipart) __attribute__((noinline));
 extern int npWebApiDeleteRequest(SceInt64 requestId);
 extern int npWebApiAbortRequest(SceInt64 requestId);
-extern int npWebApiSend(SceInt64 requestId, int partIndex, const void *data, SceSize size, unsigned char useRespInfo,
-	void *respInfoOrStatus);
 extern int npWebApiGetHttpStatusCode(SceInt64 requestId, int *pStatus);
 extern int npWebApiReadData(SceInt64 requestId, void *data, SceSize size);
 extern int npWebApiGetErrorCode(void);
