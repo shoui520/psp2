@@ -16,6 +16,7 @@
 #include <post_ss_mgr/sblpmmgr.h>
 #include <regmgr/regmgr.h>
 #include <vshbridge/vshbridge.h>
+#include <graphics/drawobj/effect_path.h>
 
 #include "shell.h"
 
