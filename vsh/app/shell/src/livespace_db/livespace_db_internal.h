@@ -646,13 +646,6 @@ int LsdbGetAppDbRebuildFlag(void);
 int LsdbSetAppDbRebuildFlag(int flag);
 int LsdbGetRegion(void);
 
-/* makes and frees the time exports' object (with the network tick exports) */
-void LsdbTimeInit(void);
-void LsdbTimeTerm(void);
-
-/* a language code's system language (the LiveArea's language table) */
-int LsdbLanguageFromCode(const paf::string *code);
-
 /* the application database's path */
 extern const char *g_lsdbAppDbPath;
 

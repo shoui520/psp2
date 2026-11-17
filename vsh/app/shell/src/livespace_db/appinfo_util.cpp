@@ -5,6 +5,33 @@
 #include "livespace_db_internal.h"
 #include <regmgr/regmgr.h>
 
+/*
+ * A liveitem's pokesute tag (on, off, or none without one) in *result; 1 when it is shown, for
+ * the pokesute kept (0: any), or for a format-ver before 01.04, which has no pokesute
+ */
+int LiCheckPokesute(LiParser *parser, paf::list<XmlElement> *children, int formatVersion,
+		    int pokesute, int *result)
+{
+	*result = LI_POKESUTE_NONE;
+	for (paf::list<XmlElement>::iterator child = children->begin(); child != children->end();
+	     ++child) {
+		if (g_liTagPokesute == child->name) {
+			int on = LiOnOffFromName(&child->text);
+			int shown;
+
+			if (on == 0) {
+				shown = LI_POKESUTE_OFF;
+			} else {
+				shown = LI_POKESUTE_NONE;
+				if (on == 1)
+					shown = LI_POKESUTE_ON;
+			}
+			*result = shown;
+		}
+	}
+	return formatVersion < 104 || pokesute == 0 || *result == pokesute;
+}
+
 extern "C" {
 
 #if defined(FW_TYPE_CEX)

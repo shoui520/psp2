@@ -11,9 +11,12 @@
 #include <std/string>
 #include <std/vector>
 #include <std/list>
+#include <common/shared_ptr.h>
 #include <graphics/text/attributed_string.h>
 #include <scetypes.h>
+#include <system_param.h>
 #include <datetime/datetime.h>
+#include "xml_tree.h"
 
 /* the parts of a template, and the bit each one's GetMask gives (a frame's: its frameN) */
 #define LI_PART_BACKGROUND	1	/* livearea-background */
@@ -48,6 +51,11 @@
 /* an on or off attribute's values */
 #define LI_ON_OFF_INVALID	3
 
+/* a liveitem's pokesute tag: none, on or off */
+#define LI_POKESUTE_NONE	1
+#define LI_POKESUTE_ON		2
+#define LI_POKESUTE_OFF		3
+
 /* a part of a template */
 class LiPart {
 public:
@@ -74,6 +82,10 @@ public:
 
 /* a function of the system-function-zone: its func, and its target */
 struct LiFunction {
+	LiFunction()		/* func left to its user */
+	{
+	}
+
 	int func;
 	paf::string target;
 };
@@ -130,52 +142,50 @@ public:
 	paf::string m_reqAppVer;
 };
 
-/* where an element sits in its frame: its alignments, its size and its position */
-struct LiPlacement {
-	LiPlacement()
-		: align(LI_ALIGN_CENTER), valign(LI_ALIGN_CENTER), width(0), height(0), x(0), y(0),
-		  hasX(false), hasY(false)
+/* an element placed in its frame: its alignments, its size and its position */
+class LiPlacedElement : public LiItemElement {
+public:
+	LiPlacedElement(int type)
+		: LiItemElement(type), m_align(LI_ALIGN_CENTER), m_valign(LI_ALIGN_CENTER),
+		  m_width(0), m_height(0), m_x(0), m_y(0), m_hasX(false), m_hasY(false)
 	{
 	}
 
-	int align;
-	int valign;
-	int width;
-	int height;
-	int x;
-	int y;
-	bool hasX;
-	bool hasY;
+	int m_align;
+	int m_valign;
+	int m_width;
+	int m_height;
+	int m_x;
+	int m_y;
+	bool m_hasX;
+	bool m_hasY;
 };
 
 /* a liveitem's background: its image */
-class LiItemBackground : public LiItemElement {
+class LiItemBackground : public LiPlacedElement {
 public:
 	LiItemBackground();
 	virtual ~LiItemBackground();
 
-	LiPlacement m_place;
 	paf::string m_image;
 };
 
 /* a liveitem's image: the image, and the element it is placed from */
-class LiImage : public LiItemElement {
+class LiImage : public LiPlacedElement {
 public:
 	LiImage();
 	virtual ~LiImage();
 
-	LiPlacement m_place;
 	paf::string m_image;
 	int m_origin;			/* LI_ITEM_* */
 };
 
 /* a liveitem's text: its layout and its strings */
-class LiText : public LiItemElement {
+class LiText : public LiPlacedElement {
 public:
 	LiText();
 	virtual ~LiText();
 
-	LiPlacement m_place;
 	int m_textAlign;
 	int m_textValign;
 	int m_lineAlign;
@@ -190,7 +200,7 @@ public:
 	int m_marginBottom;
 	int m_marginLeft;
 	int m_marginRight;
-	int m_strCount;			/* -1 until a str */
+	int m_titleIndex;		/* the title's str, -1 without one */
 	paf::graph::AttributedString m_string;
 };
 
@@ -205,10 +215,10 @@ public:
 	SceUInt64 m_from;		/* 0: from any time */
 	SceUInt64 m_until;		/* -1: for ever */
 	bool m_default;
-	short m_country;
-	short m_language;
-	short m_ageLimit;
-	int m_reserved;
+	short m_ageLimit;		/* its age-limit, 0 without one */
+	short m_uageLimit;		/* its uage-limit, 255 without one */
+	short m_pokesute;		/* LI_POKESUTE_* */
+	LiTarget *m_target;
 	paf::vector<LiItemElement *> m_elements;
 };
 
@@ -240,9 +250,49 @@ public:
 	paf::string m_style;
 	paf::string m_formatVer;
 	SceInt64 m_contentRev;
-	int m_reserved;
+	int m_formatVersion;		/* format-ver's number (LiFormatVersion) */
 	paf::list<LiPart *> m_parts;
 	SceInt64 m_reserved2;
+};
+
+/* reads a template.xml into a LiTemplate: the file, whether it is a system application's, and
+   the liveitems kept (its language, country and age, now, the pokesute) */
+class LiParser {
+public:
+	LiParser(const char *path, bool system, bool useDefault);
+	~LiParser();
+
+	int Parse();
+	int SetFilter(const int *language, const char *country, int age);
+	int ParseFrameOnly(XmlElement *element);
+	int SetDefaultPath();
+
+	void Error(const char *format, ...);
+	int ParseTitle(XmlElement *element);
+	int ParseLiveitem(XmlElement *element, LiFrame *frame, bool isDefault, int *limits,
+			  int pokesute);
+	int ParseFrame(XmlElement *element);
+	int ParseGate(XmlElement *element, bool isDefault);
+	int ParseFunctionZone(XmlElement *element);
+	int ParseBackground(XmlElement *element, bool isDefault);
+	int ParseParts(XmlElement *root, bool last);
+	int ParseLivearea(XmlElement *root);
+
+	paf::string m_path;
+	bool m_system;		/* a system application's: its function zone and model */
+	bool m_useDefault;		/* the default template when the file cannot be read */
+	bool m_isDefault;		/* the default template read */
+	paf::common::SharedPtr<LiTemplate> m_template;
+	const int *m_language;		/* NULL: any */
+	const char *m_country;		/* NULL: any */
+	int m_age;			/* -1: any */
+	bool m_checkTime;		/* only the liveitems shown now */
+	bool m_keepAll;			/* every liveitem, unfiltered */
+	bool m_supportedFormatOnly;	/* only the format-vers this firmware supports */
+	bool m_networkTime;		/* now by the network's time */
+	int m_pokesute;			/* 0: any, else the LI_POKESUTE_* kept */
+	int m_languageValue;
+	paf::string m_countryValue;
 };
 
 /* a format-ver's number ("01.03": 103), -1 when it is not one */
@@ -340,6 +390,64 @@ extern paf::string g_liAttrMarginTop;
 extern paf::string g_liAttrMarginBottom;
 extern paf::string g_liAttrMarginLeft;
 extern paf::string g_liAttrMarginRight;
+
+/* livearea_parser.cpp: the path and whitespace strings */
+extern paf::string g_liDotDotSlash;
+extern paf::string g_liSlash;
+extern paf::string g_liCrLf;
+extern paf::string g_liLf;
+extern paf::string g_liTab;
+extern paf::string g_liSpace;
+
+void LiParserError(LiParser *parser, const char *format, ...);
+bool LiIsFilterTag(const paf::string *name);
+void LiRemoveNewlines(paf::string *str);
+void LiRemoveWhitespace(paf::string *str);
+int LiParsePlacement(const paf::string *tag, const XmlElement::AttrMap::iterator *attr,
+		     LiPlacedElement *element, LiParser *parser, bool outside);
+LiText *LiParseText(XmlElement *element, LiLiveItem *item, LiParser *parser);
+int LiCheckPath(LiParser *parser, paf::string *path);
+LiImage *LiParseImage(XmlElement *element, LiLiveItem *item, LiParser *parser);
+LiItemBackground *LiParseItemBackground(XmlElement *element, LiLiveItem *item, LiParser *parser);
+LiTarget *LiParseTarget(XmlElement *element, LiLiveItem *item, LiParser *parser);
+int LiParseItemElements(LiLiveItem *item, XmlElement *element, const int *limits, int pokesute,
+			LiParser *parser);
+int LiIsFrameAllowed(const paf::string *style, const paf::string *id);
+int LiParseLiveitemElement(LiLiveItem *item, XmlElement *element, const int *limits,
+			   int pokesute, LiParser *parser);
+
+/* livearea_filter.cpp: makes and frees the time exports' object (with the network tick exports) */
+void LsdbTimeInit(void);
+void LsdbTimeTerm(void);
+
+/* a language code's system language (the LiveArea's language table), -1 for another code */
+int LsdbLanguageFromCode(const paf::string *code);
+
+/* a liveitem's country, and its age limits there when its country is the system's */
+struct LiAgeLimits {
+	int ageLimit;
+	int uageLimit;
+	bool hasAgeLimit;
+	bool hasUageLimit;
+};
+
+int LiIsExcludedCountry(const paf::string *country, const char *systemCountry,
+			XmlElement::AttrMap *attrs, const int *language);
+int LiCheckCountry(const paf::string *country, const char *systemCountry,
+		   XmlElement::AttrMap *attrs, const int *language, LiAgeLimits *limits);
+
+#define LI_LANGUAGE_COUNT	(SCE_SYSTEM_PARAM_LANG_TURKISH + 1)
+
+extern paf::string g_liAll;
+extern paf::string g_liLanguages[LI_LANGUAGE_COUNT];
+
+/* a liveitem's filter tags: its country, language and age (limits: its age-limit and
+   uage-limit, or NULL), its model, and its pokesute (result: the LI_POKESUTE_* it shows in) */
+int LiFilterLiveitem(LiParser *parser, paf::list<XmlElement> *children, const int *language,
+		     const char *country, int age, int *limits);
+int LiCheckModel(LiParser *parser, paf::list<XmlElement> *children);
+int LiCheckPokesute(LiParser *parser, paf::list<XmlElement> *children, int formatVersion,
+		    int pokesute, int *result);
 
 extern "C" {
 

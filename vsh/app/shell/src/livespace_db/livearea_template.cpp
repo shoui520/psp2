@@ -5,10 +5,10 @@
  */
 #include "livearea.h"
 
-/* a liveitem from any time for ever, shown in every country and language */
+/* a liveitem from any time for ever, without an age limit */
 LiLiveItem::LiLiveItem()
-	: m_from(0), m_until((SceUInt64)-1), m_default(false), m_country(0), m_language(255),
-	  m_ageLimit(1), m_reserved(0)
+	: m_from(0), m_until((SceUInt64)-1), m_default(false), m_ageLimit(0), m_uageLimit(255),
+	  m_pokesute(LI_POKESUTE_NONE), m_target(NULL)
 {
 }
 
@@ -175,7 +175,7 @@ unsigned int LiTitle::GetMask() const
 	return LI_MASK_TITLE;
 }
 
-LiTemplate::LiTemplate() : m_contentRev(0), m_reserved(0), m_reserved2(0)
+LiTemplate::LiTemplate() : m_contentRev(0), m_formatVersion(0), m_reserved2(0)
 {
 }
 
@@ -280,7 +280,7 @@ extern "C" int SceLsdb_87172F61(const paf::string *version)
 	return -1;
 }
 
-LiItemBackground::LiItemBackground() : LiItemElement(LI_ITEM_BACKGROUND)
+LiItemBackground::LiItemBackground() : LiPlacedElement(LI_ITEM_BACKGROUND)
 {
 }
 
@@ -288,7 +288,7 @@ LiItemBackground::~LiItemBackground()
 {
 }
 
-LiImage::LiImage() : LiItemElement(LI_ITEM_IMAGE), m_origin(LI_ITEM_BACKGROUND)
+LiImage::LiImage() : LiPlacedElement(LI_ITEM_IMAGE), m_origin(LI_ITEM_BACKGROUND)
 {
 }
 
@@ -297,10 +297,10 @@ LiImage::~LiImage()
 }
 
 LiText::LiText()
-	: LiItemElement(LI_ITEM_TEXT), m_textAlign(0), m_textValign(0), m_lineAlign(1),
+	: LiPlacedElement(LI_ITEM_TEXT), m_textAlign(0), m_textValign(0), m_lineAlign(1),
 	  m_origin(LI_ITEM_BACKGROUND), m_lineSpace(0), m_lineBreak(true), m_wordWrap(true),
 	  m_ellipsis(false), m_wordScroll(false), m_preBr(true), m_marginTop(0),
-	  m_marginBottom(0), m_marginLeft(0), m_marginRight(0), m_strCount(-1)
+	  m_marginBottom(0), m_marginLeft(0), m_marginRight(0), m_titleIndex(-1)
 {
 }
 
