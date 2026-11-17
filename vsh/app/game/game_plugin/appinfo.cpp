@@ -821,6 +821,11 @@ static GameSfoParam s_sfoSaveDataParams[] = {
 	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
 };
 
+/* the game categories again, for the test by a category's own length */
+static const char *s_gameCategoryNames[] = {
+	"gc", "gda", "gd", "gp", "gdb", "wda", "gdc", "gpc", "gdd", "gpd",
+};
+
 /* the keys of the localized short titles and titles, STITLE_00..19 and TITLE_00..19 */
 static unsigned int s_stitleKeys[] = {
 	LsdbKeyHash("STITLE_00"), LsdbKeyHash("STITLE_01"), LsdbKeyHash("STITLE_02"),
@@ -1183,4 +1188,108 @@ const unsigned int *gameGetAddcontDirKeys(void)
 unsigned int gameGetAddcontDirKeyCount(void)
 {
 	return sizeof(s_addcontDirKeys) / sizeof(s_addcontDirKeys[0]);
+}
+
+/* whether a category is a game's, compared over the category's own length (0x81010C28) */
+bool gameCategoryIsGameName(const string &category)
+{
+	unsigned int i;
+
+	for (i = 0; i < sizeof(s_gameCategoryNames) / sizeof(s_gameCategoryNames[0]); i++) {
+		if (sce_paf_strncmp(category.c_str(), s_gameCategoryNames[i], category.length()) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+/*
+ * Whether an application counts as on ux0: (0x81010C5A): any _apptype but 0 and 2 does, else
+ * its original path must begin with ux0:. PLACEHOLDER: what the application types are is not
+ * read yet.
+ */
+int gameAppIsOnUx0(const LsdbAppInfoPtr *info, bool *onUx0)
+{
+	*onUx0 = false;
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APPTYPE);
+
+	if (it == (*info)->end())
+		return GAME_ERROR_NO_VALUE;
+
+	int type = (int)gameLsdbValueInteger(it->second);
+
+	if (type != 2 && type != 0) {
+		*onUx0 = true;
+	} else {
+		it = (*info)->find(LSDB_KEY_ORG_PATH);
+		if (it == (*info)->end())
+			return GAME_PAF_ERROR_NOT_FOUND;
+		if (sce_paf_strncmp("ux0:", LsdbValueText(it->second), 4) == 0)
+			*onUx0 = true;
+	}
+
+	return 0;
+}
+
+/*
+ * Whether two categories belong to one title: the same, or a game and its patch (gd and gp,
+ * gdc and gpc, gdd and gpd, either way round) (0x81010D48).
+ */
+bool gameCategoryMatches(const string &category, const string &other)
+{
+	if (category == other)
+		return true;
+	if (category == "gd" && other == "gp")
+		return true;
+	if (category == "gp" && other == "gd")
+		return true;
+	if (category == "gdc" && other == "gpc")
+		return true;
+	if (category == "gpc" && other == "gdc")
+		return true;
+	if (category == "gdd" && other == "gpd")
+		return true;
+	if (category == "gpd" && other == "gdd")
+		return true;
+
+	return false;
+}
+
+/* whether a category pair is a gdc/gpc title's and its gdd/gpd one's (0x81010EB2) */
+bool gameCategoryIsDataPair(const string &category, const string &other)
+{
+	return (category == "gdc" && other == "gdd") || (category == "gpc" && other == "gpd");
+}
+
+/*
+ * Where a path is: 1 a game card (gro0:; 2 with bit 0 of flags), 4 pd0:, 3 ux0:, else 0
+ * (0x81010F28). PLACEHOLDER: what the flag selects is not read yet.
+ */
+int gamePathGetStorage(const string &path, SceUInt64 flags)
+{
+	if (path.find("gro0:") != string::npos)
+		return (flags & 1) ? 2 : 1;
+	if (path.find("pd0:") != string::npos)
+		return 4;
+	if (path.find("ux0:") != string::npos)
+		return 3;
+
+	return 0;
+}
+
+/*
+ * Where a patch's path is, for a gp or gpc category: 1 a game card (gro0:; 2 with bit 0 of
+ * flags), 3 ux0:, else 0 (0x8101108E).
+ */
+int gamePatchPathGetStorage(const string &path, SceUInt64 flags, const string &category)
+{
+	if (category == "gp" || category == "gpc") {
+		if (path.find("gro0:") != string::npos)
+			return (flags & 1) ? 2 : 1;
+		if (path.find("ux0:") != string::npos)
+			return 3;
+	}
+
+	return 0;
 }

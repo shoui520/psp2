@@ -205,6 +205,13 @@ const GameSfoParam *gameSfoGetSaveDataParams(void);
 unsigned int gameSfoGetSaveDataParamCount(void);
 const unsigned int *gameGetAddcontDirKeys(void);
 unsigned int gameGetAddcontDirKeyCount(void);
+bool gameCategoryIsGameName(const paf::string &category);
+int gameAppIsOnUx0(const LsdbAppInfoPtr *info, bool *onUx0);
+bool gameCategoryMatches(const paf::string &category, const paf::string &other);
+bool gameCategoryIsDataPair(const paf::string &category, const paf::string &other);
+int gamePathGetStorage(const paf::string &path, SceUInt64 flags);
+int gamePatchPathGetStorage(const paf::string &path, SceUInt64 flags,
+			    const paf::string &category);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 
