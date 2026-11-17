@@ -8,3 +8,5 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/vsh/paf")
+# SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
+set_source_files_properties(boot.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)

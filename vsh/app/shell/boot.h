@@ -17,5 +17,6 @@ bool shellBootIsLaunchRestricted(void);
 bool shellBootArePluginsLoaded(void);
 bool shellBootHasAppStack(void);
 int shellBootGetDatabaseState(void);
+void shellBootLoadColdbootPlugin(void);
 
 #endif
