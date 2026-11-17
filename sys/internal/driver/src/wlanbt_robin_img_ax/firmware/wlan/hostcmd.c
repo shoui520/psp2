@@ -515,7 +515,7 @@ unsigned int hostCmdCurrentCode(void)
 	return 0;
 }
 
-#define PUT16(p, v)	do { (p)[0] = (uint8_t)(v); (p)[1] = (uint8_t)((v) >> 8); } while (0)
+#define PUT16(p, v)	do { unsigned int put16_ = (v); (p)[0] = (uint8_t)put16_; (p)[1] = (uint8_t)(put16_ >> 8); } while (0)
 #define MAC_644_STATE	MAC_REG(0x644)
 
 #define SDIO_IOCTL_SLEEP_STATS		9

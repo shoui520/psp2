@@ -289,10 +289,16 @@ _Static_assert(sizeof(struct WlanLocalWepKey) == 15, "local WEP key");
 /* The station's MIB values the host sets (wlanDeviceAddress points here). */
 struct WlanDeviceConfig {
 	uint8_t address[6];
-	uint8_t rtsThreshold[2];	/* 2347: off */
+	union {
+		uint8_t rtsThreshold[2];	/* 2347: off */
+		uint16_t rtsThresholdValue;	/* the two bytes copied whole */
+	};
 	uint8_t shortRetryLimit;	/* 9 */
 	uint8_t longRetryLimit;		/* 4 */
-	uint8_t fragThreshold[2];	/* 2346: off */
+	union {
+		uint8_t fragThreshold[2];	/* 2346: off */
+		uint16_t fragThresholdValue;
+	};
 	uint32_t parameters[2];		/* 512 and 96 at start; readers not converted yet */
 	uint16_t timeouts[4];		/* 500 each at start; readers not converted yet */
 };

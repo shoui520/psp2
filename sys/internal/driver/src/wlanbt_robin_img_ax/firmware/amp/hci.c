@@ -1138,8 +1138,8 @@ int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argum
 		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
 		event.state = kind;
-		event.word1 = argument0;
-		event.word2 = argument1;
+		event.argument0 = argument0;
+		event.argument1 = argument1;
 		ampLinkPostEvent(index, kind == 0 ? 1 : 2, &event);
 	} else {
 		ampHciAdjustCommandCount(-1);
@@ -1172,8 +1172,8 @@ int ampHciDisconnectPhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t a
 		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
 		event.state = 0;
-		event.word1 = argument0;
-		event.word2 = argument1;
+		event.argument0 = argument0;
+		event.argument1 = argument1;
 		ampLinkPostEvent(index, 4, &event);
 		ampPalNotifyDisconnect(index);
 	} else {
@@ -1197,8 +1197,8 @@ int ampHciShortRangeMode(uint16_t opcode, OsaBuffer *command, uint32_t argument0
 		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
 		event.state = 0;
-		event.word1 = argument0;
-		event.word2 = argument1;
+		event.argument0 = argument0;
+		event.argument1 = argument1;
 		ampLinkPostEvent(index, 5, &event);
 	} else {
 		status = AMP_HCI_UNKNOWN_CONNECTION;
@@ -1281,7 +1281,7 @@ fail:
 	event.opcode = (data[1] << 8) | data[0];
 	event.link = link;
 	event.state = ampPhysicalLinks[link].state;
-	event.word1 = status;
+	event.argument0 = status;
 	ampLinkPostEvent(link, 16, &event);
 	return status;
 }

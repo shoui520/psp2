@@ -39,12 +39,12 @@ int macTxNotifyConvertFrame(OsaBuffer *buffer);						/* 0x33a5e */
 void macTxNotifyVerifyFrame(void);							/* 0x33abc */
 int macTxNotifySelectFrame(OsaBuffer *buffer);						/* 0x33acc */
 void macTxNotifyAdjustFrame(int result, uint16_t statusCode);				/* 0x33c56 */
-void macTxNotifyRecordFrame(unsigned int algorithm, int kind, const uint8_t *peer,
-			    unsigned int statusCode);					/* 0x33c70 */
+void macTxNotifyRecordFrame(uint8_t algorithm, int kind, const uint8_t *peer,
+			    uint16_t statusCode);					/* 0x33c70 */
 int macTxNotifyFilterFrame(struct WlanConnection *connection,
 			   const struct WlanJoinAuthRequest *request);			/* 0x33c96 */
 int macTxNotifyHandleHeader(struct WlanConnection *connection,
-			    const struct WlanLeaveRequest *request, int notify);	/* 0x33d14 */
+			    const struct WlanLeaveRequest *request, uint8_t notify);	/* 0x33d14 */
 int macTxNotifyProcessHeader(OsaBuffer *buffer);					/* 0x33d3c */
 int macTxNotifyUpdateHeader(OsaBuffer *buffer);						/* 0x33dee */
 int macTxNotifyConfigureHeader(OsaBuffer *buffer);					/* 0x33eb6 */

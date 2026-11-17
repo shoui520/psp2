@@ -33,7 +33,7 @@ int (*wlanTxBaAddHook)(struct WlanConnection *connection, const struct WlanBaReq
 	__attribute__((section(".itcm.rw")));
 
 /* The elements the frame bodies of the HT management put out. */
-static void put16(uint8_t *bytes, unsigned int value)
+static inline void put16(uint8_t *bytes, unsigned int value)
 {
 	bytes[0] = value;
 	bytes[1] = value >> 8;
@@ -302,9 +302,11 @@ void wlanBaAddbaAccepted(struct WlanConnection *connection, uint16_t startSequen
 }
 
 /* The response of HostCmd 0xd0, the DELBA: the host's result, the peer, and the parameter set and reason it gave. */
-void wlanHostDelbaReplyBuild(OsaBuffer *message, const uint8_t *body, int success, const uint8_t *peer)
+void wlanHostDelbaReplyBuild(OsaBuffer *message, struct WlanConnection *connection, const uint8_t *body, int success,
+			     const uint8_t *peer)
 {
 	struct WlanHostResponse *response = wlanHostResponse(message);
+	unsigned int reason;
 
 	response->command[0] = WLAN_HOST_RESPONSE_DELBA & 0xff;
 	response->command[1] = WLAN_HOST_RESPONSE_DELBA >> 8;
@@ -317,8 +319,9 @@ void wlanHostDelbaReplyBuild(OsaBuffer *message, const uint8_t *body, int succes
 	__aeabi_memcpy(&response->body[1], peer, 6);
 	response->body[7] = body[2];
 	response->body[8] = body[3];
-	response->body[9] = body[4];
-	response->body[10] = body[5];
+	reason = body[4] | body[5] << 8;
+	response->body[9] = reason;
+	response->body[10] = reason >> 8;
 	response->body[11] = 0;
 }
 
@@ -421,8 +424,8 @@ void wlanHtElementsClear(uint8_t *htCapability, uint8_t *htOperation, uint8_t *c
  * A DELBA was sent (notify 1) or its transmission failed (0): the timer that waited for it stops and, when it
  * was running and the session is deleted, the session's timeout too. Returns 1 when the timer was running.
  */
-int wlanBaDelbaCheck(int notify, const uint8_t *body, struct WlanConnection *connection, const uint8_t *peer,
-		     struct WlanSoftTimer *timer)
+uint8_t wlanBaDelbaCheck(int notify, const uint8_t *body, struct WlanConnection *connection, const uint8_t *peer,
+			 struct WlanSoftTimer *timer)
 {
 	int running = 0;
 	UINT posture = tx_interrupt_control(TX_INT_DISABLE);
@@ -461,14 +464,12 @@ int wlanBssCoexIsFrame(const uint8_t *body)
 }
 
 /* The response of HostCmd 0xe9: the coexistence element and the intolerant channel report of the frame. */
-void wlanHostCoexistenceReplyBuild(OsaBuffer *message, const uint8_t *body)
+void wlanHostCoexistenceReplyBuild(OsaBuffer *message, struct WlanConnection *connection, const uint8_t *body)
 {
 	struct WlanHostResponse *response = wlanHostResponse(message);
 
 	response->command[0] = WLAN_HOST_RESPONSE_COEXISTENCE & 0xff;
 	response->command[1] = WLAN_HOST_RESPONSE_COEXISTENCE >> 8;
-	response->sequence[0] = 0;
-	response->sequence[1] = 0;
 	response->result[0] = 0;
 	response->result[1] = 0;
 	__aeabi_memcpy(&response->body[0], body + 2, 3);

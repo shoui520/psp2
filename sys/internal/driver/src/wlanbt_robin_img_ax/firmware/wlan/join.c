@@ -189,7 +189,7 @@ void wlanJoinSetBss(const struct WlanJoinBss *bss)
 	connection->networkSsidLength = bss->ssidLength;
 	wlanBssSelectAddress(0, bss->bssid);
 	wlanTxSetSharedRadio(1);
-	wlanMacAddressApply();
+	wlanMacSsidApply(bss->ssid, bss->ssidLength);
 }
 
 /* 0x11c56: end the join with a result (0: associated). */

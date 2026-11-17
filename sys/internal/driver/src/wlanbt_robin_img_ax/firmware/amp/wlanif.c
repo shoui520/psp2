@@ -105,6 +105,10 @@ uint8_t ampActivityTimestamp[4] __attribute__((section(".itcm.bss")));
 uint8_t ampScanEnabled __attribute__((section(".itcm.bss")));
 static uint8_t ampPalLocalName[48] __attribute__((section(".itcm.bss")));
 static uint8_t ampWlanFlagsStorage[32] __attribute__((section(".itcm.bss")));
+/* The driver's three message queues, as every mdev driver has them (ampDriverInit(), wlanDriverInit()); nothing sends on them. */
+struct AmpQueue ampWlanCommandQueue __attribute__((section(".dtcm.bss")));
+struct AmpQueue ampWlanEventQueue __attribute__((section(".dtcm.bss")));
+struct AmpQueue ampWlanDataQueue __attribute__((section(".dtcm.bss")));
 struct MdevDriver ampWlanDriver __attribute__((section(".dtcm.bss")));
 
 /* Copies count bytes of source in reverse order. */
@@ -147,7 +151,7 @@ static inline unsigned int get16(const uint8_t *p)
 	return p[0] | (p[1] << 8);
 }
 
-static void put16(uint8_t *p, unsigned int value)
+static inline void put16(uint8_t *p, unsigned int value)
 {
 	p[0] = value;
 	p[1] = value >> 8;
@@ -158,9 +162,11 @@ void ampPalStartLink(struct WlanConnection *connection)
 {
 	OsaBuffer *buffer;
 	uint8_t *command;
-	uint8_t *tlv;
-	uint8_t *next;
-	unsigned int ssidLength;
+	struct MrvlIEtypesHeader *ssid, *ds, *rates, *channels;
+	uint8_t *channelList;
+	uint8_t *rsn;
+	uint16_t ssidLength;
+	unsigned int length;
 	unsigned int size;
 
 	buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0x100, 0, 3);
@@ -178,36 +184,42 @@ void ampPalStartLink(struct WlanConnection *connection)
 	put16(command + 16, 0x0100);
 	put16(command + 18, connection->capability);
 	command[20] = 16;
-	/* SSID TLV */
-	put16(command + 21, 0);
+	/* The TLVs: each one's place and the size come from the lengths written into the headers before it. */
+	ssid = (struct MrvlIEtypesHeader *)(command + 21);
+	ssid->type = 0;
 	ssidLength = strlen(connection->ssid);
-	put16(command + 23, ssidLength);
-	__aeabi_memcpy(command + 25, connection->ssid, ssidLength);
-	/* DS parameter TLV */
-	tlv = command + 25 + ssidLength;
-	put16(tlv, 3);
-	put16(tlv + 2, 1);
-	tlv[4] = connection->channel;
-	/* Supported rates TLV */
-	next = tlv + 5;
-	put16(next, 1);
-	put16(next + 2, 12);
-	__aeabi_memcpy(next + 4, ampSupportedRates, 12);
-	/* Channel list TLV */
-	put16(next + 16, 0x0101);
-	put16(next + 18, 7);
-	__aeabi_memclr(next + 20, 7);
-	next[21] = connection->channel;
-	next[20] = (4 * (next[20] >> 2)) & 0xf3;
-	tlv = next + 27;
-	size = ssidLength + 57;
-	if (btampAddRsnIe((IEEEtypes_RSNElement_t *)(tlv + 2)) != 0) {
+	ssid->length = ssidLength;
+	__aeabi_memcpy(ssid + 1, connection->ssid, ssidLength);
+	length = ssid->length;
+	ds = (struct MrvlIEtypesHeader *)((uint8_t *)(ssid + 1) + length);
+	ds->type = 3;
+	ds->length = 1;
+	((uint8_t *)(ds + 1))[0] = connection->channel;
+	size = 21 + sizeof(*ssid) + length;
+	length = ds->length;
+	size += sizeof(*ds) + length;
+	rates = (struct MrvlIEtypesHeader *)((uint8_t *)(ds + 1) + length);
+	rates->type = 1;
+	__aeabi_memcpy(rates + 1, ampSupportedRates, 12);
+	rates->length = 12;
+	channels = (struct MrvlIEtypesHeader *)((uint8_t *)(rates + 1) + 12);
+	channels->type = 0x0101;
+	channels->length = 7;
+	channelList = (uint8_t *)(channels + 1);
+	__aeabi_memclr(channelList, 7);
+	channelList[1] = connection->channel;
+	channelList[0] = (4 * (channelList[0] >> 2)) & 0xf3;
+	length = channels->length;
+	rsn = channelList + length;
+	size += sizeof(*rates) + 12 + sizeof(*channels) + length;
+	if (btampAddRsnIe((IEEEtypes_RSNElement_t *)(rsn + 2)) != 0) {
 		/* Turn the element header (id, length) into a TLV header. */
-		unsigned int length = tlv[3];
+		struct MrvlIEtypesHeader *header = (struct MrvlIEtypesHeader *)rsn;
 
-		put16(tlv, 48);
-		put16(tlv + 2, length);
-		size += length + 4;
+		header->type = 48;
+		length = rsn[3];
+		header->length = length;
+		size += length + sizeof(*header);
 	}
 	put16(command + 2, size);
 	if (wlanJoinAssociate(connection, (HostCmd_DS_802_11_ASSOCIATE *)(command + 8), (uint16_t)(size - 8)) == 0)
@@ -223,7 +235,6 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 	struct AmpLinkRequest *request;
 	OsaBuffer *release = NULL;
 	uint8_t *data;
-	unsigned int handle;
 	unsigned int physical;
 	unsigned int priority;
 	int isNew = 1;
@@ -231,11 +242,13 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 	if (event == AMP_WLAN_EVENT_TRANSMIT) {
 		ampPalLastTransmit = buffer;
 		data = (uint8_t *)buffer + buffer->dataOffset - 4;
-		handle = ((data[1] << 8) & 0xfff) | data[0];
+		/* the ACL header's handle, read again for each use */
+#define ACL_HANDLE(data)	(((data)[1] << 8 & 0xfff) | (data)[0])
 		priority = 0;
-		if (ampLogicalLinkServiceType(handle) == 2)
+		if (ampLogicalLinkServiceType(ACL_HANDLE(data)) == 2)
 			priority = 4;
-		physical = ampPhysicalLinkFindByLogical(handle);
+		physical = ampPhysicalLinkFindByLogical(ACL_HANDLE(data));
+#undef ACL_HANDLE
 		connection = wlanConnectionFind(WLAN_BSS_TYPE_AMP, physical);
 		if (!connection) {
 			osa_BufferFree(buffer);
@@ -281,7 +294,7 @@ int ampPalWlanEvent(void *device, OsaBuffer *buffer, uintptr_t argument, unsigne
 	if (event == AMP_WLAN_EVENT_CONTROL) {
 		release = buffer;
 		message = (struct AmpWlanMessage *)((uint8_t *)buffer + buffer->dataOffset);
-		switch (message->code[0]) {
+		switch (get16(message->code)) {
 		case AMP_WLAN_SET_ADDRESS:
 			__aeabi_memcpy((uint8_t *)(uintptr_t)__aeabi_uread4(message->first + 1) + 88,
 				       ampLocalFrameAddress, 6);
@@ -442,7 +455,7 @@ int ampPalWlanControl(void *device, int command, void *argument)
 			       &ampPalWindowTimer, 0);
 		break;
 	case AMP_WLAN_IOCTL_CHANNEL_SET:
-		handle = (uint16_t)buffer->allocationMetadata;
+		handle = *(const uint16_t *)argument;	/* the logical link's handle */
 		ampPalNotifyCode12(ampPhysicalLinkFindByLogical(handle), handle);
 		break;
 	case AMP_WLAN_IOCTL_DATA_LOOP:
@@ -470,7 +483,9 @@ int ampPalWlanControl(void *device, int command, void *argument)
 /* Registers the "btamp_pal" device with the mdev framework. */
 int ampWlanDriverInit(void)
 {
-	__aeabi_memclr4(&ampWlanDriver, sizeof(ampWlanDriver));
+	__aeabi_memclr4(&ampWlanCommandQueue, sizeof(ampWlanCommandQueue));
+	__aeabi_memclr4(&ampWlanEventQueue, sizeof(ampWlanEventQueue));
+	__aeabi_memclr4(&ampWlanDataQueue, sizeof(ampWlanDataQueue));
 	ampWlanEventFlags = (struct OsaEventFlags *)ampWlanFlagsStorage;
 	osaEventFlagsInit(&ampWlanEventFlags);
 	ampWlanDriver.name = ampPalDriverName;

@@ -545,7 +545,10 @@ struct WlanConnection {
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */
 	uint8_t txOptions;		/* bit 1: passed to the frame builder; bit 3: any rate allowed;
 				   bit 5: the BSS uses ERP protection */
-	uint8_t bssCapability[2];	/* capability information of the IBSS started or joined */
+	union {
+		uint8_t bssCapability[2];	/* capability information of the IBSS started or joined */
+		uint16_t bssCapabilityValue;	/* the two bytes stored whole */
+	};
 	uint8_t reserved58[6];
 	uint8_t supportedRates[14];
 	uint8_t supportedRatesLength;
@@ -560,8 +563,14 @@ struct WlanConnection {
 	uint16_t beaconPeriod;		/* TU, of the IBSS started or joined */
 	uint8_t localAddress[6];
 	/* HostCmd_CMD_802_11_SNMP_MIB's values (Marvell: RTS and fragmentation thresholds, retry limits). */
-	uint8_t rtsThreshold[2];
-	uint8_t fragThreshold[2];
+	union {
+		uint8_t rtsThreshold[2];	/* little endian, as the host command carries it */
+		uint16_t rtsThresholdValue;	/* the two bytes copied whole */
+	};
+	union {
+		uint8_t fragThreshold[2];
+		uint16_t fragThresholdValue;
+	};
 	uint8_t shortRetryLimit;
 	uint8_t longRetryLimit;
 	uint8_t dtimHold;		/* nonzero: the group frames are not released at the DTIM */
@@ -682,7 +691,8 @@ struct WlanConnection {
 	uint32_t timerHandle;
 	uint32_t secondTimerHandle;
 	uint8_t retryCount;
-	uint8_t rsnElement[63];		/* AMP link: its RSN element (ID, length, body), for EAPOL-Key */
+	uint8_t rsnElement[47];		/* AMP link: its RSN element (ID, length, body), for EAPOL-Key */
+	struct WlanHtElements ampHtElements;	/* AMP link: the HT elements it sends */
 	uint8_t transmitBusy;
 };
 
@@ -780,6 +790,7 @@ _Static_assert(offsetof(struct WlanConnection, txHeader) == 816, "TX header");
 _Static_assert(offsetof(struct WlanConnection, timerHandle) == 868, "timer");
 _Static_assert(offsetof(struct WlanConnection, retryCount) == 876, "retry count");
 _Static_assert(offsetof(struct WlanConnection, rsnElement) == 877, "AMP RSN element");
+_Static_assert(offsetof(struct WlanConnection, ampHtElements) == 924, "AMP HT elements");
 _Static_assert(offsetof(struct WlanConnection, transmitBusy) == 940, "transmit busy");
 
 /* wlan/conn.c */

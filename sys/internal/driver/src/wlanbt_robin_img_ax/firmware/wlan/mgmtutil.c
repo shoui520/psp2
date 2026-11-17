@@ -54,10 +54,10 @@ void wlanMacAddressSet(const uint8_t *address)
 	romLibResetState(word[1], word[0]);
 }
 
-/* Has the ROM act on the address it was given. */
-void wlanMacAddressApply(void)
+/* 0x0002a254: the MAC takes the SSID (the ROM's routine). */
+void wlanMacSsidApply(const uint8_t *ssid, uint8_t length)
 {
-	romLibBuildState();
+	romLibBuildState(ssid, length);
 }
 
 /*

@@ -53,7 +53,7 @@ uint8_t wlanHtCapabilityCache[28] __attribute__((section(".sqram1.bss")));		/* 0
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 
-static void put16(uint8_t *bytes, unsigned int value)
+static inline void put16(uint8_t *bytes, unsigned int value)
 {
 	bytes[0] = value;
 	bytes[1] = value >> 8;
@@ -81,10 +81,9 @@ const uint8_t *wlanConnectionHtOperation(struct WlanConnection *connection)
 		operation = ((struct WlanHtElements *)(void *)&connection->localName)->htOperation;
 		break;
 	case 4:
-		operation = ((struct WlanHtElements *)(void *)&connection->secondTimerHandle)->htOperation;
+		operation = connection->ampHtElements.htOperation;
 		break;
-	case 5:
-	case 6:
+	default:
 		sysIrqDisable();
 		for (;;)
 			;
@@ -108,7 +107,7 @@ const uint8_t *wlanConnectionHtCoexistence(struct WlanConnection *connection)
 			return coexistence;
 		return elements->htCoexistence;
 	case 4:
-		return ((struct WlanHtElements *)(void *)&connection->secondTimerHandle)->htCoexistence;
+		return connection->ampHtElements.htCoexistence;
 	default:
 		sysIrqDisable();
 		for (;;)
@@ -132,7 +131,7 @@ const uint8_t *wlanConnectionHtOverlapScan(struct WlanConnection *connection)
 			return scan;
 		return elements->overlapScan;
 	case 4:
-		return ((struct WlanHtElements *)(void *)&connection->secondTimerHandle)->overlapScan;
+		return connection->ampHtElements.overlapScan;
 	default:
 		sysIrqDisable();
 		for (;;)
@@ -169,12 +168,12 @@ int wlanHtShortGiWanted(struct WlanConnection *connection, unsigned int rate)
 /* The channel width in use: 1 for 20 MHz, 2 for 40 MHz. */
 int wlanHtChannelWidth(struct WlanConnection *connection)
 {
-	unsigned int wide;
+	int wide;	/* Sony's one-bit signed field: -1 when the bit is set */
 
 	if (connection->mode == 2)
-		wide = (wlanConnectionHtOperation(connection)[3] >> 2) & 1;
+		wide = (int)((uint32_t)wlanConnectionHtOperation(connection)[3] << 29) >> 31;
 	else
-		wide = (wlanHtTxCapability[0] >> 1) & 1;
+		wide = (int)((uint32_t)wlanHtTxCapability[0] << 30) >> 31;
 	return wide + 1;
 }
 
@@ -192,10 +191,11 @@ int wlanConnectionIsHt(struct WlanConnection *connection)
 int wlanConnectionHtTransmitsBa(struct WlanConnection *connection)
 {
 	unsigned int flags = connection->flags;
+	int transmits = 0;
 
 	if (flags & 0x40)
-		return flags >> 7 != 0;
-	return 0;
+		transmits = flags >> 7 != 0;
+	return transmits;
 }
 
 /* Copies the connection's HT element of the id (45, 61, 72 or 74) into the frame being built; returns its length. */

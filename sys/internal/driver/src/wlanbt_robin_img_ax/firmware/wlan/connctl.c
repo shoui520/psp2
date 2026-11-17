@@ -13,78 +13,6 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 
-/*
- * Roles of the connections the MAC serves: the "client" connection is the
- * station role (a station, or a group client), the other one is the AP, group
- * owner, AMP or IBSS role.
- */
-struct WlanConnection *wlanConnectionClient __attribute__((section(".sqram1.rw")));
-struct WlanConnection *wlanConnectionOther __attribute__((section(".sqram1.rw")));
-uint8_t wlanRoleMask __attribute__((section(".sqram1.rw")));
-
-int wlanRoleMaskIs(unsigned int mask)
-{
-	return mask == wlanRoleMask;
-}
-
-struct WlanConnection *wlanConnectionByRole(int role)
-{
-	if (role == 2)
-		return wlanConnectionClient;
-	return wlanConnectionOther;
-}
-
-int wlanConnectionHasPrimary(void)
-{
-	return wlanConnectionPrimary != NULL;
-}
-
-int wlanConnectionSetPrimary(struct WlanConnection *connection)
-{
-	wlanConnectionPrimary = connection;
-	return 0;
-}
-
-struct WlanConnection *wlanConnectionGetPrimary(void)
-{
-	return wlanConnectionPrimary;
-}
-
-/* Records a new connection in its role slot; returns 1 when the AP role blocks it. */
-int wlanConnectionActivate(struct WlanConnection *connection)
-{
-	unsigned int type;
-
-	if (wlanHasApRole() && wlanConnectionClient->state == 7)
-		return 1;
-	type = connection->interfaceType;
-	if (type == WLAN_IF_AMP) {
-		if (wlanConnectionOther == NULL)
-			wlanConnectionOther = connection;
-		wlanRoleMask = 1;
-		return 0;
-	}
-	if (type != WLAN_IF_STATION) {
-		if (type != WLAN_IF_AP) {
-			wlanConnectionOther = connection;
-			wlanRoleMask = type == WLAN_IF_IBSS ? 2 : 0;
-			if (type == 0)
-				wlanRoleMask = 1;
-			return 0;
-		}
-		if (connection->mode != 2) {
-			if (connection->mode == 0)
-				return 0;
-			wlanConnectionOther = connection;
-			wlanRoleMask = 1;
-			return 0;
-		}
-	}
-	wlanConnectionClient = connection;
-	wlanRoleMask = 3;
-	return 0;
-}
-
 void wlanTrace(uint32_t tag, uint32_t value)
 {
 }
@@ -94,20 +22,18 @@ int wlanPostConnectionEvent(struct WlanConnection *connection, uint32_t event)
 {
 	OsaBuffer *buffer = osa_BufferAlloc(&wlanEventPool, 0, 0);
 	uint8_t *message;
-	int result;
 
-	if (buffer == NULL)
-		return 1;
-	message = (uint8_t *)buffer + buffer->dataOffset;
-	__aeabi_memclr(message, 8);
-	__aeabi_uwrite4((uintptr_t)connection, message);
-	__aeabi_uwrite4(event, message + 4);
-	result = osaMsgQueueSend(cbProcQueue, 4, (uintptr_t)buffer, 0);
-	if (result != 0) {
-		osa_BufferFree(buffer);
-		return 1;
+	if (buffer != NULL) {
+		message = (uint8_t *)buffer + buffer->dataOffset;
+		__aeabi_memclr(message, 8);
+		__aeabi_uwrite4((uintptr_t)connection, message);
+		__aeabi_uwrite4(event, message + 4);
+		if (osaMsgQueueSend(cbProcQueue, 4, (uintptr_t)buffer, 0) == 0)
+			return 0;
 	}
-	return result;
+	/* also on a failed allocation: Sony frees the NULL buffer */
+	osa_BufferFree(buffer);
+	return 1;
 }
 
 /* True when the state semaphore of the control task could be taken at once. */

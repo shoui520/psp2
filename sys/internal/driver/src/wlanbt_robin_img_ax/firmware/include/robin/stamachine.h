@@ -108,10 +108,10 @@ int macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_
 void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */
 int macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer, unsigned int reason,
-			int notify);					/* 0x34f7c */
-OsaBuffer *wlanHostDelbaReply(struct WlanConnection *connection, const uint8_t *body, int success,
-			      const uint8_t *peer);			/* 0x34fba */
-OsaBuffer *wlanHostCoexistenceReply(struct WlanConnection *connection, const uint8_t *body);	/* 0x34fe4 */
+			uint8_t notify);					/* 0x34f7c */
+int wlanHostDelbaReply(struct WlanConnection *connection, const uint8_t *body, int success,
+		       const uint8_t *peer);			/* 0x34fba */
+int wlanHostCoexistenceReply(struct WlanConnection *connection, const uint8_t *body);	/* 0x34fe4 */
 int macMgmtPostReceived(void);						/* 0x3483e */
 int macMgmtPostRelease(void);						/* 0x34852 */
 

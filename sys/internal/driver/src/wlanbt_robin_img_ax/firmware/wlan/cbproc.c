@@ -176,7 +176,7 @@ void wlanPsHostCmdRespond(struct WlanConnection *connection)
  * the sequence number and the BSS of the host command being run and goes to
  * the host as that command's response.
  */
-static void cbProcRespondSme(void)
+static inline void cbProcRespondSme(void)
 {
 	OsaBuffer *smeBuffer;
 	uint8_t *command;

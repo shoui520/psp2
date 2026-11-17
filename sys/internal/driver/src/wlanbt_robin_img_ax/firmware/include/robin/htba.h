@@ -215,7 +215,7 @@ void wlanHostAddbaReplyBuild(OsaBuffer *message, int result, const uint8_t *peer
 void wlanBaAddbaAccepted(struct WlanConnection *connection, uint16_t startSequence,
 			 unsigned int timeout, uint16_t paramSet, const uint8_t *peer,
 			 struct WlanTxBaSession *txSessions, void (*callback)(uint32_t)); /* 0x4af2a */
-void wlanHostDelbaReplyBuild(OsaBuffer *message, const uint8_t *body, int success,
+void wlanHostDelbaReplyBuild(OsaBuffer *message, struct WlanConnection *connection, const uint8_t *body, int success,
 			     const uint8_t *peer);				/* 0x4afb0 */
 void wlanBaAddbaRequestBuild(OsaBuffer *frame, uint16_t startSequence,
 			     const struct HostCmdAddbaRequest *request);	/* 0x4b002 */
@@ -227,11 +227,11 @@ void wlanHtProtectionObserve(WlanProtection *protection, const WlanIePointers *i
 			     const uint8_t *source, const uint8_t *bssid, int32_t timeout); /* 0x4b124 */
 void wlanHtElementsClear(uint8_t *htCapability, uint8_t *htOperation, uint8_t *coexistence,
 			 uint8_t *address, uint8_t *overlapScan);		/* 0x4b19e */
-int wlanBaDelbaCheck(int notify, const uint8_t *body, struct WlanConnection *connection,
-		     const uint8_t *peer, struct WlanSoftTimer *timer);		/* 0x4b1e4 */
+uint8_t wlanBaDelbaCheck(int notify, const uint8_t *body, struct WlanConnection *connection,
+			 const uint8_t *peer, struct WlanSoftTimer *timer);		/* 0x4b1e4 */
 int wlanBaIsDelba(const uint8_t *body);						/* 0x4b25a */
 int wlanBssCoexIsFrame(const uint8_t *body);					/* 0x4b26e */
-void wlanHostCoexistenceReplyBuild(OsaBuffer *message, const uint8_t *body); /* 0x4b282 */
+void wlanHostCoexistenceReplyBuild(OsaBuffer *message, struct WlanConnection *connection, const uint8_t *body); /* 0x4b282 */
 int wlanBaAddbaTimeoutResponse(uint8_t *response, const uint8_t *record, uint8_t *token); /* 0x4b2be */
 void wlanBssCoexFrameBuild(OsaBuffer *frame, const uint8_t *body, unsigned int length); /* 0x4b2ea */
 void wlanBaRxResponseApply(const uint8_t *response, int update, struct WlanRxBaSession *sessions,

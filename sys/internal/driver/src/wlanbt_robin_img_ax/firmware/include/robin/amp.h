@@ -164,8 +164,11 @@ struct AmpLinkEvent {
 	uint16_t opcode;
 	uint8_t link;
 	uint8_t state;
-	uint32_t word1;
-	uint32_t word2;
+	union {
+		uint32_t argument0;
+		uint8_t status;		/* AMP_LINK_EVENT_ASSOC_FAILED: the HCI status */
+	};
+	uint32_t argument1;
 };
 _Static_assert(sizeof(struct AmpLinkEvent) == 12, "AMP link event record");
 

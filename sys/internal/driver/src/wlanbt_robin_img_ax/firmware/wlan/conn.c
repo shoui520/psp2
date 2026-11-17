@@ -27,8 +27,16 @@
 #include "robin/peerrate.h"
 #include "robin/stamachine.h"
 
+uint8_t wlanRoleMask __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionList __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionFreeList __attribute__((section(".sqram1.rw")));
+/*
+ * Roles of the connections the MAC serves: the "client" connection is the
+ * station role (a station, or a group client), the other one is the AP, group
+ * owner, AMP or IBSS role.
+ */
+struct WlanConnection *wlanConnectionOther __attribute__((section(".sqram1.rw")));
+struct WlanConnection *wlanConnectionClient __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionSession __attribute__((section(".sqram1.rw")));
 struct WlanConnection *wlanConnectionPrimary __attribute__((section(".sqram1.rw")));
 /* The DTCM block at 0x040088dc: the channel in use, the slots (rings) taken, the counts and the slot table. */
@@ -296,13 +304,16 @@ int wlanConnectionSlotAttach(struct WlanConnection *connection)
 		wlanChannelInUse[0] = connection->channel;
 	if (connection->interfaceType == WLAN_IF_IBSS || connection->interfaceType == WLAN_IF_STATION ||
 	    connection->interfaceType == WLAN_IF_AP || connection->interfaceType == WLAN_IF_AMP) {
+		uint8_t number = connection->bssNumber;
+		uint8_t type = connection->bssType;
+
 		for (slot = 0; slot < WLAN_CONNECTION_SLOTS; slot = (uint8_t)(slot + 1)) {
 			struct WlanConnection *other;
 
 			if (!((1 << slot) & wlanConnectionSlotMask))
 				continue;
 			other = wlanConnectionSlots[slot];
-			if (other->bssNumber == connection->bssNumber && other->bssType == connection->bssType)
+			if (other->bssNumber == number && other->bssType == type)
 				return 0;
 		}
 		return wlanConnectionSlotAcquire(connection);
@@ -410,6 +421,13 @@ struct WlanConnection *wlanConnectionNextFlagged(struct WlanConnection *after,
 	return found;
 }
 
+struct WlanConnection *wlanConnectionByRole(int role)
+{
+	if (role == 2)
+		return wlanConnectionClient;
+	return wlanConnectionOther;
+}
+
 int wlanConnectionsIdle(void)
 {
 	struct WlanConnection *connection;
@@ -438,6 +456,11 @@ int wlanNoConnectionActive(void)
 	}
 	sysIrqRestore(posture);
 	return 1;
+}
+
+int wlanConnectionHasPrimary(void)
+{
+	return wlanConnectionPrimary != NULL;
 }
 
 /* Next connection after one in the list that belongs to the given BSS. */
@@ -780,7 +803,7 @@ int wlanConnectionIndexAcquire(struct WlanConnection *connection)
 		result = 1;
 		for (index = 0; index < 4 && result != 0; ++index) {
 			if (!((1 << index) & wlanConnectionIndexMask)) {
-				result = macTxNotifyAcquireBuffer(1, connection->interfaceAddress, index, fresh);
+				result = macTxNotifyAcquireBuffer(1, connection->interfaceAddress, (uint8_t)index, fresh);
 				if (result == 0) {
 					connection->interfaceIndex = index;
 					wlanConnectionIndexMask |= 1 << index;
@@ -923,6 +946,41 @@ void wlanConnectionSetupType3Info(struct WlanConnection *connection)
 		key->key.hdr.keyType = KEY_TYPE_WEP;
 		key->key.hdr.keyState &= ~1;
 	}
+}
+
+/* Records a new connection in its role slot; returns 1 when the AP role blocks it. */
+int wlanConnectionActivate(struct WlanConnection *connection)
+{
+	unsigned int type;
+
+	if (wlanHasApRole() && wlanConnectionClient->state == 7)
+		return 1;
+	type = connection->interfaceType;
+	if (type == WLAN_IF_AMP) {
+		if (wlanConnectionOther == NULL)
+			wlanConnectionOther = connection;
+		wlanRoleMask = 1;
+		return 0;
+	}
+	if (type != WLAN_IF_STATION) {
+		if (type != WLAN_IF_AP) {
+			wlanConnectionOther = connection;
+			wlanRoleMask = type == WLAN_IF_IBSS ? 2 : 0;
+			if (type == 0)
+				wlanRoleMask = 1;
+			return 0;
+		}
+		if (connection->mode != 2) {
+			if (connection->mode == 0)
+				return 0;
+			wlanConnectionOther = connection;
+			wlanRoleMask = 1;
+			return 0;
+		}
+	}
+	wlanConnectionClient = connection;
+	wlanRoleMask = 3;
+	return 0;
 }
 
 /* The connection becomes an access point's: its mode is 2, and the first of them is activated. */
@@ -1080,8 +1138,7 @@ int wlanConnectionFreeListClean(void)
 			connection = connection->next;
 		}
 	}
-	sysIrqRestore(posture);
-	return 0;
+	return sysIrqRestore(posture);
 }
 
 /* The connections' state, their buffer pools and the idle hook that frees released connections. */
@@ -1209,10 +1266,8 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		wlanSignalInit(connection);
 		wlanRateChannelWidthSet(connection, 1, wlanHtChannelWidth(connection));
 	}
-	connection->rtsThreshold[0] = wlanDeviceAddress->rtsThreshold[0];
-	connection->rtsThreshold[1] = wlanDeviceAddress->rtsThreshold[1];
-	connection->fragThreshold[0] = wlanDeviceAddress->fragThreshold[0];
-	connection->fragThreshold[1] = wlanDeviceAddress->fragThreshold[1];
+	connection->rtsThresholdValue = wlanDeviceAddress->rtsThresholdValue;
+	connection->fragThresholdValue = wlanDeviceAddress->fragThresholdValue;
 	connection->shortRetryLimit = wlanDeviceAddress->shortRetryLimit;
 	connection->longRetryLimit = wlanDeviceAddress->longRetryLimit;
 	connection->beaconPeriod = 100;
@@ -1252,7 +1307,7 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 		connection->rxManagement = wlanAmpRxManagement;
 		connection->flags |= 4;
 		wlanConnectionSetActiveFlag(connection, 1);
-		state = (struct WlanHtElements *)(void *)&connection->rsnElement[47];
+		state = &connection->ampHtElements;
 		state->htOperation = wlanHtOperationIe;
 		state->htCoexistence = wlanHtCoexIe;
 		state->overlapScan = wlanHtOverlapScanIe;
@@ -1396,10 +1451,8 @@ struct WlanConnection *wlanConnectionDuplicateIbss(const uint8_t *peer, struct W
 	copy->networkSsidLength = source->networkSsidLength;
 	copy->dtimPeriod = source->dtimPeriod;
 	copy->beaconPeriod = source->beaconPeriod;
-	copy->rtsThreshold[0] = source->rtsThreshold[0];
-	copy->rtsThreshold[1] = source->rtsThreshold[1];
-	copy->fragThreshold[0] = source->fragThreshold[0];
-	copy->fragThreshold[1] = source->fragThreshold[1];
+	copy->rtsThresholdValue = source->rtsThresholdValue;
+	copy->fragThresholdValue = source->fragThresholdValue;
 	copy->shortRetryLimit = source->shortRetryLimit;
 	copy->longRetryLimit = source->longRetryLimit;
 	__aeabi_memcpy(copy->peerAddress, peer, 6);
@@ -1469,10 +1522,13 @@ int wlanIbssSecurityActive(void)
 		if (connection->interfaceType == 1 && !(connection->flags & 4)) {
 			struct WlanKeyBuffer *block = connection->keyBlocks[0];
 
-			if (block != NULL && block->key.hdr.keyType == KEY_TYPE_AES &&
-			    (block->key.hdr.keyState & 1)) {
-				sysIrqRestore(posture);
-				return 1;
+			if (block != NULL) {
+				cipher_key_t *key = &block->key;
+
+				if (key->hdr.keyType == KEY_TYPE_AES && key != NULL && (key->hdr.keyState & 1)) {
+					sysIrqRestore(posture);
+					return 1;
+				}
 			}
 		}
 	}
@@ -1651,6 +1707,22 @@ done:
 	return allowed;
 }
 
+int wlanConnectionSetPrimary(struct WlanConnection *connection)
+{
+	wlanConnectionPrimary = connection;
+	return 0;
+}
+
+struct WlanConnection *wlanConnectionGetPrimary(void)
+{
+	return wlanConnectionPrimary;
+}
+
+int wlanRoleMaskIs(unsigned int mask)
+{
+	return mask == wlanRoleMask;
+}
+
 /* The peer's address and state of the link check are cleared and the connection's peer state gets the argument. */
 int wlanConnectionUpdatePeer(struct WlanConnection *connection, int argument)
 {
@@ -1778,14 +1850,14 @@ int wlanBssQueuedFrames(const struct WlanConnection *bss)
 /* The BSS count over the access points and stations in mode 2. */
 int wlanConnectionCountMode2(int stage)
 {
-	unsigned int types = 0x302;	/* interface types 2, 3 */
+	uint8_t types[4] = { 2, 3 };	/* interface types */
 	int total = 0;
 
 	if (stage == 2) {
 		unsigned int i;
 
 		for (i = 0; i < 2; i++) {
-			struct WlanConnection *connection = wlanConnectionFirst((types >> (8 * i)) & 0xff);
+			struct WlanConnection *connection = wlanConnectionFirst(types[i]);
 
 			while (connection != NULL) {
 				if (connection->mode == 2)

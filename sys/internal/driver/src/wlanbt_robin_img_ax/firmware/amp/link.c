@@ -42,14 +42,14 @@ static inline void ampLinkEnter(struct AmpLinkMachine *machine, enum AmpLinkStat
 }
 
 /* A command the state does not allow. */
-static void ampLinkDisallow(const struct AmpLinkEvent *record)
+static inline void ampLinkDisallow(const struct AmpLinkEvent *record)
 {
 	ampHciAdjustCommandCount(-1);
 	ampHciSendCommandStatus(record->opcode, AMP_HCI_COMMAND_DISALLOWED);
 }
 
 /* The link failed: the host hears Physical Link Complete with the status, and the link is freed. */
-static void ampLinkFail(struct AmpLinkMachine *machine, int status)
+static inline void ampLinkFail(struct AmpLinkMachine *machine, int status)
 {
 	ampHciPhysicalLinkComplete(status, ampPhysicalLinks[machine->link].handle);
 	ampPhysicalLinkReset(machine->link);
@@ -119,7 +119,6 @@ static const int32_t *ampLinkWaitAssoc(void *context, const int32_t *event)
 	struct AmpLinkMachine *machine = context;
 	const struct AmpLinkMessage *message = (const struct AmpLinkMessage *)event;
 	const struct AmpLinkEvent *record = message->record;
-	struct AmpPhysicalLink *link;
 
 	switch (message->code) {
 	case ROM_HSM_EXIT:
@@ -133,11 +132,10 @@ static const int32_t *ampLinkWaitAssoc(void *context, const int32_t *event)
 		ampLinkDisallow(record);
 		return NULL;
 	case AMP_LINK_EVENT_WRITE_REMOTE_ASSOC:
-		link = &ampPhysicalLinks[record->link];
-		ampHciSendHostEvent(record->state == 0 ? 1 : 2, 0, "w", (uint32_t)link);
+		ampHciSendHostEvent(record->state == 0 ? 1 : 2, 0, "w", (uint32_t)&ampPhysicalLinks[record->link]);
 		ampHciAdjustCommandCount(-1);
 		ampHciSendEvent(AMP_EVENT_COMMAND_COMPLETE, 0, "Rhbb", record->opcode,
-				AMP_HCI_SUCCESS, link->handle);
+				AMP_HCI_SUCCESS, ampPhysicalLinks[record->link].handle);
 		return NULL;
 	case AMP_LINK_EVENT_DISCONNECT_PHYSICAL_LINK:
 		ampLinkTimerStop();
@@ -163,7 +161,7 @@ static const int32_t *ampLinkWaitAssoc(void *context, const int32_t *event)
 		ampLinkFail(machine, AMP_HCI_CONNECTION_LIMIT);
 		return NULL;
 	case AMP_LINK_EVENT_ASSOC_FAILED:
-		ampHciPhysicalLinkComplete(record->word1 & 0xff, ampPhysicalLinks[machine->link].handle);
+		ampHciPhysicalLinkComplete(record->status, ampPhysicalLinks[machine->link].handle);
 		ampPhysicalLinkReset(machine->link);
 		romHsmTransition(machine, &machine->idle);
 		return NULL;

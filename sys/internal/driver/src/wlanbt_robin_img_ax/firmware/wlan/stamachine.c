@@ -93,7 +93,7 @@ uint8_t wlanProbeRates[14] __attribute__((section(".itcm.bss")));			/* 0x57824 *
 struct WlanIbssStates wlanIbssStates __attribute__((section(".itcm.bss")));		/* 0x5783c */
 
 /* The links and the management layer wake the MAC management task through its event flags. */
-static int macMgmtWake(uint32_t events)
+static inline int macMgmtWake(uint32_t events)
 {
 	return osaEventFlagsSet(*wlanTaskHandles.mgmtEventFlags, events, MGMT_EVENT_SET_OR);
 }
@@ -515,7 +515,7 @@ unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body)
 
 /* Asks the management state to deauthenticate `peer`, on the channel the radio is on. */
 int macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer, unsigned int reason,
-			int notify)
+			uint8_t notify)
 {
 	uint8_t channel[8];
 	struct WlanLeaveRequest request;
@@ -528,28 +528,25 @@ int macMgmtAcquireState(struct WlanConnection *connection, const uint8_t *peer, 
 }
 
 /* The host's reply to a Block Ack teardown. */
-OsaBuffer *wlanHostDelbaReply(struct WlanConnection *connection, const uint8_t *body, int success,
-			      const uint8_t *peer)
+int wlanHostDelbaReply(struct WlanConnection *connection, const uint8_t *body, int success, const uint8_t *peer)
 {
 	OsaBuffer *message = wlanHostMessageAlloc(connection);
 
-	if (message != NULL) {
-		wlanHostDelbaReplyBuild(message, body, success, peer);
-		wlanHostMessagePost(message);
-	}
-	return message;
+	if (message == NULL)
+		return 0;
+	wlanHostDelbaReplyBuild(message, connection, body, success, peer);
+	return wlanHostMessagePost(message);
 }
 
 /* ... and to a 20/40 BSS coexistence frame. */
-OsaBuffer *wlanHostCoexistenceReply(struct WlanConnection *connection, const uint8_t *body)
+int wlanHostCoexistenceReply(struct WlanConnection *connection, const uint8_t *body)
 {
 	OsaBuffer *message = wlanHostMessageAlloc(connection);
 
-	if (message != NULL) {
-		wlanHostCoexistenceReplyBuild(message, body);
-		wlanHostMessagePost(message);
-	}
-	return message;
+	if (message == NULL)
+		return 0;
+	wlanHostCoexistenceReplyBuild(message, connection, body);
+	return wlanHostMessagePost(message);
 }
 
 /*
@@ -821,7 +818,7 @@ static const struct WlanStaEvent *macMgmtRecordState(struct WlanIbssMachine *mac
 	}
 }
 
-/* Reached from the Record state: it keeps the report, and returns to where the machine was. */
+/* 0x0003543c: reached from the Record state: it keeps the report, and returns to where the machine was. */
 static inline const struct WlanStaEvent *macMgmtHoldState(struct WlanIbssMachine *machine,
 						   const struct WlanStaEvent *event)
 {

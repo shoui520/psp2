@@ -87,8 +87,7 @@ static struct WlanLeave wlanLeave __attribute__((section(".itcm.bss")));	/* 0x5e
 __attribute__((noinline)) void macTxNotifyManageFrame(struct WlanConnection *connection, uint16_t capability,
 			    uint16_t associationId, const uint8_t *peer)
 {
-	connection->bssCapability[0] = (uint8_t)capability;
-	connection->bssCapability[1] = (uint8_t)(capability >> 8);
+	connection->bssCapabilityValue = capability;
 	connection->associationId = associationId;
 	__aeabi_memcpy(connection->peerAddress, peer, 6);
 	wlanAssociationChanged();
@@ -124,12 +123,12 @@ noWmm:
 	wlanCustomIeApply(connection, 1, frame, offset);
 	if (connection != NULL && connection->interfaceType == WLAN_IF_AP) {
 		unsigned int include;
+		unsigned int length;
 
 		wlanConnectionPsState(connection);
 		include = connection->mode == 3 ? 0x2000 : 0;
-		PUT_U16(frame->bodyLength,
-			p2pDirectCheckContext(connection, frame, NULL, include | 4, 0) +
-			U16(frame->bodyLength));
+		length = p2pDirectCheckContext(connection, frame, NULL, include | 4, 0) + U16(frame->bodyLength);
+		PUT_U16(frame->bodyLength, length);
 	}
 	if (wlanMgmtSendFrame(buffer) != -1)
 		return 0;
@@ -196,7 +195,7 @@ void macTxNotifyClearFrame(OsaBuffer *buffer)
 	uint8_t *htOverlapScan;
 	unsigned int status;
 	uint32_t rateBitmap;
-	uint8_t flags;
+	uint32_t flags;
 	uint32_t extra;
 	int state;
 	int rateCount;
@@ -245,8 +244,8 @@ void macTxNotifyClearFrame(OsaBuffer *buffer)
 	macTxNotifyManageFrame(connection, wlanAssocCapability, U16(frame->body + 4), frame->address2);
 	macMgmtVerifyContext();
 	wlanSubscribeResetFailures(connection);
-	macMgmtPrepareContext(&flags, &extra);
-	if (flags & 3)
+	macMgmtPrepareContext((uint8_t *)&flags, &extra);
+	if (*(const uint8_t *)&flags & 3)
 		state = 0;
 	else
 		state = macMgmtQueryState(flags, extra);
@@ -262,16 +261,18 @@ int macTxNotifyConvertFrame(OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 	WlanWirelessFrame *frame = BUFFER_FRAME(buffer);
-	uint8_t event[8];
+	struct {
+		uint8_t address[6];
+		uint16_t reason;
+	} event;
 
 	if (connection->state == 3)
 		macTxNotifyAdjustFrame(3, U16(frame->body));
 	if (U16(frame->bodyLength) < 2)
 		return -1;
-	__aeabi_memcpy(event, frame->address2, 6);
-	event[6] = frame->body[0];
-	event[7] = frame->body[1];
-	wlanReportEvent(connection, event, 9);
+	event.reason = U16(frame->body);
+	__aeabi_memcpy(event.address, frame->address2, 6);
+	wlanReportEvent(connection, &event, 9);
 	return 0;
 }
 
@@ -294,7 +295,7 @@ int macTxNotifySelectFrame(OsaBuffer *buffer)
 	};
 	uint8_t edca[20];
 	struct WlanConnection *connection = buffer->context;
-	WlanWirelessFrame *frame = BUFFER_FRAME(buffer);
+	WlanWirelessFrame *frame;
 	const uint8_t *peer;
 	WlanIePointers ies;
 	OsaBuffer *reply;
@@ -304,6 +305,7 @@ int macTxNotifySelectFrame(OsaBuffer *buffer)
 	unsigned int count;
 
 	__aeabi_memcpy4(edca, edcaParameterSet, sizeof(edca));
+	frame = BUFFER_FRAME(buffer);
 	length = U16(frame->bodyLength);
 	if (frame->frameControl[1] & 1)
 		peer = frame->address3;
@@ -369,8 +371,8 @@ __attribute__((noinline)) void macTxNotifyAdjustFrame(int result, uint16_t statu
 }
 
 /* The join's authentication result: kind 0 done, 4 an unsupported algorithm, 5 refused, else failed. */
-__attribute__((noinline)) void macTxNotifyRecordFrame(unsigned int algorithm, int kind, const uint8_t *peer,
-			    unsigned int statusCode)
+__attribute__((noinline)) void macTxNotifyRecordFrame(uint8_t algorithm, int kind, const uint8_t *peer,
+			    uint16_t statusCode)
 {
 	int result;
 
@@ -417,7 +419,7 @@ int macTxNotifyFilterFrame(struct WlanConnection *connection,
 
 /* Deauthenticates the peer the request names; -1 when it could not be sent, and a leave is pending. */
 int macTxNotifyHandleHeader(struct WlanConnection *connection,
-			    const struct WlanLeaveRequest *request, int notify)
+			    const struct WlanLeaveRequest *request, uint8_t notify)
 {
 	int result = wlanMgmtSendDeauth(connection, request->peer, request->peer, U16(request->reason),
 					notify);
@@ -440,6 +442,7 @@ int macTxNotifyProcessHeader(OsaBuffer *buffer)
 	OsaBuffer *reply;
 	WlanWirelessFrame *out;
 	const struct WlanKeyBuffer *key;
+	const WlanWepHostConfig *config;
 	int kind;
 
 	kind = WLAN_JOIN_RECORD_REFUSED;
@@ -461,12 +464,11 @@ build:
 		key = connection->keyBlocks[0];
 	else
 		key = connection->keyBlocks[1];
-	if (key == NULL) {
+	if (key == NULL || (config = (const WlanWepHostConfig *)&key->key) == NULL) {
 		osa_BufferFree(reply);
 		return -1;
 	}
-	wlanTxEncryptWepFragment((uint8_t *)out, U16(out->bodyLength),
-				 (const WlanWepHostConfig *)&key->key);
+	wlanTxEncryptWepFragment((uint8_t *)out, U16(out->bodyLength), config);
 	if (wlanMgmtSendFrame(reply) == -1)
 		return -1;
 	return 1;
@@ -522,14 +524,16 @@ int macTxNotifyConfigureHeader(OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 	WlanWirelessFrame *frame = BUFFER_FRAME(buffer);
-	uint8_t event[8];
+	struct {
+		uint8_t address[6];
+		uint16_t reason;
+	} event;
 
 	if (U16(frame->bodyLength) < 2)
 		return -1;
-	__aeabi_memcpy(event, frame->address2, 6);
-	event[6] = frame->body[0];
-	event[7] = frame->body[1];
-	wlanReportEvent(connection, event, 8);
+	event.reason = U16(frame->body);
+	__aeabi_memcpy(event.address, frame->address2, 6);
+	wlanReportEvent(connection, &event, 8);
 	return 0;
 }
 
@@ -570,14 +574,16 @@ int macTxNotifyCheckHeader(OsaBuffer *buffer)
 /* The authentication frame's response: the join's authentication result; 0 when it was a success. */
 int macTxNotifyValidateHeader(const WlanWirelessFrame *frame)
 {
+	unsigned int sequence = U16(frame->body + 2);
+	unsigned int algorithm = U16(frame->body);
 	unsigned int status;
 
-	if (U16(frame->body + 2) == 2) {
+	if (sequence == 2) {
 		status = U16(frame->body + 4);
-		macTxNotifyRecordFrame(frame->body[0], status != 0 ? 5 : 0, frame->address2, status);
+		macTxNotifyRecordFrame(algorithm, status != 0 ? 5 : 0, frame->address2, status);
 		return 0;
 	}
-	macTxNotifyRecordFrame(frame->body[0], 4, frame->address2, 14);
+	macTxNotifyRecordFrame(algorithm, 4, frame->address2, 14);
 	return -1;
 }
 
@@ -613,6 +619,15 @@ int macTxNotifyDispatchHeader(uint32_t handle, int event, uint32_t argument)
 			break;
 		case 9:
 			macTxNotifyPrepareHeader(3);
+			break;
+		case 0:
+		case 1:
+		case 2:
+		case 4:
+		case 5:
+		case 7:
+		case 10:
+		case 12:
 			break;
 		}
 		return 3;
@@ -660,6 +675,7 @@ void macTxNotifyBuildHeader(struct WlanConnection *connection, const uint8_t *pe
 	macMgmtPrepareContext(&band, &channel);
 	params.callback = (int (*)(uint32_t, int, uint32_t))macTxNotifyDispatchHeader;
 	params.context = (uint32_t)(uintptr_t)macTxNotifyParseHeader;
+	params.connection = connection;
 	wlanLeave.connection = connection;
 	if (peer != NULL && !p2pDirectPrepareState(peer)) {
 		if (wlanAddressIsBroadcast(peer)) {
@@ -670,7 +686,7 @@ void macTxNotifyBuildHeader(struct WlanConnection *connection, const uint8_t *pe
 		}
 		__aeabi_memcpy(wlanLeave.peer, peer, 6);
 	} else {
-		__aeabi_memcpy(wlanLeave.peer, connection->localAddress, 6);
+		__aeabi_memcpy4(wlanLeave.peer, connection->localAddress, 6);
 	}
 	if (p2pDirectPrepareState(wlanLeave.peer)) {
 		if (callback != NULL)
@@ -684,12 +700,11 @@ void macTxNotifyBuildHeader(struct WlanConnection *connection, const uint8_t *pe
 	params.flags = (channel == (uint8_t)channel ? 2 * (params.flags >> 1) : params.flags | 1) | 4;
 	params.delay = timeout;
 	params.tag = 20000;
-	params.connection = connection;
 	wlanLeave.reason = reason;
 	wlanLeave.callback = callback;
 	wlanLeave.slot = wlanSlotSubmit(&params);
 	if (wlanLeave.slot == 0)
-		macTxNotifyResetHeader(0, peer);
+		macTxNotifyResetHeader(2, wlanLeave.peer);
 }
 
 /* The leave's end: the management state is told, with the address and the result. */
@@ -720,15 +735,19 @@ __attribute__((noinline)) void fmCoexNotifyTable(uint8_t *frame, uint16_t capabi
 		       const uint8_t *currentAp)
 {
 	WlanWirelessFrame *request = (WlanWirelessFrame *)frame;
-	unsigned int length = 4;
+	const uint8_t *bytes = (const uint8_t *)&capability;
 
-	PUT_U16(request->body, capability);
+	request->body[0] = bytes[0];
+	request->body[1] = bytes[1];
 	PUT_U16(request->body + 2, listenInterval);
+	PUT_U16(request->bodyLength, 4);
 	if (currentAp != NULL) {
+		unsigned int length;
+
 		__aeabi_memcpy(request->body + 4, currentAp, 6);
-		length = 10;
+		length = U16(request->bodyLength) + 6;
+		PUT_U16(request->bodyLength, length);
 	}
-	PUT_U16(request->bodyLength, length);
 }
 
 /* The elements of an association response, as the connection keeps them: HT, 20/40 and scan. */
@@ -755,22 +774,22 @@ unsigned int fmCoexInspectTable(const WlanBeaconIePointers *ies, uint8_t *rates,
 				const WlanHtCapabilityIe *htCapability)
 {
 	unsigned int length = 0;
-	unsigned int extra;
+	uint8_t extra;
 	unsigned int bitmap;
 
 	__aeabi_memclr(rates, 14);
 	if (ies->pSupportedRates != NULL) {
-		length = ies->pSupportedRates[1];
-		if (length > 14)
-			length = 14;
+		length = 14;
+		if (ies->pSupportedRates[1] < 14)
+			length = ies->pSupportedRates[1];
 		__aeabi_memcpy(rates, ies->pSupportedRates + 2, length);
 	}
 	if (ies->pExtSupportedRates != NULL) {
-		extra = ies->pExtSupportedRates[1];
-		if (extra > 14 - length)
-			extra = 14 - length;
+		extra = 14 - length;
+		if ((int)(14 - length) >= ies->pExtSupportedRates[1])
+			extra = ies->pExtSupportedRates[1];
 		__aeabi_memcpy(rates + length, ies->pExtSupportedRates + 2, extra);
-		length += extra;
+		length = (uint8_t)(length + extra);
 	}
 	bitmap = wlanRateBitmapAll(rates, length, NULL, 0, htCapability);
 	*count = (uint8_t)length;
@@ -783,7 +802,7 @@ void fmCoexTrackTable(WlanWirelessFrame *frame, const void *ssid, const void *ra
 {
 	unsigned int length = ssid != NULL ? romStringLength(ssid, 32) : 0;
 	unsigned int count;
-	unsigned int extra = 0;
+	uint8_t extra = 0;
 
 	wlanAppendIe(frame, IE_SSID, ssid, length);
 	count = romStringLength(rates, 14);

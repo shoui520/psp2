@@ -686,7 +686,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	macMgmtScheduleFrame(connection, 5);
 	info->uapBusy = 0;
 	wlanBssSelectAddress(2, connection->localAddress);
-	wlanMacAddressApply();
+	wlanMacSsidApply(connection->networkSsid, connection->networkSsidLength);
 	sleep->beaconPeriod = connection->beaconPeriod;
 	sleep->beaconInterval = connection->beaconPeriod << 10;
 	wlanMacOperationModeSet(1);

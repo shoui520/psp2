@@ -84,7 +84,7 @@ void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t 
 	length = romStringLength(join->ssid, 32);
 	romStringCopy(ssid, join->ssid, length);
 	*ssidLength = length;
-	wlanMacAddressApply();
+	wlanMacSsidApply(join->ssid, length);
 	wlanIbssRecordJoin(join);
 	wlanIbssTimersControl(1);
 }

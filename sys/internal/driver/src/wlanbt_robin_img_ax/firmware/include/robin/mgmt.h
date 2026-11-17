@@ -36,7 +36,7 @@ void wlanIbssTimingEnd(void);
 
 /* wlan/mgmtutil.c */
 void wlanMacAddressSet(const uint8_t *address);			/* 0x2a214 */
-void wlanMacAddressApply(void);					/* 0x2a254 */
+void wlanMacSsidApply(const uint8_t *ssid, uint8_t length);					/* 0x2a254 */
 void wlanIbssAddressGenerate(uint8_t *address, const uint8_t *source);	/* 0x2a25c */
 int wlanIbssRecordStart(const WlanAdHocStart *start);		/* 0x2a2e6 */
 int wlanIbssRecordJoin(const WlanAdHocBssDesc *join);		/* 0x2a358 */
@@ -49,7 +49,7 @@ unsigned int wlanTxPowerMinimum(unsigned int channel, unsigned int band);
 int wlanTxPowerAllowed(unsigned int channel, unsigned int band, unsigned int rate);
 uint8_t wlanCurrentChannel(void);
 unsigned int wlanCurrentBand(void);
-uint8_t wlanCurrentChannelFlags(uint8_t *flags);
+unsigned int wlanCurrentChannelFlags(uint8_t *flags);
 void wlanTxPowerApply(void);
 void wlanTxPowerSetHostLimit(int32_t limit, int apply);
 void wlanTxPowerSetLinkLimit(int32_t limit, int apply);
@@ -58,7 +58,7 @@ void wlanTxPowerSetConnectionLimit(int32_t *slot, int32_t limit, int apply);
 void wlanTxPowerUpdateConnection(struct WlanConnection *connection, unsigned int channel,
 				 int apply);
 int wlanChannelFlagsDecode(const uint8_t *flags, uint8_t *band, uint8_t *bandwidth);
-int wlanSetChannel(uint32_t channel, const uint8_t *flags, int wait);
+int wlanSetChannel(uint8_t channel, const uint8_t *flags, int wait);
 int wlanSetChannelFlags(const uint8_t *flags);
 void wlanMacReleaseHold(void);
 uint8_t wlanOperatingChannel(void);
@@ -66,7 +66,7 @@ struct WlanReplyFrame *wlanMgmtBuildFrame(OsaBuffer *buffer, const uint8_t *sour
 					  const uint8_t *destination, unsigned int subtype,
 					  const uint8_t *bssid);
 int wlanMgmtSendFrame(OsaBuffer *buffer);
-OsaBuffer *wlanMgmtAllocFrame(struct WlanConnection *connection, uint32_t size);
+OsaBuffer *wlanMgmtAllocFrame(struct WlanConnection *connection, uint16_t size);
 int wlanMgmtSendLeave(struct WlanConnection *connection, const uint8_t *destination,
 		      const uint8_t *bssid, uint16_t reason, uint8_t kind, int disassociate);
 int wlanMgmtSendDeauth(struct WlanConnection *connection, const uint8_t *destination,
@@ -81,7 +81,7 @@ uint16_t wlanCustomIeGet(struct WlanConnection *connection, uint8_t *out, int si
 void wlanCustomIeRemoveBss(unsigned int interfaceType, unsigned int bssNumber);
 int wlanCustomIeReset(void);
 void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
-		       uint8_t offset);
+		       unsigned int offset);
 int wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int16_t length);
 int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
 			uint16_t *size);

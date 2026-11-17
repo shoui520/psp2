@@ -206,7 +206,7 @@ void wlanSetSlotTime(int shortSlot)
 	uint8_t queue;
 
 	macMgmtPrepareContext((uint8_t *)&flags, NULL);
-	if (flags & 3) {
+	if (*(const uint8_t *)&flags & 3) {
 		wlanSlotTableSize(2);
 		slotTime = WLAN_SLOT_TIME_SHORT;
 	} else {
@@ -224,7 +224,7 @@ int wlanIbssTimingStart(struct WlanConnection *connection, const void *parameter
 {
 	wlanIbssAddressGenerate(connection->localAddress, connection->interfaceAddress);
 	romLibFormatContext();
-	wlanMacAddressApply();
+	wlanMacSsidApply(parameters, connection->networkSsidLength);
 	return wlanIbssRecordStart(parameters);
 }
 
@@ -272,8 +272,10 @@ unsigned int wlanCurrentBand(void)
 }
 
 /* The channel flags (WLAN_CHANNEL_*) of the channel the radio is tuned to. */
-uint8_t wlanCurrentChannelFlags(uint8_t *flags)
+unsigned int wlanCurrentChannelFlags(uint8_t *flags)
 {
+	unsigned int value;
+
 	switch (rfGetBandwidth()) {
 	case 0:
 		*flags = (*flags & ~WLAN_CHANNEL_WIDTH_MASK & ~WLAN_CHANNEL_OFFSET_MASK) |
@@ -291,9 +293,10 @@ uint8_t wlanCurrentChannelFlags(uint8_t *flags)
 		*flags &= ~WLAN_CHANNEL_WIDTH_MASK & ~WLAN_CHANNEL_OFFSET_MASK;
 		break;
 	}
-	*flags = (*flags & ~WLAN_CHANNEL_BAND_MASK) |
-		 (rfGetBand() == RF_BAND_5GHZ ? WLAN_CHANNEL_BAND_5GHZ : WLAN_CHANNEL_BAND_2GHZ);
-	return *flags;
+	value = (*flags & ~WLAN_CHANNEL_BAND_MASK) |
+		(rfGetBand() == RF_BAND_5GHZ ? WLAN_CHANNEL_BAND_5GHZ : WLAN_CHANNEL_BAND_2GHZ);
+	*flags = value;
+	return value;
 }
 
 /* Applies the transmit power limits to the current channel. */
@@ -361,11 +364,11 @@ int wlanChannelFlagsDecode(const uint8_t *flags, uint8_t *band, uint8_t *bandwid
  * Tunes the radio. With wait, the transmit path is stopped first (if it
  * stops in time) and restarted afterwards.
  */
-int wlanSetChannel(uint32_t channel, const uint8_t *flags, int wait)
+int wlanSetChannel(uint8_t channel, const uint8_t *flags, int wait)
 {
-	uint32_t status = 0;
 	uint8_t band;
 	uint8_t bandwidth;
+	uint32_t status = 0;
 
 	wlanChannelFlagsDecode(flags, &band, &bandwidth);
 	romLibResolveState();
@@ -412,14 +415,15 @@ struct WlanReplyFrame *wlanMgmtBuildFrame(OsaBuffer *buffer, const uint8_t *sour
 	struct WlanConnection *connection = buffer->context;
 	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
 	struct WlanReplyFrame *request = (struct WlanReplyFrame *)buffer->data;
+	const uint16_t *words = (const uint16_t *)destination;	/* the address is halfword aligned */
 	int broadcast;
 
 	buffer->dataOffset = 28;
 	__aeabi_memclr4(request, offsetof(struct WlanReplyFrame, frameLength));
 	wlanBuildMgmtHeader(frame, source, destination, bssid, subtype, wlanLocalState->powerSave);
 	broadcast = 0;
-	if (LE16(destination) == 0xffff && LE16(destination + 2) == 0xffff)
-		broadcast = LE16(destination + 4) == 0xffff;
+	if (words[0] == 0xffff && words[1] == 0xffff)
+		broadcast = words[2] == 0xffff;
 	request->descriptor.header.wire.packetLength[0] =
 		wlanPsProcessFrame(connection, subtype, broadcast);
 	if (connection->interfaceType == WLAN_IF_AP) {
@@ -453,7 +457,7 @@ int wlanMgmtSendFrame(OsaBuffer *buffer)
 }
 
 /* A buffer for a management frame of the connection, its transmit data cleared. */
-OsaBuffer *wlanMgmtAllocFrame(struct WlanConnection *connection, uint32_t size)
+OsaBuffer *wlanMgmtAllocFrame(struct WlanConnection *connection, uint16_t size)
 {
 	OsaBuffer *buffer = osa_BufferAlloc(&wlanBlockPool7, size, 0);
 
@@ -476,19 +480,19 @@ int wlanMgmtSendLeave(struct WlanConnection *connection, const uint8_t *destinat
 {
 	OsaBuffer *buffer = wlanMgmtAllocFrame(connection, WLAN_MGMT_FRAME_SIZE);
 	WlanWirelessFrame *frame;
-	struct WlanReplyFrame *request;
 
 	if (buffer == NULL)
 		return -1;
 	frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
-	request = wlanMgmtBuildFrame(buffer, connection->interfaceAddress, destination,
-				     disassociate ? WLAN_SUBTYPE_DISASSOC : WLAN_SUBTYPE_DEAUTH, bssid);
+	wlanMgmtBuildFrame(buffer, connection->interfaceAddress, destination,
+			   disassociate ? WLAN_SUBTYPE_DISASSOC : WLAN_SUBTYPE_DEAUTH, bssid);
 	frame->bodyLength[0] = 2;
 	frame->bodyLength[1] = 0;
 	frame->body[0] = reason;
 	frame->body[1] = reason >> 8;
-	/* The original reloads and stores the data offset back unchanged here. */
-	request->kind = kind;
+	/* Sony reloads the data offset and stores it back unchanged. */
+	buffer->dataOffset = buffer->dataOffset;
+	((struct WlanReplyFrame *)buffer->data)->kind = kind;
 	return wlanMgmtSendFrame(buffer);
 }
 
@@ -541,8 +545,11 @@ void wlanCustomIeUpdateMask(void)
 	unsigned int slot;
 
 	wlanCustomIeMask = 0;
-	for (slot = 0; slot < WLAN_CUSTOM_IE_SLOTS; slot++)
-		wlanCustomIeMask |= wlanCustomIes.entries[slot].mask;
+	for (slot = 0; slot < WLAN_CUSTOM_IE_SLOTS; slot++) {
+		const struct WlanCustomIe *entry = &wlanCustomIes.entries[slot];
+
+		wlanCustomIeMask |= entry->mask;
+	}
 }
 
 /*
@@ -579,7 +586,7 @@ int wlanCustomIeConfigure(struct WlanConnection *connection, const uint8_t *list
 				*owners = 0;
 			if (*owners == 0)
 				__aeabi_memclr(entry, sizeof(*entry));
-			__aeabi_memclr(entry, sizeof(*entry));
+			__aeabi_memclr(&wlanCustomIes.entries[slot], sizeof(*entry));
 		} else {
 			if (length > WLAN_CUSTOM_IE_SIZE)
 				return 1;
@@ -614,7 +621,7 @@ int wlanCustomIeConfigure(struct WlanConnection *connection, const uint8_t *list
 			if (memcmp(entry, ie, length + 4) != 0)
 				return 1;
 			*owners |= bit;
-			__aeabi_memclr(entry, sizeof(*entry));
+			__aeabi_memclr(&wlanCustomIes.entries[slot], sizeof(*entry));
 		}
 next:
 		list = ie + 4 + LE16(ie + 2);
@@ -654,26 +661,28 @@ uint16_t wlanCustomIeGet(struct WlanConnection *connection, uint8_t *out, int si
 	for (slot = first; slot < end; slot++) {
 		uint32_t owners = wlanCustomIes.owners[slot];
 		const struct WlanCustomIe *entry = &wlanCustomIes.entries[slot];
+		const uint8_t *slotBytes = (const uint8_t *)&slot;	/* copied byte by byte */
 
 		if (owners != 0 && !(owners & bit))
 			continue;
 		if (entry->mask == WLAN_CUSTOM_IE_ALL_FRAMES && slot == 0) {
 			uint32_t length = 0;
+			const uint8_t *lengthBytes = (const uint8_t *)&length;
 			const uint8_t *mask = (const uint8_t *)&wlanCustomIes.entries[0].mask;
 
-			out[0] = slot;
-			out[1] = slot >> 8;
+			out[0] = slotBytes[0];
+			out[1] = slotBytes[1];
 			p2pHostAttributesGet(connection, out, (uint16_t *)&length);
 			out += 2;
 			out[0] = mask[0];
 			out[1] = mask[1];
-			out[2] = length;
-			out[3] = length >> 8;
+			out[2] = lengthBytes[0];
+			out[3] = lengthBytes[1];
 			out += (uint16_t)length + 4;
 			total = total + (uint16_t)length + 6;
 		} else {
-			out[0] = slot;
-			out[1] = slot >> 8;
+			out[0] = slotBytes[0];
+			out[1] = slotBytes[1];
 			out += 2;
 			__aeabi_memcpy(out, entry, entry->length + 4);
 			out += 4 + entry->length;
@@ -690,8 +699,7 @@ void wlanCustomIeRemoveBss(unsigned int interfaceType, unsigned int bssNumber)
 	unsigned int slot;
 
 	for (slot = 0; slot < WLAN_CUSTOM_IE_SLOTS; slot++) {
-		wlanCustomIes.owners[slot] &= ~bit;
-		if (wlanCustomIes.owners[slot] == 0)
+		if ((wlanCustomIes.owners[slot] &= ~bit) == 0)
 			__aeabi_memclr(&wlanCustomIes.entries[slot], sizeof(wlanCustomIes.entries[slot]));
 	}
 	wlanCustomIeUpdateMask();
@@ -707,7 +715,7 @@ int wlanCustomIeReset(void)
 
 /* Adds the interface's custom IEs for the frame's subtype to the frame, or removes them. */
 void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessFrame *frame,
-		       uint8_t offset)
+		       unsigned int offset)
 {
 	uint32_t bit;
 	unsigned int slot;
@@ -726,9 +734,9 @@ void wlanCustomIeApply(struct WlanConnection *connection, int add, WlanWirelessF
 		    !(entry->mask & (1 << (frame->frameControl[0] >> 4))))
 			continue;
 		if (add)
-			wlanAppendIeList(frame, offset, entry->buffer, entry->length);
+			wlanAppendIeList(frame, (uint8_t)offset, entry->buffer, entry->length);
 		else
-			wlanRemoveIeList(frame, offset, entry->buffer, entry->length);
+			wlanRemoveIeList(frame, (uint8_t)offset, entry->buffer, entry->length);
 	}
 }
 
@@ -765,6 +773,12 @@ int wlanCustomIeSet(struct WlanConnection *connection, const uint8_t *list, int1
  * HostCmd_CMD_MGMT_IE_LIST: sets the custom IEs of the TLVs, or reads them
  * back into the TLVs and the command size. Returns 0.
  */
+/* A TLV of HostCmd_CMD_MGMT_IE_LIST. */
+struct __attribute__((packed)) WlanMgmtIeTlv {
+	uint16_t type;
+	int16_t length;
+};
+
 int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *tlv,
 			uint16_t *size)
 {
@@ -774,7 +788,9 @@ int wlanCustomIeCommand(struct WlanConnection *connection, int action, uint8_t *
 	while (remaining > 0) {
 		if (LE16(tlv) == TLV_TYPE_MGMT_IE) {
 			if (action == HostCmd_ACT_GEN_SET) {
-				wlanCustomIeSet(connection, tlv + 4, (int16_t)LE16(tlv + 2));
+				/* the length as the packed signed halfword it is */
+				wlanCustomIeSet(connection, tlv + 4,
+						((const struct WlanMgmtIeTlv *)tlv)->length);
 			} else {
 				uint16_t written = wlanCustomIeGet(connection, tlv + 4, LE16(tlv + 2));
 
@@ -986,8 +1002,9 @@ void wlanApErpUpdate(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	unsigned int band = role->channelFlags & WLAN_CHANNEL_BAND_MASK;
 
-	if (info->phyMode != 0 && (role->channelFlags & WLAN_CHANNEL_BAND_MASK) == WLAN_CHANNEL_BAND_2GHZ) {
+	if (info->phyMode != 0 && band == WLAN_CHANNEL_BAND_2GHZ) {
 		wlanApRateFlagsUpdate(info->phyMode, &info->erpInfo);
 		macMgmtInspectFrame(connection);
 		wlanContentionWindowUpdate(connection->interfaceType,
@@ -1008,9 +1025,10 @@ void wlanApOlbcClear(struct WlanConnection *connection)
 void wlanApUpdateProtection(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
-	int protect = 1;
+	int protect;
 
 	if (info->phyMode == WLAN_PHY_MODE_B) {
+		protect = 0;
 		info->rateFlags &= ~WLAN_RATE_FLAG_PROTECTION;
 		info->capability[0] &= ~WLAN_CAPABILITY0_SHORT_PREAMBLE;
 	} else {
@@ -1097,7 +1115,7 @@ unsigned int wlanStartFrequencyBand(unsigned int startFrequency, unsigned int ch
 	}
 }
 
-unsigned int wlanStartFrequency(unsigned int band, unsigned int channel)
+__attribute__((noinline)) unsigned int wlanStartFrequency(unsigned int band, unsigned int channel)
 {
 	return channel == 14 ? 2414 : 2407;
 }
