@@ -24,6 +24,12 @@ int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices);
 int sceAVConfigSetAutoSuspend2(int seconds);
 int sceAVConfigClearAutoSuspend2(void);
 
+/* the display's brightness, its maximum, the display turned on, and the auto suspend */
+int sceAVConfigGetDisplayMaxBrightness(unsigned int *brightness);
+int sceAVConfigSetDisplayBrightness(unsigned int brightness);
+int sceAVConfigDisplayOn(void);
+int sceAVConfigSetAutoSuspend(unsigned int interval);
+
 #ifdef __cplusplus
 }
 #endif

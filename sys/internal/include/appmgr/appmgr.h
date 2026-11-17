@@ -70,6 +70,7 @@ int sceAppMgrAcquireBgmPortWithPriority(int priority);
 int sceAppMgrAcquireBtrm(void);
 int sceAppMgrAcquireSoundOutExclusive(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode);
 int sceAppMgrAcquireSoundOutExclusive2(int priority, SceUInt32 displayEnabled, SceUInt32 displayMode, int displayRequest);
+int sceAppMgrDeclareShellProcess2(const char *titleId);
 int sceAppMgrDeclareSystemChatApp(void);
 int sceAppMgrDump(void);
 int sceAppMgrEnableDuckingOnSystemChat(int enabled, SceUInt32 volume);
@@ -88,6 +89,7 @@ int sceAppMgrReleaseBtrm(void);
 int sceAppMgrReleaseSoundOutExclusive(void);
 int sceAppMgrReleaseSoundOutExclusive2(void);
 int sceAppMgrReleaseSoundOutExclusive3(void);
+int sceAppMgrRestoreDisplaySettingForShell(void);
 int sceAppMgrSendLiveBoardMode(int mode);
 int sceAppMgrSetBgmSubPriority(int enabled, int priority);
 int sceAppMgrSetBgmSubPriorityForSystemChat(int enabled);
@@ -217,7 +219,7 @@ int sceAppMgrLaunchAppByName2(const char *name, const char *param,
 int sceAppMgrLaunchAppByPath4(const char *path, const char *name, SceUInt32 budgetSize,
 			      const char *param, SceUInt32 processAttr,
 			      const AppmgrLaunchAppOption *option);
-int sceAppMgrGetStatusByAppId(int appId, SceAppMgrAppStatus *status);
+int sceAppMgrGetStatusByAppId(int appId, void *status);
 int sceAppMgrActivateApp(int appId);
 #endif
 

@@ -27,6 +27,11 @@ SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 SceUInt32 vshKernelSendSysEvent(int event);
 SceUInt32 vshSblQafMgrIsAllowKeepCoreFile(void);
 SceUInt32 vshSblUtMgrHasComTestFlag(void);
+SceUInt32 vshPowerSetPowerSwMode(int mode);
+SceUInt32 vshPowerSetStandbyButtonPushTime(int time);
+SceUInt32 vshPowerGetWakeupFactor(void);
+SceUInt32 vshSysconIsIduMode(void);
+SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len);
 
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {

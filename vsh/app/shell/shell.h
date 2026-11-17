@@ -67,6 +67,8 @@ bool shellStartupIsTestMode(void);		/* false in this build (0x81409e2c, folded) 
 int shellStartupGetIduMode(void);		/* 1: idu (demo unit) mode */
 int shellStartupGetPageCount(void);		/* home screen pages (pagec) */
 bool shellStartupGetIcwvp(void);		/* id storage flag 2 (icwvp) */
+bool shellStartupGetIdsFlag4(void);		/* id storage flag 4 (0x81004D94) */
+bool shellStartupLeaveIduMode(void);		/* shell event 8 (0x81004E94) */
 
 /* the icon cache: video memory and a surface pool for the home screen's icons */
 void shellIconCacheInit(void);
@@ -113,6 +115,13 @@ int shellNpStart(void);					/* SceNpSystem, /CONFIG/NP env (0x81003F90) */
 int shellNpServicesStart(void);				/* (0x8100463C) */
 int shellNpNotifyStart(void);				/* (0x81004608) */
 int shellShutterSoundInit(void);			/* (0x81004D38) */
+int shellShutterSoundStart(void);			/* (0x812443E8) */
+int shellRtcSetAlarmTick(const void *tick, int flag);	/* vshRtcSetAlarmTick (0x81417C78) */
+int shellRtcUtilSync(bool fromCallback);		/* /CONFIG/DATE, summer time (0x81365888) */
+int shellErrorDialogInit(void);				/* (0x810FB5D4) */
+int shellAppEventInit(void);				/* (0x81241238) */
+int shellNetworkMgrCreate(bool enable);			/* (0x811C9070) */
+int shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */
 int shellNoticeServiceStart(void);			/* (0x81005204) */
 int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
 int shellIsComTestMode(int *error);			/* id storage leaf 2 says test (0x81132AA2) */
