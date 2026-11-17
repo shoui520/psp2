@@ -91,6 +91,20 @@ int shellTriggerMgrSvcCtrl(int command, int arg);
 int shellParentalControlMgrCreate(void);
 int shellZoomMgrCreate(void);
 
+/* the services the boot job starts (ShellBootJob::Run) */
+int shellCloudDataGetMcId(int type, void *mcId);	/* vshAppMgrCloudDataGetMcId (0x81417DB4) */
+int shellCloudDataSetMcId(int type, const void *mcId);	/* vshAppMgrCloudDataSetMcId (0x81417DBC) */
+int shellLaunchListUpdate(void);		/* ur0:game/launch from version_launch.dat (0x810A258C) */
+int shellLiblocationStart(void);		/* SceLiblocationPrivateHeap, ur0:liblocation (0x81002D8C) */
+void shellCalibrationUpdateStart(void);		/* thread SceCalibrationUpdate (0x81002570) */
+void shellRefreshCronStart(void);		/* a cron entry that posts a refresh (0x8100267C) */
+int shellLiveAreaDailyCronStart(void);		/* SceLiveAreaDailyCronJob (0x8119A072) */
+int shellRemoteDownloadStart(void);		/* SceRemoteDownloadLibJob, events 13 and 14 (0x81004610) */
+int shellConsoleInfoStart(void);		/* ur0:ci, SceConsoleInfoSendJobQueue (0x810E5954) */
+void shellNpFriendInit(void);			/* SceNpFriendVshModelAlloc, ...ImporterAlloc (0x810F5F4A) */
+int shellAppStateMarkForeground(void);		/* flags the foreground application's slot (0x81244B62) */
+int shellThemeApplyPending(void);		/* the theme left to apply, /CONFIG/THEME (0x81005834) */
+
 /* the screen shown while the boot waits (a busy indicator) */
 void shellBootScreenCreate(void);
 void shellBootScreenClose(void);

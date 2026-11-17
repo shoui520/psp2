@@ -35,6 +35,8 @@
 #include "plugins.h"
 #include "shell.h"
 #include "src/livespace_db/livespace_db.h"
+#include "src/livespace_db/lsdb_keys.h"
+#include <graphics/drawobj/effect_path.h>
 
 using namespace paf;
 
@@ -122,7 +124,27 @@ public:
 	{
 	}
 
-	virtual int Run();
+	/* the services the shell starts once its boot is done */
+	virtual int Run()
+	{
+		char mcId[8];
+
+		if (shellCloudDataGetMcId(0, mcId) != 0)
+			shellCloudDataSetMcId(0, NULL);
+		if (system::Model::GetType() == 1)
+			shellLaunchListUpdate();
+		shellLiblocationStart();
+		if (system::Model::GetType() != 1)
+			shellCalibrationUpdateStart();
+		shellRefreshCronStart();
+		shellLiveAreaDailyCronStart();
+		shellRemoteDownloadStart();
+		shellConsoleInfoStart();
+		shellNpFriendInit();
+		shellAppStateMarkForeground();
+		shellThemeApplyPending();
+		return 0;
+	}
 
 	virtual void Finish(int result)
 	{
