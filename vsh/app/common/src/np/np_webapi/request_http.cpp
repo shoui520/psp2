@@ -203,3 +203,96 @@ done:
 	npWebApiLibContextUnlock(auth->libContext);
 	return result;
 }
+
+/* has the account's token checked or fetched (by the mode), then the access token read from the account manager */
+int npWebApiAuthObjectGetAccess(NpWebApiAuthObject *auth, char *pFlagA, char *pFlagB, unsigned char mode)
+{
+	int result;
+
+	npWebApiLibContextLock(auth->libContext);
+	if (mode != 0) {
+		result = SceNpCommonPs4_19B2A80D(auth->field8, pFlagA, auth->titleToken);
+		if (result >= 0)
+			result = SceNpManager_1F0C6314(auth->accessToken, pFlagB);
+	} else {
+		result = SceNpCommonPs4_1BF9EFFF(auth->field8, pFlagA, auth->titleToken);
+		if (result >= 0)
+			result = SceNpManager_1F0C6314(auth->accessToken, pFlagB);
+	}
+	npWebApiLibContextUnlock(auth->libContext);
+	return result;
+}
+
+/* sends a piece of the body (the whole of it for a request without parts) */
+int npWebApiRequestSendBody(NpWebApiRequest *request, const void *data, SceSize size)
+{
+	int result;
+
+	result = sceHttpSendRequest(request->httpRequestId, data, size);
+	if (result == NP_WEBAPI_HTTP_ERROR_SSL) {
+		result = npWebApiConvertHttpError(request->httpRequestId, NP_WEBAPI_HTTP_ERROR_SSL);
+		if (result < 0)
+			return result;
+	} else if (result < 0) {
+		return result;
+	}
+	request->sentSize += size;
+	return result;
+}
+
+/* the hash of the body the request has sent (it is kept for the response's check) */
+void npWebApiRequestFinishBodyHash(NpWebApiRequest *request)
+{
+	unsigned char context[1856];
+	NpWebApiBodyHash hash;
+
+	sceClibMemset(context, 0, 1856);
+	sceClibMemset(&hash, 0, 8);
+	SceNpCommonPs4_358A8F68(context, &hash);
+	SceNpCommonPs4_AD229434(context, request->data, request->field316);
+	request->field312 = hash.value;
+}
+
+/* reads the response into the buffer of the caller (as much as fits) and hashes all of it */
+int npWebApiRequestReadResponse(NpWebApiRequest *request, NpWebApiResponseBuffer *buffer)
+{
+	unsigned char context[1856];
+	NpWebApiBodyHash hash;
+	char chunk[32];
+	int total;
+	int result;
+	int room;
+	SceSize length;
+
+	total = 0;
+	sceClibMemset(context, 0, 1856);
+	sceClibMemset(&hash, 0, 8);
+	SceNpCommonPs4_358A8F68(context, &hash);
+	for (;;) {
+		sceClibMemset(chunk, 0, 32);
+		result = sceHttpReadData(request->httpRequestId, chunk, 31);
+		if (result < 0)
+			break;
+		if (result > 0) {
+			if (buffer != NULL && buffer->data != NULL && buffer->size != 0) {
+				room = buffer->size - total - 1;
+				if (room > 0) {
+					length = result;
+					if (room < result)
+						length = room;
+					sceClibMemcpy_safe((char *)buffer->data + total, chunk, length);
+				}
+			}
+			total += result;
+			SceNpCommonPs4_AD229434(context, chunk, result);
+			if (result > 0)
+				continue;
+		}
+		if (hash.flag != 0)
+			request->field312 = hash.value;
+		if (buffer != NULL)
+			buffer->length = total;
+		break;
+	}
+	return result;
+}

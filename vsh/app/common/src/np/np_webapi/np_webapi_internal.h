@@ -710,13 +710,49 @@ extern int npWebApiRequestSetMultipartContentType(NpWebApiRequest *request, cons
 	const char *boundary) __attribute__((noinline));
 extern int npWebApiRequestAddHttpHeader(NpWebApiRequest *request, const char *name, const char *value)
 	__attribute__((noinline));
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern const char *SceNpCommonPs4_D1AB9B23(int language);
+#ifdef __cplusplus
+}
+#endif
 extern int npWebApiGetLanguageSetting(char *buffer, SceSize size);
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommon_BBC13621(void);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_FA1249E8(int ctx);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_9CAF0FE7(char *dst, int size, int value, int base, int a5, int a6);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern SceSize sceClibStrlcat(char *dst, const char *src, SceSize size);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern char *sceClibStrncat(char *dst, const char *src, SceSize size);
+#ifdef __cplusplus
+}
+#endif
 extern int npWebApiRequestCreateHttpRequest(NpWebApiRequest *request, int connId, const char *baseUrl);
 extern const char *npWebApiRequestGetPath(NpWebApiRequest *request);
 extern NpWebApiRequest *npWebApiRequestSetField228(NpWebApiRequest *request, int value);
@@ -734,16 +770,116 @@ typedef struct NpWebApiAuthObject {
 	char titleToken[8];
 } NpWebApiAuthObject;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpManager_4110B787(int *pToken);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpManager_FDE78C74(int token, void *accessToken);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpManager_3907F96A(int token);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_25D1C02B(int handle, int a2, void *token, int a4);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_13798894(int handle, int a2, void *token, int a4);
+#ifdef __cplusplus
+}
+#endif
 extern int npWebApiAuthObjectRequestAccess(NpWebApiAuthObject *auth, NpWebApiRequest *request, unsigned char mode);
+typedef struct NpWebApiBodyHash {
+	unsigned char flag;
+	unsigned char reserved1[3];
+	int value;
+} NpWebApiBodyHash;
+
+typedef struct NpWebApiResponseBuffer {
+	unsigned char reserved0[4];
+	void *data;
+	SceSize size;
+	SceSize length;
+} NpWebApiResponseBuffer;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpCommonPs4_19B2A80D(int a1, char *a2, void *token);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpCommonPs4_1BF9EFFF(int a1, char *a2, void *token);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpManager_1F0C6314(void *accessToken, char *a2);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern void SceNpCommonPs4_358A8F68(void *context, NpWebApiBodyHash *hash);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern void SceNpCommonPs4_AD229434(void *context, const void *data, SceSize size);
+#ifdef __cplusplus
+}
+#endif
+extern int npWebApiAuthObjectGetAccess(NpWebApiAuthObject *auth, char *pFlagA, char *pFlagB, unsigned char mode);
+extern int npWebApiRequestSendBody(NpWebApiRequest *request, const void *data, SceSize size);
+extern void npWebApiRequestFinishBodyHash(NpWebApiRequest *request);
+extern int npWebApiRequestReadResponse(NpWebApiRequest *request, NpWebApiResponseBuffer *buffer);
 extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_00F74689(void);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern SceUInt32 sceKernelGetProcessTimeLow(void);
+#ifdef __cplusplus
+}
+#endif
 extern int npWebApiSetMultipartContentType(SceInt64 requestId, const char *contentType, const char *boundary);
 /* a part of a multipart request: its ID, its header text and the number of bytes it announced and
    has sent */
@@ -1025,7 +1161,13 @@ extern NpPushLibContext *npPushLibContextDestruct(NpPushLibContext *ctx) __attri
 extern int npPushLibContextDeleteObject(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextInit(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextInitInstance(void);
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_741F88FE(volatile int *counter);	/* atomic increment: the old value */
+#ifdef __cplusplus
+}
+#endif
 extern void npPushCallbackListInsert(NpPushCallbackNode **pResult, NpPushCallbackList *list,
 	const NpPushCallbackRecord *record) __attribute__((noinline));
 extern int npPushCallbackListErase(NpPushCallbackNode **pResult, NpPushCallbackList *list,
