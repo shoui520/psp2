@@ -17,6 +17,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/memory/memory.cpp
 	npext/memory/ring_buf.cpp
 	npext/np/communication_id.cpp
+	npext/np/online_id.cpp
+	npext/np/title_id.cpp
+	npext/stream/stream_reader.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
 	npext/thread/mutex.cpp

@@ -87,6 +87,51 @@ struct NpCommonPs4CommunicationId {
 int SceNpCommon_5BC54899(void *communicationId, const char *string);
 int SceNpCommon_E426FEE8(void *communicationId, char *buffer, SceSize size);
 
+/* the same ids without the vtable: the layouts of SceNpCommunicationId, SceNpOnlineId and SceNpTitleId */
+struct NpCommonPs4CommunicationIdData {
+	char data[9];
+	char term;
+	SceUInt8 num;
+	char dummy[1];
+};
+
+struct NpCommonPs4OnlineIdData {
+	char data[16];
+	char term;
+	char dummy[3];
+};
+
+struct NpCommonPs4TitleIdData {
+	char id[13];
+	char padding[3];
+};
+
+/* npext/np/online_id.cpp: a SceNpOnlineId (16 characters, terminator, padding) behind a vtable */
+struct NpCommonPs4OnlineId {
+	const void *const *vtable;
+	char data[16];
+	char term;
+	char dummy[3];
+};
+
+/* npext/np/title_id.cpp: a SceNpTitleId (NPXX12345_00 and its terminator, padding) behind a vtable */
+struct NpCommonPs4TitleId {
+	const void *const *vtable;
+	char id[13];
+	char padding[3];
+};
+
+/* npext/stream/stream_reader.cpp: a reader of bytes and the observer of what it reads */
+struct NpCommonPs4StreamReader {
+	const void *const *vtable;
+};
+
+struct NpCommonPs4StreamObserver {
+	const void *const *vtable;
+};
+
+int SceNpCommon_8C21F489(const void *left, const void *right);
+
 /* the build Sony's assert paths name: one per firmware */
 #if defined(FW_TYPE_CEX)
 #define NP_COMMON_PS4_BUILD "J01509657"

@@ -139,6 +139,68 @@ int SceNpCommonPs4_0F8CD52B(const struct NpCommonPs4CommunicationId *left, const
 	return result;
 }
 
+int SceNpCommonPs4_2BA66AD3(const struct NpCommonPs4CommunicationId *communicationId)
+{
+	char zero[12];
+	int result;
+
+	sceClibMemset(zero, 0, 12);
+	result = 0;
+	if (sceClibStrncmp(communicationId->data, zero, 9) == 0)
+		result = communicationId->num == (SceUInt8)zero[10];
+	return result;
+}
+
+int SceNpCommonPs4_3E897C67(const struct NpCommonPs4CommunicationIdData *left, const struct NpCommonPs4CommunicationId *right)
+{
+	int result;
+
+	result = 0;
+	if (sceClibStrncmp(left->data, right->data, 9) == 0)
+		return left->num == right->num;
+	return result;
+}
+
+int SceNpCommonPs4_ED648EB9(const struct NpCommonPs4CommunicationId *left, const struct NpCommonPs4CommunicationIdData *right)
+{
+	int result;
+
+	result = 0;
+	if (sceClibStrncmp(left->data, right->data, 9) == 0)
+		return left->num == right->num;
+	return result;
+}
+
+int SceNpCommonPs4_190DAFA6(const struct NpCommonPs4CommunicationId *left, const struct NpCommonPs4CommunicationId *right)
+{
+	int result;
+
+	result = 0;
+	if (sceClibStrncmp(left->data, right->data, 9) != 0 || left->num != right->num)
+		return 1;
+	return result;
+}
+
+int SceNpCommonPs4_6DDC937F(const struct NpCommonPs4CommunicationIdData *left, const struct NpCommonPs4CommunicationId *right)
+{
+	int result;
+
+	result = 0;
+	if (sceClibStrncmp(left->data, right->data, 9) != 0 || left->num != right->num)
+		return 1;
+	return result;
+}
+
+int SceNpCommonPs4_B1AAA60C(const struct NpCommonPs4CommunicationId *left, const struct NpCommonPs4CommunicationIdData *right)
+{
+	int result;
+
+	result = 0;
+	if (sceClibStrncmp(left->data, right->data, 9) != 0 || left->num != right->num)
+		return 1;
+	return result;
+}
+
 const void *g_communicationIdVtable[] = {	/* 0x8102a900 */
 	NULL,
 	NULL,
