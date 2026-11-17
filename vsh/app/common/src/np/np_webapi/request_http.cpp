@@ -296,3 +296,69 @@ int npWebApiRequestReadResponse(NpWebApiRequest *request, NpWebApiResponseBuffer
 	}
 	return result;
 }
+
+/* the URL of the service the request names, from the list the library keeps and, when the account manager
+   knows a new one, from it */
+int npWebApiPushObjectGetServiceUrl(NpWebApiPushObject *object, const char *service, char *pFound, char **pUrl)
+{
+	unsigned char idle;
+	int result;
+	int created;
+	NpWebApiServiceUrl *entry;
+	NpWebApiServiceUrl *node;
+	char url[128];
+	NpWebApiLibContext *libCtx;
+
+	idle = 0;
+	npWebApiLibContextGetAborted(object->libContext, &idle);
+	sceClibMemset(url, 0, 128);
+	if (idle != 0)
+		result = SceNpCommonPs4_2A1D2A4B(service, pFound, url, 128);
+	else
+		result = SceNpCommonPs4_28372F53(service, pFound, url, 128);
+	if (result < 0)
+		return result;
+	if (*pFound != 0) {
+		npWebApiLibContextLock(object->libContext);
+		npWebApiLibContextLock(object->libContext);
+		for (entry = object->head; entry != NULL; entry = entry->next) {
+			if (sceClibStrncmp(entry->name, service, sceClibStrnlen(service, 0xFFFFFFFF)) == 0)
+				break;
+		}
+		npWebApiLibContextUnlock(object->libContext);
+		libCtx = object->libContext;
+		if (entry != NULL) {
+			npWebApiLibContextLock(libCtx);
+			sceClibMemset(entry->url, 0, 128);
+			sceClibMemcpy_safe(entry->url, url, sceClibStrnlen(url, 0xFFFFFFFF));
+			npWebApiLibContextUnlock(object->libContext);
+			result = 0;
+		} else {
+			node = (NpWebApiServiceUrl *)npWebApiLibContextPoolAlloc(libCtx, 208);
+			created = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+			if (node != NULL) {
+				sceClibMemset(node, 0, 208);
+				sceClibStrncpy(node->name, service, 32);
+				sceClibStrncpy(node->url, url, 128);
+				entry = node;
+				created = 0;
+			}
+			result = created;
+			if (created < 0) {
+				npWebApiLibContextUnlock(object->libContext);
+				return result;
+			}
+			npWebApiLibContextLock(object->libContext);
+			if (object->head != NULL)
+				entry->next = object->head;
+			created = object->count + 1;
+			object->head = entry;
+			object->count = created;
+			npWebApiLibContextUnlock(object->libContext);
+		}
+		npWebApiLibContextUnlock(object->libContext);
+		if (entry != NULL && pUrl != NULL)
+			*pUrl = entry->url;
+	}
+	return result;
+}

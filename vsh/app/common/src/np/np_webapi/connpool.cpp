@@ -171,3 +171,59 @@ int npWebApiPushObjectAbortRequest(NpWebApiPushObject *object, NpWebApiRequest *
 	npWebApiLibContextUnlock(object->libContext);
 	return result;
 }
+
+/* the connection of the user context to a server (the one named, made on the first use) */
+int npWebApiConnectionPoolGetConnection(NpWebApiConnectionPool *pool, const char *name, const char *url, int *pConnId)
+{
+	NpWebApiConnection *conn;
+	NpWebApiConnection *node;
+	NpWebApiLibContext *libCtx;
+	int result;
+	int created;
+
+	result = 0;
+	if (name == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	npWebApiLibContextLock(pool->libContext);
+	for (conn = pool->head; conn != NULL; conn = conn->next) {
+		if (sceClibStrncmp(conn->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) == 0)
+			break;
+	}
+	libCtx = pool->libContext;
+	if (conn == NULL) {
+		node = (NpWebApiConnection *)npWebApiLibContextPoolAlloc(libCtx, 72);
+		if (node != NULL) {
+			sceClibMemset(node, 0, 72);
+			sceClibStrncpy(node->name, name, sceClibStrnlen(name, 0xFFFFFFFF));
+			created = sceHttpCreateConnectionWithURL(npWebApiUserContextGetHttpTemplateId(pool->userContext), url, 1);
+			if (created >= 0) {
+				node->connId = created;
+				conn = node;
+				goto link;
+			}
+			result = created;
+		} else {
+			result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+		}
+		if (node != NULL)
+			npWebApiLibContextDestroyPool(pool->libContext, node);
+		goto fail;
+link:
+		if (result < 0)
+			return result;
+		if (pool->head != NULL)
+			conn->next = pool->head;
+		pool->head = conn;
+		pool->count++;
+		libCtx = pool->libContext;
+		goto out;
+fail:
+		if (result < 0)
+			return result;
+	}
+out:
+	npWebApiLibContextUnlock(libCtx);
+	if (pConnId != NULL)
+		*pConnId = conn->connId;
+	return result;
+}
