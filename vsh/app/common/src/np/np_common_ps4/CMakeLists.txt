@@ -16,12 +16,15 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/http/http_uri.cpp
 	npext/json/json_doc.cpp
 	npext/json/json_parser.cpp
+	npext/json/json_string.cpp
 	npext/json/json_value.cpp
 	npext/memory/memory.cpp
 	npext/memory/ring_buf.cpp
 	npext_npm/np_service_base_url/get_service_base_url_trans.cpp
 	npext_npm/np_token.cpp
 	npext_npm/np_trans.cpp
+	npext_npm/np_system_param.cpp
+	np_util/server_error/np_server_error.c
 	npext_npm/np_environment.cpp
 	npext/np/communication_id.cpp
 	npext/np/online_id.cpp

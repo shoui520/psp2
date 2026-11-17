@@ -38,6 +38,10 @@ extern "C" {
 #define NP_COMMON_PS4_ERROR_80559E13	-2141872621
 #define NP_COMMON_PS4_ERROR_80559E2D	-2141872595
 #define NP_COMMON_PS4_ERROR_80559E2E	-2141872594
+#define NP_COMMON_PS4_ERROR_JSON_INVALID_ARGUMENT	-2141911551	/* 0x80550601 */
+#define NP_COMMON_PS4_ERROR_JSON_INVALID_STRING	-2141911550	/* 0x80550602 */
+#define NP_COMMON_PS4_ERROR_80550687	-2141911417
+#define NP_COMMON_PS4_ERROR_80550689	-2141911415
 #define NP_COMMON_PS4_ERROR_80559F7F	-2141872385
 #define NP_COMMON_PS4_ERROR_80559E14	-2141872620
 #define NP_COMMON_PS4_ERROR_80559E16	-2141872618
@@ -353,7 +357,6 @@ struct NpCommonPs4TitleToken *SceNpCommonPs4_FD80FE40(struct NpCommonPs4TitleTok
 const char *SceNpCommonPs4_80D16974(const struct NpCommonPs4TitleToken *token);
 int SceNpCommonPs4_191AEA9E(struct NpCommonPs4Handle *handle, struct NpCommonPs4OnlineId *onlineId, struct NpCommonPs4UserToken *token);
 int SceNpCommonPs4_9BC491E3(struct NpCommonPs4Handle *handle, const char *onlineId, struct NpCommonPs4TitleToken *token);
-int SceNpCommonPs4_FB63A152(SceInt32 statusCode, void *body, SceSize length);
 int SceNpManager_737B2820(SceInt32 id);
 int SceNpCommonPs4_639086A3(SceInt32 reserved);
 int SceNpCommonPs4_530CAFDA(SceInt32 id);
@@ -784,6 +787,49 @@ struct NpCommonPs4RingBufAlloc *SceNpCommonPs4_A264C490(struct NpCommonPs4RingBu
 int SceNpCommonPs4_530564F5(struct NpCommonPs4RingBufAlloc *ringBuf, SceSize bufSize);
 int SceNpCommonPs4_31D856EA(struct NpCommonPs4RingBufAlloc *ringBuf);
 int SceNpCommonPs4_E1F6AE0F(struct NpCommonPs4RingBufAlloc *ringBuf);
+int SceNpCommonPs4_9AD6061C(char *dst, SceSize dstSize, const char *src, SceSize srcLength);
+int SceNpCommonPs4_1A8B2250(char *dst, SceSize dstSize, const char *src, int srcLength, SceSize *pLength);
+int SceNpCommonPs4_12AA95E3(void *dst, SceSize dstSize, const char *src, SceSize srcLength, SceSize *pLength, int *pConsumed);
+int npCommonPs4JsonParseHex4(const char *src, unsigned short *pCode);
+int npCommonPs4JsonEncodeUtf8(unsigned int code, char *dst);
+int SceNpCommonPs4_32155BF8(const char *str, const char **pEnd, int base);
+int SceNpCommonPs4_C08B6E1C(int language, char *code);
+const char *SceNpCommonPs4_D1AB9B23(int language);
+int SceNpCommonPs4_FA1249E8(void);
+int SceNpCommonPs4_64C85FD5(void);
+extern const char *g_languageCodes[22];
+/* the error body's lexer context: whether the body carried an error, and its code (-1 when it has none) */
+struct NpCommonPs4ServerErrorContext {
+	SceUInt8 valid;
+	SceInt32 code;
+};
+/* a token the lexer hands its callback: its type (3: a string or number) and its text */
+struct NpCommonPs4LexerToken {
+	int type;
+	char text[1];
+};
+typedef int (*NpCommonPs4LexerCallback)(void *lexer, int event, int depth, int node, int arg4,
+	const struct NpCommonPs4LexerToken *token, int arg6, void *context);
+extern const unsigned char g_serverErrorConfig[];		/* 0x81028a40 */
+extern const unsigned char g_serverErrorConfigEither[];	/* 0x81028a8c */
+int SceNpCommonPs4_738FF77D(void *lexer, const void *config, NpCommonPs4LexerCallback callback, void *context);
+int SceNpCommonPs4_6C941C30(void *lexer, const void *data, int size);
+int SceNpCommonPs4_AC633131(void *lexer, struct NpCommonPs4ServerErrorContext *context);
+int SceNpCommonPs4_358A8F68(void *lexer, struct NpCommonPs4ServerErrorContext *context);
+int SceNpCommonPs4_AD229434(void *lexer, const void *data, int size);
+int _sceNpServerErrorJsonGetErrorCode(int status, const void *body, int size, SceUInt8 either);
+int npCommonPs4ServerErrorOnCode(void *lexer, int event, int depth, int node, int arg4,
+	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context);
+int npCommonPs4ServerErrorOnCodeEither(void *lexer, int event, int depth, int node, int arg4,
+	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context);
+int SceNpCommonPs4_FB63A152(int status, const void *body, int size);
+int SceNpCommonPs4_CF591432(int status, const void *body, int size);
+int SceNpCommonPs4_69090D80(int requestId);
+int SceNpCommonPs4_EF0A4C60(int requestId, const char *prefix);
+int SceNpCommon_BBC13621(void);
+int SceNpManager_72936716(const char *notification, int reserved);
+SceInt32 sceHttpUriUnescape(char *out, SceSize *require, SceSize prepare, const char *in);
+int sceRegMgrSystemParamGetInt(int id, int *value);
 
 #ifdef __cplusplus
 }
