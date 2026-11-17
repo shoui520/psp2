@@ -168,6 +168,13 @@ extern int SceNpCommonPs4_6B1D3984(int a, int b, int c, int d, int e, void *out)
 extern void SceNpCommonPs4_93C97239(void *object);			/* releases a reference */
 extern void SceNpCommonPs4_64BAC888(void *object);			/* takes a reference */
 extern void *SceNpCommonPs4_342A935D(int size);				/* allocates */
+extern void *SceNpCommonPs4_0C922423(int size, void *allocator);		/* allocates an object */
+extern void *SceNpCommonPs4_4266D870(void *mutex);				/* a lock object: constructor */
+extern int SceNpCommonPs4_8AA7E995(void *mutex, const char *name, int recursive);	/* its creation */
+extern int SceNpCommonPs4_C78F5DF5(void *mutex);				/* whether it is created */
+extern int SceNpCommonPs4_63EED478(void *mutex);				/* its deletion */
+extern void SceNpCommonPs4_294F0B1A(void *mutex);				/* its destructor */
+extern int SceNpCommonPs4_1096EAD4(int arg);
 
 #ifdef __cplusplus
 }
@@ -894,6 +901,29 @@ extern void npPushLibContextReceivePush(NpPushLibContext *ctx) __attribute__((no
 extern void npPushLibContextReceiveService(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextCheckCallback(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushCheckCallback(void) __attribute__((noinline));
+
+/* the push library's own allocator (a four-word descriptor set by npPushSetCallbackParam), its context and
+   the classes the context is made of (Sony's np_push/src: np_push_lib_context.cpp, np_push_data_filter.cpp) */
+extern int g_pushAllocator[4];				/* 0x81014080 */
+extern unsigned char g_pushReceiveBuffer[0x2000];	/* 0x81012080 */
+extern const void *const g_pushLibContextVtable[];	/* 0x8100ef80 */
+extern const void *const g_pushDataFilterVtable[];	/* 0x8100f0d0 */
+extern const void *const g_pushServiceListVtable[];	/* 0x8100f100 */
+extern void *npPushAllocatorGet(void) __attribute__((noinline));
+extern void *npPushAlloc(int size) __attribute__((noinline));
+extern int npPushFree(void *memory) __attribute__((noinline));
+extern NpPushLibContext *npPushLibContextConstruct(NpPushLibContext *ctx) __attribute__((noinline));
+extern NpPushLibContext *npPushLibContextDestruct(NpPushLibContext *ctx) __attribute__((noinline));
+extern int npPushLibContextDeleteObject(NpPushLibContext *ctx) __attribute__((noinline));
+extern int npPushLibContextInit(NpPushLibContext *ctx) __attribute__((noinline));
+extern int npPushLibContextInitInstance(void);
+extern NpPushExDataNames *npPushDataFilterConstruct(NpPushExDataNames *names) __attribute__((noinline));
+extern NpPushExDataNames *npPushDataFilterDestruct(NpPushExDataNames *names) __attribute__((noinline));
+extern int npPushDataFilterDelete(NpPushExDataNames *names) __attribute__((noinline));
+extern int npPushDataFilterInit(NpPushExDataNames *names) __attribute__((noinline));
+extern NpWebApiExtdEntryList *npPushServiceListConstruct(NpWebApiExtdEntryList *list) __attribute__((noinline));
+extern NpWebApiExtdEntryList *npPushServiceListDestruct(NpWebApiExtdEntryList *list) __attribute__((noinline));
+extern int npPushServiceListDelete(NpWebApiExtdEntryList *list) __attribute__((noinline));
 extern int npPushServicesCollectNames(NpWebApiExtdEntryList *services, const char *name, NpPushExDataNames **pNames)
 	__attribute__((noinline));
 extern int npPushLibContextCollectNames(NpPushLibContext *ctx, const char *name, NpPushExDataNames **pNames)

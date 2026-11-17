@@ -32,4 +32,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	np_push_ipc_tlv.cpp
 	np_push_ipc_data.cpp
 	np_push_event.cpp
+	np_push_data_filter.cpp
+	np_push_lib_context.cpp
 )

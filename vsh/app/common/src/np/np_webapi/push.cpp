@@ -6,7 +6,7 @@
 #include "np_webapi_internal.h"
 
 NpPushLibContext *g_pushLibContext;		/* 0x81010038 */
-static int s_pushCallbackParam[4];		/* 0x81014080 */
+int g_pushAllocator[4];				/* 0x81014080 */
 
 void npPushLibContextDelete(void)
 {
@@ -22,11 +22,11 @@ NpPushLibContext *npPushLibContextGet(void)
 
 int npPushSetCallbackParam(const int *param)
 {
-	s_pushCallbackParam[0] = param[0];
-	s_pushCallbackParam[1] = param[1];
-	s_pushCallbackParam[2] = param[2];
-	s_pushCallbackParam[3] = param[3];
-	return s_pushCallbackParam[3];
+	g_pushAllocator[0] = param[0];
+	g_pushAllocator[1] = param[1];
+	g_pushAllocator[2] = param[2];
+	g_pushAllocator[3] = param[3];
+	return g_pushAllocator[3];
 }
 
 /* the name of a filter (its text at +32) when it has one or its ID is set; none otherwise */
