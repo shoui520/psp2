@@ -40,6 +40,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/thread/timer.cpp
 	npext/time/time.cpp
 	npasm/np_asm_wrap.cpp
+	npasm/np_asm_transport.cpp
+	npasm/np_asm_request.cpp
+	npasm/np_asm_registry.cpp
 	npext/thread/thread.cpp
 	../../../../../../sys/sdk/target/src/libsnc/i64ops.c
 	../../../../../../sys/sdk/target/src/libsnc/i32ops.c

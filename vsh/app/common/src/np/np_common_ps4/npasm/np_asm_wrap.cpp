@@ -1403,7 +1403,7 @@ int SceNpCommonPs4_6602CA8B(const int *pParam, const int *pCallbacks)
 		return NP_ASM_ERROR_80559D4B;
 	result = npAsmWrapInit(0, pParam);
 	if (result >= 0) {
-		result = npAsmCallbackTableSet(npAsmGetCallbackTable(), pCallbacks);
+		result = npAsmCallbackTableSet(npAsmGetCallbackTable(), (const struct NpAsmCallbacks *)pCallbacks);
 		if (result >= 0) {
 			npAsmWrapSetInitialized(1);
 			return result;
