@@ -7,7 +7,19 @@
 
 extern "C" {
 
-extern const void *g_cancelableVtable[];	/* 0x8102a6c0 */
+void npCommonPs4Breakpoint(void);
+int SceNpCommonPs4_A6C7D48D(struct NpCommonPs4Cancelable *cancelable, int errcode, int flags);
+struct NpCommonPs4Cancelable *SceNpCommonPs4_48074E29(struct NpCommonPs4Cancelable *cancelable);
+void SceNpCommonPs4_74001725(struct NpCommonPs4Cancelable *cancelable);
+
+const void *g_cancelableVtable[] = {		/* 0x8102a6c0 */
+	(const void *)SceNpCommonPs4_A6C7D48D,
+	(const void *)SceNpCommonPs4_48074E29,
+	(const void *)SceNpCommonPs4_74001725,
+	(const void *)npCommonPs4Breakpoint,
+	NULL,
+	NULL,
+};
 
 int SceNpCommonPs4_86DF1834(struct NpCommonPs4Cancelable *cancelable, SceUInt8 enabled)
 {
@@ -189,10 +201,10 @@ struct NpCommonPs4Cancelable *SceNpCommonPs4_48074E29(struct NpCommonPs4Cancelab
 	return cancelable;
 }
 
-int SceNpCommonPs4_74001725(struct NpCommonPs4Cancelable *cancelable)
+void SceNpCommonPs4_74001725(struct NpCommonPs4Cancelable *cancelable)
 {
 	SceNpCommonPs4_48074E29(cancelable);
-	return SceNpCommonPs4_BB5282C8(cancelable);
+	operator delete(cancelable);
 }
 
 struct NpCommonPs4Cancelable *SceNpCommonPs4_C6E3FE21(struct NpCommonPs4Cancelable *cancelable)

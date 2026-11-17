@@ -23,6 +23,7 @@ extern "C" {
 /* the errors the library returns (0x8055800X: the library's own; Sony's names for them are not
    known) */
 #define NP_COMMON_PS4_ERROR_80558003	-2141880317
+#define NP_COMMON_PS4_ERROR_80559E03	-2141872637
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
 #define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80558005 */
 #define NP_COMMON_PS4_ERROR_OUT_OF_MEMORY	-2141880313	/* 0x80558007 */
@@ -61,9 +62,11 @@ struct NpCommonPs4Allocator {
 				NP_COMMON_PS4_SOURCE(file), line, "ASSERT", text)); \
 	} while (0)
 
-/* a mutex of the library (three words; Sony's layout is not known) */
+/* a mutex of the library: a kernel mutex behind a vtable */
 struct NpCommonPs4Mutex {
-	SceUInt32 state[3];
+	const void *const *vtable;
+	SceUID mutexId;
+	SceUInt8 initialized;
 };
 
 /* npext/handle/cancelable.cpp: a handle that can be cancelled, with the handles above and below it */
@@ -115,17 +118,27 @@ struct NpCommonPs4HeapStats {
 
 int SceNpCommonPs4_A2A8493B(struct NpCommonPs4Mutex *mutex);	/* lock */
 int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex);	/* unlock */
-int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, int recursive);
+int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, char recursive);
 int SceNpCommonPs4_63EED478(struct NpCommonPs4Mutex *mutex);
-int SceNpCommonPs4_294F0B1A(struct NpCommonPs4Mutex *mutex);
-int SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex);
+struct NpCommonPs4Mutex *SceNpCommonPs4_294F0B1A(struct NpCommonPs4Mutex *mutex);
+struct NpCommonPs4Mutex *SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex);
+struct NpCommonPs4Mutex *SceNpCommonPs4_4C7BD335(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_AB8AE01C(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_E0ED3312(struct NpCommonPs4Mutex *mutex);
+struct NpCommonPs4Mutex *SceNpCommonPs4_3FE4AAB6(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_6EA40010(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_2D74359F(SceUID *pMutex);
+int SceNpCommonPs4_D37A4868(SceUID *pMutex);
+int SceNpCommonPs4_262D1ACE(SceUID *pMutex);
+extern const void *g_mutexVtable[];
+extern const void *g_baseVtable[];	/* 0x8102a6b0 */
 int SceNpCommonPs4_C78F5DF5(struct NpCommonPs4Mutex *mutex);
 int SceNpCommonPs4_F56B0EAB(SceInt64 *pTime);
 int SceNpCommonPs4_A25DA29A(SceUInt32 *pTime);
 int SceNpCommonPs4_93DA3594(const char *data, int length);
 void SceNpCommonPs4_0A7044DA(const unsigned char *data, SceSize size);
 int SceNpCommonPs4_F50BD96A(int printed);
-int SceNpCommonPs4_BB5282C8(void *memory);
+int SceNpCommonPs4_BB5282C8(void *object);
 void SceNpCommonPs4_31DB2D97(void);
 int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer);
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);

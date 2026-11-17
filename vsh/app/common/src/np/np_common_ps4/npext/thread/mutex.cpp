@@ -6,7 +6,7 @@
 
 extern "C" {
 
-SceUID SceNpCommonPs4_EDBFFFE9(SceUID *pMutex, const char *name, char recursive)
+__attribute__((noinline)) SceUID SceNpCommonPs4_EDBFFFE9(SceUID *pMutex, const char *name, char recursive)
 {
 	SceUID result;
 
@@ -20,12 +20,12 @@ SceUID SceNpCommonPs4_EDBFFFE9(SceUID *pMutex, const char *name, char recursive)
 	return 0;
 }
 
-int SceNpCommonPs4_2D74359F(SceUID *pMutex)
+__attribute__((noinline)) int SceNpCommonPs4_2D74359F(SceUID *pMutex)
 {
 	return sceKernelDeleteMutex(*pMutex);
 }
 
-int SceNpCommonPs4_D37A4868(SceUID *pMutex)
+__attribute__((noinline)) int SceNpCommonPs4_D37A4868(SceUID *pMutex)
 {
 	int result;
 
@@ -47,7 +47,7 @@ int SceNpCommonPs4_950060DC(SceUID *pMutex)
 	return 0;
 }
 
-int SceNpCommonPs4_262D1ACE(SceUID *pMutex)
+__attribute__((noinline)) int SceNpCommonPs4_262D1ACE(SceUID *pMutex)
 {
 	int result;
 
@@ -106,5 +106,136 @@ int SceNpCommonPs4_4A1C1C3C(SceKernelLwMutexWork *pWork)
 		return result;
 	return 0;
 }
+
+__attribute__((noinline)) int SceNpCommonPs4_BB5282C8(void *object)
+{
+	void *const *pool;
+
+	if (object == NULL)
+		return 0;
+	pool = (void *const *)((char *)object - 16);
+	return ((int (*)(void *, void *))((void *const *)*pool)[2])((char *)object - 16, ((void *const *)*pool)[3]);
+}
+
+struct NpCommonPs4Mutex *SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex)
+{
+	mutex->vtable = g_mutexVtable;
+	mutex->initialized = 0;
+	sceClibMemset(&mutex->mutexId, 0, 4);
+	return mutex;
+}
+
+struct NpCommonPs4Mutex *SceNpCommonPs4_4C7BD335(struct NpCommonPs4Mutex *mutex)
+{
+	mutex->vtable = g_mutexVtable;
+	mutex->initialized = 0;
+	sceClibMemset(&mutex->mutexId, 0, 4);
+	return mutex;
+}
+
+int SceNpCommonPs4_AB8AE01C(struct NpCommonPs4Mutex *mutex)
+{
+	if (mutex->initialized != 0)
+		return SceNpCommonPs4_2D74359F(&mutex->mutexId);
+	return (int)mutex;
+}
+
+struct NpCommonPs4Mutex *SceNpCommonPs4_294F0B1A(struct NpCommonPs4Mutex *mutex)
+{
+	if (mutex->initialized != 0) {
+		mutex->vtable = g_mutexVtable;
+		SceNpCommonPs4_2D74359F(&mutex->mutexId);
+	}
+	mutex->vtable = g_baseVtable;
+	return mutex;
+}
+
+int SceNpCommonPs4_E0ED3312(struct NpCommonPs4Mutex *mutex)
+{
+	if (mutex->initialized != 0) {
+		mutex->vtable = g_mutexVtable;
+		SceNpCommonPs4_2D74359F(&mutex->mutexId);
+	}
+	mutex->vtable = g_baseVtable;
+	return SceNpCommonPs4_BB5282C8(mutex);
+}
+
+struct NpCommonPs4Mutex *SceNpCommonPs4_3FE4AAB6(struct NpCommonPs4Mutex *mutex)
+{
+	if (mutex->initialized != 0) {
+		mutex->vtable = g_mutexVtable;
+		SceNpCommonPs4_2D74359F(&mutex->mutexId);
+	}
+	mutex->vtable = g_baseVtable;
+	return mutex;
+}
+
+int SceNpCommonPs4_C78F5DF5(struct NpCommonPs4Mutex *mutex)
+{
+	return mutex->initialized;
+}
+
+int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, char recursive)
+{
+	int result;
+
+	if (mutex->initialized != 0)
+		return NP_COMMON_PS4_ERROR_80559E03;
+	result = SceNpCommonPs4_EDBFFFE9(&mutex->mutexId, name, (recursive & 1) ? 1 : 0);
+	if (result >= 0) {
+		mutex->initialized = 1;
+		return 0;
+	}
+	return result;
+}
+
+int SceNpCommonPs4_6EA40010(struct NpCommonPs4Mutex *mutex)
+{
+	mutex->initialized = 0;
+	return (int)mutex;
+}
+
+int SceNpCommonPs4_63EED478(struct NpCommonPs4Mutex *mutex)
+{
+	if (mutex->initialized != 0)
+		SceNpCommonPs4_2D74359F(&mutex->mutexId);
+	mutex->initialized = 0;
+	return 0;
+}
+
+int SceNpCommonPs4_A2A8493B(struct NpCommonPs4Mutex *mutex)
+{
+	int result;
+	int printed;
+
+	result = SceNpCommonPs4_D37A4868(&mutex->mutexId);
+	if (result != 0) {
+		sceClibPrintf("Mutex lock failed. ret=%x\n", result);
+		printed = sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "Lock", NP_COMMON_PS4_SOURCE("npext\\thread\\mutex.cpp"), 124, "HALT_ASSERT", "ret == 0");
+		return SceNpCommonPs4_F50BD96A(printed);
+	}
+	return result;
+}
+
+int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex)
+{
+	int result;
+	int printed;
+
+	result = SceNpCommonPs4_262D1ACE(&mutex->mutexId);
+	if (result != 0) {
+		sceClibPrintf("Mutex unlock failed. ret=%x\n", result);
+		printed = sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "Unlock", NP_COMMON_PS4_SOURCE("npext\\thread\\mutex.cpp"), 140, "HALT_ASSERT", "ret == 0");
+		return SceNpCommonPs4_F50BD96A(printed);
+	}
+	return result;
+}
+
+const void *g_mutexVtable[] = {		/* 0x8102aa0c */
+	(const void *)SceNpCommonPs4_294F0B1A,
+	(const void *)SceNpCommonPs4_E0ED3312,
+	NULL,
+	NULL,
+};
 
 }
