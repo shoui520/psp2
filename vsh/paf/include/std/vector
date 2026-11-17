@@ -64,6 +64,14 @@ public:
 			return *this;
 		}
 
+		iterator operator--(int)
+		{
+			iterator result(*this);
+
+			--*this;
+			return result;
+		}
+
 		iterator operator+(difference_type off) const
 		{
 			iterator result(m_ptr);
