@@ -934,26 +934,27 @@ int AppInfoDaemon::GetTitlesByCategory(const char **categories, unsigned int cou
 	return ret;
 }
 
-int AppInfoDaemon::GetUriTitles(const char *scheme, int arg2, int arg3)
+int AppInfoDaemon::GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
-	int result = AppDbGetUriTitles(connection, scheme, arg3, arg2);
+	int result = AppDbGetUriTitle(connection, uri, flags, titleId);
 	SceActivityDb_11D77056(m_access, result);
 	return result;
 }
 
-int AppInfoDaemon::GetUriHostPath(const char *scheme, unsigned int arg2, void *result)
+int AppInfoDaemon::GetSchemeUris(const char **schemes, unsigned int count,
+	paf::vector<paf::string> *uris)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
-	int ret = AppDbGetUriHostPath(connection, scheme, arg2, result);
+	int ret = AppDbGetSchemeUris(connection, schemes, count, uris);
 	SceActivityDb_11D77056(m_access, ret);
 	return ret;
 }

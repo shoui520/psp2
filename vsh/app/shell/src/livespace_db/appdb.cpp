@@ -7,6 +7,9 @@
 #include <string.h>
 #include <std/stdio.h>
 #include <std/string.h>
+#include <std/list>
+#include <std/algorithm>
+#include <common/string_util.h>
 #include <dbutil/statement.h>
 #include "livespace_db_internal.h"
 
@@ -2363,4 +2366,645 @@ int AppDbUpdateAppInfoBits(ActivityDbConnection *connection, const paf::string *
 	delete id;
 	info->insert(paf::pair<unsigned int, LsdbValue>(key, *bits));
 	return AppDbSetAppInfo(connection, &info, true, mask);
+}
+
+/*
+ * Reads a scheme an application gives in its SUPPORT_URI ("scheme:hostpath", or "<...>" to
+ * claim the scheme for itself) into uri. A title not trusted may not give a character of
+ * "\"<>{|}" past the first six, an http(s) URI without a host, a "ps" or "sce" scheme, or a
+ * scheme another title claimed. Returns 1 when the scheme is taken, else 0.
+ */
+static __attribute__((noinline)) int AppDbParseUri(ActivityDbConnection *connection,
+	const paf::string *text, bool trusted, LsdbUri *uri)
+{
+	size_t colon = text->find(':');
+
+	if (colon == paf::string::npos || colon == 0)
+		return 0;
+
+	size_t end = text->size();
+
+	if (!trusted && text->find_first_of("\"<>{|}", 6) != paf::string::npos)
+		return 0;
+
+	bool claimed = false;
+
+	if ((*text)[0] == '<')
+		claimed = (*text)[text->size() - 1] == '>';
+
+	size_t start = 0;
+
+	if (claimed) {
+		start = 1;
+		end--;
+	}
+	uri->scheme = paf::string(*text, start, colon - start);
+	uri->hostpath = paf::string(*text, colon + 1, end - colon - 1);
+	if (!trusted) {
+		if (uri->hostpath.size() != 0 &&
+			(uri->scheme == "http" || uri->scheme == "https")) {
+			if (uri->hostpath.size() < 4 || uri->hostpath[0] != '/' ||
+				uri->hostpath[1] != '/' ||
+				uri->hostpath.find('/', 3) == paf::string::npos)
+				return 0;
+		}
+		if (sce_paf_strncmp(uri->scheme.c_str(), "ps", 2) == 0 ||
+			sce_paf_strncmp(uri->scheme.c_str(), "sce", 3) == 0)
+			return 0;
+
+		RefPtr<Statement> statement;
+		int result = connection->Prepare(paf::string("SELECT 1 FROM tbl_uri "
+			"WHERE scheme=? AND (flag&?)=0"), &statement);
+
+		if (result == 0) {
+			result = AppDbBindString(&statement, 1, &uri->scheme);
+			if (result == 0) {
+				result = AppDbBindInt(&statement, 2, LSDB_URI_FLAG_SHARED);
+				if (result == 0)
+					result = statement->Step(1);
+			}
+		}
+		if (result != 1)
+			return 0;
+	}
+	if (!claimed)
+		uri->flag |= LSDB_URI_FLAG_SHARED;
+	return 1;
+}
+
+/* the titles trusted with any URI scheme */
+static const char *s_uriTitles[] = {
+	"PCSI00013",
+};
+
+static inline bool AppDbIsUriTitle(const char *titleId)
+{
+	for (int i = 0; i < sizeof(s_uriTitles) / sizeof(s_uriTitles[0]); i++)
+		if (sce_paf_strcmp(titleId, s_uriTitles[i]) == 0)
+			return true;
+	return false;
+}
+
+/* adds the URI schemes of an application's SUPPORT_URI (a line each) to tbl_uri */
+int AppDbAddUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app)
+{
+	paf::vector<LsdbUri> uris;
+	const char *titleId = sceLsdbGetName(app);
+	const char *supportUri = SceLsdb_AE60C3A5(app);
+
+	if (supportUri != NULL) {
+		bool trusted = SceLsdb_41019D89(app) != 0 || AppDbIsUriTitle(titleId);
+		paf::list<paf::string> lines;
+
+		paf::common::string_util::tokenize(lines, paf::string(supportUri), 0, '\n');
+		for (paf::list<paf::string>::iterator it = lines.begin(); it != lines.end(); ++it) {
+			LsdbUri uri;
+
+			if (AppDbParseUri(connection, &*it, trusted, &uri) != 0) {
+				paf::vector<LsdbUri>::iterator end = uris.end();
+
+				if (paf::find(uris.begin(), end, uri) == end)
+					uris.push_back(uri);
+			}
+		}
+	}
+	if (uris.size() == 0)
+		return 0;
+
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("INSERT INTO tbl_uri VALUES(?,?,?,?)"),
+		&statement);
+
+	if (result != 0)
+		return result;
+	for (paf::vector<LsdbUri>::iterator it = uris.begin(); it != uris.end(); ++it) {
+		result = statement->ClearBindings();
+		if (result == 0)
+			result = statement->Reset();
+		if (result == 0)
+			result = AppDbBindText(&statement, 1, titleId, -1);
+		if (result == 0)
+			result = AppDbBindInt(&statement, 2, it->flag);
+		if (result == 0)
+			result = AppDbBindString(&statement, 3, &it->scheme);
+		if (result == 0)
+			result = AppDbBindString(&statement, 4, &it->hostpath);
+		if (result != 0)
+			break;
+		result = statement->Step(1);
+		if (result == 1)
+			result = 0;
+		if (result != 0)
+			break;
+	}
+	return result;
+}
+
+/* removes a title's URI schemes */
+int AppDbDeleteUris(ActivityDbConnection *connection, const paf::string *titleId)
+{
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("DELETE FROM tbl_uri WHERE titleId=?"),
+		&statement);
+
+	if (result == 0) {
+		result = AppDbBindString(&statement, 1, titleId);
+		if (result == 0) {
+			result = statement->Step(1);
+			if (result == 1)
+				result = 0;
+		}
+	}
+	return result;
+}
+
+/* replaces an application's URI schemes with those of its SUPPORT_URI */
+int AppDbUpdateUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app)
+{
+	int result;
+
+	{
+		paf::string titleId(sceLsdbGetName(app));
+
+		result = AppDbDeleteUris(connection, &titleId);
+	}
+	if (result == 0)
+		result = AppDbAddUris(connection, app);
+	return result;
+}
+
+/* replaces an application's URI schemes with those of the SUPPORT_URI the database holds */
+int AppDbRefreshUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app)
+{
+	if (SceLsdb_AE60C3A5(app) == NULL)
+		return 0;
+
+	LsdbAppInfoPtr stored(new LsdbAppInfo);
+	int result;
+
+	{
+		paf::string titleId(sceLsdbGetName(app));
+
+		result = AppDbGetAppInfo(connection, &titleId, &stored);
+	}
+	if (result != 0)
+		return result;
+	{
+		paf::string titleId(sceLsdbGetName(&stored));
+
+		result = AppDbDeleteUris(connection, &titleId);
+	}
+	if (result == 0)
+		result = AppDbAddUris(connection, &stored);
+	if (result != 0)
+		return result;
+	return 0;
+}
+
+/* a title that handles a URI: how much of the URI's hostpath its own matched, and its times */
+struct LsdbUriTitle {
+	LsdbUriTitle() : matchLength(0), ltime(0), ctime(0)
+	{
+	}
+
+	__attribute__((always_inline)) ~LsdbUriTitle()
+	{
+	}
+
+	paf::string titleId;
+	int matchLength;		/* -1 for a hostpath that does not match */
+	SceUInt64 ltime;		/* the last launch */
+	SceUInt64 ctime;		/* the install */
+};
+
+static __attribute__((noinline)) int AppDbBindUriTitles(RefPtr<Statement> *statement,
+	const paf::string *scheme, SceInt64 flags)
+{
+	int result = (*statement)->ClearBindings();
+
+	if (result == 0)
+		result = (*statement)->Reset();
+	if (result == 0)
+		result = AppDbBindInt(statement, 1, LSDB_KEY_LLTIME);
+	if (result == 0)
+		result = AppDbBindInt(statement, 2, LSDB_KEY_CTIME);
+	if (result == 0)
+		result = AppDbBindString(statement, 3, scheme);
+	if (result == 0 && flags != 0)
+		result = AppDbBindInt(statement, 4, flags);
+	return result;
+}
+
+/* a time column, kept as text */
+static inline SceUInt64 AppDbColumnTime(RefPtr<Statement> *statement, int column)
+{
+	dbutil::Value value;
+
+	memset(&value, 0, sizeof(value));
+	(*statement)->GetValue(column, &value);
+	return value.type == SQLITE_TEXT ? SceActivityDb_ADFC2C4C(value.data.text) : 0;
+}
+
+/*
+ * Keeps the row's title in best where it handles hostpath better: a longer hostpath prefix,
+ * then a later launch, then a later install.
+ */
+static __attribute__((noinline)) void AppDbReadUriTitle(RefPtr<Statement> *statement,
+	const paf::string *hostpath, LsdbUriTitle *best)
+{
+	LsdbUriTitle title;
+
+	title.titleId = AppDbColumnString(statement, 0);
+	title.ltime = AppDbColumnTime(statement, 1);
+	title.ctime = AppDbColumnTime(statement, 2);
+	{
+		paf::string prefix = AppDbColumnString(statement, 3);
+
+		if (prefix.size() == 0)
+			title.matchLength = 0;
+		else if (hostpath->size() >= prefix.size() &&
+			sce_paf_memcmp(prefix.c_str(), hostpath->c_str(), prefix.size()) == 0)
+			title.matchLength = prefix.size();
+		else
+			title.matchLength = -1;
+	}
+	if (title.matchLength < 0)
+		return;
+	if (best->matchLength < title.matchLength) {
+		*best = title;
+	} else if (best->matchLength == title.matchLength) {
+		if (best->ltime < title.ltime) {
+			*best = title;
+		} else if (best->ltime == title.ltime) {
+			if (best->ctime < title.ctime)
+				*best = title;
+			else if (best->ctime == 0)
+				*best = title;
+		}
+	}
+}
+
+/* the title that handles a URI ("scheme:hostpath") best, of those whose flag has flags */
+int AppDbGetUriTitle(ActivityDbConnection *connection, const char *uri, unsigned int flags,
+	paf::string *titleId)
+{
+	paf::string scheme;
+	paf::string hostpath;
+	LsdbUriTitle best;
+	bool parsed = false;
+
+	{
+		paf::string text(uri);
+		size_t colon = text.find(':');
+
+		if (colon != paf::string::npos && colon != 0) {
+			scheme = paf::string(text, 0, colon);
+			hostpath = paf::string(text, colon + 1, text.size() - colon - 1);
+			parsed = true;
+		}
+	}
+	if (!parsed)
+		return LSDB_ERROR_INVALID_ARGUMENT;
+
+	RefPtr<Statement> statement;
+	const char *sql = "SELECT tbl_uri.titleId AS titleId, a1.val AS ltime, a2.val AS ctime, "
+		"hostpath FROM tbl_uri LEFT OUTER JOIN tbl_appinfo a1 ON "
+		"tbl_uri.titleId=a1.titleId AND a1.key=? LEFT OUTER JOIN tbl_appinfo a2 ON "
+		"tbl_uri.titleId=a2.titleId AND a2.key=? WHERE scheme=?";
+
+	if (flags != 0)
+		sql = "SELECT tbl_uri.titleId AS titleId, a1.val AS ltime, a2.val AS ctime, "
+			"hostpath FROM tbl_uri LEFT OUTER JOIN tbl_appinfo a1 ON "
+			"tbl_uri.titleId=a1.titleId AND a1.key=? LEFT OUTER JOIN tbl_appinfo a2 "
+			"ON tbl_uri.titleId=a2.titleId AND a2.key=? WHERE scheme=? AND (flag&?)";
+
+	int result = connection->Prepare(paf::string(sql), &statement);
+
+	if (result == 0) {
+		result = AppDbBindUriTitles(&statement, &scheme, flags);
+		if (result == 0) {
+			while ((result = statement->Step(1)) == 0)
+				AppDbReadUriTitle(&statement, &hostpath, &best);
+			if (result == 1) {
+				if (best.titleId.size() != 0) {
+					*titleId = best.titleId;
+					result = 0;
+				} else {
+					result = LSDB_ERROR_NOT_FOUND;
+				}
+			}
+		}
+	}
+	return result;
+}
+
+/* the URIs ("scheme:hostpath") the applications give for schemes, each once */
+int AppDbGetSchemeUris(ActivityDbConnection *connection, const char **schemes, unsigned int count,
+	paf::vector<paf::string> *uris)
+{
+	RefPtr<Statement> statement;
+
+	if (schemes == NULL)
+		return LSDB_ERROR_INVALID_ARGUMENT;
+
+	int result = connection->Prepare(paf::string("SELECT hostpath FROM tbl_uri WHERE scheme=?"),
+		&statement);
+
+	if (result != 0)
+		goto out;
+	uris->clear();
+	for (unsigned int i = 0; i < count; i++) {
+		const char *scheme = schemes[i];
+
+		if (scheme == NULL) {
+			result = LSDB_ERROR_INVALID_ARGUMENT;
+			goto out;
+		}
+		result = statement->ClearBindings();
+		if (result == 0)
+			result = statement->Reset();
+		if (result == 0)
+			result = AppDbBindText(&statement, 1, scheme, -1);
+		if (result != 0)
+			goto out;
+		while ((result = statement->Step(1)) == 0) {
+			dbutil::Value column;
+
+			result = statement->GetValue(0, &column);
+			if (result != 0)
+				goto out;
+			if (column.size != 0 && column.type == SQLITE_TEXT) {
+				paf::string uri = paf::string(scheme) + ':' + column.data.text;
+
+				if (paf::find(uris->begin(), uris->end(), uri) == uris->end())
+					uris->push_back(uri);
+			}
+		}
+		if (result != 1)
+			goto out;
+		result = 0;
+	}
+out:
+	return result;
+}
+
+/* a text of theme.xml: its UTF-16 characters as a blob, NULL for none */
+static inline int AppDbBindWString(RefPtr<Statement> *statement, int index,
+	const paf::wstring *text)
+{
+	if (text->size() != 0) {
+		dbutil::Value value;
+
+		value.type = SQLITE_BLOB;
+		value.name = NULL;
+		value.size = text->size() * sizeof(wchar_t);
+		value.data.integer = 0;
+		value.data.blob = text->c_str();
+		return (*statement)->Bind(index, &value, false);
+	}
+	return AppDbBindNull(statement, index);
+}
+
+/* binds a theme's record: its texts in each language from ?30 (titles) and ?60 (providers) */
+static __attribute__((noinline)) int AppDbBindTheme(RefPtr<Statement> *statement,
+	const paf::string *id, int type, const paf::string *packageImageFilePath,
+	const paf::string *homePreviewFilePath, const paf::string *startPreviewFilePath,
+	const paf::wstring *titleDefault, const paf::wstring *providerDefault, int contentVer,
+	const SceUInt64 *lastModifiedTime, unsigned int size, const paf::wstring *titles,
+	int titleCount, const paf::wstring *providers, int providerCount)
+{
+	int result = (*statement)->ClearBindings();
+
+	if (result == 0)
+		result = (*statement)->Reset();
+	if (result == 0)
+		result = AppDbBindString(statement, 1, id);
+	if (result == 0)
+		result = AppDbBindString(statement, 2, packageImageFilePath);
+	if (result == 0)
+		result = AppDbBindString(statement, 3, homePreviewFilePath);
+	if (result == 0)
+		result = AppDbBindString(statement, 4, startPreviewFilePath);
+	if (result == 0)
+		result = AppDbBindInt(statement, 5, contentVer);
+	if (result == 0) {
+		char time[30] = "";
+
+		SceActivityDb_9A8944FC(lastModifiedTime, time, sizeof(time));
+		result = AppDbBindText(statement, 6, time, -1);
+	}
+	if (result == 0)
+		result = AppDbBindInt(statement, 7, size);
+	if (result == 0)
+		result = AppDbBindInt(statement, 8, type);
+	if (result == 0)
+		result = AppDbBindWString(statement, 9, titleDefault);
+	if (result == 0)
+		result = AppDbBindWString(statement, 10, providerDefault);
+	if (result == 0) {
+		for (int i = 0; i < titleCount; i++) {
+			result = AppDbBindWString(statement, 30 + i, &titles[i]);
+			if (result != 0)
+				return result;
+		}
+		for (int i = 0; i < providerCount; i++) {
+			result = AppDbBindWString(statement, 60 + i, &providers[i]);
+			if (result != 0)
+				return result;
+		}
+	}
+	return result;
+}
+
+/* adds a custom theme (its texts in each language), or replaces the one of its id */
+int AppDbSetTheme(ActivityDbConnection *connection, const paf::string *id, int type,
+	const paf::string *packageImageFilePath, const paf::string *homePreviewFilePath,
+	const paf::string *startPreviewFilePath, const paf::wstring *titleDefault,
+	const paf::wstring *providerDefault, int contentVer, const SceUInt64 *lastModifiedTime,
+	unsigned int size, const paf::wstring *titles, int titleCount,
+	const paf::wstring *providers, int providerCount)
+{
+	RefPtr<Statement> statement;
+
+	if (titles == NULL || providers == NULL || type != LSDB_THEME_TYPE_CUSTOM)
+		return LSDB_ERROR_INVALID_ARGUMENT;
+
+	int result = connection->Prepare(paf::string("REPLACE INTO tbl_theme(id, "
+		"packageImageFilePath, homePreviewFilePath, startPreviewFilePath, contentVer, "
+		"lastModifiedTime, size, type, titleDefault, providerDefault, title0, title1, "
+		"title2, title3, title4, title5, title6, title7, title8, title9, title10, "
+		"title11, title12, title13, title14, title15, title16, title17, title18, "
+		"title19, title20, title21, title22, title23, title24, title25, provider0, "
+		"provider1, provider2, provider3, provider4, provider5, provider6, provider7, "
+		"provider8, provider9, provider10, provider11, provider12, provider13, "
+		"provider14, provider15, provider16, provider17, provider18, provider19, "
+		"provider20, provider21, provider22, provider23, provider24, provider25) "
+		"VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,?30, ?31, ?32, ?33, ?34, ?35, "
+		"?36, ?37, ?38, ?39, ?40, ?41, ?42, ?43, ?44, ?45, ?46, ?47, ?48, ?49, ?50, ?51, "
+		"?52, ?53, ?54, ?55, ?60, ?61, ?62, ?63, ?64, ?65, ?66, ?67, ?68, ?69, ?70, ?71, "
+		"?72, ?73, ?74, ?75, ?76, ?77, ?78, ?79, ?80, ?81, ?82, ?83, ?84, ?85)"),
+		&statement);
+
+	if (result == 0) {
+		result = AppDbBindTheme(&statement, id, LSDB_THEME_TYPE_CUSTOM,
+			packageImageFilePath, homePreviewFilePath, startPreviewFilePath,
+			titleDefault, providerDefault, contentVer, lastModifiedTime, size, titles,
+			titleCount, providers, providerCount);
+		if (result == 0) {
+			result = statement->Step(1);
+			if (result == 1)
+				result = 0;
+		}
+	}
+	return result;
+}
+
+int AppDbDeleteTheme(ActivityDbConnection *connection, const paf::string *id)
+{
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("DELETE FROM tbl_theme WHERE id=?"),
+		&statement);
+
+	if (result == 0) {
+		result = AppDbBindString(&statement, 1, id);
+		if (result == 0) {
+			result = statement->Step(1);
+			if (result == 1)
+				result = 0;
+		}
+	}
+	return result;
+}
+
+int AppDbDeleteAllThemes(ActivityDbConnection *connection)
+{
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("DELETE FROM tbl_theme"), &statement);
+
+	if (result == 0) {
+		result = statement->Step(1);
+		if (result == 1)
+			result = 0;
+	}
+	return result;
+}
+
+int AppDbGetThemeCount(ActivityDbConnection *connection, int *count)
+{
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("SELECT count(*) FROM tbl_theme"),
+		&statement);
+
+	if (result == 0) {
+		result = statement->Step(1);
+		if (result == 0)
+			*count = AppDbColumnInt(&statement, 0);
+	}
+	return result;
+}
+
+/* the themes' ids, the latest modified first */
+int AppDbGetThemeIds(ActivityDbConnection *connection, paf::vector<paf::string> *ids)
+{
+	RefPtr<Statement> statement;
+	int result = connection->Prepare(paf::string("SELECT id FROM tbl_theme ORDER BY "
+		"lastModifiedTime DESC"), &statement);
+
+	if (result == 0) {
+		while ((result = statement->Step(1)) == 0)
+			ids->push_back(AppDbColumnString(&statement, 0));
+		if (result == 1)
+			result = 0;
+	}
+	return result;
+}
+
+/* a text of theme.xml from a blob column, empty for none */
+static inline paf::wstring AppDbColumnWString(RefPtr<Statement> *statement, int column)
+{
+	dbutil::Value value;
+
+	memset(&value, 0, sizeof(value));
+	(*statement)->GetValue(column, &value);
+	paf::wstring text;
+
+	if (value.type == SQLITE_BLOB)
+		text.assign((const wchar_t *)value.data.blob, value.size / sizeof(wchar_t));
+	return text;
+}
+
+/* reads a theme's row: its title and provider in the language read, else the default ones */
+static __attribute__((noinline)) void AppDbReadTheme(RefPtr<Statement> *statement,
+	LsdbTheme *theme)
+{
+	theme->id = AppDbColumnString(statement, 0);
+	theme->packageImageFilePath = AppDbColumnString(statement, 1);
+	theme->homePreviewFilePath = AppDbColumnString(statement, 2);
+	theme->startPreviewFilePath = AppDbColumnString(statement, 3);
+	theme->contentVer = AppDbColumnInt(statement, 4);
+	theme->lastModifiedTime = AppDbColumnTime(statement, 5);
+	theme->size = AppDbColumnInt(statement, 6);
+	theme->type = AppDbColumnInt(statement, 7);
+	theme->titleDefault = AppDbColumnWString(statement, 8);
+	theme->providerDefault = AppDbColumnWString(statement, 9);
+
+	paf::wstring title = AppDbColumnWString(statement, 10);
+
+	if (title.size() != 0)
+		theme->titleDefault = title;
+
+	paf::wstring provider = AppDbColumnWString(statement, 11);
+
+	if (provider.size() != 0)
+		theme->providerDefault = provider;
+}
+
+/* a theme's record, its title and provider in language (titleN, providerN) */
+int AppDbGetTheme(ActivityDbConnection *connection, const paf::string *id, int language,
+	LsdbTheme *theme)
+{
+	RefPtr<Statement> statement;
+	char title[16];
+	char provider[16];
+
+	sce_paf_snprintf(title, sizeof(title), ", title%d ", language);
+	sce_paf_snprintf(provider, sizeof(provider), ", provider%d ", language);
+
+	paf::string sql("SELECT id, packageImageFilePath, homePreviewFilePath, "
+		"startPreviewFilePath, contentVer, lastModifiedTime, size, type, titleDefault, "
+		"providerDefault");
+
+	sql += title;
+	sql += provider;
+	sql += "FROM tbl_theme WHERE id=?";
+
+	int result = connection->Prepare(sql, &statement);
+
+	if (result == 0) {
+		result = AppDbBindString(&statement, 1, id);
+		if (result == 0) {
+			result = statement->Step(1);
+			if (result == 0)
+				AppDbReadTheme(&statement, theme);
+			else if (result == 1)
+				result = LSDB_ERROR_NOT_FOUND;
+		}
+	}
+	return result;
+}
+
+/* the themes' bytes in all, or the error */
+SceInt64 AppDbGetThemesSize(ActivityDbConnection *connection)
+{
+	RefPtr<Statement> statement;
+	SceInt64 size = 0;
+	int result = connection->Prepare(paf::string("SELECT sum(size) FROM tbl_theme"),
+		&statement);
+
+	if (result == 0) {
+		result = statement->Step(1);
+		if (result == 0)
+			size = AppDbColumnInt(&statement, 0);
+	}
+	return result != 0 ? result : size;
 }

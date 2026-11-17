@@ -179,14 +179,18 @@ int SceLsdb_FA25AF8D(AppInfoSClient *client, const char **categories, unsigned i
 	return client->m_impl->GetTitlesByCategory(categories, count, limit, titleIds);
 }
 
-int SceLsdb_E2838878(AppInfoSClient *client, const char *scheme, int arg2, int arg3)
+/* the title that handles a URI best: the longest hostpath prefix, then the latest launch */
+int SceLsdb_E2838878(AppInfoSClient *client, const char *uri, paf::string *titleId,
+	unsigned int flags)
 {
-	return client->m_impl->GetUriTitles(scheme, arg2, arg3);
+	return client->m_impl->GetUriTitle(uri, titleId, flags);
 }
 
-int SceLsdb_391170D3(AppInfoSClient *client, const char *scheme, unsigned int arg2, void *result)
+/* the URIs ("scheme:hostpath") the applications give for schemes */
+int SceLsdb_391170D3(AppInfoSClient *client, const char **schemes, unsigned int count,
+	paf::vector<paf::string> *uris)
 {
-	return client->m_impl->GetUriHostPath(scheme, arg2, result);
+	return client->m_impl->GetSchemeUris(schemes, count, uris);
 }
 
 int SceLsdb_84D3F674(AppInfoSClient *client, LsdbAppInfoPtr *app, int pageNo, const LsdbIconPtr *icon,

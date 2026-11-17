@@ -28,6 +28,12 @@ ActivityDbConnection *SceActivityDb_82B45E74(ActivityDbAccess *access);
 /* ends the transaction taken by SceActivityDb_82B45E74: commits when result is 0, else rolls back */
 int SceActivityDb_11D77056(ActivityDbAccess *access, int result);
 
+/* a decimal text's value (a time the database keeps as text) */
+SceInt64 SceActivityDb_ADFC2C4C(const char *text);
+
+/* a time's text (an rtc tick) in buf of size bytes; returns buf */
+char *SceActivityDb_9A8944FC(const SceUInt64 *time, char *buf, int size);
+
 /* what a database is rebuilt for */
 typedef struct ActivityDbRebuildParam {
 	int state;

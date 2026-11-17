@@ -16,6 +16,7 @@
 #include <std/string>
 #include <std/map>
 #include <std/vector>
+#include <std/algorithm>
 #include <common/shared_ptr.h>
 #include <thread/thread.h>
 #include "livespace_db.h"
@@ -192,6 +193,7 @@ typedef paf::common::SharedPtr<LsdbAppInfo> LsdbAppInfoPtr;
 #define LSDB_KEY_CATEGORY	0x21CA76B1u	/* "CATEGORY" */
 #define LSDB_KEY_STITLE		0xEED70EC4u	/* "STITLE" */
 #define LSDB_KEY_BG_TITLE_ID	0xC1C050C4u	/* "_bg_title_id" */
+#define LSDB_KEY_CTIME		0xA246C97Du	/* "#_ctime": the title's install */
 #define LSDB_KEY_PARENTAL_LEVEL	0x879D390Du	/* "PARENTAL_LEVEL" */
 
 /*
@@ -350,6 +352,40 @@ int AppDbSetAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info
 int AppDbAddAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info, bool replace,
 	SceInt64 mask);
 int AppDbAddUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app);
+
+/* a URI scheme an application handles (a row of tbl_uri, its title ID left out) */
+struct LsdbUri {
+	LsdbUri() : flag(0)
+	{
+	}
+
+	SceInt64 flag;			/* LSDB_URI_FLAG_* */
+	paf::string scheme;
+	paf::string hostpath;
+};
+
+#define LSDB_URI_FLAG_SHARED	1	/* not in <...>: other titles may claim the scheme */
+
+inline bool operator==(const LsdbUri &left, const LsdbUri &right)
+{
+	return left.scheme == right.scheme && left.hostpath == right.hostpath;
+}
+
+PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbUri, paf::allocator<LsdbUri>)
+
+/* Sony's build calls the records' find out of line */
+namespace paf {
+template<>
+inline __attribute__((noinline)) vector<LsdbUri>::iterator
+find(vector<LsdbUri>::iterator _First, vector<LsdbUri>::iterator _Last, const LsdbUri &_Val)
+{
+	for (; _First != _Last; ++_First)
+		if (*_First == _Val)
+			break;
+	return _First;
+}
+}
+
 int AppDbDeleteThemeOf(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbDeleteAppInfo(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbDeleteUris(ActivityDbConnection *connection, const paf::string *titleId);
@@ -382,18 +418,23 @@ int AppDbFindTitles(ActivityDbConnection *connection, LsdbQueryCondition *condit
 	paf::vector<paf::string> *titleIds, unsigned int flags);
 int AppDbGetTitlesByCategory(ActivityDbConnection *connection, const char **categories,
 	unsigned int count, int limit, paf::vector<paf::string> *titleIds);
-int AppDbGetUriTitles(ActivityDbConnection *connection, const char *scheme, int arg3, int arg2);
-int AppDbGetUriHostPath(ActivityDbConnection *connection, const char *scheme, unsigned int arg2,
-	void *result);
+int AppDbGetUriTitle(ActivityDbConnection *connection, const char *uri, unsigned int flags,
+	paf::string *titleId);
+int AppDbGetSchemeUris(ActivityDbConnection *connection, const char **schemes, unsigned int count,
+	paf::vector<paf::string> *uris);
 int AppDbSetTheme(ActivityDbConnection *connection, const paf::string *id, int type,
 	const paf::string *packageImageFilePath, const paf::string *homePreviewFilePath,
 	const paf::string *startPreviewFilePath, const paf::wstring *titleDefault,
 	const paf::wstring *providerDefault, int contentVer, const SceUInt64 *lastModifiedTime,
-	int size, const paf::wstring *titles, int titleCount, const paf::wstring *providers,
-	int providerCount);
+	unsigned int size, const paf::wstring *titles, int titleCount,
+	const paf::wstring *providers, int providerCount);
 int AppDbDeleteTheme(ActivityDbConnection *connection, const paf::string *id);
 int AppDbDeleteAllThemes(ActivityDbConnection *connection);
 int AppDbGetThemeCount(ActivityDbConnection *connection, int *count);
+int AppDbGetTheme(ActivityDbConnection *connection, const paf::string *id, int language,
+	LsdbTheme *theme);
+SceInt64 AppDbGetThemesSize(ActivityDbConnection *connection);
+int AppDbGetThemeIds(ActivityDbConnection *connection, paf::vector<paf::string> *ids);
 
 /* the exports of the other files the daemon calls */
 extern "C" {
@@ -406,6 +447,11 @@ int SceLsdb_E05F71CB(void);
 int SceLsdb_A92420DA(int added, int pageNo);
 int SceLsdb_6E4B6EBF(int folderId, int *pageNo, int *pos, const char *title);
 unsigned int SceLsdb_63C29E70(int which);
+
+/* an application's values: its title ID, its SUPPORT_URI text, whether it is a "gda" title */
+const char *sceLsdbGetName(const LsdbAppInfoPtr *app);
+const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
+int SceLsdb_41019D89(const LsdbAppInfoPtr *app);
 }
 
 /* a blob of a database row, read through its own transaction (dbblob.cpp) */
@@ -484,8 +530,8 @@ public:
 		unsigned int flags);
 	int GetTitlesByCategory(const char **categories, unsigned int count, int limit,
 		paf::vector<paf::string> *titleIds);
-	int GetUriTitles(const char *scheme, int arg2, int arg3);
-	int GetUriHostPath(const char *scheme, unsigned int arg2, void *result);
+	int GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags);
+	int GetSchemeUris(const char **schemes, unsigned int count, paf::vector<paf::string> *uris);
 	int SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *theme, unsigned int flags);
 	int SetTheme(const LsdbTheme *theme, const LsdbThemeText *title, const LsdbThemeText *provider);
 	int DeleteTheme(const paf::string *id);
@@ -543,8 +589,8 @@ public:
 		unsigned int flags);
 	int GetTitlesByCategory(const char **categories, unsigned int count, int limit,
 		paf::vector<paf::string> *titleIds);
-	int GetUriTitles(const char *scheme, int arg2, int arg3);
-	int GetUriHostPath(const char *scheme, unsigned int arg2, void *result);
+	int GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags);
+	int GetSchemeUris(const char **schemes, unsigned int count, paf::vector<paf::string> *uris);
 	paf::string GetConfigString(int key, const char *defaultValue);
 	SceInt64 GetConfigInt64(int key, SceInt64 defaultValue);
 	int SetConfigString(int key, const char *value);

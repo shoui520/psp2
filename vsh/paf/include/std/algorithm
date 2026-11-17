@@ -1,5 +1,5 @@
 /*
- * paf::copy, paf::for_each, paf::find_if, paf::lower_bound, paf::min and paf::max (Dinkumware's
+ * paf::copy, paf::for_each, paf::find, paf::find_if, paf::lower_bound, paf::min and paf::max (Dinkumware's
  * <algorithm>), and
  * paf::sort, which is not Dinkumware's: a quicksort around the first element that turns to a
  * heapsort past 16 levels (libpaf's build of the draw layers' entries, 0x8121fce8 TOOL).
@@ -25,6 +25,15 @@ inline _Fn1 for_each(_InIt _First, _InIt _Last, _Fn1 _Func)
 	for (; _First != _Last; ++_First)
 		_Func(*_First);
 	return _Func;
+}
+
+template<class _InIt, class _Ty>
+inline _InIt find(_InIt _First, _InIt _Last, const _Ty &_Val)
+{
+	for (; _First != _Last; ++_First)
+		if (*_First == _Val)
+			break;
+	return _First;
 }
 
 template<class _InIt, class _Pr>

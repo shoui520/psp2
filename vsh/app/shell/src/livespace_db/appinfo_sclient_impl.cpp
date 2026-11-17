@@ -172,14 +172,15 @@ int AppInfoSClientImpl::GetTitlesByCategory(const char **categories, unsigned in
 		titleIds);
 }
 
-int AppInfoSClientImpl::GetUriTitles(const char *scheme, int arg2, int arg3)
+int AppInfoSClientImpl::GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags)
 {
-	return AppInfoDaemon::GetInstance()->GetUriTitles(scheme, arg2, arg3);
+	return AppInfoDaemon::GetInstance()->GetUriTitle(uri, titleId, flags);
 }
 
-int AppInfoSClientImpl::GetUriHostPath(const char *scheme, unsigned int arg2, void *result)
+int AppInfoSClientImpl::GetSchemeUris(const char **schemes, unsigned int count,
+	paf::vector<paf::string> *uris)
 {
-	return AppInfoDaemon::GetInstance()->GetUriHostPath(scheme, arg2, result);
+	return AppInfoDaemon::GetInstance()->GetSchemeUris(schemes, count, uris);
 }
 
 paf::string AppInfoSClientImpl::GetConfigString(int key, const char *defaultValue)
