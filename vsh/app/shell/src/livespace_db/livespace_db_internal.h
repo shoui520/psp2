@@ -607,4 +607,49 @@ struct AppInfoSClient {
 	AppInfoSClientImpl *m_impl;
 };
 
+/*
+ * A listener of the daemon's application events: the callback and its argument (the shell's
+ * handle on SceLsdb_BF481B29 and SceLsdb_5FCAF61C).
+ */
+typedef void (*LsdbEventCallback)(int event, void *info, void *arg);
+
+struct LsdbEventListener {
+	LsdbEventCallback callback;
+	void *arg;
+};
+
+/*
+ * A reader of the application database for another thread: each query runs in a transaction
+ * of its own that is rolled back. It notes any change the daemon reports.
+ */
+class AppInfoQClientImpl {
+public:
+	AppInfoQClientImpl();
+	~AppInfoQClientImpl();
+	int Open();
+	int GetAppInfo(const paf::string *titleId, LsdbAppInfoPtr *info);
+	int GetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value);
+	int HasAppInfo(const paf::string *titleId);
+	int FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, bool theme);
+	int FindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *titleIds,
+		unsigned int flags);
+	int GetTitlesByCategory(const char **categories, unsigned int count, int limit,
+		paf::vector<paf::string> *titleIds);
+	int GetUriTitle(const char *uri, paf::string *titleId, unsigned int flags);
+	int GetSchemeUris(const char **schemes, unsigned int count, paf::vector<paf::string> *uris);
+	paf::string GetConfigString(int key, const char *defaultValue);
+	SceInt64 GetConfigInt64(int key, SceInt64 defaultValue);
+	bool IsChanged(bool clear);
+	int GetThemeIds(paf::vector<paf::string> *ids);
+	int GetTheme(const paf::string *id, int language, LsdbTheme *theme);
+	SceInt64 GetThemesSize();
+
+	volatile int32_t m_changed;
+};
+
+/* the reader the exports are methods of */
+struct AppInfoQClient {
+	AppInfoQClientImpl *m_impl;
+};
+
 #endif

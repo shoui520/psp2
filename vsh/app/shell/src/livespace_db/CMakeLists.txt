@@ -9,6 +9,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	appinfo_sclient_impl.cpp
 	appinfo_daemon.cpp
 	appdb.cpp
+	appinfo_listener.cpp
+	appinfo_qclient.cpp
+	appinfo_qclient_impl.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/app/common/src"
