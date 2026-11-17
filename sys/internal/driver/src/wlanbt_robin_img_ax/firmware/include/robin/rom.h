@@ -112,7 +112,7 @@ void romLibClearContext(unsigned int rate, unsigned int value);		/* 0x03f3aadb *
 void romLibVerifyState(uint32_t *first, uint32_t *second);			/* 0x03f3a6b9: the 64-bit timer, as two words (inferred) */
 void romLibQueryState(const void *address);					/* 0x03f3a4c9 */
 void romLibResetState(uint32_t high, uint32_t low);				/* 0x03f3a4db */
-void romLibBuildState(const uint8_t *ssid, uint8_t length);							/* 0x03f3a417 */
+void romLibBuildState(const uint8_t *ssid, unsigned int length);							/* 0x03f3a417 */
 void romLibComputeContext(uint32_t mask);					/* 0x03f3a8ff */
 void romLibParseContext(uint32_t mask);						/* 0x03f3a8d7 */
 void romLibBuildContext(uint32_t mask);						/* 0x03f3a8e1 */

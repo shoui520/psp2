@@ -50,7 +50,7 @@ void macMgmtUpdateEntry(uintptr_t argument);					/* 0x36236 */
 void macMgmtConfigureEntry(uint8_t *capability, uint8_t *information, uint8_t *coexistence,
 			   uint8_t *obssScan, uint8_t *reserved);		/* 0x36420 */
 int macMgmtCheckEntry(struct WlanConnection *connection, uint8_t *tlv, uint8_t *channels); /* 0x3642a */
-OsaBuffer *macMgmtValidateEntry(struct WlanConnection *connection, const uint8_t *request,
+int macMgmtValidateEntry(struct WlanConnection *connection, const uint8_t *request,
 				unsigned int command);				/* 0x36464 */
 void macMgmtPrepareEntry(void);							/* 0x3649e */
 void macMgmtDispatchEntry(const uint8_t *rsn, const uint8_t *wpa, uint8_t *ucast, uint8_t *mcast,
@@ -65,7 +65,7 @@ int macMgmtApplyEntry(void);							/* 0x36a2a */
 void macMgmtResolveEntry(struct WlanConnection *connection, unsigned int channel, int limited); /* 0x36a32 */
 void macMgmtScheduleEntry(struct WlanConnection *connection);			/* 0x36a56 */
 void macMgmtNotifyEntry(struct WlanConnection *connection);			/* 0x36a78 */
-OsaBuffer *hostCmd002bStart(struct WlanConnection *connection, uint8_t *command);	/* 0x365aa */
-OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command);	/* 0x3675e */
+int hostCmd002bStart(struct WlanConnection *connection, uint8_t *command);	/* 0x365aa */
+int hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command);	/* 0x3675e */
 
 #endif /* ROBIN_MGMTENTRY_H */

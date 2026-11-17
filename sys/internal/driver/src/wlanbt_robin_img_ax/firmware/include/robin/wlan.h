@@ -6,6 +6,26 @@
 #include <net_ps/ethernet.h>
 #include "robin/buffer.h"
 
+/* IEEE 802.11 capability information field (Sony builds it bit by bit in a local) */
+struct __attribute__((packed)) WlanCapabilityInfo {
+	uint16_t ess : 1;
+	uint16_t ibss : 1;
+	uint16_t cfPollable : 1;
+	uint16_t cfPollRequest : 1;
+	uint16_t privacy : 1;
+	uint16_t shortPreamble : 1;
+	uint16_t pbcc : 1;
+	uint16_t channelAgility : 1;
+	uint16_t spectrumManagement : 1;
+	uint16_t qos : 1;
+	uint16_t shortSlotTime : 1;
+	uint16_t apsd : 1;
+	uint16_t radioMeasurement : 1;
+	uint16_t dsssOfdm : 1;
+	uint16_t delayedBlockAck : 1;
+	uint16_t immediateBlockAck : 1;
+};
+
 typedef struct WlanSnapHeader {
 	WlanLlcSnapPrefix prefix;
 	union {

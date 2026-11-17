@@ -266,10 +266,12 @@ unsigned int wlanTxRingLastQueue(void)
 void macTxNotifySelectBuffer(void)
 {
 	uint64_t now = romGetTimerTimestamp();
-	uint64_t period = (uint64_t)(macTxNotifyManageBuffer() << 10);
+	uint64_t next;
 
-	romLibHandleContext((uint32_t)(now - now % period + period),
-			    (uint32_t)((now - now % period + period) >> 32));
+	/* the next interval boundary; Sony reads the interval twice and widens it signed */
+	next = now - now % (int64_t)(int)(macTxNotifyManageBuffer() << 10);
+	next += (int64_t)(int)(macTxNotifyManageBuffer() << 10);
+	romLibHandleContext((uint32_t)next, (uint32_t)(next >> 32));
 	MAC_370_QUEUE_MODE |= 4;
 	MAC_2F4_RINGS |= 0x200;
 }
@@ -315,16 +317,16 @@ void hostCmd0102(unsigned int on)
 	if (on) {
 		if (wlanMacPendingState == 0) {
 			wlanMacPendingEntry = MAC_46C_FILTER;
-			wlanMacPendingTable = MAC_474_VALUE;
+			wlanMacPendingTable = MAC_470_VALUE;
 			wlanMacPendingFilter = MAC_300_MODE;
 			wlanMacPendingState = 1;
 		}
 		MAC_46C_FILTER = 0;
-		MAC_474_VALUE = 0;
+		MAC_470_VALUE = 0;
 		MAC_300_MODE |= 0x800222eb;
 	} else if (wlanMacPendingState != 0) {
 		MAC_46C_FILTER = wlanMacPendingEntry;
-		MAC_474_VALUE = wlanMacPendingTable;
+		MAC_470_VALUE = wlanMacPendingTable;
 		MAC_300_MODE = wlanMacPendingFilter;
 		wlanMacPendingState = 0;
 		wlanMacPendingFilter = 0;

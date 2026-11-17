@@ -55,7 +55,7 @@ void wlanMacAddressSet(const uint8_t *address)
 }
 
 /* 0x0002a254: the MAC takes the SSID (the ROM's routine). */
-void wlanMacSsidApply(const uint8_t *ssid, uint8_t length)
+void wlanMacSsidApply(const uint8_t *ssid, unsigned int length)
 {
 	romLibBuildState(ssid, length);
 }
@@ -183,8 +183,11 @@ void wlanBuildMgmtHeader(WlanWirelessFrame *frame, const uint8_t *source, const 
 	if (frame == NULL || source == NULL || destination == NULL || bssid == NULL)
 		return;
 	__aeabi_memclr(frame, 32);
-	header[2] = subtype << 4;
-	header[3] = (powerManagement & 1) << 4;
+	/* frame control: protocol version 0, type 0 (management), the subtype */
+	header[2] &= ~0x03;
+	header[2] &= ~0x0c;
+	header[2] = (header[2] & 0x0f) | (subtype << 4);
+	header[3] = (header[3] & ~0x10) | ((powerManagement << 4) & 0x10);	/* the power management bit */
 	__aeabi_memcpy(header + 6, destination, 6);
 	__aeabi_memcpy(header + 12, source, 6);
 	__aeabi_memcpy(header + 18, bssid, 6);
@@ -205,35 +208,34 @@ int wlanEventMessageBuild(struct WlanSmMessage *message, int code, const void *d
 	__aeabi_memclr4(message, sizeof(*message));
 	message->event = code;
 	switch (code) {
-	case 8:
-		break;
-	case 9:
-	case 10:
-		__aeabi_memcpy(message->value, data, 8);
-		break;
-	case 11:
-	case 13:
-		message->value[0] = *(const uint8_t *)data;
-		break;
 	case 7:
-	case 12:
-	case 14:
-	case 15:
-	case 16:
-	case 17:
-	case 18:
-	case 19:
 	case 20:
-	case 28:
-		result = 0;
-		break;
 	case 21:
 	case 22:
 	case 23:
 	case 24:
 	case 25:
 	case 26:
+		break;
+	case 8:
+	case 9:
+		__aeabi_memcpy(message->value, data, 8);
+		break;
+	case 10:
+	case 12:
+		message->value[0] = *(const uint8_t *)data;
+		break;
+	case 11:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+	case 17:
+	case 18:
+	case 19:
 	case 27:
+	default:
+		result = 0;
 		break;
 	}
 	return result;

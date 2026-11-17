@@ -78,11 +78,11 @@ void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t 
 
 	if (join == NULL)
 		return;
-	wlanTxSetSharedRadio(join->capability & 1);
+	wlanTxSetSharedRadio(join->capabilityInfo.ess ? 1 : 0);
 	wlanMacAddressSet(join->bssid);
 	__aeabi_memcpy(bssid, join->bssid, 6);
 	length = romStringLength(join->ssid, 32);
-	romStringCopy(ssid, join->ssid, length);
+	strncpy((char *)ssid, (const char *)join->ssid, length);
 	*ssidLength = length;
 	wlanMacSsidApply(join->ssid, length);
 	wlanIbssRecordJoin(join);
@@ -237,7 +237,7 @@ int macMgmtSyncContext(struct WlanConnection *connection)
 void macMgmtApplyContext(struct WlanConnection *connection, uint8_t *htInformation)
 {
 	uint8_t *htOperation = (uint8_t *)wlanConnectionHtOperation(connection);
-	uint8_t flags = wlanChannelContext.flags;
+	uint8_t flags;			/* Sony leaves it uninitialised (its band is read) */
 	uint8_t index;
 	int widened = 0;
 	unsigned int offset;
@@ -252,6 +252,7 @@ void macMgmtApplyContext(struct WlanConnection *connection, uint8_t *htInformati
 		widened = 1;
 	} else {
 		wlanHtTxCapability[0] &= ~2;
+		widened = 0;
 	}
 	wlanRateChannelWidthSet(connection, 0, wlanHtChannelWidth(connection));
 	offset = htOperation[3] & 3;
@@ -449,11 +450,12 @@ void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *fra
 			ps->noaMode = 0;
 		} else {
 			const uint8_t *attribute = direct->attributes[P2P_SLOT_NOTICE_OF_ABSENCE];
-			unsigned int length = attribute[1] | (attribute[2] << 8);
+			unsigned int opportunistic = attribute[4] >> 7;
 			unsigned int window = attribute[4] & 0x7f;
+			unsigned int length = attribute[1] | (attribute[2] << 8);
 
 			__aeabi_memcpy(ps->noaAttribute, attribute, length + 3);
-			if ((attribute[4] >> 7) && window) {
+			if (opportunistic && window) {
 				wlanPsWakeBeacons = window >> 1;
 				ps->noaMode = 1;
 			} else if (length > 2 && (ps->noaAttribute[6] | ps->noaAttribute[7] |
@@ -511,7 +513,6 @@ void macMgmtClearContext(struct WlanConnection *connection)
 /* 0x35e14: the connection is put back to what it was before it joined or started a network. */
 void macMgmtConvertContext(struct WlanConnection *connection)
 {
-	const uint8_t *rates = wlanRadioConfig->rates;
 	unsigned int count;
 
 	macTxSetPowerSave(0);
@@ -542,9 +543,10 @@ void macMgmtConvertContext(struct WlanConnection *connection)
 	else
 		antDivReset();
 	wlanSignalReset(connection);
-	count = romStringLength(rates, 14);
+	count = romStringLength(wlanRadioConfig->rates, 14);
 	wlanPsBuildPacket();
-	macMgmtQueryContext(connection, rates, count, wlanRateBitmapAll(rates, count, 0, 0, NULL));
+	macMgmtQueryContext(connection, wlanRadioConfig->rates, count,
+			    wlanRateBitmapAll(wlanRadioConfig->rates, count, 0, 0, NULL));
 	macTxNotifyApplyFrame(connection);
 	wlanWmmSet(connection, 0, 0);
 	btLmpLcHandleState(0);
@@ -574,7 +576,7 @@ int macMgmtSelectContext(struct WlanConnection *connection)
 	if (connection->mode == 2) {
 		if ((connection->flags2 & 0x10) == 0)
 			return 0;
-	} else if (connection->machine.state == &wlanIbssStates.hold &&
+	} else if (connection->machine.state == &((struct WlanIbssStates *)connection->machine.root)->hold &&
 		   wlanOperatingChannel() != wlanChannelContext.savedChannel) {
 		return 0;
 	}
@@ -585,9 +587,9 @@ int macMgmtSelectContext(struct WlanConnection *connection)
 int wlanStaSmLinked(const struct WlanConnection *connection)
 {
 	const struct RomHsmState *state = connection->machine.state;
+	const struct WlanIbssStates *states = (const struct WlanIbssStates *)connection->machine.root;
 
-	return state == &wlanIbssStates.select || state == &wlanIbssStates.adjust ||
-	       state == &wlanIbssStates.record;
+	return state == &states->select || state == &states->adjust || state == &states->record;
 }
 
 /* 0x35fca: the IBSS the machine is in is dropped; the beacons it missed are forgotten. */

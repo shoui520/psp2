@@ -36,7 +36,7 @@ void wlanIbssTimingEnd(void);
 
 /* wlan/mgmtutil.c */
 void wlanMacAddressSet(const uint8_t *address);			/* 0x2a214 */
-void wlanMacSsidApply(const uint8_t *ssid, uint8_t length);					/* 0x2a254 */
+void wlanMacSsidApply(const uint8_t *ssid, unsigned int length);					/* 0x2a254 */
 void wlanIbssAddressGenerate(uint8_t *address, const uint8_t *source);	/* 0x2a25c */
 int wlanIbssRecordStart(const WlanAdHocStart *start);		/* 0x2a2e6 */
 int wlanIbssRecordJoin(const WlanAdHocBssDesc *join);		/* 0x2a358 */

@@ -74,6 +74,7 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 	unsigned int rate;
 	unsigned int length;
 	uint32_t word;
+	unsigned int period;
 	int hasExtended = 0;
 
 	__aeabi_memcpy4(edca, wlanAmpEdcaParameterSet, sizeof(edca));
@@ -83,8 +84,9 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 	buffer->dataOffset = 176;
 	wlanSetSlotTime(1);
 	body = frame->body;
-	body[8] = connection->beaconPeriod;
-	body[9] = connection->beaconPeriod >> 8;
+	period = connection->beaconPeriod;
+	body[8] = period;
+	body[9] = period >> 8;
 	body[10] = connection->bssCapability[0];
 	body[11] = connection->bssCapability[1];
 	cursor = body + 12;
@@ -100,8 +102,9 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 		hasExtended = 1;
 	}
 	cursor[0] = 1;			/* Supported Rates: the first four */
-	cursor[1] = romStringCopy(cursor + 2, wlanLocalState->rates, 4);
-	cursor += 2 + cursor[1];
+	length = romStringCopy(cursor + 2, wlanLocalState->rates, 4);
+	cursor[1] = length;
+	cursor += 2 + length;
 	cursor[0] = 3;			/* DS Parameter Set */
 	cursor[1] = 1;
 	cursor[2] = connection->channel;
@@ -124,8 +127,9 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 	}
 	if (hasExtended) {
 		cursor[0] = 50;		/* Extended Supported Rates: the rest */
-		cursor[1] = romStringCopy(cursor + 2, wlanLocalState->rates + 4, extended);
-		cursor += 2 + cursor[1];
+		length = romStringCopy(cursor + 2, wlanLocalState->rates + 4, extended);
+		cursor[1] = length;
+		cursor += 2 + length;
 	}
 	rsn = cursor;
 	cursor += btampAddRsnIe((IEEEtypes_RSNElement_t *)cursor);
@@ -171,21 +175,29 @@ void macMgmtProcessEntry(struct WlanConnection *connection, unsigned int subtype
 void macMgmtUpdateEntry(uintptr_t argument)
 {
 	struct WlanConnection *connection = (struct WlanConnection *)argument;
-	const uint8_t *rates = wlanLocalState->rates;
 	struct WlanBssTiming timing;
+	struct WlanCapabilityInfo capability;
 	struct WlanBandChannel band;
 	unsigned int count;
 	OsaBuffer *buffer;
 
 	wlanMacFlush();
-	band.channelFlags = 0;
+	capability = (struct WlanCapabilityInfo){ 0 };
+	capability.ess = 1;
+	capability.privacy = 1;
+	capability.ibss = 0;
+	capability.shortPreamble = 1;
+	capability.shortSlotTime = 1;
+	/* 2.4 GHz, 20 MHz; Sony leaves the offset bits as they were */
+	band.channelFlags &= ~WLAN_CHANNEL_BAND_MASK;
+	band.channelFlags &= ~WLAN_CHANNEL_WIDTH_MASK;
 	band.channel = connection->channel;
 	macMgmtProcessContext(connection, &band.channelFlags, band.channel);
 	macMgmtUpdateContext(band, connection->channel);
 	macMgmtCheckContext();
-	count = (uint8_t)romStringLength(rates, 14);
-	macMgmtQueryContext(connection, rates, count,
-			    wlanRateBitmapAll(rates, count, 0, 0,
+	count = (uint8_t)romStringLength(wlanLocalState->rates, 14);
+	macMgmtQueryContext(connection, wlanLocalState->rates, count,
+			    wlanRateBitmapAll(wlanLocalState->rates, count, 0, 0,
 					      (const WlanHtCapabilityIe *)connection->htCapability));
 	macTxNotifyApplyFrame(connection);
 	wlanTxSetSharedRadio(2);
@@ -201,8 +213,7 @@ void macMgmtUpdateEntry(uintptr_t argument)
 	MAC_REG(0x824) |= 4;
 	MAC_REG(0x300) |= 0x2000;
 	SOC_MAC_EVENT_CONTROL |= 0x20;
-	connection->bssCapability[0] = 0x31;
-	connection->bssCapability[1] = 0x04;
+	connection->bssCapabilityInfo = capability;
 
 	buffer = connection->beaconBuffer;
 	wlanIbssBeaconBuffer = buffer;
@@ -249,8 +260,8 @@ int macMgmtCheckEntry(struct WlanConnection *connection, uint8_t *tlv, uint8_t *
 }
 
 /* 0x36464: the host's request is answered with a failure and what it gave is dropped. */
-OsaBuffer *macMgmtValidateEntry(struct WlanConnection *connection, const uint8_t *request,
-				unsigned int command)
+int macMgmtValidateEntry(struct WlanConnection *connection, const uint8_t *request,
+			 unsigned int command)
 {
 	OsaBuffer *message;
 
@@ -259,9 +270,9 @@ OsaBuffer *macMgmtValidateEntry(struct WlanConnection *connection, const uint8_t
 	message = wlanHostMessageAlloc(connection);
 	if (message != NULL) {
 		wlanHostResponseBuild(message, command, 1, request[4]);
-		wlanHostMessagePost(message);
+		return wlanHostMessagePost(message);
 	}
-	return message;
+	return 0;
 }
 
 /* 0x3649e: the MAC is quiesced around the flush, unless it already is. */
@@ -443,19 +454,19 @@ struct WlanIbssTlvs {
 	const uint8_t *rsn;
 };
 
-static inline __attribute__((always_inline)) void wlanIbssParseTlvs(struct WlanConnection *connection, const uint8_t *cursor, unsigned int length,
+static inline __attribute__((always_inline)) void wlanIbssParseTlvs(struct WlanConnection *connection, uint8_t **cursor, uint16_t *length,
 			      uint8_t *channels, int start, struct WlanIbssTlvs *found)
 {
 	for (;;) {
-		uint8_t *tlv = (uint8_t *)cursor;
+		uint8_t *tlv = *cursor;
 		unsigned int size;
-		unsigned int type;
+		int type;
 
-		if ((uint16_t)length < 4)
+		if (*length < 4)
 			break;
-		length = (uint16_t)(length - 4);
+		*length -= 4;
 		size = tlv[2] | (tlv[3] << 8);
-		if (size > length)
+		if (size > *length)
 			break;
 		type = tlv[0] | (tlv[1] << 8);
 		if (type == 221) {
@@ -491,8 +502,8 @@ static inline __attribute__((always_inline)) void wlanIbssParseTlvs(struct WlanC
 		} else {
 			macMgmtCheckEntry(connection, tlv, channels);
 		}
-		length = (uint16_t)length - size;
-		cursor = tlv + size + 4;
+		*length -= size;
+		*cursor = tlv + size + 4;
 	}
 }
 
@@ -510,7 +521,7 @@ struct __attribute__((packed)) WlanIbssJoinMessage {
 };
 
 /* 0x365aa: HostCmd_CMD_802_11_AD_HOC_START: the request, with its elements, goes to the state machine. */
-OsaBuffer *hostCmd002bStart(struct WlanConnection *connection, uint8_t *command)
+int hostCmd002bStart(struct WlanConnection *connection, uint8_t *command)
 {
 	struct WlanIbssTlvs found = { NULL, NULL };
 	struct WlanIbssStartMessage *message;
@@ -537,7 +548,8 @@ OsaBuffer *hostCmd002bStart(struct WlanConnection *connection, uint8_t *command)
 			    connection->beaconPeriod);
 	message->event = WLAN_STA_EVENT_START;
 	__aeabi_memcpy(message->command, command, 8);
-	wlanIbssParseTlvs(connection, command + 77, tlvLength, message->start.reserved2, 1, &found);
+	extraIes = command + 77;
+	wlanIbssParseTlvs(connection, &extraIes, &tlvLength, message->start.reserved2, 1, &found);
 	macMgmtParseEntry(0, found.wpa, found.rsn, &wlanIbssIeBuffer, &present, &connection->securitySuites[0],
 			  &connection->securitySuites[1]);
 	connection->flags = (connection->flags & 0xfb) | ((4 * present) & 7);
@@ -547,11 +559,13 @@ OsaBuffer *hostCmd002bStart(struct WlanConnection *connection, uint8_t *command)
 		osa_BufferFree(buffer);
 		return macMgmtValidateEntry(connection, command, 0x802b);
 	}
-	return NULL;
+	if (failed)
+		return macMgmtValidateEntry(connection, command, 0x802b);
+	return failed;
 }
 
 /* 0x3675e: HostCmd_CMD_802_11_AD_HOC_JOIN, the same for an IBSS to join. */
-OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
+int hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
 {
 	struct WlanIbssTlvs found = { NULL, NULL };
 	struct WlanIbssJoinMessage *message;
@@ -559,11 +573,13 @@ OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
 	uint16_t tlvLength = 0;
 	uint8_t *extraIes;
 	uint8_t present = 0;
+	int failed;
 
 	macMgmtPrepareEntry();
+	failed = connection->state != 0;
 	macMgmtConfigureEntry(connection->htCapability, wlanHtOperationIe, wlanHtCoexIe, wlanHtOverlapScanIe,
 			      NULL);
-	if (connection->state != 0)
+	if (failed)
 		return macMgmtValidateEntry(connection, command, 0x802c);
 	wlanIeBufferAlloc(&wlanIbssIeBuffer);
 	buffer = macMgmtHandleState(connection);
@@ -573,7 +589,8 @@ OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
 	wlanAdHocJoinParse(&message->join, command, &tlvLength);
 	wlanIbssPowerLimit = 255;
 	message->event = WLAN_STA_EVENT_JOIN;
-	wlanIbssParseTlvs(connection, command + 101, tlvLength, message->join.reserved, 0, &found);
+	extraIes = command + 101;
+	wlanIbssParseTlvs(connection, &extraIes, &tlvLength, message->join.reserved, 0, &found);
 	macMgmtParseEntry(0, found.wpa, found.rsn, &wlanIbssIeBuffer, &present, &connection->securitySuites[0],
 			  &connection->securitySuites[1]);
 	connection->flags = (connection->flags & 0xfb) | ((4 * present) & 7);
@@ -584,5 +601,7 @@ OsaBuffer *hostCmd002cJoin(struct WlanConnection *connection, uint8_t *command)
 		return macMgmtValidateEntry(connection, command, 0x802c);
 	}
 	connection->state = 2;
-	return NULL;
+	if (failed)
+		return macMgmtValidateEntry(connection, command, 0x802c);
+	return failed;
 }

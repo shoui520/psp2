@@ -38,7 +38,10 @@ typedef struct __attribute__((packed)) WlanAdHocBssDesc {
 	uint8_t localTime[8];
 	uint8_t phyParamSet[7];
 	uint8_t ssParamSet[8];
-	uint16_t capability;
+	union __attribute__((packed)) {
+		uint16_t capability;
+		struct WlanCapabilityInfo capabilityInfo;
+	};
 	uint8_t dataRates[14];
 	uint8_t reserved[7];
 	const uint8_t *extraIes;

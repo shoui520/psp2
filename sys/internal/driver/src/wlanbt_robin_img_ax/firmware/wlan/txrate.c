@@ -19,14 +19,14 @@ int macMgmtParseContext(void);					/* 0x356b4 */
 uint32_t wlanMacOperationSaved __attribute__((section(".sqram1.bss")));			/* 0xc0011c04 */
 
 /* Takes a new rate set and finds the limits of its classes. */
-void wlanConnectionRateSetUpdate(struct WlanConnection *connection, uint32_t rateSet)
+void wlanConnectionRateSetUpdate(struct WlanConnection *connection, uint16_t rateSet)
 {
 	wlanRateSetLimits(&connection->rateSet, rateSet, &connection->ofdmHigh, &connection->ofdmLow,
 			  &connection->cckHigh, &connection->cckLow);
 }
 
 /* The first rate at or below start in the CCK range of the rate set. */
-uint8_t wlanTxLowRate(struct WlanConnection *connection, unsigned int start)
+unsigned int wlanTxLowRate(struct WlanConnection *connection, unsigned int start)
 {
 	return wlanFindSetBitDown(connection->rateSet, start, connection->cckHigh, connection->cckLow);
 }

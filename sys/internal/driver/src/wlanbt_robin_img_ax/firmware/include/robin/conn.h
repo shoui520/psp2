@@ -22,6 +22,7 @@ struct WlanP2pClient;
 #include "robin/buffer.h"
 #include "robin/esatypes.h"
 #include "robin/threadx.h"
+#include "robin/wlan.h"
 
 /*
  * The 37 bytes in front of a frame sent through the WLAN SDIO device: the
@@ -375,8 +376,7 @@ struct WlanConnectionInfo {
 
 struct WlanSubscribeEvents;
 
-/* A channel and its band, as the roles keep them. */
-/* Passed by value (a word: armcc loads it whole). */
+/* A channel and its band, as the roles keep them. Passed by value (a word: armcc loads it whole). */
 struct WlanBandChannel {
 	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
 	uint8_t channel;
@@ -549,6 +549,7 @@ struct WlanConnection {
 	union {
 		uint8_t bssCapability[2];	/* capability information of the IBSS started or joined */
 		uint16_t bssCapabilityValue;	/* the two bytes stored whole */
+		struct WlanCapabilityInfo bssCapabilityInfo;
 	};
 	uint8_t reserved58[6];
 	uint8_t supportedRates[14];

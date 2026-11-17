@@ -37,8 +37,8 @@ int wlanMacBringUp(uint32_t descriptor, const struct MacRegionProvider *provider
 void wlanMacDmaRestart(void);					/* 0x31596 */
 
 /* wlan/txrate.c */
-void wlanConnectionRateSetUpdate(struct WlanConnection *connection, uint32_t rateSet);	/* 0x31d94 */
-uint8_t wlanTxLowRate(struct WlanConnection *connection, unsigned int start);		/* 0x31db0 */
+void wlanConnectionRateSetUpdate(struct WlanConnection *connection, uint16_t rateSet);	/* 0x31d94 */
+unsigned int wlanTxLowRate(struct WlanConnection *connection, unsigned int start);		/* 0x31db0 */
 unsigned int wlanConnectionResponseRate(struct WlanConnection *connection, unsigned int rate); /* 0x31dc0 */
 void wlanTxHookIdle(void);					/* 0x31dd0 */
 int wlanMacOperationWait(uint32_t timeout, uint32_t *status);	/* 0x31dd2 */
