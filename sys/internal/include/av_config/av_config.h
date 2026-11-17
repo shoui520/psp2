@@ -20,6 +20,10 @@ int SceAVConfigForDriver_91792D6F(unsigned int index);
 /* the audio devices connected (a syscall SceAVConfig's user library passes on) */
 int sceAVConfigGetConnectedAudioDevice(SceUInt32 *devices);
 
+/* the auto suspend time while an application of the boot runs, and its reset (the shell's) */
+int sceAVConfigSetAutoSuspend2(int seconds);
+int sceAVConfigClearAutoSuspend2(void);
+
 #ifdef __cplusplus
 }
 #endif

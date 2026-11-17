@@ -2,6 +2,10 @@
 
 #include <scetypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define REGMGR_WORD_SIZE	0x100
 
 /* a change, as the notify function gets it (names unknown) */
@@ -94,3 +98,7 @@ int sceRegMgrGetKeysInfo(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrSetKeys(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrGetKeys(const char *category, RegMgrKeyInfo *info, int count);
 int sceRegMgrGetInitVals(const char *category, RegMgrKeyInfo *info, int count);
+
+#ifdef __cplusplus
+}
+#endif

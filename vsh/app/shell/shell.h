@@ -14,6 +14,19 @@ enum {
 	SHELL_EVENT_MODEL	= 3,
 };
 
+/* the application events (SceShell_83D16CA8's), names ours from their listeners */
+enum {
+	SHELL_APP_EVENT_ENDED		= 0,
+	SHELL_APP_EVENT_STARTED		= 3,
+	SHELL_APP_EVENT_ACTIVATED	= 5,	/* sent by the shell: ShellAppActivatedEvent */
+};
+
+/* an application event's data (the fields the boot reads) */
+typedef struct ShellAppEvent {
+	int reserved;
+	int appId;
+} ShellAppEvent;
+
 /* what a shell event listener is called with: the event's code and its data */
 typedef void (*ShellEventCallback)(int code, const void *data, void *arg);
 
@@ -44,6 +57,12 @@ int shellMusicSetBgm(bool on);
 /* the telephony setup (coldboot's telephony job) */
 int shellTelephonyStartSetup(int type, const char *param);
 
+/* the application events: sends one to its listeners (0x81241230) */
+int shellAppEventSend(int event, const void *data, int flags);
+
+/* the application in front, as the shell's screens follow it (0x810E17EE) */
+int shellAppSetForeground(int type, const char *name, int flags);
+
 /* the RTC (vshRtcSetCurrentTick) */
 int shellRtcSetCurrentTick(const SceRtcTick *tick);
 
@@ -54,6 +73,23 @@ int shellCounterAdd(int id, unsigned int value, int flags);
 int npUpdateClockStart(int *request, int priority, SceUID pid);
 int npUpdateClockGetState(int request);		/* 2: done */
 int npUpdateClockGetResult(int request, int *result);
+
+/* a media information write, done by a SceMediaInfoWriterJob (0x810F3098); type 1-3 write
+   the shell's own (NPXS19999) */
+struct ShellMediaInfoRequest {
+	int type;
+	char titleId[12];
+	int attr[4];
+};
+void shellMediaInfoWrite(const ShellMediaInfoRequest *request, bool cancelOnFailure);
+
+/* a request to the trigger manager service, done by a SceTriggerMgrSvcCtrlJob (0x812A4A3A) */
+int shellTriggerMgrSvcCtrl(int command, int arg);
+
+/* the singletons created once: the parental control manager (it watches
+   /CONFIG/SECURITY/PARENTAL, 0x81232F64) and the accessibility zoom (0x810A7D5A) */
+int shellParentalControlMgrCreate(void);
+int shellZoomMgrCreate(void);
 
 /* the screen shown while the boot waits (a busy indicator) */
 void shellBootScreenCreate(void);

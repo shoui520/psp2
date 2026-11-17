@@ -215,6 +215,8 @@ int sceAppMgrLaunchAppByName2(const char *name, const char *param,
 int sceAppMgrLaunchAppByPath4(const char *path, const char *name, SceUInt32 budgetSize,
 			      const char *param, SceUInt32 processAttr,
 			      const AppmgrLaunchAppOption *option);
+int sceAppMgrGetStatusByAppId(int appId, SceAppMgrAppStatus *status);
+int sceAppMgrActivateApp(int appId);
 #endif
 
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's

@@ -22,6 +22,7 @@ enum {
 
 /* power_manage_plugin's functions */
 enum {
+	POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT	= 15,
 	POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE	= 16,
 };
 
@@ -45,6 +46,45 @@ struct DbrecoveryPluginInterface {
 	int (*getState)(void);			/* the database state the recovery left */
 	void (*setTheme)(ShellTheme *theme);
 };
+
+void powerManagePluginSetParam(paf::Plugin::InitParam2 *param);
+void powerManagePluginInit(paf::Plugin *plugin);
+void powerManagePluginStart(paf::Plugin *plugin);
+void powerManagePluginStop(paf::Plugin *plugin);
+void powerManagePluginExit(paf::Plugin *plugin);
+
+void telephonyPluginInit(paf::Plugin *plugin);
+void telephonyPluginStart(paf::Plugin *plugin);
+void telephonyPluginStop(paf::Plugin *plugin);
+void telephonyPluginExit(paf::Plugin *plugin);
+
+void musiccorePluginInit(paf::Plugin *plugin);
+void musiccorePluginStart(paf::Plugin *plugin);
+void musiccorePluginStop(paf::Plugin *plugin);
+void musiccorePluginExit(paf::Plugin *plugin);
+
+void imposePluginSetParam(paf::Plugin::InitParam2 *param);
+void imposePluginInit(paf::Plugin *plugin);
+void imposePluginStart(paf::Plugin *plugin);
+void imposePluginStop(paf::Plugin *plugin);
+void imposePluginExit(paf::Plugin *plugin);
+
+void indicatorPluginSetParam(paf::Plugin::InitParam2 *param);
+void indicatorPluginInit(paf::Plugin *plugin);
+void indicatorPluginStart(paf::Plugin *plugin);
+void indicatorPluginStop(paf::Plugin *plugin);
+void indicatorPluginExit(paf::Plugin *plugin);
+
+void gamePluginInit(paf::Plugin *plugin);
+void gamePluginStart(paf::Plugin *plugin);
+void gamePluginStop(paf::Plugin *plugin);
+void gamePluginExit(paf::Plugin *plugin);
+
+void topmenuPluginSetParam(paf::Plugin::InitParam2 *param);
+void topmenuPluginInit(paf::Plugin *plugin);
+void topmenuPluginStart(paf::Plugin *plugin);
+void topmenuPluginStop(paf::Plugin *plugin);
+void topmenuPluginExit(paf::Plugin *plugin);
 
 void coldbootPluginSetParam(paf::Plugin::InitParam2 *param);
 void coldbootPluginInit(paf::Plugin *plugin);

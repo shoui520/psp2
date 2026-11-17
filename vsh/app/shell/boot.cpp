@@ -17,6 +17,8 @@
 #include <graphics/graphmem/graphmem.h>
 #include <graphics/surface/surface_pool.h>
 #include <graphics/effects/wave_switch.h>
+#include <graphics/effects/gate_blur.h>
+#include <graphics/effects/screen_copy.h>
 #include <job/job.h>
 #include <common/main_thread_call_list.h>
 #include <system/system.h>
@@ -24,6 +26,10 @@
 #include <regmgr/regmgr.h>
 #include <kernel/processmgr.h>
 #include <appmgr/appmgr.h>
+#include <av_config/av_config.h>
+#include <std/vector>
+#include <inputdevice/touchscreen/touchscreen.h>
+#include <vshbridge/vshbridge.h>
 
 #include "boot.h"
 #include "plugins.h"
@@ -48,7 +54,7 @@ static int s_pluginsLoading;			/* plugin loads not finished */
 static int s_databaseState = -1;		/* what the database check or recovery reported */
 static unsigned int s_clockPollCount;		/* frames the network clock update has taken */
 
-static ShellAppIdStack s_bootAppStack;		/* applications started before the home screen */
+static vector<int> s_bootAppStack;		/* ids of the applications started before the home screen */
 
 static void shellBootStartResidentPlugins(void);
 static void shellBootStartResidentOrIdu(void);
@@ -76,7 +82,7 @@ bool shellBootArePluginsLoaded(void)
 
 bool shellBootHasAppStack(void)
 {
-	return s_bootAppStack.count != 0;
+	return s_bootAppStack.size() != 0;
 }
 
 int shellBootGetDatabaseState(void)
@@ -357,14 +363,7 @@ static void shellBootCheckInitialSetup(bool clockUpdated)
 	SceRtcTick tick;
 
 	if (sceRtcGetCurrentTick(&tick) == SCE_RTC_ERROR_NOT_INITIALIZED) {
-		if (shellStartupIsPmMode() || shellStartupGetIduMode() == 1 || shellStartupIsTestMode()) {
-			SceDateTime time = { 2011, 1, 1 };
-			SceRtcTick local;
-
-			sceRtcGetTick(&time, &local);
-			sceRtcConvertLocalTimeToUtc(&local, &tick);
-			shellRtcSetCurrentTick(&tick);
-		} else {
+		if (!shellStartupIsPmMode() && shellStartupGetIduMode() != 1 && !shellStartupIsTestMode()) {
 			int automatic;
 
 			if (system::Model::GetType() == 1 && !clockUpdated &&
@@ -381,23 +380,210 @@ static void shellBootCheckInitialSetup(bool clockUpdated)
 			clockInvalid = true;
 			goto initialSetup;
 		}
+
+		SceDateTime time;
+		SceRtcTick local;
+
+		time.year = 2011;
+		time.month = 1;
+		time.day = 1;
+		time.hour = 0;
+		time.minute = 0;
+		time.second = 0;
+		time.microsecond = 0;
+		sceRtcGetTick(&time, &local);
+		sceRtcConvertLocalTimeToUtc(&local, &tick);
+		shellRtcSetCurrentTick(&tick);
 	}
 	s_bootState |= BOOT_STATE_BOOT_APPS_DONE;
 	shellBootCheckDatabase();
 	return;
 
 initialSetup:
-	SceShell_83D16CA8(3, shellBootOnAppEvent, NULL);
-	SceShell_83D16CA8(0, shellBootOnAppEvent, NULL);
+	SceShell_83D16CA8(SHELL_APP_EVENT_STARTED, shellBootOnAppEvent, NULL);
+	SceShell_83D16CA8(SHELL_APP_EVENT_ENDED, shellBootOnAppEvent, NULL);
 
 	common::SharedPtr<job::JobItem> setupJob(new ShellInitialSetupJob(clockInvalid));
 
 	job::JobQueue::default_queue->Enqueue(setupJob);
 }
 
+/* the system plugins the home screen needs, each counted until it is loaded */
+static void shellBootStartSystem(void)
+{
+	sceKernelPowerLock(SCE_KERNEL_POWER_TICK_DEFAULT);
+	sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
+	graph::GateBlur::Initialize();
+	graph::ScreenCopy::Initialize();
+
+	{
+		Plugin::InitParam param;
+
+		param.name = "power_manage_plugin";
+		param.resource_file = "vs0:vsh/shell/power_manage_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = powerManagePluginSetParam;
+		param.init_func = powerManagePluginInit;
+		param.start_func = powerManagePluginStart;
+		param.stop_func = powerManagePluginStop;
+		param.exit_func = powerManagePluginExit;
+
+		GraphMem::DeviceType device = (GraphMem::DeviceType)(system::Model::GetType() != 1);
+		char poolName[] = "SceShellPowerManageSurfacePool";
+		void *pool = GraphMem::AllocOSMemory(device, 0xa0000, poolName, NULL);
+
+		param.surface_pool = new graph::SurfacePool(pool, 0xa0000, poolName);
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "telephony_plugin";
+		param.resource_file = "vs0:vsh/shell/telephony_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = shellBootPluginSetParamNoop;
+		param.init_func = telephonyPluginInit;
+		param.start_func = telephonyPluginStart;
+		param.stop_func = telephonyPluginStop;
+		param.exit_func = telephonyPluginExit;
+		param.private_heap_size = system::Model::GetType() == 0 ? 0x80000 : 0x8000;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "musiccore_plugin";
+		param.resource_file = "vs0:vsh/shell/musiccore_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = shellBootPluginSetParamNoop;
+		param.init_func = musiccorePluginInit;
+		param.start_func = musiccorePluginStart;
+		param.stop_func = musiccorePluginStop;
+		param.exit_func = musiccorePluginExit;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "impose_plugin";
+		param.resource_file = "vs0:vsh/shell/impose_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = imposePluginSetParam;
+		param.init_func = imposePluginInit;
+		param.start_func = imposePluginStart;
+		param.stop_func = imposePluginStop;
+		param.exit_func = imposePluginExit;
+
+		char poolName[] = "SceShellImposeSurfacePool";
+		void *pool = GraphMem::AllocOSMemory(GraphMem::DeviceType_VideoMemory, 0x40000, poolName, NULL);
+
+		param.surface_pool = new graph::SurfacePool(pool, 0x40000, poolName);
+		param.graphics_flag = 7;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "indicator_plugin";
+		param.resource_file = "vs0:vsh/shell/indicator_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = indicatorPluginSetParam;
+		param.init_func = indicatorPluginInit;
+		param.start_func = indicatorPluginStart;
+		param.stop_func = indicatorPluginStop;
+		param.exit_func = indicatorPluginExit;
+
+		GraphMem::DeviceType device = (GraphMem::DeviceType)(system::Model::GetType() != 1);
+		char poolName[] = "SceShellIndicatorSurfacePool";
+		void *pool = GraphMem::AllocOSMemory(device, 0x4b000, poolName, NULL);
+
+		param.surface_pool = new graph::SurfacePool(pool, 0x4b000, poolName);
+		param.graphics_flag = 7;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "game_plugin";
+		param.caller_name = "__main__";
+		param.set_param_func = shellBootPluginSetParamNoop;
+		param.init_func = gamePluginInit;
+		param.start_func = gamePluginStart;
+		param.stop_func = gamePluginStop;
+		param.exit_func = gamePluginExit;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	{
+		Plugin::InitParam param;
+
+		param.name = "topmenu_plugin";
+		param.resource_file = "vs0:vsh/shell/topmenu_plugin.rco";
+		param.caller_name = "__main__";
+		param.set_param_func = topmenuPluginSetParam;
+		param.init_func = topmenuPluginInit;
+		param.start_func = topmenuPluginStart;
+		param.stop_func = topmenuPluginStop;
+		param.exit_func = topmenuPluginExit;
+
+		GraphMem::DeviceType device = GraphMem::DeviceType_VideoMemory;
+
+		if (system::Model::GetType() == 1)
+			device = GraphMem::DeviceType_SystemMemory;
+
+		char poolName[] = "SceShellTopmenuSurfacePool";
+		void *pool = GraphMem::AllocOSMemory(device, 0x40000, poolName, NULL);
+
+		param.surface_pool = new graph::SurfacePool(pool, 0x40000, poolName);
+		param.graphics_flag = 7;
+		Plugin::LoadAsync(param, shellBootOnSystemPluginLoaded, 0);
+		s_pluginsLoading++;
+	}
+	if (s_pluginsLoading == 0) {
+		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
+		s_bootState |= BOOT_STATE_SYSTEM_PLUGINS_LOADED;
+		shellBootCheckInitialSetup(false);
+	}
+}
+
 void shellBootStartSystemEntry(void)
 {
 	shellBootStartSystem();
+}
+
+/* the first power event: the system event goes out, the shell's media information is written,
+   the trigger manager service and the parental control and zoom managers start; heard once */
+static void shellBootOnPowerEvent(int code, const void *data, void *arg)
+{
+	ShellMediaInfoRequest request;
+
+	vshKernelSendSysEvent(0);
+	request.type = 1;
+	request.attr[0] = 0;
+	request.attr[1] = 0;
+	request.attr[2] = 0;
+	request.attr[3] = 0;
+	shellMediaInfoWrite(&request, false);
+	shellTriggerMgrSvcCtrl(0, 0);
+	shellParentalControlMgrCreate();
+	shellZoomMgrCreate();
+
+	Plugin *powerManage = Plugin::Find("power_manage_plugin");
+
+	if (powerManage != NULL) {
+		ShellPluginInterface *iface = (ShellPluginInterface *)powerManage->GetInterface(1);
+
+		if (iface != NULL) {
+			iface->func[POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT]();
+			iface->func[POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE]();
+		}
+	}
+	SceShell_D4C7D2B7(SHELL_EVENT_POWER, shellBootOnPowerEvent, NULL);
 }
 
 /* the model is known: on a model other than 1 the telephony setup starts; heard once */
@@ -456,7 +642,7 @@ static __attribute__((noinline)) void shellBootProceed(void)
 		return;
 	}
 
-	if (s_bootAppStack.count == 0)
+	if (s_bootAppStack.size() == 0)
 		shellBootScreenCreate();
 	if (s_bootState & BOOT_STATE_DATABASE_READY)
 		shellBootStartResidentOrIdu();
@@ -493,6 +679,78 @@ static void shellBootOnDbrecoveryPluginLoaded(Plugin *plugin)
 	}
 	if ((s_bootState & BOOT_STATE_COLDBOOT_DONE) && (s_bootState & BOOT_STATE_BOOT_APPS_DONE))
 		shellBootProceed();
+}
+
+/* what SHELL_APP_EVENT_ACTIVATED sends with an application brought to the front */
+struct ShellAppActivatedEvent {
+	SceUID processId;
+	int appId;
+	const char *appName;
+	bool fromBoot;
+};
+
+/*
+ * an application event while the boot's applications run (the initial setup, a recovery): their
+ * ids are stacked as they start and unstacked as they end, the one on top is brought to the
+ * front, and the last one's end lets the boot go on
+ */
+static void shellBootOnAppEvent(int code, const void *data, void *arg)
+{
+	const ShellAppEvent *event = (const ShellAppEvent *)data;
+	int appId;
+
+	if (code > 0) {
+		SceAppMgrAppStatus status;
+
+		if (code != SHELL_APP_EVENT_STARTED || sceAppMgrGetStatusByAppId(event->appId, &status) != 0 ||
+		    (status.processAttr & 1))
+			return;
+		if (s_bootAppStack.size() == 0) {
+			shellBootScreenClose();
+			if (system::Model::GetType() != 1) {
+				sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DISABLE_AUTO_SUSPEND);
+				sceAVConfigSetAutoSuspend2(600);
+			}
+			inputdevice::touchscreen::ActivateDefaultRegion(0, false);
+			inputdevice::touchscreen::ActivateDefaultRegion(1, false);
+		}
+		s_bootAppStack.push_back(event->appId);
+		appId = event->appId;
+	} else {
+		if (code < 0)
+			return;
+		if (s_bootAppStack.size() == 0 || s_bootAppStack.back() != event->appId)
+			return;
+		s_bootAppStack.pop_back();
+		if (s_bootAppStack.size() == 0) {
+			if (system::Model::GetType() != 1)
+				sceAVConfigClearAutoSuspend2();
+			inputdevice::touchscreen::ActivateDefaultRegion(0, true);
+			inputdevice::touchscreen::ActivateDefaultRegion(1, true);
+			SceShell_E3D3A162(SHELL_APP_EVENT_STARTED, shellBootOnAppEvent, NULL);
+			SceShell_E3D3A162(SHELL_APP_EVENT_ENDED, shellBootOnAppEvent, NULL);
+			shellAppSetForeground(1, "NPXS19999", 0);
+			s_bootState |= BOOT_STATE_BOOT_APPS_DONE;
+			shellBootProceed();
+			return;
+		}
+		appId = s_bootAppStack.back();
+	}
+	if (appId != -1) {
+		SceAppMgrAppStatus status;
+
+		sceAppMgrActivateApp(appId);
+		if (sceAppMgrGetStatusByAppId(appId, &status) == 0) {
+			ShellAppActivatedEvent activated;
+
+			activated.fromBoot = false;
+			activated.processId = status.processId;
+			activated.appId = status.appId;
+			activated.appName = status.appName;
+			shellAppEventSend(SHELL_APP_EVENT_ACTIVATED, &activated, 0);
+			shellAppSetForeground(1, status.appName, 0);
+		}
+	}
 }
 
 /* the network clock update, polled each frame: the setup check again when it is done */

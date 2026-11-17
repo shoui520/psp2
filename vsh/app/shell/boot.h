@@ -6,12 +6,6 @@
 
 #include <scetypes.h>
 
-/* a growing array of application ids, used as a stack: grows and shrinks by 10 */
-struct ShellAppIdStack {
-	int *data;
-	int count;
-	int capacity;
-};
 
 bool shellBootIsLaunchRestricted(void);
 bool shellBootArePluginsLoaded(void);
