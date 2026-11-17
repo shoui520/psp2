@@ -229,7 +229,24 @@ typedef struct NpWebApiPushFilter {
 typedef struct NpWebApiServiceFilter {
 	const void *const *vtable;
 	int id;
+	unsigned char all;
+	unsigned char reserved1[3];
+	NpWebApiHandleList list;
+	void *types;
+	unsigned int typeCount;
+	char name[33];
+	unsigned char reserved2[3];
+	int handle;
+	NpWebApiLibContext *libContext;
 } NpWebApiServiceFilter;
+
+typedef char NpWebApiServiceFilterSizeCheck[sizeof(NpWebApiServiceFilter) == 76 ? 1 : -1];
+
+extern const void *g_serviceFilterVtable[];	/* 0x8100edbc */
+extern NpWebApiServiceFilter *npWebApiServiceFilterConstruct(NpWebApiServiceFilter *filter,
+	NpWebApiLibContext *libCtx) __attribute__((noinline));
+extern NpWebApiServiceFilter *npWebApiServiceFilterDestruct(NpWebApiServiceFilter *filter) __attribute__((noinline));
+extern int npWebApiServiceFilterDelete(NpWebApiServiceFilter *filter) __attribute__((noinline));
 
 extern void npWebApiServiceFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiServiceFilter **pFilter) __attribute__((noinline));

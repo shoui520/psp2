@@ -490,3 +490,71 @@ int npWebApiDeleteExtdPushEventFilter(int libCtxId, int filterId)
 	}
 	return result;
 }
+
+NpWebApiServiceFilter *npWebApiServiceFilterConstruct(NpWebApiServiceFilter *filter, NpWebApiLibContext *libCtx)
+{
+	filter->vtable = g_serviceFilterVtable;
+	filter->all = 0;
+	filter->list.sentinel = NULL;
+	filter->list.count = 0;
+	filter->list.allocator = NULL;
+	filter->id = 0;
+	filter->types = NULL;
+	filter->typeCount = 0;
+	filter->libContext = libCtx;
+	sceClibMemset(filter->name, 0, 33);
+	sceClibMemset(&filter->handle, 0, 4);
+	filter->list.allocator = (void *)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(libCtx));
+	return filter;
+}
+
+static inline void serviceFilterTeardown(NpWebApiServiceFilter *filter)
+{
+	NpWebApiHandleNode *sentinel;
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *next;
+	void *allocator;
+	void *types;
+
+	types = filter->types;
+	filter->vtable = g_serviceFilterVtable;
+	if (types != NULL)
+		npWebApiLibContextDestroyPool(filter->libContext, types);
+	sentinel = filter->list.sentinel;
+	if (sentinel != NULL) {
+		node = sentinel->next;
+		allocator = filter->list.allocator;
+		if (node != sentinel) {
+			do {
+				next = node->next;
+				if (allocator != NULL) {
+					SceNpCommonPs4_6B428829(allocator, node);
+					allocator = filter->list.allocator;
+					sentinel = filter->list.sentinel;
+				}
+				node = next;
+			} while (next != sentinel);
+		}
+		if (allocator != NULL)
+			SceNpCommonPs4_6B428829(allocator, node);
+	}
+	filter->vtable = g_baseVtable;
+}
+
+NpWebApiServiceFilter *npWebApiServiceFilterDestruct(NpWebApiServiceFilter *filter)
+{
+	serviceFilterTeardown(filter);
+	return filter;
+}
+
+int npWebApiServiceFilterDelete(NpWebApiServiceFilter *filter)
+{
+	serviceFilterTeardown(filter);
+	return SceNpCommonPs4_BB5282C8(filter);
+}
+
+const void *g_serviceFilterVtable[] = {	/* 0x8100edbc */
+	(const void *)npWebApiServiceFilterDestruct,
+	(const void *)npWebApiServiceFilterDelete,
+	NULL,
+};
