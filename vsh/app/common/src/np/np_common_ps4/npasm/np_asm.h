@@ -112,7 +112,36 @@ struct NpAsmRegistryEntry {
 	int extra;
 };
 
-struct NpAsmClient;
+/* the client of the layer (208 bytes): the one the exports work on, and the secondary one the registry can switch to.
+   titleFromApplication: the title the application set, titleFromSystem: the one read from the system */
+struct NpAsmClient {
+	const void *const *vtable;
+	SceUInt8 padding0[4];
+	SceKernelLwMutexWork mutex;
+	int httpContextId;
+	SceUInt8 titleId[16];
+	SceUInt8 titleSecret[128];
+	SceUInt8 titleFromApplication;
+	SceUInt8 titleFromSystem;
+	SceUInt8 padding1[2];
+	struct NpAsmTransport *transport;
+	struct NpAsmRequest *requests;
+	SceUInt8 notDevelopmentMode;
+	SceUInt8 padding2[3];
+	int systemTitle;
+};
+
+/* a buffer handed to a call of the NpAsm service: a request's data, and where the answer goes */
+struct NpAsmIpcInBuffer {
+	const void *data;
+	SceSize size;
+};
+
+struct NpAsmIpcOutBuffer {
+	void *data;
+	SceSize size;
+	SceSize *pOutSize;
+};
 
 /* what the exports 0x4ea26d7a.. hand out for a request: an id the caller keeps, the request of the client it stands
    for (the primary one, or the secondary one when the layer is switched to it), and the allocator it was created
@@ -209,9 +238,14 @@ int npAsmSecondaryReloadTitleId(void);
 
 /* the client (0x81015f9e..): the objects of the layer */
 struct NpAsmClient *npAsmClientGet(void);
-struct NpAsmClient *npAsmClientGetSecondary(void);
 int npAsmClientCreate(int param1, const int *pParam, int notDevelopmentMode);
-int npAsmClientDestroy(int next);
+int npAsmClientDestroy(int unused);
+int npAsmIpcTerminate(void *ipcClient);
+int npAsmClientCheckTitleId(struct NpAsmClient *client, const char *pTitleId);
+struct NpAsmClient *npAsmClientTerm(struct NpAsmClient *client);
+int npAsmClientDelete(struct NpAsmClient *client);
+void npAsmClientNullsub(void);
+struct NpAsmClient *npAsmClientGetSecondary(void);
 struct NpAsmTransport *npAsmClientGetTransport(struct NpAsmClient *client);
 int npAsmClientLock(struct NpAsmClient *client);
 int npAsmClientUnlock(struct NpAsmClient *client);
@@ -221,18 +255,18 @@ void npAsmClientRemoveRequest(struct NpAsmClient *client, struct NpAsmRequest *r
 int npAsmClientGetHttpContextId(struct NpAsmClient *client);
 struct NpCommonPs4Allocator *npAsmClientGetAllocator(struct NpAsmClient *client);
 struct NpCommonPs4Allocator *npAsmClientGetRequestAllocator(struct NpAsmClient *client);
-struct NpCommonPs4Allocator *npAsmClientGetAllocatorForBuffers(struct NpAsmClient *client);
 int npAsmClientGetTitleId(struct NpAsmClient *client, void *pTitleId, void *pTitleSecret, SceUInt8 check);
 int npAsmClientIsSystemTitle(struct NpAsmClient *client);
-int npAsmClientSetLimit(struct NpAsmClient *client, int limit);
+int npAsmClientIsNotDevelopmentMode(struct NpAsmClient *client);
+int npAsmClientSetSystemTitle(struct NpAsmClient *client, int systemTitle);
 int npAsmClientSetTitleId(struct NpAsmClient *client, const void *pTitleId, const void *pTitleSecret, SceUInt8 fromSystem);
 int npAsmSecondaryClientCreate(void);
 int npAsmSecondaryClientDestroy(void);
 int npAsmServiceInit(void);
 void npAsmServiceTerm(int next);
-int npAsmConnectionSetTitleId(void *connection, const void *pTitleId);
-int npAsmConnectionClearTitleId(void *connection);
-int npAsmConnectionQuery(void *connection, int a1, int a2);
+int npAsmConnectionSetTitleId(void *ipcClient, const void *pTitleId);
+int npAsmConnectionClearTitleId(void *ipcClient);
+int npAsmConnectionQuery(void *ipcClient, int a1, int a2);
 
 /* a request (0x81013d7c..) */
 struct NpAsmRequest *npAsmRequestInit(struct NpAsmRequest *request, const struct NpAsmRequestParam *pParam);
@@ -268,8 +302,8 @@ int npAsmLimitationCheck(const char *pTitleId, int kind, SceUInt8 *pExpired, Sce
 int npAsmLimitationSet(const void *pTitleId, const SceUInt64 *pExpires);
 struct NpAsmRequest *npAsmRequestSetNext(struct NpAsmRequest *request, struct NpAsmRequest *next);
 struct NpAsmRequest *npAsmRequestGetNext(struct NpAsmRequest *request);
-int npAsmClientCheck(struct NpAsmClient *client, void *pTitleId, void *serviceName, void *pValid, void *buffer, int size);
-int npAsmClientUpdate(struct NpAsmClient *client, void *pTitleId, void *serviceName, void *buffer);
+int npAsmIpcCheck(void *ipcClient, void *pTitleId, void *serviceName, void *pValid, void *buffer, int size);
+int npAsmIpcUpdate(void *ipcClient, void *pTitleId, void *serviceName, void *buffer);
 int npAsmConnectionAbort(void *connection);
 int npAsmConnectionGetTitleToken(void *connection, const void *titleId, const void *titleSecret, const void *accessToken, void *tokenOut);
 extern int sceRtcGetCurrentRetainedNetworkTick(SceRtcTick *pTick);
@@ -322,6 +356,8 @@ int SceNpCommonPs4_D84BF4B7(int a1);
 int SceNpCommonPs4_1096EAD4(int a1);
 void *SceNpCommonPs4_A0599F24(void);
 extern int sceAppMgrIsDevelopmentMode(void);
+extern int sceAppMgrAppParamGetString(int pid, int id, char *buf, SceSize bufSize);
+extern int sceKernelGetProcessId(void);
 extern SceUInt32 SceLibKernel_9F793F84(void);
 int sceAppMgrGetSystemDataFile(int type, void *buffer, SceSize size);
 SceUInt32 sceNetNtohl(SceUInt32 net32);

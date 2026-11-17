@@ -25,6 +25,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext_npm/np_trans.cpp
 	npext_npm/np_system_param.cpp
 	np_util/server_error/np_server_error.c
+	crypto/hmac.c
+	crypto/sha256.c
 	npext/json/json_lexer.c
 	npext_npm/np_environment.cpp
 	npext/np/communication_id.cpp
@@ -44,6 +46,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npasm/np_asm_request.cpp
 	npasm/np_asm_registry.cpp
 	npasm/np_asm_connection.cpp
+	npasm/np_asm_client.cpp
 	npext/thread/thread.cpp
 	../../../../../../sys/sdk/target/src/libsnc/i64ops.c
 	../../../../../../sys/sdk/target/src/libsnc/i32ops.c
@@ -53,3 +56,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 
 # the libsnc runtime objects the module does not call are not linked
 target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+
+# the SHA-256 and the HMAC over it were built with GCC 4.8, without a stack guard
+set_source_files_properties(crypto/hmac.c crypto/sha256.c PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_OPTIONS -fno-stack-protector)

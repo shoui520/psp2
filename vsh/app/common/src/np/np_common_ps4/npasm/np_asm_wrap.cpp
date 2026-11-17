@@ -332,9 +332,9 @@ __attribute__((noinline)) int npAsmSetTitleId(const void *pTitleId, const void *
 
 	result = 0;
 	client = npAsmClientGet();
-	if (SceLibKernel_9F793F84() < 0x3500000 || npAsmClientIsSystemTitle(client) != 0 || SceNpCommonPs4_64C85FD5() != 0
+	if (SceLibKernel_9F793F84() < 0x3500000 || npAsmClientIsNotDevelopmentMode(client) != 0 || SceNpCommonPs4_64C85FD5() != 0
 		|| ((!npAsmIsSystemAppInline() ? (result = npAsmConnectionSetTitleId(SceNpCommonPs4_A0599F24(), pTitleId)) : 0), result >= 0)) {
-		npAsmClientSetLimit(client, a3);
+		npAsmClientSetSystemTitle(client, a3);
 		npAsmClientSetTitleId(client, pTitleId, pTitleSecret, 0);
 	}
 	return result;
@@ -740,7 +740,7 @@ int npAsmRequestParseCacheControl(struct NpAsmRequest *request)
 	client = npAsmClientGet();
 	result = npAsmConnectionGetHeaderSize(npAsmRequestGetConnection(request), "Cache-Control", &size);
 	if (result >= 0) {
-		header = (char *)SceNpCommonPs4_AA980113(npAsmClientGetAllocatorForBuffers(client), size + 1);
+		header = (char *)SceNpCommonPs4_AA980113(npAsmClientGetAllocator(client), size + 1);
 		if (header == NULL) {
 			result = NP_ASM_ERROR_OUT_OF_MEMORY;
 		} else {
@@ -767,7 +767,7 @@ parse:
 	if (result < 0)
 		request->cacheStatus = result;
 	if (header != NULL)
-		SceNpCommonPs4_6B428829(npAsmClientGetAllocatorForBuffers(client), header);
+		SceNpCommonPs4_6B428829(npAsmClientGetAllocator(client), header);
 	return result;
 }
 
@@ -1081,7 +1081,7 @@ int SceNpCommonPs4_E7831B1A(void)
 	if (result >= 0) {
 		client = npAsmClientGetSecondary();
 		npAsmClientSetTitleId(client, titleId, titleSecret, 0);
-		npAsmClientSetLimit(client, 1);
+		npAsmClientSetSystemTitle(client, 1);
 	}
 	return result;
 }
@@ -1097,7 +1097,7 @@ int SceNpCommonPs4_FB0B3FBD(const void *pParam)
 	struct NpAsmRequest *request;
 
 	client = npAsmClientGetSecondary();
-	request = (struct NpAsmRequest *)SceNpCommonPs4_0C922423(sizeof(struct NpAsmRequest), npAsmClientGetAllocatorForBuffers(client));
+	request = (struct NpAsmRequest *)SceNpCommonPs4_0C922423(sizeof(struct NpAsmRequest), npAsmClientGetAllocator(client));
 	if (request == NULL || (request = npAsmRequestInit(request, (const struct NpAsmRequestParam *)pParam)) == NULL)
 		return NP_ASM_ERROR_OUT_OF_MEMORY;
 	npAsmClientAddRequest(client, request);

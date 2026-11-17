@@ -9,6 +9,7 @@ extern "C" {
 
 extern const void *g_npAsmRequestVtable[];	/* 0x8102ab98 */
 
+
 SceUInt32 g_npAsmRequestIdCounter;		/* 0x8102b99c */
 SceUInt8 g_npAsmLimitTitleId[16];		/* 0x8102b9a0 */
 SceUInt64 g_npAsmLimitExpires;			/* 0x8102b9b0 */
@@ -199,5 +200,12 @@ int npAsmLimitationSet(const void *pTitleId, const SceUInt64 *pExpires)
 	return result;
 }
 /*SORT-END*/
+
+const void *g_npAsmRequestVtable[] = {		/* 0x8102ab98 */
+	NULL,
+	NULL,
+	(const void *)npAsmRequestTerm,
+	(const void *)npAsmRequestDelete,
+};
 
 }

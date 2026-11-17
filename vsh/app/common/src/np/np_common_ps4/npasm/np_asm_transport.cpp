@@ -7,9 +7,10 @@
 
 extern "C" {
 
-extern const void *g_npAsmCallbackTableVtable[];	/* 0x8102ab78 */
-extern const void *g_npAsmTransportVtable[];		/* 0x8102ab88 */
 extern const int g_npAsmCallbackTableExtra;		/* 0x8102b168 */
+
+extern const void *g_npAsmCallbackTableVtable[];
+extern const void *g_npAsmTransportVtable[];
 
 struct NpAsmCallbackTable g_npAsmCallbackTable;		/* 0x8102b990 */
 
@@ -94,7 +95,7 @@ int npAsmCallbackTableCheck(struct NpAsmCallbackTable *table, void *pTitleId, vo
 			return check(pTitleId, serviceName, pValid, buffer, size);
 		*(SceUInt8 *)pValid = 0;
 	} else {
-		return npAsmClientCheck((struct NpAsmClient *)SceNpCommonPs4_A0599F24(), pTitleId, serviceName, pValid,
+		return npAsmIpcCheck((void *)SceNpCommonPs4_A0599F24(), pTitleId, serviceName, pValid,
 			buffer, size);
 	}
 	return result;
@@ -111,7 +112,7 @@ int npAsmCallbackTableUpdate(struct NpAsmCallbackTable *table, void *pTitleId, v
 		if (update != NULL)
 			return update(pTitleId, serviceName, buffer);
 	} else {
-		return npAsmClientUpdate((struct NpAsmClient *)SceNpCommonPs4_A0599F24(), pTitleId, serviceName, buffer);
+		return npAsmIpcUpdate((void *)SceNpCommonPs4_A0599F24(), pTitleId, serviceName, buffer);
 	}
 	return result;
 }
@@ -125,6 +126,7 @@ int npAsmCallbackTableRegister(void)
 int npAsmTransportAddToken(struct NpAsmTransport *transport, struct NpAsmTokenEntry *entry)
 {
 	struct NpAsmClient *client;
+	struct NpAsmClient *lockClient;
 	struct NpAsmTokenEntry *oldest;
 	struct NpAsmTokenEntry *previous;
 	struct NpAsmTokenEntry *scan;
@@ -144,7 +146,8 @@ int npAsmTransportAddToken(struct NpAsmTransport *transport, struct NpAsmTokenEn
 				oldest = scan;
 		}
 		npAsmClientUnlock(client);
-		npAsmClientLock(transport->client);
+		lockClient = transport->client;
+		npAsmClientLock(lockClient);
 		scan = transport->head;
 		if (scan != NULL) {
 			do {
@@ -163,20 +166,20 @@ int npAsmTransportAddToken(struct NpAsmTransport *transport, struct NpAsmTokenEn
 					transport->head = next;
 				}
 				transport->count = count - 1;
-				npAsmClientUnlock(transport->client);
+				npAsmClientUnlock(lockClient);
 			}
 		}
 		SceNpCommonPs4_6B428829(npAsmClientGetAllocator(client), oldest);
 	}
-	client = transport->client;
-	npAsmClientLock(client);
+	lockClient = transport->client;
+	npAsmClientLock(lockClient);
 	next = transport->head;
 	count = transport->count;
 	if (next != NULL)
 		entry->next = next;
 	transport->head = entry;
 	transport->count = count + 1;
-	return npAsmClientUnlock(client);
+	return npAsmClientUnlock(lockClient);
 }
 
 int npAsmClientUpdateTokenLimitation(struct NpAsmTransport *transport, void *connection, const void *pTitleId)
@@ -371,7 +374,7 @@ update:
 						if (ret < 0) {
 							if (ret == -2111831545) {
 								if (npAsmIsSystemApp() == 0)
-									npAsmClientDestroy((int)SceNpCommonPs4_A0599F24());
+									npAsmIpcTerminate(SceNpCommonPs4_A0599F24());
 								if (npAsmClientUpdateTokenLimitation(self, npAsmRequestGetConnection(request), titleId2) >= 0)
 									ret = NP_ASM_ERROR_80552A09;
 							}
@@ -454,6 +457,7 @@ int npAsmTransportIsTokenValid(struct NpAsmTransport *transport, const void *pOn
 	SceUInt64 *pExpire)
 {
 	struct NpAsmClient *client;
+	struct NpAsmClient *lockClient;
 	struct NpAsmTokenEntry *entry;
 	int result;
 	int valid;
@@ -461,9 +465,9 @@ int npAsmTransportIsTokenValid(struct NpAsmTransport *transport, const void *pOn
 	SceRtcTick halfLife;
 	SceUInt8 titleId[16];
 	SceUInt8 titleSecret[128];
-	char limited;
+	SceUInt8 limited;
 	int i;
-	const SceUInt64 *src;
+	const SceRtcTick *src;
 	SceUInt64 *dst;
 
 	limited = 0;
@@ -471,18 +475,19 @@ int npAsmTransportIsTokenValid(struct NpAsmTransport *transport, const void *pOn
 	sceClibMemset(titleId, 0, 16);
 	sceClibMemset(titleSecret, 0, 128);
 	result = npAsmClientGetTitleId(client, titleId, titleSecret, 1);
-	if (result >= 0 && (npAsmClientIsSystemTitle(client) != 0 || (result = npAsmLimitationCheck((const char *)titleId, 2, (SceUInt8 *)&limited, NULL)) >= 0)
+	if (result >= 0 && (npAsmClientIsSystemTitle(client) != 0 || (result = npAsmLimitationCheck((const char *)titleId, 2, &limited, NULL)) >= 0)
 		&& limited != 0)
 		result = NP_ASM_ERROR_80552A09;
 	if (result >= 0) {
 		result = sceRtcGetCurrentRetainedNetworkTick(&tick);
 		if (result >= 0) {
-			npAsmClientLock(transport->client);
+			lockClient = transport->client;
+			npAsmClientLock(lockClient);
 			for (entry = transport->head; entry != NULL; entry = entry->next) {
 				if (SceNpCommon_8C21F489(entry, pOnlineId) == 0)
 					break;
 			}
-			npAsmClientUnlock(transport->client);
+			npAsmClientUnlock(lockClient);
 			if (entry != NULL) {
 				valid = sceRtcTickAddTicks(&halfLife, (const SceRtcTick *)&entry->fetched,
 					(entry->token.expires - entry->fetched) >> 1);
@@ -495,12 +500,12 @@ int npAsmTransportIsTokenValid(struct NpAsmTransport *transport, const void *pOn
 						*pValid = 0;
 					} else {
 						dst = pExpire;
-						src = (const SceUInt64 *)&entry->token;
+						src = (const SceRtcTick *)&entry->token;
 						*pValid = 1;
 						i = 65;
 						do {
-							SceUInt64 first = src[0];
-							SceUInt64 second = src[1];
+							SceUInt64 first = src[0].tick;
+							SceUInt64 second = src[1].tick;
 
 							--i;
 							src += 2;
@@ -518,5 +523,19 @@ int npAsmTransportIsTokenValid(struct NpAsmTransport *transport, const void *pOn
 	return result;
 }
 /*SORT-END*/
+
+const void *g_npAsmCallbackTableVtable[] = {	/* 0x8102ab78 */
+	NULL,
+	NULL,
+	(const void *)npAsmCallbackTableTerm,
+	(const void *)npAsmCallbackTableDelete,
+};
+
+const void *g_npAsmTransportVtable[] = {		/* 0x8102ab88 */
+	NULL,
+	NULL,
+	(const void *)npAsmTransportTerm,
+	(const void *)npAsmTransportDelete,
+};
 
 }
