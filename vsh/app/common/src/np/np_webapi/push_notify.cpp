@@ -218,7 +218,7 @@ int npPushLibContextStopNotification(NpPushLibContext *ctx, const NpPushKey *key
 	ret = npPushLibContextReleaseUser(ctx, key, &count);
 	if (ret != 0)
 		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "StopNotification",
-			"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_lib_context.cpp", 668,
+			"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_lib_context.cpp", 668,
 			"ASSERT", "ret == 0"));
 	if ((count | ret) != 0 || (result = npPushIpcSendId(SceNpCommonPs4_A0599F24(), key->id)) >= 0) {
 		SceNpCommonPs4_6BA5A164(ctx->mutex);

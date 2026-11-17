@@ -216,10 +216,10 @@ int npWebApiLibContextInit(NpWebApiLibContext *ctx, const char *name)
 				sceClibMemset((void *)ctx->reserved116, 0, length + 1);
 				sceClibStrncpy((char *)ctx->reserved116, name, length);
 			}
-			ctx->handles.allocator = SceNpCommonPs4_31DB2D97(ctx->heapBlock->poolObject);
 			ctx->filters.allocator = SceNpCommonPs4_31DB2D97(ctx->heapBlock->poolObject);
 			ctx->serviceFilters.allocator = SceNpCommonPs4_31DB2D97(ctx->heapBlock->poolObject);
 			ctx->extdFilters.allocator = SceNpCommonPs4_31DB2D97(ctx->heapBlock->poolObject);
+			ctx->handles.allocator = SceNpCommonPs4_31DB2D97(ctx->heapBlock->poolObject);
 			return result;
 		}
 fail:

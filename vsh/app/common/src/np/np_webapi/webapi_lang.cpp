@@ -18,7 +18,7 @@ int npWebApiGetLanguageSetting(char *buffer, SceSize size)
 	language = g_systemParam;
 	if (language < 0) {
 		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "getLanguageSetting",
-			"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_webapi\\webapi_lang.cpp", 69, "ASSERT", "0"));
+			"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_webapi\\webapi_lang.cpp", 69, "ASSERT", "0"));
 		language = g_systemParam;
 	}
 	result = 0;

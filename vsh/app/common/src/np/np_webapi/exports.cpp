@@ -7,6 +7,8 @@
 
 extern "C" {
 
+static const char g_shellParamName[] = "gda";
+
 int sceNpWebApiSetNpTitleId(const SceNpTitleId *pTitleId, const SceNpTitleSecret *pTitleSecret)
 {
 	int result;
@@ -20,7 +22,7 @@ int sceNpWebApiSetNpTitleId(const SceNpTitleId *pTitleId, const SceNpTitleSecret
 	if (pid < 0)
 		return pid;
 	sceAppMgrAppParamGetString(pid, 8, param, 4);
-	if (sceClibStrncmp("gda", param, sceClibStrnlen("gda", 0xFFFFFFFF)) == 0)
+	if (sceClibStrncmp(g_shellParamName, param, sceClibStrnlen(g_shellParamName, 0xFFFFFFFF)) == 0)
 		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
 	if (npWebApiIsShellProcess())
 		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
@@ -349,7 +351,7 @@ int npWebApiCreateRequestObject(unsigned int userCtxId, const char *apiGroup, co
 		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 	if (content != NULL && content->contentLength != 0 && content->pContentType == NULL)
 		return NP_WEBAPI_ERROR_INVALID_CONTENT_PARAMETER;
-	if (npWebApiGetSdkVersion() < NP_WEBAPI_SDK_3_50 || !(method > 3))
+	if (npWebApiGetSdkVersion() < NP_WEBAPI_SDK_3_50 || method == 0 || method == 1 || method == 2 || method == 3)
 		return npWebApiCreateRequestInternal(userCtxId, apiGroup, path, method, content, extraData, pRequestId,
 			multipart);
 	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
@@ -414,9 +416,9 @@ int sceNpWebApiDeleteRequest(SceInt64 requestId)
 	return npWebApiDeleteRequest(requestId);
 }
 
-int sceNpWebApiSendRequest(SceInt64 requestId, const void *pData, SceSize dataSize, int *pHttpStatus)
+int sceNpWebApiSendRequest(SceInt64 requestId, const void *pData, SceSize dataSize)
 {
-	return npWebApiRequestSend(requestId, 0, pData, dataSize, 0, (NpWebApiResponseBuffer *)pHttpStatus);
+	return npWebApiRequestSend(requestId, 0, pData, dataSize, 0, NULL);
 }
 
 int sceNpWebApiSendMultipartRequest(SceInt64 requestId, int partIndex, const void *pData, SceSize dataSize)
@@ -461,14 +463,14 @@ int sceNpWebApiGetErrorCode(void)
 
 int sceNpWebApiSetMultipartContentType(SceInt64 requestId, const char *pTypeName, const char *pBoundary)
 {
-	if (pBoundary != NULL)
+	if (pTypeName != NULL)
 		return npWebApiSetMultipartContentType(requestId, pTypeName, pBoundary);
 	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 }
 
 int sceNpWebApiAddMultipartPart(SceInt64 requestId, const SceNpWebApiMultipartPartParameter *pParam, int *pIndex)
 {
-	if (pIndex != NULL)
+	if (pParam != NULL)
 		return npWebApiAddMultipartPart(requestId, pParam, pIndex);
 	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 }

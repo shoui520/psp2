@@ -224,7 +224,7 @@ static int npPushExDataCount(NpPushExData *exData)
 
 #define NP_PUSH_EXDATA_ASSERT(line, what)							\
 	SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", what,		\
-		"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_push\\ipc\\np_push_ipc_data.cpp", line,	\
+		"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_push\\ipc\\np_push_ipc_data.cpp", line,	\
 		"ASSERT", "idx < ExDataNum()"))
 
 /* the names and texts of the slots, for the callbacks */

@@ -276,6 +276,8 @@ void npPushLibContextReceivePush(NpPushLibContext *ctx)
 {
 	NpPushExData exData;
 	NpPushExDataSlot *dummy;
+	int *slotWords;
+	int i;
 	unsigned char to[32];
 	unsigned char fromBuffer[32];
 	unsigned char extra[12];
@@ -288,7 +290,14 @@ void npPushLibContextReceivePush(NpPushLibContext *ctx)
 	int result;
 
 	exData.data = NULL;
-	sceClibMemset(exData.slots, 0, sizeof(exData.slots));
+	slotWords = (int *)exData.slots;
+	for (i = 5; i != 0; i--) {
+		slotWords[0] = 0;
+		slotWords[1] = 0;
+		slotWords[2] = 0;
+		slotWords[3] = 0;
+		slotWords += 4;
+	}
 	exDataNum = 0;
 	from = NULL;
 	if (npPushLibContextReceive(ctx, to, fromBuffer, extra, dataType, ctx->receiveBuffer,
@@ -320,6 +329,8 @@ void npPushLibContextReceivePush(NpPushLibContext *ctx)
 void npPushLibContextReceiveService(NpPushLibContext *ctx)
 {
 	NpPushExData exData;
+	int *slotWords;
+	int i;
 	unsigned char to[32];
 	unsigned char fromBuffer[32];
 	unsigned char extra[12];
@@ -336,7 +347,14 @@ void npPushLibContextReceiveService(NpPushLibContext *ctx)
 	buffer = ctx->receiveBuffer;
 	flags = ctx->flags;
 	from = NULL;
-	sceClibMemset(exData.slots, 0, sizeof(exData.slots));
+	slotWords = (int *)exData.slots;
+	for (i = 5; i != 0; i--) {
+		slotWords[0] = 0;
+		slotWords[1] = 0;
+		slotWords[2] = 0;
+		slotWords[3] = 0;
+		slotWords += 4;
+	}
 	if ((flags & NP_PUSH_FLAG_ACTIVE) != 0 && SceNpCommonPs4_6B1D3984(0, 0, 2, 0, 5, id) >= 0) {
 		sceClibMemset(buffer, 0, NP_PUSH_RECEIVE_BUFFER_SIZE);
 		if (npPushIpcReceiveServiceEvent(SceNpCommonPs4_A0599F24(), 0, NULL, 0, to, fromBuffer, extra, dataType,

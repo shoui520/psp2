@@ -23,6 +23,16 @@
 extern "C" {
 #endif
 #include <regmgr/regmgr.h>
+
+/* the build Sony's assert paths name: one per firmware */
+#if defined(FW_TYPE_CEX)
+#define NP_WEBAPI_BUILD "J01509657"
+#elif FW_VERSION == 0x03630011
+#define NP_WEBAPI_BUILD "J01508051"
+#else
+#define NP_WEBAPI_BUILD "J01509658"
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -43,7 +43,7 @@ int npPushDataFilterInit(NpPushExDataNames *names)
 
 	if (names->names != NULL)
 		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "Init",
-			"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_data_filter.cpp", 32, "ASSERT",
+			"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_data_filter.cpp", 32, "ASSERT",
 			"this->names == 0"));
 	memory = npPushAlloc(330);
 	names->names = (char (*)[33])memory;

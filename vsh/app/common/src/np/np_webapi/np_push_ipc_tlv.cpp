@@ -217,7 +217,7 @@ int npPushIpcTlvStringUnserialize(NpPushIpcTlv *tlv, char *src, unsigned int siz
 		if (length != 0) {
 			if (size - headerSize < length)
 				SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "Unserialize",
-					"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_push\\ipc\\np_push_ipc_tlv.cpp", 219,
+					"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_push\\ipc\\np_push_ipc_tlv.cpp", 219,
 					"ASSERT", "dataSize-total >= len"));
 			text = src + 4;
 			src[length + 3] = 0;

@@ -243,7 +243,7 @@ int npPushLibContextInitInstance(void)
 
 	if (g_pushLibContext != NULL)
 		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "InitInstance",
-			"W:\\Build\\J01509658\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_lib_context.cpp", 1124,
+			"W:\\Build\\" NP_WEBAPI_BUILD "\\vsh\\app\\common\\src\\np\\np_push\\src\\np_push_lib_context.cpp", 1124,
 			"ASSERT", "s_instance == 0"));
 	ctx = NULL;
 	memory = SceNpCommonPs4_0C922423(92, npPushAllocatorGet());
