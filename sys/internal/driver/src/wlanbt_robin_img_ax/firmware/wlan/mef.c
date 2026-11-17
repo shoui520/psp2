@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include "robin/esa.h"
 #include "robin/conn.h"
+#include "robin/macrate.h"
 #include "robin/mef.h"
 #include "robin/wlan.h"
 #include "robin/btrom.h"
@@ -24,7 +25,7 @@ int wlanMefStackPush(struct WlanMefStack *stack, unsigned int count, const void 
 	if (length + count >= wlanMefStackLimit)
 		return 0;
 	__aeabi_memcpy(&stack->data[length], source, count);
-	stack->length = length + count;
+	stack->length += count;
 	return 1;
 }
 
@@ -35,7 +36,7 @@ int wlanMefStackPop(struct WlanMefStack *stack, unsigned int count, void *destin
 	if (length < count)
 		return 0;
 	__aeabi_memcpy(destination, &stack->data[length - count], count);
-	stack->length = length - count;
+	stack->length -= count;
 	return 1;
 }
 
@@ -71,7 +72,7 @@ int wlanMefTokenPop(struct WlanMefStack *stack, struct WlanMefToken *token)
 	return 1;
 }
 
-int wlanMefIsOperator(const struct WlanMefToken *token)
+__attribute__((noinline)) int wlanMefIsOperator(const struct WlanMefToken *token)
 {
 	return token->type > 0x40;
 }
@@ -102,8 +103,8 @@ int wlanMefCompareSequence(const struct WlanMefPacket *packet, struct WlanMefTok
 }
 
 /* Compares the value of the given size (1, 2 or 4) at the offset with the expected number. */
-int wlanMefCompareNumber(const struct WlanMefPacket *packet, struct WlanMefToken *size,
-			 const struct WlanMefToken *offset, const struct WlanMefToken *expected)
+void wlanMefCompareNumber(const struct WlanMefPacket *packet, struct WlanMefToken *size,
+			  const struct WlanMefToken *offset, const struct WlanMefToken *expected)
 {
 	uint32_t wanted = expected->number;
 	uint32_t where = offset->number;
@@ -123,11 +124,10 @@ int wlanMefCompareNumber(const struct WlanMefPacket *packet, struct WlanMefToken
 		}
 		if (wanted == value) {
 			size->number = 1;
-			return 1;
+			return;
 		}
 	}
 	size->number = 0;
-	return 0;
 }
 
 /* True when the expected bytes equal the packet bytes masked with the mask. */
@@ -210,10 +210,8 @@ int wlanMefEvaluate(struct WlanMefStack *stack, const struct WlanMefPacket *pack
 			return 0;
 		wlanMefTokenPop(stack, &second);
 	}
-	switch (operator) {
-	case WLAN_MEF_COMPARE_SEQUENCE:
-	case WLAN_MEF_COMPARE_NUMBER:
-	case WLAN_MEF_COMPARE_MASKED:
+	if (operator == WLAN_MEF_COMPARE_SEQUENCE || operator == WLAN_MEF_COMPARE_NUMBER ||
+	    operator == WLAN_MEF_COMPARE_MASKED) {
 		if (!wlanMefTokenPop(stack, &third))
 			return 0;
 		if (wlanMefIsOperator(&third)) {
@@ -226,22 +224,19 @@ int wlanMefEvaluate(struct WlanMefStack *stack, const struct WlanMefPacket *pack
 			wlanMefCompareSequence(packet, &first, &second, &third);
 		else if (operator == WLAN_MEF_COMPARE_NUMBER)
 			wlanMefCompareNumber(packet, &first, &second, &third);
-		else
+		else if (operator == WLAN_MEF_COMPARE_MASKED)
 			wlanMefCompareMasked(packet, &first, &second, &third);
-		break;
-	case WLAN_MEF_AND:
+	} else if (operator == WLAN_MEF_AND) {
 		wlanMefAnd(&first, &second);
-		break;
-	case WLAN_MEF_OR:
+	} else if (operator == WLAN_MEF_OR) {
 		wlanMefOr(&first, &second);
-		break;
-	default:
+	} else {
 		return 1;
 	}
 	return wlanMefTokenPush(stack, &first) != 0;
 }
 
-int wlanMefResetDepth(void)
+__attribute__((noinline)) int wlanMefResetDepth(void)
 {
 	wlanMefDepth = 1;
 	return 1;
@@ -308,9 +303,10 @@ int wlanBuildEthernetHeader(OsaBuffer *buffer, unsigned int classMask, struct Wl
 {
 	const uint8_t *frame = (const uint8_t *)buffer + buffer->dataOffset;
 	uint8_t *header = (uint8_t *)frame + wlanOffloadHeadroom + 32 - 14;
-	uint16_t destination[6];
-	uint16_t source[6];
+	uint16_t destination[3];
+	uint16_t source[3];
 	unsigned int length;
+	unsigned int swapped;
 
 	wlanFrameGetEthernetAddresses(destination, source, frame);
 	if ((wlanAddressClass(destination) & classMask) == 0)
@@ -318,8 +314,9 @@ int wlanBuildEthernetHeader(OsaBuffer *buffer, unsigned int classMask, struct Wl
 	__aeabi_memcpy(header, destination, 6);
 	__aeabi_memcpy(header + 6, source, 6);
 	length = (uint16_t)(buffer->length - 0x60);
-	header[12] = length >> 8;
-	header[13] = length;
+	swapped = (length >> 8) | (length << 8);	/* the type field holds the length, big-endian */
+	header[12] = swapped;
+	header[13] = swapped >> 8;
 	packet->length = length + 14;
 	packet->data = header;
 	return 1;
@@ -349,7 +346,7 @@ struct WlanSnapArp *wlanBuildArpReply(OsaBuffer *buffer, struct WlanSnapArp *rep
 		return NULL;
 	request = (const struct WlanSnapArp *)((const uint8_t *)buffer + buffer->dataOffset +
 					       wlanOffloadHeadroom + 32);
-	if (request->snap[6] != 0x08 || request->snap[7] != 0x06)
+	if (request->etherType != ETHERTYPE_ARP_SWAPPED)
 		return NULL;
 	__aeabi_memcpy(reply, request, 16);
 	reply->operation[0] = 0;
@@ -365,29 +362,30 @@ struct WlanSnapArp *wlanBuildArpReply(OsaBuffer *buffer, struct WlanSnapArp *rep
 int wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength, unsigned int maxLength)
 {
 	const uint8_t *request;
-	uint8_t *ip;
+	const struct WlanIpHeader *header;
+	struct WlanIpHeader *ip;
+	struct WlanIcmpHeader *icmp;
 	unsigned int ipLength;
 	unsigned int total;
 
 	if (reply == NULL || buffer == NULL)
 		return 0;
 	request = (const uint8_t *)buffer + buffer->dataOffset + wlanOffloadHeadroom + 32;
-	ipLength = (uint16_t)((request[10] << 8) | request[11]);
+	header = (const struct WlanIpHeader *)(request + 8);
+	ipLength = WLAN_IP_FIELD(header->totalLength);
 	total = (uint16_t)(ipLength + 8);
-	if ((request[14] & 0x20) != 0 || total > maxLength)
+	if ((WLAN_IP_FIELD(header->fragment) & WLAN_IP_MORE_FRAGMENTS) != 0 || total > maxLength)
 		return 0;
 	__aeabi_memcpy(reply, request, total);
-	ip = reply + 8;
-	__aeabi_uwrite4(__aeabi_uread4(request + 8 + 16), ip + 12);
-	__aeabi_uwrite4(__aeabi_uread4(request + 8 + 12), ip + 16);
-	ip[10] = 0;
-	ip[11] = 0;
-	*(uint16_t *)(ip + 10) = wlanInternetChecksum((const uint16_t *)ip, 20);
-	ip += 20;
-	ip[0] = 0;
-	ip[2] = 0;
-	ip[3] = 0;
-	*(uint16_t *)(ip + 2) = wlanInternetChecksum((const uint16_t *)ip, (uint16_t)(ipLength - 20));
+	ip = (struct WlanIpHeader *)(reply + 8);
+	__aeabi_uwrite4(__aeabi_uread4(header->destination), ip->source);
+	__aeabi_uwrite4(__aeabi_uread4(header->source), ip->destination);
+	ip->checksum = 0;
+	ip->checksum = wlanInternetChecksum((const uint16_t *)ip, 20);
+	icmp = (struct WlanIcmpHeader *)(ip + 1);
+	icmp->type = WLAN_ICMP_ECHO_REPLY;
+	icmp->checksum = 0;
+	icmp->checksum = wlanInternetChecksum((const uint16_t *)icmp, (uint16_t)(ipLength - 20));
 	*replyLength = total;
 	return 1;
 }
@@ -395,27 +393,31 @@ int wlanBuildEchoReply(OsaBuffer *buffer, uint8_t *reply, uint16_t *replyLength,
 /* Parameter slots: a value (or values) followed by a mask of the valid indexes. */
 int wlanParam8Set(uint8_t *slot, unsigned int index, const uint8_t *value)
 {
-	if (index != 0)
+	if (index >= 1)
 		return 0;
-	slot[1] |= 1;
-	slot[0] = *value;
+	slot[1] |= 1 << index;
+	slot[index] = *value;
 	return 1;
 }
 
 int wlanParam8Get(const uint8_t *slot, unsigned int index, uint8_t *value)
 {
-	if (index != 0 || !(slot[1] & 1))
+	if (index >= 1 || !(slot[1] & (1 << index)))
 		return 0;
-	*value = slot[0];
+	*value = slot[index];
 	return 1;
 }
 
 int wlanParam16Set(uint8_t *slot, unsigned int index, const uint16_t *value)
 {
+	uint16_t v;
+
 	if (index >= 2)
 		return 0;
 	slot[4] |= 1 << index;
-	*(uint16_t *)(slot + 2 * index) = *value;
+	v = *value;
+	slot[2 * index] = v;
+	slot[2 * index + 1] = v >> 8;
 	return 1;
 }
 
@@ -468,8 +470,8 @@ int wlanParam64Get(const uint8_t *slot, unsigned int index, void *value)
 }
 
 /* The configured filters; the last one is the copy that gets evaluated. */
-struct WlanMefEntry wlanMefEntries[WLAN_MEF_ENTRIES] __attribute__((section(".itcm.bss")));
 struct WlanMefConfig wlanMefConfig __attribute__((section(".itcm.bss")));
+struct WlanMefEntry wlanMefEntries[WLAN_MEF_ENTRIES] __attribute__((section(".itcm.bss")));
 const struct WlanHostSleepConfig *wlanHostSleepActive __attribute__((section(".itcm.rw"))) = NULL;
 /* The parameters the host last configured: none by default. */
 struct WlanHostSleepConfig wlanHostSleepSettings __attribute__((section(".itcm.rw"))) = {
@@ -513,28 +515,20 @@ void wlanMefConfigClear(void)
 /* Takes the address rules out of a list of TLVs (type, length, value; little endian). */
 void wlanMefConfigParse(const uint8_t *tlvs, int length)
 {
-	unsigned int rules;
-	unsigned int used;
-	unsigned int size;
+	int rules;
 
-	*(uint32_t *)&wlanMefConfig.rules[0] = 0;
+	wlanMefConfig.rules[0].addressType = 0;
 	while (length > 4) {
-		size = (tlvs[3] << 8) | tlvs[2];
 		if (((tlvs[1] << 8) | tlvs[0]) == WLAN_TLV_MEF_ADDRESS_RULES) {
-			rules = size >> 3;
-			if (size == 8 * rules && (int16_t)(8 * rules + 4) <= length) {
-				used = rules < 8 ? rules : 8;
-				__aeabi_memcpy(&wlanMefConfig.rules[0], tlvs + 4, 8 * used);
-				while (rules < 8) {
-					wlanMefConfig.rules[rules].addressType = 0;
-					wlanMefConfig.rules[rules].protocol = 0;
-					wlanMefConfig.rules[rules].target = 0;
-					++rules;
-				}
+			rules = ((tlvs[3] << 8) | tlvs[2]) >> 3;
+			if (((tlvs[3] << 8) | tlvs[2]) == 8 * rules && (int16_t)(8 * rules + 4) <= length) {
+				__aeabi_memcpy(&wlanMefConfig.rules[0], tlvs + 4, 8 * (rules < 8 ? rules : 8));
+				for (; rules < 8; ++rules)
+					wlanMefConfig.rules[rules] = (struct WlanMefAddressRule){ 0 };
 			}
 		}
-		length = (int16_t)(length - size - 4);
-		tlvs += size + 4;
+		length = (int16_t)(length - ((tlvs[3] << 8) | tlvs[2]) - 4);
+		tlvs += ((tlvs[3] << 8) | tlvs[2]) + 4;
 	}
 }
 
@@ -552,8 +546,7 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 	struct WlanConnection *connection;
 	unsigned int class;
 	unsigned int type;
-	unsigned int i;
-	int isData = ((frame[2] >> 2) & 3) == 2;
+	int i;
 
 	if (*(const uint16_t *)destination == 0xffff && *(const uint16_t *)(destination + 2) == 0xffff &&
 	    *(const uint16_t *)(destination + 4) == 0xffff) {
@@ -566,7 +559,7 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 		class = 2;
 		type = 2;
 	}
-	if (isData) {
+	if (((frame[2] >> 2) & 3) == 2) {	/* a data frame */
 		*securityDrop = 0;
 		protocol = (const uint16_t *)(payload + 6);
 		connection = buffer->context;
@@ -578,7 +571,7 @@ int wlanMefAcceptFrame(OsaBuffer *buffer, uint8_t *securityDrop)
 	}
 	if ((__aeabi_uread4(wlanHostSleepActive->conditions) & class) == 0)
 		return 0;
-	if (!isData || *(uint32_t *)&wlanMefConfig.rules[0] == 0)
+	if (((frame[2] >> 2) & 3) != 2 || wlanMefConfig.rules[0].addressType == 0)
 		return 1;
 	for (i = 0; i < 8; ++i) {
 		const struct WlanMefAddressRule *rule = &wlanMefConfig.rules[i];
@@ -600,7 +593,7 @@ uint16_t wlanMefEntryCount __attribute__((section(".itcm.rw"))) = 0;
 
 
 /* Allocates a frame buffer for the connection; 0 if the pool is empty. */
-OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection)
+__attribute__((noinline)) OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection)
 {
 	OsaBuffer *buffer = osa_BufferAlloc(&wlanReplyFramePool, 0x700, 0);
 
@@ -612,16 +605,15 @@ OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection)
 }
 
 /* Where the body of the frame goes. */
-uint8_t *wlanReplyFramePayload(OsaBuffer *buffer)
+__attribute__((noinline)) uint8_t *wlanReplyFramePayload(OsaBuffer *buffer)
 {
 	return (uint8_t *)buffer + buffer->dataOffset + WLAN_REPLY_FRAME_BODY;
 }
 
-OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer)
+__attribute__((noinline)) void wlanReplyFrameFree(OsaBuffer *buffer)
 {
 	if (buffer != NULL)
 		osa_BufferFree(buffer);
-	return buffer;
 }
 
 /*
@@ -629,11 +621,13 @@ OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer)
  * the frame: to the destination within the BSS when the destination is the
  * interface's own address, otherwise through the access point (ToDS).
  */
-int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, int length)
+__attribute__((noinline)) int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype,
+						 unsigned int length)
 {
 	struct WlanConnection *connection = buffer->context;
 	struct WlanReplyFrame *frame = (struct WlanReplyFrame *)((uint8_t *)buffer + buffer->dataOffset);
 	const uint8_t *source;
+	uint32_t *txControl;
 
 	frame->frame = frame->frameLength;
 	frame->frameLength[0] = length;
@@ -641,20 +635,27 @@ int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtyp
 	frame->kind = 0x30;
 	__aeabi_memclr(frame->header, sizeof(frame->header));
 	frame->header[0] = (((frame->header[0] & 0xf3) + 8) & 0xf) | (subtype << 4);
-	if (memcmp(destination, connection->interfaceAddress, 6) != 0) {
-		frame->header[1] |= 1;
-		__aeabi_memcpy(frame->header + 4, connection->localAddress, 6);
-		source = destination;
-	} else {
+	if (destination[0] == connection->interfaceAddress[0] &&
+	    destination[1] == connection->interfaceAddress[1] &&
+	    destination[2] == connection->interfaceAddress[2] &&
+	    destination[3] == connection->interfaceAddress[3] &&
+	    destination[4] == connection->interfaceAddress[4] &&
+	    destination[5] == connection->interfaceAddress[5]) {
 		__aeabi_memcpy(frame->header + 4, destination, 6);
 		source = connection->localAddress;
+	} else {
+		frame->header[1] |= 1;	/* ToDS */
+		__aeabi_memcpy(frame->header + 4, connection->localAddress, 6);
+		source = destination;
 	}
 	__aeabi_memcpy(frame->header + 16, source, 6);
 	__aeabi_memcpy(frame->header + 10, connection->interfaceAddress, 6);
 	frame->queue = 0;
 	frame->descriptor.header.wire.packetLength[0] = 3;
 	frame->descriptor.control = 0;
-	frame->descriptor.flags = (frame->descriptor.flags & ~0x1f) | 0x11;
+	txControl = (uint32_t *)&frame->descriptor.priority;	/* bytes 12-15: the transmit control word */
+	*txControl &= ~(MAC_TX_CONTROL_RATE_FIXED | MAC_TX_CONTROL_RATE_MASK);
+	*txControl |= (1 << 8) | MAC_TX_CONTROL_RATE_FIXED;	/* fixed at rate 1 */
 	return wlanTxSubmit(buffer);
 }
 
@@ -667,25 +668,22 @@ int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtyp
 int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
 {
 	struct WlanConnection *connection = wlanMefConnection;
-	struct WlanMefStack *working = &wlanMefEntries[WLAN_MEF_WORKING].stack;
-	unsigned int i;
+	struct WlanMefEntry *working = &wlanMefEntries[WLAN_MEF_WORKING];
 	unsigned int posture;
 	int failed;
+	int i;
 
 	if (buffer != NULL)
 		connection = buffer->context;
 	for (i = 0; i < wlanMefEntryCount; ++i) {
-		struct WlanMefEntry *entry = &wlanMefEntries[i];
-		uint8_t flags;
-
 		posture = sysIrqDisable();
-		if (mode & ~entry->modes) {
+		if (mode & ~wlanMefEntries[i].modes) {
 			sysIrqRestore(posture);
 			continue;
 		}
-		wlanMefEntries[WLAN_MEF_WORKING].modes = entry->modes;
-		wlanMefEntries[WLAN_MEF_WORKING].flags = entry->flags;
-		wlanMefLoad(working, (const uint8_t *)&entry->stack);
+		working->modes = wlanMefEntries[i].modes;
+		working->flags = wlanMefEntries[i].flags;
+		wlanMefLoad(&working->stack, (const uint8_t *)&wlanMefEntries[i].stack);
 		sysIrqRestore(posture);
 		if (mode & WLAN_MEF_MODE_PATTERN) {
 			wlanMefReplyPattern(connection);
@@ -693,9 +691,8 @@ int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
 		}
 		if (!wlanMefMatchFrame(buffer))
 			continue;
-		flags = wlanMefEntries[WLAN_MEF_WORKING].flags;
 		failed = 0;
-		if ((flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ARP_REPLY) {
+		if ((working->flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ARP_REPLY) {
 			struct WlanConnection *owner = buffer->context;
 			OsaBuffer *reply = wlanReplyFrameAlloc(owner);
 
@@ -708,26 +705,29 @@ int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode)
 				else
 					wlanReplyFrameFree(reply);
 			}
-		} else if ((flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ECHO_REPLY) {
+		} else if ((working->flags >> WLAN_MEF_ACTION_SHIFT) == WLAN_MEF_ACTION_ECHO_REPLY) {
 			const uint8_t *request = (const uint8_t *)buffer + buffer->dataOffset;
 			OsaBuffer *reply = wlanReplyFrameAlloc(buffer->context);
 			uint16_t length;
 
-			if (reply != NULL &&
-			    wlanBuildEchoReply(buffer, wlanReplyFramePayload(reply), &length, 0x64c)) {
-				wlanReplyFrameSend(reply, request + 18, 0, length);
-			} else {
-				if (reply != NULL)
-					wlanReplyFrameFree(reply);
+			if (reply == NULL) {
 				failed = 1;
+			} else if (!wlanBuildEchoReply(buffer, wlanReplyFramePayload(reply), &length, 0x64c)) {
+				wlanReplyFrameFree(reply);
+				failed = 1;
+			} else {
+				wlanReplyFrameSend(reply, request + 18, 0, length);
+				failed = 0;
 			}
 		}
-		if (failed) {
+		if (failed || (working->flags & WLAN_MEF_FLAG_WAKE)) {
 			*wake = 1;
-			return 1;
+			if (failed)
+				return 1;
+		} else {
+			*wake = 0;
 		}
-		*wake = (flags & WLAN_MEF_FLAG_WAKE) != 0;
-		if (!(flags & WLAN_MEF_FLAG_KEEP))
+		if (!(working->flags & WLAN_MEF_FLAG_KEEP))
 			buffer->length = 0;
 		return 1;
 	}
@@ -746,11 +746,13 @@ int wlanMefConfigure(struct WlanConnection *connection, const uint8_t *config)
 	unsigned int posture = sysIrqDisable();
 	const uint8_t *entry;
 	uint32_t wake;
+	unsigned int count;
 	int i;
 
 	__aeabi_uwrite4((int)__aeabi_uread4(config), &wlanMefClassMask);
-	wlanMefEntryCount = (config[5] << 8) | config[4];
-	if (wlanMefEntryCount > 2) {
+	count = (config[5] << 8) | config[4];
+	wlanMefEntryCount = count;
+	if (count > 2) {
 		sysIrqRestore(posture);
 		return 0;
 	}
@@ -778,28 +780,39 @@ int wlanMefConfigure(struct WlanConnection *connection, const uint8_t *config)
 int wlanMefReplyPattern(struct WlanConnection *connection)
 {
 	struct WlanMefStack *working = &wlanMefEntries[WLAN_MEF_WORKING].stack;
-	struct WlanMefToken offset;
-	struct WlanMefToken pattern;
-	struct WlanMefToken repeat;
 	struct WlanMefToken destination;
+	struct WlanMefToken repeat;
+	struct WlanMefToken pattern;
+	struct WlanMefToken offset;
+	const uint8_t *address;
+	const uint8_t *bytes;
+	unsigned int length;
+	int count;
+	int start;
+	uint16_t total;
 	OsaBuffer *frame;
 	uint8_t *body;
-	unsigned int i;
+	int i;
 
 	wlanMefTokenPop(working, &offset);
 	wlanMefTokenPop(working, &pattern);
 	wlanMefTokenPop(working, &repeat);
 	wlanMefTokenPop(working, &destination);
+	address = destination.sequence.bytes;
+	count = (uint16_t)repeat.number;
+	length = pattern.sequence.length;
+	bytes = pattern.sequence.bytes;
+	start = offset.number - 14;
+	total = count * length + start;
 	frame = wlanReplyFrameAlloc(connection);
 	if (frame == NULL)
 		return 0;
-	body = wlanReplyFramePayload(frame) + (offset.number - 14);
-	for (i = 0; i < (uint16_t)repeat.number; ++i) {
-		__aeabi_memcpy(body, pattern.sequence.bytes, pattern.sequence.length);
-		body += pattern.sequence.length;
+	body = wlanReplyFramePayload(frame) + start;
+	for (i = 0; i < count; ++i) {
+		__aeabi_memcpy(body, bytes, length);
+		body += length;
 	}
-	return wlanReplyFrameSend(frame, destination.sequence.bytes, wlanMefEntries[WLAN_MEF_WORKING].flags,
-				  (uint16_t)(repeat.number * pattern.sequence.length + offset.number - 14));
+	return wlanReplyFrameSend(frame, address, wlanMefEntries[WLAN_MEF_WORKING].flags, total);
 }
 
 int wlanMefDisable(void)

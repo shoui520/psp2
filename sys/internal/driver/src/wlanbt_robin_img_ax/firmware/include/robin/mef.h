@@ -14,11 +14,11 @@
 #include "robin/txring.h"
 #include <wlanbt/wlanbt_protocol.h>
 
-/* The stack: bytes are pushed after the length. */
+/* The stack: bytes are pushed after the length (unaligned: it follows two bytes in an entry). */
 struct WlanMefStack {
 	uint16_t length;
 	uint8_t data[100];
-};
+} __attribute__((packed));
 
 /* The frame being matched. */
 struct WlanMefPacket {
@@ -53,7 +53,8 @@ enum {
 
 /* 802.2 SNAP header followed by an ARP packet for IPv4 over Ethernet. */
 struct WlanSnapArp {
-	uint8_t snap[8];
+	uint8_t snap[6];
+	uint16_t etherType;		/* as read in memory: ETHERTYPE_ARP_SWAPPED for ARP */
 	uint8_t hardwareType[2];
 	uint8_t protocolType[2];
 	uint8_t hardwareSize;
@@ -66,6 +67,38 @@ struct WlanSnapArp {
 };
 
 _Static_assert(sizeof(struct WlanSnapArp) == 36, "SNAP ARP");
+
+#define ETHERTYPE_ARP_SWAPPED	0x0608	/* 0x0806 in network order */
+
+/* An IPv4 header after the SNAP header, as the echo reply reads it (unaligned, signed fields). */
+struct WlanIpHeader {
+	uint8_t versionLength;
+	uint8_t service;
+	int16_t totalLength;		/* big-endian */
+	int16_t identification;
+	int16_t fragment;		/* big-endian: flags and offset */
+	uint8_t timeToLive;
+	uint8_t protocol;
+	uint16_t checksum;
+	uint8_t source[4];
+	uint8_t destination[4];
+} __attribute__((packed));
+
+_Static_assert(sizeof(struct WlanIpHeader) == 20, "IPv4 header");
+
+#define WLAN_IP_MORE_FRAGMENTS	0x2000
+
+/* The ICMP header after it. */
+struct WlanIcmpHeader {
+	uint8_t type;
+	uint8_t code;
+	uint16_t checksum;
+} __attribute__((packed));
+
+#define WLAN_ICMP_ECHO_REPLY	0
+
+/* A big-endian header field in host order (Sony's macro works on the signed field). */
+#define WLAN_IP_FIELD(x)	((((x) >> 8) & 0xff) | (((x) & 0xff) << 8))
 
 /* One configured filter: the modes it applies in, flags, and its expression (stack). */
 struct WlanMefEntry {
@@ -172,8 +205,8 @@ extern struct WlanConnection *wlanMefConnection;
 extern uint16_t wlanMefEntryCount;
 OsaBuffer *wlanReplyFrameAlloc(struct WlanConnection *connection);
 uint8_t *wlanReplyFramePayload(OsaBuffer *buffer);
-int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, int length);
-OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer);
+int wlanReplyFrameSend(OsaBuffer *buffer, const uint8_t *destination, int subtype, unsigned int length);
+void wlanReplyFrameFree(OsaBuffer *buffer);
 int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode);
 int wlanMefReplyPattern(struct WlanConnection *connection);
 int wlanMefDisable(void);
@@ -191,8 +224,8 @@ int wlanMefTokenPop(struct WlanMefStack *stack, struct WlanMefToken *token);
 int wlanMefIsOperator(const struct WlanMefToken *token);
 int wlanMefCompareSequence(const struct WlanMefPacket *packet, struct WlanMefToken *offset,
 			   const struct WlanMefToken *sequence, const struct WlanMefToken *repeat);
-int wlanMefCompareNumber(const struct WlanMefPacket *packet, struct WlanMefToken *size,
-			 const struct WlanMefToken *offset, const struct WlanMefToken *expected);
+void wlanMefCompareNumber(const struct WlanMefPacket *packet, struct WlanMefToken *size,
+			  const struct WlanMefToken *offset, const struct WlanMefToken *expected);
 int wlanMefCompareMasked(const struct WlanMefPacket *packet, struct WlanMefToken *mask,
 			 const struct WlanMefToken *offset, const struct WlanMefToken *expected);
 void wlanMefAnd(struct WlanMefToken *first, const struct WlanMefToken *second);

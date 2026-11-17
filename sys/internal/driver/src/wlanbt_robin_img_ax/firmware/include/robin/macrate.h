@@ -34,4 +34,8 @@ void wlanMacSelectConfig(int mode);					/* 0x2896c */
 void wlanMacSlotConfigure(int longSlot);				/* 0x2897c */
 void wlanRateResponseTableBuild(uint32_t rateSet, int count);		/* 0x28a9e */
 
+/* The transmit control word: bits 8-11 the rate, bit 12 set when the rate field holds one. */
+#define MAC_TX_CONTROL_RATE_FIXED	0x00001000u	/* the control word's rate field is set */
+#define MAC_TX_CONTROL_RATE_MASK	0x00000f00u
+
 #endif /* ROBIN_MACRATE_H */

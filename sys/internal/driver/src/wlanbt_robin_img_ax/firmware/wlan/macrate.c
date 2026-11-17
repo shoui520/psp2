@@ -14,8 +14,6 @@
 
 #define MAC_13C_FIXED_RESPONSE		0x00000001u	/* the response rate is not in bits 3-6 */
 #define MAC_13C_SLOT_FLAG		0x00008000u
-#define MAC_TX_CONTROL_RATE_FIXED	0x00001000u	/* the control word's rate field is set */
-#define MAC_TX_CONTROL_RATE_MASK	0x00000f00u
 #define MAC_TX_RATES			14
 #define WLAN_RATE_LAST			12
 #define WLAN_RATE_FIRST_OFDM		5
