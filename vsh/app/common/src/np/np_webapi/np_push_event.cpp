@@ -491,28 +491,32 @@ int npPushLibContextAddCallback(NpPushLibContext *ctx, void *callback, void *arg
 
 int npPushLibContextRemoveCallback(NpPushLibContext *ctx, int id)
 {
+	int status;
 	NpPushCallbackNode *sentinel;
 	NpPushCallbackNode *result;
 	NpPushCallbackNode *node;
+	NpPushCallbackNode *at;
 
 	SceNpCommonPs4_A2A8493B(ctx->receiveLock);
 	sentinel = ctx->callbacks.sentinel;
 	node = NULL;
 	if (sentinel != NULL)
 		node = sentinel->next;
-	if (node != sentinel) {
-		while (node->id != id) {
-			node = node->next;
-			if (node == sentinel)
-				goto notFound;
-		}
-		npPushCallbackListErase(&result, &ctx->callbacks, &node);
-		SceNpCommonPs4_6BA5A164(ctx->receiveLock);
-		return 0;
+	while (node != sentinel) {
+		if (node->id == id)
+			goto found;
+		node = node->next;
 	}
-notFound:
 	SceNpCommonPs4_6BA5A164(ctx->receiveLock);
-	return -2141871613;
+	status = -2141871613;
+	goto done;
+found:
+	at = node;
+	npPushCallbackListErase(&result, &ctx->callbacks, &at);
+	SceNpCommonPs4_6BA5A164(ctx->receiveLock);
+	status = 0;
+done:
+	return status;
 }
 
 int npPushLibContextRegisterDispatch(void (*dispatch)(const struct NpPushPeer *, const struct NpPushPeer *, const char *,

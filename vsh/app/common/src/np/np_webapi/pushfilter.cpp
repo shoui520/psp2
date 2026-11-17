@@ -1143,7 +1143,7 @@ int npWebApiExtdFilterInit(NpWebApiExtdFilter *filter, NpWebApiHandle *handle, c
 		source = records;
 		for (i = 0; i < count; i++) {
 			sceClibMemcpy_safe(copy, source, 0x41);
-			result = npWebApiExtdServiceCreate(npWebApiLibContextGetPool(libCtx), copy->service,
+			result = npWebApiExtdServiceCreate(npWebApiLibContextGetPool2(libCtx), copy->service,
 				&copy->serviceObject);
 			if (result < 0)
 				goto fail;
