@@ -233,7 +233,7 @@ void rtcInterrupt(void)
 				timers[i].handler();
 		}
 	}
-#if !FW_SINCE(0x01000107)
+#if HANG_TIMER && !FW_SINCE(0x01000107)
 	/* before 0x01000107 a hang starts timer 11, whose interrupt counts it (tm11Interrupt) */
 #if FW_SINCE(0x01000104)
 	if (hangDetected() != 0 && (hangState != HANG_COUNTING || !hangTimerRunning())) {

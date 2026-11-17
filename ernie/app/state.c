@@ -27,6 +27,13 @@
 #include "timer.h"
 #include "updatereq.h"
 
+/* the reset's transition: a resume in this mode (0x00090009's 0x55) */
+#if FW_SINCE(0x00090206)
+#define STATE_RESET_TRANSITION	0x04
+#else
+#define STATE_RESET_TRANSITION	0x55
+#endif
+
 extern void inputStateOff(void);
 extern void inputStateShutdown(void);
 extern void inputStateCut(void);
@@ -44,6 +51,10 @@ extern int button1Reset(void);
 extern int button1Result(void);
 extern int button2Reset(void);
 extern int button2Result(void);
+#if !FW_SINCE(0x00090206)
+extern int button1State(void);
+extern int button2State(void);
+#endif
 
 static int stateStartEnter(void);
 static int stateOnEnter(void);
@@ -466,7 +477,7 @@ static int stateResetEnter(void)
 	struct StateEvent event;
 
 	event.type = STATE_EVENT_TRANSITION;
-	event.transition = 4;
+	event.transition = STATE_RESET_TRANSITION;
 	stateTransition(&event);
 #endif
 	return 0;
@@ -722,10 +733,12 @@ static int stateResetHandle(struct StateEvent *event)
 	case 0x40:
 		stateNext = STATE_SHUTDOWN;
 		break;
-	case 0x04:
+	case STATE_RESET_TRANSITION:
 		stateNext = STATE_RESUME;
 		stateRequest.bits.mode = event->transition & 0x7f;
+#if FW_SINCE(0x00090206)
 		stateRequest.bits.notify = 0;
+#endif
 		break;
 	}
 	return 0;
@@ -819,6 +832,40 @@ static unsigned int stateNextOf(void)
 
 /* input handler: input 1.4 (input1Bit4Active) wakes a suspended system; its release with button 2
    not pressed and input 1.6 up starts an off one */
+#if !FW_SINCE(0x00090206)
+/* 0x00090009: released with no press counted, in the state the press began in (not resuming),
+   the system wakes by transition 0 */
+void stateInputWake2(void)
+{
+	STATE_TRANSITION_EVENT
+
+	if (input1Bit4Active()) {
+		button2Reset();
+		pinMonitor1Enable(1);
+	} else {
+		if (!(unsigned char)button2Result() && !input1Bit6Active() &&
+		    stateGet() != STATE_RESUME && stateGet() == button2State())
+			STATE_TRANSITION_WAKE(0);
+		button2Reset();
+	}
+}
+
+/* and input 1.6 by transition 0x12 */
+void stateInputWake1(void)
+{
+	STATE_TRANSITION_EVENT
+
+	if (input1Bit6Active()) {
+		button1Reset();
+		pinMonitor0Enable(1);
+	} else {
+		if (!(unsigned char)button1Result() && stateGet() != STATE_RESUME &&
+		    stateGet() == button1State())
+			STATE_TRANSITION_WAKE(0x12);
+		button1Reset();
+	}
+}
+#else
 void stateInputWake2(void)
 {
 	STATE_TRANSITION_EVENT
@@ -861,6 +908,7 @@ void stateInputWake1(void)
 		button1Reset();
 	}
 }
+#endif
 
 /* serial mode 0's unlock (serialAuthUnlock0): an off system starts by transition 0x0c */
 unsigned char stateSerialUnlock(void)

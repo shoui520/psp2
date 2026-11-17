@@ -108,10 +108,15 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
+$_IF (ERNIE_FW<0x00090206)	; (no charge LED blink bytes)
+kResult		EQU	0FFE6EH		; a service's result, or an index it keeps
+kTemp		EQU	0FFE70H
+kTimeout	EQU	0FFE72H		; a service's timeout, 32 bits
+$ELSE
 $_IF (ERNIE_FW<=0x00090804)
-kResult		EQU	0FFE70H		; a service's result, or an index it keeps
+kResult		EQU	0FFE70H
 kTemp		EQU	0FFE72H
-kTimeout	EQU	0FFE74H		; a service's timeout, 32 bits
+kTimeout	EQU	0FFE74H
 $ELSE
 $_IF (ERNIE_FW>=0x0100060B)	; (no csi01.c, motion.c short data)
 kResult		EQU	0FFE68H
@@ -121,6 +126,7 @@ $ELSE
 kResult		EQU	0FFE74H
 kTemp		EQU	0FFE76H
 kTimeout	EQU	0FFE78H
+$ENDIF
 $ENDIF
 $ENDIF
 regVar		EQU	0FFEB4H		; the compiler's register variables (16 bytes)

@@ -91,7 +91,9 @@ struct PinMonitors {
 
 extern struct InputGroup inputGroup1;
 extern struct PinMonitors pinMonitors;
+#if FW_SINCE(0x00090206)
 extern unsigned char intp11Level;
+#endif
 extern __sreg unsigned char inputState1;
 #if FW_SINCE(0x01000306)
 extern __near unsigned char holdTicks;
@@ -107,6 +109,7 @@ extern unsigned char button2HoldReached(unsigned char ticks);
 extern void button2HoldReset(void);
 #endif
 extern void inputScanHold(unsigned int ticks);
+extern void intp11Enable(unsigned char enable);
 /* the scan timer: mode 1 runs timer 3, mode 2 timer 0x16, every interval; hold ticks of
    timer 3 first (inputScanHold) */
 struct InputScan {

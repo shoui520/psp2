@@ -14,7 +14,12 @@
 #define PARAM_PATTERN_SIZE	0x22
 
 struct Param {
+#if FW_SINCE(0x00090206)
 	struct ChargeLevel chargeLevels[10];	/* chargeReadFlags's levels */
+#else
+	struct ChargeLevel chargeLevels[9];	/* 0x00090009's nine */
+	unsigned char	chargeLevelsEnd[4];	/* set to 0xff, where later versions have a tenth */
+#endif
 	unsigned char	levels[4];		/* the Elmo's regulators 0x81-0x84's levels
 						   (serial1Command0950, 0951) */
 	unsigned char	base;			/* bits 0-5 serial1Command0950's base step */

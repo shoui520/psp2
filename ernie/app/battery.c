@@ -120,6 +120,69 @@ unsigned char batteryControl(unsigned int command, unsigned char *data, unsigned
 	return result;
 }
 
+#if !FW_SINCE(0x00090206)	/* 0x00090009's order */
+/* a write to the device at packet[0]: the rest of the length bytes */
+unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
+{
+	ER ercd;
+	FLGPTN ptn;
+	unsigned char status;
+
+	if (deviceVersions.battery.id == 0x00ff)
+		return 0;
+	if (length != 0) {
+		batteryIica.txCount = length - 1;
+		batteryIica.rxData = NULL;
+		batteryIica.rxCount = 0;
+		batteryIica.txData = packet + 1;
+		batteryIica.address = *packet;
+		batteryIica.status = &status;
+		iicaStart(&batteryIica);
+		ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+		if (ercd == E_OK) {
+			if (ptn & 0x10)
+				clr_flg(4, ~0x10);
+		} else if (ercd == E_TMOUT) {
+			iicaInit();
+			status = 0x10;
+		}
+	} else {
+		status = 0;
+	}
+	return status;
+}
+
+/* a register of the device at packet[0] (packet[1] the register); a timeout resets the bus */
+unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
+{
+	ER ercd;
+	FLGPTN ptn;
+	unsigned char status;
+
+	if (deviceVersions.battery.id == 0x00ff) {
+		*data++ = 0;
+		*data = 0;
+		return 0;
+	}
+	batteryIica.rxData = data;
+	batteryIica.rxCount = length;
+	batteryIica.txData = packet + 1;
+	batteryIica.txCount = 1;
+	batteryIica.address = *packet;
+	batteryIica.status = &status;
+	iicaStart(&batteryIica);
+	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+	if (ercd == E_OK) {
+		if (ptn & 0x10)
+			clr_flg(4, ~0x10);
+	} else if (ercd == E_TMOUT) {
+		iicaInit();
+		status = 0x10;
+	}
+	return status;
+}
+#endif
+
 /* the battery's identity (struct BatteryInfo's four words): 0xfffe for each where a battery
    without a gauge answered */
 unsigned char batteryReadInfo(unsigned int *info)
@@ -191,6 +254,7 @@ unsigned char batteryReadTemp(unsigned int *value)
 	return batteryRead(&reg, (unsigned char *)value, 2);
 }
 
+#if FW_SINCE(0x00090206)	/* 0x00090009 has no internal temperature */
 /* its internal temperature (0x20), from version 0x0404 on; before it 0x0aac (0 degrees) */
 unsigned char batteryReadBicTemp(unsigned int *value)
 {
@@ -203,6 +267,7 @@ unsigned char batteryReadBicTemp(unsigned int *value)
 	*value = 0x0aac;
 	return 0;
 }
+#endif
 
 /* its state of charge in percent (0x2c) */
 unsigned char batteryReadLifePercent(unsigned int *value)
@@ -213,6 +278,7 @@ unsigned char batteryReadLifePercent(unsigned int *value)
 	return batteryRead(&reg, (unsigned char *)value, 2);
 }
 
+#if FW_SINCE(0x00090206)
 /* a register of the device at packet[0] (packet[1] the register); a timeout resets the bus */
 unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
 {
@@ -279,6 +345,34 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	}
 	return status;
 }
+#else	/* 0x00090009's order */
+/* 0x08b0: the battery's bootloader line */
+void batteryBLLineOn(void)
+{
+#if !BOARD_102603
+	P96 = 1;
+#endif
+}
+
+void batteryBLLineOff(void)
+{
+#if !BOARD_102603
+	P96 = 0;
+#endif
+}
+
+/* at the power-off: the gauge's control command 0x0011 (its hibernation), from version 0x0408 */
+unsigned char batteryHibernate(void)
+{
+	if (deviceVersions.battery.version[1] >= 0x0408) {
+		elmoCommand[0] = 0;
+		elmoCommand[1] = 0x11;
+		elmoCommand[2] = 0;
+		return batteryWrite(elmoCommand, 3);
+	}
+	return 0;
+}
+#endif
 
 /* 0x09b0: the gauge's control command 0x0f00 (its bootloader), checked at 0x16 where a battery
    without a gauge answered */
@@ -349,6 +443,7 @@ unsigned char batterySWReset(void)
 	return batteryWrite(elmoCommand, 3);
 }
 
+#if FW_SINCE(0x00090206)
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {
@@ -375,6 +470,7 @@ unsigned char batteryHibernate(void)
 	}
 	return 0;
 }
+#endif
 
 #if FW_SINCE(0x00090903)
 /* 0x098d: the gauge's control command 0x0015 */

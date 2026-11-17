@@ -118,6 +118,9 @@
 /* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, whose intp11Enable does nothing
    and whose handler is empty */
 #define BOARD_INTP11		(ERNIE_BOARD != 0x00406000 && (!BOARD_102603 || HW_IS(0x00315200)))
+/* and its level kept on both edges since 0x00090206; 0x00090009's INTP11 takes the rising edge
+   only, holding the scan (intp11Interrupt), and intp11Low reads input group 3 */
+#define BOARD_INTP11_LEVEL	(BOARD_INTP11 && FW_SINCE(0x00090206))
 
 /* the hardware watchdog (WDTE): PCH-1000's runs, kicked by the tasks, the NVS and the
    configuration's flash writes; the others' never */

@@ -77,8 +77,11 @@ void systemInit(void)
 	debugPinReserved(0);
 	debugPinCode(0x7f);
 #endif
+#if FW_SINCE(0x00090206)
 	resetFlags = RESF;
 	configInit();
+#endif
+	/* 0x00090009 keeps no reset flags and opens the settings in task2On */
 	timerInit();
 	paramInit();
 	taskClearPending(-1);

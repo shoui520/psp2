@@ -19,6 +19,9 @@
 #define HANG_COUNTING		1
 #define HANG_RESET		2	/* the system reset with cause 0x30 */
 
+/* INTTM11 counts a hang from 0x00090206 until 0x0100060B; 0x00090009 has no hang counter */
+#define HANG_TIMER		(FW_SINCE(0x00090206) && !FW_SINCE(0x0100060B))
+
 extern SYSINFO_NEAR unsigned char hangState;
 extern SYSINFO_NEAR unsigned char hangCount;
 extern SYSINFO_NEAR unsigned char resetFlags;

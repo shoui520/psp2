@@ -31,6 +31,21 @@ static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 };
 #endif
 
+#if !FW_SINCE(0x00090206)
+/* 0x00090009's battery levels (remainCap, volt), without a settings block */
+static const struct ChargeLevel paramChargeLevelsDefault[9] = {
+	{ 0x00d6, 0x0dac },
+	{ 0x0047, 0x0ce4 },
+	{ 0x00d6, 0x0dac },
+	{ 0x00d6, 0x0dac },
+	{ 0x008f, 0x0d48 },
+	{ 0x0047, 0x0ce4 },
+	{ 0x8024, 0x0c1c },
+	{ 0x00d6, 0x0dac },
+	{ 0x00d6, 0x0dac },
+};
+#endif
+
 struct Param param;
 
 /* serial1Command0950's base step at a reset: 0x00411000's 0x0b (not 0x00315200's) */
@@ -63,6 +78,26 @@ int paramInit(void)
 	param.alarmLevel3G = 0;
 #endif
 	paramLoad();
+	ena_dsp();
+	return 0;
+}
+#elif !FW_SINCE(0x00090206)
+/* 0x00090009 has no settings block: nine levels from its own table, the tenth unset */
+int paramInit(void)
+{
+	dis_dsp();
+	memset(&param, 0, sizeof(param));
+	memcpy(param.chargeLevels, paramChargeLevelsDefault, sizeof(paramChargeLevelsDefault));
+	param.chargeLevelsEnd[0] = 0xff;
+	param.chargeLevelsEnd[1] = 0xff;
+	param.chargeLevelsEnd[2] = 0xff;
+	param.chargeLevelsEnd[3] = 0xff;
+	param.levels[0] = 0x24;
+	param.levels[1] = 0x24;
+	param.levels[2] = 0x24;
+	param.levels[3] = 0x24;
+	param.base = PARAM_BASE_DEFAULT;
+	param.adjust = 0;
 	ena_dsp();
 	return 0;
 }
@@ -127,9 +162,14 @@ unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *b
 		return 1;
 	if (size > PARAM_ACCESS_MAX)
 		return 1;
+#if FW_SINCE(0x00090206)
 	dis_dsp();
 	memcpy(buf, (unsigned char *)&param + offset, size);
 	ena_dsp();
+#else
+	/* 0x00090009 reads with dispatching on */
+	memcpy(buf, (unsigned char *)&param + offset, size);
+#endif
 	return 0;
 }
 
@@ -150,6 +190,7 @@ void paramGetChargeLevels(struct ChargeLevel *levels)
 {
 	unsigned int i;
 
+#if FW_SINCE(0x00090206)
 	dis_dsp();
 	for (i = 0; i < 10; i++) {
 		levels->remainCap = param.chargeLevels[i].remainCap;
@@ -157,6 +198,14 @@ void paramGetChargeLevels(struct ChargeLevel *levels)
 		levels++;
 	}
 	ena_dsp();
+#else
+	/* 0x00090009: its nine levels, dispatching on */
+	for (i = 0; i < 9; i++) {
+		levels->remainCap = param.chargeLevels[i].remainCap;
+		levels->volt = param.chargeLevels[i].volt;
+		levels++;
+	}
+#endif
 }
 
 #if FW_SINCE(0x01000306)

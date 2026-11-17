@@ -417,6 +417,7 @@ int uart2Open(void)
 /* closes UART2 and its pins; SAU1 is enabled (not disabled) when channel 2's output is off */
 int uart2Close(void)
 {
+#if BOARD_BBMC
 	if (uart2.flags & UART_OPEN) {
 		uartStopTx(2);
 		uartStopRx(2);
@@ -430,7 +431,8 @@ int uart2Close(void)
 			SAU1EN = 1;
 		uart2.flags = (uart2.flags & ~UART_OPEN) | UART_CLOSED;
 	}
-	return 0;
+#endif
+	return 0;	/* no modem on UART2 */
 }
 #else
 /* closes UART2; its pins stay up when keep is set, else they go low */

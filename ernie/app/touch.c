@@ -631,7 +631,11 @@ unsigned char touchBackup0(void)
 	unsigned char command;
 
 	command = 0x55;
+#if FW_SINCE(0x00090206)
 	return touchWrite(touch.panel[0].objects.backup, &command, 1, 0);
+#else	/* 0x00090009 passes the byte itself as the pointer */
+	return touchWrite(touch.panel[0].objects.backup, (unsigned char *)command, 1, 0);
+#endif
 }
 
 /* BACKUPNV as read (0xff: no answer) */
@@ -651,7 +655,11 @@ unsigned char touchBackup1(void)
 	unsigned char command;
 
 	command = 0x55;
+#if FW_SINCE(0x00090206)
 	return touchWrite(touch.panel[1].objects.backup, &command, 1, 1);
+#else	/* 0x00090009 passes the byte itself as the pointer */
+	return touchWrite(touch.panel[1].objects.backup, (unsigned char *)command, 1, 1);
+#endif
 }
 
 unsigned char touchBackupState1(void)

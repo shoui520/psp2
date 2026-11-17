@@ -441,8 +441,14 @@ static void touchRequestRun(void)
 					return;
 				}
 			}
+#if FW_SINCE(0x00090206)
 			hostRequestAnswer(&touchRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
 			inputRequests.touchPending = 0;
+#else
+			/* 0x00090009 fails request 1's, and leaves request 3 pending */
+			controlsRequest.state = HOST_REQUEST_ERROR;
+			controlsRequest.status = 0x3f;
+#endif
 		}
 	}
 }
@@ -509,7 +515,12 @@ void controlsRequestRun(void)
 				return;
 			}
 		}
+#if FW_SINCE(0x00090206)
 		hostRequestAnswer(&controlsRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+#else
+		controlsRequest.state = HOST_REQUEST_ERROR;
+		controlsRequest.status = 0x3f;
+#endif
 	}
 }
 
@@ -524,6 +535,7 @@ void controlsReadButtons(unsigned char *out)
 	out[3] = ((inputState1 ^ 0x0a) & 0x0e) | 0x74;
 }
 
+#if FW_SINCE(0x00090206)	/* 0x00090009 has one set */
 /* the analog sticks, from the set analogFlags names */
 void controlsReadAnalog(unsigned char *out)
 {
@@ -532,6 +544,7 @@ void controlsReadAnalog(unsigned char *out)
 	else
 		controlsReadAnalog1(out);
 }
+#endif
 
 void controlsReadAnalog0(unsigned char *out)
 {
@@ -541,6 +554,7 @@ void controlsReadAnalog0(unsigned char *out)
 	out[3] = analogSticks0[3];
 }
 
+#if FW_SINCE(0x00090206)
 void controlsReadAnalog1(unsigned char *out)
 {
 	out[0] = analogSticks1[0];
@@ -548,6 +562,7 @@ void controlsReadAnalog1(unsigned char *out)
 	out[2] = analogSticks1[2];
 	out[3] = analogSticks1[3];
 }
+#endif
 
 /* 0x0100 (sceSysconGetControlsInfo) */
 unsigned char hostCommandControlsInfo(unsigned char *out, unsigned char *length)
@@ -560,11 +575,16 @@ unsigned char hostCommandControlsInfo(unsigned char *out, unsigned char *length)
 /* 0x0111 */
 unsigned char hostCommandAnalog(unsigned char *out, unsigned char *length)
 {
+#if FW_SINCE(0x00090206)
 	controlsReadAnalog(out);
+#else
+	controlsReadAnalog0(out);
+#endif
 	*length = 4;
 	return 0;
 }
 
+#if FW_SINCE(0x00090206)	/* 0x00090009 has neither command for both sets of axes */
 /* 0x0113 */
 unsigned char hostCommandAnalogBoth(unsigned char *out, unsigned char *length)
 {
@@ -573,16 +593,22 @@ unsigned char hostCommandAnalogBoth(unsigned char *out, unsigned char *length)
 	*length = 8;
 	return 0;
 }
+#endif
 
 /* 0x0101 */
 unsigned char hostCommandControlsAnalog(unsigned char *out, unsigned char *length)
 {
 	controlsReadButtons(out);
+#if FW_SINCE(0x00090206)
 	controlsReadAnalog(out + 4);
+#else
+	controlsReadAnalog0(out + 4);
+#endif
 	*length = 8;
 	return 0;
 }
 
+#if FW_SINCE(0x00090206)
 /* 0x0104 */
 unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned char *length)
 {
@@ -592,6 +618,7 @@ unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned char *l
 	*length = 12;
 	return 0;
 }
+#endif
 
 /* 0x0103 (sceSysconGetMultiCnInfo) */
 unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length)
@@ -656,10 +683,13 @@ static void controlsRequest0181(void)
 		else if (controlsRequest.data[0] == 1) {
 			analogCalibrationReset();
 			analogCalibrationSave();
-		} else if (controlsRequest.data[0] == 2) {
+		}
+#if FW_SINCE(0x00090206)	/* 0x00090009 has no default */
+		else if (controlsRequest.data[0] == 2) {
 			analogCalibrationDefault();
 			analogCalibrationSave();
 		}
+#endif
 #if FW_SINCE(0x0100060B)
 		else if (controlsRequest.data[0] == 3)
 			analogCalibrationDefault();	/* not saved */

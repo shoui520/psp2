@@ -665,7 +665,9 @@ unsigned char powerCut(void)
 #if FW_SINCE(0x0100060B)
 	waitResult = 0;
 #endif
+#if FW_SINCE(0x00090206)
 	clockOutputStop();
+#endif
 	POWER_WAIT_CLEAR(5);
 	powerJobPostCut();
 	POWER_WAIT(5, 0x19);
@@ -675,6 +677,9 @@ unsigned char powerCut(void)
 		P33 = 1;
 #endif
 	P6.2 = 0;
+#if !FW_SINCE(0x00090206)
+	clockOutputStop();	/* 0x00090009: after the line */
+#endif
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();

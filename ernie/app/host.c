@@ -111,10 +111,14 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0101, hostCommandControlsAnalog, 0 },
 	{ 0x0102, hostCommand0102, 0 },
 	{ 0x0103, hostCommandMultiCnInfo, 0 },
+#if FW_SINCE(0x00090206)	/* 0x00090009: no command for both sets of axes */
 	{ 0x0104, hostCommandControlsAnalogBoth, 0 },
+#endif
 	{ 0x0111, hostCommandAnalog, 0 },
 	{ 0x0112, hostCommand0112, 0 },
+#if FW_SINCE(0x00090206)
 	{ 0x0113, hostCommandAnalogBoth, 0 },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ 0x0120, hostCommand0120, 0 },
 #endif
@@ -618,7 +622,12 @@ int hostFrameFinish(void)
 		request = hostLink.request;
 		if (hostLink.requestMismatch == 1) {
 			/* the command was not the request's */
-		} else if (!hostLink.flags.bits.checksum) {
+		}
+#if FW_SINCE(0x00090206)
+		else if (!hostLink.flags.bits.checksum) {
+#else
+		else {	/* 0x00090009 passes on a frame whose checksum failed too */
+#endif
 			switch (request->state) {
 			case HOST_REQUEST_RECEIVE:
 				length = MIN(request->size, hostLink.tx[2] - 1);

@@ -420,6 +420,7 @@ static void powerJobUpdate(void)
    paramSetting1 and 2 */
 static void chargeLedBlinkExpire(void)
 {
+#if FW_SINCE(0x00090206)	/* 0x00090009 only posts the update */
 	if (chargeLedBlinkOn == 1) {
 		chargeLedBlinkOn = 0;
 		timerStart(CHARGE_LED_TIMER, configGet()->paramSetting2 - 1);
@@ -427,6 +428,7 @@ static void chargeLedBlinkExpire(void)
 		chargeLedBlinkOn = 1;
 		timerStart(CHARGE_LED_TIMER, configGet()->paramSetting1 - 1);
 	}
+#endif
 	task5SetFlag(4, 0x2000);
 }
 
@@ -434,7 +436,9 @@ void chargeLedInit(void)
 {
 	struct TimerHandler handler;
 
+#if FW_SINCE(0x00090206)
 	chargeLedBlinking = 0;
+#endif
 	chargeLedBlinkOn = 0;
 	handler.handler = chargeLedBlinkExpire;
 	timerSetHandler(CHARGE_LED_TIMER, &handler);

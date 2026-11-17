@@ -180,12 +180,16 @@ unsigned char cookieCtrlCharge(unsigned char on)
 	unsigned char value;
 
 	if (on) {
+#if FW_SINCE(0x00090206)
 		if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
 			value = cookieRegs[0].byte[0] & 0x3f;
 		else {
 			result = 0;
 			goto done;
 		}
+#else
+		value = cookieRegs[0].byte[0] & 0x3f;	/* 0x00090009: no lock */
+#endif
 	} else
 		value = cookieRegs[0].byte[0] | 0xc0;
 	if (value != cookieRegs[0].byte[0]) {
@@ -197,7 +201,9 @@ unsigned char cookieCtrlCharge(unsigned char on)
 			cookieRegs[0].byte[0] = value;
 	} else
 		result = 0;
+#if FW_SINCE(0x00090206)
 done:
+#endif
 	return result;
 }
 #endif
@@ -241,6 +247,7 @@ unsigned char cookieCtrlSupplyCurrentAc(unsigned char current)
 	return result;
 }
 
+#if FW_SINCE(0x00090206)
 /* register 7's low byte, its bits 5-7 */
 unsigned char cookieCtrlReg7(unsigned char value)
 {
@@ -272,6 +279,8 @@ unsigned char cookieReadStatus2(unsigned char *status)
 	return cookieRead(&reg, status);
 }
 
+#endif
+
 #if FW_SINCE(0x01000109)
 /* register 3 read back: the Cookie cleared bit 7, so the USB's mode is new */
 void cookieReadReg3(void)
@@ -289,6 +298,7 @@ void cookieReadReg3(void)
 }
 #endif
 
+#if FW_SINCE(0x00090206)
 /* register 3's bit 6 clear while on and nothing holds it: 0x0892 (sceSysconCtrlChargeAC).
    Sony's compares the new value with the register's high byte, not the low one it sets. */
 unsigned char cookieCtrlChargeAc(unsigned char on)
@@ -326,6 +336,8 @@ unsigned char cookieCtrlChargeAc(unsigned char on)
 done:
 	return result;
 }
+
+#endif
 
 /* register 3's bit 2 clear in mode 1 */
 unsigned char cookieCtrlReg3Mode(unsigned char mode)
@@ -407,6 +419,62 @@ done:
 #endif
 	return result;
 }
+
+#if !FW_SINCE(0x00090206)	/* 0x00090009's order */
+/* register 7's low byte, its bits 5-7 */
+unsigned char cookieCtrlReg7(unsigned char value)
+{
+	unsigned char result;
+
+	value &= 0xe0;
+	elmoCommand[0] = COOKIE_CTRL_REG(7);
+	elmoCommand[1] = value;
+	elmoCommand[2] = cookieRegs[4].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[4].byte[0] = value;
+	return result;
+}
+
+/* 0x00090009: register 3's bit 6 clear while on, no lock and no read first */
+unsigned char cookieCtrlChargeAc(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (on)
+		value = cookieRegs[0].byte[0] & 0xbf;
+	else
+		value = cookieRegs[0].byte[0] | 0x40;
+	if (value != cookieRegs[0].byte[1]) {
+		elmoCommand[0] = COOKIE_CTRL_REG(3);
+		elmoCommand[1] = value;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[0] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+unsigned char cookieReadStatus1(unsigned char *status)
+{
+	unsigned char reg;
+
+	reg = COOKIE_CTRL_REG(1);
+	return cookieRead(&reg, status);
+}
+
+unsigned char cookieReadStatus2(unsigned char *status)
+{
+	unsigned char reg;
+
+	reg = COOKIE_CTRL_REG(2);
+	return cookieRead(&reg, status);
+}
+
+#endif
 
 #if FW_SINCE(0x00090804)	/* led.c's */
 /* register 3's bit 0 set and bit 2 clear */

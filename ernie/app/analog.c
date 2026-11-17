@@ -54,8 +54,14 @@ static __near unsigned int analogWorkHigh;	/* and its divisor */
 /* a work word's high byte, read from memory */
 #define ANALOG_HIGH(word)	(((unsigned char __near *)&(word))[1])
 static __near unsigned char analogSample;	/* the samples[] the next conversions go to */
-static __near unsigned char analogMinRange;	/* the high byte of a range that calibrates */
+static __near unsigned char analogMinRange;	/* the high byte of a range that calibrates
+						   (0x00090009: unused) */
+#if FW_SINCE(0x00090206)
 static __near unsigned int analogScales[ANALOG_SETS];	/* each set's margin, 1/1000 of the range */
+#else
+static __near unsigned char analogScale;	/* the margin, range * analogScale >> */
+static __near unsigned char analogScaleShift;	/* analogScaleShift: 0x57 >> 9 or (mode 2) 0x31 */
+#endif
 static __near unsigned char analogMultiCnInput;	/* the high byte of ANI11's result */
 static __near unsigned char analogMultiCnReserved;	/* cleared by analogMultiCnInit, otherwise
 							   unused */
@@ -63,9 +69,13 @@ static __near unsigned char analogMultiCn;		/* the level of the last reading */
 static __near unsigned char analogMultiCnPrevious;	/* of the one before */
 static __near unsigned char analogMultiCnReported;	/* the level the host reads; 0xff: none */
 __near unsigned char analogSticks0[ANALOG_AXES];
+#if FW_SINCE(0x00090206)
 __near unsigned char analogSticks1[ANALOG_AXES];
+#endif
 static __near struct AnalogCalibration analogCalibration;
+#if FW_SINCE(0x00090206)
 __near unsigned char analogFlags;
+#endif
 
 /* inputKeys.state's bit 0x0080 (analogStart80, never called): only reset, except where
    BOARD_ANALOG_CHANNEL8 converts it (channel 8's level, analogLevels5) */
@@ -86,6 +96,7 @@ static struct {
 static unsigned char analogSuspend;	/* 0xff (analogInput80Reset): the sticks' samples are not
 					   taken */
 
+#if FW_SINCE(0x00090206)
 /* the axes' samples centred and the calibration's limits from the settings */
 void analogInit(void)
 {
@@ -234,6 +245,90 @@ void analogCalibrationReset(void)
 	analogAxes[3].calibrated = 0;
 }
 
+#else
+/* 0x00090009: the axes' samples and positions centred, the margin of mode 1 */
+void analogInit(void)
+{
+	analogCenterSet0();
+	analogAxes[0].samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].median = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].position = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].last = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].median = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].position = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].last = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].median = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].position = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].last = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].median = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].position = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].last = ANALOG_SAMPLE_CENTER;
+	analogSample = 0;
+	analogAxes[0].range = 0;
+	analogAxes[0].margin = 0;
+	analogAxes[0].high = 0;
+	analogAxes[0].low = 0;
+	analogAxes[1].range = 0;
+	analogAxes[1].margin = 0;
+	analogAxes[1].high = 0;
+	analogAxes[1].low = 0;
+	analogAxes[2].range = 0;
+	analogAxes[2].margin = 0;
+	analogAxes[2].high = 0;
+	analogAxes[2].low = 0;
+	analogAxes[3].range = 0;
+	analogAxes[3].margin = 0;
+	analogAxes[3].high = 0;
+	analogAxes[3].low = 0;
+	analogAxes[0].calibrated = 0;
+	analogAxes[1].calibrated = 0;
+	analogAxes[2].calibrated = 0;
+	analogAxes[3].calibrated = 0;
+	analogScale = 0x57;
+	analogScaleShift = 9;
+}
+
+void analogCenterSet0(void)
+{
+	analogSticks0[0] = ANALOG_VALUE_CENTER;
+	analogSticks0[1] = ANALOG_VALUE_CENTER;
+	analogSticks0[2] = ANALOG_VALUE_CENTER;
+	analogSticks0[3] = ANALOG_VALUE_CENTER;
+	analogAxes[0].value = ANALOG_VALUE_CENTER;
+	analogAxes[1].value = ANALOG_VALUE_CENTER;
+	analogAxes[2].value = ANALOG_VALUE_CENTER;
+	analogAxes[3].value = ANALOG_VALUE_CENTER;
+}
+
+/* every axis's calibration back to the centre, not yet calibrated */
+void analogCalibrationReset(void)
+{
+	analogCalibration.axis[0].min = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[0].max = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[1].min = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[1].max = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[2].min = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[2].max = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[3].min = ANALOG_SAMPLE_CENTER;
+	analogCalibration.axis[3].max = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].calibrated = 0;
+	analogAxes[1].calibrated = 0;
+	analogAxes[2].calibrated = 0;
+	analogAxes[3].calibrated = 0;
+}
+#endif
+
 /* the settings' calibration */
 void analogCalibrationDefault(void)
 {
@@ -271,10 +366,17 @@ static void analogCalibrationLoaded(unsigned char command, unsigned char result)
 
 	if (result == 0) {
 		for (i = 0; i < ANALOG_AXES; i++) {
+#if FW_SINCE(0x00090206)
 			range = analogCalibration.axis[i].max - analogCalibration.axis[i].min;
 			if (analogCalibration.axis[i].min > configGet()->analogMin ||
 			    analogCalibration.axis[i].max < configGet()->analogMax ||
 			    configGet()->analogMinRange > ANALOG_HIGH(range)) {
+#else
+			range = analogCalibration.axis[i].max - analogCalibration.axis[i].min;
+			if (analogCalibration.axis[i].min > ANALOG_SAMPLE_CENTER ||
+			    analogCalibration.axis[i].max < ANALOG_SAMPLE_CENTER ||
+			    ANALOG_HIGH(range) < 0x64) {
+#endif
 				analogCalibrationDefault();
 				return;
 			}
@@ -402,7 +504,14 @@ void analogEvent(unsigned int inputs)
 		analogFilter1();
 		analogFilter2();
 		analogFilter3();
+#if FW_SINCE(0x00090206)
 		analogReport();
+#else
+		analogSticks0[0] = 0xff - analogAxes[0].value;
+		analogSticks0[1] = 0xff - analogAxes[1].value;
+		analogSticks0[2] = analogAxes[2].value;
+		analogSticks0[3] = analogAxes[3].value;
+#endif
 	}
 #if FW_SINCE(0x0100010B)
 	if ((inputs & 0x0020) && (inputKeys.state & 0x0020)) {
@@ -489,6 +598,7 @@ void analogLatchUpdate(unsigned char value)
 	analogLatch.previous = analogLatch.state;
 }
 
+#if FW_SINCE(0x00090206)
 /* axis 0: the median of its samples, the calibration widened to it, then its sets */
 void analogFilter0(void)
 {
@@ -1052,8 +1162,254 @@ void analogReport(void)
 #endif
 }
 
+#else
+/* axis 0: the median of its samples, the calibration widened to it, the position held
+   between the calibration's ends less the margin, and its value 0-0xff between them */
+void analogFilter0(void)
+{
+	union {
+		unsigned long	product;
+		unsigned int	word[2];
+	} work;
+
+	if (analogAxes[0].samples[0] < analogAxes[0].samples[1]) {
+		if (analogAxes[0].samples[1] < analogAxes[0].samples[2])
+			analogAxes[0].median = analogAxes[0].samples[1];
+		else if (analogAxes[0].samples[0] < analogAxes[0].samples[2])
+			analogAxes[0].median = analogAxes[0].samples[2];
+		else
+			analogAxes[0].median = analogAxes[0].samples[0];
+	} else {
+		if (analogAxes[0].samples[2] < analogAxes[0].samples[1])
+			analogAxes[0].median = analogAxes[0].samples[1];
+		else if (analogAxes[0].samples[2] < analogAxes[0].samples[0])
+			analogAxes[0].median = analogAxes[0].samples[2];
+		else
+			analogAxes[0].median = analogAxes[0].samples[0];
+	}
+	if (analogAxes[0].median >= 0 && analogAxes[0].median <= ADC_RESULT_MASK)
+		analogAxes[0].position = analogAxes[0].median;
+	if (ANALOG_HIGH(analogCalibration.axis[0].max) < ANALOG_HIGH(analogAxes[0].position))
+		analogCalibration.axis[0].max = analogAxes[0].position;
+	if (ANALOG_HIGH(analogAxes[0].position) < ANALOG_HIGH(analogCalibration.axis[0].min))
+		analogCalibration.axis[0].min = analogAxes[0].position;
+	analogAxes[0].range = analogCalibration.axis[0].max - analogCalibration.axis[0].min;
+	if (ANALOG_HIGH(analogAxes[0].range) >= 0x64)
+		analogAxes[0].calibrated = 1;
+	MDUC.7 = 0;
+	MDAH = analogAxes[0].range;
+	MDAL = analogScale;
+	NOP();
+	work.word[0] = MDBL;
+	work.word[1] = MDBH;
+	analogAxes[0].margin = work.product >> analogScaleShift;
+	analogAxes[0].margin &= ADC_RESULT_MASK;
+	analogAxes[0].high = analogCalibration.axis[0].max - analogAxes[0].margin;
+	if (analogAxes[0].high < analogAxes[0].position)
+		analogAxes[0].position = analogAxes[0].high;
+	analogAxes[0].low = analogCalibration.axis[0].min + analogAxes[0].margin;
+	if (analogAxes[0].position < analogAxes[0].low)
+		analogAxes[0].position = analogAxes[0].low;
+	if (analogAxes[0].position != analogAxes[0].last && analogAxes[0].calibrated == 1) {
+		analogAxes[0].last = analogAxes[0].position;
+		analogWorkLow = analogAxes[0].last - analogAxes[0].low;
+		analogWorkLow -= ANALOG_HIGH(analogWorkLow);
+		analogWorkHigh = analogAxes[0].high - analogAxes[0].low;
+		analogWorkLow = analogWorkLow / ANALOG_HIGH(analogWorkHigh);
+		if (ANALOG_HIGH(analogWorkLow))
+			analogAxes[0].value = 0xff;
+		else
+			analogAxes[0].value = analogWorkLow;
+	}
+}
+
+/* axis 1: the median of its samples, the calibration widened to it, the position held
+   between the calibration's ends less the margin, and its value 0-0xff between them */
+void analogFilter1(void)
+{
+	union {
+		unsigned long	product;
+		unsigned int	word[2];
+	} work;
+
+	if (analogAxes[1].samples[0] < analogAxes[1].samples[1]) {
+		if (analogAxes[1].samples[1] < analogAxes[1].samples[2])
+			analogAxes[1].median = analogAxes[1].samples[1];
+		else if (analogAxes[1].samples[0] < analogAxes[1].samples[2])
+			analogAxes[1].median = analogAxes[1].samples[2];
+		else
+			analogAxes[1].median = analogAxes[1].samples[0];
+	} else {
+		if (analogAxes[1].samples[2] < analogAxes[1].samples[1])
+			analogAxes[1].median = analogAxes[1].samples[1];
+		else if (analogAxes[1].samples[2] < analogAxes[1].samples[0])
+			analogAxes[1].median = analogAxes[1].samples[2];
+		else
+			analogAxes[1].median = analogAxes[1].samples[0];
+	}
+	if (analogAxes[1].median >= 0 && analogAxes[1].median <= ADC_RESULT_MASK)
+		analogAxes[1].position = analogAxes[1].median;
+	if (ANALOG_HIGH(analogCalibration.axis[1].max) < ANALOG_HIGH(analogAxes[1].position))
+		analogCalibration.axis[1].max = analogAxes[1].position;
+	if (ANALOG_HIGH(analogAxes[1].position) < ANALOG_HIGH(analogCalibration.axis[1].min))
+		analogCalibration.axis[1].min = analogAxes[1].position;
+	analogAxes[1].range = analogCalibration.axis[1].max - analogCalibration.axis[1].min;
+	if (ANALOG_HIGH(analogAxes[1].range) >= 0x64)
+		analogAxes[1].calibrated = 1;
+	MDUC.7 = 0;
+	MDAH = analogAxes[1].range;
+	MDAL = analogScale;
+	NOP();
+	work.word[0] = MDBL;
+	work.word[1] = MDBH;
+	analogAxes[1].margin = work.product >> analogScaleShift;
+	analogAxes[1].margin &= ADC_RESULT_MASK;
+	analogAxes[1].high = analogCalibration.axis[1].max - analogAxes[1].margin;
+	if (analogAxes[1].high < analogAxes[1].position)
+		analogAxes[1].position = analogAxes[1].high;
+	analogAxes[1].low = analogCalibration.axis[1].min + analogAxes[1].margin;
+	if (analogAxes[1].position < analogAxes[1].low)
+		analogAxes[1].position = analogAxes[1].low;
+	if (analogAxes[1].position != analogAxes[1].last && analogAxes[1].calibrated == 1) {
+		analogAxes[1].last = analogAxes[1].position;
+		analogWorkLow = analogAxes[1].last - analogAxes[1].low;
+		analogWorkLow -= ANALOG_HIGH(analogWorkLow);
+		analogWorkHigh = analogAxes[1].high - analogAxes[1].low;
+		analogWorkLow = analogWorkLow / ANALOG_HIGH(analogWorkHigh);
+		if (ANALOG_HIGH(analogWorkLow))
+			analogAxes[1].value = 0xff;
+		else
+			analogAxes[1].value = analogWorkLow;
+	}
+}
+
+/* axis 2: the median of its samples, the calibration widened to it, the position held
+   between the calibration's ends less the margin, and its value 0-0xff between them */
+void analogFilter2(void)
+{
+	union {
+		unsigned long	product;
+		unsigned int	word[2];
+	} work;
+
+	if (analogAxes[2].samples[0] < analogAxes[2].samples[1]) {
+		if (analogAxes[2].samples[1] < analogAxes[2].samples[2])
+			analogAxes[2].median = analogAxes[2].samples[1];
+		else if (analogAxes[2].samples[0] < analogAxes[2].samples[2])
+			analogAxes[2].median = analogAxes[2].samples[2];
+		else
+			analogAxes[2].median = analogAxes[2].samples[0];
+	} else {
+		if (analogAxes[2].samples[2] < analogAxes[2].samples[1])
+			analogAxes[2].median = analogAxes[2].samples[1];
+		else if (analogAxes[2].samples[2] < analogAxes[2].samples[0])
+			analogAxes[2].median = analogAxes[2].samples[2];
+		else
+			analogAxes[2].median = analogAxes[2].samples[0];
+	}
+	if (analogAxes[2].median >= 0 && analogAxes[2].median <= ADC_RESULT_MASK)
+		analogAxes[2].position = analogAxes[2].median;
+	if (ANALOG_HIGH(analogCalibration.axis[2].max) < ANALOG_HIGH(analogAxes[2].position))
+		analogCalibration.axis[2].max = analogAxes[2].position;
+	if (ANALOG_HIGH(analogAxes[2].position) < ANALOG_HIGH(analogCalibration.axis[2].min))
+		analogCalibration.axis[2].min = analogAxes[2].position;
+	analogAxes[2].range = analogCalibration.axis[2].max - analogCalibration.axis[2].min;
+	if (ANALOG_HIGH(analogAxes[2].range) >= 0x64)
+		analogAxes[2].calibrated = 1;
+	MDUC.7 = 0;
+	MDAH = analogAxes[2].range;
+	MDAL = analogScale;
+	NOP();
+	work.word[0] = MDBL;
+	work.word[1] = MDBH;
+	analogAxes[2].margin = work.product >> analogScaleShift;
+	analogAxes[2].margin &= ADC_RESULT_MASK;
+	analogAxes[2].high = analogCalibration.axis[2].max - analogAxes[2].margin;
+	if (analogAxes[2].high < analogAxes[2].position)
+		analogAxes[2].position = analogAxes[2].high;
+	analogAxes[2].low = analogCalibration.axis[2].min + analogAxes[2].margin;
+	if (analogAxes[2].position < analogAxes[2].low)
+		analogAxes[2].position = analogAxes[2].low;
+	if (analogAxes[2].position != analogAxes[2].last && analogAxes[2].calibrated == 1) {
+		analogAxes[2].last = analogAxes[2].position;
+		analogWorkLow = analogAxes[2].last - analogAxes[2].low;
+		analogWorkLow -= ANALOG_HIGH(analogWorkLow);
+		analogWorkHigh = analogAxes[2].high - analogAxes[2].low;
+		analogWorkLow = analogWorkLow / ANALOG_HIGH(analogWorkHigh);
+		if (ANALOG_HIGH(analogWorkLow))
+			analogAxes[2].value = 0xff;
+		else
+			analogAxes[2].value = analogWorkLow;
+	}
+}
+
+/* axis 3: the median of its samples, the calibration widened to it, the position held
+   between the calibration's ends less the margin, and its value 0-0xff between them */
+void analogFilter3(void)
+{
+	union {
+		unsigned long	product;
+		unsigned int	word[2];
+	} work;
+
+	if (analogAxes[3].samples[0] < analogAxes[3].samples[1]) {
+		if (analogAxes[3].samples[1] < analogAxes[3].samples[2])
+			analogAxes[3].median = analogAxes[3].samples[1];
+		else if (analogAxes[3].samples[0] < analogAxes[3].samples[2])
+			analogAxes[3].median = analogAxes[3].samples[2];
+		else
+			analogAxes[3].median = analogAxes[3].samples[0];
+	} else {
+		if (analogAxes[3].samples[2] < analogAxes[3].samples[1])
+			analogAxes[3].median = analogAxes[3].samples[1];
+		else if (analogAxes[3].samples[2] < analogAxes[3].samples[0])
+			analogAxes[3].median = analogAxes[3].samples[2];
+		else
+			analogAxes[3].median = analogAxes[3].samples[0];
+	}
+	if (analogAxes[3].median >= 0 && analogAxes[3].median <= ADC_RESULT_MASK)
+		analogAxes[3].position = analogAxes[3].median;
+	if (ANALOG_HIGH(analogCalibration.axis[3].max) < ANALOG_HIGH(analogAxes[3].position))
+		analogCalibration.axis[3].max = analogAxes[3].position;
+	if (ANALOG_HIGH(analogAxes[3].position) < ANALOG_HIGH(analogCalibration.axis[3].min))
+		analogCalibration.axis[3].min = analogAxes[3].position;
+	analogAxes[3].range = analogCalibration.axis[3].max - analogCalibration.axis[3].min;
+	if (ANALOG_HIGH(analogAxes[3].range) >= 0x64)
+		analogAxes[3].calibrated = 1;
+	MDUC.7 = 0;
+	MDAH = analogAxes[3].range;
+	MDAL = analogScale;
+	NOP();
+	work.word[0] = MDBL;
+	work.word[1] = MDBH;
+	analogAxes[3].margin = work.product >> analogScaleShift;
+	analogAxes[3].margin &= ADC_RESULT_MASK;
+	analogAxes[3].high = analogCalibration.axis[3].max - analogAxes[3].margin;
+	if (analogAxes[3].high < analogAxes[3].position)
+		analogAxes[3].position = analogAxes[3].high;
+	analogAxes[3].low = analogCalibration.axis[3].min + analogAxes[3].margin;
+	if (analogAxes[3].position < analogAxes[3].low)
+		analogAxes[3].position = analogAxes[3].low;
+	if (analogAxes[3].position != analogAxes[3].last && analogAxes[3].calibrated == 1) {
+		analogAxes[3].last = analogAxes[3].position;
+		analogWorkLow = analogAxes[3].last - analogAxes[3].low;
+		analogWorkLow -= ANALOG_HIGH(analogWorkLow);
+		analogWorkHigh = analogAxes[3].high - analogAxes[3].low;
+		analogWorkLow = analogWorkLow / ANALOG_HIGH(analogWorkHigh);
+		if (ANALOG_HIGH(analogWorkLow))
+			analogAxes[3].value = 0xff;
+		else
+			analogAxes[3].value = analogWorkLow;
+	}
+}
+#endif
+
 /* the median of three samples (never called) */
+#if FW_SINCE(0x00090206)
 unsigned int analogMedian(unsigned int *samples)
+#else
+unsigned int analogMedian(unsigned int __far *samples)
+#endif
 {
 	unsigned int median;
 
@@ -1095,6 +1451,22 @@ void analogSetMode(unsigned char mode)
 {
 	dis_dsp();
 	switch (mode) {
+#if !FW_SINCE(0x00090206)
+	case 0:
+		inputKeys.state &= ~0x0002;
+		analogInit();
+		break;
+	case 1:		/* the margin a sixth of the range */
+		analogScale = 0x57;
+		analogScaleShift = 9;
+		inputKeys.state |= 0x0002;
+		break;
+	case 2:		/* a tenth */
+		analogScale = 0x31;
+		analogScaleShift = 9;
+		inputKeys.state |= 0x0002;
+		break;
+#else
 #if !FW_SINCE(0x0100010B)
 	case 0:		/* analogStop's, before it */
 		inputKeys.state &= ~0x0002;
@@ -1118,6 +1490,7 @@ void analogSetMode(unsigned char mode)
 		inputKeys.state |= 0x0002;
 		analogFlags = ANALOG_SET0 | ANALOG_SET1;
 		break;
+#endif
 	}
 	ena_dsp();
 }
@@ -1166,7 +1539,11 @@ unsigned char analogGetMultiCn(void)
 }
 
 /* each axis's last sample */
+#if FW_SINCE(0x00090206)
 void analogGetSamples(unsigned int *out)
+#else
+void analogGetSamples(unsigned int __far *out)
+#endif
 {
 	unsigned char i;
 

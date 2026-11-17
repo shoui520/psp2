@@ -18,7 +18,7 @@
 #pragma interrupt INTTM04 tm04Interrupt
 #pragma rtos_interrupt INTSRE0 sre0Interrupt
 #pragma rtos_interrupt INTP0 intp0Interrupt
-#if ERNIE_FW < 0x0100060B	/* BOARD_MOTION */
+#if ERNIE_FW < 0x0100060B && ERNIE_FW >= 0x00090206	/* HANG_TIMER */
 #pragma interrupt INTTM11 tm11Interrupt
 #endif
 #pragma sfr
@@ -220,9 +220,16 @@ void intp8Interrupt(void)
 /* P7.7's edges: the level kept, and the serial link's input told */
 void intp11Interrupt(void)
 {
-#if BOARD_INTP11
+#if BOARD_INTP11_LEVEL
 	intp11Level = P7.7;
 	serial2InputLink();
+#elif BOARD_INTP11
+	/* 0x00090009: P7.7 high, INTP11 off and the scan held, unless it scans in mode 1 */
+	if (P7.7) {
+		intp11Enable(0);
+		if (inputScan.mode != 1)
+			inputScanHold(0x1a);
+	}
 #endif
 }
 
@@ -262,7 +269,7 @@ void intp0Interrupt(void)
 		STATE_TRANSITION(0x41);
 }
 
-#if BOARD_MOTION
+#if HANG_TIMER
 /* the hang timer: as the RTC's interrupt counts, the system reset (cause 0x30) at the
    eighth tick that hangLimitReached allows; with no hang, the timer stopped */
 void tm11Interrupt(void)

@@ -38,6 +38,7 @@ struct AnalogOutput {
 	unsigned char	value;
 };
 
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 struct AnalogAxis {
 	unsigned int		samples[ANALOG_SAMPLES];
 	unsigned int		median;
@@ -45,6 +46,21 @@ struct AnalogAxis {
 	unsigned char		calibrated;	/* range's high byte reached analogMinRange */
 	struct AnalogOutput	output[ANALOG_SETS];
 };
+#else
+/* 0x00090009: one set, its position held between low and high, as a value 0-0xff */
+struct AnalogAxis {
+	unsigned int	samples[ANALOG_SAMPLES];
+	unsigned int	median;
+	unsigned char	value;
+	unsigned char	calibrated;	/* range's high byte reached 0x64 */
+	unsigned int	position;
+	unsigned int	last;		/* the position the value was computed from */
+	unsigned int	range;		/* the calibration's max - min */
+	unsigned int	margin;		/* range * analogScale >> analogScaleShift */
+	unsigned int	high;		/* the calibration's max less the margin */
+	unsigned int	low;		/* its min plus the margin */
+};
+#endif
 
 /* a level of the multi connector and the lowest input that reads as it */
 struct AnalogLevel {
@@ -81,7 +97,11 @@ extern void analogFilter1(void);
 extern void analogFilter2(void);
 extern void analogFilter3(void);
 extern void analogReport(void);
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 extern unsigned int analogMedian(unsigned int *samples);
+#else
+extern unsigned int analogMedian(unsigned int __far *samples);
+#endif
 extern unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *levels,
 				     unsigned char count);
 extern void analogSetMode(unsigned char mode);
@@ -91,7 +111,11 @@ extern void analogStop80(void);
 extern void analogMultiCnStart(void);
 extern void analogMultiCnStop(void);
 extern unsigned char analogGetMultiCn(void);
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 extern void analogGetSamples(unsigned int *out);
+#else
+extern void analogGetSamples(unsigned int __far *out);
+#endif
 extern void analogLatchInit(void);
 extern unsigned char analogLatchIsSet(void);
 extern void analogLatchOn(void);

@@ -48,9 +48,11 @@ struct ButtonPress {
 	unsigned char	keys;		/* the keys held at the second press */
 	unsigned char	result;		/* the keys of the press reported */
 	unsigned char	reserved;
+#if FW_SINCE(0x00090206)	/* 0x00090009 has no press times */
 	unsigned char	time1;		/* presses for the first report (byte 0x2e of NVS area
 					   1, at least 3) */
 	unsigned char	time2;		/* presses for the second (byte 0x2f, at least 3) */
+#endif
 	unsigned int	state;		/* the system state the presses were counted in */
 };
 
@@ -160,7 +162,9 @@ struct InputHandler powerInputHandler;		/* group 2's bit 0, with the BBMC's */
 struct InputDelays inputDelays;
 struct InputScan inputScan;
 struct PinMonitors pinMonitors;
+#if FW_SINCE(0x00090206)
 unsigned char intp11Level;			/* P7.7 at its last edge (INTP11) */
+#endif
 
 __sreg unsigned char inputRaw1;
 __sreg unsigned char inputRaw2;
@@ -233,7 +237,9 @@ void inputInit(void)
 	intp10Enable(0);
 	intp8Enable(0);
 	intp11Enable(0);
+#if FW_SINCE(0x00090206)
 	intp11Level = 1;
+#endif
 	inputRaw1 = 0xff;
 	inputState1 = 0xff;
 	inputGroup1.prev = 0xff;
@@ -258,7 +264,8 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
-#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IS(0x00315200))	/* 0x00601000: PCH-1000's, with the pins */
+#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IS(0x00315200)) && \
+    FW_SINCE(0x00090206)	/* 0x00601000: PCH-1000's, with the pins; 0x00090009 dispatches bit 1 (intp11Low) */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 #else
@@ -394,6 +401,9 @@ void inputResumePrepare(void)
 {
 	intp1Enable(0);
 	intp13Enable(0);
+#if BOARD_INTP11 && !FW_SINCE(0x00090206)
+	intp11Enable(0);
+#endif
 	intp2Enable(0);
 	intp7Enable(0);
 	intp4Enable(0);
@@ -718,6 +728,9 @@ void inputStateSuspend(void)
 #if BOARD_OFF_WAKE
 	intp1Enable(1);
 	intp13Enable(1);
+#if BOARD_INTP11 && !FW_SINCE(0x00090206)
+	intp11Enable(1);
+#endif
 	inputScanMode2(1);
 #else
 	inputScanMode1(1);
@@ -1079,7 +1092,7 @@ unsigned char input3Bit5High(void)
 
 unsigned char intp11Low(void)
 {
-#if BOARD_INTP11
+#if BOARD_INTP11_LEVEL
 	return intp11Level == 0;
 #else
 	return inputState3.1 == 0;
@@ -1173,6 +1186,39 @@ void pinMonitor1Enable(unsigned char enable)
 /* pin monitor 1's handler (P4.6 held): its presses counted with the key read at the second */
 #if !FW_SINCE(0x01000107)
 /* before 0x01000107 the system state is checked first, and pressAnyState does not exist */
+#if !FW_SINCE(0x00090206)
+/* 0x00090009: no press times in the parameters; key 1 held for the sixth tick is a press */
+void button2Held(void)
+{
+	STATE_TRANSITION_EVENT
+
+	buttonPress2.count++;
+	if (stateGet() != button2State()) {
+		button2SetState(0);
+	} else if (buttonPress2.count < 2) {
+		pinMonitor1Enable(1);
+	} else if (buttonPress2.count == 2) {
+		inputKeysOpen();
+		dly_tsk(3);
+		buttonPress2.keys = button2Keys();
+		pinMonitor1Enable(1);
+	} else if (buttonPress2.keys == button2Keys()) {
+		switch (buttonPress2.keys) {
+		case 1:
+			if (buttonPress2.count == 6) {
+				buttonPress2.result = buttonPress2.keys;
+				STATE_TRANSITION(0x14);
+			} else {
+				pinMonitor1Enable(1);
+			}
+			break;
+		}
+	} else {
+		buttonPress2.result = buttonPress2.keys;
+		STATE_TRANSITION(0x14);
+	}
+}
+#else
 void button2Held(void)
 {
 	unsigned char value;
@@ -1214,6 +1260,7 @@ void button2Held(void)
 		STATE_TRANSITION(0x14);
 	}
 }
+#endif
 #else
 void button2Held(void)
 {
@@ -1318,7 +1365,11 @@ void intp11Enable(unsigned char enable)
 		PIF11 = 0;
 	} else {
 		EGP1.3 = 1;
+#if BOARD_INTP11_LEVEL
 		EGN1.3 = 1;
+#else
+		EGN1.3 = 0;
+#endif
 		PIF11 = 0;
 		PMK11 = 0;
 	}
@@ -1445,6 +1496,64 @@ unsigned char button1Keys(void)
 }
 
 /* pin monitor 0's handler (P11.5 held) */
+#if !FW_SINCE(0x00090206)
+/* 0x00090009: no press times in the parameters; held to the sixth tick, both buttons a press
+   (0x0b), button 1 alone 0x13 (not in state 0x0020), and to the 0x14th both keys 2 a press of
+   button 2 too (0x31, with the keys closed); other keys 0x13 at once */
+void button1Held(void)
+{
+	STATE_TRANSITION_EVENT
+	unsigned char value;
+
+	buttonPress1.count++;
+	if (stateGet() != button1State()) {
+		button1SetState(0);
+	} else if (buttonPress1.count < 2) {
+		pinMonitor0Enable(1);
+	} else if (buttonPress1.count == 2) {
+		inputKeysOpen();
+		dly_tsk(3);
+		buttonPress1.keys = button1Keys();
+		pinMonitor0Enable(1);
+	} else if (buttonPress1.keys == button1Keys()) {
+		switch (buttonPress1.keys) {
+		case 2:
+			if (buttonPress1.count == 0x14) {
+				buttonPress1.result = buttonPress1.keys;
+				buttonPress2.result = buttonPress1.keys;
+				inputKeysClose();
+				value = STATE_TRANSITION_NOMASK(0x31);
+				if (value != 0)
+					;
+			} else {
+				pinMonitor0Enable(1);
+			}
+			break;
+		case 3:
+			if (buttonPress1.count == 6) {
+				buttonPress1.result = buttonPress1.keys;
+				STATE_TRANSITION(0x0b);
+			} else {
+				pinMonitor0Enable(1);
+			}
+			break;
+		case 1:
+			if (buttonPress1.count == 6) {
+				if (stateGet() != 0x0020) {
+					buttonPress1.result = buttonPress1.keys;
+					STATE_TRANSITION(0x13);
+				}
+			} else {
+				pinMonitor0Enable(1);
+			}
+			break;
+		}
+	} else if (stateGet() != 0x0020) {
+		buttonPress1.result = buttonPress1.keys = 1;
+		STATE_TRANSITION(0x13);
+	}
+}
+#else
 void button1Held(void)
 {
 	unsigned char value;
@@ -1490,6 +1599,7 @@ void button1Held(void)
 		}
 	}
 }
+#endif
 
 void intp7Enable(unsigned char enable)
 {

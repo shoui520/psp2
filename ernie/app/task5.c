@@ -21,6 +21,9 @@
 
 
 unsigned int powerDevicePending;
+#if !FW_SINCE(0x00090206)
+unsigned char chargeLedBlinkOn;
+#endif
 
 extern unsigned char input1Bit7Active(void);
 
@@ -230,9 +233,10 @@ static void task5ChargeLed(void)
 }
 #else
 /* before 0x01000104 the charge LED is the Cookie's register 3 here: off (bits 2 and 0), blinking
-   (chargeLedSetBlink) or the Cookie's */
+   (chargeLedSetBlink) or the Cookie's; 0x00090009 leaves it to the Cookie */
 static void task5ChargeLed(void)
 {
+#if FW_SINCE(0x00090206)
 	if (input1Bit7Active()) {
 #if FW_SINCE(0x00090804)
 		if (configGet()->start.bits.chargeLedOff) {
@@ -251,12 +255,15 @@ static void task5ChargeLed(void)
 		else
 			chargeLedSetBlink(0);
 	}
+#endif
 }
 
 /* task 5's (flag 0x2000): the blink's state to the Cookie */
 static void chargeLedBlinkUpdate(void)
 {
+#if FW_SINCE(0x00090206)
 	cookieCtrlReg3Bit2(chargeLedBlinkOn);
+#endif
 }
 #endif
 

@@ -103,8 +103,12 @@ static union {
 		unsigned char	hardwareInfo[4];
 		unsigned char	version[4];
 		unsigned char	dlVersion[4];
+#if FW_SINCE(0x00090206)
 		unsigned char	flags;		/* getResetFlags's */
 		unsigned char	reserved[3];
+#else
+		unsigned char	reserved[4];	/* 0x00090009 reports no reset flags */
+#endif
 	} version;				/* command 0x0101's */
 	struct ConfigVersions versions;		/* command 0x0140's */
 } serial1Data;
@@ -282,7 +286,7 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 	getErnieDlVersion(serial1Data.version.dlVersion);
 #if FW_SINCE(0x01000107)
 	serial1Data.version.flags = getResetFlags();
-#else
+#elif FW_SINCE(0x00090206)
 	serial1Data.version.flags = resetFlags;
 #endif
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));

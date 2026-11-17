@@ -22,7 +22,10 @@
 	EXTRN	_intp8Interrupt, _intp10Interrupt, _intp11Interrupt, _tickInterrupt
 	EXTRN	_uart2ErrorInterrupt
 $_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
-	EXTRN	_csi01Interrupt, _tm01Interrupt, _tm11Interrupt
+	EXTRN	_csi01Interrupt, _tm01Interrupt
+$ENDIF
+$_IF (ERNIE_FW<0x0100060B&&ERNIE_FW>=0x00090206)	; HANG_TIMER
+	EXTRN	_tm11Interrupt
 $ENDIF
 $_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000)	; BOARD_SERIAL4: PCH-1000 has no UART4 (0x00601000 has)
 	EXTRN	_uart4ErrorInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
@@ -115,7 +118,7 @@ _vector_INTSRE4:
 _vector_INTTM10:
 	DW	LOWW(_tickInterrupt)	; 56H
 _vector_INTTM11:
-$_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
+$_IF (ERNIE_FW<0x0100060B&&ERNIE_FW>=0x00090206)	; HANG_TIMER
 	DW	LOWW(_tm11Interrupt)	; 58H
 $ELSE
 	DW	0			; 58H

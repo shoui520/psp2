@@ -8,6 +8,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "kernel.h"
+#include "sysinfo.h"
 #include "tau.h"
 
 void tickStart(void)
@@ -88,7 +89,7 @@ void tm10Stop(void)
 	TT1L.0 = 1;
 }
 
-#if BOARD_MOTION
+#if HANG_TIMER
 void tm11Start(void)
 {
 	TMR11 = 0x8000;

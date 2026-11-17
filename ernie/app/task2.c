@@ -205,8 +205,18 @@ unsigned char task2StateEvent(void)
 unsigned char task2On(void)
 {
 	unsigned char ret;
+#if !FW_SINCE(0x00090206)
+	unsigned char config;
+#endif
 
 	ret = 0;
+#if !FW_SINCE(0x00090206)
+	/* 0x00090009 opens the settings here; its result is tested and nothing done (an empty
+	   statement, as a print left out of the build) */
+	config = configInit();
+	if (config != 0)
+		;
+#endif
 #if FW_SINCE(0x01000104)
 	if (stateGetCause() == 0x60)
 #endif

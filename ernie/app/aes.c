@@ -103,8 +103,10 @@ static const unsigned char aesRcon[14] = {
 static const char aesRevision[] = "$Rev: 4488 $";
 #elif FW_SINCE(0x00090903)
 static const char aesRevision[] = "$Rev: 2587 $";
-#else
+#elif FW_SINCE(0x00090206)
 static const char aesRevision[] = "$Rev: 2166 $";
+#else
+static const char aesRevision[] = "$Rev: 1987 $";
 #endif
 
 /* the application's tests them against NULL, a far null */

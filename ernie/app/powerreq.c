@@ -27,6 +27,7 @@
 #include "kernel.h"
 #include "led.h"
 #include "motion.h"
+#include "param.h"
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
@@ -126,7 +127,9 @@ static void batteryRequestWriteReg(void);
 static void batteryRequest0988(void);
 static void batteryRequestSWReset(void);
 static void batteryRequestGetFullCap2(void);
+#if FW_SINCE(0x00090206)
 static void batteryRequestGetBicTemp(void);
+#endif
 #if FW_SINCE(0x00090903)
 static void batteryRequestGetCycleCount(void);
 static void batteryRequest098D(void);
@@ -225,7 +228,9 @@ static const struct PowerCommand batteryCommands[] = {
 	{ 0x0988, batteryRequest0988 },
 	{ 0x0989, batteryRequestSWReset },
 	{ 0x098a, batteryRequestGetFullCap2 },
+#if FW_SINCE(0x00090206)
 	{ 0x098b, batteryRequestGetBicTemp },
+#endif
 #if FW_SINCE(0x00090903)
 	{ 0x098c, batteryRequestGetCycleCount },
 	{ 0x098d, batteryRequest098D },
@@ -313,7 +318,12 @@ void powerRequestEvent(void)
 				return;
 			}
 		}
+#if FW_SINCE(0x00090206)
 		hostRequestAnswer(&powerRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+#else
+		powerRequest.state = HOST_REQUEST_ERROR;
+		powerRequest.status = 0x3f;
+#endif
 	}
 }
 
@@ -332,7 +342,12 @@ void batteryRequestEvent(void)
 				return;
 			}
 		}
+#if FW_SINCE(0x00090206)
 		hostRequestAnswer(&batteryRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+#else
+		batteryRequest.state = HOST_REQUEST_ERROR;
+		batteryRequest.status = 0x3f;
+#endif
 	}
 }
 
@@ -962,7 +977,11 @@ static void powerRequestCtrlVoltage(void)
 #endif
 			result = 3;
 		} else {
+#if FW_SINCE(0x00090206)
 			trim = configGet()->voltageTrim;
+#else
+			paramGetBase(&trim);	/* 0x00090009: the parameters' */
+#endif
 			level = levelTrim(powerRequestData[1], trim);
 			result = powerResult(powerSetVoltage(regulator, level));
 		}
@@ -1572,6 +1591,7 @@ static void batteryRequestGetTemp(void)
 	batteryRequest.status = result;
 }
 
+#if FW_SINCE(0x00090206)
 /* 0x098b (sceSysconGetBicTemp) */
 static void batteryRequestGetBicTemp(void)
 {
@@ -1589,6 +1609,7 @@ static void batteryRequestGetBicTemp(void)
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
 }
+#endif
 
 /* 0x0982 (sceSysconGetBatteryFullCap): the battery's register 0x3c */
 static void batteryRequestGetFullCap(void)

@@ -208,7 +208,11 @@ unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 {
 	commandPins.bits.p30 = P3.0;
+#if FW_SINCE(0x00090206)
 	commandPins.bits.present = 1;
+#else
+	commandPins.bits.present = P14.1;	/* 0x00090009 reads it */
+#endif
 #if FW_SINCE(0x0100060B)
 	commandPins.bits.p31 = 1;	/* P3.1 is driven low (inputInit): reported high */
 #else
@@ -630,10 +634,15 @@ allowed:
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 					else
 						hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
-				} else
+				}
+#if FW_SINCE(0x00090206)	/* 0x00090009 leaves the other commands unanswered */
+				else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+#else
+			}
+#endif
 			break;
 #if FW_SINCE(0x00090903)
 		case 0x00d0:		/* the handshake before the SNVS */

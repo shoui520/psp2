@@ -504,11 +504,13 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.wlanLine = kept->block.wlanLine;
 	copy->block.wlanLineExtra = kept->block.wlanLineExtra;
 #endif
+#if FW_SINCE(0x00090206)	/* 0x00090009 keeps no more than these */
 	copy->block.keep.value = kept->block.keep.value;
 	if (copy->block.keep.bits.pressTimesSet) {
 		copy->block.pressTime1 = kept->block.pressTime1;
 		copy->block.pressTime2 = kept->block.pressTime2;
 	}
+#endif
 #if FW_RETAIL_10X || FW_SINCE(0x0100060B)
 	copy->block.test.value = kept->block.test.value;
 #endif

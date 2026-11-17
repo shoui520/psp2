@@ -238,6 +238,7 @@ void sleepFactorSet15(unsigned char on)
 	}
 }
 
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)	/* 0x00090009 has no charge factor 5 */
 void sleepFactorSet19(unsigned char on)
 {
 	if (sleepFactor.bits[2].b3 ^ on) {
@@ -247,6 +248,7 @@ void sleepFactorSet19(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif
 
 /* the updater has not the last three, 0x00090804 not 22 and 23 */
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x00090903)
