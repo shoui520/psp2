@@ -629,10 +629,37 @@ typedef struct NpPushUserList {
 	void *allocator;
 } NpPushUserList;
 
+typedef struct NpWebApiExtdName {
+	const void *const *vtable;
+	struct NpWebApiExtdName *next;
+	struct NpWebApiExtdName *prev;
+	char name[33];
+	unsigned char reserved[3];
+} NpWebApiExtdName;
+
+typedef struct NpWebApiExtdEntry {
+	const void *const *vtable;
+	void *pool;
+	struct NpWebApiExtdEntry *next;
+	struct NpWebApiExtdEntry *prev;
+	char service[65];
+	unsigned char reserved[3];
+	NpWebApiExtdName *head;
+	NpWebApiExtdName *tail;
+} NpWebApiExtdEntry;
+
+typedef struct NpWebApiExtdEntryList {
+	void *reserved;
+	NpWebApiExtdEntry *head;
+	NpWebApiExtdEntry *tail;
+} NpWebApiExtdEntryList;
+
 typedef struct NpPushLibContext {
 	const void **vtable;
 	unsigned char reserved4[12];
-	unsigned char mutex[48];
+	unsigned char mutex[24];
+	NpWebApiExtdEntryList services;
+	unsigned char reserved52[12];
 	NpPushUserList users;
 	unsigned char reserved76[12];
 	unsigned int flags;
@@ -722,37 +749,6 @@ extern const void *g_objectListVtable[];	/* 0x8100ef60 */
 #define NP_WEBAPI_ERROR_REGISTRY_SERVICE_TOO_LONG	-2141871578	/* 0x8055a226 */
 #define NP_WEBAPI_ERROR_REGISTRY_NAME_TOO_LONG	-2141871571	/* 0x8055a22d */
 
-typedef struct NpWebApiExtdName {
-	const void *const *vtable;
-	struct NpWebApiExtdName *next;
-	struct NpWebApiExtdName *prev;
-	char name[33];
-	unsigned char reserved[3];
-} NpWebApiExtdName;
-
-typedef struct NpWebApiExtdEntry {
-	const void *const *vtable;
-	void *pool;
-	struct NpWebApiExtdEntry *next;
-	struct NpWebApiExtdEntry *prev;
-	char service[65];
-	unsigned char reserved[3];
-	NpWebApiExtdName *head;
-	NpWebApiExtdName *tail;
-} NpWebApiExtdEntry;
-
-typedef struct NpWebApiExtdEntryList {
-	void *reserved;
-	NpWebApiExtdEntry *head;
-	NpWebApiExtdEntry *tail;
-} NpWebApiExtdEntryList;
-
-typedef struct NpWebApiExtdRegistry {
-	unsigned char reserved1[16];
-	unsigned char mutex[24];
-	NpWebApiExtdEntryList entries;
-} NpWebApiExtdRegistry;
-
 /* what the filters keep of an entry: its object and the entry */
 typedef struct NpWebApiExtdService {
 	const void *const *vtable;
@@ -762,7 +758,6 @@ typedef struct NpWebApiExtdService {
 typedef char NpWebApiExtdNameSizeCheck[sizeof(NpWebApiExtdName) == 48 ? 1 : -1];
 typedef char NpWebApiExtdEntrySizeCheck[sizeof(NpWebApiExtdEntry) == 92 ? 1 : -1];
 
-extern NpWebApiExtdRegistry *g_extdRegistry;	/* 0x81010038 */
 extern const void *g_extdNameVtable[];		/* 0x8100f0e0 */
 extern const void *g_extdEntryVtable[];		/* 0x8100f0f0 */
 extern const void *g_extdServiceVtable[];	/* 0x8100f088 */
@@ -782,12 +777,11 @@ extern int npWebApiExtdEntryListAdd(NpWebApiExtdEntryList *list, void *pool, con
 	NpWebApiExtdEntry **pEntry) __attribute__((noinline));
 extern int npWebApiExtdEntryListRemove(NpWebApiExtdEntryList *list, NpWebApiExtdEntry *entry) __attribute__((noinline));
 extern int npWebApiExtdEntryAddName(NpWebApiExtdEntry *entry, const char *name) __attribute__((noinline));
-extern int npWebApiExtdRegistryAddEntry(NpWebApiExtdRegistry *registry, void *pool, const char *service,
+extern int npWebApiExtdRegistryAddEntry(NpPushLibContext *registry, void *pool, const char *service,
 	NpWebApiExtdEntry **pEntry) __attribute__((noinline));
-extern int npWebApiExtdRegistryRemoveEntry(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry) __attribute__((noinline));
-extern int npWebApiExtdRegistryAddName(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry,
+extern int npWebApiExtdRegistryRemoveEntry(NpPushLibContext *registry, NpWebApiExtdEntry *entry) __attribute__((noinline));
+extern int npWebApiExtdRegistryAddName(NpPushLibContext *registry, NpWebApiExtdEntry *entry,
 	const char *name) __attribute__((noinline));
-extern NpWebApiExtdRegistry *npWebApiExtdGetRegistry(void) __attribute__((noinline));
 extern int npWebApiExtdServiceCreate(void *pool, const char *service, NpWebApiExtdService **pService) __attribute__((noinline));
 extern int npWebApiExtdServiceAddName(NpWebApiExtdService *service, const char *name) __attribute__((noinline));
 extern int npWebApiExtdServiceDestroy(NpWebApiExtdService *service) __attribute__((noinline));

@@ -5,8 +5,6 @@
 
 #include "np_webapi_internal.h"
 
-NpWebApiExtdRegistry *g_extdRegistry;		/* 0x81010038 */
-
 void *npWebApiExtdEntryClearService(void *service)
 {
 	sceClibMemset(service, 0, 65);
@@ -206,32 +204,32 @@ int npWebApiExtdEntryAddName(NpWebApiExtdEntry *entry, const char *name)
 	return result;
 }
 
-int npWebApiExtdRegistryAddEntry(NpWebApiExtdRegistry *registry, void *pool, const char *service,
+int npWebApiExtdRegistryAddEntry(NpPushLibContext *registry, void *pool, const char *service,
 	NpWebApiExtdEntry **pEntry)
 {
 	int result;
 
 	SceNpCommonPs4_A2A8493B(registry->mutex);
-	result = npWebApiExtdEntryListAdd(&registry->entries, pool, service, pEntry);
+	result = npWebApiExtdEntryListAdd(&registry->services, pool, service, pEntry);
 	SceNpCommonPs4_6BA5A164(registry->mutex);
 	if (result >= 0)
 		return 0;
 	return result;
 }
 
-int npWebApiExtdRegistryRemoveEntry(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry)
+int npWebApiExtdRegistryRemoveEntry(NpPushLibContext *registry, NpWebApiExtdEntry *entry)
 {
 	int result;
 
 	SceNpCommonPs4_A2A8493B(registry->mutex);
-	result = npWebApiExtdEntryListRemove(&registry->entries, entry);
+	result = npWebApiExtdEntryListRemove(&registry->services, entry);
 	SceNpCommonPs4_6BA5A164(registry->mutex);
 	if (result >= 0)
 		return 0;
 	return result;
 }
 
-int npWebApiExtdRegistryAddName(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry, const char *name)
+int npWebApiExtdRegistryAddName(NpPushLibContext *registry, NpWebApiExtdEntry *entry, const char *name)
 {
 	int result;
 
@@ -243,20 +241,15 @@ int npWebApiExtdRegistryAddName(NpWebApiExtdRegistry *registry, NpWebApiExtdEntr
 	return result;
 }
 
-NpWebApiExtdRegistry *npWebApiExtdGetRegistry(void)
-{
-	return g_extdRegistry;
-}
-
 int npWebApiExtdServiceCreate(void *pool, const char *service, NpWebApiExtdService **pService)
 {
-	NpWebApiExtdRegistry *registry;
+	NpPushLibContext *registry;
 	NpWebApiExtdService *object;
 	NpWebApiExtdService *memory;
 	NpWebApiExtdEntry *entry;
 	int result;
 
-	registry = npWebApiExtdGetRegistry();
+	registry = npPushLibContextGet();
 	if (registry == NULL)
 		return NP_WEBAPI_ERROR_REGISTRY_NOT_FOUND;
 	object = NULL;
@@ -280,10 +273,10 @@ int npWebApiExtdServiceCreate(void *pool, const char *service, NpWebApiExtdServi
 
 int npWebApiExtdServiceAddName(NpWebApiExtdService *service, const char *name)
 {
-	NpWebApiExtdRegistry *registry;
+	NpPushLibContext *registry;
 	int result;
 
-	registry = npWebApiExtdGetRegistry();
+	registry = npPushLibContextGet();
 	if (registry == NULL)
 		return NP_WEBAPI_ERROR_REGISTRY_NOT_FOUND;
 	if (sceClibStrnlen(name, 0xFFFFFFFF) > 0x20)
@@ -296,10 +289,10 @@ int npWebApiExtdServiceAddName(NpWebApiExtdService *service, const char *name)
 
 int npWebApiExtdServiceDestroy(NpWebApiExtdService *service)
 {
-	NpWebApiExtdRegistry *registry;
+	NpPushLibContext *registry;
 	int result;
 
-	registry = npWebApiExtdGetRegistry();
+	registry = npPushLibContextGet();
 	if (registry == NULL)
 		return NP_WEBAPI_ERROR_REGISTRY_NOT_FOUND;
 	result = npWebApiExtdRegistryRemoveEntry(registry, service->entry);
