@@ -365,9 +365,9 @@ void wlanWmmAddtsResult(uint8_t *command, const uint8_t *response, unsigned int 
 
 /*
  * 0x2d10c: the body of a WMM DELTS action frame: action 2, token 0, status 0 and the 63 bytes of
- * the TSPEC element. Its length is 4 + 63.
+ * the TSPEC element. Its length is 4 + 63; the length the host gave is not read.
  */
-void wlanTspecBuildDelts(OsaBuffer *buffer, const uint8_t *tspecElement)
+void wlanTspecBuildDelts(OsaBuffer *buffer, const uint8_t *tspecElement, unsigned int length)
 {
 	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
 	uint8_t *body = frame->body;

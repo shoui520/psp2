@@ -50,12 +50,12 @@ unsigned int p2pDirectTrackEntry(void);					/* 0x4190a */
 unsigned int p2pDirectManageEntry(void);					/* 0x41940 */
 int p2pDirectAcquireEntry(void);						/* 0x4196a */
 int p2pDirectReleaseEntry(void);						/* 0x419a6 */
-int p2pDirectSetupEntry(uint32_t handle, int event, void (*completion)(int result));	/* 0x419d4 */
+int p2pDirectSetupEntry(uint32_t handle, int event, void (*completion)(int result, int detail));	/* 0x419d4 */
 int p2pDirectClearEntry(uint32_t handle, const struct WlanTxStatus *status, const OsaBuffer *buffer,
 			uint32_t second, uint32_t third,
 			int (*result)(const uint8_t *body, int length));		/* 0x41a5c */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 int p2pDirectSelectEntry(unsigned int category);				/* 0x41c72 */
-int p2pDirectAdjustEntry(unsigned int tid);					/* 0x41c88 */
+int p2pDirectAdjustEntry(uint8_t tid);					/* 0x41c88 */
 
 #endif

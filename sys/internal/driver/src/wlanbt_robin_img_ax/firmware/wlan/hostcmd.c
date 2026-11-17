@@ -432,7 +432,7 @@ int hostCmd006bSet(struct WlanConnection *connection, unsigned int action, uint8
 		   unsigned int length);					/* 0x378b0 */
 unsigned int hostCmd006bGet(uint8_t *body, unsigned int flush);			/* 0x378f0 */
 int hostCmd006e(struct WlanConnection *connection, char *body, int length);	/* 0x41af8 */
-void hostCmd006f(uint8_t *body, int length);					/* 0x41838 */
+int hostCmd006f(uint8_t *body, int length);					/* 0x41838 */
 unsigned int hostCmd0070(uint8_t *body);					/* 0x1e826 */
 unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e782 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */

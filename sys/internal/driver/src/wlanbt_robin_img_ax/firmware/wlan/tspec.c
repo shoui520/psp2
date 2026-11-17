@@ -115,13 +115,14 @@ int p2pDirectBuildEntry(const uint8_t *tspec, int mode)
 /* An action frame of the connection towards the peer, for an ADDTS request or a DELTS. */
 int p2pDirectComputeEntry(OsaBuffer **buffer)
 {
-	struct WlanConnection *connection = wlanAddtsPending.connection;
-	OsaBuffer *frame = wlanMgmtAllocFrame(connection, 300);
+	OsaBuffer *frame = wlanMgmtAllocFrame(wlanAddtsPending.connection, 300);
+	struct WlanConnection *connection;
 	WlanWirelessFrame *wireless;
 
 	*buffer = frame;
 	if (frame != NULL) {
 		wireless = (WlanWirelessFrame *)((uint8_t *)frame + frame->dataOffset);
+		connection = wlanAddtsPending.connection;
 		wlanMgmtBuildFrame(frame, connection->interfaceAddress, connection->peerAddress, 13,
 				   connection->localAddress);
 		wireless->body[0] = WLAN_ACTION_CATEGORY_WMM;
@@ -146,9 +147,10 @@ int p2pDirectQueryEntry(const uint8_t *tspec, unsigned int length, const uint8_t
 		wlanAddtsPending.dialogToken = 1;
 	body = wlanTspecBuildAddts(buffer, tspec, length, wlanAddtsPending.dialogToken);
 	if (tailLength != 0) {
-		unsigned int size = ((frame[1] << 8) | frame[0]) + tailLength;
+		unsigned int size;
 
 		__aeabi_memcpy(body + length + 12, tail, tailLength);
+		size = ((frame[1] << 8) | frame[0]) + tailLength;
 		frame[0] = size;
 		frame[1] = size >> 8;
 	}
@@ -169,7 +171,7 @@ __attribute__((noinline)) int p2pDirectSelectEntry(unsigned int category)
 	return wlanWmm.queues[wlanAccessCategoryToQueue(category)].edca.acm;
 }
 
-__attribute__((noinline)) int p2pDirectAdjustEntry(unsigned int tid)
+__attribute__((noinline)) int p2pDirectAdjustEntry(uint8_t tid)
 {
 	return p2pDirectSelectEntry(wlanTidToAccessCategory(tid));
 }
@@ -210,7 +212,7 @@ int p2pDirectSyncEntry(int count)
 
 int p2pDirectApplyEntry(void)
 {
-	return p2pDirectSyncEntry(1);
+	return p2pDirectSyncEntry(1) == 0;
 }
 
 /* Tells the host the result of a request: the response (NULL: none came). */
@@ -345,7 +347,7 @@ int p2pDirectReleaseEntry(void)
 }
 
 /* The time slot of the request: what it does at each of its events. */
-int p2pDirectSetupEntry(uint32_t handle, int event, void (*completion)(int result))
+int p2pDirectSetupEntry(uint32_t handle, int event, void (*completion)(int result, int detail))
 {
 	switch (event) {
 	case 3:
@@ -366,7 +368,7 @@ int p2pDirectSetupEntry(uint32_t handle, int event, void (*completion)(int resul
 		if (wlanAddtsPending.slot != handle)
 			return 4;
 		if (completion != NULL)
-			completion(0);
+			completion(0, 0);
 		break;
 	case 6:
 		p2pDirectAcquireEntry();
@@ -391,18 +393,20 @@ int p2pDirectClearEntry(uint32_t handle, const struct WlanTxStatus *status, cons
 
 		if ((frame[2] >> 4) == 13 && frame[32] == WLAN_ACTION_CATEGORY_WMM &&
 		    frame[33] == WLAN_WMM_ACTION_ADDTS_RESPONSE) {
+			/* the response is consumed; the status is looked at all the same (IDA 0x41ac6) */
+			consumed = 1;
 			if (frame[35] == 0) {
 				if (!p2pDirectBuildEntry(frame + 44, 1))
-					return 1;
+					goto status;
 				p2pDirectScheduleEntry(wlanAddtsPending.connection, frame + 12, frame + 6, frame + 32);
 			}
 			if (result != NULL && result(frame + 32, (frame[1] << 8) | frame[0]) != 0) {
 				wlanSlotAbort(wlanAddtsPending.slot, 6);
 				wlanAddtsPending.slot = 0;
 			}
-			return 1;
 		}
 	}
+status:
 	if (status != NULL) {
 		unsigned int control = ((const uint8_t *)(uintptr_t)TX_DATA_FRAME(status->data))[2];
 
@@ -463,22 +467,24 @@ int hostCmd006e(struct WlanConnection *connection, char *body, int length)
 /* The connection joined: the streams that wait are requested in a slot, or the status told to the host. */
 void p2pDirectVerifyEntry(struct WlanConnection *connection)
 {
-	uint8_t toRequest = 0;
 	struct WlanSlotParams params;
+	uint8_t toRequest = 0;
+	unsigned int count;
 
 	if (!(connection->flags2 & WLAN_CONN2_ASSOCIATED) || wlanWmmEnabled() == 0)
 		return;
 	if (p2pDirectResetEntry() == 0 && (wlanTspecFlags & WLAN_TSPEC_SEND_ALWAYS) == 0)
 		return;
 	p2pDirectValidateEntry(&toRequest);
-	if (toRequest != 0) {
+	count = toRequest;
+	if (count != 0) {
 		__aeabi_memclr4(&params, 0x38);
 		__aeabi_memclr4(&wlanAddtsPending, 0x60);
 		params.callback = (int (*)(uint32_t, int, uint32_t))p2pDirectSetupEntry;
 		params.context = (uint32_t)(uintptr_t)p2pDirectClearEntry;
 		params.argument = (uint32_t)(uintptr_t)p2pDirectApplyEntry;
 		params.connection = connection;
-		params.duration = 250000 * toRequest;
+		params.duration = 250000 * count;
 		wlanAddtsPending.slot = wlanSlotSubmit(&params);
 		wlanAddtsPending.connection = connection;
 	} else if (p2pDirectAcquireEntry() != 0) {
@@ -501,7 +507,7 @@ unsigned int hostCmd005d(uint8_t *body)
 }
 
 /* The host removes a stream: the DELTS goes out when the connection is associated. */
-void hostCmd006f(uint8_t *body, int length)
+int hostCmd006f(uint8_t *body, int length)
 {
 	int result = 0;
 	OsaBuffer *buffer;
@@ -509,9 +515,11 @@ void hostCmd006f(uint8_t *body, int length)
 	p2pDirectBuildEntry(body + 11, 0);
 	body[0] = 4;
 	if ((wlanAddtsPending.connection->flags2 & WLAN_CONN2_ASSOCIATED) != 0 && wlanWmmEnabled() != 0) {
+		unsigned int tspecLength = body[2];	/* HostCmd_DS_WMM_DELTS_REQ: result, reason, TSPEC length, TSPEC */
+
 		p2pDirectComputeEntry(&buffer);
 		if (buffer != NULL) {
-			wlanTspecBuildDelts(buffer, body + 3);
+			wlanTspecBuildDelts(buffer, body + 3, tspecLength);
 			result = wlanMgmtSendFrame(buffer);
 		} else {
 			result = -1;
@@ -520,4 +528,5 @@ void hostCmd006f(uint8_t *body, int length)
 			body[0] = 0;
 		p2pDirectScheduleEntry(wlanAddtsPending.connection, NULL, NULL, NULL);
 	}
+	return result;
 }
