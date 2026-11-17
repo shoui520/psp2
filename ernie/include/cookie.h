@@ -16,6 +16,14 @@
 #define COOKIE_REG(reg)		((unsigned char)(configGet()->cookieRegHigh ? (reg) + 0xa0 : (reg)))
 #endif
 
+/* a register the controls write and the status reads: 0x00090206 numbers them from 0
+   whatever the settings say (only its version read takes the settings' base) */
+#if FW_SINCE(0x00090804)
+#define COOKIE_CTRL_REG(reg)	COOKIE_REG(reg)
+#else
+#define COOKIE_CTRL_REG(reg)	(reg)
+#endif
+
 /* the Cookie's address on the I2C bus */
 #if BOARD_COOKIE_REG_HIGH
 #define COOKIE_ADDRESS		(configGet()->cookieRegHigh ? 0xa4 : 0xa8)
@@ -29,7 +37,11 @@ union CookieReg {
 	unsigned char	byte[2];
 };
 
+#if FW_SINCE(0x00090804)
 extern union CookieReg cookieRegs[6];	/* registers 3-8 */
+#else
+extern union CookieReg cookieRegs[7];	/* registers 3-9 */
+#endif
 
 extern void cookieInit(void);
 extern unsigned char cookieWrite(unsigned char *data, unsigned char length);

@@ -298,10 +298,12 @@ unsigned char batteryStartBLMode(void)
 		if (result != 0)
 			;
 	}
+#if FW_SINCE(0x00090804)
 	if (result == 0) {
 		cookieCtrlBatteryCharge(0);
 		chargeTimerStop();
 	}
+#endif
 	return result;
 }
 
@@ -310,7 +312,9 @@ unsigned char batteryStopBLMode(void)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x00090804)
 	chargeTimerStart(0x0a);
+#endif
 	elmoCommand[0] = 0x16;
 	elmoCommand[1] = 0;
 	elmoCommand[2] = 0x0f;
@@ -327,14 +331,18 @@ unsigned char batteryStopBLMode(void)
 			result = batteryWriteAt(elmoCommand, 3);
 		}
 	}
+#if FW_SINCE(0x00090804)
 	cookieCtrlBatteryCharge(1);
+#endif
 	return result;
 }
 
 /* 0x0989: the gauge's control command 0x0041 (its reset) */
 unsigned char batterySWReset(void)
 {
+#if FW_SINCE(0x00090804)
 	chargeTimerStart(0x0a);
+#endif
 	elmoCommand[0] = 0;
 	elmoCommand[1] = 0x41;
 	elmoCommand[2] = 0;

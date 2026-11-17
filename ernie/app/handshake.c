@@ -537,7 +537,9 @@ static int handshakeUnlock11(void)
 
 static int handshakeLockHandler11(void)
 {
+#if FW_SINCE(0x00090804)
 	logEvent(0x16);
+#endif
 	return 0;
 }
 

@@ -77,12 +77,15 @@
 #define BOARD_ANALOG_CHANNEL8	BOARD_IS(0x00411000)
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
-   0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa) */
-#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !BOARD_IS(0x00411000))
+   0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa), nor has
+   0x00411000 after 0x00090206 */
+#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && \
+				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
 
 /* the settings stand in for a battery that does not answer (its temperature, capacities, ...);
-   PCH-1000 always asks the battery */
-#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !BOARD_IS(0x00411000))
+   PCH-1000 always asks the battery, and so does 0x00411000 after 0x00090206 */
+#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && \
+				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
    after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 or PDEL */

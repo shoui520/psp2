@@ -157,6 +157,10 @@ void updaterRequestNotify(void)
 			}
 			hostRequestAnswerReady(&updaterRequest.state);
 			break;
+		/* the downloader's requests: refused while the app runs */
+		case 0x1180:
+		case 0x1181:
+		case 0x1182:
 		default:
 			updaterRequest.state = HOST_REQUEST_ERROR;
 			break;

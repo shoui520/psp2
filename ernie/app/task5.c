@@ -45,8 +45,10 @@ void task5(VP_INT exinf)
 		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
 #elif FW_SINCE(0x00090903)
 		ercd = wai_flg(4, 0xf7a3, TWF_ORW, &ptn);
-#else
+#elif FW_SINCE(0x00090804)
 		ercd = wai_flg(4, 0xf3a3, TWF_ORW, &ptn);	/* no Cookie cycle */
+#else
+		ercd = wai_flg(4, 0xf1a3, TWF_ORW, &ptn);	/* no power LED fade */
 #endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0002) {
@@ -103,10 +105,12 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x2000);
 				chargeLedBlinkUpdate();
 			}
+#if FW_SINCE(0x00090804)
 			if (ptn & 0x0200) {
 				clr_flg(4, ~0x0200);
 				powerLedFadeStep();
 			}
+#endif
 			if (ptn & 0x4000) {
 				clr_flg(4, ~0x4000);
 				serial1Operation();
@@ -230,11 +234,13 @@ static void task5ChargeLed(void)
 static void task5ChargeLed(void)
 {
 	if (input1Bit7Active()) {
+#if FW_SINCE(0x00090804)
 		if (configGet()->start.bits.chargeLedOff) {
 			cookieCtrlReg3Bit2(0);
 			cookieCtrlReg3Mode(1);
 			return;
 		}
+#endif
 		if (chargeBatteryLevel9())
 			chargeLedSetBlink(1);
 		else

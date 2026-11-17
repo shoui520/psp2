@@ -159,6 +159,7 @@ void bbmcInit(void)
 unsigned char bbmcPowerOn(void)
 {
 	uart2Open();
+#if FW_SINCE(0x00090804)
 	switch (bbmc.state) {
 	case 3:
 		break;
@@ -174,6 +175,12 @@ unsigned char bbmcPowerOn(void)
 		timerStart(TIMER_RTC(0x15), 0xa0);
 		break;
 	}
+#else
+	if (bbmc.state != 3) {
+		timerStart(BBMC_LINK_TIMER, 0x28);
+		timerStart(TIMER_RTC(0x15), 0xa0);
+	}
+#endif
 #if FW_SINCE(0x01000104)
 	bbmc.repeats = 0;
 	bbmc.lastSequence = 0xff;
@@ -189,7 +196,11 @@ unsigned char bbmcPowerOff(void)
 	PM34 = 0;
 	P36 = 0;
 	PM36 = 0;
+#if FW_SINCE(0x00090804)
 	uart2Close(0);
+#else
+	uart2Close();
+#endif
 #if FW_SINCE(0x01000104)
 	bbmc.state = 1;
 	bbmc.transition = 0;
@@ -251,6 +262,7 @@ unsigned char bbmcStart(void)
 	bbmcWriteRegs(8, 4, zero4, BBMC_WRITE_RESET);
 #endif
 	switch (bbmcRegs.r.mode) {
+#if FW_SINCE(0x00090804)
 	case 1:
 		P125 = 1;
 #if FW_SINCE(0x01000104)
@@ -263,6 +275,15 @@ unsigned char bbmcStart(void)
 	case 7:
 		bbmc.state = 4;
 		break;
+#else
+	/* mode 6 as mode 1 without the line */
+	case 1:
+		P125 = 1;
+	case 6:
+		bbmc.state = 3;
+		timerStart(TIMER_RTC(0x19), 0x14);
+		break;
+#endif
 	default:
 		bbmc.state = 2;
 		break;
@@ -310,12 +331,15 @@ unsigned char bbmcGetMode(void)
 		return 2;
 	case 6:
 		return 3;
+#if FW_SINCE(0x00090804)
 	case 7:
 		return 4;
+#endif
 	}
 	return 0;
 }
 
+#if FW_SINCE(0x00090804)
 unsigned char bbmcIsOn(void)
 {
 	switch (bbmc.state) {
@@ -326,6 +350,7 @@ unsigned char bbmcIsOn(void)
 	}
 	return 0;
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 unsigned char bbmcModeIsNone(void)
@@ -378,8 +403,10 @@ unsigned char bbmcEvent(FLGPTN ptn)
 
 		mode = bbmcRegs.r.mode;
 		P125 = 0;
+#if FW_SINCE(0x00090804)
 		if (mode == 7)
 			mode = 1;
+#endif
 		bbmcWriteRegs(6, 2, (unsigned char *)&mode, BBMC_WRITE_RESET);
 		bbmcSetStatus(0x41);
 	}
@@ -394,14 +421,41 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		bbmcReceive();
 	if (ptn & BBMC_EVENT_RX_TIMEOUT)
 		bbmc.rxLength = 0;
+#if FW_SINCE(0x00090804)
 	if (ptn & BBMC_EVENT_LINK_TIMEOUT) {
 		if (stateGet() == 0x0008) {
 			uart2Close(1);
 			intp8Enable(1);
 		}
 	}
+#else
+	if (ptn & BBMC_EVENT_LINK_TIMEOUT)
+		;
+#endif
 	if (ptn & BBMC_EVENT_START)
 		;
+#if !FW_SINCE(0x00090804)
+	/* 0x00090206 runs the request before the state's change, and has no resume */
+	if (ptn & BBMC_EVENT_REQUEST)
+		bbmcRequestRun();
+	if (ptn & BBMC_EVENT_STATE) {
+		unsigned long zero;
+		unsigned int state;
+
+		zero = 0;
+		state = stateGet();
+		switch (state) {
+		case 0x0020:
+		case 0x8020:
+			break;
+		case 0x0004:
+		case 0x8004:
+			bbmcWriteRegs(8, 4, (unsigned char *)&zero, BBMC_WRITE_RESET);
+			break;
+		}
+	}
+	return 0;
+#else
 	if (ptn & BBMC_EVENT_RESUME) {
 		intp8Enable(0);
 		uart2Open();
@@ -411,7 +465,8 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		timerStart(BBMC_LINK_TIMER, 0x28);
 #endif
 	}
-#if !FW_SINCE(0x01000104)
+#endif
+#if !FW_SINCE(0x01000104) && FW_SINCE(0x00090804)
 	/* before 0x01000104 the states and their transitions are handled alike, and the mode's
 	   status and events cleared off; 0x00090804 leaves the transition flag set */
 	if (ptn & BBMC_EVENT_STATE) {
@@ -488,7 +543,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 			break;
 		}
 	}
-#else
+#elif FW_SINCE(0x01000104)
 	if (ptn & BBMC_EVENT_STATE) {
 		unsigned int state;
 
@@ -524,9 +579,11 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		}
 	}
 #endif
+#if FW_SINCE(0x00090804)
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
 	return 0;
+#endif
 }
 
 #if FW_SINCE(0x0100060B)
@@ -1026,12 +1083,17 @@ void bbmcRequestRun(void)
 				bbmcRequest.status = 0;
 				break;
 			case 1:
+#if FW_SINCE(0x00090804)
 				if (bbmcIsOn()) {
 					P37 = 1;
 					bbmcRequest.status = 0;
 				} else {
 					bbmcRequest.status = 5;
 				}
+#else
+				P37 = 1;
+				bbmcRequest.status = 0;
+#endif
 				break;
 			default:
 				bbmcRequest.status = 0x3c;

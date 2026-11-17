@@ -43,8 +43,8 @@ int hangDetected(void)
 }
 #endif
 
-#if !FW_SINCE(0x0100060B)
-/* neither is in 0x0100060B */
+#if !FW_SINCE(0x0100060B) && (FW_SINCE(0x00090804) || BOARD_STANDBY_STOP)
+/* neither is in 0x0100060B, nor in 0x00090206 without the standby stop */
 int hangStarted(void)
 {
 	return hangCount == 1;
@@ -59,10 +59,12 @@ int hangTimerRunning(void)
 }
 #endif
 
+#if FW_SINCE(0x00090804)
 unsigned char getResetFlags(void)
 {
 	return resetFlags;
 }
+#endif
 
 #if FW_SINCE(0x01000107)
 unsigned long getIdRecord1(void)

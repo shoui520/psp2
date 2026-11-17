@@ -160,7 +160,11 @@ void uartStopTx(unsigned char port)
 	} else if (port < 4) {
 		mask = 1 << (port - 2) * 2;
 		ST1L = 0x0f & mask;
+#if FW_SINCE(0x00090804)
 		SOE1L &= ~mask;
+#else
+		SOE1L |= ~mask;		/* sets the other outputs: fixed by 0x00090804 */
+#endif
 	}
 }
 
@@ -403,6 +407,26 @@ int uart2Open(void)
 	return 0;
 }
 
+#if !FW_SINCE(0x00090804)
+/* closes UART2 and its pins; SAU1 is enabled (not disabled) when channel 2's output is off */
+int uart2Close(void)
+{
+	if (uart2.flags & UART_OPEN) {
+		uartStopTx(2);
+		uartStopRx(2);
+		SS1L.0 = 0;
+		SS1L.1 = 0;
+		P14.4 = 0;
+		SOE1L.0 = 0;
+		P36 = 0;
+		PM36 = 0;
+		if (!SOE1L.2)
+			SAU1EN = 1;
+		uart2.flags = (uart2.flags & ~UART_OPEN) | UART_CLOSED;
+	}
+	return 0;
+}
+#else
 /* closes UART2; its pins stay up when keep is set, else they go low */
 int uart2Close(unsigned char keep)
 {
@@ -446,6 +470,7 @@ int uart2Close(unsigned char keep)
 #endif
 	return 0;
 }
+#endif
 
 /* a reception error: cleared, and on an overrun the channel restarts */
 void uart3ErrorInterrupt(void)

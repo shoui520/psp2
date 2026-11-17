@@ -532,6 +532,9 @@ int aesCbcDecrypt(const unsigned char __near *in, unsigned char __near *out,
 int aesEncrypt(const unsigned char __near *in, unsigned char __near *out, struct AesKey __near *ks)
 {
 	unsigned char round, nk, nr;
+#if !FW_SINCE(0x00090804)
+	unsigned long unused;		/* 0x00090206 keeps four more bytes in the frame */
+#endif
 
 	if (in == AES_NULL || out == AES_NULL || ks->w == NULL)
 		return AES_ERROR_NULL;
@@ -561,6 +564,9 @@ int aesEncrypt(const unsigned char __near *in, unsigned char __near *out, struct
 int aesDecrypt(const unsigned char __near *in, unsigned char __near *out, struct AesKey __near *ks)
 {
 	unsigned char round, nk, nr;
+#if !FW_SINCE(0x00090804)
+	unsigned long unused;		/* 0x00090206 keeps four more bytes in the frame */
+#endif
 
 	if (out == AES_NULL || in == AES_NULL || ks->w == NULL)
 		return AES_ERROR_NULL;

@@ -427,7 +427,14 @@ void analogEvent(unsigned int inputs)
 #endif
 			sleepFactorSet6(1);
 			sleepFactorSet5(1);
+#if FW_SINCE(0x00090804)
 			task2SetFlag(3, 0x0001);
+#else
+			switch (analogMultiCnReported) {
+			case 2:
+				task2SetFlag(3, 0x0001);
+			}
+#endif
 		}
 		analogMultiCnPrevious = analogMultiCn;
 	}

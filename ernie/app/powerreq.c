@@ -80,7 +80,9 @@ static void powerRequestCtrlUsbStatus(void);
 static void powerRequest088D(void);
 static void powerRequestCtrlRMRPower(void);
 static void powerRequestCtrlMultiCnPower(void);
+#if FW_SINCE(0x00090804)
 static void powerRequestCtrlLedPwmBlink(void);
+#endif
 #if LED_REQUESTS
 static void powerRequestSetChargeLedCtrl(void);
 #endif
@@ -183,7 +185,9 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x089a, powerRequestCtrlUsbStatus },
 	{ 0x089b, powerRequestCtrlRMRPower },
 	{ 0x089c, powerRequestCtrlMultiCnPower },
+#if FW_SINCE(0x00090804)
 	{ 0x089d, powerRequestCtrlLedPwmBlink },
+#endif
 #if LED_REQUESTS
 	{ 0x089e, powerRequestSetChargeLedCtrl },
 #endif
@@ -686,7 +690,7 @@ static void powerRequestCtrlUsbStatus(void)
 		powerStatus.bits.usb = status[1] >> 2;
 		ena_dsp();
 #else
-		reg = COOKIE_REG(2);
+		reg = COOKIE_CTRL_REG(2);
 		cookieRead(&reg, cookieStatus2.byte);
 		dis_dsp();
 		powerStatus.bits.usb = cookieStatus2.bits.usb;
@@ -850,8 +854,9 @@ static void powerRequestCtrlLedPwmBlink(void)
 	powerRequestDone(result);
 }
 
-#else
-/* before the LED requests, data[1] is powerLedFadeStart's pattern */
+#elif FW_SINCE(0x00090804)
+/* before the LED requests, data[1] is powerLedFadeStart's pattern (no 0x089d on 0x00090206,
+   which has no power LED fade) */
 static void powerRequestCtrlLedPwmBlink(void)
 {
 	unsigned char result;
@@ -1092,10 +1097,14 @@ static void powerRequestCtrlChargeAC(void)
 
 	if (powerRequest.length == 1) {
 		if (powerRequestData[0] != 0) {
+#if FW_SINCE(0x00090804)
 			chargeControl.1 = 1;
+#endif
 			on = 1;
 		} else {
+#if FW_SINCE(0x00090804)
 			chargeControl.1 = 0;
+#endif
 			on = 0;
 		}
 		result = powerResult(cookieCtrlChargeAc(on));
@@ -1204,15 +1213,22 @@ static void powerRequestReadCookieReg(void)
 {
 	unsigned char result;
 	unsigned char value[2];
+#if FW_SINCE(0x00090804)
 	unsigned char reg;
+#endif
 
 	if (powerRequest.length < 3) {
+#if !FW_SINCE(0x00090804)
+		/* the host's register number as it is */
+		result = powerResult(cookieRead(powerRequestData, value));
+#else
 #if BOARD_COOKIE_REG_HIGH
 		reg = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 : powerRequestData[0];
 #else
 		reg = powerRequestData[0];
 #endif
 		result = powerResult(cookieRead(&reg, value));
+#endif
 		if (result == 0) {
 			powerRequestAnswer[0] = value[1];
 			powerRequestAnswer[1] = value[0];
@@ -1232,7 +1248,7 @@ static void powerRequestWriteCookieReg(void)
 	unsigned char index;
 
 	if (powerRequest.length == 3) {
-#if BOARD_COOKIE_REG_HIGH
+#if BOARD_COOKIE_REG_HIGH && FW_SINCE(0x00090804)
 		write[0] = configGet()->cookieRegHigh ? powerRequestData[0] + 0xa0 :
 			   powerRequestData[0];
 #else
@@ -1242,8 +1258,13 @@ static void powerRequestWriteCookieReg(void)
 		write[2] = powerRequestData[1];
 		result = powerResult(cookieWrite(write, 3));
 		if (result == 0) {
+#if FW_SINCE(0x00090804)
 			if (write[0] >= COOKIE_REG(3) && write[0] <= COOKIE_REG(8)) {
-				index = write[0] - COOKIE_REG(3);
+#else
+			/* registers 3 to 0x11, past cookieRegs' seven */
+			if (write[0] >= 3 && write[0] < 0x12) {
+#endif
+				index = write[0] - COOKIE_CTRL_REG(3);
 				cookieRegs[index].byte[0] = write[1];
 				cookieRegs[index].byte[1] = write[2];
 			}

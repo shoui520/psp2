@@ -30,8 +30,14 @@ _rtos_task_table:
 	DW	LOWW(_task2), 8801H
 	DW	LOWW(_task3), 8401H
 	DW	LOWW(_hostTask), 8401H
+$_IF (ERNIE_FW>=0x00090804)
 	DW	LOWW(_task5), 8C02H
 	DW	LOWW(_task6), 8C02H
+$ELSE
+; 0x00090206 links task5 in the first bank
+	DW	LOWW(_task5), 8C01H
+	DW	LOWW(_task6), 8C02H
+$ENDIF
 	DW	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; their extended information
 	DW	0D3DCH, 0D4F8H, 0D59CH, 0D678H, 0D74CH, 0D828H	; their stacks' tops
 	DW	0D8EAH			; the kernel's stack

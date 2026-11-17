@@ -127,8 +127,10 @@ static void touchRequestBootloaderStatus0(void);
 static void touchRequestBackup0(void);
 static void touchRequestReset0(void);
 static void touchRequestConfigVersion0(void);
+#if FW_SINCE(0x00090804)
 static void touchRequestUserData0(void);
 static void touchRequestSelfTest0(void);
+#endif
 static void touchRequestEnterBootloader1(void);
 static void touchRequestUnlock1(void);
 static void touchRequestLoad1(void);
@@ -137,8 +139,10 @@ static void touchRequestBootloaderStatus1(void);
 static void touchRequestBackup1(void);
 static void touchRequestReset1(void);
 static void touchRequestConfigVersion1(void);
+#if FW_SINCE(0x00090804)
 static void touchRequestUserData1(void);
 static void touchRequestSelfTest1(void);
+#endif
 #if BOARD_MOTION
 static void motionRequest0480(void);
 static void motionRequest0481(void);
@@ -198,10 +202,15 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03a3, touchRequestFlash0 },
 	{ 0x03a4, touchRequestBootloaderStatus0 },
 	{ 0x03a5, touchRequestBackup0 },
+#if FW_SINCE(0x00090804)
 	{ 0x03a6, touchRequestReset0 },
 	{ 0x03a7, touchRequestConfigVersion0 },
 	{ 0x03a8, touchRequestUserData0 },
 	{ 0x03a9, touchRequestSelfTest0 },
+#else
+	{ 0x03a7, touchRequestConfigVersion0 },
+	{ 0x03a6, touchRequestReset0 },
+#endif
 	{ 0x03b0, touchRequestEnterBootloader1 },
 	{ 0x03b1, touchRequestUnlock1 },
 	{ 0x03b2, touchRequestLoad1 },
@@ -210,8 +219,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03b5, touchRequestBackup1 },
 	{ 0x03b6, touchRequestReset1 },
 	{ 0x03b7, touchRequestConfigVersion1 },
+#if FW_SINCE(0x00090804)
 	{ 0x03b8, touchRequestUserData1 },
 	{ 0x03b9, touchRequestSelfTest1 },
+#endif
 };
 
 #if BOARD_MOTION
@@ -701,7 +712,9 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 {
 	if (result == 0) {
 		controlsRequest.status = 0;
+#if FW_SINCE(0x00090804)
 		logEvent(3);
+#endif
 	} else
 		controlsRequest.status = 0x02;
 	controlsRequest.answerLength = 0;
@@ -933,14 +946,18 @@ static void touchRequestStart(void)
 				TMMK04 = 0;
 				TS0L = 0x10;
 			}
+#if FW_SINCE(0x00090804)
 			touchUpdateState();
+#endif
 			inputRequests.touchPhase = 1;
 		} else {
 			if (!(touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1))) {
 				TT0L = 0x10;
 				TMMK04 = 1;
 				TMIF04 = 0;
+#if FW_SINCE(0x00090804)
 				touchSetMode(0);
+#endif
 #if FW_SINCE(0x01000306)
 				touchClearFlags(TOUCH_FRAME);
 #endif
@@ -1589,7 +1606,12 @@ static void touchRequestReset1(void)
 /* 0x03a7 */
 static void touchRequestConfigVersion0(void)
 {
+#if FW_SINCE(0x00090804)
 	touchReadConfigVersion0(inputRequests.touchAnswer);
+#else
+	inputRequests.touchAnswer[0] = 0;	/* no version read yet */
+	inputRequests.touchAnswer[1] = 0;
+#endif
 	inputRequests.touchPending = 0;
 	touchRequest.answerLength = 2;
 	touchRequest.status = 0;
@@ -1600,7 +1622,12 @@ static void touchRequestConfigVersion0(void)
 /* 0x03b7 */
 static void touchRequestConfigVersion1(void)
 {
+#if FW_SINCE(0x00090804)
 	touchReadConfigVersion1(inputRequests.touchAnswer);
+#else
+	inputRequests.touchAnswer[0] = 0;	/* no version read yet */
+	inputRequests.touchAnswer[1] = 0;
+#endif
 	inputRequests.touchPending = 0;
 	touchRequest.answerLength = 2;
 	touchRequest.status = 0;
@@ -1608,6 +1635,7 @@ static void touchRequestConfigVersion1(void)
 	return;
 }
 
+#if FW_SINCE(0x00090804)
 /* 0x03a8 */
 static void touchRequestUserData0(void)
 {
@@ -1649,6 +1677,7 @@ static void touchRequestSelfTest1(void)
 	touchRequest.status = 0;
 	hostRequestAnswerReady(&touchRequest.state);
 }
+#endif
 
 #if BOARD_MOTION
 /* 0x0482 */

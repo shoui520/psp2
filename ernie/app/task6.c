@@ -22,7 +22,7 @@ void task6(VP_INT exinf)
 	bbmcInit();
 #endif
 	for (;;) {
-		ercd = wai_flg(6, 0x73ff, TWF_ORW, &ptn);
+		ercd = wai_flg(6, 0x7000 | BBMC_EVENTS, TWF_ORW, &ptn);
 		if (ercd != E_OK)
 			continue;
 		if (ptn & BBMC_EVENTS) {

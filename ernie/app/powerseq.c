@@ -32,6 +32,9 @@
 
 #if BOARD_WLAN_102603
 #define POWER_SET_WLAN_LINE(level)	(P6.7 = (level))
+#elif !FW_SINCE(0x00090804)
+/* 0x00090206 drives no WLAN line */
+#define POWER_SET_WLAN_LINE(level)	do { } while (0)
 #elif FW_SINCE(0x01000104)
 #define POWER_SET_WLAN_LINE(level)	(P31 = (level))
 #else
@@ -163,14 +166,18 @@ void powerSeqOn(void)
 			if ((status & 0xe0) == 0xa0)
 #endif
 				cookieCtrlBatteryCharge(0);
+#if FW_SINCE(0x00090804)
 			logEvent(0x0d);
+#endif
 		}
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
 				cookieReadStatus1(&status);
 				if (status & 0x02) {
+#if FW_SINCE(0x00090804)
 					if (deviceVersions.battery.version[1] >= 0x408 && deviceVersions.battery.version[1] < 0x412)
 						powerSleep(0x2a8);
+#endif
 					break;
 				}
 			}
@@ -221,8 +228,10 @@ unsigned char powerSeqResume(void)
 	if (mode.bits.mode == 0x0c)
 		powerSdOn();
 #endif
+#if FW_SINCE(0x00090804)
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -291,6 +300,7 @@ void powerSeqLevels(void)
 	elmoWrite(elmoCommand, 12);
 }
 
+#if FW_SINCE(0x00090804)
 /* P3.1 low until P6.7 goes low, at most six waits */
 void powerSeqWaitP67(void)
 {
@@ -310,6 +320,7 @@ void powerSeqWaitP67(void)
 	P31 = 1;
 #endif
 }
+#endif
 
 /* the lines low, the devices off, then the off sequence's Elmo steps */
 unsigned char powerSeqOff(void)
@@ -326,7 +337,9 @@ unsigned char powerSeqOff(void)
 #if BOARD_102603 && !BOARD_WLAN_102603
 	P6.7 = 0;
 #endif
+#if FW_SINCE(0x00090804)
 	P37 = 0;
+#endif
 	clockOutputStop();
 	powerMultiCnOff();
 	powerRmrOff();
@@ -386,7 +399,9 @@ unsigned char powerSeqSuspend(void)
 	if (!(elmoStatusMask.reg[0] & 0x10))
 		P95 = 0;
 #endif
-#if !FW_SINCE(0x01000104)
+#if !FW_SINCE(0x00090804)
+	powerLedSet(0);
+#elif !FW_SINCE(0x01000104)
 	if (!configGet()->suspendLedKeep) {
 		if (powerLedGetStatus() & configGet()->suspendLedMask)
 			powerLedFadeStart(1);
@@ -494,7 +509,12 @@ unsigned char powerAccOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[4] = mask;
+#if FW_SINCE(0x00090804)
 			timerStart(TIMER(0x11), 0);
+#else
+			sleepFactorSet2(1);
+			powerSleep(2);
+#endif
 		}
 	}
 	return result;
@@ -513,7 +533,9 @@ unsigned char powerAccOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[4] = mask;
+#if FW_SINCE(0x00090804)
 			timerStop(TIMER(0x11));
+#endif
 			sleepFactorSet2(0);
 			powerStartTimer(0x10, POWER_TIMER(8), 0x4b);
 		}
@@ -610,8 +632,10 @@ unsigned char powerBbmcCycle(void)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x00090804)
 	P37 = 0;
 	P125 = 0;
+#endif
 	if (bbmcGetMode()) {
 		bbmcSetOff();
 #if BOARD_102603
@@ -628,6 +652,10 @@ unsigned char powerBbmcCycle(void)
 		return 2;
 	}
 	bbmcSetOff();
+#if !FW_SINCE(0x00090804)
+	P37 = 0;	/* 0x00090206: after the BBMC's off */
+	P125 = 0;
+#endif
 	if (input2Bit0Get() == 1) {
 		P6.5 = 1;
 		powerSleep(0x14);
@@ -713,7 +741,7 @@ unsigned char powerCookieSet(void)
 	unsigned char result;
 
 	cookieReadReg3();
-#if BOARD_COOKIE_REG_HIGH
+#if BOARD_COOKIE_REG_HIGH && FW_SINCE(0x00090804)	/* 0x00090206: plain 3 */
 	elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
 #else
 	elmoCommand[0] = 0x03;
@@ -734,13 +762,13 @@ unsigned char powerCookieClear(void)
 	result = 0;
 #if FW_SINCE(0x01000107)
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
-#elif FW_SINCE(0x00090903)
+#elif FW_SINCE(0x00090903) || !FW_SINCE(0x00090804)
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1) {
 #else
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && chargeVbus) {
 #endif
 		cookieReadReg3();
-#if BOARD_COOKIE_REG_HIGH
+#if BOARD_COOKIE_REG_HIGH && FW_SINCE(0x00090804)
 		elmoCommand[0] = configGet()->cookieRegHigh ? 0xa3 : 0x03;
 #else
 		elmoCommand[0] = 0x03;
@@ -842,7 +870,7 @@ unsigned char powerRmrOff(void)
 	unsigned char result;
 	unsigned int mask;
 
-#if FW_SINCE(0x01000306)
+#if FW_SINCE(0x01000306) || !FW_SINCE(0x00090804)
 	if (POWER_RMR_REG & POWER_RMR_BIT) {
 #endif
 		mask = POWER_RMR_REG & ~POWER_RMR_BIT;
@@ -854,7 +882,7 @@ unsigned char powerRmrOff(void)
 			POWER_RMR_REG = mask;
 			powerStartTimer(0x1000, TIMER(0x0d), 0x4b);
 		}
-#if FW_SINCE(0x01000306)
+#if FW_SINCE(0x01000306) || !FW_SINCE(0x00090804)
 	} else {
 		result = 0;
 	}
@@ -878,7 +906,11 @@ unsigned char powerSdOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
+#if FW_SINCE(0x00090804)
 			timerStart(TIMER(0x12), 1);
+#else
+			powerSleep(5);
+#endif
 		}
 	}
 	return result;
@@ -897,9 +929,13 @@ unsigned char powerSdOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
+#if FW_SINCE(0x00090804)
 			timerStop(TIMER(0x12));
 			sleepFactorSet10(0);
 			powerStartTimer(0x2000, TIMER(0x0e), 0x11f);
+#else
+			powerStartTimer(0x2000, TIMER(0x0e), 0x25);
+#endif
 		}
 	} else {
 		result = 0;
@@ -933,19 +969,29 @@ unsigned char powerMultiCnOff(void)
 	unsigned char result;
 	unsigned int mask;
 
-	mask = elmoRegAB & 0x7fff;
-	elmoCommand[0] = 0xab;
-	elmoCommand[1] = ((unsigned char *)&mask)[1];
-	elmoCommand[2] = (unsigned char)mask;
-	result = elmoWrite(elmoCommand, 3);
-	if (result == 0) {
-		elmoRegAB = mask;
-		powerSleep(0x64);
+#if !FW_SINCE(0x00090804)
+	/* 0x00090206: only when it is on */
+	if (elmoRegAB & 0x8000) {
+#endif
+		mask = elmoRegAB & 0x7fff;
+		elmoCommand[0] = 0xab;
+		elmoCommand[1] = ((unsigned char *)&mask)[1];
+		elmoCommand[2] = (unsigned char)mask;
+		result = elmoWrite(elmoCommand, 3);
+		if (result == 0) {
+			elmoRegAB = mask;
+			powerSleep(0x64);
+		}
+#if !FW_SINCE(0x00090804)
+	} else {
+		result = 0;
 	}
+#endif
 	return result;
 }
 #endif
 
+#if FW_SINCE(0x00090804)
 /* timer 0x11 (powerAccOn) */
 void powerAccTimer(void)
 {
@@ -967,6 +1013,7 @@ void powerSeqInit(void)
 	handler.handler = powerSdTimer;
 	timerSetHandler(TIMER(0x12), &handler);
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 /* at the off and the suspend: the Cookie's register 3's bit 7 set for a while (timer 0x1e) */

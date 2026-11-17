@@ -78,7 +78,8 @@ OBJECT	sysinfo.c
 OBJECT	log.c		IF ERNIE_FW>=0x00090804
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
 OBJECT	param.c
-OBJECT	led.c
+# 0x00090206 has no power LED fade: its LED is powerseq.c's powerLedSet
+OBJECT	led.c		IF ERNIE_FW>=0x00090804
 OBJECT	authkeys.c	IF ERNIE_FW>=0x0100060B
 OBJECT	serialreq.c	IF ERNIE_FW>=0x00090903
 OBJECT	snvs.c		IF ERNIE_FW>=0x00090903

@@ -11,6 +11,7 @@
 #include "kernel.h"
 #include "param.h"
 
+#if FW_SINCE(0x00090804)
 static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -20,6 +21,7 @@ static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 0x06, 0x0a,
 #endif
 };
+#endif
 
 #if FW_SINCE(0x01000306)
 static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
@@ -81,9 +83,16 @@ int paramInit(void)
 	param.levels[3] = 0x23;
 	param.base = PARAM_BASE_DEFAULT;
 	param.adjust = 0;
+#if FW_SINCE(0x00090804)
 	param.setting1 = configGet()->paramSetting1;
 	param.setting2 = configGet()->paramSetting2;
 	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
+#else
+	/* 0x00090206 takes the settings from the bytes the press times have later, and has no
+	   pattern 1 */
+	param.setting1 = configGet()->pressTime1;
+	param.setting2 = configGet()->pressTime2;
+#endif
 	ena_dsp();
 	return 0;
 }
@@ -236,8 +245,10 @@ void paramGetAdjust(unsigned char *adjust)
 	*adjust = param.adjust & 0xf0;
 }
 
+#if FW_SINCE(0x00090804)
 void paramGetPattern1(unsigned char *pattern)
 {
 	memcpy(pattern, param.pattern1, PARAM_PATTERN_SIZE);
 }
+#endif
 #endif

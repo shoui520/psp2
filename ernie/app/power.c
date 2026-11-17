@@ -372,7 +372,9 @@ unsigned char powerResume(union PowerRequest *request)
 	task2SetFlag(3, 0x1000);
 	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
+#if FW_SINCE(0x00090804)
 	task6SetFlag(6, 0x80);
+#endif
 #if FW_SINCE(0x0100060B)
 	POWER_WAIT_KEEP(6, 5);
 #endif
@@ -495,7 +497,9 @@ unsigned char powerOff(void)
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
 	task6SetFlag(6, 0x80);
+#if FW_SINCE(0x00090804)
 	POWER_WAIT(6, 5);
+#endif
 	powerPendingClear(6);
 #if !FW_SINCE(0x01000104)
 	task2SetFlag(3, 0x1000);
@@ -574,8 +578,10 @@ unsigned char powerSuspend(void)
 	POWER_WAIT(5, 0xfa);
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(6);
+#if FW_SINCE(0x00090804)
 	task6SetFlag(6, 0x80);
 	POWER_WAIT(6, 5);
+#endif
 	powerPendingClear(6);
 #if !FW_SINCE(0x01000104)
 	/* before 0x01000104 the host link stops last */

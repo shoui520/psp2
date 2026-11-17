@@ -138,12 +138,17 @@ static void powerJobOn(void)
 #endif
 		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = 0;
 	powerTimersInit();
+#if FW_SINCE(0x00090804)
 	powerSeqInit();
+#endif
 #if FW_SINCE(0x01000104)
 	powerLedInit();
 	chargeLedInit();
 	timerStart(TIMER_RTC(0x17), 1);
 	powerResumed = 0;
+#elif !FW_SINCE(0x00090804)
+	chargeLedInit();
+	timerStart(TIMER_RTC(0x17), 1);
 #else
 	if (configGet()->start.bits.chargeLedOff) {
 		cookieCtrlReg3Bit2(0);
@@ -173,7 +178,7 @@ static void powerJobResume(void)
 		powerLedSetPwm(1);
 	}
 #endif
-#else
+#elif FW_SINCE(0x00090804)
 	powerLedFadeStart(0);
 	powerSleep(4);
 #endif
@@ -264,12 +269,16 @@ static void powerJobOff(void)
 	if ((signed char)bbmc.state >= 2 || input2Bit0Get() == 1)
 		powerBbmcRestart();
 	powerSeqOff();
+#if FW_SINCE(0x00090804)
 	cookieCtrlBatteryCharge(1);
+#endif
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
+#if FW_SINCE(0x00090804)
 	chargeControl.1 = 1;
 	powerLedFadeStart(0);
+#endif
 	powerReady(POWER_JOB_PART);
 }
 #endif
@@ -296,8 +305,12 @@ static void powerJobShutdown(void)
 {
 	powerSeqOff();
 	iicaClose();
+#if FW_SINCE(0x00090804)
 	chargeTimerStop();
 	powerLedFadeStart(0);
+#else
+	timerStop(TIMER_RTC(0x17));
+#endif
 	powerReady(POWER_JOB_PART);
 }
 #endif
@@ -345,7 +358,9 @@ static void powerJobSuspend(void)
 	charge.acDelay = 0x3c;
 	task5SetFlag(4, 0x20);
 	POWER_JOB_VBUS_ON();
+#if FW_SINCE(0x00090804)
 	chargeControl.1 = 1;
+#endif
 	powerReady(POWER_JOB_PART);
 }
 #endif
@@ -372,14 +387,23 @@ static void powerJobCut(void)
 	chargeLedInit();
 #endif
 	iicaClose();
+#if FW_SINCE(0x00090804)
 	chargeTimerStop();
+#else
+	timerStop(TIMER_RTC(0x17));
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
 static void powerJobOffEnd(void)
 {
 	batteryHibernate();
+#if FW_SINCE(0x00090804)
 	chargeTimerStop();
+#else
+	timerStop(TIMER_RTC(0x17));
+	clr_flg(4, ~0x0020);
+#endif
 }
 
 #if FW_SINCE(0x01000104)

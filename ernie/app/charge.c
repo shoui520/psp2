@@ -38,6 +38,12 @@ __sreg union CookieStatus2 cookieStatus2;
 __sreg union PowerStatus powerStatus;
 __sreg unsigned char chargeFactors;
 __sreg unsigned char chargeControl;
+/* bit 0, the transition 0x16 due at the AC: 0x00090206 keeps it in the whole byte */
+#if FW_SINCE(0x00090804)
+#define CHARGE_AC_DUE		chargeControl.0
+#else
+#define CHARGE_AC_DUE		chargeControl
+#endif
 __sreg struct ChargeTemp chargeTemp;
 __sreg unsigned char chargeCurrent;
 __sreg unsigned char chargeUsbMode;
@@ -87,8 +93,12 @@ void chargeInit(void)
 	chargeVbus = 1;
 #endif
 	chargeBbmcVersion = 0;
+#if FW_SINCE(0x00090804)
 	chargeControl.0 = 0;
 	chargeControl.1 = 1;
+#else
+	chargeControl = 0;
+#endif
 	chargeFactors.0 = 0;
 #if FW_SINCE(0x00090903)
 	chargeCookieSetting = 0xc0;
@@ -493,9 +503,9 @@ void chargeUpdate(void)
 		return;
 	status1 = cookieStatus1;
 	status2 = cookieStatus2;
-	reg = COOKIE_REG(1);
+	reg = COOKIE_CTRL_REG(1);
 	cookieRead(&reg, cookieStatus1.byte);
-	reg = COOKIE_REG(2);
+	reg = COOKIE_CTRL_REG(2);
 	cookieRead(&reg, cookieStatus2.byte);
 	state = stateGet();
 	ac = chargeFactors.0;
@@ -515,9 +525,9 @@ void chargeUpdate(void)
 			if (chargeFactors.0) {
 				charge.acDelay = 10;
 				if (!(stateGetWakeMask() & 0x00400000))
-					chargeControl.0 = 1;
+					CHARGE_AC_DUE = 1;
 			} else {
-				chargeControl.0 = 0;
+				CHARGE_AC_DUE = 0;
 				charge.acDelay = 0x3c;
 			}
 			timerStart(TIMER_RTC(0x17), charge.acDelay);
@@ -529,10 +539,18 @@ void chargeUpdate(void)
 		sleepFactorSetStatus4(chargeFactors.1);
 		ena_dsp();
 		if (cookieStatus2.bits.vbusCharge) {
+#if FW_SINCE(0x00090804)
 			if (chargeUsbMode == 0 && !P14.5 && (cookieStatus2.bits.usb & 2)) {
 				chargeUsbMode = 1;
 				chargeSetCurrent();
 			}
+#else
+			if (!(status2.word & 0x8000) && (cookieStatus2.bits.usb & 2)) {
+				if (chargeUsbMode == 0)
+					chargeUsbMode = 1;
+				chargeSetCurrent();
+			}
+#endif
 		} else if (status2.word & 0x8000) {
 			if (deviceVersions.cookie[1] < 0x31)
 				cookieCtrlSupplyCurrentUsb(0x10);
@@ -540,6 +558,7 @@ void chargeUpdate(void)
 		if (cookieStatus1.bits.level)
 			;
 	}
+#if FW_SINCE(0x00090804)
 	if (deviceVersions.battery.id == 0) {
 		if (batteryReadInfo(&deviceVersions.battery.id) == 0) {
 			chargeSetBattery();
@@ -553,10 +572,24 @@ void chargeUpdate(void)
 		batteryReadBicTemp(&charge.batteryBicTemp);
 		chargeTempUpdate(charge.batteryTemp, &chargeTemp);
 	}
+#endif
 	if (powerStatus.bits.battery) {
+#if FW_SINCE(0x00090804)
 		if (!(status1.word & 0x0002) && deviceVersions.battery.version[1] >= 0x0408 &&
 		    deviceVersions.battery.version[1] < 0x0412)
 			return;
+#else
+		if (deviceVersions.battery.id == 0) {
+			if (batteryReadInfo(&deviceVersions.battery.id) == 0) {
+				chargeSetBattery();
+			} else {
+				deviceVersions.battery.id = deviceVersions.battery.version[0] =
+					deviceVersions.battery.version[1] =
+					deviceVersions.battery.version[2] = 0;
+				return;
+			}
+		}
+#endif
 		batteryReadRemainCap(&charge.batteryRemainCap);
 		batteryReadVolt(&charge.batteryVolt);
 		batteryReadLifePercent(&charge.batteryLifePercent);
@@ -591,14 +624,24 @@ void chargeUpdate(void)
 		}
 		charge.flagsLast = charge.flagsRead;
 		if (state & 0x000c) {
-			if (chargeControl.0 && CHARGE_TEST(chargeMayStart())) {
+			if (CHARGE_AC_DUE && CHARGE_TEST(chargeMayStart())) {
 				chargeTransition(0x16);
-				chargeControl.0 = 0;
+				CHARGE_AC_DUE = 0;
 			}
+#if FW_SINCE(0x00090804)
 			if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && !(stateGetWakeMask() & 0x8000) &&
 			    (!(charge.flags & 0x0004) || CHARGE_TEST(chargeMayStart())))
+#else
+			if ((cookieStatus2.bits.usb & 1) && !(stateGetWakeMask() & 0x8000) &&
+			    (!(charge.flags & 0x0004) || CHARGE_TEST(chargeMayStart())))
+#endif
 				chargeTransition(0x0f);
 		}
+#if !FW_SINCE(0x00090804)
+		batteryReadTemp(&charge.batteryTemp);
+		batteryReadBicTemp(&charge.batteryBicTemp);
+		chargeTempUpdate(charge.batteryTemp, &chargeTemp);
+#endif
 		if (CHARGE_TEST(chargeBbmcChanged()))
 			chargeSetCurrent();
 		charge.batteryTempC = charge.batteryTemp - 0x0aac;
@@ -610,7 +653,9 @@ void chargeUpdate(void)
 		chargeResetBattery();
 		if (!configGet()->start.bits.batteryNoRetry && !(state & 0x8000) && (state & 0x0028))
 			chargeTransition(0x32);
+#if FW_SINCE(0x00090804)
 		logEvent(0x0e);
+#endif
 	}
 }
 #endif
@@ -722,10 +767,14 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 				cookieCtrlCharge(0);
 				if (t->level == 0) {
 					powerStatus.bits.cookieLock0 = 1;
+#if FW_SINCE(0x00090804)
 					logEvent(9);
+#endif
 				} else {
 					powerStatus.bits.cookieLock1 = 1;
+#if FW_SINCE(0x00090804)
 					logEvent(0x0a);
+#endif
 				}
 			} else {
 				if (t->setting1 == 0xff) {
@@ -928,7 +977,7 @@ void chargeUpdateSoon(void)
 	/* timer 0x16's handler: the wait is the timer's */
 #elif FW_SINCE(0x00090903)
 	dly_tsk(5);
-#else
+#elif FW_SINCE(0x00090804)
 	if (!input1Bit7Active())
 		chargeUsbMode = 0;
 #endif
@@ -1028,7 +1077,11 @@ int chargeSetCurrent(void)
 				result = powerCookieSet();
 			}
 		} else {
+#if FW_SINCE(0x00090804)
 			if (cookieRegs[0].byte[0] & 0x80)
+#else
+			if ((cookieRegs[0].byte[0] & 0x80) && chargeVbus)
+#endif
 				result = powerCookieClear();
 			if (deviceVersions.cookie[1] < 0x31 && setting >= 0x11)
 				setting = (setting >> 1) & 0xf0;
@@ -1104,8 +1157,10 @@ int chargeMayStart(void)
 #endif
 	if (configGet()->start.bits.batteryNoRetry)
 		return 1;
+#if FW_SINCE(0x00090804)
 	if (deviceVersions.battery.id == 0xfffe)
 		return 1;
+#endif
 	if (charge.flags & 0x8000)
 		return 0;
 	if (charge.flags & 0x0002)
@@ -1165,6 +1220,7 @@ void chargeResetBattery(void)
 		charge.batteryLifePercent = charge.batteryRemainCap = charge.batteryVolt = 0;
 }
 
+#if FW_SINCE(0x00090804)
 /* the next update after ticks */
 void chargeTimerStart(unsigned int ticks)
 {
@@ -1177,6 +1233,7 @@ void chargeTimerStop(void)
 	clr_flg(4, ~0x0020);
 	timerStop(TIMER_RTC(0x17));
 }
+#endif
 
 /* for the touch frames' power bit and powerreq (before 0x01000104 neither, on boards without BOARD_TOUCH_CHARGE) */
 #if FW_SINCE(0x01000104) || BOARD_TOUCH_CHARGE
