@@ -6,6 +6,7 @@
 #define _SHELL_PLUGINS_H
 
 #include <plugin.h>
+#include <std/string>
 
 /*
  * PLACEHOLDER: the function table a shell plugin gives through GetInterface(1), indexed until
@@ -111,5 +112,85 @@ void liveareaPluginExit(paf::Plugin *plugin);
 void mailResidentPluginInit(paf::Plugin *plugin);
 void mailResidentPluginStart(paf::Plugin *plugin);
 void mailResidentPluginStop(paf::Plugin *plugin);
+
+/*
+ * telephony_plugin's GetInterface(1): its modem and its service objects. Their methods are
+ * called through their tables; only the slots the shell's files call are written out.
+ */
+namespace paf { class IDParam; }
+
+/* what a telephony service method returns: a result code (methods out of line: 0x8124E288,
+   the destructor folded into an empty function) */
+class TelephonyResult {
+public:
+	~TelephonyResult();
+	int GetCode();
+
+private:
+	int m_code;
+};
+
+struct TelephonyModem;
+struct TelephonyModemVtable {
+	void *reserved0[7];
+	int (*getNetworkName)(TelephonyModem *self, char *name);			/* +0x1C */
+	void *reserved1[6];
+	int (*getState)(TelephonyModem *self, int *query);				/* +0x38 */
+};
+struct TelephonyModem {
+	const TelephonyModemVtable *vtable;
+};
+
+struct TelephonyService;
+struct TelephonyServiceVtable {
+	void *reserved0[7];
+	TelephonyResult (*getDataEnabled)(TelephonyService *self, SceUInt8 *enabled);	/* +0x1C */
+	void *reserved1[41];
+	TelephonyResult (*getRestriction)(TelephonyService *self, int *restriction);	/* +0xC4 */
+	void *reserved2[27];
+	TelephonyResult (*getStatus)(TelephonyService *self, int type, int *status);	/* +0x134 */
+};
+struct TelephonyService {
+	const TelephonyServiceVtable *vtable;
+};
+
+struct TelephonyPluginInterface {
+	void *reserved[2];
+	TelephonyModem *(*getModem)(void);
+	TelephonyService *(*getService)(void);
+};
+
+/* a notice impose_plugin shows: its name, the message and fields the shell leaves 0 */
+struct ImposeNotice {
+	const char *name;
+	int reserved0;
+	int reserved1;
+	int reserved2;
+	paf::string title;
+	int reserved3;
+	int reserved4;
+	int reserved5;
+	const wchar_t *message;
+	int reserved6;
+	int reserved7;
+	int reserved8;
+
+	ImposeNotice() : name(NULL), reserved0(0), reserved1(0), reserved2(0), title(""),
+		reserved3(0), reserved4(0), reserved5(0), message(NULL), reserved6(0),
+		reserved7(0), reserved8(0)
+	{
+	}
+
+	~ImposeNotice()
+	{
+	}
+};
+
+/* impose_plugin's GetInterface(1) */
+struct ImposePluginInterface {
+	void (*showNotice)(ImposeNotice *notice);
+	void *reserved;
+	const wchar_t *(*getString)(const paf::IDParam &id);
+};
 
 #endif

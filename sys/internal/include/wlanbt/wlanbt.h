@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef int (*SceWlanBtMonitorCallback)(unsigned int event,
 				      unsigned int argument, unsigned int size,
 				      const void *data);
@@ -15,3 +19,7 @@ unsigned int sceWlanGetConfiguration(void);
 int sceWlanGetWakeOnTargetProcess(void);
 int sceWlanSetConfiguration(int request);
 int sceWlanUnregisterCallback(void);
+
+#ifdef __cplusplus
+}
+#endif

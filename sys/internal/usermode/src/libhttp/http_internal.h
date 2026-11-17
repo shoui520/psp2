@@ -11,6 +11,7 @@
 #include <kernel/error.h>
 #include <libkernel/libkernel.h>
 #include <libhttp.h>
+#include <libhttp/httpinternal.h>
 #include <libmd5.h>
 #include <libbase64.h>
 #include <net/socket.h>
@@ -846,7 +847,6 @@ int SceHttp_F30073EC(int id, SceUInt8 value);
 int SceHttp_30F5D11F(int id, int *value);
 int SceHttp_53B722F2(int id, SceBool enable, int mode, const char *server, SceUShort16 port);
 int SceHttp_C498765A(int id, int value);
-int SceHttp_855D5254(int value);
 
 /* cert.c: the loaded CA certificates and the client certificate with its private key */
 #define HTTPS_SSL_ERROR_INVALID_VALUE	-2143070207	/* 0x80435801 */

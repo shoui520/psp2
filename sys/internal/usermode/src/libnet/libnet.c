@@ -6,6 +6,7 @@
  */
 #include <stdarg.h>
 #include <libkernel/libkernel.h>
+#include <libnet/netinternal.h>
 #include "libnet_internal.h"
 
 /* the stack's ioctl that sets a P2P socket's key (udpp2p's SIOCP2PSETKEY) */

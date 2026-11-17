@@ -60,6 +60,7 @@ static ShellExclusiveFuncMtp s_exclusiveFuncMtp = {
 	shellExclusiveFuncMtpFree,
 	shellExclusiveFuncMtpPrintStats,
 };
+static bool s_mtpMarlinStarted = false;
 
 static void shellMtpOnAppEvent(int code, const void *data, void *arg);
 static void shellMtpOnShellEvent(int code, const void *data, void *arg);
@@ -227,4 +228,11 @@ static void shellMtpOnShellEvent(int code, const void *data, void *arg)
 		return;
 	sce_paf_printf_dummy();
 	shellMtpServerNotifyShellEvent(data);
+}
+
+/* the Marlin service (SceMtpMlnSvc) started */
+void shellMtpMarlinStart(void)
+{
+	if (shellMtpMarlinServiceStart() >= 0)
+		s_mtpMarlinStarted = true;
 }

@@ -7,6 +7,8 @@
 
 #include <scetypes.h>
 #include <rtc.h>
+#include <net.h>
+#include <libnetctl.h>
 
 /* the shell events boot.cpp listens to (names ours, from what the listeners do) */
 enum {
@@ -23,7 +25,7 @@ enum {
 
 /* an application event's data (the fields the boot reads) */
 typedef struct ShellAppEvent {
-	int reserved;
+	SceUID processId;
 	int appId;
 } ShellAppEvent;
 
@@ -179,6 +181,93 @@ int shellMtpHostFunc3(int arg);
 int shellMtpHostFunc4(int arg);
 int shellMtpHostFunc5(int arg);
 
+/* the MTP Marlin service (SceMtpMlnSvc, 0x812BC4F0) started at boot (0x81003250) */
+int shellMtpMarlinServiceStart(void);
+void shellMtpMarlinStart(void);
+
+/* the network: libraries started at boot (0x81003AFE) */
+void shellNetStart(void);
+
+/* what the WISPr login reports its events to */
+typedef void (*ShellNetWisprCallback)(int event, int arg0, int arg1, int arg2, int arg3, int arg4);
+
+/* what the shell's NetCtl server asks the shell (net.cpp's functions, in this order) */
+struct ShellNetCtlHostFuncs {
+	void (*getProcessStatus)(SceUID processId, int *allowed, int *isFront);
+	int (*isProcessConnecting)(SceUID frontProcessId, SceUID processId);
+	int (*hasNetworkThread)(SceUID processId);
+	int (*exclusiveBegin)(int id, void *callback, void *arg);
+	int (*exclusiveEnd)(int id);
+	int (*isAnyProcessAllowed)(const SceUID *processIds, SceUInt32 count);
+	int (*wisprStart)(ShellNetWisprCallback callback, int id, const char *ssid,
+			  const void *bssid, int arg);
+	void (*wisprStop)(void);
+	int (*getMobileNetworkName)(char *name, SceSize size);
+	bool (*isMobileNetworkAvailable)(void);
+	void (*notifyComPrevented)(int wlan, int mobile);
+	int (*getMobileNetworkStatus)(int *status);
+};
+
+/* the shell's NetCtl server (SceNetCtlInt, 0x8120E820), its IPC server (SceNetCtlIpcInt,
+   0x8120CEB4) and what the host functions ask it (0x8120EEF0, 0x8120F070, 0x8120EE5A,
+   0x8120F178) */
+int shellNetCtlInit(SceSize inetStackSize, int inetPriority, SceSize adhocStackSize,
+		    int adhocPriority, const ShellNetCtlHostFuncs *host);
+int shellNetCtlIpcInit(void);
+int shellNetCtlGetProcessState(SceUID processId);
+int shellNetCtlIsProcessLinked(SceUID processId, SceUID frontProcessId);
+int shellNetCtlGetActiveCount(void);
+int shellNetCtlProcessEnded(SceUID processId);
+
+/* the shell's NetCtl functions libnetctl calls in place of its requests (0x8120EA6C...) */
+int shellNetCtlInetGetInfo(int code, SceNetCtlInfo *info);
+int shellNetCtlInetGetState(int *state);
+int shellNetCtlHandle_E8E8DF18(int *out);
+int shellNetCtlHandle_CDEBA500(int code, void *info);
+int shellNetCtlAdhocGetState(int *state);
+int shellNetCtlHandle_0CC36330(int *out);
+int shellNetCtlAdhocGetInAddr(SceNetInAddr *inaddr);
+int shellNetCtlGetNatInfo(SceNetCtlNatInfo *natinfo);
+int shellNetCtlHandle_F30365D6(void *info);
+int shellNetCtlHandle_6A56FC3A(const char **ssids, SceUInt32 count, void *param);
+int shellNetCtlHandle_47980B9B(void);
+int shellNetCtlHandle_92EB6B1A(int a0, void *out);
+int shellNetCtlHandle_A840C74C(void *buf, int count);
+int shellNetCtlHandle_1A254169(void *a0, void *a1, int a2, int *a3);
+int shellNetCtlHandle_27932A1B(void *a0, int a1, int *a2);
+int shellNetCtlHandle_484EE0B2(void *buf, int count);
+int shellNetCtlHandle_A59146E1(void *a0, void *a1, int a2, int *a3);
+int shellNetCtlHandle_147B054C(int *out);
+int shellNetCtlHandle_C15740E9(int *out);
+int shellNetCtlHandle_CCF30B92(int a0);
+/* also the table's 0x54 entry (one function for both) */
+int shellNetCtlGetIfStat(int device, SceNetCtlIfStat *ifstat);
+int shellNetCtlHandle_777FE4C2(int a0, int a1);
+int shellNetCtlHandle_8B2FEFAA(int a0, int a1);
+
+/* the exclusive function the NetCtl server runs under (0x810E26CC, 0x810E290A) */
+int shellExclusiveFuncNetBegin(int id, void *callback, void *arg);
+int shellExclusiveFuncNetEnd(int id);
+
+/* STUN (SceNetStun, 0x812181CC), UPnP (SceNetUpnp, 0x8121A038, 0x8121A06C) and the WISPr
+   login (SceNetWispr, 0x8121ADB0, 0x8121AE02, 0x8121AE20, 0x8121ADE2) */
+struct ShellNetUpnpParam {
+	int enable;
+};
+struct ShellNetWisprParam {
+	SceUInt8 bssid[8];
+	char ssid[33];
+	SceUInt8 reserved[3];
+};
+int shellNetStunInit(SceSize memorySize, int (*rand)(void));
+int shellNetUpnpInit(SceSize stackSize, int priority, const char *env);
+int shellNetUpnpSetParam(const ShellNetUpnpParam *param);
+int shellNetWisprInit(ShellNetWisprCallback callback, SceSize stackSize, int priority,
+		      int arg);
+int shellNetWisprStart(int id, const ShellNetWisprParam *param);
+int shellNetWisprStop(void);
+void shellNetWisprTerm(void);
+
 /* the screen shown while the boot waits (a busy indicator) */
 void shellBootScreenCreate(void);
 void shellBootScreenClose(void);
@@ -187,6 +276,10 @@ void shellBootScreenClose(void);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* the NetCtl server's state for the shell's own process (0x8120EDE2, 0x8120EE00) */
+int SceShell_5928D835(void);
+int SceShell_871A8E92(void);
 
 /* add a listener of an application event */
 int SceShell_83D16CA8(int event, ShellEventCallback callback, void *arg);
