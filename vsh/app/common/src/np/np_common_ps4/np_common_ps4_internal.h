@@ -226,7 +226,9 @@ extern const void *g_jsonStringValueVtable[];
 extern const void *g_jsonArrayValueVtable[];
 extern const void *g_jsonObjectValueVtable[];
 struct NpCommonPs4JsonParser *SceNpCommonPs4_4577A207(struct NpCommonPs4JsonParser *parser, struct NpCommonPs4Allocator *pool);
-int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, const void *handlerBase);
+int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, const void *const *const *eventHandler);
+int SceNpCommonPs4_EB1B7375(void *lexer, void *config, void *callback, void *context);
+int SceNpCommonPs4_F5EE219F(void *lexer, void *data, int size);
 int SceNpCommonPs4_FE98E2A7(struct NpCommonPs4JsonParser *parser, void *data, int size);
 
 /* a block of memory the library allocated, and its size */
