@@ -218,8 +218,8 @@ unsigned int p2pDirectConfigureEntry(void)
 	unsigned int slot;
 
 	for (slot = 0; slot < WLAN_WMM_SLOTS; slot = (uint8_t)(slot + 1)) {
-		if (wlanWmmSlots[slot].state == 4)
-			total += (wlanWmmSlots[slot].mediumTime[1] << 8) | wlanWmmSlots[slot].mediumTime[0];
+		if (wlanWmm.slots[slot].state == 4)
+			total += (wlanWmm.slots[slot].mediumTime[1] << 8) | wlanWmm.slots[slot].mediumTime[0];
 	}
 	return total;
 }
@@ -249,7 +249,7 @@ int p2pDirectValidateEntry(uint8_t *toRequest)
 	unsigned int slot;
 
 	for (slot = 0; slot < WLAN_WMM_SLOTS; slot = (uint8_t)(slot + 1)) {
-		const struct WlanWmmSlot *session = wlanWmmSessions[slot];
+		const struct WlanWmmSlot *session = wlanWmm.sessions[slot];
 
 		if (session != NULL && session->state != 0) {
 			count = (uint8_t)(count + 1);
@@ -265,15 +265,15 @@ int p2pDirectValidateEntry(uint8_t *toRequest)
 /* The TSPEC takes its U-APSD bit (action 1) or gives it back (action 0). */
 void p2pDirectPrepareEntry(struct WlanWmmSlot *session, int action)
 {
-	wlanTspecApplyBits(action, &wlanWmmSessionBits, &wlanWmmFlowBits, &wlanWmmReferenceBits, session->tspec,
+	wlanTspecApplyBits(action, &wlanWmm.infoIe[2][WLAN_WMM_IE_QOS_INFO], &wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO], &wlanWmm.infoIe[1][WLAN_WMM_IE_QOS_INFO], session->tspec,
 			   &session->directions);
-	wlanPsSetRoleMasks(wlanWmmFlowBits, wlanWmmSessionBits);
+	wlanPsSetRoleMasks(wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO], wlanWmm.infoIe[2][WLAN_WMM_IE_QOS_INFO]);
 }
 
 /* Frees the TSPEC of a slot. */
 int p2pDirectDispatchEntry(unsigned int slot)
 {
-	struct WlanWmmSlot **session = &wlanWmmSessions[slot];
+	struct WlanWmmSlot **session = &wlanWmm.sessions[slot];
 
 	__aeabi_memclr(*session, 0x37);
 	__aeabi_memclr((*session)->tail, 0x1b);
@@ -304,7 +304,7 @@ void p2pDirectParseEntry(uint32_t timer, uint32_t argument)
 		record->usedTime = 0;
 	} while (queue < WLAN_WMM_QUEUES);
 	if (used != 0)
-		osaCreateTimer(p2pDirectParseEntry, 0, 1000000, &wlanWmmPolicingTimer, 0);
+		osaCreateTimer(p2pDirectParseEntry, 0, 1000000, &wlanWmm.policingTimer, 0);
 	else
-		wlanWmmPolicingTimer = 0;
+		wlanWmm.policingTimer = 0;
 }

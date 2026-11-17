@@ -84,8 +84,6 @@ uint16_t wlanAssocListenInterval __attribute__((section(".itcm.rw"))) = 0x000a;	
 struct WlanJoin wlanJoin __attribute__((section(".itcm.bss")));
 
 /* Not converted yet; provisional names. */
-uint8_t wlanJoinWmmIe[9] __attribute__((section(".dtcm.bss")));				/* 0x4008fc0 */
-extern uint8_t wlanBssWmmIe[9];						/* DTCM 0x04008fc9 */
 void p2pDirectVerifyEntry(struct WlanConnection *connection);		/* 0x41bf2 */
 int ampPalOwnsConnection(struct WlanConnection *connection);		/* 0x236f8 */
 void macMgmtFilterPacket(int filter, int kind);				/* 0x3a5aa */
@@ -510,7 +508,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 	__aeabi_memcpy(wlanJoin.bss.bssid, command->peerStaAddr, sizeof(wlanJoin.bss.bssid));
 	wlanJoin.capability[0] = command->capInfo[0];
 	wlanJoin.capability[1] = command->capInfo[1];
-	__aeabi_memclr4(wlanJoinWmmIe, sizeof(wlanJoinWmmIe));
+	__aeabi_memclr4(wlanWmm.joinIe, sizeof(wlanWmm.joinIe));
 	__aeabi_memclr(wlanJoinHtCapability, sizeof(wlanJoinHtCapability));
 	__aeabi_memclr4(wlanJoin.rates, sizeof(wlanJoin.rates));
 	remaining = length - offsetof(HostCmd_DS_802_11_ASSOCIATE, tlvBuffer);
@@ -576,9 +574,9 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			break;
 		case TLV_TYPE_VENDOR_IE:
 			if (wlanWmmElementType(tlv + 4) == WLAN_VENDOR_WMM_INFORMATION) {
-				wlanJoinWmmIe[0] = tlv[0];
-				wlanJoinWmmIe[1] = tlv[2];
-				__aeabi_memcpy(&wlanJoinWmmIe[2], tlv + 4, LE16(tlv + 2));
+				wlanWmm.joinIe[0] = tlv[0];
+				wlanWmm.joinIe[1] = tlv[2];
+				__aeabi_memcpy(&wlanWmm.joinIe[2], tlv + 4, LE16(tlv + 2));
 			}
 			if (wlanWpaElementType(tlv + 4) != WLAN_VENDOR_WPA)
 				break;
@@ -661,7 +659,7 @@ int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length)
 			wlanIeBufferAppend(&wlanJoin.ieBuffer, rsnIe, rsnIe[1] + 2);
 		}
 	}
-	__aeabi_memcpy(wlanBssWmmIe, wlanJoinWmmIe, sizeof(wlanBssWmmIe));
+	__aeabi_memcpy(wlanWmm.bssIe, wlanWmm.joinIe, sizeof(wlanWmm.bssIe));
 
 	__aeabi_memclr4(&params, sizeof(params));
 	params.callback = wlanJoinSlotEvent;

@@ -112,10 +112,10 @@ int macTxNotifyAcquireFrame(OsaBuffer *buffer, const uint8_t *ssid, const uint8_
 	fmCoexTrackTable(frame, ssid, rates, NULL);
 	wlanAssocRateBitmap = wlanRateBitmapAll(rates, 14, NULL, 0, (const WlanHtCapabilityIe *)wlanJoinHtCapability);
 	if (connection->interfaceType == WLAN_IF_AMP && ampScanChannel != 0)
-		__aeabi_memcpy(wlanBssWmmIe, &qosCapability, 3);
+		__aeabi_memcpy(wlanWmm.bssIe, &qosCapability, 3);
 	else if (wlanWmmHasElement() == 0)
 		goto noWmm;
-	wlanAppendIe(frame, wlanBssWmmIe[0], &wlanBssWmmIe[2], wlanBssWmmIe[1]);
+	wlanAppendIe(frame, wlanWmm.bssIe[0], &wlanWmm.bssIe[2], wlanWmm.bssIe[1]);
 noWmm:
 	if (wlanJoinHtCapability[0] != 0)
 		wlanAppendIe(frame, wlanJoinHtCapability[0], &wlanJoinHtCapability[2], wlanJoinHtCapability[1]);

@@ -24,9 +24,6 @@ wlanHwInfo		= wlanDtcmState + 0xc0;		/* 0x040088ac */
 wlanAntennaProfile	= wlanDtcmState + 0xde;		/* 0x040088ca */
 wlanIbssJoinState	= wlanDtcmState + 0xe2;		/* 0x040088ce */
 wlanSavedMgmtPriority	= wlanDtcmState + 0xee;		/* 0x040088da */
-wlanWmmFlowBits		= wlanWmmIe + 0x08;		/* 0x04008fda */
-wlanWmmReferenceBits	= wlanWmmIe + 0x11;		/* 0x04008fe3 */
-wlanWmmSessionBits	= wlanWmmIe + 0x1a;		/* 0x04008fec */
 wlanDataEnd		= wlanCommandScanWindow + 0x2bc;	/* 0x00057e9a */
 
 /*

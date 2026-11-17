@@ -56,8 +56,8 @@ int p2pDirectBuildEntry(const uint8_t *tspec, int mode)
 	count = p2pDirectValidateEntry(NULL);
 	if (tsid >= 8)
 		return 0;
-	flowBefore = wlanWmmFlowBits;
-	sessionBefore = wlanWmmSessionBits;
+	flowBefore = wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO];
+	sessionBefore = wlanWmm.infoIe[2][WLAN_WMM_IE_QOS_INFO];
 	if (mode == 1 || mode == 2) {
 		struct WlanWmmQueue *queue;
 		struct WlanWmmSlot *session;
@@ -71,25 +71,25 @@ int p2pDirectBuildEntry(const uint8_t *tspec, int mode)
 			if (slot->directions & directions) {
 				unsigned int old = TSPEC_TSID(slot->tspec);
 
-				p2pDirectPrepareEntry(wlanWmmSessions[old], 0);
+				p2pDirectPrepareEntry(wlanWmm.sessions[old], 0);
 				p2pDirectDispatchEntry(old);
 				changed = 1;
 			}
 		}
-		session = wlanWmmSessions[tsid];
+		session = wlanWmm.sessions[tsid];
 		if (session != NULL) {
 			p2pDirectPrepareEntry(session, 0);
 			p2pDirectDispatchEntry(tsid);
 			changed = 1;
 		}
-		slot = &wlanWmmSlots[priority];
-		wlanWmmSessions[tsid] = slot;
+		slot = &wlanWmm.slots[priority];
+		wlanWmm.sessions[tsid] = slot;
 		__aeabi_memcpy(slot, tspec, TSPEC_LENGTH);
-		wlanWmmSessions[tsid]->directions = directions;
-		p2pDirectPrepareEntry(wlanWmmSessions[tsid], mode);
-		wlanWmmSessions[tsid]->state = mode == 2 ? 5 : 4;
+		wlanWmm.sessions[tsid]->directions = directions;
+		p2pDirectPrepareEntry(wlanWmm.sessions[tsid], mode);
+		wlanWmm.sessions[tsid]->state = mode == 2 ? 5 : 4;
 	} else {
-		struct WlanWmmSlot *session = wlanWmmSessions[tsid];
+		struct WlanWmmSlot *session = wlanWmm.sessions[tsid];
 
 		if (session != NULL) {
 			p2pDirectPrepareEntry(session, mode);
@@ -97,15 +97,15 @@ int p2pDirectBuildEntry(const uint8_t *tspec, int mode)
 		}
 	}
 	timeChanged = p2pDirectConfigureEntry() != time;
-	flowChanged = (uint8_t)memcmp(&flowBefore, &wlanWmmFlowBits, 1);
-	sessionChanged = (uint8_t)memcmp(&sessionBefore, &wlanWmmSessionBits, 1);
+	flowChanged = (uint8_t)memcmp(&flowBefore, &wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO], 1);
+	sessionChanged = (uint8_t)memcmp(&sessionBefore, &wlanWmm.infoIe[2][WLAN_WMM_IE_QOS_INFO], 1);
 	if (timeChanged) {
 		unsigned int queueIndex;
 
 		p2pDirectCheckEntry();
 		for (queueIndex = 0; queueIndex < 4; queueIndex = (uint8_t)(queueIndex + 1))
 			wlanWmmApplyQueue(queueIndex);
-		if (wlanWmmPolicingTimer == 0)
+		if (wlanWmm.policingTimer == 0)
 			p2pDirectParseEntry(0, 0);
 	}
 	return p2pDirectValidateEntry(NULL) != (int)count ||
@@ -155,7 +155,7 @@ int p2pDirectQueryEntry(const uint8_t *tspec, unsigned int length, const uint8_t
 	if ((wlanTspecFlags & WLAN_TSPEC_SEND_ALWAYS) == 0) {
 		unsigned int bit = 1 << wlanTspecUapsdBit(TSPEC_USER_PRIORITY(body + 12));
 
-		if (wlanWmmFlowBits & bit)
+		if (wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO] & bit)
 			body[13] |= 4;
 		else
 			body[13] &= 0xfb;
@@ -194,7 +194,7 @@ int p2pDirectSyncEntry(int count)
 	int slot;
 
 	for (slot = 7; slot >= 0; --slot) {
-		struct WlanWmmSlot *session = &wlanWmmSlots[slot];
+		struct WlanWmmSlot *session = &wlanWmm.slots[slot];
 
 		if (session->state != 1)
 			continue;
@@ -288,7 +288,7 @@ unsigned int p2pDirectTrackEntry(void)
 	unsigned int slot;
 
 	for (slot = 0; slot < 8; ++slot) {
-		struct WlanWmmSlot *session = wlanWmmSessions[slot];
+		struct WlanWmmSlot *session = wlanWmm.sessions[slot];
 
 		if (session != NULL && session->state == 4) {
 			session->state = 1;
@@ -305,7 +305,7 @@ unsigned int p2pDirectManageEntry(void)
 	unsigned int slot;
 
 	for (slot = 0; slot < 8; ++slot) {
-		struct WlanWmmSlot *session = wlanWmmSessions[slot];
+		struct WlanWmmSlot *session = wlanWmm.sessions[slot];
 
 		if (session != NULL && session->state == 4)
 			session->state = 5;
@@ -320,7 +320,7 @@ int p2pDirectAcquireEntry(void)
 	unsigned int slot;
 
 	for (slot = 0; slot < 8; ++slot) {
-		struct WlanWmmSlot *session = wlanWmmSessions[slot];
+		struct WlanWmmSlot *session = wlanWmm.sessions[slot];
 
 		if (session != NULL && session->state == 5) {
 			resumed = 1;
@@ -448,7 +448,7 @@ int hostCmd006e(struct WlanConnection *connection, char *body, int length)
 		if (wlanAddtsPending.slot == 0)
 			result = -1;
 	} else if (p2pDirectBuildEntry((uint8_t *)body + 15, 1)) {
-		wlanWmmSessions[tsid]->state = 1;
+		wlanWmm.sessions[tsid]->state = 1;
 		body[0] = 4;
 		result = 0;
 	} else {
@@ -489,7 +489,7 @@ void p2pDirectVerifyEntry(struct WlanConnection *connection)
 /* The status of a stream for the host (HostCmd 0x5d). */
 unsigned int hostCmd005d(uint8_t *body)
 {
-	struct WlanWmmSlot *session = wlanWmmSessions[body[0] & 7];
+	struct WlanWmmSlot *session = wlanWmm.sessions[body[0] & 7];
 	const uint8_t *directions = NULL;
 	int valid = 0;
 

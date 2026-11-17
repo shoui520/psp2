@@ -493,12 +493,12 @@ unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body)
 		tlv[3] = 0;
 		__aeabi_memcpy(tlv + 4, connection->supportedRates, 14);
 		cursor = tlv + 4 + GET_U16(&tlv[2]);
-		if (wlanWmmIe[0][0] != 0) {
-			cursor[0] = wlanWmmIe[0][0];
+		if (wlanWmm.infoIe[0][0] != 0) {
+			cursor[0] = wlanWmm.infoIe[0][0];
 			cursor[1] = 0;
-			cursor[2] = wlanWmmIe[0][1];
+			cursor[2] = wlanWmm.infoIe[0][1];
 			cursor[3] = 0;
-			__aeabi_memcpy(cursor + 4, &wlanWmmIe[0][2], 7);
+			__aeabi_memcpy(cursor + 4, &wlanWmm.infoIe[0][2], 7);
 			cursor += 4 + 7;
 		}
 		if (wlanAssocHtCapability[0] != 0) {

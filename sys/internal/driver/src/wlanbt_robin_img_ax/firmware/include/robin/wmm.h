@@ -59,12 +59,42 @@ _Static_assert(offsetof(struct WlanWmmSlot, directions) == 84, "WMM slot directi
 _Static_assert(sizeof(struct WlanWmmEdca) == 4, "EDCA parameters");
 _Static_assert(sizeof(struct WlanWmmQueue) == 20, "WMM queue");
 
+
+/* The byte of a WMM information element (as kept here: ID, length, then the body) that holds its QoS Info. */
+#define WLAN_WMM_IE_QOS_INFO	8
+
+/*
+ * All WMM state but the per-queue timing and statistics: one object in the
+ * original, cleared as a whole (wlanWmmClear() clears 0x3cc bytes from
+ * 0x04008c4c, and the other modules address its parts from wlanWmm).
+ */
 struct WlanWmm {
 	uint8_t enabled;		/* the BSS is a WMM one */
 	uint8_t parameterSetCount;	/* the parameter set count of the parameter element in use */
 	uint8_t reserved2[2];
 	struct WlanWmmQueue queues[WLAN_WMM_QUEUES];
+	struct WlanWmmSlot slots[WLAN_WMM_SLOTS];		/* 0x04008ca0 */
+	struct WlanWmmSlot *sessions[WLAN_WMM_SLOTS];		/* 0x04008fa0: the TSPECs admitted, by TSID */
+	uint8_t joinIe[9];			/* 0x04008fc0: the WMM information element of the join command */
+	uint8_t bssIe[9];			/* 0x04008fc9: the BSS's element header (or its QoS capability) */
+	uint8_t infoIe[3][9];			/* 0x04008fd2: the information elements in use; their QoS Info
+						   bytes: 0 the delivery-enabled (downlink) access categories,
+						   1 the reference, 2 the trigger-enabled (uplink) ones */
+	uint8_t element[26];			/* 0x04008fed: the parameter element, ID 221 */
+	uint8_t currentSlot;			/* 0x04009007 */
+	uint8_t padding[2];
+	uint16_t policed;			/* 0x0400900a */
+	int validatedSeen[2];			/* 0x0400900c: each ring's validated frame count when last read
+						   (macTxStatsAddValidated()) */
+	uint32_t policingTimer;			/* 0x04009014: osaCreateTimer() handle of the medium time's second */
 };
+
+_Static_assert(offsetof(struct WlanWmm, slots) == 0x54, "WMM slots");
+_Static_assert(offsetof(struct WlanWmm, sessions) == 0x354, "WMM sessions");
+_Static_assert(offsetof(struct WlanWmm, joinIe) == 0x374, "WMM join element");
+_Static_assert(offsetof(struct WlanWmm, element) == 0x3a1, "WMM parameter element");
+_Static_assert(offsetof(struct WlanWmm, policed) == 0x3be, "WMM policed time");
+_Static_assert(sizeof(struct WlanWmm) == 0x3cc, "WMM state");
 
 /* What a queue's frames cost: one bin of Marvell's HostCmd_CMD_WMM_QUEUE_STATS (32 bytes). */
 struct WlanWmmStats {
@@ -93,20 +123,9 @@ struct WlanIePointers;
 struct WlanTspecRequest;
 
 extern struct WlanWmm wlanWmm;					/* 0x04008c4c */
-extern struct WlanWmmSlot wlanWmmSlots[WLAN_WMM_SLOTS];		/* 0x04008ca0 */
-extern struct WlanWmmSlot *wlanWmmSessions[WLAN_WMM_SLOTS];	/* 0x04008fa0: the TSPECs admitted, by slot */
-extern uint8_t wlanBssWmmIe[9];				/* 0x04008fc9: the parameter element's header */
-extern uint8_t wlanWmmIe[3][9];					/* 0x04008fd2: the information elements in use */
-extern uint8_t wlanWmmCurrentSlot;				/* 0x04009007 */
-extern uint32_t wlanWmmPolicingTimer;				/* 0x04009014: osaCreateTimer() handle of the medium time's second */
-extern uint16_t wlanWmmPoliced;					/* 0x0400900a */
 extern struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES];	/* 0x04009018 */
 extern struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES];	/* 0x04009038 */
-extern uint8_t wlanWmmFlowBits;					/* 0x04008fda */
-extern uint8_t wlanWmmReferenceBits;				/* 0x04008fe3 */
-extern uint8_t wlanWmmSessionBits;				/* 0x04008fec */
-extern uint8_t wlanWmmElement[26];				/* 0x04008fed: the parameter element, ID 221 */
-extern uint16_t wlanWmmDefaultTime;				/* 0x00054ec0 */
+extern uint32_t wlanWmmDefaultTime;				/* 0x00054ec0 */
 extern const uint8_t wlanWmmRings[8];				/* SQRAM 0xc000fa9b: two rings per access category */
 
 int wlanWmmEnable(void);					/* 0x1e570 */
@@ -137,7 +156,6 @@ void wlanWmmSetupQueue(unsigned int queue);			/* 0x1eb5e */
 int wlanWmmApplyApEdca(struct WlanConnection *connection);	/* 0x1ea08 */
 void wlanWmmSetApsdSupport(uint8_t *ie, int enable);		/* 0x1ea54 */
 int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid);	/* 0x1ea6c */
-int wlanConnectionQosEnabled(struct WlanConnection *connection);	/* 0x30324 */
 unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
 unsigned int wlanGroupNextSequence(unsigned int tid);		/* 0x4204c */
 unsigned int wlanWmmLastSequence(unsigned int tid);		/* 0x4205a */
