@@ -409,3 +409,120 @@ int npWebApiRequestRegisterTitle(NpWebApiLibContext *libCtx, NpWebApiRequest *re
 	npWebApiLibContextUnlock(libCtx);
 	return result;
 }
+
+/* the same for a request: the account manager is asked for the service's URL as the user of the request */
+int npWebApiPushObjectRequestServiceUrl(NpWebApiPushObject *object, const char *service, char **pUrl,
+	NpWebApiRequest *request)
+{
+	int result;
+	unsigned char idle;
+	NpWebApiUserContext *userCtx;
+	NpWebApiLibContext *libCtx;
+	NpWebApiServiceUrl *entry;
+	NpWebApiServiceUrl *node;
+	int created;
+	int params[2];
+	char url[128];
+
+	result = 0;
+	idle = 0;
+	userCtx = NULL;
+	npWebApiLibContextGetAborted(object->libContext, &idle);
+	npWebApiLibContextLock(object->libContext);
+	for (entry = object->head; entry != NULL; entry = entry->next) {
+		if (sceClibStrncmp(entry->name, service, sceClibStrnlen(service, 0xFFFFFFFF)) == 0)
+			break;
+	}
+	npWebApiLibContextUnlock(object->libContext);
+	if (request != NULL) {
+		libCtx = object->libContext;
+		userCtx = npWebApiLibContextFindUserContext(libCtx, (int)(npWebApiRequestGetId(request) >> 32));
+		if (userCtx == NULL) {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+			goto done;
+		}
+		sceClibMemset(params, 0, 8);
+		params[1] = (int)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool2(object->libContext));
+		if (idle != 0)
+			result = SceNpCommonPs4_FB0B3FBD(params);
+		else
+			result = SceNpCommonPs4_639086A3(params);
+		if (result < 0)
+			goto done;
+		npWebApiLibContextLock(object->libContext);
+		npWebApiRequestSetField236(request, result);
+		if (npWebApiRequestGetBusy(request) != 0) {
+			result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+			npWebApiLibContextUnlock(object->libContext);
+			goto done;
+		}
+		npWebApiLibContextUnlock(object->libContext);
+		sceClibMemset(url, 0, 128);
+		if (idle != 0)
+			result = SceNpCommonPs4_C3B57417(npWebApiRequestGetField236(request),
+				(int)npWebApiUserContextOnlineId(userCtx), service, url, 128);
+		else
+			result = SceNpCommonPs4_DA99BBD7(npWebApiRequestGetField236(request),
+				(int)npWebApiUserContextOnlineId(userCtx), service, url, 128);
+		if (result < 0)
+			goto done;
+		npWebApiLibContextLock(object->libContext);
+		if (idle != 0)
+			SceNpCommonPs4_9C4F1236(npWebApiRequestGetField236(request));
+		else
+			SceNpCommonPs4_530CAFDA(npWebApiRequestGetField236(request));
+		npWebApiRequestSetField236(request, 0);
+		npWebApiLibContextLock(object->libContext);
+		for (entry = object->head; entry != NULL; entry = entry->next) {
+			if (sceClibStrncmp(entry->name, service, sceClibStrnlen(service, 0xFFFFFFFF)) == 0)
+				break;
+		}
+		npWebApiLibContextUnlock(object->libContext);
+		libCtx = object->libContext;
+		if (entry != NULL) {
+			result = 0;
+			npWebApiLibContextLock(libCtx);
+			sceClibMemset(entry->url, 0, 128);
+			sceClibMemcpy_safe(entry->url, url, sceClibStrnlen(url, 0xFFFFFFFF));
+			npWebApiLibContextUnlock(object->libContext);
+		} else {
+			node = (NpWebApiServiceUrl *)npWebApiLibContextPoolAlloc(libCtx, 208);
+			created = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+			if (node != NULL) {
+				sceClibMemset(node, 0, 208);
+				sceClibStrncpy(node->name, service, 32);
+				sceClibStrncpy(node->url, url, 128);
+				created = 0;
+				entry = node;
+			}
+			result = created;
+			if (created < 0) {
+				npWebApiLibContextUnlock(object->libContext);
+				goto done;
+			}
+			npWebApiLibContextLock(object->libContext);
+			if (object->head != NULL)
+				entry->next = object->head;
+			created = object->count + 1;
+			object->head = entry;
+			object->count = created;
+			npWebApiLibContextUnlock(libCtx);
+		}
+		npWebApiLibContextUnlock(object->libContext);
+	}
+	if (entry != NULL && pUrl != NULL)
+		*pUrl = entry->url;
+done:
+	if (userCtx != NULL)
+		npWebApiUserContextRelease(userCtx);
+	npWebApiLibContextLock(object->libContext);
+	if (request != NULL && npWebApiRequestGetField236(request) != 0) {
+		if (idle != 0)
+			SceNpCommonPs4_9C4F1236(npWebApiRequestGetField236(request));
+		else
+			SceNpCommonPs4_530CAFDA(npWebApiRequestGetField236(request));
+		npWebApiRequestSetField236(request, 0);
+	}
+	npWebApiLibContextUnlock(object->libContext);
+	return result;
+}
