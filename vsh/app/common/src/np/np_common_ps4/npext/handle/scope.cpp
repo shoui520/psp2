@@ -61,7 +61,7 @@ struct NpCommonPs4Scope *SceNpCommonPs4_101259AD(struct NpCommonPs4Scope *scope)
 	return scope;
 }
 
-int SceNpCommonPs4_DDFD56E9(struct NpCommonPs4Scope *scope, struct NpCommonPs4Handle *handle)
+int SceNpCommonPs4_DDFD56E9(struct NpCommonPs4Scope *scope, struct NpCommonPs4Handle *handle, int arg1, int arg2, int arg3)
 {
 	int result;
 	int attached;
@@ -70,7 +70,7 @@ int SceNpCommonPs4_DDFD56E9(struct NpCommonPs4Scope *scope, struct NpCommonPs4Ha
 		NP_COMMON_PS4_ASSERT(0, "Begin", "npext\\handle\\scope.cpp", 33, "m_handle == 0");
 	result = SceNpCommonPs4_2CA5AE6A(&scope->cancelable);
 	if (result >= 0) {
-		attached = SceNpCommonPs4_E70C78DB(&handle->cancelable, &scope->cancelable);
+		attached = SceNpCommonPs4_E70C78DB(&handle->cancelable, &scope->cancelable, arg1, arg2, arg3);
 		if (attached >= 0) {
 			scope->handle = handle;
 			return 0;
@@ -81,7 +81,7 @@ int SceNpCommonPs4_DDFD56E9(struct NpCommonPs4Scope *scope, struct NpCommonPs4Ha
 	return result;
 }
 
-int SceNpCommonPs4_3D0FA7C9(struct NpCommonPs4Scope *scope, int result)
+int SceNpCommonPs4_3D0FA7C9(struct NpCommonPs4Scope *scope, int result, int arg1, int arg2, int arg3)
 {
 	struct NpCommonPs4Handle *handle;
 	int status;
@@ -91,7 +91,7 @@ int SceNpCommonPs4_3D0FA7C9(struct NpCommonPs4Scope *scope, int result)
 		SceNpCommonPs4_6BF7B5BE(&handle->cancelable, &scope->cancelable);
 		scope->handle = NULL;
 	}
-	status = SceNpCommonPs4_3C8364C3(&scope->cancelable);
+	status = SceNpCommonPs4_3C8364C3(&scope->cancelable, arg1, arg2, arg3);
 	if (status >= 0)
 		status = result;
 	SceNpCommonPs4_9BCAE348(&scope->cancelable);

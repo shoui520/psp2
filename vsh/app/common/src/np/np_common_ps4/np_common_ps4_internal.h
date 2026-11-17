@@ -14,6 +14,7 @@
 #include <kernel/threadmgr.h>
 #include <kernel/sysmem.h>
 #include <libkernel/libkernel.h>
+#include <libhttp.h>
 #include "np_common_ps4.h"
 
 #ifdef __cplusplus
@@ -96,6 +97,37 @@ struct NpCommonPs4Scope {
 	struct NpCommonPs4Handle *handle;
 };
 
+/* npext/http: an HTTP template, a transaction (connection and request) and the connection pool it takes
+ * connections from */
+struct NpCommonPs4HttpTemplate {
+	const void *const *vtable;
+	SceInt32 templateId;
+};
+
+struct NpCommonPs4HttpTimeouts {
+	SceUInt32 connectTimeout;
+	SceUInt32 recvTimeout;
+	SceUInt32 sendTimeout;
+};
+
+struct NpCommonPs4HttpTrans {
+	const void *const *vtable;
+	const void *const *vtableSecondBase;
+	struct NpCommonPs4Allocator *pool;
+	void *connPool;
+	SceInt32 connId;
+	SceInt32 reqId;
+	SceUInt64 receivedSize;
+};
+
+/* the connection pool (npext/http/http_conn_pool.cpp) */
+int npCommonPs4HttpConnPoolGetConnection(void *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *scheme,
+	const char *serverName, SceUShort16 port, SceInt32 *pConnId);
+int npCommonPs4HttpConnPoolGetConnectionWithUrl(void *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *url,
+	SceInt32 *pConnId);
+int npCommonPs4HttpConnPoolRelease(void *connPool, SceInt32 connId);
+void npCommonPs4HttpConnPoolReportError(void *connPool, SceInt32 connId, int error);
+
 /* a block of memory the library allocated, and its size */
 void *NpCommonPs4MspaceAllocate(SceSize size, void *context);
 void *NpCommonPs4MspaceReallocate(void *pointer, SceSize size, void *context);
@@ -139,10 +171,17 @@ struct NpCommonPs4Cancelable *SceNpCommonPs4_C6E3FE21(struct NpCommonPs4Cancelab
 int SceNpCommonPs4_2CA5AE6A(struct NpCommonPs4Cancelable *cancelable);
 int SceNpCommonPs4_9BCAE348(struct NpCommonPs4Cancelable *cancelable);
 int SceNpCommonPs4_3AAA7DF7(struct NpCommonPs4Cancelable *cancelable);
-int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable);
-int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub);
+int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable, int arg1, int arg2, int arg3);
+int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub, int arg1, int arg2, int arg3);
 int SceNpCommonPs4_6BF7B5BE(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub);
 void npCommonPs4Breakpoint(void);
+struct NpCommonPs4Scope *SceNpCommonPs4_37C3D094(struct NpCommonPs4Scope *scope);
+struct NpCommonPs4Scope *SceNpCommonPs4_5BBB1ABA(struct NpCommonPs4Scope *scope);
+struct NpCommonPs4Scope *SceNpCommonPs4_9486DE09(struct NpCommonPs4Scope *scope);
+void SceNpCommonPs4_A3174D9A(struct NpCommonPs4Scope *scope);
+struct NpCommonPs4Scope *SceNpCommonPs4_101259AD(struct NpCommonPs4Scope *scope);
+int SceNpCommonPs4_DDFD56E9(struct NpCommonPs4Scope *scope, struct NpCommonPs4Handle *handle, int arg1, int arg2, int arg3);
+int SceNpCommonPs4_3D0FA7C9(struct NpCommonPs4Scope *scope, int result, int arg1, int arg2, int arg3);
 int SceNpCommonPs4_A2A8493B(struct NpCommonPs4Mutex *mutex);	/* lock */
 int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex);	/* unlock */
 int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, char recursive);
@@ -172,8 +211,9 @@ int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointe
 int SceNpCommonPs4_6B428829(struct NpCommonPs4Allocator *allocator, void *pointer);
 char *SceNpCommonPs4_1CAB4A2E(struct NpCommonPs4Allocator *allocator, const char *string);
 char *SceNpCommonPs4_83496021(struct NpCommonPs4Allocator *allocator, const char *string, SceSize maxLength);
-int SceNpCommonPs4_299ADFC3(struct NpCommonPs4Allocator *allocator, void *pointer);
-int SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *pointer);
+void *SceNpCommonPs4_299ADFC3(struct NpCommonPs4Allocator *allocator, SceSize size);
+void SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *pointer);
+void *SceNpCommonPs4_D154D84F(SceSize size, struct NpCommonPs4Allocator *pool);
 int SceNpCommonPs4_5BF297C0(void **pMspace, void *memory, SceSize size);
 int SceNpCommonPs4_B3C0FE19(void **pMspace, void *mspace);
 void *SceNpCommonPs4_1B0517EF(void **pMspace);

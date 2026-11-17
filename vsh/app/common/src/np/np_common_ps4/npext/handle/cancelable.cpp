@@ -106,7 +106,7 @@ int SceNpCommonPs4_06575826(struct NpCommonPs4Cancelable *cancelable)
 	return result;
 }
 
-int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable)
+int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable, int arg1, int arg2, int arg3)
 {
 	struct NpCommonPs4Cancelable *top;
 	struct NpCommonPs4Cancelable *next;
@@ -236,7 +236,7 @@ int SceNpCommonPs4_3AAA7DF7(struct NpCommonPs4Cancelable *cancelable)
 	return SceNpCommonPs4_C78F5DF5(&cancelable->mutex);
 }
 
-int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub)
+int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub, int arg1, int arg2, int arg3)
 {
 	struct NpCommonPs4Cancelable *top;
 	struct NpCommonPs4Cancelable *next;

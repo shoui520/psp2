@@ -162,14 +162,14 @@ char *SceNpCommonPs4_83496021(struct NpCommonPs4Allocator *allocator, const char
 	return copy;
 }
 
-int SceNpCommonPs4_299ADFC3(struct NpCommonPs4Allocator *allocator, void *pointer)
+void *SceNpCommonPs4_299ADFC3(struct NpCommonPs4Allocator *allocator, SceSize size)
 {
-	return ((int (*)(void *, void *))allocator->allocate)(pointer, allocator->context);
+	return allocator->allocate(size, allocator->context);
 }
 
-int SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *pointer)
+void SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *pointer)
 {
-	return ((int (*)(void *, void *))allocator->deallocate)(pointer, allocator->context);
+	allocator->deallocate(pointer, allocator->context);
 }
 
 int NpCommonPs4AllocatorReallocate(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size)
