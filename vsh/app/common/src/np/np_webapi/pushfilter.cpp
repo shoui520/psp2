@@ -706,7 +706,7 @@ int npWebApiServiceFilterResolve(NpWebApiServiceFilter *filter, NpWebApiHandle *
 		goto out;
 	sceClibMemset(params, 0, 8);
 	params[0] = npWebApiLibContextZero();
-	params[1] = SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(filter->libContext));
+	params[1] = (int)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(filter->libContext));
 	if (aborted != 0)
 		result = SceNpCommonPs4_FB0B3FBD(params);
 	else
@@ -915,7 +915,7 @@ int npWebApiExtdFilterResolve(NpWebApiExtdFilter *filter, NpWebApiHandle *handle
 		goto out;
 	sceClibMemset(params, 0, 8);
 	params[0] = npWebApiLibContextZero();
-	params[1] = SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(filter->libContext));
+	params[1] = (int)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(filter->libContext));
 	if (aborted != 0)
 		result = SceNpCommonPs4_FB0B3FBD(params);
 	else

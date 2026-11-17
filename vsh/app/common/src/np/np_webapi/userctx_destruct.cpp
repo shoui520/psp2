@@ -6,7 +6,7 @@
 
 /* frees the nodes of one of the user context's rings (the compiler's code for it is Sony's inline) */
 #define FREE_RING(head, allocator, count, clear)				\
-	ring = userCtx->head;							\
+	ring = (NpWebApiListNode *)userCtx->head;							\
 	if (ring != NULL) {							\
 		node = ring->next;						\
 		block = userCtx->allocator;					\
@@ -16,7 +16,7 @@
 				if (block != NULL) {				\
 					SceNpCommonPs4_6B428829(block, node);	\
 					block = userCtx->allocator;		\
-					ring = userCtx->head;			\
+					ring = (NpWebApiListNode *)userCtx->head;			\
 				}						\
 				node = next;					\
 			} while (next != ring);					\
@@ -39,9 +39,9 @@ NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx)
 	void *block;
 
 	userCtx->vtable = g_userContextVtable;
-	FREE_RING(listCHead, listCAllocator, listCCount, 1)
-	FREE_RING(listBHead, listBAllocator, listBCount, 1)
-	FREE_RING(listAHead, listAAllocator, listACount, 1)
+	FREE_RING(extdCallbacks.sentinel, extdCallbacks.allocator, extdCallbacks.count, 1)
+	FREE_RING(serviceCallbacks.sentinel, serviceCallbacks.allocator, serviceCallbacks.count, 1)
+	FREE_RING(pushCallbacks.sentinel, pushCallbacks.allocator, pushCallbacks.count, 1)
 	npWebApiLibContextLock(userCtx->libContext);
 	request = userCtx->requestHead;
 	if (request != NULL) {
@@ -53,9 +53,9 @@ NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx)
 	}
 	userCtx->requestCount = 0;
 	npWebApiLibContextUnlock(userCtx->libContext);
-	FREE_RING(listCHead, listCAllocator, listCCount, 0)
-	FREE_RING(listBHead, listBAllocator, listBCount, 0)
-	FREE_RING(listAHead, listAAllocator, listACount, 0)
+	FREE_RING(extdCallbacks.sentinel, extdCallbacks.allocator, extdCallbacks.count, 0)
+	FREE_RING(serviceCallbacks.sentinel, serviceCallbacks.allocator, serviceCallbacks.count, 0)
+	FREE_RING(pushCallbacks.sentinel, pushCallbacks.allocator, pushCallbacks.count, 0)
 	userCtx->vtable = g_baseVtable;
 	return userCtx;
 }
