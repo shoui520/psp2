@@ -21,6 +21,12 @@
 #endif
 #define BOARD_IS(id)		(ERNIE_BOARD == (id))
 
+/* the board whose kernel the build runs: the code's board's, but where hw/<id>.mk's KERNEL says
+   otherwise (0x00315200: 0x00411000's code on DEM-3000L's kernel) */
+#ifndef ERNIE_KERNEL
+#define ERNIE_KERNEL		ERNIE_BOARD
+#endif
+
 /* board family: the hardware ID's top byte (0x00 1x/3x prototypes, 0x004 IRT/IRS, 0x006
  * IRS-1001, 0x007 DOL (PS TV), 0x008 USS (PCH-2000)) */
 #define HW_FAMILY		(ERNIE_HW >> 20)

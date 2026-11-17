@@ -30,7 +30,10 @@
 #include "state.h"
 #include "timer.h"
 
-#if BOARD_WLAN_102603
+#if HW_IS(0x00315200)
+/* 0x00315200 drives no WLAN line */
+#define POWER_SET_WLAN_LINE(level)	do { } while (0)
+#elif BOARD_WLAN_102603
 #define POWER_SET_WLAN_LINE(level)	(P6.7 = (level))
 #elif !FW_SINCE(0x00090804)
 /* 0x00090206 drives no WLAN line */
@@ -76,6 +79,27 @@ static const struct PowerStep powerSuspendSteps[4] = {
 	{ { 0x7100, 0x0000, 0x0040, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x8000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x7c },
+};
+#elif HW_IS(0x00315200)
+/* 0x00315200's: four steps each, 0x00102603's without register 0xa3's bits 15 and 14 and
+   register 0xa2's 0x1880 */
+static const struct PowerStep powerResumeSteps[4] = {
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
+	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 4 },
+	{ { 0x7103, 0x0000, 0x0140, 0x0000, 0x0000, 0x0000 }, 4 },
+	{ { 0x0000, 0x0000, 0x0200, 0x0000, 0x0000, 0x0000 }, 8 },
+};
+static const struct PowerStep powerOffSteps[4] = {
+	{ { 0x0011, 0x8000, 0x1a80, 0x0000, 0x8000, 0x0000 }, 0x78 },
+	{ { 0x7102, 0x0000, 0x0140, 0x0000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x70 },
+};
+static const struct PowerStep powerSuspendSteps[4] = {
+	{ { 0x0001, 0x8000, 0x0280, 0x0000, 0x8000, 0x0000 }, 0x78 },
+	{ { 0x7102, 0x0000, 0x0140, 0x0000, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
+	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x70 },
 };
 #elif BOARD_102603
 /* 0x00102603's: four steps each */
@@ -339,7 +363,7 @@ unsigned char powerSeqOff(void)
 #if BOARD_102603 && !BOARD_WLAN_102603
 	P6.7 = 0;
 #endif
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090804) && BOARD_BBMC
 	P37 = 0;
 #endif
 	clockOutputStop();
@@ -1065,6 +1089,7 @@ unsigned char powerBbmcOff(void)
 	unsigned char result;
 
 	result = 0;
+#if BOARD_BBMC
 	P37 = 0;
 	P125 = 0;
 	bbmcSetOff();
@@ -1073,6 +1098,9 @@ unsigned char powerBbmcOff(void)
 		powerSleep(0x14);
 		P6.5 = 0;
 	}
+#else
+	result = 4;	/* no 3G modem */
+#endif
 	return result;
 }
 
@@ -1080,6 +1108,7 @@ unsigned char powerBbmcOn(void)
 {
 	unsigned char result;
 
+#if BOARD_BBMC
 	if (bbmcGetMode()) {
 #if BOARD_102603
 		powerBbmcPulse();
@@ -1106,17 +1135,22 @@ unsigned char powerBbmcOn(void)
 	} else {
 		result = 0;
 	}
+#else
+	result = 4;	/* no 3G modem */
+#endif
 	if (result)
 		bbmcWake();
 	return result;
 }
 
-/* the 3G modem's P3.3 pulse, 0x0e74 long */
+/* the 3G modem's P3.3 pulse, 0x0e74 long (none without the modem) */
 void powerBbmcPulse(void)
 {
+#if BOARD_BBMC
 	P33 = 1;
 	powerSleep(0x0e74);
 	P33 = 0;
+#endif
 }
 #elif FW_SINCE(0x00090903)
 /* task 5's (flag 0x0400): the Cookie's charge off for a second and on again, while its status
@@ -1176,7 +1210,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	return result;
 }
 
-#if BOARD_102603
+#if BOARD_102603 && !HW_IS(0x00315200)
 /* 0x0885: Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12 set, one per
    argument */
 unsigned char powerElmoA0Set2(unsigned char bit15, unsigned char bit14, unsigned char bit12)
@@ -1482,6 +1516,7 @@ unsigned char powerBbmcStart(void)
 {
 	unsigned char result;
 
+#if BOARD_BBMC
 	bbmcStart();
 	if (input2Bit0Get() == 0) {
 		P6.5 = 1;
@@ -1497,6 +1532,9 @@ unsigned char powerBbmcStart(void)
 	} else {
 		result = 0;
 	}
+#else
+	result = 4;	/* no 3G modem */
+#endif
 	return result;
 }
 

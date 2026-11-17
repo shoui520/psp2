@@ -69,4 +69,7 @@ struct SfrBits {
 /* port 12's bit 5 (P12.5): the 3G modem's power in mode 1 (bbmc.c) */
 #define P125			SFR_BITS(0xfff0c).b5
 
+/* port 12's bit 7 (P12.7): the analog inputs' power on 0x00102603 and 0x00315200 (input.c) */
+#define P127			SFR_BITS(0xfff0c).b7
+
 #endif

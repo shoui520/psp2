@@ -73,13 +73,21 @@ struct InputHandler bbmcInputHandlerWake;
 
 /* a register's 2-bit right for each mode, at the shift bbmcModeShift gives */
 static const unsigned char bbmcModeShift[5] = { 4, 0, 2, 6, 6 };
+#if BOARD_BBMC
 static const unsigned char bbmcRegModes[BBMC_REGS + 1] = {
+#else
+/* (0x00315200's without the last, unused, entry) */
+static const unsigned char bbmcRegModes[BBMC_REGS] = {
+#endif
 	0x33, 0x03, 0x33, 0x30, 0x03, 0x03, 0x3c, 0x3c,
 	0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31,
 	0x30, 0x30, 0x30, 0x30, 0x3c, 0x00, 0x00, 0x00,
 	0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c, 0x3c,
 	0x3c, 0x3c, 0x3c, 0x3c, 0x0f,
 };
+#if !BOARD_BBMC
+/* no modem: none of the zeros its registers are reset with */
+#else
 static const unsigned char bbmcZero12[12] = { 0 };
 #if FW_SINCE(0x01000104)
 static const unsigned char bbmcZero16[16] = { 0 };
@@ -89,6 +97,7 @@ static const unsigned char bbmcZero4[4] = { 0 };
 /* before 0x01000104 the mode registers are 0x0e bytes, and bbmcStart's zeros its own */
 static const unsigned char bbmcZero16[14] = { 0 };
 #endif
+#endif	/* BOARD_BBMC */
 
 /* the link's timeouts and handlers, the registers, request 0x0a and the inputs; the hardware
    info's flag 0x02 when P3.2 stays low */
@@ -141,12 +150,15 @@ void bbmcInit(void)
 	bbmcInputHandlerWake.type = 1;
 	bbmcInputHandlerWake.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	bbmcInputHandlerWake.handler = bbmcPostWake;
+#if !BOARD_BBMC
+	/* no modem to power down or detect */
+#elif BOARD_102603
 	P33 = 0;
-#if BOARD_102603
 	/* the modem taken as there whenever the board says it detects one */
 	if (configGet()->board.bits.bbmcDetect)
 		setHardwareInfoFlags(0x02);
 #else
+	P33 = 0;
 	if (configGet()->board.bits.bbmcDetect) {
 		level = P3.2;
 		dly_tsk(1);
@@ -158,6 +170,9 @@ void bbmcInit(void)
 
 unsigned char bbmcPowerOn(void)
 {
+#if !BOARD_BBMC
+	return 0;
+#else
 	uart2Open();
 #if FW_SINCE(0x00090804)
 	switch (bbmc.state) {
@@ -186,12 +201,16 @@ unsigned char bbmcPowerOn(void)
 	bbmc.lastSequence = 0xff;
 #endif
 	return 0;
+#endif
 }
 
 /* the lines low, the link closed, the registers of the mode and the events cleared, and the
    status for the system state */
 unsigned char bbmcPowerOff(void)
 {
+#if !BOARD_BBMC
+	return 0;
+#else
 	P34 = 0;
 	PM34 = 0;
 	P36 = 0;
@@ -237,11 +256,15 @@ unsigned char bbmcPowerOff(void)
 	}
 #endif
 	return 0;
+#endif
 }
 
 /* the lines as inputs, and the state for the mode set */
 unsigned char bbmcStart(void)
 {
+#if !BOARD_BBMC
+	return 0;
+#else
 #if FW_SINCE(0x01000104)
 	PM34 = 1;
 	PM36 = 1;
@@ -289,6 +312,7 @@ unsigned char bbmcStart(void)
 		break;
 	}
 	return 0;
+#endif
 }
 
 unsigned char bbmcSetOff(void)
@@ -362,6 +386,11 @@ unsigned char bbmcModeIsNone(void)
 /* event flag 6's events */
 unsigned char bbmcEvent(FLGPTN ptn)
 {
+#if !BOARD_BBMC
+	if (ptn & BBMC_EVENT_REQUEST)
+		bbmcRequestRun();
+	return 0;
+#else
 #if FW_SINCE(0x01000104)
 	STATE_TRANSITION_EVENT
 #endif
@@ -584,6 +613,7 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		bbmcRequestRun();
 	return 0;
 #endif
+#endif	/* BOARD_BBMC */
 }
 
 #if FW_SINCE(0x0100060B)
@@ -1036,6 +1066,12 @@ void bbmcRequestNotify(void)
 /* request 0x0a's commands: 0x0a80 reads registers, 0x0a81 writes them, 0x0a82 sets P3.7 */
 void bbmcRequestRun(void)
 {
+#if !BOARD_BBMC
+	/* no modem: every command fails */
+	bbmcRequest.answerLength = 0;
+	bbmcRequest.status = 4;
+	hostRequestAnswerReady(&bbmcRequest.state);
+#else
 	unsigned char result;
 
 	if (!handshakeUnlocked11()) {
@@ -1107,6 +1143,7 @@ void bbmcRequestRun(void)
 		bbmcRequest.state = HOST_REQUEST_UNKNOWN;
 		break;
 	}
+#endif
 }
 
 void bbmcPostRxTimeout(void)

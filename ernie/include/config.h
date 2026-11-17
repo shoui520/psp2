@@ -137,6 +137,10 @@ struct ConfigBlock {
 	unsigned char	voltage84;
 #endif
 #if BOARD_IRS1001
+#elif ERNIE_HW == 0x00315200
+	unsigned char	reserved22[3];		/* 0x00315200's layout: the trim two bytes later */
+	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
+	unsigned char	reserved7[0xf8 - 0xf6];
 #elif ERNIE_BOARD == 0x00406000
 	unsigned char	reserved22[2];		/* PCH-1000's layout: the trim a byte later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */

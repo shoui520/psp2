@@ -1,3 +1,8 @@
 # Board 0x00315200: certainly DEM-3000H (IRT-001), supports FW 0.940.000-1.692.000
 # Firmware versions with an update patch: 0x00080504 0x00090009 0x00090206 0x00090804 0x00090903 0x01000104 0x01000107 0x01000109 0x0100010A 0x0100010B 0x01000306
 HW_ID := 0x00315200
+# NEC D79F0109; 0x00411000's code, as 0x00102603's (its board functions the same), on
+# DEM-3000L's kernel (0x00415000's, its RAM 4 bytes higher); the differences by HW_IS
+BOARD := 0x00411000
+KERNEL := 0x00415000
+CHIP := f1030a0

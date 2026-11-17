@@ -26,8 +26,10 @@ include hw/$(HW).mk
 # the board whose code it runs (hw/<id>.mk sets BOARD, or BOARD_<version> for one version, where
 # it is another board's)
 BOARD ?= $(or $(BOARD_$(FW)),$(HW))
+# the board whose kernel it runs (hw/<id>.mk sets KERNEL where it is not the code's board's)
+KERNEL ?= $(BOARD)
 
-CFLAGS := -DERNIE_HW=$(HW) -DERNIE_BOARD=$(BOARD) -DERNIE_FW=$(FW) -Iinclude
+CFLAGS := -DERNIE_HW=$(HW) -DERNIE_BOARD=$(BOARD) -DERNIE_KERNEL=$(KERNEL) -DERNIE_FW=$(FW) -Iinclude
 # the updater's build: the headers' declarations of what it has in a form of its own
 ifeq ($(PROGRAM),updater)
 CFLAGS += -DERNIE_UPDATER

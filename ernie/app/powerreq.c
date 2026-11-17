@@ -476,7 +476,7 @@ static void powerRequest0884(void)
 }
 
 /* 0x0885 (SceSysconForDriver_79E6DD8B) */
-#if BOARD_102603
+#if BOARD_102603 && !HW_IS(0x00315200)
 /* Elmo register 0xa3's bits 15 and 14 and register 0xa0's bit 12: bit 14 (data bit 1 to set,
    bit 2 to clear) must be on, or already on, for bit 15 (data bit 2 to set, bit 1 to clear),
    0x3c otherwise */
@@ -714,6 +714,14 @@ static void powerRequestCtrlUsbStatus(void)
 #endif
 
 /* 0x088d (SceSysconForDriver_DD16ABD9) */
+#if !BOARD_BBMC
+/* no 3G modem */
+static void powerRequest088D(void)
+{
+	powerRequestDone(4);
+	return;
+}
+#else
 static void powerRequest088D(void)
 {
 	unsigned char result;
@@ -744,6 +752,7 @@ static void powerRequest088D(void)
 		powerRequestDone(result);
 	}
 }
+#endif
 
 /* 0x089b (sceSysconCtrlRMRPower) */
 #if BOARD_102603

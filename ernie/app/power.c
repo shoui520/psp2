@@ -215,7 +215,13 @@ unsigned char powerErrorGet(void)
 }
 #endif
 
-#if BOARD_102603
+#if HW_IS(0x00315200)
+/* no fault line */
+int powerFaulty(void)
+{
+	return 0;
+}
+#elif BOARD_102603
 /* its fault line: input 3's bit 5 */
 int powerFaulty(void)
 {
@@ -664,8 +670,10 @@ unsigned char powerCut(void)
 	powerJobPostCut();
 	POWER_WAIT(5, 0x19);
 	powerPendingClear(5);
+#if BOARD_BBMC
 	if (input2Bit0Get() == 1)
 		P33 = 1;
+#endif
 	P6.2 = 0;
 	hostIntDisable();
 	dly_tsk(1);
@@ -693,10 +701,12 @@ unsigned char powerCut(void)
 		result = 1;
 	dly_tsk(3);
 	P6.2 = 1;
+#if BOARD_BBMC
 	if (P33) {
 		dly_tsk(0x39d);
 		P33 = 0;
 	}
+#endif
 	return result;
 }
 

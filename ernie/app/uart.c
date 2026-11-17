@@ -20,6 +20,7 @@
 
 #include "ernie.h"
 #include "chip.h"
+#include "board.h"
 #include "kernel.h"
 #include "serial.h"
 #include "task.h"
@@ -360,6 +361,10 @@ void uart3Timeout(void)
 /* opens UART2 at uart2Config's speed */
 int uart2Open(void)
 {
+#if !BOARD_BBMC
+	/* no modem on UART2 */
+	return 0;
+#else
 	if (!SAU1EN)
 		SAU1EN = 1;
 #if FW_SINCE(0x01000104)
@@ -405,6 +410,7 @@ int uart2Open(void)
 	SREMK2 = 0;
 	uart2.flags |= UART_OPEN;
 	return 0;
+#endif
 }
 
 #if !FW_SINCE(0x00090804)
@@ -430,6 +436,9 @@ int uart2Close(void)
 /* closes UART2; its pins stay up when keep is set, else they go low */
 int uart2Close(unsigned char keep)
 {
+#if !BOARD_BBMC
+	return 0;
+#else
 	if (uart2.flags & UART_OPEN) {
 #if FW_SINCE(0x0100010B)
 		STMK2 = 1;
@@ -469,6 +478,7 @@ int uart2Close(unsigned char keep)
 	}
 #endif
 	return 0;
+#endif
 }
 #endif
 

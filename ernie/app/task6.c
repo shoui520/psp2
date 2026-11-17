@@ -5,6 +5,7 @@
 #pragma rtos_task task6
 
 #include "ernie.h"
+#include "board.h"
 #include "task.h"
 #include "trace.h"
 #include "bbmc.h"
@@ -27,7 +28,9 @@ void task6(VP_INT exinf)
 			continue;
 		if (ptn & BBMC_EVENTS) {
 			clr_flg(6, ~(ptn & BBMC_EVENTS));
+#if BOARD_BBMC
 			bbmcEvent(ptn);
+#endif
 		}
 		if (ptn & 0x3000)
 			clr_flg(6, ~(ptn & 0x3000));

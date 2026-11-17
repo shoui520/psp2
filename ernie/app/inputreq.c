@@ -724,7 +724,12 @@ static void controlsRequest0184Done(unsigned char command, unsigned char result)
 /* six fixed words */
 static void controlsRequest0185(void)
 {
-#if BOARD_IS(0x00411000)
+#if HW_IS(0x00315200)
+	inputRequests.controlsAnswer.word[0] = 0x00ff;
+	inputRequests.controlsAnswer.word[1] = 0xff00;
+	inputRequests.controlsAnswer.word[2] = 0x0001;
+	inputRequests.controlsAnswer.word[3] = 0x0100;
+#elif BOARD_IS(0x00411000)
 	inputRequests.controlsAnswer.word[0] = 0x00ff;
 	inputRequests.controlsAnswer.word[1] = 0xff00;
 	inputRequests.controlsAnswer.word[2] = 0x00ff;

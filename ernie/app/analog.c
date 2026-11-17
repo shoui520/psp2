@@ -349,7 +349,11 @@ unsigned char analogStart(unsigned int inputs)
 	if (inputs & 0x0020)
 		mask |= 0x0c;
 	if (inputs & 0x0001) {
+#if HW_IS(0x00315200)
+		P127 = 0;
+#else
 		P12 &= (unsigned char)~0x80;
+#endif
 		mask |= 0x02;
 	}
 #else
@@ -440,7 +444,11 @@ void analogEvent(unsigned int inputs)
 	}
 #if BOARD_102603
 	if (inputs & 0x0001) {
+#if HW_IS(0x00315200)
+		P127 = 1;
+#else
 		P12 |= 0x80;
+#endif
 		analogLatchUpdate(ANALOG_HIGH(adcResults[6]));
 	}
 #else
@@ -977,7 +985,8 @@ void analogScale31(unsigned int position)
 	}
 }
 
-/* the sets' values as reported: axis 1 inverted, axis 0, axis 3, axis 2 inverted */
+/* the sets' values as reported: axis 1 inverted, axis 0, axis 3, axis 2 inverted (0x00315200:
+   axes 0 and 1 inverted, 2 and 3) */
 void analogReport(void)
 {
 #if BOARD_ANALOG_CHANNEL8
@@ -1008,6 +1017,20 @@ void analogReport(void)
 			analogSticks1[2] = 0xff - analogAxes[2].output[1].value;
 			analogSticks1[3] = 0xff - analogAxes[3].output[1].value;
 		}
+	}
+#elif HW_IS(0x00315200)
+	/* axes 0 and 1 inverted, 2 and 3 as they are */
+	if (analogFlags & ANALOG_SET0) {
+		analogSticks0[0] = 0xff - analogAxes[0].output[0].value;
+		analogSticks0[1] = 0xff - analogAxes[1].output[0].value;
+		analogSticks0[2] = analogAxes[2].output[0].value;
+		analogSticks0[3] = analogAxes[3].output[0].value;
+	}
+	if (analogFlags & ANALOG_SET1) {
+		analogSticks1[0] = 0xff - analogAxes[0].output[1].value;
+		analogSticks1[1] = 0xff - analogAxes[1].output[1].value;
+		analogSticks1[2] = analogAxes[2].output[1].value;
+		analogSticks1[3] = analogAxes[3].output[1].value;
 	}
 #else
 	if (analogFlags & ANALOG_SET0) {

@@ -258,7 +258,7 @@ void inputInit(void)
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
-#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && !BOARD_INPUTS_102603	/* 0x00601000: PCH-1000's, with the pins */
+#if BOARD_INPUT3_PINS && ERNIE_BOARD != 0x00406000 && (!BOARD_INPUTS_102603 || HW_IS(0x00315200))	/* 0x00601000: PCH-1000's, with the pins */
 	inputGroup3.pending = 0x24;
 	inputGroup3.enable = 0x3d;
 #else
@@ -456,14 +456,22 @@ void inputPowerOff(void)
 	analogStop();
 	adcCloseForBoard();
 #if BOARD_INPUTS_102603
+#if HW_IS(0x00315200)
+	P127 = 0;
+#else
 	P12 &= (unsigned char)~0x80;
+#endif
 	P5.4 = 0;
 #endif
 #else
 	adcCloseForBoard();
 	inputKeysClose();
 #if BOARD_INPUTS_102603
+#if HW_IS(0x00315200)
+	P127 = 0;
+#else
 	P12 &= (unsigned char)~0x80;
+#endif
 	P5.4 = 0;
 #endif
 #endif
@@ -638,13 +646,21 @@ void inputSuspend(void)
 	analogStop();
 	adcCloseForBoard();
 #if BOARD_INPUTS_102603
+#if HW_IS(0x00315200)
+	P127 = 0;
+#else
 	P12 &= (unsigned char)~0x80;
+#endif
 #endif
 #else
 	adcCloseForBoard();
 	inputKeysClose();
 #if BOARD_INPUTS_102603
+#if HW_IS(0x00315200)
+	P127 = 0;
+#else
 	P12 &= (unsigned char)~0x80;
+#endif
 #endif
 #endif
 	return;
@@ -756,6 +772,7 @@ void sampleInputs1(void)
 
 void sampleInputs2(void)
 {
+#if BOARD_BBMC	/* group 2: the 3G modem's lines */
 	inputRaw2.2 = P3.2;
 	inputRaw2.1 = P3.4;
 	inputRaw2.0 = P12.6;
@@ -763,11 +780,12 @@ void sampleInputs2(void)
 	inputGroupUpdate(&inputRaw2, &inputState2, &inputGroup2);
 	if (inputGroup2.changed) {
 	}
+#endif
 }
 
 void sampleInputs3(void)
 {
-#if BOARD_INPUTS_102603
+#if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.2;
 #elif BOARD_INPUT3_PINS
@@ -779,7 +797,7 @@ void sampleInputs3(void)
 	inputRaw3.3 = P2.7;
 	inputRaw3.4 = P2.5;
 #endif
-#if BOARD_INPUTS_102603
+#if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
 	inputRaw3.5 = P2.1;
 #endif
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
