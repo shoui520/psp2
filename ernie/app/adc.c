@@ -37,7 +37,7 @@ void adcOpen(void)
 		ADCEN = 1;
 		ADCE = 1;
 #if BOARD_IS(0x00411000) && !FW_SINCE(0x0100010B)
-		ADPC = 0x08;
+		ADPC = ADC_FIRST_CHANNEL;	/* the analog pins from the first channel */
 #else
 		ADPC = 0x0b;
 #endif
