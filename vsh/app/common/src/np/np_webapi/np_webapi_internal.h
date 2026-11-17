@@ -73,7 +73,10 @@ extern int npPushTerm(void);
 extern int npPushRegisterCallback(void);
 extern int npPushUnregisterCallback(void);
 extern void npPushClearCallbackParam(void) __attribute__((noinline));
-extern void npPushDispatch(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8);
+struct NpPushPeer;
+struct NpPushExDataArgument;
+extern void npPushDispatch(const struct NpPushPeer *to, const struct NpPushPeer *from, const char *service, const char *dataType,
+	const void *data, SceSize dataLength, const struct NpPushExDataArgument *exData, int exDataNum);
 extern int npWebApiNewLibContext(SceSize poolSize, void *pool, const char *name, int flags) __attribute__((noinline));
 extern int npWebApiDeleteLibContext(int libCtxId);
 extern int npWebApiStopLibContext(int libCtxId);
@@ -949,8 +952,8 @@ extern int npPushServiceListIsEmpty(NpWebApiExtdEntryList *list) __attribute__((
 #define NP_PUSH_STATE_NOT_READY			-2141871333	/* 0x8055a31b */
 
 typedef void (*NpPushEventCallback)(const void *to, const void *from, const void *extra, const char *dataType,
-	const char *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum, void *argument);
-typedef void (*NpPushServiceEventCallback)(const void *to, const void *from, const char *service, const char *data,
+	const void *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum, void *argument);
+typedef void (*NpPushServiceEventCallback)(const void *to, const void *from, const char *service, const void *data,
 	SceSize dataLength, void *argument);
 
 extern int npPushIpcReceiveHeader(NpWebApiIpmiClient *client, unsigned char *id, const void *to, const void *from,
@@ -964,10 +967,10 @@ extern int npPushIpcReceiveServiceEvent(NpWebApiIpmiClient *client, int zero, co
 extern int npPushLibContextReceive(NpPushLibContext *ctx, void *to, void *from, void *extra, char *dataType,
 	void *buffer, SceSize size, int *length) __attribute__((noinline));
 extern void npPushLibContextDispatchEvent(NpPushLibContext *ctx, const void *to, const void *from, const void *extra,
-	const char *dataType, const char *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum)
+	const char *dataType, const void *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum)
 	__attribute__((noinline));
 extern void npPushLibContextDispatchServiceEvent(NpPushLibContext *ctx, const void *to, const void *from,
-	const char *service, const char *data, SceSize dataLength) __attribute__((noinline));
+	const char *service, const void *data, SceSize dataLength) __attribute__((noinline));
 extern void npPushLibContextReceivePush(NpPushLibContext *ctx) __attribute__((noinline));
 extern void npPushLibContextReceiveService(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextCheckCallback(NpPushLibContext *ctx) __attribute__((noinline));
@@ -996,7 +999,8 @@ extern int npPushCallbackListErase(NpPushCallbackNode **pResult, NpPushCallbackL
 extern int npPushLibContextAddCallback(NpPushLibContext *ctx, void *callback, void *argument, int *pId)
 	__attribute__((noinline));
 extern int npPushLibContextRemoveCallback(NpPushLibContext *ctx, int id) __attribute__((noinline));
-extern int npPushLibContextRegisterDispatch(void (*dispatch)(int, int, int, int, int, int, int, int), int a2, int *pId);
+extern int npPushLibContextRegisterDispatch(void (*dispatch)(const struct NpPushPeer *, const struct NpPushPeer *, const char *,
+	const char *, const char *, SceSize, const struct NpPushExDataArgument *, int), int a2, int *pId);
 extern int npPushLibContextUnregisterDispatch(int id);
 extern NpPushExDataNames *npPushDataFilterConstruct(NpPushExDataNames *names) __attribute__((noinline));
 extern NpPushExDataNames *npPushDataFilterDestruct(NpPushExDataNames *names) __attribute__((noinline));
@@ -1182,5 +1186,47 @@ extern void npWebApiExtdCallbackListInsert(NpWebApiCallbackNode **pResult, NpWeb
 	NpWebApiCallbackRecord *record) __attribute__((noinline));
 extern int npWebApiExtdCallbackListErase(NpWebApiCallbackNode **pResult, NpWebApiCallbackList *list,
 	NpWebApiCallbackNode **pAt) __attribute__((noinline));
+
+
+/* the push events a library context's user contexts are given (npPushDispatch and its helpers) */
+typedef struct NpPushPeer {
+	unsigned char reserved0[8];
+	SceNpPeerAddress address;
+} NpPushPeer;
+
+extern NpWebApiLibContext *npWebApiGetFirstLibContext(void);
+extern NpWebApiLibContext *npWebApiLibContextNext(NpWebApiLibContext *ctx);
+extern int npWebApiUserContextHandleHasNext(NpWebApiUserContextHandle *handle) __attribute__((noinline));
+extern NpWebApiUserContext *npWebApiUserContextHandleNext(NpWebApiUserContextHandle *handle) __attribute__((noinline));
+extern int npPushFilterContainsType(const NpWebApiPushFilter *filter, const char *dataType) __attribute__((noinline));
+extern int npWebApiServiceFilterMatches(const NpWebApiServiceFilter *filter, const char *service, const char *dataType)
+	__attribute__((noinline));
+extern int npWebApiExtdFilterMatches(const NpWebApiExtdFilter *filter, const char *service, const char *dataType,
+	NpWebApiExtdFilterRecord **pRecord) __attribute__((noinline));
+extern int npWebApiExtdDataCollect(NpWebApiLibContext *ctx, const NpWebApiExtdFilterRecord *record,
+	const NpPushExDataArgument *exData, int exDataNum, SceNpWebApiExtdPushEventExtdData **pData, SceSize *pCount)
+	__attribute__((noinline));
+extern int npWebApiUserContextCallLegacyCallback(NpWebApiLibContext *ctx, NpWebApiUserContext *userCtx,
+	const NpPushPeer *to, const NpPushPeer *from, const char *dataType, const void *data, SceSize dataLength)
+	__attribute__((noinline));
+extern int npWebApiLibContextCopyPeers(NpWebApiLibContext *ctx, const NpPushPeer *to, const NpPushPeer *from,
+	const char *dataType, const void *data, SceSize dataLength, SceNpPeerAddress **pTo, SceNpPeerAddress **pFrom,
+	char **pDataType, void **pData, SceSize *pLength) __attribute__((noinline));
+extern void npWebApiUserContextDispatchPushEvent(NpWebApiUserContext *userCtx, SceNpPeerAddress *to,
+	SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength) __attribute__((noinline));
+extern void npWebApiUserContextDispatchPushEventLocked(NpWebApiUserContext *userCtx, SceNpPeerAddress *to,
+	SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength) __attribute__((noinline));
+extern void npWebApiUserContextDispatchServiceEvent(NpWebApiUserContext *userCtx, const char *service,
+	SceNpPeerAddress *to, SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength)
+	__attribute__((noinline));
+extern void npWebApiUserContextDispatchServiceEventLocked(NpWebApiUserContext *userCtx, const char *service,
+	SceNpPeerAddress *to, SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength)
+	__attribute__((noinline));
+extern void npWebApiUserContextDispatchExtdEvent(NpWebApiUserContext *userCtx, const char *service,
+	SceNpPeerAddress *to, SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength,
+	const NpPushExDataArgument *exData, int exDataNum) __attribute__((noinline));
+extern void npWebApiUserContextDispatchExtdEventLocked(NpWebApiUserContext *userCtx, const char *service,
+	SceNpPeerAddress *to, SceNpPeerAddress *from, const char *dataType, const void *data, SceSize dataLength,
+	const NpPushExDataArgument *exData, int exDataNum) __attribute__((noinline));
 
 #endif

@@ -36,4 +36,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	np_push_lib_context.cpp
 	libctx_create.cpp
 	module.cpp
+	push_dispatch.cpp
 )
