@@ -710,6 +710,10 @@ extern int npWebApiRequestSetMultipartContentType(NpWebApiRequest *request, cons
 	const char *boundary) __attribute__((noinline));
 extern int npWebApiRequestAddHttpHeader(NpWebApiRequest *request, const char *name, const char *value)
 	__attribute__((noinline));
+extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
+extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
+extern int SceNpCommonPs4_00F74689(void);
+extern SceUInt32 sceKernelGetProcessTimeLow(void);
 extern int npWebApiSetMultipartContentType(SceInt64 requestId, const char *contentType, const char *boundary);
 /* a part of a multipart request: its ID, its header text and the number of bytes it announced and
    has sent */

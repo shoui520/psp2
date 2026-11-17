@@ -249,3 +249,60 @@ int npWebApiAddMultipartPart(SceInt64 requestId, const SceNpWebApiMultipartPartP
 		npWebApiLibContextRelease(libCtx);
 	return result;
 }
+
+/* gives a multipart request its content type (the default one, a boundary made when there is none) and
+   works out the length of the body from the parts it has */
+int npWebApiRequestPrepareMultipart(NpWebApiRequest *request)
+{
+	char *contentType;
+	char *boundary;
+	SceSize typeLength;
+	SceSize boundaryLength;
+	SceSize length;
+	SceSize total;
+	int offset;
+	int i;
+	char *text;
+	NpWebApiListNode *head;
+	NpWebApiListNode *node;
+	NpWebApiMultipartPart *part;
+
+	contentType = request->buffer76;
+	boundary = request->boundary;
+	if (sceClibStrnlen(contentType, 0xFFFFFFFF) == 0)
+		sceClibSnprintf(contentType, 64, "multipart/mixed");
+	typeLength = sceClibStrnlen(contentType, 0xFFFFFFFF);
+	if (sceClibStrnlen(boundary, 0xFFFFFFFF) == 0) {
+		sceClibMemset(boundary, 0, 64);
+		SceNpCommonPs4_61DAB7E5(sceKernelGetProcessTimeLow());
+		offset = sceClibSnprintf(boundary, 63, "---------------------------");
+		for (i = 15; i != 0; i--)
+			offset += sceClibSnprintf(boundary + offset, 63 - offset, "%x", SceNpCommonPs4_00F74689() % 16);
+	}
+	boundaryLength = sceClibStrnlen(boundary, 0xFFFFFFFF);
+	length = typeLength + boundaryLength + sceClibStrnlen("; boundary=", 0xFFFFFFFF) + 1;
+	text = (char *)npWebApiLibContextPoolAlloc(request->libContext, length);
+	if (text == NULL)
+		return NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+	sceClibMemset(text, 0, length);
+	sceClibSnprintf(text, length, "%s; boundary=%s", contentType, boundary);
+	request->contentType = text;
+	npWebApiLibContextLock(request->libContext);
+	total = boundaryLength;
+	head = request->listBHead;
+	node = NULL;
+	if (head != NULL)
+		node = head->next;
+	if (node != head) {
+		do {
+			part = (NpWebApiMultipartPart *)node->value8;
+			length = sceClibStrnlen(part->header, 0xFFFFFFFF);
+			node = node->next;
+			total += boundaryLength + length + part->contentLength + 6;
+		} while (node != request->listBHead);
+	}
+	npWebApiLibContextUnlock(request->libContext);
+	request->totalSize = total + 6;
+	request->flag204 = 1;
+	return 0;
+}
