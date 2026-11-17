@@ -10,11 +10,13 @@ static unsigned int s_handleCounter;		/* 0x81010018 */
 int npWebApiGetErrorCode(void)
 {
 	int result;
+	SceUInt32 version;
 
-	if (g_sdkVersion < NP_WEBAPI_SDK_3_50)
-		result = SceNpCommonPs4_FB63A152();
-	else
+	version = g_sdkVersion;
+	if (version >= NP_WEBAPI_SDK_3_50)
 		result = SceNpCommonPs4_CF591432();
+	else
+		result = SceNpCommonPs4_FB63A152();
 	if (result < 0)
 		return npWebApiConvertError(result);
 	return result;
@@ -164,14 +166,14 @@ int npWebApiLibContextIsHandleUnusable(NpWebApiLibContext *ctx, NpWebApiHandle *
 		node = sentinel->next;
 	unusable = 1;
 	if (node != sentinel) {
-		while (node->handle != handle) {
+		do {
+			if (node->handle == handle) {
+				unusable = (handle->state & 2) != 0;
+				break;
+			}
 			node = node->next;
-			if (node == sentinel)
-				goto done;
-		}
-		unusable = (handle->state & 2) != 0;
+		} while (node != sentinel);
 	}
-done:
 	SceNpCommonPs4_4A1C1C3C(&ctx->lock);
 	return unusable;
 }
@@ -190,16 +192,14 @@ int npWebApiLibContextAcquireHandle(NpWebApiLibContext *ctx, int handleId, NpWeb
 	if (sentinel != NULL)
 		node = sentinel->next;
 	result = 0;
-	if (node == sentinel)
-		goto notFound;
-	while (1) {
+	while (node != sentinel) {
 		handle = node->handle;
 		if (handle->id == handleId)
-			break;
+			goto found;
 		node = node->next;
-		if (node == sentinel)
-			goto notFound;
 	}
+	goto notFound;
+found:
 	if (handle == NULL) {
 notFound:
 		result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
@@ -266,17 +266,14 @@ int npWebApiLibContextDeleteHandle(NpWebApiLibContext *ctx, int handleId)
 	node = NULL;
 	if (sentinel != NULL)
 		node = sentinel->next;
-	if (node == sentinel) {
-		result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
-		goto out;
-	}
-	while (node->handle->id != handleId) {
+	while (node != sentinel) {
+		if (node->handle->id == handleId)
+			goto found;
 		node = node->next;
-		if (node == sentinel) {
-			result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
-			goto out;
-		}
 	}
+	result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
+	goto out;
+found:
 	if (npWebApiGetSdkVersion() >= NP_WEBAPI_SDK_3_30) {
 		if (npWebApiLibContextIsHandleUnusable(ctx, node->handle) != 0) {
 			result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
