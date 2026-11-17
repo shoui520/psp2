@@ -820,4 +820,20 @@ extern int npWebApiExtdFilterInit(NpWebApiExtdFilter *filter, NpWebApiHandle *ha
 extern int npWebApiLibContextCreateExtdPushEventFilter(NpWebApiLibContext *ctx, int handleId, const char *name,
 	int arg, const char *records, unsigned int count) __attribute__((noinline));
 
+/* the user context's callbacks: registered for a filter, found by their own ID */
+extern int npWebApiLibContextHasPushEventFilter(NpWebApiLibContext *ctx, int filterId);
+extern int npWebApiLibContextHasServicePushEventFilter(NpWebApiLibContext *ctx, int filterId);
+extern int npWebApiUserContextRegisterPushEventCallback(NpWebApiUserContext *userCtx, int filterId,
+	SceNpWebApiPushEventCallback cb, void *arg);
+extern int npWebApiUserContextUnregisterPushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
+extern int npWebApiUserContextUnregisterPushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
+extern int npWebApiUserContextRegisterServicePushEventCallback(NpWebApiUserContext *userCtx, int filterId,
+	SceNpWebApiServicePushEventCallback cb, void *arg);
+extern int npWebApiUserContextUnregisterServicePushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
+extern int npWebApiUserContextUnregisterServicePushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
+extern int npWebApiUserContextRegisterExtdPushEventCallback(NpWebApiUserContext *userCtx, int filterId,
+	SceNpWebApiExtdPushEventCallback cb, void *arg);
+extern int npWebApiUserContextUnregisterExtdPushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
+extern int npWebApiUserContextUnregisterExtdPushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
+
 #endif
