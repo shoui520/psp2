@@ -42,6 +42,7 @@ extern "C" {
 #define NP_WEBAPI_ERROR_HEADER_NOT_ALLOWED	-2141902562	/* 0x8055291e */
 #define NP_WEBAPI_ERROR_REQUEST_REFERENCED	-2141902573	/* 0x80552913 */
 #define NP_WEBAPI_ERROR_FILTER_NOT_FOUND	-2141902581	/* 0x8055290b */
+#define NP_WEBAPI_ERROR_SERVICE_FILTER_NOT_FOUND	-2141902578	/* 0x8055290e */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -195,7 +196,8 @@ typedef struct NpWebApiLibContext {
 	void *pushEventObject;
 	NpWebApiHandleList handles;
 	NpWebApiHandleList filters;
-	unsigned char reserved1[24];
+	NpWebApiHandleList serviceFilters;
+	NpWebApiHandleList extdFilters;
 	int reserved116;
 	unsigned char aborted;
 	unsigned char flag121;
@@ -221,6 +223,20 @@ typedef struct NpWebApiPushFilter {
 	int typeCount;
 	NpWebApiLibContext *libContext;
 } NpWebApiPushFilter;
+
+/* a service push event filter: its vtable and ID */
+typedef struct NpWebApiServiceFilter {
+	const void *const *vtable;
+	int id;
+} NpWebApiServiceFilter;
+
+extern void npWebApiServiceFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiServiceFilter **pFilter) __attribute__((noinline));
+extern int npWebApiServiceFilterListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiHandleNode **pAt) __attribute__((noinline));
+extern int npWebApiServiceFilterGetId(NpWebApiServiceFilter *filter) __attribute__((noinline));
+extern int npWebApiLibContextDeleteServicePushEventFilter(NpWebApiLibContext *ctx, int filterId) __attribute__((noinline));
+extern int npWebApiDeleteServicePushEventFilter(int libCtxId, int filterId);
 
 extern const void *g_pushFilterVtable[];	/* 0x8100ed9c */
 extern void npWebApiFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
