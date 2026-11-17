@@ -326,6 +326,8 @@ int sceAppMgrInitSafeMemoryById(const char *id);
 int sceAppMgrSaveSafeMemory(const void *data, SceSize size, SceOff offset);
 int sceAppMgrLoadSafeMemory(void *data, SceSize size, SceOff offset);
 int sceAppMgrGetPfsProcessStatus(void);
+/* the PFS drive ("pfs0x...") a mount point of a mounted application uses */
+int sceAppMgrGetPfsDrive(const char *mountPoint, char *drive);
 int sceAppMgrIsExclusiveProcessRunning(const char *titleId);
 /* an additional content's directory in gro0:acinst: its keystone and title */
 typedef struct SceAppMgrAcdirParam {
