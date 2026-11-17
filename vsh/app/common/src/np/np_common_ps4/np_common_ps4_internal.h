@@ -585,6 +585,37 @@ int npCommonPs4CondWait(struct NpCommonPs4Cond *cond, SceUInt32 timeout);
 int npCommonPs4CondSignal(struct NpCommonPs4Cond *cond);
 int npCommonPs4CondBroadcast(struct NpCommonPs4Cond *cond);
 
+/* a kernel semaphore, created or opened by name, behind a vtable (state: 0 none, 1 created, 2 opened) */
+struct NpCommonPs4SemaphoreObject {
+	const void *const *vtable;
+	SceUID semaphore;
+	SceUInt32 state;
+};
+
+/* npext/thread/thread.cpp: a thread that runs the object's third virtual function (state: 0 none, 1 init, 2 running,
+   3 joined) */
+struct NpCommonPs4Thread {
+	const void *const *vtable;
+	SceUID thread;
+	int priority;
+	SceSize stackSize;
+	char name[32];
+	int cpuAffinity;
+	int state;
+	int exitStatus;
+};
+
+int npCommonPs4ThreadMain(SceSize argSize, void *argp);
+SceUID SceNpCommonPs4_1C1B177A(SceUID *pSema, int initCount, int maxCount, const char *name);
+int SceNpCommonPs4_908EDA3A(SceUID sema);
+SceUID SceNpCommonPs4_EB92EB4E(SceUID *pSema, const char *name);
+int SceNpCommonPs4_7272B106(SceUID sema);
+int SceNpCommonPs4_2387BCED(SceUID sema, SceUInt32 *pTimeout);
+int SceNpCommonPs4_364483E2(SceUID sema);
+int SceNpCommonPs4_04EC8796(SceUID *pThread, SceKernelThreadEntry entry, SceSize argSize, void *pArgp,
+	int initPriority, SceSize stackSize, int cpuAffinity, const char *name);
+int SceNpCommonPs4_CFB92A12(SceUID thread, int *pExitStatus);
+
 /* npext/thread/event_queue.cpp: a queue of fixed size items on a ring buffer, with a condition variable each for the
    items and for the room */
 struct NpCommonPs4EventQueue {
