@@ -1,0 +1,1292 @@
+/*
+ * SceNpCommonPs4: JSON values (npext/json/json_value.cpp): a value of one of six types (null, bool, number,
+ * string, array, object) that owns its data, and the containers of arrays and objects.
+ */
+
+#include "../../np_common_ps4_internal.h"
+
+#define NP_COMMON_PS4_JSON_DESTROY(value) (((void (*)(void *))(*(const void *const **)(value))[1])(value))
+
+extern "C" {
+
+extern const void *g_jsonValueVtable[];		/* 0x8102a7d8 */
+extern const void *g_jsonItemArrayVtable[];	/* 0x8102a8b0 */
+extern const void *g_jsonFieldSetVtable[];	/* 0x8102a8c0 */
+extern const void *g_jsonBoolDataVtable[];	/* 0x8102a880 */
+extern const void *g_jsonTextDataVtable[];	/* 0x8102a890 */
+
+__attribute__((noinline)) struct NpCommonPs4JsonValue *SceNpCommonPs4_B83E1A6A(struct NpCommonPs4JsonValue *value)
+{
+	void *data;
+
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonValueVtable);
+	switch (value->type) {
+	case NP_COMMON_PS4_JSON_TYPE_NULL:
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_BOOL:
+		data = value->data;
+		if (data != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(data);
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_NUMBER:
+		data = value->data;
+		if (data != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(data);
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_STRING:
+		data = value->data;
+		if (data != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(data);
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_ARRAY:
+		data = value->data;
+		if (data != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(data);
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_OBJECT:
+		data = value->data;
+		if (data != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(data);
+		break;
+	default:
+		break;
+	}
+	value->vtable = NP_COMMON_PS4_VTABLE(g_baseVtable);
+	return value;
+}
+
+int SceNpCommonPs4_62759A9A(struct NpCommonPs4JsonValue *value)
+{
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_F9AC735E(struct NpCommonPs4JsonValue *value)
+{
+	return SceNpCommonPs4_B83E1A6A(value);
+}
+
+__attribute__((noinline)) struct NpCommonPs4JsonValue *SceNpCommonPs4_935F32AE(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool,
+	int type)
+{
+	value->pool = pool;
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonValueVtable);
+	value->type = type;
+	value->parent = NULL;
+	switch (type) {
+	case NP_COMMON_PS4_JSON_TYPE_NULL:
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_BOOL:
+		value->data = NULL;
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_NUMBER:
+		value->data = NULL;
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_STRING:
+		value->data = NULL;
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_ARRAY:
+		value->data = NULL;
+		break;
+	case NP_COMMON_PS4_JSON_TYPE_OBJECT:
+		value->data = NULL;
+		break;
+	default:
+		return value;
+	}
+	return value;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_D309C0B3(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool,
+	int type)
+{
+	return SceNpCommonPs4_935F32AE(value, pool, type);
+}
+
+__attribute__((noinline)) struct NpCommonPs4JsonListNode *SceNpCommonPs4_A908E5EA(struct NpCommonPs4JsonItemList *list,
+	struct NpCommonPs4Allocator *pool, struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonListNode *node;
+
+	NP_COMMON_PS4_ASSERT(value != NULL, "itemArrayAddValue", "npext\\json\\json_value.cpp", 552, "value != 0");
+	node = (struct NpCommonPs4JsonListNode *)SceNpCommonPs4_299ADFC3(pool, 12);
+	if (node == NULL)
+		return NULL;
+	node->value = NULL;
+	node->next = NULL;
+	node->prev = NULL;
+	node->value = value;
+	node->next = NULL;
+	node->prev = list->tail;
+	if (list->tail != NULL)
+		list->tail->next = node;
+	if (list->head == NULL)
+		list->head = node;
+	list->tail = node;
+	return node;
+}
+
+int SceNpCommonPs4_67F61239(struct NpCommonPs4JsonItemArray *array, struct NpCommonPs4JsonValue *value,
+	struct NpCommonPs4JsonValue *parent)
+{
+	struct NpCommonPs4JsonListNode *node;
+
+	node = SceNpCommonPs4_A908E5EA(&array->list, array->pool, value);
+	if (node == NULL)
+		return ((int *)array->pool)[4];
+	node->value->parent = parent;
+	return 0;
+}
+
+int SceNpCommonPs4_413D4254(struct NpCommonPs4JsonValue *array, struct NpCommonPs4JsonValue *item)
+{
+	struct NpCommonPs4JsonItemArray *items;
+	struct NpCommonPs4JsonItemArray *memory;
+	struct NpCommonPs4JsonListNode *node;
+	int error;
+
+	NP_COMMON_PS4_ASSERT(array->type == NP_COMMON_PS4_JSON_TYPE_ARRAY, "AddItemValue", "npext\\json\\json_value.cpp", 931,
+		"m_type == TYPE_ARRAY");
+	items = (struct NpCommonPs4JsonItemArray *)array->data;
+	if (items == NULL) {
+		memory = (struct NpCommonPs4JsonItemArray *)SceNpCommonPs4_D154D84F(16, array->pool);
+		if (memory == NULL)
+			return ((int *)array->pool)[4];
+		memory->pool = array->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonItemArrayVtable);
+		memory->list.head = NULL;
+		items = memory;
+		memory->list.tail = NULL;
+		array->data = memory;
+	}
+	node = SceNpCommonPs4_A908E5EA(&items->list, items->pool, item);
+	if (node != NULL) {
+		error = 0;
+		node->value->parent = array;
+	} else {
+		error = ((int *)items->pool)[4];
+	}
+	if (error >= 0)
+		return 0;
+	return error;
+}
+
+void SceNpCommonPs4_nullsub_8(void)
+{
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_5607B8B3(struct NpCommonPs4JsonValue *array, int index)
+{
+	struct NpCommonPs4JsonItemArray *items;
+	struct NpCommonPs4JsonListNode *node;
+	struct NpCommonPs4JsonValue *result;
+	int count;
+	static const char functionName[] = "GetItemValue";
+
+	NP_COMMON_PS4_ASSERT(array->type == NP_COMMON_PS4_JSON_TYPE_ARRAY, functionName, "npext\\json\\json_value.cpp", 960,
+		"m_type == TYPE_ARRAY");
+	items = (struct NpCommonPs4JsonItemArray *)array->data;
+	result = NULL;
+	if (items != NULL) {
+		count = index;
+		node = items->list.head;
+		if (node != NULL) {
+			while (count != 0) {
+				node = node->next;
+				count--;
+				if (node == NULL)
+					return result;
+			}
+			return node->value;
+		}
+	}
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_2A4A268C(struct NpCommonPs4JsonValue *array, int index)
+{
+	struct NpCommonPs4JsonItemArray *items;
+	struct NpCommonPs4JsonListNode *node;
+	struct NpCommonPs4JsonValue *result;
+	int count;
+	static const char functionName[] = "GetItemValue";
+
+	NP_COMMON_PS4_ASSERT(array->type == NP_COMMON_PS4_JSON_TYPE_ARRAY, functionName, "npext\\json\\json_value.cpp", 973,
+		"m_type == TYPE_ARRAY");
+	items = (struct NpCommonPs4JsonItemArray *)array->data;
+	result = NULL;
+	if (items != NULL) {
+		count = index;
+		node = items->list.head;
+		if (node != NULL) {
+			while (count != 0) {
+				node = node->next;
+				count--;
+				if (node == NULL)
+					return result;
+			}
+			return node->value;
+		}
+	}
+	return result;
+}
+
+void SceNpCommonPs4_EA7C55D4(struct NpCommonPs4Allocator *pool, struct NpCommonPs4JsonField *field)
+{
+	if (field != NULL) {
+		SceNpCommonPs4_38CC9AF5(pool, field->name);
+		if (field->value != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(field->value);
+		SceNpCommonPs4_38CC9AF5(pool, field);
+	}
+}
+
+struct NpCommonPs4JsonField *SceNpCommonPs4_1DD370B6(struct NpCommonPs4Allocator *pool, const char *name)
+{
+	struct NpCommonPs4JsonField *field;
+	char *duplicate;
+
+	field = (struct NpCommonPs4JsonField *)SceNpCommonPs4_299ADFC3(pool, 16);
+	if (field != NULL) {
+		field->name = NULL;
+		field->value = NULL;
+		field->next = NULL;
+		field->prev = NULL;
+		duplicate = npCommonPs4AllocatorDuplicateString(pool, name);
+		field->name = duplicate;
+		if (duplicate != NULL)
+			return field;
+		SceNpCommonPs4_38CC9AF5(pool, field->name);
+		if (field->value != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(field->value);
+		SceNpCommonPs4_38CC9AF5(pool, field);
+	}
+	return NULL;
+}
+
+struct NpCommonPs4JsonField *SceNpCommonPs4_332AF121(struct NpCommonPs4JsonFieldList *list,
+	struct NpCommonPs4Allocator *pool, const char *name, struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonField *field;
+	char *duplicate;
+
+	NP_COMMON_PS4_ASSERT(value != NULL, "fieldSetAddField", "npext\\json\\json_value.cpp", 837, "value != 0");
+	field = (struct NpCommonPs4JsonField *)SceNpCommonPs4_299ADFC3(pool, 16);
+	if (field == NULL)
+		return NULL;
+	field->name = NULL;
+	field->value = NULL;
+	field->next = NULL;
+	field->prev = NULL;
+	duplicate = npCommonPs4AllocatorDuplicateString(pool, name);
+	field->name = duplicate;
+	if (duplicate == NULL) {
+		SceNpCommonPs4_38CC9AF5(pool, field->name);
+		if (field->value != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(field->value);
+		SceNpCommonPs4_38CC9AF5(pool, field);
+		return NULL;
+	}
+	field->value = value;
+	field->next = NULL;
+	field->prev = list->tail;
+	if (list->tail != NULL)
+		list->tail->next = field;
+	if (list->head == NULL)
+		list->head = field;
+	list->tail = field;
+	return field;
+}
+
+struct NpCommonPs4JsonField *SceNpCommonPs4_4134CFB3(struct NpCommonPs4JsonFieldList *list, const char *name)
+{
+	struct NpCommonPs4JsonField *field;
+
+	field = list->head;
+	if (field == NULL)
+		return NULL;
+	while (sceClibStrncmp(field->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) != 0) {
+		field = field->next;
+		if (field == NULL)
+			return NULL;
+	}
+	return field;
+}
+
+int SceNpCommonPs4_D467A07C(struct NpCommonPs4JsonFieldSet *fields, const char *name, struct NpCommonPs4JsonValue *value,
+	struct NpCommonPs4JsonValue *parent)
+{
+	struct NpCommonPs4JsonField *field;
+	int error;
+
+	field = fields->list.head;
+	if (field != NULL) {
+		while (sceClibStrncmp(field->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) != 0) {
+			field = field->next;
+			if (field == NULL)
+				goto add;
+		}
+		if (field->value != NULL)
+			NP_COMMON_PS4_JSON_DESTROY(field->value);
+		field->value = value;
+	} else {
+add:
+		if (SceNpCommonPs4_332AF121(&fields->list, fields->pool, name, value) == NULL) {
+			error = ((int *)fields->pool)[4];
+			operator delete(NULL);
+			return error;
+		}
+	}
+	value->parent = parent;
+	return 0;
+}
+
+struct NpCommonPs4JsonFieldList *SceNpCommonPs4_C3511483(struct NpCommonPs4JsonFieldList *list)
+{
+	list->head = NULL;
+	list->tail = NULL;
+	return list;
+}
+
+struct NpCommonPs4JsonFieldSet *SceNpCommonPs4_627506F5(struct NpCommonPs4JsonFieldSet *fields,
+	struct NpCommonPs4Allocator *pool)
+{
+	fields->pool = pool;
+	fields->vtable = NP_COMMON_PS4_VTABLE(g_jsonFieldSetVtable);
+	fields->list.tail = NULL;
+	fields->list.head = NULL;
+	return fields;
+}
+
+int SceNpCommonPs4_7833EEC2(struct NpCommonPs4JsonValue *object, const char *name, struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonFieldSet *fields;
+	int result;
+
+	NP_COMMON_PS4_ASSERT(object->type == NP_COMMON_PS4_JSON_TYPE_OBJECT, "SetFieldValue", "npext\\json\\json_value.cpp", 986,
+		"m_type == TYPE_OBJECT");
+	fields = (struct NpCommonPs4JsonFieldSet *)object->data;
+	if (fields == NULL) {
+		fields = (struct NpCommonPs4JsonFieldSet *)SceNpCommonPs4_D154D84F(16, object->pool);
+		if (fields == NULL)
+			return ((int *)object->pool)[4];
+		fields->pool = object->pool;
+		fields->vtable = NP_COMMON_PS4_VTABLE(g_jsonFieldSetVtable);
+		fields->list.head = NULL;
+		fields->list.tail = NULL;
+		object->data = fields;
+	}
+	result = SceNpCommonPs4_D467A07C(fields, name, value, object);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+struct NpCommonPs4JsonField *SceNpCommonPs4_44ECC233(struct NpCommonPs4JsonFieldList *list, int index)
+{
+	struct NpCommonPs4JsonField *field;
+
+	field = list->head;
+	if (field == NULL)
+		return field;
+	while (index != 0) {
+		field = field->next;
+		index--;
+		if (field == NULL)
+			return NULL;
+	}
+	return field;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_498A2E51(struct NpCommonPs4JsonFieldSet *fields, int index, char **pName)
+{
+	struct NpCommonPs4JsonField *field;
+
+	field = fields->list.head;
+	if (field == NULL)
+		return NULL;
+	while (index != 0) {
+		field = field->next;
+		index--;
+		if (field == NULL)
+			return NULL;
+	}
+	if (pName != NULL)
+		*pName = field->name;
+	return field->value;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_0005DF9E(struct NpCommonPs4JsonValue *object, int index, char **pName)
+{
+	struct NpCommonPs4JsonFieldSet *fields;
+	struct NpCommonPs4JsonField *field;
+	struct NpCommonPs4JsonValue *result;
+	int count;
+
+	static const char functionName[] = "GetFieldValue";
+
+	NP_COMMON_PS4_ASSERT(object->type == NP_COMMON_PS4_JSON_TYPE_OBJECT, functionName, "npext\\json\\json_value.cpp", 1015,
+		"m_type == TYPE_OBJECT");
+	fields = (struct NpCommonPs4JsonFieldSet *)object->data;
+	result = NULL;
+	if (fields != NULL) {
+		count = index;
+		field = fields->list.head;
+		if (field != NULL) {
+			while (count != 0) {
+				field = field->next;
+				count--;
+				if (field == NULL)
+					return result;
+			}
+			if (pName != NULL)
+				*pName = field->name;
+			return field->value;
+		}
+	}
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_713C8A08(struct NpCommonPs4JsonValue *object, int index, char **pName)
+{
+	struct NpCommonPs4JsonFieldSet *fields;
+	struct NpCommonPs4JsonField *field;
+	struct NpCommonPs4JsonValue *result;
+	int count;
+
+	static const char functionName[] = "GetFieldValue";
+
+	NP_COMMON_PS4_ASSERT(object->type == NP_COMMON_PS4_JSON_TYPE_OBJECT, functionName, "npext\\json\\json_value.cpp", 1028,
+		"m_type == TYPE_OBJECT");
+	fields = (struct NpCommonPs4JsonFieldSet *)object->data;
+	result = NULL;
+	if (fields != NULL) {
+		count = index;
+		field = fields->list.head;
+		if (field != NULL) {
+			while (count != 0) {
+				field = field->next;
+				count--;
+				if (field == NULL)
+					return result;
+			}
+			if (pName != NULL)
+				*pName = field->name;
+			return field->value;
+		}
+	}
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_F1F2B46E(struct NpCommonPs4JsonFieldSet *fields, const char *name)
+{
+	struct NpCommonPs4JsonField *field;
+
+	field = fields->list.head;
+	if (field == NULL)
+		return NULL;
+	while (sceClibStrncmp(field->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) != 0) {
+		field = field->next;
+		if (field == NULL)
+			return NULL;
+	}
+	return field->value;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_3F3A476E(struct NpCommonPs4JsonValue *object, const char *name)
+{
+	struct NpCommonPs4JsonFieldSet *fields;
+	struct NpCommonPs4JsonField *field;
+	struct NpCommonPs4JsonValue *result;
+
+	static const char functionName[] = "GetFieldValue";
+
+	NP_COMMON_PS4_ASSERT(object->type == NP_COMMON_PS4_JSON_TYPE_OBJECT, functionName, "npext\\json\\json_value.cpp", 1041,
+		"m_type == TYPE_OBJECT");
+	fields = (struct NpCommonPs4JsonFieldSet *)object->data;
+	result = NULL;
+	if (fields != NULL) {
+		field = fields->list.head;
+		if (field != NULL) {
+			while (sceClibStrncmp(field->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) != 0) {
+				field = field->next;
+				if (field == NULL)
+					return result;
+			}
+			return field->value;
+		}
+	}
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_428DE8A6(struct NpCommonPs4JsonValue *object, const char *name)
+{
+	struct NpCommonPs4JsonFieldSet *fields;
+	struct NpCommonPs4JsonField *field;
+	struct NpCommonPs4JsonValue *result;
+
+	static const char functionName[] = "GetFieldValue";
+
+	NP_COMMON_PS4_ASSERT(object->type == NP_COMMON_PS4_JSON_TYPE_OBJECT, functionName, "npext\\json\\json_value.cpp", 1054,
+		"m_type == TYPE_OBJECT");
+	fields = (struct NpCommonPs4JsonFieldSet *)object->data;
+	result = NULL;
+	if (fields != NULL) {
+		field = fields->list.head;
+		if (field != NULL) {
+			while (sceClibStrncmp(field->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) != 0) {
+				field = field->next;
+				if (field == NULL)
+					return result;
+			}
+			return field->value;
+		}
+	}
+	return result;
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsBool(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonValue *result;
+
+	result = NULL;
+	if (value->type == NP_COMMON_PS4_JSON_TYPE_BOOL)
+		result = value;
+	return result;
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsNumber(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonValue *result;
+
+	result = NULL;
+	if (value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER)
+		result = value;
+	return result;
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsString(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonValue *result;
+
+	result = NULL;
+	if (value->type == NP_COMMON_PS4_JSON_TYPE_STRING)
+		result = value;
+	return result;
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsArray(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonValue *result;
+
+	result = NULL;
+	if (value->type == NP_COMMON_PS4_JSON_TYPE_ARRAY)
+		result = value;
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_15A2D6E3(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonValue *result;
+
+	result = NULL;
+	if (value->type == NP_COMMON_PS4_JSON_TYPE_OBJECT)
+		result = value;
+	return result;
+}
+
+void SceNpCommonPs4_31619280(void)
+{
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_2D0351A2(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonValue *copy;
+
+	copy = (struct NpCommonPs4JsonValue *)SceNpCommonPs4_D154D84F(20, pool);
+	if (copy == NULL)
+		return NULL;
+	SceNpCommonPs4_935F32AE(copy, pool, NP_COMMON_PS4_JSON_TYPE_NULL);
+	copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonNullValueVtable);
+	return copy;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_A6BD2963(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonValue *copy;
+
+	copy = (struct NpCommonPs4JsonValue *)SceNpCommonPs4_D154D84F(20, pool);
+	if (copy == NULL)
+		return NULL;
+	SceNpCommonPs4_935F32AE(copy, pool, NP_COMMON_PS4_JSON_TYPE_NULL);
+	copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonNullValueVtable);
+	return copy;
+}
+
+int SceNpCommonPs4_FF11808F(struct NpCommonPs4JsonValue *value)
+{
+	void *data;
+
+	data = value->data;
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	value->data = NULL;
+	return 0;
+}
+
+struct NpCommonPs4JsonBoolData *SceNpCommonPs4_D997BBF9(struct NpCommonPs4JsonBoolData *data)
+{
+	data->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolDataVtable);
+	data->value = 0;
+	return data;
+}
+
+struct NpCommonPs4JsonBoolData *SceNpCommonPs4_64A4C862(struct NpCommonPs4JsonBoolData *data, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonBoolData *copy;
+
+	copy = (struct NpCommonPs4JsonBoolData *)SceNpCommonPs4_D154D84F(8, pool);
+	if (copy != NULL) {
+		copy->value = 0;
+		copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolDataVtable);
+		copy->value = data->value;
+	}
+	return NULL;
+}
+
+__attribute__((noinline)) struct NpCommonPs4JsonValue *SceNpCommonPs4_50BC0275(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonValue *result;
+	struct NpCommonPs4JsonValue *copy;
+	struct NpCommonPs4JsonBoolData *data;
+	struct NpCommonPs4JsonBoolData *dataCopy;
+
+	result = NULL;
+	copy = (struct NpCommonPs4JsonValue *)SceNpCommonPs4_D154D84F(20, pool);
+	if (copy != NULL) {
+		SceNpCommonPs4_935F32AE(copy, pool, NP_COMMON_PS4_JSON_TYPE_BOOL);
+		copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolValueVtable);
+		data = (struct NpCommonPs4JsonBoolData *)value->data;
+		if (data == NULL)
+			return copy;
+		dataCopy = (struct NpCommonPs4JsonBoolData *)SceNpCommonPs4_D154D84F(8, pool);
+		if (dataCopy != NULL) {
+			dataCopy->value = 0;
+			dataCopy->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolDataVtable);
+			dataCopy->value = data->value;
+		}
+		copy->data = result;
+		NP_COMMON_PS4_JSON_DESTROY(copy);
+	}
+	return result;
+}
+
+int SceNpCommonPs4_C6A17ECD(struct NpCommonPs4JsonBoolData *data, char boolean)
+{
+	data->value = boolean;
+	return 0;
+}
+
+int SceNpCommonPs4_AE224009(struct NpCommonPs4JsonValue *value, char boolean)
+{
+	struct NpCommonPs4JsonBoolData *data;
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_BOOL, "SetBool", "npext\\json\\json_value.cpp", 1217,
+		"m_type == TYPE_BOOL");
+	data = (struct NpCommonPs4JsonBoolData *)value->data;
+	if (data != NULL) {
+		data->value = boolean;
+	} else {
+		data = (struct NpCommonPs4JsonBoolData *)SceNpCommonPs4_D154D84F(8, value->pool);
+		if (data == NULL)
+			return ((int *)value->pool)[4];
+		data->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolDataVtable);
+		data->value = 0;
+		data->value = boolean;
+		value->data = data;
+	}
+	return 0;
+}
+
+int SceNpCommonPs4_C6BD1713(struct NpCommonPs4JsonBoolData *data)
+{
+	return data->value;
+}
+
+int SceNpCommonPs4_C1277FAD(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonBoolData *data;
+	int result;
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_BOOL, "GetBool", "npext\\json\\json_value.cpp", 1255,
+		"m_type == TYPE_BOOL");
+	data = (struct NpCommonPs4JsonBoolData *)value->data;
+	result = 0;
+	if (data != NULL)
+		return data->value;
+	return result;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_D3B1E97E(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool)
+{
+	return SceNpCommonPs4_50BC0275(value, pool);
+}
+
+int SceNpCommonPs4_DD94C5AE(struct NpCommonPs4JsonValue *value)
+{
+	void *data;
+
+	data = value->data;
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	value->data = NULL;
+	return 0;
+}
+
+struct NpCommonPs4JsonTextData *SceNpCommonPs4_BD5F84AD(struct NpCommonPs4JsonTextData *data, struct NpCommonPs4Allocator *pool)
+{
+	data->pool = pool;
+	data->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+	data->text = NULL;
+	return data;
+}
+
+struct NpCommonPs4JsonTextData *SceNpCommonPs4_C04D5BD5(struct NpCommonPs4JsonTextData *data, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonTextData *copy;
+
+	copy = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, pool);
+	if (copy != NULL) {
+		copy->pool = pool;
+		copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		copy->text = NULL;
+		copy->text = npCommonPs4AllocatorDuplicateString(pool, data->text);
+		if (copy->text != NULL)
+			return copy;
+		NP_COMMON_PS4_JSON_DESTROY(copy);
+	}
+	return NULL;
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_33A6B1DF(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool)
+{
+	struct NpCommonPs4JsonValue *result;
+	struct NpCommonPs4JsonValue *copy;
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *dataCopy;
+
+	result = NULL;
+	copy = (struct NpCommonPs4JsonValue *)SceNpCommonPs4_D154D84F(20, pool);
+	if (copy == NULL)
+		return result;
+	SceNpCommonPs4_935F32AE(copy, pool, NP_COMMON_PS4_JSON_TYPE_NUMBER);
+	copy->vtable = NP_COMMON_PS4_VTABLE(g_jsonNumberValueVtable);
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL)
+		return copy;
+	dataCopy = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, pool);
+	if (dataCopy != NULL) {
+		dataCopy->pool = pool;
+		dataCopy->text = NULL;
+		dataCopy->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		dataCopy->text = npCommonPs4AllocatorDuplicateString(pool, data->text);
+		if (dataCopy->text == NULL) {
+			NP_COMMON_PS4_JSON_DESTROY(dataCopy);
+			dataCopy = NULL;
+		}
+	}
+	copy->data = dataCopy;
+	if (dataCopy != NULL)
+		return copy;
+	NP_COMMON_PS4_JSON_DESTROY(copy);
+	return result;
+}
+
+int SceNpCommonPs4_E595BA30(struct NpCommonPs4JsonTextData *data, SceInt32 number)
+{
+	char *text;
+	int result;
+	SceSize length;
+
+	result = SceNpCommonPs4_9CAF0FE7(NULL, 0, number, 10, 0, &length);
+	if (result >= 0) {
+		text = (char *)SceNpCommonPs4_299ADFC3(data->pool, length + 1);
+		if (text != NULL) {
+			result = SceNpCommonPs4_9CAF0FE7(text, length + 1, number, 10, 0, NULL);
+			if (result >= 0) {
+				SceNpCommonPs4_38CC9AF5(data->pool, data->text);
+				data->text = text;
+				result = 0;
+			}
+		} else {
+			result = ((int *)data->pool)[4];
+		}
+	}
+	return result;
+}
+
+int SceNpCommonPs4_B3B466CE(struct NpCommonPs4JsonValue *value, SceInt32 number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *memory;
+	int result;
+	static const char functionName[] = "SetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1314, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		result = SceNpCommonPs4_E595BA30(data, number);
+		if (result >= 0)
+			return 0;
+		return result;
+	}
+	data = NULL;
+	memory = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, value->pool);
+	if (memory != NULL) {
+		memory->pool = value->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		memory->text = NULL;
+		data = memory;
+		result = SceNpCommonPs4_E595BA30(data, number);
+		if (result >= 0) {
+			value->data = data;
+			return 0;
+		}
+	} else {
+		result = ((int *)value->pool)[4];
+	}
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	return result;
+}
+
+int SceNpCommonPs4_B6A954DA(struct NpCommonPs4JsonTextData *data, SceUInt32 number)
+{
+	char *text;
+	int result;
+	SceSize length;
+
+	result = NpCommonPs4UIntToString(NULL, 0, number, 10, 0, &length);
+	if (result >= 0) {
+		text = (char *)SceNpCommonPs4_299ADFC3(data->pool, length + 1);
+		if (text != NULL) {
+			result = NpCommonPs4UIntToString(text, length + 1, number, 10, 0, NULL);
+			if (result >= 0) {
+				SceNpCommonPs4_38CC9AF5(data->pool, data->text);
+				data->text = text;
+				result = 0;
+			}
+		} else {
+			result = ((int *)data->pool)[4];
+		}
+	}
+	return result;
+}
+
+int SceNpCommonPs4_9AB50830(struct NpCommonPs4JsonValue *value, SceUInt32 number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *memory;
+	int result;
+	static const char functionName[] = "SetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1351, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		result = SceNpCommonPs4_B6A954DA(data, number);
+		if (result >= 0)
+			return 0;
+		return result;
+	}
+	data = NULL;
+	memory = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, value->pool);
+	if (memory != NULL) {
+		memory->pool = value->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		memory->text = NULL;
+		data = memory;
+		result = SceNpCommonPs4_B6A954DA(data, number);
+		if (result >= 0) {
+			value->data = data;
+			return 0;
+		}
+	} else {
+		result = ((int *)value->pool)[4];
+	}
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	return result;
+}
+
+int SceNpCommonPs4_3C9E23DC(struct NpCommonPs4JsonTextData *data, SceInt64 number)
+{
+	char *text;
+	int result;
+	SceSize length;
+
+	result = NpCommonPs4Int64ToString(NULL, 0, number, 10, 0, &length);
+	if (result >= 0) {
+		text = (char *)SceNpCommonPs4_299ADFC3(data->pool, length + 1);
+		if (text != NULL) {
+			result = NpCommonPs4Int64ToString(text, length + 1, number, 10, 0, NULL);
+			if (result >= 0) {
+				SceNpCommonPs4_38CC9AF5(data->pool, data->text);
+				data->text = text;
+				result = 0;
+			}
+		} else {
+			result = ((int *)data->pool)[4];
+		}
+	}
+	return result;
+}
+
+int SceNpCommonPs4_78DFC124(struct NpCommonPs4JsonValue *value, SceInt64 number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *memory;
+	int result;
+	static const char functionName[] = "SetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1388, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		result = SceNpCommonPs4_3C9E23DC(data, number);
+		if (result >= 0)
+			return 0;
+		return result;
+	}
+	data = NULL;
+	memory = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, value->pool);
+	if (memory != NULL) {
+		memory->pool = value->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		memory->text = NULL;
+		data = memory;
+		result = SceNpCommonPs4_3C9E23DC(data, number);
+		if (result >= 0) {
+			value->data = data;
+			return 0;
+		}
+	} else {
+		result = ((int *)value->pool)[4];
+	}
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	return result;
+}
+
+int SceNpCommonPs4_A23BA075(struct NpCommonPs4JsonTextData *data, SceUInt64 number)
+{
+	char *text;
+	int result;
+	SceSize length;
+
+	result = NpCommonPs4UInt64ToString(NULL, 0, number, 10, 0, &length);
+	if (result >= 0) {
+		text = (char *)SceNpCommonPs4_299ADFC3(data->pool, length + 1);
+		if (text != NULL) {
+			result = NpCommonPs4UInt64ToString(text, length + 1, number, 10, 0, NULL);
+			if (result >= 0) {
+				SceNpCommonPs4_38CC9AF5(data->pool, data->text);
+				data->text = text;
+				result = 0;
+			}
+		} else {
+			result = ((int *)data->pool)[4];
+		}
+	}
+	return result;
+}
+
+int SceNpCommonPs4_CFEC9EA7(struct NpCommonPs4JsonValue *value, SceUInt64 number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *memory;
+	int result;
+	static const char functionName[] = "SetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1425, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		result = SceNpCommonPs4_A23BA075(data, number);
+		if (result >= 0)
+			return 0;
+		return result;
+	}
+	data = NULL;
+	memory = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, value->pool);
+	if (memory != NULL) {
+		memory->pool = value->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		memory->text = NULL;
+		data = memory;
+		result = SceNpCommonPs4_A23BA075(data, number);
+		if (result >= 0) {
+			value->data = data;
+			return 0;
+		}
+	} else {
+		result = ((int *)value->pool)[4];
+	}
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	return result;
+}
+
+int SceNpCommonPs4_56AC9166(struct NpCommonPs4JsonTextData *data, const char *string)
+{
+	char *copy;
+	struct NpCommonPs4Allocator *pool;
+
+	pool = data->pool;
+	if (string != NULL) {
+		copy = npCommonPs4AllocatorDuplicateString(pool, string);
+		pool = data->pool;
+		if (copy == NULL)
+			return ((int *)pool)[4];
+		SceNpCommonPs4_38CC9AF5(pool, data->text);
+	} else {
+		SceNpCommonPs4_38CC9AF5(pool, data->text);
+		copy = NULL;
+	}
+	data->text = copy;
+	return 0;
+}
+
+int SceNpCommonPs4_943736E5(struct NpCommonPs4JsonValue *value, const char *string)
+{
+	struct NpCommonPs4JsonTextData *data;
+	struct NpCommonPs4JsonTextData *memory;
+	int result;
+	static const char functionName[] = "SetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1462, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		result = SceNpCommonPs4_56AC9166(data, string);
+		if (result >= 0)
+			return 0;
+		return result;
+	}
+	data = NULL;
+	memory = (struct NpCommonPs4JsonTextData *)SceNpCommonPs4_D154D84F(12, value->pool);
+	if (memory != NULL) {
+		memory->pool = value->pool;
+		memory->vtable = NP_COMMON_PS4_VTABLE(g_jsonTextDataVtable);
+		memory->text = NULL;
+		data = memory;
+		result = SceNpCommonPs4_56AC9166(data, string);
+		if (result >= 0) {
+			value->data = data;
+			return 0;
+		}
+	} else {
+		result = ((int *)value->pool)[4];
+	}
+	if (data != NULL)
+		NP_COMMON_PS4_JSON_DESTROY(data);
+	return result;
+}
+
+int SceNpCommonPs4_60D9210E(struct NpCommonPs4JsonTextData *data, SceInt32 *number)
+{
+	int result;
+
+	if (data->text != NULL) {
+		result = SceNpCommonPs4_3AE5ABF3(data->text, number, 10, NULL);
+		if (result < 0)
+			return result;
+	} else {
+		*number = 0;
+	}
+	return 0;
+}
+
+int SceNpCommonPs4_417E4AA6(struct NpCommonPs4JsonValue *value, SceInt32 *number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	char *text;
+	int result;
+	static const char functionName[] = "GetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1499, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL) {
+		*number = 0;
+		return 0;
+	}
+	text = data->text;
+	if (text == NULL) {
+		*number = 0;
+		return 0;
+	}
+	result = SceNpCommonPs4_3AE5ABF3(text, number, 10, NULL);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+int SceNpCommonPs4_A2D9B617(struct NpCommonPs4JsonTextData *data, SceUInt32 *number)
+{
+	int result;
+
+	if (data->text != NULL) {
+		result = SceNpCommonPs4_D5B30475(data->text, number, 10, NULL);
+		if (result < 0)
+			return result;
+	} else {
+		*number = 0;
+	}
+	return 0;
+}
+
+int SceNpCommonPs4_08E9C5F9(struct NpCommonPs4JsonValue *value, SceUInt32 *number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	char *text;
+	int result;
+	static const char functionName[] = "GetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1520, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL) {
+		*number = 0;
+		return 0;
+	}
+	text = data->text;
+	if (text == NULL) {
+		*number = 0;
+		return 0;
+	}
+	result = SceNpCommonPs4_D5B30475(text, number, 10, NULL);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+int SceNpCommonPs4_7D1F38BD(struct NpCommonPs4JsonTextData *data, SceInt64 *number)
+{
+	int result;
+
+	if (data->text != NULL) {
+		result = NpCommonPs4StrToInt64(data->text, number, 10, NULL);
+		if (result < 0)
+			return result;
+	} else {
+		*number = 0;
+	}
+	return 0;
+}
+
+int SceNpCommonPs4_318BF324(struct NpCommonPs4JsonValue *value, SceInt64 *number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	char *text;
+	int result;
+	static const char functionName[] = "GetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1541, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL) {
+		*number = 0;
+		return 0;
+	}
+	text = data->text;
+	if (text == NULL) {
+		*number = 0;
+		return 0;
+	}
+	result = NpCommonPs4StrToInt64(text, number, 10, NULL);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+int SceNpCommonPs4_D4E2FEA6(struct NpCommonPs4JsonTextData *data, SceUInt64 *number)
+{
+	int result;
+
+	if (data->text != NULL) {
+		result = NpCommonPs4StrToUInt64(data->text, number, 10, NULL);
+		if (result < 0)
+			return result;
+	} else {
+		*number = 0;
+	}
+	return 0;
+}
+
+int SceNpCommonPs4_F29A11C0(struct NpCommonPs4JsonValue *value, SceUInt64 *number)
+{
+	struct NpCommonPs4JsonTextData *data;
+	char *text;
+	int result;
+	static const char functionName[] = "GetNum";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1562, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL) {
+		*number = 0;
+		return 0;
+	}
+	text = data->text;
+	if (text == NULL) {
+		*number = 0;
+		return 0;
+	}
+	result = NpCommonPs4StrToUInt64(text, number, 10, NULL);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+const char *SceNpCommonPs4_D99E09CC(struct NpCommonPs4JsonTextData *data)
+{
+	const char *result;
+
+	result = "0";
+	if (data->text != NULL)
+		return data->text;
+	return result;
+}
+
+const char *SceNpCommonPs4_FAE43676(struct NpCommonPs4JsonValue *value)
+{
+	struct NpCommonPs4JsonTextData *data;
+	const char *result;
+	static const char functionName[] = "GetNumStr";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1591, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data == NULL)
+		return "0";
+	result = "0";
+	if (data->text != NULL)
+		return data->text;
+	return result;
+}
+
+int SceNpCommonPs4_83A224E1(struct NpCommonPs4JsonValue *value, char *buffer, SceSize size)
+{
+	struct NpCommonPs4JsonTextData *data;
+	const char *text;
+	const char *string;
+	static const char functionName[] = "GetNum";
+	static const char inlinedFunctionName[] = "GetNumStr";
+
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, functionName, "npext\\json\\json_value.cpp", 1583, "m_type == TYPE_NUMBER");
+	NP_COMMON_PS4_ASSERT(value->type == NP_COMMON_PS4_JSON_TYPE_NUMBER, inlinedFunctionName, "npext\\json\\json_value.cpp", 1591, "m_type == TYPE_NUMBER");
+	data = (struct NpCommonPs4JsonTextData *)value->data;
+	if (data != NULL) {
+		text = "0";
+		if (data->text != NULL)
+			text = data->text;
+		string = text;
+	} else {
+		string = "0";
+	}
+	return NpCommonPs4StringCopy(buffer, size, string);
+}
+
+}
