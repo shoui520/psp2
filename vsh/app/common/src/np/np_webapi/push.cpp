@@ -7,6 +7,8 @@
 
 NpPushLibContext *g_pushLibContext;		/* 0x81010038 */
 int g_pushAllocator[4];				/* 0x81014080 */
+int g_pushCallbackId;				/* 0x81010024 */
+volatile unsigned int g_pushInitFlags;			/* 0x81010034 */
 
 void npPushLibContextDelete(void)
 {
@@ -72,6 +74,22 @@ int npPushIpcRegisterId(NpWebApiIpmiClient *client, const void *data)
 	return result;
 }
 
+/* tells the service (command 0x20002) the 16-byte title ID of the application */
+int npWebApiIpcSetNpTitleId(NpWebApiIpmiClient *client, const void *titleId)
+{
+	NpWebApiIpmiIn in[1];
+	int ret;
+	int result;
+
+	ret = 0;
+	in[0].data = titleId;
+	in[0].size = 16;
+	result = client->vtbl->invoke(client, 0x20002, in, 1, &ret, NULL, 0);
+	if (result == 0)
+		result = ret;
+	return result;
+}
+
 /* starts the notifications of a user; the library context must exist */
 int npPushRegisterUser(SceNpOnlineId *onlineId)
 {
@@ -103,5 +121,73 @@ int npPushUnregisterUser(SceNpOnlineId *onlineId)
 	SceNpCommonPs4_1543D7EE(&key);
 	if (result >= 0)
 		return 0;
+	return result;
+}
+
+void npPushClearCallbackParam(void)
+{
+	sceClibMemset(g_pushAllocator, 0, sizeof(g_pushAllocator));
+}
+
+/* starts the library's receive path with the allocator it was given: the flags tell what to undo */
+int npPushInit(const int *allocator)
+{
+	int result;
+	unsigned int flags;
+
+	if (g_pushInitFlags != 0)
+		return -2141871615;
+	npPushSetCallbackParam(allocator);
+	g_pushInitFlags |= 1;
+	result = npPushLibContextInitInstance();
+	if (result < 0) {
+		flags = g_pushInitFlags;
+		if ((g_pushInitFlags & 2) != 0) {
+			npPushLibContextDelete();
+			flags = g_pushInitFlags;
+		}
+		if ((flags & 1) != 0)
+			npPushClearCallbackParam();
+		g_pushInitFlags = 0;
+		return result;
+	}
+	g_pushInitFlags |= 2;
+	return 0;
+}
+
+int npPushTerm(void)
+{
+	unsigned int flags;
+
+	flags = g_pushInitFlags;
+	if (flags == 0)
+		return -2141871614;
+	if ((flags & 2) != 0) {
+		npPushLibContextDelete();
+		flags = g_pushInitFlags;
+	}
+	if ((flags & 1) != 0)
+		npPushClearCallbackParam();
+	g_pushInitFlags = 0;
+	return 0;
+}
+
+int npPushRegisterCallback(void)
+{
+	return npPushLibContextRegisterDispatch(npPushDispatch, 0, &g_pushCallbackId);
+}
+
+int npPushUnregisterCallback(void)
+{
+	int result;
+
+	result = g_pushCallbackId;
+	if (g_pushCallbackId != 0) {
+		result = npPushLibContextUnregisterDispatch(g_pushCallbackId);
+		if (result >= 0) {
+			g_pushCallbackId = 0;
+			return 0;
+		}
+	}
 	return result;
 }

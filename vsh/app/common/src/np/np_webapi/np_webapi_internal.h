@@ -33,6 +33,10 @@ extern "C" {
 #define NP_WEBAPI_ERROR_HANDLE_NOT_FOUND	-2141902579	/* 0x8055290d */
 #define NP_WEBAPI_ERROR_OUT_OF_MEMORY		-2141902591	/* 0x80552901 */
 #define NP_WEBAPI_ERROR_INVALID_ARGUMENT	-2141902590	/* 0x80552902 */
+#define NP_WEBAPI_ERROR_INVALID_CONTENT_PARAMETER	-2141902584	/* 0x80552908 */
+#define NP_WEBAPI_ERROR_ABORT_NOT_ALLOWED	-2141902575	/* 0x80552911 */
+#define NP_WEBAPI_ERROR_RESPONSE_NOT_AVAILABLE	-2141870590	/* 0x8055a602 */
+#define NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL	-2141872382	/* 0x80559f02 */
 #define NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND	-2141902588	/* 0x80552904 */
 #define NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND	-2141902587	/* 0x80552905 */
 #define NP_WEBAPI_ERROR_USER_CONTEXT_ALREADY_EXISTS	-2141902582	/* 0x8055290a */
@@ -61,14 +65,25 @@ extern volatile int g_initCount;		/* 0x81010004 */
 extern volatile int g_defaultLibCtxId;	/* 0x81010008 */
 
 /* the library context, the user context and the request, by the IDs the exports take */
-extern int npWebApiIsShellMode(void);
 extern int npWebApiCreateLibContext(SceSize poolSize, void *pool, const char *name, int flags);
+extern int npWebApiModuleInit(const int *shellParam) __attribute__((noinline));
+extern int npWebApiModuleTerm(void) __attribute__((noinline));
+extern int npPushInit(const int *allocator);
+extern int npPushTerm(void);
+extern int npPushRegisterCallback(void);
+extern int npPushUnregisterCallback(void);
+extern void npPushClearCallbackParam(void) __attribute__((noinline));
+extern void npPushDispatch(int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8);
+extern int npWebApiNewLibContext(SceSize poolSize, void *pool, const char *name, int flags) __attribute__((noinline));
 extern int npWebApiDeleteLibContext(int libCtxId);
-extern int npWebApiStartLibContext(int libCtxId, int a1, unsigned char a2);
 extern int npWebApiStopLibContext(int libCtxId);
 extern int npWebApiResolveUserContext(int libCtxId, unsigned char needSignedIn);
-extern int npWebApiCreateRequestObject(int userCtxId, const char *apiGroup, const char *path, unsigned int method,
-	const SceNpWebApiContentParameter *content, int a6, SceInt64 *pRequestId, unsigned char multipart);
+extern int npWebApiCreateRequestObject(unsigned int userCtxId, const char *apiGroup, const char *path, unsigned int method,
+	const SceNpWebApiContentParameter *content, const void *extraData, SceInt64 *pRequestId, unsigned char multipart)
+	__attribute__((noinline));
+extern int npWebApiCreateRequestInternal(unsigned int userCtxId, const char *path, const char *query,
+	unsigned int method, const SceNpWebApiContentParameter *content, const void *extraData, SceInt64 *pRequestId,
+	unsigned char multipart) __attribute__((noinline));
 extern int npWebApiDeleteRequest(SceInt64 requestId);
 extern int npWebApiAbortRequest(SceInt64 requestId);
 extern int npWebApiSend(SceInt64 requestId, int partIndex, const void *data, SceSize size, unsigned char useRespInfo,
@@ -128,7 +143,7 @@ extern int SceNpCommonPs4_CF591432(void);
 extern int SceNpCommon_8C21F489(const SceNpOnlineId *a, const SceNpOnlineId *b);	/* compare online IDs */
 extern int SceNpCommonPs4_38CC9AF5(void *pool, void *block);
 extern int SceNpCommonPs4_299ADFC3(void *pool, int size);
-extern int SceNpCommonPs4_31DB2D97(void *pool);
+extern void *SceNpCommonPs4_31DB2D97(void *pool);
 extern const void *g_userContextVtable[];	/* 0x8100eddc */
 extern const void *g_connectionPoolVtable[];	/* 0x8100eb7c */
 extern const void *g_baseVtable[];		/* 0x8100eb6c */
@@ -160,6 +175,28 @@ extern void *SceNpCommonPs4_AA980113(void *allocator, int size);
 extern int SceNpCommonPs4_A2A8493B(void *mutex);				/* lock */
 extern int SceNpCommonPs4_6BA5A164(void *mutex);				/* unlock */
 extern int SceNpCommonPs4_D84BF4B7(int arg);
+extern int SceNpCommonPs4_4E897A97(const void *titleId, const void *titleSecret);	/* sets the title ID and secret */
+extern int SceNpCommonPs4_9AFE6E37(const void *a, const void *b);
+extern int SceNpCommonPs4_6AC5EF70(void *titleId, void *titleSecret);	/* gets them */
+extern int SceNpCommonPs4_D0F55105(int a, void *b);
+extern int SceNpCommonPs4_D082556B(const char *src, SceSize length, char *dst, SceSize dstSize);
+extern int SceNpCommonPs4_64C85FD5(void);
+extern int SceNpCommonPs4_0D1288D4(void *mspace);
+extern const int *SceNpCommonPs4_53484B79(void);
+extern int SceNpCommonPs4_CC43F27D(void);
+extern int SceNpCommonPs4_8CE077C7(void);
+extern int SceNpCommonPs4_6602CA8B(const int *allocator, const int *param);
+extern int SceNpCommonPs4_E7831B1A(void);
+extern int SceNpCommonPs4_AA96CC6A(void);
+extern int SceNpCommonPs4_A2AEF12D(void);
+extern int SceNpCommonPs4_7F68D169(void);
+extern int SceNpCommonPs4_F2D6BA27(void);
+extern int SceNpCommonPs4_5492CC76(int zero, const int *allocator);
+extern int SceNpCommonPs4_E2805B06(void);
+extern int SceNpCommonPs4_33B5FE83(void);
+extern int SceNpCommonPs4_4EA26D7A(void);
+extern int SceNpCommonPs4_019C2522(void);
+extern SceUInt32 SceLibKernel_9F793F84(void);
 extern struct NpWebApiIpmiClient *SceNpCommonPs4_A0599F24(void);			/* the NP service's IPMI client */
 extern void SceNpCommonPs4_F50BD96A(int result);				/* halt after a failed assertion */
 extern void *SceNpCommonPs4_108738F2(void *object);			/* IPC data: base constructor */
@@ -214,7 +251,7 @@ typedef struct NpWebApiHandleList {
 
 /* a library context (176 bytes); the contexts of the process are a list (g_libContexts) */
 typedef struct NpWebApiLibContext {
-	const void *vtable;
+	const void *const *vtable;
 	struct NpWebApiLibContext *next;
 	unsigned int state;
 	int refCount;
@@ -376,6 +413,31 @@ extern int npWebApiHeapCreate(void);
 extern void npWebApiHeapDestroy(void);
 extern int npWebApiHeapGet(void **pMspace);
 extern NpWebApiLibContext *npWebApiFindLibContext(int libCtxId, unsigned char allowDeleting);
+/* a library context's life: its pool, its lists and the list of the contexts of the process (g_libContexts) */
+typedef struct NpWebApiPoolCallbacks {
+	void *(*allocate)(SceSize size, void *mspace);
+	void *(*reallocate)(void *ptr, SceSize size, void *mspace);
+	void (*release)(void *ptr, void *mspace);
+	void *mspace;
+	int error;
+} NpWebApiPoolCallbacks;
+
+extern const void *const g_libContextVtable[];	/* 0x8100eb8c */
+extern int npWebApiHeapBlockCreate(SceSize poolSize, void *pool, NpWebApiHeapBlock *block, int id) __attribute__((noinline));
+extern NpWebApiLibContext *npWebApiLibContextConstruct(NpWebApiLibContext *ctx, NpWebApiHeapBlock *heapBlock, int state,
+	int id) __attribute__((noinline));
+extern NpWebApiLibContext *npWebApiLibContextDestruct(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern int npWebApiLibContextDeleteObject(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern int npWebApiLibContextInit(NpWebApiLibContext *ctx, const char *name) __attribute__((noinline));
+extern void npWebApiLibContextClearHandles(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern void npWebApiLibContextClearFilters(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern void npWebApiLibContextClearServiceFilters(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern void npWebApiLibContextClearExtdFilters(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern int npWebApiDestroyLibContext(int libCtxId) __attribute__((noinline));
+extern int npWebApiLibContextDeleteUserContexts(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern int npWebApiLibContextAbortHandles(NpWebApiLibContext *ctx) __attribute__((noinline));
+extern int npWebApiLibContextHasBusyHandles(NpWebApiLibContext *ctx) __attribute__((noinline));
+
 extern int npWebApiLibContextAddUserContext(NpWebApiLibContext *ctx, NpWebApiUserContext *userCtx);
 extern int npWebApiLibContextRemoveUserContext(NpWebApiLibContext *ctx, NpWebApiUserContext *userCtx);
 extern NpWebApiUserContext *npWebApiLibContextFindUserContext(NpWebApiLibContext *ctx, int userCtxId);
@@ -578,7 +640,7 @@ extern NpWebApiRequest *npWebApiUserContextFindRequest(NpWebApiUserContext *user
 extern NpWebApiRequest *npWebApiRequestSetNext(NpWebApiRequest *request, NpWebApiRequest *next);
 /* a user context's HTTP connections: a list of connections, each one's ID and the next */
 typedef struct NpWebApiConnection {
-	unsigned char reserved0[32];
+	char name[32];
 	int connId;
 	struct NpWebApiConnection *next;
 } NpWebApiConnection;
@@ -602,6 +664,8 @@ extern int npWebApiConnectionPoolAbortRequest(NpWebApiConnectionPool *pool, NpWe
 extern int npWebApiPushObjectAbortRequest(NpWebApiPushObject *object, NpWebApiRequest *request);
 extern int npWebApiDestroyObject(void *object);
 extern int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool);
+extern int npWebApiConnectionPoolDeleteConnection(NpWebApiConnectionPool *pool, const char *name)
+	__attribute__((noinline));
 extern NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectionPool *pool, NpWebApiUserContext *userCtx);
 extern NpWebApiConnectionPool *npWebApiConnectionPoolDestruct(NpWebApiConnectionPool *pool);
 extern int npWebApiConnectionPoolDeleteThis(NpWebApiConnectionPool *pool);
@@ -746,13 +810,20 @@ typedef struct NpWebApiExtdEntryList {
 	NpWebApiExtdEntry *tail;
 } NpWebApiExtdEntryList;
 
-/* the callbacks the library's own users register for a push event: a ring of 16-byte nodes */
+/* the callbacks the library's own users register for a push event: a ring of 20-byte nodes */
 typedef struct NpPushCallbackNode {
 	struct NpPushCallbackNode *prev;
 	struct NpPushCallbackNode *next;
 	void *callback;
 	void *argument;
+	int id;
 } NpPushCallbackNode;
+
+typedef struct NpPushCallbackRecord {
+	void *callback;
+	void *argument;
+	int id;
+} NpPushCallbackRecord;
 
 typedef struct NpPushCallbackList {
 	NpPushCallbackNode *sentinel;
@@ -917,6 +988,16 @@ extern NpPushLibContext *npPushLibContextDestruct(NpPushLibContext *ctx) __attri
 extern int npPushLibContextDeleteObject(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextInit(NpPushLibContext *ctx) __attribute__((noinline));
 extern int npPushLibContextInitInstance(void);
+extern int SceNpCommonPs4_741F88FE(volatile int *counter);	/* atomic increment: the old value */
+extern void npPushCallbackListInsert(NpPushCallbackNode **pResult, NpPushCallbackList *list,
+	const NpPushCallbackRecord *record) __attribute__((noinline));
+extern int npPushCallbackListErase(NpPushCallbackNode **pResult, NpPushCallbackList *list,
+	NpPushCallbackNode **pAt) __attribute__((noinline));
+extern int npPushLibContextAddCallback(NpPushLibContext *ctx, void *callback, void *argument, int *pId)
+	__attribute__((noinline));
+extern int npPushLibContextRemoveCallback(NpPushLibContext *ctx, int id) __attribute__((noinline));
+extern int npPushLibContextRegisterDispatch(void (*dispatch)(int, int, int, int, int, int, int, int), int a2, int *pId);
+extern int npPushLibContextUnregisterDispatch(int id);
 extern NpPushExDataNames *npPushDataFilterConstruct(NpPushExDataNames *names) __attribute__((noinline));
 extern NpPushExDataNames *npPushDataFilterDestruct(NpPushExDataNames *names) __attribute__((noinline));
 extern int npPushDataFilterDelete(NpPushExDataNames *names) __attribute__((noinline));
@@ -931,9 +1012,9 @@ extern int npPushLibContextCollectNames(NpPushLibContext *ctx, const char *name,
 
 
 extern NpPushLibContext *g_pushLibContext;	/* 0x81010038 */
-extern void npPushLibContextDelete(void);
+extern void npPushLibContextDelete(void) __attribute__((noinline));
 extern NpPushLibContext *npPushLibContextGet(void) __attribute__((noinline));
-extern int npPushSetCallbackParam(const int *param);
+extern int npPushSetCallbackParam(const int *param) __attribute__((noinline));
 typedef struct NpPushUserValue {
 	NpPushKey key;
 	int refCount;
@@ -977,6 +1058,16 @@ typedef struct NpWebApiIpmiClient {
 } NpWebApiIpmiClient;
 
 extern int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data);
+extern int npWebApiIpcSetNpTitleId(NpWebApiIpmiClient *client, const void *titleId);
+extern int npWebApiRequestGetContentLength(NpWebApiRequest *request, SceULong64 *pContentLength)
+	__attribute__((noinline));
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int sceAppMgrIsDevelopmentMode(void);
+#ifdef __cplusplus
+}
+#endif
 extern int npPushIpcRegisterId(NpWebApiIpmiClient *client, const void *data);
 extern int npPushRegisterUser(SceNpOnlineId *onlineId);	/* 0x8100987a, not written yet */
 extern int npPushUnregisterUser(SceNpOnlineId *onlineId);	/* 0x810098d4, not written yet */

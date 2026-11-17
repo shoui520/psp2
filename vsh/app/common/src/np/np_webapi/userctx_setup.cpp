@@ -115,6 +115,57 @@ out:
 	return result;
 }
 
+int npWebApiCreateRequestInternal(unsigned int userCtxId, const char *path, const char *query, unsigned int method,
+	const SceNpWebApiContentParameter *content, const void *extraData, SceInt64 *pRequestId, unsigned char multipart)
+{
+	NpWebApiRequest *request;
+	NpWebApiUserContext *userCtx;
+	NpWebApiLibContext *libCtx;
+	NpWebApiLibContext *lockedCtx;
+	int result;
+
+	request = NULL;
+	userCtx = NULL;
+	libCtx = npWebApiFindLibContext(userCtxId >> 16, 0);
+	if (libCtx == NULL) {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+		goto out;
+	}
+	userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
+	if (userCtx == NULL) {
+		result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+		goto out;
+	}
+	result = npWebApiRequestCreate(userCtx, path, query, method, content, extraData, &request, multipart);
+	if (result < 0)
+		goto out;
+	if (g_sdkVersion >= NP_WEBAPI_SDK_3_30) {
+		lockedCtx = libCtx;
+		npWebApiLibContextLock(lockedCtx);
+		if (npWebApiUserContextFlag158(userCtx) != 0) {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+			npWebApiLibContextUnlock(lockedCtx);
+			goto out;
+		}
+	}
+	npWebApiUserContextAddRequest(userCtx, request);
+	if (g_sdkVersion >= NP_WEBAPI_SDK_3_30)
+		npWebApiLibContextUnlock(libCtx);
+	if (pRequestId != NULL)
+		*pRequestId = npWebApiRequestGetId(request);
+	npWebApiUserContextRelease(userCtx);
+	npWebApiLibContextRelease(libCtx);
+	return result;
+out:
+	if (request != NULL)
+		npWebApiRequestDestroy(request, NULL);
+	if (userCtx != NULL)
+		npWebApiUserContextRelease(userCtx);
+	if (libCtx != NULL)
+		npWebApiLibContextRelease(libCtx);
+	return result;
+}
+
 int npWebApiStopLibContext(int libCtxId)
 {
 	int result;

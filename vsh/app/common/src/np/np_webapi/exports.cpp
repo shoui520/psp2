@@ -7,6 +7,302 @@
 
 extern "C" {
 
+int sceNpWebApiSetNpTitleId(const SceNpTitleId *pTitleId, const SceNpTitleSecret *pTitleSecret)
+{
+	int result;
+	int pid;
+	char param[4];
+
+	if (pTitleId == NULL || pTitleSecret == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	sceClibMemset(param, 0, 4);
+	pid = sceKernelGetProcessId();
+	if (pid < 0)
+		return pid;
+	sceAppMgrAppParamGetString(pid, 8, param, 4);
+	if (sceClibStrncmp("gda", param, sceClibStrnlen("gda", 0xFFFFFFFF)) == 0)
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	if (npWebApiIsShellProcess())
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	result = SceNpCommonPs4_4E897A97(pTitleId, pTitleSecret);
+	if (result >= 0 && sceAppMgrIsDevelopmentMode() != 0 && SceNpCommonPs4_64C85FD5() == 0)
+		result = npWebApiIpcSetNpTitleId(SceNpCommonPs4_A0599F24(), pTitleId);
+	return result;
+}
+
+int SceNpWebApi_4699EF17(const void *a1, const void *a2)
+{
+	if (a1 != NULL && a2 != NULL)
+		return SceNpCommonPs4_9AFE6E37(a1, a2);
+	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+}
+
+int sceNpWebApiGetNpTitleId(SceNpTitleId *pTitleId, SceNpTitleSecret *pTitleSecret)
+{
+	if (pTitleId != NULL && pTitleSecret != NULL)
+		return SceNpCommonPs4_6AC5EF70(pTitleId, pTitleSecret);
+	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+}
+
+int sceNpWebApiUtilityParseNpId(const char *pNpIdStr, SceNpId *pNpId)
+{
+	char str[64];
+	char name[20];
+	char dot[8];
+	char slash[8];
+	char tail[8];
+	SceNpId id;
+	int result;
+	int hasSlash;
+	SceSize start;
+	SceSize i;
+	SceSize len;
+	const char *p;
+
+	if (pNpIdStr == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	sceClibMemset(str, 0, sizeof(str));
+	result = SceNpCommonPs4_D082556B(pNpIdStr, sceClibStrnlen(pNpIdStr, 0xFFFFFFFF), str, sizeof(str));
+	if (result < 0)
+		return result;
+	hasSlash = 0;
+	sceClibMemset(name, 0, sizeof(name));
+	sceClibMemset(dot, 0, sizeof(dot));
+	sceClibMemset(slash, 0, sizeof(slash));
+	sceClibMemset(tail, 0, sizeof(tail));
+	start = 0;
+	i = 0;
+	p = str;
+	while (i <= sceClibStrnlen(str, 0xFFFFFFFF)) {
+		len = i - start;
+		if (*p == '@') {
+			sceClibMemcpy_safe(name, &str[start], len <= sizeof(name) ? len : sizeof(name));
+			start = i + 1;
+		} else if (*p == '.') {
+			sceClibMemcpy_safe(dot, &str[start], len <= sizeof(dot) ? len : sizeof(dot));
+			start = i + 1;
+		} else if (*p == '/') {
+			if (slash != NULL)
+				sceClibMemcpy_safe(slash, &str[start], len <= sizeof(slash) ? len : sizeof(slash));
+			hasSlash = 1;
+			start = i + 1;
+		} else if (*p == 0) {
+			if (hasSlash) {
+				if (tail != NULL)
+					sceClibMemcpy_safe(tail, &str[start], len <= sizeof(tail) ? len : sizeof(tail));
+			} else if (slash != NULL) {
+				sceClibMemcpy_safe(slash, &str[start], len <= sizeof(slash) ? len : sizeof(slash));
+			}
+		}
+		p++;
+		i++;
+	}
+	sceClibMemset(&id, 0, sizeof(id));
+	sceClibMemcpy_safe(&id, name, sceClibStrnlen(name, 0xFFFFFFFF));
+	sceClibSnprintf((char *)id.opt, sizeof(id.opt), "%s%s%s", dot, slash, tail);
+	if (pNpId != NULL) {
+		id.reserved[0] = 1;
+		sceClibMemcpy_safe(pNpId, &id, sizeof(id));
+	}
+	return result;
+}
+
+int SceNpWebApi_C42F1E67(int libCtxId)
+{
+	NpWebApiLibContext *libCtx;
+
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx == NULL)
+		return NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	npWebApiLibContextSetAborted(libCtx);
+	npWebApiLibContextRelease(libCtx);
+	return 0;
+}
+
+int SceNpWebApi_B280EA3D(int libCtxId)
+{
+	NpWebApiLibContext *libCtx;
+
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx == NULL)
+		return NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	if (npWebApiLibContextHasOtherUsers(libCtx))
+		return NP_WEBAPI_ERROR_ABORT_NOT_ALLOWED;
+	npWebApiLibContextClearAborted(libCtx);
+	npWebApiLibContextRelease(libCtx);
+	return 0;
+}
+
+int SceNpWebApi_07913970(int libCtxId, const char *pServerName)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	int result;
+
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx != NULL) {
+		result = npWebApiResolveUserContext(libCtxId, 0);
+		if (result >= 0) {
+			userCtx = npWebApiLibContextFindUserContext(libCtx, result);
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+			if (userCtx != NULL)
+				result = npWebApiConnectionPoolDeleteConnection(
+					(NpWebApiConnectionPool *)npWebApiUserContextRequests(userCtx), pServerName);
+			if (userCtx != NULL)
+				npWebApiUserContextRelease(userCtx);
+		}
+	} else {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	}
+	if (libCtx != NULL)
+		npWebApiLibContextRelease(libCtx);
+	return result;
+}
+
+int SceNpWebApi_CB51F139(SceInt64 requestId, SceULong64 *pContentLength)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	NpWebApiRequest *request;
+	unsigned int libCtxId;
+	int userCtxId;
+	int result;
+
+	libCtxId = npWebApiRequestIdGetLibContextId(requestId);
+	userCtxId = npWebApiRequestIdGetUserContextId(requestId);
+	if (pContentLength == NULL || requestId == 0)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	if (libCtx != NULL) {
+		userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
+		if (userCtx != NULL) {
+			request = npWebApiUserContextFindRequest(userCtx, requestId);
+			result = NP_WEBAPI_ERROR_REQUEST_NOT_FOUND;
+			if (request != NULL)
+				result = npWebApiRequestGetContentLength(request, pContentLength);
+			if (request != NULL)
+				npWebApiRequestRelease(request);
+		} else {
+			result = NP_WEBAPI_ERROR_USER_CONTEXT_NOT_FOUND;
+		}
+		if (userCtx != NULL)
+			npWebApiUserContextRelease(userCtx);
+	} else {
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	}
+	if (libCtx != NULL)
+		npWebApiLibContextRelease(libCtx);
+	return result;
+}
+
+int SceNpWebApi_4D7CC67C(int a1, void *a2)
+{
+	if (a2 != NULL)
+		return SceNpCommonPs4_D0F55105(a1, a2);
+	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+}
+
+int sceNpWebApiInitialize(SceSize poolSize)
+{
+	char param[4];
+	int result;
+	int id;
+
+	sceClibMemset(param, 0, 4);
+	result = sceKernelGetProcessId();
+	if (result < 0)
+		return result;
+	sceAppMgrAppParamGetString(result, 8, param, 4);
+	if (sceClibStrncmp("gda", param, sceClibStrnlen("gda", 0xFFFFFFFF)) == 0)
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	if (npWebApiIsShellProcess())
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	if (g_initState == 0)
+		g_initState = 1;
+	if (g_defaultLibCtxId == 0) {
+		result = npWebApiNewLibContext(poolSize, NULL, NULL, 0);
+		if (result >= 0) {
+			g_defaultLibCtxId = result;
+			id = result;
+			result = npWebApiCreateUserContextObject(id, NULL, 0);
+			if (result >= 0) {
+				g_initCount++;
+				return 0;
+			}
+			if (id != 0) {
+				npWebApiDeleteLibContext(id);
+				if (id == g_defaultLibCtxId)
+					g_defaultLibCtxId = 0;
+			}
+		}
+	} else {
+		result = NP_WEBAPI_ERROR_ALREADY_INITIALIZED;
+	}
+	if (g_initCount == 0 && g_initState != 0)
+		g_initState = 0;
+	return result;
+}
+
+int SceNpWebApi_A11FBA1A(SceSize poolSize, void *pool, const char *name)
+{
+	int result;
+	int id;
+
+	if (poolSize == 0)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	if (npWebApiIsShellProcess())
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	if (g_initState == 0)
+		g_initState = 1;
+	result = npWebApiNewLibContext(poolSize, pool, name, 1);
+	if (result >= 0) {
+		id = result;
+		result = npWebApiCreateUserContextObject(id, NULL, 0);
+		if (result >= 0) {
+			g_initCount++;
+			return id;
+		}
+		if (id != 0) {
+			npWebApiDeleteLibContext(id);
+			if (id == g_defaultLibCtxId)
+				g_defaultLibCtxId = 0;
+		}
+	}
+	if (g_initCount == 0 && g_initState != 0)
+		g_initState = 0;
+	return result;
+}
+
+int SceNpWebApi_E8FBA9B8(SceSize poolSize, void *pool)
+{
+	int result;
+	int id;
+
+	if (poolSize == 0)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	if (!npWebApiIsShellProcess())
+		return NP_WEBAPI_ERROR_NOT_ALLOWED_IN_SHELL;
+	if (g_initState == 0)
+		g_initState = 1;
+	result = npWebApiNewLibContext(poolSize, pool, "SceShell", 2);
+	if (result >= 0) {
+		id = result;
+		result = npWebApiCreateUserContextObject(id, NULL, 0);
+		if (result >= 0) {
+			g_initCount++;
+			return id;
+		}
+		if (id != 0) {
+			npWebApiDeleteLibContext(id);
+			if (id == g_defaultLibCtxId)
+				g_defaultLibCtxId = 0;
+		}
+	}
+	if (g_initCount == 0 && g_initState != 0)
+		g_initState = 0;
+	return result;
+}
+
 int sceNpWebApiTerminate(void)
 {
 	int result;
@@ -44,6 +340,23 @@ int SceNpWebApi_66CEC1A6(int libCtxId)
 	return result;
 }
 
+}
+
+int npWebApiCreateRequestObject(unsigned int userCtxId, const char *apiGroup, const char *path, unsigned int method,
+	const SceNpWebApiContentParameter *content, const void *extraData, SceInt64 *pRequestId, unsigned char multipart)
+{
+	if (apiGroup == NULL || path == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	if (content != NULL && content->contentLength != 0 && content->pContentType == NULL)
+		return NP_WEBAPI_ERROR_INVALID_CONTENT_PARAMETER;
+	if (npWebApiGetSdkVersion() < NP_WEBAPI_SDK_3_50 || !(method > 3))
+		return npWebApiCreateRequestInternal(userCtxId, apiGroup, path, method, content, extraData, pRequestId,
+			multipart);
+	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+}
+
+extern "C" {
+
 int sceNpWebApiCreateRequest(const char *pApiGroup, const char *pPath, SceNpWebApiHttpMethod method,
 	const SceNpWebApiContentParameter *pContentParameter, SceInt64 *pRequestId)
 {
@@ -58,7 +371,7 @@ int sceNpWebApiCreateRequest(const char *pApiGroup, const char *pPath, SceNpWebA
 }
 
 int SceNpWebApi_0D910413(int libCtxId, const char *pApiGroup, const char *pPath, SceNpWebApiHttpMethod method,
-	const SceNpWebApiContentParameter *pContentParameter, int a6, SceInt64 *pRequestId)
+	const SceNpWebApiContentParameter *pContentParameter, const void *a6, SceInt64 *pRequestId)
 {
 	int userCtxId;
 

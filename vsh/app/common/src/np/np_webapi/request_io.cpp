@@ -183,3 +183,13 @@ int npWebApiGetHttpResponseHeader(SceInt64 requestId, const char *name, char *va
 		npWebApiLibContextRelease(libCtx);
 	return result;
 }
+
+int npWebApiRequestGetContentLength(NpWebApiRequest *request, SceULong64 *pContentLength)
+{
+	int result;
+
+	result = NP_WEBAPI_ERROR_RESPONSE_NOT_AVAILABLE;
+	if (request->httpRequestId != 0)
+		return sceHttpGetResponseContentLength(request->httpRequestId, pContentLength);
+	return result;
+}

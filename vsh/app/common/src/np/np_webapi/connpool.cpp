@@ -55,6 +55,54 @@ int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool)
 	return 0;
 }
 
+int npWebApiConnectionPoolDeleteConnection(NpWebApiConnectionPool *pool, const char *name)
+{
+	NpWebApiConnection *conn;
+	NpWebApiConnection *node;
+	NpWebApiConnection *prev;
+
+	if (name == NULL)
+		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
+	npWebApiLibContextLock(pool->libContext);
+	conn = pool->head;
+	if (conn != NULL) {
+		do {
+			if (sceClibStrncmp(conn->name, name, sceClibStrnlen(name, 0xFFFFFFFF)) == 0)
+				break;
+			conn = conn->next;
+		} while (conn != NULL);
+		if (conn != NULL) {
+			node = pool->head;
+			prev = NULL;
+			if (node != NULL) {
+				while (node != conn) {
+					prev = node;
+					node = node->next;
+					if (node == NULL)
+						goto notFound;
+				}
+			}
+			if (node != NULL) {
+				if (prev != NULL)
+					prev->next = node->next;
+				else
+					pool->head = node->next;
+				pool->count--;
+			} else {
+notFound:
+				npWebApiLibContextUnlock(pool->libContext);
+			}
+			if (conn->connId != 0) {
+				sceHttpDeleteConnection(conn->connId);
+				conn->connId = 0;
+			}
+			npWebApiLibContextDestroyPool(pool->libContext, conn);
+		}
+	}
+	npWebApiLibContextUnlock(pool->libContext);
+	return 0;
+}
+
 NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectionPool *pool, NpWebApiUserContext *userCtx)
 {
 	pool->vtable = g_connectionPoolVtable;

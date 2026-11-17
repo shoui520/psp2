@@ -6,6 +6,8 @@
 
 #include "np_webapi_internal.h"
 
+static volatile int g_pushCallbackCounter;	/* 0x8101003C */
+
 #define NP_PUSH_RECEIVE_BUFFER_SIZE	0x2000
 #define NP_PUSH_RECEIVE_EXDATA_MAX	10
 #define NP_PUSH_FLAG_ACTIVE		1
@@ -377,4 +379,166 @@ int npPushCheckCallback(void)
 int npWebApiCheckCallback(void)
 {
 	return npPushCheckCallback();
+}
+
+/* the list's insert: a ring around a sentinel node made when the first comes */
+void npPushCallbackListInsert(NpPushCallbackNode **pResult, NpPushCallbackList *list, const NpPushCallbackRecord *record)
+{
+	NpPushCallbackNode *sentinel;
+	NpPushCallbackNode *node;
+	NpPushCallbackNode *created;
+	void *memory;
+	void *callback;
+	void *argument;
+	int id;
+
+	if (list->sentinel == NULL) {
+		created = NULL;
+		if (list->allocator != NULL) {
+			memory = SceNpCommonPs4_AA980113(list->allocator, 20);
+			if (memory != NULL) {
+				sentinel = (NpPushCallbackNode *)operator new(20, memory);
+				if (sentinel != NULL) {
+					sentinel->callback = NULL;
+					sentinel->argument = NULL;
+					sentinel->id = 0;
+					created = sentinel;
+				}
+			}
+		}
+		list->sentinel = created;
+		if (created == NULL) {
+			*pResult = NULL;
+			return;
+		}
+		created->prev = created;
+		created->next = created;
+	}
+	callback = record->callback;
+	argument = record->argument;
+	id = record->id;
+	if (list->allocator != NULL) {
+		memory = SceNpCommonPs4_AA980113(list->allocator, 20);
+		if (memory != NULL) {
+			node = (NpPushCallbackNode *)operator new(20, memory);
+			if (node != NULL) {
+				node->callback = callback;
+				node->argument = argument;
+				node->prev = list->sentinel->prev;
+				node->id = id;
+				node->next = list->sentinel;
+				sentinel = list->sentinel;
+				sentinel->prev->next = node;
+				list->count++;
+				list->sentinel->prev = node;
+				*pResult = node;
+				return;
+			}
+		}
+	}
+	*pResult = NULL;
+}
+
+int npPushCallbackListErase(NpPushCallbackNode **pResult, NpPushCallbackList *list, NpPushCallbackNode **pAt)
+{
+	NpPushCallbackNode *node;
+	NpPushCallbackNode *next;
+	NpPushCallbackNode *prev;
+	int count;
+
+	node = *pAt;
+	next = node->next;
+	prev = next;
+	if (node == list->sentinel) {
+		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "erase",
+			"../../../../../app/common/src/np/include/np_common_ps4/npext/list.h", 364, "HALT_ASSERT",
+			"at != end()"));
+		prev = node->next;
+	}
+	prev->prev = node->prev;
+	node->prev->next = node->next;
+	if (list->allocator != NULL)
+		SceNpCommonPs4_6B428829(list->allocator, node);
+	count = list->count - 1;
+	list->count = count;
+	*pResult = next;
+	return count;
+}
+
+/* adds a callback (the library's own users' dispatcher) with a fresh ID */
+int npPushLibContextAddCallback(NpPushLibContext *ctx, void *callback, void *argument, int *pId)
+{
+	NpPushCallbackRecord record;
+	NpPushCallbackNode *node;
+	int id;
+
+	SceNpCommonPs4_A2A8493B(ctx->receiveLock);
+	record.callback = callback;
+	record.argument = argument;
+	id = SceNpCommonPs4_741F88FE(&g_pushCallbackCounter) + 1;
+	if (id == 0)
+		id = SceNpCommonPs4_741F88FE(&g_pushCallbackCounter) + 1;
+	record.id = id;
+	npPushCallbackListInsert(&node, &ctx->callbacks, &record);
+	if (node != NULL) {
+		*pId = record.id;
+		SceNpCommonPs4_6BA5A164(ctx->receiveLock);
+		return 0;
+	}
+	SceNpCommonPs4_6BA5A164(ctx->receiveLock);
+	return -2141871612;
+}
+
+int npPushLibContextRemoveCallback(NpPushLibContext *ctx, int id)
+{
+	NpPushCallbackNode *sentinel;
+	NpPushCallbackNode *result;
+	NpPushCallbackNode *node;
+
+	SceNpCommonPs4_A2A8493B(ctx->receiveLock);
+	sentinel = ctx->callbacks.sentinel;
+	node = NULL;
+	if (sentinel != NULL)
+		node = sentinel->next;
+	if (node != sentinel) {
+		while (node->id != id) {
+			node = node->next;
+			if (node == sentinel)
+				goto notFound;
+		}
+		npPushCallbackListErase(&result, &ctx->callbacks, &node);
+		SceNpCommonPs4_6BA5A164(ctx->receiveLock);
+		return 0;
+	}
+notFound:
+	SceNpCommonPs4_6BA5A164(ctx->receiveLock);
+	return -2141871613;
+}
+
+int npPushLibContextRegisterDispatch(void (*dispatch)(int, int, int, int, int, int, int, int), int a2, int *pId)
+{
+	NpPushLibContext *ctx;
+	int result;
+
+	ctx = npPushLibContextGet();
+	if (ctx == NULL)
+		return -2141871614;
+	result = npPushLibContextAddCallback(ctx, (void *)dispatch, (void *)a2, pId);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
+int npPushLibContextUnregisterDispatch(int id)
+{
+	NpPushLibContext *ctx;
+	int result;
+
+	ctx = npPushLibContextGet();
+	if (ctx == NULL)
+		return -2141871614;
+	result = npPushLibContextRemoveCallback(ctx, id);
+	if (result >= 0)
+		return 0;
+	return result;
 }
