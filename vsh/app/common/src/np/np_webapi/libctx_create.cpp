@@ -538,8 +538,7 @@ notFound:
 			SceNpCommonPs4_29895EBB(&ctx->lock);
 			sceClibMemcpy_safe(&heapBlock, ctx->heapBlock, sizeof(heapBlock));
 			heap = ctx->heapBlock;
-			if (ctx != NULL)
-				((void (*)(NpWebApiLibContext *))ctx->vtable[1])(ctx);
+			((void (*)(NpWebApiLibContext *))ctx->vtable[1])(ctx);
 			SceNpCommonPs4_38CC9AF5(heapBlock.poolObject, heap);
 			if (heapBlock.mspace != NULL)
 				sceClibMspaceDestroy(heapBlock.mspace);
