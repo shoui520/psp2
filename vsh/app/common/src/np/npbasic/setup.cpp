@@ -1137,7 +1137,7 @@ stopped:
 	} else {
 		result = NP_BASIC_ERROR_UNKNOWN;
 	}
-	sceKernelExitThread(result);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(result);
 	return result;
 }
 

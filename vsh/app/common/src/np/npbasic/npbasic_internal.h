@@ -45,6 +45,8 @@ typedef struct NpBasicClient NpBasicClient;
 extern "C" {
 #endif
 extern NpBasicClient *SceIpmi_9EE9496B(int client);
+/* the thread exit this module imports from SceThreadmgrCoredumpTime (SDK: sceKernelExitThread) */
+extern SceInt32 SceThreadmgrCoredumpTime_sceKernelExitThread(SceInt32 exitStatus);
 extern SceUInt32 SceLibKernel_9F793F84(void);
 extern SceInt32 sceKernelGetSystemTime(SceKernelSysClock *pClock);
 extern int sceNpBasicUnregisterJoinGameAckHandler(void);
