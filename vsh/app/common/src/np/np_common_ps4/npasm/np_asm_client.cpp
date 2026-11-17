@@ -282,7 +282,7 @@ int npAsmClientCreate(int param1, const int *pParam, int notDevelopmentMode)
 	return result;
 }
 
-struct NpAsmClient *npAsmClientGet(void)
+__attribute__((noinline)) struct NpAsmClient *npAsmClientGet(void)
 {
 	return g_npAsmClient;
 }
@@ -297,7 +297,7 @@ struct NpCommonPs4Allocator *npAsmClientGetAllocator(struct NpAsmClient *client)
 	return &g_npAsmAllocator;
 }
 
-struct NpCommonPs4Allocator *npAsmClientGetRequestAllocator(struct NpAsmClient *client)
+__attribute__((noinline)) struct NpCommonPs4Allocator *npAsmClientGetRequestAllocator(struct NpAsmClient *client)
 {
 	return &g_npAsmAllocator;
 }
@@ -592,7 +592,7 @@ int npAsmSecondaryClientDestroy(void)
 	return 0;
 }
 
-struct NpAsmClient *npAsmClientGetSecondary(void)
+__attribute__((noinline)) struct NpAsmClient *npAsmClientGetSecondary(void)
 {
 	return g_npAsmSecondaryClient;
 }

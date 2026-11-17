@@ -43,37 +43,36 @@ int npAsmRegistryAdd(void *object, void *callback, const int *pExtra)
 
 	sceKernelLockLwMutex(&g_npAsmRegistryMutex, 1, NULL);
 	scan = g_npAsmRegistryTable;
-	i = 0;
-	while (scan->callback != NULL) {
-		++i;
-		++scan;
-		if (i >= 128)
-			goto allocate;
-	}
-	entry = scan;
-	if (entry == NULL) {
-allocate:
-		entry = (struct NpAsmRegistryEntry *)operator new(sizeof(struct NpAsmRegistryEntry));
-		if (entry == NULL) {
-			sceKernelLockLwMutex(&g_npAsmRegistryMutex, 1, NULL);
-			return 1;
+	for (i = 0; i < 128; i++, scan++) {
+		if (scan->callback == NULL) {
+			entry = scan;
+			if (entry != NULL)
+				goto found;
+			break;
 		}
 	}
+	entry = (struct NpAsmRegistryEntry *)operator new(sizeof(struct NpAsmRegistryEntry));
+	if (entry == NULL) {
+		sceKernelLockLwMutex(&g_npAsmRegistryMutex, 1, NULL);
+		return 1;
+	}
+found:
+	int extra = *pExtra;
 	entry->callback = callback;
 	entry->next = g_npAsmRegistryHead;
 	entry->object = object;
-	entry->extra = *pExtra;
+	entry->extra = extra;
 	g_npAsmRegistryHead = entry;
 	sceKernelUnlockLwMutex(&g_npAsmRegistryMutex, 1);
 	return 0;
 }
 
-void npAsmWrapSetInitialized(SceUInt8 value)
+__attribute__((noinline)) void npAsmWrapSetInitialized(SceUInt8 value)
 {
 	g_npAsmWrapInitialized = value;
 }
 
-SceUInt8 npAsmWrapIsInitialized(void)
+__attribute__((noinline)) SceUInt8 npAsmWrapIsInitialized(void)
 {
 	return g_npAsmWrapInitialized;
 }
@@ -250,7 +249,7 @@ __attribute__((noinline)) void npAsmNotifyServiceError(int result, const void *p
 	}
 }
 
-int npAsmIsSystemApp(void)
+__attribute__((noinline)) int npAsmIsSystemApp(void)
 {
 	unsigned char status[128];
 
@@ -300,7 +299,7 @@ __attribute__((noinline)) int npAsmWrapTerm(void)
 	return 0;
 }
 
-int npAsmWrapConnectionSetTitleId(const void *pTitleId)
+__attribute__((noinline)) int npAsmWrapConnectionSetTitleId(const void *pTitleId)
 {
 	int result;
 
@@ -310,7 +309,7 @@ int npAsmWrapConnectionSetTitleId(const void *pTitleId)
 	return result;
 }
 
-int npAsmWrapConnectionClearTitleId(void)
+__attribute__((noinline)) int npAsmWrapConnectionClearTitleId(void)
 {
 	int result;
 
@@ -320,7 +319,7 @@ int npAsmWrapConnectionClearTitleId(void)
 	return result;
 }
 
-int npAsmWrapConnectionQuery(int a1, int a2)
+__attribute__((noinline)) int npAsmWrapConnectionQuery(int a1, int a2)
 {
 	return npAsmConnectionQuery(SceNpCommonPs4_A0599F24(), a1, a2);
 }
@@ -427,7 +426,7 @@ __attribute__((noinline)) int npAsmGetTitleIdUnchecked(void *pTitleId, void *pTi
 	return npAsmClientGetTitleId(npAsmClientGet(), pTitleId, pTitleSecret, 0);
 }
 
-int npAsmRequestCreate(const void *pParam)
+__attribute__((noinline)) int npAsmRequestCreate(const void *pParam)
 {
 	struct NpAsmClient *client;
 	struct NpCommonPs4Allocator *allocator;
@@ -435,7 +434,7 @@ int npAsmRequestCreate(const void *pParam)
 
 	client = npAsmClientGet();
 	if (pParam == NULL || (allocator = ((const struct NpAsmRequestParam *)pParam)->allocator) == NULL)
-		allocator = npAsmClientGetAllocator(client);
+		allocator = npAsmClientGetRequestAllocator(client);
 	request = (struct NpAsmRequest *)SceNpCommonPs4_0C922423(sizeof(struct NpAsmRequest), allocator);
 	if (request == NULL || (request = npAsmRequestInit(request, (const struct NpAsmRequestParam *)pParam)) == NULL)
 		return NP_ASM_ERROR_OUT_OF_MEMORY;
@@ -443,7 +442,7 @@ int npAsmRequestCreate(const void *pParam)
 	return npAsmRequestGetId(request);
 }
 
-int npAsmRequestDestroy(int requestId)
+__attribute__((noinline)) int npAsmRequestDestroy(int requestId)
 {
 	struct NpAsmClient *client;
 	struct NpAsmRequest *request;
@@ -458,7 +457,7 @@ int npAsmRequestDestroy(int requestId)
 		if (npAsmRequestGetParam(request)->allocator != NULL)
 			allocator = npAsmRequestGetParam(request)->allocator;
 		else
-			allocator = npAsmClientGetAllocator(client);
+			allocator = npAsmClientGetRequestAllocator(client);
 		npAsmClientRemoveRequest(client, request);
 		npAsmRequestCancel(request);
 		npAsmRequestFreeResults(request, allocator);
@@ -470,7 +469,7 @@ int npAsmRequestDestroy(int requestId)
 	return result;
 }
 
-int npAsmRequestGetTitleToken(SceInt32 requestId, const char *onlineId, void *buffer, SceUInt8 flag)
+__attribute__((noinline)) int npAsmRequestGetTitleToken(SceInt32 requestId, const char *onlineId, void *buffer, SceUInt8 flag)
 {
 	struct NpAsmClient *client;
 	struct NpAsmTransport *transport;
@@ -495,7 +494,7 @@ __attribute__((noinline)) int npAsmGetTokenLimitation(void *pExpired, void *pTic
 	return npAsmTransportGetTokenLimitation(npAsmClientGetTransport(client), pExpired, pTick);
 }
 
-int npAsmCallbackUpdate(void *pTitleId, void *serviceName, void *buffer)
+__attribute__((noinline)) int npAsmCallbackUpdate(void *pTitleId, void *serviceName, void *buffer)
 {
 	return npAsmCallbackTableUpdate(npAsmGetCallbackTable(), pTitleId, serviceName, buffer);
 }
@@ -534,7 +533,7 @@ int npAsmRequestGetBaseUrl(int requestId, const void *pOnlineId, void *pTitleId,
 				npAsmRequestGetParam(request)->httpContextId > 0 ? npAsmRequestGetParam(request)->httpContextId
 					: npAsmClientGetHttpContextId(client),
 				npAsmRequestGetParam(request)->allocator != NULL ? npAsmRequestGetParam(request)->allocator
-					: npAsmClientGetAllocator(client),
+					: npAsmClientGetRequestAllocator(client),
 				&connection);
 			if (result >= 0) {
 				if (pTitleId == NULL) {
@@ -570,12 +569,12 @@ finish:
 	return result;
 }
 
-int npAsmCallbackCheck(void *pTitleId, void *serviceName, void *pValid, void *buffer, int size)
+__attribute__((noinline)) int npAsmCallbackCheck(void *pTitleId, void *serviceName, void *pValid, void *buffer, int size)
 {
 	return npAsmCallbackTableCheck(npAsmGetCallbackTable(), pTitleId, serviceName, pValid, buffer, size);
 }
 
-int npAsmRequestGetBaseUrlChecked(int requestId, const void *pOnlineId, void *pTitleId, void *serviceName, void *buffer, int size)
+__attribute__((noinline)) int npAsmRequestGetBaseUrlChecked(int requestId, const void *pOnlineId, void *pTitleId, void *serviceName, void *buffer, int size)
 {
 	int result;
 	SceUInt8 valid;
@@ -892,7 +891,7 @@ __attribute__((noinline)) int npAsmRequestGetMaxAge(int requestId, int *pMaxAge)
 	return result;
 }
 
-int npAsmRequestAbort(SceInt32 requestId)
+__attribute__((noinline)) int npAsmRequestAbort(SceInt32 requestId)
 {
 	struct NpAsmRequest *request;
 
@@ -1319,7 +1318,7 @@ int npAsmSecondaryRequestGetMaxAge(int requestId, int *pMaxAge)
 	return result;
 }
 
-int npAsmSecondaryReloadTitleId(void)
+__attribute__((noinline)) int npAsmSecondaryReloadTitleId(void)
 {
 	unsigned char titleId[NP_ASM_TITLE_ID_SIZE];
 	unsigned char titleSecret[NP_ASM_TITLE_SECRET_SIZE];
@@ -1328,7 +1327,7 @@ int npAsmSecondaryReloadTitleId(void)
 	sceClibMemset(titleSecret, 0, NP_ASM_TITLE_SECRET_SIZE);
 	if (npAsmGetSystemTitleId(titleId, titleSecret) >= 0 && npAsmWrapConnectionSetTitleId(titleId) >= 0
 		&& npAsmClientGet() != NULL)
-		npAsmClientSetTitleId(npAsmClientGet(), titleId, titleSecret, 0);
+		npAsmClientSetTitleId(npAsmClientGet(), titleId, titleSecret, 1);
 	return 0;
 }
 
@@ -1362,10 +1361,10 @@ int SceNpCommonPs4_19B2A80D(const void *pOnlineId, SceUInt8 *pValid, SceUInt64 *
 int SceNpCommonPs4_28372F53(void *serviceName, void *pValid, void *buffer, int size)
 {
 	int result;
-	unsigned char titleId[NP_ASM_TITLE_ID_SIZE];
 
 	if (serviceName != NULL) {
-		sceClibMemset(titleId, 0, NP_ASM_TITLE_ID_SIZE);
+		unsigned char titleId[NP_ASM_TITLE_ID_SIZE] = { 0 };
+
 		result = npAsmClientGetTitleId(npAsmClientGet(), titleId, NULL, 1);
 		if (result >= 0)
 			result = npAsmCallbackCheck(titleId, serviceName, pValid, buffer, size);
@@ -1378,10 +1377,10 @@ int SceNpCommonPs4_28372F53(void *serviceName, void *pValid, void *buffer, int s
 int SceNpCommonPs4_2A1D2A4B(void *serviceName, void *pValid, void *buffer, int size)
 {
 	int result;
-	unsigned char titleId[NP_ASM_TITLE_ID_SIZE];
 
 	if (serviceName != NULL) {
-		sceClibMemset(titleId, 0, NP_ASM_TITLE_ID_SIZE);
+		unsigned char titleId[NP_ASM_TITLE_ID_SIZE] = { 0 };
+
 		result = npAsmClientGetTitleId(npAsmClientGetSecondary(), titleId, NULL, 1);
 		if (result >= 0)
 			result = npAsmCallbackCheck(titleId, serviceName, pValid, buffer, size);
