@@ -125,6 +125,29 @@ const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
 /* a title ID: nine upper-case letters and digits (0x8101D662) */
 int gameCheckTitleId(const char *titleId);
 
+/*
+ * PLACEHOLDER: one parameter of a param.sfo to load into an application's information: its
+ * name, the key it is stored under (0: the name's hash), its SFO format (0x0004 binary, 0x0204
+ * UTF-8, 0x0404 integer) and the largest length accepted.
+ */
+struct GameSfoParam {
+	const char *name;
+	unsigned int key;
+	SceUInt16 format;
+	SceUInt16 reserved;
+	SceUInt16 maxLength;
+	SceUInt16 reserved2;
+};
+
+/*
+ * PLACEHOLDER names, defined in another file of the shell: a file read whole into a new buffer
+ * (0x8103397C), and a param.sfo's parameters stored into an application's information
+ * (0x81033D70).
+ */
+int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize size);
+int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
+		      unsigned int count, LsdbAppInfoPtr *info, bool checkLength);
+
 size_t gameStrnlen(const char *str, size_t max);
 int gameAppInfoSetTimeNow(unsigned int key, LsdbAppInfoPtr *info);
 int gameAppInfoCopyTime(unsigned int key, const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
@@ -150,6 +173,13 @@ void gameUnmountGameDrives(void);
 float gameSumPercent(int last, const float *values);
 int gameStitleKey(unsigned int language, unsigned int *key);
 int gameTitleKey(unsigned int language, unsigned int *key);
+int gameSfoLoad(const paf::string &path, const GameSfoParam *params, unsigned int count,
+		LsdbAppInfoPtr *info);
+int gameSfoLoadVerified(const paf::string &path, const GameSfoParam *params, unsigned int count,
+			LsdbAppInfoPtr *info, const char *digest, SceSize digestLength);
+int gameFileWrite(const paf::string &path, const void *buf, size_t size, paf::string *detail);
+int gameFileRead(const paf::string &path, void *buf, size_t size, paf::string *detail);
+int gameAppRegisterEnd(const LsdbAppInfoPtr *info);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 

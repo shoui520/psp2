@@ -29,10 +29,18 @@ _Static_assert(sizeof(SceSha256Context) == 0x90, "SceSha256Context size");
 
 /* the SDK's user library; the kernel declares its own in sysmem/utils.h */
 #ifndef PSP2_KERNEL
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+extern "C" {
+#endif
+
 SceInt32 sceSha256Digest(const void *plain, SceUInt32 len, SceUChar8 *digest);
 SceInt32 sceSha256BlockInit(SceSha256Context *pContext);
 SceInt32 sceSha256BlockUpdate(SceSha256Context *pContext, const void *plain, SceUInt32 len);
 SceInt32 sceSha256BlockResult(SceSha256Context *pContext, SceUChar8 *digest);
+
+#if defined(_LANGUAGE_C_PLUS_PLUS)||defined(__cplusplus)||defined(c_plusplus)
+}
+#endif
 #endif
 
 #endif /* SCE_LIBSHA256_H */

@@ -6,10 +6,13 @@
  */
 #include <stddef.h>
 #include <scetypes.h>
+#include <kernel/iofilemgr.h>
 #include <std/string.h>
 #include <std/string>
+#include <libsha256.h>
 #include <rtc/rtc.h>
 #include <dir/dir.h>
+#include <file/file.h>
 #include <file/localfile.h>
 #include <vshbridge/vshbridge.h>
 #include <plugin.h>
@@ -24,6 +27,7 @@ using namespace paf;
 
 /* the errors (values only) */
 #define GAME_ERROR_NO_PLUGIN	-2146430719	/* 0x80101101: a plugin the call needs is not loaded */
+#define GAME_ERROR_BAD_DATA	-2146430716	/* 0x80101104: a file whose contents do not check */
 #define GAME_ERROR_NO_VALUE	-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
 #define GAME_ERROR_NO_DRIVE	-2146430682	/* 0x80101126: a path without a drive */
@@ -685,6 +689,166 @@ int gameTitleKey(unsigned int language, unsigned int *key)
 		return (int)LSDB_KEY_TITLE;
 
 	*key = s_titleKeys[language];
+
+	return 0;
+}
+
+/* a param.sfo's parameters loaded into an application's information (0x81010472) */
+int gameSfoLoad(const string &path, const GameSfoParam *params, unsigned int count,
+		LsdbAppInfoPtr *info)
+{
+	void *sfo = NULL;
+	int size;
+	int ret;
+
+	size = LocalFile::GetFileSize(path.c_str());
+	if (size < 0) {
+		ret = size;
+		goto out;
+	}
+
+	ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
+	if (ret < 0)
+		goto out;
+
+	ret = gameSfoLoadParams(sfo, size, params, count, info, true);
+	if (ret < 0)
+		goto out;
+
+	ret = 0;
+out:
+	if (sfo != NULL)
+		sce_paf_free(sfo);
+
+	return ret;
+}
+
+/*
+ * A param.sfo's parameters loaded into an application's information once the file's SHA-256
+ * digest begins with digest (0x810104F6).
+ */
+int gameSfoLoadVerified(const string &path, const GameSfoParam *params, unsigned int count,
+			LsdbAppInfoPtr *info, const char *digest, SceSize digestLength)
+{
+	unsigned char sum[32];
+	void *sfo = NULL;
+	int size;
+	int ret;
+
+	if (digest == NULL || digestLength == 0) {
+		ret = GAME_ERROR_INVALID_ARGUMENT;
+		goto out;
+	}
+
+	size = LocalFile::GetFileSize(path.c_str());
+	if (size < 0) {
+		ret = size;
+		goto out;
+	}
+
+	ret = gameFileReadAlloc(path.c_str(), 0, &sfo, size);
+	if (ret < 0)
+		goto out;
+
+	sce_paf_memset(sum, 0, sizeof(sum));
+	ret = sceSha256Digest(sfo, size, sum);
+	if (ret < 0)
+		goto out;
+
+	gameDebugDump("sceSha256Digest() digest", sum, sizeof(sum));
+	if (sce_paf_strncmp(digest, (const char *)sum, digestLength) != 0) {
+		ret = GAME_ERROR_BAD_DATA;
+		goto out;
+	}
+
+	ret = gameSfoLoadParams(sfo, size, params, count, info, true);
+	if (ret < 0)
+		goto out;
+
+	ret = 0;
+out:
+	if (sfo != NULL)
+		sce_paf_free(sfo);
+
+	return ret;
+}
+
+/*
+ * A file written whole; on a failed write the file is removed. On either failure detail is
+ * left the path's detail (0x810105D0).
+ */
+int gameFileWrite(const string &path, const void *buf, size_t size, string *detail)
+{
+	int ret = 0;
+	common::SharedPtr<File> file =
+		LocalFile::Open(path.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &ret);
+
+	if (ret < 0) {
+		gamePathDetail(path, detail);
+		return ret;
+	}
+
+	ret = file->Write(buf, size);
+	if (ret < 0) {
+		file->Close();
+		LocalFile::RemoveFile(path.c_str());
+		gamePathDetail(path, detail);
+		return ret;
+	}
+
+	file->Close();
+
+	return 0;
+}
+
+/*
+ * A file read whole into buf; on either failure detail is left the path's detail
+ * (0x81010754).
+ */
+int gameFileRead(const string &path, void *buf, size_t size, string *detail)
+{
+	int ret = 0;
+	common::SharedPtr<File> file = LocalFile::Open(path.c_str(), SCE_O_RDONLY, 0, &ret);
+
+	if (ret < 0) {
+		gamePathDetail(path, detail);
+		return ret;
+	}
+
+	ret = file->Read(buf, size);
+	if (ret < 0) {
+		file->Close();
+		gamePathDetail(path, detail);
+		return ret;
+	}
+
+	file->Close();
+
+	return 0;
+}
+
+/* topmenu_plugin told that an application's registration has ended (0x810108D2) */
+int gameAppRegisterEnd(const LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_TITLE_ID);
+
+	if (it == (*info)->end())
+		return GAME_ERROR_NO_VALUE;
+
+	string titleId(LsdbValueText(it->second));
+
+	Plugin *topmenu = Plugin::Find("topmenu_plugin");
+
+	if (topmenu == NULL)
+		return GAME_ERROR_NO_PLUGIN;
+
+	ShellPluginInterface *iface = (ShellPluginInterface *)topmenu->GetInterface(1);
+
+	if (iface == NULL)
+		return GAME_ERROR_NO_PLUGIN;
+
+	((void (*)(const char *, int))iface->func[TOPMENU_PLUGIN_FUNC_REGISTER_END])(
+		titleId.c_str(), 0);
 
 	return 0;
 }
