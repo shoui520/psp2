@@ -33,6 +33,7 @@ using namespace paf;
 #define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
 #define GAME_ERROR_NO_STORAGE	-2146430663	/* 0x80101139: a path on no storage the plugin knows */
 #define GAME_ERROR_NO_DRIVE	-2146430682	/* 0x80101126: a path without a drive */
+#define GAME_ERROR_NO_SFO_PARAMS	-2146430672	/* 0x80101130: a category with no param.sfo table */
 
 /*
  * topmenu_plugin's functions an application's registration calls around applauncher_plugin's
@@ -912,8 +913,10 @@ int gameSfoLoad(const string &path, const GameSfoParam *params, unsigned int cou
 
 	ret = 0;
 out:
-	if (sfo != NULL)
+	if (sfo != NULL) {
 		sce_paf_free(sfo);
+		sfo = NULL;
+	}
 
 	return ret;
 }
@@ -1367,6 +1370,120 @@ int gameAppInfoReplacePaths(LsdbAppInfoPtr *info, const string &from, const stri
 			gameLsdbValueSetText((**info)[keys[i]], path);
 		}
 	}
+
+	return 0;
+}
+
+/*
+ * A registration's original and SELF paths with their beginning replaced (0x8101167C), when it
+ * has a title ID. Sony's code copies the title ID and does nothing with it.
+ */
+int gameAppRegistrationReplacePaths(GameAppRegistration *app, const string &from,
+				    const string &to)
+{
+	int ret = gameAppInfoReplacePaths(&app->info, from, to);
+
+	if (ret < 0)
+		return ret;
+
+	LsdbAppInfo::iterator it = app->info->find(LSDB_KEY_TITLE_ID);
+
+	if (it == app->info->end())
+		return GAME_ERROR_NO_VALUE;
+
+	string titleId(LsdbValueText(it->second));
+
+	return 0;
+}
+
+/*
+ * The param.sfo parameters an application's category loads (0x81011740): the application
+ * table for games, patches and their data, the attribute table for gdd and gpd.
+ */
+int gameAppInfoGetSfoParams(const LsdbAppInfoPtr *info, const GameSfoParam **params,
+			    unsigned int *count)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+
+	if (it == (*info)->end())
+		return GAME_ERROR_BAD_DATA;
+
+	string category(LsdbValueText(it->second));
+
+	if (category == "gd" || category == "gdc") {
+		*params = s_sfoAppParams;
+		*count = 80;
+	} else if (category == "gdd") {
+		*params = s_sfoAttributeParams;
+		*count = 6;
+	} else if (category == "gp" || category == "gpc") {
+		*params = s_sfoAppParams;
+		*count = 80;
+	} else if (category == "gpd") {
+		*params = s_sfoAttributeParams;
+		*count = 6;
+	} else if (category == "gda" || category == "gdb" || category == "wda") {
+		*params = s_sfoAppParams;
+		*count = 80;
+	} else {
+		return GAME_ERROR_NO_SFO_PARAMS;
+	}
+
+	return 0;
+}
+
+/*
+ * An application's version parameters loaded from its param.sfo, and the parameter table its
+ * category loads (0x8101196C).
+ */
+int gameSfoLoadAppVer(const string &path, LsdbAppInfoPtr *info, const GameSfoParam **params,
+		      unsigned int *count)
+{
+	int ret = gameSfoLoad(path, s_sfoAppVerParams, 3, info);
+
+	if (ret < 0)
+		return ret;
+
+	ret = gameAppInfoGetSfoParams(info, params, count);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * gameSfoLoadAppVer once the param.sfo's SHA-256 checks against digest (0x81011A10).
+ */
+int gameSfoLoadAppVerVerified(const string &path, LsdbAppInfoPtr *info,
+			      const GameSfoParam **params, unsigned int *count,
+			      const char *digest, SceSize digestLength)
+{
+	int ret = gameSfoLoadVerified(path, s_sfoAppVerParams, 3, info, digest, digestLength);
+
+	if (ret < 0)
+		return ret;
+
+	ret = gameAppInfoGetSfoParams(info, params, count);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * Whether a param.sfo's ATTRIBUTE fits its category (0x81011A4E): a game (gd, gdc) takes no
+ * value above 1 in bits 1-2, and bit 20 needs bit 0. PLACEHOLDER: what the bits mean is not
+ * read yet.
+ */
+int gameAttributeCheck(const string &category, SceInt64 attribute)
+{
+	int level = (int)((attribute & 6) >> 1);
+
+	if ((category == "gd" || category == "gdc") && level >= 2)
+		return GAME_ERROR_BAD_DATA;
+
+	if ((attribute & 0x100000) != 0 && (attribute & 1) == 0)
+		return GAME_ERROR_BAD_DATA;
 
 	return 0;
 }

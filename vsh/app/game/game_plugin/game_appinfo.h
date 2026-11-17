@@ -214,6 +214,16 @@ int gamePatchPathGetStorage(const paf::string &path, SceUInt64 flags,
 			    const paf::string &category);
 int gameTitleGetStorage(const char *titleId, int *storage);
 int gameAppInfoReplacePaths(LsdbAppInfoPtr *info, const paf::string &from, const paf::string &to);
+int gameAppRegistrationReplacePaths(GameAppRegistration *app, const paf::string &from,
+				    const paf::string &to);
+int gameAppInfoGetSfoParams(const LsdbAppInfoPtr *info, const GameSfoParam **params,
+			    unsigned int *count);
+int gameSfoLoadAppVer(const paf::string &path, LsdbAppInfoPtr *info, const GameSfoParam **params,
+		      unsigned int *count);
+int gameSfoLoadAppVerVerified(const paf::string &path, LsdbAppInfoPtr *info,
+			      const GameSfoParam **params, unsigned int *count,
+			      const char *digest, SceSize digestLength);
+int gameAttributeCheck(const paf::string &category, SceInt64 attribute);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 
