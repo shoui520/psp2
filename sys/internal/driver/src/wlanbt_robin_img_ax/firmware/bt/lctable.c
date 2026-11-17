@@ -58,7 +58,7 @@ void (*btTableConnectReply)(const uint8_t *, unsigned int, unsigned int) __attri
 	romLibRecordEntry;							/* 0x552e8 */
 int (*btTableConnectCheck)(const uint8_t *, unsigned int, unsigned int, uint8_t *)
 	__attribute__((section(".itcm.rw"))) = btBdhRomComputeContext;	/* 0x552ec */
-void (*btTableConnectQuery)(const uint8_t *, uint32_t *, uint32_t *, uint8_t *)
+void (*btTableConnectQuery)(const uint8_t *, uint8_t *, uint32_t *, uint8_t *)
 	__attribute__((section(".itcm.rw"))) = btBdhRomQueryContext;		/* 0x552f0 */
 void (*btTableInquiryFilterClear)(void) __attribute__((section(".itcm.rw"))) = romLibAdjustEntry;	/* 0x552f4 */
 void (*btTableConnectFail)(const uint8_t *) __attribute__((section(".itcm.rw"))) = btBdhRomResetContext;	/* 0x552f8 */
@@ -287,19 +287,19 @@ void btLmpLcComputeTable(struct BtDeviceProfile *profile, uint32_t clock, unsign
 	uint32_t start = profile->due;
 	int quiet = 0;
 	int missed;
-	unsigned int adjust;
+	unsigned int window;
 
 	btLcoRomResetContext(profile->index);
 	missed = btLmpLcBuildTable(profile, clock);
 	if (btLmpLcDispatchTable(profile->index) != 0 && btLmpLcInspectEntry(btSource.packet, profile->index) == 0)
 		quiet = 1;
-	adjust = profile->adjust;
-	if ((missed | quiet | adjust) == 0)
+	window = profile->window;
+	if ((missed | quiet | profile->adjust) == 0)
 		return;
-	if ((int32_t)(clock - (start + profile->window)) < 0) {
+	if ((int32_t)(clock - (start + window)) < 0) {
 		uint32_t due;
 
-		if (btTableLinkModes[profile->index] != 1 || adjust == 0)
+		if (btTableLinkModes[profile->index] != 1 || profile->adjust == 0)
 			return;
 		due = profile->due;
 		btLtsRomQueryState(profile);
@@ -650,22 +650,22 @@ void btLmpLcSetupTable(void)
 int btLmpLcClearTable(uint32_t event, struct BtDeviceProfile *profile, uint32_t clock, uint32_t argument,
 		      uint32_t burst, uint32_t limit)
 {
-	uint32_t second = 0;
-	uint32_t first = 0;
+	uint8_t second = 0;
+	uint8_t first = 0;
 	int result;
 
 	if (btLmpLcReleaseTable() && !btLmpLcDispatchTable(profile->index) &&
 	    btDeviceProfile[profile->index].state == 2) {
-		btLmpLcManageTable(&profile->secondSetting, (uint8_t *)&second);
-		btLmpLcManageTable(&profile->firstSetting, (uint8_t *)&first);
+		btLmpLcManageTable(&profile->secondSetting, &second);
+		btLmpLcManageTable(&profile->firstSetting, &first);
 	}
 	result = btLtsRomTrackState(event, profile, clock, argument, burst, limit);
 	if (profile->tracked == 1 &&
 	    (int)(profile->due - profile->guard - btLtsRomScheduleState(btLtsRomParseState(0))) < 2)
 		btLdaRomVerifyState(profile->active, btLdrRomScheduleState(profile->index));
-	if ((uint8_t)first != 0)
+	if (first != 0)
 		profile->firstSetting = first;
-	if ((uint8_t)second != 0)
+	if (second != 0)
 		profile->secondSetting = second;
 	return result;
 }
@@ -684,10 +684,10 @@ void btLmpLcVerifyTable(uint32_t *request)
 {
 	const uint8_t *links = btHccRomApplyState();
 	const uint8_t *packet = (const uint8_t *)(uintptr_t)*request;
-	uint32_t kind;
+	uint16_t kind;
 
 	btLdrRomDispatchState(packet + 7, &kind, 0);
-	if ((uint16_t)kind != 36) {
+	if (kind != 36) {
 		btHccRomSyncState(request);
 		return;
 	}

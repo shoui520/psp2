@@ -226,7 +226,7 @@ extern int (*btTableConnectDone)(unsigned int status, const uint8_t *address);	/
 extern void (*btTableConnectReply)(const uint8_t *address, unsigned int reason, unsigned int role);	/* 0x552e8 */
 extern int (*btTableConnectCheck)(const uint8_t *address, unsigned int linkType, unsigned int roleSwitch,
 				  uint8_t *slot);			/* 0x552ec */
-extern void (*btTableConnectQuery)(const uint8_t *address, uint32_t *linkType, uint32_t *result,
+extern void (*btTableConnectQuery)(const uint8_t *address, uint8_t *linkType, uint32_t *result,
 				   uint8_t *slot);			/* 0x552f0 */
 extern void (*btTableInquiryFilterClear)(void);		/* 0x552f4 */
 extern void (*btTableConnectFail)(const uint8_t *message);	/* 0x552f8 */

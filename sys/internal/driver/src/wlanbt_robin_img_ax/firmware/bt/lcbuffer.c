@@ -44,14 +44,11 @@ void btLmpLcProcessBuffer(void)
 	unsigned int factor = 1;
 
 	if (((LINK_HALF(34) >> 4) & 3) != 0 && btLinkScanFlags == 0 && btHostTiming.enabled == 1) {
-		unsigned int rate;
-
-		LINK_HALF(404) |= btHostTiming.scale << 4;
-		rate = LINK_HALF(116);
+		LINK_HALF(404) = LINK_HALF(404) | btHostTiming.scale << 4;
 		if (btTableModeQueue & 1) {
-			if (!(rate & 1))
+			if (!(LINK_HALF(116) & 1))
 				divisor = 2;
-		} else if (rate & 1) {
+		} else if (LINK_HALF(116) & 1) {
 			factor = 2;
 		}
 		btHostTiming.ticks[0] = btHostTiming.ticks[0] * factor / divisor;
@@ -618,18 +615,16 @@ void btLmpLcResolveBuffer(int link, unsigned int mode)
 {
 	struct BtDeviceProfile *profile = &btDeviceProfile[link];
 	unsigned int bit = 1 << link;
-	unsigned int mask = btTableModeMask;
-	unsigned int set = (uint8_t)(bit | mask);
 
 	btTableLinkModes[link] = mode;
 	switch (mode) {
 	case 0:
 	case 2:
 		if (profile->hold != 0) {
-			btTableModeMask = set;
+			btTableModeMask |= 1 << link;
 			btTableLinkModes[link] = 3;
 		} else {
-			btTableModeMask = mask & ~bit;
+			btTableModeMask &= ~bit;
 		}
 		break;
 	case 1:
@@ -638,7 +633,7 @@ void btLmpLcResolveBuffer(int link, unsigned int mode)
 		btTableModeMask |= bit;
 		break;
 	case 3:
-		btTableModeMask = set;
+		btTableModeMask |= 1 << link;
 		break;
 	}
 }
@@ -1132,6 +1127,7 @@ void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock)
 	unsigned int window = profile->window;
 	struct BtStepRecord *step;
 	const struct BtSlotTiming *timing;
+	unsigned int state;
 	unsigned int keep;
 	unsigned int packet;
 
@@ -1144,9 +1140,10 @@ void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock)
 		step = &btDeviceContext.steps[0];
 		timing = &btDeviceContext.timings[0];
 	}
+	state = event->state;
 	keep = profile->keepWindow;
 	packet = timing->packet;
-	if (event->state == 7) {
+	if (state == 7) {
 		if (step->steps < 9)
 			return;
 		step->steps = 0;
@@ -1171,7 +1168,7 @@ void btLmpLcClearBuffer(struct BtSlotEvent *event, uint32_t clock)
 			profile->adjust = 0;
 			goto apply;
 		}
-	} else if (event->state == 11) {
+	} else if (state == 11) {
 		if (keep != 0) {
 			if (profile->repeats < profile->repeatLimit) {
 				profile->window = window + 9;
@@ -2026,7 +2023,7 @@ void btLmpLcConvertPacket(uint32_t first, uint32_t second, unsigned int slots, u
 	btTargetLongest = longest;
 }
 
-#define SLOT_REGISTER(link, offset)	(*(BtHalf *)(btLinkSlotRegisters + (link) * 32 + (offset)))
+#define SLOT_REGISTER(link, offset)	(*(volatile BtHalf *)(btLinkSlotRegisters + (link) * 32 + (offset)))
 
 /*
  * The ROM's slot setup, with the link's slot registers held (bit 10) and the control word's bit 9
@@ -2077,10 +2074,11 @@ done:
 void btLmpLcSelectPacket(unsigned int link)
 {
 	uint8_t *record = btLtsRomValidateState(0) + link * 40;
+	unsigned int offset = *(BtHalf *)(record + 20);
 	unsigned int status;
 
-	*(BtWord *)(record + 12) = *(BtWord *)(record + 28) + *(BtHalf *)(record + 20);
-	*(BtHalf *)(record + 20) = (unsigned int)(*(BtHalf *)(record + 20) + *(BtHalf *)(record + 10)) % 0x2d2;
+	*(BtWord *)(record + 12) = *(BtWord *)(record + 28) + offset;
+	*(BtHalf *)(record + 20) = (offset + *(BtHalf *)(record + 10)) % 0x2d2;
 	SLOT_REGISTER(link, 12) = *(BtHalf *)(record + 20);
 	record[39] = 0;
 	status = *(BtHalf *)(btLinkSlotStatus + link * 32 + 30);
@@ -2253,14 +2251,14 @@ void btLmpLcHandleFrame(const uint8_t *message)
 	frame = (const uint8_t *)(uintptr_t)*(const BtWord *)(message + 8) + *(const BtHalf *)(message + 6);
 	length = frame[2];
 	registers = btLinkSlotRegisters + link * 32;
-	used = (uint16_t)((int)(*(BtHalf *)(registers + 22) - *(BtHalf *)(registers + 24) + SYNC_RING) % SYNC_RING);
+	used = (uint16_t)((int)(*(volatile BtHalf *)(registers + 22) - *(volatile BtHalf *)(registers + 24) + SYNC_RING) % SYNC_RING);
 	room = (uint16_t)(SYNC_RING - 2 - used);
 	if (room < length)
 		length = room;
 	if (length == 0) {
 		btSyncFrameCounts.dropped[link]++;
 	} else {
-		unsigned int position = (unsigned int)(*(BtHalf *)(registers + 22) + record[17]) % SYNC_RING;
+		unsigned int position = (unsigned int)(*(volatile BtHalf *)(registers + 22) + record[17]) % SYNC_RING;
 		const uint8_t *source = frame + 3;
 		unsigned int count = length;
 		uint8_t *destination;
@@ -2282,7 +2280,7 @@ void btLmpLcHandleFrame(const uint8_t *message)
 		record[17] = fill;
 		if (used != 0 || fill >= SYNC_HANDOFF) {
 			registers = btLinkSlotRegisters + link * 32;
-			*(BtHalf *)(registers + 22) = (unsigned int)(*(BtHalf *)(registers + 22) + fill) % SYNC_RING;
+			*(volatile BtHalf *)(registers + 22) = (unsigned int)(*(volatile BtHalf *)(registers + 22) + fill) % SYNC_RING;
 			record[17] = 0;
 		} else {
 			btSyncFrameCounts.partial[link]++;
@@ -2593,9 +2591,9 @@ void btLmpLcQueryFrame(const uint8_t *event)
 {
 	uint8_t address[8] __attribute__((aligned(4)));
 	uint8_t deviceClass[4] __attribute__((aligned(4)));
-	uint32_t linkType;
-	uint32_t result;
+	uint8_t linkType;
 	uint8_t slot;
+	uint32_t result;
 	unsigned int accept;
 	int i;
 
@@ -3207,8 +3205,9 @@ void btLmpLcConfigureHeader(unsigned int link, uint32_t transaction, uint32_t va
  * controller record asks for it; opcode 11 goes to btLmpLcConfigureHeader(); opcode 9 marks a link
  * in mode 9 that btLinkStateCheckHook() accepts. 1 when the message was taken.
  */
-int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, uint32_t opcode)
+int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, uint32_t code)
 {
+	uint16_t opcode = code;
 	unsigned int handle = ((const BtHalf *)message)[2];
 	uint8_t *links = btHccRomApplyState();
 	uint8_t *records = btLscRomParseState(0);
@@ -3216,7 +3215,7 @@ int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, 
 
 	if (kind != 2)
 		return 0;
-	if ((uint16_t)opcode == 15) {
+	if (opcode == 15) {
 		uint8_t *link = links + handle * 120;
 		const uint8_t *answer;
 
@@ -3260,13 +3259,13 @@ int btLmpLcCheckHeader(unsigned int kind, const void *message, uint32_t unused, 
 			}
 		}
 	}
-	if ((uint16_t)opcode == 11) {
+	if (opcode == 11) {
 		const uint8_t *transaction = btLdrRomDispatchState((const uint8_t *)message + 7, &opcode, &reason);
 
 		btLmpLcConfigureHeader(handle, (uint32_t)(uintptr_t)transaction, reason);
 		return 1;
 	}
-	if ((uint16_t)opcode == 9) {
+	if (opcode == 9) {
 		uint8_t *record = records + handle * 248;
 
 		if (record[64] == 9 && record[117] == 0 && btLinkStateCheckHook(handle))
@@ -3286,7 +3285,7 @@ void btLmpLcValidateHeader(uint32_t kind, uint32_t argument, unsigned int link, 
 	uint8_t *context;
 	uint8_t *links;
 	uint8_t saved;
-	uint32_t opcode;
+	uint16_t opcode;
 	uint8_t reason;
 
 	if (*(const BtWord *)message != 0xc48 || kind != 0) {
@@ -3301,7 +3300,7 @@ void btLmpLcValidateHeader(uint32_t kind, uint32_t argument, unsigned int link, 
 	*(BtHalf *)(context + 20) = *(const BtHalf *)extra;
 	if (links[link * 120 + 20] == 1)
 		context[26] = ((const uint8_t *)extra)[3];
-	if ((uint16_t)opcode == 42) {
+	if (opcode == 42) {
 		btLdrRomBuildState(link, (int8_t)reason, 42);
 		context[24] = 2;
 	}
@@ -3601,7 +3600,7 @@ void btLmpLcAcquireHeader(unsigned int link)
 void btLmpLcReleaseHeader(void)
 {
 	if (btHostRate == 0) {
-		const struct BtModeControl *control = btLinkModeControl;
+		const volatile struct BtModeControl *control = btLinkModeControl;
 		uint8_t session = (control->current + control->sessions - 2) % control->sessions;
 
 		if ((btLinkSessions[session].active & 0xf) != 8 || btTableModeTable != 0)

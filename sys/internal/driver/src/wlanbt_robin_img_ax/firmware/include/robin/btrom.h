@@ -106,7 +106,7 @@ int btLtsRomTrackState(uint32_t event, struct BtDeviceProfile *profile, uint32_t
 uint32_t btLdrRomScheduleState(int link);
 void btLdaRomVerifyState(uint8_t device, uint32_t state);
 void btBdhRomReleaseState(int link);
-const uint8_t *btLdrRomDispatchState(const uint8_t *field, uint32_t *value, uint8_t *reason);
+const uint8_t *btLdrRomDispatchState(const uint8_t *field, uint16_t *value, uint8_t *reason);
 void btHccRomSyncState(uint32_t *request);
 int btLdaRomValidateState(uint16_t *request);
 void btLdaRomComputeState(void);
@@ -271,7 +271,7 @@ int btHccRomUpdateState(unsigned int status, const uint8_t *address);
 int btBdhRomConfigureContext(unsigned int module, unsigned int event, const char *format, ...);
 void romLibRecordEntry(const uint8_t *address, unsigned int reason, unsigned int role);
 int btBdhRomComputeContext(const uint8_t *address, unsigned int linkType, unsigned int roleSwitch, uint8_t *slot);
-void btBdhRomQueryContext(const uint8_t *address, uint32_t *linkType, uint32_t *result, uint8_t *slot);
+void btBdhRomQueryContext(const uint8_t *address, uint8_t *linkType, uint32_t *result, uint8_t *slot);
 void btLdaRomHandleState(unsigned int handle, uint32_t enable, unsigned int value);
 void btLcoRomQueryContext(const uint8_t *message);
 void btHccRomDispatchState(const uint8_t *message);
