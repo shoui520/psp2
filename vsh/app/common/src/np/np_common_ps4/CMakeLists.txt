@@ -3,6 +3,7 @@ enable_language(CXX)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	mem.cpp
 	base64.cpp
+	strtox.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
 	npext/thread/mutex.cpp
