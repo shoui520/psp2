@@ -59,3 +59,14 @@ NpWebApiUserContext *npWebApiUserContextDestruct(NpWebApiUserContext *userCtx)
 	userCtx->vtable = g_baseVtable;
 	return userCtx;
 }
+
+int npWebApiUserContextDelete(NpWebApiUserContext *userCtx)
+{
+	npWebApiUserContextDestruct(userCtx);
+	return SceNpCommonPs4_BB5282C8(userCtx);
+}
+
+const void *g_userContextVtable[] = {		/* 0x8100eddc */
+	(const void *)npWebApiUserContextDestruct,
+	(const void *)npWebApiUserContextDelete,
+};

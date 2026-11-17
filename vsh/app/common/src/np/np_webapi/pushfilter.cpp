@@ -57,6 +57,33 @@ int npWebApiPushFilterGetId(NpWebApiPushFilter *filter)
 	return filter->id;
 }
 
+NpWebApiPushFilter *npWebApiPushFilterDestruct(NpWebApiPushFilter *filter)
+{
+	if (filter->types != NULL) {
+		filter->vtable = g_pushFilterVtable;
+		npWebApiLibContextDestroyPool(filter->libContext, filter->types);
+	}
+	filter->vtable = g_baseVtable;
+	return filter;
+}
+
+int npWebApiPushFilterDelete(NpWebApiPushFilter *filter)
+{
+	if (filter->types != NULL) {
+		filter->vtable = g_pushFilterVtable;
+		npWebApiLibContextDestroyPool(filter->libContext, filter->types);
+	}
+	filter->vtable = g_baseVtable;
+	return SceNpCommonPs4_BB5282C8(filter);
+}
+
+const void *g_pushFilterVtable[] = {		/* 0x8100ed9c */
+	(const void *)npWebApiPushFilterDestruct,
+	(const void *)npWebApiPushFilterDelete,
+	NULL,
+	NULL,
+};
+
 /* the filter list's insert: the handle list's, for filters */
 void npWebApiFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list, NpWebApiPushFilter **pFilter)
 {
@@ -331,6 +358,16 @@ int npWebApiServiceFilterGetId(NpWebApiServiceFilter *filter)
 	return filter->id;
 }
 
+char *npWebApiServiceFilterGetName(NpWebApiServiceFilter *filter)
+{
+	return filter->name;
+}
+
+int npWebApiServiceFilterGetHandle(NpWebApiServiceFilter *filter)
+{
+	return filter->handle;
+}
+
 int npWebApiLibContextDeleteServicePushEventFilter(NpWebApiLibContext *ctx, int filterId)
 {
 	NpWebApiHandleNode *sentinel;
@@ -470,6 +507,11 @@ int npWebApiExtdFilterListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList
 int npWebApiExtdFilterGetId(NpWebApiExtdFilter *filter)
 {
 	return filter->id;
+}
+
+int npWebApiExtdFilterGetHandle(NpWebApiExtdFilter *filter)
+{
+	return filter->handle;
 }
 
 int npWebApiLibContextDeleteExtdPushEventFilter(NpWebApiLibContext *ctx, int filterId)

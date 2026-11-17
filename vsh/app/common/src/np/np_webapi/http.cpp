@@ -127,3 +127,10 @@ int npWebApiObjectListDeleteThis(NpWebApiObjectList *list)
 	list->vtable = g_baseVtable;
 	return SceNpCommonPs4_BB5282C8(list);
 }
+
+const void *g_objectListVtable[] = {		/* 0x8100ef60 */
+	(const void *)npWebApiObjectListDestruct,
+	(const void *)npWebApiObjectListDeleteThis,
+	NULL,
+	NULL,
+};

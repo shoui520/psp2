@@ -255,3 +255,10 @@ int npWebApiCloseAllConnections(void)
 	}
 	return npWebApiGlobalUnlock();
 }
+
+const void *g_connectionPoolVtable[] = {	/* 0x8100eb7c */
+	(const void *)npWebApiConnectionPoolDestruct,
+	(const void *)npWebApiConnectionPoolDeleteThis,
+	NULL,
+	NULL,
+};

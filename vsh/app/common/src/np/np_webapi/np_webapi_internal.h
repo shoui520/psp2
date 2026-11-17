@@ -1663,3 +1663,20 @@ extern void npWebApiUserContextDispatchExtdEventLocked(NpWebApiUserContext *user
 	const NpPushExDataArgument *exData, int exDataNum) __attribute__((noinline));
 
 #endif
+
+/* the base class's virtual destructors (Sony's classes derive from it), the filters' and the handle
+   objects' destructors, and the small getters */
+extern void *npWebApiBaseDestruct(void *object) __attribute__((noinline));
+extern int npWebApiBaseDelete(void *object) __attribute__((noinline));
+extern NpWebApiUserContextHandle *npWebApiUserContextHandleDestruct(NpWebApiUserContextHandle *handle) __attribute__((noinline));
+extern int npWebApiUserContextHandleDelete(NpWebApiUserContextHandle *handle) __attribute__((noinline));
+extern NpWebApiUserObject *npWebApiUserObjectDestruct(NpWebApiUserObject *object) __attribute__((noinline));
+extern int npWebApiUserObjectDelete(NpWebApiUserObject *object) __attribute__((noinline));
+extern int npWebApiUserContextDelete(NpWebApiUserContext *userCtx) __attribute__((noinline));
+extern NpWebApiPushFilter *npWebApiPushFilterDestruct(NpWebApiPushFilter *filter) __attribute__((noinline));
+extern int npWebApiPushFilterDelete(NpWebApiPushFilter *filter) __attribute__((noinline));
+extern char *npWebApiServiceFilterGetName(NpWebApiServiceFilter *filter) __attribute__((noinline));
+extern int npWebApiServiceFilterGetHandle(NpWebApiServiceFilter *filter) __attribute__((noinline));
+extern int npWebApiExtdFilterGetHandle(NpWebApiExtdFilter *filter) __attribute__((noinline));
+extern int npWebApiIpcCallMissingHandler0(int a0, int a1, int a2) __attribute__((noinline));
+extern int npWebApiIpcCallMissingHandler1(int a0, int a1, int a2) __attribute__((noinline));

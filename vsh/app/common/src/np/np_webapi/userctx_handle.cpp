@@ -33,3 +33,39 @@ NpWebApiUserObject *npWebApiUserObjectConstruct(NpWebApiUserObject *object, NpWe
 	sceClibMemset(object->buffer280, 0, 0x410);
 	return object;
 }
+
+NpWebApiUserContextHandle *npWebApiUserContextHandleDestruct(NpWebApiUserContextHandle *handle)
+{
+	handle->vtable = g_baseVtable;
+	return handle;
+}
+
+int npWebApiUserContextHandleDelete(NpWebApiUserContextHandle *handle)
+{
+	handle->vtable = g_baseVtable;
+	return SceNpCommonPs4_BB5282C8(handle);
+}
+
+const void *g_userContextHandleVtable[] = {	/* 0x8100eb9c */
+	(const void *)npWebApiUserContextHandleDestruct,
+	(const void *)npWebApiUserContextHandleDelete,
+};
+
+NpWebApiUserObject *npWebApiUserObjectDestruct(NpWebApiUserObject *object)
+{
+	object->vtable = g_baseVtable;
+	return object;
+}
+
+int npWebApiUserObjectDelete(NpWebApiUserObject *object)
+{
+	object->vtable = g_baseVtable;
+	return SceNpCommonPs4_BB5282C8(object);
+}
+
+const void *g_userObjectVtable[] = {		/* 0x8100edcc */
+	(const void *)npWebApiUserObjectDestruct,
+	(const void *)npWebApiUserObjectDelete,
+	NULL,
+	NULL,
+};

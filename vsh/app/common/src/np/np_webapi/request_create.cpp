@@ -225,3 +225,10 @@ fail:
 	}
 	return result;
 }
+
+const void *g_requestVtable[] = {		/* 0x8100edac */
+	(const void *)npWebApiRequestDestruct,
+	(const void *)npWebApiRequestDelete,
+	NULL,
+	NULL,
+};

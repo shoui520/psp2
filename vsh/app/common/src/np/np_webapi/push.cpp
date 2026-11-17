@@ -211,3 +211,24 @@ int npWebApiIpcSetTokenTitleId(NpWebApiIpmiClient *client, int handle, const voi
 		result = ret;
 	return result;
 }
+
+/* two calls through a handler no build of the library sets: both return 9 (the error of a missing handler) */
+int npWebApiIpcCallMissingHandler0(int a0, int a1, int a2)
+{
+	int (*handler)(int, int, int, int);
+
+	handler = (int (*)(int, int, int, int))0;
+	if (handler == NULL)
+		return 9;
+	return handler(a0, a1, a2, 0);
+}
+
+int npWebApiIpcCallMissingHandler1(int a0, int a1, int a2)
+{
+	int (*handler)(int, int, int, int);
+
+	handler = (int (*)(int, int, int, int))0;
+	if (handler == NULL)
+		return 9;
+	return handler(a0, a1, a2, 1);
+}

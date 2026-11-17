@@ -13,3 +13,23 @@ SceUInt32 npWebApiGetSdkVersion(void)
 {
 	return g_sdkVersion;
 }
+
+/* the root of Sony's classes: an object's vtable becomes this one while its base is destroyed */
+void *npWebApiBaseDestruct(void *object)
+{
+	*(const void *const **)object = g_baseVtable;
+	return object;
+}
+
+int npWebApiBaseDelete(void *object)
+{
+	*(const void *const **)object = g_baseVtable;
+	return SceNpCommonPs4_BB5282C8(object);
+}
+
+const void *g_baseVtable[] = {		/* 0x8100eb6c */
+	(const void *)npWebApiBaseDestruct,
+	(const void *)npWebApiBaseDelete,
+	NULL,
+	NULL,
+};
