@@ -44,6 +44,9 @@ extern "C" {
 #define NP_WEBAPI_ERROR_FILTER_NOT_FOUND	-2141902581	/* 0x8055290b */
 #define NP_WEBAPI_ERROR_SERVICE_FILTER_NOT_FOUND	-2141902578	/* 0x8055290e */
 #define NP_WEBAPI_ERROR_EXTD_FILTER_NOT_FOUND	-2141902564	/* 0x8055291c */
+#define NP_WEBAPI_ERROR_CALLBACK_NOT_FOUND	-2141902580	/* 0x8055290c */
+#define NP_WEBAPI_ERROR_SERVICE_CALLBACK_NOT_FOUND	-2141902577	/* 0x8055290f */
+#define NP_WEBAPI_ERROR_EXTD_CALLBACK_NOT_FOUND	-2141902563	/* 0x8055291d */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -86,7 +89,8 @@ extern int npWebApiAbortHandle(int libCtxId, int handleId) __attribute__((noinli
 extern int npWebApiCreateServicePushEventFilter(int libCtxId, int handleId, const char *service, SceNpServiceLabel label,
 	const SceNpWebApiPushEventDataType *types, SceSize num);
 extern int npWebApiDeleteServicePushEventFilter(int libCtxId, int filterId);
-extern int npWebApiRegisterServicePushEventCallback(int userCtxId, int filterId, SceNpWebApiServicePushEventCallback cb, void *arg);
+extern int npWebApiRegisterServicePushEventCallback(int userCtxId, int filterId, SceNpWebApiServicePushEventCallback cb,
+	SceNpWebApiServicePushEventCallback cbEx, void *arg);
 extern int npWebApiUnregisterServicePushEventCallback(int userCtxId, int callbackId);
 extern int npWebApiCreateExtdPushEventFilter(int libCtxId, int handleId, const char *service, SceNpServiceLabel label,
 	const SceNpWebApiExtdPushEventFilterParameter *param, SceSize num);
@@ -368,6 +372,62 @@ extern int npWebApiGlobalUnlock(void) __attribute__((noinline));
 /* a user context: the library context it belongs to, its reference count, its ID and its user */
 struct NpWebApiListNode;
 
+/* the callbacks a user context keeps: rings of nodes around a sentinel made when the first comes. A
+   node is the callback's ID, its filter's ID, the callbacks and the argument, and a state byte (2 while
+   the callback runs; the unregister waits for it) */
+typedef struct NpWebApiCallbackNode {
+	struct NpWebApiCallbackNode *prev;
+	struct NpWebApiCallbackNode *next;
+	int id;
+	int filterId;
+	void *callback;
+	void *argument;
+	unsigned char state;
+	unsigned char reserved25[3];
+} NpWebApiCallbackNode;
+
+typedef struct NpWebApiCallbackList {
+	NpWebApiCallbackNode *sentinel;
+	unsigned long count;
+	void *allocator;
+} NpWebApiCallbackList;
+
+typedef struct NpWebApiServiceCallbackNode {
+	struct NpWebApiServiceCallbackNode *prev;
+	struct NpWebApiServiceCallbackNode *next;
+	int id;
+	int filterId;
+	void *callback;
+	void *callbackEx;
+	void *argument;
+	unsigned char state;
+	unsigned char reserved29[3];
+} NpWebApiServiceCallbackNode;
+
+typedef struct NpWebApiServiceCallbackList {
+	NpWebApiServiceCallbackNode *sentinel;
+	unsigned long count;
+	void *allocator;
+} NpWebApiServiceCallbackList;
+
+/* what is inserted: the node without its links */
+typedef struct NpWebApiCallbackRecord {
+	int id;
+	int filterId;
+	void *callback;
+	void *argument;
+	unsigned char state;
+} NpWebApiCallbackRecord;
+
+typedef struct NpWebApiServiceCallbackRecord {
+	int id;
+	int filterId;
+	void *callback;
+	void *callbackEx;
+	void *argument;
+	unsigned char state;
+} NpWebApiServiceCallbackRecord;
+
 typedef struct NpWebApiUserContext {
 	const void *vtable;
 	NpWebApiLibContext *libContext;
@@ -380,15 +440,9 @@ typedef struct NpWebApiUserContext {
 	struct NpWebApiUserContext *next;
 	struct NpWebApiRequest *requestHead;
 	int requestCount;
-	struct NpWebApiListNode *listAHead;
-	int listACount;
-	void *listAAllocator;
-	struct NpWebApiListNode *listBHead;
-	int listBCount;
-	void *listBAllocator;
-	struct NpWebApiListNode *listCHead;
-	int listCCount;
-	void *listCAllocator;
+	NpWebApiCallbackList pushCallbacks;
+	NpWebApiServiceCallbackList serviceCallbacks;
+	NpWebApiCallbackList extdCallbacks;
 	unsigned char flag96;
 	unsigned char flag97;
 	unsigned char flag98;
@@ -828,12 +882,25 @@ extern int npWebApiUserContextRegisterPushEventCallback(NpWebApiUserContext *use
 extern int npWebApiUserContextUnregisterPushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
 extern int npWebApiUserContextUnregisterPushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
 extern int npWebApiUserContextRegisterServicePushEventCallback(NpWebApiUserContext *userCtx, int filterId,
-	SceNpWebApiServicePushEventCallback cb, void *arg);
+	SceNpWebApiServicePushEventCallback cb, SceNpWebApiServicePushEventCallback cbEx, void *arg);
 extern int npWebApiUserContextUnregisterServicePushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
 extern int npWebApiUserContextUnregisterServicePushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
 extern int npWebApiUserContextRegisterExtdPushEventCallback(NpWebApiUserContext *userCtx, int filterId,
 	SceNpWebApiExtdPushEventCallback cb, void *arg);
 extern int npWebApiUserContextUnregisterExtdPushEventCallbackOld(NpWebApiUserContext *userCtx, int callbackId);
 extern int npWebApiUserContextUnregisterExtdPushEventCallback(NpWebApiUserContext *userCtx, int callbackId);
+
+extern void npWebApiCallbackListInsert(NpWebApiCallbackNode **pResult, NpWebApiCallbackList *list,
+	NpWebApiCallbackRecord *record) __attribute__((noinline));
+extern int npWebApiCallbackListErase(NpWebApiCallbackNode **pResult, NpWebApiCallbackList *list,
+	NpWebApiCallbackNode **pAt) __attribute__((noinline));
+extern void npWebApiServiceCallbackListInsert(NpWebApiServiceCallbackNode **pResult, NpWebApiServiceCallbackList *list,
+	NpWebApiServiceCallbackRecord *record) __attribute__((noinline));
+extern int npWebApiServiceCallbackListErase(NpWebApiServiceCallbackNode **pResult, NpWebApiServiceCallbackList *list,
+	NpWebApiServiceCallbackNode **pAt) __attribute__((noinline));
+extern void npWebApiExtdCallbackListInsert(NpWebApiCallbackNode **pResult, NpWebApiCallbackList *list,
+	NpWebApiCallbackRecord *record) __attribute__((noinline));
+extern int npWebApiExtdCallbackListErase(NpWebApiCallbackNode **pResult, NpWebApiCallbackList *list,
+	NpWebApiCallbackNode **pAt) __attribute__((noinline));
 
 #endif

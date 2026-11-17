@@ -333,7 +333,7 @@ int sceNpWebApiRegisterServicePushEventCallback(int filterId, SceNpWebApiService
 	userCtxId = npWebApiResolveUserContext(g_defaultLibCtxId, 0);
 	if (userCtxId >= 0) {
 		if (cbFunc != NULL)
-			return npWebApiRegisterServicePushEventCallback(userCtxId, filterId, cbFunc, pUserArg);
+			return npWebApiRegisterServicePushEventCallback(userCtxId, filterId, cbFunc, NULL, pUserArg);
 		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 	}
 	return userCtxId;
@@ -346,7 +346,7 @@ int SceNpWebApi_1BDB76C0(int libCtxId, int filterId, SceNpWebApiServicePushEvent
 	userCtxId = npWebApiResolveUserContext(libCtxId, 0);
 	if (userCtxId >= 0) {
 		if (cbFunc != NULL)
-			return npWebApiRegisterServicePushEventCallback(userCtxId, filterId, cbFunc, pUserArg);
+			return npWebApiRegisterServicePushEventCallback(userCtxId, filterId, NULL, cbFunc, pUserArg);
 		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 	}
 	return userCtxId;

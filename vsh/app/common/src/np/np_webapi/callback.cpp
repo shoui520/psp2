@@ -85,7 +85,8 @@ int npWebApiUnregisterServicePushEventCallback(int userCtxId, int callbackId)
 	return result;
 }
 
-int npWebApiRegisterServicePushEventCallback(int userCtxId, int filterId, SceNpWebApiServicePushEventCallback cb, void *arg)
+int npWebApiRegisterServicePushEventCallback(int userCtxId, int filterId, SceNpWebApiServicePushEventCallback cb,
+	SceNpWebApiServicePushEventCallback cbEx, void *arg)
 {
 	NpWebApiLibContext *libCtx;
 	NpWebApiUserContext *userCtx;
@@ -96,7 +97,7 @@ int npWebApiRegisterServicePushEventCallback(int userCtxId, int filterId, SceNpW
 		userCtx = npWebApiLibContextFindUserContext(libCtx, userCtxId);
 		if (userCtx != NULL) {
 			if (g_sdkVersion < NP_WEBAPI_SDK_3_50 || npWebApiLibContextHasServicePushEventFilter(libCtx, filterId) != 0)
-				result = npWebApiUserContextRegisterServicePushEventCallback(userCtx, filterId, cb, arg);
+				result = npWebApiUserContextRegisterServicePushEventCallback(userCtx, filterId, cb, cbEx, arg);
 			else
 				result = NP_WEBAPI_ERROR_SERVICE_FILTER_NOT_FOUND;
 		} else {
