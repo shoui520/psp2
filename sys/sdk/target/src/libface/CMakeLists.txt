@@ -4,5 +4,7 @@
 enable_language(CXX)
 psp2_module(app0_sce_module_libface KIND user COMPILER snc PARTIAL SOURCES
 	age.cpp
+	allparts.cpp
+	attribute.cpp
 	libface.c
 )

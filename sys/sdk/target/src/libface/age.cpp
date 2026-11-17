@@ -6,12 +6,6 @@
 
 #include "face_internal.h"
 
-/* a dictionary tag, from the four characters that spell it */
-static inline uint32_t faceTag(const char *s)
-{
-	return (uint8_t)s[0] | (uint8_t)s[1] << 8 | (uint8_t)s[2] << 16 | (uint8_t)s[3] << 24;
-}
-
 int sceFaceAgeRangeEstimate(const unsigned char *imgPtr, int width, int height, int rowstride,
 			    const SceFaceAgeDictPtr ageDictPtr,
 			    const SceFaceDetectionResult *detectedFace,
@@ -62,7 +56,7 @@ int sceFaceAgeRangeEstimate(const unsigned char *imgPtr, int width, int height, 
 	face.pitch = detectedFace->facePitch;
 	face.yaw = detectedFace->faceYaw;
 	face.partsId = 0xffff;
-	face.score = 0.0f;
+	face.label = 0;
 	face.level = 0;
 	face.valid = 1;
 
