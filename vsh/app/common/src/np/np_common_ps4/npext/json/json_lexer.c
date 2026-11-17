@@ -1177,3 +1177,595 @@ int SceNpCommonPs4_F5EE219F(struct NpCommonPs4Lexer *lexer, const char *src, int
 	lexer->state = state;
 	return 0;
 }
+
+/* the third lexer's match: the length compared of a key is the caller's */
+int npCommonPs4Lexer3Match(const struct NpCommonPs4LexerConfig *config, SceSize depth, int mode, int kind, const char *name,
+	SceSize nameLength, int *pIndex, int *pFlag)
+{
+	const struct NpCommonPs4LexerNode *node;
+	int index;
+	int result;
+
+	result = 0;
+	if (pIndex != NULL)
+		*pIndex = -1;
+	if (pFlag != NULL)
+		*pFlag = 0;
+	if (depth < config->numLevels) {
+		node = config->levels[depth];
+		index = 0;
+		while (node->kind == NP_COMMON_PS4_LEXER_NODE_KEY || node->kind == NP_COMMON_PS4_LEXER_NODE_ELEMENT) {
+			if (mode == LEXER_MODE_ANY) {
+				if (node->name == NULL) {
+					result = 1;
+					if (pIndex != NULL)
+						*pIndex = index;
+					if (pFlag != NULL)
+						*pFlag = node->flag;
+					return result;
+				}
+			} else if (kind == NP_COMMON_PS4_LEXER_NODE_KEY && node->kind == NP_COMMON_PS4_LEXER_NODE_KEY) {
+				if (name != NULL && node->name != NULL && sceClibStrncasecmp(node->name, name, nameLength) == 0) {
+					result = 1;
+					if (pIndex != NULL)
+						*pIndex = index;
+					if (pFlag != NULL)
+						*pFlag = node->flag;
+					return result;
+				}
+			} else if (kind == NP_COMMON_PS4_LEXER_NODE_ELEMENT && node->kind == NP_COMMON_PS4_LEXER_NODE_ELEMENT) {
+				result = 1;
+				if (pIndex != NULL)
+					*pIndex = index;
+				if (pFlag != NULL)
+					*pFlag = node->flag;
+				return result;
+			}
+			node++;
+			index++;
+		}
+	}
+	return result;
+}
+
+/* the third lexer's npCommonPs4LexerCopyChar */
+int npCommonPs4Lexer3CopyChar(const char *src, SceSize length, SceSize *pConsumed, char *partial, SceSize *pPartialLength,
+	SceSize *pRemaining, char *decoded, SceSize *pSourceLength, SceSize *pLength)
+{
+	int result;
+	int ret;
+	SceSize size;
+
+	result = 1;
+	if (*pRemaining != 0) {
+		if (*pRemaining <= length) {
+			*pConsumed = *pRemaining;
+			size = *pRemaining;
+		} else {
+			*pConsumed = length;
+			size = length;
+		}
+		sceClibMemcpy_safe(&partial[*pPartialLength], src, size);
+		*pPartialLength += *pConsumed;
+		*pRemaining -= *pConsumed;
+		if (*pRemaining != 0)
+			return 0;
+		ret = SceNpCommonPs4_12AA95E3(decoded, 4, partial, *pPartialLength, pLength, (int *)pSourceLength);
+		if (ret == NP_COMMON_PS4_ERROR_JSON_INVALID_STRING) {
+			result = 0;
+			*pRemaining = *pSourceLength - *pPartialLength;
+		} else if (ret >= 0) {
+			*pRemaining = 0;
+			*pPartialLength = 0;
+		} else {
+			*pSourceLength = 1;
+			*pLength = 1;
+			sceClibMemcpy_safe(decoded, partial, 1);
+		}
+	} else {
+		size = length;
+		if (length >= 6)
+			size = 6;
+		*pConsumed = size;
+		ret = SceNpCommonPs4_12AA95E3(decoded, 4, src, size, pLength, (int *)pSourceLength);
+		if (ret == NP_COMMON_PS4_ERROR_JSON_INVALID_STRING) {
+			sceClibMemcpy_safe(partial, src, *pConsumed);
+			result = 0;
+			*pPartialLength = *pConsumed;
+			*pRemaining = *pSourceLength - *pConsumed;
+		} else if (ret >= 0) {
+			*pConsumed = *pSourceLength;
+		} else {
+			*pSourceLength = 1;
+			*pLength = 1;
+			sceClibMemcpy_safe(decoded, src, 1);
+			*pConsumed = 1;
+		}
+	}
+	return result;
+}
+
+int SceNpCommonPs4_CAFD09C2(struct NpCommonPs4Lexer3 *lexer, const struct NpCommonPs4LexerConfig *config, char *name, SceSize nameSize,
+	char *text, SceSize textSize, NpCommonPs4Lexer3Callback callback, void *context)
+{
+	if (lexer == NULL || name == NULL || text == NULL)
+		return NP_COMMON_PS4_ERROR_JSON_INVALID_ARGUMENT;
+	if (nameSize == 0 || textSize < 0x20)
+		return NP_COMMON_PS4_ERROR_JSON_INVALID_STRING;
+	sceClibMemset(lexer, 0, 0xD0);
+	lexer->config = config;
+	lexer->name = name;
+	lexer->nameSize = nameSize;
+	lexer->tokenText = text;
+	lexer->tokenSize = textSize;
+	lexer->callback = callback;
+	lexer->context = context;
+	lexer->state = LEXER_STATE_START;
+	lexer->depth = 0;
+	lexer->mode = LEXER_MODE_ANY;
+	return 0;
+}
+
+/* a value read: the callback told of it, with a token of the type and the buffer */
+#define LEXER3_VALUE_READ(lexer, result) \
+	do { \
+		token.type = (lexer)->tokenType; \
+		token.text = (lexer)->tokenText; \
+		(result) = (lexer)->callback((lexer), NP_COMMON_PS4_LEXER_EVENT_VALUE, (lexer)->depth, \
+			(lexer)->nodeIndex[(lexer)->depth], \
+			(lexer)->arrayIndex[(lexer)->depth] == -1 ? (lexer)->name : NULL, &token, \
+			(lexer)->arrayIndex[(lexer)->depth], (lexer)->context); \
+	} while (0)
+
+#define LEXER3_END(lexer, event, result) \
+	((result) = (lexer)->callback((lexer), (event), (lexer)->depth, (lexer)->nodeIndex[(lexer)->depth], NULL, NULL, \
+		(lexer)->arrayIndex[(lexer)->depth], (lexer)->context))
+
+int SceNpCommonPs4_D7AB56B8(struct NpCommonPs4Lexer3 *lexer, const char *src, int size)
+{
+	const char *p;
+	int pos;
+	int state;
+	int result;
+	int c;
+	int node;
+	int flag;
+	int matched;
+	int mode;
+	SceSize depth;
+	int kind;
+	int zero;
+	SceSize consumed;
+	SceSize sourceLength;
+	SceSize length;
+	char decoded[8];
+	struct NpCommonPs4Lexer3Token token;
+	const char *literal;
+
+	p = src;
+	pos = 0;
+	state = lexer->state;
+	result = 0;
+	zero = 0;
+	literal = NULL;
+	if (size > 0) {
+		do {
+			switch (state) {
+			case LEXER_STATE_START:
+				c = *p;
+				if (c == '{') {
+					lexer->arrayIndex[lexer->depth] = -1;
+					state = LEXER_STATE_OBJECT_BEGIN;
+				} else if (c == '[') {
+					state = LEXER_STATE_ARRAY_BEGIN;
+					lexer->arrayIndex[lexer->depth] = zero;
+				} else if (c == '"') {
+					state = LEXER_STATE_KEY_BEGIN;
+				} else {
+					++p;
+					pos = p - src;
+				}
+				break;
+			case LEXER_STATE_OBJECT_BEGIN:
+				if (*p == '{') {
+					depth = lexer->depth;
+					if (depth >= 16)
+						return LEXER_ERROR_DEPTH;
+					kind = NP_COMMON_PS4_LEXER_NODE_ELEMENT;
+					if (lexer->arrayIndex[depth] == -1)
+						kind = NP_COMMON_PS4_LEXER_NODE_KEY;
+					matched = npCommonPs4Lexer3Match(lexer->config, depth, lexer->mode, kind, lexer->name, lexer->nameSize, &node, &flag);
+					lexer->matched = matched;
+					depth = lexer->depth;
+					if (matched == 1) {
+						lexer->nodeIndex[depth] = node;
+						lexer->matchedFlag = flag;
+						result = lexer->callback(lexer, NP_COMMON_PS4_LEXER_EVENT_OBJECT_BEGIN, depth, node, NULL, NULL,
+							lexer->arrayIndex[depth], lexer->context);
+						if (result < 0)
+							return result;
+						depth = lexer->depth + 1;
+						mode = lexer->mode;
+						if (lexer->matchedFlag == 1) {
+							lexer->depth = depth;
+							state = LEXER_STATE_KEY_BEGIN;
+							lexer->arrayIndex[depth] = -1;
+						} else {
+							lexer->depth = depth;
+							state = LEXER_STATE_SKIP;
+							lexer->arrayIndex[depth] = -1;
+							lexer->baseDepth = depth;
+						}
+					} else {
+						mode = lexer->mode;
+						if (depth != 0) {
+							lexer->depth = depth + 1;
+							lexer->baseDepth = depth + 1;
+							lexer->arrayIndex[depth + 1] = -1;
+							state = LEXER_STATE_SKIP;
+						} else {
+							state = LEXER_STATE_START;
+						}
+					}
+					if (mode == LEXER_MODE_ANY)
+						lexer->mode = zero;
+				}
+				++p;
+				pos = p - src;
+				break;
+			case LEXER_STATE_OBJECT_END:
+				if (*p == '}') {
+					if (lexer->matched == 1) {
+						depth = lexer->depth;
+						if (depth != 0) {
+							lexer->depth = depth - 1;
+							LEXER3_END(lexer, NP_COMMON_PS4_LEXER_EVENT_OBJECT_END, result);
+							if (result < 0)
+								return result;
+						}
+					}
+					state = LEXER_STATE_START;
+					if (lexer->depth != 0)
+						state = LEXER_STATE_NEXT;
+				}
+				++p;
+				pos = p - src;
+				break;
+			case LEXER_STATE_ARRAY_BEGIN:
+				if (*p == '[') {
+					depth = lexer->depth;
+					if (depth >= 16)
+						return LEXER_ERROR_DEPTH;
+					kind = NP_COMMON_PS4_LEXER_NODE_ELEMENT;
+					if (lexer->arrayIndex[depth] == -1)
+						kind = NP_COMMON_PS4_LEXER_NODE_KEY;
+					matched = npCommonPs4Lexer3Match(lexer->config, depth, lexer->mode, kind, lexer->name, lexer->nameSize, &node, &flag);
+					lexer->matched = matched;
+					depth = lexer->depth;
+					if (matched == 1) {
+						lexer->nodeIndex[depth] = node;
+						lexer->matchedFlag = flag;
+						result = lexer->callback(lexer, NP_COMMON_PS4_LEXER_EVENT_ARRAY_BEGIN, depth, node, NULL, NULL,
+							lexer->arrayIndex[depth], lexer->context);
+						if (result < 0)
+							return result;
+						depth = lexer->depth;
+						mode = lexer->mode;
+						matched = lexer->matched;
+						if (depth > 1) {
+							matched = npCommonPs4Lexer3Match(lexer->config, depth + 1, mode, NP_COMMON_PS4_LEXER_NODE_ELEMENT, NULL, 0, &node, &flag);
+							depth = lexer->depth;
+							mode = lexer->mode;
+							lexer->matched = matched;
+						}
+						if (matched == 1) {
+							lexer->depth = depth + 1;
+							state = LEXER_STATE_VALUE;
+							lexer->nodeIndex[depth + 1] = node;
+							lexer->arrayIndex[depth + 1] = zero;
+							lexer->matchedFlag = flag;
+						} else if (depth != 0) {
+							lexer->depth = depth + 1;
+							lexer->arrayIndex[depth + 1] = zero;
+							state = LEXER_STATE_SKIP;
+							lexer->baseDepth = depth + 1;
+						} else {
+							state = LEXER_STATE_START;
+						}
+					} else {
+						mode = lexer->mode;
+						if (depth != 0) {
+							lexer->depth = depth + 1;
+							lexer->arrayIndex[depth + 1] = zero;
+							state = LEXER_STATE_SKIP;
+							lexer->baseDepth = depth + 1;
+						} else {
+							state = LEXER_STATE_START;
+						}
+					}
+					if (mode == LEXER_MODE_ANY)
+						lexer->mode = zero;
+				}
+				++p;
+				pos = p - src;
+				break;
+			case LEXER_STATE_ARRAY_END:
+				if (*p == ']') {
+					if (lexer->matched == 1) {
+						depth = lexer->depth;
+						if (depth != 0) {
+							lexer->depth = depth - 1;
+							LEXER3_END(lexer, NP_COMMON_PS4_LEXER_EVENT_ARRAY_END, result);
+							if (result < 0)
+								return result;
+						}
+					}
+					state = LEXER_STATE_START;
+					if (lexer->depth != 0)
+						state = LEXER_STATE_NEXT;
+				}
+				++p;
+				pos = p - src;
+				break;
+			case LEXER_STATE_KEY_BEGIN:
+				c = *p;
+				if (c == '"') {
+					state = LEXER_STATE_KEY;
+					sceClibMemset(lexer->name, 0, lexer->nameSize);
+					lexer->length = zero;
+					++p;
+					pos = p - src;
+				} else if (c == '}' && lexer->arrayIndex[lexer->depth] == -1) {
+					state = LEXER_STATE_OBJECT_END;
+				} else if (c != ']' || lexer->arrayIndex[lexer->depth] == -1) {
+					++p;
+					pos = p - src;
+				} else {
+					state = LEXER_STATE_ARRAY_END;
+				}
+				break;
+			case LEXER_STATE_KEY:
+				if (npCommonPs4Lexer3CopyChar(p, size - pos, &consumed, lexer->partial, &lexer->partialLength,
+					&lexer->remaining, decoded, &sourceLength, &length) == 1) {
+					if (lexer->length + length >= lexer->nameSize || (length == 1 && sourceLength == 1 && decoded[0] == '"')) {
+						state = LEXER_STATE_COLON;
+						lexer->name[lexer->length] = zero;
+					} else {
+						sceClibMemcpy_safe(&lexer->name[lexer->length], decoded, length);
+						p += consumed;
+						lexer->length += length;
+						pos = p - src;
+					}
+				} else {
+					p += consumed;
+					pos = p - src;
+				}
+				break;
+			case LEXER_STATE_COLON:
+				if (*p == ':') {
+					matched = npCommonPs4Lexer3Match(lexer->config, lexer->depth, lexer->mode, NP_COMMON_PS4_LEXER_NODE_KEY,
+						lexer->name, lexer->nameSize, &node, &flag);
+					lexer->matched = matched;
+					if (matched == 1) {
+						depth = lexer->depth;
+						lexer->nodeIndex[depth] = node;
+						lexer->matchedFlag = flag;
+						result = lexer->callback(lexer, NP_COMMON_PS4_LEXER_EVENT_KEY, depth, node, lexer->name, NULL,
+							lexer->arrayIndex[depth], lexer->context);
+						if (result < 0)
+							return result;
+						state = LEXER_STATE_VALUE;
+						sceClibMemset(lexer->tokenText, 0, lexer->tokenSize);
+					} else {
+						state = LEXER_STATE_NEXT;
+					}
+				}
+				++p;
+				pos = p - src;
+				break;
+			case LEXER_STATE_VALUE:
+				c = *p;
+				if (c == '{') {
+					state = LEXER_STATE_OBJECT_BEGIN;
+				} else if (c == '[') {
+					state = LEXER_STATE_ARRAY_BEGIN;
+				} else if (c == 't' || c == 'f' || c == 'n') {
+					state = LEXER_STATE_LITERAL;
+					if (c == 't') {
+						literal = "true";
+						kind = NP_COMMON_PS4_LEXER_TOKEN_TRUE;
+					} else {
+						kind = zero;
+						literal = "null";
+						if (c == 'f') {
+							literal = "false";
+							kind = NP_COMMON_PS4_LEXER_TOKEN_FALSE;
+						}
+					}
+					++p;
+					lexer->tokenType = kind;
+					pos = p - src;
+					lexer->length = 1;
+				} else if ((sceClibLookCtypeTable(c) & 4) != 0 || (c = *p) == '-') {
+					lexer->tokenType = NP_COMMON_PS4_LEXER_TOKEN_NUMBER;
+					lexer->tokenText[0] = *p++;
+					pos = p - src;
+					lexer->length = 1;
+					state = LEXER_STATE_NUMBER;
+				} else if (c == '"') {
+					++p;
+					pos = p - src;
+					lexer->tokenType = NP_COMMON_PS4_LEXER_TOKEN_STRING;
+					state = LEXER_STATE_STRING;
+					lexer->length = zero;
+				} else if (c == '}' && lexer->arrayIndex[lexer->depth] == -1) {
+					state = LEXER_STATE_OBJECT_END;
+				} else if (c != ']' || lexer->arrayIndex[lexer->depth] == -1) {
+					++p;
+					pos = p - src;
+				} else {
+					state = LEXER_STATE_ARRAY_END;
+				}
+				break;
+			case LEXER_STATE_NEXT:
+				c = *p;
+				if (c == ',') {
+					if (lexer->arrayIndex[lexer->depth] == -1) {
+						state = LEXER_STATE_KEY_BEGIN;
+					} else {
+						state = LEXER_STATE_VALUE;
+						sceClibMemset(lexer->tokenText, 0, lexer->tokenSize);
+						if (lexer->matched == 1)
+							++lexer->arrayIndex[lexer->depth];
+					}
+					++p;
+					pos = p - src;
+				} else if (c == '}' && lexer->arrayIndex[lexer->depth] == -1) {
+					state = LEXER_STATE_OBJECT_END;
+					lexer->matched = 1;
+				} else if (c != ']' || lexer->arrayIndex[lexer->depth] == -1) {
+					if (c == '{') {
+						depth = lexer->depth + 1;
+						lexer->depth = depth;
+						lexer->arrayIndex[depth] = -1;
+						++p;
+						lexer->baseDepth = depth;
+						pos = p - src;
+						state = LEXER_STATE_SKIP;
+					} else if (c == '[') {
+						depth = lexer->depth + 1;
+						lexer->depth = depth;
+						++p;
+						pos = p - src;
+						lexer->arrayIndex[depth] = zero;
+						state = LEXER_STATE_SKIP;
+						lexer->baseDepth = depth;
+					} else {
+						++p;
+						pos = p - src;
+					}
+				} else {
+					state = LEXER_STATE_ARRAY_END;
+					lexer->matched = 1;
+				}
+				break;
+			case LEXER_STATE_LITERAL:
+				if (literal != NULL && lexer->length < sceClibStrnlen(literal, 0xFFFFFFFF)
+					&& *p == literal[lexer->length]) {
+					lexer->length++;
+					if (lexer->length >= sceClibStrnlen(literal, 0xFFFFFFFF)) {
+						state = LEXER_STATE_NEXT;
+						LEXER3_VALUE_READ(lexer, result);
+						if (result < 0)
+							return result;
+					}
+					++p;
+					pos = p - src;
+				} else {
+					state = LEXER_STATE_NEXT;
+				}
+				break;
+			case LEXER_STATE_NUMBER:
+				c = *p;
+				length = lexer->length;
+				if ((sceClibLookCtypeTable(c) & 4) != 0 || c == '.' || c == '+' || c == '-' || c == 'e' || c == 'E') {
+					if (length < lexer->tokenSize - 1) {
+						lexer->tokenText[length] = *p;
+						lexer->length = length + 1;
+					}
+					++p;
+					pos = p - src;
+				} else {
+					state = LEXER_STATE_NEXT;
+					lexer->tokenText[length] = zero;
+					LEXER3_VALUE_READ(lexer, result);
+					if (result < 0)
+						return result;
+				}
+				break;
+			case LEXER_STATE_STRING:
+				if (npCommonPs4Lexer3CopyChar(p, size - pos, &consumed, lexer->partial, &lexer->partialLength,
+					&lexer->remaining, decoded, &sourceLength, &length) == 1) {
+					if (lexer->length + length >= lexer->tokenSize || (length == 1 && sourceLength == 1 && decoded[0] == '"')) {
+						state = LEXER_STATE_NEXT;
+						lexer->tokenText[lexer->length] = zero;
+						LEXER3_VALUE_READ(lexer, result);
+						if (result < 0)
+							return result;
+						++p;
+						pos = p - src;
+					} else {
+						sceClibMemcpy_safe(&lexer->tokenText[lexer->length], decoded, length);
+						p += consumed;
+						lexer->length += length;
+						pos = p - src;
+					}
+				} else {
+					p += consumed;
+					pos = p - src;
+				}
+				break;
+			case LEXER_STATE_SKIP:
+				c = *p;
+				if (c == '{') {
+					depth = lexer->depth;
+					if (depth >= 16)
+						return LEXER_ERROR_DEPTH;
+					lexer->depth = depth + 1;
+					lexer->arrayIndex[depth + 1] = -1;
+					++p;
+					pos = p - src;
+				} else if (c == '[') {
+					depth = lexer->depth;
+					if (depth > 16)
+						return LEXER_ERROR_DEPTH;
+					++p;
+					lexer->depth = depth + 1;
+					pos = p - src;
+					lexer->arrayIndex[depth + 1] = zero;
+				} else if (c == '}' && lexer->arrayIndex[lexer->depth] == -1) {
+					depth = lexer->depth;
+					if (depth != 0) {
+						lexer->depth = depth - 1;
+						if (depth - 1 >= lexer->baseDepth) {
+							++p;
+							pos = p - src;
+						} else {
+							state = LEXER_STATE_OBJECT_END;
+							lexer->baseDepth = zero;
+						}
+					} else {
+						++p;
+						pos = p - src;
+					}
+				} else if (c != ']' || lexer->arrayIndex[lexer->depth] == -1) {
+					++p;
+					pos = p - src;
+				} else {
+					depth = lexer->depth;
+					if (depth != 0) {
+						lexer->depth = depth - 1;
+						if (depth - 1 >= lexer->baseDepth) {
+							++p;
+							pos = p - src;
+						} else {
+							state = LEXER_STATE_ARRAY_END;
+							lexer->baseDepth = zero;
+						}
+					} else {
+						++p;
+						pos = p - src;
+					}
+				}
+				break;
+			default:
+				++p;
+				pos = p - src;
+				break;
+			}
+		} while (size > pos);
+	}
+	lexer->state = state;
+	return 0;
+}
+
