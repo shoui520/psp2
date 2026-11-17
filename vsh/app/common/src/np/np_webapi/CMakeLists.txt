@@ -25,4 +25,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	request_io.cpp
 	request_header.cpp
 	pushfilter.cpp
+	extd_registry.cpp
 )

@@ -134,6 +134,7 @@ extern int SceNpManager_737B2820(void);
 extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
 extern int SceNpCommonPs4_6B428829(void *allocator, void *node);
 extern int sceNpManagerGetNpId(void *npId);
+extern SceSize sceClibStrlcpy(char *dst, const char *src, SceSize size);
 extern int SceNpManager_A775A452(int state);
 extern int SceNpCommonPs4_FB0B3FBD(void *params);
 extern int SceNpCommonPs4_639086A3(void *params);
@@ -156,6 +157,7 @@ extern int SceNpCommonPs4_6BA5A164(void *mutex);				/* unlock */
 extern int SceNpCommonPs4_D84BF4B7(int arg);
 extern struct NpWebApiIpmiClient *SceNpCommonPs4_A0599F24(void);			/* the NP service's IPMI client */
 extern void SceNpCommonPs4_F50BD96A(int result);				/* halt after a failed assertion */
+
 #ifdef __cplusplus
 }
 #endif
@@ -712,5 +714,82 @@ extern NpWebApiObjectList *npWebApiObjectListConstruct(NpWebApiObjectList *list,
 extern NpWebApiObjectList *npWebApiObjectListDestruct(NpWebApiObjectList *list);
 extern int npWebApiObjectListDeleteThis(NpWebApiObjectList *list);
 extern const void *g_objectListVtable[];	/* 0x8100ef60 */
+
+/* the extended push event filters' service registry (global 0x81010038): the services and the names they know */
+#define NP_WEBAPI_ERROR_REGISTRY_NOT_FOUND	-2141871614	/* 0x8055a202 */
+#define NP_WEBAPI_ERROR_REGISTRY_ENTRY_NOT_FOUND	-2141871562	/* 0x8055a236 */
+#define NP_WEBAPI_ERROR_REGISTRY_NAME_EXISTS	-2141871563	/* 0x8055a235 */
+#define NP_WEBAPI_ERROR_REGISTRY_SERVICE_TOO_LONG	-2141871578	/* 0x8055a226 */
+#define NP_WEBAPI_ERROR_REGISTRY_NAME_TOO_LONG	-2141871571	/* 0x8055a22d */
+
+typedef struct NpWebApiExtdName {
+	const void *const *vtable;
+	struct NpWebApiExtdName *next;
+	struct NpWebApiExtdName *prev;
+	char name[33];
+	unsigned char reserved[3];
+} NpWebApiExtdName;
+
+typedef struct NpWebApiExtdEntry {
+	const void *const *vtable;
+	void *pool;
+	struct NpWebApiExtdEntry *next;
+	struct NpWebApiExtdEntry *prev;
+	char service[65];
+	unsigned char reserved[3];
+	NpWebApiExtdName *head;
+	NpWebApiExtdName *tail;
+} NpWebApiExtdEntry;
+
+typedef struct NpWebApiExtdEntryList {
+	void *reserved;
+	NpWebApiExtdEntry *head;
+	NpWebApiExtdEntry *tail;
+} NpWebApiExtdEntryList;
+
+typedef struct NpWebApiExtdRegistry {
+	unsigned char reserved1[16];
+	unsigned char mutex[24];
+	NpWebApiExtdEntryList entries;
+} NpWebApiExtdRegistry;
+
+/* what the filters keep of an entry: its object and the entry */
+typedef struct NpWebApiExtdService {
+	const void *const *vtable;
+	NpWebApiExtdEntry *entry;
+} NpWebApiExtdService;
+
+typedef char NpWebApiExtdNameSizeCheck[sizeof(NpWebApiExtdName) == 48 ? 1 : -1];
+typedef char NpWebApiExtdEntrySizeCheck[sizeof(NpWebApiExtdEntry) == 92 ? 1 : -1];
+
+extern NpWebApiExtdRegistry *g_extdRegistry;	/* 0x81010038 */
+extern const void *g_extdNameVtable[];		/* 0x8100f0e0 */
+extern const void *g_extdEntryVtable[];		/* 0x8100f0f0 */
+extern const void *g_extdServiceVtable[];	/* 0x8100f088 */
+
+extern void *npWebApiExtdEntryClearService(void *service) __attribute__((noinline));
+extern int npWebApiExtdEntrySetService(char *dst, const char *src) __attribute__((noinline));
+extern void *npWebApiExtdNameClear(void *name) __attribute__((noinline));
+extern int npWebApiExtdNameSet(char *dst, const char *src) __attribute__((noinline));
+extern int npWebApiExtdNameEquals(const char *a, const char *b) __attribute__((noinline));
+extern NpWebApiExtdName *npWebApiExtdNameDestruct(NpWebApiExtdName *name) __attribute__((noinline));
+extern int npWebApiExtdNameDelete(NpWebApiExtdName *name) __attribute__((noinline));
+extern NpWebApiExtdEntry *npWebApiExtdEntryDestruct(NpWebApiExtdEntry *entry) __attribute__((noinline));
+extern int npWebApiExtdEntryDelete(NpWebApiExtdEntry *entry) __attribute__((noinline));
+extern NpWebApiExtdService *npWebApiExtdServiceDestruct(NpWebApiExtdService *service) __attribute__((noinline));
+extern int npWebApiExtdServiceDelete(NpWebApiExtdService *service) __attribute__((noinline));
+extern int npWebApiExtdEntryListAdd(NpWebApiExtdEntryList *list, void *pool, const char *service,
+	NpWebApiExtdEntry **pEntry) __attribute__((noinline));
+extern int npWebApiExtdEntryListRemove(NpWebApiExtdEntryList *list, NpWebApiExtdEntry *entry) __attribute__((noinline));
+extern int npWebApiExtdEntryAddName(NpWebApiExtdEntry *entry, const char *name) __attribute__((noinline));
+extern int npWebApiExtdRegistryAddEntry(NpWebApiExtdRegistry *registry, void *pool, const char *service,
+	NpWebApiExtdEntry **pEntry) __attribute__((noinline));
+extern int npWebApiExtdRegistryRemoveEntry(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry) __attribute__((noinline));
+extern int npWebApiExtdRegistryAddName(NpWebApiExtdRegistry *registry, NpWebApiExtdEntry *entry,
+	const char *name) __attribute__((noinline));
+extern NpWebApiExtdRegistry *npWebApiExtdGetRegistry(void) __attribute__((noinline));
+extern int npWebApiExtdServiceCreate(void *pool, const char *service, NpWebApiExtdService **pService) __attribute__((noinline));
+extern int npWebApiExtdServiceAddName(NpWebApiExtdService *service, const char *name) __attribute__((noinline));
+extern int npWebApiExtdServiceDestroy(NpWebApiExtdService *service) __attribute__((noinline));
 
 #endif
