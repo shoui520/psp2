@@ -275,12 +275,34 @@ extern int npWebApiServiceFilterGetId(NpWebApiServiceFilter *filter) __attribute
 extern int npWebApiLibContextDeleteServicePushEventFilter(NpWebApiLibContext *ctx, int filterId) __attribute__((noinline));
 extern int npWebApiDeleteServicePushEventFilter(int libCtxId, int filterId);
 
-/* an extended push event filter: its vtable and ID */
+/* what an extended filter keeps for one service: its name, the names it listens to and the service object */
+typedef struct NpWebApiExtdFilterRecord {
+	char service[65];
+	unsigned char reserved1[3];
+	char *names;
+	unsigned int nameCount;
+	struct NpWebApiExtdService *serviceObject;
+} NpWebApiExtdFilterRecord;
+
+/* an extended push event filter (76 bytes) */
 typedef struct NpWebApiExtdFilter {
 	const void *const *vtable;
 	int id;
+	unsigned char all;
+	unsigned char reserved1[3];
+	NpWebApiHandleList list;
+	NpWebApiExtdFilterRecord *records;
+	unsigned int recordCount;
+	char name[33];
+	unsigned char reserved2[3];
+	int handle;
+	NpWebApiLibContext *libContext;
 } NpWebApiExtdFilter;
 
+typedef char NpWebApiExtdFilterSizeCheck[sizeof(NpWebApiExtdFilter) == 76 ? 1 : -1];
+
+extern void npWebApiExtdFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiExtdFilter **pFilter) __attribute__((noinline));
 extern int npWebApiExtdFilterListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiHandleNode **pAt) __attribute__((noinline));
 extern int npWebApiExtdFilterGetId(NpWebApiExtdFilter *filter) __attribute__((noinline));
@@ -785,5 +807,17 @@ extern int npWebApiExtdRegistryAddName(NpPushLibContext *registry, NpWebApiExtdE
 extern int npWebApiExtdServiceCreate(void *pool, const char *service, NpWebApiExtdService **pService) __attribute__((noinline));
 extern int npWebApiExtdServiceAddName(NpWebApiExtdService *service, const char *name) __attribute__((noinline));
 extern int npWebApiExtdServiceDestroy(NpWebApiExtdService *service) __attribute__((noinline));
+
+extern const void *g_extdFilterVtable[];	/* 0x8100ef70 */
+extern NpWebApiExtdFilter *npWebApiExtdFilterConstruct(NpWebApiExtdFilter *filter, NpWebApiLibContext *libCtx)
+	__attribute__((noinline));
+extern NpWebApiExtdFilter *npWebApiExtdFilterDestruct(NpWebApiExtdFilter *filter) __attribute__((noinline));
+extern int npWebApiExtdFilterDelete(NpWebApiExtdFilter *filter) __attribute__((noinline));
+extern int npWebApiExtdFilterResolve(NpWebApiExtdFilter *filter, NpWebApiHandle *handle, const char *name,
+	int arg) __attribute__((noinline));
+extern int npWebApiExtdFilterInit(NpWebApiExtdFilter *filter, NpWebApiHandle *handle, const char *name, int arg,
+	const char *records, unsigned int count) __attribute__((noinline));
+extern int npWebApiLibContextCreateExtdPushEventFilter(NpWebApiLibContext *ctx, int handleId, const char *name,
+	int arg, const char *records, unsigned int count) __attribute__((noinline));
 
 #endif
