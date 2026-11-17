@@ -25,6 +25,8 @@ extern "C" {
    known) */
 #define NP_COMMON_PS4_ERROR_80558003	-2141880317
 #define NP_COMMON_PS4_ERROR_80559E03	-2141872637
+#define NP_COMMON_PS4_ERROR_80559E0D	-2141872627
+#define NP_COMMON_PS4_ERROR_80559E11	-2141872623
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
 #define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80558005 */
 #define NP_COMMON_PS4_ERROR_OUT_OF_MEMORY	-2141880313	/* 0x80558007 */
@@ -118,6 +120,22 @@ struct NpCommonPs4HttpTrans {
 	SceInt32 connId;
 	SceInt32 reqId;
 	SceUInt64 receivedSize;
+};
+
+/* npext/http/http_uri.cpp: a parsed URI whose elements point into one buffer */
+struct NpCommonPs4HttpUri {
+	const void *const *vtable;
+	SceUInt8 opaque;
+	char *scheme;
+	char *username;
+	char *password;
+	char *hostname;
+	char *path;
+	char *query;
+	char *fragment;
+	SceUShort16 port;
+	struct NpCommonPs4Allocator *pool;
+	void *buffer;
 };
 
 /* the connection pool (npext/http/http_conn_pool.cpp) */
