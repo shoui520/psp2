@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include "robin/amp.h"
 #include "robin/btrom.h"
+#include "robin/clock.h"
 #include "robin/hct.h"
 #include "robin/mdev.h"
 #include "robin/task.h"
@@ -319,7 +320,6 @@ int ampPalNotifyCode11(int first, int second)
 
 /* ---- Frames of a physical link --------------------------------------------- */
 
-extern int clockApplyCore(uint32_t value);
 int ampPalSdioDataCallback(OsaBuffer *buffer);
 extern uint8_t ampLocalFrameAddress[6];		/* source address of AMP frames */
 

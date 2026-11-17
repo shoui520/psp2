@@ -64,14 +64,14 @@ uint32_t wlanMacPendingTable __attribute__((section(".sqram1.bss")));			/* 0xc00
 void macTxNotifyResetBuffer(struct WlanConnection *connection, unsigned int start)
 {
 	wlanMacConfigApply(wlanTxLowRate(connection, start));
-	wlanMacConfigBit15Update(!(wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE));
+	wlanMacConfigBit15Update((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) ? 0 : 1);
 }
 
 /* 0x321aa: the rate a frame is answered at: the register's mask of rates, as a count of bits. */
 unsigned int macTxNotifySyncBuffer(unsigned int index, uint32_t rates)
 {
 	unsigned int result = 9;
-	unsigned int mask = 0;
+	unsigned int mask;
 
 	switch (index) {
 	case 15: case 23:
@@ -94,21 +94,14 @@ unsigned int macTxNotifySyncBuffer(unsigned int index, uint32_t rates)
 	case 20: case 21: case 26: case 27: case 28: case 29: case 30:
 		mask = 8160;
 		break;
-	case 22: case 31:
+	default:
 		mask = 32;
 		result = 5;
 		break;
-	case 32:
-		for (;;)
-			;
-	default:
-		break;
 	}
-	if (mask != 0) {
-		rates = (mask & rates) >> 5;
-		if (rates == 0)
-			return result;
-	}
+	rates = (mask & rates) >> 5;
+	if (rates == 0)
+		return result;
 	result = 4;
 	do {
 		result = (uint8_t)(result + 1);
@@ -147,7 +140,7 @@ void macTxNotifyApplyBuffer(struct WlanConnection *connection)
 void macTxNotifyResolveBuffer(unsigned int rate)
 {
 	wlanMacConfigApply(rate);
-	wlanMacConfigBit15Update(!(wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE));
+	wlanMacConfigBit15Update((wlanProtection.flags & WLAN_PROTECTION_LONG_PREAMBLE) ? 0 : 1);
 }
 
 /* 0x322c0 */
@@ -220,9 +213,12 @@ int macTxNotifyAcquireBuffer(int enable, const uint8_t *address, unsigned int sl
 /* 0x3239c */
 void macTxNotifyReleaseBuffer(void)
 {
+	uint32_t flags;
+
 	MAC_2E4_CONTEXT = 48;
-	MAC_2D4_FLAGS |= 0x2000000;
-	romLibSyncState(1, MAC_2D4_FLAGS, 0x2000000);
+	flags = MAC_2D4_FLAGS | 0x2000000;
+	MAC_2D4_FLAGS = flags;
+	romLibSyncState(1, flags, 0x2000000);
 	MAC_824_CONTROL_BITS |= 4;
 	MAC_300_MODE |= 0x2000;
 }
@@ -310,7 +306,7 @@ void macTxNotifyFilterBuffer(int shared)
 /* 0x3252c */
 void macTxNotifyHandlePacket(void)
 {
-	MAC_300_MODE |= 0x2000;
+	MAC_300_MODE |= 0x1000;
 }
 
 /* 0x32538: the filter the host set is put aside and the MAC accepts everything, or put back. */

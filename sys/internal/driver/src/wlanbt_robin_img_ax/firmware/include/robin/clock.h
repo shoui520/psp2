@@ -41,7 +41,7 @@ unsigned int clockRegistersInit(void);
 uint32_t clockReferenceRate(void);
 uint32_t clockBaseRate(void);
 int clockSelectSource(int enable);
-unsigned int clockApplyCore(unsigned int khz);
+void clockApplyCore(unsigned int khz);
 uint32_t clockSlowestRate(void);
 uint32_t clockSlowestRateGet(void);
 const uint8_t *clockDividerRowSelect(void);

@@ -1854,26 +1854,6 @@ int macTxStatsAddChecked(unsigned int queue, int *last)
 	return total - previous;
 }
 
-/* Signal-to-noise value limited to 0..102. */
-int8_t wlanClampSnr(int value)
-{
-	if (value > 102)
-		return 102;
-	if (value < 0)
-		return 0;
-	return value;
-}
-
-/* Noise floor in dBm limited to -102..0, reported as a positive number. */
-int wlanClampNoise(int value)
-{
-	if (value > 0)
-		value = 0;
-	else if (value < -102)
-		value = -102;
-	return (int8_t)-value;
-}
-
 /* The packet type in a descriptor's wire header, read where it is used. */
 static inline unsigned int macTxPacketType(const WlanTxDescriptor *descriptor)
 {

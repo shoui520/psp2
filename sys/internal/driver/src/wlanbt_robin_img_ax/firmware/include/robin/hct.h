@@ -44,7 +44,7 @@ int hctPostPacket(uint8_t *packet, uint32_t flag);
 int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument,
 		     unsigned int event);
 void hctReceiveEvent(struct HctLinkMessage *message);
-int hctSendCommand(struct HctLinkMessage *message);
+void hctSendCommand(struct HctLinkMessage *message);
 void hctSendAclData(struct HctLinkMessage *message);
 int hctCreditReturned(struct HctLinkMessage *message);
 void hctTransferDone(struct HctLinkMessage *message);

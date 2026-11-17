@@ -20,7 +20,7 @@ uint8_t *rfRestart(void);
 unsigned int socClockSetDivider(char divider);
 unsigned int socClockSetMode(void);
 unsigned int socClockPrepare(int mode, char divider);
-int socClockConfigure(void);
+void socClockConfigure(void);
 void rfRegWriteLow7(char value);
 void socClockInit(void);
 void sysChipIdRead(void);
@@ -28,7 +28,7 @@ int socSensorCalibration(void);
 int socSensorRead(void);
 int socSensorSample(void);
 unsigned int socClockFilter(void);
-unsigned int socPowerPreset(void);
+void socPowerPreset(void);
 void socEnableBlockA(void);
 void uapPrepareEntry(uint8_t entry);
 void rfCalibrateTrim(void);
@@ -70,7 +70,7 @@ extern int rfPowerBlock[5];			/* 0x54dc8 */
 
 extern int (*sysDelayHook)(uint32_t microseconds);	/* 0x54e0c */
 extern uint16_t sysChipIdHigh;				/* 0x040089d4 */
-extern uint16_t sysChipIdLow;				/* 0x040089d6 */
+extern uint8_t sysChipIdLow;				/* 0x040089d6 */
 extern uint32_t sysMacVersion;				/* 0x040089dc */
 
 /* Not converted yet; provisional names. Addresses are those of the 4.00 image. */

@@ -293,6 +293,8 @@ void hctSendAclToHost(struct HctLinkMessage *message)
 	uint8_t *packet = (uint8_t *)message->data - 4;
 	uint8_t *header;
 	uint32_t patternLength;
+	uint32_t frame;
+	uint32_t type;
 	uint32_t handle;
 
 	buffer->dataOffset = 36;
@@ -302,9 +304,10 @@ void hctSendAclToHost(struct HctLinkMessage *message)
 	buffer->data[11] = length >> 8;
 	if (hctMatch.enabled != 0 && btLmpLcVerifyContext(0)) {
 		header = message->data;
+		frame = header[2] | (header[3] << 8);
+		type = header[4] | (header[5] << 8);
 		patternLength = (uint8_t)((header[0] | (header[1] << 8)) - 2);
-		if (hctMatch.frame != (header[2] | (header[3] << 8)) ||
-		    hctMatch.header != (header[4] | (header[5] << 8)) ||
+		if (hctMatch.frame != frame || hctMatch.header != type ||
 		    hctMatch.length != patternLength ||
 		    memcmp(header + 6, hctMatch.data, patternLength) != 0) {
 			osa_MsgFree((void **)&message);
@@ -466,34 +469,38 @@ void hctReceiveEvent(struct HctLinkMessage *message)
 }
 
 /* 0x00020848: command completion for a link; message 5097. */
-int hctSendCommand(struct HctLinkMessage *message)
+void hctSendCommand(struct HctLinkMessage *message)
 {
 	unsigned int link = message->handle;
 	OsaBuffer *buffer = (OsaBuffer *)message->data;
 	struct RomHctLinkQueue *queue;
+	struct HctLinkMessage *command;
 	uint8_t *packet;
 	void *destination;
 
 	if (link < HCT_LINK_COUNT && (queue = &romHctLinkQueue[link])->pending != 0) {
-		message->id = 502;
-		message->length = buffer->dataOffset;
+		command = message;
+		command->id = 502;
+		command->length = buffer->dataOffset;
 		queue->counter++;
 		if (romHctMode == 1) {
 			packet = (uint8_t *)buffer + buffer->dataOffset;
 			destination = romHctSourceCounter(romHctHostSlot[link][5]);
-			message->length = packet[2];
+			command->length = packet[2];
 			__aeabi_memcpy(destination, packet + 3, packet[2]);
-			btBdhRomHandleContext(message);
+			btBdhRomHandleContext(command);
 			osa_BufferFree(buffer);
 			mdevIoctl(btSdioActiveHandle, 0x14, 0);
 		} else {
-			osa_MsgSend((void **)&message, romQueueLc);
+			osa_MsgSend((void **)&command, romQueueLc);
 		}
-		return 0;
+		message = NULL;
+	} else {
+		osa_BufferFree(buffer);
+		mdevIoctl(btSdioActiveHandle, 0x14, 0);
 	}
-	osa_BufferFree(buffer);
-	mdevIoctl(btSdioActiveHandle, 0x14, 0);
-	return osa_MsgFree((void **)&message);
+	if (message != NULL)
+		osa_MsgFree((void **)&message);
 }
 
 /* 0x000208ea: data for a link from the host (message 510 or 517 after filtering). */
@@ -541,6 +548,14 @@ int hctCreditReturned(struct HctLinkMessage *message)
 	return osa_MsgFree((void **)&message);
 }
 
+/* Messages 511 and 512: a transfer for a link finished. */
+struct HctTransferMessage {
+	uint32_t id;
+	uint16_t handle;
+	uint8_t status;			/* nonzero: the transfer failed */
+	uint8_t reserved;
+};
+
 /* 0x000209a2: a transfer for a link finished (messages 511 and 512). */
 void hctTransferDone(struct HctLinkMessage *message)
 {
@@ -553,7 +568,7 @@ void hctTransferDone(struct HctLinkMessage *message)
 	word = message->handle;
 	link = word >> 14 != 0 ? 0 : word & 0xfff;
 	info = &romHctLinkInfo[link];
-	if (info->active != 0 && (uint8_t)message->length == 0) {
+	if (info->active != 0 && ((struct HctTransferMessage *)message)->status == 0) {
 		info->outstanding--;
 		if (romHctQueueMode != 1 || message->id != 512)
 			hctCompleteTransfer(message->handle & 0xfff, 1);

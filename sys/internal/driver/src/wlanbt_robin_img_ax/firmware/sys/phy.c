@@ -8,6 +8,7 @@
 #include "robin/coex.h"
 #include "robin/event.h"
 #include "robin/mac.h"
+#include "robin/mactx.h"
 #include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/rom.h"
@@ -27,35 +28,50 @@ int32_t wlanAntennaRssiLow __attribute__((section(".dtcm.bss")));
 uint32_t wlanAntenna __attribute__((section(".dtcm.bss")));
 uint32_t wlanAntennaStrongTime __attribute__((section(".dtcm.bss")));
 
+/*
+ * The data, in Sony's order (0x549dc..0x54a2f): the bytes, the halfwords, the
+ * words, then the tables.
+ */
 /* Added to every calibrated RSSI. */
-static int8_t wlanRssiBias __attribute__((section(".itcm.bss")));
-
-/* Hardware rate codes: DSSS in units of 100 kbit/s, then the OFDM codes. */
-static uint8_t wlanRateCodes[14] __attribute__((section(".itcm.rw"))) = {
-	10, 20, 55, 110, 220, 0x0b, 0x0f, 0x0a, 0x0e, 0x09, 0x0d, 0x08, 0x0c, 0x07
-};
+static int8_t wlanRssiBias __attribute__((section(".itcm.rw"))) = 0;
+/* The baseband's version registers, as last read. */
+static uint8_t bbpVersionMajorCache __attribute__((section(".itcm.rw"))) = 0;
+static uint8_t bbpVersionMinorCache __attribute__((section(".itcm.rw"))) = 0;
+/* bbpSetAdjustment(): 0 or 1 selects BBP_REG_ADJUST_SELECT; 0xff: none set. */
+static uint8_t bbpAdjustMode __attribute__((section(".itcm.rw"))) = 0xff;
+static uint8_t bbpAdjustOffset __attribute__((section(".itcm.rw"))) = 0;
+/* The operating region revision bbpInit() sets (1.38). */
+uint8_t opRegionMinor __attribute__((section(".itcm.rw"))) = 0;
+uint8_t opRegionMajor __attribute__((section(".itcm.rw"))) = 0;
 
 static struct WlanSignalCalibration wlanNoiseCalibration __attribute__((section(".itcm.rw"))) = {
 	{ -15, -15 }, -1, -120
+};
+
+/* The register pairs (high byte, low byte) the calibration lookups go to. */
+static uint16_t bbpCalibrationRegisters[3][1][2] __attribute__((section(".itcm.rw"))) = {
+	{ { 0x3c0, 0x3c1 } }, { { 0x3be, 0x3bf } }, { { 0x3c4, 0x3c5 } },
+};
+
+/* rfTuneChannel(): tunes that ended with the synthesizer unlocked, in all and by lock state. */
+static struct {
+	uint32_t total;
+	uint32_t byState[3];
+} rfUnlockedTunes __attribute__((section(".itcm.rw"))) = { 0 };
+
+/*
+ * The hardware rate code of each rate index: DSSS in units of 100 kbit/s, the
+ * OFDM codes, then the MCS of HT20, MCS 32 and the MCS of HT40.
+ */
+static uint8_t wlanRateCodes[31] __attribute__((section(".itcm.rw"))) = {
+	10, 20, 55, 110, 220, 0x0b, 0x0f, 0x0a, 0x0e, 0x09, 0x0d, 0x08, 0x0c, 0x07,
+	0, 1, 2, 3, 4, 5, 6, 7, 32, 0, 1, 2, 3, 4, 5, 6, 7,
 };
 static struct WlanSignalCalibration wlanRssiCalibration[3] __attribute__((section(".itcm.rw"))) = {
 	{ { -15, -15 }, -1, -110 },
 	{ { -15, -15 }, -1, -110 },
 	{ { -15, -15 }, -1, -110 },
 };
-
-/* bbpSetAdjustment(): 0 or 1 selects BBP_REG_ADJUST_SELECT; 0xff: none set. */
-static uint8_t bbpAdjustMode __attribute__((section(".itcm.rw"))) = 0xff;
-static uint8_t bbpAdjustOffset __attribute__((section(".itcm.rw")));
-
-/* The register pairs (high byte, low byte) the calibration lookups go to. */
-static uint16_t bbpCalibrationRegisters[3][2] __attribute__((section(".itcm.rw"))) = {
-	{ 0x3c0, 0x3c1 }, { 0x3be, 0x3bf }, { 0x3c4, 0x3c5 },
-};
-
-/* rfTuneChannel(): tunes that ended with the synthesizer unlocked, in all and by lock state. */
-static uint32_t rfUnlockedTunes __attribute__((section(".itcm.rw")));
-static uint32_t rfUnlockedTunesByState[3] __attribute__((section(".itcm.rw")));
 
 /* bbpNoiseHistogramRead(): the level of each bin in dBm, 9 bins then 11. */
 static const int8_t bbpNoiseHistogramLevels[20] = {
@@ -145,6 +161,11 @@ int bbpInit(void)
 	return 1;
 }
 
+uint32_t bbpReadVersionRegister(uint32_t index)
+{
+	return (uint8_t)BBP_VERSION_REGISTERS[index];
+}
+
 void bbpWriteRegister(unsigned int reg, unsigned int value)
 {
 	BBP_REGISTER(reg) = value;
@@ -158,6 +179,27 @@ void bbpSetRegisterBits(unsigned int reg, unsigned int mask)
 void bbpClearRegisterBits(unsigned int reg, unsigned int mask)
 {
 	BBP_REGISTER(reg) = (uint8_t)BBP_REGISTER(reg) & ~mask;
+}
+
+uint32_t bbpGetVersionMajor(void)
+{
+	uint32_t version = bbpReadVersionRegister(0);
+
+	bbpVersionMajorCache = version;
+	return version;
+}
+
+uint32_t bbpGetVersionMinor(void)
+{
+	uint32_t version = bbpReadVersionRegister(1);
+
+	bbpVersionMinorCache = version;
+	return version;
+}
+
+uint32_t bbpGetVersionPatch(void)
+{
+	return 0;
 }
 
 /* Rate index of a DSSS rate given in units of 100 kbit/s. */
@@ -179,9 +221,9 @@ int wlanDsssRateIndex(int rate)
 }
 
 /* Rate index of an OFDM rate code. */
-int wlanOfdmRateIndex(int code)
+int wlanOfdmRateIndex(uint8_t code)
 {
-	switch ((int8_t)code) {
+	switch (code) {
 	case 7:
 		return 13;
 	case 8:
@@ -295,7 +337,27 @@ int wlanClampRssi(int dbm)
 	} else {
 		dbm = 0;
 	}
-	return -(int8_t)dbm;
+	return (int8_t)-dbm;
+}
+
+/* Noise floor in dBm limited to -102..0, reported as a positive number. */
+int wlanClampNoise(int value)
+{
+	if (value > 0)
+		value = 0;
+	else if (value < -102)
+		value = -102;
+	return (int8_t)-value;
+}
+
+/* Signal-to-noise value limited to 0..102. */
+int8_t wlanClampSnr(int value)
+{
+	if (value > 102)
+		return 102;
+	if (value < 0)
+		return 0;
+	return value;
 }
 
 /*
@@ -305,19 +367,25 @@ int wlanClampRssi(int dbm)
 void wlanRxConvertStatus(struct WlanRxStatus *status)
 {
 	unsigned int phyMode;
+	unsigned int ht40;
+	uint8_t legacyRate;
 	int rate;
 
 	if (status == NULL)
 		return;
 	phyMode = (status->phyInfo >> 3) & 3;
+	ht40 = status->mcs >> 7;
+	legacyRate = status->legacyRate;
 	if (phyMode == 0)
-		rate = wlanOfdmRateIndex(status->legacyRate);
+		rate = wlanOfdmRateIndex(legacyRate);
 	else if (phyMode == 1)
-		rate = wlanDsssRateIndex(status->legacyRate);
+		rate = wlanDsssRateIndex(legacyRate);
+	else if (phyMode == 2 || phyMode == 3)
+		rate = wlanHtRateIndex(ht40, status->mcs & 0x7f);
 	else
-		rate = wlanHtRateIndex(status->mcs >> 7, status->mcs & 0x7f);
+		rate = WLAN_RATE_INDEX_INVALID;
 	status->legacyRate = rate;
-	status->rssi = wlanCalibrateRssi((int8_t)status->rssi, phyMode);
+	status->rssi = wlanCalibrateRssi((int8_t)status->rssi, (status->phyInfo >> 3) & 3);
 	status->noise = wlanCalibrateNoise((int8_t)status->noise);
 }
 
@@ -334,56 +402,56 @@ int bbpTxHook(void)
 }
 
 /* Writes a 16-bit calibration value, high byte first, to a register pair. */
-static inline void bbpWriteCalibration(int pair, uint16_t value)
+static inline void bbpWriteCalibration(int table, int path, const uint16_t *value)
 {
-	bbpWriteRegister(bbpCalibrationRegisters[pair][0], value >> 8);
-	bbpWriteRegister(bbpCalibrationRegisters[pair][1], value & 0xff);
+	bbpWriteRegister(bbpCalibrationRegisters[table][path][0], *value >> 8);
+	bbpWriteRegister(bbpCalibrationRegisters[table][path][1], *value & 0xff);
 }
 
 void bbpLoadCalibration0(unsigned int channel, unsigned int band)
 {
-	struct WlanCalibrationKey key;
 	uint16_t value;
+	struct WlanCalibrationKey key;
 	int path;
 
 	key.channel = channel;
 	key.band = band;
 	for (path = 0; path < 1; path++)
 		if (wlanCalibrationLookup0(key, &value))
-			bbpWriteCalibration(path * 2 + 0, value);
+			bbpWriteCalibration(0, path, &value);
 }
 
 void bbpLoadCalibration1(unsigned int channel, unsigned int band)
 {
-	struct WlanCalibrationKey key;
 	uint16_t value;
+	struct WlanCalibrationKey key;
 	int path;
 
 	key.channel = channel;
 	key.band = band;
 	for (path = 0; path < 1; path++)
 		if (wlanCalibrationLookup1(key, &value))
-			bbpWriteCalibration(path * 2 + 1, value);
+			bbpWriteCalibration(1, path, &value);
 }
 
 void bbpLoadCalibration2(unsigned int channel, unsigned int band)
 {
-	struct WlanCalibrationKey key;
 	uint16_t value;
+	struct WlanCalibrationKey key;
 	int path;
 
 	key.channel = channel;
 	key.band = band;
 	for (path = 0; path < 1; path++)
 		if (wlanCalibrationLookup2(key, &value))
-			bbpWriteCalibration(path * 2 + 2, value);
+			bbpWriteCalibration(2, path, &value);
 }
 
 /* The signal-level offsets of the channel, or the defaults when there are none. */
 void bbpLoadSignalCalibration(unsigned int channel, unsigned int band)
 {
-	struct WlanCalibrationKey key;
 	int8_t values[8];
+	struct WlanCalibrationKey key;
 
 	key.channel = channel;
 	key.band = band;
@@ -405,6 +473,19 @@ int wlanHt40CenterChannel(int fiveGHz, int channel, int mode)
 	if (mode != 2 && mode != 3)
 		return channel;
 	switch (channel) {
+	case 36:
+	case 40:
+		return 38;
+	case 44:
+	case 48:
+		return 46;
+	case 60:
+	case 64:
+		return 62;
+	case 100:
+	case 104:
+		return 102;
+	case 108:
 	case 112:
 		return 110;
 	case 116:
@@ -422,24 +503,6 @@ int wlanHt40CenterChannel(int fiveGHz, int channel, int mode)
 	case 157:
 	case 161:
 		return 159;
-	}
-	if (channel > 136 || (channel & 3) != 0)
-		return 54;
-	switch ((uint8_t)(channel >> 2)) {
-	case 9:
-	case 10:
-		return 38;
-	case 11:
-	case 12:
-		return 46;
-	case 15:
-	case 16:
-		return 62;
-	case 25:
-	case 26:
-		return 102;
-	case 27:
-		return 110;
 	}
 	return 54;
 }
@@ -509,9 +572,9 @@ int rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth)
 	rfLoadBandRegisters(band, bandwidth);
 	wlanTxPowerClassesApply();
 	center = wlanHt40CenterChannel(band, channel8, bandwidth);
-	rfChannelHookAfter();
+	rfChannelHookAfter(band, center);
 	bbpLoadPathTable(band, sysEventPathIsEnabled(band));
-	rfChannelHookBefore();
+	rfChannelHookBefore(band, sysEventPathIsEnabled(band));
 	rfBusClearBits(RF_REG_LOCK_CONTROL, 0x02);
 	macTuneHoldStart();
 	if (sysEventPathIsEnabled(band))
@@ -527,16 +590,16 @@ int rfTuneChannel(unsigned int band, uint32_t channel, unsigned int bandwidth)
 		if (!(SOC_STATUS & SOC_STATUS_RF_LOCKED)) {
 			switch (rfBusRead(RF_REG_LOCK_CONTROL) >> 6) {
 			case 1:
-				rfUnlockedTunesByState[0]++;
+				rfUnlockedTunes.byState[0]++;
 				break;
 			case 2:
-				rfUnlockedTunesByState[1]++;
+				rfUnlockedTunes.byState[1]++;
 				break;
 			case 3:
-				rfUnlockedTunesByState[2]++;
+				rfUnlockedTunes.byState[2]++;
 				break;
 			}
-			rfUnlockedTunes++;
+			rfUnlockedTunes.total++;
 		}
 		rfBusSetBits(RF_REG_LOCK_CONTROL, 0x02);
 	}

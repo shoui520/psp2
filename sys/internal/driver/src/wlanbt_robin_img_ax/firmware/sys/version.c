@@ -5,15 +5,12 @@
 #include <stddef.h>
 #include "robin/calibration.h"
 #include "robin/osa.h"
+#include "robin/phy.h"
 #include "robin/rf.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
 #include "robin/soc.h"
 
-static uint8_t bbpVersionMajorCache __attribute__((section(".itcm.rw")));
-static uint8_t bbpVersionMinorCache __attribute__((section(".itcm.rw")));
-uint8_t opRegionMinor __attribute__((section(".itcm.rw")));
-uint8_t opRegionMajor __attribute__((section(".itcm.rw")));
 uint8_t calRegionMinor __attribute__((section(".dtcm.rw")));
 uint8_t calRegionMajor __attribute__((section(".dtcm.rw")));
 
@@ -24,39 +21,15 @@ static char driverVersion[8] __attribute__((section(".itcm.rw"))) = "2.3.1.0";
 /* Part of the firmware identification; the exact release text. */
 static const char firmwareId[] = "w8787-Ax, RF878X, FP65, 14.65.9.p223, BT_SDIO $";
 static const char firmwareBuild[] = "RC: , yhou, 2014/07/09, 12:09:01";
+/* The control words of the first five radio bus modes, for rfBusLock() (sys/rfbus.c). */
+const uint16_t rfBusControlDefaults[5] = { 0x000f, 0x007f, 0x0001, 0x0000, 0x0000 };
 
-uint32_t socGetChipRevision(void)
-{
-	return (uint8_t)SOC_CHIP_REVISION;
-}
-
-uint32_t bbpReadVersionRegister(uint32_t index)
-{
-	return (uint8_t)BBP_VERSION_REGISTERS[index];
-}
-
-uint32_t bbpGetVersionMajor(void)
-{
-	bbpVersionMajorCache = bbpReadVersionRegister(0);
-	return bbpVersionMajorCache;
-}
-
-uint32_t bbpGetVersionMinor(void)
-{
-	bbpVersionMinorCache = bbpReadVersionRegister(1);
-	return bbpVersionMinorCache;
-}
-
-uint32_t bbpGetVersionPatch(void)
-{
-	return 0;
-}
-
-
-static inline void versionAppendByte(char *buffer, uint32_t value)
-{
-	osaFormatHexByte(value, buffer + strlen(buffer));
-}
+/* The end of the text is found before the value is read. */
+#define versionAppendByte(buffer, value) do {			\
+	char *end_ = (buffer) + strlen(buffer);			\
+								\
+	osaFormatHexByte((value), end_);			\
+} while (0)
 
 static inline void versionAppendChar(char *buffer, char c)
 {
@@ -66,7 +39,7 @@ static inline void versionAppendChar(char *buffer, char c)
 	end[1] = '\0';
 }
 
-static void versionAppend(char *buffer, const char *text)
+static inline void versionAppend(char *buffer, const char *text)
 {
 	strcpy(buffer + strlen(buffer), text);
 }
@@ -86,7 +59,7 @@ char *osaFormatVersionBanner(int selector, char *buffer)
 		break;
 	case 1:
 		versionAppend(buffer, "ChipRev:");
-		versionAppendByte(buffer, socGetChipRevision());
+		versionAppendByte(buffer, (uint8_t)socGetChipRevision());
 		versionAppend(buffer, ", ");
 		versionAppend(buffer, "BB:");
 		versionAppendByte(buffer, bbpGetVersionMajor());

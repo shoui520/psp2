@@ -21,8 +21,6 @@
 #include "robin/wlan.h"
 #include "robin/wlanrx.h"
 
-#define SOC_EVENT_CONTROL_CRYPTO_MASK	0x04004300u
-
 uint32_t wlanCryptoTxActive __attribute__((section(".dtcm.rw")));		/* 0x04000f30 */
 uint32_t wlanCryptoRxActive __attribute__((section(".dtcm.rw")));		/* 0x04000f34 */
 uint8_t *wlanCryptoTxHeader __attribute__((section(".dtcm.rw")));		/* 0x04000f38 */
@@ -41,20 +39,6 @@ static inline int txNext(int index)
 static inline int rxNext(int index)
 {
 	return index == WLAN_CRYPTO_RX_RING_SIZE - 1 ? 0 : index + 1;
-}
-
-/* Holds the event paths while the engine or a host command works. */
-void socEventsHold(void)
-{
-	SOC_EVENT_CONTROL |= SOC_EVENT_CONTROL_CRYPTO_MASK;
-}
-
-unsigned int socEventsRelease(void)
-{
-	unsigned int control = SOC_EVENT_CONTROL & ~SOC_EVENT_CONTROL_CRYPTO_MASK;
-
-	SOC_EVENT_CONTROL = control;
-	return control;
 }
 
 unsigned int wlanCryptoCount(unsigned int index)

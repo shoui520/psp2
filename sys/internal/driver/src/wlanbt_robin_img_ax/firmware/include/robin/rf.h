@@ -40,8 +40,8 @@ void rfSleepHook(void);
 void rfBusWriteIndexed(int index, uint8_t value);
 int rfWaitLock(void);
 void rfLoadBandRegisters(int band, int mode);
-void rfChannelHookBefore(void);
-void rfChannelHookAfter(void);
+void rfChannelHookBefore(int band, int pathEnabled);	/* empty */
+void rfChannelHookAfter(int band, int center);	/* empty */
 void rfCalibrateChannel(int unused, unsigned int channel);
 int rfSynthesizerSet(uint32_t frequency, uint32_t reference, int doubled);	/* 0x28496 */
 int rfBusEnable(void);

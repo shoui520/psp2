@@ -17,8 +17,14 @@
 /* Non-zero once the bus has been brought up; the accessors do nothing before. */
 uint32_t rfBusEnabled __attribute__((section(".itcm.bss")));
 static uint8_t rfBusLockState __attribute__((section(".itcm.rw"))) = RFBUS_LOCK_FREE;
-static uint32_t rfBusOwnerPosture __attribute__((section(".itcm.bss")));
-static uint32_t rfBusLockDepth __attribute__((section(".itcm.bss")));
+static uint32_t rfBusOwnerPosture __attribute__((section(".itcm.rw"))) = 0;
+static uint32_t rfBusLockDepth __attribute__((section(".itcm.rw"))) = 0;
+/*
+ * The control words of the first five bus modes (rfBusControlModes in SQRAM has
+ * them all). Sony's rfBusLock() reads it from memory: it is defined in another
+ * object (sys/version.c, after whose strings it sits at 0x53f76).
+ */
+extern const uint16_t rfBusControlDefaults[5];
 
 
 void rfBusWaitIdle(void)
@@ -52,7 +58,7 @@ void rfBusLock(void)
 	rfBusLockDepth = 1;
 	kept = RFBUS_CONFIGURATION & RFBUS_CONFIGURATION_KEEP;
 	if ((RFBUS_CONFIGURATION & ~kept) != RFBUS_CONFIGURATION_MODE) {
-		RFBUS_CONTROL = rfBusControlModes[2];
+		RFBUS_CONTROL = rfBusControlDefaults[2];
 		RFBUS_CONFIGURATION = kept | RFBUS_CONFIGURATION_MODE;
 	}
 }
@@ -123,4 +129,3 @@ void rfBusClearBits(uint16_t reg, uint8_t mask)
 {
 	rfBusWrite(reg, rfBusRead(reg) & ~mask);
 }
-

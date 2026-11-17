@@ -20,6 +20,9 @@ struct WlanSignalCalibration {
 #define WLAN_RATE_INDEX_INVALID	0xff
 
 uint32_t bbpReadVersionRegister(uint32_t index);
+uint32_t bbpGetVersionMajor(void);
+uint32_t bbpGetVersionMinor(void);
+uint32_t bbpGetVersionPatch(void);
 extern uint8_t opRegionMinor;					/* 0x549e1 */
 extern uint8_t opRegionMajor;					/* 0x549e2 */
 extern struct PhyRegisterEntry bbpInitRegisters[];		/* 0x040002d8 */
@@ -31,7 +34,7 @@ void bbpSetRegisterBits(unsigned int reg, unsigned int mask);
 void bbpClearRegisterBits(unsigned int reg, unsigned int mask);
 
 int wlanDsssRateIndex(int rate);
-int wlanOfdmRateIndex(int code);
+int wlanOfdmRateIndex(uint8_t code);
 int wlanHtRateIndex(int is40MHz, unsigned int mcs);
 int wlanRateCode(int index);
 int wlanHt40CenterChannel(int fiveGHz, int channel, int mode);

@@ -316,11 +316,11 @@ void rfLoadBandRegisters(int band, int mode)
 	}
 }
 
-void rfChannelHookBefore(void)
+void rfChannelHookBefore(int band, int pathEnabled)
 {
 }
 
-void rfChannelHookAfter(void)
+void rfChannelHookAfter(int band, int center)
 {
 }
 
