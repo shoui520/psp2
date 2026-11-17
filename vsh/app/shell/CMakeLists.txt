@@ -19,6 +19,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/paf/src/prx_loader.cpp
 	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 	${PSP2_SRC}/vsh/app/game/game_plugin/game_plugin.cpp
+	savedata_backup.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

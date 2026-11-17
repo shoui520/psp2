@@ -345,6 +345,9 @@ int SceAppMgrForDriver_61B13981(void *offlineId, SceUInt32 *checkWord);	/* vitas
 /* vitasdk: ksceAppMgrLocalBackupVerifyOfflineHeader */
 int SceAppMgrForDriver_62E98C42(const void *header);
 int sceAppMgrSaveDataNotifyBackupFinished(const char *saveDataTitleId);
+/* the user side of SceAppMgrForDriver_2FAA6ABD and _61B13981 (SceVshBridge's stub wrappers) */
+int vshAppMgrCloudDataSetupKey(SceAppMgrCloudDataKey *key);
+int vshAppMgrLocalBackupGetOfflineId(void *offlineId, SceUInt32 *checkWord);
 
 #ifdef __cplusplus
 }
