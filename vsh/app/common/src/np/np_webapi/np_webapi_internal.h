@@ -710,6 +710,8 @@ extern int npWebApiRequestSetMultipartContentType(NpWebApiRequest *request, cons
 	const char *boundary) __attribute__((noinline));
 extern int npWebApiRequestAddHttpHeader(NpWebApiRequest *request, const char *name, const char *value)
 	__attribute__((noinline));
+extern const char *SceNpCommonPs4_D1AB9B23(int language);
+extern int npWebApiGetLanguageSetting(char *buffer, SceSize size);
 extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
 extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
 extern int SceNpCommonPs4_00F74689(void);
