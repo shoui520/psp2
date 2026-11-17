@@ -11,6 +11,7 @@
 #include <rtc/rtc.h>
 #include <dir/dir.h>
 #include <file/localfile.h>
+#include <vshbridge/vshbridge.h>
 #include <plugin.h>
 #include <common/shared_ptr.h>
 
@@ -41,6 +42,10 @@ enum {
 	APPLAUNCHER_PLUGIN_FUNC_REGISTER	= 0,
 	APPLAUNCHER_PLUGIN_FUNC_UNREGISTER	= 1,	/* PLACEHOLDER: meaning not read yet */
 };
+
+/* the mount IDs of gro0: and grw0: (values only) */
+#define GAME_MOUNT_ID_GRO0	0x900
+#define GAME_MOUNT_ID_GRW0	0xA00
 
 /* where the shell keeps an application's LiveArea copy */
 #define GAME_APPMETA_DIR	"ur0:appmeta/"
@@ -573,6 +578,113 @@ int gameAppEntryFill(GameAppRegistration *app, const string *appDir, const strin
 	it = app->info->find(LSDB_KEY_PARENTAL_LEVEL);
 	if (it != end)
 		app->entry->parentalLevel = (int)gameLsdbValueInteger(it->second);
+
+	return 0;
+}
+
+/* whether a category is a game's: gd, gp, gdc, gpc or gdb (0x81010294) */
+bool gameCategoryIsGame(const string &category)
+{
+	return category == "gd" || category == "gp" || category == "gdc" || category == "gpc" ||
+	       category == "gdb";
+}
+
+/* the categories of a game patch */
+static const char *s_patchCategories[] = { "gp", "gpc", "gpd" };
+
+/* whether a category is a game patch's, by its first four bytes (0x81010338) */
+bool gameCategoryIsPatch(const string &category)
+{
+	unsigned int i;
+
+	for (i = 0; i < sizeof(s_patchCategories) / sizeof(s_patchCategories[0]); i++) {
+		if (sce_paf_strncmp(category.c_str(), s_patchCategories[i], 4) == 0)
+			return true;
+	}
+
+	return false;
+}
+
+/* PLACEHOLDER: whether type is one of 6, 7, 14, 15 and 16; what the values are is not read
+   yet (0x8101036A) */
+bool gameTypeIsSpecial(int type)
+{
+	return type == 6 || type == 7 || type == 14 || type == 15 || type == 16;
+}
+
+/* whether a category is ME or EG (0x81010386) */
+bool gameCategoryIsEgMe(const string &category)
+{
+	return category == "ME" || category == "EG";
+}
+
+/* grw0: and gro0: unmounted (0x810103C6) */
+void gameUnmountGameDrives(void)
+{
+	vshIoUmount(GAME_MOUNT_ID_GRW0, 0, 0, 0);
+	vshIoUmount(GAME_MOUNT_ID_GRO0, 0, 0, 0);
+}
+
+/* the sum of values[0..last], as a percentage (0x810103E6) */
+float gameSumPercent(int last, const float *values)
+{
+	float sum = 0.0f;
+	int i;
+
+	for (i = last + 1; i != 0; i--)
+		sum += *values++;
+
+	return sum * 100.0f;
+}
+
+/* the keys of the localized short titles and titles, STITLE_00..19 and TITLE_00..19 */
+static unsigned int s_stitleKeys[] = {
+	LsdbKeyHash("STITLE_00"), LsdbKeyHash("STITLE_01"), LsdbKeyHash("STITLE_02"),
+	LsdbKeyHash("STITLE_03"), LsdbKeyHash("STITLE_04"), LsdbKeyHash("STITLE_05"),
+	LsdbKeyHash("STITLE_06"), LsdbKeyHash("STITLE_07"), LsdbKeyHash("STITLE_08"),
+	LsdbKeyHash("STITLE_09"), LsdbKeyHash("STITLE_10"), LsdbKeyHash("STITLE_11"),
+	LsdbKeyHash("STITLE_12"), LsdbKeyHash("STITLE_13"), LsdbKeyHash("STITLE_14"),
+	LsdbKeyHash("STITLE_15"), LsdbKeyHash("STITLE_16"), LsdbKeyHash("STITLE_17"),
+	LsdbKeyHash("STITLE_18"), LsdbKeyHash("STITLE_19"),
+};
+static unsigned int s_titleKeys[] = {
+	LsdbKeyHash("TITLE_00"), LsdbKeyHash("TITLE_01"), LsdbKeyHash("TITLE_02"),
+	LsdbKeyHash("TITLE_03"), LsdbKeyHash("TITLE_04"), LsdbKeyHash("TITLE_05"),
+	LsdbKeyHash("TITLE_06"), LsdbKeyHash("TITLE_07"), LsdbKeyHash("TITLE_08"),
+	LsdbKeyHash("TITLE_09"), LsdbKeyHash("TITLE_10"), LsdbKeyHash("TITLE_11"),
+	LsdbKeyHash("TITLE_12"), LsdbKeyHash("TITLE_13"), LsdbKeyHash("TITLE_14"),
+	LsdbKeyHash("TITLE_15"), LsdbKeyHash("TITLE_16"), LsdbKeyHash("TITLE_17"),
+	LsdbKeyHash("TITLE_18"), LsdbKeyHash("TITLE_19"),
+};
+
+/*
+ * The key of language's short title: STITLE_<language>. Sony's code returns the plain key (STITLE) for
+ * language -1 without storing it, which its unsigned range check never lets through (0x81010412).
+ */
+int gameStitleKey(unsigned int language, unsigned int *key)
+{
+	if (language >= 20)
+		return GAME_ERROR_INVALID_ARGUMENT;
+	if (language == (unsigned int)-1)
+		return (int)LSDB_KEY_STITLE;
+
+	*key = s_stitleKeys[language];
+
+	return 0;
+}
+
+/*
+ * The key of language's title: TITLE_<language>. Sony's code returns the plain key (TITLE) for
+ * language -1 without storing it, which its unsigned range check never lets through (0x81010442).
+ */
+int gameTitleKey(unsigned int language, unsigned int *key)
+{
+	if (language >= 20)
+		return GAME_ERROR_INVALID_ARGUMENT;
+	if (language == (unsigned int)-1)
+		return (int)LSDB_KEY_TITLE;
+
+	*key = s_titleKeys[language];
 
 	return 0;
 }

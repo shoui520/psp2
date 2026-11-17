@@ -24,6 +24,7 @@ SceUInt32 vshSblSsIsDevelopmentMode(void);
 SceUInt32 vshSblAimgrGetPscode(void *code);
 SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 		     SceUInt32 reservedLow, SceUInt32 reservedHigh);
+SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh);
 SceUInt32 vshKernelSendSysEvent(int event);
 SceUInt32 vshSblQafMgrIsAllowKeepCoreFile(void);
 SceUInt32 vshSblUtMgrHasComTestFlag(void);

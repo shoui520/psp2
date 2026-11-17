@@ -142,6 +142,14 @@ int gameAppInfoGetAttributeKind(const LsdbAppInfoPtr *info);
 int gameAppInfoGetCategoryKind(const LsdbAppInfoPtr *info, int *kind);
 int gameAppEntryFill(GameAppRegistration *app, const paf::string *appDir,
 		     const paf::string *dir);
+bool gameCategoryIsGame(const paf::string &category);
+bool gameCategoryIsPatch(const paf::string &category);
+bool gameTypeIsSpecial(int type);
+bool gameCategoryIsEgMe(const paf::string &category);
+void gameUnmountGameDrives(void);
+float gameSumPercent(int last, const float *values);
+int gameStitleKey(unsigned int language, unsigned int *key);
+int gameTitleKey(unsigned int language, unsigned int *key);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 

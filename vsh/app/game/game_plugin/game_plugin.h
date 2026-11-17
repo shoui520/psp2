@@ -47,6 +47,9 @@ int gamePfsUnmount(paf::string *mountPoint);
 /* a package's content type: additional content */
 #define GAME_CONTENT_TYPE_ADDCONT	22
 
+/* the plugin's error for an argument out of range (value only) */
+#define GAME_ERROR_INVALID_ARGUMENT	-2146430720	/* 0x80101100 */
+
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
 
