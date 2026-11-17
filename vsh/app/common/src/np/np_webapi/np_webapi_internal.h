@@ -219,7 +219,13 @@ extern int SceNpCommonPs4_8AA7E995(void *mutex, const char *name, int recursive)
 extern int SceNpCommonPs4_C78F5DF5(void *mutex);				/* whether it is created */
 extern int SceNpCommonPs4_63EED478(void *mutex);				/* its deletion */
 extern void SceNpCommonPs4_294F0B1A(void *mutex);				/* its destructor */
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_1096EAD4(int arg);
+#ifdef __cplusplus
+}
+#endif
 
 #ifdef __cplusplus
 }
@@ -738,9 +744,18 @@ extern int npWebApiGetLanguageSetting(char *buffer, SceSize size);
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommon_BBC13621(void);
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -756,12 +771,21 @@ extern int SceNpCommonPs4_FA1249E8(int ctx);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpCommonPs4_9CAF0FE7(char *dst, int size, int value, int base, int a5, int a6);
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -802,9 +826,18 @@ typedef struct NpWebApiAuthObject {
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpManager_4110B787(int *pToken);
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -814,11 +847,23 @@ extern int SceNpManager_FDE78C74(int token, void *accessToken);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpManager_3907F96A(int token);
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -834,12 +879,21 @@ extern int SceNpCommonPs4_25D1C02B(int handle, int a2, void *token, int a4);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpCommonPs4_13798894(int handle, int a2, void *token, int a4);
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -854,7 +908,7 @@ typedef struct NpWebApiBodyHash {
 } NpWebApiBodyHash;
 
 typedef struct NpWebApiResponseBuffer {
-	unsigned char reserved0[4];
+	int statusCode;
 	void *data;
 	SceSize size;
 	SceSize length;
@@ -866,12 +920,42 @@ extern "C" {
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpCommonPs4_EF0A4C60(int httpId, const char *name);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern int SceNpManager_72936716(const char *text, int a2);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+extern void SceNpManager_F66A7AAE(void);
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_19B2A80D(int a1, char *a2, void *token);
 #ifdef __cplusplus
 }
 #endif
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -887,11 +971,23 @@ extern int SceNpCommonPs4_1BF9EFFF(int a1, char *a2, void *token);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpManager_1F0C6314(void *accessToken, char *a2);
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -901,9 +997,18 @@ extern void SceNpCommonPs4_358A8F68(void *context, NpWebApiBodyHash *hash);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 extern void SceNpCommonPs4_AD229434(void *context, const void *data, SceSize size);
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -914,9 +1019,18 @@ extern int npWebApiRequestReadResponse(NpWebApiRequest *request, NpWebApiRespons
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_2A1D2A4B(const char *service, char *pFlag, char *url, int size);
 #ifdef __cplusplus
 }
+#endif
+#ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
@@ -926,6 +1040,12 @@ extern int SceNpCommonPs4_28372F53(const char *service, char *pFlag, char *url, 
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpCommonPs4_C3B57417(int handle, int a2, const char *service, char *url, int size);
@@ -933,9 +1053,18 @@ extern int SceNpCommonPs4_C3B57417(int handle, int a2, const char *service, char
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpCommonPs4_DA99BBD7(int handle, int a2, const char *service, char *url, int size);
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -945,7 +1074,12 @@ extern int npWebApiPushObjectRequestServiceUrl(NpWebApiPushObject *object, const
 	NpWebApiRequest *request);
 extern int npWebApiConnectionPoolGetConnection(NpWebApiConnectionPool *pool, const char *name, const char *url,
 	int *pConnId);
+extern int npWebApiRequestSend(SceInt64 requestId, int partId, const void *data, SceSize size, unsigned char flag,
+	NpWebApiResponseBuffer *response);
 extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
+#ifdef __cplusplus
+extern "C" {
+#endif
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -960,12 +1094,21 @@ extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
 }
 #endif
 #ifdef __cplusplus
+}
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+#ifdef __cplusplus
 extern "C" {
 #endif
 #ifdef __cplusplus
 extern "C" {
 #endif
 extern int SceNpCommonPs4_00F74689(void);
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif
@@ -1266,7 +1409,13 @@ extern "C" {
 #ifdef __cplusplus
 extern "C" {
 #endif
+#ifdef __cplusplus
+extern "C" {
+#endif
 extern int SceNpCommonPs4_741F88FE(volatile int *counter);	/* atomic increment: the old value */
+#ifdef __cplusplus
+}
+#endif
 #ifdef __cplusplus
 }
 #endif

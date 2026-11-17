@@ -39,4 +39,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	push_dispatch.cpp
 	webapi_lang.cpp
 	request_http.cpp
+	request_send.cpp
 )
