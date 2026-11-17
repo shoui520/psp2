@@ -1,0 +1,5 @@
+set(FW_VERSION     0x03570011)
+set(FW_TYPE        SDK)
+set(FW_SDK_VERSION 0x03570011)
+set(FW_DEBUG       0)
+set(FW_IS_400      0)

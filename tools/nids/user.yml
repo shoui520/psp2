@@ -3067,6 +3067,36 @@ modules:
           _sceErrorHistoryPostError: 0x70F9D872
           _sceErrorHistorySetDefaultFormat: 0xB94DAA2F
           _sceErrorHistoryUpdateSequenceInfo: 0x6FBE4BDC
+  SceFace:
+    nid: 0x00000000
+    libraries:
+      SceFace:
+        kernel: false
+        nid: 0xF5683CF7
+        functions:
+          sceFaceAgeGetWorkingMemorySize: 0x73E9791D
+          sceFaceAgeRangeEstimate: 0x17F3DC79
+          sceFaceAgeRangeIntegrate: 0xB794C6CB
+          sceFaceAllParts: 0xE521EB6F
+          sceFaceAllPartsGetWorkingMemorySize: 0xCF07E1C4
+          sceFaceAttribute: 0x67F0585A
+          sceFaceAttributeGetWorkingMemorySize: 0xA905A467
+          sceFaceDetection: 0xF3045394
+          sceFaceDetectionEx: 0xD9603C69
+          sceFaceDetectionGetDefaultParam: 0xE5689BD1
+          sceFaceDetectionGetWorkingMemorySize: 0xF24B851D
+          sceFaceDetectionLocal: 0x7D71725D
+          sceFaceEstimatePoseRegion: 0xF7E4EC1F
+          sceFaceIdentifyGetFeature: 0xF852E35D
+          sceFaceIdentifyGetWorkingMemorySize: 0x4468B054
+          sceFaceIdentifySimilarity: 0x8F8E9FB1
+          sceFaceParts: 0x87550392
+          sceFacePartsEx: 0x70C9CF95
+          sceFacePartsGetWorkingMemorySize: 0x707B9A1D
+          sceFacePartsResultCheck: 0xCC98B939
+          sceFaceShapeFit: 0x64F45021
+          sceFaceShapeGetWorkingMemorySize: 0xC0812127
+          sceFaceShapeTrack: 0x37704DE9
   SceFiber:
     nid: 0x00000000
     libraries:
@@ -19796,6 +19826,57 @@ modules:
         nid: 0x877181ED
         functions:
           sceShutterSoundPlay: 0x7FFB6D79
+  SceSmart:
+    nid: 0x00000000
+    libraries:
+      SceSmart:
+        kernel: false
+        nid: 0xC2D4E61A
+        functions:
+          sceSmartCreateInstantImageTarget: 0x57C17649
+          sceSmartCreateLearnedImageTarget: 0x5A31446E
+          sceSmartDestroyTarget: 0x0C6A1DA8
+          sceSmartGetTargetInfo: 0x23EDFA9A
+          sceSmartInit: 0x58979C84
+          sceSmartRelease: 0x43DF6D9C
+          sceSmartSceneMappingDispatchAndQuery: 0xF10FDDD1
+          sceSmartSceneMappingDispatchAndQueryWithMask: 0x4D9EA817
+          sceSmartSceneMappingEnableMask: 0x7C4731E2
+          sceSmartSceneMappingFixMap: 0xA96B997B
+          sceSmartSceneMappingForceLocalize: 0x6D4081D3
+          sceSmartSceneMappingGetInitializationPointInfo: 0x9A578A29
+          sceSmartSceneMappingGetLandmarkInfo: 0xB17057EA
+          sceSmartSceneMappingGetNodePointInfo: 0x607AACB5
+          sceSmartSceneMappingGetNumInitializationPoints: 0xDF900B29
+          sceSmartSceneMappingGetNumLandmarks: 0x2260E8BB
+          sceSmartSceneMappingGetNumNodePoints: 0x3159D38C
+          sceSmartSceneMappingLoadMap: 0x961367D3
+          sceSmartSceneMappingPropagateResult: 0x5A9EC64D
+          sceSmartSceneMappingRegisterTarget: 0x55C37F31
+          sceSmartSceneMappingRemoveLandmark: 0x9F30C12A
+          sceSmartSceneMappingReset: 0xC1AD43BC
+          sceSmartSceneMappingRun: 0xC7EBD753
+          sceSmartSceneMappingRunCore: 0xCB30BD4D
+          sceSmartSceneMappingSaveMap: 0x4907021F
+          sceSmartSceneMappingSetCustomListener: 0x4A4F20EF
+          sceSmartSceneMappingSetDenseMapMode: 0xE7867558
+          sceSmartSceneMappingSetDispatchMode: 0xA4EC7755
+          sceSmartSceneMappingStart: 0xA3A82B99
+          sceSmartSceneMappingStop: 0x52EB57E4
+          sceSmartSceneMappingUnregisterTarget: 0x6807CA97
+          sceSmartTargetTrackingDispatchAndQuery: 0x7FE71305
+          sceSmartTargetTrackingGetResults: 0x648C7E15
+          sceSmartTargetTrackingQuery: 0x2808C8CB
+          sceSmartTargetTrackingQuery2: 0xD17EF0B2
+          sceSmartTargetTrackingRegisterTarget: 0x8ACADD54
+          sceSmartTargetTrackingReset: 0xA4A155B5
+          sceSmartTargetTrackingRun: 0xBFD87F61
+          sceSmartTargetTrackingRun2: 0x245EC28A
+          sceSmartTargetTrackingRunWorker: 0x8AE7354A
+          sceSmartTargetTrackingSetSearchPolicy: 0x35344A8E
+          sceSmartTargetTrackingStart: 0x5A121F6C
+          sceSmartTargetTrackingStop: 0xC4C607C0
+          sceSmartTargetTrackingUnregisterTarget: 0x6EE07829
   SceSqlite:
     nid: 0x00000000
     libraries:

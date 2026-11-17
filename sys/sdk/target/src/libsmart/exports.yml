@@ -1,0 +1,59 @@
+SceSmart:
+  attributes: 0
+  version:
+    major: 1
+    minor: 1
+  main:
+    stop: module_stop
+    exit: module_exit
+    start: module_start
+  libraries:
+    SceSmart:
+      syscall: false
+      version: 1
+      nid: 0xC2D4E61A
+      functions:
+        - sceSmartDestroyTarget: 0x0C6A1DA8
+        - sceSmartSceneMappingGetNumLandmarks: 0x2260E8BB
+        - sceSmartGetTargetInfo: 0x23EDFA9A
+        - sceSmartTargetTrackingRun2: 0x245EC28A
+        - sceSmartTargetTrackingQuery: 0x2808C8CB
+        - sceSmartSceneMappingGetNumNodePoints: 0x3159D38C
+        - sceSmartTargetTrackingSetSearchPolicy: 0x35344A8E
+        - sceSmartRelease: 0x43DF6D9C
+        - sceSmartSceneMappingSaveMap: 0x4907021F
+        - sceSmartSceneMappingSetCustomListener: 0x4A4F20EF
+        - sceSmartSceneMappingDispatchAndQueryWithMask: 0x4D9EA817
+        - sceSmartSceneMappingStop: 0x52EB57E4
+        - sceSmartSceneMappingRegisterTarget: 0x55C37F31
+        - sceSmartCreateInstantImageTarget: 0x57C17649
+        - sceSmartInit: 0x58979C84
+        - sceSmartTargetTrackingStart: 0x5A121F6C
+        - sceSmartCreateLearnedImageTarget: 0x5A31446E
+        - sceSmartSceneMappingPropagateResult: 0x5A9EC64D
+        - sceSmartSceneMappingGetNodePointInfo: 0x607AACB5
+        - sceSmartTargetTrackingGetResults: 0x648C7E15
+        - sceSmartSceneMappingUnregisterTarget: 0x6807CA97
+        - sceSmartSceneMappingForceLocalize: 0x6D4081D3
+        - sceSmartTargetTrackingUnregisterTarget: 0x6EE07829
+        - sceSmartSceneMappingEnableMask: 0x7C4731E2
+        - sceSmartTargetTrackingDispatchAndQuery: 0x7FE71305
+        - sceSmartTargetTrackingRegisterTarget: 0x8ACADD54
+        - sceSmartTargetTrackingRunWorker: 0x8AE7354A
+        - sceSmartSceneMappingLoadMap: 0x961367D3
+        - sceSmartSceneMappingGetInitializationPointInfo: 0x9A578A29
+        - sceSmartSceneMappingRemoveLandmark: 0x9F30C12A
+        - sceSmartSceneMappingStart: 0xA3A82B99
+        - sceSmartTargetTrackingReset: 0xA4A155B5
+        - sceSmartSceneMappingSetDispatchMode: 0xA4EC7755
+        - sceSmartSceneMappingFixMap: 0xA96B997B
+        - sceSmartSceneMappingGetLandmarkInfo: 0xB17057EA
+        - sceSmartTargetTrackingRun: 0xBFD87F61
+        - sceSmartSceneMappingReset: 0xC1AD43BC
+        - sceSmartTargetTrackingStop: 0xC4C607C0
+        - sceSmartSceneMappingRun: 0xC7EBD753
+        - sceSmartSceneMappingRunCore: 0xCB30BD4D
+        - sceSmartTargetTrackingQuery2: 0xD17EF0B2
+        - sceSmartSceneMappingGetNumInitializationPoints: 0xDF900B29
+        - sceSmartSceneMappingSetDenseMapMode: 0xE7867558
+        - sceSmartSceneMappingDispatchAndQuery: 0xF10FDDD1
