@@ -232,6 +232,13 @@ public:
 		return ptr[pos];
 	}
 
+	const _Ty &at(size_type pos) const
+	{
+		if (pos >= count)
+			ScePafStdc_D608246A();
+		return ptr[pos];
+	}
+
 	iterator begin()
 	{
 		return iterator(ptr);

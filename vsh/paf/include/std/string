@@ -176,6 +176,9 @@ public:
 
 	_Myt &insert(size_type pos, const _Elem *src, size_type len);
 
+	/* len copies of ch inserted at pos; a pos past the end is reported */
+	__attribute__((noinline)) _Myt &insert(size_type pos, size_type len, _Elem ch);
+
 	/* len elements from src written over the string from pos, which grows where they reach past
 	   its end; a pos past the end is reported (name ours: no source names it) */
 	_Myt &replace(size_type pos, const _Elem *src, size_type len);
@@ -297,6 +300,15 @@ public:
 			}
 		}
 		return npos;
+	}
+
+	/* the last element at or before pos that is one of the len elements of set */
+	__attribute__((noinline)) size_type find_last_of(const _Elem *set, size_type pos,
+		size_type len) const;
+
+	size_type find_last_of(const _Elem *set, size_type pos = npos) const
+	{
+		return find_last_of(set, pos, _Traits::length(set));
 	}
 
 	size_type find_first_of(const _Elem *set, size_type pos = 0) const
@@ -585,6 +597,61 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_
 		ScePafStdc_D608246A();
 	}
 	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+basic_string<_Elem, _Traits, _Ax> &
+basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, size_type len, _Elem ch)
+{
+	if (pos > count)
+		ScePafStdc_D608246A();
+
+	_Elem *dst = alloc.allocate(count + len + 1);
+
+	if (dst != NULL) {
+		size_type size = count + len;
+
+		_Traits::copy(dst, ptr, pos);
+		if (len != 0) {
+			_Elem *fill = dst + pos;
+
+			for (size_type n = len; n != 0; --n)
+				*fill++ = ch;
+		}
+		_Traits::copy(dst + (pos + len), ptr + pos, count - pos);
+		dst[count + len] = 0;
+		if (ptr != &empty_string)
+			alloc.deallocate(ptr, count + 1);
+		ptr = dst;
+		count = size;
+	} else {
+		ScePafStdc_D608246A();
+	}
+	return *this;
+}
+
+template<class _Elem, class _Traits, class _Ax>
+typename basic_string<_Elem, _Traits, _Ax>::size_type
+basic_string<_Elem, _Traits, _Ax>::find_last_of(const _Elem *set, size_type pos,
+	size_type len) const
+{
+	if (count != 0) {
+		const _Elem *end = set + len;
+		const _Elem *at = ptr + (pos < count - 1 ? pos : count - 1);
+
+		for (;; --at) {
+			const _Elem *member;
+
+			for (member = set; member != end; ++member)
+				if (*member == *at)
+					break;
+			if (member != end)
+				return at - ptr;
+			if (at == ptr)
+				break;
+		}
+	}
+	return npos;
 }
 
 template<class _Elem, class _Traits, class _Ax>
