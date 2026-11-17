@@ -7,9 +7,6 @@
 
 extern "C" {
 
-#define CTYPE_SPACE	8
-#define CTYPE_DIGIT	4
-#define CTYPE_ALPHA	3
 
 int SceNpCommonPs4_32155BF8(const char *str, const char **pEnd, int base)
 {

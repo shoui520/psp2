@@ -14,6 +14,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/json/json_doc.cpp
 	npext/json/json_parser.cpp
 	npext/json/json_value.cpp
+	npext/memory/memory.cpp
+	npext/memory/ring_buf.cpp
+	npext/np/communication_id.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
 	npext/thread/mutex.cpp

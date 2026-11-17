@@ -49,6 +49,44 @@ struct NpCommonPs4Allocator {
 	void *context;
 };
 
+/* the character classes of sceClibLookCtypeTable */
+#define CTYPE_ALPHA	3
+#define CTYPE_DIGIT	4
+#define CTYPE_SPACE	8
+
+/* npext/memory/memory.cpp: an object that counts its references */
+struct NpCommonPs4RefCounted {
+	const void *const *vtable;
+	volatile SceUInt32 refCount;
+};
+
+/* npext/memory/ring_buf.cpp: a ring buffer over a block of memory, and the one that owns its block */
+struct NpCommonPs4RingBuf {
+	const void *const *vtable;
+	SceUInt8 *buf;
+	SceUInt8 *rp;
+	SceUInt8 *wp;
+	SceSize size;
+	SceSize bufSize;
+};
+
+struct NpCommonPs4RingBufAlloc {
+	struct NpCommonPs4RingBuf ringBuf;
+	struct NpCommonPs4Allocator *pool;
+};
+
+/* npext/np/communication_id.cpp: a SceNpCommunicationId (NPWR12345_00) behind a vtable */
+struct NpCommonPs4CommunicationId {
+	const void *const *vtable;
+	char data[9];
+	char term;
+	SceUInt8 num;
+	char dummy[1];
+};
+
+int SceNpCommon_5BC54899(void *communicationId, const char *string);
+int SceNpCommon_E426FEE8(void *communicationId, char *buffer, SceSize size);
+
 /* the build Sony's assert paths name: one per firmware */
 #if defined(FW_TYPE_CEX)
 #define NP_COMMON_PS4_BUILD "J01509657"
@@ -360,6 +398,7 @@ void SceNpCommonPs4_0A7044DA(const unsigned char *data, SceSize size);
 int SceNpCommonPs4_F50BD96A(int printed);
 int SceNpCommonPs4_BB5282C8(void *object);
 struct NpCommonPs4Allocator *SceNpCommonPs4_31DB2D97(struct NpCommonPs4Allocator *pool);
+void *NpCommonPs4AllocatorReallocate(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);
 int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer);
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);
 int SceNpCommonPs4_6B428829(struct NpCommonPs4Allocator *allocator, void *pointer);
@@ -393,6 +432,11 @@ int SceNpCommonPs4_39208D69(struct NpCommonPs4MemBlock *block);
 int SceNpCommonPs4_39CF37A2(struct NpCommonPs4Heap *heap, SceSize size, const char *name);
 int SceNpCommonPs4_87E42067(struct NpCommonPs4Heap *heap, void *mspace);
 void *SceNpCommonPs4_C52C787A(struct NpCommonPs4Heap *heap);
+SceUInt32 SceNpCommonPs4_741F88FE(volatile SceUInt32 *counter);
+SceUInt32 SceNpCommonPs4_7B512A98(volatile SceUInt32 *counter);
+int SceNpCommonPs4_221CC7EE(struct NpCommonPs4RingBuf *ringBuf, void *buf, SceSize bufSize);
+void *SceNpCommonPs4_D7E49888(struct NpCommonPs4RingBuf *ringBuf, SceSize *pBlockSize);
+SceUInt32 SceNpCommonPs4_7AF729FD(struct NpCommonPs4RingBuf *ringBuf, SceSize size);
 
 #ifdef __cplusplus
 }

@@ -185,9 +185,9 @@ extern "C" char *npCommonPs4AllocatorDuplicateString(struct NpCommonPs4Allocator
 	return copy;
 }
 
-int NpCommonPs4AllocatorReallocate(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size)
+void *NpCommonPs4AllocatorReallocate(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size)
 {
-	return ((int (*)(void *, SceSize, void *))allocator->reallocate)(pointer, size, allocator->context);
+	return allocator->reallocate(pointer, size, allocator->context);
 }
 
 __attribute__((noinline)) int SceNpCommonPs4_5BF297C0(void **pMspace, void *memory, SceSize size)
