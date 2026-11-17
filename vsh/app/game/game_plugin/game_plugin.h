@@ -47,6 +47,9 @@ int gamePfsUnmount(paf::string *mountPoint);
 /* a package's content type: additional content */
 #define GAME_CONTENT_TYPE_ADDCONT	22
 
+/* paf's error for a file that does not exist (value only) */
+#define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
+
 /*
  * PLACEHOLDER: what 0x8136D9D4 reads from a split package's head.bin, 0x78 bytes; only the
  * content type and the body's size, in 32-byte blocks, are known.

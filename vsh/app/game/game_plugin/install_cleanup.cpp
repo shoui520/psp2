@@ -29,9 +29,6 @@ using namespace paf;
 #define GAME_ERROR_INVALID_PACKAGE	-2146430693	/* 0x8010111B */
 #define GAME_ERROR_PACKAGE_TOO_LARGE	-2146430658	/* 0x8010113E */
 
-/* paf's error for a file that does not exist (value only) */
-#define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
-
 /* the PFS devctl that lists the NIDs of the files a PFS image holds (value only) */
 #define GAME_PFS_DEVCTL_GET_NIDS	0x4812
 

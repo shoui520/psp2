@@ -40,6 +40,16 @@ inline void gameLsdbValueSetText(LsdbValue &value, const char *text)
 	value.type = LSDB_VALUE_TEXT;
 }
 
+/* a value set to a copy of text */
+inline void gameLsdbValueSetText(LsdbValue &value, const paf::string &text)
+{
+	if (value.type == LSDB_VALUE_TEXT && value.text != NULL)
+		*value.text = text;
+	else
+		value.text = new paf::string(text);
+	value.type = LSDB_VALUE_TEXT;
+}
+
 /* a value set to an integer */
 inline void gameLsdbValueSetInteger(LsdbValue &value, SceInt64 integer)
 {
@@ -78,16 +88,39 @@ inline void gameLsdbValueAssign(LsdbValue &value, const LsdbValue &other)
  * (built on the stack by 0x810161EA). Only the fields this file's functions use are written
  * out; the rest is laid out from the caller's frame.
  */
-struct GameAppPaths;			/* PLACEHOLDER: an 88-byte object, not read yet */
+/*
+ * What applauncher_plugin shows of an application (0x58 bytes, built by 0x810161EA).
+ * PLACEHOLDER: the fields this file does not set are not read yet.
+ */
+struct GameAppEntry {
+	int otherHeader[3];
+	paf::string otherText;
+	paf::string iconPath;			/* icon0.png, or icon0.dds for EG and ME */
+	int storage;				/* 2 for wda, 0 otherwise */
+	paf::string titleId;
+	int kind;				/* 2-5 from the attribute or the path, 1 for ME */
+	paf::string contentLocation;		/* wda's CONTENT_LOCATION */
+	int parentalLevel;
+	int otherTail[4];
+};
 
 struct GameAppRegistration {
-	paf::common::SharedPtr<GameAppPaths> paths;
+	paf::common::SharedPtr<GameAppEntry> entry;
 	LsdbAppInfoPtr info;
 	SceUInt8 otherFields[0x10];
 	int liveAreaState;			/* 0xFFFFFF when built; 0 when it has none */
 	bool otherFlag;
 	int mode;				/* what the registration is for (1: an install) */
 };
+
+/*
+ * SceLsdb's exports this plugin calls (livespace_db's appinfo_accessor.cpp; declared here until
+ * livespace_db_internal.h declares them)
+ */
+extern "C" {
+const char *sceLsdbGetStitle(const LsdbAppInfoPtr *app);
+const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
+}
 
 /* a title ID: nine upper-case letters and digits (0x8101D662) */
 int gameCheckTitleId(const char *titleId);
@@ -98,6 +131,17 @@ int gameAppInfoCopyTime(unsigned int key, const LsdbAppInfoPtr *src, LsdbAppInfo
 int gameAppInfoCopyShellKeys(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
 int gameAppInfoCopyKept(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
 int gameAppInfoSetPromoteAttr(SceUInt32 attr, LsdbAppInfoPtr *info);
+int gameAppUnregister(const char *const *titleId);
+void gameAppInfoGetStitle(const LsdbAppInfoPtr *info, paf::string *stitle);
+void gameAppInfoGetTitle(const LsdbAppInfoPtr *info, paf::string *title);
+int gamePathGetDrive(const paf::string &path, paf::string *drive);
+bool gameDriveIsNotData(const paf::string &drive);
+int gameAppInfoSetLiveAreaPath(LsdbAppInfoPtr *info, const paf::string *appDir,
+			       const paf::string *dir);
+int gameAppInfoGetAttributeKind(const LsdbAppInfoPtr *info);
+int gameAppInfoGetCategoryKind(const LsdbAppInfoPtr *info, int *kind);
+int gameAppEntryFill(GameAppRegistration *app, const paf::string *appDir,
+		     const paf::string *dir);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 
