@@ -480,7 +480,10 @@ int wlanWmmQueueConfig(uint8_t *body, uint16_t *table, uint32_t *length)
 		unsigned int action = body[0];
 
 		if (action == 0) {
-			*(uint16_t *)(body + 2) = table[queue];
+			unsigned int time = table[queue];
+
+			body[2] = time;
+			body[3] = time >> 8;
 		} else if (action == 1) {
 			unsigned int time = (body[3] << 8) | body[2];
 
@@ -516,7 +519,7 @@ int wlanWmmAppendIe(uint8_t *body, const uint8_t *element)
 /* Each queue's frames in flight and what they cost. */
 struct WlanWmmTiming wlanWmmTiming[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009018 */
 struct WlanWmmStats wlanWmmStats[WLAN_WMM_QUEUES] __attribute__((section(".dtcm.bss")));	/* 0x04009038 */
-uint32_t wlanQosNullSequence __attribute__((section(".sqram1.bss")));			/* SQRAM 0xc0011b08 */
+uint16_t wlanQosNullSequence __attribute__((section(".sqram1.bss")));			/* SQRAM 0xc0011b08 */
 int (*wlanEdcaApplyHook)(struct WlanConnection *connection) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb4 */
 uint8_t wlanWmmParameterElement[26] __attribute__((section(".sqram1.bss")));		/* SQRAM 0xc0031ee4 */
 
@@ -684,7 +687,8 @@ int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned
 			   connection->localAddress);
 	frame->duration[0] = 2;
 	frame->duration[1] = 1;
-	sequence = (frame->sequenceControl[0] & 0xf) | (uint16_t)(16 * wlanQosNullSequence++);
+	sequence = (((frame->sequenceControl[1] << 8) | frame->sequenceControl[0]) & 0xf) |
+		   (wlanQosNullSequence++ << 4);
 	frame->sequenceControl[0] = (uint8_t)sequence;
 	frame->sequenceControl[1] = (uint8_t)(sequence >> 8);
 	frame->frameControl[1] |= 2;
@@ -773,13 +777,15 @@ int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *poli
 		__aeabi_memclr4(bin, sizeof(*bin));
 		length = 2;
 	} else if (response->action == 2) {
+		unsigned int packets;
 		unsigned int delivered;
 		unsigned int transmitDelay;
 
-		response->packets = bin->packets;
 		response->lost = bin->lost;
-		delivered = (uint16_t)(bin->packets - bin->lost);
-		if (bin->packets == bin->lost) {
+		packets = bin->packets;
+		response->packets = packets;
+		delivered = packets - response->lost;
+		if (delivered == 0) {
 			__aeabi_uwrite4(0, body + 6);
 			transmitDelay = 0;
 		} else {
@@ -1003,10 +1009,11 @@ void wlanWmmFrameDone(uint8_t *data, unsigned int queue, int delivered, unsigned
 	}
 	sysIrqRestore(level);
 	msi_wl_GetMCUCoreTimerTxTSF(&high, &now);
-	last = data[106] != 0 ? queuedAt : timing->lastTime;
+	last = data[106] != 0 ? *(uint32_t *)(data + 100) : timing->lastTime;
 	timing->lastTime = now;
 	if (delivered != 0) {
 		transmitDelay = now >= last ? now - last : 5000;
+		queuedAt = *(uint32_t *)(data + 100);
 		queueDelay = queuedAt <= now ? now - queuedAt : transmitDelay;
 		queueDelay += 1000 * *(uint16_t *)(data + 104);
 		limit = wlanRadioConfig->wmmQueueTime[queue] << 10;
@@ -1037,7 +1044,8 @@ uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *s
 			int time = romLibConfigureState(rate, (uint16_t)*(uint32_t *)(status->data + 8),
 							(frame[1] << 8) | frame[0], wlanWmm.enabled);
 
-			airtime += time + wlanConnectionAckTime(connection, rate, *(uint32_t *)(status->data + 8));
+			airtime += time + wlanConnectionAckTime(connection, rate,
+								 (uint16_t)*(uint32_t *)(status->data + 8));
 			attempts[rate]--;
 		}
 	}
@@ -1064,12 +1072,14 @@ int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned i
 		    unsigned int delay)
 {
 	struct WlanWmmSlot *slot = &wlanWmm.slots[priority];
-	unsigned int queue = slot->ownQueue;
-	unsigned int ring = slot->activeQueue;
+	unsigned int queue;
+	unsigned int ring;
 	int accepted = 1;
 	unsigned int subtype;
 
 	*(uint16_t *)(data + 4) = 0;
+	queue = slot->ownQueue;
+	ring = slot->activeQueue;
 	if (connection->interfaceType == 1) {
 		ring = 0;
 	} else if (wlanWmm.enabled != 0) {
@@ -1084,12 +1094,12 @@ int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned i
 			}
 			*(uint16_t *)(data + 4) = 0;
 		}
-		if (priority == 255)
+		if (!accepted)
 			return accepted;
 	}
 	data[108] = ring;
 	subtype = WMM_TX_FRAME(data)[2] >> 4;
-	if (subtype == 0 || subtype == 8 || subtype == 12) {
+	if ((subtype == 0 || subtype == 8 || subtype == 12) && accepted) {
 		struct WlanWmmTiming *timing = &wlanWmmTiming[queue];
 		unsigned int level;
 
@@ -1111,14 +1121,16 @@ int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned i
 void wlanTxCountDropped(OsaBuffer *buffer)
 {
 	uint8_t *data;
+	unsigned int queue;
 	unsigned int subtype;
 
 	if (((struct WlanConnection *)buffer->context)->mode == 2)
 		return;
 	data = (uint8_t *)buffer + buffer->dataOffset;
+	queue = wlanWmm.slots[data[0] & 7].ownQueue;
 	subtype = WMM_TX_FRAME(data)[2] >> 4;
 	if (subtype == 0 || subtype == 8 || subtype == 12)
-		wlanWmmFrameDone(data, wlanWmm.slots[data[0] & 7].ownQueue, 0, 0, 0);
+		wlanWmmFrameDone(data, queue, 0, 0, 0);
 }
 
 /*
@@ -1132,29 +1144,33 @@ void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *statu
 	unsigned int used = 0;
 	unsigned int policed = 0;
 	int reapply = 0;
-	unsigned int slotIndex = data[0] & 7;
+	unsigned int slotIndex;
 	unsigned int queue;
 	unsigned int subtype;
 
 	romGetTimerTimestamp();
+	slotIndex = status->data[0] & 7;
 	queue = wlanWmm.slots[slotIndex].ownQueue;
 	wlanWmm.slots[slotIndex].lastSequence = ((frame[25] << 8) | frame[24]) >> 4;
 	subtype = frame[2] >> 4;
-	if (subtype != 0 && subtype != 8 && subtype != 12)
-		return;
-	{
+	/* plain data frames are done without airtime; QoS data and QoS null are charged */
+	if (subtype != 0) {
 		struct WlanWmmQueue *record = &wlanWmm.queues[queue];
 
+		if (subtype != 8 && subtype != 12)
+			return;
 		if (record->edca.acm) {
 			int airtime;
 			unsigned int medium;
+			unsigned int admitted;
 
 			if (*(uint32_t *)(data + 8) & 0x20000000)
 				airtime = wlanTxAirtimeValidated(connection, status);
 			else
 				airtime = wlanTxAirtime(connection, status);
 			medium = (unsigned int)(airtime << 11) >> 16;
-			if (record->admittedTime == 0 || record->exhausted != 0) {
+			admitted = record->admittedTime;
+			if (admitted == 0 || record->exhausted != 0) {
 				policed = medium;
 			} else {
 				unsigned int total;
@@ -1162,15 +1178,15 @@ void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *statu
 				used = medium;
 				total = (uint16_t)(record->usedTime + medium);
 				record->usedTime = total;
-				if (total > record->admittedTime) {
-					policed = total - record->admittedTime;
+				if (total > admitted) {
+					policed = (uint16_t)(total - admitted);
 					record->exhausted = 1;
 					reapply = 1;
 				}
 			}
 		}
 	}
-	wlanWmmFrameDone(data, queue, status->result == 0, used, policed);
+	wlanWmmFrameDone(status->data, queue, status->result == 0, used, policed);
 	if (reapply != 0)
 		wlanWmmApplyQueue(queue);
 }

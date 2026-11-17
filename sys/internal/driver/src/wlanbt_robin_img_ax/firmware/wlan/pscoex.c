@@ -284,7 +284,7 @@ int wlanCoexUpdateEstimate(uint64_t start, uint64_t now, uint32_t maxSample, int
 	spread = high - low;
 	if (spread > maxDeviation)
 		spread = maxDeviation;
-	*deviation = (*deviation * 2 + spread) / 3;
+	*deviation = (*deviation * 2 + (int32_t)spread) / 3;
 	return 1;
 }
 

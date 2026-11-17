@@ -156,13 +156,13 @@ int hostCmdRateStepsSet(uint8_t *body)
 		unsigned int step = hostCmdRateSteps[i];
 
 		if (HOSTCMD_U16(body + 8) == step)
-			hostClockPreset[0] = step * 1000;
+			wlanMacDescriptor.hostClockPreset[0] = step * 1000;
 		if (HOSTCMD_U16(body + 10) == step)
-			hostClockPreset[1] = step * 1000;
+			wlanMacDescriptor.hostClockPreset[1] = step * 1000;
 		if (HOSTCMD_U16(body + 12) == step)
-			hostClockPreset[2] = step * 1000;
+			wlanMacDescriptor.hostClockPreset[2] = step * 1000;
 		if (HOSTCMD_U16(body + 14) == step)
-			hostClockPreset[3] = step * 1000;
+			wlanMacDescriptor.hostClockPreset[3] = step * 1000;
 	}
 	wlanBaTablesChangedHandler();
 	return 1;
@@ -315,10 +315,10 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 		body[13] = hostCmdRateDefault >> 8;
 		body[14] = hostCmdRateDefault;
 		body[15] = hostCmdRateDefault >> 8;
-		HOSTCMD_RATE_STEP(body + 8, hostClockPreset[0]);
-		HOSTCMD_RATE_STEP(body + 10, hostClockPreset[1]);
-		HOSTCMD_RATE_STEP(body + 12, hostClockPreset[2]);
-		HOSTCMD_RATE_STEP(body + 14, hostClockPreset[3]);
+		HOSTCMD_RATE_STEP(body + 8, wlanMacDescriptor.hostClockPreset[0]);
+		HOSTCMD_RATE_STEP(body + 10, wlanMacDescriptor.hostClockPreset[1]);
+		HOSTCMD_RATE_STEP(body + 12, wlanMacDescriptor.hostClockPreset[2]);
+		HOSTCMD_RATE_STEP(body + 14, wlanMacDescriptor.hostClockPreset[3]);
 		*size = 24;
 	}
 	if (HOSTCMD_U16(body + 4) == 1) {

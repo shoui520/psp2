@@ -258,8 +258,8 @@ void sysHandleMappedEventSource(uint32_t device, uint32_t dispatch)
 	sysEventRoutesHold(device);
 }
 
-/* 0x2cc2 */
-void sysEventDeviceActivate(int route, uint32_t device)
+/* 0x2cc2: called, never inlined (sysEventRouteStart) */
+__attribute__((noinline)) void sysEventDeviceActivate(int route, uint32_t device)
 {
 	(void)route;
 	sysHandleMappedEventSource(device, 0);

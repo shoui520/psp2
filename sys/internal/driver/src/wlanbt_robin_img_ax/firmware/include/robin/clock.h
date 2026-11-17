@@ -56,7 +56,6 @@ void clockHostSelectPreset0(void);
 void clockHostSelectPreset1(void);
 void clockHostSelectPreset2(void);
 void clockHostSelectPreset3(void);
-extern uint32_t hostClockPreset[4];	/* DTCM 0x040089b0 */
 
 /* The reference clock profile, a strap of SOC_REG(0): an index into the tables. */
 int sysRefClockProfile(void);

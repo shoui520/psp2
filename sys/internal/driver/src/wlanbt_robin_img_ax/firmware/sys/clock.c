@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include "robin/clock.h"
 #include "robin/hct.h"
+#include "robin/mactx.h"
 #include "robin/rom.h"
 #include "robin/sleep.h"
 #include "robin/soc.h"
@@ -104,11 +105,6 @@ static uint8_t sysRefClockProfileMap[8] __attribute__((section(".sqram1.rw"))) =
 	0, 1, 2, 4, 5, 9, 6, 6,
 };
 
-/* The clock rates a host command can choose between, in kHz (DTCM 0x040089b0..0x040089bc). */
-uint32_t hostClockPreset[4] __attribute__((section(".dtcm.bss")));
-/* The rate set for the host (client 3), and the rate it is to be set to. */
-static uint32_t clockHostApplied __attribute__((section(".dtcm.bss")));
-static uint32_t clockHostTarget __attribute__((section(".dtcm.bss")));
 
 /*
  * Records the request of a client and applies the fastest request of all
@@ -463,56 +459,58 @@ unsigned int clockApplyCore(unsigned int khz)
 	return 0;
 }
 
-/* The rate (client 3) of the host commands that set the clock. */
-static inline void clockHostRequest(uint32_t khz)
-{
-	clockHostApplied = khz;
-	clockRequestCore(khz, 3);
-	clockRequestAux(khz, 3);
-	clockRequestBus(khz, 3);
-	clockRequestVote(khz, 3);
-}
+/*
+ * The rate (client 3) of the host commands that set the clock, when it changed. Sony's is a
+ * macro: khz is read again for each request (0x26b48, 0x26b78).
+ */
+#define CLOCK_HOST_REQUEST(khz)						\
+	do {								\
+		if (wlanMacDescriptor.hostClockApplied != (khz)) {	\
+			wlanMacDescriptor.hostClockApplied = (khz);	\
+			clockRequestCore((khz), 3);			\
+			clockRequestAux((khz), 3);			\
+			clockRequestBus((khz), 3);			\
+			clockRequestVote((khz), 3);			\
+		}							\
+	} while (0)
 
 void clockHostSetMax(void)
 {
-	if (clockHostApplied != 128000)
-		clockHostRequest(128000);
+	CLOCK_HOST_REQUEST(128000);
 }
 
 void clockHostSetMin(void)
 {
-	if (clockHostApplied != 4000)
-		clockHostRequest(4000);
+	CLOCK_HOST_REQUEST(4000);
 }
 
 void clockHostApplyTarget(void)
 {
-	if (clockHostTarget != clockHostApplied)
-		clockHostRequest(clockHostTarget);
+	CLOCK_HOST_REQUEST(wlanMacDescriptor.hostClockTarget);
 }
 
 void clockHostSelectPreset0(void)
 {
-	clockHostTarget = hostClockPreset[0];
-	clockHostApplyTarget();
+	wlanMacDescriptor.hostClockTarget = wlanMacDescriptor.hostClockPreset[0];
+	CLOCK_HOST_REQUEST(wlanMacDescriptor.hostClockPreset[0]);
 }
 
 void clockHostSelectPreset1(void)
 {
-	clockHostTarget = hostClockPreset[1];
-	clockHostApplyTarget();
+	wlanMacDescriptor.hostClockTarget = wlanMacDescriptor.hostClockPreset[1];
+	CLOCK_HOST_REQUEST(wlanMacDescriptor.hostClockPreset[1]);
 }
 
 void clockHostSelectPreset2(void)
 {
-	clockHostTarget = hostClockPreset[2];
-	clockHostApplyTarget();
+	wlanMacDescriptor.hostClockTarget = wlanMacDescriptor.hostClockPreset[2];
+	CLOCK_HOST_REQUEST(wlanMacDescriptor.hostClockPreset[2]);
 }
 
 void clockHostSelectPreset3(void)
 {
-	clockHostTarget = hostClockPreset[3];
-	clockHostApplyTarget();
+	wlanMacDescriptor.hostClockTarget = wlanMacDescriptor.hostClockPreset[3];
+	CLOCK_HOST_REQUEST(wlanMacDescriptor.hostClockPreset[3]);
 }
 
 /* Programs the clock multiplier of the profile into SOC_REG(0x118) and SOC_REG(0x11c). */

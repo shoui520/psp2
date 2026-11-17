@@ -349,12 +349,12 @@ struct WlanMacDescriptor *wlanMacDescriptorInit(uint32_t descriptor)
 	struct WlanMacDescriptor *mac = &wlanMacDescriptor;
 	struct WlanLocalArea *local = &wlanLocalArea;
 
-	mac->clockKhz[1] = 32000;
-	mac->clockKhz[2] = 32000;
-	mac->clockKhz[0] = 80000;
-	mac->clockKhz[3] = 32000;
-	mac->clockKhz[5] = 80000;
-	mac->clockKhz[4] = 0;
+	mac->hostClockPreset[1] = 32000;
+	mac->hostClockPreset[2] = 32000;
+	mac->hostClockPreset[0] = 80000;
+	mac->hostClockPreset[3] = 32000;
+	mac->hostClockTarget = 80000;
+	mac->hostClockApplied = 0;
 	mac->descriptor = descriptor;
 	mac->regionTable = local->regionTable;
 	mac->localArea = local;
