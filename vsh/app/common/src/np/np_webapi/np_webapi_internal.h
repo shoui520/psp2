@@ -712,6 +712,18 @@ extern int npWebApiRequestAddHttpHeader(NpWebApiRequest *request, const char *na
 	__attribute__((noinline));
 extern const char *SceNpCommonPs4_D1AB9B23(int language);
 extern int npWebApiGetLanguageSetting(char *buffer, SceSize size);
+extern int SceNpCommon_BBC13621(void);
+extern int SceNpCommonPs4_FA1249E8(int ctx);
+extern int SceNpCommonPs4_9CAF0FE7(char *dst, int size, int value, int base, int a5, int a6);
+extern SceSize sceClibStrlcat(char *dst, const char *src, SceSize size);
+extern char *sceClibStrncat(char *dst, const char *src, SceSize size);
+extern int npWebApiRequestCreateHttpRequest(NpWebApiRequest *request, int connId, const char *baseUrl);
+extern const char *npWebApiRequestGetPath(NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiRequestSetField228(NpWebApiRequest *request, int value);
+extern NpWebApiRequest *npWebApiRequestSetField236(NpWebApiRequest *request, int value);
+extern NpWebApiRequest *npWebApiRequestSetResponseHeaders(NpWebApiRequest *request, int headers, int size);
+extern void *npWebApiRequestGetData(NpWebApiRequest *request);
+extern char *npWebApiAuthObjectGetAccessToken(void *object);
 extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
 extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
 extern int SceNpCommonPs4_00F74689(void);

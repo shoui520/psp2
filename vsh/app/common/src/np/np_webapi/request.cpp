@@ -255,3 +255,37 @@ NpWebApiRequest *npWebApiRequestSetKind(NpWebApiRequest *request, int value)
 	request->kind = value;
 	return request;
 }
+
+const char *npWebApiRequestGetPath(NpWebApiRequest *request)
+{
+	return request->path;
+}
+
+NpWebApiRequest *npWebApiRequestSetField228(NpWebApiRequest *request, int value)
+{
+	request->field228 = value;
+	return request;
+}
+
+NpWebApiRequest *npWebApiRequestSetField236(NpWebApiRequest *request, int value)
+{
+	request->field236 = value;
+	return request;
+}
+
+NpWebApiRequest *npWebApiRequestSetResponseHeaders(NpWebApiRequest *request, int headers, int size)
+{
+	request->field220 = headers;
+	request->field224 = size;
+	return request;
+}
+
+void *npWebApiRequestGetData(NpWebApiRequest *request)
+{
+	return request->data;
+}
+
+char *npWebApiAuthObjectGetAccessToken(void *object)
+{
+	return (char *)object + 16;
+}
