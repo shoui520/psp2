@@ -231,7 +231,10 @@ struct LsdbIconLocation {
 };
 /* a theme's record (tbl_theme) */
 struct LsdbTheme {
-	int reserved;
+	virtual ~LsdbTheme()
+	{
+	}
+
 	paf::string id;
 	int type;			/* LSDB_THEME_TYPE_CUSTOM */
 	paf::string packageImageFilePath;
@@ -306,11 +309,58 @@ struct HomeProperty {
 const char *const *LsdbThemeGetSystemTitleIds(unsigned int *count);
 
 /* an installed theme: its folder and its theme.xml */
-struct LsdbThemeInfo {
-	paf::string path;
-	int reserved;
-	HomeProperty m_homeProperty;
+struct StartScreenProperty {
+	paf::string m_filePath;
+	int m_dateColor;
+	int m_dateLayout;
+	int m_notifyBgColor;
+	int m_notifyBorderColor;
+	int m_notifyFontColor;
 };
+
+struct InfomationBarProperty {
+	int m_barColor;
+	int m_indicatorColor;
+	int m_noticeFontColor;
+	int m_noticeGlowColor;
+	paf::string m_newNoticeFilePath;
+	paf::string m_noNoticeFilePath;
+};
+
+struct InfomationProperty {
+	InfomationProperty();
+
+	int m_contentVer;
+	LsdbThemeText m_title;
+	LsdbThemeText m_provider;
+	paf::string m_packageImageFilePath;
+	paf::string m_startPreviewFilePath;
+	paf::string m_homePreviewFilePath;
+};
+
+/* an installed theme: its folder and theme.xml (the shell's ctor 0x813BC572, 1456 bytes) */
+struct LsdbThemeInfo {
+	LsdbThemeInfo();
+
+	paf::string path;
+	int m_slot;				/* -1 at construction; the shell does not read it */
+	HomeProperty m_homeProperty;
+	StartScreenProperty m_startScreenProperty;
+	InfomationBarProperty m_infomationBarProperty;
+	InfomationProperty m_infomationProperty;
+	paf::string m_contentPath;		/* not read by the shell or SceLsdb */
+	int m_status;				/* 0 at construction; not read */
+	SceUInt64 m_lastModifiedTime;		/* an rtc tick */
+};
+
+/* the layout the shell's code gives */
+typedef char LsdbThemeSizeCheck[sizeof(LsdbTheme) == 104 ? 1 : -1];
+typedef char LsdbThemeInfoSizeCheck[sizeof(LsdbThemeInfo) == 1456 &&
+	offsetof(LsdbThemeInfo, m_startScreenProperty) == 812 &&
+	offsetof(LsdbThemeInfo, m_infomationBarProperty) == 844 &&
+	offsetof(LsdbThemeInfo, m_infomationProperty) == 884 &&
+	offsetof(LsdbThemeInfo, m_contentPath) == 1428 &&
+	offsetof(LsdbThemeInfo, m_lastModifiedTime) == 1448 ? 1 : -1];
 
 #define LSDB_SET_PAGE_THEME_ICONS	0x1
 #define LSDB_SET_PAGE_THEME_PAGES	0x2
