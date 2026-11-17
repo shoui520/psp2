@@ -501,12 +501,11 @@ int sceNpWebApiAbortRequest(SceInt64 requestId)
 
 int sceNpWebApiCreatePushEventFilter(const SceNpWebApiPushEventDataType *pDataType, SceSize dataTypeNum)
 {
-	if (g_defaultLibCtxId != 0) {
-		if (pDataType != NULL && dataTypeNum != 0)
-			return npWebApiCreatePushEventFilter(g_defaultLibCtxId, pDataType, dataTypeNum);
-		return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
-	}
-	return NP_WEBAPI_ERROR_NOT_INITIALIZED;
+	if (g_defaultLibCtxId == 0)
+		return NP_WEBAPI_ERROR_NOT_INITIALIZED;
+	if (pDataType != NULL && dataTypeNum != 0)
+		return npWebApiCreatePushEventFilter(g_defaultLibCtxId, pDataType, dataTypeNum);
+	return NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 }
 
 int SceNpWebApi_19062C5A(int libCtxId, const SceNpWebApiPushEventDataType *pDataType, SceSize dataTypeNum)
