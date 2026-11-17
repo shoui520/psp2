@@ -4,6 +4,10 @@
 #include <scetypes.h>
 #include <rtc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * The NP DRM license (RIF), the PSM license and the activation data (act.dat). Layouts and
  * field names are the henkaku wiki's and vitasdk's (no Sony name found); fields nothing
@@ -112,6 +116,9 @@ int _sceNpDrmGetRifName(char *rif_name, uint64_t aid);
 int _sceNpDrmRemoveActData(uint64_t *accountId);
 
 int _sceNpDrmCheckActData(int *actType, int *versionFlag, uint64_t *accountId, const struct NpDrmCheckActDataArgs *userArgs);
+/* the user library's call, through _sceNpDrmCheckActData */
+int sceNpDrmCheckActData(int *actType, int *versionFlag, SceUInt64 *accountId, SceUInt64 *startTime,
+			 SceUInt64 *expirationTime);
 
 /* vitasdk: ksceNpDrmGetRifNameForInstall */
 int SceNpDrmForDriver_17573133(char *name, const SceNpDrmLicense *license, unsigned int isFixed);
@@ -145,3 +152,7 @@ int SceNpDrmForDriver_4E321BDE(const SceNpDrmLicense *license, const char *doc,
 /* vitasdk: ksceNpDrmPspEbootVerify */
 int SceNpDrmForDriver_B6CA3A2C(const char *ebootPath, const void *signature);
 int SceNpDrmForDriver_FC84CA1A(void);	/* vitasdk: ksceNpDrmIsLooseAccountBind */
+
+#ifdef __cplusplus
+}
+#endif

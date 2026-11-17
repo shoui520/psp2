@@ -5,8 +5,7 @@
  * setup, a database recovery). Until the boot is done, launches by name are refused except the
  * network settings, which go through the settings application.
  *
- * The 3.6x shell names none of its source files: this file's name and the names in it are ours
- * (agent/namecheck).
+ * The 3.6x shell names none of its source files: this file's name and the names in it are ours.
  */
 #include <scetypes.h>
 #include <sceerror.h>
@@ -34,6 +33,7 @@
 #include "boot.h"
 #include "plugins.h"
 #include "shell.h"
+#include "theme.h"
 #include "src/livespace_db/livespace_db.h"
 #include "src/livespace_db/lsdb_keys.h"
 #include <graphics/drawobj/effect_path.h>
@@ -202,7 +202,7 @@ static void shellBootStartResidentPlugins(void)
 		void *pool = GraphMem::AllocOSMemory(GraphMem::DeviceType_VideoMemory, 0xc0000, poolName, NULL);
 
 		param.surface_pool = new graph::SurfacePool(pool, 0xc0000, poolName);
-		param.arguments[string("theme_apply")] = Plugin::Argument(shellThemeGetApplyState());
+		param.arguments[string("theme_apply")] = Plugin::Argument(shellThemeIsPending());
 		param.graphics_flag = 7;
 		Plugin::LoadAsync(param, shellBootOnResidentPluginLoaded, 0);
 		s_pluginsLoading++;
@@ -301,7 +301,7 @@ static void shellBootCheckDatabase(void)
 		param.module_interface_version = 1;
 		param.module_option = 1;
 		param.arguments[string("state")] = Plugin::Argument(1);
-		param.arguments[string("pagec")] = Plugin::Argument(shellStartupGetPageCount());
+		param.arguments[string("pagec")] = Plugin::Argument(shellStartupGetPageColor());
 		param.arguments[string("icwvp")] = Plugin::Argument(shellStartupGetIcwvp());
 		param.arguments[string("spool")] = Plugin::Argument((int32_t)shellIconCacheGetSurfacePool());
 		param.unload_callback = shellBootOnDbrecoveryPluginUnloaded;
@@ -691,8 +691,8 @@ static void shellBootOnDbrecoveryPluginLoaded(Plugin *plugin)
 
 	if (iface != NULL) {
 		iface->setFinishCallback(shellBootOnDbrecoveryFinished);
-		if (!shellThemeIsApplying())
-			iface->setTheme(shellThemeGetCurrent());
+		if (!shellThemeIconsEnabled())
+			iface->setTheme(shellThemeGetInfo());
 	}
 	if ((s_bootState & BOOT_STATE_COLDBOOT_DONE) && (s_bootState & BOOT_STATE_BOOT_APPS_DONE))
 		shellBootProceed();

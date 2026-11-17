@@ -7,6 +7,9 @@
 
 #include <plugin.h>
 #include <std/string>
+#include <common/shared_ptr.h>
+
+struct LsdbThemeInfo;
 
 /*
  * PLACEHOLDER: the function table a shell plugin gives through GetInterface(1), indexed until
@@ -27,14 +30,6 @@ enum {
 	POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE	= 16,
 };
 
-/* the theme the shell shows (theme.cpp's; layout not written out yet) */
-struct ShellTheme;
-
-/* the theme the home screen applies (theme_apply) */
-int shellThemeGetApplyState(void);
-bool shellThemeIsApplying(void);
-ShellTheme *shellThemeGetCurrent(void);
-
 /* coldboot_plugin's GetInterface(1) */
 struct ColdbootPluginInterface {
 	void (*finish)(void);			/* the boot is done: close the cold-boot screens */
@@ -45,7 +40,7 @@ struct DbrecoveryPluginInterface {
 	void (*finish)(void);			/* the boot is done: close the recovery screens */
 	void (*setFinishCallback)(void (*callback)(paf::Plugin *plugin));
 	int (*getState)(void);			/* the database state the recovery left */
-	void (*setTheme)(ShellTheme *theme);
+	void (*setTheme)(paf::common::SharedPtr<LsdbThemeInfo> *theme);
 };
 
 void powerManagePluginSetParam(paf::Plugin::InitParam2 *param);

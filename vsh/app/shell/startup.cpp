@@ -24,10 +24,10 @@ using namespace paf;
 
 /* the id storage leaf of the home screen settings, and its flags */
 #define SHELL_STARTUP_IDS_LEAF		278
-#define SHELL_STARTUP_IDS_PAGE_COUNT	0x01	/* pageCount holds the home screen pages */
+#define SHELL_STARTUP_IDS_PAGE_COLOR	0x01	/* pageColor holds the pages' colour (pagec) */
 #define SHELL_STARTUP_IDS_ICWVP		0x02
-#define SHELL_STARTUP_IDS_FLAG4		0x04
-#define SHELL_STARTUP_MAX_PAGE_COUNT	31
+#define SHELL_STARTUP_IDS_PRESET_THEME	0x04	/* pd0 has a theme */
+#define SHELL_STARTUP_MAX_PAGE_COLOR	31
 
 /* the IDU mode: off, on, and left (the demo ended) */
 #define SHELL_IDU_MODE_OFF		0
@@ -58,19 +58,19 @@ using namespace paf;
 /* paf's model type of the PlayStation TV (value only) */
 #define SHELL_MODEL_TYPE_1		1
 
-/* the id storage leaf's home screen settings: its flags and the page count (unaligned) */
+/* the id storage leaf's home screen settings: its flags and the pages' colour (unaligned) */
 typedef struct ShellStartupIdStorage {
 	SceUInt8 flags;
-	SceUInt8 pageCount[2];
+	SceUInt8 pageColor[2];
 	SceUInt8 reserved;
 } __attribute__((aligned(4))) ShellStartupIdStorage;
 
 static int s_initialize = 1;
 static bool s_isPmMode = false;
 static int s_iduMode = SHELL_IDU_MODE_OFF;
-static int s_pageCount = 0;
+static int s_pageColor = 0;
 static bool s_icwvp = false;
-static bool s_idsFlag4 = false;
+static bool s_hasPresetTheme = false;
 
 int shellShutterSoundInit(void)
 {
@@ -97,9 +97,9 @@ int shellStartupGetIduMode(void)
 	return s_iduMode;
 }
 
-int shellStartupGetPageCount(void)
+int shellStartupGetPageColor(void)
 {
-	return s_pageCount;
+	return s_pageColor;
 }
 
 bool shellStartupGetIcwvp(void)
@@ -113,9 +113,9 @@ bool shellStartupIsTestMode(void)
 	return false;
 }
 
-bool shellStartupGetIdsFlag4(void)
+bool shellStartupHasPresetTheme(void)
 {
-	return s_idsFlag4;
+	return s_hasPresetTheme;
 }
 
 /* the IDU mode's settings: in it, the display at its brightest, no auto suspend and no power
@@ -199,14 +199,14 @@ int shellStartupInit(void)
 	if ((int)vshIdStorageLookup(SHELL_STARTUP_IDS_LEAF, 0, &ids, sizeof(ids)) >= 0 &&
 	    ids.flags != 0) {
 		SceUInt8 flags = ids.flags;
-		int pageCount = ids.pageCount[0] | (ids.pageCount[1] << 8);
+		int pageColor = ids.pageColor[0] | (ids.pageColor[1] << 8);
 
-		if ((flags & SHELL_STARTUP_IDS_PAGE_COUNT) && pageCount <= SHELL_STARTUP_MAX_PAGE_COUNT)
-			s_pageCount = pageCount;
+		if ((flags & SHELL_STARTUP_IDS_PAGE_COLOR) && pageColor <= SHELL_STARTUP_MAX_PAGE_COLOR)
+			s_pageColor = pageColor;
 		if (flags & SHELL_STARTUP_IDS_ICWVP)
 			s_icwvp = true;
-		if (flags & SHELL_STARTUP_IDS_FLAG4)
-			s_idsFlag4 = true;
+		if (flags & SHELL_STARTUP_IDS_PRESET_THEME)
+			s_hasPresetTheme = true;
 	}
 
 	shellErrorDialogInit();

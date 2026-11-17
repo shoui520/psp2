@@ -65,9 +65,9 @@ bool shellStartupNeedsInitialSetup(void);	/* initialize bit 0 clear (0x81004D4C)
 bool shellStartupIsPmMode(void);		/* sceSblPmMgrGetCurrentMode gave 1 */
 bool shellStartupIsTestMode(void);		/* false in this build (0x81409e2c, folded) */
 int shellStartupGetIduMode(void);		/* 1: idu (demo unit) mode */
-int shellStartupGetPageCount(void);		/* home screen pages (pagec) */
+int shellStartupGetPageColor(void);		/* the pages' colour, their wave (pagec) (0x81004D7C) */
 bool shellStartupGetIcwvp(void);		/* id storage flag 2 (icwvp) */
-bool shellStartupGetIdsFlag4(void);		/* id storage flag 4 (0x81004D94) */
+bool shellStartupHasPresetTheme(void);	/* a pd0 theme, id storage flag 4 (0x81004D94) */
 bool shellStartupLeaveIduMode(void);		/* shell event 8 (0x81004E94) */
 
 /* the icon cache: video memory and a surface pool for the home screen's icons */
@@ -123,6 +123,7 @@ int shellAppEventInit(void);				/* (0x81241238) */
 int shellNetworkMgrCreate(bool enable);			/* (0x811C9070) */
 int shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */
 int shellNoticeServiceStart(void);			/* (0x81005204) */
+int shellNoticeServiceInit(void);			/* made and started (0x8139AB6C) */
 int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
 int shellIsComTestMode(int *error);			/* id storage leaf 2 says test (0x81132AA2) */
 int shellThemeLoad(void);				/* the current theme (0x810053D0) */
@@ -133,6 +134,24 @@ int shellHandlerTableCreate(void);			/* (0x81248BB4) */
 int shellUtilServerMgrCreate(void);			/* (0x8124BB02) */
 int shellMainThreadPollerCreate(void);			/* (0x8121CFE2) */
 int shellErrorDialogShow(int type, int error, const void *message, int flags);	/* (0x810FB45E) */
+
+/* a notice request: an ux0 theme whose activation has expired sends (0, -1, NULL)
+   (0x8124B4DA) */
+int shellSystemNoticeRequest(int type, int arg, const char *text);
+
+/* the home screen told to update: 3 after a theme change (0x811CCE2C) */
+int shellHomeUpdateRequest(SceUInt8 kind);
+
+/* a callback added to the shell's table of eight, called with a result (0x8132773E) */
+typedef void (*ShellTableCallback)(int result, void *arg);
+int shellCallbackTableAdd(ShellTableCallback callback, void *arg);
+
+/* the shell's livespace_db client (0x811C4BF8 makes it) */
+struct AppInfoSClient;
+struct ShellLsdbClient {
+	AppInfoSClient *client;
+};
+extern ShellLsdbClient *g_shellLsdbClient;
 
 /* the application in front, as the shell's screens follow it (0x810E17EE) */
 int shellAppSetForeground(int type, const char *name, int flags);

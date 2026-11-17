@@ -185,6 +185,7 @@ public:
 	void Update(void *param);
 	graph::SurfacePool *GetSurfacePool() const;
 	void SetLocale(Locale locale);
+	Locale GetLocale() const { return static_cast<Locale>(m_locale); }	/* inline: SceShell reads Framework+92 itself */
 	void LoadCommonResourceSync(LoadCRFinishCallback callback);
 	void LoadCommonResourceAsync(LoadCRFinishCallback callback);
 	void LoadCommonResourceSync(CommonResourceInitParam &param, LoadCRFinishCallback callback);
