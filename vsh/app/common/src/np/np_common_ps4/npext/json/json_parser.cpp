@@ -60,7 +60,8 @@ int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, 
 	int result;
 
 	NP_COMMON_PS4_ASSERT(eventHandler != NULL, "Init", "npext\\json\\json_parser.cpp", 36, "eventHandler != 0");
-	result = SceNpCommonPs4_EB1B7375(parser->lexer, config, (void *)SceNpCommonPs4_E20FCABC, parser);
+	result = SceNpCommonPs4_EB1B7375((struct NpCommonPs4Lexer *)parser->lexer, (const struct NpCommonPs4LexerConfig *)config,
+		(NpCommonPs4LexerCallback)SceNpCommonPs4_E20FCABC, parser);
 	if (result >= 0) {
 		parser->handler = eventHandler;
 		return 0;
@@ -72,7 +73,7 @@ int SceNpCommonPs4_FE98E2A7(struct NpCommonPs4JsonParser *parser, void *data, in
 {
 	int result;
 
-	result = SceNpCommonPs4_F5EE219F(parser->lexer, data, size);
+	result = SceNpCommonPs4_F5EE219F((struct NpCommonPs4Lexer *)parser->lexer, (const char *)data, size);
 	if (result >= 0)
 		return 0;
 	return result;
@@ -97,7 +98,7 @@ int SceNpCommonPs4_7CC0800E(struct NpCommonPs4JsonParser *parser, int unused, vo
 		parser->bufferSize, &length);
 	if (result >= 0) {
 		if (length != 0) {
-			error = SceNpCommonPs4_F5EE219F(parser->lexer, parser->buffer, length);
+			error = SceNpCommonPs4_F5EE219F((struct NpCommonPs4Lexer *)parser->lexer, (const char *)parser->buffer, length);
 			result = 0;
 			if (error < 0)
 				result = error;

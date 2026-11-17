@@ -124,9 +124,9 @@ struct NpCommonPs4Allocator *SceNpCommonPs4_31DB2D97(struct NpCommonPs4Allocator
 	return pool;
 }
 
-int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer)
+void *SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, SceSize size)
 {
-	return ((int (*)(void *, void *))allocator->allocate)(pointer, allocator->context);
+	return ((void *(*)(SceSize, void *))allocator->allocate)(size, allocator->context);
 }
 
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size)
