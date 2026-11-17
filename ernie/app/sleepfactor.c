@@ -166,8 +166,8 @@ void sleepFactorSet9(unsigned char on)
 	}
 }
 
-/* 0x00090206 of the 0x00411000 board has none */
-#if FW_SINCE(0x00090804) || BOARD_102603
+/* 0x00090206 has none */
+#if FW_SINCE(0x00090804)
 void sleepFactorSet10(unsigned char on)
 {
 	if (sleepFactor.bits[1].b2 ^ on) {

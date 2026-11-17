@@ -222,7 +222,9 @@ unsigned char powerSeqResume(void)
 		powerWaitMs(powerResumeSteps[i].delay);
 	}
 #if BOARD_102603
+#if FW_SINCE(0x00090804)
 	sleepFactorSet10(1);
+#endif
 #else
 	mode = *stateGetWakeupFactor();
 	if (mode.bits.mode == 0x0c)
@@ -445,7 +447,11 @@ unsigned char powerSdOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
+#if FW_SINCE(0x00090804)
 			timerStart(TIMER(0x12), 1);
+#else
+			powerSleep(5);
+#endif
 		}
 	}
 	return result;
@@ -464,8 +470,10 @@ unsigned char powerSdOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
+#if FW_SINCE(0x00090804)
 			timerStop(TIMER(0x12));
 			sleepFactorSet10(0);
+#endif
 			powerStartTimer(0x0008, POWER_TIMER(0x07), 0x25);
 		}
 	} else {

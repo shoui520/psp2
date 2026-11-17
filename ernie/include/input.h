@@ -123,6 +123,8 @@ extern void intp13Enable(unsigned char enable);
 extern void intp4Enable(unsigned char enable);
 extern void intp3Enable(unsigned char enable);
 extern void intp10Enable(unsigned char enable);
+extern void intp2Enable(unsigned char enable);
+extern void intp7Enable(unsigned char enable);
 #endif
 extern unsigned char input3Bit0High(void);
 #if !FW_SINCE(0x01000104) || BOARD_INPUTS_102603

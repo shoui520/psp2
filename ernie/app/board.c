@@ -9,6 +9,8 @@
 #include "board.h"
 #ifdef ERNIE_UPDATER
 #include "../updater/updater.h"
+#elif BOARD_102603 && !FW_SINCE(0x00090804)
+extern unsigned char input1Bit5Active(void);
 #endif
 
 /* the updater has these in its own board.c */
@@ -50,10 +52,14 @@ unsigned char boardGetMultiCnOutput(void)
 	return (P13.0 ? 1 : 0) | (P2.2 ? 2 : 0);
 }
 
-/* bit 0 to P13.0, bit 1 to P2.2; 1 for an output above 4 */
+/* bit 0 to P13.0, bit 1 to P2.2; 1 for an output above 4 (above 3 in 0x00090206) */
 unsigned char boardSetMultiCnOutput(unsigned char output)
 {
+#if FW_SINCE(0x00090804)
 	if (output >= 5)
+#else
+	if (output >= 4)
+#endif
 		return 1;
 	P13.0 = (output & 1) ? 1 : 0;
 	P2.2 = (output & 2) ? 1 : 0;
@@ -175,8 +181,9 @@ unsigned char boardMultiCnStop(void)
 
 #endif
 
-#ifdef ERNIE_UPDATER
-/* the updater's: something on the multi-connector, as its inputs report it */
+#if defined(ERNIE_UPDATER) || (BOARD_102603 && !FW_SINCE(0x00090804))
+/* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
+   inputs report it */
 unsigned char boardMultiCnIsDongle(void)
 {
 	return (unsigned char)input1Bit5Active();

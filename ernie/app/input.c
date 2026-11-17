@@ -876,6 +876,9 @@ void pinMonitorPoll(void)
 				}
 			} else {
 				pinMonitor2Enable(0);
+#if !FW_SINCE(0x00090804)
+				intp7Enable(1);
+#endif
 			}
 			pinMonitors.pin[2].last = level;
 #endif

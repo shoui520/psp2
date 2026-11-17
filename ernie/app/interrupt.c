@@ -72,7 +72,13 @@ void intp1Interrupt(void)
 void intp2Interrupt(void)
 {
 	if (P4.7) {
+#if !FW_SINCE(0x00090804)
+		intp2Enable(0);
+#endif
 		inputGroup1.prev &= ~0x10;
+#if !FW_SINCE(0x00090804)
+		if (inputScan.mode != 1)
+#endif
 		inputScanHold(0x1a);
 	}
 }
@@ -81,9 +87,15 @@ void intp2Interrupt(void)
 void intp7Interrupt(void)
 {
 	if (!P14.1) {
+#if !FW_SINCE(0x00090804)
+		intp7Enable(0);
+#endif
 		if (pinMonitors.pin[2].config.reload != 0) {
 			pinMonitor2Enable(1);
 			pinMonitors.pin[2].last = 0;
+#if !FW_SINCE(0x00090804)
+			if (inputScan.mode != 1)
+#endif
 			inputScanHold(0x1a);
 		} else
 			pinMonitors.pin[2].config.handler();
