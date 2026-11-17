@@ -12,6 +12,12 @@ extern "C" {
 /* returns a livespace_db error when its trigger table cannot be used (0x801010F1, ...) */
 int SceLsdb_B0E42B67(void);
 
+/* passes value to the new-event daemon (shell gives 60, or -60) and returns its result */
+int SceLsdb_2944E643(int value);
+
+/* registers the callback livespace_db calls back into the shell with */
+void SceLsdb_AADCDCFC(void *callback);
+
 #ifdef __cplusplus
 }
 #endif
