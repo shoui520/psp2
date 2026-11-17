@@ -221,7 +221,7 @@ int npAsmConnectionGetBaseUrl(void *connection, const void *titleId, const void 
 {
 	if (g_npAsmConnectionState == 0)
 		return NP_ASM_CONNECTION_ERROR_NOT_INITIALIZED;
-	if (titleId != NULL && serviceName != NULL && accessToken != NULL && buffer != NULL)
+	if (titleId != NULL && serviceName != NULL && accessToken != NULL && tokenEntry != NULL)
 		return npAsmConnectionRequestBaseUrl((struct NpAsmConnection *)connection, (const char *)titleId,
 			(const char *)serviceName, (const char *)accessToken, (const char *)tokenEntry, (char *)buffer, size);
 	return NP_ASM_CONNECTION_ERROR_INVALID_ARGUMENT;

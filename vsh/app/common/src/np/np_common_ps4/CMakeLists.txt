@@ -73,6 +73,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 
 # the libsnc runtime objects the module does not call are not linked
 target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
 
 # the SHA-256 and the HMAC over it were built with GCC 4.8, without a stack guard
 set_source_files_properties(crypto/hmac.c crypto/sha256.c PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
