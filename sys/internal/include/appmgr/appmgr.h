@@ -210,6 +210,7 @@ _Static_assert(sizeof(AppmgrLaunchAppByNameOption) == 64 &&
 
 /* SceAppMgrUser's (driver_us, whose appmgr.c defines them with untyped words) */
 #if !defined(PSP2_KERNEL)
+int sceAppMgrGetUserDirPath(int partitionId, char *path, SceSize size);
 int sceAppMgrLaunchAppByName(int flags, const char *name, const char *param);
 int sceAppMgrLaunchAppByName2(const char *name, const char *param,
 			      const AppmgrLaunchAppByNameOption *option);

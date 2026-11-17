@@ -6,9 +6,14 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	boot.cpp
 	boot_screen.cpp
 	boot_tasks.cpp
+	lsdb_start.cpp
+	framework.cpp
+	modules.cpp
+	mtp.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
-	"${PSP2_SRC}/vsh/paf")
+	"${PSP2_SRC}/vsh/paf" "${PSP2_SRC}/contrib/sqlite-3.7.6.3" "${PSP2_SRC}/vsh/app/common/src"
+	"${PSP2_SRC}/sys/internal/usermode/src" "${PSP2_SRC}/vsh/lowlayer/src")
 # SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
-set_source_files_properties(boot.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+set_source_files_properties(boot.cpp lsdb_start.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)

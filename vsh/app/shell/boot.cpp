@@ -278,11 +278,6 @@ static void shellBootStartResidentOrIdu(void)
 	}
 }
 
-/* livespace_db's errors after which the trigger table is rebuilt (values only: no names known) */
-#define SHELL_LSDB_TRIGGER_TABLE_STALE(call)	\
-	((call) == (int)0x801010F1 || (call) == (int)0x801010F4 || (call) == (int)0x801010FE || \
-	 (call) == (int)0x801010FF || (call) == (int)0x801010F2)
-
 /* the database: recovered by dbrecovery_plugin when the shell found it damaged, else checked */
 static void shellBootCheckDatabase(void)
 {
