@@ -97,6 +97,8 @@ int shellCloudDataSetMcId(int type, const void *mcId);	/* vshAppMgrCloudDataSetM
 int shellLaunchListUpdate(void);		/* ur0:game/launch from version_launch.dat (0x810A258C) */
 int shellLiblocationStart(void);		/* SceLiblocationPrivateHeap, ur0:liblocation (0x81002D8C) */
 void shellCalibrationUpdateStart(void);		/* thread SceCalibrationUpdate (0x81002570) */
+int shellCalibrationUpdateThreadCreate(void);	/* (0x810E181C) */
+void shellCoredumpCleanup(void);		/* crash dumps in ux0:data/ removed (0x81002578) */
 void shellRefreshCronStart(void);		/* a cron entry that posts a refresh (0x8100267C) */
 int shellLiveAreaDailyCronStart(void);		/* SceLiveAreaDailyCronJob (0x8119A072) */
 int shellRemoteDownloadStart(void);		/* SceRemoteDownloadLibJob, events 13 and 14 (0x81004610) */

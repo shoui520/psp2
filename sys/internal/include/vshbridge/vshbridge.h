@@ -25,6 +25,7 @@ SceUInt32 vshSblAimgrGetPscode(void *code);
 SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 		     SceUInt32 reservedLow, SceUInt32 reservedHigh);
 SceUInt32 vshKernelSendSysEvent(int event);
+SceUInt32 vshSblQafMgrIsAllowKeepCoreFile(void);
 
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {
