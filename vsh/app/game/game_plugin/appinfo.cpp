@@ -30,6 +30,8 @@ using namespace paf;
 #define GAME_ERROR_BAD_DATA	-2146430716	/* 0x80101104: a file whose contents do not check */
 #define GAME_ERROR_NO_VALUE	-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
+#define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
+#define GAME_ERROR_NO_STORAGE	-2146430663	/* 0x80101139: a path on no storage the plugin knows */
 #define GAME_ERROR_NO_DRIVE	-2146430682	/* 0x80101126: a path without a drive */
 
 /*
@@ -1289,6 +1291,81 @@ int gamePatchPathGetStorage(const string &path, SceUInt64 flags, const string &c
 			return (flags & 1) ? 2 : 1;
 		if (path.find("ux0:") != string::npos)
 			return 3;
+	}
+
+	return 0;
+}
+
+/*
+ * Where an application is installed, from its attribute and original path (0x810111C0); 0
+ * (no storage) is an error.
+ */
+int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage)
+{
+	SceUInt64 attr = 0;
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+
+	if (it != (*info)->end())
+		attr = gameLsdbValueInteger(it->second);
+
+	it = (*info)->find(LSDB_KEY_ORG_PATH);
+	if (it == (*info)->end())
+		return GAME_ERROR_NO_VALUE;
+
+	{
+		string path(LsdbValueText(it->second));
+
+		*storage = gamePathGetStorage(path, attr);
+	}
+
+	if (*storage == 0)
+		return GAME_ERROR_NO_STORAGE;
+
+	return 0;
+}
+
+/* where the application titleId is installed, from its record (0x810112FE) */
+int gameTitleGetStorage(const char *titleId, int *storage)
+{
+	LsdbAppInfoPtr info(new LsdbAppInfo);
+
+	if (info.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	int ret = gameAppGetInfo(titleId, &info);
+
+	if (ret < 0)
+		return ret;
+
+	return gameAppGetStorage(&info, storage);
+}
+
+/*
+ * An application's original and SELF paths (_org_path, _self_path) with their beginning
+ * replaced: each that contains from has its first from.length() bytes replaced by to
+ * (0x8101145A).
+ */
+int gameAppInfoReplacePaths(LsdbAppInfoPtr *info, const string &from, const string &to)
+{
+	LsdbAppInfo::iterator end = (*info)->end();
+	static const unsigned int keys[] = {
+		LsdbKeyHasher<9>::Hash("_org_path"),
+		LsdbKeyHasher<10>::Hash("_self_path"),
+	};
+	unsigned int i;
+
+	for (i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
+		LsdbAppInfo::iterator it = (*info)->find(keys[i]);
+
+		if (it == end)
+			return GAME_ERROR_NO_VALUE;
+
+		string path(LsdbValueText(it->second));
+
+		if (path.find(from) != string::npos) {
+			path.replace(0, from.length(), to);
+			gameLsdbValueSetText((**info)[keys[i]], path);
+		}
 	}
 
 	return 0;

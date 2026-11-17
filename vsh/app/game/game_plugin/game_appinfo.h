@@ -212,6 +212,8 @@ bool gameCategoryIsDataPair(const paf::string &category, const paf::string &othe
 int gamePathGetStorage(const paf::string &path, SceUInt64 flags);
 int gamePatchPathGetStorage(const paf::string &path, SceUInt64 flags,
 			    const paf::string &category);
+int gameTitleGetStorage(const char *titleId, int *storage);
+int gameAppInfoReplacePaths(LsdbAppInfoPtr *info, const paf::string &from, const paf::string &to);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 
