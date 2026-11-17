@@ -898,6 +898,45 @@ struct NpCommonPs4Lexer3 {
 	void *context;
 };
 
+/* the lexer of 0x81010168: the third one, told where in the text everything is, its values handed over in pieces
+   when they are longer than the buffer */
+struct NpCommonPs4Lexer4Token {
+	int type;
+	char *text;
+	int complete;			/* 1 the whole value, 0 a piece of it */
+};
+
+struct NpCommonPs4Lexer4;
+typedef int (*NpCommonPs4Lexer4Callback)(struct NpCommonPs4Lexer4 *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4Lexer4Token *token, int arrayIndex, SceSize offset, void *context);
+
+/* 220 bytes */
+struct NpCommonPs4Lexer4 {
+	const struct NpCommonPs4LexerConfig *config;
+	char *name;
+	SceSize nameSize;
+	int tokenType;
+	char *tokenText;
+	SceSize tokenSize;
+	SceSize depth;
+	int nodeIndex[16];
+	int arrayIndex[16];
+	int state;
+	SceSize position;		/* of the next character in all the text fed */
+	SceSize tokenStart;		/* of the key or value being read */
+	SceSize length;
+	const char *literal;		/* "true", "false" or "null" while one is read */
+	int matched;
+	int matchedFlag;
+	int mode;
+	SceSize baseDepth;
+	char partial[12];
+	SceSize partialLength;
+	SceSize remaining;
+	NpCommonPs4Lexer4Callback callback;
+	void *context;
+};
+
 extern const struct NpCommonPs4LexerConfig g_serverErrorConfig;		/* 0x81028a40 */
 extern const struct NpCommonPs4LexerConfig g_serverErrorConfigEither;	/* 0x81028a8c */
 int npCommonPs4LexerMatch(const struct NpCommonPs4LexerConfig *config, SceSize depth, int mode, int kind, const char *name,
@@ -919,6 +958,13 @@ int npCommonPs4Lexer3CopyChar(const char *src, SceSize length, SceSize *pConsume
 int SceNpCommonPs4_CAFD09C2(struct NpCommonPs4Lexer3 *lexer, const struct NpCommonPs4LexerConfig *config, char *name, SceSize nameSize,
 	char *text, SceSize textSize, NpCommonPs4Lexer3Callback callback, void *context);
 int SceNpCommonPs4_D7AB56B8(struct NpCommonPs4Lexer3 *lexer, const char *src, int size);
+int npCommonPs4Lexer4Match(const struct NpCommonPs4LexerConfig *config, SceSize depth, int mode, int kind, const char *name,
+	SceSize nameLength, int *pIndex, int *pFlag);
+int npCommonPs4Lexer4CopyChar(const char *src, SceSize length, SceSize *pConsumed, char *partial, SceSize *pPartialLength,
+	SceSize *pRemaining, char *decoded, SceSize *pSourceLength, SceSize *pLength);
+int SceNpCommonPs4_8BF34333(struct NpCommonPs4Lexer4 *lexer, const struct NpCommonPs4LexerConfig *config, char *name, SceSize nameSize,
+	char *text, SceSize textSize, NpCommonPs4Lexer4Callback callback, void *context);
+int SceNpCommonPs4_40E4EF01(struct NpCommonPs4Lexer4 *lexer, const char *src, int size);
 int SceNpCommonPs4_AC633131(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context);
 int SceNpCommonPs4_358A8F68(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context);
 int SceNpCommonPs4_AD229434(struct NpCommonPs4Lexer *lexer, const char *data, int size);
