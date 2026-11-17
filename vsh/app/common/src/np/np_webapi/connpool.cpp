@@ -227,3 +227,31 @@ out:
 		*pConnId = conn->connId;
 	return result;
 }
+
+/* closes the connections of a pool under its library context's lock */
+int npWebApiConnectionPoolCloseAllLocked(NpWebApiConnectionPool *pool)
+{
+	npWebApiLibContextLock(pool->libContext);
+	npWebApiConnectionPoolCloseAll(pool);
+	return npWebApiLibContextUnlock(pool->libContext);
+}
+
+/* closes the connections of every user context of every library context */
+int npWebApiCloseAllConnections(void)
+{
+	NpWebApiLibContext *libCtx;
+	NpWebApiUserContext *userCtx;
+	int result;
+
+	npWebApiGlobalLock();
+	result = (int)&g_libContexts;
+	for (libCtx = g_libContexts; libCtx != NULL; libCtx = libCtx->next) {
+		SceNpCommonPs4_F5840D6E(&libCtx->lock);
+		for (userCtx = libCtx->userContextHead; userCtx != NULL; userCtx = npWebApiUserContextNext(userCtx)) {
+			if (npWebApiUserContextRequests(userCtx) != NULL)
+				npWebApiConnectionPoolCloseAllLocked((NpWebApiConnectionPool *)npWebApiUserContextRequests(userCtx));
+		}
+		result = SceNpCommonPs4_4A1C1C3C(&libCtx->lock);
+	}
+	return npWebApiGlobalUnlock();
+}

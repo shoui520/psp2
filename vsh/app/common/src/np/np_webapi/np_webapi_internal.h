@@ -682,6 +682,8 @@ extern int npWebApiConnectionPoolAbortRequest(NpWebApiConnectionPool *pool, NpWe
 extern int npWebApiPushObjectAbortRequest(NpWebApiPushObject *object, NpWebApiRequest *request);
 extern int npWebApiDestroyObject(void *object);
 extern int npWebApiConnectionPoolCloseAll(NpWebApiConnectionPool *pool);
+extern int npWebApiConnectionPoolCloseAllLocked(NpWebApiConnectionPool *pool) __attribute__((noinline));
+extern int npWebApiCloseAllConnections(void) __attribute__((noinline));
 extern int npWebApiConnectionPoolDeleteConnection(NpWebApiConnectionPool *pool, const char *name)
 	__attribute__((noinline));
 extern NpWebApiConnectionPool *npWebApiConnectionPoolConstruct(NpWebApiConnectionPool *pool, NpWebApiUserContext *userCtx);
