@@ -202,7 +202,7 @@ int SceNpCommonPs4_602C6A9A(int handleId)
 	return result;
 }
 
-int SceNpCommonPs4_337328A1(int handleId, const char *id, const char *serviceName, unsigned int *pCount)
+int SceNpCommonPs4_337328A1(int handleId, const char *serviceName, const char *id, unsigned int *pCount)
 {
 	struct NpAsmHandle *handle;
 	int result;
@@ -216,9 +216,9 @@ int SceNpCommonPs4_337328A1(int handleId, const char *id, const char *serviceNam
 		result = sceNpManagerGetNpId(npId);
 		if (result >= 0) {
 			if (handle->secondary != 0)
-				result = npAsmSecondaryWrapRequestGetRelatedTitleIds(handle->requestId, npId, id, serviceName, pCount);
+				result = npAsmSecondaryWrapRequestGetRelatedTitleIds(handle->requestId, npId, serviceName, id, pCount);
 			else
-				result = SceNpCommonPs4_B6CD5BEB(handle->requestId, npId, id, serviceName, pCount);
+				result = SceNpCommonPs4_B6CD5BEB(handle->requestId, npId, serviceName, id, pCount);
 		}
 	}
 	return result;

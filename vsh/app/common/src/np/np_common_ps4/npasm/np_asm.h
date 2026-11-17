@@ -26,6 +26,14 @@ extern "C" {
 #define NP_ASM_ERROR_80559D4B			-2141872821
 #define NP_ASM_ERROR_80559D4D			-2141872819
 #define NP_ASM_ERROR_80559D4F			-2141872817
+/* what the HTTP connection layer returns (0x80559D0X) */
+#define NP_ASM_CONNECTION_ERROR_ALREADY_INITIALIZED	-2141872895	/* 0x80559D01 */
+#define NP_ASM_CONNECTION_ERROR_NOT_INITIALIZED		-2141872894	/* 0x80559D02 */
+#define NP_ASM_CONNECTION_ERROR_INVALID_ARGUMENT	-2141872893	/* 0x80559D03 */
+#define NP_ASM_CONNECTION_ERROR_OUT_OF_MEMORY		-2141872892	/* 0x80559D04 */
+#define NP_ASM_CONNECTION_ERROR_INVALID_CONNECTION	-2141872890	/* 0x80559D06 */
+#define NP_ASM_CONNECTION_ERROR_ABORTED			-2141872889	/* 0x80559D07 */
+
 #define NP_ASM_ERROR_80552A09			-2141902327
 #define NP_ASM_ERROR_80552A0A			-2141902326
 #define NP_ASM_ERROR_80552A0B			-2141902325
@@ -75,7 +83,8 @@ struct NpAsmNpComInfo {
 	SceUInt8 npComId[12];
 	SceUInt8 passPhrase[256];
 	SceUInt32 passPhraseSize;
-	SceUInt8 iv[36];
+	SceUInt8 iv[32];
+	SceUInt32 ivSize;
 	SceUInt32 serviceLabel;
 };
 
@@ -184,15 +193,15 @@ int npAsmRequestGetNpComInfo(int requestId, const void *pOnlineId, const char *n
 	const unsigned char *titleSecret, int serviceLabel, void *pOut);
 int npAsmRequestParseCacheControl(struct NpAsmRequest *request);
 int npAsmRequestUpdateCacheControl(struct NpAsmRequest *request);
-int npAsmRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName, unsigned int *pCount);
+int npAsmRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id, unsigned int *pCount);
 int npAsmRequestCopyRelatedTitleIds(int requestId, void *buffer, unsigned int count);
 int npAsmRequestGetMaxAge(int requestId, int *pMaxAge);
 int npAsmRequestAbort(SceInt32 requestId);
 int npAsmSecondaryRequestGetBaseUrl(int requestId, const void *pOnlineId, void *pTitleId, void *serviceName, void *buffer, int size);
 int npAsmSecondaryRequestGetNpComInfo(int requestId, const void *pOnlineId, const char *npComId, int serviceLabel, void *pOut);
-int npAsmSecondaryRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName,
+int npAsmSecondaryRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id,
 	unsigned int *pCount);
-int npAsmSecondaryWrapRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName,
+int npAsmSecondaryWrapRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id,
 	unsigned int *pCount);
 int npAsmSecondaryRequestCopyRelatedTitleIds(int requestId, void *buffer, unsigned int count);
 int npAsmSecondaryRequestGetMaxAge(int requestId, int *pMaxAge);
@@ -266,16 +275,35 @@ int npAsmConnectionGetTitleToken(void *connection, const void *titleId, const vo
 extern int sceRtcGetCurrentRetainedNetworkTick(SceRtcTick *pTick);
 
 /* the HTTP connection to the ASM server (0x8101463c..) */
+/* a connection to the ASM server (28 bytes): its template, HTTP connection and request, made for one call */
+struct NpAsmConnection {
+	struct NpAsmConnection *self;
+	int httpContextId;
+	struct NpCommonPs4Allocator *allocator;
+	int templateId;
+	int connectionId;
+	int requestId;
+	SceUInt8 aborted;
+};
+
+int npAsmConnectionInit(void);
+int npAsmConnectionTerm(void);
 int npAsmConnectionCreate(int httpContextId, struct NpCommonPs4Allocator *allocator, void **pConnection);
 int npAsmConnectionDestroy(void *connection);
 int npAsmConnectionGetBaseUrl(void *connection, const void *titleId, const void *serviceName, const void *accessToken,
 	const void *tokenEntry, void *buffer, int size);
 int npAsmConnectionGetNpComInfo(void *connection, const char *titleId, const char *npComId, const void *accessToken,
 	const void *tokenEntry, struct NpAsmNpComInfo **pList, unsigned int *pCount);
-int npAsmConnectionGetRelatedTitleIds(void *connection, const char *serviceName, const char *id, const void *accessToken,
+int npAsmConnectionGetRelatedTitleIds(void *connection, const char *id, const char *serviceName, const void *accessToken,
 	const void *tokenEntry, void **pList, unsigned int *pCount);
 int npAsmConnectionGetHeaderSize(void *connection, const char *name, unsigned int *pSize);
 int npAsmConnectionGetHeader(void *connection, const char *name, char *buffer, unsigned int size);
+int npAsmHmacSha256(const void *key, SceSize keySize, const void *data, SceSize dataSize, void *digest);
+int SceNpCommon_14BC2B99(char *dst, SceSize dstSize, const char *src, SceSize srcLength, SceSize *pLength);
+int SceNpCommon_0624AE44(char *version);
+int SceNpCommonPs4_EC456A83(const unsigned char *src, unsigned char *dst, SceSize length);
+int SceNpCommonPs4_D082556B(const char *src, SceSize srcLength, unsigned char *dst, SceSize dstSize);
+extern int sceHttpsGetSslError(int reqId, int *errNum, unsigned int *detail);
 
 int npCommonPs4AesInit(struct NpCommonPs4AesContext *context, unsigned int blockBits, unsigned int keyBits, const void *key);
 int npCommonPs4AesDecryptBlock(struct NpCommonPs4AesContext *context, const void *in, void *out);
@@ -288,7 +316,7 @@ int SceNpCommonPs4_4858EFB6(SceKernelLwMutexWork *pWork, const char *name, char 
 int SceNpCommonPs4_29895EBB(SceKernelLwMutexWork *pWork);
 int SceNpCommonPs4_F5840D6E(SceKernelLwMutexWork *pWork);
 int SceNpCommonPs4_4A1C1C3C(SceKernelLwMutexWork *pWork);
-int SceNpCommonPs4_B6CD5BEB(int requestId, const void *pOnlineId, const char *id, const char *serviceName, unsigned int *pCount);
+int SceNpCommonPs4_B6CD5BEB(int requestId, const void *pOnlineId, const char *serviceName, const char *id, unsigned int *pCount);
 int SceNpCommonPs4_E2FC8250(int requestId, void *buffer, unsigned int count);
 int SceNpCommonPs4_D84BF4B7(int a1);
 int SceNpCommonPs4_1096EAD4(int a1);

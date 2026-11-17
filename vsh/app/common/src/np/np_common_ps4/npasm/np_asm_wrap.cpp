@@ -199,12 +199,12 @@ int SceNpCommonPs4_6E443E9B(int requestId, const void *pOnlineId, const char *np
 	return NP_ASM_ERROR_INVALID_ARGUMENT;
 }
 
-int SceNpCommonPs4_B6CD5BEB(int requestId, const void *pOnlineId, const char *id, const char *serviceName, unsigned int *pCount)
+int SceNpCommonPs4_B6CD5BEB(int requestId, const void *pOnlineId, const char *serviceName, const char *id, unsigned int *pCount)
 {
 	if (g_npAsmWrapInitialized == 0)
 		return NP_ASM_ERROR_NOT_INITIALIZED;
 	if (pOnlineId != NULL && id != NULL && serviceName != NULL)
-		return npAsmRequestGetRelatedTitleIds(requestId, pOnlineId, id, serviceName, pCount);
+		return npAsmRequestGetRelatedTitleIds(requestId, pOnlineId, serviceName, id, pCount);
 	return NP_ASM_ERROR_INVALID_ARGUMENT;
 }
 
@@ -776,7 +776,7 @@ int npAsmRequestUpdateCacheControl(struct NpAsmRequest *request)
 	return npAsmRequestParseCacheControl(request);
 }
 
-int npAsmRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName, unsigned int *pCount)
+int npAsmRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id, unsigned int *pCount)
 {
 	struct NpAsmClient *client;
 	struct NpAsmTransport *transport;
@@ -823,7 +823,7 @@ int npAsmRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const c
 					goto finish;
 				}
 				npAsmClientUnlock(client);
-				result = npAsmConnectionGetRelatedTitleIds(npAsmRequestGetConnection(request), serviceName, id, accessToken,
+				result = npAsmConnectionGetRelatedTitleIds(npAsmRequestGetConnection(request), id, serviceName, accessToken,
 					tokenEntry, &list, &count);
 				if (result >= 0) {
 					result = npAsmRequestUpdateCacheControl(request);
@@ -1191,7 +1191,7 @@ int SceNpCommonPs4_AB41A67D(int requestId, const void *pOnlineId, const char *np
 	return NP_ASM_ERROR_INVALID_ARGUMENT;
 }
 
-int npAsmSecondaryRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName,
+int npAsmSecondaryRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id,
 	unsigned int *pCount)
 {
 	struct NpAsmClient *client;
@@ -1239,7 +1239,7 @@ int npAsmSecondaryRequestGetRelatedTitleIds(int requestId, const void *pOnlineId
 					goto finish;
 				}
 				npAsmClientUnlock(client);
-				result = npAsmConnectionGetRelatedTitleIds(npAsmRequestGetConnection(request), serviceName, id, accessToken,
+				result = npAsmConnectionGetRelatedTitleIds(npAsmRequestGetConnection(request), id, serviceName, accessToken,
 					tokenEntry, &list, &count);
 				if (result >= 0) {
 					result = npAsmRequestUpdateCacheControl(request);
@@ -1267,11 +1267,11 @@ finish:
 	return result;
 }
 
-int npAsmSecondaryWrapRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *id, const char *serviceName,
+int npAsmSecondaryWrapRequestGetRelatedTitleIds(int requestId, const void *pOnlineId, const char *serviceName, const char *id,
 	unsigned int *pCount)
 {
 	if (pOnlineId != NULL && id != NULL && serviceName != NULL)
-		return npAsmSecondaryRequestGetRelatedTitleIds(requestId, pOnlineId, id, serviceName, pCount);
+		return npAsmSecondaryRequestGetRelatedTitleIds(requestId, pOnlineId, serviceName, id, pCount);
 	return NP_ASM_ERROR_INVALID_ARGUMENT;
 }
 
