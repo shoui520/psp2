@@ -30,8 +30,8 @@
 #include "state.h"
 #include "timer.h"
 
-#if HW_IS(0x00315200)
-/* 0x00315200 drives no WLAN line */
+#if HW_IS(0x00315200) && FW_SINCE(0x01000104)
+/* 0x00315200 drives no WLAN line (before 0x01000104 the config's, as below) */
 #define POWER_SET_WLAN_LINE(level)	do { } while (0)
 #elif BOARD_WLAN_102603
 #define POWER_SET_WLAN_LINE(level)	(P6.7 = (level))
@@ -217,7 +217,7 @@ void powerSeqOn(void)
 	}
 	cookieCtrlBatteryCharge(1);
 #if !FW_SINCE(0x01000104)
-	elmoPowerOnStage = BOARD_IS(0x00411000) ? 0x0b : 7;
+	elmoPowerOnStage = BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0x0b : 7;
 #endif
 	chargeInit();
 }
@@ -360,7 +360,7 @@ unsigned char powerSeqOff(void)
 	P6.3 = 0;
 	P13.1 = 0;
 	POWER_SET_WLAN_LINE(0);
-#if BOARD_102603 && !BOARD_WLAN_102603
+#if BOARD_102603 && !BOARD_WLAN_102603 && !HW_IS(0x00315200)
 	P6.7 = 0;
 #endif
 #if FW_SINCE(0x00090804) && BOARD_BBMC
@@ -622,7 +622,7 @@ unsigned char powerOffWlan(void)
 #if BOARD_WLAN_102603
 		POWER_SET_WLAN_LINE(0);
 		clockOutputStop();
-#elif BOARD_102603
+#elif BOARD_102603 && !HW_IS(0x00315200)
 		P6.7 = 0;
 		clockOutputStop();
 		POWER_SET_WLAN_LINE(0);
@@ -664,6 +664,7 @@ unsigned char powerBbmcCycle(void)
 {
 	unsigned char result;
 
+#if BOARD_BBMC
 #if FW_SINCE(0x00090804)
 	P37 = 0;
 	P125 = 0;
@@ -708,6 +709,9 @@ unsigned char powerBbmcCycle(void)
 	} else {
 		result = 0;
 	}
+#else
+	result = 4;	/* no 3G modem */
+#endif
 	if (result)
 		bbmcWake();
 	return result;
@@ -718,6 +722,7 @@ unsigned char powerBbmcRestart(void)
 {
 	unsigned char result;
 
+#if BOARD_BBMC
 	bbmcSetOff();
 	P37 = 0;
 	P125 = 0;
@@ -731,6 +736,9 @@ unsigned char powerBbmcRestart(void)
 		bbmcWake();
 		result = 2;
 	}
+#else
+	result = 4;	/* no 3G modem */
+#endif
 	return result;
 }
 #endif

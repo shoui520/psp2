@@ -1700,6 +1700,10 @@ void motionStreamPrepare(void)
 /* 0x0480: the sensor's two words (zeros if it is held in reset), once the scan has read them */
 static void motionRequest0480(void)
 {
+#if HW_IS(0x00315200) && !FW_SINCE(0x01000104)
+	unsigned char result;	/* 0x00315200's before 0x01000104: unused, its register saved */
+
+#endif
 	switch (inputRequests.motionPhase) {
 	case 0:
 		if (inputDelays.motionInfo != 0)

@@ -1014,6 +1014,16 @@ static void powerRequestCtrlDeviceReset(void)
 }
 
 /* 0x0890 (SceSysconForDriver_285594F8) */
+#if HW_IS(0x00315200) && !FW_SINCE(0x01000104)
+/* 0x00315200 before 0x01000104: no P3.3 to switch (Sony's keeps the result variable, unused:
+   its register is saved) */
+static void powerRequest0890(void)
+{
+	unsigned char result;
+
+	powerRequestDone(4);
+}
+#else
 static void powerRequest0890(void)
 {
 	unsigned char result;
@@ -1032,6 +1042,7 @@ static void powerRequest0890(void)
 		powerRequestDone(result);
 	}
 }
+#endif
 
 /* 0x0891 (sceSysconCtrlLED) */
 static void powerRequestCtrlLED(void)

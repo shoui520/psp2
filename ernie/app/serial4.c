@@ -272,7 +272,7 @@ unsigned char serial4Open2(int baud)
 	uart4Open(baud);
 	serial4Start(2);
 	serial2SetLink(1);
-#if !FW_SINCE(0x01000104) && !BOARD_102603
+#if !FW_SINCE(0x01000104) && (!BOARD_102603 || HW_IS(0x00315200))
 	dly_tsk(13);
 #endif
 	serial2SetP71(0);
