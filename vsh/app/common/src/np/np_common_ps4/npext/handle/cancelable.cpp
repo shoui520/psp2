@@ -7,18 +7,13 @@
 
 extern "C" {
 
-void npCommonPs4Breakpoint(void);
-int SceNpCommonPs4_A6C7D48D(struct NpCommonPs4Cancelable *cancelable, int errcode, int flags);
-struct NpCommonPs4Cancelable *SceNpCommonPs4_48074E29(struct NpCommonPs4Cancelable *cancelable);
-void SceNpCommonPs4_74001725(struct NpCommonPs4Cancelable *cancelable);
-
-const void *g_cancelableVtable[] = {		/* 0x8102a6c0 */
+const void *g_cancelableVtable[] = {		/* 0x8102a6b8 */
+	NULL,
+	NULL,
 	(const void *)SceNpCommonPs4_A6C7D48D,
 	(const void *)SceNpCommonPs4_48074E29,
 	(const void *)SceNpCommonPs4_74001725,
 	(const void *)npCommonPs4Breakpoint,
-	NULL,
-	NULL,
 };
 
 int SceNpCommonPs4_86DF1834(struct NpCommonPs4Cancelable *cancelable, SceUInt8 enabled)
@@ -164,7 +159,7 @@ int SceNpCommonPs4_A6C7D48D(struct NpCommonPs4Cancelable *cancelable, int errcod
 
 struct NpCommonPs4Cancelable *SceNpCommonPs4_178E883B(struct NpCommonPs4Cancelable *cancelable)
 {
-	cancelable->vtable = g_cancelableVtable;
+	cancelable->vtable = NP_COMMON_PS4_VTABLE(g_cancelableVtable);
 	SceNpCommonPs4_4266D870(&cancelable->mutex);
 	cancelable->cancelErrcode = 0;
 	cancelable->cancelFlags = 0;
@@ -177,7 +172,7 @@ struct NpCommonPs4Cancelable *SceNpCommonPs4_178E883B(struct NpCommonPs4Cancelab
 
 struct NpCommonPs4Cancelable *SceNpCommonPs4_EB1FBB74(struct NpCommonPs4Cancelable *cancelable)
 {
-	cancelable->vtable = g_cancelableVtable;
+	cancelable->vtable = NP_COMMON_PS4_VTABLE(g_cancelableVtable);
 	SceNpCommonPs4_4266D870(&cancelable->mutex);
 	cancelable->cancelErrcode = 0;
 	cancelable->cancelFlags = 0;
@@ -193,7 +188,7 @@ struct NpCommonPs4Cancelable *SceNpCommonPs4_48074E29(struct NpCommonPs4Cancelab
 	int lockCount;
 
 	lockCount = cancelable->lockCount;
-	cancelable->vtable = g_cancelableVtable;
+	cancelable->vtable = NP_COMMON_PS4_VTABLE(g_cancelableVtable);
 	NP_COMMON_PS4_ASSERT(lockCount == 0, "~Cancelable", "npext\\handle\\cancelable.cpp", 35, "m_lockCount == 0");
 	NP_COMMON_PS4_ASSERT(cancelable->subCancel == 0, "~Cancelable", "npext\\handle\\cancelable.cpp", 36, "m_subCancel == 0");
 	NP_COMMON_PS4_ASSERT(cancelable->parentCancel == 0, "~Cancelable", "npext\\handle\\cancelable.cpp", 37, "m_parentCancel == 0");
@@ -284,6 +279,19 @@ link:
 	sub->parentCancel = cancelable;
 	SceNpCommonPs4_6BA5A164(mutex);
 	return 0;
+}
+
+int SceNpCommonPs4_6BF7B5BE(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub)
+{
+	struct NpCommonPs4Mutex *mutex;
+
+	mutex = &cancelable->mutex;
+	SceNpCommonPs4_A2A8493B(mutex);
+	if (sub != NULL && cancelable->subCancel != sub)
+		return SceNpCommonPs4_6BA5A164(mutex);
+	sub->parentCancel = NULL;
+	cancelable->subCancel = NULL;
+	return SceNpCommonPs4_6BA5A164(mutex);
 }
 
 }

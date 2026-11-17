@@ -31,21 +31,22 @@ extern "C" {
 void *SceNpCommonPs4_31451392(void **object);
 int SceNpCommonPs4_B467D873(void **object);
 
-const void *g_baseVtable[] = {		/* 0x8102a6b0 */
+const void *g_baseVtable[] = {		/* 0x8102a6a8 */
+	NULL,
+	NULL,
 	(const void *)SceNpCommonPs4_31451392,
 	(const void *)SceNpCommonPs4_B467D873,
-	NULL,
 };
 
 void *SceNpCommonPs4_31451392(void **object)
 {
-	*object = (void *)g_baseVtable;
+	*object = (void *)NP_COMMON_PS4_VTABLE(g_baseVtable);
 	return object;
 }
 
 int SceNpCommonPs4_B467D873(void **object)
 {
-	*object = (void *)g_baseVtable;
+	*object = (void *)NP_COMMON_PS4_VTABLE(g_baseVtable);
 	return SceNpCommonPs4_BB5282C8(object);
 }
 

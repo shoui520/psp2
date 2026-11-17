@@ -119,7 +119,7 @@ __attribute__((noinline)) int SceNpCommonPs4_BB5282C8(void *object)
 
 struct NpCommonPs4Mutex *SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex)
 {
-	mutex->vtable = g_mutexVtable;
+	mutex->vtable = NP_COMMON_PS4_VTABLE(g_mutexVtable);
 	mutex->initialized = 0;
 	sceClibMemset(&mutex->mutexId, 0, 4);
 	return mutex;
@@ -127,7 +127,7 @@ struct NpCommonPs4Mutex *SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex)
 
 struct NpCommonPs4Mutex *SceNpCommonPs4_4C7BD335(struct NpCommonPs4Mutex *mutex)
 {
-	mutex->vtable = g_mutexVtable;
+	mutex->vtable = NP_COMMON_PS4_VTABLE(g_mutexVtable);
 	mutex->initialized = 0;
 	sceClibMemset(&mutex->mutexId, 0, 4);
 	return mutex;
@@ -143,30 +143,30 @@ int SceNpCommonPs4_AB8AE01C(struct NpCommonPs4Mutex *mutex)
 struct NpCommonPs4Mutex *SceNpCommonPs4_294F0B1A(struct NpCommonPs4Mutex *mutex)
 {
 	if (mutex->initialized != 0) {
-		mutex->vtable = g_mutexVtable;
+		mutex->vtable = NP_COMMON_PS4_VTABLE(g_mutexVtable);
 		SceNpCommonPs4_2D74359F(&mutex->mutexId);
 	}
-	mutex->vtable = g_baseVtable;
+	mutex->vtable = NP_COMMON_PS4_VTABLE(g_baseVtable);
 	return mutex;
 }
 
 int SceNpCommonPs4_E0ED3312(struct NpCommonPs4Mutex *mutex)
 {
 	if (mutex->initialized != 0) {
-		mutex->vtable = g_mutexVtable;
+		mutex->vtable = NP_COMMON_PS4_VTABLE(g_mutexVtable);
 		SceNpCommonPs4_2D74359F(&mutex->mutexId);
 	}
-	mutex->vtable = g_baseVtable;
+	mutex->vtable = NP_COMMON_PS4_VTABLE(g_baseVtable);
 	return SceNpCommonPs4_BB5282C8(mutex);
 }
 
 struct NpCommonPs4Mutex *SceNpCommonPs4_3FE4AAB6(struct NpCommonPs4Mutex *mutex)
 {
 	if (mutex->initialized != 0) {
-		mutex->vtable = g_mutexVtable;
+		mutex->vtable = NP_COMMON_PS4_VTABLE(g_mutexVtable);
 		SceNpCommonPs4_2D74359F(&mutex->mutexId);
 	}
-	mutex->vtable = g_baseVtable;
+	mutex->vtable = NP_COMMON_PS4_VTABLE(g_baseVtable);
 	return mutex;
 }
 
@@ -231,11 +231,11 @@ int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex)
 	return result;
 }
 
-const void *g_mutexVtable[] = {		/* 0x8102aa0c */
+const void *g_mutexVtable[] = {		/* 0x8102aa04 */
+	NULL,
+	NULL,
 	(const void *)SceNpCommonPs4_294F0B1A,
 	(const void *)SceNpCommonPs4_E0ED3312,
-	NULL,
-	NULL,
 };
 
 }

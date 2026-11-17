@@ -54,6 +54,9 @@ struct NpCommonPs4Allocator {
 #endif
 #define NP_COMMON_PS4_SOURCE(path) "W:\\Build\\" NP_COMMON_PS4_BUILD "\\vsh\\app\\common\\src\\np\\np_common_ps4\\" path
 
+/* a vtable object starts with two words (offset to top, type information); the object's vtable pointer points past them */
+#define NP_COMMON_PS4_VTABLE(table) (&(table)[2])
+
 /* Sony's assert: prints where it failed, then stops (SceNpCommonPs4_F50BD96A) */
 #define NP_COMMON_PS4_ASSERT(condition, function, file, line, text) \
 	do { \
@@ -79,6 +82,18 @@ struct NpCommonPs4Cancelable {
 	int lockCount;
 	struct NpCommonPs4Cancelable *subCancel;
 	struct NpCommonPs4Cancelable *parentCancel;
+};
+
+/* npext/handle/handle.cpp, scope.cpp: a reference counted handle that is a Cancelable, and the scope that attaches to one */
+struct NpCommonPs4Handle {
+	const void *const *vtable;
+	struct NpCommonPs4Cancelable cancelable;
+	int refCount;
+};
+
+struct NpCommonPs4Scope {
+	struct NpCommonPs4Cancelable cancelable;
+	struct NpCommonPs4Handle *handle;
 };
 
 /* a block of memory the library allocated, and its size */
@@ -116,6 +131,18 @@ struct NpCommonPs4HeapStats {
 	SceSize currentInUse;
 };
 
+int SceNpCommonPs4_A6C7D48D(struct NpCommonPs4Cancelable *cancelable, int errcode, int flags);
+struct NpCommonPs4Cancelable *SceNpCommonPs4_EB1FBB74(struct NpCommonPs4Cancelable *cancelable);
+struct NpCommonPs4Cancelable *SceNpCommonPs4_48074E29(struct NpCommonPs4Cancelable *cancelable);
+void SceNpCommonPs4_74001725(struct NpCommonPs4Cancelable *cancelable);
+struct NpCommonPs4Cancelable *SceNpCommonPs4_C6E3FE21(struct NpCommonPs4Cancelable *cancelable);
+int SceNpCommonPs4_2CA5AE6A(struct NpCommonPs4Cancelable *cancelable);
+int SceNpCommonPs4_9BCAE348(struct NpCommonPs4Cancelable *cancelable);
+int SceNpCommonPs4_3AAA7DF7(struct NpCommonPs4Cancelable *cancelable);
+int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable);
+int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub);
+int SceNpCommonPs4_6BF7B5BE(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub);
+void npCommonPs4Breakpoint(void);
 int SceNpCommonPs4_A2A8493B(struct NpCommonPs4Mutex *mutex);	/* lock */
 int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex);	/* unlock */
 int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, char recursive);
