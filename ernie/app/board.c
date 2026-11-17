@@ -181,7 +181,7 @@ unsigned char boardMultiCnStop(void)
 
 #endif
 
-#if defined(ERNIE_UPDATER) || (BOARD_102603 && !FW_SINCE(0x00090804))
+#if defined(ERNIE_UPDATER) || (HW_IS(0x00102603) && !FW_SINCE(0x00090804))
 /* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
    inputs report it */
 unsigned char boardMultiCnIsDongle(void)
@@ -223,11 +223,11 @@ void boardPortInit(void)
 	P2 = 0x00;
 	PM2 = BOARD_PM2;
 	P3 = 0x00;
-	PM3 = 0x07;
+	PM3 = BOARD_PM3;
 	P4 = 0x00;
 	PM4 = BOARD_PM4;
 	P5 = 0x00;
-	PM5 = 0x00;
+	PM5 = BOARD_PM5;
 	P6 = 0x05;
 	PM6 = BOARD_PM6;
 	P7 = 0x00;
@@ -236,16 +236,16 @@ void boardPortInit(void)
 	PM8 = 0x00;
 	P9 = 0x00;
 	PM9 = BOARD_PM9;
-	P11 = 0x00;
+	P11 = BOARD_P11;
 	PM11 = BOARD_PM11;
 	P12 = BOARD_P12;
-	PM12 = 0x5f;
+	PM12 = BOARD_PM12;
 	P13 = 0x00;
 	PM13 = 0xfc;
-#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000)
+#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000) || HW_IS(0x00315200)
 	P14 = 0x00;
 #else
-	/* 0x00411000's 0x00090206: P14.3 an open-drain output, high */
+	/* 0x00411000's 0x00090206 (not 0x00315200's): P14.3 an open-drain output, high */
 	POM14 = 0x08;
 	P14 = 0x08;
 #endif

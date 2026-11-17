@@ -80,14 +80,14 @@
 #define BOARD_ANALOG_CHANNEL8	(BOARD_IS(0x00411000) && !HW_IS(0x00315200))
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
-   0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa), nor has
-   0x00411000 after 0x00090206 */
-#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && \
+   0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa), nor have
+   0x00411000 after 0x00090206 and 0x00315200 */
+#define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00315200) && \
 				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
 
 /* the settings stand in for a battery that does not answer (its temperature, capacities, ...);
-   PCH-1000 always asks the battery, and so does 0x00411000 after 0x00090206 */
-#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && \
+   PCH-1000 always asks the battery, and so do 0x00411000 after 0x00090206 and 0x00315200 */
+#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00315200) && \
 				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
@@ -187,18 +187,25 @@
 
 /* the port modes boardPortInit sets: PCH-1000 drives P7.3 and P7.7 (no input 3 pins there)
    and P9.3 */
-#define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : 0xfd)
+#define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : HW_IS(0x00315200) ? 0xed : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
 /* and 0x00102603's own */
 /* (0x00411000's 0x00090206 port modes are 0x00102603's, but for PM14; the other boards'
    0x00090206 keep its PM6 only, with PM2 0xff and PM14 0xec) */
 #define BOARD_PORTS_102603		(BOARD_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000)))
-#define BOARD_PM2		(BOARD_PORTS_102603 ? 0xab : !FW_SINCE(0x00090804) ? 0xff : 0x01)
+#define BOARD_PM2		(HW_IS(0x00315200) ? 0x01 : BOARD_PORTS_102603 ? 0xab : \
+				 !FW_SINCE(0x00090804) ? 0xff : 0x01)
 #define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
-#define BOARD_PM6		(BOARD_102603 || !FW_SINCE(0x00090804) ? 0x12 : 0x92)
-#define BOARD_PM11		(BOARD_102603 ? 0xf2 : 0xf1)
+#define BOARD_PM6		((BOARD_102603 && !HW_IS(0x00315200)) || !FW_SINCE(0x00090804) ? 0x12 : 0x92)
+#define BOARD_PM11		(HW_IS(0x00315200) ? 0xf0 : BOARD_102603 ? 0xf2 : 0xf1)
 #define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
-#define BOARD_PM14		(BOARD_102603 ? 0xe6 : !FW_SINCE(0x00090804) && !BOARD_IS(0x00411000) ? 0xec : 0xe4)
+#define BOARD_PM14		(HW_IS(0x00315200) ? 0xc6 : BOARD_102603 ? 0xe6 : \
+				 !FW_SINCE(0x00090804) && !BOARD_IS(0x00411000) ? 0xec : 0xe4)
+/* and 0x00315200's own: P11.1 high, PM3 0x03, PM5 0x30, PM12 0x1f */
+#define BOARD_PM3		(HW_IS(0x00315200) ? 0x03 : 0x07)
+#define BOARD_PM5		(HW_IS(0x00315200) ? 0x30 : 0x00)
+#define BOARD_P11		(HW_IS(0x00315200) ? 0x02 : 0x00)
+#define BOARD_PM12		(HW_IS(0x00315200) ? 0x1f : 0x5f)
 #define BOARD_PM15		(BOARD_PORTS_102603 ? 0xff : 0xf8)
 
 /* the 3G modem (bbmc.c's events, task 6's): not on 0x00315200, whose bbmcEvent only refuses

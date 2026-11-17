@@ -435,7 +435,11 @@ void analogEvent(unsigned int inputs)
 			task2SetFlag(3, 0x0001);
 #else
 			switch (analogMultiCnReported) {
+#if BOARD_102603
+			case 0x51:	/* its levels are two inputs' nibbles */
+#else
 			case 2:
+#endif
 				task2SetFlag(3, 0x0001);
 			}
 #endif

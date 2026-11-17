@@ -386,7 +386,29 @@ unsigned char bbmcModeIsNone(void)
 /* event flag 6's events */
 unsigned char bbmcEvent(FLGPTN ptn)
 {
-#if !BOARD_BBMC
+#if !BOARD_BBMC && !FW_SINCE(0x00090804)
+	/* 0x00315200's 0x00090206: the request, and the state's change still writes the modem's
+	   registers */
+	if (ptn & BBMC_EVENT_REQUEST)
+		bbmcRequestRun();
+	if (ptn & BBMC_EVENT_STATE) {
+		unsigned long zero;
+		unsigned int state;
+
+		zero = 0;
+		state = stateGet();
+		switch (state) {
+		case 0x0020:
+		case 0x8020:
+			break;
+		case 0x0004:
+		case 0x8004:
+			bbmcWriteRegs(8, 4, (unsigned char *)&zero, BBMC_WRITE_RESET);
+			break;
+		}
+	}
+	return 0;
+#elif !BOARD_BBMC
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
 	return 0;

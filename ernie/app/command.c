@@ -114,14 +114,14 @@ union CommandWord {
 #endif
 };
 
-/* the commands request 0 takes before the handshake */
-static const unsigned int commandBaseRequests[6] = {
-	0x0080, 0x0083, 0x0084, 0x0085, 0x00a0, 0x00c0,
-};
-
 /* the time stamp's digits in appTimeStamp: the year, month, day, hour and minute */
 const unsigned char timeStampDigits[12] = {
 	8, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23,
+};
+
+/* the commands request 0 takes before the handshake */
+static const unsigned int commandBaseRequests[6] = {
+	0x0080, 0x0083, 0x0084, 0x0085, 0x00a0, 0x00c0,
 };
 
 /* 0x0001 (sceSysconGetErnieVersion) */

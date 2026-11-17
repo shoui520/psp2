@@ -416,11 +416,14 @@ void inputResumeOpen(void)
 	analogInit();
 #endif
 	adcOpenForBoard();
-#if BOARD_INPUTS_102603
+#if BOARD_INPUTS_102603 && !FW_SINCE(0x00090804)
+	P127 = 1;
+#elif BOARD_INPUTS_102603
 	P12 |= 0x80;
 #endif
 	inputGroup1.pending |= 0x08;
-#if BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))
+#if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))) && \
+    !(HW_IS(0x00315200) && !FW_SINCE(0x00090804))
 	inputDelays.latchOn = 0x1c;
 #endif
 #if BOARD_MOTION
@@ -434,6 +437,24 @@ void inputResumeOpen(void)
 	return;
 }
 
+#if !FW_SINCE(0x00090804)
+/* 0x00090206: no wake from INTP10 at power-off; the multi-connector off */
+void inputPowerOff(void)
+{
+	touchClose();
+#if BOARD_MOTION
+	motionClose();
+#endif
+	adcCloseForBoard();
+	inputKeysClose();
+	boardMultiCnOutputOff();
+#if BOARD_INPUTS_102603
+	P127 = 0;
+	P5.4 = 0;
+#endif
+	analogLatchInit();
+}
+#else
 void inputPowerOff(void)
 {
 	unsigned long flags;
@@ -478,13 +499,29 @@ void inputPowerOff(void)
 	analogLatchInit();
 	return;
 }
+#endif
 
 void inputStateOff(void)
 {
 	intp7Enable(0);
 	intp4Enable(0);
 	intp3Enable(0);
+#if !FW_SINCE(0x00090804)
+	/* 0x00090206: INTP10 off, no cold-start hold */
+	intp10Enable(0);
 #if BOARD_OFF_WAKE
+	intp13Enable(1);
+	intp11Enable(1);
+	if (!P4.6)
+		inputScanMode1(1);
+	else {
+		intp1Enable(1);
+		inputScanMode2(1);
+	}
+#else
+	inputScanMode1(1);
+#endif
+#elif BOARD_OFF_WAKE
 	intp13Enable(1);
 	intp1Enable(1);
 #if BOARD_INTP11
@@ -497,7 +534,9 @@ void inputStateOff(void)
 #else
 	inputScanMode1(1);
 #endif
+#if FW_SINCE(0x00090804)
 	coldStart = 0;
+#endif
 }
 
 void inputShutdown(void)
@@ -580,6 +619,14 @@ void inputSuspend(void)
 			intp4Enable(1);
 	}
 	if ((flags & 0x00000008) == 0) {
+#if BOARD_INPUTS_102603
+		if (!P14.1) {
+			pinMonitor2Enable(1);
+			pinMonitors.pin[2].last = 0;
+			inputScanHold(0x1a);
+		} else
+			intp7Enable(1);
+#endif
 	}
 	if ((flags & 0x00010000) == 0) {
 		if (!P7.6) {
