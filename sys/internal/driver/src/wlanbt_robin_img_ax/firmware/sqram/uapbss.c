@@ -98,8 +98,7 @@ void uapBssDefaults(struct WlanConnection *connection)
 	info->protectionFlags = ((info->protectionFlags & ~1) | 6) & 0xc7;
 	info->pktFwdCtl = 1;
 	info->pktFwdCtlConfigured = 1;
-	info->protectionFlags &= ~0xc0;
-	info->protectionFlagsHigh &= ~1;
+	info->antenna.rx = 0;
 
 	/* channels 1 to 11, scanned actively and passively, 2000 TU in all */
 	info->channelCount = UAP_DEFAULT_CHANNELS;
@@ -128,7 +127,8 @@ void uapBssDefaults(struct WlanConnection *connection)
 	info->unicastRate = 0;
 	info->txRate = 0;
 	info->maxStations = 10;
-	info->securityMode = (SecurityMode_t){ .noRsn = 1 };
+	info->securityMode = (SecurityMode_t){ 0 };
+	info->securityMode.noRsn = 1;
 	info->staAgeout = 1800;
 	info->psStaAgeout = 400;
 	macMgmtProcessHeader(info);
@@ -670,27 +670,25 @@ void p2pDiscoverabilityCheck(struct WlanDirectContext *peer, uint32_t changed, s
  * one's value (bytes 4 and 5, big endian) set from wpsDevicePasswordId for this
  * frame only, while provisioningAction is set.
  */
-unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
+void p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	uint8_t *attribute = ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID];
-	uint8_t saved[2] = { 0, 0 };
-	uint32_t value = 0;
-	unsigned int result;
+	uint8_t saved[2];
 
 	if (attribute != NULL && ps->provisioningAction != 0) {
+		unsigned int value = (ps->wpsDevicePasswordId << 8) | ((ps->wpsDevicePasswordId >> 8) & 0xff);
+
 		saved[0] = attribute[4];
 		saved[1] = attribute[5];
-		value = (ps->wpsDevicePasswordId << 8) | ((ps->wpsDevicePasswordId >> 8) & 0xff);
-		attribute[4] = ((uint8_t *)&value)[0];
-		attribute[5] = ((uint8_t *)&value)[1];
+		attribute[4] = value;
+		attribute[5] = value >> 8;
 	}
-	result = p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
+	p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
 	if (ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID] != NULL && ps->provisioningAction != 0) {
 		attribute[4] = saved[0];
 		attribute[5] = saved[1];
 	}
-	return result;
 }
 
 /*
@@ -716,8 +714,8 @@ void p2pOperatingChannelSelect(struct WlanConnection *connection, const struct W
 	}
 	if (peer->attributes[P2P_SLOT_OPERATING_CHANNEL] != NULL) {
 		ps->p2pStatus.value = 4;
-		count = list[7];
-		for (i = 0; i < count; i = (uint8_t)(i + 1)) {
+		list = peer->attributes[P2P_SLOT_CHANNEL_LIST];
+		for (i = 0; i < list[7]; i = (uint8_t)(i + 1)) {
 			if (list[8 + i] == peer->attributes[P2P_SLOT_OPERATING_CHANNEL][7]) {
 				ps->p2pStatus.value = 0;
 				goto common;
@@ -2045,7 +2043,7 @@ int p2pServiceDiscoverySend(struct WlanConnection *connection, const uint8_t *re
 {
 	struct WlanPsPeerState *ps;
 	const uint8_t *body = request + 6;
-	union WlanBssidWords bssid = p2pWildcardBssid;
+	union WlanBssidWords bssid = { .bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 } };
 	const uint8_t *address = NULL;
 	unsigned int now = 0;
 	OsaBuffer *frame;
@@ -2416,9 +2414,10 @@ int p2pPublicActionCommand(struct WlanConnection *connection, const uint8_t *com
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	const uint8_t *request = command + 8;
+	unsigned int subtype = request[12];
 
 	ps->dialogToken = request[13];
-	switch (request[12]) {
+	switch (subtype) {
 	case 0:		/* GO negotiation request */
 		ps->p2pFlags |= 0x01;
 		p2pDeviceConnection = connection;
@@ -2507,7 +2506,7 @@ int hostCmd00ea(struct WlanConnection *connection, uint8_t *command)
 	uint8_t *tlv;
 	uint8_t *out;
 
-	switch (command[0]) {
+	switch ((uint8_t)TLV_U16(command)) {
 	case HOST_CMD_P2P_PARAMS_CONFIG:
 		if (TLV_U16(body) == 1) {
 			unsigned int remaining = (uint16_t)(length - 2);

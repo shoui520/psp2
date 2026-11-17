@@ -37,7 +37,7 @@
 #include "robin/peerrate.h"
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
-#define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
+#define PUT_U16(bytes, value)	(((struct __attribute__((packed)) { uint16_t word; } *)(bytes))->word = (uint16_t)(value))
 
 /* A message to the host (a command's response or an event): what wlanHostMessageAlloc() hands out. */
 struct WlanHostMessage {
@@ -230,7 +230,7 @@ int hostCmd00b1(struct WlanConnection *connection)
 	else
 		info->capability[0] |= 0x10;
 	info->pktFwdCtl = info->pktFwdCtlConfigured;
-	if (role->channelFlags >> 6 == 1 && macMgmtSchedulePacket()) {
+	if (role->channelFlags >> 6 == 1 && macMgmtSchedulePacket() == 1) {
 		kind = WLAN_SME_BSS_START_HT;
 		result = 5;
 	}
@@ -354,7 +354,7 @@ void macMgmtFormatBuffer(uint32_t timer, uint32_t argument)
 }
 
 /* A deauthentication is sent to the peer; returns what wlanMgmtSendDeauth() says, 0: sent. */
-int macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer, unsigned int reason)
+int macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer, uint16_t reason)
 {
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
 	int own = 0;
@@ -385,7 +385,7 @@ int macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer,
 }
 
 /* The host's HostCmd 0xb5 or the access point's own decision: the peer is deauthenticated and the host is told. */
-int macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int reason)
+int macMgmtTrackBuffer(struct WlanConnection *connection, uint16_t reason)
 {
 	int result;
 	OsaBuffer *message;
@@ -453,12 +453,13 @@ __attribute__((noinline)) int macMgmtSetupBuffer(uint16_t algorithm, uint16_t se
 		       struct WlanConnection *connection)
 {
 	OsaBuffer *buffer = wlanMgmtAllocFrame(connection, 0x15c);
+	uint8_t *frame;
 
 	if (buffer == NULL)
-		return 0;
+		return -1;
+	frame = (uint8_t *)BUFFER_DATA(buffer);
 	wlanMgmtBuildFrame(buffer, connection->interfaceAddress, connection->peerAddress, 11, connection->localAddress);
-	fmCoexScheduleTable((uint8_t *)BUFFER_DATA(buffer),
-			    algorithm, sequence, status, challenge);
+	fmCoexScheduleTable(frame, algorithm, sequence, status, challenge);
 	return wlanMgmtSendFrame(buffer);
 }
 
@@ -467,13 +468,15 @@ int macMgmtClearBuffer(const WlanWirelessFrame *frame, unsigned int sequence, un
 		       const uint8_t *request)
 {
 	const uint8_t *body = frame->body;
-	unsigned int received = U16(body);
+	unsigned int number = U16(body + 2);
 
-	if (U16(body + 2) != sequence)
+	if (number != sequence)
 		return 14;
-	if (U16(body + 2) == 3 && !(frame->frameControl[1] & 0x40))
+	if (number == 3 && !(frame->frameControl[1] & 0x40))
 		return 1;
-	if (wlanFrameHasWpsIe(request) == 0 || received != 0) {
+	if (wlanFrameHasWpsIe(request) == 0 || U16(body) != 0) {
+		unsigned int received = U16(body);
+
 		if (algorithm == 255) {
 			if (received < 2)
 				return 0;
@@ -533,12 +536,11 @@ int macMgmtSelectBuffer(struct WlanConnection *connection, uint8_t **text)
 /* The challenge text: 128 bytes from the C library's generator, seeded with the MAC's timer. */
 void fmCoexUpdateTable(uint8_t *text)
 {
-	uint32_t timer[2];
-	uint32_t value;
-	unsigned int offset;
+	uint32_t offset;	/* first the timer's high word */
+	uint32_t value;		/* first its low word, the seed */
 
-	romLibVerifyState(&timer[1], &timer[0]);
-	srand(timer[0]);
+	romLibVerifyState(&offset, &value);
+	srand(value);
 	for (offset = 0; offset < WLAN_CHALLENGE_SIZE; offset += 4) {
 		value = rand();
 		__aeabi_memcpy(text + offset, &value, 4);
@@ -680,13 +682,13 @@ const uint8_t *fmCoexComputeTable(WlanWirelessFrame *frame, const WlanWirelessFr
 /* The peer's HT capabilities say it can send greenfield frames. */
 int fmCoexQueryTable(const WlanIePointers *ies)
 {
-	return (ies->pHtCap->capabilities & 0x0010) != 0;
+	return ies->pHtCap->capability.greenfield;
 }
 
 /* The peer's HT capabilities say it supports 40 MHz. */
 int fmCoexResetTable(const WlanIePointers *ies)
 {
-	return (ies->pHtCap->capabilities & WLAN_HT_CAP_40MHZ) != 0;
+	return ies->pHtCap->capability.supportedChannelWidth;
 }
 
 /* Elements of the BSS go into a frame as they are kept: the HT capabilities, the HT operation and the WMM parameter ones; each returns its size. */
@@ -815,7 +817,7 @@ void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument)
 unsigned int macMgmtRecordBuffer(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
-	unsigned int number;
+	uint8_t number;
 
 	if (info->stationCount >= info->maxStations)
 		return 0;
@@ -834,12 +836,10 @@ unsigned int macMgmtRecordBuffer(struct WlanConnection *connection)
 __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connection)
 {
 	struct WlanConnectionRole *role;
-	struct WlanConnectionInfo *info;
 
 	if (!(connection->flags2 & WLAN_CONN2_ASSOCIATED))
 		return;
 	role = wlanConnectionInfoSlot(connection);
-	info = role->info;
 	if (connection->flags & WLAN_CONN_HT) {
 		const uint8_t *peer = connection->peerAddress;
 		unsigned int tid;
@@ -857,45 +857,45 @@ __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connec
 			}
 		}
 		if (!(connection->htCapability[2] & 0x02))
-			--info->ht20MhzStations;
+			--role->info->ht20MhzStations;
 		if (!(connection->htCapability[2] & 0x10))
-			--info->htNonGreenfieldStations;
+			--role->info->htNonGreenfieldStations;
 		if (connection->htCapability[3] & 0x40) {
-			if (--info->ht40IntolerantStations == 0)
+			if (--role->info->ht40IntolerantStations == 0)
 				macMgmtManagePacket(connection, 1);
 		}
-	} else {
-		--info->htMixedStations;
 	}
+	if (!(connection->flags & WLAN_CONN_HT))
+		--role->info->htMixedStations;
 	wlanSecurityRefresh(connection);
 	connection->flags &= ~WLAN_CONN_HT;
 	__aeabi_memclr(connection->htCapability, sizeof(connection->htCapability));
 	wlanApPsStationGone(connection);
 	connection->flags2 &= ~WLAN_CONN2_ASSOCIATED;
 	if (connection->associationId != 0)
-		wlanBitmapFree(info->aidBitmap, 32, connection->associationId - 1);
+		wlanBitmapFree(role->info->aidBitmap, 32, connection->associationId - 1);
 	connection->associationId = 0;
-	--info->stationCount;
+	--role->info->stationCount;
 	role->state = 2;
 	if (role->erpCapable == 0) {
-		if (--info->erpInfo == 0)
+		if (--role->info->erpInfo == 0)
 			wlanApErpUpdate(connection);
 	}
 	if (!(connection->bssCapability[0] & 0x20)) {
-		if (--info->nonErpStations == 0)
+		if (--role->info->nonErpStations == 0)
 			wlanApUpdateProtection(connection);
 	}
 	if (!(connection->bssCapability[1] & 0x04)) {
-		if (--info->longSlotStations == 0)
+		if (--role->info->longSlotStations == 0)
 			wlanApUpdateSlotTime(connection);
 	}
-	if (info->securityMode.wpa || info->securityMode.wpa2) {
+	if (role->info->securityMode.wpa || role->info->securityMode.wpa2) {
 		if (connection->keyBlocks[1] != NULL) {
 			wlanKeyBufferFree(connection->keyBlocks[1]);
 			connection->keyBlocks[1] = NULL;
 		}
 	}
-	if (info->securityMode.wapi && connection->keyBlocks[1] != NULL) {
+	if (role->info->securityMode.wapi && connection->keyBlocks[1] != NULL) {
 		keyApi_FreeKey(&connection->keyBlocks[1]);
 		connection->flags &= ~WLAN_CONN_WAPI;
 		connection->keyBlocks[0] = NULL;
@@ -907,7 +907,7 @@ __attribute__((noinline)) void macMgmtFilterBuffer(struct WlanConnection *connec
 		KeyMgmtStopHskTimer(connection, 0);
 		__aeabi_memclr4(&role->keyMgmt, 0x34);
 	}
-	if (info->stationCount == 0)
+	if (role->info->stationCount == 0)
 		wlanHostEventSendPlain(connection, WLAN_HOST_EVENT_BSS_EMPTY);
 	macTxFlushConnection(connection);
 }

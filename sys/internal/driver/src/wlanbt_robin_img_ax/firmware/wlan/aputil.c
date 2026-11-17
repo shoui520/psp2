@@ -18,7 +18,7 @@
 #define WLAN_TLV_WMM_VALUE	24
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
-#define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
+#define PUT_U16(bytes, value)	(((struct __attribute__((packed)) { uint16_t word; } *)(bytes))->word = (uint16_t)(value))
 
 /* erpInfo points to WlanConnectionInfo.erpInfo; the functions reach the rest of it. */
 #define WLAN_ERP_INFO(erpInfo) \
@@ -110,10 +110,12 @@ void wlanApMicErrorInit(unsigned int wpa, MIC_Error_t *micError)
 void wlanTlvAppendElement(const uint8_t *element, uint8_t **cursor, uint8_t *length)
 {
 	unsigned int size = element[1] + 4;
+	unsigned int bodyLength;
 
 	PUT_U16(*cursor, element[0]);
-	PUT_U16(*cursor + 2, element[1]);
-	__aeabi_memcpy(*cursor + 4, element + 2, element[1]);
+	bodyLength = element[1];
+	PUT_U16(*cursor + 2, bodyLength);
+	__aeabi_memcpy(*cursor + 4, element + 2, bodyLength);
 	*cursor += size;
 	PUT_U16(length, U16(length) + size);
 }

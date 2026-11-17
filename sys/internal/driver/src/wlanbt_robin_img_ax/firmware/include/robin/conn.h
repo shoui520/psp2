@@ -280,6 +280,14 @@ struct WlanConnectionInfo {
 			uint8_t reserved40b[10];
 			struct WlanWmmAcParameters acParameters[4];	/* the same records, BE, BK, VI, VO */
 		};
+		struct {
+			uint8_t wmmHeader[8];		/* id, length, OUI, type, subtype, version */
+			struct __attribute__((packed)) {	/* an AP's QoS Info (WMM 2.2.1), wmmElement[8] */
+				uint8_t parameterSetCount : 4;	/* changes whenever the AC parameters change */
+				uint8_t reserved : 3;
+				uint8_t uapsd : 1;
+			} apQosInfo;
+		};
 	};
 	uint8_t reserved66[2];
 	uint32_t htEnabled;		/* nonzero: the access point's HT elements apply */
@@ -319,8 +327,18 @@ struct WlanConnectionInfo {
 	} extCapability;		/* the extended capabilities element */
 	uint32_t mgmtForwardMask;	/* bit n: management frames of subtype n are handed to the host */
 	uint8_t ht2040Managed;		/* nonzero: the BSS starts at 20 MHz and macMgmtManagePacket() widens it */
-	uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: the SSID is broadcast: beacons carry it and probe requests without one are answered (clear: hidden) */
-	uint8_t protectionFlagsHigh;	/* bit 0: the top bit of the 16-bit flags protectionFlags starts (bits 6-8 cleared together by uapBssDefaults()) */
+	union {
+		struct {
+			uint8_t protectionFlags;	/* bit 0: protection forced on, bit 1: the SSID is broadcast: beacons carry it and probe requests without one are answered (clear: hidden) */
+			uint8_t protectionFlagsHigh;	/* bit 0: the top bit of the receive antenna */
+		};
+		struct __attribute__((packed)) {
+			uint16_t : 3;
+			uint16_t tx : 3;		/* the transmit antenna (ANTENNA_CTL 1) */
+			uint16_t rx : 3;		/* the receive antenna (ANTENNA_CTL 0) */
+			uint16_t : 7;
+		} antenna;
+	};
 	uint8_t pktFwdCtlConfigured;	/* what the host configured; pktFwdCtl takes it when the BSS starts */
 	uint8_t pktFwdCtl;		/* WLAN_PKT_FWD_*: what the access point does with frames between its stations (inferred) */
 	struct WlanWapiSettings wapi;	/* 545: the BSS's WAPI element, when it is a WAPI one */
@@ -380,7 +398,6 @@ struct WlanSubscribeEvents;
 struct WlanBandChannel {
 	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
 	uint8_t channel;
-	uint8_t reserved[2];
 };
 
 /* The access point's association context: its first block is set up with the connection. */

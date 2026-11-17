@@ -23,7 +23,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 int wlanApConfigTlvGet(unsigned int type, void **addresses, uint8_t *lengths,
 		       struct WlanConnectionInfo *info, uint8_t *ssid, uint8_t *channelFlags,
 		       uint16_t *length, uint8_t *tlv, int shortPreamble, int bssStarted,
-		       uint32_t *antennas, uint32_t *wepKeys, uint16_t hookValue,
+		       uint32_t *antennas, uint32_t *wepKeys, unsigned int hookValue,
 		       uint8_t *scratchFlag, uint8_t *scratchByte, uint16_t *scratchHalf,
 		       uint32_t *scratchWord, uint8_t *htScratch, uint8_t *wmmScratch,
 		       uint8_t *protocols);

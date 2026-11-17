@@ -22,8 +22,8 @@
 #include "robin/wapiie.h"
 #include "robin/wmm.h"
 
-#define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
-#define PUT_U16(bytes, value)	((bytes)[0] = (uint8_t)(value), (bytes)[1] = (uint8_t)((value) >> 8))
+#define U16(bytes)		(((const struct __attribute__((packed)) { uint16_t word; } *)(bytes))->word)
+#define PUT_U16(bytes, value)	(((struct __attribute__((packed)) { uint16_t word; } *)(bytes))->word = (uint16_t)(value))
 
 /* The TLVs of HostCmd 0xb0 (Marvell's TLV numbers; below 0x100 an element's ID). */
 #define WLAN_TLV_SSID		0x0000
@@ -211,8 +211,9 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 		length = bss->ssidLength;
 		if (length != U16(tlv + 2) || memcmp(ssid, value, length) != 0)
 			*pmkChanged = 1;
-		bss->ssidLength = tlv[2];
-		__aeabi_memcpy(ssid, value, tlv[2]);
+		length = (uint8_t)U16(tlv + 2);
+		bss->ssidLength = length;
+		__aeabi_memcpy(ssid, value, length);
 		if (bss->ssidLength < sizeof(bss->ssid))
 			ssid[bss->ssidLength] = 0;
 		break;
@@ -252,8 +253,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 		info->uapsdEnabled = qosInfo >> 7;
 		if (wmm == 1 && memcmp(info->acParameters, value + 8, 16) != 0) {
 			__aeabi_memcpy(info->acParameters, value + 8, 16);
-			/* the parameter set count */
-			info->wmmElement[8] = (info->wmmElement[8] & 0xf0) | ((info->wmmElement[8] + 1) & 0x0f);
+			info->apQosInfo.parameterSetCount++;
 			if (bssStarted == 1) {
 				wlanSqramFrameHook(connection);
 				wlanEdcaApplyHook(connection);
@@ -265,8 +265,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 		break;
 	case WLAN_TLV_CHANNEL_CONFIG:
 		channelFlags[0] = value[0];
-		channelFlags[1] = value[1];
-		info->htOperation[2] = channelFlags[1];
+		info->htOperation[2] = channelFlags[1] = value[1];
 		if ((channelFlags[0] >> 4) & 3) {
 			info->htOperation[3] = (info->htOperation[3] & ~3) | ((channelFlags[0] >> 4) & 3);
 			info->htCapability[2] |= 2;
@@ -320,7 +319,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 		    memcmp(rsn->PSKPassPhrase, value, rsn->PSKPassPhraseLen) == 0)
 			break;
 		*pmkChanged = 1;
-		rsn->PSKPassPhraseLen = tlv[2];
+		rsn->PSKPassPhraseLen = U16(tlv + 2);
 		__aeabi_memclr4(rsn->PSKPassPhrase, sizeof(rsn->PSKPassPhrase));
 		*copyTo = rsn->PSKPassPhrase;
 		break;
@@ -367,7 +366,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 		*copyTo = &info->psStaAgeout;
 		break;
 	case WLAN_TLV_UCAST_CIPHER: {
-		unsigned int protocol = value[0];
+		unsigned int protocol = U16(value);
 		uint8_t cipher = value[2];
 
 		if (protocol & WLAN_PROTOCOL_WPA) {
@@ -406,7 +405,7 @@ int wlanApConfigTlvSet(const uint8_t *tlv, struct WlanConnectionInfo *info, uint
 int wlanApConfigTlvGet(unsigned int type, void **addresses, uint8_t *lengths,
 		       struct WlanConnectionInfo *info, uint8_t *ssid, uint8_t *channelFlags,
 		       uint16_t *length, uint8_t *tlv, int shortPreamble, int bssStarted,
-		       uint32_t *antennas, uint32_t *wepKeys, uint16_t hookValue,
+		       uint32_t *antennas, uint32_t *wepKeys, unsigned int hookValue,
 		       uint8_t *scratchFlag, uint8_t *scratchByte, uint16_t *scratchHalf,
 		       uint32_t *scratchWord, uint8_t *htScratch, uint8_t *wmmScratch,
 		       uint8_t *protocols)
@@ -450,12 +449,12 @@ int wlanApConfigTlvGet(unsigned int type, void **addresses, uint8_t *lengths,
 		lengths[3] = 16;
 		return handled;
 	case WLAN_TLV_CHANNEL_LIST:
-		addresses[2] = info->channels;
 		*length = sizeof(info->channels[0]) * info->channelCount;
+		addresses[2] = info->channels;
 		break;
 	case WLAN_TLV_AUTH_TYPE:
-		addresses[2] = &info->authAlgorithm;
 		*length = 1;
+		addresses[2] = &info->authAlgorithm;
 		break;
 	case WLAN_TLV_CHANNEL_CONFIG:
 		*length = 2;
@@ -488,11 +487,10 @@ int wlanApConfigTlvGet(unsigned int type, void **addresses, uint8_t *lengths,
 		break;
 	case WLAN_TLV_ANTENNA_CTL:
 		*length = 2;
-		*scratchFlag = *antennas & 1;
-		if (*antennas & 1)
-			*scratchByte = (info->protectionFlags >> 3) & 7;
+		if ((*scratchFlag = *antennas & 1) != 0)
+			*scratchByte = info->antenna.tx;
 		else
-			*scratchByte = ((info->protectionFlagsHigh << 8 | info->protectionFlags) >> 6) & 7;
+			*scratchByte = info->antenna.rx;
 		addresses[2] = scratchFlag;
 		lengths[2] = 1;
 		addresses[3] = scratchByte;
@@ -549,16 +547,16 @@ int wlanApConfigTlvGet(unsigned int type, void **addresses, uint8_t *lengths,
 		return handled;
 	}
 	case WLAN_TLV_PASSPHRASE:
-		addresses[2] = rsn->PSKPassPhrase;
 		*length = rsn->PSKPassPhraseLen;
+		addresses[2] = rsn->PSKPassPhrase;
 		break;
 	case WLAN_TLV_ENCRYPT_PROTOCOL:
-		addresses[2] = &info->securityMode;
 		*length = 2;
+		addresses[2] = &info->securityMode;
 		break;
 	case WLAN_TLV_AUTH_KEY:
-		addresses[2] = &rsn->AuthKey;
 		*length = 2;
+		addresses[2] = &rsn->AuthKey;
 		break;
 	case WLAN_TLV_WPA_CIPHER:
 		*length = 2;
@@ -669,7 +667,6 @@ uint16_t hostCmd00b0Set(struct WlanConnection *connection, uint8_t *command)
 	const uint8_t *value;
 	unsigned int remaining;
 	unsigned int length;
-	unsigned int type;
 	uint16_t status = 0;
 	uint16_t running[12];
 	int count = 12;
@@ -698,8 +695,7 @@ uint16_t hostCmd00b0Set(struct WlanConnection *connection, uint8_t *command)
 				goto next;
 			}
 		}
-		type = U16(tlv);
-		switch (type) {
+		switch (U16(tlv)) {
 		case WLAN_TLV_UNICAST_RATE:
 			info->unicastRate = value[0];
 			if (value[0] != 0)
@@ -747,16 +743,10 @@ uint16_t hostCmd00b0Set(struct WlanConnection *connection, uint8_t *command)
 			status = WLAN_AP_CONFIG_UNSUPPORTED;
 			break;
 		case WLAN_TLV_ANTENNA_CTL:
-			if (value[0] == 0) {
-				/* the receive antenna: bits 6-8 of the 16-bit flags */
-				unsigned int flags = (info->protectionFlagsHigh << 8 & 0xfe3f) |
-						     (info->protectionFlags & 0x3f) | (value[1] << 6 & 0x1ff);
-
-				info->protectionFlags = (info->protectionFlags & 0x3f) | value[1] << 6;
-				info->protectionFlagsHigh = flags >> 8;
-			} else {
-				info->protectionFlags = (info->protectionFlags & 0xc7) | ((value[1] << 3) & 0x3f);
-			}
+			if (value[0] == 0)
+				info->antenna.rx = value[1];
+			else
+				info->antenna.tx = value[1];
 			break;
 		case WLAN_TLV_RTS_THRESHOLD:
 			copyTo = &info->rtsThreshold;
@@ -851,9 +841,9 @@ int hostCmd00b0Get(struct WlanConnection *connection, uint8_t *command)
 	uint8_t lengths[8] = { 0 };
 	int all = 1;
 	uint32_t unused[2] = { 0, 0 };
-	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connection);
+	struct WlanConnectionRole *role;
 	uint16_t authKeyLength = WLAN_AP_CONFIG_AUTH_KEY_LENGTH;
-	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
+	struct WlanConnectionInfo *info;
 	int count = 48;
 	uint32_t antennas = WLAN_AP_CONFIG_ANTENNAS;
 	uint32_t wepKeys = WLAN_AP_CONFIG_WEP_KEYS;
@@ -876,6 +866,8 @@ int hostCmd00b0Get(struct WlanConnection *connection, uint8_t *command)
 
 	__aeabi_memcpy4(types, wlanApConfigAllTlvs, sizeof(types));
 	__aeabi_memclr4(addresses, sizeof(addresses[0]) * 5);
+	role = wlanConnectionInfoSlot(connection);
+	info = wlanConnectionInfo(connection);
 	cursor = command + 10;
 	if (U16(command + 2) != 10) {
 		count = 0;

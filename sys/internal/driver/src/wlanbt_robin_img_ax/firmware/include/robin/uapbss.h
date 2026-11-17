@@ -44,7 +44,7 @@ int p2pDiscoverabilityRequestSend(struct WlanConnection *connection, const uint8
 struct WlanPsPeerState;
 void p2pDiscoverabilityCheck(struct WlanDirectContext *peer, uint32_t changed,
 			     struct WlanPsPeerState *ps);				/* SQRAM 0xc000b124 */
-unsigned int p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame);	/* SQRAM 0xc000b1da */
+void p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame);	/* SQRAM 0xc000b1da */
 void p2pOperatingChannelSelect(struct WlanConnection *connection, const struct WlanDirectContext *peer);	/* SQRAM 0xc000b24c */
 int p2pGoNegotiationBuild(struct WlanConnection *connection, const uint8_t *request, uint8_t *response,
 			  unsigned int kind);					/* SQRAM 0xc000b330 */

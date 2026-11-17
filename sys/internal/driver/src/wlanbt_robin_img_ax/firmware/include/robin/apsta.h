@@ -30,8 +30,8 @@ void macMgmtScheduleBuffer(struct WlanConnection *connection);				/* 0x388a4 */
 void macMgmtNotifyBuffer(struct WlanConnection *connection, int keep);			/* 0x38938 */
 void macMgmtFormatBuffer(uint32_t timer, uint32_t argument);				/* 0x38974 */
 int macMgmtInspectBuffer(struct WlanConnection *connection, const uint8_t *peer,
-			 unsigned int reason);						/* 0x38990 */
-int macMgmtTrackBuffer(struct WlanConnection *connection, unsigned int reason);		/* 0x38a18 */
+			 uint16_t reason);						/* 0x38990 */
+int macMgmtTrackBuffer(struct WlanConnection *connection, uint16_t reason);		/* 0x38a18 */
 int macMgmtManageBuffer(struct WlanConnection *connection, const uint8_t *peer);	/* 0x38a8a */
 void macMgmtAcquireBuffer(struct WlanConnection *connection);				/* 0x38ae0 */
 int macMgmtReleaseBuffer(OsaBuffer *buffer);						/* 0x38b04 */
