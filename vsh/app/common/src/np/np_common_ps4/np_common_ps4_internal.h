@@ -23,13 +23,18 @@ extern "C" {
 
 /* the errors the library returns (0x8055800X: the library's own; Sony's names for them are not
    known) */
+#define NP_COMMON_PS4_ERROR_80558001	-2141880319
+#define NP_COMMON_PS4_ERROR_80558002	-2141880318
 #define NP_COMMON_PS4_ERROR_80558003	-2141880317
+#define NP_COMMON_PS4_ERROR_80558006	-2141880314
 #define NP_COMMON_PS4_ERROR_80559E03	-2141872637
 #define NP_COMMON_PS4_ERROR_80559E0C	-2141872628
 #define NP_COMMON_PS4_ERROR_80559E0D	-2141872627
 #define NP_COMMON_PS4_ERROR_80559E0E	-2141872626
 #define NP_COMMON_PS4_ERROR_80559E10	-2141872624
 #define NP_COMMON_PS4_ERROR_80559E11	-2141872623
+#define NP_COMMON_PS4_ERROR_80559E14	-2141872620
+#define NP_COMMON_PS4_ERROR_80559E16	-2141872618
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
 #define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80558005 */
 #define NP_COMMON_PS4_ERROR_OUT_OF_MEMORY	-2141880313	/* 0x80558007 */
@@ -483,6 +488,141 @@ SceUInt32 SceNpCommonPs4_7B512A98(volatile SceUInt32 *counter);
 int SceNpCommonPs4_221CC7EE(struct NpCommonPs4RingBuf *ringBuf, void *buf, SceSize bufSize);
 void *SceNpCommonPs4_D7E49888(struct NpCommonPs4RingBuf *ringBuf, SceSize *pBlockSize);
 SceUInt32 SceNpCommonPs4_7AF729FD(struct NpCommonPs4RingBuf *ringBuf, SceSize size);
+
+/* the SceNpCommon event loop (SceNpCommon_9AEF645B and the calls below), its due entries, and a thread of our own
+   that does the same with a list sorted by due time (npext/thread/timer.cpp, callback.cpp) */
+int SceNpCommon_48314C6E(void *loop);
+int SceNpCommon_9AEF645B(void *loop, const char *name, SceSize stackSize, int priority, int cpuAffinity);
+int SceNpCommon_BDCD318E(void *loop, void *entry, int *pRemoved);
+int SceNpCommon_40724BEA(void *loop, void *entry, SceUInt32 time, int reserved, int (*callback)(void *), void *argument);
+
+struct NpCommonPs4TimerEntry {
+	struct NpCommonPs4TimerEntry *next;
+	int (*callback)(void *argument);
+	SceInt64 dueTime;
+	void *argument;
+	SceUInt32 reserved;
+};
+
+struct NpCommonPs4TimerThread {
+	SceUID thread;
+	SceUID mutex;
+	SceUID cond;
+	int running;
+	int stopping;
+	struct NpCommonPs4TimerEntry *head;
+};
+
+int npCommonPs4TimerThreadStart(struct NpCommonPs4TimerThread *timer, const char *name, SceSize stackSize,
+	int priority, int cpuAffinity);
+int npCommonPs4TimerThreadStop(struct NpCommonPs4TimerThread *timer);
+int npCommonPs4TimerThreadAdd(struct NpCommonPs4TimerThread *timer, struct NpCommonPs4TimerEntry *entry,
+	SceUInt32 delay, int (*callback)(void *argument), void *argument);
+int npCommonPs4TimerThreadRemove(struct NpCommonPs4TimerThread *timer, struct NpCommonPs4TimerEntry *entry,
+	int *pRemoved);
+
+/* how a host is started: its thread's name, stack size, priority and CPU affinity */
+struct NpCommonPs4HostParam {
+	const char *name;
+	SceSize stackSize;
+	int priority;
+	int cpuAffinity;
+};
+
+/* what a job runs: any object whose third virtual function is the work */
+struct NpCommonPs4JobTarget {
+	const void *const *vtable;
+};
+
+/* a host that runs timed jobs on a timer thread of its own */
+struct NpCommonPs4TimerHost {
+	const void *const *vtable;
+	struct NpCommonPs4TimerThread timer;
+	SceUInt8 active;
+	SceUInt8 borrowed;
+};
+
+/* a host that runs them on a SceNpCommon event loop, its own (loopData) or one it was given */
+struct NpCommonPs4EventLoopHost {
+	const void *const *vtable;
+	void *loop;
+	SceUInt32 loopData[6];
+	SceUInt8 active;
+	SceUInt8 borrowed;
+};
+
+/* a timed job: the entry the host's list holds, and what runs when it is due; state is 0 (idle), -1 (waiting), -2
+   (running) or 1 (done) */
+struct NpCommonPs4Job {
+	const void *const *vtable;
+	void *host;
+	int state;
+	SceUInt32 reserved;
+	struct NpCommonPs4TimerEntry entry;
+	struct NpCommonPs4JobTarget *target;
+};
+
+/* a kernel event flag, created or opened by name, behind a vtable (state: 0 none, 1 created, 2 opened) */
+struct NpCommonPs4EventFlag {
+	const void *const *vtable;
+	SceUID eventFlag;
+	SceUInt32 state;
+};
+
+/* a condition variable behind a vtable, over the mutex of another object (npext/thread/cond.cpp) */
+struct NpCommonPs4Cond {
+	const void *const *vtable;
+	SceUID cond;
+	SceUID *mutex;
+};
+
+struct NpCommonPs4Cond *npCommonPs4CondConstruct(struct NpCommonPs4Cond *cond);
+struct NpCommonPs4Cond *npCommonPs4CondDestruct(struct NpCommonPs4Cond *cond);
+int npCommonPs4CondIsInit(struct NpCommonPs4Cond *cond);
+int npCommonPs4CondInit(struct NpCommonPs4Cond *cond, const char *name, struct NpCommonPs4Mutex *mutex);
+int npCommonPs4CondDestroy(struct NpCommonPs4Cond *cond);
+int npCommonPs4CondWait(struct NpCommonPs4Cond *cond, SceUInt32 timeout);
+int npCommonPs4CondSignal(struct NpCommonPs4Cond *cond);
+int npCommonPs4CondBroadcast(struct NpCommonPs4Cond *cond);
+
+/* npext/thread/event_queue.cpp: a queue of fixed size items on a ring buffer, with a condition variable each for the
+   items and for the room */
+struct NpCommonPs4EventQueue {
+	const void *const *vtable;
+	struct NpCommonPs4RingBufAlloc ringBuf;
+	struct NpCommonPs4Mutex mutex;
+	struct NpCommonPs4Cond itemCond;
+	struct NpCommonPs4Cond spaceCond;
+	SceSize itemSize;
+	SceSize itemCount;
+	SceUInt16 initialized;
+	SceUInt16 closedFlags;
+};
+
+SceUID SceNpCommonPs4_85B12451(SceUID *pEventFlag, const char *name, SceUInt32 attr, int reserved, SceUInt32 initPattern);
+int SceNpCommonPs4_E42B3A09(SceUID eventFlag);
+int SceNpCommonPs4_BF4855F2(SceUID *pEventFlag, const char *name);
+int SceNpCommonPs4_73E77BE0(SceUID eventFlag);
+int SceNpCommonPs4_78905979(SceUID eventFlag, int reserved0, SceUInt32 bitPattern, int reserved1, SceUInt32 waitMode,
+	SceUInt64 *pResult, SceUInt32 *pTimeout);
+int SceNpCommonPs4_2559AAB6(SceUID eventFlag, int reserved0, SceUInt32 bitPattern, int reserved1, SceUInt32 waitMode,
+	SceUInt64 *pResult);
+int SceNpCommonPs4_48C115EA(SceUID eventFlag, int reserved, SceUInt32 bitPattern);
+int SceNpCommonPs4_84EA4F2A(SceUID eventFlag, int reserved, SceUInt32 bitPattern);
+int SceNpCommonPs4_F2753B27(SceUID eventFlag, int reserved0, SceUInt32 setPattern, int reserved1, SceUInt32 *pNumWaitThreads);
+SceUID SceNpCommonPs4_EDBFFFE9(SceUID *pMutex, const char *name, char recursive);
+SceUID SceNpCommonPs4_34C15C21(SceUID *pCond, SceUID *pMutex, const char *name);
+int SceNpCommonPs4_AC89B1E7(SceUID *pCond);
+int SceNpCommonPs4_3D73D77E(SceUID *pCond);
+int SceNpCommonPs4_B599A560(struct NpCommonPs4RingBuf *ringBuf);
+SceSize SceNpCommonPs4_2A607C9A(struct NpCommonPs4RingBuf *ringBuf);
+int SceNpCommonPs4_548EF805(struct NpCommonPs4RingBuf *ringBuf, const char *data, SceSize length);
+int SceNpCommonPs4_DC5607D0(struct NpCommonPs4RingBuf *ringBuf, char *dst, SceSize length);
+struct NpCommonPs4RingBufAlloc *SceNpCommonPs4_3245630F(struct NpCommonPs4RingBufAlloc *ringBuf, struct NpCommonPs4Allocator *pool);
+struct NpCommonPs4RingBufAlloc *SceNpCommonPs4_A264C490(struct NpCommonPs4RingBufAlloc *ringBuf);
+int SceNpCommonPs4_530564F5(struct NpCommonPs4RingBufAlloc *ringBuf, SceSize bufSize);
+int SceNpCommonPs4_31D856EA(struct NpCommonPs4RingBufAlloc *ringBuf);
+int SceNpCommonPs4_E1F6AE0F(struct NpCommonPs4RingBufAlloc *ringBuf);
 
 #ifdef __cplusplus
 }

@@ -20,10 +20,13 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/np/online_id.cpp
 	npext/np/title_id.cpp
 	npext/stream/stream_reader.cpp
+	npext/thread/callback.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
+	npext/thread/event_queue.cpp
 	npext/thread/mutex.cpp
 	npext/thread/semaphore.cpp
+	npext/thread/timer.cpp
 	npext/thread/thread.cpp
 	../../../../../../sys/sdk/target/src/libsnc/i64ops.c
 	../../../../../../sys/sdk/target/src/libsnc/i32ops.c
