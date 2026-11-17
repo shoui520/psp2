@@ -38,6 +38,11 @@ public:
 		new ((void *)ptr) _Ty(val);
 	}
 
+	void destroy(pointer ptr)
+	{
+		ptr->~_Ty();
+	}
+
 	/* a failed allocate, as the containers that take an allocator report it: paf's
 	   heap reports it, an allocator of its own need not (name ours) */
 	void report_failure()
