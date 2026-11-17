@@ -25,6 +25,7 @@ extern "C" {
    known) */
 #define NP_COMMON_PS4_ERROR_80558003	-2141880317
 #define NP_COMMON_PS4_ERROR_80559E03	-2141872637
+#define NP_COMMON_PS4_ERROR_80559E0C	-2141872628
 #define NP_COMMON_PS4_ERROR_80559E0D	-2141872627
 #define NP_COMMON_PS4_ERROR_80559E11	-2141872623
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
@@ -146,6 +147,88 @@ int npCommonPs4HttpConnPoolGetConnectionWithUrl(void *connPool, struct NpCommonP
 int npCommonPs4HttpConnPoolRelease(void *connPool, SceInt32 connId);
 void npCommonPs4HttpConnPoolReportError(void *connPool, SceInt32 connId, int error);
 
+/* npext/json: a JSON value (type: null, boolean, number, string, array, object), its parser and its document */
+#define NP_COMMON_PS4_JSON_TYPE_NULL	0
+#define NP_COMMON_PS4_JSON_TYPE_BOOL	1
+#define NP_COMMON_PS4_JSON_TYPE_NUMBER	2
+#define NP_COMMON_PS4_JSON_TYPE_STRING	3
+#define NP_COMMON_PS4_JSON_TYPE_ARRAY	4
+#define NP_COMMON_PS4_JSON_TYPE_OBJECT	5
+
+struct NpCommonPs4JsonValue {
+	const void *const *vtable;
+	struct NpCommonPs4Allocator *pool;
+	struct NpCommonPs4JsonValue *parent;
+	SceInt32 type;
+	void *data;
+};
+
+/* where the document builder writes: the buffer is optional (a null buffer only counts) */
+struct NpCommonPs4JsonTree {
+	const void **vtable;
+	struct NpCommonPs4JsonValue *root;
+};
+
+struct NpCommonPs4JsonWriter {
+	char *buffer;
+	SceSize size;
+	SceSize length;
+};
+
+/* the parser (npext/json/json_parser.cpp): a lexer that reports to an event handler */
+struct NpCommonPs4JsonParser {
+	const void *const *vtable;
+	struct NpCommonPs4Allocator *pool;
+	unsigned char lexer[1856];
+	char *buffer;
+	SceSize bufferSize;
+	const void *const *const *handler;
+};
+
+struct NpCommonPs4JsonDocument {
+	const void *const *vtable;
+	const void *const *handlerVtable;
+	struct NpCommonPs4Allocator *pool;
+	void *config;
+	struct NpCommonPs4JsonParser *parser;
+	struct NpCommonPs4JsonValue *root;
+	struct NpCommonPs4JsonValue *current;
+	char *name;
+};
+
+struct NpCommonPs4JsonObject {
+	const void *const *vtable;
+	struct NpCommonPs4Allocator *pool;
+};
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_D309C0B3(struct NpCommonPs4JsonValue *value, struct NpCommonPs4Allocator *pool, int type);
+int SceNpCommonPs4_413D4254(struct NpCommonPs4JsonValue *array, struct NpCommonPs4JsonValue *item);
+int SceNpCommonPs4_7833EEC2(struct NpCommonPs4JsonValue *object, const char *name, struct NpCommonPs4JsonValue *value);
+int SceNpCommonPs4_AE224009(struct NpCommonPs4JsonValue *value, int boolean);
+int SceNpCommonPs4_943736E5(struct NpCommonPs4JsonValue *value, const char *number);
+int SceNpCommonPs4_CAD8A67F(struct NpCommonPs4JsonValue *value, const char *string);
+int SceNpCommonPs4_9C3F1645(struct NpCommonPs4JsonValue *object);
+int SceNpCommonPs4_713C8A08(struct NpCommonPs4JsonValue *object, int index, char **pName);
+int SceNpCommonPs4_1E21D357(struct NpCommonPs4JsonValue *array);
+struct NpCommonPs4JsonValue *SceNpCommonPs4_2A4A268C(struct NpCommonPs4JsonValue *array, int index);
+const char *SceNpCommonPs4_ED539A9D(struct NpCommonPs4JsonValue *string);
+const char *SceNpCommonPs4_FAE43676(struct NpCommonPs4JsonValue *number);
+int SceNpCommonPs4_C1277FAD(struct NpCommonPs4JsonValue *boolean);
+struct NpCommonPs4JsonValue *SceNpCommonPs4_15A2D6E3(struct NpCommonPs4JsonValue *value);
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsBool(struct NpCommonPs4JsonValue *value);
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsNumber(struct NpCommonPs4JsonValue *value);
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsString(struct NpCommonPs4JsonValue *value);
+struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsArray(struct NpCommonPs4JsonValue *value);
+extern const void *g_jsonNullValueVtable[];
+extern const void *g_jsonBoolValueVtable[];
+extern const void *g_jsonNumberValueVtable[];
+extern const void *g_jsonStringValueVtable[];
+extern const void *g_jsonArrayValueVtable[];
+extern const void *g_jsonObjectValueVtable[];
+struct NpCommonPs4JsonParser *SceNpCommonPs4_4577A207(struct NpCommonPs4JsonParser *parser, struct NpCommonPs4Allocator *pool);
+int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, const void *handlerBase);
+int SceNpCommonPs4_FE98E2A7(struct NpCommonPs4JsonParser *parser, void *data, int size);
+
 /* a block of memory the library allocated, and its size */
 void *NpCommonPs4MspaceAllocate(SceSize size, void *context);
 void *NpCommonPs4MspaceReallocate(void *pointer, SceSize size, void *context);
@@ -228,6 +311,7 @@ int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointe
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);
 int SceNpCommonPs4_6B428829(struct NpCommonPs4Allocator *allocator, void *pointer);
 char *SceNpCommonPs4_1CAB4A2E(struct NpCommonPs4Allocator *allocator, const char *string);
+char *npCommonPs4AllocatorDuplicateString(struct NpCommonPs4Allocator *allocator, const char *string);
 char *SceNpCommonPs4_83496021(struct NpCommonPs4Allocator *allocator, const char *string, SceSize maxLength);
 void *SceNpCommonPs4_299ADFC3(struct NpCommonPs4Allocator *allocator, SceSize size);
 void SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *pointer);

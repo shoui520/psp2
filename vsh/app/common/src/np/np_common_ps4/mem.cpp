@@ -172,6 +172,18 @@ void SceNpCommonPs4_38CC9AF5(struct NpCommonPs4Allocator *allocator, void *point
 	allocator->deallocate(pointer, allocator->context);
 }
 
+extern "C" char *npCommonPs4AllocatorDuplicateString(struct NpCommonPs4Allocator *allocator, const char *string)
+{
+	SceSize length;
+	char *copy;
+
+	length = sceClibStrnlen(string, 0xFFFFFFFF) + 1;
+	copy = (char *)allocator->allocate(length, allocator->context);
+	if (copy != NULL)
+		sceClibStrncpy(copy, string, length);
+	return copy;
+}
+
 int NpCommonPs4AllocatorReallocate(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size)
 {
 	return ((int (*)(void *, SceSize, void *))allocator->reallocate)(pointer, size, allocator->context);

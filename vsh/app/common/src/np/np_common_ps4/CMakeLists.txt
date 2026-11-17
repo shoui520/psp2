@@ -11,6 +11,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/handle/scope.cpp
 	npext/http/http_trans.cpp
 	npext/http/http_uri.cpp
+	npext/json/json_doc.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
 	npext/thread/mutex.cpp
