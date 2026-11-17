@@ -6,8 +6,6 @@
 
 #include <skeleton.h>
 
-STUB_MAIN(module_start)
-
 STUB(SceShell_0025417F)
 STUB(SceShell_05D6FCB0)
 STUB(SceShell_29A14252)

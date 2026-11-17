@@ -107,7 +107,7 @@ __attribute__((noinline)) static int shellSvcStart(void)
 	return SceShellSvc_E91AEAD4();
 }
 
-int shellStart(void)
+int main(int argc, char *argv[])
 {
 	s_startTime = SceThreadmgr_47F6DE49();
 	sceClibPrintf("[Shell]: vsh/release_branches/release_03.650 r142704 (build#757166)\n");

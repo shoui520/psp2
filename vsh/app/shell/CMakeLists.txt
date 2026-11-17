@@ -15,6 +15,9 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	start.cpp
 	startup.cpp
 	theme.cpp
+	trigger_mgr_start.cpp
+	${PSP2_SRC}/vsh/paf/src/prx_loader.cpp
+	${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -22,3 +25,6 @@ target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/incl
 	"${PSP2_SRC}/sys/internal/usermode/src" "${PSP2_SRC}/vsh/lowlayer/src")
 # SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
 set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
+# the 3.65 SDK's start code
+set_source_files_properties(${PSP2_SRC}/sys/sdk/target/src/crt0/crt0_main.c PROPERTIES
+	COMPILE_DEFINITIONS SCE_CRT0_SDK_VERSION=0x03650011)

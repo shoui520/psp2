@@ -5,15 +5,28 @@
  * main's result. The data are the process and C library parameters the module exports
  * (sceProcessParam), each field the address of the program's own setting, or 0 where the
  * program does not define it (the settings are weak).
+ *
+ * The module's SDK is SCE_CRT0_SDK_VERSION, 0.996 unless its build says otherwise. The 3.65
+ * SDK's (SceShell) also loads the modules the program lists to preload before the
+ * constructors, and its parameters carry the main thread's option, the heap's initial and unit
+ * sizes, its overrun check and the TLS allocator.
  */
 #include <stddef.h>
 #include <scetypes.h>
 
 #define SCE_CRT0_ARGV_MAX		32
 #define SCE_PROCESS_PARAM_MAGIC		0x32505350	/* "PSP2" */
+#ifndef SCE_CRT0_SDK_VERSION
+#define SCE_CRT0_SDK_VERSION		0x00996070
+#endif
+#define SCE_CRT0_SDK_365		(SCE_CRT0_SDK_VERSION >= 0x03650011)
+#if SCE_CRT0_SDK_365
+#define SCE_PROCESS_PARAM_VERSION	6
+#define SCE_LIBC_PARAM_VERSION		9
+#else
 #define SCE_PROCESS_PARAM_VERSION	5
 #define SCE_LIBC_PARAM_VERSION		5
-#define SCE_CRT0_SDK_VERSION		0x00996070
+#endif
 #define SCE_LIBC_HEAP_SIZE_DEFAULT	0x40000
 
 typedef void (*SceCrt0InitFunc)(void);
@@ -32,6 +45,9 @@ typedef struct SceProcessParam {
 	const unsigned int *processPreloadDisabled;
 	const int *mainThreadCpuAffinityMask;
 	const struct SceLibcParam *libcParam;
+#if SCE_CRT0_SDK_365
+	const void *mainThreadOptParam;
+#endif
 } SceProcessParam;
 
 /* the program's replacements of the C library's allocator */
@@ -65,6 +81,18 @@ typedef struct SceLibcNewReplace {
 	void *operatorDeleteArrayNothrow;
 } SceLibcNewReplace;
 
+#if SCE_CRT0_SDK_365
+/* the program's replacements of the TLS allocator */
+typedef struct SceLibcMallocReplaceForTls {
+	SceSize size;
+	SceUInt32 version;		/* 1 */
+	void *mallocInitForTls;
+	void *mallocFinalizeForTls;
+	void *mallocForTls;
+	void *freeForTls;
+} SceLibcMallocReplaceForTls;
+#endif
+
 /* the C library parameters (version 5) */
 typedef struct SceLibcParam {
 	SceSize size;
@@ -77,6 +105,12 @@ typedef struct SceLibcParam {
 	SceUInt32 version;
 	const SceLibcMallocReplace *mallocReplace;
 	const SceLibcNewReplace *newReplace;
+#if SCE_CRT0_SDK_365
+	const unsigned int *heapInitialSize;
+	const unsigned int *heapUnitSize1MiB;
+	const unsigned int *heapDetectOverrun;
+	const SceLibcMallocReplaceForTls *mallocReplaceForTls;
+#endif
 } SceLibcParam;
 
 /* the program's settings */
@@ -90,6 +124,16 @@ extern const int sceUserMainThreadCpuAffinityMask __attribute__((weak));
 extern const unsigned int sceLibcHeapSize __attribute__((weak));
 extern const unsigned int sceLibcHeapExtendedAlloc __attribute__((weak));
 extern const unsigned int sceLibcHeapDelayedAlloc __attribute__((weak));
+#if SCE_CRT0_SDK_365
+extern const char sceUserMainThreadOptParam[] __attribute__((weak));
+extern const unsigned int sceLibcHeapInitialSize __attribute__((weak));
+extern const unsigned int sceLibcHeapUnitSize1MiB __attribute__((weak));
+extern const unsigned int sceLibcHeapDetectOverrun __attribute__((weak));
+
+/* the modules to load and start before the constructors */
+extern const char *const _sceUserModuleList[] __attribute__((weak));
+extern const unsigned int _sceUserModuleListSize __attribute__((weak));
+#endif
 
 void user_malloc_init(void) __attribute__((weak));
 void user_malloc_finalize(void) __attribute__((weak));
@@ -110,6 +154,17 @@ void _Z11user_deletePv(void) __attribute__((weak));
 void _Z11user_deletePvRKSt9nothrow_t(void) __attribute__((weak));
 void _Z17user_delete_arrayPv(void) __attribute__((weak));
 void _Z17user_delete_arrayPvRKSt9nothrow_t(void) __attribute__((weak));
+#if SCE_CRT0_SDK_365
+void user_malloc_for_tls_init(void) __attribute__((weak));
+void user_malloc_for_tls_finalize(void) __attribute__((weak));
+void *user_malloc_for_tls(size_t size) __attribute__((weak));
+void user_free_for_tls(void *ptr) __attribute__((weak));
+
+SceUID sceKernelLoadStartModule(const char *moduleFileName, SceSize args, const void *argp,
+				SceUInt32 flags, const void *pOpt, int *pRes);
+int sceClibPrintf(const char *fmt, ...);
+void abort(void) __attribute__((noreturn));
+#endif
 
 /* the constructors, from the linker */
 extern SceCrt0InitFunc __start__Zpreinit_array[] __attribute__((weak));
@@ -140,12 +195,28 @@ static const SceLibcNewReplace __sce_libcnewreplace = {
 	_Z17user_delete_arrayPv, _Z17user_delete_arrayPvRKSt9nothrow_t,
 };
 
+#if SCE_CRT0_SDK_365
+static const SceLibcMallocReplaceForTls __sce_libcmallocreplacefortls = {
+	sizeof(SceLibcMallocReplaceForTls), 1,
+	user_malloc_for_tls_init, user_malloc_for_tls_finalize, user_malloc_for_tls,
+	user_free_for_tls,
+};
+#endif
+
 static const SceLibcParam __sce_libcparam = {
 	sizeof(SceLibcParam), 0,
 	&sceLibcHeapSize, &__sceLibcHeapSizeDefault, &sceLibcHeapExtendedAlloc,
 	&sceLibcHeapDelayedAlloc, SCE_CRT0_SDK_VERSION, SCE_LIBC_PARAM_VERSION,
 	&__sce_libcmallocreplace, &__sce_libcnewreplace,
+#if SCE_CRT0_SDK_365
+	&sceLibcHeapInitialSize, &sceLibcHeapUnitSize1MiB, &sceLibcHeapDetectOverrun,
+	&__sce_libcmallocreplacefortls,
+#endif
 };
+
+#if SCE_CRT0_SDK_365
+const SceUInt32 __crt0_main_sdk_version_var = SCE_CRT0_SDK_VERSION;
+#endif
 
 SceProcessParam __sce_process_param = {
 	sizeof(SceProcessParam), SCE_PROCESS_PARAM_MAGIC, SCE_PROCESS_PARAM_VERSION,
@@ -153,6 +224,9 @@ SceProcessParam __sce_process_param = {
 	sceUserMainThreadName, &sceUserMainThreadPriority, &sceUserMainThreadStackSize,
 	&sceUserMainThreadAttribute, sceProcessName, &sce_process_preload_disabled,
 	&sceUserMainThreadCpuAffinityMask, &__sce_libcparam,
+#if SCE_CRT0_SDK_365
+	sceUserMainThreadOptParam,
+#endif
 };
 
 void _initialize(SceSize args, char *argp);
@@ -162,6 +236,49 @@ void _start(SceSize args, char *argp)
 	_initialize(args, argp);
 }
 
+#if SCE_CRT0_SDK_365
+void _initialize(SceSize args, char *argp)
+{
+	SceCrt0InitFunc *init;
+	char *arg = argp;
+	unsigned int i;
+	int argc, length;
+
+	__dso_handle = &__dso_handle;
+	for (argc = 0; ; argc++) {
+		__argc = argc;
+		if (argc >= SCE_CRT0_ARGV_MAX - 1 || arg - argp >= (int)args)
+			break;
+		__argv[argc] = arg;
+		for (length = 0; arg[length] != '\0'; length++)
+			;
+		arg += length + 1;
+	}
+	__argv[argc] = NULL;
+
+	if (_sceUserModuleList != NULL) {
+		for (i = 0; i < _sceUserModuleListSize; i++) {
+			SceUID ret = sceKernelLoadStartModule(_sceUserModuleList[i], 0, NULL, 0, NULL, NULL);
+
+			if (ret < 0) {
+				sceClibPrintf("Preload module failed 0x%08x : %s\n", ret, _sceUserModuleList[i]);
+				abort();
+			}
+		}
+	}
+
+	for (init = __start__Zpreinit_array; init < __stop__Zpreinit_array; init++) {
+		if (*init != NULL)
+			(*init)();
+	}
+	for (init = __start__Zinit_array; init < __stop__Zinit_array; init++) {
+		if (*init != NULL)
+			(*init)();
+	}
+
+	exit(main(__argc, __argv));
+}
+#else
 void _initialize(SceSize args, char *argp)
 {
 	SceCrt0InitFunc *init;
@@ -194,6 +311,7 @@ void _initialize(SceSize args, char *argp)
 	for (;;)
 		;
 }
+#endif
 
 int _stop(void)
 {

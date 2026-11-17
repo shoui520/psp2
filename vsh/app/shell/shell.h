@@ -102,7 +102,7 @@ int shellAppEventSend(int event, const void *data, int flags);
 
 /* the shell's start (start.cpp): its time, the services started by its start job, and the
    error the start ended with (0x81004AE4) */
-int shellStart(void);
+int main(int argc, char *argv[]);			/* the process main (0x81004AE4) */
 SceUInt64 shellStartGetTime(void);			/* (0x81004C4C) */
 int shellStartAppDataMount(void);			/* ux0 application data, id 105 (0x81004C1E) */
 int shellStartAppDataUmount(void);			/* (0x81004C3C) */
@@ -176,6 +176,8 @@ struct ShellMediaInfoRequest {
 };
 void shellMediaInfoWrite(const ShellMediaInfoRequest *request, bool cancelOnFailure);
 
+/* the trigger manager: its heap, job queue and database, made at start (0x812A4876) */
+int shellTriggerMgrInit(void);
 /* a request to the trigger manager service, done by a SceTriggerMgrSvcCtrlJob (0x812A4A3A) */
 int shellTriggerMgrSvcCtrl(int command, int arg);
 
