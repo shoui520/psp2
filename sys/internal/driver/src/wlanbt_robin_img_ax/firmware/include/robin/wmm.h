@@ -60,6 +60,19 @@ _Static_assert(sizeof(struct WlanWmmEdca) == 4, "EDCA parameters");
 _Static_assert(sizeof(struct WlanWmmQueue) == 20, "WMM queue");
 
 
+/* One access category's record in a WMM parameter element (four of them from byte 10). */
+struct __attribute__((packed)) WlanWmmAcRecord {
+	uint8_t aifsn : 4;
+	uint8_t acm : 1;		/* admission control mandatory */
+	uint8_t aci : 2;		/* the access category: 0 AC_BE, 1 AC_BK, 2 AC_VI, 3 AC_VO */
+	uint8_t reserved : 1;
+	uint8_t ecwMin : 4;
+	uint8_t ecwMax : 4;
+	uint16_t txopLimit;		/* units of 32 microseconds */
+};
+
+_Static_assert(sizeof(struct WlanWmmAcRecord) == 4, "WMM access category record");
+
 /* The byte of a WMM information element (as kept here: ID, length, then the body) that holds its QoS Info. */
 #define WLAN_WMM_IE_QOS_INFO	8
 

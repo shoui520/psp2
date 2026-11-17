@@ -528,7 +528,7 @@ int hostCmd0081(uint8_t *body)
 /* The queues but the first start with no outstanding admission counters. */
 void wlanWmmResetCounters(void)
 {
-	unsigned int queue;
+	int queue;
 
 	for (queue = wlanAccessCategoryToQueue(1); queue <= 3; queue++) {
 		wlanWmmTiming[queue].lastTime = 0;
@@ -819,11 +819,11 @@ int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, s
 /* A WMM parameter element's header: vendor element, Microsoft OUI, type 2, subtype 1, version 1. */
 void wlanWmmBuildParameterElement(uint8_t *ie)
 {
-	uint32_t oui = 0x02f25000;
+	uint8_t oui[4] = { 0x00, 0x50, 0xf2, 0x02 };	/* Microsoft OUI, type 2 */
 
 	ie[0] = 221;
 	ie[1] = 24;
-	__aeabi_memcpy(ie + 2, &oui, 4);
+	__aeabi_memcpy(ie + 2, oui, 4);
 	ie[6] = 1;
 	ie[7] = 1;
 	ie[8] = 0;
@@ -832,30 +832,44 @@ void wlanWmmBuildParameterElement(uint8_t *ie)
 /* The parameter element an AP announces without any of its own (the WMM defaults). */
 void wlanWmmFillParameterElement(uint8_t *ie)
 {
+	struct WlanWmmAcRecord *ac = (struct WlanWmmAcRecord *)&ie[10];
+
 	wlanWmmBuildParameterElement(ie);
 	ie[9] = 0;
-	ie[10] = (16 * (ie[10] >> 4) + 3) & 0xf;		/* AC_BE: AIFSN 3 */
-	ie[11] = 0xa4;						/* ECWmin 4, ECWmax 10 */
-	ie[12] = 0;
-	ie[13] = 0;
-	ie[14] = (((16 * (ie[14] >> 4) + 7) & 0x8f) + 32) & 0x7f;	/* AC_BK: AIFSN 7 */
-	ie[15] = 0xa4;
-	ie[16] = 0;
-	ie[17] = 0;
-	ie[18] = (((16 * (ie[18] >> 4) + 2) & 0x8f) + 64) & 0x7f;	/* AC_VI: AIFSN 2, TXOP 188 */
-	ie[19] = 0x43;
-	ie[20] = 0xbc;
-	ie[21] = 0;
-	ie[22] = ((16 * (ie[22] >> 4) + 2) & 0xf) | 0x60;	/* AC_VO: AIFSN 2, TXOP 102 */
-	ie[23] = 0x32;
-	ie[24] = 0x66;
-	ie[25] = 0;
+	ac[0].aifsn = 3;		/* AC_BE: AIFSN 3, CWmin 15, CWmax 1023 */
+	ac[0].acm = 0;
+	ac[0].aci = 0;
+	ac[0].reserved = 0;
+	ac[0].ecwMin = 4;
+	ac[0].ecwMax = 10;
+	ac[0].txopLimit = 0;
+	ac[1].aifsn = 7;		/* AC_BK: AIFSN 7, CWmin 15, CWmax 1023 */
+	ac[1].acm = 0;
+	ac[1].aci = 1;
+	ac[1].reserved = 0;
+	ac[1].ecwMin = 4;
+	ac[1].ecwMax = 10;
+	ac[1].txopLimit = 0;
+	ac[2].aifsn = 2;		/* AC_VI: AIFSN 2, CWmin 7, CWmax 15, TXOP 6016 us */
+	ac[2].acm = 0;
+	ac[2].aci = 2;
+	ac[2].reserved = 0;
+	ac[2].ecwMin = 3;
+	ac[2].ecwMax = 4;
+	ac[2].txopLimit = 188;
+	ac[3].aifsn = 2;		/* AC_VO: AIFSN 2, CWmin 3, CWmax 7, TXOP 3264 us */
+	ac[3].acm = 0;
+	ac[3].aci = 3;
+	ac[3].reserved = 0;
+	ac[3].ecwMin = 2;
+	ac[3].ecwMax = 3;
+	ac[3].txopLimit = 102;
 }
 
 /* The transmit TID of a queue's slot. */
 unsigned int wlanWmmTid(unsigned int priority)
 {
-	return ((struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * priority))->activeRing;
+	return wlanWmm.slots[priority].activeRing;
 }
 
 /* The next sequence number of a TID, as it stands. */
@@ -1029,9 +1043,9 @@ uint32_t wlanTxAirtime(struct WlanConnection *connection, struct WlanTxStatus *s
 int wlanTxAirtimeValidated(struct WlanConnection *connection, struct WlanTxStatus *status)
 {
 	const uint8_t *frame = WMM_TX_FRAME(status->data);
-	unsigned int ring = ((struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * (status->data[0] & 7)))->statsRing;
+	unsigned int ring = wlanWmm.slots[status->data[0] & 7].statsRing;
 	int count = macTxStatsAddValidated(ring, &wlanWmm.validatedSeen[ring]);
-	uint8_t rate = ((uint8_t *)connection + 600)[*(uint32_t *)((uint8_t *)connection + 448)];
+	uint8_t rate = connection->peerLink.rateControl.rates[connection->peerLink.rateControl.current];
 
 	return count * romLibConfigureState(rate, (uint16_t)*(uint32_t *)(status->data + 8),
 					    (frame[1] << 8) | frame[0], 1);
@@ -1044,7 +1058,7 @@ int wlanTxAirtimeValidated(struct WlanConnection *connection, struct WlanTxStatu
 int wlanWmmSetQueue(struct WlanConnection *connection, uint8_t *data, unsigned int priority,
 		    unsigned int delay)
 {
-	struct WlanWmmSlot *slot = (struct WlanWmmSlot *)((uint8_t *)&wlanWmm + 84 + 96 * priority);
+	struct WlanWmmSlot *slot = &wlanWmm.slots[priority];
 	unsigned int queue = slot->ownQueue;
 	unsigned int ring = slot->activeQueue;
 	int accepted = 1;
