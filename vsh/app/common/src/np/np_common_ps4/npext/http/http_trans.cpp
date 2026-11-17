@@ -91,7 +91,7 @@ int SceNpCommonPs4_53E8E212(struct NpCommonPs4HttpTrans *trans)
 }
 
 int SceNpCommonPs4_AFA1D770(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4HttpTemplate *tmpl,
-	void *connPool, SceInt32 method, const char *scheme, const char *serverName, SceUShort16 port,
+	struct NpCommonPs4HttpConnPool *connPool, SceInt32 method, const char *scheme, const char *serverName, SceUShort16 port,
 	const char *path, SceULong64 contentLength)
 {
 	int result;
@@ -140,7 +140,7 @@ fail:
 }
 
 int SceNpCommonPs4_D30A8E84(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4HttpTemplate *tmpl,
-	void *connPool, SceInt32 method, const char *url, SceULong64 contentLength)
+	struct NpCommonPs4HttpConnPool *connPool, SceInt32 method, const char *url, SceULong64 contentLength)
 {
 	int result;
 	SceInt32 connId;

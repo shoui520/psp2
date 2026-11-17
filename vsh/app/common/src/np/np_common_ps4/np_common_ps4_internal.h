@@ -33,6 +33,12 @@ extern "C" {
 #define NP_COMMON_PS4_ERROR_80559E0E	-2141872626
 #define NP_COMMON_PS4_ERROR_80559E10	-2141872624
 #define NP_COMMON_PS4_ERROR_80559E11	-2141872623
+#define NP_COMMON_PS4_ERROR_80559E09	-2141872631
+#define NP_COMMON_PS4_ERROR_80559E12	-2141872622
+#define NP_COMMON_PS4_ERROR_80559E13	-2141872621
+#define NP_COMMON_PS4_ERROR_80559E2D	-2141872595
+#define NP_COMMON_PS4_ERROR_80559E2E	-2141872594
+#define NP_COMMON_PS4_ERROR_80559F7F	-2141872385
 #define NP_COMMON_PS4_ERROR_80559E14	-2141872620
 #define NP_COMMON_PS4_ERROR_80559E16	-2141872618
 #define NP_COMMON_PS4_ERROR_80558004	-2141880316
@@ -203,11 +209,38 @@ struct NpCommonPs4HttpTimeouts {
 	SceUInt32 sendTimeout;
 };
 
+/* npext/http/http_conn_pool.cpp: a connection of the pool (kept for reuse while inUse is 0), and the
+   pool: a list of connections, at most connNumMax of them */
+struct NpCommonPs4HttpConn {
+	const void *const *vtable;
+	struct NpCommonPs4AllocatorWithError *pool;
+	SceInt32 connId;
+	SceInt32 templateId;
+	char *scheme;
+	char *host;
+	SceUShort16 port;
+	SceInt32 inUse;
+	SceUInt8 invalid;
+	SceInt32 reportedError;
+	struct NpCommonPs4HttpConn *next;
+	struct NpCommonPs4HttpConn *prev;
+};
+
+struct NpCommonPs4HttpConnPool {
+	const void *const *vtable;
+	struct NpCommonPs4AllocatorWithError *pool;
+	SceInt32 connNumMax;
+	SceInt32 connNum;
+	struct NpCommonPs4HttpConn *head;
+	struct NpCommonPs4HttpConn *tail;
+	struct NpCommonPs4Mutex mutex;
+};
+
 struct NpCommonPs4HttpTrans {
 	const void *const *vtable;
 	const void *const *vtableSecondBase;
 	struct NpCommonPs4Allocator *pool;
-	void *connPool;
+	struct NpCommonPs4HttpConnPool *connPool;
 	SceInt32 connId;
 	SceInt32 reqId;
 	SceUInt64 receivedSize;
@@ -229,13 +262,107 @@ struct NpCommonPs4HttpUri {
 	void *buffer;
 };
 
+struct NpCommonPs4HttpUri *SceNpCommonPs4_EF053155(struct NpCommonPs4HttpUri *uri, struct NpCommonPs4Allocator *pool);
+struct NpCommonPs4HttpUri *SceNpCommonPs4_349710F4(struct NpCommonPs4HttpUri *uri);
+int SceNpCommonPs4_A9EAFF5E(struct NpCommonPs4HttpUri *uri, const char *srcUrl);
+
 /* the connection pool (npext/http/http_conn_pool.cpp) */
-int npCommonPs4HttpConnPoolGetConnection(void *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *scheme,
+int npCommonPs4HttpConnPoolGetConnection(struct NpCommonPs4HttpConnPool *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *scheme,
 	const char *serverName, SceUShort16 port, SceInt32 *pConnId);
-int npCommonPs4HttpConnPoolGetConnectionWithUrl(void *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *url,
+int npCommonPs4HttpConnPoolGetConnectionWithUrl(struct NpCommonPs4HttpConnPool *connPool, struct NpCommonPs4HttpTemplate *tmpl, const char *url,
 	SceInt32 *pConnId);
-int npCommonPs4HttpConnPoolRelease(void *connPool, SceInt32 connId);
-void npCommonPs4HttpConnPoolReportError(void *connPool, SceInt32 connId, int error);
+struct NpCommonPs4HttpConnPool *npCommonPs4HttpConnPoolConstruct(struct NpCommonPs4HttpConnPool *connPool,
+	struct NpCommonPs4AllocatorWithError *pool);
+struct NpCommonPs4HttpTemplate *npCommonPs4HttpTemplateConstruct(struct NpCommonPs4HttpTemplate *tmpl);
+int npCommonPs4HttpTemplateInit(struct NpCommonPs4HttpTemplate *tmpl, int libHttpCtxId, const char *userAgent,
+	SceInt32 httpVer, SceUInt8 autoProxyConf);
+int npCommonPs4HttpConnPoolInit(struct NpCommonPs4HttpConnPool *connPool, SceInt32 connNumMax);
+int npCommonPs4HttpConnPoolRelease(struct NpCommonPs4HttpConnPool *connPool, SceInt32 connId);
+int npCommonPs4HttpConnPoolReportError(struct NpCommonPs4HttpConnPool *connPool, SceInt32 connId, int error);
+
+/* npext/http/http_context.cpp: the HTTP template and connection pool the NP requests are made with */
+struct NpCommonPs4HttpContext {
+	const void *const *vtable;
+	struct NpCommonPs4AllocatorWithError *pool;
+	struct NpCommonPs4HttpTemplate *tmpl;
+	struct NpCommonPs4HttpConnPool *connPool;
+	SceInt32 libHttpCtxId;
+};
+
+/* npext_npm/np_trans.cpp: an HttpTrans that belongs to an NP user (the online id the tokens are made for) */
+struct NpCommonPs4NpTrans {
+	struct NpCommonPs4HttpTrans trans;
+	struct NpCommonPs4OnlineId onlineId;
+};
+
+/* npext_npm/np_token.cpp: the tokens the NP server requests carry (data is a string) */
+struct NpCommonPs4UserToken {
+	const void *const *vtable;
+	SceUInt32 reserved;
+	char data[264];
+};
+
+struct NpCommonPs4TitleToken {
+	const void *const *vtable;
+	SceUInt32 reserved;
+	char data[1040];
+};
+
+int SceNpCommonPs4_47443DCE(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Handle *handle, void *buffer,
+	SceSize size, SceSize *pReceived);
+int SceNpCommonPs4_F81085EE(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Handle *handle, const void *data,
+	SceSize size, SceSize *pSent);
+int SceNpCommonPs4_8EBA83E1(char *secondBase, struct NpCommonPs4Handle *handle, const void *data, SceSize size,
+	SceSize *pSent);
+/* npext_npm/np_service_base_url/get_service_base_url_trans.cpp: a string behind a vtable, allocated from a pool */
+struct NpCommonPs4StringHolder {
+	const void *const *vtable;
+	char *string;
+	struct NpCommonPs4AllocatorWithError *pool;
+};
+
+struct NpCommonPs4NpTrans *SceNpCommonPs4_3FC6688C(struct NpCommonPs4NpTrans *npTrans, struct NpCommonPs4Allocator *pool,
+	const struct NpCommonPs4OnlineId *onlineId);
+struct NpCommonPs4NpTrans *SceNpCommonPs4_47D94EF0(struct NpCommonPs4NpTrans *npTrans);
+int SceNpCommonPs4_060EB06B(struct NpCommonPs4NpTrans *npTrans, struct NpCommonPs4Handle *handle);
+int SceNpCommonPs4_57B14D22(struct NpCommonPs4NpTrans *npTrans, struct NpCommonPs4Handle *handle);
+int SceNpCommonPs4_49776226(struct NpCommonPs4NpTrans *npTrans, struct NpCommonPs4Handle *handle);
+int SceNpCommonPs4_18DDD712(struct NpCommonPs4NpTrans *npTrans, struct NpCommonPs4Handle *handle);
+struct NpCommonPs4StringHolder *SceNpCommonPs4_FDA863C0(struct NpCommonPs4StringHolder *holder,
+	struct NpCommonPs4AllocatorWithError *pool);
+int SceNpCommonPs4_B0F7DE6E(struct NpCommonPs4StringHolder *holder, const char *string);
+const char *SceNpCommonPs4_2CE76BE5(const struct NpCommonPs4StringHolder *holder);
+int npCommonPs4NpEnvironmentGet(char *environment);
+int sceNpCommonGetNpEnviroment(char *environment);
+int SceNpCommonPs4_44FF13E8(struct NpCommonPs4HttpTrans *trans, const char *name, const char *value);
+int SceNpCommonPs4_6B6E813E(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Handle *handle, SceInt32 *pStatusCode);
+int SceNpCommonPs4_C80B0275(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Handle *handle, void *buffer,
+	SceSize size, SceSize *pReceived);
+int SceNpCommonPs4_3FC1A88F(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Handle *handle, const void *data,
+	SceSize size);
+int SceNpCommonPs4_D30A8E84(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4HttpTemplate *tmpl,
+	struct NpCommonPs4HttpConnPool *connPool, SceInt32 method, const char *url, SceULong64 contentLength);
+struct NpCommonPs4HttpTrans *SceNpCommonPs4_9256CF02(struct NpCommonPs4HttpTrans *trans, struct NpCommonPs4Allocator *pool);
+struct NpCommonPs4HttpTrans *SceNpCommonPs4_47C5936B(struct NpCommonPs4HttpTrans *trans);
+struct NpCommonPs4OnlineId *SceNpCommonPs4_AEC0DAC5(struct NpCommonPs4OnlineId *onlineId, const struct NpCommonPs4OnlineId *source);
+struct NpCommonPs4OnlineId *SceNpCommonPs4_1543D7EE(struct NpCommonPs4OnlineId *onlineId);
+struct NpCommonPs4UserToken *SceNpCommonPs4_988DFD87(struct NpCommonPs4UserToken *token);
+struct NpCommonPs4UserToken *SceNpCommonPs4_78CC9FCD(struct NpCommonPs4UserToken *token);
+struct NpCommonPs4TitleToken *SceNpCommonPs4_DC4787E9(struct NpCommonPs4TitleToken *token);
+struct NpCommonPs4TitleToken *SceNpCommonPs4_FD80FE40(struct NpCommonPs4TitleToken *token);
+const char *SceNpCommonPs4_80D16974(const struct NpCommonPs4TitleToken *token);
+int SceNpCommonPs4_191AEA9E(struct NpCommonPs4Handle *handle, struct NpCommonPs4OnlineId *onlineId, struct NpCommonPs4UserToken *token);
+int SceNpCommonPs4_9BC491E3(struct NpCommonPs4Handle *handle, const char *onlineId, struct NpCommonPs4TitleToken *token);
+int SceNpCommonPs4_FB63A152(SceInt32 statusCode, void *body, SceSize length);
+int SceNpManager_737B2820(SceInt32 id);
+int SceNpCommonPs4_639086A3(SceInt32 reserved);
+int SceNpCommonPs4_530CAFDA(SceInt32 id);
+int SceNpCommonPs4_13798894(SceInt32 id, const char *onlineId, void *buffer, SceUInt8 reserved);
+int SceNpCommonPs4_68D08C92(SceInt32 id);
+int SceNpManager_4110B787(SceInt32 *pId);
+int SceNpManager_FDE78C74(SceInt32 id, void *buffer);
+int SceNpManager_3907F96A(SceInt32 id);
+int SceNpManager_F66A7AAE(void);
 
 /* npext/json: a JSON value (type: null, boolean, number, string, array, object), its parser and its document */
 #define NP_COMMON_PS4_JSON_TYPE_NULL	0
@@ -366,6 +493,9 @@ extern const void *g_jsonStringValueVtable[];
 extern const void *g_jsonArrayValueVtable[];
 extern const void *g_jsonObjectValueVtable[];
 struct NpCommonPs4JsonParser *SceNpCommonPs4_4577A207(struct NpCommonPs4JsonParser *parser, struct NpCommonPs4Allocator *pool);
+struct NpCommonPs4JsonParser *SceNpCommonPs4_4F720AFD(struct NpCommonPs4JsonParser *parser, struct NpCommonPs4Allocator *pool);
+struct NpCommonPs4JsonParser *SceNpCommonPs4_0A3AA2EF(struct NpCommonPs4JsonParser *parser);
+int SceNpCommonPs4_7CC0800E(struct NpCommonPs4JsonParser *parser, int unused, void *stream);
 int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, const void *const *const *eventHandler);
 int SceNpCommonPs4_EB1B7375(void *lexer, void *config, void *callback, void *context);
 int SceNpCommonPs4_F5EE219F(void *lexer, void *data, int size);

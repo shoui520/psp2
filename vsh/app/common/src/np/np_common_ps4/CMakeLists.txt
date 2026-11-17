@@ -9,6 +9,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/handle/cancelable.cpp
 	npext/handle/handle.cpp
 	npext/handle/scope.cpp
+	npext/http/http_context.cpp
+	npext/http/http_conn_pool.cpp
+	npext/http/http_template.cpp
 	npext/http/http_trans.cpp
 	npext/http/http_uri.cpp
 	npext/json/json_doc.cpp
@@ -16,6 +19,10 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext/json/json_value.cpp
 	npext/memory/memory.cpp
 	npext/memory/ring_buf.cpp
+	npext_npm/np_service_base_url/get_service_base_url_trans.cpp
+	npext_npm/np_token.cpp
+	npext_npm/np_trans.cpp
+	npext_npm/np_environment.cpp
 	npext/np/communication_id.cpp
 	npext/np/online_id.cpp
 	npext/np/title_id.cpp
