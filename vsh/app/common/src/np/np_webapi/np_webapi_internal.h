@@ -18,6 +18,7 @@
 #include <np/np_common.h>
 #include <np/np_webapi.h>
 #include <appmgr.h>
+#include <net/inet.h>
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -161,6 +162,12 @@ extern int SceNpCommonPs4_6BA5A164(void *mutex);				/* unlock */
 extern int SceNpCommonPs4_D84BF4B7(int arg);
 extern struct NpWebApiIpmiClient *SceNpCommonPs4_A0599F24(void);			/* the NP service's IPMI client */
 extern void SceNpCommonPs4_F50BD96A(int result);				/* halt after a failed assertion */
+extern void *SceNpCommonPs4_108738F2(void *object);			/* IPC data: base constructor */
+extern void *SceNpCommonPs4_BA23AD76(void *object);			/* IPC data: base destructor */
+extern int SceNpCommonPs4_6B1D3984(int a, int b, int c, int d, int e, void *out);	/* the NP service's state check */
+extern void SceNpCommonPs4_93C97239(void *object);			/* releases a reference */
+extern void SceNpCommonPs4_64BAC888(void *object);			/* takes a reference */
+extern void *SceNpCommonPs4_342A935D(int size);				/* allocates */
 
 #ifdef __cplusplus
 }
@@ -732,16 +739,166 @@ typedef struct NpWebApiExtdEntryList {
 	NpWebApiExtdEntry *tail;
 } NpWebApiExtdEntryList;
 
+/* the callbacks the library's own users register for a push event: a ring of 16-byte nodes */
+typedef struct NpPushCallbackNode {
+	struct NpPushCallbackNode *prev;
+	struct NpPushCallbackNode *next;
+	void *callback;
+	void *argument;
+} NpPushCallbackNode;
+
+typedef struct NpPushCallbackList {
+	NpPushCallbackNode *sentinel;
+	unsigned long count;
+	void *allocator;
+} NpPushCallbackList;
+
+/* and for a service's: the service name each is for, and its argument */
+typedef struct NpPushServiceCallbackNode {
+	struct NpPushServiceCallbackNode *prev;
+	struct NpPushServiceCallbackNode *next;
+	void *callback;
+	char service[65];
+	unsigned char reserved77[3];
+	int exact;
+	void *argument;
+} NpPushServiceCallbackNode;
+
+typedef char NpPushServiceCallbackNodeSizeCheck[sizeof(NpPushServiceCallbackNode) == 88 ? 1 : -1];
+
+typedef struct NpPushServiceCallbackList {
+	NpPushServiceCallbackNode *sentinel;
+	unsigned long count;
+	void *allocator;
+} NpPushServiceCallbackList;
+
+/* the extended data names a push event carries: ten of 33 bytes, and how many are used */
+typedef struct NpPushExDataNames {
+	void *reserved0[2];
+	char (*names)[33];
+	int count;
+} NpPushExDataNames;
+
 typedef struct NpPushLibContext {
 	const void **vtable;
-	unsigned char reserved4[12];
-	unsigned char mutex[24];
+	unsigned char receiveLock[12];
+	unsigned char mutex[12];
+	NpPushCallbackList callbacks;
 	NpWebApiExtdEntryList services;
-	unsigned char reserved52[12];
+	NpPushServiceCallbackList serviceCallbacks;
 	NpPushUserList users;
-	unsigned char reserved76[12];
+	void *receiveBuffer;
+	void *exDataBuffer;
+	NpPushExDataNames *exDataNames;
 	unsigned int flags;
 } NpPushLibContext;
+
+typedef char NpPushLibContextSizeCheck[sizeof(NpPushLibContext) == 92 ? 1 : -1];
+
+/* the push service's IPC data (Sony's np_push/ipc: np_push_ipc_tlv.cpp and np_push_ipc_data.cpp): a packet is a
+   sequence of {type, length} headers in network order with their data; a TLV object is one of them */
+#define NP_PUSH_IPC_ERROR_INVALID_DATA		-2141871570	/* 0x8055a22e */
+#define NP_PUSH_IPC_ERROR_BUFFER_TOO_SMALL	-2141871569	/* 0x8055a22f */
+#define NP_PUSH_IPC_ERROR_NO_SLOT		-2141871568	/* 0x8055a230 */
+#define NP_PUSH_IPC_ERROR_NAME_TOO_LONG		-2141871571	/* 0x8055a22d */
+#define NP_PUSH_IPC_ERROR_NO_ROOM		-2141871566	/* 0x8055a232 */
+#define NP_PUSH_IPC_ERROR_NO_FIRST		-2141871567	/* 0x8055a231 */
+
+typedef struct NpPushIpcTlv {
+	const void *const *vtable;
+	unsigned char reserved4[4];
+	unsigned short type;
+	unsigned char reserved10[2];
+	const char *data;
+	int length;
+} NpPushIpcTlv;
+
+typedef char NpPushIpcTlvSizeCheck[sizeof(NpPushIpcTlv) == 20 ? 1 : -1];
+
+/* what an event carries besides its text: the data text and ten (name, text) pairs */
+typedef struct NpPushExDataSlot {
+	const char *name;
+	const char *text;
+} NpPushExDataSlot;
+
+typedef struct NpPushExData {
+	const char *data;
+	NpPushExDataSlot slots[10];
+} NpPushExData;
+
+typedef struct NpPushExDataArgument {
+	const char *name;
+	const char *text;
+	SceSize length;
+} NpPushExDataArgument;
+
+extern const void *const g_ipcTlvVtable[];		/* 0x8100f098 */
+extern const void *const g_ipcTlvStringVtable[];	/* 0x8100f0b4 */
+extern int npPushIpcReadHeader(unsigned short expected, unsigned short *length, const char *src, unsigned int size,
+	unsigned int *consumed) __attribute__((noinline));
+extern int npPushIpcReadTypeLength(unsigned short *type, unsigned short *length, const char *src, unsigned int size,
+	unsigned int *consumed) __attribute__((noinline));
+extern int npPushIpcSkip(const char *src, unsigned int size, unsigned int *consumed) __attribute__((noinline));
+extern NpPushIpcTlv *npPushIpcTlvStringConstruct(NpPushIpcTlv *tlv, unsigned short type) __attribute__((noinline));
+extern NpPushIpcTlv *npPushIpcTlvStringDestruct(NpPushIpcTlv *tlv) __attribute__((noinline));
+extern int npPushIpcTlvStringDelete(NpPushIpcTlv *tlv);
+extern SceSize npPushIpcTlvStringGetLength(NpPushIpcTlv *tlv);
+extern int npPushIpcTlvStringSerialize(NpPushIpcTlv *tlv, char *dst, unsigned int size, SceSize *written);
+extern int npPushIpcTlvStringUnserialize(NpPushIpcTlv *tlv, char *src, unsigned int size, unsigned int *consumed);
+extern NpPushIpcTlv *npPushIpcTlvDestruct(NpPushIpcTlv *tlv);
+extern int npPushIpcTlvDelete(NpPushIpcTlv *tlv);
+extern void npPushIpcTlvPure(void);
+
+extern int npPushExDataParseNames(NpPushExDataSlot *slot, char *src, unsigned int size, unsigned int *consumed)
+	__attribute__((noinline));
+extern int npPushExDataParseFirst(const char **first, char *src, unsigned int size, unsigned int *consumed)
+	__attribute__((noinline));
+extern int npPushExDataParse(NpPushExData *exData, char *src, unsigned int size, unsigned int *consumed)
+	__attribute__((noinline));
+extern const char *npPushExDataGetData(NpPushExData *exData) __attribute__((noinline));
+extern SceSize npPushExDataGetDataLength(NpPushExData *exData) __attribute__((noinline));
+extern int npPushExDataGather(NpPushExData *exData, NpPushExDataArgument *dst, int max, int *count)
+	__attribute__((noinline));
+extern int npPushExDataNamesClear(NpPushExDataNames *names) __attribute__((noinline));
+extern int npPushExDataNamesContain(NpPushExDataNames *names, const char *name) __attribute__((noinline));
+extern int npPushExDataNamesAdd(NpPushExDataNames *names, const char *name) __attribute__((noinline));
+extern int npPushServiceNameEquals(const char *a, const char *b) __attribute__((noinline));
+extern int npPushServiceNameMatches(const char *a, const char *b, char exact) __attribute__((noinline));
+extern int npPushServiceListIsEmpty(NpWebApiExtdEntryList *list) __attribute__((noinline));
+
+#define NP_PUSH_ERROR_NO_LIB_CONTEXT		-2141871614	/* 0x8055a202 */
+#define NP_PUSH_ERROR_NOT_READY			-2141871592	/* 0x8055a218 */
+#define NP_PUSH_STATE_NOT_READY			-2141871333	/* 0x8055a31b */
+
+typedef void (*NpPushEventCallback)(const void *to, const void *from, const void *extra, const char *dataType,
+	const char *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum, void *argument);
+typedef void (*NpPushServiceEventCallback)(const void *to, const void *from, const char *service, const char *data,
+	SceSize dataLength, void *argument);
+
+extern int npPushIpcReceiveHeader(NpWebApiIpmiClient *client, unsigned char *id, const void *to, const void *from,
+	const void *extra, const char *dataType) __attribute__((noinline));
+extern int npPushIpcReceiveEvent(NpWebApiIpmiClient *client, int zero, const void *names, int nameCount, const void *to,
+	const void *from, const void *extra, const char *dataType, void *buffer, SceSize size, int *length)
+	__attribute__((noinline));
+extern int npPushIpcReceiveServiceEvent(NpWebApiIpmiClient *client, int zero, const void *names, int nameCount,
+	const void *to, const void *from, const void *extra, const char *dataType, void *buffer, SceSize size,
+	int *length) __attribute__((noinline));
+extern int npPushLibContextReceive(NpPushLibContext *ctx, void *to, void *from, void *extra, char *dataType,
+	void *buffer, SceSize size, int *length) __attribute__((noinline));
+extern void npPushLibContextDispatchEvent(NpPushLibContext *ctx, const void *to, const void *from, const void *extra,
+	const char *dataType, const char *data, SceSize dataLength, const NpPushExDataArgument *exData, int exDataNum)
+	__attribute__((noinline));
+extern void npPushLibContextDispatchServiceEvent(NpPushLibContext *ctx, const void *to, const void *from,
+	const char *service, const char *data, SceSize dataLength) __attribute__((noinline));
+extern void npPushLibContextReceivePush(NpPushLibContext *ctx) __attribute__((noinline));
+extern void npPushLibContextReceiveService(NpPushLibContext *ctx) __attribute__((noinline));
+extern int npPushLibContextCheckCallback(NpPushLibContext *ctx) __attribute__((noinline));
+extern int npPushCheckCallback(void) __attribute__((noinline));
+extern int npPushServicesCollectNames(NpWebApiExtdEntryList *services, const char *name, NpPushExDataNames **pNames)
+	__attribute__((noinline));
+extern int npPushLibContextCollectNames(NpPushLibContext *ctx, const char *name, NpPushExDataNames **pNames)
+	__attribute__((noinline));
+
 
 extern NpPushLibContext *g_pushLibContext;	/* 0x81010038 */
 extern void npPushLibContextDelete(void);
