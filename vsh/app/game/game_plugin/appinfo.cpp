@@ -45,6 +45,7 @@ enum {
 enum {
 	APPLAUNCHER_PLUGIN_FUNC_REGISTER	= 0,
 	APPLAUNCHER_PLUGIN_FUNC_UNREGISTER	= 1,	/* PLACEHOLDER: meaning not read yet */
+	APPLAUNCHER_PLUGIN_FUNC_UPDATE		= 2,	/* PLACEHOLDER: meaning not read yet */
 };
 
 /* the mount IDs of gro0: and grw0: (values only) */
@@ -641,6 +642,185 @@ float gameSumPercent(int last, const float *values)
 	return sum * 100.0f;
 }
 
+/* PLACEHOLDER: what is read with the versions; the system versions under their own keys */
+static GameSfoParam s_sfoVersionParams[] = {
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 4, 4, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "TITLE_ID", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "PSP2_SYSTEM_VER", LsdbKeyHash("_system_ver"), GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "PSP2_DISP_VER", LsdbKeyHash("_disp_ver"), GAME_SFO_FORMAT_TEXT, 7, 8, 0 },
+	{ "PSP2_SYSTEM_ROOT_VER", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "VERSION", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "REGION_DENY", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
+/* PLACEHOLDER: the category, attribute and application version */
+static const GameSfoParam s_sfoAppVerParams[] = {
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+};
+
+/* PLACEHOLDER: what an installation checks */
+static GameSfoParam s_sfoCheckParams[] = {
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "PSP2_SYSTEM_VER", LsdbKeyHash("_system_ver"), GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "REGION_DENY", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
+/* an application's parameters, all that its information keeps */
+static GameSfoParam s_sfoAppParams[] = {
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 4, 4, 0 },
+	{ "STITLE", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_00", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_01", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_02", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_03", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_04", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_05", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_06", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_07", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_08", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_09", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_10", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_11", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_12", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_13", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_14", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_15", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_16", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_17", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_18", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_19", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_00", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_01", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_02", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_03", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_04", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_05", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_06", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_07", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_08", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_09", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_10", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_11", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_12", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_13", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_14", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_15", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_16", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_17", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_18", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_19", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "ATTRIBUTE2", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "TITLE_ID", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_1", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_2", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_3", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_4", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_5", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_6", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_ADDCONT_ADD_7", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_1", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_2", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_3", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_4", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_5", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_6", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_SAVEDATA_ADD_7", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "PSP2_SYSTEM_VER", LsdbKeyHash("_system_ver"), GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "PSP2_DISP_VER", LsdbKeyHash("_disp_ver"), GAME_SFO_FORMAT_TEXT, 7, 8, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "VERSION", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "SAVEDATA_MAX_SIZE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "LAREA_TYPE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "SUPPORT_URI", 0, GAME_SFO_FORMAT_TEXT, 512, 512, 0 },
+	{ "REFERER_TITLE_ID", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "INSTALL_DIR_CACHE", LsdbKeyHash("INSTALL_DIR_CACHE0"), GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "IMPORT_SAVEDATA_INFO", 0, GAME_SFO_FORMAT_TEXT, 1024, 1024, 0 },
+	{ "PARENT_INSTALL_DIR", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "BOOT_INSTALL_DIR", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "CONTENT_ID", 0, GAME_SFO_FORMAT_TEXT, 48, 48, 0 },
+	{ "NP_COMMUNICATION_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+	{ "REGION_DENY", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "CONTENT_LOCATION", 0, GAME_SFO_FORMAT_TEXT, 256, 256, 0 },
+	{ "ATTRIBUTE_MINOR", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
+/* PLACEHOLDER: the attributes and the save data import */
+static const GameSfoParam s_sfoAttributeParams[] = {
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "ATTRIBUTE2", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "TITLE_ID", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "ATTRIBUTE_MINOR", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "IMPORT_SAVEDATA_INFO", 0, GAME_SFO_FORMAT_TEXT, 1024, 1024, 0 },
+};
+
+/* the titles and the parental level */
+static const GameSfoParam s_sfoTitleParams[] = {
+	{ "STITLE", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_00", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_01", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_02", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_03", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_04", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_05", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_06", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_07", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_08", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_09", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_10", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_11", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_12", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_13", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_14", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_15", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_16", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_17", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_18", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "STITLE_19", 0, GAME_SFO_FORMAT_TEXT, 52, 52, 0 },
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_00", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_01", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_02", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_03", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_04", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_05", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_06", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_07", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_08", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_09", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_10", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_11", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_12", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_13", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_14", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_15", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_16", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_17", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_18", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "TITLE_19", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
+/* PLACEHOLDER: what save data checks */
+static GameSfoParam s_sfoSaveDataParams[] = {
+	{ "SAVEDATA_MAX_SIZE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "PSP2_DISP_VER", LsdbKeyHash("_disp_ver"), GAME_SFO_FORMAT_TEXT, 7, 8, 0 },
+	{ "PSP2_SYSTEM_VER", LsdbKeyHash("_system_ver"), GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "INSTALL_DIR_SAVEDATA", 0, GAME_SFO_FORMAT_TEXT, 10, 12, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+};
+
 /* the keys of the localized short titles and titles, STITLE_00..19 and TITLE_00..19 */
 static unsigned int s_stitleKeys[] = {
 	LsdbKeyHash("STITLE_00"), LsdbKeyHash("STITLE_01"), LsdbKeyHash("STITLE_02"),
@@ -659,6 +839,14 @@ static unsigned int s_titleKeys[] = {
 	LsdbKeyHash("TITLE_12"), LsdbKeyHash("TITLE_13"), LsdbKeyHash("TITLE_14"),
 	LsdbKeyHash("TITLE_15"), LsdbKeyHash("TITLE_16"), LsdbKeyHash("TITLE_17"),
 	LsdbKeyHash("TITLE_18"), LsdbKeyHash("TITLE_19"),
+};
+
+/* the keys of the additional contents' directories, INSTALL_DIR_ADDCONT_ADD_1..7 */
+static unsigned int s_addcontDirKeys[] = {
+	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_1"), LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_2"),
+	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_3"), LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_4"),
+	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_5"), LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_6"),
+	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_7"),
 };
 
 /*
@@ -851,4 +1039,148 @@ int gameAppRegisterEnd(const LsdbAppInfoPtr *info)
 		titleId.c_str(), 0);
 
 	return 0;
+}
+
+/*
+ * A registered application's information handed to applauncher_plugin again, topmenu_plugin told
+ * the registration has ended when notifyTopmenu is set (0x810109C4).
+ */
+int gameAppUpdate(const LsdbAppInfoPtr *info, bool flag, bool notifyTopmenu)
+{
+	int ret;
+	Plugin *applauncher = Plugin::Find("applauncher_plugin");
+
+	if (applauncher == NULL) {
+		ret = GAME_ERROR_NO_PLUGIN;
+	} else {
+		ShellPluginInterface *iface = (ShellPluginInterface *)applauncher->GetInterface(1);
+
+		ret = GAME_ERROR_NO_PLUGIN;
+		if (iface != NULL)
+			ret = ((int (*)(const LsdbAppInfoPtr *, bool))
+			       iface->func[APPLAUNCHER_PLUGIN_FUNC_UPDATE])(info, flag);
+	}
+
+	if (notifyTopmenu)
+		gameAppRegisterEnd(info);
+
+	return ret;
+}
+
+/* a theme's record set from its theme.xml's title and provider (0x81010A14) */
+int gameThemeSetInfo(const LsdbTheme *theme, const common::SharedPtr<LsdbThemeInfo> *info)
+{
+	AppInfoSClient client;
+	int ret;
+
+	SceLsdb_D322A870(&client);
+	ret = SceLsdb_01790EDE(&client, theme, &(*info)->m_infomationProperty.m_title,
+			       &(*info)->m_infomationProperty.m_provider);
+	SceLsdb_56D8DCF0(&client);
+
+	return ret;
+}
+
+/* whether two applications' APP_VER differ, a missing one read as empty (0x81010A5E) */
+bool gameAppVersionDiffers(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other)
+{
+	string version;
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APP_VER);
+
+	if (it != (*info)->end())
+		version = LsdbValueText(it->second);
+
+	string otherVersion;
+
+	it = (*other)->find(LSDB_KEY_APP_VER);
+	if (it != (*other)->end())
+		otherVersion = LsdbValueText(it->second);
+
+	bool same = version == otherVersion;
+
+	return !same;
+}
+
+/*
+ * The parameter tables and their lengths (0x81010BC2..0x81010C28). Sony's linker keeps one
+ * copy of functions with the same code, so several lengths share another's.
+ */
+const GameSfoParam *gameSfoGetVersionParams(void)
+{
+	return s_sfoVersionParams;
+}
+
+unsigned int gameSfoGetVersionParamCount(void)
+{
+	return sizeof(s_sfoVersionParams) / sizeof(s_sfoVersionParams[0]);
+}
+
+const GameSfoParam *gameSfoGetAppVerParams(void)
+{
+	return s_sfoAppVerParams;
+}
+
+unsigned int gameSfoGetAppVerParamCount(void)
+{
+	return sizeof(s_sfoAppVerParams) / sizeof(s_sfoAppVerParams[0]);
+}
+
+const GameSfoParam *gameSfoGetCheckParams(void)
+{
+	return s_sfoCheckParams;
+}
+
+unsigned int gameSfoGetCheckParamCount(void)
+{
+	return sizeof(s_sfoCheckParams) / sizeof(s_sfoCheckParams[0]);
+}
+
+const GameSfoParam *gameSfoGetAppParams(void)
+{
+	return s_sfoAppParams;
+}
+
+unsigned int gameSfoGetAppParamCount(void)
+{
+	return sizeof(s_sfoAppParams) / sizeof(s_sfoAppParams[0]);
+}
+
+const GameSfoParam *gameSfoGetAttributeParams(void)
+{
+	return s_sfoAttributeParams;
+}
+
+unsigned int gameSfoGetAttributeParamCount(void)
+{
+	return sizeof(s_sfoAttributeParams) / sizeof(s_sfoAttributeParams[0]);
+}
+
+const GameSfoParam *gameSfoGetTitleParams(void)
+{
+	return s_sfoTitleParams;
+}
+
+unsigned int gameSfoGetTitleParamCount(void)
+{
+	return sizeof(s_sfoTitleParams) / sizeof(s_sfoTitleParams[0]);
+}
+
+const GameSfoParam *gameSfoGetSaveDataParams(void)
+{
+	return s_sfoSaveDataParams;
+}
+
+unsigned int gameSfoGetSaveDataParamCount(void)
+{
+	return sizeof(s_sfoSaveDataParams) / sizeof(s_sfoSaveDataParams[0]);
+}
+
+const unsigned int *gameGetAddcontDirKeys(void)
+{
+	return s_addcontDirKeys;
+}
+
+unsigned int gameGetAddcontDirKeyCount(void)
+{
+	return sizeof(s_addcontDirKeys) / sizeof(s_addcontDirKeys[0]);
 }

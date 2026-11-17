@@ -125,18 +125,23 @@ const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
 /* a title ID: nine upper-case letters and digits (0x8101D662) */
 int gameCheckTitleId(const char *titleId);
 
+/* a param.sfo parameter's format (values only) */
+#define GAME_SFO_FORMAT_BINARY		0x0004
+#define GAME_SFO_FORMAT_TEXT		0x0204
+#define GAME_SFO_FORMAT_INTEGER		0x0404
+
 /*
  * PLACEHOLDER: one parameter of a param.sfo to load into an application's information: its
- * name, the key it is stored under (0: the name's hash), its SFO format (0x0004 binary, 0x0204
- * UTF-8, 0x0404 integer) and the largest length accepted.
+ * name, the key it is stored under (0: the name's hash), its SFO format, its length and the
+ * largest length accepted.
  */
 struct GameSfoParam {
 	const char *name;
 	unsigned int key;
 	SceUInt16 format;
-	SceUInt16 reserved;
+	SceUInt16 length;
 	SceUInt16 maxLength;
-	SceUInt16 reserved2;
+	SceUInt16 reserved;
 };
 
 /*
@@ -180,6 +185,26 @@ int gameSfoLoadVerified(const paf::string &path, const GameSfoParam *params, uns
 int gameFileWrite(const paf::string &path, const void *buf, size_t size, paf::string *detail);
 int gameFileRead(const paf::string &path, void *buf, size_t size, paf::string *detail);
 int gameAppRegisterEnd(const LsdbAppInfoPtr *info);
+int gameAppUpdate(const LsdbAppInfoPtr *info, bool flag, bool notifyTopmenu);
+int gameThemeSetInfo(const LsdbTheme *theme,
+		     const paf::common::SharedPtr<LsdbThemeInfo> *info);
+bool gameAppVersionDiffers(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other);
+const GameSfoParam *gameSfoGetVersionParams(void);
+unsigned int gameSfoGetVersionParamCount(void);
+const GameSfoParam *gameSfoGetAppVerParams(void);
+unsigned int gameSfoGetAppVerParamCount(void);
+const GameSfoParam *gameSfoGetCheckParams(void);
+unsigned int gameSfoGetCheckParamCount(void);
+const GameSfoParam *gameSfoGetAppParams(void);
+unsigned int gameSfoGetAppParamCount(void);
+const GameSfoParam *gameSfoGetAttributeParams(void);
+unsigned int gameSfoGetAttributeParamCount(void);
+const GameSfoParam *gameSfoGetTitleParams(void);
+unsigned int gameSfoGetTitleParamCount(void);
+const GameSfoParam *gameSfoGetSaveDataParams(void);
+unsigned int gameSfoGetSaveDataParamCount(void);
+const unsigned int *gameGetAddcontDirKeys(void);
+unsigned int gameGetAddcontDirKeyCount(void);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 

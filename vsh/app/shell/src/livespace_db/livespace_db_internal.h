@@ -24,6 +24,7 @@
 #include <plugin.h>
 #include "livespace_db.h"
 #include "lsdb_keys.h"
+#include "livearea.h"
 #include <activity_db/activity_db.h>
 
 /* SceLsdb's errors (no SDK header names them) */
@@ -652,9 +653,6 @@ void LsdbTimeTerm(void);
 /* a language code's system language (the LiveArea's language table) */
 int LsdbLanguageFromCode(const paf::string *code);
 
-/* the network time, paf's when the debug network time is not set */
-extern "C" int SceLsdb_76C1997A(paf::rtc::Tick *tick);
-
 /* the application database's path */
 extern const char *g_lsdbAppDbPath;
 
@@ -1026,6 +1024,8 @@ public:
 
 /* the client exports the shell's theme code calls (appinfo_sclient.cpp, appinfo_qclient.cpp) */
 extern "C" {
+AppInfoSClient *SceLsdb_D322A870(AppInfoSClient *client);
+AppInfoSClient *SceLsdb_56D8DCF0(AppInfoSClient *client);
 int SceLsdb_6F73E332(AppInfoSClient *client, const paf::common::SharedPtr<LsdbThemeInfo> *theme,
 	unsigned int flags);
 int SceLsdb_01790EDE(AppInfoSClient *client, const LsdbTheme *theme, const LsdbThemeText *title,
