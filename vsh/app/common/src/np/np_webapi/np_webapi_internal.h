@@ -262,6 +262,8 @@ extern int npWebApiServiceFilterResolve(NpWebApiServiceFilter *filter, NpWebApiH
 	const char *name, int arg) __attribute__((noinline));
 extern int npWebApiServiceFilterInit(NpWebApiServiceFilter *filter, NpWebApiHandle *handle, const char *name,
 	int arg, const char *types, unsigned int typeCount) __attribute__((noinline));
+extern int npWebApiLibContextCreateServicePushEventFilter(NpWebApiLibContext *ctx, int handleId, const char *name,
+	int arg, const char *types, unsigned int typeCount) __attribute__((noinline));
 
 extern void npWebApiServiceFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiServiceFilter **pFilter) __attribute__((noinline));

@@ -759,3 +759,52 @@ int npWebApiServiceFilterInit(NpWebApiServiceFilter *filter, NpWebApiHandle *han
 	filter->id = id;
 	return id;
 }
+
+int npWebApiLibContextCreateServicePushEventFilter(NpWebApiLibContext *ctx, int handleId, const char *name, int arg,
+	const char *types, unsigned int typeCount)
+{
+	NpWebApiServiceFilter *filter;
+	NpWebApiHandle *handle;
+	NpWebApiHandleNode *node;
+	void *memory;
+	int result;
+
+	handle = NULL;
+	filter = NULL;
+	memory = SceNpCommonPs4_D154D84F(76, ctx->heapBlock->poolObject);
+	if (memory != NULL)
+		filter = npWebApiServiceFilterConstruct((NpWebApiServiceFilter *)memory, ctx);
+	if (filter == NULL) {
+		result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+		goto fail;
+	}
+	result = npWebApiLibContextAcquireHandle(ctx, handleId, &handle);
+	if (result < 0)
+		goto fail;
+	result = npWebApiServiceFilterInit(filter, handle, name, arg, types, typeCount);
+	if (result < 0)
+		goto fail;
+	SceNpCommonPs4_F5840D6E(&ctx->lock);
+	npWebApiServiceFilterListInsert(&node, &ctx->serviceFilters, &filter);
+	if (node == NULL) {
+		result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+		SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+		goto fail;
+	}
+	SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	if (handle != NULL) {
+		SceNpCommonPs4_F5840D6E(&ctx->lock);
+		handle->refCount--;
+		SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	}
+	return npWebApiServiceFilterGetId(filter);
+fail:
+	if (handle != NULL) {
+		SceNpCommonPs4_F5840D6E(&ctx->lock);
+		handle->refCount--;
+		SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	}
+	if (filter != NULL)
+		((void (*)(NpWebApiServiceFilter *))filter->vtable[1])(filter);
+	return result;
+}
