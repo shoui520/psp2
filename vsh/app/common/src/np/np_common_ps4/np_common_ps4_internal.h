@@ -20,9 +20,18 @@
 extern "C" {
 #endif
 
-/* the errors the library returns */
-#define NP_COMMON_PS4_ERROR_OUT_OF_MEMORY	-2141880313	/* 0x80553007 */
-#define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80553005 */
+/* the errors the library returns (0x8055800X: the library's own; Sony's names for them are not
+   known) */
+#define NP_COMMON_PS4_ERROR_80558003	-2141880317
+#define NP_COMMON_PS4_ERROR_80558004	-2141880316
+#define NP_COMMON_PS4_ERROR_INVALID_ARGUMENT	-2141880315	/* 0x80558005 */
+#define NP_COMMON_PS4_ERROR_OUT_OF_MEMORY	-2141880313	/* 0x80558007 */
+#define NP_COMMON_PS4_ERROR_80558009	-2141880311
+#define NP_COMMON_PS4_ERROR_8055800B	-2141880309
+#define NP_COMMON_PS4_ERROR_TIMEOUT	-2141880308	/* 0x8055800c */
+#define NP_COMMON_PS4_ERROR_8055800D	-2141880307
+#define NP_COMMON_PS4_ERROR_8055800E	-2141880306
+#define NP_COMMON_PS4_ERROR_BUSY	-2141880305	/* 0x8055800f */
 
 /* an allocator: three functions and the context they take as their last argument */
 struct NpCommonPs4Allocator {

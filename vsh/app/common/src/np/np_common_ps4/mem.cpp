@@ -485,7 +485,7 @@ struct NpCommonPs4AllocatorWithError *SceNpCommonPs4_03C9ACE2(void)
 	g_globalAllocatorWithError.reallocate = (void *(*)(void *, SceSize, void *))NpCommonPs4HeapReallocate;
 	g_globalAllocatorWithError.deallocate = (void (*)(void *, void *))NpCommonPs4HeapDeallocate;
 	g_globalAllocatorWithError.context = &g_globalHeap;
-	g_globalAllocatorWithError.error = -2141880309;
+	g_globalAllocatorWithError.error = NP_COMMON_PS4_ERROR_8055800B;
 	return &g_globalAllocatorWithError;
 }
 
@@ -547,50 +547,6 @@ SceUInt32 SceNpCommonPs4_76118391(volatile SceUInt32 *target, SceUInt32 expected
 	} while (value == expected && __strex(desired, target) != 0);
 	__dmb();
 	return value;
-}
-
-int SceNpCommonPs4_E47C64E8(SceUID *pCond)
-{
-	return sceKernelWaitCond(*pCond, NULL);
-}
-
-SceUID SceNpCommonPs4_34C15C21(SceUID *pCond, SceUID *pMutex, const char *name)
-{
-	SceUID result;
-
-	result = sceKernelCreateCond(name, 0, *pMutex, (const SceKernelCondOptParam *)NULL);
-	if (result >= 0)
-		*pCond = result;
-	return result;
-}
-
-int SceNpCommonPs4_AC89B1E7(SceUID *pCond)
-{
-	if (pCond != NULL) {
-		if (*pCond != 0) {
-			sceKernelDeleteCond(*pCond);
-			*pCond = 0;
-		}
-	}
-	return 0;
-}
-
-int SceNpCommonPs4_69E858EA(SceUID *pCond, SceUInt32 timeout)
-{
-	SceUInt32 waitTime;
-	int result;
-
-	if (timeout != 0) {
-		waitTime = timeout;
-		result = sceKernelWaitCond(*pCond, &waitTime);
-		if (result == (int)0x80028005)
-			result = -2141880308;
-		else if (result >= 0)
-			result = 0;
-	} else {
-		result = sceKernelWaitCond(*pCond, NULL);
-	}
-	return result;
 }
 
 }
