@@ -35,10 +35,14 @@ struct WlanWmmSlot {
 	uint8_t reserved95;
 };
 
-/* EDCA parameters of an access category as the MAC takes them (the first two swapped). */
+/* EDCA parameters of an access category as the MAC takes them (the nibbles swapped from the element's record). */
 struct WlanWmmEdca {
-	uint8_t info;			/* bits 1-2: access category, bit 3: admission control mandatory, bits 4-7: AIFSN */
-	uint8_t contention;		/* ECWmin << 4 | ECWmax */
+	uint8_t reserved : 1;
+	uint8_t category : 2;		/* the access category */
+	uint8_t acm : 1;		/* admission control mandatory */
+	uint8_t aifsn : 4;
+	uint8_t ecwMax : 4;
+	uint8_t ecwMin : 4;
 	uint16_t txop;			/* TXOP limit */
 };
 
@@ -197,7 +201,7 @@ void wlanWmmAddtsResult(uint8_t *command, const uint8_t *response, unsigned int 
 void wlanTspecBuildDelts(OsaBuffer *buffer, const uint8_t *tspecElement);			/* 0x2d10c */
 unsigned int wlanWmmTsStatus(uint8_t *body, const uint8_t *tsInfo, const uint8_t *direction, int valid);	/* 0x2d164 */
 int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *policed);	/* 0x2d3d0 */
-int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
+void wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
 			 uint16_t *times, unsigned int cwMin, unsigned int cwMax);	/* 0x2d4e4 */
 
 #endif /* ROBIN_WMM_H */

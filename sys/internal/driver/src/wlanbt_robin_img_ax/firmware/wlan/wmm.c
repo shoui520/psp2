@@ -50,14 +50,14 @@ int wlanWmmEnable(void)
 int wlanWmmApplyQueue(unsigned int queue)
 {
 	struct WlanWmmQueue *record = &wlanWmm.queues[queue];
-	unsigned int category = wlanAccessCategoryToQueue((record->edca.info >> 1) & 3);
+	unsigned int category = wlanAccessCategoryToQueue(record->edca.category);
 	int fallback = 0;
 	unsigned int chosen = category;
 	unsigned int target = category;
 	unsigned int i;
 	int slot;
 
-	if (record->edca.info & 8) {
+	if (record->edca.acm) {
 		if (record->admittedTime == 0) {
 			fallback = 1;
 			chosen = record->fallback;
@@ -110,12 +110,12 @@ int wlanWmmSetParameters(const uint8_t *element, uint8_t *count)
 		struct WlanWmmQueue *record = &wlanWmm.queues[i];
 		unsigned int fallback;
 
-		if (record->edca.info & 8) {
+		if (record->edca.acm) {
 			unsigned int k;
 
 			fallback = 255;
 			for (k = 0; k <= i; k = (uint8_t)(k + 1)) {
-				if (!(wlanWmm.queues[k].edca.info & 8))
+				if (!(wlanWmm.queues[k].edca.acm))
 					fallback = k;
 			}
 		} else {
@@ -154,11 +154,11 @@ int wlanWmmQueueStatus(const struct WlanConnection *connection, uint8_t *tlvs)
 		} else {
 			uint16_t admitted = record->admittedTime;
 
-			tlvs[8] = (record->edca.info & 8) != 0;	/* flow required */
+			tlvs[8] = (record->edca.acm) != 0;	/* flow required */
 			tlvs[9] = admitted != 0;		/* flow created */
 			tlvs[6] = admitted;			/* medium time */
 			tlvs[7] = admitted >> 8;
-			if ((record->edca.info & 8) && admitted == 0)
+			if ((record->edca.acm) && admitted == 0)
 				tlvs[5] = 1;
 			if (wlanWmm.infoIe[0][WLAN_WMM_IE_QOS_INFO] & (1 << bit))
 				tlvs[10] = 1;
@@ -437,18 +437,20 @@ int wlanWmmQueueBit(int queue)
 /* A queue's contention parameters go to the MAC (the ROM's EDCA setters). */
 int wlanWmmSetEdca(unsigned int queue, const struct WlanWmmEdca *edca)
 {
-	romEdcaSetCwMin(queue, (1 << (edca->contention >> 4)) - 1);
-	romEdcaSetCwMax(queue, (1 << (edca->contention & 0xf)) - 1);
-	romEdcaSetAifsn(queue, edca->info >> 4);
+	romEdcaSetCwMin(queue, (1 << edca->ecwMin) - 1);
+	romEdcaSetCwMax(queue, (1 << edca->ecwMax) - 1);
+	romEdcaSetAifsn(queue, edca->aifsn);
 	return romEdcaSetTxop(queue, edca->txop);
 }
 
 /* 1: the WMM parameter element holds all four access categories; its parameter set count goes to *count. */
 int wlanWmmParseParameter(const uint8_t *element, uint8_t *count)
 {
-	if (element == NULL || element[1] != 24 ||
-	    (uint8_t)((1 << ((element[22] >> 5) & 3)) | (1 << ((element[18] >> 5) & 3)) |
-		      (1 << ((element[14] >> 5) & 3)) | (1 << ((element[10] >> 5) & 3))) != 0xf)
+	/* Sony's code reads the records before the test of the element (also when it is NULL). */
+	const struct WlanWmmAcRecord *ac = (const struct WlanWmmAcRecord *)&element[10];
+	uint8_t categories = (1 << ac[0].aci) | (1 << ac[1].aci) | (1 << ac[2].aci) | (1 << ac[3].aci);
+
+	if (element == NULL || element[1] != 24 || categories != 0xf)
 		return 0;
 	if (count != NULL)
 		*count = element[8] & 0xf;
@@ -458,11 +460,14 @@ int wlanWmmParseParameter(const uint8_t *element, uint8_t *count)
 /* An AC parameter record of the element (ACI/AIFSN, ECW, TXOP limit) becomes a queue's record. */
 struct WlanWmmEdca *wlanWmmStoreQueue(struct WlanWmmEdca *edca, const uint8_t *record)
 {
-	edca->info = (edca->info & 0xf9) | (2 * ((record[0] >> 5) & 3));
-	edca->info = (edca->info & 0xf7) | (8 * ((record[0] >> 4) & 1));
-	edca->info = (edca->info & 0x0f) | (16 * record[0]);
-	edca->contention = ((record[1] & 0xf) << 4) | (record[1] >> 4);
-	edca->txop = (record[3] << 8) | record[2];
+	const struct WlanWmmAcRecord *ac = (const struct WlanWmmAcRecord *)record;
+
+	edca->category = ac->aci;
+	edca->acm = ac->acm;
+	edca->aifsn = ac->aifsn;
+	edca->ecwMin = ac->ecwMin;
+	edca->ecwMax = ac->ecwMax;
+	edca->txop = ac->txopLimit;
 	return edca;
 }
 
@@ -632,7 +637,7 @@ void wlanWmmClear(void)
 int wlanWmmApplyApEdca(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
-	struct WlanWmmEdca edca = { 0, 0, 0 };
+	struct WlanWmmEdca edca = { 0 };
 	unsigned int category = 0;
 	unsigned int queue;
 	int result;
@@ -797,7 +802,7 @@ int wlanWmmStatsCommand(uint8_t *body, struct WlanWmmStats *bins, uint16_t *poli
 }
 
 /* Without WMM the four queues, the three information elements and the parameter element are reset. */
-int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
+void wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, struct WlanWmmEdca *edca,
 			 uint16_t *times, unsigned int cwMin, unsigned int cwMax)
 {
 	unsigned int queue;
@@ -806,14 +811,14 @@ int wlanWmmResetDefaults(void *info1, void *info2, void *info3, void *element, s
 	__aeabi_memclr(info2, 9);
 	__aeabi_memclr(info3, 9);
 	__aeabi_memclr(element, 26);
-	edca->info = 2 << 4;
-	edca->contention = (cwMin << 4) | (cwMax & 0xf);
+	edca->aifsn = 2;
+	edca->ecwMin = cwMin;
+	edca->ecwMax = cwMax;
 	edca->txop = 0;
 	for (queue = 0; queue <= 7; queue = (uint8_t)(queue + 1)) {
 		wlanWmmSetEdca(queue, edca);
 		times[queue] = wlanWmmDefaultTime;
 	}
-	return wlanWmmDefaultTime;
 }
 
 /* A WMM parameter element's header: vendor element, Microsoft OUI, type 2, subtype 1, version 1. */
@@ -888,7 +893,7 @@ unsigned int wlanWmmLastSequence(unsigned int tid)
 unsigned int wlanWmmAifsn(unsigned int queue)
 {
 	if (wlanWmm.enabled != 0 && queue < 4)
-		return wlanWmm.queues[queue].edca.info >> 4;
+		return wlanWmm.queues[queue].edca.aifsn;
 	return 2;
 }
 
@@ -1140,7 +1145,7 @@ void wlanWmmTxDone(struct WlanConnection *connection, struct WlanTxStatus *statu
 	{
 		struct WlanWmmQueue *record = &wlanWmm.queues[queue];
 
-		if (record->edca.info & 8) {
+		if (record->edca.acm) {
 			int airtime;
 			unsigned int medium;
 

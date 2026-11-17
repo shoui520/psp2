@@ -166,7 +166,7 @@ int p2pDirectQueryEntry(const uint8_t *tspec, unsigned int length, const uint8_t
 /* Whether the access category needs admission control. */
 __attribute__((noinline)) int p2pDirectSelectEntry(unsigned int category)
 {
-	return (wlanWmm.queues[wlanAccessCategoryToQueue(category)].edca.info >> 3) & 1;
+	return wlanWmm.queues[wlanAccessCategoryToQueue(category)].edca.acm;
 }
 
 __attribute__((noinline)) int p2pDirectAdjustEntry(unsigned int tid)
