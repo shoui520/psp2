@@ -235,10 +235,10 @@ void boardPortInit(void)
 	PM12 = 0x5f;
 	P13 = 0x00;
 	PM13 = 0xfc;
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000)
 	P14 = 0x00;
 #else
-	/* 0x00090206: P14.3 an open-drain output, high */
+	/* 0x00411000's 0x00090206: P14.3 an open-drain output, high */
 	POM14 = 0x08;
 	P14 = 0x08;
 #endif

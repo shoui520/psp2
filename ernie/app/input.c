@@ -420,7 +420,7 @@ void inputResumeOpen(void)
 	P12 |= 0x80;
 #endif
 	inputGroup1.pending |= 0x08;
-#if BOARD_INPUTS_102603 || !FW_SINCE(0x00090804)
+#if BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))
 	inputDelays.latchOn = 0x1c;
 #endif
 #if BOARD_MOTION

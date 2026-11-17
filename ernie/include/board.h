@@ -185,14 +185,15 @@
 #define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
 /* and 0x00102603's own */
-/* (0x00090206's port modes are 0x00102603's on every board, but for PM14) */
-#define BOARD_PORTS_102603		(BOARD_102603 || !FW_SINCE(0x00090804))
-#define BOARD_PM2		(BOARD_PORTS_102603 ? 0xab : 0x01)
+/* (0x00411000's 0x00090206 port modes are 0x00102603's, but for PM14; the other boards'
+   0x00090206 keep its PM6 only, with PM2 0xff and PM14 0xec) */
+#define BOARD_PORTS_102603		(BOARD_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000)))
+#define BOARD_PM2		(BOARD_PORTS_102603 ? 0xab : !FW_SINCE(0x00090804) ? 0xff : 0x01)
 #define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
-#define BOARD_PM6		(BOARD_PORTS_102603 ? 0x12 : 0x92)
+#define BOARD_PM6		(BOARD_102603 || !FW_SINCE(0x00090804) ? 0x12 : 0x92)
 #define BOARD_PM11		(BOARD_102603 ? 0xf2 : 0xf1)
 #define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
-#define BOARD_PM14		(BOARD_102603 ? 0xe6 : 0xe4)
+#define BOARD_PM14		(BOARD_102603 ? 0xe6 : !FW_SINCE(0x00090804) && !BOARD_IS(0x00411000) ? 0xec : 0xe4)
 #define BOARD_PM15		(BOARD_PORTS_102603 ? 0xff : 0xf8)
 
 /* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
