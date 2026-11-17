@@ -133,6 +133,15 @@ extern int SceNpCommonPs4_68D08C92(...);
 extern int SceNpManager_737B2820(void);
 extern void *SceNpCommonPs4_D154D84F(int size, void *pool);	/* allocate from a pool */
 extern int SceNpCommonPs4_6B428829(void *allocator, void *node);
+extern int sceNpManagerGetNpId(void *npId);
+extern int SceNpManager_A775A452(int state);
+extern int SceNpCommonPs4_FB0B3FBD(void *params);
+extern int SceNpCommonPs4_639086A3(void *params);
+extern int SceNpCommonPs4_17EB36C2(void *object, int arg);
+extern int SceNpCommonPs4_AB41A67D(int handle, void *npId, const char *name, int arg, void *out);
+extern int SceNpCommonPs4_6E443E9B(int handle, void *npId, const char *name, void *object, int zero, int arg, void *out);
+extern int SceNpCommonPs4_9C4F1236(int handle);
+extern int SceNpCommonPs4_530CAFDA(int handle);
 extern int SceNpCommonPs4_CE924EB3(int a, void *object);
 struct NpPushKey;
 struct NpWebApiIpmiClient;
@@ -247,6 +256,10 @@ extern NpWebApiServiceFilter *npWebApiServiceFilterConstruct(NpWebApiServiceFilt
 	NpWebApiLibContext *libCtx) __attribute__((noinline));
 extern NpWebApiServiceFilter *npWebApiServiceFilterDestruct(NpWebApiServiceFilter *filter) __attribute__((noinline));
 extern int npWebApiServiceFilterDelete(NpWebApiServiceFilter *filter) __attribute__((noinline));
+extern void npWebApiFilterRecordListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	const unsigned char *record) __attribute__((noinline));
+extern int npWebApiServiceFilterResolve(NpWebApiServiceFilter *filter, NpWebApiHandle *handle,
+	const char *name, int arg) __attribute__((noinline));
 
 extern void npWebApiServiceFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiServiceFilter **pFilter) __attribute__((noinline));

@@ -558,3 +558,159 @@ const void *g_serviceFilterVtable[] = {	/* 0x8100edbc */
 	(const void *)npWebApiServiceFilterDelete,
 	NULL,
 };
+
+/* the list of the 12-byte service records: 20-byte nodes (prev, next, the record) */
+void npWebApiFilterRecordListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list, const unsigned char *record)
+{
+	NpWebApiHandleNode *sentinel;
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *result;
+	void *memory;
+	void *allocator;
+	unsigned char bytes[12];
+	unsigned long count;
+	int i;
+
+	allocator = list->allocator;
+	if (list->sentinel == NULL) {
+		sentinel = NULL;
+		if (allocator != NULL) {
+			memory = SceNpCommonPs4_AA980113(allocator, 20);
+			if (memory != NULL) {
+				node = (NpWebApiHandleNode *)operator new(20, memory);
+				if (node != NULL) {
+					for (i = 8; i < 20; i++)
+						((unsigned char *)node)[i] = 0;
+					sentinel = node;
+				}
+			}
+		}
+		list->sentinel = sentinel;
+		if (sentinel == NULL) {
+			*pResult = NULL;
+			return;
+		}
+		sentinel->prev = sentinel;
+		sentinel->next = sentinel;
+		allocator = list->allocator;
+	}
+	for (i = 0; i < 12; i++)
+		bytes[i] = record[i];
+	if (allocator != NULL) {
+		memory = SceNpCommonPs4_AA980113(allocator, 20);
+		if (memory != NULL) {
+			result = (NpWebApiHandleNode *)operator new(20, memory);
+			if (result != NULL) {
+				for (i = 0; i < 12; i++)
+					((unsigned char *)result)[8 + i] = bytes[i];
+				result->prev = list->sentinel->prev;
+				node = list->sentinel;
+				result->next = node;
+				node->prev->next = result;
+				count = list->count + 1;
+				list->sentinel->prev = result;
+				list->count = count;
+				*pResult = result;
+				return;
+			}
+		}
+	}
+	*pResult = NULL;
+}
+
+/* looks the name up for the user and keeps the answer in the filter's record list */
+int npWebApiServiceFilterResolve(NpWebApiServiceFilter *filter, NpWebApiHandle *handle, const char *name, int arg)
+{
+	unsigned char aborted;
+	NpWebApiHandleNode *inserted;
+	int params[2];
+	unsigned char object[16];
+	unsigned char npId[36];
+	struct {
+		unsigned char data[144];
+		int tail;
+	} record;
+	int result;
+	int value;
+	int state;
+
+	value = 0;
+	aborted = 0;
+	state = npWebApiLibContextGetAborted(filter->libContext, &aborted);
+	if (SceNpManager_A775A452(state) == 0) {
+		result = -2141902576;
+		goto out;
+	}
+	record.tail = 0;
+	sceClibMemset(npId, 0, 36);
+	result = sceNpManagerGetNpId(npId);
+	if (result < 0)
+		goto out;
+	sceClibMemset(params, 0, 8);
+	params[0] = npWebApiLibContextZero();
+	params[1] = SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool(filter->libContext));
+	if (aborted != 0)
+		result = SceNpCommonPs4_FB0B3FBD(params);
+	else
+		result = SceNpCommonPs4_639086A3(params);
+	if (result < 0)
+		goto out;
+	npWebApiLibContextLock(filter->libContext);
+	value = result;
+	handle->object = result;
+	if (npWebApiLibContextIsHandleUnusable(filter->libContext, handle) != 0) {
+		result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
+		npWebApiLibContextUnlock(filter->libContext);
+		goto out;
+	}
+	if (npWebApiLibContextIsStarted(filter->libContext, (NpWebApiLibContext *)handle) != 0) {
+		result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+		npWebApiLibContextUnlock(filter->libContext);
+		goto out;
+	}
+	npWebApiLibContextUnlock(filter->libContext);
+	sceClibMemset(object, 0, 16);
+	result = SceNpCommonPs4_17EB36C2(object, 0);
+	if (result < 0)
+		goto out;
+	sceClibMemset(record.data, 0, 144);
+	if (aborted != 0)
+		result = SceNpCommonPs4_AB41A67D(value, npId, name, arg, record.data);
+	else
+		result = SceNpCommonPs4_6E443E9B(value, npId, name, object, 0, arg, record.data);
+	if (result < 0)
+		goto out;
+	npWebApiLibContextLock(filter->libContext);
+	if (aborted != 0)
+		result = SceNpCommonPs4_9C4F1236(value);
+	else
+		result = SceNpCommonPs4_530CAFDA(value);
+	value = 0;
+	if (npWebApiLibContextIsHandleUnusable(filter->libContext, handle) != 0) {
+		result = NP_WEBAPI_ERROR_HANDLE_NOT_FOUND;
+		npWebApiLibContextUnlock(filter->libContext);
+		goto out;
+	}
+	if (npWebApiLibContextIsStarted(filter->libContext, (NpWebApiLibContext *)handle) != 0) {
+		result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+		npWebApiLibContextUnlock(filter->libContext);
+		goto out;
+	}
+	handle->object = record.tail;
+	npWebApiLibContextUnlock(filter->libContext);
+	npWebApiFilterRecordListInsert(&inserted, &filter->list, record.data);
+	if (inserted == NULL)
+		result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+out:
+	npWebApiLibContextLock(filter->libContext);
+	if (value != 0) {
+		if (aborted != 0)
+			SceNpCommonPs4_9C4F1236(value);
+		else
+			SceNpCommonPs4_530CAFDA(value);
+		if (npWebApiLibContextIsHandleUnusable(filter->libContext, handle) == 0)
+			handle->object = 0;
+	}
+	npWebApiLibContextUnlock(filter->libContext);
+	return result;
+}
