@@ -28,4 +28,5 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	extd_registry.cpp
 	callback.cpp
 	callback_user.cpp
+	memstats.cpp
 )

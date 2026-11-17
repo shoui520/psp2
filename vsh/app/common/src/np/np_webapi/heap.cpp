@@ -34,7 +34,7 @@ void *npWebApiMspaceRealloc(void *ptr, SceSize size, void *mspace)
 	return NULL;
 }
 
-void npWebApiMspaceGetStats(void *mspace, SceSize *stats)
+int npWebApiMspaceGetStats(void *mspace, SceSize *stats)
 {
 	struct MspaceStats mspaceStats[2];
 	int result;
@@ -47,7 +47,10 @@ void npWebApiMspaceGetStats(void *mspace, SceSize *stats)
 			stats[2] = mspaceStats[0].currentInUse;
 			stats[0] = mspaceStats[0].capacity;
 		}
+	} else {
+		result = NP_WEBAPI_ERROR_INVALID_ARGUMENT;
 	}
+	return result;
 }
 
 int npWebApiHeapCreate(void)

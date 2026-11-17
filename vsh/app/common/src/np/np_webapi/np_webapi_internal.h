@@ -355,7 +355,9 @@ extern int npWebApiGlobalLockDestroy(void);
 extern void *npWebApiMspaceAlloc(SceSize size, void *mspace);
 extern void npWebApiMspaceFree(void *ptr, void *mspace);
 extern void *npWebApiMspaceRealloc(void *ptr, SceSize size, void *mspace);
-extern void npWebApiMspaceGetStats(void *mspace, SceSize *stats);
+extern int npWebApiMspaceGetStats(void *mspace, SceSize *stats);
+extern int npWebApiLibContextGetMemoryPoolStats(NpWebApiLibContext *ctx, SceNpWebApiMemoryPoolStats *stats)
+	__attribute__((noinline));
 extern int npWebApiHeapCreate(void);
 extern void npWebApiHeapDestroy(void);
 extern int npWebApiHeapGet(void **pMspace);
