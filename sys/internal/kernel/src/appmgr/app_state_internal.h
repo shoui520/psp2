@@ -304,47 +304,6 @@ typedef struct AppmgrLaunchRequest {
 
 _Static_assert(sizeof(AppmgrLaunchRequest) == 80, "launch request");
 
-/* The launcher's options (sceAppMgrLaunchAppByName2ndStage): the status and the parameter
- * delivery result are copied out to its user pointers */
-typedef struct AppmgrLaunchAppOption {
-	SceSize size;
-	SceUInt32 flags;
-	char appName[32];			/* taken when flags has 0x100000 */
-	SceAppMgrAppStatus *status;
-	SceUInt32 pycontSize;
-	AppmgrInfobarState defaultInfobar;
-	SceUInt32 launchArgumentMarker;
-	char proxyAppName[32];
-	SceUInt32 launchOrigin;
-	SceUInt32 reserved;
-	SceUInt32 *paramResult;			/* four words */
-	SceUInt32 useCommonDialog;
-	SceUInt32 enlargeGameMemorySize;	/* MiB, at most 109 */
-} AppmgrLaunchAppOption;
-
-_Static_assert(sizeof(AppmgrLaunchAppOption) == 108 &&
-	       offsetof(AppmgrLaunchAppOption, status) == 40 &&
-	       offsetof(AppmgrLaunchAppOption, proxyAppName) == 56 &&
-	       offsetof(AppmgrLaunchAppOption, paramResult) == 96, "launch option fields");
-
-/* The option block of the launches by name (the system calls copy it in whole) */
-typedef struct AppmgrLaunchAppByNameOption {
-	SceSize size;
-	SceUInt32 launchMode;
-	SceUInt32 reserved;
-	SceUID launchCallbackId;		/* the caller's own UIDs */
-	SceUID paramCallbackId;
-	int creatorAppId;			/* taken when launchMode has 0x840000 */
-	SceUInt32 evictionThresholdClass;
-	SceUInt32 resumeCreatorOnLaunchFailure;
-	signed char reservedTail[32];		/* must be zero */
-} AppmgrLaunchAppByNameOption;
-
-_Static_assert(sizeof(AppmgrLaunchAppByNameOption) == 64 &&
-	       offsetof(AppmgrLaunchAppByNameOption, launchCallbackId) == 12 &&
-	       offsetof(AppmgrLaunchAppByNameOption, reservedTail) == 32,
-	       "launch by name option fields");
-
 /* _launchApp4's argument: the launch, run on a stack of its own */
 typedef struct AppmgrLaunchApp4Param {
 	int appId;

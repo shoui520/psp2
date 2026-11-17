@@ -166,6 +166,57 @@ _Static_assert(sizeof(SceAppMgrAppStatus) == 128 &&
 	       offsetof(SceAppMgrAppStatus, recommendedOrientationActivated) == 124,
 	       "application status output");
 
+/* The launcher's options (sceAppMgrLaunchAppByName2ndStage): the status and the parameter
+ * delivery result are copied out to its user pointers */
+typedef struct AppmgrLaunchAppOption {
+	SceSize size;
+	SceUInt32 flags;
+	char appName[32];			/* taken when flags has 0x100000 */
+	SceAppMgrAppStatus *status;
+	SceUInt32 pycontSize;
+	AppmgrInfobarState defaultInfobar;
+	SceUInt32 launchArgumentMarker;
+	char proxyAppName[32];
+	SceUInt32 launchOrigin;
+	SceUInt32 reserved;
+	SceUInt32 *paramResult;			/* four words */
+	SceUInt32 useCommonDialog;
+	SceUInt32 enlargeGameMemorySize;	/* MiB, at most 109 */
+	SceUInt32 reservedTail[5];		/* the system calls copy 128 bytes; SceShell clears them */
+} AppmgrLaunchAppOption;
+
+_Static_assert(sizeof(AppmgrLaunchAppOption) == 128 &&
+	       offsetof(AppmgrLaunchAppOption, status) == 40 &&
+	       offsetof(AppmgrLaunchAppOption, proxyAppName) == 56 &&
+	       offsetof(AppmgrLaunchAppOption, paramResult) == 96, "launch option fields");
+
+/* The option block of the launches by name (the system calls copy it in whole) */
+typedef struct AppmgrLaunchAppByNameOption {
+	SceSize size;
+	SceUInt32 launchMode;
+	SceUInt32 reserved;
+	SceUID launchCallbackId;		/* the caller's own UIDs */
+	SceUID paramCallbackId;
+	int creatorAppId;			/* taken when launchMode has 0x840000 */
+	SceUInt32 evictionThresholdClass;
+	SceUInt32 resumeCreatorOnLaunchFailure;
+	signed char reservedTail[32];		/* must be zero */
+} AppmgrLaunchAppByNameOption;
+
+_Static_assert(sizeof(AppmgrLaunchAppByNameOption) == 64 &&
+	       offsetof(AppmgrLaunchAppByNameOption, launchCallbackId) == 12 &&
+	       offsetof(AppmgrLaunchAppByNameOption, reservedTail) == 32,
+	       "launch by name option fields");
+
+/* SceAppMgrUser's (driver_us, whose appmgr.c defines them with untyped words) */
+#if !defined(PSP2_KERNEL)
+int sceAppMgrLaunchAppByName2(const char *name, const char *param,
+			      const AppmgrLaunchAppByNameOption *option);
+int sceAppMgrLaunchAppByPath4(const char *path, const char *name, SceUInt32 budgetSize,
+			      const char *param, SceUInt32 processAttr,
+			      const AppmgrLaunchAppOption *option);
+#endif
+
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
  * system calls) */
 int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
