@@ -62,8 +62,8 @@ static ShellExclusiveFuncMtp s_exclusiveFuncMtp = {
 };
 static bool s_mtpMarlinStarted = false;
 
-static void shellMtpOnAppEvent(int code, const void *data, void *arg);
-static void shellMtpOnShellEvent(int code, const void *data, void *arg);
+static void shellMtpOnAppEvent(int code, const void *data, SceSize size, void *arg);
+static void shellMtpOnShellEvent(int code, const void *data, SceSize size, void *arg);
 static int shellMtpOnRegistryChange(int notifyId, int notifyCount, int notifyArg, void *common);
 
 void shellMtpStart(void)
@@ -207,7 +207,7 @@ static int shellMtpOnRegistryChange(int notifyId, int notifyCount, int notifyArg
 }
 
 /* an application started, came to the front or ended: the MTP server is told */
-static void shellMtpOnAppEvent(int code, const void *data, void *arg)
+static void shellMtpOnAppEvent(int code, const void *data, SceSize size, void *arg)
 {
 	const ShellMtpAppEvent *event = (const ShellMtpAppEvent *)data;
 
@@ -222,7 +222,7 @@ static void shellMtpOnAppEvent(int code, const void *data, void *arg)
 		sce_paf_printf_dummy();
 }
 
-static void shellMtpOnShellEvent(int code, const void *data, void *arg)
+static void shellMtpOnShellEvent(int code, const void *data, SceSize size, void *arg)
 {
 	if (code != SHELL_EVENT_2)
 		return;

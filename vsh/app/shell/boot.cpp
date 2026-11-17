@@ -69,7 +69,7 @@ static void shellBootOnDbrecoveryPluginLoaded(Plugin *plugin);
 static void shellBootCheckInitialSetup(bool clockUpdated);
 static void shellBootOnClockUpdatePoll(void *userdata);
 static void shellBootOnColdbootPluginUnloaded(void *userdata);
-static void shellBootOnAppEvent(int code, const void *data, void *arg);
+static void shellBootOnAppEvent(int code, const void *data, SceSize size, void *arg);
 static void shellBootOnSystemPluginLoaded(Plugin *plugin);
 
 bool shellBootIsLaunchRestricted(void)
@@ -161,8 +161,8 @@ static void shellBootPluginNoop(Plugin *plugin)
 }
 
 static void shellBootOnResidentPluginLoaded(Plugin *plugin);
-static void shellBootOnPowerEvent(int code, const void *data, void *arg);
-static void shellBootOnModelEvent(int code, const void *data, void *arg);
+static void shellBootOnPowerEvent(int code, const void *data, SceSize size, void *arg);
+static void shellBootOnModelEvent(int code, const void *data, SceSize size, void *arg);
 
 /* the boot is done: the shell's own job, its event listeners and its resident plugins */
 static void shellBootStartResidentPlugins(void)
@@ -575,7 +575,7 @@ void shellBootStartSystemEntry(void)
 
 /* the first power event: the system event goes out, the shell's media information is written,
    the trigger manager service and the parental control and zoom managers start; heard once */
-static void shellBootOnPowerEvent(int code, const void *data, void *arg)
+static void shellBootOnPowerEvent(int code, const void *data, SceSize size, void *arg)
 {
 	ShellMediaInfoRequest request;
 
@@ -604,7 +604,7 @@ static void shellBootOnPowerEvent(int code, const void *data, void *arg)
 }
 
 /* the model is known: on a model other than 1 the telephony setup starts; heard once */
-static void shellBootOnModelEvent(int code, const void *data, void *arg)
+static void shellBootOnModelEvent(int code, const void *data, SceSize size, void *arg)
 {
 	if (system::Model::GetType() != 1)
 		shellTelephonyStartSetup(0, NULL);
@@ -711,7 +711,7 @@ struct ShellAppActivatedEvent {
  * ids are stacked as they start and unstacked as they end, the one on top is brought to the
  * front, and the last one's end lets the boot go on
  */
-static void shellBootOnAppEvent(int code, const void *data, void *arg)
+static void shellBootOnAppEvent(int code, const void *data, SceSize size, void *arg)
 {
 	const ShellAppEvent *event = (const ShellAppEvent *)data;
 	int appId;

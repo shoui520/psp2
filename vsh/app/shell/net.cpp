@@ -461,7 +461,7 @@ static const NetCtlHandlers s_netCtlHandlers = {
 	shellNetCtlHandle_8B2FEFAA,
 };
 
-static void shellNetOnAppEvent(int code, const void *data, void *arg);
+static void shellNetOnAppEvent(int code, const void *data, SceSize size, void *arg);
 
 void shellNetStart(void)
 {
@@ -524,7 +524,7 @@ void shellNetStart(void)
 
 /* an application ended: the NetCtl server forgets it, and its restriction notices may show
    again */
-static void shellNetOnAppEvent(int code, const void *data, void *arg)
+static void shellNetOnAppEvent(int code, const void *data, SceSize size, void *arg)
 {
 	const ShellAppEvent *event = (const ShellAppEvent *)data;
 

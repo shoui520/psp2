@@ -29,8 +29,9 @@ typedef struct ShellAppEvent {
 	int appId;
 } ShellAppEvent;
 
-/* what a shell event listener is called with: the event's code and its data */
-typedef void (*ShellEventCallback)(int code, const void *data, void *arg);
+/* what a shell event listener is called with: the event's code, its data and their size, and
+   the argument the listener was added with */
+typedef void (*ShellEventCallback)(int code, const void *data, SceSize size, void *arg);
 
 #ifdef __cplusplus
 namespace paf { class Framework; namespace graph { class SurfacePool; } }
@@ -44,6 +45,9 @@ int shellFrameworkRun(void);
 int shellExclusiveFuncMgrCreate(void);		/* SceShellExclusiveFuncMgr */
 int shellAppEventServerCreate(void);		/* SceShellAppEventServerMutex */
 int shellEventServerCreate(void);		/* SceShellEventServerMutex */
+
+/* send an event to the shell event server's listeners of its code (0x81004AA6) */
+int shellEventServerSend(int code, const void *data, SceSize size);
 
 /* the IME service: SceImeService's server made and started (0x81002D84, 0x8113E642) */
 int shellImeServiceStart(void);
