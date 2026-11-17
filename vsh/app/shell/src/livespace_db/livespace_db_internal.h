@@ -195,6 +195,30 @@ typedef paf::common::SharedPtr<LsdbAppInfo> LsdbAppInfoPtr;
 #define LSDB_KEY_BG_TITLE_ID	0xC1C050C4u	/* "_bg_title_id" */
 #define LSDB_KEY_CTIME		0xA246C97Du	/* "#_ctime": the title's install */
 #define LSDB_KEY_PARENTAL_LEVEL	0x879D390Du	/* "PARENTAL_LEVEL" */
+#define LSDB_KEY_TITLE		0x222641E9u	/* "TITLE" */
+#define LSDB_KEY_LIVEAREA_PATH	0x9CCBEDE2u	/* "#_livearea_path" */
+#define LSDB_KEY_ATTRIBUTE	0x19FAFFCFu	/* "ATTRIBUTE" */
+#define LSDB_KEY_LAREA_TYPE	0x2A9A9293u	/* "LAREA_TYPE" */
+#define LSDB_KEY_APP_MEMSIZE	0xDCE149FAu	/* "_app_memsize" */
+#define LSDB_KEY_PROMOTE_ATTR	0xCF78B9EDu	/* "#_promote_attr" */
+#define LSDB_KEY_FG_TITLE_ID	0x308A7798u	/* "_fg_title_id" */
+#define LSDB_KEY_DISC_ID	0x194D012Cu	/* "DISC_ID" */
+#define LSDB_KEY_TITLE_ID_SFO	0xF960D54Fu	/* "TITLE_ID" */
+#define LSDB_KEY_APPTYPE	0xFAEA72ADu	/* "_apptype" */
+#define LSDB_KEY_SELF_PATH	0xB4232566u	/* "_self_path" */
+#define LSDB_KEY_PHY_MEMSIZE	0xAA162102u	/* "_phy_memsize" */
+#define LSDB_KEY_EBOOT_ATTR	0xEA522F51u	/* "_eboot_attr" */
+#define LSDB_KEY_APP_VER	0xBCD7161Eu	/* "APP_VER" */
+#define LSDB_KEY_CONTENT_ID	0x4D6FEFCAu	/* "CONTENT_ID" */
+#define LSDB_KEY_NP_COMMUNICATION_ID	0x10C1A2E0u	/* "NP_COMMUNICATION_ID" */
+#define LSDB_KEY_SYSTEM_VER	0xE2327E05u	/* "_system_ver" */
+#define LSDB_KEY_GAMEDATA_ID	0x924BC88Du	/* "GAMEDATA_ID" */
+#define LSDB_KEY_BOOTABLE	0x78CF5165u	/* "BOOTABLE" */
+#define LSDB_KEY_CONTENT_LOCATION	0x39A02870u	/* "CONTENT_LOCATION" */
+#define LSDB_KEY_SPLASH_PATH	0x6711F0ADu	/* "_splash_path" */
+#define LSDB_KEY_UP_STATUS	0xF1A6E2F1u	/* "#_up_status" */
+#define LSDB_KEY_SUPPORT_URI	0x8FE4356Du	/* "SUPPORT_URI" */
+#define LSDB_KEY_INSTALL_DIR_SAVEDATA_ADD_1	0xC79BFEECu	/* "INSTALL_DIR_SAVEDATA_ADD_1" */
 
 /*
  * A title query's condition: a parameter (key) compared with any of values by op; conditions
@@ -496,13 +520,17 @@ int SceLsdb_30900530(void);
 int SceLsdb_E05F71CB(void);
 int SceLsdb_A92420DA(int added, int pageNo);
 int SceLsdb_6E4B6EBF(int folderId, int *pageNo, int *pos, const char *title);
-unsigned int SceLsdb_63C29E70(int which);
+unsigned int SceLsdb_63C29E70(int language);
 
 /* an application's values: its title ID, its SUPPORT_URI text, whether it is a "gda" title */
 const char *sceLsdbGetName(const LsdbAppInfoPtr *app);
 const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
 int SceLsdb_41019D89(const LsdbAppInfoPtr *app);
 }
+
+/* SceLsdb_C36501F7 without telling the listeners (appinfo_daemon_api.cpp) */
+int LsdbUpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits,
+	SceInt64 mask);
 
 /* a blob of a database row, read through its own transaction (dbblob.cpp) */
 typedef int (*LsdbDbBlobTransaction)(int op, void *arg, int reserved,
@@ -701,5 +729,21 @@ public:
 struct AppInfoQClient {
 	AppInfoQClientImpl *m_impl;
 };
+
+/* the client exports the shell's theme code calls (appinfo_sclient.cpp, appinfo_qclient.cpp) */
+extern "C" {
+int SceLsdb_6F73E332(AppInfoSClient *client, const paf::common::SharedPtr<LsdbThemeInfo> *theme,
+	unsigned int flags);
+int SceLsdb_01790EDE(AppInfoSClient *client, const LsdbTheme *theme, const LsdbThemeText *title,
+	const LsdbThemeText *provider);
+int SceLsdb_54F188A5(AppInfoSClient *client, const paf::string *id);
+int SceLsdb_637814FE(AppInfoSClient *client);
+AppInfoQClient *SceLsdb_A6D8772C(AppInfoQClient *client);
+int SceLsdb_DEF5C3F9(AppInfoQClient *client);
+AppInfoQClient *SceLsdb_E2101B03(AppInfoQClient *client);
+int SceLsdb_E90B81CD(AppInfoQClient *client);
+int SceLsdb_64DD44C2(AppInfoQClient *client, const paf::string *id, int language,
+	LsdbTheme *theme);
+}
 
 #endif
