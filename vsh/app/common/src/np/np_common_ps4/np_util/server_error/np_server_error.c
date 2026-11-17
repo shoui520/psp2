@@ -6,21 +6,60 @@
 
 #include "../../np_common_ps4_internal.h"
 
+/* what the body of an error is read for: "error" with its "code", or only the "code" (the paths the lexer
+   reports to the callback) */
+const struct NpCommonPs4LexerNode g_serverErrorNodesError[] = {		/* 0x810289fc */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "error", 1 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 }
+};
+
+const struct NpCommonPs4LexerNode g_serverErrorNodesCode[] = {		/* 0x81028a20 */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "code", 0 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 }
+};
+
+const struct NpCommonPs4LexerNode *const g_serverErrorLevels[] = {		/* 0x81028a38 */
+	g_serverErrorNodesError,
+	g_serverErrorNodesCode
+};
+
+const struct NpCommonPs4LexerConfig g_serverErrorConfig = { g_serverErrorLevels, 2 };		/* 0x81028a40 */
+
+const struct NpCommonPs4LexerNode g_serverErrorNodesEitherError[] = {		/* 0x81028a48 */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "error", 1 },
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "code", 0 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 }
+};
+
+const struct NpCommonPs4LexerNode g_serverErrorNodesEitherCode[] = {		/* 0x81028a6c */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "code", 0 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 }
+};
+
+const struct NpCommonPs4LexerNode *const g_serverErrorLevelsEither[] = {		/* 0x81028a84 */
+	g_serverErrorNodesEitherError,
+	g_serverErrorNodesEitherCode
+};
+
+const struct NpCommonPs4LexerConfig g_serverErrorConfigEither = { g_serverErrorLevelsEither, 2 };		/* 0x81028a8c */
+
 /* the lexer's callback for the body of an error: "error":{"code":N} (config 0x81028a40) and also the
    body's "code":N (config 0x81028a8c); the error's code, if a number below 0x1000000 */
-int npCommonPs4ServerErrorOnCode(void *lexer, int event, int depth, int node, int arg4,
-	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context)
+int npCommonPs4ServerErrorOnCode(struct NpCommonPs4Lexer *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4LexerToken *token, int arrayIndex, void *context)
 {
+	struct NpCommonPs4ServerErrorContext *error;
 	int result;
 	int code;
 
 	result = 0;
-	if (event == 6 && depth == 1 && node == 0) {
-		if (token->type == 3) {
+	if (event == NP_COMMON_PS4_LEXER_EVENT_VALUE && depth == 1 && node == 0) {
+		if (token->type == NP_COMMON_PS4_LEXER_TOKEN_NUMBER) {
 			code = SceNpCommonPs4_32155BF8(token->text, NULL, 10);
 			if (code >= 0 && code <= 0xFFFFFF) {
-				context->code = code;
-				context->valid = 1;
+				error = (struct NpCommonPs4ServerErrorContext *)context;
+				error->code = code;
+				error->valid = 1;
 			} else {
 				result = NP_COMMON_PS4_ERROR_80550687;
 			}
@@ -31,19 +70,21 @@ int npCommonPs4ServerErrorOnCode(void *lexer, int event, int depth, int node, in
 	return result;
 }
 
-int npCommonPs4ServerErrorOnCodeEither(void *lexer, int event, int depth, int node, int arg4,
-	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context)
+int npCommonPs4ServerErrorOnCodeEither(struct NpCommonPs4Lexer *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4LexerToken *token, int arrayIndex, void *context)
 {
+	struct NpCommonPs4ServerErrorContext *error;
 	int result;
 	int code;
 
 	result = 0;
-	if (event == 6 && ((depth == 1 && node == 0) || (depth == 0 && node == 1))) {
-		if (token->type == 3) {
+	if (event == NP_COMMON_PS4_LEXER_EVENT_VALUE && ((depth == 1 && node == 0) || (depth == 0 && node == 1))) {
+		if (token->type == NP_COMMON_PS4_LEXER_TOKEN_NUMBER) {
 			code = SceNpCommonPs4_32155BF8(token->text, NULL, 10);
 			if (code >= 0 && code <= 0xFFFFFF) {
-				context->code = code;
-				context->valid = 1;
+				error = (struct NpCommonPs4ServerErrorContext *)context;
+				error->code = code;
+				error->valid = 1;
 			} else {
 				result = NP_COMMON_PS4_ERROR_80550687;
 			}
@@ -54,51 +95,51 @@ int npCommonPs4ServerErrorOnCodeEither(void *lexer, int event, int depth, int no
 	return result;
 }
 
-int SceNpCommonPs4_AC633131(void *lexer, struct NpCommonPs4ServerErrorContext *context)
+int SceNpCommonPs4_AC633131(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context)
 {
 	if (context != NULL) {
 		context->valid = 0;
 		context->code = -1;
-		return SceNpCommonPs4_738FF77D(lexer, g_serverErrorConfig, (NpCommonPs4LexerCallback)npCommonPs4ServerErrorOnCode, context);
+		return SceNpCommonPs4_738FF77D(lexer, &g_serverErrorConfig, npCommonPs4ServerErrorOnCode, context);
 	}
 	return NP_COMMON_PS4_ERROR_JSON_INVALID_ARGUMENT;
 }
 
-int SceNpCommonPs4_358A8F68(void *lexer, struct NpCommonPs4ServerErrorContext *context)
+int SceNpCommonPs4_358A8F68(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context)
 {
 	if (context != NULL) {
 		context->valid = 0;
 		context->code = -1;
-		return SceNpCommonPs4_738FF77D(lexer, g_serverErrorConfigEither, (NpCommonPs4LexerCallback)npCommonPs4ServerErrorOnCodeEither, context);
+		return SceNpCommonPs4_738FF77D(lexer, &g_serverErrorConfigEither, npCommonPs4ServerErrorOnCodeEither, context);
 	}
 	return NP_COMMON_PS4_ERROR_JSON_INVALID_ARGUMENT;
 }
 
-int SceNpCommonPs4_AD229434(void *lexer, const void *data, int size)
+int SceNpCommonPs4_AD229434(struct NpCommonPs4Lexer *lexer, const char *data, int size)
 {
 	return SceNpCommonPs4_6C941C30(lexer, data, size);
 }
 
 /* the NP error of a response: the one its body carries, else its HTTP status made one */
-int _sceNpServerErrorJsonGetErrorCode(int status, const void *body, int size, SceUInt8 either)
+int _sceNpServerErrorJsonGetErrorCode(int status, const char *body, int size, SceUInt8 either)
 {
-	char lexer[1856];
+	struct NpCommonPs4Lexer lexer;
 	struct NpCommonPs4ServerErrorContext context;
 	int ret;
 
 	if (body != NULL
 		&& size != 0
-		&& (sceClibMemset(lexer, 0, 0x740),
+		&& (sceClibMemset(&lexer, 0, 0x740),
 			sceClibMemset(&context, 0, 8),
 			(either
 				? (context.valid = 0,
 					context.code = -1,
-					SceNpCommonPs4_738FF77D(lexer, g_serverErrorConfigEither, (NpCommonPs4LexerCallback)npCommonPs4ServerErrorOnCodeEither, &context))
+					SceNpCommonPs4_738FF77D(&lexer, &g_serverErrorConfigEither, npCommonPs4ServerErrorOnCodeEither, &context))
 				: (context.valid = 0,
 					context.code = -1,
-					SceNpCommonPs4_738FF77D(lexer, g_serverErrorConfig, (NpCommonPs4LexerCallback)npCommonPs4ServerErrorOnCode, &context)))
+					SceNpCommonPs4_738FF77D(&lexer, &g_serverErrorConfig, npCommonPs4ServerErrorOnCode, &context)))
 				>= 0)
-		&& SceNpCommonPs4_6C941C30(lexer, body, size) >= 0
+		&& SceNpCommonPs4_6C941C30(&lexer, body, size) >= 0
 		&& context.valid == 1) {
 		if (context.code == -1) {
 			ret = 0x82FFFFFF;
@@ -118,12 +159,12 @@ int _sceNpServerErrorJsonGetErrorCode(int status, const void *body, int size, Sc
 	return ret;
 }
 
-int SceNpCommonPs4_FB63A152(int status, const void *body, int size)
+int SceNpCommonPs4_FB63A152(int status, const char *body, int size)
 {
 	return _sceNpServerErrorJsonGetErrorCode(status, body, size, 0);
 }
 
-int SceNpCommonPs4_CF591432(int status, const void *body, int size)
+int SceNpCommonPs4_CF591432(int status, const char *body, int size)
 {
 	return _sceNpServerErrorJsonGetErrorCode(status, body, size, 1);
 }

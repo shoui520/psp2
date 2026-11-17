@@ -500,8 +500,6 @@ struct NpCommonPs4JsonParser *SceNpCommonPs4_4F720AFD(struct NpCommonPs4JsonPars
 struct NpCommonPs4JsonParser *SceNpCommonPs4_0A3AA2EF(struct NpCommonPs4JsonParser *parser);
 int SceNpCommonPs4_7CC0800E(struct NpCommonPs4JsonParser *parser, int unused, void *stream);
 int SceNpCommonPs4_89322005(struct NpCommonPs4JsonParser *parser, void *config, const void *const *const *eventHandler);
-int SceNpCommonPs4_EB1B7375(void *lexer, void *config, void *callback, void *context);
-int SceNpCommonPs4_F5EE219F(void *lexer, void *data, int size);
 int SceNpCommonPs4_FE98E2A7(struct NpCommonPs4JsonParser *parser, void *data, int size);
 
 /* a block of memory the library allocated, and its size */
@@ -803,27 +801,92 @@ struct NpCommonPs4ServerErrorContext {
 	SceUInt8 valid;
 	SceInt32 code;
 };
-/* a token the lexer hands its callback: its type (3: a string or number) and its text */
+/* the lexer (npext/json/json_lexer.c): a JSON text read as it comes, in pieces, and the paths of its objects
+   and arrays that a callback is told of. A config names, for each depth, the keys (or array elements) that
+   matter; a node of kind 0 ends the depth's list */
+#define NP_COMMON_PS4_LEXER_NODE_END	0
+#define NP_COMMON_PS4_LEXER_NODE_KEY	1
+#define NP_COMMON_PS4_LEXER_NODE_ELEMENT	2
+
+struct NpCommonPs4LexerNode {
+	int kind;
+	const char *name;
+	int flag;
+};
+
+struct NpCommonPs4LexerConfig {
+	const struct NpCommonPs4LexerNode *const *levels;
+	SceSize numLevels;
+};
+
+/* what the callback is told of: an object or array begun (1, 3) or ended (2, 4), a key (5), a value (6) */
+#define NP_COMMON_PS4_LEXER_EVENT_OBJECT_BEGIN	1
+#define NP_COMMON_PS4_LEXER_EVENT_OBJECT_END	2
+#define NP_COMMON_PS4_LEXER_EVENT_ARRAY_BEGIN	3
+#define NP_COMMON_PS4_LEXER_EVENT_ARRAY_END	4
+#define NP_COMMON_PS4_LEXER_EVENT_KEY	5
+#define NP_COMMON_PS4_LEXER_EVENT_VALUE	6
+
+/* a value the lexer hands its callback: its type (0 null, 1 true, 2 false, 3 number, 4 string) and its text */
+#define NP_COMMON_PS4_LEXER_TOKEN_NULL	0
+#define NP_COMMON_PS4_LEXER_TOKEN_TRUE	1
+#define NP_COMMON_PS4_LEXER_TOKEN_FALSE	2
+#define NP_COMMON_PS4_LEXER_TOKEN_NUMBER	3
+#define NP_COMMON_PS4_LEXER_TOKEN_STRING	4
+
 struct NpCommonPs4LexerToken {
 	int type;
-	char text[1];
+	char text[1536];
 };
-typedef int (*NpCommonPs4LexerCallback)(void *lexer, int event, int depth, int node, int arg4,
-	const struct NpCommonPs4LexerToken *token, int arg6, void *context);
-extern const unsigned char g_serverErrorConfig[];		/* 0x81028a40 */
-extern const unsigned char g_serverErrorConfigEither[];	/* 0x81028a8c */
-int SceNpCommonPs4_738FF77D(void *lexer, const void *config, NpCommonPs4LexerCallback callback, void *context);
-int SceNpCommonPs4_6C941C30(void *lexer, const void *data, int size);
-int SceNpCommonPs4_AC633131(void *lexer, struct NpCommonPs4ServerErrorContext *context);
-int SceNpCommonPs4_358A8F68(void *lexer, struct NpCommonPs4ServerErrorContext *context);
-int SceNpCommonPs4_AD229434(void *lexer, const void *data, int size);
-int _sceNpServerErrorJsonGetErrorCode(int status, const void *body, int size, SceUInt8 either);
-int npCommonPs4ServerErrorOnCode(void *lexer, int event, int depth, int node, int arg4,
-	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context);
-int npCommonPs4ServerErrorOnCodeEither(void *lexer, int event, int depth, int node, int arg4,
-	const struct NpCommonPs4LexerToken *token, int arg6, struct NpCommonPs4ServerErrorContext *context);
-int SceNpCommonPs4_FB63A152(int status, const void *body, int size);
-int SceNpCommonPs4_CF591432(int status, const void *body, int size);
+
+struct NpCommonPs4Lexer;
+typedef int (*NpCommonPs4LexerCallback)(struct NpCommonPs4Lexer *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4LexerToken *token, int arrayIndex, void *context);
+
+/* 1856 bytes */
+struct NpCommonPs4Lexer {
+	const struct NpCommonPs4LexerConfig *config;
+	char name[128];			/* the key being read, then the last key */
+	struct NpCommonPs4LexerToken token;
+	SceSize depth;
+	int nodeIndex[16];		/* by depth: the config's node the path matched */
+	int arrayIndex[16];		/* by depth: -1 in an object, else the element's index */
+	int state;
+	SceSize length;			/* of the key or value read so far */
+	int matched;
+	int matchedFlag;
+	int mode;
+	SceSize baseDepth;
+	char partial[12];		/* the escape or character a piece of text ended in */
+	SceSize partialLength;
+	SceSize remaining;
+	NpCommonPs4LexerCallback callback;
+	void *context;
+};
+extern const struct NpCommonPs4LexerConfig g_serverErrorConfig;		/* 0x81028a40 */
+extern const struct NpCommonPs4LexerConfig g_serverErrorConfigEither;	/* 0x81028a8c */
+int npCommonPs4LexerMatch(const struct NpCommonPs4LexerConfig *config, SceSize depth, int mode, int kind, const char *name,
+	int *pIndex, int *pFlag);
+int npCommonPs4LexerCopyChar(const char *src, SceSize length, SceSize *pConsumed, char *partial, SceSize *pPartialLength,
+	SceSize *pRemaining, char *decoded, SceSize *pSourceLength, SceSize *pLength);
+int npCommonPs4Lexer2Match(const struct NpCommonPs4LexerConfig *config, SceSize depth, int mode, int kind, const char *name,
+	int *pIndex, int *pFlag);
+int npCommonPs4Lexer2CopyChar(const char *src, SceSize length, SceSize *pConsumed, char *partial, SceSize *pPartialLength,
+	SceSize *pRemaining, char *decoded, SceSize *pSourceLength, SceSize *pLength);
+int SceNpCommonPs4_738FF77D(struct NpCommonPs4Lexer *lexer, const struct NpCommonPs4LexerConfig *config, NpCommonPs4LexerCallback callback, void *context);
+int SceNpCommonPs4_6C941C30(struct NpCommonPs4Lexer *lexer, const char *data, int size);
+int SceNpCommonPs4_EB1B7375(struct NpCommonPs4Lexer *lexer, const struct NpCommonPs4LexerConfig *config, NpCommonPs4LexerCallback callback, void *context);
+int SceNpCommonPs4_F5EE219F(struct NpCommonPs4Lexer *lexer, const char *src, int size);
+int SceNpCommonPs4_AC633131(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context);
+int SceNpCommonPs4_358A8F68(struct NpCommonPs4Lexer *lexer, struct NpCommonPs4ServerErrorContext *context);
+int SceNpCommonPs4_AD229434(struct NpCommonPs4Lexer *lexer, const char *data, int size);
+int _sceNpServerErrorJsonGetErrorCode(int status, const char *body, int size, SceUInt8 either);
+int npCommonPs4ServerErrorOnCode(struct NpCommonPs4Lexer *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4LexerToken *token, int arrayIndex, void *context);
+int npCommonPs4ServerErrorOnCodeEither(struct NpCommonPs4Lexer *lexer, int event, int depth, int node, const char *name,
+	const struct NpCommonPs4LexerToken *token, int arrayIndex, void *context);
+int SceNpCommonPs4_FB63A152(int status, const char *body, int size);
+int SceNpCommonPs4_CF591432(int status, const char *body, int size);
 int SceNpCommonPs4_69090D80(int requestId);
 int SceNpCommonPs4_EF0A4C60(int requestId, const char *prefix);
 int SceNpCommon_BBC13621(void);

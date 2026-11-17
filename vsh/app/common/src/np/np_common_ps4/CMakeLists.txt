@@ -25,6 +25,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	npext_npm/np_trans.cpp
 	npext_npm/np_system_param.cpp
 	np_util/server_error/np_server_error.c
+	npext/json/json_lexer.c
 	npext_npm/np_environment.cpp
 	npext/np/communication_id.cpp
 	npext/np/online_id.cpp

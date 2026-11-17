@@ -2314,6 +2314,32 @@ struct NpCommonPs4JsonValue *SceNpCommonPs4_E8740CE6(struct NpCommonPs4JsonValue
 	return result;
 }
 
+int SceNpCommonPs4_3CE6B5C7(struct NpCommonPs4JsonValue *object, const char *name, char *buffer, SceSize size)
+{
+	struct NpCommonPs4JsonValue *field;
+	struct NpCommonPs4JsonTextData *data;
+	const char *text;
+	const char *string;
+	int result;
+
+	field = SceNpCommonPs4_428DE8A6(object, name);
+	if (field == NULL || field->type != NP_COMMON_PS4_JSON_TYPE_STRING)
+		return NP_COMMON_PS4_ERROR_80559E0E;
+	data = (struct NpCommonPs4JsonTextData *)field->data;
+	if (data != NULL) {
+		text = "";
+		if (data->text != NULL)
+			text = data->text;
+		string = text;
+	} else {
+		string = "";
+	}
+	result = NpCommonPs4StringCopy(buffer, size, string);
+	if (result >= 0)
+		return 0;
+	return result;
+}
+
 struct NpCommonPs4JsonValue *SceNpCommonPs4_2F351F96(struct NpCommonPs4JsonValue *object, const char *name)
 {
 	struct NpCommonPs4JsonValue *result;

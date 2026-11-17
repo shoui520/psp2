@@ -203,4 +203,149 @@ SceUInt32 SceNpCommonPs4_61DAB7E5(SceUInt32 seed)
 	return seed;
 }
 
+/* the URL-safe alphabet's decoder: the table's '+' and '/' invalid, '-' and '_' the values 62 and 63; the
+   last group may come short, completed with '=' */
+int SceNpCommonPs4_4A7DB2EF(const char *src, SceSize srcLength, unsigned char *dst, SceSize dstSize)
+{
+	char chunk[4];
+	char table[256];
+	int count;
+	int a;
+	int b;
+	int c;
+	int d;
+	int bits;
+	int i;
+
+	for (i = 0; i < 256; i++)
+		table[i] = g_base64DecodeTable[i];
+	table[47] = BASE64_INVALID;
+	table[43] = BASE64_INVALID;
+	table[45] = 62;
+	table[95] = 63;
+	count = 0;
+	while (srcLength > 4) {
+		a = table[(int)src[0]];
+		if (a == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		bits = a << 18;
+		b = table[(int)src[1]];
+		if (b == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		bits |= b << 12;
+		c = table[(int)src[2]];
+		if (c == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		bits |= c << 6;
+		d = table[(int)src[3]];
+		if (d == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		bits |= d;
+		if (dstSize < 3)
+			return NP_COMMON_PS4_ERROR_80558003;
+		dst[2] = bits;
+		dst[0] = bits >> 16;
+		srcLength -= 4;
+		dst[1] = bits >> 8;
+		src += 4;
+		dst += 3;
+		dstSize -= 3;
+		count += 3;
+	}
+	for (i = 0; i < 4; i++) {
+		if (i >= srcLength)
+			chunk[i] = BASE64_PAD;
+		else
+			chunk[i] = src[i];
+	}
+	a = table[chunk[0]];
+	if (a == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	b = table[chunk[1]];
+	if (b == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	bits = (a << 18) | (b << 12);
+	if (chunk[2] == BASE64_PAD) {
+		if (chunk[3] != BASE64_PAD)
+			return NP_COMMON_PS4_ERROR_80558004;
+		if (dstSize == 0)
+			return NP_COMMON_PS4_ERROR_80558003;
+		dst[0] = bits >> 16;
+		return count + 1;
+	}
+	c = table[chunk[2]];
+	if (c == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	bits |= c << 6;
+	if (chunk[3] == BASE64_PAD) {
+		if (dstSize < 2)
+			return NP_COMMON_PS4_ERROR_80558003;
+		dst[0] = bits >> 16;
+		dst[1] = bits >> 8;
+		return count + 2;
+	}
+	d = table[chunk[3]];
+	if (d == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	bits |= d;
+	if (dstSize < 3)
+		return NP_COMMON_PS4_ERROR_80558003;
+	dst[2] = bits;
+	dst[0] = bits >> 16;
+	dst[1] = bits >> 8;
+	return count + 3;
+}
+
+/* the same decoder's length of what it would decode */
+int SceNpCommonPs4_2E65CBA6(const char *src, SceSize srcLength)
+{
+	char chunk[4];
+	char table[256];
+	int count;
+	int i;
+
+	for (i = 0; i < 256; i++)
+		table[i] = g_base64DecodeTable[i];
+	table[47] = BASE64_INVALID;
+	table[43] = BASE64_INVALID;
+	table[45] = 62;
+	table[95] = 63;
+	count = 0;
+	while (srcLength > 4) {
+		if (table[(int)src[0]] == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		if (table[(int)src[1]] == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		if (table[(int)src[2]] == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		if (table[(int)src[3]] == BASE64_INVALID)
+			return NP_COMMON_PS4_ERROR_80558004;
+		srcLength -= 4;
+		src += 4;
+		count += 3;
+	}
+	for (i = 0; i < 4; i++) {
+		if (i >= srcLength)
+			chunk[i] = BASE64_PAD;
+		else
+			chunk[i] = src[i];
+	}
+	if (table[chunk[0]] == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	if (table[chunk[1]] == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	if (chunk[2] == BASE64_PAD) {
+		if (chunk[3] == BASE64_PAD)
+			return count + 1;
+		return NP_COMMON_PS4_ERROR_80558004;
+	}
+	if (table[chunk[2]] == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	if (chunk[3] == BASE64_PAD)
+		return count + 2;
+	if (table[chunk[3]] == BASE64_INVALID)
+		return NP_COMMON_PS4_ERROR_80558004;
+	return count + 3;
+}
+
 }
