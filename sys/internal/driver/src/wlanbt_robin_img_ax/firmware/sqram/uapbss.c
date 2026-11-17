@@ -486,8 +486,12 @@ void p2pGroupRoleApply(struct WlanConnection *connection, struct WlanDirectConte
 			       sizeof(ps->groupDeviceAddress));
 		__aeabi_memcpy(ps->groupSsid, "DIRECT-", 7);
 		ps->groupIdLength = 13;
-		bssid = peer->attributes[P2P_SLOT_GROUP_BSSID];
-		if (bssid == NULL) {
+		/*
+		 * Sony's code tests the group BSSID attribute but copies from the slot that
+		 * holds its pointer, not from the attribute (IDA 0xc000aef6..0xc000af00).
+		 */
+		bssid = (const uint8_t *)&peer->attributes[P2P_SLOT_GROUP_BSSID];
+		if (peer->attributes[P2P_SLOT_GROUP_BSSID] == NULL) {
 			groupBssid[0] = P2P_ATTR_GROUP_BSSID;
 			groupBssid[1] = 6;
 			groupBssid[2] = 0;
@@ -527,6 +531,17 @@ void p2pDeviceIdAppend(uint8_t *frame, const uint8_t *address)
 	frame[1] = added >> 8;
 }
 
+/* An address in two words (the wildcard BSSID p2pActionFrameAlloc() and
+ * p2pServiceDiscoverySend() put in their frames: one object in Sony's build). */
+union WlanBssidWords {
+	uint8_t bytes[8];
+	uint32_t words[2];
+};
+
+static const union WlanBssidWords p2pWildcardBssid = {
+	.bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 },
+};
+
 /*
  * Starts a P2P public action or action frame to destination, with the P2P
  * OUI and subtype. A group owner sends from its P2P interface address, unless
@@ -536,7 +551,6 @@ void p2pDeviceIdAppend(uint8_t *frame, const uint8_t *address)
 int p2pActionFrameAlloc(struct WlanConnection *connection, OsaBuffer **frame, const uint8_t *destination,
 			unsigned int kind, uint8_t subtype)
 {
-	static const uint8_t wildcard[8] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 };
 	uint8_t bssidAny[8];
 	struct WlanPsPeerState *ps;
 	unsigned int peerState = 0;
@@ -547,7 +561,7 @@ int p2pActionFrameAlloc(struct WlanConnection *connection, OsaBuffer **frame, co
 	const uint8_t *bssid;
 	unsigned int length;
 
-	__builtin_memcpy(bssidAny, wildcard, sizeof(bssidAny));
+	__builtin_memcpy(bssidAny, p2pWildcardBssid.bytes, sizeof(bssidAny));
 	ps = wlanConnectionPsState(connection);
 	buffer = wlanMgmtAllocFrame(connection, 400);
 	if (buffer == NULL)
@@ -1155,7 +1169,6 @@ void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *fra
 	uint8_t deviceId[12];
 	unsigned int first = 0;
 	unsigned int changed = 0;
-	unsigned int length = (frame[1] << 8) | frame[0];
 	OsaBuffer *buffer;
 	uint8_t *data;
 	uint8_t *body;
@@ -1164,7 +1177,7 @@ void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *fra
 	ps = wlanConnectionPsState(connection);
 	if (connection->p2pState != 2)
 		return;
-	rates = osaFindTlv(frame + 32, 1, length);
+	rates = osaFindTlv(frame + 32, 1, (frame[1] << 8) | frame[0]);
 	extendedRates = osaFindTlv(frame + 32, 50, (frame[1] << 8) | frame[0]);
 	if (rates == NULL || wlanRatesHaveOfdm(rates + 2, rates[1]) == 0) {
 		if (extendedRates == NULL || wlanRatesHaveOfdm(extendedRates + 2, extendedRates[1]) == 0)
@@ -2022,16 +2035,6 @@ struct WlanConnection *p2pActionFrameConnection(const OsaBuffer *buffer, uint32_
 	}
 	return connection;
 }
-
-/* An address in two words (the BSSID p2pServiceDiscoverySend() puts in its frame). */
-union WlanBssidWords {
-	uint8_t bytes[8];
-	uint32_t words[2];
-};
-
-static const union WlanBssidWords p2pWildcardBssid = {
-	.bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 },
-};
 
 /*
  * A service discovery (GAS) frame the host gives: the peer's address and the
@@ -2954,7 +2957,7 @@ void p2pInvitationRequestBuild(struct WlanConnection *connection, uint8_t *frame
 	}
 	context->attributes[P2P_SLOT_OPERATING_CHANNEL] = operating;
 	length = p2pDirectCheckContext(connection, (WlanWirelessFrame *)frame, context,
-				       include | (1u << P2P_ATTR_INVITATION_FLAGS) | (1u << P2P_ATTR_EXTENDED_LISTEN_TIMING) |
+				       include | (1u << P2P_ATTR_INVITATION_FLAGS) | (1u << P2P_ATTR_DEVICE_INFO) |
 				       (1u << P2P_ATTR_CHANNEL_LIST) | (1u << P2P_ATTR_CONFIGURATION_TIMEOUT),
 				       given | (1u << P2P_ATTR_OPERATING_CHANNEL));
 	length += (frame[1] << 8) | frame[0];
