@@ -1,5 +1,7 @@
 /*
- * Event paths and sleep votes (0x28cc..0x3540, 0x238d4..0x24334).
+ * Event paths and sleep votes (0x28cc..0x2edf, 0x238d4..0x24334; the primary
+ * and secondary paths are in sys/eventprimary.c, the tertiary path in
+ * sys/eventtertiary.c).
  *
  * The chip shares its radio between WLAN, Bluetooth, an AMP link and the FM
  * receiver. Four routes (sys/eventroute.c) bind a device event to an event
@@ -29,39 +31,12 @@
 #include "robin/sync.h"
 #include "robin/sys.h"
 #include "robin/wlantask.h"
+#include "eventpath_regs.h"
 
 /* The calibration timings, 60 for every reference clock. */
 const uint8_t rfCalibTimingA[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d7e */
 const uint8_t rfCalibTimingC[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d88 */
 const uint8_t rfCalibTimingB[RF_CALIB_CLOCK_PROFILES] = { [0 ... RF_CALIB_CLOCK_PROFILES - 1] = 60 };	/* 0x53d92 */
-
-/* Registers of the event paths; the names say what the code does with them. */
-#define EVENT_PATH_PENDING_TIMER	SOC_REG(0x040)
-#define EVENT_PATH_PENDING_CHANNEL	SOC_REG(0x044)	/* bit 1: a path was entered */
-#define EVENT_PATH_PENDING_PARAM	SOC_REG(0x048)
-#define EVENT_PATH_PENDING_CONFIG	SOC_REG(0x04c)	/* bit 16: the engine runs */
-#define EVENT_PATH_PENDING_CONTROL	SOC_REG(0x060)
-#define EVENT_PATH_EVENT		SOC_REG(0x09c)
-#define EVENT_PATH_CHANNEL		SOC_REG(0x130)
-#define EVENT_PATH_STATUS		SOC_REG(0x140)
-#define EVENT_PATH_BUS_CLOCK		SOC_REG(0x144)	/* low nibble: bus clock divider */
-#define EVENT_PATH_COUNTER		SOC_REG(0x180)
-#define EVENT_PATH_RATE			SOC_REG(0x188)
-#define EVENT_PATH_KEY			SOC_REG(0x18c)
-#define EVENT_PATH_COMMAND		SOC_REG(0x1a8)
-#define EVENT_PATH_REGISTER		SOC_REG(0x200)
-#define EVENT_PATH_RECORD		SOC_REG(0x204)
-#define EVENT_PATH_FRAME		SOC_REG(0x250)
-#define EVENT_PATH_CONTROL		SOC_CONTROL		/* bit 3 */
-#define EVENT_PATH_MEASURE		SOC_SLEEP_MEASURE_CONTROL	/* bit 7 */
-
-#define SOC_IRQ_PRIMARY_EVENT		0x200000
-#define SOC_IRQ_SECONDARY_EVENT		0x8000000
-#define SOC_IRQ_MIDDLE_EVENT		0x100
-
-/* The BT link controller's wake-up statistics, in the engine's microseconds. */
-#define SYS_PRIMARY_WINDOW_DIVISOR	1250
-#define SYS_PRIMARY_POLL_US		2000000
 
 uint8_t sysEventEngineFlags __attribute__((section(".itcm.rw"))) = SYS_ENGINE_EVENT_PATHS;
 uint8_t sysSleepShortWake __attribute__((section(".itcm.rw")));
@@ -69,21 +44,19 @@ uint32_t sysSleepVotes __attribute__((section(".itcm.rw")));
 /* Time the idle thread spent waiting, once the host asked for the load (nonzero). */
 uint64_t sysIdleTime __attribute__((section(".itcm.rw")));
 uint64_t sysIdleStart __attribute__((section(".itcm.rw")));
+/* The routes (sys/eventroute.c); their data is this file's. */
+struct SysEventRoute sysEventRoutes[SYS_EVENT_ROUTE_COUNT] __attribute__((section(".itcm.rw"))) = {
+	{ 0xff, 0xff, 0xff, 0 },
+	{ 0xff, 0xff, 0xff, 0 },
+	{ 0xff, 0xff, 0xff, 0 },
+	{ 0xff, 0xff, 0xff, 0 },
+};
 
 struct SysEventSourceHandlerEntry sysEventSourceHandlers[3] __attribute__((section(".itcm.rw"))) = {
 	{ 12, NULL },
 	{ 11, NULL },
 	{ 10, NULL },
 };
-
-/* The primary path: the slots until the Bluetooth link controller needs the radio. */
-static uint8_t sysPrimaryMinWindow __attribute__((section(".itcm.rw"))) = 0x15;
-static uint32_t sysPrimaryNextBtEvent __attribute__((section(".itcm.rw")));
-static uint32_t sysPrimaryBtEventClock __attribute__((section(".itcm.rw")));
-static uint32_t sysPrimaryPollClock __attribute__((section(".itcm.rw")));
-static uint32_t sysFmCoexPathState __attribute__((section(".itcm.rw")));
-/* Bit 2 of radio register 18, read once; 0xff until then. */
-static uint8_t sysTertiaryRadioFlag __attribute__((section(".itcm.rw"))) = 0xff;
 
 /* 0x28cc */
 void sysProcessEventQueues(uint32_t events)
@@ -97,12 +70,12 @@ void sysProcessEventQueues(uint32_t events)
 }
 
 /* Routes 0 to 3 hold the chip awake while their device is busy and let go again. */
-void sysEventRoute2Hold(void)
+__attribute__((noinline)) void sysEventRoute2Hold(void)
 {
 	sysProcessEventQueues(0);
 }
 
-void sysEventRoute2Release(void)
+__attribute__((noinline)) void sysEventRoute2Release(void)
 {
 }
 
@@ -115,12 +88,12 @@ void sysEventPathEnter(int route, uint32_t device, uint32_t source)
 		btLmpLcFormatContext(0, 0, 10, 0);
 }
 
-void sysEventPathLeft(void)
+__attribute__((noinline)) void sysEventPathLeft(void)
 {
 }
 
-/* 0x293e: every route bound to the device event holds the chip awake. */
-void sysEventRoutesHold(uint32_t device)
+/* 0x293e: every route bound to the device event holds the chip awake (callers pass route 0xff: any). */
+void sysEventRoutesHold(unsigned int route, uint32_t device)
 {
 	if (sysEventRouteDevice(0) == device)
 		sysEventRoute0Hold();
@@ -133,7 +106,7 @@ void sysEventRoutesHold(uint32_t device)
 }
 
 /* 0x297c */
-void sysEventRoutesRelease(uint32_t device)
+void sysEventRoutesRelease(unsigned int route, uint32_t device)
 {
 	if (sysEventRouteDevice(0) == device)
 		sysEventRoute0Release();
@@ -171,10 +144,10 @@ void sysEventRouteStart(int route, uint32_t device)
 }
 
 /*
- * 0x2aa4: binds a device event to a channel of its route; the value goes
- * into the route's flags above the bound and masked bits.
+ * 0x2aa4: binds a device event to a channel of its route (for channel 8, the
+ * GPIO pin it drives); the new channel's pin is set idle.
  */
-int sysEventRouteBind(unsigned int device, unsigned int channel, unsigned int flags)
+int sysEventRouteBind(unsigned int device, unsigned int channel, unsigned int gpio)
 {
 	unsigned int index;
 	struct SysEventRoute *route;
@@ -185,19 +158,19 @@ int sysEventRouteBind(unsigned int device, unsigned int channel, unsigned int fl
 		route = &sysEventRoutes[index];
 		if (route->device != device)
 			continue;
-		if ((route->flags & SYS_EVENT_ROUTE_BOUND) && route->channel != channel)
+		if (route->bound && route->channel != channel)
 			return 0;
 		if (route->channel == channel ||
-		    !sysEventRouteReleaseChannel(index, device, route->channel))
+		    !sysEventRouteKeepChannel(index, device, route->channel))
 			continue;
 		route->channel = channel;
-		route->flags = (route->flags & 7) | (flags << 3);
-		if (!sysEventRouteAcquireChannel(index, device, channel)) {
+		route->gpio = gpio;
+		if (!sysEventRouteIdleChannel(index, device, channel)) {
 			route->channel = 0xff;
-			route->flags &= 7;
+			route->gpio = 0;
 			return 0;
 		}
-		route->flags |= SYS_EVENT_ROUTE_BOUND;
+		route->bound = 1;
 	}
 	return 1;
 }
@@ -251,11 +224,11 @@ void sysHandleMappedEventSource(uint32_t device, uint32_t dispatch)
 	}
 	if (dispatch == 0 && sysEventRouteState(device) != 0) {
 		if (channel == 8)
-			gpioPinWrite(sysEventRoutes[route].flags >> 3, 0);
+			gpioPinWrite(sysEventRoutes[route].gpio, 0);
 		else if (channel == 9)
 			gpioPinWrite(16, 0);
 	}
-	sysEventRoutesHold(device);
+	sysEventRoutesHold(SYS_EVENT_ROUTE_NONE, device);
 }
 
 /* 0x2cc2: called, never inlined (sysEventRouteStart) */
@@ -297,10 +270,10 @@ void sysEventRouteConfigure(unsigned int route, int device, int source)
 		}
 	}
 	if (channel == 8)
-		gpioPinWrite(sysEventRoutes[route].flags >> 3, 1);
+		gpioPinWrite(sysEventRoutes[route].gpio, 1);
 	else if (channel == 9)
 		gpioPinWrite(16, 1);
-	sysEventRoutesRelease(device);
+	sysEventRoutesRelease(SYS_EVENT_ROUTE_NONE, device);
 }
 
 /* 0x2dea: the SDIO devices of a route have nothing pending. */
@@ -325,19 +298,21 @@ int sysEventRouteIdle(unsigned int route)
 }
 
 /* 0x2e64: route 0's device is busy. */
-void sysEventRoute0Hold(void)
+__attribute__((noinline)) void sysEventRoute0Hold(void)
 {
 	sysSleepForbid(SLEEP_VOTE_PRIMARY_DEVICE);
 	if (sysEventAlternateModeIsSet() != 0) {
 		sysSecondaryGateOpen();
 		sysSecondaryWaitAltMode();
 	}
-	while (rfBlock4Get() == 0)
-		clockSourceMode();
+	if (rfBlock4Get() == 0) {
+		while (clockSourceMode() == 0)
+			;	/* wait for a clock source */
+	}
 	btLmpLcFormatContext(0, 0, 8, 0);
 }
 
-void sysEventRoute0Release(void)
+__attribute__((noinline)) void sysEventRoute0Release(void)
 {
 	sysSleepAllow(SLEEP_VOTE_PRIMARY_DEVICE);
 }
@@ -356,377 +331,14 @@ void sysHandlePrimaryEvent(void)
 	sysEventPathEnter(0, device, source);
 }
 
-/* 0x2ee0: the primary path is entered when its vote allows it. */
-void sysEnterPrimaryEvent(void)
-{
-	UINT posture = sysIrqDisable();
-
-	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH) {
-		sysHandlePrimaryEvent();
-		sysDelayUs(1000);
-		btLtsRomParseState(0);
-	}
-	sysIrqRestore(posture);
-}
-
-/* 0x2f0c */
-void sysPrimaryRouteStart(void)
-{
-	int device = sysEventRouteDevice(0);
-
-	sysEventRouteSource(0);
-	sysEventRouteStart(0, device);
-}
-
-/* 0x2f28 */
-void sysPrimaryRouteResume(void)
-{
-	UINT posture = sysIrqDisable();
-
-	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_DEVICE)
-		sysPrimaryRouteStart();
-	sysIrqRestore(posture);
-}
-
-/* 0x2f44 */
-int sysPrimaryRouteReady(void)
-{
-	int device = sysEventRouteDevice(0);
-
-	sysEventRouteSource(0);
-	return sysEventRouteReady(0, device) != 0;
-}
-
-/*
- * 0x2f66: whether the Bluetooth link controller leaves the radio alone long
- * enough; its next activity is measured once and then counted down.
- */
-int sysPrimaryWindowOpen(void)
-{
-	uint32_t remaining;
-
-	if (sysEventAlternateModeIsSet() != 0)
-		return sysPrimaryRouteReady();
-	remaining = 0xffffffff;
-	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH) {
-		if (sysPrimaryNextBtEvent != 0xffffffff) {
-			remaining = sysEventClockElapsedUs(sysPrimaryBtEventClock) /
-				    SYS_PRIMARY_WINDOW_DIVISOR;
-			if (remaining < sysPrimaryNextBtEvent)
-				remaining = sysPrimaryNextBtEvent - remaining;
-			else
-				remaining = 0;
-		}
-	} else {
-		if (btLmpLcBuildContext(&remaining) == 0)
-			return 0;
-		sysPrimaryNextBtEvent = remaining;
-		sysPrimaryBtEventClock = sysEventClockNow();
-	}
-	if (remaining >= sysPrimaryMinWindow)
-		return sysPrimaryRouteReady();
-	return 0;
-}
-
-/* 0x2fce */
-int sysPrimaryWindowCheck(void)
-{
-	return (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH) != 0 && sysPrimaryWindowOpen();
-}
-
-/* 0x2fe8 */
-void sysPrimaryRouteStop(void)
-{
-	int device = sysEventRouteDevice(0);
-	uint32_t source = sysEventRouteSource(0);
-
-	sysEventRouteStop(0, device, source);
-}
-
-/* 0x3004 */
-int sysPrimaryRouteArmed(void)
-{
-	return sysPrimaryRouteReady() && btLmpLcManageContext(0) != 0;
-}
-
-/* 0x3020 */
-void sysPrimaryRouteTryStop(void)
-{
-	if ((sysSleepVotes & SLEEP_VOTE_PRIMARY_DEVICE) == 0 && btLmpLcActiveCount == 2 &&
-	    sysPrimaryWindowCheck() && sysPrimaryRouteArmed())
-		sysPrimaryRouteStop();
-}
-
-/* 0x3048: the primary path is left. */
-void sysLeavePrimaryEvent(void)
-{
-	sysEventRouteDevice(0);
-	sysEventRouteSource(0);
-	*(uint16_t *)(btLinkContext + 26) = 23;
-	sysEnableEventSources(8);
-	sysDisableSecondaryEventMode();
-	sysResetSecondaryEventConfiguration();
-	SOC_IRQ_ENABLE_CLEAR = SOC_IRQ_PRIMARY_EVENT;
-	sysEventPathLeft();
-	EVENT_PATH_PENDING_CHANNEL &= ~2u;
-	sysSleepAllow(SLEEP_VOTE_PRIMARY_PATH);
-}
-
-/* 0x3094: polled by the idle thread: the primary path is left once the window allows it. */
-void sysPrimaryEventPoll(void)
-{
-	UINT posture;
-
-	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH)
-		return;
-	if (!sysPrimaryWindowOpen()) {
-		if (sysEventClockElapsedUs(sysPrimaryPollClock) > SYS_PRIMARY_POLL_US) {
-			sysPrimaryPollClock = sysEventClockNow();
-			btLmpLcClearState();
-		}
-	}
-	if (sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH)
-		return;
-	if (sysPrimaryWindowOpen()) {
-		posture = sysIrqDisable();
-		if (sysPrimaryWindowOpen())
-			sysLeavePrimaryEvent();
-		sysIrqRestore(posture);
-	}
-}
-
-/* 0x3108: puts the FM receiver's radio path in the state the secondary path needs. */
-void sysFmCoexPathSet(void)
-{
-	UINT posture = sysIrqDisable();
-	uint32_t clock;
-
-	if (sysFmCoexPathState == 0) {
-		rfRegBegin();
-		rfRegSetBits(31, 134);
-		rfRegEnd();
-		EVENT_PATH_STATUS = (EVENT_PATH_STATUS & 0xedffffff) | 0x10000000;
-		clock = sysReadEventClock();
-		while (sysReadEventClock() == clock)
-			;
-		EVENT_PATH_STATUS |= 0x12000000;
-		EVENT_PATH_CONTROL &= ~8u;
-		EVENT_PATH_MEASURE &= ~0x80u;
-		rfRegBegin();
-		rfRegClearBits(32, 8);
-		rfRegEnd();
-		sysFmCoexPathState = 1;
-	}
-	sysIrqRestore(posture);
-}
-
-/* 0x3182: the opposite. */
-void sysFmCoexPathRestore(void)
-{
-	UINT posture = sysIrqDisable();
-	uint32_t clock;
-
-	if (sysFmCoexPathState == 1) {
-		if (!socStrapIsSet()) {
-			rfRegBegin();
-			rfRegSetBits(32, 8);
-			rfRegEnd();
-		}
-		EVENT_PATH_MEASURE |= 0x80;
-		EVENT_PATH_CONTROL &= ~8u;
-		EVENT_PATH_STATUS = (EVENT_PATH_STATUS & 0xedffffff) | 0x10000000;
-		clock = sysReadEventClock();
-		while (sysReadEventClock() == clock)
-			;
-		sysDelayUs(10);
-		EVENT_PATH_CONTROL |= 8;
-		EVENT_PATH_STATUS &= 0xedffffff;
-		rfRegBegin();
-		rfRegClearBits(31, 4);
-		rfRegEnd();
-		sysFmCoexPathState = 0;
-	}
-	sysIrqRestore(posture);
-}
-
-/* 0x3210 */
-void sysSecondaryGateOpen(void)
-{
-	unsigned int device = sysEventRouteDevice(1);
-
-	if ((sysSleepVotes & SLEEP_VOTE_PRIMARY_PATH) && (sysSleepVotes & SLEEP_VOTE_WLAN) && device != 6) {
-		sysClearEventFlags(0x8000);
-		sysEnableEventSources(0x80000000);
-		SOC_EVENT_ENGINE_GATE |= 0x200;
-	}
-}
-
-/* 0x3246 */
-void sysSecondaryWaitAltMode(void)
-{
-	if (sysEventRouteDevice(1) != 6) {
-		while (sysEventAlternateModeIsSet() != 0)
-			;
-	}
-}
-
-/* 0x325c: route 1's device is busy. */
-void sysEventRoute1Hold(void)
-{
-	sysSleepForbid(SLEEP_VOTE_SECONDARY_DEVICE);
-}
-
-void sysEventRoute1Release(void)
-{
-	sysSleepAllow(SLEEP_VOTE_SECONDARY_DEVICE);
-}
-
-/* 0x3270: the secondary path is entered. */
-void sysHandleSecondaryEvent(void)
-{
-	uint32_t state = 0;
-	int device = sysEventRouteDevice(1);
-	int source = sysEventRouteSource(1);
-
-	sysSleepForbid(SLEEP_VOTE_SECONDARY_PATH);
-	sysFmCoexPathRestore();
-	sysEnableTertiaryEventMode();
-	sysDisableEventSources(0x20);
-	sysConfigureTertiaryEventPath();
-	fmCoexPrepareState(&state);
-	SOC_IRQ_ENABLE_SET = SOC_IRQ_SECONDARY_EVENT;
-	sysEventPathEnter(1, device, source);
-}
-
-/* 0x32be */
-void sysEnterSecondaryEvent(void)
-{
-	UINT posture = sysIrqDisable();
-
-	if (sysSleepVotes & SLEEP_VOTE_SECONDARY_PATH)
-		sysHandleSecondaryEvent();
-	sysIrqRestore(posture);
-}
-
-/* 0x32dc */
-int sysSecondaryRouteReady(void)
-{
-	int device = sysEventRouteDevice(1);
-
-	sysEventRouteSource(1);
-	return sysEventRouteReady(1, device) != 0;
-}
-
-/* 0x32fe */
-int sysSecondaryReady(void)
-{
-	uint32_t state;
-
-	return fmCoexValidateState(&state) != 0 && sysSecondaryRouteReady();
-}
-
-/* 0x331a */
-int sysSecondaryCheck(void)
-{
-	return (sysSleepVotes & SLEEP_VOTE_SECONDARY_PATH) != 0 && sysSecondaryReady();
-}
-
-/* 0x3334 */
-void sysSecondaryRouteStop(void)
-{
-	unsigned int device = sysEventRouteDevice(1);
-	uint32_t source = sysEventRouteSource(1);
-
-	if (sysEventRouteDevice(0) != device)
-		sysEventRouteStop(1, device, source);
-}
-
-/* 0x335c */
-void sysSecondaryRouteTryStop(void)
-{
-	if ((sysSleepVotes & SLEEP_VOTE_SECONDARY_DEVICE) == 0 && sysSecondaryCheck() &&
-	    sysSecondaryRouteReady())
-		sysSecondaryRouteStop();
-}
-
-/* 0x337c */
-void sysTertiaryPathRestore(void)
-{
-	sysRestoreTertiaryEventPath();
-	EVENT_PATH_COMMAND &= 0xcc7ffffd;
-	EVENT_PATH_FRAME |= 0x1800;
-	EVENT_PATH_PENDING_CONTROL = 2 * (EVENT_PATH_PENDING_CONTROL >> 1);
-	EVENT_PATH_STATUS &= 0xbffffff5;
-}
-
-/* 0x33b0: the secondary path is left. */
-void sysLeaveSecondaryEvent(void)
-{
-	uint32_t state = 0;
-
-	sysEventRouteDevice(1);
-	sysEventRouteSource(1);
-	sysEnableEventSources(0x20);
-	sysDisableTertiaryEventMode();
-	SOC_IRQ_ENABLE_CLEAR = SOC_IRQ_SECONDARY_EVENT;
-	if (fmCoexPrepareState(&state) != 0) {
-		sysTertiaryPathConfigure();
-	} else {
-		sysTertiaryPathRestore();
-		if (fmCoexDispatchState() != 0)
-			sysFmCoexPathSet();
-	}
-	sysEventPathLeft();
-	sysSleepAllow(SLEEP_VOTE_SECONDARY_PATH);
-}
-
-/* 0x3412: polled by the idle thread: the secondary path is left once the FM receiver allows it. */
-void sysSecondaryEventPoll(void)
-{
-	UINT posture;
-
-	if ((sysSleepVotes & SLEEP_VOTE_SECONDARY_PATH) == 0 && sysSecondaryReady()) {
-		posture = sysIrqDisable();
-		if (sysSecondaryReady())
-			sysLeaveSecondaryEvent();
-		sysIrqRestore(posture);
-	}
-}
-
-/* 0x3460 */
-void sysTertiaryPathConfigure(void)
-{
-	sysConfigureTertiaryEventPath();
-	EVENT_PATH_COMMAND = (EVENT_PATH_COMMAND & 0xcffffffd) | 0x3800000;
-	EVENT_PATH_FRAME &= 0xffffc7fe;
-	if (!socStrapIsSet())
-		EVENT_PATH_PENDING_CONTROL |= 0x10001;
-	if (sysTertiaryRadioFlag == 0xff) {
-		rfRegBegin();
-		sysTertiaryRadioFlag = rfRegRead(18) & 4;
-		rfRegEnd();
-	}
-	if (sysTertiaryRadioFlag == 0)
-		EVENT_PATH_PENDING_CONTROL |= 0x10001;
-	EVENT_PATH_STATUS = (EVENT_PATH_STATUS & 0x9ffffff0) + 0x4000000e;
-}
-
-/* 0x351c */
-__attribute__((noinline)) int sysEnableEventSources(uint32_t sources)
-{
-	SOC_EVENT_SOURCE_ENABLE |= sources;
-	SOC_EVENT_SECONDARY_ENABLE |= sources;
-	return 1;
-}
-
 /* 0x2431c: route 3's device is busy. */
-void sysEventRoute3Hold(void)
+__attribute__((noinline)) void sysEventRoute3Hold(void)
 {
 	sysSleepForbid(SLEEP_VOTE_TERTIARY_DEVICE);
 	btLmpLcFormatContext(1, 0, 8, 0);
 }
 
-void sysEventRoute3Release(void)
+__attribute__((noinline)) void sysEventRoute3Release(void)
 {
 	sysSleepAllow(SLEEP_VOTE_TERTIARY_DEVICE);
 }
@@ -809,7 +421,7 @@ static __attribute__((noinline)) void sysIdleDeepSleep(uint32_t macState)
 	EVENT_PATH_PENDING_CONFIG &= ~sources;
 	if (sysEventEngineFlags & SYS_ENGINE_EVENT_PATHS) {
 		if (macState != 14) {
-			SOC_EVENT_SECONDARY_CONFIGURATION |= 1;
+			EVENT_PATH_SECONDARY_CONFIGURATION |= 1;
 			sysClearEventFlags(0x80);
 			sysEnableEventSources(sources << 7);
 			SOC_EVENT_LATCH = 3;
@@ -1093,7 +705,7 @@ void sysIdleStatsReset(void)
 }
 
 /* 0x23ea0 */
-uint32_t sysEventClockNow(void)
+__attribute__((noinline)) uint32_t sysEventClockNow(void)
 {
 	return sysReadEventClock();
 }
@@ -1130,15 +742,19 @@ int sysSetEventSourceHandler(uint32_t source, SysEventSourceHandler handler)
 }
 
 /* 0x23f24 */
-int sysEventSourceReset(uint32_t source)
+void sysEventSourceReset(uint32_t source)
 {
-	if (source == 12) {
+	switch (source) {
+	case 10:
+	case 11:
+		break;
+	case 12:
 		SOC_EVENT_STATUS &= ~0x10000000u;
 		sysClearEventFlags(0x1000);
 		sysClearSecondaryEventFlags(0x1000);
-		return sysEnableEventSources(0x10000000);
+		sysEnableEventSources(0x10000000);
+		break;
 	}
-	return source;
 }
 
 /* 0x23f54: source 12's handler is called when the event of its source arrives. */
@@ -1174,7 +790,7 @@ static struct {
 	0, 0,
 	0x5c28f62c, 0x62b6ae2c,
 	0x7ced912c, 0x78fd5224,
-	0x51ebe524, 0x4ea4a924,
+	0x51eb8524, 0x4ea4a924,
 	0x477e6b24, 0x3c7ea924,
 	},
 };
@@ -1225,21 +841,21 @@ static inline __attribute__((always_inline)) void sysChannelClearSources(unsigne
 	}
 }
 
-/* 0x2406e: releases the source's channel, and takes its calibration table again. */
-int sysEventRouteChannelUpdate(int route, int device, int source, int hold)
+/*
+ * 0x2406e: unless the channel is kept, sets its pin idle (quiesced, driven
+ * high, selected) and clears its sources.
+ */
+int sysEventRouteChannelUpdate(int route, int device, int channel, int keep)
 {
-	unsigned int channel;
-
-	if (source == 8) {
-		if (hold != 0)
+	if (channel == 8) {
+		if (keep != 0)
 			return 1;
-		channel = sysEventRoutes[route].flags >> 3;
-		if (!sysChannelQuiesce(channel))
+		if (!sysChannelQuiesce(sysEventRoutes[route].gpio))
 			return 0;
-		gpioPinWrite(channel, 1);
-		gpioPinSelect(channel, 1);
-		sysChannelClearSources(channel);
-	} else if (source == 9 && hold == 0) {
+		gpioPinWrite(sysEventRoutes[route].gpio, 1);
+		gpioPinSelect(sysEventRoutes[route].gpio, 1);
+		sysChannelClearSources(sysEventRoutes[route].gpio);
+	} else if (channel == 9 && keep == 0) {
 		gpioPinWrite(16, 1);
 		gpioPinSelect(16, 1);
 		PERIPH_REG(0x270) &= ~1u;
@@ -1248,16 +864,16 @@ int sysEventRouteChannelUpdate(int route, int device, int source, int hold)
 	return 1;
 }
 
-/* 0x240fc */
-int sysEventRouteAcquireChannel(int route, int device, int source)
+/* 0x240fc: the channel a route leaves is kept as it is. */
+__attribute__((noinline)) int sysEventRouteKeepChannel(uint8_t route, int device, int channel)
 {
-	return sysEventRouteChannelUpdate(route, device, source, 1);
+	return sysEventRouteChannelUpdate(route, device, channel, 1);
 }
 
-/* 0x24100 */
-int sysEventRouteReleaseChannel(int route, int device, int source)
+/* 0x24100: the channel a route takes is set idle. */
+__attribute__((noinline)) int sysEventRouteIdleChannel(uint8_t route, int device, int channel)
 {
-	return sysEventRouteChannelUpdate(route, device, source, 0);
+	return sysEventRouteChannelUpdate(route, device, channel, 0);
 }
 
 /* 0x24104 */
@@ -1272,7 +888,7 @@ int sysChannelReset(unsigned int channel)
 }
 
 /* 0x24152: nothing to do after the engine's routes are set up. */
-void sysEventEngineInitHook(void)
+__attribute__((noinline)) void sysEventEngineInitHook(void)
 {
 }
 
@@ -1348,7 +964,7 @@ void sysPathRegistersInit(void)
 	if (SOC_CHIP_REVISION & 0xff)
 		value &= 0xffefffef;
 	SOC_EVENT_PATH_CONTROL = value;
-	if ((SOC_CHIP_REVISION & 0xff) && sysReadEventClock() < 0x200)
+	if ((SOC_CHIP_REVISION & 0xff) && sysReadEventConfigurationStatus() < 0x200)
 		EVENT_PATH_EVENT = (EVENT_PATH_EVENT | 1) & ~4u;
 	else
 		EVENT_PATH_EVENT &= ~1u;

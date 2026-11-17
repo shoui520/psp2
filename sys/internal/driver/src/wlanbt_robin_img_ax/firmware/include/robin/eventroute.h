@@ -7,16 +7,17 @@
 #define SYS_EVENT_ROUTE_COUNT	4
 #define SYS_EVENT_ROUTE_NONE	0xff
 
-/* Bits of SysEventRoute.flags; the bits above hold a value set with the route. */
-#define SYS_EVENT_ROUTE_BOUND	0x02
-#define SYS_EVENT_ROUTE_MASKED	0x04
-
 struct SysEventRoute {
 	uint8_t device;		/* device event number, 0xff when the slot is free */
 	uint8_t source;		/* event source it is routed to */
 	uint8_t channel;
-	uint8_t flags;
+	uint8_t reserved : 1;
+	uint8_t bound : 1;	/* the channel was set up */
+	int8_t masked : 1;	/* -1 while the device event is masked (sysEventRouteState() reads it signed) */
+	uint8_t gpio : 5;	/* GPIO pin of channel 8 */
 };
+
+_Static_assert(sizeof(struct SysEventRoute) == 4, "event route");
 
 extern struct SysEventRoute sysEventRoutes[SYS_EVENT_ROUTE_COUNT];
 

@@ -4,13 +4,6 @@
  */
 #include "robin/eventroute.h"
 
-struct SysEventRoute sysEventRoutes[SYS_EVENT_ROUTE_COUNT] __attribute__((section(".itcm.rw"))) = {
-	{ 0xff, 0xff, 0xff, 0 },
-	{ 0xff, 0xff, 0xff, 0 },
-	{ 0xff, 0xff, 0xff, 0 },
-	{ 0xff, 0xff, 0xff, 0 },
-};
-
 /* Device event of a route, by route number. */
 unsigned int sysEventRouteDevice(unsigned int index)
 {
@@ -93,9 +86,9 @@ int sysEventRouteSetMasked(int device, int enable)
 		if (route->device != device)
 			continue;
 		if (enable)
-			route->flags &= ~SYS_EVENT_ROUTE_MASKED;
+			route->masked = 0;
 		else
-			route->flags |= SYS_EVENT_ROUTE_MASKED;
+			route->masked = -1;
 	}
 	return enable;
 }
@@ -107,7 +100,7 @@ int sysEventRouteState(int device)
 
 	for (index = 0; index < SYS_EVENT_ROUTE_COUNT; ++index) {
 		if (sysEventRoutes[index].device == device)
-			return ((sysEventRoutes[index].flags & SYS_EVENT_ROUTE_MASKED) != 0) + 1;
+			return sysEventRoutes[index].masked + 1;	/* 1, or 0 while masked */
 	}
 	return 0;
 }
