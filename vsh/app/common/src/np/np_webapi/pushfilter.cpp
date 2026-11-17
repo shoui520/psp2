@@ -1,0 +1,239 @@
+/*
+ * SceNpWebApi: push event filters, the library context's list of them and the exports' backends.
+ * The names are ours.
+ */
+
+#include "np_webapi_internal.h"
+
+static unsigned int s_filterCounter;		/* 0x81010020 */
+
+NpWebApiPushFilter *npWebApiPushFilterConstruct(NpWebApiPushFilter *filter, NpWebApiLibContext *libCtx)
+{
+	filter->libContext = libCtx;
+	filter->vtable = g_pushFilterVtable;
+	filter->id = 0;
+	filter->types = NULL;
+	filter->typeCount = 0;
+	return filter;
+}
+
+int npWebApiPushFilterInit(NpWebApiPushFilter *filter, const char *types, int typeCount)
+{
+	const char *source;
+	int offset;
+	int i;
+	int id;
+
+	source = types;
+	if (types != NULL && typeCount != 0) {
+		filter->types = (void *)npWebApiLibContextPoolAlloc(filter->libContext, 65 * typeCount);
+		if (filter->types == NULL)
+			return NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+		sceClibMemset(filter->types, 0, 65 * typeCount);
+		if (typeCount != 0) {
+			offset = 0;
+			for (i = typeCount; i != 0; i--) {
+				sceClibMemcpy_safe((char *)filter->types + offset, source, 0x41);
+				offset += 65;
+				source += 65;
+			}
+		}
+		filter->typeCount = typeCount;
+	}
+	s_filterCounter++;
+	id = s_filterCounter;
+	if (s_filterCounter >= 0xEFFFFFFF) {
+		id = 1;
+		s_filterCounter = 1;
+	}
+	filter->id = id;
+	return id;
+}
+
+int npWebApiPushFilterGetId(NpWebApiPushFilter *filter)
+{
+	return filter->id;
+}
+
+/* the filter list's insert: the handle list's, for filters */
+void npWebApiFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list, NpWebApiPushFilter **pFilter)
+{
+	NpWebApiHandleNode *sentinel;
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *result;
+	void *memory;
+	NpWebApiPushFilter *filter;
+	void *allocator;
+	unsigned long count;
+
+	allocator = list->allocator;
+	if (list->sentinel == NULL) {
+		sentinel = NULL;
+		if (allocator != NULL) {
+			memory = SceNpCommonPs4_AA980113(allocator, 12);
+			if (memory != NULL) {
+				node = (NpWebApiHandleNode *)operator new(12, memory);
+				if (node != NULL) {
+					node->handle = NULL;
+					sentinel = node;
+				}
+			}
+		}
+		list->sentinel = sentinel;
+		if (sentinel == NULL) {
+			*pResult = NULL;
+			return;
+		}
+		sentinel->prev = sentinel;
+		sentinel->next = sentinel;
+		allocator = list->allocator;
+	}
+	filter = *pFilter;
+	if (allocator != NULL) {
+		memory = SceNpCommonPs4_AA980113(allocator, 12);
+		if (memory != NULL) {
+			result = (NpWebApiHandleNode *)operator new(12, memory);
+			if (result != NULL) {
+				result->handle = (NpWebApiHandle *)filter;
+				result->prev = list->sentinel->prev;
+				node = list->sentinel;
+				result->next = node;
+				node->prev->next = result;
+				count = list->count + 1;
+				list->sentinel->prev = result;
+				list->count = count;
+				*pResult = result;
+				return;
+			}
+		}
+	}
+	*pResult = NULL;
+}
+
+int npWebApiFilterListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list, NpWebApiHandleNode **pAt)
+{
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *next;
+	NpWebApiHandleNode *link;
+	NpWebApiHandleNode *prev;
+	void *allocator;
+	unsigned long count;
+
+	node = *pAt;
+	next = node->next;
+	link = next;
+	if (node == list->sentinel) {
+		SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", "erase",
+			"../../../../../app/common/src/np/include/np_common_ps4/npext/list.h", 364, "HALT_ASSERT",
+			"at != end()"));
+		link = node->next;
+	}
+	prev = node->prev;
+	link->prev = prev;
+	prev->next = node->next;
+	allocator = list->allocator;
+	if (allocator != NULL)
+		SceNpCommonPs4_6B428829(allocator, node);
+	count = list->count - 1;
+	list->count = count;
+	*pResult = next;
+	return count;
+}
+
+int npWebApiLibContextCreatePushEventFilter(NpWebApiLibContext *ctx, const char *types, int typeCount)
+{
+	NpWebApiPushFilter *filter;
+	NpWebApiHandleNode *node;
+	void *memory;
+	int result;
+
+	filter = NULL;
+	memory = SceNpCommonPs4_D154D84F(20, ctx->heapBlock->poolObject);
+	if (memory != NULL)
+		filter = npWebApiPushFilterConstruct((NpWebApiPushFilter *)memory, ctx);
+	if (filter != NULL) {
+		result = npWebApiPushFilterInit(filter, types, typeCount);
+		if (result >= 0) {
+			SceNpCommonPs4_F5840D6E(&ctx->lock);
+			npWebApiFilterListInsert(&node, &ctx->filters, &filter);
+			if (node != NULL) {
+				SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+				return npWebApiPushFilterGetId(filter);
+			}
+			result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+			SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+		}
+	} else {
+		result = NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+	}
+	if (filter != NULL)
+		((void (*)(NpWebApiPushFilter *))filter->vtable[1])(filter);
+	return result;
+}
+
+int npWebApiLibContextDeletePushEventFilter(NpWebApiLibContext *ctx, int filterId)
+{
+	NpWebApiHandleNode *sentinel;
+	NpWebApiHandleNode *node;
+	NpWebApiHandleNode *erased;
+	NpWebApiHandleNode *at;
+	NpWebApiPushFilter *filter;
+	int result;
+
+	result = 0;
+	SceNpCommonPs4_F5840D6E(&ctx->lock);
+	sentinel = ctx->filters.sentinel;
+	node = NULL;
+	if (sentinel != NULL)
+		node = sentinel->next;
+	if (node == sentinel) {
+		result = NP_WEBAPI_ERROR_FILTER_NOT_FOUND;
+	} else {
+		while (npWebApiPushFilterGetId((NpWebApiPushFilter *)node->handle) != filterId) {
+			node = node->next;
+			if (node == ctx->filters.sentinel) {
+				result = NP_WEBAPI_ERROR_FILTER_NOT_FOUND;
+				goto out;
+			}
+		}
+		filter = (NpWebApiPushFilter *)node->handle;
+		if (filter != NULL)
+			((void (*)(NpWebApiPushFilter *))filter->vtable[1])(filter);
+		at = node;
+		npWebApiFilterListErase(&erased, &ctx->filters, &at);
+	}
+out:
+	SceNpCommonPs4_4A1C1C3C(&ctx->lock);
+	return result;
+}
+
+int npWebApiCreatePushEventFilter(int libCtxId, const SceNpWebApiPushEventDataType *pDataType, unsigned int num)
+{
+	NpWebApiLibContext *libCtx;
+	int result;
+
+	result = npWebApiResolveUserContext(libCtxId, 1);
+	if (result >= 0) {
+		libCtx = npWebApiFindLibContext(libCtxId, 0);
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+		if (libCtx != NULL)
+			result = npWebApiLibContextCreatePushEventFilter(libCtx, (const char *)pDataType, num);
+		if (libCtx != NULL)
+			npWebApiLibContextRelease(libCtx);
+	}
+	return result;
+}
+
+int npWebApiDeletePushEventFilter(int libCtxId, int filterId)
+{
+	NpWebApiLibContext *libCtx;
+	int result;
+
+	libCtx = npWebApiFindLibContext(libCtxId, 0);
+	result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+	if (libCtx != NULL) {
+		result = npWebApiLibContextDeletePushEventFilter(libCtx, filterId);
+		npWebApiLibContextRelease(libCtx);
+	}
+	return result;
+}

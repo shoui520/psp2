@@ -41,6 +41,7 @@ extern "C" {
 #define NP_WEBAPI_ERROR_INVALID_CONTENT_TYPE	-2141902568	/* 0x80552918 */
 #define NP_WEBAPI_ERROR_HEADER_NOT_ALLOWED	-2141902562	/* 0x8055291e */
 #define NP_WEBAPI_ERROR_REQUEST_REFERENCED	-2141902573	/* 0x80552913 */
+#define NP_WEBAPI_ERROR_FILTER_NOT_FOUND	-2141902581	/* 0x8055290b */
 #define NP_WEBAPI_ERROR_NOT_INITIALIZED		-2141902335	/* 0x80552a01 */
 #define NP_WEBAPI_ERROR_ALREADY_INITIALIZED	-2141902334	/* 0x80552a02 */
 
@@ -193,7 +194,8 @@ typedef struct NpWebApiLibContext {
 	int userContextCount;
 	void *pushEventObject;
 	NpWebApiHandleList handles;
-	unsigned char reserved1[36];
+	NpWebApiHandleList filters;
+	unsigned char reserved1[24];
 	int reserved116;
 	unsigned char aborted;
 	unsigned char flag121;
@@ -211,6 +213,27 @@ extern void npWebApiHandleListInsert(NpWebApiHandleNode **pResult, NpWebApiHandl
 	NpWebApiHandle **pHandle) __attribute__((noinline));
 extern int npWebApiHandleListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
 	NpWebApiHandleNode **pAt) __attribute__((noinline));
+/* a push event filter (20 bytes): its ID, the types it listens for (65-byte records) and its library context */
+typedef struct NpWebApiPushFilter {
+	const void *const *vtable;
+	int id;
+	void *types;
+	int typeCount;
+	NpWebApiLibContext *libContext;
+} NpWebApiPushFilter;
+
+extern const void *g_pushFilterVtable[];	/* 0x8100ed9c */
+extern void npWebApiFilterListInsert(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiPushFilter **pFilter) __attribute__((noinline));
+extern int npWebApiFilterListErase(NpWebApiHandleNode **pResult, NpWebApiHandleList *list,
+	NpWebApiHandleNode **pAt) __attribute__((noinline));
+extern NpWebApiPushFilter *npWebApiPushFilterConstruct(NpWebApiPushFilter *filter, NpWebApiLibContext *libCtx) __attribute__((noinline));
+extern int npWebApiPushFilterInit(NpWebApiPushFilter *filter, const char *types, int typeCount) __attribute__((noinline));
+extern int npWebApiPushFilterGetId(NpWebApiPushFilter *filter) __attribute__((noinline));
+extern int npWebApiLibContextCreatePushEventFilter(NpWebApiLibContext *ctx, const char *types, int typeCount) __attribute__((noinline));
+extern int npWebApiLibContextDeletePushEventFilter(NpWebApiLibContext *ctx, int filterId) __attribute__((noinline));
+extern int npWebApiCreatePushEventFilter(int libCtxId, const SceNpWebApiPushEventDataType *pDataType, unsigned int num);
+extern int npWebApiDeletePushEventFilter(int libCtxId, int filterId);
 extern int npWebApiLibContextCreateHandle(NpWebApiLibContext *ctx);
 extern int npWebApiLibContextIsHandleUnusable(NpWebApiLibContext *ctx, NpWebApiHandle *handle)
 	__attribute__((noinline));
