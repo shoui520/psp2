@@ -6,6 +6,7 @@
 #include "np_webapi_internal.h"
 
 static unsigned int s_filterCounter;		/* 0x81010020 */
+static unsigned int s_serviceFilterCounter;	/* 0x81010028 */
 
 NpWebApiPushFilter *npWebApiPushFilterConstruct(NpWebApiPushFilter *filter, NpWebApiLibContext *libCtx)
 {
@@ -713,4 +714,48 @@ out:
 	}
 	npWebApiLibContextUnlock(filter->libContext);
 	return result;
+}
+
+int npWebApiServiceFilterInit(NpWebApiServiceFilter *filter, NpWebApiHandle *handle, const char *name, int arg,
+	const char *types, unsigned int typeCount)
+{
+	int result;
+	SceSize length;
+	const char *source;
+	int offset;
+	unsigned int i;
+	int id;
+
+	if (name != NULL) {
+		result = npWebApiServiceFilterResolve(filter, handle, name, arg);
+		if (result < 0)
+			return result;
+		length = sceClibStrnlen(name, 0xFFFFFFFF);
+		sceClibStrncpy(filter->name, name, length);
+	} else {
+		filter->all = 1;
+	}
+	filter->handle = arg;
+	if (types != NULL && typeCount != 0) {
+		filter->types = (void *)npWebApiLibContextPoolAlloc(filter->libContext, 65 * typeCount);
+		if (filter->types == NULL)
+			return NP_WEBAPI_ERROR_OUT_OF_MEMORY;
+		sceClibMemset(filter->types, 0, 65 * typeCount);
+		source = types;
+		offset = 0;
+		for (i = typeCount; i != 0; i--) {
+			sceClibMemcpy_safe((char *)filter->types + offset, source, 0x41);
+			offset += 65;
+			source += 65;
+		}
+		filter->typeCount = typeCount;
+	}
+	s_serviceFilterCounter++;
+	id = s_serviceFilterCounter;
+	if (s_serviceFilterCounter >= 0xEFFFFFFF) {
+		id = 1;
+		s_serviceFilterCounter = 1;
+	}
+	filter->id = id;
+	return id;
 }
