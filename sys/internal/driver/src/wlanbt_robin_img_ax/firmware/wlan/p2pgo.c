@@ -293,7 +293,7 @@ made:
 	connection->channel = ps->groupChannel;
 	if (p2pDirectInspectState() != 0)
 		ps->channelShared = 1;
-	macMgmtUpdateContext(role->channelFlags, role->channel);
+	macMgmtUpdateContext(role->band, role->channel);
 	wlanMacFilterMasksUpdate();
 	return 0;
 }

@@ -124,7 +124,8 @@ extern struct WlanChannelContext wlanChannelContext;				/* 0x55158 */
 
 /* Not converted yet; provisional names. */
 void macMgmtPrepareContext(uint8_t *band, uint32_t *extra);			/* 0x3566a */
-int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel);		/* 0x355d2 */
+struct WlanBandChannel;	/* robin/conn.h */
+int macMgmtUpdateContext(struct WlanBandChannel band, uint8_t channel);		/* 0x355d2 */
 void macMgmtCheckContext(void);							/* 0x3564a */
 void macMgmtConfigureContext(const uint8_t *htOperation);				/* 0x3560c */
 void macMgmtValidateContext(void);						/* 0x3565e */

@@ -201,6 +201,7 @@ void wlanJoinFinish(uint8_t result)
 	uint8_t *response;
 	unsigned int length;
 	unsigned int flags;
+	uint8_t *capability;
 	UINT posture;
 
 	wlanSlotClearWindow(wlanJoin.slot);
@@ -239,14 +240,15 @@ void wlanJoinFinish(uint8_t result)
 		if (wlanJoin.capability[1] & WLAN_CAPABILITY1_SPECTRUM_MGMT)
 			wlanTxPowerUpdateConnection(wlanJoin.connection, wlanJoin.channel, 0);
 		wlanTxPowerApply();
-		hostCmdConnectionChanged();
-		wlanJoin.connection->bssCapability[0] = wlanJoin.capability[0];
-		wlanJoin.connection->bssCapability[1] = wlanJoin.capability[1];
+		hostCmdConnectionChanged(wlanJoin.connection);
+		capability = wlanJoin.connection->bssCapability;
+		capability[0] = wlanJoin.capability[0];
+		capability[1] = wlanJoin.capability[1];
 		wlanJoin.connection->dtimPeriod = 0;
 		wlanPsHostMode = 0;
-		wlanJoin.connection->flags = (wlanJoin.connection->flags & ~WLAN_CONN_PRIVACY) |
-					     ((wlanJoin.privacy << 2) & 7);
-		flags = (wlanJoin.connection->flags & ~WLAN_CONN_WAPI) | ((wlanJoin.wapi << 4) & 0x1f);
+		flags = (wlanJoin.connection->flags & ~WLAN_CONN_PRIVACY) | ((wlanJoin.privacy << 2) & 7);
+		wlanJoin.connection->flags = flags;
+		flags = (flags & ~WLAN_CONN_WAPI) | ((wlanJoin.wapi << 4) & 0x1f);
 		wlanJoin.connection->flags = flags;
 		if (!wlanJoin.portPending) {
 			if (!(wlanJoin.connection->flags2 & WLAN_CONN2_ASSOCIATED) ||
@@ -724,7 +726,7 @@ int wlanJoinAssociate(struct WlanConnection *connection, HostCmd_DS_802_11_ASSOC
 }
 
 /* 0x126fa: the AP answered the authentication. */
-void wlanJoinAuthResult(int result, uint16_t statusCode)
+void wlanJoinAuthResult(uint8_t result, uint16_t statusCode)
 {
 	wlanJoin.statusCode = statusCode;
 	wlanJoin.state = WLAN_JOIN_AUTH_DONE;
@@ -741,7 +743,7 @@ void wlanJoinAuthResult(int result, uint16_t statusCode)
 }
 
 /* 0x1275e: the AP answered the (re)association. */
-void wlanJoinAssocResult(int result, uint16_t statusCode)
+void wlanJoinAssocResult(uint8_t result, uint16_t statusCode)
 {
 	wlanJoin.state = WLAN_JOIN_ASSOC_DONE;
 	wlanJoin.statusCode = statusCode;

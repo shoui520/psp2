@@ -216,7 +216,7 @@ static __attribute__((noinline)) uint32_t keyApi_UpdateKeys(struct WlanConnectio
 done:
 	wlanBaTablesChangedHandler();
 	if (pwkey != NULL && IS_KEY_STATE_ENABLED(pwkey))
-		hostCmdConnectionChanged();
+		hostCmdConnectionChanged(connPtr);
 	return result;
 }
 
@@ -332,7 +332,7 @@ uint32_t keyApi_ApUpdateKeyMaterial(struct WlanConnection *connPtr, int updateGr
 		}
 		keyApiSta_SetKeyFromKeyData(updateGrpKey, &keyBuffer->key, cipher, keyData);
 	}
-	hostCmdConnectionChanged();
+	hostCmdConnectionChanged(connPtr);
 	return 0;
 }
 

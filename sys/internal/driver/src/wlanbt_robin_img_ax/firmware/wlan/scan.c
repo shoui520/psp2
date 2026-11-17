@@ -70,7 +70,8 @@ __attribute__((noinline)) int macMgmtFormatEntry(void)
 	wlanScanState.repeat = 0;
 	wlanScanState.ssidIndex = 0;
 	channel = &scan->channels[index];
-	if (!wlanSlotSetChannel(channel->channelFlags, channel->channel) ||
+	if (!wlanSlotSetChannel((struct WlanBandChannel){ .channelFlags = channel->channelFlags },
+				channel->channel) ||
 	    wlanSlotSetDuration(scan->slot, 1000 * SCAN_LE16(channel->maxDwell)) != WLAN_SLOT_OK)
 		return wlanSlotAbort(scan->slot, 6);
 	if (channel->flags & 1)

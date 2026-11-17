@@ -274,7 +274,7 @@ static int wlanTablesInit(void)
 	wlanHostEventQueueInit();
 	wlanDomainClear();
 	wlanPsReleaseHeader();
-	macMgmtUpdateContext(0, 6);
+	macMgmtUpdateContext((struct WlanBandChannel){ .channelFlags = 0 }, 6);
 	macMgmtCheckContext();
 	antDivStart();
 	wlanWmmClear();

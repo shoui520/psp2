@@ -99,16 +99,15 @@ void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel, 
 }
 
 /* 0x355d2: the radio goes to the channel, unless it is there. */
-int macMgmtUpdateContext(uint8_t channelFlags, unsigned int channel)
+int macMgmtUpdateContext(struct WlanBandChannel band, uint8_t channel)
 {
-	uint8_t flags = channelFlags;
-
-	if (channel != wlanChannelContext.channel || flags != wlanChannelContext.flags) {
-		wlanSetChannel(channel, &flags, 1);
-		wlanChannelContext.flags = flags;
+	if (channel != wlanChannelContext.channel ||
+	    memcmp(&band.channelFlags, &wlanChannelContext.flags, sizeof(band.channelFlags)) != 0) {
+		wlanSetChannel(channel, &band.channelFlags, 1);
+		wlanChannelContext.flags = band.channelFlags;
 		wlanChannelContext.channel = channel;
 		if (wlanChannelContext.savedChannel == 0) {
-			wlanChannelContext.savedFlags = flags;
+			wlanChannelContext.savedFlags = band.channelFlags;
 			wlanChannelContext.savedChannel = channel;
 		}
 	}
@@ -217,7 +216,8 @@ int macMgmtSyncContext(struct WlanConnection *connection)
 
 	wlanTxPowerSetLinkLimit(wlanChannelContext.linkPowerLimit, 0);
 	if (connection->interfaceType != 3 || p2pBssActiveGet(connection) == 0)
-		macMgmtUpdateContext(wlanChannelContext.savedFlags, wlanChannelContext.savedChannel);
+		macMgmtUpdateContext((struct WlanBandChannel){ .channelFlags = wlanChannelContext.savedFlags },
+				     wlanChannelContext.savedChannel);
 	adhoc = 0;
 	if (connection->interfaceType == 1)
 		adhoc = (connection->flags2 & 0x10) != 0;
@@ -496,7 +496,8 @@ void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *fra
 int macMgmtSetupContext(struct WlanConnection *connection)
 {
 	macMgmtFilterState(&connection->machine);
-	romHsmStart(&connection->machine, &wlanIbssStates.verify);
+	/* the root is the first of its machine's states (wlanIbssStates.clear) */
+	romHsmStart(&connection->machine, &((struct WlanIbssStates *)connection->machine.root)->verify);
 	return 0;
 }
 

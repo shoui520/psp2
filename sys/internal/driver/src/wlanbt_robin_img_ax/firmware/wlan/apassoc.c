@@ -48,7 +48,7 @@
 void wlanSubmitControlFrame(struct WlanConnection *connection, const uint8_t *frame);	/* 0x3b9f0 */
 
 /* The association request goes back with the BSS's own elements (custom ones too) as a response, after the station is let go of. */
-int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument)
+int macMgmtHandlePacket(OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 	WlanWirelessFrame *frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
@@ -141,21 +141,21 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 	fmCoexComputeTable(frame, request, &elements, &length);
 	if (status != 0) {
 		PUT_U16(body + 2, status);
-		return macMgmtHandlePacket(response, 0);
+		return macMgmtHandlePacket(response);
 	}
 	length = wlanParseIes(elements, length, &ies);
 	if (fmCoexCheckTable(frame, &ies, length, connection->networkSsid, connection->networkSsidLength) != 0)
-		return macMgmtHandlePacket(response, 0);
+		return macMgmtHandlePacket(response);
 	if (macMgmtUpdatePacket(connection, ies.pWps, ies.pRsn, ies.pWpa, ies.pWapi, &code) == -1) {
 		PUT_U16(body + 2, code);
-		return macMgmtHandlePacket(response, 0);
+		return macMgmtHandlePacket(response);
 	}
 	if (info->apMicError.disableStaAsso != 0)
 		goto denied;
 	if (fmCoexValidateTable(frame, &ies, info->rates, rates, &ratesCount, &extendedCount) != 0 ||
 	    (info->htEnabled != 0 &&
 	     fmCoexConfigureTable(frame, request, &ies, &role->keyMgmt.staUcstCipher, info->htCapability) != 0))
-		return macMgmtHandlePacket(response, 0);
+		return macMgmtHandlePacket(response);
 	if (extendedCount != 0)
 		wlanAppendIe(frame, 0x32, rates + 8, extendedCount);
 	if (info->htEnabled == 1 && ies.pHtCap != NULL)
@@ -335,7 +335,7 @@ int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWireless
 
 denied:
 	PUT_U16(body + 2, WLAN_STATUS_ASSOC_DENIED);
-	return macMgmtHandlePacket(response, 0);
+	return macMgmtHandlePacket(response);
 }
 
 /* The peer is deauthenticated (reason 2: its authentication is no longer valid). */
@@ -430,7 +430,7 @@ void macMgmtQueryPacket(struct WlanConnection *connection)
 	int count;
 
 	KeyMgmtStopHskTimer(connection, 1);
-	osaCancelTimer(info->grpRekeyTimer);
+	osaCancelTimer(info->apMicTimer);
 	if (info->securityMode.wpa || info->securityMode.wpa2) {
 		if (connection->keyBlocks[0] != NULL)
 			wlanKeyBufferFree(connection->keyBlocks[0]);
@@ -631,7 +631,7 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	uint8_t *cursor;
 	unsigned int ratesLength;
 	unsigned int bitmap;
-	uint8_t contextFlags, contextChannel;
+	struct WlanBandChannel context;
 
 	if (connection->interfaceType != 2 && (connection->interfaceType != 3 || connection->mode == 0))
 		return 0;
@@ -653,13 +653,12 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 	wlanBaTablesChangedHandler();
 	SOC_MAC_EVENT_CONTROL |= 0x20;
 	if (wlanP2pConnection(connection) != 0) {
-		contextFlags = role->channelFlags;
-		contextChannel = role->channel;
+		context = role->band;
 	} else {
-		contextFlags = channelOut[0];
-		contextChannel = channelOut[1];
+		context.channelFlags = channelOut[0];
+		context.channel = channelOut[1];
 	}
-	macMgmtUpdateContext(contextFlags, contextChannel);
+	macMgmtUpdateContext(context, context.channel);
 	macMgmtCheckContext();
 	ratesLength = (uint8_t)romStringLength(info->rates, 14);
 	bitmap = wlanRateBitmapAll(info->rates, ratesLength, 0, 0, (const WlanHtCapabilityIe *)connection->htCapability);

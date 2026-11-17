@@ -173,15 +173,15 @@ void macMgmtUpdateEntry(uintptr_t argument)
 	struct WlanConnection *connection = (struct WlanConnection *)argument;
 	const uint8_t *rates = wlanLocalState->rates;
 	struct WlanBssTiming timing;
-	uint8_t flags[2];
+	struct WlanBandChannel band;
 	unsigned int count;
 	OsaBuffer *buffer;
 
 	wlanMacFlush();
-	flags[0] = 0;
-	flags[1] = connection->channel;
-	macMgmtProcessContext(connection, &flags[0], flags[1]);
-	macMgmtUpdateContext(flags[0], connection->channel);
+	band.channelFlags = 0;
+	band.channel = connection->channel;
+	macMgmtProcessContext(connection, &band.channelFlags, band.channel);
+	macMgmtUpdateContext(band, connection->channel);
 	macMgmtCheckContext();
 	count = (uint8_t)romStringLength(rates, 14);
 	macMgmtQueryContext(connection, rates, count,

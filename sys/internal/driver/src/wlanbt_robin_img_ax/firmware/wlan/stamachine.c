@@ -369,7 +369,7 @@ int macMgmtResolveState(struct WlanConnection *connection, unsigned int security
 		}
 	}
 	wlanBaTablesChangedHandler();
-	return hostCmdConnectionChanged();
+	return hostCmdConnectionChanged(connection);
 }
 
 /* The connection is left: its peer, state and keys are dropped. */

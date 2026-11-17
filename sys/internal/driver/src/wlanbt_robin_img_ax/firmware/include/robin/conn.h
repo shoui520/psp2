@@ -376,9 +376,11 @@ struct WlanConnectionInfo {
 struct WlanSubscribeEvents;
 
 /* A channel and its band, as the roles keep them. */
+/* Passed by value (a word: armcc loads it whole). */
 struct WlanBandChannel {
 	uint8_t channelFlags;		/* WlanChannelFlags: the band is in bits 0-1 */
 	uint8_t channel;
+	uint8_t reserved[2];
 };
 
 /* The access point's association context: its first block is set up with the connection. */
@@ -396,7 +398,6 @@ struct WlanConnectionRole {
 		};
 		struct WlanBandChannel band;
 	};
-	uint8_t reserved10[2];
 	uint32_t listenInterval;
 	uint8_t reserved16[4];
 	struct WlanApPsQueue psQueue;	/* the peer's frames while it dozes */

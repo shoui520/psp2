@@ -128,7 +128,7 @@ int wlanSlotSetWindow(uint32_t handle, uint32_t delay);
 int wlanSlotClearWindow(uint32_t handle);
 int wlanSlotAbort(uint32_t handle, int code);
 void wlanSlotCancelById(uint32_t handle);
-int wlanSlotSetChannel(int channel, int band);
+int wlanSlotSetChannel(struct WlanBandChannel band, uint8_t channel);
 int wlanSlotBegin(void);
 int wlanSlotQueryStart(int power);
 int wlanSlotHasCurrentAlias(void);

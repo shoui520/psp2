@@ -215,8 +215,8 @@ int wlanJoinHandleFrame(uint32_t handle, const struct WlanTxStatus *status, OsaB
 int wlanJoinSetup(HostCmd_DS_802_11_ASSOCIATE *command, unsigned int length);
 int wlanJoinAssociate(struct WlanConnection *connection, HostCmd_DS_802_11_ASSOCIATE *command,
 		      unsigned int length);
-void wlanJoinAuthResult(int result, uint16_t statusCode);
-void wlanJoinAssocResult(int result, uint16_t statusCode);
+void wlanJoinAuthResult(uint8_t result, uint16_t statusCode);
+void wlanJoinAssocResult(uint8_t result, uint16_t statusCode);
 void wlanJoinInit(void);
 int wlanJoinReported(OsaBuffer *buffer);
 uint16_t wlanJoinListenInterval(void);

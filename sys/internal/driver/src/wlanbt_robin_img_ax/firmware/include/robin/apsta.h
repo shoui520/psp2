@@ -133,7 +133,7 @@ void fmCoexTrackTable(WlanWirelessFrame *frame, const void *ssid, const void *ra
 void fmCoexManageTable(uint8_t *table);							/* 0x4c0cc */
 
 /* wlan/apassoc.c */
-int macMgmtHandlePacket(OsaBuffer *buffer, uintptr_t argument);				/* 0x3902c */
+int macMgmtHandlePacket(OsaBuffer *buffer);				/* 0x3902c */
 int macMgmtUpdatePacket(struct WlanConnection *connection, const uint8_t *wps, const void *rsn,
 			const void *wpa, const uint8_t *wapi, uint16_t *status);	/* 0x390a2 */
 int macMgmtConfigurePacket(struct WlanConnection *connection, const WlanWirelessFrame *request,

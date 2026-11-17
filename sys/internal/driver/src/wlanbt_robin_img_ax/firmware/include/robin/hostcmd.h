@@ -119,6 +119,6 @@ void hostCmd0078HooksInit(void);
 int hostCmd0078Parse(uint32_t *status, uint8_t *body, struct HostCmdCryptoRequest *request,
 		     int8_t *lengthChange);						/* SQRAM 0xc00078d6 */
 
-int hostCmdConnectionChanged(void);						/* 0x18c0a */
+int hostCmdConnectionChanged(struct WlanConnection *connection);	/* 0x18c0a */
 
 #endif /* ROBIN_HOSTCMD_H */

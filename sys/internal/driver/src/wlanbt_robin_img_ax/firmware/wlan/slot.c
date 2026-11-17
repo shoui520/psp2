@@ -503,9 +503,9 @@ void wlanSlotCancelById(uint32_t handle)
 	wlanSlotUnlock();
 }
 
-int wlanSlotSetChannel(int channel, int band)
+int wlanSlotSetChannel(struct WlanBandChannel band, uint8_t channel)
 {
-	return macMgmtUpdateContext(channel, band) == 0;
+	return macMgmtUpdateContext(band, channel) == 0;
 }
 
 /* The current request gets the channel: switches, reports and calls back. */
@@ -515,7 +515,8 @@ int wlanSlotBegin(void)
 	wlanReportEvent(SCHED.current->connection, NULL, 22);
 	wlanReportEvent(SCHED.current->connection, NULL, 21);
 	if (SCHED.current->mode != 0)
-		wlanSlotSetChannel(SCHED.current->bssType, SCHED.current->mode);
+		wlanSlotSetChannel((struct WlanBandChannel){ .channelFlags = SCHED.current->bssType },
+				   SCHED.current->mode);
 	SCHED.current->state = WLAN_SLOT_RUNNING;
 	if (SCHED.current->elapsed != NULL)
 		*SCHED.current->elapsed = (uint32_t)romGetTimerTimestamp() -

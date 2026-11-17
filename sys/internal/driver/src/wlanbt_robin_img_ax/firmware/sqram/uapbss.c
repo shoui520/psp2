@@ -1267,7 +1267,7 @@ int p2pListenSlotStart(struct WlanConnection *connection, uint32_t slot)
 	struct WlanConnection *station = wlanConnectionFirst(0);
 	struct WlanConnection *accessPoint = wlanConnectionFirst(2);
 	uint32_t channel = 0;
-	uint32_t flags;
+	struct WlanBandChannel flags;	/* the current channel's */
 	unsigned int duration;
 
 	if (station != NULL && (station->flags2 & WLAN_CONN2_ASSOCIATED))

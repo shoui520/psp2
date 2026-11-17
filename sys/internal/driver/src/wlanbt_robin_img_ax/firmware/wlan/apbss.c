@@ -209,7 +209,7 @@ void macMgmtPrepareFrame(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	struct WlanConnection *peer;
-	uint8_t channel[2];
+	struct WlanBandChannel channel;
 
 	if ((uint32_t)wlanConnectionGetCount() == wlanConnectionDtimHoldCount()) {
 		romLibResolveState();
@@ -224,8 +224,8 @@ void macMgmtPrepareFrame(struct WlanConnection *connection)
 			wlanPsStartHostModeTimer(connection);
 	}
 	wlanConnectionDtimRelease(connection);
-	macMgmtNotifyPacket(connection, channel);
-	macMgmtUpdateContext(channel[0], channel[1]);
+	macMgmtNotifyPacket(connection, &channel.channelFlags);
+	macMgmtUpdateContext(channel, channel.channel);
 	macMgmtCheckContext();
 	if ((info->securityMode.wpa || info->securityMode.wpa2) && wlanInterfaceNeedsSecurity(connection) != 0)
 		KeyMgmtStartGrpRekeyTimer(connection);

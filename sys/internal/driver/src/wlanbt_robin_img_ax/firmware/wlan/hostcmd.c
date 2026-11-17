@@ -330,7 +330,7 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 }
 
 /* The host changed the keys or rates of a connection. */
-int hostCmdConnectionChanged(void)
+int hostCmdConnectionChanged(struct WlanConnection *connection)
 {
 	wlanAnyConnectionHostFlag8();
 	return romLibScheduleState();
@@ -943,7 +943,7 @@ int hostCmdProcess(void)
 			connection->hostFlags = body[0];
 			connection->txOptions = body[1];
 			wlanBaTablesChangedHandler();
-			hostCmdConnectionChanged();
+			hostCmdConnectionChanged(connection);
 			goto done;
 
 		case 43:	/* HostCmd_CMD_802_11_AD_HOC_START */
@@ -1064,7 +1064,7 @@ int hostCmdProcess(void)
 				hostCmd005e(connection, body + 2, hdr + HOSTCMD_U16(hdr + 2));
 				wlanBaTablesChangedHandler();
 				if ((uintptr_t)connection->keyBlocks[1] + 28 != 0 && (connection->keyBlocks[1]->key.hdr.keyState & 1)) {
-					hostCmdConnectionChanged();
+					hostCmdConnectionChanged(connection);
 				}
 				if (wlanSessionId != 0 && wlanRoleOtherOnly() && (connection->flags & 1))
 					wlanPsStartHostModeTimer(connection);
@@ -1907,7 +1907,7 @@ int hostCmdProcess(void)
 				MAC_300_MODE &= ~8u;
 				osaTaskSleep(10);
 				wlanRxFrameTypeMask = HOSTCMD_U16(body + 4);
-				macMgmtUpdateContext(body[10], body[11]);
+				macMgmtUpdateContext((struct WlanBandChannel){ .channelFlags = body[10] }, body[11]);
 				macMgmtCheckContext();
 				wlanConnectionSetPrimary(connection);
 				hostCmd0102(1);

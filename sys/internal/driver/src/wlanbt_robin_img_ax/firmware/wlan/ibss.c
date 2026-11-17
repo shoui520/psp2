@@ -243,7 +243,7 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 			channel = join->phyParamSet[2];
 		}
 		wlanPsVerifyFrame(3);
-		macMgmtUpdateContext(channelFlags, channel);
+		macMgmtUpdateContext((struct WlanBandChannel){ .channelFlags = channelFlags }, channel);
 		macMgmtCheckContext();
 		wlanIbssJoinSetup(connection, join);
 		wlanAdHocJoinToStart(&start, join);
@@ -269,7 +269,7 @@ void wlanIbssJoin(struct WlanConnection *connection, const WlanAdHocBssDesc *joi
 /* AD_HOC_START: starts an IBSS with the host's parameters. */
 void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *start)
 {
-	uint8_t channel[2];		/* channel flags, number */
+	struct WlanBandChannel channel;
 	uint32_t flags;
 	uint32_t extra;
 	unsigned int count;
@@ -284,14 +284,14 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 		wlanPsVerifyFrame(3);
 		connection->beaconPeriod = start->beaconPeriod;
 		if (start->reserved2[1]) {
-			channel[0] = start->reserved2[0];
-			channel[1] = start->reserved2[1];
+			channel.channelFlags = start->reserved2[0];
+			channel.channel = start->reserved2[1];
 		} else {
-			channel[0] = flags;
-			channel[1] = start->phyParamSet[2];
+			channel.channelFlags = flags;
+			channel.channel = start->phyParamSet[2];
 		}
-		macMgmtProcessContext(connection, channel, channel[1]);
-		macMgmtUpdateContext(channel[0], channel[1]);
+		macMgmtProcessContext(connection, &channel.channelFlags, channel.channel);
+		macMgmtUpdateContext(channel, channel.channel);
 		macMgmtCheckContext();
 		wlanAdHocSsid(start->ssid, connection->localAddress, connection->networkSsid,
 			      &connection->networkSsidLength);
@@ -310,7 +310,7 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
 					      (IEEEtypes_MacAddr_t *)connection->localAddress,
 					      (IEEEtypes_MacAddr_t *)connection->interfaceAddress);
 		if (start->capability & WLAN_CAPABILITY_SPECTRUM_MANAGEMENT)
-			macMgmtResolveEntry(connection, channel[1], 1);
+			macMgmtResolveEntry(connection, channel.channel, 1);
 		wlanProtection.flags = (wlanProtection.flags & ~WLAN_PROTECTION_DSSS_BSS) |
 				       ((wlanRatesDsssOnly(rates) & 1) << 6);
 		if (wlanConnectionSlotAttach(connection))
