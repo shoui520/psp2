@@ -808,3 +808,22 @@ fail:
 		((void (*)(NpWebApiServiceFilter *))filter->vtable[1])(filter);
 	return result;
 }
+
+int npWebApiCreateServicePushEventFilter(int libCtxId, int handleId, const char *service, SceNpServiceLabel label,
+	const SceNpWebApiPushEventDataType *pDataType, unsigned int num)
+{
+	NpWebApiLibContext *libCtx;
+	int result;
+
+	result = npWebApiResolveUserContext(libCtxId, 1);
+	if (result >= 0) {
+		libCtx = npWebApiFindLibContext(libCtxId, 0);
+		result = NP_WEBAPI_ERROR_LIB_CONTEXT_NOT_FOUND;
+		if (libCtx != NULL)
+			result = npWebApiLibContextCreateServicePushEventFilter(libCtx, handleId, service, label,
+				(const char *)pDataType, num);
+		if (libCtx != NULL)
+			npWebApiLibContextRelease(libCtx);
+	}
+	return result;
+}
