@@ -249,9 +249,23 @@ void commandRequestReceive(void)
 	commandRequest.state = HOST_REQUEST_RECEIVE;
 }
 
+/* the pending device bits 0x00b2 sets for the dongle's output off and on (0x00102603's
+   multi-connector switch: bits 1 and 0) */
+#if BOARD_102603
+#define COMMAND_PENDING_DONGLE_OFF	0x02
+#define COMMAND_PENDING_DONGLE_ON	0x01
+#else
+#define COMMAND_PENDING_DONGLE_OFF	0x20
+#define COMMAND_PENDING_DONGLE_ON	0x10
+#endif
+
+/* every board's 0x010001xx: 0x00c0 without transition 0x5b, 0x00c0's parameter window
+   0xff000000, the transitions' result read as a byte */
+#define COMMAND_10X		(FW_SINCE(0x01000104) && !FW_SINCE(0x01000306))
+
 /* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 (0xff000000 before
-   0x01000104 and in the retail boards' 0x010001xx) */
-#if FW_SINCE(0x01000104) && !FW_RETAIL_10X
+   0x01000104 and in the 0x010001xx) */
+#if FW_SINCE(0x01000104) && !COMMAND_10X
 #define COMMAND_PARAMETER_WINDOW	0xfc000000
 #else
 #define COMMAND_PARAMETER_WINDOW	0xff000000
@@ -458,7 +472,19 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x00b1:		/* sceSysconCtrlWirelessPowerDown */
+#if HW_IS(0x00102603)
+			/* the wireless power line, P6.7 */
+			if (commandRequest.length == 1) {
+				if (commandRequestData[0] == 1)
+					P6.7 = 1;
+				else
+					P6.7 = 0;
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+			} else
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+#else
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+#endif
 			break;
 		case 0x00b2:		/* sceSysconCtrlHostOutputViaDongle */
 			if (commandRequest.length == 1) {
@@ -466,14 +492,14 @@ allowed:
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 4, 0);
 				else if (commandRequestData[0] == 0) {
 					boardSetMultiCnOutput(0);
-					powerDeviceSetPending(0x20);
+					powerDeviceSetPending(COMMAND_PENDING_DONGLE_OFF);
 					dly_tsk(25);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
 					boardSetMultiCnOutput(1);
-					powerDeviceSetPending(0x10);
+					powerDeviceSetPending(COMMAND_PENDING_DONGLE_ON);
 					dly_tsk(10);
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				}
@@ -482,7 +508,9 @@ allowed:
 			break;
 #if FW_SINCE(0x00090804)	/* not in 0x00090206 */
 		case 0x00b3:		/* P6.7 */
-#if FW_SINCE(0x01000104)
+#if BOARD_102603 && FW_SINCE(0x01000104)
+			commandRequestAnswer[0] = 0;	/* P6.7 is an output (0x00b1) or not wired */
+#elif FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = P6.7;
 #else
 			if (configGet()->CONFIG_WLAN_LINE)
@@ -557,7 +585,7 @@ allowed:
 					parameter = COMMAND_PARAMETER(commandRequestData);
 					parameter &= ~0x00800000;
 					stateSetWakeMask(parameter);
-#if !FW_RETAIL_10X
+#if !COMMAND_10X
 				} else if (commandRequestData[0] == 0x13) {
 					transition = 0x5b;
 					parameter = COMMAND_PARAMETER(commandRequestData);
@@ -568,7 +596,7 @@ allowed:
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
 					break;
 				}
-#if FW_RETAIL_10X
+#if COMMAND_10X
 				if ((unsigned char)STATE_TRANSITION_NOMASK(transition) == 0)
 #else
 				if (STATE_TRANSITION_NOMASK(transition) == 0)
@@ -588,7 +616,7 @@ allowed:
 				if (commandRequestData[0] == 0x5a) {
 #if FW_SINCE(0x01000104)
 					transition = 0x56;
-#if FW_RETAIL_10X
+#if COMMAND_10X
 					if ((unsigned char)STATE_TRANSITION(transition) == 0)
 #else
 					if (STATE_TRANSITION(transition) == 0)
