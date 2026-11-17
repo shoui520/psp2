@@ -177,7 +177,7 @@ OsaBuffer *wlanReplyFrameFree(OsaBuffer *buffer);
 int wlanMefProcessFrame(OsaBuffer *buffer, uint32_t *wake, uint32_t mode);
 int wlanMefReplyPattern(struct WlanConnection *connection);
 int wlanMefDisable(void);
-unsigned int wlanTidToAccessCategory(int tid);
+unsigned int wlanTidToAccessCategory(uint8_t tid);
 unsigned int wlanAccessCategoryToQueue(unsigned int category);
 extern uint16_t wlanMefStackLimit;
 extern uint16_t wlanMefDepthLimit;

@@ -163,7 +163,7 @@ void wlanBaAddbaResponseReceived(struct WlanConnection *connection, int result,
 				 const uint8_t *peer, uint8_t *response);	/* 0x30438 */
 void wlanBaDelbaTimeout(uint32_t record);					/* 0x304e5 */
 void wlanBaAddbaTimeout(uint32_t record);					/* 0x30521 */
-int wlanBaAllowedForTid(struct WlanConnection *connection, unsigned int tid);	/* 0x30552 */
+int wlanBaAllowedForTid(struct WlanConnection *connection, uint8_t tid);	/* 0x30552 */
 int hostCmd00ce(uint8_t *body, unsigned int length);				/* 0x3058e */
 int hostCmd00cf(uint8_t *body, unsigned int length);				/* 0x306ca */
 int hostCmd00d0(uint8_t *body, unsigned int length);				/* 0x30728 */

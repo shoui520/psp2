@@ -313,7 +313,7 @@ void wlanBaAddbaTimeout(uint32_t record)
 }
 
 /* Whether a Block Ack may be set up for the TID: not where the TID's access category is delivery enabled (U-APSD). */
-int wlanBaAllowedForTid(struct WlanConnection *connection, unsigned int tid)
+int wlanBaAllowedForTid(struct WlanConnection *connection, uint8_t tid)
 {
 	if (connection->mode == 2 && connection->qosPeer == 1) {
 		struct WlanConnectionRole *slot = wlanConnectionInfoSlot(connection);

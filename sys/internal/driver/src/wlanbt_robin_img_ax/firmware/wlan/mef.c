@@ -810,9 +810,9 @@ int wlanMefDisable(void)
 }
 
 /* The access category of a TID: 1 for background, 2 for video, 3 for voice, 0 otherwise. */
-unsigned int wlanTidToAccessCategory(int tid)
+unsigned int wlanTidToAccessCategory(uint8_t tid)
 {
-	switch ((int8_t)tid) {
+	switch (tid) {
 	case 1:
 	case 2:
 		return 1;

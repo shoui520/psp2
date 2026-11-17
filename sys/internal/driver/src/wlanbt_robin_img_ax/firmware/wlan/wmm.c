@@ -619,7 +619,7 @@ int wlanWmmCurrentSlotNumber(void)
 }
 
 /* A transmit Block Ack window changed the queue and ring a TID's frames use. */
-int wlanWmmSetBaWindow(unsigned int tid, unsigned int queue, unsigned int ring)
+int wlanWmmSetBaWindow(uint8_t tid, unsigned int queue, unsigned int ring)
 {
 	struct WlanWmmSlot *slot = &wlanWmm.slots[tid];
 
@@ -670,16 +670,15 @@ void wlanWmmSetApsdSupport(uint8_t *ie, int enable)
 }
 
 /* A QoS Null frame from the access point to a peer's TID ends a U-APSD service period. */
-int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid)
+void wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid)
 {
 	OsaBuffer *buffer;
 	struct WlanReplyFrame *request;
 	WlanWirelessFrame *frame;
 	unsigned int sequence;
-	int result;
 
 	if (connection == NULL)
-		return 0;
+		return;
 	while ((buffer = wlanMgmtAllocFrame(connection, 300)) == NULL)
 		osaTaskSleep(1);
 	frame = (WlanWirelessFrame *)((uint8_t *)buffer + buffer->dataOffset);
@@ -687,8 +686,8 @@ int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned
 			   connection->localAddress);
 	frame->duration[0] = 2;
 	frame->duration[1] = 1;
-	sequence = (((frame->sequenceControl[1] << 8) | frame->sequenceControl[0]) & 0xf) |
-		   (wlanQosNullSequence++ << 4);
+	sequence = wlanQosNullSequence++ << 4;
+	sequence |= ((frame->sequenceControl[1] << 8) | frame->sequenceControl[0]) & 0xf;
 	frame->sequenceControl[0] = (uint8_t)sequence;
 	frame->sequenceControl[1] = (uint8_t)(sequence >> 8);
 	frame->frameControl[1] |= 2;
@@ -704,10 +703,8 @@ int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned
 	request->descriptor.header.bssType = (request->descriptor.header.bssType >> 3 << 3) | (tid & 7) | 0x10;
 	request->descriptor.header.wire.packetLength[0] = wlanTxDataRate(connection, 0);
 	request->queue = wlanAccessCategoryToQueue(wlanTidToAccessCategory(tid));
-	result = wlanTxSubmit(buffer);
-	if (result != 1)
+	if (wlanTxSubmit(buffer) != 1)
 		osa_BufferFree(buffer);
-	return result;
 }
 
 /* The defaults of the parameter element the access point announces without WMM. */

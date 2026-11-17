@@ -166,13 +166,13 @@ int hostCmd0081(uint8_t *body);					/* 0x1e83c: HostCmd_CMD_WMM_QUEUE_STATS */
 void wlanWmmResetCounters(void);				/* 0x1e84a */
 int wlanWmmHasElement(void);					/* 0x1e9ac */
 int wlanWmmCurrentSlotNumber(void);				/* 0x1e9ba */
-int wlanWmmSetBaWindow(unsigned int tid, unsigned int queue, unsigned int ring);	/* 0x1e9c2 */
+int wlanWmmSetBaWindow(uint8_t tid, unsigned int queue, unsigned int ring);	/* 0x1e9c2 */
 void wlanWmmClear(void);					/* 0x1e9f2 */
 void wlanWmmInitDefaults(void);					/* 0x1eb4e */
 void wlanWmmSetupQueue(unsigned int queue);			/* 0x1eb5e */
 int wlanWmmApplyApEdca(struct WlanConnection *connection);	/* 0x1ea08 */
 void wlanWmmSetApsdSupport(uint8_t *ie, int enable);		/* 0x1ea54 */
-int wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid);	/* 0x1ea6c */
+void wlanWmmSendQosNull(struct WlanConnection *connection, int moreData, unsigned int tid);	/* 0x1ea6c */
 unsigned int wlanWmmTid(unsigned int priority);			/* 0x41e76 */
 unsigned int wlanGroupNextSequence(unsigned int tid);		/* 0x4204c */
 unsigned int wlanWmmLastSequence(unsigned int tid);		/* 0x4205a */
