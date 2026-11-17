@@ -724,6 +724,22 @@ extern NpWebApiRequest *npWebApiRequestSetField236(NpWebApiRequest *request, int
 extern NpWebApiRequest *npWebApiRequestSetResponseHeaders(NpWebApiRequest *request, int headers, int size);
 extern void *npWebApiRequestGetData(NpWebApiRequest *request);
 extern char *npWebApiAuthObjectGetAccessToken(void *object);
+/* the user context's object at +44: the library context, the account's access token and title token */
+typedef struct NpWebApiAuthObject {
+	const void *vtable;
+	NpWebApiLibContext *libContext;
+	int field8;
+	unsigned char reserved12[4];
+	char accessToken[264];
+	char titleToken[8];
+} NpWebApiAuthObject;
+
+extern int SceNpManager_4110B787(int *pToken);
+extern int SceNpManager_FDE78C74(int token, void *accessToken);
+extern int SceNpManager_3907F96A(int token);
+extern int SceNpCommonPs4_25D1C02B(int handle, int a2, void *token, int a4);
+extern int SceNpCommonPs4_13798894(int handle, int a2, void *token, int a4);
+extern int npWebApiAuthObjectRequestAccess(NpWebApiAuthObject *auth, NpWebApiRequest *request, unsigned char mode);
 extern int npWebApiRequestPrepareMultipart(NpWebApiRequest *request);
 extern int SceNpCommonPs4_61DAB7E5(SceUInt32 seed);
 extern int SceNpCommonPs4_00F74689(void);

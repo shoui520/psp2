@@ -124,3 +124,82 @@ done:
 		npWebApiUserContextRelease(userCtx);
 	return result;
 }
+
+/* asks the account manager for the access of the user (a token handle), has the token for the request
+   made (the secure side's, or the shell's, by the mode) and gives both handles back */
+int npWebApiAuthObjectRequestAccess(NpWebApiAuthObject *auth, NpWebApiRequest *request, unsigned char mode)
+{
+	int token;
+	int handle;
+	int result;
+	int params[2];
+
+	handle = 0;
+	token = 0;
+	result = SceNpManager_4110B787(&token);
+	if (result >= 0) {
+		npWebApiLibContextLock(auth->libContext);
+		npWebApiRequestSetField228(request, token);
+		if (npWebApiRequestGetBusy(request) != 0) {
+			result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+			npWebApiLibContextUnlock(auth->libContext);
+			goto done;
+		}
+		npWebApiLibContextUnlock(auth->libContext);
+		result = SceNpManager_FDE78C74(token, auth->accessToken);
+		if (result >= 0) {
+			npWebApiLibContextLock(auth->libContext);
+			SceNpManager_3907F96A(token);
+			npWebApiRequestSetField228(request, 0);
+			token = 0;
+			npWebApiLibContextUnlock(auth->libContext);
+			sceClibMemset(params, 0, 8);
+			params[0] = npWebApiLibContextZero();
+			params[1] = (int)SceNpCommonPs4_31DB2D97(npWebApiLibContextGetPool2(auth->libContext));
+			if (mode != 0)
+				result = SceNpCommonPs4_FB0B3FBD(params);
+			else
+				result = SceNpCommonPs4_639086A3(params);
+			if (result >= 0) {
+				npWebApiLibContextLock(auth->libContext);
+				handle = result;
+				npWebApiRequestSetField236(request, result);
+				if (npWebApiRequestGetBusy(request) != 0) {
+					result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+					npWebApiLibContextUnlock(auth->libContext);
+					goto done;
+				}
+				npWebApiLibContextUnlock(auth->libContext);
+				if (mode != 0)
+					result = SceNpCommonPs4_25D1C02B(result, auth->field8, auth->titleToken, 0);
+				else
+					result = SceNpCommonPs4_13798894(result, auth->field8, auth->titleToken, 0);
+				if (result >= 0) {
+					npWebApiLibContextLock(auth->libContext);
+					if (mode != 0)
+						result = SceNpCommonPs4_9C4F1236(handle);
+					else
+						result = SceNpCommonPs4_530CAFDA(handle);
+					npWebApiRequestSetField236(request, 0);
+					npWebApiLibContextUnlock(auth->libContext);
+					handle = 0;
+				}
+			}
+		}
+	}
+done:
+	npWebApiLibContextLock(auth->libContext);
+	if (token != 0) {
+		SceNpManager_3907F96A(token);
+		npWebApiRequestSetField228(request, 0);
+	}
+	if (handle != 0) {
+		if (mode != 0)
+			SceNpCommonPs4_9C4F1236(handle);
+		else
+			SceNpCommonPs4_530CAFDA(handle);
+		npWebApiRequestSetField236(request, 0);
+	}
+	npWebApiLibContextUnlock(auth->libContext);
+	return result;
+}
