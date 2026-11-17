@@ -113,7 +113,7 @@ void SceNpCommonPs4_0A7044DA(const unsigned char *data, SceSize size)
 	sceClibPrintf("\n");
 }
 
-int SceNpCommonPs4_F50BD96A(void)
+int SceNpCommonPs4_F50BD96A(int printed)
 {
 	*(volatile int *)0 = 0;
 	return 0;

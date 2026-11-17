@@ -43,6 +43,41 @@ struct NpCommonPs4Allocator {
 	void *context;
 };
 
+/* the build Sony's assert paths name: one per firmware */
+#if defined(FW_TYPE_CEX)
+#define NP_COMMON_PS4_BUILD "J01509657"
+#elif FW_VERSION == 0x03630011
+#define NP_COMMON_PS4_BUILD "J01508051"
+#else
+#define NP_COMMON_PS4_BUILD "J01509658"
+#endif
+#define NP_COMMON_PS4_SOURCE(path) "W:\\Build\\" NP_COMMON_PS4_BUILD "\\vsh\\app\\common\\src\\np\\np_common_ps4\\" path
+
+/* Sony's assert: prints where it failed, then stops (SceNpCommonPs4_F50BD96A) */
+#define NP_COMMON_PS4_ASSERT(condition, function, file, line, text) \
+	do { \
+		if (!(condition)) \
+			SceNpCommonPs4_F50BD96A(sceClibPrintf("Assertion in %s(%s:%d): %s(%s)\n", function, \
+				NP_COMMON_PS4_SOURCE(file), line, "ASSERT", text)); \
+	} while (0)
+
+/* a mutex of the library (three words; Sony's layout is not known) */
+struct NpCommonPs4Mutex {
+	SceUInt32 state[3];
+};
+
+/* npext/handle/cancelable.cpp: a handle that can be cancelled, with the handles above and below it */
+struct NpCommonPs4Cancelable {
+	const void *const *vtable;
+	struct NpCommonPs4Mutex mutex;
+	int cancelErrcode;
+	int cancelFlags;
+	SceUInt8 cancelable;
+	int lockCount;
+	struct NpCommonPs4Cancelable *subCancel;
+	struct NpCommonPs4Cancelable *parentCancel;
+};
+
 /* a block of memory the library allocated, and its size */
 void *NpCommonPs4MspaceAllocate(SceSize size, void *context);
 void *NpCommonPs4MspaceReallocate(void *pointer, SceSize size, void *context);
@@ -78,11 +113,19 @@ struct NpCommonPs4HeapStats {
 	SceSize currentInUse;
 };
 
+int SceNpCommonPs4_A2A8493B(struct NpCommonPs4Mutex *mutex);	/* lock */
+int SceNpCommonPs4_6BA5A164(struct NpCommonPs4Mutex *mutex);	/* unlock */
+int SceNpCommonPs4_8AA7E995(struct NpCommonPs4Mutex *mutex, const char *name, int recursive);
+int SceNpCommonPs4_63EED478(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_294F0B1A(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_4266D870(struct NpCommonPs4Mutex *mutex);
+int SceNpCommonPs4_C78F5DF5(struct NpCommonPs4Mutex *mutex);
 int SceNpCommonPs4_F56B0EAB(SceInt64 *pTime);
 int SceNpCommonPs4_A25DA29A(SceUInt32 *pTime);
 int SceNpCommonPs4_93DA3594(const char *data, int length);
 void SceNpCommonPs4_0A7044DA(const unsigned char *data, SceSize size);
-int SceNpCommonPs4_F50BD96A(void);
+int SceNpCommonPs4_F50BD96A(int printed);
+int SceNpCommonPs4_BB5282C8(void *memory);
 void SceNpCommonPs4_31DB2D97(void);
 int SceNpCommonPs4_AA980113(struct NpCommonPs4Allocator *allocator, void *pointer);
 int SceNpCommonPs4_67BBE5F9(struct NpCommonPs4Allocator *allocator, void *pointer, SceSize size);

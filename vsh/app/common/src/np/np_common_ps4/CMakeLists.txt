@@ -5,6 +5,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	base64.cpp
 	strtox.cpp
 	itoa.cpp
+	npext/handle/cancelable.cpp
 	npext/thread/cond.cpp
 	npext/thread/event_flag.cpp
 	npext/thread/mutex.cpp
