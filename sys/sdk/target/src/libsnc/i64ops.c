@@ -93,7 +93,7 @@ unsigned long long __udivdi3(unsigned long long n, unsigned long long d)
 		if (dd.w.lo == 0)
 			return __aeabi_ldiv0(n);
 		if ((dd.w.lo & -dd.w.lo) == dd.w.lo)
-			return __lshrdi3(n, 31 - __builtin_clz(dd.w.lo));
+			return __lshrdi3(n, (int)(31 - __builtin_clz(dd.w.lo)));
 	}
 	if (d > n)
 		return 0;

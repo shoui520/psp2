@@ -750,15 +750,15 @@ int npAsmRequestParseCacheControl(struct NpAsmRequest *request)
 				if (size != 0) {
 					i = 0;
 					scan = header;
-					while (*scan != '=') {
+					do {
+						if (*scan == '=') {
+							++i;
+							break;
+						}
 						++i;
 						++scan;
-						if (size <= i)
-							goto parse;
-					}
-					++i;
+					} while (size > i);
 				}
-parse:
 				request->maxAge = (int)sceClibStrtoll(&header[i], NULL, 10);
 			}
 		}

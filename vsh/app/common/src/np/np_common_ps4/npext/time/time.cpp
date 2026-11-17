@@ -138,7 +138,7 @@ int SceNpCommonPs4_6B9F019D(const SceInt64 *pNow, const SceInt64 *pStart, SceUIn
 
 	result = timeLeft(pNow, pStart, seconds * 1000000, left);
 	if (pLeftSeconds != NULL)
-		*pLeftSeconds = left[0] / 1000000;
+		*pLeftSeconds = (SceInt64)left[0] / 1000000;
 	return result;
 }
 

@@ -481,8 +481,9 @@ __attribute__((noinline)) int npAsmConnectionRequestTitleToken(struct NpAsmConne
 		sceClibMemset(host, 0, 0x30);
 		sceClibMemset(environment, 0, 0x11);
 		result = sceNpCommonGetNpEnviroment(environment);
-		if (result >= 0) {
+		if (result >= 0)
 			sceClibSnprintf(host, 0x30, "asm.%s.community.playstation.net", environment);
+		if (result >= 0) {
 			sceClibMemset(url, 0, 0x100);
 			sceClibSnprintf(url, 0x100, "%s://%s/asm/%s/apps/%s/npTitleToken", "https", host, "v1", titleId);
 			sceClibMemset(body, 0, 0x100);
@@ -495,7 +496,7 @@ __attribute__((noinline)) int npAsmConnectionRequestTitleToken(struct NpAsmConne
 				sceClibSnprintf(signing, 0x24, "%s.%lld", titleId, seconds);
 				length = sceClibStrnlen(signing, 0xFFFFFFFF);
 				r = npAsmHmacSha256(titleSecret, 128, signing, length, digest);
-				if (r >= 0) {
+				if (r >= 0 && signature != NULL) {
 					sceClibMemset(signature, 0, 0x2D);
 					r = SceNpCommonPs4_EC456A83(digest, (unsigned char *)signature, 32);
 				}
@@ -536,8 +537,8 @@ __attribute__((noinline)) int npAsmConnectionRequestBaseUrl(struct NpAsmConnecti
 	SceSize length;
 	SceSize nameLength;
 	char *escaped;
+	SceUInt8 needsEscape;
 	char environment[17];
-	char needsEscape;
 	char host[48];
 	char url[260];
 	char response[2048];
@@ -552,7 +553,7 @@ __attribute__((noinline)) int npAsmConnectionRequestBaseUrl(struct NpAsmConnecti
 		goto finish;
 	}
 	nameLength = sceClibStrnlen(serviceName, 0x80);
-	result = npAsmConnectionCheckEscape(serviceName, nameLength, &needsEscape, &length);
+	result = npAsmConnectionCheckEscape(serviceName, nameLength, (char *)&needsEscape, &length);
 	escaped = NULL;
 	if (result >= 0) {
 		escaped = NULL;
@@ -1065,19 +1066,19 @@ __attribute__((noinline)) int npAsmConnectionCheckEscape(const char *name, SceSi
 				if (escaped == length) {
 					i = 0;
 					if (length != 0) {
-						while (*scan != 32) {
+						do {
+							if (*scan == 32) {
+								needs = 1;
+								break;
+							}
 							++i;
 							++scan;
-							if (i >= length)
-								goto done;
-						}
-						needs = 1;
+						} while (i < length);
 					}
 				}
 			} else {
 				needs = 1;
 			}
-done:
 			if (pNeedsEscape != NULL)
 				*pNeedsEscape = needs;
 			if (pLength != NULL)

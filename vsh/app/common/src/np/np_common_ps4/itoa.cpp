@@ -233,7 +233,7 @@ int NpCommonPs4Int64ToString(char *buf, SceSize size, SceInt64 value, int base, 
 	do {
 		last = count++;
 		v /= (SceUInt64)(SceInt64)base;
-	} while (v != 0);
+	} while (v > 0);
 	if (buf != NULL) {
 		if (size < last + 2)
 			return NP_COMMON_PS4_ERROR_BUFFER_TOO_SMALL;
@@ -250,7 +250,7 @@ int NpCommonPs4Int64ToString(char *buf, SceSize size, SceInt64 value, int base, 
 			}
 			*p-- = ch;
 			v /= (SceUInt64)(SceInt64)base;
-		} while (v != 0);
+		} while (v > 0);
 		buf[last + 1] = '\0';
 	}
 	if (pLength != NULL)
@@ -272,7 +272,7 @@ int NpCommonPs4UInt64ToString(char *buf, SceSize size, SceUInt64 value, int base
 	extra = 0;
 	if (base <= 0 || base > 36)
 		return NP_COMMON_PS4_ERROR_80558009;
-	if ((flags & 4) && value != 0) {
+	if ((flags & 4) && value > 0) {
 		if (buf != NULL) {
 			if (size < 2)
 				return NP_COMMON_PS4_ERROR_BUFFER_TOO_SMALL;
@@ -310,7 +310,7 @@ int NpCommonPs4UInt64ToString(char *buf, SceSize size, SceUInt64 value, int base
 	do {
 		last = count++;
 		v /= (SceUInt64)(SceInt64)base;
-	} while (v != 0);
+	} while (v > 0);
 	if (buf != NULL) {
 		if (size < last + 2)
 			return NP_COMMON_PS4_ERROR_BUFFER_TOO_SMALL;
@@ -327,7 +327,7 @@ int NpCommonPs4UInt64ToString(char *buf, SceSize size, SceUInt64 value, int base
 			}
 			*p-- = ch;
 			v /= (SceUInt64)(SceInt64)base;
-		} while (v != 0);
+		} while (v > 0);
 		buf[last + 1] = '\0';
 	}
 	if (pLength != NULL)
