@@ -27,8 +27,6 @@ struct BtRateHistory btRateHistory[8] __attribute__((section(".itcm.bss")));	/* 
 
 /* The host's connection setup event filters (btLmpLcQueryFrame()). */
 struct BtEventFilter btEventFilters[BT_EVENT_FILTERS] __attribute__((section(".itcm.bss")));	/* 0x59f50 */
-uint8_t btEventFilterCount __attribute__((section(".itcm.bss")));		/* 0x5a050 */
-uint8_t btEventFilterAccept __attribute__((section(".itcm.bss")));		/* 0x5a051 */
 
 __attribute__((noinline)) void btLmpLcHandleBuffer(void)
 {
@@ -2943,10 +2941,8 @@ void btLmpLcAcquireFrame(unsigned int link)
 	btLtsRomProcessState(link);
 	flags = *(BtHalf *)(records + link * 40 + 6);
 	kind = flags & 3;
-	if (!((1u << kind) & ((flags >> 10) & 0xf)) &&
-	    (*(volatile uint16_t *)&btLinkControlWord[2] | 1u << (kind + 4)) == 0)
-		return;
-	btLinkControlWord[2] &= ~(1u << (kind + 4));
+	if (((1u << kind) & ((flags >> 10) & 0xf)) || (btLinkControlWord[2] | 1u << (kind + 4)) != 0)
+		btLinkControlWord[2] &= ~(1u << (kind + 4));
 }
 
 /* The control word's bit for the link's kind follows the record's mask, then the ROM's step. */

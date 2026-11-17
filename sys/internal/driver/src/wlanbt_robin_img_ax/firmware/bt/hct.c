@@ -7,6 +7,7 @@
  * The filename and all role names are inferred; no source name survives.
  */
 #include <stddef.h>
+#include "robin/btbuffer.h"
 #include "robin/btcontext.h"
 #include "robin/btpool.h"
 #include "robin/btrom.h"
@@ -23,43 +24,6 @@
 #include "robin/sys.h"
 #include "robin/wlan.h"
 
-
-/*
- * The clock rates the Bluetooth side needs during coexistence (0x56e40), set
- * by hctClockRequirementSet(). A policy bit says the chip's rate meets one
- * of them; while it does, the RF block that goes with it stays on.
- */
-#define HCT_CLOCK_REFERENCE_MET	0x01	/* rfBlock0 */
-#define HCT_CLOCK_BASE_MET	0x02	/* rfBlock1 */
-#define HCT_CLOCK_SLOWEST_MET	0x04	/* rfBlock4 */
-#define HCT_CLOCK_SCHEDULING	0x08	/* hctEnableCoexScheduling() */
-
-/* hctClockRequirementSet()'s selectors; bit 31 applies the requirements at once. */
-enum {
-	HCT_CLOCK_NONE = 0,
-	HCT_CLOCK_REFERENCE = 1,
-	HCT_CLOCK_CORE = 2,
-	HCT_CLOCK_AUX = 3,
-	HCT_CLOCK_BASE = 4,
-	HCT_CLOCK_MODE = 5,
-	HCT_CLOCK_BUS = 6,
-	HCT_CLOCK_VOTE = 7,
-};
-#define HCT_CLOCK_APPLY		0x80000000
-
-struct HctClockRequirements {
-	uint32_t referenceRate;		/* 32000 while mode is above 1 */
-	uint32_t coreRate;
-	uint32_t auxRate;
-	uint32_t busRate;
-	uint32_t voteRate;
-	uint8_t mode;
-	uint8_t policy;			/* HCT_CLOCK_* */
-	uint8_t reserved[2];
-};
-
-static struct HctClockRequirements hctClock __attribute__((section(".itcm.bss")));	/* 0x56e40 */
-
 /* BT link controller RAM patches (bt/lmp, not converted). */
 void btLmpLcConfigureDescriptor(void);
 void btLmpLcCheckDescriptor(uint32_t handle, uint8_t *data, uint32_t type, uint32_t direction);
@@ -67,29 +31,34 @@ void btLmpLcResetTable(void);
 
 /* AMP controller callbacks (amp, not converted). */
 
-
-#define HCT_LINK_COUNT		11
-#define HCT_ACL_LINKS		7
+/* Message 5134 body: the packet pattern to match, as the host set it. */
+struct HctMatchSetup {
+	uint16_t frame;
+	uint16_t header;
+	uint8_t enabled;
+	uint8_t length;
+	uint8_t data[16];
+};
 
 /* Packet filter state; the fields are matched against incoming HCI data. */
-uint8_t hctCoexTickCount __attribute__((section(".itcm.rw")));
-uint8_t hctCoexDirty __attribute__((section(".itcm.rw")));
-uint8_t hctHostActive __attribute__((section(".itcm.rw")));
+uint8_t hctHostActive __attribute__((section(".itcm.rw"))) = 0;
 uint8_t hctModeCurrent __attribute__((section(".itcm.rw"))) = 2;
 uint8_t hctModeRequested __attribute__((section(".itcm.rw"))) = 2;
-uint8_t hctSleepRequested __attribute__((section(".itcm.rw")));
-uint32_t hctDeviceContext __attribute__((section(".itcm.rw")));
-void *btSdioDev __attribute__((section(".itcm.rw")));
-void *btHciDev __attribute__((section(".itcm.rw")));
-void *btSdioActiveHandle __attribute__((section(".itcm.rw")));
+uint8_t hctSleepRequested __attribute__((section(".itcm.rw"))) = 0;
+uint32_t hctDeviceContext __attribute__((section(".itcm.rw"))) = 0;
+void *btSdioDev __attribute__((section(".itcm.rw"))) = 0;
+void *btHciDev __attribute__((section(".itcm.rw"))) = 0;
+void *btSdioActiveHandle __attribute__((section(".itcm.rw"))) = 0;
 uint32_t hctChannelMask __attribute__((section(".itcm.rw"))) = 0xffffffff;
 const char *hctDriverName __attribute__((section(".itcm.rw"))) = "bt_hci";
-OsaBuffer *hctPending __attribute__((section(".itcm.rw")));
-uint16_t hctMatchFrame __attribute__((section(".itcm.rw"))) = 2;
-uint16_t hctMatchHeader __attribute__((section(".itcm.rw"))) = 0x1011;
-uint8_t hctMatchEnabled __attribute__((section(".itcm.rw")));
-uint8_t hctMatchLength __attribute__((section(".itcm.rw"))) = 1;
-uint8_t hctMatchData[64] __attribute__((section(".itcm.rw"))) = { 0x82 };
+OsaBuffer *hctPending __attribute__((section(".itcm.rw"))) = 0;
+struct HctMatchSetup hctMatch __attribute__((section(".itcm.rw"))) = {
+	.frame = 2,
+	.header = 0x1011,
+	.enabled = 0,
+	.length = 1,
+	.data = { 0x82 },
+};
 
 static struct MdevDriver hctSdioDriver __attribute__((section(".itcm.bss")));
 
@@ -110,249 +79,6 @@ struct HctLinkMessage {
 	uint16_t status;
 	uint32_t extra;
 };
-
-/*
- * 0x0001fdc4: drops the policy bit of a requirement the chip's rates no
- * longer meet. 1: a bit was dropped, so the caller checks again.
- */
-int hctClockCheckRequirements(void)
-{
-	int changed = 0;
-	uint32_t slowest;
-
-	if (hctClock.mode > 1)
-		hctClock.referenceRate = 32000;
-	if ((hctClock.policy & HCT_CLOCK_REFERENCE_MET) &&
-	    clockReferenceRate() < hctClock.referenceRate) {
-		changed = 1;
-		hctClock.policy &= ~HCT_CLOCK_REFERENCE_MET;
-	}
-	if (!(hctClock.policy & HCT_CLOCK_SLOWEST_MET))
-		return changed;
-	slowest = clockSlowestRateGet();
-	if (hctClock.coreRate > slowest || hctClock.busRate > slowest ||
-	    (!rfEventTransitionActive() &&
-	     (clockRequestedCore(3) > slowest || clockRequestedBus(3) > slowest)) ||
-	    clockRequestedCore(5) > slowest || clockRequestedBus(5) > slowest ||
-	    clockRequestedCore(1) > slowest || clockRequestedBus(1) > slowest ||
-	    clockRequestedCore(2) > slowest || clockRequestedBus(2) > slowest ||
-	    !(hctClock.policy & HCT_CLOCK_REFERENCE_MET) ||
-	    !(hctClock.policy & HCT_CLOCK_BASE_MET)) {
-		changed = 1;
-		hctClock.policy &= ~HCT_CLOCK_SLOWEST_MET;
-	}
-	return changed;
-}
-
-/* 0x0001fe7a: switches the RF blocks the policy bits keep on, and asks for the rates. */
-int hctClockApply(void)
-{
-	int state = sysIrqDisable();
-
-	while (hctClockCheckRequirements())
-		;
-	if ((hctClock.policy & HCT_CLOCK_REFERENCE_MET) && !rfBlock0Get())
-		rfBlock0Set(1);
-	if ((hctClock.policy & HCT_CLOCK_BASE_MET) && !rfBlock1Get())
-		rfBlock1Set(1);
-	if (hctClock.policy & HCT_CLOCK_SLOWEST_MET) {
-		if (!rfBlock4Get())
-			rfBlock4Set(1);
-	}
-	if (!(hctClock.policy & HCT_CLOCK_SLOWEST_MET)) {
-		if (rfBlock4Get())
-			rfBlock4Set(0);
-	}
-	if (!(hctClock.policy & HCT_CLOCK_BASE_MET) && rfBlock1Get())
-		rfBlock1Set(0);
-	if (!(hctClock.policy & HCT_CLOCK_REFERENCE_MET) && rfBlock0Get())
-		rfBlock0Set(0);
-	clockRequestCore(hctClock.coreRate, 0);
-	clockRequestAux(hctClock.auxRate, 0);
-	if (!(hctClock.policy & HCT_CLOCK_REFERENCE_MET))
-		clockSelectSource(hctClock.referenceRate == 32000);
-	clockRequestBus(hctClock.busRate, 0);
-	clockRequestVote(hctClock.voteRate, 0);
-	hctCoexDirty = 0;
-	sysIrqRestore(state);
-	return 0;
-}
-
-/* Sets the policy bit of a requirement the rate meets. */
-static inline void hctClockSlowestMet(uint32_t value)
-{
-	if (clockSlowestRateGet() >= value)
-		hctClock.policy |= HCT_CLOCK_SLOWEST_MET;
-	else
-		hctClock.policy &= ~HCT_CLOCK_SLOWEST_MET;
-}
-
-/*
- * 0x0001ff4e: sets one clock requirement (HCT_CLOCK_*), and applies them all
- * when HCT_CLOCK_APPLY is set. 1: coexistence scheduling is off.
- */
-int hctClockRequirementSet(int selector, uint32_t value)
-{
-	struct HctClockRequirements previous;
-	int apply = 0;
-
-	__aeabi_memcpy4(&previous, &hctClock, sizeof(previous));
-	if (!(hctClock.policy & HCT_CLOCK_SCHEDULING))
-		return 1;
-	if (selector < 0) {
-		selector &= ~HCT_CLOCK_APPLY;
-		apply = 1;
-	}
-	switch (selector) {
-	case HCT_CLOCK_REFERENCE:
-		if (clockReferenceRate() >= value)
-			hctClock.policy |= HCT_CLOCK_REFERENCE_MET;
-		else
-			hctClock.policy &= ~HCT_CLOCK_REFERENCE_MET;
-		hctClock.referenceRate = value;
-		break;
-	case HCT_CLOCK_CORE:
-		hctClockSlowestMet(value);
-		hctClock.coreRate = value;
-		break;
-	case HCT_CLOCK_AUX:
-		hctClockSlowestMet(value);
-		hctClock.auxRate = value;
-		break;
-	case HCT_CLOCK_BUS:
-		hctClockSlowestMet(value);
-		hctClock.busRate = value;
-		break;
-	case HCT_CLOCK_VOTE:
-		hctClockSlowestMet(value);
-		hctClock.voteRate = value;
-		break;
-	case HCT_CLOCK_BASE:
-		if (clockBaseRate() >= value)
-			hctClock.policy |= HCT_CLOCK_BASE_MET;
-		else
-			hctClock.policy &= ~HCT_CLOCK_BASE_MET;
-		break;
-	case HCT_CLOCK_MODE:
-		hctClock.mode = value;
-		break;
-	default:
-		break;
-	}
-	if (memcmp(&previous, &hctClock, sizeof(previous)) != 0)
-		hctCoexDirty = 1;
-	if (apply)
-		hctClockApply();
-	return 0;
-}
-
-/* 0x00020044: chooses the coexistence intervals from the state of the ACL links. */
-void hctComputeCoexIntervals(void)
-{
-	uint32_t slow = 4000;
-	uint32_t fast = 4000;
-	uint32_t interval;
-	uint8_t *link;
-	uint8_t *info;
-	unsigned int i;
-
-	for (i = 1; i < HCT_ACL_LINKS + 1; i++) {
-		link = btHccRomApplyState();
-		if (link[120 * i] == 2) {
-			info = btLcoRomVerifyState(i);
-			if (info[4] == 1 && info[6] == 1)
-				interval = link[120 * i + 3] ? 8000 : 4000;
-			else
-				interval = link[120 * i + 3] ? 32000 : 8000;
-			if (slow <= interval)
-				slow = interval;
-		} else if (link[120 * i] == 1) {
-			interval = 16000;
-			if (slow > 16000)
-				interval = slow;
-			slow = interval;
-		}
-	}
-	if (romCoexPrimaryFlag != 0) {
-		slow = 32000;
-		fast = 16000;
-	}
-	if (romTargetTable == 2) {
-		interval = 16000;
-		if (slow > 16000)
-			interval = slow;
-		slow = interval;
-		fast = 16000;
-	}
-	hctClockRequirementSet(HCT_CLOCK_REFERENCE, 16000);
-	hctClockRequirementSet(HCT_CLOCK_AUX, fast);
-	hctClockRequirementSet(HCT_CLOCK_CORE, slow);
-}
-
-/* 0x00020112: once per coexistence tick, refreshes the scheduling state. */
-void hctCoexTick(void)
-{
-	uint32_t slow;
-	uint32_t fast;
-
-	if (hctCoexTickCount < 5 || (SOC_EVENT_STATE & 4) != 0) {
-		if (hctCoexTickCount < 5)
-			hctCoexTickCount++;
-		if ((hctClock.policy & HCT_CLOCK_SCHEDULING) != 0) {
-			if (rfBlock3Get() == 0)
-				rfBlock3Set(1);
-			if (rfBlock2Get() == 0)
-				rfBlock2Set(1);
-			if (!rfEventTransitionActive())
-				rfEventTransitionSet(1);
-			hctClockRequirementSet(HCT_CLOCK_BASE, romHctCoexMode);
-			hctComputeCoexIntervals();
-			slow = 4000;
-			fast = 4000;
-			if (hctClock.coreRate > 16000) {
-				fast = 16000;
-				slow = 16000;
-			}
-			hctClockRequirementSet(HCT_CLOCK_VOTE, slow);
-			hctClockRequirementSet(HCT_CLOCK_BUS, fast);
-			if (hctCoexDirty != 0)
-				hctClockRequirementSet(HCT_CLOCK_APPLY | HCT_CLOCK_NONE, 0);
-		}
-	}
-}
-
-/* 0x000201a2: lowers the coexistence deadline when the programmed one is later. */
-uint32_t sysUpdateEventDeadline(void)
-{
-	uint32_t result = (uint32_t)hctClock.policy << 28;
-	uint32_t interval;
-	uint32_t parsed;
-
-	if ((hctClock.policy & HCT_CLOCK_SCHEDULING) != 0) {
-		interval = 16000;
-		parsed = clockRequestedCore(6);
-		result = rfBlock4Get();
-		if (result != 0) {
-			result = clockSlowestRateGet();
-			if (result >= 16000)
-				result = 16000;
-			interval = result;
-		}
-		if (parsed < interval) {
-			clockRequestCore(interval, 0);
-			hctCoexDirty = 1;
-			return 1;
-		}
-	}
-	return result;
-}
-
-/* 0x000201f6 */
-uint32_t *hctEnableCoexScheduling(void)
-{
-	hctClock.policy |= HCT_CLOCK_SCHEDULING;
-	return &hctClock.referenceRate;
-}
 
 /* 0x00020294: hands every queued packet to the SDIO device. */
 void hctFlushPending(void)
@@ -406,9 +132,9 @@ void hctDeliverToHost(uint8_t *payload, uint32_t event)
 	OsaBuffer *buffer = (OsaBuffer *)(payload - sizeof(OsaBuffer));
 
 	if (hctHostActive != 0 &&
-	    (hctMatchEnabled == 0 || !btLmpLcVerifyContext(0) || event == 3)) {
+	    (hctMatch.enabled == 0 || !btLmpLcVerifyContext(0) || event == 3)) {
 		btLmpLcAcquireContext(0);
-		if (hctMatchEnabled != 0 && hctPending != NULL)
+		if (hctMatch.enabled != 0 && hctPending != NULL)
 			hctFlushPending();
 		mdevForwardEvent(btSdioActiveHandle, buffer, payload[9] + 2, event);
 	} else {
@@ -454,8 +180,7 @@ int hctRxCallback(OsaBuffer *buffer)
 	case 5:
 		release = romHctMode == 1 ? romHctAcquireSession : romHctReleaseBuffer;
 		release(buffer->data + 12);
-		btBdhRomScheduleState();
-		return 0;
+		return btBdhRomScheduleState();
 	case 8:
 		buffer->dataOffset = 36;
 		link = (header[36] | (header[37] << 8)) & 0xfff;
@@ -475,59 +200,63 @@ void hctDropPending(uint32_t key, const void *address)
 	OsaBuffer *previous = hctPending;
 	OsaBuffer *next;
 	uint8_t *data;
-	uint32_t tag;
-	uint32_t match;
+	const uint8_t *peer;
 
 	while (buffer != NULL) {
-		tag = buffer->transportTag;
-		data = (uint8_t *)buffer + buffer->dataOffset;
-		if (tag == 2) {
+		if (buffer->transportTag == 2) {
+			data = (uint8_t *)buffer + buffer->dataOffset;
 			switch (data[8]) {
 			case 3:
-				match = (uint32_t)(data[11] | (data[12] << 8)) == key;
-				break;
+				if ((uint32_t)(data[11] | (data[12] << 8)) != key)
+					goto keep;
+				goto drop;
 			case 27:
-				match = (uint32_t)(data[10] | (data[11] << 8)) == key;
-				break;
+				if ((uint32_t)(data[10] | (data[11] << 8)) != key)
+					goto keep;
+				goto drop;
 			case 18:
-				match = memcmp(data + 11, address, 6) == 0;
+				peer = data + 11;
 				break;
 			case 32:
-				match = memcmp(data + 10, address, 6) == 0;
+				peer = data + 10;
 				break;
 			default:
-				match = 0;
-				break;
+				goto keep;
 			}
+			if (memcmp(peer, address, 6) != 0)
+				goto keep;
 		} else {
-			match = (uint32_t)(data[0] | ((data[1] << 8) & 0xfff)) == key && tag != 0;
+			data = (uint8_t *)buffer + buffer->dataOffset;
+			if ((uint32_t)((data[0] | (data[1] << 8)) & 0xfff) != key)
+				goto keep;
 		}
-		if (!match) {
-			previous = buffer;
-			buffer = hctNext(buffer);
-			continue;
-		}
+		if (buffer->transportTag == 0)
+			goto keep;
+drop:
 		next = hctNext(buffer);
 		if (buffer == hctPending)
 			hctPending = next;
 		else
 			*(OsaBuffer **)previous = next;
-		if (tag == 2)
+		if (buffer->transportTag == 2)
 			osa_MsgFree((void **)&data);
 		else
 			hctRxCallback(buffer);
 		buffer = next;
+		continue;
+keep:
+		previous = buffer;
+		buffer = hctNext(buffer);
 	}
 }
 
 /* Message 5100: releases the link context named by the message. */
 struct HctReleaseMessage {
 	uint32_t id;
-	uint8_t type;
-	uint8_t reserved[3];
+	uint32_t type;			/* the link; its low byte is used */
 	uint8_t first;
-	uint8_t reserved2;
-	uint16_t second;
+	uint8_t reserved;
+	uint8_t second[2];		/* little endian, unaligned */
 };
 
 /* 0x000204ba: the ROM's hook for ACL data (H4 packet type 2) to the host. */
@@ -539,9 +268,9 @@ void hctDeliverAclToHost(uint8_t *payload)
 /* 0x000204be */
 void hctReleaseLinkContext(struct HctReleaseMessage *message)
 {
+	uint32_t second = message->second[0] | (message->second[1] << 8);
 	uint32_t first = message->first;
-	uint32_t second = message->second;
-	uint32_t type = message->type;
+	uint8_t type = message->type;
 
 	osa_MsgFree((void **)&message);
 	btLmpLcReleaseContext(type, first, second);
@@ -554,15 +283,6 @@ struct HctCommandMessage {
 	uint8_t length;
 	uint8_t parameters[];
 } __attribute__((packed));
-
-/* Message 5134 body: the packet pattern to match, as the host set it. */
-struct HctMatchSetup {
-	uint16_t frame;
-	uint16_t header;
-	uint8_t enabled;
-	uint8_t length;
-	uint8_t data[];
-};
 
 /* 0x000204e4: ACL data from the controller, to the host or into the pending queue. */
 void hctSendAclToHost(struct HctLinkMessage *message)
@@ -580,38 +300,39 @@ void hctSendAclToHost(struct HctLinkMessage *message)
 	buffer->data[9] = handleWord >> 8;
 	buffer->data[10] = length;
 	buffer->data[11] = length >> 8;
-	header = message->data;
-	patternLength = (uint8_t)(header[0] - 2);
-	if (hctMatchEnabled == 0 || !btLmpLcVerifyContext(0) ||
-	    ((hctMatchFrame == (header[2] | (header[3] << 8))) &&
-	     (hctMatchHeader == (header[4] | (header[5] << 8))) &&
-	     hctMatchLength == patternLength &&
-	     memcmp(header + 6, hctMatchData, patternLength) == 0)) {
-		btLmpLcAcquireContext(0);
-		handle = handleWord & 0xfff;
-		btLmpLcCheckDescriptor(handle, message->data, handleWord >> 12, 1);
-		osa_MsgFree((void **)&message);
-		if (romHctControl[handle] != 0) {
-			btBdhRomUpdateContext(packet, (uint16_t)(length + 4));
-			buffer->transportTag = 5;
-			hctRxCallback(buffer);
-		} else if (hctHostActive != 0) {
-			if (romHctFilterAcl == NULL || romHctFilterAcl(buffer) == 0) {
-				if (romHctFlowEnabled != 0) {
-					--romHctChannel;
-					++romHctLinkInfo[handle].aclCount;
-				}
-				if (hctMatchEnabled != 0)
-					hctFlushPending();
-				mdevForwardEvent(btSdioActiveHandle, buffer, length + 4, 5);
+	if (hctMatch.enabled != 0 && btLmpLcVerifyContext(0)) {
+		header = message->data;
+		patternLength = (uint8_t)((header[0] | (header[1] << 8)) - 2);
+		if (hctMatch.frame != (header[2] | (header[3] << 8)) ||
+		    hctMatch.header != (header[4] | (header[5] << 8)) ||
+		    hctMatch.length != patternLength ||
+		    memcmp(header + 6, hctMatch.data, patternLength) != 0) {
+			osa_MsgFree((void **)&message);
+			romHctReleaseBuffer(&buffer->data[12]);
+			return;
+		}
+	}
+	btLmpLcAcquireContext(0);
+	handle = handleWord & 0xfff;
+	btLmpLcCheckDescriptor(handle, message->data, handleWord >> 12, 1);
+	osa_MsgFree((void **)&message);
+	if (romHctControl[handle] != 0) {
+		btBdhRomUpdateContext(packet, (uint16_t)(length + 4));
+		buffer->transportTag = 5;
+		hctRxCallback(buffer);
+	} else if (hctHostActive != 0) {
+		if (romHctFilterAcl == NULL || romHctFilterAcl(buffer) == 0) {
+			if (romHctFlowEnabled != 0) {
+				--romHctChannel;
+				++romHctLinkInfo[handle].aclCount;
 			}
-		} else {
-			buffer->transportTag = 5;
-			hctQueuePending(buffer);
+			if (hctMatch.enabled != 0)
+				hctFlushPending();
+			mdevForwardEvent(btSdioActiveHandle, buffer, length + 4, 5);
 		}
 	} else {
-		osa_MsgFree((void **)&message);
-		romHctReleaseBuffer(&buffer->data[12]);
+		buffer->transportTag = 5;
+		hctQueuePending(buffer);
 	}
 }
 
@@ -628,10 +349,11 @@ void hctRouteMessage(struct HctLinkMessage *message)
 int hctPostPacket(uint8_t *packet, uint32_t flag)
 {
 	struct HctLinkMessage *message;
+	uint16_t handle = packet[0] | (packet[1] << 8);
 
 	message = osa_MsgAlloc(sizeof(*message));
 	message->id = 510;
-	message->handle = packet[0] | (packet[1] << 8);
+	message->handle = handle;
 	message->length = packet[2] | (packet[3] << 8);
 	message->status = 0;
 	message->flag = flag;
@@ -765,7 +487,7 @@ int hctSendCommand(struct HctLinkMessage *message)
 			osa_BufferFree(buffer);
 			mdevIoctl(btSdioActiveHandle, 0x14, 0);
 		} else {
-			osa_MsgSend((void **)&message, romQueueBtCore);
+			osa_MsgSend((void **)&message, romQueueLc);
 		}
 		return 0;
 	}
@@ -795,7 +517,7 @@ void hctSendAclData(struct HctLinkMessage *message)
 			if (romHctMode == 1)
 				btBdhRomRecordState(message);
 			else
-				osa_MsgSend((void **)&message, romQueueBtCore);
+				osa_MsgSend((void **)&message, romQueueLc);
 			return;
 		}
 	}
@@ -811,7 +533,7 @@ int hctCreditReturned(struct HctLinkMessage *message)
 	unsigned int link = message->handle & 0xfff;
 
 	if (romHctLinkQueue[link].flags != 0) {
-		btBdhRomNotifyState(link, romQueueBtCore);
+		btBdhRomNotifyState(link, romQueueLc);
 		if (hctHostActive != 0 && romHctLinkQueue[link].credits < 3 &&
 		    hctDeviceContext == 0)
 			hctReceiveEvent(message);
@@ -820,14 +542,14 @@ int hctCreditReturned(struct HctLinkMessage *message)
 }
 
 /* 0x000209a2: a transfer for a link finished (messages 511 and 512). */
-int hctTransferDone(struct HctLinkMessage *message)
+void hctTransferDone(struct HctLinkMessage *message)
 {
 	unsigned int word;
 	unsigned int link;
 	struct RomHctLinkInfo *info;
 
 	if (romHctMode == 2)
-		return romHctMode;
+		return;
 	word = message->handle;
 	link = word >> 14 != 0 ? 0 : word & 0xfff;
 	info = &romHctLinkInfo[link];
@@ -836,7 +558,7 @@ int hctTransferDone(struct HctLinkMessage *message)
 		if (romHctQueueMode != 1 || message->id != 512)
 			hctCompleteTransfer(message->handle & 0xfff, 1);
 	}
-	return osa_MsgFree((void **)&message);
+	osa_MsgFree((void **)&message);
 }
 
 /* 0x000209fa: data for a link that is passed on or kept back (message 517). */
@@ -895,7 +617,7 @@ int hctSetEnabled(int enable)
 }
 
 /* 0x00020b14: tells the controller core about the new mode. */
-int hctSetCoreMode(int mode)
+void hctSetCoreMode(int mode)
 {
 	uint32_t *message;
 
@@ -903,26 +625,24 @@ int hctSetCoreMode(int mode)
 	message[0] = 3278;
 	*(uint8_t *)&message[1] = mode != 0;
 	hctModeCurrent = mode;
-	return osa_MsgSend((void **)&message, romQueueBtCore);
+	osa_MsgSend((void **)&message, romQueueLsc);
 }
 
 /* 0x00020b40: moves the controller to the requested mode (sleep or normal). */
-int hctApplyMode(int resume)
+void hctApplyMode(int resume)
 {
-	if (hctModeCurrent != hctModeRequested) {
-		if (hctModeRequested == 0)
-			return hctSetCoreMode(hctModeRequested);
-		if (hctModeRequested != 1)
-			return hctModeRequested;
-		if (resume != 0)
-			return hctSetCoreMode(hctModeRequested);
-		if (hctSleepRequested == 0) {
+	if (hctModeCurrent == hctModeRequested)
+		return;
+	if (hctModeRequested == 0) {
+		hctSetCoreMode(hctModeRequested);
+	} else if (hctModeRequested == 1) {
+		if (resume != 0) {
+			hctSetCoreMode(hctModeRequested);
+		} else if (hctSleepRequested == 0) {
 			hctSleepRequested = 1;
 			btLscRomApplyState(0x1000, 0x1404, 0, 0);
-			return 0;
 		}
 	}
-	return hctModeRequested;
 }
 
 /* 0x00020b7a: opens "bt_sdio" once and installs the packet callbacks. */
@@ -942,7 +662,7 @@ void hctOpenSdio(void)
  * 0x0002020c: sends the controller core an AFH channel map without the
  * Bluetooth channels that each WLAN channel in the mask would overlap.
  */
-int hctSendAfhMap(void)
+void hctSendAfhMap(void)
 {
 	uint32_t mask = hctChannelMask;
 	uint32_t *message;
@@ -953,13 +673,12 @@ int hctSendAfhMap(void)
 	int bit;
 
 	if (mask == 0xffffffff)
-		return 0;
+		return;
 	message = osa_MsgAlloc(16);
 	if (message == NULL)
-		return 0;
+		return;
 	message[0] = 5121;
-	map = (uint8_t *)&message[1];
-	__aeabi_memset4(map, 10, 0xff);
+	__aeabi_memset4(&message[1], 10, 0xff);
 	while (mask != 0) {
 		if ((mask & 1) != 0 && (unsigned int)(channel - 1) <= 13) {
 			start = 5 * channel - 8;
@@ -971,20 +690,21 @@ int hctSendAfhMap(void)
 				if (channel != 14)
 					start = 53;
 			}
+			map = (uint8_t *)&message[1];
 			for (bit = start; (unsigned int)end > (unsigned int)bit; bit++)
 				map[bit >> 3] &= ~(1 << (bit & 7));
 		}
 		mask >>= 1;
 		channel++;
 	}
-	return osa_MsgSend((void **)&message, romQueueBtCore);
+	osa_MsgSend((void **)&message, romQueueBtCore);
 }
 
 /* 0x0002028c */
-int hctEnableHost(void)
+void hctEnableHost(void)
 {
 	hctHostActive = 1;
-	return hctSendAfhMap();
+	hctSendAfhMap();
 }
 
 /* 0x00020dfa: nonzero when the SDIO device accepts a new command. */
@@ -1087,7 +807,6 @@ void hctTask(void)
 	for (;;) {
 		struct HctLinkMessage *link;
 		uint32_t id;
-		int keep = 0;
 
 		message = mdevReceiveMessage();
 		link = message;
@@ -1102,7 +821,7 @@ void hctTask(void)
 			break;
 		case HCT_MSG_DELIVER_EVENT:
 			hctDeliverToHost(message, 2);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_AFH_RESET:
 			btBdhRomVerifyState();
@@ -1132,27 +851,27 @@ void hctTask(void)
 		case HCT_MSG_TRANSFER_DONE:
 		case HCT_MSG_TRANSFER_DONE_QUEUED:
 			hctTransferDone(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_COMMAND_DONE:
 			hctCommandDone(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_CREDIT_RETURNED:
 			hctCreditReturned(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_SEND_ACL:
 			hctSendAclData(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_LINK_DATA:
 			hctHandleLinkData(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_CORE_FORMAT:
 			btBdhRomFormatState();
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_CORE_ADJUST:
 			btBdhRomAdjustState();
@@ -1174,18 +893,18 @@ void hctTask(void)
 			break;
 		case HCT_MSG_COMMAND_COMPLETE:
 			hctSendCommand(link);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_FRAME_FLAG:
 			romHctFrameFlag = link->handle & 0xff;
 			break;
 		case HCT_MSG_DELIVER_TO_HOST:
 			hctDeliverToHost(message, 3);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_RELEASE_CONTEXT:
 			hctReleaseLinkContext(message);
-			keep = 1;
+			message = NULL;
 			break;
 		case HCT_MSG_CONFIGURE_DESCRIPTOR:
 			btLmpLcConfigureDescriptor();
@@ -1214,12 +933,12 @@ void hctTask(void)
 			struct HctMatchSetup *match = (struct HctMatchSetup *)copy;
 
 			__aeabi_memcpy4(copy, (uint8_t *)message + 4, 24);
-			hctMatchEnabled = match->enabled;
+			hctMatch.enabled = match->enabled;
 			if (match->length != 0) {
-				hctMatchFrame = match->frame;
-				hctMatchHeader = match->header;
-				hctMatchLength = match->length;
-				__aeabi_memcpy(hctMatchData, match->data, match->length);
+				hctMatch.frame = match->frame;
+				hctMatch.header = match->header;
+				hctMatch.length = match->length;
+				__aeabi_memcpy(hctMatch.data, match->data, match->length);
 			}
 			break;
 		}
@@ -1229,7 +948,7 @@ void hctTask(void)
 		default:
 			break;
 		}
-		if (!keep && message != NULL)
+		if (message != NULL)
 			osa_MsgFree(&message);
 	}
 }

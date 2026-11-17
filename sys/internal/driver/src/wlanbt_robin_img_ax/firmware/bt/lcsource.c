@@ -5,12 +5,16 @@
  * names are the firmware's placeholders.
  */
 #include <stddef.h>
+#include "robin/btbuffer.h"
 #include "robin/btpower.h"
 #include "robin/btrom.h"
 #include "robin/btsource.h"
 #include "robin/bttable.h"
 
 struct BtSourceState btSource __attribute__((section(".itcm.bss")));		/* 0x5a274 */
+/* The event filter's count and default (bt/lcbuffer.c); their data is this file's. */
+uint8_t btEventFilterCount __attribute__((section(".itcm.bss")));		/* 0x5a050 */
+uint8_t btEventFilterAccept __attribute__((section(".itcm.bss")));		/* 0x5a051 */
 struct BtSourceRecord btSourceBuffer[BT_SOURCE_LINKS] __attribute__((section(".itcm.bss")));	/* 0x5a054 */
 
 /* The ROM's record of a link is formatted with its timeout opened up. */

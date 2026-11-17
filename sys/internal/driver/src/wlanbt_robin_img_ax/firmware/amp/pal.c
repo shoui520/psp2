@@ -40,7 +40,7 @@ extern struct AmpQueue ampEventQueue;
 extern struct AmpQueue ampDataQueue;
 extern struct OsaEventFlags *ampEventFlags;
 extern TX_THREAD *ampTaskThread;
-extern uint8_t ampPalUsers;
+extern int8_t ampPalUsers;
 
 static struct AmpPalMessage *ampPalBody(OsaBuffer *buffer)
 {
@@ -48,61 +48,60 @@ static struct AmpPalMessage *ampPalBody(OsaBuffer *buffer)
 }
 
 /*
- * Forwards a PAL message that names a link to the link's state machine. The
- * record carries the two registers the message loop passes on.
+ * Forwards a PAL message that names a link to the link's state machine.
+ * Only the record's link and state are written; its other bytes are left as
+ * they are, as in the original (RVCT reserves the record by pushing r2/r3).
+ * Inlined into each ampPalPostLinkEvent<n>(), as in the original.
  */
-static void ampPalPostLinkEvent(OsaBuffer *buffer, uint32_t event, uint32_t argument0,
-				uint32_t argument1)
+static inline void ampPalPostLinkEvent(OsaBuffer *buffer, uint32_t event)
 {
 	struct AmpPalMessage *message = ampPalBody(buffer);
 	struct AmpLinkEvent notice;
 
-	notice.opcode = argument0;
 	notice.link = message->body[0];
 	notice.state = ampPhysicalLinks[notice.link].state;
-	notice.word1 = argument1;
 	ampLinkPostEvent(notice.link, event, &notice);
 }
 
 /* 0x000221f8 */
-int ampPalPostLinkEvent7(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent7(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 7, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 7);
 	return 0;
 }
 
 /* 0x0002221c */
-int ampPalPostLinkEvent8(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent8(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 8, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 8);
 	return 0;
 }
 
 /* 0x00022240 */
-int ampPalPostLinkEvent9(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent9(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 9, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 9);
 	return 0;
 }
 
 /* 0x00022264 */
-int ampPalPostLinkEvent10(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent10(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 10, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 10);
 	return 0;
 }
 
 /* 0x00022288 */
-int ampPalPostLinkEvent13(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent13(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 13, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 13);
 	return 0;
 }
 
 /* 0x000222ac */
-int ampPalPostLinkEvent14(uint16_t code, OsaBuffer *buffer, uint32_t argument0, uint32_t argument1)
+int ampPalPostLinkEvent14(uint16_t code, OsaBuffer *buffer)
 {
-	ampPalPostLinkEvent(buffer, 14, argument0, argument1);
+	ampPalPostLinkEvent(buffer, 14);
 	return 0;
 }
 
@@ -116,24 +115,19 @@ int ampHciDisconnectPhysicalLinkComplete(int status, int physicalHandle)
 }
 
 /* 0x0002230e: the peer or the link went away; removes its logical links. */
-int ampPalPhysicalLinkDisconnected(uint16_t code, OsaBuffer *buffer, uint32_t argument0,
-				   uint32_t argument1)
+int ampPalPhysicalLinkDisconnected(uint16_t code, OsaBuffer *buffer)
 {
 	struct AmpPalMessage *message = ampPalBody(buffer);
-	struct AmpLinkEvent notice;
-	unsigned int index = message->body[0];
-	unsigned int slot;
+	struct AmpLinkEvent notice;	/* only the link is written, as in the original */
+	uint16_t slot;
 
+	notice.link = message->body[0];
 	ampDisconnectReason = 8;
 	for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++)
-		ampLogicalLinkRemove(ampPhysicalLinks[index].logicalLinks[slot].handle, 8);
-	ampHciDisconnectPhysicalLinkComplete(0, ampPhysicalLinks[index].handle);
-	ampPhysicalLinkReset(index);
-	notice.opcode = argument0;
-	notice.link = index;
-	notice.state = argument0 >> 24;
-	notice.word1 = argument1;
-	ampLinkPostEvent(index, 15, &notice);
+		ampLogicalLinkRemove(ampPhysicalLinks[notice.link].logicalLinks[slot].handle, 8);
+	ampHciDisconnectPhysicalLinkComplete(0, ampPhysicalLinks[notice.link].handle);
+	ampPhysicalLinkReset(notice.link);
+	ampLinkPostEvent(notice.link, 15, &notice);
 	return 0;
 }
 
@@ -162,7 +156,7 @@ void ampPalShortRangeModeChanged(uint16_t code, OsaBuffer *buffer)
 int ampPalDataFromHost(OsaBuffer *buffer)
 {
 	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
-	uint32_t handle = ((data[1] << 8) & 0xfff) | data[0];
+	uint32_t handle = ((data[1] << 8) | data[0]) & 0xfff;
 
 	if (ampLogicalLinkFind(handle) < AMP_LOGICAL_LINKS) {
 		buffer->dataOffset += 4;
@@ -192,9 +186,8 @@ int ampPalDataToHost(OsaBuffer *buffer, unsigned int physicalIndex)
 		word = (((header[1] << 8) >> 12) << 12) | ampPhysicalLinks[physicalIndex].handle;
 		header[0] = word;
 		header[1] = word >> 8;
-		header[1] = (header[1] | 0x30) & 0x3f;
-		header[2] = buffer->length;
-		header[3] = buffer->length >> 8;
+		header[1] = (header[1] & 0xf) | 0x30;
+		*(uint16_t *)(header + 2) = buffer->length;
 		buffer->length += 4;
 		buffer->pool = (struct OsaBufferPool *)(uintptr_t)buffer->ringStart;
 		btLmpLcAcquireContext(1);
@@ -220,7 +213,7 @@ int ampPalDropPacket(OsaBuffer *buffer)
 extern uint32_t ampLinkSupervisionInterval;
 
 /* Message body: a 16-bit code, a 16-bit length, then the value bytes. */
-static OsaBuffer *ampPalAllocNotice(uint16_t code, uint16_t length)
+static inline OsaBuffer *ampPalAllocNotice(uint16_t code, uint16_t length)
 {
 	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
 	uint8_t *data;
@@ -235,7 +228,7 @@ static OsaBuffer *ampPalAllocNotice(uint16_t code, uint16_t length)
 	return buffer;
 }
 
-static void ampPalSendNotice(OsaBuffer *buffer)
+static inline void ampPalSendNotice(OsaBuffer *buffer)
 {
 	mdevForwardEvent(ampHciDev, buffer, 0x1c, 0xb);
 }
@@ -330,20 +323,22 @@ extern int clockApplyCore(uint32_t value);
 int ampPalSdioDataCallback(OsaBuffer *buffer);
 extern uint8_t ampLocalFrameAddress[6];		/* source address of AMP frames */
 
-/* LLC/SNAP prefix of the Bluetooth SIG (organization 00:19:58). */
-const uint8_t ampSnapPrefix[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x19, 0x58 };
+/* LLC/SNAP prefix of the Bluetooth SIG (organization 00:19:58), a local array in each user. */
+#define AMP_SNAP_PREFIX	{ 0xaa, 0xaa, 0x03, 0x00, 0x19, 0x58 }
 
 /* 0x0002375a: writes the transmit descriptor and the Ethernet and SNAP headers. */
 int ampPalBuildFrame(WlanTxFrameHeader *frame, const uint8_t *peer, uint32_t length,
 		     uint32_t kind, int priority, struct WlanConnection *context)
 {
+	uint8_t snap[6] = AMP_SNAP_PREFIX;
+	int status = 0;
 	uint16_t total = length + 22;
 
 	if (kind == AMP_PROTOCOL_L2CAP) {
 		__aeabi_memcpy(frame, &context->txHeader, sizeof(*frame));
 		frame->packetLength[0] = total;
 		frame->packetLength[1] = total >> 8;
-		return 0;
+		return status;
 	}
 	frame->packetType[0] = 0xe0;
 	frame->packetType[1] = 0;
@@ -355,7 +350,7 @@ int ampPalBuildFrame(WlanTxFrameHeader *frame, const uint8_t *peer, uint32_t len
 	__aeabi_memcpy(frame->source, ampLocalFrameAddress, 6);
 	frame->lengthBigEndian[0] = (length + 8) >> 8;
 	frame->lengthBigEndian[1] = length + 8;
-	__aeabi_memcpy(frame->snap, ampSnapPrefix, 6);
+	__aeabi_memcpy(frame->snap, snap, 6);
 	frame->protocol[0] = kind >> 8;
 	frame->protocol[1] = kind;
 	frame->priority = priority;
@@ -364,7 +359,7 @@ int ampPalBuildFrame(WlanTxFrameHeader *frame, const uint8_t *peer, uint32_t len
 	frame->delay = 0;
 	frame->bssType = context->bssType;
 	frame->bssNumber = context->bssNumber;
-	return 0;
+	return status;
 }
 
 /* 0x00022bc0: sends a frame of the given PAL protocol to the peer of the link. */
@@ -453,6 +448,7 @@ int ampPalPrepareTxHeader(struct WlanConnection *context)
 {
 	uint8_t *frame = (uint8_t *)&context->txHeader;
 	struct WlanTxFrameHeader *header = &context->txHeader;
+	uint8_t snap[6] = AMP_SNAP_PREFIX;
 
 	/* The original clears 50 bytes: the header and the bytes behind it. */
 	__aeabi_memclr(frame, 0x32);
@@ -464,7 +460,7 @@ int ampPalPrepareTxHeader(struct WlanConnection *context)
 	header->bssNumber = context->bssNumber;
 	__aeabi_memcpy(header->destination, context->peerAddress, 6);
 	__aeabi_memcpy(header->source, context->localAddress, 6);
-	__aeabi_memcpy(header->snap, ampSnapPrefix, 6);
+	__aeabi_memcpy(header->snap, snap, 6);
 	header->protocol[0] = 0;
 	header->protocol[1] = AMP_PROTOCOL_L2CAP;
 	return 1;
@@ -537,7 +533,7 @@ void *ampHciDev __attribute__((section(".itcm.rw")));
 static const char *ampHciDevName __attribute__((section(".itcm.rw"))) = "amphci";
 struct OsaEventFlags *ampEventFlags __attribute__((section(".itcm.rw")));
 TX_THREAD *ampTaskThread __attribute__((section(".itcm.rw")));
-uint8_t ampPalUsers __attribute__((section(".itcm.bss")));
+int8_t ampPalUsers __attribute__((section(".itcm.bss")));
 
 static struct OsaPoolConfig ampHciPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x118, 6 };
 static struct OsaPoolConfig ampTransmitPoolConfig __attribute__((section(".itcm.rw"))) = { 0, 0x7e8, 3 };
@@ -611,7 +607,7 @@ void ampTask(ULONG input)
 }
 
 /* 0x00002620: creates the event flags and the thread; 1 on failure. */
-int ampTaskStart(void)
+__attribute__((noinline)) int ampTaskStart(void)
 {
 	ampEventFlags = (struct OsaEventFlags *)ampEventFlagsStorage;
 	osaEventFlagsInit(&ampEventFlags);
@@ -623,9 +619,11 @@ int ampTaskStart(void)
 }
 
 /* 0x00002662: drops everything that is queued and resets the controller state. */
-int ampFlushQueues(void)
+int ampFlushQueues(int argument)
 {
 	OsaBuffer *buffer;
+
+	(void)argument;		/* the driver callback's argument; ampPalOpen() passes 0 */
 
 	while ((buffer = osa_MsgQueueRecv(&ampCommandQueue)) != NULL)
 		osa_BufferFree(buffer);
@@ -646,7 +644,7 @@ int ampPalOpen(void)
 		ampPalUsers++;
 	else
 		status = ampTaskStart();
-	ampFlushQueues();
+	ampFlushQueues(0);
 	return status;
 }
 
@@ -678,7 +676,7 @@ int ampPalSdioControlCallback(void *device, OsaBuffer *buffer, uint16_t length, 
 			if (size >= room)
 				size = room;
 			__aeabi_memcpy((uint8_t *)copy + copy->dataOffset, source, size);
-			copy->length = size;
+			buffer->length = size;	/* the original sets the freed buffer's length, not the copy's */
 		}
 		osa_BufferFree(buffer);
 		mdevIoctl(ampSdioDev, 0x14, 0);
@@ -764,7 +762,7 @@ int ampPalDropSecurityFrame(void)
 {
 	uint8_t *data = (uint8_t *)ampSecurityFrame + ampSecurityFrame->dataOffset;
 
-	if ((((data[1] << 8) & 0xcfff) | data[0]) == 0x8024)
+	if ((((data[1] << 8) | data[0]) & ~0x3000) == 0x8024)
 		osa_BufferFree(ampSecurityFrame);
 	return 0;
 }
@@ -779,10 +777,11 @@ int ampPalFrameDataOffset(void)
 int ampPalCopySupportedRates(struct WlanConnection *context)
 {
 	uint8_t *out = context->supportedRates;
-	unsigned int i;
+	const uint8_t *in = ampSupportedRates;
+	unsigned int count = 12;
 
-	for (i = 0; i < 12; i++)
-		*out++ = ampSupportedRates[i];
+	while (count-- != 0)
+		*out++ = *in++;
 	context->supportedRatesLength = 12;
 	return 12;
 }
@@ -805,23 +804,23 @@ int ampPalEventLoop(void)
 		switch (code) {
 		case 1:
 		case 2:
-			ampPalPostLinkEvent7(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent7(code, buffer);
 			break;
 		case 3:
-			ampPalPostLinkEvent8(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent8(code, buffer);
 			break;
 		case 4:
-			ampPalPostLinkEvent9(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent9(code, buffer);
 			break;
 		case 5:
-			ampPalPostLinkEvent10(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent10(code, buffer);
 			break;
 		case 6:
 		case 7:
-			ampPalPostLinkEvent13(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent13(code, buffer);
 			break;
 		case 8:
-			ampPalPostLinkEvent14(code, buffer, code & 0xff, code);
+			ampPalPostLinkEvent14(code, buffer);
 			break;
 		case 10:
 			ampPalShortRangeModeChanged(code, buffer);
@@ -833,7 +832,7 @@ int ampPalEventLoop(void)
 			ampHciEnhancedFlushComplete(code, buffer);
 			break;
 		case 13:
-			ampPalPhysicalLinkDisconnected(code, buffer, code & 0xff, 0);
+			ampPalPhysicalLinkDisconnected(code, buffer);
 			break;
 		case 128:
 			ampPalIgnoreMessage();

@@ -149,7 +149,7 @@ void btLcoRomReleaseState(uint8_t *command, uint8_t *result, uint32_t argument);
 
 /* Link tables of the controller: 120 bytes per link, index 1..7. */
 uint8_t *btHccRomApplyState(void);
-uint8_t *btLcoRomVerifyState(uint32_t link);
+uint8_t *btLcoRomVerifyState(uint16_t link);
 struct BtSlotEvent;
 void btLtsRomReleaseState(struct BtSlotEvent *event);
 struct BtSlotQueue;
@@ -312,7 +312,7 @@ void btHccRomResolveState(unsigned int link, unsigned int kind);
 void btBdhRomSyncState(uint32_t timer, uint32_t mode);
 void *btBdhRomResolveState(uint32_t handle, uint32_t flag);
 void btBdhRomProcessContext(void);
-void btBdhRomScheduleState(void);
+int btBdhRomScheduleState(void);
 void btBdhRomUpdateContext(void *data, uint32_t length);
 void btBdhRomHandleContext(void *message);
 void btBdhRomRecordState(void *message);

@@ -1,9 +1,12 @@
-/* Host controller transport of the Bluetooth controller (bt/hct.c). */
+/* Host controller transport of the Bluetooth controller (bt/hct.c, bt/hctclock.c). */
 #ifndef ROBIN_HCT_H
 #define ROBIN_HCT_H
 
 #include <stdint.h>
 #include "robin/buffer.h"
+
+#define HCT_LINK_COUNT		11
+#define HCT_ACL_LINKS		7
 
 struct HctLinkMessage;
 struct HctReleaseMessage;
@@ -44,16 +47,16 @@ void hctReceiveEvent(struct HctLinkMessage *message);
 int hctSendCommand(struct HctLinkMessage *message);
 void hctSendAclData(struct HctLinkMessage *message);
 int hctCreditReturned(struct HctLinkMessage *message);
-int hctTransferDone(struct HctLinkMessage *message);
+void hctTransferDone(struct HctLinkMessage *message);
 void hctHandleLinkData(struct HctLinkMessage *message);
 int hctCommandDone(struct HctLinkMessage *message);
 int hctInitControllerDescriptor(void);
 int hctSetEnabled(int enable);
-int hctSetCoreMode(int mode);
-int hctApplyMode(int resume);
+void hctSetCoreMode(int mode);
+void hctApplyMode(int resume);
 void hctOpenSdio(void);
-int hctSendAfhMap(void);
-int hctEnableHost(void);
+void hctSendAfhMap(void);
+void hctEnableHost(void);
 int hctSdioIdle(void);
 int hctLinkActive(unsigned int handle);
 extern uint32_t romCoexPrimaryFlag;

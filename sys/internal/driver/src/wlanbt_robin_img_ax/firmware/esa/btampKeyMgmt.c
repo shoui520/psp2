@@ -89,6 +89,9 @@ void btampKeyMgmtInit(void)
 }
 
 /* A transmit buffer with the header of an AMP security frame to the peer. */
+/* LLC/SNAP prefix of the Bluetooth SIG (organization 00:19:58); amp/pal.c builds it as a local array. */
+static const uint8_t ampSnapPrefix[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x19, 0x58 };
+
 static __attribute__((noinline, noclone)) OsaBuffer *btampPrepDefaultEapolMsg(struct WlanConnection *connPtr)
 {
 	OsaBuffer *pBufDesc = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);

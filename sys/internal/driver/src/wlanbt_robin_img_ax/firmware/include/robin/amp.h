@@ -192,7 +192,6 @@ enum {
 int ampPalNotify(int value, int code);
 int ampPalNotifySecured(int link);
 int ampPalLinkEstablished(struct WlanConnection *context);
-extern const uint8_t ampSnapPrefix[6];
 void ampPalSetLocalAddress(const uint8_t *address, int reversed);
 int ampWlanDriverInit(void);						/* amp/wlanif.c */
 int ampDriverInit(void);						/* amp/pal.c */
