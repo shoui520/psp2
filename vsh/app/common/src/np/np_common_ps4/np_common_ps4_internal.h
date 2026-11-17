@@ -23,6 +23,7 @@ extern "C" {
 
 /* the errors the library returns (0x8055800X: the library's own; Sony's names for them are not
    known) */
+#define NP_COMMON_PS4_ERROR_80550004	-2141911804
 #define NP_COMMON_PS4_ERROR_80558001	-2141880319
 #define NP_COMMON_PS4_ERROR_80558002	-2141880318
 #define NP_COMMON_PS4_ERROR_80558003	-2141880317
@@ -489,6 +490,11 @@ struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsBool(struct NpCommonPs4JsonVa
 struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsNumber(struct NpCommonPs4JsonValue *value);
 struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsString(struct NpCommonPs4JsonValue *value);
 struct NpCommonPs4JsonValue *npCommonPs4JsonValueAsArray(struct NpCommonPs4JsonValue *value);
+/* the value vtables the library exports (as variables, by NID) */
+#define g_jsonNullValueVtable SceNpCommonPs4_29448C99
+#define g_jsonBoolValueVtable SceNpCommonPs4_4B0BAC23
+#define g_jsonNumberValueVtable SceNpCommonPs4_BF527EAD
+#define g_jsonObjectValueVtable SceNpCommonPs4_6316B584
 extern const void *g_jsonNullValueVtable[];
 extern const void *g_jsonBoolValueVtable[];
 extern const void *g_jsonNumberValueVtable[];
@@ -548,7 +554,7 @@ int SceNpCommonPs4_3AAA7DF7(struct NpCommonPs4Cancelable *cancelable);
 int SceNpCommonPs4_3C8364C3(struct NpCommonPs4Cancelable *cancelable, int arg1, int arg2, int arg3);
 int SceNpCommonPs4_E70C78DB(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub, int arg1, int arg2, int arg3);
 int SceNpCommonPs4_6BF7B5BE(struct NpCommonPs4Cancelable *cancelable, struct NpCommonPs4Cancelable *sub);
-void npCommonPs4Breakpoint(void);
+void __cxa_pure_virtual(void);
 struct NpCommonPs4Scope *SceNpCommonPs4_37C3D094(struct NpCommonPs4Scope *scope);
 struct NpCommonPs4Scope *SceNpCommonPs4_5BBB1ABA(struct NpCommonPs4Scope *scope);
 struct NpCommonPs4Scope *SceNpCommonPs4_9486DE09(struct NpCommonPs4Scope *scope);

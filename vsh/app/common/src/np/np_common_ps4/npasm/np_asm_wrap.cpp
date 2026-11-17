@@ -8,9 +8,9 @@
 
 extern "C" {
 
-extern struct NpAsmRegistryEntry g_npAsmRegistryTable[128];	/* 0x8102b170 */
-extern struct NpAsmRegistryEntry *g_npAsmRegistryHead;		/* 0x8102b074 */
-extern SceKernelLwMutexWork g_npAsmRegistryMutex;		/* 0x8102b970 */
+struct NpAsmRegistryEntry g_npAsmRegistryTable[128];	/* 0x8102b170 */
+struct NpAsmRegistryEntry *g_npAsmRegistryHead;		/* 0x8102b074 */
+SceKernelLwMutexWork g_npAsmRegistryMutex;		/* 0x8102b970 */
 
 /* the secret of the system title NPXS10097_00 that the secondary client signs its requests with */
 const unsigned char g_npAsmSystemTitleSecret[NP_ASM_TITLE_SECRET_SIZE] = {	/* 0x81028e5c */
@@ -270,7 +270,7 @@ __attribute__((noinline)) int npAsmWrapInit(int param1, const int *pParam)
 	int next;
 	int notDevelopmentMode;
 
-	result = npAsmServiceInit();
+	result = npAsmConnectionInit();
 	if (result >= 0) {
 		if (npAsmIsSystemAppInline() || (next = SceNpCommonPs4_D84BF4B7(2), result = next, next >= 0)) {
 			notDevelopmentMode = sceAppMgrIsDevelopmentMode() == 0;
@@ -282,7 +282,7 @@ __attribute__((noinline)) int npAsmWrapInit(int param1, const int *pParam)
 			else
 				next = NP_ASM_SYSTEM_APP_ID;
 		}
-		npAsmServiceTerm(next);
+		npAsmConnectionTerm();
 	}
 	return result;
 }
@@ -296,7 +296,7 @@ __attribute__((noinline)) int npAsmWrapTerm(void)
 	else
 		next = NP_ASM_SYSTEM_APP_ID;
 	next = npAsmClientDestroy(next);
-	npAsmServiceTerm(next);
+	npAsmConnectionTerm();
 	return 0;
 }
 

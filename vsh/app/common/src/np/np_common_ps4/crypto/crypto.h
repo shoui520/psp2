@@ -6,6 +6,10 @@
 
 #include "../np_common_ps4_internal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* the functions of a hash an HMAC is built on, with the offset of the key block in the HMAC context */
 struct NpCommonPs4HashAlgorithm {
 	SceSize contextOffset;
@@ -26,6 +30,23 @@ struct NpCommonPs4Sha256Context {
 	SceUInt8 buffer[64];
 	SceUInt32 digest[8];
 };
+
+/* the block cipher the library carries (Rijndael with the block and key size as parameters): the context (976 bytes),
+   and the chaining value the caller keeps after it. The round keys of the encryption come first, then those of the
+   decryption (the equivalent inverse cipher's) */
+struct NpCommonPs4AesContext {
+	int size;
+	unsigned int keyWords;
+	unsigned int blockWords;
+	unsigned int rounds;
+	SceUInt32 encryptKeys[120];
+	SceUInt32 decryptKeys[120];
+	SceUInt8 iv[32];
+};
+
+int npCommonPs4AesInit(struct NpCommonPs4AesContext *context, unsigned int blockBits, unsigned int keyBits, const void *key);
+int npCommonPs4AesEncryptBlock(struct NpCommonPs4AesContext *context, const void *in, void *out);
+int npCommonPs4AesDecryptBlock(struct NpCommonPs4AesContext *context, const void *in, void *out);
 
 extern const struct NpCommonPs4HashAlgorithm g_npCommonPs4Sha256Algorithm;	/* 0x81029ca0 */
 extern SceUInt32 g_npCommonPs4Sha256Init[8];				/* 0x8102abd8 */
@@ -48,5 +69,9 @@ int npAsmHmacSha256(const void *key, SceSize keySize, const void *data, SceSize 
 int npAsmHmacSha256Init(void *context, const void *key, SceSize keySize);
 int npAsmHmacSha256Update(void *context, const void *data, SceSize size);
 int npAsmHmacSha256Final(void *context, void *digest);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

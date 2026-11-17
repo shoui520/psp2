@@ -188,7 +188,7 @@ const void *g_threadVtable[] = {		/* 0x8102aa24 */
 	NULL,
 	(const void *)SceNpCommonPs4_6D4C9272,
 	(const void *)SceNpCommonPs4_653C2CB0,
-	(const void *)npCommonPs4Breakpoint,
+	(const void *)__cxa_pure_virtual,
 };
 
 }

@@ -7,7 +7,7 @@
 
 extern "C" {
 
-extern const int g_npAsmCallbackTableExtra;		/* 0x8102b168 */
+int g_npAsmCallbackTableExtra;				/* 0x8102b168 */
 
 extern const void *g_npAsmCallbackTableVtable[];
 extern const void *g_npAsmTransportVtable[];

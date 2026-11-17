@@ -9,6 +9,12 @@
 
 extern "C" {
 
+#define g_jsonBoolDataVtable SceNpCommonPs4_40D3D9F2
+#define g_jsonTextDataVtable SceNpCommonPs4_932570B2
+#define g_jsonStringDataVtable SceNpCommonPs4_29A2EE35
+#define g_jsonItemArrayVtable SceNpCommonPs4_E3D6AEC2
+#define g_jsonFieldSetVtable SceNpCommonPs4_3FA55F77
+
 extern const void *g_jsonValueVtable[];		/* 0x8102a7d8 */
 extern const void *g_jsonItemArrayVtable[];	/* 0x8102a8b0 */
 extern const void *g_jsonFieldSetVtable[];	/* 0x8102a8c0 */
@@ -2881,5 +2887,187 @@ __attribute__((noinline)) void *SceNpCommonPs4_D154D84F(SceSize size, struct NpC
 	}
 	return NULL;
 }
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonNullValueDestruct(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonNullValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int npCommonPs4JsonNullValueDelete(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonNullValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonBoolValueDestruct(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int npCommonPs4JsonBoolValueDelete(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonBoolValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonNumberValueDestruct(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonNumberValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int npCommonPs4JsonNumberValueDelete(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonNumberValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonStringValueDestruct(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonStringValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int npCommonPs4JsonStringValueDelete(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonStringValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *npCommonPs4JsonArrayValueDestruct(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonArrayValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int npCommonPs4JsonArrayValueDelete(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonArrayValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+struct NpCommonPs4JsonValue *SceNpCommonPs4_A9E601DB(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonObjectValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return value;
+}
+
+int SceNpCommonPs4_371321DA(struct NpCommonPs4JsonValue *value)
+{
+	value->vtable = NP_COMMON_PS4_VTABLE(g_jsonObjectValueVtable);
+	SceNpCommonPs4_B83E1A6A(value);
+	return SceNpCommonPs4_BB5282C8(value);
+}
+
+const void *g_jsonValueVtable[] = {		/* 0x8102a7d8 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_B83E1A6A,
+	(const void *)SceNpCommonPs4_62759A9A,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
+};
+
+const void *g_jsonNullValueVtable[] = {		/* 0x8102a7f0 */
+	NULL,
+	NULL,
+	(const void *)npCommonPs4JsonNullValueDestruct,
+	(const void *)npCommonPs4JsonNullValueDelete,
+	(const void *)SceNpCommonPs4_31619280,
+	(const void *)SceNpCommonPs4_A6BD2963,
+};
+
+const void *g_jsonBoolValueVtable[] = {		/* 0x8102a808 */
+	NULL,
+	NULL,
+	(const void *)npCommonPs4JsonBoolValueDestruct,
+	(const void *)npCommonPs4JsonBoolValueDelete,
+	(const void *)SceNpCommonPs4_FF11808F,
+	(const void *)SceNpCommonPs4_D3B1E97E,
+};
+
+const void *g_jsonNumberValueVtable[] = {		/* 0x8102a820 */
+	NULL,
+	NULL,
+	(const void *)npCommonPs4JsonNumberValueDestruct,
+	(const void *)npCommonPs4JsonNumberValueDelete,
+	(const void *)SceNpCommonPs4_DD94C5AE,
+	(const void *)SceNpCommonPs4_95AA3921,
+};
+
+const void *g_jsonStringValueVtable[] = {		/* 0x8102a838 */
+	NULL,
+	NULL,
+	(const void *)npCommonPs4JsonStringValueDestruct,
+	(const void *)npCommonPs4JsonStringValueDelete,
+	(const void *)SceNpCommonPs4_8B8D8D16,
+	(const void *)SceNpCommonPs4_6F0CB695,
+};
+
+const void *g_jsonArrayValueVtable[] = {		/* 0x8102a850 */
+	NULL,
+	NULL,
+	(const void *)npCommonPs4JsonArrayValueDestruct,
+	(const void *)npCommonPs4JsonArrayValueDelete,
+	(const void *)SceNpCommonPs4_A7B91FD4,
+	(const void *)SceNpCommonPs4_18EA8733,
+};
+
+const void *g_jsonObjectValueVtable[] = {		/* 0x8102a868 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_A9E601DB,
+	(const void *)SceNpCommonPs4_371321DA,
+	(const void *)SceNpCommonPs4_9DB48E05,
+	(const void *)npCommonPs4JsonObjectValueClone,
+};
+
+const void *g_jsonBoolDataVtable[] = {		/* 0x8102a880 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_22D12B6B,
+	(const void *)SceNpCommonPs4_3F48BFF4,
+};
+
+const void *g_jsonTextDataVtable[] = {		/* 0x8102a890 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_B778425E,
+	(const void *)SceNpCommonPs4_280EF5E0,
+};
+
+const void *g_jsonStringDataVtable[] = {		/* 0x8102a8a0 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_8CE27F18,
+	(const void *)SceNpCommonPs4_1ED87D80,
+};
+
+const void *g_jsonItemArrayVtable[] = {		/* 0x8102a8b0 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_7CCD3D42,
+	(const void *)SceNpCommonPs4_0E43CE5B,
+};
+
+const void *g_jsonFieldSetVtable[] = {		/* 0x8102a8c0 */
+	NULL,
+	NULL,
+	(const void *)SceNpCommonPs4_A06DF220,
+	(const void *)SceNpCommonPs4_01846E6A,
+};
 
 }

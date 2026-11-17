@@ -104,7 +104,7 @@ const void *g_scopeVtable[] = {		/* 0x8102a6fc */
 	(const void *)SceNpCommonPs4_A6C7D48D,
 	(const void *)SceNpCommonPs4_9486DE09,
 	(const void *)SceNpCommonPs4_A3174D9A,
-	(const void *)npCommonPs4Breakpoint,
+	(const void *)__cxa_pure_virtual,
 };
 
 }

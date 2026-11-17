@@ -19,7 +19,24 @@ struct NpCommonPs4ServiceBaseUrlParser {
 extern const void *g_serviceBaseUrlTransVtable[];	/* 0x8102aaac: the vtables of the transaction and of its second base */
 extern const void *g_serviceBaseUrlParserVtable[];	/* 0x8102aa74: the vtables of the parser and of its observer base */
 extern const void *g_stringHolderVtable[];		/* 0x8102aad8 */
-extern unsigned char g_serviceBaseUrlParseConfig[];	/* 0x81028880: the members the parser looks for */
+/* the members the parser looks for: the root object's, then its "url" */
+static const struct NpCommonPs4LexerNode g_serviceBaseUrlRootNodes[] = {		/* 0x81028840 */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, NULL, 1 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 },
+};
+static const struct NpCommonPs4LexerNode g_serviceBaseUrlUrlNodes[] = {		/* 0x81028860 */
+	{ NP_COMMON_PS4_LEXER_NODE_KEY, "url", 0 },
+	{ NP_COMMON_PS4_LEXER_NODE_END, "", 0 },
+};
+static const struct NpCommonPs4LexerNode *const g_serviceBaseUrlParseLevels[] = {	/* 0x81028878 */
+	g_serviceBaseUrlRootNodes,
+	g_serviceBaseUrlUrlNodes,
+};
+extern const struct NpCommonPs4LexerConfig g_serviceBaseUrlParseConfig;
+const struct NpCommonPs4LexerConfig g_serviceBaseUrlParseConfig = {		/* 0x81028880 */
+	g_serviceBaseUrlParseLevels,
+	2,
+};
 
 /* the observer base's callbacks that the observer leaves alone (they return 0) */
 int npCommonPs4JsonObserverDefault1(void)
@@ -138,7 +155,7 @@ int SceNpCommonPs4_C2B11396(struct NpCommonPs4NpTrans *npTrans, struct NpCommonP
 			memory->parser.vtable = NP_COMMON_PS4_VTABLE(g_serviceBaseUrlParserVtable);
 			memory->observerVtable = &g_serviceBaseUrlParserVtable[7];
 			parser = memory;
-			result = SceNpCommonPs4_89322005(&memory->parser, g_serviceBaseUrlParseConfig, &memory->observerVtable);
+			result = SceNpCommonPs4_89322005(&memory->parser, (void *)&g_serviceBaseUrlParseConfig, &memory->observerVtable);
 			if (result >= 0) {
 				result = SceNpCommonPs4_7CC0800E(&parser->parser, (int)handle, npTrans);
 				if (result >= 0) {

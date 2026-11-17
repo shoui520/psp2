@@ -4,9 +4,11 @@
 
 #include "np_common_ps4_internal.h"
 
-extern "C" void *g_runtimeMspace;		/* 0x8102b160 */
+extern "C" {
+void *g_runtimeMspace;			/* 0x8102b160 */
+}
 
-extern "C" void npCommonPs4Breakpoint(void)
+extern "C" void __cxa_pure_virtual(void)
 {
 	__builtin_trap();
 }
@@ -24,6 +26,12 @@ extern "C" __attribute__((noinline)) void npCommonPs4RuntimeFree(void *ptr)
 void operator delete(void *ptr)
 {
 	npCommonPs4RuntimeFree(ptr);
+}
+
+/* 0x81021284: the placement form, which the IPMI client and the ipc2 client construct their objects with */
+void *operator new(SceSize size, void *where)
+{
+	return where;
 }
 
 extern "C" {

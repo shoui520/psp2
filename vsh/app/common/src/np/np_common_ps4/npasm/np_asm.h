@@ -8,6 +8,7 @@
 
 #include <rtc.h>
 #include "../np_common_ps4_internal.h"
+#include "../crypto/crypto.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,16 +93,6 @@ struct NpAsmNpComInfoPlain {
 	SceUInt8 npComId[12];
 	SceUInt8 passPhrase[128];
 	SceUInt32 serviceLabel;
-};
-
-/* the block cipher the library carries (Rijndael with the block and key size as parameters): the schedule and the
-   chaining value */
-struct NpCommonPs4AesContext {
-	int unknown0;
-	int unknown1;
-	unsigned int blockWords;
-	SceUInt8 schedule[964];
-	SceUInt8 iv[32];
 };
 
 /* a registered request class: the table at 0x8102b170 holds 128 of them, the rest is allocated */
@@ -262,8 +253,6 @@ int npAsmClientSetSystemTitle(struct NpAsmClient *client, int systemTitle);
 int npAsmClientSetTitleId(struct NpAsmClient *client, const void *pTitleId, const void *pTitleSecret, SceUInt8 fromSystem);
 int npAsmSecondaryClientCreate(void);
 int npAsmSecondaryClientDestroy(void);
-int npAsmServiceInit(void);
-void npAsmServiceTerm(int next);
 int npAsmConnectionSetTitleId(void *ipcClient, const void *pTitleId);
 int npAsmConnectionClearTitleId(void *ipcClient);
 int npAsmConnectionQuery(void *ipcClient, int a1, int a2);
@@ -339,8 +328,6 @@ int SceNpCommonPs4_EC456A83(const unsigned char *src, unsigned char *dst, SceSiz
 int SceNpCommonPs4_D082556B(const char *src, SceSize srcLength, unsigned char *dst, SceSize dstSize);
 extern int sceHttpsGetSslError(int reqId, int *errNum, unsigned int *detail);
 
-int npCommonPs4AesInit(struct NpCommonPs4AesContext *context, unsigned int blockBits, unsigned int keyBits, const void *key);
-int npCommonPs4AesDecryptBlock(struct NpCommonPs4AesContext *context, const void *in, void *out);
 
 int SceNpCommonPs4_FB0B3FBD(const void *pParam);
 int SceNpCommonPs4_9C4F1236(int requestId);

@@ -515,9 +515,9 @@ const void *g_hostInterfaceVtable[] = {		/* 0x8102a930 */
 	NULL,
 	(const void *)npCommonPs4HostInterfaceDestruct,
 	(const void *)npCommonPs4HostInterfaceDelete,
-	(const void *)npCommonPs4Breakpoint,
-	(const void *)npCommonPs4Breakpoint,
-	(const void *)npCommonPs4Breakpoint,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
 };
 
 const void *g_timerHostVtable[] = {		/* 0x8102a94c */
@@ -535,10 +535,10 @@ const void *g_jobInterfaceVtable[] = {		/* 0x8102a968 */
 	NULL,
 	(const void *)npCommonPs4JobInterfaceDestruct,
 	(const void *)npCommonPs4JobInterfaceDelete,
-	(const void *)npCommonPs4Breakpoint,
-	(const void *)npCommonPs4Breakpoint,
-	(const void *)npCommonPs4Breakpoint,
-	(const void *)npCommonPs4Breakpoint,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
+	(const void *)__cxa_pure_virtual,
 };
 
 const void *g_timerJobVtable[] = {		/* 0x8102a988 */

@@ -13,7 +13,7 @@ const void *g_cancelableVtable[] = {		/* 0x8102a6b8 */
 	(const void *)SceNpCommonPs4_A6C7D48D,
 	(const void *)SceNpCommonPs4_48074E29,
 	(const void *)SceNpCommonPs4_74001725,
-	(const void *)npCommonPs4Breakpoint,
+	(const void *)__cxa_pure_virtual,
 };
 
 int SceNpCommonPs4_86DF1834(struct NpCommonPs4Cancelable *cancelable, SceUInt8 enabled)
