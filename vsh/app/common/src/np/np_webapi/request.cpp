@@ -289,3 +289,9 @@ char *npWebApiAuthObjectGetAccessToken(void *object)
 {
 	return (char *)object + 16;
 }
+
+NpWebApiRequest *npWebApiRequestSetField232(NpWebApiRequest *request, int value)
+{
+	request->field232 = value;
+	return request;
+}

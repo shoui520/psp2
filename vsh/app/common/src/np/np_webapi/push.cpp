@@ -191,3 +191,23 @@ int npPushUnregisterCallback(void)
 	}
 	return result;
 }
+
+/* tells the service (command 0x20001) the handle of the account's token and the 16-byte title ID */
+int npWebApiIpcSetTokenTitleId(NpWebApiIpmiClient *client, int handle, const void *titleId)
+{
+	NpWebApiIpmiIn in[2];
+	int ret;
+	int result;
+	int value;
+
+	ret = 0;
+	value = handle;
+	in[0].data = &value;
+	in[0].size = 4;
+	in[1].data = titleId;
+	in[1].size = 16;
+	result = client->vtbl->invoke(client, 0x20001, in, 2, &ret, NULL, 0);
+	if (result == 0)
+		result = ret;
+	return result;
+}

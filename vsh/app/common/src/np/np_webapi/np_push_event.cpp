@@ -515,7 +515,8 @@ notFound:
 	return -2141871613;
 }
 
-int npPushLibContextRegisterDispatch(void (*dispatch)(int, int, int, int, int, int, int, int), int a2, int *pId)
+int npPushLibContextRegisterDispatch(void (*dispatch)(const struct NpPushPeer *, const struct NpPushPeer *, const char *,
+	const char *, const void *, SceSize, const struct NpPushExDataArgument *, int), int a2, int *pId)
 {
 	NpPushLibContext *ctx;
 	int result;

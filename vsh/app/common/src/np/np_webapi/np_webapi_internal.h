@@ -162,6 +162,11 @@ extern int SceNpManager_A775A452(int state);
 extern int SceNpCommonPs4_FB0B3FBD(void *params);
 extern int SceNpCommonPs4_639086A3(void *params);
 extern int SceNpCommonPs4_17EB36C2(void *object, int arg);
+extern int SceNpCommonPs4_1409BA27(int a1, int a2, int a3, int *pToken);
+extern int SceNpCommonPs4_CB9970ED(int a1, int token);
+extern int SceNpCommonPs4_363B3916(int a1, int token, int a3);
+extern int SceNpCommonPs4_E1418F84(int a1, int token);
+extern int SceNpCommonPs4_1D2FB0F9(int a1, int token);
 extern int SceNpCommonPs4_AB41A67D(int handle, void *npId, const char *name, int arg, void *out);
 extern int SceNpCommonPs4_6E443E9B(int handle, void *npId, const char *name, void *object, int zero, int arg, void *out);
 extern int SceNpCommonPs4_9C4F1236(int handle);
@@ -1274,7 +1279,7 @@ extern int npPushLibContextAddCallback(NpPushLibContext *ctx, void *callback, vo
 	__attribute__((noinline));
 extern int npPushLibContextRemoveCallback(NpPushLibContext *ctx, int id) __attribute__((noinline));
 extern int npPushLibContextRegisterDispatch(void (*dispatch)(const struct NpPushPeer *, const struct NpPushPeer *, const char *,
-	const char *, const char *, SceSize, const struct NpPushExDataArgument *, int), int a2, int *pId);
+	const char *, const void *, SceSize, const struct NpPushExDataArgument *, int), int a2, int *pId);
 extern int npPushLibContextUnregisterDispatch(int id);
 extern NpPushExDataNames *npPushDataFilterConstruct(NpPushExDataNames *names) __attribute__((noinline));
 extern NpPushExDataNames *npPushDataFilterDestruct(NpPushExDataNames *names) __attribute__((noinline));
@@ -1337,6 +1342,9 @@ typedef struct NpWebApiIpmiClient {
 
 extern int npPushIpcSendId(NpWebApiIpmiClient *client, const void *data);
 extern int npWebApiIpcSetNpTitleId(NpWebApiIpmiClient *client, const void *titleId);
+extern int npWebApiIpcSetTokenTitleId(NpWebApiIpmiClient *client, int handle, const void *titleId);
+extern int npWebApiRequestRegisterTitle(NpWebApiLibContext *libCtx, NpWebApiRequest *request);
+extern NpWebApiRequest *npWebApiRequestSetField232(NpWebApiRequest *request, int value);
 extern int npWebApiRequestGetContentLength(NpWebApiRequest *request, SceULong64 *pContentLength)
 	__attribute__((noinline));
 #ifdef __cplusplus

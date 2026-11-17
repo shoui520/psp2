@@ -362,3 +362,50 @@ int npWebApiPushObjectGetServiceUrl(NpWebApiPushObject *object, const char *serv
 	}
 	return result;
 }
+
+/* has the account manager make a token for the request's title ID (and tells the service the handle) */
+int npWebApiRequestRegisterTitle(NpWebApiLibContext *libCtx, NpWebApiRequest *request)
+{
+	int token;
+	int result;
+	int next;
+	char titleId[16];
+	char buffer[128];
+
+	token = 0;
+	sceClibMemset(titleId, 0, 16);
+	sceClibMemset(buffer, 0, 128);
+	result = SceNpCommonPs4_17EB36C2(titleId, (int)buffer);
+	if (result >= 0) {
+		result = SceNpCommonPs4_1409BA27(1, 0, 0, &token);
+		if (result >= 0) {
+			npWebApiLibContextLock(libCtx);
+			npWebApiRequestSetField232(request, token);
+			if (npWebApiRequestGetBusy(request) != 0) {
+				result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+				npWebApiLibContextUnlock(libCtx);
+			} else {
+				npWebApiLibContextUnlock(libCtx);
+				result = SceNpCommonPs4_CB9970ED(1, token);
+				if (result >= 0) {
+					result = npWebApiIpcSetTokenTitleId(SceNpCommonPs4_A0599F24(),
+						token, titleId);
+					if (result >= 0)
+						result = SceNpCommonPs4_363B3916(1, token, 0);
+					next = SceNpCommonPs4_E1418F84(1, token);
+					if (next < 0 && result == 0)
+						result = next;
+				}
+			}
+			next = SceNpCommonPs4_1D2FB0F9(1, token);
+			if (next < 0 && result == 0)
+				result = next;
+		}
+	}
+	npWebApiLibContextLock(libCtx);
+	npWebApiRequestSetField232(request, 0);
+	if (npWebApiRequestGetBusy(request) != 0)
+		result = NP_WEBAPI_ERROR_REQUEST_BUSY;
+	npWebApiLibContextUnlock(libCtx);
+	return result;
+}
