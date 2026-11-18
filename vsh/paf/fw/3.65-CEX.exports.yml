@@ -164,7 +164,7 @@ ScePaf:
         - sce_paf_rand: 0xC9DACD41
         - _ZN3paf3TTYD1Ev: 0xCAFCD794
         - __cxa_guard_acquire: 0xCB26B866
-        - ScePafStdc_D00387E7: 0xD00387E7
+        - _ZnwjPN3paf6memory13HeapAllocatorE: 0xD00387E7
         - ScePafStdc_D04CBFC0: 0xD04CBFC0
         - sce_paf_bzero: 0xD21442B4
         - sce_paf_strncat: 0xD259BEAF

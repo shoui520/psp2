@@ -18,7 +18,7 @@ void *sce_paf_memalign(size_t align, size_t size)
 	return HeapAllocatorMemalign(s_heap, align, size);
 }
 
-void *ScePafStdc_D00387E7(size_t size, HeapAllocator *allocator)
+void *_ZnwjPN3paf6memory13HeapAllocatorE(size_t size, HeapAllocator *allocator)
 {
 	return allocator ? HeapAllocatorMalloc(allocator, size) : NULL;
 }

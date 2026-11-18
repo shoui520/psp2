@@ -92,6 +92,12 @@ public:
 		Option_UseDisplayAreaSettings = 8
 	};
 
+	/* the heap the framework's image decoders allocate from */
+	memory::HeapAllocator *GetDecodeHeap()
+	{
+		return m_decode_heap;
+	}
+
 	/* what the framework is made with; the defaults read the system's settings */
 	class InitParam {
 	public:

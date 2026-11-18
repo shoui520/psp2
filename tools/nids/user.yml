@@ -14443,7 +14443,7 @@ modules:
           ScePafStdc_C95732BB: 0xC95732BB
           ScePafStdc_CAFCD794: 0xCAFCD794
           ScePafStdc_CB26B866: 0xCB26B866
-          ScePafStdc_D00387E7: 0xD00387E7
+          _ZnwjPN3paf6memory13HeapAllocatorE: 0xD00387E7
           ScePafStdc_D04CBFC0: 0xD04CBFC0
           ScePafStdc_D41FD265: 0xD41FD265
           ScePafStdc_D608246A: 0xD608246A
