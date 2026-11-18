@@ -157,7 +157,6 @@ extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
  * the system to update; the job stopped; the card's NPDRM license expired, shown as the card's
  * own error.
  */
-#define GAME_ERROR_GC_QUIET		-2146430680	/* 0x80101128 */
 #define GAME_ERROR_GC_APP_UPDATE	-2146430687	/* 0x80101121 */
 #define GAME_ERROR_GC_STOPPED		-2144206822	/* 0x8032001A */
 #define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */

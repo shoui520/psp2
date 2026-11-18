@@ -138,6 +138,27 @@ bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const paf::string &titleI
 /* gameUx0PatchExists, for another file (0x810414D8) */
 bool gamePatchExists(const paf::string &titleId);
 
+/*
+ * PLACEHOLDER: the check of an update against the installed application, defined in another
+ * file of the plugin (constructor 0x8104B81C, Check 0x8104D4CA, vtable 0x8152EB1C), 40 bytes.
+ */
+class GameUpdateChecker {
+public:
+	GameUpdateChecker(const paf::string &path, bool flag1, bool flag2, GameJobProgress *progress,
+			  int userData);
+	virtual ~GameUpdateChecker();
+
+	int Check(const LsdbAppInfoPtr *installed, LsdbAppInfoPtr *update);
+
+	paf::string m_path;
+	paf::string m_name;
+	bool m_flag1;
+	bool m_otherFlag;
+	bool m_flag2;
+	GameJobProgress *m_progress;
+	int m_userData;
+};
+
 /* the drives a patch is promoted on */
 #define GAME_PATCH_DRIVE_GRW0	1
 #define GAME_PATCH_DRIVE_UX0	2
@@ -149,7 +170,7 @@ bool gamePatchExists(const paf::string &titleId);
  */
 class GamePatchPromoter : public GamePromoter {
 public:
-	GamePatchPromoter(const char *path, int kind, bool flag1, bool flag2,
+	GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1, bool flag2,
 			  const GameJobProgress *progress, int userData, float scale);
 	virtual ~GamePatchPromoter();
 
@@ -163,7 +184,22 @@ public:
 	/* the promoted folder moved into the drive's patch folder (0x8103FC64) */
 	int MovePatch();
 
-	int m_kind;
+	/* the game card's patch copied into the drive's temp/promote (0x810414E0) */
+	int CopyCardPatch(GameJobProgress *progress);
+
+	/*
+	 * When m_move is set, the game card's patch copied into the drive's temp/promote and the
+	 * card's application mounted with it (0x81041C0C).
+	 */
+	int MountCardPatch();
+
+	/* the patch's param.sfo read into info (0x81042EA0) */
+	int ReadSfo(LsdbAppInfoPtr *info);
+
+	/* the installed application's record checked against the patch's (0x81042154) */
+	int CheckInstalled(LsdbAppInfoPtr *installed, bool flag);
+
+	const LsdbAppInfoPtr *m_sfo;	/* the parameters an update keeps, when set */
 	paf::string m_mountPoint;	/* unmounted when set */
 	bool m_flag1;
 	bool m_flag2;

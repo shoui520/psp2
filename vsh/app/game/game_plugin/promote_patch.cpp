@@ -25,9 +25,10 @@ using namespace paf;
 /* the digits of an APP_VER */
 #define GAME_APP_VER_DIGITS	8
 
-GamePatchPromoter::GamePatchPromoter(const char *path, int kind, bool flag1, bool flag2,
-				     const GameJobProgress *progress, int userData, float scale)
-	: GamePromoter(path, progress, userData, scale), m_kind(kind), m_flag1(flag1),
+GamePatchPromoter::GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1,
+				     bool flag2, const GameJobProgress *progress, int userData,
+				     float scale)
+	: GamePromoter(path, progress, userData, scale), m_sfo(sfo), m_flag1(flag1),
 	  m_flag2(flag2), m_move(false), m_drive(0)
 {
 	m_weights[0] = 0.3f;
@@ -240,4 +241,194 @@ bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const string &titleId, co
 bool gamePatchExists(const string &titleId)
 {
 	return gameUx0PatchExists(titleId);
+}
+
+int GamePatchPromoter::CopyCardPatch(GameJobProgress *progress)
+{
+	string drive("");
+
+	drive = "";
+	if (m_drive == GAME_PATCH_DRIVE_GRW0)
+		drive = "grw0:";
+	else if (m_drive == GAME_PATCH_DRIVE_UX0)
+		drive = "ux0:";
+	else
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	int ret;
+	string tempDir = drive + string("temp");
+
+	if (Dir::IsExist(tempDir.c_str())) {
+		ret = Dir::RemoveRecursive(tempDir.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	string promoteDir = drive + string("temp/promote");
+
+	ret = Dir::CreateRecursive(promoteDir.c_str(), 6);
+	if (ret < 0)
+		return ret;
+
+	string cardPath = string("gro0:patch") + string("/") + m_name;
+	string promotePath = promoteDir + string("/") + m_name;
+
+	ret = gameCopyFileWithPool(cardPath.c_str(), promotePath.c_str(), 0, 0, (int)progress,
+				   m_userData);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+int GamePatchPromoter::MountCardPatch()
+{
+	if (!m_move)
+		return 0;
+
+	float part = 0.5f;
+
+	if (m_install)
+		part = 0.225f;
+
+	GameJobProgress *progress = new GameJobProgress(m_progress, part);
+
+	if (progress == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	if (m_mountPoint.length() != 0)
+		gameAppUnmount(&m_mountPoint);
+
+	int ret = CopyCardPatch(progress);
+
+	if (m_install)
+		progress->Add(part * 100.0f);
+
+	delete progress;
+
+	if (ret < 0)
+		return ret;
+
+	string appPath = string("gro0:app/") + m_name;
+	string drive("");
+
+	drive = "";
+	if (m_drive == GAME_PATCH_DRIVE_GRW0)
+		drive = "grw0:";
+	else if (m_drive == GAME_PATCH_DRIVE_UX0)
+		drive = "ux0:";
+	else
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	string promotePath = drive + string("temp/promote") + string("/") + m_name;
+
+	ret = gameGameDataMount(appPath.c_str(), promotePath.c_str(), NULL, &m_mountPoint);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * The folder made ready: the installed application's record read, the patch's param.sfo read,
+ * and when an application is installed the patch checked against it; then the game card's
+ * patch copied and mounted when m_move is set (0x81043B1C).
+ */
+int GamePatchPromoter::Prepare(bool flag)
+{
+	if (m_info.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	int ret = gameAppGetInfo(m_name.c_str(), &m_info);
+
+	if (ret < 0 && ret != (int)LSDB_ERROR_NOT_FOUND)
+		return ret;
+
+	LsdbAppInfoPtr info(new LsdbAppInfo);
+
+	if (info.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	ret = ReadSfo(&info);
+	if (ret < 0)
+		return ret;
+
+	if (m_move) {
+		m_weights[1] = 0.2f;
+		m_weights[0] = 0.5f;
+		m_weights[3] = 0.05f;
+		m_weights[2] = 0.25f;
+	}
+
+	if (m_info->size() != 0) {
+		m_install = true;
+
+		GameJobProgress *progress = NULL;
+
+		if (m_move) {
+			progress = new GameJobProgress(m_progress, 0.15f);
+			if (progress == NULL)
+				return GAME_ERROR_NO_INFO_MEMORY;
+		}
+
+		GameUpdateChecker *checker = new GameUpdateChecker(m_path, m_flag1, true,
+			progress != NULL ? progress : &m_progress, m_userData);
+
+		if (checker == NULL) {
+			delete progress;
+			return GAME_ERROR_NO_INFO_MEMORY;
+		}
+
+		if (m_sfo->get() != NULL && (*m_sfo)->size() != 0) {
+			ret = gameAppInfoCopyParental(m_sfo, &info);
+			if (ret < 0) {
+				delete progress;
+				delete checker;
+				return ret;
+			}
+		}
+
+		ret = checker->Check(&m_info, &info);
+		if (ret < 0) {
+			delete progress;
+			delete checker;
+
+			if (ret != GAME_ERROR_GC_QUIET)
+				return ret;
+
+			int err = ret;
+
+			ret = CheckInstalled(&m_info, flag);
+			if (ret < 0)
+				return ret;
+
+			if (!m_move)
+				return err;
+
+			ret = MountCardPatch();
+			if (ret < 0)
+				return ret;
+
+			m_param.updateApp = true;
+
+			return 0;
+		}
+
+		if (progress != NULL) {
+			progress->Add(100.0f);
+			delete progress;
+		}
+
+		delete checker;
+	} else {
+		m_install = false;
+	}
+
+	ret = MountCardPatch();
+	if (ret < 0)
+		return ret;
+
+	m_param.updateApp = true;
+
+	return 0;
 }

@@ -270,6 +270,7 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_NO_FTT		-2146430576	/* 0x80101190: no free-trial license file */
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 #define GAME_ERROR_UNREGISTER		-2146430679	/* 0x80101129: applauncher_plugin kept an application */
+#define GAME_ERROR_GC_QUIET		-2146430680	/* 0x80101128: nothing to show (an update already in place) */
 #define GAME_ERROR_NO_INSTALL_INFO	-2146430692	/* 0x8010111C: a folder without its install information */
 #define GAME_ERROR_NOT_APP_PACKAGE	-2146430672	/* 0x80101130: a package of another content type */
 /* a category the call does not handle (value only) */
