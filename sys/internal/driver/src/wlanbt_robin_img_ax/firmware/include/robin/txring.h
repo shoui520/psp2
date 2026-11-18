@@ -60,7 +60,7 @@ struct WlanMacTxRequest {
 	uint8_t host[4];	/* unaligned pointer to the host descriptor */
 	uint8_t buffer[4];	/* unaligned pointer to the buffer data (28 bytes past the buffer) */
 	uint8_t next[4];	/* unaligned word, cleared */
-};
+} __attribute__((packed));	/* Sony reads its 16-bit fields byte by byte */
 
 /* Bits 3-9 of WlanMacTxRequest.rate hold the rate index. */
 #define MAC_TX_RATE_MASK		0x3f8u
@@ -136,7 +136,7 @@ extern uintptr_t wlanWindowOwners[20];
 int wlanFrameSetPowerSave(const struct WlanMacTxRequest *request, int powerSave);
 int wlanTxRingFill(struct WlanMacTxRequest *request, unsigned int ring);
 int wlanTxRingPublish(unsigned int ring);
-int wlanTxRingPush(const struct WlanMacTxRequest *request, unsigned int ring, volatile uint32_t *readIndex,
+int wlanTxRingPush(const struct WlanMacTxRequest *request, int ring, volatile uint32_t *readIndex,
 		   volatile uint32_t *writeIndex, uint32_t *mask);
 uint32_t wlanTxRingPushPublished(const struct WlanMacTxRequest *request, unsigned int ring,
 				 volatile uint32_t *writeIndex);

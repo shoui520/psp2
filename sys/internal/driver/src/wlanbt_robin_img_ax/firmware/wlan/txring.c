@@ -99,7 +99,7 @@ __attribute__((noinline)) int wlanTxRingPublish(unsigned int ring)
 	unsigned int count = wlanTxRingPending[ring];
 	unsigned int limit;
 	volatile uint32_t *writeIndex;
-	unsigned int i;
+	int i;
 
 	if (count == 0)
 		return 0;
@@ -109,7 +109,7 @@ __attribute__((noinline)) int wlanTxRingPublish(unsigned int ring)
 	wlanTxRingPending[ring] -= limit;
 	writeIndex = wlanTxRingWriteIndex[ring];
 	if (wlanWindowOwner(ring, wlanWindowOwners) == 1) {
-		for (i = 0; i < limit; ++i) {
+		for (i = 0; i < (int)limit; ++i) {
 			unsigned int published = wlanTxRingPublished[ring];
 			const struct WlanMacTxRequest *request =
 				(const struct WlanMacTxRequest *)MAC_TX_RING_ENTRY(ring, published);
@@ -140,7 +140,7 @@ __attribute__((noinline)) int wlanTxRingPublish(unsigned int ring)
  * behind the read index. A set bit 7 of ring selects policy bit (ring & 7) of
  * the mask, a clear one resets it. Returns 0 when the ring is full.
  */
-int wlanTxRingPush(const struct WlanMacTxRequest *request, unsigned int ring, volatile uint32_t *readIndex,
+int wlanTxRingPush(const struct WlanMacTxRequest *request, int ring, volatile uint32_t *readIndex,
 		   volatile uint32_t *writeIndex, uint32_t *mask)
 {
 	uint32_t read = *readIndex;
@@ -482,10 +482,13 @@ int wlanTxInFlightWatchdog(void)
 	ULONG now;
 
 	if (sysEventEngineIsActive() != 0 || MAC_REG(0x10) == MAC_REG(0x14)) {
-		int remaining = wlanTxInFlightCount;
+		ULONG elapsed;
+		int remaining;
 
 		sysGetTime(&now);
-		if (remaining != 0 && now - wlanTxInFlightChecked >= WLAN_TX_IN_FLIGHT_CHECK_MS) {
+		elapsed = now - wlanTxInFlightChecked;
+		remaining = wlanTxInFlightCount;
+		if (remaining != 0 && elapsed >= WLAN_TX_IN_FLIGHT_CHECK_MS) {
 			unsigned int stale = 0;
 			unsigned int i = 0;
 
