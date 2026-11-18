@@ -2744,7 +2744,7 @@ string gameCardGetTitleId(void)
 }
 
 /* A folder's statistics read into a cleared stat (0x8101731A). */
-int gameDirGetStat(const string &path, GameDirStat *stat)
+int gameDirGetStat(const string &path, SceNpDrmInstallInfo *stat)
 {
 	sce_paf_memset(stat, 0, sizeof(*stat));
 

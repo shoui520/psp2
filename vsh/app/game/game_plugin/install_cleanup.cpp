@@ -953,7 +953,7 @@ int gameCleanupAddcont(void)
  * for additional content, the package in appDir concatenated back. On failure, detail is
  * given what gamePathGetMountedDrive finds for the folder that failed.
  */
-int gameCleanupInstall(const char *path, const GameInstallPackage *package, const char *appDir,
+int gameCleanupInstall(const char *path, const SceNpDrmInstallInfo *package, const char *appDir,
 		       const LsdbAppInfoPtr *info, string *detail)
 {
 	int ret;

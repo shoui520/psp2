@@ -1166,7 +1166,7 @@ int gamePluginContentImportDelete(const char *titleId)
 }
 
 /* Whether an application is a game, EG, ME or PSM application by its category (0x8102DAA0). */
-bool gamePluginAppIsGame(const LsdbAppInfoPtr *info)
+__attribute__((noinline)) bool gamePluginAppIsGame(const LsdbAppInfoPtr *info)
 {
 	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
 
@@ -1175,8 +1175,21 @@ bool gamePluginAppIsGame(const LsdbAppInfoPtr *info)
 
 	const char *category = LsdbValueText(it->second);
 
-	return gameCategoryIsGame(category) || gameCategoryIsEg(category) ||
-	       gameCategoryIsMe(category) || gameCategoryIsPsm(category);
+	/* gameCategoryIsGame, IsEg, IsMe and IsPsm, inlined */
+	for (SceUInt32 i = 0; i < 6; i++)
+		if (sce_paf_strncmp(category, s_gameCategories[i], 4) == 0)
+			return true;
+	for (int i = 0; i < 1; i++)
+		if (sce_paf_strncmp(category, s_egCategories[i], 4) == 0)
+			return true;
+	for (int i = 0; i < 1; i++)
+		if (sce_paf_strncmp(category, s_meCategories[i], 4) == 0)
+			return true;
+	for (SceUInt32 i = 0; i < 2; i++)
+		if (sce_paf_strncmp(category, s_psmCategories[i], 4) == 0)
+			return true;
+
+	return false;
 }
 
 /*
@@ -1242,12 +1255,17 @@ int gamePluginAddcontInfoCheck(const char *titleId, bool *found)
 
 	string device;
 
-	if (storage == 1)
+	switch (storage) {
+	case 1:
 		device = "grw0:";
-	else if (storage == 2 || storage == 3)
+		break;
+	case 2:
+	case 3:
 		device = "ux0:";
-	else
+		break;
+	default:
 		return GAME_ERROR_BAD_STORAGE;
+	}
 
 	string path = device + string("addcont/info");
 
@@ -1319,24 +1337,19 @@ int gamePluginAppIsAllowed(const string &titleId, bool *allowed, int *model)
 			*allowed = bit3Clear;
 		else
 			*allowed = bit2Clear;
-		return 0;
-	}
-
-	if (!dolce) {
+	} else if (!dolce) {
 		*allowed = true;
-		return 0;
+	} else {
+		SceUInt8 mode = 0;
+
+		if (sceSblPmMgrGetCurrentMode(&mode) == 0 && mode == 1) {
+			*allowed = true;
+		} else {
+			ret = gameDolceAppCheck(titleId, allowed);
+			if (ret < 0)
+				return ret;
+		}
 	}
-
-	SceUInt8 mode = 0;
-
-	if (sceSblPmMgrGetCurrentMode(&mode) == 0 && mode == 1) {
-		*allowed = true;
-		return 0;
-	}
-
-	ret = gameDolceAppCheck(titleId, allowed);
-	if (ret < 0)
-		return ret;
 
 	return 0;
 }
@@ -1781,7 +1794,7 @@ int gamePluginDirGetAttributeMinor(const string &dir, bool *valid, bool *bit2Cle
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
 
-	GameDirStat stat;
+	SceNpDrmInstallInfo stat;
 
 	sce_paf_memset(&stat, 0, sizeof(stat));
 
@@ -1796,8 +1809,8 @@ int gamePluginDirGetAttributeMinor(const string &dir, bool *valid, bool *bit2Cle
 		return GAME_ERROR_NO_INFO_MEMORY;
 
 	ret = gameSfoLoadVerified(dir + string(GAME_SFO_PATH), gameSfoGetAttributeParams(),
-				  gameSfoGetAttributeParamCount(), &info, stat.digest,
-				  stat.digestLength);
+				  gameSfoGetAttributeParamCount(), &info, stat.param_digest,
+				  stat.param_digest_size);
 	if (ret < 0)
 		return ret;
 
@@ -1821,10 +1834,16 @@ int gamePluginAppDataOperate(const char *titleId, int kind, int arg2, int arg3, 
 		gameWorkBegin();
 		gameShellHold(true, false);
 
-		if (kind >= 1 && kind <= 3)
+		switch (kind) {
+		case 1:
+		case 2:
+		case 3:
 			ret = gameAppDataOperate(titleId, kind, arg2, arg3, arg4);
-		else
+			break;
+		default:
 			ret = GAME_ERROR_INVALID_ARGUMENT;
+			break;
+		}
 
 		gameShellRelease();
 		gameWorkEnd();

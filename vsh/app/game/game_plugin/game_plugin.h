@@ -182,27 +182,12 @@ public:
 	SceUInt8 moreFields[4];
 };
 
-/* PLACEHOLDER: what gamePluginParamJobRun's job is given, 140 bytes */
+/* PLACEHOLDER names: what gamePluginParamJobRun's job is given, 140 bytes */
 struct GameJobParam {
-	SceUInt32 otherFields[35];
-};
-
-/*
- * PLACEHOLDER: a job the shell is locked for, made from a GameJobParam (constructor 0x8103084C,
- * 1136 bytes), defined in another file of the plugin.
- */
-class GameParamJob {
-public:
-	GameParamJob(const GameJobParam *param, int arg1, int arg2);
-	virtual ~GameParamJob();
-
-	int Run(void);		/* 0x8103094C */
-
-	GameJobParam m_param;
-	int m_arg1;
-	int m_arg2;
-	int m_result;
-	SceUInt8 otherFields[976];
+	char path[128];				/* the package folder */
+	SceUInt32 otherWord;
+	void (*progressFunc)(void *arg, float percent);
+	void *progressArg;
 };
 
 /*
@@ -243,7 +228,8 @@ int gamePfsMount(const paf::string &dir, const paf::string &name, const void *ke
 		 paf::string *mountPoint);
 int gamePfsUnmount(paf::string *mountPoint);
 
-/* a package's content type: additional content */
+/* a package's content type: an application, additional content (values only) */
+#define GAME_CONTENT_TYPE_APP		31
 #define GAME_CONTENT_TYPE_ADDCONT	22
 
 /* the plugin's error for an argument out of range (value only) */
@@ -268,31 +254,43 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_FTT_MISMATCH	-2146430654	/* 0x80101142: a free-trial license of another content */
 #define GAME_ERROR_NO_FTT		-2146430576	/* 0x80101190: no free-trial license file */
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
+#define GAME_ERROR_NO_INSTALL_INFO	-2146430692	/* 0x8010111C: a folder without its install information */
+#define GAME_ERROR_NOT_APP_PACKAGE	-2146430672	/* 0x80101130: a package of another content type */
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
 
 /*
- * PLACEHOLDER: what 0x8136D9D4 reads from a split package's head.bin, 0x78 bytes; only the
- * content type and the body's size, in 32-byte blocks, are known.
+ * PLACEHOLDER: what 0x8136D9D4 reads from a split package's head.bin, 0x78 bytes, the head of an
+ * installation's SceNpDrmInstallInfo; the content type, the body's size in 32-byte blocks and
+ * the content ID are known.
  */
 struct GamePackageInfo {
 	SceUInt32 headerFields[1];
-	SceUInt32 contentType;
+	SceUInt32 contentType;			/* GAME_CONTENT_TYPE_* */
 	SceUInt32 moreHeaderFields[1];
 	SceUInt32 bodyBlocks;
-	SceUInt32 otherFields[26];
+	SceUInt32 otherFields[6];
+	char contentId[48];			/* "XX0000-XXXXNNNNN_00-XXXXXXXXXXXXXXXX" */
+	SceUInt8 moreFields[32];
 };
 
+typedef char GamePackageInfoSize[sizeof(GamePackageInfo) == 0x78 ? 1 : -1];
+
 /*
- * PLACEHOLDER: an installation's package, its head.bin's information first and the
- * application's keystone at 0x278; the rest is not known yet.
+ * What NpDrm keeps of an installation, 936 bytes: Sony's name and the names of the three fields
+ * its debug dumps print ("sceNpDrmInstallInfo.license", ".keystone", ".param_digest").
  */
-struct GameInstallPackage {
+struct SceNpDrmInstallInfo {
 	GamePackageInfo info;
-	SceUInt8 otherFields[0x278 - sizeof(GamePackageInfo)];
-	SceUInt8 keystone[0x60];
+	SceUInt8 license[512];
+	SceUInt8 keystone[256];
+	char param_digest[40];			/* what param.sfo's digest is checked against */
+	SceSize param_digest_size;
+	SceUInt8 reserved[4];
 };
+
+typedef char SceNpDrmInstallInfoSize[sizeof(SceNpDrmInstallInfo) == 0x3A8 ? 1 : -1];
 
 /* the title IDs of the additional content an installation left (0x8102B8C4) */
 int gamePluginGetAddcontTitles(paf::vector<paf::string> *titles);
@@ -342,6 +340,13 @@ int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf
 
 /* a split package's information read from its head.bin at path, with buf as work memory */
 int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceSize bufSize);
+
+/*
+ * PLACEHOLDER name: the install information of the package folder at path, which ends in '/',
+ * with buf as work memory (0x8136DA0A, in the NpDrm package code the shell links)
+ */
+int gameNpDrmGetInstallInfo(SceNpDrmInstallInfo *info, SceSize size, const char *path, void *buf,
+			    SceSize bufSize);
 
 /* The NP account ID, 0 when the registry has none (0x81018610). */
 int gameNpGetAccountId(SceUInt64 *accountId);

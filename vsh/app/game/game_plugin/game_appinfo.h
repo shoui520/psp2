@@ -127,11 +127,14 @@ inline void gameLsdbValueAssign(LsdbValue &value, const LsdbValue &other)
 struct GameAppEntryOther;	/* PLACEHOLDER: what the entry's shared pointer holds */
 
 struct GameAppEntry {
-	GameAppEntry() : otherHeader(), storage(0), kind(0), parentalLevel(0), otherInt(0)
+	GameAppEntry() : otherWord1(0), otherWord2(0), otherWord3(0), storage(0), kind(0),
+			 parentalLevel(0), otherInt(0)
 	{
 	}
 
-	int otherHeader[3];
+	int otherWord1;
+	int otherWord2;
+	int otherWord3;
 	paf::string otherText;
 	paf::string iconPath;			/* icon0.png, or icon0.dds for EG and ME */
 	int storage;				/* 2 for wda, 0 otherwise */
@@ -153,7 +156,6 @@ struct GameAppRegistration {
 	paf::common::SharedPtr<GameAppEntry> entry;
 	LsdbAppInfoPtr info;
 	paf::vector<LsdbAppInfoPtr> related;	/* the related applications' informations */
-	SceUInt8 otherFields[4];
 	int liveAreaState;			/* 0xFFFFFF when built; 0 when it has none */
 	bool otherFlag;
 	int mode;				/* what the registration is for (1: an install) */
@@ -475,24 +477,66 @@ bool gameAppHasFttLicense(const paf::string &titleId);
 /* the game card application's title ID (0x810170A0) */
 paf::string gameCardGetTitleId(void);
 
-/*
- * PLACEHOLDER: a folder's statistics, as 0x8104639C fills them; only the digest its param.sfo is
- * checked against is known (gamePluginDirGetAttributeMinor).
- */
-struct GameDirStat {
-	SceUInt8 data[0x378];
-	char digest[40];
-	SceSize digestLength;
-	SceUInt8 reserved[4];
+/* PLACEHOLDER: a folder's install information (0x8104639C, in a file of the shell not written yet) */
+int gameDirReadStat(const paf::string &path, SceNpDrmInstallInfo *stat);
+
+/* a folder's install information read into a cleared one (0x8101731A) */
+int gameDirGetStat(const paf::string &path, SceNpDrmInstallInfo *stat);
+
+/* a job's progress, as its installer advances it */
+struct GameJobProgress {
+	float *percent;
+	int busy;				/* cleared when the job ends */
+	float scale;
+	void (*func)(void *arg, float percent);
+	void *arg;
 };
 
-typedef char GameDirStatSize[sizeof(GameDirStat) == 0x3A8 ? 1 : -1];
+/*
+ * PLACEHOLDER: the installer a GameParamJob runs, 80 bytes, in another file of the plugin
+ * (constructor 0x81030A6C, Run 0x81031B94).
+ */
+class GameJobInstaller {
+public:
+	GameJobInstaller(const GameJobParam *param, SceNpDrmInstallInfo *info,
+			 GameJobProgress *progress, paf::string *errorTitleId, float scale);
+	virtual ~GameJobInstaller();
 
-/* PLACEHOLDER: a folder's statistics (0x8104639C, in a file of the shell not written yet) */
-int gameDirReadStat(const paf::string &path, GameDirStat *stat);
+	int Run(int arg1, int arg2);
 
-/* a folder's statistics read into a cleared stat (0x8101731A) */
-int gameDirGetStat(const paf::string &path, GameDirStat *stat);
+	SceUInt8 otherFields[76];
+};
+
+/*
+ * PLACEHOLDER names: a package folder installed with the shell locked, from a GameJobParam
+ * (0x810305E8..0x81030A6C), 1136 bytes.
+ */
+class GameParamJob {
+public:
+	GameParamJob(const GameJobParam *param, int arg1, int arg2);
+	virtual ~GameParamJob();
+
+	int Run(void);
+
+	/* the install information of the folder at path ("GetInstallInfo", Sony's name in 0.990) */
+	int GetInstallInfo(const paf::string &path, SceNpDrmInstallInfo *info);
+
+	/* whether the parameters name an application's package folder */
+	int Check(void);
+
+	GameJobParam m_param;
+	int m_reserved;			/* not written: Sony clears the parameters only */
+	int m_arg1;
+	int m_arg2;
+	int m_result;
+	SceNpDrmInstallInfo m_info;
+	paf::string m_errorTitleId;
+	float m_percent;
+	GameJobProgress m_progress;
+	int m_padding;
+};
+
+typedef char GameParamJobSize[sizeof(GameParamJob) == 0x470 ? 1 : -1];
 
 /*
  * PLACEHOLDER name, defined in another file of the shell: whether the PSP emulator's list
