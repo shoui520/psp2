@@ -7,14 +7,16 @@
 #define _GAME_PLUGIN_ALARM_H
 
 #include <scetypes.h>
+#include <rtc.h>
 #include <std/string>
 #include <std/map>
 
 #include "game_appinfo.h"
 
 /*
- * PLACEHOLDER: an application's alarm, defined in another file of the plugin (constructor
- * 0x8107FBF0, 56 bytes): the application and when its license expires.
+ * An application's alarm (alarm_entry.cpp, constructor 0x8107FBF0, vtable 0x8152EF3C), 56 bytes:
+ * the application, when its license expires, and the secure alarm set 30, 15 and 5 minutes
+ * before, each time with a notice of the minutes left. The names are ours.
  */
 class GameAlarmEntry {
 public:
@@ -22,16 +24,22 @@ public:
 	virtual ~GameAlarmEntry();
 
 	/* PLACEHOLDER names: the alarm started (0x81080160), started again (0x81080210), its time
-	   checked when the alarm rings (0x81080328), and its notice closed (0x810803AA) */
+	   checked when the alarm rings (0x81080316), and its notice taken down (0x810803AA) */
 	int Start(void);
 	int Restart(void);
 	int Check(void);
-	int Close(void);
+	void Close(void);
 
-	SceUInt32 reserved;
-	SceUInt64 expireTime;
-	paf::string titleId;
-	SceUInt8 otherFields[28];
+private:
+	void Notify(int step, SceUInt64 remaining);
+	int GetNextTick(SceRtcTick *tick, int *step);
+
+	SceUInt32 reserved0;
+	SceRtcTick m_expireTime;
+	paf::string m_titleId;
+	paf::wstring reserved1;		/* nothing reads or writes it */
+	paf::string m_name;		/* the notice's: "SceGameAlarm" and the title ID */
+	SceUInt32 reserved2;
 };
 
 typedef char GameAlarmEntrySize[sizeof(GameAlarmEntry) == 56 ? 1 : -1];

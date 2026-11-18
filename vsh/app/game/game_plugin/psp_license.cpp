@@ -97,9 +97,6 @@ static char s_removePath[SCE_IO_MAX_PATH_BUFFER_SIZE];
 #define GAME_APP_PART_ADDCONT		3
 #define GAME_APP_PART_USER_SAVEDATA	4
 
-/* the partition sceAppMgrGetUserDirPath gives the user's folder of (value only) */
-#define GAME_USER_DIR_PARTITION		2
-
 /*
  * how gameUr0AppmetaSetup sets an appmeta in ur0 aside: the whole folder, or all but its icons
  * (values only)

@@ -661,9 +661,6 @@ int GameUr0Setup::SetupGameAppmeta(const string &dir)
 	return ret;
 }
 
-/* the largest param.sfo a game card's appmeta keeps */
-#define GAME_GC_PARAM_SFO_MAX	0x8000
-
 /* The game card's param.sfo copied into dir as gc_param.sfo (0x8103A56A). */
 int GameUr0Setup::SetupGcParamSfo(const string &dir)
 {
@@ -675,7 +672,7 @@ int GameUr0Setup::SetupGcParamSfo(const string &dir)
 	if (ret < 0)
 		return ret;
 
-	if (stat.st_size > GAME_GC_PARAM_SFO_MAX)
+	if (stat.st_size > GAME_PARAM_SFO_MAX_SIZE)
 		return GAME_ERROR_BAD_PARAM_SIZE;
 
 	ret = gameCopyFileWithPool(src.c_str(), dst.c_str(), 0, 0, 0, 0);
@@ -744,9 +741,6 @@ appmeta:
 
 	return ret;
 }
-
-/* the free space a game's appmeta needs on ur0: */
-#define GAME_APPMETA_SIZE	0x500000
 
 /*
  * A game's appmeta made in ur0:temp/appmeta and moved into ur0:appmeta, copied for a type 1 or 2

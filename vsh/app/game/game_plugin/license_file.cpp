@@ -26,11 +26,6 @@ using namespace paf;
 /* the size of a license's file name */
 #define GAME_RIF_NAME_SIZE	48
 
-/* the content types whose licenses are written: applications (21, 22) and themes (31) */
-#define GAME_LICENSE_CONTENT_APP		21
-#define GAME_LICENSE_CONTENT_APP_ADDCONT	22
-#define GAME_LICENSE_CONTENT_THEME	31
-
 /* the license file's flag set when the free-trial license moves over one already there */
 #define GAME_LICENSE_FLAG_ACTIVATED	1
 
@@ -88,7 +83,7 @@ int gameFileWriteToDir(const void *buf, SceSize size, const string *dir, const c
  * gives it; path is left its path (0x8103ECEE).
  */
 int gameLicenseWrite(SceUInt32 contentType, const void *license, SceSize licenseSize,
-		     const string *dir, string *path, string *detail, int arg6, int arg7)
+		     const string *dir, string *path, string *detail)
 {
 	gameDebugDump("rif data", license, licenseSize);
 

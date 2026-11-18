@@ -121,8 +121,7 @@ struct GameGcPromoteEntry {
 int gameGcGetPromoteEntries(vector<GameGcPromoteEntry> *entries);
 int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), void *arg);
 
-/* a card title's state before it is promoted (value only), and how many titles a card lists */
-#define GAME_GC_TITLE_NOT_PROMOTED	-2146430710	/* 0x8010110A */
+/* how many titles a card lists; a title not promoted yet is GAME_ERROR_NOT_INSTALLED */
 #define GAME_GC_TITLES_MAX		1
 
 /* the promoter's error for a card it knows no title of (value only) */
@@ -176,7 +175,6 @@ enum {
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameGcGetPromoteCount(void);		/* 0x810FCB30 */
 int shellGetGcTitleSet(void);			/* 0x81004D70: which of the system's own card titles it has */
-wstring shellFormatText(const wchar_t *format, ...);	/* 0x81343700: %s-style substitution */
 static void gameGcPromoteOnPowerEvent(void *arg);
 extern "C" int SceShell_548A3111(int event, ShellEventCallback callback, void *arg);
 extern "C" int SceShell_F197032C(int event, ShellEventCallback callback, void *arg);
@@ -1811,7 +1809,7 @@ int GameGcPromote::ListTitles(job::JobItem *job, const string &dir)
 			}
 
 			s_mutex.Lock();
-			m_titles[entry.name] = GAME_GC_TITLE_NOT_PROMOTED;
+			m_titles[entry.name] = GAME_ERROR_NOT_INSTALLED;
 			s_mutex.Unlock();
 
 			if (++count >= GAME_GC_TITLES_MAX)

@@ -21,9 +21,6 @@
 
 using namespace paf;
 
-/* the library's error for a parameter the param.sfo does not have */
-#define SFO_ERROR_NOT_FOUND	-2146412027	/* 0x80105A05 */
-
 /* a parameter's key: the hash of its name (FNV-1a), 0 for an empty name */
 static inline unsigned int gameSfoKeyHash(const char *name)
 {

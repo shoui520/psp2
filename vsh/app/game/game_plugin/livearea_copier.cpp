@@ -22,26 +22,15 @@
 
 using namespace paf;
 
-/* the share of each step in a copier's progress: its checks, its copy and its commit */
-#define GAME_LIVEAREA_WEIGHT_CHECK	0.1f
-#define GAME_LIVEAREA_WEIGHT_COPY	0.8f
-#define GAME_LIVEAREA_WEIGHT_COMMIT	0.1f
-
-/* the room an application's appmeta needs on ux0: */
-#define GAME_APPMETA_SIZE		0x500000
-
-/* the largest card param.sfo copied */
-#define GAME_GC_PARAM_MAX_SIZE		0x8000
-
 GameLiveAreaCopier::GameLiveAreaCopier(bool flag, const string &name, GameCancelFunc cancel,
 				       void *arg, const GameJobProgress *progress, string *detail,
 				       float scale)
 	: m_flag(flag), m_name(name), m_cancel(cancel), m_arg(arg), m_progress(*progress, scale),
 	  m_detail(detail)
 {
-	m_weights[0] = GAME_LIVEAREA_WEIGHT_CHECK;
-	m_weights[1] = GAME_LIVEAREA_WEIGHT_COPY;
-	m_weights[2] = GAME_LIVEAREA_WEIGHT_COMMIT;
+	m_weights[0] = GAME_APPMETA_WEIGHT_CHECK;
+	m_weights[1] = GAME_APPMETA_WEIGHT_COPY;
+	m_weights[2] = GAME_APPMETA_WEIGHT_COMMIT;
 }
 
 GameLiveAreaCopier::~GameLiveAreaCopier()
@@ -161,7 +150,7 @@ static int gameGcParamCopy(const string &dir, string *detail)
 		return ret;
 	}
 
-	if (stat.st_size > GAME_GC_PARAM_MAX_SIZE)
+	if (stat.st_size > GAME_PARAM_SFO_MAX_SIZE)
 		return GAME_ERROR_BAD_PARAM_SIZE;
 
 	ret = gameCopyFileWithPool(src.c_str(), dst.c_str(), 0, 0, 0, (int)detail);

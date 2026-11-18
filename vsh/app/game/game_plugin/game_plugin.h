@@ -129,7 +129,8 @@ struct GameInstallParam {
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
 	char errorTitleId[16];
-	SceUInt8 moreFields[4];
+	bool noLicense;			/* a license's package without its license (kind 2) */
+	SceUInt8 reserved2[3];
 };
 
 typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
@@ -209,6 +210,7 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_LICENSE_PERIOD	-2146430655	/* 0x80101141: a license outside its period */
 #define GAME_ERROR_BAD_LICENSE_SIZE	-2146430653	/* 0x80101143: a license file larger than a license */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
+#define GAME_ERROR_NOT_INSTALLED	-2146430710	/* 0x8010110A: an application without a record */
 /* an application the database has no record of, or a record without a key (value only) */
 #define GAME_ERROR_NO_RECORD		-2146430711	/* 0x80101109 */
 /* a license that gives no #_up_status (value only) */
@@ -228,6 +230,8 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_UNKNOWN_CATEGORY	-2146430673	/* 0x8010112F */
 /* a path on no storage the plugin knows (value only) */
 #define GAME_ERROR_NO_STORAGE		-2146430663	/* 0x80101139 */
+/* PLACEHOLDER name: an update for an application on a game card (value only) */
+#define GAME_ERROR_GC_UPDATE		-2146430665	/* 0x80101137 */
 /* the installer's error that keeps the title it stopped at (value only) */
 #define GAME_ERROR_INSTALL_TITLE	-2146430664	/* 0x80101138 */
 /* the promote's error shown as a plain error dialog (value only) */
@@ -393,6 +397,10 @@ int gameGameDataMount(const char *appPath, const char *patchPath, const char *ri
 		      paf::string *mountPoint);
 int gameAppDataMount(const paf::string &titleId, paf::string *mountPoint, bool reserved);
 int gameAppDataUnmount(paf::string *mountPoint);
+
+/* the partition sceAppMgrGetUserDirPath gives the user's folder of (value only) */
+#define GAME_USER_DIR_PARTITION		2
+
 int gamePspemuWorkMount(paf::string *mountPoint);
 int gamePspemuWorkUnmount(paf::string *mountPoint);
 int gameThemeMount(const paf::string &contentId, const paf::string &themePath, const void *rif,

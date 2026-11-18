@@ -66,14 +66,14 @@ int GameInstallJob::CreatePromoter(const GameInstallParam *param, GamePromoterIf
 	case GAME_INSTALL_KIND_APP:
 		*promoter = created = new GameAppInstaller(param, progress, errorTitleId);
 		break;
-	case GAME_INSTALL_KIND_PATCH:
-		*promoter = created = new GamePatchInstaller(param, progress, errorTitleId);
+	case GAME_INSTALL_KIND_PSP:
+		*promoter = created = new GamePspAppInstaller(param, progress, errorTitleId);
 		break;
 	case GAME_INSTALL_KIND_LICENSE:
 		*promoter = created = new GameLicenseInstaller(param, progress, errorTitleId);
 		break;
-	case GAME_INSTALL_KIND_ADDCONT:
-		*promoter = created = new GameAddcontInstaller(param, progress, errorTitleId);
+	case GAME_INSTALL_KIND_PSM:
+		*promoter = created = new GamePsmAppInstaller(param, progress, errorTitleId);
 		break;
 	default:
 		return GAME_ERROR_NOT_APP_PACKAGE;

@@ -67,6 +67,8 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #ifndef LSDB_KEY_INSTALL_DIR_CACHE
 #define LSDB_KEY_INSTALL_DIR_CACHE	0x35EF415Bu	/* "INSTALL_DIR_CACHE0" */
 #endif
+#define LSDB_KEY_SAVEDATA_MAX_SIZE	0x98264E03u	/* "SAVEDATA_MAX_SIZE" */
+#define LSDB_KEY_REGION_DENY		0xCC003704u	/* "REGION_DENY" */
 #ifndef LSDB_KEY_IMPORT_SAVEDATA_INFO
 #define LSDB_KEY_IMPORT_SAVEDATA_INFO	0x6DBCFF31u	/* "IMPORT_SAVEDATA_INFO" */
 #endif
@@ -88,6 +90,9 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 /* PLACEHOLDER name: the ATTRIBUTE bit that marks an application with a manual */
 #define GAME_ATTRIBUTE_MANUAL	0x200000
 
+/* PLACEHOLDER name: the ATTRIBUTE bit set when an application's app folder is not there */
+#define GAME_ATTRIBUTE_NO_APP_DIR	0x1
+
 /* an ATTRIBUTE bit: the application's license decides its #_up_status */
 #define GAME_ATTRIBUTE_UP_STATUS_LICENSE	0x400
 
@@ -95,6 +100,14 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 inline SceInt64 gameLsdbValueInteger(const LsdbValue &value)
 {
 	return value.type == LSDB_VALUE_INTEGER ? value.integer : 0;
+}
+
+/* a value's text as a string, "" when it has none */
+inline paf::string gameLsdbValueString(const LsdbValue &value)
+{
+	if (value.type == LSDB_VALUE_TEXT && value.text != NULL)
+		return *value.text;
+	return paf::string("");
 }
 
 /* a value set to a copy of text (Sony's code inlines this everywhere) */
@@ -321,6 +334,22 @@ int sfoFindParam(SfoHandle *handle, const char *key, void **param);
 int sfoGetParamInfo(SfoHandle *handle, void *param, const char **key, SceSize *length,
 		    SceSize *maxLength);
 int sfoGetParamValue(SfoHandle *handle, void *param, const void **value);
+
+/*
+ * PLACEHOLDER names, the same library: a new param.sfo made in memory (0x81342E04), a parameter
+ * added with its format, length and largest length (0x813426CE), a parameter's value replaced
+ * (0x81342D82), the size of the param.sfo written (0x8134331E), and the param.sfo written into
+ * a buffer of that size (0x813432DE).
+ */
+int sfoCreate(SfoHandle **handle);
+int sfoAddParam(SfoHandle *handle, const char *key, const void *value, SceUInt16 format,
+		SceSize length, SceSize maxLength);
+int sfoSetParamValue(SfoHandle *handle, void *param, const void *value, SceSize length);
+int sfoGetSize(SfoHandle *handle, SceSize *size);
+int sfoWrite(void *buf, SceSize size, SfoHandle *handle);
+
+/* the library's error for a parameter the param.sfo does not have */
+#define SFO_ERROR_NOT_FOUND	-2146412027	/* 0x80105A05 */
 
 int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize size);
 int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
@@ -748,6 +777,9 @@ extern "C" int sceNpDrmGetRifNameForInstall(char *rifName, const void *license, 
 /* the SDK's glue over SceVshBridge's import (0x81417C70) */
 extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 
+/* the SDK's glue over SceVshBridge's import (0x81417C80) */
+extern "C" int vshRtcSetSecureAlarmTick(const SceRtcTick *tick);
+
 /* where the content ID is in a PSP game's DATA.PSP, and its size */
 #define GAME_PSP_CONTENT_ID_OFFSET	0x560
 #define GAME_PSP_CONTENT_ID_SIZE	48
@@ -756,12 +788,16 @@ extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 #define GAME_LICENSE_NO_EXPIRY		0x7FFFFFFFFFFFFFFFLL
 #define GAME_LICENSE_ERROR_EXPIRED	-2139095023	/* 0x80800011 */
 
+/* the content types whose licenses are written: applications (21, 22) and themes (31) */
+#define GAME_LICENSE_CONTENT_APP		21
+#define GAME_LICENSE_CONTENT_APP_ADDCONT	22
+#define GAME_LICENSE_CONTENT_THEME	31
+
 /* license_file.cpp: an application's license files (0x8103E944..0x8103FB34) */
 int gameFileWriteToDir(const void *buf, SceSize size, const paf::string *dir, const char *name,
 		       paf::string *path, paf::string *detail);
 int gameLicenseWrite(SceUInt32 contentType, const void *license, SceSize licenseSize,
-		     const paf::string *dir, paf::string *path, paf::string *detail, int arg6,
-		     int arg7);
+		     const paf::string *dir, paf::string *path, paf::string *detail);
 int gameFttRemove(const paf::string &titleId);
 int gameLicenseActivate(const paf::string *path);
 int gameFttInstall(const paf::string *path, const paf::string &titleId);
@@ -1096,6 +1132,17 @@ int gameAppmetaCommit(const paf::string *tempDir, const paf::string *titleId, bo
 int gameAppmetaCommitNew(const paf::string *titleId);
 int gameLsdbHasRoom(bool *hasRoom);
 int gameAppmetaCheckSpace(bool check, SceUInt64 size, paf::string *detail);
+
+/* the room an application's appmeta needs on its drive */
+#define GAME_APPMETA_SIZE		0x500000
+
+/* the largest param.sfo (a card's, an application's) an appmeta keeps */
+#define GAME_PARAM_SFO_MAX_SIZE		0x8000
+
+/* the share of each step in an appmeta copier's progress: its checks, its copy and its commit */
+#define GAME_APPMETA_WEIGHT_CHECK	0.1f
+#define GAME_APPMETA_WEIGHT_COPY	0.8f
+#define GAME_APPMETA_WEIGHT_COMMIT	0.1f
 
 /*
  * What sets an application up in ur0 (its appmeta, its livearea) under the plugin's

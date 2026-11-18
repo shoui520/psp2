@@ -89,7 +89,7 @@ int GameThemeCopier::Commit(string *themeDir, string *contentPath, GameJobProgre
 	string licensePath;
 
 	ret = gameLicenseWrite(m_info->info.contentType, m_info->license, m_info->licenseSize,
-			       &licenseDir, &licensePath, m_errorTitleId, -1, -1);
+			       &licenseDir, &licensePath, m_errorTitleId);
 	if (ret < 0)
 		return ret;
 

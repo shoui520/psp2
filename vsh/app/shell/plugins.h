@@ -194,8 +194,19 @@ struct ImposeNotice {
 /* impose_plugin's GetInterface(1) */
 struct ImposePluginInterface {
 	void (*showNotice)(ImposeNotice *notice);
-	void *reserved;
+	void (*removeNotice)(const char *name);	/* PLACEHOLDER name: the notice of that name taken down */
 	const wchar_t *(*getString)(const paf::IDParam &id);
 };
+
+/*
+ * PLACEHOLDER name: format with its %s-style tokens replaced by the texts given, in order, the
+ * texts not given empty (0x81343700, in the shell's own code)
+ */
+paf::wstring shellFormatText(const wchar_t *format, const wchar_t *text1 = L"",
+			     const wchar_t *text2 = L"", const wchar_t *text3 = L"",
+			     const wchar_t *text4 = L"", const wchar_t *text5 = L"",
+			     const wchar_t *text6 = L"", const wchar_t *text7 = L"",
+			     const wchar_t *text8 = L"", const wchar_t *text9 = L"",
+			     const wchar_t *text10 = L"", const wchar_t *text11 = L"");
 
 #endif

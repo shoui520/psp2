@@ -130,6 +130,23 @@ SceUID sceKernelCreateMsgPipeWithLR(const char *name, SceUInt32 type, SceUInt32 
 				    SceSize size, const SceKernelMsgPipeOptParam *option,
 				    void *caller);
 
+/* the system time, in microseconds */
+int sceKernelGetSystemTime(SceKernelSysClock *clock);
+
+/*
+ * A PSP saved data's MAC, computed by GcAuthMgr (save_context.c): the context set up for a
+ * mode, the data added (a multiple of 16 bytes), and the 16-byte MAC made, with key or NULL.
+ * The context is GcAuthMgr's; its 40 bytes are opaque here.
+ */
+struct MsSaveBBMacContext {
+	SceUInt8 opaque[40];
+};
+
+int SceLibKernel_1693032E(struct MsSaveBBMacContext *context, SceUInt mode);
+int sceSblGcAuthMgrMsSaveBBMacUpdate(struct MsSaveBBMacContext *context, const void *data,
+				     SceSize size);
+int SceLibKernel_774AE3CB(struct MsSaveBBMacContext *context, void *mac, const void *key);
+
 /*
  * The lightweight mutex's lock (without callbacks) and unlock that the SDK's early stubs link
  * (cui_setupper's updater_core, built with the 0.996 SDK); no Sony name is known for either

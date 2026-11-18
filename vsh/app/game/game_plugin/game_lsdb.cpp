@@ -414,7 +414,7 @@ int gameAppGetSizes(const string *appDir, const string &titleId, unsigned int fl
 		if (storage == 2 || storage == 3) {
 			char userDir[32];
 
-			ret = sceAppMgrGetUserDirPath(2, userDir, sizeof(userDir));
+			ret = sceAppMgrGetUserDirPath(GAME_USER_DIR_PARTITION, userDir, sizeof(userDir));
 			if (ret < 0)
 				return ret;
 
