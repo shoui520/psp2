@@ -1,12 +1,13 @@
 /*
  * The game plugin's patch promoter: an application's patch, promoted in the drive's temp/promote,
- * moved into its patch folder (0x8103FB34..0x8104639C), and the checks of the game card's patch
+ * moved into its patch folder (0x8103FB34..0x81045DF6), and the checks of the game card's patch
  * against the installed one. The file's name and the functions' are ours (no record names them);
  * the strings are Sony's.
  */
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <std/stdio.h>
 #include <std/string.h>
 #include <std/string>
 #include <common/shared_ptr.h>
@@ -590,6 +591,196 @@ int GamePatchPromoter::Prepare(bool flag)
 		return ret;
 
 	m_param.updateApp = true;
+
+	return 0;
+}
+
+/*
+ * The source of the promoted application's information: the folder read is the mount point when
+ * there is one; the LiveArea's folder and the license folder are set by the drive the
+ * application is on (0x8104415A).
+ */
+int GamePatchPromoter::CreateSource(GamePromoteSource **source)
+{
+	string dir(m_path);
+
+	if (m_mountPoint.length() != 0)
+		dir = m_mountPoint;
+
+	string sysDir = dir + string("/sce_sys");
+	string sfoPath = sysDir + string("/param.sfo");
+
+	if (m_path.find("gro0:") != string::npos) {
+		LsdbAppInfoPtr info(new LsdbAppInfo);
+
+		if (info.get() == NULL)
+			return GAME_ERROR_NO_INFO_MEMORY;
+
+		int ret = gameSfoLoad(sfoPath, gameSfoGetAppVerParams(),
+				      gameSfoGetAppVerParamCount(), &info);
+		if (ret < 0) {
+			gamePathGetMountedDrive(sfoPath, (string *)m_userData);
+			return ret;
+		}
+
+		SceUInt64 attribute = 0;
+		LsdbAppInfo::iterator it = info->find(LSDB_KEY_ATTRIBUTE);
+
+		if (it != info->end())
+			attribute = gameLsdbValueInteger(it->second);
+
+		if (attribute & 1) {
+			m_appDir = m_path;
+			m_dir = string("ur0:appmeta/") + m_name;
+		} else {
+			m_appDir = m_path;
+			m_dir = string("ur0:appmeta/") + m_name;
+		}
+
+		m_licensePath = string("gro0:license/app/") + m_name;
+	} else if (m_path.find("pd0:") != string::npos) {
+		m_appDir = m_path;
+		m_dir = string("ur0:appmeta/") + m_name;
+		m_licensePath = string("pd0:license/app/") + m_name;
+	} else if (m_path.find("vs0:") != string::npos) {
+		m_appDir = m_path;
+		m_dir = string("vs0:app/") + m_name;
+	} else if (m_path.find("ux0:") != string::npos) {
+		m_appDir = dir;
+		m_dir = string("ur0:appmeta/") + m_name;
+		m_licensePath = string("ux0:license/app/") + m_name;
+	}
+
+	GameAppSourceParam param(dir.c_str(), m_path.c_str(), m_name.c_str(), sysDir.c_str(),
+				 m_dir.c_str(), m_info);
+
+	*source = new GameAppSource(param);
+	if (*source == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	return 0;
+}
+
+/*
+ * The record built by the promoter, the kept values of the installed record added for an update;
+ * a game card's game gets the appinst bit, and an application without a LiveArea type whose
+ * template.xml is missing the bit that says so (0x8104531A).
+ */
+int GamePatchPromoter::SetInfo(GamePromoteSource *source, bool registerApp,
+			       GameAppRegistration *reg)
+{
+	int ret = GamePromoter::SetInfo(source, registerApp, reg);
+
+	if (ret < 0)
+		return ret;
+
+	LsdbAppInfo::iterator end = reg->info->end();
+
+	if (m_install && m_param.updateApp) {
+		ret = gameAppInfoCopyKept(&m_info, &reg->info);
+		if (ret < 0)
+			return ret;
+	}
+
+	LsdbAppInfo::iterator it = reg->info->find(LSDB_KEY_CATEGORY);
+
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	string category(LsdbValueText(it->second));
+
+	if (category == "gd" || category == "gp") {
+		if (LocalFile::Exists("gro0:")) {
+			string titleId = gameCardGetTitleId();
+
+			if (titleId == m_name.c_str()) {
+				bool appinst = gameDirHasSubDirs(string("gro0:appinst"));
+
+				gameAppInfoSetAppconfBit10(&reg->info, appinst);
+			}
+		}
+	}
+
+	it = reg->info->find(LSDB_KEY_LAREA_TYPE);
+	if (it == end || (int)gameLsdbValueInteger(it->second) == 0) {
+		int upStatus = 0;
+
+		it = reg->info->find(LSDB_KEY_UP_STATUS);
+		if (it != end)
+			upStatus = (int)gameLsdbValueInteger(it->second);
+
+		string templatePath;
+
+		if (upStatus == 3) {
+			templatePath = m_path +
+				       string("/sce_sys/retail/livearea/contents/template.xml");
+			if (!LocalFile::Exists(templatePath.c_str()))
+				templatePath = m_path +
+					       string("/sce_sys/livearea/contents/template.xml");
+		} else {
+			templatePath = m_path + string("/sce_sys/livearea/contents/template.xml");
+		}
+
+		if (!LocalFile::Exists(templatePath.c_str()))
+			gameAppInfoSetAppconfBit12(&reg->info, true);
+	}
+
+	return 0;
+}
+
+/*
+ * What is left once the record is built: the parental values an update keeps, the EBOOT
+ * parameters of eboot.bin and of the first related application's eboot2.bin, and the LiveArea
+ * brought into ur0:appmeta when m_flag2 is set (0x810458A0).
+ */
+int GamePatchPromoter::Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg)
+{
+	int ret;
+
+	if (m_sfo->get() != NULL && (*m_sfo)->size() != 0) {
+		ret = gameAppInfoCopyParental(m_sfo, &reg->info);
+		if (ret < 0)
+			return ret;
+	}
+
+	string dir(m_path);
+
+	if (m_mountPoint.length() != 0)
+		dir = m_mountPoint;
+
+	string ebootPath = dir + string("/eboot.bin");
+
+	gameAppInfoUpdateEbootParam(ebootPath, &reg->info, NULL);
+
+	LocalFileStat stat;
+	char name[32];
+
+	for (unsigned int i = 0; i < reg->related.size() && i < 1; i++) {
+		sce_paf_snprintf(name, sizeof(name), "/eboot%u.bin", i + 2);
+		ebootPath = dir + string(name);
+
+		if (LocalFile::Getstat(ebootPath.c_str(), &stat) == 0)
+			gameAppInfoUpdateEbootParam(ebootPath, &reg->related[i], NULL);
+	}
+
+	if (m_flag2) {
+		LsdbAppInfo::iterator it = reg->info->find(LSDB_KEY_CATEGORY);
+
+		if (it == reg->info->end())
+			return GAME_ERROR_NO_VALUE;
+
+		string category(LsdbValueText(it->second));
+		GameLiveAreaCopier *copier = new GameLiveAreaCopier(false, string(""), cancel, arg,
+								    &m_progress, 0, 0.4f);
+
+		if (copier == NULL)
+			return GAME_ERROR_NO_INFO_MEMORY;
+
+		ret = copier->Run(reg, &dir);
+		delete copier;
+		if (ret < 0)
+			return ret;
+	}
 
 	return 0;
 }

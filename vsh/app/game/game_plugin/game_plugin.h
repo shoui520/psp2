@@ -141,7 +141,9 @@ struct GameInstallParam {
 	int kind;			/* 2 for a license update's package */
 	bool flag1;
 	bool flag2;
-	SceUInt8 otherFields[10];
+	SceUInt8 reserved[2];
+	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
+	void *progressArg;
 	char errorTitleId[16];
 	SceUInt8 moreFields[4];
 };
@@ -149,40 +151,17 @@ struct GameInstallParam {
 typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
 
 struct GameInstallExParam {
-	SceUInt8 otherFields[144];
+	char path[128];			/* the package folder's path */
+	SceUInt8 otherFields[8];
+	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
+	void *progressArg;
 	char errorTitleId[16];
+	SceUInt8 moreFields[128];
 };
 
-/*
- * PLACEHOLDER: the plugin's two installers, defined in another file of the plugin (constructors
- * 0x81045E92 and 0x810465F8, Run 0x8104625A and 0x81046BC0; 300 and 1336 bytes): the
- * constructor's result and the title ID an error names are known.
- */
-class GameInstallJob {
-public:
-	GameInstallJob(const GameInstallParam *param, bool flag, bool (*isStopRequested)(void),
-		       int arg4);
-	virtual ~GameInstallJob();
+typedef char GameInstallExParamSize[sizeof(GameInstallExParam) == 288 ? 1 : -1];
 
-	int Run();
-
-	int m_result;
-	SceUInt8 otherFields[280];
-	paf::string m_errorTitleId;
-};
-
-class GameInstallExJob {
-public:
-	GameInstallExJob(const GameInstallExParam *param, bool flag, int arg3, int arg4);
-	virtual ~GameInstallExJob();
-
-	int Run();
-
-	int m_result;
-	SceUInt8 otherFields[1312];
-	paf::string m_errorTitleId;
-	SceUInt8 moreFields[4];
-};
+/* GameInstallJob and GameInstallExJob, the plugin's two installers: promoter.h */
 
 /* PLACEHOLDER names: what gamePluginParamJobRun's job is given, 140 bytes */
 struct GameJobParam {

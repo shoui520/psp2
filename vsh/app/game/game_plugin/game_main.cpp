@@ -28,6 +28,7 @@
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "promoter.h"
 
 using namespace paf;
 
