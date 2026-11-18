@@ -24,6 +24,8 @@
 #include "game_plugin.h"
 #include "game_appinfo.h"
 
+PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbValue, paf::allocator<LsdbValue>)
+
 using namespace paf;
 
 int gameTempDirPrepare(const char *dir);
@@ -111,8 +113,11 @@ struct GameFatFormatParam {
 	SceUInt32 fsKind;		/* from the partition type: 2 FAT16, 3 FAT32, 4 exFAT */
 };
 
-/* PLACEHOLDER names: the FAT formatter's library, linked into the shell, not written yet */
-extern "C" int gameFatFormat(GameFatFormatParam *param);		/* 0x81383D8C */
+/*
+ * the FAT formatter linked into the shell, not written yet (FatFormat is named by its messages;
+ * the time helper's name is ours)
+ */
+extern "C" int FatFormat(GameFatFormatParam *param);		/* 0x81383D8C */
 extern "C" SceUInt32 gameFatTimeFromDateTime(const SceDateTime *time);	/* 0x8137E2D8 */
 
 /* how deep a PSP folder tree's removal goes, and the file names each of its steps reads */
@@ -500,19 +505,29 @@ bool gamePspGamedataIsOnlyFor(const char *gamedataId, const char *titleId)
 	SceLsdb_A6D8772C(&client);
 
 	if (SceLsdb_E90B81CD(&client) == 0) {
-		LsdbQueryCondition condition;
+		bool other = false;
 
-		condition.key = LSDB_KEY_GAMEDATA_ID;
-		condition.next = NULL;
-		condition.values.push_back(LsdbValue(gamedataId));
+		{
+			LsdbQueryCondition condition;
 
-		SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+			condition.key = LSDB_KEY_GAMEDATA_ID;
+			condition.next = NULL;
+			condition.values.push_back(LsdbValue(gamedataId));
 
-		for (unsigned int i = 0; i < titleIds.size(); i++) {
-			if (sce_paf_strncmp(titleIds[i].c_str(), titleId, GAME_PSP_TITLE_ID_LEN) != 0) {
-				SceLsdb_E2101B03(&client);
-				return false;
+			SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+
+			for (unsigned int i = 0; i < titleIds.size(); i++) {
+				if (sce_paf_strncmp(titleIds[i].c_str(), titleId,
+						    GAME_PSP_TITLE_ID_LEN) != 0) {
+					other = true;
+					break;
+				}
 			}
+		}
+
+		if (other) {
+			SceLsdb_E2101B03(&client);
+			return false;
 		}
 	}
 
@@ -634,19 +649,29 @@ bool gameSavedataDirIsOnlyFor(const char *savedataDir, const char *titleId)
 	SceLsdb_A6D8772C(&client);
 
 	if (SceLsdb_E90B81CD(&client) == 0) {
-		LsdbQueryCondition condition;
+		bool other = false;
 
-		condition.key = LSDB_KEY_INSTALL_DIR_SAVEDATA;
-		condition.next = NULL;
-		condition.values.push_back(LsdbValue(savedataDir));
+		{
+			LsdbQueryCondition condition;
 
-		SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+			condition.key = LSDB_KEY_INSTALL_DIR_SAVEDATA;
+			condition.next = NULL;
+			condition.values.push_back(LsdbValue(savedataDir));
 
-		for (unsigned int i = 0; i < titleIds.size(); i++) {
-			if (sce_paf_strncmp(titleIds[i].c_str(), titleId, GAME_PSP_TITLE_ID_LEN) != 0) {
-				SceLsdb_E2101B03(&client);
-				return false;
+			SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+
+			for (unsigned int i = 0; i < titleIds.size(); i++) {
+				if (sce_paf_strncmp(titleIds[i].c_str(), titleId,
+						    GAME_PSP_TITLE_ID_LEN) != 0) {
+					other = true;
+					break;
+				}
 			}
+		}
+
+		if (other) {
+			SceLsdb_E2101B03(&client);
+			return false;
 		}
 	}
 
@@ -840,7 +865,7 @@ int gameGcAppDelete(const char *titleId, LsdbAppInfoPtr *info)
 						break;
 					}
 
-					ret = gameFatFormat(&param);
+					ret = FatFormat(&param);
 					if (ret >= 0)
 						sceIoSync(param.device, 0);
 
@@ -898,4 +923,77 @@ int gameRenameIfExists(const char *src, const char *dst)
 		return LocalFile::RenameFile(src, dst);
 
 	return ret;
+}
+
+/*
+ * The save data folder savedataDir of user userNo moved into ux0:temp/game, when it is there
+ * (0x8105DC40).
+ */
+int gameSavedataMoveToTemp(const string &savedataDir, const string &userNo)
+{
+	string savedata = string("user/") + userNo + string("/savedata/") + savedataDir;
+	string src = string("ux0:") + savedata;
+	string name = gamePathToFileName(savedata.c_str());
+	string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+	int ret = gameRenameIfExists(src.c_str(), dst.c_str());
+
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * Whether no application but titleId names addcontDir among its additional contents' folders;
+ * true also when the applications cannot be asked (0x8105E202).
+ */
+bool gameAddcontDirIsOnlyFor(const char *addcontDir, const char *titleId)
+{
+	if (addcontDir == NULL)
+		return false;
+
+	unsigned int keys[] = {
+		LSDB_KEY_INSTALL_DIR_ADDCONT,
+		LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_1, LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_2,
+		LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_3, LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_4,
+		LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_5, LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_6,
+		LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_7,
+	};
+	vector<string> titleIds;
+	AppInfoQClient client;
+
+	SceLsdb_A6D8772C(&client);
+
+	if (SceLsdb_E90B81CD(&client) == 0) {
+		for (int i = 0; i < 8; i++) {
+			bool other = false;
+
+			{
+				LsdbQueryCondition condition;
+
+				condition.key = keys[i];
+				condition.next = NULL;
+				condition.values.push_back(LsdbValue(addcontDir));
+
+				SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+
+				for (unsigned int j = 0; j < titleIds.size(); j++) {
+					if (sce_paf_strncmp(titleIds[j].c_str(), titleId,
+							    GAME_PSP_TITLE_ID_LEN) != 0) {
+						other = true;
+						break;
+					}
+				}
+			}
+
+			if (other) {
+				SceLsdb_E2101B03(&client);
+				return false;
+			}
+		}
+	}
+
+	SceLsdb_E2101B03(&client);
+
+	return true;
 }
