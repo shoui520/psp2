@@ -174,23 +174,6 @@ struct GameLicenseStatus {
 	char expireText[65];		/* expireTime as text, "-" when it does not fit */
 };
 
-/*
- * PLACEHOLDER: a PSP game's license, defined in another file of the shell (constructor
- * 0x8101F1FC, check 0x8101F8B2; 32 bytes)
- */
-class GamePspLicense {
-public:
-	GamePspLicense();
-	virtual ~GamePspLicense();
-
-	int Check(const string &path);
-
-	int m_result;
-	bool m_valid;
-	SceUInt64 m_startTime;
-	SceUInt64 m_expireTime;
-};
-
 /* the license errors gameLicenseGetStatus reports (values only) */
 #define GAME_LICENSE_ERROR_NOT_FOUND	-2139095036	/* 0x80800004 */
 #define GAME_LICENSE_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
@@ -201,9 +184,6 @@ int gameContentImportDelete(const char *titleId);		/* 0x810576A2: ux0:content_ma
 int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);	/* 0x810609AC */
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
 int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);	/* 0x81062BBA */
-int gameLicenseGetRemaining(const SceUInt64 *expireTime, SceUInt64 *remaining);	/* 0x8101FBEA */
-int gameLicenseFormatTime(const SceUInt64 *time, char *text, SceSize size);	/* 0x8101FC78 */
-int gameLicenseCheckPeriod(const SceUInt64 *startTime, const SceUInt64 *expireTime);	/* 0x8101FD0E */
 extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);	/* 0x81449964 */
 int gameIoGetDeviceSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);	/* 0x8137E308 */
 int gameAppDataOperateFiles(const string &titleId, LsdbAppInfoPtr *info, int arg1, int arg2,

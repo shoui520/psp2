@@ -130,4 +130,34 @@ int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf
 /* a split package's information read from its head.bin at path, with buf as work memory */
 int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceSize bufSize);
 
+/* The NP account ID, 0 when the registry has none (0x81018610). */
+int gameNpGetAccountId(SceUInt64 *accountId);
+
+/*
+ * A PSP game's license: the RIF in ux0:pspemu/PSP/LICENSE named by the content ID in its
+ * EBOOT.PBP, its check's result and its validity period (license.cpp; 32 bytes).
+ */
+class GamePspLicense {
+public:
+	GamePspLicense();
+	virtual ~GamePspLicense();
+
+	int ReadRif(const paf::string &rifPath);
+	int GetRifName(const paf::string &ebootPath, paf::string *rifName);
+	int Check(const paf::string &path);
+
+	int m_result;
+	bool m_valid;
+	SceUInt64 m_startTime;
+	SceUInt64 m_expireTime;
+};
+
+/*
+ * The time left until a license's expireTime (0x8101FBEA), that time as text, "-" when it
+ * does not fit in size bytes (0x8101FC78), and whether now is in the period (0x8101FD0E).
+ */
+int gameLicenseGetRemaining(const SceUInt64 *expireTime, SceUInt64 *remaining);
+int gameLicenseFormatTime(const SceUInt64 *time, char *text, SceSize size);
+int gameLicenseCheckPeriod(const SceUInt64 *startTime, const SceUInt64 *expireTime);
+
 #endif
