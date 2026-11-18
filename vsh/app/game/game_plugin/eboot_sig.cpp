@@ -301,8 +301,8 @@ int gameEbootCheck(const char *dir, string *detail)
 }
 
 /* The signature at sigPath checked against the EBOOT (0x81032952). */
-int GameEbootSig::Verify(const string &ebootPath, const string &sigPath, bool allowPsp,
-			 string *detail)
+int gameEbootSigCheck(const string &titleId, const string &ebootPath, const string &sigPath,
+		      bool allowPsp, string *detail)
 {
 	int ret = gameEbootSigVerify(ebootPath, sigPath, allowPsp, detail);
 

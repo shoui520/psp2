@@ -646,8 +646,8 @@ int GamePatchPromoter::CreateSource(GamePromoteSource **source)
 		m_licensePath = string("ux0:license/app/") + m_name;
 	}
 
-	GameAppSourceParam param(dir.c_str(), m_path.c_str(), m_name.c_str(), sysDir.c_str(),
-				 m_dir.c_str(), m_info);
+	GameFolderSourceParam param(dir.c_str(), m_path.c_str(), m_name.c_str(), sysDir.c_str(),
+				    m_dir.c_str(), m_info);
 
 	*source = new GameAppSource(param);
 	if (*source == NULL)

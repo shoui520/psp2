@@ -24,29 +24,55 @@ int gameUtf8Length(const char *str);
 int gameUtf8ToUtf16(SceWChar16 *dst, SceSize size, const char *src);
 
 /*
- * PLACEHOLDER: what a promotion's source is built from, 92 bytes. The constructors that read it
- * are in another file of the plugin (0x8107A6F0, 0x8107A90A); its names are ours.
+ * PLACEHOLDER: what a promotion's source is built from, 60 bytes: the PSP promoter builds it
+ * whole (0x8106A346), the folder sources with what follows. The constructors that read it are in
+ * another file of the plugin (0x8107A6F0, 0x8107A90A); its names are ours.
  */
 struct GameAppSourceParam {
-	GameAppSourceParam(const char *dir, const char *path, const char *name, const char *sysDir,
-			   const char *metaDir, const LsdbAppInfoPtr &info)
-		: dir(dir), path(path), name(name), sysDir(sysDir), metaDir(metaDir),
-		  appPath(path), info(info)
+	GameAppSourceParam(const char *dir, const char *path, const char *name, const char *sysDir)
+		: dir(dir), path(path), name(name), sysDir(sysDir)
 	{
 		options[0] = 0;
 		options[1] = 0;
 		options[2] = 0;
 	}
 
+	GameAppSourceParam(const char *dir, const char *path, const char *name,
+			   const paf::string &sysDir)
+		: dir(dir), path(path), name(name), sysDir(sysDir)
+	{
+		options[0] = 0;
+		options[1] = 0;
+		options[2] = 0;
+	}
+
+	~GameAppSourceParam()
+	{
+	}
+
 	paf::string dir;		/* the folder read: the mount point, else the path */
 	paf::string path;		/* the folder promoted */
 	paf::string name;		/* its name */
-	int options[3];			/* 0 from the patch promoter */
-	paf::string sysDir;		/* dir's sce_sys */
+	int options[3];			/* 0 from the promoters */
+	paf::string sysDir;		/* dir's sce_sys; the LiveArea's folder for a PSP game */
+};
+
+/* what a folder source is built from, 92 bytes; its names are ours */
+struct GameFolderSourceParam : GameAppSourceParam {
+	GameFolderSourceParam(const char *dir, const char *path, const char *name,
+			      const char *sysDir, const char *metaDir, const LsdbAppInfoPtr &info)
+		: GameAppSourceParam(dir, path, name, sysDir), metaDir(metaDir), appPath(path),
+		  info(info)
+	{
+	}
+
 	paf::string metaDir;		/* the LiveArea's folder (ur0:appmeta/<name>) */
 	paf::string appPath;		/* the folder promoted, again */
 	LsdbAppInfoPtr info;		/* the record it had */
 };
+
+typedef char GameAppSourceParamSize[sizeof(GameAppSourceParam) == 60 ? 1 : -1];
+typedef char GameFolderSourceParamSize[sizeof(GameFolderSourceParam) == 92 ? 1 : -1];
 
 /*
  * PLACEHOLDER: what a promoter reads its application's information from (each kind its own),
@@ -89,7 +115,7 @@ typedef char GamePromoteSourceSize[sizeof(GamePromoteSource) == 88 ? 1 : -1];
  */
 class GameFolderSource : public GamePromoteSource {
 public:
-	GameFolderSource(const GameAppSourceParam &param);
+	GameFolderSource(const GameFolderSourceParam &param);
 	virtual ~GameFolderSource();
 
 	virtual int Load(GameAppRegistration *reg);
@@ -119,7 +145,7 @@ typedef char GameFolderSourceSize[sizeof(GameFolderSource) == 172 ? 1 : -1];
 /* the source of an application's folder (constructor 0x810475B2, vtable 0x8152EADC), 172 bytes */
 class GameAppSource : public GameFolderSource {
 public:
-	GameAppSource(const GameAppSourceParam &param);
+	GameAppSource(const GameFolderSourceParam &param);
 	virtual ~GameAppSource();
 
 	virtual int SetDirs(GameAppRegistration *reg);
@@ -676,16 +702,28 @@ typedef char GameInstallExJobSize[sizeof(GameInstallExJob) == 1336 ? 1 : -1];
  * PLACEHOLDER: the promoters of a PSP game, of an application in ux0:appmeta and of a
  * PlayStation Mobile game, defined in other files of the plugin; their names are ours.
  */
-class GamePspPromoter : public GamePromoter {	/* constructor 0x8106A1E8, 152 bytes */
+/*
+ * A PSP game's folder in ux0:pspemu/PSP/GAME promoted from its EBOOT.PBP's param.sfo
+ * (psp_promoter.cpp, constructor 0x8106A1E8, destructor 0x8106A248, vtable 0x8152EC7C), 152
+ * bytes. PLACEHOLDER names.
+ */
+class GamePspPromoter : public GamePromoter {
 public:
-	GamePspPromoter(const char *path, bool flag1, bool flag2, const GameJobProgress *progress,
-			int userData, float scale);
+	GamePspPromoter(const char *path, const char *installPath, bool writeAppmeta,
+			const GameJobProgress *progress, int userData, float scale);
+	virtual ~GamePspPromoter();
 
 	virtual int Prepare(bool flag);
 	virtual int CreateSource(GamePromoteSource **source);
+	virtual int SetInfo(GamePromoteSource *source, bool registerApp, GameAppRegistration *reg);
+	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg);
 
-	SceUInt8 m_body[28];		/* PLACEHOLDER: laid out with its file */
+	paf::string m_installPath;	/* the folder the game is installed to, when not m_path */
+	paf::string m_paramPath;	/* the source's PBP the parameters were read from */
+	bool m_writeAppmeta;		/* the appmeta step run after the record */
 };
+
+typedef char GamePspPromoterSize[sizeof(GamePspPromoter) == 152 ? 1 : -1];
 
 class GameAppmetaPromoter : public GamePromoter {	/* constructor 0x8106AC10, 164 bytes */
 public:
@@ -698,16 +736,62 @@ public:
 	SceUInt8 m_body[40];		/* PLACEHOLDER: laid out with its file */
 };
 
-class GamePsmPromoter : public GamePromoter {	/* constructor 0x81069D54, 176 bytes */
+/*
+ * PLACEHOLDER: what a PlayStation Mobile game's promotion reads its app.info with, defined in
+ * another file of the plugin (constructor 0x81094CF8, destructor 0x81094D58, vtable 0x8152F080),
+ * 36 bytes. The names are ours.
+ */
+class GamePsmAppReader {
+public:
+	GamePsmAppReader(int userData);
+	virtual ~GamePsmAppReader();
+
+	/* the app.info made, and whether info is installed already (0x81094E02) */
+	int Prepare(bool flag, LsdbAppInfoPtr *info, bool *installed);
+
+	/* the source of the application at path, from its app.info (0x81094E80) */
+	int CreateSource(const paf::string &appInfoPath, const paf::string &dir,
+			 const paf::string &path, GamePromoteSource **source);
+
+	/* the app.info's information set into reg (0x81095056) */
+	int SetInfo(bool registerApp, const LsdbAppInfoPtr *info, GameAppRegistration *reg);
+
+	/* the content ID read from the file at path into info (0x8109506C) */
+	int ReadContentId(const paf::string &path, LsdbAppInfoPtr *info);
+
+	/* the LiveArea written from the app.info, scale of progress (0x8109510E) */
+	int Finish(GameAppRegistration *reg, const GameJobProgress *progress,
+		   GameCancelFunc cancel, void *arg, float scale);
+
+	GamePsmAppInfo *m_appInfo;
+	paf::string m_path;
+	paf::string m_name;		/* the application's folder name */
+	int m_userData;
+};
+
+typedef char GamePsmAppReaderSize[sizeof(GamePsmAppReader) == 36 ? 1 : -1];
+
+/*
+ * A PlayStation Mobile game's folder in ux0:psm promoted (psm_promoter.cpp, constructor
+ * 0x81069D54, destructor 0x81069D98, vtable 0x8152EC58), 176 bytes. PLACEHOLDER names.
+ */
+class GamePsmPromoter : public GamePromoter {
 public:
 	GamePsmPromoter(const char *path, bool flag, const GameJobProgress *progress, int userData,
 			float scale);
+	virtual ~GamePsmPromoter();
 
 	virtual int Prepare(bool flag);
 	virtual int CreateSource(GamePromoteSource **source);
+	virtual int SetInfo(GamePromoteSource *source, bool registerApp, GameAppRegistration *reg);
+	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg);
 
-	SceUInt8 m_body[52];		/* PLACEHOLDER: laid out with its file */
+	GamePsmAppReader m_reader;
+	paf::string m_otherPath;	/* not read in this file */
+	bool m_flag;			/* not read in this file */
 };
+
+typedef char GamePsmPromoterSize[sizeof(GamePsmPromoter) == 176 ? 1 : -1];
 
 /*
  * The promotion of an application's directory: the promoter its path asks for run on the

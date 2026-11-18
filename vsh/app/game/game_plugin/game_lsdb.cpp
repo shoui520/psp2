@@ -46,7 +46,6 @@ struct GameDevInfo {
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameAppDeletePrepare(const char *titleId);			/* 0x810FCA70 */
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
-extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);	/* 0x81449964 */
 /* the SDK's libSceCes (libces_ucs.h) and the user side of _sceFiosKernelOverlayResolveSync */
 extern "C" int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize,
 				 uint32_t *utf32);					/* 0x8138932C */

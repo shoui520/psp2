@@ -23,20 +23,10 @@
 
 using namespace paf;
 
-/* the SDK's glue over SceVshBridge's import (0x81417C70) */
-extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
-
-/* the SDK's glue over SceNpDrm's imports (0x81449964, 0x8144996C) */
-extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);
-extern "C" int sceNpDrmGetFixedRifName(char *rifName, SceUInt64 accountId);
-
 /* what sceNpDrmGetRifInfo returns for a license outside its period, and without an account */
 #define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */
 #define GAME_NPDRM_ERROR_NOT_STARTED	-2138636281	/* 0x80870007 */
 #define GAME_NPDRM_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
-
-/* the end of a license without one */
-#define GAME_LICENSE_NO_EXPIRY		0x7FFFFFFFFFFFFFFFLL
 
 /* the game card's drive: its licenses are under the fixed name */
 #define GAME_GAMECARD_DRIVE		"gro0:"

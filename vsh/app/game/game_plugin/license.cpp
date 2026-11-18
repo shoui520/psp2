@@ -21,20 +21,9 @@ using namespace paf;
 /* where a PSP game's licenses are, by content ID */
 #define GAME_PSP_LICENSE_DIR		"ux0:pspemu/PSP/LICENSE/"
 
-/* where the content ID is in a PSP game's DATA.PSP, and its size */
-#define GAME_PSP_CONTENT_ID_OFFSET	0x560
-#define GAME_PSP_CONTENT_ID_SIZE	48
-
-/* the expireTime of a license without an end */
-#define GAME_LICENSE_NO_EXPIRY		0x7FFFFFFFFFFFFFFFLL
-
 /* the license period's errors (values only) */
 #define GAME_ERROR_LICENSE_NO_EXPIRY	-2146430656	/* 0x80101140 */
-#define GAME_LICENSE_ERROR_EXPIRED	-2139095023	/* 0x80800011 */
 #define GAME_LICENSE_ERROR_NOT_STARTED	-2139095016	/* 0x80800018 */
-
-/* the SDK's glue over SceVshBridge's import (0x81417C70) */
-extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 
 /* the time as the system's text, "-" without an end (0x81343D8E). PLACEHOLDER: its name */
 wstring gameLicenseTimeToText(const SceUInt64 *time);

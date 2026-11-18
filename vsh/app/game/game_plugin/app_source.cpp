@@ -19,7 +19,7 @@
 
 using namespace paf;
 
-GameAppSource::GameAppSource(const GameAppSourceParam &param) : GameFolderSource(param)
+GameAppSource::GameAppSource(const GameFolderSourceParam &param) : GameFolderSource(param)
 {
 	m_appDir = param.dir;
 }

@@ -124,7 +124,7 @@ int GameAppPromoter::CreatePromoter(const string *path, const LsdbAppInfoPtr *sf
 	GamePromoter *created;
 
 	if (path->find("ux0:pspemu/PSP/GAME/") != string::npos) {
-		*promoter = created = new GamePspPromoter(path->c_str(), false, otherFlag, progress,
+		*promoter = created = new GamePspPromoter(path->c_str(), NULL, otherFlag, progress,
 							  (int)errorTitleId, 1.0f);
 	} else if (path->find("ux0:appmeta/") != string::npos) {
 		*promoter = created = new GameAppmetaPromoter(path->c_str(), progress,

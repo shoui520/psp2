@@ -159,25 +159,7 @@ struct GameJobParam {
 	void *progressArg;
 };
 
-/*
- * PLACEHOLDER: the plugin's license updater, its "SceGameUpdateLicense" state (constructor
- * 0x8106471C, destructor 0x81064750, 272 bytes), defined in another file of the plugin.
- */
-class GameLicenseUpdater {
-public:
-	GameLicenseUpdater();
-	~GameLicenseUpdater();
-
-	/* PLACEHOLDER names: the update of titleId's license (0x81064EFE), and 0x81065FC0 */
-	int Update(const char *titleId);
-	int Run(void *arg);
-
-	/* PLACEHOLDER name: a license update's package found, its folder and path (0x8106715C) */
-	int Prepare(const paf::string &titleId, paf::string *contentId, paf::string *dir,
-		    paf::string *path);
-
-	SceUInt8 otherFields[272];
-};
+/* GameLicenseUpdater, the plugin's license updater: license_updater.h */
 
 /*
  * The plugin's work pool, 64 KiB blocks, lent to one user at a time while the plugin runs

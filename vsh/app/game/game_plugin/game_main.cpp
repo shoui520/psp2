@@ -30,6 +30,7 @@
 #include "game_appinfo.h"
 #include "alarm.h"
 #include "promoter.h"
+#include "license_updater.h"
 
 using namespace paf;
 
@@ -1104,8 +1105,8 @@ void gamePluginAlarmRemoveQuiet(const LsdbAppInfoPtr *info)
 		s_alarm->Refresh(info);
 }
 
-/* An application's license updated (0x8102D9E8). */
-int gamePluginLicenseUpdate(const char *titleId)
+/* The license of the application titleId at path updated (0x8102D9E8). */
+int gamePluginLicenseUpdate(const char *path, const char *titleId)
 {
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
@@ -1113,7 +1114,7 @@ int gamePluginLicenseUpdate(const char *titleId)
 	if (s_licenseUpdater == NULL)
 		return GAME_ERROR_NOT_READY;
 
-	int ret = s_licenseUpdater->Update(titleId);
+	int ret = s_licenseUpdater->Update(path, titleId);
 
 	if (ret < 0)
 		return ret;
@@ -1270,8 +1271,8 @@ int gamePluginAddcontInfoCheck(const char *titleId, bool *found)
 	return 0;
 }
 
-/* PLACEHOLDER name: what the license updater does with arg (0x8102E442) */
-int gamePluginLicenseUpdaterRun(void *arg)
+/* The licenses of the additional contents of titleId updated (0x8102E442). */
+int gamePluginAddcontLicenseUpdate(const char *titleId)
 {
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
@@ -1279,7 +1280,7 @@ int gamePluginLicenseUpdaterRun(void *arg)
 	if (s_licenseUpdater == NULL)
 		return GAME_ERROR_NOT_READY;
 
-	int ret = s_licenseUpdater->Run(arg);
+	int ret = s_licenseUpdater->UpdateAddcont(titleId);
 
 	if (ret < 0)
 		return ret;

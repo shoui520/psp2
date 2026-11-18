@@ -5,6 +5,10 @@
 #ifndef _GAME_APPINFO_H
 #define _GAME_APPINFO_H
 
+#include <rtc.h>
+#include <cxml/cxml.h>
+#include <file/file.h>
+
 #include "../../shell/src/livespace_db/livespace_db_internal.h"
 
 /* an application's information from livespace_db (0x81018666) */
@@ -727,8 +731,21 @@ int gameAppInfoSetUpStatusFromLicense(SceNpDrmLicense *license, SceSize size, Ls
 int gameAppPrepareRegister(LsdbAppInfoPtr *info, bool *keepLiveArea, paf::string *detail);
 int gameAppInfoCheckAppmeta(LsdbAppInfoPtr *info, bool *hasAppmeta, paf::string *detail);
 
-/* the SDK's glue over SceNpDrm's import (0x81449974) */
+/* the SDK's glue over SceNpDrm's imports (0x81449964, 0x8144996C, 0x81449974) */
+extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);
+extern "C" int sceNpDrmGetFixedRifName(char *rifName, SceUInt64 accountId);
 extern "C" int sceNpDrmGetRifNameForInstall(char *rifName, const void *license, int flags);
+
+/* the SDK's glue over SceVshBridge's import (0x81417C70) */
+extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
+
+/* where the content ID is in a PSP game's DATA.PSP, and its size */
+#define GAME_PSP_CONTENT_ID_OFFSET	0x560
+#define GAME_PSP_CONTENT_ID_SIZE	48
+
+/* the end of a license without one, and the license check's error of one past its end */
+#define GAME_LICENSE_NO_EXPIRY		0x7FFFFFFFFFFFFFFFLL
+#define GAME_LICENSE_ERROR_EXPIRED	-2139095023	/* 0x80800011 */
 
 /* license_file.cpp: an application's license files (0x8103E944..0x8103FB34) */
 int gameFileWriteToDir(const void *buf, SceSize size, const paf::string *dir, const char *name,
@@ -785,12 +802,12 @@ int gameEbootSigGen(const SceNpDrmInstallInfo *info, const paf::string &ebootPat
 		    const void *sha256, const paf::string &sigPath, paf::string *detail);
 int gameEbootCheck(const char *dir, paf::string *detail);
 
-/* PLACEHOLDER name: what other objects check an EBOOT signature with (0x81032952) */
-class GameEbootSig {
-public:
-	int Verify(const paf::string &ebootPath, const paf::string &sigPath, bool allowPsp,
-		   paf::string *detail);
-};
+/*
+ * PLACEHOLDER name: what other files check an EBOOT signature with; the application's title ID,
+ * which its callers pass first, is not read (0x81032952)
+ */
+int gameEbootSigCheck(const paf::string &titleId, const paf::string &ebootPath,
+		      const paf::string &sigPath, bool allowPsp, paf::string *detail);
 
 /*
  * PLACEHOLDER name, defined in another file of the shell: whether the PSP emulator's list
@@ -926,8 +943,8 @@ int gameNpDrmGetRifName(paf::string *rifName);
 int gamePluginFttRead(const char *titleId, GameFttInfo *info);
 
 /*
- * PLACEHOLDER names: a PSM application's app.info, read into its record and written out as its
- * icons (constructor 0x810673D8, 204 bytes, in another file of the plugin).
+ * A PSM application's app.info (psm_appinfo.cpp, constructor 0x810673D8, 204 bytes): the
+ * document read into the application's record, and its icon and LiveArea background written out.
  */
 class GamePsmAppInfo {
 public:
@@ -941,7 +958,26 @@ public:
 	int WriteIcon(const paf::string &path);
 	int WritePic(const paf::string &path);
 
-	SceUInt8 otherFields[172];
+private:
+	int SetAttributeMinor(const LsdbAppInfoPtr *info, const bool &appXmlFormat,
+			      const bool &psVitaTv, LsdbAppInfoPtr *appInfo);
+	int ReadFeatureList(const paf::cxml::Element &list, LsdbAppInfoPtr *appInfo,
+			    bool *psVitaTv);
+	int ReadDeveloper(const paf::cxml::Element &developer);
+	static int ReadParentalControl(const paf::cxml::Element &control,
+				       LsdbAppInfoPtr *appInfo);
+	static int GetLanguage(const paf::string &locale);
+	int ReadShortName(const paf::cxml::Element &name, LsdbAppInfoPtr *appInfo);
+	int ReadName(const paf::cxml::Element &name, LsdbAppInfoPtr *appInfo);
+	int ReadVersions(const paf::cxml::Element &root, LsdbAppInfoPtr *appInfo);
+	int ReadWebsite(const paf::cxml::Element &website);
+	int WriteImage(const paf::string &name, const paf::string &path, void *buf,
+		       SceSize bufSize);
+
+	paf::cxml::Document m_doc;
+	paf::common::SharedPtr<paf::File> m_file;	/* the app.info, read as its document needs */
+
+public:
 	paf::string m_author;		/* written under the title in the LiveArea */
 	paf::string m_website;		/* the LiveArea's developer link */
 	unsigned int m_defaultLanguage;	/* the language of the title shown by default */
