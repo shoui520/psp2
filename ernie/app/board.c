@@ -37,7 +37,9 @@ unsigned char boardSuspendSteps(void)
 }
 #endif
 
-#if BOARD_MULTICN_BITS
+#if BOARD_USS1001
+/* the slim's multi-connector is in multicn.c */
+#elif BOARD_MULTICN_BITS
 /* the switch off: both low */
 unsigned char boardMultiCnOutputOff(void)
 {
@@ -181,7 +183,9 @@ unsigned char boardMultiCnStop(void)
 
 #endif
 
-#if defined(ERNIE_UPDATER) || (HW_IS(0x00102603) && !FW_SINCE(0x00090804))
+#if BOARD_USS1001
+/* the slim's in multicn.c */
+#elif defined(ERNIE_UPDATER) || (HW_IS(0x00102603) && !FW_SINCE(0x00090804))
 /* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
    inputs report it */
 unsigned char boardMultiCnIsDongle(void)
@@ -196,7 +200,7 @@ unsigned char boardMultiCnIsDongle(void)
 }
 #endif
 
-#if FW_SINCE(0x00090804)	/* 0x00090206 has no debug board */
+#if FW_SINCE(0x00090804) && !BOARD_USS1001	/* 0x00090206 has no debug board */
 /* a debug board on the multi-connector (UART3 in its debug mode): never on this board */
 unsigned char boardMultiCnIsDebug(void)
 {
@@ -329,6 +333,7 @@ void boardPortInit102603(void)
 }
 
 #endif
+#if !BOARD_USS1001	/* the slim's is in uss1001.c */
 /* the ports' levels and modes at the start (hdwinit) */
 void boardPortInit(void)
 {
@@ -369,4 +374,5 @@ void boardPortInit(void)
 	P15 = 0x00;
 	PM15 = BOARD_PM15;
 }
+#endif	/* !BOARD_USS1001 */
 #endif

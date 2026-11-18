@@ -5,6 +5,8 @@
  */
 #pragma rtos_interrupt INTAD adcInterrupt
 #pragma sfr
+#pragma DI
+#pragma EI
 
 #include "ernie.h"
 #include "adc.h"
@@ -35,6 +37,15 @@ void adcOpen(void)
 		adcSkip = 0;
 		adcChannel = ADC_FIRST_CHANNEL;
 		ADCEN = 1;
+#if BOARD_USS1001	/* the RL78's converter: ANI0-ANI7 analog, 8-bit limits wide open */
+		ADPC = 0x08;
+		ADM0 = 0x16;
+		ADM1 = 0x00;
+		ADM2 = 0x60;
+		ADUL = 0xff;
+		ADLL = 0x00;
+		ADCE = 1;
+#else
 		ADCE = 1;
 #if BOARD_IS(0x00411000) && !FW_SINCE(0x0100010B)
 		ADPC = ADC_FIRST_CHANNEL;	/* the analog pins from the first channel */
@@ -42,6 +53,7 @@ void adcOpen(void)
 		ADPC = 0x0b;
 #endif
 		ADM = 0x03;
+#endif
 		ADIF = 0;
 		ADMK = 0;
 #if FW_SINCE(0x0100010B)
@@ -81,7 +93,7 @@ unsigned char adcStart(unsigned char mask, int skip)
 	adcDone = 0;
 	adcBit = ADC_CHANNEL_BIT(ADC_FIRST_CHANNEL);
 	adcChannel = ADC_FIRST_CHANNEL;
-	while (adcChannel < 0x10 && !(adcBit & adcMask)) {
+	while (adcChannel < ADC_START_END && !(adcBit & adcMask)) {
 		adcBit <<= 1;
 		adcChannel++;
 	}
@@ -113,7 +125,9 @@ void adcOpenForBoard(void)
 	case 0x0008:
 	case 0x0020:
 		adcOpen();
+#if !BOARD_USS1001
 		inputScanHold(0x1a);
+#endif
 		break;
 	case 0x0000:
 	case 0x0001:
@@ -127,13 +141,20 @@ void adcOpenForBoard(void)
 	}
 }
 
-/* closes the converter, unless a key of 0x00e3 is held on the boards that have it */
+/* the keys that keep the converter open (the slim's 0x0032) */
+#if BOARD_USS1001
+#define ADC_KEYS	0x0032
+#else
+#define ADC_KEYS	0x00e3
+#endif
+
+/* closes the converter, unless a key of ADC_KEYS is held on the boards that have it */
 void adcCloseForBoard(void)
 {
 	switch (stateGet() & 0x7fff) {
 	case 0x0004:
 	case 0x0008:
-		if (inputKeys.state & 0x00e3)
+		if (inputKeys.state & ADC_KEYS)
 			return;
 		adcClose();
 		return;
@@ -149,7 +170,13 @@ void adcCloseForBoard(void)
 	case 0x0800:
 		break;
 	}
-	inputKeys.state &= ~0x00e3;
+#if BOARD_USS1001
+	DI();
+	inputKeys.state &= ~ADC_KEYS;
+	EI();
+#else
+	inputKeys.state &= ~ADC_KEYS;
+#endif
 	adcClose();
 }
 #endif
@@ -161,7 +188,11 @@ void adcInterrupt(void)
 	if (adcSkip != 0) {
 		adcSkip--;
 	} else {
+#if BOARD_USS1001
+		adcResults[adcChannel - ADC_FIRST_CHANNEL] = ADCR;
+#else
 		adcResults[0x0f - adcChannel] = ADCR;
+#endif
 		if ((adcDone |= adcBit) != adcMask) {
 			adcBit <<= 1;
 			adcChannel++;

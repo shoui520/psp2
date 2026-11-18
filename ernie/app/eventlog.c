@@ -21,7 +21,7 @@ static unsigned int eventLogNext;
 static unsigned int eventLogCount;
 
 /* the data of the events the modules record, four bytes each */
-unsigned char eventLogCharge[4];
+union EventLogData eventLogCharge;
 unsigned char eventLogTask1[4];
 unsigned char eventLogInput[4];
 unsigned char eventLogCommand[4];

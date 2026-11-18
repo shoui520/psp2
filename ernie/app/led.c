@@ -128,11 +128,18 @@ void chargeLedInit(void)
 #else
 	leds.charge.mode = CHARGE_LED_NONE;
 #endif
+#if BOARD_USS1001	/* the slim's power LED module keeps these two settings */
+	if (configGet()->state.bits.chargeLedOff)
+		powerLedSetFlags(0x100);
+	if (configGet()->state.bits.chargeLedStateOff)
+		powerLedSetFlags(0x200);
+#else
 	if (configGet()->state.bits.chargeLedOff)
 		chargeLedSetOff(1);
 #if FW_SINCE(0x01000306)
 	if (configGet()->state.bits.chargeLedStateOff)
 		chargeLedSetStateOff(1);
+#endif
 #endif
 	chargeLedUpdate();
 }
@@ -400,7 +407,11 @@ void chargeLedUpdate(void)
 	unsigned int state;
 
 	state = stateGet();
+#if BOARD_USS1001
+	if (chargeUsbIs1() &&
+#else
 	if ((cookieStatus2.byte[1] & 0x0c) == 0x04 &&
+#endif
 	    ((leds.charge.request.value & CHARGE_LED_REQUEST_CHARGING) || (state & 0x0004)))
 		charging = 1;
 	else
@@ -423,7 +434,7 @@ void chargeLedUpdate(void)
 			if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)
 				mode = CHARGE_LED_BLINK;
 			else if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				 (!charging && !chargeFactors.0))
+				 (!charging && !CHARGE_FACTOR_STATUS3))
 				mode = CHARGE_LED_OFF;
 			else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 				mode = CHARGE_LED_HOST;
@@ -434,7 +445,7 @@ void chargeLedUpdate(void)
 			if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)
 				mode = CHARGE_LED_BLINK;
 			else if (!(leds.charge.request.value & CHARGE_LED_OFFS) &&
-				 (charging || chargeFactors.0))
+				 (charging || CHARGE_FACTOR_STATUS3))
 				mode = CHARGE_LED_AUTO;
 			else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 				mode = CHARGE_LED_HOST;
@@ -446,7 +457,7 @@ void chargeLedUpdate(void)
 				mode = CHARGE_LED_BLINK;
 			else if (!(leds.charge.request.value & CHARGE_LED_REQUEST_HOST)) {
 				if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				    (!charging && !chargeFactors.0))
+				    (!charging && !CHARGE_FACTOR_STATUS3))
 					mode = CHARGE_LED_OFF;
 				else
 					mode = CHARGE_LED_AUTO;
@@ -456,7 +467,7 @@ void chargeLedUpdate(void)
 		case CHARGE_LED_BLINK:
 			if (!(leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)) {
 				if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				    (!charging && !chargeFactors.0))
+				    (!charging && !CHARGE_FACTOR_STATUS3))
 					mode = CHARGE_LED_OFF;
 				else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 					mode = CHARGE_LED_HOST;
@@ -546,7 +557,9 @@ void powerLedUpdate(void)
 /* task 5's (flag 0x0800) */
 void ledUpdate(void)
 {
+#if !BOARD_USS1001	/* the slim's charge LED runs on its own */
 	chargeLedUpdate();
+#endif
 	powerLedUpdate();
 }
 #endif
@@ -747,6 +760,7 @@ void powerLedFadeStart(unsigned char pattern)
 	}
 }
 
+#if !BOARD_USS1001	/* the slim's are powerseq.c's */
 /* 0-15, into the Elmo's register 0x60 bits 12-15 */
 int powerLedSetBrightness(unsigned char level)
 {
@@ -783,6 +797,7 @@ int powerLedSetPwm(unsigned char on)
 		elmoRegA6 = value;
 	return result;
 }
+#endif
 
 unsigned char powerLedGetStatus(void)
 {

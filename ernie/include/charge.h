@@ -6,6 +6,7 @@
 #define ERNIE_CHARGE_H
 
 #include "ernie.h"
+#include "board.h"
 
 /* the Cookie's status register 1 (cookieReadStatus1), which the power status copies
    (chargeSetPowerStatus) */
@@ -29,6 +30,21 @@ union CookieStatus1 {
 union CookieStatus2 {
 	unsigned int	word;
 	unsigned char	byte[2];
+#if BOARD_USS1001
+	/* the slim's: three bits of the USB status, one lower, and three of the supply */
+	struct {
+		unsigned char	reserved1:1;
+		unsigned char	supply:3;	/* the power status's bits 16-18 */
+		unsigned char	reserved2:4;
+		unsigned char	reserved3:1;
+		unsigned char	usb:3;		/* the power status's bits 8-10 (0x089a) */
+		unsigned char	boost:1;	/* set while charging: a battery put in is boosted
+						   (chargeUpdate) */
+		unsigned char	reserved4:1;
+		unsigned char	vbus:1;		/* the power status's bits 22-23 */
+		unsigned char	reserved5:1;
+	} bits;
+#else
 	struct {
 		unsigned char	reserved1;
 		unsigned char	reserved2:2;
@@ -37,6 +53,7 @@ union CookieStatus2 {
 		unsigned char	vbus:1;
 		unsigned char	vbusCharge:1;	/* set: chargeSetCurrent at each update */
 	} bits;
+#endif
 };
 
 /* a battery temperature range, while the temperature is below its limit (limit[1] when it
@@ -153,12 +170,25 @@ struct Charge {
 };
 #endif
 
+#if BOARD_USS1001
+/* the slim's boost of a battery put in while charging (chargeUpdate) */
+union ChargeBoost {
+	unsigned int	word;
+	struct {
+		unsigned int	running:1;	/* chargeBoostTicks holds its start */
+		unsigned int	done:1;		/* cookieCtrlReg3Bit12 set; cleared with it */
+		unsigned int	reserved:14;
+	} bits;
+};
+#endif
+
 /* the power status (host command 0x0800), from the Cookie's status registers (chargeSetPowerStatus) */
 union PowerStatus {
-	unsigned int	word;
 #if BOARD_USS1001
-	unsigned char	byte[4];	/* the slim's: two bytes more (0x0800) */
+	unsigned int	word[2];	/* the slim's: two bytes more (0x0800) */
+	unsigned char	byte[4];
 #else
+	unsigned int	word;
 	unsigned char	byte[2];
 #endif
 	struct {
@@ -178,6 +208,12 @@ union PowerStatus {
 		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
 		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, cookieCtrlChargeAc) */
 		unsigned char	level:2;	/* the Cookie's status 1's bits 3-4 */
+#if BOARD_USS1001
+		unsigned char	supply:4;	/* the Cookie's status 2's bits 1-3 */
+		unsigned char	reserved2:2;
+		unsigned char	vbus1:1;	/* both its VBUS */
+		unsigned char	vbus2:1;
+#endif
 	} bits;
 };
 
@@ -191,9 +227,43 @@ extern unsigned char chargeLedBlinkOn;		/* 0x00090009's, task 5's: cleared, neve
 extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
 extern __sreg union PowerStatus powerStatus;
+#if BOARD_USS1001
+/* the slim's: the same bits as fields */
+union ChargeFactors {
+	unsigned char	byte;
+	struct {
+		unsigned char	status3:1;
+		unsigned char	status4:1;
+		unsigned char	factor16:1;
+		unsigned char	factor17:1;
+		unsigned char	factor18:1;
+		unsigned char	factor19:1;
+		unsigned char	factor22:1;
+		unsigned char	factor23:1;
+	} bits;
+};
+extern __sreg union ChargeFactors chargeFactors;
+#define CHARGE_FACTOR_STATUS3	chargeFactors.bits.status3
+#define CHARGE_FACTOR_STATUS4	chargeFactors.bits.status4
+#define CHARGE_FACTOR_16	chargeFactors.bits.factor16
+#define CHARGE_FACTOR_17	chargeFactors.bits.factor17
+#define CHARGE_FACTOR_18	chargeFactors.bits.factor18
+#define CHARGE_FACTOR_19	chargeFactors.bits.factor19
+#define CHARGE_FACTOR_22	chargeFactors.bits.factor22
+#define CHARGE_FACTOR_23	chargeFactors.bits.factor23
+#else
 extern __sreg unsigned char chargeFactors;	/* the charge's sleep factors: 0 status 3 (the AC or
 						   the USB status's bit 1), 1 status 4, 2-5 16-19,
 						   6 22, 7 23 */
+#define CHARGE_FACTOR_STATUS3	chargeFactors.0
+#define CHARGE_FACTOR_STATUS4	chargeFactors.1
+#define CHARGE_FACTOR_16	chargeFactors.2
+#define CHARGE_FACTOR_17	chargeFactors.3
+#define CHARGE_FACTOR_18	chargeFactors.4
+#define CHARGE_FACTOR_19	chargeFactors.5
+#define CHARGE_FACTOR_22	chargeFactors.6
+#define CHARGE_FACTOR_23	chargeFactors.7
+#endif
 extern __sreg unsigned char chargeControl;	/* 0: transition 0x16 due at the AC (chargeUpdate);
 						   1: the AC's charge on (0x0892) */
 extern __sreg struct ChargeTemp chargeTemp;
@@ -213,6 +283,19 @@ extern __sreg unsigned char chargeCookieSetting;	/* cookieCtrlSupplyCurrentAc's 
 #endif
 #if FW_SINCE(0x01000107)
 extern __sreg unsigned char chargeCookieHeld;	/* powerCookieHold's */
+#endif
+#if BOARD_USS1001
+/* the slim's: the status registers at the last update */
+extern __sreg union CookieStatus1 chargeStatus1Last;
+extern __sreg union CookieStatus2 chargeStatus2Last;
+extern __sreg unsigned int chargeBoostTicks;	/* the RTC's ticks when the boost started */
+extern __sreg union ChargeBoost chargeBoost;
+extern __sreg unsigned char chargeTempSetting;	/* the USB supply's setting the battery's
+						   temperature allows (chargeSetCurrent) */
+extern __sreg unsigned char chargeManualMode;	/* chargeSetManualMode's: 1 on, 0 off, 0xff
+						   not set */
+extern __sreg unsigned char chargeUsbWait;	/* the USB's checks left until it settles */
+extern __sreg unsigned char chargeUsbTicks;	/* and the ticks between them */
 #endif
 extern struct Charge charge;
 
@@ -263,12 +346,24 @@ extern void chargeTimer1fStart(void);
 extern void chargeTimer1fStop(void);
 extern void chargeSetAcDelay(void);
 #if BOARD_USS1001
+extern unsigned char chargeUsbPower(void);
+extern unsigned char chargeUsbDongle(void);
+extern unsigned char chargeUsbDebug(void);
+extern unsigned char chargeUsbMultiCn2(void);
+extern unsigned char chargeExternalPower(void);
 extern unsigned char chargeUsbIs1(void);
 extern unsigned char chargeUsbIs2(void);
 extern unsigned char chargeVbusActive(void);
 /* the slim's manual charge mode (0x08c0; 0x0840): 1 on, 0 off, 0xff it could not be set */
 extern unsigned char chargeSetManualMode(unsigned char on);
 extern unsigned char chargeGetManualMode(void);
+extern unsigned char chargeManualOn(void);
+extern unsigned char chargeManualOff(void);
+extern void chargeUsbModeUpdate(void);
+extern int chargeUsbRequestUpdate(void);
+extern void chargeUsbChanged(void);
+extern unsigned char chargeUsbCurrent(void);
+extern char chargeBatteryLevel3(void);
 /* bit 0: the USB connected (P7.5 low); bit 7: set as it changes, task 5 not asked to update */
 extern __sreg unsigned char chargeUsbState;
 #else

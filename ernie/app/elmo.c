@@ -57,6 +57,27 @@ static const struct ElmoRegInit elmoRegInit[] = {
 };
 #endif
 
+#if BOARD_USS1001
+/* the slim's: nothing to set up before the versions are read */
+void elmoInit(void)
+{
+}
+
+/* writes every register of elmoRegInit with its initial value, after the Elmo's version
+   answered (powerSeqOn); the copy keeps the value only when the write went through */
+void elmoInitRegs(void)
+{
+	unsigned int i;
+
+	for (i = 0; i < 11; i++) {
+		elmoCommand[0] = elmoRegInit[i].reg;
+		elmoCommand[1] = elmoRegInit[i].initial >> 8;
+		elmoCommand[2] = elmoRegInit[i].initial;
+		if (elmoWrite(elmoCommand, 3) == 0)
+			*elmoRegInit[i].value = elmoRegInit[i].initial;
+	}
+}
+#else
 /* writes every register of elmoRegInit with its initial value */
 void elmoInitRegs(void)
 {
@@ -92,6 +113,7 @@ void elmoInitRegs(void)
 	}
 #endif
 }
+#endif /* BOARD_USS1001 */
 
 /* writes length bytes, a register number and its value; 0, or the transfer's status */
 unsigned char elmoWrite(unsigned char *data, unsigned char length)
@@ -166,14 +188,97 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	return status;
 }
 
+#if BOARD_USS1001
+/* the version's two bytes, as the slim's code reaches them */
+struct ElmoVersion {
+	unsigned char	low;
+	unsigned char	high;
+};
+#define ELMO_VERSION_OF(version)	((struct ElmoVersion *)(version))
+#endif
+
 unsigned char elmoReadVersion(unsigned char *version)
 {
 	unsigned char reg;
 
+#if BOARD_USS1001
+	/* the slim's: not again once the Elmo did not answer */
+	if (deviceVersions.elmo[0] == 0xff) {
+		ELMO_VERSION_OF(version)->low = ELMO_VERSION_OF(version)->high = 0xff;
+		return 0;
+	}
+#endif
 	reg = ELMO_VERSION;
 	return elmoRead(&reg, version);
 }
 
+#if BOARD_USS1001
+/* the slim's: sets (set) or clears masks[0-3] in the status masks, and clears or sets
+   masks->regA7 in register 0xa7, in one write of elmoCommand; the copies change only when the
+   write went through. 0, or elmoWrite's error */
+/* the status masks as the slim's code reaches them: a register each */
+#define ELMO_STATUS	((struct ElmoMasks *)&elmoStatusMask)
+
+unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
+{
+	unsigned char length;
+	unsigned char result;
+	unsigned int value[6];
+
+	length = 0;
+	result = 0;
+	if (masks->status0 != 0) {
+		value[0] = set ? ELMO_STATUS->status0 | masks->status0 :
+			~masks->status0 & ELMO_STATUS->status0;
+		elmoCommand[length++] = 0xa0;
+		elmoCommand[length++] = ((unsigned char *)&value[0])[1];
+		elmoCommand[length++] = (unsigned char)value[0];
+	}
+	if (masks->status1 != 0) {
+		value[1] = set ? ELMO_STATUS->status1 | masks->status1 :
+			~masks->status1 & ELMO_STATUS->status1;
+		elmoCommand[length++] = 0xa1;
+		elmoCommand[length++] = ((unsigned char *)&value[1])[1];
+		elmoCommand[length++] = (unsigned char)value[1];
+	}
+	if (masks->status2 != 0) {
+		value[2] = set ? ELMO_STATUS->status2 | masks->status2 :
+			~masks->status2 & ELMO_STATUS->status2;
+		elmoCommand[length++] = 0xa2;
+		elmoCommand[length++] = ((unsigned char *)&value[2])[1];
+		elmoCommand[length++] = (unsigned char)value[2];
+	}
+	if (masks->status3 != 0) {
+		value[3] = set ? ELMO_STATUS->status3 | masks->status3 :
+			~masks->status3 & ELMO_STATUS->status3;
+		elmoCommand[length++] = 0xa3;
+		elmoCommand[length++] = ((unsigned char *)&value[3])[1];
+		elmoCommand[length++] = (unsigned char)value[3];
+	}
+	if (masks->regA7 != 0) {
+		value[5] = set ? ~masks->regA7 & elmoRegA7 : elmoRegA7 | masks->regA7;
+		elmoCommand[length++] = 0xa7;
+		elmoCommand[length++] = ((unsigned char *)&value[5])[1];
+		elmoCommand[length++] = (unsigned char)value[5];
+	}
+	if (length != 0) {
+		result = elmoWrite(elmoCommand, length);
+		if (result == 0) {
+			if (masks->status0 != 0)
+				ELMO_STATUS->status0 = value[0];
+			if (masks->status1 != 0)
+				ELMO_STATUS->status1 = value[1];
+			if (masks->status2 != 0)
+				ELMO_STATUS->status2 = value[2];
+			if (masks->status3 != 0)
+				ELMO_STATUS->status3 = value[3];
+			if (masks->regA7 != 0)
+				elmoRegA7 = value[5];
+		}
+	}
+	return result;
+}
+#else
 /* sets masks[0-4] in the status masks and clears masks->regA7 in register 0xa7, and writes the
    command for each register changed into command; its length */
 unsigned char elmoSetMasks(struct ElmoMasks *masks, unsigned char *command)
@@ -269,6 +374,8 @@ unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command)
 	return length;
 }
 
+#endif /* BOARD_USS1001 */
+
 /* writes the command for each status mask select's bits 0-4 name into command; its length */
 unsigned char elmoGetMasks(unsigned char select, unsigned char *command)
 {
@@ -295,10 +402,12 @@ unsigned char elmoGetMasks(unsigned char select, unsigned char *command)
 		command[length++] = elmoStatusMask.byte[7];
 		command[length++] = elmoStatusMask.byte[6];
 	}
+#if !BOARD_USS1001	/* the slim's leaves register 0xa4 out */
 	if (select & 0x10) {
 		command[length++] = 0xa4;
 		command[length++] = elmoStatusMask.byte[9];
 		command[length++] = elmoStatusMask.byte[8];
 	}
+#endif
 	return length;
 }

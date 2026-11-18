@@ -6,6 +6,7 @@
 #pragma sfr
 
 #include <stddef.h>
+#include <string.h>
 
 #include "ernie.h"
 #include "charge.h"
@@ -15,7 +16,734 @@
 #include "kernel.h"
 #include "powerreq.h"
 #include "powerseq.h"
+#include "task.h"
 
+#if BOARD_USS1001
+/*
+ * The slim's Cookie: with no Cookie (its version 0xff) nothing goes on the bus. Its registers
+ * are written once from a table, the controls write without comparing (the update wrappers,
+ * out of the manual charge mode, compare), and register 6's bit 3 stands for register 3's bit
+ * 7 (cookieReadReg3).
+ */
+static struct IicaRequest cookieIica;
+union CookieReg cookieRegs[6];
+
+/* the slim's COOKIE_REG and COOKIE_ADDRESS, which nothing calls */
+unsigned char cookieReg(unsigned char reg)
+{
+	return (unsigned char)(configGet()->cookieRegHigh ? reg + 0xa0 : reg);
+}
+
+unsigned int cookieAddress(void)
+{
+	return configGet()->cookieRegHigh ? 0xa4 : 0xa8;
+}
+
+void cookieInit(void)
+{
+}
+
+/* each register to its first value; Sony's table leaves the registers' numbers to be set */
+struct CookieRegInit {
+	unsigned char	reg;
+	union CookieReg	*last;
+	unsigned int	value;
+};
+
+void cookieInitRegs(void)
+{
+	unsigned char i;
+	struct CookieRegInit regs[6] = {
+		{ 0, &cookieRegs[0], 0x0014 },
+		{ 0, &cookieRegs[1], 0x0060 },
+		{ 0, &cookieRegs[2], 0x0000 },
+		{ 0, &cookieRegs[3], 0x0010 },
+		{ 0, &cookieRegs[4], 0x0020 },
+		{ 0, &cookieRegs[5], 0x0010 },
+	};
+
+	regs[0].reg = 3;
+	regs[1].reg = 4;
+	regs[2].reg = 5;
+	regs[3].reg = 6;
+	regs[4].reg = 7;
+	regs[5].reg = 8;
+
+	for (i = 0; i < 6; i++) {
+		elmoCommand[0] = regs[i].reg;
+		elmoCommand[1] = (unsigned char)regs[i].value;
+		elmoCommand[2] = (unsigned char)(regs[i].value >> 8);
+		if (cookieWrite(elmoCommand, 3) == 0)
+			regs[i].last->word = regs[i].value;
+	}
+}
+
+/* data[0] is the register */
+unsigned char cookieWrite(unsigned char *data, unsigned char length)
+{
+	unsigned char status;
+	ER ercd;
+	FLGPTN ptn;
+	unsigned char i;
+
+	if (deviceVersions.cookie[0] == 0xff)
+		return 0;
+	cookieIica.rxData = NULL;
+	cookieIica.rxCount = 0;
+	cookieIica.txData = data;
+	cookieIica.txCount = length;
+	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.status = &status;
+	for (i = 1; i < length; i++)
+		;
+	clr_flg(4, ~0x10);
+	iicaStart(&cookieIica);
+	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+	if (ercd == E_OK) {
+		if (ptn & 0x10)
+			clr_flg(4, ~0x10);
+	} else if (ercd == E_TMOUT) {
+		status = 0x10;
+	}
+	return status;
+}
+
+/* a register's two bytes; with no Cookie 0 */
+unsigned char cookieRead(unsigned char *reg, unsigned char *data)
+{
+	unsigned char status;
+	ER ercd;
+	FLGPTN ptn;
+
+	if (deviceVersions.cookie[0] == 0xff) {
+		*data++ = 0;
+		*data = 0;
+		return 0;
+	}
+	cookieIica.rxData = data;
+	cookieIica.rxCount = 2;
+	cookieIica.txData = reg;
+	cookieIica.txCount = 1;
+	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.status = &status;
+	clr_flg(4, ~0x10);
+	iicaStart(&cookieIica);
+	ercd = twai_flg(4, 0x10, TWF_ORW, &ptn, 0x4b);
+	if (ercd == E_OK) {
+		if (ptn & 0x10)
+			clr_flg(4, ~0x10);
+	} else if (ercd == E_TMOUT) {
+		status = 0x10;
+	}
+	return status;
+}
+
+/* the version as Sony's sets it here: two bytes of a struct, not the array */
+struct CookieVersion {
+	unsigned char	low;
+	unsigned char	high;
+};
+#define COOKIE_VERSION(version)	((struct CookieVersion *)(version))
+
+/* register 0; with no Cookie 0xffff */
+unsigned char cookieReadVersion(unsigned char *version)
+{
+	unsigned char reg;
+
+	if (deviceVersions.cookie[0] == 0xff) {
+		COOKIE_VERSION(version)->low = COOKIE_VERSION(version)->high = 0xff;
+		return 0;
+	}
+	reg = 0;
+	return cookieRead(&reg, version);
+}
+
+/* register 4's low byte, out of the manual charge mode and when it changes */
+unsigned char cookieUpdateChargingCurrent(unsigned char current)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0 && current != cookieRegs[1].byte[0])
+		cookieCtrlChargingCurrent(current);
+	return result;
+}
+
+/* register 4's low byte: 0x08c2 (sceSysconCtrlChargingCurrent) and the temperature's range */
+unsigned char cookieCtrlChargingCurrent(unsigned char current)
+{
+	unsigned char result;
+
+	elmoCommand[0] = 4;
+	elmoCommand[1] = current;
+	elmoCommand[2] = cookieRegs[1].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[1].byte[0] = current;
+	return result;
+}
+
+/* register 8's low byte, out of the manual charge mode and when it changes */
+unsigned char cookieUpdateReg8(unsigned char value)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0 && value != cookieRegs[5].byte[0])
+		cookieCtrlReg8(value);
+	return result;
+}
+
+/* register 8's low byte: the temperature's range */
+unsigned char cookieCtrlReg8(unsigned char value)
+{
+	unsigned char result;
+
+	elmoCommand[0] = 8;
+	elmoCommand[1] = value;
+	elmoCommand[2] = cookieRegs[5].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[5].byte[0] = value;
+	return result;
+}
+
+/* the battery's charge, out of the manual charge mode */
+unsigned char cookieUpdateBatteryCharge(unsigned char on)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0)
+		result = cookieCtrlBatteryCharge(on);
+	return result;
+}
+
+/* register 3's bit 15 clear while on: 0x08c1 (sceSysconCtrlBatteryCharge) */
+unsigned char cookieCtrlBatteryCharge(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (on)
+		value = cookieRegs[0].byte[1] & 0x7f;
+	else
+		value = cookieRegs[0].byte[1] | 0x80;
+	if (value != cookieRegs[0].byte[1]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = cookieRegs[0].byte[0];
+		elmoCommand[2] = value;
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[1] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+/* register 3's bit 13 set while on */
+unsigned char cookieCtrlReg3Bit13(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (on)
+		value = cookieRegs[0].byte[1] | 0x20;
+	else
+		value = cookieRegs[0].byte[1] & 0xdf;
+	if (value != cookieRegs[0].byte[1]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = cookieRegs[0].byte[0];
+		elmoCommand[2] = value;
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[1] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+/* register 3's bit 12 set while on (the charge's boost), then register 6 read back */
+unsigned char cookieCtrlReg3Bit12(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (on)
+		value = cookieRegs[0].byte[1] | 0x10;
+	else
+		value = cookieRegs[0].byte[1] & 0xef;
+	if (value != cookieRegs[0].byte[1]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = cookieRegs[0].byte[0];
+		elmoCommand[2] = value;
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0) {
+			cookieRegs[0].byte[1] = value;
+			cookieReadReg3();
+			task5SetFlag(4, 0x0400);
+		}
+	} else
+		result = 0;
+	return result;
+}
+
+/* the Cookie held (powerCookieClear, powerCookieSet), then the AC's charge */
+unsigned char cookieCtrlCharge(unsigned char on)
+{
+	unsigned char result;
+
+	if (on)
+		powerCookieClear();
+	else
+		powerCookieSet();
+	result = cookieCtrlChargeAc(on);
+	return result;
+}
+
+/* register 6, out of the manual charge mode, at most chargeCookieSetting and
+   chargeTempSetting */
+unsigned char cookieUpdateSupplyCurrentUsb(unsigned char current)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0) {
+		if (chargeCookieSetting < current)
+			current = chargeCookieSetting;
+		if (chargeTempSetting < current)
+			current = chargeTempSetting;
+		result = cookieCtrlSupplyCurrentUsb(current);
+	}
+	return result;
+}
+
+/* register 6's bits 4-7: 0x08c4 (sceSysconCtrlSupplyCurrentUsb) */
+unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current)
+{
+	unsigned char result;
+
+	cookieReadReg3();
+	current = (cookieRegs[3].byte[0] & 0x0f) | current;
+	elmoCommand[0] = 6;
+	elmoCommand[1] = current;
+	elmoCommand[2] = cookieRegs[3].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[3].byte[0] = current;
+	return result;
+}
+
+/* the AC's supply current, as the USB's: the slim has none to set */
+unsigned char cookieUpdateSupplyCurrent(unsigned char current)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0) {
+		if (chargeCookieSetting < current)
+			current = chargeCookieSetting;
+		if (chargeTempSetting < current)
+			current = chargeTempSetting;
+		result = cookieCtrlSupplyCurrent(current);
+	}
+	return result;
+}
+
+unsigned char cookieCtrlSupplyCurrent(unsigned char current)
+{
+	unsigned char result = 0;
+
+	return result;
+}
+
+/* register 7's low byte, its bits 5-7 */
+unsigned char cookieCtrlReg7(unsigned char value)
+{
+	unsigned char result;
+
+	value &= 0xe0;
+	elmoCommand[0] = 7;
+	elmoCommand[1] = value;
+	elmoCommand[2] = cookieRegs[4].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[4].byte[0] = value;
+	return result;
+}
+
+/* the currents set, as their registers' bits 4-7 */
+unsigned char cookieGetChargingCurrent(void)
+{
+	return cookieRegs[1].byte[0] & 0xf0;
+}
+
+unsigned char cookieGetSupplyCurrentUsb(void)
+{
+	return cookieRegs[3].byte[0] & 0xf0;
+}
+
+unsigned char cookieGetSupplyCurrent(void)
+{
+	return 0;
+}
+
+/* a current as the host gives it to its register's bits 4-7, 1 for one it cannot be: the
+   charging current even, 2-30 */
+unsigned char cookieChargingCurrentEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+
+	result = 0;
+	if ((value & 1) != 0 || value < 2 || value >= 0x1f)
+		result = 1;
+	else
+		*reg = (value << 3) & 0xf0;
+	return result;
+}
+
+/* the USB supply's: 1-24 in twelve steps */
+unsigned char cookieSupplyCurrentUsbEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+	unsigned char bits;
+
+	result = 0;
+	bits = 0;
+	switch (value) {
+	case 1:
+		bits = 0x10;
+		break;
+	case 3:
+		bits = 0x20;
+		break;
+	case 5:
+		bits = 0x30;
+		break;
+	case 7:
+		bits = 0x40;
+		break;
+	case 9:
+		bits = 0x50;
+		break;
+	case 10:
+		bits = 0x60;
+		break;
+	case 12:
+		bits = 0x70;
+		break;
+	case 15:
+		bits = 0x80;
+		break;
+	case 17:
+		bits = 0x90;
+		break;
+	case 19:
+		bits = 0xa0;
+		break;
+	case 21:
+		bits = 0xb0;
+		break;
+	case 24:
+		bits = 0xc0;
+		break;
+	default:
+		result = 1;
+		break;
+	}
+	if (result == 0)
+		*reg = bits;
+	return result;
+}
+
+/* the AC's: none */
+unsigned char cookieSupplyCurrentEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+	unsigned char bits;
+
+	result = 0;
+	switch (value) {
+	default:
+		result = 1;
+		return result;
+	}
+	*reg = bits;
+	return result;
+}
+
+/* and back, as the host reads them (0x0841, 0x0843) */
+unsigned char cookieChargingCurrentDecode(unsigned char *out, unsigned char reg)
+{
+	*out = reg >> 3;
+	return 0;
+}
+
+unsigned char cookieSupplyCurrentUsbDecode(unsigned char *out, unsigned char reg)
+{
+	unsigned char result;
+	unsigned char value;
+
+	result = 0;
+	value = 0;
+	switch (reg) {
+	case 0x10:
+		value = 1;
+		break;
+	case 0x20:
+		value = 3;
+		break;
+	case 0x30:
+		value = 5;
+		break;
+	case 0x40:
+		value = 7;
+		break;
+	case 0x50:
+		value = 9;
+		break;
+	case 0x60:
+		value = 10;
+		break;
+	case 0x70:
+		value = 12;
+		break;
+	case 0x80:
+		value = 15;
+		break;
+	case 0x90:
+		value = 17;
+		break;
+	case 0xa0:
+		value = 19;
+		break;
+	case 0xb0:
+		value = 21;
+		break;
+	case 0xc0:
+		value = 24;
+		break;
+	default:
+		result = 1;
+		break;
+	}
+	if (result == 0)
+		*out = value;
+	return result;
+}
+
+unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg)
+{
+	unsigned char result;
+	unsigned char value;
+
+	result = 0;
+	switch (reg) {
+	default:
+		result = 1;
+		return result;
+	}
+	*out = value;
+	return result;
+}
+
+unsigned char cookieReadStatus1(unsigned char *status)
+{
+	unsigned char reg;
+
+	reg = 1;
+	return cookieRead(&reg, status);
+}
+
+unsigned char cookieReadStatus2(unsigned char *status)
+{
+	unsigned char reg;
+
+	reg = 2;
+	return cookieRead(&reg, status);
+}
+
+/* status registers 1 and 2 as the power status has them (0x08c6) */
+unsigned char cookieReadReg1(unsigned char *out)
+{
+	unsigned char result;
+	unsigned char reg;
+	union CookieStatus1 status1;
+	union CookieStatus2 status2;
+	union PowerStatus status;
+
+	reg = 1;
+	result = cookieRead(&reg, status1.byte);
+	if (result != 0)
+		goto done;
+	reg = 2;
+	result = cookieRead(&reg, status2.byte);
+	if (result != 0)
+		goto done;
+	memset(&status, 0, sizeof(status));
+	status.bits.charging = status1.bits.charging;
+	status.bits.battery = status1.bits.battery;
+	status.bits.ac = status1.bits.ac;
+	status.bits.status3 = status1.bits.status3;
+	status.bits.status2 = status1.bits.status2;
+	status.bits.status1 = status1.bits.status1;
+	status.bits.level = status1.bits.level;
+	status.bits.usb = status2.bits.usb;
+	status.bits.supply = status2.bits.supply;
+	status.bits.vbus1 = status.bits.vbus2 = status2.bits.vbus;
+	out[0] = status.byte[0];
+	out[1] = status.byte[1];
+	out[2] = status.byte[2];
+	out[3] = status.byte[3];
+done:
+	return result;
+}
+
+/* register 3 */
+unsigned char cookieReadReg3Value(unsigned char *value)
+{
+	unsigned char reg;
+
+	reg = 3;
+	return cookieRead(&reg, value);
+}
+
+/* register 6 read back: the Cookie cleared bit 3, so the USB's mode is new */
+void cookieReadReg3(void)
+{
+	unsigned char reg;
+	unsigned char was;
+
+	was = cookieRegs[3].byte[0] & 0x08;
+	reg = 6;
+	cookieRead(&reg, cookieRegs[3].byte);
+	if (!(cookieRegs[3].byte[0] & 0x08) && was) {
+		chargeUsbMode = 0;
+		chargeUsbHold = 0;
+	}
+}
+
+/* the AC's charge, out of the manual charge mode, while on only when nothing holds the
+   Cookie and the charge may run: 0x0892 (sceSysconCtrlChargeAC) */
+unsigned char cookieCtrlChargeAc(unsigned char on)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0) {
+		if (on && (powerStatus.bits.cookieLock0 || powerStatus.bits.cookieLock1 ||
+			   chargeCookieHeld || !chargeControl.1))
+			;
+		else
+			result = cookieSetChargeAc(on);
+	}
+	return result;
+}
+
+/* the slim has no AC charge to set */
+unsigned char cookieSetChargeAc(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	value = 0;
+	result = 0;
+	return result;
+}
+
+/* register 6's bit 3, out of the manual charge mode, while on only when nothing holds the
+   Cookie */
+unsigned char cookieUpdateReg6Bit3(unsigned char clear)
+{
+	unsigned char result = 0;
+
+	if (chargeGetManualMode() == 0) {
+		if (!clear || (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 &&
+			       !chargeCookieHeld))
+			result = cookieCtrlReg6Bit3(clear);
+	}
+	return result;
+}
+
+/* register 6's bit 3 clear while on */
+unsigned char cookieCtrlReg6Bit3(unsigned char clear)
+{
+	unsigned char result;
+	unsigned char value;
+
+	cookieReadReg3();
+	if (clear)
+		value = cookieRegs[3].byte[0] & 0xf7;
+	else
+		value = cookieRegs[3].byte[0] | 0x08;
+	elmoCommand[0] = 6;
+	elmoCommand[1] = value;
+	elmoCommand[2] = cookieRegs[3].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[3].byte[0] = elmoCommand[1];
+	return result;
+}
+
+/* register 3's bit 2 clear in mode 1 */
+unsigned char cookieCtrlReg3Mode(unsigned char mode)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (mode == 1)
+		value = cookieRegs[0].byte[0] & 0xfb;
+	else
+		value = cookieRegs[0].byte[0] | 0x04;
+	if (value != cookieRegs[0].byte[0]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = value;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[0] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+/* register 3's bit 0 set and bit 2 clear while on, else both clear */
+unsigned char cookieCtrlReg3Bit2(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	if (on) {
+		value = cookieRegs[0].byte[0] & 0xfb;
+		value |= 0x01;
+	} else
+		value = cookieRegs[0].byte[0] & 0xfa;
+	if (value != cookieRegs[0].byte[0]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = value;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[0] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+/* register 3's bit 0 set and bit 2 clear */
+unsigned char cookieCtrlReg3Bit0(void)
+{
+	unsigned char value;
+	unsigned char result;
+
+	value = (cookieRegs[0].byte[0] & 0xfb) | 0x01;
+	if (value != cookieRegs[0].byte[0]) {
+		elmoCommand[0] = 3;
+		elmoCommand[1] = value;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[0] = value;
+	} else
+		result = 0;
+	return result;
+}
+
+#else
 static struct IicaRequest cookieIica;
 #if FW_SINCE(0x00090804)
 union CookieReg cookieRegs[6];
@@ -499,3 +1227,5 @@ unsigned char cookieCtrlReg3Bit0(void)
 	return result;
 }
 #endif
+
+#endif	/* BOARD_USS1001 */

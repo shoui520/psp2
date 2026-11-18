@@ -69,12 +69,12 @@
 #undef CSIMK01
 #undef IICAIF
 #undef IICAMK
-#define TMIF00		SFR_BITS(0xfffe1).b6
-#define TMMK00		SFR_BITS(0xfffe5).b6
-#define CSIIF01		SFR_BITS(0xfffe1).b7
-#define CSIMK01		SFR_BITS(0xfffe5).b7
-#define IICAIF		SFR_BITS(0xfffe2).b4
-#define IICAMK		SFR_BITS(0xfffe6).b4
+#define TMIF00		IF0H.6
+#define TMMK00		MK0H.6
+#define CSIIF01		IF0H.7
+#define CSIMK01		MK0H.7
+#define IICAIF		IF1L.4
+#define IICAMK		MK1L.4
 #define IICAPR0		SFR_BITS(0xfffea).b4
 #define IICAPR1		SFR_BITS(0xfffee).b4
 
@@ -109,6 +109,14 @@
 #define STMK4		SFR_BITS(0xfffd6).b5
 #define SRMK4		SFR_BITS(0xfffd6).b6
 #define SREMK4		SFR_BITS(0xfffd6).b7
+#undef SRPR04
+#undef SRPR14
+#undef SREPR04
+#undef SREPR14
+#define SRPR04		SFR_BITS(0xfffda).b6	/* PR03L.6, PR13L.6 */
+#define SRPR14		SFR_BITS(0xfffde).b6
+#define SREPR04		SFR_BITS(0xfffda).b7	/* PR03L.7, PR13L.7 */
+#define SREPR14		SFR_BITS(0xfffde).b7
 
 /*
  * A register of Sony's chip at 0xf0270, outside the RL78's: USS-1001's serial lines on the

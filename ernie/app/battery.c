@@ -1,10 +1,11 @@
 /*
  * The battery: its gauge's registers over the I2C bus, while one answered at the power-on
- * (deviceVersions.battery.id not 0x00ff), and its bootloader's commands.
+ * (deviceVersions.battery.id not BATTERY_NONE), and its bootloader's commands.
  */
 #pragma sfr
 
 #include <stddef.h>
+#include <string.h>
 
 #include "ernie.h"
 #include "board.h"
@@ -13,6 +14,7 @@
 #include "chip.h"
 #include "config.h"
 #include "cookie.h"
+#include "eventlog.h"
 #include "iica.h"
 #include "kernel.h"
 #include "powerseq.h"
@@ -25,16 +27,43 @@
 #define BATTERY_ADDRESS		0xaa
 #endif
 
+/* the charge stopped while the bootloader runs: on the slim out of the manual charge mode */
+#if BOARD_USS1001
+#define BATTERY_CHARGE(on)	cookieUpdateBatteryCharge(on)
+#else
+#define BATTERY_CHARGE(on)	cookieCtrlBatteryCharge(on)
+#endif
+
+/* the battery's id when none answered at the power-on */
+#if BOARD_USS1001
+#define BATTERY_NONE		0xffff
+#else
+#define BATTERY_NONE		0x00ff
+#endif
+
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
 struct BatteryBLCommand batteryBLCommand;
+#if BOARD_USS1001
+union BatteryFaults batteryFaults;
+#endif
 
 void batteryInit(void)
 {
 	batteryBLCommand.command = 0;
 	batteryBLCommand.length = 0;
 	batteryBLCommand.buffer = batteryBLBuffer;
+#if BOARD_USS1001
+	memset(batteryFaults.byte, 0, sizeof(batteryFaults));
+#endif
 }
+
+#if BOARD_USS1001
+/* after batteryReadInfo answered (charge.c): nothing */
+void batteryInfoRead(void)
+{
+}
+#endif
 
 /* data[0] is the register */
 unsigned char batteryWrite(unsigned char *data, unsigned char length)
@@ -43,7 +72,7 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	ER ercd;
 	FLGPTN ptn;
 
-	if (deviceVersions.battery.id == 0x00ff)
+	if (deviceVersions.battery.id == BATTERY_NONE)
 		return 0;
 	batteryIica.rxData = NULL;
 	batteryIica.rxCount = 0;
@@ -72,7 +101,7 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	FLGPTN ptn;
 	unsigned char status;
 
-	if (deviceVersions.battery.id == 0x00ff) {
+	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
@@ -102,7 +131,7 @@ unsigned char batteryControl(unsigned int command, unsigned char *data, unsigned
 {
 	unsigned char result;
 
-	if (deviceVersions.battery.id == 0x00ff) {
+	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
@@ -128,7 +157,7 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	FLGPTN ptn;
 	unsigned char status;
 
-	if (deviceVersions.battery.id == 0x00ff)
+	if (deviceVersions.battery.id == BATTERY_NONE)
 		return 0;
 	if (length != 0) {
 		batteryIica.txCount = length - 1;
@@ -159,7 +188,7 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 	FLGPTN ptn;
 	unsigned char status;
 
-	if (deviceVersions.battery.id == 0x00ff) {
+	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
@@ -185,6 +214,88 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 
 /* the battery's identity (struct BatteryInfo's four words): 0xfffe for each where a battery
    without a gauge answered */
+#if BOARD_USS1001
+/* the slim's: the id, the type twice (the second word from 0x0416 on: 0xa8 for a 0x0802
+   battery of type 0xa7 or 0xa8), the version, then the bootloader's (0xfffd before 0x0416); with
+   none answered all 0xffff */
+/* the words as Sony's sets them here: a struct's, not the array's. The gauge's control
+   commands 1 (the device's type), 3 (the hardware's version), 2 (the firmware's) and 6; the
+   data flash's class 0x39 */
+struct BatteryInfoWords {
+	unsigned int	id;		/* command 1 */
+	unsigned int	type;		/* the hardware's, or 0xa8 */
+	unsigned int	firmware;	/* command 2 */
+	unsigned int	dataFlash;	/* class 0x39's first word */
+	unsigned int	command6;	/* from firmware 0x0416 */
+	unsigned int	hardware;	/* command 3 */
+};
+#define BATTERY_INFO(info)	((struct BatteryInfoWords *)(info))
+
+unsigned char batteryReadInfo(unsigned int *info)
+{
+	unsigned char result;
+	unsigned char status;
+
+	if (deviceVersions.battery.id == BATTERY_NONE) {
+		BATTERY_INFO(info)->id = BATTERY_INFO(info)->type = BATTERY_INFO(info)->firmware =
+			BATTERY_INFO(info)->dataFlash = BATTERY_INFO(info)->command6 =
+			BATTERY_INFO(info)->hardware = 0xffff;
+		return 0;
+	}
+	result = batteryControl(1, (unsigned char *)&BATTERY_INFO(info)->id, 2);
+	if (result == 0) {
+		result = batteryControl(3,
+				(unsigned char *)&BATTERY_INFO(info)->hardware, 2);
+		if (result == 0) {
+			result = batteryControl(2,
+					(unsigned char *)&BATTERY_INFO(info)->firmware, 2);
+			if (result == 0) {
+				BATTERY_INFO(info)->type = BATTERY_INFO(info)->hardware;
+				if (BATTERY_INFO(info)->firmware >= 0x0416) {
+					result = batteryControl(6,
+							(unsigned char *)&BATTERY_INFO(info)->command6, 2);
+					if (result != 0)
+						goto failed;
+					if ((BATTERY_INFO(info)->hardware == 0xa7 ||
+					     BATTERY_INFO(info)->hardware == 0xa8) &&
+					    BATTERY_INFO(info)->command6 == 0x0802)
+						BATTERY_INFO(info)->type = 0xa8;
+				} else
+					BATTERY_INFO(info)->command6 = 0xfffd;
+				elmoCommand[0] = 0x3e;
+				elmoCommand[1] = 0x39;
+				result = batteryWrite(elmoCommand, 2);
+				if (result == 0) {
+					elmoCommand[0] = 0x3f;
+					elmoCommand[1] = 0;
+					result = batteryWrite(elmoCommand, 2);
+					if (result == 0) {
+						powerSleep2(4);
+						elmoCommand[0] = 0x40;
+						result = batteryRead(elmoCommand,
+							(unsigned char *)&BATTERY_INFO(info)->dataFlash, 2);
+					}
+				}
+			}
+		}
+	}
+failed:
+	if (result == 1) {
+		elmoCommand[0] = 0x16;
+		elmoCommand[1] = 0;
+		result = batteryReadAt(elmoCommand, &status, 1);
+		if (result == 0) {
+			BATTERY_INFO(info)->id = 0xfffe;
+			BATTERY_INFO(info)->type = 0xfffe;
+			BATTERY_INFO(info)->firmware = 0xfffe;
+			BATTERY_INFO(info)->dataFlash = 0xfffe;
+			BATTERY_INFO(info)->command6 = 0xfffe;
+			BATTERY_INFO(info)->hardware = 0xfffe;
+		}
+	}
+	return result;
+}
+#else
 unsigned char batteryReadInfo(unsigned int *info)
 {
 	unsigned char result;
@@ -226,6 +337,7 @@ unsigned char batteryReadInfo(unsigned int *info)
 	}
 	return result;
 }
+#endif
 
 /* the gauge's remaining capacity (register 0x10) */
 unsigned char batteryReadRemainCap(unsigned int *value)
@@ -260,12 +372,17 @@ unsigned char batteryReadBicTemp(unsigned int *value)
 {
 	unsigned char reg;
 
+#if BOARD_USS1001
+	reg = 0x20;					/* the slim's: whatever the version */
+	return batteryRead(&reg, (unsigned char *)value, 2);
+#else
 	if (deviceVersions.battery.version[1] >= 0x0404) {
 		reg = 0x20;
 		return batteryRead(&reg, (unsigned char *)value, 2);
 	}
 	*value = 0x0aac;
 	return 0;
+#endif
 }
 #endif
 
@@ -288,7 +405,7 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 	FLGPTN ptn;
 	unsigned char status;
 
-	if (deviceVersions.battery.id == 0x00ff) {
+	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
@@ -321,7 +438,7 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	FLGPTN ptn;
 	unsigned char status;
 
-	if (deviceVersions.battery.id == 0x00ff)
+	if (deviceVersions.battery.id == BATTERY_NONE)
 		return 0;
 	if (length != 0) {
 		batteryIica.txCount = length - 1;
@@ -398,7 +515,7 @@ unsigned char batteryStartBLMode(void)
 	}
 #if FW_SINCE(0x00090804)
 	if (result == 0) {
-		cookieCtrlBatteryCharge(0);
+		BATTERY_CHARGE(0);
 		chargeTimerStop();
 	}
 #endif
@@ -430,7 +547,7 @@ unsigned char batteryStopBLMode(void)
 		}
 	}
 #if FW_SINCE(0x00090804)
-	cookieCtrlBatteryCharge(1);
+	BATTERY_CHARGE(1);
 #endif
 	return result;
 }
@@ -447,7 +564,38 @@ unsigned char batterySWReset(void)
 	return batteryWrite(elmoCommand, 3);
 }
 
-#if FW_SINCE(0x00090206)
+#if BOARD_USS1001
+/* 0x08b0: the battery's bootloader line, P6.4 on the slim, recorded in the faults */
+void batteryBLLineOn(void)
+{
+	P6.4 = 1;
+	batteryFaults.byte[1] |= 0x01;
+	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+}
+
+void batteryBLLineOff(void)
+{
+	P6.4 = 0;
+	batteryFaults.byte[1] &= ~0x01;
+	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+}
+
+/* at the power-off: the manual charge mode left, the faults recorded and cleared, then the
+   gauge's control command 0x0011 (its hibernation) whatever the version */
+unsigned char batteryHibernate(void)
+{
+	chargeSetManualMode(0);
+	batteryFaults.byte[1] |= 0x02;
+	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+	batteryFaults.byte[0] = 0;
+	batteryFaults.word[2] = 0;
+	batteryFaults.word[3] = 0;
+	elmoCommand[0] = 0;
+	elmoCommand[1] = 0x11;
+	elmoCommand[2] = 0;
+	return batteryWrite(elmoCommand, 3);
+}
+#elif FW_SINCE(0x00090206)
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {
@@ -485,5 +633,13 @@ unsigned char batteryControl0015(void)
 	elmoCommand[1] = 0x15;
 	elmoCommand[2] = 0;
 	return batteryWrite(elmoCommand, 3);
+}
+#endif
+
+#if BOARD_USS1001
+/* the faults record's eight bytes */
+void batteryGetFaults(unsigned char *faults)
+{
+	memcpy(faults, batteryFaults.byte, sizeof(batteryFaults));
 }
 #endif

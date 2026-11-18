@@ -13,7 +13,9 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if FW_SINCE(0x0100060B)
+#if BOARD_USS1001
+#define CONFIG_VERSION		0x58	/* the slim's layout */
+#elif FW_SINCE(0x0100060B)
 #define CONFIG_VERSION		0x38	/* this build's layout */
 #elif FW_SINCE(0x01000306)
 #define CONFIG_VERSION		0x31	/* (no charge alarm adjusts or off information) */
@@ -127,8 +129,9 @@ struct ConfigBlock {
 	} keep;					/* kept across a new layout */
 	unsigned char	paramSetting1;		/* the parameter block's, for the host */
 	unsigned char	paramSetting2;
-#if BOARD_IRS1001
-	unsigned char	reserved41[0xf8 - 0xee];	/* IRS-1001 keeps its levels at 0x1bc */
+#if BOARD_IRS1001 || BOARD_USS1001
+	unsigned char	reserved41[0xf8 - 0xee];	/* IRS-1001 keeps its levels at 0x1bc,
+							   USS-1001 at 0x1e0 */
 #else
 	unsigned char	voltage81;		/* the Elmo's regulators 0x81-0x84: their levels at a
 						   resume */
@@ -136,9 +139,7 @@ struct ConfigBlock {
 	unsigned char	voltage83;
 	unsigned char	voltage84;
 #endif
-#if BOARD_IRS1001
-#elif BOARD_USS1001
-	unsigned char	reserved7[0xf8 - 0xf2];	/* USS-1001 keeps its trim at 0x1e5 */
+#if BOARD_IRS1001 || BOARD_USS1001
 #elif ERNIE_HW == 0x00315200
 	unsigned char	reserved22[3];		/* 0x00315200's layout: the trim two bytes later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
@@ -269,17 +270,46 @@ struct ConfigBlock {
 	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
 	unsigned char	offInfo3;
 #if BOARD_USS1001
-	unsigned char	reserved34[0x1e5 - 0x1e0];
+	unsigned char	voltage81;		/* USS-1001's regulators 0x81-0x84: their levels at a
+						   resume */
+	unsigned char	voltage82;
+	unsigned char	voltage83;
+	unsigned char	voltage84;
+	unsigned char	reserved34;
 	unsigned char	voltageTrim;		/* USS-1001: passed with a regulator's level
 						   (0x088e) */
-	unsigned char	reserved45[0x216 - 0x1e6];
+	unsigned char	chargeUsbCurrents[8][6];	/* USS-1001: the USB supply's settings by the
+							   USB status and chargeUsbMode
+							   (chargeUsbCurrent); 0xff none */
 	unsigned int	analogInput10Interval;	/* USS-1001: the RTC's ticks between starts of
 						   analog input 0x0010 (input.c's scan) */
-	unsigned char	reserved44[0x226 - 0x218];
+	unsigned char	reserved44[0x21c - 0x218];
+	union {
+		unsigned char	value;
+		struct {
+			unsigned char	manualOffCold:1;	/* USS-1001: set: the manual charge
+								   mode off when the cold range stops
+								   the charge (chargeTempUpdate) */
+			unsigned char	manualCharge:1;	/* and set: transition 0x0f also in the
+							   manual charge mode (chargeUpdate) */
+			unsigned char	reserved47:6;
+		} bits;
+	} charge;
+	unsigned char	reserved48;
+	unsigned char	manualChargingCurrent;	/* USS-1001: the manual charge mode's Cookie
+						   settings (chargeSetManualMode) */
+	unsigned char	manualReg8;
+	unsigned char	manualSupplyCurrent;
+	unsigned char	manualSupplyCurrentUsb;
+	unsigned int	chargeBoostTime;	/* USS-1001: in seconds, the longest the boost runs
+						   after a battery goes in charging (chargeUpdate) */
+	unsigned int	chargeBoostVolt;	/* and the battery's voltage that ends it sooner */
 	unsigned char	touchDelayWriteByte;	/* USS-1001: the delay after each byte panel 0 is
 						   written */
 	unsigned char	touchDelayRelease;	/* and after its deselect */
-	unsigned char	reserved43[0x239 - 0x228];
+	unsigned char	reserved43[0x238 - 0x228];
+	unsigned char	chargeDongleCurrent;	/* USS-1001: the USB supply's setting with the
+						   multi-connector's dongle or debug board */
 	unsigned char	analogLimitScale;	/* USS-1001: a calibrated axis's limits are its
 						   calibration's widened by range * this / 100 */
 	unsigned int	analogLimitMargin;	/* plus this (analogLimitsSet) */

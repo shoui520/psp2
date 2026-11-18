@@ -63,7 +63,7 @@
 #define BOARD_DEBUG_PINS_POWER	HW_IS(0x00601000)
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
-#define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 ? 4 : 3)
+#define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 || BOARD_USS1001 ? 4 : 3)
 
 /* the multi-connector's switch: the output's bits 0 and 1 are P13.0 and P2.2, set at once
    (0x00102603); the others' a mode, with a wait between the two pins */
@@ -125,7 +125,7 @@
 /* the lowest NVS offset the host may read or write (app/nvsreq.c): PCH-1000 and PDEL keep their
    first 0x400 bytes from the host (the hardware ID's, not the code's: 0x00405x00 and
    0x00415200 run their code with 0) */
-#define BOARD_NVS_HOST_OFFSET_MIN	(HW_IS(0x00406000) || HW_IS(0x00416000) ? 0x0400 : 0)
+#define BOARD_NVS_HOST_OFFSET_MIN	(HW_IS(0x00406000) || HW_IS(0x00416000) || BOARD_USS1001 ? 0x0400 : 0)
 
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others

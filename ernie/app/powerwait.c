@@ -4,8 +4,11 @@
  * 4-0xe (4-0x10 before 0x01000104), each of which clears its bit of powerTimers when it runs out.
  */
 #pragma sfr
+#pragma DI
+#pragma EI
 
 #include "board.h"
+#include "charge.h"
 #include "ernie.h"
 #include "input.h"
 #include "kernel.h"
@@ -17,7 +20,7 @@
 #include "tau.h"
 #include "timer.h"
 
-#if FW_SINCE(0x0100060B) && !BOARD_102603
+#if FW_SINCE(0x0100060B) && !BOARD_102603 && !BOARD_USS1001
 #define POWER_DEVICE_JOBS	9
 #else
 #define POWER_DEVICE_JOBS	11
@@ -35,7 +38,9 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0010, powerHdmiCecOn },
 	{ 0x0020, powerHdmiCecOff },
 #endif
-#if BOARD_102603
+#if BOARD_USS1001
+	{ 0x0040, (unsigned char (*)(void))chargeUsbRequestUpdate },
+#elif BOARD_102603
 	{ 0x0040, powerSdOn },
 	{ 0x0080, powerSdOff },
 #elif !FW_SINCE(0x0100060B)
@@ -45,6 +50,9 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0100, powerBbmcStart },
 	{ 0x0200, powerBbmcCycle },
 	{ 0x1000, powerCookieSet },
+#if BOARD_USS1001
+	{ 0x2000, powerBbmcStop },
+#endif
 };
 
 static unsigned int powerWaitReserved[2];
@@ -58,7 +66,13 @@ void powerDeviceRun(void)
 	for (i = 0; i < POWER_DEVICE_JOBS; i++) {
 		if (powerDeviceJobs[i].bits & powerDevicePending) {
 			powerDeviceJobs[i].job();
+#if BOARD_USS1001
+			dis_dsp();
 			powerDevicePending &= ~powerDeviceJobs[i].bits;
+			ena_dsp();
+#else
+			powerDevicePending &= ~powerDeviceJobs[i].bits;
+#endif
 		}
 	}
 }
@@ -134,11 +148,30 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 }
 
 /* until the timers of the bits ran out */
+#if BOARD_USS1001
+/* the slim gives up after 120 waits, and clears the bits itself */
+void powerWaitTimers(unsigned int bits)
+{
+	unsigned char tries;
+
+	tries = 120;
+	while (bits & powerTimers) {
+		dly_tsk(3);
+		if (--tries == 0) {
+			DI();
+			powerTimers &= ~bits;
+			EI();
+			break;
+		}
+	}
+}
+#else
 void powerWaitTimers(unsigned int bits)
 {
 	while (bits & powerTimers)
 		dly_tsk(3);
 }
+#endif
 
 void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks)
 {
@@ -219,7 +252,7 @@ static void powerTimerEnd13(void)
 }
 #endif
 
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !BOARD_USS1001	/* the slim has no bit 14 */
 static void powerTimerEnd14(void)
 {
 	powerTimers &= ~0x4000;
@@ -265,7 +298,7 @@ void powerTimersInit(void)
 	handler.handler = powerTimerEnd13;
 	timerSetHandler(TIMER(0x0e), &handler);
 #endif
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !BOARD_USS1001
 	handler.handler = powerTimerEnd14;
 	timerSetHandler(0x15, &handler);
 #endif

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "elmo.h"
+#include "eventlog.h"
 #include "iica.h"
 #include "kernel.h"
 #include "led.h"
@@ -37,8 +38,9 @@ unsigned char powerResumed;		/* set by a resume, cleared by a power on */
 static unsigned char padding;		/* 0xff2ed: nothing uses it */
 #endif
 struct PowerJobState powerJobState;
-unsigned int powerCutRegs[3];		/* registers 0xb0-0xb2 of elmoRead's device, read at a
-					   power cut and cleared at a power on */
+unsigned int powerCutRegs[POWER_CUT_REGS];	/* registers 0xb0-0xb2 (the slim's: 0xb3) of
+						   elmoRead's device, read at a power cut and
+						   cleared at a power on */
 
 /* the charge update's period: chargeSetAcDelay's since 0x01000306, 10 before */
 #if FW_SINCE(0x01000306)
@@ -124,6 +126,174 @@ void powerJob(void)
 	}
 }
 
+#if BOARD_USS1001
+/*
+ * The slim's jobs: the power LED module's flags (powerLedSetFlags) in place of the charge
+ * LED's settings, and chargeUsbModeUpdate in place of the mode applied again.
+ */
+static void powerJobOn(void)
+{
+	STATE_TRANSITION_EVENT
+	if (!P3.1) {
+		P3.4 = 0;
+		STATE_TRANSITION(0x41);
+	}
+	EGP0.4 = 0;
+	EGN0.4 = 1;
+	PIF4 = 0;
+	PMK4 = 0;
+	EGP1.1 = 1;
+	EGN1.1 = 1;
+	PIF9 = 0;
+	PMK9 = 0;
+	task5SetFlag(4, 0x400);
+	powerSeqOn();
+	if (stateGetCause() != 0x42)
+		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = powerCutRegs[3] = 0;
+	powerTimersInit();
+	powerSeqInit();
+	powerLedInit();
+	powerLedFlagsInit(0);
+	timerStart(TIMER_RTC(0x17), 1);
+	powerResumed = 0;
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobResume(void)
+{
+	union PowerRequest *mode;
+
+	batteryBLLineOff();
+	powerResumed = 1;
+	mode = stateGetWakeupFactor();
+	if (mode->bits.mode == 0x0f && !mode->bits.notify)
+		powerLedSetFlags(0x40);
+	powerSeqResume();
+	powerRequestInit();
+	chargeSetAcDelay();
+	task5SetFlag(4, 0x20);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobOff(void)
+{
+	powerLedClearFlags(0x04);
+	powerBbmcOff();
+	powerSeqOff();
+	powerBbmcOn();
+	cookieUpdateBatteryCharge(1);
+	if (powerResumed) {
+		powerCookieHold();
+		chargeUsbModeUpdate();
+	}
+	chargeSetAcDelay();
+	task5SetFlag(4, 0x20);
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
+	powerLedSetMode(POWER_LED_SET_ON);
+	/* the charge LED's blink of the fat's sleep factor 19 is gone; its test stays */
+	if ((sleepFactorGet() & 0x00080000) && input1Bit7Active()) {
+	}
+	if (configGet()->state.bits.chargeLedOff)
+		powerLedSetFlags(0x100);
+	else
+		powerLedClearFlags(0x100);
+	if (configGet()->state.bits.chargeLedStateOff)
+		powerLedSetFlags(0x200);
+	else
+		powerLedClearFlags(0x200);
+	powerLedClearFlags(0x40);
+	chargeTimer1fStop();
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobShutdown(void)
+{
+	powerLedClearFlags(0x04);
+	powerSeqOff();
+	chargeUsbModeUpdate();
+	chargeTimerStop();
+	powerLedSetMode(POWER_LED_SET_ON);
+	powerLedClearFlags(0x40);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobSuspend(void)
+{
+	powerLedClearFlags(0x04);
+	powerSeqSuspend();
+	if (chargeBatteryLevel9()) {
+		powerOffWlan();
+		if (!bbmcModeIsNone() || configGet()->suspendCheck)
+			powerBbmcCycle();
+	}
+	chargeUsbModeUpdate();
+	if (!powerLedGetKeep())
+		powerLedSetMode(POWER_LED_SET_ON);
+	if (sleepFactorGet() & 0x00080000) {
+		if (input1Bit7Active()) {
+		}
+		powerLedSetAlarm(1);
+	}
+	chargeSetAcDelay();
+	task5SetFlag(4, 0x20);
+	chargeVbus.0 = 1;
+	chargeControl.1 = 1;
+	powerCookieHold();
+	powerLedClearFlags(0x40);
+	powerReady(POWER_JOB_PART);
+}
+
+/* the lines low, registers 0xb0-0xb3 read and logged (event log kind 5, codes 0x20 and 0x21) */
+static void powerJobCut(void)
+{
+	unsigned char reg;
+	unsigned char result;
+
+	P4.1 = 0;
+	P4.2 = 0;
+	P6.5 = 0;
+	P0.5 = 0;
+	reg = 0xb0;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[0]);
+	reg = 0xb1;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[1]);
+	reg = 0xb2;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
+	reg = 0xb3;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[3]);
+	eventLogRecord(5, 0x20, (unsigned char *)&powerCutRegs[0], 4);
+	eventLogRecord(5, 0x21, (unsigned char *)&powerCutRegs[2], 4);
+	powerLedFlagsInit(0);
+	powerLedClearFlags(0x04);
+	chargeUsbModeUpdate();
+	chargeTimerStop();
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobOffEnd(void)
+{
+	powerLedFlagsInit(0);
+	batteryHibernate();
+	chargeTimerStop();
+}
+
+static void powerJobUpdate(void)
+{
+	powerLedClearFlagsNow(0x04);
+	if (powerLedGetState() & POWER_LED_REQUEST_PATTERNS)
+		powerLedSetMode(POWER_LED_SET_OFF);
+	ledUpdate();
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobReset(void)
+{
+	powerLedClearFlags(0x40);
+	powerLedClearFlags(0x04);
+	powerReady(POWER_JOB_PART);
+}
+#else
 static void powerJobOn(void)
 {
 	STATE_TRANSITION_EVENT
@@ -462,3 +632,4 @@ static void powerJobReset(void)
 	powerReady(POWER_JOB_PART);
 }
 #endif
+#endif /* BOARD_USS1001 */

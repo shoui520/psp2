@@ -8,6 +8,7 @@
 #define ERNIE_LED_H
 
 #include "ernie.h"
+#include "board.h"
 
 /* the LEDs' requests and modes, the charge LED's blink: since 0x01000104; before, the power
    LED's fade only */
@@ -202,6 +203,14 @@ extern void chargeLedSetReleased(unsigned char on);
 extern void chargeLedSetCharging(unsigned char on);
 #endif
 extern void powerLedSetAlarm(unsigned char on);
+#if BOARD_USS1001
+/* the slim's power LED module: the causes it shows, set and cleared */
+extern void powerLedFlagsInit(unsigned char unused);
+extern void powerLedSetFlags(unsigned int flags);
+extern void powerLedClearFlags(unsigned int flags);
+extern void powerLedSetFlagsNow(unsigned int flags);
+extern void powerLedClearFlagsNow(unsigned int flags);
+#endif
 extern void powerLedFadeOff(void);
 extern void powerLedFadeOn(void);
 extern void powerLedSetKeep(unsigned char keep);

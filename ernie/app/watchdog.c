@@ -7,6 +7,9 @@
 #include <string.h>
 
 #include "config.h"
+#if BOARD_USS1001
+#include "eventlog.h"
+#endif
 #include "state.h"
 #include "timer.h"
 #include "watchdog.h"
@@ -103,6 +106,9 @@ static void watchdogExpire(void)
 	STATE_TRANSITION_EVENT
 	switch (watchdog.bytes.mode) {
 	case 0:
+#if BOARD_USS1001	/* the slim logs the setting first */
+		eventLogRecord(4, 1, (unsigned char *)&watchdog, 2);
+#endif
 #if FW_SINCE(0x00090903)
 		STATE_TRANSITION_NOMASK(0x35);
 #else

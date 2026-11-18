@@ -6,12 +6,17 @@
 #ifndef ERNIE_POWERSEQ_H
 #define ERNIE_POWERSEQ_H
 
+#include "board.h"
 #include "elmo.h"
 
 /* the battery's identity, which batteryReadInfo reads */
 struct BatteryInfo {
 	unsigned int	id;
+#if BOARD_USS1001
+	unsigned int	version[5];	/* the slim's: two words more (batteryReadInfo) */
+#else
 	unsigned int	version[3];	/* 0xffff: no battery answered */
+#endif
 };
 
 /* a step of a sequence: the Elmo masks it sets or clears, then a wait */
@@ -92,6 +97,9 @@ extern unsigned char powerNone3Off(void);
 extern unsigned char powerHpremoteOn(void);
 extern unsigned char powerHpremoteOff(void);
 extern unsigned char powerBbmcStart(void);
+#if BOARD_USS1001
+extern unsigned char powerBbmcStop(void);
+#endif
 extern unsigned char powerLedSet(unsigned char on);
 #if FW_SINCE(0x0100060B)
 extern void powerGetCutRegs(unsigned char *regs);

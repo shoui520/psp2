@@ -22,7 +22,7 @@ OBJECT	command.c
 OBJECT	uart.c
 OBJECT	clockout.c
 OBJECT	csi10.c
-OBJECT	dma.c
+OBJECT	dma.c		IF ERNIE_HW!=0x00805038	# the slim has the DTC (dtc.c)
 OBJECT	touch.c
 OBJECT	inputreq.c
 OBJECT	csi01.c		IF ERNIE_FW<0x0100060B	# BOARD_MOTION
@@ -146,7 +146,8 @@ SYMBOL	@RTARG4		0xffedc
 SYMBOL	@RTARG6		0xffede
 RESERVE	0xffed4		12
 # the settings' two banks in the flash, which neither program's image holds
-SYMBOL	_configBanks	0x3b800
+SYMBOL	_configBanks	0x3b800		IF ERNIE_HW!=0x00805038
+SYMBOL	_configBanks	0x5f800		IF ERNIE_HW==0x00805038	# the slim's, at the end of its 384 KiB
 
 # the interrupts' vectors are vectors.asm's table, not the compiler's
 DROP	@@VECT??

@@ -40,8 +40,13 @@ extern void elmoInitRegs(void);
 extern unsigned char elmoWrite(unsigned char *data, unsigned char length);
 extern unsigned char elmoRead(unsigned char *reg, unsigned char *value);
 extern unsigned char elmoReadVersion(unsigned char *version);
+#if BOARD_USS1001
+extern void elmoInit(void);
+extern unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set);
+#else
 extern unsigned char elmoSetMasks(struct ElmoMasks *masks, unsigned char *command);
 extern unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command);
+#endif
 extern unsigned char elmoGetMasks(unsigned char select, unsigned char *command);
 
 #endif

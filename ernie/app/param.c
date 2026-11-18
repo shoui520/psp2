@@ -77,6 +77,12 @@ int paramInit(void)
 	param.alarmLevel = 0;
 	param.alarmLevel3G = 0;
 #endif
+#if BOARD_USS1001
+	param.presets[0] = 0x19;
+	param.presets[1] = 0x19;
+	param.presets[2] = 0x09;
+	param.presets[3] = 0x09;
+#endif
 	paramLoad();
 	ena_dsp();
 	return 0;

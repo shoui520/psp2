@@ -66,6 +66,12 @@ extern unsigned char cookieCtrlChargeAc(unsigned char on);
 extern unsigned char cookieCtrlReg3Mode(unsigned char mode);
 extern unsigned char cookieCtrlReg3Bit2(unsigned char on);
 #if BOARD_USS1001
+/* the slim's COOKIE_REG and COOKIE_ADDRESS as functions (nothing calls them), its registers'
+   first values written, register 3's bit 13 */
+extern unsigned char cookieReg(unsigned char reg);
+extern unsigned int cookieAddress(void);
+extern void cookieInitRegs(void);
+extern unsigned char cookieCtrlReg3Bit13(unsigned char on);
 /* the slim's: the charging current (register 2) and the USB supply current (register 6) set,
    their bits 4-7, and as the host reads them (0x0841, 0x0843) */
 extern unsigned char cookieGetChargingCurrent(void);
@@ -76,8 +82,26 @@ extern unsigned char cookieSupplyCurrentUsbDecode(unsigned char *out, unsigned c
 extern unsigned char cookieChargingCurrentEncode(unsigned char *reg, unsigned char value);
 extern unsigned char cookieSupplyCurrentUsbEncode(unsigned char *reg, unsigned char value);
 extern unsigned char cookieReadReg1(unsigned char *reg);
+extern unsigned char cookieUpdateReg6Bit3(unsigned char clear);
 extern unsigned char cookieCtrlReg6Bit3(unsigned char clear);
+/* the AC's supply current, which the slim has not: 0, and 1 for every value */
+extern unsigned char cookieGetSupplyCurrent(void);
+extern unsigned char cookieSupplyCurrentEncode(unsigned char *reg, unsigned char value);
+extern unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg);
 #endif
 extern unsigned char cookieCtrlReg3Bit0(void);
+#if BOARD_USS1001
+/* the slim's: the charge's settings, sent only out of the manual charge mode and when they
+   change; register 3 read into value; its bit 12 (the charge's boost) */
+extern unsigned char cookieUpdateChargingCurrent(unsigned char current);
+extern unsigned char cookieUpdateReg8(unsigned char value);
+extern unsigned char cookieReadReg3Value(unsigned char *value);
+extern unsigned char cookieCtrlReg3Bit12(unsigned char on);
+extern unsigned char cookieUpdateSupplyCurrent(unsigned char current);
+extern unsigned char cookieUpdateSupplyCurrentUsb(unsigned char current);
+extern unsigned char cookieCtrlSupplyCurrent(unsigned char current);	/* answers 0 */
+extern unsigned char cookieUpdateBatteryCharge(unsigned char on);
+extern unsigned char cookieSetChargeAc(unsigned char on);		/* answers 0 */
+#endif
 
 #endif

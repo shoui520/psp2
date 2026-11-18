@@ -447,40 +447,40 @@ void batteryRequestEvent(void)
    data's first two bytes */
 static void powerRequestLogRequest(void)
 {
-	eventLogCharge[0] = powerRequest.command & 0xff;
-	eventLogCharge[1] = powerRequest.length;
-	eventLogCharge[2] = powerRequest.data[0];
-	eventLogCharge[3] = powerRequest.data[1];
-	eventLogRecord(0x10, 0x08, eventLogCharge, 4);
+	eventLogCharge.byte[0] = powerRequest.command & 0xff;
+	eventLogCharge.byte[1] = powerRequest.length;
+	eventLogCharge.byte[2] = powerRequest.data[0];
+	eventLogCharge.byte[3] = powerRequest.data[1];
+	eventLogRecord(0x10, 0x08, eventLogCharge.byte, 4);
 }
 
 /* and of its answer (code 0x88): the number, the answer's length, its status and first byte */
 static void powerRequestLogAnswer(void)
 {
-	eventLogCharge[0] = powerRequest.command & 0xff;
-	eventLogCharge[1] = powerRequest.answerLength;
-	eventLogCharge[2] = powerRequest.status;
-	eventLogCharge[3] = powerRequest.answer[0];
-	eventLogRecord(0x10, 0x88, eventLogCharge, 4);
+	eventLogCharge.byte[0] = powerRequest.command & 0xff;
+	eventLogCharge.byte[1] = powerRequest.answerLength;
+	eventLogCharge.byte[2] = powerRequest.status;
+	eventLogCharge.byte[3] = powerRequest.answer[0];
+	eventLogRecord(0x10, 0x88, eventLogCharge.byte, 4);
 }
 
 /* request 9's (codes 0x09 and 0x89) */
 static void batteryRequestLogRequest(void)
 {
-	eventLogCharge[0] = batteryRequest.command & 0xff;
-	eventLogCharge[1] = batteryRequest.length;
-	eventLogCharge[2] = batteryRequest.data[0];
-	eventLogCharge[3] = batteryRequest.data[1];
-	eventLogRecord(0x10, 0x09, eventLogCharge, 4);
+	eventLogCharge.byte[0] = batteryRequest.command & 0xff;
+	eventLogCharge.byte[1] = batteryRequest.length;
+	eventLogCharge.byte[2] = batteryRequest.data[0];
+	eventLogCharge.byte[3] = batteryRequest.data[1];
+	eventLogRecord(0x10, 0x09, eventLogCharge.byte, 4);
 }
 
 static void batteryRequestLogAnswer(void)
 {
-	eventLogCharge[0] = batteryRequest.command & 0xff;
-	eventLogCharge[1] = batteryRequest.answerLength;
-	eventLogCharge[2] = batteryRequest.status;
-	eventLogCharge[3] = batteryRequest.answer[0];
-	eventLogRecord(0x10, 0x89, eventLogCharge, 4);
+	eventLogCharge.byte[0] = batteryRequest.command & 0xff;
+	eventLogCharge.byte[1] = batteryRequest.answerLength;
+	eventLogCharge.byte[2] = batteryRequest.status;
+	eventLogCharge.byte[3] = batteryRequest.answer[0];
+	eventLogRecord(0x10, 0x89, eventLogCharge.byte, 4);
 }
 #else
 void powerRequestNotify(void)

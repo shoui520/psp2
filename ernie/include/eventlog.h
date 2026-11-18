@@ -29,7 +29,13 @@ struct EventLogEntry {
 };
 
 /* the data of the events the modules record, four bytes each (in eventlog.c's data) */
-extern unsigned char eventLogCharge[4];
+/* the data of a charge event: four bytes, or the slim's two words */
+union EventLogData {
+	unsigned char	byte[4];
+	unsigned int	word[2];
+};
+
+extern union EventLogData eventLogCharge;
 extern unsigned char eventLogTask1[4];
 extern unsigned char eventLogInput[4];
 extern unsigned char eventLogCommand[4];

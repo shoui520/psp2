@@ -6,6 +6,7 @@
 #define ERNIE_STATE_H
 
 #include "ernie.h"
+#include "board.h"
 #include "kernel.h"
 
 /* the request powerResume runs (stateRequest), and the wakeup factor it leaves: the mode picks
@@ -62,11 +63,31 @@ struct StateEntry {
 	int		(*handle)(struct StateEvent *event);
 };
 
+#if BOARD_USS1001
+/* the slim's state variables are one record, copied at each state's entry into the last two
+   entered (stateHistory) */
+struct StateRecord {
+	unsigned char	count;		/* the states entered */
+	unsigned char	phase;		/* the phase: 1 to run, 2 done, 3 failed */
+	unsigned int	state;
+	unsigned int	next;
+	unsigned int	events;
+	unsigned char	cause;		/* the transition that started the state */
+};
+extern __sreg struct StateRecord stateRecord;
+#define statePhase	stateRecord.phase
+#define powerState	stateRecord.state
+#define stateNext	stateRecord.next
+#define stateEvents	stateRecord.events
+#define stateCause	stateRecord.cause
+#else
 extern __sreg unsigned char statePhase;	/* the phase: 1 to run, 2 done, 3 failed */
 extern __sreg unsigned int powerState;
 extern __sreg unsigned int stateNext;
 extern __sreg unsigned int stateEvents;
-#if FW_SINCE(0x00090903)
+#endif
+#if BOARD_USS1001
+#elif FW_SINCE(0x00090903)
 extern __sreg unsigned char stateCause;	/* the transition that started the state */
 #else
 extern __sreg unsigned int stateCause;	/* 0x00090804: a word */
@@ -85,7 +106,12 @@ extern union PowerRequest *stateGetWakeupFactor(void);
 extern unsigned char stateGetCause(void);
 #endif
 extern unsigned int stateGet(void);
-#if FW_SINCE(0x01000104)
+#if BOARD_USS1001
+extern int stateTransition(unsigned int transition);	/* the slim's takes a word */
+#define STATE_TRANSITION_EVENT
+#define STATE_TRANSITION(t)	stateTransition(t)
+#define STATE_TRANSITION_NOMASK(t)	stateTransition(t)
+#elif FW_SINCE(0x01000104)
 extern int stateTransition(unsigned char transition);
 #define STATE_TRANSITION_EVENT
 #define STATE_TRANSITION(t)	stateTransition(t)

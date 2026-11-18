@@ -7,6 +7,7 @@
 #define ERNIE_PARAM_H
 
 #include "ernie.h"
+#include "board.h"
 
 #include "charge.h"
 
@@ -44,7 +45,13 @@ struct Param {
 	unsigned char	alarmLevel;		/* the charge alarms' adjust (0-2) without the
 						   3G modem (paramGetAlarmLevel) */
 	unsigned char	alarmLevel3G;		/* and with it */
+#if BOARD_USS1001
+	unsigned char	presets[4];		/* the slim's: paramInit's 0x19, 0x19, 9, 9, read
+						   only through paramRead */
+	unsigned char	reserved3[2];
+#else
 	unsigned char	reserved3[6];
+#endif
 #else
 	unsigned char	reserved3[8];
 #endif

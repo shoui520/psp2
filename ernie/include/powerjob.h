@@ -5,6 +5,8 @@
 #ifndef ERNIE_POWERJOB_H
 #define ERNIE_POWERJOB_H
 
+#include "board.h"
+
 #define POWER_JOB_ON		1	/* powerOn */
 #define POWER_JOB_RESUME	2	/* powerResume */
 #define POWER_JOB_OFF		3	/* powerOff */
@@ -21,8 +23,15 @@ struct PowerJobState {
 	unsigned char	flag;		/* only ever cleared */
 };
 
+/* the registers a power cut reads (powerJobCut): 0xb0 on */
+#if BOARD_USS1001
+#define POWER_CUT_REGS	4
+#else
+#define POWER_CUT_REGS	3
+#endif
+
 extern struct PowerJobState powerJobState;
-extern unsigned int powerCutRegs[3];
+extern unsigned int powerCutRegs[POWER_CUT_REGS];
 
 extern void powerJob(void);
 

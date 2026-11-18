@@ -81,6 +81,7 @@ struct ConfigRecords {
 	unsigned char	reserved[3];
 };
 
+#if !BOARD_USS1001	/* the slim's flash library and its configFlashWrite: flash.c */
 /* the flash library (the updater's, at 0xf2b2-0xf6f2) */
 extern void FSL_Open(void);
 extern unsigned char FSL_Init(unsigned char *descriptor);
@@ -92,6 +93,7 @@ extern unsigned char FSL_IVerify(unsigned int block);
 extern unsigned char FSL_Write(unsigned long address, unsigned char words);
 extern void FSL_Close(void);
 extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buffer */
+#endif
 
 /* the banks, in the updater's part of the flash (app.lk), and the defaults of this build's
    layout (configdefault.c, at 0x800) */
@@ -552,6 +554,7 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 }
 #endif
 
+#if !BOARD_USS1001
 /* erases the bank at address and writes the open copy there, three times at most */
 unsigned char configFlashWrite(unsigned long address)
 {
@@ -643,6 +646,7 @@ close:
 	return result;
 #endif
 }
+#endif	/* !BOARD_USS1001 */
 
 #if FW_SINCE(0x00090804)	/* none in 0x00090206 */
 /* the open copy set to the defaults and committed */
