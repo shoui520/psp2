@@ -35,12 +35,4 @@ public:
 
 typedef char GameThemeCopierSize[sizeof(GameThemeCopier) == 32 ? 1 : -1];
 
-/*
- * PLACEHOLDER: a content's license written into dir under the name of its content ID, the file
- * left in path (0x8103ECEE, in a file of the plugin not written yet).
- */
-int gameLicenseWrite(SceUInt32 contentType, const void *license, SceSize licenseSize,
-		     const paf::string *dir, paf::string *path, paf::string *detail, int arg6,
-		     int arg7);
-
 #endif

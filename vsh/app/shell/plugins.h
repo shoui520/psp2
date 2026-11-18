@@ -25,6 +25,7 @@ enum {
 	TOPMENU_PLUGIN_FUNC_GAME_RELEASE	= 32,	/* and done; what topmenu does is not read yet */
 	TOPMENU_PLUGIN_FUNC_BUSY_BEGIN		= 35,	/* the first of the game plugin's busy calls, */
 	TOPMENU_PLUGIN_FUNC_BUSY_END		= 36,	/* and the last */
+	TOPMENU_PLUGIN_FUNC_UP_STATUS		= 66,	/* PLACEHOLDER name: an application's #_up_status changed */
 	TOPMENU_PLUGIN_FUNC_BOOT_DONE		= 88,
 };
 

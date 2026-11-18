@@ -260,6 +260,10 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_LICENSE_PERIOD	-2146430655	/* 0x80101141: a license outside its period */
 #define GAME_ERROR_BAD_LICENSE_SIZE	-2146430653	/* 0x80101143: a license file larger than a license */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
+/* an application the database has no record of, or a record without a key (value only) */
+#define GAME_ERROR_NO_RECORD		-2146430711	/* 0x80101109 */
+/* a license that gives no #_up_status (value only) */
+#define GAME_ERROR_NO_UP_STATUS		-2146430652	/* 0x80101144 */
 #define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
 #define GAME_ERROR_EBOOT		-2146430699	/* 0x80101115: an EG or ME application's EBOOT.PBP that does not open */
 #define GAME_ERROR_FTT_MISMATCH	-2146430654	/* 0x80101142: a free-trial license of another content */

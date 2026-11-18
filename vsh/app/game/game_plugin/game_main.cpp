@@ -136,7 +136,6 @@ static string s_pspemuWorkMountPoint;
 static bool s_repromoting;
 
 /* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
-int gameLockedJobRun(void *arg, int arg1);	/* 0x8103DCF4 */
 int gameContentImportPrepare(const char *titleId);	/* 0x810562E4 */
 int gameContentImportRun(const char *titleId);		/* 0x810569FC: the installing dialog */
 int gameContentImportCheck(const char *titleId);	/* 0x8105718C */
@@ -959,8 +958,8 @@ int gamePluginTitleGetSize(const char *titleId, GameCancelFunc cancel, void *arg
 }
 
 /*
- * PLACEHOLDER name: what 0x8103DCF4 does with arg, with the shell locked and the system kept
- * awake (0x8102D456).
+ * PLACEHOLDER name: the #_up_status of the application titleId (every one when "") set from its
+ * license, with the shell locked and the system kept awake (0x8102D456).
  */
 int gamePluginShellLockedJob(void *arg)
 {
@@ -974,7 +973,7 @@ int gamePluginShellLockedJob(void *arg)
 		gameShellLock();
 		gameWorkBegin();
 
-		ret = gameLockedJobRun(arg, 0);
+		ret = gameAppUpdateUpStatusAll((const char *)arg, 0);
 		if (ret >= 0)
 			ret = 0;
 

@@ -10,6 +10,9 @@
 /* an application's information from livespace_db (0x81018666) */
 int gameAppGetInfo(const char *titleId, LsdbAppInfoPtr *info);
 
+/* the title IDs of the applications that meet conditions (game_lsdb.cpp, 0x81018736) */
+int gameFindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *titleIds);
+
 /*
  * Where an application is installed (0x810111C0), from its attribute and original path: 1 and
  * 2 for gro0:, 3 for ux0:.
@@ -656,6 +659,41 @@ private:
 typedef char GameRifInfoSize[sizeof(GameRifInfo) == 48 ? 1 : -1];
 
 /*
+ * An application's #_up_status: its license's type, set from the license in its license folder
+ * (up_status.cpp, 0x8103D648), and set to status in its record re-registered (0x8103C860).
+ */
+int gameAppUpdateUpStatus(const char *titleId, int userData);
+int gameAppSetUpStatus(const char *titleId, SceUInt32 status, int userData);
+
+/*
+ * The #_up_status of the application titleId, or of every application with one when titleId is
+ * "" (0x8103DCF4); an application's record given its #_up_status from the license in path
+ * (0x8103DEB6) or from license (0x8103E3C2), 0 unless it is a game whose ATTRIBUTE has the
+ * license bit and noLicense is not set.
+ */
+int gameAppUpdateUpStatusAll(const char *titleId, int userData);
+int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const paf::string *path, int unused, int userData,
+			   const bool *noLicense);
+int gameAppInfoSetUpStatusFromLicense(SceNpDrmLicense *license, SceSize size, LsdbAppInfoPtr *info,
+				      int unused, int userData, const bool *noLicense);
+
+/* PLACEHOLDER: an application's record prepared for its registration (0x81050A8A) */
+int gameAppPrepareRegister(LsdbAppInfoPtr *info, bool *keepLiveArea, int userData);
+
+/* the SDK's glue over SceNpDrm's import (0x81449974) */
+extern "C" int sceNpDrmGetRifNameForInstall(char *rifName, const void *license, int flags);
+
+/* license_file.cpp: an application's license files (0x8103E944..0x8103FB34) */
+int gameFileWriteToDir(const void *buf, SceSize size, const paf::string *dir, const char *name,
+		       paf::string *path, paf::string *detail);
+int gameLicenseWrite(SceUInt32 contentType, const void *license, SceSize licenseSize,
+		     const paf::string *dir, paf::string *path, paf::string *detail, int arg6,
+		     int arg7);
+int gameFttRemove(const paf::string &titleId);
+int gameLicenseActivate(const paf::string *path);
+int gameFttInstall(const paf::string *path, const paf::string &titleId);
+
+/*
  * A license read into a new buffer (0x81035528); the PocketStation's license checked
  * (0x810357F4); the path of an application's license in its license folder (0x81035860).
  */
@@ -807,6 +845,12 @@ struct GameFttInfo {
 	int otherField;
 	bool flag;
 };
+
+/* the name of the user's license file (game_lsdb.cpp, 0x8101D3DE) */
+int gameNpDrmGetRifName(paf::string *rifName);
+
+/* an application's free-trial license read (game_main.cpp, 0x8102F198) */
+int gamePluginFttRead(const char *titleId, GameFttInfo *info);
 
 /*
  * PLACEHOLDER names: a PSM application's app.info, read into its record and written out as its
