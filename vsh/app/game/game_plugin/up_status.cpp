@@ -283,8 +283,8 @@ out:
  * A record's #_up_status from the license in the license folder path: 0 unless it is a game
  * whose ATTRIBUTE has the license bit and noLicense is not set (0x8103DEB6).
  */
-int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const string *path, int unused, int userData,
-			   const bool *noLicense)
+int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const string *path, const string *dir,
+			   int userData, const bool *noLicense)
 {
 	LsdbAppInfo::iterator end = (*info)->end();
 	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);

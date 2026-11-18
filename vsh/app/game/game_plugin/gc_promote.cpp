@@ -38,6 +38,7 @@
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "promoter.h"
 
 using namespace paf;
 
@@ -121,12 +122,6 @@ int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), voi
 
 /* the installer's error that keeps the title it stopped at (value only) */
 #define GAME_ERROR_INSTALL_TITLE	-2146430664	/* 0x80101138 */
-
-/*
- * Whether the card's title needs its update installed over what storage holds (0x81041454).
- * PLACEHOLDER: its name; defined in another file of the shell.
- */
-bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const string &titleId, const int *storage);
 
 /* a card title's state before it is promoted (value only), and how many titles a card lists */
 #define GAME_GC_TITLE_NOT_PROMOTED	-2146430710	/* 0x8010110A */

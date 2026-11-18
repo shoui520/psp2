@@ -20,6 +20,9 @@ int gameFindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *tit
 int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 
 /* keys livespace_db_internal.h does not name yet (FNV-1a of the names, lsdb_keys.h) */
+#ifndef LSDB_KEY_MTIME
+#define LSDB_KEY_MTIME		0x18B45AA7u	/* "#_mtime": the title's last change */
+#endif
 #ifndef LSDB_KEY_LIBLOCATION
 #define LSDB_KEY_LIBLOCATION	0xA9492ECAu	/* "#LIBLOCATION" */
 #endif
@@ -672,7 +675,8 @@ int gameAppSetUpStatus(const char *titleId, SceUInt32 status, int userData);
  * license bit and noLicense is not set.
  */
 int gameAppUpdateUpStatusAll(const char *titleId, int userData);
-int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const paf::string *path, int unused, int userData,
+int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const paf::string *path,
+			   const paf::string *dir, int userData,
 			   const bool *noLicense);
 int gameAppInfoSetUpStatusFromLicense(SceNpDrmLicense *license, SceSize size, LsdbAppInfoPtr *info,
 				      int unused, int userData, const bool *noLicense);

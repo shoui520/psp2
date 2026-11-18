@@ -24,7 +24,6 @@
 
 using namespace paf;
 
-#define GAME_ERROR_UNREGISTER		-2146430679	/* 0x80101129: applauncher_plugin kept an application */
 #define GAME_ERROR_NO_DEVICE		-2146430678	/* 0x8010112A: a path without a device name */
 #define GAME_ERROR_INVALID_TITLE_ID	-2146430573	/* 0x80101193: not nine capitals and digits */
 
