@@ -102,7 +102,7 @@ int GameInstallExJob::CreatePromoter(const char *path, const SceNpDrmInstallInfo
 {
 	GamePromoterIf *created;
 
-	if (gameTypeIsSpecial(info->info.contentType)) {
+	if (gameTypeIsSpecial(info->info.contentType) == true) {
 		{
 			string pbootPath = string(path) + string("/USRDIR/CONTENT/PBOOT.PBP");
 			LocalFileStat stat;

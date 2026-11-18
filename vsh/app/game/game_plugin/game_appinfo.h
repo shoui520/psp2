@@ -17,6 +17,9 @@ int gameAppGetInfo(const char *titleId, LsdbAppInfoPtr *info);
 /* the title IDs of the applications that meet conditions (game_lsdb.cpp, 0x81018736) */
 int gameFindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *titleIds);
 
+/* the title IDs of the applications whose text value of key is text (game_lsdb.cpp, 0x8101878A) */
+int gameFindTitlesByText(paf::vector<paf::string> *titleIds, unsigned int key, const char *text);
+
 /*
  * Where an application is installed (0x810111C0), from its attribute and original path: 1 and
  * 2 for gro0:, 3 for ux0:, 4 for pd0:.

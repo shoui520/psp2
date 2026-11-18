@@ -138,7 +138,8 @@ struct GameInstallExParam {
 	char path[128];			/* the package folder's path */
 	SceUInt8 reserved;
 	bool imported;			/* PLACEHOLDER name: set by the content import */
-	SceUInt8 padding[2];
+	bool checkContentId;		/* a PSP game's content ID checked before its install */
+	bool copySavedata;		/* a PlayStation game's saved data installed with it */
 	int storage;			/* the application's storage (gamePluginGetStorage) */
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
