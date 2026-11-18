@@ -22,7 +22,18 @@ struct GamePluginInterface {
 };
 extern GamePluginInterface gamePluginInterface;
 
-/* the plugin's main object, made at start and deleted at stop (0x8102B296, 0x8102B2BA) */
+/*
+ * The plugin's main object, made at start and deleted at stop (0x8102B296, 0x8102B2BA). Its
+ * name is ours: nothing of Sony's names it.
+ */
+class GamePlugin {
+public:
+	GamePlugin(paf::Plugin *plugin);		/* 0x8102AFFC */
+	virtual ~GamePlugin();				/* 0x8102B27C */
+
+	paf::Plugin *m_plugin;
+};
+
 void gamePluginCreate(paf::Plugin *plugin);
 void gamePluginDestroy(void);
 
@@ -51,6 +62,8 @@ int gamePfsUnmount(paf::string *mountPoint);
 #define GAME_ERROR_INVALID_ARGUMENT	-2146430720	/* 0x80101100 */
 
 /* the plugin's errors several of its files return (values only) */
+#define GAME_ERROR_NOT_READY		-2146430719	/* 0x80101101: what it needs is not there (a mount's record, the
+						   promoter, the plugins a dialog is shown with) */
 #define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */

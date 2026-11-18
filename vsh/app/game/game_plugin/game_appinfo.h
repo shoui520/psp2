@@ -390,6 +390,10 @@ int gameAppInfoGetParentalLevel(const LsdbAppInfoPtr *info);
 /* whether a folder has a folder in it (0x81016ACC) */
 bool gameDirHasSubDirs(const paf::string &path);
 
+/* the number of icons on count pages from pageNo (0x81018892), and of the user's (0x810188D4) */
+int gameCountIcons(int pageNo, unsigned int count);
+int gameCountUserIcons(void);
+
 /* bit 12 of an application's #appconf set or cleared (0x81016B8E) */
 void gameAppInfoSetAppconfBit12(LsdbAppInfoPtr *info, bool set);
 

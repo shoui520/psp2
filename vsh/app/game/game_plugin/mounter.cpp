@@ -24,7 +24,6 @@
 
 using namespace paf;
 
-#define GAME_ERROR_NO_MOUNT		-2146430719	/* 0x80101101: a mount registered without its record */
 #define GAME_ERROR_DRIVE_MISMATCH	-2146430695	/* 0x80101119: mounted before from the other drive */
 
 /* the drives sceAppMgrInstallDirMount mounts an installation's directory from */
@@ -170,7 +169,7 @@ int gameGameDataMount(const char *appPath, const char *patchPath, const char *ri
 		GameLicensedMount *mount = it->second;
 
 		if (mount == NULL)
-			return GAME_ERROR_NO_MOUNT;
+			return GAME_ERROR_NOT_READY;
 
 		*mountPoint = mount->mountPoint;
 		mount->refs++;
@@ -292,7 +291,7 @@ int gamePfsMount(const string &dir, const string &name, const void *keystone, st
 		GameInstallDirMount *mount = it->second;
 
 		if (mount == NULL)
-			return GAME_ERROR_NO_MOUNT;
+			return GAME_ERROR_NOT_READY;
 
 		if (mount->drive == drive) {
 			*mountPoint = mount->mountPoint;
@@ -374,7 +373,7 @@ int gameAppDataMount(const string &titleId, string *mountPoint)
 			GameMount *mount = it->second;
 
 			if (mount == NULL)
-				return GAME_ERROR_NO_MOUNT;
+				return GAME_ERROR_NOT_READY;
 
 			*mountPoint = mount->mountPoint;
 			mount->refs++;
@@ -450,7 +449,7 @@ int gamePspemuWorkMount(string *mountPoint)
 				GameMount *mount = it->second;
 
 				if (mount == NULL)
-					return GAME_ERROR_NO_MOUNT;
+					return GAME_ERROR_NOT_READY;
 
 				*mountPoint = mount->mountPoint;
 				mount->refs++;
@@ -517,7 +516,7 @@ int gameThemeDataMount(const string &contentId, const string &themePath, const s
 	if (it != s_themeMounts.end()) {
 		mount = it->second;
 		if (mount == NULL)
-			return GAME_ERROR_NO_MOUNT;
+			return GAME_ERROR_NOT_READY;
 
 		mount->refs++;
 	} else {
