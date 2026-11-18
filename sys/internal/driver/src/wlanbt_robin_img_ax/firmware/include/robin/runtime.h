@@ -10,6 +10,8 @@ int __aeabi_uwrite4(int value, void *address);
 char *strcpy(char *destination, const char *source);
 int memcmp(const void *left, const void *right, size_t size);
 void *memset(void *dest, int value, size_t size);
+/* No routine in the image: the compiler expands the small copies the firmware makes with it. */
+void *memcpy(void *destination, const void *source, size_t size);
 
 char *strncpy(char *destination, const char *source, size_t size);
 

@@ -649,11 +649,9 @@ struct WlanConnection {
 	uint8_t reserved661[3];
 	uint32_t reserved664;		/* cleared when the connection is configured */
 	uint32_t reserved668;
-	struct WlanKeyBuffer *keyBlocks[2];	/* [0]: the group key (HostCmd 0x37's), [1]: the pairwise key (0x36's and 0x5e's) */
-	union {
-		uint8_t *radioParams;	/* the radio configuration's block this connection's SNMP values use */
-		struct WlanKeyBuffer *hskKey;	/* an access point's peer: the buffer whose key data holds the handshake's nonce and key */
-	};
+	struct WlanKeyBuffer *keyBlocks[2];	/* [0]: the group key (HostCmd 0x37's), [1]: the pairwise key (0x36's and 0x5e's);
+						   an access point's peer's [1] holds the 4-way handshake's nonce and key */
+	uint8_t *radioParams;		/* the radio configuration's block this connection's SNMP values use */
 	uint8_t reserved684[4];
 	struct WlanSubscribeEvents *subscribeEvents[1];	/* HostCmd_CMD_802_11_SUBSCRIBE_EVENT */
 	uint16_t subscribeTriggered;	/* WLAN_SUBSCRIBE_* events met, not yet reported */

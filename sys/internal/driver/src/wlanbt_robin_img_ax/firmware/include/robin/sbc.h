@@ -198,7 +198,13 @@ _Static_assert(sizeof(struct SbcStream) == 0x44, "SBC stream");
  * and the decoder's frames. Which setting bit is which is not known; the
  * fields are named by the setting they come from.
  */
-struct __attribute__((packed)) SbcPcmDescriptor {
+/* An 11-bit count of the descriptor: Sony writes it byte by byte, its own field packed. */
+struct __attribute__((packed)) SbcPcmCount {
+	uint16_t value : 11;
+	uint16_t reserved : 5;
+};
+
+struct SbcPcmDescriptor {
 	uint8_t portBit1 : 1;		/* sbcPcmPortConfig bit 1 */
 	uint8_t portBit2 : 1;		/* sbcPcmPortConfig bit 2 */
 	uint8_t enable : 1;		/* 1 */
@@ -216,15 +222,11 @@ struct __attribute__((packed)) SbcPcmDescriptor {
 	uint8_t frameSync;
 	uint8_t slots;			/* sbcPcmSlotConfig bits 2-7, at least 1 */
 	uint16_t encoderOffset;		/* the encoder's sample bytes and the caller's offset */
-	uint16_t encoderSamples : 11;
-	uint16_t reserved6 : 5;
-	uint16_t encoderBytes : 11;
-	uint16_t reserved8 : 5;
+	struct SbcPcmCount encoderSamples;
+	struct SbcPcmCount encoderBytes;
 	uint16_t decoderOffset;
-	uint16_t decoderSamples : 11;
-	uint16_t reserved12 : 5;
-	uint16_t decoderBytes : 11;
-	uint16_t reserved14 : 5;
+	struct SbcPcmCount decoderSamples;
+	struct SbcPcmCount decoderBytes;
 };
 
 _Static_assert(sizeof(struct SbcPcmDescriptor) == 16, "SBC PCM descriptor");

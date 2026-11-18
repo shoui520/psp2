@@ -18,6 +18,7 @@
 #include "robin/mgmt.h"
 #include "robin/psctl.h"
 #include "robin/rom.h"
+#include "robin/threadx.h"
 #include "robin/runtime.h"
 #include "robin/scan.h"
 #include "robin/slot.h"
@@ -32,6 +33,7 @@
 /* The ROM's. */
 void romLibSyncContext(unsigned int mask);
 
+static TX_SEMAPHORE wlanScanSemaphoreStorage __attribute__((section(".itcm.bss")));		/* 0x578a4 */
 struct WlanScanState wlanScanState __attribute__((section(".itcm.bss")));			/* 0x578c0 */
 struct WlanScan wlanCommandScan __attribute__((section(".itcm.bss")));				/* 0x578d4 */
 struct WlanScanResults wlanCommandScanResults __attribute__((section(".itcm.bss")));		/* 0x57adc */
@@ -157,11 +159,13 @@ int macMgmtAcquireEntry(uint32_t handle, uint32_t event, OsaBuffer *buffer, uint
 			uint32_t argument)
 {
 	uint32_t channel = unused;
+	void *context;
 	const uint8_t *frame;
 	unsigned int subtype;
 
 	if (buffer == NULL)
 		return 0;
+	context = buffer->context;
 	frame = (const uint8_t *)buffer + buffer->dataOffset;
 	subtype = frame[2] >> 4;
 	if (subtype == 2) {
@@ -169,7 +173,7 @@ int macMgmtAcquireEntry(uint32_t handle, uint32_t event, OsaBuffer *buffer, uint
 		if (p2pActionFrameConnection(buffer, &channel) != NULL)
 			macMgmtDispatchState(buffer, argument, channel);
 	} else if (subtype == 5 || subtype == 8) {
-		fmCoexFormatBuffer((uintptr_t)buffer->context, (WlanWirelessFrame *)frame, argument, wlanScanState.scan,
+		fmCoexFormatBuffer((uintptr_t)context, (WlanWirelessFrame *)frame, argument, wlanScanState.scan,
 				   wlanScanState.scan->channelIndex);
 		return 1;
 	}
@@ -258,7 +262,8 @@ OsaBuffer *macMgmtSetupEntry(struct WlanScanResults *results)
 int macMgmtClearEntry(uint8_t *out, const struct WlanScanResults *results)
 {
 	unsigned int length;
-	unsigned int count;
+	unsigned int size;
+	const void *source;
 	uint8_t *tlv;
 	uint8_t *channels;
 	unsigned int offset;
@@ -266,30 +271,30 @@ int macMgmtClearEntry(uint8_t *out, const struct WlanScanResults *results)
 
 	if (results != NULL && __aeabi_uread4(&results->data) != 0 && (length = __aeabi_uread4(&results->length)) != 0 &&
 	    results->count != 0) {
-		count = results->count;
-		out[0] = length;
-		out[1] = length >> 8;
-		out[2] = count;
-		__aeabi_memcpy(out + 3, (const void *)__aeabi_uread4(&results->data), __aeabi_uread4(&results->length));
+		/* the count is read back from the answer each time it is used */
+		*(uint16_t *)out = length;
+		out[2] = results->count;
+		size = __aeabi_uread4(&results->length);
+		source = (const void *)__aeabi_uread4(&results->data);
+		__aeabi_memcpy(out + 3, source, size);
 		length = __aeabi_uread4(&results->length);
 		tlv = out + length + 3;
 		tlv[0] = 19;
 		tlv[1] = 1;
-		tlv[2] = 8 * count;
-		tlv[3] = (8 * count) >> 8;
-		offset = length + 7 + 8 * count;
+		*(uint16_t *)(tlv + 2) = 8 * out[2];
+		offset = 8 * out[2] + length + 7;
 		for (i = 0; i < out[2]; i++)
 			__aeabi_memcpy(tlv + 4 + 8 * i, results->records[i].timestamp, 8);
 		channels = out + offset;
 		channels[0] = 42;
 		channels[1] = 1;
-		channels[2] = 2 * count;
-		channels[3] = (2 * count) >> 8;
+		*(uint16_t *)(channels + 2) = 2 * out[2];
+		length = 2 * out[2] + offset + 4;
 		for (i = 0; i < out[2]; i++) {
 			channels[4 + 2 * i] = results->records[i].channelBand[0];
 			channels[5 + 2 * i] = results->records[i].channelBand[1];
 		}
-		return offset + 2 * count + 4;
+		return length;
 	}
 	out[0] = 0;
 	out[1] = 0;
@@ -300,13 +305,12 @@ int macMgmtClearEntry(uint8_t *out, const struct WlanScanResults *results)
 /* 0x36ef4: the host's scan command into the scan (the BSS type and BSSID, then TLVs). */
 int macMgmtConvertEntry(int unused, uint8_t *command, int16_t length, struct WlanScan *scan)
 {
-	static const uint8_t anyBssid[8] = { 0 };
+	uint8_t anyBssid[8] = { 0 };
 	struct WlanIeBuffer *ies = &scan->ies;
 	unsigned int remaining;
 	uint8_t *tlv;
 	unsigned int type;
 	unsigned int size;
-	uint32_t channel = 0;
 	uint32_t extra;
 
 	__aeabi_memclr4(scan, sizeof(*scan));
@@ -332,10 +336,13 @@ int macMgmtConvertEntry(int unused, uint8_t *command, int16_t length, struct Wla
 		case 221:
 			wlanIeBufferAppendTlv(ies, tlv);
 			break;
-		case 257:
+		case 257: {
+			uint32_t channel = 0;
+
 			wlanTlvChannelListParse(tlv, (uint8_t *)scan->channels, &channel);
 			macMgmtPrepareContext(NULL, &extra);
 			break;
+		}
 		case 258:
 			wlanTlvNumProbesParse(tlv, (uint8_t *)&scan->probes);
 			break;
@@ -348,13 +355,11 @@ int macMgmtConvertEntry(int unused, uint8_t *command, int16_t length, struct Wla
 		case 330:
 			tlv[2] = 26;
 			tlv[3] = 0;
-			tlv[0] = 45;
-			tlv[1] = 0;
+			*(uint16_t *)tlv = 45;
 			wlanIeBufferAppendTlv(ies, tlv);
 			break;
 		case 335:
-			tlv[0] = 127;
-			tlv[1] = 0;
+			*(uint16_t *)tlv = 127;
 			wlanIeBufferAppendTlv(ies, tlv);
 			break;
 		default:
@@ -435,10 +440,11 @@ void macMgmtAdjustEntry(struct WlanConnection *connection)
 	}
 }
 
-/* 0x3719a: the loop's semaphore. */
+/* 0x3719a: the loop's semaphore, in its storage beside the state. */
 int macMgmtRecordEntry(void)
 {
 	__aeabi_memclr4(&wlanScanState, 20);
+	wlanScanState.semaphore = (struct OsaSemaphore *)&wlanScanSemaphoreStorage;
 	return osaSemaphoreInit(&wlanScanState.semaphore, 1, 12);
 }
 

@@ -7,6 +7,8 @@
 #include "robin/mac.h"
 #include "robin/patch.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
+#include "robin/stream.h"
 #include "robin/txring.h"
 
 /*
@@ -65,9 +67,12 @@ void wlanMacSetPolicyBit(uint32_t *mask, uint32_t code)
 /* Checks two indexed entries; the second value is offset by 0x2000 when upper is set. */
 int wlanMacEntryCheckPair(unsigned int index, const uint32_t *entry, int upper)
 {
-	if (romMacEntryCheck(index, entry[0]) == 0)
+	unsigned int offset;
+
+	if (romMacEntryCheck(index, entry[0], entry[1]) == 0)
 		return 0;
-	return romMacEntryCheck(index + 1, entry[2] + (upper != 0 ? 0x2000 : 0)) != 0;
+	offset = upper != 0 ? 0x2000 : 0;
+	return romMacEntryCheck(index + 1, entry[2] + offset, entry[3] + offset) != 0;
 }
 
 int wlanMacEntryWritePair(unsigned int index, const uint32_t *entry)
@@ -146,10 +151,10 @@ int wlanMacTableWrite(uint32_t low, uint32_t high, unsigned int index)
 }
 
 /* Reads table entry index into entry[0..2]; 1 if the index is out of range. */
-int wlanMacTableRead(uint16_t *entry, unsigned int index)
+int wlanMacTableRead(void *entry, unsigned int index)
 {
 	uint32_t low;
-	uint16_t high;
+	uint32_t high;
 
 	if (index - MAC_TABLE_FIRST >= MAC_TABLE_COUNT)
 		return 1;
@@ -159,7 +164,7 @@ int wlanMacTableRead(uint16_t *entry, unsigned int index)
 	low = MAC_314_TABLE_LOW;
 	high = MAC_318_TABLE_HIGH;
 	__aeabi_memcpy(entry, &low, 4);
-	entry[2] = high;
+	memcpy((uint8_t *)entry + 4, &high, 2);	/* copied a byte at a time */
 	return 0;
 }
 
@@ -232,7 +237,7 @@ unsigned int wlanFindSetBitDown(uint32_t mask, unsigned int start, unsigned int 
 		return high;
 	if (start <= low)
 		return start;
-	while (start >= low) {
+	while ((int)start >= (int)low) {	/* signed: start may go below 0 */
 		if ((1u << start) & mask)
 			return (uint8_t)start;
 		--start;
@@ -258,7 +263,7 @@ int wlanBaSlotApply(int slot, int window)
 	MAC_AC0_BA_ACTIVE |= 1 << slot;
 	MAC_ACC_BA_WINDOWS |= (slot | 8) << (4 * window);
 	control = MAC_E00_BA_CONTROL;
-	MAC_E00_BA_CONTROL |= 1 << (window + 8);
+	MAC_E00_BA_CONTROL = control | 1 << (window + 8);
 	return control;
 }
 
@@ -280,6 +285,12 @@ void wlanBaWindowCounterReset(int window)
 void wlanMacE80Select(void)
 {
 	MAC_E80_CONTROL = (MAC_E80_CONTROL & 0xfffff89c) | 1;
+}
+
+/* Sets a hardware window's Block Ack timeout register (0x295f4, next to the Block Ack slot code). */
+void bbpSetWindowTimeout(uint32_t value, unsigned int windowId)
+{
+	MAC_REG(0xe30 + 4 * windowId) = value;
 }
 
 /* Hooks the MAC mode sequences consult. Rings reset: hardware pointers back in step; veto: nonzero keeps bits 31 and 17 clear. */
@@ -368,9 +379,8 @@ int wlanHookReturnZero(void)
 }
 
 /* Installs the ring reset and the mode veto hooks. */
-int wlanTxHooksInit(void)
+void wlanTxHooksInit(void)
 {
 	wlanTxRingsResetHook = wlanTxRingsReset;
 	wlanModeVetoHook = wlanHookReturnZero;
-	return 0;
 }

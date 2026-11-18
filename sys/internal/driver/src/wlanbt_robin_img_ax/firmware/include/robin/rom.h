@@ -129,7 +129,7 @@ void mdevForwardEvent(void *device, OsaBuffer *buffer, uintptr_t argument,
 void *mdevOpenDevice(const char *name, unsigned int flags);
 int mdevIoctl(void *device, unsigned int operation, uintptr_t argument);
 #define SDIO_IOCTL_HOST_PENDING		0x46
-void mdevReleaseDevice(void *device);
+uint32_t mdevReleaseDevice(void *device);	/* returns what the ROM leaves in r0 */
 
 /* sqram/rom_ram.c */
 int romRamInit(void);

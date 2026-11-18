@@ -11,9 +11,9 @@
 #include "robin/mactx.h"
 #include "robin/task.h"
 
-struct WlanSlotScheduler wlanSlotScheduler __attribute__((section(".dtcm.bss")));
-static struct OsaSemaphore *wlanSlotLockHandle __attribute__((section(".dtcm.bss")));
+/* The scheduler's lock (0x4002a70), its handle the scheduler's lock field (0x4002e00). */
 static uint32_t wlanSlotLockObject[7] __attribute__((section(".dtcm.bss")));
+struct WlanSlotScheduler wlanSlotScheduler __attribute__((section(".dtcm.bss")));
 /* Handle of the last request; handles start at 1 and skip 0. */
 static uint32_t wlanSlotLastHandle __attribute__((section(".dtcm.bss")));
 
@@ -130,10 +130,12 @@ int wlanSlotCancel(struct WlanSlotRequest *request)
 	UINT posture = sysIrqDisable();
 
 	if (SCHED.current != request) {
+		uint32_t handle = request->handle;	/* read before the state, as Sony's code does */
+
 		result = WLAN_SLOT_OK;
 		if (request->state == WLAN_SLOT_QUEUED) {
 			request->state = WLAN_SLOT_CANCELLED;
-			request->callback(request->handle, WLAN_SLOT_EVENT_CANCEL, request->argument);
+			request->callback(handle, WLAN_SLOT_EVENT_CANCEL, request->argument);
 		} else if (osaCancelTimer(request->timer) == 1) {
 			request->callback(request->handle, WLAN_SLOT_EVENT_CANCEL, request->argument);
 			request->timer = 0;
@@ -162,26 +164,23 @@ void wlanSlotGetRunning(uint32_t *context, uint32_t *handle, uint32_t *argument)
 }
 
 /* Asks the running request how it is doing. */
-int wlanSlotPoll(void)
+void wlanSlotPoll(void)
 {
 	++SCHED.polls;
 	if (SCHED.current != NULL) {
 		++SCHED.activePolls;
-		return SCHED.current->callback(SCHED.current->handle, WLAN_SLOT_EVENT_POLL,
-					       SCHED.current->argument);
+		SCHED.current->callback(SCHED.current->handle, WLAN_SLOT_EVENT_POLL, SCHED.current->argument);
 	}
-	return 0;
 }
 
 /* Lets a request that waits for the state semaphore continue. */
-int wlanSlotResume(void)
+void wlanSlotResume(void)
 {
 	if (SCHED.current != NULL && SCHED.current->phase == 3) {
 		wlanReleaseStateSemaphore();
 		SCHED.current->phase = 1;
-		return osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
+		osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
 	}
-	return 0;
 }
 
 /*
@@ -193,43 +192,40 @@ int wlanSlotResume(void)
 int wlanSlotRun(void)
 {
 	struct WlanSlotRequest *current = SCHED.current;
+	unsigned int phase;
+	uint32_t handle;
 	int power;
 
 	if (current == NULL)
 		return WLAN_SLOT_FAILED;
-	switch (current->phase) {
-	case 1:
-	case 2:
-		power = current->phase == 1;
-		if (!wlanConnectEventTryWait())
-			break;
-		if (wlanSlotQueryStart(power) == WLAN_SLOT_OK) {
-			SCHED.current->phase = 3;
-			return WLAN_SLOT_OK;
+	/* tested one phase after the other, as Sony's code does (no switch table); the handle is read first */
+	phase = current->phase;
+	handle = current->handle;
+	if (phase == 1 || phase == 2) {
+		power = phase == 1;
+		if (wlanConnectEventTryWait()) {
+			if (wlanSlotQueryStart(power) == WLAN_SLOT_OK) {
+				SCHED.current->phase = 3;
+				return WLAN_SLOT_OK;
+			}
+			wlanReleaseStateSemaphore();
 		}
-		wlanReleaseStateSemaphore();
-		break;
-	case 3:
+		osaTaskSleep(1);
+		osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
+	} else if (phase == 3) {
 		ledFirmwareStateSet(1);
 		SCHED.current->phase = 4;
 		wlanSlotBegin();
-		return WLAN_SLOT_OK;
-	case 6:
+	} else if (phase == 6) {
 		wlanSlotFinish(6);
-		return WLAN_SLOT_OK;
-	case 7:
+	} else if (phase == 7) {
 		wlanSlotCancelByFlags(1, 0);
 		wlanSlotFinish(7);
-		return WLAN_SLOT_OK;
-	case 8:
+	} else if (phase == 8) {
 		wlanSlotFinish(8);
-		return WLAN_SLOT_OK;
-	default:
-		current->callback(current->handle, current->phase, current->argument);
-		return WLAN_SLOT_OK;
+	} else {
+		current->callback(handle, phase, current->argument);
 	}
-	osaTaskSleep(1);
-	osaEventFlagsSet(macMgmtEventFlags, 0x40, 7);
 	return WLAN_SLOT_OK;
 }
 
@@ -245,8 +241,7 @@ int wlanSlotNotifyTick(void)
 int wlanSlotInit(void)
 {
 	__aeabi_memclr4(&SCHED, sizeof(SCHED));
-	wlanSlotLockHandle = (struct OsaSemaphore *)wlanSlotLockObject;
-	SCHED.lock = wlanSlotLockHandle;
+	SCHED.lock = (struct OsaSemaphore *)wlanSlotLockObject;
 	osaSemaphoreInit(&SCHED.lock, 1, 12);
 	romEdcaSetCwMin(4, 0);
 	romEdcaSetCwMax(4, 0);
@@ -293,13 +288,15 @@ struct WlanSlotRequest *wlanSlotPopNext(void)
 
 struct WlanSlotRequest *wlanSlotFind(uint32_t handle)
 {
-	unsigned int i;
+	struct WlanSlotRequest *found = NULL;
+	unsigned int i = 0;
 
-	for (i = 0; i < WLAN_SLOT_REQUESTS; i++) {
+	do {
 		if (SCHED.requests[i].handle == handle)
-			return &SCHED.requests[i];
-	}
-	return NULL;
+			found = &SCHED.requests[i];
+		i++;
+	} while (found == NULL && i < WLAN_SLOT_REQUESTS);
+	return found;
 }
 
 /* Cancels every request whose flags carry bit 1 (first) or bit 0 (second). */
@@ -397,9 +394,9 @@ typedef int (*WlanSlotRunningCallback)(uint32_t handle, uint32_t event, uint32_t
 
 static inline int wlanSlotCallRunning(uint32_t event, uint32_t first, uint32_t second, uint32_t third)
 {
-	uint32_t context = 0;
-	uint32_t handle = 0;
-	uint32_t argument = 0;
+	uint32_t context;	/* wlanSlotGetRunning() clears it; the others are set with it */
+	uint32_t handle;
+	uint32_t argument;
 	int result = 0;
 
 	wlanSlotGetRunning(&context, &handle, &argument);
@@ -416,7 +413,7 @@ int wlanSlotRunningNotify(uint32_t first, uint32_t third)
 
 int wlanSlotRunningResult(uint32_t second, uint32_t third)
 {
-	return wlanSlotCallRunning(0, 0, second, third);
+	return wlanSlotCallRunning(0, 0, second, third) != 0;	/* 1 when the request answered nonzero */
 }
 
 int wlanSlotRunningEvent(uint32_t event)
@@ -523,8 +520,7 @@ int wlanSlotBegin(void)
 				   SCHED.current->mode);
 	SCHED.current->state = WLAN_SLOT_RUNNING;
 	if (SCHED.current->elapsed != NULL)
-		*SCHED.current->elapsed = (uint32_t)romGetTimerTimestamp() -
-					  (uint32_t)SCHED.current->startTime;
+		*SCHED.current->elapsed = romGetTimerTimestamp() - SCHED.current->startTime;
 	SCHED.current->callback(SCHED.current->handle, WLAN_SLOT_EVENT_START, SCHED.current->argument);
 	if (SCHED.current->duration != 0 && SCHED.current->timer == 0)
 		osaCreateTimer((OsaTimerCallback)wlanSlotStart, (uint32_t)SCHED.current,

@@ -107,8 +107,8 @@ void wlanSlotWindowExpired(uint32_t timer, struct WlanSlotRequest *request);
 uint32_t wlanSlotSubmit(const struct WlanSlotParams *params);
 int wlanSlotCancel(struct WlanSlotRequest *request);
 void wlanSlotGetRunning(uint32_t *context, uint32_t *handle, uint32_t *argument);
-int wlanSlotPoll(void);
-int wlanSlotResume(void);
+void wlanSlotPoll(void);	/* Sony's returns what r0 holds */
+void wlanSlotResume(void);
 int wlanSlotRun(void);
 int wlanSlotNotifyTick(void);
 int wlanSlotInit(void);

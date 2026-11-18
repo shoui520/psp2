@@ -89,8 +89,11 @@ uint8_t wlanCalibrationType60Loaded(void)
 /* Choose the primary antenna: by the path state with diversity, else as configured. */
 void wlanAntennaSelectPrimary(void)
 {
+	/* the config pointer is read once here; the switch's stores read it again after the call */
+	struct WlanRadioConfig *config = wlanRadioConfig;
+
 	if ((((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 2) != 0) {
-		wlanRadioConfig->primaryDiversity = 1;
+		config->primaryDiversity = 1;
 		switch (macGetEventPrimaryPathState()) {
 		case 3:
 		case 5:
@@ -102,8 +105,8 @@ void wlanAntennaSelectPrimary(void)
 			break;
 		}
 	} else {
-		wlanRadioConfig->primaryDiversity = 0;
-		wlanRadioConfig->primaryAntenna =
+		config->primaryDiversity = 0;
+		config->primaryAntenna =
 			((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 1;
 	}
 }
@@ -111,8 +114,11 @@ void wlanAntennaSelectPrimary(void)
 /* The same for the secondary antenna (profile bits 2-3). */
 void wlanAntennaSelectSecondary(void)
 {
+	/* the config pointer is read once here; the switch's stores read it again after the call */
+	struct WlanRadioConfig *config = wlanRadioConfig;
+
 	if ((((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup & 8) != 0) {
-		wlanRadioConfig->secondaryDiversity = 1;
+		config->secondaryDiversity = 1;
 		switch (macGetEventSecondaryPathState()) {
 		case 3:
 		case 5:
@@ -124,8 +130,8 @@ void wlanAntennaSelectSecondary(void)
 			break;
 		}
 	} else {
-		wlanRadioConfig->secondaryDiversity = 0;
-		wlanRadioConfig->secondaryAntenna =
+		config->secondaryDiversity = 0;
+		config->secondaryAntenna =
 			(((const struct WlanAntennaProfile *)__aeabi_uread4(&wlanAntennaProfile))->antennaSetup >> 2) & 1;
 	}
 }
@@ -242,15 +248,15 @@ int wlanCalibrationTableQuery(uint8_t *data, unsigned int *length)
  * measured, else the two neighbours it lies between (channel numbers wrap
  * past 200).
  */
-int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, unsigned int channel,
+int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, int channel,
 				  uint8_t *low, uint8_t *high, uint8_t *lowIndex,
 				  uint8_t *highIndex)
 {
 	uint8_t i;
 
 	for (i = 0; i < count; i++) {
-		unsigned int current = channels[i];
-		unsigned int next, target;
+		int current = channels[i];
+		int next, target;
 
 		if (current == channel) {
 			*low = channels[i];
@@ -386,11 +392,14 @@ int wlanCalibrationLookupQuad(struct WlanCalibrationKey key, void *values)
 /* Linear interpolation between (lowPoint, low) and (highPoint, high), rounded. */
 int wlanInterpolate(int low, int high, int lowPoint, int highPoint, int point)
 {
+	int scaled;
+
 	if (low == high || point == lowPoint)
 		return low;
 	if (point == highPoint)
 		return high;
-	return low + ((((high - low) * 8) * (point - lowPoint) / (highPoint - lowPoint) + 4) >> 3);
+	scaled = (high - low) << 3;
+	return low + ((scaled * (point - lowPoint) / (highPoint - lowPoint) + 4) >> 3);
 }
 
 /* Eight bytes of per-channel values, the last halfword interpolated for the channel. */
@@ -425,33 +434,33 @@ int wlanCalibrationLookupInterpolated(struct WlanCalibrationKey key, uint8_t *va
 	return 1;
 }
 
-int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value)
+int wlanCalibrationLookup1(struct WlanCalibrationKey key, void *value)
 {
 	uint16_t result;
 
 	if (!wlanCalibValue1Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
-	*value = result;
+	memcpy(value, &result, 2);	/* a byte at a time */
 	return 1;
 }
 
-int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value)
+int wlanCalibrationLookup0(struct WlanCalibrationKey key, void *value)
 {
 	uint16_t result;
 
 	if (!wlanCalibValue0Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
-	*value = result;
+	memcpy(value, &result, 2);	/* a byte at a time */
 	return 1;
 }
 
-int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value)
+int wlanCalibrationLookup2(struct WlanCalibrationKey key, void *value)
 {
 	uint16_t result;
 
 	if (!wlanCalibValue2Get(calDataBandIndex(key.band, key.channel), &result))
 		return 0;
-	*value = result;
+	memcpy(value, &result, 2);	/* a byte at a time */
 	return 1;
 }
 

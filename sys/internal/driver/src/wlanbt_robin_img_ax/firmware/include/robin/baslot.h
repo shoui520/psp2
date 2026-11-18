@@ -55,7 +55,7 @@ uint32_t wlanTxRingBufferAddress(void);				/* 0x3109c */
 int wlanBaHwReset(void);					/* 0x28f30 */
 void wlanRateParametersClear(void);				/* 0x29060 */
 void wlanBaEntriesInit(void);					/* 0x29114 */
-void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, uint16_t sequence, int mode,
+void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, WlanSequenceControl sequence, int mode,
 		       unsigned int slot);				/* 0x29180 */
 int wlanBaSlotSetup(const struct WlanBaRequest *request, unsigned int window, unsigned int slot);
 									/* 0x29264 */

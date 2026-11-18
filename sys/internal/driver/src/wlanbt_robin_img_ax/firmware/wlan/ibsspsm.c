@@ -165,7 +165,7 @@ const int32_t *wlanPsParseBuffer(struct WlanIbssPsMachine *machine, const int32_
 	case WLAN_PS_EVENT_IEEE_ENTER:
 		tx_timer_deactivate(timer);
 		wlanPsClearTable(connection, 5);
-		machine->resume = &machine->off;
+		machine->resume = &machine->sleep;
 		target = &machine->ieeeHold;
 		break;
 	case ROM_HSM_EXIT:
@@ -264,7 +264,7 @@ const int32_t *wlanPsComputeBuffer(struct WlanIbssPsMachine *machine, const int3
 			return NULL;
 		posted = WLAN_EVENT_SUBSCRIBED;
 		break;
-	case 5:
+	case 3:
 		if (machine->awakeReported != 0)
 			return NULL;
 		machine->awakeReported = 1;
@@ -288,16 +288,17 @@ transition:
 /* 0x3c5b6: the 802.11 power-management null frames. */
 const int32_t *wlanPsQueryBuffer(struct WlanIbssPsMachine *machine, const int32_t *event)
 {
+	struct WlanConnection *connection = machine->connection;
 	uint32_t active;
 
 	switch (*event) {
 	case WLAN_IBSS_PS_EVENT_SLEEP:
 		machine->resume = &machine->sleep;
-		wlanPsHostCmdRespond(machine->connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case WLAN_IBSS_PS_EVENT_WAKE:
 		machine->resume = &machine->off;
-		wlanPsHostCmdRespond(machine->connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case ROM_HSM_EXIT:
 		active = 0;

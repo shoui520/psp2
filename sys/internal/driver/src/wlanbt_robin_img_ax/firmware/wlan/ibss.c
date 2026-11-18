@@ -35,6 +35,18 @@
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 
+/* The halfwords of wlanIbssInfo, a byte at a time. */
+static inline unsigned int wlanIbssGet16(const uint8_t *bytes)
+{
+	return bytes[0] | bytes[1] << 8;
+}
+
+static inline void wlanIbssPut16(uint8_t *bytes, unsigned int value)
+{
+	bytes[0] = value;
+	bytes[1] = value >> 8;
+}
+
 /* The templates' frames start this far into their buffers. */
 #define WLAN_IBSS_TEMPLATE_OFFSET	176
 
@@ -104,7 +116,7 @@ void wlanIbssBuildTemplate(struct WlanConnection *connection, const WlanAdHocSta
 	uint8_t *copyStart;
 	uint8_t *end;
 	uint32_t flags;
-	unsigned int rate;
+	uint8_t rate;
 	unsigned int bodyOffset;
 	unsigned int length;
 	uint16_t bodyLength;
@@ -187,12 +199,12 @@ void wlanIbssSetInfo(struct WlanConnection *connection, uint16_t beaconPeriod,
 {
 	__aeabi_memclr(&wlanIbssInfo, sizeof(wlanIbssInfo));
 	if (connection->txOptions & 0x20)
-		wlanIbssInfo.flags |= WLAN_IBSS_PROTECTION;
+		wlanIbssPut16(wlanIbssInfo.flags, wlanIbssGet16(wlanIbssInfo.flags) | WLAN_IBSS_PROTECTION);
 	else
-		wlanIbssInfo.flags &= ~WLAN_IBSS_PROTECTION;
+		wlanIbssPut16(wlanIbssInfo.flags, wlanIbssGet16(wlanIbssInfo.flags) & ~WLAN_IBSS_PROTECTION);
 	__aeabi_memcpy(wlanIbssInfo.bssid, connection->localAddress, 6);
-	wlanIbssInfo.beaconPeriod = beaconPeriod;
-	wlanIbssInfo.atimWindow = atimWindow;
+	wlanIbssPut16(wlanIbssInfo.beaconPeriod, beaconPeriod);
+	wlanIbssPut16(wlanIbssInfo.atimWindow, atimWindow);
 }
 
 /* Builds both templates and hands them to the MAC. */
@@ -350,13 +362,17 @@ __attribute__((noinline)) void wlanIbssAdopt(struct WlanConnection *connection, 
 	__aeabi_memcpy(beacon->address3, frame->address3, 6);
 	__aeabi_memcpy(wlanIbssProbeResponseFrame->address3, frame->address3, 6);
 	__aeabi_memcpy(wlanIbssInfo.bssid, frame->address3, 6);
-	wlanIbssInfo.beaconPeriod = LE16(&frame->body[8]);
-	wlanPsFilterFrame(wlanIbssInfo.beaconPeriod);
+	/* copied a byte at a time, then read back */
+	wlanIbssInfo.beaconPeriod[0] = frame->body[8];
+	wlanIbssInfo.beaconPeriod[1] = frame->body[9];
+	wlanPsFilterFrame(wlanIbssGet16(wlanIbssInfo.beaconPeriod));
 	if (ibssParameters) {
-		wlanIbssInfo.atimWindow = LE16(&ibssParameters[2]);
-		macMgmtPrepareDescriptor(LE16(&ibssParameters[2]));
+		unsigned int atimWindow = ibssParameters[2] | ibssParameters[3] << 8;
+
+		wlanIbssPut16(wlanIbssInfo.atimWindow, atimWindow);
+		macMgmtPrepareDescriptor(atimWindow);
 	} else {
-		wlanIbssInfo.atimWindow = macMgmtDispatchDescriptor();
+		wlanIbssPut16(wlanIbssInfo.atimWindow, macMgmtDispatchDescriptor());
 	}
 	if (!(connection->txOptions & 0x20) && erp && (erp[2] & WLAN_ERP_USE_PROTECTION)) {
 		ie = wlanFindIe(wlanIbssBeaconFrame, IE_ERP_INFORMATION, WLAN_FRAME_BEACON, NULL, 0);
@@ -371,14 +387,14 @@ __attribute__((noinline)) void wlanIbssAdopt(struct WlanConnection *connection, 
 	MAC_300_MODE &= ~8u;
 	SOC_MAC_TIMER = 0;
 	MAC_604_TIMER_HIGH = 0;
-	MAC_608_NEXT_BEACON = (uint32_t)wlanIbssInfo.beaconPeriod << 11;
+	MAC_608_NEXT_BEACON = wlanIbssGet16(wlanIbssInfo.beaconPeriod) << 11;
 	MAC_60C_NEXT_BEACON_HIGH = 0;
-	MAC_618_BEACON_PERIOD = wlanIbssInfo.beaconPeriod;
+	MAC_618_BEACON_PERIOD = wlanIbssGet16(wlanIbssInfo.beaconPeriod);
 	MAC_640_BEACON_WINDOW = 511;
 	MAC_300_MODE |= 8;
 	sysIrqRestore(state);
 	connection->stationFlags |= 2;
-	if (wlanIbssInfo.atimWindow) {
+	if (wlanIbssGet16(wlanIbssInfo.atimWindow)) {
 		wlanPsClearTable(connection, 0);
 		if (wlanSessionId & 0x10)
 			wlanPsStartHostModeTimer(connection);
@@ -400,7 +416,10 @@ void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWireles
 	WlanProtectionTimer *noWmm = &wlanProtection.timers[WLAN_PROTECTION_NON_WMM_PEER];
 	const uint8_t *bssid = frame->address3;
 	struct WlanConnection *peer;
-	uint8_t previous[6];
+	/* the old BSSID: Sony copies its word-aligned 8 bytes with two word loads */
+	struct {
+		uint8_t bytes[6];
+	} __attribute__((aligned(4))) previous;
 	unsigned int rates;
 	uint32_t flags;
 	int changed = 0;
@@ -420,9 +439,9 @@ void wlanIbssBeaconReceived(struct WlanConnection *connection, const WlanWireles
 			wlanHostEventSendAddress(connection, 32, connection->peerAddress);
 		if ((connection->stationFlags & 1) &&
 		    !wlanConnectionHasLocalAddress(connection, bssid)) {
-			__aeabi_memcpy(previous, connection->localAddress, sizeof(previous));
+			previous = *(const __typeof__(previous) *)connection->localAddress;
 			wlanIbssAdopt(connection, frame, ies->pIbssParam, ies->pErpInfo, ies->pHtInfo);
-			while ((peer = wlanConnectionFindByLocal(WLAN_IF_IBSS, previous)) != NULL)
+			while ((peer = wlanConnectionFindByLocal(WLAN_IF_IBSS, previous.bytes)) != NULL)
 				__aeabi_memcpy(peer->localAddress, bssid, 6);
 			wlanPostConnectionEvent(connection, 0x80000000u);
 		}
@@ -597,6 +616,7 @@ void wlanIbssStartDone(struct WlanConnection *connection, int status)
 void wlanIbssJoinSetup(struct WlanConnection *connection, const WlanAdHocBssDesc *join)
 {
 	unsigned int rates;
+	const uint8_t *capability;
 
 	wlanAdHocJoinRates((WlanAdHocBssDesc *)join, connection->supportedRates,
 			   &connection->supportedRatesLength);
@@ -608,8 +628,10 @@ void wlanIbssJoinSetup(struct WlanConnection *connection, const WlanAdHocBssDesc
 	wlanProtection.flags = (wlanProtection.flags & ~WLAN_PROTECTION_DSSS_BSS) |
 			       ((wlanRatesDsssOnly(rates) & 1) << 6);
 	macTxNotifyApplyFrame(connection);
-	connection->bssCapability[0] = join->capability;
-	connection->bssCapability[1] = join->capability >> 8;
+	/* copied a byte at a time */
+	capability = (const uint8_t *)&join->capability;
+	connection->bssCapability[0] = capability[0];
+	connection->bssCapability[1] = capability[1];
 	macMgmtHandleContext(join, connection->localAddress, connection->networkSsid,
 			     &connection->networkSsidLength);
 	if (supplicantIsEnabled() && (connection->flags & 4))
@@ -625,6 +647,6 @@ void wlanIbssJoinSetup(struct WlanConnection *connection, const WlanAdHocBssDesc
 /* A kept beacon takes the ATIM window and beacon period of wlanIbssInfo. */
 void wlanIbssRefreshBeacon(WlanBeaconDescriptor *const *beacon)
 {
-	wlanSetAtimWindow(beacon, wlanIbssInfo.atimWindow);
-	wlanSetBeaconPeriod(beacon, wlanIbssInfo.beaconPeriod);
+	wlanSetAtimWindow(beacon, wlanIbssGet16(wlanIbssInfo.atimWindow));
+	wlanSetBeaconPeriod(beacon, wlanIbssGet16(wlanIbssInfo.beaconPeriod));
 }

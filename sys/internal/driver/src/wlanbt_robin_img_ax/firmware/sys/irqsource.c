@@ -54,9 +54,6 @@ int sysAcknowledgeEvents(uint32_t events)
 	return 1;
 }
 
-SysBbpCompletionHook sysBbpCompletionHook
-	__attribute__((section(".itcm.rw"))) = 0;
-
 volatile uint32_t *sysWaitForBbpCommand(void)
 {
 	do {
@@ -66,9 +63,9 @@ volatile uint32_t *sysWaitForBbpCommand(void)
 	return &BBP_EVENT_A;
 }
 
-SysBbpCompletionHook socEventHookInit(void)
+WlanDmaCompletionHook socEventHookInit(void)
 {
-	sysBbpCompletionHook = sysWaitForBbpCommand;
+	wlanDmaCompletionHook = sysWaitForBbpCommand;
 	return sysWaitForBbpCommand;
 }
 

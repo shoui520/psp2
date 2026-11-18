@@ -72,7 +72,8 @@ struct WlanScan {
 	struct WlanIeBuffer ies;	/* 500: the elements the probe requests carry besides the SSID and the rates */
 	uint32_t waited;		/* 508: the time the request waited for the channel (the scheduler's elapsed) */
 	struct WlanScanResults *results;	/* 512: where the loop reports its end */
-	uint32_t parameter;		/* 516: the command's parameter */
+	uint8_t parameter;		/* 516: the command's parameter */
+	uint8_t reserved517[3];
 };
 
 _Static_assert(sizeof(struct WlanScan) == 520, "scan");

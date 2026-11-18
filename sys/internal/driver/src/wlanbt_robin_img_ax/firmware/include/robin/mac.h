@@ -87,7 +87,7 @@
 #define MAC_EC0_BA_COUNTER(window) MAC_REG(0xec0 + 4 * (window))
 
 /* ROM routines behind the MAC's indexed entries. */
-int romMacEntryCheck(unsigned int index, uint32_t value);			/* 0x03f3ac3d */
+int romMacEntryCheck(unsigned int index, uint32_t first, uint32_t second);	/* 0x03f3ac3d */
 int romMacEntryWrite(unsigned int index, uint32_t first, uint32_t second);	/* 0x03f3ac8b */
 int romMacEntryRead(unsigned int index, uint32_t *first, uint32_t *second);	/* 0x03f3acbf */
 
@@ -109,7 +109,7 @@ void wlanMacWrite474(uint32_t value);
 uint32_t wlanMacRead5f8(void);
 void wlanMacSetE80Bits(void);
 int wlanMacTableWrite(uint32_t low, uint32_t high, unsigned int index);
-int wlanMacTableRead(uint16_t *entry, unsigned int index);
+int wlanMacTableRead(void *entry, unsigned int index);
 int wlanMacLoadRegions(const struct MacRegionProvider *provider);
 int wlanHalfwordsEqual(const uint16_t *const *first, const uint16_t *const *second, unsigned int count);
 int wlanMacWriteChecked(unsigned int from, unsigned int to, unsigned int page, uint32_t value);
@@ -130,7 +130,7 @@ int wlanMacMode300Reset(void);
 void *wlanMacModeSwitch(int on);
 int wlanTxRingsReset(void);
 int wlanHookReturnZero(void);
-int wlanTxHooksInit(void);
+void wlanTxHooksInit(void);
 
 void wlanBaWindowEnable(int window);
 void wlanBaWindowDisable(int window);

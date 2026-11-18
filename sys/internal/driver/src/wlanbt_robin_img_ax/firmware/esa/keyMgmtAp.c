@@ -170,7 +170,7 @@ int GeneratePWKMsg3(struct WlanConnection *connPtr)
 	role = wlanConnectionInfoSlot(connPtr);
 	info = wlanConnectionInfo(connPtr);
 	pKeyMgmtInfo = &role->keyMgmt;
-	pHskData = &connPtr->hskKey->key.ckd.hskData;
+	pHskData = &connPtr->keyBlocks[1]->key.ckd.hskData;
 
 	incrementReplayCounter(pKeyMgmtInfo);
 
@@ -228,7 +228,7 @@ int GeneratePWKMsg1(struct WlanConnection *connPtr)
 		return 1;
 
 	pKeyMgmtInfo = &role->keyMgmt;
-	pHskData = &connPtr->hskKey->key.ckd.hskData;
+	pHskData = &connPtr->keyBlocks[1]->key.ckd.hskData;
 
 	incrementReplayCounter(pKeyMgmtInfo);
 	replay_cnt[0] = pKeyMgmtInfo->counterHi;
@@ -394,7 +394,7 @@ int ProcessPWKMsg2(OsaBuffer *pmbuf)
 	struct WlanConnection *connPtr = pmbuf->context;
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connPtr);
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connPtr);
-	eapolHskData_t *pHskData = &connPtr->hskKey->key.ckd.hskData;
+	eapolHskData_t *pHskData = &connPtr->keyBlocks[1]->key.ckd.hskData;
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo = &role->keyMgmt;
 	EAPOL_KeyMsg_t *rx_eapol_ptr = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
 	WlanIePointers iePointers;
@@ -467,7 +467,7 @@ int ProcessPWKMsg4(OsaBuffer *pmbuf)
 	struct WlanConnection *connPtr = pmbuf->context;
 	struct WlanConnectionRole *role = wlanConnectionInfoSlot(connPtr);
 	apKeyMgmtInfoSta_t *pKeyMgmtInfo = &role->keyMgmt;
-	eapolHskData_t *pHskData = &connPtr->hskKey->key.ckd.hskData;
+	eapolHskData_t *pHskData = &connPtr->keyBlocks[1]->key.ckd.hskData;
 	EAPOL_KeyMsg_t *rx_eapol_ptr = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
 
 	if (!IsEAPOL_MICValid(rx_eapol_ptr, pKeyMgmtInfo->EAPOL_MIC_Key))
@@ -624,7 +624,8 @@ int AuthenticatorProcessEapolPacket(OsaBuffer *pmbuf)
 	int result;
 
 	if (!(connPtr->flags2 & WLAN_CONN2_ASSOCIATED))
-		return 0;
+		/* the original returns what its test left: the flags shifted to bit 31 (bss.c ignores it) */
+		return (uint32_t)connPtr->flags2 << 27;
 
 	rx_eapol_ptr = (EAPOL_KeyMsg_t *)((uint8_t *)pmbuf + pmbuf->dataOffset);
 	if (rx_eapol_ptr->key_info.Error)

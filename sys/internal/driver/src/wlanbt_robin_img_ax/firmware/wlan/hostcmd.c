@@ -437,7 +437,7 @@ unsigned int hostCmd0070(uint8_t *body);					/* 0x1e826 */
 unsigned int hostCmd0071(struct WlanConnection *connection, char *body);	/* 0x1e782 */
 unsigned int hostCmd0081(uint8_t *body);					/* 0x1e83c */
 void hostCmd0083(unsigned int bssType, unsigned int bssNumber, unsigned int value); /* SQRAM 0xc0007406 */
-void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
+int hostCmd0084(unsigned int action, uint8_t *data, unsigned int size);	/* 0x4237e */
 void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
 		 uint16_t *wakeDtims, uint16_t *listenBeacons);				/* 0x2cdfc */
 int hostCmd008fWrite(unsigned int length, uint8_t *data);			/* 0x33084 */

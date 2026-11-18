@@ -218,9 +218,11 @@ int fmCoexConfigurePacket(void)
 		goto dropped;
 	}
 	if (osa_BufferClone(&btPacketPool) <= 4) {
-		sbcMediaPacket = osa_BufferAlloc(&btPacketPool, 0, ~0u);
-		sbcMediaPacket->transportTag = SBC_MEDIA_TAG;
-		sbcMediaPacket->data[7] = 2;
+		OsaBuffer *packet = osa_BufferAlloc(&btPacketPool, 0, ~0u);
+
+		sbcMediaPacket = packet;
+		packet->transportTag = SBC_MEDIA_TAG;
+		packet->data[7] = 2;
 		sbcMediaPacket->dataOffset = SBC_MEDIA_OFFSET;
 		sbcFrame.frames = 0;
 		sbcFrame.headerLength = sbcStream.headerLength + SBC_MEDIA_OFFSET;
@@ -431,11 +433,11 @@ void btSbcValidateState(struct SbcPcmDescriptor *descriptor, uint16_t encoderOff
 	unsigned int slots;
 
 	descriptor->encoderOffset = sbcFrame.sampleBytes + encoderOffset;
-	descriptor->encoderSamples = sbcFrame.samples;
-	descriptor->encoderBytes = sbcFrame.sampleBytes;
+	descriptor->encoderSamples.value = sbcFrame.samples;
+	descriptor->encoderBytes.value = sbcFrame.sampleBytes;
 	descriptor->decoderOffset = sbcDecoderFrame.sampleBytes + decoderOffset;
-	descriptor->decoderSamples = sbcDecoderFrame.samples;
-	descriptor->decoderBytes = sbcDecoderFrame.sampleBytes;
+	descriptor->decoderSamples.value = sbcDecoderFrame.samples;
+	descriptor->decoderBytes.value = sbcDecoderFrame.sampleBytes;
 	descriptor->portBit1 = (sbcPcmPortConfig & 2) >> 1;
 	descriptor->portBit2 = (sbcPcmPortConfig & 4) >> 2;
 	descriptor->enable = 1;
@@ -565,9 +567,11 @@ int btSbcBuildState(void)
 int btSbcComputeState(void)
 {
 	if (sbcMediaPacket == NULL) {
-		sbcMediaPacket = osa_BufferAlloc(&btTablePool, SBC_MSBC_SCO_SIZE, ~0u);
-		sbcMediaPacket->transportTag = SBC_SCO_TAG;
-		sbcMediaPacket->data[7] = SBC_SCO_TAG;
+		OsaBuffer *packet = osa_BufferAlloc(&btTablePool, SBC_MSBC_SCO_SIZE, ~0u);
+
+		sbcMediaPacket = packet;
+		packet->transportTag = SBC_SCO_TAG;
+		packet->data[7] = SBC_SCO_TAG;
 		sbcMediaPacket->dataOffset = SBC_MEDIA_OFFSET;
 		sbcFrame.frames = 0;
 		sbcFrame.headerLength = SBC_MSBC_SCO_HEADER;
@@ -817,20 +821,19 @@ int btSbcSyncState(uint32_t requests)
 int btSbcApplyState(void)
 {
 	if (sbcDevicesOpen == 1) {
+		uint32_t released;
+
 		sbcHeld = 0;
 		mdevReleaseDevice(sbcDevices.encoder);
 		mdevReleaseDevice(sbcDevices.decoder);
-		mdevReleaseDevice(sbcDevices.pcm);
+		released = mdevReleaseDevice(sbcDevices.pcm);
 		sbcDevices.encoder = NULL;
 		sbcDevices.decoder = NULL;
 		sbcDevices.pcm = NULL;
 		romCoexPrimaryFlag = 0;
 		sbcDevicesOpen = 0;
-		/*
-		 * The original passes what mdevReleaseDevice() left in r0; the
-		 * ROM routine's use of it is not known.
-		 */
-		btSbcRomSyncContext(0);
+		/* the original passes what the last mdevReleaseDevice() left in r0 */
+		btSbcRomSyncContext(released);
 	}
 	romHctFilterEvent = NULL;
 	return 0;
@@ -922,8 +925,8 @@ int btSbcFormatState(void)
 	sbcDecoderPacket = osa_BufferAlloc(&btTablePool, 0x100, ~0u);
 	packet = sbcDecoderPacket;
 	if (packet != NULL) {
-		packet->dataOffset = 32;
 		packet->transportTag = SBC_SCO_TAG;
+		packet->dataOffset = 32;
 		packet->data[7] = SBC_SCO_TAG;
 		packet = sbcDecoderPacket;
 		packet->length = sbcFrame.samples;

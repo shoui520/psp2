@@ -9,6 +9,7 @@
 #define ROBIN_STREAM_H
 
 #include <stdint.h>
+#include "robin/mac.h"
 #include "robin/patch.h"
 
 /* Transmit session (20 bytes). */
@@ -33,16 +34,18 @@ struct WlanRxBaSession {
 	uint32_t frameCount;
 };
 
-/* Parameters of an add-Block-Ack request; other bytes are not read here. */
-struct WlanBaRequest {
-	uint8_t flags;
-	uint8_t reserved0[3];
-	uint8_t tid[4];		/* unaligned word, low byte used */
-	uint8_t timeout[4];	/* unaligned word, in Block Ack timeout units */
-	uint8_t windowSize[4];	/* unaligned word, the frames the window holds */
-	uint8_t reserved16[4];
+/* Parameters of an add-Block-Ack request, packed (__aeabi_uread4/__aeabi_uwrite4 through a pointer, the sequence a byte at a time). */
+struct __attribute__((packed)) WlanBaRequest {
+	uint8_t reserved0 : 1;
+	uint8_t direction : 3;		/* 0 transmit (the peer accepted ours), 1 receive (the host's response) */
+	uint8_t reserved4 : 4;
+	uint8_t reserved1[3];
+	uint32_t tid;		/* low byte used */
+	uint32_t timeout;	/* in Block Ack timeout units */
+	uint32_t windowSize;	/* the frames the window holds */
+	uint32_t reserved16;
 	uint8_t peer[6];
-	uint8_t startSequence[2];
+	WlanSequenceControl startSequence;
 };
 
 /* Free list of hardware window numbers (2 bytes per transmit session). */

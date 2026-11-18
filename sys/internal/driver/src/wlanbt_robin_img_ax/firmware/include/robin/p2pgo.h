@@ -169,10 +169,21 @@ uint8_t *p2pDirectResetContext(uint8_t *position);					/* 0x406a6 */
 void p2pDirectSyncContext(const uint8_t *source, uint8_t *destination, int limit, uint8_t **mark);	/* 0x406ca */
 unsigned int p2pDirectApplyContext(uint8_t *out, const void *oui, unsigned int size, const uint8_t *in,
 				   uint16_t limit);					/* 0x407a4 */
-void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed, int length,
-			     struct WlanDirectContext *context);			/* 0x40992 */
+struct WlanDirectContext *p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed,
+						  int length, struct WlanDirectContext *context);	/* 0x40992 */
 struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int body, unsigned int *mask,
 						   unsigned int *changed, struct WlanDirectContext *context); /* 0x40b16 */
+/*
+ * The start of a WLAN_HOST_EVENT_WIFIDIRECT_GENERIC event (mlan's wifidirect event): its
+ * length, type and subtype, then the peer's address. Unaligned in the event buffer.
+ */
+struct __attribute__((packed)) WlanDirectEvent {
+	uint16_t length;
+	uint16_t type;
+	uint16_t subtype;
+	uint8_t peerAddress[6];
+};
+
 unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
 				    unsigned int type, uint16_t value);			/* 0x40b88 */
 int p2pDirectFormatContext(struct WlanConnection *connection);				/* 0x40da2 */

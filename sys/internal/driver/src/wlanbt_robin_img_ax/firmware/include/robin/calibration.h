@@ -111,7 +111,7 @@ int wlanRfEventRefresh(void);
 int wlanCalibrationTableUpdate(uint8_t *data, unsigned int offset, unsigned int length,
 			       unsigned int action);			/* 0xe85a */
 int wlanCalibrationTableQuery(uint8_t *data, unsigned int *length);	/* 0xe880 */
-int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, unsigned int channel,
+int wlanCalibrationChannelBracket(const uint8_t *channels, unsigned int count, int channel,
 				  uint8_t *low, uint8_t *high, uint8_t *lowIndex,
 				  uint8_t *highIndex);
 int wlanTxPowerRange(const struct WlanTxPowerRecord *record, unsigned int power, uint8_t *range);
@@ -121,9 +121,9 @@ int wlanCalibrationLookupBlock(struct WlanCalibrationKey key, void *block);
 int wlanCalibrationLookupQuad(struct WlanCalibrationKey key, void *values);
 int wlanInterpolate(int low, int high, int lowPoint, int highPoint, int point);
 int wlanCalibrationLookupInterpolated(struct WlanCalibrationKey key, uint8_t *values);
-int wlanCalibrationLookup1(struct WlanCalibrationKey key, uint16_t *value);
-int wlanCalibrationLookup0(struct WlanCalibrationKey key, uint16_t *value);
-int wlanCalibrationLookup2(struct WlanCalibrationKey key, uint16_t *value);
+int wlanCalibrationLookup1(struct WlanCalibrationKey key, void *value);
+int wlanCalibrationLookup0(struct WlanCalibrationKey key, void *value);
+int wlanCalibrationLookup2(struct WlanCalibrationKey key, void *value);
 int wlanCalibrationLookupFlags(unsigned int index, uint8_t *flags);
 int wlanCalibrationLookupSignal(struct WlanCalibrationKey key, int8_t *values);
 

@@ -4,7 +4,8 @@
 
 #include <stdint.h>
 
-typedef void (*WlanDmaCompletionHook)(void);
+/* Called once engine B's copy is started (0x54dfc); socEventHookInit() sets it to sysWaitForBbpCommand(). */
+typedef volatile uint32_t *(*WlanDmaCompletionHook)(void);
 
 extern WlanDmaCompletionHook wlanDmaCompletionHook;
 

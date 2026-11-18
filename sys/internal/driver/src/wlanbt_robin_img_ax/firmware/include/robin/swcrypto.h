@@ -88,7 +88,7 @@ WLAN_CRYPTO_CALL OsaBuffer *wlanCryptoTxPop(struct WlanCryptoTxRing *ring);		/* 
 void wlanCryptoTxDrain(struct WlanCryptoTxRing *ring);			/* 0x1ecae */
 void wlanCryptoRxDrain(struct WlanCryptoRxRing *ring);			/* 0x1ecc6 */
 void wlanCryptoFlushConnection(struct WlanConnection *connection);	/* 0x1ecde */
-void wlanCryptoRetargetFrames(unsigned int from, uint8_t to, unsigned int tid);	/* 0x1ee16 */
+void wlanCryptoRetargetFrames(unsigned int from, unsigned int to, unsigned int tid);	/* 0x1ee16 */
 void wlanCryptoMoveFrames(unsigned int from, unsigned int to, unsigned int tid,
 			  const void *address);				/* 0x1ee52 */
 int wlanCryptoSend(OsaBuffer *buffer);					/* 0x1eea6 */

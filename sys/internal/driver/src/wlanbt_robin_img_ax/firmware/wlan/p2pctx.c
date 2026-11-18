@@ -78,12 +78,13 @@ unsigned int p2pDirectConfigureContext(uint8_t *element, const uint8_t *attribut
 {
 	unsigned int added = 0;
 	unsigned int room;
-	unsigned int length = (attribute[2] << 8) | attribute[1];
+	unsigned int length;
+	unsigned int value;
 	unsigned int total;
 	uint8_t *tail;
 	uint8_t *first;
 
-	if (length == 0 || element == NULL)
+	if (((attribute[2] << 8) | attribute[1]) == 0 || element == NULL)
 		return 0;
 	for (; *element == 0xdd; element += element[1] + 2) {
 		if (element[1] < 0xf8) {
@@ -96,9 +97,12 @@ unsigned int p2pDirectConfigureContext(uint8_t *element, const uint8_t *attribut
 	room = 248;
 found:
 	tail = &element[element[1] + 2];
+	/* the attribute may lie where the element grows: its length is read again after each store */
 	tail[0] = attribute[0];
-	tail[1] = attribute[1];
-	tail[2] = attribute[2];
+	value = (attribute[2] << 8) | attribute[1];
+	tail[1] = value;
+	tail[2] = value >> 8;
+	length = (attribute[2] << 8) | attribute[1];
 	total = (uint16_t)(added + 3);
 	if (room < length) {
 		const uint8_t *source = attribute + 3;
@@ -129,9 +133,9 @@ found:
 		return total;
 	}
 	__aeabi_memcpy(tail + 3, attribute + 3, length);
-	total = (uint16_t)(length + total);
+	total = (uint16_t)(((attribute[2] << 8) | attribute[1]) + total);
 	element[1] += attribute[1] + 3;
-	__aeabi_memclr(&tail[length + 3], 6);
+	__aeabi_memclr(&tail[((attribute[2] << 8) | attribute[1]) + 3], 6);
 	return total;
 }
 
@@ -235,10 +239,13 @@ unsigned int p2pDirectValidateContext(struct WlanConnection *connection, WlanWir
 {
 	uint8_t *buffer = (uint8_t *)frame;
 	unsigned int added;
+	unsigned int length;
 
 	wlanConnectionPsState(connection);
 	added = (uint16_t)p2pDirectCheckContext(connection, frame, NULL, 0xc, 0);
-	*(uint16_t *)buffer += added;
+	length = ((buffer[1] << 8) | buffer[0]) + added;
+	buffer[0] = length;
+	buffer[1] = length >> 8;
 	return added;
 }
 
@@ -248,9 +255,11 @@ unsigned int p2pDirectPrepareContext(struct WlanConnection *connection, WlanWire
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	uint8_t *buffer = (uint8_t *)frame;
 	unsigned int added;
+	unsigned int length;
 
 	if (connection->mode == 1) {
-		uint8_t options = ps->p2pOptions;
+		/* Sony saves the word the options byte starts (it is word aligned) and puts the byte back. */
+		uint32_t options = *(const uint32_t *)&ps->p2pOptions;
 
 		ps->p2pOptions = 0;
 		added = (uint16_t)p2pDirectCheckContext(connection, frame, NULL, 0x2004, 0);
@@ -258,7 +267,9 @@ unsigned int p2pDirectPrepareContext(struct WlanConnection *connection, WlanWire
 	} else {
 		added = (uint16_t)p2pDirectCheckContext(connection, frame, NULL, 0x2004, 0);
 	}
-	*(uint16_t *)buffer += added;
+	length = ((buffer[1] << 8) | buffer[0]) + added;
+	buffer[0] = length;
+	buffer[1] = length >> 8;
 	return added;
 }
 
@@ -414,8 +425,8 @@ void p2pDirectSyncContext(const uint8_t *source, uint8_t *destination, int limit
 	if (distance == 1) {
 		destination[0] = source[0];
 		source += 6;
-		destination[1] = source[1];
 		length = (source[2] << 8) | source[1];
+		destination[1] = source[1];
 		destination[2] = source[2];
 		out = destination + 3;
 	} else {
@@ -429,7 +440,7 @@ void p2pDirectSyncContext(const uint8_t *source, uint8_t *destination, int limit
 		}
 		out = destination + 3;
 	}
-	if (limit != -1 && (unsigned int)(limit - 3) < length)
+	if (limit != -1 && limit - 3 < (int)length)
 		length = (uint16_t)(limit - 3);
 	body = source + 3;
 	while (done < length) {
@@ -478,7 +489,7 @@ unsigned int p2pDirectApplyContext(uint8_t *out, const void *oui, unsigned int s
 				if (left == 0)
 					break;
 				attributeLength = (element[2] << 8) | element[1];
-				used = (uint16_t)(remaining + 3);
+				used = remaining + 3;
 				if (attributeLength + limit + used >= 900) {
 					*length = remaining;
 					return remaining;
@@ -527,9 +538,11 @@ unsigned int p2pDirectApplyContext(uint8_t *out, const void *oui, unsigned int s
  * Reads the attributes of the P2P elements that start at element into context (one pointer per slot)
  * and sets bit n of mask for the attribute n found; changed gets the bits that were new while an
  * attribute went on into the next element. length is what the frame holds from the element on.
+ * Returns context, or NULL for no element, an attribute ID above 18 or an attribute that runs past
+ * the elements.
  */
-void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed, int length,
-			     struct WlanDirectContext *context)
+struct WlanDirectContext *p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigned int *changed,
+						  int length, struct WlanDirectContext *context)
 {
 	static const uint8_t slots[19] = {
 		P2P_SLOT_STATUS, P2P_SLOT_MINOR_REASON, P2P_SLOT_CAPABILITY, P2P_SLOT_DEVICE_ID,
@@ -546,7 +559,7 @@ void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigne
 	*changed = 0;
 	*mask = 0;
 	if (element == NULL)
-		return;
+		return NULL;
 	position = element;
 	while (memcmp(position + 2, wlanP2pOui, 4) == 0) {
 		unsigned int bytes = position[1];
@@ -562,7 +575,7 @@ void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigne
 				break;
 			before = *mask;
 			if (*position > 18)
-				return;
+				return NULL;
 			context->attributes[slots[*position]] = (uint8_t *)position;
 			*mask |= 1u << *position;
 			next = (uint16_t)(((position[2] << 8) | position[1]) + 3);
@@ -577,25 +590,25 @@ void p2pDirectResolveContext(const uint8_t *element, unsigned int *mask, unsigne
 
 				position = p2pDirectParseContext(position, &left);
 				if (position == NULL)
-					return;
+					return NULL;
 				length = (int16_t)(length - (position - start));
 			}
 			if (left == 0 || length == 0) {
 				consumed = 0;
-				goto element_done;
+				break;
 			}
-			return;
 		}
-		element_done:
 		length = (int16_t)(length - consumed);
 		if ((int16_t)length <= 0 || position == NULL)
-			return;
+			return context;
 	}
+	return context;
 }
 
 /*
  * Finds the P2P elements of a frame (body: they start at its fixed offset 40; else by their OUI)
- * and reads their attributes into context. Returns the context.
+ * and reads their attributes into context. Returns what p2pDirectResolveContext() returns, NULL when
+ * the frame has no P2P element.
  */
 struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int body, unsigned int *mask,
 						   unsigned int *changed, struct WlanDirectContext *context)
@@ -603,22 +616,34 @@ struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int bod
 	unsigned int found = 0;
 	unsigned int fresh = 0;
 	const uint8_t *element;
+	struct WlanDirectContext *result;
 
 	if (body != 0)
 		element = frame + 40;
 	else
 		element = p2pDirectDispatchContext((WlanWirelessFrame *)(uintptr_t)frame, 1, wlanP2pOui, 4);
-	if (element != NULL) {
-		int length = (int16_t)((((frame[1] << 8) | frame[0]) - (uint16_t)(element - frame)) + 32);
+	if (element == NULL)
+		return NULL;
+	{
+		int length = (int16_t)(((((int8_t)frame[1] << 8) | frame[0]) - (uint16_t)(element - frame)) + 32);
 
 		__aeabi_memclr4(context, sizeof(*context));
-		p2pDirectResolveContext(element, &found, &fresh, length, context);
+		result = p2pDirectResolveContext(element, &found, &fresh, length, context);
 		if (mask != NULL)
 			*mask = found;
 		if (changed != NULL)
 			*changed = fresh;
 	}
-	return context;
+	return result;
+}
+
+/* Adds to the little-endian length at the start of an event, byte by byte like Sony's. */
+static __inline void p2pEventGrow(uint8_t *event, unsigned int size)
+{
+	unsigned int length = ((event[1] << 8) | event[0]) + size;
+
+	event[0] = length;
+	event[1] = length >> 8;
 }
 
 /*
@@ -629,29 +654,30 @@ struct WlanDirectContext *p2pDirectScheduleContext(const uint8_t *frame, int bod
 unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uint8_t *frame, uint8_t *event,
 				    unsigned int type, uint16_t value)
 {
+	unsigned int length = 0;
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	struct WlanDirectContext context;
 	uint8_t groupId[40];
 	uint8_t deviceInfoCopy[12];
 	uint8_t capabilityCopy[8];
 	unsigned int mask;
-	unsigned int length = 0;
 	unsigned int used;
 	unsigned int count;
+	unsigned int total;
 	uint8_t *out;
 
 	event[0] = 2;
 	event[1] = 0;
 	__aeabi_memcpy(event + 6, frame + 12, 6);
-	*(uint16_t *)event += 6;
-	*(uint16_t *)(event + 2) = type;
-	*(uint16_t *)(event + 4) = value;
-	*(uint16_t *)event += 4;
+	p2pEventGrow(event, 6);
+	((struct WlanDirectEvent *)event)->type = type;
+	((struct WlanDirectEvent *)event)->subtype = value;
+	p2pEventGrow(event, 4);
 	out = event + 12;
 	if (type == 3 || type == 4) {
 		*(uint32_t *)out = ps->persistentGroupIndex;
 		out = event + 16;
-		*(uint16_t *)event += 4;
+		p2pEventGrow(event, 4);
 	}
 	count = (frame[1] << 8) | frame[0];
 	if (count > 32) {
@@ -662,24 +688,27 @@ unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uin
 			const uint8_t *wps = p2pDirectDispatchContext((WlanWirelessFrame *)(uintptr_t)frame, 1, wlanWpsOui, 4);
 			unsigned int before = (event[1] << 8) | event[0];
 
-			*(uint16_t *)event = p2pDirectApplyContext(out, wlanP2pOui, 4, p2p, before) + before;
-			used = (uint16_t)(((event[1] << 8) | event[0]) - before);
+			total = p2pDirectApplyContext(out, wlanP2pOui, 4, p2p, before) + ((event[1] << 8) | event[0]);
+			*(uint16_t *)event = total;
+			used = (uint16_t)(total - before);
 			if (p2p != NULL && (frame[2] >> 4) == 5) {
+				struct WlanDirectContext *direct;
+
 				mask = 0;
-				p2pDirectScheduleContext(frame, 0, NULL, &mask, &context);
+				direct = p2pDirectScheduleContext(frame, 0, NULL, &mask, &context);
 				if (mask & 0x2000)
-					p2pDirectSyncContext(context.attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, 9,
-							     &context.attributes[P2P_SLOT_DEVICE_INFO]);
+					p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, 9,
+							     &direct->attributes[P2P_SLOT_DEVICE_INFO]);
 				if (mask & 4)
-					p2pDirectSyncContext(context.attributes[P2P_SLOT_CAPABILITY], capabilityCopy, 5,
-							     &context.attributes[P2P_SLOT_CAPABILITY]);
-				if (context.attributes[P2P_SLOT_CAPABILITY] != NULL &&
-				    (context.attributes[P2P_SLOT_CAPABILITY][4] & 1) != 0) {
+					p2pDirectSyncContext(direct->attributes[P2P_SLOT_CAPABILITY], capabilityCopy, 5,
+							     &direct->attributes[P2P_SLOT_CAPABILITY]);
+				if (direct != NULL && direct->attributes[P2P_SLOT_CAPABILITY] != NULL &&
+				    (direct->attributes[P2P_SLOT_CAPABILITY][4] & 1) != 0) {
 					unsigned int size;
 
 					groupId[0] = P2P_ATTR_GROUP_ID;
-					if (context.attributes[P2P_SLOT_DEVICE_INFO] != NULL)
-						__aeabi_memcpy(groupId + 3, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+					if (direct->attributes[P2P_SLOT_DEVICE_INFO] != NULL)
+						__aeabi_memcpy(groupId + 3, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
 					__aeabi_memcpy(groupId + 9, frame + 46, frame[45]);
 					size = frame[45] + 6;
 					groupId[1] = size;
@@ -690,10 +719,10 @@ unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uin
 						length = (uint16_t)(size + 3);
 						p2pDirectRecordState(&out[used]);
 						used = (uint16_t)(used + 6);
-						*(uint16_t *)event += 6;
+						p2pEventGrow(event, 6);
 						header = &out[used];
 						__aeabi_memcpy(header, groupId, length);
-						*(uint16_t *)event += length;
+						p2pEventGrow(event, length);
 						header[-5] += length;
 					}
 				}
@@ -702,8 +731,10 @@ unsigned int p2pDirectNotifyContext(struct WlanConnection *connection, const uin
 		} else {
 			added = p2pDirectApplyContext(out, wlanP2pOui, 4, frame + 40, (event[1] << 8) | event[0]);
 		}
-		*(uint16_t *)event += added;
-		count = event[1];
+		total = added + ((event[1] << 8) | event[0]);
+		event[0] = total;
+		event[1] = total >> 8;
+		count = total >> 8;
 	}
 	return count;
 }
@@ -754,6 +785,7 @@ struct WlanP2pClient *p2pDirectReleaseContext(struct WlanConnection *connection,
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	struct WlanDirectContext context;
+	struct WlanDirectContext *direct;
 	struct WlanP2pClient *client;
 	unsigned int mask = 0;
 	unsigned int changed = 0;
@@ -763,31 +795,32 @@ struct WlanP2pClient *p2pDirectReleaseContext(struct WlanConnection *connection,
 	unsigned int length;
 	unsigned int irq;
 
-	p2pDirectScheduleContext((const uint8_t *)request, 0, &changed, &mask, &context);
-	if (context.attributes[P2P_SLOT_CAPABILITY] == NULL || context.attributes[P2P_SLOT_DEVICE_INFO] == NULL)
+	direct = p2pDirectScheduleContext((const uint8_t *)request, 0, &changed, &mask, &context);
+	if (direct == NULL || direct->attributes[P2P_SLOT_CAPABILITY] == NULL ||
+	    direct->attributes[P2P_SLOT_DEVICE_INFO] == NULL)
 		return NULL;
 	(void)changed;
 	if (mask & 0x2000)
-		p2pDirectSyncContext(context.attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, -1,
-				     &context.attributes[P2P_SLOT_DEVICE_INFO]);
+		p2pDirectSyncContext(direct->attributes[P2P_SLOT_DEVICE_INFO], deviceInfoCopy, -1,
+				     &direct->attributes[P2P_SLOT_DEVICE_INFO]);
 	if (mask & 4)
-		p2pDirectSyncContext(context.attributes[P2P_SLOT_CAPABILITY], capabilityCopy, -1,
-				     &context.attributes[P2P_SLOT_CAPABILITY]);
+		p2pDirectSyncContext(direct->attributes[P2P_SLOT_CAPABILITY], capabilityCopy, -1,
+				     &direct->attributes[P2P_SLOT_CAPABILITY]);
 	client = (struct WlanP2pClient *)ps->groupInfoAttribute.clients;
 	while (ps->groupClientCount > count) {
-		if (memcmp(client->deviceAddress, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6) == 0)
+		if (memcmp(client->deviceAddress, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6) == 0)
 			return client;
 		client = (struct WlanP2pClient *)((uint8_t *)client + client->length + 1);
 		count = (uint8_t)(count + 1);
 	}
 	irq = sysIrqDisable();
 	__aeabi_memclr(client, 0x59);
-	client->capability = context.attributes[P2P_SLOT_CAPABILITY][3];
-	__aeabi_memcpy(client->deviceAddress, context.attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
+	client->capability = direct->attributes[P2P_SLOT_CAPABILITY][3];
+	__aeabi_memcpy(client->deviceAddress, direct->attributes[P2P_SLOT_DEVICE_INFO] + 3, 6);
 	__aeabi_memcpy(client->interfaceAddress, (const uint8_t *)request + 12, 6);
-	length = (context.attributes[P2P_SLOT_DEVICE_INFO][2] << 8) | context.attributes[P2P_SLOT_DEVICE_INFO][1];
-	__aeabi_memcpy(client->information, context.attributes[P2P_SLOT_DEVICE_INFO] + 9, length - 6);
-	client->length = context.attributes[P2P_SLOT_DEVICE_INFO][1] + 7;
+	length = (direct->attributes[P2P_SLOT_DEVICE_INFO][2] << 8) | direct->attributes[P2P_SLOT_DEVICE_INFO][1];
+	__aeabi_memcpy(client->information, direct->attributes[P2P_SLOT_DEVICE_INFO] + 9, length - 6);
+	client->length = direct->attributes[P2P_SLOT_DEVICE_INFO][1] + 7;
 	ps->groupInfoAttribute.id = P2P_ATTR_GROUP_INFO;
 	length = ((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) + length + 8;
 	ps->groupInfoAttribute.length[0] = length;
@@ -812,7 +845,7 @@ int p2pDirectSetupContext(struct WlanConnection *connection, struct WlanP2pClien
 		return 0;
 	ps = wlanConnectionPsState(connection);
 	size = (uint8_t)(client->length + 1);
-	if (((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) < (int)size)
+	if (((ps->groupInfoAttribute.length[1] << 8) | ps->groupInfoAttribute.length[0]) < client->length + 1u)
 		return 0;
 	entry = (struct WlanP2pClient *)ps->groupInfoAttribute.clients;
 	while (ps->groupClientCount > index && memcmp(entry->deviceAddress, client->deviceAddress, 6) != 0) {

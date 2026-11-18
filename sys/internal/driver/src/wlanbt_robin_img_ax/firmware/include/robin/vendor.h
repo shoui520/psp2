@@ -46,10 +46,7 @@ extern const uint16_t btRadioDefaults[BT_RADIO_DEFAULTS];		/* 0x542c0 */
 /* What completes a vendor command 97 that is waiting, or NULL (DTCM). */
 extern void (*romVendorPending)(void);			/* DTCM 0x400f590 */
 
-/* The queues the vendor messages go to; the values are the original's literals. */
-#define BT_QUEUE_VENDOR_LINK	0xe1302d1eu
-#define BT_QUEUE_VENDOR_POWER	0xef000000u
-
+/* The messages the vendor commands send (to the ROM's queues, romQueueBtCore, romQueueSlot, romQueueLcp). */
 #define BT_MESSAGE_VENDOR_LINK	0x13ef
 #define BT_MESSAGE_LINK_POWER	0xcd3	/* btLmpLcResolveBuffer() takes it */
 

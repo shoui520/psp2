@@ -40,12 +40,10 @@ static struct {
 	uint8_t queue;			/* bit 0: the limit changed and is written to the radio */
 	uint8_t limit;			/* the value last written to the radio */
 	uint8_t reserved34[2];
-	uint8_t active;			/* wlanPsCheckDescriptor() put the compensation on the sampling */
-	uint8_t reserved37[3];
+	uint32_t active;		/* wlanPsCheckDescriptor() put the compensation on the sampling */
 	struct WlanLimitState *state;	/* 0x596f4 */
 	uint8_t bandScale[4];		/* 256ths of the limit by the part of the 5 GHz band */
-	uint8_t curveLoaded;		/* the calibration entry of the reference channel is in curve */
-	uint8_t reserved49[3];
+	uint32_t curveLoaded;		/* the calibration entry of the reference channel is in curve */
 	uint32_t slot;			/* nonzero: the sample is not tracked */
 	struct WlanLimitCurve tracking;	/* what the host's calibration gave (wlanPsValidateDescriptor) */
 	struct WlanLimitCurve curve;	/* the entry of the reference channel (wlanPsConvertHeader) */
@@ -79,7 +77,8 @@ int wlanPsSyncHeader(void)
 	int sample;
 
 	for (sample = socSensorSample();
-	     wlanLimit.stable - wlanLimit.tolerance > sample || wlanLimit.stable + wlanLimit.tolerance < sample;
+	     wlanLimit.stable - wlanLimit.tolerance > sample ||
+	     (unsigned int)(wlanLimit.stable + wlanLimit.tolerance) < (unsigned int)sample;
 	     sample = socSensorSample())
 		wlanLimit.stable = sample;
 	wlanLimit.stable = sample;
@@ -280,7 +279,7 @@ int wlanPsClearHeader(unsigned int band, unsigned int channel, unsigned int band
 	int scale;
 
 	if (band == 1) {
-		frequency = romRfChannelTable5G[wlanChannelIndex[wlanHt40CenterChannel(1, channel, bandwidth)]];
+		frequency = romRfChannelTable5G[wlanChannelIndex[wlanHt40CenterChannel(1, (uint8_t)channel, bandwidth)]];
 		if (frequency > 5100) {
 			if (frequency > 5350) {
 				if (frequency > 5720)
@@ -301,9 +300,13 @@ int wlanPsClearHeader(unsigned int band, unsigned int channel, unsigned int band
 /* Reads the calibration entry of channel 1 of the 2.4 GHz band. */
 int wlanPsConvertHeader(void)
 {
-	struct WlanCalibrationKey key = { .band = 0, .channel = 1 };
+	struct WlanCalibrationKey key;	/* the original sets only these two bytes */
 
-	wlanLimit.curveLoaded = wlanCalibrationLookupBlock(key, &wlanLimit.curve) != 0;
+	key.band = 0;
+	key.channel = 1;
+	wlanLimit.curveLoaded = 0;
+	if (wlanCalibrationLookupBlock(key, &wlanLimit.curve) != 0)
+		wlanLimit.curveLoaded = 1;
 	return wlanLimit.curveLoaded;
 }
 
@@ -393,7 +396,8 @@ int wlanPsAdjustHeader(unsigned int sample, unsigned int limit)
 	tracked = (uint16_t)(8 * wlanPsTrackHeader(&wlanLimit.curve, sample));
 	state = wlanLimit.state;
 	state->tracked = tracked;
-	state->stamp = romGetMicroseconds();
+	wlanLimit.state->stamp = romGetMicroseconds();
+	state = wlanLimit.state;
 	if (limit <= tracked || (int)(limit - tracked) <= 16) {
 		if (limit >= tracked || (int)(tracked - limit) <= 16) {
 			state->countdown = 1080000;
@@ -449,7 +453,7 @@ void wlanPsFilterHeader(unsigned int band, uint32_t channel, unsigned int bandwi
 	state = wlanLimit.state;
 	kind = state->kind;
 	if (kind == 5) {
-		state->positionSampled = macTxNotifySelectPacket();
+		wlanLimit.state->positionSampled = macTxNotifySelectPacket();
 		wlanLimit.state->sampleSampled = socSensorSample();
 		sysIrqRestore(posture);
 		return;
@@ -465,7 +469,7 @@ void wlanPsFilterHeader(unsigned int band, uint32_t channel, unsigned int bandwi
 		state = wlanLimit.state;
 		state->limit = limit;
 		state->limitApplied = limit;
-		state->sample = socSensorSample();
+		wlanLimit.state->sample = socSensorSample();
 		sysIrqRestore(posture);
 		return;
 	}
@@ -494,8 +498,7 @@ void wlanPsFilterHeader(unsigned int band, uint32_t channel, unsigned int bandwi
 		sysIrqRestore(posture);
 		return;
 	}
-	state = wlanLimit.state;
-	state->position = macTxNotifySelectPacket();
+	wlanLimit.state->position = macTxNotifySelectPacket();
 	sample = socSensorSample();
 	state = wlanLimit.state;
 	state->sample = sample;
@@ -607,7 +610,7 @@ void wlanPsConfigureDescriptor(int sample, int reset)
 		wlanLimit.limit = 0;
 	}
 	if (wlanLimit.slot == 0) {
-		if (wlanPsHandleDescriptor())
+		if (wlanPsHandleDescriptor() == 1)
 			value = wlanPsProcessDescriptor(rfGetBand(), sample);
 		else
 			value = wlanPsTrackHeader(&wlanLimit.tracking, sample);

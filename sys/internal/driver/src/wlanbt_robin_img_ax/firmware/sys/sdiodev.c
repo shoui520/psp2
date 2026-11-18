@@ -146,7 +146,6 @@ static inline __attribute__((always_inline)) void sdioSetReceiveBuffer(volatile 
 static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct MdevDriver *dev)
 {
 	unsigned int fn = dev->index;
-	volatile struct SdioFunctionRegs *regs;
 	OsaBuffer *buffer;
 	unsigned int slot;
 
@@ -156,12 +155,11 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 			sdioReceiveBuffers[dev->index][0] = buffer;
 			if (buffer != NULL) {
 				buffer->dataOffset = SDIO_RECEIVE_DATA_OFFSET;
-				regs = sdioRegs[dev->index];
-				regs->receiveSlot = 0;
-				sdioSetReceiveBuffer(regs, sdioReceiveBuffers[dev->index][0],
+				sdioRegs[dev->index]->receiveSlot = 0;
+				sdioSetReceiveBuffer(sdioRegs[dev->index], sdioReceiveBuffers[dev->index][0],
 						     sdioReceiveBuffers[dev->index][0]->dataOffset);
 				sdioReceiveBuffers[dev->index][0]->packetClass = 8;
-				regs->receivePorts = 1;
+				sdioRegs[dev->index]->receivePorts = 1;
 				sdioReceiveMask[dev->index] = 1;
 				sdioReceiveSlots[dev->index] = 1;
 				sdioSendSlots[dev->index] = 1;
@@ -178,10 +176,9 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 				int offset = ampPalFrameDataOffset();
 
 				sdioReceiveBuffers[dev->index][0]->dataOffset = offset;
-				regs = sdioRegs[dev->index];
-				sdioSetReceiveBuffer(regs, sdioReceiveBuffers[dev->index][0], offset);
+				sdioSetReceiveBuffer(sdioRegs[dev->index], sdioReceiveBuffers[dev->index][0], offset);
 				sdioReceiveBuffers[dev->index][0]->packetClass = 8;
-				regs->receivePorts = 1;
+				sdioRegs[dev->index]->receivePorts = 1;
 				sdioReceiveMask[dev->index] = 1;
 				sdioReceiveSlots[dev->index] = 1;
 				sdioSendSlots[dev->index] = 1;
@@ -192,11 +189,10 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 		}
 		if (buffer != NULL) {
 			buffer->dataOffset = SDIO_PACKET_DATA_OFFSET;
-			regs = sdioRegs[dev->index];
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[dev->index][0],
+			sdioSetReceiveBuffer(sdioRegs[dev->index], sdioReceiveBuffers[dev->index][0],
 					     SDIO_PACKET_DATA_OFFSET);
 			sdioReceiveBuffers[dev->index][0]->packetClass = 8;
-			regs->receivePorts = 1;
+			sdioRegs[dev->index]->receivePorts = 1;
 			sdioReceiveMask[dev->index] = 1;
 			sdioReceiveSlots[dev->index] = 1;
 			sdioSendSlots[dev->index] = 1;
@@ -210,13 +206,12 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 		sdioReceiveBuffers[dev->index][slot] = buffer;
 		if (buffer != NULL) {
 			buffer->dataOffset = SDIO_RECEIVE_DATA_OFFSET;
-			regs = sdioRegs[dev->index];
-			regs->receiveSlot = slot;
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[dev->index][slot],
+			sdioRegs[dev->index]->receiveSlot = slot;
+			sdioSetReceiveBuffer(sdioRegs[dev->index], sdioReceiveBuffers[dev->index][slot],
 					     sdioReceiveBuffers[dev->index][slot]->dataOffset);
 			sdioReceiveBuffers[dev->index][slot]->packetClass = 8;
 			sdioReceivePosted[dev->index] |= 1 << slot;
-			regs->receivePorts = 1 << slot;
+			sdioRegs[dev->index]->receivePorts = 1 << slot;
 			sdioReceiveMask[dev->index] |= 1 << sdioReceiveSlots[dev->index]++;
 		}
 	}
@@ -264,15 +259,13 @@ static __attribute__((noinline, noclone)) void sdioRaiseHostIrq(unsigned int fn,
 /* 0x24870: the init callback; resets the function's registers and offers the host its buffers. */
 static __attribute__((noinline, noclone)) int sdioFunctionInit(struct MdevDriver *dev)
 {
-	volatile struct SdioFunctionRegs *regs = sdioRegs[dev->index];
-	volatile struct SdioFunctionBlocks *blocks;
 	OsaBuffer *buffer;
 	uint32_t cause;
 
-	regs->receivePorts = 0;
-	regs->sendPorts = 0;
-	regs->irqStatus = 1;
-	regs->irqStatus = 0;
+	sdioRegs[dev->index]->receivePorts = 0;
+	sdioRegs[dev->index]->sendPorts = 0;
+	sdioRegs[dev->index]->irqStatus = 1;
+	sdioRegs[dev->index]->irqStatus = 0;
 	if (sdioSinglePort[dev->index] == 0) {
 		uint8_t *control = (uint8_t *)&sdioRegs[dev->index]->dmaControl;
 
@@ -290,14 +283,12 @@ static __attribute__((noinline, noclone)) int sdioFunctionInit(struct MdevDriver
 		sdioReceiveBuffers[dev->index][0] = buffer;
 		if (buffer != NULL) {
 			buffer->dataOffset = SDIO_RECEIVE_DATA_OFFSET;
-			regs = sdioRegs[dev->index];
-			regs->receiveSlot = 0;
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[dev->index][0],
+			sdioRegs[dev->index]->receiveSlot = 0;
+			sdioSetReceiveBuffer(sdioRegs[dev->index], sdioReceiveBuffers[dev->index][0],
 					     sdioReceiveBuffers[dev->index][0]->dataOffset);
 			sdioReceiveBuffers[dev->index][0]->packetClass = 8;
 			sdioReceivePosted[dev->index] = 1;
-			regs = sdioRegs[dev->index];
-			regs->receivePorts = 1;
+			sdioRegs[dev->index]->receivePorts = 1;
 			sdioReceiveMask[dev->index] |= 1;
 		}
 	}
@@ -312,12 +303,10 @@ static __attribute__((noinline, noclone)) int sdioFunctionInit(struct MdevDriver
 		sdioWakeLine.width = 0xffff;
 	}
 	sdioRegs[dev->index]->dmaState = 0;
-	blocks = sdioBlocks[dev->index];
-	blocks->shift = 5;
-	blocks->blocks = 0;
-	blocks->reserved4 = 0;
-	regs = sdioRegs[dev->index];
-	if (regs->receivePorts != 0) {
+	sdioBlocks[dev->index]->shift = 5;
+	sdioBlocks[dev->index]->blocks = 0;
+	sdioBlocks[dev->index]->reserved4 = 0;
+	if (sdioRegs[dev->index]->receivePorts != 0) {
 		sdioReceiveReported[dev->index] = sdioReceivePosted[dev->index];
 		sdioReceivePosted[dev->index] = 0;
 		cause = 13;
@@ -346,7 +335,6 @@ static __attribute__((noinline, noclone)) void sdioStageSendBuffer(unsigned int 
 {
 	unsigned int slot = 0;
 	uint8_t *packet = NULL;
-	volatile struct SdioFunctionRegs *regs;
 	struct OsaMsgList *queue;
 	OsaBuffer *buffer;
 
@@ -367,9 +355,9 @@ static __attribute__((noinline, noclone)) void sdioStageSendBuffer(unsigned int 
 staged:
 		buffer = sdioSendBuffers[fn][slot];
 		packet = (uint8_t *)buffer + buffer->dataOffset;
-		sdioRegs[fn]->sendLength[slot] = *(uint16_t *)packet;
+		sdioRegs[fn]->sendLength[slot] = ((packet[1] << 8) | packet[0]);
 		if (type == 2)
-			sdioRegs[fn]->sendInfo = 8 * *(uint16_t *)(packet + 4) + 3;
+			sdioRegs[fn]->sendInfo = 8 * ((packet[5] << 8) | packet[4]) + 3;
 	} else if (fn == SDIO_FUNCTION_BT || fn == SDIO_FUNCTION_AMP) {
 		if (type == 3 || type == 5 || type == 2 || type == 8)
 			sdioSendBuffers[fn][0] = osa_MsgQueueRecv(&sdioEventQueue[fn]);
@@ -383,26 +371,25 @@ staged:
 					    (uint8_t *)buffer + buffer->dataOffset + 4);
 		}
 		packet = (uint8_t *)sdioSendBuffers[fn][0] + sdioSendBuffers[fn][0]->dataOffset;
-		sdioRegs[fn]->lengthWindow = *(uint16_t *)packet;
-		sdioBlocks[fn]->blocks = (*(uint16_t *)packet + (1 << sdioBlocks[fn]->shift) - 1) >>
+		sdioRegs[fn]->lengthWindow = ((packet[1] << 8) | packet[0]);
+		sdioBlocks[fn]->blocks = (((packet[1] << 8) | packet[0]) + (1 << sdioBlocks[fn]->shift) - 1) >>
 					 sdioBlocks[fn]->shift;
 		sdioRegs[fn]->sendInfo = packet[3];
 	} else {
 		return;
 	}
-	regs = sdioRegs[fn];
 	if (sdioSinglePort[fn] == 0) {
 		uint32_t ports;
 
-		regs->sendSlot = slot;
-		regs->sendLength[slot] = *(uint16_t *)packet;
+		sdioRegs[fn]->sendSlot = slot;
+		sdioRegs[fn]->sendLength[slot] = ((packet[1] << 8) | packet[0]);
 		sdioSendPending[fn] |= 1 << slot;
 		ports = (uint8_t)sdioSendSlots[fn];
 		if (ports > 1 && slot != 0 && ports == ++sdioSendFill)
 			sdioSendFill = 1;
 	}
-	__aeabi_uwrite4((int)(uintptr_t)packet, (void *)&regs->sendBuffer);
-	if (sdioSinglePort[fn] != 0 || regs->sendPorts == 0) {
+	__aeabi_uwrite4((int)(uintptr_t)packet, (void *)&sdioRegs[fn]->sendBuffer);
+	if (sdioSinglePort[fn] != 0 || sdioRegs[fn]->sendPorts == 0) {
 		if (type == 131 || type == 130) {
 			sdioPostSendPorts(fn, 1);
 			sdioSendPending[fn] = 2 * (sdioSendPending[fn] >> 1);
@@ -475,22 +462,20 @@ static __attribute__((noinline, noclone)) int sdioFunctionWrite(struct MdevDrive
 		uint8_t *data = (uint8_t *)buffer;
 
 		if (type == 2) {
-			unsigned int command;
-
 			packet = data + buffer->dataOffset;
 			buffer->dataOffset += 8;
 			length = (packet[11] << 8) | packet[10];
 			data += buffer->dataOffset;
 			data[2] = 3;
 			data[3] = 0;
-			*(uint16_t *)data = length + 8;
+			data[0] = length + 8;
+			data[1] = (length + 8) >> 8;
 			posture = sysIrqDisable();
-			command = (packet[13] << 8) | packet[12];
-			if (command == 0xa)
-				osa_MsgQueueSendFront(&sdioResponseQueue[dev->index], buffer, 0, 20);
+			if (((packet[13] << 8) | packet[12]) == 0xa)
+				osa_MsgQueueSendFront(&sdioResponseQueue[dev->index], buffer);
 			else
 				osa_MsgQueueSend(&sdioResponseQueue[dev->index], buffer);
-			if (sdioSendBuffers[dev->index][0] == NULL && wlanPsHciDeferred(command) != 0 &&
+			if (sdioSendBuffers[dev->index][0] == NULL && wlanPsHciDeferred((packet[13] << 8) | packet[12]) != 0 &&
 			    wlanPsHostIsActive() == 0) {
 				sdioSetFunctionBusy(dev->index, 0);
 				if (sdioClockRequest == 0)
@@ -524,9 +509,12 @@ static __attribute__((noinline, noclone)) int sdioFunctionWrite(struct MdevDrive
 			return 1;
 		}
 		buffer->dataOffset = SDIO_SEND_DATA_OFFSET;
-		length = ((data[35] << 8) | data[34]) + ((data[37] << 8) | data[36]) + 4;
-		data[SDIO_SEND_DATA_OFFSET] = data[34] + data[36] + 4;
-		data[29] = length >> 8;
+		{
+			int total = ((data[35] << 8) | data[34]) + (((int8_t)data[37] << 8) | data[36]) + 4;	/* the high byte signed */
+
+			data[SDIO_SEND_DATA_OFFSET] = total;
+			data[29] = total >> 8;
+		}
 		data[30] = SDIODEV_TYPE_DATA;
 		data[31] = 0;
 		posture = sysIrqDisable();
@@ -548,7 +536,8 @@ static __attribute__((noinline, noclone)) int sdioFunctionWrite(struct MdevDrive
 		sdioSetFunctionBusy(dev->index, 0);
 	}
 	packet = (uint8_t *)buffer + buffer->dataOffset;
-	*(uint16_t *)packet = length + 4;
+	packet[0] = length + 4;		/* unaligned: a byte at a time */
+	packet[1] = (length + 4) >> 8;
 	packet[2] = 0;
 	posture = sysIrqDisable();
 	if (sdioHciPending[dev->index] != 0 && (type != 3 || !btLmpLcConvertContext(0, packet + 4)))
@@ -569,7 +558,7 @@ static __attribute__((noinline, noclone)) int sdioFunctionWrite(struct MdevDrive
 		if (!btLmpLcConvertContext(0, packet + 4)) {
 			osa_MsgQueueSend(&sdioEventQueue[dev->index], buffer);
 		} else {
-			osa_MsgQueueSendFront(&sdioEventQueue[dev->index], buffer, 0, 20);
+			osa_MsgQueueSendFront(&sdioEventQueue[dev->index], buffer);
 			sdioHciPending[dev->index] = 0;
 			if (dev->index != SDIO_FUNCTION_AMP)
 				sdioSetFunctionBusy(dev->index, 0);
@@ -681,34 +670,32 @@ static __attribute__((noinline, noclone)) void sdioWakeHandler(void)
 /* 0x2523c: offers the host its receive buffers: port 0 and the ones the host freed (WLAN), or the only one. */
 static __attribute__((noinline, noclone)) void sdioAllocReceive(unsigned int fn)
 {
-	volatile struct SdioFunctionRegs *regs;
 	unsigned int slot, bit;
 	OsaBuffer *buffer;
 
 	if (fn == SDIO_FUNCTION_WLAN) {
-		regs = sdioRegs[0];
-		sdioReceiveFree[0] = regs->receivePorts;
+		sdioReceiveFree[0] = sdioRegs[0]->receivePorts;
 		sdioReceivePosted[0] = 0;
 		if (sdioReceiveFree[0] == 0xffff || sdioReceiveFree[0] == 0xfffe)
 			return;
 		for (slot = (uint16_t)sdioReceiveFill;; slot = (uint16_t)sdioReceiveFill) {
-			if (sdioReceiveBuffers[0][slot] != NULL)
+			/* the loop indexes by the function, the setup above by the WLAN function */
+			if (sdioReceiveBuffers[fn][slot] != NULL)
 				break;
 			bit = 1 << slot;
-			sdioReceiveFree[0] |= bit;
+			sdioReceiveFree[fn] |= bit;
 			buffer = wlanTxBufferAlloc(&wlanBlockPool28, wlanMgmtFrameSize, 0, 0);
-			sdioReceiveBuffers[0][slot] = buffer;
+			sdioReceiveBuffers[fn][slot] = buffer;
 			if (buffer == NULL)
 				break;
 			buffer->dataOffset = SDIO_RECEIVE_DATA_OFFSET;
-			regs = sdioRegs[0];
-			regs->receiveSlot = slot;
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[0][slot],
-					     sdioReceiveBuffers[0][slot]->dataOffset);
-			sdioReceivePosted[0] |= bit;
-			regs->receivePorts = bit;
-			sdioReceiveBuffers[0][slot]->packetClass = 8;
-			if (sdioReceiveSlots[0] == ++sdioReceiveFill)
+			sdioRegs[fn]->receiveSlot = slot;
+			sdioSetReceiveBuffer(sdioRegs[fn], sdioReceiveBuffers[fn][slot],
+					     sdioReceiveBuffers[fn][slot]->dataOffset);
+			sdioReceivePosted[fn] |= bit;
+			sdioRegs[fn]->receivePorts = bit;
+			sdioReceiveBuffers[fn][slot]->packetClass = 8;
+			if (sdioReceiveSlots[fn] == ++sdioReceiveFill)
 				sdioReceiveFill = 1;
 		}
 	} else if (fn == SDIO_FUNCTION_BT) {
@@ -716,9 +703,8 @@ static __attribute__((noinline, noclone)) void sdioAllocReceive(unsigned int fn)
 		sdioReceiveBuffers[1][0] = buffer;
 		if (buffer != NULL) {
 			buffer->dataOffset = SDIO_PACKET_DATA_OFFSET;
-			regs = sdioRegs[1];
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[1][0], SDIO_PACKET_DATA_OFFSET);
-			regs->receivePorts = 1;
+			sdioSetReceiveBuffer(sdioRegs[1], sdioReceiveBuffers[1][0], SDIO_PACKET_DATA_OFFSET);
+			sdioRegs[1]->receivePorts = 1;
 			sdioReceiveBuffers[1][0]->packetClass = 8;
 		}
 	} else if (fn == SDIO_FUNCTION_AMP) {
@@ -728,9 +714,8 @@ static __attribute__((noinline, noclone)) void sdioAllocReceive(unsigned int fn)
 			int offset = ampPalFrameDataOffset();
 
 			sdioReceiveBuffers[2][0]->dataOffset = offset;
-			regs = sdioRegs[2];
-			sdioSetReceiveBuffer(regs, sdioReceiveBuffers[2][0], offset);
-			regs->receivePorts = 1;
+			sdioSetReceiveBuffer(sdioRegs[2], sdioReceiveBuffers[2][0], offset);
+			sdioRegs[2]->receivePorts = 1;
 			sdioReceiveBuffers[2][0]->packetClass = 8;
 		}
 	}
@@ -739,11 +724,10 @@ static __attribute__((noinline, noclone)) void sdioAllocReceive(unsigned int fn)
 /* 0x25388: the WLAN function's port 0 gets a buffer when the host has emptied it. */
 static __attribute__((noinline, noclone)) void sdioBuildReceive(unsigned int fn)
 {
-	volatile struct SdioFunctionRegs *regs = sdioRegs[fn];
 	OsaBuffer **slot;
 	OsaBuffer *buffer;
 
-	sdioReceiveFree[fn] = regs->receivePorts & sdioReceiveMask[fn];
+	sdioReceiveFree[fn] = sdioRegs[fn]->receivePorts & sdioReceiveMask[fn];
 	if ((sdioReceiveFree[fn] & 1) == 0) {
 		slot = &sdioReceiveBuffers[fn][0];
 		if (*slot == NULL) {
@@ -751,10 +735,9 @@ static __attribute__((noinline, noclone)) void sdioBuildReceive(unsigned int fn)
 			*slot = buffer;
 			if (buffer != NULL) {
 				buffer->dataOffset = SDIO_RECEIVE_DATA_OFFSET;
-				regs = sdioRegs[fn];
-				regs->receiveSlot = 0;
-				sdioSetReceiveBuffer(regs, *slot, (*slot)->dataOffset);
-				regs->receivePorts = 1;
+				sdioRegs[fn]->receiveSlot = 0;
+				sdioSetReceiveBuffer(sdioRegs[fn], *slot, (*slot)->dataOffset);
+				sdioRegs[fn]->receivePorts = 1;
 				(*slot)->packetClass = 8;
 			}
 		}
@@ -939,14 +922,15 @@ allocate:
 	case SDIODEV_CMD_GET_WAKE_LINE: {
 		struct SdioWakeLineArgument *wake = argument;
 
-		wake->line.pin = sdioWakeLine.pin;
-		wake->line.polarity = sdioWakeLine.polarity;
-		wake->line.width = sdioWakeLine.width;
+		wake->reply.pin = sdioWakeLine.pin;
+		wake->reply.polarity[0] = sdioWakeLine.polarity;
+		wake->reply.polarity[1] = sdioWakeLine.polarity >> 8;
+		wake->reply.width = sdioWakeLine.width;
 		return 0;
 	}
 	case SDIODEV_CMD_QUIESCE_ANY:
 		fn = dev->index;
-		if (fn <= 2)
+		if (fn == SDIO_FUNCTION_WLAN || fn == SDIO_FUNCTION_BT || fn == SDIO_FUNCTION_AMP)
 			sdioFunctionQuiesce(fn);
 		return 0;
 	case SDIODEV_CMD_SET_AUX_HOOK:
@@ -1167,12 +1151,11 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 		sdioWakePending = 0;
 	}
 	for (i = 0; i < SDIO_FUNCTIONS; i++) {
-		volatile struct SdioFunctionRegs *regs = sdioRegs[i];
 		int staged = 0;
 
-		status = regs->irqStatus;
-		regs->irqStatus = ~status | SDIO_STATUS_RESET;
-		flags = regs->hostFlags;
+		status = sdioRegs[i]->irqStatus;
+		sdioRegs[i]->irqStatus = ~status | SDIO_STATUS_RESET;
+		flags = sdioRegs[i]->hostFlags;
 		if (i == SDIO_FUNCTION_WLAN) {
 			uint32_t sent, ready, saved;
 			unsigned int k, next;
@@ -1180,8 +1163,8 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 			if (status & SDIO_STATUS_READ) {
 				int released = 0;
 
-				sent = (uint16_t)regs->sendPorts;
-				regs->dmaState = 0;
+				sent = (uint16_t)sdioRegs[i]->sendPorts;
+				sdioRegs[i]->dmaState = 0;
 				if ((sent & 1) == 0 && (sdioSendPending[0] & 1) == 0 && sdioSendBuffers[0][0] != NULL) {
 					sdioSendBuffers[0][0]->dataOffset = SDIO_PACKET_DATA_OFFSET;
 					wlanPsHciTraffic(sdioSendBuffers[0][0]);
@@ -1243,10 +1226,10 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 				if ((flags & SDIO_HOST_BLOCKED) != 0) {
 					sdioWakeCount++;
 				} else {
-					regs->dmaState = 0;
+					sdioRegs[i]->dmaState = 0;
 					if (sysEventEngineIsActive() != 0)
 						sysDispatchMiddleEventBits(0x100000);
-					ready = (uint16_t)(regs->receivePorts & sdioReceiveMask[0]);
+					ready = (uint16_t)(sdioRegs[i]->receivePorts & sdioReceiveMask[0]);
 					saved = ready;
 					wlanPsHostSleepEnd();
 					if (sdioReceiveMask[0] != ready) {
@@ -1272,9 +1255,9 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 										hostCmdNode(command + 8);
 									sdioReceiveHooks[0](&sdioDrivers[0], buffer, 0, 1);
 								} else {
-									regs->receiveSlot = 0;
-									sdioSetReceiveBuffer(regs, buffer, buffer->dataOffset);
-									regs->receivePorts = 1;
+									sdioRegs[i]->receiveSlot = 0;
+									sdioSetReceiveBuffer(sdioRegs[i], buffer, buffer->dataOffset);
+									sdioRegs[i]->receivePorts = 1;
 								}
 							}
 						}
@@ -1326,13 +1309,13 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 			}
 			wlanPsStageAdvance();
 		} else if (i == SDIO_FUNCTION_BT || i == SDIO_FUNCTION_AMP) {
-			if ((status & SDIO_STATUS_WRITTEN) && (regs->hostFlags & SDIO_HOST_BLOCKED) == 0) {
+			if ((status & SDIO_STATUS_WRITTEN) && (sdioRegs[i]->hostFlags & SDIO_HOST_BLOCKED) == 0) {
 				OsaBuffer *buffer = sdioReceiveBuffers[i][0];
 				uint8_t *packet = (uint8_t *)buffer + buffer->dataOffset;
 				uint32_t limit = i == SDIO_FUNCTION_AMP ? SDIO_AMP_PACKET_MAX : SDIO_BT_PACKET_MAX;
 
-				regs->dmaState = 0;
-				if (*(uint16_t *)packet <= limit) {
+				sdioRegs[i]->dmaState = 0;
+				if (((packet[1] << 8) | packet[0]) <= limit) {
 					buffer->packetClass = 2;
 					btLmpLcFormatContext(i == SDIO_FUNCTION_AMP, 0, 7, 0);
 					sdioAllocReceive(i);
@@ -1355,7 +1338,7 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 				struct OsaMsgList *queue;
 				OsaBuffer *next;
 
-				regs->dmaState = 0;
+				sdioRegs[i]->dmaState = 0;
 				if (sent != NULL) {
 					int amp, started;
 
@@ -1390,11 +1373,11 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 						sdioStageSendBuffer(i, (uint8_t)next->transportTag);
 				}
 			}
-			if ((regs->irqMask & 0x10) != 0 && (status & SDIO_STATUS_RESET) != 0) {
+			if ((sdioRegs[i]->irqMask & 0x10) != 0 && (status & SDIO_STATUS_RESET) != 0) {
 				if (i != SDIO_FUNCTION_AMP)
 					sdioSetFunctionBusy(i, 0);
 				sdioHostActive[i] = 1;
-				regs->irqMask = 7;
+				sdioRegs[i]->irqMask = 7;
 				btLmpLcFormatContext(i == SDIO_FUNCTION_AMP, 0, 9, 0);
 			}
 		}
@@ -1405,24 +1388,22 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 /* 0x26224: creates the queues of the three functions and registers them as mdev drivers. */
 void sdioDevicesInit(void)
 {
-	unsigned int i;
+	int i;
 
 	for (i = 0; i < SDIO_FUNCTIONS; i++) {
-		struct MdevDriver *driver = &sdioDrivers[i];
-
 		sdioReceiveHooks[i] = NULL;
 		__aeabi_memclr4(&sdioDataQueue[i], sizeof(struct OsaMsgList));
 		__aeabi_memclr4(&sdioEventQueue[i], sizeof(struct OsaMsgList));
 		__aeabi_memclr4(&sdioResponseQueue[i], sizeof(struct OsaMsgList));
-		driver->index = i;
-		driver->name = sdioFunctionNames[i];
-		driver->callbacks[1] = NULL;
-		driver->callbacks[2] = NULL;
-		driver->callbacks[3] = NULL;
-		driver->callbacks[0] = sdioFunctionInit;
-		driver->callbacks[4] = sdioFunctionWrite;
-		driver->callbacks[5] = sdioFunctionIoctl;
-		driver->callbacks[6] = sdioFunctionInterrupt;
-		mdevRegisterDriver(driver, sdioFunctionInterrupt);
+		sdioDrivers[i].index = i;
+		sdioDrivers[i].name = sdioFunctionNames[i];
+		sdioDrivers[i].callbacks[1] = NULL;
+		sdioDrivers[i].callbacks[2] = NULL;
+		sdioDrivers[i].callbacks[3] = NULL;
+		sdioDrivers[i].callbacks[0] = sdioFunctionInit;
+		sdioDrivers[i].callbacks[4] = sdioFunctionWrite;
+		sdioDrivers[i].callbacks[5] = sdioFunctionIoctl;
+		sdioDrivers[i].callbacks[6] = sdioFunctionInterrupt;
+		mdevRegisterDriver(&sdioDrivers[i], sdioFunctionInterrupt);
 	}
 }

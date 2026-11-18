@@ -1738,7 +1738,7 @@ int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *re
 	uint32_t wakeBit;
 	UINT posture;
 
-	if ((((unsigned int)request->flags << 28) >> 29) != 0)
+	if (request->direction != 0)
 		return 0;
 	hwSlot = wlanTxBaFindFreeHwSlot();
 	if (hwSlot == 2)
@@ -1752,21 +1752,21 @@ int macTxBaAdd(struct WlanConnection *connection, const struct WlanBaRequest *re
 		return 0;
 	wlanBaNotifyAdded(connection, hwSlot, request->peer);
 	if (connection->mode == 3 || connection->mode == 1)
-		wlanWmmSetBaWindow((uint8_t)__aeabi_uread4(request->tid), windowId, hwSlot);
+		wlanWmmSetBaWindow((uint8_t)request->tid, windowId, hwSlot);
 	wlanBaWindowCounterReset(windowId);
 	wlanBaWindowEnable(window);
 	wlanWindowOwners[window] = 1;
 	wlanTxBaAdd((uintptr_t)connection, request, hwSlot, windowId, wlanTxBaSessions);
 	macTxActivateWindow(windowId);
 	queue = wlanAccessCategoryToQueue(
-		wlanTidToAccessCategory((uint8_t)__aeabi_uread4(request->tid)));
+		wlanTidToAccessCategory((uint8_t)request->tid));
 	posture = sysIrqDisable();
 	wakeBit = macTxAcquireWakeBit();
-	wlanCryptoMoveFrames(queue, windowId, (uint8_t)__aeabi_uread4(request->tid),
+	wlanCryptoMoveFrames(queue, windowId, (uint8_t)request->tid,
 			 connection->peerAddress);
-	wlanTxRingMoveToWindow(windowId, queue, (uint8_t)__aeabi_uread4(request->tid),
+	wlanTxRingMoveToWindow(windowId, queue, (uint8_t)request->tid,
 			       connection->peerAddress);
-	wlanTxRingRouteFilled(windowId, queue, (uint8_t)__aeabi_uread4(request->tid),
+	wlanTxRingRouteFilled(windowId, queue, (uint8_t)request->tid,
 			      connection->peerAddress);
 	macTxReleaseWakeBits(&wakeBit);
 	sysIrqRestore(posture);

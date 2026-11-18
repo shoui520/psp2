@@ -169,7 +169,7 @@ void wlanRxBaAdd(const struct WlanBaRequest *request, unsigned int hwSlot,
 		if (sessions[i].state)
 			continue;
 		session = &sessions[i];
-		session->tid = __aeabi_uread4(request->tid);
+		session->tid = request->tid;
 		session->hwSlot = hwSlot;
 		__aeabi_memcpy(session->peer, request->peer, 6);
 		session->state = 1;
@@ -210,12 +210,12 @@ void wlanTxBaAdd(uintptr_t owner, const struct WlanBaRequest *request,
 		if (sessions[i].active)
 			continue;
 		session = &sessions[i];
-		session->tid = __aeabi_uread4(request->tid);
+		session->tid = request->tid;
 		session->hwSlot = hwSlot;
 		__aeabi_memcpy(session->peer, request->peer, 6);
 		session->active = 1;
 		session->windowId = windowId;
-		timeout = __aeabi_uread4(request->timeout);
+		timeout = request->timeout;
 		if (timeout)
 			session->timeout = (timeout * 9) << 8;
 		else
@@ -384,19 +384,14 @@ void wlanTxBaRemove(const uint8_t *peer, unsigned int tid, uint8_t *windowId,
 /* True when the read and write pointers of all eight transmit queues agree. */
 int macTxQueuesIdle(void)
 {
-	return MAC_REG(0x040) == MAC_REG(0x044) &&
-	       MAC_REG(0x048) == MAC_REG(0x04c) &&
-	       MAC_REG(0x050) == MAC_REG(0x054) &&
-	       MAC_REG(0x058) == MAC_REG(0x05c) &&
-	       MAC_REG(0x060) == MAC_REG(0x064) &&
-	       MAC_REG(0x068) == MAC_REG(0x06c) &&
-	       MAC_REG(0x070) == MAC_REG(0x074) &&
-	       MAC_REG(0x078) == MAC_REG(0x07c);
-}
-
-void bbpSetWindowTimeout(uint32_t value, unsigned int windowId)
-{
-	MAC_REG(0xe30 + 4 * windowId) = value;
+	return MAC_REG16(0x040) == MAC_REG16(0x044) &&
+	       MAC_REG16(0x048) == MAC_REG16(0x04c) &&
+	       MAC_REG16(0x050) == MAC_REG16(0x054) &&
+	       MAC_REG16(0x058) == MAC_REG16(0x05c) &&
+	       MAC_REG16(0x060) == MAC_REG16(0x064) &&
+	       MAC_REG16(0x068) == MAC_REG16(0x06c) &&
+	       MAC_REG16(0x070) == MAC_REG16(0x074) &&
+	       MAC_REG16(0x078) == MAC_REG16(0x07c);
 }
 
 /* First transmit session number whose hardware slot bit is free. */

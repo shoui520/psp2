@@ -296,7 +296,7 @@ typedef struct wep_key_data_t {
 	uint8_t Reserved;
 } wep_key_data_t;
 
-typedef struct __attribute__((packed)) cipher_key_aes_t {
+typedef struct cipher_key_aes_t {
 	uint8_t key[16];
 	uint8_t txMicKey[8];
 	uint8_t rxMicKey[8];
@@ -309,9 +309,10 @@ typedef struct __attribute__((packed)) cipher_key_aes_t {
 	uint32_t decryptState[5];	/* where wlanCcmpDecrypt() keeps a fragment's state for the next one */
 } cipher_key_aes_t;
 
-typedef struct __attribute__((packed)) cipher_key_t {
+/* Not packed: Sony reads the counters with word and halfword loads. */
+typedef struct cipher_key_t {
 	cipher_key_hdr_t hdr;
-	union __attribute__((packed)) {
+	union {
 		cipher_key_aes_t aes;		/* also TKIP */
 		cipher_key_wapi_t wapi;
 		wep_key_data_t wep;
@@ -319,6 +320,7 @@ typedef struct __attribute__((packed)) cipher_key_t {
 	} ckd;
 } cipher_key_t;
 
+_Static_assert(sizeof(cipher_key_t) == 84, "cipher key");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.txIv32) == 52, "send counter");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.aes.decryptState) == 60, "decryption state");
 _Static_assert(__builtin_offsetof(cipher_key_t, ckd.wapi.rxPn) == 62, "WAPI receive packet number");

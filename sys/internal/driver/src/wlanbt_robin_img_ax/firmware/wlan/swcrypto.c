@@ -196,12 +196,13 @@ void wlanCryptoFlushConnection(struct WlanConnection *connection)
 }
 
 /* Sends the queued frames of a TID to another ring. */
-void wlanCryptoRetargetFrames(unsigned int from, uint8_t to, unsigned int tid)
+void wlanCryptoRetargetFrames(unsigned int from, unsigned int to, unsigned int tid)
 {
 	struct WlanCryptoTxRing *ring = &wlanCryptoTxRing;
+	int tail = ring->tail;
 	int read;
 
-	for (read = ring->head; txNext(ring->tail) != read; read = txNext(read)) {
+	for (read = ring->head; txNext(tail) != read; read = txNext(read)) {
 		OsaBuffer *buffer = ring->entries[read];
 		uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
 
@@ -220,11 +221,11 @@ void wlanCryptoMoveFrames(unsigned int from, unsigned int to, unsigned int tid, 
 	    memcmp((const uint8_t *)*(uint32_t *)(data + 96) + 6, address, 6) == 0)
 		TX_DATA_RING(data) = (uint8_t)to;
 	if (txNext(wlanCryptoTxRing.tail) != wlanCryptoTxRing.head)
-		wlanCryptoRetargetFrames(from, (uint8_t)to, tid);
+		wlanCryptoRetargetFrames(from, to, tid);
 }
 
 /* True if a frame waits for the engine while it is idle (the firmware hangs on that). */
-static int wlanCryptoWaitingWhileIdle(void)
+static __inline int wlanCryptoWaitingWhileIdle(void)
 {
 	struct WlanCryptoTxRing *tx = &wlanCryptoTxRing;
 
@@ -289,16 +290,15 @@ int wlanCryptoRxPush(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_
 
 	if (rxNext(rxNext(tail)) == ring->head)
 		return 0;
-	tail = rxNext(tail);
-	ring->tail = tail;
-	entry = &ring->entries[tail];
-	entry->buffer = buffer;
-	entry->key = key;
-	__aeabi_memcpy(entry->status, (const uint8_t *)status + 4, 24);
+	ring->tail = rxNext(tail);
+	ring->entries[ring->tail].buffer = buffer;
+	ring->entries[ring->tail].key = key;
+	__aeabi_memcpy(ring->entries[ring->tail].status, (const uint8_t *)status + 4, 24);
+	entry = &ring->entries[ring->tail];
 	entry->status[8] = status->qosControl[0];
 	entry->status[9] = status->qosControl[1];
-	entry->status[15] = (entry->status[15] & 0xe7) | (status->phyInfo & 0x18);
-	entry->frame = __aeabi_uread4(status->frame);
+	ring->entries[ring->tail].status[15] = (ring->entries[ring->tail].status[15] & 0xe7) | (status->phyInfo & 0x18);
+	ring->entries[ring->tail].frame = __aeabi_uread4(status->frame);
 	return 1;
 }
 
@@ -329,6 +329,7 @@ int wlanCryptoAdjust(struct WlanCryptoTxRing *tx, struct WlanCryptoRxRing *rx, O
 
 	for (;;) {
 		struct WlanCryptoHeldFrame *entry;
+		cipher_key_t *key;
 
 		result = wlanCryptoCounters[WLAN_CRYPTO_BUSY];
 		if (result != 0)
@@ -336,7 +337,8 @@ int wlanCryptoAdjust(struct WlanCryptoTxRing *tx, struct WlanCryptoRxRing *rx, O
 		entry = wlanCryptoRxPop(rx);
 		if (entry == NULL)
 			break;
-		if (entry->key != NULL) {
+		key = entry->key;
+		if (key != NULL) {
 			struct WlanRxStatus *status = &rx->scratch->status;
 
 			__aeabi_memcpy((uint8_t *)status + 4, entry->status, 24);
@@ -344,7 +346,7 @@ int wlanCryptoAdjust(struct WlanCryptoTxRing *tx, struct WlanCryptoRxRing *rx, O
 			status->qosControl[1] = entry->status[9];
 			status->phyInfo = (status->phyInfo & 0xe7) | (entry->status[15] & 0x18);
 			__aeabi_uwrite4(__aeabi_uread4(&entry->frame), status->frame);
-			if (wlanCryptoReceiveTable(&entry->buffer, status, entry->key) != 0)
+			if (wlanCryptoReceiveTable(&entry->buffer, status, key) != 0)
 				break;
 		}
 		wlanCryptoReleaseBuffer(entry->buffer);
@@ -368,17 +370,17 @@ int wlanCryptoSendTable(OsaBuffer *buffer)
 	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
 	cipher_key_t *key = *(cipher_key_t **)(data + 112);
 	struct WlanConnection *connection = buffer->context;
-	uint8_t *frame = (uint8_t *)*(uint32_t *)(data + 96);
 	unsigned int type = key->hdr.keyType;
 
 	if (type == KEY_TYPE_AES) {
+		uint8_t *frame = *(uint8_t **)(data + 96);
 		uint8_t keyId = 0;
 
 		if (connection->mode == 2 && (frame[6] & 1))
 			keyId = wlanConnectionInfo(connection)->grpKeyData.KeyIndex;
-		wlanCcmpSend(frame, 0, data[0], key, keyId);
+		wlanCcmpSend(*(uint8_t **)(data + 96), 0, *(uint32_t *)data, *(cipher_key_t **)(data + 112), keyId);
 	} else if (type == KEY_TYPE_WAPI) {
-		wlanWapiSend(frame, 0, data[0], key);
+		wlanWapiSend(*(uint8_t **)(data + 96), 0, *(uint32_t *)data, key);
 	}
 	return 0;
 }
@@ -403,6 +405,7 @@ int wlanCryptoReceiveTable(OsaBuffer **buffer, struct WlanRxStatus *status, ciph
 int wlanCcmpSend(uint8_t *frame, int unused, unsigned int priority, cipher_key_t *key, unsigned int keyId)
 {
 	uint32_t posture;
+	unsigned int length;
 	unsigned int result;
 
 	wlanCryptoTxHeader = frame;
@@ -416,7 +419,9 @@ int wlanCcmpSend(uint8_t *frame, int unused, unsigned int priority, cipher_key_t
 	posture = sysIrqDisable();
 	wlanCcmEncrypt((const WlanWirelessFrame *)frame, (frame[1] << 8) | frame[0],
 		       (const uint32_t *)key->ckd.aes.key, frame + 40, priority & 7, 0);
-	*(uint16_t *)frame = ((frame[1] << 8) | frame[0]) + 16;
+	length = ((frame[1] << 8) | frame[0]) + 16;
+	frame[0] = length;
+	frame[1] = length >> 8;
 	sysIrqRestore(posture);
 	result = (uint16_t)(key->ckd.aes.txIv16 + 1);
 	key->ckd.aes.txIv16 = result;
@@ -474,8 +479,6 @@ int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 	if (dataLength <= 0)
 		return 0;
 	/* The original passes whatever is on its stack when the connection is not ready. */
-	low = 0;
-	high = 0;
 	if (wlanConnectionIsReady(connection))
 		wlanRxReplayCheck(iv, key, &low, &high);
 	wlanCryptoScratch.buffer = buffer;
@@ -485,7 +488,10 @@ int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 	wlanCryptoRxKey = key;
 	wlanCcmDecrypt((const WlanWirelessFrame *)frame, iv, (uint16_t)dataLength,
 		       (const uint32_t *)key->ckd.aes.key, status->qosControl[0] & 7, 0);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 	wlanRxKeySetReplayCounter(key, low, high);
+#pragma GCC diagnostic pop
 	return 1;
 }
 
@@ -498,20 +504,25 @@ int wlanCcmpReceive(OsaBuffer *buffer, struct WlanRxStatus *status, cipher_key_t
 int sysServiceWlanPackets(void)
 {
 	if (wlanCryptoTxActive == 1) {
-		OsaBuffer *buffer = wlanCryptoTxBuffer;
-		struct WlanConnection *connection = buffer->context;
-		uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
-		uint8_t type = wlanCryptoTxHeader[2];
+		OsaBuffer *buffer;
+		struct WlanConnection *connection;
+		uint8_t *data;
+		uint8_t control[2];
 
 		CCM_CONTROL(0) &= ~CCM_CONTROL_INPUT_PENDING;
 		wlanCryptoTxActive = 0;
 		wlanCryptoCounters[WLAN_CRYPTO_BUSY] = 0;
+		buffer = wlanCryptoTxBuffer;
+		connection = buffer->context;
+		data = (uint8_t *)buffer + buffer->dataOffset;
+		control[0] = wlanCryptoTxHeader[2];
+		control[1] = wlanCryptoTxHeader[3];
 		if (connection == NULL) {
 			wlanCompletePacket(buffer, 0);
-		} else if (!(wlanCryptoTxHeader[3] & WLAN_FC1_MORE_FRAGMENTS)) {
+		} else if (!(control[1] & WLAN_FC1_MORE_FRAGMENTS)) {
 			if (connection->mode == 2 && wlanTxHoldForPeer(buffer, connection) != 0) {
 				/* held for the peer's power save */
-			} else if (((type >> 2) & 3) != 2) {
+			} else if (((control[0] >> 2) & 3) != 2) {
 				macTxSendMgmtFrame(wlanCryptoTxBuffer);
 			} else if (wlanTxSendFrame(wlanCryptoTxBuffer) == 0) {
 				wlanCompletePacket(wlanCryptoTxBuffer, 0);
@@ -524,16 +535,19 @@ int sysServiceWlanPackets(void)
 
 			if (key->hdr.keyType == KEY_TYPE_AES) {
 				uint8_t keyId = 0;
+				unsigned int length;
 
 				if (connection->mode == 2 && (wlanCryptoTxHeader[6] & 1))
 					keyId = wlanConnectionInfo(connection)->grpKeyData.KeyIndex;
-				*(uint16_t *)next = ((next[1] << 8) | next[0]) - 16;
-				wlanCcmpSend(next, 0, data[0], key, keyId);
+				length = ((next[1] << 8) | next[0]) - 16;
+				next[0] = length;
+				next[1] = length >> 8;
+				wlanCcmpSend(next, 0, *(uint32_t *)data, *(cipher_key_t **)(data + 112), keyId);
 				if (wlanCryptoCounters[WLAN_CRYPTO_BUSY] != 0)
 					return wlanCryptoCounters[WLAN_CRYPTO_BUSY];
 				return socEventsRelease();
 			} else if (key->hdr.keyType == KEY_TYPE_WAPI) {
-				wlanWapiSend(next, 0, data[0], key);
+				wlanWapiSend(next, 0, *(uint32_t *)data, key);
 				if (wlanCryptoCounters[WLAN_CRYPTO_BUSY] != 0)
 					return wlanCryptoCounters[WLAN_CRYPTO_BUSY];
 				return socEventsRelease();

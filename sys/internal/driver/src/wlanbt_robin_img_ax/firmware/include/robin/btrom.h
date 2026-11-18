@@ -33,8 +33,8 @@ struct OsaMsgList {
 
 void *osa_MsgQueueRecv(void *queue);
 int osa_MsgQueueSend(void *queue, void *message);
-/* Like osa_MsgQueueSend(), but the message becomes the first of the list; the last argument is 20 in every use. */
-int osa_MsgQueueSendFront(void *queue, void *message, uint32_t reserved, uint32_t size);
+/* Like osa_MsgQueueSend(), but the message becomes the first of the list. */
+int osa_MsgQueueSendFront(void *queue, void *message);
 /* Posts an event record to the queue of an object created by osa_QueueCreate(). */
 int mdevRomQueryState(void *object, uint32_t event, const void *record);
 

@@ -14,13 +14,13 @@
 struct WlanConnection;
 struct WlanMacTxRequest;
 
-/* What the IBSS started or joined runs with (0x56878); byte aligned. */
-struct __attribute__((packed)) WlanIbssInfo {
+/* What the IBSS started or joined runs with (0x56878); its halfwords are read and written a byte at a time. */
+struct WlanIbssInfo {
 	uint8_t reserved0[4];
 	uint8_t bssid[6];
-	uint16_t beaconPeriod;		/* TU */
-	uint16_t atimWindow;		/* TU */
-	uint16_t flags;			/* WLAN_IBSS_* */
+	uint8_t beaconPeriod[2];	/* TU, little-endian */
+	uint8_t atimWindow[2];		/* TU, little-endian */
+	uint8_t flags[2];		/* WLAN_IBSS_*, little-endian */
 };
 
 _Static_assert(sizeof(struct WlanIbssInfo) == 16, "IBSS information");

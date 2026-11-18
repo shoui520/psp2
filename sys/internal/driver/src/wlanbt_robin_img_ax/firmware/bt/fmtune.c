@@ -186,11 +186,16 @@ int btSbcResolveEntry(int search)
 /* Enables or disables the stereo decoder's outputs, as the settings ask. */
 void btSbcScheduleEntry(int enable)
 {
+	unsigned int width;
+
 	if ((fmSettings.policy >> 4 & 0xf) == 1) {
 		btFmEnableHook(enable, 3);
 		FM_REGISTER(0x3bc) |= 0x2000;
 	}
-	FM_REGISTER(0x3bc) = (FM_REGISTER(0x3bc) & ~0x600) | (((fmSettings.policy >> 23 & 3) != 0) << 9);
+	width = fmSettings.policy >> 23 & 3;
+	if (width != 0)
+		width = 1;
+	FM_REGISTER(0x3bc) = (FM_REGISTER(0x3bc) & ~0x600) | width << 9;
 	if (enable != 0) {
 		FM_REGISTER(0x3bc) |= 1;
 		FM_REGISTER(0x03c) &= ~0x1000;

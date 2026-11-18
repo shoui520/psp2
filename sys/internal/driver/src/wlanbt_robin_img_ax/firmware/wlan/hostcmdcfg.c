@@ -185,7 +185,7 @@ unsigned int hostCmd005e(struct WlanConnection *connection, uint8_t *tlv, uint8_
 {
 	unsigned int count = 0;
 	int last = 0;
-	uint32_t any[2] = { 0xffffffff, 0xffff };
+
 	do {
 		unsigned int type = TLV_TYPE(tlv);
 
@@ -194,6 +194,7 @@ unsigned int hostCmd005e(struct WlanConnection *connection, uint8_t *tlv, uint8_
 
 			if (connection->mode == 2) {
 				uint8_t *next = tlv + TLV_LENGTH(tlv) + 4;
+				uint32_t any[2] = { 0xffffffff, 0xffff };
 
 				target = NULL;
 				if (next < end && TLV_TYPE(next) == TLV_KEY_PEER) {
@@ -224,21 +225,17 @@ skipped:
 /* The answer to 0x5e: the group key's and the pairwise key's TLVs. */
 unsigned int hostCmd005eGet(struct WlanConnection *connection, uint8_t *out)
 {
-	uint16_t *tlv;
-	unsigned int size;
-	unsigned int used;
-	unsigned int second;
+	struct MrvlIEtypesHeader *header = (struct MrvlIEtypesHeader *)out;
+	unsigned int first, second;
 
-	out[0] = TLV_KEY_MATERIAL & 0xff;
-	out[1] = TLV_KEY_MATERIAL >> 8;
-	size = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)(out + 4), 1);
-	*(uint16_t *)(out + 2) = size;
-	tlv = (uint16_t *)(out + size + 4);
-	used = (int16_t)(size + 4);
-	*tlv = TLV_KEY_MATERIAL;
-	second = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)(tlv + 2), 0);
-	tlv[1] = second;
-	return (uint16_t)(wlanTlvTerminate((uint8_t *)tlv + second + 4) + second + used + 4);
+	header->type = TLV_KEY_MATERIAL;
+	first = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)(out + 4), 1);
+	header->length = first;
+	header = (struct MrvlIEtypesHeader *)(out + 4 + first);
+	header->type = TLV_KEY_MATERIAL;
+	second = keyApi_GetKeyMaterial(connection, (key_MgtMaterial_t *)((uint8_t *)header + 4), 0);
+	header->length = second;
+	return (uint16_t)(wlanTlvTerminate((uint8_t *)header + 4 + second) + (first + 4) + 4 + second);
 }
 
 /* 0xc5: the security profile: the mode and the ciphers, set from the TLVs or written into them. */
@@ -308,7 +305,7 @@ int wlanPsSelectDescriptor(struct WlanConnection *connection, unsigned int actio
 			}
 			__aeabi_memcpy(data + 10, entry->element, entry->element[1] + 2);
 			size = entry->element[1] + 12;
-			*(uint16_t *)(data + 2) = entry->element[1] + 8;
+			((struct MrvlIEtypesHeader *)data)->length = entry->element[1] + 8;	/* a byte at a time */
 			result = 0;
 			break;
 		}
@@ -491,13 +488,15 @@ int hostCmd00e0(unsigned int action, uint8_t *data, unsigned int length)
 			mask = 1 << bit;
 			if ((mask & configured) != 0) {
 				unsigned int index = (uint16_t)bit >> 1;
+				unsigned int flags;
 
 				entry[4] = bit;
 				entry[5] = (uint16_t)bit >> 8;
 				__aeabi_uwrite4(wlanCoexConfig.period[index], entry + 12);
 				__aeabi_uwrite4(wlanCoexConfig.reserve[index].word, entry + 8);
-				entry[6] = wlanCoexConfig.flags[index];
-				entry[7] = wlanCoexConfig.flags[index] >> 8;
+				flags = wlanCoexConfig.flags[index];
+				entry[6] = flags;
+				entry[7] = flags >> 8;
 				used = (int16_t)(used + 1);
 				configured = (uint16_t)(mask ^ configured);
 			}
@@ -558,7 +557,7 @@ unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *out)
 	out[1] = TLV_SESSION_TIMEOUT >> 8;
 	out[2] = 2;
 	out[3] = 0;
-	*(uint16_t *)(out + 4) = wlanPsSessionTimeout;
+	memcpy(out + 4, &wlanPsSessionTimeout, 2);	/* a byte at a time */
 	out += 6;
 	out[0] = TLV_PS_HOST_CONFIG & 0xff;
 	out[1] = TLV_PS_HOST_CONFIG >> 8;
@@ -574,7 +573,7 @@ unsigned int hostCmd00e4(struct WlanConnection *connection, uint8_t *out)
 	out += 16;
 	out[0] = TLV_SLEEP_INACTIVITY & 0xff;
 	out[1] = TLV_SLEEP_INACTIVITY >> 8;
-	*(uint16_t *)(out + 2) = 12;
+	((struct MrvlIEtypesHeader *)out)->length = 12;	/* unaligned: a byte at a time */
 	__aeabi_memcpy(out + 4, &sleep->inactivityTimeout, 12);
 	return 56;
 }
@@ -603,7 +602,7 @@ int hostCmd00d6Parse(uint8_t *tlv, int length, uint8_t **legacy, uint8_t **gener
 			break;
 		}
 		size = (uint16_t)(TLV_LENGTH(tlv) + 4);
-		if (size > (unsigned int)length)
+		if ((int)size > length)
 			break;
 		length = (int16_t)(length - size);
 		tlv += size;
@@ -638,7 +637,7 @@ uint32_t wlanTemplateTimerSaved __attribute__((section(".itcm.rw")));				/* 0x55
  * go into the templates. The TLV is turned into the element, ID 0xdd, in place. The register is parked
  * at 1 for a get (action 0) and given back for a set.
  */
-void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size)
+int hostCmd0084(unsigned int action, uint8_t *data, unsigned int size)
 {
 	unsigned int remaining = (uint16_t)(size - 10);
 
@@ -664,4 +663,5 @@ void hostCmd0084(unsigned int action, uint8_t *data, unsigned int size)
 		wlanTemplateTimerSaved = MAC_REG(0x0e0);
 		MAC_REG(0x0e0) = 1;
 	}
+	return 1;
 }

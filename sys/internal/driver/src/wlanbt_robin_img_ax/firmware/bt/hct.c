@@ -45,7 +45,7 @@ uint8_t hctHostActive __attribute__((section(".itcm.rw"))) = 0;
 uint8_t hctModeCurrent __attribute__((section(".itcm.rw"))) = 2;
 uint8_t hctModeRequested __attribute__((section(".itcm.rw"))) = 2;
 uint8_t hctSleepRequested __attribute__((section(".itcm.rw"))) = 0;
-uint32_t hctDeviceContext __attribute__((section(".itcm.rw"))) = 0;
+uint8_t hctDeviceContext __attribute__((section(".itcm.rw"))) = 0;
 void *btSdioDev __attribute__((section(".itcm.rw"))) = 0;
 void *btHciDev __attribute__((section(".itcm.rw"))) = 0;
 void *btSdioActiveHandle __attribute__((section(".itcm.rw"))) = 0;
@@ -199,12 +199,15 @@ void hctDropPending(uint32_t key, const void *address)
 	OsaBuffer *buffer = hctPending;
 	OsaBuffer *previous = hctPending;
 	OsaBuffer *next;
+	unsigned int tag;
 	uint8_t *data;
 	const uint8_t *peer;
 
 	while (buffer != NULL) {
-		if (buffer->transportTag == 2) {
-			data = (uint8_t *)buffer + buffer->dataOffset;
+		/* the tag and the data offset are read first; the tag again after a peer matched */
+		tag = buffer->transportTag;
+		data = (uint8_t *)buffer + buffer->dataOffset;
+		if (tag == 2) {
 			switch (data[8]) {
 			case 3:
 				if ((uint32_t)(data[11] | (data[12] << 8)) != key)
@@ -225,20 +228,20 @@ void hctDropPending(uint32_t key, const void *address)
 			}
 			if (memcmp(peer, address, 6) != 0)
 				goto keep;
-		} else {
-			data = (uint8_t *)buffer + buffer->dataOffset;
-			if ((uint32_t)((data[0] | (data[1] << 8)) & 0xfff) != key)
-				goto keep;
+			tag = buffer->transportTag;
+		} else if ((uint32_t)(data[0] | ((data[1] << 8) & 0xfff)) != key) {
+			goto keep;
 		}
-		if (buffer->transportTag == 0)
+		if (tag == 0)
 			goto keep;
 drop:
-		next = hctNext(buffer);
+		/* unlinked, then its link read again */
 		if (buffer == hctPending)
-			hctPending = next;
+			hctPending = hctNext(buffer);
 		else
-			*(OsaBuffer **)previous = next;
-		if (buffer->transportTag == 2)
+			*(OsaBuffer **)previous = hctNext(buffer);
+		next = hctNext(buffer);
+		if (tag == 2)
 			osa_MsgFree((void **)&data);
 		else
 			hctRxCallback(buffer);
@@ -282,7 +285,7 @@ struct HctCommandMessage {
 	uint16_t opcode;
 	uint8_t length;
 	uint8_t parameters[];
-} __attribute__((packed));
+};
 
 /* 0x000204e4: ACL data from the controller, to the host or into the pending queue. */
 void hctSendAclToHost(struct HctLinkMessage *message)
@@ -404,13 +407,14 @@ int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument, unsign
 			hctEnableHost();
 		if (btSdioActiveHandle != btSdioDev)
 			return 0;
-		command = osa_MsgAlloc(packet[2] + 9);
+		message = osa_MsgAlloc(packet[2] + 9);
+		command = (struct HctCommandMessage *)message;
 		command->id = 5010;
 		command->opcode = packet[0] | (packet[1] << 8);
 		command->length = packet[2];
 		__aeabi_memcpy(command->parameters, packet + 3, packet[2]);
 		hctRouteMessage((struct HctLinkMessage *)command);
-		osa_MsgSend((void **)&command, romQueueBtCore);
+		osa_MsgSend((void **)&message, romQueueBtCore);
 		break;
 	}
 	osa_BufferFree(buffer);

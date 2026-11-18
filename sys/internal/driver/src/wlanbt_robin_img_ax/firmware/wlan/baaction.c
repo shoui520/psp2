@@ -143,28 +143,26 @@ void wlanBaTimeoutExpired(struct WlanConnection *connection, const uint8_t *reco
 			  struct WlanTxBaSession *txSessions, struct WlanRxBaSession *rxSessions,
 			  void (*callback)(uint32_t))
 {
-	unsigned int tid = record[6];
-	unsigned int initiator = record[7];
-	int idle;
-
-	if (initiator == 0) {
-		idle = wlanRxBaFrameCount(tid, record, rxSessions) == 0;
-		if (!idle)
-			wlanRxBaResetCount(tid, record, rxSessions);
-	} else {
-		idle = wlanTxBaIdleCount(tid, record, txSessions) == 0;
-		if (!idle)
-			wlanTxBaTouch(tid, record, txSessions);
+	/* the TID (record[6]) and the initiator (record[7]) are read again at each use */
+	if (record[7] == 0) {
+		if (wlanRxBaFrameCount(record[6], record, rxSessions) != 0) {
+			wlanRxBaResetCount(record[6], record, rxSessions);
+			goto restart;
+		}
+	} else if (wlanTxBaIdleCount(record[6], record, txSessions) != 0) {
+		wlanTxBaTouch(record[6], record, txSessions);
+		goto restart;
 	}
-	if (idle) {
+	{
 		uint8_t event[8];
 
-		event[0] = tid;
+		event[0] = record[6];
 		__aeabi_memcpy(&event[1], record, 6);
-		event[7] = initiator;
+		event[7] = record[7];
 		wlanRomServices.sendHostEvent(connection, WLAN_EVENT_BA_STREAM_TIMEOUT, event, 8);
 	}
-	wlanBaTimeoutStart(connection, U16(record + 8), record, record[6], record[7], callback);
+restart:
+	wlanBaTimeoutStart(connection, *(const uint16_t *)(record + 8), record, record[6], record[7], callback);
 }
 
 /* Stops the timeout of the session; the table's entry is free again. */
@@ -173,17 +171,15 @@ int wlanBaTimeoutCancel(const uint8_t *peer, unsigned int tid, unsigned int init
 	unsigned int index;
 	unsigned int count;
 
+	/* the table is read again after each call */
 	for (index = 0;; index = (uint8_t)(index + 1)) {
-		struct WlanBaTimeout *entry;
-
 		count = wlanBaTimeoutCount;
 		if (index >= count)
 			return count;
-		entry = &wlanBaTimeoutTable[index];
-		if (entry->tid == tid && memcmp(peer, entry->peer, 6) == 0 &&
-		    entry->initiator == initiator && entry->active != 0) {
-			wlanSoftTimerStop(&entry->timer);
-			entry->active = 0;
+		if (wlanBaTimeoutTable[index].tid == tid && memcmp(peer, wlanBaTimeoutTable[index].peer, 6) == 0 &&
+		    wlanBaTimeoutTable[index].initiator == initiator && wlanBaTimeoutTable[index].active != 0) {
+			wlanSoftTimerStop(&wlanBaTimeoutTable[index].timer);
+			wlanBaTimeoutTable[index].active = 0;
 			return 0;
 		}
 	}
@@ -267,12 +263,10 @@ void wlanHostAddbaReplyBuild(OsaBuffer *message, int result, const uint8_t *peer
 	__aeabi_memcpy(&response->body[1], peer, 6);
 	response->body[0] = result;
 	response->body[7] = body[2];
-	response->body[8] = body[3];
-	response->body[9] = body[4];
+	put16(&response->body[8], U16(body + 3));
 	response->body[10] = body[5];
 	response->body[11] = body[6];
-	response->body[12] = body[7];
-	response->body[13] = body[8];
+	put16(&response->body[12], U16(body + 7));
 }
 
 /*
@@ -284,21 +278,20 @@ void wlanBaAddbaAccepted(struct WlanConnection *connection, uint16_t startSequen
 			 void (*callback)(uint32_t))
 {
 	struct WlanBaRequest request;
-	unsigned int tid = (paramSet >> 2) & 0xf;
 
+	request.tid = (paramSet >> 2) & 0xf;
 	__aeabi_memcpy(request.peer, peer, 6);
-	if (wlanTxBaProbe(tid, request.peer, txSessions) == 0) {
-		request.flags = 0;
-		__aeabi_uwrite4(tid, request.tid);
-		__aeabi_uwrite4(paramSet >> 6, request.timeout);
-		__aeabi_uwrite4(paramSet >> 6, request.windowSize);
-		request.startSequence[0] = startSequence << 4;
-		request.startSequence[1] = (startSequence << 4) >> 8;
+	if (wlanTxBaProbe(request.tid, request.peer, txSessions) == 0) {
+		request.direction = 0;
+		request.timeout = paramSet >> 6;
+		request.windowSize = paramSet >> 6;
+		request.startSequence.number = startSequence;
+		request.startSequence.fragment = 0;
 		if (wlanTxBaAddHook(connection, &request) == 0)
 			return;
 	}
 	if (timeout != 0)
-		wlanBaTimeoutStart(connection, timeout, request.peer, tid, 1, callback);
+		wlanBaTimeoutStart(connection, timeout, request.peer, request.tid, 1, callback);
 }
 
 /* The response of HostCmd 0xd0, the DELBA: the host's result, the peer, and the parameter set and reason it gave. */
@@ -335,7 +328,9 @@ void wlanBaAddbaRequestBuild(OsaBuffer *frame, uint16_t startSequence, const str
 	wireless->body[3] = request->paramSet[0];
 	wireless->body[4] = request->paramSet[1];
 	put16(&wireless->body[5], U16(request->timeout));
-	put16(&wireless->body[7], startSequence << 4);
+	/* the starting sequence number, then its fragment bits cleared */
+	((WlanFrameSequence *)&wireless->body[7])->number = startSequence;
+	((WlanFrameSequence *)&wireless->body[7])->fragment = 0;
 	put16(wireless->bodyLength, 9);
 }
 
@@ -360,8 +355,7 @@ void wlanBaAddbaResponseBuild(OsaBuffer *frame, const struct HostCmdAddbaRespons
 	wireless->body[2] = response->dialogToken;
 	wireless->body[5] = response->paramSet[0];
 	wireless->body[6] = response->paramSet[1];
-	wireless->body[7] = response->timeout[0];
-	wireless->body[8] = response->timeout[1];
+	put16(&wireless->body[7], U16(response->timeout));
 	put16(&wireless->body[3], U16(response->status));
 	put16(wireless->bodyLength, 9);
 }
@@ -369,13 +363,15 @@ void wlanBaAddbaResponseBuild(OsaBuffer *frame, const struct HostCmdAddbaRespons
 /* The receive session's request from the host's ADDBA response. */
 void wlanBaRxRequestFromResponse(struct WlanBaRequest *request, const uint8_t *response)
 {
-	request->flags = 2;
-	__aeabi_uwrite4((response[10] >> 2) & 0xf, request->tid);
-	__aeabi_uwrite4(U16(response + 10) >> 6, request->timeout);
-	__aeabi_uwrite4(U16(response + 10) >> 6, request->windowSize);
+	unsigned int size;
+
+	request->direction = 1;
+	request->tid = (response[10] >> 2) & 0xf;
+	size = U16(response + 10) >> 6;		/* read once, written as the timeout and the window size */
+	request->timeout = size;
+	request->windowSize = size;
 	__aeabi_memcpy(request->peer, response + 1, 6);
-	request->startSequence[0] = response[14];
-	request->startSequence[1] = response[15];
+	memcpy(&request->startSequence, response + 14, 2);
 }
 
 /* Notes what the HT elements of a frame say in the protection timers: non-greenfield stations and other BSSs' non-HT stations. */
@@ -385,19 +381,23 @@ void wlanHtProtectionObserve(WlanProtection *protection, const WlanIePointers *i
 	const uint8_t *htInformation = ies->pHtInfo;
 	const WlanHtCapabilityIe *htCapability = ies->pHtCap;
 	WlanProtectionTimer *timer;
-	int own = memcmp(bssid, source, 6) == 0;
+	int own;
 
+	/* the addresses are compared after the HT information's timers are written */
 	if (htInformation != NULL && htCapability != NULL) {
 		if (htInformation[4] & 4)
 			__aeabi_uwrite4(timeout, protection->timers[WLAN_PROTECTION_NON_GREENFIELD].remaining);
 		if (htInformation[4] & 0x10)
 			__aeabi_uwrite4(timeout, protection->timers[WLAN_PROTECTION_OBSS_NON_HT].remaining);
+		own = memcmp(bssid, source, 6) == 0;
 		if (own) {
-			if (htCapability->capabilities & 0x10)
+			if (htCapability->capability.greenfield)
 				return;
-		} else if ((htCapability->capabilities & 0x10) && htCapability->mcsSet[0] != 0) {
+		} else if (htCapability->capability.greenfield && htCapability->mcsSet[0] != 0) {
 			return;
 		}
+	} else {
+		own = memcmp(bssid, source, 6) == 0;
 	}
 	timer = own ? &protection->timers[WLAN_PROTECTION_NO_GREENFIELD_BSS]
 		    : &protection->timers[WLAN_PROTECTION_NO_GREENFIELD_PEER];
@@ -488,7 +488,7 @@ int wlanBaAddbaTimeoutResponse(uint8_t *response, const uint8_t *record, uint8_t
 	response[4] = 0;
 	response[5] = record[8];
 	response[6] = record[9];
-	put16(&response[7], U16(record + 10));
+	put16(&response[7], *(const uint16_t *)(record + 10));	/* an aligned halfword in the record */
 	return 1;
 }
 
@@ -517,20 +517,20 @@ void wlanBaRxResponseApply(const uint8_t *response, int update, struct WlanRxBaS
 {
 	struct WlanBaRequest request;
 	uint8_t slot;
-	uint8_t hwSlot = 0;
+	unsigned int hwSlot = 0;	/* a word: the setup fills its low byte */
 	unsigned int timeout;
 
 	wlanBaRxRequestFromResponse(&request, response);
-	if (wlanRxBaHwSlot(request.tid[0], request.peer, &slot, sessions) != 0) {
+	if (wlanRxBaHwSlot((uint8_t)request.tid, request.peer, &slot, sessions) != 0) {
 		if (update)
 			wlanRxBaHwUpdate(&request, slot);
-		wlanBaTimeoutCancel(request.peer, request.tid[0], 0);
+		wlanBaTimeoutCancel(request.peer, (uint8_t)request.tid, 0);
 	} else {
 		if (update) {
-			if (wlanRxBaHwSetup(&request, &hwSlot) != 1)
+			if (wlanRxBaHwSetup(&request, (uint8_t *)&hwSlot) != 1)
 				return;
 		} else {
-			wlanRxBaHwRelease(request.peer, (uint16_t)request.tid[0]);
+			wlanRxBaHwRelease(request.peer, (uint16_t)request.tid);
 		}
 		wlanRxBaAdd(&request, hwSlot, sessions);
 		if (update)
@@ -538,5 +538,5 @@ void wlanBaRxResponseApply(const uint8_t *response, int update, struct WlanRxBaS
 	}
 	timeout = U16(response + 12);
 	if (timeout != 0)
-		wlanBaTimeoutStart(connection, timeout, request.peer, request.tid[0], 0, callback);
+		wlanBaTimeoutStart(connection, timeout, request.peer, (uint8_t)request.tid, 0, callback);
 }

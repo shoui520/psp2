@@ -17,7 +17,7 @@ extern uint8_t hctHostActive;
 extern uint8_t hctModeCurrent;
 extern uint8_t hctModeRequested;
 extern uint8_t hctSleepRequested;
-extern uint32_t hctDeviceContext;
+extern uint8_t hctDeviceContext;	/* read and written a byte wide */
 extern void *btSdioDev;
 extern void *btHciDev;
 extern void *btSdioActiveHandle;

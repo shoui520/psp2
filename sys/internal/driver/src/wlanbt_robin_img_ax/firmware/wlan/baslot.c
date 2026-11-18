@@ -152,7 +152,7 @@ void wlanBaEntriesInit(void)
  * Writes a session's peer and TID, and its starting sequence number, to the
  * entries of a slot: mode 0 for a transmit slot, 1 for a receive slot.
  */
-void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, uint16_t sequence, int mode,
+void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, WlanSequenceControl sequence, int mode,
 		       unsigned int slot)
 {
 	struct {
@@ -167,7 +167,7 @@ void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, uint16_t sequence,
 		address.high |= tid << 28;
 		romMacEntryWrite(entry + BA_ENTRY_TX_PEER, address.low, address.high);
 		address.high = 0;
-		address.low = sequence;
+		address.low = sequence.value;
 		romMacEntryWrite(entry + BA_ENTRY_TX_SEQUENCE, address.low, 0);
 	} else if (mode == 1) {
 		__aeabi_memcpy(&address.low, peer, 4);
@@ -175,7 +175,7 @@ void wlanBaEntryRecord(unsigned int tid, const uint8_t *peer, uint16_t sequence,
 		address.high |= tid << 28;
 		romMacEntryWrite(entry + BA_ENTRY_RX_PEER, address.low, address.high);
 		address.high = 0;
-		address.low = sequence;
+		address.low = sequence.value;
 		romMacEntryWrite(entry + BA_ENTRY_RX_PEER + 1, address.low, 0);
 	}
 }
@@ -193,24 +193,33 @@ void wlanBaSlotSetSequence(int slot, WlanSequenceControl sequence)
 	romMacEntryWrite(2 * slot + BA_ENTRY_TX_SEQUENCE, sequence.value, 0);
 }
 
+/*
+ * Marks a request not acknowledged (MAC_TX_DONE_FAILED in reserved1[1]): Sony sets the bit in a
+ * 16-bit field over reserved1[1] and txFlags, so both bytes are written back.
+ */
+static __inline void wlanMacTxRequestFail(struct WlanMacTxRequest *request)
+{
+	unsigned int status = ((request->txFlags << 8) | request->reserved1[1]) | 1;
+
+	request->reserved1[1] = status;
+	request->txFlags = status >> 8;
+}
+
 /* Programs a transmit slot for a session (window is the hardware window it belongs to). */
 int wlanBaSlotSetup(const struct WlanBaRequest *request, unsigned int window, unsigned int slot)
 {
 	volatile struct MacBaSlot *regs = MAC_BA_SLOT(slot);
 	unsigned int i;
-	uint16_t sequence;
 
 	for (i = 0; i < BA_ENTRY_RING_COUNT; i = (uint8_t)(i + 1))
 		romMacEntryWrite(BA_ENTRY_RING_FIRST + slot * 64 + i, 0, 0);
 	romMacEntryWrite(BA_ENTRY_SLOT_STATE + slot, 0, 0);
 	MAC_AC0_BA_ACTIVE |= MAC_AC0_SLOT_BITS << slot;
 	MAC_ACC_BA_WINDOWS |= (slot | 8) << (4 * window);
-	sequence = request->startSequence[0] | (request->startSequence[1] << 8);
-	wlanBaEntryRecord((uint8_t)__aeabi_uread4(request->tid), request->peer, sequence, 0, slot);
-	sequence = request->startSequence[0] | (request->startSequence[1] << 8);
-	wlanBaSlotSetSequence(slot, (WlanSequenceControl){ .value = sequence });
-	regs->timeout = __aeabi_uread4(request->timeout) - 1;
-	regs->windowSize = __aeabi_uread4(request->windowSize) - 1;
+	wlanBaEntryRecord((uint8_t)request->tid, request->peer, request->startSequence, 0, slot);
+	wlanBaSlotSetSequence(slot, request->startSequence);
+	regs->timeout = request->timeout - 1;
+	regs->windowSize = request->windowSize - 1;
 	regs->buffer = wlanTxRingOps.bufferAddress();
 	MAC_AD0_EVENT = 0xffff;
 	regs->parameter = wlanTxRingOps.slotParameter;
@@ -301,7 +310,7 @@ void wlanBaSlotClear(unsigned int slot)
 		if (!(control & BA_ENTRY_RING_BUSY) && request != 0) {
 			control |= BA_ENTRY_RING_BUSY;
 			romMacEntryWrite(entry, request, control);
-			((struct WlanMacTxRequest *)request)->reserved1[1] |= 1;
+			wlanMacTxRequestFail((struct WlanMacTxRequest *)request);
 			wlanTxRingOps.complete((struct WlanMacTxRequest *)request);
 		}
 		read = (read + 4) & 0x1ff;
@@ -314,14 +323,12 @@ int wlanRxBaHwSetup(const struct WlanBaRequest *request, uint8_t *slot)
 {
 	unsigned int found = wlanRxBaFindFreeHwSlot();
 	unsigned int i;
-	uint16_t sequence;
 
 	*slot = found;
 	if (found == wlanRxBaCount)
 		return 0;
 	MAC_AC0_BA_ACTIVE |= (16u << found) | MAC_ACD_RX_SLOT_BITS;
-	sequence = request->startSequence[0] | (request->startSequence[1] << 8);
-	wlanBaEntryRecord((uint8_t)__aeabi_uread4(request->tid), request->peer, sequence, 1, found);
+	wlanBaEntryRecord((uint8_t)request->tid, request->peer, request->startSequence, 1, found);
 	for (i = 0; i < 2; i = (uint8_t)(i + 1))
 		romMacEntryWrite(2 * found + i + BA_ENTRY_RX_SEQUENCE, 0, 0);
 	MAC_BA_RX_PARAMETER(found) = 30;
@@ -333,10 +340,9 @@ int wlanRxBaHwSetup(const struct WlanBaRequest *request, uint8_t *slot)
 int wlanRxBaHwUpdate(const struct WlanBaRequest *request, unsigned int slot)
 {
 	unsigned int i;
-	uint16_t sequence = request->startSequence[0] | (request->startSequence[1] << 8);
 
-	wlanBaEntryRecord((uint8_t)__aeabi_uread4(request->tid), request->peer, sequence, 1, slot);
-	for (i = 0; i < 2; i = (uint8_t)(i + 1))
+	wlanBaEntryRecord((uint8_t)request->tid, request->peer, request->startSequence, 1, slot);
+	for (i = 0; i < 2; i++)
 		romMacEntryWrite(2 * slot + i + BA_ENTRY_RX_SEQUENCE, 0, 0);
 	return 1;
 }
@@ -373,7 +379,7 @@ void wlanBaSlotFlush(int slot, int window)
 		if (!(control & BA_ENTRY_RING_BUSY) && request != 0) {
 			control |= BA_ENTRY_RING_BUSY;
 			romMacEntryWrite(entry, request, control);
-			((struct WlanMacTxRequest *)request)->reserved1[1] |= 1;
+			wlanMacTxRequestFail((struct WlanMacTxRequest *)request);
 			wlanTxRingOps.complete((struct WlanMacTxRequest *)request);
 		}
 		read = (read + 4) & 0x1ff;
@@ -384,18 +390,21 @@ void wlanBaSlotFlush(int slot, int window)
 /* Clears the entry of a receive session's peer and TID. */
 int wlanRxBaHwRelease(const uint8_t *peer, unsigned int tid)
 {
-	uint32_t key[2];
+	union {
+		uint64_t value;
+		uint32_t word[2];
+	} key;
 	uint32_t low;
 	uint32_t high;
 	unsigned int posture;
 	unsigned int entry;
 
-	__aeabi_memcpy(key, peer, 6);
-	key[1] |= tid << 28;
+	__aeabi_memcpy(&key, peer, 6);
+	key.word[1] |= tid << 28;
 	posture = tx_interrupt_control(TX_INT_DISABLE);
 	for (entry = BA_ENTRY_RX_RELEASE_FIRST; entry < BA_ENTRY_RX_RELEASE_END; entry = (uint16_t)(entry + 2)) {
 		romMacEntryRead(entry, &low, &high);
-		if (key[0] == low && key[1] == (high & 0xf000ffff)) {
+		if (key.value == (((uint64_t)(high & 0xf000ffff) << 32) | low)) {
 			romMacEntryWrite(entry, 0, 0);
 			break;
 		}

@@ -109,7 +109,7 @@ void btSbcSyncContext(void)
 /* Puts the fixed level's tables in place of the defaults, when the level is fixed. */
 void btSbcApplyContext(void)
 {
-	unsigned int i;
+	int i;
 
 	if (btPowerLevelContext != 7)
 		return;
@@ -167,7 +167,7 @@ void btSbcScheduleContext(void)
 	message = osa_MsgAlloc(4);
 	if (message != NULL) {
 		message[0] = BT_MESSAGE_VENDOR_LINK;
-		osa_MsgSend((void **)&message, BT_QUEUE_VENDOR_LINK);
+		osa_MsgSend((void **)&message, romQueueBtCore);
 	}
 }
 
@@ -196,7 +196,7 @@ void btSbcFormatContext(unsigned int length, const uint8_t *parameters, uint8_t 
 		*(uint32_t *)message = BT_MESSAGE_LINK_POWER;
 		*(uint16_t *)(message + 4) = link;
 		message[6] = step;
-		osa_MsgSend((void **)&message, BT_QUEUE_VENDOR_POWER);
+		osa_MsgSend((void **)&message, romQueueSlot);
 	}
 }
 
@@ -315,8 +315,7 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		btSbcResolveContext(length, parameters, argument, (uintptr_t)returnLength, status);
 		return;
 	case 106:
-		/* The low byte only. */
-		*(uint8_t *)&hctDeviceContext = parameters[0];
+		hctDeviceContext = parameters[0];
 		return;
 	case 107:
 		btSbcCheckEntry(length, parameters, status, returnLength, returnParameters);
@@ -377,7 +376,7 @@ void btSbcSetupContext(const uint8_t *address, uint8_t role)
 	*(uint32_t *)message = BT_MESSAGE_LINK_REQUEST;
 	__aeabi_memcpy(message + 4, address, 6);
 	message[10] = role;
-	osa_MsgSend((void **)&message, BT_QUEUE_VENDOR_POWER);
+	osa_MsgSend((void **)&message, romQueueLcp);
 }
 
 /* A link went down (event kind 1) during a role switch: reports the switch with the role asked for. */
@@ -638,7 +637,12 @@ free:
 
 int btSbcFilterContext(const uint8_t *message)
 {
-	(void)message;
+	/* Sony's reads the field of message 5010 and leaves it unused: nothing is filtered */
+	if (*(const uint32_t *)message == 5010) {
+		unsigned int field = *(const volatile uint16_t *)(message + 4) >> 10;	/* the read stays */
+
+		(void)field;
+	}
 	return 0;
 }
 
@@ -715,6 +719,8 @@ void btSbcCheckEntry(unsigned int length, const uint8_t *parameters, uint8_t *st
 		     uint8_t *returnParameters)
 {
 	uint8_t *message = NULL;
+	unsigned int kind;
+	unsigned int size;
 
 	(void)returnLength;
 	(void)returnParameters;
@@ -729,17 +735,19 @@ void btSbcCheckEntry(unsigned int length, const uint8_t *parameters, uint8_t *st
 		return;
 	}
 	*(uint32_t *)message = BT_MESSAGE_VENDOR_COMMAND;
-	message[8] = parameters[0];
+	kind = parameters[0];
+	message[8] = kind;
 	message[9] = 0;
-	if (parameters[0] != 0 && length > 1) {
+	if (kind != 0 && length > 1) {
 		if (length < 7 || parameters[5] > 16) {
 			*status = BT_STATUS_INVALID;
 			osa_MsgFree((void **)&message);
 		} else {
 			*(uint16_t *)(message + 4) = parameters[1] | parameters[2] << 8;
 			*(uint16_t *)(message + 6) = parameters[3] | parameters[4] << 8;
-			message[9] = parameters[5];
-			__aeabi_memcpy(message + 10, parameters + 6, parameters[5]);
+			size = parameters[5];
+			message[9] = size;
+			__aeabi_memcpy(message + 10, parameters + 6, size);
 		}
 	}
 	if (*status == 0)
@@ -829,7 +837,7 @@ int btSbcParseEntry(const uint8_t *command)
 /* Registers the two ROM drivers. */
 void btSbcBuildEntry(void)
 {
-	unsigned int i;
+	int i;
 
 	for (i = 0; i < 2; i++) {
 		btSbcDriverStates[i] = 0;

@@ -133,6 +133,7 @@ enum {
 #define SOC_MAC_TIMER		REG32(0x8000a600)	/* free-running; the defragmenter's start times */
 /* MAC register file; the offsets are the hardware's, no names are known. */
 #define MAC_REG(offset)		REG32(SOC_MAC_REGISTER_BASE + (offset))
+#define MAC_REG16(offset)	REG16(SOC_MAC_REGISTER_BASE + (offset))	/* a register read 16 bits wide */
 #define SOC_MAC_EVENT_PATH_CONTROL REG32(0x8000a7e0)
 #define SOC_MAC_EVENT_PRIMARY_PATTERN REG32(0x8000a78c)
 #define SOC_MAC_EVENT_CONTROL_PATTERN REG32(0x8000a7e4)

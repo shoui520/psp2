@@ -545,8 +545,13 @@ void btLmpLcApplyBuffer(uint8_t *request)
 
 		if (btLinkSessionCheck(link) == 1) {
 			clock = *(const int *)(const void *)(records + 116 * link + 32);
-			if (device != 0 && clock > (int)now)
-				clock = native + clock - now;
+			if (device != 0) {
+				/* a link clock not past now gives the native clock */
+				if (clock > (int)now)
+					clock = native + clock - now;
+				else
+					clock = native;
+			}
 		} else if (btLdrRomAcquireState() != 0) {
 			uint16_t other;
 
@@ -576,7 +581,7 @@ void btLmpLcApplyBuffer(uint8_t *request)
 		start = (uint8_t)((int)native % period);
 	else
 		start = (uint8_t)((int)(native ^ 0x2000000) % period);
-	if (slot > start)
+	if (start > slot)
 		offset = (uint8_t)(slot - start + period);
 	else
 		offset = (uint8_t)(slot - start);
@@ -1220,7 +1225,9 @@ void btLmpLcVerifyBuffer(struct BtSlotQueue *queue, struct BtDeviceProfile *prof
 
 	for (node = queue->head; node != NULL; node = node->next) {
 		uint32_t start = profile->interval * step + base - profile->guard;
-		uint32_t end = profile->baseWindow + ((profile->secondSetting + profile->firstSetting) >> 1) + start - 2;
+		/* the end is counted from the slot itself, without the guard */
+		uint32_t end = profile->baseWindow + ((profile->secondSetting + profile->firstSetting) >> 1) +
+			       profile->interval * step + base - 2;
 		uint32_t nodeStart = node->due - node->guard;
 		uint32_t nodeEnd = node->baseWindow + node->guard +
 				   (((node->secondSetting + node->firstSetting) >> 1) + nodeStart) - 2;
@@ -1783,9 +1790,7 @@ uint32_t btLmpLcManagePacket(unsigned int argument)
 			uint32_t start;
 			unsigned int need;
 
-			while (profile != NULL && btLtsRomAdjustState(queue) == 0)
-				;
-			if (profile == NULL)
+			if (profile == NULL || btLtsRomAdjustState(queue) == 0)
 				goto next;
 			profile->guard = btLdrRomResolveState(profile->index);
 			start = profile->due - profile->guard;
@@ -3435,20 +3440,24 @@ int btLmpLcResetHeader(unsigned int link, uint32_t a1, uint32_t a2, uint32_t a3)
 }
 
 /*
- * A device link's slots start at the clock: its profile is counted from there, its record and flags
- * come from btTableRecord (and the mode setting of the payload register's state), and it is marked
- * set up here (option bit 7) once the ROM has configured it.
+ * A device link's slots start at the clock: its profile is counted from there, its timing comes
+ * from btTableRecord (the interval with the mode setting of the payload register's state added, the
+ * span one less), and it is marked set up here (option bit 7) once the ROM has configured it.
  */
 void btLmpLcSyncHeader(unsigned int index, uint32_t clock, uint32_t a2, uint32_t a3, uint32_t a4)
 {
 	struct BtDeviceProfile *profile = &btDeviceProfile[index];
 	unsigned int record;
+	unsigned int mode;
 
 	btLtsRomQueryState(profile);
 	profile->anchor = btLtsRomScheduleState(clock);
 	record = btTableRecord;
-	profile->index = record - 1;
-	profile->flags = (btLinkPayloadRegister != 0 ? btTableModeContext : btTableModeState) + record;
+	profile->span = record - 1;
+	mode = btTableModeContext;
+	if (btLinkPayloadRegister == 0)
+		mode = btTableModeState;
+	profile->interval = mode + record;
 	btLtsRomConfigureContext(index, clock, a2, a3, a4);
 	profile->options |= 0x80;
 }
