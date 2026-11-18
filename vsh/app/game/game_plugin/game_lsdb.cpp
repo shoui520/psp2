@@ -46,7 +46,6 @@ struct GameDevInfo {
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameAppDeletePrepare(const char *titleId);			/* 0x810FCA70 */
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
-int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);	/* 0x81062BBA */
 extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);	/* 0x81449964 */
 /* the SDK's libSceCes (libces_ucs.h) and the user side of _sceFiosKernelOverlayResolveSync */
 extern "C" int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize,
@@ -54,8 +53,6 @@ extern "C" int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint3
 extern "C" int sceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *inPath,
 					       char *outPath, SceSize maxPath);		/* 0x8144DA0C */
 int gameIoGetDeviceSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);	/* 0x8137E308 */
-int gameAppDataOperateFiles(const string &titleId, LsdbAppInfoPtr *info, int arg1, int arg2,
-			    int arg3, int arg4);				/* 0x81063906 */
 
 /* The NP account ID, 0 when the registry has none (0x81018610). */
 int gameNpGetAccountId(SceUInt64 *accountId)
@@ -872,8 +869,8 @@ int gameAppDeletePart(const char *titleId, int kind)
 }
 
 /*
- * An operation on an application's data, for applications only (0x8101B746). PLACEHOLDER: what
- * the operation and its words are is not read yet.
+ * Save data of an application deleted, for applications only (0x8101B746): arg1 says whose
+ * (gameAppDataOperateFiles), arg2 is the user; arg3 and arg4 are passed on and not read.
  */
 int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int arg4)
 {

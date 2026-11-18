@@ -33,6 +33,110 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbValue, paf::allocator<LsdbValue>)
 
 using namespace paf;
 
+/*
+ * An application's #appsize: its sizes in 32 KiB units, packed in 61 bits: the application's in
+ * bits 0-19, its patch's in bits 20-39 and its additional contents' in bits 40-60; a field of all
+ * ones is a size not counted yet. The names are ours.
+ */
+#define GAME_APPSIZE_UNIT_SHIFT		15
+#define GAME_APPSIZE_MAX		0x1FFFFFFFFFFFFFFFull
+#define GAME_APPSIZE_PATCH_SHIFT	20
+#define GAME_APPSIZE_PATCH_MASK		0xFFFFFull
+#define GAME_APPSIZE_ADDCONT_SHIFT	40
+#define GAME_APPSIZE_ADDCONT_MASK	0x1FFFFFull
+
+/* a size in #appsize units, rounded up; the not-counted values kept as they are */
+inline unsigned int gameAppSizeUnits(SceUInt64 size)
+{
+	if (size == 0)
+		return 0;
+	if (size < (1u << GAME_APPSIZE_UNIT_SHIFT))
+		return 1;
+	if (size == GAME_APPSIZE_PATCH_MASK || size == GAME_APPSIZE_ADDCONT_MASK)
+		return (unsigned int)size;
+
+	unsigned int units = (unsigned int)(size >> GAME_APPSIZE_UNIT_SHIFT);
+
+	if ((size & ((1u << GAME_APPSIZE_UNIT_SHIFT) - 1)) != 0)
+		units++;
+
+	return units;
+}
+
+/*
+ * SceLsdb's export defined in appinfo_daemon_api.cpp, which livespace_db_internal.h does not
+ * declare yet: the bits of mask in an application's integer parameter set to bits
+ */
+extern "C" int SceLsdb_C36501F7(const paf::string *titleId, unsigned int key,
+				const LsdbValue *bits, SceInt64 mask);
+
+/*
+ * A field of titleId's #appsize set to size: the others kept, or not counted when the application
+ * has none yet.
+ */
+inline int gameAppSizeSet(const paf::string *titleId, SceUInt64 size, unsigned int shift,
+			  SceUInt64 fieldMask)
+{
+	AppInfoQClient client;
+	SceUInt64 bits = 0;
+	unsigned int units;
+	bool found = false;
+
+	SceLsdb_A6D8772C(&client);
+
+	int ret = SceLsdb_E90B81CD(&client);
+
+	if (ret != 0) {
+		SceLsdb_E2101B03(&client);
+	} else {
+		{
+			LsdbValue value;
+
+			ret = SceLsdb_65ECEF39(&client, titleId, LsdbKeyHash("#appsize"), &value);
+			if (ret == 0) {
+				if (((SceUInt64)gameLsdbValueInteger(value) >> 61) == 0) {
+					bits = (SceUInt64)gameLsdbValueInteger(value);
+					found = true;
+				} else {
+					ret = -1;
+				}
+			}
+		}
+		SceLsdb_E2101B03(&client);
+	}
+
+	if (found) {
+		units = gameAppSizeUnits(size);
+		if (units > fieldMask)
+			return -1;
+	} else {
+		if (ret != (int)LSDB_ERROR_NOT_FOUND)
+			return ret;
+
+		units = gameAppSizeUnits(size);
+		bits = GAME_APPSIZE_MAX;
+	}
+
+	bits = (bits & ~(fieldMask << shift)) | ((SceUInt64)units << shift);
+
+	LsdbValue update;
+
+	update.integer = (SceInt64)(bits & GAME_APPSIZE_MAX);
+
+	return SceLsdb_C36501F7(titleId, LsdbKeyHash("#appsize"), &update, -1);
+}
+
+/* the patch's and the additional contents' fields of titleId's #appsize set to size */
+inline int gameAppSizeSetPatch(const paf::string *titleId, SceUInt64 size)
+{
+	return gameAppSizeSet(titleId, size, GAME_APPSIZE_PATCH_SHIFT, GAME_APPSIZE_PATCH_MASK);
+}
+
+inline int gameAppSizeSetAddcont(const paf::string *titleId, SceUInt64 size)
+{
+	return gameAppSizeSet(titleId, size, GAME_APPSIZE_ADDCONT_SHIFT, GAME_APPSIZE_ADDCONT_MASK);
+}
+
 int gameTempDirPrepare(const char *dir);
 const char *gamePathSkipDrive(const char *path);
 int gameRenameIfExists(const char *src, const char *dst);
@@ -81,6 +185,36 @@ static char s_removePath[SCE_IO_MAX_PATH_BUFFER_SIZE];
 
 /* the game card's read-only mount */
 #define GAME_GC_RO_DRIVE		"gro0:"
+
+/* the game card's writable mount and its temporary folder */
+#define GAME_GC_RW_DRIVE		"grw0:"
+#define GAME_GRW0_TEMP_DIR		"grw0:temp/game"
+
+/*
+ * the parts of an application gameAppDeleteFilesPart deletes: the current user's save data, every
+ * user's, the patch, the additional contents, one user's save data (values only)
+ */
+#define GAME_APP_PART_SAVEDATA		0
+#define GAME_APP_PART_ALL_SAVEDATA	1
+#define GAME_APP_PART_PATCH		2
+#define GAME_APP_PART_ADDCONT		3
+#define GAME_APP_PART_USER_SAVEDATA	4
+
+/* the partition sceAppMgrGetUserDirPath gives the user's folder of (value only) */
+#define GAME_USER_DIR_PARTITION		2
+
+/*
+ * how gameUr0AppmetaSetup sets an appmeta in ur0 aside: the whole folder, or all but its icons
+ * (values only)
+ */
+#define GAME_UR0_APPMETA_MOVE		0
+#define GAME_UR0_APPMETA_KEEP_ICONS	1
+#define GAME_UR0_APPMETA_MODES		3
+
+/* what gameAppDataOperateFiles deletes: one user's, the current user's, every user's save data */
+#define GAME_APP_DATA_USER_SAVEDATA	1
+#define GAME_APP_DATA_SAVEDATA		2
+#define GAME_APP_DATA_ALL_SAVEDATA	3
 
 /* PLACEHOLDER name: the ATTRIBUTE bit of a game card application deleted like an installed one */
 #define GAME_ATTRIBUTE_GC_AS_APP	0x1
@@ -1512,4 +1646,483 @@ int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info)
 		return gameVitaAppDelete(titleId, false, info);
 
 	return gameGcAppDelete(titleId, info);
+}
+
+/*
+ * A part of the game card application titleId deleted from the card's writable partition, its
+ * save data, its patch or its additional contents and their licenses, moved into grw0:temp/game
+ * and that removed (0x81060AD8).
+ */
+int gameGcAppDeletePart(const char *titleId, LsdbAppInfoPtr *info, int part)
+{
+	LocalFileStat stat;
+	const char *orgPath = LsdbValueText((**info)[LSDB_KEY_ORG_PATH]);
+
+	if (orgPath == NULL)
+		return GAME_ERROR_NO_VALUE;
+
+	int ret = gameTempDirPrepare(GAME_GRW0_TEMP_DIR);
+
+	if (ret < 0)
+		return ret;
+
+	LocalFileStat orgStat;
+
+	if (LocalFile::Getstat(orgPath, &orgStat) != 0)
+		return 0;
+
+	switch (part) {
+	case GAME_APP_PART_SAVEDATA: {
+		const char *savedataDir =
+			LsdbValueText((**info)[LsdbKeyHash("INSTALL_DIR_SAVEDATA")]);
+		string savedata = string("savedata/") + savedataDir;
+		string src = string(GAME_GC_RW_DRIVE) + savedata;
+		string name = gamePathToFileName(savedata.c_str());
+		string dst = string(GAME_GRW0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+		break;
+	}
+	case GAME_APP_PART_PATCH: {
+		string patch = string("patch/") + titleId;
+		string src = string(GAME_GC_RW_DRIVE) + patch;
+		string name = gamePathToFileName(patch.c_str());
+		string dst = string(GAME_GRW0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+		break;
+	}
+	case GAME_APP_PART_ADDCONT: {
+		unsigned int keys[] = {
+			LsdbKeyHash("INSTALL_DIR_ADDCONT"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_1"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_2"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_3"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_4"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_5"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_6"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_7"),
+		};
+
+		for (int i = 0; i < 8; i++) {
+			const char *addcontDir = LsdbValueText((**info)[keys[i]]);
+
+			if (addcontDir == NULL || *addcontDir == '\0')
+				continue;
+
+			{
+				string addcont = string("addcont/") + addcontDir;
+				string src = string(GAME_GC_RW_DRIVE) + addcont;
+				string name = gamePathToFileName(addcont.c_str());
+				string dst = string(GAME_GRW0_TEMP_DIR) + "/" + name;
+
+				ret = gameRenameIfExists(src.c_str(), dst.c_str());
+				if (ret < 0)
+					return ret;
+			}
+
+			string license = string("license/addcont/") + addcontDir;
+			string src = string(GAME_GC_RW_DRIVE) + license;
+			string name = gamePathToFileName(license.c_str());
+			string dst = string(GAME_GRW0_TEMP_DIR) + "/" + name;
+
+			ret = gameRenameIfExists(src.c_str(), dst.c_str());
+			if (ret < 0)
+				return ret;
+		}
+		break;
+	}
+	}
+
+	return gameRemoveDirectoryContents(GAME_GRW0_TEMP_DIR, NULL, NULL, NULL, true);
+}
+
+/*
+ * A part of the Vita application titleId deleted (0x81061A82): the current user's save data, every
+ * user's or the user userNo's, its patch or its additional contents and their licenses, moved into
+ * ux0:temp/game and that removed; a deleted patch or additional content is no longer counted in
+ * the application's #appsize. removeApp is not read.
+ */
+int gameVitaAppDeletePart(const char *titleId, bool removeApp, LsdbAppInfoPtr *info, int part,
+			  int userNo)
+{
+	int savedataRet = 0;
+	LocalFileStat stat;
+	int ret = gameTempDirPrepare(GAME_UX0_TEMP_DIR);
+
+	if (ret < 0)
+		return ret;
+
+	switch (part) {
+	case GAME_APP_PART_SAVEDATA: {
+		const char *savedataDir =
+			LsdbValueText((**info)[LsdbKeyHash("INSTALL_DIR_SAVEDATA")]);
+		char userDir[32];
+
+		sce_paf_memset(userDir, 0, sizeof(userDir));
+		ret = sceAppMgrGetUserDirPath(GAME_USER_DIR_PARTITION, userDir, sizeof(userDir));
+		if (ret < 0)
+			return ret;
+
+		string userPath(userDir);
+		string::size_type pos = userPath.rfind("/", string::npos, sce_paf_strlen("/"));
+		string user = userPath.substr(pos + 1, userPath.size() - pos);
+
+		ret = gameSavedataMoveToTemp(string(savedataDir), user);
+		if (ret < 0)
+			return ret;
+
+		shellSavedataBackupDeleteCurrentUser(string(savedataDir));
+
+		char backupTitleId[16];
+
+		sce_paf_memset(backupTitleId, 0, sizeof(backupTitleId));
+		sce_paf_strncpy(backupTitleId, savedataDir, GAME_PSP_TITLE_ID_LEN - 1);
+		vshAppMgrSaveDataLocalBackupTargetRemoveItem(backupTitleId);
+		break;
+	}
+	case GAME_APP_PART_ALL_SAVEDATA: {
+		const char *savedataDir =
+			LsdbValueText((**info)[LsdbKeyHash("INSTALL_DIR_SAVEDATA")]);
+
+		for (int i = 0; i < GAME_PSM_USERS; i++) {
+			char user[4];
+
+			sce_paf_snprintf(user, 3, "%02d", i);
+			ret = gameSavedataMoveToTemp(string(savedataDir), string(user));
+			if (ret < 0 && savedataRet == 0)
+				savedataRet = GAME_ERROR_SAVEDATA_LEFT;
+		}
+
+		shellSavedataBackupDeleteAll(string(savedataDir));
+
+		char backupTitleId[16];
+
+		sce_paf_memset(backupTitleId, 0, sizeof(backupTitleId));
+		sce_paf_strncpy(backupTitleId, savedataDir, GAME_PSP_TITLE_ID_LEN - 1);
+		vshAppMgrSaveDataLocalBackupTargetRemoveItem(backupTitleId);
+		break;
+	}
+	case GAME_APP_PART_PATCH: {
+		string patch = string("patch/") + titleId;
+		string src = string("ux0:") + patch;
+		string name = gamePathToFileName(patch.c_str());
+		string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+
+		if ((*info)->find(LsdbKeyHash("#appsize")) != (*info)->end()) {
+			string title(titleId);
+
+			gameAppSizeSetPatch(&title, GAME_APPSIZE_PATCH_MASK);
+		}
+		break;
+	}
+	case GAME_APP_PART_ADDCONT: {
+		unsigned int keys[] = {
+			LsdbKeyHash("INSTALL_DIR_ADDCONT"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_1"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_2"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_3"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_4"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_5"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_6"),
+			LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_7"),
+		};
+
+		for (int i = 0; i < 8; i++) {
+			const char *addcontDir = LsdbValueText((**info)[keys[i]]);
+
+			if (addcontDir == NULL || *addcontDir == '\0')
+				continue;
+
+			{
+				string addcont = string("addcont/") + addcontDir;
+				string src = string("ux0:") + addcont;
+				string name = gamePathToFileName(addcont.c_str());
+				string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+
+				ret = gameRenameIfExists(src.c_str(), dst.c_str());
+				if (ret < 0)
+					return ret;
+			}
+
+			string license = string("license/addcont/") + addcontDir;
+			string src = string("ux0:") + license;
+			string name = gamePathToFileName(license.c_str());
+			string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+
+			ret = gameRenameIfExists(src.c_str(), dst.c_str());
+			if (ret < 0)
+				return ret;
+		}
+
+		if ((*info)->find(LsdbKeyHash("#appsize")) != (*info)->end()) {
+			string title(titleId);
+
+			gameAppSizeSetAddcont(&title, GAME_APPSIZE_ADDCONT_MASK);
+		}
+		break;
+	}
+	case GAME_APP_PART_USER_SAVEDATA: {
+		const char *savedataDir =
+			LsdbValueText((**info)[LsdbKeyHash("INSTALL_DIR_SAVEDATA")]);
+		char user[4];
+
+		sce_paf_snprintf(user, 3, "%02d", userNo);
+		ret = gameSavedataMoveToTemp(string(savedataDir), string(user));
+		if (ret < 0)
+			return ret;
+
+		shellSavedataBackupDeleteUser(string(savedataDir), userNo);
+		break;
+	}
+	}
+
+	ret = gameRemoveDirectoryContents(GAME_UX0_TEMP_DIR, NULL, NULL, NULL, true);
+	if (ret >= 0 && part == GAME_APP_PART_ALL_SAVEDATA && savedataRet != 0)
+		ret = savedataRet;
+
+	return ret;
+}
+
+/*
+ * A part of the application titleId deleted, by the kind its folder says (0x81062BBA): none of a
+ * PSP game, the card's writable partition's of a game card application, else the Vita
+ * application's.
+ */
+int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part)
+{
+	const char *orgPath = LsdbValueText((**info)[LSDB_KEY_ORG_PATH]);
+
+	if (orgPath == NULL)
+		return GAME_ERROR_NO_VALUE;
+
+	if (sce_paf_strncmp(orgPath, GAME_PSP_GAME_DIR, sce_paf_strlen(GAME_PSP_GAME_DIR)) == 0)
+		return GAME_ERROR_BAD_STORAGE;
+
+	if (sce_paf_strncmp(orgPath, GAME_GC_RO_DRIVE, sce_paf_strlen(GAME_GC_RO_DRIVE)) != 0)
+		return gameVitaAppDeletePart(titleId, true, info, part, 0);
+
+	if (gameLsdbValueInteger((**info)[LSDB_KEY_ATTRIBUTE]) & GAME_ATTRIBUTE_GC_AS_APP)
+		return gameVitaAppDeletePart(titleId, false, info, part, 0);
+
+	return gameGcAppDeletePart(titleId, info, part);
+}
+
+/*
+ * The application titleId's appmeta in ur0 set aside (0x81062CC6): with mode
+ * GAME_UR0_APPMETA_MOVE the whole folder, with GAME_UR0_APPMETA_KEEP_ICONS each of its files
+ * but the icons, moved into ur0:temp/game, and that removed.
+ */
+int gameUr0AppmetaSetup(const string *titleId, int mode)
+{
+	if (titleId->size() == 0 || mode >= GAME_UR0_APPMETA_MODES)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	int ret = gameTempDirPrepare(GAME_UR0_TEMP_DIR);
+
+	if (ret < 0)
+		return ret;
+
+	if (mode == GAME_UR0_APPMETA_MOVE) {
+		string appmeta = string("appmeta/") + *titleId;
+		string src = string("ur0:") + appmeta;
+		string dst;
+		string name = gamePathToFileName(appmeta.c_str());
+
+		dst = string(GAME_UR0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+	} else if (mode == GAME_UR0_APPMETA_KEEP_ICONS) {
+		string appmeta = string("appmeta/") + *titleId;
+		string path = string("ur0:") + appmeta;
+		Dir dir;
+
+		ret = dir.Open(path.c_str());
+		if (ret < 0)
+			return ret;
+
+		do {
+			DirEnt entry;
+
+			ret = dir.Read(&entry);
+			if (ret != 0)
+				continue;
+
+			if (sce_paf_strncmp(entry.name.c_str(), ".", 1) == 0)
+				continue;
+			if (entry.name == "icon0.png" || entry.name == "icon0.dds")
+				continue;
+
+			string src = path + string("/") + entry.name;
+			string dst = string(GAME_UR0_TEMP_DIR) + "/" + entry.name;
+
+			{
+				LocalFileStat stat;
+				int moved = 0;
+
+				if (LocalFile::Getstat(src.c_str(), &stat) == 0) {
+					Dir::CreateRecursive(dst.c_str(), 6);
+					gameRemoveDirectory(dst.c_str(), 0, 0, 0, true);
+					moved = LocalFile::RenameFile(src.c_str(), dst.c_str());
+				}
+				ret = moved;
+			}
+
+			if (ret < 0) {
+				dir.Close();
+				return ret;
+			}
+		} while (ret == 0);
+
+		dir.Close();
+	}
+
+	ret = gameRemoveDirectoryContents(GAME_UR0_TEMP_DIR, NULL, NULL, NULL, true);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * Whether ux0:umass holds files the application titleId leaves behind (0x8106371E): only when it
+ * is the last preset application installed.
+ */
+int gameUmassHasFiles(const string *titleId, bool *found)
+{
+	bool last = false;
+
+	*found = false;
+
+	int ret = gamePresetIsLastInstalled(titleId, &last);
+
+	if (ret < 0)
+		return ret;
+
+	if (!last)
+		return 0;
+
+	string path(GAME_UMASS_DIR);
+
+	if (Dir::IsExist(path.c_str())) {
+		Dir dir;
+
+		ret = dir.Open(path.c_str());
+		if (ret < 0)
+			return ret;
+
+		unsigned int files = 0;
+
+		do {
+			DirEnt entry;
+
+			ret = dir.Read(&entry);
+			if (ret != 0)
+				continue;
+
+			if (entry.name == "." || entry.name == "..")
+				continue;
+
+			if (entry.type == DirEnt::Type_File)
+				files++;
+		} while (ret == 0);
+
+		dir.Close();
+
+		if (files != 0)
+			*found = true;
+	}
+
+	return 0;
+}
+
+/*
+ * A file of size bytes at path shrunk to below 128 MiB, a step at a time, before it is removed
+ * (0x81063854); a smaller one is left.
+ */
+int gameFileShrink(const string &path, SceOff size)
+{
+	if (size < GAME_UMASS_SHRINK_STEP)
+		return 0;
+
+	SceUID fd = sceIoOpen(path.c_str(), SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 0606);
+
+	if (fd < 0)
+		return fd;
+
+	SceIoStat stat;
+	int ret;
+
+	stat.st_size = size;
+	while (stat.st_size >= GAME_UMASS_SHRINK_STEP) {
+		stat.st_size -= GAME_UMASS_SHRINK_STEP;
+		ret = sceIoChstatByFd(fd, &stat, SCE_CST_SIZE);
+		if (ret < 0) {
+			sceIoClose(fd);
+			return ret;
+		}
+	}
+
+	ret = sceIoClose(fd);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * The save data of the application titleId deleted, by what (0x81063906): one user's (user
+ * userNo), the current user's, or every user's; a game card application's from the card's
+ * writable partition. reserved and reserved2 are not read.
+ */
+int gameAppDataOperateFiles(const string &titleId, LsdbAppInfoPtr *info, int what, int userNo,
+			    int reserved, int reserved2)
+{
+	int storage = 0;
+	int ret = gameAppGetStorage(info, &storage);
+
+	if (ret < 0)
+		return ret;
+
+	if (storage == GAME_STORAGE_GRO0) {
+		ret = gameGcAppDeletePart(titleId.c_str(), info, GAME_APP_PART_SAVEDATA);
+		if (ret < 0)
+			return ret;
+		return 0;
+	}
+
+	if (storage != GAME_STORAGE_GRO0_OTHER && storage != GAME_STORAGE_UX0)
+		return GAME_ERROR_NO_STORAGE;
+
+	int part;
+
+	switch (what) {
+	case GAME_APP_DATA_USER_SAVEDATA:
+		part = GAME_APP_PART_USER_SAVEDATA;
+		break;
+	case GAME_APP_DATA_SAVEDATA:
+		part = GAME_APP_PART_SAVEDATA;
+		break;
+	case GAME_APP_DATA_ALL_SAVEDATA:
+		part = GAME_APP_PART_ALL_SAVEDATA;
+		break;
+	default:
+		return GAME_ERROR_INVALID_ARGUMENT;
+	}
+
+	ret = gameVitaAppDeletePart(titleId.c_str(), storage == GAME_STORAGE_UX0, info, part, userNo);
+	if (ret < 0)
+		return ret;
+
+	return 0;
 }

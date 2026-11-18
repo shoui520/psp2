@@ -858,6 +858,19 @@ struct GamePresetTitle {
 /* an application's files deleted, by its kind (psp_license.cpp, 0x810609AC) */
 int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);
 
+/* a part of an application's files deleted, by its kind (psp_license.cpp, 0x81062BBA) */
+int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);
+
+/* an application's appmeta in ur0 set aside, by mode (psp_license.cpp, 0x81062CC6) */
+int gameUr0AppmetaSetup(const paf::string *titleId, int mode);
+
+/* whether ux0:umass holds files titleId leaves behind (psp_license.cpp, 0x8106371E) */
+int gameUmassHasFiles(const paf::string *titleId, bool *found);
+
+/* an application's save data deleted, whose by what (psp_license.cpp, 0x81063906) */
+int gameAppDataOperateFiles(const paf::string &titleId, LsdbAppInfoPtr *info, int what,
+			    int userNo, int reserved, int reserved2);
+
 /* the title IDs of the shell's own applications (game_lsdb.cpp, 0x8101CEFA) */
 void gamePresetGetTitleIds(paf::vector<paf::string> *titleIds);
 

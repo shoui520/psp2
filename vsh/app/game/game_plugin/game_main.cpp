@@ -141,8 +141,6 @@ int gamePspAddcontInfoCheck(const char *path, vector<string> *titleIds, bool *fo
 int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found);		/* 0x8109B7A6 */
 int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */
 int gameLaunchEmuListCheck(const string &titleId, bool *listed);	/* 0x810A4AA2: list_launch_emu.dat */
-int gameUr0AppmetaSetup(const string *titleId, const char *path);	/* 0x81062CC6: ur0:temp/game */
-int gameUmassCheck(int arg, bool *found);	/* 0x8106371E: ux0:umass */
 bool gameLaunchCheckIsOn(void);		/* 0x810A4B20: /CONFIG/SYSTEM/launch_check, on without it */
 
 /* topmenu_plugin's interface, found once */
@@ -1474,27 +1472,27 @@ int gamePluginSetupUr0(const LsdbAppInfoPtr *info, int arg)
 }
 
 /* An application's appmeta set up in ur0, under the same mutex (0x8102ED34). */
-int gamePluginSetupUr0Appmeta(const string *titleId, const char *path)
+int gamePluginSetupUr0Appmeta(const string *titleId, int mode)
 {
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
 
 	s_setupUr0Mutex.Lock();
 
-	int ret = gameUr0AppmetaSetup(titleId, path);
+	int ret = gameUr0AppmetaSetup(titleId, mode);
 
 	s_setupUr0Mutex.Unlock();
 
 	return ret;
 }
 
-/* PLACEHOLDER name: what ux0:umass's check gives, once started (0x8102ED72). */
-int gamePluginUmassCheck(int arg, bool *found)
+/* PLACEHOLDER name: whether ux0:umass holds files titleId leaves, once started (0x8102ED72). */
+int gamePluginUmassCheck(const string *titleId, bool *found)
 {
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
 
-	return gameUmassCheck(arg, found);
+	return gameUmassHasFiles(titleId, found);
 }
 
 /* What an application's folders take, the folders dirs names (0x8102ED90). */
