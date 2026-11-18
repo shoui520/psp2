@@ -507,51 +507,8 @@ int gameDirReadStat(const paf::string &path, SceNpDrmInstallInfo *stat);
 /* a folder's install information read into a cleared one (0x8101731A) */
 int gameDirGetStat(const paf::string &path, SceNpDrmInstallInfo *stat);
 
-/* a job's progress, as its installer advances it */
-struct GameJobProgress {
-	/* a progress that only counts */
-	GameJobProgress(float *percent)
-		: percent(percent), busy(0), scale(0.0f), func(NULL), arg(NULL)
-	{
-	}
 
-	GameJobProgress(float *percent, void (*func)(void *arg, float percent), void *arg)
-		: percent(percent), busy(0), scale(1.0f), func(func), arg(arg)
-	{
-	}
-
-	/* a part of progress, scaled */
-	GameJobProgress(const GameJobProgress &progress, float scale)
-		: percent(progress.percent), busy(0), scale(progress.scale * scale),
-		  func(progress.func), arg(progress.arg)
-	{
-	}
-
-	float *percent;
-	int busy;				/* cleared when the job ends */
-	float scale;
-	void (*func)(void *arg, float percent);
-	void *arg;
-};
-
-/*
- * PLACEHOLDER: what copies a theme's package into place and then commits it, 32 bytes, in another
- * file of the plugin (constructor 0x8103C120; Install its third virtual, Commit 0x8103C33C).
- * share is the part of the progress the step takes.
- */
-class GameThemeCopier {
-public:
-	GameThemeCopier(SceNpDrmInstallInfo *info, paf::string *errorTitleId);
-	virtual ~GameThemeCopier();
-	virtual int Install(const paf::string &path, const paf::string &themeId,
-			    paf::string *themeDir, paf::string *contentPath,
-			    GameJobProgress *progress, float share, int arg6, int arg7);
-
-	int Commit(paf::string *themeDir, paf::string *contentPath, GameJobProgress *progress,
-		   float share, int arg4, int arg5);
-
-	SceUInt8 otherFields[28];
-};
+#include "theme_copy.h"
 
 /*
  * A theme's theme.xml read into its record (theme_reader.cpp, 0x81033FA4..0x81034650): its

@@ -312,6 +312,44 @@ struct SceNpDrmInstallInfo {
 
 typedef char SceNpDrmInstallInfoSize[sizeof(SceNpDrmInstallInfo) == 0x3A8 ? 1 : -1];
 
+/* a job's progress, as its installer advances it */
+struct GameJobProgress {
+	/* a progress that only counts */
+	GameJobProgress(float *percent)
+		: percent(percent), busy(0), scale(0.0f), func(NULL), arg(NULL)
+	{
+	}
+
+	GameJobProgress(float *percent, void (*func)(void *arg, float percent), void *arg)
+		: percent(percent), busy(0), scale(1.0f), func(func), arg(arg)
+	{
+	}
+
+	/* a part of progress, scaled */
+	GameJobProgress(const GameJobProgress &progress, float scale)
+		: percent(progress.percent), busy(0), scale(progress.scale * scale),
+		  func(progress.func), arg(progress.arg)
+	{
+	}
+
+	/* value added to the progress */
+	void Add(float value)
+	{
+		if (percent == NULL)
+			return;
+
+		*percent += scale * value;
+		if (func != NULL)
+			func(arg, *percent);
+	}
+
+	float *percent;
+	int busy;				/* cleared when the job ends */
+	float scale;
+	void (*func)(void *arg, float percent);
+	void *arg;
+};
+
 /* the title IDs of the additional content an installation left (0x8102B8C4) */
 int gamePluginGetAddcontTitles(paf::vector<paf::string> *titles);
 
