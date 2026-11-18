@@ -164,8 +164,6 @@ extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
  */
 #define GAME_ERROR_GC_QUIET		-2146430680	/* 0x80101128 */
 #define GAME_ERROR_GC_APP_UPDATE	-2146430687	/* 0x80101121 */
-#define GAME_ERROR_GC_SYSTEM_UPDATE	-2146430650	/* 0x80101146 */
-#define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108 */
 #define GAME_ERROR_GC_STOPPED		-2144206822	/* 0x8032001A */
 #define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */
 #define GAME_ERROR_GC_LICENSE_EXPIRED	-2146430649	/* 0x80101147 */
@@ -2511,7 +2509,7 @@ void gameGcPromoteFinish(int result, void *arg)
 			promote->m_inserted = false;
 			gameUnmountGameDrives();
 		}
-	} else if (result == GAME_ERROR_GC_SYSTEM_UPDATE) {
+	} else if (result == GAME_ERROR_SYSTEM_UPDATE) {
 		promote->m_sysupchkLoaded = true;
 		gameGcPromoteCheckUpdate(promote);
 	} else if (result == GAME_ERROR_INSTALL_TITLE) {

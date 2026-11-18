@@ -209,8 +209,8 @@ int gameAppDeletePart(const char *titleId, int kind);
 int gameGcLoadParamSfo(LsdbAppInfoPtr *info);
 
 /*
- * PLACEHOLDER: a param.sfo's reader into an application's information, defined in another file
- * of the plugin (constructor 0x810329E0, Load 0x81032F44; 8 bytes).
+ * A signed param.sfo's reader into an application's information (sfo_reader.cpp: constructor
+ * 0x810329E0, Load 0x81032F44; 8 bytes).
  */
 class GameSfoReader {
 public:
@@ -218,6 +218,11 @@ public:
 	virtual ~GameSfoReader();
 
 	int Load(const paf::string &path);
+
+private:
+	int Check(LsdbAppInfoPtr *info);
+	int Verify(const char *path, void *sfo, SceSize *size);
+	int Read(const paf::string &path, LsdbAppInfoPtr *info);
 
 	LsdbAppInfoPtr *m_info;
 };
@@ -268,8 +273,9 @@ int gameAppCheckUpdate(const LsdbAppInfoPtr *info, void (*callback)(int result, 
 		       void *arg, bool gameCard, int mode, int priority);
 
 /*
- * PLACEHOLDER: what a SELF's eboot parameters (its control information of type 6) give the
- * shell, read by 0x8103301C. Only the fields the game plugin reads are named.
+ * What a SELF's eboot parameters (its control information of type 6) give the shell, with the
+ * check value of the saved copy (eboot_param.cpp). Only the fields the game plugin reads are
+ * named.
  */
 struct GameEbootParamData {
 	SceUInt8 digest[0x20];			/* the saved copy's check value */
@@ -281,15 +287,16 @@ struct GameEbootParamData {
 };
 
 /*
- * PLACEHOLDER: a SELF's eboot parameters, defined in another file of the shell (constructor
- * 0x81032FD4, destructors 0x81032FF8 and 0x81033006, Read 0x8103328C, Load 0x81033456).
+ * A SELF's eboot parameters, kept with a check value in a saved copy (eboot_param.cpp:
+ * constructor 0x81032FD4, destructors 0x81032FF8 and 0x81033006).
  */
 class GameEbootParam {
 public:
 	GameEbootParam();
 	virtual ~GameEbootParam();
-	int Read(const paf::string &path);	/* from a SELF */
+	int Read(const paf::string &path);	/* from a SELF (0x8103328C) */
 	int Load(const paf::string &path);	/* from a saved copy (0x81033456) */
+	int Save(const paf::string &selfPath, const paf::string &path);	/* 0x8103375E */
 
 	GameEbootParamData data;
 };
@@ -316,7 +323,16 @@ bool gameCategoryIsPatch(const paf::string &category);
 bool gameTypeIsSpecial(int type);
 bool gameCategoryIsEgMe(const paf::string &category);
 void gameUnmountGameDrives(void);
-float gameSumPercent(int last, const float *values);
+/* an application's param.sfo, from its folder */
+#define GAME_SFO_PATH		"/sce_sys/param.sfo"
+
+float gameSumPercent(int last, const float *values, unsigned int count);
+
+/*
+ * PLACEHOLDER name, defined in another file of the shell: whether the system is older than the
+ * version required (0x81363DA0)
+ */
+int shellSystemVersionCheck(SceUInt32 required, int *older);
 int gameStitleKey(unsigned int language, unsigned int *key);
 int gameTitleKey(unsigned int language, unsigned int *key);
 int gameSfoLoad(const paf::string &path, const GameSfoParam *params, unsigned int count,
@@ -485,6 +501,18 @@ int gameDirGetStat(const paf::string &path, SceNpDrmInstallInfo *stat);
 
 /* a job's progress, as its installer advances it */
 struct GameJobProgress {
+	GameJobProgress(float *percent, void (*func)(void *arg, float percent), void *arg)
+		: percent(percent), busy(0), scale(1.0f), func(func), arg(arg)
+	{
+	}
+
+	/* a part of progress, scaled */
+	GameJobProgress(const GameJobProgress &progress, float scale)
+		: percent(progress.percent), busy(0), scale(progress.scale * scale),
+		  func(progress.func), arg(progress.arg)
+	{
+	}
+
 	float *percent;
 	int busy;				/* cleared when the job ends */
 	float scale;
@@ -493,19 +521,87 @@ struct GameJobProgress {
 };
 
 /*
- * PLACEHOLDER: the installer a GameParamJob runs, 80 bytes, in another file of the plugin
- * (constructor 0x81030A6C, Run 0x81031B94).
+ * PLACEHOLDER: what copies a theme's package into place and then commits it, 32 bytes, in another
+ * file of the plugin (constructor 0x8103C120; Install its third virtual, Commit 0x8103C33C).
+ * share is the part of the progress the step takes.
  */
-class GameJobInstaller {
+class GameThemeCopier {
 public:
-	GameJobInstaller(const GameJobParam *param, SceNpDrmInstallInfo *info,
-			 GameJobProgress *progress, paf::string *errorTitleId, float scale);
-	virtual ~GameJobInstaller();
+	GameThemeCopier(SceNpDrmInstallInfo *info, paf::string *errorTitleId);
+	virtual ~GameThemeCopier();
+	virtual int Install(const paf::string &path, const paf::string &themeId,
+			    paf::string *themeDir, paf::string *contentPath,
+			    GameJobProgress *progress, float share, int arg6, int arg7);
 
-	int Run(int arg1, int arg2);
+	int Commit(paf::string *themeDir, paf::string *contentPath, GameJobProgress *progress,
+		   float share, int arg4, int arg5);
 
-	SceUInt8 otherFields[76];
+	SceUInt8 otherFields[28];
 };
+
+/*
+ * PLACEHOLDER: what reads a theme's theme.xml into its record, 60 bytes, in another file of the
+ * plugin (constructor 0x81033FA4, Read 0x810344AE).
+ */
+class GameThemeReader {
+public:
+	GameThemeReader(SceNpDrmInstallInfo *info, const paf::string *themeId,
+			const paf::string *themeDir, const paf::string *contentPath, bool extracted);
+	virtual ~GameThemeReader();
+
+	int Read(LsdbTheme *theme, paf::common::SharedPtr<LsdbThemeInfo> *info, int arg3,
+		 int arg4);
+
+	SceUInt8 otherFields[56];
+};
+
+/* the steps of a theme's installation, for its progress */
+#define GAME_THEME_INSTALL_STEPS	5
+
+/*
+ * PLACEHOLDER names: a theme's package installed into ux0:theme, or a theme already there
+ * registered (0x81030A6C..0x81031C1C), 80 bytes.
+ */
+class GameThemeInstaller {
+public:
+	GameThemeInstaller(const GameJobParam *param, SceNpDrmInstallInfo *info,
+			   GameJobProgress *progress, paf::string *errorTitleId, float scale);
+	virtual ~GameThemeInstaller();
+
+	int Run(bool (*cancel)(void *arg), void *arg);
+
+	/* whether the system is new enough for the theme's param.sfo */
+	int CheckSystemVersion(void);
+
+	/* the theme's package installed, and the theme already in ux0:theme registered */
+	int InstallPackage(bool (*cancel)(void *arg), void *arg);
+	int InstallExtracted(bool (*cancel)(void *arg), void *arg);
+
+	/* the progress after step, of GAME_THEME_INSTALL_STEPS */
+	void SetProgress(int step)
+	{
+		float percent = gameSumPercent(step, m_weights, GAME_THEME_INSTALL_STEPS);
+
+		if (m_progress.percent == NULL || percent < *m_progress.percent ||
+		    percent > 100.0f)
+			return;
+
+		*m_progress.percent = percent;
+		if (m_progress.func != NULL)
+			m_progress.func(m_progress.arg, *m_progress.percent);
+		m_progress.busy = 0;
+	}
+
+	const GameJobParam *m_param;
+	SceNpDrmInstallInfo *m_info;
+	GameJobProgress m_progress;
+	float m_weights[GAME_THEME_INSTALL_STEPS];	/* each step's part of the progress */
+	paf::string *m_errorTitleId;
+	paf::string m_reserved;			/* not set in this file */
+	paf::string m_themeId;			/* "<title ID>-<the content ID's label>" */
+};
+
+typedef char GameThemeInstallerSize[sizeof(GameThemeInstaller) == 80 ? 1 : -1];
 
 /*
  * PLACEHOLDER names: a package folder installed with the shell locked, from a GameJobParam
@@ -513,7 +609,7 @@ public:
  */
 class GameParamJob {
 public:
-	GameParamJob(const GameJobParam *param, int arg1, int arg2);
+	GameParamJob(const GameJobParam *param, bool (*cancel)(void *arg), void *arg);
 	virtual ~GameParamJob();
 
 	int Run(void);
@@ -526,8 +622,8 @@ public:
 
 	GameJobParam m_param;
 	int m_reserved;			/* not written: Sony clears the parameters only */
-	int m_arg1;
-	int m_arg2;
+	bool (*m_cancel)(void *arg);
+	void *m_cancelArg;
 	int m_result;
 	SceNpDrmInstallInfo m_info;
 	paf::string m_errorTitleId;
@@ -537,6 +633,38 @@ public:
 };
 
 typedef char GameParamJobSize[sizeof(GameParamJob) == 0x470 ? 1 : -1];
+
+/*
+ * PLACEHOLDER: what makes a PlayStation game's multi-disc signature from the PSP emulator's disc
+ * list ("SceGamePs1DiscInfoParser", 28 bytes), in another file of the plugin (constructor
+ * 0x81034650, Load 0x81034732, Generate 0x810348E0).
+ */
+class GamePs1DiscInfoParser {
+public:
+	GamePs1DiscInfoParser();
+	virtual ~GamePs1DiscInfoParser();
+
+	int Load(const paf::string &path);
+	int Generate(const SceNpDrmInstallInfo *info, paf::string ebootPath, void *signature);
+
+	SceUInt8 otherFields[24];
+};
+
+/*
+ * A PSP application's EBOOT.PBP signature (eboot_sig.cpp): made for an installation and written
+ * to sigPath (0x810321A4), and checked, the old PSP signature only where allowPsp is set; the
+ * check of an application's folder, the PSP emulator's work folder mounted (0x810326AA).
+ */
+int gameEbootSigGen(const SceNpDrmInstallInfo *info, const paf::string &ebootPath,
+		    const void *sha256, const paf::string &sigPath, paf::string *detail);
+int gameEbootCheck(const char *dir, paf::string *detail);
+
+/* PLACEHOLDER name: what other objects check an EBOOT signature with (0x81032952) */
+class GameEbootSig {
+public:
+	int Verify(const paf::string &ebootPath, const paf::string &sigPath, bool allowPsp,
+		   paf::string *detail);
+};
 
 /*
  * PLACEHOLDER name, defined in another file of the shell: whether the PSP emulator's list

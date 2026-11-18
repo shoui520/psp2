@@ -60,9 +60,6 @@ using namespace paf;
 /* where the PSP emulator keeps the PSP games installed on the memory card */
 #define GAME_PSPEMU_GAME_DIR	"ux0:pspemu/PSP/GAME"
 
-/* an application's param.sfo in its folder */
-#define GAME_SFO_PATH		"/sce_sys/param.sfo"
-
 /* the applications' licenses */
 #define GAME_LICENSE_APP_DIR	"ux0:license/app/"
 
@@ -140,7 +137,6 @@ static bool s_repromoting;
 
 /* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
 int gameLockedJobRun(void *arg, int arg1);	/* 0x8103DCF4 */
-int gameEbootCheck(const char *path, int arg);		/* 0x810326AA: EBOOT.PBP, __sce_ebootpbp */
 int gameContentImportPrepare(const char *titleId);	/* 0x810562E4 */
 int gameContentImportRun(const char *titleId);		/* 0x810569FC: the installing dialog */
 int gameContentImportCheck(const char *titleId);	/* 0x8105718C */
@@ -1050,7 +1046,7 @@ int gamePluginLicenseCheck(const LsdbAppInfoPtr *info, GameLicenseStatus *status
 	if (ret < 0)
 		return ret;
 
-	if (gameCategoryIsEgMe(category) && gameEbootCheck(path.c_str(), 0) < 0)
+	if (gameCategoryIsEgMe(category) && gameEbootCheck(path.c_str(), NULL) < 0)
 		return GAME_ERROR_EBOOT;
 
 	return 0;
@@ -1576,7 +1572,7 @@ int gamePluginParamJobRun(const GameJobParam *param)
 		gameWorkBegin();
 		gameShellHold(true, false);
 
-		GameParamJob *job = new GameParamJob(param, 0, 0);
+		GameParamJob *job = new GameParamJob(param, NULL, NULL);
 
 		if (job != NULL) {
 			ret = job->m_result;

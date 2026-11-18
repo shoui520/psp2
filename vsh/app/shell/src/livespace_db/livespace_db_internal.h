@@ -265,6 +265,10 @@ struct LsdbIconLocation {
 };
 /* a theme's record (tbl_theme) */
 struct LsdbTheme {
+	LsdbTheme() : type(0), contentVer(0), lastModifiedTime(0), size(0)
+	{
+	}
+
 	virtual ~LsdbTheme()
 	{
 	}

@@ -31,6 +31,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/gamedata_plus_util/src/plus_sd_list.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/game_main.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/param_job.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/theme_install.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/eboot_sig.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/sfo_reader.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/eboot_param.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

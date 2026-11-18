@@ -185,7 +185,8 @@ public:
 /* PLACEHOLDER names: what gamePluginParamJobRun's job is given, 140 bytes */
 struct GameJobParam {
 	char path[128];				/* the package folder */
-	SceUInt32 otherWord;
+	bool extracted;				/* PLACEHOLDER name: a theme already in ux0:theme */
+	SceUInt8 padding[3];
 	void (*progressFunc)(void *arg, float percent);
 	void *progressArg;
 };
@@ -228,8 +229,9 @@ int gamePfsMount(const paf::string &dir, const paf::string &name, const void *ke
 		 paf::string *mountPoint);
 int gamePfsUnmount(paf::string *mountPoint);
 
-/* a package's content type: an application, additional content (values only) */
+/* a package's content type: an application, additional content, a PlayStation game (values only) */
 #define GAME_CONTENT_TYPE_APP		31
+#define GAME_CONTENT_TYPE_PS1		6
 #define GAME_CONTENT_TYPE_ADDCONT	22
 
 /* the plugin's error for an argument out of range (value only) */
@@ -248,6 +250,10 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_NOT_READY		-2146430719	/* 0x80101101: what it needs is not there (a mount's record, the
 						   promoter, the plugins a dialog is shown with) */
 #define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
+#define GAME_ERROR_BAD_DATA		-2146430716	/* 0x80101104: a file whose contents do not check */
+#define GAME_ERROR_BAD_SIGNED_SFO	-2146430662	/* 0x8010113A: a signed param.sfo whose header does not check */
+#define GAME_ERROR_BAD_SELF		-2146430681	/* 0x80101127: a SELF whose headers do not check */
+#define GAME_ERROR_BAD_PARAM_SIZE	-2146430659	/* 0x8010113D: a saved copy of the eboot parameters of the wrong size */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
 #define GAME_ERROR_EBOOT		-2146430699	/* 0x80101115: an EG or ME application's EBOOT.PBP that does not open */
@@ -256,6 +262,9 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 #define GAME_ERROR_NO_INSTALL_INFO	-2146430692	/* 0x8010111C: a folder without its install information */
 #define GAME_ERROR_NOT_APP_PACKAGE	-2146430672	/* 0x80101130: a package of another content type */
+#define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108: stopped by the caller's cancel check */
+#define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
+#define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
@@ -272,7 +281,7 @@ struct GamePackageInfo {
 	SceUInt32 bodyBlocks;
 	SceUInt32 otherFields[6];
 	char contentId[48];			/* "XX0000-XXXXNNNNN_00-XXXXXXXXXXXXXXXX" */
-	SceUInt8 moreFields[32];
+	char titleId[32];
 };
 
 typedef char GamePackageInfoSize[sizeof(GamePackageInfo) == 0x78 ? 1 : -1];
@@ -285,9 +294,11 @@ struct SceNpDrmInstallInfo {
 	GamePackageInfo info;
 	SceUInt8 license[512];
 	SceUInt8 keystone[256];
-	char param_digest[40];			/* what param.sfo's digest is checked against */
+	char param_digest[32];			/* what param.sfo's digest is checked against */
+	SceSize licenseSize;
+	SceUInt32 otherWord;
 	SceSize param_digest_size;
-	SceUInt8 reserved[4];
+	int swVersion;				/* what a PSP EBOOT's signature is made for */
 };
 
 typedef char SceNpDrmInstallInfoSize[sizeof(SceNpDrmInstallInfo) == 0x3A8 ? 1 : -1];

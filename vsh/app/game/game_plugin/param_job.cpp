@@ -84,15 +84,10 @@ int GameParamJob::Check(void)
 }
 
 /* The job made from param, its folder checked (0x8103084C). */
-GameParamJob::GameParamJob(const GameJobParam *param, int arg1, int arg2)
-	: m_param(), m_arg1(arg1), m_arg2(arg2), m_result(0), m_percent(0.0f)
+GameParamJob::GameParamJob(const GameJobParam *param, bool (*cancel)(void *arg), void *arg)
+	: m_param(), m_cancel(cancel), m_cancelArg(arg), m_result(0), m_percent(0.0f),
+	  m_progress(&m_percent, param->progressFunc, param->progressArg)
 {
-	m_progress.percent = &m_percent;
-	m_progress.busy = 0;
-	m_progress.scale = 1.0f;
-	m_progress.func = param->progressFunc;
-	m_progress.arg = param->progressArg;
-
 	sce_paf_memcpy(&m_param, param, sizeof(m_param));
 	sce_paf_memset(&m_info, 0, sizeof(m_info));
 
@@ -112,13 +107,13 @@ int GameParamJob::Run(void)
 	if (ret < 0)
 		return ret;
 
-	GameJobInstaller *installer = new GameJobInstaller(&m_param, &m_info, &m_progress,
-							   &m_errorTitleId, 1.0f);
+	GameThemeInstaller *installer = new GameThemeInstaller(&m_param, &m_info, &m_progress,
+							       &m_errorTitleId, 1.0f);
 
 	if (installer == NULL)
 		return GAME_ERROR_NO_INFO_MEMORY;
 
-	ret = installer->Run(m_arg1, m_arg2);
+	ret = installer->Run(m_cancel, m_cancelArg);
 	if (ret < 0) {
 		delete installer;
 		return ret;

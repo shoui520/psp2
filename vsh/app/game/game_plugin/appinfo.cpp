@@ -29,7 +29,6 @@ using namespace paf;
 
 /* the errors (values only) */
 #define GAME_ERROR_NO_PLUGIN	-2146430719	/* 0x80101101: a plugin the call needs is not loaded */
-#define GAME_ERROR_BAD_DATA	-2146430716	/* 0x80101104: a file whose contents do not check */
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
 #define GAME_ERROR_NO_STORAGE	-2146430663	/* 0x80101139: a path on no storage the plugin knows */
 #define GAME_ERROR_NO_SFO_PARAMS	-2146430672	/* 0x80101130: a category with no param.sfo table */
@@ -637,8 +636,8 @@ void gameUnmountGameDrives(void)
 	vshIoUmount(GAME_MOUNT_ID_GRO0, 0, 0, 0);
 }
 
-/* the sum of values[0..last], as a percentage (0x810103E6) */
-float gameSumPercent(int last, const float *values)
+/* the sum of values[0..last] of count values, as a percentage (0x810103E6) */
+float gameSumPercent(int last, const float *values, unsigned int count)
 {
 	float sum = 0.0f;
 	int i;

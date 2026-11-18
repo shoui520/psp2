@@ -24,7 +24,6 @@
 
 using namespace paf;
 
-#define GAME_ERROR_CANCELED		-2146430712	/* 0x80101108: cancelled by the caller */
 #define GAME_ERROR_UNREGISTER		-2146430679	/* 0x80101129: applauncher_plugin kept an application */
 #define GAME_ERROR_NO_DEVICE		-2146430678	/* 0x8010112A: a path without a device name */
 #define GAME_ERROR_INVALID_TITLE_ID	-2146430573	/* 0x80101193: not nine capitals and digits */
@@ -377,7 +376,7 @@ int gameAddcontLicenseGetSize(const string &titleId, const int *storage, GameCan
 	}
 
 	if (cancel != NULL && cancel(arg) != 0)
-		return GAME_ERROR_CANCELED;
+		return GAME_ERROR_ABORTED;
 
 	*size = licenseSize;
 
@@ -444,7 +443,7 @@ int gameAddcontGetSize(const string &titleId, LsdbAppInfoPtr info, const int *st
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	*size = total;
@@ -507,7 +506,7 @@ int gameAppGetSizes(const string *appDir, const string &titleId, unsigned int fl
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	unsigned int dataFlag = flags & 8;
@@ -546,7 +545,7 @@ int gameAppGetSizes(const string *appDir, const string &titleId, unsigned int fl
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if ((flags & 4) != 0) {
@@ -580,7 +579,7 @@ int gameAppGetSizes(const string *appDir, const string &titleId, unsigned int fl
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 
 		SceUInt64 licenseSize = 0;
 
@@ -632,7 +631,7 @@ int gamePspGetSizes(const string *appDir, const string &titleId, unsigned int fl
 		sizes->total += size;
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if ((flags & 2) == 0)
@@ -658,7 +657,7 @@ int gamePspGetSizes(const string *appDir, const string &titleId, unsigned int fl
 	}
 
 	if (cancel != NULL && cancel(arg) != 0)
-		return GAME_ERROR_CANCELED;
+		return GAME_ERROR_ABORTED;
 
 	return 0;
 }
@@ -687,7 +686,7 @@ int gameSysAppGetSizes(const string *appDir, const string &titleId, unsigned int
 		sizes->total += size;
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if ((flags & 8) == 0)
@@ -704,7 +703,7 @@ int gameSysAppGetSizes(const string *appDir, const string &titleId, unsigned int
 		sizes->total += size;
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	string license = string("ux0:") + string("license/app/") + titleId;
@@ -1328,7 +1327,7 @@ int gameAppGetDirsSize(const char *titleId, int dirs, GameCancelFunc cancel, voi
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if (dirs & GAME_APP_DIR_APPMETA) {
@@ -1345,7 +1344,7 @@ int gameAppGetDirsSize(const char *titleId, int dirs, GameCancelFunc cancel, voi
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if (dirs & GAME_APP_DIR_LICENSE) {
@@ -1362,7 +1361,7 @@ int gameAppGetDirsSize(const char *titleId, int dirs, GameCancelFunc cancel, voi
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	if (dirs & GAME_APP_DIR_PATCH) {
@@ -1379,7 +1378,7 @@ int gameAppGetDirsSize(const char *titleId, int dirs, GameCancelFunc cancel, voi
 		}
 
 		if (cancel != NULL && cancel(arg) != 0)
-			return GAME_ERROR_CANCELED;
+			return GAME_ERROR_ABORTED;
 	}
 
 	return 0;
