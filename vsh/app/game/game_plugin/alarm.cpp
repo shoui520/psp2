@@ -339,7 +339,7 @@ void GameAlarm::OnAppResumed(int code, int value, const char *titleId, void *arg
 	for (EntryMap::iterator it = alarm->m_entries.begin(); it != end; ++it) {
 		GameAlarmEntry *entry = it->second;
 
-		if (entry != NULL && entry->titleId == titleId) {
+		if (entry != NULL && entry->m_titleId == titleId) {
 			alarm->StartAlarm(string(titleId));
 			entry->Restart();
 			return;

@@ -31,6 +31,8 @@ public:
 	void Close(void);
 
 private:
+	friend class GameAlarm;
+
 	void Notify(int step, SceUInt64 remaining);
 	int GetNextTick(SceRtcTick *tick, int *step);
 

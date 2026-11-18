@@ -920,20 +920,27 @@ public:
 typedef char GameLicenseInstallSourceSize[sizeof(GameLicenseInstallSource) == 36 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a PlayStation Mobile application's package, defined in another file
- * of the plugin (constructor 0x8108521C), 12 bytes. The names are ours.
+ * The source of a PlayStation Mobile application's package (psm_app_install_source.cpp,
+ * 0x8108521C..0x81085DF0, vtable 0x8152EFA0), 12 bytes: installed to ux0:psm/<title ID> with its
+ * license. The names are ours.
  */
 class GamePsmAppInstallSource : public GameInstallSource {
 public:
+	GamePsmAppInstallSource(const GameInstallParam *param, paf::string *errorTitleId);
+	virtual ~GamePsmAppInstallSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
 	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
 			     int reserved2, int reserved3, float scale);
-	GamePsmAppInstallSource(const GameInstallParam *param, paf::string *errorTitleId);
-	virtual ~GamePsmAppInstallSource();
 
-	SceUInt8 m_body[8];		/* PLACEHOLDER: laid out with its file */
+private:
+	int WriteLicense(const paf::string *path, const paf::string *dir, paf::string *licensePath,
+			 paf::string *detail);
+
+	const GameInstallParam *m_param;
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
 };
 
 typedef char GamePsmAppInstallSourceSize[sizeof(GamePsmAppInstallSource) == 12 ? 1 : -1];
@@ -1489,8 +1496,9 @@ public:
 typedef char GamePspAppInstallerSize[sizeof(GamePspAppInstaller) == 156 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a PSP game's package, defined in another file of the plugin
- * (constructor 0x81085DF0), 32 bytes. The names are ours.
+ * The source of a PSP game's package (psp_app_install_source.cpp, constructor 0x81085DF0): the
+ * pspemu work folder mounted while it installs, the games' old folders under ux0:pspemu moved to
+ * ux0:pspemu/temp/promote, and the package's moved into place. The names are ours.
  */
 class GamePspAppInstallSource : public GameInstallSource {
 public:
@@ -1504,7 +1512,17 @@ public:
 				const paf::string *gameDataId, paf::string *errorTitleId);
 	virtual ~GamePspAppInstallSource();
 
-	SceUInt8 m_body[28];		/* PLACEHOLDER: laid out with its file */
+private:
+	int MoveOld(const paf::string *path, const paf::string &fromDir,
+		    const paf::string &toDir, int type, paf::string *detail);
+	int MoveNew(const paf::string &fromDir, const paf::string &toDir, int type,
+		    paf::string *detail);
+
+	const GameInstallParam *m_param;
+	paf::string m_mountPoint;			/* the pspemu work folder's */
+	const paf::vector<paf::string> *m_titleIds;	/* the games sharing the game data */
+	const paf::string *m_gameDataId;
+	paf::string *m_errorTitleId;
 };
 
 typedef char GamePspAppInstallSourceSize[sizeof(GamePspAppInstallSource) == 32 ? 1 : -1];

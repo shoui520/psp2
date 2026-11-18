@@ -24,9 +24,6 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbValue, paf::allocator<LsdbValue>)
 
 using namespace paf;
 
-/* the size of a license's file name */
-#define GAME_RIF_NAME_SIZE	48
-
 /* the #_up_status values a license gives */
 #define GAME_UP_STATUS_MAX	3
 

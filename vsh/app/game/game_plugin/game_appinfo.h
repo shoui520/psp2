@@ -788,6 +788,9 @@ extern "C" int vshRtcSetSecureAlarmTick(const SceRtcTick *tick);
 #define GAME_LICENSE_NO_EXPIRY		0x7FFFFFFFFFFFFFFFLL
 #define GAME_LICENSE_ERROR_EXPIRED	-2139095023	/* 0x80800011 */
 
+/* the size of a license's file name */
+#define GAME_RIF_NAME_SIZE	48
+
 /* the content types whose licenses are written: applications (21, 22) and themes (31) */
 #define GAME_LICENSE_CONTENT_APP		21
 #define GAME_LICENSE_CONTENT_APP_ADDCONT	22

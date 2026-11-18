@@ -34,9 +34,6 @@ using namespace paf;
 /* the PocketStation's license */
 #define GAME_POCKETSTATION_CONTENT_ID	"JA0003-PCSC80018_00-POCKETSTATION001"
 
-/* the length of a rif's name */
-#define GAME_RIF_NAME_SIZE		48
-
 /* 0x810349D4 */
 GameRifInfo::GameRifInfo(int userData)
 	: m_accountId(0), m_licenseType(GAME_RIF_LICENSE_PERMANENT), m_loaded(false), m_result(0),

@@ -23,9 +23,6 @@ using namespace paf;
 /* where the applications' licenses are, by title ID */
 #define GAME_LICENSE_APP_DIR	"ux0:license/app/"
 
-/* the size of a license's file name */
-#define GAME_RIF_NAME_SIZE	48
-
 /* the license file's flag set when the free-trial license moves over one already there */
 #define GAME_LICENSE_FLAG_ACTIVATED	1
 
