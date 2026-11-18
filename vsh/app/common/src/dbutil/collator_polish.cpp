@@ -10,7 +10,7 @@ const SceUInt8 CollatorPolish::s_groupOrder[COLLATOR_CHAR_TYPE_COUNT] =
 	{ 2, 3, 1, 4, 4, 4, 4, 4, 4 };
 
 /* the letters' weights, by character */
-static const SceUInt8 s_weight[0x17d] = {
+static const SceUInt8 s_polishWeight[0x17d] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -66,13 +66,13 @@ unsigned int CollatorPolish::RemoveAccent(unsigned int c)
 unsigned int CollatorPolish::GetLatinWeight(unsigned int c)
 {
 	if (!m_attribute[COLLATOR_ATTR_CASE_SENSITIVE])
-		return s_weight[c];
+		return s_polishWeight[c];
 	if ((c >= 'A' && c <= 'Z') || c == 0x104 || c == 0x106 || c == 0x118 || c == 0x141 ||
 	    c == 0x143 || c == 0xd3 || c == 0x15a || c == 0x179 || c == 0x17b)
-		return s_weight[c] * 2 + !m_attribute[COLLATOR_ATTR_UPPER_FIRST];
+		return s_polishWeight[c] * 2 + !m_attribute[COLLATOR_ATTR_UPPER_FIRST];
 	if ((c >= 'a' && c <= 'z') || c == 0x105 || c == 0x107 || c == 0x119 || c == 0x142 ||
 	    c == 0x144 || c == 0xf3 || c == 0x15b || c == 0x17a || c == 0x17c)
-		return s_weight[c] * 2 + !m_attribute[COLLATOR_ATTR_LOWER_FIRST];
+		return s_polishWeight[c] * 2 + !m_attribute[COLLATOR_ATTR_LOWER_FIRST];
 	return c;
 }
 

@@ -10,7 +10,7 @@ const SceUInt8 CollatorTurkish::s_groupOrder[COLLATOR_CHAR_TYPE_COUNT] =
 	{ 2, 3, 1, 4, 4, 4, 4, 4, 4 };
 
 /* the letters' weights, by character */
-static const SceUInt8 s_weight[0x160] = {
+static const SceUInt8 s_turkishWeight[0x160] = {
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -82,13 +82,13 @@ unsigned int CollatorTurkish::RemoveAccent(unsigned int c)
 unsigned int CollatorTurkish::GetLatinWeight(unsigned int c)
 {
 	if (!m_attribute[COLLATOR_ATTR_CASE_SENSITIVE])
-		return s_weight[c];
+		return s_turkishWeight[c];
 	if ((c >= 'A' && c <= 'Z') || c == 0xc7 || c == 0x11e || c == 0x130 || c == 0xd6 ||
 	    c == 0x15e || c == 0xdc)
-		return s_weight[c] * 2 + !m_attribute[COLLATOR_ATTR_UPPER_FIRST];
+		return s_turkishWeight[c] * 2 + !m_attribute[COLLATOR_ATTR_UPPER_FIRST];
 	if ((c >= 'a' && c <= 'z') || c == 0xe7 || c == 0x11f || c == 0x131 || c == 0xf6 ||
 	    c == 0x15f || c == 0xfc)
-		return s_weight[c] * 2 + !m_attribute[COLLATOR_ATTR_LOWER_FIRST];
+		return s_turkishWeight[c] * 2 + !m_attribute[COLLATOR_ATTR_LOWER_FIRST];
 	return c;
 }
 
