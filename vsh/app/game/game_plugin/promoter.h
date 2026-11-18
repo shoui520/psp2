@@ -619,29 +619,209 @@ public:
 	SceUInt8 m_body[120];		/* PLACEHOLDER: laid out with its file */
 };
 
-/* an application (GD) (constructor 0x8106D3EC), 156 bytes */
-class GameGdInstaller : public GamePromoterIf {
+/*
+ * PLACEHOLDER: the check of an application's update package against the installed application,
+ * defined in another file of the plugin (constructor 0x8107DA08, vtable 0x8152EF18), 36 bytes.
+ */
+class GameGdUpdateCheck {
 public:
-	GameGdInstaller(const char *path, const SceNpDrmInstallInfo *info,
-	                GameJobProgress *progress, paf::string *errorTitleId);
+	GameGdUpdateCheck(const paf::string &titleId, const paf::string &path, bool notImported,
+			  paf::string *errorTitleId);
+	virtual ~GameGdUpdateCheck();
+
+	/* the check against the installed application's record (0x8107DD86) */
+	int Check(const LsdbAppInfoPtr *info);
+
+	SceUInt8 m_body[32];
+};
+
+typedef char GameGdUpdateCheckSize[sizeof(GameGdUpdateCheck) == 36 ? 1 : -1];
+
+/*
+ * PLACEHOLDER: the installers' base, defined in another file of the plugin (constructor
+ * 0x81095248, destructor 0x8109541A, vtable 0x8152F090), 124 bytes: the package folder's source
+ * made, its record built and registered, by stages. The names are ours.
+ */
+class GameInstallSource;
+
+class GamePackageInstaller : public GamePromoterIf {
+public:
+	GamePackageInstaller(const char *path, const SceNpDrmInstallInfo *info,
+			     GameJobProgress *progress, paf::string *errorTitleId, float scale);
+	virtual ~GamePackageInstaller();
 
 	virtual int Run(GameAppRegistration *reg, bool registerApp, GameCancelFunc cancel,
 			void *arg);
 
-	SceUInt8 m_body[152];		/* PLACEHOLDER: laid out with its file */
+	/* the folder made ready for the install */
+	virtual int Prepare(bool flag)
+	{
+		return 0;
+	}
+
+	/* the source of the package folder, its error in *ret */
+	virtual GameInstallSource *CreateSource(int *ret)
+	{
+		*ret = 0;
+		return NULL;
+	}
+
+	/* once the source has installed the package to dir and path */
+	virtual int Installed(paf::string *dir, paf::string *path)
+	{
+		return 0;
+	}
+
+	/* what is undone after a failed or finished install */
+	virtual int Cleanup(void)
+	{
+		return 0;
+	}
+
+	/* the record built from the source (0x81095DA4) */
+	virtual int SetInfo(bool registerApp, GameAppRegistration *reg);
+
+	/* the record of an install the source reports as not to be registered */
+	virtual int SetOtherInfo(bool flag, GameAppRegistration *reg, paf::string *dir,
+				 paf::string *path)
+	{
+		return 0;
+	}
+
+	/* what is left once the record is registered */
+	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg)
+	{
+		return 0;
+	}
+
+	const char *m_path;			/* the package folder, at the head of its GameInstallExParam */
+	const SceNpDrmInstallInfo *m_info;
+	GameInstallSource *m_source;		/* CreateSource's */
+	GameInstallSource *m_infoSource;	/* the source SetInfo reads */
+	GameJobProgress m_progress;
+	float m_weights[6];			/* each stage's part of the progress */
+	bool m_flag;
+	bool m_prepareFlag;			/* Prepare's */
+	bool m_otherFlag;
+	paf::string m_titleId;			/* the install information's */
+	paf::string m_appDir;
+	paf::string m_dir;
+	paf::string m_otherDir;
+	paf::string *m_errorTitleId;		/* the title ID an error names */
+	bool m_noLicense;			/* the folder's GameInstallExParam names no license */
 };
 
-/* additional content (AC) (constructor 0x8106D0B0), 132 bytes */
-class GameAcInstaller : public GamePromoterIf {
+typedef char GamePackageInstallerSize[sizeof(GamePackageInstaller) == 124 ? 1 : -1];
+
+/* PLACEHOLDER: a source of an installer, defined in another file of the plugin */
+class GameInstallSource {
+public:
+	virtual ~GameInstallSource();
+};
+
+/*
+ * PLACEHOLDER: the source of an additional content's package folder, defined in another file of
+ * the plugin (constructor 0x810875F0), 64 bytes.
+ */
+class GameAddcontSource : public GameInstallSource {
+public:
+	GameAddcontSource(const char *path, const SceNpDrmInstallInfo *info, LsdbAppInfoPtr *appInfo,
+			  paf::string *errorTitleId);
+
+	SceUInt8 m_body[60];
+};
+
+/*
+ * An additional content installed (ac_installer.cpp, constructor 0x8106D0B0, vtable 0x8152ECC4),
+ * 132 bytes: its application's record read, the install held while the application runs with
+ * its additional contents, and the #appsize's additional contents' field reset.
+ */
+class GameAcInstaller : public GamePackageInstaller {
 public:
 	GameAcInstaller(const char *path, const SceNpDrmInstallInfo *info,
-	                GameJobProgress *progress, paf::string *errorTitleId);
+	                GameJobProgress *progress, paf::string *errorTitleId, float scale = 1.0f);
+	virtual ~GameAcInstaller();
 
-	virtual int Run(GameAppRegistration *reg, bool registerApp, GameCancelFunc cancel,
-			void *arg);
+	virtual int Prepare(bool flag);
+	virtual GameInstallSource *CreateSource(int *ret);
+	virtual int Installed(paf::string *dir, paf::string *path);
 
-	SceUInt8 m_body[128];		/* PLACEHOLDER: laid out with its file */
+	LsdbAppInfoPtr m_appInfo;		/* the application's record */
 };
+
+typedef char GameAcInstallerSize[sizeof(GameAcInstaller) == 132 ? 1 : -1];
+
+/*
+ * PLACEHOLDER: the sources of an application's package folder, defined in other files of the
+ * plugin: an update's (constructor 0x8108A81C, 36 bytes) and an application's (constructor
+ * 0x8108A0FC, 40 bytes).
+ */
+class GameGdUpdateSource : public GameInstallSource {
+public:
+	GameGdUpdateSource(const SceNpDrmInstallInfo *info, const LsdbAppInfoPtr *appInfo,
+			   paf::string *errorTitleId);
+
+	SceUInt8 m_body[32];
+};
+
+class GameGdAppSource : public GameInstallSource {
+public:
+	GameGdAppSource(const SceNpDrmInstallInfo *info, bool noLicense, const paf::string &mountPoint,
+			paf::string *errorTitleId);
+
+	SceUInt8 m_body[36];
+};
+
+/*
+ * An application installed (gd_installer.cpp, constructor 0x8106D3EC, vtable 0x8152ECF8), 156
+ * bytes: its record read and checked against the update, its folder moved into place and its
+ * record built from its param.sfo.
+ */
+class GameGdInstaller : public GamePackageInstaller {
+public:
+	GameGdInstaller(const char *path, const SceNpDrmInstallInfo *info,
+	                GameJobProgress *progress, paf::string *errorTitleId, float scale = 1.0f);
+	virtual ~GameGdInstaller();
+
+	virtual int Prepare(bool flag);
+	virtual GameInstallSource *CreateSource(int *ret);
+	virtual int Installed(paf::string *dir, paf::string *path);
+	virtual int Cleanup(void);
+	virtual int SetInfo(bool registerApp, GameAppRegistration *reg);
+	virtual int SetOtherInfo(bool flag, GameAppRegistration *reg, paf::string *dir,
+				 paf::string *path);
+	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg);
+
+	/* the application unmounted, unless the caller mounted it, and its mount point cleared */
+	int UnmountApp(void)
+	{
+		if (m_noLicense) {
+			m_mountPoint.assign(NULL, 0);
+			return 0;
+		}
+
+		int ret = gameAppUnmount(&m_mountPoint);
+
+		if (ret < 0) {
+			m_mountPoint.assign(NULL, 0);
+			return ret;
+		}
+
+		m_mountPoint.assign(NULL, 0);
+		return 0;
+	}
+
+	/* GAME_ERROR_BAD_DATA when bit 0 of the two records' ATTRIBUTE differs (0x8106D832) */
+	int CheckAttribute(const LsdbAppInfoPtr *installed, const LsdbAppInfoPtr *update);
+
+	LsdbAppInfoPtr m_appInfo;		/* the installed application's record */
+	paf::string m_mountPoint;		/* the application's, unmounted unless m_noLicense */
+	int m_otherWord;
+	bool m_install;				/* cleared when the update is already in place */
+	int m_lastWord;
+};
+
+typedef char GameGdInstallerSize[sizeof(GameGdInstaller) == 156 ? 1 : -1];
 
 /* a PlayStation Mobile game (constructor 0x810713C0), 184 bytes */
 class GamePsmInstaller : public GamePromoterIf {

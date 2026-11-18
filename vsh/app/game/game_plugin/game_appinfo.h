@@ -39,6 +39,9 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #ifndef LSDB_KEY_APPCONF
 #define LSDB_KEY_APPCONF	0x5142196Bu	/* "#appconf" */
 #endif
+#ifndef LSDB_KEY_APPSIZE
+#define LSDB_KEY_APPSIZE	0x61CC8AE0u	/* "#appsize" */
+#endif
 #ifndef LSDB_KEY_DISP_VER
 #define LSDB_KEY_DISP_VER	0x47C0E8ACu	/* "_disp_ver" */
 #endif

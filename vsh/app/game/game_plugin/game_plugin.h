@@ -237,6 +237,9 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_INSTALLED_ON_UX0	-2146430666	/* 0x80101136 */
 /* a home screen with too many icons; applauncher's icons are tidied after it (value only) */
 #define GAME_ERROR_TOO_MANY_ICONS	-2146430701	/* 0x80101113 */
+/* an install held for 15 seconds by a running application that uses the content (value only;
+   PLACEHOLDER name) */
+#define GAME_ERROR_APP_RUNNING		-2146430700	/* 0x80101114 */
 /* too little room on ux0: for an application's appmeta (value only; PLACEHOLDER name) */
 #define GAME_ERROR_NO_APPMETA_SPACE	-2146430702	/* 0x80101112 */
 /* too little room on ur0: for an application's appmeta (value only; PLACEHOLDER name) */
@@ -276,7 +279,7 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 struct GamePackageInfo {
 	SceUInt32 headerFields[1];
 	SceUInt32 contentType;			/* GAME_CONTENT_TYPE_* */
-	SceUInt32 moreHeaderFields[1];
+	SceUInt32 flags;			/* GAME_PACKAGE_FLAG_* */
 	SceUInt32 bodyBlocks;
 	SceUInt32 otherFields[6];
 	char contentId[48];			/* "XX0000-XXXXNNNNN_00-XXXXXXXXXXXXXXXX" */
@@ -284,6 +287,9 @@ struct GamePackageInfo {
 };
 
 typedef char GamePackageInfoSize[sizeof(GamePackageInfo) == 0x78 ? 1 : -1];
+
+/* PLACEHOLDER name: a package of an update, promoted through temp/promote (bit 4 of flags) */
+#define GAME_PACKAGE_FLAG_UPDATE	0x10
 
 /*
  * What NpDrm keeps of an installation, 936 bytes: Sony's name and the names of the three fields
@@ -444,6 +450,13 @@ int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceS
  */
 int gameNpDrmGetInstallInfo(SceNpDrmInstallInfo *info, SceSize size, const char *path, void *buf,
 			    SceSize bufSize);
+
+/*
+ * PLACEHOLDER name: whether the record of the application appName names titleId (its first ten
+ * characters) in one of eight keys (the table at 0x815C6FF0); 0 when either is NULL or the record
+ * cannot be read (0x81371F32, in the shell)
+ */
+int gameAppRecordNamesTitle(const char *titleId, const char *appName);
 
 /* The NP account ID, 0 when the registry has none (0x81018610). */
 int gameNpGetAccountId(SceUInt64 *accountId);

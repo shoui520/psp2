@@ -36,6 +36,7 @@ SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len
 SceUInt32 vshRtcIsSecureAlarmed(void);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
+SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);
 
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {
