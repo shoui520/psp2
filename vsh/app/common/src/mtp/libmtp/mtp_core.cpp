@@ -330,7 +330,7 @@ int sceMtpInit(const SceMtpInitParam *param)
 	}
 	mtpStatusReset();
 	mtpDevInitialize();
-	mtpSettingsInitialize();
+	mtpMarlinInitialize();
 	ret = mtpCapabilityInfoInitialize();
 	if (ret >= 0) {
 		s_coreState = MTP_CORE_STATE_INITIALIZED;

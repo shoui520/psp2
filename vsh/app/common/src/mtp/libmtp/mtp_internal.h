@@ -198,6 +198,7 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_INVALID_OBJECT_PROP_FORMAT	0xA802
 #define MTP_RESPONSE_INVALID_OBJECT_PROP_VALUE	0xA803
 #define MTP_RESPONSE_INVALID_OBJECT_REFERENCE	0xA804
+#define MTP_RESPONSE_INVALID_DATASET	0xA806
 #define MTP_RESPONSE_VENDOR_OBJECT_TOO_LARGE	0xA809
 #define MTP_RESPONSE_VENDOR_CANCELED	0xA020
 
@@ -882,7 +883,6 @@ int mtpUsbMonitorStart(void);
 int mtpUsbMonitorStop(void);
 int mtpUsbMonitorIsStarted(void);
 int mtpUsbMonitorHasBeenDisconnected(void);
-void mtpSettingsInitialize(void);
 int mtpCapabilityInfoInitialize(void);
 void mtpCapabilityInfoFinalize(void);
 int mtpUtilInitialize(SceSize size, const MtpLargeBufferFuncs *largeBufferFuncs);
@@ -1182,7 +1182,7 @@ int mtpCmdGetDevicePropDesc(const MtpOperation *operation, MtpOperation *respons
 int mtpCmdGetDevicePropValue(const MtpOperation *operation, MtpOperation *response);
 int mtpCmdSetDevicePropValue(const MtpOperation *operation, MtpOperation *response);
 int mtpCmdGetPartialObject(const MtpOperation *operation, MtpOperation *response);
-int mtpCmdGetMarlinMsgResult(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinMsgHdls(const MtpOperation *operation, MtpOperation *response);
 int mtpCmdGetMarlinMsgInfo(const MtpOperation *operation, MtpOperation *response);
 int mtpCmdGetMarlinMsg(const MtpOperation *operation, MtpOperation *response);
 int mtpCmdSendMarlinMsgInfo(const MtpOperation *operation, MtpOperation *response);
@@ -1275,14 +1275,21 @@ int mtpContextNpDrmExecAuthentication(MtpContext *context, int arg1, int activat
 int mtpContextNpDrmGetLicense(MtpContext *context, int arg1, int arg2, int arg3);
 
 /* Marlin (MRLN) */
-int mtpMarlinGetInfo(int type, int arg2, int arg3, void *arg4, int *arg5);
-int mtpMarlinSetInfo(int type, int arg2, char *arg3, int arg4);
-int mtpExecMarlinActivation(int arg0, int arg1, int arg2, int arg3);
-int mtpExecMarlinDeactivation(int arg0, int arg1, int arg2, int arg3);
-int mtpExecMarlinLicenseMove(int arg0, int arg1, int arg2, int arg3, int arg4);
-int mtpExecMarlinLicenseCopy(int arg0, int arg1, int arg2, int arg3, int arg4);
-int mtpExecMarlinLicenseCheck(int arg0, int arg1, int arg2, int arg3, int arg4);
-int mtpExecMarlinSharedInfoAcq(int arg0, int arg1, int arg2, int arg3);
+int mtpMarlinGetInfo(int type, SceSize size, SceUInt32 offset, void *data, SceSize *outSize);
+int mtpMarlinSetInfo(int type, SceUInt32 offset, const void *data, SceSize size);
+void mtpMarlinInitialize(void);
+int mtpExecMarlinActivation(int reserved, SceUInt32 arg, SceUInt32 *result2,
+	SceUInt32 *result3);
+int mtpExecMarlinDeactivation(int reserved, SceUInt32 arg, SceUInt32 *result2,
+	SceUInt32 *result3);
+int mtpExecMarlinLicenseMove(int reserved, const char *licenseId, SceSize length,
+	SceUInt32 arg, int unused);
+int mtpExecMarlinLicenseCopy(int reserved, const char *licenseId, SceSize length,
+	SceUInt32 arg, int unused);
+int mtpExecMarlinLicenseCheck(int reserved, const char *licenseId, SceSize length,
+	SceUInt32 arg, SceUInt32 *state);
+int mtpExecMarlinSharedInfoAcq(int reserved, const char *licenseId, SceSize length,
+	SceUInt32 *info);
 
 /* the storages (STRG) and the objects (OBJ) */
 MtpStorage *mtpStrgFindStorageByName(const char *name);

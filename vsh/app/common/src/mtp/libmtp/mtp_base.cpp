@@ -126,7 +126,7 @@ int commandHandler(MtpOperation *command, MtpOperation *response)
 		ret = mtpCmdSetObjectPropList(command, response);
 		break;
 	case 0x9407:
-		ret = mtpCmdGetMarlinMsgResult(command, response);
+		ret = mtpCmdGetMarlinMsgHdls(command, response);
 		break;
 	case 0x9408:
 		ret = mtpCmdGetMarlinMsgInfo(command, response);
@@ -1110,42 +1110,42 @@ int SceLibMtp_0497FA87(SceUInt32 contextId, MtpContextProgress *progress)
 	return mtpContextGetProgress(contextId, progress);
 }
 
-int SceLibMtp_C10B3D7C(int type, int arg2, int arg3, void *arg4, int *arg5)
+int SceLibMtp_C10B3D7C(int type, SceSize size, SceUInt32 offset, void *data, SceSize *outSize)
 {
-	return mtpMarlinGetInfo(type, arg2, arg3, arg4, arg5);
+	return mtpMarlinGetInfo(type, size, offset, data, outSize);
 }
 
-int SceLibMtp_6211F119(int type, int arg2, char *arg3, int arg4)
+int SceLibMtp_6211F119(int type, SceUInt32 offset, const void *data, SceSize size)
 {
-	return mtpMarlinSetInfo(type, arg2, arg3, arg4);
+	return mtpMarlinSetInfo(type, offset, data, size);
 }
 
-int SceLibMtp_C12DE479(int arg1, int arg2, int arg3)
+int SceLibMtp_C12DE479(SceUInt32 arg1, SceUInt32 *arg2, SceUInt32 *arg3)
 {
 	return mtpExecMarlinActivation(0, arg1, arg2, arg3);
 }
 
-int SceLibMtp_24369599(int arg1, int arg2, int arg3)
+int SceLibMtp_24369599(SceUInt32 arg1, SceUInt32 *arg2, SceUInt32 *arg3)
 {
 	return mtpExecMarlinDeactivation(0, arg1, arg2, arg3);
 }
 
-int SceLibMtp_A55E6AB6(int arg1, int arg2, int arg3, int arg4)
+int SceLibMtp_A55E6AB6(const char *arg1, SceSize arg2, SceUInt32 arg3, int arg4)
 {
 	return mtpExecMarlinLicenseMove(0, arg1, arg2, arg3, arg4);
 }
 
-int SceLibMtp_0BC34F1F(int arg1, int arg2, int arg3, int arg4)
+int SceLibMtp_0BC34F1F(const char *arg1, SceSize arg2, SceUInt32 arg3, int arg4)
 {
 	return mtpExecMarlinLicenseCopy(0, arg1, arg2, arg3, arg4);
 }
 
-int SceLibMtp_542F3064(int arg1, int arg2, int arg3, int arg4)
+int SceLibMtp_542F3064(const char *arg1, SceSize arg2, SceUInt32 arg3, SceUInt32 *arg4)
 {
 	return mtpExecMarlinLicenseCheck(0, arg1, arg2, arg3, arg4);
 }
 
-int SceLibMtp_E35C1C83(int arg1, int arg2, int arg3)
+int SceLibMtp_E35C1C83(const char *arg1, SceSize arg2, SceUInt32 *arg3)
 {
 	return mtpExecMarlinSharedInfoAcq(0, arg1, arg2, arg3);
 }
