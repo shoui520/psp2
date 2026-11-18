@@ -43,7 +43,12 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	mtp_cmd_ext.cpp
 	mtp_marlin.cpp
 	mtp_npdrm.cpp
+	mtp_obj.cpp
+	mtp_system_setting.cpp
+	mtp_storage.cpp
+	mtp_net_operation.cpp
 	bgcopy_service_manager.cpp
+	mtp_cache.cpp
 )
 target_include_directories(${PSP2_TARGET} PRIVATE "${PSP2_SRC}/vsh/paf/include"
 	"${PSP2_SRC}/sys/internal/usermode/src")

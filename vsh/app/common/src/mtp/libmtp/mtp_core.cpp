@@ -750,7 +750,7 @@ static int waitingForRun(SceSize argSize, void *argp)
 			mtpDevIfChangePhase(0);
 			if (!setConnected())
 				goto end;
-			if (mtpBgCopyGetNumTasks() <= 0)
+			if (mtpStrgGetNumActiveStorages() <= 0)
 				mtpCoreSetPublicStatus(3, -1);
 			else
 				mtpCoreSetPublicStatus(4, -1);

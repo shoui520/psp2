@@ -1195,15 +1195,15 @@ int sceMtpCheckContextValid(SceUInt32 contextId)
 	return SCE_MTP_ERROR_INVALID_ARGUMENT;
 }
 
-int SceLibMtp_81BCF297(const char *path, MtpObjectId *objectId)
+int SceLibMtp_81BCF297(const MtpObjectData *data, MtpObjectId *objectId)
 {
 	SceUInt32 handle;
 	SceUInt32 uniqueId;
 	int ret;
 
-	if (path == NULL || objectId == NULL)
+	if (data == NULL || objectId == NULL)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
-	ret = mtpStrgRegisterObject(path, &handle);
+	ret = mtpStrgRegisterObject(data, &handle);
 	if (ret < 0)
 		return ret;
 	ret = mtpStrgVTConvertMtpHandleToUniqueId(handle, &uniqueId);
@@ -1232,7 +1232,7 @@ int SceLibMtp_E2A9E59C(SceInt64 objectId)
 	return mtpObjDeleteObjectData(logical, uniqueId);
 }
 
-int SceLibMtp_9310EEEF(SceInt64 objectId, void *data)
+int SceLibMtp_9310EEEF(SceInt64 objectId, MtpObjectData *data)
 {
 	SceUInt32 uniqueId = MTP_OBJECT_ID_UNIQUE(objectId);
 	SceUInt32 storageId = MTP_OBJECT_STORAGE_ID(MTP_OBJECT_ID_STORAGE(objectId));
@@ -1282,7 +1282,7 @@ int SceLibMtp_E107F90D(const char *path, MtpObjectId *objectId)
 	return 0;
 }
 
-int SceLibMtp_EA4E8C39(SceInt64 objectId, const void *data)
+int SceLibMtp_EA4E8C39(SceInt64 objectId, const MtpObjectUpdateData *data)
 {
 	SceUInt32 uniqueId = MTP_OBJECT_ID_UNIQUE(objectId);
 	MtpLogicalStorage *logical;
@@ -1491,7 +1491,7 @@ int SceLibMtp_965F1CD0(void)
 	return mtpCoreWake(0);
 }
 
-int SceLibMtp_D6C90706(int arg1, int arg2, SceUInt32 *contextId)
+int SceLibMtp_D6C90706(const void *data, SceSize size, SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1505,7 +1505,7 @@ int SceLibMtp_D6C90706(int arg1, int arg2, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_RPC_NET_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRpcNetOperation(context, 0, arg1, arg2);
+	ret = mtpContextRpcNetOperation(context, 0, data, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1513,22 +1513,16 @@ int SceLibMtp_D6C90706(int arg1, int arg2, SceUInt32 *contextId)
 	return ret;
 }
 
-/* the result of a network RPC: two words */
-typedef struct MtpRpcNetOperationResult {
-	int arg1;
-	int arg2;
-} MtpRpcNetOperationResult;
-
-int SceLibMtp_6E2FE43A(SceUInt32 contextId, int arg1, int arg2)
+int SceLibMtp_6E2FE43A(SceUInt32 contextId, void *buffer, SceSize *size)
 {
-	MtpRpcNetOperationResult result;
+	MtpNetOperationResult result;
 
-	result.arg1 = arg1;
-	result.arg2 = arg2;
+	result.buffer = buffer;
+	result.size = size;
 	return mtpIfEndCommon(contextId, &result, NULL);
 }
 
-int sceMtpBeginRpcNetOperationSend(int arg, SceUInt32 *contextId)
+int sceMtpBeginRpcNetOperationSend(SceSize size, SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1542,7 +1536,7 @@ int sceMtpBeginRpcNetOperationSend(int arg, SceUInt32 *contextId)
 	ret = mtpContextCreate(1, &context, MTP_OPERATION_REQUEST_RPC_NET_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRpcNetOperation(context, 1, 0, arg);
+	ret = mtpContextRpcNetOperation(context, MTP_NET_OPERATION_SEND, NULL, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1550,16 +1544,16 @@ int sceMtpBeginRpcNetOperationSend(int arg, SceUInt32 *contextId)
 	return ret;
 }
 
-int SceLibMtp_D919C89C(SceUInt32 contextId, int arg1, int arg2)
+int SceLibMtp_D919C89C(SceUInt32 contextId, void *buffer, SceSize *size)
 {
-	MtpRpcNetOperationResult result;
+	MtpNetOperationResult result;
 
-	result.arg1 = arg1;
-	result.arg2 = arg2;
+	result.buffer = buffer;
+	result.size = size;
 	return mtpIfEndCommon(contextId, &result, NULL);
 }
 
-int sceMtpBeginRpcNetOperationRecv(int arg1, int arg2, SceUInt32 *contextId)
+int sceMtpBeginRpcNetOperationRecv(const void *data, SceSize size, SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1573,7 +1567,7 @@ int sceMtpBeginRpcNetOperationRecv(int arg1, int arg2, SceUInt32 *contextId)
 	ret = mtpContextCreate(1, &context, MTP_OPERATION_REQUEST_RPC_NET_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRpcNetOperation(context, 2, arg1, arg2);
+	ret = mtpContextRpcNetOperation(context, MTP_NET_OPERATION_RECV, data, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1626,12 +1620,12 @@ int sceMtpBeginSearchObject(int arg1, int arg2, int arg3, SceUInt32 *contextId)
 	return ret;
 }
 
-int SceLibMtp_BBCC3F5B(SceUInt32 contextId, int arg1, int arg2)
+int SceLibMtp_BBCC3F5B(SceUInt32 contextId, SceUInt32 *numFound, SceUInt32 *searchId)
 {
-	MtpRpcNetOperationResult result;
+	MtpSearchResult result;
 
-	result.arg1 = arg1;
-	result.arg2 = arg2;
+	result.numFound = numFound;
+	result.searchId = searchId;
 	return mtpIfEndCommon(contextId, &result, NULL);
 }
 

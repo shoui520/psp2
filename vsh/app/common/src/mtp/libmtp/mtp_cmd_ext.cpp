@@ -96,11 +96,6 @@ typedef struct MtpTotalObjectSizeResult {
 	SceUInt64 *totalSize;
 } MtpTotalObjectSizeResult;
 
-typedef struct MtpSearchResult {
-	SceUInt32 *numFound;
-	SceUInt32 *searchId;
-} MtpSearchResult;
-
 static void getResultParam(MtpContext *context, void *result);
 static void getNumOfObjectResult(MtpContext *context, void *result);
 static void getHostStorageSizeResult(MtpContext *context, void *result);
@@ -1292,7 +1287,7 @@ static int receiveFileData(MtpContext *context, int isFile, SceInt64 size, SceUI
 		ret = -2;
 		goto free_path;
 	}
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMDE, 280, "unable to get parent handle from cache=0x%x\n", n);
@@ -1301,7 +1296,7 @@ static int receiveFileData(MtpContext *context, int isFile, SceInt64 size, SceUI
 	}
 	if (setDates != 0) {
 		n = mtpCacheGetObjectProperty(storage->cache, uniqueId,
-			MTP_CACHE_PROP_DATE_CREATED, &created, sizeof(created));
+			MTP_DB_QUERY_DATE_CREATED, &created, sizeof(created));
 		if (n < 0) {
 			MTP_ERR(MTP_TAG_CMDE, 288,
 				"unable to get created time from cache: 0x%x\n", n);
@@ -1309,7 +1304,7 @@ static int receiveFileData(MtpContext *context, int isFile, SceInt64 size, SceUI
 			goto free_path;
 		}
 		n = mtpCacheGetObjectProperty(storage->cache, uniqueId,
-			MTP_CACHE_PROP_DATE_MODIFIED, &modified, sizeof(modified));
+			MTP_DB_QUERY_DATE_MODIFIED, &modified, sizeof(modified));
 		if (n < 0) {
 			MTP_ERR(MTP_TAG_CMDE, 294,
 				"unable to get modified time from cache: 0x%x\n", n);
@@ -1546,7 +1541,7 @@ int mtpCmdCheckObjectExistence(const MtpOperation *operation, MtpOperation *resp
 	}
 	pfsPath = &path[nameLength + 1023];
 	mtpUtilStrcpy(path, storage->info->name);
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMDE, 2030, "unable to get full path name from cache=0x%x\n", n);
@@ -1776,7 +1771,7 @@ int mtpCmdGetPartOfObjectSpecfiedByHost(const MtpOperation *operation, MtpOperat
 		goto free;
 	}
 	mtpUtilStrcpy(path, storage->info->name);
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMDE, 2333, "unable to get full path name from cache=0x%x\n", n);
@@ -1787,7 +1782,7 @@ int mtpCmdGetPartOfObjectSpecfiedByHost(const MtpOperation *operation, MtpOperat
 		nameLength + 1023, 1);
 	if (ret < 0)
 		goto free;
-	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_SIZE,
+	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_OBJECT_SIZE,
 		&objectSize, sizeof(objectSize));
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CMDE, 2345, "unable to get object size from cache=0x%x\n", ret);

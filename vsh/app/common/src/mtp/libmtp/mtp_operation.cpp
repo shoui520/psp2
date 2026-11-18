@@ -13,7 +13,6 @@
 #define MTP_CMD_WORK_SIZE		0x2000
 /* an object property dataset: the representative sample data's is larger */
 #define MTP_OBJECT_PROP_DESC_SIZE	0x1000
-#define MTP_OBJECT_PROP_VALUE_SIZE_LARGE	0x10000
 /* the ObjectPropList group of the sample data (GetObjectPropList's group code) */
 #define MTP_OBJECT_PROP_GROUP_SAMPLE_DATA	4
 
@@ -563,7 +562,7 @@ static int _getObject(const MtpOperation *operation, MtpOperation *response, int
 		goto free;
 	}
 	mtpUtilStrcpy(path, storage->info->name);
-	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (ret < 0) {
 		ret = -2;
@@ -573,7 +572,7 @@ static int _getObject(const MtpOperation *operation, MtpOperation *response, int
 	ret = mtpStrgCreatePfsPath(storage, &path[nameLength], pfsPath, nameLength + 1023, 1);
 	if (ret < 0)
 		goto free;
-	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_SIZE,
+	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_OBJECT_SIZE,
 		&xferSize, sizeof(xferSize));
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CMD, 283, "unable to get object size from cache=0x%x\n", ret);
@@ -881,7 +880,7 @@ int mtpCmdSendObjectInfo(const MtpOperation *operation, MtpOperation *response)
 			code = MTP_RESPONSE_INVALID_PARENT_OBJECT;
 			goto free_name;
 		}
-		if (mtpStrgCheckDestination(storageId, format, &parent, context) < 0) {
+		if (mtpStrgCheckParentHandle(storageId, format, &parent, context) < 0) {
 			MTP_ERR(MTP_TAG_CMD, 1467, "Destination is not supported: %u, 0x%x, %u, %s\n",
 				storageId, format, parent, name);
 			code = MTP_RESPONSE_DESTINATION_UNSUPPORTED;
@@ -1054,21 +1053,21 @@ int mtpCmdSendObject(const MtpOperation *operation, MtpOperation *response)
 		ret = -2;
 		goto free;
 	}
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMD, 1705, "unable to get parent handle from cache=0x%x\n", n);
 		ret = -2;
 		goto free;
 	}
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_DATE_CREATED,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_DATE_CREATED,
 		&created, sizeof(created));
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMD, 1710, "unable to get created time from cache: 0x%x\n", n);
 		ret = -2;
 		goto free;
 	}
-	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_DATE_MODIFIED,
+	n = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_DATE_MODIFIED,
 		&modified, sizeof(modified));
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMD, 1715, "unable to get modified time from cache: 0x%x\n", n);
@@ -1082,7 +1081,7 @@ int mtpCmdSendObject(const MtpOperation *operation, MtpOperation *response)
 		mtpCoreGetObjectTransferSize(), 0, &received, &code, context);
 	if (ret < 0) {
 		if (received > 0 && mtpCoreGetObjectTransferSize() == 0xFFFFFFFF) {
-			n = mtpCacheSetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_SIZE,
+			n = mtpCacheSetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_OBJECT_SIZE,
 				&received, sizeof(received));
 			if (n < 0) {
 				MTP_ERR(MTP_TAG_CMD, 1769,
@@ -1098,7 +1097,7 @@ int mtpCmdSendObject(const MtpOperation *operation, MtpOperation *response)
 	}
 	mtpFileSetDates(pfsPath, NULL, &modified);
 	if (mtpCoreGetObjectTransferSize() == 0xFFFFFFFF) {
-		n = mtpCacheSetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_SIZE,
+		n = mtpCacheSetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_OBJECT_SIZE,
 			&received, sizeof(received));
 		if (n < 0) {
 			MTP_ERR(MTP_TAG_CMD, 1740, "unable to set parent handle from cache=0x%x\n",

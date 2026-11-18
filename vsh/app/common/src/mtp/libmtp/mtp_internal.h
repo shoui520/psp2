@@ -36,6 +36,10 @@ extern "C" {
 #define SCE_MTP_ERROR_ALREADY		((int)0x80540002)
 #define SCE_MTP_ERROR_INVALID_ARGUMENT	((int)0x80540003)
 #define SCE_MTP_ERROR_NOT_STOPPED	((int)0x80540004)
+/* a logical storage holds its most objects already */
+#define SCE_MTP_ERROR_STORAGE_FULL	((int)0x80540005)
+/* no registered storage has the mount point a path names */
+#define SCE_MTP_ERROR_STORAGE_NOT_FOUND	((int)0x80540006)
 #define SCE_MTP_ERROR_NO_MEMORY		((int)0x80540007)
 #define SCE_MTP_ERROR_DEVICE		((int)0x80540008)
 #define SCE_MTP_ERROR_INVALID_PARENT	((int)0x80540009)
@@ -746,6 +750,10 @@ typedef union MtpPropForm {
 } MtpPropForm;
 
 /* a device or object property's description */
+/* MtpPropDesc.getSet: whether the host may set the property */
+#define MTP_GET		0
+#define MTP_GET_SET	1
+
 typedef struct MtpPropDesc {
 	SceUInt16 code;
 	SceUInt16 dataType;
@@ -877,7 +885,6 @@ void mtpQueueCancelAll(int arg);
 int mtpQueuePushCommand(MtpOperation *operation, int flags);
 int mtpBgCopyIdleTimerInitialize(void);
 void mtpBgCopyIdleTimerTerminate(void);
-int mtpBgCopyGetNumTasks(void);
 int mtpUsbMonitorCreate(void);
 int mtpUsbMonitorDelete(void);
 int mtpUsbMonitorStart(void);
@@ -962,6 +969,8 @@ void NetMtpExpandSocketReceiveTimeout(void);
 void NetMtpResetSocketReceiveTimeout(void);
 int mtpStrgInitialize(void);
 int mtpStrgUninitialize(void);
+/* the storages whose databases are open */
+int mtpStrgGetNumActiveStorages(void);
 /* mtp_file.c */
 int mtpFileExists(const char *path);
 int mtpFileGetDates(const char *path, SceDateTime *ctime, SceDateTime *mtime);
@@ -1147,10 +1156,12 @@ typedef struct MtpStorageInfo {
 typedef struct MtpStorage MtpStorage;
 struct MtpStorage {
 	void *owner;
-	const MtpStorageInfo *info;
+	MtpStorageInfo *info;
 	void *reserved[3];
 	int (*start)(MtpStorage *storage);
 	int (*stop)(MtpStorage *storage);
+	int (*activate)(MtpStorageInfo *info);		/* opens its databases */
+	int (*deactivate)(MtpStorageInfo *info, int arg);
 };
 
 typedef struct MtpCache MtpCache;
@@ -1174,9 +1185,10 @@ typedef struct MtpDB MtpDB;
 /* a storage's logical storage (104 bytes, in the storage manager's table) */
 struct MtpLogicalStorage {
 	const char *rootFolder;		/* its folder under the mount point */
-	SceUInt8 reserved[4];		/* not read by the C written yet (STRG) */
+	const char **rootDirs;		/* the folders the host may make at its root, or NULL */
 	SceUInt16 index;		/* its number in its physical storage, from 1 */
-	SceUInt8 reserved1[10];
+	SceUInt16 largeObjectSupported;	/* it takes objects of 4 GiB and more */
+	SceUInt8 reserved1[8];
 	SceUInt32 maxObjects;		/* the objects its database has room for */
 	SceUInt32 numObjects;		/* mtpDBGetUniqueIdInfo's */
 	SceUInt8 reserved2[4];
@@ -1184,9 +1196,56 @@ struct MtpLogicalStorage {
 	const MtpStorageInfo *info;	/* info->name: the mount point */
 	MtpCache *cache;
 	int (*getStorageInfo)(MtpLogicalStorage *storage);
-	SceUInt8 reserved3[16];
+	SceUInt8 reserved3[4];
+	/* the path a storage path names on the device, and the path the PFS layer opens */
+	int (*convertNormalPath)(MtpLogicalStorage *storage, const char *path, char *normal,
+		SceSize size);
+	int (*createPfsPath)(MtpLogicalStorage *storage, const char *path, char *pfsPath,
+		SceSize size, int create);
+	SceUInt8 reserved4[4];
 	MtpStorageDataset dataset;	/* what GetStorageInfo sends */
 };
+
+/* a logical storage's database (DB) */
+struct MtpDB {
+	int type;			/* MTP_DB_TYPE_* */
+	int handle;			/* -1 until it is open */
+	SceUInt8 reserved[256];
+	SceUID mutex;
+};
+int mtpDBGetUniqueIdInfo(MtpDB *db, SceUInt32 *numObjects);
+
+/* a storage's handle map (OMAP): its handles and their unique ids, in SQLite */
+typedef struct MtpObjmap {
+	SceUInt32 nextIndex;
+	SceUInt32 magic;		/* MTP_OBJMAP_MAGIC while its storage is registered */
+	struct sqlite3 *db;
+	SceUInt32 handleBase;		/* its storage's bits of a handle */
+	SceKernelLwMutexWork lock;
+} MtpObjmap;
+#define MTP_OBJMAP_MAGIC		0xDEADBEEF
+int mtpObjmapCreate(MtpObjmap *objmap, SceUInt32 storageId);
+int mtpObjmapDestroy(MtpObjmap *objmap);
+int mtpObjmapSetupHandles(MtpObjmap *objmap);
+int mtpObjmapUnsetupHandles(MtpObjmap *objmap);
+int mtpObjmapDeallocate(MtpObjmap *objmap, SceUInt32 uniqueId);
+int mtpObjmapAllocate(MtpObjmap *objmap, SceUInt32 flags, SceUInt32 uniqueId, SceUInt32 parent,
+	SceUInt32 *handle);
+int mtpObjmapConvertMtpHandleToUniqueId(MtpObjmap *objmap, SceUInt32 handle,
+	SceUInt32 *uniqueId);
+int mtpObjmapConvertUniqueIdToMtpHandle(MtpObjmap *objmap, SceUInt32 uniqueId,
+	SceUInt32 *handle);
+int mtpObjmapGetParentMtpHandleFromUniqueId(MtpObjmap *objmap, SceUInt32 uniqueId,
+	SceUInt32 *parent);
+int mtpObjmapGetParentMtpHandleFromMtpHandle(MtpObjmap *objmap, SceUInt32 handle,
+	SceUInt32 *parent);
+int mtpObjmapGetNumUniqueIds(MtpObjmap *objmap, SceUInt32 parent, SceUInt32 *num);
+int mtpObjmapGetUniqueIds(MtpObjmap *objmap, SceUInt32 parent, SceUInt32 offset,
+	SceUInt32 count, SceUInt32 *ids);
+
+/* the host's storage (HOST), the one storage there is */
+int mtpHostInitialize(void);
+int mtpHostUninitialize(MtpStorage *storage);
 
 /* the commands (CMD and CMDE) */
 int mtpCmdGetDeviceInfo(const MtpOperation *operation, MtpOperation *response);
@@ -1278,9 +1337,9 @@ int mtpContextGetObjectStatus(MtpContext *context, SceUInt32 type, const char *p
 	SceSize length);
 int mtpContextImportObjectThumbnail(MtpContext *context, SceUInt32 handle, SceUInt32 type);
 int mtpContextDeleteObject(MtpContext *context, SceUInt32 handle);
-int mtpContextGetSystemSetting(MtpContext *context, int arg1);
-int mtpContextSetSystemSetting(MtpContext *context, int arg1, int arg2);
-int mtpContextGetNpAccountInfo(MtpContext *context, int arg1);
+int mtpContextGetSystemSetting(MtpContext *context, int setting);
+int mtpContextSetSystemSetting(MtpContext *context, int setting, SceUInt32 size);
+int mtpContextGetNpAccountInfo(MtpContext *context, SceUInt32 size);
 int mtpContextGetPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 offset,
 	SceUInt64 size, int import);
 int mtpContextSendPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 offset,
@@ -1318,15 +1377,20 @@ int mtpExecMarlinSharedInfoAcq(int reserved, const char *licenseId, SceSize leng
 	SceUInt32 *info);
 
 /* the storages (STRG) and the objects (OBJ) */
+typedef struct MtpObjectData MtpObjectData;
 MtpStorage *mtpStrgFindStorageByName(const char *name);
 int mtpStrgVTCreateMtpHandles(MtpStorage *storage);
 int mtpStrgVTDestroyMtpHandles(MtpStorage *storage);
 int mtpStrgVTConvertMtpHandleToUniqueId(SceUInt32 handle, SceUInt32 *uniqueId);
-int mtpStrgRegisterObject(const char *path, SceUInt32 *handle);
+int mtpStrgRegisterObject(const MtpObjectData *data, SceUInt32 *handle);
 int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle);
 int mtpStrgRegisterDirectory(const char *path, SceUInt32 *handle);
 int mtpStrgVTConvertUniqueIdToMtpHandle(SceUInt32 storageId, SceUInt32 uniqueId,
 	SceUInt32 *handle);
+/* a logical storage's id: its physical storage's index, then its own */
+#define MTP_LOGICAL_STORAGE_ID(storage) \
+	((storage)->index | (SceUInt32)(storage)->info->index << 16)
+
 /* the logical storage of an object handle's (or object ID's) storage bits */
 #define MTP_OBJECT_STORAGE_ID(storage) \
 	((((storage) >> 27 & 3) + 1) | ((((storage) >> 29 & 3) + 1) << 16))
@@ -1356,10 +1420,17 @@ int mtpStrgIsLargeObjectSupported(SceUInt32 storageId);
 #define MTP_ACCESS_READ_ONLY		1
 int mtpStrgGetAccessCapability(SceUInt32 storageId);
 /* whether a format may go to *parent (which it may change) for the context's request */
-int mtpStrgCheckDestination(SceUInt32 storageId, SceUInt32 format, SceUInt32 *parent,
+int mtpStrgCheckParentHandle(SceUInt32 storageId, SceUInt32 format, SceUInt32 *parent,
 	MtpContext *context);
 /* whether a directory of that name may be made at the storage's root */
 int mtpStrgIsRootDirAllowed(MtpLogicalStorage *storage, const char *name);
+int mtpStrgSetupMtpRootFolder(MtpLogicalStorage *storage);
+int mtpStrgRegister(MtpStorage *storage);
+int mtpStrgUnregister(MtpStorage *storage);
+int mtpStrgActivate(MtpStorage *storage);
+int mtpStrgDeactivate(MtpStorage *storage, int arg);
+int mtpStrgVTSetupMtpHandles(SceUInt32 storageId);
+int mtpStrgVTUnsetupMtpHandles(SceUInt32 storageId);
 int mtpStrgUpdateLogicalInfo(MtpLogicalStorage *storage);
 /* the handle of a storage's root ("association") */
 #define MTP_OBJECT_ROOT_HANDLE(storageId) \
@@ -1370,9 +1441,9 @@ int mtpObjPackObjectPropList(MtpLogicalStorage *storage, SceUInt32 uniqueId, Sce
 	SceUInt16 code, SceUInt32 group, SceUInt32 depth, void *buf, SceUInt32 *count,
 	SceUInt32 *size, int *send);
 int mtpObjPackObjectPropValue(MtpLogicalStorage *storage, SceUInt32 uniqueId,
-	SceUInt16 code, void *buf, SceSize size);
+	SceUInt16 code, void *buf, int size);
 int mtpObjSetObjectPropValue(MtpLogicalStorage *storage, SceUInt32 uniqueId,
-	SceUInt16 code, const void *value, int notify);
+	SceUInt16 code, const void *value, int writeBack);
 int mtpObjPackObjectReferences(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *buf,
 	SceSize size);
 int mtpObjSetObjectReferences(MtpLogicalStorage *storage, SceUInt32 uniqueId,
@@ -1384,16 +1455,168 @@ int mtpObjAddRegularObject(MtpLogicalStorage *storage, SceUInt32 parent, SceUInt
 /* the path the PFS layer opens for path in storage */
 int mtpStrgCreatePfsPath(MtpLogicalStorage *storage, const char *path, char *pfsPath,
 	SceSize size, int create);
-/* an object's property from the cache: its size (8 bytes), its full path, ... */
-#define MTP_CACHE_PROP_SIZE		4
-#define MTP_CACHE_PROP_DATE_CREATED	5
-#define MTP_CACHE_PROP_DATE_MODIFIED	6
-#define MTP_CACHE_PROP_PATH		7
+/*
+ * an object's property in the database and the cache: the columns of tbl_mtpObject, in
+ * the order mtpDBObjectPropCode2QueryType numbers them
+ */
+#define MTP_DB_QUERY_UID			0
+#define MTP_DB_QUERY_PARENT_UID			1
+#define MTP_DB_QUERY_OBJECT_FORMAT		2
+#define MTP_DB_QUERY_PROTECTION_STATUS		3
+#define MTP_DB_QUERY_OBJECT_SIZE		4
+#define MTP_DB_QUERY_DATE_CREATED		5
+#define MTP_DB_QUERY_DATE_MODIFIED		6
+#define MTP_DB_QUERY_FULL_PATH_NAME		7
+#define MTP_DB_QUERY_NON_CONSUMABLE		8
+#define MTP_DB_QUERY_NAME			9
+#define MTP_DB_QUERY_PUOID			10
+#define MTP_DB_QUERY_ARTIST			11
+#define MTP_DB_QUERY_GENRE			12
+#define MTP_DB_QUERY_ALBUM			13
+#define MTP_DB_QUERY_ALBUM_ARTIST		14
+#define MTP_DB_QUERY_USE_COUNT			15
+#define MTP_DB_QUERY_SAMPLE_RATE		16
+#define MTP_DB_QUERY_AUDIO_WAVE_CODEC		17
+#define MTP_DB_QUERY_AUDIO_BIT_RATE		18
+#define MTP_DB_QUERY_ORIGINAL_RELEASE_DATE	19
+#define MTP_DB_QUERY_DURATION			20
+#define MTP_DB_QUERY_NUMBER_OF_CHANNELS		21
+#define MTP_DB_QUERY_RATING			22
+#define MTP_DB_QUERY_BITRATE_TYPE		23
+#define MTP_DB_QUERY_DRM_STATUS			24
+#define MTP_DB_QUERY_TRACK			25
+#define MTP_DB_QUERY_SAMPLE_FORMAT		26
+#define MTP_DB_QUERY_BUYFLAG			27
+#define MTP_DB_QUERY_AUDIO_BIT_DEPTH		28
+#define MTP_DB_QUERY_WIDTH			29
+#define MTP_DB_QUERY_HEIGHT			30
+#define MTP_DB_QUERY_OBJECT_DATA_BASIC		31	/* the whole ObjectDataBasic */
+#define MTP_DB_QUERY_OBJECT_DATA_EXTENSION	32	/* the columns after it */
+#define MTP_DB_QUERY_OBJECT_DATA		33	/* the whole row, an ObjectData */
+/* the object property cache (CACH): a storage's most used rows of its database */
+int mtpCacheInitialize(MtpLogicalStorage *storage, MtpCache **cache, SceUInt32 maxEntries);
+int mtpCacheUninitialize(MtpCache **cache);
 int mtpCacheGetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, void *buf,
 	SceSize size);
 int mtpCacheSetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, const void *buf,
 	SceSize size);
 int mtpCacheWriteBackDirtyCache(MtpCache *cache);
+int mtpCacheInvalidate(MtpCache *cache, SceUInt32 uniqueId);
+
+/* an object's row of tbl_mtpObject (MTP_DB_QUERY_OBJECT_DATA_BASIC) */
+typedef struct ObjectDataBasic {
+	SceUInt32 uid;
+	SceUInt32 parentUid;		/* MTP_OBJ_NO_PARENT for a root object */
+	SceUInt8 reserved[4];
+	SceUInt16 objectFormat;
+	SceUInt16 protectionStatus;
+	SceUInt64 objectSize;
+	SceUInt8 reserved1[8];
+	SceDateTime dateCreated;
+	SceDateTime dateModified;
+	char fullPathName[1023];
+	SceUInt8 nonConsumable;
+	char name[256];
+	SceUInt8 puoid[16];		/* mtpUtilMd5 of the path and the creation date */
+} ObjectDataBasic;
+#define MTP_OBJ_NO_PARENT		0xFFFFFFFF
+
+/* the whole row of tbl_mtpObject (MTP_DB_QUERY_OBJECT_DATA), what the cache keeps */
+typedef struct ObjectData {
+	ObjectDataBasic basic;
+	char artist[256];
+	char genre[256];
+	char album[256];
+	char albumArtist[256];
+	SceUInt32 useCount;
+	SceUInt32 sampleRate;
+	SceUInt32 audioWaveCodec;
+	SceUInt32 audioBitRate;
+	SceDateTime originalReleaseDate;
+	SceUInt32 duration;
+	SceUInt16 numberOfChannels;
+	SceUInt16 rating;
+	SceUInt16 bitrateType;
+	SceUInt16 drmStatus;
+	SceUInt16 track;		/* also the SampleFormat column's */
+	SceUInt8 buyflag;
+	SceUInt8 padding;
+	SceUInt32 audioBitDepth;
+	SceUInt8 reserved[4];
+	SceUInt32 width;
+	SceUInt32 height;
+} ObjectData;
+
+/* the object mtpObjAddObjectData adds and mtpObjGetObjectData reads */
+struct __attribute__((packed)) MtpObjectData {
+	SceUInt64 objectSize;
+	SceUInt16 objectFormat;
+	SceDateTime dateCreated;
+	SceDateTime dateModified;
+	char fullPathName[1023];
+	char name[256];
+	SceUInt32 width;
+	SceUInt32 height;
+};
+
+/* the properties mtpObjUpdateObjectData writes back */
+typedef struct __attribute__((packed)) MtpObjectUpdateData {
+	SceUInt64 objectSize;
+	SceUInt16 objectFormat;
+	SceDateTime dateCreated;
+	SceDateTime dateModified;
+	char name[256];
+	SceUInt32 width;
+	SceUInt32 height;
+} MtpObjectUpdateData;
+
+/* the database (DB) */
+int mtpDBRegisterObject(MtpDB *db, ObjectDataBasic *object);
+int mtpDBUnregisterObject(MtpDB *db, SceUInt32 uniqueId);
+int mtpDBGetObjectProperty(MtpDB *db, SceUInt32 uniqueId, int type, void *buf, SceSize size);
+int mtpDBSetObjectProperty(MtpDB *db, SceUInt32 uniqueId, int type, const void *buf,
+	SceSize size);
+int mtpDBGetNumObjectsByType(MtpDB *db, int type, const void *value, SceUInt32 *num);
+int mtpDBGetObjectUniqueIdsByType(MtpDB *db, int type, const void *value, SceUInt32 offset,
+	SceUInt32 count, SceUInt32 *ids);
+/* where a property sits in an ObjectDataBasic, and its size */
+int mtpDBGetObjectPropertyOffset(int type, SceUInt32 *offset, SceUInt32 *size);
+/* a property's column value as the MTP value the host reads */
+int mtpDBFixToObjectPropValue(int type, void *dst, const void *src, SceSize size);
+/* an MTP value the host sent as the property's column value */
+void mtpDBFixFromObjectPropValue(int type, const void *src, void *dst, SceSize size);
+/* an object property code's MTP_DB_QUERY_* */
+int mtpDBObjectPropCode2QueryType(SceUInt16 code);
+
+/* the unique ids' handle map */
+int mtpStrgVTValidateUniqueId(SceUInt32 storageId, SceUInt32 uniqueId, SceUInt16 format,
+	SceUInt32 parent, SceUInt32 *handle);
+int mtpStrgVTInvalidateUniqueId(SceUInt32 storageId, SceUInt32 uniqueId);
+int mtpStrgVTGetParentMtpHandleFromUniqueId(SceUInt32 storageId, SceUInt32 uniqueId,
+	SceUInt32 *parent);
+/* the index bits of an object handle; all set for a storage's root */
+#define MTP_OBJECT_HANDLE_INDEX_MASK	0x7FFFFFF
+
+#define MTP_OBJECT_PROP_STORAGE_ID	0xDC01
+#define MTP_OBJECT_PROP_PARENT_OBJECT	0xDC0B
+#define MTP_FORMAT_UNDEFINED		0x3000
+#define MTP_FORMAT_ABSTRACT_AUDIO_ALBUM		0xBA03
+#define MTP_FORMAT_ABSTRACT_AV_PLAYLIST		0xBA05
+#define MTP_EVENT_OBJECT_PROP_CHANGED		0xC801
+#define MTP_OBJECT_PROP_OBJECT_SIZE		0xDC04
+/* the room for a property value that may be a representative sample's picture */
+#define MTP_OBJECT_PROP_VALUE_SIZE_LARGE	0x10000
+int mtpStrgVTGetNumUniqueIds(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num);
+int mtpStrgVTGetUniqueIds(SceUInt32 storageId, SceUInt32 parent, SceUInt32 offset,
+	SceUInt32 count, SceUInt32 *ids);
+
+int mtpObjAddRootObject(MtpLogicalStorage *storage);
+int mtpObjAddDirectoryObject(MtpLogicalStorage *storage, const char *name,
+	SceUInt32 *uniqueId);
+int mtpObjBuildFullPathName(MtpLogicalStorage *storage, SceUInt32 parent, const char *name,
+	char *path, int withMountPoint);
+int mtpObjAddObjectData(MtpLogicalStorage *storage, SceUInt32 parent,
+	const MtpObjectData *data, const char *path, SceUInt32 *handle);
 
 /* mtp_operation.cpp */
 /* a data phase's transfer buffers: the heap's, or the large buffer's while it is free */
@@ -1413,16 +1636,40 @@ int mtpStrgGetNumObjects(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num);
 /* sends the handles itself; *send is cleared when that fails */
 int mtpStrgGetMtpHandles(SceUInt32 storageId, SceUInt32 parent, SceUInt32 num, int *send);
 int mtpObjDeleteObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId);
-int mtpObjGetObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *data);
-int mtpObjUpdateObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, const void *data);
-void mtpObjNotifyProprtyUpdate(SceUInt32 uniqueId, SceUInt32 storageId);
+int mtpObjGetObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, MtpObjectData *data);
+int mtpObjUpdateObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId,
+	const MtpObjectUpdateData *data);
+int mtpObjNotifyProprtyUpdate(SceUInt32 uniqueId, SceUInt32 storageId);
 
 /* the background copy (BGCP) */
 int mtpBgCopyGetTaskInfo(SceUInt32 *id, int *type, void *path);
 
 /* the network RPC, the search, the handover, the pause and resume of a transfer */
-int mtpContextRpcNetOperation(MtpContext *context, int type, int arg1, int arg2);
-int mtpContextRpcNetOperationAbort(MtpContext *context, int arg1, int arg2, int arg3);
+/* a network operation: what it sends, which way its data goes, and the host's answer */
+#define MTP_NET_OPERATION_SEND	1	/* the caller's data phase sends */
+#define MTP_NET_OPERATION_RECV	2	/* the caller's data phase receives */
+typedef struct MtpNetOperation {
+	void *sendData;
+	SceSize sendSize;
+	int type;		/* 0, MTP_NET_OPERATION_SEND or MTP_NET_OPERATION_RECV */
+	void *recvData;
+	SceSize recvSize;
+} MtpNetOperation;
+
+/* where a search's caller gets how many objects it found, and the search */
+typedef struct MtpSearchResult {
+	SceUInt32 *numFound;
+	SceUInt32 *searchId;
+} MtpSearchResult;
+
+/* where a caller gets the host's answer when the request ends */
+typedef struct MtpNetOperationResult {
+	void *buffer;
+	SceSize *size;
+} MtpNetOperationResult;
+
+int mtpContextRpcNetOperation(MtpContext *context, int type, const void *data, SceSize size);
+int mtpContextRpcNetOperationAbort(MtpContext *context, int operation, int arg, int id);
 int mtpContextSearchObject(MtpContext *context, const char *keyword, SceUInt32 type,
 	SceUInt32 flags);
 int mtpContextHandover(MtpContext *context, const void *info);

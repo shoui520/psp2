@@ -23,9 +23,6 @@ int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
 #define MTP_SPEC_PROTOCOL_VERSION	1800010
 #define MTP_SPEC_COM_VERSION		190
 
-#define MTP_GET		0
-#define MTP_GET_SET	1
-
 /* a thumbnail size the PS Vita information offers, per kind of content */
 typedef struct MtpSpecThumbnail {
 	int kind;			/* MTP_SPEC_THUMB_* */
