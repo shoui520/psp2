@@ -104,32 +104,8 @@ struct GameAppRegistration;
  */
 int gamePluginPromote(const char *path, bool report, GameAppRegistration *reg);
 
-/*
- * PLACEHOLDER: the promoter of an application's directory, defined in another file of the
- * plugin (constructor 0x81046D04, Run 0x810473E8; 96 bytes). Only what this plugin's main file
- * reads is written out; the flags' names are ours and their meaning is not read yet.
- */
+/* GameAppPromoter, the promoter of an application's directory: promoter.h */
 struct GamePromoteParam;
-
-class GameAppPromoter {
-public:
-	GameAppPromoter(const char *path, bool flag, GameAppRegistration *reg,
-			bool (*isStopRequested)(void), int arg5, int arg6, int arg7, int arg8);
-	GameAppPromoter(const GamePromoteParam *param, bool flag, GameAppRegistration *reg,
-			bool (*cancel)(void *arg), void *arg);	/* 0x81046E2C */
-	virtual ~GameAppPromoter();
-
-	int Run();
-
-	int m_result;			/* the constructor's result */
-	SceUInt8 otherFields[38];
-	bool m_installed;
-	bool m_promoted;
-	bool m_otherFlag;
-	bool m_replaced;
-	SceUInt8 moreFields[34];
-	paf::string m_errorTitleId;	/* the title ID an error names */
-};
 
 /*
  * PLACEHOLDER: what an install (0x8102BFB2) is asked for, 176 bytes, and what an install of the
@@ -250,6 +226,7 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 #define GAME_ERROR_UNREGISTER		-2146430679	/* 0x80101129: applauncher_plugin kept an application */
 #define GAME_ERROR_GC_QUIET		-2146430680	/* 0x80101128: nothing to show (an update already in place) */
+#define GAME_ERROR_GC_REPLACED		-2146430647	/* 0x80101149: likewise, the record replaced (PLACEHOLDER name) */
 #define GAME_ERROR_NO_UX0		-2146430676	/* 0x8010112C: ux0: is not there */
 #define GAME_ERROR_NO_INSTALL_INFO	-2146430692	/* 0x8010111C: a folder without its install information */
 #define GAME_ERROR_NOT_APP_PACKAGE	-2146430672	/* 0x80101130: a package of another content type */
@@ -327,6 +304,18 @@ struct GameJobProgress {
 		*percent += scale * value;
 		if (func != NULL)
 			func(arg, *percent);
+	}
+
+	/* the progress set to value, when it is ahead of it and no more than 100 */
+	void Set(float value)
+	{
+		if (percent == NULL || value < *percent || value > 100.0f)
+			return;
+
+		*percent = value;
+		if (func != NULL)
+			func(arg, *percent);
+		busy = 0;
 	}
 
 	float *percent;

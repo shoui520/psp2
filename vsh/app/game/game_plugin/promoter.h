@@ -491,4 +491,89 @@ public:
 
 typedef char GameInstallExJobSize[sizeof(GameInstallExJob) == 1336 ? 1 : -1];
 
+/*
+ * app_promoter.cpp: the promotion of an application's directory, by the promoter its path asks
+ * for (0x81046D04..0x810475B2).
+ *
+ * PLACEHOLDER: the promoters of a PSP game, of an application in ux0:appmeta and of a
+ * PlayStation Mobile game, defined in other files of the plugin; their names are ours.
+ */
+class GamePspPromoter : public GamePromoter {	/* constructor 0x8106A1E8, 152 bytes */
+public:
+	GamePspPromoter(const char *path, bool flag1, bool flag2, const GameJobProgress *progress,
+			int userData, float scale);
+
+	virtual int Prepare(bool flag);
+	virtual int CreateSource(GamePromoteSource **source);
+
+	SceUInt8 m_body[28];		/* PLACEHOLDER: laid out with its file */
+};
+
+class GameAppmetaPromoter : public GamePromoter {	/* constructor 0x8106AC10, 164 bytes */
+public:
+	GameAppmetaPromoter(const char *path, const GameJobProgress *progress, int userData,
+			    float scale);
+
+	virtual int Prepare(bool flag);
+	virtual int CreateSource(GamePromoteSource **source);
+
+	SceUInt8 m_body[40];		/* PLACEHOLDER: laid out with its file */
+};
+
+class GamePsmPromoter : public GamePromoter {	/* constructor 0x81069D54, 176 bytes */
+public:
+	GamePsmPromoter(const char *path, bool flag, const GameJobProgress *progress, int userData,
+			float scale);
+
+	virtual int Prepare(bool flag);
+	virtual int CreateSource(GamePromoteSource **source);
+
+	SceUInt8 m_body[52];		/* PLACEHOLDER: laid out with its file */
+};
+
+/*
+ * The promotion of an application's directory: the promoter its path asks for run on the
+ * caller's registration (constructors 0x81046D04 and 0x81046E2C, destructor 0x81046F6E, vtable
+ * 0x8152EACC), 96 bytes. PLACEHOLDER names; the flags' meaning is partly read.
+ */
+class GameAppPromoter {
+public:
+	GameAppPromoter(const char *path, bool flag, GameAppRegistration *reg,
+			bool (*isStopRequested)(void), void *arg, int unused,
+			void (*progressFunc)(void *arg, float percent), void *progressArg);
+	GameAppPromoter(const GamePromoteParam *param, bool flag, GameAppRegistration *reg,
+			bool (*cancel)(void *arg), void *arg);
+	virtual ~GameAppPromoter();
+
+	/* the promotion run: the promoter of the path, then the progress at 100 */
+	int Run();
+
+	/* whether path is in an application folder of gro0:, vs0:, ux0: or pd0: (0x81047030) */
+	static bool IsAppPath(const paf::string *path);
+
+	/* the promoter path asks for (0x810471B4) */
+	static int CreatePromoter(const paf::string *path, const LsdbAppInfoPtr *sfo, bool option,
+				  bool otherFlag, GamePromoter **promoter,
+				  GameJobProgress *progress, paf::string *errorTitleId);
+
+	int m_result;			/* the constructor's result */
+	LsdbAppInfoPtr m_sfo;		/* the parameter's record, when given */
+	GameAppRegistration *m_reg;
+	paf::string m_path;
+	paf::string m_name;		/* the directory's name, after its path's last '/' */
+	bool m_registerApp;		/* the promoter's registerApp */
+	bool m_option;			/* the parameter's option */
+	bool m_installed;		/* the promoter had nothing to show */
+	bool m_promoted;		/* the promoter's m_install */
+	bool m_otherFlag;
+	bool m_replaced;		/* GAME_ERROR_GC_REPLACED from the promoter */
+	GameCancelFunc m_cancel;
+	void *m_arg;
+	float m_percent;
+	GameJobProgress m_progress;
+	paf::string m_errorTitleId;	/* the title ID an error names */
+};
+
+typedef char GameAppPromoterSize[sizeof(GameAppPromoter) == 96 ? 1 : -1];
+
 #endif
