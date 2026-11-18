@@ -21,21 +21,6 @@
 
 using namespace paf;
 
-/*
- * PLACEHOLDER names: the param.sfo library the shell links (0x81342xxx; also in gamedata_plugin,
- * gamecard_installer_plugin, NPXS10026 and NPXS10031; no Sony name found): a param.sfo opened
- * from memory and closed, a parameter found by its key, its length and largest length, and its
- * value.
- */
-struct SfoHandle;
-
-int sfoOpen(const void *sfo, SceSize size, SfoHandle **handle);
-int sfoClose(SfoHandle *handle);
-int sfoFindParam(SfoHandle *handle, const char *key, void **param);
-int sfoGetParamInfo(SfoHandle *handle, void *param, const char **key, SceSize *length,
-		    SceSize *maxLength);
-int sfoGetParamValue(SfoHandle *handle, void *param, const void **value);
-
 /* the library's error for a parameter the param.sfo does not have */
 #define SFO_ERROR_NOT_FOUND	-2146412027	/* 0x80105A05 */
 

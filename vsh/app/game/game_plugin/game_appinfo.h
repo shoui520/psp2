@@ -62,6 +62,16 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #define LSDB_KEY_VERSION	0xD3BBB9B7u	/* "VERSION" */
 #endif
 
+/* a PSP application's param.sfo keys */
+#define LSDB_KEY_PSP_SYSTEM_VER	0x16A32D32u	/* "PSP_SYSTEM_VER" */
+#define LSDB_KEY_UPDATER_VER	0x8F1D7630u	/* "UPDATER_VER" */
+#define LSDB_KEY_DISC_NUMBER	0x604B15D4u	/* "DISC_NUMBER" */
+#define LSDB_KEY_DISC_TOTAL	0x4A5E0009u	/* "DISC_TOTAL" */
+#define LSDB_KEY_USE_USB	0x3607E5DDu	/* "USE_USB" */
+
+/* PLACEHOLDER name: the ATTRIBUTE bit that marks an application with a manual */
+#define GAME_ATTRIBUTE_MANUAL	0x200000
+
 /* a value's integer, 0 when it is a text */
 inline SceInt64 gameLsdbValueInteger(const LsdbValue &value)
 {
@@ -271,6 +281,21 @@ struct GameSfoParam {
  * (0x81033DE0), "NN.NN" (0x81033E22) or "NN.NNN" (0x81033E70), 0 or GAME_ERROR_BAD_DATA, and a
  * version's digits as a number (0x81033ECC).
  */
+/*
+ * PLACEHOLDER names: the param.sfo library the shell links (0x81342xxx; also in gamedata_plugin,
+ * gamecard_installer_plugin, NPXS10026 and NPXS10031; no Sony name found): a param.sfo opened
+ * from memory and closed, a parameter found by its key, its length and largest length, and its
+ * value.
+ */
+struct SfoHandle;
+
+int sfoOpen(const void *sfo, SceSize size, SfoHandle **handle);
+int sfoClose(SfoHandle *handle);
+int sfoFindParam(SfoHandle *handle, const char *key, void **param);
+int sfoGetParamInfo(SfoHandle *handle, void *param, const char **key, SceSize *length,
+		    SceSize *maxLength);
+int sfoGetParamValue(SfoHandle *handle, void *param, const void **value);
+
 int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize size);
 int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
 		      unsigned int count, LsdbAppInfoPtr *info, bool checkLength);
@@ -900,8 +925,14 @@ int gameUr0CheckFreeSpace(SceUInt64 size, paf::string *detail);
 /* PLACEHOLDER names: size bytes at offset of the file at path read into buf (0x8105388C) */
 int gameFileReadAt(const paf::string *path, SceUInt32 offset, SceSize size, void *buf);
 
-/* PLACEHOLDER names: a PBP's param.sfo read into sfo, and its parameters checked (0x81049274, 0x81048A7A) */
+/*
+ * PLACEHOLDER names: the parameters of a PBP's param.sfo read into sfo, those of its content
+ * type (0x81049274) or those params names (0x810491E2), and a PSP param.sfo's parameters checked
+ * (0x81048A7A)
+ */
 int gamePbpReadSfo(const paf::string *path, LsdbAppInfoPtr *sfo);
+int gamePbpLoadSfo(const paf::string *path, const GameSfoParam *params, unsigned int count,
+		   LsdbAppInfoPtr *info);
 int gameSfoCheck(const LsdbAppInfoPtr *sfo);
 
 /*

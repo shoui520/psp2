@@ -23,14 +23,155 @@ int gameUtf8Length(const char *str);
  */
 int gameUtf8ToUtf16(SceWChar16 *dst, SceSize size, const char *src);
 
-/* what a promoter reads its application's information from (each kind its own) */
+/*
+ * PLACEHOLDER: what a promotion's source is built from, 92 bytes. The constructors that read it
+ * are in another file of the plugin (0x8107A6F0, 0x8107A90A); its names are ours.
+ */
+struct GameAppSourceParam {
+	GameAppSourceParam(const char *dir, const char *path, const char *name, const char *sysDir,
+			   const char *metaDir, const LsdbAppInfoPtr &info)
+		: dir(dir), path(path), name(name), sysDir(sysDir), metaDir(metaDir),
+		  appPath(path), info(info)
+	{
+		options[0] = 0;
+		options[1] = 0;
+		options[2] = 0;
+	}
+
+	paf::string dir;		/* the folder read: the mount point, else the path */
+	paf::string path;		/* the folder promoted */
+	paf::string name;		/* its name */
+	int options[3];			/* 0 from the patch promoter */
+	paf::string sysDir;		/* dir's sce_sys */
+	paf::string metaDir;		/* the LiveArea's folder (ur0:appmeta/<name>) */
+	paf::string appPath;		/* the folder promoted, again */
+	LsdbAppInfoPtr info;		/* the record it had */
+};
+
+/*
+ * PLACEHOLDER: what a promoter reads its application's information from (each kind its own),
+ * defined in another file of the plugin (constructor 0x8107A6F0, vtable 0x8152EEB0), 88 bytes.
+ * The names are ours.
+ */
 class GamePromoteSource {
 public:
+	GamePromoteSource(const GameAppSourceParam &param);
 	virtual ~GamePromoteSource();
 
-	/* the application's information set into reg */
-	virtual int SetInfo(GameAppRegistration *reg) = 0;
+	/* the application's information set into reg (0x8107A83C) */
+	virtual int SetInfo(GameAppRegistration *reg);
+
+	/* the information read into reg */
+	virtual int Load(GameAppRegistration *reg) = 0;
+
+	bool m_ready;			/* false from the constructor */
+	paf::string m_dir;		/* the folder read */
+	paf::string m_path;		/* the folder promoted */
+	paf::string m_name;		/* its name */
+	int m_option;			/* param.options[2] */
+	paf::string m_titleId;		/* the title ID: the name, else the path's last part */
+	paf::string m_folderName;	/* likewise */
+	SceUInt32 m_flags;		/* GAME_SOURCE_FLAG_* */
+	int m_options[2];		/* param.options[0..1] */
+	paf::string *m_detail;		/* where an error's detail goes, NULL */
 };
+
+typedef char GamePromoteSourceSize[sizeof(GamePromoteSource) == 88 ? 1 : -1];
+
+/* GamePromoteSource::m_flags */
+#define GAME_SOURCE_FLAG_UX0		0x1	/* the application is on ux0: */
+#define GAME_SOURCE_FLAG_MANUAL		0x2	/* it has a manual */
+#define GAME_SOURCE_FLAG_INSTALLED	0x4	/* GameFolderSource::m_installed */
+
+/*
+ * PLACEHOLDER: the source of an application folder with its sce_sys, defined in another file of
+ * the plugin (constructor 0x8107A90A, vtable 0x8152EEC8), 172 bytes. The names are ours.
+ */
+class GameFolderSource : public GamePromoteSource {
+public:
+	GameFolderSource(const GameAppSourceParam &param);
+	virtual ~GameFolderSource();
+
+	virtual int Load(GameAppRegistration *reg);
+
+	/* the application's data folders set into reg */
+	virtual int SetDirs(GameAppRegistration *reg) = 0;
+
+	/* the application's paths set into reg */
+	virtual int SetPaths(GameAppRegistration *reg) = 0;
+
+	virtual int LoadIcons(GameAppRegistration *reg);		/* 0x8107B990 */
+	virtual int LoadLiveArea(GameAppRegistration *reg);	/* 0x8107BA88 */
+
+	paf::string m_sysDir;		/* the folder's sce_sys */
+	paf::string m_metaDir;		/* the LiveArea's folder */
+	paf::string m_appDir;		/* the application's folder, "" here */
+	paf::string m_appPath;		/* the folder promoted */
+	paf::string m_extra;		/* "" from the constructor */
+	int m_count;			/* 0 from the constructor */
+	LsdbAppInfoPtr m_oldInfo;	/* the record the application had */
+	bool m_installed;		/* false from the constructor */
+	int m_reserved[2];		/* 0 from the constructor */
+};
+
+typedef char GameFolderSourceSize[sizeof(GameFolderSource) == 172 ? 1 : -1];
+
+/* the source of an application's folder (constructor 0x810475B2, vtable 0x8152EADC), 172 bytes */
+class GameAppSource : public GameFolderSource {
+public:
+	GameAppSource(const GameAppSourceParam &param);
+	virtual ~GameAppSource();
+
+	virtual int SetDirs(GameAppRegistration *reg);
+	virtual int SetPaths(GameAppRegistration *reg);
+};
+
+typedef char GameAppSourceSize[sizeof(GameAppSource) == 172 ? 1 : -1];
+
+/*
+ * The source of a PSP application's folder: its EBOOT.PBP's param.sfo, or that of its PBOOT.PBP
+ * or PARAM.PBP update (constructor 0x8104888E, vtable 0x8152EB04), 172 bytes. The names are ours.
+ */
+class GamePspSource : public GamePromoteSource {
+public:
+	GamePspSource(const GameAppSourceParam &param);
+	virtual ~GamePspSource();
+
+	virtual int Load(GameAppRegistration *reg);
+
+	/* the folders under the title ID, and the manual (0x81048414) */
+	void Init(const GameAppSourceParam &param);
+
+	/* the application's paths and kind set into reg (0x8104959E) */
+	int SetPaths(const paf::string *pbpPath, GameAppRegistration *reg);
+
+	/* the GAMEDATA_ID of the titles that share NPJH90038's (0x81049A74) */
+	int FixGamedataId(LsdbAppInfoPtr *info, const paf::string *titleId);
+
+	/* the title converted, and the system and application versions (0x81049B4A) */
+	int SetTitle(GameAppRegistration *reg);
+
+	/* src's parameters but BOOTABLE and CATEGORY copied into dst (0x81049F98) */
+	int CopyInfo(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
+
+	/*
+	 * The param.sfo of the PBP at pbpPath read into info, and the newest of its PBOOT.PBP
+	 * updates chosen (0x8104A10E); the last two arguments are not read.
+	 */
+	int LoadSfo(const paf::string &titleId, paf::string *pbpPath, LsdbAppInfoPtr *info,
+		    int unused1, int unused2);
+
+	int m_reserved;			/* 0 from the constructor */
+	LsdbAppInfoPtr m_sfo;		/* an empty record */
+	paf::string m_baseDir;		/* m_dir without the title ID */
+	paf::string m_basePath;		/* m_path without the title ID */
+	paf::string m_drive;		/* "ux0:" */
+	paf::string m_sysDir;		/* param.sysDir */
+	paf::string m_paramPath;	/* the PBP the parameters were read from */
+	paf::string m_selfPath;		/* the PBP run, under m_basePath */
+};
+
+typedef char GamePspSourceSize[sizeof(GamePspSource) == 172 ? 1 : -1];
 
 /* a promotion, as the plugin runs it (vtable 0x8152EC20) */
 class GamePromoterIf {
@@ -159,46 +300,6 @@ public:
 	int m_userData;
 };
 
-/*
- * PLACEHOLDER: what an application folder's source is built from, 92 bytes. The constructors
- * that read it are in another file of the plugin (0x8107A6F0, 0x8107A90A); its names are ours.
- */
-struct GameAppSourceParam {
-	GameAppSourceParam(const char *dir, const char *path, const char *name, const char *sysDir,
-			   const char *metaDir, const LsdbAppInfoPtr &info)
-		: dir(dir), path(path), name(name), sysDir(sysDir), metaDir(metaDir),
-		  appPath(path), info(info)
-	{
-		options[0] = 0;
-		options[1] = 0;
-		options[2] = 0;
-	}
-
-	paf::string dir;		/* the folder read: the mount point, else the path */
-	paf::string path;		/* the folder promoted */
-	paf::string name;		/* its name */
-	int options[3];			/* 0 from the patch promoter */
-	paf::string sysDir;		/* dir's sce_sys */
-	paf::string metaDir;		/* the LiveArea's folder (ur0:appmeta/<name>) */
-	paf::string appPath;		/* the folder promoted, again */
-	LsdbAppInfoPtr info;		/* the record it had */
-};
-
-/*
- * PLACEHOLDER: the source of an application folder's information, defined in another file of
- * the plugin (constructor 0x810475B2, vtable 0x8152EADC), 172 bytes; laid out when that file is
- * written.
- */
-class GameAppSource : public GamePromoteSource {
-public:
-	GameAppSource(const GameAppSourceParam &param);
-
-	virtual int SetInfo(GameAppRegistration *reg);
-
-	SceUInt8 m_body[168];		/* PLACEHOLDER: laid out with its file */
-};
-
-typedef char GameAppSourceSize[sizeof(GameAppSource) == 172 ? 1 : -1];
 
 /*
  * PLACEHOLDER: the application's LiveArea brought into ur0:appmeta, defined in another file of
