@@ -88,10 +88,10 @@ int32_t MultiTouchGestureListener::OnUpdate(const inputdevice::Data *data, uint3
 int32_t MultiTouchGestureListener::RefreshActiveTouch(uint32_t bitmap)
 {
 	uint32_t touches = m_touch_bitmap;
-	int32_t count = 0;
+	int32_t count;
 
 	if (m_attached_bitmap == m_attached_bitmap_pre) {
-		for (; touches != 0; touches >>= 1) {
+		for (count = 0; touches != 0; touches >>= 1) {
 			if (touches & 1)
 				count++;
 		}
@@ -100,13 +100,14 @@ int32_t MultiTouchGestureListener::RefreshActiveTouch(uint32_t bitmap)
 
 	uint32_t keep = touches & bitmap;
 	uint32_t max = m_touch_count_max;
-	uint32_t held = 0;
+	uint32_t held;
+	uint32_t added;
+	uint32_t b;
 
 	m_touch_bitmap = keep;
+	held = 0;
 
-	uint32_t added = bitmap & ~keep;
-
-	for (uint32_t b = keep; b != 0; b >>= 1) {
+	for (added = bitmap & ~keep, b = keep; b != 0; b >>= 1) {
 		if (b & 1)
 			held++;
 	}
@@ -133,7 +134,7 @@ int32_t MultiTouchGestureListener::RefreshActiveTouch(uint32_t bitmap)
 			mask >>= 1;
 		} while (held > max);
 	}
-	for (; keep != 0; keep >>= 1) {
+	for (count = 0; keep != 0; keep >>= 1) {
 		if (keep & 1)
 			count++;
 	}
