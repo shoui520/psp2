@@ -961,7 +961,7 @@ int SceLibMtp_D4A132BD(SceUInt32 contextId)
 	return mtpIfEndCommon(contextId, NULL, NULL);
 }
 
-int sceMtpBeginNpDrmGetRtc(int arg1, int arg2, SceUInt32 *contextId)
+int sceMtpBeginNpDrmGetRtc(const void *request, SceSize size, SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -975,7 +975,7 @@ int sceMtpBeginNpDrmGetRtc(int arg1, int arg2, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_NPDRM_RTC);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextNpDrmGetRtc(context, arg1, arg2);
+	ret = mtpContextNpDrmGetRtc(context, request, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -994,7 +994,8 @@ int SceLibMtp_2D3DD76D(SceUInt32 contextId, void *arg2, void *arg3)
 	return mtpIfEndCommon(contextId, result, NULL);
 }
 
-int sceMtpBeginNpDrmActivate(int arg1, int arg2, int arg3, SceUInt32 *contextId)
+int sceMtpBeginNpDrmActivate(SceUInt32 arg, const void *request, SceSize size,
+	SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1008,7 +1009,7 @@ int sceMtpBeginNpDrmActivate(int arg1, int arg2, int arg3, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_NPDRM);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextNpDrmExecAuthentication(context, arg1, 1, arg2, arg3);
+	ret = mtpContextNpDrmExecAuthentication(context, arg, 1, request, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1029,7 +1030,8 @@ int SceLibMtp_48DE8672(SceUInt32 contextId, void *arg2, void *arg3, void *arg4, 
 	return mtpIfEndCommon(contextId, result, NULL);
 }
 
-int sceMtpBeginNpDrmDeactivate(int arg1, int arg2, int arg3, SceUInt32 *contextId)
+int sceMtpBeginNpDrmDeactivate(SceUInt32 arg, const void *request, SceSize size,
+	SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1043,7 +1045,7 @@ int sceMtpBeginNpDrmDeactivate(int arg1, int arg2, int arg3, SceUInt32 *contextI
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_NPDRM);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextNpDrmExecAuthentication(context, arg1, 0, arg2, arg3);
+	ret = mtpContextNpDrmExecAuthentication(context, arg, 0, request, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1064,7 +1066,8 @@ int SceLibMtp_923FAB90(SceUInt32 contextId, void *arg2, void *arg3, void *arg4)
 	return mtpIfEndCommon(contextId, result, NULL);
 }
 
-int sceMtpBeginNpDrmGetLicense(int arg1, int arg2, int arg3, SceUInt32 *contextId)
+int sceMtpBeginNpDrmGetLicense(const void *rtc, const void *licenseId, SceSize size,
+	SceUInt32 *contextId)
 {
 	MtpContext *context;
 	int ret;
@@ -1078,7 +1081,7 @@ int sceMtpBeginNpDrmGetLicense(int arg1, int arg2, int arg3, SceUInt32 *contextI
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_NPDRM);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextNpDrmGetLicense(context, arg1, arg2, arg3);
+	ret = mtpContextNpDrmGetLicense(context, rtc, licenseId, size);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else

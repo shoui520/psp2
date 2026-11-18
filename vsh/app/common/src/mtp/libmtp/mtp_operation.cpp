@@ -910,9 +910,9 @@ int mtpCmdSendObjectInfo(const MtpOperation *operation, MtpOperation *response)
 		MTP_ERR(MTP_TAG_CMD, 1499, "unable to update logical info=0x%x\n", ret);
 		goto free_name;
 	}
-	if (storage->freeSpaceInBytes < size || storage->freeSpaceInObjects == 0) {
-		MTP_ERR(MTP_TAG_CMD, 1505, "store full: %llu, %u\n", storage->freeSpaceInBytes,
-			storage->freeSpaceInObjects);
+	if (storage->dataset.freeSpaceInBytes < size || storage->dataset.freeSpaceInObjects == 0) {
+		MTP_ERR(MTP_TAG_CMD, 1505, "store full: %llu, %u\n", storage->dataset.freeSpaceInBytes,
+			storage->dataset.freeSpaceInObjects);
 		code = MTP_RESPONSE_STORE_FULL;
 		goto free_name;
 	}

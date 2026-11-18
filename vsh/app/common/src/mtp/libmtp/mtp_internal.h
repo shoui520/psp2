@@ -190,6 +190,7 @@ typedef struct SceMtpInitParam {
 /* the vendor responses (the names are ours) */
 #define MTP_RESPONSE_VENDOR_INVALID_CONTEXT	0xA001
 #define MTP_RESPONSE_VENDOR_UNKNOWN_STATUS	0xA004
+#define MTP_RESPONSE_VENDOR_DATA_TOO_LARGE	0xA005
 #define MTP_RESPONSE_VENDOR_NO_MEMORY	0xA007
 #define MTP_RESPONSE_VENDOR_INVALID_IMPORT_HANDLE	0xA00A
 #define MTP_RESPONSE_VENDOR_NO_IMPORT_HANDLE	0xA011
@@ -1117,6 +1118,7 @@ int netMtpDeviceIsWaking(void);
 #define MTP_OPERATION_REQUEST_RESUME_IMPORT_OBJECT	0xC12D
 #define MTP_OPERATION_REQUEST_NPDRM_RTC			0xC600
 #define MTP_OPERATION_REQUEST_NPDRM			0xC601
+#define MTP_OPERATION_REQUEST_NPDRM_LICENSE		0xC611
 
 /* what mtpContextRequestFsOperation asks the host to do */
 #define MTP_FS_OPERATION_CREATE_DIR	1
@@ -1153,17 +1155,37 @@ struct MtpStorage {
 
 typedef struct MtpCache MtpCache;
 
+/* a storage's StorageInfo dataset, as the storage manager keeps it */
+typedef struct MtpStorageDataset {
+	SceUInt16 storageType;
+	SceUInt16 filesystemType;
+	SceUInt16 accessCapability;
+	SceUInt16 padding;
+	SceUInt64 maxCapacity;
+	SceUInt64 freeSpaceInBytes;
+	SceUInt32 freeSpaceInObjects;
+	SceUInt32 padding2;
+	const char *storageDescription;
+	const char *volumeIdentifier;
+} MtpStorageDataset;
+
+typedef struct MtpDB MtpDB;
+
 /* a storage's logical storage (104 bytes, in the storage manager's table) */
 struct MtpLogicalStorage {
-	SceUInt8 reserved[8];		/* not read by the C written yet (STRG) */
+	const char *rootFolder;		/* its folder under the mount point */
+	SceUInt8 reserved[4];		/* not read by the C written yet (STRG) */
 	SceUInt16 index;		/* its number in its physical storage, from 1 */
-	SceUInt8 reserved1[26];
+	SceUInt8 reserved1[10];
+	SceUInt32 maxObjects;		/* the objects its database has room for */
+	SceUInt32 numObjects;		/* mtpDBGetUniqueIdInfo's */
+	SceUInt8 reserved2[4];
+	MtpDB *db;
 	const MtpStorageInfo *info;	/* info->name: the mount point */
 	MtpCache *cache;
-	SceUInt8 reserved2[36];
-	SceUInt64 freeSpaceInBytes;	/* mtpStrgUpdateLogicalInfo's */
-	SceUInt32 freeSpaceInObjects;
-	SceUInt8 reserved3[12];
+	int (*getStorageInfo)(MtpLogicalStorage *storage);
+	SceUInt8 reserved3[16];
+	MtpStorageDataset dataset;	/* what GetStorageInfo sends */
 };
 
 /* the commands (CMD and CMDE) */
@@ -1269,10 +1291,14 @@ int mtpContextGetTotalObjectSize(MtpContext *context, SceUInt32 numHandles);
 int mtpContextGetSpecifiedObjectMetadata(MtpContext *context, SceUInt32 type,
 	const SceUInt32 *items, SceUInt32 numItems);
 int mtpContextCheckImportHandle(SceUInt32 handle, const MtpContext *context);
-int mtpContextNpDrmGetRtc(MtpContext *context, int arg1, int arg2);
-int mtpContextNpDrmExecAuthentication(MtpContext *context, int arg1, int activate, int arg3,
-				      int arg4);
-int mtpContextNpDrmGetLicense(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextNpDrmGetRtc(MtpContext *context, const void *request, SceSize size);
+int mtpContextNpDrmExecAuthentication(MtpContext *context, SceUInt32 arg, int activate,
+	const void *request, SceSize size);
+int mtpContextNpDrmGetLicense(MtpContext *context, const void *rtc, const void *licenseId,
+	SceSize size);
+
+/* SceSblGcAuthMgr's user library */
+int sceSblGcAuthMgrPcactGetChallenge(int type, void *challenge, const void *data);
 
 /* Marlin (MRLN) */
 int mtpMarlinGetInfo(int type, SceSize size, SceUInt32 offset, void *data, SceSize *outSize);
@@ -1316,20 +1342,6 @@ typedef struct MtpStorageIds {
 	SceUInt32 num;
 	SceUInt32 *ids;
 } MtpStorageIds;
-
-/* a storage's StorageInfo dataset, as the storage manager keeps it */
-typedef struct MtpStorageDataset {
-	SceUInt16 storageType;
-	SceUInt16 filesystemType;
-	SceUInt16 accessCapability;
-	SceUInt16 padding;
-	SceUInt64 maxCapacity;
-	SceUInt64 freeSpaceInBytes;
-	SceUInt32 freeSpaceInObjects;
-	SceUInt32 padding2;
-	const char *storageDescription;
-	const char *volumeIdentifier;
-} MtpStorageDataset;
 
 /* the bytes of IDs written, or an error */
 int mtpStrgGetStorageIds(MtpStorageIds *ids);
