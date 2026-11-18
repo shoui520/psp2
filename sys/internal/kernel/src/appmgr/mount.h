@@ -5,6 +5,7 @@
 #include <scetypes.h>
 #include <pfsmgr/pfsmgr.h>
 #include <kernel/openpsid.h>
+#include <appmgr/appmgr_license.h>
 
 typedef struct AppmgrPfsMount {
 	int mountId;
@@ -103,31 +104,6 @@ int appmgrGetAccountIdentity(SceUInt64 *accountId, SceKernelOpenPsId *openPsId,
 #define APPMGR_STRNCAT(destination, source, count, capacity) \
 	strncat(destination, source, count)
 #endif
-
-typedef struct AppmgrLicenseInfo {
-	char contentId[48];
-	int licenseVersion;
-	int licenseFlags;
-	int flags;
-	unsigned int skuFlags;
-	SceUInt64 accountId;
-	SceUInt64 flags2;
-	SceUInt64 licStartTime;
-	SceUInt64 licExpTime;
-	unsigned char klicense[16];
-} AppmgrLicenseInfo;
-
-_Static_assert(sizeof(AppmgrLicenseInfo) == 112, "license information");
-_Static_assert(offsetof(AppmgrLicenseInfo, licenseVersion) == 48 &&
-	       offsetof(AppmgrLicenseInfo, licenseFlags) == 52 &&
-	       offsetof(AppmgrLicenseInfo, flags) == 56 &&
-	       offsetof(AppmgrLicenseInfo, skuFlags) == 60 &&
-	       offsetof(AppmgrLicenseInfo, accountId) == 64 &&
-	       offsetof(AppmgrLicenseInfo, flags2) == 72 &&
-	       offsetof(AppmgrLicenseInfo, licStartTime) == 80 &&
-	       offsetof(AppmgrLicenseInfo, licExpTime) == 88 &&
-	       offsetof(AppmgrLicenseInfo, klicense) == 96,
-	       "license information fields");
 
 /* mount.c */
 int appmgrDecodeString(const unsigned char *source, char *destination, SceSize size);

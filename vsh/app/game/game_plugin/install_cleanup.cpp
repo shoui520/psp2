@@ -24,7 +24,6 @@
 using namespace paf;
 
 /* the errors (values only) */
-#define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
 #define GAME_ERROR_INVALID_PACKAGE	-2146430693	/* 0x8010111B */
 #define GAME_ERROR_PACKAGE_TOO_LARGE	-2146430658	/* 0x8010113E */
 
@@ -952,7 +951,7 @@ int gameCleanupAddcont(void)
 /*
  * What an interrupted installation left cleaned up: the application's folder (path), then,
  * for additional content, the package in appDir concatenated back. On failure, detail is
- * given what gamePathDetail finds for the folder that failed.
+ * given what gamePathGetMountedDrive finds for the folder that failed.
  */
 int gameCleanupInstall(const char *path, const GameInstallPackage *package, const char *appDir,
 		       const LsdbAppInfoPtr *info, string *detail)
@@ -961,7 +960,7 @@ int gameCleanupInstall(const char *path, const GameInstallPackage *package, cons
 
 	ret = gameCleanupApp(path, info, detail, package->keystone);
 	if (ret < 0) {
-		gamePathDetail(string(path), detail);
+		gamePathGetMountedDrive(string(path), detail);
 		return ret;
 	}
 
@@ -998,6 +997,6 @@ int gameCleanupInstall(const char *path, const GameInstallPackage *package, cons
 	}
 	ret = GAME_ERROR_INVALID_ARGUMENT;
 fail:
-	gamePathDetail(string(appDir), detail);
+	gamePathGetMountedDrive(string(appDir), detail);
 	return ret;
 }

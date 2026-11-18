@@ -37,8 +37,8 @@ void gamePluginReleasePool(paf::common::SharedPtr<paf::memory::PoolAllocator> *p
 void gameDebugDump(const char *label, const void *data, SceSize size);
 
 /*
- * An application's PFS mounted with its keystone, the mount point left in mountPoint
- * (0x8101E23C), and unmounted (0x8101E434).
+ * An installation's directory mounted with its keystone, from grw0: when dir is on it, else
+ * from ux0:, the mount point left in mountPoint (0x8101E23C), and unmounted (0x8101E434).
  */
 int gamePfsMount(const paf::string &dir, const paf::string &name, const void *keystone,
 		 paf::string *mountPoint);
@@ -49,6 +49,12 @@ int gamePfsUnmount(paf::string *mountPoint);
 
 /* the plugin's error for an argument out of range (value only) */
 #define GAME_ERROR_INVALID_ARGUMENT	-2146430720	/* 0x80101100 */
+
+/* the plugin's errors several of its files return (values only) */
+#define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
+#define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
+#define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
+#define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
@@ -79,22 +85,40 @@ struct GameInstallPackage {
 int gamePluginGetAddcontTitles(paf::vector<paf::string> *titles);
 
 /*
- * An application's folder mounted for reading, the mount point left in mountPoint
- * (0x8101DE16), and unmounted (0x8101E0B2). PLACEHOLDER: the meaning of the two words is not
- * known; install_cleanup.cpp passes 0 for each.
+ * The plugin's counted mounts (mounter.cpp): an application's game data, with its patch and its
+ * license (rif, written to ur0:temp/rif/work.bin, when given), the mount point left in
+ * mountPoint (0x8101DE16), and unmounted (0x8101E0B2); the same without writing the license
+ * (0x8101DBA0); an application's data (0x8101E56E, 0x8101E6F6); the PSP emulator's work
+ * directory (0x8101E84C, 0x8101E9B6); a theme (0x8101ECBA, 0x8101EAE2; 0x8101EF4E); and the drive
+ * a mount point stands for (0x8101D89C).
  */
-int gameAppMount(const char *path, const char *drive, int arg2, int arg3,
+int gameAppMount(const char *appPath, const char *patchPath, const void *rif, SceSize rifSize,
 		 paf::string *mountPoint);
 int gameAppUnmount(paf::string *mountPoint);
-
-/* PLACEHOLDER: what 0x8101BFB4 finds for path and leaves in detail, when detail is given */
-void gamePathDetail(const paf::string &path, paf::string *detail);
+int gameGameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
+		      paf::string *mountPoint);
+int gameAppDataMount(const paf::string &titleId, paf::string *mountPoint);
+int gameAppDataUnmount(paf::string *mountPoint);
+int gamePspemuWorkMount(paf::string *mountPoint);
+int gamePspemuWorkUnmount(paf::string *mountPoint);
+int gameThemeMount(const paf::string &contentId, const paf::string &themePath, const void *rif,
+		   SceSize rifSize, paf::string *mountPoint);
+int gameThemeDataMount(const paf::string &contentId, const paf::string &themePath,
+		       const paf::string &rifPath, paf::string *mountPoint);
+int gameThemeUnmount(paf::string *mountPoint);
+void gameMountGetDrive(const paf::string &path, paf::string *drive);
 
 /*
- * A directory removed, by a job of its own (0x8101BA08). PLACEHOLDER: the meaning of the
- * three words and the flag is not known; this file passes 0, 0, 0 and true.
+ * The drive a path is reached by: the drive of the mount that holds it, else the path's own
+ * drive; drive is left as it is when neither is found (0x8101BFB4).
  */
-int gameRemoveDirectory(const char *path, int arg1, int arg2, int arg3, bool wait);
+void gamePathGetMountedDrive(const paf::string &path, paf::string *drive);
+
+/*
+ * A file or a directory tree removed, by a remover of its own (0x8101BA08); with mapErrors, an
+ * error is translated by gameFileToPafError (0x8101C212). PLACEHOLDER: the meaning of the three words is not known.
+ */
+int gameRemoveDirectory(const char *path, int arg1, int arg2, int arg3, bool mapErrors);
 
 /*
  * A file copied, by a job of its own, with buf as its work memory (0x8101AB80). PLACEHOLDER:

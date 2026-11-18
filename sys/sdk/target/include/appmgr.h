@@ -79,6 +79,32 @@ int sceAppMgrAppParamGetInt(SceUID pid, int id, int *value);
 int sceAppMgrAppParamGetString(SceUID pid, int id, char *buf, SceSize bufSize);
 int sceAppMgrLaunchAppByUri(int flags, const char *uri);
 
+/*
+ * not in the SDK: the license of the application at path (its layout is AppmgrLicenseInfo in
+ * <appmgr/appmgr.h>)
+ */
+int sceAppMgrCheckRifGD(const char *path, void *info);
+
+#ifndef PSP2_KERNEL
+/*
+ * not in the SDK: a theme's PFS mounted (ux0:theme/<contentId>, or themePath and rifPath for a
+ * debug theme); the mount point goes to mountPoint (16 bytes). The kernel's function of this
+ * name is appmgr's own (<appmgr/appmgr.h>).
+ */
+int sceAppMgrThemeDataMount(const char *contentId, const char *themePath, const char *rifPath,
+			    char *mountPoint);
+
+/*
+ * not in the SDK: an application's game data mounted (appPath, with its patch and license when
+ * given), and an installation's directory mounted with its keystone from a drive (500 grw0:,
+ * 501 ux0:); the mount point goes to mountPoint (16 bytes)
+ */
+int sceAppMgrGameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
+			   char *mountPoint);
+int sceAppMgrInstallDirMount(unsigned int mountId, const char *id, const void *keystone,
+			     char *mountPoint);
+#endif
+
 #ifdef __cplusplus
 }
 #endif

@@ -17,6 +17,7 @@
 #include <kernel/processmgr.h>
 #include <kernel/iofilemgr.h>
 #include <kernel/iofilemgr_stat.h>
+#include <appmgr.h>
 #include <appmgr/appmgr.h>
 #include <npdrm/npdrm.h>
 #include <regmgr/regmgr.h>

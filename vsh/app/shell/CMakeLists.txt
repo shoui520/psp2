@@ -22,6 +22,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	savedata_backup.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/install_cleanup.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/appinfo.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/game_lsdb.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/mounter.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

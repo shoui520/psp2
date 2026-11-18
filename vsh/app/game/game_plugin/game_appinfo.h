@@ -23,6 +23,37 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #ifndef LSDB_KEY_APPCONF
 #define LSDB_KEY_APPCONF	0x5142196Bu	/* "#appconf" */
 #endif
+#ifndef LSDB_KEY_DISP_VER
+#define LSDB_KEY_DISP_VER	0x47C0E8ACu	/* "_disp_ver" */
+#endif
+#ifndef LSDB_KEY_TARGET_APP_VER
+#define LSDB_KEY_TARGET_APP_VER	0x21EAAE0Eu	/* "TARGET_APP_VER" */
+#endif
+#ifndef LSDB_KEY_INSTALL_DIR_SAVEDATA
+#define LSDB_KEY_INSTALL_DIR_SAVEDATA	0x10954174u	/* "INSTALL_DIR_SAVEDATA" */
+#endif
+#ifndef LSDB_KEY_INSTALL_DIR_ADDCONT
+#define LSDB_KEY_INSTALL_DIR_ADDCONT	0xF11F5930u	/* "INSTALL_DIR_ADDCONT" */
+#endif
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_1	0x043E0A78u	/* "INSTALL_DIR_ADDCONT_ADD_1" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_2	0x073E0F31u	/* "INSTALL_DIR_ADDCONT_ADD_2" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_3	0x063E0D9Eu	/* "INSTALL_DIR_ADDCONT_ADD_3" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_4	0x093E1257u	/* "INSTALL_DIR_ADDCONT_ADD_4" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_5	0x083E10C4u	/* "INSTALL_DIR_ADDCONT_ADD_5" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_6	0x0B3E157Du	/* "INSTALL_DIR_ADDCONT_ADD_6" */
+#define LSDB_KEY_INSTALL_DIR_ADDCONT_ADD_7	0x0A3E13EAu	/* "INSTALL_DIR_ADDCONT_ADD_7" */
+#ifndef LSDB_KEY_INSTALL_DIR_CACHE
+#define LSDB_KEY_INSTALL_DIR_CACHE	0x35EF415Bu	/* "INSTALL_DIR_CACHE0" */
+#endif
+#ifndef LSDB_KEY_IMPORT_SAVEDATA_INFO
+#define LSDB_KEY_IMPORT_SAVEDATA_INFO	0x6DBCFF31u	/* "IMPORT_SAVEDATA_INFO" */
+#endif
+#ifndef LSDB_KEY_ATTRIBUTE2
+#define LSDB_KEY_ATTRIBUTE2	0xE320FB47u	/* "ATTRIBUTE2" */
+#endif
+#ifndef LSDB_KEY_VERSION
+#define LSDB_KEY_VERSION	0xD3BBB9B7u	/* "VERSION" */
+#endif
 
 /* a value's integer, 0 when it is a text */
 inline SceInt64 gameLsdbValueInteger(const LsdbValue &value)
@@ -92,7 +123,13 @@ inline void gameLsdbValueAssign(LsdbValue &value, const LsdbValue &other)
  * What applauncher_plugin shows of an application (0x58 bytes, built by 0x810161EA).
  * PLACEHOLDER: the fields this file does not set are not read yet.
  */
+struct GameAppEntryOther;	/* PLACEHOLDER: what the entry's shared pointer holds */
+
 struct GameAppEntry {
+	GameAppEntry() : otherHeader(), storage(0), kind(0), parentalLevel(0), otherInt(0)
+	{
+	}
+
 	int otherHeader[3];
 	paf::string otherText;
 	paf::string iconPath;			/* icon0.png, or icon0.dds for EG and ME */
@@ -101,13 +138,21 @@ struct GameAppEntry {
 	int kind;				/* 2-5 from the attribute or the path, 1 for ME */
 	paf::string contentLocation;		/* wda's CONTENT_LOCATION */
 	int parentalLevel;
-	int otherTail[4];
+	int otherInt;
+	paf::common::SharedPtr<GameAppEntryOther> other;
+	int otherTail;
 };
 
 struct GameAppRegistration {
+	GameAppRegistration() : entry(new GameAppEntry), info(new LsdbAppInfo),
+				liveAreaState(0xFFFFFF), otherFlag(true), mode(0)
+	{
+	}
+
 	paf::common::SharedPtr<GameAppEntry> entry;
 	LsdbAppInfoPtr info;
-	SceUInt8 otherFields[0x10];
+	paf::vector<LsdbAppInfoPtr> related;	/* the related applications' informations */
+	SceUInt8 otherFields[4];
 	int liveAreaState;			/* 0xFFFFFF when built; 0 when it has none */
 	bool otherFlag;
 	int mode;				/* what the registration is for (1: an install) */
@@ -152,6 +197,40 @@ struct GameSfoParam {
 int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize size);
 int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
 		      unsigned int count, LsdbAppInfoPtr *info, bool checkLength);
+
+/*
+ * PLACEHOLDER names, defined in another file of the shell: whether a version is "NN.NN"
+ * (0x81033E22) and whether it is "NN.NNN" (0x81033E70), 0 or GAME_ERROR_BAD_DATA.
+ */
+int gameVersionCheck(const char *version);
+int gameSystemVersionCheck(const char *version);
+
+/*
+ * PLACEHOLDER: what a SELF's eboot parameters (its control information of type 6) give the
+ * shell, read by 0x8103301C. Only the fields the game plugin reads are named.
+ */
+struct GameEbootParamData {
+	SceUInt8 digest[0x20];			/* the saved copy's check value */
+	SceUInt32 header;			/* the record's word at 0x10; 1 without a copy */
+	SceUInt32 attribute;			/* stored as _eboot_attr */
+	SceUInt32 phyMemsize;			/* stored as _phy_memsize */
+	SceUInt32 appMemsize;			/* stored as _app_memsize */
+	SceUInt8 otherParams[0xF0];
+};
+
+/*
+ * PLACEHOLDER: a SELF's eboot parameters, defined in another file of the shell (constructor
+ * 0x81032FD4, destructors 0x81032FF8 and 0x81033006, Read 0x8103328C, Load 0x81033456).
+ */
+class GameEbootParam {
+public:
+	GameEbootParam();
+	virtual ~GameEbootParam();
+	int Read(const paf::string &path);	/* from a SELF */
+	int Load(const paf::string &path);	/* from a saved copy (0x81033456) */
+
+	GameEbootParamData data;
+};
 
 size_t gameStrnlen(const char *str, size_t max);
 int gameAppInfoSetTimeNow(unsigned int key, LsdbAppInfoPtr *info);
@@ -203,6 +282,24 @@ const GameSfoParam *gameSfoGetTitleParams(void);
 unsigned int gameSfoGetTitleParamCount(void);
 const GameSfoParam *gameSfoGetSaveDataParams(void);
 unsigned int gameSfoGetSaveDataParamCount(void);
+const GameSfoParam *gameSfoGetPspCheckParams(void);
+unsigned int gameSfoGetPspCheckParamCount(void);
+const GameSfoParam *gameSfoGetPspGameParams(void);
+unsigned int gameSfoGetPspGameParamCount(void);
+const GameSfoParam *gameSfoGetPspAppParams(void);
+unsigned int gameSfoGetPspAppParamCount(void);
+const GameSfoParam *gameSfoGetPspPs1Params(void);
+unsigned int gameSfoGetPspPs1ParamCount(void);
+const GameSfoParam *gameSfoGetPspDiscGameParams(void);
+unsigned int gameSfoGetPspDiscGameParamCount(void);
+const GameSfoParam *gameSfoGetPspGameBootParams(void);
+unsigned int gameSfoGetPspGameBootParamCount(void);
+const GameSfoParam *gameSfoGetPspPatchParams(void);
+unsigned int gameSfoGetPspPatchParamCount(void);
+const GameSfoParam *gameSfoGetPspUpdaterParams(void);
+unsigned int gameSfoGetPspUpdaterParamCount(void);
+const GameSfoParam *gameSfoGetPspWgParams(void);
+unsigned int gameSfoGetPspWgParamCount(void);
 const unsigned int *gameGetAddcontDirKeys(void);
 unsigned int gameGetAddcontDirKeyCount(void);
 bool gameCategoryIsGameName(const paf::string &category);
@@ -224,6 +321,154 @@ int gameSfoLoadAppVerVerified(const paf::string &path, LsdbAppInfoPtr *info,
 			      const GameSfoParam **params, unsigned int *count,
 			      const char *digest, SceSize digestLength);
 int gameAttributeCheck(const paf::string &category, SceInt64 attribute);
+int gameAppInfoCheckSfo(const LsdbAppInfoPtr *info);
+int gameAttributeCompare(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other);
+
+int gameAppInfoCheckPatchSfo(const LsdbAppInfoPtr *info);
+int gameAppInfoSetEbootParam(const paf::string &selfPath, LsdbAppInfoPtr info);
+int gameAppInfoCopyEbootParam(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
+int gameAppInfoUpdateEbootParam(const paf::string &selfPath, LsdbAppInfoPtr *info,
+				paf::string *detail);
+int gameAppInfoLoadEbootParam(const paf::string &path, LsdbAppInfoPtr *info, paf::string *detail);
+void gameAppInfoSetSaveDataDir(LsdbAppInfoPtr *info, const paf::string &dir);
+void gameAppInfoSetAddcontDir(LsdbAppInfoPtr *info, const paf::string &dir);
+void gameAppInfoSetCacheDir(LsdbAppInfoPtr *info, const paf::string &dir);
+
+/* an application's IMPORT_SAVEDATA_INFO emptied (0x810145EE) */
+void gameAppInfoClearImportSaveDataInfo(LsdbAppInfoPtr *info);
+
+/* an application's #appconf, 0 without one (0x810146BE) */
+SceInt64 gameAppInfoGetAppconf(const LsdbAppInfoPtr *info);
+
+/* a patch's #appconf bits 0-3 for flags (0x81014724) */
+SceUInt64 gamePatchAppconfLow(const LsdbAppInfoPtr *info, const paf::string &category,
+			     SceUInt64 flags);
+
+/* a patch's #appconf bits 5-7 for flags (0x810148D8) */
+SceUInt64 gamePatchAppconfHigh(const LsdbAppInfoPtr *info, const paf::string &category,
+			     SceUInt64 flags);
+
+
+/* a patch's #LIBLOCATION, ATTRIBUTE and #appconf over its application's (0x81014A8E) */
+int gameAppInfoSetPatchAttribute(const LsdbAppInfoPtr *app, LsdbAppInfoPtr *info);
+
+/* selfPath and path from the application a BOOT_INSTALL_DIR names (0x81014EDA) */
+int gameAppInfoUseBootSelfPath(const LsdbAppInfoPtr *info, paf::string *selfPath,
+			       paf::string *path);
+
+/* 1 for a game, 2 for NPXS10998, 0 for other data (0x810153C8) */
+void gameAppInfoGetGameKind(const LsdbAppInfoPtr *info, const paf::string &titleId, int *kind);
+
+/* an application's _bg_title_id from its background application (0x810154C0) */
+void gameAppRegistrationSetBgTitleId(GameAppRegistration *app);
+
+/* the drive an application's data goes to: grw0: or ux0: (0x81015614) */
+int gamePathGetDataDrive(const paf::string &path, bool toUx0, paf::string *drive);
+
+/* whether info differs from other in the system version or parental keys (0x810157BA) */
+int gameAppInfoParentalDiffers(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other);
+
+/* the system version and parental keys an update keeps, copied (0x81015A7E) */
+int gameAppInfoCopyParental(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst);
+
+/* an error when an application or its background application is running (0x81015ED8) */
+int gameAppCheckNotRunning(const paf::string &titleId, const LsdbAppInfoPtr *info);
+
+/* bit 11 of an application's #appconf set or cleared (0x81015FA2) */
+void gameAppInfoSetAppconfBit11(LsdbAppInfoPtr *info, bool set);
+
+/* bit 10 of an application's #appconf set or cleared (0x810160C6) */
+void gameAppInfoSetAppconfBit10(LsdbAppInfoPtr *info, bool set);
+
+/* a game card application's information moved to ux0: (0x810161EA) */
+int gameAppInfoMoveToUx0(LsdbAppInfoPtr *info, bool doRegister, bool notify,
+			 const paf::string *dir);
+
+/* an application's PARENTAL_LEVEL, 0 without one (0x81016A74) */
+int gameAppInfoGetParentalLevel(const LsdbAppInfoPtr *info);
+
+/* whether a folder has a folder in it (0x81016ACC) */
+bool gameDirHasSubDirs(const paf::string &path);
+
+/* bit 12 of an application's #appconf set or cleared (0x81016B8E) */
+void gameAppInfoSetAppconfBit12(LsdbAppInfoPtr *info, bool set);
+
+/* bit 2 of an application's #_promote_attr set or cleared (0x81016CB2) */
+void gameAppInfoSetPromoteAttrBit2(LsdbAppInfoPtr *info, bool set);
+
+/* whether bit 2 of an application's #_promote_attr is set (0x81016E02) */
+bool gameAppInfoPromoteAttrBit2(const LsdbAppInfoPtr *info);
+
+/*
+ * PLACEHOLDER: the free trial license's file name, <name>.ftt (0x8101D49E, in a file of the
+ * plugin not written yet)
+ */
+int gameFttLicenseName(paf::string *name);
+
+/* whether an application has its free trial license file (0x81016E6C) */
+bool gameAppHasFttLicense(const paf::string &titleId);
+
+/* the game card application's title ID (0x810170A0) */
+paf::string gameCardGetTitleId(void);
+
+/* PLACEHOLDER: a folder's statistics, as 0x8104639C fills them (not read yet) */
+struct GameDirStat {
+	SceUInt8 data[0x3A8];
+};
+
+/* PLACEHOLDER: a folder's statistics (0x8104639C, in a file of the shell not written yet) */
+int gameDirReadStat(const paf::string &path, GameDirStat *stat);
+
+/* a folder's statistics read into a cleared stat (0x8101731A) */
+int gameDirGetStat(const paf::string &path, GameDirStat *stat);
+
+/*
+ * PLACEHOLDER name, defined in another file of the shell: whether the PSP emulator's list
+ * (ur0:emu_list/list.dat, /CONFIG/PSPEMU enable_list) allows a title ID (0x813728C8)
+ */
+int gamePspEmuListAllows(const char *titleId);
+
+/* whether a PSP content ID names a title the emulator allows (0x8101810A) */
+int gamePspCheckContentId(const char *contentId);
+
+/* whether a content ID is the PocketStation application's (0x81018184) */
+bool gameIsPocketStation(const paf::string &contentId);
+
+/* a PSP game's boot file: EBOOT.PBP, PBOOT.PBP or PARAM.PBP (0x81017D80) */
+int gamePspGetBootPath(const paf::string &dir, paf::string *path);
+
+/* a PSP game's game data ID (0x810178A8) */
+int gamePspGetGameDataId(const LsdbAppInfoPtr *info, paf::string *gameDataId);
+
+/* GAME_ERROR_APP_RUNNING when the foreground application shares a PSP game's data (0x81017A32) */
+int gamePspCheckGameDataNotRunning(const paf::string &titleId, const LsdbAppInfoPtr *info);
+
+/* GAME_ERROR_APP_RUNNING when the foreground application is titleId (0x81017850) */
+int gameAppCheckNotForeground(const paf::string &titleId);
+
+/* a PSP PBP file's header: its magic ("\0PBP"), version and the offsets of its files */
+struct GamePbpHeader {
+	SceUInt8 magic[4];
+	SceUInt32 version;
+	SceUInt32 paramSfoOffset;
+	SceUInt32 icon0Offset;
+	SceUInt32 icon1Offset;
+	SceUInt32 pic0Offset;
+	SceUInt32 pic1Offset;
+	SceUInt32 snd0Offset;
+	SceUInt32 dataPspOffset;
+	SceUInt32 dataPsarOffset;
+};
+
+/* a PBP file's header, and whether it is a PS1 multi-disc image (0x81017422) */
+int gamePbpReadHeader(const char *path, GamePbpHeader *header, bool *multiDisc);
+
+/* the ATTRIBUTE_MINOR flags (0x8101733E) */
+int gameAppInfoGetAttributeMinor(const LsdbAppInfoPtr *info, bool *valid,
+				 bool *bit2Clear, bool *bit3Clear);
+
+int gameAddcontCheck(const LsdbAppInfoPtr *app, const LsdbAppInfoPtr *info,
+		     const paf::vector<LsdbAppInfoPtr> *related);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
 

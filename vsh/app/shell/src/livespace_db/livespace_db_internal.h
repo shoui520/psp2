@@ -1037,3 +1037,9 @@ int SceLsdb_64DD44C2(AppInfoQClient *client, const paf::string *id, int language
 }
 
 #endif
+#define LSDB_KEY_ATTRIBUTE_MINOR	0x8FC97EB1u	/* "ATTRIBUTE_MINOR" */
+int SceLsdb_CF4B3684(AppInfoSClient *client, int pageNo, unsigned int pageCount);
+int SceLsdb_4DB9BCB4(AppInfoSClient *client);
+int SceLsdb_76B75713(AppInfoQClient *client, LsdbQueryCondition *conditions,
+	paf::vector<paf::string> *titleIds, unsigned int flags);
+int SceLsdb_D239031A(AppInfoQClient *client, const paf::string *titleId, LsdbAppInfoPtr *info);

@@ -229,10 +229,6 @@ int sceAppMgrLaunchAppByNameForDebugger(const char *name, const char *param);
 int SceAppMgrForDriver_99AA37C1(const char *name);
 int SceAppMgrForDriver_DC13160A(SceUID pid, struct SceAppMgrAppStatus *status);
 int sceAppMgrUmount(const char *driveId);
-/* a theme's PFS mounted (ux0:theme/<contentId>, or themePath and rifPath for a debug theme);
-   the mount point goes to mountPoint (16 bytes) */
-int sceAppMgrThemeDataMount(const char *contentId, const char *themePath, const char *rifPath,
-			    char *mountPoint);
 int sceAppMgrDestroyAppForTest(SceUID pid);
 int sceAppMgrLiveAreaOperationByNameForLoadp(int operation, const char *appName);
 int sceAppMgrLiveAreaOperationForLoadp(int operation);

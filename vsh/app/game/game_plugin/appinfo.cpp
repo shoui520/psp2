@@ -16,6 +16,8 @@
 #include <file/localfile.h>
 #include <vshbridge/vshbridge.h>
 #include <plugin.h>
+#include <appmgr.h>
+#include <appmgr/appmgr.h>
 #include <common/shared_ptr.h>
 
 #include "../../shell/src/livespace_db/lsdb_keys.h"
@@ -28,12 +30,14 @@ using namespace paf;
 /* the errors (values only) */
 #define GAME_ERROR_NO_PLUGIN	-2146430719	/* 0x80101101: a plugin the call needs is not loaded */
 #define GAME_ERROR_BAD_DATA	-2146430716	/* 0x80101104: a file whose contents do not check */
-#define GAME_ERROR_NO_VALUE	-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
-#define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
 #define GAME_ERROR_NO_STORAGE	-2146430663	/* 0x80101139: a path on no storage the plugin knows */
-#define GAME_ERROR_NO_DRIVE	-2146430682	/* 0x80101126: a path without a drive */
 #define GAME_ERROR_NO_SFO_PARAMS	-2146430672	/* 0x80101130: a category with no param.sfo table */
+#define GAME_ERROR_NO_BOOT_APP	-2146430677	/* 0x8010112B: a BOOT_INSTALL_DIR no application is installed in */
+#define GAME_ERROR_APP_RUNNING	-2146430700	/* 0x80101114: an application that is running */
+#define GAME_ERROR_BAD_PBP	-2146430686	/* 0x80101122: a PBP file without its header */
+#define GAME_ERROR_PSP_NOT_LISTED	-2146430689	/* 0x8010111F: a PSP title the emulator's list does not allow */
+#define GAME_ERROR_PATCH_DATA	-2146430673	/* 0x8010112F: a patch whose category is data */
 
 /*
  * topmenu_plugin's functions an application's registration calls around applauncher_plugin's
@@ -824,6 +828,104 @@ static GameSfoParam s_sfoSaveDataParams[] = {
 	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
 };
 
+/* PLACEHOLDER: what is checked of a PSP game (the disc ID under TITLE_ID) */
+static GameSfoParam s_sfoPspCheckParams[] = {
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "UPDATER_VER", 0, GAME_SFO_FORMAT_TEXT, 5, 8, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "GAMEDATA_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+	{ "DISC_ID", LsdbKeyHash("TITLE_ID"), GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+};
+
+/* a PSP game on a memory card (MG) */
+static const GameSfoParam s_sfoPspGameParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "GAMEDATA_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+};
+
+/* a PSP application on a memory card (MA); the same as a game's, one copy in Sony's binary */
+static const GameSfoParam s_sfoPspAppParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "GAMEDATA_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+};
+
+/* a PS1 classic (ME) */
+static GameSfoParam s_sfoPspPs1Params[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DISC_ID", LsdbKeyHash("TITLE_ID"), GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DRIVER_PATH", 0, GAME_SFO_FORMAT_TEXT, 64, 64, 0 },
+	{ "PSP_SYSTEM_VER", 0, GAME_SFO_FORMAT_TEXT, 5, 8, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "GAMEDATA_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+};
+
+/* a PSP disc game image (EG) */
+static GameSfoParam s_sfoPspDiscGameParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DISC_ID", LsdbKeyHash("TITLE_ID"), GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+	{ "DISC_TOTAL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DISC_NUMBER", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DRIVER_PATH", 0, GAME_SFO_FORMAT_TEXT, 64, 64, 0 },
+	{ "PSP_SYSTEM_VER", 0, GAME_SFO_FORMAT_TEXT, 5, 8, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "HRKGMP_VER", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "GAMEDATA_ID", 0, GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+};
+
+/* PLACEHOLDER: a PSP game on a memory card, the case without its title (MG) */
+static const GameSfoParam s_sfoPspGameBootParams[] = {
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
+/* a PSP game patch (PG) */
+static const GameSfoParam s_sfoPspPatchParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "ATTRIBUTE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+	{ "TARGET_APP_VER", 0, GAME_SFO_FORMAT_TEXT, 6, 8, 0 },
+};
+
+/* a PSP updater (MG) */
+static const GameSfoParam s_sfoPspUpdaterParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DRIVER_PATH", 0, GAME_SFO_FORMAT_TEXT, 64, 64, 0 },
+	{ "UPDATER_VER", 0, GAME_SFO_FORMAT_TEXT, 5, 8, 0 },
+};
+
+/* PLACEHOLDER: a PSP category WG */
+static GameSfoParam s_sfoPspWgParams[] = {
+	{ "TITLE", 0, GAME_SFO_FORMAT_TEXT, 128, 128, 0 },
+	{ "PARENTAL_LEVEL", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DISC_ID", LsdbKeyHash("TITLE_ID"), GAME_SFO_FORMAT_TEXT, 13, 16, 0 },
+	{ "BOOTABLE", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+	{ "DRIVER_PATH", 0, GAME_SFO_FORMAT_TEXT, 64, 64, 0 },
+	{ "PSP_SYSTEM_VER", 0, GAME_SFO_FORMAT_TEXT, 5, 8, 0 },
+	{ "CATEGORY", 0, GAME_SFO_FORMAT_TEXT, 3, 4, 0 },
+	{ "USE_USB", 0, GAME_SFO_FORMAT_INTEGER, 4, 4, 0 },
+};
+
 /* the game categories again, for the test by a category's own length */
 static const char *s_gameCategoryNames[] = {
 	"gc", "gda", "gd", "gp", "gdb", "wda", "gdc", "gpc", "gdd", "gpd",
@@ -855,6 +957,12 @@ static unsigned int s_addcontDirKeys[] = {
 	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_3"), LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_4"),
 	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_5"), LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_6"),
 	LsdbKeyHash("INSTALL_DIR_ADDCONT_ADD_7"),
+};
+
+/* the keys an application's information must keep from the one it replaces */
+static unsigned int s_parentalKeys[] = {
+	LsdbKeyHash("PARENTAL_LEVEL"),
+	LsdbKeyHash("REGION_DENY"),
 };
 
 /*
@@ -982,7 +1090,7 @@ int gameFileWrite(const string &path, const void *buf, size_t size, string *deta
 		LocalFile::Open(path.c_str(), SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6, &ret);
 
 	if (ret < 0) {
-		gamePathDetail(path, detail);
+		gamePathGetMountedDrive(path, detail);
 		return ret;
 	}
 
@@ -990,7 +1098,7 @@ int gameFileWrite(const string &path, const void *buf, size_t size, string *deta
 	if (ret < 0) {
 		file->Close();
 		LocalFile::RemoveFile(path.c_str());
-		gamePathDetail(path, detail);
+		gamePathGetMountedDrive(path, detail);
 		return ret;
 	}
 
@@ -1009,14 +1117,14 @@ int gameFileRead(const string &path, void *buf, size_t size, string *detail)
 	common::SharedPtr<File> file = LocalFile::Open(path.c_str(), SCE_O_RDONLY, 0, &ret);
 
 	if (ret < 0) {
-		gamePathDetail(path, detail);
+		gamePathGetMountedDrive(path, detail);
 		return ret;
 	}
 
 	ret = file->Read(buf, size);
 	if (ret < 0) {
 		file->Close();
-		gamePathDetail(path, detail);
+		gamePathGetMountedDrive(path, detail);
 		return ret;
 	}
 
@@ -1475,7 +1583,7 @@ int gameSfoLoadAppVerVerified(const string &path, LsdbAppInfoPtr *info,
  * value above 1 in bits 1-2, and bit 20 needs bit 0. PLACEHOLDER: what the bits mean is not
  * read yet.
  */
-int gameAttributeCheck(const string &category, SceInt64 attribute)
+__attribute__((noinline)) int gameAttributeCheck(const string &category, SceInt64 attribute)
 {
 	int level = (int)((attribute & 6) >> 1);
 
@@ -1486,4 +1594,1503 @@ int gameAttributeCheck(const string &category, SceInt64 attribute)
 		return GAME_ERROR_BAD_DATA;
 
 	return 0;
+}
+
+/*
+ * Whether an application's param.sfo values are ones the shell accepts (0x81011ADA): a
+ * category, a parental level up to 11, an attribute that fits the category, a title ID,
+ * versions in their formats, a LiveArea type below 4, and for game and wireless data (gda,
+ * wda) a BOOT_INSTALL_DIR naming another installed application.
+ */
+int gameAppInfoCheckSfo(const LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator end = (*info)->end();
+	string category;
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+	const char *text;
+	int ret;
+
+	if (it == end)
+		return GAME_ERROR_BAD_DATA;
+
+	text = LsdbValueText(it->second);
+	if (text == NULL || *text == '\0')
+		return GAME_ERROR_BAD_DATA;
+
+	category = text;
+
+	it = (*info)->find(LSDB_KEY_PARENTAL_LEVEL);
+	if (it != end && (SceUInt32)gameLsdbValueInteger(it->second) > 11)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+	if (it != end) {
+		ret = gameAttributeCheck(category, gameLsdbValueInteger(it->second));
+		if (ret < 0)
+			return ret;
+	}
+
+	it = (*info)->find(LSDB_KEY_TITLE_ID_SFO);
+	if (it == end)
+		return GAME_ERROR_BAD_DATA;
+
+	string titleId(LsdbValueText(it->second));
+
+	if (titleId.length() == 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_DISP_VER);
+	if (it != end && gameSystemVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_APP_VER);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_TARGET_APP_VER);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_VERSION);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_LAREA_TYPE);
+	if (it != end) {
+		switch ((SceUInt32)gameLsdbValueInteger(it->second)) {
+		case 0:
+		case 1:
+		case 2:
+		case 3:
+			break;
+		default:
+			return GAME_ERROR_BAD_DATA;
+		}
+	}
+
+	it = (*info)->find(LSDB_KEY_BOOT_INSTALL_DIR);
+	if (it == end)
+		return 0;
+
+	if (!(category == "gda" || category == "wda"))
+		return GAME_ERROR_BAD_DATA;
+
+	string bootDir(LsdbValueText(it->second));
+
+	if (bootDir.length() == 0 || bootDir == titleId)
+		return GAME_ERROR_BAD_DATA;
+
+	LsdbAppInfoPtr boot(new LsdbAppInfo);
+
+	if (boot.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	ret = gameAppGetInfo(bootDir.c_str(), &boot);
+	if (ret < 0) {
+		if (ret == (int)LSDB_ERROR_NOT_FOUND)
+			return GAME_ERROR_NO_BOOT_APP;
+		return ret;
+	}
+
+	return 0;
+}
+
+/*
+ * Whether two param.sfo informations agree in ATTRIBUTE bits 0 and 20 (0x8101243C); an empty
+ * information agrees with any. PLACEHOLDER: what the bits mean is not read yet.
+ */
+int gameAttributeCompare(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other)
+{
+	if (info->get() != NULL && (*info)->size() == 0)
+		return 0;
+
+	SceUInt32 attribute = 0;
+	SceUInt32 otherAttribute = 0;
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+
+	if (it != (*info)->end())
+		attribute = (SceUInt32)gameLsdbValueInteger(it->second);
+
+	it = (*other)->find(LSDB_KEY_ATTRIBUTE);
+	if (it != (*other)->end())
+		otherAttribute = (SceUInt32)gameLsdbValueInteger(it->second);
+
+	if (((attribute ^ otherAttribute) & 0x100001) != 0)
+		return GAME_ERROR_BAD_DATA;
+
+	return 0;
+}
+
+/*
+ * Whether an additional content's information fits the application it belongs to and the
+ * other contents installed with it (0x81012522): its category must match the application's,
+ * pair with each other's, and its ATTRIBUTE bits 0 and 20 and INSTALL_DIR_ADDCONT_ADD_n
+ * directories must agree with theirs.
+ */
+int gameAddcontCheck(const LsdbAppInfoPtr *app, const LsdbAppInfoPtr *info,
+		     const vector<LsdbAppInfoPtr> *related)
+{
+	if (related->size() == 0)
+		return 0;
+
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	string category(LsdbValueText(it->second));
+	char dirs[7][12];
+	unsigned int i;
+
+	for (i = 0; i < 7; i++) {
+		dirs[i][0] = '\0';
+		it = (*info)->find(s_addcontDirKeys[i]);
+		if (it != end) {
+			sce_paf_strncpy(dirs[i], LsdbValueText(it->second), 11);
+			dirs[i][11] = '\0';
+		}
+	}
+
+	it = (*info)->find(LSDB_KEY_TITLE_ID);
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	string titleId(LsdbValueText(it->second));
+	SceInt64 attribute = 0;
+
+	it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+	if (it != end)
+		attribute = gameLsdbValueInteger(it->second);
+
+	if (app->get() != NULL && (*app)->size() != 0) {
+		LsdbAppInfo::iterator appEnd = (*app)->end();
+
+		it = (*app)->find(LSDB_KEY_CATEGORY);
+		if (it == appEnd)
+			return GAME_ERROR_NO_VALUE;
+
+		bool matches;
+		{
+			string appCategory(LsdbValueText(it->second));
+
+			matches = gameCategoryMatches(appCategory, category);
+		}
+		if (!matches)
+			return GAME_ERROR_BAD_DATA;
+
+		SceInt64 appAttribute = 0;
+
+		it = (*app)->find(LSDB_KEY_ATTRIBUTE);
+		if (it != appEnd)
+			appAttribute = gameLsdbValueInteger(it->second);
+
+		if (((appAttribute ^ attribute) & 0x100001) != 0)
+			return GAME_ERROR_BAD_DATA;
+	}
+
+	unsigned int n;
+
+	for (n = 0; n < related->size(); n++) {
+		LsdbAppInfo::iterator otherEnd = (*related)[n]->end();
+
+		it = (*related)[n]->find(LSDB_KEY_CATEGORY);
+		if (it == otherEnd)
+			return GAME_ERROR_NO_VALUE;
+
+		bool pairs;
+		{
+			string otherCategory(LsdbValueText(it->second));
+
+			pairs = gameCategoryIsDataPair(category, otherCategory);
+		}
+		if (!pairs)
+			return GAME_ERROR_BAD_DATA;
+
+		SceInt64 otherAttribute = 0;
+
+		it = (*related)[n]->find(LSDB_KEY_ATTRIBUTE);
+		if (it != otherEnd)
+			otherAttribute = gameLsdbValueInteger(it->second);
+
+		if (((attribute ^ otherAttribute) & 0x100001) != 0)
+			return GAME_ERROR_BAD_DATA;
+
+		for (i = 0; i < 7; i++) {
+			it = (*related)[n]->find(s_addcontDirKeys[i]);
+			if (it != otherEnd &&
+			    sce_paf_strncmp(dirs[i], LsdbValueText(it->second),
+					    gameStrnlen(dirs[i], 12) + 1) != 0)
+				return GAME_ERROR_BAD_DATA;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Whether a patch's param.sfo values are ones the shell accepts (0x81012D74): a category that
+ * is not data, an attribute that fits it, a title ID and versions in their format.
+ */
+int gameAppInfoCheckPatchSfo(const LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+	int ret;
+
+	if (it == end)
+		return GAME_ERROR_BAD_DATA;
+
+	string category(LsdbValueText(it->second));
+
+	if (category.length() == 0)
+		return GAME_ERROR_BAD_DATA;
+
+	if (category == "gda" || category == "wda")
+		return GAME_ERROR_PATCH_DATA;
+
+	it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+	if (it != end) {
+		ret = gameAttributeCheck(category, gameLsdbValueInteger(it->second));
+		if (ret < 0)
+			return ret;
+	}
+
+	it = (*info)->find(LSDB_KEY_TITLE_ID_SFO);
+	if (it == end)
+		return GAME_ERROR_BAD_DATA;
+
+	string titleId(LsdbValueText(it->second));
+
+	if (titleId.length() == 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_APP_VER);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_TARGET_APP_VER);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	it = (*info)->find(LSDB_KEY_VERSION);
+	if (it != end && gameVersionCheck(LsdbValueText(it->second)) < 0)
+		return GAME_ERROR_BAD_DATA;
+
+	return 0;
+}
+
+/*
+ * A SELF's eboot attribute and memory sizes stored into an application's information
+ * (0x810131E8): zeros when the SELF cannot be read, whose error is returned.
+ */
+int gameAppInfoSetEbootParam(const string &selfPath, LsdbAppInfoPtr info)
+{
+	SceUInt32 attribute = 0;
+	SceUInt32 phyMemsize = 0;
+	SceUInt32 appMemsize = 0;
+	GameEbootParam *param = new GameEbootParam;
+
+	if (param == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	int ret = param->Read(selfPath);
+
+	if (ret >= 0) {
+		attribute = param->data.attribute;
+		phyMemsize = param->data.phyMemsize;
+		appMemsize = param->data.appMemsize;
+		ret = 0;
+	}
+
+	gameLsdbValueSetInteger((*info)[LSDB_KEY_EBOOT_ATTR], attribute);
+	gameLsdbValueSetInteger((*info)[LSDB_KEY_PHY_MEMSIZE], phyMemsize);
+	gameLsdbValueSetInteger((*info)[LSDB_KEY_APP_MEMSIZE], appMemsize);
+
+	delete param;
+
+	return ret;
+}
+
+/* an application's eboot attribute and memory sizes copied to another's (0x8101336E) */
+int gameAppInfoCopyEbootParam(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst)
+{
+	LsdbAppInfo::iterator end = (*src)->end();
+	LsdbAppInfo::iterator it = (*src)->find(LSDB_KEY_EBOOT_ATTR);
+
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+	gameLsdbValueSetInteger((**dst)[LSDB_KEY_EBOOT_ATTR],
+				(SceUInt32)gameLsdbValueInteger(it->second));
+
+	it = (*src)->find(LSDB_KEY_PHY_MEMSIZE);
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+	gameLsdbValueSetInteger((**dst)[LSDB_KEY_PHY_MEMSIZE],
+				(SceUInt32)gameLsdbValueInteger(it->second));
+
+	it = (*src)->find(LSDB_KEY_APP_MEMSIZE);
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+	gameLsdbValueSetInteger((**dst)[LSDB_KEY_APP_MEMSIZE],
+				(SceUInt32)gameLsdbValueInteger(it->second));
+
+	return 0;
+}
+
+/*
+ * An application's eboot attribute and memory sizes set from its SELF (0x810135C0): zeros
+ * without a SELF path; for game and wireless data (gda, wda) with a BOOT_INSTALL_DIR whose
+ * SELF is not there, copied from the boot application's information.
+ */
+int gameAppInfoUpdateEbootParam(const string &selfPath, LsdbAppInfoPtr *info, string *detail)
+{
+	if (info->get() == NULL)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	if (selfPath.length() == 0) {
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_EBOOT_ATTR], 0);
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_PHY_MEMSIZE], 0);
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APP_MEMSIZE], 0);
+		return 0;
+	}
+
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+	int ret;
+
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	bool isData;
+	{
+		string category(LsdbValueText(it->second));
+
+		isData = category == "gda" || category == "wda";
+	}
+
+	if (!isData) {
+		ret = gameAppInfoSetEbootParam(selfPath, *info);
+		if (ret < 0) {
+			gamePathGetMountedDrive(selfPath, detail);
+			return ret;
+		}
+		return 0;
+	}
+
+	it = (*info)->find(LSDB_KEY_BOOT_INSTALL_DIR);
+	if (it == end) {
+		gameAppInfoSetEbootParam(selfPath, *info);
+		return 0;
+	}
+
+	string bootDir(LsdbValueText(it->second));
+
+	it = (*info)->find(LSDB_KEY_TITLE_ID);
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	string titleId(LsdbValueText(it->second));
+
+	if (bootDir.length() == 0 || bootDir == titleId)
+		return GAME_ERROR_BAD_DATA;
+
+	LocalFileStat stat;
+
+	ret = LocalFile::Getstat(selfPath.c_str(), &stat);
+	if (ret < 0 && ret != GAME_PAF_ERROR_NOT_FOUND)
+		return ret;
+
+	if (ret == 0) {
+		gameAppInfoSetEbootParam(selfPath, *info);
+		return 0;
+	}
+
+	LsdbAppInfoPtr boot(new LsdbAppInfo);
+
+	if (boot.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	ret = gameAppGetInfo(bootDir.c_str(), &boot);
+	if (ret < 0) {
+		if (ret == (int)LSDB_ERROR_NOT_FOUND)
+			return GAME_ERROR_NO_BOOT_APP;
+		return ret;
+	}
+
+	ret = gameAppInfoCopyEbootParam(&boot, info);
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * An application's eboot attribute and memory sizes set from a saved copy of its eboot
+ * parameters (0x81013E8E): zeros when there is none.
+ */
+int gameAppInfoLoadEbootParam(const string &path, LsdbAppInfoPtr *info, string *detail)
+{
+	GameEbootParam *param = new GameEbootParam;
+
+	if (param == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	int ret = param->Load(path);
+
+	if (ret < 0) {
+		delete param;
+		if (ret == GAME_PAF_ERROR_NOT_FOUND) {
+			gameLsdbValueSetInteger((**info)[LSDB_KEY_EBOOT_ATTR], 0);
+			gameLsdbValueSetInteger((**info)[LSDB_KEY_PHY_MEMSIZE], 0);
+			gameLsdbValueSetInteger((**info)[LSDB_KEY_APP_MEMSIZE], 0);
+			return 0;
+		}
+		gamePathGetMountedDrive(path, detail);
+		return ret;
+	}
+
+	gameLsdbValueSetInteger((**info)[LSDB_KEY_EBOOT_ATTR], param->data.attribute);
+	gameLsdbValueSetInteger((**info)[LSDB_KEY_PHY_MEMSIZE], param->data.phyMemsize);
+	gameLsdbValueSetInteger((**info)[LSDB_KEY_APP_MEMSIZE], param->data.appMemsize);
+
+	delete param;
+
+	return 0;
+}
+
+/*
+ * An application's INSTALL_DIR_SAVEDATA, set to dir when it has none or an empty one
+ * (0x81014128).
+ */
+void gameAppInfoSetSaveDataDir(LsdbAppInfoPtr *info, const string &dir)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_INSTALL_DIR_SAVEDATA);
+
+	if (it == (*info)->end()) {
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_SAVEDATA], dir);
+		return;
+	}
+
+	const char *saveDataDir = LsdbValueText(it->second);
+
+	if (saveDataDir != NULL && *saveDataDir != '\0')
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_SAVEDATA], saveDataDir);
+	else
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_SAVEDATA], dir.c_str());
+}
+
+/*
+ * An application's INSTALL_DIR_ADDCONT, set to dir when it has none or an empty one
+ * (0x810142C8).
+ */
+void gameAppInfoSetAddcontDir(LsdbAppInfoPtr *info, const string &dir)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_INSTALL_DIR_ADDCONT);
+
+	if (it == (*info)->end()) {
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_ADDCONT], dir);
+		return;
+	}
+
+	const char *addcontDir = LsdbValueText(it->second);
+
+	if (addcontDir != NULL && *addcontDir != '\0')
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_ADDCONT], addcontDir);
+	else
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_ADDCONT], dir.c_str());
+}
+
+/*
+ * An application's INSTALL_DIR_CACHE (stored as INSTALL_DIR_CACHE0), set to dir when it has
+ * none or an empty one (0x81014468).
+ */
+void gameAppInfoSetCacheDir(LsdbAppInfoPtr *info, const string &dir)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_INSTALL_DIR_CACHE);
+
+	if (it == (*info)->end()) {
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_CACHE], dir);
+		return;
+	}
+
+	const char *cacheDir = LsdbValueText(it->second);
+
+	if (cacheDir != NULL && *cacheDir != '\0')
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_CACHE], cacheDir);
+	else
+		gameLsdbValueSetText((**info)[LSDB_KEY_INSTALL_DIR_CACHE], dir);
+}
+
+/* An application's IMPORT_SAVEDATA_INFO emptied, when it has one (0x810145EE). */
+void gameAppInfoClearImportSaveDataInfo(LsdbAppInfoPtr *info)
+{
+	if ((*info)->find(LSDB_KEY_IMPORT_SAVEDATA_INFO) != (*info)->end())
+		gameLsdbValueSetText((**info)[LSDB_KEY_IMPORT_SAVEDATA_INFO], "");
+}
+
+/* An application's #appconf, 0 without one (0x810146BE). */
+SceInt64 gameAppInfoGetAppconf(const LsdbAppInfoPtr *info)
+{
+	if (info->get() == NULL)
+		return 0;
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APPCONF);
+
+	if (it == (*info)->end())
+		return 0;
+
+	return gameLsdbValueInteger(it->second);
+}
+
+/*
+ * The low 4 bits of a patch's #appconf when both the patch's ATTRIBUTE and flags have bit 24;
+ * 15 when only flags has it, 0 otherwise (0x81014724).
+ */
+SceUInt64 gamePatchAppconfLow(const LsdbAppInfoPtr *info, const string &category,
+			     SceUInt64 flags)
+{
+	SceUInt64 ret = 0;
+
+	if (info->get() != NULL && (category == "gp" || category == "gpc")) {
+		LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+		SceUInt64 attribute = 0;
+
+		if (it != (*info)->end())
+			attribute = gameLsdbValueInteger(it->second);
+
+		if ((attribute & 0x1000000) != 0 && (flags & 0x1000000) != 0)
+			return gameAppInfoGetAppconf(info) & 0xF;
+		if ((attribute & 0x1000000) == 0 && (flags & 0x1000000) != 0)
+			return 15;
+		if ((attribute & 0x1000000) != 0 && (flags & 0x1000000) == 0)
+			return 0;
+	} else if ((flags & 0x1000000) != 0) {
+		return 15;
+	}
+
+	return ret;
+}
+
+/*
+ * Bits 5-7 of a patch's #appconf when both the patch's ATTRIBUTE and flags have bit 25; 32
+ * when only flags has it, 0 otherwise (0x810148D8).
+ */
+SceUInt64 gamePatchAppconfHigh(const LsdbAppInfoPtr *info, const string &category,
+			     SceUInt64 flags)
+{
+	SceUInt64 ret = 0;
+
+	if (info->get() != NULL && (category == "gp" || category == "gpc")) {
+		LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+		SceUInt64 attribute = 0;
+
+		if (it != (*info)->end())
+			attribute = gameLsdbValueInteger(it->second);
+
+		if ((attribute & 0x2000000) != 0 && (flags & 0x2000000) != 0)
+			return gameAppInfoGetAppconf(info) & 0xE0;
+		if ((attribute & 0x2000000) == 0 && (flags & 0x2000000) != 0)
+			return 32;
+		if ((attribute & 0x2000000) != 0 && (flags & 0x2000000) == 0)
+			return 0;
+	} else if ((flags & 0x2000000) != 0) {
+		return 32;
+	}
+
+	return ret;
+}
+
+/*
+ * A patch's information made ready to register over its application app: #LIBLOCATION from
+ * the attribute's level (bits 1-2), ATTRIBUTE2 folded into ATTRIBUTE's upper word, and the
+ * #appconf bits the patch keeps from the application (0x81014A8E).
+ */
+int gameAppInfoSetPatchAttribute(const LsdbAppInfoPtr *app, LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+
+	if (it == end)
+		return GAME_ERROR_BAD_DATA;
+
+	string category(LsdbValueText(it->second));
+
+	it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+
+	SceUInt64 attribute = 0;
+
+	if (it != end)
+		attribute = gameLsdbValueInteger(it->second);
+
+	SceUInt32 level = (SceUInt32)((attribute & 6) >> 1);
+
+	if (app->get() != NULL && (category == "gp" || category == "gpc")) {
+		LsdbAppInfo::iterator appIt = (*app)->find(LSDB_KEY_ATTRIBUTE);
+		SceUInt64 appAttribute = 0;
+
+		if (appIt != (*app)->end())
+			appAttribute = gameLsdbValueInteger(appIt->second);
+
+		SceUInt32 appLevel = (SceUInt32)((appAttribute & 6) >> 1);
+
+		if (appLevel == level)
+			gameLsdbValueSetInteger((**info)[LSDB_KEY_LIBLOCATION], appLevel);
+		else
+			gameLsdbValueSetInteger((**info)[LSDB_KEY_LIBLOCATION], level);
+	} else if (level != 0) {
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_LIBLOCATION], level);
+	}
+
+	it = (*info)->find(LSDB_KEY_ATTRIBUTE2);
+	if (it != end) {
+		SceUInt32 attribute2 = (SceUInt32)gameLsdbValueInteger(it->second);
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_ATTRIBUTE],
+					attribute | ((SceUInt64)attribute2 << 32));
+		(*info)->erase(it);
+	}
+
+	SceUInt64 appconf = gamePatchAppconfLow(app, category, attribute) |
+			    gamePatchAppconfHigh(app, category, attribute);
+
+	appconf |= gameAppInfoGetAppconf(app) & ~(SceUInt64)0xEF;
+	gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+
+	return 0;
+}
+
+/*
+ * For an application installed in another one's folder (BOOT_INSTALL_DIR): selfPath and path
+ * set to that application's _self_path when selfPath is not there (0x81014EDA).
+ */
+int gameAppInfoUseBootSelfPath(const LsdbAppInfoPtr *info, string *selfPath, string *path)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_BOOT_INSTALL_DIR);
+
+	if (it == (*info)->end())
+		return 0;
+
+	if (*LsdbValueText(it->second) == '\0')
+		return 0;
+
+	string bootDir(LsdbValueText(it->second));
+
+	if (bootDir.length() == 0)
+		return 0;
+
+	LsdbAppInfoPtr boot(new LsdbAppInfo);
+	int ret = gameAppGetInfo(bootDir.c_str(), &boot);
+
+	if (ret < 0) {
+		if (ret == (int)LSDB_ERROR_NOT_FOUND)
+			return GAME_ERROR_NO_BOOT_APP;
+		return ret;
+	}
+
+	LsdbAppInfo::iterator end = boot->end();
+
+	it = boot->find(LSDB_KEY_SELF_PATH);
+	if (it == end)
+		return GAME_ERROR_NO_VALUE;
+
+	LocalFileStat stat;
+
+	if (LocalFile::Getstat(selfPath->c_str(), &stat) == GAME_PAF_ERROR_NOT_FOUND) {
+		string bootSelfPath(LsdbValueText(it->second));
+
+		*selfPath = bootSelfPath;
+		*path = bootSelfPath;
+
+		if (boot->find(LSDB_KEY_TITLE_ID) == end)
+			return GAME_ERROR_NO_VALUE;
+	}
+
+	return 0;
+}
+
+/* the categories of a game application (by their first four bytes) */
+static const char *s_gameAppCategories[] = { "gd", "gp", "gdc", "gdd", "gpc", "gpd" };
+
+/*
+ * An application's kind (0x810153C8): 1 for a game, 2 for the data application NPXS10998, 0
+ * for other data; kind is left alone without a category or with another one.
+ */
+void gameAppInfoGetGameKind(const LsdbAppInfoPtr *info, const string &titleId, int *kind)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_CATEGORY);
+
+	if (it == (*info)->end())
+		return;
+
+	const char *category = LsdbValueText(it->second);
+
+	if (sce_paf_strncmp(category, "gda", 4) == 0 || sce_paf_strncmp(category, "gdb", 4) == 0 ||
+	    sce_paf_strncmp(category, "wda", 4) == 0) {
+		if (sce_paf_strncmp(titleId.c_str(), "NPXS10998", 10) == 0)
+			*kind = 2;
+		else
+			*kind = 0;
+		return;
+	}
+
+	unsigned int i;
+
+	for (i = 0; i < sizeof(s_gameAppCategories) / sizeof(s_gameAppCategories[0]); i++) {
+		if (sce_paf_strncmp(category, s_gameAppCategories[i], 4) == 0) {
+			*kind = 1;
+			return;
+		}
+	}
+}
+
+/*
+ * An application's _bg_title_id set to its background application's title ID, when it has
+ * one (0x810154C0).
+ */
+void gameAppRegistrationSetBgTitleId(GameAppRegistration *app)
+{
+	if (app->related.size() == 0)
+		return;
+
+	static const unsigned int keys[] = { LsdbKeyHash("_bg_title_id") };
+	unsigned int i;
+
+	for (i = 0; i < app->related.size() && i < sizeof(keys) / sizeof(keys[0]); i++) {
+		const LsdbAppInfoPtr *bgApp = &app->related[i];
+		LsdbAppInfo::iterator it = (*bgApp)->find(LSDB_KEY_TITLE_ID);
+
+		if (it != (*bgApp)->end())
+			gameLsdbValueSetText((*app->info)[keys[i]], LsdbValueText(it->second));
+	}
+}
+
+/*
+ * The drive an application's data goes to, from where the application is (0x81015614): grw0:
+ * for a game card (ux0: with toUx0), ux0: for ux0: and pd0:.
+ */
+int gamePathGetDataDrive(const string &path, bool toUx0, string *drive)
+{
+	if (path.find("gro0:") != string::npos) {
+		if (toUx0)
+			*drive = "ux0:";
+		else
+			*drive = "grw0:";
+		return 0;
+	}
+
+	if (path.find("ux0:") != string::npos || path.find("pd0:") != string::npos) {
+		*drive = "ux0:";
+		return 0;
+	}
+
+	return GAME_ERROR_NO_DRIVE;
+}
+
+/*
+ * Whether an application's information differs from other's in what an update must keep
+ * (0x810157BA): the system version and the parental keys. Sony's code looks the system
+ * version up in info twice and tests the second against other's end.
+ */
+int gameAppInfoParentalDiffers(const LsdbAppInfoPtr *info, const LsdbAppInfoPtr *other)
+{
+	if (info->get() == NULL || (*info)->size() == 0)
+		return 1;
+
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator otherEnd = (*other)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_SYSTEM_VER);
+	LsdbAppInfo::iterator otherIt = (*info)->find(LSDB_KEY_SYSTEM_VER);
+
+	if (it != end && otherIt != otherEnd &&
+	    (SceUInt32)gameLsdbValueInteger(otherIt->second) !=
+	    (SceUInt32)gameLsdbValueInteger(it->second))
+		return 1;
+
+	unsigned int i;
+
+	for (i = 0; i < sizeof(s_parentalKeys) / sizeof(s_parentalKeys[0]); i++) {
+		it = (*info)->find(s_parentalKeys[i]);
+		otherIt = (*other)->find(s_parentalKeys[i]);
+
+		switch (it->second.type) {
+		case LSDB_VALUE_INTEGER: {
+			int value = 0, otherValue = 0;
+
+			if (it != end)
+				value = (int)it->second.integer;
+			if (otherIt != otherEnd)
+				otherValue = (int)gameLsdbValueInteger(otherIt->second);
+			if (value != otherValue)
+				return 1;
+			break;
+		}
+		case LSDB_VALUE_TEXT: {
+			string text, otherText;
+
+			if (it != end)
+				text = LsdbValueText(it->second);
+			if (otherIt != otherEnd)
+				otherText = LsdbValueText(otherIt->second);
+			if (!(text == otherText))
+				return 1;
+			break;
+		}
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * What an update must keep copied from src to dst (0x81015A7E): the system version with its
+ * display string when dst has none or an older one, and the parental keys.
+ */
+int gameAppInfoCopyParental(const LsdbAppInfoPtr *src, LsdbAppInfoPtr *dst)
+{
+	LsdbAppInfo::iterator end = (*src)->end();
+	LsdbAppInfo::iterator it = (*src)->find(LSDB_KEY_SYSTEM_VER);
+	LsdbAppInfo::iterator dstIt = (*dst)->find(LSDB_KEY_SYSTEM_VER);
+
+	if (it != end) {
+		SceUInt32 version = (SceUInt32)gameLsdbValueInteger(it->second);
+
+		if (dstIt == (*dst)->end()) {
+			gameLsdbValueSetInteger((**dst)[LSDB_KEY_SYSTEM_VER], version);
+			it = (*src)->find(LSDB_KEY_DISP_VER);
+			if (it != end)
+				gameLsdbValueSetText((**dst)[LSDB_KEY_DISP_VER],
+						     LsdbValueText(it->second));
+		} else if ((SceUInt32)gameLsdbValueInteger(dstIt->second) < version) {
+			gameLsdbValueSetInteger((**dst)[LSDB_KEY_SYSTEM_VER], version);
+			it = (*src)->find(LSDB_KEY_DISP_VER);
+			if (it != end)
+				gameLsdbValueSetText((**dst)[LSDB_KEY_DISP_VER],
+						     LsdbValueText(it->second));
+		}
+	}
+
+	unsigned int i;
+
+	for (i = 0; i < sizeof(s_parentalKeys) / sizeof(s_parentalKeys[0]); i++) {
+		it = (*src)->find(s_parentalKeys[i]);
+		if (it == end)
+			continue;
+
+		switch (it->second.type) {
+		case LSDB_VALUE_INTEGER:
+			gameLsdbValueSetInteger((**dst)[s_parentalKeys[i]],
+						(SceUInt32)gameLsdbValueInteger(it->second));
+			break;
+		case LSDB_VALUE_TEXT:
+			gameLsdbValueSetText((**dst)[s_parentalKeys[i]], LsdbValueText(it->second));
+			break;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * GAME_ERROR_APP_RUNNING when an application or its background application is running
+ * (0x81015ED8).
+ */
+int gameAppCheckNotRunning(const string &titleId, const LsdbAppInfoPtr *info)
+{
+	SceAppMgrAppStatus status;
+
+	sce_paf_memset(&status, 0, sizeof(status));
+	if (sceAppMgrGetStatusByName(titleId.c_str(), &status) == 0)
+		return GAME_ERROR_APP_RUNNING;
+
+	if (info->get() == NULL || (*info)->size() == 0)
+		return 0;
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_BG_TITLE_ID);
+
+	if (it == (*info)->end())
+		return 0;
+
+	const char *bgTitleId = LsdbValueText(it->second);
+
+	sce_paf_memset(&status, 0, sizeof(status));
+	if (sceAppMgrGetStatusByName(bgTitleId, &status) == 0)
+		return GAME_ERROR_APP_RUNNING;
+
+	return 0;
+}
+
+/* Bit 11 (0x800) of an application's #appconf set or cleared (0x81015FA2). */
+void gameAppInfoSetAppconfBit11(LsdbAppInfoPtr *info, bool set)
+{
+	if (set) {
+		SceUInt64 appconf = gameAppInfoGetAppconf(info) | 0x800;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+		return;
+	}
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APPCONF);
+
+	if (it != (*info)->end()) {
+		SceUInt64 appconf = gameLsdbValueInteger(it->second) & ~(SceUInt64)0x800;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+	}
+}
+
+/* Bit 10 (0x400) of an application's #appconf set or cleared (0x810160C6). */
+void gameAppInfoSetAppconfBit10(LsdbAppInfoPtr *info, bool set)
+{
+	if (set) {
+		SceUInt64 appconf = gameAppInfoGetAppconf(info) | 0x400;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+		return;
+	}
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APPCONF);
+
+	if (it != (*info)->end()) {
+		SceUInt64 appconf = gameLsdbValueInteger(it->second) & ~(SceUInt64)0x400;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+	}
+}
+
+/*
+ * A game card application's information moved to ux0: (0x810161EA): its paths from gro0: to
+ * ux0:, bit 0 of its attribute set, bit 1 of #_promote_attr set when dir has a manual, bits 10
+ * and 11 of #appconf cleared; registered again with doRegister (and ended with notify).
+ */
+int gameAppInfoMoveToUx0(LsdbAppInfoPtr *info, bool doRegister, bool notify, const string *dir)
+{
+	GameAppRegistration app;
+	int ret;
+
+	app.info = *info;
+	if (app.entry.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	ret = gameAppRegistrationReplacePaths(&app, string("gro0:"), string("ux0:"));
+	if (ret < 0)
+		return ret;
+
+	LsdbAppInfo::iterator end = (*info)->end();
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+	SceUInt64 attribute = 0;
+
+	if (it != end)
+		attribute = gameLsdbValueInteger(it->second);
+	gameLsdbValueSetInteger((**info)[LSDB_KEY_ATTRIBUTE], attribute | 1);
+
+	it = (*info)->find(LSDB_KEY_PROMOTE_ATTR);
+	if (it != end) {
+		SceUInt32 promoteAttr = (SceUInt32)gameLsdbValueInteger(it->second);
+		string manual = *dir + string("/sce_sys/manual/001.png");
+		LocalFileStat stat;
+
+		if (LocalFile::Getstat(manual.c_str(), &stat) == 0)
+			promoteAttr |= 2;
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_PROMOTE_ATTR], promoteAttr);
+	}
+
+	gameAppInfoSetAppconfBit10(info, false);
+	gameAppInfoSetAppconfBit11(info, false);
+
+	if (doRegister) {
+		char param[4];
+
+		param[0] = 0;
+		app.liveAreaState = 0;
+		ret = gameAppRegister(&app, 1, false, notify, param);
+		if (ret < 0)
+			return ret;
+		if (notify && (ret = gameAppRegisterEnd(&app.info)) < 0)
+			return ret;
+	}
+
+	return 0;
+}
+
+/* An application's PARENTAL_LEVEL, 0 without one (0x81016A74). */
+int gameAppInfoGetParentalLevel(const LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_PARENTAL_LEVEL);
+
+	if (it == (*info)->end())
+		return 0;
+
+	return (int)gameLsdbValueInteger(it->second);
+}
+
+/* Whether a folder has any folder in it other than the dot ones (0x81016ACC). */
+bool gameDirHasSubDirs(const string &path)
+{
+	int count = 0;
+	bool ret = false;
+
+	if (!Dir::IsExist(path.c_str()))
+		return false;
+
+	Dir dir;
+
+	if (dir.Open(path.c_str()) < 0)
+		return false;
+
+	DirEnt entry;
+
+	while (dir.Read(&entry) == 0) {
+		if (entry.type == DirEnt::Type_Dir && sce_paf_strncmp(entry.name.c_str(), ".", 1) != 0)
+			count++;
+	}
+	dir.Close();
+
+	if (count != 0)
+		ret = true;
+
+	return ret;
+}
+
+/* Bit 12 (0x1000) of an application's #appconf set or cleared (0x81016B8E). */
+void gameAppInfoSetAppconfBit12(LsdbAppInfoPtr *info, bool set)
+{
+	if (set) {
+		SceUInt64 appconf = gameAppInfoGetAppconf(info) | 0x1000;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+		return;
+	}
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_APPCONF);
+
+	if (it != (*info)->end()) {
+		SceUInt64 appconf = gameLsdbValueInteger(it->second) & ~(SceUInt64)0x1000;
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_APPCONF], appconf);
+	}
+}
+
+/* Bit 2 (0x4) of an application's #_promote_attr set or cleared (0x81016CB2). */
+void gameAppInfoSetPromoteAttrBit2(LsdbAppInfoPtr *info, bool set)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_PROMOTE_ATTR);
+
+	if (set) {
+		SceUInt32 promoteAttr = 0;
+
+		if (it != (*info)->end())
+			promoteAttr = (SceUInt32)gameLsdbValueInteger(it->second);
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_PROMOTE_ATTR], promoteAttr | 4);
+	} else if (it != (*info)->end()) {
+		SceUInt32 promoteAttr = (SceUInt32)gameLsdbValueInteger(it->second);
+
+		gameLsdbValueSetInteger((**info)[LSDB_KEY_PROMOTE_ATTR], promoteAttr & ~4u);
+	}
+}
+
+/* Whether bit 2 (0x4) of an application's #_promote_attr is set (0x81016E02). */
+bool gameAppInfoPromoteAttrBit2(const LsdbAppInfoPtr *info)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_PROMOTE_ATTR);
+
+	if (it != (*info)->end() && (gameLsdbValueInteger(it->second) & 4) != 0)
+		return true;
+
+	return false;
+}
+
+/* Whether ux0:license/app/<titleId>/ has the free trial license file (0x81016E6C). */
+bool gameAppHasFttLicense(const string &titleId)
+{
+	string name;
+
+	if (gameFttLicenseName(&name) < 0)
+		return false;
+
+	string path = string("ux0:license/app/") + titleId;
+
+	path += "/";
+	path.append(name);
+
+	return LocalFile::Exists(path.c_str());
+}
+
+/* The title ID of the game card's application: the first folder in gro0:app (0x810170A0). */
+string gameCardGetTitleId(void)
+{
+	string titleId("");
+
+	if (!Dir::IsExist("gro0:"))
+		return string("");
+
+	string path = string("gro0:") + string("app");
+	Dir dir;
+
+	if (dir.Open(path.c_str()) < 0)
+		return string("");
+
+	DirEnt entry;
+
+	while (dir.Read(&entry) == 0) {
+		if (entry.type == DirEnt::Type_Dir && sce_paf_strncmp(entry.name.c_str(), ".", 1) != 0) {
+			titleId = entry.name;
+			break;
+		}
+	}
+	dir.Close();
+
+	return titleId;
+}
+
+/* A folder's statistics read into a cleared stat (0x8101731A). */
+int gameDirGetStat(const string &path, GameDirStat *stat)
+{
+	sce_paf_memset(stat, 0, sizeof(*stat));
+
+	int ret = gameDirReadStat(path, stat);
+
+	if (ret < 0)
+		return ret;
+
+	return 0;
+}
+
+/*
+ * The ATTRIBUTE_MINOR flags: valid when bit 4 is set, then whether bits 2 and
+ * 3 are clear (0x8101733E).
+ */
+int gameAppInfoGetAttributeMinor(const LsdbAppInfoPtr *info, bool *valid,
+				 bool *bit2Clear, bool *bit3Clear)
+{
+	*valid = false;
+	*bit2Clear = false;
+	*bit3Clear = false;
+
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE_MINOR);
+
+	if (it != (*info)->end()) {
+		SceUInt64 minor = gameLsdbValueInteger(it->second);
+
+		if ((minor & 0x10) != 0) {
+			*valid = true;
+			*bit2Clear = (minor & 4) == 0;
+			*bit3Clear = (minor & 8) == 0;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * The PSP parameter tables and their lengths (0x810173C0..0x81017420); Sony's linker keeps one
+ * copy of the lengths with the same code.
+ */
+const GameSfoParam *gameSfoGetPspCheckParams(void)
+{
+	return s_sfoPspCheckParams;
+}
+
+unsigned int gameSfoGetPspCheckParamCount(void)
+{
+	return sizeof(s_sfoPspCheckParams) / sizeof(s_sfoPspCheckParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspGameParams(void)
+{
+	return s_sfoPspGameParams;
+}
+
+unsigned int gameSfoGetPspGameParamCount(void)
+{
+	return sizeof(s_sfoPspGameParams) / sizeof(s_sfoPspGameParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspAppParams(void)
+{
+	return s_sfoPspAppParams;
+}
+
+unsigned int gameSfoGetPspAppParamCount(void)
+{
+	return sizeof(s_sfoPspAppParams) / sizeof(s_sfoPspAppParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspPs1Params(void)
+{
+	return s_sfoPspPs1Params;
+}
+
+unsigned int gameSfoGetPspPs1ParamCount(void)
+{
+	return sizeof(s_sfoPspPs1Params) / sizeof(s_sfoPspPs1Params[0]);
+}
+
+const GameSfoParam *gameSfoGetPspDiscGameParams(void)
+{
+	return s_sfoPspDiscGameParams;
+}
+
+unsigned int gameSfoGetPspDiscGameParamCount(void)
+{
+	return sizeof(s_sfoPspDiscGameParams) / sizeof(s_sfoPspDiscGameParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspGameBootParams(void)
+{
+	return s_sfoPspGameBootParams;
+}
+
+unsigned int gameSfoGetPspGameBootParamCount(void)
+{
+	return sizeof(s_sfoPspGameBootParams) / sizeof(s_sfoPspGameBootParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspPatchParams(void)
+{
+	return s_sfoPspPatchParams;
+}
+
+unsigned int gameSfoGetPspPatchParamCount(void)
+{
+	return sizeof(s_sfoPspPatchParams) / sizeof(s_sfoPspPatchParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspUpdaterParams(void)
+{
+	return s_sfoPspUpdaterParams;
+}
+
+unsigned int gameSfoGetPspUpdaterParamCount(void)
+{
+	return sizeof(s_sfoPspUpdaterParams) / sizeof(s_sfoPspUpdaterParams[0]);
+}
+
+const GameSfoParam *gameSfoGetPspWgParams(void)
+{
+	return s_sfoPspWgParams;
+}
+
+unsigned int gameSfoGetPspWgParamCount(void)
+{
+	return sizeof(s_sfoPspWgParams) / sizeof(s_sfoPspWgParams[0]);
+}
+
+/*
+ * A PBP file's header, and whether its data.psar is a PS1 multi-disc image
+ * (PSTITLEIMG) when multiDisc is given (0x81017422).
+ */
+int gamePbpReadHeader(const char *path, GamePbpHeader *header, bool *multiDisc)
+{
+	int ret = 0;
+	SceUInt8 *buf = (SceUInt8 *)sce_paf_malloc(0x200);
+
+	if (buf == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	common::SharedPtr<File> file = LocalFile::Open(path, SCE_O_RDONLY, 0, &ret);
+
+	if (ret != 0) {
+		sce_paf_free(buf);
+		return ret;
+	}
+
+	SceInt64 size = file->GetFileSize();
+
+	if (size < 0) {
+		sce_paf_free(buf);
+		return (int)size;
+	}
+
+	ret = file->Read(buf, 0x200);
+	if (ret < 0) {
+		sce_paf_free(buf);
+		file->Close();
+		return ret;
+	}
+
+	if (buf[0] != 0 || buf[1] != 'P' || buf[2] != 'B' || buf[3] != 'P') {
+		sce_paf_free(buf);
+		file->Close();
+		return GAME_ERROR_BAD_PBP;
+	}
+
+	sce_paf_memcpy(header, buf, sizeof(*header));
+
+	if (multiDisc != NULL) {
+		char magic[17];
+
+		if (size < header->dataPsarOffset) {
+			sce_paf_free(buf);
+			file->Close();
+			return GAME_ERROR_BAD_PBP;
+		}
+
+		SceInt64 pos = file->Seek(header->dataPsarOffset, SCE_SEEK_SET);
+
+		if (pos < 0) {
+			sce_paf_free(buf);
+			file->Close();
+			return (int)pos;
+		}
+
+		ret = file->Read(magic, sizeof(magic));
+		if (ret < 0) {
+			sce_paf_free(buf);
+			file->Close();
+			return ret;
+		}
+
+		*multiDisc = false;
+		if (sce_paf_memcmp(magic, "PSTITLEIMG000000", 16) == 0)
+			*multiDisc = true;
+	}
+
+	file->Close();
+	sce_paf_free(buf);
+
+	return 0;
+}
+
+/* GAME_ERROR_APP_RUNNING when the application in the foreground (-3) is titleId (0x81017850). */
+int gameAppCheckNotForeground(const string &titleId)
+{
+	SceAppMgrAppStatus status;
+
+	sce_paf_memset(&status, 0, sizeof(status));
+	if (sceAppMgrGetStatusByAppId(-3, &status) == 0 &&
+	    sce_paf_strncmp(status.appName, titleId.c_str(), titleId.length()) == 0)
+		return GAME_ERROR_APP_RUNNING;
+
+	return 0;
+}
+
+/*
+ * A PSP game's GAMEDATA_ID, else its TITLE_ID; the three ULJS00167..9 discs share the game
+ * data of NPJH90038 (0x810178A8).
+ */
+int gamePspGetGameDataId(const LsdbAppInfoPtr *info, string *gameDataId)
+{
+	LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_GAMEDATA_ID);
+
+	if (it != (*info)->end()) {
+		*gameDataId = LsdbValueText(it->second);
+		return 0;
+	}
+
+	it = (*info)->find(LSDB_KEY_TITLE_ID_SFO);
+	if (it == (*info)->end())
+		return GAME_ERROR_BAD_DATA;
+
+	string titleId(LsdbValueText(it->second));
+
+	if (sce_paf_strncmp(titleId.c_str(), "ULJS00167", 10) == 0 ||
+	    sce_paf_strncmp(titleId.c_str(), "ULJS00168", 10) == 0 ||
+	    sce_paf_strncmp(titleId.c_str(), "ULJS00169", 10) == 0)
+		*gameDataId = "NPJH90038";
+
+	return 0;
+}
+
+/*
+ * GAME_ERROR_APP_RUNNING when the application in the foreground (-3) is titleId, or is a PSP
+ * game that shares its game data (0x81017A32).
+ */
+int gamePspCheckGameDataNotRunning(const string &titleId, const LsdbAppInfoPtr *info)
+{
+	SceAppMgrAppStatus status;
+
+	sce_paf_memset(&status, 0, sizeof(status));
+	if (sceAppMgrGetStatusByAppId(-3, &status) != 0)
+		return 0;
+
+	if (sce_paf_strncmp(status.appName, titleId.c_str(), titleId.length()) == 0)
+		return GAME_ERROR_APP_RUNNING;
+
+	string gameDataId;
+	int ret = gamePspGetGameDataId(info, &gameDataId);
+
+	if (ret < 0)
+		return ret;
+
+	if (gameDataId.length() == 0)
+		return 0;
+
+	LsdbAppInfoPtr running(new LsdbAppInfo);
+
+	if (running.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	ret = gameAppGetInfo(status.appName, &running);
+	if (ret < 0)
+		return ret;
+
+	string runningId;
+
+	ret = gamePspGetGameDataId(&running, &runningId);
+	if (ret < 0)
+		return ret;
+
+	if (runningId == gameDataId)
+		return GAME_ERROR_APP_RUNNING;
+
+	return 0;
+}
+
+/* A PSP game's boot file in dir: EBOOT.PBP, else PBOOT.PBP, else PARAM.PBP (0x81017D80). */
+int gamePspGetBootPath(const string &dir, string *path)
+{
+	*path = dir + string("/EBOOT.PBP");
+
+	LocalFileStat stat;
+
+	if (LocalFile::Getstat(path->c_str(), &stat) < 0) {
+		*path = dir + string("/PBOOT.PBP");
+		if (LocalFile::Getstat(path->c_str(), &stat) < 0) {
+			*path = dir + string("/PARAM.PBP");
+
+			int ret = LocalFile::Getstat(path->c_str(), &stat);
+
+			if (ret < 0)
+				return ret;
+		}
+	}
+
+	return 0;
+}
+
+/*
+ * Whether a PSP content ID (1 to 47 characters) names a title the emulator's list allows: its
+ * title ID is the 9 characters after the 7 of the service ID (0x8101810A).
+ */
+int gamePspCheckContentId(const char *contentId)
+{
+	unsigned int len;
+	char titleId[12];
+
+	if (contentId == NULL)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	for (len = 0; len < 48; len++) {
+		if (contentId[len] == '\0')
+			break;
+	}
+
+	if (len == 0 || len >= 48)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	sce_paf_memset(titleId, 0, sizeof(titleId));
+	sce_paf_strncpy(titleId, contentId + 7, 9);
+	titleId[9] = '\0';
+
+	if (!gamePspEmuListAllows(titleId))
+		return GAME_ERROR_PSP_NOT_LISTED;
+
+	return 0;
+}
+
+/* Whether a content ID is the PocketStation application's (0x81018184). */
+bool gameIsPocketStation(const string &contentId)
+{
+	return contentId == string("JA0003-PCSC80018_00-POCKETSTATION001");
 }
