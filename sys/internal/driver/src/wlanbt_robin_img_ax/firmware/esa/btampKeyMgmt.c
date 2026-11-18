@@ -122,14 +122,25 @@ static __attribute__((noinline, noclone)) OsaBuffer *btampPrepDefaultEapolMsg(st
 	return pBufDesc;
 }
 
-/* The frame's lengths, and the frame to the MAC. */
-static inline __attribute__((always_inline)) void btampSendEapolMsg(OsaBuffer *pBufDesc, struct BtampEapolFrame *frame, uint16_t length)
+/* The frame's lengths: the MAC's little-endian length, then the big-endian EAPOL length. */
+static inline __attribute__((always_inline)) void btampSetEapolLength(OsaBuffer *pBufDesc, struct BtampEapolFrame *frame, uint16_t length)
 {
+	unsigned int lengthBigEndian;
+
 	frame->header.packetLength[0] = length;
 	frame->header.packetLength[1] = length >> 8;
 	pBufDesc->length = length;
-	frame->header.lengthBigEndian[0] = length >> 8;
-	frame->header.lengthBigEndian[1] = length;
+	lengthBigEndian = length >> 8;
+	frame->header.lengthBigEndian[0] = lengthBigEndian;
+	frame->header.lengthBigEndian[1] = lengthBigEndian >> 8;
+	lengthBigEndian |= pBufDesc->length << 8;
+	frame->header.lengthBigEndian[0] = lengthBigEndian;
+	frame->header.lengthBigEndian[1] = lengthBigEndian >> 8;
+}
+
+/* The frame to the MAC. */
+static inline __attribute__((always_inline)) void btampSendEapolMsg(OsaBuffer *pBufDesc)
+{
 	mdevForwardEvent(wlanDevice, pBufDesc, pBufDesc->length, BTAMP_TX_EVENT);
 }
 
@@ -177,8 +188,9 @@ int btampGeneratePWKMsg1(struct WlanConnection *connPtr)
 	__aeabi_memclr(pKeyMsg->key_MIC, sizeof(pKeyMsg->key_MIC));
 	pKeyMsg->key_material_len = 0;
 	btampFormEapolHdr(&pKeyMsg->hdr_8021x, BTAMP_EAPOL_KEY_BODY);
+	btampSetEapolLength(pBufDesc, frame, BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
 	connPtr->linkFlags = BTAMP_HSK_WAIT_MSG2;
-	btampSendEapolMsg(pBufDesc, frame, BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
+	btampSendEapolMsg(pBufDesc);
 	return 0;
 }
 
@@ -271,8 +283,9 @@ static __attribute__((noinline, noclone)) int btampGeneratePWKMsg3(struct WlanCo
 	btampFormEapolHdr(&pKeyMsg->hdr_8021x, bodyLength);
 	ComputeEAPOL_MIC(pKeyMsg, bodyLength + sizeof(Hdr_8021x_t), btampKeyMgmtInfo.EAPOL_MIC_Key,
 			 EAPOL_MIC_KEY_SIZE, pKeyMsg->key_info.KeyDescriptorVersion);
+	btampSetEapolLength(pBufDesc, frame, bodyLength + BTAMP_FRAME_OVERHEAD);
 	connPtr->linkFlags = BTAMP_HSK_WAIT_MSG4;
-	btampSendEapolMsg(pBufDesc, frame, bodyLength + BTAMP_FRAME_OVERHEAD);
+	btampSendEapolMsg(pBufDesc);
 	return 0;
 
 fail:
@@ -377,8 +390,9 @@ static __attribute__((noinline, noclone)) int btampGeneratePWKMsg2(struct WlanCo
 	ComputeEAPOL_MIC(pKeyMsg, ieLen + BTAMP_EAPOL_KEY_BODY + sizeof(Hdr_8021x_t),
 			 btampKeyMgmtInfo.EAPOL_MIC_Key, EAPOL_MIC_KEY_SIZE,
 			 pKeyMsg->key_info.KeyDescriptorVersion);
+	btampSetEapolLength(pBufDesc, frame, ieLen + BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
 	connPtr->linkFlags = BTAMP_HSK_WAIT_MSG3;
-	btampSendEapolMsg(pBufDesc, frame, ieLen + BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
+	btampSendEapolMsg(pBufDesc);
 	return 0;
 }
 
@@ -411,7 +425,8 @@ static __attribute__((noinline, noclone)) int btampGeneratePWKMsg4(struct WlanCo
 	ComputeEAPOL_MIC(pKeyMsg, BTAMP_EAPOL_KEY_BODY + sizeof(Hdr_8021x_t),
 			 btampKeyMgmtInfo.EAPOL_MIC_Key, EAPOL_MIC_KEY_SIZE,
 			 pKeyMsg->key_info.KeyDescriptorVersion);
-	btampSendEapolMsg(pBufDesc, frame, BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
+	btampSetEapolLength(pBufDesc, frame, BTAMP_EAPOL_KEY_BODY + BTAMP_FRAME_OVERHEAD);
+	btampSendEapolMsg(pBufDesc);
 	return 0;
 }
 
