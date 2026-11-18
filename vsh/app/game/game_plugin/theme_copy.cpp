@@ -14,8 +14,10 @@
 #include <dir/dir.h>
 #include <file/localfile.h>
 
+#include "../../shell/src/livespace_db/livespace_db_internal.h"
+#include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
-#include "theme_copy.h"
+#include "game_appinfo.h"
 
 using namespace paf;
 

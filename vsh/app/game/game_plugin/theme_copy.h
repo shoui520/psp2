@@ -1,6 +1,5 @@
 /*
- * A theme's extracted package moved into place for its installer (theme_copy.cpp). Kept out of
- * game_appinfo.h: theme_copy.cpp has no livespace_db keys, so no static initializer.
+ * A theme's extracted package moved into place for its installer (theme_copy.cpp).
  */
 
 #ifndef GAME_PLUGIN_THEME_COPY_H
