@@ -146,7 +146,6 @@ int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */
 int gameLaunchEmuListCheck(const string &titleId, bool *listed);	/* 0x810A4AA2: list_launch_emu.dat */
 int gameUr0AppmetaSetup(const string *titleId, const char *path);	/* 0x81062CC6: ur0:temp/game */
 int gameUmassCheck(int arg, bool *found);	/* 0x8106371E: ux0:umass */
-int gameFttLicenseRead(common::SharedPtr<File> file, GameFttLicense *license);	/* 0x810A4EC4 */
 bool gameLaunchCheckIsOn(void);		/* 0x810A4B20: /CONFIG/SYSTEM/launch_check, on without it */
 
 /* topmenu_plugin's interface, found once */

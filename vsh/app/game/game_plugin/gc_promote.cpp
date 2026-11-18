@@ -139,10 +139,6 @@ int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), voi
 /* an error code as the system shows it, "C1-2345-6" (SceDriverUser's) */
 extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
 
-/* the plugin's error for a home screen with too many icons; applauncher's icons are tidied
-   after it (value only) */
-#define GAME_ERROR_TOO_MANY_ICONS	-2146430701	/* 0x80101113 */
-
 /* the promote's error shown with the conflicting title (value only) */
 #define GAME_ERROR_GC_CONFLICT		-2146430642	/* 0x8010114E */
 

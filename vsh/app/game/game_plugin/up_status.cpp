@@ -153,7 +153,7 @@ int gameAppSetUpStatus(const char *titleId, SceUInt32 status, int userData)
 	bool keepLiveArea = false;
 	bool updated = false;
 
-	ret = gameAppPrepareRegister(&reg.info, &keepLiveArea, userData);
+	ret = gameAppPrepareRegister(&reg.info, &keepLiveArea, (string *)userData);
 	if (ret >= 0) {
 		ret = gameAppRegister(&reg, 1, keepLiveArea, false, &updated);
 		if (ret >= 0) {

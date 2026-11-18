@@ -26,11 +26,6 @@ using namespace paf;
 /* the digits of an APP_VER */
 #define GAME_APP_VER_DIGITS	8
 
-/*
- * PLACEHOLDER: whether the application of info has its LiveArea in ur0:appmeta, set in
- * hasAppmeta (0x8105159A, in another file of the shell; its name is ours).
- */
-int gameAppInfoCheckAppmeta(LsdbAppInfoPtr *info, bool *hasAppmeta, int userData);
 
 GamePatchPromoter::GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1,
 				     bool flag2, const GameJobProgress *progress, int userData,
@@ -458,7 +453,7 @@ int GamePatchPromoter::CheckInstalled(LsdbAppInfoPtr *installed, bool flag)
 
 	bool hasAppmeta = false;
 
-	ret = gameAppInfoCheckAppmeta(installed, &hasAppmeta, m_userData);
+	ret = gameAppInfoCheckAppmeta(installed, &hasAppmeta, (string *)m_userData);
 	if (ret < 0)
 		return ret;
 
@@ -771,7 +766,7 @@ int GamePatchPromoter::Finish(GameAppRegistration *reg, GameCancelFunc cancel, v
 
 		string category(LsdbValueText(it->second));
 		GameLiveAreaCopier *copier = new GameLiveAreaCopier(false, string(""), cancel, arg,
-								    &m_progress, 0, 0.4f);
+								    &m_progress, NULL, 0.4f);
 
 		if (copier == NULL)
 			return GAME_ERROR_NO_INFO_MEMORY;

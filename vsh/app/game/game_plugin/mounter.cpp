@@ -353,8 +353,11 @@ int gamePfsUnmount(string *mountPoint)
 	return 0;
 }
 
-/* An application's data (mount ID 110) mounted, or the mount it already has counted (0x8101E56E). */
-int gameAppDataMount(const string &titleId, string *mountPoint)
+/*
+ * An application's data (mount ID 110) mounted, or the mount it already has counted (0x8101E56E);
+ * reserved is not read (its callers pass 0 or 1).
+ */
+int gameAppDataMount(const string &titleId, string *mountPoint, bool reserved)
 {
 	thread::MutexLock lock(&s_mounterMutex);
 	ScePfsRndDriveId drive;

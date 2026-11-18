@@ -18,6 +18,7 @@
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "promoter.h"
 
 using namespace paf;
 
@@ -103,7 +104,7 @@ int GameUr0Setup::SetupPsmLiveArea(const string &dir, GamePsmAppInfo *appInfo)
 
 	float percent = 0;
 	GameJobProgress progress(&percent);
-	GamePsmLiveAreaWriter *writer = new GamePsmLiveAreaWriter(0, 0, &progress, 1.0f, 0);
+	GamePsmLiveAreaWriter *writer = new GamePsmLiveAreaWriter(NULL, NULL, &progress, NULL, 1.0f);
 
 	if (writer == NULL)
 		return GAME_ERROR_NO_INFO_MEMORY;
@@ -893,7 +894,7 @@ int GameUr0Setup::Mount(void)
 	}
 
 	if (m_dataMounted) {
-		ret = gameAppDataMount(string(m_titleId.c_str()), &m_mountPoint);
+		ret = gameAppDataMount(string(m_titleId.c_str()), &m_mountPoint, true);
 		if (ret < 0)
 			return ret;
 	}

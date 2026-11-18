@@ -15,7 +15,7 @@ int gameFindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *tit
 
 /*
  * Where an application is installed (0x810111C0), from its attribute and original path: 1 and
- * 2 for gro0:, 3 for ux0:.
+ * 2 for gro0:, 3 for ux0:, 4 for pd0:.
  */
 int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 
@@ -23,6 +23,7 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #define GAME_STORAGE_GRO0		1
 #define GAME_STORAGE_GRO0_OTHER		2
 #define GAME_STORAGE_UX0		3
+#define GAME_STORAGE_PD0		4
 
 /* keys livespace_db_internal.h does not name yet (FNV-1a of the names, lsdb_keys.h) */
 #ifndef LSDB_KEY_MTIME
@@ -220,6 +221,9 @@ struct GameLicenseStatus {
 /* the cluster size of path's device (0x8101890E); a folder tree's size in clusters (0x8101898E) */
 int gameDeviceGetClusterSize(const char *path, SceUInt64 *clusterSize);
 int gameDirGetSize(const char *path, GameCancelFunc cancel, void *arg, SceUInt64 *size);
+
+/* a device's size and free space (game_lsdb.cpp, 0x8101C038) */
+int gameDeviceGetSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);
 
 /* the copies and removals of game_lsdb.cpp (0x8101ACA0, 0x8101AEA0, 0x8101BAC8) */
 int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, int arg6,
@@ -711,8 +715,13 @@ int gameAppInfoSetUpStatus(LsdbAppInfoPtr *info, const paf::string *path,
 int gameAppInfoSetUpStatusFromLicense(SceNpDrmLicense *license, SceSize size, LsdbAppInfoPtr *info,
 				      int unused, int userData, const bool *noLicense);
 
-/* PLACEHOLDER: an application's record prepared for its registration (0x81050A8A) */
-int gameAppPrepareRegister(LsdbAppInfoPtr *info, bool *keepLiveArea, int userData);
+/*
+ * livearea_copier.cpp: an application's record prepared for its registration, keepLiveArea set
+ * when its appmeta has a retail LiveArea (0x81050A8A); whether a card application has one
+ * (0x8105159A)
+ */
+int gameAppPrepareRegister(LsdbAppInfoPtr *info, bool *keepLiveArea, paf::string *detail);
+int gameAppInfoCheckAppmeta(LsdbAppInfoPtr *info, bool *hasAppmeta, paf::string *detail);
 
 /* the SDK's glue over SceNpDrm's import (0x81449974) */
 extern "C" int sceNpDrmGetRifNameForInstall(char *rifName, const void *license, int flags);
@@ -871,6 +880,13 @@ struct GameFttLicense {
 	SceUInt32 flags;	/* bit 0: GameFttInfo's flag */
 };
 
+/*
+ * PLACEHOLDER names: a free-trial license read from file (0x810A4EC4), and the size of the data
+ * that follows it (0x810A5148)
+ */
+int gameFttLicenseRead(paf::common::SharedPtr<paf::File> file, GameFttLicense *license);
+int gameFttLicenseGetDataSize(paf::common::SharedPtr<paf::File> file, SceSize *size);
+
 /* what gamePluginFttRead gives of an application's free-trial license */
 struct GameFttInfo {
 	char contentId[48];
@@ -902,32 +918,62 @@ public:
 	int WriteIcon(const paf::string &path);
 	int WritePic(const paf::string &path);
 
-	SceUInt8 otherFields[200];
+	SceUInt8 otherFields[172];
+	paf::string m_author;		/* written under the title in the LiveArea */
+	paf::string m_website;		/* the LiveArea's developer link */
+	unsigned int m_defaultLanguage;	/* the language of the title shown by default */
 };
 
-/*
- * PLACEHOLDER names: what writes a PSM application's livearea template.xml (constructor
- * 0x810520C4, 52 bytes, in another file of the plugin), from its app.info.
- */
-class GamePsmLiveAreaWriter {
-public:
-	GamePsmLiveAreaWriter(int arg0, int arg1, const GameJobProgress *progress, float scale,
-			      int arg4);
-	virtual ~GamePsmLiveAreaWriter();
-
-	/* the template at path written for the record info (0x810521BA) */
-	int Write(const paf::string &path, const LsdbAppInfoPtr *info);
-
-	SceUInt8 otherFields[44];
-	GamePsmAppInfo *m_appInfo;
-};
-
-typedef char GamePsmLiveAreaWriterSize[sizeof(GamePsmLiveAreaWriter) == 52 ? 1 : -1];
+typedef char GamePsmAppInfoSize[sizeof(GamePsmAppInfo) == 204 ? 1 : -1];
 
 /* PLACEHOLDER names: whether ur0 has size bytes free (0x81055628, in another file) */
 int gameUr0CheckFreeSpace(SceUInt64 size, paf::string *detail);
 
-/* PLACEHOLDER names: size bytes at offset of the file at path read into buf (0x8105388C) */
+/*
+ * PLACEHOLDER names: an image's extent, mode and format as paf::image gives them (0x81055462, in
+ * another file), read from the image in buf.
+ */
+struct GameImageInfo {
+	GameImageInfo() : width(0), height(0), mode(-1), format(0)
+	{
+	}
+
+	int width;
+	int height;
+	int mode;		/* an ImageMode, ImageMode_NONE before it is read */
+	int format;		/* an ImageFormat */
+};
+
+int gameImageGetInfo(paf::memory::HeapAllocator *allocator, void *buf, size_t size,
+		     GameImageInfo *info);
+
+/* PLACEHOLDER name: the same read from the image file at path (0x8105534E) */
+int gameImageGetFileInfo(paf::memory::HeapAllocator *allocator, const paf::string &path,
+			 GameImageInfo *info);
+
+/*
+ * PLACEHOLDER names: what an application's icon or background must be: its extent, its largest
+ * file, its ImageMode and its ImageFormat (24 bytes)
+ */
+struct GameImageFormat {
+	GameImageFormat(int _width, int _height, SceUInt64 _maxSize, int _mode, int _format)
+		: width(_width), height(_height), maxSize(_maxSize), mode(_mode), format(_format)
+	{
+	}
+
+	int width;
+	int height;
+	SceUInt64 maxSize;
+	int mode;
+	int format;
+};
+
+typedef char GameImageFormatSize[sizeof(GameImageFormat) == 24 ? 1 : -1];
+
+/*
+ * PLACEHOLDER names: a PSP icon, size bytes at offset of the file at path, read into buf and
+ * checked: a PNG of no more than 144x80 pixels (0x8105388C)
+ */
 int gameFileReadAt(const paf::string *path, SceUInt32 offset, SceSize size, void *buf);
 
 /*
@@ -944,10 +990,10 @@ int gameSfoCheck(const LsdbAppInfoPtr *sfo);
  * PLACEHOLDER names: an application's icon (0x81055DCE) or background (0x81055DD8) format, and an
  * image at src converted to it at dst (0x81055C04)
  */
-int gameIcon0Format(void);
-int gamePic0Format(void);
-int gameImageConvert(const paf::string *src, const paf::string *dst, int format,
-		     paf::string *detail);
+const GameImageFormat *gameIcon0Format(void);
+const GameImageFormat *gamePic0Format(void);
+int gameImageConvert(const paf::string *src, const paf::string *dst,
+		     const GameImageFormat *format, paf::string *detail);
 
 /*
  * PLACEHOLDER names: a package's parameters copied from srcDir into an appmeta dstDir
@@ -968,8 +1014,20 @@ int gameFileWrite(const paf::string *path, const void *buf, SceSize size);
 int gameIconWrite(int kind, int attributeKind, const paf::string *path, const void *buf,
 		  SceSize size);
 
-/* PLACEHOLDER names: an application's appmeta made in tempDir moved into ur0:appmeta (0x81054B14) */
-int gameAppmetaCommit(const paf::string *tempDir, const paf::string *titleId, int arg);
+/*
+ * PLACEHOLDER names: an application's appmeta made in tempDir moved into the appmeta folder of
+ * tempDir's drive, tempDir removed when removeTempDir is set (0x81054B14)
+ */
+int gameAppmetaCommit(const paf::string *tempDir, const paf::string *titleId, bool removeTempDir);
+
+/*
+ * PLACEHOLDER names: the appmeta made in ux0:appmeta/new moved to ux0:appmeta/titleId (0x81055138);
+ * whether the home screen has room for another icon (0x810552D8); whether ux0: has size bytes
+ * free when check is set, the drive in detail when it cannot tell (0x8105556A)
+ */
+int gameAppmetaCommitNew(const paf::string *titleId);
+int gameLsdbHasRoom(bool *hasRoom);
+int gameAppmetaCheckSpace(bool check, SceUInt64 size, paf::string *detail);
 
 /*
  * What sets an application up in ur0 (its appmeta, its livearea) under the plugin's

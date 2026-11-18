@@ -308,29 +308,99 @@ public:
 
 typedef char GameUpdateCheckerSize[sizeof(GameUpdateChecker) == 40 ? 1 : -1];
 
+/* what makes an application's appmeta from its folder (vtable 0x8152EB2C); its names are ours */
+class GameAppmetaWriterIf {
+public:
+	virtual ~GameAppmetaWriterIf()
+	{
+	}
+
+	virtual int Run(GameAppRegistration *reg, const paf::string *dir) = 0;
+};
+
 /*
- * PLACEHOLDER: the application's LiveArea brought into ur0:appmeta, defined in another file of
- * the plugin (constructor 0x8104DAC4, vtable 0x8152EB40), 64 bytes; its names are ours.
+ * An application's appmeta (its icons, LiveArea and parameters) made from its folder in
+ * ux0:appmeta or ur0:appmeta (livearea_copier.cpp, constructor 0x8104DAC4, vtable 0x8152EB40),
+ * 64 bytes; its names are ours.
  */
-class GameLiveAreaCopier {
+class GameLiveAreaCopier : public GameAppmetaWriterIf {
 public:
 	GameLiveAreaCopier(bool flag, const paf::string &name, GameCancelFunc cancel, void *arg,
-			   const GameJobProgress *progress, int userData, float scale);
+			   const GameJobProgress *progress, paf::string *detail, float scale);
 	virtual ~GameLiveAreaCopier();
 
-	/* the LiveArea of reg's application, read from dir */
+	/* the appmeta of reg's application, a game's, from its folder dir */
 	virtual int Run(GameAppRegistration *reg, const paf::string *dir);
 
-	bool m_flag;
+private:
+	int Write(const paf::string *dir, unsigned int kind, bool gcParam,
+		  GameJobProgress *progress, float scale);
+	int CopyToNew(const paf::string *dir, const paf::string *titleId, unsigned int kind,
+		      bool gcParam, bool onUx0);
+	int CopyToUx0(const paf::string *dir, const paf::string *titleId, unsigned int kind,
+		      bool gcParam);
+	int Copy(const LsdbAppInfoPtr *info, const paf::string *dir);
+	int CopyFttIcon(const paf::string *mountPoint, const LsdbAppInfoPtr *info);
+	int WriteFtt(const LsdbAppInfoPtr *info, const paf::string *dir);
+	int CopyFtt(const LsdbAppInfoPtr *info, const paf::string *dir);
+
+	bool m_flag;			/* a free-trial application, its license file at m_name */
 	paf::string m_name;
 	GameCancelFunc m_cancel;
 	void *m_arg;
 	GameJobProgress m_progress;
-	float m_weights[3];
-	int m_userData;
+	float m_weights[3];		/* each step's share of m_progress */
+	paf::string *m_detail;		/* where a failed copy's drive goes */
 };
 
 typedef char GameLiveAreaCopierSize[sizeof(GameLiveAreaCopier) == 64 ? 1 : -1];
+
+/*
+ * A PSM application's LiveArea template.xml written from its app.info (psm_livearea_writer.cpp,
+ * constructor 0x810520C4, vtable 0x8152EB54), 52 bytes; its names are ours.
+ */
+class GamePsmLiveAreaWriter : public GameAppmetaWriterIf {
+public:
+	GamePsmLiveAreaWriter(GameCancelFunc cancel, void *arg, const GameJobProgress *progress,
+			      paf::string *detail, float scale);
+
+	/* the step's share of the progress added, when the registry has room */
+	virtual int Run(GameAppRegistration *reg, const paf::string *dir);
+
+	/* the template at path written for the record info */
+	int Write(const paf::string &path, const LsdbAppInfoPtr *info);
+
+	GameCancelFunc m_cancel;
+	void *m_arg;
+	GameJobProgress m_progress;
+	float m_weights[3];		/* each step's share of m_progress */
+	paf::string *m_detail;
+	GamePsmAppInfo *m_appInfo;	/* the app.info the template is written from */
+};
+
+typedef char GamePsmLiveAreaWriterSize[sizeof(GamePsmLiveAreaWriter) == 52 ? 1 : -1];
+
+/*
+ * The appmeta step of a PSP application's promotion, which only counts its share of the progress
+ * (psp_icon.cpp, constructor 0x81053840, vtable 0x8152EB68), 48 bytes; its names are ours. Its
+ * Run is GamePsmLiveAreaWriter's code, which Sony's link keeps once (0x81052114).
+ */
+class GamePspAppmetaWriter : public GameAppmetaWriterIf {
+public:
+	GamePspAppmetaWriter(GameCancelFunc cancel, void *arg, const GameJobProgress *progress,
+			     paf::string *detail, float scale);
+
+	/* the commit's share of the progress added, when the registry has room */
+	virtual int Run(GameAppRegistration *reg, const paf::string *dir);
+
+	GameCancelFunc m_cancel;
+	void *m_arg;
+	GameJobProgress m_progress;
+	float m_weights[3];		/* each step's share of m_progress */
+	paf::string *m_detail;
+};
+
+typedef char GamePspAppmetaWriterSize[sizeof(GamePspAppmetaWriter) == 48 ? 1 : -1];
 
 /* the drives a patch is promoted on */
 #define GAME_PATCH_DRIVE_GRW0	1

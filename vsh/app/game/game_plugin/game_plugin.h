@@ -242,12 +242,24 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
    one installed on ux0: (values only; PLACEHOLDER names) */
 #define GAME_ERROR_STORAGE_CONFLICT	-2146430667	/* 0x80101135 */
 #define GAME_ERROR_INSTALLED_ON_UX0	-2146430666	/* 0x80101136 */
+/* a home screen with too many icons; applauncher's icons are tidied after it (value only) */
+#define GAME_ERROR_TOO_MANY_ICONS	-2146430701	/* 0x80101113 */
+/* too little room on ux0: for an application's appmeta (value only; PLACEHOLDER name) */
+#define GAME_ERROR_NO_APPMETA_SPACE	-2146430702	/* 0x80101112 */
+/* too little room on ur0: for an application's appmeta (value only; PLACEHOLDER name) */
+#define GAME_ERROR_NO_UR0_SPACE		-2146430703	/* 0x80101111 */
+/* a read or write of fewer bytes than asked (value only; PLACEHOLDER name) */
+#define GAME_ERROR_SHORT_IO		-2146430657	/* 0x8010113F */
+/* a PSP icon of another format than PNG, or larger than it may be (value only; PLACEHOLDER name) */
+#define GAME_ERROR_BAD_ICON		-2146430668	/* 0x80101134 */
 #define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108: stopped by the caller's cancel check */
 #define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
 #define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
+/* paf's error for a device that is not there (value only; PLACEHOLDER name) */
+#define GAME_PAF_ERROR_NO_DEVICE	-2135994332	/* 0x80AF5024 */
 
 /*
  * PLACEHOLDER: what 0x8136D9D4 reads from a split package's head.bin, 0x78 bytes, the head of an
@@ -352,7 +364,7 @@ int gameAppMount(const char *appPath, const char *patchPath, const void *rif, Sc
 int gameAppUnmount(paf::string *mountPoint);
 int gameGameDataMount(const char *appPath, const char *patchPath, const char *rifPath,
 		      paf::string *mountPoint);
-int gameAppDataMount(const paf::string &titleId, paf::string *mountPoint);
+int gameAppDataMount(const paf::string &titleId, paf::string *mountPoint, bool reserved);
 int gameAppDataUnmount(paf::string *mountPoint);
 int gamePspemuWorkMount(paf::string *mountPoint);
 int gamePspemuWorkUnmount(paf::string *mountPoint);
