@@ -41,6 +41,8 @@ void gamePluginDestroy(void);
 #define GAME_ERROR_NOT_STARTED		-2146430717	/* 0x80101103 */
 #define GAME_ERROR_BAD_STORAGE		-2146430715	/* 0x80101105: an application installed on no known storage */
 #define GAME_ERROR_STOPPING		-2146430704	/* 0x80101110 */
+/* a game card's application missing from gro0:app (value only) */
+#define GAME_ERROR_NO_GC_APP		-2146430690	/* 0x8010111E */
 /* a mount point that does not fit the caller's buffer (value only) */
 #define GAME_ERROR_BUFFER_TOO_SMALL	-2146430697	/* 0x80101117 */
 /* the work pool lent out already (value only) */
@@ -265,6 +267,10 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 #define GAME_ERROR_NO_INSTALL_INFO	-2146430692	/* 0x8010111C: a folder without its install information */
 #define GAME_ERROR_NOT_APP_PACKAGE	-2146430672	/* 0x80101130: a package of another content type */
+/* a category the call does not handle (value only) */
+#define GAME_ERROR_UNKNOWN_CATEGORY	-2146430673	/* 0x8010112F */
+/* a path on no storage the plugin knows (value only) */
+#define GAME_ERROR_NO_STORAGE		-2146430663	/* 0x80101139 */
 #define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108: stopped by the caller's cancel check */
 #define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
 #define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */

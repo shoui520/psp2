@@ -30,13 +30,10 @@ using namespace paf;
 /* the errors (values only) */
 #define GAME_ERROR_NO_PLUGIN	-2146430719	/* 0x80101101: a plugin the call needs is not loaded */
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
-#define GAME_ERROR_NO_STORAGE	-2146430663	/* 0x80101139: a path on no storage the plugin knows */
-#define GAME_ERROR_NO_SFO_PARAMS	-2146430672	/* 0x80101130: a category with no param.sfo table */
 #define GAME_ERROR_NO_BOOT_APP	-2146430677	/* 0x8010112B: a BOOT_INSTALL_DIR no application is installed in */
 #define GAME_ERROR_APP_RUNNING	-2146430700	/* 0x80101114: an application that is running */
 #define GAME_ERROR_BAD_PBP	-2146430686	/* 0x80101122: a PBP file without its header */
 #define GAME_ERROR_PSP_NOT_LISTED	-2146430689	/* 0x8010111F: a PSP title the emulator's list does not allow */
-#define GAME_ERROR_PATCH_DATA	-2146430673	/* 0x8010112F: a patch whose category is data */
 
 /*
  * topmenu_plugin's functions an application's registration calls around applauncher_plugin's
@@ -1533,7 +1530,7 @@ int gameAppInfoGetSfoParams(const LsdbAppInfoPtr *info, const GameSfoParam **par
 		*params = s_sfoAppParams;
 		*count = 80;
 	} else {
-		return GAME_ERROR_NO_SFO_PARAMS;
+		return GAME_ERROR_NOT_APP_PACKAGE;
 	}
 
 	return 0;
@@ -1846,7 +1843,7 @@ int gameAppInfoCheckPatchSfo(const LsdbAppInfoPtr *info)
 		return GAME_ERROR_BAD_DATA;
 
 	if (category == "gda" || category == "wda")
-		return GAME_ERROR_PATCH_DATA;
+		return GAME_ERROR_UNKNOWN_CATEGORY;
 
 	it = (*info)->find(LSDB_KEY_ATTRIBUTE);
 	if (it != end) {

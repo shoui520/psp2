@@ -29,7 +29,6 @@ using namespace paf;
 /* the version checks' errors (values only) */
 #define GAME_ERROR_INVALID_TITLE_ID	-2146430573	/* 0x80101193 */
 #define GAME_ERROR_SYSTEM_TOO_OLD	-2146430687	/* 0x80101121: the system is older than needed */
-#define GAME_ERROR_UNKNOWN_CATEGORY	-2146430673	/* 0x8010112F */
 #define GAME_ERROR_NO_PSM_RUNTIME	-2146430971	/* 0x80101005 */
 #define GAME_ERROR_PSM_NOT_INSTALLED	-2146430641	/* 0x8010114F */
 #define GAME_ERROR_PSM_TOO_OLD		-2146430643	/* 0x8010114D */

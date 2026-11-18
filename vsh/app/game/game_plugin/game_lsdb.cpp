@@ -114,7 +114,7 @@ struct GameTreeCopyParam {
 	bool flag1;
 	bool flag2;
 	int reserved;
-	int arg4;
+	string *detail;		/* where a copy that failed was */
 };
 
 /*
@@ -839,7 +839,7 @@ int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, i
  * A file or a directory tree copied, by a copier of its own (0x8101AEA0). PLACEHOLDER: the
  * meaning of the other words is not known.
  */
-int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, int arg4)
+int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, string *detail)
 {
 	GameTreeCopyParam param;
 
@@ -849,7 +849,7 @@ int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, int arg4)
 	param.flag1 = false;
 	param.flag0 = false;
 	param.flag2 = true;
-	param.arg4 = arg4;
+	param.detail = detail;
 
 	GameTreeCopier *copier = new GameTreeCopier(&param);
 

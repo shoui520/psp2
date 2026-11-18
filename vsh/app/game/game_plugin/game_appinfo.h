@@ -200,6 +200,12 @@ struct GameLicenseStatus {
 int gameDeviceGetClusterSize(const char *path, SceUInt64 *clusterSize);
 int gameDirGetSize(const char *path, GameCancelFunc cancel, void *arg, SceUInt64 *size);
 
+/* the copies and removals of game_lsdb.cpp (0x8101ACA0, 0x8101AEA0, 0x8101BAC8) */
+int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, int arg6,
+			 int arg7);
+int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, paf::string *detail);
+int gameRemoveDirectoryContents(const char *path, int arg1, int arg2, int arg3, bool mapErrors);
+
 /* an application's sizes, by flags (0x8101A78A), and its license's status (0x8101BD12) */
 int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc cancel, void *arg,
 		      GameAppSizes *sizes);
@@ -503,6 +509,12 @@ int gameDirGetStat(const paf::string &path, SceNpDrmInstallInfo *stat);
 
 /* a job's progress, as its installer advances it */
 struct GameJobProgress {
+	/* a progress that only counts */
+	GameJobProgress(float *percent)
+		: percent(percent), busy(0), scale(0.0f), func(NULL), arg(NULL)
+	{
+	}
+
 	GameJobProgress(float *percent, void (*func)(void *arg, float percent), void *arg)
 		: percent(percent), busy(0), scale(1.0f), func(func), arg(arg)
 	{
@@ -840,18 +852,129 @@ struct GameFttInfo {
 };
 
 /*
- * PLACEHOLDER: what sets an application up in ur0 under the plugin's SceGamePluginSetupUr0
- * mutex (constructor 0x81035AA8, 96 bytes), defined in another file of the plugin.
+ * PLACEHOLDER names: a PSM application's app.info, read into its record and written out as its
+ * icons (constructor 0x810673D8, 204 bytes, in another file of the plugin).
+ */
+class GamePsmAppInfo {
+public:
+	GamePsmAppInfo();
+	virtual ~GamePsmAppInfo();
+
+	/* the app.info at path read, with the record info, into appInfo (0x810681A2) */
+	int Load(const char *path, const LsdbAppInfoPtr *info, LsdbAppInfoPtr *appInfo);
+
+	/* the application's icon and background written to path (0x8106876C, 0x810693F0) */
+	int WriteIcon(const paf::string &path);
+	int WritePic(const paf::string &path);
+
+	SceUInt8 otherFields[200];
+};
+
+/*
+ * PLACEHOLDER names: what writes a PSM application's livearea template.xml (constructor
+ * 0x810520C4, 52 bytes, in another file of the plugin), from its app.info.
+ */
+class GamePsmLiveAreaWriter {
+public:
+	GamePsmLiveAreaWriter(int arg0, int arg1, const GameJobProgress *progress, float scale,
+			      int arg4);
+	virtual ~GamePsmLiveAreaWriter();
+
+	/* the template at path written for the record info (0x810521BA) */
+	int Write(const paf::string &path, const LsdbAppInfoPtr *info);
+
+	SceUInt8 otherFields[44];
+	GamePsmAppInfo *m_appInfo;
+};
+
+typedef char GamePsmLiveAreaWriterSize[sizeof(GamePsmLiveAreaWriter) == 52 ? 1 : -1];
+
+/* PLACEHOLDER names: whether ur0 has size bytes free (0x81055628, in another file) */
+int gameUr0CheckFreeSpace(SceUInt64 size, paf::string *detail);
+
+/* PLACEHOLDER names: size bytes at offset of the file at path read into buf (0x8105388C) */
+int gameFileReadAt(const paf::string *path, SceUInt32 offset, SceSize size, void *buf);
+
+/* PLACEHOLDER names: a PBP's param.sfo read into sfo, and its parameters checked (0x81049274, 0x81048A7A) */
+int gamePbpReadSfo(const paf::string *path, LsdbAppInfoPtr *sfo);
+int gameSfoCheck(const LsdbAppInfoPtr *sfo);
+
+/*
+ * PLACEHOLDER names: an application's icon (0x81055DCE) or background (0x81055DD8) format, and an
+ * image at src converted to it at dst (0x81055C04)
+ */
+int gameIcon0Format(void);
+int gamePic0Format(void);
+int gameImageConvert(const paf::string *src, const paf::string *dst, int format,
+		     paf::string *detail);
+
+/*
+ * PLACEHOLDER names: a package's parameters copied from srcDir into an appmeta dstDir
+ * (0x810556D6), and an EBOOT's parameters written to paramPath (0x81055DE4)
+ */
+int gameAppmetaCopyParams(const paf::string &srcDir, const paf::string &dstDir,
+			  paf::string *detail);
+int gameAppmetaWriteEbootParam(const paf::string *ebootPath, const paf::string *paramPath,
+			       paf::string *detail);
+
+/* PLACEHOLDER names: buf written as the file at path (0x81053B58) */
+int gameFileWrite(const paf::string *path, const void *buf, SceSize size);
+
+/*
+ * PLACEHOLDER names: a PSP application's ICON0 in buf written to path as its icon, for its
+ * category kind and attribute kind (0x81054930)
+ */
+int gameIconWrite(int kind, int attributeKind, const paf::string *path, const void *buf,
+		  SceSize size);
+
+/* PLACEHOLDER names: an application's appmeta made in tempDir moved into ur0:appmeta (0x81054B14) */
+int gameAppmetaCommit(const paf::string *tempDir, const paf::string *titleId, int arg);
+
+/*
+ * What sets an application up in ur0 (its appmeta, its livearea) under the plugin's
+ * SceGamePluginSetupUr0 mutex (ur0_setup.cpp, 0x81035AA8..0x8103C120), 96 bytes.
  */
 class GameUr0Setup {
 public:
-	GameUr0Setup(const LsdbAppInfoPtr *info, int arg);
+	GameUr0Setup(const LsdbAppInfoPtr *info, int type);
 	virtual ~GameUr0Setup();
 
-	int Run(void);		/* 0x8103C03E */
+	int Run(void);
 
-	SceUInt8 otherFields[92];
+private:
+	int SetupPsmLiveArea(const paf::string &dir, GamePsmAppInfo *appInfo);
+	int SetupPsmIcons(const paf::string &dir, GamePsmAppInfo *appInfo);
+	int SetupPsm(void);
+	int SetupPs1LiveArea(const paf::string &dir);
+	int SetupPspLiveArea(const paf::string &dir);
+	int SetupPspIcons(const paf::string &dir, const paf::string *ebootPath);
+	int GetPspBootPath(paf::string *path);
+	int SetupPsp(void);
+	int SetupGameAppmeta(const paf::string &dir);
+	int SetupGcParamSfo(const paf::string &dir);
+	int SetupGameDir(const paf::string &dir, bool skipParams);
+	int SetupGameAppmetaDir(bool skipParams);
+	int SetupPromoteAppmeta(const paf::string *titleId);
+	int Mount(void);
+	bool IsGameCategory(void);
+	int SetupGame(void);
+
+	LsdbAppInfoPtr m_info;
+	int m_type;			/* below 3 */
+	int m_error;			/* the constructor's */
+	paf::string m_titleId;
+	paf::string m_category;
+	paf::string m_orgPath;
+	int m_storage;			/* gameAppGetStorage's */
+	SceUInt32 m_upStatus;		/* #_up_status */
+	bool m_mounted;
+	bool m_dataMounted;
+	paf::string m_mountPoint;
+	paf::string m_detail;		/* where a step that failed was */
+	bool m_promoteAttrBit2;
 };
+
+typedef char GameUr0SetupSize[sizeof(GameUr0Setup) == 96 ? 1 : -1];
 
 /*
  * What a promote from parameters (gamePluginPromoteParam) is given, 164 bytes (names ours, from
