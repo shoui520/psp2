@@ -19,12 +19,12 @@
 #include "robin/wlan.h"
 #include "robin/wlantask.h"
 
-/* A message from the PAL driver: a 16-bit code, a 16-bit length and a body. */
+/* A message from the PAL driver: a 16-bit code, a 16-bit length and a body (Sony reads it byte by byte: packed). */
 struct AmpPalMessage {
 	uint16_t code;
 	uint16_t length;
 	uint8_t body[];
-};
+} __attribute__((packed));
 
 /* Host notification codes sent with ampPalNotify(). */
 enum {
@@ -180,8 +180,7 @@ int ampPalDataFromHost(OsaBuffer *buffer)
 /* The HCI ACL data header Sony writes in front of a received frame (byte by byte: packed). */
 struct AmpAclHeader {
 	uint16_t handle:12;
-	uint16_t packetBoundary:2;
-	uint16_t broadcast:2;
+	uint16_t flags:4;	/* packet boundary (bits 12-13) and broadcast (bits 14-15) */
 	uint16_t length;
 } __attribute__((packed));
 
@@ -194,8 +193,7 @@ int ampPalDataToHost(OsaBuffer *buffer, unsigned int physicalIndex)
 		buffer->dataOffset -= 4;
 		header = (struct AmpAclHeader *)((uint8_t *)buffer + buffer->dataOffset);
 		header->handle = ampPhysicalLinks[physicalIndex].handle;
-		header->packetBoundary = 3;
-		header->broadcast = 0;
+		header->flags = 3;	/* packet boundary 3, no broadcast */
 		header->length = buffer->length;
 		buffer->length += 4;
 		buffer->pool = (struct OsaBufferPool *)(uintptr_t)buffer->ringStart;
@@ -793,7 +791,7 @@ int ampPalCopySupportedRates(struct WlanConnection *context)
 	return 12;
 }
 
-void ampPalIgnoreMessage(void);
+__attribute__((noinline)) void ampPalIgnoreMessage(void);
 
 /* 0x000024d6: handles the messages the PAL driver queued for the controller. */
 int ampPalEventLoop(void)

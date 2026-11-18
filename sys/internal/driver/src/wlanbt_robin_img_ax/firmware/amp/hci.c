@@ -126,7 +126,7 @@ int ampHciSendEvent(uint8_t eventCode, uint32_t maskSelector, const char *format
 	int length;
 
 	if (maskSelector != 0 &&
-	    ampHciEventEnabled(ampEventMaskPage2, (uint16_t)maskSelector) != 1)
+	    ampHciEventEnabled(ampEventMaskPage2, (uint16_t)maskSelector) == 0)
 		return 0;
 	buffer = ampHciAllocBuffer(&ampHciPool, AMP_POOL_BUFFER_SIZE, 0);
 	if (buffer == NULL)
@@ -188,6 +188,12 @@ int ampHciSendEvent(uint8_t eventCode, uint32_t maskSelector, const char *format
 	return 1;
 }
 
+/* The header of a message to the PAL host driver (Sony writes it byte by byte: packed). */
+struct AmpHostEventHeader {
+	uint16_t id;
+	uint16_t length;
+} __attribute__((packed));
+
 /*
  * 0x0002105e: the same formats, for the messages to the host driver of the PAL
  * ("btamp_pal"): a 16-bit identifier, a 16-bit length, the parameters.
@@ -196,7 +202,7 @@ int ampHciSendHostEvent(uint16_t id, int unused, const char *format, ...)
 {
 	va_list args;
 	OsaBuffer *buffer;
-	uint16_t *header;
+	struct AmpHostEventHeader *header;
 	uint8_t *start;
 	uint8_t *out;
 	uint32_t value;
@@ -207,8 +213,8 @@ int ampHciSendHostEvent(uint16_t id, int unused, const char *format, ...)
 		return 0;
 	buffer = ampHciAllocBuffer(&ampHciPool, AMP_POOL_BUFFER_SIZE, 0xffffffff);
 	va_start(args, format);
-	header = (uint16_t *)((uint8_t *)buffer + buffer->dataOffset);
-	header[0] = id;
+	header = (struct AmpHostEventHeader *)((uint8_t *)buffer + buffer->dataOffset);
+	header->id = id;
 	start = (uint8_t *)buffer + 4 + buffer->dataOffset;
 	out = start;
 	for (; *format != '\0'; format++) {
@@ -253,8 +259,9 @@ int ampHciSendHostEvent(uint16_t id, int unused, const char *format, ...)
 		}
 	}
 	va_end(args);
-	header[1] = (uint16_t)(out - start);
-	buffer->length = (uint16_t)(header[1] + 4);
+	length = out - start;
+	header->length = length;
+	buffer->length = (uint16_t)(length + 4);
 	mdevForwardEvent(ampPalDevice, buffer, buffer->length, 1);
 	return 1;
 }
@@ -303,17 +310,17 @@ unsigned int ampPhysicalLinkAllocate(uint32_t handle)
 {
 	unsigned int i;
 
-	for (i = 0; i < AMP_PHYSICAL_LINKS; i++) {
+	for (i = 0; i < AMP_PHYSICAL_LINKS; i = (uint8_t)(i + 1)) {
 		if (ampPhysicalLinks[i].handle == handle)
 			return AMP_PHYSICAL_LINKS;
 	}
-	for (i = 0; ampPhysicalLinks[i].handle != AMP_LINK_FREE; ) {
-		i = (uint8_t)(i + 1);
-		if (i >= AMP_PHYSICAL_LINKS)
-			return AMP_PHYSICAL_LINKS;
+	for (i = 0; i < AMP_PHYSICAL_LINKS; i = (uint8_t)(i + 1)) {
+		if (ampPhysicalLinks[i].handle == AMP_LINK_FREE) {
+			ampPhysicalLinks[i].handle = handle;
+			return i;
+		}
 	}
-	ampPhysicalLinks[i].handle = handle;
-	return i;
+	return AMP_PHYSICAL_LINKS;
 }
 
 /* 0x0002120a */
@@ -335,8 +342,8 @@ unsigned int ampPhysicalLinkFindByLogical(uint32_t logicalHandle)
 	unsigned int link;
 	unsigned int slot;
 
-	for (link = 0; link < AMP_PHYSICAL_LINKS; link++) {
-		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++) {
+	for (link = 0; link < AMP_PHYSICAL_LINKS; link = (uint8_t)(link + 1)) {
+		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot = (uint8_t)(slot + 1)) {
 			if (ampPhysicalLinks[link].logicalLinks[slot].handle == logicalHandle)
 				return link;
 		}
@@ -352,7 +359,7 @@ int ampPhysicalLinkReset(unsigned int index)
 
 	if (index < AMP_PHYSICAL_LINKS) {
 		link = &ampPhysicalLinks[index];
-		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++)
+		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot = (uint8_t)(slot + 1))
 			link->logicalLinks[slot].handle = AMP_LOGICAL_FREE;
 		link->handle = AMP_LINK_FREE;
 		__aeabi_memclr4(link->peerAddress, 6);
@@ -384,8 +391,8 @@ unsigned int ampLogicalLinkFind(uint32_t logicalHandle)
 
 	if (logicalHandle == AMP_LOGICAL_FREE)
 		return AMP_LOGICAL_LINKS;
-	for (link = 0; link < AMP_PHYSICAL_LINKS; link++) {
-		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++) {
+	for (link = 0; link < AMP_PHYSICAL_LINKS; link = (uint8_t)(link + 1)) {
+		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot = (uint8_t)(slot + 1)) {
 			if (ampPhysicalLinks[link].logicalLinks[slot].handle == logicalHandle)
 				return slot;
 		}
@@ -399,8 +406,8 @@ unsigned int ampLogicalLinkFindByFlowSpec(uint32_t flowSpecId)
 	unsigned int link;
 	unsigned int slot;
 
-	for (link = 0; link < AMP_PHYSICAL_LINKS; link++) {
-		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++) {
+	for (link = 0; link < AMP_PHYSICAL_LINKS; link = (uint8_t)(link + 1)) {
+		for (slot = 0; slot < AMP_LOGICAL_LINKS; slot = (uint8_t)(slot + 1)) {
 			if (ampPhysicalLinks[link].logicalLinks[slot].txFlowSpec.id == flowSpecId)
 				return slot;
 		}
@@ -416,8 +423,8 @@ int ampLogicalLinkServiceType(uint32_t logicalHandle)
 	unsigned int slot;
 
 	if (logicalHandle < AMP_LOGICAL_FREE) {
-		for (link = 0; link < AMP_PHYSICAL_LINKS; link++) {
-			for (slot = 0; slot < AMP_LOGICAL_LINKS; slot++) {
+		for (link = 0; link < AMP_PHYSICAL_LINKS; link = (uint8_t)(link + 1)) {
+			for (slot = 0; slot < AMP_LOGICAL_LINKS; slot = (uint8_t)(slot + 1)) {
 				struct AmpLogicalLink *logical =
 					&ampPhysicalLinks[link].logicalLinks[slot];
 
@@ -442,8 +449,8 @@ enum {
 };
 
 /* PAL capabilities advertised in the local AMP_ASSOC (type 4). */
-static uint16_t ampLocalPalCapabilitiesLength __attribute__((section(".itcm.bss")));
-static uint8_t ampLocalPalCapabilities[4] __attribute__((section(".itcm.bss")));
+uint16_t ampLocalPalCapabilitiesLength __attribute__((section(".itcm.bss")));
+uint8_t ampLocalPalCapabilities[4] __attribute__((section(".itcm.bss")));
 
 /* 0x0002308e: resets the connected-channel part of the local AMP_ASSOC. */
 int ampAssocResetConnectedChannels(struct AmpLocalAssoc *assoc)
@@ -477,8 +484,8 @@ unsigned int ampAssocBuild(uint8_t *out, unsigned int physicalIndex)
 	out[1] = 6;
 	__aeabi_memcpy(out + 3, ampLocalAssoc.macAddress, 6);
 	out[9] = AMP_ASSOC_PREFERRED_CHANNEL_LIST;
-	out[10] = ampLocalAssoc.preferredChannelsLength;
 	out[11] = ampLocalAssoc.preferredChannelsLength >> 8;
+	out[10] = ampLocalAssoc.preferredChannelsLength;
 	if (physicalIndex < AMP_PHYSICAL_LINKS) {
 		channel = ampPhysicalLinks[physicalIndex].channel;
 		ampLocalAssoc.preferredChannels[6] = channel;
@@ -497,8 +504,8 @@ unsigned int ampAssocBuild(uint8_t *out, unsigned int physicalIndex)
 	if (ampLocalAssoc.connectedChannelsLength != 0) {
 		out[position] = AMP_ASSOC_CONNECTED_CHANNEL;
 		next = (uint16_t)(position + 1);
-		out[next] = ampLocalAssoc.connectedChannelsLength;
 		out[next + 1] = ampLocalAssoc.connectedChannelsLength >> 8;
+		out[next] = ampLocalAssoc.connectedChannelsLength;
 		next = (uint16_t)(next + 2);
 		__aeabi_memcpy(out + next, ampLocalAssoc.connectedChannels,
 			       ampLocalAssoc.connectedChannelsLength);
@@ -506,8 +513,8 @@ unsigned int ampAssocBuild(uint8_t *out, unsigned int physicalIndex)
 	}
 	out[position] = AMP_ASSOC_PAL_CAPABILITIES;
 	next = (uint16_t)(position + 1);
-	out[next] = ampLocalPalCapabilitiesLength;
 	out[next + 1] = ampLocalPalCapabilitiesLength >> 8;
+	out[next] = ampLocalPalCapabilitiesLength;
 	next = (uint16_t)(next + 2);
 	__aeabi_memcpy(out + next, ampLocalPalCapabilities, ampLocalPalCapabilitiesLength);
 	position = (uint16_t)(ampLocalPalCapabilitiesLength + next);
@@ -1536,9 +1543,8 @@ int ampHciEnhancedFlush(uint16_t opcode, OsaBuffer *command)
 	const uint8_t *data = ampHciParameters(command);
 	int status = 0;
 	unsigned int physical;
-	uint32_t handle = (data[4] << 8) | data[3];
 
-	if (ampLogicalLinkFind(handle) == AMP_LOGICAL_LINKS)
+	if (ampLogicalLinkFind((data[4] << 8) | data[3]) == AMP_LOGICAL_LINKS)
 		status = 2;
 	if (data[5] != 0)
 		status = AMP_HCI_INVALID_PARAMETERS;
@@ -1548,8 +1554,8 @@ int ampHciEnhancedFlush(uint16_t opcode, OsaBuffer *command)
 		ampHciSendEvent(0x39, 0, "h", (data[4] << 8) | data[3]);
 		ampHciSendNopCommandStatus();
 	} else {
-		physical = ampPhysicalLinkFindByLogical(handle);
-		ampHciSendHostEvent(11, 0, "hw", handle, (uint32_t)&ampPhysicalLinks[physical]);
+		physical = ampPhysicalLinkFindByLogical((data[4] << 8) | data[3]);
+		ampHciSendHostEvent(11, 0, "hw", (data[4] << 8) | data[3], (uint32_t)&ampPhysicalLinks[physical]);
 	}
 	return 0;
 }
