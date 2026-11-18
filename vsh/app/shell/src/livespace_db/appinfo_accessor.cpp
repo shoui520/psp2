@@ -196,7 +196,7 @@ const char *sceLsdbGetCategory(const LsdbAppInfoPtr *app)
 }
 
 /* whether the application is a "gda" (system) application */
-int SceLsdb_41019D89(const LsdbAppInfoPtr *app)
+bool SceLsdb_41019D89(const LsdbAppInfoPtr *app)
 {
 	const char *category = sceLsdbGetCategory(app);
 

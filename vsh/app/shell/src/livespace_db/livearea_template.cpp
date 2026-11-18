@@ -91,7 +91,7 @@ unsigned int LiFunctionZone::GetMask() const
 }
 
 LiFrame::LiFrame()
-	: LiPart(LI_PART_FRAME), m_multi(0), m_autoflip(0), m_rev(0), m_hasRev(false)
+	: LiPart(LI_PART_FRAME), m_multi(0), m_autoflip(0), m_rev(0), m_isDefault(false)
 {
 }
 
@@ -175,7 +175,7 @@ unsigned int LiTitle::GetMask() const
 	return LI_MASK_TITLE;
 }
 
-LiTemplate::LiTemplate() : m_contentRev(0), m_formatVersion(0), m_reserved2(0)
+LiTemplate::LiTemplate() : m_contentRev(0), m_formatVersion(0), m_modifiedDate(0)
 {
 }
 
@@ -423,6 +423,8 @@ paf::string g_liAttrTitleColor("color");
 paf::string g_liAttrFrom("from");
 paf::string g_liAttrUntil("until");
 paf::string g_liAttrItemDefault("default");
+/* a liveitem's from when it has none (from any time) */
+paf::rtc::Tick g_liFromAny;
 paf::string g_liTagCntry("cntry");
 paf::string g_liTagExcludeCntry("exclude-cntry");
 paf::string g_liTagLang("lang");

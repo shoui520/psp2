@@ -43,6 +43,8 @@
 
 /* dbutil's error for SQLite's SQLITE_CONSTRAINT */
 #define LSDB_DBUTIL_ERROR_CONSTRAINT	0x80103213
+/* the error SceLsdb gives for an UPDATE whose step failed (dbutil's range) */
+#define LSDB_ERROR_UPDATE_FAILED	0x80103202
 
 /* the page numbers: the pages from 0, the folders' pages in a range of their own, and the page
    of the icons no page shows */
@@ -151,6 +153,11 @@ struct LsdbValue {
 	{
 	}
 
+	/* a text value, a copy of text */
+	LsdbValue(const paf::string &text) : type(LSDB_VALUE_TEXT), text(new paf::string(text))
+	{
+	}
+
 	/* a text value of its own */
 	LsdbValue(const char *text) : type(LSDB_VALUE_TEXT), text(new paf::string(text))
 	{
@@ -163,6 +170,35 @@ struct LsdbValue {
 		else if (type == LSDB_VALUE_TEXT)
 			text = other.text != NULL ? new paf::string(
 				*other.text) : new paf::string("");
+	}
+
+	/* sets a copy of text, or an integer */
+	void SetText(const paf::string &value)
+	{
+		if (type == LSDB_VALUE_TEXT && text != NULL)
+			*text = value;
+		else
+			text = new paf::string(value);
+		type = LSDB_VALUE_TEXT;
+	}
+
+	void SetText(const char *value)
+	{
+		if (type == LSDB_VALUE_TEXT && text != NULL)
+			*text = value;
+		else
+			text = new paf::string(value);
+		type = LSDB_VALUE_TEXT;
+	}
+
+	void SetInteger(SceInt64 value)
+	{
+		if (type == LSDB_VALUE_TEXT) {
+			delete text;
+			text = NULL;
+		}
+		integer = value;
+		type = LSDB_VALUE_INTEGER;
 	}
 
 	~LsdbValue()
@@ -211,6 +247,7 @@ typedef paf::common::SharedPtr<LsdbAppInfo> LsdbAppInfoPtr;
 #define LSDB_KEY_LAREA_TYPE	0x2A9A9293u	/* "LAREA_TYPE" */
 #define LSDB_KEY_APP_MEMSIZE	0xDCE149FAu	/* "_app_memsize" */
 #define LSDB_KEY_PROMOTE_ATTR	0xCF78B9EDu	/* "#_promote_attr" */
+#define LSDB_KEY_ATTRIBUTE_MINOR	0x8FC97EB1u	/* "ATTRIBUTE_MINOR" */
 #define LSDB_KEY_FG_TITLE_ID	0x308A7798u	/* "_fg_title_id" */
 #define LSDB_KEY_DISC_ID	0x194D012Cu	/* "DISC_ID" */
 #define LSDB_KEY_TITLE_ID_SFO	0xF960D54Fu	/* "TITLE_ID" */
@@ -436,6 +473,8 @@ int AppDbAddPage(ActivityDbConnection *connection, int pageNo, LsdbIconList *ico
 	int create);
 int AppDbDeletePage(ActivityDbConnection *connection, int pageNo);
 int AppDbIsNoPosition(int pageNo, int pos);
+int AppDbGetTitleIconOnly(ActivityDbConnection *connection, const paf::string *titleId,
+	LsdbIconPtr *icon, int *pageNo, bool theme);
 int AppDbFindTitleIcon(ActivityDbConnection *connection, const paf::string *titleId,
 	LsdbIconPtr *icon, int *pageNo, bool theme);
 int AppDbSetAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info, bool update,
@@ -477,7 +516,7 @@ find(vector<LsdbUri>::iterator _First, vector<LsdbUri>::iterator _Last, const Ls
 }
 }
 
-int AppDbDeleteThemeOf(ActivityDbConnection *connection, const paf::string *titleId);
+int AppDbDeleteBgAppInfo(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbDeleteAppInfo(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbDeleteUris(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbGetPageCount(ActivityDbConnection *connection, int *count);
@@ -490,7 +529,6 @@ int AppDbGetAppInfo(ActivityDbConnection *connection, const paf::string *titleId
 	LsdbAppInfoPtr *info);
 int AppDbHasAppInfo(ActivityDbConnection *connection, const paf::string *titleId);
 int AppDbReplaceAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info);
-int AppDbMergeAppInfo(ActivityDbConnection *connection, LsdbAppInfoPtr *app, bool main);
 int AppDbUpdateUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app);
 int AppDbRefreshUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app);
 int AppDbUpdateTitleIcons(ActivityDbConnection *connection, const paf::string *titleId,
@@ -530,18 +568,31 @@ int AppDbGetThemeIds(ActivityDbConnection *connection, paf::vector<paf::string> 
 extern "C" {
 int SceLsdb_06CD70C5(void);
 int SceLsdb_68059E87(void);
+int SceLsdb_60B535FD(int source, int language);
+paf::string SceLsdb_88FDC55C(int source);
 int SceLsdb_2AB5A403(const char *titleId, const LsdbIconLocation *location);
 int SceLsdb_2DF6EA05(const char *titleId);
 int SceLsdb_30900530(void);
-int SceLsdb_E05F71CB(void);
-int SceLsdb_A92420DA(int added, int pageNo);
+void SceLsdb_E05F71CB(void);
+int SceLsdb_A92420DA(bool added, int pageNo);
+bool SceLsdb_0746F1E9(const char *titleId, LsdbIconLocation *location);
+bool SceLsdb_74DDAE58(int pageNo, int pos);
+int SceLsdb_81759902(void);
+bool SceLsdb_8DEDCA55(void);
+void SceLsdb_DEC47CBD(bool readOnly);
 int SceLsdb_6E4B6EBF(int folderId, int *pageNo, int *pos, const char *title);
 unsigned int SceLsdb_63C29E70(int language);
 
 /* an application's values: its title ID, its SUPPORT_URI text, whether it is a "gda" title */
 const char *sceLsdbGetName(const LsdbAppInfoPtr *app);
 const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
-int SceLsdb_41019D89(const LsdbAppInfoPtr *app);
+bool SceLsdb_41019D89(const LsdbAppInfoPtr *app);
+int sceLsdbGetSystemVersion(const LsdbAppInfoPtr *app);
+int sceLsdbGetType(const LsdbAppInfoPtr *app);
+const char *SceLsdb_C070E42E(const LsdbAppInfoPtr *app);
+int SceLsdb_BE72A404(const char *titleId);
+bool SceLsdb_69B32F6C(int value);
+int SceLsdb_1673AD48(void);
 }
 
 /* 1 for a title the PSP compatibility layer runs (SceCompatForVsh) */
@@ -802,9 +853,18 @@ struct AppInfoSClient {
 typedef void (*LsdbEventCallback)(int event, void *info, void *arg);
 
 struct LsdbEventListener {
+	LsdbEventListener() : callback(NULL), arg(NULL)
+	{
+	}
+
 	LsdbEventCallback callback;
 	void *arg;
 };
+
+extern "C" {
+int SceLsdb_5FCAF61C(LsdbEventListener *listener);
+int SceLsdb_BF481B29(LsdbEventListener *listener, LsdbEventCallback callback, void *arg);
+}
 
 /*
  * A reader of the application database for another thread: each query runs in a transaction
@@ -908,7 +968,7 @@ public:
 	static int Upgrade(ActivityDbConnection *connection, int version);
 
 	int Open(ActivityDbAccess *access);
-	int Close();
+	void Close();
 	void NotifyListeners();
 	int ResetPopupCount();
 	int ClearPopups();
@@ -983,14 +1043,92 @@ struct NewEventAccessor {
 	NewEventAccessorImpl *m_impl;
 };
 
+/* SceAppMgrUser's: the path app0 of process pid is mounted from (292 bytes) */
+extern "C" int sceAppMgrGetRawPathOfApp0ByPidForShell(SceUID pid, char *path);
+extern "C" int sceAppMgrGetRawPath(const char *path, char *rawPath, int size);
+
+/* a title's parental control state the LiveArea keeps (tbl_livearea's pcc columns) */
+struct LiPcc {
+	SceUInt64 updDate;		/* an rtc tick */
+	int resStatus;			/* kept less one */
+	int signOff;
+};
+
+#define LI_PCC_UPD_DATE		1
+#define LI_PCC_RES_STATUS	2
+#define LI_PCC_SIGN_OFF		4
+
+/* the LiveArea's errors: no template.xml, one that cannot be read, one too large */
+#define LI_ERROR_NO_TEMPLATE		0x80104003
+#define LI_ERROR_INVALID_TEMPLATE	0x80104004
+#define LI_ERROR_TEMPLATE_TOO_LARGE	0x80104009
+#define LI_ERROR_NO_FILE		0x80104005	/* an image file not found */
+#define LI_ERROR_FILES_TOO_LARGE	0x80104007	/* a template's files over LI_FILES_SIZE_MAX */
+#define LI_ERROR_IMAGE_FORMAT		0x80104008	/* an image neither PNG nor GIM */
+#define LI_ERROR_NO_FRAME		0x8010400A	/* no frame of that id */
+
+/* the LiveAreas ur0: holds, a frame's userdata read back, the copy buffer of a file */
+#define LI_UR0_TITLE_MAX		88
+#define LI_USERDATA_MAX			1023
+#define LI_COPY_BUFFER_SIZE		0x2000
+#define LI_FILES_SIZE_MAX		0x100000
+#define LI_RAW_PATH_SIZE		1024
+
+/* the LiveArea database (tbl_livearea, its frames and its files): one per process */
 class LiDaemon {
 public:
+	LiDaemon() : m_access(NULL), m_mutex("SceLsdbLiDaemon", 0)
+	{
+	}
+
+	static LiDaemon *Instance();
 	static LiDaemon *GetInstance();
 	static int Upgrade(ActivityDbConnection *connection, int version);
 
 	int Open(ActivityDbAccess *access);
 	int Close();
-	int UpdateTitles(const paf::string &titleId, int language, bool notify);
+	int UpdateTitles(const paf::string &titleId, int language, paf::string *path);
+	int Register(const paf::string *titleId, const char *dir, int language);
+	int DeleteTitle(ActivityDbConnection *connection, const paf::string *titleId);
+	int Delete(const paf::string *titleId);
+	int GetTemplate(paf::common::SharedPtr<LiTemplate> *tmpl, const paf::string *titleId,
+			bool keepDefault);
+	int GetUserdata(const paf::string *titleId, const paf::string *frameId,
+			paf::string *userdata, SceUID pid);
+	int StoreContents(const paf::string *titleId, paf::string *path, bool system,
+			  bool network);
+	int Update(const paf::string *titleId, paf::common::SharedPtr<LiTemplate> *tmpl,
+		   const char *dir, bool keepStyle, paf::string *path, bool system, bool network,
+		   unsigned int *mask, paf::string *storedPath);
+	int UpdateFromDir(const paf::string *titleId, const char *dir, unsigned int *mask,
+			  const SceUInt64 *modifiedDate, paf::string *storedPath, SceUID pid);
+	int UpdateTemplate(const paf::string *titleId,
+			   paf::common::SharedPtr<LiTemplate> *tmpl, const char *dir, bool keepStyle,
+			   unsigned int *mask, paf::string *storedPath, SceUID pid);
+	void ResetContentsPath(const paf::string *titleId, const char *path);
+	int HasFunction(const paf::string *titleId, int func);
+	int GetPcc(const paf::string *titleId, LiPcc *pcc);
+	int SetPcc(const paf::string *titleId, bool function0, const LiPcc *pcc, int pccFlags);
+	int SetFunction(const paf::string *titleId, const LiFunction *function);
+	int RemoveFunction(const paf::string *titleId, int func);
+	int GetModifiedDate(const paf::string *titleId, SceUInt64 *date);
+	int SetModifiedDate(const paf::string *titleId, const SceUInt64 *date);
+	int GetRevision(const paf::string *titleId, const char *frameId, SceInt64 *rev,
+			paf::string *orgPath, SceUID pid);
+	int GetUr0TitleToRemove(paf::vector<paf::string> *excluded, paf::string *titleId);
+
+	/* add_rm_list(path): a file the database dropped, to remove once it is committed */
+	static void AddRmList(sqlite3_context *context, int argc, sqlite3_value **argv);
+
+	/* the files to remove when a transaction ends: those dropped, or added if it was rolled
+	   back */
+	static void RemoveFiles(int rolledBack);
+
+	ActivityDbAccess *m_access;
+	int m_reserved;
+	paf::thread::RMutex m_mutex;
+	paf::vector<paf::string> m_rmList;	/* the files the database dropped */
+	paf::vector<paf::string> m_addList;	/* the files written for it */
 };
 
 /* the listener of application events the LiveArea keeps its titles with */
@@ -1029,10 +1167,15 @@ int SceLsdb_01790EDE(AppInfoSClient *client, const LsdbTheme *theme, const LsdbT
 	const LsdbThemeText *provider);
 int SceLsdb_54F188A5(AppInfoSClient *client, const paf::string *id);
 int SceLsdb_637814FE(AppInfoSClient *client);
+int SceLsdb_CF4B3684(AppInfoSClient *client, int pageNo, unsigned int pageCount);
+int SceLsdb_4DB9BCB4(AppInfoSClient *client);
 AppInfoQClient *SceLsdb_A6D8772C(AppInfoQClient *client);
 int SceLsdb_DEF5C3F9(AppInfoQClient *client);
 AppInfoQClient *SceLsdb_E2101B03(AppInfoQClient *client);
 int SceLsdb_E90B81CD(AppInfoQClient *client);
+int SceLsdb_76B75713(AppInfoQClient *client, LsdbQueryCondition *conditions,
+	paf::vector<paf::string> *titleIds, unsigned int flags);
+int SceLsdb_D239031A(AppInfoQClient *client, const paf::string *titleId, LsdbAppInfoPtr *info);
 int SceLsdb_65ECEF39(AppInfoQClient *client, const paf::string *titleId, unsigned int key,
 	LsdbValue *value);
 SceInt64 SceLsdb_61F17FDA(AppInfoQClient *client, int key, SceInt64 defaultValue);
@@ -1041,9 +1184,3 @@ int SceLsdb_64DD44C2(AppInfoQClient *client, const paf::string *id, int language
 }
 
 #endif
-#define LSDB_KEY_ATTRIBUTE_MINOR	0x8FC97EB1u	/* "ATTRIBUTE_MINOR" */
-int SceLsdb_CF4B3684(AppInfoSClient *client, int pageNo, unsigned int pageCount);
-int SceLsdb_4DB9BCB4(AppInfoSClient *client);
-int SceLsdb_76B75713(AppInfoQClient *client, LsdbQueryCondition *conditions,
-	paf::vector<paf::string> *titleIds, unsigned int flags);
-int SceLsdb_D239031A(AppInfoQClient *client, const paf::string *titleId, LsdbAppInfoPtr *info);

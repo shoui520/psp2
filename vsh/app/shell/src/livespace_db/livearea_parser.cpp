@@ -1249,8 +1249,10 @@ int LiParser::Parse()
 			return -1;
 	} else {
 		if (file.get() == NULL) {
+#if !defined(FW_TYPE_CEX)	/* a retail system prints no errors */
 			sceClibPrintf("[livearea xml]xmlfile is not found. "
 				      "The defaul livearea is shown.\n");
+#endif
 			return -4;
 		}
 		if (file->GetFileSize() > LI_TEMPLATE_SIZE_MAX) {

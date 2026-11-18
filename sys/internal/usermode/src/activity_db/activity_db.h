@@ -99,6 +99,20 @@ int SceActivityDb_94516607(ActivityDbAccess *access, const ActivityDbFunction *f
 /* runs count SQL statements on the connection */
 int SceActivityDb_D3277649(ActivityDbConnection *connection, const char *const *sql, int count);
 
+/* calls callback when the current transaction ends: with 1 when it was rolled back, else 0 */
+int SceActivityDb_14DE3B37(ActivityDbAccess *access, void (*callback)(int rolledBack));
+
+/* the activity daemon (its mutex "SceLsdbActDaemon"), made at its first use */
+typedef struct ActivityDbDaemon ActivityDbDaemon;
+ActivityDbDaemon *SceActivityDb_FBB82B37(void);
+
+/*
+ * Queues the deletion of the activities of the titles in titleIds (a paf::vector of
+ * paf::string) on the daemon's queue; done, when not NULL, is told the result
+ */
+int SceActivityDb_D67DF90F(ActivityDbDaemon *daemon, int queue, const void *titleIds,
+	void *done);
+
 /* opens (or makes) the activity database at path with flags, through the library's one instance */
 int SceActivityDb_B5012F40(const char *path, int flags);
 

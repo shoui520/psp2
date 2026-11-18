@@ -7,6 +7,50 @@
 #include <datetime/datetime.h>
 #include "livespace_db_internal.h"
 
+/* a copy of a vector of ints, out of line where Sony's build calls it (MoveIcons) */
+namespace paf {
+template<> inline __attribute__((noinline))
+vector<int, allocator<int> >::vector(const vector<int, allocator<int> > &src) : alloc(src.alloc)
+{
+	count = 0;
+	limit = 0;
+
+	int *data = alloc.allocate(src.limit);
+
+	if (data == NULL)
+		alloc.report_failure();
+	ptr = data;
+	if (data != NULL) {
+		count = src.count;
+		limit = src.limit;
+		for (size_type i = 0; i < count; ++i)
+			new (&ptr[i]) int(src.ptr[i]);
+	}
+}
+
+/* CreateFolder's one-page list, which Sony's build makes out of line */
+template<> inline __attribute__((noinline))
+vector<common::SharedPtr<LsdbPage>, allocator<common::SharedPtr<LsdbPage> > >::vector(
+	size_type size, const common::SharedPtr<LsdbPage> &val,
+	const allocator<common::SharedPtr<LsdbPage> > &al) : alloc(al)
+{
+	count = 0;
+	limit = 0;
+
+	common::SharedPtr<LsdbPage> *buffer = alloc.allocate(size);
+
+	if (buffer == NULL)
+		alloc.report_failure();
+	ptr = buffer;
+	if (buffer != NULL) {
+		count = size;
+		limit = size;
+		for (size_type i = 0; i < count; ++i)
+			new (&ptr[i]) common::SharedPtr<LsdbPage>(val);
+	}
+}
+}
+
 /* the result of opening the database, until a rebuild clears it */
 static int s_openResult = 0;
 const char *g_lsdbAppDbPath = "ur0:shell/db/app.db";
@@ -641,12 +685,12 @@ int AppInfoDaemon::RegisterApp(LsdbAppInfoPtr *app, int pageNo, const LsdbIconPt
 	int result = AppDbAddIcon(connection, pageNo, icon, NULL, 0);
 	if (result != 0)
 		goto end;
-	result = AppDbSetAppInfo(connection, app, 0);
+	result = AppDbAddAppInfo(connection, app, false, -1);
 	if (result != 0)
 		goto end;
 	for (paf::vector<LsdbAppInfoPtr>::iterator other = related->begin(); other != related->end();
 	     ++other) {
-		result = AppDbSetAppInfo(connection, &*other, 0);
+		result = AppDbAddAppInfo(connection, &*other, false, -1);
 		if (result != 0)
 			goto end;
 	}
@@ -692,7 +736,7 @@ int AppInfoDaemon::UnregisterApp(const paf::string *titleId, bool removeFolder, 
 		bool inFolder = false;
 		LsdbIconPtr icon(new LsdbIcon);
 
-		if (AppDbFindTitleIcon(connection, titleId, &icon, &iconPageNo, 0) != 0) {
+		if (AppDbGetTitleIconOnly(connection, titleId, &icon, &iconPageNo, 0) != 0) {
 			removeFolder = false;
 		} else {
 			if (removeFolder && LSDB_IS_FOLDER_ID(iconPageNo))
@@ -704,7 +748,7 @@ int AppInfoDaemon::UnregisterApp(const paf::string *titleId, bool removeFolder, 
 	bool onMemoryCard = AppInfoDaemonIsOnMemoryCard(connection, titleId);
 	int result;
 
-	AppDbDeleteThemeOf(connection, titleId);
+	AppDbDeleteBgAppInfo(connection, titleId);
 	result = AppDbDeleteAppInfo(connection, titleId);
 	if (result != 0)
 		goto end;
@@ -769,11 +813,11 @@ int AppInfoDaemon::UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
 		{
 			paf::string theme(titleId);
 
-			AppDbDeleteThemeOf(connection, &theme);
+			AppDbDeleteBgAppInfo(connection, &theme);
 		}
 		for (paf::vector<LsdbAppInfoPtr>::iterator other = related->begin();
 		     other != related->end(); ++other) {
-			result = AppDbSetAppInfo(connection, &*other, 0);
+			result = AppDbAddAppInfo(connection, &*other, false, -1);
 			if (result != 0)
 				goto end;
 		}
@@ -785,9 +829,12 @@ int AppInfoDaemon::UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
 				result = LSDB_ERROR_NO_TITLE_ID;
 				goto end;
 			}
-			paf::string iconTitleId(titleId);
+			{
+				paf::string iconTitleId(titleId);
 
-			result = AppDbUpdateTitleIcons(connection, &iconTitleId, icon, LSDB_ICON_FIELD_ALL);
+				result = AppDbUpdateTitleIcons(connection, &iconTitleId, icon,
+					LSDB_ICON_FIELD_ALL);
+			}
 			if (result != 0)
 				goto end;
 		}
@@ -808,12 +855,12 @@ int AppInfoDaemon::RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, unsi
 	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
-	int result = AppDbMergeAppInfo(connection, app, true);
+	int result = AppDbSetAppInfo(connection, app, true);
 	if (result != 0)
 		goto end;
 	for (paf::vector<LsdbAppInfoPtr>::iterator other = related->begin(); other != related->end();
 	     ++other) {
-		result = AppDbMergeAppInfo(connection, &*other, false);
+		result = AppDbSetAppInfo(connection, &*other, false);
 		if (result != 0)
 			goto end;
 	}
@@ -996,7 +1043,8 @@ int AppInfoDaemon::SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *the
 			LsdbIconPtr icon(new LsdbIcon);
 
 			icon->iconPath = LsdbThemeInfoGetFilePath(theme->get(), &param->m_iconFilePath);
-			result = AppDbUpdateTitleIcons(connection, &paf::string(titleId), &icon, LSDB_ICON_FIELD_THEME_ICON_PATH);
+			result = AppDbUpdateTitleIcons(connection, &paf::string(titleId), &icon,
+				LSDB_ICON_FIELD_THEME_ICON_PATH);
 			if (result != 0) {
 				if (result != LSDB_ERROR_NOT_FOUND)
 					goto end;
@@ -1022,8 +1070,11 @@ int AppInfoDaemon::SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *the
 
 		result = AppDbGetPageCount(connection, &count);
 		if (result == 0) {
-			paf::vector<int> pageNos(count, 0);
-			LsdbPageList pages(count, paf::common::SharedPtr<LsdbPage>());
+			paf::vector<int> pageNos;
+			LsdbPageList pages;
+
+			pageNos.resize(count, 0);
+			pages.resize(count, paf::common::SharedPtr<LsdbPage>());
 
 			for (int i = 0; i < count; i++) {
 				pageNos[i] = i;

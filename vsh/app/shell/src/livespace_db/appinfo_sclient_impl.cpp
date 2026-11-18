@@ -91,7 +91,8 @@ int AppInfoSClientImpl::GetAppInfo(const paf::string *titleId, LsdbAppInfoPtr *i
 	return AppInfoDaemon::GetInstance()->GetAppInfo(titleId, info);
 }
 
-int AppInfoSClientImpl::GetAppInfoValue(const paf::string *titleId, unsigned int key, LsdbValue *value)
+int AppInfoSClientImpl::GetAppInfoValue(const paf::string *titleId, unsigned int key,
+	LsdbValue *value)
 {
 	return AppInfoDaemon::GetInstance()->GetAppInfoValue(titleId, key, value);
 }
@@ -135,7 +136,8 @@ int AppInfoSClientImpl::RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
 	return AppInfoDaemon::GetInstance()->RefreshApp(app, icon, fields, related, true);
 }
 
-int AppInfoSClientImpl::UpdateAppInfoBits(const paf::string *titleId, unsigned int key, const LsdbValue *bits, SceInt64 mask)
+int AppInfoSClientImpl::UpdateAppInfoBits(const paf::string *titleId, unsigned int key,
+	const LsdbValue *bits, SceInt64 mask)
 {
 	return AppInfoDaemon::GetInstance()->UpdateAppInfoBits(titleId, key, bits, mask, true);
 }

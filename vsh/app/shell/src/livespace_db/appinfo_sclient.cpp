@@ -146,7 +146,8 @@ int SceLsdb_87EE0526(AppInfoSClient *client, const paf::string *titleId, LsdbApp
 	return client->m_impl->GetAppInfo(titleId, info);
 }
 
-int SceLsdb_DB73BD7E(AppInfoSClient *client, const paf::string *titleId, unsigned int key, LsdbValue *value)
+int SceLsdb_DB73BD7E(AppInfoSClient *client, const paf::string *titleId, unsigned int key,
+	LsdbValue *value)
 {
 	return client->m_impl->GetAppInfoValue(titleId, key, value);
 }
@@ -162,7 +163,8 @@ int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *titleId, LsdbIco
 	return client->m_impl->FindTitleIcon(titleId, icon, pageNo, theme);
 }
 
-int SceLsdb_7F53B3B6(AppInfoSClient *client, const int *folderId, int *pageNo, const LsdbIconPtr *icon)
+int SceLsdb_7F53B3B6(AppInfoSClient *client, const int *folderId, int *pageNo,
+	const LsdbIconPtr *icon)
 {
 	return client->m_impl->GetFolderIcon(folderId, pageNo, icon);
 }
@@ -193,13 +195,15 @@ int SceLsdb_391170D3(AppInfoSClient *client, const char **schemes, unsigned int 
 	return client->m_impl->GetSchemeUris(schemes, count, uris);
 }
 
-int SceLsdb_84D3F674(AppInfoSClient *client, LsdbAppInfoPtr *app, int pageNo, const LsdbIconPtr *icon,
+int SceLsdb_84D3F674(AppInfoSClient *client, LsdbAppInfoPtr *app, int pageNo,
+	const LsdbIconPtr *icon,
 	paf::vector<LsdbAppInfoPtr> *related)
 {
 	return client->m_impl->RegisterApp(app, pageNo, icon, related);
 }
 
-int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string *titleId, bool removeFolder, int *pageNo)
+int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string *titleId, bool removeFolder,
+	int *pageNo)
 {
 	return client->m_impl->UnregisterApp(titleId, removeFolder, pageNo);
 }

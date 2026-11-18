@@ -12,6 +12,7 @@
 #include <libkernel/libkernel.h>
 #include <kernel/iofilemgr.h>
 #include <rtc.h>
+#include <ini_file_processor/ini_file_processor.h>
 
 /* the libkernel mspace calls the tree has no header of yet */
 typedef void *SceClibMspace;
@@ -22,15 +23,6 @@ SceClibMspace sceClibMspaceCreate(void *base, SceSize size);
 int sceClibMspaceDestroy(SceClibMspace mspace);
 }
 
-#define SCE_INI_FILE_PROCESSOR_ERROR_OUT_OF_MEMORY	-2138832895	/* 0x80840001 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_NOT_OPEN		-2138832894	/* 0x80840002 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_INVALID_ARGUMENT	-2138832890	/* 0x80840006 */
-
-/* the application's allocator: one function to take memory and one to give it back */
-struct IniAllocatorOps {
-	void *(*alloc)(SceSize size, void *context);
-	void (*free)(void *ptr, void *context);
-};
 
 /* the library's pool of 4096 byte blocks, which it makes from a memory block when it is first used */
 struct IniPool : IniAllocatorOps {
@@ -44,14 +36,6 @@ struct IniAllocatorRef {
 	IniAllocatorOps *ops;
 	void *context;
 	bool owned;
-};
-
-/* what the application gives the processor: the size of the pool, or its own allocator */
-struct IniConfig {
-	SceSize poolSize;
-	SceUInt32 reserved;
-	IniAllocatorOps *ops;
-	void *context;
 };
 
 /* placement new, which the library defines itself */
@@ -155,7 +139,6 @@ extern IniString *iniStringSubstr(IniString *result, const IniString *source, Sc
 extern SceSize iniPathDeviceLength(const char *path);
 extern const char *iniPathFileName(const char *path);
 
-#define SCE_INI_FILE_PROCESSOR_ERROR_NO_FILE_NAME	-2138832887	/* 0x80840009 */
 
 class IniBuffer;
 /* the buffer a copy goes through (its other methods are not known yet) */
@@ -168,8 +151,6 @@ public:
 	virtual void *data();
 	virtual SceSize size();
 };
-
-#define INI_RESULT_STREAM_END	8650753		/* 0x840001 */
 
 /* what the processor asks of a file: the base keeps the name, the mode and the last error */
 class IniFileBase {
@@ -271,13 +252,6 @@ struct IniEntry {
 	IniEntry *next;
 };
 
-#define SCE_INI_FILE_PROCESSOR_ERROR_EMPTY		-2138832891	/* 0x80840005 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_NOT_WRITABLE	-2138832889	/* 0x80840007 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_BAD_KEY		-2138832882	/* 0x8084000e */
-#define SCE_INI_FILE_PROCESSOR_ERROR_BUFFER_TOO_SMALL	-2138832879	/* 0x80840011 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_NO_SUCH_KEY	-2138832880	/* 0x80840010 */
-#define SCE_INI_FILE_PROCESSOR_ERROR_NO_OFFSET		-2138832881	/* 0x8084000f */
-#define SCE_INI_FILE_PROCESSOR_ERROR_TOO_MANY		-2138832876	/* 0x80840014 */
 #define INI_MODE_UNOPENED	32
 #define INI_MODE_WRITABLE	1
 

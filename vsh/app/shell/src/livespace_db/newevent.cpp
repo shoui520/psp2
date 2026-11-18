@@ -820,7 +820,7 @@ __attribute__((noinline)) int NeDaemon::Open(ActivityDbAccess *access)
 	return 0;
 }
 
-__attribute__((noinline)) int NeDaemon::Close()
+__attribute__((noinline)) void NeDaemon::Close()
 {
 	if (m_access != NULL) {
 		NeFunction increment("increment_popup_num", IncrementPopupNum);
@@ -837,7 +837,6 @@ __attribute__((noinline)) int NeDaemon::Close()
 		m_access = NULL;
 	}
 	m_listeners.clear();
-	return 0;
 }
 
 __attribute__((noinline)) ActivityDbConnection *NeDaemon::BeginTransaction()

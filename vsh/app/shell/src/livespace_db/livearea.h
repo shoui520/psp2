@@ -29,9 +29,13 @@
 #define LI_MASK_FUNCTION_ZONE	0x20000
 #define LI_MASK_GATE		0x40000
 #define LI_MASK_TITLE		0x80000
+#define LI_MASK_STYLE		0x100000	/* a new style: the stored frames dropped */
 
 /* the frames, frame1 to frame10 */
 #define LI_FRAME_COUNT		10
+
+/* the liveitems a frame's tbl_livearea_frame row holds */
+#define LI_ROW_ITEM_COUNT	10
 
 /* the elements of a liveitem; an origin names the frame or one of them */
 #define LI_ITEM_FRAME		2
@@ -95,6 +99,17 @@ class LiFunctionZone : public LiPart {
 public:
 	LiFunctionZone();
 	virtual ~LiFunctionZone();
+
+	/* its function of func, NULL without one */
+	LiFunction *GetFunction(int func)
+	{
+		for (paf::vector<LiFunction>::iterator it = m_functions.begin();
+		     it != m_functions.end(); ++it) {
+			if (it->func == func)
+				return &*it;
+		}
+		return NULL;
+	}
 	virtual unsigned int GetMask() const;
 
 	paf::vector<LiFunction> m_functions;
@@ -212,6 +227,17 @@ public:
 
 	bool HasElement(int type);
 
+	/* its element of type, NULL without one */
+	LiItemElement *GetElement(int type)
+	{
+		for (paf::vector<LiItemElement *>::iterator it = m_elements.begin();
+		     it != m_elements.end(); ++it) {
+			if ((*it)->m_type == type)
+				return *it;
+		}
+		return NULL;
+	}
+
 	SceUInt64 m_from;		/* 0: from any time */
 	SceUInt64 m_until;		/* -1: for ever */
 	bool m_default;
@@ -233,7 +259,7 @@ public:
 	int m_multi;
 	int m_autoflip;
 	SceInt64 m_rev;
-	bool m_hasRev;
+	bool m_isDefault;		/* its type is 0: the default frame */
 	paf::string m_userdata;
 	paf::vector<LiLiveItem *> m_items;
 };
@@ -247,12 +273,22 @@ public:
 	bool HasPart(int type);
 	bool HasFrame(const paf::string *id);
 
+	/* its part of type, NULL without one */
+	LiPart *GetPart(int type)
+	{
+		for (paf::list<LiPart *>::iterator it = m_parts.begin(); it != m_parts.end(); ++it) {
+			if ((*it)->m_type == type)
+				return *it;
+		}
+		return NULL;
+	}
+
 	paf::string m_style;
 	paf::string m_formatVer;
 	SceInt64 m_contentRev;
 	int m_formatVersion;		/* format-ver's number (LiFormatVersion) */
 	paf::list<LiPart *> m_parts;
-	SceInt64 m_reserved2;
+	SceUInt64 m_modifiedDate;	/* an rtc tick, 0 without one */
 };
 
 /* reads a template.xml into a LiTemplate: the file, whether it is a system application's, and
@@ -449,7 +485,17 @@ int LiCheckModel(LiParser *parser, paf::list<XmlElement> *children);
 int LiCheckPokesute(LiParser *parser, paf::list<XmlElement> *children, int formatVersion,
 		    int pokesute, int *result);
 
+/* livearea_api.cpp: a liveitem as its template's XML, and read from it */
+extern paf::rtc::Tick g_liFromAny;
+int LiWritePlacement(XmlElement *element, LiPlacedElement *placed);
+int LiWriteLiveitem(paf::string *out, LiLiveItem *item, bool system);
+bool LiReadLiveitem(LiLiveItem *item, const char *xml, bool anyModel, int age,
+		    int formatVersion, int pokesute);
+
 extern "C" {
+
+int SceLsdb_5BDC6351(LiFrame **frame, const char *xml, int size, const int *language,
+		     const char *country, int age, bool system);
 
 /* a liveitem's time: from and until round now (whole: until only); 1 when it shows */
 int SceLsdb_628CFBE1(LiLiveItem *item, bool whole, bool network);

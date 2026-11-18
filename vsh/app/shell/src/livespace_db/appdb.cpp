@@ -45,7 +45,8 @@ int AppDbGetPageCount(ActivityDbConnection *connection, int *count)
 }
 
 /* binds a page: its number to ?1, its columns to ?2 ... ?8 */
-static __attribute__((noinline)) int AppDbBindPage(RefPtr<Statement> *statement, int pageNo, const LsdbPage *page)
+static __attribute__((noinline)) int AppDbBindPage(RefPtr<Statement> *statement, int pageNo,
+	const LsdbPage *page)
 {
 	int result = (*statement)->ClearBindings();
 
@@ -83,9 +84,9 @@ static __attribute__((noinline)) int AppDbBindPage(RefPtr<Statement> *statement,
  * title ID and folder to ?20 ... ?22; then where it is: the title ID's icons (?30), the rowid
  * (?30) or the position on pageNo (?30, ?31; pos, or the icon's own with a negative pos).
  */
-static __attribute__((noinline)) int AppDbBindIcon(RefPtr<Statement> *statement, int pageNo, const paf::string *titleId,
-	const LsdbIcon *icon, bool insert, unsigned int fields, int pos, const void *image,
-	int imageSize, int type)
+static __attribute__((noinline)) int AppDbBindIcon(RefPtr<Statement> *statement, int pageNo,
+	const paf::string *titleId, const LsdbIcon *icon, bool insert, unsigned int fields, int pos,
+	const void *image, int imageSize, int type)
 {
 	int result = (*statement)->ClearBindings();
 
@@ -339,7 +340,8 @@ static __attribute__((noinline)) int AppDbBindValue(RefPtr<Statement> *statement
 }
 
 /* sets a setting (tbl_config) */
-static __attribute__((noinline)) int AppDbSetConfigValue(ActivityDbConnection *connection, int key, const LsdbValue *value)
+static __attribute__((noinline)) int AppDbSetConfigValue(ActivityDbConnection *connection, int key,
+	const LsdbValue *value)
 {
 	RefPtr<Statement> statement;
 	int result = connection->Prepare(paf::string("REPLACE INTO tbl_config VALUES(?, ?)"),
@@ -400,7 +402,8 @@ int AppDbUpdateConfigBits(ActivityDbConnection *connection, int key, SceInt64 bi
 }
 
 /* takes a column's value: an integer or a copy of its text */
-static __attribute__((noinline)) void LsdbValueSetColumn(const dbutil::Value *column, LsdbValue *value)
+static __attribute__((noinline)) void LsdbValueSetColumn(const dbutil::Value *column,
+	LsdbValue *value)
 {
 	if (column->type == SQLITE_INTEGER) {
 		SceInt64 integer = column->data.integer;
@@ -423,7 +426,8 @@ static __attribute__((noinline)) void LsdbValueSetColumn(const dbutil::Value *co
 }
 
 /* reads a setting; LSDB_ERROR_NOT_FOUND without it */
-static __attribute__((noinline)) int AppDbGetConfigValue(ActivityDbConnection *connection, int key, LsdbValue *value)
+static __attribute__((noinline)) int AppDbGetConfigValue(ActivityDbConnection *connection, int key,
+	LsdbValue *value)
 {
 	RefPtr<Statement> statement;
 	int result = connection->Prepare(paf::string("SELECT val FROM tbl_config WHERE ikey=?"),
@@ -1002,7 +1006,8 @@ int AppDbMoveIcons(ActivityDbConnection *connection, paf::vector<int> *fromPages
 }
 
 /* updates each page of pageNos from its page of pages */
-int AppDbUpdatePage(ActivityDbConnection *connection, paf::vector<int> *pageNos, LsdbPageList *pages)
+int AppDbUpdatePage(ActivityDbConnection *connection, paf::vector<int> *pageNos,
+	LsdbPageList *pages)
 {
 	if (pageNos->size() < pages->size() || pageNos->size() == 0)
 		return LSDB_ERROR_INVALID_ARGUMENT;
@@ -1765,7 +1770,7 @@ out:
  * A title's icon into icon (with theme, its theme image) and, without pageNo NULL, the number
  * of its page; LSDB_ERROR_NOT_FOUND without one.
  */
-static __attribute__((noinline)) int AppDbGetTitleIconOnly(ActivityDbConnection *connection,
+__attribute__((noinline)) int AppDbGetTitleIconOnly(ActivityDbConnection *connection,
 	const paf::string *titleId, LsdbIconPtr *icon, int *pageNo, bool theme)
 {
 	if (titleId->size() == 0)
@@ -1994,7 +1999,7 @@ int AppDbUpdateIconTitles(ActivityDbConnection *connection, unsigned int key)
 		if (result != 0)
 			break;
 		result = update->Step(1);
-		if (result != 1)
+		if (result != 0 && result != 1)
 			break;
 	}
 	if (result == 1)
@@ -2119,9 +2124,11 @@ int AppDbReplaceAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *
 	int result = AppDbCheckAppInfoKeys(info);
 
 	if (result == 0) {
-		paf::string titleId = LsdbValueString(id->second);
+		{
+			paf::string titleId = LsdbValueString(id->second);
 
-		result = AppDbDeleteAppInfo(connection, &titleId);
+			result = AppDbDeleteAppInfo(connection, &titleId);
+		}
 		if (result == 0)
 			result = AppDbAddAppInfo(connection, info, false, -1);
 	}
@@ -2163,7 +2170,7 @@ int AppDbSetAppInfo(ActivityDbConnection *connection, const LsdbAppInfoPtr *info
 				if (result == 0) {
 					if (column.type != SQLITE_INTEGER)
 						result = LSDB_ERROR_DATABASE;
-					else if ((int)column.data.integer == 0)
+					else if (column.data.integer == 0)
 						result = LSDB_ERROR_NOT_FOUND;
 				}
 			}
@@ -2388,7 +2395,7 @@ int AppDbAddUris(ActivityDbConnection *connection, LsdbAppInfoPtr *app)
 	const char *supportUri = SceLsdb_AE60C3A5(app);
 
 	if (supportUri != NULL) {
-		bool trusted = SceLsdb_41019D89(app) != 0 || AppDbIsUriTitle(titleId);
+		bool trusted = SceLsdb_41019D89(app) || AppDbIsUriTitle(titleId);
 		paf::list<paf::string> lines;
 
 		paf::common::string_util::tokenize(lines, paf::string(supportUri), 0, '\n');

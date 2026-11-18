@@ -18,11 +18,13 @@ int SceLsdb_2944E643(int value);
 /* registers the callback livespace_db calls back into the shell with */
 void SceLsdb_AADCDCFC(void *callback);
 
-/* reads a value of a result item (a title ID) into out */
-int SceLsdb_EF880EFE(const void *item, void *out);
-
 #ifdef __cplusplus
 }
+
+#include <std/string>
+
+/* reads the title's LiveArea again from its contents, in the system language */
+extern "C" int SceLsdb_EF880EFE(const paf::string *titleId, paf::string *path);
 #endif
 
 #endif

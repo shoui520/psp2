@@ -100,7 +100,7 @@ int LsdbDatabase::SetLanguage(int language)
 		return LSDB_ERROR_NOT_READY;
 	appInfoResult = AppInfoDaemon::GetInstance()->UpdateIconTitles(language);
 	liveAreaResult = LiDaemon::GetInstance()->UpdateTitles(paf::string((const char *)NULL, 0),
-		language, false);
+		language, NULL);
 	if (appInfoResult == 0 && liveAreaResult == 0) {
 		param.state = -1;
 		param.version = -1;
@@ -134,7 +134,7 @@ int LsdbDatabase::ResetEvents()
 	if (NeDaemon::GetInstance()->BeginTransaction() == NULL)
 		return LSDB_ERROR_NOT_READY;
 	NeDaemon::GetInstance()->DeleteEvents(0);
-	LiDaemon::GetInstance()->UpdateTitles(paf::string(""), -1, false);
+	LiDaemon::GetInstance()->UpdateTitles(paf::string(""), -1, NULL);
 	NeDaemon::GetInstance()->EndTransaction(0);
 	return 0;
 }

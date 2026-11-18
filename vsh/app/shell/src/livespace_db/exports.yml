@@ -58,13 +58,13 @@ SceLsdb:
         - SceLsdb_41185388: 0x41185388
         - sceLsdbGetTitle: 0x4141EBCD
         - SceLsdb_43153457: 0x43153457
-        - SceLsdb_43495B68: 0x43495B68
+        - _ZN8LiParser9SetFilterEPKiPKci: 0x43495B68
         - SceLsdb_44CD0D07: 0x44CD0D07
         - SceLsdb_457F369E: 0x457F369E
         - SceLsdb_45B38A03: 0x45B38A03
         - SceLsdb_464351D0: 0x464351D0
         - sceLsdbGetBootable: 0x46BF2766
-        - SceLsdb_4B153968: 0x4B153968
+        - _ZN8LiParserD1Ev: 0x4B153968
         - SceLsdb_4B64A790: 0x4B64A790
         - SceLsdb_4C137FCC: 0x4C137FCC
         - SceLsdb_4DB9BCB4: 0x4DB9BCB4
@@ -79,7 +79,7 @@ SceLsdb:
         - SceLsdb_60C08DFF: 0x60C08DFF
         - SceLsdb_61F17FDA: 0x61F17FDA
         - SceLsdb_628CFBE1: 0x628CFBE1
-        - SceLsdb_632ACD0F: 0x632ACD0F
+        - _ZN8LiParser5ParseEv: 0x632ACD0F
         - SceLsdb_637814FE: 0x637814FE
         - sceLsdbGetAppVer: 0x63AB6A8F
         - SceLsdb_63C29E70: 0x63C29E70
@@ -88,7 +88,7 @@ SceLsdb:
         - SceLsdb_65ECEF39: 0x65ECEF39
         - SceLsdb_6769DBC4: 0x6769DBC4
         - SceLsdb_68059E87: 0x68059E87
-        - SceLsdb_685C21AB: 0x685C21AB
+        - _ZN8LiParser14SetDefaultPathEv: 0x685C21AB
         - SceLsdb_69B32F6C: 0x69B32F6C
         - SceLsdb_6AFF7E71: 0x6AFF7E71
         - SceLsdb_6C74B301: 0x6C74B301
@@ -105,9 +105,9 @@ SceLsdb:
         - SceLsdb_7AF9008C: 0x7AF9008C
         - SceLsdb_7D7F6809: 0x7D7F6809
         - SceLsdb_7F53B3B6: 0x7F53B3B6
-        - SceLsdb_800809E3: 0x800809E3
+        - _ZN8LiParserC1EPKcbb: 0x800809E3
         - SceLsdb_81759902: 0x81759902
-        - SceLsdb_840502DE: 0x840502DE
+        - _ZN7LiFrameC1Ev: 0x840502DE
         - SceLsdb_849E8DC6: 0x849E8DC6
         - SceLsdb_84D3F674: 0x84D3F674
         - SceLsdb_854DB867: 0x854DB867
@@ -175,7 +175,7 @@ SceLsdb:
         - SceLsdb_D22CFA8C: 0xD22CFA8C
         - SceLsdb_D239031A: 0xD239031A
         - SceLsdb_D322A870: 0xD322A870
-        - SceLsdb_D3EF2C98: 0xD3EF2C98
+        - _ZN10LiTemplateC1Ev: 0xD3EF2C98
         - sceLsdbGetAttribute: 0xD494B2C3
         - SceLsdb_D4B1C54E: 0xD4B1C54E
         - SceLsdb_D55B5DD6: 0xD55B5DD6
@@ -186,7 +186,7 @@ SceLsdb:
         - SceLsdb_DA0D7B0A: 0xDA0D7B0A
         - SceLsdb_DA5DC77C: 0xDA5DC77C
         - SceLsdb_DB73BD7E: 0xDB73BD7E
-        - SceLsdb_DCF95A06: 0xDCF95A06
+        - _ZN10LiTemplateD1Ev: 0xDCF95A06
         - SceLsdb_DD7D68C0: 0xDD7D68C0
         - SceLsdb_DE0DA538: 0xDE0DA538
         - SceLsdb_DEA13663: 0xDEA13663

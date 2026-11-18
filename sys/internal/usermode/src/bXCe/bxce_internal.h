@@ -859,19 +859,29 @@ namespace Sax {
  */
 class DocumentHandler {
 public:
-	virtual ~DocumentHandler() = 0;
-	virtual int startDocument(void *userData) = 0;
+	/* an application's handler takes these defaults for the events it does not handle (the
+	   importers' vtables point at them) */
+	virtual ~DocumentHandler() {}
+	virtual int startDocument(void *userData) { return 0; }
 	virtual int startElement(void *userData, const char *name, int length,
-				 const AttributeList *attrList) = 0;
-	virtual int characters(void *userData, const char *ch, int length) = 0;
-	virtual int endElement(void *userData, const char *name, int length) = 0;
-	virtual int endDocument(void *userData) = 0;
-	virtual int skippedText(void *userData, int tokenType, const char *text, int length) = 0;
-	virtual int entityData(void *userData, int entityType, const char *name, int length) = 0;
-	virtual int reserved(void *userData) = 0;
-	virtual void fatalError(void *userData, int errCode) = 0;
-	virtual int charactersWithOffset(void *userData, const char *ch, int length,
-					 int offset) = 0;
+				 const AttributeList *attrList) { return 0; }
+	virtual int characters(void *userData, const char *ch, int length) { return 0; }
+	virtual int endElement(void *userData, const char *name, int length) { return 0; }
+	virtual int endDocument(void *userData) { return 0; }
+	virtual int skippedText(void *userData, int tokenType, const char *text, int length)
+	{
+		return 0;
+	}
+	virtual int entityData(void *userData, int entityType, const char *name, int length)
+	{
+		return 0;
+	}
+	virtual int reserved(void *userData) { return 0; }
+	virtual void fatalError(void *userData, int errCode) {}
+	virtual int charactersWithOffset(void *userData, const char *ch, int length, int offset)
+	{
+		return 0;
+	}
 };
 
 /* the parser's handler that passes each event on to the application's */
