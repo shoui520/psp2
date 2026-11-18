@@ -61,6 +61,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/tree_remover.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/dir_size_counter.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psp_license.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/game_util.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

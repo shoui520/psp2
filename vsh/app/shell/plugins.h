@@ -31,6 +31,8 @@ enum {
 
 /* power_manage_plugin's functions */
 enum {
+	POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK	= 2,	/* PLACEHOLDER names: a function called on */
+	POWER_MANAGE_PLUGIN_FUNC_REMOVE_CALLBACK = 3,	/* the power events, and no longer */
 	POWER_MANAGE_PLUGIN_FUNC_GAME_HOLD	= 5,	/* PLACEHOLDER names: the game plugin at work, */
 	POWER_MANAGE_PLUGIN_FUNC_GAME_RELEASE	= 6,	/* and done */
 	POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT	= 15,

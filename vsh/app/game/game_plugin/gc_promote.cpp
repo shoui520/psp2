@@ -39,6 +39,7 @@
 #include "game_plugin.h"
 #include "game_appinfo.h"
 #include "promoter.h"
+#include "game_util.h"
 
 using namespace paf;
 
@@ -175,9 +176,6 @@ enum {
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameGcGetPromoteCount(void);		/* 0x810FCB30 */
 int shellGetGcTitleSet(void);			/* 0x81004D70: which of the system's own card titles it has */
-int gamePowerManageAddCallback(void (*func)(void *arg), void *arg);	/* 0x81063A60 */
-int gamePowerManageRemoveCallback(void (*func)(void *arg), void *arg);	/* 0x81063A8C */
-SceUInt32 gameErrorGetMessageId(int error);	/* 0x81063AB8: applauncher's text of an error */
 wstring shellFormatText(const wchar_t *format, ...);	/* 0x81343700: %s-style substitution */
 static void gameGcPromoteOnPowerEvent(void *arg);
 extern "C" int SceShell_548A3111(int event, ShellEventCallback callback, void *arg);
@@ -230,24 +228,6 @@ typedef map<string, int> GameGcPromoteTitles;
 
 /* the dialog's update handler; PLACEHOLDER: not declared in the library's header yet */
 extern "C" int SceCommonGuiDialog_17091699(int dialogId, CommonGuiDialogHandler *handler);
-
-/*
- * A dialog handler that calls a function with the dialog's value and button and its two
- * arguments. PLACEHOLDER: defined in another file of the shell (its constructor 0x81063A30), names
- * ours.
- */
-class GameDialogFuncHandler : public CommonGuiDialogHandler {
-public:
-	typedef void (*Func)(SceInt32 value, SceInt32 button, void *arg1, void *arg2);
-
-	GameDialogFuncHandler(Func func, void *arg1, void *arg2);
-
-	virtual void operator()(SceInt32 value, SceInt32 button);
-
-	Func m_func;
-	void *m_arg1;
-	void *m_arg2;
-};
 
 /* the widget of the parent with the ID, when it is of the type */
 #define GAME_GC_PROMOTE_FIND(parent, type, id)						\
