@@ -280,26 +280,33 @@ bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const paf::string &titleI
 bool gamePatchExists(const paf::string &titleId);
 
 /*
- * PLACEHOLDER: the check of an update against the installed application, defined in another
- * file of the plugin (constructor 0x8104B81C, Check 0x8104D4CA, vtable 0x8152EB1C), 40 bytes.
+ * The check of an update against the installed application (update_checker.cpp, constructor
+ * 0x8104B81C, vtable 0x8152EB1C), 40 bytes. PLACEHOLDER names.
  */
 class GameUpdateChecker {
 public:
-	GameUpdateChecker(const paf::string &path, bool flag1, bool flag2, GameJobProgress *progress,
-			  int userData);
+	GameUpdateChecker(const paf::string &path, bool replace, bool notifyTopmenu,
+			  GameJobProgress *progress, paf::string *detail);
 	virtual ~GameUpdateChecker();
 
-	int Check(const LsdbAppInfoPtr *installed, LsdbAppInfoPtr *update);
+	int CheckUx0(int installedStorage, int storage, const LsdbAppInfoPtr *installed,
+		     const LsdbAppInfoPtr *info, bool versionDiffers);
+	int ReturnToCard(const LsdbAppInfoPtr *installed);
+	int MoveToTemp(const LsdbAppInfoPtr *installed);
+	int CheckGro0(int installedStorage, int storage, const LsdbAppInfoPtr *installed,
+		      const LsdbAppInfoPtr *info, bool versionDiffers);
+	int Check(const LsdbAppInfoPtr *installed, const LsdbAppInfoPtr *info);
 
 	paf::string m_path;
-	paf::string m_name;
-	bool m_flag1;
-	bool m_otherFlag;
-	bool m_flag2;
-	GameJobProgress *m_progress;
-	int m_userData;
+	paf::string m_name;		/* the path's last component */
+	bool m_replace;			/* a card's application may replace its copy on ux0: */
+	bool m_reserved;
+	bool m_notifyTopmenu;
+	GameJobProgress *m_progress;	/* NULL for none */
+	paf::string *m_detail;		/* where a failed move's drive goes */
 };
 
+typedef char GameUpdateCheckerSize[sizeof(GameUpdateChecker) == 40 ? 1 : -1];
 
 /*
  * PLACEHOLDER: the application's LiveArea brought into ur0:appmeta, defined in another file of

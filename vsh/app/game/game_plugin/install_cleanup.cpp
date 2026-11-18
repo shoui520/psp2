@@ -33,11 +33,6 @@ using namespace paf;
 /* an application's keystone (sce_sys/keystone) */
 #define GAME_KEYSTONE_SIZE		0x60
 
-/* where gameAppGetStorage says an application is installed */
-#define GAME_STORAGE_GRO0		1
-#define GAME_STORAGE_GRO0_OTHER		2
-#define GAME_STORAGE_UX0		3
-
 /* the largest NID list read */
 #define GAME_PFS_NIDS_SIZE		0x10000
 

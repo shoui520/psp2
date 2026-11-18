@@ -534,7 +534,7 @@ int GamePatchPromoter::Prepare(bool flag)
 		}
 
 		GameUpdateChecker *checker = new GameUpdateChecker(m_path, m_flag1, true,
-			progress != NULL ? progress : &m_progress, m_userData);
+			progress != NULL ? progress : &m_progress, (string *)m_userData);
 
 		if (checker == NULL) {
 			delete progress;

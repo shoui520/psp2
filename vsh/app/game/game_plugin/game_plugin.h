@@ -234,6 +234,14 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_UNKNOWN_CATEGORY	-2146430673	/* 0x8010112F */
 /* a path on no storage the plugin knows (value only) */
 #define GAME_ERROR_NO_STORAGE		-2146430663	/* 0x80101139 */
+/* the installer's error that keeps the title it stopped at (value only) */
+#define GAME_ERROR_INSTALL_TITLE	-2146430664	/* 0x80101138 */
+/* the promote's error shown as a plain error dialog (value only) */
+#define GAME_ERROR_GC_PLAIN		-2146430696	/* 0x80101118 */
+/* an update on a game card over the application installed from the other kind of card, and over
+   one installed on ux0: (values only; PLACEHOLDER names) */
+#define GAME_ERROR_STORAGE_CONFLICT	-2146430667	/* 0x80101135 */
+#define GAME_ERROR_INSTALLED_ON_UX0	-2146430666	/* 0x80101136 */
 #define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108: stopped by the caller's cancel check */
 #define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
 #define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */

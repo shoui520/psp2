@@ -19,6 +19,11 @@ int gameFindTitles(LsdbQueryCondition *conditions, paf::vector<paf::string> *tit
  */
 int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 
+/* where gameAppGetStorage says an application is installed */
+#define GAME_STORAGE_GRO0		1
+#define GAME_STORAGE_GRO0_OTHER		2
+#define GAME_STORAGE_UX0		3
+
 /* keys livespace_db_internal.h does not name yet (FNV-1a of the names, lsdb_keys.h) */
 #ifndef LSDB_KEY_MTIME
 #define LSDB_KEY_MTIME		0x18B45AA7u	/* "#_mtime": the title's last change */

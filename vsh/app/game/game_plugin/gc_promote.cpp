@@ -120,9 +120,6 @@ struct GameGcPromoteEntry {
 int gameGcGetPromoteEntries(vector<GameGcPromoteEntry> *entries);
 int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), void *arg);
 
-/* the installer's error that keeps the title it stopped at (value only) */
-#define GAME_ERROR_INSTALL_TITLE	-2146430664	/* 0x80101138 */
-
 /* a card title's state before it is promoted (value only), and how many titles a card lists */
 #define GAME_GC_TITLE_NOT_PROMOTED	-2146430710	/* 0x8010110A */
 #define GAME_GC_TITLES_MAX		1
@@ -146,9 +143,7 @@ extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
    after it (value only) */
 #define GAME_ERROR_TOO_MANY_ICONS	-2146430701	/* 0x80101113 */
 
-/* the promote's errors shown as a plain error dialog, and with the conflicting title (values
-   only) */
-#define GAME_ERROR_GC_PLAIN		-2146430696	/* 0x80101118 */
+/* the promote's error shown with the conflicting title (value only) */
 #define GAME_ERROR_GC_CONFLICT		-2146430642	/* 0x8010114E */
 
 /*
