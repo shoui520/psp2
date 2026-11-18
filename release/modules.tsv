@@ -221,7 +221,7 @@ vs0/data/external/webcore/jx_web_filtering	third-party-libs-psp2/webcore/jx_web_
 vs0/data/external/webcore/vita_jsextobj	third-party-libs-psp2/webcore/vita_jsextobj	vs0:data/external/webcore/vita_jsextobj.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	webcore beside ScePsp2Compat
 vs0/sys/external/activity_db	sys/internal/usermode/src/activity_db	vs0:sys/external/activity_db.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/adhoc_matching	sys/internal/usermode/src/adhoc_matching	vs0:sys/external/adhoc_matching.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
-vs0/sys/external/apputil	sys/internal/usermode/src/apputil	vs0:sys/external/apputil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
+vs0/sys/external/apputil	vsh/app/common/src/apputil	vs0:sys/external/apputil.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	string	vsh/app/common/src/apputil/webbrowser/webbrowser.cpp (1.500.151-TOOL; SceAppUtil)
 vs0/sys/external/apputil_ext	sys/internal/usermode/src/apputil_ext	vs0:sys/external/apputil_ext.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/audiocodec	sys/internal/usermode/src/audiocodec	vs0:sys/external/audiocodec.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
 vs0/sys/external/avcdec_for_player	sys/internal/usermode/src/avcdec_for_player	vs0:sys/external/avcdec_for_player.suprx	3.650.011-TOOL,3.630.011-DEBUGGER,3.65-CEX	pattern	vs0:sys/external library -> sys/internal/usermode/src
