@@ -51,6 +51,7 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #ifndef LSDB_KEY_ATTRIBUTE2
 #define LSDB_KEY_ATTRIBUTE2	0xE320FB47u	/* "ATTRIBUTE2" */
 #endif
+#define LSDB_KEY_SYSTEM_ROOT_VER	0x291BA145u	/* "PSP2_SYSTEM_ROOT_VER" */
 #ifndef LSDB_KEY_VERSION
 #define LSDB_KEY_VERSION	0xD3BBB9B7u	/* "VERSION" */
 #endif
@@ -204,6 +205,13 @@ int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
  */
 int gameVersionCheck(const char *version);
 int gameSystemVersionCheck(const char *version);
+
+/* whether the system runs the application of info, by its category (version_check.cpp) */
+int gameAppCheckSystemVersion(const LsdbAppInfoPtr *info, paf::string *version);
+
+/* the application's update checked for, with callback told of the result (version_check.cpp) */
+int gameAppCheckUpdate(const LsdbAppInfoPtr *info, void (*callback)(int result, void *arg),
+		       void *arg, bool gameCard, int mode, int priority);
 
 /*
  * PLACEHOLDER: what a SELF's eboot parameters (its control information of type 6) give the

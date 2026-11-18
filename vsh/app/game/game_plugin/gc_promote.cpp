@@ -155,11 +155,10 @@ bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const string &titleId, co
 #define GAME_ERROR_NO_GC_TITLE		-2146430651	/* 0x80101145 */
 
 /*
- * The card's own param.sfo (gro0:gc/param.sfo) loaded into info (0x8102C6B8), and the rest of
- * info filled for path (0x81028D50). PLACEHOLDER names: defined in other files of the plugin.
+ * The card's own param.sfo (gro0:gc/param.sfo) loaded into info (0x8102C6B8). PLACEHOLDER
+ * name: defined in another file of the plugin.
  */
 int gameGcLoadParamSfo(LsdbAppInfoPtr *info);
-int gameAppInfoFill(LsdbAppInfoPtr *info, const string &path);
 
 /* the plugin's error for a plugin that did not come up in time (value only) */
 #define GAME_ERROR_TIMEOUT		-2146430708	/* 0x8010110C */
@@ -206,13 +205,6 @@ bool gameIsStopRequested(void);
 
 /* applauncher's text of the installer stopped at a title (value only) */
 #define GAME_GC_PROMOTE_MSG_INSTALL_TITLE	0x888126CA
-
-/*
- * The application's update checked for, with callback told of the result (0x8102A4AC): 0, or a
- * negative error. PLACEHOLDER: its name; defined in another file of the plugin.
- */
-int gameAppCheckUpdate(const LsdbAppInfoPtr *info, void (*callback)(int result, void *arg),
-		       void *arg, bool dialog, int mode, int priority);
 
 /*
  * An application's directory mounted, its mount point (at most 16 characters) left in mountPoint
@@ -2111,9 +2103,9 @@ int GameGcPromote::LoadCardInfo(job::JobItem *job)
 	if (job->IsCanceled())
 		return GAME_ERROR_CANCELED;
 
-	string path(s_empty_name);
+	string version(s_empty_name);
 
-	ret = gameAppInfoFill(&m_appInfo, path);
+	ret = gameAppCheckSystemVersion(&m_appInfo, &version);
 	if (ret < 0)
 		return ret;
 

@@ -37,6 +37,9 @@ class ShellSysupchkInitParam : public paf::Plugin::InitParam {
 public:
 	ShellSysupchkInitParam();
 
+	/* PLACEHOLDER: Sony's copy is the COMDAT at 0x814091D0 (every caller calls it) */
+	~ShellSysupchkInitParam();
+
 	/* the parameters as the plugin's arguments, the callback as its notify callback
 	   (0x81362476) */
 	int SetParam(const ShellSysupchkParam &param);
