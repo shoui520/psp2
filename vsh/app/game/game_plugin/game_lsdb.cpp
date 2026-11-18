@@ -29,19 +29,6 @@ using namespace paf;
 #define GAME_ERROR_NO_DEVICE		-2146430678	/* 0x8010112A: a path without a device name */
 #define GAME_ERROR_INVALID_TITLE_ID	-2146430573	/* 0x80101193: not nine capitals and digits */
 
-/* a caller's cancel test, polled while a long count runs: nonzero cancels */
-typedef int (*GameCancelFunc)(void *arg);
-
-/* an application's sizes, by what holds them, and their total */
-struct GameAppSizes {
-	SceUInt64 app;		/* the application's own folder */
-	SceUInt64 patch;
-	SceUInt64 addcont;
-	SceUInt64 data;		/* save data, licenses and appmeta */
-	SceUInt64 total;
-	bool addcontEncrypted;	/* every additional content has its sce_pfs */
-};
-
 /* what devctl 0x3001 reports of a device */
 struct GameDevInfo {
 	SceInt64 maxSize;
@@ -161,26 +148,12 @@ private:
 	SceUInt8 m_state[1412];
 };
 
-/* a license's status: what the caller fills (the path) and what gameLicenseGetStatus reads */
-struct GameLicenseStatus {
-	char path[128];
-	SceUInt64 startTime;
-	SceUInt64 expireTime;
-	SceUInt64 remaining;		/* the time left until expireTime */
-	int result;			/* the license check's result */
-	int expireTextResult;
-	bool valid;
-	bool flag1;			/* PLACEHOLDER: bit 1 of the license's flags */
-	char expireText[65];		/* expireTime as text, "-" when it does not fit */
-};
-
 /* the license errors gameLicenseGetStatus reports (values only) */
 #define GAME_LICENSE_ERROR_NOT_FOUND	-2139095036	/* 0x80800004 */
 #define GAME_LICENSE_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
 
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameAppDeletePrepare(const char *titleId);			/* 0x810FCA70 */
-int gameContentImportDelete(const char *titleId);		/* 0x810576A2: ux0:content_manager/import */
 int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);	/* 0x810609AC */
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
 int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);	/* 0x81062BBA */
@@ -1544,12 +1517,6 @@ void gamePresetGetTitleIds(vector<string> *titleIds)
 	titleIds->push_back(string("PCSC00046"));
 }
 
-/* PLACEHOLDER: whether a title is one the shell keeps as its own, and which list holds it */
-struct GamePresetTitle {
-	bool isPreset;
-	int kind;	/* 1: gamePresetGetTitleIds's list, 2: PCSC80012 */
-};
-
 /* Whether titleId is one the shell keeps as its own (0x8101D098). */
 int gamePresetCheckTitle(const char *titleId, GamePresetTitle *preset)
 {
@@ -1581,12 +1548,6 @@ int gamePresetCheckTitle(const char *titleId, GamePresetTitle *preset)
 
 	return 0;
 }
-
-/* PLACEHOLDER: what gamePresetGetDataSize reports of a title the shell keeps as its own */
-struct GamePresetData {
-	int kind;		/* GamePresetTitle's kind, 0 for any other title */
-	SceUInt64 size;		/* what its data folder takes */
-};
 
 /*
  * What the data of a title the shell keeps as its own takes: ux0:umass for one of

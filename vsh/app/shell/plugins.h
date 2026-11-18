@@ -21,11 +21,17 @@ struct ShellPluginInterface {
 
 /* topmenu_plugin's functions */
 enum {
-	TOPMENU_PLUGIN_FUNC_BOOT_DONE	= 88,
+	TOPMENU_PLUGIN_FUNC_GAME_HOLD		= 31,	/* PLACEHOLDER names: the game plugin at work, */
+	TOPMENU_PLUGIN_FUNC_GAME_RELEASE	= 32,	/* and done; what topmenu does is not read yet */
+	TOPMENU_PLUGIN_FUNC_BUSY_BEGIN		= 35,	/* the first of the game plugin's busy calls, */
+	TOPMENU_PLUGIN_FUNC_BUSY_END		= 36,	/* and the last */
+	TOPMENU_PLUGIN_FUNC_BOOT_DONE		= 88,
 };
 
 /* power_manage_plugin's functions */
 enum {
+	POWER_MANAGE_PLUGIN_FUNC_GAME_HOLD	= 5,	/* PLACEHOLDER names: the game plugin at work, */
+	POWER_MANAGE_PLUGIN_FUNC_GAME_RELEASE	= 6,	/* and done */
 	POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT	= 15,
 	POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE	= 16,
 };

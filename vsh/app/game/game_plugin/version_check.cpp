@@ -55,13 +55,12 @@ static const SceUInt16 s_denyRegions[] = { 1, 2, 5, 6, 4, 10, 3, 7, 8, 9, 7, 7 }
 /*
  * PLACEHOLDER names, defined in other files of the shell: whether a version is "N.NN"
  * (0x81033DE0), a version's digits as a number (0x81033ECC), whether the system is older than
- * a version (0x81363DA0), whether a title is a PSM application and the system's model
- * (0x8102E928), and the PSM runtime the system has installed, 0 without one (0x810FCBA6).
+ * a version (0x81363DA0), and the PSM runtime the system has installed, 0 without one
+ * (0x810FCBA6).
  */
 int gameVersionCheckShort(const char *version);
 int gameVersionToNumber(const char *version, SceSize size, SceUInt32 *number);
 int shellSystemVersionCheck(SceUInt32 required, int *older);
-int gamePsmIsApp(const string &titleId, bool *psm, int *modelType);
 int shellPsmGetRuntimeVersion(SceUInt16 *version);
 
 /* A version's text, "N.NN" or "NN.NN", as a number (0x81028480). */
@@ -268,14 +267,14 @@ __attribute__((noinline)) int gameAppCheckSystemVersion(const LsdbAppInfoPtr *in
 			return GAME_ERROR_NO_VALUE;
 
 		string titleId(LsdbValueText(id->second));
-		bool psm = false;
-		int modelType = 0;
-		int ret = gamePsmIsApp(titleId, &psm, &modelType);
+		bool allowed = false;
+		int model = 0;
+		int ret = gamePluginPsmAppIsAllowed(titleId, &allowed, &model);
 
 		if (ret < 0)
 			return ret;
 
-		if (!psm)
+		if (!allowed)
 			return 0;
 
 		SceUInt32 runtime = 0;

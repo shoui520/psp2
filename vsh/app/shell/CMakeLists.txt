@@ -29,6 +29,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/version_check.cpp
 	${PSP2_SRC}/vsh/app/gamedata_plus_util/src/plus_app_list.cpp
 	${PSP2_SRC}/vsh/app/gamedata_plus_util/src/plus_sd_list.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/game_main.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

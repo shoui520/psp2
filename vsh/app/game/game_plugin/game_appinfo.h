@@ -168,6 +168,58 @@ const char *sceLsdbGetStitle(const LsdbAppInfoPtr *app);
 const char *sceLsdbGetTitle(const LsdbAppInfoPtr *app);
 }
 
+/* a caller's cancel test, polled while a long count runs: nonzero cancels */
+typedef int (*GameCancelFunc)(void *arg);
+
+/* an application's sizes, by what holds them, and their total */
+struct GameAppSizes {
+	SceUInt64 app;		/* the application's own folder */
+	SceUInt64 patch;
+	SceUInt64 addcont;
+	SceUInt64 data;		/* save data, licenses and appmeta */
+	SceUInt64 total;
+	bool addcontEncrypted;	/* every additional content has its sce_pfs */
+};
+
+/* a license's status: what the caller fills (the path) and what gameLicenseGetStatus reads */
+struct GameLicenseStatus {
+	char path[128];
+	SceUInt64 startTime;
+	SceUInt64 expireTime;
+	SceUInt64 remaining;		/* the time left until expireTime */
+	int result;			/* the license check's result */
+	int expireTextResult;
+	bool valid;
+	bool flag1;			/* PLACEHOLDER: bit 1 of the license's flags */
+	char expireText[65];		/* expireTime as text, "-" when it does not fit */
+};
+
+/* an application's sizes, by flags (0x8101A78A), and its license's status (0x8101BD12) */
+int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc cancel, void *arg,
+		      GameAppSizes *sizes);
+int gameLicenseGetStatus(GameLicenseStatus *status);
+
+/* an application deleted (game_lsdb.cpp: 0x8101B058), and a part of it (0x8101B3FC) */
+int gameAppDelete(const char *titleId);
+int gameAppDeletePart(const char *titleId, int kind);
+
+/* the card's own param.sfo (gro0:gc/param.sfo) loaded into info (0x8102C6B8) */
+int gameGcLoadParamSfo(LsdbAppInfoPtr *info);
+
+/*
+ * PLACEHOLDER: a param.sfo's reader into an application's information, defined in another file
+ * of the plugin (constructor 0x810329E0, Load 0x81032F44; 8 bytes).
+ */
+class GameSfoReader {
+public:
+	GameSfoReader(LsdbAppInfoPtr *info);
+	virtual ~GameSfoReader();
+
+	int Load(const paf::string &path);
+
+	LsdbAppInfoPtr *m_info;
+};
+
 /* a title ID: nine upper-case letters and digits (0x8101D662) */
 int gameCheckTitleId(const char *titleId);
 
@@ -423,10 +475,18 @@ bool gameAppHasFttLicense(const paf::string &titleId);
 /* the game card application's title ID (0x810170A0) */
 paf::string gameCardGetTitleId(void);
 
-/* PLACEHOLDER: a folder's statistics, as 0x8104639C fills them (not read yet) */
+/*
+ * PLACEHOLDER: a folder's statistics, as 0x8104639C fills them; only the digest its param.sfo is
+ * checked against is known (gamePluginDirGetAttributeMinor).
+ */
 struct GameDirStat {
-	SceUInt8 data[0x3A8];
+	SceUInt8 data[0x378];
+	char digest[40];
+	SceSize digestLength;
+	SceUInt8 reserved[4];
 };
+
+typedef char GameDirStatSize[sizeof(GameDirStat) == 0x3A8 ? 1 : -1];
 
 /* PLACEHOLDER: a folder's statistics (0x8104639C, in a file of the shell not written yet) */
 int gameDirReadStat(const paf::string &path, GameDirStat *stat);
@@ -483,5 +543,112 @@ int gameAddcontCheck(const LsdbAppInfoPtr *app, const LsdbAppInfoPtr *info,
 		     const paf::vector<LsdbAppInfoPtr> *related);
 int gameAppRegister(GameAppRegistration *app, int mode, bool keepLiveArea, bool notifyTopmenu,
 		    const void *param);
+
+/*
+ * What an application's folders on ux0 take, the folders dirs names (game_lsdb.cpp,
+ * 0x8101C298).
+ */
+int gameAppGetDirsSize(const char *titleId, int dirs, GameCancelFunc cancel, void *arg,
+		       SceUInt64 *size);
+
+/* PLACEHOLDER: whether a title is one the shell keeps as its own, and which list holds it */
+struct GamePresetTitle {
+	bool isPreset;
+	int kind;	/* 1: gamePresetGetTitleIds's list, 2: PCSC80012 */
+};
+
+/* whether titleId is one the shell keeps as its own (game_lsdb.cpp, 0x8101D098) */
+int gamePresetCheckTitle(const char *titleId, GamePresetTitle *preset);
+
+/* PLACEHOLDER: what gamePresetGetDataSize reports of a title the shell keeps as its own */
+struct GamePresetData {
+	int kind;		/* GamePresetTitle's kind, 0 for any other title */
+	SceUInt64 size;		/* what its data folder takes */
+};
+
+/* what the data of a title the shell keeps as its own takes (game_lsdb.cpp, 0x8101D2C8) */
+int gamePresetGetDataSize(const char *titleId, GameCancelFunc cancel, void *arg,
+			  GamePresetData *data);
+
+/* the name of the user's free-trial license file (game_lsdb.cpp, 0x8101D49E) */
+int gameNpDrmGetFttName(paf::string *fttName);
+
+/*
+ * PLACEHOLDER: what 0x810A4EC4 reads from a free-trial license file, 0x50 bytes: its content ID
+ * and two times it converts to dates.
+ */
+struct GameFttLicense {
+	SceUInt8 header[8];
+	char contentId[48];
+	SceUInt64 time1;
+	SceUInt64 time2;
+	int otherField;
+	SceUInt32 flags;	/* bit 0: GameFttInfo's flag */
+};
+
+/* what gamePluginFttRead gives of an application's free-trial license */
+struct GameFttInfo {
+	char contentId[48];
+	SceUInt64 time1;
+	SceUInt64 time2;
+	int otherField;
+	bool flag;
+};
+
+/*
+ * PLACEHOLDER: what sets an application up in ur0 under the plugin's SceGamePluginSetupUr0
+ * mutex (constructor 0x81035AA8, 96 bytes), defined in another file of the plugin.
+ */
+class GameUr0Setup {
+public:
+	GameUr0Setup(const LsdbAppInfoPtr *info, int arg);
+	virtual ~GameUr0Setup();
+
+	int Run(void);		/* 0x8103C03E */
+
+	SceUInt8 otherFields[92];
+};
+
+/*
+ * What a promote from parameters (gamePluginPromoteParam) is given, 164 bytes (names ours, from
+ * the gamecard promoter's use).
+ */
+struct GamePromoteParam {
+	char path[128];				/* the title's directory */
+	LsdbAppInfoPtr appInfo;
+	bool option;
+	void (*progressFunc)(void *arg, float progress);	/* told the install's progress */
+	void *progressArg;
+	char errorTitleId[16];			/* the title ID an error names */
+};
+
+typedef char GamePromoteParamSize[sizeof(GamePromoteParam) == 164 ? 1 : -1];
+
+/* an installed application's sizes on ux0, for what flags asks (game_lsdb.cpp, 0x8101C950) */
+int gameAppGetInstalledSizes(const paf::string &titleId, unsigned int flags, GameCancelFunc cancel,
+			     void *arg, GameAppSizes *sizes);
+
+/* an operation on an application's data (game_lsdb.cpp, 0x8101B746; its words are not read yet) */
+int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int arg4);
+
+/* PLACEHOLDER name: an imported content deleted, defined in another file (0x810576A2) */
+int gameContentImportDelete(const char *titleId);
+
+/*
+ * PLACEHOLDER: the plugin's alarm, its "SceGameAlarm" callback (constructor 0x81063BD0, 36
+ * bytes), defined in another file of the plugin.
+ */
+class GameAlarm {
+public:
+	GameAlarm();
+	virtual ~GameAlarm();
+
+	/* PLACEHOLDER names: what is known of the alarm's methods */
+	int SetForPath(const char *path, const char *arg);	/* 0x81063D4A */
+	int Update(const LsdbAppInfoPtr *info);			/* 0x81063EEC */
+	int Remove(const LsdbAppInfoPtr *info);			/* 0x81064154 */
+
+	SceUInt8 otherFields[32];
+};
 
 #endif

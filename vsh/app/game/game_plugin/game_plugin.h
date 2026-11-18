@@ -29,13 +29,201 @@ extern GamePluginInterface gamePluginInterface;
 class GamePlugin {
 public:
 	GamePlugin(paf::Plugin *plugin);		/* 0x8102AFFC */
-	virtual ~GamePlugin();				/* 0x8102B27C */
+	virtual ~GamePlugin();				/* 0x8103037C */
 
 	paf::Plugin *m_plugin;
 };
 
 void gamePluginCreate(paf::Plugin *plugin);
 void gamePluginDestroy(void);
+
+/* the plugin's errors for a call before start, and while a stop is requested (values only) */
+#define GAME_ERROR_NOT_STARTED		-2146430717	/* 0x80101103 */
+#define GAME_ERROR_BAD_STORAGE		-2146430715	/* 0x80101105: an application installed on no known storage */
+#define GAME_ERROR_STOPPING		-2146430704	/* 0x80101110 */
+/* a mount point that does not fit the caller's buffer (value only) */
+#define GAME_ERROR_BUFFER_TOO_SMALL	-2146430697	/* 0x80101117 */
+/* the work pool lent out already (value only) */
+#define GAME_ERROR_POOL_BUSY		-2146430670	/* 0x80101132 */
+
+/* whether the game plugin has a stop requested (0x8102B2DC) */
+bool gameIsStopRequested(void);
+
+/*
+ * topmenu_plugin and power_manage_plugin told the plugin is at work (0x8102B2EE), and that it
+ * is done (0x8102B386); topmenu's busy count, +1 (0x8102B430) and -1 (0x8102B49A).
+ */
+void gameShellHold(bool topmenu, bool powerManage);
+void gameShellRelease(void);
+void gameTopmenuBusyBegin(void);
+void gameTopmenuBusyEnd(void);
+
+/* whether an application's category is a game's (0x8102B4F2), EG (0x8102B524), ME (0x8102B556)
+   or a PlayStation Mobile application's (0x8102B588) */
+bool gameCategoryIsGame(const char *category);
+bool gameCategoryIsEg(const char *category);
+bool gameCategoryIsMe(const char *category);
+bool gameCategoryIsPsm(const char *category);
+
+/*
+ * An application's directory mounted, its mount point (at most 16 characters) left in mountPoint
+ * (0x8102B736), and unmounted (0x8102B7FC).
+ */
+int gameAppDirMount(const char *appPath, char *mountPoint, SceSize size);
+int gameAppDirUnmount(const char *mountPoint);
+
+/* the PSP emulator's work directory mounted (0x8102B860) and unmounted (0x8102B886) */
+int gamePluginPspemuWorkMount(void);
+int gamePluginPspemuWorkUnmount(void);
+
+namespace paf {
+namespace job {
+class JobQueue;
+}
+}
+
+/* the promoter's job queue, NULL before start (0x8102B8AC); its dialog held (0x8102B8E2) */
+paf::job::JobQueue *gamePluginGetJobQueue(void);
+void gamePluginSetDialogHold(bool hold);
+
+/* the game card promoter (gc_promote.cpp) */
+void gameGcPromoteCreate(GamePlugin *owner);
+void gameGcPromoteDestroy(void);
+int gameGcPromoteGetPendingTitles(paf::vector<paf::string> *titles);
+void gameGcPromoteSetDialogHold(bool hold);
+paf::job::JobQueue *gameGcPromoteGetJobQueue(void);
+void gameGcPromoteSetNoticeHeld(bool held);
+
+struct GameAppRegistration;
+
+/*
+ * An application promoted from its directory at path into reg: 0, 1 for ux0:appmeta/new, 2 or
+ * 1 by what the promoter found when report is set, or an error (0x8102B8F8).
+ */
+int gamePluginPromote(const char *path, bool report, GameAppRegistration *reg);
+
+/*
+ * PLACEHOLDER: the promoter of an application's directory, defined in another file of the
+ * plugin (constructor 0x81046D04, Run 0x810473E8; 96 bytes). Only what this plugin's main file
+ * reads is written out; the flags' names are ours and their meaning is not read yet.
+ */
+struct GamePromoteParam;
+
+class GameAppPromoter {
+public:
+	GameAppPromoter(const char *path, bool flag, GameAppRegistration *reg,
+			bool (*isStopRequested)(void), int arg5, int arg6, int arg7, int arg8);
+	GameAppPromoter(const GamePromoteParam *param, bool flag, GameAppRegistration *reg,
+			bool (*cancel)(void *arg), void *arg);	/* 0x81046E2C */
+	virtual ~GameAppPromoter();
+
+	int Run();
+
+	int m_result;			/* the constructor's result */
+	SceUInt8 otherFields[38];
+	bool m_installed;
+	bool m_promoted;
+	bool m_otherFlag;
+	bool m_replaced;
+	SceUInt8 moreFields[34];
+	paf::string m_errorTitleId;	/* the title ID an error names */
+};
+
+/*
+ * PLACEHOLDER: what an install (0x8102BFB2) is asked for, 176 bytes, and what an install of the
+ * second kind (0x8102C228) is asked for; only the title ID an error names is known.
+ */
+struct GameInstallParam {
+	char path[128];			/* the package's path */
+	char titleId[12];
+	int kind;			/* 2 for a license update's package */
+	bool flag1;
+	bool flag2;
+	SceUInt8 otherFields[10];
+	char errorTitleId[16];
+	SceUInt8 moreFields[4];
+};
+
+typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
+
+struct GameInstallExParam {
+	SceUInt8 otherFields[144];
+	char errorTitleId[16];
+};
+
+/*
+ * PLACEHOLDER: the plugin's two installers, defined in another file of the plugin (constructors
+ * 0x81045E92 and 0x810465F8, Run 0x8104625A and 0x81046BC0; 300 and 1336 bytes): the
+ * constructor's result and the title ID an error names are known.
+ */
+class GameInstallJob {
+public:
+	GameInstallJob(const GameInstallParam *param, bool flag, bool (*isStopRequested)(void),
+		       int arg4);
+	virtual ~GameInstallJob();
+
+	int Run();
+
+	int m_result;
+	SceUInt8 otherFields[280];
+	paf::string m_errorTitleId;
+};
+
+class GameInstallExJob {
+public:
+	GameInstallExJob(const GameInstallExParam *param, bool flag, int arg3, int arg4);
+	virtual ~GameInstallExJob();
+
+	int Run();
+
+	int m_result;
+	SceUInt8 otherFields[1312];
+	paf::string m_errorTitleId;
+	SceUInt8 moreFields[4];
+};
+
+/* PLACEHOLDER: what gamePluginParamJobRun's job is given, 140 bytes */
+struct GameJobParam {
+	SceUInt32 otherFields[35];
+};
+
+/*
+ * PLACEHOLDER: a job the shell is locked for, made from a GameJobParam (constructor 0x8103084C,
+ * 1136 bytes), defined in another file of the plugin.
+ */
+class GameParamJob {
+public:
+	GameParamJob(const GameJobParam *param, int arg1, int arg2);
+	virtual ~GameParamJob();
+
+	int Run(void);		/* 0x8103094C */
+
+	GameJobParam m_param;
+	int m_arg1;
+	int m_arg2;
+	int m_result;
+	SceUInt8 otherFields[976];
+};
+
+/*
+ * PLACEHOLDER: the plugin's license updater, its "SceGameUpdateLicense" state (constructor
+ * 0x8106471C, destructor 0x81064750, 272 bytes), defined in another file of the plugin.
+ */
+class GameLicenseUpdater {
+public:
+	GameLicenseUpdater();
+	~GameLicenseUpdater();
+
+	/* PLACEHOLDER names: the update of titleId's license (0x81064EFE), and 0x81065FC0 */
+	int Update(const char *titleId);
+	int Run(void *arg);
+
+	/* PLACEHOLDER name: a license update's package found, its folder and path (0x8106715C) */
+	int Prepare(const paf::string &titleId, paf::string *contentId, paf::string *dir,
+		    paf::string *path);
+
+	SceUInt8 otherFields[272];
+};
 
 /*
  * The plugin's work pool, 64 KiB blocks, lent to one user at a time while the plugin runs
@@ -61,12 +249,24 @@ int gamePfsUnmount(paf::string *mountPoint);
 /* the plugin's error for an argument out of range (value only) */
 #define GAME_ERROR_INVALID_ARGUMENT	-2146430720	/* 0x80101100 */
 
+/*
+ * A title promoted from param, stopped when cancel says so (game_main.cpp, 0x8102C776; the
+ * parameters are in game_appinfo.h).
+ */
+int gamePluginPromoteParam(GamePromoteParam *param, bool (*cancel)(void *arg), void *arg);
+
+/* whether a PlayStation Mobile application may run on this model (game_main.cpp) */
+int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *model);
+
 /* the plugin's errors several of its files return (values only) */
 #define GAME_ERROR_NOT_READY		-2146430719	/* 0x80101101: what it needs is not there (a mount's record, the
 						   promoter, the plugins a dialog is shown with) */
 #define GAME_ERROR_NO_INFO_MEMORY	-2146430718	/* 0x80101102: no memory for an information */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
+#define GAME_ERROR_EBOOT		-2146430699	/* 0x80101115: an EG or ME application's EBOOT.PBP that does not open */
+#define GAME_ERROR_FTT_MISMATCH	-2146430654	/* 0x80101142: a free-trial license of another content */
+#define GAME_ERROR_NO_FTT		-2146430576	/* 0x80101190: no free-trial license file */
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
 
 /* paf's error for a file that does not exist (value only) */

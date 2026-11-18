@@ -119,25 +119,6 @@ struct GameGcPromoteEntry {
 int gameGcGetPromoteEntries(vector<GameGcPromoteEntry> *entries);
 int gameGcPromoteEntry(GameGcPromoteEntry *entry, bool (*cancel)(void *arg), void *arg);
 
-/*
- * What the game plugin's installer is given, 164 bytes (names ours, from the promoter's use;
- * the last words are not read here).
- */
-struct GameInstallParam {
-	char path[128];				/* the title's directory */
-	LsdbAppInfoPtr appInfo;
-	bool option;
-	void (*progressFunc)(void *arg, float progress);	/* told the install's progress */
-	void *progressArg;
-	SceUInt32 reserved[4];
-};
-
-/*
- * A title installed by the game plugin's installer, stopped when cancel says so: the title's
- * new state, or a negative error (0x8102C776). PLACEHOLDER: its name.
- */
-int gameInstallApp(GameInstallParam *param, bool (*cancel)(void *arg), void *arg);
-
 /* the installer's error that keeps the title it stopped at (value only) */
 #define GAME_ERROR_INSTALL_TITLE	-2146430664	/* 0x80101138 */
 
@@ -153,12 +134,6 @@ bool gameAppIsUpdateNeeded(const LsdbAppInfoPtr *info, const string &titleId, co
 
 /* the promoter's error for a card it knows no title of (value only) */
 #define GAME_ERROR_NO_GC_TITLE		-2146430651	/* 0x80101145 */
-
-/*
- * The card's own param.sfo (gro0:gc/param.sfo) loaded into info (0x8102C6B8). PLACEHOLDER
- * name: defined in another file of the plugin.
- */
-int gameGcLoadParamSfo(LsdbAppInfoPtr *info);
 
 /* the plugin's error for a plugin that did not come up in time (value only) */
 #define GAME_ERROR_TIMEOUT		-2146430708	/* 0x8010110C */
@@ -180,9 +155,6 @@ extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
    only) */
 #define GAME_ERROR_GC_PLAIN		-2146430696	/* 0x80101118 */
 #define GAME_ERROR_GC_CONFLICT		-2146430642	/* 0x8010114E */
-
-/* whether the game plugin has a stop requested (0x8102B2DC). PLACEHOLDER: its name */
-bool gameIsStopRequested(void);
 
 /*
  * The results a promote's job ends with that its end handles itself (values only; names ours from
@@ -206,14 +178,6 @@ bool gameIsStopRequested(void);
 /* applauncher's text of the installer stopped at a title (value only) */
 #define GAME_GC_PROMOTE_MSG_INSTALL_TITLE	0x888126CA
 
-/*
- * An application's directory mounted, its mount point (at most 16 characters) left in mountPoint
- * (0x8102B736), and unmounted (0x8102B7FC). PLACEHOLDER names: defined in another file of the
- * plugin.
- */
-int gameAppDirMount(const char *appPath, char *mountPoint, SceSize size);
-int gameAppDirUnmount(const char *mountPoint);
-
 /* where a game card's applications are */
 #define GAME_GC_APP_DIR			"gro0:app"
 #define GAME_GC_APPINST_DIR		"gro0:appinst"
@@ -226,8 +190,6 @@ enum {
 };
 
 /* PLACEHOLDER names, defined in other files of the shell */
-void gameTopmenuBusyBegin(void);		/* 0x8102B430: topmenu's busy count, +1 */
-void gameTopmenuBusyEnd(void);			/* 0x8102B49A: topmenu's busy count, -1 */
 int gameGcGetPromoteCount(void);		/* 0x810FCB30 */
 int shellGetGcTitleSet(void);			/* 0x81004D70: which of the system's own card titles it has */
 int gamePowerManageAddCallback(void (*func)(void *arg), void *arg);	/* 0x81063A60 */
@@ -1917,7 +1879,7 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 	s_mutex.Unlock();
 
 	string path;
-	GameInstallParam param;
+	GamePromoteParam param;
 	SceUInt32 text = GAME_GC_PROMOTE_MSG_PROMOTING;
 
 	if (noProgress)
@@ -1982,7 +1944,7 @@ int GameGcPromote::InstallTitles(job::JobItem *job, bool noProgress, const strin
 		param.progressFunc = gameGcPromoteOnProgress;
 		param.progressArg = this;
 
-		ret = gameInstallApp(&param, gameGcPromoteIsCanceled, job);
+		ret = gamePluginPromoteParam(&param, gameGcPromoteIsCanceled, job);
 		if (ret < 0) {
 			if (ret == GAME_ERROR_INSTALL_TITLE) {
 				s_mutex.Lock();
@@ -2798,7 +2760,7 @@ int gameGcPromoteRunMigration(GameGcPromoteJob *job, void *arg)
 {
 	GameGcPromote *promote = (GameGcPromote *)arg;
 	string path;
-	GameInstallParam param;
+	GamePromoteParam param;
 	Plugin *applauncher = Plugin::Find("applauncher_plugin");
 
 	promote->m_progress = 0;
@@ -2838,7 +2800,7 @@ int gameGcPromoteRunMigration(GameGcPromoteJob *job, void *arg)
 		param.progressFunc = gameGcPromoteOnProgress;
 		param.progressArg = promote;
 
-		ret = gameInstallApp(&param, gameGcPromoteIsCanceled, job);
+		ret = gamePluginPromoteParam(&param, gameGcPromoteIsCanceled, job);
 		if (ret >= 0) {
 			GameGcPromote::s_mutex.Lock();
 			promote->m_titles[promote->m_contentId] = ret;
