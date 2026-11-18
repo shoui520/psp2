@@ -330,6 +330,95 @@ int GamePatchPromoter::MountCardPatch()
 }
 
 /*
+ * The patch's param.sfo read into info. A vs0: application's is read where it is; a game card's
+ * application gets its patch folder by its attribute (ux0: or grw0:), or the card's own patch
+ * when that is newer; then the application is mounted with its patch, and the sfo read from the
+ * mount (0x81042EA0).
+ */
+int GamePatchPromoter::ReadSfo(LsdbAppInfoPtr *info)
+{
+	string patchPath;
+	string sfoPath;
+	string::size_type pos = m_path.find("app/");
+	int ret;
+
+	if (pos == string::npos)
+		return GAME_ERROR_NO_DRIVE;
+
+	if (m_path.find("vs0:") != string::npos) {
+		sfoPath = string("vs0:app/") + m_name + string("/sce_sys/param.sfo");
+	} else {
+		if (m_path.find("gro0:app/") != string::npos) {
+			sfoPath = m_path + string("/sce_sys/param.sfo");
+
+			ret = gameSfoLoad(string(sfoPath.c_str()), gameSfoGetAppVerParams(),
+					  gameSfoGetAppVerParamCount(), info);
+			if (ret < 0) {
+				gamePathGetMountedDrive(sfoPath, (string *)m_userData);
+				return ret;
+			}
+
+			SceUInt64 attribute = 0;
+			LsdbAppInfo::iterator it = (*info)->find(LSDB_KEY_ATTRIBUTE);
+
+			if (it != (*info)->end())
+				attribute = gameLsdbValueInteger(it->second);
+
+			if (attribute & 1) {
+				m_drive = GAME_PATCH_DRIVE_UX0;
+				patchPath = string("ux0:patch/") + m_name;
+			} else {
+				m_drive = GAME_PATCH_DRIVE_GRW0;
+				patchPath = string("grw0:patch/") + m_name;
+			}
+
+			if (gameGcPatchExists(m_name) && m_drive == GAME_PATCH_DRIVE_UX0) {
+				LocalFileStat stat;
+
+				if (LocalFile::Getstat("ux0:", &stat) < 0) {
+					gamePathGetMountedDrive(string("ux0:"), (string *)m_userData);
+					return GAME_ERROR_NO_UX0;
+				}
+			}
+
+			if (gameAppIsUpdateNeeded(&m_info, m_name, &m_drive) && !g_gameRepromoting) {
+				m_move = true;
+				patchPath = string("gro0:patch/") + m_name;
+			}
+
+			(*info)->clear();
+		} else if (m_path.find("pd0:app/") != string::npos) {
+			patchPath.assign(NULL, 0);
+		} else {
+			string path(m_path);
+
+			path.replace(pos, 4, "patch/", 0, 6);
+			patchPath = path;
+		}
+
+		if (patchPath.length() != 0 && Dir::IsExist(patchPath.c_str()))
+			ret = gameGameDataMount(m_path.c_str(), patchPath.c_str(), NULL,
+						&m_mountPoint);
+		else
+			ret = gameGameDataMount(m_path.c_str(), NULL, NULL, &m_mountPoint);
+
+		if (ret < 0)
+			return ret;
+
+		sfoPath = m_mountPoint + string("/sce_sys/param.sfo");
+	}
+
+	ret = gameSfoLoad(string(sfoPath.c_str()), gameSfoGetCheckParams(),
+			  gameSfoGetCheckParamCount(), info);
+	if (ret < 0) {
+		gamePathGetMountedDrive(sfoPath, (string *)m_userData);
+		return ret;
+	}
+
+	return 0;
+}
+
+/*
  * The folder made ready: the installed application's record read, the patch's param.sfo read,
  * and when an application is installed the patch checked against it; then the game card's
  * patch copied and mounted when m_move is set (0x81043B1C).

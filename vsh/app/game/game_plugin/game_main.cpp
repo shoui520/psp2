@@ -133,7 +133,7 @@ static common::SharedPtr<memory::PoolAllocator> s_pool;
 static bool s_topmenuHeld;
 static bool s_powerManageHeld;
 static string s_pspemuWorkMountPoint;
-static bool s_repromoting;
+bool g_gameRepromoting;
 
 /* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
 int gameContentImportPrepare(const char *titleId);	/* 0x810562E4 */
@@ -917,9 +917,9 @@ int gamePluginAppDeletePart(const char *titleId, int kind)
 	LsdbAppInfo::iterator it = info->find(LSDB_KEY_ORG_PATH);
 
 	if (it != info->end()) {
-		s_repromoting = true;
+		g_gameRepromoting = true;
 		err = gamePluginPromoteLocked(LsdbValueText(it->second));
-		s_repromoting = false;
+		g_gameRepromoting = false;
 		if (err < 0)
 			return err;
 	}
