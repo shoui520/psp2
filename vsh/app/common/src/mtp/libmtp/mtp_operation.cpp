@@ -9,11 +9,6 @@
 #include <sceerror.h>
 #include "mtp_internal.h"
 
-/* the transfer buffers: the heap's, or the large buffer's while it is free */
-#define MTP_CMD_XFER_SIZE		0x10000
-#define MTP_CMD_XFER_SIZE_LARGE		0x100000
-#define MTP_CMD_XFER_ALIGN		0x40
-
 /* the buffer an operation's dataset is built in */
 #define MTP_CMD_WORK_SIZE		0x2000
 /* an object property dataset: the representative sample data's is larger */
@@ -24,20 +19,6 @@
 
 /* the largest file a host may send whose size it gives only in the data */
 #define MTP_CMD_FILE_SIZE_MAX		0x1000000000LL
-
-/* what a SendObject's progress reports, and how often (in percent) */
-#define MTP_CORE_PUBLIC_STATUS_RECEIVING	6
-#define MTP_CMD_PROGRESS_STEP		10
-
-/* the transfer thread's receive request, and the wait for its end */
-#define MTP_XFER_REQUEST_SEND		1
-#define MTP_XFER_REQUEST_RECV		2
-#define MTP_XFER_DONE_SEND		0x10
-#define MTP_XFER_DONE			0x20
-
-/* the buffer states mtpUtilGetBufferState reports between a transfer's buffers */
-#define MTP_UTIL_BUFFER_STATE_TO_HEAP	1
-#define MTP_UTIL_BUFFER_STATE_TO_LARGE	3
 
 extern "C" {
 

@@ -428,7 +428,8 @@ int sceMtpBeginImportObject(int arg1, int arg2, int unused, SceUInt32 *contextId
 		mtpContextDelete(context);
 		return ret;
 	}
-	ret = mtpContextImportObjectData(context, arg1, arg2, arg5, arg6);
+	ret = mtpContextImportObjectData(context, arg1, (const char *)arg2,
+		(const char *)arg5, arg6);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -514,8 +515,8 @@ int sceMtpBeginCreateHostDir(int arg1, int arg2, int arg3, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_FS_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_CREATE_DIR, arg3, 0, arg1,
-					   arg2);
+	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_CREATE_DIR, arg3, 0,
+		(const char *)arg1, arg2);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -542,8 +543,8 @@ int sceMtpBeginDeleteHostDir(int arg1, int arg2, int arg3, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_FS_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_DELETE_DIR, arg3, 0, arg1,
-					   arg2);
+	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_DELETE_DIR, arg3, 0,
+		(const char *)arg1, arg2);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -570,7 +571,7 @@ int sceMtpBeginMoveHostDir(int arg1, int arg2, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_FS_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_MOVE_DIR, arg1, arg2, 0, 0);
+	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_MOVE_DIR, arg1, arg2, NULL, 0);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -597,8 +598,8 @@ int sceMtpBeginCreateHostFile(int arg1, int arg2, int arg3, SceUInt32 *contextId
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_FS_OPERATION);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_CREATE_FILE, arg3, 0, arg1,
-					   arg2);
+	ret = mtpContextRequestFsOperation(context, MTP_FS_OPERATION_CREATE_FILE, arg3, 0,
+		(const char *)arg1, arg2);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -625,7 +626,7 @@ int sceMtpBeginGetObjectStatus2(int arg1, int arg2, int arg3, SceUInt32 *context
 	ret = mtpContextCreate(1, &context, MTP_OPERATION_REQUEST_OBJECT_STATUS);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextGetObjectStatus(context, arg1, arg2, arg3);
+	ret = mtpContextGetObjectStatus(context, arg1, (const char *)arg2, arg3);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -946,7 +947,8 @@ int sceMtpBeginSpecifiedObjectMetadata(int arg1, int arg2, int arg3, SceUInt32 *
 	ret = mtpContextCreate(1, &context, MTP_OPERATION_REQUEST_SPECIFIED_OBJECT_METADATA);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextGetSpecifiedObjectMetadata(context, arg1, arg2, arg3);
+	ret = mtpContextGetSpecifiedObjectMetadata(context, arg1,
+		(const SceUInt32 *)arg2, arg3);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1245,7 +1247,7 @@ int SceLibMtp_9310EEEF(SceInt64 objectId, void *data)
 
 int SceLibMtp_6BB1C852(int arg)
 {
-	return mtpObjSetNotifyMode(arg);
+	return mtpContextSetResumeContextId(arg);
 }
 
 int sceMtpGetBgTaskInfo(SceUInt32 *id, int *type, void *path)
@@ -1613,7 +1615,7 @@ int sceMtpBeginSearchObject(int arg1, int arg2, int arg3, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_SEARCH_OBJECT);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextSearchObject(context, arg2, arg1, arg3);
+	ret = mtpContextSearchObject(context, (const char *)arg2, arg1, arg3);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else
@@ -1644,7 +1646,7 @@ int sceMtpBeginHandover(int arg, SceUInt32 *contextId)
 	ret = mtpContextCreate(0, &context, MTP_OPERATION_REQUEST_HANDOVER);
 	if (ret < 0)
 		return ret;
-	ret = mtpContextHandover(context, arg);
+	ret = mtpContextHandover(context, (const void *)arg);
 	if (ret < 0)
 		mtpContextDelete(context);
 	else

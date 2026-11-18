@@ -191,6 +191,9 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_VENDOR_INVALID_CONTEXT	0xA001
 #define MTP_RESPONSE_VENDOR_UNKNOWN_STATUS	0xA004
 #define MTP_RESPONSE_VENDOR_NO_MEMORY	0xA007
+#define MTP_RESPONSE_VENDOR_INVALID_IMPORT_HANDLE	0xA00A
+#define MTP_RESPONSE_VENDOR_NO_IMPORT_HANDLE	0xA011
+#define MTP_RESPONSE_VENDOR_OBJECT_EXISTENCE	0xA02C
 #define MTP_RESPONSE_INVALID_OBJECT_PROP_CODE	0xA801
 #define MTP_RESPONSE_INVALID_OBJECT_PROP_FORMAT	0xA802
 #define MTP_RESPONSE_INVALID_OBJECT_PROP_VALUE	0xA803
@@ -833,7 +836,9 @@ void mtpUtilReplaceInvalidChars(char *name, SceSize length);
 #define MTP_UTIL_BUFFER_LARGE		0
 #define MTP_UTIL_BUFFER_HEAP		1
 #define MTP_UTIL_BUFFER_STATE_NONE	0
+#define MTP_UTIL_BUFFER_STATE_TO_HEAP	1
 #define MTP_UTIL_BUFFER_STATE_LARGE	2
+#define MTP_UTIL_BUFFER_STATE_TO_LARGE	3
 #define MTP_UTIL_BUFFER_STATE_HEAP	4
 
 int mtpUtilIsLargeBufferEnabled(void);
@@ -891,6 +896,11 @@ int mtpXferUninitialize(void);
 #define MTP_XFER_EVF_SEND_DONE		0x10
 #define MTP_XFER_EVF_RECV_DONE		0x20
 #define MTP_XFER_EVF_EXIT		0x8000
+/* the transfer thread's requests, and the waits for their ends */
+#define MTP_XFER_REQUEST_SEND		1
+#define MTP_XFER_REQUEST_RECV		2
+#define MTP_XFER_DONE_SEND		0x10
+#define MTP_XFER_DONE			0x20
 int mtpXferStart(SceUInt32 request, void *data, SceSize size, SceUInt64 totalSize);
 int mtpXferWait(SceUInt32 done);
 /* the network responder's socket timeouts around a transfer */
@@ -1231,26 +1241,34 @@ int mtpCmdGetObjectReferences(const MtpOperation *operation, MtpOperation *respo
 int mtpCmdSetObjectReferences(const MtpOperation *operation, MtpOperation *response);
 
 /* the contexts' requests */
-int mtpContextGetNumOfObject(MtpContext *context, int arg1, int arg2);
-int mtpContextImportBrowsingData(MtpContext *context, int arg1, int arg2, int arg3, int arg4);
-int mtpContextImportObjectData(MtpContext *context, int arg1, int arg2, int arg3, int arg4);
-int mtpContextExportObjectWithCheck(MtpContext *context, SceUInt64 arg1, SceUInt64 arg2);
-int mtpContextRequestFsOperation(MtpContext *context, int operation, int arg1, int arg2,
-				 int arg3, int arg4);
-int mtpContextGetObjectStatus(MtpContext *context, int arg1, int arg2, int arg3);
-int mtpContextImportObjectThumbnail(MtpContext *context, int arg1, int arg2);
-int mtpContextDeleteObject(MtpContext *context, int arg1);
+int mtpContextGetNumOfObject(MtpContext *context, SceUInt32 type, SceUInt32 param);
+int mtpContextImportBrowsingData(MtpContext *context, SceUInt32 type, SceUInt32 param1,
+	SceUInt32 param2, SceUInt32 param3);
+void mtpContextDeleteBrowsingContext(void *data, SceSize size);
+int mtpContextImportObjectData(MtpContext *context, SceUInt32 source, const char *path,
+	const char *name, int import);
+int mtpContextSetResumeContextId(SceUInt32 contextId);
+/* object: the unique ID, then the handle's storage bits (an MtpObjectId) */
+int mtpContextExportObjectWithCheck(MtpContext *context, SceUInt64 object, SceUInt64 target);
+int mtpContextRequestFsOperation(MtpContext *context, int operation, SceUInt32 param1,
+	SceUInt32 param2, const char *path, SceSize size);
+int mtpContextGetObjectStatus(MtpContext *context, SceUInt32 type, const char *path,
+	SceSize length);
+int mtpContextImportObjectThumbnail(MtpContext *context, SceUInt32 handle, SceUInt32 type);
+int mtpContextDeleteObject(MtpContext *context, SceUInt32 handle);
 int mtpContextGetSystemSetting(MtpContext *context, int arg1);
 int mtpContextSetSystemSetting(MtpContext *context, int arg1, int arg2);
 int mtpContextGetNpAccountInfo(MtpContext *context, int arg1);
-int mtpContextGetPartOfObject(MtpContext *context, int arg1, SceUInt64 offset, SceUInt64 size,
-			      int arg5);
-int mtpContextSendPartOfObject(MtpContext *context, int arg1, SceUInt64 offset,
-			       SceUInt64 size);
-int mtpContextGetHostStorageSize(MtpContext *context, int arg1);
-int mtpContextCompareObjectData(MtpContext *context, SceUInt64 arg1);
-int mtpContextGetTotalObjectSize(MtpContext *context, int arg1);
-int mtpContextGetSpecifiedObjectMetadata(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextGetPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 offset,
+	SceUInt64 size, int import);
+int mtpContextSendPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 offset,
+	SceUInt64 size);
+int mtpContextGetHostStorageSize(MtpContext *context, SceUInt32 storageId);
+int mtpContextCompareObjectData(MtpContext *context, SceUInt64 object);
+int mtpContextGetTotalObjectSize(MtpContext *context, SceUInt32 numHandles);
+int mtpContextGetSpecifiedObjectMetadata(MtpContext *context, SceUInt32 type,
+	const SceUInt32 *items, SceUInt32 numItems);
+int mtpContextCheckImportHandle(SceUInt32 handle, const MtpContext *context);
 int mtpContextNpDrmGetRtc(MtpContext *context, int arg1, int arg2);
 int mtpContextNpDrmExecAuthentication(MtpContext *context, int arg1, int activate, int arg3,
 				      int arg4);
@@ -1273,6 +1291,9 @@ int mtpStrgVTDestroyMtpHandles(MtpStorage *storage);
 int mtpStrgVTConvertMtpHandleToUniqueId(SceUInt32 handle, SceUInt32 *uniqueId);
 int mtpStrgRegisterObject(const char *path, SceUInt32 *handle);
 int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle);
+int mtpStrgRegisterDirectory(const char *path, SceUInt32 *handle);
+int mtpStrgVTConvertUniqueIdToMtpHandle(SceUInt32 storageId, SceUInt32 uniqueId,
+	SceUInt32 *handle);
 /* the logical storage of an object handle's (or object ID's) storage bits */
 #define MTP_OBJECT_STORAGE_ID(storage) \
 	((((storage) >> 27 & 3) + 1) | ((((storage) >> 29 & 3) + 1) << 16))
@@ -1356,6 +1377,14 @@ int mtpCacheSetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, con
 int mtpCacheWriteBackDirtyCache(MtpCache *cache);
 
 /* mtp_operation.cpp */
+/* a data phase's transfer buffers: the heap's, or the large buffer's while it is free */
+#define MTP_CMD_XFER_SIZE		0x10000
+#define MTP_CMD_XFER_SIZE_LARGE		0x100000
+#define MTP_CMD_XFER_ALIGN		0x40
+
+/* what a received file's progress reports, and how often (in percent) */
+#define MTP_CORE_PUBLIC_STATUS_RECEIVING	6
+#define MTP_CMD_PROGRESS_STEP		10
 int mtpCmdUtilReceiveFileData(const MtpOperation *operation, MtpOperation *response,
 	const char *path, SceSize size, int create, SceUInt64 *received, int *responseCode,
 	MtpContext *context);
@@ -1368,7 +1397,6 @@ int mtpObjDeleteObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId);
 int mtpObjGetObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *data);
 int mtpObjUpdateObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, const void *data);
 void mtpObjNotifyProprtyUpdate(SceUInt32 uniqueId, SceUInt32 storageId);
-int mtpObjSetNotifyMode(int mode);
 
 /* the background copy (BGCP) */
 int mtpBgCopyGetTaskInfo(SceUInt32 *id, int *type, void *path);
@@ -1376,9 +1404,10 @@ int mtpBgCopyGetTaskInfo(SceUInt32 *id, int *type, void *path);
 /* the network RPC, the search, the handover, the pause and resume of a transfer */
 int mtpContextRpcNetOperation(MtpContext *context, int type, int arg1, int arg2);
 int mtpContextRpcNetOperationAbort(MtpContext *context, int arg1, int arg2, int arg3);
-int mtpContextSearchObject(MtpContext *context, int arg1, int arg2, int arg3);
-int mtpContextHandover(MtpContext *context, int arg1);
-int mtpContextPauseExportObject(MtpContext *context, int arg1);
+int mtpContextSearchObject(MtpContext *context, const char *keyword, SceUInt32 type,
+	SceUInt32 flags);
+int mtpContextHandover(MtpContext *context, const void *info);
+int mtpContextPauseExportObject(MtpContext *context, SceUInt32 contextId);
 int mtpContextResumeExportObject(MtpContext *context);
 int mtpContextResumeImportObject(MtpContext *context);
 
