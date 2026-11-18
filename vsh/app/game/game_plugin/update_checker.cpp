@@ -162,7 +162,7 @@ int GameUpdateChecker::ReturnToCard(const LsdbAppInfoPtr *installed)
 		}
 	}
 
-	gameRemoveDirectory("ux0:temp/promote", 0, 0, (int)progress, true);
+	gameRemoveDirectory("ux0:temp/promote", NULL, NULL, progress, true);
 	delete progress;
 
 	ret = gameAppUpdate(&reg.info, param[0], m_notifyTopmenu);

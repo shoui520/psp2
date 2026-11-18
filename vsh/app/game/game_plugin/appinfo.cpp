@@ -32,7 +32,6 @@ using namespace paf;
 #define GAME_ERROR_CATEGORY	-2146430705	/* 0x8010110F: a category the plugin does not know */
 #define GAME_ERROR_NO_BOOT_APP	-2146430677	/* 0x8010112B: a BOOT_INSTALL_DIR no application is installed in */
 #define GAME_ERROR_APP_RUNNING	-2146430700	/* 0x80101114: an application that is running */
-#define GAME_ERROR_BAD_PBP	-2146430686	/* 0x80101122: a PBP file without its header */
 #define GAME_ERROR_PSP_NOT_LISTED	-2146430689	/* 0x8010111F: a PSP title the emulator's list does not allow */
 
 /*

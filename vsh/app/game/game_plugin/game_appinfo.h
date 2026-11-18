@@ -228,8 +228,10 @@ int gameDeviceGetSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSi
 /* the copies and removals of game_lsdb.cpp (0x8101ACA0, 0x8101AEA0, 0x8101BAC8) */
 int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, int arg6,
 			 int arg7);
-int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, paf::string *detail);
-int gameRemoveDirectoryContents(const char *path, int arg1, int arg2, int arg3, bool mapErrors);
+int gameMoveTree(const char *src, const char *dst, GameCancelFunc cancel, void *cancelArg,
+		 paf::string *detail);
+int gameRemoveDirectoryContents(const char *path, GameCancelFunc cancel, void *cancelArg,
+				GameJobProgress *progress, bool mapErrors);
 
 /* an application's sizes, by flags (0x8101A78A), and its license's status (0x8101BD12) */
 int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc cancel, void *arg,
@@ -612,7 +614,7 @@ public:
 		*m_progress.percent = percent;
 		if (m_progress.func != NULL)
 			m_progress.func(m_progress.arg, *m_progress.percent);
-		m_progress.busy = 0;
+		m_progress.added = 0;
 	}
 
 	const GameJobParam *m_param;
@@ -1097,7 +1099,14 @@ int gameAppGetInstalledSizes(const paf::string &titleId, unsigned int flags, Gam
 /* an operation on an application's data (game_lsdb.cpp, 0x8101B746; its words are not read yet) */
 int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int arg4);
 
-/* PLACEHOLDER name: an imported content deleted, defined in another file (0x810576A2) */
+/*
+ * PLACEHOLDER names: the content import (content_import.cpp): a package folder at path queued
+ * for import (0x810562E4), the queued folders of titleId's additional content installed
+ * (0x810569FC), counted (0x8105718C) and removed (0x810576A2)
+ */
+int gameContentImportPrepare(const char *path);
+int gameContentImportRun(const char *titleId);
+int gameContentImportCheck(const char *titleId);
 int gameContentImportDelete(const char *titleId);
 
 /*

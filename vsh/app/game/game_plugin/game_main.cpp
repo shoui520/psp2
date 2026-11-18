@@ -137,9 +137,6 @@ static string s_pspemuWorkMountPoint;
 bool g_gameRepromoting;
 
 /* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
-int gameContentImportPrepare(const char *titleId);	/* 0x810562E4 */
-int gameContentImportRun(const char *titleId);		/* 0x810569FC: the installing dialog */
-int gameContentImportCheck(const char *titleId);	/* 0x8105718C */
 int gamePspAddcontInfoCheck(const char *path, vector<string> *titleIds, bool *found);	/* 0x8109F2E4 */
 int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found);		/* 0x8109B7A6 */
 int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */

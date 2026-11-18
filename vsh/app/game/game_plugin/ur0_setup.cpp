@@ -212,7 +212,7 @@ int GameUr0Setup::SetupPsm(void)
 			if (m_type == 1 || m_type == 2) {
 				string dst = string(GAME_APPMETA_DIR "/") + m_titleId;
 
-				ret = gameCopyTree(appmetaDir.c_str(), dst.c_str(), 0, 0, &m_detail);
+				ret = gameMoveTree(appmetaDir.c_str(), dst.c_str(), NULL, NULL, &m_detail);
 				if (ret < 0)
 					return ret;
 
@@ -571,7 +571,7 @@ int GameUr0Setup::SetupPsp(void)
 	if (m_type == 1 || m_type == 2) {
 		dst = string(GAME_APPMETA_DIR "/") + m_titleId;
 
-		ret = gameCopyTree(appmetaDir.c_str(), dst.c_str(), 0, 0, &m_detail);
+		ret = gameMoveTree(appmetaDir.c_str(), dst.c_str(), NULL, NULL, &m_detail);
 		if (ret < 0)
 			goto end;
 
@@ -775,7 +775,7 @@ int GameUr0Setup::SetupGameAppmetaDir(bool skipParams)
 	if (m_type == 1 || m_type == 2) {
 		string dst = string(GAME_APPMETA_DIR "/") + m_titleId;
 
-		ret = gameCopyTree(dir.c_str(), dst.c_str(), 0, 0, &m_detail);
+		ret = gameMoveTree(dir.c_str(), dst.c_str(), NULL, NULL, &m_detail);
 		if (ret < 0)
 			return ret;
 

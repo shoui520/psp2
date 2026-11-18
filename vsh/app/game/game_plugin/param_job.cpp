@@ -127,7 +127,7 @@ int GameParamJob::Run(void)
 		*percent = 100.0f;
 		if (m_progress.func != NULL)
 			m_progress.func(m_progress.arg, 100.0f);
-		m_progress.busy = 0;
+		m_progress.added = 0;
 	}
 
 	return 0;

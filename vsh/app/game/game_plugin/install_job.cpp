@@ -110,7 +110,7 @@ int GameInstallJob::Run()
 		*m_progress.percent = 100.0f;
 		if (m_progress.func != NULL)
 			m_progress.func(m_progress.arg, *m_progress.percent);
-		m_progress.busy = 0;
+		m_progress.added = 0;
 	}
 
 	return 0;

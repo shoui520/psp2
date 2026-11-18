@@ -54,6 +54,13 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/livearea_copier.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psm_livearea_writer.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/appmeta.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/content_import.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/file_copier.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/tree_scanner.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/tree_mover.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/tree_remover.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/dir_size_counter.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/psp_license.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

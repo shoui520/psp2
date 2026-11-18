@@ -20,6 +20,14 @@
 struct GamePluginInterface {
 	void (*func[65])(void);
 };
+
+/* the plugin's functions its own files call through its interface (PLACEHOLDER names) */
+enum {
+	GAME_PLUGIN_FUNC_GET_STORAGE	= 1,	/* gamePluginGetStorage (0x8102B5D8) */
+	GAME_PLUGIN_FUNC_INSTALL_EX	= 13,	/* gamePluginInstallEx (0x8102C228) */
+	GAME_PLUGIN_FUNC_DIALOG_OPEN	= 34,	/* gc_promote's promote dialog, opened (0x810214CC) */
+	GAME_PLUGIN_FUNC_DIALOG_CLOSE	= 36,	/* and closed (0x810218A6) */
+};
 extern GamePluginInterface gamePluginInterface;
 
 /*
@@ -128,7 +136,10 @@ typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
 
 struct GameInstallExParam {
 	char path[128];			/* the package folder's path */
-	SceUInt8 otherFields[8];
+	SceUInt8 reserved;
+	bool imported;			/* PLACEHOLDER name: set by the content import */
+	SceUInt8 padding[2];
+	int storage;			/* the application's storage (gamePluginGetStorage) */
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
 	char errorTitleId[16];
@@ -253,6 +264,9 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 /* a PSP icon of another format than PNG, or larger than it may be (value only; PLACEHOLDER name) */
 #define GAME_ERROR_BAD_ICON		-2146430668	/* 0x80101134 */
 #define GAME_ERROR_ABORTED		-2146430712	/* 0x80101108: stopped by the caller's cancel check */
+#define GAME_ERROR_BAD_PBP		-2146430686	/* 0x80101122: a PBP file without its header */
+#define GAME_ERROR_TOO_DEEP		-2146430683	/* 0x80101125: a folder tree deeper than a copy goes */
+#define GAME_ERROR_KIND_MISMATCH	-2146430671	/* 0x80101131: a file where a folder is copied, or the other way */
 #define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
 #define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */
 
@@ -299,18 +313,18 @@ typedef char SceNpDrmInstallInfoSize[sizeof(SceNpDrmInstallInfo) == 0x3A8 ? 1 : 
 struct GameJobProgress {
 	/* a progress that only counts */
 	GameJobProgress(float *percent)
-		: percent(percent), busy(0), scale(0.0f), func(NULL), arg(NULL)
+		: percent(percent), added(0), scale(0.0f), func(NULL), arg(NULL)
 	{
 	}
 
 	GameJobProgress(float *percent, void (*func)(void *arg, float percent), void *arg)
-		: percent(percent), busy(0), scale(1.0f), func(func), arg(arg)
+		: percent(percent), added(0), scale(1.0f), func(func), arg(arg)
 	{
 	}
 
 	/* a part of progress, scaled */
 	GameJobProgress(const GameJobProgress &progress, float scale)
-		: percent(progress.percent), busy(0), scale(progress.scale * scale),
+		: percent(progress.percent), added(0), scale(progress.scale * scale),
 		  func(progress.func), arg(progress.arg)
 	{
 	}
@@ -335,11 +349,24 @@ struct GameJobProgress {
 		*percent = value;
 		if (func != NULL)
 			func(arg, *percent);
-		busy = 0;
+		added = 0;
+	}
+
+	/* the job's part of the progress set to value, scaled */
+	void Update(float value)
+	{
+		if (percent == NULL)
+			return;
+
+		value = scale * value;
+		*percent += value - added;
+		if (func != NULL)
+			func(arg, *percent);
+		added = value;
 	}
 
 	float *percent;
-	int busy;				/* cleared when the job ends */
+	float added;				/* what this job has added to it, cleared when it ends */
 	float scale;
 	void (*func)(void *arg, float percent);
 	void *arg;
@@ -382,10 +409,28 @@ void gameMountGetDrive(const paf::string &path, paf::string *drive);
 void gamePathGetMountedDrive(const paf::string &path, paf::string *drive);
 
 /*
- * A file or a directory tree removed, by a remover of its own (0x8101BA08); with mapErrors, an
- * error is translated by gameFileToPafError (0x8101C212). PLACEHOLDER: the meaning of the three words is not known.
+ * A file or a directory tree removed, by a remover of its own, its walk stopped when cancel says so
+ * and its share of progress updated (0x8101BA08); with mapErrors, an error is translated by
+ * gameFileToPafError (0x8101C212).
  */
-int gameRemoveDirectory(const char *path, int arg1, int arg2, int arg3, bool mapErrors);
+int gameRemoveDirectory(const char *path, int (*cancel)(void *arg), void *cancelArg,
+			GameJobProgress *progress, bool mapErrors);
+
+/* a file of size bytes cut down 128 MiB at a time, before it is removed (0x81063854) */
+int gameFileShrink(const paf::string &path, SceOff size);
+
+/* the files and folders of a folder tree counted, its walk stopped when cancel says so (0x8101C052) */
+int gameTreeGetCount(const char *path, int (*cancel)(void *arg), void *arg, SceUInt32 *count);
+
+/* what the files of a folder tree add up to, its walk stopped when cancel says so (0x8101C118) */
+int gameTreeGetSize(const char *path, int (*cancel)(void *arg), void *arg, SceUInt64 *size);
+
+/* a folder's (0x8101C1DC) and a file's (0x8101C212) IO error as paf reports it */
+int gameDirToPafError(int error);
+int gameFileToPafError(int error);
+
+/* "/" and name appended to path, a buffer of pathSize bytes (0x8101C248) */
+int gamePathAppend(char *path, SceSize pathSize, const char *name, SceSize nameSize);
 
 /*
  * A file copied, by a job of its own, with buf as its work memory (0x8101AB80). PLACEHOLDER:

@@ -17,6 +17,21 @@ typedef struct SceIoDirent {
 	int		dummy;		/* padding */
 } SceIoDirent;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* the kernel exports these under the same names (iofilemgr/iofilemgr.h) */
+#if !defined(PSP2_KERNEL) && !defined(_SCE_IOFILEMGR_KERNEL_EXPORTS)
+SceUID sceIoDopen(const char *dirname);
+int sceIoDclose(SceUID fd);
+int sceIoDread(SceUID fd, SceIoDirent *buf);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* !_LANGUAGE_ASSEMBLY */
 
 #endif /* _SCE_KERNEL_IOFILEMGR_DIRENT_H */

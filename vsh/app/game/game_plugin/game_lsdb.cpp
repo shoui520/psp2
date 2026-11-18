@@ -21,6 +21,7 @@
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "copier.h"
 
 using namespace paf;
 
@@ -33,117 +34,6 @@ struct GameDevInfo {
 	SceInt64 freeSize;
 	SceUInt32 clusterSize;
 	void *reserved;
-};
-
-/*
- * PLACEHOLDER: a folder tree's size counter, defined in another file of the shell (constructor
- * 0x81059A44, count 0x81059C22; 1416 bytes)
- */
-class GameDirSizeCounter {
-public:
-	GameDirSizeCounter(GameCancelFunc cancel, void *arg, int flags);
-	virtual ~GameDirSizeCounter();
-
-	int Count(const string *path, SceUInt32 clusterSize, int option, SceUInt64 *size);
-
-private:
-	SceUInt8 m_state[1412];
-};
-
-/*
- * PLACEHOLDER: a folder tree's walker, defined in another file of the shell (constructor
- * 0x81058C90, scan 0x81058E4E; 1416 bytes): it counts the files and folders under a path, at
- * most maxDepth folders deep, and adds up the files' sizes.
- */
-class GameTreeScanner {
-public:
-	GameTreeScanner(GameCancelFunc cancel, void *arg, int maxDepth);
-	virtual ~GameTreeScanner();
-
-	int Scan(const string &path);
-
-private:
-	SceUInt8 m_state[1396];
-
-public:
-	SceUInt32 m_fileCount;
-	SceUInt32 m_dirCount;
-	SceUInt64 m_totalSize;
-};
-
-/* PLACEHOLDER: what a file copier is made with; the meaning of most words is not known */
-struct GameCopyParam {
-	int reserved;
-	int arg2;
-	int arg3;
-	int chunkCount;		/* 128 */
-	bool flag0;
-	bool flag1;
-	bool flag2;
-	void *buf;
-	SceSize bufSize;
-	int arg6;
-	int arg7;
-};
-
-/*
- * PLACEHOLDER: a file copier, defined in another file of the shell (constructor 0x81057D74, copy
- * 0x81058A50; 2512 bytes)
- */
-class GameFileCopier {
-public:
-	GameFileCopier(const GameCopyParam *param);
-	virtual ~GameFileCopier();
-
-	int Copy(const string *src, const string *dst, SceUInt64 *copied);
-
-private:
-	SceUInt8 m_state[2508];
-};
-
-/*
- * PLACEHOLDER: what a tree copier is made with; the word after the flags is read by the
- * copier but never written here
- */
-struct GameTreeCopyParam {
-	int arg2;
-	int arg3;
-	int chunkCount;		/* 128 */
-	bool flag0;
-	bool flag1;
-	bool flag2;
-	int reserved;
-	string *detail;		/* where a copy that failed was */
-};
-
-/*
- * PLACEHOLDER: a copier of a file or a directory tree, defined in another file of the shell
- * (constructor 0x81058F38, copy 0x8105936E; 2448 bytes)
- */
-class GameTreeCopier {
-public:
-	GameTreeCopier(const GameTreeCopyParam *param);
-	virtual ~GameTreeCopier();
-
-	virtual int Copy(const string &src, const string &dst);
-
-private:
-	SceUInt8 m_state[2444];
-};
-
-/*
- * PLACEHOLDER: a remover of a file or a directory tree, defined in another file of the shell
- * (constructor 0x810595CC, remove 0x81059914; 1416 bytes)
- */
-class GameTreeRemover {
-public:
-	GameTreeRemover(int arg3, int arg1, int arg2, bool mapErrors, int depth);
-	virtual ~GameTreeRemover();
-
-	int Remove(const string &path);
-
-private:
-	SceUInt8 m_state[1412];
 };
 
 /* the license errors gameLicenseGetStatus reports (values only) */
@@ -335,7 +225,7 @@ int gameDirGetSize(const char *path, GameCancelFunc cancel, void *arg, SceUInt64
 	if (counter == NULL)
 		return GAME_ERROR_NO_INFO_MEMORY;
 
-	ret = counter->Count(&string(path), (SceUInt32)clusterSize, 0, &counted);
+	ret = counter->Count(&string(path), (SceUInt32)clusterSize, &counted);
 	if (ret < 0) {
 		delete counter;
 		return ret;
@@ -772,17 +662,17 @@ int gameCopyFile(const char *src, const char *dst, int arg2, int arg3, void *buf
 {
 	GameCopyParam param;
 
-	param.arg2 = arg2;
-	param.flag2 = false;
-	param.flag1 = false;
-	param.flag0 = false;
-	param.reserved = 0;
-	param.chunkCount = 128;
-	param.arg3 = arg3;
+	param.cancel = (GameCancelFunc)arg2;
+	param.reserved2 = false;
+	param.replace = false;
+	param.reserved = false;
+	param.heap = NULL;
+	param.maxDepth = 128;
+	param.cancelArg = (void *)arg3;
 	param.bufSize = bufSize;
 	param.buf = buf;
-	param.arg6 = arg6;
-	param.arg7 = arg7;
+	param.progress = (GameJobProgress *)arg6;
+	param.detail = (string *)arg7;
 
 	GameFileCopier *copier = new GameFileCopier(&param);
 
@@ -835,29 +725,30 @@ int gameCopyFileWithPool(const char *src, const char *dst, int arg2, int arg3, i
 }
 
 /*
- * A file or a directory tree copied, by a copier of its own (0x8101AEA0). PLACEHOLDER: the
- * meaning of the other words is not known.
+ * A file or a folder tree moved to dst, by a mover of its own, its walk stopped when cancel says
+ * so (0x8101AEA0). The mover's progress word is left as the stack holds it, as Sony's is.
  */
-int gameCopyTree(const char *src, const char *dst, int arg2, int arg3, string *detail)
+int gameMoveTree(const char *src, const char *dst, GameCancelFunc cancel, void *cancelArg,
+		 string *detail)
 {
-	GameTreeCopyParam param;
+	GameTreeMoveParam param;
 
-	param.arg2 = arg2;
-	param.arg3 = arg3;
-	param.chunkCount = 128;
-	param.flag1 = false;
-	param.flag0 = false;
-	param.flag2 = true;
+	param.cancel = cancel;
+	param.cancelArg = cancelArg;
+	param.maxDepth = 128;
+	param.reserved2 = false;
+	param.reserved = false;
+	param.moveFiles = true;
 	param.detail = detail;
 
-	GameTreeCopier *copier = new GameTreeCopier(&param);
+	GameTreeMover *mover = new GameTreeMover(&param);
 
-	if (copier == NULL)
+	if (mover == NULL)
 		return GAME_ERROR_NO_INFO_MEMORY;
 
-	int ret = copier->Copy(string(src), string(dst));
+	int ret = mover->Move(string(src), string(dst));
 
-	delete copier;
+	delete mover;
 
 	if (ret < 0)
 		return ret;
@@ -1001,9 +892,10 @@ int gameAppDataOperate(const char *titleId, int arg1, int arg2, int arg3, int ar
 	return 0;
 }
 
-int gameRemoveDirectory(const char *path, int arg1, int arg2, int arg3, bool mapErrors)
+int gameRemoveDirectory(const char *path, GameCancelFunc cancel, void *cancelArg,
+			GameJobProgress *progress, bool mapErrors)
 {
-	GameTreeRemover *remover = new GameTreeRemover(arg3, arg1, arg2, mapErrors, 15);
+	GameTreeRemover *remover = new GameTreeRemover(progress, cancel, cancelArg, mapErrors, 15);
 
 	if (remover == NULL)
 		return GAME_ERROR_NO_INFO_MEMORY;
@@ -1022,7 +914,8 @@ int gameRemoveDirectory(const char *path, int arg1, int arg2, int arg3, bool map
  * What a directory holds removed, each entry by gameRemoveDirectory with the same words; entries
  * whose names start with a dot are kept (0x8101BAC8).
  */
-int gameRemoveDirectoryContents(const char *path, int arg1, int arg2, int arg3, bool mapErrors)
+int gameRemoveDirectoryContents(const char *path, GameCancelFunc cancel, void *cancelArg,
+				GameJobProgress *progress, bool mapErrors)
 {
 	Dir dir;
 	int ret = dir.Open(path);
@@ -1037,7 +930,7 @@ int gameRemoveDirectoryContents(const char *path, int arg1, int arg2, int arg3, 
 		if (ret == 0 && sce_paf_strncmp(entry.name.c_str(), ".", 1) != 0) {
 			string child = string(path) + string("/") + entry.name;
 
-			ret = gameRemoveDirectory(child.c_str(), arg1, arg2, arg3, mapErrors);
+			ret = gameRemoveDirectory(child.c_str(), cancel, cancelArg, progress, mapErrors);
 			if (ret < 0) {
 				dir.Close();
 				return ret;
