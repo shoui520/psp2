@@ -1119,11 +1119,10 @@ void ampPhysicalLinksInit(void)
 }
 
 /* 0x00021f52: Create_Physical_Link and Accept_Physical_Link. */
-int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argument0,
-			     uint32_t argument1)
+int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command)
 {
 	const uint8_t *data = ampHciParameters(command);
-	struct AmpLinkEvent event;
+	struct AmpLinkEvent event;	/* argument0/1 unset, as in the original */
 	struct AmpPhysicalLink *link;
 	unsigned int index = ampPhysicalLinkAllocate(data[3]);
 	unsigned int kind;
@@ -1133,13 +1132,11 @@ int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argum
 		link->keyLength = data[4];
 		link->keyType = data[5];
 		__aeabi_memcpy(link->key, data + 6, data[4]);
-		kind = (uint8_t)(data[0] - 53);
+		kind = (uint8_t)(((data[1] << 8) | data[0]) - 53);
 		link->state = kind;
-		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
+		event.opcode = (data[1] << 8) | data[0];
 		event.state = kind;
-		event.argument0 = argument0;
-		event.argument1 = argument1;
 		ampLinkPostEvent(index, kind == 0 ? 1 : 2, &event);
 	} else {
 		ampHciAdjustCommandCount(-1);
@@ -1153,27 +1150,22 @@ int ampHciCreatePhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argum
 }
 
 /* 0x00021fde: Accept_Physical_Link jumps into the Create_Physical_Link handler. */
-int ampHciAcceptPhysicalLinkStub(uint16_t opcode, OsaBuffer *command, uint32_t argument0,
-				 uint32_t argument1)
+int ampHciAcceptPhysicalLinkStub(uint16_t opcode, OsaBuffer *command)
 {
-	return ampHciCreatePhysicalLink(opcode, command, argument0, argument1);
+	return ampHciCreatePhysicalLink(opcode, command);
 }
 
 /* 0x00021fe0: Disconnect_Physical_Link. */
-int ampHciDisconnectPhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t argument0,
-				 uint32_t argument1)
+int ampHciDisconnectPhysicalLink(uint16_t opcode, OsaBuffer *command)
 {
 	const uint8_t *data = ampHciParameters(command);
-	struct AmpLinkEvent event;
+	struct AmpLinkEvent event;	/* state and argument0/1 unset, as in the original */
 	unsigned int index = ampPhysicalLinkFind(data[3]);
 
 	if (index < AMP_PHYSICAL_LINKS) {
 		ampDisconnectReason = data[4];
-		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
-		event.state = 0;
-		event.argument0 = argument0;
-		event.argument1 = argument1;
+		event.opcode = (data[1] << 8) | data[0];
 		ampLinkPostEvent(index, 4, &event);
 		ampPalNotifyDisconnect(index);
 	} else {
@@ -1184,21 +1176,17 @@ int ampHciDisconnectPhysicalLink(uint16_t opcode, OsaBuffer *command, uint32_t a
 }
 
 /* 0x0002202e: Short_Range_Mode. */
-int ampHciShortRangeMode(uint16_t opcode, OsaBuffer *command, uint32_t argument0,
-			 uint32_t argument1)
+int ampHciShortRangeMode(uint16_t opcode, OsaBuffer *command)
 {
 	const uint8_t *data = ampHciParameters(command);
-	struct AmpLinkEvent event;
+	struct AmpLinkEvent event;	/* state and argument0/1 unset, as in the original */
 	int status = 0;
 	unsigned int index = ampPhysicalLinkFind(data[3]);
 
 	if (index < AMP_PHYSICAL_LINKS) {
 		ampPhysicalLinks[index].shortRangeMode = data[4];
-		event.opcode = (data[1] << 8) | data[0];
 		event.link = index;
-		event.state = 0;
-		event.argument0 = argument0;
-		event.argument1 = argument1;
+		event.opcode = (data[1] << 8) | data[0];
 		ampLinkPostEvent(index, 5, &event);
 	} else {
 		status = AMP_HCI_UNKNOWN_CONNECTION;
@@ -1215,8 +1203,7 @@ int ampHciWriteRemoteAmpAssoc(uint16_t opcode, OsaBuffer *command)
 	struct AmpLinkEvent event;
 	int status = 0;
 	unsigned int link = ampPhysicalLinkFind(data[3]);
-	unsigned int fragment = (data[7] << 8) | data[6];
-	unsigned int total = (uint16_t)(fragment + ((data[5] << 8) | data[4]));
+	unsigned int total = (uint16_t)(((data[7] << 8) | data[6]) + ((data[5] << 8) | data[4]));
 	uint32_t length;
 	unsigned int channel;
 
@@ -1235,13 +1222,14 @@ int ampHciWriteRemoteAmpAssoc(uint16_t opcode, OsaBuffer *command)
 		ampRemoteAssocBuffer->length = 0;
 	}
 	if (status == 0 && ampRemoteAssocBuffer != NULL) {
+		/* Sony reads the fragment length from the command again here */
 		__aeabi_memcpy((uint8_t *)ampRemoteAssocBuffer + ampRemoteAssocBuffer->dataOffset +
-			       ampRemoteAssocBuffer->length, data + 8, fragment);
-		ampRemoteAssocBuffer->length += fragment;
+			       ampRemoteAssocBuffer->length, data + 8, (data[7] << 8) | data[6]);
+		ampRemoteAssocBuffer->length += (data[7] << 8) | data[6];
 	}
 check:
-	/* The original reads the length even without a buffer; treat that as no match. */
-	length = ampRemoteAssocBuffer != NULL ? ampRemoteAssocBuffer->length : ~total;
+	/* As the original: read even without a buffer (address 4 is mapped memory). */
+	length = ampRemoteAssocBuffer->length;
 	if (length != total) {
 		if (status != 0)
 			goto fail;
@@ -1281,7 +1269,7 @@ fail:
 	event.opcode = (data[1] << 8) | data[0];
 	event.link = link;
 	event.state = ampPhysicalLinks[link].state;
-	event.argument0 = status;
+	event.status = status;
 	ampLinkPostEvent(link, 16, &event);
 	return status;
 }
@@ -1667,14 +1655,12 @@ enum {
 extern struct AmpQueue ampCommandQueue;
 
 /* Handles one queued HCI command; unknown opcodes are rejected. */
-static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
+static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode, uint32_t ogf, uint32_t ocf)
 {
-	uint32_t ogf = ((ampHciParameters(command)[1] << 8) >> 10);
-	uint32_t ocf = opcode & 0x3ff;
 
 	switch (ogf) {
 	case AMP_OGF_STATUS:
-		switch ((uint8_t)opcode) {
+		switch (ocf) {
 		case 1:
 			ampHciReadFailedContactCounter(opcode, command);
 			return 1;
@@ -1699,7 +1685,7 @@ static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 		}
 		return 0;
 	case AMP_OGF_TESTING:
-		switch ((uint8_t)opcode) {
+		switch (ocf) {
 		case 3:
 			ampHciEnableDeviceUnderTestMode(opcode);
 			return 1;
@@ -1731,15 +1717,15 @@ static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 		}
 		return 0;
 	case AMP_OGF_LINK_CONTROL:
-		switch ((uint8_t)opcode) {
+		switch (ocf) {
 		case 0x35:
-			ampHciCreatePhysicalLink(opcode, command, 0, ocf - 0x35);
+			ampHciCreatePhysicalLink(opcode, command);
 			return 1;
 		case 0x36:
-			ampHciAcceptPhysicalLinkStub(opcode, command, 0, ocf - 0x35);
+			ampHciAcceptPhysicalLinkStub(opcode, command);
 			return 1;
 		case 0x37:
-			ampHciDisconnectPhysicalLink(opcode, command, 0, ocf - 0x35);
+			ampHciDisconnectPhysicalLink(opcode, command);
 			return 1;
 		case 0x38:
 			ampHciCreateLogicalLink(opcode, command);
@@ -1799,7 +1785,7 @@ static inline int ampHciDispatch(OsaBuffer *command, uint32_t opcode)
 			ampHciWriteBestEffortFlushTimeout(opcode, command);
 			return 1;
 		case 0x6b:
-			ampHciShortRangeMode(opcode, command, 0, ocf - 99);
+			ampHciShortRangeMode(opcode, command);
 			return 1;
 		}
 		return 0;
@@ -1837,7 +1823,7 @@ int ampHciProcessCommands(void)
 	uint32_t opcode;
 	uint32_t ogf;
 	uint32_t ocf;
-	int known;
+	int known = 1;	/* set once: after an unknown command, the later ones of this run are rejected too */
 
 	do {
 		command = osa_MsgQueueRecv(&ampCommandQueue);
@@ -1851,7 +1837,8 @@ int ampHciProcessCommands(void)
 			ampHciDisallowCommand(opcode, AMP_HCI_COMMAND_DISALLOWED, 0);
 		} else {
 			ampHciAdjustCommandCount(1);
-			known = ampHciDispatch(command, opcode);
+			if (!ampHciDispatch(command, opcode, ogf, ocf))
+				known = 0;
 			if (!known)
 				ampHciRejectUnknownCommand(opcode);
 		}
