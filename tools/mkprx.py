@@ -506,19 +506,39 @@ def elf(a):
 			e.put(mi + field, e.word(mi + field) + delta)
 		text[1][end - 8 - text[0]:extab - text[0]] = bytes(extab + delta - (end - 8))
 
+	# A user module of SNC without any code (np_message_padding) keeps its table
+	# addresses; its linker ends the empty text with an EXIDX_CANTUNWIND record
+	# (written below) and puts the SDK version word after it
+	no_code = (e.word(mi + MI_EXIDX_END - 4) == e.word(mi + MI_EXIDX_END)
+		   and "module_sdk_version" in sym)
+
 	# Sony's linker writes 0 for an empty unwind table (and its extab) and for an
 	# empty import table: the data modules (psp2config) have neither
-	if e.word(mi + MI_EXIDX_END - 4) == e.word(mi + MI_EXIDX_END):
+	if not no_code and e.word(mi + MI_EXIDX_END - 4) == e.word(mi + MI_EXIDX_END):
 		for field in range(MI_EXIDX_END - 4, MI_EXIDX_END + 12, 4):
 			e.put(mi + field, 0)
 	imports = e.word(mi + MI_LIBSTUB_TOP) != e.word(mi + MI_LIBSTUB_TOP + 4)
-	if not imports:
+	if not imports and not no_code:
 		e.put(mi + MI_LIBSTUB_TOP, 0)
 		e.put(mi + MI_LIBSTUB_TOP + 4, 0)
 		# and ends the text at its last byte, not at the empty .sceRefs's alignment
 		end = max(h[3] + h[5] for h in e.shdrs
 			  if h[2] & 2 and h[5] and text[0] <= h[3] < text[0] + len(text[1]))
 		del text[1][end - text[0]:]
+	if no_code:
+		# EXIDX_CANTUNWIND for the start of the empty text, then the SDK version word
+		ver = sym["module_sdk_version"]
+		at = ver - text[0]
+		word = bytes(text[1][at:at + 4])
+		text[1][at:] = struct.pack("<II", (text[0] - ver) & 0x7fffffff, 1) + word
+		for r in refs:
+			if r.target == ver:
+				r.target += 8
+			if r.anchor == ver:
+				r.anchor += 8
+		for field, value in ((MI_EXIDX_END - 4, at), (MI_EXIDX_END, at + 8),
+				     (MI_EXIDX_END + 4, at + 8), (MI_EXIDX_END + 8, at + 8)):
+			e.put(mi + field, value)
 
 	# .sceRefs (16-byte aligned, after .ARM.extab): the references the loader patches
 	# with an import's address. Per imported variable, in .sceVStub.rodata order:
