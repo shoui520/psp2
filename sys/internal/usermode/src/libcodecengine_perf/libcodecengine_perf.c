@@ -6,7 +6,8 @@
  * kernel side of those six ignores its arguments and returns 0, so their
  * argument lists are not known (PLACEHOLDER: argument lists).
  */
-#include <psp2/types.h>
+#include <stddef.h>
+#include <scetypes.h>
 
 typedef struct SceCodecEnginePmonProcessorLoad {
 	SceUInt32 size;
