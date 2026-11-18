@@ -1,8 +1,11 @@
 /*
  * The settings' requests: request 0x13 takes the host's commands 0x1380-0x1386 on the
  * settings (app/config.c), and command 0x1300 answers their versions. The commands run in
- * task 2, at event flag 3's bit 0x4000.
+ * task 2, at event flag 3's bit 0x4000. The slim's also take 0x1390-0x1394 on the backup
+ * store's regions (app/bstore.c), and command 0x1310 answers their number.
  */
+#include "board.h"
+#include "bstore.h"
 #include "config.h"
 #include "configreq.h"
 #include "handshake.h"
@@ -19,8 +22,15 @@ union ConfigRequestOffset {
 	} bytes;
 };
 
+#if BOARD_USS1001
+unsigned char configRequestAnswer[0x40];
+/* the region, the offset, the size, the data */
+unsigned char configRequestData[4 + 0x40];
+#else
 unsigned char configRequestAnswer[0x20];
-#if FW_SINCE(0x01000104)
+#endif
+#if BOARD_USS1001
+#elif FW_SINCE(0x01000104)
 unsigned char configRequestData[3 + 0x40];	/* the offset, the size, the data or records */
 #elif FW_SINCE(0x00090804)
 unsigned char configRequestData[0x40];
@@ -46,6 +56,16 @@ unsigned char hostCommandConfigVersions(unsigned char *out, unsigned char *lengt
 	*length = 8;
 	return 0;
 }
+
+#if BOARD_USS1001
+/* 0x1310: the block store's regions */
+unsigned char hostCommand1310(unsigned char *out, unsigned char *length)
+{
+	*out = bstoreRegionCount();
+	*length = 1;
+	return 0;
+}
+#endif
 
 /* event flag 3's 0x4000: the host's command came in */
 void configRequestEvent(FLGPTN ptn)
@@ -139,6 +159,52 @@ void configRequestEvent(FLGPTN ptn)
 #else
 			case 0x1385:	/* 0x00090206: the records' number, answered as unknown */
 #endif
+#if BOARD_USS1001
+			case 0x1390:		/* a block store region's read */
+				if (configRequest.length == 4) {
+					offset.bytes.low = configRequestData[1];
+					offset.bytes.high = configRequestData[2];
+					size = configRequestData[3];
+					result = bstoreRead(configRequestData[0], offset.value, size,
+							    configRequestAnswer);
+				} else
+					result = 0x3b;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result,
+						  result == 0 ? size : 0);
+				break;
+			case 0x1391:		/* write */
+				if (configRequest.length >= 5) {
+					offset.bytes.low = configRequestData[1];
+					offset.bytes.high = configRequestData[2];
+					size = configRequestData[3];
+					result = bstoreWrite(configRequestData[0], offset.value, size,
+							     &configRequestData[4]);
+				} else
+					result = 0x3b;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+			case 0x1392:		/* open */
+				if (configRequest.length == 2)
+					result = bstoreOpen(configRequestData[0], configRequestData[1]);
+				else
+					result = 0x3b;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+			case 0x1393:		/* close */
+				if (configRequest.length == 1)
+					result = bstoreClose(configRequestData[0]);
+				else
+					result = 0x3b;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+			case 0x1394:		/* commit */
+				if (configRequest.length == 1)
+					result = bstoreCommit(configRequestData[0]);
+				else
+					result = 0x3b;
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
+				break;
+#endif
 			default:
 				hostRequestAnswer(&configRequest, HOST_REQUEST_UNKNOWN, 0, 0);
 				break;
@@ -158,5 +224,13 @@ void configRequestNotify(void)
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&configRequest, HOST_REQUEST_RECEIVE);
 		break;
+#if BOARD_USS1001
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&configRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&configRequest, HOST_REQUEST_IDLE);
+		break;
+#endif
 	}
 }

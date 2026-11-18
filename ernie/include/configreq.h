@@ -1,6 +1,7 @@
 /*
  * The settings' requests (app/configreq.c): request 0x13 takes the host's commands
- * 0x1380-0x1386 (the settings' read, write, open, close, commit and records), run in task 2
+ * 0x1380-0x1386 (the settings' read, write, open, close, commit and records; the slim's
+ * also 0x1390-0x1394 on the block store's regions), run in task 2
  * at event flag 3's bit 0x4000.
  */
 #ifndef ERNIE_CONFIGREQ_H
