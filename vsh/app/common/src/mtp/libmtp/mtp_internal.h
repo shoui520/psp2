@@ -1104,7 +1104,15 @@ struct MtpStorage {
 	int (*stop)(MtpStorage *storage);
 };
 
-typedef struct MtpLogicalStorage MtpLogicalStorage;
+typedef struct MtpCache MtpCache;
+
+/* a storage's logical storage (104 bytes, in the storage manager's table) */
+typedef struct MtpLogicalStorage {
+	SceUInt8 reserved[36];		/* not read by the C written yet (STRG) */
+	const MtpStorageInfo *info;	/* info->name: the mount point */
+	MtpCache *cache;
+	SceUInt8 reserved2[60];
+} MtpLogicalStorage;
 
 /* the commands (CMD and CMDE) */
 int mtpCmdGetDeviceInfo(const MtpOperation *operation, MtpOperation *response);
@@ -1257,6 +1265,14 @@ int mtpStrgIsStorageValid(SceUInt32 storageId);
 int mtpStrgIsStorageAvailable(SceUInt32 storageId);
 int mtpStrgGetStorageInfo(SceUInt32 storageId, const MtpStorageDataset **dataset);
 int mtpStrgIsObjectHandleValid(SceUInt32 handle);
+/* the path the PFS layer opens for path in storage */
+int mtpStrgCreatePfsPath(MtpLogicalStorage *storage, const char *path, char *pfsPath,
+	SceSize size, int create);
+/* an object's property from the cache: its size (8 bytes), its full path, ... */
+#define MTP_CACHE_PROP_SIZE		4
+#define MTP_CACHE_PROP_PATH		7
+int mtpCacheGetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, void *buf,
+	SceSize size);
 int mtpObjPackObjectInfo(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *buf,
 	SceSize size);
 int mtpStrgGetNumObjects(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num);

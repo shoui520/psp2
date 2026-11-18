@@ -26,7 +26,9 @@
 #define MTP_CMD_PROGRESS_STEP		10
 
 /* the transfer thread's receive request, and the wait for its end */
+#define MTP_XFER_REQUEST_SEND		1
 #define MTP_XFER_REQUEST_RECV		2
+#define MTP_XFER_DONE_SEND		0x10
 #define MTP_XFER_DONE			0x20
 
 /* the buffer states mtpUtilGetBufferState reports between a transfer's buffers */
@@ -500,6 +502,257 @@ error:
 	if (context != NULL)
 		mtpContextPutContext(context, 1);
 	return mtpDevDriverHandleErrorResponse(operation, response, ret, code, send);
+}
+
+/* GetObject, and GetPartialObject (partial: param[1] the offset, param[2] the bytes) */
+static int _getObject(const MtpOperation *operation, MtpOperation *response, int partial)
+{
+	SceUInt32 handle = operation->param[0];
+	void *(*allocFunc)(SceSize align, SceSize size);
+	void (*freeFunc)(void *ptr) = NULL;
+	MtpLogicalStorage *storage = NULL;
+	MtpContext *context = NULL;
+	void *buffers[2];
+	SceSize bufSize = 0;
+	int code = MTP_RESPONSE_GENERAL_ERROR;
+	int send = 1;
+	int current = 0;
+	int lastPercent = 0;
+	int percent;
+	int bufferState;
+	int started;
+	SceUInt64 objectSize;
+	SceUInt64 xferSize;
+	SceUInt64 offset;
+	SceUInt64 total;
+	SceInt64 remaining;
+	SceUInt32 count;
+	SceUInt32 uniqueId;
+	SceSize nameLength;
+	char *path;
+	char *pfsPath;
+	SceUID fd;
+	int ret;
+
+	buffers[0] = NULL;
+	buffers[1] = NULL;
+	mtpContextGetContextByEvent(MTP_OPERATION_REQUEST_OBJECT_INFO, &context);
+	if (partial) {
+		if (operation->numParams < 3) {
+			MTP_ERR(MTP_TAG_CMD, 216, "wrong param\n");
+			code = MTP_RESPONSE_INVALID_PARAMETER;
+			ret = -2;
+			goto error;
+		}
+	} else if (operation->numParams == 0) {
+		MTP_ERR(MTP_TAG_CMD, 221, "wrong param\n");
+		code = MTP_RESPONSE_INVALID_PARAMETER;
+		ret = -2;
+		goto error;
+	}
+	if ((handle & MTP_OBJECT_HANDLE_DIR) != 0) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 232, "handle is association\n");
+		code = MTP_RESPONSE_INVALID_OBJECT_HANDLE;
+		goto error;
+	}
+	if (mtpStrgGetLogicalStorage(MTP_OBJECT_STORAGE_ID(handle), &storage) < 0) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 240, "storage is not available\n");
+		code = MTP_RESPONSE_STORE_NOT_AVAILABLE;
+		goto error;
+	}
+	nameLength = mtpUtilStrlen(storage->info->name);
+	path = (char *)mtpUtilMalloc(nameLength * 2 + 2046);
+	if (path == NULL) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 250, "unable to alloc memory for file name\n");
+		goto error;
+	}
+	pfsPath = &path[nameLength + 1023];
+	ret = mtpStrgVTConvertMtpHandleToUniqueId(handle, &uniqueId);
+	if (ret < 0) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 258, "unable to convert MTP handle to UniquId=0x%x\n", ret);
+		code = MTP_RESPONSE_INVALID_OBJECT_HANDLE;
+		goto free;
+	}
+	mtpUtilStrcpy(path, storage->info->name);
+	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_PATH,
+		&path[nameLength], 1023);
+	if (ret < 0) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 270, "unable to get full path name from cache=0x%x\n", ret);
+		goto free;
+	}
+	ret = mtpStrgCreatePfsPath(storage, &path[nameLength], pfsPath, nameLength + 1023, 1);
+	if (ret < 0)
+		goto free;
+	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_CACHE_PROP_SIZE,
+		&xferSize, sizeof(xferSize));
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 283, "unable to get object size from cache=0x%x\n", ret);
+		ret = -2;
+		goto free;
+	}
+	objectSize = xferSize;
+	if (partial == 1) {
+		count = operation->param[2];
+		offset = operation->param[1];
+		total = objectSize;
+		if (count < objectSize)
+			total = count;
+		if (offset + total > objectSize) {
+			MTP_ERR(MTP_TAG_CMD, 294, "size illegal over %dbytes\n",
+				(int)(offset + total - objectSize));
+			code = MTP_RESPONSE_INVALID_PARAMETER;
+			goto free;
+		}
+	} else {
+		total = objectSize;
+		offset = 0;
+	}
+	remaining = total;
+	mtpCoreSetPublicStatus(MTP_CORE_PUBLIC_STATUS_RECEIVING, 0);
+	if (context != NULL)
+		mtpContextSetProgress(context, 0, total, 1);
+	if (remaining <= 0) {
+		ret = mtpCoreSendData(&xferSize, 0, 0);
+		if (ret < 0) {
+			MTP_ERR(MTP_TAG_CMD, 449, "unable to send data=0x%x", ret);
+			send = 0;
+			goto free;
+		}
+		goto done;
+	}
+	freeFunc = mtpUtilFree;
+	bufSize = MTP_CMD_XFER_SIZE;
+	allocFunc = mtpUtilMallocAlign;
+	if (mtpUtilIsLargeBufferEnabled()) {
+		bufferState = mtpUtilGetBufferState();
+		if (bufferState == MTP_UTIL_BUFFER_STATE_TO_LARGE) {
+			mtpUtilSetBufferState(MTP_UTIL_BUFFER_STATE_HEAP);
+		} else if (bufferState != MTP_UTIL_BUFFER_STATE_HEAP &&
+			   mtpUtilLargeBufferStart() == 0) {
+			freeFunc = mtpUtilLargeBufferFree;
+			bufSize = MTP_CMD_XFER_SIZE_LARGE;
+			allocFunc = mtpUtilLargeBufferMemalign;
+		}
+	}
+	buffers[0] = allocFunc(MTP_CMD_XFER_ALIGN, bufSize);
+	buffers[1] = allocFunc(MTP_CMD_XFER_ALIGN, bufSize);
+	if (buffers[0] == NULL || buffers[1] == NULL) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 342, "unable to alloc xfer bufs\n");
+		goto free_buffers;
+	}
+	fd = mtpFileOpen(pfsPath, SCE_O_RDONLY, 0);
+	if (fd < 0) {
+		ret = -2;
+		MTP_ERR(MTP_TAG_CMD, 351, "unable to open=%s, 0x%x\n", pfsPath, fd);
+		code = MTP_RESPONSE_STORE_NOT_AVAILABLE;
+		goto free_buffers;
+	}
+	if (offset > 0 && mtpFileSeek(fd, offset, SCE_SEEK_SET) < 0) {
+		MTP_ERR(MTP_TAG_CMD, 360, "unable to seek to offset\n");
+		code = MTP_RESPONSE_STORE_NOT_AVAILABLE;
+		ret = -2;
+		goto close;
+	}
+	do {
+		bufferState = mtpUtilGetBufferState();
+		xferSize = 0;
+		started = 0;
+		if (bufferState != MTP_UTIL_BUFFER_STATE_TO_LARGE &&
+		    bufferState != MTP_UTIL_BUFFER_STATE_TO_HEAP) {
+			xferSize = remaining;
+			if (remaining >= bufSize)
+				xferSize = bufSize;
+			if (mtpFileRead(fd, buffers[current], xferSize) < 0) {
+				ret = -2;
+				MTP_ERR(MTP_TAG_CMD, 376, "unable to read data\n");
+				mtpXferWait(MTP_XFER_DONE_SEND);
+				mtpDevIfCancelTransfer();
+				code = MTP_RESPONSE_TRANSACTION_CANCELLED;
+				goto close;
+			}
+			started = 1;
+		}
+		ret = mtpXferWait(MTP_XFER_DONE_SEND);
+		if (ret < 0) {
+			MTP_ERR(MTP_TAG_CMD, 389, "wait xfer error=0x%x\n", ret);
+			send = 0;
+			goto close;
+		}
+		if (started) {
+			ret = mtpXferStart(MTP_XFER_REQUEST_SEND, buffers[current], xferSize, total);
+			if (ret < 0) {
+				MTP_ERR(MTP_TAG_CMD, 397, "start xfer error=0x%x\n", ret);
+				ret = -2;
+				goto close;
+			}
+		}
+		remaining -= xferSize;
+		percent = 100 - (int)(remaining * 100 / (SceInt64)total);
+		if (percent - lastPercent >= MTP_CMD_PROGRESS_STEP) {
+			mtpCoreSetPublicStatus(MTP_CORE_PUBLIC_STATUS_RECEIVING, percent);
+			lastPercent = percent;
+		}
+		if (context != NULL)
+			mtpContextSetProgress(context, total - remaining, total, 0);
+		if ((bufferState == MTP_UTIL_BUFFER_STATE_TO_LARGE && !started) ||
+		    (bufferState == MTP_UTIL_BUFFER_STATE_TO_HEAP && !started)) {
+			ret = mtpUtilChangeBufferAllocator(&buffers[0], &buffers[1], &bufSize,
+				&freeFunc, bufferState == MTP_UTIL_BUFFER_STATE_TO_LARGE);
+			if (ret < 0) {
+				ret = -2;
+				MTP_ERR(MTP_TAG_CMD, 429, "unable to alloc xfer bufs\n");
+			}
+		}
+		if (ret == -2)
+			break;
+		current ^= 1;
+	} while (remaining > 0);
+	ret = mtpXferWait(MTP_XFER_DONE_SEND);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 440, "wait xfer error=0x%x\n", ret);
+		send = 0;
+		goto close;
+	}
+	mtpFileClose(fd);
+done:
+	if (partial) {
+		count = (SceUInt32)(total - remaining);
+		if ((total - remaining) >> 32 != 0)
+			count = 0xFFFFFFFF;
+		mtpUtilSetMtpResponse(MTP_RESPONSE_OK, &count, 1, operation, response);
+	}
+	if (freeFunc != NULL) {
+		freeFunc(buffers[0]);
+		freeFunc(buffers[1]);
+	}
+	mtpUtilFree(path);
+	if (context != NULL)
+		mtpContextPutContext(context, 1);
+	return ret;
+close:
+	mtpFileClose(fd);
+free_buffers:
+	freeFunc(buffers[0]);
+	freeFunc(buffers[1]);
+	if (mtpContextIsDeleted(context))
+		mtpUtilLargeBufferEnd();
+free:
+	mtpUtilFree(path);
+error:
+	if (context != NULL)
+		mtpContextPutContext(context, 1);
+	return mtpDevDriverHandleErrorResponse(operation, response, ret, code, send);
+}
+
+int mtpCmdGetObject(const MtpOperation *operation, MtpOperation *response)
+{
+	return _getObject(operation, response, 0);
 }
 
 }
