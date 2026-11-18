@@ -254,6 +254,9 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_BAD_SIGNED_SFO	-2146430662	/* 0x8010113A: a signed param.sfo whose header does not check */
 #define GAME_ERROR_BAD_SELF		-2146430681	/* 0x80101127: a SELF whose headers do not check */
 #define GAME_ERROR_BAD_PARAM_SIZE	-2146430659	/* 0x8010113D: a saved copy of the eboot parameters of the wrong size */
+#define GAME_ERROR_NO_DISC_INFO		-2146430660	/* 0x8010113C: a disc list without the game */
+#define GAME_ERROR_LICENSE_PERIOD	-2146430655	/* 0x80101141: a license outside its period */
+#define GAME_ERROR_BAD_LICENSE_SIZE	-2146430653	/* 0x80101143: a license file larger than a license */
 #define GAME_ERROR_NO_VALUE		-2146430713	/* 0x80101107: a key the record does not have */
 #define GAME_ERROR_NO_MEMORY		-2146430709	/* 0x8010110B */
 #define GAME_ERROR_EBOOT		-2146430699	/* 0x80101115: an EG or ME application's EBOOT.PBP that does not open */

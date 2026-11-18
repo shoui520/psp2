@@ -144,7 +144,6 @@ int gamePspAddcontInfoCheck(const char *path, vector<string> *titleIds, bool *fo
 int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found);		/* 0x8109B7A6 */
 int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */
 int gameLaunchEmuListCheck(const string &titleId, bool *listed);	/* 0x810A4AA2: list_launch_emu.dat */
-int gamePspRifCheck(const string &rifPath);			/* 0x810357F4 */
 int gameUr0AppmetaSetup(const string *titleId, const char *path);	/* 0x81062CC6: ur0:temp/game */
 int gameUmassCheck(int arg, bool *found);	/* 0x8106371E: ux0:umass */
 int gameFttLicenseRead(common::SharedPtr<File> file, GameFttLicense *license);	/* 0x810A4EC4 */

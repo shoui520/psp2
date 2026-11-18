@@ -196,6 +196,10 @@ struct GameLicenseStatus {
 	char expireText[65];		/* expireTime as text, "-" when it does not fit */
 };
 
+/* the cluster size of path's device (0x8101890E); a folder tree's size in clusters (0x8101898E) */
+int gameDeviceGetClusterSize(const char *path, SceUInt64 *clusterSize);
+int gameDirGetSize(const char *path, GameCancelFunc cancel, void *arg, SceUInt64 *size);
+
 /* an application's sizes, by flags (0x8101A78A), and its license's status (0x8101BD12) */
 int gameTitleGetSizes(const char *titleId, unsigned int flags, GameCancelFunc cancel, void *arg,
 		      GameAppSizes *sizes);
@@ -538,19 +542,31 @@ public:
 };
 
 /*
- * PLACEHOLDER: what reads a theme's theme.xml into its record, 60 bytes, in another file of the
- * plugin (constructor 0x81033FA4, Read 0x810344AE).
+ * A theme's theme.xml read into its record (theme_reader.cpp, 0x81033FA4..0x81034650): its
+ * package at packagePath mounted with the license, the record's ID the installPath.
  */
 class GameThemeReader {
 public:
 	GameThemeReader(SceNpDrmInstallInfo *info, const paf::string *themeId,
-			const paf::string *themeDir, const paf::string *contentPath, bool extracted);
+			const paf::string *packagePath, const paf::string *installPath,
+			bool extracted);
 	virtual ~GameThemeReader();
 
-	int Read(LsdbTheme *theme, paf::common::SharedPtr<LsdbThemeInfo> *info, int arg3,
-		 int arg4);
+	int Read(LsdbTheme *theme, paf::common::SharedPtr<LsdbThemeInfo> *info,
+		 GameCancelFunc cancel, void *arg);
 
-	SceUInt8 otherFields[56];
+private:
+	int GetSize(SceSize *size, GameCancelFunc cancel, void *arg);
+	int LoadInfo(paf::common::SharedPtr<LsdbThemeInfo> *info);
+	int ReadEmpty(LsdbTheme *theme, paf::common::SharedPtr<LsdbThemeInfo> *info,
+		      GameCancelFunc cancel, void *arg);
+
+	SceNpDrmInstallInfo *m_info;
+	paf::string m_themeId;
+	paf::string m_packagePath;
+	paf::string m_installPath;
+	bool m_extracted;
+	paf::string m_mountPoint;	/* the package's, while it is read */
 };
 
 /* the steps of a theme's installation, for its progress */
@@ -632,10 +648,62 @@ public:
 
 typedef char GameParamJobSize[sizeof(GameParamJob) == 0x470 ? 1 : -1];
 
+struct SceNpDrmLicense;
+
+/* what kind of license a GameRifInfo read: by its SKU flags */
+#define GAME_RIF_LICENSE_NONE		0	/* no SKU flags */
+#define GAME_RIF_LICENSE_PERMANENT	1
+#define GAME_RIF_LICENSE_TRIAL		3	/* more than one flag */
+
 /*
- * PLACEHOLDER: what makes a PlayStation game's multi-disc signature from the PSP emulator's disc
- * list ("SceGamePs1DiscInfoParser", 28 bytes), in another file of the plugin (constructor
- * 0x81034650, Load 0x81034732, Generate 0x810348E0).
+ * An application's NpDrm license and its information (npdrm_license.cpp, 0x810349D4..0x81035AA8),
+ * 48 bytes; the shell's other parts read it too.
+ */
+class GameRifInfo {
+public:
+	GameRifInfo(int userData);
+	virtual ~GameRifInfo();
+
+	int GetInfo(SceNpDrmLicense *license, SceSize size, SceUInt64 *accountId,
+		    SceUInt64 *startTime, SceUInt64 *expireTime, SceUInt32 *skuFlags,
+		    bool allowPeriod);
+	int Load(const paf::string &dir, const SceUInt64 *accountId, bool allowPeriod);
+	int GetPeriod(SceNpDrmLicense *license, SceSize size, char *contentId,
+		      SceUInt64 *startTime, SceUInt64 *expireTime);
+
+	SceUInt64 m_accountId;
+	SceUInt64 m_startTime;
+	SceUInt64 m_expireTime;
+	int m_licenseType;	/* GAME_RIF_LICENSE_* */
+	bool m_loaded;		/* Load found a license, for an account or not */
+	int m_result;		/* what reading it returned */
+	int m_userData;		/* the creator's, not read here */
+
+private:
+	int ReadFile(const paf::string &path, SceUInt64 *accountId, SceUInt64 *startTime,
+		     SceUInt64 *expireTime, SceUInt32 *skuFlags, bool allowPeriod);
+};
+
+typedef char GameRifInfoSize[sizeof(GameRifInfo) == 48 ? 1 : -1];
+
+/*
+ * A license read into a new buffer (0x81035528); the PocketStation's license checked
+ * (0x810357F4); the path of an application's license in its license folder (0x81035860).
+ */
+int gameRifRead(const paf::string &path, SceNpDrmLicense **license, int *size);
+int gamePspRifCheck(const paf::string &rifPath);
+int gameRifGetPath(const paf::string &dir, const SceUInt64 *accountId, paf::string *path,
+		   paf::string *detail);
+
+/* a multi-disc game's entry of a disc list: its product code first */
+struct GameDiscInfo {
+	SceUInt8 data[256];
+};
+
+/*
+ * A PlayStation game's multi-disc signature made from the PSP emulator's disc list
+ * (ps1_discinfo.cpp, 0x81034650..0x81034964), read into a block of the plugin's pool
+ * "SceGamePs1DiscInfoParser".
  */
 class GamePs1DiscInfoParser {
 public:
@@ -643,9 +711,15 @@ public:
 	virtual ~GamePs1DiscInfoParser();
 
 	int Load(const paf::string &path);
-	int Generate(const SceNpDrmInstallInfo *info, paf::string ebootPath, void *signature);
+	int Generate(const SceNpDrmInstallInfo *info, const paf::string &ebootPath,
+		     void *signature);
 
-	SceUInt8 otherFields[24];
+private:
+	paf::common::SharedPtr<paf::memory::PoolAllocator> m_pool;
+	GameDiscInfo *m_discInfo;	/* the pool's block */
+	SceSize m_size;			/* the block's size */
+	int m_error;			/* what the construction failed with */
+	SceUInt32 m_count;		/* the entries read */
 };
 
 /*

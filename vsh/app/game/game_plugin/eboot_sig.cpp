@@ -42,11 +42,6 @@ struct GamePspEbootSignature {
 	SceUInt8 data[256];
 };
 
-/* a multi-disc game's disc list */
-struct GameDiscInfo {
-	SceUInt8 data[256];
-};
-
 /* the disc list the PSP emulator carries, for a game without its own */
 #define GAME_PSPEMU_DISCINFO	"vs0:app/NPXS10028/__sce_discinfo"
 
