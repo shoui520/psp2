@@ -79,8 +79,10 @@ static void powerRequest088C(void);
 static void powerRequestCtrlHpremote(void);
 static void powerRequestCtrlUsbStatus(void);
 static void powerRequest088D(void);
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 static void powerRequestCtrlRMRPower(void);
 static void powerRequestCtrlMultiCnPower(void);
+#endif
 #if FW_SINCE(0x00090804)
 static void powerRequestCtrlLedPwmBlink(void);
 #endif
@@ -99,12 +101,14 @@ static void powerRequestReadElmoReg(void);
 static void powerRequestWriteElmoReg(void);
 static void powerRequestReadCookieReg(void);
 static void powerRequestWriteCookieReg(void);
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 static void powerRequestBatteryStartBLMode(void);
 static void powerRequestCtrlManualChargeMode(void);
 static void powerRequestCtrlBatteryCharge(void);
 static void powerRequestCtrlChargingCurrent(void);
 static void powerRequestCtrlSupplyCurrentAc(void);
 static void powerRequestCtrlSupplyCurrentUsb(void);
+#endif
 void powerReadStatus(unsigned char *out);
 #if !FW_SINCE(0x00090903)
 static void powerRequest08A0(void);
@@ -126,7 +130,9 @@ static void batteryRequestReadReg(void);
 static void batteryRequestWriteReg(void);
 static void batteryRequest0988(void);
 static void batteryRequestSWReset(void);
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 static void batteryRequestGetFullCap2(void);
+#endif
 #if FW_SINCE(0x00090206)
 static void batteryRequestGetBicTemp(void);
 #endif
@@ -186,8 +192,10 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x0898, powerRequestWriteCookieReg },
 	{ 0x0899, powerRequestCtrlHpremote },
 	{ 0x089a, powerRequestCtrlUsbStatus },
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 	{ 0x089b, powerRequestCtrlRMRPower },
 	{ 0x089c, powerRequestCtrlMultiCnPower },
+#endif
 #if FW_SINCE(0x00090804)
 	{ 0x089d, powerRequestCtrlLedPwmBlink },
 #endif
@@ -204,12 +212,14 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x08a9, powerRequest08A9 },
 	{ 0x08aa, powerRequest08AA },
 #endif
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 	{ 0x08b0, powerRequestBatteryStartBLMode },
 	{ 0x08c0, powerRequestCtrlManualChargeMode },
 	{ 0x08c1, powerRequestCtrlBatteryCharge },
 	{ 0x08c2, powerRequestCtrlChargingCurrent },
 	{ 0x08c3, powerRequestCtrlSupplyCurrentAc },
 	{ 0x08c4, powerRequestCtrlSupplyCurrentUsb },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ 0x08c5, powerRequest08C5 },
 #endif
@@ -227,7 +237,9 @@ static const struct PowerCommand batteryCommands[] = {
 	{ 0x0987, batteryRequestWriteReg },
 	{ 0x0988, batteryRequest0988 },
 	{ 0x0989, batteryRequestSWReset },
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 	{ 0x098a, batteryRequestGetFullCap2 },
+#endif
 #if FW_SINCE(0x00090206)
 	{ 0x098b, batteryRequestGetBicTemp },
 #endif
@@ -769,6 +781,7 @@ static void powerRequest088D(void)
 }
 #endif
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 /* 0x089b (sceSysconCtrlRMRPower) */
 #if BOARD_102603
 /* nothing to power on 0x00102603 */
@@ -817,6 +830,7 @@ static void powerRequestCtrlMultiCnPower(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 #endif
 
 /*
@@ -1128,6 +1142,13 @@ static void powerRequestCtrlLED(void)
 	powerRequestDone(result);
 }
 
+#if !FW_SINCE(0x00090009)
+/* 0x0892 (sceSysconCtrlChargeAC): 0x00080504 has no AC charge control, and answers 0 */
+static void powerRequestCtrlChargeAC(void)
+{
+	powerRequestDone(0);
+}
+#else
 /* 0x0892 (sceSysconCtrlChargeAC) */
 static void powerRequestCtrlChargeAC(void)
 {
@@ -1151,6 +1172,7 @@ static void powerRequestCtrlChargeAC(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x0893 (sceSysconCtrlChargeVBUS): data[1] 1 the first bit, 0 the second */
 static void powerRequestCtrlChargeVBUS(void)
@@ -1313,6 +1335,7 @@ static void powerRequestWriteCookieReg(void)
 	powerRequestDone(result);
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 /* 0x08b0 (sceSysconBatteryStartBLMode, to version 0x70503) */
 static void powerRequestBatteryStartBLMode(void)
 {
@@ -1386,6 +1409,7 @@ static void powerRequestCtrlSupplyCurrentUsb(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* the Elmo's status registers 0xa0-0xa3 and 0xa4's high byte, high byte first */
 void powerReadStatus(unsigned char *out)
@@ -1697,6 +1721,7 @@ static void batteryRequestGetSOH(void)
 	batteryRequest.status = result;
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 /* 0x098a (sceSysconGetBatteryFullCap, the second): register 0x12 */
 static void batteryRequestGetFullCap2(void)
 {
@@ -1717,6 +1742,7 @@ static void batteryRequestGetFullCap2(void)
 	hostRequestAnswerReady(&batteryRequest.state);
 	batteryRequest.status = result;
 }
+#endif
 
 #if FW_SINCE(0x00090903)
 /* 0x098c (sceSysconGetBatteryCycleCount): register 0x2a (0x00090804 has not it, nor 0x098d) */

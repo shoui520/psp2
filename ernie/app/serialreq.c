@@ -63,6 +63,142 @@ void serialRequestReset(void)
 	return;
 }
 
+#if !FW_SINCE(0x00090009)
+/* 0x00080504: the status and the length go into the request, and hostRequestAnswerReady sends them */
+void serialRequestNotify(void)
+{
+	unsigned char result;
+	unsigned char offset;
+	unsigned char size;
+
+	if (!handshakeUnlocked11()) {
+		hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+		handshakeRefuse();
+		return;
+	}
+	switch (serialRequest.event) {
+	case HOST_EVENT_COMMAND:
+		if (serialRequest.command >= 0x2082 && (serialIsLocked() || serialGetLink() != 1)) {
+			serialRequest.answerLength = 0;
+			serialRequest.status = 0x10;
+			hostRequestAnswerReady(&serialRequest.state);
+			return;
+		}
+		switch (serialRequest.command) {
+		case 0x2080:		/* unlock */
+			serialRequest.status = serialUnlock(1);
+			serialRequest.answerLength = 0;
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		case 0x2081:		/* lock */
+			serialRequest.status = serialLock(1);
+			serialRequest.answerLength = 0;
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		case 0x2082:		/* restart: text (0) or binary (1), speed 2 or 3 */
+			if (serialRequest.length == 4) {
+				result = serialGetState();
+				if (result != 0 && result != 1)
+					serialRequest.status = 1;	/* (then overwritten) */
+				if (serialRequestData[0] == 0) {
+					serialStart(1);
+					serialRequest.status = 0;
+				} else if (serialRequestData[0] == 1) {
+					serialStart(SERIAL_BINARY | 1);
+					serialRequest.status = 0;
+				} else {
+					serialRequest.status = 3;
+					goto restartEnd;
+				}
+				if (serialRequestData[1] == 0 || serialRequestData[1] == 1)
+					serialRequest.status = serialReopen(serialRequestData[1] += 2);
+				else
+					serialRequest.status = 3;
+			} else
+				serialRequest.status = 2;
+restartEnd:
+			serialRequest.answerLength = 0;
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		case 0x2083:		/* read the buffer */
+			if (serialRequest.length == 2) {
+				offset = serialRequestData[0];
+				size = serialRequestData[1];
+				result = serial1BufferRead(offset, size, serialRequestData);
+				sleepFactorSet25(0);
+				if (result != 0)
+					serialRequest.answerLength = 0;
+				else
+					serialRequest.answerLength = size;
+				serialRequest.status = result;
+			} else {
+				serialRequest.answerLength = 0;
+				serialRequest.status = 2;
+			}
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		case 0x2084:		/* write the buffer, and send what was written */
+			if (serialRequest.length >= 3) {
+				offset = serialRequestData[0];
+				size = serialRequestData[1];
+				result = serial1BufferWrite(offset, size, &serialRequestData[2]);
+				serialRequest.status = result;
+			} else
+				serialRequest.status = 2;	/* (result is not set: Sony's) */
+			if (result == 0) {
+				dis_dsp();
+				if (serialGetState() == SERIAL_RECEIVE) {
+					SERIAL_REQUEST_COPY();
+					serial.command = SERIAL_REQUEST_FRAME;
+					serial.status = 0;
+					serial.length = size;
+					task2SetFlag(3, 0x0010);
+				} else
+					serialRequest.status = 5;
+				ena_dsp();
+			}
+			serialRequest.answerLength = 0;
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		case 0x2085:		/* 0: write the buffer, 1: send its bytes */
+			if (serialRequest.length >= 3) {
+				if (serialRequestData[0] == 0) {
+					offset = serialRequestData[1];
+					size = serialRequestData[2];
+					result = serial1BufferWrite(offset, size, &serialRequestData[3]);
+					serialRequest.status = result;
+				} else if (serialRequestData[0] == 1) {
+					offset = serialRequestData[1];
+					size = serialRequestData[2];
+					dis_dsp();
+					if (serialGetState() == SERIAL_RECEIVE) {
+						SERIAL_REQUEST_COPY();
+						serial.command = SERIAL_REQUEST_FRAME;
+						serial.status = 0;
+						serial.length = size;
+						task2SetFlag(3, 0x0010);
+						serialRequest.status = 0;
+					} else
+						serialRequest.status = 5;
+					ena_dsp();
+				} else
+					serialRequest.status = 3;
+			} else
+				serialRequest.status = 2;
+			serialRequest.answerLength = 0;
+			hostRequestAnswerReady(&serialRequest.state);
+			break;
+		default:
+			serialRequest.state = HOST_REQUEST_ERROR;
+			break;
+		}
+		break;
+	case HOST_EVENT_ANSWERED:
+		serialRequest.state = HOST_REQUEST_RECEIVE;
+		break;
+	}
+}
+#else
 void serialRequestNotify(void)
 {
 	unsigned char result;
@@ -186,3 +322,4 @@ restartEnd:
 		break;
 	}
 }
+#endif

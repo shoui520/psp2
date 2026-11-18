@@ -115,14 +115,19 @@ struct Charge {
 #if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)	/* 0x00090009 has no BIC temperature */
 	unsigned int	batteryBicTemp;
 #endif
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090009)	/* 0x00080504 has none */
 	unsigned int	batteryLifePercent;
+#endif
 	unsigned int	batteryTempC;
 #if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 	unsigned int	batteryBicTempC;
 #endif
 	unsigned int	acDelay;		/* timer 0x18's, the update's period */
+#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090009)	/* 0x00080504: chargeTempTicks and
+							   chargeCheckTicks */
 	unsigned int	tempTicks;		/* not used by the updater */
 	unsigned int	checkTicks;		/* 0x00090804's: the RTC's ticks at the update */
+#endif
 };
 #else
 struct Charge {

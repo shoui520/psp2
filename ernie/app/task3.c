@@ -26,7 +26,7 @@ void task3(VP_INT exinf)
 #endif
 
 	for (;;) {
-#if BOARD_TOUCH_RESET
+#if BOARD_TOUCH_RESET && FW_SINCE(0x00090009)	/* 0x00080504 identifies the panels in inputProcess */
 		ercd = wai_flg(2, 0x00dc, TWF_ORW, &ptn);
 #else
 		ercd = wai_flg(2, 0x001c, TWF_ORW, &ptn);
@@ -56,7 +56,7 @@ void task3(VP_INT exinf)
 				clr_flg(2, ~0x0010);
 				controlsRequestRun();
 			}
-#if BOARD_TOUCH_RESET
+#if BOARD_TOUCH_RESET && FW_SINCE(0x00090009)
 			if (ptn & 0x0040) {
 				clr_flg(2, ~0x0040);
 				touchIdentify0();

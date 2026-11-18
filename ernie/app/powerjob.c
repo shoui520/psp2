@@ -72,7 +72,9 @@ static void powerJobOff(void);
 static void powerJobShutdown(void);
 static void powerJobSuspend(void);
 static void powerJobCut(void);
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 static void powerJobOffEnd(void);
+#endif
 #if FW_SINCE(0x01000104)
 static void powerJobUpdate(void);
 #else
@@ -104,9 +106,11 @@ void powerJob(void)
 	case POWER_JOB_CUT:
 		powerJobCut();
 		return;
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 	case POWER_JOB_OFF_END:
 		powerJobOffEnd();
 		return;
+#endif
 #if FW_SINCE(0x01000104)
 	case POWER_JOB_UPDATE:
 		powerJobUpdate();
@@ -167,7 +171,9 @@ static void powerJobResume(void)
 	union PowerRequest *mode;
 #endif
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no bootloader line */
 	batteryBLLineOff();
+#endif
 #if FW_SINCE(0x01000104)
 	powerResumed = 1;
 #if !BOARD_IRS1001
@@ -395,6 +401,7 @@ static void powerJobCut(void)
 	powerReady(POWER_JOB_PART);
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 static void powerJobOffEnd(void)
 {
 	batteryHibernate();
@@ -405,6 +412,7 @@ static void powerJobOffEnd(void)
 	clr_flg(4, ~0x0020);
 #endif
 }
+#endif
 
 #if FW_SINCE(0x01000104)
 static void powerJobUpdate(void)

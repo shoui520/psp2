@@ -157,10 +157,12 @@ void getHardwareInfo(unsigned char *buf)
 	buf[0] |= versionFlags.hardwareInfoFlags;
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 unsigned char getHardwareInfoFlags(void)
 {
 	return versionFlags.hardwareInfoFlags | appVersionInfo.hardwareInfo[0];
 }
+#endif
 
 void setHardwareInfoFlags(unsigned char flags)
 {

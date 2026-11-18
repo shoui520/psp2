@@ -41,7 +41,9 @@ static struct InputHandler * const inputHandlers2Bit0[] = {
 	&powerInputHandler, &bbmcInputHandlerPower
 };
 static struct InputHandler * const inputHandlers2Bit1[] = { &bbmcInputHandlerWake };
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no input 1 bit 0 handler */
 static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler1Bit0 };
+#endif
 
 static unsigned char inputHandlers1Bit6Count(void);
 static unsigned char inputHandlers1Bit7Count(void);
@@ -57,11 +59,17 @@ static unsigned char inputHandlers3Bit1Count(void);
 static unsigned char inputHandlers3Bit2Count(void);
 static unsigned char inputHandlers2Bit0Count(void);
 static unsigned char inputHandlers2Bit1Count(void);
+#if FW_SINCE(0x00090009)
 static unsigned char inputHandlers1Bit0Count(void);
+#endif
 
 /* the second bit of group 1 is not sampled */
 const struct InputBit inputBits1[8] = {
+#if FW_SINCE(0x00090009)
 	{ inputHandlers1Bit0, inputHandlers1Bit0Count },
+#else
+	{ NULL, NULL },
+#endif
 	{ inputHandlers1Bit1, inputHandlers1Bit1Count },
 #if FW_SINCE(0x0100060B)
 	{ NULL, NULL },
@@ -170,8 +178,10 @@ static unsigned char inputHandlers2Bit1Count(void)
 	return LENGTH(inputHandlers2Bit1);
 }
 
+#if FW_SINCE(0x00090009)
 static unsigned char inputHandlers1Bit0Count(void)
 {
 	return LENGTH(inputHandlers1Bit0);
 }
+#endif
 

@@ -40,7 +40,7 @@
 #if FW_SINCE(0x00090804)
 #define BBMC_LINK_TIMER		TIMER(0x13)
 #else
-#define BBMC_LINK_TIMER		0x13
+#define BBMC_LINK_TIMER		TIMER_RTC_FIRST	/* 0x13 (0x00080504: 0x11) */
 #endif
 
 /* bbmcNvsDone's commands */
@@ -907,8 +907,10 @@ void bbmcRegsInit(void)
 	memset(&bbmcRegs, 0, BBMC_REGS);
 #if FW_SINCE(0x01000104)
 	bbmcRegs.r.id = 5;
-#else
+#elif FW_SINCE(0x00090009)
 	bbmcRegs.r.id = 3;
+#else
+	bbmcRegs.r.id = 1;
 #endif
 	bbmcRegs.r.reserved1 = 0;
 	bbmcRegs.r.size = BBMC_REGS;
@@ -1010,7 +1012,11 @@ unsigned char bbmcReadRegs(unsigned char reg, unsigned char count, unsigned char
 	}
 	result = count;
 	while (count--) {
+#if FW_SINCE(0x00090009)
 		if (reg >= 8 && reg < 0x14) {
+#else
+		if (reg >= 8 && reg < 0x10) {
+#endif
 			*values = bbmcRegs.byte[reg];
 			if (!keep)
 				bbmcRegs.byte[reg] = 0;
@@ -1055,6 +1061,7 @@ unsigned char bbmcGetPending(void)
 	return bbmc.pending;
 }
 
+#if FW_SINCE(0x00090009) /* not in 0x00080504 */
 /* 0 without a version, 1 for versions 0-2, else 2 */
 unsigned char bbmcGetVersion(void)
 {
@@ -1064,6 +1071,8 @@ unsigned char bbmcGetVersion(void)
 		return 1;
 	return 2;
 }
+
+#endif
 
 void bbmcDelay(void)
 {

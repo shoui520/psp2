@@ -178,7 +178,9 @@ void stateEvent(struct StateEvent *event)
 				stateNext = stateNextOf();
 				powerState = stateNext | 0x8000;
 				statePhase = 1;
+#if FW_SINCE(0x00090009)	/* 0x00080504 keeps no cause */
 				stateCause = event->transition;
+#endif
 				taskHookState();
 				stateNext = 0;
 			}
@@ -200,7 +202,9 @@ unsigned long stateGetWakeMask(void)
 
 void stateInit(void)
 {
+#if FW_SINCE(0x00090009)
 	unsigned long mask;
+#endif
 
 	stateRequest.byte[0] = 0x7f;
 	stateRequest.byte[1] = 0xff;
@@ -211,6 +215,9 @@ void stateInit(void)
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
 	if (configGet()->start.bits.wakeUnmask22)
 		mask &= ~0x00400000UL;
+#elif !FW_SINCE(0x00090009)
+	/* 0x00080504 wakes on everything */
+	stateSetWakeMask(0xffffffff);
 #else
 	/* 0x00090206's configuration has no wake masks */
 	if (configGet()->start.bits.wakeUnmask22)
@@ -222,7 +229,9 @@ void stateInit(void)
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
 #endif
+#if FW_SINCE(0x00090009)
 	stateSetWakeMask(mask);
+#endif
 }
 
 /* host command 0x0010 (sceSysconGetWakeupFactor) */
@@ -601,7 +610,9 @@ static int stateResumeHandle(struct StateEvent *event)
 #endif
 	case 0x50:
 	case 0x52: case 0x53:
+#if FW_SINCE(0x00090009)
 	case 0x56:
+#endif
 #if FW_SINCE(0x01000104)
 	case 0x57: case 0x58:
 #endif

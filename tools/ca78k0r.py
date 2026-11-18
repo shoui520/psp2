@@ -74,6 +74,7 @@ def cc(src, asm, chip, options=(), includes=(), defines=()):
 
 SEGMENT = re.compile(r'^([A-Za-z_?@][\w?@]*)\s+(CSEG|DSEG|BSEG)\b\s*([^;]*?)\s*(;.*)?$', re.I)
 LABEL = re.compile(r'^([A-Za-z_?@][\w?@]*):')
+BIT = re.compile(r'^([A-Za-z_?@][\w?@]*)\s+DBIT\b', re.I)	# a bit segment's label
 SYMBOLS = re.compile(r'^\s+(EXTRN|EXTBIT|PUBLIC)\s+([^;]*?)\s*(;.*)?$', re.I)
 END = re.compile(r'^\s+END\b', re.I)
 
@@ -85,7 +86,8 @@ class Segment:
 
 	@property
 	def labels(self):
-		return [m.group(1) for m in map(LABEL.match, self.lines) if m]
+		label = BIT.match if self.kind == 'BSEG' else LABEL.match
+		return [m.group(1) for m in map(label, self.lines) if m]
 
 	def __repr__(self):
 		return f'<{self.name} {self.kind} {self.attr}: {len(self.lines)} lines>'

@@ -14,7 +14,11 @@
 STACKTOP	EQU	0FE20H		; the stack grows down from here, to RAMBOTTOM
 RAMBOTTOM	EQU	0CF00H		; the RAM's start (0xfcf00)
 KEEPEND		EQU	0D900H + 4 + 0FCH	; the kept RAM's end: its header and the bytes summed
+$_IF (ERNIE_FW>=0x00090009)
 KEEPCLEAR	EQU	0DA90H		; what a warm start clears from
+$ELSE
+KEEPCLEAR	EQU	0DA8EH		; (0x00080504)
+$ENDIF
 SADDRSIZE	EQU	0C0H		; the short direct area above the stack (0xffe20)
 
 ; the starts of the segments copied and cleared (cstartend.asm has their ends): the

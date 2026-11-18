@@ -167,12 +167,14 @@ void powerJobPostCut(void)
 	return;
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 void powerJobPostOffEnd(void)
 {
 	powerJobState.id = POWER_JOB_OFF_END;
 	task5SetFlag(4, 0x0002);
 	return;
 }
+#endif
 
 /* before 0x01000306 the reset job is not posted: powerReset puts the charge LED off itself
    (before 0x01000107 there is no charging request to clear) */

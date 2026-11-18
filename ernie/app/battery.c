@@ -269,6 +269,7 @@ unsigned char batteryReadBicTemp(unsigned int *value)
 }
 #endif
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 reads no state of charge */
 /* its state of charge in percent (0x2c) */
 unsigned char batteryReadLifePercent(unsigned int *value)
 {
@@ -277,6 +278,7 @@ unsigned char batteryReadLifePercent(unsigned int *value)
 	reg = 0x2c;
 	return batteryRead(&reg, (unsigned char *)value, 2);
 }
+#endif
 
 #if FW_SINCE(0x00090206)
 /* a register of the device at packet[0] (packet[1] the register); a timeout resets the bus */
@@ -346,6 +348,7 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	return status;
 }
 #else	/* 0x00090009's order */
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no bootloader line and no hibernation */
 /* 0x08b0: the battery's bootloader line */
 void batteryBLLineOn(void)
 {
@@ -372,6 +375,7 @@ unsigned char batteryHibernate(void)
 	}
 	return 0;
 }
+#endif
 #endif
 
 /* 0x09b0: the gauge's control command 0x0f00 (its bootloader), checked at 0x16 where a battery

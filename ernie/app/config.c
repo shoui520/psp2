@@ -107,7 +107,9 @@ static struct ConfigRecords configRecords;
 static char configApplyRecords(unsigned char *records, unsigned int length,
 			       unsigned char check);
 #endif
+#if FW_SINCE(0x00090009)	/* 0x00080504 merges nothing */
 static unsigned char configMerge(unsigned char from, unsigned char to);
+#endif
 static unsigned char configCheck(unsigned char bank);
 static unsigned char configNewerVersion(void);
 static unsigned char configNewerCount(void);
@@ -135,9 +137,11 @@ int configInit(void)
 		if (newer == 2) {
 			config.bank = configNewerCount();
 		} else {
+#if FW_SINCE(0x00090009)
 			result0 = configMerge(newer, newer == 0 ? 1 : 0);
 			if (result0 != 0) {
 			}
+#endif
 			config.bank = newer;
 		}
 	} else {
@@ -379,6 +383,12 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	}
 	return left == 0 ? 0 : 6;
 }
+#elif !FW_SINCE(0x00090009)
+/* 0x00080504 writes no records */
+unsigned char configWriteRecords(unsigned char *records, int length)
+{
+	return 1;
+}
 #else
 /* 0x00090206: each record its length (of what follows it), the offset (high byte first) and
    the bytes to write there in the open copy; no types and no digest */
@@ -473,6 +483,7 @@ static const struct ConfigBank *const configTable[3] = {
 #define CONFIG_BANK(i)	(&configBanks[i])
 #endif
 
+#if FW_SINCE(0x00090009)
 /* the block of one bank (from: 0 or 1, or 2 the defaults), with what another keeps (to: the
    sticks' calibration, the board, ...), written over to: when from is a new layout's defaults
    and to has been written since its own */
@@ -539,6 +550,7 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	result = configCommit();
 	return result;
 }
+#endif
 
 /* erases the bank at address and writes the open copy there, three times at most */
 unsigned char configFlashWrite(unsigned long address)

@@ -97,7 +97,9 @@ int paramInit(void)
 	param.levels[2] = 0x24;
 	param.levels[3] = 0x24;
 	param.base = PARAM_BASE_DEFAULT;
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 	param.adjust = 0;
+#endif
 	ena_dsp();
 	return 0;
 }
@@ -289,10 +291,12 @@ void paramGetBase(unsigned char *base)
 	*base = param.base & 0x3f;
 }
 
+#if FW_SINCE(0x00090009)
 void paramGetAdjust(unsigned char *adjust)
 {
 	*adjust = param.adjust & 0xf0;
 }
+#endif
 
 #if FW_SINCE(0x00090804)
 void paramGetPattern1(unsigned char *pattern)

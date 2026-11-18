@@ -61,7 +61,9 @@ extern struct InputHandler inputHandlerCharge;
 extern struct InputHandler inputHandler1Bit7;
 #endif
 extern struct InputHandler inputHandler1Bit3;
+#if FW_SINCE(0x00090009)
 extern struct InputHandler inputHandler1Bit0;
+#endif
 /* a group of input bits, debounced over two samples */
 struct InputGroup {
 	unsigned char	enable;		/* the bits dispatched */

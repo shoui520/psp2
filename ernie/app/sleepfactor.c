@@ -228,6 +228,7 @@ void sleepFactorSet18(unsigned char on)
 	}
 }
 
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 void sleepFactorSet15(unsigned char on)
 {
 	if (sleepFactor.bits[1].b7 ^ on) {
@@ -237,6 +238,7 @@ void sleepFactorSet15(unsigned char on)
 		ena_dsp();
 	}
 }
+#endif
 
 #if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)	/* 0x00090009 has no charge factor 5 */
 void sleepFactorSet19(unsigned char on)

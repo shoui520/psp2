@@ -17,6 +17,13 @@
 #define POWER_TIMER(id)		(id)
 #endif
 
+/* bit 11's timer: after 9 and 10's, in 0x00080504 the last power timer (no bits 12 and 13) */
+#if FW_SINCE(0x00090009) || defined(ERNIE_UPDATER)
+#define POWER_TIMER11		TIMER(0x0c)
+#else
+#define POWER_TIMER11		0x0e
+#endif
+
 /* a device job: run when its bit is posted */
 struct PowerDeviceJob {
 	unsigned int	bits;

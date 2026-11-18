@@ -61,13 +61,16 @@ struct TouchObject {
 };
 
 /* the registers the module uses, from the object table (report and status already shifted
-   for the link, bit 0 the read bit) */
+   for the link, bit 0 the read bit); 0x00080504 reads no object table: its three are fixed by
+   the controller's firmware version (touchIdentify0) */
 struct TouchObjects {
 	unsigned int	report;		/* T34's byte 0x0e: what a frame reads */
 	unsigned int	numTouch;	/* T9's NUMTOUCH (byte 14): the touches reported */
 	unsigned int	reset;		/* T6 (command processor): its RESET */
+#if FW_SINCE(0x00090009)
 	unsigned int	backup;		/* T6's BACKUPNV */
 	unsigned int	power;		/* T7 (power configuration) */
+#endif
 #if FW_SINCE(0x00090804)	/* 0x00090206 keeps only the five above */
 	unsigned int	selfTest;	/* T25 */
 	unsigned int	userData;	/* T38 */
@@ -220,6 +223,10 @@ extern void touchClose(void);
 extern void touchClearFrames0(void);
 extern void touchClearFrames1(void);
 extern void touchStartFrame(void);
+#if !FW_SINCE(0x00090009)
+extern void touchIdentify0(void);
+extern void touchIdentify1(void);
+#endif
 extern void touchStartFrameNoLock(void);
 extern void touchEnable0(void);
 extern void touchDisable0(void);

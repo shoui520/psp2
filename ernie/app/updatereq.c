@@ -236,7 +236,9 @@ void updaterStartDownloader(void)
 {
 	unsigned char snapshot;
 	unsigned long sleepFactor;
+#if FW_SINCE(0x00090009)
 	unsigned long version;
+#endif
 #if FW_SINCE(0x01000109)
 	unsigned long hardware;
 	unsigned char board;
@@ -249,8 +251,10 @@ void updaterStartDownloader(void)
 		;
 	snapshot = sleepFactorSnapshot();
 	sleepFactor = sleepFactorGet();
+#if FW_SINCE(0x00090009)	/* 0x00080504 clears nothing for the downloader */
 	getErnieDlVersion((unsigned char *)&version);
 	version &= 0xffffff00;
+#endif
 #if FW_SINCE(0x01000104)
 	version = ((version << 24) & 0xff000000) | ((version << 8) & 0x00ff0000) |
 		  ((version >> 8) & 0x0000ff00) | ((version >> 24) & 0x000000ff);
@@ -287,8 +291,10 @@ void updaterStartDownloader(void)
 #else
 		DOWNLOADER_START->link.config = hostLink.config;
 #endif
+#if FW_SINCE(0x00090009)
 		if (version >= 0x00200000 && version <= 0x00260000)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
+#endif
 #endif
 #if FW_SINCE(0x01000109)
 		if (board == 0x40 && (version == 0x00010000 || version == 0x00010800)) {

@@ -43,6 +43,7 @@ struct TouchBuffer touchBuffer;
 struct TouchDelays touchDelays;
 #endif
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 has none */
 /* forgets both controllers */
 void touchClearPanels(void)
 {
@@ -94,6 +95,7 @@ void touchClearPanels(void)
 	touch.state.value = 0;
 #endif
 }
+#endif
 
 /* opens the link, with no panel enabled */
 void touchOpen(void)
@@ -114,6 +116,15 @@ void touchOpen(void)
 	touchBuffer.frame = 0;
 	touchBuffer.end = 0;
 	touchBuffer.data = touchBufferData;
+#if !FW_SINCE(0x00090009)
+	/* 0x00080504: the registers of firmware 0x20-0x21 until touchIdentify0 reads the version */
+	touch.panel[0].objects.report = 0x031e;
+	touch.panel[1].objects.report = 0x031e;
+	touch.panel[0].objects.numTouch = 0x011c;
+	touch.panel[1].objects.numTouch = 0x011c;
+	touch.panel[0].objects.reset = 0x00f5;
+	touch.panel[1].objects.reset = 0x00f5;
+#endif
 	memset(&touchCommand, 0, sizeof(touchCommand));
 #if FW_SINCE(0x01000306)
 	touchDelays.select = configGet()->touchDelaySelect;
@@ -485,6 +496,7 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 	transfer.sendCount = length + 2;
 	transfer.state = CSI10_TRANSFER;
 	csi10Transfer(&transfer);
+#if FW_SINCE(0x00090009)
 	retry = 0xff;
 	do {
 		if (csi10GetState() == CSI10_DONE) {
@@ -496,6 +508,23 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 			return 0;
 		}
 	} while (retry-- != 0);
+#else
+	/* 0x00080504 waits a tick between its 30 looks */
+	retry = 30;
+	for (;;) {
+		if (csi10GetState() == CSI10_DONE) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			csi10Release();
+			return 0;
+		}
+		if (retry-- == 0)
+			break;
+		dly_tsk(1);
+	}
+#endif
 busy:
 	return 2;
 }
@@ -526,6 +555,7 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 	transfer.sendCount = 2;
 	transfer.state = CSI10_TRANSFER;
 	csi10Transfer(&transfer);
+#if FW_SINCE(0x00090009)
 	retry = 0xff;
 	do {
 		if (csi10GetState() == CSI10_DONE) {
@@ -538,11 +568,30 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 			return 0;
 		}
 	} while (retry-- != 0);
+#else
+	/* 0x00080504 waits a tick between its 30 looks */
+	retry = 30;
+	for (;;) {
+		if (csi10GetState() == CSI10_DONE) {
+			if (panel == 0)
+				P0.1 = 1;
+			else if (panel == 1)
+				P0.0 = 1;
+			memcpy(data, touchReply.data, length);
+			csi10Release();
+			return 0;
+		}
+		if (retry-- == 0)
+			break;
+		dly_tsk(1);
+	}
+#endif
 busy:
 	return 2;
 }
 #endif
 
+#if FW_SINCE(0x00090009)
 /* reads panel 0's information block, and its object table when its firmware changed */
 void touchIdentify0(void)
 {
@@ -579,6 +628,75 @@ void touchIdentify1(void)
 	} else
 		memset(&touch.panel[1], 0xff, 4);
 }
+#else
+/* 0x00080504: the information block's first four bytes read into the panel, and the registers
+   of the controller's firmware version, for each version the module knows */
+void touchIdentify0(void)
+{
+	int result;
+
+	if (P0.6) {
+		result = touchRead(0x0000, (unsigned char *)&touch.panel[0], 4, 0);
+		if (result != 0)
+			memset(&touch.panel[0], 0xff, 4);
+		else if (touch.panel[0].version < 0x20) {
+			touch.panel[0].objects.report = 0x0358;
+			touch.panel[0].objects.numTouch = 0x011a;
+			touch.panel[0].objects.reset = 0x00fb;
+		} else if (touch.panel[0].version < 0x22) {
+			touch.panel[0].objects.report = 0x031e;
+			touch.panel[0].objects.numTouch = 0x011c;
+			touch.panel[0].objects.reset = 0x00f5;
+		} else if (touch.panel[0].version < 0x23) {
+			touch.panel[0].objects.report = 0x0288;
+			touch.panel[0].objects.numTouch = 0x0106;
+			touch.panel[0].objects.reset = 0x00dd;
+		} else if (touch.panel[0].version >= 0xf0) {
+			touch.panel[0].objects.report = 0x031e;
+			touch.panel[0].objects.numTouch = 0x011c;
+			touch.panel[0].objects.reset = 0x00f5;
+		} else {
+			touch.panel[0].objects.report = 0x00c0;
+			touch.panel[0].objects.numTouch = 0x01a0;
+			touch.panel[0].objects.reset = 0x0177;
+		}
+	} else
+		memset(&touch.panel[0], 0xff, 4);
+}
+
+void touchIdentify1(void)
+{
+	int result;
+
+	if (P0.5) {
+		result = touchRead(0x0000, (unsigned char *)&touch.panel[1], 4, 1);
+		if (result != 0)
+			memset(&touch.panel[1], 0xff, 4);
+		else if (touch.panel[1].version < 0x20) {
+			touch.panel[1].objects.report = 0x0358;
+			touch.panel[1].objects.numTouch = 0x011a;
+			touch.panel[1].objects.reset = 0x00fb;
+		} else if (touch.panel[1].version < 0x22) {
+			touch.panel[1].objects.report = 0x031e;
+			touch.panel[1].objects.numTouch = 0x011c;
+			touch.panel[1].objects.reset = 0x00f5;
+		} else if (touch.panel[1].version < 0x23) {
+			touch.panel[1].objects.report = 0x0288;
+			touch.panel[1].objects.numTouch = 0x0106;
+			touch.panel[1].objects.reset = 0x00dd;
+		} else if (touch.panel[1].version >= 0xf0) {
+			touch.panel[1].objects.report = 0x031e;
+			touch.panel[1].objects.numTouch = 0x011c;
+			touch.panel[1].objects.reset = 0x00f5;
+		} else {
+			touch.panel[1].objects.report = 0x00c0;
+			touch.panel[1].objects.numTouch = 0x01a0;
+			touch.panel[1].objects.reset = 0x0177;
+		}
+	} else
+		memset(&touch.panel[1], 0xff, 4);
+}
+#endif
 
 unsigned char touchBootloaderStatus0(unsigned char *status)
 {
@@ -625,6 +743,7 @@ unsigned char touchBootloaderUnlock1(void)
 	return touchWrite(TOUCH_BOOTLOADER, command, 2, 1);
 }
 
+#if FW_SINCE(0x00090009)	/* 0x00080504: no backup, reset or power commands */
 /* saves the controller's objects to its non-volatile memory */
 unsigned char touchBackup0(void)
 {
@@ -707,6 +826,7 @@ unsigned char touchSetPower1(unsigned char interval)
 	data[1] = interval;
 	return touchWriteVerified(touch.panel[1].objects.power, data, 2, 1);
 }
+#endif
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
@@ -888,6 +1008,7 @@ void touchDelaySelect(void)
 		NOP();
 }
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 reads no object table */
 /* reads a controller's object table: the addresses of the objects the module uses */
 void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigned char panel)
 {
@@ -958,6 +1079,7 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 		}
 	}
 }
+#endif
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
 /* writes mode's settings to both controllers */

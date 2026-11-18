@@ -31,7 +31,9 @@ unsigned int elmoLed;
 unsigned int elmoRegA6;
 unsigned int elmoRegA7;
 unsigned int elmoRegAA;
+#if FW_SINCE(0x00090009)
 unsigned int elmoRegAB;
+#endif
 #if FW_SINCE(0x00090804)
 unsigned int elmoReg60;
 #endif
@@ -68,7 +70,9 @@ void elmoInitRegs(void)
 	elmoRegA6 = 0;
 	elmoRegA7 = 0;
 	elmoRegAA = 0;
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no multi connector power */
 	elmoRegAB = 0;
+#endif
 #else
 #if !FW_SINCE(0x0100060B)
 	unsigned char result;

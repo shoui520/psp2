@@ -75,7 +75,9 @@ void sampleInputs3(void);
 void inputGroupUpdate(unsigned char *raw, unsigned char *state, struct InputGroup *group);
 void pinMonitorPoll(void);
 unsigned char input1Bit5Active(void);
+#if FW_SINCE(0x00090009)
 unsigned char input1Bit0Active(void);
+#endif
 unsigned char input1Bit3Active(void);
 void pinMonitor1Set(struct PinConfig *config);
 void pinMonitor1Enable(unsigned char enable);
@@ -113,7 +115,9 @@ void input1Bit2Low(void);
 void input1Bit2High(void);
 #endif
 void inputMultiCnChanged(void);
+#if FW_SINCE(0x00090009)
 void input1Bit0Changed(void);
+#endif
 void inputScanHold(unsigned int ticks);
 void inputScanTimer(void);
 void levelMonitor2Poll(void);
@@ -155,7 +159,9 @@ struct InputHandler inputHandlerCharge;
 struct InputHandler inputHandler1Bit7;
 #endif
 struct InputHandler inputHandler1Bit3;
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no input 1 bit 0 handler */
 struct InputHandler inputHandler1Bit0;
+#endif
 #if FW_SINCE(0x0100060B)
 struct InputHandler powerInputHandler;		/* group 2's bit 0, with the BBMC's */
 #endif
@@ -240,13 +246,24 @@ void inputInit(void)
 #if FW_SINCE(0x00090206)
 	intp11Level = 1;
 #endif
+#if FW_SINCE(0x00090009)
 	inputRaw1 = 0xff;
 	inputState1 = 0xff;
 	inputGroup1.prev = 0xff;
 	inputGroup1.changed = 0;
 	inputGroup1.pending = 0xa1;
+#else
+	/* 0x00080504: bit 0 has no handler (and no pending report) */
+	inputRaw1 = 0xfe;
+	inputState1 = 0xfe;
+	inputGroup1.prev = 0xfe;
+	inputGroup1.changed = 0;
+	inputGroup1.pending = 0xa0;
+#endif
 #if FW_SINCE(0x0100060B)
 	inputGroup1.enable = 0xfb;	/* bit 2 is not watched */
+#elif !FW_SINCE(0x00090009)
+	inputGroup1.enable = 0xfe;	/* 0x00080504: bit 0 is not watched */
 #else
 	inputGroup1.enable = 0xff;
 #endif
@@ -335,9 +352,11 @@ void inputInit(void)
 	inputHandler1Bit3.type = 1;
 	inputHandler1Bit3.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit3.handler = input1Bit3Changed;
+#if FW_SINCE(0x00090009)
 	inputHandler1Bit0.type = 1;
 	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit0.handler = input1Bit0Changed;
+#endif
 #if FW_SINCE(0x0100060B)
 	powerInputHandler.type = 0;
 	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
@@ -519,7 +538,13 @@ void inputStateOff(void)
 #if !FW_SINCE(0x00090804)
 	/* 0x00090206: INTP10 off, no cold-start hold */
 	intp10Enable(0);
-#if BOARD_OFF_WAKE
+#if !FW_SINCE(0x00090009)
+	/* 0x00080504: INTP1 on too, and scan mode 2 whatever P4.6 */
+	intp1Enable(1);
+	intp13Enable(1);
+	intp11Enable(1);
+	inputScanMode2(1);
+#elif BOARD_OFF_WAKE
 	intp13Enable(1);
 	intp11Enable(1);
 	if (!P4.6)
@@ -783,6 +808,12 @@ void inputProcess(void)
 	events = inputKeys.events;
 	switch (stateGet() & 0x7fff) {
 	case 0x0020:
+#if !FW_SINCE(0x00090009)	/* 0x00080504 reads the panels' identity here */
+		if (events & 0x0100)
+			touchIdentify0();
+		if (events & 0x0200)
+			touchIdentify1();
+#endif
 #if BOARD_MOTION
 		if (events & 0x0400)
 			motionInfoPoll();
@@ -1065,11 +1096,13 @@ unsigned char input1Bit5Active(void)
 	return !inputState1.5;
 }
 
+#if FW_SINCE(0x00090009)
 unsigned char input1Bit0Active(void)
 {
 	return !inputState1.0;
 }
 
+#endif
 unsigned char input1Bit3Active(void)
 {
 	return !inputState1.3;
@@ -1870,6 +1903,7 @@ void inputMultiCnChanged(void)
 #endif
 }
 
+#if FW_SINCE(0x00090009)
 void input1Bit0Changed(void)
 {
 #if !BOARD_INPUTS_102603
@@ -1884,6 +1918,7 @@ void input1Bit0Changed(void)
 #endif
 #endif
 }
+#endif
 
 /* timer 3 run ticks times first (the inputs held at a power-on) */
 void inputScanHold(unsigned int ticks)
@@ -1903,6 +1938,47 @@ void inputScanHold(unsigned int ticks)
 
 /* the scan timer's handler (timers 3 and 0x16): the key bits latched, task 3 woken and the
    timer restarted, the delays counted down */
+#if !FW_SINCE(0x00090009)
+/* 0x00080504: the delays first, and the touch panels' two report events 0x0100 and 0x0200
+   (inputProcess identifies the panels on them) */
+void inputScanTimer(void)
+{
+	unsigned char toggled;
+
+	inputKeys.events = 0;
+	if (inputDelays.motionInfo != 0) {
+		if (--inputDelays.motionInfo == 0)
+			motionInfoStart();
+	}
+	if (inputDelays.flag40 != 0) {
+		if (--inputDelays.flag40 == 0)
+			inputKeys.events |= 0x0100;
+	}
+	if (inputDelays.flag80 != 0) {
+		if (--inputDelays.flag80 == 0)
+			inputKeys.events |= 0x0200;
+	}
+	if (inputDelays.latchOn != 0) {
+		if (--inputDelays.latchOn == 0)
+			analogLatchOn();
+	}
+	toggled = scanCount++ ^ scanCount;
+	inputKeys.events |= inputKeys.state & 0x0402;
+	if (toggled & 0x02)
+		inputKeys.events |= inputKeys.state & 0x000c;
+	if (toggled & 0x04)
+		inputKeys.events |= inputKeys.state & 0x00a1;
+	task3SetFlag(2, 0x0008);
+	if (inputScan.hold != 0) {
+		inputScan.hold--;
+		timerStart(3, 1);
+	} else if (inputScan.mode == 2) {
+		timerStart(TIMER_RTC(0x16), inputScan.interval);
+	} else {
+		timerStart(3, inputScan.interval);
+	}
+}
+#else
 void inputScanTimer(void)
 {
 	unsigned char toggled;
@@ -1954,6 +2030,7 @@ void inputScanTimer(void)
 			analogLatchOn();
 	}
 }
+#endif
 
 /* the RTC's interrupt (state 0x0010 or 0x0800): P11.4 */
 void levelMonitor1Poll(void)

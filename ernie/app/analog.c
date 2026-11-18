@@ -534,7 +534,7 @@ void analogEvent(unsigned int inputs)
 		if (analogMultiCn == analogMultiCnPrevious && analogMultiCn != analogMultiCnReported) {
 			analogMultiCnReported = analogMultiCn;
 			analogMultiCnStop();
-#if !FW_SINCE(0x0100010B)
+#if !FW_SINCE(0x0100010B) && FW_SINCE(0x00090009)	/* 0x00080504 keeps the ADC open */
 			if (stateGet() != 0x0020)
 				adcClose();
 #endif
@@ -1567,7 +1567,7 @@ void analogLatchInit(void)
 	analogLatch.state = 0xff;
 }
 
-/* never called */
+/* 0x00080504's controlsReadButtons only */
 unsigned char analogLatchIsSet(void)
 {
 	if (analogLatch.reported == 1)

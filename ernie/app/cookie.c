@@ -436,6 +436,7 @@ unsigned char cookieCtrlReg7(unsigned char value)
 	return result;
 }
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 has only cookieCtrlReg7 here */
 /* 0x00090009: register 3's bit 6 clear while on, no lock and no read first */
 unsigned char cookieCtrlChargeAc(unsigned char on)
 {
@@ -474,6 +475,7 @@ unsigned char cookieReadStatus2(unsigned char *status)
 	return cookieRead(&reg, status);
 }
 
+#endif
 #endif
 
 #if FW_SINCE(0x00090804)	/* led.c's */

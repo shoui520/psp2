@@ -259,8 +259,10 @@ unsigned char serialCommands1Count(void)
 	return 0x2d;
 #elif FW_SINCE(0x00090804)
 	return 0x31;
-#else
+#elif FW_SINCE(0x00090009)
 	return 0x25;
+#else
+	return 0x1f;
 #endif
 }
 
@@ -622,6 +624,7 @@ static unsigned char serial1Command0301(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if FW_SINCE(0x00090009) /* 0x00080504 has no settings commands */
 /* 0x0140: the banks' versions and counts (configGetVersions) */
 static unsigned char serial1Command0140(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -657,6 +660,8 @@ static unsigned char serial1Command0141(struct SerialBuffer *request, struct Ser
 	return result == 0 ? 0 : result;
 }
 
+#endif
+
 #if FW_SINCE(0x0100060B)
 /* 0x0168: sleepFactorGetOffInfo's */
 static unsigned char serial1Command0168(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -669,6 +674,7 @@ static unsigned char serial1Command0168(struct SerialBuffer *request, struct Ser
 }
 #endif
 
+#if FW_SINCE(0x00090009)
 /* 0x0142: the offset, the size, the data: a write to the open copy (configWrite) */
 static unsigned char serial1Command0142(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -734,7 +740,10 @@ static unsigned char serial1Command0145(struct SerialBuffer *request, struct Ser
 	return result == 0 ? 0 : result;
 }
 
-#if !FW_SINCE(0x00090804)
+#endif
+
+#if !FW_SINCE(0x00090009)
+#elif !FW_SINCE(0x00090804)
 /* 0x00090206's records for the open copy (configWriteRecords): the size, the records; no entry
    of serialCommands1 runs it, and it sets no answer */
 static unsigned char serial1Command0146(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1632,12 +1641,14 @@ const struct SerialCommand serialCommands1[] = {
 	{ 0x0121, serial1Command0121 },
 	{ 0x0131, serial1Command0131 },
 	{ 0x0132, serial1Command0132 },
+#if FW_SINCE(0x00090009)
 	{ 0x0140, serial1Command0140 },
 	{ 0x0141, serial1Command0141 },
 	{ 0x0142, serial1Command0142 },
 	{ 0x0143, serial1Command0143 },
 	{ 0x0144, serial1Command0144 },
 	{ 0x0145, serial1Command0145 },
+#endif
 	{ 0x0300, serial1Command0300 },
 	{ 0x0301, serial1Command0301 },
 	{ 0x0900, serial1Command0900 },

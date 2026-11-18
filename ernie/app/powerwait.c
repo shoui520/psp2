@@ -28,8 +28,13 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0002, powerAccOff },
 	{ 0x0004, powerHpremoteOn },
 	{ 0x0008, powerHpremoteOff },
+#if FW_SINCE(0x00090009)
 	{ 0x0010, powerMultiCnOn },
 	{ 0x0020, powerMultiCnOff },
+#else	/* 0x00080504: no multi-connector power */
+	{ 0x0010, powerHdmiCecOn },
+	{ 0x0020, powerHdmiCecOff },
+#endif
 #if BOARD_102603
 	{ 0x0040, powerSdOn },
 	{ 0x0080, powerSdOff },
@@ -202,6 +207,7 @@ static void powerTimerEnd11(void)
 	powerTimers &= ~0x0800;
 }
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no bits 12 and 13 */
 static void powerTimerEnd12(void)
 {
 	powerTimers &= ~0x1000;
@@ -211,6 +217,7 @@ static void powerTimerEnd13(void)
 {
 	powerTimers &= ~0x2000;
 }
+#endif
 
 #if FW_SINCE(0x0100060B)
 static void powerTimerEnd14(void)
@@ -251,11 +258,13 @@ void powerTimersInit(void)
 	timerSetHandler(0x0d, &handler);
 #endif
 	handler.handler = powerTimerEnd11;
-	timerSetHandler(TIMER(0x0c), &handler);
+	timerSetHandler(POWER_TIMER11, &handler);
+#if FW_SINCE(0x00090009)
 	handler.handler = powerTimerEnd12;
 	timerSetHandler(TIMER(0x0d), &handler);
 	handler.handler = powerTimerEnd13;
 	timerSetHandler(TIMER(0x0e), &handler);
+#endif
 #if FW_SINCE(0x0100060B)
 	handler.handler = powerTimerEnd14;
 	timerSetHandler(0x15, &handler);

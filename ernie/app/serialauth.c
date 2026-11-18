@@ -79,8 +79,15 @@ static unsigned char serialAuthLock14(void);
 
 
 static const struct SerialAuthKeys serialAuthKeys[SERIAL_AUTH_MODES] = {
+#if !FW_SINCE(0x00090009)	/* the round keys */
+	{ 0x00, (const unsigned char *)serialKey0First, (const unsigned char *)serialKey0Second,
+	  serialKey0Check },
+	{ 0x01, (const unsigned char *)serialKey1First, (const unsigned char *)serialKey1Second,
+	  serialKey1Check },
+#else
 	{ 0x00, serialKey0First, serialKey0Second, serialKey0Check },
 	{ 0x01, serialKey1First, serialKey1Second, serialKey1Check },
+#endif
 #if FW_SINCE(0x00090804)
 	{ 0x0e, serialKey2First, serialKey2Second, serialKey2Check },
 #endif
@@ -146,6 +153,105 @@ unsigned char serialAuthSetMode(unsigned char state, unsigned char mode)
 #define SERIAL_AUTH_KEY	serialAuthKeys[serialAuth.mode]	/* 0x00090206: the modes are 0 and 1 */
 #endif
 
+#if !FW_SINCE(0x00090009)
+/*
+ * Process serial mode 1's authenticated exchange. 0x00080504 keeps each mode's keys expanded
+ * (authkeys.c), so it takes no pool block and expands nothing.
+ */
+unsigned char serialAuthCommand(unsigned char *data)
+{
+	struct AesKey key;
+	/* The original passes these stack bytes without initializing them first. */
+	unsigned char nonce[16];
+	unsigned char seed[4];
+
+	memcpy(&serialAuthPacket, data, sizeof(serialAuthPacket));
+	switch (serialAuth.state) {
+	case 0:
+		serialAuth.mode = serialAuthPacket.mode;
+		if (serialAuth.mode != 0 && serialAuth.mode != 1) {
+			serialAuth.state = 0xff;
+			serialAuthPacket.error = 1;
+		} else {
+			serialAuth.state = 1;
+			serialAuthPacket.error = 0;
+		}
+		/* fall through */
+	case 1:
+		randomGenerate(seed, nonce);
+		memcpy(serialAuth.nonce, nonce, 8);
+		serialAuthPacket.magic = 0x30;
+		serialAuthPacket.step = 0;
+		serialAuthPacket.mode = serialAuth.mode;
+		memset(serialAuthPacket.header, 0, 0x24);
+		memcpy(data, &serialAuthPacket, sizeof(serialAuthPacket));
+		serialAuth.state = 2;
+		break;
+	case 2:
+		if (serialAuthPacket.magic != 0x30 || serialAuthPacket.step != 1 ||
+		    serialAuthPacket.error != 0 || serialAuthPacket.mode != serialAuth.mode) {
+			serialAuth.state = 0xff;
+			serialAuthPacket.error = 1;
+		} else {
+			serialAuth.state = 3;
+			serialAuthPacket.error = 0;
+		}
+		memcpy(serialAuth.challenge, serialAuthPacket.challenge, 8);
+		serialAuthPacket.magic = 0x30;
+		serialAuthPacket.step = 2;
+		serialAuthPacket.mode = serialAuth.mode;
+		memcpy(serialAuthPacket.header, serialHeader, 4);
+		memcpy(serialAuthPacket.challenge, serialAuth.nonce, 8);
+		memcpy(serialAuthPacket.response, serialAuth.challenge, 8);
+		memcpy(serialAuthPacket.key, SERIAL_AUTH_KEY.check, 16);
+		key.w = (unsigned long *)SERIAL_AUTH_KEY.first;
+		key.nk = 4;
+		key.nb = 4;
+		aesCbcEncrypt(serialAuthPacket.challenge, serialAuthPacket.challenge,
+			      (struct AesKey __near *)&key, serialIv, 0x20);
+		memcpy(data, &serialAuthPacket, sizeof(serialAuthPacket));
+		break;
+	case 3:
+		if (serialAuthPacket.magic != 0x30 || serialAuthPacket.step != 3 ||
+		    serialAuthPacket.error != 0 || serialAuthPacket.mode != serialAuth.mode) {
+			serialAuth.state = 0xff;
+			serialAuthPacket.error = 1;
+		}
+		key.w = (unsigned long *)SERIAL_AUTH_KEY.second;
+		key.nk = 4;
+		key.nb = 4;
+		aesCbcDecrypt(serialAuthPacket.challenge, (unsigned char __near *)(data + 8),
+			      (struct AesKey __near *)&key, serialIv, 0x20);
+		memcpy(serialAuthPacket.challenge, data + 8, 0x20);
+		if (serialAuth.state != 0xff) {
+			if (memcmp(serialAuthPacket.challenge, serialAuth.challenge, 8) != 0 ||
+			    memcmp(serialAuthPacket.response, serialAuth.nonce, 8) != 0) {
+				serialAuth.state = 0xff;
+				serialAuthPacket.error = 2;
+			} else {
+				serialAuth.state = 0;
+				serialAuthPacket.error = 0;
+			}
+		}
+		serialAuthPacket.magic = 0x30;
+		serialAuthPacket.step = 0xff;
+		serialAuthPacket.mode = serialAuth.mode;
+		memset(serialAuthPacket.header, 0, 0x24);
+		memcpy(data, &serialAuthPacket, sizeof(serialAuthPacket));
+		break;
+	default:
+		break;
+	}
+	if (serialAuth.state == 0xff) {
+		serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return 0x10;
+	} else if (serialAuth.state == 0) {
+		serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return 0;
+	}
+	return 0;
+}
+#else
 /* Process serial mode 1's authenticated exchange. */
 unsigned char serialAuthCommand(unsigned char *data)
 {
@@ -302,6 +408,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 	return 0;
 #endif
 }
+#endif
 
 unsigned char serialAuthState(void)
 {

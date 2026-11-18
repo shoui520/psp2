@@ -515,10 +515,12 @@ unsigned char powerOff(void)
 	PER0.2 = 0;
 #if FW_SINCE(0x0100060B)
 	if (stateCause == 0x56 || stateCause == 0x5c)
-#else
+#elif FW_SINCE(0x00090009)	/* 0x00080504 has no off end job */
 	if (stateCause == 0x56)
 #endif
+#if FW_SINCE(0x00090009)
 		powerJobPostOffEnd();
+#endif
 	if (powerPendingGet() != 0)
 		result = 1;
 #if !FW_SINCE(0x01000104)
