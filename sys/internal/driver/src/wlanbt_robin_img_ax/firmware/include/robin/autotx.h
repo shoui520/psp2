@@ -26,7 +26,7 @@ struct __attribute__((packed)) WlanAutoTxFrame {
 	uint16_t frameLength;		/* the bytes from destination on */
 	uint8_t destination[6];		/* zero: the connection's local address */
 	uint8_t source[6];		/* zero: the interface address */
-	uint8_t payload[];
+	uint8_t payload[98];		/* the rest of the record */
 };
 
 /* The configured frame (0x5745e) and the time left until it is due. */

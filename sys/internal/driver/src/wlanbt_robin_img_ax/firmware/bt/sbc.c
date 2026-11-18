@@ -43,11 +43,14 @@ void fmCoexFilterBuffer(void)
 	int i;
 
 	for (i = 0; i < SBC_DRIVERS; i++) {
-		struct MdevDriver *driver = &sbcCodecDrivers[i];
+		struct MdevDriver *driver;
+		const char *name;
 
 		sbcCodecDriverStatus[i] = 0;
+		name = sbcCodecDriverNames[i];
+		driver = &sbcCodecDrivers[i];
 		driver->index = i;
-		driver->name = sbcCodecDriverNames[i];
+		driver->name = name;
 		driver->callbacks[0] = btSbcRomFormatState;
 		driver->callbacks[1] = btSbcRomInspectState;
 		driver->callbacks[2] = btSbcRomTrackState;
@@ -65,11 +68,14 @@ void fmCoexHandlePacket(void)
 	int i;
 
 	for (i = 0; i < SBC_DRIVERS; i++) {
-		struct MdevDriver *driver = &sbcPcmDrivers[i];
+		struct MdevDriver *driver;
+		const char *name;
 
 		sbcPcmDriverStatus[i] = 0;
+		name = sbcPcmDriverNames[i];
+		driver = &sbcPcmDrivers[i];
 		driver->index = i;
-		driver->name = sbcPcmDriverNames[i];
+		driver->name = name;
 		driver->callbacks[0] = btSbcRomCheckState;
 		driver->callbacks[1] = btSbcRomValidateState;
 		driver->callbacks[2] = btSbcRomPrepareState;
@@ -183,6 +189,7 @@ int fmCoexConfigurePacket(void)
 	uint32_t status;
 	unsigned int tries = 0;
 	uint8_t *rtp;
+	uint8_t *header;
 	unsigned int sequence;
 	uint32_t timestamp;
 
@@ -205,10 +212,11 @@ int fmCoexConfigurePacket(void)
 		rtp[5] = timestamp >> 16;
 		rtp[6] = timestamp >> 8;
 		rtp[7] = timestamp;
-		sbcStream.header[2] = sbcMediaPacket->length - 4;
-		sbcStream.header[3] = (sbcMediaPacket->length - 4) >> 8;
-		sbcStream.header[4] = sbcMediaPacket->length - 8;
-		sbcStream.header[5] = (sbcMediaPacket->length - 8) >> 8;
+		header = sbcStream.header;
+		header[2] = sbcMediaPacket->length - 4;
+		header[3] = (sbcMediaPacket->length - 4) >> 8;
+		header[4] = sbcMediaPacket->length - 8;
+		header[5] = (sbcMediaPacket->length - 8) >> 8;
 		__aeabi_memcpy((uint8_t *)sbcMediaPacket + sbcMediaPacket->dataOffset, sbcStream.header,
 			       sbcStream.headerLength);
 		mdevForwardEvent(btHciDev, sbcMediaPacket, sbcMediaPacket->length, SBC_MEDIA_TAG);
@@ -217,7 +225,7 @@ int fmCoexConfigurePacket(void)
 	} else if (sbcMediaPacket != NULL) {
 		goto dropped;
 	}
-	if (osa_BufferClone(&btPacketPool) <= 4) {
+	if ((unsigned int)osa_BufferClone(&btPacketPool) <= 4) {
 		OsaBuffer *packet = osa_BufferAlloc(&btPacketPool, 0, ~0u);
 
 		sbcMediaPacket = packet;
@@ -428,7 +436,7 @@ __attribute__((noinline)) unsigned int btSbcCheckState(uint8_t value)
 }
 
 /* Fills the PCM port's descriptor for the encoder's and the decoder's frames. */
-void btSbcValidateState(struct SbcPcmDescriptor *descriptor, uint16_t encoderOffset, uint16_t decoderOffset)
+void btSbcValidateState(struct SbcPcmDescriptor *descriptor, unsigned int encoderOffset, unsigned int decoderOffset)
 {
 	unsigned int slots;
 
@@ -567,11 +575,9 @@ int btSbcBuildState(void)
 int btSbcComputeState(void)
 {
 	if (sbcMediaPacket == NULL) {
-		OsaBuffer *packet = osa_BufferAlloc(&btTablePool, SBC_MSBC_SCO_SIZE, ~0u);
-
-		sbcMediaPacket = packet;
-		packet->transportTag = SBC_SCO_TAG;
-		packet->data[7] = SBC_SCO_TAG;
+		sbcMediaPacket = osa_BufferAlloc(&btTablePool, SBC_MSBC_SCO_SIZE, ~0u);
+		sbcMediaPacket->transportTag = SBC_SCO_TAG;
+		sbcMediaPacket->data[7] = SBC_SCO_TAG;
 		sbcMediaPacket->dataOffset = SBC_MEDIA_OFFSET;
 		sbcFrame.frames = 0;
 		sbcFrame.headerLength = SBC_MSBC_SCO_HEADER;
@@ -671,12 +677,15 @@ int btSbcResetState(void)
 			sbcMsbc.rxSynced = 0;
 		}
 		if (packet != NULL) {
-			OsaBuffer *rest = sbcReceivedPacket;
+			OsaBuffer *rest;
 			unsigned int restLength;
+			unsigned int offset;
 
 			havePacket = 1;
 			packet->length = ((uint8_t *)packet + packet->dataOffset)[2];
-			packet->dataOffset = sbcDecoderFrame.headerLength;
+			offset = sbcDecoderFrame.headerLength;
+			packet->dataOffset = offset;
+			rest = sbcReceivedPacket;
 			restLength = rest->length;
 			frame = (uint8_t *)rest + rest->dataOffset + restLength;
 			length = (uint16_t)(restLength + packet->length);
@@ -684,7 +693,7 @@ int btSbcResetState(void)
 			if (length > SBC_SCO_MAXIMUM)
 				for (;;)
 					;
-			__aeabi_memcpy(frame, (uint8_t *)packet + sbcDecoderFrame.headerLength, packet->length);
+			__aeabi_memcpy(frame, (uint8_t *)packet + offset, packet->length);
 			romHctRxHook(packet);
 		}
 	}
@@ -768,11 +777,13 @@ consumed:
 		length = packet->length;
 		if ((unsigned int)(sbcDecoderFrame.frames + sbcDecoderFrame.length + 2) > length) {
 			/* Moves what is left of the packet to its start. */
+			unsigned int offset = sbcDecoderFrame.headerLength;
+
 			frame = (uint8_t *)packet + packet->dataOffset;
-			packet->dataOffset = sbcDecoderFrame.headerLength;
+			packet->dataOffset = offset;
 			packet->length = length - sbcDecoderFrame.frames;
 			sbcDecoderFrame.frames = 0;
-			__aeabi_memcpy((uint8_t *)packet + sbcDecoderFrame.headerLength, frame, packet->length);
+			__aeabi_memcpy((uint8_t *)packet + offset, frame, packet->length);
 		}
 	}
 
@@ -925,14 +936,17 @@ int btSbcFormatState(void)
 	sbcDecoderPacket = osa_BufferAlloc(&btTablePool, 0x100, ~0u);
 	packet = sbcDecoderPacket;
 	if (packet != NULL) {
-		packet->transportTag = SBC_SCO_TAG;
+		unsigned int samples;
+
 		packet->dataOffset = 32;
+		packet->transportTag = SBC_SCO_TAG;
 		packet->data[7] = SBC_SCO_TAG;
 		packet = sbcDecoderPacket;
 		packet->length = sbcFrame.samples;
 		packet->dataOffset = SBC_PCM_SCO_OFFSET;
+		samples = sbcFrame.event == 2 ? 0 : sbcFrame.samples;
 		packet->length = sbcFrame.samples;
-		mdevRomUpdateState(sbcDevices.pcm, packet, sbcFrame.event == 2 ? 0 : sbcFrame.samples, 8);
+		mdevRomUpdateState(sbcDevices.pcm, packet, samples, 8);
 		packet = sbcDecoderPacket;
 		packet->dataOffset = SBC_MEDIA_OFFSET;
 		sco = (uint8_t *)packet + SBC_MEDIA_OFFSET;

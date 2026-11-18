@@ -221,10 +221,10 @@ struct SbcPcmDescriptor {
 	uint8_t reserved1 : 1;
 	uint8_t frameSync;
 	uint8_t slots;			/* sbcPcmSlotConfig bits 2-7, at least 1 */
-	uint16_t encoderOffset;		/* the encoder's sample bytes and the caller's offset */
+	uint16_t encoderOffset __attribute__((packed));	/* written byte by byte; the encoder's sample bytes and the caller's offset */
 	struct SbcPcmCount encoderSamples;
 	struct SbcPcmCount encoderBytes;
-	uint16_t decoderOffset;
+	uint16_t decoderOffset __attribute__((packed));
 	struct SbcPcmCount decoderSamples;
 	struct SbcPcmCount decoderBytes;
 };
@@ -428,8 +428,8 @@ int btSbcDecoderProcess(void);				/* 0x4d544 */
 int btSbcUpdateState(void);				/* 0x4d548 */
 void btSbcConfigureState(const uint8_t *settings);	/* 0x4d5a4 */
 unsigned int btSbcCheckState(uint8_t value);		/* 0x4d5be */
-void btSbcValidateState(struct SbcPcmDescriptor *descriptor, uint16_t encoderOffset,
-			uint16_t decoderOffset);		/* 0x4d5dc */
+void btSbcValidateState(struct SbcPcmDescriptor *descriptor, unsigned int encoderOffset,
+			unsigned int decoderOffset);	/* 0x4d5dc */
 int btSbcPrepareState(void);				/* 0x4d716 */
 int btSbcCloseCodecDevices(OsaBuffer *event);		/* 0x4d758 */
 int btSbcDispatchState(const uint8_t *data);		/* 0x4d760 */
