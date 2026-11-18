@@ -12,8 +12,6 @@
 #include "mtp_internal.h"
 
 /* the vendor operations a request runs, and the events the host is told of */
-#define MTP_OPERATION_HTTP_GET_DATA	0xC10B
-#define MTP_OPERATION_HTTP_GET_PROPERTY	0xC113
 #define MTP_OPERATION_EXPORT_OBJECT	0xC107
 
 /* the context's kind: whether it holds a data phase */

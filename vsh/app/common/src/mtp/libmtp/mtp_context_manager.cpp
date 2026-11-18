@@ -11,7 +11,6 @@
 
 using paf::common::SharedPtr;
 
-#define MTP_TAG_CTXT			"CTXT:"
 
 MtpContextManager::MtpContextManager() : m_mutex(0), m_canceling(0)
 {

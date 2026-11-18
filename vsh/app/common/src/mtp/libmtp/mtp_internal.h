@@ -27,6 +27,10 @@ extern "C" {
 #define MTP_WARN(tag, line, fmt, ...) \
 	sceClibPrintf("[MTP %s%s(%d)warning] " fmt, tag, __FUNCTION__, line, ##__VA_ARGS__)
 
+/* the tags of the messages of the files several files share */
+#define MTP_TAG_CMD	"CMD :"
+#define MTP_TAG_CTXT	"CTXT:"
+
 /* SceLibMtp's errors (the names are ours) */
 #define SCE_MTP_ERROR_NOT_INITIALIZED	((int)0x80540001)
 #define SCE_MTP_ERROR_ALREADY		((int)0x80540002)
@@ -35,9 +39,13 @@ extern "C" {
 #define SCE_MTP_ERROR_NO_MEMORY		((int)0x80540007)
 #define SCE_MTP_ERROR_DEVICE		((int)0x80540008)
 #define SCE_MTP_ERROR_INVALID_PARENT	((int)0x80540009)
+/* an object property the device does not let the host set */
+#define SCE_MTP_ERROR_READ_ONLY_PROPERTY	((int)0x8054000A)
 /* mtpObjAddRegularObject: a file of that name is already there */
 #define SCE_MTP_ERROR_OBJECT_EXISTS	((int)0x80540035)
 #define SCE_MTP_ERROR_NOT_FOUND		((int)0x80540011)
+/* the host's data phase ended before a value's bytes */
+#define SCE_MTP_ERROR_RECEIVE		((int)0x80540012)
 #define SCE_MTP_ERROR_DATA_PHASE_OVER	((int)0x80540013)
 #define SCE_MTP_ERROR_TERMINATED	((int)0x80540014)
 #define SCE_MTP_ERROR_HOST_TIMEOUT	((int)0x8054001C)
@@ -50,6 +58,8 @@ extern "C" {
 #define SCE_MTP_ERROR_GENERAL		((int)0x80540015)
 #define SCE_MTP_ERROR_UNSUPPORTED_FORMAT	((int)0x8054000B)
 #define SCE_MTP_ERROR_UNSUPPORTED_PROPERTY	((int)0x8054000C)
+/* the cache and the database have no such object */
+#define SCE_MTP_ERROR_NO_SUCH_OBJECT	((int)0x8054000E)
 
 /* the network device's errors (the names are ours) */
 #define SCE_MTP_ERROR_NET_UNKNOWN_HOST_TYPE	((int)0x8054001E)
@@ -161,15 +171,18 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_GENERAL_ERROR	0x2002
 #define MTP_RESPONSE_SESSION_NOT_OPEN	0x2003
 #define MTP_RESPONSE_OPERATION_NOT_SUPPORTED	0x2005
-#define MTP_RESPONSE_DEVICE_PROP_NOT_SUPPORTED	0x2006
+#define MTP_RESPONSE_PARAMETER_NOT_SUPPORTED	0x2006
 #define MTP_RESPONSE_INCOMPLETE_TRANSFER	0x2007
 #define MTP_RESPONSE_INVALID_STORAGE_ID	0x2008
 #define MTP_RESPONSE_INVALID_OBJECT_HANDLE	0x2009
+#define MTP_RESPONSE_DEVICE_PROP_NOT_SUPPORTED	0x200A
+#define MTP_RESPONSE_INVALID_OBJECT_FORMAT_CODE	0x200B
 #define MTP_RESPONSE_STORE_FULL		0x200C
 #define MTP_RESPONSE_STORE_READ_ONLY	0x200E
 #define MTP_RESPONSE_ACCESS_DENIED	0x200F
 #define MTP_RESPONSE_STORE_NOT_AVAILABLE	0x2013
 #define MTP_RESPONSE_SPECIFICATION_BY_FORMAT_UNSUPPORTED	0x2014
+#define MTP_RESPONSE_NO_VALID_OBJECT_INFO	0x2015
 #define MTP_RESPONSE_INVALID_PARENT_OBJECT	0x201A
 #define MTP_RESPONSE_DESTINATION_UNSUPPORTED	0x2020
 #define MTP_RESPONSE_INVALID_PARAMETER	0x201D
@@ -178,6 +191,10 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_VENDOR_INVALID_CONTEXT	0xA001
 #define MTP_RESPONSE_VENDOR_UNKNOWN_STATUS	0xA004
 #define MTP_RESPONSE_VENDOR_NO_MEMORY	0xA007
+#define MTP_RESPONSE_INVALID_OBJECT_PROP_CODE	0xA801
+#define MTP_RESPONSE_INVALID_OBJECT_PROP_FORMAT	0xA802
+#define MTP_RESPONSE_INVALID_OBJECT_PROP_VALUE	0xA803
+#define MTP_RESPONSE_INVALID_OBJECT_REFERENCE	0xA804
 #define MTP_RESPONSE_VENDOR_OBJECT_TOO_LARGE	0xA809
 #define MTP_RESPONSE_VENDOR_CANCELED	0xA020
 
@@ -1006,6 +1023,12 @@ int mtpCmdHttpSendProperty(MtpOperation *operation, MtpOperation *response);
 #define MTP_DEVICE_PROP_SYNCHRONIZATION_PARTNER	0xD401
 #define MTP_DEVICE_PROP_DEVICE_FRIENDLY_NAME	0xD402
 #define MTP_DEVICE_PROP_DEVICE_ICON		0xD405
+/* a device property's dataset buffer: the icon's is larger */
+#define MTP_DEVICE_PROP_DESC_SIZE	0x4000
+#define MTP_DEVICE_PROP_DESC_SIZE_LARGE	0x10000
+
+/* the object property the host may send in pieces larger than the device keeps */
+#define MTP_OBJECT_PROP_REPRESENTATIVE_SAMPLE_DATA	0xDC86
 
 /* an object property's value: its data type, where it is and how much room it has */
 typedef struct MtpPropData {
@@ -1059,6 +1082,8 @@ int netMtpDeviceIsWaking(void);
 #define MTP_OPERATION_REQUEST_SEND_NUM_OF_OBJECT	0xC104
 #define MTP_OPERATION_REQUEST_SEND_OBJECT_METADATA	0xC105
 #define MTP_OPERATION_REQUEST_SEND_OBJECT		0xC107
+#define MTP_OPERATION_HTTP_GET_DATA	0xC10B
+#define MTP_OPERATION_HTTP_GET_PROPERTY	0xC113
 #define MTP_OPERATION_REQUEST_OBJECT_INFO		0xC109
 #define MTP_OPERATION_REQUEST_GET_SETTING_INFO		0xC10D
 #define MTP_OPERATION_REQUEST_OBJECT_STATUS		0xC10F
@@ -1096,10 +1121,15 @@ typedef struct MtpObjectId {
 } MtpObjectId;
 
 /* a storage the storage manager knows by name */
+typedef struct MtpLogicalStorage MtpLogicalStorage;
+
+/* a physical storage the storage manager knows by name, with its logical storages */
 typedef struct MtpStorageInfo {
 	const char *name;
 	SceUInt16 index;		/* its slot in the storage manager */
 	SceUInt16 started;		/* its handles are created */
+	SceUInt32 numLogicalStorages;
+	MtpLogicalStorage *logicalStorages;
 } MtpStorageInfo;
 
 typedef struct MtpStorage MtpStorage;
@@ -1114,15 +1144,17 @@ struct MtpStorage {
 typedef struct MtpCache MtpCache;
 
 /* a storage's logical storage (104 bytes, in the storage manager's table) */
-typedef struct MtpLogicalStorage {
-	SceUInt8 reserved[36];		/* not read by the C written yet (STRG) */
+struct MtpLogicalStorage {
+	SceUInt8 reserved[8];		/* not read by the C written yet (STRG) */
+	SceUInt16 index;		/* its number in its physical storage, from 1 */
+	SceUInt8 reserved1[26];
 	const MtpStorageInfo *info;	/* info->name: the mount point */
 	MtpCache *cache;
 	SceUInt8 reserved2[36];
 	SceUInt64 freeSpaceInBytes;	/* mtpStrgUpdateLogicalInfo's */
 	SceUInt32 freeSpaceInObjects;
 	SceUInt8 reserved3[12];
-} MtpLogicalStorage;
+};
 
 /* the commands (CMD and CMDE) */
 int mtpCmdGetDeviceInfo(const MtpOperation *operation, MtpOperation *response);
@@ -1248,6 +1280,8 @@ int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle);
 #define MTP_OBJECT_HANDLE_DIR		0x4000000
 
 int mtpStrgGetLogicalStorage(SceUInt32 storageId, MtpLogicalStorage **storage);
+SceUInt32 mtpStrgGetNumPhysicalStorages(void);
+int mtpStrgGetPhysicalStorageByIndex(SceUInt32 index, const MtpStorageInfo **storage);
 
 /* the storage IDs GetStorageIDs sends: num is the room in, the IDs out */
 typedef struct MtpStorageIds {
@@ -1291,6 +1325,18 @@ int mtpStrgUpdateLogicalInfo(MtpLogicalStorage *storage);
 #define MTP_OBJECT_ROOT_HANDLE(storageId) \
 	((((storageId) - 1) & 3) << 27 | ((((storageId) >> 16) - 1) & 3) << 29 | 0x7FFFFFF)
 int mtpObjRemoveObject(MtpLogicalStorage *storage, SceUInt32 uniqueId);
+/* counts (buf NULL) or packs an ObjectPropList: count elements, size bytes */
+int mtpObjPackObjectPropList(MtpLogicalStorage *storage, SceUInt32 uniqueId, SceUInt16 format,
+	SceUInt16 code, SceUInt32 group, SceUInt32 depth, void *buf, SceUInt32 *count,
+	SceUInt32 *size, int *send);
+int mtpObjPackObjectPropValue(MtpLogicalStorage *storage, SceUInt32 uniqueId,
+	SceUInt16 code, void *buf, SceSize size);
+int mtpObjSetObjectPropValue(MtpLogicalStorage *storage, SceUInt32 uniqueId,
+	SceUInt16 code, const void *value, int notify);
+int mtpObjPackObjectReferences(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *buf,
+	SceSize size);
+int mtpObjSetObjectReferences(MtpLogicalStorage *storage, SceUInt32 uniqueId,
+	const void *references, SceSize size);
 int mtpObjRemoveFile(MtpLogicalStorage *storage, SceUInt32 parent, const char *name);
 int mtpObjAddRegularObject(MtpLogicalStorage *storage, SceUInt32 parent, SceUInt16 format,
 	SceUInt32 size, SceUInt32 imagePixWidth, SceUInt32 imagePixHeight, const char *name,
@@ -1300,9 +1346,19 @@ int mtpStrgCreatePfsPath(MtpLogicalStorage *storage, const char *path, char *pfs
 	SceSize size, int create);
 /* an object's property from the cache: its size (8 bytes), its full path, ... */
 #define MTP_CACHE_PROP_SIZE		4
+#define MTP_CACHE_PROP_DATE_CREATED	5
+#define MTP_CACHE_PROP_DATE_MODIFIED	6
 #define MTP_CACHE_PROP_PATH		7
 int mtpCacheGetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, void *buf,
 	SceSize size);
+int mtpCacheSetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, const void *buf,
+	SceSize size);
+int mtpCacheWriteBackDirtyCache(MtpCache *cache);
+
+/* mtp_operation.cpp */
+int mtpCmdUtilReceiveFileData(const MtpOperation *operation, MtpOperation *response,
+	const char *path, SceSize size, int create, SceUInt64 *received, int *responseCode,
+	MtpContext *context);
 int mtpObjPackObjectInfo(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *buf,
 	SceSize size);
 int mtpStrgGetNumObjects(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num);

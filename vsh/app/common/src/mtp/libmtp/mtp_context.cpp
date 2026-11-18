@@ -17,7 +17,6 @@
 
 using paf::common::SharedPtr;
 
-#define MTP_TAG_CTXT			"CTXT:"
 
 /* a context's state */
 #define MTP_CONTEXT_STATE_IDLE		0

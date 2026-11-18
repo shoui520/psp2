@@ -10,12 +10,7 @@
 #include <regmgr/regmgr.h>
 #include "mtp_internal.h"
 
-#define MTP_TAG_CMD			"CMD :"
-
 #define MTP_DEVICE_INFO_SIZE		0x2000
-#define MTP_DEVICE_PROP_DESC_SIZE	0x4000
-#define MTP_DEVICE_PROP_DESC_SIZE_LARGE	0x10000
-#define MTP_DEVICE_PROP_LARGE		0xD405
 #define MTP_VITA_INFORMATION_SIZE	0x1000
 #define MTP_CMD_RECV_SIZE		0x10000
 
@@ -205,7 +200,7 @@ int mtpCmdGetDevicePropDesc(const MtpOperation *operation, MtpOperation *respons
 		ret = -2;
 		goto error;
 	}
-	if ((SceUInt16)code == MTP_DEVICE_PROP_LARGE)
+	if ((SceUInt16)code == MTP_DEVICE_PROP_DEVICE_ICON)
 		size = MTP_DEVICE_PROP_DESC_SIZE_LARGE;
 	buf = mtpUtilMalloc(size);
 	if (buf == NULL) {
@@ -216,7 +211,7 @@ int mtpCmdGetDevicePropDesc(const MtpOperation *operation, MtpOperation *respons
 	n = mtpPropPackDevicePropDesc((SceUInt16)code, buf, size);
 	if (n < 0) {
 		MTP_ERR(MTP_TAG_CMD, 321, "device property is not supported\n");
-		responseCode = MTP_RESPONSE_DEVICE_PROP_NOT_SUPPORTED;
+		responseCode = MTP_RESPONSE_PARAMETER_NOT_SUPPORTED;
 		ret = -2;
 	} else {
 		ret = mtpCoreSendData(buf, n, n);
