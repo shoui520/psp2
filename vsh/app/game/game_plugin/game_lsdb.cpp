@@ -45,7 +45,6 @@ struct GameDevInfo {
 
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameAppDeletePrepare(const char *titleId);			/* 0x810FCA70 */
-int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);	/* 0x810609AC */
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
 int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);	/* 0x81062BBA */
 extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);	/* 0x81449964 */

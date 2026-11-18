@@ -79,6 +79,9 @@ int sceAppMgrAppParamGetInt(SceUID pid, int id, int *value);
 int sceAppMgrAppParamGetString(SceUID pid, int id, char *buf, SceSize bufSize);
 int sceAppMgrLaunchAppByUri(int flags, const char *uri);
 
+/* not in the SDK: a loop-back device formatted (the shell: id 100, kind 5, for ux0:umass) */
+int sceAppMgrLoopBackFormat(int id, int kind, int arg2, int arg3);
+
 /*
  * not in the SDK: the license of the application at path (its layout is AppmgrLicenseInfo in
  * <appmgr/appmgr.h>)

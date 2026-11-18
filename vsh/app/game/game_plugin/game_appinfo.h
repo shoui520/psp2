@@ -855,6 +855,12 @@ struct GamePresetTitle {
 	int kind;	/* 1: gamePresetGetTitleIds's list, 2: PCSC80012 */
 };
 
+/* an application's files deleted, by its kind (psp_license.cpp, 0x810609AC) */
+int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);
+
+/* the title IDs of the shell's own applications (game_lsdb.cpp, 0x8101CEFA) */
+void gamePresetGetTitleIds(paf::vector<paf::string> *titleIds);
+
 /* whether titleId is one the shell keeps as its own (game_lsdb.cpp, 0x8101D098) */
 int gamePresetCheckTitle(const char *titleId, GamePresetTitle *preset);
 
