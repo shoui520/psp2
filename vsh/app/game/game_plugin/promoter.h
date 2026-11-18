@@ -30,11 +30,8 @@ int gameUtf8ToUtf16(SceWChar16 *dst, SceSize size, const char *src);
  */
 struct GameAppSourceParam {
 	GameAppSourceParam(const char *dir, const char *path, const char *name, const char *sysDir)
-		: dir(dir), path(path), name(name), sysDir(sysDir)
+		: dir(dir), path(path), name(name), options(), sysDir(sysDir)
 	{
-		options[0] = 0;
-		options[1] = 0;
-		options[2] = 0;
 	}
 
 	GameAppSourceParam(const char *dir, const char *path, const char *name,
@@ -63,6 +60,13 @@ struct GameFolderSourceParam : GameAppSourceParam {
 			      const char *sysDir, const char *metaDir, const LsdbAppInfoPtr &info)
 		: GameAppSourceParam(dir, path, name, sysDir), metaDir(metaDir), appPath(path),
 		  info(info)
+	{
+	}
+
+	/* the appmeta promoter's: the application's folder given, and no record */
+	GameFolderSourceParam(const char *dir, const char *path, const char *name,
+			      const char *sysDir, const char *metaDir, const char *appPath)
+		: GameAppSourceParam(dir, path, name, sysDir), metaDir(metaDir), appPath(appPath)
 	{
 	}
 
@@ -725,16 +729,47 @@ public:
 
 typedef char GamePspPromoterSize[sizeof(GamePspPromoter) == 152 ? 1 : -1];
 
-class GameAppmetaPromoter : public GamePromoter {	/* constructor 0x8106AC10, 164 bytes */
+/*
+ * PLACEHOLDER: the source of an application promoted from its ux0:appmeta folder, defined in
+ * another file of the plugin (constructor 0x8107C0DC), 188 bytes. The names are ours.
+ */
+class GameAppmetaSource : public GameFolderSource {
+public:
+	GameAppmetaSource(const GameFolderSourceParam &param);
+	virtual ~GameAppmetaSource();
+
+	virtual int SetDirs(GameAppRegistration *reg);
+	virtual int SetPaths(GameAppRegistration *reg);
+
+	SceUInt8 m_body[16];		/* PLACEHOLDER: laid out with its file */
+};
+
+typedef char GameAppmetaSourceSize[sizeof(GameAppmetaSource) == 188 ? 1 : -1];
+
+/*
+ * An application promoted from its ux0:appmeta folder, the game card's or ux0:app's
+ * (appmeta_promoter.cpp, constructor 0x8106AC10, destructor 0x8106AC6C, vtable 0x8152ECA0), 164
+ * bytes. PLACEHOLDER names.
+ */
+class GameAppmetaPromoter : public GamePromoter {
 public:
 	GameAppmetaPromoter(const char *path, const GameJobProgress *progress, int userData,
 			    float scale);
+	virtual ~GameAppmetaPromoter();
 
 	virtual int Prepare(bool flag);
 	virtual int CreateSource(GamePromoteSource **source);
+	virtual int SetInfo(GamePromoteSource *source, bool registerApp, GameAppRegistration *reg);
+	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg);
 
-	SceUInt8 m_body[40];		/* PLACEHOLDER: laid out with its file */
+	LsdbAppInfoPtr m_gcSfo;		/* the card's gc_param.sfo, kept in ux0:appmeta */
+	paf::string m_appMountPoint;	/* ux0:app's game data, mounted */
+	paf::string m_dataMountPoint;	/* the application's data, mounted */
+	bool m_hasUpStatus;		/* m_upStatus set for the record */
+	SceUInt32 m_upStatus;		/* the installed record's #_up_status */
 };
+
+typedef char GameAppmetaPromoterSize[sizeof(GameAppmetaPromoter) == 164 ? 1 : -1];
 
 /*
  * PLACEHOLDER: what a PlayStation Mobile game's promotion reads its app.info with, defined in

@@ -39,9 +39,6 @@ struct GameDevInfo {
 	void *reserved;
 };
 
-/* the license errors gameLicenseGetStatus reports (values only) */
-#define GAME_LICENSE_ERROR_NOT_FOUND	-2139095036	/* 0x80800004 */
-#define GAME_LICENSE_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
 
 /* PLACEHOLDER names, defined in other files of the shell */
 int gameAppDeletePrepare(const char *titleId);			/* 0x810FCA70 */

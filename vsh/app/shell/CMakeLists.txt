@@ -53,6 +53,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/update_checker.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/livearea_copier.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psm_livearea_writer.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/psp_icon.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/appmeta.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/content_import.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/file_copier.cpp
@@ -64,8 +65,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/game_util.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/alarm.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/license_updater.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/psm_appinfo.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psm_promoter.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psp_promoter.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/appmeta_promoter.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

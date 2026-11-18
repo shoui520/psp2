@@ -27,9 +27,6 @@ using namespace paf;
 /* the size of a license's file name */
 #define GAME_RIF_NAME_SIZE	48
 
-/* an ATTRIBUTE bit: the application's license decides its #_up_status */
-#define GAME_ATTRIBUTE_UP_STATUS_LICENSE	0x400
-
 /* the #_up_status values a license gives */
 #define GAME_UP_STATUS_MAX	3
 

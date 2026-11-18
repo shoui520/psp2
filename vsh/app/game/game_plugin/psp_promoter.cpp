@@ -102,10 +102,10 @@ int GamePspPromoter::CreateSource(GamePromoteSource **source)
 	string dir = m_path.substr(0, m_path.length() - m_name.length() - 1);
 	string path;
 
-	if (m_installPath.length() != 0)
-		path = m_installPath.substr(0, m_installPath.length() - m_name.length() - 1);
-	else
+	if (m_installPath.length() == 0)
 		path = dir;
+	else
+		path = m_installPath.substr(0, m_installPath.length() - m_name.length() - 1);
 
 	m_dir = string("ur0:appmeta/") + m_name;
 	m_licensePath.assign(NULL, 0);

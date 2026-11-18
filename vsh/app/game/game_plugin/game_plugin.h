@@ -261,6 +261,10 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */
+
+/* the license errors gameLicenseGetStatus reports, also from the mounts (values only) */
+#define GAME_LICENSE_ERROR_NOT_FOUND	-2139095036	/* 0x80800004 */
+#define GAME_LICENSE_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
 /* paf's error for a device that is not there (value only; PLACEHOLDER name) */
 #define GAME_PAF_ERROR_NO_DEVICE	-2135994332	/* 0x80AF5024 */
 
@@ -396,6 +400,9 @@ void gameMountGetDrive(const paf::string &path, paf::string *drive);
  * drive; drive is left as it is when neither is found (0x8101BFB4).
  */
 void gamePathGetMountedDrive(const paf::string &path, paf::string *drive);
+
+/* the device of a path, up to and including its colon (0x8101AF9E) */
+int gamePathGetDevice(const paf::string &path, paf::string *device);
 
 /*
  * A file or a directory tree removed, by a remover of its own, its walk stopped when cancel says so

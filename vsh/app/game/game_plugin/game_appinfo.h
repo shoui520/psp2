@@ -82,6 +82,9 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 /* PLACEHOLDER name: the ATTRIBUTE bit that marks an application with a manual */
 #define GAME_ATTRIBUTE_MANUAL	0x200000
 
+/* an ATTRIBUTE bit: the application's license decides its #_up_status */
+#define GAME_ATTRIBUTE_UP_STATUS_LICENSE	0x400
+
 /* a value's integer, 0 when it is a text */
 inline SceInt64 gameLsdbValueInteger(const LsdbValue &value)
 {
