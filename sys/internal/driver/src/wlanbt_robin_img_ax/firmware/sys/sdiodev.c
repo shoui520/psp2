@@ -103,12 +103,13 @@ static struct SdioSleepConfig sdioSleepConfig __attribute__((section(".dtcm.rw")
 static const char *sdioFunctionNames[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = {
 	"sdio", "bt_sdio", "amp_sdio",
 };
-static volatile struct SdioFunctionRegs *sdioRegs[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = {
+/* Sony re-reads both pointer tables at every use, also after loads only. */
+static volatile struct SdioFunctionRegs *volatile sdioRegs[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = {
 	(volatile struct SdioFunctionRegs *)0x80000100,
 	(volatile struct SdioFunctionRegs *)0x80000200,
 	(volatile struct SdioFunctionRegs *)0x80000300,
 };
-static volatile struct SdioFunctionBlocks *sdioBlocks[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = {
+static volatile struct SdioFunctionBlocks *volatile sdioBlocks[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = {
 	(volatile struct SdioFunctionBlocks *)0x80000160,
 	(volatile struct SdioFunctionBlocks *)0x80000260,
 	(volatile struct SdioFunctionBlocks *)0x80000360,
@@ -122,7 +123,7 @@ static struct OsaMsgList sdioDataQueue[SDIO_FUNCTIONS] __attribute__((section(".
 static struct OsaMsgList sdioEventQueue[SDIO_FUNCTIONS] __attribute__((section(".dtcm.bss")));
 static struct OsaMsgList sdioResponseQueue[SDIO_FUNCTIONS] __attribute__((section(".dtcm.bss")));
 static OsaBuffer *sdioReceiveBuffers[SDIO_FUNCTIONS][SDIO_PORTS] __attribute__((section(".dtcm.bss")));
-static OsaBuffer *sdioSendBuffers[SDIO_FUNCTIONS][SDIO_PORTS] __attribute__((section(".dtcm.bss")));
+static OsaBuffer *volatile sdioSendBuffers[SDIO_FUNCTIONS][SDIO_PORTS] __attribute__((section(".dtcm.bss")));
 static uint32_t sdioDataHold[SDIO_FUNCTIONS] __attribute__((section(".dtcm.bss")));
 static SdioReceiveHook sdioReceiveHooks[SDIO_FUNCTIONS] __attribute__((section(".dtcm.bss")));
 static struct MdevDriver sdioDrivers[SDIO_FUNCTIONS] __attribute__((section(".dtcm.bss")));
@@ -143,7 +144,7 @@ static inline __attribute__((always_inline)) void sdioSetReceiveBuffer(volatile 
 }
 
 /* 0x245d4: gives the host the buffers it writes to; the function starts with one port, or all of them. */
-static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct MdevDriver *dev)
+static __attribute__((noinline, noclone)) int sdioPostReceiveBuffers(struct MdevDriver *dev)
 {
 	unsigned int fn = dev->index;
 	OsaBuffer *buffer;
@@ -183,9 +184,9 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 				sdioReceiveSlots[dev->index] = 1;
 				sdioSendSlots[dev->index] = 1;
 			}
-			return;
+			return 0;
 		} else {
-			return;
+			return 0;
 		}
 		if (buffer != NULL) {
 			buffer->dataOffset = SDIO_PACKET_DATA_OFFSET;
@@ -197,7 +198,7 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 			sdioReceiveSlots[dev->index] = 1;
 			sdioSendSlots[dev->index] = 1;
 		}
-		return;
+		return 0;
 	}
 	sdioReceiveSlots[fn] = 1;
 	sdioSendSlots[dev->index] = SDIO_PORTS;
@@ -215,6 +216,7 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 			sdioReceiveMask[dev->index] |= 1 << sdioReceiveSlots[dev->index]++;
 		}
 	}
+	return 0;
 }
 
 /* 0x247d4: pulses the line that wakes the host. */
@@ -864,6 +866,11 @@ static __attribute__((noinline, noclone)) int sdioFunctionIoctl(struct MdevDrive
 			if (sdioReceiveBuffers[fn][0] == NULL) {
 				sdioAllocReceive(fn);
 				fn = dev->index;
+				/* the original tests the slots' address, not the buffer it allocated (0x255bc) */
+				if (sdioReceiveBuffers[fn] == NULL) {
+					sysIrqRestore(posture);
+					return 1;
+				}
 				if (fn == 1 || fn == 2 || (btHciWlanAsleep | fn) == 0)
 					sdioRaiseHostIrq(fn, 1);
 			}
@@ -922,10 +929,9 @@ allocate:
 	case SDIODEV_CMD_GET_WAKE_LINE: {
 		struct SdioWakeLineArgument *wake = argument;
 
-		wake->reply.pin = sdioWakeLine.pin;
-		wake->reply.polarity[0] = sdioWakeLine.polarity;
-		wake->reply.polarity[1] = sdioWakeLine.polarity >> 8;
-		wake->reply.width = sdioWakeLine.width;
+		wake->line.pin = sdioWakeLine.pin;
+		wake->line.polarity = sdioWakeLine.polarity;
+		wake->line.width = sdioWakeLine.width;
 		return 0;
 	}
 	case SDIODEV_CMD_QUIESCE_ANY:
@@ -948,13 +954,16 @@ allocate:
 	case SDIODEV_CMD_GET_PARAMETERS: {
 		struct SdioSleepConfig *config = argument;
 
+		uint32_t mode;
+
 		config->queue = sdioSleepConfig.queue;
 		config->timer = sdioSleepConfig.timer;
-		config->config = sdioSleepConfig.config;
-		if (sdioSleepConfig.config == 1) {
+		mode = sdioSleepConfig.config;
+		if (mode == 1) {
 			config->channel = sdioSleepConfig.channel;
 			config->param = sdioSleepConfig.param;
 		}
+		config->config = mode;
 		return 0;
 	}
 	case SDIODEV_CMD_SET_IDLE:
@@ -1309,14 +1318,15 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 			}
 			wlanPsStageAdvance();
 		} else if (i == SDIO_FUNCTION_BT || i == SDIO_FUNCTION_AMP) {
-			if ((status & SDIO_STATUS_WRITTEN) && (sdioRegs[i]->hostFlags & SDIO_HOST_BLOCKED) == 0) {
-				OsaBuffer *buffer = sdioReceiveBuffers[i][0];
-				uint8_t *packet = (uint8_t *)buffer + buffer->dataOffset;
+			if ((status & SDIO_STATUS_WRITTEN) && (flags & SDIO_HOST_BLOCKED) == 0) {
+				uint8_t *packet = (uint8_t *)sdioReceiveBuffers[i][0] + sdioReceiveBuffers[i][0]->dataOffset;
 				uint32_t limit = i == SDIO_FUNCTION_AMP ? SDIO_AMP_PACKET_MAX : SDIO_BT_PACKET_MAX;
+				OsaBuffer *buffer;
 
 				sdioRegs[i]->dmaState = 0;
 				if (((packet[1] << 8) | packet[0]) <= limit) {
-					buffer->packetClass = 2;
+					sdioReceiveBuffers[i][0]->packetClass = 2;
+					buffer = sdioReceiveBuffers[i][0];
 					btLmpLcFormatContext(i == SDIO_FUNCTION_AMP, 0, 7, 0);
 					sdioAllocReceive(i);
 					if (sdioReceiveBuffers[i][0] != NULL)

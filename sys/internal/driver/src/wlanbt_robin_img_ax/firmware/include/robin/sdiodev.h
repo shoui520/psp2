@@ -83,15 +83,8 @@ struct SdioWakeLine {
 /* The argument of the ioctls SDIODEV_CMD_SET_WAKE_LINE and SDIODEV_CMD_GET_WAKE_LINE. */
 struct SdioWakeLineArgument {
 	uint16_t reserved;
-	union {
-		struct SdioWakeLine line;	/* set: read a byte at a time */
-		struct {			/* get: the pin and width written whole, the polarity by bytes */
-			uint16_t pin;
-			uint8_t polarity[2];
-			uint16_t width;
-		} reply;
-	};
-};
+	struct SdioWakeLine line;
+} __attribute__((packed));		/* Sony reads and writes it byte by byte */
 
 /*
  * How the chip is brought out of sleep for the SDIO functions and what it
