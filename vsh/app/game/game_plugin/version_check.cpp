@@ -53,13 +53,9 @@ static const SceUInt16 s_denyRegions[] = { 1, 2, 5, 6, 4, 10, 3, 7, 8, 9, 7, 7 }
 #define GAME_PARENTAL_LEVEL_NEVER	99
 
 /*
- * PLACEHOLDER names, defined in other files of the shell: whether a version is "N.NN"
- * (0x81033DE0), a version's digits as a number (0x81033ECC), whether the system is older than
- * a version (0x81363DA0, in game_appinfo.h), and the PSM runtime the system has installed, 0
- * without one (0x810FCBA6).
+ * PLACEHOLDER name, defined in another file of the shell: the PSM runtime the system has
+ * installed, 0 without one (0x810FCBA6). The version checks are sfo_param.cpp's (game_appinfo.h).
  */
-int gameVersionCheckShort(const char *version);
-int gameVersionToNumber(const char *version, SceSize size, SceUInt32 *number);
 int shellPsmGetRuntimeVersion(SceUInt16 *version);
 
 /* A version's text, "N.NN" or "NN.NN", as a number (0x81028480). */

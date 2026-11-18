@@ -250,20 +250,18 @@ struct GameSfoParam {
 };
 
 /*
- * PLACEHOLDER names, defined in another file of the shell: a file read whole into a new buffer
- * (0x8103397C), and a param.sfo's parameters stored into an application's information
- * (0x81033D70).
+ * sfo_param.cpp: a file read whole into a new buffer (0x8103397C), a param.sfo's parameters
+ * stored into an application's information (0x81033D70), whether a version is "N.NN"
+ * (0x81033DE0), "NN.NN" (0x81033E22) or "NN.NNN" (0x81033E70), 0 or GAME_ERROR_BAD_DATA, and a
+ * version's digits as a number (0x81033ECC).
  */
 int gameFileReadAlloc(const char *path, SceInt64 offset, void **buf, SceSize size);
 int gameSfoLoadParams(const void *sfo, SceSize size, const GameSfoParam *params,
 		      unsigned int count, LsdbAppInfoPtr *info, bool checkLength);
-
-/*
- * PLACEHOLDER names, defined in another file of the shell: whether a version is "NN.NN"
- * (0x81033E22) and whether it is "NN.NNN" (0x81033E70), 0 or GAME_ERROR_BAD_DATA.
- */
+int gameVersionCheckShort(const char *version);
 int gameVersionCheck(const char *version);
 int gameSystemVersionCheck(const char *version);
+int gameVersionToNumber(const char *version, SceSize size, SceUInt32 *number);
 
 /* whether the system runs the application of info, by its category (version_check.cpp) */
 int gameAppCheckSystemVersion(const LsdbAppInfoPtr *info, paf::string *version);
