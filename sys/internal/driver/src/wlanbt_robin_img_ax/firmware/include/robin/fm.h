@@ -82,9 +82,10 @@ struct FmSettings {
 	uint16_t searchThreshold;	/* 15: how far a channel must stand above a neighbour */
 	uint16_t reserved10;
 	uint32_t features;	/* bits 4, 5 and 13 are read here */
-	uint8_t audioLimit;	/* the highest level btSbcScheduleBuffer() raises audioSetting to */
-	uint8_t audioSetting;	/* the transmit level, 99 once the radio is started: what btFmApplyHook() is given */
-	uint16_t reserved18;
+	/* one word of bit fields: Sony reads the level with a word load */
+	uint32_t audioLimit : 8;	/* the highest level btSbcScheduleBuffer() raises audioSetting to */
+	uint32_t audioSetting : 8;	/* the transmit level, 99 once the radio is started: what btFmApplyHook() is given */
+	uint32_t reserved18 : 16;
 	uint32_t tuneFlags;	/* FM_TUNE_* */
 	uint32_t levelFlags;	/* bit 14: the level reads 56 high (btSbcParseTable()) */
 	uint32_t reserved17;

@@ -98,17 +98,18 @@ void wlanCoexResetEstimate(uint32_t mode, uint32_t btActive)
 
 	if (btActive != wlanCoexLast.btActive || mode != wlanCoexLast.mode ||
 	    window != wlanCoexLast.window || wlanCoex.maxSample == 0) {
-		int32_t sample = (window - wlanCoexConfig.minimumWindow) / 2;
+		int32_t sample;
 		int32_t deviation;
 
-		if (sample <= wlanCoexConfig.minimumEstimate)
-			sample = wlanCoexConfig.minimumEstimate;
-		wlanCoex.maxSample = sample;
+		wlanCoex.maxSample = (window - wlanCoexConfig.minimumWindow) / 2;
+		wlanCoex.maxSample = wlanCoex.maxSample > wlanCoexConfig.minimumEstimate ?
+				     wlanCoex.maxSample : wlanCoexConfig.minimumEstimate;
+		sample = wlanCoex.maxSample;
 		deviation = sample / 3;
 		wlanCoex.drift = 0;
 		wlanCoex.maxDeviation = deviation;
-		wlanCoex.shortfall = 0;
 		wlanCoex.mean = sample;
+		wlanCoex.shortfall = 0;
 		wlanCoex.deviation = deviation;
 		wlanCoexLast.window = wlanCoex.window[btActive];
 		wlanCoexLast.btActive = btActive;
@@ -445,13 +446,11 @@ void wlanCoexInit(void)
 	__aeabi_memclr4(&wlanCoex, sizeof(wlanCoex));
 	wlanCoexConfig.btConfig = 2;
 	wlanCoexConfig.period[0] = 20000;
-	wlanCoexConfig.reserve[0].time[0] = 10000;
-	wlanCoexConfig.reserve[0].time[1] = 4000;
+	wlanCoexConfig.reserve[0].word = (4000 << 16) | 10000;	/* both times in one word */
 	wlanCoexConfig.flags[0] = 0;
 	wlanCoexConfig.period[1] = 40000;
 	wlanCoexConfig.minimumWindow = 1000;
-	wlanCoexConfig.reserve[1].time[0] = 25000;
-	wlanCoexConfig.reserve[1].time[1] = 10000;
+	wlanCoexConfig.reserve[1].word = (10000 << 16) | 25000;
 	wlanCoexConfig.minimumEstimate = 4500;
 	wlanCoexConfig.slack = 2000;
 	wlanCoexConfig.maxCredits = 1;
@@ -572,7 +571,7 @@ static inline int wlanCoexUpdate(struct WlanConnection *connection)
 	wlanCoex.request = 0;
 	wlanCoexStopCycle();
 	wlanCoexResetCounters();
-	wlanCoex.btActive = btCoexLinkIsActive();
+	wlanCoex.btActive = btCoexLinkIsActive() ? 1 : 0;
 	if (!wlanCoexIsBtMode(wlanCoex.mode))
 		wlanCoexResetEstimate(wlanCoex.mode, wlanCoex.btActive);
 

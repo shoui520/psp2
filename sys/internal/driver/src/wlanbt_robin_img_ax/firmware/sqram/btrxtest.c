@@ -73,7 +73,7 @@ unsigned int btLcoRomInspectContext(void);		/* 0x3f2000e: seeds the pseudo-rando
 unsigned int btLcoRomFormatContext(unsigned int value);	/* 0x3f1ffe6: its next byte */
 
 /* The byte each pattern repeats (SQRAM 0xc000fa90). */
-static const uint8_t btRxTestPatterns[] = { 0xfe, 0x00, 0x00, 0xff, 0x55 };
+static const uint8_t btRxTestPatterns[] = { 0x00, 0x00, 0xff, 0x55, 0xfe };
 
 struct BtRxTest btRxTest __attribute__((section(".itcm.rw"))) = { .ltAddress = 1 };				/* 0x55760 */
 static struct BtRxTestStats btRxTestStats __attribute__((section(".itcm.bss")));	/* 0x5ad34 */

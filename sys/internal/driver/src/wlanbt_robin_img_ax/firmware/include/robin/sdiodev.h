@@ -78,7 +78,7 @@ struct SdioWakeLine {
 	uint16_t pin;			/* 0xffff when there is none */
 	uint16_t polarity;		/* 1: low pulse, else high pulse */
 	uint16_t width;			/* microseconds */
-};
+} __attribute__((packed));		/* Sony reads its fields byte by byte */
 
 /* The argument of the ioctls SDIODEV_CMD_SET_WAKE_LINE and SDIODEV_CMD_GET_WAKE_LINE. */
 struct SdioWakeLineArgument {

@@ -77,13 +77,14 @@ static uint8_t sdioResetWindow[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"
 static uint8_t sdioSinglePort[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = { 0, 1, 1 };	/* 0x4000c96 */
 static uint8_t sdioChannel[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = { 0xff, 0xff, 0xff };
 uint8_t sdioReceiveSlots[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw")));	/* 0x04000c9c */
-static uint8_t sdioSendSlots[SDIO_FUNCTIONS + 2] __attribute__((section(".dtcm.rw")));
+static uint8_t sdioSendSlots[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw")));
 static uint32_t sdioWakeCount __attribute__((section(".dtcm.rw")));	/* host accesses blocked while the host slept */
 static uint32_t sdioSendPendingFlag __attribute__((section(".dtcm.rw")));	/* something was raised to the host and not collected */
-static struct {
-	void (*sendDone)(OsaBuffer *buffer);	/* what releases a sent packet */
-	void *aux;
-} sdioHooks[2] __attribute__((section(".dtcm.rw")));	/* functions 1 and 2 */
+/* What releases a sent packet, and the auxiliary hook, of functions 1 and 2 (four words: armcc sorts by size). */
+static void (*sdioBtSendDone)(OsaBuffer *buffer) __attribute__((section(".dtcm.rw")));
+static void *sdioBtAuxHook __attribute__((section(".dtcm.rw")));
+static void (*sdioAmpSendDone)(OsaBuffer *buffer) __attribute__((section(".dtcm.rw")));
+static void *sdioAmpAuxHook __attribute__((section(".dtcm.rw")));
 static uint32_t sdioReceiveReclaim __attribute__((section(".dtcm.rw")));	/* the next receive slot to hand up */
 static uint32_t sdioSendFill __attribute__((section(".dtcm.rw")));	/* the next send slot to fill */
 static uint32_t sdioReceiveFill __attribute__((section(".dtcm.rw")));	/* the next receive slot to allocate */
@@ -224,40 +225,40 @@ static __attribute__((noinline, noclone)) void sdioPostReceiveBuffers(struct Mde
 /* 0x247d4: pulses the line that wakes the host. */
 static __attribute__((noinline, noclone)) void sdioWakeLinePulse(void)
 {
-	uint32_t bit, high, low;
+	uint32_t bit, asserted, released;
 	int cycles;
 
 	if (sdioWakeLine.pin == 0xffff)
 		return;
 	bit = 1u << (sdioWakeLine.pin & 0xff);
-	if (sdioWakeLine.polarity == 1) {
-		low = SDIO_WAKE_GPIO & ~bit;
-		high = bit | low;
+	if (sdioWakeLine.polarity == 1) {	/* a low pulse */
+		asserted = SDIO_WAKE_GPIO & ~bit;
+		released = bit | asserted;
 	} else {
-		high = SDIO_WAKE_GPIO & ~bit;
-		low = bit | high;
-		/* the first value written is the asserted level */
-		bit = high;
-		high = low;
-		low = bit;
+		released = SDIO_WAKE_GPIO & ~bit;
+		asserted = bit | released;
 	}
 	cycles = (int)(romMul32x32(sdioWakeLine.width, sysClockFrequency) >> 10);
-	SDIO_WAKE_GPIO = low;
+	SDIO_WAKE_GPIO = asserted;
 	if (cycles != 0)
 		robinDelayLoop(cycles);
-	SDIO_WAKE_GPIO = high;
+	SDIO_WAKE_GPIO = released;
 }
 
 /* 0x24838: tells the host (the cause is a SDIODEV_CAUSE_ bit set) and pulses the wake line. */
 static __attribute__((noinline, noclone)) void sdioRaiseHostIrq(unsigned int fn, uint32_t cause)
 {
-	if (sdioSinglePort[fn] != 0 || (cause & SDIODEV_CAUSE_RECEIVE) == 0 ||
-	    sdioReceiveReported[fn] != 1 || (cause &= ~SDIODEV_CAUSE_RECEIVE) != 0) {
-		if (fn == SDIO_FUNCTION_WLAN)
-			sdioSendPendingFlag = 1;
-		sdioRegs[fn]->hostIrq = cause;
-		sdioWakeLinePulse();
+	/* a receive the host was told of already needs no second interrupt */
+	if (sdioSinglePort[fn] == 0 && (cause & SDIODEV_CAUSE_RECEIVE) != 0 &&
+	    sdioReceiveReported[fn] == 1) {
+		cause &= ~SDIODEV_CAUSE_RECEIVE;
+		if (cause == 0)
+			return;
 	}
+	if (fn == SDIO_FUNCTION_WLAN)
+		sdioSendPendingFlag = 1;
+	sdioRegs[fn]->hostIrq = cause;
+	sdioWakeLinePulse();
 }
 
 /* 0x24870: the init callback; resets the function's registers and offers the host its buffers. */
@@ -812,9 +813,9 @@ static __attribute__((noinline, noclone)) int sdioFunctionIoctl(struct MdevDrive
 	case SDIODEV_CMD_SET_SEND_DONE:
 		posture = sysIrqDisable();
 		if (dev->index == SDIO_FUNCTION_BT)
-			sdioHooks[0].sendDone = (void (*)(OsaBuffer *))argument;
+			sdioBtSendDone = (void (*)(OsaBuffer *))argument;
 		else if (dev->index == SDIO_FUNCTION_AMP)
-			sdioHooks[1].sendDone = (void (*)(OsaBuffer *))argument;
+			sdioAmpSendDone = (void (*)(OsaBuffer *))argument;
 		sysIrqRestore(posture);
 		return 0;
 	case SDIODEV_CMD_SEND_BUSY:
@@ -951,9 +952,9 @@ allocate:
 	case SDIODEV_CMD_SET_AUX_HOOK:
 		posture = sysIrqDisable();
 		if (dev->index == SDIO_FUNCTION_BT)
-			sdioHooks[0].aux = argument;
+			sdioBtAuxHook = argument;
 		else if (dev->index == SDIO_FUNCTION_AMP)
-			sdioHooks[1].aux = argument;
+			sdioAmpAuxHook = argument;
 		sysIrqRestore(posture);
 		return 0;
 	case SDIODEV_CMD_TX_POOL_BUSY:
@@ -1358,7 +1359,7 @@ static __attribute__((noinline, noclone)) int sdioFunctionInterrupt(struct MdevD
 				if (sent != NULL) {
 					int amp, started;
 
-					done = i == SDIO_FUNCTION_AMP ? sdioHooks[1].sendDone : sdioHooks[0].sendDone;
+					done = i == SDIO_FUNCTION_AMP ? sdioAmpSendDone : sdioBtSendDone;
 					if (i == SDIO_FUNCTION_BT) {
 						if (btLmpLcClearContext(0, (uint8_t *)sent + sent->dataOffset + 4))
 							sdioHciPending[1] = 1;

@@ -79,7 +79,7 @@ typedef struct WlanCoexConfig {
 	int32_t minimumWindow;
 	int32_t minimumEstimate;
 	uint32_t slack;				/* earliest cycle start before a period ends */
-	uint8_t maxCredits;			/* frames released per window */
+	int8_t maxCredits;			/* frames released per window (signed: Sony compares it signed) */
 	uint8_t retryLimit;
 	uint16_t macTiming;
 } WlanCoexConfig;
@@ -104,7 +104,7 @@ typedef struct WlanCoex {
 	uint32_t cycleTimer;
 	uint32_t guardTimer;
 	uint32_t pollTimer;
-	uint8_t credits;		/* frames released in this window */
+	int8_t credits;		/* frames released in this window */
 	int8_t outstanding;		/* frames queued and not completed */
 	uint16_t padding;
 	uint32_t deferred;		/* the pending event could not be armed */

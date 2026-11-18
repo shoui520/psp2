@@ -21,12 +21,13 @@
  * The receive diversity (wlanUpdateAntennaDiversity()): the RSSI above which
  * the antenna is switched to 1, the RSSI at or below which it goes back to 0
  * after a while, the antenna in use (0 or 1), and when the signal was last
- * strong. The thresholds are not set anywhere in this firmware (inferred names).
+ * strong. Nothing in this firmware sets the thresholds: they keep the image's
+ * -30 and -50 (inferred names).
  */
-int32_t wlanAntennaRssiHigh __attribute__((section(".dtcm.bss")));
-int32_t wlanAntennaRssiLow __attribute__((section(".dtcm.bss")));
-uint32_t wlanAntenna __attribute__((section(".dtcm.bss")));
-uint32_t wlanAntennaStrongTime __attribute__((section(".dtcm.bss")));
+int32_t wlanAntennaRssiHigh __attribute__((section(".dtcm.rw"))) = -30;	/* 0x4000d30 */
+int32_t wlanAntennaRssiLow __attribute__((section(".dtcm.rw"))) = -50;
+uint32_t wlanAntenna __attribute__((section(".dtcm.rw")));
+uint32_t wlanAntennaStrongTime __attribute__((section(".dtcm.rw")));
 
 /*
  * The data, in Sony's order (0x549dc..0x54a2f): the bytes, the halfwords, the

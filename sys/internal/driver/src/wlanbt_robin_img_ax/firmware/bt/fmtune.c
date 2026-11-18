@@ -1577,7 +1577,7 @@ int btSbcValidateBuffer(uint8_t value)
 /* What btSbcValidateBuffer() was given: 0 (the ROM's), 1 or 2. */
 uint8_t btSbcPrepareBuffer(void)
 {
-	return fmTuner.levelMode * 2 + 1 - (fmSettings.policy >> 17 & 1);
+	return fmTuner.levelMode * 2 + 1 + ((int32_t)(fmSettings.policy << 14) >> 31);	/* bit 17 read as a signed bit */
 }
 
 int btSbcDispatchBuffer(uint8_t value)
