@@ -300,7 +300,8 @@ int btSbcScheduleTable(uint32_t frequency, uint32_t *station, uint8_t mode);	/* 
 
 extern int (*btFmResetHook)(void);					/* DTCM 0x400eefc */
 extern int (*btFmTuneModeHook)(unsigned int mode, uint32_t frequency);	/* DTCM 0x400ef00 */
-void btSbcNotifyTable(uint32_t *config);			/* 0x508be */
+struct SbcPcmStream;
+void btSbcNotifyTable(struct SbcPcmStream *config);		/* 0x508be */
 int btSbcFormatTable(uint8_t mode);				/* 0x5096a */
 
 /* fmTuner.mode: what btSbcFormatTable() starts the radio for; 0 stops it. */

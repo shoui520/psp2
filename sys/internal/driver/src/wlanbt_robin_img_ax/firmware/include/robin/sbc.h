@@ -84,6 +84,29 @@ struct SbcFrame {
 	uint16_t event;			/* 4: the samples follow the previous frame's */
 };
 
+/*
+ * The PCM stream's format words, given to sbcPcmStreamHook: one word of bit
+ * fields (Sony writes them one at a time, a store each), a word the FM radio
+ * clears, and the sample rate's code.
+ */
+struct SbcPcmStream {
+	uint32_t enable : 1;		/* cleared by the FM radio */
+	uint32_t mono : 1;		/* the FM policy's rate mode is 4 */
+	uint32_t reserved2 : 5;
+	uint32_t format : 4;		/* the codec's interface format: 0 (0x10) or 1 (8) */
+	uint32_t frameSync : 1;		/* register 4 gets 0x86 */
+	uint32_t master : 1;		/* register 4 gets 0x100 */
+	uint32_t width : 5;		/* the sample width's code: 23 and 31 take 8 bits of clock */
+	uint32_t clocking : 2;		/* SBC_PCM_CODEC_CLOCKS: the codec clocks the port */
+	uint32_t level : 8;		/* 0x80 and the FM policy's bit 18: register 6 bit 0 from its bit 0 */
+	uint32_t invert : 1;		/* register 4 bit 0 */
+	uint32_t reserved29 : 3;
+	uint32_t reserved1;		/* cleared by the FM radio */
+	uint32_t rate;			/* the sample rate's code (0..6) */
+};
+
+_Static_assert(sizeof(struct SbcPcmStream) == 12, "SBC PCM stream format");
+
 /* The PCM port's format (SBC_IOCTL_SET_BUFFER, SBC_IOCTL_CONFIGURE). */
 struct SbcPcmConfig {
 	union {
@@ -309,7 +332,7 @@ extern OsaBuffer *sbcReceivedPacket;			/* DTCM 0x400fa28: the A2DP packet being 
 extern uint8_t sbcDevicesOpen;				/* DTCM 0x400fa18 */
 extern uint8_t sbcHeld;					/* DTCM 0x400fa34: the stream is not started */
 extern uint32_t sbcReceiveEmpty;			/* DTCM 0x400fa3c: decoder frames without a packet */
-extern void (*sbcPcmStreamHook)(const uint32_t *config);	/* DTCM 0x400ef30 */
+extern void (*sbcPcmStreamHook)(const struct SbcPcmStream *config);	/* DTCM 0x400ef30 */
 extern struct OsaMsgList sbcReceiveQueue;		/* SQRAM 0xc003303c: the received A2DP packets */
 extern struct SbcFrame sbcDecoderFrame;			/* SQRAM 0xc0033194 */
 extern struct MdevDriver sbcAudioDriver;		/* SQRAM 0xc0033204 */
@@ -371,7 +394,7 @@ void btSbcRomComputeContext(uint8_t *frame);		/* decodes the H2 header's frame *
 #define SBC_CODEC_SETTINGS	26
 #define SBC_CODEC_POWER		REG32(0x8000216c)	/* inferred: bit 14 is held while the codec is written */
 #define SBC_CODEC_POWER_HOLD	0x4000
-#define SBC_PCM_CODEC_CLOCKS	1	/* format word 0, bits 19..18: the codec clocks the port */
+#define SBC_PCM_CODEC_CLOCKS	1	/* SbcPcmStream.clocking: the codec clocks the port */
 
 struct SbcCodecSetting {
 	uint8_t reg;
@@ -383,7 +406,7 @@ extern const struct SbcCodecSetting sbcCodecSettings[2][SBC_CODEC_SETTINGS];	/* 
 extern TX_EVENT_FLAGS_GROUP sbcPcmEvents;		/* SQRAM 0xc0033164: the PCM port's DMA events */
 
 void btSbcTrackBuffer(unsigned int reg, unsigned int value);	/* 0x51598 */
-void btSbcPcmStreamHandler(const uint32_t *config);	/* 0x515bc: the PCM port's format words */
+void btSbcPcmStreamHandler(const struct SbcPcmStream *config);	/* 0x515bc */
 int btSbcPcmDmaCallback(uintptr_t device, uintptr_t buffer, uintptr_t argument, unsigned int status);	/* 0x51764 */
 
 /* bt/sbcinit.c */

@@ -208,7 +208,7 @@ void btSbcFormatContext(unsigned int length, const uint8_t *parameters, uint8_t 
 void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t *parameters, uintptr_t argument,
 			 uint8_t *returnLength, uint8_t *status, uint8_t *returnParameters)
 {
-	uint32_t config[3];
+	struct SbcPcmStream config;
 	uint32_t version;
 	unsigned int rate;
 
@@ -231,10 +231,11 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		/* The original leaves the rest of the format words as the stack held them. */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-		config[0] = (config[0] & ~0xc0000u) | 0x10000000;
+		config.clocking = 0;
+		config.invert = 1;
 #pragma GCC diagnostic pop
-		config[2] = 0;
-		btSbcPcmStreamHandler(config);
+		config.rate = 0;
+		btSbcPcmStreamHandler(&config);
 		return;
 	case 15:
 		version = hostCmd0003Version();

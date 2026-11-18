@@ -54,23 +54,23 @@ __attribute__((noinline)) void btSbcTrackBuffer(unsigned int reg, unsigned int v
  * when the codec clocks the port, its format (register 4), its sample rate
  * (register 7) and its clock (register 6) from the format words.
  */
-void btSbcPcmStreamHandler(const uint32_t *config)
+void btSbcPcmStreamHandler(const struct SbcPcmStream *config)
 {
 	unsigned int i, value, clock = 0x100, width;
 
 	SBC_CODEC_POWER |= SBC_CODEC_POWER_HOLD;
 	rfBusEnter0000();
-	if ((config[0] >> 18 & 3) == SBC_PCM_CODEC_CLOCKS) {
+	if (config->clocking == SBC_PCM_CODEC_CLOCKS) {
 		for (i = 0; i < SBC_CODEC_SETTINGS; i++)
 			btSbcTrackBuffer(sbcCodecSettings[0][i].reg, sbcCodecSettings[0][i].value);
 		value = 0;
-		if ((config[0] & 0x1000) != 0)
+		if (config->master)
 			value = 0x100;
-		if ((config[0] & 0x800) != 0)
+		if (config->frameSync)
 			value |= 0x86;
-		if ((config[0] & 0x10000000) != 0)
+		if (config->invert)
 			value |= 1;
-		switch (config[0] >> 7 & 0xf) {
+		switch (config->format) {
 		case 0:
 			value |= 0x10;
 			break;
@@ -79,7 +79,7 @@ void btSbcPcmStreamHandler(const uint32_t *config)
 			break;
 		}
 		btSbcTrackBuffer(4, value);
-		switch (config[2]) {
+		switch (config->rate) {
 		case 0:
 			clock = 0x180;
 			value = 5;
@@ -107,12 +107,12 @@ void btSbcPcmStreamHandler(const uint32_t *config)
 			break;
 		}
 		btSbcTrackBuffer(7, value);
-		width = config[0] >> 13 & 0x1f;
+		width = config->width;
 		if (width == 23 || width == 31)
 			value = clock | 8;
 		else
 			value = clock | 0xc;
-		if ((config[0] & 0x100000) != 0)
+		if ((config->level & 1) != 0)
 			value |= 1;
 		btSbcTrackBuffer(6, value);
 	} else {

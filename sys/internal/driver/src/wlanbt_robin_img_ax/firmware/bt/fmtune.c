@@ -1123,30 +1123,24 @@ next:
 }
 
 /* Sets up the PCM port for the FM audio from the policy. */
-void btSbcNotifyTable(uint32_t *config)
+void btSbcNotifyTable(struct SbcPcmStream *config)
 {
-	uint32_t policy, word;
-
-	policy = fmSettings.policy;
-	word = config[0] & ~1;
-	if ((policy >> 4 & 0xf) == 4)
-		word |= 2;
-	else
-		word &= ~2;
-	word &= ~0x7c;
-	word = (word & ~0x10000000) | (uint32_t)((policy >> 17 & 1) == 0) << 28;
-	config[1] = 0;
-	word &= ~0x1800;
-	word = (word & ~0xff00000) | ((policy >> 18 & 1) + 0x80) << 20;
-	if ((policy >> 19 & 3) == 3) {
-		word &= ~0xc0000;
+	config->enable = 0;
+	config->mono = (fmSettings.policy >> 4 & 0xf) == 4;
+	config->reserved2 = 0;
+	config->invert = ((int32_t)(fmSettings.policy << 14) >> 31) + 1;	/* bit 17 read as a signed bit */
+	config->reserved1 = 0;
+	config->frameSync = 0;
+	config->master = 0;
+	config->level = (fmSettings.policy >> 18 & 1) + 0x80;
+	if ((fmSettings.policy >> 19 & 3) == 3) {
+		config->clocking = 0;
 	} else {
-		word = (word & ~0xc0000) + 0x40000;
-		word = (word & ~0x780) | (policy >> 19 & 3) << 7;
+		config->clocking = SBC_PCM_CODEC_CLOCKS;
+		config->format = fmSettings.policy >> 19 & 3;
 	}
-	config[0] = word;
-	config[2] = policy >> 8 & 0xf;
-	config[0] = (config[0] & ~0x3e000) | (fmTuner.filterCodes[policy >> 23 & 3] & 0x1f) << 13;
+	config->rate = fmSettings.policy >> 8 & 0xf;
+	config->width = fmTuner.filterCodes[fmSettings.policy >> 23 & 3];
 }
 
 /*
@@ -1155,7 +1149,7 @@ void btSbcNotifyTable(uint32_t *config)
  */
 int btSbcFormatTable(uint8_t mode)
 {
-	uint32_t config[3];
+	struct SbcPcmStream config;
 	unsigned int kind, rate;
 	int result;
 
@@ -1185,9 +1179,9 @@ int btSbcFormatTable(uint8_t mode)
 	fmSettings.audioSetting = 99;
 	btFmApplyHook(99, 1);
 	if ((fmSettings.policy >> 4 & 0xf) == 1) {
-		btSbcNotifyTable(config);
-		config[0] = (config[0] & ~0xff00000) | (uint32_t)((fmSettings.policy >> 18 & 1) == 0) << 20;
-		sbcPcmStreamHook(config);
+		btSbcNotifyTable(&config);
+		config.level = ((int32_t)(fmSettings.policy << 13) >> 31) + 1;	/* bit 18 read as a signed bit */
+		sbcPcmStreamHook(&config);
 		btAudioPathDataInvert(fmSettings.policy >> 18 & 1);
 	}
 	if ((mode & FM_MODE_TRANSMIT) != 0) {
