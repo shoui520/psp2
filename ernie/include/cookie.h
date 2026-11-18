@@ -65,6 +65,19 @@ extern void cookieReadReg3(void);
 extern unsigned char cookieCtrlChargeAc(unsigned char on);
 extern unsigned char cookieCtrlReg3Mode(unsigned char mode);
 extern unsigned char cookieCtrlReg3Bit2(unsigned char on);
+#if BOARD_USS1001
+/* the slim's: the charging current (register 2) and the USB supply current (register 6) set,
+   their bits 4-7, and as the host reads them (0x0841, 0x0843) */
+extern unsigned char cookieGetChargingCurrent(void);
+extern unsigned char cookieGetSupplyCurrentUsb(void);
+extern unsigned char cookieChargingCurrentDecode(unsigned char *out, unsigned char reg);
+extern unsigned char cookieSupplyCurrentUsbDecode(unsigned char *out, unsigned char reg);
+/* and back, 1 for a value it cannot be (0x08c2, 0x08c4) */
+extern unsigned char cookieChargingCurrentEncode(unsigned char *reg, unsigned char value);
+extern unsigned char cookieSupplyCurrentUsbEncode(unsigned char *reg, unsigned char value);
+extern unsigned char cookieReadReg1(unsigned char *reg);
+extern unsigned char cookieCtrlReg6Bit3(unsigned char clear);
+#endif
 extern unsigned char cookieCtrlReg3Bit0(void);
 
 #endif

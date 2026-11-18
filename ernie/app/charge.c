@@ -48,7 +48,11 @@ __sreg unsigned char chargeControl;
 #endif
 __sreg struct ChargeTemp chargeTemp;
 __sreg unsigned char chargeCurrent;
+#if BOARD_USS1001
+__sreg volatile unsigned char chargeUsbMode;
+#else
 __sreg unsigned char chargeUsbMode;
+#endif
 #if FW_SINCE(0x00090903)
 __sreg unsigned char chargeUsbHold;
 #endif
@@ -1137,7 +1141,11 @@ void chargeUpdateSoon(void)
 
 #if FW_SINCE(0x01000104)
 /* the Cookie's charge setting for the USB status and chargeUsbMode */
+#if BOARD_USS1001
+unsigned char chargeSetCurrent(void)
+#else
 int chargeSetCurrent(void)
+#endif
 {
 	unsigned char result;
 	unsigned char setting;

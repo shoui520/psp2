@@ -156,7 +156,11 @@ struct Charge {
 /* the power status (host command 0x0800), from the Cookie's status registers (chargeSetPowerStatus) */
 union PowerStatus {
 	unsigned int	word;
+#if BOARD_USS1001
+	unsigned char	byte[4];	/* the slim's: two bytes more (0x0800) */
+#else
 	unsigned char	byte[2];
+#endif
 	struct {
 		unsigned char	reserved0:1;
 		unsigned char	status1:1;	/* the Cookie's status 1's bits 12-15 */
@@ -165,8 +169,12 @@ union PowerStatus {
 		unsigned char	ac:1;		/* its bits 0-2; with no Cookie 0x60 */
 		unsigned char	battery:1;
 		unsigned char	charging:1;
+#if BOARD_USS1001
+		unsigned char	usb:4;		/* the USB status's bits 1-3 (0x089a) */
+#else
 		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
 		unsigned char	reserved1:2;
+#endif
 		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
 		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, cookieCtrlChargeAc) */
 		unsigned char	level:2;	/* the Cookie's status 1's bits 3-4 */
@@ -190,7 +198,11 @@ extern __sreg unsigned char chargeControl;	/* 0: transition 0x16 due at the AC (
 						   1: the AC's charge on (0x0892) */
 extern __sreg struct ChargeTemp chargeTemp;
 extern __sreg unsigned char chargeCurrent;	/* the charge setting sent (cookieCtrlSupplyCurrentUsb); 0xff none */
+#if BOARD_USS1001
+extern __sreg volatile unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
+#else
 extern __sreg unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
+#endif
 #if FW_SINCE(0x00090903)
 extern __sreg unsigned char chargeUsbHold;	/* 0xff: mode 5 while charging; no transition 0x0f */
 #endif
@@ -219,7 +231,11 @@ extern void chargeUpdateSoon(void);
 #if FW_SINCE(0x0100060B)
 extern void chargeUpdateLater(void);
 #endif
+#if BOARD_USS1001
+extern unsigned char chargeSetCurrent(void);
+#else
 extern int chargeSetCurrent(void);
+#endif
 #ifdef ERNIE_UPDATER
 extern unsigned char chargeMayStart(void);
 #else
@@ -250,6 +266,11 @@ extern void chargeSetAcDelay(void);
 extern unsigned char chargeUsbIs1(void);
 extern unsigned char chargeUsbIs2(void);
 extern unsigned char chargeVbusActive(void);
+/* the slim's manual charge mode (0x08c0; 0x0840): 1 on, 0 off, 0xff it could not be set */
+extern unsigned char chargeSetManualMode(unsigned char on);
+extern unsigned char chargeGetManualMode(void);
+/* bit 0: the USB connected (P7.5 low); bit 7: set as it changes, task 5 not asked to update */
+extern __sreg unsigned char chargeUsbState;
 #else
 extern int chargeUsbIs1(void);
 extern int chargeUsbIs2(void);

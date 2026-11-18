@@ -21,6 +21,7 @@
 #include "config.h"
 #include "cookie.h"
 #include "elmo.h"
+#include "eventlog.h"
 #include "handshake.h"
 #include "host.h"
 #include "input.h"
@@ -54,13 +55,43 @@ extern unsigned char input2Bit1Get(void);
 extern void inputMotionInfoLater(void);
 extern void inputFlag40Later(void);
 extern void inputFlag80Later(void);
+#if BOARD_USS1001
+/* the slim's power LED (the module after multicn.c): the reasons it shows, set or cleared for
+   task 5 (event flag 4's 0x0800) or at once, and the blink times of host command 0x0821/0x0822 */
+extern void powerLedSetFlags(unsigned int flags);
+extern void powerLedClearFlags(unsigned int flags);
+extern void powerLedLoadBlink(unsigned char index);
+extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);
+#endif
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
 
 void powerRequestNotify(void);
 void batteryRequestNotify(void);
+#if BOARD_USS1001
+/* the slim's: every command is answered with its status and answer's length, and logged */
+void powerRequestReply(unsigned char status, unsigned char length);
+void batteryRequestReply(unsigned char status, unsigned char length);
+#define powerRequestDone(status)	powerRequestReply(status, 0)
+static void powerRequestLogRequest(void);
+static void powerRequestLogAnswer(void);
+static void batteryRequestLogRequest(void);
+static void batteryRequestLogAnswer(void);
+#define POWER_REQUEST_ANSWER(code, size)	powerRequestReply(code, size)
+#define BATTERY_REQUEST_ANSWER(code, size)	batteryRequestReply(code, size)
+#else
 void powerRequestUnknown(void);
 void powerRequestDone(unsigned char status);
+/* the answer's length, the answer ready, then its status */
+#define POWER_REQUEST_ANSWER(code, size)						\
+	powerRequest.answerLength = (size);						\
+	hostRequestAnswerReady(&powerRequest.state);					\
+	powerRequest.status = (code)
+#define BATTERY_REQUEST_ANSWER(code, size)						\
+	batteryRequest.answerLength = (size);						\
+	hostRequestAnswerReady(&batteryRequest.state);					\
+	batteryRequest.status = (code)
+#endif
 static void powerRequestGetElmoVersion(void);
 static void powerRequestGetCookieVersion(void);
 #if !FW_SINCE(0x00090903)
@@ -88,6 +119,9 @@ static void powerRequestCtrlLedPwmBlink(void);
 #endif
 #if LED_REQUESTS
 static void powerRequestSetChargeLedCtrl(void);
+#endif
+#if BOARD_USS1001
+static void powerRequest089F(void);
 #endif
 static void powerRequestCtrlVoltage(void);
 static void powerRequestCtrlDeviceReset(void);
@@ -149,6 +183,16 @@ static unsigned char batteryResult(unsigned char result);
 #if FW_SINCE(0x0100060B)
 static void powerRequest08C5(void);
 #endif
+#if BOARD_USS1001
+static void powerRequest08C6(void);
+static void powerRequest08C7(void);
+static void powerRequest08C8(void);
+static void powerRequest08C9(void);
+static void powerRequest08CA(void);
+static void powerRequest08CB(void);
+static void powerRequest08CC(void);
+static void powerRequest08CD(void);
+#endif
 
 struct HostRequest powerRequest;		/* request 8 */
 struct HostRequest batteryRequest;		/* request 9 */
@@ -202,6 +246,9 @@ static const struct PowerCommand powerCommands[] = {
 #if LED_REQUESTS
 	{ 0x089e, powerRequestSetChargeLedCtrl },
 #endif
+#if BOARD_USS1001
+	{ 0x089f, powerRequest089F },
+#endif
 #if !FW_SINCE(0x00090903)
 	{ 0x08a0, powerRequest08A0 },
 	{ 0x08a1, powerRequest08A1 },
@@ -222,6 +269,16 @@ static const struct PowerCommand powerCommands[] = {
 #endif
 #if FW_SINCE(0x0100060B)
 	{ 0x08c5, powerRequest08C5 },
+#endif
+#if BOARD_USS1001
+	{ 0x08c6, powerRequest08C6 },
+	{ 0x08c7, powerRequest08C7 },
+	{ 0x08c8, powerRequest08C8 },
+	{ 0x08c9, powerRequest08C9 },
+	{ 0x08ca, powerRequest08CA },
+	{ 0x08cb, powerRequest08CB },
+	{ 0x08cc, powerRequest08CC },
+	{ 0x08cd, powerRequest08CD },
 #endif
 };
 
@@ -284,6 +341,148 @@ void powerInputChanged(void)
 	task5SetFlag(4, 0x0040);
 }
 
+#if BOARD_USS1001
+void powerRequestNotify(void)
+{
+	switch (powerRequest.event) {
+	case HOST_EVENT_NONE:
+		break;
+	case HOST_EVENT_COMMAND:
+		hostRequestSetState(&powerRequest, HOST_REQUEST_BUSY);
+		powerCommand = powerRequest.command;
+		task5SetFlag(4, 0x0001);
+		break;
+	case HOST_EVENT_ANSWERED:
+		hostRequestSetState(&powerRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&powerRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&powerRequest, HOST_REQUEST_IDLE);
+		break;
+	}
+}
+
+void batteryRequestNotify(void)
+{
+	switch (batteryRequest.event) {
+	case HOST_EVENT_NONE:
+		break;
+	case HOST_EVENT_COMMAND:
+		hostRequestSetState(&batteryRequest, HOST_REQUEST_BUSY);
+		task5SetFlag(4, 0x0100);
+		break;
+	case HOST_EVENT_ANSWERED:
+		hostRequestSetState(&batteryRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&batteryRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&batteryRequest, HOST_REQUEST_IDLE);
+		break;
+	}
+}
+
+/* answers request 8 */
+void powerRequestReply(unsigned char status, unsigned char length)
+{
+	hostRequestAnswer(&powerRequest, HOST_REQUEST_ANSWER, status, length);
+}
+
+/* answers request 9 */
+void batteryRequestReply(unsigned char status, unsigned char length)
+{
+	hostRequestAnswer(&batteryRequest, HOST_REQUEST_ANSWER, status, length);
+}
+
+/* request 8's command, from powerCommands */
+void powerRequestEvent(void)
+{
+	unsigned char i;
+
+	powerRequestLogRequest();
+	if (!handshakeUnlocked11()) {
+		hostRequestAnswer(&powerRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+		handshakeRefuse();
+		powerRequestLogAnswer();
+	} else {
+		for (i = 0; i < sizeof(powerCommands) / sizeof(powerCommands[0]); i++) {
+			if (powerCommands[i].command == powerCommand) {
+				powerCommands[i].handler();
+				powerRequestLogAnswer();
+				return;
+			}
+		}
+		hostRequestAnswer(&powerRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+		powerRequestLogAnswer();
+	}
+}
+
+/* request 9's command, from batteryCommands */
+void batteryRequestEvent(void)
+{
+	unsigned char i;
+
+	batteryRequestLogRequest();
+	if (!handshakeUnlocked11()) {
+		hostRequestAnswer(&batteryRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+		handshakeRefuse();
+		batteryRequestLogAnswer();
+	} else {
+		for (i = 0; i < sizeof(batteryCommands) / sizeof(batteryCommands[0]); i++) {
+			if (batteryCommands[i].command == batteryRequest.command) {
+				batteryCommands[i].handler();
+				batteryRequestLogAnswer();
+				return;
+			}
+		}
+		hostRequestAnswer(&batteryRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
+		batteryRequestLogAnswer();
+	}
+}
+
+/* the event log's record of request 8's command (code 0x08): the number, the length and the
+   data's first two bytes */
+static void powerRequestLogRequest(void)
+{
+	eventLogCharge[0] = powerRequest.command & 0xff;
+	eventLogCharge[1] = powerRequest.length;
+	eventLogCharge[2] = powerRequest.data[0];
+	eventLogCharge[3] = powerRequest.data[1];
+	eventLogRecord(0x10, 0x08, eventLogCharge, 4);
+}
+
+/* and of its answer (code 0x88): the number, the answer's length, its status and first byte */
+static void powerRequestLogAnswer(void)
+{
+	eventLogCharge[0] = powerRequest.command & 0xff;
+	eventLogCharge[1] = powerRequest.answerLength;
+	eventLogCharge[2] = powerRequest.status;
+	eventLogCharge[3] = powerRequest.answer[0];
+	eventLogRecord(0x10, 0x88, eventLogCharge, 4);
+}
+
+/* request 9's (codes 0x09 and 0x89) */
+static void batteryRequestLogRequest(void)
+{
+	eventLogCharge[0] = batteryRequest.command & 0xff;
+	eventLogCharge[1] = batteryRequest.length;
+	eventLogCharge[2] = batteryRequest.data[0];
+	eventLogCharge[3] = batteryRequest.data[1];
+	eventLogRecord(0x10, 0x09, eventLogCharge, 4);
+}
+
+static void batteryRequestLogAnswer(void)
+{
+	eventLogCharge[0] = batteryRequest.command & 0xff;
+	eventLogCharge[1] = batteryRequest.answerLength;
+	eventLogCharge[2] = batteryRequest.status;
+	eventLogCharge[3] = batteryRequest.answer[0];
+	eventLogRecord(0x10, 0x89, eventLogCharge, 4);
+}
+#else
 void powerRequestNotify(void)
 {
 	switch (powerRequest.event) {
@@ -362,15 +561,25 @@ void batteryRequestEvent(void)
 #endif
 	}
 }
+#endif
 
 /* 0x0800 (SceSysconForDriver_A2FE9BF9): the power status */
 unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 {
 	dis_dsp();
+#if BOARD_USS1001
+	*out++ = powerStatus.byte[0];
+	*out++ = powerStatus.byte[1];
+	*out++ = powerStatus.byte[2];
+	*out = powerStatus.byte[3];
+	ena_dsp();
+	*length = 4;
+#else
 	*out++ = powerStatus.byte[0];
 	*out = powerStatus.byte[1];
 	ena_dsp();
 	*length = 2;
+#endif
 	return 0;
 }
 
@@ -403,6 +612,116 @@ unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *lengt
 }
 #endif
 
+#if BOARD_USS1001
+/* 0x0804: the USB state 4, while the USB is in state 1 */
+unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
+{
+	if (chargeUsbIs1()) {
+		if (chargeCurrent != 0xff) {
+			chargeCurrent = 0xff;
+			chargeUsbMode = 4;
+			eventLogRecord(5, 0x22, 0, 0);
+			powerDeviceSetPending(0x1000);
+		}
+	}
+	*length = 0;
+	return 0;
+}
+
+/* 0x0805-0x0807: one or two zero bytes, answered as unknown */
+unsigned char hostCommand0805(unsigned char *out, unsigned char *length)
+{
+	*length = 1;
+	*out = 0;
+	return 0x3f;
+}
+
+unsigned char hostCommand0806(unsigned char *out, unsigned char *length)
+{
+	unsigned char value = 0;
+
+	*length = 1;
+	*out = value;
+	return 0x3f;
+}
+
+unsigned char hostCommand0807(unsigned char *out, unsigned char *length)
+{
+	*length = 2;
+	*out++ = 0;
+	*out = 0;
+	return 0x3f;
+}
+
+/* 0x0820: the power LED's host blink off */
+unsigned char hostCommand0820(unsigned char *out, unsigned char *length)
+{
+	powerLedClearFlags(0x0008);
+	*length = 0;
+	return 0;
+}
+
+/* 0x0821 and 0x0822: the power LED's host blink on, with the blink times 0 or 1 */
+unsigned char hostCommand0821(unsigned char *out, unsigned char *length)
+{
+	powerLedLoadBlink(0);
+	powerLedSetFlags(0x0008);
+	*length = 0;
+	return 0;
+}
+
+unsigned char hostCommand0822(unsigned char *out, unsigned char *length)
+{
+	powerLedLoadBlink(1);
+	powerLedSetFlags(0x0008);
+	*length = 0;
+	return 0;
+}
+
+/* 0x0840: the manual charge mode */
+unsigned char hostCommand0840(unsigned char *out, unsigned char *length)
+{
+	*out = chargeGetManualMode();
+	*length = 1;
+	return 0;
+}
+
+/* 0x0841: the charging current set */
+unsigned char hostCommand0841(unsigned char *out, unsigned char *length)
+{
+	unsigned char result = 0;
+
+	if (cookieChargingCurrentDecode(out, cookieGetChargingCurrent()) != 0) {
+		*out = 0;
+		result = 1;
+	}
+	*length = 1;
+	return result;
+}
+
+/* 0x0842 */
+unsigned char hostCommand0842(unsigned char *out, unsigned char *length)
+{
+	unsigned char result = 0;
+
+	*out = 0;
+	*length = 1;
+	return result;
+}
+
+/* 0x0843: the USB supply current set */
+unsigned char hostCommand0843(unsigned char *out, unsigned char *length)
+{
+	unsigned char result = 0;
+
+	if (cookieSupplyCurrentUsbDecode(out, cookieGetSupplyCurrentUsb()) != 0) {
+		*out = 0;
+		result = 1;
+	}
+	*length = 1;
+	return result;
+}
+#else
 /* 0x0804: the USB state 4 */
 unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
 {
@@ -429,26 +748,41 @@ void powerRequestDone(unsigned char status)
 	powerRequest.status = status;
 	hostRequestAnswerReady(&powerRequest.state);
 }
+#endif
 
 /* 0x0880 (sceSysconGetElmoVersion) */
+#if BOARD_USS1001
 static void powerRequestGetElmoVersion(void)
 {
 	powerRequestAnswer[0] = deviceVersions.elmo[1];
 	powerRequestAnswer[1] = deviceVersions.elmo[0];
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = 0;
+	powerRequestReply(0, 2);
 }
+#else
+static void powerRequestGetElmoVersion(void)
+{
+	powerRequestAnswer[0] = deviceVersions.elmo[1];
+	powerRequestAnswer[1] = deviceVersions.elmo[0];
+	POWER_REQUEST_ANSWER(0, 2);
+}
+#endif
 
 /* 0x0881 (sceSysconGetCookieVersion) */
+#if BOARD_USS1001
 static void powerRequestGetCookieVersion(void)
 {
 	powerRequestAnswer[0] = deviceVersions.cookie[1];
 	powerRequestAnswer[1] = deviceVersions.cookie[0];
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = 0;
+	powerRequestReply(0, 2);
 }
+#else
+static void powerRequestGetCookieVersion(void)
+{
+	powerRequestAnswer[0] = deviceVersions.cookie[1];
+	powerRequestAnswer[1] = deviceVersions.cookie[0];
+	POWER_REQUEST_ANSWER(0, 2);
+}
+#endif
 
 #if !FW_SINCE(0x00090903)
 /* 0x0882 (0x00090804's): the battery's three version words */
@@ -460,20 +794,24 @@ static void powerRequest0882(void)
 	*answer++ = deviceVersions.battery.version[0];
 	*answer++ = deviceVersions.battery.version[1];
 	*answer = deviceVersions.battery.version[2];
-	powerRequest.answerLength = 6;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = 0;
+	POWER_REQUEST_ANSWER(0, 6);
 }
 #endif
 
 /* 0x0883 (sceSysconGetPowerStatus) */
+#if BOARD_USS1001
 static void powerRequestGetPowerStatus(void)
 {
 	powerReadStatus(powerRequestAnswer);
-	powerRequest.answerLength = 8;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = 0;
+	powerRequestReply(0, 8);
 }
+#else
+static void powerRequestGetPowerStatus(void)
+{
+	powerReadStatus(powerRequestAnswer);
+	POWER_REQUEST_ANSWER(0, 8);
+}
+#endif
 
 /* 0x0884 (SceSysconForDriver_3FDD29D6) */
 static void powerRequest0884(void)
@@ -547,6 +885,29 @@ out:
 	powerRequestDone(result);
 }
 #else
+#if BOARD_USS1001
+/* the slim's: Elmo register 0xa0's bits, data bits 0-2 any set */
+static void powerRequest0885(void)
+{
+	unsigned char result = 0;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] & 0x80) {
+			if (powerRequestData[0] & 0x07) {
+				result = powerElmoA0Set2();
+				result = powerResult(result);
+			}
+		} else {
+			if (powerRequestData[0] & 0x07) {
+				result = powerElmoA0Clear2();
+				result = powerResult(result);
+			}
+		}
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 static void powerRequest0885(void)
 {
 	unsigned char result;
@@ -569,6 +930,7 @@ static void powerRequest0885(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 #endif
 
 /* 0x0886 (sceSysconCtrlHdmiCecPower) */
@@ -682,6 +1044,47 @@ static void powerRequestCtrlHpremote(void)
 }
 
 /* 0x089a (sceSysconCtrlUsbStatus) */
+#if BOARD_USS1001
+static void powerRequestCtrlUsbStatus(void)
+{
+	unsigned char result = 0;
+	unsigned char mode = chargeUsbMode;
+	unsigned char status[2];
+
+	if (powerRequest.length < 3) {
+		chargeUsbMode = powerRequestData[0];
+		if (chargeUsbMode != 0)
+			;
+		switch (chargeUsbMode) {
+		case 3:
+			chargeUsbHold = 0;
+			break;
+		case 0:
+		case 1:
+		case 2:
+		case 4:
+			break;
+		case 5:
+			if (chargeGetCharging() != 0)
+				chargeUsbHold = 0xff;
+			break;
+		}
+		if (!chargeUsbState.7) {
+			cookieReadStatus2(status);
+			dis_dsp();
+			powerStatus.bits.usb = (status[1] >> 1) & 7;
+			ena_dsp();
+		}
+		if (mode != chargeUsbMode) {
+			result = powerResult(chargeSetCurrent());
+			if (!chargeUsbState.7)
+				task5SetFlag(4, 0x0020);
+		}
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlUsbStatus(void)
 {
 	unsigned char result;
@@ -732,6 +1135,7 @@ static void powerRequestCtrlUsbStatus(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* the 3G modem's P3.3 pulse: powerBbmcPulse since 0x01000104, written out before */
 #if FW_SINCE(0x01000104)
@@ -845,7 +1249,7 @@ static void powerRequestCtrlLedPwmBlink(void)
 	if (powerRequest.length == 2) {
 		switch (powerRequestData[0]) {
 		case 1:
-#if FW_SINCE(0x01000306)
+#if FW_SINCE(0x01000306) && !BOARD_USS1001
 			ledSetOff(0);
 #endif
 			switch (powerRequestData[1] & 0x0f) {
@@ -930,6 +1334,17 @@ static void powerRequestSetChargeLedCtrl(void)
 
 	if (powerRequest.length == 1) {
 		switch (powerRequestData[0]) {
+#if BOARD_USS1001
+		/* the slim's: no charge LED for the host to switch */
+		case 0:
+			break;
+		case 1:
+			break;
+		case 2:
+			if (configGet()->chargeLedHost)
+				;
+			break;
+#else
 		case 0:
 			chargeLedSetHost(0);
 			chargeLedSetHostOff(1);
@@ -944,6 +1359,7 @@ static void powerRequestSetChargeLedCtrl(void)
 				chargeLedSetHost(1);
 			}
 			break;
+#endif
 		default:
 			result = 3;
 			break;
@@ -952,6 +1368,45 @@ static void powerRequestSetChargeLedCtrl(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+
+#if BOARD_USS1001
+/* 0x089f: the power LED's blink (data[1] the pattern, data[2-3] and data[4-5] its times, low byte
+   first) set (data[0] 1) or stopped (0) */
+static void powerRequest089F(void)
+{
+	unsigned int on;
+	unsigned int off;
+	unsigned char result = 0;
+
+	if (powerRequest.length == 6) {
+		if (powerRequestData[0] == 0) {
+			powerLedSetPattern(0xff, 0, 0);
+			powerLedClearFlags(0x0004);
+		} else if (powerRequestData[0] == 1) {
+			on = powerRequestData[2] | (unsigned int)powerRequestData[3] << 8;
+			off = powerRequestData[4] | (unsigned int)powerRequestData[5] << 8;
+			if (on != 0 || off != 0) {
+				switch (powerRequestData[1]) {
+				case 0:
+					powerLedSetPattern(0, on, off);
+					powerLedSetFlags(0x0004);
+					break;
+				case 1:
+					powerLedSetPattern(1, on, off);
+					powerLedSetFlags(0x0004);
+					break;
+				case 2:
+					powerLedSetPattern(2, on, off);
+					powerLedSetFlags(0x0004);
+					break;
+				}
+			}
+		}
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#endif
 #endif
 
 /* 0x088e (sceSysconCtrlVoltage): data[0] the regulator 1-4, data[1] its level */
@@ -983,6 +1438,9 @@ static void powerRequestCtrlVoltage(void)
 #if BOARD_IRS1001
 		/* IRS-1001's regulators take 0x48-0x87 */
 		if (powerRequestData[1] < 0x48 || powerRequestData[1] >= 0x88) {
+#elif BOARD_USS1001
+		/* USS-1001's take 0x3c-0x7b */
+		if (powerRequestData[1] < 0x3c || powerRequestData[1] >= 0x7c) {
 #elif FW_SINCE(0x0100060B)
 		/* Sony's tests the level against a lowest level of 0 too */
 		if (powerRequestData[1] < 0 || powerRequestData[1] >= 0x40) {
@@ -1014,6 +1472,16 @@ static void powerRequestCtrlDeviceReset(void)
 		if (powerRequestData[0] < 2) {
 			if (powerRequestData[1] & 0x01)
 				;
+#if BOARD_USS1001
+			if (powerRequestData[1] & 0x02)
+				P6.5 = powerRequestData[0];
+			if (powerRequestData[1] & 0x04)
+				P4.2 = powerRequestData[0];
+			if (powerRequestData[1] & 0x08)
+				P4.1 = powerRequestData[0];
+			if (powerRequestData[1] & 0x10)
+				P0.5 = powerRequestData[0];
+#else
 			if (powerRequestData[1] & 0x02) {
 #if BOARD_MOTION
 				if (powerRequestData[0] != 0 && motionGetStatus() != 0xff) {
@@ -1039,6 +1507,7 @@ static void powerRequestCtrlDeviceReset(void)
 			}
 			if (powerRequestData[1] & 0x10)
 				P13.1 = powerRequestData[0];
+#endif
 		}
 		result = 0;
 	} else
@@ -1047,7 +1516,13 @@ static void powerRequestCtrlDeviceReset(void)
 }
 
 /* 0x0890 (SceSysconForDriver_285594F8) */
-#if HW_IS(0x00315200) && !FW_SINCE(0x01000104)
+#if BOARD_USS1001
+/* the slim's: no P3.3 to switch */
+static void powerRequest0890(void)
+{
+	powerRequestDone(4);
+}
+#elif HW_IS(0x00315200) && !FW_SINCE(0x01000104)
 /* 0x00315200 before 0x01000104: no P3.3 to switch (Sony's keeps the result variable, unused:
    its register is saved) */
 static void powerRequest0890(void)
@@ -1078,6 +1553,40 @@ static void powerRequest0890(void)
 #endif
 
 /* 0x0891 (sceSysconCtrlLED) */
+#if BOARD_USS1001
+static void powerRequestCtrlLED(void)
+{
+	unsigned char result = 0;
+	unsigned int led;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] & 0x40) {
+			if (powerRequestData[0] & 0x80)
+				powerLedSetMode(POWER_LED_SET_OFF);
+			else
+				powerLedSetMode(POWER_LED_SET_ON);
+		}
+		if (powerRequestData[0] & 0x38) {
+			led = elmoLed;
+			if (powerRequestData[0] & 0x20) {
+				if (powerRequestData[0] & 0x80)
+					led |= 0x4000;
+				else
+					led &= ~0x4000;
+			}
+			elmoCommand[0] = 0xa5;
+			elmoCommand[1] = ((unsigned char *)&led)[1];
+			elmoCommand[2] = (unsigned char)led;
+			result = elmoWrite(elmoCommand, 3);
+			if (result == 0)
+				elmoLed = led;
+			result = powerResult(result);
+		}
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlLED(void)
 {
 	unsigned char result;
@@ -1141,8 +1650,17 @@ static void powerRequestCtrlLED(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
-#if !FW_SINCE(0x00090009)
+#if BOARD_USS1001
+/* 0x0892 (sceSysconCtrlChargeAC): the slim has no AC charge control, and answers 0 */
+static void powerRequestCtrlChargeAC(void)
+{
+	unsigned char result = 0;
+
+	powerRequestDone(result);
+}
+#elif !FW_SINCE(0x00090009)
 /* 0x0892 (sceSysconCtrlChargeAC): 0x00080504 has no AC charge control, and answers 0 */
 static void powerRequestCtrlChargeAC(void)
 {
@@ -1175,6 +1693,35 @@ static void powerRequestCtrlChargeAC(void)
 #endif
 
 /* 0x0893 (sceSysconCtrlChargeVBUS): data[1] 1 the first bit, 0 the second */
+#if BOARD_USS1001
+static void powerRequestCtrlChargeVBUS(void)
+{
+	unsigned char result = 0;
+	unsigned char host = (unsigned char)chargeVbus.1;
+	unsigned char device = (unsigned char)chargeVbus.0;
+
+	if (powerRequest.length < 3) {
+		if (powerRequestData[0] != 0) {
+			if (powerRequestData[1] == 1)
+				chargeVbus.1 = 1;
+			else if (powerRequestData[1] == 0)
+				chargeVbus.0 = 1;
+		} else {
+			if (powerRequestData[1] == 1)
+				chargeVbus.1 = 0;
+			else if (powerRequestData[1] == 0)
+				chargeVbus.0 = 0;
+		}
+		if (chargeVbus.1 != host || chargeVbus.0 != device) {
+			result = powerResult(chargeSetCurrent());
+			if (!chargeUsbState.7)
+				task5SetFlag(4, 0x0020);
+		}
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlChargeVBUS(void)
 {
 	unsigned char result;
@@ -1208,6 +1755,7 @@ static void powerRequestCtrlChargeVBUS(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x0894: sets (data[0] not 0) or clears the bits of data[1-8] in the Elmo's status masks */
 static void powerRequest0894(void)
@@ -1229,7 +1777,11 @@ static void powerRequest0894(void)
 		elmoStatusMask.byte[7] &= ~powerRequestData[7];
 		elmoStatusMask.byte[9] &= ~powerRequestData[8];
 	}
+#if BOARD_USS1001
+	result = elmoWrite(elmoCommand, elmoGetMasks(0x0f, elmoCommand));
+#else
 	result = elmoWrite(elmoCommand, elmoGetMasks(0x1f, elmoCommand));
+#endif
 	result = powerResult(result);
 	powerRequestDone(result);
 }
@@ -1248,9 +1800,7 @@ static void powerRequestReadElmoReg(void)
 		}
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0896 (sceSysconWriteElmoReg): data[0] the register, data[1-2] the value, low byte first */
@@ -1296,9 +1846,7 @@ static void powerRequestReadCookieReg(void)
 		}
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0898 (sceSysconWriteCookieReg): registers 3-8 are kept in cookieRegs */
@@ -1345,13 +1893,52 @@ static void powerRequestBatteryStartBLMode(void)
 }
 
 /* 0x08c0 (sceSysconCtrlManualChargeMode): nothing to do */
+#if BOARD_USS1001
+/* the slim's: the manual charge mode on or off; 0x3e when it cannot be */
+static void powerRequestCtrlManualChargeMode(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 1) {
+		result = chargeSetManualMode(powerRequestData[0] != 0 ? 1 : 0);
+		if (result == 0xff)
+			result = 0x3e;
+		else
+			result = powerResult(result);
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlManualChargeMode(void)
 {
 	powerRequestDone(0);
 	return;
 }
+#endif
 
 /* 0x08c1 (sceSysconCtrlBatteryCharge) */
+#if BOARD_USS1001
+/* the slim's 0x08c1-0x08c4 and 0x08c7-0x08c8 run only in the manual charge mode, 0x3e otherwise */
+static void powerRequestCtrlBatteryCharge(void)
+{
+	unsigned char result;
+	unsigned char on;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1) {
+			if (powerRequestData[0] != 0)
+				on = 1;
+			else
+				on = 0;
+			result = powerResult(cookieCtrlBatteryCharge(on));
+		} else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlBatteryCharge(void)
 {
 	unsigned char result;
@@ -1367,8 +1954,29 @@ static void powerRequestCtrlBatteryCharge(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x08c2 (sceSysconCtrlChargingCurrent) */
+#if BOARD_USS1001
+static void powerRequestCtrlChargingCurrent(void)
+{
+	unsigned char result;
+	unsigned char current;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1) {
+			result = cookieChargingCurrentEncode(&current, powerRequestData[0]);
+			if (result != 0)
+				result = 0x3c;
+			else
+				result = powerResult(cookieCtrlChargingCurrent(current));
+		} else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlChargingCurrent(void)
 {
 	unsigned char result;
@@ -1381,8 +1989,25 @@ static void powerRequestCtrlChargingCurrent(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x08c3 (sceSysconCtrlSupplyCurrentAc) */
+#if BOARD_USS1001
+static void powerRequestCtrlSupplyCurrentAc(void)
+{
+	unsigned char result;
+	unsigned char current = 0;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1)
+			result = 0;
+		else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlSupplyCurrentAc(void)
 {
 	unsigned char result;
@@ -1395,8 +2020,29 @@ static void powerRequestCtrlSupplyCurrentAc(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x08c4 (sceSysconCtrlSupplyCurrentUsb) */
+#if BOARD_USS1001
+static void powerRequestCtrlSupplyCurrentUsb(void)
+{
+	unsigned char result;
+	unsigned char current;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1) {
+			result = cookieSupplyCurrentUsbEncode(&current, powerRequestData[0]);
+			if (result != 0)
+				result = 0x3c;
+			else
+				result = powerResult(cookieCtrlSupplyCurrentUsb(current));
+		} else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+#else
 static void powerRequestCtrlSupplyCurrentUsb(void)
 {
 	unsigned char result;
@@ -1408,6 +2054,100 @@ static void powerRequestCtrlSupplyCurrentUsb(void)
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
+}
+#endif
+#endif
+
+#if BOARD_USS1001
+/* 0x08c6: the Cookie's register 1 */
+static void powerRequest08C6(void)
+{
+	unsigned char result;
+	unsigned char unused;
+	unsigned char reg[4];
+
+	if (powerRequest.length == 0) {
+		result = cookieReadReg1(reg);
+		result = powerResult(result);
+		if (result == 0) {
+			powerRequestAnswer[0] = reg[0];
+			powerRequestAnswer[1] = reg[1];
+			powerRequestAnswer[2] = reg[2];
+			powerRequestAnswer[3] = reg[3];
+		}
+	} else
+		result = 0x3b;
+	powerRequestReply(result, 4);
+}
+
+static void powerRequest08C7(void)
+{
+	unsigned char result;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1)
+			result = 0;
+		else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+
+/* 0x08c8: the Cookie's register 6 bit 3 cleared (data[0] set) or set */
+static void powerRequest08C8(void)
+{
+	unsigned char result;
+
+	if (chargeGetManualMode() == 1) {
+		if (powerRequest.length == 1)
+			result = powerResult(cookieCtrlReg6Bit3(powerRequestData[0] != 0 ? 1 : 0));
+		else
+			result = 0x3b;
+	} else
+		result = 0x3e;
+	powerRequestDone(result);
+}
+
+/* 0x08c9-0x08cd: not known, answered with a zero byte or two */
+static void powerRequest08C9(void)
+{
+	unsigned char result;
+
+	result = 0x3f;
+	powerRequestReply(result, 0);
+}
+
+static void powerRequest08CA(void)
+{
+	unsigned char result;
+
+	result = 0x3f;
+	powerRequestReply(result, 1);
+}
+
+static void powerRequest08CB(void)
+{
+	unsigned char result;
+
+	result = 0x3f;
+	powerRequestReply(result, 1);
+}
+
+static void powerRequest08CC(void)
+{
+	unsigned char result;
+
+	result = 0x3f;
+	powerRequestReply(result, 0);
+}
+
+static void powerRequest08CD(void)
+{
+	unsigned char result;
+
+	result = 0x3f;
+	powerRequestReply(result, 2);
 }
 #endif
 
@@ -1436,9 +2176,7 @@ static void powerRequest08A0(void)
 		result = powerResult(batteryReadTemp((unsigned int *)powerRequestAnswer));
 	else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a1: the gauge's register 0x3c */
@@ -1452,9 +2190,7 @@ static void powerRequest08A1(void)
 		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a2: register 0x14 */
@@ -1468,9 +2204,7 @@ static void powerRequest08A2(void)
 		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a3: register 0x16 */
@@ -1484,9 +2218,7 @@ static void powerRequest08A3(void)
 		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a4: register 0x28 */
@@ -1500,9 +2232,7 @@ static void powerRequest08A4(void)
 		result = powerResult(batteryRead(&reg, powerRequestAnswer, 2));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a8: data[0] the register to read */
@@ -1514,9 +2244,7 @@ static void powerRequest08A8(void)
 		result = powerResult(batteryRead(powerRequestData, powerRequestAnswer, 2));
 	else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x08a9: data[0] the register, data[1-2] its value */
@@ -1529,9 +2257,7 @@ static void powerRequest08A9(void)
 		result = powerResult(batteryWrite(&powerRequestData[1], 3));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 0;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 0);
 }
 
 /* 0x08aa: data[0] the control command */
@@ -1545,9 +2271,7 @@ static void powerRequest08AA(void)
 		result = powerResult(batteryControl(command, powerRequestAnswer, 2));
 	} else
 		result = 0x3b;
-	powerRequest.answerLength = 2;
-	hostRequestAnswerReady(&powerRequest.state);
-	powerRequest.status = result;
+	POWER_REQUEST_ANSWER(result, 2);
 }
 #endif
 
@@ -1588,16 +2312,29 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 #endif
 
 /* 0x0980 (sceSysconGetBatteryVersion) */
+#if BOARD_USS1001
+static void batteryRequestGetVersion(void)
+{
+	unsigned char result;
+
+	result = batteryResult(batteryReadInfo(&deviceVersions.battery.id));
+	if (result == 0) {
+		batteryRequestAnswer.word[0] = deviceVersions.battery.version[0];
+		batteryRequestAnswer.word[1] = deviceVersions.battery.version[1];
+		batteryRequestAnswer.word[2] = deviceVersions.battery.version[2];
+	}
+	batteryRequestReply(result, 6);
+}
+#else
 static void batteryRequestGetVersion(void)
 {
 	batteryReadInfo(&deviceVersions.battery.id);
 	batteryRequestAnswer.word[0] = deviceVersions.battery.version[0];
 	batteryRequestAnswer.word[1] = deviceVersions.battery.version[1];
 	batteryRequestAnswer.word[2] = deviceVersions.battery.version[2];
-	batteryRequest.answerLength = 6;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = 0;
+	BATTERY_REQUEST_ANSWER(0, 6);
 }
+#endif
 
 /* 0x0981 (sceSysconGetBatteryTemp) */
 static void batteryRequestGetTemp(void)
@@ -1612,9 +2349,7 @@ static void batteryRequestGetTemp(void)
 			result = batteryResult(batteryReadTemp(batteryRequestAnswer.word));
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 #if FW_SINCE(0x00090206)
@@ -1631,9 +2366,7 @@ static void batteryRequestGetBicTemp(void)
 			result = batteryResult(batteryReadBicTemp(batteryRequestAnswer.word));
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 #endif
 
@@ -1653,9 +2386,7 @@ static void batteryRequestGetFullCap(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0983 (sceSysconGetBatteryElec): register 0x14 */
@@ -1674,9 +2405,7 @@ static void batteryRequestGetElec(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0984 (sceSysconGetBatteryTTE): register 0x16 */
@@ -1695,9 +2424,7 @@ static void batteryRequestGetTTE(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0985 (sceSysconGetBatterySOH): register 0x28 */
@@ -1716,9 +2443,7 @@ static void batteryRequestGetSOH(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 #if FW_SINCE(0x00090009)	/* not in 0x00080504 */
@@ -1738,9 +2463,7 @@ static void batteryRequestGetFullCap2(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 #endif
 
@@ -1761,9 +2484,7 @@ static void batteryRequestGetCycleCount(void)
 		}
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x098d */
@@ -1772,9 +2493,7 @@ static void batteryRequest098D(void)
 	unsigned char result;
 
 	result = batteryResult(batteryControl0015());
-	batteryRequest.answerLength = 0;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 0);
 }
 #endif
 
@@ -1788,9 +2507,7 @@ static void batteryRequestReadReg(void)
 						 2));
 	else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0987 (sceSysconWriteBatteryReg): data[0] the register, data[2-3] the value */
@@ -1803,9 +2520,7 @@ static void batteryRequestWriteReg(void)
 		result = batteryResult(batteryWrite(&batteryRequestData.byte[1], 3));
 	} else
 		result = 0x3b;
-	batteryRequest.answerLength = 0;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 0);
 }
 
 /* 0x0988 (SceSysconForDriver_A5AB19B1) */
@@ -1818,9 +2533,7 @@ static void batteryRequest0988(void)
 						 batteryRequestAnswer.byte, 2));
 	else
 		result = 0x3b;
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x0989 (sceSysconBatterySWReset) */
@@ -1829,9 +2542,7 @@ static void batteryRequestSWReset(void)
 	unsigned char result;
 
 	result = batteryResult(batterySWReset());
-	batteryRequest.answerLength = 0;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 0);
 }
 
 /* 0x09b0 (sceSysconBatteryStartBLMode) */
@@ -1840,9 +2551,7 @@ static void batteryRequestStartBLMode(void)
 	unsigned char result;
 
 	result = batteryResult(batteryStartBLMode());
-	batteryRequest.answerLength = 0;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 0);
 }
 
 /* 0x09b1 (sceSysconBatteryStopBLMode) */
@@ -1851,9 +2560,7 @@ static void batteryRequestStopBLMode(void)
 	unsigned char result;
 
 	result = batteryResult(batteryStopBLMode());
-	batteryRequest.answerLength = 0;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 0);
 }
 
 /*
@@ -1879,9 +2586,7 @@ static void batteryRequestSetBLCommand(void)
 	} else
 		result = 0x3b;
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /* 0x09b3 (sceSysconBatteryExecBLCommand): data[0-1] the command set by 0x09b2 */
@@ -1900,9 +2605,7 @@ static void batteryRequestExecBLCommand(void)
 	} else
 		result = 0x3b;
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
-	batteryRequest.answerLength = 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, 2);
 }
 
 /*
@@ -1925,9 +2628,7 @@ static void batteryRequestReadBLCommand(void)
 	} else
 		result = 0x3b;
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
-	batteryRequest.answerLength = batteryBLCommand.length + 2;
-	hostRequestAnswerReady(&batteryRequest.state);
-	batteryRequest.status = result;
+	BATTERY_REQUEST_ANSWER(result, batteryBLCommand.length + 2);
 }
 
 /* a device's result as the host's status: 1, 2 and 4 give 0x22, 0x10 gives 0x21, the rest 1 */

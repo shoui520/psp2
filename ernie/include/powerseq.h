@@ -72,8 +72,13 @@ extern void powerCookieCycle(void);
 #endif
 extern unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13);
 extern unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13);
+#if BOARD_USS1001
+extern unsigned char powerElmoA0Set2(void);
+extern unsigned char powerElmoA0Clear2(void);
+#else
 extern unsigned char powerElmoA0Set2(unsigned char bit12, unsigned char unused1, unsigned char unused0);
 extern unsigned char powerElmoA0Clear2(unsigned char bit12, unsigned char unused1, unsigned char unused0);
+#endif
 extern unsigned char powerHdmiCecOn(void);
 extern unsigned char powerHdmiCecOff(void);
 extern unsigned char powerMotionOn(void);
