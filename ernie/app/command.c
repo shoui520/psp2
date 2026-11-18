@@ -120,9 +120,17 @@ const unsigned char timeStampDigits[12] = {
 };
 
 /* the commands request 0 takes before the handshake */
-static const unsigned int commandBaseRequests[6] = {
+#if HOST_WATCHDOG
+#define COMMAND_BASE_REQUESTS	6
+static const unsigned int commandBaseRequests[COMMAND_BASE_REQUESTS] = {
 	0x0080, 0x0083, 0x0084, 0x0085, 0x00a0, 0x00c0,
 };
+#else
+#define COMMAND_BASE_REQUESTS	4
+static const unsigned int commandBaseRequests[COMMAND_BASE_REQUESTS] = {
+	0x0080, 0x0083, 0x00a0, 0x00c0,
+};
+#endif
 
 /* 0x0001 (sceSysconGetErnieVersion) */
 unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length)
@@ -192,6 +200,7 @@ unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
+#if HOST_WATCHDOG
 /* 0x0013: the host's watchdog's setting */
 unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 {
@@ -203,6 +212,15 @@ unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 	*length = 2;
 	return 0;
 }
+#else
+/* 0x0013: no host watchdog in 0x00080504; it answers 0xaa */
+unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
+{
+	out[0] = 0xaa;
+	*length = 1;
+	return 0;
+}
+#endif
 
 /* 0x0014: the pins */
 unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
@@ -307,7 +325,7 @@ void commandRequestNotify(void)
 #endif
 
 	if (!handshakeUnlocked11()) {
-		for (i = 0; i < 6; i++) {
+		for (i = 0; i < COMMAND_BASE_REQUESTS; i++) {
 			if (commandBaseRequests[i] == commandRequest.command)
 				goto allowed;
 		}
@@ -373,6 +391,7 @@ allowed:
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
+#if HOST_WATCHDOG
 		case 0x0083:
 			if (commandRequest.length == 2) {
 				word.byte[0] = commandRequestData[0];
@@ -391,6 +410,11 @@ allowed:
 			result = (unsigned char)watchdogKick();
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, 0);
 			break;
+#else
+		case 0x0083:		/* 0x00080504: no host watchdog */
+			hostRequestAnswer(&commandRequest, 0x10, 0x3f, 0);
+			break;
+#endif
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no log */
 		case 0x0086:		/* the log: sceSysconGetLogInfo */
 		case 0x0087:		/* sceSysconLogStart */
@@ -490,6 +514,7 @@ allowed:
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 #endif
 			break;
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 		case 0x00b2:		/* sceSysconCtrlHostOutputViaDongle */
 			if (commandRequest.length == 1) {
 				if (boardMultiCnIsDongle() == 0)
@@ -510,6 +535,7 @@ allowed:
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
+#endif
 #if FW_SINCE(0x00090804)	/* not in 0x00090206 */
 		case 0x00b3:		/* P6.7 */
 #if BOARD_102603 && FW_SINCE(0x01000104)
@@ -615,6 +641,7 @@ allowed:
 		case 0x00c1:		/* sceSysconErnieShutdown */
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			break;
+#if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 		case 0x00c2:
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 0x5a) {
@@ -644,6 +671,7 @@ allowed:
 			}
 #endif
 			break;
+#endif
 #if FW_SINCE(0x00090903)
 		case 0x00d0:		/* the handshake before the SNVS */
 			if (commandRequest.length == 0x28) {

@@ -102,7 +102,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 	{ 0x0011, hostCommandClock, 0 },
 	{ 0x0012, hostCommandAlarm, 0 },
-	{ 0x0013, hostCommand0013, 0 },
+	{ 0x0013, hostCommand0013, 0 },	/* 0x00080504: a stub */
 	{ 0x0014, hostCommandPins, 0 },
 #if FW_SINCE(0x0100060B)
 	{ 0x0015, hostCommand0015, 0 },
@@ -137,7 +137,9 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0804, hostCommand0804, 0 },
 	{ 0x0900, hostCommandBatteryRemainCap, 0 },
 	{ 0x0901, hostCommandBatteryVolt, 0 },
+#if FW_SINCE(0x00090009)
 	{ 0x0902, hostCommandBatteryLifePercent, 0 },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ 0x0a00, hostCommand0a00, 0 },
 #endif
@@ -152,7 +154,9 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, hostCommandHardwareInfo, 0 },
 	{ 0x0010, hostCommandWakeupFactor, 0 },
+#if HOST_WATCHDOG
 	{ 0x0013, hostCommand0013, 0 },
+#endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 #if FW_SINCE(0x00090903)
 	{ 0x1101, hostCommandUpdaterProgress, 0 },
@@ -501,7 +505,9 @@ int hostFrameCommand(void)
 		else
 			hostLink.rx[3] = 0x3f;
 		hostLink.rx[2] = length + 2;
+#if HOST_WATCHDOG
 		watchdogKick();
+#endif
 	} else {
 		request = hostFindRequest(hostLink.tx[1]);
 		if (request != NULL) {
@@ -523,7 +529,9 @@ int hostFrameCommand(void)
 					hostLink.rx[3] = 0x82;
 				}
 				hostLink.rx[2] = length + 2;
-				watchdogKick();
+		#if HOST_WATCHDOG
+		watchdogKick();
+#endif
 				break;
 			case HOST_REQUEST_IDLE:
 				hostLink.rx[3] = 0x3e;
@@ -532,7 +540,9 @@ int hostFrameCommand(void)
 			case HOST_REQUEST_RECEIVE:
 				hostLink.rx[3] = 0x80;
 				hostLink.rx[2] = 2;
-				watchdogKick();
+		#if HOST_WATCHDOG
+		watchdogKick();
+#endif
 				break;
 			case HOST_REQUEST_BUSY:
 				if (request->command == FRAME_COMMAND(hostLink.tx)) {
@@ -542,7 +552,9 @@ int hostFrameCommand(void)
 					hostLink.rx[3] = 0x82;
 				}
 				hostLink.rx[2] = 2;
-				watchdogKick();
+		#if HOST_WATCHDOG
+		watchdogKick();
+#endif
 				break;
 			case HOST_REQUEST_ERROR:
 				hostLink.rx[3] = 0x83;

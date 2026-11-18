@@ -73,7 +73,7 @@ OBJECT	task.c
 OBJECT	configdefault.c	IF ERNIE_FW<0x01000104&&ERNIE_FW>=0x00090804	# 0x00090206 has no defaults
 OBJECT	config.c
 OBJECT	configreq.c
-OBJECT	watchdog.c
+OBJECT	watchdog.c	IF ERNIE_FW>=0x00090009
 OBJECT	sysinfo.c
 OBJECT	log.c		IF ERNIE_FW>=0x00090804
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)

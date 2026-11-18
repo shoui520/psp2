@@ -1545,6 +1545,7 @@ unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
+#if FW_SINCE(0x00090009)	/* 0x00080504 has no 0x0902 */
 /* 0x0902 (sceSysconGetBatteryLifePercent) */
 unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length)
 {
@@ -1553,6 +1554,7 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 	*length = 2;
 	return 0;
 }
+#endif
 
 /* the battery's word for the host, or the setting's when no battery answered */
 #if BOARD_BATTERY_STANDIN

@@ -69,7 +69,9 @@ void systemInit(void)
 	statePhase = 2;
 	stateNext = 0;
 	stateEvents = 0;
+#if FW_SINCE(0x00090009)
 	stateCause = 0x7f;
+#endif
 #if FW_SINCE(0x0100060B)
 	debugPinInit();
 #endif

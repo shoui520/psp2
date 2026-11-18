@@ -5,6 +5,9 @@
 #ifndef ERNIE_WATCHDOG_H
 #define ERNIE_WATCHDOG_H
 
+/* 0x00080504 has no host watchdog */
+#define HOST_WATCHDOG		FW_SINCE(0x00090009)
+
 /* an RTC timer: its ticks are 0.5 s */
 #ifdef ERNIE_UPDATER
 #define WATCHDOG_TIMER		0x1c

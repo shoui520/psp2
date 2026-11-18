@@ -234,8 +234,10 @@ unsigned char task2On(void)
 #if FW_SINCE(0x00090804)
 	boardMultiCnOutputOff();
 #endif
+#if HOST_WATCHDOG
 	watchdogSet(&configGet()->watchdog);
 	watchdogStop();
+#endif
 	return ret;
 }
 
@@ -262,7 +264,9 @@ unsigned char task2Off(void)
 #endif
 	updaterRequestInit();
 	configRequestInit();
+#if HOST_WATCHDOG
 	watchdogStop();
+#endif
 #if FW_SINCE(0x00090903)
 	if (nvsRead(0x2d, 1, &value, 1) == 0)
 		setDlFlags(value);
@@ -299,7 +303,9 @@ unsigned char task2Resume(void)
 #endif
 	commandRequestReceive();
 	serialRequestReset();
+#if HOST_WATCHDOG
 	watchdogSetup();
+#endif
 #if !FW_SINCE(0x01000104) && FW_SINCE(0x00090903)
 	snvsReset();	/* (0x00090804 has no SNVS) */
 #endif
@@ -320,7 +326,9 @@ unsigned char task2Suspend(void)
 #else
 	boardSetMultiCnOutput(0);
 #endif
+#if HOST_WATCHDOG
 	watchdogStop();
+#endif
 	return ret;
 }
 
@@ -337,7 +345,9 @@ unsigned char task2Shutdown(void)
 #endif
 	serialClose1();
 	serial1Reset();
+#if HOST_WATCHDOG
 	watchdogStop();
+#endif
 	return ret;
 }
 
@@ -354,7 +364,9 @@ unsigned char task2Cut(void)
 #endif
 	serialClose1();
 	serial1Reset();
+#if HOST_WATCHDOG
 	watchdogStop();
+#endif
 	return ret;
 }
 
@@ -364,7 +376,9 @@ unsigned char task2Reset(void)
 
 	ret = 0;
 	serialAuthInit();
+#if HOST_WATCHDOG
 	watchdogStop();
+#endif
 	return ret;
 }
 

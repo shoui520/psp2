@@ -43,13 +43,16 @@ struct Timer {
 #elif FW_SINCE(0x00090804)
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		((id) + 1)
-#else
+#elif FW_SINCE(0x00090009)
 #define TIMER_RTC_FIRST		0x13
 #define TIMER_RTC(id)		((id) - 1)
+#else
+#define TIMER_RTC_FIRST		0x11
+#define TIMER_RTC(id)		((id) - 3)
 #endif
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #define TIMER(id)		((id) - 2)
-#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104)
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090009)
 #define TIMER(id)		(id)
 #else
 #define TIMER(id)		((id) + 2)
@@ -62,9 +65,12 @@ struct Timer {
 #define TIMER_COUNT		0x1f
 #elif FW_SINCE(0x00090804)
 #define TIMER_COUNT		0x1e	/* 0x00090804: no timer 0x1e */
-#else
+#elif FW_SINCE(0x00090009)
 #define TIMER_COUNT		0x1b	/* 0x00090206: no power timers 9 and 10 (TIMER()), and
 					   the RTC's end at 0x1c (TIMER_RTC()) */
+#else
+#define TIMER_COUNT		0x18	/* 0x00080504: timers 0x0c and up at their numbers, the RTC's
+					   from 0x11 (TIMER_RTC()), no watchdog timer */
 #endif
 
 extern __near struct Timer timers[TIMER_COUNT];
