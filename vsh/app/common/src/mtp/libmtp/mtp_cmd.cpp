@@ -27,9 +27,6 @@
 #define MTP_HOST_STATUS_UNSUPPORTED	6
 #define MTP_HOST_STATUS_CONNECTED_EX	0x10005
 
-#define MTP_IF_TYPE_NET			2
-#define MTP_PLATFORM_CLASS_PS3		2
-#define MTP_REGION_PS3_RESTRICTED	13
 
 extern "C" {
 
@@ -185,7 +182,7 @@ int mtpCmdCloseSession(const MtpOperation *operation, MtpOperation *response)
 	}
 	mtpContextCancelAll();
 	if (mtpDevGetIfType() == MTP_IF_TYPE_NET &&
-	    mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS3 && mtpStatusGetState() == 4)
+	    mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS && mtpStatusGetState() == 4)
 		mtpStatusSetState(2, 14, 0);
 	else
 		mtpStatusSetState(0, -1, 0);
@@ -432,7 +429,7 @@ int mtpCmdSendInitiatorInfo(const MtpOperation *operation, MtpOperation *respons
 	}
 	mtpUtilFree(buf);
 	parser.Terminate();
-	if (mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS3)
+	if (mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS)
 		mtpStatusSetState(5, -1, 0);
 	result = 0;
 	mtpUtilSetMtpResponse(MTP_RESPONSE_OK, &result, 1, operation, response);
@@ -461,8 +458,8 @@ int mtpCmdSendHostStatus(const MtpOperation *operation, MtpOperation *response)
 	switch (status) {
 	case MTP_HOST_STATUS_CONNECTED:
 	case MTP_HOST_STATUS_CONNECTED_EX:
-		if (mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS3 &&
-		    sceRegMgrSrvGetRegion() == MTP_REGION_PS3_RESTRICTED) {
+		if (mtpStatusGetPlatformClass() == MTP_PLATFORM_CLASS_PS &&
+		    sceRegMgrSrvGetRegion() == MTP_REGION_CHINA) {
 			mtpStatusSetState(0, -1, 1);
 			break;
 		}

@@ -12,8 +12,6 @@
 #include <bXCe/bxce_internal.h>
 #include "mtp_internal.h"
 
-#define MTP_REGION_CHINA	13
-
 typedef struct MtpPlatformName {
 	const char *name;
 	int type;

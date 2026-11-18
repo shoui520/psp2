@@ -34,6 +34,7 @@ extern "C" {
 #define SCE_MTP_ERROR_NOT_STOPPED	((int)0x80540004)
 #define SCE_MTP_ERROR_NO_MEMORY		((int)0x80540007)
 #define SCE_MTP_ERROR_DEVICE		((int)0x80540008)
+#define SCE_MTP_ERROR_INVALID_PARENT	((int)0x80540009)
 #define SCE_MTP_ERROR_NOT_FOUND		((int)0x80540011)
 #define SCE_MTP_ERROR_DATA_PHASE_OVER	((int)0x80540013)
 #define SCE_MTP_ERROR_TERMINATED	((int)0x80540014)
@@ -110,6 +111,9 @@ extern "C" {
 #define MTP_IF_TYPE_USB			1
 #define MTP_IF_TYPE_NET			2
 
+/* sceRegMgrSrvGetRegion's region where a PS host may not connect */
+#define MTP_REGION_CHINA		13
+
 /* the core's state */
 #define MTP_CORE_STATE_NONE		0
 #define MTP_CORE_STATE_INITIALIZED	1
@@ -157,6 +161,11 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_OPERATION_NOT_SUPPORTED	0x2005
 #define MTP_RESPONSE_DEVICE_PROP_NOT_SUPPORTED	0x2006
 #define MTP_RESPONSE_INCOMPLETE_TRANSFER	0x2007
+#define MTP_RESPONSE_INVALID_STORAGE_ID	0x2008
+#define MTP_RESPONSE_INVALID_OBJECT_HANDLE	0x2009
+#define MTP_RESPONSE_STORE_NOT_AVAILABLE	0x2013
+#define MTP_RESPONSE_SPECIFICATION_BY_FORMAT_UNSUPPORTED	0x2014
+#define MTP_RESPONSE_INVALID_PARENT_OBJECT	0x201A
 #define MTP_RESPONSE_INVALID_PARAMETER	0x201D
 #define MTP_RESPONSE_SESSION_ALREADY_OPEN	0x201E
 /* the vendor responses (the names are ours) */
@@ -1043,6 +1052,7 @@ int netMtpDeviceIsWaking(void);
 #define MTP_OPERATION_REQUEST_SEND_NUM_OF_OBJECT	0xC104
 #define MTP_OPERATION_REQUEST_SEND_OBJECT_METADATA	0xC105
 #define MTP_OPERATION_REQUEST_SEND_OBJECT		0xC107
+#define MTP_OPERATION_REQUEST_OBJECT_INFO		0xC109
 #define MTP_OPERATION_REQUEST_GET_SETTING_INFO		0xC10D
 #define MTP_OPERATION_REQUEST_OBJECT_STATUS		0xC10F
 #define MTP_OPERATION_REQUEST_SEND_OBJECT_THUMBNAIL	0xC110
@@ -1213,7 +1223,45 @@ int mtpStrgVTDestroyMtpHandles(MtpStorage *storage);
 int mtpStrgVTConvertMtpHandleToUniqueId(SceUInt32 handle, SceUInt32 *uniqueId);
 int mtpStrgRegisterObject(const char *path, SceUInt32 *handle);
 int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle);
+/* the logical storage of an object handle's (or object ID's) storage bits */
+#define MTP_OBJECT_STORAGE_ID(storage) \
+	((((storage) >> 27 & 3) + 1) | ((((storage) >> 29 & 3) + 1) << 16))
+/* an object handle's bit for a directory (the parents GetObjectHandles takes) */
+#define MTP_OBJECT_HANDLE_DIR		0x4000000
+
 int mtpStrgGetLogicalStorage(SceUInt32 storageId, MtpLogicalStorage **storage);
+
+/* the storage IDs GetStorageIDs sends: num is the room in, the IDs out */
+typedef struct MtpStorageIds {
+	SceUInt32 num;
+	SceUInt32 *ids;
+} MtpStorageIds;
+
+/* a storage's StorageInfo dataset, as the storage manager keeps it */
+typedef struct MtpStorageDataset {
+	SceUInt16 storageType;
+	SceUInt16 filesystemType;
+	SceUInt16 accessCapability;
+	SceUInt16 padding;
+	SceUInt64 maxCapacity;
+	SceUInt64 freeSpaceInBytes;
+	SceUInt32 freeSpaceInObjects;
+	SceUInt32 padding2;
+	const char *storageDescription;
+	const char *volumeIdentifier;
+} MtpStorageDataset;
+
+/* the bytes of IDs written, or an error */
+int mtpStrgGetStorageIds(MtpStorageIds *ids);
+int mtpStrgIsStorageValid(SceUInt32 storageId);
+int mtpStrgIsStorageAvailable(SceUInt32 storageId);
+int mtpStrgGetStorageInfo(SceUInt32 storageId, const MtpStorageDataset **dataset);
+int mtpStrgIsObjectHandleValid(SceUInt32 handle);
+int mtpObjPackObjectInfo(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *buf,
+	SceSize size);
+int mtpStrgGetNumObjects(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num);
+/* sends the handles itself; *send is cleared when that fails */
+int mtpStrgGetMtpHandles(SceUInt32 storageId, SceUInt32 parent, SceUInt32 num, int *send);
 int mtpObjDeleteObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId);
 int mtpObjGetObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *data);
 int mtpObjUpdateObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, const void *data);
@@ -1477,7 +1525,8 @@ public:
 	bXCe::Sax::DocumentHandler *m_handler;
 };
 
-/* a parser of the capabilityInfo a host sends ("CAPABILITY:") */
+/* a parser of the capabilityInfo a host sends (mtp_capability.cpp) */
+class CapabilityInfoHandler;
 class CapabilityInfoParser {
 public:
 	CapabilityInfoParser() : m_parser(NULL), m_handler(NULL) {}
@@ -1487,7 +1536,7 @@ public:
 	int Parse(const char *data, int length, bool isFinal);
 
 	bXCe::Sax::Parser *m_parser;
-	bXCe::Sax::DocumentHandler *m_handler;
+	CapabilityInfoHandler *m_handler;
 };
 #endif
 

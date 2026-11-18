@@ -9,4 +9,3 @@
 STUB_MAIN(module_start)
 STUB_MAIN(module_stop)
 
-STUB(SceLibMtp_94040962)

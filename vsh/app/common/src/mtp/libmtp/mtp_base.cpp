@@ -1213,10 +1213,6 @@ int SceLibMtp_81BCF297(const char *path, MtpObjectId *objectId)
 #define MTP_OBJECT_ID_UNIQUE(id)	((SceUInt32)(id))
 #define MTP_OBJECT_ID_STORAGE(id)	((SceUInt32)((id) >> 32))
 
-/* the logical storage of an object ID's storage bits */
-#define MTP_OBJECT_STORAGE_ID(storage) \
-	((((storage) >> 27 & 3) + 1) | ((((storage) >> 29 & 3) + 1) << 16))
-
 int SceLibMtp_E2A9E59C(SceInt64 objectId)
 {
 	SceUInt32 uniqueId = MTP_OBJECT_ID_UNIQUE(objectId);
