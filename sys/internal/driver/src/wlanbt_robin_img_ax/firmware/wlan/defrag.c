@@ -17,8 +17,8 @@
 #include "robin/threadx.h"
 
 WlanDefragContext wlanDefragContext __attribute__((section(".itcm.bss")));
-uint8_t wlanDefragDiscarding __attribute__((section(".sqram1.rw")));
-uint32_t wlanRomServicesTimerOffset __attribute__((section(".sqram1.rw")));
+uint8_t wlanDefragDiscarding __attribute__((section(".sqram1.rw"))) = 1;	/* 0xc0011b0c */
+uint32_t wlanRomServicesTimerOffset __attribute__((section(".sqram1.rw"))) = 20000;	/* 0xc0011b10 */
 OsaBuffer *wlanDefragReassembly __attribute__((section(".sqram1.rw")));
 OsaBuffer *wlanDefragReassemblyWep __attribute__((section(".sqram1.rw")));
 

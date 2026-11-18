@@ -74,7 +74,7 @@ static uint8_t sdioClockRequest __attribute__((section(".dtcm.rw")));	/* an acti
 static uint8_t sdioWakePending __attribute__((section(".dtcm.rw")));	/* the wake handler ran, the next interrupt releases */
 static uint8_t sdioResetWindow[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = { 1, 1, 1 };
 /* Written by the ROM before the drivers start (the image holds zeros). */
-static uint8_t sdioSinglePort[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw")));
+static uint8_t sdioSinglePort[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = { 0, 1, 1 };	/* 0x4000c96 */
 static uint8_t sdioChannel[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw"))) = { 0xff, 0xff, 0xff };
 uint8_t sdioReceiveSlots[SDIO_FUNCTIONS] __attribute__((section(".dtcm.rw")));	/* 0x04000c9c */
 static uint8_t sdioSendSlots[SDIO_FUNCTIONS + 2] __attribute__((section(".dtcm.rw")));

@@ -44,7 +44,7 @@ uint32_t wlanTxRingPending[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram
 uint32_t wlanTxRingPublished[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.bss")));
 uint32_t wlanTxRingFilled[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.bss")));
 /* Entries published at once. */
-uint32_t wlanTxRingPublishLimit __attribute__((section(".sqram1.bss")));
+uint32_t wlanTxRingPublishLimit __attribute__((section(".sqram1.rw"))) = 1;	/* 0xc0011bdc */
 /* Policy bits cleared when a ring is filled (one per ring) and set or cleared when a frame is pushed. */
 uint32_t wlanTxRingMaskFill __attribute__((section(".sqram1.bss")));
 uint32_t wlanTxRingMaskPush __attribute__((section(".sqram1.bss")));
@@ -106,8 +106,8 @@ __attribute__((noinline)) int wlanTxRingPublish(unsigned int ring)
 	limit = wlanTxRingPublishLimit;
 	if (count < limit)
 		limit = count;
-	wlanTxRingPending[ring] -= limit;
 	writeIndex = wlanTxRingWriteIndex[ring];
+	wlanTxRingPending[ring] -= limit;
 	if (wlanWindowOwner(ring, wlanWindowOwners) == 1) {
 		for (i = 0; i < (int)limit; ++i) {
 			unsigned int published = wlanTxRingPublished[ring];

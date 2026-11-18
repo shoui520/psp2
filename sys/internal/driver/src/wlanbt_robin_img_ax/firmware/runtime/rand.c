@@ -13,7 +13,7 @@ struct RandState {
 	int second;
 };
 
-struct RandState randState = { 23, RAND_WORDS - 1 };	/* 0x55784 */
+struct RandState randState;	/* 0x55784: zero in the image until srand() sets it */
 static unsigned int randTable[RAND_WORDS];		/* 0x5ad78 */
 
 void srand(unsigned int seed)
