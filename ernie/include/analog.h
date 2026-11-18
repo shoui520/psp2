@@ -7,6 +7,8 @@
 #ifndef ERNIE_ANALOG_H
 #define ERNIE_ANALOG_H
 
+#include "board.h"
+
 #define ANALOG_AXES		4
 #define ANALOG_SAMPLES		3	/* an axis's median is of its last three */
 #define ANALOG_SETS		2
@@ -38,7 +40,30 @@ struct AnalogOutput {
 	unsigned char	value;
 };
 
-#if defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
+#if BOARD_USS1001
+/* the slim's record of an axis's readings outside its limits: the lowest at or below limitMin,
+   the highest at or above limitMax, the last with its low six bits set, and how many were below
+   and above (up to 0xff) */
+struct AnalogFault {
+	unsigned int	low;
+	unsigned int	high;
+	unsigned int	noise;
+	unsigned char	below;
+	unsigned char	above;
+};
+
+struct AnalogAxis {
+	unsigned int		samples[ANALOG_SAMPLES];
+	unsigned int		median;
+	unsigned int		range;		/* the calibration's max - min */
+	unsigned int		limitMin;	/* the readings taken: above limitMin, below */
+	unsigned int		limitMax;	/* limitMax (analogLimitsSet) */
+	unsigned char		calibrated;	/* range's high byte reached analogMinRange */
+	struct AnalogOutput	output[ANALOG_SETS];
+	struct AnalogFault	sampleFault;	/* the samples outside the limits */
+	struct AnalogFault	medianFault;	/* and the medians */
+};
+#elif defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 struct AnalogAxis {
 	unsigned int		samples[ANALOG_SAMPLES];
 	unsigned int		median;
@@ -117,6 +142,10 @@ extern void analogGetSamples(unsigned int *out);
 extern void analogGetSamples(unsigned int __far *out);
 #endif
 /* the slim's analog input 0x0010 (inputKeys' bit) */
+#if BOARD_USS1001
+extern void analogLimitsSet(void);
+extern void analogLimitsGet(unsigned int *out);
+#endif
 extern void analogInput10Init(void);
 extern void analogStart10(void);
 extern void analogStop10(void);

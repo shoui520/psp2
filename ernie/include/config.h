@@ -137,6 +137,8 @@ struct ConfigBlock {
 	unsigned char	voltage84;
 #endif
 #if BOARD_IRS1001
+#elif BOARD_USS1001
+	unsigned char	reserved7[0xf8 - 0xf2];	/* USS-1001 keeps its trim at 0x1e5 */
 #elif ERNIE_HW == 0x00315200
 	unsigned char	reserved22[3];		/* 0x00315200's layout: the trim two bytes later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
@@ -267,14 +269,23 @@ struct ConfigBlock {
 	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
 	unsigned char	offInfo3;
 #if BOARD_USS1001
-	unsigned char	reserved34[0x216 - 0x1e0];
+	unsigned char	reserved34[0x1e5 - 0x1e0];
+	unsigned char	voltageTrim;		/* USS-1001: passed with a regulator's level
+						   (0x088e) */
+	unsigned char	reserved45[0x216 - 0x1e6];
 	unsigned int	analogInput10Interval;	/* USS-1001: the RTC's ticks between starts of
 						   analog input 0x0010 (input.c's scan) */
 	unsigned char	reserved44[0x226 - 0x218];
 	unsigned char	touchDelayWriteByte;	/* USS-1001: the delay after each byte panel 0 is
 						   written */
 	unsigned char	touchDelayRelease;	/* and after its deselect */
-	unsigned char	reserved43[0x3e0 - 0x228];
+	unsigned char	reserved43[0x239 - 0x228];
+	unsigned char	analogLimitScale;	/* USS-1001: a calibrated axis's limits are its
+						   calibration's widened by range * this / 100 */
+	unsigned int	analogLimitMargin;	/* plus this (analogLimitsSet) */
+	unsigned int	analogLimitMin;		/* and kept within these, an axis's limits */
+	unsigned int	analogLimitMax;		/* before it is calibrated */
+	unsigned char	reserved46[0x3e0 - 0x240];
 #else
 	unsigned char	reserved34[0x3e0 - 0x1e0];
 #endif
