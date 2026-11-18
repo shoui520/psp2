@@ -213,7 +213,7 @@ int wlanMacWriteChecked(unsigned int from, unsigned int to, unsigned int page, u
 	to &= 0xff;
 	if ((from < to && from + 248 <= to) || (from > to && from <= to + 8))
 		return 0;
-	REG32(SOC_MAC_REGISTER_BASE | (page << 8) | to) = value;
+	REG32((page << 8) | to | MAC_000_REGION_A) = value;	/* a slot of DMA region A */
 	return 1;
 }
 

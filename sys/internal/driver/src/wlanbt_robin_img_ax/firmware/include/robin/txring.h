@@ -15,13 +15,15 @@
 #include <stdint.h>
 #include "robin/buffer.h"
 #include "robin/conn.h"
+#include "robin/mac.h"
 #include "robin/rom.h"
 
 #define WLAN_TX_RING_COUNT	14
 #define WLAN_TX_RING_SHADOWED	7	/* rings below this fill before publishing */
 
+/* A ring's slot in DMA region A: the region's base comes from the MAC register that holds it. */
 #define MAC_TX_RING_ENTRY(ring, index) \
-	REG32(SOC_MAC_REGISTER_BASE | ((unsigned int)(ring) << 8) | (uint8_t)(index))
+	REG32((uint8_t)(index) | ((unsigned int)(ring) << 8) | MAC_000_REGION_A)
 
 /* Transmit request the MAC reads (76 bytes); only the fields the ring code touches are named. */
 /* WlanMacTxRequest.txFlags: the MAC holds the frame to the time in expiry (a lifetime, a template's time). */

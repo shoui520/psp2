@@ -139,7 +139,7 @@ int wlanTxWindowPush(struct WlanMacTxRequest *request, unsigned int length, unsi
 	if (((head + 4) & 0x1f) == (MAC_REG(0x934 + 8 * window) & 0x1f)) {
 		result = 0;
 	} else {
-		REG32(SOC_MAC_REGISTER_BASE | 0xc00 | (head & 0x1f) | (32 * window)) = (uint32_t)request;
+		REG32(MAC_000_REGION_A | 0xc00 | (head & 0x1f) | (32 * window)) = (uint32_t)request;
 		MAC_REG(0x930 + 8 * window) = (head + 4) & 0x3f;
 	}
 	sysIrqRestore(posture);
@@ -292,7 +292,7 @@ OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status)
 	posture = sysIrqDisable();
 	tail = MAC_014_QUEUE_TAIL;
 	if ((MAC_010_QUEUE_HEAD & 0x1ff) != (tail & 0x1ff)) {
-		struct WlanMacTxRequest *done = *(struct WlanMacTxRequest **)((uint8_t)tail | SOC_MAC_REGISTER_BASE | 0xd00);
+		struct WlanMacTxRequest *done = *(struct WlanMacTxRequest **)((uint8_t)tail | MAC_000_REGION_A | 0xd00);
 
 		if (done != NULL) {
 			uint8_t *data = (uint8_t *)__aeabi_uread4(done->buffer);

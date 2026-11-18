@@ -407,7 +407,7 @@ int wlanTxInFlightRemove(OsaBuffer *buffer)
 }
 
 /* How many frames the table holds. */
-unsigned int wlanTxInFlightFrames(void)
+__attribute__((noinline)) unsigned int wlanTxInFlightFrames(void)
 {
 	return wlanTxInFlightCount;
 }
@@ -420,7 +420,7 @@ void wlanTxInFlightClear(void)
 }
 
 /* The first frame control byte of the frame the transmit data points to. */
-static uint8_t wlanTxFrameControl(const uint8_t *data)
+static inline uint8_t wlanTxFrameControl(const uint8_t *data)
 {
 	return ((const uint8_t *)(uintptr_t)TX_DATA_FRAME(data))[2];
 }
@@ -622,7 +622,7 @@ void wlanTxRingClearCounters(void)
 int wlanTxRingsPending(void)
 {
 	unsigned int posture = sysIrqDisable();
-	unsigned int ring;
+	int ring;
 
 	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++) {
 		if (wlanTxRingPending[ring] != 0) {
@@ -645,7 +645,7 @@ int wlanTxRingsDrained(void)
 int wlanTxFramesOutsideRings(void)
 {
 	uint8_t pending = 0;
-	unsigned int ring;
+	int ring;
 
 	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++)
 		pending = wlanTxRingPending[ring] + pending;
@@ -694,11 +694,11 @@ uint8_t wlanTxRingBudget[WLAN_TX_RING_SHADOWED] __attribute__((section(".sqram1.
 int wlanTxRingPublishNext(void)
 {
 	int published = 0;
-	unsigned int rounds = 0;
+	int rounds = 0;
 	unsigned int posture = sysIrqDisable();
 
 	do {
-		unsigned int i = 0;
+		int i = 0;
 
 		while (published == 0) {
 			unsigned int ring = wlanTxRingOrder[i];
@@ -727,7 +727,7 @@ int wlanTxRingPublishNext(void)
 void wlanTxRingsFlush(void)
 {
 	unsigned int posture = sysIrqDisable();
-	unsigned int i = 0;
+	int i = 0;
 
 	do {
 		unsigned int ring = wlanTxRingOrder[i];
