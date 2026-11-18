@@ -28,6 +28,7 @@
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
 #include "game_appinfo.h"
+#include "alarm.h"
 #include "promoter.h"
 
 using namespace paf;
@@ -1045,8 +1046,8 @@ int gamePluginLicenseCheck(const LsdbAppInfoPtr *info, GameLicenseStatus *status
 	return 0;
 }
 
-/* The alarm of the application at path set (0x8102D90A). */
-int gamePluginAlarmSet(const char *path, const char *arg)
+/* The application at path kept as the next to get an alarm (0x8102D90A). */
+int gamePluginAlarmSet(const char *path, const GameLicenseStatus *status)
 {
 	if (!s_started)
 		return GAME_ERROR_NOT_STARTED;
@@ -1054,7 +1055,7 @@ int gamePluginAlarmSet(const char *path, const char *arg)
 	if (s_alarm == NULL)
 		return GAME_ERROR_NOT_READY;
 
-	int ret = s_alarm->SetForPath(path, arg);
+	int ret = s_alarm->SetPending(path, status);
 
 	if (ret < 0)
 		return ret;
@@ -1062,7 +1063,7 @@ int gamePluginAlarmSet(const char *path, const char *arg)
 	return 0;
 }
 
-/* An application's alarm updated (0x8102D94A). */
+/* An application given its alarm, when it is the pending one (0x8102D94A). */
 int gamePluginAlarmUpdate(const LsdbAppInfoPtr *info)
 {
 	if (!s_started)
@@ -1071,7 +1072,7 @@ int gamePluginAlarmUpdate(const LsdbAppInfoPtr *info)
 	if (s_alarm == NULL)
 		return GAME_ERROR_NOT_READY;
 
-	int ret = s_alarm->Update(info);
+	int ret = s_alarm->Add(info);
 
 	if (ret < 0)
 		return ret;
@@ -1079,7 +1080,7 @@ int gamePluginAlarmUpdate(const LsdbAppInfoPtr *info)
 	return 0;
 }
 
-/* An application's alarm removed (0x8102D988). */
+/* An application's alarm armed and started again (0x8102D988). */
 int gamePluginAlarmRemove(const LsdbAppInfoPtr *info)
 {
 	if (!s_started)
@@ -1088,7 +1089,7 @@ int gamePluginAlarmRemove(const LsdbAppInfoPtr *info)
 	if (s_alarm == NULL)
 		return GAME_ERROR_NOT_READY;
 
-	int ret = s_alarm->Remove(info);
+	int ret = s_alarm->Refresh(info);
 
 	if (ret < 0)
 		return ret;
@@ -1096,11 +1097,11 @@ int gamePluginAlarmRemove(const LsdbAppInfoPtr *info)
 	return 0;
 }
 
-/* An application's alarm removed, its result not wanted (0x8102D9C6). */
+/* An application's alarm armed and started again, its result not wanted (0x8102D9C6). */
 void gamePluginAlarmRemoveQuiet(const LsdbAppInfoPtr *info)
 {
 	if (s_started && s_alarm != NULL)
-		s_alarm->Remove(info);
+		s_alarm->Refresh(info);
 }
 
 /* An application's license updated (0x8102D9E8). */

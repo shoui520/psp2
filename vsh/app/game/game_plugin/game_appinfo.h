@@ -1130,21 +1130,4 @@ int gameContentImportRun(const char *titleId);
 int gameContentImportCheck(const char *titleId);
 int gameContentImportDelete(const char *titleId);
 
-/*
- * PLACEHOLDER: the plugin's alarm, its "SceGameAlarm" callback (constructor 0x81063BD0, 36
- * bytes), defined in another file of the plugin.
- */
-class GameAlarm {
-public:
-	GameAlarm();
-	virtual ~GameAlarm();
-
-	/* PLACEHOLDER names: what is known of the alarm's methods */
-	int SetForPath(const char *path, const char *arg);	/* 0x81063D4A */
-	int Update(const LsdbAppInfoPtr *info);			/* 0x81063EEC */
-	int Remove(const LsdbAppInfoPtr *info);			/* 0x81064154 */
-
-	SceUInt8 otherFields[32];
-};
-
 #endif

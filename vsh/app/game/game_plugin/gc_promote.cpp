@@ -180,7 +180,6 @@ wstring shellFormatText(const wchar_t *format, ...);	/* 0x81343700: %s-style sub
 static void gameGcPromoteOnPowerEvent(void *arg);
 extern "C" int SceShell_548A3111(int event, ShellEventCallback callback, void *arg);
 extern "C" int SceShell_F197032C(int event, ShellEventCallback callback, void *arg);
-int shellAppEventServerRemoveListener(int event, ShellEventCallback callback, void *arg);
 
 /*
  * A job of the promoter: a function run on the queue and one called with its result
