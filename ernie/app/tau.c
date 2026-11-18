@@ -11,6 +11,7 @@
 #include "sysinfo.h"
 #include "tau.h"
 
+#if !BOARD_USS1001	/* USS-1001 has them after the timers' */
 void tickStart(void)
 {
 	tau1PowerOn();
@@ -24,6 +25,7 @@ void tickStop(void)
 	tau1PowerOff();
 	return;
 }
+#endif
 
 /* TM10's interrupt: a tick of the kernel's time */
 void tickInterrupt(void)
@@ -35,7 +37,11 @@ void tau0PowerOn(void)
 {
 	if (!TAU0EN) {
 		TAU0EN = 1;
+#if CHIP_RL78
+		TPS0 = 0x80;	/* the RL78's 16-bit register */
+#else
 		TPS0L = 0x80;
+#endif
 	}
 }
 
@@ -48,7 +54,11 @@ void tau1PowerOn(void)
 {
 	if (!TAU1EN) {
 		TAU1EN = 1;
+#if CHIP_RL78
+		TPS1 = 0xf0;	/* the RL78's 16-bit register */
+#else
 		TPS1L = 0xf0;
+#endif
 	}
 }
 
@@ -104,5 +114,21 @@ void tm11Stop(void)
 	TMMK11 = 1;
 	TMIF11 = 0;
 	TT1L.1 = 1;
+}
+#endif
+
+#if BOARD_USS1001
+void tickStart(void)
+{
+	tau1PowerOn();
+	tm10Start();
+	return;
+}
+
+void tickStop(void)
+{
+	tm10Stop();
+	tau1PowerOff();
+	return;
 }
 #endif

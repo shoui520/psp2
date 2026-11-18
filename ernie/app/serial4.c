@@ -491,7 +491,12 @@ void serial4StartTimers(void)
 
 #if !FW_SINCE(0x01000104)
 /* the 0x0009xxxx builds carry a table of user names after this file's constants, which
-   nothing reads */
+   nothing reads; a segment of its own, which the link moves to the next 64 KiB page (and
+   config.c's constants into the hole) where it does not fit before one, as Sony's does on
+   0x00102603's 0x00090009 */
+#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
+#pragma section @@CNSTL @@CNSTU
+#endif
 const char serial4Users[5][12] = {
 	"USR_KERMIT", "USR_WWAN", "USR_ERNIE", "USR_SUPER", "USR_DBGR"
 };

@@ -86,6 +86,22 @@ void intInit(void)
 	PR11 = 0xffff;
 	PR02 = 0xffff;
 	PR12 = 0xffff;
+#if CHIP_RL78
+	/* the RL78/G13's names: its UART receptions, the IICA and PR03L/PR13L's bits 6 and 7
+	   (which its device file does not name) at level 2 */
+	SREPR01 = 0;
+	SREPR11 = 1;
+	IICAPR00 = 0;
+	IICAPR10 = 1;
+	SRPR02 = 0;
+	SRPR12 = 1;
+	SREPR02 = 0;
+	SREPR12 = 1;
+	PR03L.6 = 0;
+	PR13L.6 = 1;
+	PR03L.7 = 0;
+	PR13L.7 = 1;
+#else
 	SRPR02 = 0;
 	SRPR12 = 1;
 	SREPR02 = 0;
@@ -98,6 +114,7 @@ void intInit(void)
 	SRPR14 = 1;
 	SREPR01 = 0;
 	SREPR11 = 1;
+#endif
 	EGP0 = 0;
 	EGP1 = 0;
 	EGN0 = 0;

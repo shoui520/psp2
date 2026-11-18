@@ -32,6 +32,8 @@
 #define HW_FAMILY		(ERNIE_HW >> 20)
 #define HW_IS(id)		(ERNIE_HW == (id))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
+/* the chip: the slim models' RL78/G13 (0x008), else the 78K0R/KG3-L */
+#define CHIP_RL78		(HW_FAMILY == 0x008)
 
 /* the retail boards' 0x010001xx (PCH-1000 0x00406000, PDEL 0x00416000): built from a source
    of their own, between 0x00090903's and the DEM boards' 0x010001xx (no transition 0x5b, a
@@ -53,5 +55,7 @@
  * as a long (@@luadd), the build's CA78K0R V1.72 to its low 16 bits only
  */
 #define FAR_ADD(p, n)		((void *)((unsigned long)(p) + (n)))
+
+#include "rl78.h"
 
 #endif

@@ -116,6 +116,11 @@ extern void analogGetSamples(unsigned int *out);
 #else
 extern void analogGetSamples(unsigned int __far *out);
 #endif
+/* the slim's analog input 0x0010 (inputKeys' bit) */
+extern void analogInput10Init(void);
+extern void analogStart10(void);
+extern void analogStop10(void);
+extern void analogAxesReset(void);
 extern void analogLatchInit(void);
 extern unsigned char analogLatchIsSet(void);
 extern void analogLatchOn(void);

@@ -16,6 +16,10 @@
    Elmo wiring and power steps */
 #define BOARD_IRS1001		((ERNIE_HW & 0x00ff0000) == 0x00600000)
 
+/* the slim models' USS-1001 boards (0x008xxxxx, PCH-2000): PCH-1000's code (its ERNIE_BOARD)
+   above drivers of their own, on an RL78/G13 (CHIP_RL78) */
+#define BOARD_USS1001		(HW_FAMILY == 0x008)
+
 /* 0x00102603: 0x00411000's code (its ERNIE_BOARD) for a board with another Elmo wiring, ports
    and multi-connector switch; 0x00315200 (DEM-3000H) has most of it, its own differences by
    HW_IS */
@@ -26,9 +30,19 @@
 #if BOARD_IRS1001 && !HW_IS(0x00601000)
 #define BOARD_INPUT1_BIT7_PIN	P7.5
 #define BOARD_TOUCH_CHG_PIN	P14.5
+#elif BOARD_USS1001
+#define BOARD_INPUT1_BIT7_PIN	P14.5
+#define BOARD_TOUCH_CHG_PIN	P12.5	/* the slim's panel 0 */
 #else
 #define BOARD_INPUT1_BIT7_PIN	P14.5
 #define BOARD_TOUCH_CHG_PIN	P7.5
+#endif
+
+/* the rear panel's (panel 1's) CHG line */
+#if BOARD_USS1001
+#define BOARD_TOUCH_CHG1_PIN	P6.7
+#else
+#define BOARD_TOUCH_CHG1_PIN	P6.4
 #endif
 
 /* P9.2 and P1.5 cleared with P9.1 by a resume's other requests, a shutdown and a cut: not on
@@ -81,14 +95,17 @@
 
 /* the settings' cookieRegHigh: the Cookie and the battery at 0xa4, the Cookie's registers from
    0xa0; PCH-1000 has neither choice (the Cookie at 0xa8, the battery at 0xaa), nor have
-   0x00411000 after 0x00090206 and 0x00315200 */
+   0x00411000 after 0x00090206, 0x00315200 and 0x00102603 before 0x00090206 */
 #define BOARD_COOKIE_REG_HIGH	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00315200) && \
-				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
+				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)) && \
+				 (!BOARD_102603 || FW_SINCE(0x00090206)))
 
 /* the settings stand in for a battery that does not answer (its temperature, capacities, ...);
-   PCH-1000 always asks the battery, and so do 0x00411000 after 0x00090206 and 0x00315200 */
+   PCH-1000 always asks the battery, and so do 0x00411000 after 0x00090206, 0x00315200 and
+   0x00102603 before 0x00090206 */
 #define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00315200) && \
-				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)))
+				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)) && \
+				 (!BOARD_102603 || FW_SINCE(0x00090206)))
 
 /* the touch panels' resets (P0.5, P0.6): released at a resume, and the panels identified again
    after one (0x088f, a resume) by event flag 2's 0x0040 and 0x0080; not on PCH-1000 or PDEL */
@@ -113,7 +130,7 @@
 /* the RTC's interrupt in state 0x0010 watches input 1's bit 7 (P14.5) once a shutdown is
    marked, and runs transition 0x62 when it settles low (input1Bit7Poll): PCH-1000's; the others
    keep input1Bit7Poll empty */
-#define BOARD_INPUT1_BIT7_POLL	(ERNIE_BOARD == 0x00406000 || BOARD_102603 && !HW_IS(0x00315200))
+#define BOARD_INPUT1_BIT7_POLL	((ERNIE_BOARD == 0x00406000 || BOARD_102603 && !HW_IS(0x00315200)) && !BOARD_USS1001)
 
 /* INTP11 (P7.7, intp11Level): not on PCH-1000 or 0x00102603, whose intp11Enable does nothing
    and whose handler is empty */
@@ -190,30 +207,33 @@
 
 /* the port modes boardPortInit sets: PCH-1000 drives P7.3 and P7.7 (no input 3 pins there)
    and P9.3 */
-#define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : HW_IS(0x00315200) ? 0xed : 0xfd)
+#define BOARD_PM7		(ERNIE_BOARD == 0x00406000 ? 0x75 : BOARD_PORTS_315200 ? 0xed : 0xfd)
 #define BOARD_PM9		(ERNIE_BOARD == 0x00406000 ? 0x00 : 0x08)
+/* 0x00315200's values (below), also in 0x00102603's 0x00090009, where boardPortInit is not
+   called (boardInit calls boardPortInit102603) */
+#define BOARD_PORTS_315200	(HW_IS(0x00315200) || (HW_IS(0x00102603) && !FW_SINCE(0x00090206)))
 /* and 0x00102603's own */
 /* (0x00411000's 0x00090206 port modes are 0x00102603's, but for PM14; the other boards'
    0x00090206 keep its PM6 only, with PM2 0xff and PM14 0xec) */
 #define BOARD_PORTS_102603		(BOARD_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000)))
-#define BOARD_PM2		(HW_IS(0x00315200) ? 0x01 : BOARD_PORTS_102603 ? 0xab : \
+#define BOARD_PM2		(BOARD_PORTS_315200 ? 0x01 : BOARD_PORTS_102603 ? 0xab : \
 				 !FW_SINCE(0x00090804) ? 0xff : 0x01)
 #define BOARD_PM4		(BOARD_102603 ? 0xd0 : 0x40)
 #define BOARD_PM6		((BOARD_102603 && !HW_IS(0x00315200)) || !FW_SINCE(0x00090804) ? 0x12 : 0x92)
-#define BOARD_PM11		(HW_IS(0x00315200) ? 0xf0 : BOARD_102603 ? 0xf2 : 0xf1)
+#define BOARD_PM11		(BOARD_PORTS_315200 ? 0xf0 : BOARD_102603 ? 0xf2 : 0xf1)
 #define BOARD_P12		(BOARD_102603 ? 0x80 : 0x00)
-#define BOARD_PM14		(HW_IS(0x00315200) ? 0xc6 : BOARD_102603 ? 0xe6 : \
+#define BOARD_PM14		(BOARD_PORTS_315200 ? 0xc6 : BOARD_102603 ? 0xe6 : \
 				 !FW_SINCE(0x00090804) && !BOARD_IS(0x00411000) ? 0xec : 0xe4)
 /* and 0x00315200's own: P11.1 high, PM3 0x03, PM5 0x30, PM12 0x1f */
-#define BOARD_PM3		(HW_IS(0x00315200) ? 0x03 : 0x07)
-#define BOARD_PM5		(HW_IS(0x00315200) ? 0x30 : 0x00)
-#define BOARD_P11		(HW_IS(0x00315200) ? 0x02 : 0x00)
-#define BOARD_PM12		(HW_IS(0x00315200) ? 0x1f : 0x5f)
+#define BOARD_PM3		(BOARD_PORTS_315200 ? 0x03 : 0x07)
+#define BOARD_PM5		(BOARD_PORTS_315200 ? 0x30 : 0x00)
+#define BOARD_P11		(BOARD_PORTS_315200 ? 0x02 : 0x00)
+#define BOARD_PM12		(BOARD_PORTS_315200 ? 0x1f : 0x5f)
 #define BOARD_PM15		(BOARD_PORTS_102603 ? 0xff : 0xf8)
 
 /* the 3G modem (bbmc.c's events, task 6's): not on 0x00315200, whose bbmcEvent only refuses
-   request 0x0a's commands (status 4) and which task 6 never calls */
-#define BOARD_BBMC		(!HW_IS(0x00315200))
+   request 0x0a's commands (status 4) and which task 6 never calls, nor on USS-1001 */
+#define BOARD_BBMC		(!HW_IS(0x00315200) && !BOARD_USS1001)
 
 /* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
 #define BOARD_BBMC_INIT_PULSE	(ERNIE_BOARD != 0x00406000 && BOARD_BBMC)
@@ -228,11 +248,11 @@
 /* standby may stop the clock when nothing needs it (taskStandbyHalt); the others always halt */
 #define BOARD_STANDBY_STOP	(ERNIE_BOARD == 0x00406000 && !HW_IS(0x00601000))
 
-/* boardSetMultiCnOutput's and boardGetMultiCnOutput's outputs */
 /* the motion sensor (CSI01, its frame timer TM01, request 4 and stream 0x0400) and timer 11's
    hang interrupt: gone from the 0x0100060x builds */
 #define BOARD_MOTION		(!FW_SINCE(0x0100060B))
 
+/* boardSetMultiCnOutput's and boardGetMultiCnOutput's outputs */
 #define BOARD_MULTICN_HOST	0	/* P13.0 low, P2.2 high */
 #define BOARD_MULTICN_DONGLE	1	/* P13.0 high */
 #define BOARD_MULTICN_OFF	4	/* both low (boardSetMultiCnOutput: 2-4) */
@@ -246,6 +266,12 @@ extern unsigned char boardGetMultiCnOutput(void);
 extern unsigned char boardSetMultiCnOutput(unsigned char output);
 extern unsigned char boardMultiCnStop(void);
 extern unsigned char boardMultiCnIsDongle(void);
+#if BOARD_USS1001
+extern unsigned char boardMultiCnPower(unsigned char on);
+extern unsigned char boardMultiCnSetSwitch(unsigned char value);
+extern unsigned char boardMultiCnSetSerial(unsigned char on);
+extern void boardMultiCnUpdate(void);
+#endif
 #if FW_SINCE(0x00090804)
 extern unsigned char boardMultiCnIsDebug(void);
 #else
@@ -253,5 +279,10 @@ extern unsigned char boardMultiCnIsDebug(void);
 extern void boardInit(void);
 #endif
 extern void boardPortInit(void);
+#if !FW_SINCE(0x00090206)
+extern void boardPortInitA(void);
+extern void boardPortInitB(void);
+extern void boardPortInit102603(void);
+#endif
 
 #endif

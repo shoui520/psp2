@@ -1490,12 +1490,20 @@ void chargeSetAcDelay(void)
 #endif
 
 #if FW_SINCE(0x01000109)
+#if BOARD_USS1001
+unsigned char chargeUsbIs1(void)
+#else
 int chargeUsbIs1(void)
+#endif
 {
 	return powerStatus.bits.usb == 1;
 }
 
+#if BOARD_USS1001
+unsigned char chargeUsbIs2(void)
+#else
 int chargeUsbIs2(void)
+#endif
 {
 	return cookieStatus2.bits.vbus && powerStatus.bits.usb == 2;
 }

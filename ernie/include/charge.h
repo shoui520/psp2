@@ -246,7 +246,13 @@ extern void chargeReadTempVolt(unsigned int *value);
 extern void chargeTimer1fStart(void);
 extern void chargeTimer1fStop(void);
 extern void chargeSetAcDelay(void);
+#if BOARD_USS1001
+extern unsigned char chargeUsbIs1(void);
+extern unsigned char chargeUsbIs2(void);
+extern unsigned char chargeVbusActive(void);
+#else
 extern int chargeUsbIs1(void);
 extern int chargeUsbIs2(void);
+#endif
 
 #endif

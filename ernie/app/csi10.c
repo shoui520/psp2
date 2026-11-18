@@ -20,6 +20,41 @@
 
 static __sreg struct Csi10Transfer csi10;
 
+#if BOARD_USS1001
+/* USS-1001's panel: SAU0's channel 1 (CSI01) */
+#define CSI10_SIO	SIO01
+#else
+#define CSI10_SIO	SIO10
+#endif
+
+#if BOARD_USS1001
+/* CSI01 on P4.3 (SCK), P4.4 (SI) and P4.5 (SO), P12.6 the panel's select, high */
+int csi10Open(void)
+{
+	if (!SAU0EN) {
+		SAU0EN = 1;
+		SPS0 &= 0xfff0;
+	}
+	ST0L.1 = 1;
+	SMR01 = 0x0020;
+	SCR01 = 0xc007;
+	SDR01 = 0x0200;
+	SO0 |= 0x0202;
+	SOE0L.1 = 1;
+	P4.5 = 1;
+	PM4.5 = 0;
+	PM4.4 = 1;
+	P4.3 = 1;
+	PM4.3 = 0;
+	P12.6 = 1;
+	PM12.6 = 0;
+	SS0L.1 = 1;
+	CSIIF01 = 0;
+	CSIMK01 = 0;
+	csi10.state = CSI10_OPEN;
+	return 0;
+}
+#else
 /* opens the channel */
 int csi10Open(void)
 {
@@ -53,6 +88,8 @@ int csi10Open(void)
 	return 0;
 }
 
+#endif
+
 /* starts a transfer that INTCSI10 runs; 1 if one is running */
 int csi10Transfer(struct Csi10Transfer *transfer)
 {
@@ -66,12 +103,15 @@ int csi10Transfer(struct Csi10Transfer *transfer)
 		csi10.send = transfer->send;
 		csi10.sendCount = transfer->sendCount;
 		csi10.receiveCount = transfer->receiveCount;
+#if BOARD_USS1001
+		csi10.delay = transfer->delay;
+#endif
 		if (csi10.sendCount != 0) {
-			SIO10 = *csi10.send;
+			CSI10_SIO = *csi10.send;
 			csi10.send++;
 			csi10.sendCount--;
 		} else
-			SIO10 = 0;
+			CSI10_SIO = 0;
 		return 0;
 	}
 	return 1;
@@ -87,12 +127,15 @@ int csi10TransferNoLock(struct Csi10Transfer *transfer)
 		csi10.send = transfer->send;
 		csi10.sendCount = transfer->sendCount;
 		csi10.receiveCount = transfer->receiveCount;
+#if BOARD_USS1001
+		csi10.delay = transfer->delay;
+#endif
 		if (csi10.sendCount != 0) {
-			SIO10 = *csi10.send;
+			CSI10_SIO = *csi10.send;
 			csi10.send++;
 			csi10.sendCount--;
 		} else
-			SIO10 = 0;
+			CSI10_SIO = 0;
 		return 0;
 	}
 	return 1;
@@ -104,6 +147,24 @@ int csi10Cancel(void)
 	return 0;
 }
 
+#if BOARD_USS1001
+void csi10StopChannel(void)
+{
+	ST0L.1 = 1;
+}
+
+void csi10Close(void)
+{
+	ST0L.1 = 1;
+	CSIMK01 = 1;
+	CSIIF01 = 0;
+	SOE0L.1 = 0;
+	P4.3 = 0;
+	P4.5 = 0;
+	P12.6 = 0;
+	csi10.state = 0;
+}
+#else
 void csi10StopChannel(void)
 {
 	ST0L.2 = 1;
@@ -122,6 +183,7 @@ void csi10Close(void)
 	P0.0 = 0;
 	csi10.state = 0;
 }
+#endif
 
 unsigned char csi10GetState(void)
 {
@@ -142,7 +204,100 @@ void csi10Release(void)
 
 /* a byte went both ways: store the one received, send the next; at a transfer's end, start
    the next phase */
-#if !FW_SINCE(0x00090903)
+#if BOARD_USS1001
+/* USS-1001: panel 0 alone on the link (the rear panel is on IICA1); its report ends the frame,
+   whose report carries one byte more (its status) for family 0x82 variant 0x2b */
+void csi10Interrupt(void)
+{
+	unsigned char data;
+	unsigned char i;
+
+	if (SSR01L & 0x01) {
+		SIR01L = 0x01;
+		data = 0;
+	} else
+		data = CSI10_SIO;
+	if (csi10.receiveCount != 0) {
+		*csi10.receive = data;
+		csi10.receive++;
+		csi10.receiveCount--;
+	}
+	for (i = 0; i < csi10.delay; i++)
+		NOP();
+	if (csi10.sendCount != 0) {
+		CSI10_SIO = *csi10.send;
+		csi10.send++;
+		csi10.sendCount--;
+	} else if (csi10.receiveCount != 0)
+		CSI10_SIO = 0;
+	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(SSR01L & 0x40)) {
+		csi10.state &= ~CSI10_BUSY;
+		switch (csi10.state & CSI10_PHASE) {
+		case CSI10_TRANSFER:
+			csi10.state = CSI10_DONE;
+			break;
+		case CSI10_COMMAND0:
+			csi10.state = CSI10_REPORT0;
+			break;
+		case CSI10_REPORT0:
+			for (i = 0; i < touchDelays.deselect; i++)
+				NOP();
+			P12.6 = 1;
+			csi10.state = CSI10_FRAME;
+			break;
+		}
+		switch (csi10.state) {
+		case CSI10_DONE:
+			break;
+		case CSI10_REPORT1:
+			csi10.receive = touchFrames[touch.frame].panel[1];
+			csi10.receiveCount = TOUCH_REPORT_SIZE;
+			csi10.send = (unsigned char *)&touchCommand;
+			csi10.sendCount = 0;
+			csi10.state |= CSI10_BUSY;
+			CSI10_SIO = 0;
+			break;
+		case CSI10_COMMAND0:
+			P12.6 = 0;
+			touchFrames[touch.frame].time0 = TCR02;
+			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATE] = touch.state.value;
+			for (i = 0; i < touchDelays.select; i++)
+				NOP();
+			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+			csi10.receive = (unsigned char *)&touchReply;
+			csi10.receiveCount = 0;
+			csi10.send = (unsigned char *)&touchCommand;
+			csi10.sendCount = 2;
+			csi10.state |= CSI10_BUSY;
+			CSI10_SIO = *csi10.send;
+			csi10.send++;
+			csi10.sendCount--;
+			break;
+		case CSI10_REPORT0:
+			if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
+				csi10.receiveCount = TOUCH_REPORT_SIZE + 1;
+			else
+				csi10.receiveCount = TOUCH_REPORT_SIZE;
+			csi10.receive = touchFrames[touch.frame].panel[0];
+			csi10.send = (unsigned char *)&touchCommand;
+			csi10.sendCount = 0;
+			csi10.state |= CSI10_BUSY;
+			CSI10_SIO = 0;
+			break;
+		case CSI10_FRAME:
+			/* family 0x82 variant 0x2b reports its status as the report's byte 0x34 */
+			if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
+				touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATUS] =
+					touchFrames[touch.frame].panel[0][TOUCH_REPORT_SIZE];
+			hostStream0300.first = hostStream0301.first = hostStream0302.first = touch.frame;
+			csi10.state = CSI10_OPEN;
+			touch.flags |= TOUCH_FRAME;
+			touch.flags &= ~TOUCH_RUNNING;
+			break;
+		}
+	}
+}
+#elif !FW_SINCE(0x00090903)
 /* 0x00090804: each phase's end starts the next itself, and the frame has no status reads */
 void csi10Interrupt(void)
 {
@@ -153,7 +308,7 @@ void csi10Interrupt(void)
 		SIR02L = 0x01;
 		data = 0;
 	} else
-		data = SIO10;
+		data = CSI10_SIO;
 	if (csi10.receiveCount != 0) {
 		*csi10.receive = data;
 		csi10.receive++;
@@ -162,11 +317,11 @@ void csi10Interrupt(void)
 	for (i = 0; i < TOUCH_DELAY_BYTE; i++)
 		NOP();
 	if (csi10.sendCount != 0) {
-		SIO10 = *csi10.send;
+		CSI10_SIO = *csi10.send;
 		csi10.send++;
 		csi10.sendCount--;
 	} else if (csi10.receiveCount != 0)
-		SIO10 = 0;
+		CSI10_SIO = 0;
 	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(0x40 & SSR02L)) {
 		csi10.state &= ~CSI10_BUSY;
 		switch (csi10.state & CSI10_PHASE) {
@@ -179,7 +334,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 0;
 			csi10.state = CSI10_REPORT1 | CSI10_BUSY;
-			SIO10 = 0;
+			CSI10_SIO = 0;
 			break;
 		case CSI10_REPORT1:
 			P0.0 = 1;
@@ -197,7 +352,7 @@ void csi10Interrupt(void)
 				csi10.send = (unsigned char *)&touchCommand;
 				csi10.sendCount = 2;
 				csi10.state = CSI10_COMMAND0 | CSI10_BUSY;
-				SIO10 = *csi10.send;
+				CSI10_SIO = *csi10.send;
 				csi10.send++;
 				csi10.sendCount--;
 			} else
@@ -209,7 +364,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 0;
 			csi10.state = CSI10_REPORT0 | CSI10_BUSY;
-			SIO10 = 0;
+			CSI10_SIO = 0;
 			break;
 		case CSI10_REPORT0:
 			P0.1 = 1;
@@ -233,7 +388,7 @@ void csi10Interrupt(void)
 		SIR02L = 0x01;
 		data = 0;
 	} else
-		data = SIO10;
+		data = CSI10_SIO;
 	if (csi10.receiveCount != 0) {
 		*csi10.receive = data;
 		csi10.receive++;
@@ -242,11 +397,11 @@ void csi10Interrupt(void)
 	for (i = 0; i < TOUCH_DELAY_BYTE; i++)
 		NOP();
 	if (csi10.sendCount != 0) {
-		SIO10 = *csi10.send;
+		CSI10_SIO = *csi10.send;
 		csi10.send++;
 		csi10.sendCount--;
 	} else if (csi10.receiveCount != 0)
-		SIO10 = 0;
+		CSI10_SIO = 0;
 	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(0x40 & SSR02L)) {
 		csi10.state &= ~CSI10_BUSY;
 
@@ -324,7 +479,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 0;
 			csi10.state |= CSI10_BUSY;
-			SIO10 = 0;
+			CSI10_SIO = 0;
 			break;
 		case CSI10_COMMAND0:
 			P0.1 = 0;
@@ -338,7 +493,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
 			csi10.state |= CSI10_BUSY;
-			SIO10 = *csi10.send;
+			CSI10_SIO = *csi10.send;
 			csi10.send++;
 			csi10.sendCount--;
 			break;
@@ -348,7 +503,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 0;
 			csi10.state |= CSI10_BUSY;
-			SIO10 = 0;
+			CSI10_SIO = 0;
 			break;
 		case CSI10_STATUS1:
 			P0.0 = 0;
@@ -360,7 +515,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
 			csi10.state |= CSI10_BUSY;
-			SIO10 = *csi10.send;
+			CSI10_SIO = *csi10.send;
 			csi10.send++;
 			csi10.sendCount--;
 			break;
@@ -374,7 +529,7 @@ void csi10Interrupt(void)
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 2;
 			csi10.state |= CSI10_BUSY;
-			SIO10 = *csi10.send;
+			CSI10_SIO = *csi10.send;
 			csi10.send++;
 			csi10.sendCount--;
 			break;

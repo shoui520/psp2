@@ -5,13 +5,16 @@
 #include <stddef.h>
 
 #include "bbmc.h"
+#include "board.h"
 #include "input.h"
 #include "inputbits.h"
 #include "powerreq.h"
 
+#if !BOARD_USS1001	/* the slim's group 1 bit 1 and group 3 bit 2 have no handlers */
 /* nothing else refers to it, so its owner is not known: type 0, never called; the program's
    one initialised variable */
 struct InputHandler inputHandler1Bit1 = { 0, 0, 0 };
+#endif
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
@@ -21,7 +24,9 @@ static struct InputHandler * const inputHandlers1Bit2[] = {
 	&inputHandler1Bit2Low, &inputHandler1Bit2High
 };
 #endif
+#if !BOARD_USS1001
 static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandler1Bit1 };
+#endif
 static struct InputHandler * const inputHandlers1Bit5[] = {
 	&inputHandlerSerial1, &inputHandlerMultiCn
 };
@@ -36,7 +41,9 @@ static struct InputHandler * const inputHandlers1Bit7[] = { &inputHandlerCharge 
 static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler1Bit3 };
 static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandlerSerial2Request };
 static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2Link };
+#if !BOARD_USS1001
 static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler3Bit2 };
+#endif
 static struct InputHandler * const inputHandlers2Bit0[] = {
 	&powerInputHandler, &bbmcInputHandlerPower
 };
@@ -51,12 +58,16 @@ static unsigned char inputHandlers1Bit4Count(void);
 #if !FW_SINCE(0x0100060B)
 static unsigned char inputHandlers1Bit2Count(void);
 #endif
+#if !BOARD_USS1001
 static unsigned char inputHandlers1Bit1Count(void);
+#endif
 static unsigned char inputHandlers1Bit5Count(void);
 static unsigned char inputHandlers1Bit3Count(void);
 static unsigned char inputHandlers3Bit0Count(void);
 static unsigned char inputHandlers3Bit1Count(void);
+#if !BOARD_USS1001
 static unsigned char inputHandlers3Bit2Count(void);
+#endif
 static unsigned char inputHandlers2Bit0Count(void);
 static unsigned char inputHandlers2Bit1Count(void);
 #if FW_SINCE(0x00090009)
@@ -70,7 +81,11 @@ const struct InputBit inputBits1[8] = {
 #else
 	{ NULL, NULL },
 #endif
+#if BOARD_USS1001
+	{ NULL, NULL },
+#else
 	{ inputHandlers1Bit1, inputHandlers1Bit1Count },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ NULL, NULL },
 #else
@@ -95,7 +110,11 @@ const struct InputBit inputBits2[6] = {
 const struct InputBit inputBits3[6] = {
 	{ inputHandlers3Bit0, inputHandlers3Bit0Count },
 	{ inputHandlers3Bit1, inputHandlers3Bit1Count },
+#if BOARD_USS1001
+	{ NULL, NULL },
+#else
 	{ inputHandlers3Bit2, inputHandlers3Bit2Count },
+#endif
 	{ NULL, NULL },
 	{ NULL, NULL },
 	{ NULL, NULL },
@@ -138,10 +157,12 @@ static unsigned char inputHandlers1Bit2Count(void)
 }
 #endif
 
+#if !BOARD_USS1001
 static unsigned char inputHandlers1Bit1Count(void)
 {
 	return LENGTH(inputHandlers1Bit1);
 }
+#endif
 
 static unsigned char inputHandlers1Bit5Count(void)
 {
@@ -163,10 +184,12 @@ static unsigned char inputHandlers3Bit1Count(void)
 	return LENGTH(inputHandlers3Bit1);
 }
 
+#if !BOARD_USS1001
 static unsigned char inputHandlers3Bit2Count(void)
 {
 	return LENGTH(inputHandlers3Bit2);
 }
+#endif
 
 static unsigned char inputHandlers2Bit0Count(void)
 {

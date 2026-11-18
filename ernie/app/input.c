@@ -17,6 +17,7 @@
 #include "charge.h"
 #include "chip.h"
 #include "config.h"
+#include "eventlog.h"
 #include "input.h"
 #include "inputbits.h"
 #include "inputreq.h"
@@ -57,6 +58,20 @@ struct ButtonPress {
 };
 
 extern unsigned char getResetCause(void);
+
+/* task 3's event flag: the slim sets it through task3SetFlag */
+#if BOARD_USS1001
+#define INPUT_SET_FLAG(flag, pattern)	task3SetFlag(flag, pattern)
+#else
+#define INPUT_SET_FLAG(flag, pattern)	set_flg(flag, pattern)
+#endif
+
+/* the scan's RTC timer: the slim's RTC timers are numbered otherwise (its inputreq.c's 0x15) */
+#if BOARD_USS1001
+#define INPUT_SCAN_RTC_TIMER	0x17
+#else
+#define INPUT_SCAN_RTC_TIMER	TIMER_RTC(0x16)
+#endif
 
 void intp1Enable(unsigned char enable);
 void intp2Enable(unsigned char enable);
@@ -120,6 +135,25 @@ void input1Bit0Changed(void);
 #endif
 void inputScanHold(unsigned int ticks);
 void inputScanTimer(void);
+#if BOARD_USS1001
+void inputInit(void);
+void inputPowerOff(void);
+void inputStateOff(void);
+void inputSuspend(void);
+void inputStateSuspend(void);
+void inputResumePrepare(void);
+void inputResumeOpen(void);
+void inputCut(void);
+void inputStateCut(void);
+void inputShutdown(void);
+void inputStateShutdown(void);
+void inputReset(void);
+void inputScanRtcTimer(void);
+void inputStateReset(void);
+void inputLogButton1(unsigned char event);
+void inputLogButton2(unsigned char event);
+void inputLogTransition(unsigned char transition);
+#endif
 void levelMonitor2Poll(void);
 void input1Bit3Changed(void);
 void levelMonitor1Start(void);
@@ -134,12 +168,18 @@ unsigned char button2HoldDone(void);
 #endif
 
 unsigned int inputReserved;
+#if BOARD_USS1001
+unsigned int analogInput10Ticks;		/* the RTC's ticks at analog input 0x0010's last start */
+#endif
 unsigned char scanCount;			/* the scan's ticks */
 unsigned char coldStart;			/* the reset cause's high nibble was 0 */
 unsigned char inputShutdownMarked;			/* set by inputShutdownMark */
+#if BOARD_USS1001
+unsigned char inputStateNext;			/* the transition inputStateRun runs (task 3) */
+#endif
 struct InputKeys inputKeys;
-struct LevelMonitor levelMonitor1;		/* P11.4, reports 0x61 */
-struct LevelMonitor levelMonitor2;		/* P12.0, reports 0x42 */
+struct LevelMonitor levelMonitor1;		/* P11.4 (the slim's P13.7), reports 0x61 */
+struct LevelMonitor levelMonitor2;		/* P12.0 (the slim's P3.1), reports 0x42 */
 struct InputGroup inputGroup1;
 struct InputGroup inputGroup2;
 struct InputGroup inputGroup3;
@@ -151,7 +191,9 @@ struct InputHandler inputHandler1Bit2High;
 struct InputHandler inputHandlerSerial2Request;
 struct InputHandler inputHandlerSerial2Link;
 struct InputHandler inputHandlerSerial1;
+#if !BOARD_USS1001	/* the slim's group 3 bit 2 has none */
 struct InputHandler inputHandler3Bit2;
+#endif
 struct InputHandler inputHandlerMultiCn;
 struct InputHandler inputHandlerWake1;
 struct InputHandler inputHandlerCharge;
@@ -165,7 +207,9 @@ struct InputHandler inputHandler1Bit0;
 #if FW_SINCE(0x0100060B)
 struct InputHandler powerInputHandler;		/* group 2's bit 0, with the BBMC's */
 #endif
+#if !BOARD_USS1001
 struct InputDelays inputDelays;
+#endif
 struct InputScan inputScan;
 struct PinMonitors pinMonitors;
 #if FW_SINCE(0x00090206)
@@ -198,6 +242,163 @@ __near unsigned char holdTicks;			/* RTC ticks P4.6 held with P11.5 */
 __near unsigned char holdReached;		/* holdTicks reached buttonPress2.time2 + 1 */
 #endif
 
+#if BOARD_USS1001
+/* the slim's power transitions run in task 3 (event flag 2, bit 0x0400): the caller names one */
+void inputStateRequest(unsigned char state)
+{
+	inputStateNext = state;
+	task3SetFlag(2, 0x0400);
+}
+
+void inputStateRun(void)
+{
+	switch (inputStateNext) {
+	case 0:
+		inputInit();
+		break;
+	case 1:
+		inputPowerOff();
+		break;
+	case 2:
+		inputStateOff();
+		break;
+	case 3:
+		inputSuspend();
+		break;
+	case 4:
+		inputStateSuspend();
+		break;
+	case 5:
+		inputResumePrepare();
+		break;
+	case 6:
+		inputResumeOpen();
+		break;
+	case 7:
+		inputCut();
+		break;
+	case 8:
+		inputStateCut();
+		break;
+	case 9:
+		inputShutdown();
+		break;
+	case 10:
+		inputStateShutdown();
+		break;
+	case 11:
+		inputReset();
+		break;
+	case 12:
+		inputStateReset();
+		break;
+	}
+	if (stateGet() & 0x8000)
+		powerReady(3);
+}
+
+void inputInit(void)
+{
+	struct TimerHandler timer;
+	struct PinConfig config;
+
+	inputReserved = 0;
+	if ((getResetCause() & 0xf0) == 0)
+		coldStart = 1;
+	PM3.0 = 1;
+	PM1.7 = 0;
+	P1.7 = 0;
+	PM12.0 = 1;
+	analogInput10Init();
+	intp1Enable(0);
+	intp13Enable(0);
+	intp7Enable(0);
+	intp11Enable(0);
+	intp11Level = 1;
+	inputRaw1 = 0xff;
+	inputState1 = 0xff;
+	inputGroup1.prev = 0xff;
+	inputGroup1.changed = 0;
+	inputGroup1.pending = 0xa1;
+	inputGroup1.enable = 0xfb;	/* bit 2 is not watched */
+	inputGroup1.bits = inputBits1;
+	inputGroup1.count = inputBits1Count;
+	inputRaw2 = 0;
+	inputState2 = 0;
+	inputGroup2.prev = 0;
+	inputGroup2.changed = 0;
+	inputGroup2.pending = 0;
+	inputGroup2.enable = 0x0f;
+	inputGroup2.bits = inputBits2;
+	inputGroup2.count = inputBits2Count;
+	inputRaw3 = 0x04;
+	inputState3 = 0x04;
+	inputGroup3.prev = 0x04;
+	inputGroup3.changed = 0;
+	inputGroup3.pending = 0x26;
+	inputGroup3.enable = 0x3f;
+	inputGroup3.bits = inputBits3;
+	inputGroup3.count = inputBits3Count;
+	inputHandlerWake2.type = 1;
+	inputHandlerWake2.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerWake2.handler = stateInputWake2;
+	inputHandlerSerial2Request.type = 0;
+	inputHandlerSerial2Request.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerSerial2Request.handler = inputNone;
+	inputHandlerSerial2Link.type = 0;
+	inputHandlerSerial2Link.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerSerial2Link.handler = inputNone;
+	inputHandlerSerial1.type = 1;
+	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
+	inputHandlerSerial1.handler = serial1InputHandler;
+	inputHandlerMultiCn.type = 1;
+	inputHandlerMultiCn.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerMultiCn.handler = inputMultiCnChanged;
+	inputHandlerWake1.type = 1;
+	inputHandlerWake1.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandlerWake1.handler = stateInputWake1;
+	/* the charge's and bit 7's handlers stay type 0 */
+	inputHandler1Bit3.type = 1;
+	inputHandler1Bit3.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler1Bit3.handler = input1Bit3Changed;
+	inputHandler1Bit0.type = 1;
+	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	inputHandler1Bit0.handler = input1Bit0Changed;
+	powerInputHandler.type = 0;
+	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
+	powerInputHandler.handler = powerInputChanged;
+	config.reload = 0x40;
+	config.handler = button1Held;
+	pinMonitor0Set(&config);
+	pinMonitor0Enable(0);
+	button1Reset();
+	config.reload = 0x40;
+	config.handler = button2Held;
+	pinMonitor1Set(&config);
+	pinMonitor1Enable(0);
+	button2Reset();
+	config.reload = 3;
+	config.handler = pinMonitor2Expired;
+	pinMonitor2Set(&config);
+	pinMonitor2Enable(0);
+	inputKeys.state = 0;
+	inputKeys.events = 0;
+	inputShutdownMarked = 0;
+	levelMonitor1.enable = 0;
+	levelMonitor2.enable = 0;
+	touchClearPanels();
+	analogAxesReset();
+	scanCount = 0;
+	analogInput10Ticks = 0;
+	inputScan.mode = 0;
+	inputScan.interval = 0;
+	inputScan.hold = 0;
+	timer.handler = inputScanTimer;
+	timerSetHandler(3, &timer);
+	timer.handler = inputScanRtcTimer;
+	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
+}
+#else
 void inputInit(void)
 {
 	struct TimerHandler timer;
@@ -413,22 +614,27 @@ void inputInit(void)
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
 	timerSetHandler(3, &timer);
-	timerSetHandler(TIMER_RTC(0x16), &timer);
+	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
 }
+#endif
 
 void inputResumePrepare(void)
 {
 	intp1Enable(0);
 	intp13Enable(0);
-#if BOARD_INTP11 && !FW_SINCE(0x00090206)
+#if (BOARD_INTP11 || BOARD_102603) && !FW_SINCE(0x00090206)	/* 0x00102603's does nothing */
 	intp11Enable(0);
 #endif
+#if BOARD_USS1001
+	intp7Enable(0);
+#else
 	intp2Enable(0);
 	intp7Enable(0);
 	intp4Enable(0);
 	intp3Enable(0);
 	intp10Enable(0);
 	intp8Enable(0);
+#endif
 	inputScanMode1(1);
 }
 
@@ -453,7 +659,11 @@ void inputResumeOpen(void)
 	inputGroup1.pending |= 0x08;
 #if (BOARD_INPUTS_102603 || (!FW_SINCE(0x00090804) && BOARD_IS(0x00411000))) && \
     !(HW_IS(0x00315200) && !FW_SINCE(0x00090804))
+#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
+	inputDelays.analog80 = 0x1c;	/* 0x00102603's 0x00090009 starts channel 8 */
+#else
 	inputDelays.latchOn = 0x1c;
+#endif
 #endif
 #if BOARD_MOTION
 	if (elmoVersion0() == 0xff)
@@ -482,6 +692,18 @@ void inputPowerOff(void)
 	P5.4 = 0;
 #endif
 	analogLatchInit();
+}
+#elif BOARD_USS1001
+/* the slim reads the wake mask and wakes from nothing at power-off */
+void inputPowerOff(void)
+{
+	unsigned long flags;
+
+	flags = stateGetWakeMask();
+	touchClose();
+	inputKeysClose();
+	analogStop();
+	adcCloseForBoard();
 }
 #else
 void inputPowerOff(void)
@@ -532,6 +754,17 @@ void inputPowerOff(void)
 
 void inputStateOff(void)
 {
+#if BOARD_USS1001
+	intp7Enable(0);
+	intp13Enable(1);
+	intp1Enable(1);
+	if (coldStart && !P7.6)
+		inputScanHold(0x754);
+	else
+		inputScanMode2(1);
+	coldStart = 0;
+}
+#else
 	intp7Enable(0);
 	intp4Enable(0);
 	intp3Enable(0);
@@ -573,6 +806,7 @@ void inputStateOff(void)
 	coldStart = 0;
 #endif
 }
+#endif
 
 void inputShutdown(void)
 {
@@ -600,7 +834,7 @@ void inputStateShutdown(void)
 	inputShutdownMark();
 #endif
 	timerStop(3);
-	timerStop(TIMER_RTC(0x16));
+	timerStop(INPUT_SCAN_RTC_TIMER);
 }
 
 void inputCut(void)
@@ -634,7 +868,16 @@ void inputSuspend(void)
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
-#if !FW_SINCE(0x00090804)
+#if BOARD_USS1001
+	if ((flags & 0x00000004) == 0) {
+		intp7Enable(1);
+		if (!P3.0) {
+			pinMonitor2Enable(1);
+			pinMonitors.pin[2].last = 0;
+			inputScanHold(0x1a);
+		}
+	}
+#elif !FW_SINCE(0x00090804)
 	/* 0x00090206 turns a pin's interrupt on only while the pin is high: a low pin is
 	   monitored at once, and its interrupt turns itself off at the edge */
 	if ((flags & 0x00000004) == 0) {
@@ -774,9 +1017,21 @@ void inputReset(void)
 #else
 	analogSetMode(0);
 #endif
+#if !BOARD_USS1001
 	analogLatchOff();
+#endif
 }
 
+#if BOARD_USS1001
+void inputStateReset(void)
+{
+	touchDisable0();
+	touchDisable1();
+	analogStop();
+}
+#endif
+
+#if !BOARD_USS1001	/* the slim's are USS-1001's port code (uss1001.c) */
 /* P5.0-3, P8 and P11.2-3 inputs with their pull-ups (the keys button1Keys reads) */
 void inputKeysOpen(void)
 {
@@ -798,8 +1053,48 @@ void inputKeysClose(void)
 	P11 = 0xf3 & P11;
 	PM11 = 0xf3 & PM11;
 }
+#endif
 
 /* task 3's mask 0x0008 (the scan's tick): the inputs sampled and dispatched */
+#if BOARD_USS1001
+/* the slim's: also in states 0x0200 and 0x0400, and the groups' new states logged */
+void inputProcess(void)
+{
+	unsigned int keys;
+	unsigned int events;
+
+	events = inputKeys.events;
+	switch (stateGet() & 0x7fff) {
+	case 0x0020:
+		if (touch.rate == 0 && (events & 0x000c))
+			touchStartFrame();
+	case 0x0004:
+	case 0x0008:
+	case 0x0200:
+	case 0x0400:
+		sampleInputs1();
+		sampleInputs2();
+		sampleInputs3();
+		if (inputGroup1.changed || inputGroup2.changed || inputGroup3.changed) {
+			eventLogInput[0] = inputState1;
+			eventLogInput[1] = inputState2;
+			eventLogInput[2] = inputState3;
+			eventLogInput[3] = 0;
+			eventLogRecord(3, 1, eventLogInput, 4);
+		}
+		pinMonitorPoll();
+		keys = events & 0x0032;
+		if (keys != 0)
+			analogStart(keys);
+		break;
+	case 0x0800:
+		levelMonitor2Poll();
+		break;
+	case 0x0010:
+		break;
+	}
+}
+#else
 void inputProcess(void)
 {
 	unsigned int keys;
@@ -837,20 +1132,27 @@ void inputProcess(void)
 		break;
 	}
 }
+#endif
 
 void sampleInputs1(void)
 {
 #if BOARD_INPUTS_102603
 	inputRaw1.1 = P4.7;
 #endif
+#if BOARD_USS1001
+	inputRaw1.3 = P6.6;
+	inputRaw1.4 = P7.6;
+	inputRaw1.6 = P7.4;
+#else
 	inputRaw1.3 = P14.2;
 	inputRaw1.4 = P4.6;
 	inputRaw1.5 = P2.0;
 	inputRaw1.6 = P11.5;
+#endif
 #if BOARD_INPUT1_BIT7_POLL
 	inputRaw1.7 = BOARD_INPUT1_BIT7_PIN;
 #endif
-#if !BOARD_INPUTS_102603
+#if !BOARD_INPUTS_102603 && !BOARD_USS1001
 	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
 #endif
@@ -946,6 +1248,52 @@ void inputGroupUpdate(unsigned char *raw, unsigned char *state, struct InputGrou
 
 /* each running pin monitor: its handler called once the level held its reload ticks, the
    monitor stopped when the level changes */
+#if BOARD_USS1001
+/* the slim's: P7.4 (monitor 0), P7.6 (1) and P3.0 (monitor 2, mask bit 0x10) */
+void pinMonitorPoll(void)
+{
+	unsigned char level;
+
+	if (pinMonitors.mask != 0) {
+		if (pinMonitors.mask & 0x01) {
+			level = P7.4;
+			if (pinMonitors.pin[0].last == level) {
+				if (pinMonitors.pin[0].count-- == 0) {
+					pinMonitor0Enable(0);
+					pinMonitors.pin[0].config.handler();
+				}
+			} else {
+				pinMonitor0Enable(0);
+			}
+			pinMonitors.pin[0].last = level;
+		}
+		if (pinMonitors.mask & 0x02) {
+			level = P7.6;
+			if (pinMonitors.pin[1].last == level) {
+				if (pinMonitors.pin[1].count-- == 0) {
+					pinMonitor1Enable(0);
+					pinMonitors.pin[1].config.handler();
+				}
+			} else {
+				pinMonitor1Enable(0);
+			}
+			pinMonitors.pin[1].last = level;
+		}
+		if (pinMonitors.mask & 0x10) {
+			level = P3.0;
+			if (pinMonitors.pin[2].last == level) {
+				if (pinMonitors.pin[2].count-- == 0) {
+					pinMonitor2Enable(0);
+					pinMonitors.pin[2].config.handler();
+				}
+			} else {
+				pinMonitor2Enable(0);
+			}
+			pinMonitors.pin[2].last = level;
+		}
+	}
+}
+#else
 void pinMonitorPoll(void)
 {
 	unsigned char level;
@@ -1068,6 +1416,7 @@ void pinMonitorPoll(void)
 #endif
 	}
 }
+#endif
 
 unsigned char input1Bit4Active(void)
 {
@@ -1079,10 +1428,12 @@ unsigned char input1Bit6Active(void)
 	return !inputState1.6;
 }
 
+#if !BOARD_USS1001
 unsigned char input1Bit1Active(void)
 {
 	return !inputState1.1;
 }
+#endif
 
 #if !FW_SINCE(0x0100060B)
 unsigned char input1Bit2Active(void)
@@ -1093,7 +1444,12 @@ unsigned char input1Bit2Active(void)
 
 unsigned char input1Bit5Active(void)
 {
+#if BOARD_USS1001
+	/* the slim's: something on the multi-connector (neither nothing nor 0xfe) */
+	return analogGetMultiCn() != 0 && analogGetMultiCn() != 0xfe;
+#else
 	return !inputState1.5;
+#endif
 }
 
 #if FW_SINCE(0x00090009)
@@ -1113,10 +1469,12 @@ unsigned char input3Bit0High(void)
 	return inputState3.0 != 0;
 }
 
+#if !BOARD_USS1001	/* the slim has none */
 unsigned char input3Bit2Active(void)
 {
 	return !inputState3.2;
 }
+#endif
 
 unsigned char input3Bit5High(void)
 {
@@ -1182,6 +1540,19 @@ void intp2Enable(unsigned char enable)
 
 void intp1Enable(unsigned char enable)
 {
+#if BOARD_USS1001	/* the slim's INTP10 */
+	if (enable == 0) {
+		EGP1.2 = 0;
+		EGN1.2 = 0;
+		MK2L.7 = 1;
+		IF2L.7 = 0;
+	} else {
+		EGP1.2 = 0;
+		EGN1.2 = 1;
+		IF2L.7 = 0;
+		MK2L.7 = 0;
+	}
+#else
 	if (enable == 0) {
 		EGP0.1 = 0;
 		EGN0.1 = 0;
@@ -1193,6 +1564,7 @@ void intp1Enable(unsigned char enable)
 		PIF1 = 0;
 		PMK1 = 0;
 	}
+#endif
 }
 
 void pinMonitor1Set(struct PinConfig *config)
@@ -1323,6 +1695,9 @@ void button2Held(void)
 		buttonPress2.time1 = BUTTON_TIME(value, 0x1f);
 		paramRead(0x2f, 1, &value);
 		buttonPress2.time2 = BUTTON_TIME(value, 0x3f);
+#if BOARD_USS1001
+		inputLogButton2(0);
+#endif
 	} else if (buttonPress2.keys == button2Keys()) {
 		switch (buttonPress2.keys) {
 		case 1:
@@ -1341,6 +1716,9 @@ void button2Held(void)
 				}
 				buttonPress2.result = buttonPress2.keys;
 				STATE_TRANSITION(0x14);
+#if BOARD_USS1001
+				inputLogButton2(0x14);
+#endif
 				pinMonitor1Enable(1);
 #if FW_SINCE(0x01000306)
 			} else if (buttonPress2.count == buttonPress2.time2 || button2HoldDone()) {
@@ -1355,7 +1733,15 @@ void button2Held(void)
 					return;
 				}
 				buttonPress2.result = 2;
+#if BOARD_USS1001	/* after a cause 0x18 (the slim's), transition 0x68 */
+				if (stateGetCause() == 0x18)
+					STATE_TRANSITION(0x68);
+				else
+					STATE_TRANSITION(0x31);
+				inputLogButton2(0x31);
+#else
 				STATE_TRANSITION(0x31);
+#endif
 			} else {
 				pinMonitor1Enable(1);
 			}
@@ -1369,12 +1755,28 @@ void button2Held(void)
 		buttonPress1.keys = 1;
 		buttonPress2.result = buttonPress2.keys;
 		STATE_TRANSITION(0x14);
+#if BOARD_USS1001
+		inputLogButton2(0x14);
+#endif
 	}
 }
 #endif
 
 void intp13Enable(unsigned char enable)
 {
+#if BOARD_USS1001	/* the slim's INTP8 */
+	if (enable == 0) {
+		EGP1.0 = 0;
+		EGN1.0 = 0;
+		MK2L.5 = 1;
+		IF2L.5 = 0;
+	} else {
+		EGP1.0 = 0;
+		EGN1.0 = 1;
+		IF2L.5 = 0;
+		MK2L.5 = 0;
+	}
+#else
 	if (enable == 0) {
 		EGP13 = 0;
 		EGN13 = 0;
@@ -1386,6 +1788,7 @@ void intp13Enable(unsigned char enable)
 		IF0H.7 = 0;
 		MK0H.7 = 0;
 	}
+#endif
 }
 
 void intp11Enable(unsigned char enable)
@@ -1489,7 +1892,11 @@ unsigned char button2Keys(void)
 	unsigned char keys;
 
 	keys = 0;
+#if BOARD_USS1001
+	if (P7.4)
+#else
 	if (P11.5)
+#endif
 		keys++;
 	return keys;
 }
@@ -1516,8 +1923,12 @@ unsigned char button1Keys(void)
 	unsigned char keys[2];
 
 	keys[0] = P8;
+#if BOARD_USS1001	/* the slim's keys on P7, its buttons P7.4 and P7.6 */
+	keys[1] = (P7 & 0x5f) | 0xa0;
+#else
 	keys[1] = (0x0f & P5) | ((!P11.5 ? (unsigned char)0xef : (unsigned char)0xff) &
 				 (!P4.6 ? (unsigned char)0xbf : (unsigned char)0xff) & 0xf0);
+#endif
 	result = 0;
 	if (keysBothButtons(keys) && stateGet() == 0x0004)
 		result = 3;
@@ -1619,12 +2030,18 @@ void button1Held(void)
 		buttonPress1.time1 = BUTTON_TIME(value, 0x1f);
 		paramRead(0x2f, 1, &value);
 		buttonPress1.time2 = BUTTON_TIME(value, 0x3f);
+#if BOARD_USS1001
+		inputLogButton1(0);
+#endif
 	} else if (buttonPress1.keys == button1Keys()) {
 		switch (buttonPress1.keys) {
 		case 3:
 			if (buttonPress1.count == buttonPress1.time1) {
 				buttonPress1.result = buttonPress1.keys;
 				STATE_TRANSITION(0x0b);
+#if BOARD_USS1001
+				inputLogButton1(0x0b);
+#endif
 			} else {
 				pinMonitor0Enable(1);
 			}
@@ -1636,6 +2053,19 @@ void button1Held(void)
 
 void intp7Enable(unsigned char enable)
 {
+#if BOARD_USS1001	/* the slim's INTP3 */
+	if (enable == 0) {
+		EGP0.3 = 0;
+		EGN0.3 = 0;
+		MK0L.5 = 1;
+		IF0L.5 = 0;
+	} else {
+		EGP0.3 = 0;
+		EGN0.3 = 1;
+		IF0L.5 = 0;
+		MK0L.5 = 0;
+	}
+#else
 	if (enable == 0) {
 		EGP0.7 = 0;
 		EGN0.7 = 0;
@@ -1650,6 +2080,7 @@ void intp7Enable(unsigned char enable)
 		PMK7 = 0;
 	}
 #endif
+#endif
 }
 
 void pinMonitor2Set(struct PinConfig *config)
@@ -1660,6 +2091,15 @@ void pinMonitor2Set(struct PinConfig *config)
 
 void pinMonitor2Enable(unsigned char enable)
 {
+#if BOARD_USS1001	/* P3.0, mask bit 0x10 */
+	if (enable == 0)
+		pinMonitors.mask &= ~0x10;
+	else {
+		pinMonitors.pin[2].last = 0;
+		pinMonitors.pin[2].count = pinMonitors.pin[2].config.reload;
+		pinMonitors.mask |= 0x10;
+	}
+#else
 	if (enable == 0)
 		pinMonitors.mask &= ~0x04;
 #if BOARD_INPUTS_102603
@@ -1669,16 +2109,21 @@ void pinMonitor2Enable(unsigned char enable)
 		pinMonitors.mask |= 0x04;
 	}
 #endif
+#endif
 }
 
 void pinMonitor2Expired(void)
 {
-#if BOARD_INPUTS_102603
+#if BOARD_USS1001
+	stateTransition(2);
+	inputLogTransition(2);
+#elif BOARD_INPUTS_102603
 	STATE_TRANSITION_EVENT
 	STATE_TRANSITION(3);
 #endif
 }
 
+#if !BOARD_USS1001	/* the slim has pin monitors 0-2 only */
 void intp4Enable(unsigned char enable)
 {
 	if (enable == 0) {
@@ -1869,6 +2314,7 @@ void pinMonitor6Expired(void)
 	task6SetFlag(6, 0x0200);
 #endif
 }
+#endif
 
 #if !FW_SINCE(0x0100060B)
 void input1Bit2Low(void)
@@ -1894,19 +2340,19 @@ void inputMultiCnChanged(void)
 #if FW_SINCE(0x0100010B)
 		analogMultiCnStop();
 #endif
-		powerDeviceSetPending(BOARD_INPUTS_102603 ? 2 : 0x20);
+		powerDeviceSetPending(BOARD_INPUTS_102603 && !BOARD_USS1001 ? 2 : 0x20);
 		sleepFactorSet5(0);
 		analogMultiCnInit();
 	}
 #if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
-	set_flg(2, 0x0100);
+	INPUT_SET_FLAG(2, 0x0100);
 #endif
 }
 
 #if FW_SINCE(0x00090009)
 void input1Bit0Changed(void)
 {
-#if !BOARD_INPUTS_102603
+#if !BOARD_INPUTS_102603 && !BOARD_USS1001
 	if (input1Bit0Active() == 1) {
 		sleepFactorSet15(1);
 	} else {
@@ -1914,7 +2360,7 @@ void input1Bit0Changed(void)
 		sleepFactorSet15(0);
 	}
 #if FW_SINCE(0x00090804)
-	set_flg(2, 0x0100);
+	INPUT_SET_FLAG(2, 0x0100);
 #endif
 #endif
 }
@@ -1929,8 +2375,11 @@ void inputScanHold(unsigned int ticks)
 #else
 	{	/* 0x00090206 holds it again, however long it was held */
 #endif
-		timerStop(TIMER_RTC(0x16));
+		timerStop(INPUT_SCAN_RTC_TIMER);
 		inputScan.hold = ticks;
+#if BOARD_USS1001
+		scanCount = 0;
+#endif
 		timerStart(3, 1);
 	}
 	EI();
@@ -1938,7 +2387,62 @@ void inputScanHold(unsigned int ticks)
 
 /* the scan timer's handler (timers 3 and 0x16): the key bits latched, task 3 woken and the
    timer restarted, the delays counted down */
-#if !FW_SINCE(0x00090009)
+#if BOARD_USS1001
+/* the slim's: analog input 0x0010 started every configured interval (and at every tick in
+   state 0x20), the sticks latched at every tick, the keys every second, inputs 0x0010 and
+   0x0020 every fourth; mode 2 is the RTC's timer, inputScanRtcTimer */
+void inputScanTimer(void)
+{
+	unsigned char count;
+	unsigned char toggled;
+	unsigned int ticks;
+
+	inputKeys.events = 0;
+	count = scanCount++;
+	toggled = count ^ scanCount;
+	if (stateGet() != 0x20) {
+		timerGetRtcTicks(&ticks);
+		if (ticks - analogInput10Ticks >= configGet()->analogInput10Interval) {
+			analogInput10Ticks = ticks;
+			analogStart10();
+		}
+	} else
+		analogStart10();
+	inputKeys.events |= inputKeys.state & 0x0002;
+	if (toggled & 0x02)
+		inputKeys.events |= inputKeys.state & 0x000c;
+	if (toggled & 0x04)
+		inputKeys.events |= inputKeys.state & 0x0030;
+	task3SetFlag(2, 0x0008);
+	if (inputScan.hold != 0) {
+		inputScan.hold--;
+		timerStart(3, 1);
+	} else if (inputScan.mode == 2) {
+		timerStart(INPUT_SCAN_RTC_TIMER, 0);
+	} else {
+		timerStart(3, inputScan.interval);
+	}
+}
+
+/* the RTC's (scan mode 2): every input latched at each of its ticks */
+void inputScanRtcTimer(void)
+{
+	unsigned int ticks;
+
+	inputKeys.events = 0;
+	if (stateGet() != 0x20) {
+		timerGetRtcTicks(&ticks);
+		if (ticks - analogInput10Ticks >= configGet()->analogInput10Interval) {
+			analogInput10Ticks = ticks;
+			analogStart10();
+		}
+	} else
+		analogStart10();
+	inputKeys.events |= inputKeys.state & 0x003e;
+	task3SetFlag(2, 0x0008);
+	timerStart(INPUT_SCAN_RTC_TIMER, 0);
+}
+#elif !FW_SINCE(0x00090009)
 /* 0x00080504: the delays first, and the touch panels' two report events 0x0100 and 0x0200
    (inputProcess identifies the panels on them) */
 void inputScanTimer(void)
@@ -1973,7 +2477,7 @@ void inputScanTimer(void)
 		inputScan.hold--;
 		timerStart(3, 1);
 	} else if (inputScan.mode == 2) {
-		timerStart(TIMER_RTC(0x16), inputScan.interval);
+		timerStart(INPUT_SCAN_RTC_TIMER, inputScan.interval);
 	} else {
 		timerStart(3, inputScan.interval);
 	}
@@ -1999,7 +2503,7 @@ void inputScanTimer(void)
 		inputScan.hold--;
 		timerStart(3, 1);
 	} else if (inputScan.mode == 2) {
-		timerStart(TIMER_RTC(0x16), inputScan.interval);
+		timerStart(INPUT_SCAN_RTC_TIMER, inputScan.interval);
 	} else {
 		timerStart(3, inputScan.interval);
 	}
@@ -2037,11 +2541,18 @@ void levelMonitor1Poll(void)
 {
 	STATE_TRANSITION_EVENT
 	if (levelMonitor1.enable != 0) {
+#if BOARD_USS1001
+		levelMonitor1.now = P13.7;
+#else
 		levelMonitor1.now = P11.4;
+#endif
 		if (levelMonitor1.state != levelMonitor1.now && levelMonitor1.last == levelMonitor1.now) {
 			levelMonitor1.state = levelMonitor1.now;
 			if (levelMonitor1.state != 0) {
 				STATE_TRANSITION(0x61);
+#if BOARD_USS1001
+				inputLogTransition(0x61);
+#endif
 #if !FW_SINCE(0x00090804)
 				levelMonitor1.enable = 0;
 #endif
@@ -2056,11 +2567,18 @@ void levelMonitor2Poll(void)
 {
 	STATE_TRANSITION_EVENT
 	if (levelMonitor2.enable != 0) {
+#if BOARD_USS1001
+		levelMonitor2.now = P3.1;
+#else
 		levelMonitor2.now = P12.0;
+#endif
 		if (levelMonitor2.state != levelMonitor2.now && levelMonitor2.last == levelMonitor2.now) {
 			levelMonitor2.state = levelMonitor2.now;
 			if (levelMonitor2.state != 0) {
 				STATE_TRANSITION(0x42);
+#if BOARD_USS1001
+				inputLogTransition(0x42);
+#endif
 #if !FW_SINCE(0x00090804)
 				levelMonitor2.enable = 0;
 #endif
@@ -2105,6 +2623,10 @@ unsigned char levelMonitor1High(void)
 
 void input1Bit3Changed(void)
 {
+#if BOARD_USS1001
+	if (input1Bit3Active() != 1)
+		powerDeviceSetPending(8);
+#else
 	if (input1Bit3Active() == 1) {
 		if (stateGet() == 0x0020)
 			inputDelays.latchOn = 0x40;
@@ -2112,8 +2634,9 @@ void input1Bit3Changed(void)
 		powerDeviceSetPending(8);
 		analogLatchInit();
 	}
+#endif
 #if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
-	set_flg(2, 0x0100);
+	INPUT_SET_FLAG(2, 0x0100);
 #endif
 }
 
@@ -2123,7 +2646,11 @@ void inputNone(void)
 
 unsigned char input1Bit7Active(void)
 {
+#if BOARD_USS1001	/* the slim's: the charger's VBUS */
+	return chargeVbusActive();
+#else
 	return !inputState1.7;
+#endif
 }
 
 void levelMonitor1Start(void)
@@ -2154,10 +2681,13 @@ void inputScanMode1(unsigned int interval)
 {
 	DI();
 	if (inputScan.mode != 1) {
-		timerStop(TIMER_RTC(0x16));
+		timerStop(INPUT_SCAN_RTC_TIMER);
 		inputScan.mode = 1;
 		inputScan.interval = interval;
 		inputScan.hold = 0;
+#if BOARD_USS1001
+		scanCount = 0;
+#endif
 		timerStart(3, interval);
 	}
 	EI();
@@ -2172,7 +2702,7 @@ void inputScanMode2(unsigned int interval)
 		timerStop(3);
 		inputScan.mode = 2;
 		inputScan.interval = interval;
-		timerStart(TIMER_RTC(0x16), interval);
+		timerStart(INPUT_SCAN_RTC_TIMER, interval);
 	}
 	EI();
 	return;
@@ -2181,7 +2711,7 @@ void inputScanMode2(unsigned int interval)
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no input 1 bit 7 */
 void input1Bit7Changed(void)
 {
-	set_flg(2, 0x0100);
+	INPUT_SET_FLAG(2, 0x0100);
 	return;
 }
 #endif
@@ -2189,7 +2719,7 @@ void input1Bit7Changed(void)
 #if FW_SINCE(0x01000104)
 void inputChanged(void)
 {
-	set_flg(2, 0x0100);
+	INPUT_SET_FLAG(2, 0x0100);
 	return;
 }
 #endif
@@ -2213,5 +2743,33 @@ void button2HoldReset(void)
 	holdReached = 0;
 	paramRead(0x2f, 1, &value);
 	buttonPress2.time2 = BUTTON_TIME(value, 0x3f);
+}
+#endif
+
+#if BOARD_USS1001
+/* the slim's event log (kind 3): a button's event with its keys and presses (code 3) */
+void inputLogButton1(unsigned char event)
+{
+	eventLogInput[0] = 1;
+	eventLogInput[1] = event;
+	eventLogInput[2] = buttonPress1.keys;
+	eventLogInput[3] = buttonPress1.count;
+	eventLogRecord(3, 3, eventLogInput, 4);
+}
+
+void inputLogButton2(unsigned char event)
+{
+	eventLogInput[0] = 2;
+	eventLogInput[1] = event;
+	eventLogInput[2] = buttonPress2.keys;
+	eventLogInput[3] = buttonPress2.count;
+	eventLogRecord(3, 3, eventLogInput, 4);
+}
+
+/* a transition the inputs ask (code 4) */
+void inputLogTransition(unsigned char transition)
+{
+	eventLogInput[0] = transition;
+	eventLogRecord(3, 4, eventLogInput, 1);
 }
 #endif

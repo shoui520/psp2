@@ -33,6 +33,8 @@ struct HostLinkConfig {
 #define HOST_EVENT_NONE		0
 #define HOST_EVENT_COMMAND	1	/* a command came in */
 #define HOST_EVENT_ANSWERED	2	/* the answer went out */
+#define HOST_EVENT_OPEN		0x10	/* the slim's: the link is up, every request takes commands */
+#define HOST_EVENT_CLOSE	0x20	/* the slim's: the request takes none */
 
 /*
  * A request: a command the host sends with its number (the frame's second byte, with bit 7 of
@@ -95,7 +97,8 @@ struct HostLink {
 	unsigned char	state;		/* the frame's state (host.c) */
 	unsigned char	position;	/* the bytes of the frame transferred */
 	union HostFlags	flags;
-	unsigned char	reserved;	/* nothing reads or writes it */
+	unsigned char	closing;	/* the slim's: hostCloseRequests closed the requests (the
+					   others: unused) */
 	unsigned char	txBuffer[0x80];
 	unsigned char	rxBuffer[0x80];
 };
@@ -143,5 +146,7 @@ extern void hostRequestSetState(struct HostRequest *request, unsigned char state
 extern void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 			      unsigned char status, unsigned char length);
 extern void hostRequestAnswerReady(unsigned char *state);
+extern int hostOpenRequests(void);				/* the slim's */
+extern unsigned char hostCloseRequests(unsigned char tries);	/* the slim's */
 
 #endif

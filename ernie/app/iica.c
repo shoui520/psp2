@@ -4,7 +4,11 @@
  * 1 and 2 for a missing acknowledge) in *status.
  */
 #ifndef ERNIE_UPDATER
+#if (ERNIE_HW >> 20) == 0x008
+#pragma rtos_interrupt INTIICA0 iicaInterrupt	/* the RL78's name */
+#else
 #pragma rtos_interrupt INTIICA iicaInterrupt
+#endif
 #endif
 #pragma sfr
 #pragma NOP
@@ -20,6 +24,16 @@
 #define IICA_DONE		6
 
 #define IICA_WAIT		0xf000	/* the polled transfer's wait for each interrupt */
+
+/* the clock's high width: one less on the slim models */
+#if CHIP_RL78
+#define IICA_WH			0x07
+#else
+#define IICA_WH			0x08
+#endif
+
+/* *status while a transfer runs (the slim models'; the others leave it) */
+#define IICA_BUSY		0x80
 
 static struct IicaRequest iicaRequest;
 
@@ -76,15 +90,20 @@ unsigned char iicaInit(void)
 		IICAEN = 1;
 		IICE = 0;
 		IICWL = 0x0b;
-		IICWH = 0x08;
+		IICWH = IICA_WH;
 		SVA = 0;
 		IICF = 0;
 		IICCTL1 = 0x0c;
 		IICCTL0 = 0x1c;
 		IICE = 1;
 		P6.0 = 0;
+#if CHIP_RL78
+		PM6.0 = 0;
+		P6.1 = 0;
+#else
 		P6.1 = 0;
 		PM6.0 = 0;
+#endif
 		PM6.1 = 0;
 		IICAIF = 0;
 		if (STCEN)
@@ -126,6 +145,9 @@ int iicaStart(struct IicaRequest *request)
 	iicaRequest = *request;
 	STT = 1;
 	iicaRequest.state = IICA_ADDRESS;
+#if CHIP_RL78
+	*iicaRequest.status = IICA_BUSY;
+#endif
 	IICA = iicaRequest.address;
 	return 0;
 }
@@ -230,8 +252,13 @@ noStop:
 void iicaClose(void)
 {
 	P6.0 = 1;
+#if CHIP_RL78
+	PM6.0 = 0;
+	P6.1 = 1;
+#else
 	P6.1 = 1;
 	PM6.0 = 0;
+#endif
 	PM6.1 = 0;
 	IICE = 0;
 	IICAMK = 1;

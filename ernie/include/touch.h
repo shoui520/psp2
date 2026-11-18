@@ -7,6 +7,7 @@
 #define ERNIE_TOUCH_H
 
 #include "ernie.h"
+#include "board.h"
 
 #define TOUCH_FRAMES		2
 
@@ -49,6 +50,7 @@ struct TouchFrame {
 #define TOUCH_INFO_VERSION	2
 #define TOUCH_INFO_BUILD	3
 #define TOUCH_INFO_OBJECTS	6
+#define TOUCH_OBJECTS_MAX	0x2e	/* USS-1001 reads no longer object table */
 
 /* an entry of the object table, which follows the information block */
 struct TouchObject {
@@ -80,13 +82,36 @@ struct TouchObjects {
 	unsigned int	t51;
 #endif
 #if FW_SINCE(0x00090903)
+#if !BOARD_USS1001
 	unsigned int	status;		/* T34's byte 0x54: read after a frame's report */
+#endif
 	unsigned int	grip;		/* T20 (grip and face suppression) */
 #endif
 #if FW_SINCE(0x01000109)
 	unsigned int	cte;		/* T28 (CTE configuration) */
 #endif
+#if BOARD_USS1001
+	unsigned int	comms;		/* T18 (communications configuration) */
+#endif
 };
+
+#if BOARD_USS1001
+/* touchReadObjects' record of the objects a table had, by the controller's family and variant:
+   all of them for 0x800a; the others need no T20, T22 or T28 */
+#define TOUCH_FOUND_RESET	0x0001
+#define TOUCH_FOUND_POWER	0x0002
+#define TOUCH_FOUND_TOUCH	0x0004
+#define TOUCH_FOUND_GRIP	0x0008
+#define TOUCH_FOUND_NOISE	0x0010
+#define TOUCH_FOUND_SELF_TEST	0x0020
+#define TOUCH_FOUND_CTE		0x0040
+#define TOUCH_FOUND_REPORT	0x0080
+#define TOUCH_FOUND_USER_DATA	0x0100
+#define TOUCH_FOUND_T51		0x0200
+#define TOUCH_FOUND_COMMS	0x0400
+#define TOUCH_FOUND_ALL		0x07ff
+#define TOUCH_FOUND_REAR	0x07a7
+#endif
 
 /* a set of the controller's settings (touchSetMode) */
 struct TouchMode {
@@ -132,6 +157,11 @@ struct TouchPanel {
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no modes */
 	struct TouchMode modes[TOUCH_MODES];
 #endif
+#if BOARD_USS1001
+	unsigned char	objectsUnread:1;	/* touchIdentify could not read the object table: read it again */
+	unsigned char	modesUnread:1;	/* a read of the modes failed: touchReadConfigVersion reads
+					   them again */
+#endif
 };
 
 /* Touch.flags: which panels a frame reads, and its end */
@@ -140,6 +170,7 @@ struct TouchPanel {
 #define TOUCH_STATUS0		0x04	/* panel 0's status too */
 #define TOUCH_STATUS1		0x08	/* panel 1's status too */
 #define TOUCH_BUSY		0x10	/* a command has the link: no frame starts */
+#define TOUCH_RUNNING		0x20	/* USS-1001: a frame is being read */
 #define TOUCH_FRAME		0x80	/* a frame is complete */
 
 /* Touch.state, copied into each panel's part of a frame */
@@ -186,18 +217,41 @@ struct TouchDelays {
 	unsigned char	select;			/* after a chip select */
 	unsigned char	byte;			/* after each byte */
 	unsigned char	deselect;		/* before a deselect */
+#if BOARD_USS1001
+	unsigned char	writeByte;		/* after each byte written */
+	unsigned char	release;		/* after a deselect */
+#endif
 };
 
 /* what goes to a panel and what comes back: an address in it (bit 0 set: a read), then the
    data written or read there */
 struct TouchPacket {
 	unsigned int	address;
+#if BOARD_USS1001
+	unsigned char	data[0x114];
+#else
 	unsigned char	data[0x112];
+#endif
 };
 
 #define TOUCH_READ		0x0001
 #define TOUCH_STATUS_LENGTH	3	/* a status read: the address, then the status */
 
+#if BOARD_USS1001
+/*
+ * The rear panel's report, read on IICA1 into the frame's panel 1: its first touch (4 bytes)
+ * and status come at TOUCH_REAR_REPORT_OLD for the controller's version 9 before build 0x12,
+ * at TOUCH_REAR_REPORT otherwise, and TOUCH_REAR_LENGTH_OLD or TOUCH_REAR_LENGTH bytes are read.
+ */
+#define TOUCH_REAR_REPORT_OLD	0x0c
+#define TOUCH_REAR_REPORT	0x18
+#define TOUCH_REAR_LENGTH_OLD	0x12
+#define TOUCH_REAR_LENGTH	0x1e
+#define TOUCH_REAR_TOUCH	0x30
+#define TOUCH_REAR_TOUCH_SIZE	4
+
+extern unsigned char touchRearStatus;	/* the frame's IICA1 transfer: 0 when it is done */
+#endif
 extern struct TouchFrame touchFrames[TOUCH_FRAMES];
 extern struct TouchPacket touchCommand;
 extern struct TouchPacket touchReply;
@@ -244,8 +298,13 @@ extern unsigned char touchWrite(unsigned int address, unsigned char *data, unsig
 				unsigned char panel);
 extern unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int length,
 			       unsigned char panel);
+#if BOARD_USS1001
+extern unsigned char touchIdentify0(void);
+extern unsigned char touchIdentify1(void);
+#else
 extern void touchIdentify0(void);
 extern void touchIdentify1(void);
+#endif
 extern unsigned char touchBootloaderStatus0(unsigned char *status);
 extern unsigned char touchBootloaderStatus1(unsigned char *status);
 extern unsigned char touchEnterBootloader0(void);
@@ -267,11 +326,40 @@ extern unsigned char touchReadUserData1(unsigned char *data);
 extern unsigned char touchSelfTest0(unsigned char test, unsigned char *pass);
 extern unsigned char touchSelfTest1(unsigned char test, unsigned char *pass);
 extern void touchDelaySelect(void);
+#if BOARD_USS1001
+extern unsigned char touchReadObjects(struct TouchObjects *objects, unsigned char count,
+				      unsigned char panel);
+#else
 extern void touchReadObjects(struct TouchObjects *objects, unsigned char count,
 			     unsigned char panel);
+#endif
 extern void touchSetMode(unsigned char mode);
+#if BOARD_USS1001
+extern void touchSetModePin(unsigned char mode);
+extern unsigned char touchSetT51Byte4_0(unsigned char value);
+extern unsigned char touchSetT51Byte4_1(unsigned char value);
+extern unsigned char touchReadT34Bytes0(unsigned char *data);
+extern unsigned char touchReadT34Bytes1(unsigned char *data);
+extern unsigned char touchSetT51Bytes5_0(unsigned char *data);
+extern unsigned char touchSetT51Bytes5_1(unsigned char *data);
+extern unsigned char touchSetT51Bytes9_0(unsigned char *data);
+extern unsigned char touchSetT51Bytes9_1(unsigned char *data);
+extern unsigned char touchSetComms(unsigned char value, unsigned char panel);
+extern unsigned char touchReadT34Bit3(unsigned char *set, unsigned char panel);
+extern unsigned char touchTestModePin(unsigned char *out);
+extern unsigned char touchBootloaderWrite(unsigned char *data, unsigned int length,
+					  unsigned char panel);
+extern unsigned char touchBootloaderRead(unsigned char *data, unsigned int length,
+					 unsigned char panel);
+extern void touchClearMode(void);
+#endif
+#if BOARD_USS1001
+extern unsigned char touchReadModes0(void);
+extern unsigned char touchReadModes1(void);
+#else
 extern void touchReadModes0(void);
 extern void touchReadModes1(void);
+#endif
 extern void touchUpdateState(void);
 #if FW_SINCE(0x00090903)
 extern unsigned char touchStatusOn0(void);

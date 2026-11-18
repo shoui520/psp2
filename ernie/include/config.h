@@ -235,7 +235,12 @@ struct ConfigBlock {
 	unsigned char	touchDelayDeselect;
 	unsigned char	touchWriteTries;	/* a verified write's tries */
 	unsigned char	touchWriteReads;	/* and the reads each try compares */
+#if BOARD_USS1001
+	unsigned char	touchDelayReadByte;	/* USS-1001's delay after each byte panel 0 sends
+						   back */
+#else
 	unsigned char	reserved6;
+#endif
 	unsigned int	hostBusyLimit;		/* the host link's busy time before a pause */
 	unsigned int	hostIdleLimit;		/* the idle time that clears the busy time */
 	unsigned int	hostPause;		/* the pause, in ticks */
@@ -261,7 +266,18 @@ struct ConfigBlock {
 							   parameter block's alarm level */
 	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
 	unsigned char	offInfo3;
+#if BOARD_USS1001
+	unsigned char	reserved34[0x216 - 0x1e0];
+	unsigned int	analogInput10Interval;	/* USS-1001: the RTC's ticks between starts of
+						   analog input 0x0010 (input.c's scan) */
+	unsigned char	reserved44[0x226 - 0x218];
+	unsigned char	touchDelayWriteByte;	/* USS-1001: the delay after each byte panel 0 is
+						   written */
+	unsigned char	touchDelayRelease;	/* and after its deselect */
+	unsigned char	reserved43[0x3e0 - 0x228];
+#else
 	unsigned char	reserved34[0x3e0 - 0x1e0];
+#endif
 	unsigned char	offInfoBit0;		/* not 0: sleepFactorGetOffInfo's bit 0 */
 	unsigned char	offInfoBit1;		/* and its bit 1 */
 	unsigned char	reserved30[CONFIG_SIZE - 0x3e2];

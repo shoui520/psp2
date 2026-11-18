@@ -23,6 +23,17 @@ extern unsigned char hostCommand0801(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryRemainCapOld(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommand0804(unsigned char *out, unsigned char *length);
+/* the slim's */
+extern unsigned char hostCommand0805(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0806(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0807(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0820(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0821(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0822(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0840(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0841(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0842(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0843(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length);

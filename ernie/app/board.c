@@ -209,7 +209,11 @@ unsigned char boardMultiCnIsDebug(void)
 /* 0x00090206's hdwinit sets the ports through this */
 void boardInit(void)
 {
+#if HW_IS(0x00102603) && !FW_SINCE(0x00090206)
+	boardPortInit102603();	/* 0x00090009 */
+#else
 	boardPortInit();
+#endif
 }
 
 #endif
@@ -354,7 +358,7 @@ void boardPortInit(void)
 	PM12 = BOARD_PM12;
 	P13 = 0x00;
 	PM13 = 0xfc;
-#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000) || HW_IS(0x00315200)
+#if FW_SINCE(0x00090804) || !BOARD_IS(0x00411000) || BOARD_PORTS_315200
 	P14 = 0x00;
 #else
 	/* 0x00411000's 0x00090206 (not 0x00315200's): P14.3 an open-drain output, high */

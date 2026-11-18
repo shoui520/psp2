@@ -954,6 +954,9 @@ unsigned char powerOffWlan(void)
 		P13.1 = 0;
 #if !FW_SINCE(0x00090206)
 		/* 0x00090009 keeps the line, and stops the clock output once the WLAN is off */
+#if BOARD_102603 && !HW_IS(0x00315200)
+		P6.7 = 0;
+#endif
 #elif BOARD_WLAN_102603
 		POWER_SET_WLAN_LINE(0);
 		clockOutputStop();

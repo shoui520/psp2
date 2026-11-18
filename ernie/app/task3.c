@@ -17,6 +17,50 @@
 #include "touch.h"
 
 
+#if BOARD_USS1001
+void task3(VP_INT exinf)
+{
+	ER ercd;
+	FLGPTN ptn;
+
+	for (;;) {
+		ercd = wai_flg(2, 0x851c, TWF_ORW, &ptn);
+		if (ercd == E_OK) {
+			if (ptn & 0x0400) {
+				clr_flg(2, ~0x0400);
+				inputStateRun();
+			}
+			if (ptn & 0x0008) {
+				clr_flg(2, ~0x0008);
+				inputProcess();
+				if (stateGet() == 0x0020)
+					touchRequestRun();
+				debugPinSet((unsigned char)(P4.0 ^ 1));
+			}
+			if (ptn & 0x0004) {
+				clr_flg(2, ~0x0004);
+				analogEvent(inputKeys.events & 0x32);
+			}
+			if (ptn & 0x0010) {
+				clr_flg(2, ~0x0010);
+				controlsRequestRun();
+			}
+			if (ptn & 0x0100) {
+				clr_flg(2, ~0x0100);
+				touchUpdateState();
+			}
+			if (ptn & 0x0800) {
+				clr_flg(2, ~0x0800);
+				controlsRequest0180Done();
+			}
+			if (ptn & 0x8000)
+				clr_flg(2, ~0x8000);
+		}
+		task3Idle();
+	}
+	ext_tsk();
+}
+#else
 void task3(VP_INT exinf)
 {
 	ER ercd;
@@ -86,3 +130,4 @@ void task3(VP_INT exinf)
 	}
 	ext_tsk();
 }
+#endif

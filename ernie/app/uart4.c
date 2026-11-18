@@ -2,10 +2,15 @@
  * UART4 on SAU2 (channel 0 sends, channel 1 receives; TxD4 P9.4, RxD4 P9.3): opened at one of
  * uart4Bauds' speeds, and read and written through uart4's ring buffers.
  */
-#if ERNIE_BOARD != 0x00406000 || ERNIE_HW == 0x00601000	/* BOARD_SERIAL4 (#pragma comes first) */
+#if ERNIE_BOARD != 0x00406000 || ERNIE_HW == 0x00601000 || ERNIE_HW >= 0x00800000	/* BOARD_SERIAL4 (#pragma comes first) */
+#if ERNIE_HW >= 0x00800000	/* CHIP_RL78: USS-1001's vectors are in vectors_rl78.asm */
+#define UART4_INTERRUPT	__rtos_interrupt
+#else
 #pragma rtos_interrupt INTSRE1 uart4ErrorInterrupt
 #pragma rtos_interrupt INTSR4 uart4ReceiveInterrupt
 #pragma rtos_interrupt INTST4 uart4SendInterrupt
+#define UART4_INTERRUPT
+#endif
 #pragma sfr
 
 #include "ernie.h"
@@ -15,6 +20,18 @@
 #include "timer.h"
 #include "uart.h"
 #include "uart4.h"
+#if CHIP_RL78
+#include "serial.h"
+#endif
+
+#if CHIP_RL78
+/* USS-1001: TxD4 on P9.2, RxD4 on P9.3 without a pull-up, the error interrupt UART4's own */
+#define UART4_SREIF	SREIF4
+#define UART4_SREMK	SREMK4
+#else
+#define UART4_SREIF	SREIF1
+#define UART4_SREMK	SREMK1
+#endif
 
 /* uart4Open's speeds */
 struct Uart4Baud {
@@ -55,7 +72,11 @@ int uart4Open(unsigned char baud)
 		}
 	}
 	PM93 = 1;
+#if CHIP_RL78
+	PM9.2 = 1;
+#else
 	PM94 = 1;
+#endif
 	uart4Close();
 	SAU2EN = 1;
 	uart4.txBuffer = uart4Tx;
@@ -74,31 +95,52 @@ int uart4Open(unsigned char baud)
 	SDR21 = (unsigned int)config.divisor << 9;
 	SDR20 = (unsigned int)config.divisor << 9;
 	SOL2 = 0;
+#if CHIP_RL78
+	SOE20 = 0;
+	SO2 = 0x0f0f;
+	SOE20 = 1;
+#else
 	SOE2L.0 = 0;
 	SO2 = 0x0f0f;
 	SOE2L.0 = 1;
+#endif
 	SIR20L = 0;
 	SIR21L = 0x07;
+#if CHIP_RL78
+	PM93 = 1;
+	P9.2 = 1;
+	PM9.2 = 0;
+#else
 	PU93 = 1;
 	PM93 = 1;
 	P94 = 1;
 	PM94 = 0;
+#endif
 	NFEN0.4 = 1;
 	STIF4 = 0;
 	SRIF4 = 0;
-	SREIF1 = 0;
+	UART4_SREIF = 0;
 	STMK4 = 0;
 	SRMK4 = 0;
-	SREMK1 = 0;
+	UART4_SREMK = 0;
+#if CHIP_RL78
+	SS20 = 1;
+	SS21 = 1;
+#else
 	SS2L.0 = 1;
 	SS2L.1 = 1;
+#endif
 	return 0;
 }
 
 void uart4StopTx(void)
 {
 	ST2L = 0x01;
+#if CHIP_RL78
+	SOE20 = 0;
+#else
 	SOE2L.0 = 0;
+#endif
 }
 
 void uart4StopRx(void)
@@ -116,17 +158,23 @@ void uart4Close(void)
 {
 	STMK4 = 1;
 	SRMK4 = 1;
-	SREMK1 = 1;
+	UART4_SREMK = 1;
 	STIF4 = 0;
 	SRIF4 = 0;
-	SREIF1 = 0;
+	UART4_SREIF = 0;
 	uart4StopTx();
 	uart4StopRx();
 	uart4Disable();
+#if CHIP_RL78
+	PM93 = 1;
+	P9.2 = 1;
+	PM9.2 = 0;
+#else
 	PU93 = 1;
 	PM93 = 1;
 	P94 = 1;
 	PM94 = 0;
+#endif
 }
 
 /* takes up to size bytes received; their count */
@@ -174,7 +222,7 @@ unsigned char uart4Write(unsigned char *buf, unsigned char size)
 }
 
 /* a reception error: cleared (SREIF1 is UART4's error interrupt) */
-void uart4ErrorInterrupt(void)
+UART4_INTERRUPT void uart4ErrorInterrupt(void)
 {
 	unsigned char status;
 
@@ -183,7 +231,41 @@ void uart4ErrorInterrupt(void)
 	SIR21 = status & 0x07;
 }
 
-void uart4ReceiveInterrupt(void)
+#if CHIP_RL78
+/*
+ * The slim models' UART4 is the serial port (the fat models' UART3): a byte received restarts
+ * the frame's timeout, and the end of a send is event 0x0002 of flag 3.
+ */
+UART4_INTERRUPT void uart4ReceiveInterrupt(void)
+{
+	struct UartPort *p;
+	unsigned char data;
+
+	p = &uart4;
+	data = SDR21;
+	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
+		uart4.rxBuffer[uart4.rxWrite] = data;
+		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
+		if (serial.mode == 3) {
+			if (p->timeout.flgid != 0)
+				timerStart(p->timeout.timer, p->timeout.timeout);
+		} else if (serial.mode == 1)
+			timerStart(TIMER(0x10), 2);
+	}
+}
+
+UART4_INTERRUPT void uart4SendInterrupt(void)
+{
+	struct UartPort *p = &uart4;
+
+	if (p->txWrite - p->txRead & p->txMask) {
+		SDR20 = p->txBuffer[p->txRead];
+		p->txRead = p->txRead + 1 & p->txMask;
+	} else if (serial.mode == 1)
+		task2SetFlag(3, 2);
+}
+#else
+UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 {
 	unsigned char data;
 
@@ -196,7 +278,7 @@ void uart4ReceiveInterrupt(void)
 }
 
 /* the next byte queued, or, with none left, event 0x0200 of flag 3 */
-void uart4SendInterrupt(void)
+UART4_INTERRUPT void uart4SendInterrupt(void)
 {
 	struct UartPort *p = &uart4;
 
@@ -206,4 +288,5 @@ void uart4SendInterrupt(void)
 	} else
 		task2SetFlag(3, 0x0200);
 }
+#endif
 #endif

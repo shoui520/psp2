@@ -26,6 +26,7 @@
 #include "configreq.h"
 #include "csi.h"
 #include "dma.h"
+#include "dtc.h"
 #include "handshake.h"
 #include "host.h"
 #include "inputreq.h"
@@ -48,6 +49,16 @@
 #define HOST_DATA		0x08
 #define HOST_END		0x0a
 #define HOST_ABORT		0x80
+
+/* the link's lines to the host: HOST_READY high while the link takes frames, HOST_FRAME low
+   during a frame (the slim's P9.6 and P1.5) */
+#if BOARD_USS1001
+#define HOST_READY		P9.6
+#define HOST_FRAME		P1.5
+#else
+#define HOST_READY		P5.6
+#define HOST_FRAME		P5.7
+#endif
 
 /* a command handler: the answer's data to out, its length to *length; returns the result */
 typedef unsigned char (*HostCommandHandler)(unsigned char *out, unsigned char *length);
@@ -99,6 +110,9 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0003, hostCommandSleepFactor, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, hostCommandHardwareInfo, 0 },
+#if BOARD_USS1001
+	{ 0x0006, hostCommand0006, 0 },
+#endif
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 	{ 0x0011, hostCommandClock, 0 },
 	{ 0x0012, hostCommandAlarm, 0 },
@@ -122,6 +136,9 @@ static const struct HostCommand hostCommands[] = {
 #if FW_SINCE(0x0100060B)
 	{ 0x0120, hostCommand0120, 0 },
 #endif
+#if BOARD_USS1001
+	{ 0x0130, hostCommand0130, 0 },
+#endif
 	{ 0x0300, (HostCommandHandler)&hostStream0300, 1 },
 	{ 0x0301, (HostCommandHandler)&hostStream0301, 1 },
 	{ 0x0302, (HostCommandHandler)&hostStream0302, 1 },
@@ -134,7 +151,21 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0802, hostCommandBatteryRemainCapOld, 0 },
 	{ 0x0803, hostCommandBatteryVoltOld, 0 },
 #endif
+#if BOARD_USS1001
 	{ 0x0804, hostCommand0804, 0 },
+	{ 0x0805, hostCommand0805, 0 },
+	{ 0x0806, hostCommand0806, 0 },
+	{ 0x0807, hostCommand0807, 0 },
+	{ 0x0820, hostCommand0820, 0 },
+	{ 0x0821, hostCommand0821, 0 },
+	{ 0x0822, hostCommand0822, 0 },
+	{ 0x0840, hostCommand0840, 0 },
+	{ 0x0841, hostCommand0841, 0 },
+	{ 0x0842, hostCommand0842, 0 },
+	{ 0x0843, hostCommand0843, 0 },
+#else
+	{ 0x0804, hostCommand0804, 0 },
+#endif
 	{ 0x0900, hostCommandBatteryRemainCap, 0 },
 	{ 0x0901, hostCommandBatteryVolt, 0 },
 #if FW_SINCE(0x00090009)
@@ -145,6 +176,9 @@ static const struct HostCommand hostCommands[] = {
 #endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1300, hostCommandConfigVersions, 0 },
+#if BOARD_USS1001
+	{ 0x1310, hostCommand1310, 0 },
+#endif
 };
 
 static const struct HostCommand hostBaseCommands[] = {
@@ -153,9 +187,15 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0002, hostCommandTimeStamp, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, hostCommandHardwareInfo, 0 },
+#if BOARD_USS1001
+	{ 0x0006, hostCommand0006, 0 },
+#endif
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 #if HOST_WATCHDOG
 	{ 0x0013, hostCommand0013, 0 },
+#endif
+#if BOARD_USS1001
+	{ 0x0806, hostCommand0806, 0 },
 #endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 #if FW_SINCE(0x00090903)
@@ -239,6 +279,9 @@ int hostInit(void)
 	hostLink.frameMax = 0x80;
 	hostLink.state = HOST_IDLE;
 	hostLink.flags.value = 0;
+#if BOARD_USS1001
+	hostLink.closing = 0;
+#endif
 	hostThrottle.frameEnd = 0;
 	hostThrottle.frameStart = 0;
 	hostThrottle.busyTime = 0;
@@ -380,6 +423,55 @@ int hostStep(FLGPTN flgptn)
 	return 0;
 }
 
+#if BOARD_USS1001
+/* the slim's: a command's request answers at once unless it is busy (an error with status 0x39,
+   any other state with status 1); the others take the state, a busy or failed one goes back to
+   taking commands */
+void hostRequestSetState(struct HostRequest *request, unsigned char state)
+{
+	if (request != NULL) {
+		switch (request->event) {
+		case HOST_EVENT_COMMAND:
+			switch (state) {
+			case HOST_REQUEST_BUSY:
+				request->state = state;
+				return;
+			case HOST_REQUEST_ERROR:
+				request->status = 0x39;
+				break;
+			case HOST_REQUEST_IDLE:
+			case HOST_REQUEST_RECEIVE:
+			default:
+				request->status = 1;
+				break;
+			}
+			request->answerLength = 0;
+			dis_dsp();
+			request->state = HOST_REQUEST_ANSWER;
+			hostLink.flags.bits.answer = 1;
+			ena_dsp();
+			break;
+		case HOST_EVENT_NONE:
+		case HOST_EVENT_ANSWERED:
+		default:
+			switch (state) {
+			case HOST_REQUEST_IDLE:
+			case HOST_REQUEST_RECEIVE:
+				request->state = state;
+				break;
+			case HOST_REQUEST_BUSY:
+			case HOST_REQUEST_ERROR:
+				request->state = HOST_REQUEST_RECEIVE;
+				break;
+			default:
+				request->state = 0x80;
+				break;
+			}
+			break;
+		}
+	}
+}
+#else
 void hostRequestSetState(struct HostRequest *request, unsigned char state)
 {
 	if (request != NULL) {
@@ -400,6 +492,8 @@ void hostRequestSetState(struct HostRequest *request, unsigned char state)
 		}
 	}
 }
+
+#endif
 
 void hostRequestSetStateChecked(struct HostRequest *request, unsigned char state)
 {
@@ -463,6 +557,7 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 	}
 }
 
+#if !BOARD_USS1001
 /* a request's answer is ready (state: the request's state) */
 void hostRequestAnswerReady(unsigned char *state)
 {
@@ -475,6 +570,7 @@ void hostRequestAnswerReady(unsigned char *state)
 	ena_dsp();
 #endif
 }
+#endif
 
 /* the frame's first two bytes: the link's status and flags out, the command's word in */
 int hostFrameBegin(void)
@@ -482,9 +578,9 @@ int hostFrameBegin(void)
 	hostLink.rx[0] = sleepFactorSnapshot() | hostLink.flags.value;
 	hostLink.flags.bits.overflow = 0;
 	hostLink.flags.bits.checksum = 0;
-	P5.6 = 1;
+	HOST_READY = 1;
 	P90 = 0;
-	P5.7 = 0;
+	HOST_FRAME = 0;
 	csiTransferWait(hostLink.tx, 2, hostLink.rx, 2);
 	hostLink.position = 2;
 	return 0;
@@ -575,11 +671,20 @@ int hostFrameCommand(void)
 	csiTransferDmaWait(hostLink.tx + hostLink.position, hostLink.rx + hostLink.position, length);
 	hostLink.rx[hostLink.rx[2] + 2] = hostChecksum(hostLink.rx, hostLink.rx[2] + 2);
 	hostLink.position += length;
+#if BOARD_USS1001
+	/* the slim's DTC moves all but the last byte in; that one is read as the transfer ends */
+	while (!CSIIF00)
+		NOP();
+	csiRelease();
+	dtcStop(0);
+	*(hostLink.tx + hostLink.position - 1) = SIO00;
+#else
 	while (DST0)
 		NOP();
 	csiRelease();
 	dma0End();
 	dma1End();
+#endif
 	length = 1;
 	if ((hostLink.rx[2] & 1) == 0)
 		length++;
@@ -626,7 +731,7 @@ int hostFrameFinish(void)
 
 	notify = 0;
 	P90 = 1;
-	P5.7 = 1;
+	HOST_FRAME = 1;
 	sum = hostChecksum(hostLink.tx, hostLink.tx[2] + 2);
 	if (hostLink.tx[hostLink.tx[2] + 2] != sum)
 		hostLink.flags.bits.checksum = 1;
@@ -669,6 +774,13 @@ int hostFrameFinish(void)
 			}
 			if (notify && request->notify != NULL) {
 				request->notify();
+#if BOARD_USS1001
+				if (hostLink.closing) {
+					/* hostCloseRequests closed the link: the request takes no more */
+					request->event = HOST_EVENT_CLOSE;
+					request->notify();
+				}
+#endif
 				if (hostAnswerPending() == 0)
 					hostLink.flags.bits.answer = 0;
 			}
@@ -696,7 +808,7 @@ int hostRequestSendCommandHigh(void)
 int hostThrottleFrameEnd(void)
 {
 	P90 = 1;
-	P5.7 = 1;
+	HOST_FRAME = 1;
 	hostThrottle.frameEnd = TCR02;
 	hostThrottle.busyTime += hostThrottle.frameStart - hostThrottle.frameEnd;
 	return 0;
@@ -886,6 +998,16 @@ unsigned char hostPollRequests(void)
 			notify = 1;
 			break;
 		}
+#if BOARD_USS1001
+		/* the slim's: the event is cleared, and the answers checked once all are polled */
+		if (notify && (*p)->notify != NULL)
+			(*p)->notify();
+		(*p)->event = HOST_EVENT_NONE;
+		p++;
+	}
+	if (hostAnswerPending() == 0)
+		hostLink.flags.bits.answer = 0;
+#else
 		if (notify && (*p)->notify != NULL) {
 			(*p)->notify();
 			if (hostAnswerPending() == 0)
@@ -893,8 +1015,70 @@ unsigned char hostPollRequests(void)
 		}
 		p++;
 	}
+#endif
 	return busy;
 }
+
+#if BOARD_USS1001
+/* the slim's, as the link comes up (powerResume): every request takes commands again
+   (HOST_EVENT_OPEN, told through its notify handler) */
+int hostOpenRequests(void)
+{
+	unsigned int i;
+	unsigned int count;
+	struct HostRequest * const *p;
+
+	p = hostRequests;
+	count = hostRequestCount();
+	dis_dsp();
+	for (i = 0; i < count; i++) {
+		(*p)->event = HOST_EVENT_OPEN;
+		if ((*p)->notify != NULL)
+			(*p)->notify();
+		p++;
+	}
+	ena_dsp();
+	return 0;
+}
+#endif
+
+#if BOARD_USS1001
+/* the slim's: the requests waiting for a command take none any more (HOST_EVENT_CLOSE, told
+   through their notify handlers); then, every 13 ticks and up to tries times more, whether an
+   answer to a command is still to go out. Nonzero while one is */
+unsigned char hostCloseRequests(unsigned char tries)
+{
+	unsigned int i;
+	unsigned int count;
+	unsigned char busy;
+	struct HostRequest * const *p;
+
+	hostLink.closing = 1;
+	count = hostRequestCount();
+	dis_dsp();
+	for (i = 0, p = hostRequests; i < count; i++, p++) {
+		if (((*p)->event == HOST_EVENT_ANSWERED || (*p)->event == HOST_EVENT_NONE) &&
+		    (*p)->state == HOST_REQUEST_RECEIVE) {
+			(*p)->event = HOST_EVENT_CLOSE;
+			if ((*p)->notify != NULL)
+				(*p)->notify();
+		}
+	}
+	ena_dsp();
+	p = hostRequests;
+	do {
+		dly_tsk(13);
+		busy = 0;
+		dis_dsp();
+		for (i = 0, p = hostRequests; i < count; i++, p++) {
+			if ((*p)->event == HOST_EVENT_COMMAND && (*p)->state == HOST_REQUEST_ANSWER)
+				busy = 1;
+		}
+		ena_dsp();
+	} while (tries-- != 0 && busy);
+	return busy;
+}
+#endif
 
 /* the link's task: event flag 1's bits 0x0007 run the frames (hostStep), 0x0080 pauses the
    link, 0x0100 polls the requests, 0x0040 resumes the link */
@@ -912,7 +1096,7 @@ void hostTask(VP_INT exinf)
 			hostIntDisable();
 			csiClose();
 			csiOpenMsb();
-			P5.6 = 0;
+			HOST_READY = 0;
 		} else if (flgptn & 0x0100) {
 			clr_flg(1, ~0x0100);
 			dly_tsk(200);
@@ -926,7 +1110,7 @@ void hostTask(VP_INT exinf)
 			if (hostPollRequests())
 				;
 			hostIntEnable();
-			P5.6 = 1;
+			HOST_READY = 1;
 		}
 		switch (paused) {
 		case 0:

@@ -13,6 +13,7 @@ extern struct HostRequest configRequest;
 
 extern void configRequestInit(void);
 extern unsigned char hostCommandConfigVersions(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand1310(unsigned char *out, unsigned char *length);	/* the slim's */
 extern void configRequestEvent(FLGPTN ptn);
 extern void configRequestNotify(void);
 

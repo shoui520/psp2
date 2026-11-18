@@ -16,6 +16,9 @@
 #include "config.h"
 #include "csi10.h"
 #include "host.h"
+#if BOARD_USS1001
+#include "iica1.h"
+#endif
 #include "inputreq.h"
 #include "input.h"
 #include "kernel.h"
@@ -27,6 +30,14 @@ extern unsigned char input1Bit0Active(void);
 extern unsigned char input1Bit3Active(void);
 extern unsigned char input1Bit7Active(void);
 
+/* the link is taken by a frame: USS-1001's frame runs from touchStartFrame to its last
+   transfer's interrupt */
+#if BOARD_USS1001
+#define TOUCH_LINK_BUSY()	(touch.flags & TOUCH_RUNNING)
+#else
+#define TOUCH_LINK_BUSY()	(csi10GetState() != CSI10_OPEN)
+#endif
+
 /* the frame after i */
 #define TOUCH_NEXT_FRAME(i)	((i) + 1 < TOUCH_FRAMES ? (i) + 1 : 0)
 
@@ -34,6 +45,9 @@ extern unsigned char input1Bit7Active(void);
 #define TOUCH_OBJECT_ADDRESS(o)	((unsigned int)(o).addressHigh << 8 | (o).addressLow)
 
 static unsigned char touchBufferData[TOUCH_BUFFER_SIZE];
+#if BOARD_USS1001
+unsigned char touchRearStatus;
+#endif
 struct TouchFrame touchFrames[TOUCH_FRAMES];
 struct TouchPacket touchCommand;
 struct TouchPacket touchReply;
@@ -58,6 +72,10 @@ void touchClearPanels(void)
 	touch.panel[0].gripEdges[0] = 0;
 	touch.panel[0].gripEdges[1] = 0;
 #endif
+#if BOARD_USS1001
+	touch.panel[0].objectsUnread = 0;
+	touch.panel[0].modesUnread = 0;
+#endif
 #if FW_SINCE(0x00090804)
 	memset(&touch.panel[0].objects, 0, sizeof(touch.panel[0].objects));
 	memset(touch.panel[0].modes, 0, sizeof(touch.panel[0].modes));
@@ -80,6 +98,10 @@ void touchClearPanels(void)
 	touch.panel[1].gripEdges[0] = 0;
 	touch.panel[1].gripEdges[1] = 0;
 #endif
+#if BOARD_USS1001
+	touch.panel[1].objectsUnread = 0;
+	touch.panel[1].modesUnread = 0;
+#endif
 #if FW_SINCE(0x00090804)
 	memset(&touch.panel[1].objects, 0, sizeof(touch.panel[1].objects));
 	memset(touch.panel[1].modes, 0, sizeof(touch.panel[1].modes));
@@ -101,6 +123,9 @@ void touchClearPanels(void)
 void touchOpen(void)
 {
 	csi10Open();
+#if BOARD_USS1001
+	iica1Init();
+#endif
 	touchClearFrames0();
 	touchClearFrames1();
 	touch.flags = 0;
@@ -108,10 +133,14 @@ void touchOpen(void)
 	touch.setting[0] = 8;
 	touch.setting[1] = 8;
 	touch.rate = 0;
+#if BOARD_USS1001
+	touchClearMode();
+#else
 	memset(&touch.panel[0], 0, 4);
 	memset(&touch.panel[1], 0, 4);
 #if FW_SINCE(0x00090804)
 	touch.state.value = 0;
+#endif
 #endif
 	touchBuffer.frame = 0;
 	touchBuffer.end = 0;
@@ -128,8 +157,15 @@ void touchOpen(void)
 	memset(&touchCommand, 0, sizeof(touchCommand));
 #if FW_SINCE(0x01000306)
 	touchDelays.select = configGet()->touchDelaySelect;
+#if BOARD_USS1001
+	touchDelays.byte = configGet()->touchDelayReadByte;
+	touchDelays.writeByte = configGet()->touchDelayWriteByte;
+	touchDelays.deselect = configGet()->touchDelayDeselect;
+	touchDelays.release = configGet()->touchDelayRelease;
+#else
 	touchDelays.byte = configGet()->touchDelayByte;
 	touchDelays.deselect = configGet()->touchDelayDeselect;
+#endif
 #endif
 }
 
@@ -137,7 +173,13 @@ void touchClose(void)
 {
 	touchDisable0();
 	touchDisable1();
+#if BOARD_USS1001
+	P3.2 = 0;
 	csi10Close();
+	iica1Close();
+#else
+	csi10Close();
+#endif
 }
 
 /* panel 0's parts of both frames: no touch */
@@ -175,6 +217,59 @@ void touchClearFrames1(void)
 #endif
 }
 
+#if BOARD_USS1001
+/* starts a frame, into a frame no stream is sending: the rear panel's report first, on IICA1,
+   when it is enabled (INTIICA1 goes on from there), else panel 0's on CSI10 */
+void touchStartFrame(void)
+{
+	unsigned char next;
+	struct Csi10Transfer transfer;
+	struct Iica1Request request;
+
+	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
+		touch.flags |= TOUCH_RUNNING;
+		if (touch.flags & TOUCH_PANEL1) {
+			touchCommand.address = touch.panel[1].objects.report;
+		} else if (touch.flags & TOUCH_PANEL0) {
+			P12.6 = 0;
+			transfer.state = CSI10_COMMAND0;
+			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+		}
+		next = TOUCH_NEXT_FRAME(hostStream0300.first);
+		if (next == hostStream0300.block || next == hostStream0301.block ||
+		    next == hostStream0302.block)
+			next = TOUCH_NEXT_FRAME(next);
+		touch.frame = next;
+		if (touch.flags & TOUCH_PANEL1) {
+			touchFrames[touch.frame].time1 = TCR02;
+			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
+		} else if (touch.flags & TOUCH_PANEL0) {
+			touchFrames[touch.frame].time0 = TCR02;
+			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
+		}
+		if (touch.flags & TOUCH_PANEL1) {
+			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
+				request.rxCount = TOUCH_REAR_LENGTH_OLD;
+			else
+				request.rxCount = TOUCH_REAR_LENGTH;
+			request.rxData = touchFrames[touch.frame].panel[1];
+			request.txData = (unsigned char *)&touchCommand;
+			request.txCount = 2;
+			request.address = IICA1_TOUCH;
+			request.status = &touchRearStatus;
+			iica1Start(&request);
+		} else {
+			touchDelaySelect();
+			transfer.receive = (unsigned char *)&touchReply;
+			transfer.receiveCount = 0;
+			transfer.send = (unsigned char *)&touchCommand;
+			transfer.sendCount = 2;
+			transfer.delay = touchDelays.byte;
+			csi10Transfer(&transfer);
+		}
+	}
+}
+#else
 /* starts a frame, into a frame no stream is sending: panel 1's report first when it is
    enabled; INTCSI10 goes on from there */
 void touchStartFrame(void)
@@ -220,9 +315,61 @@ void touchStartFrame(void)
 		csi10Transfer(&transfer);
 	}
 }
+#endif
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no NoLock forms */
 /* touchStartFrame, for a caller that has disabled the interrupts */
+#if BOARD_USS1001
+void touchStartFrameNoLock(void)
+{
+	unsigned char next;
+	struct Csi10Transfer transfer;
+	struct Iica1Request request;
+
+	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
+		touch.flags |= TOUCH_RUNNING;
+		if (touch.flags & TOUCH_PANEL1) {
+			touchCommand.address = touch.panel[1].objects.report;
+		} else if (touch.flags & TOUCH_PANEL0) {
+			P12.6 = 0;
+			transfer.state = CSI10_COMMAND0;
+			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+		}
+		next = TOUCH_NEXT_FRAME(hostStream0300.first);
+		if (next == hostStream0300.block || next == hostStream0301.block ||
+		    next == hostStream0302.block)
+			next = TOUCH_NEXT_FRAME(next);
+		touch.frame = next;
+		if (touch.flags & TOUCH_PANEL1) {
+			touchFrames[touch.frame].time1 = TCR02;
+			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
+		} else if (touch.flags & TOUCH_PANEL0) {
+			touchFrames[touch.frame].time0 = TCR02;
+			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
+		}
+		if (touch.flags & TOUCH_PANEL1) {
+			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
+				request.rxCount = TOUCH_REAR_LENGTH_OLD;
+			else
+				request.rxCount = TOUCH_REAR_LENGTH;
+			request.rxData = touchFrames[touch.frame].panel[1];
+			request.txData = (unsigned char *)&touchCommand;
+			request.txCount = 2;
+			request.address = IICA1_TOUCH;
+			request.status = &touchRearStatus;
+			iica1Start(&request);
+		} else {
+			touchDelaySelect();
+			transfer.receive = (unsigned char *)&touchReply;
+			transfer.receiveCount = 0;
+			transfer.send = (unsigned char *)&touchCommand;
+			transfer.sendCount = 2;
+			transfer.delay = touchDelays.byte;
+			csi10TransferNoLock(&transfer);
+		}
+	}
+}
+#else
 void touchStartFrameNoLock(void)
 {
 	unsigned char next;
@@ -267,7 +414,50 @@ void touchStartFrameNoLock(void)
 	}
 }
 #endif
+#endif
 
+#if BOARD_USS1001
+/* enables panel 0 when it is present (P4.1; inputKeys.state's bit 0x0004) */
+void touchEnable0(void)
+{
+	if (P4.1 && !(inputKeys.state & 0x0004)) {
+		DI();
+		inputKeys.state |= 0x0004;
+		EI();
+		touchSetFlags(TOUCH_PANEL0);
+	}
+}
+
+/* clears inputKeys.state's high byte too */
+void touchDisable0(void)
+{
+	DI();
+	inputKeys.state &= 0x00fb;
+	EI();
+	touchClearFlags(TOUCH_PANEL0);
+	touchClearFrames0();
+}
+
+/* the rear panel's presence is P4.2 */
+void touchEnable1(void)
+{
+	if (P4.2 && !(inputKeys.state & 0x0008)) {
+		DI();
+		inputKeys.state |= 0x0008;
+		EI();
+		touchSetFlags(TOUCH_PANEL1);
+	}
+}
+
+void touchDisable1(void)
+{
+	DI();
+	inputKeys.state &= 0x00f7;
+	EI();
+	touchClearFlags(TOUCH_PANEL1);
+	touchClearFrames1();
+}
+#else
 /* enables panel 0 when it is present (inputKeys.state's bit 0x0004) */
 void touchEnable0(void)
 {
@@ -299,12 +489,74 @@ void touchDisable1(void)
 	touchClearFlags(TOUCH_PANEL1);
 	touchClearFrames1();
 }
+#endif
 
 #if FW_SINCE(0x01000306)
 /* writes length bytes at a controller's address, on the link the caller has taken: 0, 1 for
    no such panel, 2 if the transfer does not end */
 unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned int length,
 			    unsigned char panel)
+#if BOARD_USS1001
+{
+	struct Csi10Transfer transfer;
+	unsigned char retry;
+	unsigned char i;
+	struct Iica1Request request;
+	unsigned char status;
+	unsigned char tries;
+
+	if (length > sizeof(touchCommand.data))
+		return 1;
+	if (panel == 1) {
+		/* the rear panel, on IICA1: three tries */
+		tries = 3;
+		touchCommand.address = address;
+		memcpy(touchCommand.data, data, length);
+		do {
+			request.rxData = NULL;
+			request.rxCount = 0;
+			request.txData = (unsigned char *)&touchCommand;
+			request.txCount = length + 2;
+			request.address = IICA1_TOUCH;
+			request.status = &status;
+			if (iica1Transfer(&request) == 0)
+				break;
+		} while (tries-- != 0);
+		if (status != 0)
+			status += 0x10;
+		return status;
+	}
+	touchCommand.address = address * 2;
+	memcpy(touchCommand.data, data, length);
+	if (panel == 0)
+		P12.6 = 0;
+	else if (panel != 1)
+		return 1;
+	touchDelaySelect();
+	transfer.receive = (unsigned char *)&touchReply;
+	transfer.receiveCount = 0;
+	transfer.send = (unsigned char *)&touchCommand;
+	transfer.sendCount = length + 2;
+	transfer.state = CSI10_TRANSFER;
+	transfer.delay = touchDelays.writeByte;
+	csi10Transfer(&transfer);
+	retry = 0xff;
+	do {
+		if (csi10GetState() == CSI10_DONE) {
+			for (i = 0; i < touchDelays.deselect; i++)
+				NOP();
+			if (panel == 0)
+				P12.6 = 1;
+			else if (panel == 1)
+				;
+			for (i = 0; i < touchDelays.release; i++)
+				NOP();
+			return 0;
+		}
+	} while (retry-- != 0);
+	return 2;
+}
+#else
 {
 	struct Csi10Transfer transfer;
 	unsigned char retry;
@@ -339,10 +591,70 @@ unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned 
 	} while (retry-- != 0);
 	return 2;
 }
+#endif
 
 /* reads length bytes at a controller's address, as touchSpiWrite */
 unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned int length,
 			   unsigned char panel)
+#if BOARD_USS1001
+{
+	struct Csi10Transfer transfer;
+	unsigned char retry;
+	unsigned char i;
+	struct Iica1Request request;
+	unsigned char status;
+	unsigned char tries;
+
+	if (length > sizeof(touchCommand.data))
+		return 1;
+	if (panel == 1) {
+		tries = 3;
+		touchCommand.address = address;
+		do {
+			request.rxData = data;
+			request.rxCount = length;
+			request.txData = (unsigned char *)&touchCommand;
+			request.txCount = 2;
+			request.address = IICA1_TOUCH;
+			request.status = &status;
+			if (iica1Transfer(&request) == 0)
+				break;
+		} while (tries-- != 0);
+		if (status != 0)
+			status += 0x10;
+		return status;
+	}
+	touchCommand.address = address * 2 | TOUCH_READ;
+	if (panel == 0)
+		P12.6 = 0;
+	else if (panel != 1)
+		return 1;
+	touchDelaySelect();
+	transfer.receive = (unsigned char *)&touchReply;
+	transfer.receiveCount = length + 2;
+	transfer.send = (unsigned char *)&touchCommand;
+	transfer.sendCount = 2;
+	transfer.state = CSI10_TRANSFER;
+	transfer.delay = touchDelays.byte;
+	csi10Transfer(&transfer);
+	retry = 0xff;
+	do {
+		if (csi10GetState() == CSI10_DONE) {
+			for (i = 0; i < touchDelays.deselect; i++)
+				NOP();
+			if (panel == 0)
+				P12.6 = 1;
+			else if (panel == 1)
+				;
+			memcpy(data, touchReply.data, length);
+			for (i = 0; i < touchDelays.release; i++)
+				NOP();
+			return 0;
+		}
+	} while (retry-- != 0);
+	return 2;
+}
+#else
 {
 	struct Csi10Transfer transfer;
 	unsigned char retry;
@@ -377,7 +689,88 @@ unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned i
 	} while (retry-- != 0);
 	return 2;
 }
+#endif
 
+#if BOARD_USS1001
+/* writes length bytes to the rear panel's bootloader, on IICA1 (panel 1 only): 0, 1 for no
+   such panel or too long, 2 if the link stays busy, else 0x10 + the transfer's status */
+unsigned char touchBootloaderWrite(unsigned char *data, unsigned int length, unsigned char panel)
+{
+	struct Iica1Request request;
+	unsigned char status;
+	unsigned char tries = 3;
+	unsigned char wait;
+
+	if (length > sizeof(touchCommand.data))
+		return 1;
+	if (panel != 1)
+		return 1;
+	touchSetFlags(TOUCH_BUSY);
+	wait = 10;
+	while (TOUCH_LINK_BUSY()) {
+		if (wait-- == 0) {
+			status = 2;
+			goto unlock;
+		}
+		dly_tsk(1);
+	}
+	memcpy(touchCommand.data, data, length);
+	do {
+		request.rxData = NULL;
+		request.rxCount = 0;
+		request.txData = touchCommand.data;
+		request.txCount = length + 2;
+		request.address = IICA1_TOUCH_BOOTLOADER;
+		request.status = &status;
+		if (iica1Transfer(&request) == 0)
+			break;
+	} while (tries-- != 0);
+	if (status != 0)
+		status += 0x10;
+unlock:
+	touchClearFlags(TOUCH_BUSY);
+	return status;
+}
+
+/* reads length bytes from the rear panel's bootloader, as touchBootloaderWrite */
+unsigned char touchBootloaderRead(unsigned char *data, unsigned int length, unsigned char panel)
+{
+	struct Iica1Request request;
+	unsigned char status;
+	unsigned char tries = 3;
+	unsigned char wait;
+
+	if (length > sizeof(touchCommand.data))
+		return 1;
+	if (panel != 1)
+		return 1;
+	touchSetFlags(TOUCH_BUSY);
+	wait = 10;
+	while (TOUCH_LINK_BUSY()) {
+		if (wait-- == 0) {
+			status = 2;
+			goto unlock;
+		}
+		dly_tsk(1);
+	}
+	do {
+		request.rxData = data;
+		request.rxCount = length;
+		request.txData = NULL;
+		request.txCount = 0;
+		request.address = IICA1_TOUCH_BOOTLOADER;
+		request.status = &status;
+		if (iica1Transfer(&request) == 0)
+			break;
+	} while (tries-- != 0);
+	if (status != 0)
+		status += 0x10;
+unlock:
+	touchClearFlags(TOUCH_BUSY);
+	return status;
+}
+
+#endif
 /* writes, and reads back to compare, as the settings block says: 0, 2 if the link stays busy,
    3 if no try compared */
 unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
@@ -391,7 +784,7 @@ unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
 
 	touchSetFlags(TOUCH_BUSY);
 	wait = 10;
-	while (csi10GetState() != CSI10_OPEN) {
+	while (TOUCH_LINK_BUSY()) {
 		if (wait-- == 0) {
 			result = 2;
 			goto unlock;
@@ -431,7 +824,7 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 
 	touchSetFlags(TOUCH_BUSY);
 	wait = 10;
-	while (csi10GetState() != CSI10_OPEN) {
+	while (TOUCH_LINK_BUSY()) {
 		if (wait-- == 0) {
 			result = 2;
 			goto unlock;
@@ -453,7 +846,7 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 
 	touchSetFlags(TOUCH_BUSY);
 	wait = 10;
-	while (csi10GetState() != CSI10_OPEN) {
+	while (TOUCH_LINK_BUSY()) {
 		if (wait-- == 0) {
 			result = 2;
 			goto unlock;
@@ -476,7 +869,7 @@ unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int
 	unsigned char retry;
 
 	retry = 10;
-	while (csi10GetState() != CSI10_OPEN) {
+	while (TOUCH_LINK_BUSY()) {
 		if (retry-- == 0)
 			goto busy;
 		dly_tsk(1);
@@ -536,7 +929,7 @@ unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int 
 	unsigned char retry;
 
 	retry = 10;
-	while (csi10GetState() != CSI10_OPEN) {
+	while (TOUCH_LINK_BUSY()) {
 		if (retry-- == 0)
 			goto busy;
 		dly_tsk(1);
@@ -591,7 +984,117 @@ busy:
 }
 #endif
 
-#if FW_SINCE(0x00090009)
+#if BOARD_USS1001
+/* reads panel 0's information block, and its object table when its firmware changed or the
+   last read failed: 0, the read's error, or 4 for a table too long */
+unsigned char touchIdentify0(void)
+{
+	unsigned char result;
+	unsigned char info[TOUCH_INFO_SIZE];
+
+	if (P4.1) {
+		result = touchRead(0x0000, info, sizeof(info), 0);
+		if (result != 0) {
+			memset(&touch.panel[0], 0xff, 4);
+		} else if (info[TOUCH_INFO_VERSION] != touch.panel[0].version ||
+			   info[TOUCH_INFO_BUILD] != touch.panel[0].build ||
+			   touch.panel[0].objectsUnread) {
+			/* version 0x10 is 9 unless its build is 0xaa */
+			if (info[TOUCH_INFO_VERSION] == 0x10 && info[TOUCH_INFO_BUILD] != 0xaa)
+				info[TOUCH_INFO_VERSION] = 9;
+			memcpy(&touch.panel[0], info, 4);
+			if ((info[0] & 0xc0) == 0xc0) {
+				touch.panel[0].objectsUnread = 0;
+				result = 0;
+			} else if (info[TOUCH_INFO_OBJECTS] < TOUCH_OBJECTS_MAX) {
+				touch.panel[0].objectsUnread = 0;
+				result = touchReadObjects(&touch.panel[0].objects,
+							  info[TOUCH_INFO_OBJECTS], 0);
+				if (result != 0)
+					touch.panel[0].objectsUnread = 1;
+			} else {
+				touch.panel[0].objectsUnread = 1;
+				result = 4;
+			}
+		}
+	} else {
+		result = 0;
+		memset(&touch.panel[0], 0xff, 4);
+	}
+	return result;
+}
+
+/* reads panel 1's information block, and its object table when its firmware changed or the
+   last read failed: 0, the read's error, or 4 for a table too long;
+   a controller in its bootloader has its status as its information */
+unsigned char touchIdentify1(void)
+{
+	unsigned char result;
+	unsigned char info[TOUCH_INFO_SIZE];
+
+	if (P4.2) {
+		result = touchRead(0x0000, info, sizeof(info), 1);
+		if (result != 0) {
+			/* 0x11: no answer at the controller's address; its bootloader's status
+			   fills the panel's information */
+			if (result == 0x11) {
+				result = touchBootloaderStatus1(info);
+				if (result != 0)
+					memset(&touch.panel[1], 0xff, 4);
+				else
+					memset(&touch.panel[1], info[0], 4);
+			} else
+				memset(&touch.panel[1], 0xff, 4);
+		} else if (info[TOUCH_INFO_VERSION] != touch.panel[1].version ||
+			   info[TOUCH_INFO_BUILD] != touch.panel[1].build ||
+			   touch.panel[1].objectsUnread) {
+			/* version 0x10 is 9 unless its build is 0xaa */
+			if (info[TOUCH_INFO_VERSION] == 0x10 && info[TOUCH_INFO_BUILD] != 0xaa)
+				info[TOUCH_INFO_VERSION] = 9;
+			memcpy(&touch.panel[1], info, 4);
+			if ((info[0] & 0xc0) == 0xc0) {
+				touch.panel[1].objectsUnread = 0;
+				result = 0;
+			} else if (info[TOUCH_INFO_OBJECTS] < TOUCH_OBJECTS_MAX) {
+				touch.panel[1].objectsUnread = 0;
+				result = touchReadObjects(&touch.panel[1].objects,
+							  info[TOUCH_INFO_OBJECTS], 1);
+				if (result != 0)
+					touch.panel[1].objectsUnread = 1;
+			} else {
+				touch.panel[1].objectsUnread = 1;
+				result = 4;
+			}
+		}
+	} else {
+		result = 0;
+		memset(&touch.panel[1], 0xff, 4);
+	}
+	return result;
+}
+
+/* the bootloader's status byte, its two state bits alone when one is set */
+unsigned char touchBootloaderStatus0(unsigned char *status)
+{
+	unsigned char result;
+
+	result = touchRead(TOUCH_BOOTLOADER, status, 1, 0);
+	if (result == 0 && (*status & 0xc0) != 0)
+		*status &= 0xc0;
+	return result;
+}
+
+/* the rear panel's bootloader is on IICA1 */
+unsigned char touchBootloaderStatus1(unsigned char *status)
+{
+	unsigned char result;
+
+	result = touchBootloaderRead(status, 1, 1);
+	if (result == 0 && (*status & 0xc0) != 0)
+		*status &= 0xc0;
+	return result;
+}
+#elif FW_SINCE(0x00090009)
 /* reads panel 0's information block, and its object table when its firmware changed */
 void touchIdentify0(void)
 {
@@ -698,6 +1201,7 @@ void touchIdentify1(void)
 }
 #endif
 
+#if !BOARD_USS1001
 unsigned char touchBootloaderStatus0(unsigned char *status)
 {
 	return touchRead(TOUCH_BOOTLOADER, status, 1, 0);
@@ -707,6 +1211,7 @@ unsigned char touchBootloaderStatus1(unsigned char *status)
 {
 	return touchRead(TOUCH_BOOTLOADER, status, 1, 1);
 }
+#endif
 
 /* resets the controller into its bootloader */
 unsigned char touchEnterBootloader0(void)
@@ -740,7 +1245,11 @@ unsigned char touchBootloaderUnlock1(void)
 
 	command[0] = 0xdc;
 	command[1] = 0xaa;
+#if BOARD_USS1001
+	return touchBootloaderWrite(command, 2, 1);
+#else
 	return touchWrite(TOUCH_BOOTLOADER, command, 2, 1);
+#endif
 }
 
 #if FW_SINCE(0x00090009)	/* 0x00080504: no backup, reset or power commands */
@@ -834,6 +1343,64 @@ unsigned char touchSetPower1(unsigned char interval)
 /* PDEL's 0x01000104 and 0x01000107 read the modes of a changed configuration before it keeps the version */
 #define TOUCH_MODES_BEFORE_VERSION	(BOARD_IS(0x00416000) && !FW_SINCE(0x01000109))
 
+#if BOARD_USS1001
+/* reads the user data's configuration version into data (2 bytes), and the modes when it
+   changed or their last read failed; a controller in its bootloader gives its version as
+   bytes 4-5 of its 6-byte answer */
+unsigned char touchReadConfigVersion0(unsigned char *data)
+{
+	unsigned char result;
+	unsigned char status;
+	unsigned int version;
+
+	if ((touch.panel[0].family & 0xc0) == 0xc0) {
+		result = touchRead(TOUCH_BOOTLOADER, touchBufferData, 6, 0);
+		if (result == 0) {
+			data[0] = touchBufferData[4];
+			data[1] = touchBufferData[5];
+		}
+	} else
+		result = touchRead(touch.panel[0].objects.userData, data, 2, 0);
+	if (result == 0) {
+		version = (unsigned int)data[0] << 8 | data[1];
+		if (touch.panel[0].configVersion != version || touch.panel[0].modesUnread) {
+			touch.panel[0].configVersion = version;
+			result = touchReadModes0();
+		}
+	}
+	return result;
+}
+
+/* the rear controller does not answer (0x11) in its bootloader, which is asked instead */
+unsigned char touchReadConfigVersion1(unsigned char *data)
+{
+	unsigned char result;
+	unsigned char status;
+	unsigned int version;
+
+	result = touchRead(touch.panel[1].objects.userData, data, 2, 1);
+	if (result == 0) {
+		version = (unsigned int)data[0] << 8 | data[1];
+		if (touch.panel[1].configVersion != version || touch.panel[1].modesUnread) {
+			touch.panel[1].configVersion = version;
+			result = touchReadModes1();
+		}
+	} else if (result == 0x11) {
+		result = touchBootloaderStatus1(&status);
+		if (result == 0) {
+			result = touchBootloaderRead(touchBufferData, 6, 1);
+			if (result == 0) {
+				data[0] = touchBufferData[4];
+				data[1] = touchBufferData[5];
+				version = (unsigned int)data[0] << 8 | data[1];
+				if (touch.panel[1].configVersion != version)
+					touch.panel[1].configVersion = version;
+			}
+		}
+	}
+	return result;
+}
+#else
 unsigned char touchReadConfigVersion0(unsigned char *data)
 {
 #if FW_SINCE(0x01000104)
@@ -893,7 +1460,222 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 	return touchRead(touch.panel[1].objects.userData, data, 2, 1);
 #endif
 }
+#endif
 
+#if BOARD_USS1001
+/* the user data's bytes 12-19 */
+unsigned char touchReadUserData0(unsigned char *data)
+{
+	return touchRead(touch.panel[0].objects.userData + 0x0c, data, 8, 0);
+}
+
+unsigned char touchReadUserData1(unsigned char *data)
+{
+	return touchRead(touch.panel[1].objects.userData + 0x0c, data, 8, 1);
+}
+
+/* runs a self test (T25); *pass 0 if it passed, else 0xff; the result's address in T34
+   by the controller's family and variant */
+unsigned char touchSelfTest0(unsigned char test, unsigned char *pass)
+{
+	unsigned int address;
+	unsigned char command[2];
+	unsigned char value;
+	unsigned char result;
+
+	command[0] = 3;
+	command[1] = test;
+	touchWrite(touch.panel[0].objects.selfTest, command, 2, 0);
+	dly_tsk(8);
+	if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
+		address = touch.panel[0].objects.t34 + 0x5b;
+	else if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x1a)
+		address = touch.panel[0].objects.t34 + 0x54;
+	else
+		address = touch.panel[0].objects.t34 + 0x62;
+	result = touchRead(address, &value, 1, 0);
+	if (result == 0) {
+		if (value == 0xfe)
+			*pass = 0;
+		else
+			*pass = 0xff;
+	} else
+		*pass = 0xff;
+	return result;
+}
+
+unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
+{
+	unsigned int address;
+	unsigned char command[2];
+	unsigned char value;
+	unsigned char result;
+
+	command[0] = 3;
+	command[1] = test;
+	touchWrite(touch.panel[1].objects.selfTest, command, 2, 1);
+	dly_tsk(8);
+	if (touch.panel[1].family == 0x82 && touch.panel[1].variant == 0x27)
+		address = touch.panel[1].objects.t34 + 0x31;
+	else
+		address = touch.panel[1].objects.t34 + 0x62;
+	result = touchRead(address, &value, 1, 1);
+	if (result == 0) {
+		if (value == 0xfe)
+			*pass = 0;
+		else
+			*pass = 0xff;
+	} else
+		*pass = 0xff;
+	return result;
+}
+/* T51's byte 4; 2 for family 0x80 variant 0x0a before version 0x31, which have none */
+unsigned char touchSetT51Byte4_0(unsigned char value)
+{
+	unsigned char byte;
+	unsigned char result;
+
+	if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a &&
+	    touch.panel[0].version < 0x31)
+		result = 2;
+	else {
+		byte = value;
+		result = touchWrite(touch.panel[0].objects.t51 + 4, &byte, 1, 0);
+	}
+	return result;
+}
+
+unsigned char touchSetT51Byte4_1(unsigned char value)
+{
+	unsigned char byte;
+	unsigned char result;
+
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a &&
+	    touch.panel[1].version < 0x31)
+		result = 2;
+	else {
+		byte = value;
+		result = touchWrite(touch.panel[1].objects.t51 + 4, &byte, 1, 1);
+	}
+	return result;
+}
+
+/* T34's 7 bytes from 0x70 (0x69 for family 0x82 variant 0x1a; the rear's 0x82 0x27 from 0x46) */
+unsigned char touchReadT34Bytes0(unsigned char *data)
+{
+	unsigned int address;
+	unsigned char result;
+
+	if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
+		address = touch.panel[0].objects.t34 + 0x70;
+	else if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x1a)
+		address = touch.panel[0].objects.t34 + 0x69;
+	else
+		address = touch.panel[0].objects.t34 + 0x70;
+	result = touchRead(address, data, 7, 0);
+	return result;
+}
+
+unsigned char touchReadT34Bytes1(unsigned char *data)
+{
+	unsigned int address;
+	unsigned char result;
+
+	if (touch.panel[1].family == 0x82 && touch.panel[1].variant == 0x27)
+		address = touch.panel[1].objects.t34 + 0x46;
+	else
+		address = touch.panel[1].objects.t34 + 0x70;
+	result = touchRead(address, data, 7, 1);
+	return result;
+}
+
+/* T51's bytes 5-6, and 9-10, as touchSetT51Byte4_0 */
+unsigned char touchSetT51Bytes5_0(unsigned char *data)
+{
+	unsigned char result;
+
+	if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a &&
+	    touch.panel[0].version < 0x31)
+		result = 2;
+	else
+		result = touchWrite(touch.panel[0].objects.t51 + 5, data, 2, 0);
+	return result;
+}
+
+unsigned char touchSetT51Bytes5_1(unsigned char *data)
+{
+	unsigned char result;
+
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a &&
+	    touch.panel[1].version < 0x31)
+		result = 2;
+	else
+		result = touchWrite(touch.panel[1].objects.t51 + 5, data, 2, 1);
+	return result;
+}
+
+unsigned char touchSetT51Bytes9_0(unsigned char *data)
+{
+	unsigned char result;
+
+	if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a &&
+	    touch.panel[0].version < 0x31)
+		result = 2;
+	else
+		result = touchWrite(touch.panel[0].objects.t51 + 9, data, 2, 0);
+	return result;
+}
+
+unsigned char touchSetT51Bytes9_1(unsigned char *data)
+{
+	unsigned char result;
+
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a &&
+	    touch.panel[1].version < 0x31)
+		result = 2;
+	else
+		result = touchWrite(touch.panel[1].objects.t51 + 9, data, 2, 1);
+	return result;
+}
+
+/* T18's byte 1 */
+unsigned char touchSetComms(unsigned char value, unsigned char panel)
+{
+	unsigned char result = 0;
+	unsigned int address;
+
+	if (panel == 0)
+		address = touch.panel[0].objects.comms + 1;
+	else
+		address = touch.panel[1].objects.comms + 1;
+	result = touchWrite(address, &value, 1, panel);
+	return result;
+}
+
+/* *set 1 when T34's byte 7 has bit 3 (or the rear controller is in its bootloader), else 0 */
+unsigned char touchReadT34Bit3(unsigned char *set, unsigned char panel)
+{
+	unsigned char result;
+	unsigned char value;
+	unsigned int address;
+
+	if (panel == 0)
+		address = touch.panel[0].objects.t34;
+	else
+		address = touch.panel[1].objects.t34;
+	address += 7;
+	result = touchRead(address, &value, 1, panel);
+	if (result == 0)
+		*set = (value & 0x08) ? 1 : 0;
+	else if (result == 0x11) {
+		result = touchBootloaderStatus1(&value);
+		if (result == 0)
+			*set = 1;
+	} else
+		*set = 0;
+	return result;
+}
+#else
 /* the user data's bytes 12-19 */
 unsigned char touchReadUserData0(unsigned char *data)
 {
@@ -998,6 +1780,7 @@ unsigned char touchSelfTest1(unsigned char test, unsigned char *pass)
 	return result;
 }
 #endif
+#endif
 
 /* after a chip select */
 void touchDelaySelect(void)
@@ -1008,7 +1791,110 @@ void touchDelaySelect(void)
 		NOP();
 }
 
-#if FW_SINCE(0x00090009)	/* 0x00080504 reads no object table */
+#if BOARD_USS1001
+/* reads a controller's object table: the addresses of the objects the module uses; 4 when the
+   table lacks one the controller's family and variant should have */
+unsigned char touchReadObjects(struct TouchObjects *objects, unsigned char count,
+			       unsigned char panel)
+{
+	unsigned char result;
+	unsigned char i;
+	unsigned int address;
+	unsigned int object;
+	unsigned int found;
+	struct TouchObject *table;
+	unsigned int kind;
+
+	found = 0;
+	address = TOUCH_INFO_SIZE;
+	table = (struct TouchObject *)touchBufferData;
+	result = touchRead(address, (unsigned char *)table, (unsigned char)(count * 6), panel);
+	if (result == 0) {
+		for (i = 0; i < count; i++) {
+			object = TOUCH_OBJECT_ADDRESS(table[i]);
+			if (object >= TOUCH_INFO_SIZE && object < 0x801) {
+				switch (table[i].type) {
+				case 6:
+					found |= TOUCH_FOUND_RESET;
+					objects->reset = object;
+					objects->backup = object + 1;
+					break;
+				case 7:
+					found |= TOUCH_FOUND_POWER;
+					objects->power = object;
+					break;
+				case 9:
+					found |= TOUCH_FOUND_TOUCH;
+					objects->numTouch = object + 0x0e;
+					objects->touchScreen = object;
+					break;
+				case 18:
+					found |= TOUCH_FOUND_COMMS;
+					objects->comms = object;
+					break;
+				case 20:
+					found |= TOUCH_FOUND_GRIP;
+					objects->grip = object;
+					break;
+				case 22:
+					found |= TOUCH_FOUND_NOISE;
+					objects->noise = object;
+					break;
+				case 25:
+					found |= TOUCH_FOUND_SELF_TEST;
+					objects->selfTest = object;
+					break;
+				case 28:
+					found |= TOUCH_FOUND_CTE;
+					objects->cte = object;
+					break;
+				case 34:
+					found |= TOUCH_FOUND_REPORT;
+					objects->report = object + 0x0e;
+					objects->t34 = object;
+					break;
+				case 38:
+					found |= TOUCH_FOUND_USER_DATA;
+					objects->userData = object;
+					break;
+				case 51:
+					found |= TOUCH_FOUND_T51;
+					objects->t51 = object;
+					break;
+				}
+			}
+		}
+	}
+	if (panel == 0)
+		kind = (unsigned int)touch.panel[0].family << 8 | touch.panel[0].variant;
+	else
+		kind = (unsigned int)touch.panel[1].family << 8 | touch.panel[1].variant;
+	/* the report's address doubles but for 0x8227 */
+	switch (kind) {
+	case 0x800a:
+		objects->report *= 2;
+		if (found != TOUCH_FOUND_ALL)
+			result = 4;
+		break;
+	case 0x8227:
+		if (found != TOUCH_FOUND_REAR)
+			result = 4;
+		break;
+	case 0x821a:
+		objects->report *= 2;
+		if (found != TOUCH_FOUND_REAR)
+			result = 4;
+		break;
+	case 0x822b:
+	default:
+		objects->report *= 2;
+		if (found != TOUCH_FOUND_REAR)
+			result = 4;
+		break;
+	}
+	return result;
+}
+#elif FW_SINCE(0x00090009)	/* 0x00080504 reads no object table */
 /* reads a controller's object table: the addresses of the objects the module uses */
 void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigned char panel)
 {
@@ -1082,6 +1968,7 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 #endif
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
+#if !BOARD_USS1001	/* USS-1001's modes follow touchSetModePin */
 /* writes mode's settings to both controllers */
 void touchSetMode(unsigned char mode)
 {
@@ -1138,8 +2025,160 @@ void touchSetMode(unsigned char mode)
 #endif
 	}
 }
+#endif
 
+#if BOARD_USS1001
+/* P3.2 low in modes 1 and 2, high in mode 0 */
+void touchSetModePin(unsigned char mode)
+{
+	switch (mode) {
+	case 1:
+	case 2:
+		P3.2 = 0;
+		break;
+	case 0:
+	default:
+		P3.2 = 1;
+		break;
+	}
+}
+
+#endif
 /* modes 1 and 2 from panel 0's user data, mode 0 from its objects */
+#if BOARD_USS1001
+/* reads the controller's modes, family 0x80 variant 0x0a only: the last error */
+unsigned char touchReadModes0(void)
+{
+	unsigned char result;
+	unsigned char failed;
+	unsigned int address;
+	unsigned char data[TOUCH_MODE_SIZE];
+
+	failed = 0;
+	touch.panel[0].modesUnread = 0;
+	if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a) {
+		address = touch.panel[0].objects.userData + 2;
+		result = touchRead(address, data, sizeof(data), 0);
+		if (result == 0) {
+			memcpy(&touch.panel[0].modes[2], data, sizeof(data));
+			memcpy(&touch.panel[0].modes[1], data, sizeof(data) - 1);
+		} else
+			failed = result;
+		address = touch.panel[0].objects.t51 + 3;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0)
+			touch.panel[0].modes[0].t51 = data[0];
+		else
+			failed = result;
+		address = touch.panel[0].objects.touchScreen + 7;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0)
+			touch.panel[0].modes[0].threshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[0].objects.touchScreen + 0x1f;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0)
+			touch.panel[0].modes[0].hysteresis = data[0];
+		else
+			failed = result;
+		address = touch.panel[0].objects.touchScreen + 0x10;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0)
+			touch.panel[0].modes[0].mergeThreshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[0].objects.noise + 8;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0)
+			touch.panel[0].modes[0].noiseThreshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[0].objects.noise + 0x0c;
+		result = touchRead(address, data, 4, 0);
+		if (result == 0)
+			memcpy(touch.panel[0].modes[0].frequency, data, 4);
+		else
+			failed = result;
+		address = touch.panel[0].objects.cte + 4;
+		result = touchRead(address, data, 1, 0);
+		if (result == 0) {
+			touch.panel[0].modes[0].gcafDepth = data[0];
+			touch.panel[0].modes[1].gcafDepth = data[0];
+		} else
+			failed = result;
+		if (failed != 0)
+			touch.panel[0].modesUnread = 1;
+	}
+	return failed;
+}
+
+unsigned char touchReadModes1(void)
+{
+	unsigned char result;
+	unsigned char failed;
+	unsigned int address;
+	unsigned char data[TOUCH_MODE_SIZE];
+
+	failed = 0;
+	touch.panel[1].modesUnread = 0;
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a) {
+		address = touch.panel[1].objects.userData + 2;
+		result = touchRead(address, data, sizeof(data), 1);
+		if (result == 0) {
+			memcpy(&touch.panel[1].modes[2], data, sizeof(data));
+			memcpy(&touch.panel[1].modes[1], data, sizeof(data) - 1);
+		} else
+			failed = result;
+		address = touch.panel[1].objects.t51 + 3;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0)
+			touch.panel[1].modes[0].t51 = data[0];
+		else
+			failed = result;
+		address = touch.panel[1].objects.touchScreen + 7;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0)
+			touch.panel[1].modes[0].threshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[1].objects.touchScreen + 0x1f;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0)
+			touch.panel[1].modes[0].hysteresis = data[0];
+		else
+			failed = result;
+		address = touch.panel[1].objects.touchScreen + 0x10;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0)
+			touch.panel[1].modes[0].mergeThreshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[1].objects.noise + 8;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0)
+			touch.panel[1].modes[0].noiseThreshold = data[0];
+		else
+			failed = result;
+		address = touch.panel[1].objects.noise + 0x0c;
+		result = touchRead(address, data, 4, 1);
+		if (result == 0)
+			memcpy(touch.panel[1].modes[0].frequency, data, 4);
+		else
+			failed = result;
+		address = touch.panel[1].objects.cte + 4;
+		result = touchRead(address, data, 1, 1);
+		if (result == 0) {
+			touch.panel[1].modes[0].gcafDepth = data[0];
+			touch.panel[1].modes[1].gcafDepth = data[0];
+		} else
+			failed = result;
+		if (failed != 0)
+			touch.panel[1].modesUnread = 1;
+	}
+	return failed;
+}
+#else
 void touchReadModes0(void)
 {
 	int result;
@@ -1243,16 +2282,25 @@ void touchReadModes1(void)
 #endif
 	}
 }
+#endif
 
 /* the state the frames carry; mode 1 from now on */
+#if BOARD_USS1001
+void touchClearMode(void)
+{
+	touch.state.bits.mode = 0;
+	touchSetModePin(0);
+}
+
+#endif
 void touchUpdateState(void)
 {
-#if BOARD_TOUCH_CHARGE || FW_SINCE(0x01000109)
+#if BOARD_TOUCH_CHARGE || BOARD_USS1001 || FW_SINCE(0x01000109)
 	unsigned char mode;
 #endif
 
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
-#if BOARD_TOUCH_CHARGE
+#if BOARD_TOUCH_CHARGE || BOARD_USS1001
 		touch.state.bits.power = chargeGetAc() | chargeGetCharging();
 #elif FW_SINCE(0x01000104)
 		touch.state.bits.power = 1;
@@ -1262,7 +2310,7 @@ void touchUpdateState(void)
 		touch.state.bits.input3 = input1Bit3Active();
 		touch.state.bits.input5 = input1Bit5Active();
 		touch.state.bits.input0 = input1Bit0Active();
-#if BOARD_TOUCH_CHARGE
+#if BOARD_TOUCH_CHARGE || BOARD_USS1001
 		if (touch.state.value & 0xf0) {
 			if (chargeUsbIs1() || chargeUsbIs2())
 				mode = 2;
@@ -1275,7 +2323,11 @@ void touchUpdateState(void)
 #endif
 #if FW_SINCE(0x01000109)
 		if (touch.state.bits.mode != mode) {
+#if BOARD_USS1001
+			touchSetModePin(mode);	/* the controllers' modes follow the pin */
+#else
 			touchSetMode(mode);
+#endif
 			touch.state.bits.mode = mode;
 		}
 #else
@@ -1294,7 +2346,7 @@ void touchUpdateState(void)
 }
 #endif
 
-#if FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090903) && !BOARD_USS1001	/* USS-1001 reads no grip status */
 /* enables panel 0's grip status (T20), which each frame then reads */
 unsigned char touchStatusOn0(void)
 {
@@ -1378,7 +2430,67 @@ unsigned char touchSetGrip1(unsigned char *data)
 }
 #endif
 
-#if FW_SINCE(0x0100060B)
+#if BOARD_USS1001
+/* the grip edges (4 bytes), kept in the panel's gripEdges: T20's bytes 1-4 for family 0x80
+   variant 0x0a before version 0x30, else the user data's bytes 20-23; a controller in its
+   bootloader gives them as bytes 6-9 of its 10-byte answer */
+unsigned char touchReadGripEdges0(unsigned char *data)
+{
+	unsigned char result;
+	unsigned char status;
+	unsigned int address;
+
+	if ((touch.panel[0].family & 0xc0) == 0xc0) {
+		result = touchRead(TOUCH_BOOTLOADER, touchBufferData, 10, 0);
+		if (result == 0) {
+			memcpy(data, &touchBufferData[6], 4);
+			memcpy(touch.panel[0].gripEdges, &touchBufferData[6], 4);
+		}
+	} else {
+		if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a) {
+			if (touch.panel[0].version < 0x30)
+				address = touch.panel[0].objects.grip + 1;
+			else
+				address = touch.panel[0].objects.userData + 0x14;
+		} else
+			address = touch.panel[0].objects.userData + 0x14;
+		result = touchRead(address, data, 4, 0);
+		if (result == 0)
+			memcpy(touch.panel[0].gripEdges, data, 4);
+	}
+	return result;
+}
+
+/* the rear controller does not answer (0x11) in its bootloader, which is asked instead */
+unsigned char touchReadGripEdges1(unsigned char *data)
+{
+	unsigned char result;
+	unsigned char status;
+	unsigned int address;
+
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a) {
+		if (touch.panel[1].version < 0x30)
+			address = touch.panel[1].objects.grip + 1;
+		else
+			address = touch.panel[1].objects.userData + 0x14;
+	} else
+		address = touch.panel[1].objects.userData + 0x14;
+	result = touchRead(address, data, 4, 1);
+	if (result == 0)
+		memcpy(touch.panel[1].gripEdges, data, 4);
+	else if (result == 0x11) {
+		result = touchBootloaderStatus1(&status);
+		if (result == 0) {
+			result = touchBootloaderRead(touchBufferData, 10, 1);
+			if (result == 0) {
+				memcpy(data, &touchBufferData[6], 4);
+				memcpy(touch.panel[1].gripEdges, &touchBufferData[6], 4);
+			}
+		}
+	}
+	return result;
+}
+#elif FW_SINCE(0x0100060B)
 /* T20's bytes 1-4, kept in the panel's gripEdges */
 unsigned char touchReadGripEdges0(unsigned char *data)
 {
@@ -1445,5 +2557,93 @@ void touchGetReportIds(unsigned char *ids)
 	for (offset = 0, i = 0; i < touch.setting[1]; i++, offset += 6)
 		*ids++ = touchFrames[touch.frame].panel[1][offset];
 #endif
+}
+#endif
+
+#if BOARD_USS1001
+/*
+ * Request 0x038a: whether the mode pin (P3.2) switches each panel's touch threshold (T9's byte 7):
+ * with the pin high it is not T38's byte 4, with it low it is, and high again it is back. *out
+ * 0, or the first that fails: 0xfd panel 0 high, 0xfc panel 1 high, 0xff panel 0 low, 0xfe panel
+ * 1 low. The pin is left as it was.
+ */
+unsigned char touchTestModePin(unsigned char *out)
+{
+	unsigned int address;
+	unsigned char high0;
+	unsigned char low0;
+	unsigned char high1;
+	unsigned char low1;
+	unsigned char value;
+	unsigned char pin;
+	unsigned char result = 0;
+
+	*out = 0;
+	pin = P3.2;
+	P3.2 = 1;
+	dly_tsk(8);
+	address = touch.panel[0].objects.touchScreen + 7;
+	result = touchRead(address, &high0, 1, 0);
+	if (result != 0)
+		goto done;
+	address = touch.panel[0].objects.userData + 4;
+	result = touchRead(address, &low0, 1, 0);
+	if (result != 0)
+		goto done;
+	address = touch.panel[1].objects.touchScreen + 7;
+	result = touchRead(address, &high1, 1, 1);
+	if (result != 0)
+		goto done;
+	address = touch.panel[1].objects.userData + 4;
+	result = touchRead(address, &low1, 1, 1);
+	if (result != 0)
+		goto done;
+	if (high0 == low0) {
+		*out = 0xfd;
+		goto done;
+	}
+	if (high1 == low1) {
+		*out = 0xfc;
+		goto done;
+	}
+
+	P3.2 = 0;
+	dly_tsk(8);
+	address = touch.panel[0].objects.touchScreen + 7;
+	result = touchRead(address, &value, 1, 0);
+	if (result != 0)
+		goto done;
+	if (value != low0) {
+		*out = 0xff;
+		goto done;
+	}
+	address = touch.panel[1].objects.touchScreen + 7;
+	result = touchRead(address, &value, 1, 1);
+	if (result != 0)
+		goto done;
+	if (value != low1) {
+		*out = 0xfe;
+		goto done;
+	}
+
+	P3.2 = 1;
+	dly_tsk(8);
+	address = touch.panel[0].objects.touchScreen + 7;
+	result = touchRead(address, &value, 1, 0);
+	if (result != 0)
+		goto done;
+	if (value != high0) {
+		*out = 0xfd;
+		goto done;
+	}
+	address = touch.panel[1].objects.touchScreen + 7;
+	result = touchRead(address, &value, 1, 1);
+	if (result != 0)
+		goto done;
+	if (value != high1)
+		*out = 0xfc;
+done:
+	P3.2 = pin;
+	return result;
 }
 #endif

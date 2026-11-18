@@ -14,6 +14,7 @@ extern const unsigned char timeStampDigits[12];
 extern unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandTimeStamp(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandHardwareInfo(unsigned char *out, unsigned char *length);
+extern unsigned char hostCommand0006(unsigned char *out, unsigned char *length);	/* the slim's */
 extern unsigned char hostCommandWakeupFactor(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandClock(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandAlarm(unsigned char *out, unsigned char *length);
