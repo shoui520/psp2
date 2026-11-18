@@ -138,9 +138,9 @@ void btSbcSyncEntry(void)
 /* Waits a number of event clock ticks. */
 __attribute__((noinline)) int btSbcApplyEntry(uint32_t ticks)
 {
-	uint32_t start = SOC_EVENT_CLOCK;
+	uint32_t start = FM_EVENT_CLOCK;
 
-	while (SOC_EVENT_CLOCK - start < ticks)
+	while (FM_EVENT_CLOCK - start < ticks)
 		;
 	return 0;
 }
@@ -480,7 +480,7 @@ void btSbcVerifyEntry(void)
 		return;
 	}
 	fmSettings.rdsFlags |= FM_RDS_RECEIVING;
-	now = SOC_EVENT_CLOCK;
+	now = FM_EVENT_CLOCK;
 	if (now > fmTuner.rdsLastClock)
 		elapsed = now - fmTuner.rdsLastClock;
 	else
@@ -639,17 +639,17 @@ __attribute__((noinline)) int btSbcUpdateTable(uint32_t frequency, int tolerance
 	result = 1;
 	upper = fmTuner.measureSpread + tolerance;
 	lower = -upper;
-	value = FM_REGISTER(0x03c);
+	value = FM_REGISTER(0x23c);
 	gain = value >> 2 & 7;
-	FM_REGISTER(0x03c) = (value & ~0x1c) | fmTuner.measureGain << 2;
+	FM_REGISTER(0x23c) = (value & ~0x1c) | fmTuner.measureGain << 2;
 	*mean = 0;
 	for (i = 0; i < FM_MEASURE_POINTS; i = (uint8_t)(i + 1)) {
 		btFmFrequencyHook(frequency + offset);
-		value = FM_REGISTER(0x038);
-		FM_REGISTER(0x038) = value | 4;
-		FM_REGISTER(0x038) = value & ~4;
+		value = FM_REGISTER(0x238);
+		FM_REGISTER(0x238) = value | 4;
+		FM_REGISTER(0x238) = value & ~4;
 		btSbcApplyEntry(((uint32_t)fmTuner.measureTime << 15) / 1000 + 1);
-		levels[i] = FM_REGISTER(0x044);
+		levels[i] = FM_REGISTER(0x244);
 		if (fmTuner.measureScale != 0)
 			levels[i] = levels[i] * 0x5b3 >> 16;
 		else
@@ -678,7 +678,7 @@ __attribute__((noinline)) int btSbcUpdateTable(uint32_t frequency, int tolerance
 		}
 	}
 out:
-	FM_REGISTER(0x03c) = (FM_REGISTER(0x03c) & ~0x1c) | gain << 2;
+	FM_REGISTER(0x23c) = (FM_REGISTER(0x23c) & ~0x1c) | gain << 2;
 	return result;
 }
 
@@ -1511,14 +1511,15 @@ void btSbcConfigureBuffer(uint8_t scan, uint8_t offset)
 void btSbcCheckBuffer(uint32_t frequency)
 {
 	uint16_t sum = 0, best = 0, ties = 0, index, saved;
-	unsigned int enabled, rate, level, setting;
+	unsigned int enabled, rate, level, setting, value;
 
 	(void)frequency;
 	enabled = FM_REGISTER(0x05c) & 1;
 	btSbcRomHandleEntry(enabled);
 	if ((fmSettings.tuneFlags & FM_TUNE_OFFSET) != 0 && fmTuner.antennaScan != 0) {
-		saved = FM_REGISTER(0x22c) & 0xf;
-		FM_REGISTER(0x22c) = (FM_REGISTER(0x22c) & ~0xf) + 8;
+		value = FM_REGISTER(0x22c);
+		saved = value & 0xf;
+		FM_REGISTER(0x22c) = (value & ~0xf) + 8;
 		rate = FM_REGISTER(0x12c) >> 7 & 0xf;
 		if (btSbcParseTable() > 50) {
 			for (index = 0; index < 32; index++) {
@@ -1675,20 +1676,23 @@ void btSbcSyncBuffer(uint32_t value, int raise)
 void btSbcApplyBuffer(uint32_t value, int swap)
 {
 	const struct FmLevelStep *step;
+	uint16_t output;
 
 	step = btSbcInspectBuffer(value);
 	if (swap != 0)
-		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff) | (step->outputs >> 24) << 8;
+		output = (FM_REGISTER(0x398) & 0xff) | (step->outputs >> 24) << 8;
 	else
-		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff00) | (step->outputs & 0xff);
+		output = (FM_REGISTER(0x398) & 0xff00) | (step->outputs & 0xff);
+	FM_REGISTER(0x398) = output;
 	FM_REGISTER(0x39c) = (step->outputs >> 8 & 0xff) | (step->outputs >> 16 & 0xff) << 8;
 	FM_REGISTER(0x38c) = (FM_REGISTER(0x38c) & ~0x3f) | (step->settings >> 10 & 0x3f);
 	FM_REGISTER(0x390) = (FM_REGISTER(0x390) & ~0x7) | (step->settings >> 16 & 0x7);
 	FM_REGISTER(0x390) = (FM_REGISTER(0x390) & 0x7ff) | (step->settings >> 5 & 0x1f) << 11;
+	/* the second half from the value written, not from the register */
 	if (swap != 0)
-		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff00) | (step->outputs & 0xff);
+		FM_REGISTER(0x398) = (output & 0xff00) | (step->outputs & 0xff);
 	else
-		FM_REGISTER(0x398) = (FM_REGISTER(0x398) & 0xff) | (step->outputs >> 24) << 8;
+		FM_REGISTER(0x398) = (output & 0xff) | (step->outputs >> 24) << 8;
 }
 
 /* Moves the level threshold until register 0x394's bit 6 changes. */
@@ -1726,12 +1730,12 @@ void btSbcScheduleBuffer(void)
 	} else if ((FM_REGISTER(0x3b8) & 0x4000) != 0) {
 		if (level <= 100)
 			return;
-		fmSettings.audioSetting = level - 1;
+		fmSettings.audioSetting--;
 	} else {
 		if ((FM_REGISTER(0x38c) >> 6 & 0x3f) > 40) {
 			count = FM_REGISTER(0x3a4) & 0x7f;
 			if (count > 120) {
-				fmSettings.audioSetting = level - 1;
+				fmSettings.audioSetting--;
 				goto apply;
 			}
 			if (count >= 100)
@@ -1742,7 +1746,7 @@ void btSbcScheduleBuffer(void)
 		if (level >= limit)
 			return;
 		raise = 1;
-		fmSettings.audioSetting = level + 1;
+		fmSettings.audioSetting++;
 	}
 apply:
 	btFmApplyHook(fmSettings.audioSetting, raise);

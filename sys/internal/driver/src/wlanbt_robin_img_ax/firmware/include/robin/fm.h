@@ -51,10 +51,10 @@ _Static_assert(sizeof(struct FmReply) == 252, "FM reply");
 #define FM_EVENT_SEARCH_DONE	0x86
 
 /* The RDS buffer's read and write positions (FmSettings.rdsIndex). */
-struct FmRdsIndex {
-	uint8_t read;
-	uint8_t write;
-	uint16_t reserved;
+struct FmRdsIndex {	/* one word of bit fields: Sony reads the positions with a word load */
+	uint32_t read : 8;
+	uint32_t write : 8;
+	uint32_t reserved : 16;
 };
 
 /* FmSettings.rdsFlags. */
@@ -144,7 +144,7 @@ struct FmTuner {
 	uint8_t savedLevel;		/* its bit 18 */
 	uint8_t savedMode;		/* its bits 20..19 */
 	uint8_t mode;			/* FM_MODE_*, btSbcFormatTable() */
-	uint8_t measureGain;		/* 2: the gain register 0x03c takes while btSbcUpdateTable() measures */
+	uint8_t measureGain;		/* 2: the gain register 0x23c takes while btSbcUpdateTable() measures */
 	uint8_t measureTime;		/* 10: the time of one measurement, in ms */
 	uint8_t reserved12;
 	uint16_t savedLevels[2];	/* two level registers while btSbcProcessTable() overrides them */
@@ -175,6 +175,8 @@ extern struct FmTuner fmTuner;					/* 0x55694 */
 
 /* The FM block's registers, by their offset from 0x9000d800. */
 #define FM_REGISTER(offset)	REG16(0x9000d800 + (offset))
+/* The event clock (SOC_EVENT_CLOCK): the FM code reads it at its fixed address, not through sysEventRegisterBase. */
+#define FM_EVENT_CLOCK		REG32(0x80002434)
 #define FM_TUNE_POLLS		500	/* of 66 clock ticks */
 #define FM_TUNE_TIMEOUT		42
 
@@ -372,8 +374,9 @@ extern struct FmGainStep fmGainSteps[FM_GAIN_STEPS];		/* 0x556d8 */
 struct FmFrequencyStep {
 	uint16_t limit : 14;		/* the frequency in 8 kHz units */
 	uint16_t reserved0 : 2;
-	uint16_t setting : 5;		/* what btSbcResetBuffer() sets register 0x160 to */
-	uint16_t reserved1 : 11;
+	uint8_t setting : 5;		/* what btSbcResetBuffer() sets register 0x160 to: Sony reads its byte */
+	uint8_t reserved1 : 3;
+	uint8_t reserved2;
 };
 #define FM_FREQUENCY_STEPS	9
 extern struct FmFrequencyStep fmFrequencySteps[FM_FREQUENCY_STEPS];	/* 0x5571c */

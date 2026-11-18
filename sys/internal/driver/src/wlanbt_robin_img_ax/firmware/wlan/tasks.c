@@ -281,10 +281,10 @@ int cbProcPostInitStartTasks(void)
 }
 
 /*
- * Priority the "MAC Mgmt" task had before it was raised, 0xff when it was not. It starts at
- * 0 (zero-initialised, 0x40088da), as in the original: the first resume sets that priority.
+ * Priority the "MAC Mgmt" task had before it was raised, 0xff when it was not: a byte of
+ * wlanDtcmState (0x40088da, robin.ld), which wlanInit() clears and then sets to 0xff.
  */
-static uint8_t wlanSavedMgmtPriority __attribute__((section(".dtcm.bss")));
+extern uint8_t wlanSavedMgmtPriority;
 
 /*
  * Suspends the four WLAN tasks except the caller. With raise set and only
