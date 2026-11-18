@@ -155,10 +155,13 @@ void mtpStatusSetState(int state, int reason, int quiet)
 			mtpMarlinCancelWaitResult();
 	}
 	if (s_status.state == 4 && state != 4) {
-		if (mtpCoreGetIfType() == MTP_IF_TYPE_USB)
-			mtpCmdOnDisconnect(mtpCallbackInvokeEvent(2));
-		else if (reason == 8 || reason == 3 || reason == 0 || reason == 9)
-			mtpCmdOnDisconnect(mtpCallbackInvokeEvent(2));
+		if (mtpCoreGetIfType() == MTP_IF_TYPE_USB) {
+			mtpCallbackInvokeEvent(2);
+			mtpBgCopyCancelAll();
+		} else if (reason == 8 || reason == 3 || reason == 0 || reason == 9) {
+			mtpCallbackInvokeEvent(2);
+			mtpBgCopyCancelAll();
+		}
 	}
 	if (state == 0) {
 		if (s_status.platformType != 0)

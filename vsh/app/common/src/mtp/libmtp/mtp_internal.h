@@ -581,7 +581,7 @@ int mtpRegistryUnregisterNetMtpHost(const MtpNetHost *host);
 /* the rest of SceLibMtp the device and status call */
 int mtpMarlinIsWaiting(void);
 int mtpMarlinCancelWaitResult(void);
-int mtpCmdOnDisconnect(int arg);
+int mtpBgCopyCancelAll(void);
 int mtpUserNameCopy(char *dst, SceSize size, const char *src);
 int mtpBgCopyServiceNotify(int arg0, int kind, int arg2);
 int mtpQueueKick(void);
@@ -1221,7 +1221,7 @@ void mtpObjNotifyProprtyUpdate(SceUInt32 uniqueId, SceUInt32 storageId);
 int mtpObjSetNotifyMode(int mode);
 
 /* the background copy (BGCP) */
-int mtpBgCopyGetTaskInfo(int *arg1, int *arg2, int arg3);
+int mtpBgCopyGetTaskInfo(SceUInt32 *id, int *type, void *path);
 
 /* the network RPC, the search, the handover, the pause and resume of a transfer */
 int mtpContextRpcNetOperation(MtpContext *context, int type, int arg1, int arg2);
@@ -1235,9 +1235,18 @@ int mtpContextResumeImportObject(MtpContext *context);
 /* the background copy service's entry points, given by the shell (BGCP) */
 extern SceLibMtpHostFuncs g_bgCopyServiceFuncs;
 
-int mtpBgCopyRequestTask(int arg1, int arg2);
+/* a copy the background copy service is asked to run */
+typedef struct MtpBgCopyTask {
+	int type;			/* 1..4: the kind of content */
+	SceUInt32 reserved;
+	SceUInt64 size;			/* its size in bytes */
+	SceUInt32 reserved2;
+	const char *name;
+} MtpBgCopyTask;
+
+int mtpBgCopyRequestTask(const MtpBgCopyTask *task, void *path);
 int mtpBgCopyEndTask(void);
-int mtpBgCopySetTaskInfo(const void *info);
+int mtpBgCopySetTaskInfo(const void *status);
 int mtpBgCopyWriteData(const void *data, SceSize size, int index);
 int mtpBgCopyReadData(void *data, SceUInt32 offset, SceSize size, int index, SceSize *read);
 void mtpCmdMarlinFreeBuffers(void);
@@ -1288,6 +1297,172 @@ public:
 
 /* hand a context to the context manager, which keeps it while the request runs */
 void mtpContextRegister(paf::common::SharedPtr<MtpContext> context);
+
+/* the background copy ("BGCP", bgcopy_service_manager.cpp) */
+#include <std/string>
+#include <std/map>
+#include <std/vector>
+
+/* a task's progress, as the background copy service reports it */
+struct MtpBgCopyTaskStatus {
+	int result;
+	paf::string name;
+	SceUInt32 progress;		/* in percent */
+	int index;			/* the object being copied, from 0 */
+	SceUInt32 total;		/* how many objects */
+	int remaining;			/* seconds left, -1: not known */
+
+	MtpBgCopyTaskStatus() : result(0), name(), progress(0), index(0), total(0), remaining(0)
+	{
+	}
+};
+
+/* an import the background copy service runs */
+struct BgCopyImportContext {
+	SceUInt32 id;			/* the service's ID for it */
+	SceUInt32 reserved;
+	void *pauseSource;		/* where a paused export resumes from */
+	void *pauseTarget;
+	int type;			/* MtpBgCopyTask's type */
+	paf::string path;		/* where the copied data is kept */
+	MtpBgCopyTaskStatus status;
+	int restart;			/* it is started again after a disconnect */
+
+	BgCopyImportContext() : id(0), reserved(0), pauseSource(NULL), pauseTarget(NULL), type(0),
+		path((const char *)NULL, 0), restart(0)
+	{
+		status.name = "";
+	}
+
+	BgCopyImportContext(const BgCopyImportContext &src)
+		: id(src.id), reserved(src.reserved), pauseSource(src.pauseSource),
+		  pauseTarget(src.pauseTarget), type(src.type), restart(src.restart)
+	{
+		path = src.path;
+		status.name = src.status.name;
+		status.index = src.status.index;
+		status.total = src.status.total;
+		status.progress = src.status.progress;
+		status.remaining = src.status.remaining;
+		status.result = src.status.result;
+	}
+};
+
+/* the background copy service's imports, by their ID; one of them is current */
+class BgCopySrvMgr {
+public:
+	BgCopySrvMgr();
+	~BgCopySrvMgr();
+	int findContext(SceUInt32 id, BgCopyImportContext **context);
+	int addContext(const BgCopyImportContext &context);
+	int removeContext(SceUInt32 id);
+	void setCurrentId(SceUInt32 id);
+	SceUInt32 getCurrentId();
+	int setPauseSource(void *data);
+	int setPauseTarget(void *data);
+	int setPath(paf::string path);
+	int setStatus(const MtpBgCopyTaskStatus *status);
+	int setRestart(bool restart);
+	void *getPauseSource();
+	void *getPauseTarget();
+	int getPath(paf::string *path);
+	int getType();
+	int getStatus(MtpBgCopyTaskStatus *status);
+	int clearStatus();
+	int forEachRestart(int (*func)(SceUInt32 id));
+
+	static SceUInt32 s_currentId;
+
+	paf::map<SceUInt32, BgCopyImportContext *> m_contexts;
+};
+
+extern BgCopySrvMgr g_bgCopySrvMgr;
+
+/* a task's progress as the service is told it (SceLibMtp_E3EBABB4, SceLibMtp_BF311CC8) */
+struct MtpBgCopyProgress {
+	SceUInt32 id;
+	paf::string name;
+	SceUInt32 progress;		/* in percent */
+	int number;			/* the object being copied, from 1 */
+	SceUInt32 total;
+	int remaining;			/* seconds left */
+	int reserved;
+};
+
+/* the service's side of a copy run by SceLibMtp_BF311CC8 */
+class MtpBgCopyHost {
+public:
+	virtual ~MtpBgCopyHost() {}
+	virtual int isRequested() = 0;
+};
+
+/* what SceLibMtp_BF311CC8 is given */
+struct MtpBgCopyRunParam {
+	SceUInt32 id;
+	void *arg;
+	void (*notify)(void *arg, const MtpBgCopyProgress *progress);
+	int (*accept)(void);
+	MtpBgCopyHost *host;
+	SceUInt32 reserved[3];
+	paf::string path;
+};
+
+/* starts the background copy service when it does not run (bgcopy_mtp_launcher.cpp) */
+class BgCopyMtpLauncher {
+public:
+	BgCopyMtpLauncher();
+	virtual ~BgCopyMtpLauncher();
+	int start();
+	bool isMtpTaskInProgress();
+	static int execute(SceSize args, void *argp);
+
+	/* nothing reads these: they are made, cleared and destroyed only */
+	int m_state;
+	paf::string m_sourceName;
+	paf::vector<SceUInt8> m_sourceData;
+	SceUInt32 m_sourceReserved;
+	int m_sourceFlags;
+	paf::string m_targetName;
+	SceUInt32 m_targetInfo[4];
+	SceUInt64 m_targetSize;
+	int m_targetFlags;
+	paf::vector<SceUInt8> m_targetData;
+	SceUInt32 m_targetReserved;
+	int m_targetKind;
+	paf::string m_titleName;
+	SceUInt64 m_titleSize;
+	int m_titleFlags;
+	SceUInt32 m_titleReserved;
+	int m_titleKind;
+	paf::string m_dirName;
+	SceUInt64 m_dirSize;
+	int m_dirFlags;
+	int m_dirKind;
+	SceUID m_thread;
+	paf::vector<paf::string> m_files;
+	int m_fileIndex;
+	SceUID m_serviceIds[3];		/* -1: none */
+};
+
+extern BgCopyMtpLauncher g_bgCopyMtpLauncher;
+
+/* mtp_bgcopy.cpp */
+void mtpBgCopySetCurrentTask(SceUInt32 id);
+int mtpBgCopyIsIdle(void);
+int mtpBgCopySetRestart(int restart);
+void *mtpExportGetPauseSource(void);
+void *mtpExportGetPauseTarget(void);
+void mtpBgCopySetTaskPath(const paf::string *path);
+int mtpBgCopyGetTaskStatus(MtpBgCopyTaskStatus *status);
+int mtpBgCopyClearTaskStatus(void);
+int mtpBgCopyNotifyService(int arg1, int arg2);
+int mtpBgCopyCancelTask(SceUInt32 id);
+int mtpBgCopyIsServiceIdle(void);
+
+/* bgcopy_service_manager.cpp */
+struct SceAppMgrAppStatus;
+int mtpBgCopyLaunchService(int arg1, int arg2);	/* both unused, -1 */
+int mtpBgCopyGetServiceStatus(struct SceAppMgrAppStatus *status);
 
 /* a parser of the initiatorInfo a host sends (mtp_init.cpp) */
 class InitiatorInfoParser {

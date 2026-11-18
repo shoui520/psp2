@@ -58,7 +58,7 @@ int commandHandler(MtpOperation *command, MtpOperation *response)
 	if (!mtpCoreHasPendingOperation()) {
 		mtpUtilSetMtpResponse(MTP_RESPONSE_SESSION_NOT_OPEN, NULL, 0, command, response);
 		MTP_ERR(MTP_TAG_BASE, 82, "SessionOpened\n");
-		return -2;
+		goto failed;
 	}
 	if (command->code != 0x100D && command->code != 0x940D) {
 		mtpCoreSetObjectTransferHandle(0);
@@ -100,6 +100,30 @@ int commandHandler(MtpOperation *command, MtpOperation *response)
 		break;
 	case 0x101B:
 		ret = mtpCmdGetPartialObject(command, response);
+		break;
+	case 0x9801:
+		ret = mtpCmdGetObjectPropsSupported(command, response);
+		break;
+	case 0x9802:
+		ret = mtpCmdGetObjectPropDesc(command, response);
+		break;
+	case 0x9803:
+		ret = mtpCmdGetObjectPropValue(command, response);
+		break;
+	case 0x9804:
+		ret = mtpCmdSetObjectPropValue(command, response);
+		break;
+	case 0x9810:
+		ret = mtpCmdGetObjectReferences(command, response);
+		break;
+	case 0x9811:
+		ret = mtpCmdSetObjectReferences(command, response);
+		break;
+	case 0x9805:
+		ret = mtpCmdGetObjectPropList(command, response);
+		break;
+	case 0x9806:
+		ret = mtpCmdSetObjectPropList(command, response);
 		break;
 	case 0x9407:
 		ret = mtpCmdGetMarlinMsgResult(command, response);
@@ -182,27 +206,8 @@ int commandHandler(MtpOperation *command, MtpOperation *response)
 		return mtpCmdCheckObjectExistence(command, response);
 	case 0x9545:
 		return mtpCmdSendNumOfFoundObject(command, response);
-	case 0x9580:
-		ret = mtpCmdSendMarlinResults(command, response);
-		break;
-	case 0x9581:
-		ret = mtpCmdGetMarlinLicenseInfo(command, response);
-		break;
-	case 0x9582:
-		ret = mtpCmdSendMarlinLicenseInfo(command, response);
-		break;
-	case 0x9583:
-		ret = mtpCmdGetMarlinLicense(command, response);
-		break;
-	case 0x9584:
-		ret = mtpCmdSendMarlinLicense(command, response);
-		break;
-	case 0x9585:
-		ret = mtpCmdGetMarlinEventInfo(command, response);
-		break;
-	case 0x9586:
-		ret = mtpCmdSetMarlinLicenseIdToContext(command, response);
-		break;
+	case 0x9600:
+		return mtpCmdGetChallenge(command, response);
 	case 0x9601:
 		return mtpCmdSendRtc(command, response);
 	case 0x9602:
@@ -210,39 +215,37 @@ int commandHandler(MtpOperation *command, MtpOperation *response)
 		return mtpCmdSendActivation(command, response);
 	case 0x9604:
 		return mtpCmdSendLicense(command, response);
-	case 0x9801:
-		ret = mtpCmdGetObjectPropsSupported(command, response);
+	case 0x9680:
+		ret = mtpCmdSendMarlinResults(command, response);
 		break;
-	case 0x9802:
-		ret = mtpCmdGetObjectPropDesc(command, response);
+	case 0x9681:
+		ret = mtpCmdGetMarlinLicenseInfo(command, response);
 		break;
-	case 0x9803:
-		ret = mtpCmdGetObjectPropValue(command, response);
+	case 0x9682:
+		ret = mtpCmdSendMarlinLicenseInfo(command, response);
 		break;
-	case 0x9804:
-		ret = mtpCmdSetObjectPropValue(command, response);
+	case 0x9683:
+		ret = mtpCmdGetMarlinLicense(command, response);
 		break;
-	case 0x9805:
-		ret = mtpCmdGetObjectPropList(command, response);
+	case 0x9684:
+		ret = mtpCmdSendMarlinLicense(command, response);
 		break;
-	case 0x9806:
-		ret = mtpCmdSetObjectPropList(command, response);
+	case 0x9685:
+		ret = mtpCmdGetMarlinEventInfo(command, response);
 		break;
-	case 0x9810:
-		ret = mtpCmdGetObjectReferences(command, response);
+	case 0x9686:
+		ret = mtpCmdSetMarlinLicenseIdToContext(command, response);
 		break;
-	case 0x9811:
-		ret = mtpCmdSetObjectReferences(command, response);
-		break;
-	case 0x9600:
-		return mtpCmdGetChallenge(command, response);
 	default:
 		MTP_ERR(MTP_TAG_BASE, 281, "not supported operation=%0xx", command->code);
 		mtpUtilSetMtpResponse(MTP_RESPONSE_OPERATION_NOT_SUPPORTED, NULL, 0, command,
 				      response);
-		return -2;
+		goto failed;
 	}
 	return ret;
+
+failed:
+	return -2;
 }
 
 int sceMtpSuspend(void)
@@ -1249,11 +1252,11 @@ int SceLibMtp_6BB1C852(int arg)
 	return mtpObjSetNotifyMode(arg);
 }
 
-int sceMtpGetBgTaskInfo(int *arg1, int *arg2, int arg3)
+int sceMtpGetBgTaskInfo(SceUInt32 *id, int *type, void *path)
 {
 	int ret;
 
-	ret = mtpBgCopyGetTaskInfo(arg1, arg2, arg3);
+	ret = mtpBgCopyGetTaskInfo(id, type, path);
 	if (ret < 0)
 		MTP_ERR(MTP_TAG_BASE, 1846, "sceMtpGetBgTaskInfo failed: 0x%x\n", ret);
 	return ret;
@@ -1815,9 +1818,9 @@ int SceLibMtp_BB32CD0A(void)
 	return mtpUtilLargeBufferEnd();
 }
 
-int SceLibMtp_E89AF226(int arg1, int arg2)
+int SceLibMtp_E89AF226(const MtpBgCopyTask *task, void *path)
 {
-	return mtpBgCopyRequestTask(arg1, arg2);
+	return mtpBgCopyRequestTask(task, path);
 }
 
 int SceLibMtp_E7542628(void)
@@ -1825,9 +1828,9 @@ int SceLibMtp_E7542628(void)
 	return mtpBgCopyEndTask();
 }
 
-int SceLibMtp_B15DA25F(const void *info)
+int SceLibMtp_B15DA25F(const void *status)
 {
-	return mtpBgCopySetTaskInfo(info);
+	return mtpBgCopySetTaskInfo(status);
 }
 
 int SceLibMtp_972A378F(const void *data, SceSize size, int index)
