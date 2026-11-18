@@ -8,6 +8,7 @@
 #include "robin/eventpower.h"
 #include "robin/pspoll.h"
 #include "robin/psctl.h"
+#include "robin/ratesel.h"
 #include "robin/sleep.h"
 #include "robin/soc.h"
 #include "robin/stapssm.h"
@@ -98,7 +99,9 @@ int wlanPsSleepBlocked(void)
 /* A trigger may go out: Bluetooth is not using the medium, or it lets the transmitter go. */
 int wlanPsTriggerWanted(void)
 {
-	return wlanCoexActive() == 0 || wlanCoexTxAllowed();
+	if (wlanCoexActive() == 0)
+		return 1;
+	return wlanCoexTxAllowed();
 }
 
 /* The end of Bluetooth's window has been asked for. */
@@ -153,15 +156,6 @@ void wlanPsTriggerSent(void)
 int wlanPsIdle(void)
 {
 	return wlanTxRingsPending() == 0 && wlanPsPollBusy() == 0 && wlanCoexDeferred() == 0;
-}
-
-/* The two hooks of wlanPsEvaluate() (0x3d068, 0x3d06a): the ROM's packet-hold callbacks are empty here. */
-void wlanPsResetPacket(struct WlanConnection *connection)
-{
-}
-
-void wlanPsSyncPacket(struct WlanConnection *connection)
-{
 }
 
 /* The MAC stops reporting events for the triggers, and the 0x6f trigger bits go out. */
@@ -235,26 +229,23 @@ int wlanPsEvaluate(struct WlanConnection *connection, int reason)
 }
 
 /* The profile asks for no polling and no window: Bluetooth does not need the medium on a schedule. */
-static int btCoexProfileUnscheduled(uint32_t profile)
+static __inline int btCoexProfileUnscheduled(struct BtCoexProfile profile)
 {
-	return ((profile & BT_COEX_PROFILE_POLLING) == 0 || (profile & BT_COEX_PROFILE_NO_POLL) != 0) &&
-	       (profile & (BT_COEX_PROFILE_WINDOW | BT_COEX_PROFILE_SLAVE_ONLY)) == 0;
+	return (!profile.polling || profile.noPoll) && !profile.windowed && !profile.slaveOnly;
 }
 
 /* The host changed the Bluetooth profile while the station shares the radio and sleeps. */
-void btCoexProfileChanged(uint32_t previous, uint32_t profile)
+void btCoexProfileChanged(struct BtCoexProfile previous, struct BtCoexProfile profile)
 {
 	struct WlanConnection *connection = wlanConnectionByRole(0);
 	UINT posture = sysIrqDisable();
-	int wasUnscheduled = btCoexProfileUnscheduled(previous & 0xffff);
-	int isUnscheduled = btCoexProfileUnscheduled(profile & 0xffff);
 
 	if (connection != NULL && wlanPsPollMode == 1 && macMgmtParseContext() != 2 &&
 	    wlanStaPs.state == &wlanStaPs.sleep) {
-		if (wasUnscheduled && !isUnscheduled)
+		if (btCoexProfileUnscheduled(previous) && !btCoexProfileUnscheduled(profile))
 			wlanRaiseEvent(WLAN_EVENT_COEX_PROFILE_CHANGED);
-		else if (((previous ^ profile) & BT_COEX_PROFILE_SLAVE_ONLY) != 0 ||
-			 (!wasUnscheduled && isUnscheduled))
+		else if (previous.slaveOnly != profile.slaveOnly ||
+			 (!btCoexProfileUnscheduled(previous) && btCoexProfileUnscheduled(profile)))
 			wlanPsEvaluate(connection, WLAN_PS_EVALUATE_UPDATE);
 	}
 	sysIrqRestore(posture);

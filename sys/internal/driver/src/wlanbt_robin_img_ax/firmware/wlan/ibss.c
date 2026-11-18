@@ -336,7 +336,7 @@ void wlanIbssStart(struct WlanConnection *connection, const WlanAdHocStart *star
  * belongs to (IBSS merge), with its ATIM window, ERP protection and HT
  * Non-Greenfield state.
  */
-void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *frame,
+__attribute__((noinline)) void wlanIbssAdopt(struct WlanConnection *connection, const WlanWirelessFrame *frame,
 		   const uint8_t *ibssParameters, const uint8_t *erp, const uint8_t *htInformation)
 {
 	WlanWirelessFrame *beacon = wlanIbssBeaconFrame;

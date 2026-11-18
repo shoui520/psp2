@@ -212,7 +212,7 @@ int btLmpLcSelectContext(int link, int kind, const uint8_t *request)
 }
 
 /* Moves the target on to the released state (3) once it asked for it (2). */
-int btLmpLcAdjustContext(int link)
+void btLmpLcAdjustContext(int link)
 {
 	struct BtLcTarget *target = &btLmpLcTarget[link];
 
@@ -224,11 +224,10 @@ int btLmpLcAdjustContext(int link)
 			else
 				mdevIoctl(btSdioActiveHandle, 0x61, 0);
 			if (link == 0)
-				return mdevIoctl(btSdioActiveHandle, 0x1e, 0);
+				mdevIoctl(btSdioActiveHandle, 0x1e, 0);
 		}
 	} else {
 		btLmpLcInspectContext(link, 0);
 		target->since = sysEventClockNow();
 	}
-	return 0;
 }

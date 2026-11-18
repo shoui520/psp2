@@ -557,7 +557,7 @@ struct WlanConnection {
 		struct WlanIbssMachine machine;	/* the IBSS's and the station's state machine (macMgmtSetupContext()) */
 	};
 	int (*rxManagement)(OsaBuffer *buffer, uintptr_t argument);	/* management frames for this connection */
-	int (*rxControl)(const struct WlanWirelessFrame *frame, OsaBuffer *buffer);	/* control frames for this connection */
+	void (*rxControl)(const struct WlanWirelessFrame *frame, OsaBuffer *buffer);	/* control frames for this connection */
 	uint8_t dataRate;		/* fixed rate index for unicast data; 254: chosen per frame */
 	uint8_t groupRate;		/* fixed rate index for group-addressed frames; 254: none */
 	uint8_t hostFlags;		/* bit 4: frames go to the host as Ethernet II */

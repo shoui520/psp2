@@ -243,7 +243,7 @@ void wlanIeBufferInit(void);							/* 0x34c78: the buffers' pool */
 int wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out);	/* 0x3e8cc: the bytes left over; nonzero: the list was cut short */
 int wlanPsBuildDescriptor(const uint8_t *oui);					/* 0x3e8b0: 4 for a Simple Configuration element */
 int wlanPsParseDescriptor(const uint8_t *oui);					/* 0x3e894: 7 for a Wi-Fi Direct element */
-int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
+void wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
 struct WlanConnection;
 unsigned int wlanPsResetDescriptor(struct WlanConnection *connection, const uint8_t *tim);	/* 0x3e98a */
 void wlanPsSyncDescriptor(void);						/* 0x3e9d4 */

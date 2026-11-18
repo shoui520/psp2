@@ -313,7 +313,7 @@ void wlanWindowFree(unsigned int id, uintptr_t *owners,
 	}
 }
 
-uintptr_t wlanWindowOwner(unsigned int id, const uintptr_t *owners)
+uintptr_t wlanWindowOwner(uint8_t id, const uintptr_t *owners)
 {
 	return owners[id];
 }

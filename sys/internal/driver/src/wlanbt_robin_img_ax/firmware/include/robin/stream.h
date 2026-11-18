@@ -105,7 +105,7 @@ int wlanTxBaFind(unsigned int tid, const uint8_t *peer, uint8_t *index,
 void wlanTxBaArmTimeouts(uintptr_t owner, struct WlanTxBaSession *sessions);
 void wlanWindowFree(unsigned int id, uintptr_t *owners,
 		    struct WlanWindowId *pool);
-uintptr_t wlanWindowOwner(unsigned int id, const uintptr_t *owners);
+uintptr_t wlanWindowOwner(uint8_t id, const uintptr_t *owners);
 extern struct WlanWindowId wlanTxWindowIds[WLAN_TX_BA_MAX];
 void wlanWindowPoolInit(struct WlanWindowId *pool);
 int wlanWindowAlloc(struct WlanWindowId *pool);

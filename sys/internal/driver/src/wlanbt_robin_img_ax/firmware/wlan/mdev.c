@@ -60,7 +60,7 @@ int wlanHandleSecurityFrame(OsaBuffer *buffer)
 }
 
 /* Optional initialization hook called after the SDIO callbacks are installed. */
-int wlanInitializationHook(void)
+__attribute__((noinline)) int wlanInitializationHook(void)
 {
 	return 0;
 }

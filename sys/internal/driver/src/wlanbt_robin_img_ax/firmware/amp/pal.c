@@ -58,9 +58,11 @@ static inline void ampPalPostLinkEvent(OsaBuffer *buffer, uint32_t event)
 {
 	struct AmpPalMessage *message = ampPalBody(buffer);
 	struct AmpLinkEvent notice;
+	uint8_t link;
 
-	notice.link = message->body[0];
-	notice.state = ampPhysicalLinks[notice.link].state;
+	link = message->body[0];
+	notice.link = link;
+	notice.state = ampPhysicalLinks[link].state;
 	ampLinkPostEvent(notice.link, event, &notice);
 }
 
@@ -175,20 +177,26 @@ int ampPalDataFromHost(OsaBuffer *buffer)
 	return 0;
 }
 
+/* The HCI ACL data header Sony writes in front of a received frame (byte by byte: packed). */
+struct AmpAclHeader {
+	uint16_t handle:12;
+	uint16_t packetBoundary:2;
+	uint16_t broadcast:2;
+	uint16_t length;
+} __attribute__((packed));
+
 /* 0x00022ac8: prepends the HCI data header of a received packet and gives it to the host. */
 int ampPalDataToHost(OsaBuffer *buffer, unsigned int physicalIndex)
 {
-	uint8_t *header;
-	uint32_t word;
+	struct AmpAclHeader *header;
 
 	if (ampPhysicalLinkLogicalCount(physicalIndex) != 0) {
 		buffer->dataOffset -= 4;
-		header = (uint8_t *)buffer + buffer->dataOffset;
-		word = (((header[1] << 8) >> 12) << 12) | ampPhysicalLinks[physicalIndex].handle;
-		header[0] = word;
-		header[1] = word >> 8;
-		header[1] = (header[1] & 0xf) | 0x30;
-		*(uint16_t *)(header + 2) = buffer->length;
+		header = (struct AmpAclHeader *)((uint8_t *)buffer + buffer->dataOffset);
+		header->handle = ampPhysicalLinks[physicalIndex].handle;
+		header->packetBoundary = 3;
+		header->broadcast = 0;
+		header->length = buffer->length;
 		buffer->length += 4;
 		buffer->pool = (struct OsaBufferPool *)(uintptr_t)buffer->ringStart;
 		btLmpLcAcquireContext(1);
@@ -214,19 +222,12 @@ int ampPalDropPacket(OsaBuffer *buffer)
 extern uint32_t ampLinkSupervisionInterval;
 
 /* Message body: a 16-bit code, a 16-bit length, then the value bytes. */
-static inline OsaBuffer *ampPalAllocNotice(uint16_t code, uint16_t length)
+static inline void ampPalNoticeHeader(uint8_t *data, uint16_t code, uint16_t length)
 {
-	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
-	uint8_t *data;
-
-	if (buffer == NULL)
-		return NULL;
-	data = (uint8_t *)buffer + buffer->dataOffset;
 	data[0] = code;
 	data[1] = code >> 8;
 	data[2] = length;
 	data[3] = length >> 8;
-	return buffer;
 }
 
 static inline void ampPalSendNotice(OsaBuffer *buffer)
@@ -237,10 +238,13 @@ static inline void ampPalSendNotice(OsaBuffer *buffer)
 /* 0x00022b84: notice with one value byte. */
 int ampPalNotify(int value, int code)
 {
-	OsaBuffer *buffer = ampPalAllocNotice(code, 1);
+	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
+	uint8_t *data;
 
 	if (buffer != NULL) {
-		((uint8_t *)buffer + buffer->dataOffset)[4] = value;
+		data = (uint8_t *)buffer + buffer->dataOffset;
+		ampPalNoticeHeader(data, code, 1);
+		data[4] = value;
 		ampPalSendNotice(buffer);
 	}
 	return 0;
@@ -274,11 +278,12 @@ void ampPalNotifyDisconnect(unsigned int index)
 /* 0x00022fc6: notice 10 with two bytes. */
 int ampPalNotifyCode10(int first, int second)
 {
-	OsaBuffer *buffer = ampPalAllocNotice(AMP_PAL_NOTIFY_STATE, 1);
+	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
 	uint8_t *data;
 
 	if (buffer != NULL) {
 		data = (uint8_t *)buffer + buffer->dataOffset;
+		ampPalNoticeHeader(data, AMP_PAL_NOTIFY_STATE, 1);
 		data[4] = first;
 		data[5] = second;
 		ampPalSendNotice(buffer);
@@ -287,13 +292,14 @@ int ampPalNotifyCode10(int first, int second)
 }
 
 /* 0x00023006: notice 12, a byte and a halfword. */
-int ampPalNotifyCode12(int first, int second)
+int ampPalNotifyCode12(int first, unsigned int second)
 {
-	OsaBuffer *buffer = ampPalAllocNotice(AMP_PAL_NOTIFY_CHANNEL_SET, 3);
+	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
 	uint8_t *data;
 
 	if (buffer != NULL) {
 		data = (uint8_t *)buffer + buffer->dataOffset;
+		ampPalNoticeHeader(data, AMP_PAL_NOTIFY_CHANNEL_SET, 3);
 		data[4] = first;
 		data[5] = second;
 		data[6] = second >> 8;
@@ -303,13 +309,14 @@ int ampPalNotifyCode12(int first, int second)
 }
 
 /* 0x0002304a: notice 11, a byte and a halfword. */
-int ampPalNotifyCode11(int first, int second)
+int ampPalNotifyCode11(int first, unsigned int second)
 {
-	OsaBuffer *buffer = ampPalAllocNotice(AMP_PAL_NOTIFY_CHANNEL, 3);
+	OsaBuffer *buffer = ampHciAllocBuffer(&ampHciPool, 0x80, 0xffffffff);
 	uint8_t *data;
 
 	if (buffer != NULL) {
 		data = (uint8_t *)buffer + buffer->dataOffset;
+		ampPalNoticeHeader(data, AMP_PAL_NOTIFY_CHANNEL, 3);
 		data[4] = first;
 		data[5] = second;
 		data[6] = second >> 8;

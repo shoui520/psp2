@@ -94,7 +94,7 @@ int wlanTxRingFill(struct WlanMacTxRequest *request, unsigned int ring)
 }
 
 /* Hands the filled entries (up to the limit) over to the hardware. */
-int wlanTxRingPublish(unsigned int ring)
+__attribute__((noinline)) int wlanTxRingPublish(unsigned int ring)
 {
 	unsigned int count = wlanTxRingPending[ring];
 	unsigned int limit;
@@ -183,7 +183,7 @@ uint32_t wlanTxRingPushPublished(const struct WlanMacTxRequest *request, unsigne
 }
 
 /* Completes the frame behind a request. */
-void wlanTxRingComplete(struct WlanMacTxRequest *request)
+__attribute__((noinline)) void wlanTxRingComplete(struct WlanMacTxRequest *request)
 {
 	OsaBuffer *buffer = REQUEST_BUFFER(request);
 

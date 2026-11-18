@@ -58,7 +58,7 @@ uint8_t wlanJoinHtCapability[28] __attribute__((section(".sqram1.bss")));		/* 0x
 /* The tag of a deauthentication the leave request sent: what the transmit-done task reports it by. */
 #define WLAN_TX_TAG_LEAVE		19
 
-extern int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
+extern void wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out);	/* 0x3e94a */
 uint8_t wlanAssocHtCapability[28] __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0032170: the copy of it for the association */
 int p2pDirectPrepareState(const uint8_t *address);				/* 0x3f3e4 */
 int macMgmtQueryState(uint32_t flags, uint32_t extra);				/* 0x34b82 */

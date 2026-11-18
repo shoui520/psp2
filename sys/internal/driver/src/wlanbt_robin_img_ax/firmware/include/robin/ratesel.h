@@ -35,8 +35,7 @@ struct WlanRateSelection {
 	uint16_t amsduSmall;		/* 0: no aggregation */
 	uint16_t mode;			/* 0: no rate selection, 1: the firmware chooses, 2: a rate is fixed */
 	uint16_t reserved0e;
-	uint16_t amsduEnable;		/* the host's A-MSDU aggregation control (0: off) */
-	uint16_t reserved12;
+	uint32_t amsduEnable;		/* the host's A-MSDU aggregation control (0: off) */
 	uint32_t channelWidth;		/* the last width wlanRateChannelWidthSet() was given */
 	uint32_t txRateMask;		/* the rates the host allows (HostCmd_CMD_TX_RATE_CFG's rate scope) */
 	uint32_t allowedRates;		/* the rates of the connection wlanPsAcquirePacket() found */
@@ -50,7 +49,6 @@ struct WlanRateSelection {
 	uint32_t raiseMedium[2];
 	uint32_t lowerMedium[2];
 	uint32_t lowerSmall[2];
-	uint16_t burstBytes[17];	/* what wlanPsReleaseBuffer() computes: the bytes of one burst per HT rate */
 };
 
 _Static_assert(offsetof(struct WlanRateSelection, amsduBufferSize) == 4, "amsdu size");
@@ -60,10 +58,11 @@ _Static_assert(offsetof(struct WlanRateSelection, channelWidth) == 20, "selectio
 _Static_assert(offsetof(struct WlanRateSelection, txRateMask) == 24, "tx rate mask");
 _Static_assert(offsetof(struct WlanRateSelection, raiseLarge) == 32, "raise large");
 _Static_assert(offsetof(struct WlanRateSelection, lowerSmall) == 56, "lower small");
-_Static_assert(offsetof(struct WlanRateSelection, burstBytes) == 64, "burst bytes");
+_Static_assert(sizeof(struct WlanRateSelection) == 64, "rate selection");
 
 extern struct WlanRateSelection wlanRateSelection;		/* DTCM 0x04000ff4 */
-extern uint16_t *wlanRateBurstTable;				/* DTCM 0x04000f7c: wlanRateSelection.burstBytes */
+extern uint16_t wlanRateBurstLimit[17];			/* DTCM 0x04001034: what wlanPsReleaseBuffer() computes, the bytes of one burst per HT rate */
+extern uint16_t *wlanRateBurstTable;				/* DTCM 0x04000f7c: wlanRateBurstLimit */
 extern const uint32_t *wlanRateWeightTable;			/* DTCM 0x04000f80: wlanRateWeight */
 
 /* The tables of the rates, by rate index (0x54084 to 0x54240). */
@@ -111,6 +110,8 @@ void wlanTxRateAttempts(const struct WlanTxStatus *status, uint8_t *attempts);		
 void wlanPsBuildPacket(void);								/* 0x3cfe4 */
 unsigned int wlanPsComputePacket(void);						/* 0x3cff4 */
 void wlanPsQueryPacket(void);								/* 0x3d006 */
+void wlanPsResetPacket(struct WlanConnection *connection);			/* 0x3d068 */
+void wlanPsSyncPacket(struct WlanConnection *connection);			/* 0x3d06a */
 void wlanPsApplyPacket(void);								/* 0x3d06c */
 int wlanPsResolvePacket(struct WlanConnection *connection, struct WlanRxStatus *status);	/* 0x3d08c */
 int wlanPsSchedulePacket(struct WlanConnection *connection, struct WlanTxStatus *status); /* 0x3d09c */

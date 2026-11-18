@@ -199,8 +199,8 @@ void ampPalSetLocalAddress(const uint8_t *address, int reversed);
 int ampWlanDriverInit(void);						/* amp/wlanif.c */
 int ampDriverInit(void);						/* amp/pal.c */
 int ampPalNotifyCode10(int first, int second);
-int ampPalNotifyCode11(int first, int second);
-int ampPalNotifyCode12(int first, int second);
+int ampPalNotifyCode11(int first, unsigned int second);
+int ampPalNotifyCode12(int first, unsigned int second);
 int ampPalTransmit(OsaBuffer *buffer, uint32_t length, int priority, int kind);
 OsaBuffer *ampPalSendEmptyFrame(int kind, struct WlanConnection *context);
 int ampPalLinkAlive(struct WlanConnection *context);

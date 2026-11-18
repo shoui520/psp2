@@ -315,6 +315,7 @@ void wlanCoexRequestSleep(void)
 	UINT posture = sysIrqDisable();
 	int outstanding = wlanTxInFlightFrames();
 	int idle;
+	int room;
 	int i;
 
 	if (outstanding)
@@ -325,7 +326,8 @@ void wlanCoexRequestSleep(void)
 	idle = macTxIdle() && MAC_010_QUEUE_HEAD == MAC_014_QUEUE_TAIL && outstanding == 0 &&
 	       wlanCryptoCount(0) == 0 && wlanCryptoCount(0) == 0 &&
 	       wlanHostSleepPending == 0;
-	if ((idle == 1 && wlanDmaRingsHaveRoom() != 1) || wlanPsHostBusy != 0 ||
+	room = wlanDmaRingsHaveRoom();
+	if ((idle == 1 && room != 1) || wlanPsHostBusy != 0 ||
 	    wlanPsSleepAllowance == 0) {
 		wlanRaiseEvent(WLAN_EVENT_SLEEP_REFUSED);
 		return;

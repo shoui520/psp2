@@ -315,7 +315,7 @@ uint8_t *p2pDirectDispatchContext(WlanWirelessFrame *frame, int reassociation, c
  * The body of an attribute, which may go on in the elements that follow; remaining is what is left
  * of the current element. NULL when the next element is not a P2P one.
  */
-const uint8_t *p2pDirectParseContext(const uint8_t *attribute, uint16_t *remaining)
+__attribute__((noinline)) const uint8_t *p2pDirectParseContext(const uint8_t *attribute, uint16_t *remaining)
 {
 	unsigned int length = (attribute[2] << 8) | attribute[1];
 	const uint8_t *body = attribute + 3;

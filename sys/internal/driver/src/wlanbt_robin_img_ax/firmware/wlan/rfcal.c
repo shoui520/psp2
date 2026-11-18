@@ -260,7 +260,7 @@ void macTuneHoldEnd(void)
 }
 
 /* The baseband's calibration signal path: the registers the loop in ComputePacket relies on. */
-static void macTxNotifyBuildPacket(void)
+static __attribute__((noinline)) void macTxNotifyBuildPacket(void)
 {
 	bbpWriteRegister(8, 8);
 	bbpSetRegisterBits(90, 0x80);

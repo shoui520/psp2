@@ -277,7 +277,7 @@ int wlanParseIes(const uint8_t *ies, int length, WlanIePointers *out)
 }
 
 /* The elements of an access point's beacon the station keeps (the second pointer record). */
-int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out)
+void wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *out)
 {
 	int size = 0;
 
@@ -294,7 +294,6 @@ int wlanPsQueryDescriptor(const uint8_t *ies, int length, WlanBeaconIePointers *
 		length = length - size - 2;
 		ies += size + 2;
 	}
-	return size;
 }
 
 /*

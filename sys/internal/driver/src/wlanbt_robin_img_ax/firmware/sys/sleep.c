@@ -134,7 +134,7 @@ void sleepCalibrationStart(uint32_t cycles)
 	sysStartEventMeasurement(sleepCalibrationClockRate * cycles);
 }
 
-int sleepCalibrationWait(void)
+__attribute__((noinline)) int sleepCalibrationWait(void)
 {
 	sysWaitForEventMeasurement();
 	return 1;

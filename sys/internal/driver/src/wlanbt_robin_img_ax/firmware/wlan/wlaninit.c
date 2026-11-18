@@ -173,7 +173,7 @@ void p2pDirectResetTable(void);								/* 0x42188 */
 void wlanPsAcquireFrame(void);								/* 0x3d896 */
 void wlanPsBuildFrame(void);								/* 0x3d4ea */
 void wlanPsSyncDescriptor(void);							/* 0x3e9d4 */
-int wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
+void wlanPsConvertDescriptor(const uint8_t *buffer, int length);			/* 0x3ed8a */
 extern uint16_t wlanMgmtFrameSize;							/* 0x54b8e */
 
 /* The idle hook of the transmit notification. */
@@ -308,7 +308,7 @@ static int wlanInitStageDevice(void)
 	macMgmtSyncTable();
 	wlanSlotTimer = sysTimerSlotAcquire(wlanSoftTimerTick, 0);
 	if (wlanSlotTimer != NULL)
-		sysTimerStart(wlanSlotTimer->index, 1, 1);
+		sysTimerSlotStart(wlanSlotTimer->index, 1, 1);
 	macTxNotifySemaphore = (struct OsaSemaphore *)&macTxNotifySemaphoreObject;
 	osaSemaphoreInit(&macTxNotifySemaphore, 1, 12);
 	wlanInitializeDevice();

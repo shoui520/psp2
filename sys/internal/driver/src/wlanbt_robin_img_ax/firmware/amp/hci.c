@@ -126,7 +126,7 @@ int ampHciSendEvent(uint8_t eventCode, uint32_t maskSelector, const char *format
 	int length;
 
 	if (maskSelector != 0 &&
-	    !ampHciEventEnabled(ampEventMaskPage2, (uint16_t)maskSelector))
+	    ampHciEventEnabled(ampEventMaskPage2, (uint16_t)maskSelector) != 1)
 		return 0;
 	buffer = ampHciAllocBuffer(&ampHciPool, AMP_POOL_BUFFER_SIZE, 0);
 	if (buffer == NULL)
@@ -134,7 +134,7 @@ int ampHciSendEvent(uint8_t eventCode, uint32_t maskSelector, const char *format
 	va_start(args, format);
 	data = (uint8_t *)buffer + buffer->dataOffset;
 	data[0] = eventCode;
-	start = data + 2;
+	start = (uint8_t *)buffer + buffer->dataOffset + 2;	/* Sony reads the offset again after the store */
 	out = start;
 	for (; *format != '\0'; format++) {
 		switch (*format) {
@@ -530,7 +530,7 @@ unsigned int ampAssocBuild(uint8_t *out, unsigned int physicalIndex)
  * 0x000214de: stores the elements of a received AMP_ASSOC in a physical link.
  * Returns an HCI status: 0, or 0x12 when an element is longer than its slot.
  */
-int ampAssocParse(const uint8_t *data, unsigned int total, int physicalIndex)
+__attribute__((noinline)) int ampAssocParse(const uint8_t *data, unsigned int total, int physicalIndex)
 {
 	struct AmpPhysicalLink *link = &ampPhysicalLinks[physicalIndex];
 	unsigned int used = 0;
@@ -720,7 +720,7 @@ static uint8_t *ampHciParameters(const OsaBuffer *buffer)
 }
 
 /* 0x0002172a: Reset. */
-int ampHciReset(uint16_t opcode)
+__attribute__((noinline)) int ampHciReset(uint16_t opcode)
 {
 	unsigned int i;
 

@@ -17,7 +17,7 @@ struct WlanSessionOps {
 	int (*eepromClose)(void);						/* 0x54eb0 */
 	int (*hostEventSend)(struct WlanConnection *connection, uint16_t event); /* 0x54eb4 */
 	void (*mgmtPrepare)(uint8_t *band, uint32_t *extra);			/* 0x54eb8 */
-	int (*supplicantClearPMK)(const uint8_t *buffer, int length);		/* 0x54ebc */
+	void (*supplicantClearPMK)(const uint8_t *buffer, int length);		/* 0x54ebc */
 };
 
 extern struct WlanSessionOps wlanSessionOps;

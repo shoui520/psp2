@@ -169,7 +169,7 @@ int wlanPsInspectHeader(void (*callback)(int sample, int frame))
 }
 
 /* The limit the curve gives for the sample, 0 to 63. */
-int wlanPsTrackHeader(const struct WlanLimitCurve *curve, int sample)
+__attribute__((noinline)) int wlanPsTrackHeader(const struct WlanLimitCurve *curve, int sample)
 {
 	int reference = curve->reference;
 	int delta = sample - reference;

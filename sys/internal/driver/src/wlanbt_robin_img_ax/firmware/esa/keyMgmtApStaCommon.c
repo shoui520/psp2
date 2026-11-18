@@ -141,7 +141,7 @@ void supplicantParseWpaIe(IEEEtypes_WPAElement_t *pIe, SecurityMode_t *pWpaType,
 		pWpaType->wpaNone = 1;
 }
 
-void supplicantParseMcstCipher(Cipher_t *pMcstCipherOut, uint8_t *pGrpKeyCipher)
+__attribute__((noinline)) void supplicantParseMcstCipher(Cipher_t *pMcstCipherOut, uint8_t *pGrpKeyCipher)
 {
 	*(uint8_t *)pMcstCipherOut = 0;
 

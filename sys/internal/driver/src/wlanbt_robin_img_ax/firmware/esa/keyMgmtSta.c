@@ -419,7 +419,7 @@ void supplicantInstallWpaNoneKeys(struct WlanConnection *connPtr)
 	}
 }
 
-void supplicantSetProfile(SecurityMode_t wpaType, Cipher_t mcstCipher, Cipher_t ucstCipher)
+__attribute__((noinline)) void supplicantSetProfile(SecurityMode_t wpaType, Cipher_t mcstCipher, Cipher_t ucstCipher)
 {
 	currParams.wpaType = wpaType;
 	currParams.mcstCipher = mcstCipher;

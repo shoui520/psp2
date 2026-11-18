@@ -261,14 +261,13 @@ uint8_t *btLmpLcCheckState(uint8_t a1)
 }
 
 /* The controller's command sets the radio mode, and is passed to the ROM. */
-int btLmpLcValidateState(uint8_t *command)
+void btLmpLcValidateState(uint8_t *command)
 {
 	btPower.frame = 1;
 	btThresholdPayload = command[9] == 0 ? 5 : 2;
 	btPower.packet = command[10];
 	btPower.header = command[11] == 0;
 	btBdhRomDispatchState(command);
-	return 0;
 }
 
 int btLmpLcPrepareState(void)
@@ -282,10 +281,9 @@ int btLmpLcPrepareState(void)
 	return (int)(uintptr_t)context;
 }
 
-int btLmpLcDispatchState(uint32_t a1, uint32_t a2)
+void btLmpLcDispatchState(uint32_t a1, uint32_t a2)
 {
 	btBdhRomBuildState(a2, a1);
-	return 0;
 }
 
 /* The hook the ROM calls to set the control up: the registers, the radio mode and the level. */
@@ -530,7 +528,7 @@ void btLmpLcClearState(void)
 }
 
 /* Tells the radio (registers 71 and 377) the temperature. */
-int btLmpLcConvertState(void)
+void btLmpLcConvertState(void)
 {
 	uint8_t value;
 	unsigned int control;
@@ -540,7 +538,6 @@ int btLmpLcConvertState(void)
 	control = btBdhRomProcessState(71, 1);
 	btBdhRomUpdateState(377, btPower.param);
 	btBdhRomUpdateState(71, control | 0x80);
-	return 0;
 }
 
 /* A changed level is passed on to the radio and to the devices. */

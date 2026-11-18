@@ -370,15 +370,16 @@ void btLmpLcSyncContext(void)
  */
 void btLmpLcApplyContext(void)
 {
-	uint16_t profile = 0x3f80;
+	struct BtCoexProfile profile = { 0 };
 	unsigned int links = 0;
 	unsigned int idle = 0;
 	unsigned int slot;
 
+	profile.interval = 0x7f;
 	if ((btLinkMaskState | btLinkIndexRecord) != 0)
-		profile |= 8;
+		profile.windowed = 1;
 	if (btDeviceContext.entry != 0)
-		profile |= 4;
+		profile.device = 1;
 	for (slot = 1; slot < 11; slot = (uint16_t)(slot + 1)) {
 		unsigned int state = romHctHostSlot[slot][0];
 
@@ -390,43 +391,42 @@ void btLmpLcApplyContext(void)
 			links = (uint8_t)(links + 1);
 			if (mode == 3 || mode == 1)
 				idle = (uint8_t)(idle + 1);
-			profile |= 1;
+			profile.polling = 1;
 		} else {
 			const uint8_t *amp = btLcoRomProcessState(slot - 8) + 30 * (uint16_t)(slot - 8);
 			unsigned int type;
 
-			if (amp[5] < ((profile >> 7) & 0x7f))
-				profile = (profile & 0xc07f) | ((amp[5] << 7) & 0x3fff);
+			if (amp[5] < profile.interval)
+				profile.interval = amp[5];
 			type = amp[9];
 			if (type == 44 || type == 61 || type == 13 || type == 12)
-				profile = (profile & 0xff8f) + 0x60;
-			else if (((profile >> 4) & 7) == 0)
-				profile = (profile & 0xff8f) + 0x20;
-			profile |= 2;
+				profile.window = 6;
+			else if (profile.window == 0)
+				profile.window = 2;
+			profile.slaveOnly = 1;
 		}
 	}
 	if (links != 0 && links == idle)
-		profile |= 0x4000;
-	if (profile != btLmpLcContext.rate) {
-		btLmpLcContext.rate = profile;
+		profile.noPoll = 1;
+	if (memcmp(&profile, &btLmpLcContext.profile, sizeof(profile)) != 0) {
+		btLmpLcContext.profile = profile;
 		btCoexSetProfile(profile);
 	}
 }
 
 /* The idle hook: the coexistence profile is refreshed while the chip may not sleep. */
-int btLmpLcResolveContext(void)
+void btLmpLcResolveContext(void)
 {
 	if (!sysSleepVotesAllowed(1)) {
 		btLmpLcSyncContext();
 		btLmpLcApplyContext();
 	}
 	hctCoexTick();
-	return 0;
 }
 
 int btLmpLcScheduleContext(void)
 {
-	btLmpLcContext.idleHook.function = btLmpLcResolveContext;
+	btLmpLcContext.idleHook.function = (int (*)(void))btLmpLcResolveContext;	/* the idle loop ignores the result */
 	return osaAddIdleHook(&btLmpLcContext.idleHook);
 }
 

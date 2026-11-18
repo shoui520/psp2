@@ -154,16 +154,12 @@ unsigned int ledControlTlvsPut(uint8_t *out, const struct LedConfig *config)
 }
 
 /* The ROM's key handling of the supplicant: when the PMK is cleared the keys of the contexts go with it. */
-int wlanPsConvertDescriptor(const uint8_t *buffer, int length)
+void wlanPsConvertDescriptor(const uint8_t *buffer, int length)
 {
-	int result = SupplicantClearPMK_internal(buffer, length);
-
-	if (result == 0) {
+	if (SupplicantClearPMK_internal(buffer, length) == 0) {
 		supplicantDisable();
 		pmkCacheFlush();
-		return 0;
 	}
-	return result;
 }
 
 /* The ROM calls these for the supplicant instead of its own. */

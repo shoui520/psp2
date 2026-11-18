@@ -26,7 +26,7 @@
 static struct {
 	uint8_t linkCapacity;		/* 2 when a capacity was given, else 4 */
 	uint8_t linkState;
-	uint16_t profile;		/* bits 13..7 poll interval, bits 6..4 window, in slots */
+	struct BtCoexProfile profile;
 	uint32_t activity;		/* the controller has activity */
 	uint32_t scheduled;		/* a transfer is scheduled */
 	uint32_t hostReset;		/* set by host command 0x00a9, never cleared here */
@@ -76,9 +76,9 @@ void btCoexLinkTimerExpired(uint32_t timer, uint32_t argument)
 }
 
 /* 0x24466 */
-void btCoexSetProfile(uint16_t profile)
+void btCoexSetProfile(struct BtCoexProfile profile)
 {
-	uint32_t previous = btCoex.profile;
+	struct BtCoexProfile previous = btCoex.profile;
 
 	btCoex.profile = profile;
 	btCoexUpdateLink();
@@ -133,26 +133,26 @@ void btCoexSetLinkCapacity(uint32_t first, uint32_t second)
 /* 0x244ec: the polling interval and window of the profile, in microseconds. */
 void btCoexPollTiming(uint32_t *interval, uint32_t *window)
 {
-	uint32_t profile = btCoex.profile;
+	struct BtCoexProfile profile = btCoex.profile;
 
-	*interval = ((profile >> 7) & 0x7f) * BT_COEX_SLOT_US;
-	*window = ((profile >> 4) & 7) * BT_COEX_SLOT_US;
+	*interval = profile.interval * BT_COEX_SLOT_US;
+	*window = profile.window * BT_COEX_SLOT_US;
 }
 
 /* 0x2450a */
 uint32_t btCoexProfileBit1(void)
 {
-	return (btCoex.profile >> 1) & 1;
+	return btCoex.profile.slaveOnly;
 }
 
 /* 0x24516 */
 int btCoexProfilePollable(void)
 {
-	uint32_t profile = btCoex.profile;
+	struct BtCoexProfile profile = btCoex.profile;
 	int pollable = 1;
 
-	if ((profile & BT_COEX_PROFILE_POLLING) == 0 || (profile & BT_COEX_PROFILE_NO_POLL) != 0) {
-		if ((profile & BT_COEX_PROFILE_SLAVE_ONLY) == 0)
+	if (!profile.polling || profile.noPoll) {
+		if (!profile.slaveOnly)
 			pollable = 0;
 	}
 	return pollable;
@@ -161,7 +161,7 @@ int btCoexProfilePollable(void)
 /* 0x2452e */
 uint32_t btCoexProfileBit3(void)
 {
-	return (btCoex.profile >> 3) & 1;
+	return btCoex.profile.windowed;
 }
 
 /* 0x2453a */

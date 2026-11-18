@@ -121,10 +121,12 @@ struct WlanRateSelection wlanRateSelection __attribute__((section(".dtcm.rw"))) 
 	.raiseMedium = { 4500, 9000 },
 	.lowerMedium = { 6000, 3000 },
 	.lowerSmall = { 3000, 3000 },
-	.burstBytes = {
-		1265, 2531, 3797, 5062, 7594, 10125, 11390, 12656,
-		1167, 2531, 5063, 7594, 10125, 15188, 20250, 22781, 25313,
-	},
+};
+
+/* What wlanPsReleaseBuffer() computes (the firmware's initial values). */
+uint16_t wlanRateBurstLimit[17] __attribute__((section(".dtcm.rw"))) = {	/* 0x4001034 */
+	1265, 2531, 3797, 5062, 7594, 10125, 11390, 12656,
+	1167, 2531, 5063, 7594, 10125, 15188, 20250, 22781, 25313,
 };
 
 uint16_t *wlanRateBurstTable __attribute__((section(".dtcm.bss")));			/* 0x4000f7c */
@@ -285,8 +287,7 @@ int wlanPsTrackBuffer(struct WlanConnection *connection)
 
 int wlanPsManageBuffer(struct WlanConnection *connection)
 {
-	(void)connection;
-	return 0;
+	return wlanPsTrackBuffer(connection);
 }
 
 /* A connection takes a peer: its supervision starts. */
@@ -538,13 +539,15 @@ int hostCmd00d6Apply(struct WlanConnection *connection, uint8_t *rateScope, uint
 {
 	struct WlanRateSelection *selection = &wlanRateSelection;
 	uint32_t previous;
+	int error;
 
 	if (rateScope != NULL) {
 		previous = selection->txRateMask;
 		selection->txRateMask = wlanRateConfigPack(rateScope);
-		if (wlanPsFilterPacket(connection)) {
+		error = wlanPsFilterPacket(connection);
+		if (error != 0) {
 			selection->txRateMask = previous;
-			return 1;
+			return error;
 		}
 	}
 	if (dropPattern != NULL)
@@ -568,7 +571,7 @@ unsigned int hostCmd00d6Get(struct WlanConnection *connection, uint8_t *data, ui
 	uint8_t *records = data + 24;
 	uint8_t *tlv;
 	unsigned int count = 0;
-	unsigned int rate;
+	uint8_t rate;
 	unsigned int value;
 
 	PUT16(data + 4, rateMask & 0xf);
@@ -662,10 +665,19 @@ void wlanPsQueryPacket(void)
 	selection->amsduRate = 31;
 }
 
+/* The two hooks of wlanPsEvaluate() (0x3d068, 0x3d06a): the ROM's packet-hold callbacks are empty here. */
+void wlanPsResetPacket(struct WlanConnection *connection)
+{
+}
+
+void wlanPsSyncPacket(struct WlanConnection *connection)
+{
+}
+
 void wlanPsApplyPacket(void)
 {
 	wlanRateWeightTable = wlanRateWeight;
-	wlanRateBurstTable = wlanRateSelection.burstBytes;
+	wlanRateBurstTable = wlanRateBurstLimit;
 }
 
 /* The signal of a received frame; nothing else is learned of it here. */
@@ -781,7 +793,7 @@ __attribute__((noinline)) int wlanPsAcquirePacket(struct WlanConnection *connect
 	struct WlanRateControl *rc = &connection->peerLink.rateControl;
 	uint32_t widthMask = WLAN_RATE_HT40_MASK;
 	uint32_t cckMask = WLAN_RATE_DEFAULT_MASK;
-	uint8_t chosen[4];
+	uint32_t chosen;	/* a byte the callees read through a pointer */
 	int result = 1;
 
 	if (connection->mode == 2) {
@@ -793,16 +805,16 @@ __attribute__((noinline)) int wlanPsAcquirePacket(struct WlanConnection *connect
 			widthMask = WLAN_RATE_DEFAULT_MASK;
 		if (__aeabi_uread4(wlanProtection.timers[WLAN_PROTECTION_DSSS_PEER].remaining) != 0)
 			cckMask = 15;
-		chosen[0] = selection->fixedRate;
+		chosen = selection->fixedRate;
 		selection->allowedRates = widthMask & cckMask & rc->peerMask & selection->txRateMask
 					  & wlanRateModeMask[selection->fixedRate];
 		rc->rateMask = selection->allowedRates;
-		if (wlanPsManagePacket(connection, &chosen[0], 1) == 0) {
-			wlanPsTrackPacket(&chosen[0]);
+		if (wlanPsManagePacket(connection, (uint8_t *)&chosen, 1) == 0) {
+			wlanPsTrackPacket((uint8_t *)&chosen);
 			result = 0;
 		}
 		if (selection->mode == 2)
-			selection->eventRate = chosen[0];
+			selection->eventRate = *(uint8_t *)&chosen;
 		else
 			selection->eventRate = 0;
 		if (wlanPsInspectPacket(connection, &connection->dataRate) == 0)

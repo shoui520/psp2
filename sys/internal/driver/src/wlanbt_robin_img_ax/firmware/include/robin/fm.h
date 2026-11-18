@@ -310,6 +310,13 @@ int btSbcFormatTable(uint8_t mode);				/* 0x5096a */
 /* fmSettings.levelFlags bit 31: vendor command 0x5a's flag. */
 #define FM_LEVEL_VENDOR		0x80000000u
 
+/* What btSbcSelectTable() returns (in r0: a 4-byte struct). */
+struct FmClockSelection {
+	uint8_t code;
+	uint8_t flags;
+	uint8_t unset[2];	/* never written */
+};
+
 /* The PCM port's codes by frequency (btSbcSelectTable()): the first entry whose limit is not below it. */
 struct FmClockCode {
 	uint16_t limit;		/* the frequency in 8 kHz units */
@@ -332,7 +339,7 @@ int btSbcSetupTable(uint32_t *value);				/* 0x50ce8 */
 int btSbcClearTable(uint32_t value, uint32_t *result, uint8_t mode); /* 0x50d24 */
 void btSbcConvertTable(int enable);				/* 0x50dfc */
 int btSbcVerifyTable(void);					/* 0x50e22 */
-uint32_t btSbcSelectTable(uint32_t frequency);			/* 0x50e28 */
+struct FmClockSelection btSbcSelectTable(uint32_t frequency);			/* 0x50e28 */
 uint16_t btSbcManageTable(void);				/* 0x50c60 */
 void btSbcAdjustTable(uint8_t value);				/* 0x50e46 */
 int btSbcHandleBuffer(int mode);				/* 0x50ea4 */

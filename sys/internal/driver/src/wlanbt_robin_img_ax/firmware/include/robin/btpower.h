@@ -134,9 +134,9 @@ int btLmpLcProcessState(void);					/* 0x424b4 */
 unsigned int btLmpLcUpdateState(void);				/* 0x4252e */
 uint8_t *btLmpLcConfigureState(uint8_t *first, uint8_t *channel);	/* 0x4255a */
 uint8_t *btLmpLcCheckState(uint8_t a1);				/* 0x42616 */
-int btLmpLcValidateState(uint8_t *command);			/* 0x42638 */
+void btLmpLcValidateState(uint8_t *command);			/* 0x42638 */
 int btLmpLcPrepareState(void);					/* 0x42662 */
-int btLmpLcDispatchState(uint32_t a1, uint32_t a2);		/* 0x4268c */
+void btLmpLcDispatchState(uint32_t a1, uint32_t a2);		/* 0x4268c */
 int btLmpLcParseState(uint32_t a1, uint32_t a2);		/* 0x4269a */
 uint8_t *btLmpLcBuildState(void);				/* 0x426fc */
 uint8_t *btLmpLcComputeState(void);				/* 0x4270a */
@@ -155,7 +155,7 @@ uint8_t *btLmpLcAcquireState(void);					/* 0x42936 */
 void btLmpLcReleaseState(void);					/* 0x4296c */
 int btLmpLcSetupState(void);					/* 0x42990 */
 void btLmpLcClearState(void);					/* 0x429fc */
-int btLmpLcConvertState(void);					/* 0x42a1e */
+void btLmpLcConvertState(void);					/* 0x42a1e */
 int btLmpLcVerifyState(void);					/* 0x42a58 */
 unsigned int btLmpLcSelectState(uint8_t channel);		/* 0x42a70 */
 int btLmpLcAdjustState(uint8_t channel);			/* 0x42a90 */

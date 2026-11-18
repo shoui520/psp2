@@ -214,12 +214,15 @@ int wlanSlotRun(void)
 		SCHED.current->phase = 4;
 		wlanSlotBegin();
 		return WLAN_SLOT_OK;
+	case 6:
+		wlanSlotFinish(6);
+		return WLAN_SLOT_OK;
 	case 7:
 		wlanSlotCancelByFlags(1, 0);
-		/* fall through */
-	case 6:
+		wlanSlotFinish(7);
+		return WLAN_SLOT_OK;
 	case 8:
-		wlanSlotFinish();
+		wlanSlotFinish(8);
 		return WLAN_SLOT_OK;
 	default:
 		current->callback(current->handle, current->phase, current->argument);
@@ -326,10 +329,11 @@ int wlanSlotHasCurrentAlias(void)
 }
 
 /* Ends the current request, reports it and starts the next one after a short delay. */
-int wlanSlotFinish(void)
+int wlanSlotFinish(unsigned int phase)
 {
 	UINT posture;
 
+	(void)phase;
 	macTxPostEvent(1);
 	SCHED.current->callback(SCHED.current->handle, SCHED.current->phase, SCHED.current->argument);
 	if (SCHED.current->connection->interfaceType != WLAN_IF_AMP)

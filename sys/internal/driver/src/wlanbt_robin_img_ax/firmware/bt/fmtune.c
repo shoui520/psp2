@@ -1423,17 +1423,17 @@ int btSbcVerifyTable(void)
 	return fmTuner.idle;
 }
 
-/*
- * The PCM port's code for a frequency, and 2. The original returns them in
- * the two low bytes of a 4-byte struct whose other bytes it leaves unset.
- */
-uint32_t btSbcSelectTable(uint32_t frequency)
+/* The PCM port's code for a frequency, and 2; the struct's other bytes are left unset. */
+struct FmClockSelection btSbcSelectTable(uint32_t frequency)
 {
 	const struct FmClockCode *entry;
+	struct FmClockSelection selection;
 
 	for (entry = fmClockCodes; entry->limit < frequency >> 3; entry++)
 		;
-	return entry->code | 2 << 8;
+	selection.code = entry->code;
+	selection.flags = 2;
+	return selection;
 }
 
 void btSbcAdjustTable(uint8_t value)

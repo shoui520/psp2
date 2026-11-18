@@ -205,8 +205,9 @@ int fmInit(void)
 	fmDriver.callbacks[6] = fmCoexTaskMain;
 	if (mdevRegisterDriver(&fmDriver, fmCoexTaskMain) != 0)
 		return 1;
-	if (sysIrqRegister(FM_IRQ_LINE, btLmpLcDispatchDescriptor) != 0)
-		return 1;
+	error = sysIrqRegister(FM_IRQ_LINE, btLmpLcDispatchDescriptor);
+	if (error != 0)
+		return error;
 	return 0;
 }
 
@@ -236,6 +237,7 @@ int fmCoexConfigureState(unsigned int index)
 	uint32_t argument;
 	unsigned int replyLength = 3;
 	int error;
+	struct FmClockSelection selection;
 
 	message = osa_MsgQueueRecv(&fmMessages);
 	if (message == NULL)
@@ -393,9 +395,9 @@ half:
 		btSbcConfigureBuffer(command[1], command[2]);
 		break;
 	case 0x68:
-		value = btSbcSelectTable(fmCommandWord(&command[1]));
-		fmReply.data[0] = value;
-		fmReply.data[1] = value >> 8;
+		selection = btSbcSelectTable(fmCommandWord(&command[1]));
+		fmReply.data[0] = selection.code;
+		fmReply.data[1] = selection.flags;
 		replyLength = 5;
 		break;
 	case 0x69:

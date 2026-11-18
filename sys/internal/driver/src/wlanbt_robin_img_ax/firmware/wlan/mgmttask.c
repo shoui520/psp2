@@ -54,7 +54,7 @@ extern uint32_t wlanPsHostWakeDue;				/* 0x54c54 */
 
 void wlanSmPostCommand(OsaBuffer *buffer);
 int wlanRxCheckFrameClass(struct WlanConnection *connection, const WlanWirelessFrame *frame);
-int wlanMgmtRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);
+void wlanMgmtRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer);
 void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument);
 void wlanRxManagementToAll(OsaBuffer *buffer, uintptr_t argument, unsigned int interfaceType);
 void romDmaRingSetPointer(uint16_t pointer, unsigned int ring);

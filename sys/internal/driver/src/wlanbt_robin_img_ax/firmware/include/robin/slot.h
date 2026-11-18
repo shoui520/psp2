@@ -118,7 +118,7 @@ int wlanSlotUnlock(void);
 struct WlanSlotRequest *wlanSlotPopNext(void);
 struct WlanSlotRequest *wlanSlotFind(uint32_t handle);
 int wlanSlotCancelByFlags(int first, int second);
-int wlanSlotFinish(void);
+int wlanSlotFinish(unsigned int phase);	/* phase: the caller's, unused */
 int wlanSlotSetDuration(uint32_t handle, uint32_t duration);
 int wlanSlotClearTimer(uint32_t handle);
 int wlanSlotRunningEvent(uint32_t event);

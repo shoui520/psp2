@@ -55,11 +55,6 @@ struct WlanConnection;
 #define WLAN_EVENT_COEX_END_WINDOW	50
 #define WLAN_EVENT_COEX_BT_WAKE		51
 
-/* Bits of the Bluetooth profile word (sys/btcoex.c). */
-#define BT_COEX_PROFILE_POLLING		0x0001
-#define BT_COEX_PROFILE_SLAVE_ONLY	0x0002
-#define BT_COEX_PROFILE_WINDOW		0x0008
-#define BT_COEX_PROFILE_NO_POLL		0x4000
 
 #define WLAN_COEX_PROFILES		2	/* 0: WLAN modes, 1: Bluetooth modes */
 #define WLAN_COEX_BT_STATES		2	/* Bluetooth link idle, active */

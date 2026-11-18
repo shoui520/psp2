@@ -186,24 +186,25 @@ void wlanRxBlockAckRequest(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 }
 
 /* Control frames of an access point: Block Ack Requests and PS-Polls; the rest is dropped. */
-int wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
+void wlanApRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 {
 	struct WlanConnection *connection = buffer->context;
 	unsigned int subtype;
 
 	if (WLAN_FC0_TYPE(frame->frameControl[0]) != WLAN_TYPE_CONTROL ||
 	    wlanConnectionBssStarted(buffer->context) != 1)
-		return osa_BufferFree(buffer);
+		goto drop;
 	if (wlanApPsEnabled())
 		wlanPsActivity(wlanConnectionByRole(2));
 	subtype = WLAN_FC0_SUBTYPE(frame->frameControl[0]);
 	if (subtype == WLAN_SUBTYPE_BLOCK_ACK_REQUEST) {
 		wlanRxBlockAckRequest(frame, buffer);
-		return 0;
+		return;
 	}
 	if (subtype == WLAN_SUBTYPE_PS_POLL)
 		wlanApPsPsPoll(connection);
-	return osa_BufferFree(buffer);
+drop:
+	osa_BufferFree(buffer);
 }
 
 /* Management frames of an access point. */
@@ -349,23 +350,23 @@ void wlanRxManagementRoute(OsaBuffer *buffer, uintptr_t argument)
 }
 
 /* Control frames of a station or IBSS: Block Ack Requests go to the host. */
-int wlanStaRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
+void wlanStaRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 {
 	if (WLAN_FC0_TYPE(frame->frameControl[0]) == WLAN_TYPE_CONTROL &&
 	    WLAN_FC0_SUBTYPE(frame->frameControl[0]) == WLAN_SUBTYPE_BLOCK_ACK_REQUEST) {
 		wlanRxBlockAckRequest(frame, buffer);
-		return 0;
+		return;
 	}
-	return osa_BufferFree(buffer);
+	osa_BufferFree(buffer);
 }
 
 /* The same for frames of the management task. */
-int wlanMgmtRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
+void wlanMgmtRxControl(const WlanWirelessFrame *frame, OsaBuffer *buffer)
 {
 	if (WLAN_FC0_TYPE(frame->frameControl[0]) == WLAN_TYPE_CONTROL &&
 	    WLAN_FC0_SUBTYPE(frame->frameControl[0]) == WLAN_SUBTYPE_BLOCK_ACK_REQUEST) {
 		wlanRxBlockAckRequest(frame, buffer);
-		return 0;
+		return;
 	}
-	return osa_BufferFree(buffer);
+	osa_BufferFree(buffer);
 }

@@ -10,6 +10,21 @@
 #include <stdint.h>
 #include "robin/osa.h"
 
+/*
+ * The Bluetooth profile the link controller gives the coexistence code (btLmpLcApplyContext,
+ * sys/btcoex.c), passed and compared as a whole (memcmp of its two bytes).
+ */
+struct BtCoexProfile {
+	uint16_t polling : 1;	/* an ACL link is up */
+	uint16_t slaveOnly : 1;	/* an AMP link is up */
+	uint16_t device : 1;	/* the device context has an entry */
+	uint16_t windowed : 1;	/* a link of the mask or index records is up */
+	uint16_t window : 3;	/* the window, in slots: 2, or 6 for the AMP's link types 12, 13, 44, 61 */
+	uint16_t interval : 7;	/* the polling interval in slots: the AMP links' smallest, else 127 */
+	uint16_t noPoll : 1;	/* every ACL link is in sniff or hold */
+	uint16_t : 1;
+};
+
 /* 0x55284: the coexistence state of the controller. */
 struct BtLcContext {
 	uint8_t node;		/* highest activity count at which the controller counts as idle (5) */
@@ -18,7 +33,7 @@ struct BtLcContext {
 	uint8_t activeCount;	/* the link count (3 at reset), 1 when the controller has one */
 	uint8_t bitmap;		/* set (1) by event 0xf1, cleared by 0xf2 */
 	uint8_t reserved5;
-	uint16_t rate;		/* the profile the coexistence code was told last (btLmpLcApplyContext) */
+	struct BtCoexProfile profile;	/* what the coexistence code was told last (btLmpLcApplyContext) */
 	struct OsaIdleHook idleHook;	/* 0x5528c: btLmpLcResolveContext, from btLmpLcScheduleContext */
 };
 
@@ -60,7 +75,7 @@ uint8_t *btLmpLcParseContext(void);				/* 0x42f46 */
 int btLmpLcBuildContext(uint32_t *remaining);			/* 0x42f4e */
 void btLmpLcComputeContext(void);				/* 0x42f94 */
 void btLmpLcApplyContext(void);					/* 0x430d0 */
-int btLmpLcResolveContext(void);				/* 0x431ee */
+void btLmpLcResolveContext(void);				/* 0x431ee */
 int btLmpLcScheduleContext(void) __attribute__((noinline));	/* 0x43208 */
 int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length);	/* 0x4324c */
 void btLmpLcInspectContext(int link, int notify);		/* 0x432ea */
@@ -73,7 +88,7 @@ int btLmpLcClearContext(int link, const uint8_t *event);	/* 0x435d0 */
 int btLmpLcConvertContext(int link, const uint8_t *event);	/* 0x435e4 */
 int btLmpLcVerifyContext(int link);				/* 0x435f8 */
 int btLmpLcSelectContext(int link, int kind, const uint8_t *request);	/* 0x43608 */
-int btLmpLcAdjustContext(int link);				/* 0x436c8 */
+void btLmpLcAdjustContext(int link);				/* 0x436c8 */
 int btLmpLcQueryContext(int link, const uint8_t *event);	/* 0x42f96 */
 int btLmpLcResetContext(int link, const uint8_t *event);	/* 0x42ff2 */
 void btLmpLcSyncContext(void);					/* 0x43030 */

@@ -143,7 +143,7 @@ void sysTertiaryRouteTryStop(void);
 /* sys/btcoex.c */
 void btCoexUpdateLink(void);
 void btCoexLinkTimerExpired(uint32_t timer, uint32_t argument);
-void btCoexSetProfile(uint16_t profile);
+void btCoexSetProfile(struct BtCoexProfile profile);
 void btCoexActivityStarted(void);
 void btCoexActivityStopped(void);
 void btCoexSetScheduled(uint32_t scheduled);
@@ -187,6 +187,6 @@ extern const uint16_t rfCalibrationTable[];		/* 0x53d56 */
 void wlanMacRestart(void);				/* 0x1c92e */
 void wlanMacSleepExit(void);				/* 0x1c870 */
 int ampHciIsIdle(void);					/* 0x20f00 */
-void btCoexProfileChanged(uint32_t previous, uint32_t profile);	/* 0x2ec2a */
+void btCoexProfileChanged(struct BtCoexProfile previous, struct BtCoexProfile profile);	/* 0x2ec2a */
 
 #endif /* ROBIN_EVENTPOWER_H */

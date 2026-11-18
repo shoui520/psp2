@@ -45,10 +45,3 @@ void sysTertiaryPathConfigure(int fmActive)
 	EVENT_PATH_STATUS = (EVENT_PATH_STATUS & 0x9ffffff0) + 0x4000000e;
 }
 
-/* 0x351c */
-__attribute__((noinline)) int sysEnableEventSources(uint32_t sources)
-{
-	SOC_EVENT_SOURCE_ENABLE |= sources;
-	SOC_EVENT_SECONDARY_ENABLE |= sources;
-	return 1;
-}

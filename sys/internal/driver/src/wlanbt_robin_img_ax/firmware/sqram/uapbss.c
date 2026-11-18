@@ -283,7 +283,7 @@ int p2pEventSend(struct WlanConnection *connection, const uint8_t *frame, uint16
 	if (wlanTxAllocFrame(&buffer, (struct WlanHostEventFrame **)&eventFrame, type == 14 ? 900 : 200, event) == 0)
 		return 1;
 	p2pDirectNotifyContext(connection, frame, (uint8_t *)&eventFrame->code, type, value);
-	eventFrame->length = eventFrame->code;
+	eventFrame->length = *(const uint16_t *)&eventFrame->code;	/* Sony reads it as a halfword */
 	wlanHostEventSend(connection, buffer);
 	return 0;
 }
@@ -674,15 +674,15 @@ void p2pWpsConfigAppend(struct WlanConnection *connection, uint8_t *frame)
 {
 	struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
 	uint8_t *attribute = ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID];
+	uint32_t value = 0;
 	uint8_t saved[2];
 
 	if (attribute != NULL && ps->provisioningAction != 0) {
-		unsigned int value = (ps->wpsDevicePasswordId << 8) | ((ps->wpsDevicePasswordId >> 8) & 0xff);
-
 		saved[0] = attribute[4];
 		saved[1] = attribute[5];
-		attribute[4] = value;
-		attribute[5] = value >> 8;
+		value = (ps->wpsDevicePasswordId << 8) | ((ps->wpsDevicePasswordId >> 8) & 0xff);
+		attribute[4] = ((uint8_t *)&value)[0];
+		attribute[5] = ((uint8_t *)&value)[1];
 	}
 	p2pDirectConvertState(connection, (WlanWirelessFrame *)frame, 0x801);
 	if (ps->wpsAttributes[WPS_SLOT_DEVICE_PASSWORD_ID] != NULL && ps->provisioningAction != 0) {
@@ -2043,8 +2043,7 @@ int p2pServiceDiscoverySend(struct WlanConnection *connection, const uint8_t *re
 {
 	struct WlanPsPeerState *ps;
 	const uint8_t *body = request + 6;
-	union WlanBssidWords bssid = { .bytes = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0, 0 } };
-	const uint8_t *address = NULL;
+	union WlanBssidWords bssid = p2pWildcardBssid;
 	unsigned int now = 0;
 	OsaBuffer *frame;
 	uint8_t *data;
@@ -2064,17 +2063,15 @@ int p2pServiceDiscoverySend(struct WlanConnection *connection, const uint8_t *re
 
 		bssid = *local;	/* the 6 bytes and the 2 after them */
 	} else if (connection->mode == 3) {
-		address = request;
+		__aeabi_memcpy(bssid.bytes, request, 6);
 	} else if (connection->mode == 1) {
 		if (body[1] == 10) {		/* GAS initial request */
-			address = request;
+			__aeabi_memcpy(bssid.bytes, request, 6);
 		} else if (body[1] == 11) {	/* GAS initial response */
 			now = 1;
-			address = ps->interfaceAddress;
+			__aeabi_memcpy(bssid.bytes, ps->interfaceAddress, 6);
 		}
 	}
-	if (address != NULL)
-		__aeabi_memcpy(bssid.bytes, address, 6);
 	wlanMgmtBuildFrame(frame, connection->interfaceAddress, request, 13, bssid.bytes);
 	if (body[1] != 10 && body[1] != 11)
 		return 2;
