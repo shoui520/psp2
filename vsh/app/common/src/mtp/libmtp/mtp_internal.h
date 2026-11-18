@@ -12,6 +12,7 @@
 #include <libkernel/libkernel.h>
 #include <usbmtp/usbmtp.h>		/* SceMtpIf's errors, MtpIfTransfer */
 #include <rtc.h>
+#include "libmtp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -147,12 +148,13 @@ typedef struct SceMtpInitParam {
 #define MTP_EVENT_CANCEL_TRANSACTION	0x4001
 #define MTP_OPERATION_CANCEL		0xC108
 #define MTP_OPERATION_TERMINATE		0xC126
-#define MTP_OPERATION_VENDOR_C12B	0xC12B
+#define MTP_OPERATION_PAUSE_EXPORT_OBJECT	0xC12B
 #define MTP_FORMAT_ASSOCIATION		0x3001	/* a folder */
 #define MTP_RESPONSE_UNDEFINED		0x2000
 #define MTP_RESPONSE_OK			0x2001
 #define MTP_RESPONSE_GENERAL_ERROR	0x2002
 #define MTP_RESPONSE_SESSION_NOT_OPEN	0x2003
+#define MTP_RESPONSE_OPERATION_NOT_SUPPORTED	0x2005
 #define MTP_RESPONSE_DEVICE_PROP_NOT_SUPPORTED	0x2006
 #define MTP_RESPONSE_INCOMPLETE_TRANSFER	0x2007
 #define MTP_RESPONSE_INVALID_PARAMETER	0x201D
@@ -1018,7 +1020,7 @@ int mtpTaskQueueCancelAllForDoCancelAndPause(void);
 int mtpTaskQueueGetContext(SceUInt32 contextId, MtpContext **context);
 int mtpBgCopyRestartIdleTimer(void);
 int mtpCmdIsNetworkUnavailable(void);
-int mtpIfEndCommon(SceUInt32 contextId, void *result);
+int mtpIfEndCommon(SceUInt32 contextId, void *result, const char *name);
 int mtpXmlAllocatorInitialize(void);
 int mtpXmlAllocatorUninitialize(void);
 void mtpCmdAbortOperation(MtpOperation *operation, MtpOperation *response);
@@ -1032,6 +1034,213 @@ void mtpCallbackSetEventHandler(MtpEventHandler handler, void *arg);
 void mtpCallbackClearEventHandler(void);
 int mtpCallbackInvokeEvent(int event);
 int netMtpDeviceIsWaking(void);
+
+/*
+ * The API (mtp_base.c) and what it calls in the files that are not C yet; each prototype
+ * moves to its file's block when that file is written.
+ */
+/* the operations the device asks the host for; each request's context names its own */
+#define MTP_OPERATION_REQUEST_SEND_NUM_OF_OBJECT	0xC104
+#define MTP_OPERATION_REQUEST_SEND_OBJECT_METADATA	0xC105
+#define MTP_OPERATION_REQUEST_SEND_OBJECT		0xC107
+#define MTP_OPERATION_REQUEST_GET_SETTING_INFO		0xC10D
+#define MTP_OPERATION_REQUEST_OBJECT_STATUS		0xC10F
+#define MTP_OPERATION_REQUEST_SEND_OBJECT_THUMBNAIL	0xC110
+#define MTP_OPERATION_REQUEST_DELETE_OBJECT		0xC111
+#define MTP_OPERATION_REQUEST_SEND_SETTING_INFO		0xC112
+#define MTP_OPERATION_REQUEST_PART_OF_OBJECT		0xC115
+#define MTP_OPERATION_REQUEST_FS_OPERATION		0xC117
+#define MTP_OPERATION_REQUEST_SEND_PART_OF_OBJECT	0xC118
+#define MTP_OPERATION_REQUEST_STORAGE_SIZE		0xC119
+#define MTP_OPERATION_REQUEST_COPY_CONFIRMATION_INFO	0xC120
+#define MTP_OPERATION_REQUEST_EXPORT_OBJECT		0xC122
+#define MTP_OPERATION_REQUEST_OBJECT_METADATA_ITEMS	0xC123
+#define MTP_OPERATION_REQUEST_SPECIFIED_OBJECT_METADATA	0xC124
+#define MTP_OPERATION_REQUEST_NP_ACCOUNT_INFO		0xC125
+#define MTP_OPERATION_REQUEST_RPC_NET_OPERATION		0xC127
+#define MTP_OPERATION_REQUEST_RPC_NET_OPERATION_ABORT	0xC128
+#define MTP_OPERATION_REQUEST_SEARCH_OBJECT		0xC129
+#define MTP_OPERATION_REQUEST_HANDOVER			0xC12A
+#define MTP_OPERATION_REQUEST_RESUME_EXPORT_OBJECT	0xC12C
+#define MTP_OPERATION_REQUEST_RESUME_IMPORT_OBJECT	0xC12D
+#define MTP_OPERATION_REQUEST_NPDRM_RTC			0xC600
+#define MTP_OPERATION_REQUEST_NPDRM			0xC601
+
+/* what mtpContextRequestFsOperation asks the host to do */
+#define MTP_FS_OPERATION_CREATE_DIR	1
+#define MTP_FS_OPERATION_DELETE_DIR	3
+#define MTP_FS_OPERATION_CREATE_FILE	4
+#define MTP_FS_OPERATION_MOVE_DIR	5
+
+/* an object as the API's callers name it: its unique ID and its handle's storage bits */
+typedef struct MtpObjectId {
+	SceUInt32 uniqueId;
+	SceUInt32 storage;
+} MtpObjectId;
+
+/* a storage the storage manager knows by name */
+typedef struct MtpStorageInfo {
+	const char *name;
+	SceUInt16 index;		/* its slot in the storage manager */
+	SceUInt16 started;		/* its handles are created */
+} MtpStorageInfo;
+
+typedef struct MtpStorage MtpStorage;
+struct MtpStorage {
+	void *owner;
+	const MtpStorageInfo *info;
+	void *reserved[3];
+	int (*start)(MtpStorage *storage);
+	int (*stop)(MtpStorage *storage);
+};
+
+typedef struct MtpLogicalStorage MtpLogicalStorage;
+
+/* the commands (CMD and CMDE) */
+int mtpCmdGetDeviceInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdOpenSession(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdCloseSession(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetStorageIds(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetStorageInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetNumObjects(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectHandles(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendObjectInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetDevicePropDesc(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetDevicePropValue(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSetDevicePropValue(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetPartialObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinMsgResult(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinMsgInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinMsg(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendMarlinMsgInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendMarlinMsg(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetVitaInformation(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendNumOfObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetBrowseInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendObjectMetadata(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendObjectThumbnail(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdReportResult(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendInitiatorInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendSettingInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetSettingInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectStatusRequest(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendHostStatus(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetPartOfObjectRequest(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendPartOfObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetFsOperation(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetPartOfObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendStorageSize(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetTreateObjectRequest(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendCopyConfirmationInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectMetadataItemsRequest(const MtpOperation *operation,
+					MtpOperation *response);
+int mtpCmdGetCopyConfirmationInfoRequest(const MtpOperation *operation,
+					 MtpOperation *response);
+int mtpCmdKeepAlive(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetNetOperationData(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendNetOperationData(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetCapabilityInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendCapabilityInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetSearchInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetHandoverInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetPartOfObjectSpecfiedByHost(const MtpOperation *operation,
+					MtpOperation *response);
+int mtpCmdCheckObjectExistence(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendNumOfFoundObject(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendMarlinResults(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinLicenseInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendMarlinLicenseInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinLicense(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendMarlinLicense(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetMarlinEventInfo(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSetMarlinLicenseIdToContext(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetChallenge(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendRtc(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendActivation(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSendLicense(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectPropsSupported(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectPropDesc(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectPropValue(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSetObjectPropValue(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectPropList(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSetObjectPropList(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdGetObjectReferences(const MtpOperation *operation, MtpOperation *response);
+int mtpCmdSetObjectReferences(const MtpOperation *operation, MtpOperation *response);
+
+/* the contexts' requests */
+int mtpContextGetNumOfObject(MtpContext *context, int arg1, int arg2);
+int mtpContextImportBrowsingData(MtpContext *context, int arg1, int arg2, int arg3, int arg4);
+int mtpContextImportObjectData(MtpContext *context, int arg1, int arg2, int arg3, int arg4);
+int mtpContextExportObjectWithCheck(MtpContext *context, SceUInt64 arg1, SceUInt64 arg2);
+int mtpContextRequestFsOperation(MtpContext *context, int operation, int arg1, int arg2,
+				 int arg3, int arg4);
+int mtpContextGetObjectStatus(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextImportObjectThumbnail(MtpContext *context, int arg1, int arg2);
+int mtpContextDeleteObject(MtpContext *context, int arg1);
+int mtpContextGetSystemSetting(MtpContext *context, int arg1);
+int mtpContextSetSystemSetting(MtpContext *context, int arg1, int arg2);
+int mtpContextGetNpAccountInfo(MtpContext *context, int arg1);
+int mtpContextGetPartOfObject(MtpContext *context, int arg1, SceUInt64 offset, SceUInt64 size,
+			      int arg5);
+int mtpContextSendPartOfObject(MtpContext *context, int arg1, SceUInt64 offset,
+			       SceUInt64 size);
+int mtpContextGetHostStorageSize(MtpContext *context, int arg1);
+int mtpContextCompareObjectData(MtpContext *context, SceUInt64 arg1);
+int mtpContextGetTotalObjectSize(MtpContext *context, int arg1);
+int mtpContextGetSpecifiedObjectMetadata(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextNpDrmGetRtc(MtpContext *context, int arg1, int arg2);
+int mtpContextNpDrmExecAuthentication(MtpContext *context, int arg1, int activate, int arg3,
+				      int arg4);
+int mtpContextNpDrmGetLicense(MtpContext *context, int arg1, int arg2, int arg3);
+
+/* Marlin (MRLN) */
+int mtpMarlinGetInfo(int type, int arg2, int arg3, void *arg4, int *arg5);
+int mtpMarlinSetInfo(int type, int arg2, char *arg3, int arg4);
+int mtpExecMarlinActivation(int arg0, int arg1, int arg2, int arg3);
+int mtpExecMarlinDeactivation(int arg0, int arg1, int arg2, int arg3);
+int mtpExecMarlinLicenseMove(int arg0, int arg1, int arg2, int arg3, int arg4);
+int mtpExecMarlinLicenseCopy(int arg0, int arg1, int arg2, int arg3, int arg4);
+int mtpExecMarlinLicenseCheck(int arg0, int arg1, int arg2, int arg3, int arg4);
+int mtpExecMarlinSharedInfoAcq(int arg0, int arg1, int arg2, int arg3);
+
+/* the storages (STRG) and the objects (OBJ) */
+MtpStorage *mtpStrgFindStorageByName(const char *name);
+int mtpStrgVTCreateMtpHandles(MtpStorage *storage);
+int mtpStrgVTDestroyMtpHandles(MtpStorage *storage);
+int mtpStrgVTConvertMtpHandleToUniqueId(SceUInt32 handle, SceUInt32 *uniqueId);
+int mtpStrgRegisterObject(const char *path, SceUInt32 *handle);
+int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle);
+int mtpStrgGetLogicalStorage(SceUInt32 storageId, MtpLogicalStorage **storage);
+int mtpObjDeleteObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId);
+int mtpObjGetObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, void *data);
+int mtpObjUpdateObjectData(MtpLogicalStorage *storage, SceUInt32 uniqueId, const void *data);
+void mtpObjNotifyProprtyUpdate(SceUInt32 uniqueId, SceUInt32 storageId);
+int mtpObjSetNotifyMode(int mode);
+
+/* the background copy (BGCP) */
+int mtpBgCopyGetTaskInfo(int *arg1, int *arg2, int arg3);
+
+/* the network RPC, the search, the handover, the pause and resume of a transfer */
+int mtpContextRpcNetOperation(MtpContext *context, int type, int arg1, int arg2);
+int mtpContextRpcNetOperationAbort(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextSearchObject(MtpContext *context, int arg1, int arg2, int arg3);
+int mtpContextHandover(MtpContext *context, int arg1);
+int mtpContextPauseExportObject(MtpContext *context, int arg1);
+int mtpContextResumeExportObject(MtpContext *context);
+int mtpContextResumeImportObject(MtpContext *context);
+
+/* the background copy service's entry points, given by the shell (BGCP) */
+extern SceLibMtpHostFuncs g_bgCopyServiceFuncs;
+
+int mtpBgCopyRequestTask(int arg1, int arg2);
+int mtpBgCopyEndTask(void);
+int mtpBgCopySetTaskInfo(const void *info);
+int mtpBgCopyWriteData(const void *data, SceSize size, int index);
+int mtpBgCopyReadData(void *data, SceUInt32 offset, SceSize size, int index, SceSize *read);
+void mtpCmdMarlinFreeBuffers(void);
 
 #ifdef __cplusplus
 }

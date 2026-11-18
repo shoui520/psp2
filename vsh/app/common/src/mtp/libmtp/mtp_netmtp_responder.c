@@ -741,7 +741,7 @@ int netMtpResponderSendEvent(const MtpEvent *event)
 		ret = res;
 		goto error;
 	}
-	if (event->code != MTP_OPERATION_CANCEL && event->code != MTP_OPERATION_VENDOR_C12B)
+	if (event->code != MTP_OPERATION_CANCEL && event->code != MTP_OPERATION_PAUSE_EXPORT_OBJECT)
 		goto end;
 	transactionId = s_responder.transactionId;
 	if (event->transactionId != transactionId || s_responder.phase == NET_MTP_PHASE_IDLE)

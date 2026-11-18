@@ -69,7 +69,7 @@ void MtpContextManager::registerContext(SharedPtr<MtpContext> context)
 	if (context.get() == NULL)
 		return;
 	switch (context->opcode) {
-	case MTP_OPERATION_VENDOR_C12B:
+	case MTP_OPERATION_PAUSE_EXPORT_OBJECT:
 		m_pause = context;
 		break;
 	case MTP_OPERATION_TERMINATE:

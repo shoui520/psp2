@@ -58,7 +58,7 @@ SceLibMtp:
         - SceLibMtp_54CDF039: 0x54CDF039
         - SceLibMtp_55B66FA0: 0x55B66FA0
         - SceLibMtp_56FA46BB: 0x56FA46BB
-        - SceLibMtp_5B4AF4B8: 0x5B4AF4B8
+        - netMtpAssignHost: 0x5B4AF4B8
         - SceLibMtp_6079A84A: 0x6079A84A
         - SceLibMtp_6211F119: 0x6211F119
         - SceLibMtp_66B08C7D: 0x66B08C7D
@@ -80,7 +80,7 @@ SceLibMtp:
         - sceMtpBeginSearchObject: 0x7E078352
         - SceLibMtp_7FDDA203: 0x7FDDA203
         - SceLibMtp_81BCF297: 0x81BCF297
-        - SceLibMtp_83242E03: 0x83242E03
+        - sceMtpEndResumeImportObject: 0x83242E03
         - sceMtpBeginDeleteHostDir: 0x849AF30D
         - sceMtpBeginResumeExportObject: 0x85954990
         - SceLibMtp_87D21619: 0x87D21619

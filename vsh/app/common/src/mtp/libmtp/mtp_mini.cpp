@@ -26,7 +26,7 @@
 #define MTP_TITLE_ID_SETTINGS		"NPXS10015"
 #define MTP_TITLE_ID_CONTENT_MANAGER	"NPXS10026"
 
-int mtpIfEndCommon(SceUInt32 contextId, void *result)
+int mtpIfEndCommon(SceUInt32 contextId, void *result, const char *name)
 {
 	MtpContext *context = NULL;
 	int ret;
@@ -76,7 +76,7 @@ int sceMtpBeginHttpGetDataWithUrl(const char *url, int arg, SceUInt64 offset,
 
 int SceLibMtp_520D2696(SceUInt32 contextId)
 {
-	return mtpIfEndCommon(contextId, NULL);
+	return mtpIfEndCommon(contextId, NULL, NULL);
 }
 
 int sceMtpBeginHttpGetPropertyWithUrl(const char *url, int arg, SceUInt32 *contextId)
@@ -108,7 +108,7 @@ int SceLibMtp_54CDF039(SceUInt32 contextId, int arg1, int arg2)
 
 	result[0] = arg1;
 	result[1] = arg2;
-	return mtpIfEndCommon(contextId, result);
+	return mtpIfEndCommon(contextId, result, NULL);
 }
 
 int SceLibMtp_CA704934(SceUInt32 contextId, void *data, SceSize size, SceSize *received,
