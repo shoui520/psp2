@@ -25,6 +25,12 @@ using namespace paf;
 /* the digits of an APP_VER */
 #define GAME_APP_VER_DIGITS	8
 
+/*
+ * PLACEHOLDER: whether the application of info has its LiveArea in ur0:appmeta, set in
+ * hasAppmeta (0x8105159A, in another file of the shell; its name is ours).
+ */
+int gameAppInfoCheckAppmeta(LsdbAppInfoPtr *info, bool *hasAppmeta, int userData);
+
 GamePatchPromoter::GamePatchPromoter(const char *path, const LsdbAppInfoPtr *sfo, bool flag1,
 				     bool flag2, const GameJobProgress *progress, int userData,
 				     float scale)
@@ -414,6 +420,72 @@ int GamePatchPromoter::ReadSfo(LsdbAppInfoPtr *info)
 		gamePathGetMountedDrive(sfoPath, (string *)m_userData);
 		return ret;
 	}
+
+	return 0;
+}
+
+/*
+ * A game card application's record brought up to date when its patch was already in place: the
+ * #_promote_attr's manual bit, the #_up_status from the card's license, the LiveArea in
+ * ur0:appmeta and the appinst bit, then the record registered again (0x81042154).
+ */
+int GamePatchPromoter::CheckInstalled(LsdbAppInfoPtr *installed, bool flag)
+{
+	if (m_path.find("gro0:") == string::npos)
+		return 0;
+
+	string manualPath = m_mountPoint + string("/sce_sys/manual/001.png");
+	LocalFileStat stat;
+
+	if (LocalFile::Getstat(manualPath.c_str(), &stat) == 0) {
+		SceUInt32 promoteAttr = 0;
+		LsdbAppInfo::iterator it = (*installed)->find(LSDB_KEY_PROMOTE_ATTR);
+
+		if (it != (*installed)->end())
+			promoteAttr = (SceUInt32)gameLsdbValueInteger(it->second);
+		gameLsdbValueSetInteger((**installed)[LSDB_KEY_PROMOTE_ATTR], promoteAttr | 2);
+	}
+
+	string licensePath = string("gro0:license/app/") + m_name;
+	string appmetaPath = string("ur0:appmeta/") + m_name;
+	bool noLicense = false;
+	int ret = gameAppInfoSetUpStatus(installed, &licensePath, &appmetaPath, m_userData,
+					 &noLicense);
+
+	if (ret < 0)
+		return ret;
+
+	bool hasAppmeta = false;
+
+	ret = gameAppInfoCheckAppmeta(installed, &hasAppmeta, m_userData);
+	if (ret < 0)
+		return ret;
+
+	gameAppInfoSetAppconfBit10(installed, gameDirHasSubDirs(string("gro0:appinst")));
+
+	GameAppRegistration reg;
+
+	if (reg.entry.get() == NULL)
+		return GAME_ERROR_NO_INFO_MEMORY;
+
+	reg.info = *installed;
+	reg.liveAreaState = 0;
+
+	if (hasAppmeta) {
+		string liveAreaPath = string("ur0:appmeta/") + m_name + string("/livearea/contents");
+
+		gameLsdbValueSetText((**installed)[LSDB_KEY_LIVEAREA_PATH], liveAreaPath);
+	}
+
+	bool replace = false;
+
+	ret = gameAppRegister(&reg, 1, hasAppmeta, true, &replace);
+	if (ret < 0)
+		return ret;
+
+	ret = gameAppUpdate(&reg.info, replace, true);
+	if (ret < 0)
+		return ret;
 
 	return 0;
 }
