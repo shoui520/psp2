@@ -24,7 +24,7 @@ static unsigned int eventLogCount;
 unsigned char eventLogCharge[4];
 unsigned char eventLogTask1[4];
 unsigned char eventLogInput[4];
-unsigned char eventLogTouch[4];
+unsigned char eventLogCommand[4];
 unsigned char eventLogData5[4];
 
 /* eventLogRecord's entry, its clock and the byte it copies */

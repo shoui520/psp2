@@ -26,6 +26,7 @@
 /* the header's mode */
 #define LOG_MODE_STOPPED	0x00
 #define LOG_MODE_STARTED	0xaa
+#define LOG_MODE_HALTED		0x11	/* the slim's: stopped by command 0x0089 */
 #define LOG_MODE_NONE		0xff	/* not read yet: events are queued */
 
 struct LogHeader {
@@ -56,6 +57,8 @@ extern void logEvent(unsigned int event);
 extern int logGetInfo(struct LogInfo *info);
 extern int logStart(void);
 extern int logStop(void);
+/* the slim's: the log to mode (LOG_MODE_*), asked by source (1: the host's commands) */
+extern int logSetMode(unsigned char mode, unsigned char source);
 extern int logReadData(unsigned int id, void *data, unsigned char *size);
 extern int logReadOffset(unsigned int offset, unsigned char size, void *data);
 extern int logClear(unsigned int id);

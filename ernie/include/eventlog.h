@@ -32,7 +32,7 @@ struct EventLogEntry {
 extern unsigned char eventLogCharge[4];
 extern unsigned char eventLogTask1[4];
 extern unsigned char eventLogInput[4];
-extern unsigned char eventLogTouch[4];
+extern unsigned char eventLogCommand[4];
 extern unsigned char eventLogData5[4];
 
 extern void eventLogInit(void);

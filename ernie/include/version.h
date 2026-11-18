@@ -31,6 +31,11 @@ extern const char * const appTimeStamp;
 extern void		versionInit(void);
 extern void		getErnieVersion(unsigned char *buf);
 extern void		getHardwareInfo(unsigned char *buf);
+/* the slim's */
+extern void		getHardwareInfo2(unsigned char *buf);
+extern char		getHardwareInfo2Bit(unsigned char number);
+extern void		setHardwareInfo2Bit(unsigned char number, unsigned char on);
+extern void		getTimeStamp(unsigned char *out);
 extern unsigned char	getHardwareInfoFlags(void);
 extern void		setHardwareInfoFlags(unsigned char flags);
 #if FW_SINCE(0x01000104)

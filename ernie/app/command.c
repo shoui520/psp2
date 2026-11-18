@@ -19,6 +19,7 @@
 #include "clockout.h"
 #include "config.h"
 #include "command.h"
+#include "eventlog.h"
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
@@ -46,6 +47,9 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
 		   CommandDone done);
 void commandLogDone(unsigned char command, unsigned char result);
+#if BOARD_USS1001
+int commandLogHalt(unsigned char *data, unsigned char command, CommandDone done);
+#endif
 #if FW_SINCE(0x00090903)
 int commandSnvsHandshake(unsigned char *data, unsigned char command, CommandDone done);
 int commandSnvs00D1(unsigned char *data, unsigned char command, CommandDone done);
@@ -101,6 +105,18 @@ union CommandPinState {
 };
 #endif
 
+/* 0x00b3-0x00b5's pins (the slim's P12.0 and P1.7 for P6.7 and P3.1), and where 0x00b4 and
+   0x00b5 keep them (the slim's: a local of their own) */
+#if BOARD_USS1001
+#define COMMAND_PIN_P67		P12.0
+#define COMMAND_PIN_P31		P1.7
+#define COMMAND_PINS		pins
+#else
+#define COMMAND_PIN_P67		P6.7
+#define COMMAND_PIN_P31		P3.1
+#define COMMAND_PINS		word.pins.state
+#endif
+
 union CommandWord {
 	unsigned int	value;
 	unsigned char	byte[2];
@@ -140,13 +156,40 @@ unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
+#if BOARD_USS1001
+/* the slim's log of a command (kind 0x10, code 0): its number's low byte, its length and its
+   first two bytes */
+static void commandLogRequest(void)
+{
+	eventLogCommand[0] = commandRequest.command & 0xff;
+	eventLogCommand[1] = commandRequest.length;
+	eventLogCommand[2] = commandRequest.data[0];
+	eventLogCommand[3] = commandRequest.data[1];
+	eventLogRecord(0x10, 0, eventLogCommand, 4);
+}
+
+/* and of its answer (code 0x80): the number, the answer's length, its status and first byte */
+static void commandLogAnswer(void)
+{
+	eventLogCommand[0] = commandRequest.command & 0xff;
+	eventLogCommand[1] = commandRequest.answerLength;
+	eventLogCommand[2] = commandRequest.status;
+	eventLogCommand[3] = commandRequest.answer[0];
+	eventLogRecord(0x10, 0x80, eventLogCommand, 4);
+}
+#endif
+
 /* 0x0002 (sceSysconGetTimeStamp): the build's date as 12 digits, YYYYMMDDhhmm */
 unsigned char hostCommandTimeStamp(unsigned char *out, unsigned char *length)
 {
+#if BOARD_USS1001
+	getTimeStamp(out);
+#else
 	unsigned char i;
 
 	for (i = 0; i < 12; i++)
 		out[i] = appTimeStamp[timeStampDigits[i]];
+#endif
 	*length = 12;
 	return 0;
 }
@@ -158,6 +201,16 @@ unsigned char hostCommandHardwareInfo(unsigned char *out, unsigned char *length)
 	*length = 4;
 	return 0;
 }
+
+#if BOARD_USS1001
+/* 0x0006: the slim's hardware info 2 */
+unsigned char hostCommand0006(unsigned char *out, unsigned char *length)
+{
+	getHardwareInfo2(out);
+	*length = 16;
+	return 0;
+}
+#endif
 
 /* 0x0010 (sceSysconGetWakeupFactor) */
 unsigned char hostCommandWakeupFactor(unsigned char *out, unsigned char *length)
@@ -226,6 +279,11 @@ unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 {
 	commandPins.bits.p30 = P3.0;
+#if BOARD_USS1001
+	/* the slim's reports P3.0 and four bits high: present, P3.1, P7.6 and bit 4 */
+	commandPins.value |= 0x1e;
+	*out = commandPins.value & 0x1f;
+#else
 #if FW_SINCE(0x00090206)
 	commandPins.bits.present = 1;
 #else
@@ -241,6 +299,7 @@ unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 	*out = commandPins.value & 0x0f;
 #else
 	*out = commandPins.value & 0x07;	/* 0x00090206 has not P7.6 */
+#endif
 #endif
 	*length = 1;
 	return 0;
@@ -287,7 +346,9 @@ void commandRequestReceive(void)
 
 /* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 (0xff000000 before
    0x01000104 and in the 0x010001xx) */
-#if FW_SINCE(0x01000104) && !COMMAND_10X
+#if BOARD_USS1001
+#define COMMAND_PARAMETER_WINDOW	0xf0000000	/* the slim's */
+#elif FW_SINCE(0x01000104) && !COMMAND_10X
 #define COMMAND_PARAMETER_WINDOW	0xfc000000
 #else
 #define COMMAND_PARAMETER_WINDOW	0xff000000
@@ -296,11 +357,39 @@ void commandRequestReceive(void)
 				 ((unsigned long)(data)[2] << 8 & 0xff00) |		\
 				 ((unsigned long)(data)[3] << 16 & 0xff0000) |		\
 				 COMMAND_PARAMETER_WINDOW)
+/* the slim's 9-byte 0x00c0: four bytes of it in the window */
+#define COMMAND_PARAMETER4(data)	(((unsigned long)(data)[1] & 0xff) |			\
+				 ((unsigned long)(data)[2] << 8 & 0xff00) |		\
+				 ((unsigned long)(data)[3] << 16 & 0xff0000) |		\
+				 ((unsigned long)(data)[4] << 24 & 0xff000000) |	\
+				 COMMAND_PARAMETER_WINDOW)
+
+/* the slim logs 0x0081, 0x0082 and 0x00c0-0x00c2 and their answers (eventlog.c) */
+#if BOARD_USS1001
+static void commandLogRequest(void);
+static void commandLogAnswer(void);
+#define COMMAND_LOG_REQUEST()		commandLogRequest()
+#define COMMAND_LOG_ANSWER()		commandLogAnswer()
+#else
+#define COMMAND_LOG_REQUEST()
+#define COMMAND_LOG_ANSWER()
+#endif
 
 /* request 0's command came in, or its answer went out */
 void commandRequestNotify(void)
 {
-#if FW_SINCE(0x01000104)
+#if BOARD_USS1001
+	union RtcTick tick;
+	unsigned int offset;
+	unsigned char size;
+	unsigned char transition;
+	unsigned char result;
+	unsigned char linkSize;
+	unsigned long parameter;
+	unsigned char i;
+	union CommandPinState pins;	/* 0x00b4's and 0x00b5's */
+	union CommandWord word;
+#elif FW_SINCE(0x01000104)
 	STATE_TRANSITION_EVENT
 	unsigned char i;
 	union RtcTick tick;
@@ -324,6 +413,22 @@ void commandRequestNotify(void)
 	union CommandWord word;
 #endif
 
+#if BOARD_USS1001
+	/* the slim's takes the link's events too, and checks the handshake on a command */
+	switch (commandRequest.event) {
+	case HOST_EVENT_COMMAND:
+		if (!handshakeUnlocked11()) {
+			for (i = 0; i < COMMAND_BASE_REQUESTS; i++) {
+				if (commandBaseRequests[i] == commandRequest.command)
+					break;
+			}
+			if (i >= COMMAND_BASE_REQUESTS) {
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+				handshakeRefuse();
+				return;
+			}
+		}
+#else
 	if (!handshakeUnlocked11()) {
 		for (i = 0; i < COMMAND_BASE_REQUESTS; i++) {
 			if (commandBaseRequests[i] == commandRequest.command)
@@ -336,6 +441,7 @@ void commandRequestNotify(void)
 allowed:
 	switch (commandRequest.event) {
 	case HOST_EVENT_COMMAND:
+#endif
 #if FW_SINCE(0x00090903)
 		if (commandRequest.command >= 0x00d2 && commandRequest.command < 0x00d4 &&
 		    snvsUnlocked() == 0) {
@@ -357,6 +463,7 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 		case 0x0081:		/* sceSysconSetClock */
+			COMMAND_LOG_REQUEST();
 			if (commandRequest.length == 4) {
 				tick.byte[0] = commandRequestData[0];
 				tick.byte[1] = commandRequestData[1];
@@ -366,8 +473,10 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+			COMMAND_LOG_ANSWER();
 			break;
 		case 0x0082:		/* the alarm, and its mode */
+			COMMAND_LOG_REQUEST();
 			if (commandRequest.length == 4) {
 				tick.byte[0] = commandRequestData[0];
 				tick.byte[1] = commandRequestData[1];
@@ -390,6 +499,7 @@ allowed:
 #endif
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+			COMMAND_LOG_ANSWER();
 			break;
 #if HOST_WATCHDOG
 		case 0x0083:
@@ -420,6 +530,9 @@ allowed:
 		case 0x0087:		/* sceSysconLogStart */
 #if FW_SINCE(0x00090903)
 		case 0x0088:		/* sceSysconLogReadData */
+#endif
+#if BOARD_USS1001
+		case 0x0089:		/* the slim's */
 #endif
 			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
@@ -520,16 +633,24 @@ allowed:
 				if (boardMultiCnIsDongle() == 0)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 4, 0);
 				else if (commandRequestData[0] == 0) {
+#if BOARD_USS1001
+					boardSetMultiCnOutput(3);	/* the slim's: the dongle off */
+#else
 					boardSetMultiCnOutput(0);
 					powerDeviceSetPending(COMMAND_PENDING_DONGLE_OFF);
 					dly_tsk(25);
+#endif
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
+#if BOARD_USS1001
+					boardSetMultiCnOutput(2);	/* and on */
+#else
 					boardSetMultiCnOutput(1);
 					powerDeviceSetPending(COMMAND_PENDING_DONGLE_ON);
 					dly_tsk(10);
+#endif
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				}
 			} else
@@ -541,7 +662,7 @@ allowed:
 #if BOARD_102603 && FW_SINCE(0x01000104)
 			commandRequestAnswer[0] = 0;	/* P6.7 is an output (0x00b1) or not wired */
 #elif FW_SINCE(0x01000104)
-			commandRequestAnswer[0] = P6.7;
+			commandRequestAnswer[0] = COMMAND_PIN_P67;
 #else
 			if (configGet()->CONFIG_WLAN_LINE)
 				commandRequestAnswer[0] = P6.7;
@@ -553,18 +674,18 @@ allowed:
 #endif
 #if FW_SINCE(0x0100060B)
 		case 0x00b4:		/* P3.1, P6.7 and P3.0 */
-			word.pins.state.value = 0;
-			word.pins.state.bits.p31 = P3.1;
-			word.pins.state.bits.p67 = P6.7;
-			word.pins.state.bits.p30 = P3.0;
-			commandRequestAnswer[0] = word.pins.state.value;
+			COMMAND_PINS.value = 0;
+			COMMAND_PINS.bits.p31 = COMMAND_PIN_P31;
+			COMMAND_PINS.bits.p67 = COMMAND_PIN_P67;
+			COMMAND_PINS.bits.p30 = P3.0;
+			commandRequestAnswer[0] = COMMAND_PINS.value;
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 1);
 			break;
 		case 0x00b5:		/* P3.1, while sleep factor bit 0 is set */
 			if (commandRequest.length == 1) {
 				if (sleepFactorGet() & 1) {
-					word.pins.state.value = commandRequestData[0];
-					P3.1 = word.pins.state.bits.p31;
+					COMMAND_PINS.value = commandRequestData[0];
+					COMMAND_PIN_P31 = COMMAND_PINS.bits.p31;
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
 				} else
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
@@ -573,6 +694,99 @@ allowed:
 			break;
 #endif
 		case 0x00c0:		/* a transition with its parameter */
+#if BOARD_USS1001
+			/* the slim's: transition 0x5d too, and a 9-byte form with four bytes of
+			   parameter */
+			COMMAND_LOG_REQUEST();
+			if (commandRequest.length == 4) {
+				if (commandRequestData[0] == 0x00) {
+					transition = 0x50;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x01) {
+					transition = 0x51;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x10) {
+					transition = 0x58;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					parameter &= ~0x00000400;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x11) {
+					transition = 0x59;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					parameter &= ~0x00000400;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x12) {
+					transition = 0x5a;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					parameter &= ~0x00800000;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x13) {
+					transition = 0x5b;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					parameter &= ~0x02000000;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x20) {
+					transition = 0x5d;
+					parameter = COMMAND_PARAMETER(commandRequestData);
+					parameter &= ~0x0000001b;
+					stateSetWakeMask(parameter);
+				} else {
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
+					break;
+				}
+				if ((unsigned char)STATE_TRANSITION_NOMASK(transition) == 0)
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+			} else if (commandRequest.length == 9) {
+				if (commandRequestData[0] == 0x00) {
+					transition = 0x50;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x01) {
+					transition = 0x51;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x10) {
+					transition = 0x58;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					parameter &= ~0x00000400;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x11) {
+					transition = 0x59;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					parameter &= ~0x00000400;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x12) {
+					transition = 0x5a;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					parameter &= ~0x00800000;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x13) {
+					transition = 0x5b;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					parameter &= ~0x02000000;
+					stateSetWakeMask(parameter);
+				} else if (commandRequestData[0] == 0x20) {
+					transition = 0x5d;
+					parameter = COMMAND_PARAMETER4(commandRequestData);
+					parameter &= ~0x0000001b;
+					stateSetWakeMask(parameter);
+				} else {
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
+					break;
+				}
+				if ((unsigned char)STATE_TRANSITION_NOMASK(transition) == 0)
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+			} else
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+			COMMAND_LOG_ANSWER();
+			break;
+#else
 			if (commandRequest.length == 4) {
 #if !FW_SINCE(0x01000104)
 				if (commandRequestData[0] == 0x00) {
@@ -638,16 +852,20 @@ allowed:
 			} else
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
+#endif
 		case 0x00c1:		/* sceSysconErnieShutdown */
+			COMMAND_LOG_REQUEST();
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+			COMMAND_LOG_ANSWER();
 			break;
 #if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 		case 0x00c2:
+			COMMAND_LOG_REQUEST();
 			if (commandRequest.length == 1) {
 				if (commandRequestData[0] == 0x5a) {
 #if FW_SINCE(0x01000104)
 					transition = 0x56;
-#if COMMAND_10X
+#if COMMAND_10X || BOARD_USS1001
 					if ((unsigned char)STATE_TRANSITION(transition) == 0)
 #else
 					if (STATE_TRANSITION(transition) == 0)
@@ -670,6 +888,7 @@ allowed:
 #else
 			}
 #endif
+			COMMAND_LOG_ANSWER();
 			break;
 #endif
 #if FW_SINCE(0x00090903)
@@ -683,7 +902,11 @@ allowed:
 		case 0x00d1:
 			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
+#if BOARD_USS1001
+			break;
+#else
 			return;
+#endif
 		case 0x00d2:		/* sceSysconSnvsReadData */
 		case 0x00d3:		/* sceSysconSnvsWriteData */
 			if ((commandRequest.length & 0x0f) == 0) {
@@ -702,6 +925,14 @@ allowed:
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&commandRequest, HOST_REQUEST_RECEIVE);
 		break;
+#if BOARD_USS1001
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&commandRequest, HOST_REQUEST_IDLE);
+		break;
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&commandRequest, HOST_REQUEST_RECEIVE);
+		break;
+#endif
 	}
 }
 
@@ -720,6 +951,11 @@ void commandRequestRun(void)
 #if FW_SINCE(0x00090903)
 	case 0x0088:
 		commandLogRead(commandRequestData, commandRequestAnswer, 0x88, commandLogDone);
+		break;
+#endif
+#if BOARD_USS1001
+	case 0x0089:
+		commandLogHalt(commandRequestData, 0x89, commandLogDone);
 		break;
 #endif
 	case 0x00a0:
@@ -776,7 +1012,11 @@ int commandLogStart(unsigned char *data, unsigned char command, CommandDone done
 {
 	unsigned char result;
 
+#if BOARD_USS1001
+	result = (unsigned char)logSetMode(LOG_MODE_STARTED, 1);
+#else
 	result = (unsigned char)logStart();
+#endif
 	done(command, result);
 	return 0;
 }
@@ -812,6 +1052,18 @@ int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char com
 	done(command, result);
 	return 0;
 }
+
+#if BOARD_USS1001
+/* 0x0089: the slim's, the log halted */
+int commandLogHalt(unsigned char *data, unsigned char command, CommandDone done)
+{
+	unsigned char result;
+
+	result = (unsigned char)logSetMode(LOG_MODE_HALTED, 1);
+	done(command, result);
+	return 0;
+}
+#endif
 #endif
 
 #if FW_SINCE(0x00090804)
@@ -830,6 +1082,9 @@ void commandLogDone(unsigned char command, unsigned char result)
 		status = 1;
 	switch (command) {
 	case 0x87:
+#if BOARD_USS1001
+	case 0x89:
+#endif
 		length = 0;
 		break;
 	case 0x86:
