@@ -413,7 +413,7 @@ int hctEventCallback(void *device, OsaBuffer *buffer, uintptr_t argument, unsign
 		command->opcode = packet[0] | (packet[1] << 8);
 		command->length = packet[2];
 		__aeabi_memcpy(command->parameters, packet + 3, packet[2]);
-		hctRouteMessage((struct HctLinkMessage *)command);
+		hctRouteMessage((struct HctLinkMessage *)message);
 		osa_MsgSend((void **)&message, romQueueBtCore);
 		break;
 	}
