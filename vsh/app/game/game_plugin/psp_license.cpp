@@ -6,13 +6,19 @@
 
 #include <stddef.h>
 #include <scetypes.h>
+#include <sceerror.h>
 #include <kernel/iofilemgr.h>
+#include <rtc.h>
+#include <vshbridge/vshbridge.h>
 #include <std/stdio.h>
+#include <std/stdlib.h>
 #include <std/string.h>
 #include <std/string>
 #include <common/shared_ptr.h>
 #include <dir/dir.h>
 #include <file/localfile.h>
+
+#include "../../shell/src/livespace_db/livespace_db_internal.h"
 
 #include "../../shell/src/livespace_db/lsdb_keys.h"
 #include "game_plugin.h"
@@ -20,8 +26,14 @@
 
 using namespace paf;
 
-/* a removal asked to stop (0x81544108) */
+int gameTempDirPrepare(const char *dir);
+const char *gamePathSkipDrive(const char *path);
+int gameRenameIfExists(const char *src, const char *dst);
+
+/* a removal asked to stop (0x81544108), and the folder it removes, of s_removePathLen characters */
 static bool s_stopRequested;
+static SceSize s_removePathLen;
+static char s_removePath[SCE_IO_MAX_PATH_BUFFER_SIZE];
 
 /* where a PSP EBOOT's data.psp keeps its content ID, and where a license file keeps its own */
 #define GAME_PSP_DATA_CONTENT_ID_OFFSET	0x560
@@ -42,6 +54,73 @@ static bool s_stopRequested;
 /* a content ID as it is read, and the license name made of it */
 #define GAME_PSP_CONTENT_ID_SIZE	48
 #define GAME_PSP_RIF_NAME_SIZE		52
+
+/* the key of a PSP application's game data folder, under ux0:pspemu/PSP/GAME, which others may share */
+#define LSDB_KEY_GAMEDATA_ID		0x924BC88Du	/* "GAMEDATA_ID" */
+/* the key of an application's save data folder, which others may share */
+#define LSDB_KEY_INSTALL_DIR_SAVEDATA	0x10954174u	/* "INSTALL_DIR_SAVEDATA" */
+
+/* where a PSP application's folders are moved to be removed */
+#define GAME_PSP_GAME_DIR		"ux0:pspemu/PSP/GAME"
+#define GAME_PSP_TEMP_DIR		"ux0:pspemu/temp/game"
+#define GAME_UR0_TEMP_DIR		"ur0:temp/game"
+
+/* where a PSM application's folders are, and are moved to be removed */
+#define GAME_PSM_DIR			"ux0:psm/"
+#define GAME_UX0_TEMP_DIR		"ux0:temp/game"
+
+/* the category of a PSM application with a license and save data of its own, and its users */
+#define GAME_PSM_CATEGORY_MBA		"mba"
+#define GAME_PSM_USERS			64
+
+/* the game card's writable partition (grw0:), formatted when its application is deleted */
+#define GAME_GC_GAMERW_DEVICE		"sdstor0:gcd-lp-ign-gamerw"
+#define GAME_GC_PARTITION_GAMERW	10
+#define GAME_GC_FORMAT_BUF_SIZE		0x40000
+#define GAME_GC_FORMAT_BUF_ALIGN	0x1000
+
+/* a partition of the game card: its number, its MBR partition type and the clusters it is made with */
+struct GameGcPartition {
+	SceUInt8 index;
+	SceUInt8 type;
+	SceUInt16 reserved;
+	SceUInt32 clusterSize;
+	SceUInt32 reserved2;
+};
+
+static const GameGcPartition s_gcPartitions[] = {
+	{ 9, 0x07, 0, 0x8000, 0 },
+	{ GAME_GC_PARTITION_GAMERW, 0x07, 0, 0x8000, 0 },
+	{ 13, 0xDA, 0, 0, 0 },
+};
+
+/*
+ * PLACEHOLDER: what the FAT formatter linked into the shell (0x81383D8C, its messages name it
+ * "FatFormat") is given, 48 bytes; the names are ours, from what the deletion stores.
+ */
+struct GameFatFormatParam {
+	SceUInt32 reserved[2];
+	const char *device;
+	void *buf;
+	SceSize bufSize;
+	SceUInt32 clusterSize;
+	SceUInt32 initialSize;		/* 512: only the partition table made */
+	SceUInt32 reserved2;
+	SceUInt32 fatTime;		/* the volume's date and time, as FAT keeps them */
+	SceUInt32 reserved3[2];
+	SceUInt32 fsKind;		/* from the partition type: 2 FAT16, 3 FAT32, 4 exFAT */
+};
+
+/* PLACEHOLDER names: the FAT formatter's library, linked into the shell, not written yet */
+extern "C" int gameFatFormat(GameFatFormatParam *param);		/* 0x81383D8C */
+extern "C" SceUInt32 gameFatTimeFromDateTime(const SceDateTime *time);	/* 0x8137E2D8 */
+
+/* how deep a PSP folder tree's removal goes, and the file names each of its steps reads */
+#define GAME_PSP_REMOVE_MAX_DEPTH	512
+#define GAME_PSP_REMOVE_NAMES		128
+
+/* the bytes of two title IDs compared, the terminator with them */
+#define GAME_PSP_TITLE_ID_LEN		10
 
 /*
  * The name of a PSP application's license, from the content ID its EBOOT.PBP's data.psp holds
@@ -391,4 +470,432 @@ removed:
 failed:
 	*result = ret;
 	return GAME_PSP_REMOVE_FAILED;
+}
+
+/* path as one file name: each '/' made a '_' (0x8105AD9A) */
+string gamePathToFileName(const char *path)
+{
+	string name(path);
+
+	for (unsigned int i = 0; i < name.size(); i++) {
+		if (name.at(i) == '/')
+			name.at(i) = '_';
+	}
+
+	return name;
+}
+
+/*
+ * Whether no application but titleId has gamedataId as its PSP game data folder; true also when the
+ * applications cannot be asked (0x8105ADF6).
+ */
+bool gamePspGamedataIsOnlyFor(const char *gamedataId, const char *titleId)
+{
+	if (gamedataId == NULL)
+		return false;
+
+	vector<string> titleIds;
+	AppInfoQClient client;
+
+	SceLsdb_A6D8772C(&client);
+
+	if (SceLsdb_E90B81CD(&client) == 0) {
+		LsdbQueryCondition condition;
+
+		condition.key = LSDB_KEY_GAMEDATA_ID;
+		condition.next = NULL;
+		condition.values.push_back(LsdbValue(gamedataId));
+
+		SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+
+		for (unsigned int i = 0; i < titleIds.size(); i++) {
+			if (sce_paf_strncmp(titleIds[i].c_str(), titleId, GAME_PSP_TITLE_ID_LEN) != 0) {
+				SceLsdb_E2101B03(&client);
+				return false;
+			}
+		}
+	}
+
+	SceLsdb_E2101B03(&client);
+
+	return true;
+}
+
+/*
+ * The PSP application titleId deleted (0x8105AFA4): its folder, its PSP game folder when no other
+ * application has it, and its appmeta moved into the temporary folders, then those removed, the
+ * PSP one a step at a time with the licenses of its files.
+ */
+int gamePspAppDelete(const char *titleId, LsdbAppInfoPtr *info)
+{
+	LocalFileStat stat;
+	const char *orgPath = LsdbValueText((**info)[LSDB_KEY_ORG_PATH]);
+
+	if (gamePathCheckUnder(orgPath, GAME_PSP_GAME_DIR "/") < 0)
+		return GAME_ERROR_PATH_OUTSIDE;
+
+	const char *gamedataId = LsdbValueText((**info)[LSDB_KEY_GAMEDATA_ID]);
+	int ret;
+
+	ret = gameTempDirPrepare(GAME_PSP_TEMP_DIR);
+	if (ret < 0)
+		return ret;
+
+	ret = gameTempDirPrepare(GAME_UR0_TEMP_DIR);
+	if (ret < 0)
+		return ret;
+
+	if (orgPath != NULL && gamePathSkipDrive(orgPath) != NULL) {
+		string path(orgPath);
+		string name = gamePathToFileName(gamePathSkipDrive(orgPath));
+		string dst = string(GAME_PSP_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(orgPath, dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	if (gamedataId != NULL && gamedataId[0] != '\0' && gamePspGamedataIsOnlyFor(gamedataId, titleId)) {
+		string src = string(GAME_PSP_GAME_DIR) + "/" + gamedataId;
+		string dst = string(GAME_PSP_TEMP_DIR) + "/" + gamedataId;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	{
+		string appmeta = string("appmeta/") + titleId;
+		string src = string("ur0:") + appmeta;
+		string name = gamePathToFileName(appmeta.c_str());
+		string dst = string(GAME_UR0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	s_stopRequested = false;
+	s_removePathLen = gamePathGetLength(GAME_PSP_TEMP_DIR, sizeof(s_removePath) + 1);
+
+	if (s_removePathLen <= sizeof(s_removePath)) {
+		sce_paf_strncpy(s_removePath, GAME_PSP_TEMP_DIR, sizeof(s_removePath));
+
+		int depth = 0;
+		int result = 0;
+		char *names = new char[GAME_PSP_REMOVE_NAMES * GAME_PSP_NAME_SIZE];
+
+		if (names != NULL) {
+			for (;;) {
+				if (depth >= GAME_PSP_REMOVE_MAX_DEPTH) {
+					result = GAME_ERROR_TOO_DEEP;
+					break;
+				}
+
+				if (s_stopRequested) {
+					result = GAME_ERROR_ABORTED;
+					break;
+				}
+
+				ret = gamePspTreeRemoveStep(s_removePath, &s_removePathLen, names,
+							    GAME_PSP_REMOVE_NAMES, &depth, &result);
+				if (ret == GAME_PSP_REMOVE_DONE || ret == GAME_PSP_REMOVE_FAILED)
+					break;
+			}
+
+			delete[] names;
+
+			ret = result;
+			if (ret >= 0)
+				return gameRemoveDirectoryContents(GAME_UR0_TEMP_DIR, NULL, NULL, NULL,
+								   true);
+		} else {
+			ret = GAME_ERROR_NOT_READY;
+		}
+	} else {
+		ret = GAME_ERROR_INVALID_ARGUMENT;
+	}
+
+	return ret;
+}
+
+/*
+ * Whether no application but titleId has savedataDir as its save data folder; true also when the
+ * applications cannot be asked (0x8105BD36).
+ */
+bool gameSavedataDirIsOnlyFor(const char *savedataDir, const char *titleId)
+{
+	if (savedataDir == NULL)
+		return false;
+
+	vector<string> titleIds;
+	AppInfoQClient client;
+
+	SceLsdb_A6D8772C(&client);
+
+	if (SceLsdb_E90B81CD(&client) == 0) {
+		LsdbQueryCondition condition;
+
+		condition.key = LSDB_KEY_INSTALL_DIR_SAVEDATA;
+		condition.next = NULL;
+		condition.values.push_back(LsdbValue(savedataDir));
+
+		SceLsdb_76B75713(&client, &condition, &titleIds, 0);
+
+		for (unsigned int i = 0; i < titleIds.size(); i++) {
+			if (sce_paf_strncmp(titleIds[i].c_str(), titleId, GAME_PSP_TITLE_ID_LEN) != 0) {
+				SceLsdb_E2101B03(&client);
+				return false;
+			}
+		}
+	}
+
+	SceLsdb_E2101B03(&client);
+
+	return true;
+}
+
+/*
+ * The PSM application titleId deleted (0x8105BEE4): its folder, its license and the save data of
+ * each user when no other application has them, and its appmeta moved into the temporary
+ * folders, then those removed.
+ */
+int gamePsmAppDelete(const char *titleId, LsdbAppInfoPtr *info)
+{
+	LocalFileStat stat;
+	const char *orgPath = LsdbValueText((**info)[LSDB_KEY_ORG_PATH]);
+
+	if (gamePathCheckUnder(orgPath, GAME_PSM_DIR) < 0)
+		return GAME_ERROR_PATH_OUTSIDE;
+
+	int ret = gameTempDirPrepare(GAME_UX0_TEMP_DIR);
+
+	if (ret != SCE_ERROR_ERRNO_ENODEV && ret != SCE_ERROR_ERRNO_ENOENT && ret < 0)
+		return ret;
+
+	ret = gameTempDirPrepare(GAME_UR0_TEMP_DIR);
+	if (ret < 0)
+		return ret;
+
+	if (orgPath != NULL && gamePathSkipDrive(orgPath) != NULL) {
+		string path(orgPath);
+		string dst = string(GAME_UX0_TEMP_DIR) + "/" + string("psm_") + titleId;
+
+		ret = gameRenameIfExists(orgPath, dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	const char *category = LsdbValueText((**info)[LSDB_KEY_CATEGORY]);
+
+	if (category != NULL &&
+	    sce_paf_strncmp(category, GAME_PSM_CATEGORY_MBA, sizeof(GAME_PSM_CATEGORY_MBA)) == 0) {
+		string license = string("license/app/") + titleId;
+		string licenseSrc = string("ux0:") + license;
+		string licenseName = gamePathToFileName(license.c_str());
+		string licenseDst = string(GAME_UX0_TEMP_DIR) + "/" + licenseName;
+
+		if (LocalFile::Exists(licenseSrc.c_str())) {
+			ret = LocalFile::RenameFile(licenseSrc.c_str(), licenseDst.c_str());
+			if (ret < 0)
+				return ret;
+		}
+
+		const char *savedataDir = LsdbValueText((**info)[LSDB_KEY_INSTALL_DIR_SAVEDATA]);
+
+		if (savedataDir != NULL && gameCheckTitleId(savedataDir) < 0)
+			return GAME_ERROR_BAD_SAVEDATA_DIR;
+
+		if (gameSavedataDirIsOnlyFor(savedataDir, titleId)) {
+			for (int i = 0; i < GAME_PSM_USERS; i++) {
+				char userNo[4];
+
+				sce_paf_snprintf(userNo, 3, "%02d", i);
+
+				string savedata = string("user/") + string(userNo) + string("/savedata/") +
+						  string(savedataDir);
+				string src = string("ux0:") + savedata;
+				string name = gamePathToFileName(savedata.c_str());
+				string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+
+				ret = gameRenameIfExists(src.c_str(), dst.c_str());
+				if (ret < 0)
+					return ret;
+			}
+		}
+	}
+
+	{
+		string appmeta = string("appmeta/") + titleId;
+		string src = string("ur0:") + appmeta;
+		string name = gamePathToFileName(appmeta.c_str());
+		string dst = string(GAME_UR0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = gameRemoveDirectoryContents(GAME_UX0_TEMP_DIR, NULL, NULL, NULL, false);
+	if (ret == SCE_ERROR_ERRNO_ENODEV || ret == SCE_ERROR_ERRNO_ENOENT || ret >= 0)
+		return gameRemoveDirectoryContents(GAME_UR0_TEMP_DIR, NULL, NULL, NULL, true);
+
+	return ret;
+}
+
+/* the game card's partition of number index, or NULL (inlined) */
+static inline const GameGcPartition *gameGcPartitionFind(unsigned int index)
+{
+	for (unsigned int i = 0; i < sizeof(s_gcPartitions) / sizeof(s_gcPartitions[0]); i++) {
+		if (s_gcPartitions[i].index == index)
+			return &s_gcPartitions[i];
+	}
+
+	return NULL;
+}
+
+/*
+ * The game card application titleId deleted (0x8105CF9C): its cache moved and removed, the game
+ * card's writable partition formatted again when the application is there, and its appmeta moved
+ * into the temporary folder and removed.
+ */
+int gameGcAppDelete(const char *titleId, LsdbAppInfoPtr *info)
+{
+	LocalFileStat stat;
+	const char *orgPath = LsdbValueText((**info)[LSDB_KEY_ORG_PATH]);
+
+	if (orgPath == NULL)
+		return GAME_ERROR_NO_VALUE;
+
+	int ret = gameTempDirPrepare(GAME_UR0_TEMP_DIR);
+
+	if (ret < 0)
+		return ret;
+
+	ret = gameTempDirPrepare(GAME_UX0_TEMP_DIR);
+
+	if (ret == 0) {
+		string cache = string("cache/") + titleId;
+		string src = string("ux0:") + cache;
+		string name = gamePathToFileName(cache.c_str());
+		string dst = string(GAME_UX0_TEMP_DIR) + "/" + name;
+
+		if (LocalFile::Exists(src.c_str())) {
+			ret = LocalFile::RenameFile(src.c_str(), dst.c_str());
+			if (ret < 0)
+				return ret;
+		}
+
+		ret = gameRemoveDirectoryContents(GAME_UX0_TEMP_DIR, NULL, NULL, NULL, true);
+		if (ret < 0)
+			return ret;
+	}
+
+	LocalFileStat orgStat;
+
+	if (LocalFile::Getstat(orgPath, &orgStat) == 0) {
+		vshIoUmount(GAME_MOUNT_ID_GRW0, 0, 0, 0);
+
+		const GameGcPartition *partition = gameGcPartitionFind(GAME_GC_PARTITION_GAMERW);
+
+		if (partition != NULL) {
+			unsigned int type = partition->type;
+			SceUInt32 clusterSize = partition->clusterSize;
+			SceDateTime time;
+
+			ret = sceRtcGetCurrentClockLocalTime(&time);
+			if (ret >= 0) {
+				SceUInt32 fatTime = gameFatTimeFromDateTime(&time);
+				void *buf = sce_paf_memalign(GAME_GC_FORMAT_BUF_ALIGN, GAME_GC_FORMAT_BUF_SIZE);
+
+				if (buf == NULL) {
+					ret = SCE_ERROR_ERRNO_ENOMEM;
+				} else {
+					GameFatFormatParam param;
+
+					param.device = GAME_GC_GAMERW_DEVICE;
+					param.buf = buf;
+					param.reserved[0] = 0;
+					param.reserved[1] = 0;
+					param.bufSize = GAME_GC_FORMAT_BUF_SIZE;
+					param.clusterSize = clusterSize;
+					param.fatTime = fatTime;
+					param.reserved3[0] = 0;
+					param.reserved3[1] = 0;
+					param.initialSize = 0;
+					param.reserved2 = 0;
+
+					switch (type) {
+					case 0x06:
+						param.fsKind = 2;
+						break;
+					case 0x07:
+						param.fsKind = 4;
+						break;
+					case 0x0B:
+						param.fsKind = 3;
+						break;
+					default:
+						param.fsKind = 0;
+						break;
+					}
+
+					ret = gameFatFormat(&param);
+					if (ret >= 0)
+						sceIoSync(param.device, 0);
+
+					sce_paf_free(buf);
+				}
+			}
+
+			if (ret < 0 && ret != SCE_ERROR_ERRNO_ENODEV)
+				return ret;
+		}
+
+		vshIoMount(GAME_MOUNT_ID_GRW0, NULL, 0, 0, 0, 0);
+	}
+
+	{
+		string appmeta = string("appmeta/") + titleId;
+		string src = string("ur0:") + appmeta;
+		string name = gamePathToFileName(appmeta.c_str());
+		string dst = string(GAME_UR0_TEMP_DIR) + "/" + name;
+
+		ret = gameRenameIfExists(src.c_str(), dst.c_str());
+		if (ret < 0)
+			return ret;
+	}
+
+	return gameRemoveDirectoryContents(GAME_UR0_TEMP_DIR, NULL, NULL, NULL, true);
+}
+
+/* dir emptied, or made when it is not there (0x8105DBE2) */
+int gameTempDirPrepare(const char *dir)
+{
+	if (Dir::IsExist(dir))
+		return gameRemoveDirectoryContents(dir, NULL, NULL, NULL, false);
+
+	return Dir::CreateRecursive(dir, 6);
+}
+
+/* what follows the drive of path, or NULL when it names none (0x8105DC0E) */
+const char *gamePathSkipDrive(const char *path)
+{
+	const char *colon = sce_paf_strrchr(path, ':');
+
+	if (colon != NULL)
+		return colon + 1;
+
+	return NULL;
+}
+
+/* src renamed to dst, when it is there (0x8105DC22) */
+int gameRenameIfExists(const char *src, const char *dst)
+{
+	int ret = 0;
+
+	if (LocalFile::Exists(src))
+		return LocalFile::RenameFile(src, dst);
+
+	return ret;
 }

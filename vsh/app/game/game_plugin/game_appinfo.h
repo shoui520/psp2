@@ -266,6 +266,8 @@ private:
 
 /* a title ID: nine upper-case letters and digits (0x8101D662) */
 int gameCheckTitleId(const char *titleId);
+int gamePathCheckUnder(const char *path, const char *dir);
+SceSize gamePathGetLength(const char *path, SceSize max);
 
 /* a param.sfo parameter's format (values only) */
 #define GAME_SFO_FORMAT_BINARY		0x0004

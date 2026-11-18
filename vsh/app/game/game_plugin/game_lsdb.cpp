@@ -14,6 +14,9 @@
 #include <std/string>
 #include <std/vector>
 #include <regmgr/regmgr.h>
+#include <kernel/libkernel.h>
+#include <kernel/threadmgr.h>
+#include <ces/libces_ucs.h>
 #include <dir/dir.h>
 #include <file/localfile.h>
 
@@ -46,6 +49,11 @@ int gameAppDeleteFiles(const char *titleId, LsdbAppInfoPtr *info);	/* 0x810609AC
 int gameAppDirCleanup(string *appDir);				/* 0x81020438 */
 int gameAppDeleteFilesPart(const char *titleId, LsdbAppInfoPtr *info, int part);	/* 0x81062BBA */
 extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);	/* 0x81449964 */
+/* the SDK's libSceCes (libces_ucs.h) and the user side of _sceFiosKernelOverlayResolveSync */
+extern "C" int sceCesUtf8ToUtf32(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize,
+				 uint32_t *utf32);					/* 0x8138932C */
+extern "C" int sceFiosKernelOverlayResolveSync(SceUID pid, int resolveFlag, const char *inPath,
+					       char *outPath, SceSize maxPath);		/* 0x8144DA0C */
 int gameIoGetDeviceSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);	/* 0x8137E308 */
 int gameAppDataOperateFiles(const string &titleId, LsdbAppInfoPtr *info, int arg1, int arg2,
 			    int arg3, int arg4);				/* 0x81063906 */
@@ -1557,6 +1565,77 @@ int gameCheckTitleId(const char *titleId)
 		if (!(upper | digit))
 			return GAME_ERROR_INVALID_TITLE_ID;
 	}
+
+	return 0;
+}
+
+/*
+ * Whether path is under dir, both as the process's overlays resolve them; a path that is not
+ * UTF-8, or starts with a byte order mark, is not (0x8101D6C4).
+ */
+int gamePathCheckUnder(const char *path, const char *dir)
+{
+	char resolvedPath[256];
+	char resolvedDir[64];
+
+	sce_paf_memset(resolvedPath, 0, sizeof(resolvedPath));
+	sce_paf_memset(resolvedDir, 0, sizeof(resolvedDir));
+
+	if (path == NULL)
+		return GAME_ERROR_INVALID_ARGUMENT;
+	if (dir == NULL)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	SceSize pathLen = gameStrnlen(path, sizeof(resolvedPath));
+
+	if (pathLen > sizeof(resolvedPath) - 1)
+		return GAME_ERROR_INVALID_ARGUMENT;
+	if (gameStrnlen(dir, sizeof(resolvedDir)) > sizeof(resolvedDir) - 1)
+		return GAME_ERROR_INVALID_ARGUMENT;
+
+	uint32_t convSize = 0;
+	uint32_t utf16Len = 0;
+	uint32_t utf32 = 0;
+	int ret = sceCesUtf8ToUtf32((const uint8_t *)path, pathLen, &convSize, &utf32);
+
+	if (ret == 0) {
+		if (convSize == 3 && utf32 == 0xFEFF) {
+			ret = GAME_ERROR_PATH_OUTSIDE;
+		} else {
+			SceCesUcsContext ctx;
+
+			sceClibMemset(&ctx, 0, sizeof(ctx));
+			ret = sceCesUcsContextInit(&ctx);
+			if (ret == 0)
+				ret = sceCesUtf8StrGetUtf16Len(&ctx, (const uint8_t *)path, pathLen,
+							       &convSize, &utf16Len);
+		}
+	}
+
+	if (ret != 0)
+		return ret;
+
+	SceUID pid = sceKernelGetProcessId();
+
+	if (pid < 0)
+		return pid;
+
+	ret = sceFiosKernelOverlayResolveSync(pid, 0, path, resolvedPath, sizeof(resolvedPath) - 1);
+	if (ret < 0)
+		return ret;
+
+	ret = sceFiosKernelOverlayResolveSync(pid, 0, dir, resolvedDir, sizeof(resolvedDir) - 1);
+	if (ret < 0)
+		return ret;
+
+	SceSize resolvedLen = gameStrnlen(resolvedPath, sizeof(resolvedPath));
+	SceSize dirLen = gameStrnlen(resolvedDir, sizeof(resolvedDir));
+
+	if (dirLen > resolvedLen)
+		return GAME_ERROR_PATH_OUTSIDE;
+
+	if (sce_paf_strncmp(resolvedPath, resolvedDir, dirLen) != 0)
+		return GAME_ERROR_PATH_OUTSIDE;
 
 	return 0;
 }

@@ -269,6 +269,12 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_KIND_MISMATCH	-2146430671	/* 0x80101131: a file where a folder is copied, or the other way */
 #define GAME_ERROR_SYSTEM_UPDATE	-2146430650	/* 0x80101146: content for a newer system */
 #define GAME_ERROR_OLD_EBOOT_SIG	-2146430575	/* 0x80101191: a PSP EBOOT signed the old way, where it is not allowed */
+#define GAME_ERROR_BAD_SAVEDATA_DIR	-2146430573	/* 0x80101193: a save data folder that is no title ID */
+#define GAME_ERROR_PATH_OUTSIDE		-2146430572	/* 0x80101194: a path not under the folder it must be in, or not UTF-8 */
+
+/* the mount IDs of gro0: and grw0: (values only) */
+#define GAME_MOUNT_ID_GRO0	0x900
+#define GAME_MOUNT_ID_GRW0	0xA00
 
 /* paf's error for a file that does not exist (value only) */
 #define GAME_PAF_ERROR_NOT_FOUND	-2135994334	/* 0x80AF5022 */

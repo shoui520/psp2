@@ -50,10 +50,6 @@ enum {
 	APPLAUNCHER_PLUGIN_FUNC_UPDATE		= 2,	/* PLACEHOLDER: meaning not read yet */
 };
 
-/* the mount IDs of gro0: and grw0: (values only) */
-#define GAME_MOUNT_ID_GRO0	0x900
-#define GAME_MOUNT_ID_GRW0	0xA00
-
 /* where the shell keeps an application's LiveArea copy */
 #define GAME_APPMETA_DIR	"ur0:appmeta/"
 
