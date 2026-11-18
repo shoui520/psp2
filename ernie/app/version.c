@@ -108,6 +108,8 @@ const char * const appTimeStamp = timeStamp;
 /* the slim's hardware info 2 (command 0x0006): 128 bits, each this default flipped by its bit
    in versionFlags.hardwareInfo2 */
 static const unsigned char hardwareInfo2[16] = { 0x07 };
+/* the layout of the log's records (app/log.c) */
+const unsigned int logVersion = 9;
 #endif
 
 struct VersionFlags versionFlags;

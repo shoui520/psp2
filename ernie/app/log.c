@@ -49,6 +49,11 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 	{ 0x16, 0x1b, 1 },
 	{ 0x17, 0x06, 2 },
 	{ 0x18, 0x10, 1 },
+#if BOARD_USS1001
+	{ 0x19, 0x28, 1 },
+	{ 0x1a, 0x29, 1 },
+	{ 0x1d, 0x2a, 1 },
+#endif
 #else
 	{ 0x00, 0x00, 4 },	/* the header */
 	{ 0x01, 0x04, 2 },
@@ -100,6 +105,177 @@ void logInit(void)
 	logHeader.version = 0;
 }
 
+#if BOARD_USS1001
+/* the header taken in (at the first call, first, which then starts the log), and the records
+   of an older layout moved to this one's */
+static void logLoad(unsigned char first)
+{
+	union LogValue record;
+	union LogValue old;
+	int result;
+	unsigned int id;
+	unsigned char size;
+
+	if (first == 1) {
+		logHeader.state = LOG_STATE_UNLOADED;
+		logHeader.mode = LOG_MODE_NONE;
+		logHeader.version = 0;
+	}
+	if (logHeader.state == LOG_STATE_UNLOADED) {
+		result = logRead(LOG_HEADER, &record, &size);
+		if (result != 0)
+			return;
+		memcpy(&logHeader, &record, sizeof(logHeader));
+		if (logHeader.mode == LOG_MODE_NONE) {
+			result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+			if (result != 0)
+				return;
+			result = logReset();
+			if (result != 0)
+				return;
+		}
+	}
+	if (logHeader.version < LOG_VERSION) {
+		memcpy(&record, &logHeader, sizeof(logHeader));
+		result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+		if (result != 0)
+			return;
+		switch (logHeader.version) {
+		case 0:
+		case 1:
+			old.value = 0;
+			logNvsRead(0x04, 2, &old);
+			logNvsWrite(0x1c, 4, &old);
+			old.value = 0;
+			logNvsRead(0x06, 2, &old);
+			logNvsWrite(0x20, 4, &old);
+			for (id = 3; id < 0x1b; id++)
+				logClear(id);
+			break;
+		case 2:
+			old.value = 0;
+			logNvsRead(0x04, 2, &old);
+			logNvsWrite(0x1c, 4, &old);
+			old.value = 0;
+			logNvsRead(0x06, 2, &old);
+			logNvsWrite(0x20, 4, &old);
+			logClear(0x0b);
+			logClear(0x17);
+			logClear(0x18);
+			logNvsRead(0x0e, 1, &old);
+			logNvsWrite(0x24, 2, &old);
+			logNvsRead(0x0f, 1, &old);
+			logNvsWrite(0x26, 2, &old);
+			old.word = 0;
+			logNvsRead(0x0a, 1, &old);
+			logNvsWrite(0x0e, 2, &old);
+			logClear(0x19);
+			logClear(0x1a);
+			break;
+		case 3:
+		case 4:
+		case 5:
+			logClear(0x19);
+			logClear(0x1a);
+			break;
+		case 6:
+		case 7:
+		case 8:
+			logClear(0x1d);
+			break;
+		}
+		result = logWriteHeader(&record.header);
+		if (result != 0)
+			return;
+		logSetVersion(LOG_VERSION);
+	}
+	if (first == 1)
+		logSetMode(LOG_MODE_STARTED, 0);
+}
+
+/* task 2's, at each tick */
+void logUpdate(void)
+{
+	union LogValue record;
+	int result;
+	unsigned int id;
+	unsigned char size;
+
+	if (logHeader.state == LOG_STATE_UNLOADED)
+		logLoad(1);
+	else
+		logLoad(0);
+	switch (logHeader.mode) {
+	case LOG_MODE_STOPPED:
+		switch (logHeader.state) {
+		case LOG_STATE_IDLE:
+		case LOG_STATE_RUNNING:
+			break;
+		case LOG_STATE_ERASED:
+			logQueueInit();
+			result = logReset();
+			if (result != 0)
+				return;
+			break;
+		default:
+			result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+			if (result != 0)
+				return;
+			result = logReset();
+			if (result != 0)
+				return;
+			break;
+		}
+		break;
+	case LOG_MODE_STARTED:
+		switch (logHeader.state) {
+		case LOG_STATE_RUNNING:
+			if (logQueuePop(&id) == 0) {
+				result = logRead(id, &record, &size);
+				if (result != 0)
+					result = 2;
+				else {
+					record.value++;
+					if (size == 1)
+						record.value &= 0xff;
+					else if (size == 2)
+						record.value &= 0xffff;
+					if (record.value == 0)
+						result = 4;	/* the counter is full */
+					else {
+						result = logWrite(id, &record);
+						if (result != 0)
+							result = 2;
+					}
+				}
+			}
+			break;
+		case LOG_STATE_ERASED:
+		case LOG_STATE_IDLE:
+			result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+			if (result != 0)
+				return;
+			break;
+		default:
+			result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+			if (result != 0)
+				return;
+			break;
+		}
+		break;
+	case LOG_MODE_HALTED:
+		break;
+	default:
+		result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
+		if (result != 0)
+			return;
+		result = logReset();
+		if (result != 0)
+			return;
+		break;
+	}
+}
+#else
 /* task 2's, at each tick */
 void logUpdate(void)
 {
@@ -220,6 +396,7 @@ void logUpdate(void)
 		break;
 	}
 }
+#endif
 
 static int logQueuePush(unsigned int event)
 {
@@ -279,6 +456,110 @@ int logGetInfo(struct LogInfo *info)
 	return result;
 }
 
+#if BOARD_USS1001
+int logStart(void)
+{
+	int result;
+	struct LogHeader header;
+
+	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
+		logQueueInit();
+		header.state = LOG_STATE_RUNNING;
+		header.mode = LOG_MODE_STARTED;
+		header.version = logHeader.version;
+		result = logWriteHeader(&header);
+	} else
+		result = 2;
+	return result;
+}
+
+int logHalt(void)
+{
+	int result;
+	struct LogHeader header;
+
+	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
+		logQueueInit();
+		header.state = logHeader.state;
+		header.mode = LOG_MODE_HALTED;
+		header.version = logHeader.version;
+		result = logWriteHeader(&header);
+	} else
+		result = 2;
+	return result;
+}
+
+int logStop(void)
+{
+	int result;
+	struct LogHeader header;
+
+	header.state = logHeader.state;
+	header.mode = LOG_MODE_STOPPED;
+	header.version = logHeader.version;
+	result = logWriteHeader(&header);
+	return result;
+}
+
+/* 0x0087 (sceSysconLogStart) and 0x0089 */
+int logSetMode(unsigned char mode, unsigned char source)
+{
+	int result;
+	struct LogHeader header;
+	unsigned char size;
+
+	result = 0;
+	result = logRead(LOG_HEADER, &header, &size);
+	if (result != 0)
+		result = 2;
+	else {
+		switch (mode) {
+		case LOG_MODE_STOPPED:
+			result = logStop();
+			break;
+		case LOG_MODE_STARTED:
+			switch (logHeader.mode) {
+			case LOG_MODE_STARTED:
+				result = 3;
+				break;
+			case LOG_MODE_STOPPED:
+				if (source == 1 || source == 2)
+					result = logStart();
+				else
+					result = 8;
+				break;
+			case LOG_MODE_HALTED:
+				result = logStart();
+				break;
+			default:
+				result = 8;
+				break;
+			}
+			break;
+		case LOG_MODE_HALTED:
+			switch (logHeader.mode) {
+			case LOG_MODE_STARTED:
+				result = 3;
+				break;
+			case LOG_MODE_STOPPED:
+				result = logHalt();
+				break;
+			case LOG_MODE_HALTED:
+				result = 0;
+				break;
+			default:
+				result = 8;
+				break;
+			}
+			break;
+		default:
+			result = 8;
+			break;
+		}
+	}
+	return result;
+}
+#else
 /* 0x0087 (sceSysconLogStart) */
 int logStart(void)
 {
@@ -318,6 +599,7 @@ int logStop(void)
 	}
 	return result;
 }
+#endif
 
 /* 0x0088 (sceSysconLogReadData) */
 int logReadData(unsigned int id, void *data, unsigned char *size)
@@ -397,7 +679,12 @@ int logWriteHeader(struct LogHeader *header)
 
 int logRead(unsigned int id, void *data, unsigned char *size)
 {
+
+#if BOARD_USS1001
+	unsigned int i;
+#else
 	int i;
+#endif
 	int result;
 
 	for (i = 0; i < logRecordCount(); i++) {
@@ -409,12 +696,25 @@ int logRead(unsigned int id, void *data, unsigned char *size)
 			return result;
 		}
 	}
+#if BOARD_USS1001
+	if (id < LOG_IDS) {
+		/* a record this layout does not keep reads as 0 */
+		*size = 1;
+		*(unsigned char *)data = 0;
+		return 0;
+	}
+#endif
 	return 1;
 }
 
 int logWrite(unsigned int id, void *data)
 {
+
+#if BOARD_USS1001
+	unsigned int i;
+#else
 	int i;
+#endif
 	int result;
 
 	for (i = 0; i < logRecordCount(); i++) {
@@ -426,6 +726,10 @@ int logWrite(unsigned int id, void *data)
 			return result;
 		}
 	}
+#if BOARD_USS1001
+	if (id < LOG_IDS)
+		return 0;
+#endif
 	return 1;
 }
 
@@ -443,7 +747,12 @@ int logNvsWrite(unsigned int offset, unsigned char size, void *data)
 
 int logClearAll(void)
 {
+
+#if BOARD_USS1001
+	unsigned int i;
+#else
 	int i;
+#endif
 	int result;
 	unsigned long zero;
 

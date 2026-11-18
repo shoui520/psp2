@@ -8,13 +8,21 @@
 #define ERNIE_LOG_H
 
 #include "ernie.h"
+#include "board.h"
 
-#if FW_SINCE(0x00090903)
+#if BOARD_USS1001
+/* the slim's, a constant of the version block (0xf40, app/version.c) */
+extern const unsigned int logVersion;
+#define LOG_VERSION		logVersion
+#elif FW_SINCE(0x00090903)
 #define LOG_VERSION		3	/* the records' layout */
 #else
 #define LOG_VERSION		2
 #endif
 #define LOG_HEADER		0	/* the header's record */
+#if BOARD_USS1001
+#define LOG_IDS			0x1e	/* the slim's: the records' ids are below it */
+#endif
 #define LOG_EVENTS		3	/* the events queued */
 
 /* the header's state */
@@ -57,8 +65,12 @@ extern void logEvent(unsigned int event);
 extern int logGetInfo(struct LogInfo *info);
 extern int logStart(void);
 extern int logStop(void);
-/* the slim's: the log to mode (LOG_MODE_*), asked by source (1: the host's commands) */
+#if BOARD_USS1001
+extern int logHalt(void);
+/* the slim's: the log to mode (LOG_MODE_*), asked by source (0: logUpdate, 1: the host's
+   commands) */
 extern int logSetMode(unsigned char mode, unsigned char source);
+#endif
 extern int logReadData(unsigned int id, void *data, unsigned char *size);
 extern int logReadOffset(unsigned int offset, unsigned char size, void *data);
 extern int logClear(unsigned int id);
