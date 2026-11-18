@@ -6,6 +6,7 @@
 #include <scetypes.h>
 #include <libkernel/libkernel.h>
 #include <kernel/iofilemgr.h>
+#include <sceerror.h>
 #include "mtp_internal.h"
 
 #define MTP_TAG_CMD			"CMD :"
@@ -753,6 +754,266 @@ error:
 int mtpCmdGetObject(const MtpOperation *operation, MtpOperation *response)
 {
 	return _getObject(operation, response, 0);
+}
+
+/* reads a little-endian field of a received dataset */
+static inline SceUInt32 mtpCmdGetLe16(const SceUInt8 *p)
+{
+	return p[0] | p[1] << 8;
+}
+
+static inline SceUInt32 mtpCmdGetLe32(const SceUInt8 *p)
+{
+	return p[0] | p[1] << 8 | p[2] << 16 | p[3] << 24;
+}
+
+int mtpCmdSendObjectInfo(const MtpOperation *operation, MtpOperation *response)
+{
+	SceUInt32 storageId = 0;
+	MtpLogicalStorage *storage = NULL;
+	MtpContext *context = NULL;
+	int code = MTP_RESPONSE_GENERAL_ERROR;
+	const char *dateModified = NULL;
+	const char *dateCreated = NULL;
+	SceUInt32 reserved = 0;
+	int atRoot = 0;
+	SceUInt32 params[5];
+	SceUInt32 parent;
+	SceUInt32 parentStorage;
+	SceUInt32 uniqueId;
+	SceUInt32 handle;
+	SceUInt32 transfer;
+	SceUInt32 format;
+	SceUInt32 size;
+	SceUInt32 imagePixWidth;
+	SceUInt32 imagePixHeight;
+	char created[18];
+	char modified[18];
+	MtpString string;
+	SceUInt8 *buf;
+	char *name;
+	char *trimmed;
+	int offset;
+	int ret;
+	int n;
+
+	ret = mtpContextGetContextByEvent(MTP_OPERATION_REQUEST_SEND_OBJECT, &context);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1303, "GetContextByEvent failed: 0x%x\n", ret);
+		code = MTP_RESPONSE_VENDOR_INVALID_CONTEXT;
+		ret = -2;
+		goto error;
+	}
+	if (operation->numParams != 0)
+		storageId = operation->param[0];
+	if (operation->numParams >= 2)
+		parent = operation->param[1];
+	buf = (SceUInt8 *)mtpUtilMalloc(MTP_CMD_WORK_SIZE);
+	if (buf == NULL) {
+		MTP_ERR(MTP_TAG_CMD, 1321, "unable to alloc for receive buffer\n");
+		code = MTP_RESPONSE_VENDOR_NO_MEMORY;
+		ret = -2;
+		goto error;
+	}
+	ret = mtpCoreRecvData(buf, MTP_CMD_WORK_SIZE, NULL);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1329, "unable to receive data=0x%x\n", ret);
+		goto error;
+	}
+	format = mtpCmdGetLe16(buf + 4);
+	size = mtpCmdGetLe32(buf + 8);
+	imagePixWidth = mtpCmdGetLe32(buf + 26);
+	imagePixHeight = mtpCmdGetLe32(buf + 30);
+	string.numChars = 0xFF;
+	string.chars = buf + 53;
+	name = (char *)mtpUtilMalloc(1023);
+	if (name == NULL) {
+		MTP_ERR(MTP_TAG_CMD, 1353, "unable to alloc memory for object file name\n");
+		goto free_buf;
+	}
+	if (context != NULL && mtpUtilStrlen((const char *)context->work) != 0) {
+		mtpUtilStrncpy(name, (const char *)context->work, 1023);
+	} else {
+		n = mtpUtilUnpackMtpString(name, 1023, &string);
+		if (n < 0) {
+			MTP_ERR(MTP_TAG_CMD, 1363, "unable to unpack object file name=0x%x\n", n);
+			goto free_name;
+		}
+		if (n > 192) {
+			trimmed = (char *)mtpUtilMalloc(192);
+			if (trimmed == NULL) {
+				MTP_ERR(MTP_TAG_CMD, 1369,
+					"unable to alloc memory for object file name buffer\n");
+				goto free_name;
+			}
+			n = mtpUtilTrimFileName(name, trimmed, 192, 192);
+			if (n < 0) {
+				mtpUtilFree(trimmed);
+				MTP_ERR(MTP_TAG_CMD, 1376, "unable to trim file name=0x%x\n", n);
+				goto free_name;
+			}
+			mtpUtilMemset(name, 0, 1023);
+			mtpUtilStrncpy(name, trimmed, 192);
+			mtpUtilFree(trimmed);
+		}
+	}
+	mtpUtilReplaceInvalidChars(name, mtpUtilStrlen(name));
+	mtpUtilGetUnpackMtpStringSize(&string);
+	offset = string.numChars * 2 + 54;
+	string.chars = &buf[offset];
+	string.numChars = 0xFF;
+	if (mtpUtilUnpackMtpString(created, sizeof(created), &string) >= 0)
+		dateCreated = created;
+	mtpUtilGetUnpackMtpStringSize(&string);
+	string.chars = &buf[string.numChars * 2 + 1 + offset];
+	string.numChars = 0xFF;
+	if (mtpUtilUnpackMtpString(modified, sizeof(modified), &string) >= 0)
+		dateModified = modified;
+	if (storageId == 0)
+		storageId = 0x10001;
+	if (!mtpStrgIsStorageValid(storageId)) {
+		MTP_ERR(MTP_TAG_CMD, 1421, "storage is not valid\n");
+		code = MTP_RESPONSE_INVALID_STORAGE_ID;
+		goto free_name;
+	}
+	ret = mtpStrgGetLogicalStorage(storageId, &storage);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1427, "unable to get logical storage=0x%x\n", ret);
+		code = MTP_RESPONSE_STORE_NOT_AVAILABLE;
+		goto free_name;
+	}
+	if (size == 0xFFFFFFFF && !mtpStrgIsLargeObjectSupported(storageId)) {
+		MTP_ERR(MTP_TAG_CMD, 1437, "object is larger than 4GiB, currently not supported\n");
+		code = MTP_RESPONSE_VENDOR_OBJECT_TOO_LARGE;
+		goto free_name;
+	}
+	if (parent != 0) {
+		if (parent == 0xFFFFFFFF) {
+			atRoot = 1;
+			parent = MTP_OBJECT_ROOT_HANDLE(storageId);
+		}
+		if ((parent & MTP_OBJECT_HANDLE_DIR) == 0) {
+			MTP_ERR(MTP_TAG_CMD, 1458, "invalid object handle not association\n");
+			code = MTP_RESPONSE_INVALID_PARENT_OBJECT;
+			goto free_name;
+		}
+		if (mtpStrgCheckDestination(storageId, format, &parent, context) < 0) {
+			MTP_ERR(MTP_TAG_CMD, 1467, "Destination is not supported: %u, 0x%x, %u, %s\n",
+				storageId, format, parent, name);
+			code = MTP_RESPONSE_DESTINATION_UNSUPPORTED;
+			goto free_name;
+		}
+		parentStorage = MTP_OBJECT_STORAGE_ID(parent);
+		if (parent != MTP_OBJECT_ROOT_HANDLE(storageId))
+			atRoot = 0;
+	} else {
+		parent = MTP_OBJECT_ROOT_HANDLE(storageId);
+		atRoot = 1;
+		parentStorage = MTP_OBJECT_STORAGE_ID(parent);
+	}
+	if (storageId != parentStorage) {
+		MTP_ERR(MTP_TAG_CMD, 1483, "storage id and handle mismatched\n");
+		code = MTP_RESPONSE_INVALID_PARENT_OBJECT;
+		goto free_name;
+	}
+	if (mtpStrgGetAccessCapability(storageId) == MTP_ACCESS_READ_ONLY) {
+		MTP_ERR(MTP_TAG_CMD, 1491, "storage is read only\n");
+		code = MTP_RESPONSE_STORE_READ_ONLY;
+		goto free_name;
+	}
+	ret = mtpStrgUpdateLogicalInfo(storage);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1499, "unable to update logical info=0x%x\n", ret);
+		goto free_name;
+	}
+	if (storage->freeSpaceInBytes < size || storage->freeSpaceInObjects == 0) {
+		MTP_ERR(MTP_TAG_CMD, 1505, "store full: %llu, %u\n", storage->freeSpaceInBytes,
+			storage->freeSpaceInObjects);
+		code = MTP_RESPONSE_STORE_FULL;
+		goto free_name;
+	}
+	if (mtpCoreGetObjectTransferIsFile()) {
+		transfer = mtpCoreGetObjectTransferHandle();
+		ret = mtpStrgVTConvertMtpHandleToUniqueId(transfer, &uniqueId);
+		if (ret < 0) {
+			MTP_ERR(MTP_TAG_CMD, 1516,
+				"unable to convert MTP handle to uniqueId=0x%x %u\n", ret, transfer);
+		} else {
+			ret = mtpObjRemoveObject(storage, uniqueId);
+			if (ret < 0)
+				MTP_ERR(MTP_TAG_CMD, 1520, "unable to remove object=0x%x\n", ret);
+		}
+		mtpCoreClearObjectTransfer();
+	}
+	if (format == MTP_FORMAT_ASSOCIATION) {
+		if (atRoot == 1 && !mtpStrgIsRootDirAllowed(storage, name)) {
+			MTP_ERR(MTP_TAG_CMD, 1530, "access denied %s\n", name);
+			code = MTP_RESPONSE_ACCESS_DENIED;
+			goto free_name;
+		}
+	} else if (atRoot == 1 && mtpUtilStrcmp(name, "WMPInfo.xml") != 0 &&
+		   mtpUtilStrcmp(name, "DevIcon.fil") != 0) {
+		MTP_ERR(MTP_TAG_CMD, 1543, "access denied(%s)\n", name);
+		code = MTP_RESPONSE_ACCESS_DENIED;
+		goto free_name;
+	}
+	ret = mtpStrgVTConvertMtpHandleToUniqueId(parent, &uniqueId);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1553, "unable to convert MTP handle to uniqueId=0x%x\n", ret);
+		code = MTP_RESPONSE_INVALID_OBJECT_HANDLE;
+		goto free_name;
+	}
+	ret = mtpObjAddRegularObject(storage, uniqueId, format, size, imagePixWidth,
+		imagePixHeight, name, dateCreated, dateModified, &handle);
+	if (ret < 0) {
+		MTP_ERR(MTP_TAG_CMD, 1561, "unable to add object=0x%x\n", ret);
+		if (ret == SCE_MTP_ERROR_OBJECT_EXISTS) {
+			n = mtpObjRemoveFile(storage, uniqueId, name);
+			if (n != 0)
+				MTP_ERR(MTP_TAG_CMD, 1569, "mtpObjRemoveFile failed: 0x%x\n", n);
+			else
+				ret = mtpObjAddRegularObject(storage, uniqueId, format, size,
+					imagePixWidth, imagePixHeight, name, dateCreated, dateModified,
+					&handle);
+		}
+		if (ret == SCE_ERROR_ERRNO_ENOSPC)
+			code = MTP_RESPONSE_STORE_FULL;
+		if (ret < 0)
+			goto free_name;
+	}
+	mtpCoreSetObjectTransferHandle(handle);
+	mtpCoreSetObjectTransferSize(size);
+	mtpCoreSetObjectImportHandle(handle);
+	if (format == MTP_FORMAT_ASSOCIATION)
+		mtpCoreSetObjectTransferIsFile(0);
+	else
+		mtpCoreSetObjectTransferIsFile(1);
+	if (parent != operation->param[1]) {
+		MTP_ERR(MTP_TAG_CMD, 1596, "WARNING unexpected parent: %u, %u\n", parent,
+			operation->param[1]);
+	}
+	parent = operation->param[1];
+	if (context != NULL)
+		mtpContextPutContext(context, 1);
+	params[0] = storageId;
+	params[1] = atRoot != 1 ? parent : 0xFFFFFFFF;
+	params[2] = mtpCoreGetObjectTransferHandle2() & 0x7FFFFFFF;
+	params[3] = reserved;
+	params[4] = reserved;
+	mtpUtilSetMtpResponse(MTP_RESPONSE_OK, params, 5, operation, response);
+	mtpUtilFree(name);
+	mtpUtilFree(buf);
+	return ret;
+free_name:
+	mtpUtilFree(name);
+free_buf:
+	ret = -2;
+	mtpUtilFree(buf);
+error:
+	if (context != NULL)
+		mtpContextPutContext(context, 1);
+	mtpUtilSetMtpResponse(code, NULL, 0, operation, response);
+	return ret;
 }
 
 }

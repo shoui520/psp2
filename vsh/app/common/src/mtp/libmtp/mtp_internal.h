@@ -35,6 +35,8 @@ extern "C" {
 #define SCE_MTP_ERROR_NO_MEMORY		((int)0x80540007)
 #define SCE_MTP_ERROR_DEVICE		((int)0x80540008)
 #define SCE_MTP_ERROR_INVALID_PARENT	((int)0x80540009)
+/* mtpObjAddRegularObject: a file of that name is already there */
+#define SCE_MTP_ERROR_OBJECT_EXISTS	((int)0x80540035)
 #define SCE_MTP_ERROR_NOT_FOUND		((int)0x80540011)
 #define SCE_MTP_ERROR_DATA_PHASE_OVER	((int)0x80540013)
 #define SCE_MTP_ERROR_TERMINATED	((int)0x80540014)
@@ -163,15 +165,20 @@ typedef struct SceMtpInitParam {
 #define MTP_RESPONSE_INCOMPLETE_TRANSFER	0x2007
 #define MTP_RESPONSE_INVALID_STORAGE_ID	0x2008
 #define MTP_RESPONSE_INVALID_OBJECT_HANDLE	0x2009
+#define MTP_RESPONSE_STORE_FULL		0x200C
+#define MTP_RESPONSE_STORE_READ_ONLY	0x200E
+#define MTP_RESPONSE_ACCESS_DENIED	0x200F
 #define MTP_RESPONSE_STORE_NOT_AVAILABLE	0x2013
 #define MTP_RESPONSE_SPECIFICATION_BY_FORMAT_UNSUPPORTED	0x2014
 #define MTP_RESPONSE_INVALID_PARENT_OBJECT	0x201A
+#define MTP_RESPONSE_DESTINATION_UNSUPPORTED	0x2020
 #define MTP_RESPONSE_INVALID_PARAMETER	0x201D
 #define MTP_RESPONSE_SESSION_ALREADY_OPEN	0x201E
 /* the vendor responses (the names are ours) */
 #define MTP_RESPONSE_VENDOR_INVALID_CONTEXT	0xA001
 #define MTP_RESPONSE_VENDOR_UNKNOWN_STATUS	0xA004
 #define MTP_RESPONSE_VENDOR_NO_MEMORY	0xA007
+#define MTP_RESPONSE_VENDOR_OBJECT_TOO_LARGE	0xA809
 #define MTP_RESPONSE_VENDOR_CANCELED	0xA020
 
 /* an MTP operation request as the device thread receives it */
@@ -1111,7 +1118,10 @@ typedef struct MtpLogicalStorage {
 	SceUInt8 reserved[36];		/* not read by the C written yet (STRG) */
 	const MtpStorageInfo *info;	/* info->name: the mount point */
 	MtpCache *cache;
-	SceUInt8 reserved2[60];
+	SceUInt8 reserved2[36];
+	SceUInt64 freeSpaceInBytes;	/* mtpStrgUpdateLogicalInfo's */
+	SceUInt32 freeSpaceInObjects;
+	SceUInt8 reserved3[12];
 } MtpLogicalStorage;
 
 /* the commands (CMD and CMDE) */
@@ -1265,6 +1275,26 @@ int mtpStrgIsStorageValid(SceUInt32 storageId);
 int mtpStrgIsStorageAvailable(SceUInt32 storageId);
 int mtpStrgGetStorageInfo(SceUInt32 storageId, const MtpStorageDataset **dataset);
 int mtpStrgIsObjectHandleValid(SceUInt32 handle);
+/* whether a storage takes objects of 4 GiB and more */
+int mtpStrgIsLargeObjectSupported(SceUInt32 storageId);
+/* MTP_ACCESS_*: whether a storage may be written */
+#define MTP_ACCESS_READ_WRITE		0
+#define MTP_ACCESS_READ_ONLY		1
+int mtpStrgGetAccessCapability(SceUInt32 storageId);
+/* whether a format may go to *parent (which it may change) for the context's request */
+int mtpStrgCheckDestination(SceUInt32 storageId, SceUInt32 format, SceUInt32 *parent,
+	MtpContext *context);
+/* whether a directory of that name may be made at the storage's root */
+int mtpStrgIsRootDirAllowed(MtpLogicalStorage *storage, const char *name);
+int mtpStrgUpdateLogicalInfo(MtpLogicalStorage *storage);
+/* the handle of a storage's root ("association") */
+#define MTP_OBJECT_ROOT_HANDLE(storageId) \
+	((((storageId) - 1) & 3) << 27 | ((((storageId) >> 16) - 1) & 3) << 29 | 0x7FFFFFF)
+int mtpObjRemoveObject(MtpLogicalStorage *storage, SceUInt32 uniqueId);
+int mtpObjRemoveFile(MtpLogicalStorage *storage, SceUInt32 parent, const char *name);
+int mtpObjAddRegularObject(MtpLogicalStorage *storage, SceUInt32 parent, SceUInt16 format,
+	SceUInt32 size, SceUInt32 imagePixWidth, SceUInt32 imagePixHeight, const char *name,
+	const char *dateCreated, const char *dateModified, SceUInt32 *handle);
 /* the path the PFS layer opens for path in storage */
 int mtpStrgCreatePfsPath(MtpLogicalStorage *storage, const char *path, char *pfsPath,
 	SceSize size, int create);
