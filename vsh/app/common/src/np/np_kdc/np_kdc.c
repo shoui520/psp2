@@ -468,6 +468,19 @@ out:
 	return ret;
 }
 
+/* an MTP responder's status code: outside its own range (as Sony wrote the test) it is not the server's */
+static inline int KdcMtpStatusIsForeign(int status)
+{
+	return (SceUInt32)status < 0x80029700u && (SceUInt32)status > 0x800297ffu;
+}
+
+static inline int KdcMtpStatusToError(int status)
+{
+	if (KdcMtpStatusIsForeign(status))
+		return NP_KDC_ERROR_MTP_STATUS;
+	return (SceUInt8)status + NP_KDC_ERROR_SERVER_BASE;
+}
+
 /* the license from the console's own computer over MTP: the MTP client is loaded for the call */
 int SceNpKdc_A1441E8C(const char *pContentId, void *pData, SceSize size, SceSize *pRead, int bufferSize, int reserved)
 {
@@ -584,7 +597,7 @@ int SceNpKdc_A1441E8C(const char *pContentId, void *pData, SceSize size, SceSize
 									err = NP_KDC_ERROR_BUFFER_TOO_SMALL;
 								}
 							} else {
-								err = (SceUInt8)status - 2141879552;
+								err = KdcMtpStatusToError(status);
 							}
 						}
 					}
@@ -623,10 +636,20 @@ download:
 							break;
 						status = SceMtpClient_1EA892F7(g_pMtpClient, pair[0], pBuf, bufferSize);
 						if ((status | pair[1]) < 0) {
-							ret = (SceUInt8)pair[1] - 2141879552;
-							if ((SceUInt8)pair[1] == 80 && tries != 0)
-								ret = NP_KDC_ERROR_ACTIVATION_FAILED;
-							else if ((SceUInt8)pair[1] == 20)
+							ret = status;
+							if (KdcMtpStatusIsForeign(pair[1])) {
+								if (status >= 0) {
+									ret = NP_KDC_ERROR_MTP_STATUS;
+									break;
+								}
+							} else {
+								ret = (SceUInt8)pair[1] + NP_KDC_ERROR_SERVER_BASE;
+								if (ret == NP_KDC_ERROR_SERVER_REFUSED && tries != 0) {
+									ret = NP_KDC_ERROR_ACTIVATION_FAILED;
+									break;
+								}
+							}
+							if (ret == NP_KDC_ERROR_ALREADY_ACTIVATED)
 								ret = 0;
 							break;
 						}
@@ -782,7 +805,9 @@ static int KdcSendRequest(KdcRequest *pRequest, const char *pUrl)
 	SceUInt64 contentLength;
 	SceUInt64 postLength;
 	SceSize bodySize;
-	char number[16];
+	char reasonText[16];
+	char maxText[16];
+	char currentText[16];
 	int statusCode;
 	int ret;
 	int i;
@@ -798,7 +823,7 @@ static int KdcSendRequest(KdcRequest *pRequest, const char *pUrl)
 		sceClibMemset(pRequest->pBody, 0, pRequest->bodySize + 1);
 		ret = KdcBuildBody(&pRequest->params, pRequest->pBody, pRequest->bodySize, &bodySize);
 		if (ret >= 0) {
-			postLength = bodySize - 1;
+			postLength = (SceUInt64)bodySize - 1;
 			ret = sceHttpCreateRequestWithURL(pRequest->connectionId, 1, pUrl, postLength);
 			if (ret >= 0) {
 				pRequest->requestId = ret;
@@ -833,64 +858,63 @@ static int KdcSendRequest(KdcRequest *pRequest, const char *pUrl)
 				}
 				pEnd = sceClibStrstr(pStatus, "\r\n");
 				if (sceClibStrncmp("OK", pStatus, 2) != 0) {
+					SceSize length;
+					char *pSemicolon;
+
 					pRequest->drmRefused = 1;
 					pValue = sceClibStrstr(pStatus, "reason=");
 					if (pValue == NULL) {
 						ret = NP_KDC_ERROR_BAD_REASON;
-					} else {
-						SceSize length;
-						char *pSemicolon;
-
-						pValue += 7;
-						pSemicolon = sceClibStrchr(pValue, ';');
-						length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
-						if (length > 15) {
-							ret = NP_KDC_ERROR_BAD_REASON;
-						} else {
-							sceClibMemcpy_safe(number, pValue, length);
-							number[length] = 0;
-							pRequest->reason = KdcStrtol(number, NULL, 16);
-							ret = 0;
-							if (pRequest->reason == (int)0x80000000 || pRequest->reason == 0x7FFFFFFF)
-								ret = NP_KDC_ERROR_BAD_REASON;
-						}
+						goto parsed;
+					}
+					pValue += 7;
+					pSemicolon = sceClibStrchr(pValue, ';');
+					length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
+					if (length > 15
+					    || (sceClibMemcpy_safe(reasonText, pValue, length), reasonText[length] = 0,
+					    pRequest->reason = KdcStrtol(reasonText, NULL, 16),
+					    pRequest->reason == (int)0x80000000)
+					    || pRequest->reason == 0x7FFFFFFF) {
+						ret = NP_KDC_ERROR_BAD_REASON;
+						goto parsed;
 					}
 				} else {
 					pRequest->drmRefused = 0;
-					ret = 0;
-					pValue = sceClibStrstr(pStatus, "max_console=");
-					if (pValue != NULL) {
-						SceSize length;
-						char *pSemicolon;
-						SceUInt32 value;
+				}
+				pValue = sceClibStrstr(pStatus, "max_console=");
+				if (pValue != NULL) {
+					SceSize length;
+					char *pSemicolon;
+					SceUInt32 value;
 
-						pValue += 12;
-						pSemicolon = sceClibStrchr(pValue, ';');
-						length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
-						if (length <= 15) {
-							sceClibMemcpy_safe(number, pValue, length);
-							number[length] = 0;
-							value = KdcStrtol(number, NULL, 10);
-							pRequest->maxConsole = value;
-							if (value != 0x80000000 && value <= 0x7FFFFFFE) {
-								pValue = sceClibStrstr(pStatus, "current_console=");
-								if (pValue != NULL) {
-									pValue += 16;
-									pSemicolon = sceClibStrchr(pValue, ';');
-									length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
-									if (length <= 15) {
-										sceClibMemcpy_safe(number, pValue, length);
-										number[length] = 0;
-										value = KdcStrtol(number, NULL, 10);
-										pRequest->currentConsole = value;
-										if (value != 0x80000000 && value <= 0x7FFFFFFE)
-											pRequest->flags |= KDC_FLAG_CONSOLE_INFO;
-									}
+					pValue += 12;
+					pSemicolon = sceClibStrchr(pValue, ';');
+					length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
+					if (length <= 15) {
+						sceClibMemcpy_safe(maxText, pValue, length);
+						maxText[length] = 0;
+						value = KdcStrtol(maxText, NULL, 10);
+						pRequest->maxConsole = value;
+						if (value != 0x80000000 && value <= 0x7FFFFFFE) {
+							pValue = sceClibStrstr(pStatus, "current_console=");
+							if (pValue != NULL) {
+								pValue += 16;
+								pSemicolon = sceClibStrchr(pValue, ';');
+								length = ((pSemicolon != NULL) ? pSemicolon : pEnd) - pValue;
+								if (length <= 15) {
+									sceClibMemcpy_safe(currentText, pValue, length);
+									currentText[length] = 0;
+									value = KdcStrtol(currentText, NULL, 10);
+									pRequest->currentConsole = value;
+									if (value != 0x80000000 && value <= 0x7FFFFFFE)
+										pRequest->flags |= KDC_FLAG_CONSOLE_INFO;
 								}
 							}
 						}
 					}
 				}
+				ret = 0;
+parsed:
 				if (ret < 0)
 					goto fail;
 				if (pRequest->drmRefused == 0) {
