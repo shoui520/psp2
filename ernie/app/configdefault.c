@@ -86,11 +86,12 @@ const struct ConfigBank configDefault = {
 		0x2710, 0x0064, 0x0906,	/* batteryTte, batterySoh, batteryFullCap2 */
 		{ 0x0000 },	/* keep */
 		0x05, 0x01,	/* paramSetting1, paramSetting2 */
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !BOARD_DOL1002
 		0x23, 0x23, 0x23, 0x23,	/* voltage81-84 */
 		{ 0x00, 0x08, 0x05, 0x00, 0x00, 0x00 },	/* reserved7 */
 #else
 		{ 0x23, 0x23, 0x23, 0x23, 0x00, 0x08, 0x05, 0x00, 0x00, 0x00 },	/* reserved41: PCH-1000's
+										   (DOL-1002: DOL-1001's)
 										   levels, unused */
 #endif
 #if BOARD_DOL1001
@@ -152,7 +153,10 @@ const struct ConfigBank configDefault = {
 			{ 0, 10, 10, 0 },
 		},
 		0x00, 0x00,	/* offInfo2, offInfo3 */
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+		0x6e, 0x6e, 0x6e, 0x6e,	/* voltage81-84 */
+		0x08, 0x05,	/* reserved34, voltageTrim */
+#elif BOARD_DOL1001
 		{ 0x5f, 0x5f, 0x5f, 0x5f, 0x08 },	/* reserved50 */
 		0x05,	/* voltageTrim */
 #else
@@ -170,7 +174,10 @@ const struct ConfigBank configDefault = {
 			{ 0x10, CONFIG_DOL(0x50, 0x30), CONFIG_DOL(0x50, 0x30), CONFIG_DOL(0x50, 0x30), CONFIG_DOL(0x50, 0x30), CONFIG_DOL(0x50, 0x30) },
 		},
 		0x0001,	/* analogInput10Interval */
-		#if BOARD_DOL1001
+#if BOARD_DOL1001 && SOURCE_SLIM
+		{ 0x08, 0x08 },	/* reserved44 */
+		0x05, 0x06,	/* resumeTrim, resumeTrim84 */
+#elif BOARD_DOL1001
 		{ 0x08, 0x0b },	/* reserved44 */
 		0x05, 0x05,	/* resumeTrim, resumeTrim84 */
 #else
@@ -190,14 +197,28 @@ const struct ConfigBank configDefault = {
 		0x13, 0x08,	/* touchDelayWriteByte, touchDelayRelease */
 		{ 0 },	/* reserved43 */
 #endif
-#if FW_SINCE(0x01030511) && !BOARD_DOL1001
+#if BOARD_DOL1002
+		0xc0, 0x20,	/* chargeDongleCurrent, batterySetting */
+		{	/* reserved51 */
+			0x30, 0x0a, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00,
+		},
+		{ 0x00000001, 0x00000000, 0x00000000, 0x00000000 },	/* wakeMasksHigh */
+		0x00,	/* reserved52 */
+		0x07,	/* analogLimitScale */
+		0x0440, 0x0000, 0xffc0,	/* analogLimitMargin, analogLimitMin, analogLimitMax */
+		{ 0x02 },	/* reserved46 */
+#elif FW_SINCE(0x01030511) && !BOARD_DOL1001
 		0x30, 0x07,	/* chargeDongleCurrent, analogLimitScale */
 		0x0440, 0x0000, 0xffc0,	/* analogLimitMargin, analogLimitMin, analogLimitMax */
 #else
 		0x00, 0x00,	/* 0x01030505 sets none: chargeDongleCurrent, analogLimitScale */
 		0x0000, 0x0000, 0x0000,	/* analogLimitMargin, analogLimitMin, analogLimitMax */
 #endif
+#if !(BOARD_DOL1001 && SOURCE_SLIM)
 		{ 0 },	/* reserved46 */
+#endif
 		0x00, 0x00,	/* offInfoBit0, offInfoBit1 */
 		{ 0 }	/* reserved30 */
 #else

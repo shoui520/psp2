@@ -312,6 +312,39 @@ void sleepFactorSet21(unsigned char on)
 		ena_dsp();
 	}
 }
+
+#if BOARD_DOL1002
+/* DOL-1002's three more */
+void sleepFactorSet27(unsigned char on)
+{
+	if (sleepFactor.bits[3].b3 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[3].b3 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+
+void sleepFactorSet29(unsigned char on)
+{
+	if (sleepFactor.bits[3].b5 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[3].b5 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+
+void sleepFactorSet28(unsigned char on)
+{
+	if (sleepFactor.bits[3].b4 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[3].b4 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+#endif
 #endif
 #endif
 #endif

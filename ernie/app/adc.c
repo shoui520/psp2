@@ -49,6 +49,8 @@ void adcOpen(void)
 		ADCE = 1;
 #if BOARD_IS(0x00411000) && !FW_SINCE(0x0100010B)
 		ADPC = ADC_FIRST_CHANNEL;	/* the analog pins from the first channel */
+#elif BOARD_DOL1002
+		ADPC = 0x0a;
 #else
 		ADPC = 0x0b;
 #endif
@@ -142,7 +144,9 @@ void adcOpenForBoard(void)
 }
 
 /* the keys that keep the converter open (the slim's 0x0032) */
-#if SOURCE_0103
+#if BOARD_DOL1002
+#define ADC_KEYS	0x0072
+#elif SOURCE_0103
 #define ADC_KEYS	0x0032
 #else
 #define ADC_KEYS	0x00e3

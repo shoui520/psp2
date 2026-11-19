@@ -36,6 +36,8 @@ struct DownloaderStart {
 
 #if SOURCE_0103 && !BOARD_DOL1001
 #define DOWNLOADER_START	((struct DownloaderStart __near *)0xb310)
+#elif BOARD_DOL1002
+#define DOWNLOADER_START	((struct DownloaderStart __near *)0xd300)
 #else
 #define DOWNLOADER_START	((struct DownloaderStart __near *)0xd500)
 #endif

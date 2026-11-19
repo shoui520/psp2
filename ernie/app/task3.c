@@ -50,7 +50,11 @@ void task3(VP_INT exinf)
 			}
 			if (ptn & 0x0004) {
 				clr_flg(2, ~0x0004);
+#if BOARD_DOL1002
+				analogEvent(inputKeys.events & 0x72);
+#else
 				analogEvent(inputKeys.events & 0x32);
+#endif
 			}
 			if (ptn & 0x0010) {
 				clr_flg(2, ~0x0010);
@@ -68,6 +72,12 @@ void task3(VP_INT exinf)
 #endif
 			if (ptn & 0x8000)
 				clr_flg(2, ~0x8000);
+#if BOARD_DOL1002
+			if (ptn & 0x1000) {	/* not waited for: inputTouchRequest */
+				clr_flg(2, ~0x1000);
+				inputTouchRun();
+			}
+#endif
 		}
 		task3Idle();
 	}

@@ -68,6 +68,10 @@ extern unsigned char getResetCause(void);
 
 /* the scan's RTC timer */
 #define INPUT_SCAN_RTC_TIMER	TIMER_RTC(0x16)
+#if ANALOG_THERMISTOR
+/* DOL-1002's thermistor's: a reading every two ticks */
+#define INPUT_THERMISTOR_TIMER	TIMER_RTC(0x21)
+#endif
 
 void intp1Enable(unsigned char enable);
 void intp2Enable(unsigned char enable);
@@ -163,6 +167,12 @@ void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
 void input1Bit7Changed(void);
 void inputNone(void);
+#if BOARD_DOL1002
+unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout);
+#endif
+#if ANALOG_THERMISTOR
+void inputThermistorTimer(void);
+#endif
 #if FW_SINCE(0x01000306)
 unsigned char button2HoldDone(void);
 #endif
@@ -172,10 +182,18 @@ unsigned int inputReserved;
 unsigned int analogInput10Ticks;		/* the RTC's ticks at analog input 0x0010's last start */
 #endif
 unsigned char scanCount;			/* the scan's ticks */
+#if ANALOG_THERMISTOR
+unsigned char inputThermistorRequest;		/* inputThermistorTimer's: the next scan starts the
+						   thermistor's conversions */
+#endif
 unsigned char coldStart;			/* the reset cause's high nibble was 0 */
 unsigned char inputShutdownMarked;			/* set by inputShutdownMark */
 #if SOURCE_0103
 unsigned char inputStateNext;			/* the transition inputStateRun runs (task 3) */
+#endif
+#if BOARD_DOL1002
+unsigned char inputTouchPending;		/* inputTouchRequest's: bit 0 a panel opened, bit 1
+						   closed (inputTouchRun) */
 #endif
 struct InputKeys inputKeys;
 struct LevelMonitor levelMonitor1;		/* P11.4 (the slim's P13.7), reports 0x61 */
@@ -297,12 +315,52 @@ void inputStateRun(void)
 		powerReady(3);
 }
 
+#if BOARD_DOL1002
+/* a panel opened (mask bit 0) or closed (bit 1) by task 3 (inputTouchRun), waited for up to
+   timeout ticks (in steps of four): 0x80 when it was not done in time. Nothing calls it */
+unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout)
+{
+	unsigned char steps;
+
+	dis_dsp();
+	inputTouchPending |= mask;
+	ena_dsp();
+	task3SetFlag(2, 0x1000);
+	if (timeout == 0)
+		return 0;
+	steps = (unsigned char)(timeout + 4 - 1) >> 2;
+	while (steps-- != 0) {
+		dly_tsk(1);
+		if (!(inputTouchPending & mask))
+			return 0;
+	}
+	return 0x80;
+}
+
+/* task 3's event 0x1000 (which it does not wait for) */
+void inputTouchRun(void)
+{
+	unsigned char pending;
+
+	pending = inputTouchPending;
+	if (pending & 1)
+		touchOpen(1);
+	if (pending & 2)
+		touchClose(1);
+	dis_dsp();
+	inputTouchPending &= ~pending;
+	ena_dsp();
+}
+#endif
+
 void inputInit(void)
 {
 	struct TimerHandler timer;
 	struct PinConfig config;
 
+#if !BOARD_DOL1002
 	inputReserved = 0;
+#endif
 	if ((getResetCause() & 0xf0) == 0)
 		coldStart = 1;
 	PM3.0 = 1;
@@ -340,12 +398,21 @@ void inputInit(void)
 	inputGroup2.enable = 0x0f;
 	inputGroup2.bits = inputBits2;
 	inputGroup2.count = inputBits2Count;
+#if BOARD_DOL1002
+	inputRaw3 = 0;
+	inputState3 = 0;
+	inputGroup3.prev = 0;
+	inputGroup3.changed = 0;
+	inputGroup3.pending = 0x02;
+	inputGroup3.enable = 0x03;
+#else
 	inputRaw3 = 0x04;
 	inputState3 = 0x04;
 	inputGroup3.prev = 0x04;
 	inputGroup3.changed = 0;
 	inputGroup3.pending = 0x26;
 	inputGroup3.enable = 0x3f;
+#endif
 	inputGroup3.bits = inputBits3;
 	inputGroup3.count = inputBits3Count;
 	inputHandlerWake2.type = 1;
@@ -392,6 +459,10 @@ void inputInit(void)
 	pinMonitor2Enable(0);
 	inputKeys.state = 0;
 	inputKeys.events = 0;
+#if ANALOG_THERMISTOR
+	inputThermistorRequest = 0;
+	analogThermistorInit();
+#endif
 	inputShutdownMarked = 0;
 	levelMonitor1.enable = 0;
 	levelMonitor2.enable = 0;
@@ -408,6 +479,14 @@ void inputInit(void)
 	timerSetHandler(3, &timer);
 	timer.handler = inputScanRtcTimer;
 	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
+#if ANALOG_THERMISTOR
+	timer.handler = inputThermistorTimer;
+	timerSetHandler(INPUT_THERMISTOR_TIMER, &timer);
+	timerStart(INPUT_THERMISTOR_TIMER, 2);
+#endif
+#if BOARD_DOL1002
+	inputTouchPending = 0;
+#endif
 }
 #else
 void inputInit(void)
@@ -657,7 +736,11 @@ void inputResumeOpen(void)
 	union PowerRequest mode;
 
 	inputKeysOpen();
+#if SOURCE_0104
+	touchOpen(0);
+#else
 	touchOpen();
+#endif
 	mode = *stateGetWakeupFactor();
 	if (!mode.bits.notify)
 		analogCalibrationLoad();
@@ -694,7 +777,11 @@ void inputResumeOpen(void)
 /* 0x00090206: no wake from INTP10 at power-off; the multi-connector off */
 void inputPowerOff(void)
 {
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 #if BOARD_MOTION
 	motionClose();
 #endif
@@ -711,11 +798,18 @@ void inputPowerOff(void)
 /* the slim reads the wake mask and wakes from nothing at power-off */
 void inputPowerOff(void)
 {
+#if STATE_WAKE_HIGH
+	/* DOL-1002: the wake factor's bit from the state */
+	if (!(unsigned char)stateGetWakeBit(2)) {
+#else
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
 #if BOARD_DOL1001
 	if ((flags & 0x00000004) == 0) {
+#endif
+#endif
+#if BOARD_DOL1001
 		intp7Enable(1);
 		if (!P3.0) {
 			pinMonitor2Enable(1);
@@ -724,7 +818,11 @@ void inputPowerOff(void)
 		}
 	}
 #endif
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 	inputKeysClose();
 	analogStop();
 	adcCloseForBoard();
@@ -743,7 +841,11 @@ void inputPowerOff(void)
 			inputScanHold(0x1a);
 		}
 	}
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 #if BOARD_MOTION
 	motionClose();
 #endif
@@ -840,7 +942,11 @@ void inputStateOff(void)
 
 void inputShutdown(void)
 {
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 #if BOARD_MOTION
 	motionClose();
 #endif
@@ -869,7 +975,11 @@ void inputStateShutdown(void)
 
 void inputCut(void)
 {
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 #if BOARD_MOTION
 	motionClose();
 #endif
@@ -895,10 +1005,25 @@ void inputStateCut(void)
 
 void inputSuspend(void)
 {
+#if STATE_WAKE_HIGH
+	/* DOL-1002: the wake factors' bits from the state */
+	if (!(unsigned char)stateGetWakeBit(2)) {
+		intp7Enable(1);
+		if (!P3.0) {
+			pinMonitor2Enable(1);
+			pinMonitors.pin[2].last = 0;
+			inputScanHold(0x1a);
+		}
+	}
+	if (!(unsigned char)stateGetWakeBit(0x1e))
+		intp8Enable(1);
+#else
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
+#endif
 #if SOURCE_0103
+#if !STATE_WAKE_HIGH
 	if ((flags & 0x00000004) == 0) {
 		intp7Enable(1);
 		if (!P3.0) {
@@ -907,7 +1032,8 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
-#if BOARD_DOL1001
+#endif
+#if BOARD_DOL1001 && !STATE_WAKE_HIGH
 	if ((flags & 0x40000000) == 0)
 		intp8Enable(1);
 #endif
@@ -996,7 +1122,11 @@ void inputSuspend(void)
 		}
 	}
 #endif
+#if SOURCE_0104
+	touchClose(0);
+#else
 	touchClose();
+#endif
 #if BOARD_MOTION
 	motionClose();
 #endif
@@ -1022,7 +1152,9 @@ void inputSuspend(void)
 #endif
 #endif
 #endif
+#if !STATE_WAKE_HIGH	/* DOL-1002's ends in a jump to adcCloseForBoard */
 	return;
+#endif
 }
 
 void inputStateSuspend(void)
@@ -1041,8 +1173,13 @@ void inputStateSuspend(void)
 
 void inputReset(void)
 {
+#if SOURCE_0104
+	touchDisable(0);
+	touchDisable(1);
+#else
 	touchDisable0();
 	touchDisable1();
+#endif
 #if BOARD_MOTION
 	motionStop();
 #endif
@@ -1059,8 +1196,13 @@ void inputReset(void)
 #if SOURCE_0103
 void inputStateReset(void)
 {
+#if SOURCE_0104
+	touchDisable(0);
+	touchDisable(1);
+#else
 	touchDisable0();
 	touchDisable1();
+#endif
 	analogStop();
 }
 #endif
@@ -1119,7 +1261,11 @@ void inputProcess(void)
 		}
 #endif
 		pinMonitorPoll();
+#if BOARD_DOL1002
+		keys = events & 0x0072;	/* DOL-1002: and key 0x0040 */
+#else
 		keys = events & 0x0032;
+#endif
 		if (keys != 0)
 			analogStart(keys);
 		break;
@@ -1220,6 +1366,7 @@ void sampleInputs2(void)
 
 void sampleInputs3(void)
 {
+#if !BOARD_DOL1002	/* DOL-1002's samples nothing */
 #if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.2;
@@ -1238,6 +1385,7 @@ void sampleInputs3(void)
 	inputGroupUpdate(&inputRaw3, &inputState3, &inputGroup3);
 	if (inputGroup3.changed) {
 	}
+#endif
 }
 
 /* a sample debounced (a mask changes when two samples agree) and the changed and pending bits
@@ -1527,10 +1675,12 @@ unsigned char input3Bit2Active(void)
 }
 #endif
 
+#if !BOARD_DOL1002	/* not in DOL-1002 */
 unsigned char input3Bit5High(void)
 {
 	return inputState3.5 != 0;
 }
+#endif
 
 unsigned char intp11Low(void)
 {
@@ -2511,7 +2661,15 @@ void inputScanTimer(void)
 	} else
 		analogStart10();
 #endif
+#if ANALOG_THERMISTOR
+	if (inputThermistorRequest == 1) {
+		inputThermistorRequest = 0;
+		analogThermistorStart();
+	}
+	inputKeys.events |= inputKeys.state & 0x0042;
+#else
 	inputKeys.events |= inputKeys.state & 0x0002;
+#endif
 	if (toggled & 0x02)
 		inputKeys.events |= inputKeys.state & 0x000c;
 	if (toggled & 0x04)
@@ -2545,7 +2703,11 @@ void inputScanRtcTimer(void)
 	} else
 		analogStart10();
 #endif
+#if BOARD_DOL1002
+	inputKeys.events |= inputKeys.state & 0x007e;
+#else
 	inputKeys.events |= inputKeys.state & 0x003e;
+#endif
 	task3SetFlag(2, 0x0008);
 	timerStart(INPUT_SCAN_RTC_TIMER, 0);
 }
@@ -2890,5 +3052,15 @@ void inputLogTransition(unsigned char transition)
 	eventLogInput[0] = transition;
 	eventLogRecord(3, 4, eventLogInput, 1);
 #endif
+}
+#endif
+
+#if ANALOG_THERMISTOR
+/* every two ticks: the next scan starts the thermistor's conversions */
+void inputThermistorTimer(void)
+{
+	inputThermistorRequest = 1;
+	inputScanHold(3);
+	timerStart(INPUT_THERMISTOR_TIMER, 2);
 }
 #endif

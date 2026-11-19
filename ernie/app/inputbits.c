@@ -107,9 +107,12 @@ const struct InputBit inputBits2[6] = {
 	{ NULL, NULL },
 };
 
-const struct InputBit inputBits3[6] = {
+const struct InputBit inputBits3[INPUT_BITS3] = {
 	{ inputHandlers3Bit0, inputHandlers3Bit0Count },
 	{ inputHandlers3Bit1, inputHandlers3Bit1Count },
+#if INPUT_BITS3 == 2
+};
+#else
 #if SOURCE_0103
 	{ NULL, NULL },
 #else
@@ -119,6 +122,7 @@ const struct InputBit inputBits3[6] = {
 	{ NULL, NULL },
 	{ NULL, NULL },
 };
+#endif
 
 unsigned char inputBits1Count(void)
 {

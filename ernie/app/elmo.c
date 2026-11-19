@@ -3,13 +3,17 @@
  * of the registers the firmware writes, and the commands that set, clear or send the status
  * masks (registers 0xa0-0xa4) and register 0xa7.
  */
+#pragma sfr
+
 #include <stddef.h>
 
 #include "ernie.h"
 #include "elmo.h"
 #include "iica.h"
 #include "kernel.h"
+#include "log.h"
 #include "powerseq.h"
+#include "powerwait.h"
 #include "state.h"
 
 #define ELMO_TRIES	3		/* a transfer's tries */
@@ -51,7 +55,9 @@ static const struct ElmoRegInit elmoRegInit[] = {
 	{ 0xa1, &elmoStatusMask.reg[1], 0 },
 	{ 0xa2, &elmoStatusMask.reg[2], 0 },
 	{ 0xa3, &elmoStatusMask.reg[3], 0 },
+#if !BOARD_DOL1002
 	{ 0xa4, &elmoStatusMask.reg[4], 0 },
+#endif
 	{ 0xa5, &elmoLed, 0 },
 	{ 0xa6, &elmoRegA6, 0 },
 	{ 0xa7, &elmoRegA7, 0 },
@@ -59,6 +65,22 @@ static const struct ElmoRegInit elmoRegInit[] = {
 	{ 0xab, &elmoRegAB, 0 },
 	{ 0x60, &elmoReg60, 0xfff0 },
 };
+#endif
+
+#if BOARD_DOL1002
+/* DOL-1002's: elmoWrite and elmoRead do nothing while the Elmo's version is unread (0), 0xfd or
+   absent (0xff); the register setup and the version read go to the bus directly */
+#define ELMO_NO_TRANSFER	(deviceVersions.elmo[0] == 0 || deviceVersions.elmo[0] == 0xfd || \
+				 deviceVersions.elmo[0] == 0xff)
+#define ELMO_TABLE_COUNT	10
+static unsigned char elmoWriteBus(unsigned char *data, unsigned char length);
+static unsigned char elmoReadBus(unsigned char *reg, unsigned char *value);
+#define elmoInitWrite		elmoWriteBus
+#define elmoVersionRead		elmoReadBus
+#else
+#define ELMO_TABLE_COUNT	11
+#define elmoInitWrite		elmoWrite
+#define elmoVersionRead		elmoRead
 #endif
 
 #if SOURCE_0103
@@ -71,13 +93,21 @@ void elmoInit(void)
    answered (powerSeqOn); the copy keeps the value only when the write went through */
 void elmoInitRegs(void)
 {
+#if BOARD_DOL1002
+	unsigned char i;
+#else
 	unsigned int i;
+#endif
 
-	for (i = 0; i < 11; i++) {
+	for (i = 0; i < ELMO_TABLE_COUNT; i++) {
 		elmoCommand[0] = elmoRegInit[i].reg;
 		elmoCommand[1] = elmoRegInit[i].initial >> 8;
+#if BOARD_DOL1002
+		elmoCommand[2] = *(const unsigned char __far *)&elmoRegInit[i].initial;
+#else
 		elmoCommand[2] = elmoRegInit[i].initial;
-		if (elmoWrite(elmoCommand, 3) == 0)
+#endif
+		if (elmoInitWrite(elmoCommand, 3) == 0)
 			*elmoRegInit[i].value = elmoRegInit[i].initial;
 	}
 }
@@ -119,8 +149,21 @@ void elmoInitRegs(void)
 }
 #endif /* SOURCE_0103 */
 
+#if BOARD_DOL1002
+unsigned char elmoWrite(unsigned char *data, unsigned char length)
+{
+	if (ELMO_NO_TRANSFER)
+		return 0;
+	return elmoWriteBus(data, length);
+}
+
+/* writes length bytes, a register number and its value; 0, or the transfer's status, which a
+   failed transfer logs (events 0x21 and 0x22) */
+static unsigned char elmoWriteBus(unsigned char *data, unsigned char length)
+#else
 /* writes length bytes, a register number and its value; 0, or the transfer's status */
 unsigned char elmoWrite(unsigned char *data, unsigned char length)
+#endif
 {
 	ER ercd;
 	FLGPTN ptn;
@@ -129,8 +172,10 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
+#if !BOARD_DOL1002
 	if (deviceVersions.elmo[0] == 0xff)
 		return 0;
+#endif
 	do {
 		request.rxData = NULL;
 		request.rxCount = 0;
@@ -151,11 +196,32 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 		} else if (ercd == E_TMOUT)
 			status = ELMO_NO_ANSWER;
 	} while (tries-- != 0);
+#if BOARD_DOL1002
+	if (status != 0) {
+		logEvent(0x21);
+		logEventValue(0x22, status);
+	}
+#endif
 	return status;
 }
 
+#if BOARD_DOL1002
+unsigned char elmoRead(unsigned char *reg, unsigned char *value)
+{
+	if (ELMO_NO_TRANSFER) {
+		*value++ = 0;
+		*value = 0;
+		return 0;
+	}
+	return elmoReadBus(reg, value);
+}
+
+/* reads the register *reg into value[0-1]; 0, or the transfer's status, logged as elmoWriteBus's */
+static unsigned char elmoReadBus(unsigned char *reg, unsigned char *value)
+#else
 /* reads the register *reg into value[0-1]; 0, or the transfer's status */
 unsigned char elmoRead(unsigned char *reg, unsigned char *value)
+#endif
 {
 	ER ercd;
 	FLGPTN ptn;
@@ -164,11 +230,13 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
+#if !BOARD_DOL1002
 	if (deviceVersions.elmo[0] == 0xff) {
 		*value++ = 0;
 		*value = 0;
 		return 0;
 	}
+#endif
 	do {
 		request.rxData = value;
 		request.rxCount = 2;
@@ -189,6 +257,12 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 		} else if (ercd == E_TMOUT)
 			status = ELMO_NO_ANSWER;
 	} while (tries-- != 0);
+#if BOARD_DOL1002
+	if (status != 0) {
+		logEvent(0x21);
+		logEventValue(0x22, status);
+	}
+#endif
 	return status;
 }
 
@@ -205,7 +279,7 @@ unsigned char elmoReadVersion(unsigned char *version)
 {
 	unsigned char reg;
 
-#if SOURCE_0103
+#if SOURCE_0103 && !BOARD_DOL1002
 	/* the slim's: not again once the Elmo did not answer */
 	if (deviceVersions.elmo[0] == 0xff) {
 		ELMO_VERSION_OF(version)->low = ELMO_VERSION_OF(version)->high = 0xff;
@@ -213,7 +287,7 @@ unsigned char elmoReadVersion(unsigned char *version)
 	}
 #endif
 	reg = ELMO_VERSION;
-	return elmoRead(&reg, version);
+	return elmoVersionRead(&reg, version);
 }
 
 #if SOURCE_0103
@@ -222,6 +296,14 @@ unsigned char elmoReadVersion(unsigned char *version)
    write went through. 0, or elmoWrite's error */
 /* the status masks as the slim's code reaches them: a register each */
 #define ELMO_STATUS	((struct ElmoMasks *)&elmoStatusMask)
+
+/* value[]'s entry of register 0xa7 (DOL-1002: its 0xaa's after it) */
+#if BOARD_DOL1002
+#define ELMO_VALUE_A7	4
+#define ELMO_VALUE_AA	5
+#else
+#define ELMO_VALUE_A7	5
+#endif
 
 unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 {
@@ -234,7 +316,7 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 	if (masks->status0 != 0) {
 		value[0] = set ? ELMO_STATUS->status0 | masks->status0 :
 			~masks->status0 & ELMO_STATUS->status0;
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !BOARD_DOL1002
 		/* the PS TV's: a clear keeps bit 2 in system states 8 and 0x8000 while status
 		   mask 2's bit 12 is set */
 		if (!set && (masks->status0 & 0x04) && (stateGet() & 0x8008) &&
@@ -266,7 +348,7 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 		elmoCommand[length++] = ((unsigned char *)&value[3])[1];
 		elmoCommand[length++] = (unsigned char)value[3];
 	}
-#if !BOARD_USS1001	/* the PS TV's: register 0xa4 too */
+#if !BOARD_USS1001 && !BOARD_DOL1002	/* the PS TV's: register 0xa4 too */
 	if (masks->status4 != 0) {
 		value[4] = set ? ELMO_STATUS->status4 | masks->status4 :
 			~masks->status4 & ELMO_STATUS->status4;
@@ -276,12 +358,35 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 	}
 #endif
 	if (masks->regA7 != 0) {
-		value[5] = set ? ~masks->regA7 & elmoRegA7 : elmoRegA7 | masks->regA7;
+		value[ELMO_VALUE_A7] = set ? ~masks->regA7 & elmoRegA7 : elmoRegA7 | masks->regA7;
 		elmoCommand[length++] = 0xa7;
-		elmoCommand[length++] = ((unsigned char *)&value[5])[1];
-		elmoCommand[length++] = (unsigned char)value[5];
+		elmoCommand[length++] = ((unsigned char *)&value[ELMO_VALUE_A7])[1];
+		elmoCommand[length++] = (unsigned char)value[ELMO_VALUE_A7];
 	}
+#if BOARD_DOL1002
+	if (masks->regAA != 0) {
+		value[ELMO_VALUE_AA] = set ? elmoRegAA | masks->regAA : ~masks->regAA & elmoRegAA;
+		elmoCommand[length++] = 0xaa;
+		elmoCommand[length++] = ((unsigned char *)&value[ELMO_VALUE_AA])[1];
+		elmoCommand[length++] = (unsigned char)value[ELMO_VALUE_AA];
+	}
+#endif
 	if (length != 0) {
+#if BOARD_DOL1002
+		/* DOL-1002's: status mask 3's bit 12 lowers P0.1 before a clear; a set writes polled,
+		   with dispatching disabled, and raises P0.1 5 ms after it went through */
+		if (!set && (masks->status3 & 0x1000))
+			P0.1 = 0;
+		if (set && (masks->status3 & 0x1000)) {
+			dis_dsp();
+			result = elmoWritePolled(elmoCommand, length);
+			if (result == 0) {
+				powerWaitMsPolled(5);
+				P0.1 = 1;
+			}
+			ena_dsp();
+		} else
+#endif
 		result = elmoWrite(elmoCommand, length);
 		if (result == 0) {
 			if (masks->status0 != 0)
@@ -292,12 +397,16 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 				ELMO_STATUS->status2 = value[2];
 			if (masks->status3 != 0)
 				ELMO_STATUS->status3 = value[3];
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1002
 			if (masks->status4 != 0)
 				ELMO_STATUS->status4 = value[4];
 #endif
 			if (masks->regA7 != 0)
-				elmoRegA7 = value[5];
+				elmoRegA7 = value[ELMO_VALUE_A7];
+#if BOARD_DOL1002
+			if (masks->regAA != 0)
+				elmoRegAA = value[ELMO_VALUE_AA];
+#endif
 		}
 	}
 	return result;
@@ -426,7 +535,7 @@ unsigned char elmoGetMasks(unsigned char select, unsigned char *command)
 		command[length++] = elmoStatusMask.byte[7];
 		command[length++] = elmoStatusMask.byte[6];
 	}
-#if !BOARD_USS1001	/* the slim's leaves register 0xa4 out */
+#if !BOARD_USS1001 && !BOARD_DOL1002	/* the slim's and DOL-1002's leave register 0xa4 out */
 	if (select & 0x10) {
 		command[length++] = 0xa4;
 		command[length++] = elmoStatusMask.byte[9];

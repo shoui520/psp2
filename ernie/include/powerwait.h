@@ -37,6 +37,9 @@ extern void powerDeviceRun(void);
 extern void powerDeviceInit(void);
 extern void powerWaitInit(void);
 extern void powerWaitMs(unsigned int ms);
+#if BOARD_DOL1002
+extern void powerWaitMsPolled(unsigned int ms);
+#endif
 extern void powerSleep(unsigned int ms);
 extern void powerSleep2(unsigned int ms);
 extern void powerWaitInput(unsigned char edges, unsigned int timeout);

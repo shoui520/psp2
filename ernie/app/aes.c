@@ -99,7 +99,9 @@ static const unsigned char aesRcon[14] = {
 /* the updater's revision carries no revision string, and tests the near blocks against 0 */
 #define AES_NULL	0
 #else
-#if FW_SINCE(0x01030505)
+#if SOURCE_0104
+static const char aesRevision[] = "$Rev: 9140 $";
+#elif FW_SINCE(0x01030505)
 static const char aesRevision[] = "$Rev: 6209 $";
 #elif FW_SINCE(0x0100060B)
 static const char aesRevision[] = "$Rev: 4488 $";

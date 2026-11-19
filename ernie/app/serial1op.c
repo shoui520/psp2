@@ -68,6 +68,406 @@
 	}
 #endif
 
+#if BOARD_DOL1002
+/* DOL-1002 answers only while the command waits, through serial1Answer, and reads 0x0180's and
+   0x0181's registers in functions of their own, which 0x0954 reads again */
+#define SERIAL1_STATUS(result)	((result) ? 0x60 : 0)
+
+/* 0x0180's answer: the battery's readings and two of its registers */
+struct Serial1Battery {
+	unsigned int	remainCap;
+	unsigned int	volt;
+	unsigned int	temp;		/* in 0.1 degrees C */
+	unsigned int	bicTemp;
+	unsigned int	reg2c;
+	unsigned int	reg14;
+};
+
+/* 0x0181's: the gauge's control 0 and five of its registers */
+struct Serial1Gauge {
+	unsigned int	control;
+	unsigned int	reg0a;
+	unsigned int	reg28;
+	unsigned int	reg2a;
+	unsigned int	reg12;
+	unsigned int	reg22;
+};
+
+/* 0x0954's */
+struct Serial1Status {
+	struct Serial1Battery	battery;
+	struct Serial1Gauge	gauge;
+	unsigned char		cookieStatus1[2];	/* cookieReadStatus1's */
+	unsigned char		cookieStatus2[2];
+	unsigned char		cookieReg4;	/* the Cookie's registers */
+	unsigned char		cookieReg6;
+	unsigned char		cookieReg7;
+	unsigned char		cookieReg8;
+	unsigned char		reserved[8];
+};
+
+static unsigned char serial1Read0180(struct Serial1Battery *out);
+static unsigned char serial1Read0181(struct Serial1Gauge *out);
+static unsigned char serial1Read0954(struct Serial1Status *out, unsigned char parts);
+
+/* the operation's answer: command with bit 15 set, its status, data and length */
+static void serial1Answer(unsigned int command, unsigned char status, unsigned char *data,
+			  unsigned int length)
+{
+	serial.command = command | 0x8000;
+	serial.status = status;
+	serial.data = data;
+	serial.dataLength = length;
+	serial1State = 0;
+	serialSetAnswer(SERIAL_ANSWER);
+	serialPostAnswer();
+}
+
+void serial1Operation(void)
+{
+	unsigned char result;
+	unsigned char current;		/* a current's Cookie setting (0x0185-0x0187) */
+	struct BatteryInfo info;
+
+	if (serial.state == SERIAL_ANSWER_LATER) {
+		switch (serial1State) {
+		case 0x0a:	/* 0x0930: the Elmo's version */
+			result = elmoReadVersion(serial1Args.byte);
+			serial1Answer(0x0930, SERIAL1_STATUS(result), serial1Args.byte, 2);
+			break;
+		case 0x0b:	/* 0x0931: the Cookie's */
+			result = cookieReadVersion(serial1Args.byte);
+			serial1Answer(0x0931, SERIAL1_STATUS(result), serial1Args.byte, 2);
+			break;
+		case 0x0c:	/* 0x0932: the battery's identity */
+			result = batteryReadInfo(serial1Args.word);
+			serial1Answer(0x0932, SERIAL1_STATUS(result), serial1Args.byte, 12);
+			break;
+		case 1:		/* 0x0940: the Elmo's register byte[0], into byte[1] */
+			result = elmoRead(&serial1Args.byte[0], &serial1Args.byte[1]);
+			serial1Answer(0x0940, SERIAL1_STATUS(result), &serial1Args.byte[1], 2);
+			break;
+		case 2:		/* 0x0941: the three bytes to the Elmo */
+			result = elmoWrite(serial1Args.byte, 3);
+			serial1Answer(0x0941, SERIAL1_STATUS(result), NULL, 0);
+			break;
+		case 3:		/* 0x0942: the Cookie's register */
+			result = cookieRead(&serial1Args.byte[0], &serial1Args.byte[1]);
+			serial1Answer(0x0942, SERIAL1_STATUS(result), &serial1Args.byte[1], 2);
+			break;
+		case 4:		/* 0x0943: to the Cookie */
+			result = cookieWrite(serial1Args.byte, 3);
+			serial1Answer(0x0943, SERIAL1_STATUS(result), NULL, 0);
+			break;
+		case 5:		/* 0x0944: the battery's register */
+			result = batteryRead(&serial1Args.byte[0], &serial1Args.byte[1], 2);
+			serial1Answer(0x0944, SERIAL1_STATUS(result), &serial1Args.byte[1], 2);
+			break;
+		case 6:		/* 0x0945: to the battery */
+			result = batteryWrite(serial1Args.byte, 3);
+			serial1Answer(0x0945, SERIAL1_STATUS(result), NULL, 0);
+			break;
+		case 7:		/* 0x0180: the battery's readings and registers */
+			result = serial1Read0180((struct Serial1Battery *)serial1Args.word);
+			serial1Answer(0x0180, SERIAL1_STATUS(result), serial1Args.byte, 12);
+			break;
+		case 8:		/* 0x0181: the gauge's */
+			result = serial1Read0181((struct Serial1Gauge *)serial1Args.word);
+			serial1Answer(0x0181, SERIAL1_STATUS(result), serial1Args.byte, 12);
+			break;
+		case 9:		/* 0x0182: the gauge's control 0x0015 */
+			result = batteryControl0015();
+			serial1Answer(0x0182, SERIAL1_STATUS(result), NULL, 0);
+			break;
+		case 0x0d:	/* 0x0953: the battery's faults */
+			batteryGetFaults(serial1Args.byte);
+			serial1Answer(0x0953, 0, serial1Args.byte, 8);
+			break;
+		case 0x0e:	/* 0x0183: the manual charge mode on or off; 0x53 refused */
+			result = chargeSetManualMode(serial1Args.byte[0] ? 1 : 0);
+			if (result == 0xff)
+				result = 0x53;
+			else if (result)
+				result = 0x60;
+			else
+				result = 0;
+			serial1Answer(0x0183, result, NULL, 0);
+			break;
+		case 0x0f:	/* 0x0184: the charge on or off */
+			result = cookieCtrlBatteryCharge(serial1Args.byte[0] ? 1 : 0);
+			if (result)
+				result = 0x60;
+			else
+				result = 0;
+			serial1Answer(0x0184, result, NULL, 0);
+			break;
+		case 0x10:	/* 0x0185: the charging current; 0x33 a current it has no setting for */
+			result = cookieChargingCurrentEncode(&current, serial1Args.byte[0]);
+			if (result) {
+				result = 0x33;
+			} else {
+				result = cookieCtrlChargingCurrent(current);
+				if (result)
+					result = 0x60;
+				else
+					result = 0;
+			}
+			serial1Answer(0x0185, result, NULL, 0);
+			break;
+		case 0x11:	/* 0x0186: the AC supply's current */
+			result = cookieSupplyCurrentEncode(&current, serial1Args.byte[0]);
+			if (result) {
+				result = 0x33;
+			} else {
+				result = cookieCtrlSupplyCurrent(current);
+				if (result)
+					result = 0x60;
+				else
+					result = 0;
+			}
+			serial1Answer(0x0186, result, NULL, 0);
+			break;
+		case 0x12:	/* 0x0187: the USB supply's current */
+			result = cookieSupplyCurrentUsbEncode(&current, serial1Args.byte[0]);
+			if (result) {
+				result = 0x33;
+			} else {
+				result = cookieCtrlSupplyCurrentUsb(current);
+				if (result)
+					result = 0x60;
+				else
+					result = 0;
+			}
+			serial1Answer(0x0187, result, NULL, 0);
+			break;
+		case 0x13:	/* 0x0188: the AC's charge */
+			result = cookieSetChargeAc(serial1Args.byte[0] ? 1 : 0);
+			if (result)
+				result = 0x60;
+			else
+				result = 0;
+			serial1Answer(0x0188, result, NULL, 0);
+			break;
+		case 0x14:	/* 0x0189: the Cookie's register 6 bit 3 */
+			result = cookieCtrlReg6Bit3(serial1Args.byte[0] ? 1 : 0);
+			if (result)
+				result = 0x60;
+			else
+				result = 0;
+			serial1Answer(0x0189, result, NULL, 0);
+			break;
+		case 0x15:	/* 0x018a: the Cookie's register 1 */
+			result = cookieReadReg1(serial1Args.byte);
+			serial1Answer(0x018a, SERIAL1_STATUS(result), serial1Args.byte, 4);
+			break;
+		case 0x16:	/* 0x018b: the manual charge mode */
+			serial1Args.byte[0] = chargeGetManualMode();
+			serial1Answer(0x018b, 0, serial1Args.byte, 1);
+			break;
+		case 0x17:	/* 0x018c: the charging current set, 0 for one it has no value for */
+			if (cookieChargingCurrentDecode(serial1Args.byte, cookieGetChargingCurrent()))
+				serial1Args.byte[0] = 0;
+			serial1Answer(0x018c, 0, serial1Args.byte, 1);
+			break;
+		case 0x18:	/* 0x018d: the supply's */
+			if (cookieSupplyCurrentDecode(serial1Args.byte, cookieGetSupplyCurrent()))
+				serial1Args.byte[0] = 0;
+			serial1Answer(0x018d, 0, serial1Args.byte, 1);
+			break;
+		case 0x19:	/* 0x018e: the USB supply's */
+			if (cookieSupplyCurrentUsbDecode(serial1Args.byte, cookieGetSupplyCurrentUsb()))
+				serial1Args.byte[0] = 0;
+			serial1Answer(0x018e, 0, serial1Args.byte, 1);
+			break;
+		case 0x1a:	/* 0x0108: the devices' versions; status 0x98 when the Elmo's failed.
+				   The Cookie and the battery report 0xff, no device 4 (0xfdfd) */
+			memset(serial1Args.byte, 0, sizeof(serial1Args.byte));
+			result = 0;
+			serial1Args.device[0].type = 0x10;
+			serial1Args.device[0].result =
+				elmoReadVersion((unsigned char *)serial1Args.device[0].data);
+			if (serial1Args.device[0].result)
+				((unsigned char *)serial1Args.device[0].data)[0] =
+					((unsigned char *)serial1Args.device[0].data)[1] = 0xff;
+			result |= serial1Args.device[0].result;
+			serial1Args.device[1].type = 0x20;
+			serial1Args.device[1].result =
+				cookieReadVersion((unsigned char *)serial1Args.device[1].data);
+			if (serial1Args.device[1].result)
+				((unsigned char *)serial1Args.device[1].data)[0] =
+					((unsigned char *)serial1Args.device[1].data)[1] = 0xff;
+			serial1Args.device[1].result = 0xff;
+			serial1Args.device[2].type = 0x30;
+			serial1Args.device[3].type = 0x31;
+			serial1Args.device[2].result = serial1Args.device[3].result =
+				batteryReadInfo((unsigned int *)&info);
+			if (serial1Args.device[2].result) {
+				serial1Args.device[2].data[0] = serial1Args.device[2].data[1] =
+					serial1Args.device[2].data[2] = serial1Args.device[3].data[0] =
+					serial1Args.device[3].data[1] = serial1Args.device[3].data[2] = 0xffff;
+			} else {
+				serial1Args.device[2].data[0] = info.version[0];
+				serial1Args.device[2].data[1] = info.version[1];
+				serial1Args.device[2].data[2] = info.version[2];
+				serial1Args.device[3].data[0] = info.id;
+				serial1Args.device[3].data[1] = info.version[3];
+				serial1Args.device[3].data[2] = info.version[4];
+			}
+			serial1Args.device[2].result = serial1Args.device[3].result = 0xff;
+			serial1Args.device[4].type = 0x40;
+			serial1Args.device[4].result = 0xff;
+			((unsigned char *)serial1Args.device[4].data)[0] =
+				((unsigned char *)serial1Args.device[4].data)[1] = 0xfd;
+			serial1Answer(0x0108, result ? (unsigned char)0x98 : (unsigned char)0, serial1Args.byte, 0x28);
+			break;
+		case 0x1b:	/* 0x01e0: the temperature statistics */
+			thermalStatsGet(&serial1Args.thermal);
+			serial1Answer(0x01e0, 0, serial1Args.byte, 0x10);
+			break;
+		case 0x1c:	/* 0x01e1: the statistics cleared */
+			thermalStatsClear(serial1Args.byte[0]);
+			serial1Answer(0x01e1, 0, NULL, 0);
+			break;
+		case 0x1d:	/* 0x01e2: the temperature, after a zero byte */
+			serial1Args.byte[0] = 0;
+			result = thermalReadTemp((signed char *)&serial1Args.byte[1]);
+			serial1Answer(0x01e2, SERIAL1_STATUS(result), serial1Args.byte, 2);
+			break;
+		case 0x1e:	/* 0x0955: the charge's serial mode */
+			chargeSetSerialMode(serial1Args.byte[0]);
+			result = 0;
+			serial1Answer(0x0955, result, NULL, 0);
+			break;
+		case 0x1f:	/* 0x0954: the parts of 0x0180, 0x0181 and the Cookie byte[0] names */
+			result = serial1Read0954((struct Serial1Status *)serial1Args.word,
+						 serial1Args.byte[0]);
+			serial1Answer(0x0954, result, serial1Args.byte, 0x28);
+			break;
+		case 0x20:	/* 0x01b2: a device reset (powerCtrlDeviceReset) */
+			powerCtrlDeviceReset(serial1Args.byte[0], serial1Args.byte[1]);
+			serial1Answer(0x01b2, 0, NULL, 0);
+			break;
+		default:
+			serial1Answer(serial.command, 0x60, NULL, 0);
+			break;
+		}
+	}
+}
+
+/* 0x0180's: the battery's readings, and its registers 0x2c and 0x14 */
+static unsigned char serial1Read0180(struct Serial1Battery *out)
+{
+	unsigned char result = 0;
+	unsigned char reg;
+
+	memset(out, 0, sizeof(*out));
+	out->remainCap = charge.batteryRemainCap;
+	out->volt = charge.batteryVolt;
+	out->temp = charge.batteryTemp - SERIAL1_KELVIN;
+	out->bicTemp = charge.batteryBicTemp - SERIAL1_KELVIN;
+	reg = 0x2c;
+	if (batteryRead(&reg, (unsigned char *)&out->reg2c, 2))
+		result = 0x60;
+	reg = 0x14;
+	if (batteryRead(&reg, (unsigned char *)&out->reg14, 2))
+		result = 0x60;
+	return result;
+}
+
+/* 0x0181's: the gauge's control 0, and its registers 0x0a, 0x28, 0x2a, 0x22 and 0x12 */
+static unsigned char serial1Read0181(struct Serial1Gauge *out)
+{
+	unsigned char result = 0;
+	unsigned char reg;
+
+	memset(out, 0, sizeof(*out));
+	if (batteryControl(0, (unsigned char *)&out->control, 2))
+		result = 0x60;
+	reg = 0x0a;
+	if (batteryRead(&reg, (unsigned char *)&out->reg0a, 2))
+		result = 0x60;
+	reg = 0x28;
+	if (batteryRead(&reg, (unsigned char *)&out->reg28, 2))
+		result = 0x60;
+	reg = 0x2a;
+	if (batteryRead(&reg, (unsigned char *)&out->reg2a, 2))
+		result = 0x60;
+	reg = 0x22;
+	if (batteryRead(&reg, (unsigned char *)&out->reg22, 2))
+		result = 0x60;
+	reg = 0x12;
+	if (batteryRead(&reg, (unsigned char *)&out->reg12, 2))
+		result = 0x60;
+	return result;
+}
+
+/* 0x0954's: 0x0180's, then by parts: 2 the battery's readings read again, 1 0x0181's (at word
+   6), 4 the Cookie's status and its registers 4, 6, 7 and 8 (at bytes 0x18-0x1f) */
+static unsigned char serial1Read0954(struct Serial1Status *out, unsigned char parts)
+{
+	unsigned char result = 0;
+	unsigned char reg;
+	unsigned char value[2];		/* cookieRead's */
+
+	memset(out, 0, sizeof(*out));
+	result = serial1Read0180(&out->battery);
+	if (result != 0)
+		goto done;
+	if (parts & 2) {
+		out->battery.remainCap = 0;
+		out->battery.volt = 0;
+		out->battery.temp = 0;
+		out->battery.bicTemp = 0;
+		if (batteryReadRemainCap(&out->battery.remainCap))
+			result = 0x60;
+		if (batteryReadVolt(&out->battery.volt))
+			result = 0x60;
+		if (batteryReadTemp(&out->battery.temp))
+			result = 0x60;
+		out->battery.temp -= SERIAL1_KELVIN;
+		if (batteryReadBicTemp(&out->battery.bicTemp))
+			result = 0x60;
+		out->battery.bicTemp -= SERIAL1_KELVIN;
+		if (result != 0)
+			goto done;
+	}
+	if (parts & 1) {
+		result = serial1Read0181(&out->gauge);
+		if (result != 0)
+			goto done;
+	}
+	if (parts & 4) {
+		if (cookieReadStatus1(&out->cookieStatus1[0]))
+			result = 0x60;
+		if (cookieReadStatus2(&out->cookieStatus2[0]))
+			result = 0x60;
+		reg = cookieReg(4);
+		if (cookieRead(&reg, value))
+			result = 0x60;
+		else
+			out->cookieReg4 = value[0];
+		reg = cookieReg(6);
+		if (cookieRead(&reg, value))
+			result = 0x60;
+		else
+			out->cookieReg6 = value[0];
+		reg = cookieReg(7);
+		if (cookieRead(&reg, value))
+			result = 0x60;
+		else
+			out->cookieReg7 = value[0];
+		reg = cookieReg(8);
+		if (cookieRead(&reg, value))
+			result = 0x60;
+		else
+			out->cookieReg8 = value[0];
+		if (result != 0)
+			goto done;
+	}
+done:
+	return result;
+}
+#else
 void serial1Operation(void)
 {
 	unsigned char result;
@@ -435,7 +835,7 @@ void serial1Operation(void)
 		if (deviceVersions.battery.id == 0xffff)
 			serial1Args.device[2].result = serial1Args.device[3].result = 0xff;
 		serial1Args.device[4].type = 0x40;
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !ANALOG_THERMISTOR
 		serial1Args.device[4].result =
 			thermalReadManufacturer((unsigned char *)serial1Args.device[4].data);
 		serial1Args.device[4].result |=
@@ -498,3 +898,4 @@ void serial1Operation(void)
 		break;
 	}
 }
+#endif	/* BOARD_DOL1002 */

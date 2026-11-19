@@ -13,7 +13,9 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && SOURCE_SLIM
+#define CONFIG_VERSION		0x67	/* DOL-1002's layout */
+#elif BOARD_DOL1001
 #define CONFIG_VERSION		0x50	/* DOL-1001's layout */
 #elif SOURCE_0103 && FW_SINCE(0x01030511)
 #define CONFIG_VERSION		0x58	/* the slim's layout */
@@ -136,7 +138,7 @@ struct ConfigBlock {
 	} keep;					/* kept across a new layout */
 	unsigned char	paramSetting1;		/* the parameter block's, for the host */
 	unsigned char	paramSetting2;
-#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001)
+#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001) || BOARD_DOL1002
 	unsigned char	reserved41[0xf8 - 0xee];	/* IRS-1001 keeps its levels at 0x1bc,
 							   USS-1001 at 0x1e0 */
 #else
@@ -146,7 +148,7 @@ struct ConfigBlock {
 	unsigned char	voltage83;
 	unsigned char	voltage84;
 #endif
-#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001)
+#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001) || BOARD_DOL1002
 #elif BOARD_DOL1001
 	unsigned char	reserved7[0xf8 - 0xf2];	/* DOL-1001: its trims at 0x21a */
 #elif ERNIE_HW == 0x00315200
@@ -279,7 +281,7 @@ struct ConfigBlock {
 	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
 	unsigned char	offInfo3;
 #if SOURCE_0103
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !BOARD_DOL1002
 	unsigned char	reserved50[5];		/* DOL-1001 keeps its levels at 0xee */
 #else
 	unsigned char	voltage81;		/* USS-1001's regulators 0x81-0x84: their levels at a
@@ -343,12 +345,23 @@ struct ConfigBlock {
 #endif
 	unsigned char	chargeDongleCurrent;	/* USS-1001: the USB supply's setting with the
 						   multi-connector's dongle or debug board */
+#if BOARD_DOL1002
+	unsigned char	batterySetting;		/* DOL-1002: cookieCtrlReg7's for a battery version
+						   it does not know */
+	unsigned char	reserved51[0x25c - 0x23a];
+	struct ConfigWakeMasks wakeMasksHigh;	/* DOL-1002: wake factors 0x20-0x3f's */
+	unsigned char	reserved52;
+#endif
 	unsigned char	analogLimitScale;	/* USS-1001: a calibrated axis's limits are its
 						   calibration's widened by range * this / 100 */
 	unsigned int	analogLimitMargin;	/* plus this (analogLimitsSet) */
 	unsigned int	analogLimitMin;		/* and kept within these, an axis's limits */
 	unsigned int	analogLimitMax;		/* before it is calibrated */
+#if BOARD_DOL1001 && SOURCE_SLIM
+	unsigned char	reserved46[0x3e0 - 0x274];
+#else
 	unsigned char	reserved46[0x3e0 - 0x240];
+#endif
 #else
 	unsigned char	reserved34[0x3e0 - 0x1e0];
 #endif

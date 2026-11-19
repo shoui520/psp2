@@ -189,6 +189,7 @@ union ChargeBoost {
 /* the power status (host command 0x0800), from the Cookie's status registers (chargeSetPowerStatus) */
 union PowerStatus {
 #if SOURCE_0103
+	unsigned long	value;		/* read whole (0x0104's hostCommandPowerStatus) */
 	unsigned int	word[2];	/* the slim's: two bytes more (0x0800) */
 	unsigned char	byte[4];
 #else
@@ -231,7 +232,23 @@ extern unsigned char chargeLedBlinkOn;		/* 0x00090009's, task 5's: cleared, neve
 extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
 extern __sreg union PowerStatus powerStatus;
-#if SOURCE_0103
+#if BOARD_DOL1002
+/* DOL-1002's: a word, factor 22 in its high byte's bit 0 (bits 6 and 7 unused) */
+union ChargeFactors {
+	unsigned int	word;
+	struct {
+		unsigned int	status3:1;
+		unsigned int	status4:1;
+		unsigned int	factor16:1;
+		unsigned int	factor17:1;
+		unsigned int	factor18:1;
+		unsigned int	factor19:1;
+		unsigned int	unused:2;
+		unsigned int	factor22:1;
+		unsigned int	factor23:1;
+	} bits;
+};
+#elif SOURCE_0103
 /* the slim's: the same bits as fields */
 union ChargeFactors {
 	unsigned char	byte;
@@ -246,6 +263,8 @@ union ChargeFactors {
 		unsigned char	factor23:1;
 	} bits;
 };
+#endif
+#if SOURCE_0103
 extern __sreg union ChargeFactors chargeFactors;
 #define CHARGE_FACTOR_STATUS3	chargeFactors.bits.status3
 #define CHARGE_FACTOR_STATUS4	chargeFactors.bits.status4
@@ -298,6 +317,11 @@ extern __sreg unsigned char chargeTempSetting;	/* the USB supply's setting the b
 						   temperature allows (chargeSetCurrent) */
 extern __sreg unsigned char chargeManualMode;	/* chargeSetManualMode's: 1 on, 0 off, 0xff
 						   not set */
+#if BOARD_DOL1002
+extern __sreg unsigned char chargeCommand0903[2];	/* read by host command 0x0903; nothing writes it */
+extern __sreg unsigned char chargeSerialMode;	/* chargeSetSerialMode's */
+extern unsigned char chargeSetSerialMode(unsigned char mode);
+#endif
 extern __sreg unsigned char chargeUsbWait;	/* the USB's checks left until it settles */
 extern __sreg unsigned char chargeUsbTicks;	/* and the ticks between them */
 #endif
@@ -332,6 +356,15 @@ extern int chargeAlarm0On(void);
 extern char chargeBatteryLevel9(void);
 extern char chargeBatteryLevel0(void);
 extern char chargeBatteryLevel1(void);
+#if BOARD_DOL1002
+extern int chargeBatteryReady(void);
+extern int chargeBatteryReadyUsb(void);
+struct ChargeBatteryBars {
+	unsigned char	count;			/* the bars: 4 */
+	unsigned char	lit;			/* those lit */
+};
+extern void chargeGetBatteryBars(struct ChargeBatteryBars *out);
+#endif
 extern void chargeSetBattery(void);
 #ifdef ERNIE_UPDATER
 extern unsigned char chargeBbmcChanged(void);
@@ -340,7 +373,12 @@ extern int chargeBbmcChanged(void);
 #endif
 extern void chargeResetBattery(void);
 extern void chargeTimerStart(unsigned int ticks);
+#if BOARD_DOL1002
+extern void chargeTimerSet(unsigned char on);
+#define chargeTimerStop()	chargeTimerSet(0)
+#else
 extern void chargeTimerStop(void);
+#endif
 extern unsigned char chargeGetAc(void);
 extern unsigned char chargeGetCharging(void);
 #if FW_SINCE(0x01000107)
@@ -369,9 +407,12 @@ extern void chargeSetTemp(unsigned int temperature);
 extern unsigned char chargeManualOn(void);
 extern unsigned char chargeManualOff(void);
 extern void chargeUsbModeUpdate(void);
+#if BOARD_DOL1002
+extern unsigned char chargeLimitCurrent(unsigned char current);
+#endif
 extern int chargeUsbRequestUpdate(void);
 extern void chargeUsbChanged(void);
-#if FW_SINCE(0x01030511)
+#if FW_SINCE(0x01030511) || BOARD_DOL1002
 extern unsigned char chargeUsbCurrent(void);
 #endif
 extern char chargeBatteryLevel3(void);

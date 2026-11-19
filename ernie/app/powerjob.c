@@ -17,6 +17,7 @@
 #include "iica.h"
 #include "kernel.h"
 #include "led.h"
+#include "log.h"
 #include "power.h"
 #include "powerjob.h"
 #include "powerreq.h"
@@ -153,6 +154,9 @@ static void powerJobOn(void)
 	task5SetFlag(4, 0x200);
 	intp9Enable(0);
 	powerSeqOn();
+#if BOARD_DOL1002
+	chargeInit();
+#endif
 	if (stateGetCause() != 0x42)
 		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = powerCutRegs[3] = 0;
 	powerTimersInit();
@@ -201,6 +205,12 @@ static void powerJobCut(void)
 {
 	unsigned char reg;
 	unsigned char result;
+#if BOARD_DOL1002
+	union {
+		long		value;
+		unsigned int	word[2];
+	} event;		/* the registers logged */
+#endif
 
 	P13.1 = 0;
 	P37 = 0;
@@ -212,6 +222,17 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[1]);
 	reg = 0xb2;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
+#if BOARD_DOL1002
+	event.word[0] = powerCutRegs[0];
+	event.word[1] = powerCutRegs[1];
+	logEventValue(0x1e, event.value);
+	event.word[0] = powerCutRegs[2];
+	logEventValue(0x1f, event.value);
+	reg = 0xb3;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[3]);
+	event.word[0] = powerCutRegs[3];
+	logEventValue(0x20, event.value);
+#endif
 	powerLedFlagsInit(0);
 	thermalSetMode(THERMAL_MODE_OFF);
 	chargeTimerStop();
@@ -227,13 +248,13 @@ static void powerJobOffEnd(void)
 
 static void powerJobUpdate(void)
 {
-	powerLedEndMode(POWER_JOB_PART);
+	POWER_LED_END(POWER_JOB_PART, POWER_LED_EVENT_JOB_END);
 	powerReady(POWER_JOB_PART);
 }
 
 static void powerJobReset(void)
 {
-	powerLedEndMode(POWER_JOB_PART);
+	POWER_LED_END(POWER_JOB_PART, POWER_LED_EVENT_JOB_END);
 	powerReady(POWER_JOB_PART);
 }
 #elif SOURCE_0103

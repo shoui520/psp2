@@ -192,6 +192,9 @@ static void powerRequest08CD(void);
 static void powerRequest08CE(void);
 static void powerRequest08CF(void);
 #endif
+#if BOARD_DOL1002
+static void powerRequest08D0(void);
+#endif
 
 struct HostRequest powerRequest;		/* request 8 */
 struct HostRequest batteryRequest;		/* request 9 */
@@ -282,6 +285,9 @@ static const struct PowerCommand powerCommands[] = {
 #if BOARD_DOL1001
 	{ 0x08ce, powerRequest08CE },
 	{ 0x08cf, powerRequest08CF },
+#endif
+#if BOARD_DOL1002
+	{ 0x08d0, powerRequest08D0 },
 #endif
 };
 
@@ -403,7 +409,15 @@ void batteryRequestReply(unsigned char status, unsigned char length)
 /* request 8's command, from powerCommands */
 void powerRequestEvent(void)
 {
+#if SOURCE_0104
+	/* the table is sorted: searched by halves */
+	unsigned char low;
+	unsigned char middle;
+	unsigned char high;
+	const struct PowerCommand *entry;
+#else
 	unsigned char i;
+#endif
 
 	powerRequestLogRequest();
 	if (!handshakeUnlocked11()) {
@@ -411,6 +425,23 @@ void powerRequestEvent(void)
 		handshakeRefuse();
 		powerRequestLogAnswer();
 	} else {
+#if SOURCE_0104
+		low = 0;
+		high = sizeof(powerCommands) / sizeof(powerCommands[0]);
+		while (low < high) {
+			middle = (low + high) >> 1;
+			entry = &powerCommands[middle];
+			if (entry->command == powerCommand) {
+				entry->handler();
+				powerRequestLogAnswer();
+				return;
+			}
+			if (powerCommand < entry->command)
+				high = middle;
+			else
+				low = middle + 1;
+		}
+#else
 		for (i = 0; i < sizeof(powerCommands) / sizeof(powerCommands[0]); i++) {
 			if (powerCommands[i].command == powerCommand) {
 				powerCommands[i].handler();
@@ -418,6 +449,7 @@ void powerRequestEvent(void)
 				return;
 			}
 		}
+#endif
 		hostRequestAnswer(&powerRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
 		powerRequestLogAnswer();
 	}
@@ -426,7 +458,15 @@ void powerRequestEvent(void)
 /* request 9's command, from batteryCommands */
 void batteryRequestEvent(void)
 {
+#if SOURCE_0104
+	/* the table is sorted: searched by halves */
+	unsigned char low;
+	unsigned char middle;
+	unsigned char high;
+	const struct PowerCommand *entry;
+#else
 	unsigned char i;
+#endif
 
 	batteryRequestLogRequest();
 	if (!handshakeUnlocked11()) {
@@ -434,6 +474,23 @@ void batteryRequestEvent(void)
 		handshakeRefuse();
 		batteryRequestLogAnswer();
 	} else {
+#if SOURCE_0104
+		low = 0;
+		high = sizeof(batteryCommands) / sizeof(batteryCommands[0]);
+		while (low < high) {
+			middle = (low + high) >> 1;
+			entry = &batteryCommands[middle];
+			if (entry->command == batteryRequest.command) {
+				entry->handler();
+				batteryRequestLogAnswer();
+				return;
+			}
+			if (batteryRequest.command < entry->command)
+				high = middle;
+			else
+				low = middle + 1;
+		}
+#else
 		for (i = 0; i < sizeof(batteryCommands) / sizeof(batteryCommands[0]); i++) {
 			if (batteryCommands[i].command == batteryRequest.command) {
 				batteryCommands[i].handler();
@@ -441,6 +498,7 @@ void batteryRequestEvent(void)
 				return;
 			}
 		}
+#endif
 		hostRequestAnswer(&batteryRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
 		batteryRequestLogAnswer();
 	}
@@ -577,8 +635,19 @@ void batteryRequestEvent(void)
 /* 0x0800 (SceSysconForDriver_A2FE9BF9): the power status */
 unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 {
+#if SOURCE_0104
+	union PowerStatus status;
+
 	dis_dsp();
-#if SOURCE_0103
+	status.value = powerStatus.value;
+	ena_dsp();
+	*out++ = status.byte[0];
+	*out++ = status.byte[1];
+	*out++ = status.byte[2];
+	*out = status.byte[3];
+	*length = 4;
+#elif SOURCE_0103
+	dis_dsp();
 	*out++ = powerStatus.byte[0];
 	*out++ = powerStatus.byte[1];
 	*out++ = powerStatus.byte[2];
@@ -586,6 +655,7 @@ unsigned char hostCommandPowerStatus(unsigned char *out, unsigned char *length)
 	ena_dsp();
 	*length = 4;
 #else
+	dis_dsp();
 	*out++ = powerStatus.byte[0];
 	*out = powerStatus.byte[1];
 	ena_dsp();
@@ -662,6 +732,16 @@ unsigned char hostCommand0806(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
+#if SOURCE_SLIM
+/* 0x0807: DOL-1002 has no temperature sensor's version, two zero bytes */
+unsigned char hostCommand0807(unsigned char *out, unsigned char *length)
+{
+	*length = 2;
+	*out++ = 0;
+	*out = 0;
+	return 8;
+}
+#else
 /* 0x0807: the temperature sensor's version */
 unsigned char hostCommand0807(unsigned char *out, unsigned char *length)
 {
@@ -670,6 +750,7 @@ unsigned char hostCommand0807(unsigned char *out, unsigned char *length)
 	*out = deviceVersions.thermal[1];
 	return 0;
 }
+#endif
 #else
 /* 0x0805-0x0807: one or two zero bytes, answered as unknown */
 unsigned char hostCommand0805(unsigned char *out, unsigned char *length)
@@ -701,7 +782,7 @@ unsigned char hostCommand0807(unsigned char *out, unsigned char *length)
 unsigned char hostCommand0820(unsigned char *out, unsigned char *length)
 {
 #if BOARD_DOL1001
-	powerLedEndMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_END(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK_END);
 #else
 	powerLedClearFlags(0x0008);
 #endif
@@ -714,7 +795,7 @@ unsigned char hostCommand0821(unsigned char *out, unsigned char *length)
 {
 	powerLedLoadBlink(0);
 #if BOARD_DOL1001
-	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_START(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK);
 #else
 	powerLedSetFlags(0x0008);
 #endif
@@ -726,7 +807,7 @@ unsigned char hostCommand0822(unsigned char *out, unsigned char *length)
 {
 	powerLedLoadBlink(1);
 #if BOARD_DOL1001
-	powerLedStartMode(POWER_LED_MODE_HOST_BLINK);
+	POWER_LED_START(POWER_LED_MODE_HOST_BLINK, POWER_LED_EVENT_HOST_BLINK);
 #else
 	powerLedSetFlags(0x0008);
 #endif
@@ -884,6 +965,19 @@ static void powerRequest0884(void)
 	unsigned char on0 = 0;
 
 	if (powerRequest.length == 1) {
+#if SOURCE_0104
+		/* both bits at once: 0x3c */
+		if (powerRequestData[0] & 0x01)
+			on0 = 1;
+		if (powerRequestData[0] & 0x02)
+			on1 = 1;
+		if (on0 == 1 && on1 == 1)
+			result = 0x3c;
+		else if (powerRequestData[0] & 0x80)
+			result = powerElmoA0Set(on1, on0);
+		else
+			result = powerElmoA0Clear(on1, on0);
+#else
 		if (powerRequestData[0] & 0x80) {
 			if (powerRequestData[0] & 0x01)
 				on0 = 1;
@@ -897,6 +991,7 @@ static void powerRequest0884(void)
 				on1 = 1;
 			result = powerElmoA0Clear(on1, on0);
 		}
+#endif
 		result = powerResult(result);
 	} else
 		result = 0x3b;
@@ -1111,14 +1206,21 @@ static void powerRequestCtrlHpremote(void)
 static void powerRequestCtrlUsbStatus(void)
 {
 	unsigned char result = 0;
+#if SOURCE_0104
+	unsigned char mode;	/* unused: the mode compared with itself, as set, so the
+				   current is never set again here */
+#define POWER_USB_MODE	powerRequestData[0]
+#else
 	unsigned char mode = chargeUsbMode;
+#define POWER_USB_MODE	chargeUsbMode
+#endif
 	unsigned char status[2];
 
 	if (powerRequest.length < 3) {
 		chargeUsbMode = powerRequestData[0];
-		if (chargeUsbMode != 0)
+		if (POWER_USB_MODE != 0)
 			;
-		switch (chargeUsbMode) {
+		switch (POWER_USB_MODE) {
 		case 3:
 			chargeUsbHold = 0;
 			break;
@@ -1142,7 +1244,12 @@ static void powerRequestCtrlUsbStatus(void)
 #endif
 			ena_dsp();
 		}
+#if SOURCE_0104
+		if (chargeUsbMode != powerRequestData[0]) {
+#else
 		if (mode != chargeUsbMode) {
+#endif
+#undef POWER_USB_MODE
 			result = powerResult(chargeSetCurrent());
 			if (!chargeUsbState.7)
 				task5SetFlag(4, 0x0020);
@@ -1465,14 +1572,14 @@ static void powerRequest089F(void)
 	if (powerRequest.length == 6) {
 		if (powerRequestData[0] == 0) {
 			powerLedSetPattern(0xff, 0, 0);
-			powerLedEndMode(POWER_LED_MODE_HOST);
+			POWER_LED_END(POWER_LED_MODE_HOST, POWER_LED_EVENT_JOB_END);
 		} else if (powerRequestData[0] == 1) {
 			on = powerRequestData[2] | (unsigned int)powerRequestData[3] << 8;
 			off = powerRequestData[4] | (unsigned int)powerRequestData[5] << 8;
 			if (on != 0 || off != 0) {
 				if (powerRequestData[1] == 0) {
 					powerLedSetPattern(0, on, off);
-					powerLedStartMode(POWER_LED_MODE_HOST);
+					POWER_LED_START(POWER_LED_MODE_HOST, POWER_LED_EVENT_HOST);
 				}
 			}
 		}
@@ -1549,11 +1656,11 @@ static void powerRequestCtrlVoltage(void)
 #if BOARD_IRS1001
 		/* IRS-1001's regulators take 0x48-0x87 */
 		if (powerRequestData[1] < 0x48 || powerRequestData[1] >= 0x88) {
-#elif BOARD_DOL1001
+#elif BOARD_DOL1001 && !BOARD_DOL1002
 		/* DOL-1001's take 0-0x3f */
 		if (powerRequestData[1] < 0 || powerRequestData[1] >= 0x40) {
 #elif SOURCE_0103
-		/* USS-1001's take 0x3c-0x7b */
+		/* USS-1001's and DOL-1002's take 0x3c-0x7b */
 		if (powerRequestData[1] < 0x3c || powerRequestData[1] >= 0x7c) {
 #elif FW_SINCE(0x0100060B)
 		/* Sony's tests the level against a lowest level of 0 too */
@@ -1588,6 +1695,15 @@ static void powerRequestCtrlDeviceReset(void)
 {
 	unsigned char result;
 
+#if BOARD_DOL1002
+	if (powerRequest.length == 2) {
+		powerCtrlDeviceReset(powerRequestData[0], powerRequestData[1]);
+		result = 0;
+	} else
+		result = 0x3b;
+	powerRequestDone(result);
+}
+#else
 	if (powerRequest.length == 2) {
 		if (powerRequestData[0] < 2) {
 			if (powerRequestData[1] & 0x01)
@@ -1644,6 +1760,7 @@ static void powerRequestCtrlDeviceReset(void)
 		result = 0x3b;
 	powerRequestDone(result);
 }
+#endif
 
 /* 0x0890 (SceSysconForDriver_285594F8) */
 #if SOURCE_0103
@@ -1712,8 +1829,8 @@ static void powerRequestCtrlLED(void)
 				else
 					led &= ~0x4000;
 			}
-#if BOARD_DOL1001
-			/* and its two more LEDs on the Elmo */
+#if BOARD_DOL1001 && !BOARD_DOL1002
+			/* and its two more LEDs on the Elmo (DOL-1002 has the one) */
 			if (powerRequestData[0] & 0x10) {
 				if (powerRequestData[0] & 0x80)
 					led |= 0x2000;
@@ -1850,6 +1967,27 @@ static void powerRequestCtrlChargeAC(void)
 static void powerRequestCtrlChargeVBUS(void)
 {
 	unsigned char result = 0;
+#if SOURCE_0104
+	/* the bits changed in copies, written back when they differ */
+	unsigned char host = (unsigned char)chargeVbus.1;
+	unsigned char device = (unsigned char)chargeVbus.0;
+
+	if (powerRequest.length < 3) {
+		if (powerRequestData[0] != 0) {
+			if (powerRequestData[1] == 1)
+				host = 1;
+			else if (powerRequestData[1] == 0)
+				device = 1;
+		} else {
+			if (powerRequestData[1] == 1)
+				host = 0;
+			else if (powerRequestData[1] == 0)
+				device = 0;
+		}
+		if (chargeVbus.1 != host || chargeVbus.0 != device) {
+			chargeVbus.1 = host;
+			chargeVbus.0 = device;
+#else
 	unsigned char host = (unsigned char)chargeVbus.1;
 	unsigned char device = (unsigned char)chargeVbus.0;
 
@@ -1866,6 +2004,7 @@ static void powerRequestCtrlChargeVBUS(void)
 				chargeVbus.0 = 0;
 		}
 		if (chargeVbus.1 != host || chargeVbus.0 != device) {
+#endif
 			result = powerResult(chargeSetCurrent());
 			if (!chargeUsbState.7)
 				task5SetFlag(4, 0x0020);
@@ -1930,7 +2069,7 @@ static void powerRequest0894(void)
 		elmoStatusMask.byte[7] &= ~powerRequestData[7];
 		elmoStatusMask.byte[9] &= ~powerRequestData[8];
 	}
-#if SOURCE_0103 && !BOARD_DOL1001
+#if SOURCE_SLIM
 	result = elmoWrite(elmoCommand, elmoGetMasks(0x0f, elmoCommand));
 #else
 	result = elmoWrite(elmoCommand, elmoGetMasks(0x1f, elmoCommand));
@@ -2366,6 +2505,22 @@ static void powerRequest08CA(void)
 	powerRequestReply(result, 1);
 }
 
+#if ANALOG_THERMISTOR
+/* 0x08cb and 0x08cc: the sensor's registers, which DOL-1002's thermistor has none of */
+static void powerRequest08CB(void)
+{
+	unsigned char result = 8;
+
+	powerRequestReply(result, 1);
+}
+
+static void powerRequest08CC(void)
+{
+	unsigned char result = 8;
+
+	powerRequestReply(result, 0);
+}
+#else
 /* 0x08cb: one of its registers, data[0] */
 static void powerRequest08CB(void)
 {
@@ -2397,6 +2552,8 @@ static void powerRequest08CC(void)
 		result = 0x3b;
 	powerRequestReply(result, 0);
 }
+
+#endif
 
 /* 0x08cd: its temperature in kelvin */
 static void powerRequest08CD(void)
@@ -2507,6 +2664,16 @@ static void powerRequest08CF(void)
 	} else
 		result = 0x3b;
 	powerRequestDone(result);
+}
+#endif
+
+#if BOARD_DOL1002
+/* 0x08d0: refused (status 0x3e, as a request before the handshake) */
+static void powerRequest08D0(void)
+{
+	unsigned char result = 0x3e;
+
+	powerRequestReply(result, 0);
 }
 #endif
 
@@ -2663,8 +2830,23 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 }
 #endif
 
+#if BOARD_DOL1002
+/* 0x0903: the battery temperature's settings in force */
+unsigned char hostCommand0903(unsigned char *out, unsigned char *length)
+{
+	out[0] = chargeCommand0903[0];
+	out[1] = chargeCommand0903[1];
+	*length = 2;
+	return 0;
+}
+#endif
+
 /* the battery's word for the host, or the setting's when no battery answered */
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+/* DOL-1002: an id of 0, 0xfffc (powerSeqOn's for none) or 0xffff */
+#define BATTERY_ABSENT()	(deviceVersions.battery.id == 0 || deviceVersions.battery.id == 0xfffc || \
+				 deviceVersions.battery.id == 0xffff)
+#elif BOARD_DOL1001
 #define BATTERY_ABSENT()	(deviceVersions.battery.id == 0xffff)	/* DOL-1001 tests the id */
 #elif BOARD_BATTERY_STANDIN
 #define BATTERY_ABSENT()	(deviceVersions.battery.version[0] == 0xffff)

@@ -98,7 +98,7 @@ unsigned char iicaInit(void)
 		IICCTL0 = 0x1c;
 		IICE = 1;
 		P6.0 = 0;
-#if CHIP_RL78
+#if CHIP_RL78 || BOARD_DOL1002
 		PM6.0 = 0;
 		P6.1 = 0;
 #else

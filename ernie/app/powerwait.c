@@ -4,6 +4,7 @@
  * 4-0xe (4-0x10 before 0x01000104), each of which clears its bit of powerTimers when it runs out.
  */
 #pragma sfr
+#pragma NOP
 #pragma DI
 #pragma EI
 
@@ -113,6 +114,21 @@ void powerWaitMs(unsigned int ms)
 			clr_flg(4, ~0x04);
 	}
 }
+
+#if BOARD_DOL1002
+/* DOL-1002's: powerWaitMs polling TM03's interrupt request, its interrupt masked (dispatching is
+   disabled where elmoUpdateMasks calls it) */
+void powerWaitMsPolled(unsigned int ms)
+{
+	TMMK03 = 1;
+	TDR03 = (unsigned long)ms * 1000 / 32 + (ms * 1000 % 32 ? 1 : 0);
+	TS0L = 0x08;
+	while (!TMIF03)
+		NOP();
+	TMIF03 = 0;
+	TMMK03 = 0;
+}
+#endif
 
 void powerSleep(unsigned int ms)
 {
@@ -334,7 +350,11 @@ void powerTimersInit(void)
 	handler.handler = powerTimerEnd14;
 	timerSetHandler(0x13, &handler);
 	handler.handler = powerTimerEnd15;
+#if BOARD_DOL1002
+	timerSetHandler(0x16, &handler);
+#else
 	timerSetHandler(0x15, &handler);
+#endif
 #elif FW_SINCE(0x0100060B) && !SOURCE_0103
 	handler.handler = powerTimerEnd14;
 	timerSetHandler(0x15, &handler);

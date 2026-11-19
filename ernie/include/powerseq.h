@@ -31,7 +31,7 @@ struct DeviceVersions {
 						   answered */
 	unsigned char		cookie[2];	/* the Cookie's */
 	struct BatteryInfo	battery;	/* the battery's identity */
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !SOURCE_SLIM
 	unsigned char		thermal[2];	/* DOL-1001: the temperature sensor's (THERMAL_ID, 0xff
 						   none) */
 #endif
@@ -114,6 +114,9 @@ extern void powerSleepFactor21(void);
 #endif
 #if FW_SINCE(0x0100060B)
 extern void powerGetCutRegs(unsigned char *regs);
+#if BOARD_DOL1002
+extern void powerCtrlDeviceReset(unsigned char hold, unsigned char devices);
+#endif
 #endif
 
 #endif

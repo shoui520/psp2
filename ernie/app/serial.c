@@ -36,7 +36,7 @@ unsigned char serialEvent(FLGPTN ptn)
 	unsigned char result;
 
 	result = 0;
-	if ((serial.mode & SERIAL_MODE) == 2) {
+	if (SERIAL_MODE_OF(serial) == 2) {
 #if BOARD_SERIAL2
 		if (ptn & 0x0004) {
 			clr_flg(3, ~0x0004);
@@ -69,7 +69,7 @@ unsigned char serialEvent(FLGPTN ptn)
 			break;
 		}
 #endif
-	} else if ((serial.mode & SERIAL_MODE) == 1) {
+	} else if (SERIAL_MODE_OF(serial) == 1) {
 		if (ptn & 0x0010) {
 			clr_flg(3, ~0x0010);
 			serial.state = SERIAL_SEND;
@@ -120,7 +120,11 @@ unsigned char serialGetLink(void)
 
 unsigned char serialGetMode(void)
 {
+#if SERIAL_MODE_BITS
+	return SERIAL_MODE_OF(serial);
+#else
 	return serial.mode;
+#endif
 }
 
 unsigned char serialGetNextMode(void)
@@ -180,9 +184,13 @@ void serialReset(unsigned char mode)
 {
 	serial.link = 0;
 	serial.locked = 1;
-	serial.mode = mode;
+	SERIAL_MODE_BYTE(serial) = mode;
 	serial.state = 0;
+#if SERIAL_MODE_BITS
+	if (SERIAL_IS_BINARY(serial))
+#else
 	if (mode & SERIAL_BINARY)
+#endif
 		serial.buffer = serialFrame;
 	else
 		serial.buffer = serialText;
@@ -202,9 +210,13 @@ void serialStop(int port)
 /* starts receiving in mode */
 void serialStart(unsigned char mode)
 {
-	serial.mode = mode;
+	SERIAL_MODE_BYTE(serial) = mode;
 	serial.state = SERIAL_RECEIVE;
+#if SERIAL_MODE_BITS
+	if (SERIAL_IS_BINARY(serial))
+#else
 	if (mode & SERIAL_BINARY)
+#endif
 		serial.buffer = serialFrame;
 	else
 		serial.buffer = serialText;
@@ -226,7 +238,7 @@ unsigned char serialReceive(void)
 	}
 	if (length == 0)
 		return SERIAL_BAD_FRAME;
-	if (serial.mode & SERIAL_BINARY) {
+	if SERIAL_IS_BINARY(serial) {
 		if (length < 7 || length > 0x40)
 			return SERIAL_BAD_FRAME;
 		size = length;
@@ -251,7 +263,7 @@ unsigned char serialReceive(void)
 		;	/* Sony's tests the status and does nothing */
 	serial.length = (unsigned int)serialFrame[SERIAL_FRAME_LENGTH] |
 			(unsigned int)serialFrame[SERIAL_FRAME_LENGTH + 1] << 8;
-	if (!(serial.mode & SERIAL_BINARY)) {
+	if (!SERIAL_IS_BINARY(serial)) {
 		if (serial.length & 1)
 			return SERIAL_BAD_LENGTH;
 		serial.length >>= 1;
@@ -281,7 +293,7 @@ unsigned char serialDispatch(void)
 	struct SerialBuffer request;
 	struct SerialBuffer response;
 
-	if ((serial.mode & SERIAL_MODE) == 2) {
+	if (SERIAL_MODE_OF(serial) == 2) {
 #if BOARD_SERIAL2
 		if (serial.status != 0)
 			goto answer;
@@ -300,7 +312,7 @@ unsigned char serialDispatch(void)
 		}
 		serial.status = SERIAL_UNKNOWN;
 #endif
-	} else if ((serial.mode & SERIAL_MODE) == 1) {
+	} else if (SERIAL_MODE_OF(serial) == 1) {
 		if (serial.status != 0)
 			goto answer;
 #if FW_SINCE(0x00090804)
@@ -349,7 +361,7 @@ unsigned char serialSendAnswer(void)
 	serialFrame[SERIAL_FRAME_STATUS] = serial.status;
 	if (serial.dataLength >= SERIAL_DATA_SIZE)
 		serial.dataLength = 0;
-	if (serial.mode & SERIAL_BINARY) {
+	if SERIAL_IS_BINARY(serial) {
 		memcpy(&serialFrame[SERIAL_FRAME_LENGTH], &serial.dataLength, 2);
 		if (serial.dataLength != 0 && serial.data != NULL)
 			memcpy(&serialFrame[SERIAL_FRAME_DATA], serial.data, serial.dataLength);
@@ -528,7 +540,7 @@ unsigned char serialSend(struct Serial *s)
 	serialFrame[SERIAL_FRAME_STATUS] = s->status;
 	if (s->length >= SERIAL_DATA_SIZE)
 		s->length = 0;
-	if (serial.mode & SERIAL_BINARY) {
+	if SERIAL_IS_BINARY(serial) {
 		memcpy(&serialFrame[SERIAL_FRAME_LENGTH], &s->length, 2);
 		if (s->length != 0)
 			memcpy(&serialFrame[SERIAL_FRAME_DATA], s->buffer, s->length);
@@ -556,7 +568,7 @@ unsigned char serialNotify(void)
 	unsigned char i;
 	unsigned char result;
 
-	if ((serial.mode & SERIAL_MODE) == 2) {
+	if (SERIAL_MODE_OF(serial) == 2) {
 #if BOARD_SERIAL2
 		i = serialNotifies2Count();
 		while (i--) {
@@ -568,9 +580,9 @@ unsigned char serialNotify(void)
 		}
 #endif
 #if FW_SINCE(0x0100060B)
-	} else if ((serial.mode & SERIAL_MODE) == 1 && serial.status == 0) {
+	} else if (SERIAL_MODE_OF(serial) == 1 && serial.status == 0) {
 #else
-	} else if ((serial.mode & SERIAL_MODE) == 1) {
+	} else if (SERIAL_MODE_OF(serial) == 1) {
 #endif
 		i = serialNotifies1Count();
 		while (i--) {
@@ -620,8 +632,15 @@ void serialStartTimer(void)
 /* answers command 0x0105, if it waits to (status 0, no data) */
 unsigned char serialAnswer0105(void)
 {
+#if BOARD_DOL1002
+	/* DOL-1002: command 0x01d5's too */
+	if (serial.state != SERIAL_ANSWER_LATER ||
+	    (serial.command != 0x0105 && serial.command != 0x01d5))
+		return 0;
+#else
 	if (serial.state != SERIAL_ANSWER_LATER || serial.command != 0x0105)
 		return 0;
+#endif
 	serial.command |= 0x8000;
 	serial.status = 0;
 	serial.data = NULL;

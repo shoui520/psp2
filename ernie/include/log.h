@@ -20,10 +20,15 @@ extern const unsigned int logVersion;
 #define LOG_VERSION		2
 #endif
 #define LOG_HEADER		0	/* the header's record */
+#if BOARD_DOL1002
+#define LOG_IDS			0x2b	/* DOL-1002's: the records' ids are below it */
+#define LOG_EVENTS		5	/* the events queued */
+#else
 #if SOURCE_0103
 #define LOG_IDS			0x1e	/* the slim's: the records' ids are below it */
 #endif
 #define LOG_EVENTS		3	/* the events queued */
+#endif
 
 /* the header's state */
 #define LOG_STATE_UNLOADED	(-2)	/* not read from the NVS yet (logInit) */
@@ -91,9 +96,13 @@ extern int logReadData(unsigned int id, void *data, unsigned char *size);
 extern int logReadOffset(unsigned int offset, unsigned char size, void *data);
 extern int logClear(unsigned int id);
 extern int logClearIfStopped(void);
+#if !BOARD_DOL1002
 extern int logSetVersion(unsigned int version);
+#endif
 extern int logReset(void);
+#if !BOARD_DOL1002
 extern int logWriteHeader(struct LogHeader *header);
+#endif
 #if BOARD_DOL1001
 extern int logRead(unsigned int id, void *data, unsigned char *size, unsigned char *kind);
 #else

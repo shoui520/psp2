@@ -9,6 +9,9 @@
 #include "board.h"
 #include "kernel.h"
 
+/* DOL-1002: a second wake mask, for the wake factors 0x20-0x3f */
+#define STATE_WAKE_HIGH		BOARD_DOL1002
+
 /* the request powerResume runs (stateRequest), and the wakeup factor it leaves: the mode picks
    its last step */
 union PowerRequest {
@@ -105,6 +108,12 @@ extern void stateGetHistory(unsigned char *out);
 #endif
 extern void stateSetWakeMask(unsigned long mask);
 extern unsigned long stateGetWakeMask(void);
+#if STATE_WAKE_HIGH
+extern void stateSetWakeMaskHigh(unsigned long mask);
+extern unsigned long stateGetWakeMaskHigh(void);
+extern void stateSetWakeBit(unsigned char factor, unsigned char set);
+extern int stateGetWakeBit(unsigned char factor);
+#endif
 extern void stateInit(void);
 extern union PowerRequest *stateGetWakeupFactor(void);
 #if FW_SINCE(0x00090903)

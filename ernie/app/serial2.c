@@ -13,7 +13,10 @@
 #include "charge.h"
 #include "config.h"
 #include "input.h"
+#include "elmo.h"
+#include "iica.h"
 #include "kernel.h"
+#include "log.h"
 #include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
@@ -29,7 +32,7 @@
 extern unsigned char intp11Low(void);
 
 /* level less trim, or 0 when that is 0x40 or more; on IRS-1001 level plus trim, held to its
-   regulators' 0x48-0x87, on USS-1001 0x7b less level plus trim held to 0x3c-0x7b */
+   regulators' 0x48-0x87, on USS-1001 and DOL-1002 0x7b less level plus trim held to 0x3c-0x7b */
 unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
 	unsigned char result;
@@ -41,8 +44,8 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 	if (result >= 0x88)
 		result = 0x87;
 	return result;
-#elif BOARD_USS1001
-	/* USS-1001: level plus trim held to 0x3c-0x7b, counted down from 0x7b */
+#elif SOURCE_SLIM
+	/* USS-1001 and DOL-1002: level plus trim held to 0x3c-0x7b, counted down from 0x7b */
 	result = level + trim;
 	if (result < 0x3c)
 		result = 0x3c;
@@ -64,6 +67,29 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 	return result;
 #endif
 }
+
+#if BOARD_DOL1002
+unsigned char elmoWritePolled(unsigned char *data, unsigned char length)
+{
+	struct IicaRequest request;
+	unsigned char status;
+
+	request.rxData = NULL;
+	request.rxCount = 0;
+	request.txData = data;
+	request.txCount = length;
+	request.address = ELMO_ADDRESS;
+	request.status = &status;
+	IICAMK = 1;
+	iicaTransfer(&request);
+	IICAMK = 0;
+	if (status != 0) {
+		logEvent(0x21);
+		logEventValue(0x22, status);
+	}
+	return status;
+}
+#endif
 
 #if BOARD_SERIAL2
 static unsigned char serial2Data[0x20];

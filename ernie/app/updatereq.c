@@ -27,6 +27,9 @@
 #include "kernel.h"
 #include "led.h"
 #include "nvs.h"
+#if BOARD_DOL1002
+#include "power.h"
+#endif
 #include "serial.h"
 #include "sha1.h"
 #include "sleepfactor.h"
@@ -64,6 +67,10 @@ static unsigned char updaterSetSegment(unsigned char segment);
 static unsigned char updaterExecProgramming(unsigned long sum);
 static unsigned char updaterExecFinalize(unsigned char *data);
 static unsigned char updaterWriteDlFlags(unsigned char flags);
+#if BOARD_DOL1002
+static void updaterRequestBegin(void);
+static void updaterRequestEnd(void);
+#endif
 
 /* the updater key and IV (the PS Dev Wiki's "Ernie Updater AES128CBC Key"; the IRS-1001 boards
    have the 0x60 one, USS-1001 the 0x80/0x82 one) */
@@ -308,8 +315,12 @@ void updaterRequestNotify(void)
 #if SOURCE_0103
 		hostRequestSetState(&updaterRequest, HOST_REQUEST_RECEIVE);
 		if (updaterRequest.command == 0x1183 && updater.state == 0x13 &&
-		    updaterRequest.status == 0)
+		    updaterRequest.status == 0) {
 			hostIntCancel();
+#if BOARD_DOL1002	/* the downloader's answer sent: part 4 of the power sequence ready */
+			powerReady(4);
+#endif
+		}
 #else
 		updaterRequest.state = HOST_REQUEST_RECEIVE;
 		if (updaterRequest.command == 0x1183 && updater.state == 0x13)
@@ -431,6 +442,9 @@ void updaterStartDownloader(void)
 void updaterRequestAnswerOk(void)
 {
 	hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, 0, 0);
+#if BOARD_DOL1002
+	updaterRequestEnd();
+#endif
 }
 #endif
 
@@ -466,6 +480,9 @@ void updaterRequestEvent(FLGPTN ptn)
 
 	if (!(ptn & 0x0040))
 		return;
+#if BOARD_DOL1002
+	updaterRequestBegin();
+#endif
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0x3f, 0);
 		handshakeRefuse();
@@ -512,7 +529,11 @@ void updaterRequestEvent(FLGPTN ptn)
 			result = updaterExecFinalize(updaterRequestData);
 			if (result == 0x81) {
 				task2SetFlag(3, 0x0040);
+#if BOARD_DOL1002
+				return;
+#else
 				break;
+#endif
 			}
 		}
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, result, 0);
@@ -525,6 +546,9 @@ void updaterRequestEvent(FLGPTN ptn)
 #endif
 		break;
 	}
+#if BOARD_DOL1002
+	updaterRequestEnd();
+#endif
 }
 
 /* expands the updater key, copies its IV and resets the image's digest, for a new download */
@@ -915,5 +939,16 @@ static unsigned char updaterWriteDlFlags(unsigned char flags)
 		return 0x22;
 	setDlFlags(flags);
 	return 0;
+}
+#endif
+
+#if BOARD_DOL1002
+/* DOL-1002's hooks around an update command: nothing is left in them */
+static void updaterRequestBegin(void)
+{
+}
+
+static void updaterRequestEnd(void)
+{
 }
 #endif

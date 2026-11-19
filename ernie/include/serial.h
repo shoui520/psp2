@@ -36,6 +36,18 @@
 #define SERIAL_MODE		0x7f	/* 1, 2 or 3 */
 #define SERIAL_BINARY		0x80	/* frames as they are, not as hex text */
 
+/* DOL-1002 keeps the mode byte as bit fields, the mode and the binary bit */
+#define SERIAL_MODE_BITS	BOARD_DOL1002
+#if SERIAL_MODE_BITS
+#define SERIAL_MODE_OF(s)	((s).mode.bits.mode)
+#define SERIAL_IS_BINARY(s)	((s).mode.bits.binary)
+#define SERIAL_MODE_BYTE(s)	((s).mode.value)
+#else
+#define SERIAL_MODE_OF(s)	((s).mode & SERIAL_MODE)
+#define SERIAL_IS_BINARY(s)	((s).mode & SERIAL_BINARY)
+#define SERIAL_MODE_BYTE(s)	((s).mode)
+#endif
+
 /* serial.state: what serialEvent does at the next event */
 #define SERIAL_RECEIVE		1	/* a frame comes in; event 0x0004 ends it */
 #define SERIAL_RECEIVED		2	/* serialReceive takes it, serialDispatch runs it */
@@ -68,7 +80,17 @@ struct SerialBuffer {
 struct Serial {
 	unsigned char	link;		/* 0 closed, else the mode it was opened in */
 	unsigned char	locked;		/* the commands marked so are refused */
+#if SERIAL_MODE_BITS
+	union {
+		unsigned char	value;
+		struct {
+			unsigned char	mode:7;		/* SERIAL_MODE */
+			unsigned char	binary:1;	/* SERIAL_BINARY */
+		} bits;
+	} mode;
+#else
 	unsigned char	mode;		/* SERIAL_MODE, SERIAL_BINARY */
+#endif
 	unsigned char	nextMode;	/* the mode command 0x0102 restarts the link in */
 	unsigned char	baud;		/* a uart3Open baud (serialSelectBaud) */
 	unsigned char	state;		/* SERIAL_RECEIVE ... */

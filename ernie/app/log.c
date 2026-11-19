@@ -23,6 +23,16 @@ static int logQueuePop(unsigned int *event);
 #if BOARD_DOL1001
 /* a read that does not ask for the record's kind */
 #define LOG_READ(id, data, size)	logRead((id), (data), (size), NULL)
+#if BOARD_DOL1002
+static void logMigrate(unsigned int version);
+/* the header written, and taken in when written */
+#define LOG_WRITE_HEADER(result, header)				\
+	do {								\
+		(result) = logNvsWrite(LOG_HEADER, sizeof(struct LogHeader), (header)); \
+		if ((result) == 0)					\
+			memmove(&logHeader, (header), sizeof(logHeader)); \
+	} while (0)
+#endif
 #else
 #define LOG_READ(id, data, size)	logRead((id), (data), (size))
 #endif
@@ -61,6 +71,17 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 	{ 0x1b, 0x12, 2, LOG_KIND_COUNT },
 	{ 0x1c, 0x0a, 1, LOG_KIND_SET },	/* the temperature's peak (app/thermal.c) */
 	{ 0x1d, 0x2a, 1, LOG_KIND_COUNT },
+#if BOARD_DOL1002
+	{ 0x1e, 0x40, 4, LOG_KIND_OR },
+	{ 0x1f, 0x44, 2, LOG_KIND_OR },
+	{ 0x20, 0x46, 2, LOG_KIND_SET },
+	{ 0x21, 0x48, 1, LOG_KIND_COUNT },
+	{ 0x22, 0x49, 1, LOG_KIND_SET },
+	{ 0x27, 0x2b, 1, LOG_KIND_COUNT },
+	{ 0x28, 0x2c, 1, LOG_KIND_SET },
+	{ 0x29, 0x4e, 1, LOG_KIND_COUNT },
+	{ 0x2a, 0x50, 2, LOG_KIND_SET },
+#endif
 #elif FW_SINCE(0x00090903)
 	{ 0x00, 0x00, 4 },	/* the header */
 	{ 0x01, 0x1c, 4 },
@@ -168,9 +189,13 @@ void logInit(void)
 static void logLoad(unsigned char first)
 {
 	union LogValue record;
+#if !BOARD_DOL1002
 	union LogValue old;
+#endif
 	int result;
+#if !BOARD_DOL1002
 	unsigned int id;
+#endif
 	unsigned char size;
 
 	if (first == 1) {
@@ -197,6 +222,14 @@ static void logLoad(unsigned char first)
 		result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
 		if (result != 0)
 			return;
+#if BOARD_DOL1002
+		logMigrate(logHeader.version);
+		record.header.version = LOG_VERSION;
+		result = logNvsWrite(LOG_HEADER, sizeof(struct LogHeader), &record);
+		if (result != 0)
+			return;
+		memmove(&logHeader, &record, sizeof(logHeader));
+#else
 		switch (logHeader.version) {
 #if BOARD_DOL1001
 		case 3:
@@ -260,6 +293,7 @@ static void logLoad(unsigned char first)
 		if (result != 0)
 			return;
 		logSetVersion(LOG_VERSION);
+#endif
 	}
 	if (first == 1)
 		logSetMode(LOG_MODE_STARTED, 0);
@@ -277,6 +311,9 @@ void logUpdate(void)
 	unsigned char size;
 #if BOARD_DOL1001
 	unsigned char kind;
+#endif
+#if BOARD_DOL1002
+	unsigned char n;
 #endif
 
 	if (logHeader.state == LOG_STATE_UNLOADED)
@@ -308,7 +345,41 @@ void logUpdate(void)
 	case LOG_MODE_STARTED:
 		switch (logHeader.state) {
 		case LOG_STATE_RUNNING:
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+			/* the queue's events, all of them at each tick */
+			for (n = 0; n < LOG_EVENTS; n++) {
+				if (logQueuePop(&id, &value) != 0)
+					break;
+				result = logRead(id, &record, &size, &kind);
+				if (result != 0) {
+					result = 2;
+					break;
+				}
+				if (kind == LOG_KIND_COUNT)
+					record.value++;
+				else if (kind == LOG_KIND_SET)
+					record.value = value;
+				else if (kind == LOG_KIND_OR)
+					record.value |= value;
+				else {
+					result = 2;
+					break;
+				}
+				if (size == 1)
+					record.value &= 0xff;
+				else if (size == 2)
+					record.value &= 0xffff;
+				if (record.value == 0 && kind == LOG_KIND_COUNT) {
+					result = 4;	/* the counter is full */
+					break;
+				}
+				result = logWrite(id, &record);
+				if (result != 0) {
+					result = 2;
+					break;
+				}
+			}
+#elif BOARD_DOL1001
 			if (logQueuePop(&id, &value) == 0) {
 				result = logRead(id, &record, &size, &kind);
 				if (result != 0)
@@ -516,9 +587,15 @@ static int logQueuePush(unsigned int event, long value)
 	unsigned char i;
 
 	dis_dsp();
+#if BOARD_DOL1002
+	if (logHeader.mode == LOG_MODE_STOPPED)
+		result = 5;
+	else if (logQueue.count < LOG_EVENTS) {
+#else
 	if (logHeader.mode != LOG_MODE_STARTED && logHeader.mode != LOG_MODE_NONE)
 		result = 5;
 	else if (logQueue.head + logQueue.count < LOG_EVENTS) {
+#endif
 		i = (unsigned char)(logQueue.head + logQueue.count) % LOG_EVENTS;
 		logQueue.events[i].id = event;
 		logQueue.events[i].value = value;
@@ -618,11 +695,20 @@ int logStart(void)
 	struct LogHeader header;
 
 	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
+#if BOARD_DOL1002
+		if (logHeader.mode == LOG_MODE_STOPPED)
+			logQueueInit();
+		header.state = LOG_STATE_RUNNING;
+		header.mode = LOG_MODE_STARTED;
+		header.version = logHeader.version;
+		LOG_WRITE_HEADER(result, &header);
+#else
 		logQueueInit();
 		header.state = LOG_STATE_RUNNING;
 		header.mode = LOG_MODE_STARTED;
 		header.version = logHeader.version;
 		result = logWriteHeader(&header);
+#endif
 	} else
 		result = 2;
 	return result;
@@ -634,11 +720,20 @@ int logHalt(void)
 	struct LogHeader header;
 
 	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
+#if BOARD_DOL1002
+		if (logHeader.mode == LOG_MODE_STOPPED)
+			logQueueInit();
+		header.state = logHeader.state;
+		header.mode = LOG_MODE_HALTED;
+		header.version = logHeader.version;
+		LOG_WRITE_HEADER(result, &header);
+#else
 		logQueueInit();
 		header.state = logHeader.state;
 		header.mode = LOG_MODE_HALTED;
 		header.version = logHeader.version;
 		result = logWriteHeader(&header);
+#endif
 	} else
 		result = 2;
 	return result;
@@ -652,7 +747,11 @@ int logStop(void)
 	header.state = logHeader.state;
 	header.mode = LOG_MODE_STOPPED;
 	header.version = logHeader.version;
+#if BOARD_DOL1002
+	LOG_WRITE_HEADER(result, &header);
+#else
 	result = logWriteHeader(&header);
+#endif
 	return result;
 }
 
@@ -794,6 +893,22 @@ int logClearIfStopped(void)
 	return result;
 }
 
+#if BOARD_DOL1002
+int logReset(void)
+{
+	int result;
+	struct LogHeader header;
+
+	result = logClearAll();
+	if (result != 0)
+		return result;
+	header.state = LOG_STATE_IDLE;
+	header.mode = LOG_MODE_STOPPED;
+	header.version = LOG_VERSION;
+	LOG_WRITE_HEADER(result, &header);
+	return result;
+}
+#else
 int logSetVersion(unsigned int version)
 {
 	int result;
@@ -831,6 +946,7 @@ int logWriteHeader(struct LogHeader *header)
 		memmove(&logHeader, header, sizeof(logHeader));
 	return result;
 }
+#endif
 
 #if BOARD_DOL1001
 int logRead(unsigned int id, void *data, unsigned char *size, unsigned char *kind)
@@ -937,3 +1053,45 @@ unsigned int logRecordCount(void)
 {
 	return sizeof(logRecords) / sizeof(logRecords[0]);
 }
+
+#if BOARD_DOL1002
+/* the records a layout older than version did not keep cleared: from the first new one on */
+#define LOG_CLEAR_FROM(first)						\
+	do {								\
+		zero = 0;						\
+		for (id = (first); id < LOG_IDS; id++)			\
+			logWrite(id, &zero);				\
+	} while (0)
+
+static void logMigrate(unsigned int version)
+{
+	unsigned long zero;
+	unsigned int id;
+
+	switch (version) {
+	case 3:
+	case 4:
+	case 5:
+		LOG_CLEAR_FROM(0x19);
+		break;
+	case 6:
+	case 7:
+		LOG_CLEAR_FROM(0x1b);
+		break;
+	case 8:
+	case 9:
+		LOG_CLEAR_FROM(0x1d);
+		break;
+	case 0x10:
+	case 0x11:
+		LOG_CLEAR_FROM(0x1e);
+		break;
+	case 0x12:
+		LOG_CLEAR_FROM(0x21);
+		break;
+	case 0x13:
+		LOG_CLEAR_FROM(0x29);
+		break;
+	}
+}
+#endif

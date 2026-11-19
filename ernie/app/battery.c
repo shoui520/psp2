@@ -17,6 +17,7 @@
 #include "eventlog.h"
 #include "iica.h"
 #include "kernel.h"
+#include "log.h"
 #include "powerseq.h"
 #include "powerwait.h"
 
@@ -40,6 +41,23 @@
 #define BATTERY_NONE		0xffff
 #else
 #define BATTERY_NONE		0x00ff
+#endif
+
+#if BOARD_DOL1002
+/* DOL-1002 has no battery: what the other files call answers 0 (a read 0 0); the gauge's
+   transfers stay behind it, logging a failure (events 0x25 and 0x26), for the control commands
+   and the bootloader mode's start */
+#define BATTERY_LOG_FAILURE(status)	if ((status) != 0) { \
+						logEvent(0x25); \
+						logEventValue(0x26, (status)); \
+					}
+#define BATTERY_BUS_WRITE		batteryWriteBus
+#define BATTERY_BUS_READ		batteryReadBus
+#define BATTERY_BUS_READ_AT		batteryReadAtBus
+#else
+#define BATTERY_BUS_WRITE		batteryWrite
+#define BATTERY_BUS_READ		batteryRead
+#define BATTERY_BUS_READ_AT		batteryReadAt
 #endif
 
 static struct IicaRequest batteryIica;
@@ -66,15 +84,27 @@ void batteryInfoRead(void)
 }
 #endif
 
+#if BOARD_DOL1002
+unsigned char batteryWrite(unsigned char *data, unsigned char length)
+{
+	return 0;
+}
+
+/* data[0] is the register */
+static unsigned char batteryWriteBus(unsigned char *data, unsigned char length)
+#else
 /* data[0] is the register */
 unsigned char batteryWrite(unsigned char *data, unsigned char length)
+#endif
 {
 	unsigned char status;
 	ER ercd;
 	FLGPTN ptn;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE)
 		return 0;
+#endif
 	batteryIica.rxData = NULL;
 	batteryIica.rxCount = 0;
 	batteryIica.txData = data;
@@ -92,21 +122,37 @@ unsigned char batteryWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#if BOARD_DOL1002
+	BATTERY_LOG_FAILURE(status)
+#endif
 	return status;
 }
 
+#if BOARD_DOL1002
+unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char length)
+{
+	*data++ = 0;
+	*data = 0;
+	return 0;
+}
+
+static unsigned char batteryReadBus(unsigned char *reg, unsigned char *data, unsigned char length)
+#else
 /* none answered: data reads 0 0 */
 unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char length)
+#endif
 {
 	ER ercd;
 	FLGPTN ptn;
 	unsigned char status;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
 	}
+#endif
 	batteryIica.rxData = data;
 	batteryIica.rxCount = length;
 	batteryIica.txData = reg;
@@ -124,26 +170,44 @@ unsigned char batteryRead(unsigned char *reg, unsigned char *data, unsigned char
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#if BOARD_DOL1002
+	BATTERY_LOG_FAILURE(status)
+#endif
 	return status;
 }
 
+#if BOARD_DOL1002
+unsigned char batteryControl(unsigned int command, unsigned char *data, unsigned char length)
+{
+	*data++ = 0;
+	*data = 0;
+	return 0;
+}
+
+/* a control command (register 0), then its answer */
+static unsigned char batteryControlBus(unsigned int command, unsigned char *data,
+				       unsigned char length)
+#else
 /* a control command (register 0), then its answer */
 unsigned char batteryControl(unsigned int command, unsigned char *data, unsigned char length)
+#endif
 {
 	unsigned char result;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
 	}
+#endif
 	elmoCommand[0] = 0;
 	elmoCommand[1] = command & 0xff;
 	elmoCommand[2] = command >> 8;
-	result = batteryWrite(elmoCommand, 3);
+	result = BATTERY_BUS_WRITE(elmoCommand, 3);
 	if (result == 0) {
 		elmoCommand[0] = 0;
-		result = batteryRead(elmoCommand, data, length);
+		result = BATTERY_BUS_READ(elmoCommand, data, length);
 		if (result != 0)
 			;
 	}
@@ -232,6 +296,16 @@ struct BatteryInfoWords {
 };
 #define BATTERY_INFO(info)	((struct BatteryInfoWords *)(info))
 
+#if BOARD_DOL1002
+/* DOL-1002's: every word 0xfffc */
+unsigned char batteryReadInfo(unsigned int *info)
+{
+	BATTERY_INFO(info)->id = BATTERY_INFO(info)->type = BATTERY_INFO(info)->firmware =
+		BATTERY_INFO(info)->dataFlash = BATTERY_INFO(info)->command6 =
+		BATTERY_INFO(info)->hardware = 0xfffc;
+	return 0;
+}
+#else
 unsigned char batteryReadInfo(unsigned int *info)
 {
 	unsigned char result;
@@ -296,6 +370,7 @@ failed:
 	}
 	return result;
 }
+#endif /* BOARD_DOL1002 */
 #else
 unsigned char batteryReadInfo(unsigned int *info)
 {
@@ -399,18 +474,33 @@ unsigned char batteryReadLifePercent(unsigned int *value)
 #endif
 
 #if FW_SINCE(0x00090206)
+#if BOARD_DOL1002
+unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
+{
+	*data++ = 0;
+	*data = 0;
+	return 0;
+}
+
+/* a register of the device at packet[0] (packet[1] the register); a timeout resets the bus */
+static unsigned char batteryReadAtBus(unsigned char *packet, unsigned char *data,
+				      unsigned char length)
+#else
 /* a register of the device at packet[0] (packet[1] the register); a timeout resets the bus */
 unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned char length)
+#endif
 {
 	ER ercd;
 	FLGPTN ptn;
 	unsigned char status;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
 	}
+#endif
 	batteryIica.rxData = data;
 	batteryIica.rxCount = length;
 	batteryIica.txData = packet + 1;
@@ -429,18 +519,33 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 		iicaInit();
 		status = 0x10;
 	}
+#if BOARD_DOL1002
+	BATTERY_LOG_FAILURE(status)
+#endif
 	return status;
 }
 
+#if BOARD_DOL1002
+unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
+{
+	return 0;
+}
+
+/* a write to the device at packet[0]: the rest of the length bytes; nothing calls it */
+static unsigned char batteryWriteAtBus(unsigned char *packet, unsigned char length)
+#else
 /* a write to the device at packet[0]: the rest of the length bytes */
 unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
+#endif
 {
 	ER ercd;
 	FLGPTN ptn;
 	unsigned char status;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.battery.id == BATTERY_NONE)
 		return 0;
+#endif
 	if (length != 0) {
 		batteryIica.txCount = length - 1;
 		batteryIica.rxData = NULL;
@@ -463,6 +568,9 @@ unsigned char batteryWriteAt(unsigned char *packet, unsigned char length)
 	} else {
 		status = 0;
 	}
+#if BOARD_DOL1002
+	BATTERY_LOG_FAILURE(status)
+#endif
 	return status;
 }
 #else	/* 0x00090009's order */
@@ -506,14 +614,18 @@ unsigned char batteryStartBLMode(void)
 	elmoCommand[0] = 0;
 	elmoCommand[1] = 0;
 	elmoCommand[2] = 0x0f;
-	result = batteryWrite(elmoCommand, 3);
+	result = BATTERY_BUS_WRITE(elmoCommand, 3);
 	if (result == 1) {
 		elmoCommand[0] = 0x16;
 		elmoCommand[1] = 0;
-		result = batteryReadAt(elmoCommand, &data, 1);
+		result = BATTERY_BUS_READ_AT(elmoCommand, &data, 1);
 		if (result != 0)
 			;
 	}
+#if BOARD_DOL1002
+	if (result != 0)
+		;
+#endif
 #if FW_SINCE(0x00090804)
 	if (result == 0) {
 		BATTERY_CHARGE(0);
@@ -545,9 +657,17 @@ unsigned char batteryStopBLMode(void)
 			elmoCommand[1] = 0x65;
 			elmoCommand[2] = 0;
 			result = batteryWriteAt(elmoCommand, 3);
+#if BOARD_DOL1002
+			if (result != 0)
+				;
+#endif
 		}
 	}
-#if FW_SINCE(0x00090804)
+#if BOARD_DOL1002
+	/* DOL-1002's: the charge is not restarted */
+	if (result == 0)
+		;
+#elif FW_SINCE(0x00090804)
 	BATTERY_CHARGE(1);
 #endif
 	return result;
@@ -556,6 +676,18 @@ unsigned char batteryStopBLMode(void)
 /* 0x0989: the gauge's control command 0x0041 (its reset) */
 unsigned char batterySWReset(void)
 {
+#if BOARD_DOL1002
+	/* DOL-1002's: the charge stopped too */
+	unsigned char result;
+
+	chargeTimerStart(0x0a);
+	BATTERY_CHARGE(0);
+	elmoCommand[0] = 0;
+	elmoCommand[1] = 0x41;
+	elmoCommand[2] = 0;
+	result = batteryWrite(elmoCommand, 3);
+	return result;
+#else
 #if FW_SINCE(0x00090804)
 	chargeTimerStart(0x0a);
 #endif
@@ -563,6 +695,7 @@ unsigned char batterySWReset(void)
 	elmoCommand[1] = 0x41;
 	elmoCommand[2] = 0;
 	return batteryWrite(elmoCommand, 3);
+#endif
 }
 
 #if SOURCE_0103
@@ -593,6 +726,10 @@ void batteryBLLineOff(void)
    gauge's control command 0x0011 (its hibernation) whatever the version */
 unsigned char batteryHibernate(void)
 {
+#if BOARD_DOL1002
+	unsigned char result;
+
+#endif
 	chargeSetManualMode(0);
 	batteryFaults.byte[1] |= 0x02;
 #if BOARD_EVENT_LOG
@@ -604,7 +741,12 @@ unsigned char batteryHibernate(void)
 	elmoCommand[0] = 0;
 	elmoCommand[1] = 0x11;
 	elmoCommand[2] = 0;
+#if BOARD_DOL1002
+	result = batteryWrite(elmoCommand, 3);
+	return result;
+#else
 	return batteryWrite(elmoCommand, 3);
+#endif
 }
 #elif FW_SINCE(0x00090206)
 /* 0x08b0: the battery's bootloader line */

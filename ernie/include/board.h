@@ -28,6 +28,9 @@
 /* the slim's code line: USS-1001's, and from 0x0104 the PS TV's (DOL-1002, 0x00723030), on the
    fat models' chip */
 #define SOURCE_SLIM		(BOARD_USS1001 || BOARD_DOL1001 && FW_SINCE(0x01040000))
+/* DOL-1002 (0x00723030): the PS TV on the slim's line, with a thermistor for DOL-1001's
+   temperature sensor and a few changes of its own */
+#define BOARD_DOL1002		(BOARD_DOL1001 && FW_SINCE(0x01040000))
 /* that line from the slim's 0x01030511 */
 #define SOURCE_0511		(BOARD_USS1001 && FW_SINCE(0x01030511) || BOARD_DOL1001 && FW_SINCE(0x01040000))
 

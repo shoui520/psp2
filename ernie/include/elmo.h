@@ -6,6 +6,8 @@
 #ifndef ERNIE_ELMO_H
 #define ERNIE_ELMO_H
 
+#include "board.h"
+
 #define ELMO_ADDRESS		0xd0	/* on the IICA bus, shifted */
 #define ELMO_VERSION		0xd0	/* the register holding its version */
 
@@ -21,8 +23,13 @@ struct ElmoMasks {
 	unsigned int	status1;
 	unsigned int	status2;
 	unsigned int	status3;
+#if !BOARD_DOL1002
 	unsigned int	status4;
+#endif
 	unsigned int	regA7;			/* 0xa7, changed the other way */
+#if BOARD_DOL1002
+	unsigned int	regAA;			/* DOL-1002's: 0xaa, changed as the status masks */
+#endif
 };
 
 extern union ElmoStatusMask elmoStatusMask;
@@ -48,5 +55,10 @@ extern unsigned char elmoSetMasks(struct ElmoMasks *masks, unsigned char *comman
 extern unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command);
 #endif
 extern unsigned char elmoGetMasks(unsigned char select, unsigned char *command);
+
+#if BOARD_DOL1002
+/* serial2.c: elmoWrite's transfer polled, with the IICA interrupt masked, tried once */
+extern unsigned char elmoWritePolled(unsigned char *data, unsigned char length);
+#endif
 
 #endif

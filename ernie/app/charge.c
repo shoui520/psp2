@@ -56,6 +56,9 @@ __sreg union ChargeFactors chargeFactors;
 #else
 __sreg unsigned char chargeFactors;
 #endif
+#if BOARD_DOL1002
+__sreg unsigned char chargeCommand0903[2];
+#endif
 #if FW_SINCE(0x00090009)
 __sreg unsigned char chargeControl;
 #endif
@@ -104,6 +107,9 @@ __sreg unsigned char chargeCookieHeld;
 #endif
 #if SOURCE_0103
 __sreg unsigned char chargeManualMode;
+#if BOARD_DOL1002
+__sreg unsigned char chargeSerialMode;
+#endif
 __sreg unsigned char chargeUsbState;
 __sreg unsigned char chargeUsbWait;
 __sreg unsigned char chargeUsbTicks;
@@ -180,6 +186,9 @@ void chargeInit(void)
 	chargeTempSetting = 0xc0;
 	chargeCookieHeld = 0;
 	chargeManualMode = 0;
+#if BOARD_DOL1002
+	chargeSerialMode = 0;
+#endif
 	chargeUsbState = 0;
 	chargeUsbWait = 0;
 	chargeUsbTicks = 0;
@@ -436,8 +445,8 @@ void chargeInit(void)
 #endif
 }
 
-#if BOARD_USS1001 && FW_SINCE(0x01030511)
-/* the slim's calls stateTransition itself */
+#if (BOARD_USS1001 && FW_SINCE(0x01030511)) || BOARD_DOL1002
+/* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves */
 #define chargeTransition(transition)	stateTransition(transition)
 #elif SOURCE_0103	/* and the PS TV's */
 /* 0x01030505's: stateTransition with the transition's low byte */
@@ -1734,7 +1743,7 @@ void chargeUsbChanged(void)
    chargeUsbMode's */
 unsigned char chargeSetCurrent(void)
 {
-#if FW_SINCE(0x01030511) && !BOARD_DOL1001
+#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || BOARD_DOL1002
 	unsigned char current;
 	unsigned char result;
 #else
@@ -1742,12 +1751,25 @@ unsigned char chargeSetCurrent(void)
 	unsigned char current;
 #endif
 
-#if !FW_SINCE(0x01030511) || BOARD_DOL1001
+#if (!FW_SINCE(0x01030511) || BOARD_DOL1001) && !BOARD_DOL1002
 	unsigned char adjust;
 #endif
 
 	current = 0x10;
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+	/* DOL-1002's: the dongle's and debug board's setting from the settings unless the serial
+	   mode is set, a level 2 multi-connector's fixed, the USB status's in chargeUsbCurrent */
+	if (chargeUsbDongle() || chargeUsbDebug()) {
+		if (chargeSerialMode != 0)
+			current = chargeUsbCurrent();
+		else
+			current = configGet()->chargeDongleCurrent;
+	} else if (chargeUsbMultiCn2()) {
+		current = 0xc0;
+	} else {
+		current = chargeUsbCurrent();
+	}
+#elif BOARD_DOL1001
 	/* DOL-1001's: as 0x01030505's, from the older table (chargeCurrents), its dongle's and debug
 	   board's settings fixed */
 	if (chargeUsbDongle()) {
@@ -1801,15 +1823,21 @@ unsigned char chargeSetCurrent(void)
 	return result;
 }
 
-#if FW_SINCE(0x01030511) && !BOARD_DOL1001
+#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || BOARD_DOL1002
 unsigned char chargeUsbCurrent(void)
 {
 	unsigned char current;
 	unsigned char adjust;
 
 	current = 0x10;
+#if BOARD_DOL1002
+	/* DOL-1002's: DOL-1001's table */
+	if (powerStatus.bits.usb < 4 && chargeUsbMode < 6) {
+		current = configGet()->chargeCurrents[powerStatus.bits.usb][chargeUsbMode];
+#else
 	if (powerStatus.bits.usb < 8 && chargeUsbMode < 6) {
 		current = configGet()->chargeUsbCurrents[powerStatus.bits.usb][chargeUsbMode];
+#endif
 		if (current == 0xff || (chargeUsbIs1() && !chargeVbus.1) || !chargeVbus.0) {
 			current = 0xff;
 		} else if (chargeBbmcVersion == 0 && chargeUsbPower() && current >= 0x11) {
@@ -2053,6 +2081,87 @@ char chargeBatteryLevel9(void)
 #endif
 #endif
 
+#if BOARD_DOL1002
+/* DOL-1002's, which nothing calls: the battery charged enough, its remaining capacity 400 and its
+   voltage 3500 (with a USB charger: any) */
+int chargeBatteryReady(void)
+{
+	int ready;
+
+	ready = 0;
+	if (chargeUsbPower())
+		ready = 1;
+	else if (charge.batteryRemainCap >= 0x190 && charge.batteryVolt >= 0xdac)
+		ready = 1;
+	return ready;
+}
+
+/* and with a USB charger a remaining capacity of 320 */
+int chargeBatteryReadyUsb(void)
+{
+	int ready;
+
+	ready = 0;
+	if (chargeUsbPower()) {
+		if (charge.batteryRemainCap >= 0x140 && charge.batteryVolt >= 0xdac)
+			ready = 1;
+	} else if (charge.batteryRemainCap >= 0x190 && charge.batteryVolt >= 0xdac) {
+		ready = 1;
+	}
+	return ready;
+}
+
+/* the battery's life in four bars, none lit at level 3 */
+void chargeGetBatteryBars(struct ChargeBatteryBars *out)
+{
+	unsigned int percent;
+	unsigned char bars;
+
+	percent = charge.batteryLifePercent;
+	bars = 0;
+	if (chargeBatteryLevel3())
+		bars = 0;
+	else if (percent < 0x23)
+		bars = 1;
+	else if (percent < 0x37)
+		bars = 2;
+	else if (percent < 0x46)
+		bars = 3;
+	else
+		bars = 4;
+	out->count = 4;
+	out->lit = bars;
+}
+
+/* the Cookie's battery setting for the battery's version: the settings' for a version it does
+   not know, none with no battery */
+void chargeSetBattery(void)
+{
+	unsigned char setting;
+
+	setting = configGet()->batterySetting;
+	if (deviceVersions.battery.id != 0xffff) {
+		switch (deviceVersions.battery.version[2] & 0xfff0) {
+		case 0x00:
+		case 0x10:
+		case 0x20:
+			setting = 0x20;
+			break;
+		case 0x30:
+			setting = 0x40;
+			break;
+		case 0x40:
+		case 0x50:
+			setting = 0x60;
+			break;
+		case 0x60:
+			setting = 0xc0;
+			break;
+		}
+		cookieCtrlReg7(setting);
+	}
+}
+#else
 /* the Cookie's battery setting for the battery's version */
 void chargeSetBattery(void)
 {
@@ -2080,6 +2189,7 @@ void chargeSetBattery(void)
 		cookieCtrlReg7(0x60);
 #endif
 }
+#endif
 
 #if FW_SINCE(0x00090009)	/* 0x00080504 has none */
 /* whether the 3G modem's version changed since the last call */
@@ -2114,6 +2224,19 @@ void chargeTimerStart(unsigned int ticks)
 	timerStart(TIMER_RTC(0x17), ticks);
 }
 
+#if BOARD_DOL1002
+/* DOL-1002's: off, or (on) the update restarted after its period and run */
+void chargeTimerSet(unsigned char on)
+{
+	if (on) {
+		timerStart(TIMER_RTC(0x17), charge.acDelay);
+		task5SetFlag(4, 0x20);
+	} else {
+		timerStop(TIMER_RTC(0x17));
+		clr_flg(4, ~0x0020);
+	}
+}
+#else
 void chargeTimerStop(void)
 {
 #if SOURCE_0103
@@ -2125,6 +2248,7 @@ void chargeTimerStop(void)
 	timerStop(TIMER_RTC(0x17));
 #endif
 }
+#endif
 #endif
 
 /* for the touch frames' power bit and powerreq (before 0x01000104 neither, on boards without BOARD_TOUCH_CHARGE) */
@@ -2209,6 +2333,13 @@ unsigned char chargeUsbDebug(void)
 	return 0;
 }
 
+#if BOARD_DOL1002
+unsigned char chargeUsbMultiCn2(void)
+{
+	return 0;
+}
+#endif
+
 /* the AC, or a USB charger (2 or 3) */
 unsigned char chargeExternalPower(void)
 {
@@ -2257,7 +2388,13 @@ unsigned char chargeExternalPower(void)
 #endif
 
 #if FW_SINCE(0x01000109)
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+/* a USB host: status 1 */
+unsigned char chargeUsbIs1(void)
+{
+	return cookieStatus2.bits.vbus && powerStatus.bits.usb == 1;
+}
+#elif BOARD_DOL1001
 /* a USB host: status 1 with no dongle or debug board */
 unsigned char chargeUsbIs1(void)
 {
@@ -2326,6 +2463,21 @@ unsigned char chargeSetManualMode(unsigned char on)
 	}
 	return result;
 }
+
+#if BOARD_DOL1002
+/* DOL-1002's serial operation: a new mode drops the last status registers and has task 5 read
+   the charge again (event 0x20); 0 */
+unsigned char chargeSetSerialMode(unsigned char mode)
+{
+	if (chargeSerialMode != mode) {
+		chargeSerialMode = mode;
+		chargeStatus1Last.word = 0;
+		chargeStatus2Last.word = 0;
+		task5SetFlag(4, 0x20);
+	}
+	return 0;
+}
+#endif
 
 /* the manual mode's settings */
 unsigned char chargeManualOn(void)
@@ -2436,4 +2588,16 @@ void chargeUsbModeUpdate(void)
 		break;
 	}
 }
+
+#if BOARD_DOL1002
+/* a supply current at most chargeCookieSetting and chargeTempSetting */
+unsigned char chargeLimitCurrent(unsigned char current)
+{
+	if (chargeCookieSetting < current)
+		current = chargeCookieSetting;
+	if (chargeTempSetting < current)
+		current = chargeTempSetting;
+	return current;
+}
+#endif
 #endif

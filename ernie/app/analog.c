@@ -22,6 +22,7 @@
 #include "input.h"
 #include "inputreq.h"
 #include "kernel.h"
+#include "log.h"
 #include "nvsreq.h"
 #include "sleepfactor.h"
 #include "task.h"
@@ -67,6 +68,33 @@ const struct AnalogLevel analogLevels5[5] = {
 const struct AnalogLevel analogMultiCnLevels[7] = {
 	{ 0xe3, 6 }, { 0xc4, 5 }, { 0x99, 4 }, { 0x69, 3 }, { 0x40, 2 }, { 0x1d, 1 }, { 0x00, 0 },
 };
+#if ANALOG_THERMISTOR
+/* the thermistor's median result at each temperature from -41 degrees C (index 0) to 125,
+   falling */
+const unsigned int analogThermistorLevels[167] = {
+	0xf600, 0xf580, 0xf4c0, 0xf400, 0xf340, 0xf280, 0xf1c0, 0xf100,	/* -41 */
+	0xf040, 0xef40, 0xee40, 0xed40, 0xec40, 0xeb40, 0xea40, 0xe900,	/* -33 */
+	0xe7c0, 0xe6c0, 0xe580, 0xe400, 0xe2c0, 0xe140, 0xdfc0, 0xde40,	/* -25 */
+	0xdcc0, 0xdb40, 0xd980, 0xd800, 0xd640, 0xd480, 0xd2c0, 0xd0c0,	/* -17 */
+	0xcf00, 0xcd00, 0xcb00, 0xc900, 0xc700, 0xc4c0, 0xc2c0, 0xc080,	/* -9 */
+	0xbe40, 0xbc00, 0xb9c0, 0xb780, 0xb540, 0xb2c0, 0xb080, 0xae00,	/* -1 */
+	0xab80, 0xa980, 0xa6c0, 0xa440, 0xa1c0, 0x9f40, 0x9cc0, 0x9a40,	/* 7 */
+	0x97c0, 0x9540, 0x92c0, 0x9040, 0x8dc0, 0x8b40, 0x88c0, 0x8640,	/* 15 */
+	0x83c0, 0x8140, 0x7f00, 0x7c80, 0x7a00, 0x77c0, 0x7540, 0x7300,	/* 23 */
+	0x70c0, 0x6e80, 0x6c40, 0x6a00, 0x67c0, 0x6580, 0x6380, 0x6140,	/* 31 */
+	0x5f40, 0x5d40, 0x5b40, 0x5940, 0x5740, 0x5540, 0x5380, 0x5180,	/* 39 */
+	0x4fc0, 0x4e00, 0x4c40, 0x4a80, 0x48c0, 0x4740, 0x4580, 0x4400,	/* 47 */
+	0x4280, 0x40c0, 0x3f80, 0x3e00, 0x3c80, 0x3b00, 0x39c0, 0x3880,	/* 55 */
+	0x3700, 0x35c0, 0x3480, 0x3340, 0x3240, 0x3100, 0x3000, 0x2ec0,	/* 63 */
+	0x2dc0, 0x2cc0, 0x2bc0, 0x2a80, 0x29c0, 0x28c0, 0x27c0, 0x26c0,	/* 71 */
+	0x2600, 0x2500, 0x2440, 0x2380, 0x2280, 0x21c0, 0x2100, 0x2040,	/* 79 */
+	0x1f80, 0x1f00, 0x1e40, 0x1d80, 0x1cc0, 0x1c40, 0x1b80, 0x1b00,	/* 87 */
+	0x1a80, 0x19c0, 0x1940, 0x18c0, 0x1840, 0x17c0, 0x1740, 0x16c0,	/* 95 */
+	0x1640, 0x15c0, 0x1540, 0x14c0, 0x1440, 0x1400, 0x1380, 0x1300,	/* 103 */
+	0x12c0, 0x1240, 0x1200, 0x1180, 0x1140, 0x10c0, 0x1080, 0x1040,	/* 111 */
+	0x0fc0, 0x0f80, 0x0f40, 0x0f00, 0x0e80, 0x0e40, 0x0e00,	/* 119 */
+};
+#endif
 #endif
 
 static __near struct AnalogAxis analogAxes[ANALOG_AXES];	/* ANI15 first */
@@ -108,6 +136,23 @@ static struct {
 	unsigned char	previous;	/* of the one before */
 	unsigned char	reported;
 } analogInput10;
+#endif
+
+#if ANALOG_THERMISTOR
+#define ANALOG_THERMISTOR_NONE	(-128)	/* the median beyond analogThermistorLevels' ends */
+
+/* DOL-1002's thermistor: ANI10's last three samples and their median, the temperature it gives
+   and the samples it was taken from */
+static struct {
+	unsigned int	samples[ANALOG_SAMPLES];
+	unsigned int	median;
+	unsigned char	sample;		/* the samples[] the next conversion goes to */
+	signed char	temperature;	/* in degrees C */
+	unsigned int	snapshot[ANALOG_SAMPLES];
+} analogThermistor;
+
+void analogThermistorUpdate(void);
+static void analogThermistorSet(signed char temperature);
 #endif
 
 #if ANALOG_LIMITS
@@ -624,7 +669,7 @@ static void analogCalibrationLoaded(unsigned char command, unsigned char result)
 			range = analogCalibration.axis[i].max - analogCalibration.axis[i].min;
 			if (analogCalibration.axis[i].min > configGet()->analogMin ||
 			    analogCalibration.axis[i].max < configGet()->analogMax ||
-#if BOARD_USS1001
+#if SOURCE_SLIM
 			    ANALOG_HIGH(range) < configGet()->analogMinRange) {
 #else
 			    configGet()->analogMinRange > ANALOG_HIGH(range)) {
@@ -728,6 +773,10 @@ unsigned char analogStart(unsigned int inputs)
 #if BOARD_DOL1001
 	if ((inputs & 0x0020) && (inputKeys.state & 0x0020))
 		mask |= 0x08;
+#if ANALOG_THERMISTOR
+	if ((inputs & 0x0040) && (inputKeys.state & 0x0040))
+		mask |= 0x04;	/* ANI10 */
+#endif
 #else
 	if ((inputs & 0x0010) && (inputKeys.state & 0x0010))
 		mask |= 0x10;
@@ -867,10 +916,29 @@ void analogEvent(unsigned int inputs)
 	if ((inputs & 0x0002) && analogSuspend != 0xff) {
 #endif
 		ANALOG_POWER = 0;
+#if ANALOG_LIMITS
+		analogAxes[0].samples[analogSample] = adcResults[0];
+		if ((analogAxes[0].samples[analogSample] & 0x003f) || analogAxes[0].limitMin >= analogAxes[0].samples[analogSample] ||
+		    analogAxes[0].samples[analogSample] >= analogAxes[0].limitMax)
+			ANALOG_FAULT(analogAxes[0].samples[analogSample], 0, sampleFault, NULL);
+		analogAxes[1].samples[analogSample] = adcResults[1];
+		if ((analogAxes[1].samples[analogSample] & 0x003f) || analogAxes[1].limitMin >= analogAxes[1].samples[analogSample] ||
+		    analogAxes[1].samples[analogSample] >= analogAxes[1].limitMax)
+			ANALOG_FAULT(analogAxes[1].samples[analogSample], 1, sampleFault, NULL);
+		analogAxes[2].samples[analogSample] = adcResults[2];
+		if ((analogAxes[2].samples[analogSample] & 0x003f) || analogAxes[2].limitMin >= analogAxes[2].samples[analogSample] ||
+		    analogAxes[2].samples[analogSample] >= analogAxes[2].limitMax)
+			ANALOG_FAULT(analogAxes[2].samples[analogSample], 2, sampleFault, NULL);
+		analogAxes[3].samples[analogSample] = adcResults[3];
+		if ((analogAxes[3].samples[analogSample] & 0x003f) || analogAxes[3].limitMin >= analogAxes[3].samples[analogSample] ||
+		    analogAxes[3].samples[analogSample] >= analogAxes[3].limitMax)
+			ANALOG_FAULT(analogAxes[3].samples[analogSample], 3, sampleFault, NULL);
+#else
 		analogAxes[0].samples[analogSample] = adcResults[0];
 		analogAxes[1].samples[analogSample] = adcResults[1];
 		analogAxes[2].samples[analogSample] = adcResults[2];
 		analogAxes[3].samples[analogSample] = adcResults[3];
+#endif
 		if (++analogSample >= ANALOG_SAMPLES)
 			analogSample = 0;
 		analogFilter0();
@@ -928,6 +996,33 @@ void analogEvent(unsigned int inputs)
 		}
 		analogMultiCnPrevious = analogMultiCn;
 	}
+#if ANALOG_THERMISTOR
+	if ((inputs & 0x0040) && (inputKeys.state & 0x0040)) {
+		analogThermistor.samples[analogThermistor.sample] = adcResults[5];
+		analogThermistor.sample++;
+		if (analogThermistor.sample >= ANALOG_SAMPLES) {
+			if (analogThermistor.samples[0] < analogThermistor.samples[1]) {
+				if (analogThermistor.samples[1] < analogThermistor.samples[2])
+					analogThermistor.median = analogThermistor.samples[1];
+				else if (analogThermistor.samples[0] < analogThermistor.samples[2])
+					analogThermistor.median = analogThermistor.samples[2];
+				else
+					analogThermistor.median = analogThermistor.samples[0];
+			} else {
+				if (analogThermistor.samples[2] < analogThermistor.samples[1])
+					analogThermistor.median = analogThermistor.samples[1];
+				else if (analogThermistor.samples[2] < analogThermistor.samples[0])
+					analogThermistor.median = analogThermistor.samples[2];
+				else
+					analogThermistor.median = analogThermistor.samples[0];
+			}
+			analogThermistorUpdate();
+			analogThermistorStop();
+		} else {
+			inputScanHold(3);
+		}
+	}
+#endif
 #if BOARD_102603
 	if (inputs & 0x0001) {
 #if HW_IS(0x00315200)
@@ -1029,10 +1124,29 @@ void analogFilter0(void)
    and its value 0-0xff between them */
 void analogScale00(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[0].range * analogScales[0] / 1000;
 	analogAxes[0].output[0].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[0].range;
+	MDAL = analogScales[0];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[0].output[0].margin = MDAL;
+#endif
 	analogAxes[0].output[0].margin &= ADC_RESULT_MASK;
 	analogAxes[0].output[0].high = analogCalibration.axis[0].max - analogAxes[0].output[0].margin;
 	if (analogAxes[0].output[0].high < position)
@@ -1058,10 +1172,29 @@ void analogScale00(unsigned int position)
    and its value 0-0xff between them */
 void analogScale01(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[0].range * analogScales[1] / 1000;
 	analogAxes[0].output[1].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[0].range;
+	MDAL = analogScales[1];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[0].output[1].margin = MDAL;
+#endif
 	analogAxes[0].output[1].margin &= ADC_RESULT_MASK;
 	analogAxes[0].output[1].high = analogCalibration.axis[0].max - analogAxes[0].output[1].margin;
 	if (analogAxes[0].output[1].high < position)
@@ -1136,10 +1269,29 @@ void analogFilter1(void)
    and its value 0-0xff between them */
 void analogScale10(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[1].range * analogScales[0] / 1000;
 	analogAxes[1].output[0].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[1].range;
+	MDAL = analogScales[0];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[1].output[0].margin = MDAL;
+#endif
 	analogAxes[1].output[0].margin &= ADC_RESULT_MASK;
 	analogAxes[1].output[0].high = analogCalibration.axis[1].max - analogAxes[1].output[0].margin;
 	if (analogAxes[1].output[0].high < position)
@@ -1165,10 +1317,29 @@ void analogScale10(unsigned int position)
    and its value 0-0xff between them */
 void analogScale11(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[1].range * analogScales[1] / 1000;
 	analogAxes[1].output[1].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[1].range;
+	MDAL = analogScales[1];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[1].output[1].margin = MDAL;
+#endif
 	analogAxes[1].output[1].margin &= ADC_RESULT_MASK;
 	analogAxes[1].output[1].high = analogCalibration.axis[1].max - analogAxes[1].output[1].margin;
 	if (analogAxes[1].output[1].high < position)
@@ -1243,10 +1414,29 @@ void analogFilter2(void)
    and its value 0-0xff between them */
 void analogScale20(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[2].range * analogScales[0] / 1000;
 	analogAxes[2].output[0].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[2].range;
+	MDAL = analogScales[0];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[2].output[0].margin = MDAL;
+#endif
 	analogAxes[2].output[0].margin &= ADC_RESULT_MASK;
 	analogAxes[2].output[0].high = analogCalibration.axis[2].max - analogAxes[2].output[0].margin;
 	if (analogAxes[2].output[0].high < position)
@@ -1272,10 +1462,29 @@ void analogScale20(unsigned int position)
    and its value 0-0xff between them */
 void analogScale21(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[2].range * analogScales[1] / 1000;
 	analogAxes[2].output[1].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[2].range;
+	MDAL = analogScales[1];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[2].output[1].margin = MDAL;
+#endif
 	analogAxes[2].output[1].margin &= ADC_RESULT_MASK;
 	analogAxes[2].output[1].high = analogCalibration.axis[2].max - analogAxes[2].output[1].margin;
 	if (analogAxes[2].output[1].high < position)
@@ -1406,10 +1615,29 @@ static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
    and its value 0-0xff between them */
 void analogScale30(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[3].range * analogScales[0] / 1000;
 	analogAxes[3].output[0].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[3].range;
+	MDAL = analogScales[0];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[3].output[0].margin = MDAL;
+#endif
 	analogAxes[3].output[0].margin &= ADC_RESULT_MASK;
 	analogAxes[3].output[0].high = analogCalibration.axis[3].max - analogAxes[3].output[0].margin;
 	if (analogAxes[3].output[0].high < position)
@@ -1435,10 +1663,29 @@ void analogScale30(unsigned int position)
    and its value 0-0xff between them */
 void analogScale31(unsigned int position)
 {
+#if BOARD_USS1001
 	unsigned long margin;
 
 	margin = (unsigned long)analogAxes[3].range * analogScales[1] / 1000;
 	analogAxes[3].output[1].margin = margin;
+#else
+	/* DOL-1002: the fat chip's multiplier and divider */
+	MDUC.7 = 0;
+	MDAH = analogAxes[3].range;
+	MDAL = analogScales[1];
+	NOP();
+	analogWorkLow = MDBL;
+	analogWorkHigh = MDBH;
+	MDUC.7 = 1;
+	MDAH = analogWorkHigh;
+	MDAL = analogWorkLow;
+	MDBH = 0;
+	MDBL = 1000;
+	MDUC.0 = 1;
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP(); NOP();
+	analogAxes[3].output[1].margin = MDAL;
+#endif
 	analogAxes[3].output[1].margin &= ADC_RESULT_MASK;
 	analogAxes[3].output[1].high = analogCalibration.axis[3].max - analogAxes[3].output[1].margin;
 	if (analogAxes[3].output[1].high < position)
@@ -2516,6 +2763,89 @@ void analogMultiCnStop(void)
 }
 #endif
 
+#if ANALOG_THERMISTOR
+void analogThermistorInit(void)
+{
+	memset(&analogThermistor, 0, sizeof(analogThermistor));
+}
+
+/* from the input scan: three conversions of ANI10 (analogEvent) */
+void analogThermistorStart(void)
+{
+	DI();
+	inputKeys.state |= 0x0040;
+	EI();
+	analogThermistor.sample = 0;
+	adcOpenForBoard();
+}
+
+void analogThermistorStop(void)
+{
+	DI();
+	inputKeys.state &= ~0x0040;
+	EI();
+	adcCloseForBoard();
+}
+
+/* the last temperature, in degrees C; 0xff while it is out of the table's range */
+int analogThermistorRead(signed char *temperature)
+{
+	unsigned char status;
+
+	status = 0;
+	if (analogThermistor.temperature == ANALOG_THERMISTOR_NONE)
+		status = 0xff;
+	*temperature = analogThermistor.temperature;
+	return status;
+}
+
+/* the three samples' median to a temperature, by a binary search of analogThermistorLevels; a
+   median beyond the table's ends is logged (records 0x29 and 0x2a) */
+void analogThermistorUpdate(void)
+{
+	unsigned char low;
+	unsigned char middle;
+	unsigned char high;
+
+	if (analogThermistor.median >= 0xf600 || analogThermistor.median < 0x0dc1) {
+		analogThermistorSet(ANALOG_THERMISTOR_NONE);
+		logEventValue(0x29, 0);
+		logEventValue(0x2a, analogThermistor.median);
+		return;
+	}
+	low = 0;
+	high = LENGTH(analogThermistorLevels);
+	while (low < high) {
+		middle = ((unsigned int)low + (unsigned int)high) >> 1;
+		if (analogThermistor.median >= analogThermistorLevels[middle] &&
+		    analogThermistor.median < analogThermistorLevels[middle - 1]) {
+			analogThermistorSet((unsigned int)middle - 41);
+			return;
+		}
+		if (analogThermistorLevels[middle] < analogThermistor.median)
+			high = middle;
+		else
+			low = middle + 1;
+	}
+}
+
+/* the temperature, with the samples it came from */
+static void analogThermistorSet(signed char temperature)
+{
+	dis_dsp();
+	analogThermistor.temperature = temperature;
+	memcpy(analogThermistor.snapshot, analogThermistor.samples, sizeof(analogThermistor.snapshot));
+	ena_dsp();
+}
+
+/* serial command 0x01e3's seven bytes: the samples of the last temperature, then it */
+void analogThermistorGet(unsigned char *out)
+{
+	memcpy(out, analogThermistor.snapshot, sizeof(analogThermistor.snapshot));
+	out[6] = analogThermistor.temperature;
+}
+#endif
+
 /* the multi connector's level (command 0x0103) */
 unsigned char analogGetMultiCn(void)
 {
@@ -2575,6 +2905,17 @@ void analogGetMedianFaults(unsigned char *out)
 	memcpy(&out[0x10], &analogAxes[2].medianFault, sizeof(struct AnalogFault));
 	memcpy(&out[0x18], &analogAxes[3].medianFault, sizeof(struct AnalogFault));
 }
+
+#if ANALOG_SNAPSHOT
+/* the samples of each axis's median fault (analogSnapshotTake's) */
+void analogGetMedianSnapshots(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].medianSnapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[8], &analogAxes[1].medianSnapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x10], &analogAxes[2].medianSnapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x18], &analogAxes[3].medianSnapshot, sizeof(struct AnalogSnapshot));
+}
+#endif
 
 /* and of its samples (mode 0) */
 void analogGetSampleFaults(unsigned char *out)

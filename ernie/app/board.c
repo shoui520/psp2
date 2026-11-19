@@ -355,6 +355,42 @@ void boardPortInit102603(void)
 #endif
 #if !BOARD_USS1001	/* the slim's is in uss1001.c */
 /* the ports' levels and modes at the start (hdwinit) */
+#if BOARD_DOL1002
+/* DOL-1002's port modes */
+void boardPortInit(void)
+{
+	P0 = 0x00;
+	PM0 = 0x80;
+	P1 = 0x08;
+	PM1 = 0x52;
+	P2 = 0x00;
+	PM2 = 0xff;
+	P3 = 0x00;
+	PM3 = 0x0b;
+	P4 = 0x00;
+	PM4 = 0x40;
+	P5 = 0x00;
+	PM5 = 0x00;
+	P6 = 0x05;
+	PM6 = 0x22;
+	P7 = 0x00;
+	PM7 = 0xb0;
+	P8 = 0x00;
+	PM8 = 0x00;
+	P9 = 0x00;
+	PM9 = 0x00;
+	P11 = 0x00;
+	PM11 = 0xf0;
+	P12 = 0x00;
+	PM12 = 0x1f;
+	P13 = 0x00;
+	PM13 = 0xfc;
+	P14 = 0x00;
+	PM14 = 0xc0;
+	P15 = 0x00;
+	PM15 = 0x0c;
+}
+#else
 void boardPortInit(void)
 {
 	P0 = 0x00;
@@ -394,6 +430,7 @@ void boardPortInit(void)
 	P15 = 0x00;
 	PM15 = BOARD_PM15;
 }
+#endif
 #if BOARD_DOL1001
 /* DOL-1001's keys are not read (input.c's on the others) */
 void inputKeysOpen(void)

@@ -14,6 +14,7 @@
 #include "cookie.h"
 #include "iica.h"
 #include "kernel.h"
+#include "log.h"
 #include "powerreq.h"
 #include "powerseq.h"
 #include "task.h"
@@ -39,6 +40,16 @@ unsigned int cookieAddress(void)
 {
 	return configGet()->cookieRegHigh ? 0xa4 : 0xa8;
 }
+
+#if BOARD_DOL1002
+/* DOL-1002 has no Cookie to talk to: cookieWrite and cookieRead do nothing, and only
+   cookieInitRegs goes on the bus */
+static unsigned char cookieBusWrite(unsigned char *data, unsigned char length);
+static unsigned char cookieBusRead(unsigned char *reg, unsigned char *data);
+#define COOKIE_INIT_WRITE	cookieBusWrite
+#else
+#define COOKIE_INIT_WRITE	cookieWrite
+#endif
 
 #if BOARD_DOL1001
 #define COOKIE_SLIM_REG(reg)	cookieReg(reg)
@@ -87,21 +98,37 @@ void cookieInitRegs(void)
 		elmoCommand[0] = regs[i].reg;
 		elmoCommand[1] = (unsigned char)regs[i].value;
 		elmoCommand[2] = (unsigned char)(regs[i].value >> 8);
-		if (cookieWrite(elmoCommand, 3) == 0)
+		if (COOKIE_INIT_WRITE(elmoCommand, 3) == 0)
 			regs[i].last->word = regs[i].value;
 	}
+#if BOARD_DOL1002
+	/* DOL-1002 tests register 3's bit 15 and does nothing with it */
+	if (cookieRegs[0].byte[1] & 0x80)
+		;
+#endif
 }
 
 /* data[0] is the register */
+#if BOARD_DOL1002
 unsigned char cookieWrite(unsigned char *data, unsigned char length)
+{
+	return 0;
+}
+
+static unsigned char cookieBusWrite(unsigned char *data, unsigned char length)
+#else
+unsigned char cookieWrite(unsigned char *data, unsigned char length)
+#endif
 {
 	unsigned char status;
 	ER ercd;
 	FLGPTN ptn;
 	unsigned char i;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.cookie[0] == 0xff)
 		return 0;
+#endif
 	cookieIica.rxData = NULL;
 	cookieIica.rxCount = 0;
 	cookieIica.txData = data;
@@ -119,21 +146,40 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#if BOARD_DOL1002
+	if (status) {
+		logEvent(0x23);
+		logEventValue(0x24, status);
+	}
+#endif
 	return status;
 }
 
 /* a register's two bytes; with no Cookie 0 */
+#if BOARD_DOL1002
 unsigned char cookieRead(unsigned char *reg, unsigned char *data)
+{
+	*data++ = 0;
+	*data = 0;
+	return 0;
+}
+
+static unsigned char cookieBusRead(unsigned char *reg, unsigned char *data)
+#else
+unsigned char cookieRead(unsigned char *reg, unsigned char *data)
+#endif
 {
 	unsigned char status;
 	ER ercd;
 	FLGPTN ptn;
 
+#if !BOARD_DOL1002
 	if (deviceVersions.cookie[0] == 0xff) {
 		*data++ = 0;
 		*data = 0;
 		return 0;
 	}
+#endif
 	cookieIica.rxData = data;
 	cookieIica.rxCount = 2;
 	cookieIica.txData = reg;
@@ -149,6 +195,12 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
+#if BOARD_DOL1002
+	if (status) {
+		logEvent(0x23);
+		logEventValue(0x24, status);
+	}
+#endif
 	return status;
 }
 
@@ -160,6 +212,14 @@ struct CookieVersion {
 #define COOKIE_VERSION(version)	((struct CookieVersion *)(version))
 
 /* register 0; with no Cookie 0xffff */
+#if BOARD_DOL1002
+/* DOL-1002: 0xfdfd, no Cookie */
+unsigned char cookieReadVersion(unsigned char *version)
+{
+	COOKIE_VERSION(version)->low = COOKIE_VERSION(version)->high = 0xfd;
+	return 0;
+}
+#else
 unsigned char cookieReadVersion(unsigned char *version)
 {
 	unsigned char reg;
@@ -171,6 +231,7 @@ unsigned char cookieReadVersion(unsigned char *version)
 	reg = COOKIE_SLIM_REG(0);
 	return cookieRead(&reg, version);
 }
+#endif
 
 /* register 4's low byte, out of the manual charge mode and when it changes */
 unsigned char cookieUpdateChargingCurrent(unsigned char current)
@@ -248,8 +309,14 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 		elmoCommand[1] = cookieRegs[0].byte[0];
 		elmoCommand[2] = value;
 		result = cookieWrite(elmoCommand, 3);
-		if (result == 0)
+		if (result == 0) {
+#if BOARD_DOL1002
+			/* DOL-1002 tests on again and does nothing with it */
+			if (on)
+				;
+#endif
 			cookieRegs[0].byte[1] = value;
+		}
 	} else
 		result = 0;
 	return result;
@@ -324,11 +391,15 @@ unsigned char cookieUpdateSupplyCurrentUsb(unsigned char current)
 	unsigned char result = 0;
 
 	if (chargeGetManualMode() == 0) {
+#if BOARD_DOL1002
+		result = cookieCtrlSupplyCurrentUsb(chargeLimitCurrent(current));
+#else
 		if (chargeCookieSetting < current)
 			current = chargeCookieSetting;
 		if (chargeTempSetting < current)
 			current = chargeTempSetting;
 		result = cookieCtrlSupplyCurrentUsb(current);
+#endif
 	}
 	return result;
 }
@@ -357,11 +428,15 @@ unsigned char cookieUpdateSupplyCurrent(unsigned char current)
 	unsigned char result = 0;
 
 	if (chargeGetManualMode() == 0) {
+#if BOARD_DOL1002
+		result = cookieCtrlSupplyCurrent(chargeLimitCurrent(current));
+#else
 		if (chargeCookieSetting < current)
 			current = chargeCookieSetting;
 		if (chargeTempSetting < current)
 			current = chargeTempSetting;
 		result = cookieCtrlSupplyCurrent(current);
+#endif
 	}
 	return result;
 }

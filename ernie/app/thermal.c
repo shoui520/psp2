@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "ernie.h"
+#include "analog.h"
 #include "charge.h"
 #include "config.h"
 #include "iica.h"
@@ -20,6 +21,50 @@
 #include "state.h"
 #include "thermal.h"
 
+#if ANALOG_THERMISTOR
+struct Thermal thermal;
+
+/* task 5: the thermistor's temperature (analog.c), counted and given to the charge alarms in
+   0.1 K */
+void thermalPoll(void)
+{
+	unsigned char status;
+	signed char temperature;
+
+	status = thermalReadTemp(&temperature);
+	if (status == 0) {
+		thermalStatsUpdate(temperature);
+		chargeSetTemp((int)temperature * 10 + 2732);
+	}
+}
+
+void thermalInit(void)
+{
+	thermalStatsInit();
+	return;
+}
+
+int thermalReadTemp(signed char *temperature)
+{
+	unsigned char status;
+
+	analogThermistorRead(temperature);
+	status = 0;
+	return status;
+}
+
+/* in 0.1 K */
+int thermalReadKelvin(unsigned int *temperature)
+{
+	unsigned char status;
+	signed char celsius;
+
+	status = thermalReadTemp(&celsius);
+	if (status == 0)
+		*temperature = (int)celsius * 10 + 2732;
+	return status;
+}
+#else
 static struct IicaRequest thermalIica;
 struct Thermal thermal;
 
@@ -298,6 +343,8 @@ unsigned char thermalWriteLimit(signed char limit, unsigned char reg)
 		elmoCommand[1] = limit;
 	return thermalWrite(elmoCommand, 2);
 }
+
+#endif
 
 /* a temperature read: the peaks, then the mode's statistics in its system states */
 void thermalStatsUpdate(signed char temperature)

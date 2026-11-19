@@ -8,14 +8,16 @@
 #include "ernie.h"
 #include "board.h"
 
-/* 0x00411000 starts from channel 8, 0x00315200 (no channel 8) from channel 9; the slim
-   converts ANI2-ANI6, channel 2 first */
+/* 0x00411000 starts from channel 8, 0x00315200 (no channel 8) from channel 9, DOL-1002 from
+   channel 10; the slim converts ANI2-ANI6, channel 2 first */
 #if BOARD_USS1001
 #define ADC_FIRST_CHANNEL	0x02
 #elif HW_IS(0x00315200)
 #define ADC_FIRST_CHANNEL	0x09
 #elif BOARD_IS(0x00411000)
 #define ADC_FIRST_CHANNEL	0x08
+#elif BOARD_DOL1002
+#define ADC_FIRST_CHANNEL	0x0a	/* DOL-1002's: ANI10 too */
 #else
 #define ADC_FIRST_CHANNEL	0x0b
 #endif

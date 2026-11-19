@@ -154,8 +154,20 @@ struct NvsBlockInfo *nvsListPopFront(struct NvsList *list);
 #define NVS_RECORDS		0x1f	/* a block's records */
 #define NVS_HEADER		0x3e8	/* a block's header, after its records */
 #define NVS_ENTRIES		0x19	/* a spare's entries */
+#if BOARD_DOL1002
+/* DOL-1002's area 1 is 0xc0 bytes: its last four records (0x5d-0x60) take the place of area
+   0's last four (0x57-0x5a), which read as all ones and cannot be written */
+#define NVS_AREA1_SIZE		0xc0
+#define NVS_AREA0_SIZE		(NVS_DATA_BLOCKS * NVS_RECORDS * NVS_RECORD_SIZE - 0x40)
+#define NVS_HIDDEN_FIRST	0x57
+#define NVS_HIDDEN_END		0x5b
+#define NVS_MOVED_FIRST		0x5d
+#define NVS_MOVED_END		0x61
+#define NVS_MOVED_SHIFT		(NVS_MOVED_FIRST - NVS_HIDDEN_FIRST)
+#else
 #define NVS_AREA1_SIZE		0x40
 #define NVS_AREA0_SIZE		(NVS_DATA_BLOCKS * NVS_RECORDS * NVS_RECORD_SIZE - NVS_AREA1_SIZE)
+#endif
 
 /* the flash library's status */
 #define FLASH_OK		0x00
@@ -171,6 +183,12 @@ struct NvsHeader {
 	unsigned char	index;			/* the block's place in the data */
 	unsigned int	generation;		/* counts down with each move */
 };
+#if BOARD_DOL1002
+/* DOL-1002 copies a header as one 32-bit value */
+#define NVS_HEADER_COPY(to, from)	(*(unsigned long *)&(to) = *(unsigned long *)&(from))
+#else
+#define NVS_HEADER_COPY(to, from)	((to) = (from))
+#endif
 
 /* a block's first 8 bytes: its status (0x55555500 the first data block, 0x55555555 the others,
    0xaaaaaaaa or 0xaaaaaa00 a spare, all ones erased) */
@@ -872,7 +890,7 @@ unsigned char nvsMove(void)
 		return 0x0a;
 	nvsState = 0x10;
 	record = 0;
-	header = ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header;
+	NVS_HEADER_COPY(header, ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header);
 	header.mark = 2;
 	if (header.generation != 0)
 		header.generation--;
@@ -950,7 +968,7 @@ unsigned char nvsMove(void)
 		return 0x0a;
 	nvsState = 3;
 	record = 0;
-	header = ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header;
+	NVS_HEADER_COPY(header, ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header);
 	header.mark = 1;
 	if (header.generation != 0)
 		header.generation--;
@@ -1576,7 +1594,7 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned i
 	case 0:
 		return 9;
 	}
-	header = ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header;
+	NVS_HEADER_COPY(header, ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header);
 	*mark = header.mark;
 	*moves = 0xffff - header.generation;
 	*missing = 0;
@@ -1599,7 +1617,7 @@ void nvsPrintStatus(void)
 #endif
 
 #if FW_SINCE(0x00090804)
-	header = ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header;
+	NVS_HEADER_COPY(header, ((struct NvsBlock *)NVS_ADDRESS(nvsDataBlocks[0]))->header);
 #endif
 	tracePrintf("NVS Status\n");
 	tracePrintf(" status = %02X\n", nvsState);
@@ -1791,6 +1809,14 @@ unsigned char nvsGetRecord(unsigned char *record, unsigned int index)
 
 	i = NVS_SPARE_BLOCKS;
 	spare = NULL;
+#if BOARD_DOL1002
+	if (index >= NVS_HIDDEN_FIRST && index < NVS_HIDDEN_END) {
+		memset(record, 0xff, NVS_RECORD_SIZE);
+		return 0;
+	}
+	if (index >= NVS_MOVED_FIRST && index < NVS_MOVED_END)
+		index -= NVS_MOVED_SHIFT;
+#endif
 	while (i-- != 0) {
 		block = nvsSpareBlocks[i];
 		if (block == NVS_NO_BLOCK)
@@ -1830,6 +1856,12 @@ unsigned char nvsPutRecord(unsigned char *record, unsigned int index)
 
 	spare = NULL;
 	result = 0;
+#if BOARD_DOL1002
+	if (index >= NVS_HIDDEN_FIRST && index < NVS_HIDDEN_END)
+		return 0x32;
+	if (index >= NVS_MOVED_FIRST && index < NVS_MOVED_END)
+		index -= NVS_MOVED_SHIFT;
+#endif
 	if (index > NVS_DATA_BLOCKS * NVS_RECORDS)
 		return 2;
 #if FW_SINCE(0x01000306)

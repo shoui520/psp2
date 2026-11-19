@@ -205,6 +205,10 @@ unsigned char nvsErase(unsigned char block)
 					while (result == FLASH_BUSY);
 				}
 			}
+#if BOARD_DOL1001	/* the PS TV's: an empty statement of its source */
+			if (result != FLASH_OK)
+				;
+#endif
 		} while (retry-- != 0 && result == FLASH_ERASE_ERROR);
 	}
 	DI();

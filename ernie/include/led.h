@@ -242,6 +242,21 @@ union PowerLedCauses {
 #define POWER_LED_MODE_BLINK	3	/* powerLedSetBlink's count of blinks */
 #define POWER_LED_MODE_HOST_BLINK 4	/* host commands 0x0821 and 0x0822: no end */
 #define POWER_LED_MODE_HOST	5	/* the host's pattern (powerLedSetPattern) */
+#if BOARD_DOL1002
+/* DOL-1002's events (powerLedStartMode), each taking the mode shown to the next one by the
+   system state */
+#define POWER_LED_EVENT_RESUME		0	/* powerSeqResume */
+#define POWER_LED_EVENT_OFF		1	/* powerSeqOff's start */
+#define POWER_LED_EVENT_OFF_DONE	2	/* and its end */
+#define POWER_LED_EVENT_SUSPEND		3	/* powerSeqSuspend's start */
+#define POWER_LED_EVENT_SUSPEND_DONE	4	/* and its end */
+#define POWER_LED_EVENT_HOST_BLINK	5	/* host commands 0x0821 and 0x0822 */
+#define POWER_LED_EVENT_HOST_BLINK_END	6
+#define POWER_LED_EVENT_HOST		7	/* the host's pattern */
+#define POWER_LED_EVENT_JOB_END		8	/* a power job's update or reset done */
+#define POWER_LED_EVENT_RESUME_BLINK	9	/* powerSeqResume woken by the power button */
+#define POWER_LED_EVENT_BLINK_END	10	/* powerLedFlagsStep: the blinks done */
+#endif
 
 struct PowerLedFlags {
 	unsigned char	mode;		/* POWER_LED_MODE_* */
@@ -260,8 +275,20 @@ struct PowerLedFlags {
 extern struct PowerLedFlags powerLedFlags;
 extern void powerLedFlagsInit(unsigned char resumed);
 extern void powerLedFlagsStep(void);
+#if BOARD_DOL1002
+extern void powerLedStartMode(unsigned char event);
+#else
 extern void powerLedStartMode(unsigned char mode);
 extern void powerLedEndMode(unsigned char mode);
+#endif
+/* a mode started or ended (else), the event DOL-1002 passes for it */
+#if BOARD_DOL1002
+#define POWER_LED_START(mode, event)	powerLedStartMode(event)
+#define POWER_LED_END(mode, event)	powerLedStartMode(event)
+#else
+#define POWER_LED_START(mode, event)	powerLedStartMode(mode)
+#define POWER_LED_END(mode, event)	powerLedEndMode(mode)
+#endif
 extern void powerLedSetBlink(unsigned char count, unsigned int on, unsigned int off);
 extern void powerLedLoadBlink(unsigned char index);
 extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);

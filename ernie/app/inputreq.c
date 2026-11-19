@@ -184,6 +184,12 @@ static void touchRequest03BB(void);
 static void touchRequest03BC(void);
 static void touchRequest03BD(void);
 #endif
+#if SOURCE_0104
+static void touchRequest03AE(void);
+static void touchRequest03BE(void);
+static void touchRequest03AF(void);
+static void touchRequest03BF(void);
+#endif
 #if BOARD_MOTION
 static void motionRequest0480(void);
 static void motionRequest0481(void);
@@ -267,6 +273,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03ac, touchRequest03AC },
 	{ 0x03ad, touchRequest03AD },
 #endif
+#if SOURCE_0104
+	{ 0x03ae, touchRequest03AE },
+	{ 0x03af, touchRequest03AF },
+#endif
 #elif FW_SINCE(0x00090009)
 	{ 0x03a7, touchRequestConfigVersion0 },
 	{ 0x03a6, touchRequestReset0 },
@@ -290,6 +300,10 @@ static const struct InputCommand touchCommands[] = {
 	{ 0x03bb, touchRequest03BB },
 	{ 0x03bc, touchRequest03BC },
 	{ 0x03bd, touchRequest03BD },
+#endif
+#if SOURCE_0104
+	{ 0x03be, touchRequest03BE },
+	{ 0x03bf, touchRequest03BF },
 #endif
 };
 
@@ -1159,6 +1173,16 @@ static void controlsRequest01B0(void)
 #endif
 	hostRequestAnswer(&controlsRequest, HOST_REQUEST_ANSWER, status, 0);
 }
+
+#if BOARD_DOL1002
+/* 0x0131: one zero byte */
+unsigned char hostCommand0131(unsigned char *out, unsigned char *length)
+{
+	out[0] = 0;
+	*length = 1;
+	return 0;
+}
+#endif
 #endif
 
 #if !SOURCE_0103
@@ -1244,6 +1268,22 @@ static void touchRequestDeviceInfo(void)
 
 	/* each panel's status: 3 and 4 not identified, 5 and 6 its object table too long; 7 both */
 	if (touchRequest.length < 2) {
+#if SOURCE_0104
+		result = touchIdentify(0);
+		if (result == 0)
+			memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
+		else if (result == 0x40)
+			status0 = 5;
+		else
+			status0 = 3;
+		result = touchIdentify(1);
+		if (result == 0)
+			memcpy(inputRequests.touchAnswer + 4, &touch.panel[1].family, 4);
+		else if (result == 0x40)
+			status1 = 6;
+		else
+			status1 = 4;
+#else
 		result = touchIdentify0();
 		if (result == 0)
 			memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
@@ -1258,6 +1298,7 @@ static void touchRequestDeviceInfo(void)
 			status1 = 6;
 		else
 			status1 = 4;
+#endif
 	}
 	if (status0 != 0) {
 		if (status1 != 0)
@@ -1296,6 +1337,9 @@ static void touchRequestStart(void)
 	unsigned char panels;
 	unsigned char setting;
 	unsigned char rate;
+#if SOURCE_0104
+	unsigned char result;
+#endif
 
 	panels = 0;
 	rate = 0xff;
@@ -1307,15 +1351,32 @@ static void touchRequestStart(void)
 				setting = inputRequests.touchData[1] & 0x0f;
 				if (setting != 0 && setting < 9 && touch.setting[0] != setting) {
 					touch.setting[0] = setting;
+#if SOURCE_0104
+					result = touchWriteVerified(touch.panel[0].objects.numTouch,
+								    &touch.setting[0], 1, 0);
+					if (result != 0) {
+						result = 3;
+						goto error;
+					}
+#else
 					touchWriteVerified(touch.panel[0].objects.numTouch,
 							   &touch.setting[0], 1, 0);
+#endif
 				}
+#if SOURCE_0104
+				touchEnable(0);
+#else
 				touchEnable0();
+#endif
 			}
 			rate = inputRequests.touchData[1] >> 4;
 		} else if (inputRequests.touchData[0] == 0) {
 			hostStream0301.state = 0;
+#if SOURCE_0104
+			touchDisable(0);
+#else
 			touchDisable0();
+#endif
 		}
 		if (inputRequests.touchData[2] & 1) {
 			if (!(touch.flags & TOUCH_PANEL1)) {
@@ -1323,15 +1384,32 @@ static void touchRequestStart(void)
 				setting = inputRequests.touchData[3] & 0x0f;
 				if (setting != 0 && setting < 9 && touch.setting[1] != setting) {
 					touch.setting[1] = setting;
+#if SOURCE_0104
+					result = touchWriteVerified(touch.panel[1].objects.numTouch,
+								    &touch.setting[1], 1, 1);
+					if (result != 0) {
+						result = 4;
+						goto error;
+					}
+#else
 					touchWriteVerified(touch.panel[1].objects.numTouch,
 							   &touch.setting[1], 1, 1);
+#endif
 				}
+#if SOURCE_0104
+				touchEnable(1);
+#else
 				touchEnable1();
+#endif
 			}
 			rate = inputRequests.touchData[3] >> 4;
 		} else if (inputRequests.touchData[2] == 0) {
 			hostStream0302.state = 0;
+#if SOURCE_0104
+			touchDisable(1);
+#else
 			touchDisable1();
+#endif
 		}
 		if (rate != 0xff && touch.rate != rate) {
 			touch.rate = rate;
@@ -1397,6 +1475,12 @@ static void touchRequestStart(void)
 		}
 		break;
 	}
+#if SOURCE_0104
+	return;
+error:
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#endif
 }
 
 /* 0x0383: data[2] bytes (1-10) of data[3] to panel 0's address data[0-1]; the result */
@@ -1408,7 +1492,11 @@ static void touchRequestWrite0(void)
 
 	length = inputRequests.touchData[2];
 	if (length >= 11 || length == 0)
+#if SOURCE_0104
+		result = 0x3c;
+#else
 		result = 1;
+#endif
 	else {
 		address = inputRequests.touchData[0] | (unsigned int)inputRequests.touchData[1] << 8;
 		result = touchWrite(address, &inputRequests.touchData[3], length, 0);
@@ -1416,7 +1504,11 @@ static void touchRequestWrite0(void)
 	inputRequests.touchAnswer[0] = result;
 #if SOURCE_0103
 	inputRequests.touchPending = 0;
+#if SOURCE_0104
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 1);
+#endif
 #else
 	touchRequest.answerLength = 1;
 	inputRequests.touchPending = 0;
@@ -1434,7 +1526,11 @@ static void touchRequestRead0(void)
 
 	length = inputRequests.touchData[2];
 	if (length >= 11 || length == 0)
+#if SOURCE_0104
+		result = 0x3c;
+#else
 		result = 1;
+#endif
 	else {
 		memset(&inputRequests.touchAnswer[1], 0, 10);
 		address = inputRequests.touchData[0] | (unsigned int)inputRequests.touchData[1] << 8;
@@ -1443,7 +1539,11 @@ static void touchRequestRead0(void)
 	inputRequests.touchAnswer[0] = result;
 #if SOURCE_0103
 	inputRequests.touchPending = 0;
+#if SOURCE_0104
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 11);
+#else
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 11);
+#endif
 #else
 	touchRequest.answerLength = 11;
 	inputRequests.touchPending = 0;
@@ -1461,7 +1561,11 @@ static void touchRequestWrite1(void)
 
 	length = inputRequests.touchData[2];
 	if (length >= 11 || length == 0)
+#if SOURCE_0104
+		result = 0x3c;
+#else
 		result = 1;
+#endif
 	else {
 		address = inputRequests.touchData[0] | (unsigned int)inputRequests.touchData[1] << 8;
 		result = touchWrite(address, &inputRequests.touchData[3], length, 1);
@@ -1469,7 +1573,11 @@ static void touchRequestWrite1(void)
 	inputRequests.touchAnswer[0] = result;
 #if SOURCE_0103
 	inputRequests.touchPending = 0;
+#if SOURCE_0104
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 1);
+#endif
 #else
 	touchRequest.answerLength = 1;
 	inputRequests.touchPending = 0;
@@ -1487,7 +1595,11 @@ static void touchRequestRead1(void)
 
 	length = inputRequests.touchData[2];
 	if (length >= 11 || length == 0)
+#if SOURCE_0104
+		result = 0x3c;
+#else
 		result = 1;
+#endif
 	else {
 		memset(&inputRequests.touchAnswer[1], 0, 10);
 		address = inputRequests.touchData[0] | (unsigned int)inputRequests.touchData[1] << 8;
@@ -1496,7 +1608,11 @@ static void touchRequestRead1(void)
 	inputRequests.touchAnswer[0] = result;
 #if SOURCE_0103
 	inputRequests.touchPending = 0;
+#if SOURCE_0104
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 11);
+#else
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 11);
+#endif
 #else
 	touchRequest.answerLength = 11;
 	inputRequests.touchPending = 0;
@@ -1509,6 +1625,30 @@ static void touchRequestRead1(void)
 /* 0x0387: each panel's power interval (data[1] if data[0], data[5] if data[4]) */
 static void touchRequestSetPower(void)
 {
+#if SOURCE_0104
+	unsigned char result;
+
+	result = 0;
+	if (touchRequest.length == 8) {
+		if (inputRequests.touchData[0] != 0) {
+			result = touchSetPower(inputRequests.touchData[1], 0);
+			if (result != 0) {
+				result = 3;
+				goto done;
+			}
+		}
+		if (inputRequests.touchData[4] != 0) {
+			result = touchSetPower(inputRequests.touchData[5], 1);
+			if (result != 0)
+				result = 4;
+		}
+	} else
+		result = 0x3b;
+done:
+	inputRequests.touchAnswer[0] = result;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	unsigned char result;
 #if SOURCE_0103
 	unsigned char status;
@@ -1545,6 +1685,7 @@ done:
 	touchRequest.answerLength = 1;
 	inputRequests.touchPending = 0;
 	hostRequestAnswerReady(&touchRequest.state);
+#endif
 #endif
 }
 #endif
@@ -1630,6 +1771,30 @@ static void touchRequestPanelInfo(void)
 	unsigned char status1 = 0;
 
 	memset(inputRequests.touchAnswer, 0, 0x14);
+#if SOURCE_0104
+	result = touchIdentify(0);
+	if (result == 0) {
+		memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
+		if (touchReadConfigVersion(&inputRequests.touchAnswer[4], 0) != 0)
+			status0 = 3;
+		if (touchReadGripEdges(&inputRequests.touchAnswer[6], 0) != 0)
+			status0 = 3;
+	} else if (result == 0x40)
+		status0 = 5;
+	else
+		status0 = 3;
+	result = touchIdentify(1);
+	if (result == 0) {
+		memcpy(&inputRequests.touchAnswer[10], &touch.panel[1].family, 4);
+		if (touchReadConfigVersion(&inputRequests.touchAnswer[14], 1) != 0)
+			status1 = 4;
+		if (touchReadGripEdges(&inputRequests.touchAnswer[16], 1) != 0)
+			status1 = 4;
+	} else if (result == 0x40)
+		status1 = 6;
+	else
+		status1 = 4;
+#else
 	result = touchIdentify0();
 	if (result == 0) {
 		memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
@@ -1670,6 +1835,7 @@ static void touchRequestPanelInfo(void)
 		status1 = 6;
 	else
 		status1 = 4;
+#endif
 	if (status0 != 0) {
 		if (status1 != 0)
 			status = 7;
@@ -1702,10 +1868,17 @@ static void touchRequestGripEdges(void)
 	unsigned char status;
 
 	status = 0;
+#if SOURCE_0104
+	if (touchReadGripEdges(&inputRequests.touchAnswer[0], 0) != 0)
+		status = 3;
+	else if (touchReadGripEdges(&inputRequests.touchAnswer[4], 1) != 0)
+		status = 4;
+#else
 	if (touchReadGripEdges0(&inputRequests.touchAnswer[0]) != 0)
 		status = 3;
 	else if (touchReadGripEdges1(&inputRequests.touchAnswer[4]) != 0)
 		status = 4;
+#endif
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 8);
 #else
@@ -1723,6 +1896,28 @@ static void touchRequestGripEdges(void)
 /* 0x03a0: panel 0's controller to its bootloader; its status 8 runs later */
 static void touchRequestEnterBootloader0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchEnterBootloader(0);
+		if (result == 0) {
+			inputRequests.touchTimer = 8;
+			inputRequests.touchPhase = 1;
+			break;
+		}
+		goto answer;
+	case 1:
+		if (--inputRequests.touchTimer == 0) {
+			result = touchBootloaderStatus(inputRequests.touchAnswer, 0);
+answer:
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchEnterBootloader0();
@@ -1744,11 +1939,34 @@ static void touchRequestEnterBootloader0(void)
 		}
 		break;
 	}
+#endif
 }
 
 /* 0x03b0: 0x03a0 for panel 1 */
 static void touchRequestEnterBootloader1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchEnterBootloader(1);
+		if (result == 0) {
+			inputRequests.touchTimer = 8;
+			inputRequests.touchPhase = 1;
+			break;
+		}
+		goto answer;
+	case 1:
+		if (--inputRequests.touchTimer == 0) {
+			result = touchBootloaderStatus(inputRequests.touchAnswer, 1);
+answer:
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchEnterBootloader1();
@@ -1770,12 +1988,40 @@ static void touchRequestEnterBootloader1(void)
 		}
 		break;
 	}
+#endif
 }
 
 /* 0x03a1: panel 0's bootloader unlocked; its status once its CHG line (BOARD_TOUCH_CHG_PIN) falls, within
    10 runs */
 static void touchRequestUnlock0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchBootloaderUnlock(0);
+		if (result == 0) {
+			inputRequests.touchTimer = 10;
+			inputRequests.touchPhase = 1;
+			break;
+		}
+		goto answer;
+	case 1:
+		if (--inputRequests.touchTimer != 0) {
+			if (!BOARD_TOUCH_CHG_PIN) {
+				result = touchBootloaderStatus(inputRequests.touchAnswer, 0);
+				goto answer;
+			}
+		} else {
+			result = 1;
+answer:
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchBootloaderUnlock0();
@@ -1809,11 +2055,39 @@ static void touchRequestUnlock0(void)
 		}
 		break;
 	}
+#endif
 }
 
 /* 0x03b1: 0x03a1 for panel 1 (its CHG line BOARD_TOUCH_CHG1_PIN) */
 static void touchRequestUnlock1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchBootloaderUnlock(1);
+		if (result == 0) {
+			inputRequests.touchTimer = 10;
+			inputRequests.touchPhase = 1;
+			break;
+		}
+		goto answer;
+	case 1:
+		if (--inputRequests.touchTimer != 0) {
+			if (!BOARD_TOUCH_CHG1_PIN) {
+				result = touchBootloaderStatus(inputRequests.touchAnswer, 1);
+				goto answer;
+			}
+		} else {
+			result = 1;
+answer:
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchBootloaderUnlock1();
@@ -1847,6 +2121,7 @@ static void touchRequestUnlock1(void)
 		}
 		break;
 	}
+#endif
 }
 
 /*
@@ -1871,10 +2146,12 @@ static void touchRequestLoad0(void)
 				memset(touchBuffer.data, 0, TOUCH_BUFFER_SIZE);
 			memcpy(touchBuffer.data + offset, &inputRequests.touchData[5], length);
 			result = touchRead(TOUCH_BOOTLOADER, &inputRequests.touchAnswer[2], 1, 0);
+#if !SOURCE_0104
 			if (result != 0)
 				result = 1;
 			else
 				result = 0;
+#endif
 		} else
 			result = 0x3c;
 	} else
@@ -1906,6 +2183,9 @@ static void touchRequestLoad1(void)
 		touchBuffer.end = offset + length;
 		if (touchBuffer.end <= TOUCH_BUFFER_SIZE) {
 			memcpy(touchBuffer.data + offset, &inputRequests.touchData[5], length);
+#if SOURCE_0104
+			result = touchBootloaderStatus(&inputRequests.touchAnswer[2], 1);
+#else
 #if SOURCE_0103
 			result = touchBootloaderStatus1(&inputRequests.touchAnswer[2]);
 #else
@@ -1915,6 +2195,7 @@ static void touchRequestLoad1(void)
 				result = 1;
 			else
 				result = 0;
+#endif
 		} else
 			result = 0x3c;
 	} else
@@ -1952,6 +2233,10 @@ static void touchRequestFlash0(void)
 #endif
 				result = touchWrite(TOUCH_BOOTLOADER, touchBuffer.data, touchBuffer.end,
 						    0);
+#if SOURCE_0104
+				if (result != 0)
+					goto answer;
+#endif
 				inputRequests.touchPhase = 1;
 				inputRequests.touchTimer = 50;
 			} else {
@@ -1966,7 +2251,11 @@ static void touchRequestFlash0(void)
 	case 1:
 		if (--inputRequests.touchTimer != 0) {
 			if (!BOARD_TOUCH_CHG_PIN) {
+#if SOURCE_0104
+				touchBootloaderStatus(&inputRequests.touchAnswer[2], 0);
+#else
 				touchBootloaderStatus0(&inputRequests.touchAnswer[2]);
+#endif
 				inputRequests.touchPhase = 2;
 				inputRequests.touchTimer = 50;
 			}
@@ -1978,13 +2267,21 @@ static void touchRequestFlash0(void)
 	case 2:
 		if (--inputRequests.touchTimer != 0) {
 			if (!BOARD_TOUCH_CHG_PIN) {
+#if SOURCE_0104
+				touchBootloaderStatus(&inputRequests.touchAnswer[2], 0);
+#else
 				touchBootloaderStatus0(&inputRequests.touchAnswer[2]);
+#endif
 				inputRequests.touchPhase = 3;
 				inputRequests.touchTimer = 50;
 			}
 		} else {
 			result = 1;
+#if SOURCE_0104
+			touchBootloaderStatus(&inputRequests.touchAnswer[2], 0);
+#else
 			touchBootloaderStatus0(&inputRequests.touchAnswer[2]);
+#endif
 			goto answer;
 		}
 		break;
@@ -2037,6 +2334,10 @@ static void touchRequestFlash1(void)
 #else
 				result = touchWrite(TOUCH_BOOTLOADER, touchBuffer.data, touchBuffer.end,
 						    1);
+#if SOURCE_0104
+				if (result != 0)
+					goto answer;
+#endif
 #endif
 				inputRequests.touchPhase = 1;
 				inputRequests.touchTimer = 50;
@@ -2052,7 +2353,11 @@ static void touchRequestFlash1(void)
 	case 1:
 		if (--inputRequests.touchTimer != 0) {
 			if (!BOARD_TOUCH_CHG1_PIN) {
+#if SOURCE_0104
+				touchBootloaderStatus(&inputRequests.touchAnswer[2], 1);
+#else
 				touchBootloaderStatus1(&inputRequests.touchAnswer[2]);
+#endif
 				inputRequests.touchPhase = 2;
 				inputRequests.touchTimer = 50;
 			}
@@ -2064,7 +2369,11 @@ static void touchRequestFlash1(void)
 	case 2:
 		if (--inputRequests.touchTimer != 0) {
 			if (!BOARD_TOUCH_CHG1_PIN) {
+#if SOURCE_0104
+				touchBootloaderStatus(&inputRequests.touchAnswer[2], 1);
+#else
 				touchBootloaderStatus1(&inputRequests.touchAnswer[2]);
+#endif
 				inputRequests.touchPhase = 3;
 				inputRequests.touchTimer = 50;
 			}
@@ -2108,6 +2417,13 @@ answer:
 /* 0x03a4 */
 static void touchRequestBootloaderStatus0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchBootloaderStatus(inputRequests.touchAnswer, 0);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	touchBootloaderStatus0(inputRequests.touchAnswer);
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2118,11 +2434,19 @@ static void touchRequestBootloaderStatus0(void)
 	hostRequestAnswerReady(&touchRequest.state);
 #endif
 	return;
+#endif
 }
 
 /* 0x03b4 */
 static void touchRequestBootloaderStatus1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchBootloaderStatus(inputRequests.touchAnswer, 1);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	touchBootloaderStatus1(inputRequests.touchAnswer);
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2133,12 +2457,33 @@ static void touchRequestBootloaderStatus1(void)
 	hostRequestAnswerReady(&touchRequest.state);
 #endif
 	return;
+#endif
 }
 
 #if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 /* 0x03a5: panel 0's settings saved, answered 10 runs later */
 static void touchRequestBackup0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchBackup(0);
+		if (result != 0)
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		inputRequests.touchTimer = 10;
+		inputRequests.touchPhase = 1;
+		break;
+	case 1:
+		if (--inputRequests.touchTimer == 0) {
+			inputRequests.touchAnswer[0] = 0;
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchBackup0();
@@ -2159,11 +2504,32 @@ static void touchRequestBackup0(void)
 		}
 		break;
 	}
+#endif
 }
 
 /* 0x03b5 */
 static void touchRequestBackup1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		result = touchBackup(1);
+		if (result != 0)
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+		inputRequests.touchTimer = 10;
+		inputRequests.touchPhase = 1;
+		break;
+	case 1:
+		if (--inputRequests.touchTimer == 0) {
+			inputRequests.touchAnswer[0] = 0;
+			inputRequests.touchPending = 0;
+			hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, 0, 1);
+		}
+		break;
+	}
+#else
 	switch (inputRequests.touchPhase) {
 	case 0:
 		touchBackup1();
@@ -2184,11 +2550,19 @@ static void touchRequestBackup1(void)
 		}
 		break;
 	}
+#endif
 }
 
 /* 0x03a6 */
 static void touchRequestReset0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchReset(0);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 0);
+#else
 	touchReset0();
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2199,11 +2573,19 @@ static void touchRequestReset0(void)
 	hostRequestAnswerReady(&touchRequest.state);
 #endif
 	return;
+#endif
 }
 
 /* 0x03b6 */
 static void touchRequestReset1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchReset(1);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 0);
+#else
 	touchReset1();
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2214,11 +2596,21 @@ static void touchRequestReset1(void)
 	hostRequestAnswerReady(&touchRequest.state);
 #endif
 	return;
+#endif
 }
 
 /* 0x03a7 */
 static void touchRequestConfigVersion0(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	status = 0;
+	if (touchReadConfigVersion(inputRequests.touchAnswer, 0) != 0)
+		status = 3;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 2);
+#else
 #if SOURCE_0103
 	unsigned char status;
 
@@ -2244,11 +2636,21 @@ static void touchRequestConfigVersion0(void)
 #endif
 	return;
 #endif
+#endif
 }
 
 /* 0x03b7 */
 static void touchRequestConfigVersion1(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	status = 0;
+	if (touchReadConfigVersion(inputRequests.touchAnswer, 1) != 0)
+		status = 4;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 2);
+#else
 #if SOURCE_0103
 	unsigned char status;
 
@@ -2274,6 +2676,7 @@ static void touchRequestConfigVersion1(void)
 #endif
 	return;
 #endif
+#endif
 }
 #endif
 
@@ -2281,6 +2684,15 @@ static void touchRequestConfigVersion1(void)
 /* 0x03a8 */
 static void touchRequestUserData0(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	status = 0;
+	if (touchReadUserData(inputRequests.touchAnswer, 0) != 0)
+		status = 3;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 8);
+#else
 #if SOURCE_0103
 	unsigned char status;
 
@@ -2301,11 +2713,21 @@ static void touchRequestUserData0(void)
 #endif
 	return;
 #endif
+#endif
 }
 
 /* 0x03b8 */
 static void touchRequestUserData1(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	status = 0;
+	if (touchReadUserData(inputRequests.touchAnswer, 1) != 0)
+		status = 4;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 8);
+#else
 #if SOURCE_0103
 	unsigned char status;
 
@@ -2326,11 +2748,19 @@ static void touchRequestUserData1(void)
 #endif
 	return;
 #endif
+#endif
 }
 
 /* 0x03a9: panel 0's self test 0x17 */
 static void touchRequestSelfTest0(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchSelfTest(0x17, inputRequests.touchAnswer, 0);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	touchSelfTest0(0x17, inputRequests.touchAnswer);
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2340,11 +2770,19 @@ static void touchRequestSelfTest0(void)
 	touchRequest.status = 0;
 	hostRequestAnswerReady(&touchRequest.state);
 #endif
+#endif
 }
 
 /* 0x03b9 */
 static void touchRequestSelfTest1(void)
 {
+#if SOURCE_0104
+	unsigned char result = 0;
+
+	result = touchSelfTest(0x17, inputRequests.touchAnswer, 1);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 1);
+#else
 	touchSelfTest1(0x17, inputRequests.touchAnswer);
 	inputRequests.touchPending = 0;
 #if SOURCE_0103
@@ -2353,6 +2791,7 @@ static void touchRequestSelfTest1(void)
 	touchRequest.answerLength = 1;
 	touchRequest.status = 0;
 	hostRequestAnswerReady(&touchRequest.state);
+#endif
 #endif
 }
 #endif
@@ -2363,6 +2802,57 @@ static void touchRequestSelfTest1(void)
    0x80 (125 runs at most) */
 static void touchRequest03AA(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		memset(inputRequests.touchAnswer, 0, 7);
+		if (touchRequest.length == 6) {
+			if (inputRequests.touchData[1] & 0x01) {
+				status = touchSetT51Bytes5(&inputRequests.touchData[2], 0);
+				if (status != 0)
+					goto answer;
+			}
+			if (inputRequests.touchData[1] & 0x02) {
+				status = touchSetT51Bytes9(&inputRequests.touchData[4], 0);
+				if (status != 0)
+					goto answer;
+			}
+			status = touchSetT51Byte4(inputRequests.touchData[0], 0);
+			if (status != 0)
+				goto answer;
+		} else {
+			status = 0x3b;
+			goto answer;
+		}
+		inputRequests.touchPhase = 2;
+		inputRequests.touchTimer = 125;
+		break;
+	case 1:
+		if (--inputRequests.touchTimer < 0x59)
+			inputRequests.touchPhase = 2;
+		break;
+	case 2:
+		status = touchReadT34Bytes(inputRequests.touchAnswer, 0);
+		if (status != 0)
+			goto answer;
+		if (inputRequests.touchAnswer[0] != 0x80) {
+			status = 0;
+			goto answer;
+		}
+		if (--inputRequests.touchTimer != 0)
+			break;
+		status = 1;
+		goto answer;
+	default:
+		break;
+	}
+	return;
+answer:
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 7);
+#else
 	unsigned char status;
 
 	switch (inputRequests.touchPhase) {
@@ -2408,6 +2898,7 @@ static void touchRequest03AA(void)
 answer:
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 7);
+#endif
 }
 
 /* 0x03ba: panel 1's T51 bytes 5-6 (if data[1] bit 0: data[2-3]) and 9-10 (if bit 1:
@@ -2415,6 +2906,57 @@ answer:
    0x80 (125 runs at most) */
 static void touchRequest03BA(void)
 {
+#if SOURCE_0104
+	unsigned char status;
+
+	switch (inputRequests.touchPhase) {
+	case 0:
+		memset(inputRequests.touchAnswer, 0, 7);
+		if (touchRequest.length == 6) {
+			if (inputRequests.touchData[1] & 0x01) {
+				status = touchSetT51Bytes5(&inputRequests.touchData[2], 1);
+				if (status != 0)
+					goto answer;
+			}
+			if (inputRequests.touchData[1] & 0x02) {
+				status = touchSetT51Bytes9(&inputRequests.touchData[4], 1);
+				if (status != 0)
+					goto answer;
+			}
+			status = touchSetT51Byte4(inputRequests.touchData[0], 1);
+			if (status != 0)
+				goto answer;
+		} else {
+			status = 0x3b;
+			goto answer;
+		}
+		inputRequests.touchPhase = 2;
+		inputRequests.touchTimer = 125;
+		break;
+	case 1:
+		if (--inputRequests.touchTimer < 0x6c)
+			inputRequests.touchPhase = 2;
+		break;
+	case 2:
+		status = touchReadT34Bytes(inputRequests.touchAnswer, 1);
+		if (status != 0)
+			goto answer;
+		if (inputRequests.touchAnswer[0] != 0x80) {
+			status = 0;
+			goto answer;
+		}
+		if (--inputRequests.touchTimer != 0)
+			break;
+		status = 1;
+		goto answer;
+	default:
+		break;
+	}
+	return;
+answer:
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 7);
+#else
 	unsigned char status;
 
 	switch (inputRequests.touchPhase) {
@@ -2460,6 +3002,7 @@ static void touchRequest03BA(void)
 answer:
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 7);
+#endif
 }
 
 /* 0x03ab: panel 0's T18 byte 1 (touchSetComms): 1 if data[0] bit 7 is clear, else (if
@@ -2545,6 +3088,54 @@ static void touchRequest03BD(void)
 	inputRequests.touchPending = 0;
 	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, status, 1);
 }
+
+#if SOURCE_0104
+/* 0x03ae: panel 0's T34 bytes 8-10 (touchReadT34Bytes8) */
+static void touchRequest03AE(void)
+{
+	unsigned char result;
+
+	result = touchReadT34Bytes8(inputRequests.touchAnswer, 0);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 3);
+}
+
+/* 0x03be: panel 1's T34 bytes 8-10 */
+static void touchRequest03BE(void)
+{
+	unsigned char result;
+
+	result = touchReadT34Bytes8(inputRequests.touchAnswer, 1);
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 3);
+}
+
+/* 0x03af: panel 0's T6 byte 4 to data[0] (touchSetT6Byte4) */
+static void touchRequest03AF(void)
+{
+	unsigned char result;
+
+	if (touchRequest.length == 1)
+		result = touchSetT6Byte4(&inputRequests.touchData[0], 0);
+	else
+		result = 0x3b;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 0);
+}
+
+/* 0x03bf: panel 1's T6 byte 4 to data[0] */
+static void touchRequest03BF(void)
+{
+	unsigned char result;
+
+	if (touchRequest.length == 1)
+		result = touchSetT6Byte4(&inputRequests.touchData[0], 1);
+	else
+		result = 0x3b;
+	inputRequests.touchPending = 0;
+	hostRequestAnswer(&touchRequest, HOST_REQUEST_ANSWER, result, 0);
+}
+#endif
 #endif
 
 #if BOARD_MOTION

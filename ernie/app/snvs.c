@@ -12,8 +12,8 @@
 #include "snvs.h"
 
 static struct Snvs snvs;
-#if BOARD_USS1001
-static __near unsigned char snvsBuffer[0x30];	/* near on USS-1001 */
+#if BOARD_USS1001 || BOARD_DOL1002
+static __near unsigned char snvsBuffer[0x30];	/* near on the slim source's boards */
 #else
 static unsigned char snvsBuffer[0x30];
 #endif

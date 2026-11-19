@@ -379,6 +379,11 @@ unsigned char task2Resume(void)
 #if HOST_WATCHDOG
 	watchdogSetup();
 #endif
+#if BOARD_DOL1002
+	if (factor->bits.mode == 0x21) {
+		/* DOL-1002: mode 0x21 (stateOffHandle's transition 0x21) tested, nothing done */
+	}
+#endif
 #if !FW_SINCE(0x01000104) && FW_SINCE(0x00090903)
 	snvsReset();	/* (0x00090804 has no SNVS) */
 #endif
@@ -509,7 +514,11 @@ unsigned char task2Tick(void)
 #endif
 	if (isAlarmReached()) {
 		sleepFactorSet3(1);
+#if STATE_WAKE_HIGH
+		if (!(unsigned char)stateGetWakeBit(1)) {
+#else
 		if ((stateGetWakeMask() & 2) == 0) {
+#endif
 #if FW_SINCE(0x01000104)
 			if ((state == 0x0004 && getAlarmMode() != 1) || state == 0x0008)
 #else

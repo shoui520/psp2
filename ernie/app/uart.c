@@ -608,10 +608,18 @@ void uart3ReceiveInterrupt(void)
 	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
 		p->rxBuffer[p->rxWrite] = data;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
+#if BOARD_DOL1002
+		if (serialGetMode() == 3) {
+#else
 		if (serial.mode == 3) {
+#endif
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
+#if BOARD_DOL1002
+		} else if (serialGetMode() == 1)
+#else
 		} else
+#endif
 			timerStart(TIMER(0x10), 2);
 	}
 }
@@ -626,7 +634,11 @@ void uart3SendInterrupt(void)
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else {
 		p->flags &= ~UART_SENDING;
+#if BOARD_DOL1002
+		if (serialGetMode() == 1)
+#else
 		if (serial.mode != 3)
+#endif
 			task2SetFlag(3, 2);
 	}
 }

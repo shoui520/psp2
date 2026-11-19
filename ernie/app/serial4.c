@@ -427,7 +427,11 @@ unsigned char serial4Event(FLGPTN ptn)
 	}
 #endif
 	if (ptn & 0x001e) {
+#if BOARD_DOL1002
+		if (serialGetMode() == 1) {
+#else
 		if ((serialGetMode() & SERIAL_MODE) == 1) {
+#endif
 			if (ptn & 0x0010) {
 				clr_flg(3, ~0x0010);
 				serial.state = SERIAL_SEND;
@@ -465,9 +469,9 @@ unsigned char serial4Event(FLGPTN ptn)
 				break;
 			}
 		}
-#if SOURCE_0103 && FW_SINCE(0x01030511) && !BOARD_DOL1001
+#if SOURCE_0103 && FW_SINCE(0x01030511) && (!BOARD_DOL1001 || BOARD_DOL1002)
 		else {
-			/* USS-1001: the events are dropped when the line is not in mode 1 */
+			/* USS-1001 and DOL-1002: the events are dropped when the line is not in mode 1 */
 			clr_flg(3, ~0x001e);
 		}
 #endif

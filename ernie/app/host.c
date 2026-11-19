@@ -129,6 +129,9 @@ static const struct HostCommand hostCommands[] = {
 #if SOURCE_0103
 	{ 0x0130, hostCommand0130, 0 },
 #endif
+#if BOARD_DOL1002
+	{ 0x0131, hostCommand0131, 0 },
+#endif
 	{ 0x0300, (HostCommandHandler)&hostStream0300, 1 },
 	{ 0x0301, (HostCommandHandler)&hostStream0301, 1 },
 	{ 0x0302, (HostCommandHandler)&hostStream0302, 1 },
@@ -161,6 +164,9 @@ static const struct HostCommand hostCommands[] = {
 #if FW_SINCE(0x00090009)
 	{ 0x0902, hostCommandBatteryLifePercent, 0 },
 #endif
+#if BOARD_DOL1002
+	{ 0x0903, hostCommand0903, 0 },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ 0x0a00, hostCommand0a00, 0 },
 #endif
@@ -183,6 +189,9 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 #if HOST_WATCHDOG
 	{ 0x0013, hostCommand0013, 0 },
+#endif
+#if BOARD_DOL1002
+	{ 0x0131, hostCommand0131, 0 },
 #endif
 #if SOURCE_0103
 	{ 0x0806, hostCommand0806, 0 },

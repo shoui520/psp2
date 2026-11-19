@@ -107,7 +107,11 @@ const char * const appTimeStamp = timeStamp;
 #if !defined(ERNIE_UPDATER) && SOURCE_0103
 /* the hardware info 2 (command 0x0006): 128 bits, each this default flipped by its bit
    in versionFlags.hardwareInfo2 */
-#if BOARD_DOL1001
+#if BOARD_DOL1002
+static const unsigned char hardwareInfo2[16] = { 0x00, 0x01 };
+/* the layout of the log's records (app/log.c) */
+const unsigned int logVersion = 0x14;
+#elif BOARD_DOL1001
 static const unsigned char hardwareInfo2[16] = { 0x00 };
 /* the layout of the log's records (app/log.c) */
 const unsigned int logVersion = 0x10;

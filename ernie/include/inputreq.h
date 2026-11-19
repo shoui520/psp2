@@ -43,6 +43,9 @@ extern void controlsGetButtons(unsigned char *out);
 extern unsigned char hostCommand0120(unsigned char *out, unsigned char *length);
 #if SOURCE_0103
 extern unsigned char hostCommand0130(unsigned char *out, unsigned char *length);
+#if BOARD_DOL1002
+extern unsigned char hostCommand0131(unsigned char *out, unsigned char *length);
+#endif
 #endif
 /* the slim's 0x0180 sets the sticks' mode on a timer (0x01030505: at once) */
 #define CONTROLS_MODE_DELAYED	(BOARD_USS1001 && FW_SINCE(0x01030511))

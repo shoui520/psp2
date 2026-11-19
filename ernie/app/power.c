@@ -153,6 +153,10 @@ void powerSequence(void)
 		if ((powerState & STATE_OFF) || (powerState & STATE_SUSPEND) ||
 		    (powerState & STATE_RESUME))
 			;
+#if BOARD_DOL1002
+		if (powerState & STATE_OFF)	/* DOL-1002: and the off once more, also for nothing */
+			;
+#endif
 #endif
 		stateEnter();
 		task2SetFlag(3, 0x1000);
@@ -422,11 +426,20 @@ unsigned char powerResume(union PowerRequest *request)
 	task6SetFlag(6, 0x80);
 	POWER_WAIT_KEEP(6, 5);
 	powerPendingClear(6);
+#if BOARD_DOL1002
+	/* DOL-1002: not on mode 4, and a longer wait */
+	if (request->bits.mode != 0x04) {
+		POWER_WAIT_CLEAR(5);
+		powerJobPostResume();
+		POWER_WAIT_KEEP(5, 0xaf);
+	}
+#else
 	if (request->bits.mode != 0x54) {
 		POWER_WAIT_CLEAR(5);
 		powerJobPostResume();
 		POWER_WAIT_KEEP(5, 0x19);
 	}
+#endif
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(6);
@@ -997,7 +1010,9 @@ unsigned char powerReset(void)
 #endif
 	SPIDEV_POWER2 = 0;
 	dly_tsk(3);
+#if !BOARD_DOL1002	/* DOL-1002 leaves it low */
 	SPIDEV_POWER2 = 1;
+#endif
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;
@@ -1065,14 +1080,22 @@ unsigned char powerUpdate(void)
 	POWER_WAIT(2, 0x1f4);
 	powerPendingClear(2);
 	POWER_WAIT_CLEAR(4);
+#if BOARD_DOL1002
+	hostCloseRequests(5);
+#else
 	if (hostCloseRequests(5) != 0)
 		;
+#endif
 	updaterRequestAnswerOk();
 	POWER_WAIT(4, 0x32);
 	powerPendingClear(4);
 	if (powerPendingGet() != 0)
 		;
+#if BOARD_DOL1002
+	return result;
+#else
 	return waitResult;
+#endif
 #else
 	powerPendingClear(3);
 	powerPendingClear(1);

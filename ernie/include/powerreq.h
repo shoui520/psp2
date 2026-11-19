@@ -37,6 +37,9 @@ extern unsigned char hostCommand0843(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryRemainCap(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length);
+#if BOARD_DOL1002
+extern unsigned char hostCommand0903(unsigned char *out, unsigned char *length);
+#endif
 extern void powerRequestLedDone(void);
 extern void powerInputChanged(void);
 

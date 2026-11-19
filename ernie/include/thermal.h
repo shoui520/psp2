@@ -7,6 +7,7 @@
 #define ERNIE_THERMAL_H
 
 #include "ernie.h"
+#include "analog.h"
 
 #define THERMAL_ADDRESS		0x98	/* the sensor's, shifted */
 #define THERMAL_ID		0x1a	/* deviceVersions.thermal[0] when it answered; 0xff none */
@@ -87,9 +88,11 @@ struct Thermal {
 	unsigned char	period;
 	unsigned int	maxSamples;
 	struct ThermalStats stats[2];
+#if !ANALOG_THERMISTOR
 	signed char	temperature;	/* the last read */
 	union ThermalConfig config;	/* as written to the sensor */
 	unsigned char	rate;
+#endif
 };
 
 extern struct Thermal thermal;

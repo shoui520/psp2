@@ -116,6 +116,13 @@ static unsigned char configCheck(unsigned char bank);
 static unsigned char configNewerVersion(void);
 static unsigned char configNewerCount(void);
 
+/* configNewerVersion's answer when both banks have the same layout */
+#if BOARD_DOL1002
+#define CONFIG_SAME_VERSION	9
+#else
+#define CONFIG_SAME_VERSION	2
+#endif
+
 /* picks the bank to use, merging this build's defaults in if its layout is older */
 int configInit(void)
 {
@@ -136,7 +143,7 @@ int configInit(void)
 	result1 = configCheck(1);
 	if (result0 == 0 && result1 == 0) {
 		newer = configNewerVersion();
-		if (newer == 2) {
+		if (newer == CONFIG_SAME_VERSION) {
 			config.bank = configNewerCount();
 		} else {
 #if FW_SINCE(0x00090009)
@@ -228,7 +235,11 @@ unsigned char configOpen(void)
 /* writes the open copy to the other bank, which becomes the one used */
 unsigned char configCommit(void)
 {
+#if BOARD_DOL1002	/* the magic a constant of its own, not copied to the stack */
+	static const unsigned char magic[4] = "Conf";
+#else
 	unsigned char magic[4] = "Conf";
+#endif
 	unsigned char *p;
 	unsigned char result;
 	unsigned long i;
@@ -334,6 +345,9 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	left = length;
 	while (left > 0) {
 		if (record->length != 0) {
+#if BOARD_DOL1002	/* every record is hashed, not only the writes */
+			configHash.unhashed = 1;
+#endif
 			switch (record->type) {
 			case CONFIG_RECORD_WRITE:
 				if (record->length >= 3) {
@@ -350,7 +364,9 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 						memcpy((unsigned char *)&bank->block + offset,
 						       record->body.write.data, size);
 					}
+#if !BOARD_DOL1002
 					configHash.unhashed = 1;
+#endif
 				}
 				break;
 			case CONFIG_RECORD_TEXT:
@@ -680,7 +696,9 @@ unsigned char configRestoreDefaults(void)
    checksum (but for the defaults, count 1) */
 static unsigned char configCheck(unsigned char bank)
 {
+#if !BOARD_DOL1002
 	unsigned char magic[4] = "Conf";
+#endif
 	const struct ConfigBank *b;
 	unsigned long sum;
 	unsigned int i;
@@ -690,8 +708,13 @@ static unsigned char configCheck(unsigned char bank)
 	if (bank >= 2)
 		return 1;
 	b = &configBanks[bank];
+#if BOARD_DOL1002	/* the magic compared with the string itself */
+	if (memcmp(b->magic + 0, "Conf", 4) != 0)
+		return 2;
+#else
 	if (memcmp(b->magic + 0, magic, sizeof(magic)) != 0)
 		return 2;
+#endif
 	if (b->size != CONFIG_SIZE)
 		return 3;
 	if (b->version == 0xffff)
@@ -716,11 +739,11 @@ static unsigned char configCheck(unsigned char bank)
 	return 0;
 }
 
-/* the bank with the newer layout, 2 when both have the same */
+/* the bank with the newer layout, CONFIG_SAME_VERSION when both have the same */
 static unsigned char configNewerVersion(void)
 {
 	if (configBanks[0].version == configBanks[1].version)
-		return 2;
+		return CONFIG_SAME_VERSION;
 	if (configBanks[1].version < configBanks[0].version)
 		return 0;
 	return 1;

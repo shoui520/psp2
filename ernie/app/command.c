@@ -706,8 +706,73 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 #endif
+#if STATE_WAKE_HIGH
+		case 0x00b6:		/* DOL-1002: refused */
+			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+			break;
+		case 0x00b7:
+			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
+			break;
+#endif
 		case 0x00c0:		/* a transition with its parameter */
-#if SOURCE_0103
+#if STATE_WAKE_HIGH
+			/* DOL-1002: the masks set once for either form (the 9-byte one's second
+			   word in the high mask), then the transition's own wake factor masked */
+			COMMAND_LOG_REQUEST();
+			if (commandRequest.length == 4 || commandRequest.length == 9) {
+				switch (commandRequestData[0]) {
+				case 0x00:
+				case 0x01:
+				case 0x10:
+				case 0x11:
+				case 0x12:
+				case 0x13:
+				case 0x20:
+					if (commandRequest.length == 4) {
+						parameter = COMMAND_PARAMETER(commandRequestData);
+						stateSetWakeMask(parameter);
+						stateSetWakeMaskHigh(0xfffffffe);
+					} else if (commandRequest.length == 9) {
+						parameter = COMMAND_PARAMETER4(commandRequestData);
+						stateSetWakeMask(parameter);
+						parameter = COMMAND_PARAMETER4(commandRequestData + 4) |
+							    0xfffffffe;
+						stateSetWakeMaskHigh(parameter);
+					}
+					break;
+				}
+				if (commandRequestData[0] == 0x00)
+					transition = 0x50;
+				else if (commandRequestData[0] == 0x01)
+					transition = 0x51;
+				else if (commandRequestData[0] == 0x10) {
+					transition = 0x58;
+					stateSetWakeBit(0x0a, 0);
+				} else if (commandRequestData[0] == 0x11) {
+					transition = 0x59;
+					stateSetWakeBit(0x0a, 0);
+				} else if (commandRequestData[0] == 0x12) {
+					transition = 0x5a;
+					stateSetWakeBit(0x17, 0);
+				} else if (commandRequestData[0] == 0x13) {
+					transition = 0x5b;
+					stateSetWakeBit(0x19, 0);
+				} else if (commandRequestData[0] == 0x20) {
+					transition = 0x5d;
+					stateSetWakeBit(0x1b, 0);
+				} else {
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3c, 0);
+					break;
+				}
+				if ((unsigned char)STATE_TRANSITION_NOMASK(transition) == 0)
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0, 0);
+				else
+					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 6, 0);
+			} else
+				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
+			COMMAND_LOG_ANSWER();
+			break;
+#elif SOURCE_0103
 			/* the slim's: transition 0x5d too, and a 9-byte form with four bytes of
 			   parameter */
 			COMMAND_LOG_REQUEST();

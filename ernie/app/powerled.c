@@ -22,9 +22,13 @@
 /*
  * DOL-1001's power LED: the mode asked for (powerLedStartMode), kept or refused by the system
  * state and the mode shown, ended by powerLedEndMode; the blinks run on timer 0x16
- * (powerLedFlagsStep, from task 5's flag 0x2000).
+ * (DOL-1002: 0x17; powerLedFlagsStep, from task 5's flag 0x2000).
  */
+#if BOARD_DOL1002
+#define POWER_LED_TIMER		0x17
+#else
 #define POWER_LED_TIMER		0x16
+#endif
 #define POWER_LED_FOREVER	0xff	/* powerLedFlags.count: no end */
 
 #define POWER_LED_TICKS(time)	((time) / 4 + (((time) % 4) ? 1 : 0))
@@ -105,9 +109,162 @@ void powerLedFlagsStep(void)
 	if (powerLedFlags.count != 0)
 		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(time));
 	else if (stateGet() == STATE_RESUME && powerLedFlags.mode == POWER_LED_MODE_BLINK)
+#if BOARD_DOL1002
+		powerLedStartMode(POWER_LED_EVENT_BLINK_END);
+#else
 		powerLedFlags.mode = POWER_LED_MODE_ON;
+#endif
 }
 
+#if BOARD_DOL1002
+/* the event's next mode, by the mode shown, the system state and the wakeup factor (a resume
+   woken by the power button blinks); a host pattern returns to the mode it replaced */
+void powerLedStartMode(unsigned char event)
+{
+	unsigned int state;
+	union PowerRequest factor;
+	unsigned char next;
+	unsigned char change;
+
+	state = stateGet();
+	factor = *stateGetWakeupFactor();
+	next = powerLedFlags.mode;
+	change = 0;
+	switch (powerLedFlags.mode) {
+	case POWER_LED_MODE_OFF:
+		switch (event) {
+		case POWER_LED_EVENT_RESUME:
+			if ((state & 0x20) == 0x20 && factor.bits.mode != 0x20) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_RESUME_BLINK:
+			if ((state & 0x20) == 0x20 && factor.bits.mode == 0x20) {
+				next = POWER_LED_MODE_BLINK;
+				change = 1;
+			}
+			break;
+		}
+		break;
+	case POWER_LED_MODE_ON:
+		switch (event) {
+		case POWER_LED_EVENT_OFF_DONE:
+			if ((state & 4) == 4) {
+				next = POWER_LED_MODE_OFF;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_SUSPEND_DONE:
+			if ((state & 8) == 8) {
+				next = POWER_LED_MODE_OFF;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_HOST_BLINK:
+			if (state == STATE_RESUME) {
+				next = POWER_LED_MODE_HOST_BLINK;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_HOST:
+			next = POWER_LED_MODE_HOST;
+			powerLedFlags.next = POWER_LED_MODE_ON;
+			change = 1;
+			break;
+		}
+		break;
+	case POWER_LED_MODE_BLINK:
+		switch (event) {
+		case POWER_LED_EVENT_BLINK_END:
+			if ((state & 0x20) == 0x20)
+				next = POWER_LED_MODE_ON;	/* not shown */
+			break;
+		case POWER_LED_EVENT_OFF:
+			if ((state & 4) == 4) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_SUSPEND:
+			if ((state & 8) == 8) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_HOST_BLINK:
+			if (state == STATE_RESUME) {
+				next = POWER_LED_MODE_HOST_BLINK;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_HOST:
+			next = POWER_LED_MODE_HOST;
+			powerLedFlags.next = POWER_LED_MODE_BLINK;
+			change = 1;
+			break;
+		}
+		break;
+	case POWER_LED_MODE_HOST_BLINK:
+		switch (event) {
+		case POWER_LED_EVENT_HOST_BLINK_END:
+			if (state == STATE_RESUME) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_OFF:
+			if ((state & 4) == 4) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_SUSPEND:
+			if ((state & 8) == 8) {
+				next = POWER_LED_MODE_ON;
+				change = 1;
+			}
+			break;
+		case POWER_LED_EVENT_HOST_BLINK:
+			if (state == STATE_RESUME)
+				change = 1;
+			break;
+		case POWER_LED_EVENT_HOST:
+			next = POWER_LED_MODE_HOST;
+			powerLedFlags.next = POWER_LED_MODE_HOST_BLINK;
+			change = 1;
+			break;
+		}
+		break;
+	case POWER_LED_MODE_HOST:
+		switch (event) {
+		case POWER_LED_EVENT_HOST_BLINK:
+			powerLedFlags.next = POWER_LED_MODE_HOST_BLINK;
+			break;
+		case POWER_LED_EVENT_HOST_BLINK_END:
+			powerLedFlags.next = POWER_LED_MODE_ON;
+			break;
+		case POWER_LED_EVENT_OFF:
+		case POWER_LED_EVENT_SUSPEND:
+			next = POWER_LED_MODE_ON;
+			change = 1;
+			break;
+		case POWER_LED_EVENT_JOB_END:
+			next = powerLedFlags.next;
+			change = 1;
+			break;
+		case POWER_LED_EVENT_HOST:
+			change = 1;
+			break;
+		}
+		break;
+	}
+	if (change == 1) {
+		powerLedFlags.mode = next;
+		powerLedShowMode();
+	}
+}
+#else
 /* the mode asked for, shown when the system state and the mode shown allow it; a host
    pattern's request while the host pattern is shown is its mode to return to */
 void powerLedStartMode(unsigned char mode)
@@ -213,6 +370,8 @@ void powerLedEndMode(unsigned char mode)
 	}
 	powerLedShowMode();
 }
+
+#endif
 
 static void powerLedShowMode(void)
 {

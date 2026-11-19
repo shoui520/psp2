@@ -84,6 +84,31 @@ struct TouchObject {
 /* the registers the module uses, from the object table (report and status already shifted
    for the link, bit 0 the read bit); 0x00080504 reads no object table: its three are fixed by
    the controller's firmware version (touchIdentify0) */
+#if SOURCE_0104
+/* 0x0104: no BACKUPNV (T6's RESET + 1), and T60, T100 and the touch threshold's register */
+struct TouchObjects {
+	unsigned int	report;		/* T34's byte 0x0e: what a frame reads */
+	unsigned int	numTouch;	/* T9's NUMTOUCH (byte 14), T100's NUMRPT (byte 6) */
+	unsigned int	reset;		/* T6 (command processor): its RESET */
+	unsigned int	power;		/* T7 (power configuration) */
+	unsigned int	selfTest;	/* T25 */
+	unsigned int	userData;	/* T38 */
+	unsigned int	t34;
+	unsigned int	noise;		/* T22 (noise suppression) */
+	unsigned int	touchScreen;	/* T9 (multiple touch screen) or T100 */
+	unsigned int	t51;
+	unsigned int	grip;		/* T20 (grip and face suppression) */
+	unsigned int	cte;		/* T28 (CTE configuration) */
+	unsigned int	comms;		/* T18 (communications configuration) */
+	unsigned int	t60;
+	unsigned int	threshold;	/* the touch threshold: T9's TCHTHR (byte 7), T100's
+					   (byte 30) */
+};
+
+/* a controller's family and variant as one word, as the information block holds them */
+#define TOUCH_ID(family, variant)	((unsigned int)(variant) << 8 | (family))
+#define TOUCH_PANEL_ID(p)		(*(unsigned int *)&touch.panel[p].family)
+#else
 struct TouchObjects {
 	unsigned int	report;		/* T34's byte 0x0e: what a frame reads */
 	unsigned int	numTouch;	/* T9's NUMTOUCH (byte 14): the touches reported */
@@ -113,6 +138,7 @@ struct TouchObjects {
 	unsigned int	comms;		/* T18 (communications configuration) */
 #endif
 };
+#endif
 
 #if SOURCE_0103
 /* touchReadObjects' record of the objects a table had, by the controller's family and variant:
@@ -130,6 +156,13 @@ struct TouchObjects {
 #define TOUCH_FOUND_COMMS	0x0400
 #define TOUCH_FOUND_ALL		0x07ff
 #define TOUCH_FOUND_REAR	0x07a7
+#if SOURCE_0104
+#define TOUCH_FOUND_T100	0x0800
+#define TOUCH_FOUND_T60		0x1000
+#define TOUCH_FOUND_T100_OLD	0x0ba3	/* 0x82 0x34 before version 0x11 */
+#define TOUCH_FOUND_T100_ALL	0x1fa3
+#define TOUCH_FOUND_REAR_T60	0x17a7	/* 0x82 0x3a but version 9 build 0 */
+#endif
 #endif
 
 /* a set of the controller's settings (touchSetMode) */
@@ -158,6 +191,23 @@ struct TouchMode {
 #define TOUCH_MODE_SIZE		5
 #endif
 
+#if SOURCE_0104
+/* what a controller has, by its family, variant and version (touchSetFeatures) */
+union TouchFeatures {
+	unsigned char	value;
+	struct {
+		unsigned char	noModes:1;	/* no modes: touchSetMode and touchReadModes
+						   pass it by */
+		unsigned char	family82:1;	/* a 0x82 controller (0x8227, 0x822b, 0x8234, 0x823a):
+						   its report has a status byte more (csi10Interrupt) */
+		unsigned char	t51Settings:1;	/* T51's bytes 4-6 and 9-10 */
+		unsigned char	gripInUserData:1;	/* the grip edges in the user data (bytes
+							   20-23), not T20 */
+		unsigned char	reserved:4;
+	} bits;
+};
+#endif
+
 /* a panel's controller: mode 0 is what the controller had, modes 1 and 2 come from its user
    data */
 struct TouchPanel {
@@ -180,6 +230,9 @@ struct TouchPanel {
 	unsigned char	objectsUnread:1;	/* touchIdentify could not read the object table: read it again */
 	unsigned char	modesUnread:1;	/* a read of the modes failed: touchReadConfigVersion reads
 					   them again */
+#endif
+#if SOURCE_0104
+	union TouchFeatures features;
 #endif
 };
 
@@ -291,6 +344,56 @@ extern struct TouchDelays touchDelays;
 #endif
 
 extern void touchClearPanels(void);
+#if SOURCE_0104
+/* 0x0104: one function for both panels (or links), the panel (or link) its last argument */
+extern void touchOpen(unsigned char link);
+extern void touchClose(unsigned char link);
+extern void touchClearFrames(char panel);
+extern void touchStartFrame(void);
+extern void touchStartFrameNoLock(void);
+extern void touchEnable(char panel);
+extern void touchDisable(char panel);
+extern void touchSelectLink(char panel);
+extern void touchReleaseLink(char panel);
+extern unsigned char touchLinkTransfer(char panel);
+extern unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
+				char panel);
+extern unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int length,
+			       char panel);
+extern unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
+					unsigned int length, char panel);
+extern unsigned char touchIdentify(char panel);
+extern void touchSetFeatures(char panel);
+extern unsigned char touchBootloaderStatus(unsigned char *status, char panel);
+extern unsigned char touchEnterBootloader(char panel);
+extern unsigned char touchBootloaderUnlock(char panel);
+extern unsigned char touchBackup(char panel);
+extern unsigned char touchReset(char panel);
+extern unsigned char touchSetPower(unsigned char interval, char panel);
+extern unsigned char touchReadConfigVersion(unsigned char *data, char panel);
+extern unsigned char touchReadUserData(unsigned char *data, char panel);
+extern unsigned char touchSelfTest(unsigned char test, unsigned char *pass, char panel);
+extern unsigned char touchSetT51Byte4(unsigned char value, char panel);
+extern unsigned char touchReadT34Bytes(unsigned char *data, char panel);
+extern unsigned char touchSetT51Bytes5(unsigned char *data, char panel);
+extern unsigned char touchSetT51Bytes9(unsigned char *data, char panel);
+extern unsigned char touchSetComms(unsigned char value, char panel);
+extern unsigned char touchReadT34Bit3(unsigned char *set, char panel);
+extern unsigned char touchReadT34Bytes8(unsigned char *data, char panel);
+extern unsigned char touchSetT6Byte4(unsigned char *data, char panel);
+extern void touchDelay(unsigned char count);
+extern unsigned char touchReadObjects(struct TouchObjects *objects, unsigned char count,
+				      char panel);
+extern void touchSetMode(unsigned char mode);
+extern unsigned char touchReadModes(char panel);
+extern void touchClearMode(void);
+extern void touchUpdateState(void);
+extern unsigned char touchReadGripEdges(unsigned char *data, char panel);
+extern void touchSetFlags(unsigned char flags);
+extern void touchClearFlags(unsigned char flags);
+extern void touchGetReportIds(unsigned char *ids);
+extern unsigned char touchTestModePin(unsigned char *out);
+#else
 extern void touchOpen(void);
 extern void touchClose(void);
 extern void touchClearFrames0(void);
@@ -404,6 +507,7 @@ extern void touchClearFlags(unsigned char flags);
 #define touchSetFlags(bits)		(touch.flags |= (bits))
 #define touchClearFlags(bits)		(touch.flags &= ~(bits))
 #define touchWriteVerified		touchWrite
+#endif
 #endif
 
 #endif

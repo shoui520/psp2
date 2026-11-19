@@ -290,6 +290,11 @@ void csi10Interrupt(void)
 			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			TOUCH_SELECT1 = 1;
+#if SOURCE_0104
+			if (touch.panel[1].features.bits.family82)
+				touchFrames[touch.frame].panel[1][TOUCH_PANEL_STATUS] =
+					touchFrames[touch.frame].panel[1][TOUCH_REPORT_SIZE];
+#endif
 			if (touch.flags & TOUCH_PANEL0)
 				csi10.state = CSI10_COMMAND0;
 			else
@@ -303,6 +308,11 @@ void csi10Interrupt(void)
 			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			TOUCH_SELECT0 = 1;
+#if SOURCE_0104
+			if (touch.panel[0].features.bits.family82)
+				touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATUS] =
+					touchFrames[touch.frame].panel[0][TOUCH_REPORT_SIZE];
+#endif
 			csi10.state = CSI10_FRAME;
 			break;
 		}
@@ -310,8 +320,16 @@ void csi10Interrupt(void)
 		case CSI10_DONE:
 			break;
 		case CSI10_REPORT1:
+#if SOURCE_0104	/* panel 0's feature, also for panel 1 */
+			if (touch.panel[0].features.bits.family82)
+				csi10.receiveCount = TOUCH_REPORT_SIZE + 1;
+			else
+				csi10.receiveCount = TOUCH_REPORT_SIZE;
+			csi10.receive = touchFrames[touch.frame].panel[1];
+#else
 			csi10.receive = touchFrames[touch.frame].panel[1];
 			csi10.receiveCount = TOUCH_REPORT_SIZE;
+#endif
 			csi10.send = (unsigned char *)&touchCommand;
 			csi10.sendCount = 0;
 			csi10.state |= CSI10_BUSY;
@@ -334,7 +352,11 @@ void csi10Interrupt(void)
 			csi10.sendCount--;
 			break;
 		case CSI10_REPORT0:
+#if SOURCE_0104
+			if (touch.panel[0].features.bits.family82)
+#else
 			if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
+#endif
 				csi10.receiveCount = TOUCH_REPORT_SIZE + 1;
 			else
 				csi10.receiveCount = TOUCH_REPORT_SIZE;
@@ -345,10 +367,13 @@ void csi10Interrupt(void)
 			CSI10_SIO = 0;
 			break;
 		case CSI10_FRAME:
-			/* family 0x82 variant 0x2b reports its status as the report's byte 0x34 */
+			/* family 0x82 variant 0x2b reports its status as the report's byte 0x34
+			   (SOURCE_0104: copied at each report's end) */
+#if !SOURCE_0104
 			if (touch.panel[0].family == 0x82 && touch.panel[0].variant == 0x2b)
 				touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATUS] =
 					touchFrames[touch.frame].panel[0][TOUCH_REPORT_SIZE];
+#endif
 			hostStream0300.first = hostStream0301.first = hostStream0302.first = touch.frame;
 			csi10.state = CSI10_OPEN;
 			touch.flags |= TOUCH_FRAME;

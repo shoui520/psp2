@@ -105,7 +105,9 @@ static int stateModeAtLevel9(union PowerRequest *request);
 #endif
 
 /* the transitions below it are wakes, a resume's mode (the slim's has two more) */
-#if SOURCE_0103
+#if STATE_WAKE_HIGH
+#define STATE_WAKE_TRANSITIONS	0x23	/* DOL-1002: and 0x22 */
+#elif SOURCE_0103
 #define STATE_WAKE_TRANSITIONS	0x22
 #else
 #define STATE_WAKE_TRANSITIONS	0x20
@@ -169,6 +171,9 @@ union PowerRequest stateRequest;
 static struct StateMsg stateEnterMsg;		/* stateEnter's */
 #endif
 static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume */
+#if STATE_WAKE_HIGH
+static unsigned long stateWakeMaskHigh;		/* DOL-1002: wake factors 0x20-0x3f's */
+#endif
 
 #if FW_SINCE(0x01000104)
 #define STATE_TRANSITION_WAKE(t)	stateTransition(t)
@@ -270,6 +275,45 @@ unsigned long stateGetWakeMask(void)
 	return stateWakeMask;
 }
 
+#if STATE_WAKE_HIGH
+/* DOL-1002: the wake factors 0x20-0x3f, in a second mask */
+void stateSetWakeMaskHigh(unsigned long mask)
+{
+	stateWakeMaskHigh = mask;
+}
+
+unsigned long stateGetWakeMaskHigh(void)
+{
+	return stateWakeMaskHigh;
+}
+
+/* a wake factor's factor in the masks, set or cleared */
+void stateSetWakeBit(unsigned char factor, unsigned char set)
+{
+	if (set == 0) {
+		if (factor < 0x20)
+			stateWakeMask &= ~(1UL << factor);
+		else if (factor < 0x40)
+			stateWakeMaskHigh &= ~(1UL << (factor - 0x20));
+	} else {
+		if (factor < 0x20)
+			stateWakeMask |= 1UL << factor;
+		else if (factor < 0x40)
+			stateWakeMaskHigh |= 1UL << (factor - 0x20);
+	}
+}
+
+/* 1: the wake factor's factor is set in the masks */
+int stateGetWakeBit(unsigned char factor)
+{
+	if (factor < 0x20)
+		return (stateWakeMask & 1UL << factor) ? 1 : 0;
+	else if (factor < 0x40)
+		return (stateWakeMaskHigh & 1UL << (factor - 0x20)) ? 1 : 0;
+	return 0;
+}
+#endif
+
 void stateInit(void)
 {
 #if FW_SINCE(0x00090009)
@@ -279,7 +323,23 @@ void stateInit(void)
 	stateRequest.byte[0] = 0x7f;
 	stateRequest.byte[1] = 0xff;
 	stateWakeupFactor.word = stateRequest.word;
-#if FW_SINCE(0x00090804)
+#if STATE_WAKE_HIGH
+	/* DOL-1002: both masks from the configuration, then the start bits one by one */
+	mask = 0xffffffff;
+	mask |= configGet()->BOARD_WAKE_MASKS.on;
+	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
+	stateSetWakeMask(mask);
+	mask = 0xffffffff;
+	mask |= configGet()->wakeMasksHigh.on;
+	mask &= ~configGet()->wakeMasksHigh.off;
+	stateSetWakeMaskHigh(mask);
+	if (configGet()->start.bits.wakeUnmask22)
+		stateSetWakeBit(0x16, 0);
+	if (configGet()->start.bits.wakeUnmask15)
+		stateSetWakeBit(0x0f, 0);
+	if (configGet()->start.bits.coldStartOn)
+		stateSetWakeBit(0x1c, 0);
+#elif FW_SINCE(0x00090804)
 	mask = 0xffffffff;
 	mask |= configGet()->BOARD_WAKE_MASKS.on;
 	mask &= ~configGet()->BOARD_WAKE_MASKS.off;
@@ -295,15 +355,15 @@ void stateInit(void)
 	else
 		mask = 0xffffffff;
 #endif
-#if FW_SINCE(0x01000104)
+#if FW_SINCE(0x01000104) && !STATE_WAKE_HIGH
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
 #endif
-#if BOARD_DOL1001
+#if BOARD_DOL1001 && !STATE_WAKE_HIGH
 	if (configGet()->start.bits.coldStartOn)	/* and wake factor 20 unmasked */
 		mask &= ~0x00100000UL;
 #endif
-#if FW_SINCE(0x00090009)
+#if FW_SINCE(0x00090009) && !STATE_WAKE_HIGH
 	stateSetWakeMask(mask);
 #endif
 }
@@ -697,6 +757,11 @@ static int stateOffHandle(struct StateEvent *event)
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = 0x0b;
 			stateRequest.bits.data = event->arg.data = 0;
+#if STATE_WAKE_HIGH
+		} else if (event->transition == 0x21) {
+			stateNext = STATE_RESUME;
+			stateRequest.bits.mode = 0x21;
+#endif
 		} else {
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = event->transition & 0x7f;
@@ -711,6 +776,14 @@ static int stateOffHandle(struct StateEvent *event)
 		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0xffa0057cUL : 0xffa0257cUL;
 		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? ~0x001e7a01UL : ~0x001e5a01UL;
 #endif
+#if STATE_WAKE_HIGH
+		stateWakeMaskHigh |= configGet()->wakeMasksHigh.on;
+		stateWakeMaskHigh &= ~configGet()->wakeMasksHigh.off;
+		if (configGet()->state.bits.offWakeUnmask22)
+			stateSetWakeBit(0x16, 0);
+		if ((unsigned char)stateGetWakeBit(stateRequest.bits.mode))
+			stateNext = 0;
+#else
 #if FW_SINCE(0x01000104)
 		if (configGet()->state.bits.offWakeUnmask22)
 			stateWakeMask &= ~0x00400000UL;
@@ -718,12 +791,17 @@ static int stateOffHandle(struct StateEvent *event)
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
+#endif
 #if SOURCE_0103
 		/* the slim's: at battery level 9 only some modes resume, and while no alarm the
 		   power LED shows it */
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On())
 			stateNext = 0;
-#if BOARD_DOL1001
+#if STATE_WAKE_HIGH
+		/* DOL-1002: only some modes resume at battery level 9, and the LED is left */
+		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
+			stateNext = 0;
+#elif BOARD_DOL1001
 		/* DOL-1001 has no battery */
 #else
 #if FW_SINCE(0x01030511)
@@ -840,16 +918,27 @@ static int stateSuspendHandle(struct StateEvent *event)
 #if FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.suspendOn;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.suspendOff;
+#if STATE_WAKE_HIGH
+		stateWakeMaskHigh |= configGet()->wakeMasksHigh.suspendOn;
+		stateWakeMaskHigh &= ~configGet()->wakeMasksHigh.suspendOff;
+		if ((unsigned char)stateGetWakeBit(stateRequest.bits.mode))
+			stateNext = 0;
+#else
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
+#endif
 #if FW_SINCE(0x01000104)
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On())
 #else
 		if (!(unsigned char)chargeMayStart())
 #endif
 			stateNext = 0;
-#if SOURCE_0103 && !BOARD_DOL1001	/* DOL-1001 has no battery */
+#if STATE_WAKE_HIGH
+		/* DOL-1002: only some modes resume at battery level 9, and the LED is left */
+		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
+			stateNext = 0;
+#elif SOURCE_0103 && !BOARD_DOL1001	/* DOL-1001 has no battery */
 #if FW_SINCE(0x01030511)
 		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
 			stateNext = 0;
@@ -1168,8 +1257,16 @@ int stateSerialLock(void)
 /* the slim's: the modes a resume keeps at battery level 9 */
 static int stateModeAtLevel9(union PowerRequest *request)
 {
+#if STATE_WAKE_HIGH
+	/* DOL-1002's */
+	return request->bits.mode == 0 || request->bits.mode == 0x14 ||
+	       request->bits.mode == 0x18 || request->bits.mode == 0x1c ||
+	       request->bits.mode == 0x1d || request->bits.mode == 0x1f ||
+	       request->bits.mode == 0x20;
+#else
 	return request->bits.mode == 0 || request->bits.mode == 0x14 ||
 	       request->bits.mode == 0x12 || request->bits.mode == 0x18 ||
 	       request->bits.mode == 0x0b || request->bits.mode == 0x0f;
+#endif
 }
 #endif

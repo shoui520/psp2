@@ -18,6 +18,9 @@
 #define ANALOG_LIMITS		(SOURCE_0511)
 /* 0x0104: a median's fault keeps the samples it came from (struct AnalogSnapshot) */
 #define ANALOG_SNAPSHOT		FW_SINCE(0x01040000)
+/* DOL-1002: the temperature from a thermistor on ANI10 (adcResults[5], inputKeys' bit 0x0040),
+   in place of DOL-1001's sensor on the I2C bus (thermal.c) */
+#define ANALOG_THERMISTOR	BOARD_DOL1002
 
 #define ANALOG_SAMPLE_CENTER	0x8000
 #define ANALOG_VALUE_CENTER	0x80
@@ -159,12 +162,22 @@ extern void analogGetSamples(unsigned int *out);
 #else
 extern void analogGetSamples(unsigned int __far *out);
 #endif
+#if ANALOG_THERMISTOR
+extern void analogThermistorInit(void);
+extern void analogThermistorStart(void);
+extern void analogThermistorStop(void);
+extern int analogThermistorRead(signed char *temperature);
+extern void analogThermistorGet(unsigned char *out);
+#endif
 /* the slim's analog input 0x0010 (inputKeys' bit) */
 #if ANALOG_LIMITS
 extern void analogLimitsSet(void);
 extern void analogLimitsGet(unsigned int *out);
 extern void analogGetMedianFaults(unsigned char *out);
 extern void analogGetSampleFaults(unsigned char *out);
+#if ANALOG_SNAPSHOT
+extern void analogGetMedianSnapshots(unsigned char *out);
+#endif
 #endif
 extern void analogInput10Init(void);
 extern void analogStart10(void);
