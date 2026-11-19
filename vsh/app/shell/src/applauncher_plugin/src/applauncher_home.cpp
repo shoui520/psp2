@@ -46,8 +46,6 @@ using namespace paf;
 #define APPLAUNCHER_HOME_TEXTURE	0x56AEBD5F
 /* PLACEHOLDER: the background shown while a page's image cannot be read */
 #define APPLAUNCHER_HOME_NO_IMAGE_TEXTURE	0xAFDEF9D0
-/* PLACEHOLDER: an icon's type for the power button (a PlayStation TV's) */
-#define APPLAUNCHER_HOME_ICON_TYPE_POWER	6
 #define APPLAUNCHER_HOME_TEMPLATE	0xC65C4136
 #define APPLAUNCHER_HOME_FOREGROUND	0x37677DEF
 #define APPLAUNCHER_HOME_BACKGROUND	0xCBD8EDA5
@@ -603,8 +601,9 @@ void ApplauncherHome::EnterEditMode()
 	g_applauncherHome->m_background->SetPos(pos, new Timer(750.0f, Timer::FUNC_BOUNCE_OUT),
 						ui::Widget::ANIM_MOVE, 2);
 	g_applauncherHome->CreateOverlay();
-	for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
-	     it != g_applauncherHome->m_scroller.m_items.end(); ++it)
+	home = g_applauncherHome;
+	for (ShellSnapList::iterator it = home->m_scroller.m_items.begin();
+	     it != home->m_scroller.m_items.end(); ++it)
 		static_cast<ApplauncherPage *>(*it)->Save();
 	if (g_applauncherHome->m_appPage != NULL)
 		g_applauncherHome->m_appPage->Save();
@@ -1197,9 +1196,9 @@ void applauncherHomeSetPageParam(const LsdbPage *param)
 void ApplauncherHome::UpdateSnaps()
 {
 	if (shellStartupGetIduMode() == 1) {
-		for (ShellSnapList::iterator it = m_scroller.m_items.begin();
-		     it != m_scroller.m_items.end(); ++it) {
-			ui::ScrollView *view = m_scroller.m_scrollView;
+		for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
+		     it != g_applauncherHome->m_scroller.m_items.end(); ++it) {
+			ui::ScrollView *view = g_applauncherHome->m_scroller.m_scrollView;
 			ApplauncherPage *page = static_cast<ApplauncherPage *>(*it);
 
 			for (SceUInt32 i = 0; i < 10; i++) {
@@ -1213,11 +1212,11 @@ next:
 			;
 		}
 	} else if (shellStartupGetIduMode() == 2) {
-		for (ShellSnapList::iterator it = m_scroller.m_items.begin();
-		     it != m_scroller.m_items.end(); ++it) {
+		for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
+		     it != g_applauncherHome->m_scroller.m_items.end(); ++it) {
 			ApplauncherPage *page = static_cast<ApplauncherPage *>(*it);
 
-			m_scroller.m_scrollView->AddSnapChild(page->GetWidget());
+			g_applauncherHome->m_scroller.m_scrollView->AddSnapChild(page->GetWidget());
 		}
 	}
 }
@@ -1607,7 +1606,7 @@ int ApplauncherHome::RemoveApp(const string &titleId)
 
 			if (appPage != NULL && appPage->m_type == 2) {
 				folder = appPage->m_focus;
-				if (appPage->IsAppRemoved() == 1)
+				if (appPage->GetIconCount() == 1)
 					whole = true;
 			}
 		}
@@ -1824,11 +1823,11 @@ int applauncherThemeReload(void)
 	if (system::Model::GetType() == 1) {
 		LsdbIconPtr power(new LsdbIcon());
 
-		power->type = APPLAUNCHER_HOME_ICON_TYPE_POWER;
+		power->type = APPLAUNCHER_ICON_TYPE_POWER;
 		power->icon0Type = 8;		/* PLACEHOLDER: the power button's image kind */
 		if (info->get() != NULL) {
 			const IconParam *param =
-				info->get()->m_homeProperty.GetIconParam("", APPLAUNCHER_HOME_ICON_TYPE_POWER);
+				info->get()->m_homeProperty.GetIconParam("", APPLAUNCHER_ICON_TYPE_POWER);
 
 			if (param != NULL && param->m_iconFilePath.length() != 0)
 				shellThemeInfoGetFilePath(info->get(), &power->iconPath,
@@ -2539,7 +2538,7 @@ void applauncherHomeApplyTheme(void)
 			continue;
 		if (index < count)
 			titleId = *titles;
-		else if (app->type == APPLAUNCHER_HOME_ICON_TYPE_POWER)
+		else if (app->type == APPLAUNCHER_ICON_TYPE_POWER)
 			titleId = "power";
 		else
 			break;
@@ -2549,7 +2548,7 @@ void applauncherHomeApplyTheme(void)
 			g_applauncherHome->FindIconInFolder(string(titleId), &folder, NULL);
 
 		if (icon.get() != NULL) {
-			if (app->type == APPLAUNCHER_HOME_ICON_TYPE_POWER) {
+			if (app->type == APPLAUNCHER_ICON_TYPE_POWER) {
 				icon->m_data->iconPath = app->iconPath;
 				icon->Update(true);
 			} else {
@@ -2979,7 +2978,7 @@ void applauncherHomeOnRefreshThemeUI(void *data)
 }
 
 /* PLACEHOLDER name: a job's end, the semaphore given released (0x810B28B8) */
-void applauncherHomeOnJobDone(int result, void *data)
+void applauncherHomeOnJobDone(ApplauncherLsdbJob *job, void *data)
 {
 	static_cast<thread::Semaphore *>(data)->Release();
 }
