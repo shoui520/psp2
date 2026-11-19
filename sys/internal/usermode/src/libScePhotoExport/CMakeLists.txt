@@ -5,6 +5,7 @@ enable_language(CXX)
 psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	photo_export.cpp
 	../../../../sdk/target/src/libsnc/i64mod.c
+	weak_calls.c
 	../../../../sdk/target/src/libsnc/i64ops.c
 	../../../../sdk/target/src/libsnc/i32ops.c
 	../../../../sdk/target/src/libsnc/aeabi_div0.c
