@@ -77,8 +77,215 @@ extern "C" int sceAppMgrSendNotificationRequest(const void *request, int flags);
 /* the paths the media service does not take (photo0:, vs0:, vd0:; the batch checks the last) */
 static const char *const photoExportForbiddenPrefixes[4] = { "photo0:", "vs0:", "vd0:", "photo0:" };
 
+
+static __attribute__((noinline)) SceInt32 photoExportIpcSendData(IPMI::Client *pClient, void *pData, SceInt32 size,
+				       SceInt32 index, SceUInt8 last, SceInt64 total, SceInt32 reserved,
+				       const char *pPath, SceInt32 reserved2, const char *pPhotoTitle,
+				       const char *pGameTitle, const char *pGameComment,
+				       const char *pFilePath);
+static __attribute__((noinline)) SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
+				    SceInt32 reserved, SceInt32 count, void *pData);
+static __attribute__((noinline)) SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestId,
+					SceInt32 *pCount, void *pData);
+static __attribute__((noinline)) SceInt32 photoExportIpcCancel(IPMI::Client *pClient);
+static __attribute__((noinline)) SceInt32 photoExportIpcAbort(IPMI::Client *pClient);
+static __attribute__((noinline)) SceInt32 photoExportIpcGetProgress(IPMI::Client *pClient, SceInt32 *pProgress);
+static __attribute__((noinline)) SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index,
+					   const char *pPath);
+static __attribute__((noinline)) SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
+					 SceInt32 reserved, SceInt32 kind, SceInt32 count,
+					 void *pData);
+static __attribute__((noinline)) SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 requestId,
+					     SceInt32 *pCount, void *pData);
+#define PHOTO_EXPORT_SESSION_INIT(session, memory, sessionMode) \
+	do { \
+		SceInt32 i_; \
+		(session).pClient = NULL; \
+		(session).requestId = -1; \
+		memset(&(session).mspace, 0, 12); \
+		(session).pWorkMemory = (memory); \
+		(session).progress = 0; \
+		(session).pFilePath = ""; \
+		(session).mode = (sessionMode); \
+		for (i_ = 0; i_ < 10; i_++) \
+			(session).weights[i_] = 0; \
+	} while (0)
+
+typedef struct PhotoExportNotification {
+	SceUInt32 type;
+	char text[60];
+} PhotoExportNotification;
+#define PHOTO_EXPORT_TRC_FROM_DATA	"Photo:\nRequire TRC R3146 test\nscePhotoExportFromData()"
+#define PHOTO_EXPORT_TRC_FROM_FILE	"Photo:\nRequire TRC R3146 test\nscePhotoExportFromFile()"
+typedef struct PhotoExportImageInfo {
+	SceInt32 width;
+	SceInt32 height;
+	SceInt32 bitCount;		/* BMP */
+	SceInt32 compression;		/* BMP */
+	SceInt32 subsampling;		/* JPEG: 1 4:4:4, 2 4:2:2, 3 4:2:0, 4 4:1:1 */
+	SceInt32 pngInterlace;
+	SceInt32 pngColourType;
+	SceInt32 tiffPhotometric;
+	SceInt32 progressive;		/* JPEG */
+} PhotoExportImageInfo;
+typedef struct PhotoExportSendHeader {
+	SceInt32 size;
+	SceInt32 index;
+	SceUInt8 last;
+	SceInt64 total;
+	SceInt32 reserved;
+	SceInt32 reserved2;
+} PhotoExportSendHeader;
+
+/* what the image parsers read from a header */
+
+static inline SceUInt32 photoExportSwap32(SceUInt32 value)
+{
+	return (value << 24) | ((value & 0xFF00) << 8) | ((value >> 8) & 0xFF00) | (value >> 24);
+}
+
+static inline SceUInt32 photoExportSwap16(SceUInt32 value)
+{
+	return ((value & 0xFF) << 8) | ((value >> 8) & 0xFF);
+}
+
+/* the length of a string with its NUL terminator, as the requests send it */
+static inline SceInt32 photoExportSize(const char *pString)
+{
+	SceInt32 length = 0;
+
+	if (*pString != 0) {
+		length = 0;
+		do {
+			pString++;
+			length++;
+		} while (*pString != 0);
+	}
+	return length + 1;
+}
+
+/* the path checks the file exports share: length, the prefixes, the file's size */
+static inline SceInt32 photoExportCheckFile(const char *pPath)
+{
+	SceInt32 i;
+
+	if (sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH) >= SCE_PHOTO_EXPORT_MAX_FS_PATH)
+		return PHOTO_ERROR_INVALID_PATH;
+	for (i = 0; i < 3; i++) {
+		const char *pPrefix = photoExportForbiddenPrefixes[i];
+
+		if (sceClibStrncmp(pPath, pPrefix, sceClibStrnlen(pPrefix, 7)) == 0)
+			return PHOTO_ERROR_INVALID_PATH;
+	}
+	return 0;
+}
+
+static __attribute__((noinline)) SceInt32 photoExportCheckExtension(const char *pPath, char *pExtension);
+static __attribute__((noinline)) SceInt32 photoExportOpenSession(PhotoExportSession *pSession, SceBool (*cancelFunc)(void *), void *userdata);
+static __attribute__((noinline)) int photoExportAppLaunchCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon);
+static __attribute__((noinline)) int photoExportGetParamCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon);
+static __attribute__((noinline)) SceInt32 photoExportSetParam(PhotoExportSession *pSession, const ScePhotoExportParam *param, const char *pFilePath);
+static __attribute__((noinline)) SceInt32 photoExportSendFile(SceInt32 index, PhotoExportSession *pSession, const char *pFile, SceBool (*cancelFunc)(void *), void (*progressFunc)(void *, SceInt32), void *userdata, SceInt32 reserved, const char *pExtension, SceInt32 reserved2);
+static __attribute__((noinline)) SceInt32 photoExportWait(PhotoExportSession *pSession, SceInt32 count, void *pData, SceBool (*cancelFunc)(void *), void (*progressFunc)(void *, SceInt32), void *userdata, void *pResult);
+static __attribute__((noinline)) void *photoExportAlloc(PhotoExportSession *pSession, SceSize size);
+static __attribute__((noinline)) void photoExportFree(PhotoExportSession *pSession, void *pMemory);
+static __attribute__((noinline)) SceInt32 photoExportCloseSession(PhotoExportSession *pSession);
+
+static inline SceInt32 photoExportCheckSize(const char *pPath)
+{
+	SceIoStat stat;
+	SceInt32 result;
+
+	stat.st_size = 0;
+	result = PHOTO_ERROR_FILE_NOT_FOUND;
+	if (sceIoGetstat(pPath, &stat) == 0) {
+		result = 0;
+		if (stat.st_size >= 0x80000000LL)
+			result = PHOTO_ERROR_NOT_SUPPORTED;
+	}
+	return result;
+}
+
+static inline SceInt32 photoExportCheckReserved(const ScePhotoExportParam *param)
+{
+	SceInt32 i;
+
+	for (i = 0; i < 32; i++) {
+		if (param->reserved[i] != 0)
+			return PHOTO_ERROR_PARAM;
+	}
+	return 0;
+}
+
+/* FromFile and its variants: send the file, wait and return where it went */
+static inline SceInt32 photoExportFromFile(const char *pPath, const ScePhotoExportParam *param,
+				    SceInt32 reserved, void *workMemory,
+				    ScePhotoExportCancelFunc cancelFunc, void *userdata,
+				    SceInt32 *pContentId, char *pExportedPath, SceInt32 exportedPathLength)
+{
+	PhotoExportSession session;
+	char extension[6];
+	SceInt32 result;
+	PhotoExportResult *pResult;
+
+	result = photoExportCheckSize(pPath);
+	if (result != 0)
+		return result;
+	sceClibMemset(extension, 0, 6);
+	if (photoExportCheckExtension(pPath, extension) == PHOTO_ERROR_NOT_SUPPORTED)
+		return PHOTO_ERROR_NOT_SUPPORTED;
+	do {
+		PHOTO_EXPORT_SESSION_INIT(session, workMemory, 0);
+		result = photoExportOpenSession(&session, cancelFunc, userdata);
+		if (result != 0)
+			break;
+		if (photoExportSetParam(&session, param, pPath) != 0) {
+			photoExportCloseSession(&session);
+			result = PHOTO_ERROR_PARAM;
+			break;
+		}
+		pResult = (PhotoExportResult *)photoExportAlloc(&session, sizeof(PhotoExportResult) * PHOTO_EXPORT_MAX_ITEMS);
+		if (pResult == NULL) {
+			photoExportCloseSession(&session);
+			result = PHOTO_ERROR_NO_MEMORY;
+			break;
+		}
+		result = photoExportSendFile(1, &session, pPath, cancelFunc, NULL, userdata, reserved,
+					     extension, 0);
+		if (result == 0) {
+			if (cancelFunc != NULL && cancelFunc(userdata) != 0) {
+				result = PHOTO_ERROR_CANCELED;
+				goto failed;
+			}
+			result = photoExportWait(&session, 0, NULL, cancelFunc, NULL, userdata, pResult);
+			if (result == 0) {
+				if (pContentId != NULL) {
+					pContentId[0] = pResult->contentId[0];
+					pContentId[1] = pResult->contentId[1];
+				} else if (pExportedPath != NULL && exportedPathLength > 0) {
+					sceClibStrncpy(pExportedPath, pResult->path, exportedPathLength);
+				}
+				goto release;
+			}
+		}
+		if (result != IPMI_ERROR_TERMINATED) {
+failed:
+			if (pContentId != NULL) {
+				pContentId[0] = -1;
+				pContentId[1] = -1;
+			} else if (pExportedPath != NULL && exportedPathLength > 0) {
+				*pExportedPath = 0;
+			}
+		}
+release:
+		photoExportFree(&session, pResult);
+		photoExportCloseSession(&session);
+	} while (result == IPMI_ERROR_TERMINATED);
+	return result;
+}
+
 /* releases the heap */
-static void photoExportDestroyHeap(PhotoExportSession *pSession)
+static inline void photoExportDestroyHeap(PhotoExportSession *pSession)
 {
 	if (pSession->mspace != NULL) {
 		sceClibMspaceDestroy(pSession->mspace);
@@ -90,18 +297,18 @@ static void photoExportDestroyHeap(PhotoExportSession *pSession)
 	}
 }
 
-static void *photoExportAlloc(PhotoExportSession *pSession, SceSize size)
+static __attribute__((noinline)) void *photoExportAlloc(PhotoExportSession *pSession, SceSize size)
 {
 	return sceClibMspaceMalloc(pSession->mspace, size);
 }
 
-static void photoExportFree(PhotoExportSession *pSession, void *pMemory)
+static __attribute__((noinline)) void photoExportFree(PhotoExportSession *pSession, void *pMemory)
 {
 	if (pMemory != NULL)
 		sceClibMspaceFree(pSession->mspace, pMemory);
 }
 
-static int photoExportLaunchMediaService(SceUID appLaunchCallback, SceUID getParamCallback)
+static __attribute__((noinline)) int photoExportLaunchMediaService(SceUID appLaunchCallback, SceUID getParamCallback)
 {
 	PhotoExportLaunchParam param;
 
@@ -115,27 +322,9 @@ static int photoExportLaunchMediaService(SceUID appLaunchCallback, SceUID getPar
 	return sceAppMgrLaunchAppByUri2("avmedia_service:", &param);
 }
 
-static int photoExportAppLaunchCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon)
-{
-	if (notifyArg > 0)
-		*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_LAUNCHED;
-	return 0;
-}
 
-static int photoExportGetParamCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon)
-{
-	int result = 0;
 
-	if (notifyArg != 0) {
-		if (notifyArg == (SceInt32)0x8080201B)
-			*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_NONE;
-	} else {
-		*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_READY;
-	}
-	return result;
-}
-
-static SceInt32 photoExportOpenSession(PhotoExportSession *pSession,
+static __attribute__((noinline)) SceInt32 photoExportOpenSession(PhotoExportSession *pSession,
 				       SceBool (*cancelFunc)(void *), void *userdata)
 {
 	void *pBase;
@@ -284,7 +473,7 @@ static SceInt32 photoExportOpenSession(PhotoExportSession *pSession,
 	return 0;
 }
 
-static SceInt32 photoExportCloseSession(PhotoExportSession *pSession)
+static __attribute__((noinline)) SceInt32 photoExportCloseSession(PhotoExportSession *pSession)
 {
 	if (pSession->pGameComment != NULL) {
 		sceClibMspaceFree(pSession->mspace, pSession->pGameComment);
@@ -321,27 +510,8 @@ static SceInt32 photoExportCloseSession(PhotoExportSession *pSession)
 }
 
 /* the requests to the media service (photoExportIpc*, below) */
-static SceInt32 photoExportIpcSendData(IPMI::Client *pClient, void *pData, SceInt32 size,
-				       SceInt32 index, SceUInt8 last, SceInt64 total, SceInt32 reserved,
-				       const char *pPath, SceInt32 reserved2, const char *pPhotoTitle,
-				       const char *pGameTitle, const char *pGameComment,
-				       const char *pFilePath);
-static SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
-				    SceInt32 reserved, SceInt32 count, void *pData);
-static SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestId,
-					SceInt32 *pCount, void *pData);
-static SceInt32 photoExportIpcCancel(IPMI::Client *pClient);
-static SceInt32 photoExportIpcAbort(IPMI::Client *pClient);
-static SceInt32 photoExportIpcGetProgress(IPMI::Client *pClient, SceInt32 *pProgress);
-static SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index,
-					   const char *pPath);
-static SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
-					 SceInt32 reserved, SceInt32 kind, SceInt32 count,
-					 void *pData);
-static SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 requestId,
-					     SceInt32 *pCount, void *pData);
 
-static SceInt32 photoExportSendData(PhotoExportSession *pSession, void *pData, SceInt32 size,
+static __attribute__((noinline)) SceInt32 photoExportSendData(PhotoExportSession *pSession, void *pData, SceInt32 size,
 				    SceInt32 index, SceUInt8 last, SceInt64 total, SceInt32 reserved,
 				    const char *pPath, SceInt32 reserved2)
 {
@@ -350,36 +520,36 @@ static SceInt32 photoExportSendData(PhotoExportSession *pSession, void *pData, S
 				      pSession->pGameComment, pSession->pFilePath);
 }
 
-static SceInt32 photoExportStart(PhotoExportSession *pSession, SceInt32 count, void *pData)
+static __attribute__((noinline)) SceInt32 photoExportStart(PhotoExportSession *pSession, SceInt32 count, void *pData)
 {
 	return photoExportIpcStart(pSession->pClient, &pSession->requestId, 0, count, pData);
 }
 
-static SceInt32 photoExportGetResult(PhotoExportSession *pSession, SceInt32 *pCount, void *pData)
+static __attribute__((noinline)) SceInt32 photoExportGetResult(PhotoExportSession *pSession, SceInt32 *pCount, void *pData)
 {
 	if (pSession->requestId == -1)
 		return IPMI_ERROR_NOT_INITIALIZED;
 	return photoExportIpcGetResult(pSession->pClient, pSession->requestId, pCount, pData);
 }
 
-static SceInt32 photoExportCancel(PhotoExportSession *pSession)
+static __attribute__((noinline)) SceInt32 photoExportCancel(PhotoExportSession *pSession)
 {
 	return photoExportIpcCancel(pSession->pClient);
 }
 
-static SceInt32 photoExportAbort(PhotoExportSession *pSession)
+static __attribute__((noinline)) SceInt32 photoExportAbort(PhotoExportSession *pSession)
 {
 	return photoExportIpcAbort(pSession->pClient);
 }
 
-static SceInt32 photoExportStartVideo(PhotoExportSession *pSession, SceInt32 kind,
+static __attribute__((noinline)) SceInt32 photoExportStartVideo(PhotoExportSession *pSession, SceInt32 kind,
 				      SceInt32 count, void *pData)
 {
 	return photoExportIpcStartVideo(pSession->pClient, &pSession->requestId, 0, kind, count,
 					pData);
 }
 
-static SceInt32 photoExportGetVideoResult(PhotoExportSession *pSession, SceInt32 *pCount,
+static __attribute__((noinline)) SceInt32 photoExportGetVideoResult(PhotoExportSession *pSession, SceInt32 *pCount,
 					  void *pData)
 {
 	if (pSession->requestId == -1)
@@ -387,12 +557,12 @@ static SceInt32 photoExportGetVideoResult(PhotoExportSession *pSession, SceInt32
 	return photoExportIpcGetVideoResult(pSession->pClient, pSession->requestId, pCount, pData);
 }
 
-static SceInt32 photoExportGetProgress(PhotoExportSession *pSession, SceInt32 *pProgress)
+static __attribute__((noinline)) SceInt32 photoExportGetProgress(PhotoExportSession *pSession, SceInt32 *pProgress)
 {
 	return photoExportIpcGetProgress(pSession->pClient, pProgress);
 }
 
-static SceInt32 photoExportSetParam(PhotoExportSession *pSession, const ScePhotoExportParam *param,
+static __attribute__((noinline)) SceInt32 photoExportSetParam(PhotoExportSession *pSession, const ScePhotoExportParam *param,
 				    const char *pFilePath)
 {
 	if (param != NULL) {
@@ -427,21 +597,41 @@ static SceInt32 photoExportSetParam(PhotoExportSession *pSession, const ScePhoto
 	return 0;
 }
 
-static SceInt32 photoExportGetWeight(PhotoExportSession *pSession, SceInt32 index)
+static __attribute__((noinline)) SceInt32 photoExportGetWeight(PhotoExportSession *pSession, SceInt32 index)
 {
 	if (index > 0 && index <= PHOTO_EXPORT_MAX_ITEMS)
 		return pSession->weights[index - 1];
 	return 0;
 }
 
-static SceInt32 photoExportSetThumbnail(PhotoExportSession *pSession, SceInt32 index,
+static __attribute__((noinline)) SceInt32 photoExportSetThumbnail(PhotoExportSession *pSession, SceInt32 index,
 					const char *pPath)
 {
 	return photoExportIpcSetThumbnail(pSession->pClient, index, pPath != NULL ? pPath : "");
 }
 
+static __attribute__((noinline)) int photoExportAppLaunchCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon)
+{
+	if (notifyArg > 0)
+		*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_LAUNCHED;
+	return 0;
+}
+
+static __attribute__((noinline)) int photoExportGetParamCallback(int notifyId, int notifyCount, int notifyArg, void *pCommon)
+{
+	int result = 0;
+
+	if (notifyArg != 0) {
+		if (notifyArg == (SceInt32)0x8080201B)
+			*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_NONE;
+	} else {
+		*(SceInt32 *)pCommon = PHOTO_EXPORT_LAUNCH_STATE_READY;
+	}
+	return result;
+}
+
 /* start the export of count items and wait for the service, reporting the progress */
-static SceInt32 photoExportWait(PhotoExportSession *pSession, SceInt32 count, void *pData,
+static __attribute__((noinline)) SceInt32 photoExportWait(PhotoExportSession *pSession, SceInt32 count, void *pData,
 				SceBool (*cancelFunc)(void *),
 				void (*progressFunc)(void *, SceInt32), void *userdata,
 				void *pResult)
@@ -483,133 +673,8 @@ static SceInt32 photoExportWait(PhotoExportSession *pSession, SceInt32 count, vo
 	return result;
 }
 
-#define PHOTO_EXPORT_SESSION_INIT(session, memory, sessionMode) \
-	do { \
-		SceInt32 i_; \
-		(session).pClient = NULL; \
-		(session).requestId = -1; \
-		memset(&(session).mspace, 0, 12); \
-		(session).pWorkMemory = (memory); \
-		(session).progress = 0; \
-		(session).pFilePath = ""; \
-		(session).mode = (sessionMode); \
-		for (i_ = 0; i_ < 10; i_++) \
-			(session).weights[i_] = 0; \
-	} while (0)
-
-/* the file's extension, if the library takes it */
-static SceInt32 photoExportCheckExtension(const char *pPath, char *pExtension)
-{
-	SceInt32 length, pos, count;
-
-	length = sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH);
-	count = 0;
-	for (pos = length - 1; pos > length - 6; pos--) {
-		if (pPath[pos] == '.') {
-			sceClibStrncpy(pExtension, &pPath[pos], count + 1);
-			break;
-		}
-		count++;
-	}
-	if (*pExtension == 0)
-		return PHOTO_ERROR_NOT_SUPPORTED;
-	if (sceClibStrncasecmp(pExtension, ".bmp", 4) != 0
-	    && sceClibStrncasecmp(pExtension, ".gif", 4) != 0
-	    && sceClibStrncasecmp(pExtension, ".jpg", 4) != 0
-	    && sceClibStrncasecmp(pExtension, ".jpeg", 5) != 0
-	    && sceClibStrncasecmp(pExtension, ".png", 4) != 0
-	    && sceClibStrncasecmp(pExtension, ".tif", 4) != 0
-	    && sceClibStrncasecmp(pExtension, ".tiff", 5) != 0
-	    && sceClibStrncasecmp(pExtension, ".mpo", 4) != 0)
-		return PHOTO_ERROR_NOT_SUPPORTED;
-	return 0;
-}
-
-/* send the file in pieces; progress as the share of the item's weight */
-static SceInt32 photoExportSendFile(SceInt32 index, PhotoExportSession *pSession, const char *pFile,
-				    SceBool (*cancelFunc)(void *),
-				    void (*progressFunc)(void *, SceInt32), void *userdata,
-				    SceInt32 reserved, const char *pExtension, SceInt32 reserved2)
-{
-	SceUID fd;
-	SceInt64 size;
-	SceOff offset;
-	void *pBuffer;
-	SceInt32 result, pieces, sent, shown, percent;
-	float scale;
-
-	fd = sceIoOpen(pFile, SCE_O_RDONLY, 0);
-	if (fd < 0)
-		return PHOTO_ERROR_FILE_NOT_FOUND;
-	offset = sceIoLseek(fd, 0, SCE_SEEK_END);
-	size = offset;
-	if (offset < 0) {
-		sceIoClose(fd);
-		return (SceInt32)offset;
-	}
-	sceIoLseek(fd, 0, SCE_SEEK_SET);
-	pBuffer = photoExportAlloc(pSession, PHOTO_EXPORT_PIECE_SIZE);
-	if (pBuffer == NULL) {
-		sceIoClose(fd);
-		return PHOTO_ERROR_NO_MEMORY;
-	}
-	pieces = size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0) - 1;
-	sent = 0;
-	shown = 0;
-	result = 0;
-	if (pieces > 0) {
-		scale = (float)(int)(size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0));
-		do {
-			result = sceIoRead(fd, pBuffer, PHOTO_EXPORT_PIECE_SIZE);
-			if (result < 0)
-				break;
-			result = photoExportSendData(pSession, pBuffer, PHOTO_EXPORT_PIECE_SIZE, sent, 0,
-						     size, reserved, pExtension, 0);
-			if (result != 0)
-				break;
-			if (cancelFunc != NULL && cancelFunc(userdata) != 0) {
-				result = PHOTO_ERROR_CANCELED;
-				break;
-			}
-			sent++;
-			if (progressFunc != NULL) {
-				percent = (int)((float)photoExportGetWeight(pSession, index)
-						* (float)((float)sent / scale));
-				if (shown != percent) {
-					progressFunc(userdata, percent + pSession->progress);
-					shown = percent;
-				}
-			}
-		} while (sent < pieces);
-	}
-	if (cancelFunc != NULL && cancelFunc(userdata) != 0) {
-		result = PHOTO_ERROR_CANCELED;
-	} else {
-		if (result == 0) {
-			result = sceIoRead(fd, pBuffer, size - (sent << 14));
-			if (result >= 0)
-				result = photoExportSendData(pSession, pBuffer, result, sent, 1, size,
-							     reserved, pExtension, 0);
-		}
-		if (progressFunc != NULL) {
-			percent = photoExportGetWeight(pSession, index);
-			progressFunc(userdata, percent + pSession->progress);
-			pSession->progress += percent;
-		}
-	}
-	sceIoClose(fd);
-	photoExportFree(pSession, pBuffer);
-	return result;
-}
-
 /* the notification the library sends (SceAppMgr): the text the system shows */
-typedef struct PhotoExportNotification {
-	SceUInt32 type;
-	char text[60];
-} PhotoExportNotification;
 
-#define PHOTO_EXPORT_TRC_FROM_DATA	"Photo:\nRequire TRC R3146 test\nscePhotoExportFromData()"
-#define PHOTO_EXPORT_TRC_FROM_FILE	"Photo:\nRequire TRC R3146 test\nscePhotoExportFromFile()"
 
 extern "C" SceInt32 scePhotoExportFromData(const void *photodata, SceInt32 photodataSize,
 				const ScePhotoExportParam *param, void *workMemory,
@@ -701,112 +766,109 @@ release:
 	return result;
 }
 
-/* the path checks the file exports share: length, the prefixes, the file's size */
-static SceInt32 photoExportCheckFile(const char *pPath)
+
+/* the file's extension, if the library takes it */
+static __attribute__((noinline)) SceInt32 photoExportCheckExtension(const char *pPath, char *pExtension)
 {
-	SceInt32 i;
+	SceInt32 length, pos, count;
 
-	if (sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH) >= SCE_PHOTO_EXPORT_MAX_FS_PATH)
-		return PHOTO_ERROR_INVALID_PATH;
-	for (i = 0; i < 3; i++) {
-		const char *pPrefix = photoExportForbiddenPrefixes[i];
-
-		if (sceClibStrncmp(pPath, pPrefix, sceClibStrnlen(pPrefix, 7)) == 0)
-			return PHOTO_ERROR_INVALID_PATH;
+	length = sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH);
+	count = 0;
+	for (pos = length - 1; pos > length - 6; pos--) {
+		if (pPath[pos] == '.') {
+			sceClibStrncpy(pExtension, &pPath[pos], count + 1);
+			break;
+		}
+		count++;
 	}
-	return 0;
-}
-
-static SceInt32 photoExportCheckSize(const char *pPath)
-{
-	SceIoStat stat;
-	SceInt32 result;
-
-	stat.st_size = 0;
-	result = PHOTO_ERROR_FILE_NOT_FOUND;
-	if (sceIoGetstat(pPath, &stat) == 0) {
-		result = 0;
-		if (stat.st_size >= 0x80000000LL)
-			result = PHOTO_ERROR_NOT_SUPPORTED;
-	}
-	return result;
-}
-
-static SceInt32 photoExportCheckReserved(const ScePhotoExportParam *param)
-{
-	SceInt32 i;
-
-	for (i = 0; i < 32; i++) {
-		if (param->reserved[i] != 0)
-			return PHOTO_ERROR_PARAM;
-	}
-	return 0;
-}
-
-/* FromFile and its variants: send the file, wait and return where it went */
-static SceInt32 photoExportFromFile(const char *pPath, const ScePhotoExportParam *param,
-				    SceInt32 reserved, void *workMemory,
-				    ScePhotoExportCancelFunc cancelFunc, void *userdata,
-				    SceInt32 *pContentId, char *pExportedPath, SceInt32 exportedPathLength)
-{
-	PhotoExportSession session;
-	char extension[6];
-	SceInt32 result;
-	PhotoExportResult *pResult;
-
-	result = photoExportCheckSize(pPath);
-	if (result != 0)
-		return result;
-	sceClibMemset(extension, 0, 6);
-	if (photoExportCheckExtension(pPath, extension) == PHOTO_ERROR_NOT_SUPPORTED)
+	if (*pExtension == 0)
 		return PHOTO_ERROR_NOT_SUPPORTED;
-	do {
-		PHOTO_EXPORT_SESSION_INIT(session, workMemory, 0);
-		result = photoExportOpenSession(&session, cancelFunc, userdata);
-		if (result != 0)
-			break;
-		if (photoExportSetParam(&session, param, pPath) != 0) {
-			photoExportCloseSession(&session);
-			result = PHOTO_ERROR_PARAM;
-			break;
-		}
-		pResult = (PhotoExportResult *)photoExportAlloc(&session, sizeof(PhotoExportResult) * PHOTO_EXPORT_MAX_ITEMS);
-		if (pResult == NULL) {
-			photoExportCloseSession(&session);
-			result = PHOTO_ERROR_NO_MEMORY;
-			break;
-		}
-		result = photoExportSendFile(1, &session, pPath, cancelFunc, NULL, userdata, reserved,
-					     extension, 0);
-		if (result == 0) {
+	if (sceClibStrncasecmp(pExtension, ".bmp", 4) != 0
+	    && sceClibStrncasecmp(pExtension, ".gif", 4) != 0
+	    && sceClibStrncasecmp(pExtension, ".jpg", 4) != 0
+	    && sceClibStrncasecmp(pExtension, ".jpeg", 5) != 0
+	    && sceClibStrncasecmp(pExtension, ".png", 4) != 0
+	    && sceClibStrncasecmp(pExtension, ".tif", 4) != 0
+	    && sceClibStrncasecmp(pExtension, ".tiff", 5) != 0
+	    && sceClibStrncasecmp(pExtension, ".mpo", 4) != 0)
+		return PHOTO_ERROR_NOT_SUPPORTED;
+	return 0;
+}
+
+/* send the file in pieces; progress as the share of the item's weight */
+static __attribute__((noinline)) SceInt32 photoExportSendFile(SceInt32 index, PhotoExportSession *pSession, const char *pFile,
+				    SceBool (*cancelFunc)(void *),
+				    void (*progressFunc)(void *, SceInt32), void *userdata,
+				    SceInt32 reserved, const char *pExtension, SceInt32 reserved2)
+{
+	SceUID fd;
+	SceInt64 size;
+	SceOff offset;
+	void *pBuffer;
+	SceInt32 result, pieces, sent, shown, percent;
+	float scale;
+
+	fd = sceIoOpen(pFile, SCE_O_RDONLY, 0);
+	if (fd < 0)
+		return PHOTO_ERROR_FILE_NOT_FOUND;
+	offset = sceIoLseek(fd, 0, SCE_SEEK_END);
+	size = offset;
+	if (offset < 0) {
+		sceIoClose(fd);
+		return (SceInt32)offset;
+	}
+	sceIoLseek(fd, 0, SCE_SEEK_SET);
+	pBuffer = photoExportAlloc(pSession, PHOTO_EXPORT_PIECE_SIZE);
+	if (pBuffer == NULL) {
+		sceIoClose(fd);
+		return PHOTO_ERROR_NO_MEMORY;
+	}
+	pieces = size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0) - 1;
+	sent = 0;
+	shown = 0;
+	result = 0;
+	if (pieces > 0) {
+		scale = (float)(int)(size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0));
+		do {
+			result = sceIoRead(fd, pBuffer, PHOTO_EXPORT_PIECE_SIZE);
+			if (result < 0)
+				break;
+			result = photoExportSendData(pSession, pBuffer, PHOTO_EXPORT_PIECE_SIZE, sent, 0,
+						     size, reserved, pExtension, 0);
+			if (result != 0)
+				break;
 			if (cancelFunc != NULL && cancelFunc(userdata) != 0) {
 				result = PHOTO_ERROR_CANCELED;
-				goto failed;
+				break;
 			}
-			result = photoExportWait(&session, 0, NULL, cancelFunc, NULL, userdata, pResult);
-			if (result == 0) {
-				if (pContentId != NULL) {
-					pContentId[0] = pResult->contentId[0];
-					pContentId[1] = pResult->contentId[1];
-				} else if (pExportedPath != NULL && exportedPathLength > 0) {
-					sceClibStrncpy(pExportedPath, pResult->path, exportedPathLength);
+			sent++;
+			if (progressFunc != NULL) {
+				percent = (int)((float)photoExportGetWeight(pSession, index)
+						* (float)((float)sent / scale));
+				if (shown != percent) {
+					progressFunc(userdata, percent + pSession->progress);
+					shown = percent;
 				}
-				goto release;
 			}
+		} while (sent < pieces);
+	}
+	if (cancelFunc != NULL && cancelFunc(userdata) != 0) {
+		result = PHOTO_ERROR_CANCELED;
+	} else {
+		if (result == 0) {
+			result = sceIoRead(fd, pBuffer, size - (sent << 14));
+			if (result >= 0)
+				result = photoExportSendData(pSession, pBuffer, result, sent, 1, size,
+							     reserved, pExtension, 0);
 		}
-		if (result != IPMI_ERROR_TERMINATED) {
-failed:
-			if (pContentId != NULL) {
-				pContentId[0] = -1;
-				pContentId[1] = -1;
-			} else if (pExportedPath != NULL && exportedPathLength > 0) {
-				*pExportedPath = 0;
-			}
+		if (progressFunc != NULL) {
+			percent = photoExportGetWeight(pSession, index);
+			progressFunc(userdata, percent + pSession->progress);
+			pSession->progress += percent;
 		}
-release:
-		photoExportFree(&session, pResult);
-		photoExportCloseSession(&session);
-	} while (result == IPMI_ERROR_TERMINATED);
+	}
+	sceIoClose(fd);
+	photoExportFree(pSession, pBuffer);
 	return result;
 }
 
@@ -839,7 +901,7 @@ extern "C" SceInt32 scePhotoExportFromFile(const SceChar8 *photodataPath, const 
 }
 
 /* the file export of the two variants: the checks, then the export */
-static SceInt32 photoExportFromFileEx(const char *pPath, const ScePhotoExportParam *param,
+static __attribute__((noinline)) SceInt32 photoExportFromFileEx(const char *pPath, const ScePhotoExportParam *param,
 				      SceInt32 reserved, void *workMemory,
 				      ScePhotoExportCancelFunc cancelFunc, void *userdata,
 				      SceInt32 *pContentId, char *pExportedPath,
@@ -1102,31 +1164,8 @@ extern "C" SceInt32 ScePhotoExport_05D5A482(const char *pPath, void *workMemory,
 	return result;
 }
 
-/* what the image parsers read from a header */
-typedef struct PhotoExportImageInfo {
-	SceInt32 width;
-	SceInt32 height;
-	SceInt32 bitCount;		/* BMP */
-	SceInt32 compression;		/* BMP */
-	SceInt32 subsampling;		/* JPEG: 1 4:4:4, 2 4:2:2, 3 4:2:0, 4 4:1:1 */
-	SceInt32 pngInterlace;
-	SceInt32 pngColourType;
-	SceInt32 tiffPhotometric;
-	SceInt32 progressive;		/* JPEG */
-} PhotoExportImageInfo;
-
-static SceUInt32 photoExportSwap32(SceUInt32 value)
-{
-	return (value << 24) | ((value & 0xFF00) << 8) | ((value >> 8) & 0xFF00) | (value >> 24);
-}
-
-static SceUInt32 photoExportSwap16(SceUInt32 value)
-{
-	return ((value & 0xFF) << 8) | ((value >> 8) & 0xFF);
-}
-
 /* the TIFF header: the byte order and the offset of the first directory */
-static SceInt32 photoExportTiffHeader(const SceUInt8 *pData, SceInt32 size, SceInt32 *pLittleEndian,
+static __attribute__((noinline)) SceInt32 photoExportTiffHeader(const SceUInt8 *pData, SceInt32 size, SceInt32 *pLittleEndian,
 				      SceInt64 *pOffset)
 {
 	SceUInt32 offset;
@@ -1145,7 +1184,7 @@ static SceInt32 photoExportTiffHeader(const SceUInt8 *pData, SceInt32 size, SceI
 }
 
 /* the format of the data, from its first bytes */
-static SceInt32 photoExportGetFormat(const void *pData)
+static __attribute__((noinline)) SceInt32 photoExportGetFormat(const void *pData)
 {
 	static const SceUInt8 pngSignature[8] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
 	static const SceUInt8 jpegSignature[2] = { 0xFF, 0xD8 };
@@ -1166,7 +1205,7 @@ static SceInt32 photoExportGetFormat(const void *pData)
 }
 
 /* the PNG header chunk */
-static SceInt32 photoExportPngInfo(const SceUInt8 *pData, SceInt32 size, PhotoExportImageInfo *pInfo)
+static __attribute__((noinline)) SceInt32 photoExportPngInfo(const SceUInt8 *pData, SceInt32 size, PhotoExportImageInfo *pInfo)
 {
 	SceUInt32 width, height;
 
@@ -1184,7 +1223,7 @@ static SceInt32 photoExportPngInfo(const SceUInt8 *pData, SceInt32 size, PhotoEx
 }
 
 /* one marker of a JPEG: its length, the frame header and the start of the scan */
-static SceInt32 photoExportJpegMarker(const SceUInt16 *pData, SceInt32 size, SceInt64 *pPosition,
+static __attribute__((noinline)) SceInt32 photoExportJpegMarker(const SceUInt16 *pData, SceInt32 size, SceInt64 *pPosition,
 				      SceUInt32 *pLength, SceInt32 *pScan, PhotoExportImageInfo *pInfo)
 {
 	SceInt64 position, next;
@@ -1260,7 +1299,7 @@ static SceInt32 photoExportJpegMarker(const SceUInt16 *pData, SceInt32 size, Sce
 }
 
 /* the entries of a TIFF directory: the width, the height and the photometric interpretation */
-static SceInt32 photoExportTiffEntries(const SceUInt16 *pEntry, SceInt32 littleEndian, SceInt32 count,
+static __attribute__((noinline)) SceInt32 photoExportTiffEntries(const SceUInt16 *pEntry, SceInt32 littleEndian, SceInt32 count,
 				       SceInt32 *pInfo)
 {
 	SceInt32 result = 0;
@@ -1314,7 +1353,7 @@ static SceInt32 photoExportTiffEntries(const SceUInt16 *pEntry, SceInt32 littleE
 }
 
 /* the BMP header: the sizes and the colour depth */
-static SceInt32 photoExportBmpInfo(const SceUInt8 *pData, SceInt32 size, PhotoExportImageInfo *pInfo)
+static __attribute__((noinline)) SceInt32 photoExportBmpInfo(const SceUInt8 *pData, SceInt32 size, PhotoExportImageInfo *pInfo)
 {
 	SceUInt32 headerSize;
 	SceInt32 height;
@@ -1347,7 +1386,7 @@ static SceInt32 photoExportBmpInfo(const SceUInt8 *pData, SceInt32 size, PhotoEx
 }
 
 /* whether the photo application shows an image of this size and kind */
-static SceBool photoExportCheckLimits(SceInt32 format, const PhotoExportImageInfo *pInfo)
+static __attribute__((noinline)) SceBool photoExportCheckLimits(SceInt32 format, const PhotoExportImageInfo *pInfo)
 {
 	SceInt64 pixels = (SceInt64)pInfo->width * pInfo->height;
 	SceInt64 limit;
@@ -1470,7 +1509,7 @@ extern "C" SceInt32 scePhotoExportIsAvailableFromData(const void *photodata, Sce
 }
 
 /* the TIFF directory of a file */
-static SceInt32 photoExportTiffInfoFromFile(SceUID fd, SceInt32 *pInfo)
+static __attribute__((noinline)) SceInt32 photoExportTiffInfoFromFile(SceUID fd, SceInt32 *pInfo)
 {
 	SceUInt8 header[8];
 	SceInt32 littleEndian;
@@ -1572,31 +1611,7 @@ out:
 	return result;
 }
 
-/* the length of a string with its NUL terminator, as the requests send it */
-static SceInt32 photoExportSize(const char *pString)
-{
-	SceInt32 length = 0;
-
-	if (*pString != 0) {
-		length = 0;
-		do {
-			pString++;
-			length++;
-		} while (*pString != 0);
-	}
-	return length + 1;
-}
-
-typedef struct PhotoExportSendHeader {
-	SceInt32 size;
-	SceInt32 index;
-	SceUInt8 last;
-	SceInt64 total;
-	SceInt32 reserved;
-	SceInt32 reserved2;
-} PhotoExportSendHeader;
-
-static SceInt32 photoExportIpcSendData(IPMI::Client *pClient, void *pData, SceInt32 size,
+static __attribute__((noinline)) SceInt32 photoExportIpcSendData(IPMI::Client *pClient, void *pData, SceInt32 size,
 				       SceInt32 index, SceUInt8 last, SceInt64 total, SceInt32 reserved,
 				       const char *pName, SceInt32 reserved2, const char *pPhotoTitle,
 				       const char *pGameTitle, const char *pGameComment,
@@ -1634,7 +1649,7 @@ static SceInt32 photoExportIpcSendData(IPMI::Client *pClient, void *pData, SceIn
 	return result;
 }
 
-static SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
+static __attribute__((noinline)) SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
 				    SceInt32 reserved, SceInt32 count, void *pData)
 {
 	SceInt32 result;
@@ -1653,7 +1668,7 @@ static SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
 	return result;
 }
 
-static SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestId,
+static __attribute__((noinline)) SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestId,
 					SceInt32 *pCount, void *pData)
 {
 	SceInt32 result;
@@ -1673,7 +1688,7 @@ static SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestI
 	return result;
 }
 
-static SceInt32 photoExportIpcCancel(IPMI::Client *pClient)
+static __attribute__((noinline)) SceInt32 photoExportIpcCancel(IPMI::Client *pClient)
 {
 	SceInt32 result;
 	SceInt32 value = 0;
@@ -1685,7 +1700,7 @@ static SceInt32 photoExportIpcCancel(IPMI::Client *pClient)
 	return result;
 }
 
-static SceInt32 photoExportIpcAbort(IPMI::Client *pClient)
+static __attribute__((noinline)) SceInt32 photoExportIpcAbort(IPMI::Client *pClient)
 {
 	SceInt32 result;
 	SceInt32 value = 0;
@@ -1697,7 +1712,7 @@ static SceInt32 photoExportIpcAbort(IPMI::Client *pClient)
 	return result;
 }
 
-static SceInt32 photoExportIpcGetProgress(IPMI::Client *pClient, SceInt32 *pProgress)
+static __attribute__((noinline)) SceInt32 photoExportIpcGetProgress(IPMI::Client *pClient, SceInt32 *pProgress)
 {
 	SceInt32 result;
 	SceInt32 value = 0;
@@ -1712,7 +1727,7 @@ static SceInt32 photoExportIpcGetProgress(IPMI::Client *pClient, SceInt32 *pProg
 	return result;
 }
 
-static SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index,
+static __attribute__((noinline)) SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index,
 					   const char *pPath)
 {
 	SceInt32 value = 0;
@@ -1732,7 +1747,7 @@ static SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index
 	return result;
 }
 
-static SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
+static __attribute__((noinline)) SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
 					 SceInt32 reserved, SceInt32 kind, SceInt32 count,
 					 void *pData)
 {
@@ -1753,7 +1768,7 @@ static SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pReque
 	return result;
 }
 
-static SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 requestId,
+static __attribute__((noinline)) SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 requestId,
 					     SceInt32 *pCount, void *pData)
 {
 	SceInt32 result;
@@ -1772,3 +1787,4 @@ static SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 req
 		result = value;
 	return result;
 }
+
