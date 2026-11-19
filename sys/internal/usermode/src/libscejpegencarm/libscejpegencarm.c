@@ -383,47 +383,6 @@ int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, co
 	return ret;
 }
 
-extern void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
-
-/* writes the bit buffer out as four bytes, each 0xFF followed by a stuffed 0 */
-int jpegEncArmFlushBits(SceJpegArmEncoderContext *context)
-{
-	SceUInt8 *p;
-	SceUInt32 bits;
-	int ret;
-
-	p = context->pOut;
-	bits = context->bitBuffer;
-	if (context->pOut >= context->pOutLimit)
-		return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
-	*p = bits >> 24;
-	if ((bits >> 24) == 0xFF)
-		*++p = 0;
-	p[1] = bits >> 16;
-	if ((SceUInt8)(bits >> 16) == 0xFF) {
-		p[2] = 0;
-		p++;
-	}
-	p[2] = bits >> 8;
-	if ((SceUInt8)(bits >> 8) == 0xFF) {
-		p[3] = 0;
-		p++;
-	}
-	p[3] = bits;
-	ret = 0;
-	if ((SceUInt8)bits == 0xFF) {
-		p[4] = 0;
-		p++;
-	}
-	context->pOut = &p[(context->bitCount + 39) >> 3];
-	return ret;
-}
-
-void *jpegEncArmMemcpy(void *dst, const void *src, SceSize len)
-{
-	return sceClibMemcpy_safe(dst, src, len);
-}
-
 /* the scan order's step from one coefficient to the next in the transposed block */
 static const SceInt8 jpegEncArmZigzagDelta[64] = {
 	-14, 2, 14, 14, 16, -14, -14, -14, 2, 14, 14, 14, 14, 16, -14, -14,
@@ -486,6 +445,166 @@ static const SceUInt8 jpegEncArmSoiHeader[24] = {
 	0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x02, 0x01, 0x00, 0x80,
 	0x00, 0x80, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x84,
 };
+
+
+/*
+ * Appends delta bits to the bit buffer: value is already aligned for the rotation, delta is
+ * the number of bits it takes (negative for the magnitude's complement count). Once the buffer
+ * is full, its 32 bits go out as four bytes, each 0xFF followed by a stuffed 0.
+ */
+#define JPEG_ENC_ARM_PUT(value, delta)					\
+	do {								\
+		SceInt32 n_ = (delta);					\
+		SceUInt32 t_ = ror32((value), count & 31);		\
+		SceUInt32 hi_ = (t_ >> 16) << 16;			\
+		count -= n_;						\
+		bits ^= t_;						\
+		if (__builtin_expect(count >= 0, 0)) {			\
+			bits ^= hi_;					\
+			if (p >= limit)					\
+				goto out;				\
+			count -= 32;					\
+			*p = bits >> 24;				\
+			if ((bits >> 24) == 0xFF)			\
+				*++p = 0;				\
+			p[1] = bits >> 16;				\
+			if ((SceUInt8)(bits >> 16) == 0xFF) {		\
+				p[2] = 0;				\
+				p++;					\
+			}						\
+			p[2] = bits >> 8;				\
+			if ((SceUInt8)(bits >> 8) == 0xFF) {		\
+				p[3] = 0;				\
+				p++;					\
+			}						\
+			p[3] = bits;					\
+			if ((SceUInt8)bits == 0xFF) {			\
+				p[4] = 0;				\
+				p++;					\
+			}						\
+			p += 4;						\
+			bits = hi_;					\
+		}							\
+	} while (0)
+
+static inline SceUInt32 ror32(SceUInt32 value, SceUInt32 n)
+{
+	return (value >> n) | (value << (32 - n));
+}
+
+/* Huffman codes one 8x8 block of quantised coefficients (DC difference, AC runs, EOB) */
+int jpegEncArmWriteBlock(SceJpegArmEncoderContext *context, SceInt16 *block, SceInt32 component,
+			 const SceInt8 *huffman)
+{
+	SceUInt8 *p;
+	SceUInt8 *limit;
+	SceUInt32 bits;
+	SceInt32 count;
+	SceInt32 diff, coef, len, run, delta;
+	SceUInt32 nbits;
+	const SceInt8 *entry;
+	const SceInt8 *zigzag, *runStart;
+	SceInt32 code;
+	SceInt32 finalLen;
+	SceUInt32 finalValue;
+
+	p = context->pOut;
+	limit = context->pOutLimit;
+	bits = context->bitBuffer;
+	count = context->bitCount;
+	diff = block[0] - context->dcPred[component];
+	nbits = __builtin_clz(__builtin_abs(diff));
+	entry = huffman - nbits;
+	len = entry[362];
+	code = entry[32];
+	context->dcPred[component] = block[0];
+	runStart = jpegEncArmZigzagDelta;
+	for (;;) {
+		JPEG_ENC_ARM_PUT(code << (len & 31), len);
+		JPEG_ENC_ARM_PUT((diff + (diff >> 31)) << nbits, nbits - 32);
+		zigzag = runStart;
+		for (;;) {
+			coef = block[8];
+			delta = *zigzag++;
+			block = (SceInt16 *)((char *)block + delta);
+			if (coef != 0)
+				break;
+			if (delta == 0) {
+				finalLen = huffman[3];
+				finalValue = (SceUInt32)huffman[206] << 29;
+				goto final;
+			}
+		}
+		run = zigzag - (runStart + 17);
+		diff = coef;
+		nbits = __builtin_clz(__builtin_abs(coef));
+		if (run >= 0) {
+			len = huffman[32];
+			do {
+				JPEG_ENC_ARM_PUT((SceUInt32)huffman[0] << 19, len);
+				run -= 16;
+			} while (run >= 0);
+		}
+		entry = huffman + run - 16 * nbits + 512;
+		len = entry[11];
+		code = entry[171];
+		if (delta == 0) {
+			JPEG_ENC_ARM_PUT(code << (len & 31), len);
+			finalLen = nbits - 32;
+			finalValue = (diff + (diff >> 31)) << nbits;
+			goto final;
+		}
+		runStart = zigzag;
+	}
+final:
+	JPEG_ENC_ARM_PUT(finalValue, finalLen);
+out:
+	context->bitBuffer = bits;
+	context->bitCount = count;
+	context->pOut = p;
+	return (int)context;
+}
+
+extern void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
+
+/* writes the bit buffer out as four bytes, each 0xFF followed by a stuffed 0 */
+int jpegEncArmFlushBits(SceJpegArmEncoderContext *context)
+{
+	SceUInt8 *p;
+	SceUInt32 bits;
+	int ret;
+
+	p = context->pOut;
+	bits = context->bitBuffer;
+	if (context->pOut >= context->pOutLimit)
+		return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+	*p = bits >> 24;
+	if ((bits >> 24) == 0xFF)
+		*++p = 0;
+	p[1] = bits >> 16;
+	if ((SceUInt8)(bits >> 16) == 0xFF) {
+		p[2] = 0;
+		p++;
+	}
+	p[2] = bits >> 8;
+	if ((SceUInt8)(bits >> 8) == 0xFF) {
+		p[3] = 0;
+		p++;
+	}
+	p[3] = bits;
+	ret = 0;
+	if ((SceUInt8)bits == 0xFF) {
+		p[4] = 0;
+		p++;
+	}
+	context->pOut = &p[(context->bitCount + 39) >> 3];
+	return ret;
+}
+
+void *jpegEncArmMemcpy(void *dst, const void *src, SceSize len)
+{
+	return sceClibMemcpy_safe(dst, src, len);
+}
 
 SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context)
 {
@@ -569,9 +688,9 @@ SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context)
 			*p++ = q;
 		} while (i != 64);
 	}
-	context->reserved0E[2] = 0;
-	context->reserved0E[1] = 0;
-	context->reserved0E[0] = 0;
+	context->dcPred[2] = 0;
+	context->dcPred[1] = 0;
+	context->dcPred[0] = 0;
 	if (context->headerMode != 0) {
 		__builtin_memcpy(p, &jpegEncArmHuffmanHeader[420], 5);
 		p += 5;

@@ -26,7 +26,7 @@ typedef struct SceJpegArmEncoderContext {
 	SceUInt32 bitBuffer;		/* +0x08 */
 	SceInt8 bitCount;		/* +0x0C */
 	SceUInt8 ratio;			/* +0x0D compression ratio, 0x40 after Init */
-	SceUInt16 reserved0E[3];		/* +0x0E */
+	SceInt16 dcPred[3];		/* +0x0E previous DC value of each component */
 	SceUInt16 validWidth;		/* +0x14 */
 	SceUInt16 validHeight;		/* +0x16 */
 	SceUInt16 width;		/* +0x18 */
@@ -55,6 +55,8 @@ typedef struct JpegEncArmComponent {
 	SceInt32 rowStep;		/* step to the next strip row */
 } JpegEncArmComponent;
 
+extern int jpegEncArmWriteBlock(SceJpegArmEncoderContext *context, SceInt16 *block, SceInt32 component,
+				const SceInt8 *huffman);
 extern SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context);
 extern int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, const void *pCb,
 				  const void *pCr, SceUInt32 flags, void *outBuffer, SceSize outSize,
