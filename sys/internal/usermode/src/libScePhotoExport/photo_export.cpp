@@ -807,7 +807,7 @@ static __attribute__((noinline)) SceInt32 photoExportSendFile(SceInt32 index, Ph
 	SceInt64 size;
 	SceOff offset;
 	void *pBuffer;
-	SceInt32 result, pieces, sent, shown, percent;
+	SceInt32 result, total, pieces, sent, shown, percent;
 	float scale;
 
 	fd = sceIoOpen(pFile, SCE_O_RDONLY, 0);
@@ -825,12 +825,13 @@ static __attribute__((noinline)) SceInt32 photoExportSendFile(SceInt32 index, Ph
 		sceIoClose(fd);
 		return PHOTO_ERROR_NO_MEMORY;
 	}
-	pieces = size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0) - 1;
+	total = size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0);
+	pieces = total - 1;
 	sent = 0;
 	shown = 0;
 	result = 0;
 	if (pieces > 0) {
-		scale = (float)(int)(size / PHOTO_EXPORT_PIECE_SIZE + (size % PHOTO_EXPORT_PIECE_SIZE != 0));
+		scale = (float)total;
 		do {
 			result = sceIoRead(fd, pBuffer, PHOTO_EXPORT_PIECE_SIZE);
 			if (result < 0)
@@ -1401,17 +1402,17 @@ static __attribute__((noinline)) SceBool photoExportCheckLimits(SceInt32 format,
 			limit = 522240;
 		else
 			limit = pInfo->pngColourType == 3 ? 522240 : 1966080;
-		return pixels > 0 && (SceUInt32)limit >= (SceUInt64)pixels;
+		return pixels > 0 && limit >= pixels;
 	case PHOTO_EXPORT_FORMAT_JPEG:
 		limit = 40000000;
 		if ((pInfo->progressive & 1) != 0)
 			limit = 522240;
-		return pixels > 0 && (SceUInt32)limit >= (SceUInt64)pixels;
+		return pixels > 0 && limit >= pixels;
 	case PHOTO_EXPORT_FORMAT_TIFF:
 		limit = 1966080;
 		if (pInfo->tiffPhotometric == 3)
 			limit = 522240;
-		return pixels > 0 && (SceUInt32)limit >= (SceUInt64)pixels;
+		return pixels > 0 && limit >= pixels;
 	case PHOTO_EXPORT_FORMAT_BMP: {
 		SceInt32 bits = pInfo->bitCount;
 
@@ -1430,7 +1431,7 @@ static __attribute__((noinline)) SceBool photoExportCheckLimits(SceInt32 format,
 		default:
 			break;
 		}
-		if (pixels > 0 && (SceUInt32)limit >= (SceUInt64)pixels) {
+		if (pixels > 0 && limit >= pixels) {
 			SceInt32 compression = pInfo->compression;
 
 			if (compression == 0 || ((bits == 16 || bits == 32) && compression == 3))
