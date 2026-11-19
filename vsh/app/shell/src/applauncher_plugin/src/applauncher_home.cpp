@@ -477,7 +477,7 @@ ApplauncherPage *applauncherHomeAddPage(const LsdbPage *param, ApplauncherPage *
 		page->GetWidget()->SetMetaAlpha(0.0f, NULL, ui::Widget::ANIM_META_ALPHA);
 		page->GetWidget()->SetMetaAlpha(1.0f, new Timer(500.0f, Timer::FUNC_QUAD_OUT),
 						ui::Widget::ANIM_META_ALPHA);
-		page->Save();
+		page->BeginEdit();
 		for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
 		     it != g_applauncherHome->m_scroller.m_items.end(); ++it) {
 			ApplauncherPage *item = static_cast<ApplauncherPage *>(*it);
@@ -604,9 +604,9 @@ void ApplauncherHome::EnterEditMode()
 	home = g_applauncherHome;
 	for (ShellSnapList::iterator it = home->m_scroller.m_items.begin();
 	     it != home->m_scroller.m_items.end(); ++it)
-		static_cast<ApplauncherPage *>(*it)->Save();
+		static_cast<ApplauncherPage *>(*it)->BeginEdit();
 	if (g_applauncherHome->m_appPage != NULL)
-		g_applauncherHome->m_appPage->Save();
+		g_applauncherHome->m_appPage->BeginEdit();
 	g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_EDIT_MODE_ENTERED]();
 	if (g_applauncherHome->m_flags0[1]) {
 		wstring text(g_applauncherPlugin->GetString(IDParam(APPLAUNCHER_HOME_WAIT_TEXT)));
@@ -1928,7 +1928,7 @@ ApplauncherPage *applauncherHomeOpenAppPage(const common::SharedPtr<ApplauncherI
 				icon->m_page->MoveIconsAside(icon);
 			g_applauncherHome->CreateOverlay();
 			if (g_applauncherState->m_settings->m_sortEnabled != 0)
-				g_applauncherHome->m_appPage->Save();
+				g_applauncherHome->m_appPage->BeginEdit();
 		}
 	}
 	return g_applauncherHome->m_appPage;

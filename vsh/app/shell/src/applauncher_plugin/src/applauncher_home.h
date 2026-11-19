@@ -70,11 +70,24 @@ public:
 	void LoadView();
 	/* PLACEHOLDER name: where the icon's widget stands in its slot (0x810D0012) */
 	paf::math::v4 GetSlotPos();
+	/* PLACEHOLDER name: a folder, its data's type 5 (0x810CF74C) */
+	bool IsFolder();
+	/* PLACEHOLDER name: the icon widget's effect resumed (0x810D19F6) */
+	void Resume();
+	/* PLACEHOLDER names: the icon put in the edit (0x810CFFD2), and out (0x810CFFEC) */
+	void BeginEdit(bool animate);
+	void EndEdit();
+	/* PLACEHOLDER names: whether the folder takes the title (a folder with room, the title
+	   not in it yet; 0x810D1738), and the icon put in the folder and deleted from its page,
+	   deleted alone without a folder (0x810D1A06) */
+	bool CanAddChild(const char *titleId);
+	void PutInFolder(const paf::common::SharedPtr<ApplauncherIcon> &folder);
 
 	SceUInt32 reserved0[4];
 	paf::ui::AppIconBase **m_icon;		/* PLACEHOLDER: the icon's widget, first of its view */
 	ApplauncherPage *m_page;		/* PLACEHOLDER: the page it is on */
-	SceUInt8 reserved1[5];
+	SceUInt8 reserved1[4];
+	bool m_selected;			/* PLACEHOLDER: marked selected (Select, Unselect) */
 	bool m_hidden;				/* PLACEHOLDER: not shown (left out of the snaps) */
 	SceUInt8 reserved2;
 	bool m_added;				/* PLACEHOLDER: just put on the home by func0 */
@@ -94,6 +107,21 @@ struct ApplauncherRemovedIcon {
 	int m_slot;
 };
 PAF_VECTOR_INLINE_DTOR(ApplauncherRemovedIcon)
+
+/* PLACEHOLDER: the image of a folder's child, and its surface, by its position in the folder */
+struct ApplauncherFolderImage {
+	int m_pos;
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_image;
+};
+struct ApplauncherFolderSurface {
+	int m_pos;
+	paf::intrusive_ptr<paf::graph::Surface> m_surface;
+};
+
+/* PLACEHOLDER: a folder's icon drawn from its children's surfaces by the icon capture
+   (SceShellIconCaptureManager), as a PNG the caller frees, its size given back (0x813C3A72) */
+void *applauncherIconCaptureFolder(const paf::vector<ApplauncherFolderSurface> *surfaces,
+				   int *size);
 
 /*
  * PLACEHOLDER: an item of a ShellSnapList, its widget snapped to by the list's scroll view
@@ -183,13 +211,28 @@ public:
    fields read here only) */
 class ApplauncherPageView {
 public:
+	/* PLACEHOLDER names: the view's empty mark shown or hidden (0x810C5156), and its widgets
+	   brought up to the home's page count (0x810C5A0E) */
+	void SetEmpty(bool empty);
+	void Refresh();
+	/* PLACEHOLDER names: the edit begun on the view, empty or not (0x810C5688), and ended
+	   (0x810C51E2); the slot's frame faded in (0x810C5C08) and out (0x810C5D0C) */
+	void BeginEdit(bool empty);
+	void EndEdit();
+	void ShowSlotFrame(int slot, bool animate);
+	void HideSlotFrame(int slot, bool animate);
+
 	SceUInt32 reserved[2];
 	paf::ui::Widget *m_root;		/* PLACEHOLDER: the widget its icons go on */
 };
 void applauncherPageViewRelease(ApplauncherPageView *view);
+class ApplauncherPage;
+ApplauncherPageView *applauncherPageViewGet(ApplauncherPage *page, bool fast);
 
 class ApplauncherPageBase {
 public:
+	/* the page of the type, its slots empty (0x810B8516) */
+	ApplauncherPageBase(int type);
 	virtual ~ApplauncherPageBase();
 	/* PLACEHOLDER name: the page's view shown empty, or not (0x810B7DD4) */
 	virtual void SetEmpty(bool empty);
@@ -200,7 +243,8 @@ public:
 	virtual int GetIndex(void);		/* PLACEHOLDER name */
 	virtual paf::ui::Widget *GetWidget(void);
 	virtual bool IsOpened(void);		/* PLACEHOLDER name: the application page's opening done */
-	virtual void reserved10(void);
+	/* PLACEHOLDER name: where the slot's icon stands on the page */
+	virtual paf::math::v2 GetSlotPos(int slot);
 	virtual void UpdateFade(void);		/* PLACEHOLDER name: the wave's fade applied each frame */
 
 	int m_type;				/* 1: the last, empty page */
@@ -222,8 +266,12 @@ class ApplauncherPage : public ApplauncherPageBase, public ShellSnapListItem {
 public:
 	/* the page made on the plugin, from the parameters (0x810D3BB8) */
 	ApplauncherPage(paf::Plugin *plugin, const LsdbPage *param, int type);
-	/* the page saved to the database (0x810B86B4) */
-	void Save();
+	/* PLACEHOLDER name: the edit begun on the page: its view refreshed below ten pages, its
+	   icons and view put in the edit, its slots' frames set (0x810B86B4) */
+	void BeginEdit();
+	/* PLACEHOLDER name: the slots' frames shown where no folder stands in place, hidden
+	   under the others (0x810B85C6) */
+	void UpdateSlotFrames(bool animate);
 
 	LsdbPage m_param;		/* what it was made from */
 	paf::ui::Widget *m_noticeText;		/* PLACEHOLDER: the notice page's text */
@@ -238,6 +286,9 @@ public:
 	bool IsEmpty();
 	/* its icons loaded (0x810B8752) */
 	void Load(bool fast);
+	/* PLACEHOLDER name: the icons' widgets taken from the pool once (again when forced), those
+	   just added hidden to be shown later (0x810B7E5A) */
+	void LoadIcons(bool force);
 	/* PLACEHOLDER names: the page's parameters copied out (0x810D2716), and set
 	   (0x810D274C) */
 	void GetParam(LsdbPage *param);
@@ -288,8 +339,14 @@ public:
 	int GetEmptySlot();
 	/* the icon's move begun on the page (Sony's name, from its message; 0x810B4CBE) */
 	void iconMoveBegin(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+	/* PLACEHOLDER name (after iconMoveBegin): the dragged icon moved over the page's slots, the
+	   page it leaves for or opens given back, NULL when it stays (0x810B551E) */
+	ApplauncherPage *iconMove(const paf::common::SharedPtr<ApplauncherIcon> &icon, bool held,
+				 int phase);
 	bool PutIcon(const paf::common::SharedPtr<ApplauncherIcon> &icon, int slot, bool attach,
 		     bool toFolder);
+	/* PLACEHOLDER name (after iconMove): the dragged icon let go of on the page (0x810B6D62) */
+	void iconMoveEnd(const paf::common::SharedPtr<ApplauncherIcon> &icon);
 };
 
 /* the home's page indicator: the dots under the pages (0x810C24D8; names ours) */
@@ -447,6 +504,9 @@ void applauncherIconCancelDrag(void);
    once (0x810B3B36), both in the page's file */
 bool applauncherPagesLoaded(void);
 void applauncherPagesSetStarted(void);
+/* PLACEHOLDER: the applauncher's request kept, outside the IDU mode and without one
+   (0x810B8830, applauncher_page.cpp) */
+void applauncherPagesHoldRequest(void);
 /* PLACEHOLDER: the IconCacheManager, its manager first (0x815553B0, the icon cache's file) */
 struct ApplauncherIconCache {
 	paf::cache::CacheManager *m_manager;
@@ -629,7 +689,7 @@ void applauncherIconRemove(paf::common::SharedPtr<ApplauncherIcon> icon, bool fr
 void applauncherIconDetach(ApplauncherIcon *icon);
 void applauncherIconDelete(const paf::common::SharedPtr<ApplauncherIcon> &icon, bool animate,
 			   bool save);
-/* PLACEHOLDER: the pages' saved order told of icons taken off (0x810B7FE0) */
+/* PLACEHOLDER: the folders' icons drawn again from their children and saved (0x810B7FE0) */
 void applauncherPagesRemoveIcons(paf::vector<ApplauncherRemovedIcon> *icons);
 /* PLACEHOLDER: livespace_db's export, not declared there yet: the title's application taken
    off, whole with its folder or not */
@@ -640,6 +700,12 @@ extern "C" int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *title
 extern "C" int SceLsdb_94128795(AppInfoSClient *client);
 extern "C" int SceLsdb_8FAD093B(AppInfoSClient *client, int pageNo, unsigned int flags,
 	LsdbPageList *pages);
+/* PLACEHOLDER: livespace_db's exports, not declared there yet: the icons of the pages (or of
+   a folder, by its id) from the page given, and an icon's fields written, its image given */
+extern "C" int SceLsdb_D74AC354(AppInfoSClient *client, int pageNo, unsigned int count,
+	LsdbPageIconLists *pages);
+extern "C" int SceLsdb_C1A82AC8(AppInfoSClient *client, int pageNo, const LsdbIconPtr *icon,
+	unsigned int fields, const void *image, int imageSize);
 extern "C" int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string &titleId, bool whole, int flags);
 
 /* PLACEHOLDER: the 42 icons of the pool dimmed or not (0x810BCC60, the icon pool's file) */
@@ -717,6 +783,27 @@ paf::common::SharedPtr<paf::job::JobItem> applauncherGetIconNumJobStart(
 paf::common::SharedPtr<paf::job::JobItem> applauncherGetIconInfoJobStart(
 	paf::job::JobQueue *queue, const paf::string &titleId, ApplauncherLsdbJobCallback callback,
 	void *arg);
+
+/*
+ * The moves of icons saved, as livespace_db's AppDbMoveIcons takes them (Sony's job name,
+ * SetPageLayoutJob; 0x811C53DA puts it on the queue): each icon's page and position before and
+ * after, and the folders' icons taken off; its function run with it (PLACEHOLDER) before its
+ * callback.
+ */
+class SetPageLayoutJob : public ApplauncherLsdbJob {
+public:
+	paf::vector<int> m_fromPages;
+	paf::vector<int> m_fromPositions;
+	paf::vector<int> m_toPages;
+	paf::vector<int> m_toPositions;
+	paf::vector<ApplauncherRemovedIcon> m_removed;
+	ApplauncherLsdbJobCallback m_onRun;
+};
+paf::common::SharedPtr<paf::job::JobItem> applauncherSetPageLayoutJobStart(
+	paf::job::JobQueue *queue, const paf::vector<int> &fromPages,
+	const paf::vector<int> &fromPositions, const paf::vector<int> &toPages,
+	const paf::vector<int> &toPositions, const paf::vector<ApplauncherRemovedIcon> &removed,
+	ApplauncherLsdbJobCallback onRun, ApplauncherLsdbJobCallback callback, void *arg);
 
 /* the database jobs that put an application's row in (InsertAppInfoJob, 0x811C6110), rewrite
    it (UpdateAppInfoJob, 0x811C6340), rewrite what changed of it (UpdateAppInfoDiffJob,
