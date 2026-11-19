@@ -2472,10 +2472,10 @@ bool applauncherInterfaceHasApp(const string &titleId)
 }
 
 /* the interface's func22: the title's change log opened (0x810B12B4) */
-int applauncherInterfaceOpenChangeLog(const char *titleId, void *arg1, void *arg2, void *arg3,
-				      void *arg4)
+int applauncherInterfaceOpenChangeLog(const paf::string *titleId, void *loadArg,
+				      ApplauncherChangeLogCallback callback, int value, void *arg)
 {
-	return applauncherChangeLogOpen(titleId, arg1, arg2, arg3, arg4);
+	return applauncherChangeLogOpen(titleId, loadArg, callback, value, arg);
 }
 
 /* the interface's func23: the theme reloaded and, once it has data, its UI refreshed on the

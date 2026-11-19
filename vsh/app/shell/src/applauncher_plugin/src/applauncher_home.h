@@ -23,6 +23,7 @@
 #include <job/job.h>
 #include <cache/cache_image.h>
 #include <cache/cache_manager.h>
+#include <common_gui_dialog/common_gui_dialog.h>
 #include "../../../plugins.h"
 #include "../../livespace_db/livespace_db_internal.h"
 
@@ -618,6 +619,13 @@ void applauncherInterfaceReloadIcons(void);
 void applauncherInterfaceClearRequest(void);
 void applauncherHomeHideWave(void);
 
+/*
+ * PLACEHOLDER: what a title's change log opened over another application calls once it closes:
+ * the title, the value and argument it was opened with, and 1
+ */
+typedef int (*ApplauncherChangeLogCallback)(const paf::string *titleId, int value, void *arg,
+					    int closed);
+
 /* PLACEHOLDER names: the interface's func18, the index of the page in focus, -1 without one
    (0x810B10E2); func19, the application's page closed (0x810B1110); func21, whether the title
    is on the home, as an icon or in a folder (0x810B1126); func22, the title's change log opened
@@ -626,8 +634,8 @@ void applauncherHomeHideWave(void);
 int applauncherInterfaceGetFocusedPage(void);
 void applauncherInterfaceCloseAppPage(void);
 bool applauncherInterfaceHasApp(const paf::string &titleId);
-int applauncherInterfaceOpenChangeLog(const char *titleId, void *arg1, void *arg2, void *arg3,
-				      void *arg4);
+int applauncherInterfaceOpenChangeLog(const paf::string *titleId, void *loadArg,
+				      ApplauncherChangeLogCallback callback, int value, void *arg);
 int applauncherInterfaceRefreshTheme(void);
 int applauncherInterfaceReloadTheme(void);
 /* PLACEHOLDER name: the interface's func26, the kept request marked (0x810B17D8) */
@@ -649,10 +657,58 @@ const char **shellThemeGetIconTitles(SceUInt32 *count);
 void applauncherIconCacheClearPath(const paf::string &path);
 void applauncherIconCacheMakeSpace(void);
 
-/* PLACEHOLDER: the title's change log ("AppLauncherChangeLog") made and opened, its id given
-   back (0x810B965A) */
-int applauncherChangeLogOpen(const char *titleId, void *arg1, void *arg2, void *arg3,
-			     void *arg4);
+/* PLACEHOLDER names: a title's change log opened over another application, the dialog's ID
+   given back (0x810B965A); the icon's opened over the home (0x810B95CA); the open one closed
+   (0x810B9882) */
+int applauncherChangeLogOpen(const paf::string *titleId, void *loadArg,
+			     ApplauncherChangeLogCallback callback, int value, void *arg);
+class ApplauncherChangeLog *applauncherChangeLogOpenIcon(
+	const paf::common::SharedPtr<ApplauncherIcon> &icon);
+void applauncherChangeLogClose(void);
+
+/*
+ * PLACEHOLDER: an application's change information (its sce_sys/changeinfo XML), read in a job
+ * and given as the RichText's marked-up text; its file (0x810C9E26-) is not converted yet. The
+ * constructor is the vector's.
+ */
+class ApplauncherChangeInfo {
+public:
+	/* out of line in Sony's build (folded at 0x814097DC) */
+	__attribute__((noinline)) ApplauncherChangeInfo()
+	{
+	}
+
+	~ApplauncherChangeInfo();				/* 0x810C9E26 */
+	/* the XML of the language (else the default one) in the directory read: 0, or a negative
+	   error (0x810C9F82) */
+	int Load(paf::job::JobItem *job, const char *dir, int language, void *arg);
+	/* each version's heading and text, one after the other (0x810CA930) */
+	void GetText(paf::string *text);
+
+	paf::vector<void *> m_entries;
+};
+
+/*
+ * PLACEHOLDER: a dialog's handler that calls the function with the dialog's value, the button and
+ * its argument (0x810BA6FC, 0x810BA710)
+ */
+class ApplauncherDialogHandler : public CommonGuiDialogHandler {
+public:
+	ApplauncherDialogHandler(CommonGuiDialogFunction func, void *arg);
+
+	virtual ~ApplauncherDialogHandler()
+	{
+	}
+
+	virtual void operator()(SceInt32 value, SceInt32 button);
+
+	CommonGuiDialogFunction m_func;
+	void *m_arg;
+};
+
+/* PLACEHOLDER: the resource ID of an error's text, the generic one for the others (0x810BA734) */
+SceUInt32 applauncherGetErrorTextId(int error);
+#define APPLAUNCHER_ERROR_TEXT_GENERIC		0xC51AA4A4
 /* PLACEHOLDER: the theme's UI refreshed, on the main thread (0x810B28B0) */
 void applauncherHomeOnRefreshThemeUI(void *data);
 /* PLACEHOLDER: a job's end, the semaphore given released (0x810B28B8) */
@@ -911,5 +967,13 @@ enum {
 #define APPLAUNCHER_ERROR_NO_LIVEAREA		((int)0x80103301)
 #define APPLAUNCHER_ERROR_NO_MEMORY		((int)0x80103302)
 #define APPLAUNCHER_ERROR_NO_TITLE		((int)0x80103303)
+/* PLACEHOLDER: a job canceled (0x80103308), an application's change log missing from a
+   directory the game plugin did not mount (0x8010330F), an empty change log (0x80103322) and its
+   other errors (0x80103321, 0x80103323) */
+#define APPLAUNCHER_ERROR_CANCELED		((int)0x80103308)
+#define APPLAUNCHER_ERROR_NO_CHANGE_INFO_DIR	((int)0x8010330F)
+#define APPLAUNCHER_ERROR_CHANGE_INFO_READ	((int)0x80103321)
+#define APPLAUNCHER_ERROR_NO_CHANGE_INFO	((int)0x80103322)
+#define APPLAUNCHER_ERROR_CHANGE_INFO_PARSE	((int)0x80103323)
 
 #endif

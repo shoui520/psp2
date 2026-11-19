@@ -184,6 +184,11 @@ class CommonGuiLayoutDialogParam : public CommonGuiDialogParam {
 public:
 	CommonGuiLayoutDialogParam();
 
+	/* declared, so SNC inlines it into large callers as in Sony's builds */
+	~CommonGuiLayoutDialogParam()
+	{
+	}
+
 	/* the call waits until the dialog closes, and returns its result */
 	bool wait;
 	CommonGuiDialogLayout layout;
