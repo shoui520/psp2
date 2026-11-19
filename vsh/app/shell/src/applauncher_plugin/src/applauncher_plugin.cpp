@@ -31,7 +31,7 @@ void applauncherPluginSetParam(Plugin::InitParam2 *param)
 void applauncherPluginInit(Plugin *plugin)
 {
 	applauncherInterfaceRegister(plugin);
-	applauncherInterfaceSetResource();
+	applauncherHeapSet();
 	applauncherDataCacheCreate(plugin);
 	applauncherIconCacheCreate(plugin);
 

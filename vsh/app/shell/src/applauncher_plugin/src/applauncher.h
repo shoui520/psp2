@@ -17,8 +17,10 @@ void *applauncherPluginGetInterface(const char *name, int id);
 
 /* the plugin's function table set as its GetInterface(1), the plugin kept (0x810C9C7C) */
 void applauncherInterfaceRegister(paf::Plugin *plugin);
-/* the plugin's resource kept for the other files (0x810C9BF0) */
-void applauncherInterfaceSetResource(void);
+/* PLACEHOLDER names: the plugin's private heap kept (0x810C9BF0, applauncher_heap.cpp); nothing
+   in this build reads it (0x81555B18) */
+void applauncherHeapSet(void);
+extern paf::memory::HeapAllocator *g_applauncherHeap;
 /* the plugin's function table, once registered (0x81555B40); the home fills it */
 struct ApplauncherInterface {
 	void (*func[28])(void);
