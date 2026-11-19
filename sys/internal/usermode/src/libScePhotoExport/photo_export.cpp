@@ -1310,9 +1310,9 @@ static __attribute__((noinline)) SceInt32 photoExportTiffEntries(const SceUInt16
 	SceInt32 result = 0;
 	SceInt32 i;
 
-	for (i = 0; i < count; i++) {
-		SceUInt32 tag = pEntry[0];
-		SceUInt32 type = pEntry[1];
+	for (i = 0; count > i; i++) {
+		SceInt32 tag = pEntry[0];
+		SceInt32 type = pEntry[1];
 		SceUInt32 number = *(const SceUInt32 *)(pEntry + 2);
 		SceUInt32 value = 0, short_ = 0;
 
@@ -1334,24 +1334,27 @@ static __attribute__((noinline)) SceInt32 photoExportTiffEntries(const SceUInt16
 				value = photoExportSwap32(value);
 		}
 		pEntry += 6;
-		if (tag > 257) {
-			if (tag == 262) {
-				if (type == 3 && number == 1)
-					pInfo[7] = short_;
-				else
-					result = PHOTO_ERROR_INVALID_DATA;
-			}
-		} else if (tag > 255) {
-			if (tag <= 256) {
-				if (number == 1)
-					pInfo[0] = value;
-				else
-					result = PHOTO_ERROR_INVALID_DATA;
-			} else if (number == 1) {
-				pInfo[1] = value;
-			} else {
+		switch (tag) {
+		case 256:
+			if (number == 1)
+				pInfo[0] = value;
+			else
 				result = PHOTO_ERROR_INVALID_DATA;
-			}
+			break;
+		case 257:
+			if (number == 1)
+				pInfo[1] = value;
+			else
+				result = PHOTO_ERROR_INVALID_DATA;
+			break;
+		case 262:
+			if (type == 3 && number == 1)
+				pInfo[7] = short_;
+			else
+				result = PHOTO_ERROR_INVALID_DATA;
+			break;
+		default:
+			break;
 		}
 	}
 	return result;
