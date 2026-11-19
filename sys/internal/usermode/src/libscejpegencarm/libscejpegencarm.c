@@ -11,8 +11,6 @@
 
 extern void *sceClibMemset(void *dst, int ch, SceSize len);
 
-STUB(SceJpegEncArm_4EE1BAED)
-
 SceSize sceJpegArmEncoderGetContextSize(void)
 {
 	return SCE_JPEG_ARM_ENCODER_CONTEXT_SIZE;
@@ -229,6 +227,162 @@ int sceJpegArmEncoderEncode(SceJpegArmEncoderContext *context, const void *inBuf
 	return ret;
 }
 
+/* the strip-wise encoder: one strip row (or, with bit 1, one MCU) per call; bit 0 continues an image */
+int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, const void *pCb,
+			   const void *pCr, SceUInt32 flags, void *outBuffer, SceSize outSize,
+			   SceSize *pOutSize)
+{
+	JpegEncArmComponent comp[4];
+	SceUInt8 *pStart;
+	SceInt32 ret, width, chromaStride, chromaStep, rowStep, rows, validWidth, validHeight, row;
+
+	if (context == NULL || ((SceUInt32)context & 3) != 0 || pY == NULL || ((SceUInt32)pY & 7) != 0 ||
+	    pCb == NULL || ((SceUInt32)pCb & 7) != 0 || pCr == NULL || (ret = (SceUInt32)pCr & 7) != 0)
+		return SCE_JPEG_ARM_ENCODER_ERROR_INVALID_ARGUMENT;
+	if (flags > 3)
+		return SCE_JPEG_ARM_ENCODER_ERROR_INVALID_STRIP;
+	if (outBuffer == NULL) {
+		pStart = context->pOut;
+		if (pStart == NULL)
+			return SCE_JPEG_ARM_ENCODER_ERROR_INVALID_ARGUMENT;
+	} else {
+		if (pOutSize == NULL || outSize <= 3)
+			return SCE_JPEG_ARM_ENCODER_ERROR_INVALID_ARGUMENT;
+		context->pOut = outBuffer;
+		pStart = outBuffer;
+		context->pOutLimit = (SceUInt8 *)outBuffer + outSize - 4;
+	}
+	if ((flags & 1) == 0 && context->pOutLimit - pStart <= 609)
+		return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+	if (flags & 2) {
+		chromaStep = 64;
+		chromaStride = 8;
+	} else {
+		width = context->width;
+		chromaStride = context->chromaPad;
+	}
+	validWidth = context->validWidth;
+	if (flags & 2) {
+		width = 16;
+		rowStep = 128;
+	} else {
+		rowStep = 8 * width;
+		chromaStride += (SceUInt32)width >> 1;
+	}
+	if ((flags & 2) == 0)
+		chromaStep = 8 * chromaStride;
+	validHeight = context->validHeight;
+	if ((context->format & 9) == 9) {
+		comp[0].stride = width;
+		comp[0].pBase = pY;
+		comp[0].rowStep = rowStep;
+		comp[0].tableId = 0;
+		rows = (validHeight + 7) >> 3;
+		comp[0].pBlock = NULL;
+		comp[0].blockCount = 2;
+		comp[0].advance[0] = 8;
+		comp[0].advance[1] = 8;
+		comp[0].advance[2] = 0;
+		comp[0].advance[3] = 0;
+	} else {
+		comp[0].stride = width;
+		comp[0].pBase = pY;
+		comp[0].rowStep = 16 * width;
+		comp[0].tableId = 0;
+		comp[0].pBlock = NULL;
+		rows = (validHeight + 15) >> 4;
+		comp[0].blockCount = 4;
+		comp[0].advance[0] = 8;
+		comp[0].advance[1] = rowStep - 8;
+		comp[0].advance[2] = 8;
+		comp[0].advance[3] = 8 - rowStep;
+	}
+	comp[1].stride = chromaStride;
+	comp[2].stride = chromaStride;
+	comp[1].pBase = pCb;
+	comp[2].pBase = pCr;
+	comp[1].rowStep = chromaStep;
+	comp[2].rowStep = chromaStep;
+	comp[1].tableId = 1;
+	comp[1].blockCount = 1;
+	comp[2].blockCount = 1;
+	comp[1].pBlock = NULL;
+	comp[2].pBlock = NULL;
+	comp[1].advance[0] = 0;
+	comp[1].advance[1] = 0;
+	comp[1].advance[2] = 0;
+	comp[1].advance[3] = 0;
+	comp[2].advance[1] = 0;
+	comp[2].advance[2] = 0;
+	comp[2].advance[3] = 0;
+	comp[3].tableId = 0;
+	comp[3].blockCount = 0;
+	comp[1].advance[0] = 8;
+	comp[2].advance[0] = 8;
+	comp[2].tableId = 2;
+	if ((flags & 1) == 0) {
+		context->bitCount = -32;
+		context->bitBuffer = 0;
+		context->outputBase = outBuffer != NULL ? 0 : (SceUInt32)pStart;
+		context->pOut = jpegEncArmWriteHeader(context);
+		if (context->pOut >= context->pOutLimit)
+			return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+		context->stripRow = 0;
+		context->stripColumn = 0;
+		row = 0;
+	} else {
+		if (rows <= context->stripRow)
+			return SCE_JPEG_ARM_ENCODER_ERROR_INVALID_STRIP;
+		comp[0].pBlock = pY;
+		comp[1].pBlock = pCb;
+		comp[2].pBlock = pCr;
+		if (flags & 2) {
+			jpegEncArmEncodeStrip(context, 1, comp);
+			if (context->pOut >= context->pOutLimit)
+				return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+			context->stripColumn++;
+			row = context->stripRow;
+			if ((validWidth + 15) >> 4 <= context->stripColumn) {
+				context->stripColumn = 0;
+				context->stripRow = ++row;
+			}
+		} else {
+			jpegEncArmEncodeStrip(context, (validWidth + 15) >> 4, comp);
+			if (context->pOut >= context->pOutLimit)
+				return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+			row = ++context->stripRow;
+		}
+	}
+	if (rows > row) {
+		if (outBuffer != NULL) {
+			*pOutSize = context->pOut - (SceUInt8 *)outBuffer;
+			context->outputBase += context->pOut - (SceUInt8 *)outBuffer;
+			context->pOut = NULL;
+		}
+		return ret;
+	}
+	ret = jpegEncArmFlushBits(context);
+	if (ret < 0)
+		return ret;
+	pStart = context->pOut;
+	context->pOut = pStart + 2;
+	if (context->pOut > context->pOutLimit + 8)
+		return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+	pStart[0] = 0xFF;
+	context->pOut[-1] = 0xD9;
+	context->headerRatio = context->ratio;
+	if (outBuffer != NULL) {
+		SceSize size = context->pOut - (SceUInt8 *)outBuffer;
+
+		ret = context->outputBase + size;
+		*pOutSize = size;
+		context->pOut = NULL;
+	} else {
+		ret = (SceUInt8 *)context->pOut - (SceUInt8 *)context->outputBase;
+	}
+	return ret;
+}
+
 extern void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
 
 /* writes the bit buffer out as four bytes, each 0xFF followed by a stuffed 0 */
@@ -355,7 +509,7 @@ SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context)
 		pHeader[9] = '1';
 	}
 	pQuant = pHeader + 25;
-	pRecip = (SceUInt16 *)&context->reserved20[0x60];
+	pRecip = context->lumaRecip;
 	ratio = context->ratio;
 	pHeader[24] = 0;
 	rebuild = *pRecip == 0;
@@ -385,7 +539,7 @@ SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context)
 		} while (i != 64);
 	}
 	pTable = pQuant;
-	pRecip = (SceUInt16 *)&context->reserved20[0xE0];
+	pRecip = context->chromaRecip;
 	ratio = context->ratio;
 	rebuild = *pRecip == 0;
 	if (context->headerRatio != ratio)

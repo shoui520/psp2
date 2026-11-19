@@ -15,6 +15,7 @@
 #define SCE_JPEG_ARM_ENCODER_ERROR_INVALID_FORMAT	((int)0x80650303)
 #define SCE_JPEG_ARM_ENCODER_ERROR_INVALID_MODE		((int)0x80650304)
 #define SCE_JPEG_ARM_ENCODER_ERROR_INVALID_ARGUMENT	((int)0x80650305)
+#define SCE_JPEG_ARM_ENCODER_ERROR_INVALID_STRIP	((int)0x80650307)
 
 /* pixel format bits: 8/9 (bit 0: 4:2:2 strips of 8 rows) and 0x10/0x11 (bit 4: odd chroma pad) */
 #define SCE_JPEG_ARM_ENCODER_FORMAT_MASK		0x30003
@@ -34,7 +35,13 @@ typedef struct SceJpegArmEncoderContext {
 	SceInt8 headerMode;		/* +0x1D */
 	SceUInt8 headerRatio;		/* +0x1E ratio the tables were built for */
 	SceUInt8 chromaPad;		/* +0x1F */
-	SceUInt8 reserved20[0x160];	/* +0x20 */
+	SceUInt8 reserved20[4];		/* +0x20 */
+	SceInt32 stripRow;		/* +0x24 strip rows done by the strip-wise encoder */
+	SceInt32 stripColumn;		/* +0x28 MCUs done in the current row (single-MCU calls) */
+	SceUInt32 outputBase;		/* +0x2C output already handed back to the caller */
+	SceUInt8 reserved30[0x50];	/* +0x30 */
+	SceUInt16 lumaRecip[64];	/* +0x80 reciprocal of the luma quantiser, in scan order */
+	SceUInt16 chromaRecip[64];	/* +0x100 the same for chroma */
 } SceJpegArmEncoderContext;
 
 /* one image component of a strip (10 words): blocks of 8x8 taken in the order advance[] steps */
@@ -49,6 +56,9 @@ typedef struct JpegEncArmComponent {
 } JpegEncArmComponent;
 
 extern SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context);
+extern int SceJpegEncArm_4EE1BAED(SceJpegArmEncoderContext *context, const void *pY, const void *pCb,
+				  const void *pCr, SceUInt32 flags, void *outBuffer, SceSize outSize,
+				  SceSize *pOutSize);
 extern SceInt32 jpegEncArmFlushBits(SceJpegArmEncoderContext *context);
 extern void jpegEncArmEncodeStrip(SceJpegArmEncoderContext *context, SceInt32 mcuCount,
 				  JpegEncArmComponent *components);
