@@ -25,15 +25,17 @@ using namespace paf;
 #define GAME_ADDCONT_INFO_ERROR_INVALID_ARG	-2146416480	/* 0x8010A1A0 */
 #define GAME_ADDCONT_INFO_ERROR_IO		-2146416479	/* 0x8010A1A1 */
 #define GAME_ADDCONT_INFO_ERROR_BAD_DATA	-2146416478	/* 0x8010A1A2: an instv.dat without its magic */
+#define GAME_ADDCONT_INFO_ERROR_NO_INSTV	-2146416477	/* 0x8010A1A3: a folder without instv.dat */
+#define GAME_ADDCONT_INFO_ERROR_OLD_INSTV	-2146416474	/* 0x8010A1A6: an instv.dat of version 0 */
 
 /* what instv.dat starts with */
 #define GAME_ADDCONT_INSTV_MAGIC	"ACIV"
 
-/* instv.dat, 76 bytes: the version of the folder's layout */
+/* instv.dat's header, 76 bytes, followed by count GameAddcontLicenseInfo */
 struct GameAddcontInstv {
 	char magic[4];		/* GAME_ADDCONT_INSTV_MAGIC */
 	int version;		/* 1 */
-	int reserved;
+	SceUInt32 count;	/* the licenses after the header */
 	SceUInt8 padding[64];
 };
 
@@ -140,7 +142,7 @@ int gameAddcontInfoPrepare(const char *path)
 	sce_paf_memset(&instv, 0, sizeof(instv));
 	sce_paf_memcpy(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4);
 	instv.version = 1;
-	instv.reserved = 0;
+	instv.count = 0;
 	if (file->Write(&instv, sizeof(instv)) != sizeof(instv)) {
 		if (file.get() != NULL)
 			file->Close();
@@ -152,5 +154,181 @@ int gameAddcontInfoPrepare(const char *path)
 	ret = LocalFile::RenameFile(tempPath.c_str(), instvPath.c_str());
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
+	return 0;
+}
+
+/*
+ * info written into the addcont/info folder at path: its instv.dat copied to the temp folder with
+ * the license of info's content ID replaced, or info added after the others, then moved back
+ * (0x81099174).
+ */
+int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	if (path == NULL || info == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	bool grw0 = sce_paf_strncmp(path, "grw0:addcont/info", 18) == 0;
+
+	if (sce_paf_strncmp(path, "ux0:addcont/info", 17) == 0 || grw0)
+		ret = 0;
+	else
+		ret = GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+	if (ret < 0)
+		return ret;
+
+	string instvPath(path);
+
+	instvPath += "/";
+	instvPath += "instv.dat";
+
+	if (!LocalFile::Exists(instvPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instv;
+
+	sce_paf_memset(&instv, 0, sizeof(instv));
+	if (file->Read(&instv, sizeof(instv)) != sizeof(instv)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instv.version == 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	string tempDir = gameAddcontInfoTempDir(instvPath);
+
+	if (!LocalFile::Exists(tempDir.c_str())) {
+		ret = Dir::CreateRecursive(tempDir.c_str());
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	string tempPath(tempDir);
+
+	tempPath += "/";
+	tempPath += "addcont_instv.dat";
+
+	if (LocalFile::Exists(tempPath.c_str())) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		if (ret < 0) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	}
+
+	common::SharedPtr<File> temp = LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv header;
+
+	sce_paf_memset(&header, 0, sizeof(header));
+	sce_paf_memcpy(header.magic, GAME_ADDCONT_INSTV_MAGIC, 4);
+	header.version = 1;
+	header.count = instv.count + 1;
+	if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+		if (file.get() != NULL)
+			file->Close();
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	bool found = false;
+
+	for (SceUInt32 i = 0; i < instv.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		if (sce_paf_strncmp(entry, info->contentId, sizeof(info->contentId)) != 0) {
+			if (temp->Write(entry, sizeof(entry)) != sizeof(entry)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+		} else {
+			found = true;
+			if (temp->Write(info, sizeof(*info)) != sizeof(*info)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+		}
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+
+	if (found) {
+		if (temp->Seek(0, SCE_SEEK_SET) < 0) {
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+		header.count--;
+		if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	} else if (temp->Write(info, sizeof(*info)) != sizeof(*info)) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (temp.get() != NULL)
+		temp->Close();
+
+	ret = LocalFile::RemoveFile(instvPath.c_str());
+	if (ret < 0) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	ret = LocalFile::RenameFile(tempPath.c_str(), instvPath.c_str());
+	if (ret < 0)
+		return ret;
 	return 0;
 }
