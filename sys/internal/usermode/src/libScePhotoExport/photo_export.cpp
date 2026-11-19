@@ -861,8 +861,8 @@ static __attribute__((noinline)) SceInt32 photoExportSendFile(SceInt32 index, Ph
 		if (result == 0) {
 			result = sceIoRead(fd, pBuffer, size - (sent << 14));
 			if (result >= 0)
-				result = photoExportSendData(pSession, pBuffer, result, sent, 1, size,
-							     reserved, pExtension, 0);
+				result = photoExportSendData(pSession, pBuffer, size - (sent << 14), sent, 1,
+							     size, reserved, pExtension, 0);
 		}
 		if (progressFunc != NULL) {
 			percent = photoExportGetWeight(pSession, index);
@@ -1565,7 +1565,7 @@ extern "C" SceInt32 scePhotoExportIsAvailableFromFile(const SceChar8 *filePath, 
 	PhotoExportImageInfo info;
 	SceUInt8 header[16];
 	SceUInt8 buffer[140];
-	SceInt32 format, result, jpegEnd;
+	SceInt32 format, result, jpegEnd, jpegSize;
 	SceInt64 position;
 	SceUInt32 length;
 	SceUID fd;
@@ -1583,6 +1583,7 @@ extern "C" SceInt32 scePhotoExportIsAvailableFromFile(const SceChar8 *filePath, 
 		result = photoExportPngInfo(buffer, sceIoRead(fd, buffer, 33), &info);
 		break;
 	case PHOTO_EXPORT_FORMAT_JPEG:
+		jpegSize = sceIoLseek(fd, 0, SCE_SEEK_SET);
 		sceIoLseek(fd, 2, SCE_SEEK_SET);
 		length = 0;
 		jpegEnd = 0;
@@ -1595,7 +1596,7 @@ extern "C" SceInt32 scePhotoExportIsAvailableFromFile(const SceChar8 *filePath, 
 				break;
 			}
 			length = 0;
-			result = photoExportJpegMarker((const SceUInt16 *)marker, 20, &position, &length,
+			result = photoExportJpegMarker((const SceUInt16 *)marker, jpegSize, &position, &length,
 						       &jpegEnd, &info);
 			position = sceIoLseek(fd, position + length, SCE_SEEK_SET);
 			if (position < 0) {

@@ -10,3 +10,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	../../../../sdk/target/src/libsnc/i32ops.c
 	../../../../sdk/target/src/libsnc/aeabi_div0.c
 )
+# Sony's psp2ld linked with --strip-unused: the runtime routines nothing calls are not in the original.
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
