@@ -10,6 +10,8 @@
 #undef ft_qsort
 extern void ftQsort(void *pBase, int count, unsigned int size,
 		int (*compare)(const void *, const void *), void *pMemory);
-#define ft_qsort(base, count, size, compare)	ftQsort(base, count, size, compare, memory)
+/* ft_qsort( base, count, size, compare ) takes the memory object in scope; a caller without one passes its own */
+#define FT_QSORT_(base, count, size, compare, pMemory, ...)	ftQsort(base, count, size, compare, pMemory)
+#define ft_qsort(base, count, size, ...)	FT_QSORT_(base, count, size, __VA_ARGS__, memory)
 
 #endif

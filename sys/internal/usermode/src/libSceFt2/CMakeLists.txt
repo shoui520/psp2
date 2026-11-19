@@ -2,7 +2,7 @@
 # The module's registration list is include/freetype/config/ftmodule.h.
 set(FT2 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/freetype-7f316f22d)
 # Sony's changes to FreeType (freetype-sce.patch: the memory object takes the caller's allocator, no
-# FT_Init_FreeType) are applied to a copy of the three files they touch in the build tree.
+# FT_Init_FreeType) are applied to a copy of the files they touch (src/psaux is copied whole: psaux.c includes its parts) in the build tree.
 set(FT2_SCE ${CMAKE_CURRENT_BINARY_DIR}/freetype-sce)
 file(MD5 ${CMAKE_CURRENT_SOURCE_DIR}/freetype-sce.patch ft2_patch_md5)
 set(ft2_stamp "")
@@ -11,7 +11,7 @@ if(EXISTS ${FT2_SCE}/.patched)
 endif()
 if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 	file(REMOVE_RECURSE ${FT2_SCE})
-	foreach(f src/base/ftsystem.c src/base/ftinit.c include/freetype/internal/ftobjs.h)
+	foreach(f src/base/ftsystem.c src/base/ftinit.c include/freetype/internal/ftobjs.h src/psaux)
 		get_filename_component(d ${f} DIRECTORY)
 		file(COPY ${FT2}/${f} DESTINATION ${FT2_SCE}/${d})
 	endforeach()
@@ -41,7 +41,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${FT2}/src/otvalid/otvalid.c
 	${FT2}/src/base/ftotval.c
 	${FT2_SCE}/src/base/ftsystem.c
-	${FT2}/src/psaux/psaux.c
+	${FT2_SCE}/src/psaux/psaux.c
 	${FT2}/src/psnames/psnames.c
 	${FT2}/src/pshinter/pshinter.c
 	${FT2}/src/raster/raster.c
@@ -62,3 +62,5 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fno-stack-protector)
 include(../../../../../toolchains/libgcc/lib1funcs.cmake)
 gcc48_use_lib1funcs(${PSP2_TARGET})
+# Sony's C library (libc.c) was built with plain char signed (the ldrsb loads of the mode and path strings)
+set_source_files_properties(libc.c PROPERTIES COMPILE_OPTIONS -fsigned-char)

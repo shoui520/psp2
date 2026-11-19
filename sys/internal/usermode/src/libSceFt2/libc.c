@@ -89,11 +89,38 @@ size_t strlen(const char *s)
 	return len;
 }
 
-/* the lowercase of a mode character (the library's ctype table is the C locale's) */
+/* the C locale's character classes, indexed by the character plus one (index 0 is EOF) */
+#define CT_U	0x01	/* upper case */
+#define CT_L	0x02	/* lower case */
+#define CT_N	0x04	/* digit */
+#define CT_S	0x08	/* white space */
+#define CT_P	0x10	/* punctuation */
+#define CT_C	0x20	/* control */
+#define CT_X	0x40	/* hexadecimal digit */
+
+static const char g_ctype[1 + 128] = {
+	[0] = 0,
+	[1 ... 9] = CT_C,		/* NUL..BS */
+	[10 ... 14] = CT_S,		/* HT, LF, VT, FF, CR */
+	[15 ... 32] = CT_C,		/* the rest of the controls up to US */
+	[33] = CT_S,			/* space */
+	[34 ... 48] = CT_P,		/* ! .. / */
+	[49 ... 58] = CT_N,		/* 0 .. 9 */
+	[59 ... 65] = CT_P,		/* : .. @ */
+	[66 ... 71] = CT_U | CT_X,	/* A .. F */
+	[72 ... 91] = CT_U,		/* G .. Z */
+	[92 ... 97] = CT_P,		/* [ .. ` */
+	[98 ... 103] = CT_L | CT_X,	/* a .. f */
+	[104 ... 123] = CT_L,		/* g .. z */
+	[124 ... 127] = CT_P,		/* { .. ~ */
+	[128] = CT_C,			/* DEL */
+};
+
+/* the lowercase of a mode character */
 static int toLower(int c)
 {
-	if (c >= 'A' && c <= 'Z')
-		return c + ('a' - 'A');
+	if ((unsigned int)c <= 0x7F && (g_ctype[c + 1] & CT_U))
+		return (unsigned char)c + ('a' - 'A');
 	return c;
 }
 
@@ -101,9 +128,8 @@ FILE *fopen(const char *path, const char *mode)
 {
 	Ft2File *f;
 	const char *p;
-	unsigned int c;
+	char c;
 	int i, access, flags, openFlags;
-	SceInt32 whence;
 	SceUInt8 param[0x20];
 
 	if (mode == NULL || path == NULL)
@@ -117,7 +143,7 @@ FILE *fopen(const char *path, const char *mode)
 		goto fail;
 	p = mode;
 	do {
-		c = (unsigned char)*p++;
+		c = *p++;
 	} while (toLower(c) == 'b');
 	p--;
 	switch (toLower(c)) {
@@ -140,7 +166,7 @@ FILE *fopen(const char *path, const char *mode)
 		goto fail;
 	}
 	do {
-		c = (unsigned char)*++p;
+		c = *++p;
 	} while (toLower(c) == 'b');
 	if (c == '+') {
 		flags |= 0xC000;
@@ -150,32 +176,43 @@ FILE *fopen(const char *path, const char *mode)
 	} else {
 		openFlags |= 1;
 	}
+	g_files[i].mode = flags | 1;
 	f = &g_files[i];
-	f->mode = flags | 1;
 	sceKernelUnlockLwMutex(&g_ioMutex, 1);
 	f->state = 0;
 	f->fd = sceIoOpen(path, openFlags, 0606);
 	f->pushback = -1;
-	whence = (f->mode & 0x2000) != 0 ? SCE_SEEK_END : SCE_SEEK_SET;
-	if (f->mode != 0 && f->fd >= 0) {
+	if (f->mode & 0x2000) {
+		if (f->mode != 0 && f->fd >= 0) {
+			int pos;
+
+			f->pushback = -1;
+			pos = sceIoLseek(f->fd, 0, SCE_SEEK_END);
+			if (pos >= 0) {
+				f->position = pos;
+				f->state &= ~2;
+			}
+		}
+	} else if (f->mode != 0 && f->fd >= 0) {
 		int pos;
 
 		f->pushback = -1;
-		pos = sceIoLseek(f->fd, 0, whence);
+		pos = sceIoLseek(f->fd, 0, SCE_SEEK_SET);
 		if (pos >= 0) {
 			f->position = pos;
 			f->state &= ~2;
 		}
 	}
-	if (f->fd < 0) {
-		f->mode = 0;
+	if (g_files[i].fd < 0) {
+		g_files[i].mode = 0;
 		return NULL;
 	}
+	f = &g_files[i];
 	if (path[0] == 's' && path[1] == 'a' && path[2] == '0' && path[3] == ':')
 		f->deviceType = 0x800;
 	else
 		f->deviceType = 0x8000;
-	memset(param, 0, sizeof(param));
+	sceClibMemset(param, 0, sizeof(param));
 	*(SceUInt32 *)&param[0xc] = f->deviceType;
 	*(SceUInt32 *)&param[0x14] = 8;
 	sceIoIoctl(f->fd, 0x1001, param, sizeof(param), NULL, 0);

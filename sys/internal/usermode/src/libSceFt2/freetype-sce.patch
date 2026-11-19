@@ -200,3 +200,14 @@ diff -ru a/src/base/ftsystem.c b/src/base/ftsystem.c
    }
  
  
+--- a/src/psaux/afmparse.c	2026-11-19 20:49:31.025400000 +0000
++++ b/src/psaux/afmparse.c	2026-11-19 20:49:31.070744531 +0000
+@@ -752,7 +752,7 @@
+         fi->NumKernPair = n + 1;
+         ft_qsort( fi->KernPairs, fi->NumKernPair,
+                   sizeof ( AFM_KernPairRec ),
+-                  afm_compare_kern_pairs );
++                  afm_compare_kern_pairs, parser->memory );
+         return PSaux_Err_Ok;
+ 
+       case AFM_TOKEN_UNKNOWN:
