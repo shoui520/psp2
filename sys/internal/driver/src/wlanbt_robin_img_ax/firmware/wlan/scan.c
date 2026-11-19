@@ -48,22 +48,20 @@ static struct WlanInitStage wlanScanInitStage __attribute__((section(".itcm.rw")
 /* 0x36ad8: sets the radio to the scan's next channel and queues the probe requests of it. */
 __attribute__((noinline)) int macMgmtFormatEntry(void)
 {
-	struct WlanScan *scan = wlanScanState.scan;
-	struct WlanConnection *connection = wlanScanState.connection;
 	const struct WlanScanChannel *channel;
 	unsigned int index;
 	int result;
 
-	if (connection->interfaceType == WLAN_IF_AP && connection->mode == 1) {
-		if (p2pBssActiveGet(connection) != 0)
-			return wlanSlotAbort(scan->slot, 6);
-		if (p2pDirectInspectState() != 0 && macMgmtFormatTable(scan) &&
-		    !macMgmtInspectTable(scan->channelIndex))
-			return p2pListenSlotStart(connection, scan->slot);
+	if (wlanScanState.connection->interfaceType == WLAN_IF_AP && wlanScanState.connection->mode == 1) {
+		if (p2pBssActiveGet(wlanScanState.connection) != 0)
+			return wlanSlotAbort(wlanScanState.scan->slot, 6);
+		if (p2pDirectInspectState() != 0 && macMgmtFormatTable(wlanScanState.scan) &&
+		    !macMgmtInspectTable(wlanScanState.scan->channelIndex))
+			return p2pListenSlotStart(wlanScanState.connection, wlanScanState.scan->slot);
 	}
-	index = scan->channelIndex;
-	if (index >= scan->channelCount)
-		return wlanSlotAbort(scan->slot, 6);
+	index = wlanScanState.scan->channelIndex;
+	if (index >= wlanScanState.scan->channelCount)
+		return wlanSlotAbort(wlanScanState.scan->slot, 6);
 	wlanScanState.completed = 0;
 	wlanScanState.queued = 0;
 	wlanScanState.dwellDone = 0;
@@ -71,11 +69,11 @@ __attribute__((noinline)) int macMgmtFormatEntry(void)
 	wlanScanState.broadcastSent = 0;
 	wlanScanState.repeat = 0;
 	wlanScanState.ssidIndex = 0;
-	channel = &scan->channels[index];
+	channel = &wlanScanState.scan->channels[index];
 	if (!wlanSlotSetChannel((struct WlanBandChannel){ .channelFlags = channel->channelFlags },
 				channel->channel) ||
-	    wlanSlotSetDuration(scan->slot, 1000 * SCAN_LE16(channel->maxDwell)) != WLAN_SLOT_OK)
-		return wlanSlotAbort(scan->slot, 6);
+	    wlanSlotSetDuration(wlanScanState.scan->slot, 1000 * SCAN_LE16(channel->maxDwell)) != WLAN_SLOT_OK)
+		return wlanSlotAbort(wlanScanState.scan->slot, 6);
 	if (channel->flags & 1)
 		result = 1;
 	else
@@ -113,7 +111,7 @@ int macMgmtTrackEntry(OsaBuffer *buffer)
 __attribute__((noinline)) int macMgmtManageEntry(void)
 {
 	struct WlanScan *scan = wlanScanState.scan;
-	struct WlanScanSsid *ssid = NULL;
+	const uint8_t *name = NULL;
 	uint8_t *elements = NULL;
 	unsigned int length;
 	unsigned int broadcast = scan->broadcast;
@@ -130,22 +128,22 @@ __attribute__((noinline)) int macMgmtManageEntry(void)
 	count = scan->ssidCount;
 	if (wlanScanState.ssidIndex < count) {
 		if (broadcast == 0 || wlanScanState.broadcastSent != 0) {
-			while (wlanScanState.ssidIndex < count) {
+			for (;;) {
+				if (wlanScanState.ssidIndex >= count)
+					return 1;
 				if (scan->ssids[wlanScanState.ssidIndex].maxLength == 0) {
-					ssid = &scan->ssids[wlanScanState.ssidIndex];
+					name = scan->ssids[wlanScanState.ssidIndex].ssid;
 					break;
 				}
 				wlanScanState.ssidIndex++;
 			}
-			if (ssid == NULL)
-				return 1;
 		}
 	} else {
 		if (broadcast == 0 || wlanScanState.broadcastSent != 0)
 			return 1;
 	}
 	length = wlanIeBufferGet(&scan->ies, &elements);
-	result = macMgmtBuildState(wlanScanState.connection, NULL, ssid != NULL ? ssid->ssid : NULL, elements,
+	result = macMgmtBuildState(wlanScanState.connection, NULL, name, elements,
 				   length, 19, (int (*)(OsaBuffer *))macMgmtTrackEntry);
 	if (result == 0) {
 		wlanScanState.repeat++;
@@ -267,12 +265,13 @@ int macMgmtClearEntry(uint8_t *out, const struct WlanScanResults *results)
 	uint8_t *tlv;
 	uint8_t *channels;
 	unsigned int offset;
-	unsigned int i;
+	int i;
 
 	if (results != NULL && __aeabi_uread4(&results->data) != 0 && (length = __aeabi_uread4(&results->length)) != 0 &&
 	    results->count != 0) {
 		/* the count is read back from the answer each time it is used */
-		*(uint16_t *)out = length;
+		out[0] = length;
+		out[1] = length >> 8;
 		out[2] = results->count;
 		size = __aeabi_uread4(&results->length);
 		source = (const void *)__aeabi_uread4(&results->data);
@@ -281,15 +280,19 @@ int macMgmtClearEntry(uint8_t *out, const struct WlanScanResults *results)
 		tlv = out + length + 3;
 		tlv[0] = 19;
 		tlv[1] = 1;
-		*(uint16_t *)(tlv + 2) = 8 * out[2];
-		offset = 8 * out[2] + length + 7;
+		size = 8 * out[2];
+		tlv[2] = size;
+		tlv[3] = size >> 8;
+		offset = size + length + 7;
 		for (i = 0; i < out[2]; i++)
 			__aeabi_memcpy(tlv + 4 + 8 * i, results->records[i].timestamp, 8);
 		channels = out + offset;
 		channels[0] = 42;
 		channels[1] = 1;
-		*(uint16_t *)(channels + 2) = 2 * out[2];
-		length = 2 * out[2] + offset + 4;
+		size = 2 * out[2];
+		channels[2] = size;
+		channels[3] = size >> 8;
+		length = size + offset + 4;
 		for (i = 0; i < out[2]; i++) {
 			channels[4 + 2 * i] = results->records[i].channelBand[0];
 			channels[5 + 2 * i] = results->records[i].channelBand[1];
@@ -574,33 +577,32 @@ void macMgmtValidateTable(int event)
  */
 void macMgmtCompleteTable(struct WlanScanResults *results)
 {
-	struct WlanScanConfig *config = wlanScanConfig;
 	struct WlanBackgroundScanState *state = &wlanBackgroundScanState;
 	struct WlanConnection *connection;
 	unsigned int index;
 	unsigned int record;
 
 	state->slot = 0;
-	if (config->enabled == 0)
+	if (wlanScanConfig->enabled == 0)
 		return;
-	state->position += config->channelsPerScan;
-	if (state->position >= config->channelCount) {
+	state->position += wlanScanConfig->channelsPerScan;
+	if (state->position >= wlanScanConfig->channelCount) {
 		state->position = 0;
 		state->progress |= 0x80000000;
 	}
 	state->progress = (state->progress >> 3) << 3;
-	if (results->count != 0) {
+	if (state->results.count != 0) {
 		state->progress |= 1;
 		index = fmCoexVerifyEntry(results, 0);
 		record = fmCoexTrackEntry(&results->records[index], 0);
-		if (fmCoexManageEntry(record, config->thresholds[0], 0) != 0)
+		if (fmCoexManageEntry(record, wlanScanConfig->thresholds[0], 0) != 0)
 			state->progress |= 4;
 		index = fmCoexVerifyEntry(results, 1);
 		record = fmCoexTrackEntry(&results->records[index], 1);
-		if (fmCoexManageEntry(record, config->thresholds[1], 1) != 0)
+		if (fmCoexManageEntry(record, wlanScanConfig->thresholds[1], 1) != 0)
 			state->progress |= 2;
 	}
-	if (config->progress != 0 && (config->progress & ~state->progress) == 0)
+	if (wlanScanConfig->progress != 0 && (wlanScanConfig->progress & ~state->progress) == 0)
 		state->completed = state->progress;
 	if (state->completed != 0) {
 		connection = state->connection;
@@ -643,7 +645,6 @@ int macMgmtPrepareTable(void)
 	struct WlanScanConfig *config = wlanScanConfig;
 	struct WlanBackgroundScanState *state = &wlanBackgroundScanState;
 	struct WlanScan *scan = &wlanBackgroundScan;
-	struct WlanConnection *connection;
 	struct WlanPsPeerState *ps;
 	int elapsed;
 	unsigned int count;
@@ -664,14 +665,14 @@ int macMgmtPrepareTable(void)
 		count = (uint8_t)count;
 	}
 	__aeabi_memcpy(scan->rates, wlanLocalState->rates, WLAN_SCAN_RATES);
-	connection = state->connection;
-	if (connection->interfaceType == WLAN_IF_AP) {
-		if (p2pChannelShared(connection) != 0)
-			config->channelsPerScan = 1;
+	if (state->connection->interfaceType == WLAN_IF_AP) {
+		if (p2pChannelShared(state->connection) != 0)
+			wlanScanConfig->channelsPerScan = 1;
 		else
-			config->channelsPerScan = config->channelCount - state->position;
+			wlanScanConfig->channelsPerScan = wlanScanConfig->channelCount - state->position;
 	}
-	__aeabi_memcpy(scan->channels, &config->channels[state->position], 7 * count);
+	__aeabi_memcpy(scan->channels, &wlanScanConfig->channels[state->position], 7 * count);
+	config = wlanScanConfig;
 	__aeabi_memcpy(scan->ssids, config->ssids, sizeof(config->ssids));
 	scan->ssidCount = config->ssidCount;
 	__aeabi_uwrite4((int)(uintptr_t)macMgmtCompleteTable, state->results.callback);
@@ -679,16 +680,16 @@ int macMgmtPrepareTable(void)
 	if (config->progress & 2)
 		scan->policy = 1;
 	scan->probes = config->probes;
-	if (connection->interfaceType == WLAN_IF_AP && connection->mode == 1) {
+	if (state->connection->interfaceType == WLAN_IF_AP && state->connection->mode == 1) {
 		if (p2pDirectInspectState() != 0) {
-			interval = config->interval;
+			interval = wlanScanConfig->interval;
 		} else {
-			ps = wlanConnectionPsState(connection);
-			p2pConnectionStateSet(connection, 2);
+			ps = wlanConnectionPsState(state->connection);
+			p2pConnectionStateSet(state->connection, 2);
 			if (ps->extendedListenEnabled != 0)
-				interval = (uint16_t)(ps->availabilityInterval - ps->availabilityPeriod);
+				interval = ps->availabilityInterval - ps->availabilityPeriod;
 			else
-				interval = p2pDirectFormatContext(connection);
+				interval = p2pDirectFormatContext(state->connection);
 		}
 	} else {
 		interval = config->interval;
@@ -696,7 +697,7 @@ int macMgmtPrepareTable(void)
 	interval *= 1000;
 	if (elapsed < 0 && (unsigned int)-elapsed < interval)
 		interval -= elapsed;
-	state->slot = macMgmtVerifyEntry(connection, scan, interval);
+	state->slot = macMgmtVerifyEntry(state->connection, scan, interval);
 	if (state->slot == 0) {
 		macMgmtCompleteTable(&state->results);
 		return -1;

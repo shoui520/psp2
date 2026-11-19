@@ -101,7 +101,7 @@ void GenerateGTK_internal(KeyData_t *grpKeyData, uint8_t *nonce, const uint8_t *
  * WPA handshake. The access point sends message 1, message 3 and the group
  * key message with it.
  */
-void PopulateKeyMsg(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, Cipher_t *Cipher, uint32_t Type,
+void PopulateKeyMsg(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, Cipher_t *Cipher, uint16_t Type,
 		    uint32_t replay_cnt[2], uint8_t *Nonce)
 {
 	key_info_t *pKeyInfo;

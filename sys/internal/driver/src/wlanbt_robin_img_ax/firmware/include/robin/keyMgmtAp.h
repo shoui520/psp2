@@ -58,7 +58,7 @@
 /* keyMgmtAp_rom.c */
 KEYMGMT_CALL uint32_t util_FindLowestBitSet(uint32_t val);						/* 0x2839e */
 void GenerateGTK_internal(KeyData_t *grpKeyData, uint8_t *nonce, const uint8_t *StaMacAddr);	/* 0x2dd10 */
-void PopulateKeyMsg(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, Cipher_t *Cipher, uint32_t Type,
+void PopulateKeyMsg(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, Cipher_t *Cipher, uint16_t Type,
 		    uint32_t replay_cnt[2], uint8_t *Nonce);				/* 0x2dd8e */
 void prepareKDE(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, KeyData_t *grKey, Cipher_t *cipher);	/* 0x2de7c */
 BOOLEAN Encrypt_keyData(EAPOL_KeyMsg_Tx_t *tx_eapol_ptr, uint8_t *EAPOL_Encr_Key,
