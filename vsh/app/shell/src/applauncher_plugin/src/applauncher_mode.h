@@ -96,6 +96,8 @@ public:
 	LauncherMode();
 	virtual const char *GetName();
 	virtual ~LauncherMode();
+
+	static const char *s_className;
 };
 
 class AppTabEditMode : public ModeBase {
@@ -103,6 +105,8 @@ public:
 	AppTabEditMode();
 	virtual const char *GetName();
 	virtual ~AppTabEditMode();
+
+	static const char *s_className;
 };
 
 class AppTabSetThemeMode : public ModeBase {
@@ -110,6 +114,8 @@ public:
 	AppTabSetThemeMode();
 	virtual const char *GetName();
 	virtual ~AppTabSetThemeMode();
+
+	static const char *s_className;
 };
 
 class AppTabContextMenuMode : public ModeBase {
@@ -117,6 +123,8 @@ public:
 	AppTabContextMenuMode();
 	virtual const char *GetName();
 	virtual ~AppTabContextMenuMode();
+
+	static const char *s_className;
 };
 
 /* PLACEHOLDER: the modes of 8 bytes keep one word their own files name */
@@ -125,6 +133,8 @@ public:
 	AppTabIconDelMode();
 	virtual const char *GetName();
 	virtual ~AppTabIconDelMode();
+
+	static const char *s_className;
 
 	SceUInt32 reserved;
 };
@@ -135,6 +145,8 @@ public:
 	virtual const char *GetName();
 	virtual ~AppTabChangeLogMode();
 
+	static const char *s_className;
+
 	SceUInt32 reserved;
 };
 
@@ -144,14 +156,24 @@ public:
 	virtual const char *GetName();
 	virtual ~AppTabIntellectualProperty();
 
-	SceUInt32 reserved;
+	static const char *s_className;
+
+	SceUInt32 reserved;		/* PLACEHOLDER: 0 from the constructor; nothing reads it */
 };
+
+/* PLACEHOLDER: the intellectual property notice opened and closed (0x810DB78C, 0x810DB79E) */
+void applauncherIntellectualPropertyOpen(void);
+void applauncherIntellectualPropertyClose(void);
+/* PLACEHOLDER: the notice's mode asked for (0x810C2450) */
+void applauncherIntellectualPropertyEnter(void);
 
 class AppTabIconInfoMode : public ModeBase {
 public:
 	AppTabIconInfoMode();
 	virtual const char *GetName();
 	virtual ~AppTabIconInfoMode();
+
+	static const char *s_className;
 
 	SceUInt32 reserved;
 };
@@ -161,6 +183,8 @@ public:
 	AppTabAboutThisGameMode();
 	virtual const char *GetName();
 	virtual ~AppTabAboutThisGameMode();
+
+	static const char *s_className;
 
 	SceUInt32 reserved;
 };

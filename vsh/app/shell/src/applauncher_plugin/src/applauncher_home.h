@@ -11,6 +11,8 @@
 #include <scetypes.h>
 #include <plugin.h>
 #include <std/vector>
+#include <std/list>
+#include <std/map>
 #include <std/memory>
 #include <math/ngp/v2.h>
 #include <math/ngp/v3.h>
@@ -186,6 +188,111 @@ public:
 	int m_key;				/* the key of its listeners */
 };
 
+/* PLACEHOLDER: what a ShellSnapList calls on an event of its items: the event's two arguments
+   (not read yet), the item's key and the listener's data */
+typedef void (*ShellSnapListCB)(int event, void *arg, int key, void *data);
+
+/* PLACEHOLDER: a ShellSnapList's listener: its function called with its data (vtable 0x8152F36C;
+   the list's code at 0x8128xxxx, not written yet) */
+class ShellSnapListListener {
+public:
+	ShellSnapListListener(ShellSnapListCB func, void *data)
+		: m_func(func), m_data(data), m_killed(false)
+	{
+	}
+
+	virtual ~ShellSnapListListener()
+	{
+	}
+
+	virtual int Do(int event, void *arg, int key)
+	{
+		m_func(event, arg, key, m_data);
+		return 0;
+	}
+
+	ShellSnapListCB m_func;
+	void *m_data;
+	bool m_killed;				/* taken out while its list runs */
+};
+
+/* PLACEHOLDER: the listeners of one event of a ShellSnapList (vtable 0x8152F35C) */
+class ShellSnapListListenerList {
+public:
+	ShellSnapListListenerList() : m_onExec(false)
+	{
+	}
+
+	virtual ~ShellSnapListListenerList()
+	{
+		while (m_list.size() != 0) {
+			paf::list<ShellSnapListListener *>::iterator it = m_list.begin();
+
+			delete *it;
+			m_list.erase(it);
+		}
+	}
+
+	/* the listener when it is in the list, else NULL */
+	ShellSnapListListener *Find(ShellSnapListListener *listener)
+	{
+		for (paf::list<ShellSnapListListener *>::iterator it = m_list.begin();
+		     it != m_list.end(); ++it) {
+			if (*it == listener)
+				return *it;
+		}
+		return NULL;
+	}
+
+	/* the listener of the function and data, else NULL */
+	ShellSnapListListener *Find(ShellSnapListCB func, void *data)
+	{
+		for (paf::list<ShellSnapListListener *>::iterator it = m_list.begin();
+		     it != m_list.end(); ++it) {
+			if ((*it)->m_func == func && (*it)->m_data == data)
+				return *it;
+		}
+		return NULL;
+	}
+
+	/* put at the end unless it is in the list */
+	void Add(ShellSnapListListener *listener)
+	{
+		if (Find(listener) == NULL)
+			m_list.push_back(listener);
+	}
+
+	/* killed while the list runs, else taken out and deleted */
+	void Del(ShellSnapListListener *listener)
+	{
+		for (paf::list<ShellSnapListListener *>::iterator it = m_list.begin();
+		     it != m_list.end(); ++it) {
+			if (*it == listener) {
+				if (m_onExec) {
+					listener->m_killed = true;
+				} else {
+					m_list.erase(it);
+					delete listener;
+				}
+				return;
+			}
+		}
+	}
+
+	paf::list<ShellSnapListListener *> m_list;
+	bool m_onExec;				/* while its listeners are called */
+};
+
+/* Sony has the lookups in a snap list's listener map inline, like paf's handlers */
+namespace paf {
+template<>
+inline __attribute__((always_inline)) _Tree<_Tmap_traits<int, ShellSnapListListenerList *, less<int> > >::iterator
+_Tree<_Tmap_traits<int, ShellSnapListListenerList *, less<int> > >::find(const int &key)
+{
+	return iterator(_Find(key));
+}
+}
+
 /*
  * PLACEHOLDER: a list of items laid out in a scroll view, snapping to each (the shell's code at
  * 0x81284EB4-0x812861xx, not written yet): its listeners by key, the view, the items and the
@@ -224,7 +331,39 @@ public:
 	   (0x81285EC4) */
 	void ScrollTo(ShellSnapListItem *item);
 
-	SceUInt32 m_listeners[3];		/* PLACEHOLDER: the listeners' map, its type not read */
+	/* the listener called on the event (inline wherever Sony adds one) */
+	void AddListener(int event, ShellSnapListCB func, void *data)
+	{
+		ShellSnapListListener *listener = new ShellSnapListListener(func, data);
+		paf::map<int, ShellSnapListListenerList *>::iterator it = m_listeners.find(event);
+
+		if (it == m_listeners.end()) {
+			ShellSnapListListenerList *list = new ShellSnapListListenerList();
+
+			list->Add(listener);
+			m_listeners.insert(paf::pair<int, ShellSnapListListenerList *>(event, list));
+		} else if (it->second != NULL) {
+			it->second->Add(listener);
+		}
+	}
+
+	/* the listener of the function and data taken off the event (inline the same way) */
+	void DelListener(int event, ShellSnapListCB func, void *data)
+	{
+		paf::map<int, ShellSnapListListenerList *>::iterator it = m_listeners.find(event);
+
+		if (it != m_listeners.end()) {
+			ShellSnapListListenerList *list = it->second;
+
+			if (list != NULL)
+				list->Del(list->Find(func, data));
+		}
+	}
+
+	/* PLACEHOLDER name: the item of the key, NULL for none or key -1 (0x81285CCE) */
+	ShellSnapListItem *GetItemByKey(int key);
+
+	paf::map<int, ShellSnapListListenerList *> m_listeners;	/* by event */
 	paf::Plugin *m_plugin;
 	paf::ui::ScrollView *m_scrollView;
 	int m_axis;
@@ -399,18 +538,32 @@ public:
 	void iconMoveEnd(const paf::common::SharedPtr<ApplauncherIcon> &icon);
 };
 
-/* the home's page indicator: the dots under the pages (0x810C24D8; names ours) */
+/* the home's page indicator: a dot for each page, the page in view's dot the theme's current
+   page image (0x810C24D8-0x810C3B3C, applauncher_indicator.cpp; names ours) */
 class ApplauncherPageIndicator {
 public:
 	ApplauncherPageIndicator(paf::Plugin *plugin, paf::ui::Widget *widget);
 	~ApplauncherPageIndicator();
+	/* the theme's dot images loaded again, the dots refreshed (0x810C36B8) */
 	void Update();
-	/* PLACEHOLDER name: the dots shown after the delay (0x810C2C2C) */
-	void Show(float delay);
-	/* PLACEHOLDER name: the dots hidden after the delay (0x810C2CD6) */
-	void Hide(float delay);
+	/* PLACEHOLDER name: the dots shown over the time (0x810C2C2C) */
+	void Show(float time);
+	/* PLACEHOLDER name: the dots hidden over the time (0x810C2CD6) */
+	void Hide(float time);
+	/* PLACEHOLDER name: the dots put in the pages' order, the page in view's dot given the
+	   current page image and the others the base one (0x810C2D96) */
+	void Refresh();
+	/* PLACEHOLDER name: a dot opened for the page of the key, grown in (0x810C3160) */
+	void AddDot(int key);
+	/* PLACEHOLDER name: the dot of the key faded out and shrunk, then destroyed (0x810C34C0) */
+	void RemoveDot(int key);
 
-	SceUInt32 reserved[5];
+	paf::Plugin *m_plugin;
+	paf::ui::Widget *m_box;			/* the dots' box */
+	bool m_hasBaseImage;			/* the theme gives the dots' images */
+	bool m_hasCurImage;
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_baseImage;
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_curImage;
 };
 
 /*
