@@ -90,9 +90,9 @@ void GenerateGTK_internal(KeyData_t *grpKeyData, uint8_t *nonce, const uint8_t *
 	supplicantGenerateRand(grpMasterKey, sizeof(grpMasterKey));
 	Mrvl_PRF(grpMasterKey, sizeof(grpMasterKey), prefix, strlen((char *)prefix), inp_data,
 		 sizeof(inp_data), GTK, sizeof(GTK));
-	__aeabi_memcpy(grpKeyData->Key, GTK, TK_SIZE);
-	__aeabi_memcpy(grpKeyData->TxMICKey, GTK + TK_SIZE, 8);
-	__aeabi_memcpy(grpKeyData->RxMICKey, GTK + TK_SIZE + 8, 8);
+	memcpy(grpKeyData->Key, GTK, TK_SIZE);
+	memcpy(grpKeyData->TxMICKey, GTK + TK_SIZE, 8);
+	memcpy(grpKeyData->RxMICKey, GTK + TK_SIZE + 8, 8);
 }
 
 /*
@@ -247,9 +247,9 @@ void KeyMgmtAp_DerivePTK(uint8_t *pPMK, uint8_t *da, uint8_t *sa, uint8_t *ANonc
 			      newPWKey, use_kdf);
 
 	/* We need to swap Rx/Tx Keys for the access point */
-	__aeabi_memcpy(tmp, newPWKey->RxMICKey, 8);
-	__aeabi_memcpy(newPWKey->RxMICKey, newPWKey->TxMICKey, 8);
-	__aeabi_memcpy(newPWKey->TxMICKey, tmp, 8);
+	memcpy(tmp, newPWKey->RxMICKey, 8);
+	memcpy(newPWKey->RxMICKey, newPWKey->TxMICKey, 8);
+	memcpy(newPWKey->TxMICKey, tmp, 8);
 }
 
 /* The WPA or RSN element as the key data (its length is the element's plus two). */
@@ -331,15 +331,15 @@ void ROM_InitGTK(KeyData_t *grpKeyData, uint8_t *nonce, const uint8_t *StaMacAdd
  * second byte.
  */
 uint16_t keyMgmtAp_FormatWPARSN_IE_internal(IEEEtypes_InfoElementHdr_t *pIe, uint8_t isRsn,
-					    Cipher_t *pCipher, uint32_t cipherCnt,
+					    Cipher_t *pCipher, int cipherCnt,
 					    Cipher_t *pMcastCipher, uint32_t authKey,
-					    uint32_t authKeyCnt)
+					    int authKeyCnt)
 {
-	uint32_t i;
+	int i;
 	uint8_t *pBuf = NULL;
 	IEEEtypes_RSNElement_t *pRsn = (IEEEtypes_RSNElement_t *)pIe;
 	IEEEtypes_WPAElement_t *pWpa = (IEEEtypes_WPAElement_t *)pIe;
-	uint32_t bitPos = 0;
+	uint16_t bitPos = 0;
 	uint32_t authKeyBitmap = authKey;
 	uint32_t ucastBitmap = *((uint8_t *)pCipher);
 	uint32_t mcastBitmap = *((uint8_t *)pMcastCipher);

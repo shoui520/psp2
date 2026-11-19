@@ -14,6 +14,7 @@
 #include "robin/esa.h"
 #include "robin/join.h"
 #include "robin/rom.h"
+#include "robin/runtime.h"
 #include "robin/sys.h"
 #include "robin/task.h"
 #include "robin/wlan.h"
@@ -120,8 +121,9 @@ int keyMgmtKeyPairwiseTxDone(OsaBuffer *pBufDesc)
 int keyMgmtKeyGroupTxDone(OsaBuffer *pBufDesc)
 {
 	keyMgmtInfoSta_t *pKeyMgmtInfoSta = &suppData.keyMgmtInfoSta;
+	struct WlanConnection *connPtr = pBufDesc->context;
 
-	FillKeyMaterialStruct(pBufDesc->context, keyMgmtGetKeySize(0), 0, &pKeyMgmtInfoSta->GRKey);
+	FillKeyMaterialStruct(connPtr, keyMgmtGetKeySize(0), 0, &pKeyMgmtInfoSta->GRKey);
 	pKeyMgmtInfoSta->RSNDataTrafficEnabled = 1;
 	if (pKeyMgmtInfoSta->RSNSecured == 0) {
 		pKeyMgmtInfoSta->RSNSecured = 1;
@@ -386,7 +388,7 @@ void supplicantSetAssocRsn(SecurityMode_t wpaType, Cipher_t *pMcstCipher, Cipher
 		 * requests without the RSN capabilities.
 		 */
 		pRsnCap = &rsnCap;
-		__aeabi_memclr(&rsnCap, sizeof(rsnCap));
+		memset(&rsnCap, 0, sizeof(rsnCap));
 	}
 	supplicantSetAssocRsn_internal(&suppData.customMIB_RSNConfig, &currParams, wpaType,
 				       pMcstCipher, pUcstCipher, pAkm, pRsnCap, pGrpMgmtCipher);
@@ -507,10 +509,10 @@ uint16_t btampAddRsnIe(IEEEtypes_RSNElement_t *pRsnIe)
 	Cipher_t mcstWpa2;
 	Cipher_t ucstWpa2;
 
-	__aeabi_memclr(&securityMode, sizeof(securityMode));
-	__aeabi_memclr(&mcstWpa2, sizeof(mcstWpa2));
-	__aeabi_memclr(&ucstWpa2, sizeof(ucstWpa2));
-	__aeabi_memclr(&rsncap, sizeof(rsncap));
+	memset(&securityMode, 0, sizeof(securityMode));
+	memset(&mcstWpa2, 0, sizeof(mcstWpa2));
+	memset(&ucstWpa2, 0, sizeof(ucstWpa2));
+	memset(&rsncap, 0, sizeof(rsncap));
 
 	mcstWpa2.ccmp = 1;
 	ucstWpa2.ccmp = 1;

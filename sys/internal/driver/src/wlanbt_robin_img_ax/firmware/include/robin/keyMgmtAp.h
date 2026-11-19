@@ -74,9 +74,9 @@ void KeyData_AddKey(EAPOL_KeyMsg_Tx_t *pTxEAPOL, SecurityMode_t *pSecType, KeyDa
 		    Cipher_t *cipher);							/* 0x2e0f0 */
 void ROM_InitGTK(KeyData_t *grpKeyData, uint8_t *nonce, const uint8_t *StaMacAddr);	/* 0x2e172 */
 uint16_t keyMgmtAp_FormatWPARSN_IE_internal(IEEEtypes_InfoElementHdr_t *pIe, uint8_t isRsn,
-					    Cipher_t *pCipher, uint32_t cipherCnt,
+					    Cipher_t *pCipher, int cipherCnt,
 					    Cipher_t *pMcastCipher, uint32_t authKey,
-					    uint32_t authKeyCnt);			/* 0x2e184 */
+					    int authKeyCnt);			/* 0x2e184 */
 KEYMGMT_CALL uint8_t convertMrvlAuthToIEEEAuth(uint32_t mrvlauth);					/* 0x2e6fa */
 KEYMGMT_CALL uint8_t convertMrvlCipherToIEEECipher(uint32_t mrvlcipher);				/* 0x2e706 */
 

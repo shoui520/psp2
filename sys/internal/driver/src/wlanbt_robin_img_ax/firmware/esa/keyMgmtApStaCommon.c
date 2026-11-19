@@ -97,7 +97,7 @@ void supplicantParseWpaIe(IEEEtypes_WPAElement_t *pIe, SecurityMode_t *pWpaType,
 	*(uint8_t *)pMcstCipher = 0;
 	*(uint8_t *)pUcstCipher = 0;
 	__aeabi_memclr(pAkmList, akmOutMax * sizeof(AkmSuite_t));
-	__aeabi_memclr(pWpaType, sizeof(SecurityMode_t));
+	memset(pWpaType, 0, sizeof(SecurityMode_t));
 	pWpaType->wpa = 1;
 
 	/* record the AP's multicast cipher */
@@ -187,13 +187,14 @@ void supplicantParseRsnIe(IEEEtypes_RSNElement_t *pRsnIe, SecurityMode_t *pWpaTy
 	uint16_t authKeyCnt;
 	uint8_t *pAuthKeyList;
 	IEEEtypes_RSNCapability_t *pRsnCap;
+	uint8_t *pPMKIDCnt;
 	uint16_t PMKIDCnt;
 
 	if (supplicantParseRsnIe_hook(pRsnIe, pWpaTypeOut, pMcstCipherOut,
 				      pUcstCipherOut, pAkmListOut, akmOutMax,
 				      pRsnCapOut, pGrpMgmtCipherOut))
 		return;
-	__aeabi_memclr(pWpaTypeOut, sizeof(SecurityMode_t));
+	memset(pWpaTypeOut, 0, sizeof(SecurityMode_t));
 	pWpaTypeOut->wpa2 = 1;
 
 	/* the start and end of the element data */
@@ -209,14 +210,14 @@ void supplicantParseRsnIe(IEEEtypes_RSNElement_t *pRsnIe, SecurityMode_t *pWpaTy
 	supplicantParseMcstCipher(pMcstCipherOut, pGrpKeyCipher);
 
 	/* the pairwise key cipher list */
-	pwsKeyCnt = *(uint16_t *)pIeData;
+	memcpy(&pwsKeyCnt, pIeData, sizeof(pwsKeyCnt));
 	pIeData += sizeof(pRsnIe->PwsKeyCnt);
 	pPwsKeyCipherList = pIeData;
 	pIeData += pwsKeyCnt * sizeof(pRsnIe->PwsKeyCipherList);
 	supplicantParseUcstCipher(pUcstCipherOut, pwsKeyCnt, pPwsKeyCipherList);
 
 	/* the AKM list */
-	authKeyCnt = *(uint16_t *)pIeData;
+	memcpy(&authKeyCnt, pIeData, sizeof(authKeyCnt));
 	pIeData += sizeof(pRsnIe->AuthKeyCnt);
 	pAuthKeyList = pIeData;
 	pIeData += authKeyCnt * sizeof(pRsnIe->AuthKeyList);
@@ -235,10 +236,12 @@ void supplicantParseRsnIe(IEEEtypes_RSNElement_t *pRsnIe, SecurityMode_t *pWpaTy
 
 	/* the PMKID count and list, when included */
 	if (pIeData < pIeEnd) {
-		PMKIDCnt = *(uint16_t *)pIeData;
+		pPMKIDCnt = pIeData;
 		pIeData += sizeof(pRsnIe->PMKIDCnt);
-		if (pIeData < pIeEnd)
+		if (pIeData < pIeEnd) {
+			PMKIDCnt = *(uint16_t *)pPMKIDCnt;
 			pIeData += PMKIDCnt * sizeof(pRsnIe->PMKIDList);
+		}
 	}
 
 	/* the group management cipher, when included */

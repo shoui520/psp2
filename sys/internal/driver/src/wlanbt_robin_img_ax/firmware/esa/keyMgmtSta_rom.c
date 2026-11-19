@@ -41,7 +41,7 @@ void supplicantSetAssocRsn_internal(RSNConfig_t *pRsnConfig,
 				    IEEEtypes_RSNCapability_t *pRsnCap,
 				    Cipher_t *pGrpMgmtCipher)
 {
-	__aeabi_memclr(&pRsnConfig->wpaType, sizeof(pRsnConfig->wpaType));
+	memset(&pRsnConfig->wpaType, 0, sizeof(pRsnConfig->wpaType));
 	*(uint8_t *)&pRsnConfig->ucstCipher = 0;
 	*(uint8_t *)&pRsnConfig->mcstCipher = 0;
 	pRsnConfig->pmkidValid = 0;
