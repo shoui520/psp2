@@ -10,7 +10,10 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 	${FT2}/src/autofit/autofit.c
 	${FT2}/src/truetype/truetype.c
 	${FT2}/src/type1/type1.c
-	${FT2}/src/type42/type42.c
+	${FT2}/src/cff/cff.c
+	${FT2}/src/otvalid/otvalid.c
+	${FT2}/src/base/ftotval.c
+	${FT2}/src/base/ftsystem.c
 	${FT2}/src/psaux/psaux.c
 	${FT2}/src/psnames/psnames.c
 	${FT2}/src/pshinter/pshinter.c

@@ -1,10 +1,10 @@
 /***************************************************************************/
 /*                                                                         */
-/*  t42error.h                                                             */
+/*  otvgpos.h                                                              */
 /*                                                                         */
-/*    Type 42 error codes (specification only).                            */
+/*    OpenType GPOS table validator (specification).                       */
 /*                                                                         */
-/*  Copyright 2002, 2003, 2012 by                                          */
+/*  Copyright 2004 by                                                      */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -16,26 +16,21 @@
 /***************************************************************************/
 
 
-  /*************************************************************************/
-  /*                                                                       */
-  /* This file is used to define the Type 42 error enumeration constants.  */
-  /*                                                                       */
-  /*************************************************************************/
+#ifndef __OTVGPOS_H__
+#define __OTVGPOS_H__
 
-#ifndef __T42ERROR_H__
-#define __T42ERROR_H__
 
-#include FT_MODULE_ERRORS_H
+FT_BEGIN_HEADER
 
-#undef __FTERRORS_H__
 
-#undef  FT_ERR_PREFIX
-#define FT_ERR_PREFIX  T42_Err_
-#define FT_ERR_BASE    FT_Mod_Err_Type42
+  FT_LOCAL( void )
+  otv_GPOS_subtable_validate( FT_Bytes       table,
+                              OTV_Validator  valid );
 
-#include FT_ERRORS_H
 
-#endif /* __T42ERROR_H__ */
+FT_END_HEADER
+
+#endif /* __OTVGPOS_H__ */
 
 
 /* END */

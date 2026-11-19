@@ -1,10 +1,11 @@
 /***************************************************************************/
 /*                                                                         */
-/*  t42drivr.h                                                             */
+/*  cffdrivr.h                                                             */
 /*                                                                         */
-/*    High-level Type 42 driver interface (specification).                 */
+/*    High-level OpenType driver interface (specification).                */
 /*                                                                         */
-/*  Copyright 2002 by Roberto Alameda.                                     */
+/*  Copyright 1996-2001, 2002 by                                           */
+/*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
 /*  modified, and distributed under the terms of the FreeType project      */
@@ -15,8 +16,8 @@
 /***************************************************************************/
 
 
-#ifndef __T42DRIVR_H__
-#define __T42DRIVR_H__
+#ifndef __CFFDRIVER_H__
+#define __CFFDRIVER_H__
 
 
 #include <ft2build.h>
@@ -25,18 +26,13 @@
 
 FT_BEGIN_HEADER
 
-#ifdef FT_CONFIG_OPTION_PIC
-#error "this module does not support PIC yet"
-#endif
 
-
-  FT_EXPORT_VAR( const FT_Driver_ClassRec )  t42_driver_class;
+  FT_DECLARE_DRIVER( cff_driver_class )
 
 
 FT_END_HEADER
 
-
-#endif /* __T42DRIVR_H__ */
+#endif /* __CFFDRIVER_H__ */
 
 
 /* END */

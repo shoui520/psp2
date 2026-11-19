@@ -1,10 +1,10 @@
 /***************************************************************************/
 /*                                                                         */
-/*  type42.c                                                               */
+/*  otverror.h                                                             */
 /*                                                                         */
-/*    FreeType Type 42 driver component.                                   */
+/*    OpenType validation module error codes (specification only).         */
 /*                                                                         */
-/*  Copyright 2002 by                                                      */
+/*  Copyright 2004, 2005, 2012 by                                          */
 /*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
@@ -15,11 +15,30 @@
 /*                                                                         */
 /***************************************************************************/
 
-#define FT_MAKE_OPTION_SINGLE_OBJECT
 
-#include <ft2build.h>
-#include "t42objs.c"
-#include "t42parse.c"
-#include "t42drivr.c"
+  /*************************************************************************/
+  /*                                                                       */
+  /* This file is used to define the OpenType validation module error      */
+  /* enumeration constants.                                                */
+  /*                                                                       */
+  /*************************************************************************/
+
+#ifndef __OTVERROR_H__
+#define __OTVERROR_H__
+
+#include FT_MODULE_ERRORS_H
+
+#undef __FTERRORS_H__
+
+#undef  FT_ERR_PREFIX
+#define FT_ERR_PREFIX  OTV_Err_
+#define FT_ERR_BASE    FT_Mod_Err_OTvalid
+
+#define FT_KEEP_ERR_PREFIX
+
+#include FT_ERRORS_H
+
+#endif /* __OTVERROR_H__ */
+
 
 /* END */

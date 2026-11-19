@@ -1,10 +1,11 @@
 /***************************************************************************/
 /*                                                                         */
-/*  t42types.h                                                             */
+/*  cfferrs.h                                                              */
 /*                                                                         */
-/*    Type 42 font data types (specification only).                        */
+/*    CFF error codes (specification only).                                */
 /*                                                                         */
-/*  Copyright 2002, 2003, 2006, 2008 by Roberto Alameda.                   */
+/*  Copyright 2001, 2012 by                                                */
+/*  David Turner, Robert Wilhelm, and Werner Lemberg.                      */
 /*                                                                         */
 /*  This file is part of the FreeType project, and may only be used,       */
 /*  modified, and distributed under the terms of the FreeType project      */
@@ -15,42 +16,27 @@
 /***************************************************************************/
 
 
-#ifndef __T42TYPES_H__
-#define __T42TYPES_H__
+  /*************************************************************************/
+  /*                                                                       */
+  /* This file is used to define the CFF error enumeration constants.      */
+  /*                                                                       */
+  /*************************************************************************/
+
+#ifndef __CFFERRS_H__
+#define __CFFERRS_H__
+
+#include FT_MODULE_ERRORS_H
+
+#undef __FTERRORS_H__
+
+#undef  FT_ERR_PREFIX
+#define FT_ERR_PREFIX  CFF_Err_
+#define FT_ERR_BASE    FT_Mod_Err_CFF
 
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_TYPE1_TABLES_H
-#include FT_INTERNAL_TYPE1_TYPES_H
-#include FT_INTERNAL_POSTSCRIPT_HINTS_H
+#include FT_ERRORS_H
 
-
-FT_BEGIN_HEADER
-
-
-  typedef struct  T42_FaceRec_
-  {
-    FT_FaceRec      root;
-    T1_FontRec      type1;
-    const void*     psnames;
-    const void*     psaux;
-#if 0
-    const void*     afm_data;
-#endif
-    FT_Byte*        ttf_data;
-    FT_ULong        ttf_size;
-    FT_Face         ttf_face;
-    FT_CharMapRec   charmaprecs[2];
-    FT_CharMap      charmaps[2];
-    PS_UnicodesRec  unicode_map;
-
-  } T42_FaceRec, *T42_Face;
-
-
-FT_END_HEADER
-
-#endif /* __T42TYPES_H__ */
+#endif /* __CFFERRS_H__ */
 
 
 /* END */
