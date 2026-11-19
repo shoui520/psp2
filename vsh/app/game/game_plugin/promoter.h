@@ -1321,21 +1321,35 @@ public:
 typedef char GamePsmAppInstallerSize[sizeof(GamePsmAppInstaller) == 172 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a PlayStation Mobile game's package folder, defined in another file
- * of the plugin (constructor 0x8108CD5C), 44 bytes.
+ * The source of a PlayStation Mobile game's package folder (psm_install_source.cpp, constructor
+ * 0x8108CD5C, vtable 0x8152F020), 44 bytes: the package's RO and RW folders built in
+ * ux0:temp/promote/<title ID> and moved to ux0:psm/<title ID>, the old game's folders, save data
+ * and license carried over from ux0:temp/promote/old. The names are ours.
  */
 class GamePsmInstallSource : public GameInstallSource {
 public:
+	GamePsmInstallSource(const SceNpDrmInstallInfo *info, const LsdbAppInfoPtr *appInfo,
+			     paf::string *errorTitleId);
+	virtual ~GamePsmInstallSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
 	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
 			     int reserved2, int reserved3, float scale);
-	GamePsmInstallSource(const SceNpDrmInstallInfo *info, const LsdbAppInfoPtr *appInfo,
-			     paf::string *errorTitleId);
 
-	SceUInt8 m_body[40];
+private:
+	int WriteLicense(const paf::string *path, const paf::string *dir, paf::string *licensePath,
+			 paf::string *detail, bool npDrm);
+
+	const SceNpDrmInstallInfo *m_info;
+	LsdbAppInfoPtr m_appInfo;		/* the installed game's record */
+	paf::string m_pkgPath;			/* the package folder Install was given */
+	paf::string m_titleId;			/* the game's, kept by Install */
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
 };
+
+typedef char GamePsmInstallSourceSize[sizeof(GamePsmInstallSource) == 44 ? 1 : -1];
 
 /*
  * A PlayStation Mobile game installed (psm_installer.cpp, constructor 0x810713C0, vtable
@@ -1363,23 +1377,50 @@ public:
 typedef char GamePsmInstallerSize[sizeof(GamePsmInstaller) == 184 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a PSP game's package folder, defined in another file of the plugin
- * (constructor 0x8108ED68), 72 bytes; only the flag the installer reads is known.
+ * The source of a PSP game's package folder (psp_install_source.cpp, constructor 0x8108ED68,
+ * vtable 0x8152F038), 72 bytes: the installed game (or PocketStation application) and its game
+ * data folder moved aside to ux0:pspemu/temp/promote/pspemu (or ps1emu) with the new one, then
+ * moved back together by Complete, and the license written to ux0:pspemu/PSP/LICENSE. The names
+ * are ours.
  */
 class GamePspInstallSource : public GameInstallSource {
 public:
+	GamePspInstallSource(const SceNpDrmInstallInfo *info, const paf::string &titleId,
+			     paf::string *errorTitleId);
+	virtual ~GamePspInstallSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
 	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
 			     int reserved2, int reserved3, float scale);
-	GamePspInstallSource(const SceNpDrmInstallInfo *info, const paf::string &titleId,
-			     paf::string *errorTitleId);
 
-	SceUInt8 m_body[44];
+private:
+	static int MoveMgGame(const paf::string *path, const paf::string &titleId,
+			      const paf::string &promoteDir, const LsdbAppInfoPtr *sfo,
+			      paf::vector<paf::string> *moved, paf::string *detail);
+	static int MoveEgMeGame(const paf::string *path, const paf::string &titleId,
+				const paf::string &promoteDir, const LsdbAppInfoPtr *sfo,
+				paf::vector<paf::string> *moved, paf::string *detail);
+	int MovePocketStation(const paf::string *path, const paf::string &titleId,
+			      const paf::string &promoteDir, paf::vector<paf::string> *moved,
+			      paf::string *detail);
+	int MovePackage(const paf::string *path, const SceNpDrmInstallInfo *info,
+			paf::vector<paf::string> *moved);
+
+public:
+	const SceNpDrmInstallInfo *m_info;
+	LsdbAppInfoPtr m_appInfo;		/* empty, not read */
+	paf::vector<paf::string> m_moved;	/* the folders moved aside, under Install's dir */
+	const paf::string &m_titleId;		/* not read */
+	paf::string m_workDir;			/* the pspemu work folder mounted by Install */
 	bool m_ebootSig;			/* the installed EBOOT.PBP's signature to be made */
-	SceUInt8 m_more[23];
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
+	paf::string m_addcontInfoDir;		/* where a license's period is noted, or empty */
+	bool m_pocketStation;			/* a PocketStation application, in ux0:ps1emu */
 };
+
+typedef char GamePspInstallSourceSize[sizeof(GamePspInstallSource) == 72 ? 1 : -1];
 
 /* the steps of the saved data copier's progress */
 #define GAME_PS1_SAVEDATA_STEPS	8

@@ -166,12 +166,7 @@ int shellDatabaseNeedsRecovery(void)
 	return s_databaseNeedsRecovery;
 }
 
-/* livearea_plugin's and topmenu_plugin's functions the revert job calls (indexes in their
-   PLACEHOLDER tables) */
-enum {
-	LIVEAREA_PLUGIN_FUNC_REVERT	= 10,
-};
-
+/* topmenu_plugin's functions the revert job calls (indexes in its PLACEHOLDER table) */
 enum {
 	TOPMENU_PLUGIN_FUNC_UPDATE_LIVEAREA	= 45,
 	TOPMENU_PLUGIN_FUNC_LIVEAREA_REVERT	= 64,

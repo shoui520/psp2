@@ -20,6 +20,9 @@
 #include "game_appinfo.h"
 #include "promoter.h"
 
+/* Load calls the related records' push_back out of line (0x8141030C) */
+PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbAppInfoPtr, paf::allocator<LsdbAppInfoPtr>)
+
 using namespace paf;
 
 int GameFolderSource::SetDigest(const void *digest, SceSize size)

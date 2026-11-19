@@ -29,6 +29,12 @@ enum {
 	TOPMENU_PLUGIN_FUNC_BOOT_DONE		= 88,
 };
 
+/* livearea_plugin's functions (indexes in its PLACEHOLDER table) */
+enum {
+	LIVEAREA_PLUGIN_FUNC_LICENSE_ADDED	= 8,	/* PLACEHOLDER name: a PocketStation license written */
+	LIVEAREA_PLUGIN_FUNC_REVERT		= 10,
+};
+
 /* power_manage_plugin's functions */
 enum {
 	POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK	= 2,	/* PLACEHOLDER names: a function called on */

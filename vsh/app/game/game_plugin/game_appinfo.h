@@ -774,6 +774,9 @@ extern "C" int sceNpDrmGetRifName(char *rifName, SceUInt64 accountId);
 extern "C" int sceNpDrmGetFixedRifName(char *rifName, SceUInt64 accountId);
 extern "C" int sceNpDrmGetRifNameForInstall(char *rifName, const void *license, int flags);
 
+/* the SDK's glue over ScePsmDrm's import (0x8144D538) */
+extern "C" int scePsmDrmGetRifNameForInstall(char *rifName, const void *license);
+
 /* the SDK's glue over SceVshBridge's import (0x81417C70) */
 extern "C" int vshRtcGetCurrentSecureTick(SceRtcTick *tick);
 
