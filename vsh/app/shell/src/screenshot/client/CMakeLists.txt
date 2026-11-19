@@ -1,4 +1,15 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_libSceScreenShot KIND user SKELETON SOURCES
-	libSceScreenShot.c
+# SceScreenShot (vs0:sys/external/libSceScreenShot.suprx), built by Sony with SNC 3.57. No debug
+# record names its files; the files are named by what they hold (ours). The compiler's runtime
+# (SNC's libsnc) links after the library's file.
+enable_language(CXX)
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
+	screenshot.cpp
+	../../../../../../sys/sdk/target/src/libsnc/i64mod.c
+	weak_calls.c
+	../../../../../../sys/sdk/target/src/libsnc/i64ops.c
+	../../../../../../sys/sdk/target/src/libsnc/i32ops.c
+	../../../../../../sys/sdk/target/src/libsnc/aeabi_div0.c
 )
+# Sony's psp2ld linked with --strip-unused: the runtime routines nothing calls are not in the original.
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
