@@ -290,7 +290,8 @@ SEG	@@HEAP
 SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c
 SEG	@@DATA		handshake.c sysinfo.c chipid.c
 SEG	@@INIS
-AT	0xfd11c
+AT	0xfd11c	IF ERNIE_FW>=0x01030511
+AT	0xfd0c4	IF ERNIE_FW<0x01030511
 SEG	@@KRAM
 SEG	@@INITL
 SEG	@@DATAL		cstart.asm version.c rtc.c input.c host.c csi.c command.c uart.c touch.c

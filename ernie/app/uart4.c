@@ -238,10 +238,16 @@ UART4_INTERRUPT void uart4ErrorInterrupt(void)
  */
 UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 {
+#if FW_SINCE(0x01030511)
 	struct UartPort *p;
 	unsigned char data;
 
 	p = &uart4;
+#else
+	struct UartPort *p = &uart4;	/* 0x01030505: the page through @SEGAX */
+	unsigned char data;
+
+#endif
 	data = SDR21;
 	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
 		uart4.rxBuffer[uart4.rxWrite] = data;

@@ -27,7 +27,7 @@ FSSET	EQU	00B6H			; the sequencer's clock setting (!addr16)
 FLRL	EQU	00C2H			; the word read, low (!addr16)
 FLRH	EQU	00C4H			; and high (!addr16)
 
-@@CODEL	CSEG
+@@CODEL	CSEG	UNITP		; at an even address (Sony's 0x01030505 pads before it)
 
 ; AX: the 8 bytes' buffer (near)
 _flashReadExtra:

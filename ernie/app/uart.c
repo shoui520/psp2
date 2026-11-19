@@ -634,9 +634,13 @@ void uart2ErrorInterrupt(void)
 
 void uart2ReceiveInterrupt(void)
 {
+#if BOARD_USS1001 && !FW_SINCE(0x01030511)
+	struct UartPort *p = &uart2;	/* 0x01030505: the page through @SEGAX */
+#else
 	struct UartPort *p;
 
 	p = &uart2;
+#endif
 	if ((p->rxWrite + 1 & p->rxMask) != p->rxRead) {
 		p->rxBuffer[p->rxWrite] = (unsigned char)SDR11;
 		p->rxWrite = p->rxWrite + 1 & p->rxMask;
@@ -647,9 +651,13 @@ void uart2ReceiveInterrupt(void)
 
 void uart2SendInterrupt(void)
 {
+#if BOARD_USS1001 && !FW_SINCE(0x01030511)
+	struct UartPort *p = &uart2;	/* 0x01030505: the page through @SEGAX */
+#else
 	struct UartPort *p;
 
 	p = &uart2;
+#endif
 	if (p->txWrite - p->txRead & p->txMask) {
 		SDR10 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
