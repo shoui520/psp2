@@ -10,3 +10,5 @@ the public headers (`include/`) and the license files. The library sources are a
 same commit when libSceFt2 is built from here.
 
 Used under the FreeType License (`docs/FTL.TXT`).
+
+Sources (2026-11-19): `src/{autofit,base,cid,psaux,pshinter,psnames,raster,sfnt,smooth,truetype,type1,type42}` from the same commit (Jamfile, rules.mk and module.mk left out). Not yet built by any module; libSceFt2's build will pick the files Sony's module contains.

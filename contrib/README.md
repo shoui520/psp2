@@ -21,7 +21,7 @@ upstream. When a build needs another file, add it from the same release.
 | dlmalloc-2.8.3 | Doug Lea's malloc 2.8.3 | `malloc.c` | libkernel (heap) |
 | dlmalloc-2.8.4 | Doug Lea's malloc 2.8.4 | `malloc.c` | sysmem, libpaf |
 | gcc-4.8-2014.05 | Sourcery CodeBench Lite 2014.05-28 GCC, the base of Sony's GCC | the ARM runtime files libkernel reads | libkernel (through `toolchains/libgcc`) |
-| freetype-7f316f22d | FreeType 2, git 7f316f22d (2012-08-31, between 2.4.10 and 2.4.11) | the public headers, the license files (`PROVENANCE.md`) | libpvf (the FreeType API it calls in libSceFt2) |
+| freetype-7f316f22d | FreeType 2, git 7f316f22d (2012-08-31, between 2.4.10 and 2.4.11) | the public headers, the license files and (2026-11-19) the module sources (`PROVENANCE.md`) | libpvf (the FreeType API it calls in libSceFt2) |
 | giflib-4.1.6 | GIFLIB 4.1.6 | the decoder (`dgif_lib.c`), `gif_err.c`, `gifalloc.c`, their headers, COPYING, README (`PROVENANCE.md`) | libpaf (`vsh/paf/src/misc/image/giflib`, with Sony's patch) |
 | img-sgx-ddk-1.7.862890 | Imagination SGX DDK for Linux 1.7 | the full import (not trimmed yet) | gpu_es4, gpuinit_es4, gpucoredump_es4 (through the shared SGX headers) |
 | jpeg-8c | IJG libjpeg 8c | the library sources libpaf links, headers, README, change.log | libpaf (`vsh/paf/src/misc/image/libjpeg`, with Sony's patch) |
