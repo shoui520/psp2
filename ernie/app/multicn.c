@@ -6,10 +6,14 @@
  * boardGetMultiCnOutput gives 0xff for any other state.
  */
 #pragma sfr
+#if (ERNIE_HW >> 20) == 0x007	/* BOARD_DOL1001 (board.h) */
+#pragma rtos_interrupt INTP8 intp8Interrupt
+#endif
 
 #include "ernie.h"
 #include "analog.h"
 #include "board.h"
+#include "input.h"
 #include "kernel.h"
 #include "serial.h"
 #include "serial1.h"
@@ -17,7 +21,10 @@
 #include "state.h"
 #include "task5.h"
 
+extern unsigned char input1Bit5Active(void);
 
+
+#if BOARD_USS1001
 unsigned char boardMultiCnSerialInit(void)
 {
 	serialLineInit();
@@ -189,10 +196,101 @@ unsigned char boardMultiCnStop(void)
 {
 	return boardSetMultiCnOutput(0);
 }
+#else
+/* DOL-1001: the fat board's switch (board.c) for the slim's outputs, the serial links as the fat
+   models' task 2 sets them */
+void boardMultiCnUpdate(void)
+{
+	unsigned char state;
+
+	state = serialGetMode();
+	if (input1Bit5Active()) {
+		if (boardMultiCnIsDongle()) {
+			boardMultiCnSetSwitch(0);
+			switch (state) {
+			case 0:
+			case 3:
+				serialClose3();
+				serial1Reset();
+				serialOpen1(2);
+				break;
+			case 1:
+				break;
+			}
+		} else if (boardMultiCnIsDebug()) {
+			boardMultiCnSetSwitch(0);
+			switch (state) {
+			case 0:
+			case 1:
+				serialClose1();
+				serialOpen3(3);
+				break;
+			case 3:
+				break;
+			}
+		} else {
+			serialClose3();
+			serialClose1();
+			boardMultiCnSwitchStop();
+		}
+	} else {
+		serialClose3();
+		serialClose1();
+		boardMultiCnSwitchStop();
+	}
+}
+
+unsigned char boardGetMultiCnOutput(void)
+{
+	return boardMultiCnGetSwitch();
+}
+
+/* 3 the host's side and the power on in the resume, 2 the dongle's and the power off, any other
+   the switch off */
+unsigned char boardSetMultiCnOutput(unsigned char output)
+{
+	unsigned char result;
+
+	result = 0;
+	switch (output) {
+	case 3:
+		result = boardMultiCnSetSwitch(0);
+		if (stateGet() == STATE_RESUME)
+			boardMultiCnPower(1);
+		break;
+	case 2:
+		result = boardMultiCnSetSwitch(1);
+		if (stateGet() == STATE_RESUME)
+			boardMultiCnPower(0);
+		break;
+	case 0xff:
+	default:
+		result = boardMultiCnSetSwitch(4);
+		break;
+	}
+	return result;
+}
+
+unsigned char boardMultiCnOutputOff(void)
+{
+	unsigned char result;
+
+	result = 0;
+	serialClose();
+	serial1Reset();
+	boardMultiCnSwitchOff();
+	return result;
+}
+
+unsigned char boardMultiCnStop(void)
+{
+	return boardSetMultiCnOutput(0);
+}
+#endif
 
 unsigned char boardMultiCnIsDongle(void)
 {
-	return analogGetMultiCn() == 4;
+	return analogGetMultiCn() == BOARD_MULTICN_DONGLE_ID;
 }
 
 unsigned char boardMultiCnIsDebug(void)
@@ -212,3 +310,11 @@ unsigned char boardMultiCnPower(unsigned char on)
 	}
 	return 0;
 }
+
+#if BOARD_DOL1001
+/* DOL-1001's INTP8 (P7.4's edge): task 5's sleep factor 21 (flag 4, 0x0200) */
+void intp8Interrupt(void)
+{
+	task5SetFlag(4, 0x0200);
+}
+#endif

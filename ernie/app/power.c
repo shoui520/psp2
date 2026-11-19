@@ -14,7 +14,7 @@
 #include "config.h"
 #include "csi.h"
 #include "debugpin.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "dtc.h"
 #endif
 #include "host.h"
@@ -53,7 +53,7 @@ struct PowerPart {
 };
 
 extern void inputInit(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern void inputStateRequest(unsigned char state);
 #endif
 extern void inputResumePrepare(void);
@@ -66,7 +66,7 @@ extern void inputReset(void);
 extern unsigned char input2Bit0Get(void);
 extern unsigned char input3Bit5High(void);
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static unsigned char powerError;
 #endif
 
@@ -156,7 +156,7 @@ void powerSequence(void)
 #endif
 		stateEnter();
 		task2SetFlag(3, 0x1000);
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 		/* USS-1001: the power LED told of an off or a suspend */
 		switch (powerState) {
 		case STATE_OFF:
@@ -171,14 +171,14 @@ void powerSequence(void)
 	} else {
 		powerState &= 0x7fff;
 		statePhase = 3;
-#if BOARD_USS1001
+#if SOURCE_0103
 		stateEnter();
 #endif
 	}
 	taskHookState();
 }
 
-#if !BOARD_USS1001	/* the slim has no power-on test */
+#if !SOURCE_0103	/* the slim has no power-on test */
 void powerErrorClear(void)
 {
 	powerError = 0;
@@ -254,7 +254,7 @@ unsigned char powerFaulty(void)
 	return 0;
 }
 #endif
-#endif	/* !BOARD_USS1001 */
+#endif	/* !SOURCE_0103 */
 
 /* a part reports itself: its bit in event flag 5 */
 unsigned char powerReady(unsigned char id)
@@ -341,7 +341,7 @@ unsigned char powerOn(void)
 #endif
 	powerPendingReset();
 	sleepFactorInit();
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: longer waits, and the input started by its state request */
 	spiDevInit();
 	powerPendingClear(1);
@@ -409,7 +409,7 @@ unsigned char powerResume(union PowerRequest *request)
 	sleepFactorSet20(0);
 #endif
 	stateWakeupFactor.word = request->word;
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: the input's two state requests around the parts, the DTC and the host's
 	   requests opened with the link */
 	POWER_WAIT_CLEAR(3);
@@ -432,7 +432,9 @@ unsigned char powerResume(union PowerRequest *request)
 	inputStateRequest(6);
 	POWER_WAIT_KEEP(3, 3);
 	powerPendingClear(3);
+#if BOARD_USS1001
 	dtcOpen();
+#endif
 	csiOpenLsb();
 	hostInit();
 	hostOpenRequests();
@@ -453,8 +455,10 @@ unsigned char powerResume(union PowerRequest *request)
 		P91 = 0;
 		dly_tsk(1);
 		SPIDEV_POWER2 = 1;
+#if !BOARD_DOL1001	/* DOL-1001 tells nobody */
 		if (request->bits.notify)
 			set_flg(4, 0x08);
+#endif
 		dly_tsk(1);
 		result = 0;
 		break;
@@ -567,7 +571,7 @@ unsigned char powerOff(void)
 	if (configTakeChanged() != 0)
 		powerParamLoad();
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: the input stopped by its state request, the DTC closed with the CSI */
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(1);
@@ -576,7 +580,9 @@ unsigned char powerOff(void)
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
+#if BOARD_USS1001
 	dtcClose();
+#endif
 	HOST_FRAME = 0;
 	HOST_READY = 0;
 	powerPendingClear(4);
@@ -675,7 +681,7 @@ unsigned char powerSuspend(void)
 #if FW_SINCE(0x01000104)
 	sleepFactorSet20(0);
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: as its off, with P9.1 high */
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(3);
@@ -684,7 +690,9 @@ unsigned char powerSuspend(void)
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
+#if BOARD_USS1001
 	dtcClose();
+#endif
 	HOST_FRAME = 0;
 	HOST_READY = 0;
 	powerPendingClear(4);
@@ -755,7 +763,7 @@ unsigned char powerShutdown(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: as its off, the timers' clock stopped at the end */
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(9);
@@ -764,7 +772,9 @@ unsigned char powerShutdown(void)
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
+#if BOARD_USS1001
 	dtcClose();
+#endif
 	HOST_FRAME = 0;
 	HOST_READY = 0;
 	powerPendingClear(4);
@@ -836,18 +846,20 @@ unsigned char powerCut(void)
 #if FW_SINCE(0x0100060B)
 	waitResult = 0;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: P3.4 in place of P6.2, the input stopped by its state request */
 	clockOutputStop();
 	POWER_WAIT_CLEAR(5);
 	powerJobPostCut();
 	POWER_WAIT(5, 0x19);
 	powerPendingClear(5);
-	P3.4 = 0;
+	BOARD_POWER_CUT_PIN = 0;
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
+#if BOARD_USS1001
 	dtcClose();
+#endif
 	HOST_FRAME = 0;
 	HOST_READY = 0;
 	powerPendingClear(4);
@@ -869,7 +881,7 @@ unsigned char powerCut(void)
 	if (powerPendingGet() != 0)
 		result = 1;
 	dly_tsk(3);
-	P3.4 = 1;
+	BOARD_POWER_CUT_PIN = 1;
 	return result;
 #else
 #if FW_SINCE(0x00090206)
@@ -936,7 +948,7 @@ unsigned char powerReset(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: the input reset by its state request, P9.7 pulsed */
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(0x0b);
@@ -945,7 +957,9 @@ unsigned char powerReset(void)
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
+#if BOARD_USS1001
 	dtcClose();
+#endif
 	HOST_FRAME = 0;
 	powerPendingClear(4);
 	powerPendingClear(1);
@@ -994,7 +1008,7 @@ unsigned char powerReset(void)
 unsigned char powerUpdateAnswer(void)
 {
 	unsigned char result;
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char waitResult;
 
 	/* USS-1001: the parts ended, the host link given its time first */
@@ -1034,7 +1048,7 @@ unsigned char powerUpdate(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001: the input and the host's requests closed, the host link given its time */
 	POWER_WAIT_CLEAR(3);
 	inputStateRequest(0x0c);

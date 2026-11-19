@@ -13,7 +13,11 @@
 #include "state.h"
 
 #define ELMO_TRIES	3		/* a transfer's tries */
-#define ELMO_TIMEOUT	0x4b		/* the wait for a transfer's end, in ticks */
+#if BOARD_DOL1001
+#define ELMO_TIMEOUT	1		/* the wait for a transfer's end, in ticks */
+#else
+#define ELMO_TIMEOUT	0x4b
+#endif
 #define ELMO_DONE	0x0010		/* event flag 4's bit for a transfer's end */
 #define ELMO_NO_ANSWER	0x10		/* the status when the transfer did not end */
 
@@ -57,7 +61,7 @@ static const struct ElmoRegInit elmoRegInit[] = {
 };
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: nothing to set up before the versions are read */
 void elmoInit(void)
 {
@@ -113,7 +117,7 @@ void elmoInitRegs(void)
 	}
 #endif
 }
-#endif /* BOARD_USS1001 */
+#endif /* SOURCE_0103 */
 
 /* writes length bytes, a register number and its value; 0, or the transfer's status */
 unsigned char elmoWrite(unsigned char *data, unsigned char length)
@@ -188,7 +192,7 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	return status;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the version's two bytes, as the slim's code reaches them */
 struct ElmoVersion {
 	unsigned char	low;
@@ -201,7 +205,7 @@ unsigned char elmoReadVersion(unsigned char *version)
 {
 	unsigned char reg;
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* the slim's: not again once the Elmo did not answer */
 	if (deviceVersions.elmo[0] == 0xff) {
 		ELMO_VERSION_OF(version)->low = ELMO_VERSION_OF(version)->high = 0xff;
@@ -212,8 +216,8 @@ unsigned char elmoReadVersion(unsigned char *version)
 	return elmoRead(&reg, version);
 }
 
-#if BOARD_USS1001
-/* the slim's: sets (set) or clears masks[0-3] in the status masks, and clears or sets
+#if SOURCE_0103
+/* the 0x0103 source's: sets (set) or clears masks[0-3] (the PS TV's: [0-4]) in the status masks, and clears or sets
    masks->regA7 in register 0xa7, in one write of elmoCommand; the copies change only when the
    write went through. 0, or elmoWrite's error */
 /* the status masks as the slim's code reaches them: a register each */
@@ -230,6 +234,13 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 	if (masks->status0 != 0) {
 		value[0] = set ? ELMO_STATUS->status0 | masks->status0 :
 			~masks->status0 & ELMO_STATUS->status0;
+#if BOARD_DOL1001
+		/* the PS TV's: a clear keeps bit 2 in system states 8 and 0x8000 while status
+		   mask 2's bit 12 is set */
+		if (!set && (masks->status0 & 0x04) && (stateGet() & 0x8008) &&
+		    (ELMO_STATUS->status2 & 0x1000))
+			value[0] |= 0x04;
+#endif
 		elmoCommand[length++] = 0xa0;
 		elmoCommand[length++] = ((unsigned char *)&value[0])[1];
 		elmoCommand[length++] = (unsigned char)value[0];
@@ -255,6 +266,15 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 		elmoCommand[length++] = ((unsigned char *)&value[3])[1];
 		elmoCommand[length++] = (unsigned char)value[3];
 	}
+#if !BOARD_USS1001	/* the PS TV's: register 0xa4 too */
+	if (masks->status4 != 0) {
+		value[4] = set ? ELMO_STATUS->status4 | masks->status4 :
+			~masks->status4 & ELMO_STATUS->status4;
+		elmoCommand[length++] = 0xa4;
+		elmoCommand[length++] = ((unsigned char *)&value[4])[1];
+		elmoCommand[length++] = (unsigned char)value[4];
+	}
+#endif
 	if (masks->regA7 != 0) {
 		value[5] = set ? ~masks->regA7 & elmoRegA7 : elmoRegA7 | masks->regA7;
 		elmoCommand[length++] = 0xa7;
@@ -272,6 +292,10 @@ unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 				ELMO_STATUS->status2 = value[2];
 			if (masks->status3 != 0)
 				ELMO_STATUS->status3 = value[3];
+#if !BOARD_USS1001
+			if (masks->status4 != 0)
+				ELMO_STATUS->status4 = value[4];
+#endif
 			if (masks->regA7 != 0)
 				elmoRegA7 = value[5];
 		}
@@ -374,7 +398,7 @@ unsigned char elmoClearMasks(struct ElmoMasks *masks, unsigned char *command)
 	return length;
 }
 
-#endif /* BOARD_USS1001 */
+#endif /* SOURCE_0103 */
 
 /* writes the command for each status mask select's bits 0-4 name into command; its length */
 unsigned char elmoGetMasks(unsigned char select, unsigned char *command)

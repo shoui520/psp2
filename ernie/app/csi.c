@@ -169,6 +169,7 @@ int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int
 	return 1;
 }
 #else
+#if !BOARD_DOL1001	/* not in DOL-1001's */
 /* a transfer by DMA, with channel 0's interrupt at the end; 1 if it cannot start */
 int csiTransferDma(unsigned char *receive, unsigned char *send, unsigned int length)
 {
@@ -204,6 +205,7 @@ int csiTransferDma(unsigned char *receive, unsigned char *send, unsigned int len
 	csi.state &= ~CSI_BUSY;
 	return 1;
 }
+#endif
 
 /* a transfer by DMA without its interrupt (the caller polls DST0); 1 if it cannot start */
 int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int length)
@@ -284,7 +286,11 @@ void csiOpenMsb(void)
 	csi.state = 0;
 	csi.sendCount = 0;
 	csi.receiveCount = 0;
+#if BOARD_DOL1001
+	SPS0L = 0xf0 & SPS0L;
+#else
 	SPS0L &= 0xf0;
+#endif
 	SMR00 = 0x0020;
 	SCR00 = 0xf007;
 	SDR00 = 0x0600;
@@ -300,6 +306,16 @@ void csiOpenMsb(void)
 	PM1.2 = 0;
 	P1.5 = 0;
 	PM1.5 = 0;
+#elif BOARD_DOL1001
+	/* DOL-1001's: each line's mode after it, then P5.7 as the fat boards' */
+	P1.0 = 1;
+	PM1.0 = 0;
+	P1.1 = 1;
+	PM1.1 = 1;
+	P1.2 = 1;
+	PM1.2 = 0;
+	P5.7 = 0;
+	PM5.7 = 0;
 #else
 	P1.0 = 1;
 	P1.1 = 1;

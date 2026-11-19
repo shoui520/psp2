@@ -11,7 +11,7 @@
 
 #include "board.h"
 #include "ernie.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "eventlog.h"
 #endif
 #include "iica.h"
@@ -226,7 +226,7 @@ int taskStandbyHalt(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* USS-1001: 1 while a state's sequence runs or the state is none of 0x0004, 0x0008, 0x0010 and
    0x0800 */
 unsigned int taskPending1(void)
@@ -234,9 +234,7 @@ unsigned int taskPending1(void)
 	unsigned int state;
 
 	state = stateGet();
-	if ((state & 0x8000) || !(state & 0x081c))
-		return 1;
-	return 0;
+	return (state & 0x8000) || !(state & 0x081c);
 }
 #else
 unsigned int taskPending1(void)
@@ -245,7 +243,7 @@ unsigned int taskPending1(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_EVENT_LOG
 /* hooks: a state's change and (from 0x01030511) a transition handled go into the event log
    (kind 2, codes 1 and 2), a standby and the tick do nothing */
 void taskHookState(void)

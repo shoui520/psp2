@@ -77,7 +77,7 @@ unsigned char handshakeKey[16];	/* mode 0x0f's session key */
 
 static __near struct HandshakePacket handshakePacket;
 static __near struct Handshake handshake;
-#if BOARD_USS1001	/* the slim's is far */
+#if SOURCE_0103	/* the slim's is far */
 static unsigned int handshakeUnlocked[HANDSHAKE_MODES];
 #else
 static __near unsigned int handshakeUnlocked[HANDSHAKE_MODES];

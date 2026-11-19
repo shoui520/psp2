@@ -18,6 +18,9 @@
 #include "state.h"
 #include "task.h"
 #include "task5.h"
+#if BOARD_DOL1001
+#include "thermal.h"
+#endif
 
 
 unsigned int powerDevicePending;
@@ -27,12 +30,14 @@ unsigned char chargeLedBlinkOn;
 
 extern unsigned char input1Bit7Active(void);
 
+#if !BOARD_DOL1001
 static void task5ChargeLed(void);
 #if !LED_REQUESTS
 static void chargeLedBlinkUpdate(void);
 #endif
 #if FW_SINCE(0x01000306)
 static void task5LedOff(void);
+#endif
 #endif
 
 void task5(VP_INT exinf)
@@ -41,6 +46,55 @@ void task5(VP_INT exinf)
 	FLGPTN ptn;
 
 	powerDeviceInit();
+#if BOARD_DOL1001
+	/* DOL-1001's: the temperature (0x0020), the power LED's blink (0x2000), INTP9's wake
+	   (0x1000) and P7.4's sleep factor (0x0200) */
+	for (;;) {
+		ercd = wai_flg(4, 0xf3a3, TWF_ORW, &ptn);
+		if (ercd == E_OK) {
+			if (ptn & 0x0002) {
+				clr_flg(4, ~0x0002);
+				powerJobState.flag = 0;
+				powerJob();
+			}
+			if (ptn & 0x0080) {
+				clr_flg(4, ~0x0080);
+				powerDeviceRun();
+			}
+			if (ptn & 0x0001) {
+				clr_flg(4, ~0x0001);
+				powerRequestEvent();
+			}
+			if (ptn & 0x0100) {
+				clr_flg(4, ~0x0100);
+				batteryRequestEvent();
+			}
+			if (ptn & 0x0020) {
+				clr_flg(4, ~0x0020);
+				thermalPoll();
+			}
+			if (ptn & 0x2000) {
+				clr_flg(4, ~0x2000);
+				powerLedFlagsStep();
+			}
+			if (ptn & 0x4000) {
+				clr_flg(4, ~0x4000);
+				serial1Operation();
+			}
+			if (ptn & 0x8000)
+				clr_flg(4, ~0x8000);
+			if (ptn & 0x1000) {
+				clr_flg(4, ~0x1000);
+				intp9Event();
+			}
+			if (ptn & 0x0200) {
+				clr_flg(4, ~0x0200);
+				powerSleepFactor21();
+			}
+		}
+		task5Idle();
+	}
+#else
 	for (;;) {
 #if FW_SINCE(0x01000306)
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
@@ -78,7 +132,7 @@ void task5(VP_INT exinf)
 				ledUpdate();
 #endif
 			}
-#if BOARD_USS1001
+#if SOURCE_0103
 			if (ptn & 0x0008) {
 				clr_flg(4, ~0x0008);
 				task5LedOff();
@@ -109,7 +163,7 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x1000);
 				task5ChargeLed();
 			}
-#if BOARD_USS1001
+#if SOURCE_0103
 			if (ptn & 0x0800) {
 				clr_flg(4, ~0x0800);
 				powerLedFlagsUpdate();
@@ -146,6 +200,7 @@ void task5(VP_INT exinf)
 		}
 		task5Idle();
 	}
+#endif
 }
 
 void powerJobPostOn(void)
@@ -230,7 +285,7 @@ unsigned char elmoVersion0(void)
 
 void powerDeviceSetPending(unsigned int bits)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	dis_dsp();
 	powerDevicePending |= bits;
 	ena_dsp();
@@ -241,7 +296,9 @@ void powerDeviceSetPending(unsigned int bits)
 	return;
 }
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* DOL-1001's task 5 handles no charge LED */
+#elif SOURCE_0103
 /* the slim's: the power LED module's causes (the charge LED off, its full charge) */
 static void task5ChargeLed(void)
 {
@@ -315,7 +372,8 @@ static void chargeLedBlinkUpdate(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+#elif SOURCE_0103
 /* the slim's: nothing */
 static void task5LedOff(void)
 {

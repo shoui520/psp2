@@ -17,7 +17,7 @@ extern struct HostStream hostStream0302;
 extern struct HostStream hostStream0400;
 
 extern void inputRequestInit(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern void touchRequestRun(void);
 #else
 extern void devicesRequestRun(void);
@@ -34,14 +34,14 @@ extern unsigned char hostCommandControlsAnalogBoth(unsigned char *out, unsigned 
 extern unsigned char hostCommandMultiCnInfo(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommand0112(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommand0102(unsigned char *out, unsigned char *length);
-#if !BOARD_USS1001
+#if !SOURCE_0103
 extern void touchRequestCancel(void);
 #endif
 #if FW_SINCE(0x01000104)
 extern void controlsGetButtons(unsigned char *out);
 #if FW_SINCE(0x0100060B)
 extern unsigned char hostCommand0120(unsigned char *out, unsigned char *length);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char hostCommand0130(unsigned char *out, unsigned char *length);
 #endif
 /* the slim's 0x0180 sets the sticks' mode on a timer (0x01030505: at once) */

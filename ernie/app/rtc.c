@@ -77,7 +77,7 @@ void rtcStart(void)
 	case 0xf1:
 	case 0x10:
 	case 0x11:
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x51:
 #endif
 		setAlarm(RTC_ALARM_NONE);
@@ -85,7 +85,7 @@ void rtcStart(void)
 		setAlarmMode(0);
 		break;
 	case 0x40:
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x61:
 #endif
 		break;

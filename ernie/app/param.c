@@ -11,7 +11,7 @@
 #include "kernel.h"
 #include "param.h"
 
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090804) && !BOARD_DOL1001	/* DOL-1001 keeps no default patterns */
 static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -23,7 +23,7 @@ static TABLE_CONST unsigned char paramPattern1Default[PARAM_PATTERN_SIZE] = {
 };
 #endif
 
-#if FW_SINCE(0x01000306)
+#if FW_SINCE(0x01000306) && !BOARD_DOL1001
 static const unsigned char paramPattern2Default[PARAM_PATTERN_SIZE] = {
 	0x00, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
 	0x01, 0x01, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
@@ -69,15 +69,17 @@ int paramInit(void)
 	param.base = PARAM_BASE_DEFAULT;
 #endif
 	param.adjust = 0;
+#if !BOARD_DOL1001
 	memcpy(param.pattern1, paramPattern1Default, PARAM_PATTERN_SIZE);
 #if FW_SINCE(0x01000306)
 	memcpy(param.pattern2, paramPattern2Default, PARAM_PATTERN_SIZE);
+#endif
 #endif
 #if FW_SINCE(0x0100060B)
 	param.alarmLevel = 0;
 	param.alarmLevel3G = 0;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	param.presets[0] = 0x19;
 	param.presets[1] = 0x19;
 	param.presets[2] = 0x09;

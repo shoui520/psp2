@@ -9,6 +9,7 @@
 #include "bbmc.h"
 #include "board.h"
 #include "charge.h"
+#include "chip.h"
 #include "config.h"
 #include "cookie.h"
 #include "elmo.h"
@@ -24,6 +25,9 @@
 #include "sleepfactor.h"
 #include "state.h"
 #include "task.h"
+#if BOARD_DOL1001
+#include "thermal.h"
+#endif
 #include "timer.h"
 
 #define POWER_JOB_PART	5	/* the power part the jobs report */
@@ -126,7 +130,113 @@ void powerJob(void)
 	}
 }
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/*
+ * DOL-1001's jobs: the fat board's lines, INTP9's edge (intp9Enable) and the temperature
+ * sensor's mode (thermalSetMode) in place of the slim's LED and charge settings.
+ */
+static void powerJobOn(void)
+{
+	STATE_TRANSITION_EVENT
+	if (!P12.0) {
+		P6.2 = 0;
+		STATE_TRANSITION(0x41);
+	}
+	EGP0.0 = 0;
+	EGN0.0 = 1;
+	PIF0 = 0;
+	PMK0 = 0;
+	EGP1.0 = 1;
+	EGN1.0 = 1;
+	PIF8 = 0;
+	PMK8 = 0;
+	task5SetFlag(4, 0x200);
+	intp9Enable(0);
+	powerSeqOn();
+	if (stateGetCause() != 0x42)
+		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = powerCutRegs[3] = 0;
+	powerTimersInit();
+	powerSeqInit();
+	powerLedFlagsInit(0);
+	timerStart(TIMER_RTC(0x17), 10);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobResume(void)
+{
+	intp9Enable(0);
+	powerSeqResume();
+	powerRequestInit();
+	thermalSetMode(THERMAL_MODE_STANDBY);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobOff(void)
+{
+	intp9Enable(0);
+	powerSeqOff();
+	chargeSetAcDelay();
+	thermalSetMode(THERMAL_MODE_ON);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobShutdown(void)
+{
+	powerSeqOff();
+	chargeUsbModeUpdate();
+	chargeTimerStop();
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobSuspend(void)
+{
+	powerSeqSuspend();
+	thermalSetMode(THERMAL_MODE_ON);
+	intp9Enable(1);
+	powerReady(POWER_JOB_PART);
+}
+
+/* the lines low, registers 0xb0-0xb2 read */
+static void powerJobCut(void)
+{
+	unsigned char reg;
+	unsigned char result;
+
+	P13.1 = 0;
+	P37 = 0;
+	P36 = 0;
+	P8.0 = 0;
+	reg = 0xb0;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[0]);
+	reg = 0xb1;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[1]);
+	reg = 0xb2;
+	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
+	powerLedFlagsInit(0);
+	thermalSetMode(THERMAL_MODE_OFF);
+	chargeTimerStop();
+	powerReady(POWER_JOB_PART);
+	return;
+}
+
+static void powerJobOffEnd(void)
+{
+	batteryHibernate();
+	chargeTimerStop();
+}
+
+static void powerJobUpdate(void)
+{
+	powerLedEndMode(POWER_JOB_PART);
+	powerReady(POWER_JOB_PART);
+}
+
+static void powerJobReset(void)
+{
+	powerLedEndMode(POWER_JOB_PART);
+	powerReady(POWER_JOB_PART);
+}
+#elif SOURCE_0103
 /*
  * The slim's jobs: the power LED module's flags (powerLedSetFlags) in place of the charge
  * LED's settings, and chargeUsbModeUpdate in place of the mode applied again.
@@ -134,8 +244,8 @@ void powerJob(void)
 static void powerJobOn(void)
 {
 	STATE_TRANSITION_EVENT
-	if (!P3.1) {
-		P3.4 = 0;
+	if (!BOARD_INTP0_PIN) {
+		BOARD_POWER_CUT_PIN = 0;
 		STATE_TRANSITION(0x41);
 	}
 	EGP0.4 = 0;
@@ -262,8 +372,10 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
 	reg = 0xb3;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[3]);
+#if BOARD_EVENT_LOG
 	eventLogRecord(5, 0x20, (unsigned char *)&powerCutRegs[0], 4);
 	eventLogRecord(5, 0x21, (unsigned char *)&powerCutRegs[2], 4);
+#endif
 	powerLedFlagsInit(0);
 	powerLedClearFlags(0x04);
 	chargeUsbModeUpdate();
@@ -632,4 +744,4 @@ static void powerJobReset(void)
 	powerReady(POWER_JOB_PART);
 }
 #endif
-#endif /* BOARD_USS1001 */
+#endif /* SOURCE_0103 */

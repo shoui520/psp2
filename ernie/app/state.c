@@ -56,6 +56,8 @@ extern int button2Reset(void);
 extern int button2Result(void);
 #if !FW_SINCE(0x00090206)
 extern int button1State(void);
+#endif
+#if !FW_SINCE(0x00090206) || BOARD_DOL1001
 extern int button2State(void);
 #endif
 
@@ -85,12 +87,12 @@ static int stateUpdateHandle(struct StateEvent *event);
 #endif
 static unsigned int stateEventsOf(unsigned int state);
 static unsigned int stateNextOf(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 static int stateModeAtLevel9(union PowerRequest *request);
 #endif
 
 /* the input's part of a state: on the slim task 3 runs it (inputStateRun) */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define stateInputOff()		inputStateRequest(2)
 #define stateInputSuspend()	inputStateRequest(4)
 #define stateInputCut()		inputStateRequest(8)
@@ -103,7 +105,7 @@ static int stateModeAtLevel9(union PowerRequest *request);
 #endif
 
 /* the transitions below it are wakes, a resume's mode (the slim's has two more) */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define STATE_WAKE_TRANSITIONS	0x22
 #else
 #define STATE_WAKE_TRANSITIONS	0x20
@@ -135,7 +137,7 @@ static const struct StateEntry stateTable[] = {
 	{ STATE_RESET, 0x0830, stateResetEnter, stateResetHandle },
 #if FW_SINCE(0x00090903)
 	{ STATE_UPDATE_ANSWER, 0x0834, stateUpdateAnswerEnter, stateUpdateAnswerHandle },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ STATE_UPDATE, 0x0814, stateUpdateEnter, stateUpdateHandle },
 #else
 	{ STATE_UPDATE, 0x0000, stateUpdateEnter, stateUpdateHandle },
@@ -143,7 +145,7 @@ static const struct StateEntry stateTable[] = {
 #endif
 };
 
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg struct StateRecord stateRecord;
 struct StateRecord stateHistory[2];	/* the last two states entered, the last at
 					   stateRecord.count & 1 */
@@ -163,7 +165,7 @@ static unsigned char stateReserved[6];
 #endif
 union PowerRequest stateWakeupFactor;
 union PowerRequest stateRequest;
-#if BOARD_USS1001 && FW_SINCE(0x01030511)
+#if STATE_SLIM_MSG
 static struct StateMsg stateEnterMsg;		/* stateEnter's */
 #endif
 static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume */
@@ -177,7 +179,7 @@ static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume 
 					 stateTransition(&transitionEvent))
 #endif
 
-#if !BOARD_USS1001	/* not in the slim's */
+#if !SOURCE_0103	/* not in the slim's */
 void stateHostStop(void)
 {
 	hostIntDisable();
@@ -203,7 +205,7 @@ void stateEvent(struct StateEvent *event)
 		if (stateTable[i].state == powerState) {
 			switch (event->type) {
 			case STATE_EVENT_ENTER:
-#if BOARD_USS1001
+#if SOURCE_0103
 				stateRecord.count++;
 				if (statePhase != 3)
 					stateTable[i].enter();
@@ -231,7 +233,7 @@ void stateEvent(struct StateEvent *event)
 					task6SetFlag(6, 0x4000);
 				if (status & 0x10)
 					task5SetFlag(4, 0x8000);
-#if BOARD_USS1001
+#if SOURCE_0103
 				if (status & 0x04)
 					task3SetFlag(2, 0x8000);
 				if (status & 0x3c)
@@ -297,12 +299,16 @@ void stateInit(void)
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
 #endif
+#if BOARD_DOL1001
+	if (configGet()->start.bits.coldStartOn)	/* and wake factor 20 unmasked */
+		mask &= ~0x00100000UL;
+#endif
 #if FW_SINCE(0x00090009)
 	stateSetWakeMask(mask);
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the state record (serial 0x0109, mode 0) */
 void stateGetRecord(unsigned char *out)
 {
@@ -336,7 +342,7 @@ unsigned int stateGet(void)
 
 /* 0 sent; 1 no block free; 2 an error */
 #if FW_SINCE(0x01000104)
-#if BOARD_USS1001
+#if SOURCE_0103
 int stateTransition(unsigned int transition)
 #else
 int stateTransition(unsigned char transition)
@@ -449,13 +455,13 @@ static int stateOffEnter(void)
 	STATE_TRANSITION_EVENT
 	unsigned char cause;
 #endif
-#if FW_SINCE(0x01000107) && !BOARD_USS1001
+#if FW_SINCE(0x01000107) && !SOURCE_0103
 	unsigned char length;
 	unsigned char size;
 #endif
 
 	stateInputOff();
-#if !BOARD_USS1001
+#if !SOURCE_0103
 	serial4Answer0205();
 #endif
 	serialAnswer0105();
@@ -484,7 +490,7 @@ static int stateOffEnter(void)
 	case 0x11:
 		STATE_TRANSITION(0x0a);
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x51:
 		STATE_TRANSITION(0x1b);
 		/* falls through */
@@ -501,7 +507,7 @@ static int stateOffEnter(void)
 		if (configGet()->offTransition18 && configGet()->offTransitionBlock == 0)
 			STATE_TRANSITION(0x18);
 	}
-#if BOARD_USS1001
+#if SOURCE_0103
 	else if (stateCause == 0x68) {		/* the slim's: a reset with cause 0x61 */
 		dis_dsp();
 		DI();
@@ -511,7 +517,14 @@ static int stateOffEnter(void)
 #endif
 	else if (stateCause == 0x5b)
 		STATE_TRANSITION(0x19);
-#if BOARD_USS1001
+#if BOARD_DOL1001
+	else if (cause == 0 && stateCause == 0x32) {	/* DOL-1001's cold start */
+		logEvent(0x1b);
+		if (P4.6 && configGet()->start.bits.coldStartOn)
+			STATE_TRANSITION(0x1c);
+	}
+#endif
+#if SOURCE_0103
 	else if (stateCause == 0x5d) {		/* and with cause 0x51 */
 		dis_dsp();
 		DI();
@@ -521,7 +534,7 @@ static int stateOffEnter(void)
 #endif
 #endif
 #endif
-#if FW_SINCE(0x01000107) && !BOARD_USS1001
+#if FW_SINCE(0x01000107) && !SOURCE_0103
 	logReadData(1, (unsigned char *)&idRecord1, &length);
 	logReadData(0x0f, &size, &length);
 	idRecordsLength = size;
@@ -587,7 +600,7 @@ static int stateCutEnter(void)
 	stateInputCut();
 	tau0PowerOff();
 	stateCheck();
-#if BOARD_USS1001
+#if SOURCE_0103
 	setResetCause(0x20);
 #endif
 #if FW_SINCE(0x00090804)
@@ -621,7 +634,7 @@ static int stateUpdateAnswerEnter(void)
 
 static int stateUpdateEnter(void)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	stateRecordSave();			/* the slim's: recorded before the downloader */
 	taskHookState();
 #endif
@@ -667,7 +680,7 @@ static int stateOffHandle(struct StateEvent *event)
 	default:
 		if ((event->transition & 0x7f) >= STATE_WAKE_TRANSITIONS)
 			break;
-#if BOARD_USS1001
+#if SOURCE_0103
 		if (serialAuthUnlocked0() != 0) {	/* the slim's: no fault, no input 3 */
 #else
 		if (powerFaulty() != 0) {
@@ -705,11 +718,14 @@ static int stateOffHandle(struct StateEvent *event)
 		if (stateRequest.bits.mode != 0 &&
 		    ((1UL << stateRequest.bits.mode) & stateWakeMask))
 			stateNext = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* the slim's: at battery level 9 only some modes resume, and while no alarm the
 		   power LED shows it */
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On())
 			stateNext = 0;
+#if BOARD_DOL1001
+		/* DOL-1001 has no battery */
+#else
 #if FW_SINCE(0x01030511)
 		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
 			stateNext = 0;
@@ -717,6 +733,7 @@ static int stateOffHandle(struct StateEvent *event)
 		if (chargeBatteryLevel9() && !(unsigned char)chargeAlarm0On() &&
 		    stateModeAtLevel9(&stateRequest) != 0)
 			powerLedSetFlags(0x80);
+#endif
 #elif FW_SINCE(0x01000104)
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On() ||
 		    (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff &&
@@ -763,7 +780,7 @@ static int stateResumeHandle(struct StateEvent *event)
 #if FW_SINCE(0x0100060B)
 	case 0x5c:
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x5d: case 0x68:			/* the slim's resets (stateOffEnter) */
 #endif
 		stateNext = STATE_OFF;
@@ -832,7 +849,7 @@ static int stateSuspendHandle(struct StateEvent *event)
 		if (!(unsigned char)chargeMayStart())
 #endif
 			stateNext = 0;
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001	/* DOL-1001 has no battery */
 #if FW_SINCE(0x01030511)
 		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
 			stateNext = 0;
@@ -930,7 +947,7 @@ static int stateUpdateAnswerHandle(struct StateEvent *event)
 #if FW_SINCE(0x01000104)
 	case 0x57: case 0x58:
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x5b: case 0x5d: case 0x68:
 #endif
 		stateNext = STATE_OFF;
@@ -944,7 +961,7 @@ static int stateUpdateAnswerHandle(struct StateEvent *event)
 
 static int stateUpdateHandle(struct StateEvent *event)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* the slim's: the updater's state ends as the answer's does, without its resume */
 	switch (event->transition) {
 	case 0x41:
@@ -1060,13 +1077,33 @@ void stateInputWake2(void)
 	unsigned int state;
 
 	state = stateGet();
+#if BOARD_DOL1001
+	/* DOL-1001: the release of a press begun in the off or suspend state starts the system,
+	   at a cold start of cause 0x32 by transition 0x1c where the settings ask */
+	if (input1Bit4Active()) {
+		button2Reset();
+		pinMonitor1Enable(1);
+	} else {
+		if (!(unsigned char)button2Result()) {
+			if (!input1Bit6Active() && (state == STATE_OFF || state == STATE_SUSPEND) &&
+			    state == button2State()) {
+				if (configGet()->start.bits.coldStartOn &&
+				    (getResetCause() & 0xf0) == 0 && stateCause == 0x32)
+					STATE_TRANSITION(0x1c);
+				else
+					STATE_TRANSITION_WAKE(0);
+			}
+		}
+		button2Reset();
+	}
+#else
 	if (input1Bit4Active()) {
 		if (state == STATE_SUSPEND)
 			STATE_TRANSITION_WAKE(0);
 		button2Reset();
 		pinMonitor1Enable(1);
 	} else {
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* the slim starts nothing here, and does not look at the state */
 		if (!(unsigned char)button2Result() && !input1Bit6Active()) {
 		}
@@ -1082,6 +1119,7 @@ void stateInputWake2(void)
 #endif
 		button2Reset();
 	}
+#endif
 }
 
 /* input handler: input 1.6 (input1Bit6Active) wakes a suspended system by transition 0x12 */
@@ -1126,7 +1164,7 @@ int stateSerialLock(void)
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the modes a resume keeps at battery level 9 */
 static int stateModeAtLevel9(union PowerRequest *request)
 {

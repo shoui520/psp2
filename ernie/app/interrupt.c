@@ -11,6 +11,9 @@
 #if (ERNIE_HW >> 20) == 0x008	/* BOARD_USS1001 (board.h): pin monitor 2 on INTP3 */
 #pragma rtos_interrupt INTP3 intp3Interrupt
 #pragma rtos_interrupt INTP2 intp2Interrupt
+#elif (ERNIE_HW >> 20) == 0x007	/* BOARD_DOL1001 (board.h): pin monitor 2 on INTP3 */
+#pragma rtos_interrupt INTP9 intp9Interrupt
+#pragma rtos_interrupt INTP3 intp3Interrupt
 #else
 #pragma rtos_interrupt INTP2 intp2Interrupt
 #pragma rtos_interrupt INTP7 intp7Interrupt
@@ -62,6 +65,14 @@ void tm03Interrupt(void)
 	task5SetFlag(4, 0x0004);
 }
 
+#if BOARD_DOL1001
+/* DOL-1001's INTP9: event 0x1000 of flag 4 */
+void intp9Interrupt(void)
+{
+	task5SetFlag(4, 0x1000);
+}
+#endif
+
 /* BOARD_INTP1_PIN (P4.6) low: the scan held long */
 void intp1Interrupt(void)
 {
@@ -77,8 +88,8 @@ void intp1Interrupt(void)
 #endif
 }
 
-#if BOARD_USS1001
-/* USS-1001: P3.0 low runs pin monitor 2; INTP2 does nothing */
+#if BOARD_USS1001 || BOARD_DOL1001
+/* USS-1001 and DOL-1001: P3.0 low runs pin monitor 2 */
 void intp3Interrupt(void)
 {
 	if (!P3.0) {
@@ -91,9 +102,19 @@ void intp3Interrupt(void)
 	}
 }
 
+#if BOARD_USS1001
+/* USS-1001's INTP2 does nothing */
 void intp2Interrupt(void)
 {
 }
+#else
+/* DOL-1001: P11.5 high, event 0x0200 of flag 2 */
+void sre0Interrupt(void)
+{
+	if (P11.5)
+		task3SetFlag(2, 0x0200);
+}
+#endif
 #else
 #if BOARD_INPUTS_102603
 /* P4.7 high: bit 4 of input group 1 taken as changed, and the scan held */
@@ -261,7 +282,7 @@ void intp11Interrupt(void)
 #endif
 }
 
-#endif	/* BOARD_USS1001 */
+#endif	/* BOARD_USS1001 || BOARD_DOL1001 */
 
 /* the touch panels' frame timer: one shot (TT0 stops channel 4), a frame started while keys
    0x000c are held */
@@ -286,6 +307,7 @@ void intp0Interrupt(void)
 }
 #endif
 
+#if !BOARD_DOL1001
 /* BOARD_SRE0_PIN (P11.5) low: bit 0 of input group 1 taken as changed, and the scan held long */
 void sre0Interrupt(void)
 {
@@ -300,6 +322,7 @@ void sre0Interrupt(void)
 #endif
 	}
 }
+#endif
 
 #if !BOARD_USS1001
 /* BOARD_INTP0_PIN (P12.0) low: transition 0x41 */

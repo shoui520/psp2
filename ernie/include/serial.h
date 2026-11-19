@@ -11,10 +11,10 @@
 #include "kernel.h"
 #include "board.h"
 
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 #define SERIAL_PORT		4	/* the slim's: UART4 */
 #else
-#define SERIAL_PORT		3	/* the UART */
+#define SERIAL_PORT		3	/* the UART (DOL-1001's too) */
 #endif
 #define SERIAL_DATA_SIZE	0x39	/* the most data a frame carries */
 /* the most a received frame carries: 0x00090804 takes less than it sends */

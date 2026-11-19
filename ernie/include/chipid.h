@@ -6,7 +6,7 @@
 
 #include "board.h"
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the extra area's eight bytes at 0x850-0x857, read by the flash's sequencer from RAM */
 extern void flashReadExtra(unsigned char __near *out);
 

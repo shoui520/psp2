@@ -22,14 +22,14 @@ union ConfigRequestOffset {
 	} bytes;
 };
 
-#if BOARD_USS1001
+#if SOURCE_0103
 unsigned char configRequestAnswer[0x40];
 /* the region, the offset, the size, the data */
 unsigned char configRequestData[4 + 0x40];
 #else
 unsigned char configRequestAnswer[0x20];
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 #elif FW_SINCE(0x01000104)
 unsigned char configRequestData[3 + 0x40];	/* the offset, the size, the data or records */
 #elif FW_SINCE(0x00090804)
@@ -57,11 +57,15 @@ unsigned char hostCommandConfigVersions(unsigned char *out, unsigned char *lengt
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x1310: the block store's regions */
 unsigned char hostCommand1310(unsigned char *out, unsigned char *length)
 {
+#if BOARD_BSTORE
 	*out = bstoreRegionCount();
+#else
+	*out = 0;
+#endif
 	*length = 1;
 	return 0;
 }
@@ -159,7 +163,7 @@ void configRequestEvent(FLGPTN ptn)
 #else
 			case 0x1385:	/* 0x00090206: the records' number, answered as unknown */
 #endif
-#if BOARD_USS1001
+#if BOARD_BSTORE
 			case 0x1390:		/* a block store region's read */
 				if (configRequest.length == 4) {
 					offset.bytes.low = configRequestData[1];
@@ -204,6 +208,14 @@ void configRequestEvent(FLGPTN ptn)
 					result = 0x3b;
 				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, result, 0);
 				break;
+#elif BOARD_DOL1001
+			case 0x1390:		/* the block store's commands: no regions, status 3 */
+			case 0x1391:
+			case 0x1392:
+			case 0x1393:
+			case 0x1394:
+				hostRequestAnswer(&configRequest, HOST_REQUEST_ANSWER, 3, 0);
+				break;
 #endif
 			default:
 				hostRequestAnswer(&configRequest, HOST_REQUEST_UNKNOWN, 0, 0);
@@ -224,7 +236,7 @@ void configRequestNotify(void)
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&configRequest, HOST_REQUEST_RECEIVE);
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case HOST_EVENT_OPEN:
 		hostRequestSetState(&configRequest, HOST_REQUEST_RECEIVE);
 		break;

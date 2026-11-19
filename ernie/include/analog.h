@@ -14,8 +14,10 @@
 #define ANALOG_SETS		2
 
 /* the slim's limits of each axis's readings and its records of those outside them: not in
-   0x01030505 */
-#define ANALOG_LIMITS		(BOARD_USS1001 && FW_SINCE(0x01030511))
+   0x01030505; the PS TV from 0x0104 (DOL-1002) */
+#define ANALOG_LIMITS		(BOARD_USS1001 && FW_SINCE(0x01030511) || FW_SINCE(0x01040000))
+/* 0x0104: a median's fault keeps the samples it came from (struct AnalogSnapshot) */
+#define ANALOG_SNAPSHOT		FW_SINCE(0x01040000)
 
 #define ANALOG_SAMPLE_CENTER	0x8000
 #define ANALOG_VALUE_CENTER	0x80
@@ -56,6 +58,15 @@ struct AnalogFault {
 	unsigned char	above;
 };
 
+#if ANALOG_SNAPSHOT
+/* 0x0104's: the samples a median outside the limits was taken from, when it was the lowest or
+   the highest yet, and 0xffff less their sum */
+struct AnalogSnapshot {
+	unsigned int	samples[ANALOG_SAMPLES];
+	unsigned int	check;
+};
+#endif
+
 struct AnalogAxis {
 	unsigned int		samples[ANALOG_SAMPLES];
 	unsigned int		median;
@@ -66,6 +77,9 @@ struct AnalogAxis {
 	struct AnalogOutput	output[ANALOG_SETS];
 	struct AnalogFault	sampleFault;	/* the samples outside the limits */
 	struct AnalogFault	medianFault;	/* and the medians */
+#if ANALOG_SNAPSHOT
+	struct AnalogSnapshot	medianSnapshot;	/* the samples of medianFault's low or high */
+#endif
 };
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
 struct AnalogAxis {

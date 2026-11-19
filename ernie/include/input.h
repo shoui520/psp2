@@ -103,9 +103,10 @@ extern __near unsigned char holdReached;
 #endif
 
 extern void inputProcess(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern void inputStateRequest(unsigned char state);
 extern void inputStateRun(void);
+extern void inputLogTransition(unsigned char transition);
 #endif
 extern unsigned char button2Keys(void);
 extern void levelMonitor1Poll(void);

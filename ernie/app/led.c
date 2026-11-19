@@ -128,7 +128,7 @@ void chargeLedInit(void)
 #else
 	leds.charge.mode = CHARGE_LED_NONE;
 #endif
-#if BOARD_USS1001	/* the slim's power LED module keeps these two settings */
+#if SOURCE_0103 && !BOARD_DOL1001	/* the slim's power LED module keeps these two settings */
 	if (configGet()->state.bits.chargeLedOff)
 		powerLedSetFlags(0x100);
 	if (configGet()->state.bits.chargeLedStateOff)
@@ -407,7 +407,7 @@ void chargeLedUpdate(void)
 	unsigned int state;
 
 	state = stateGet();
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (chargeUsbIs1() &&
 #else
 	if ((cookieStatus2.byte[1] & 0x0c) == 0x04 &&
@@ -557,7 +557,7 @@ void powerLedUpdate(void)
 /* task 5's (flag 0x0800) */
 void ledUpdate(void)
 {
-#if !BOARD_USS1001	/* the slim's charge LED runs on its own */
+#if !SOURCE_0103	/* the slim's charge LED runs on its own */
 	chargeLedUpdate();
 #endif
 	powerLedUpdate();
@@ -760,7 +760,7 @@ void powerLedFadeStart(unsigned char pattern)
 	}
 }
 
-#if !BOARD_USS1001	/* the slim's are powerseq.c's */
+#if !SOURCE_0103	/* the slim's are powerseq.c's */
 /* 0-15, into the Elmo's register 0x60 bits 12-15 */
 int powerLedSetBrightness(unsigned char level)
 {

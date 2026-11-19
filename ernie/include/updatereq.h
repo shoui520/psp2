@@ -18,14 +18,14 @@
 
 #define UPDATER_BLOCK_SIZE	0x80	/* the decrypt works eight AES blocks at a time */
 #define UPDATER_SEGMENT_SIZE	0x400	/* a segment, a flash block: 1 KiB */
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 #define UPDATER_SEGMENTS	0x180	/* the segments of the slim's 384 KiB of flash */
 #else
-#define UPDATER_SEGMENTS	0x100	/* the segments of the 256 KiB of flash */
+#define UPDATER_SEGMENTS	0x100	/* the segments of the 256 KiB of flash (DOL-1001's too) */
 #endif
 
 /* a segment's number: a word on the slim, whose segments go past 0xff */
-#if BOARD_USS1001
+#if SOURCE_0103
 typedef unsigned int	UpdaterSegment;
 #else
 typedef unsigned char	UpdaterSegment;
@@ -69,7 +69,7 @@ extern unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char
 extern unsigned char hostCommandUpdaterProgress(unsigned char *out, unsigned char *length);
 #endif
 extern void updaterRequestNotify(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the updater's state, its segment count and the request's (serial 0x01d2) */
 extern void updaterGetStatus(unsigned char *out);
 #endif

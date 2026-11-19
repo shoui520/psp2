@@ -32,6 +32,10 @@
 #define HW_FAMILY		(ERNIE_HW >> 20)
 #define HW_IS(id)		(ERNIE_HW == (id))
 #define FW_SINCE(version)	(ERNIE_FW >= (version))
+/* the 0x0103 source: the slim models' firmware (0x01030505 on), which the PS TV's (0x01030603 on,
+   on the fat models' chip and wiring) is built from too; board.h's BOARD_USS1001 is the slim's
+   board itself (its RL78, pins and touch panels) */
+#define SOURCE_0103		FW_SINCE(0x01030000)
 /* the chip: the slim models' RL78/G13 (0x008), else the 78K0R/KG3-L */
 #define CHIP_RL78		(HW_FAMILY == 0x008)
 

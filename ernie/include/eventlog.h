@@ -7,6 +7,7 @@
 #define ERNIE_EVENTLOG_H
 
 #include "ernie.h"
+#include "board.h"
 
 #define EVENT_LOG_ENTRIES	512
 #define EVENT_LOG_DATA		4

@@ -27,14 +27,14 @@ struct DownloaderStart {
 		unsigned int		size;	/* downloaders to 1.02.ff: the config's size only */
 		DownloaderLinkConfig	config;	/* later ones: hostLink.config */
 	} link;
-#if BOARD_USS1001
-	unsigned char	multiCn;	/* analogGetMultiCn's */
-	unsigned int	ledFlags;	/* powerLedFlags.causes */
+#if SOURCE_0103
+	unsigned char	multiCn;	/* analogGetMultiCn's (not DOL-1001's) */
+	unsigned int	ledFlags;	/* powerLedFlags.causes (not DOL-1001's) */
 	unsigned char	usbState;	/* chargeUsbState */
 #endif
 };
 
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 #define DOWNLOADER_START	((struct DownloaderStart __near *)0xb310)
 #else
 #define DOWNLOADER_START	((struct DownloaderStart __near *)0xd500)

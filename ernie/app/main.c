@@ -8,7 +8,7 @@
 
 #include "ernie.h"
 #include "board.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "clock.h"
 #endif
 #include "clockout.h"
@@ -30,10 +30,54 @@ void kernelInitHook(void)
 {
 }
 
+#if BOARD_DOL1001
+/* DOL-1001's clocks, set apart from hdwinit: the peripherals' clocks off, then the fat
+   models' X1 oscillator as the main clock, P4.0 pulsed round the internal oscillator's stop */
+void clockInit(void)
+{
+	PER0 = 0;
+	PER1 = 0;
+	CMC = 0x53;
+	CSC = 0xc0;
+	CKC = 0x09;
+	OSMC = 0x01;
+	P4.0 = 0;
+	PM4.0 = 0;
+	OSTS = 0x01;
+	MSTOP = 0;
+	P4.0 = 1;
+	do {
+	} while (OSTC != 0xc0);
+	P4.0 = 0;
+	CKC = 0x18;
+	while (!MCS)
+		;
+	HIOSTOP = 1;
+	P4.0 = 1;
+	XTSTOP = 0;
+	P4.0 = 0;
+}
+
+/* clockout.c's (the clock on P14.0), in main.c's object on DOL-1001 */
+void clockOutputStart(void)
+{
+	PCLOE0 = 0;
+	CKS0 = 0x08;
+	PM14.0 = 0;
+	PCLOE0 = 1;
+}
+
+void clockOutputStop(void)
+{
+	PCLOE0 = 0;
+	PM14.0 = 1;
+}
+#endif
+
 /* the clocks: the X1 oscillator as the main clock, the internal oscillator stopped */
 void hdwinit(void)
 {
-#if BOARD_USS1001	/* the slim's clocks: clock.c */
+#if SOURCE_0103	/* the slim's clocks (clock.c), DOL-1001's (above) */
 	clockInit();
 #else
 	CMC = 0x53;
@@ -59,7 +103,7 @@ void hdwinit(void)
 		;
 	HIOSTOP = 1;
 	XTSTOP = 0;
-#endif	/* BOARD_USS1001 */
+#endif	/* SOURCE_0103 */
 #if FW_SINCE(0x00090804)
 	boardPortInit();
 #else

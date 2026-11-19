@@ -61,8 +61,10 @@ struct UartBaud {
 
 void uart2Timeout(void);
 void uart3Timeout(void);
-#if CHIP_RL78
+#if CHIP_RL78 || BOARD_DOL1001
 void uart4Timeout(void);
+#endif
+#if CHIP_RL78
 
 /* USS-1001: UART1 (SAU0's channels 2 and 3) in UART3's place, UART4 the serial link */
 struct UartPort uart1;
@@ -92,7 +94,11 @@ static struct UartPort * const uartPorts[5] = {
 };
 
 static void (* const uartTimeoutHandlers[5])(void) = {
+#if BOARD_DOL1001
+	NULL, NULL, uart2Timeout, uart3Timeout, uart4Timeout,
+#else
 	NULL, NULL, uart2Timeout, uart3Timeout, NULL,
+#endif
 };
 #endif
 
@@ -399,6 +405,13 @@ void uart3Timeout(void)
 {
 	set_flg(uart3.timeout.flgid, uart3.timeout.pattern);
 }
+
+#if BOARD_DOL1001
+/* DOL-1001's: a handler for port 4, which keeps no timeout */
+void uart4Timeout(void)
+{
+}
+#endif
 #endif
 
 /* opens UART2 at uart2Config's speed */
@@ -634,7 +647,7 @@ void uart2ErrorInterrupt(void)
 
 void uart2ReceiveInterrupt(void)
 {
-#if BOARD_USS1001 && !FW_SINCE(0x01030511)
+#if SOURCE_0103 && !FW_SINCE(0x01030511)
 	struct UartPort *p = &uart2;	/* 0x01030505: the page through @SEGAX */
 #else
 	struct UartPort *p;
@@ -651,7 +664,7 @@ void uart2ReceiveInterrupt(void)
 
 void uart2SendInterrupt(void)
 {
-#if BOARD_USS1001 && !FW_SINCE(0x01030511)
+#if SOURCE_0103 && !FW_SINCE(0x01030511)
 	struct UartPort *p = &uart2;	/* 0x01030505: the page through @SEGAX */
 #else
 	struct UartPort *p;

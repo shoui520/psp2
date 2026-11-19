@@ -16,11 +16,12 @@
 #include "powerreq.h"
 #include "powerseq.h"
 #include "powerwait.h"
+#include "state.h"
 #include "task5.h"
 #include "tau.h"
 #include "timer.h"
 
-#if FW_SINCE(0x0100060B) && !BOARD_102603 && !BOARD_USS1001
+#if FW_SINCE(0x0100060B) && !BOARD_102603 && !SOURCE_0103
 #define POWER_DEVICE_JOBS	9
 #else
 #define POWER_DEVICE_JOBS	11
@@ -38,7 +39,7 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0010, powerHdmiCecOn },
 	{ 0x0020, powerHdmiCecOff },
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0040, (unsigned char (*)(void))chargeUsbRequestUpdate },
 #elif BOARD_102603
 	{ 0x0040, powerSdOn },
@@ -50,7 +51,7 @@ static const struct PowerDeviceJob powerDeviceJobs[POWER_DEVICE_JOBS] = {
 	{ 0x0100, powerBbmcStart },
 	{ 0x0200, powerBbmcCycle },
 	{ 0x1000, powerCookieSet },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x2000, powerBbmcStop },
 #endif
 };
@@ -66,7 +67,7 @@ void powerDeviceRun(void)
 	for (i = 0; i < POWER_DEVICE_JOBS; i++) {
 		if (powerDeviceJobs[i].bits & powerDevicePending) {
 			powerDeviceJobs[i].job();
-#if BOARD_USS1001
+#if SOURCE_0103
 			dis_dsp();
 			powerDevicePending &= ~powerDeviceJobs[i].bits;
 			ena_dsp();
@@ -148,7 +149,7 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 }
 
 /* until the timers of the bits ran out */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim gives up after 120 waits, and clears the bits itself */
 void powerWaitTimers(unsigned int bits)
 {
@@ -252,10 +253,41 @@ static void powerTimerEnd13(void)
 }
 #endif
 
-#if FW_SINCE(0x0100060B) && !BOARD_USS1001	/* the slim has no bit 14 */
+#if (FW_SINCE(0x0100060B) && !SOURCE_0103) || BOARD_DOL1001	/* the slim has no bit 14 */
 static void powerTimerEnd14(void)
 {
 	powerTimers &= ~0x4000;
+}
+#endif
+
+#if BOARD_DOL1001
+static void powerTimerEnd15(void)
+{
+	powerTimers &= ~0x8000;
+}
+
+/* DOL-1001's INTP9: its falling edge (enable 1) wakes the suspended system (task 5's flag
+   0x1000, intp9Event) */
+void intp9Enable(unsigned char enable)
+{
+	if (enable == 1) {
+		EGP1.1 = 0;
+		EGN1.1 = 1;
+		PIF9 = 0;
+		PMK9 = 0;
+	} else {
+		EGP1.1 = 0;
+		EGN1.1 = 0;
+		PIF9 = 0;
+		PMK9 = 1;
+	}
+}
+
+/* task 5's, for flag 0x1000 */
+void intp9Event(void)
+{
+	STATE_TRANSITION_EVENT
+	STATE_TRANSITION(0x1d);
 }
 #endif
 
@@ -298,7 +330,12 @@ void powerTimersInit(void)
 	handler.handler = powerTimerEnd13;
 	timerSetHandler(TIMER(0x0e), &handler);
 #endif
-#if FW_SINCE(0x0100060B) && !BOARD_USS1001
+#if BOARD_DOL1001
+	handler.handler = powerTimerEnd14;
+	timerSetHandler(0x13, &handler);
+	handler.handler = powerTimerEnd15;
+	timerSetHandler(0x15, &handler);
+#elif FW_SINCE(0x0100060B) && !SOURCE_0103
 	handler.handler = powerTimerEnd14;
 	timerSetHandler(0x15, &handler);
 #endif

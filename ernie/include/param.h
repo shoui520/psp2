@@ -45,7 +45,7 @@ struct Param {
 	unsigned char	alarmLevel;		/* the charge alarms' adjust (0-2) without the
 						   3G modem (paramGetAlarmLevel) */
 	unsigned char	alarmLevel3G;		/* and with it */
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char	presets[4];		/* the slim's: paramInit's 0x19, 0x19, 9, 9, read
 						   only through paramRead */
 	unsigned char	reserved3[2];

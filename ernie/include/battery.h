@@ -40,7 +40,7 @@ extern void batteryBLLineOn(void);
 extern void batteryBLLineOff(void);
 extern unsigned char batteryHibernate(void);
 extern unsigned char batteryControl0015(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's faults record, logged as event 5, 0x10 (its first four bytes) at each change:
    byte 0 the power-on's (bits 0-3) and the charge's (4, 5), byte 1 the bootloader line (bit 0)
    and the hibernation (bit 1) */

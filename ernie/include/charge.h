@@ -30,7 +30,7 @@ union CookieStatus1 {
 union CookieStatus2 {
 	unsigned int	word;
 	unsigned char	byte[2];
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 	/* the slim's: three bits of the USB status, one lower, and three of the supply */
 	struct {
 		unsigned char	reserved1:1;
@@ -151,6 +151,10 @@ struct Charge {
 #if FW_SINCE(0x01000104)
 	unsigned char	timer1fPending;		/* cleared when timer 0x1f runs */
 #endif
+#if BOARD_DOL1001
+	unsigned int	thermalTemp;		/* DOL-1001: the temperature sensor's, in 0.1 K
+						   (chargeSetTemp) */
+#endif
 	unsigned int	flags;			/* the battery's levels (chargeReadFlags), each
 						   taken when two reads agree; 15: no battery */
 	unsigned int	flagsRead;		/* this update's read */
@@ -170,7 +174,7 @@ struct Charge {
 };
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's boost of a battery put in while charging (chargeUpdate) */
 union ChargeBoost {
 	unsigned int	word;
@@ -184,7 +188,7 @@ union ChargeBoost {
 
 /* the power status (host command 0x0800), from the Cookie's status registers (chargeSetPowerStatus) */
 union PowerStatus {
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int	word[2];	/* the slim's: two bytes more (0x0800) */
 	unsigned char	byte[4];
 #else
@@ -199,7 +203,7 @@ union PowerStatus {
 		unsigned char	ac:1;		/* its bits 0-2; with no Cookie 0x60 */
 		unsigned char	battery:1;
 		unsigned char	charging:1;
-#if BOARD_USS1001
+#if SOURCE_0103
 		unsigned char	usb:4;		/* the USB status's bits 1-3 (0x089a) */
 #else
 		unsigned char	usb:2;		/* the USB status's bits 2-3 (0x089a) */
@@ -208,7 +212,7 @@ union PowerStatus {
 		unsigned char	cookieLock0:1;	/* either set: the Cookie's register 3 keeps */
 		unsigned char	cookieLock1:1;	/* its bits (powerCookieClear, cookieCtrlChargeAc) */
 		unsigned char	level:2;	/* the Cookie's status 1's bits 3-4 */
-#if BOARD_USS1001
+#if SOURCE_0103
 		unsigned char	supply:4;	/* the Cookie's status 2's bits 1-3 */
 		unsigned char	reserved2:2;
 		unsigned char	vbus1:1;	/* both its VBUS */
@@ -227,7 +231,7 @@ extern unsigned char chargeLedBlinkOn;		/* 0x00090009's, task 5's: cleared, neve
 extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
 extern __sreg union PowerStatus powerStatus;
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the same bits as fields */
 union ChargeFactors {
 	unsigned char	byte;
@@ -268,7 +272,7 @@ extern __sreg unsigned char chargeControl;	/* 0: transition 0x16 due at the AC (
 						   1: the AC's charge on (0x0892) */
 extern __sreg struct ChargeTemp chargeTemp;
 extern __sreg unsigned char chargeCurrent;	/* the charge setting sent (cookieCtrlSupplyCurrentUsb); 0xff none */
-#if BOARD_USS1001
+#if SOURCE_0103
 extern __sreg volatile unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
 #else
 extern __sreg unsigned char chargeUsbMode;	/* the USB status's mode (0x089a) */
@@ -284,7 +288,7 @@ extern __sreg unsigned char chargeCookieSetting;	/* cookieCtrlSupplyCurrentAc's 
 #if FW_SINCE(0x01000107)
 extern __sreg unsigned char chargeCookieHeld;	/* powerCookieHold's */
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the status registers at the last update */
 extern __sreg union CookieStatus1 chargeStatus1Last;
 extern __sreg union CookieStatus2 chargeStatus2Last;
@@ -314,7 +318,7 @@ extern void chargeUpdateSoon(void);
 #if FW_SINCE(0x0100060B)
 extern void chargeUpdateLater(void);
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char chargeSetCurrent(void);
 #else
 extern int chargeSetCurrent(void);
@@ -345,7 +349,7 @@ extern void chargeReadTempVolt(unsigned int *value);
 extern void chargeTimer1fStart(void);
 extern void chargeTimer1fStop(void);
 extern void chargeSetAcDelay(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char chargeUsbPower(void);
 extern unsigned char chargeUsbDongle(void);
 #if FW_SINCE(0x01030511)
@@ -359,6 +363,9 @@ extern unsigned char chargeVbusActive(void);
 /* the slim's manual charge mode (0x08c0; 0x0840): 1 on, 0 off, 0xff it could not be set */
 extern unsigned char chargeSetManualMode(unsigned char on);
 extern unsigned char chargeGetManualMode(void);
+#if BOARD_DOL1001
+extern void chargeSetTemp(unsigned int temperature);
+#endif
 extern unsigned char chargeManualOn(void);
 extern unsigned char chargeManualOff(void);
 extern void chargeUsbModeUpdate(void);

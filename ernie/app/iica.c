@@ -14,6 +14,7 @@
 #pragma NOP
 
 #include "ernie.h"
+#include "board.h"
 #include "iica.h"
 #include "task.h"
 
@@ -145,7 +146,7 @@ int iicaStart(struct IicaRequest *request)
 	iicaRequest = *request;
 	STT = 1;
 	iicaRequest.state = IICA_ADDRESS;
-#if CHIP_RL78
+#if CHIP_RL78 || BOARD_DOL1001
 	*iicaRequest.status = IICA_BUSY;
 #endif
 	IICA = iicaRequest.address;
@@ -252,7 +253,7 @@ noStop:
 void iicaClose(void)
 {
 	P6.0 = 1;
-#if CHIP_RL78
+#if CHIP_RL78 || BOARD_DOL1001
 	PM6.0 = 0;
 	P6.1 = 1;
 #else

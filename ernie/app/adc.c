@@ -142,7 +142,7 @@ void adcOpenForBoard(void)
 }
 
 /* the keys that keep the converter open (the slim's 0x0032) */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define ADC_KEYS	0x0032
 #else
 #define ADC_KEYS	0x00e3
@@ -170,7 +170,7 @@ void adcCloseForBoard(void)
 	case 0x0800:
 		break;
 	}
-#if BOARD_USS1001
+#if SOURCE_0103
 	DI();
 	inputKeys.state &= ~ADC_KEYS;
 	EI();

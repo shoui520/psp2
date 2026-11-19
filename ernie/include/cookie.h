@@ -65,7 +65,7 @@ extern void cookieReadReg3(void);
 extern unsigned char cookieCtrlChargeAc(unsigned char on);
 extern unsigned char cookieCtrlReg3Mode(unsigned char mode);
 extern unsigned char cookieCtrlReg3Bit2(unsigned char on);
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's COOKIE_REG and COOKIE_ADDRESS as functions (nothing calls them), its registers'
    first values written, register 3's bit 13 */
 extern unsigned char cookieReg(unsigned char reg);
@@ -90,7 +90,7 @@ extern unsigned char cookieSupplyCurrentEncode(unsigned char *reg, unsigned char
 extern unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg);
 #endif
 extern unsigned char cookieCtrlReg3Bit0(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the charge's settings, sent only out of the manual charge mode and when they
    change; register 3 read into value; its bit 12 (the charge's boost) */
 extern unsigned char cookieUpdateChargingCurrent(unsigned char current);

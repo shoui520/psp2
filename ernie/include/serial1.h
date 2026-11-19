@@ -8,6 +8,9 @@
 #include "ernie.h"
 #include "board.h"
 #include "serial.h"
+#if BOARD_DOL1001
+#include "thermal.h"
+#endif
 
 /* a command's flags: what it needs */
 #define SERIAL1_UNLOCKED	0x01	/* the link unlocked (0x0103), else status 0x20 */
@@ -26,7 +29,7 @@ struct SerialCommand1 {
 
 /* the operation task 5 runs (serial1Operation, flag 4's 0x4000: 0x0180-0x0182 and
    0x0940-0x0945), 0 when none, and its arguments, which its answer's data replace */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* operation 0x1a's (0x0108): a device's versions */
 struct Serial1Device {
 	unsigned char	type;		/* 0x10 the Elmo, 0x20 the Cookie, 0x30 and 0x31 the battery,
@@ -37,10 +40,13 @@ struct Serial1Device {
 #endif
 
 union Serial1Args {
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char	byte[0x28];	/* the slim's: operation 0x1a's five devices */
 	unsigned int	word[0x14];
 	struct Serial1Device device[5];
+#if BOARD_DOL1001
+	struct ThermalReport thermal;	/* operation 0x1b's */
+#endif
 #elif FW_SINCE(0x00090903)
 	unsigned char	byte[12];
 	unsigned int	word[6];

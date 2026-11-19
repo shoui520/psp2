@@ -10,7 +10,7 @@
 #include "inputbits.h"
 #include "powerreq.h"
 
-#if !BOARD_USS1001	/* the slim's group 1 bit 1 and group 3 bit 2 have no handlers */
+#if !SOURCE_0103	/* the slim's group 1 bit 1 and group 3 bit 2 have no handlers */
 /* nothing else refers to it, so its owner is not known: type 0, never called; the program's
    one initialised variable */
 struct InputHandler inputHandler1Bit1 = { 0, 0, 0 };
@@ -24,7 +24,7 @@ static struct InputHandler * const inputHandlers1Bit2[] = {
 	&inputHandler1Bit2Low, &inputHandler1Bit2High
 };
 #endif
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static struct InputHandler * const inputHandlers1Bit1[] = { &inputHandler1Bit1 };
 #endif
 static struct InputHandler * const inputHandlers1Bit5[] = {
@@ -41,7 +41,7 @@ static struct InputHandler * const inputHandlers1Bit7[] = { &inputHandlerCharge 
 static struct InputHandler * const inputHandlers1Bit3[] = { &inputHandler1Bit3 };
 static struct InputHandler * const inputHandlers3Bit0[] = { &inputHandlerSerial2Request };
 static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2Link };
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler3Bit2 };
 #endif
 static struct InputHandler * const inputHandlers2Bit0[] = {
@@ -58,14 +58,14 @@ static unsigned char inputHandlers1Bit4Count(void);
 #if !FW_SINCE(0x0100060B)
 static unsigned char inputHandlers1Bit2Count(void);
 #endif
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static unsigned char inputHandlers1Bit1Count(void);
 #endif
 static unsigned char inputHandlers1Bit5Count(void);
 static unsigned char inputHandlers1Bit3Count(void);
 static unsigned char inputHandlers3Bit0Count(void);
 static unsigned char inputHandlers3Bit1Count(void);
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static unsigned char inputHandlers3Bit2Count(void);
 #endif
 static unsigned char inputHandlers2Bit0Count(void);
@@ -81,7 +81,7 @@ const struct InputBit inputBits1[8] = {
 #else
 	{ NULL, NULL },
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ NULL, NULL },
 #else
 	{ inputHandlers1Bit1, inputHandlers1Bit1Count },
@@ -110,7 +110,7 @@ const struct InputBit inputBits2[6] = {
 const struct InputBit inputBits3[6] = {
 	{ inputHandlers3Bit0, inputHandlers3Bit0Count },
 	{ inputHandlers3Bit1, inputHandlers3Bit1Count },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ NULL, NULL },
 #else
 	{ inputHandlers3Bit2, inputHandlers3Bit2Count },
@@ -157,7 +157,7 @@ static unsigned char inputHandlers1Bit2Count(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static unsigned char inputHandlers1Bit1Count(void)
 {
 	return LENGTH(inputHandlers1Bit1);
@@ -184,7 +184,7 @@ static unsigned char inputHandlers3Bit1Count(void)
 	return LENGTH(inputHandlers3Bit1);
 }
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 static unsigned char inputHandlers3Bit2Count(void)
 {
 	return LENGTH(inputHandlers3Bit2);

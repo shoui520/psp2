@@ -63,7 +63,7 @@ struct StateEntry {
 	int		(*handle)(struct StateEvent *event);
 };
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's state variables are one record, copied at each state's entry into the last two
    entered (stateHistory) */
 struct StateRecord {
@@ -87,7 +87,7 @@ extern __sreg unsigned int powerState;
 extern __sreg unsigned int stateNext;
 extern __sreg unsigned int stateEvents;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 #elif FW_SINCE(0x00090903)
 extern __sreg unsigned char stateCause;	/* the transition that started the state */
 #else
@@ -99,7 +99,7 @@ extern union PowerRequest stateRequest;
 extern void stateHostStop(void);
 extern void stateHostStart(void);
 extern void stateEvent(struct StateEvent *event);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern void stateGetRecord(unsigned char *out);
 extern void stateGetHistory(unsigned char *out);
 #endif
@@ -111,7 +111,7 @@ extern union PowerRequest *stateGetWakeupFactor(void);
 extern unsigned char stateGetCause(void);
 #endif
 extern unsigned int stateGet(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern int stateTransition(unsigned int transition);	/* the slim's takes a word */
 #define STATE_TRANSITION_EVENT
 #define STATE_TRANSITION(t)	stateTransition(t)

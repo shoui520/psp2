@@ -13,7 +13,7 @@ extern void debugPinInit(void);
 extern void debugPinReserved(unsigned int value);
 extern void debugPinSet(unsigned int level);
 extern void debugPinCode(unsigned int code);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern void debugPinWrite(unsigned int value);
 extern unsigned int debugPinRead(void);
 extern void debugPinWriteBit(unsigned char pin, unsigned char level);

@@ -10,16 +10,21 @@
 #pragma DI
 #pragma EI
 
+#include <string.h>
+
 #include "ernie.h"
 #include "flash.h"
+#include "config.h"
+#if BOARD_USS1001
 #include "pfdl.h"
 #include "fsl.h"
-#include "config.h"
+#endif
 
 #define FLASH_BLOCKS		8
 #define FLASH_BLOCK_SIZE	0x400
 #define FLASH_BASE		0x1000		/* the data flash's near address */
 
+#if BOARD_USS1001
 /* erases a block of the NVS when its blank check fails: tried 5 more times while the erase fails */
 unsigned char nvsErase(unsigned char block)
 {
@@ -141,6 +146,204 @@ unsigned int flashReadWord(unsigned char *address)
 	return 0xffff;
 }
 
+#endif	/* BOARD_USS1001 */
+
+#if BOARD_DOL1001
+/*
+ * DOL-1001's: the 78K0R build's configFlashWrite (config.c's) and the updater's flash
+ * preparation, on the 78K0R flash library (the updater's, at 0xf09c-0xf4dc)
+ */
+extern void FSL_Open(void);
+extern unsigned char FSL_Init(unsigned char *descriptor);
+extern unsigned char FSL_Init_cont(unsigned char *descriptor);
+extern unsigned char FSL_ModeCheck(void);
+extern unsigned char FSL_BlankCheck(unsigned int block);
+extern unsigned char FSL_Erase(unsigned int block);
+extern unsigned char FSL_IVerify(unsigned int block);
+extern unsigned char FSL_Write(unsigned long address, unsigned char words);
+extern unsigned char FSL_EEPROMWrite(unsigned long address, unsigned char words);
+extern unsigned char FSL_GetSecurityFlags(unsigned char *flags);
+extern unsigned char fslSetSecurityFlag(void);
+extern unsigned char fslSetSecurityFlagSwap(void);
+extern void FSL_Close(void);
+extern unsigned char fslDataBuffer[];		/* the library's descriptor and write buffer */
+extern struct ConfigBank configBuffer;
+
+/* the flash library's status */
+#define FLASH_OK		0x00
+#define FLASH_ERASE_ERROR	0x1a
+#define FLASH_NOT_BLANK		0x1b
+#define FLASH_WRITE_ERROR	0x1c
+#define FLASH_BUSY		0x1f
+
+/* erases a block of the NVS (0-0xf, the flash's blocks 0xf0-0xff): tried 5 more times while
+   the erase fails */
+unsigned char nvsErase(unsigned char block)
+{
+	unsigned char result;
+	unsigned char retry;
+
+	retry = 5;
+	if (block >= 0x10)
+		return 0x23;
+	block += 0xf0;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	if (result == FLASH_OK) {
+		do {
+			WDTE = 0xac;
+			result = FSL_ModeCheck();
+			if (result == FLASH_OK) {
+				do
+					result = FSL_BlankCheck(block);
+				while (result == FLASH_BUSY);
+				if (result == FLASH_NOT_BLANK) {
+					do
+						result = FSL_Erase(block);
+					while (result == FLASH_BUSY);
+				}
+			}
+		} while (retry-- != 0 && result == FLASH_ERASE_ERROR);
+	}
+	DI();
+	FSL_Close();
+	EI();
+	return result;
+}
+
+/* writes words of 4 bytes at an address of the NVS (0x3c000 on), verifying the block if asked */
+unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words, char verify)
+{
+	unsigned char result;
+	unsigned char retry;
+
+	retry = 0;
+	if ((unsigned long)address < 0x3c000)
+		return 0x23;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == FLASH_BUSY)
+		result = FSL_Init_cont(fslDataBuffer);
+	if (result == FLASH_OK) {
+		memcpy(fslDataBuffer, data, words << 2);
+		do {
+			result = FSL_ModeCheck();
+			if (result == FLASH_OK) {
+				do
+					result = FSL_EEPROMWrite((unsigned long)address, words);
+				while (result == FLASH_BUSY);
+			}
+			if (result == FLASH_OK && verify == 1) {
+				do
+					result = FSL_IVerify((unsigned long)address >> 10);
+				while (result == FLASH_BUSY);
+			}
+		} while (retry-- != 0 && result == FLASH_WRITE_ERROR);
+	}
+	FSL_Close();
+	return result;
+}
+
+/* erases the bank at address and writes the open copy there, three times at most */
+unsigned char configFlashWrite(unsigned long address)
+{
+	unsigned int i;
+	unsigned char tries;
+	unsigned char result;
+
+	tries = 3;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	while (result == 0x1f)
+		result = FSL_Init_cont(fslDataBuffer);
+	if (result == 0) {
+		do {
+			WDTE = 0xac;
+			result = FSL_ModeCheck();
+			if (result == 0) {
+				do
+					result = FSL_BlankCheck((unsigned int)(address >> 10));
+				while (result == 0x1f);
+				if (result == 0x1b) {
+					do
+						result = FSL_Erase((unsigned int)(address >> 10));
+					while (result == 0x1f);
+				}
+			}
+			if (result == 0) {
+				for (i = 0; i < 0x100; i += 0x40) {
+					memcpy(fslDataBuffer, (unsigned char *)&configBuffer + i * 4, 0x100);
+					do
+						result = FSL_Write(address + i * 4, 0x40);
+					while (result == 0x1f);
+					if (result != 0)
+						break;
+				}
+			}
+			if (result == 0) {
+				do
+					result = FSL_IVerify((unsigned int)(address >> 10));
+				while (result == 0x1f);
+			}
+		} while (tries-- != 0 && result != 0);
+	}
+	FSL_Close();
+	return result;
+}
+
+/* opens the flash library for the downloader and sets its security flag, three times at most;
+   0 when it may start */
+unsigned char updaterFlashPrepare(void)
+{
+	unsigned char result;
+	unsigned int flags;
+	unsigned char tries;
+
+	tries = 3;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	if (result == 0) {
+		result = FSL_ModeCheck();
+		if (result == 0) {
+			result = FSL_GetSecurityFlags((unsigned char *)&flags);
+			if (result == 0 || (flags & 0x0e) == 0x0e) {
+				WDTE = 0xac;
+				do
+					result = fslSetSecurityFlag();
+				while (tries-- != 0 && result != 0);
+			}
+		}
+	}
+	FSL_Close();
+	return result;
+}
+
+/* swaps the boot clusters, three times at most (nothing calls it) */
+unsigned char flashBootClusterSwap(void)
+{
+	unsigned char tries;
+	unsigned char result;
+
+	tries = 3;
+	FSL_Open();
+	result = FSL_Init(fslDataBuffer);
+	if (result == 0) {
+		result = FSL_ModeCheck();
+		if (result == 0) {
+			WDTE = 0xac;
+			do
+				result = fslSetSecurityFlagSwap();
+			while (tries-- != 0 && result != 0);
+		}
+	}
+	FSL_Close();
+	return result;
+}
+#endif	/* BOARD_DOL1001 */
+
+#if BOARD_USS1001
 /* the self-programming library's settings: the wide voltage mode, 8 MHz, each command to its end */
 const fsl_descriptor_t fslDescriptor = { 1, 8, 1 };
 
@@ -238,3 +441,5 @@ unsigned char flashInvertBootFlag(void)
 	FSL_Close();
 	return result;
 }
+
+#endif	/* BOARD_USS1001 */

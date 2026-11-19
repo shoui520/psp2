@@ -42,7 +42,7 @@ const unsigned char handshakeIv[16] = {
 };
 #endif
 
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && !BOARD_USS1001
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && (!SOURCE_0103 || BOARD_DOL1001)
 #include "handshakekeys.h"
 #endif
 
@@ -169,7 +169,7 @@ const unsigned char serialKey2Second[16] = {
 };
 #endif
 
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && BOARD_USS1001
+#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && SOURCE_0103 && !BOARD_DOL1001
 #include "handshakekeys.h"
 #endif
 

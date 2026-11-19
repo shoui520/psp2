@@ -59,20 +59,25 @@ void debugPinSet(unsigned int level)
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
+/* the slim's probe pins; the PS TV's functions are empty */
+
 /* bits 4-0 of code to P15.4-P15.0 */
 void debugPinCode(unsigned int code)
 {
+#if BOARD_USS1001
 	P15.4 = ((unsigned char)code & 0x10) ? 1 : 0;
 	P15.3 = ((unsigned char)code & 0x08) ? 1 : 0;
 	P15.2 = ((unsigned char)code & 0x04) ? 1 : 0;
 	P15.1 = ((unsigned char)code & 0x02) ? 1 : 0;
 	P15.0 = ((unsigned char)code & 0x01) ? 1 : 0;
+#endif
 }
 
 /* bits 6-0 of value to P15.6-P15.0 */
 void debugPinWrite(unsigned int value)
 {
+#if BOARD_USS1001
 	P15.6 = ((unsigned char)value & 0x40) ? 1 : 0;
 	P15.5 = ((unsigned char)value & 0x20) ? 1 : 0;
 	P15.4 = ((unsigned char)value & 0x10) ? 1 : 0;
@@ -80,6 +85,7 @@ void debugPinWrite(unsigned int value)
 	P15.2 = ((unsigned char)value & 0x04) ? 1 : 0;
 	P15.1 = ((unsigned char)value & 0x02) ? 1 : 0;
 	P15.0 = ((unsigned char)value & 0x01) ? 1 : 0;
+#endif
 }
 
 /* P15.6-P15.0's levels, as bits 6-0 */
@@ -88,13 +94,16 @@ unsigned int debugPinRead(void)
 	unsigned char value;
 
 	value = 0;
+#if BOARD_USS1001
 	value = P15.6 << 6 | P15.5 << 5 | P15.4 << 4 | P15.3 << 3 | P15.2 << 2 | P15.1 << 1 | P15.0;
+#endif
 	return value;
 }
 
 /* P15.<pin> (0-6) to level */
 void debugPinWriteBit(unsigned char pin, unsigned char level)
 {
+#if BOARD_USS1001
 	switch (pin) {
 	case 6:
 		P15.6 = level ? 1 : 0;
@@ -118,6 +127,7 @@ void debugPinWriteBit(unsigned char pin, unsigned char level)
 		P15.0 = level ? 1 : 0;
 		break;
 	}
+#endif
 }
 #elif BOARD_DEBUG_PINS_POWER
 /* bits 4-0 of code to P4.3, P4.4, P4.5, P5.4 and P5.5 */

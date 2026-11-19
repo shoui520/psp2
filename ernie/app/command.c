@@ -47,7 +47,7 @@ int commandLogInfo(unsigned char *data, unsigned char command, CommandDone done)
 int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char command,
 		   CommandDone done);
 void commandLogDone(unsigned char command, unsigned char result);
-#if BOARD_USS1001
+#if SOURCE_0103
 int commandLogHalt(unsigned char *data, unsigned char command, CommandDone done);
 #endif
 #if FW_SINCE(0x00090903)
@@ -85,7 +85,8 @@ union CommandPins {
 		unsigned char	present:1;	/* always 1 */
 		unsigned char	p31:1;		/* P3.1 */
 		unsigned char	p76:1;		/* P7.6 */
-		unsigned char	reserved:4;
+		unsigned char	p115:1;		/* P11.5 (DOL-1001) */
+		unsigned char	reserved:3;
 	} bits;
 };
 
@@ -106,8 +107,12 @@ union CommandPinState {
 #endif
 
 /* 0x00b3-0x00b5's pins (the slim's P12.0 and P1.7 for P6.7 and P3.1), and where 0x00b4 and
-   0x00b5 keep them (the slim's: a local of their own) */
-#if BOARD_USS1001
+   0x00b5 keep them (the slim's: a local of their own; DOL-1001's P6.5 and P3.1) */
+#if BOARD_DOL1001
+#define COMMAND_PIN_P67		P6.5
+#define COMMAND_PIN_P31		P3.1
+#define COMMAND_PINS		pins
+#elif SOURCE_0103
 #define COMMAND_PIN_P67		P12.0
 #define COMMAND_PIN_P31		P1.7
 #define COMMAND_PINS		pins
@@ -156,7 +161,7 @@ unsigned char hostCommandErnieVersion(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
-#if BOARD_USS1001
+#if BOARD_EVENT_LOG
 /* the slim's log of a command (kind 0x10, code 0): its number's low byte, its length and its
    first two bytes */
 static void commandLogRequest(void)
@@ -182,7 +187,7 @@ static void commandLogAnswer(void)
 /* 0x0002 (sceSysconGetTimeStamp): the build's date as 12 digits, YYYYMMDDhhmm */
 unsigned char hostCommandTimeStamp(unsigned char *out, unsigned char *length)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	getTimeStamp(out);
 #else
 	unsigned char i;
@@ -202,7 +207,7 @@ unsigned char hostCommandHardwareInfo(unsigned char *out, unsigned char *length)
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0006: the slim's hardware info 2 */
 unsigned char hostCommand0006(unsigned char *out, unsigned char *length)
 {
@@ -279,7 +284,12 @@ unsigned char hostCommand0013(unsigned char *out, unsigned char *length)
 unsigned char hostCommandPins(unsigned char *out, unsigned char *length)
 {
 	commandPins.bits.p30 = P3.0;
-#if BOARD_USS1001
+#if BOARD_DOL1001
+	/* DOL-1001's reports P3.0, three bits high (present, P3.1, P7.6) and P11.5 */
+	commandPins.value |= 0x0e;
+	commandPins.bits.p115 = P11.5;
+	*out = commandPins.value & 0x1f;
+#elif SOURCE_0103
 	/* the slim's reports P3.0 and four bits high: present, P3.1, P7.6 and bit 4 */
 	commandPins.value |= 0x1e;
 	*out = commandPins.value & 0x1f;
@@ -345,8 +355,10 @@ void commandRequestReceive(void)
 #define COMMAND_10X		(FW_SINCE(0x01000104) && !FW_SINCE(0x01000306))
 
 /* 0x00c0's parameter: the data's three bytes in the window at 0xfc000000 (0xff000000 before
-   0x01000104 and in the 0x010001xx) */
-#if BOARD_USS1001
+   0x01000104 and in the 0x010001xx; DOL-1001's: none, the bytes alone) */
+#if BOARD_DOL1001
+#define COMMAND_PARAMETER_WINDOW	0
+#elif SOURCE_0103
 #define COMMAND_PARAMETER_WINDOW	0xf0000000	/* the slim's */
 #elif FW_SINCE(0x01000104) && !COMMAND_10X
 #define COMMAND_PARAMETER_WINDOW	0xfc000000
@@ -364,8 +376,9 @@ void commandRequestReceive(void)
 				 ((unsigned long)(data)[4] << 24 & 0xff000000) |	\
 				 COMMAND_PARAMETER_WINDOW)
 
-/* the slim logs 0x0081, 0x0082 and 0x00c0-0x00c2 and their answers (eventlog.c) */
-#if BOARD_USS1001
+/* the slim logs 0x0081, 0x0082 and 0x00c0-0x00c2 and their answers (eventlog.c); DOL-1001
+   keeps the calls, to functions that do nothing (at the file's end) */
+#if BOARD_EVENT_LOG || BOARD_DOL1001
 static void commandLogRequest(void);
 static void commandLogAnswer(void);
 #define COMMAND_LOG_REQUEST()		commandLogRequest()
@@ -378,7 +391,7 @@ static void commandLogAnswer(void);
 /* request 0's command came in, or its answer went out */
 void commandRequestNotify(void)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	union RtcTick tick;
 	unsigned int offset;
 	unsigned char size;
@@ -413,7 +426,7 @@ void commandRequestNotify(void)
 	union CommandWord word;
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* the slim's takes the link's events too, and checks the handshake on a command */
 	switch (commandRequest.event) {
 	case HOST_EVENT_COMMAND:
@@ -531,7 +544,7 @@ allowed:
 #if FW_SINCE(0x00090903)
 		case 0x0088:		/* sceSysconLogReadData */
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 		case 0x0089:		/* the slim's */
 #endif
 			task2SetFlag(3, 0x2000);
@@ -633,7 +646,7 @@ allowed:
 				if (boardMultiCnIsDongle() == 0)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 4, 0);
 				else if (commandRequestData[0] == 0) {
-#if BOARD_USS1001
+#if SOURCE_0103
 					boardSetMultiCnOutput(3);	/* the slim's: the dongle off */
 #else
 					boardSetMultiCnOutput(0);
@@ -644,7 +657,7 @@ allowed:
 				} else if (serialGetState() != 0 && serialGetState() != 1)
 					hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 5, 0);
 				else {
-#if BOARD_USS1001
+#if SOURCE_0103
 					boardSetMultiCnOutput(2);	/* and on */
 #else
 					boardSetMultiCnOutput(1);
@@ -694,7 +707,7 @@ allowed:
 			break;
 #endif
 		case 0x00c0:		/* a transition with its parameter */
-#if BOARD_USS1001
+#if SOURCE_0103
 			/* the slim's: transition 0x5d too, and a 9-byte form with four bytes of
 			   parameter */
 			COMMAND_LOG_REQUEST();
@@ -865,7 +878,7 @@ allowed:
 				if (commandRequestData[0] == 0x5a) {
 #if FW_SINCE(0x01000104)
 					transition = 0x56;
-#if COMMAND_10X || BOARD_USS1001
+#if COMMAND_10X || SOURCE_0103
 					if ((unsigned char)STATE_TRANSITION(transition) == 0)
 #else
 					if (STATE_TRANSITION(transition) == 0)
@@ -902,7 +915,7 @@ allowed:
 		case 0x00d1:
 			task2SetFlag(3, 0x2000);
 			hostRequestSetState(&commandRequest, HOST_REQUEST_BUSY);
-#if BOARD_USS1001
+#if SOURCE_0103
 			break;
 #else
 			return;
@@ -925,7 +938,7 @@ allowed:
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&commandRequest, HOST_REQUEST_RECEIVE);
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case HOST_EVENT_CLOSE:
 		hostRequestSetState(&commandRequest, HOST_REQUEST_IDLE);
 		break;
@@ -953,7 +966,7 @@ void commandRequestRun(void)
 		commandLogRead(commandRequestData, commandRequestAnswer, 0x88, commandLogDone);
 		break;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x0089:
 		commandLogHalt(commandRequestData, 0x89, commandLogDone);
 		break;
@@ -1012,7 +1025,7 @@ int commandLogStart(unsigned char *data, unsigned char command, CommandDone done
 {
 	unsigned char result;
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	result = (unsigned char)logSetMode(LOG_MODE_STARTED, 1);
 #else
 	result = (unsigned char)logStart();
@@ -1053,7 +1066,7 @@ int commandLogRead(unsigned char *data, unsigned char *answer, unsigned char com
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0089: the slim's, the log halted */
 int commandLogHalt(unsigned char *data, unsigned char command, CommandDone done)
 {
@@ -1082,7 +1095,7 @@ void commandLogDone(unsigned char command, unsigned char result)
 		status = 1;
 	switch (command) {
 	case 0x87:
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x89:
 #endif
 		length = 0;
@@ -1181,5 +1194,16 @@ void commandSnvsDone(unsigned char command, unsigned char result)
 		break;
 	}
 	hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, result, length);
+}
+#endif
+
+#if BOARD_DOL1001
+/* DOL-1001 has no event log: the hooks of the commands it would log */
+static void commandLogRequest(void)
+{
+}
+
+static void commandLogAnswer(void)
+{
 }
 #endif

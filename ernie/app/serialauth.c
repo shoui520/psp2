@@ -433,7 +433,7 @@ unsigned char serialAuthUnlocked14(void)
 }
 #endif
 
-#if !BOARD_USS1001	/* not in the slim's */
+#if !SOURCE_0103	/* not in the slim's */
 void serialAuthInput(void)
 {
 }

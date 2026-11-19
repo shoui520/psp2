@@ -13,9 +13,11 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if BOARD_USS1001 && FW_SINCE(0x01030511)
+#if BOARD_DOL1001
+#define CONFIG_VERSION		0x50	/* DOL-1001's layout */
+#elif SOURCE_0103 && FW_SINCE(0x01030511)
 #define CONFIG_VERSION		0x58	/* the slim's layout */
-#elif BOARD_USS1001
+#elif SOURCE_0103
 #define CONFIG_VERSION		0x4d	/* the slim's 0x01030505 layout */
 #elif FW_SINCE(0x0100060B)
 #define CONFIG_VERSION		0x38	/* this build's layout */
@@ -72,7 +74,10 @@ struct ConfigBlock {
 							   0x01000104 the charge LED's off while
 							   input1Bit7Active holds */
 			unsigned int	wakeUnmask15:1;	/* set: wake factor 15 unmasked */
-			unsigned int	reserved26:11;
+			unsigned int	coldStartOn:1;	/* DOL-1001, set: a cold start (cause 0x32)
+							   with P4.6 high turns on (stateOffEnter),
+							   wake factor 20 unmasked (stateInit) */
+			unsigned int	reserved26:10;
 		} bits;
 	} start;				/* kept across a new layout */
 	union {
@@ -131,7 +136,7 @@ struct ConfigBlock {
 	} keep;					/* kept across a new layout */
 	unsigned char	paramSetting1;		/* the parameter block's, for the host */
 	unsigned char	paramSetting2;
-#if BOARD_IRS1001 || BOARD_USS1001
+#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001)
 	unsigned char	reserved41[0xf8 - 0xee];	/* IRS-1001 keeps its levels at 0x1bc,
 							   USS-1001 at 0x1e0 */
 #else
@@ -141,7 +146,9 @@ struct ConfigBlock {
 	unsigned char	voltage83;
 	unsigned char	voltage84;
 #endif
-#if BOARD_IRS1001 || BOARD_USS1001
+#if BOARD_IRS1001 || (SOURCE_0103 && !BOARD_DOL1001)
+#elif BOARD_DOL1001
+	unsigned char	reserved7[0xf8 - 0xf2];	/* DOL-1001: its trims at 0x21a */
 #elif ERNIE_HW == 0x00315200
 	unsigned char	reserved22[3];		/* 0x00315200's layout: the trim two bytes later */
 	unsigned char	voltageTrim;		/* passed with a regulator's level (0x088e) */
@@ -240,7 +247,7 @@ struct ConfigBlock {
 	unsigned char	touchDelayDeselect;
 	unsigned char	touchWriteTries;	/* a verified write's tries */
 	unsigned char	touchWriteReads;	/* and the reads each try compares */
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char	touchDelayReadByte;	/* USS-1001's delay after each byte panel 0 sends
 						   back */
 #else
@@ -271,13 +278,17 @@ struct ConfigBlock {
 							   parameter block's alarm level */
 	unsigned char	offInfo2;		/* sleepFactorGetOffInfo's bytes 2 and 3 */
 	unsigned char	offInfo3;
-#if BOARD_USS1001
+#if SOURCE_0103
+#if BOARD_DOL1001
+	unsigned char	reserved50[5];		/* DOL-1001 keeps its levels at 0xee */
+#else
 	unsigned char	voltage81;		/* USS-1001's regulators 0x81-0x84: their levels at a
 						   resume */
 	unsigned char	voltage82;
 	unsigned char	voltage83;
 	unsigned char	voltage84;
 	unsigned char	reserved34;
+#endif
 	unsigned char	voltageTrim;		/* USS-1001: passed with a regulator's level
 						   (0x088e) */
 	unsigned char	chargeUsbCurrents[8][6];	/* USS-1001: the USB supply's settings by the
@@ -285,7 +296,14 @@ struct ConfigBlock {
 							   (chargeUsbCurrent); 0xff none */
 	unsigned int	analogInput10Interval;	/* USS-1001: the RTC's ticks between starts of
 						   analog input 0x0010 (input.c's scan) */
+#if BOARD_DOL1001
+	unsigned char	reserved44[0x21a - 0x218];
+	unsigned char	resumeTrim;		/* DOL-1001: the trim of regulators 0x81-0x83 at a
+						   resume (powerSeqLevels) */
+	unsigned char	resumeTrim84;		/* and of regulator 0x84 */
+#else
 	unsigned char	reserved44[0x21c - 0x218];
+#endif
 	union {
 		unsigned char	value;
 		struct {
@@ -309,7 +327,20 @@ struct ConfigBlock {
 	unsigned char	touchDelayWriteByte;	/* USS-1001: the delay after each byte panel 0 is
 						   written */
 	unsigned char	touchDelayRelease;	/* and after its deselect */
+#if BOARD_DOL1001
+	unsigned char	thermalPeriod;		/* DOL-1001: the temperature statistics' ticks
+						   between samples (thermalStatsInit) */
+	unsigned char	reserved49;
+	unsigned int	thermalMaxSamples;	/* and their samples' maximum */
+	unsigned int	thermalStart0;		/* each mode's ticks before its first sample, */
+	unsigned int	thermalLimit0;		/* its last tick and the samples before it is */
+	unsigned int	thermalThreshold0;	/* answered (struct ThermalStats) */
+	unsigned int	thermalStart1;
+	unsigned int	thermalLimit1;
+	unsigned int	thermalThreshold1;
+#else
 	unsigned char	reserved43[0x238 - 0x228];
+#endif
 	unsigned char	chargeDongleCurrent;	/* USS-1001: the USB supply's setting with the
 						   multi-connector's dongle or debug board */
 	unsigned char	analogLimitScale;	/* USS-1001: a calibrated axis's limits are its

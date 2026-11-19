@@ -27,7 +27,7 @@ extern unsigned char serialRequestData[0x1c];
 #endif
 
 /* how the restart's refusals leave it (0x00090804 and USS-1001: through its end) */
-#if FW_SINCE(0x00090903) && !BOARD_USS1001
+#if FW_SINCE(0x00090903) && !SOURCE_0103
 #define SERIAL_REQUEST_RESTART_END	break
 #else
 #define SERIAL_REQUEST_RESTART_END	goto restartEnd
@@ -206,7 +206,7 @@ void serialRequestNotify(void)
 	unsigned char offset;
 	unsigned char size;
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 	if (!handshakeUnlocked11()) {
 		hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 		handshakeRefuse();
@@ -215,7 +215,7 @@ void serialRequestNotify(void)
 #endif
 	switch (serialRequest.event) {
 	case HOST_EVENT_COMMAND:
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* USS-1001 checks the handshake for the commands only */
 		if (!handshakeUnlocked11()) {
 			hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
@@ -258,7 +258,7 @@ void serialRequestNotify(void)
 					hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 3, 0);
 			} else
 				hostRequestAnswer(&serialRequest, HOST_REQUEST_ANSWER, 2, 0);
-#if !FW_SINCE(0x00090903) || BOARD_USS1001
+#if !FW_SINCE(0x00090903) || SOURCE_0103
 restartEnd:
 #endif
 			break;
@@ -331,7 +331,7 @@ restartEnd:
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&serialRequest, HOST_REQUEST_RECEIVE);
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case HOST_EVENT_CLOSE:
 		hostRequestSetState(&serialRequest, HOST_REQUEST_IDLE);
 		break;

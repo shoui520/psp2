@@ -256,7 +256,7 @@ void nvsRequestNotify(void)
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&nvsRequest, HOST_REQUEST_RECEIVE);
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case HOST_EVENT_OPEN:
 		hostRequestSetState(&nvsRequest, HOST_REQUEST_RECEIVE);
 		break;

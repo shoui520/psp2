@@ -2,7 +2,7 @@
  * UART4 on SAU2 (channel 0 sends, channel 1 receives; TxD4 P9.4, RxD4 P9.3): opened at one of
  * uart4Bauds' speeds, and read and written through uart4's ring buffers.
  */
-#if ERNIE_BOARD != 0x00406000 || ERNIE_HW == 0x00601000 || ERNIE_HW >= 0x00800000	/* BOARD_SERIAL4 (#pragma comes first) */
+#if ERNIE_BOARD != 0x00406000 || ERNIE_HW == 0x00601000 || ERNIE_HW >= 0x00700000	/* BOARD_SERIAL4, BOARD_DOL1001 or CHIP_RL78 (#pragma comes first) */
 #if ERNIE_HW >= 0x00800000	/* CHIP_RL78: USS-1001's vectors are in vectors_rl78.asm */
 #define UART4_INTERRUPT	__rtos_interrupt
 #else
@@ -14,6 +14,7 @@
 #pragma sfr
 
 #include "ernie.h"
+#include "board.h"
 #include "chip.h"
 #include "kernel.h"
 #include "task.h"
@@ -281,6 +282,9 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 #else
 UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 {
+#if BOARD_DOL1001
+	struct UartPort *p = &uart4;	/* DOL-1001: kept, unread */
+#endif
 	unsigned char data;
 
 	data = SDR21;

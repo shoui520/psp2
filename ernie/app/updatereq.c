@@ -49,8 +49,8 @@ extern unsigned char fslDataBuffer[];		/* the library's descriptor */
 #define UPDATER_NVS_DL_FLAGS	0x2d
 #define UPDATER_NVS_AREA	1
 
-#if BOARD_USS1001
-#include "flash.h"		/* updaterFlashPrepare: flash.c's on the slim */
+#if BOARD_USS1001 || BOARD_DOL1001
+#include "flash.h"		/* updaterFlashPrepare: flash.c's on the slim and DOL-1001 */
 #else
 static unsigned char updaterFlashPrepare(void);
 #endif
@@ -67,7 +67,18 @@ static unsigned char updaterWriteDlFlags(unsigned char flags);
 
 /* the updater key and IV (the PS Dev Wiki's "Ernie Updater AES128CBC Key"; the IRS-1001 boards
    have the 0x60 one, USS-1001 the 0x80/0x82 one) */
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* DOL-1001's: the PS Dev Wiki's 0x70/0x72 (PSTV) key */
+const unsigned char updaterCryptoKey[16] = {
+	0xbe, 0x01, 0xb7, 0xfa, 0x1e, 0xc3, 0xed, 0x64,
+	0x18, 0x79, 0xdd, 0xe4, 0x4d, 0x60, 0x48, 0x6e,
+};
+
+const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
+	0x67, 0x1a, 0x74, 0xc7, 0xe5, 0x0f, 0x25, 0xcf,
+	0x64, 0xd4, 0x34, 0x10, 0x39, 0xc7, 0x87, 0x05,
+};
+#elif SOURCE_0103
 const unsigned char updaterCryptoKey[16] = {
 	0xdb, 0xd9, 0x45, 0x0a, 0xcc, 0xa8, 0x54, 0x48,
 	0x95, 0x66, 0x3a, 0x6f, 0x47, 0x2b, 0xde, 0x7f,
@@ -99,14 +110,37 @@ const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
 };
 #endif
 
-/* 0x1185's signature is the syscon's identity XORed with this */
+/* 0x1185's signature is the syscon's identity XORed with this (DOL-1001's: the bytes'
+   indexes) */
+#if BOARD_DOL1001
+const unsigned char updaterSignatureMask[24] = {
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+	0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+};
+#else
 const unsigned char updaterSignatureMask[24] = {
 	0x46, 0xb5, 0x32, 0xe3, 0xf0, 0x12, 0xe6, 0x63,
 	0xc0, 0x69, 0x4e, 0xca, 0x7c, 0x8c, 0x58, 0xb7,
 	0x05, 0x02, 0x27, 0x9c, 0x0a, 0x91, 0xda, 0x21,
 };
+#endif
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* the segments run mode 0xc5e7 may program: 4-47 (0x1000-0xbfff) and 209-237 (0x34400-0x3b7ff) */
+const unsigned char updaterSegments[UPDATER_SEGMENTS / 8] = {
+	0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0xfe, 0xff, 0xff, 0x3f, 0x00, 0x00,
+};
+
+/* DOL-1001's own copy of timeStampDigits (command.c's), for the signature */
+static const unsigned char updaterTimeStampDigits[12] = {
+	8, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23,
+};
+#define UPDATER_STAMP_DIGITS	updaterTimeStampDigits
+#elif SOURCE_0103
 /* the segments run mode 0xc5e7 may program, by the number the host sends (updaterSetSegment
    maps them to the flash's): 4-47 and 85-245 */
 const unsigned char updaterSegments[0x100 / 8] = {
@@ -224,7 +258,7 @@ void updaterRequestInit(void)
 	updaterDownloader = (void (*)(void))DOWNLOADER_ENTRY;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the update's state, its segment and the request's command, event, state and
    status (serial 0x01d2) */
 void updaterGetStatus(unsigned char *out)
@@ -271,7 +305,7 @@ void updaterRequestNotify(void)
 		task2SetFlag(3, 0x0040);
 		break;
 	case HOST_EVENT_ANSWERED:
-#if BOARD_USS1001
+#if SOURCE_0103
 		hostRequestSetState(&updaterRequest, HOST_REQUEST_RECEIVE);
 		if (updaterRequest.command == 0x1183 && updater.state == 0x13 &&
 		    updaterRequest.status == 0)
@@ -282,7 +316,7 @@ void updaterRequestNotify(void)
 			hostIntCancel();
 #endif
 		break;
-#if BOARD_USS1001
+#if SOURCE_0103
 	case HOST_EVENT_OPEN:
 		hostRequestSetState(&updaterRequest, HOST_REQUEST_RECEIVE);
 		break;
@@ -310,7 +344,7 @@ void updaterStartDownloader(void)
 	unsigned char board;
 #endif
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 	serialClose1();
 	serialClose2();
 	serialOpen3(3);
@@ -347,7 +381,7 @@ void updaterStartDownloader(void)
 #endif
 #if FW_SINCE(0x01000104)
 		if (version <= 0x000102ff)
-#if BOARD_USS1001
+#if SOURCE_0103
 			/* the config's first byte, masked: size */
 			DOWNLOADER_START->link.size = 0x0f & *(unsigned char *)&hostLink.config;
 #else
@@ -355,9 +389,11 @@ void updaterStartDownloader(void)
 #endif
 		else
 			DOWNLOADER_START->link.config = hostLink.config;
-#if BOARD_USS1001
+#if SOURCE_0103
+#if !BOARD_DOL1001
 		DOWNLOADER_START->multiCn = analogGetMultiCn();
 		DOWNLOADER_START->ledFlags = powerLedFlags.causes.value;
+#endif
 		DOWNLOADER_START->usbState = chargeUsbState;
 #endif
 		if (version >= 0x00002000 && version <= 0x00002600)
@@ -398,7 +434,7 @@ void updaterRequestAnswerOk(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 /* opens the flash library for the downloader; 0 when it may start */
 static unsigned char updaterFlashPrepare(void)
 {
@@ -482,7 +518,7 @@ void updaterRequestEvent(FLGPTN ptn)
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, result, 0);
 		break;
 	default:
-#if BOARD_USS1001
+#if SOURCE_0103
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0, 0);
 #else
 		updaterRequest.state = HOST_REQUEST_ERROR;
@@ -532,7 +568,7 @@ unsigned char updaterDecryptReset(void)
 	result = (unsigned char)SHA1Reset((SHA1Context __near *)&updater.sha,
 					  (unsigned char __near *)updater.shaBlock,
 					  (unsigned long __near *)updater.shaW);
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (result != 0) {
 	}
 #endif
@@ -707,7 +743,7 @@ static unsigned char updaterSetSegment(unsigned char segment)
 	default:
 		return 1;
 	}
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001	/* DOL-1001's segments are the flash's */
 	/* the host's segments from 0x40 are the flash's from 0xc0, in a byte */
 	if (segment >= 0x40)
 		updater.segment = (unsigned char)(segment + 0x80);
@@ -797,7 +833,7 @@ static unsigned char updaterExecProgramming(unsigned long sum)
  */
 static unsigned char updaterExecFinalize(unsigned char *data)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	UpdaterSegment segment;
 	unsigned char result;
 	unsigned char flags;
@@ -813,7 +849,7 @@ static unsigned char updaterExecFinalize(unsigned char *data)
 	case 0x20:
 		updater.segment = 0;
 		updater.state++;
-#if BOARD_USS1001
+#if SOURCE_0103
 		for (i = 0; i < UPDATER_SEGMENTS - 1; i++)
 			if (updaterSegmentReceived(i))
 				updater.segmentCount++;

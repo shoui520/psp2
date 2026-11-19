@@ -34,7 +34,7 @@
 
 extern unsigned char input1Bit5Active(void);
 extern unsigned char intp11Low(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "sysinfo.h"
 #endif
 
@@ -47,7 +47,7 @@ unsigned char task2Suspend(void);
 unsigned char task2Shutdown(void);
 unsigned char task2Cut(void);
 unsigned char task2Reset(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 unsigned char task2UpdateAnswer(void);
 unsigned char task2Update(void);
 #endif
@@ -107,7 +107,7 @@ void task2(VP_INT exinf)
 	}
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's multi-connector follows its own state; INTP11 is read and not used */
 void task2MultiCnEvent(FLGPTN ptn)
 {
@@ -204,7 +204,7 @@ unsigned char task2StateEvent(void)
 		case 0x8000 | STATE_RESET:
 			ret = task2Reset();
 			break;
-#if BOARD_USS1001
+#if SOURCE_0103
 		case 0x8000 | STATE_UPDATE_ANSWER:
 			ret = task2UpdateAnswer();
 			break;
@@ -223,7 +223,7 @@ unsigned char task2StateEvent(void)
 		case STATE_RESUME:
 		case STATE_RESET:
 		case STATE_CUT:
-#if BOARD_USS1001
+#if SOURCE_0103
 		case STATE_UPDATE_ANSWER:
 		case STATE_UPDATE:
 #endif
@@ -235,7 +235,7 @@ unsigned char task2StateEvent(void)
 
 /* the end of the power-on sequence: the clock started after a cold start (cause 0x60), the
    links opened, the NVS loaded, and the host's watchdog set as configured */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: no serial 4 or 2 here, and the log started again after a cause 0x60 */
 unsigned char task2On(void)
 {
@@ -303,7 +303,7 @@ unsigned char task2Off(void)
 #if FW_SINCE(0x00090903)
 	unsigned char value;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char length;
 	unsigned char size;
 #endif
@@ -314,7 +314,7 @@ unsigned char task2Off(void)
 	serialAuthInit();
 	serialRequestInit();
 	serial4StartTimers();
-#if BOARD_USS1001
+#if SOURCE_0103
 	boardMultiCnUpdate();
 #elif FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
@@ -337,7 +337,7 @@ unsigned char task2Off(void)
 	if (getAlarmMode() == 1)
 		setAlarm(RTC_ALARM_NONE);
 #endif
-#if BOARD_USS1001	/* the fat ones read them in stateOffEnter */
+#if SOURCE_0103	/* the fat ones read them in stateOffEnter */
 	logReadData(1, (unsigned char *)&idRecord1, &length);
 	logReadData(0x0f, &size, &length);
 	idRecordsLength = size;
@@ -391,7 +391,7 @@ unsigned char task2Suspend(void)
 
 	ret = 0;
 	serialAuthInit();
-#if BOARD_USS1001
+#if SOURCE_0103
 	boardMultiCnUpdate();
 #elif FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
@@ -412,7 +412,7 @@ unsigned char task2Shutdown(void)
 	unsigned char ret;
 
 	ret = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 	boardMultiCnOutputOff();
 #else
 	serial4Close2();
@@ -435,7 +435,7 @@ unsigned char task2Cut(void)
 	unsigned char ret;
 
 	ret = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 	boardMultiCnOutputOff();
 #else
 	serial4Close2();
@@ -465,7 +465,7 @@ unsigned char task2Reset(void)
 	return ret;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 unsigned char task2UpdateAnswer(void)
 {
 	return 0;

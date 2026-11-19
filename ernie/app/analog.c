@@ -40,24 +40,29 @@ void analogScale31(unsigned int position);
 static void analogCalibrationLoaded(unsigned char command, unsigned char result);
 static void analogCalibrationSaved(unsigned char command, unsigned char result);
 
-#if BOARD_USS1001
-/* the slim's multi connector: analog input 0x0010's levels by its whole result, 0xff between
-   two */
+#if BOARD_USS1001 || BOARD_DOL1001
+/* a level by a whole result (DOL-1001 keeps analogLevelFindWide, with no table) */
 struct AnalogLevelWide {
 	unsigned int	limit;
 	unsigned int	level;
 };
+#endif
 
+#if BOARD_USS1001
+/* the slim's multi connector: analog input 0x0010's levels by its whole result, 0xff between
+   two */
 const struct AnalogLevelWide analogInput10Levels[12] = {
 	{ 0xe900, 0 }, { 0xde40, 1 }, { 0xce00, 0xff }, { 0xc440, 2 }, { 0xb640, 3 },
 	{ 0xa1c0, 0xff }, { 0x9140, 4 }, { 0x8840, 0xff }, { 0x7a80, 5 }, { 0x0580, 0xff },
 	{ 0x0140, 6 }, { 0x0000, 7 },
 };
 #else
+#if !BOARD_DOL1001
 /* the levels of an older table, never read */
 const struct AnalogLevel analogLevels5[5] = {
 	{ 0xdf, 0 }, { 0xae, 1 }, { 0x7d, 1 }, { 0x4b, 2 }, { 0x1a, 3 },
 };
+#endif
 
 const struct AnalogLevel analogMultiCnLevels[7] = {
 	{ 0xe3, 6 }, { 0xc4, 5 }, { 0x99, 4 }, { 0x69, 3 }, { 0x40, 2 }, { 0x1d, 1 }, { 0x00, 0 },
@@ -79,7 +84,7 @@ static __near unsigned char analogScale;	/* the margin, range * analogScale >> *
 static __near unsigned char analogScaleShift;	/* analogScaleShift: 0x57 >> 9 or (mode 2) 0x31 */
 #endif
 static __near unsigned char analogMultiCnInput;	/* the high byte of ANI11's result */
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 static __near unsigned char analogMultiCnReserved;	/* cleared by analogMultiCnInit, otherwise
 							   unused */
 #endif
@@ -103,16 +108,35 @@ static struct {
 	unsigned char	previous;	/* of the one before */
 	unsigned char	reported;
 } analogInput10;
+#endif
 
 #if ANALOG_LIMITS
+#if ANALOG_SNAPSHOT
+static void analogFault(unsigned int sample, struct AnalogAxis *axis, struct AnalogFault *fault,
+			struct AnalogSnapshot *snapshot);
+static void analogSnapshotTake(struct AnalogAxis *axis, struct AnalogSnapshot *snapshot);
+#define ANALOG_FAULT(sample, n, fault, snapshot)					\
+	analogFault(sample, &analogAxes[n], &analogAxes[n].fault, snapshot)
+#else
 static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			struct AnalogFault *fault);
+#define ANALOG_FAULT(sample, n, fault, snapshot)					\
+	analogFault(sample, analogAxes[n].limitMin, analogAxes[n].limitMax, &analogAxes[n].fault)
 #endif
+#endif
+#if BOARD_USS1001 || BOARD_DOL1001
 static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogLevelWide *levels,
 					unsigned char count);
 #endif
 
-#if !BOARD_USS1001
+/* the sticks' power: P9.7, DOL-1001's pin that is not there */
+#if BOARD_DOL1001
+#define ANALOG_POWER		boardDummyPin
+#else
+#define ANALOG_POWER		P97
+#endif
+
+#if !BOARD_USS1001 && !BOARD_DOL1001
 /* inputKeys.state's bit 0x0080 (analogStart80, never called): only reset, except where
    BOARD_ANALOG_CHANNEL8 converts it (channel 8's level, analogLevels5) */
 static struct {
@@ -305,6 +329,24 @@ void analogAxesReset(void)
 	analogAxes[3].medianFault.noise = ANALOG_SAMPLE_CENTER;
 	analogAxes[3].medianFault.low = ANALOG_SAMPLE_CENTER;
 	analogAxes[3].medianFault.high = ANALOG_SAMPLE_CENTER;
+#if ANALOG_SNAPSHOT
+	analogAxes[0].medianSnapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].medianSnapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].medianSnapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].medianSnapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].medianSnapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].medianSnapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].medianSnapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].medianSnapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].medianSnapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].medianSnapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].medianSnapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].medianSnapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].medianSnapshot.check = 0x7fff;
+	analogAxes[1].medianSnapshot.check = 0x7fff;
+	analogAxes[2].medianSnapshot.check = 0x7fff;
+	analogAxes[3].medianSnapshot.check = 0x7fff;
+#endif
 }
 #endif
 
@@ -626,7 +668,7 @@ void analogCalibrationGet(unsigned char *out)
 	memcpy(out, &analogCalibration, sizeof(analogCalibration));
 }
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogInput80Reset(void)
 {
 	analogSuspend = 0xff;
@@ -643,7 +685,7 @@ void analogMultiCnInit(void)
 	analogMultiCn = 0xff;
 	analogMultiCnPrevious = 0xff;
 	analogMultiCnInput = 0;
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 	analogMultiCnReserved = 0;
 #endif
 }
@@ -659,9 +701,9 @@ void analogInput10Init(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_USS1001 || BOARD_DOL1001
 /* converts the inputs (inputKeys' bits) asked and on: the sticks (0x0002), the multi
-   connector (0x0010); 1 if the converter is busy */
+   connector (0x0010; DOL-1001's 0x0020); 1 if the converter is busy */
 unsigned char analogStart(unsigned int inputs)
 {
 	unsigned char mask;
@@ -672,14 +714,24 @@ unsigned char analogStart(unsigned int inputs)
 	mask = 0;
 	skip = 1;
 	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
+#if BOARD_DOL1001
+		mask |= 0xf0;
+		ANALOG_POWER = 1;
+#else
 		mask |= 0x0f;
 #if !FW_SINCE(0x01030511)
 		P10.2 = 0;	/* 0x01030505: low here, high again in analogEvent */
 #endif
+#endif
 		skip = 4;
 	}
+#if BOARD_DOL1001
+	if ((inputs & 0x0020) && (inputKeys.state & 0x0020))
+		mask |= 0x08;
+#else
 	if ((inputs & 0x0010) && (inputKeys.state & 0x0010))
 		mask |= 0x10;
+#endif
 	busy = adcStart(mask, skip);
 	if (busy)
 		return 1;
@@ -702,7 +754,7 @@ unsigned char analogStart(unsigned int inputs)
 	skip = 1;
 	if (inputs & 0x0002) {
 		mask |= 0xf0;
-		P97 = 1;
+		ANALOG_POWER = 1;
 		skip = 2;
 	}
 #if BOARD_102603
@@ -749,23 +801,19 @@ void analogEvent(unsigned int inputs)
 		analogAxes[0].samples[analogSample] = adcResults[0];
 		if ((analogAxes[0].samples[analogSample] & 0x003f) || analogAxes[0].limitMin >= analogAxes[0].samples[analogSample] ||
 		    analogAxes[0].samples[analogSample] >= analogAxes[0].limitMax)
-			analogFault(analogAxes[0].samples[analogSample], analogAxes[0].limitMin,
-				    analogAxes[0].limitMax, &analogAxes[0].sampleFault);
+			ANALOG_FAULT(analogAxes[0].samples[analogSample], 0, sampleFault, NULL);
 		analogAxes[1].samples[analogSample] = adcResults[1];
 		if ((analogAxes[1].samples[analogSample] & 0x003f) || analogAxes[1].limitMin >= analogAxes[1].samples[analogSample] ||
 		    analogAxes[1].samples[analogSample] >= analogAxes[1].limitMax)
-			analogFault(analogAxes[1].samples[analogSample], analogAxes[1].limitMin,
-				    analogAxes[1].limitMax, &analogAxes[1].sampleFault);
+			ANALOG_FAULT(analogAxes[1].samples[analogSample], 1, sampleFault, NULL);
 		analogAxes[2].samples[analogSample] = adcResults[2];
 		if ((analogAxes[2].samples[analogSample] & 0x003f) || analogAxes[2].limitMin >= analogAxes[2].samples[analogSample] ||
 		    analogAxes[2].samples[analogSample] >= analogAxes[2].limitMax)
-			analogFault(analogAxes[2].samples[analogSample], analogAxes[2].limitMin,
-				    analogAxes[2].limitMax, &analogAxes[2].sampleFault);
+			ANALOG_FAULT(analogAxes[2].samples[analogSample], 2, sampleFault, NULL);
 		analogAxes[3].samples[analogSample] = adcResults[3];
 		if ((analogAxes[3].samples[analogSample] & 0x003f) || analogAxes[3].limitMin >= analogAxes[3].samples[analogSample] ||
 		    analogAxes[3].samples[analogSample] >= analogAxes[3].limitMax)
-			analogFault(analogAxes[3].samples[analogSample], analogAxes[3].limitMin,
-				    analogAxes[3].limitMax, &analogAxes[3].sampleFault);
+			ANALOG_FAULT(analogAxes[3].samples[analogSample], 3, sampleFault, NULL);
 #else
 		P10.2 = 1;	/* 0x01030505 */
 		analogAxes[0].samples[analogSample] = adcResults[0];
@@ -811,12 +859,14 @@ void analogEvent(unsigned int inputs)
 	unsigned char low;
 
 #endif
-#if FW_SINCE(0x0100010B)
+#if BOARD_DOL1001
+	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
+#elif FW_SINCE(0x0100010B)
 	if ((inputs & 0x0002) && analogSuspend != 0xff && (inputKeys.state & 0x0002)) {
 #else
 	if ((inputs & 0x0002) && analogSuspend != 0xff) {
 #endif
-		P97 = 0;
+		ANALOG_POWER = 0;
 		analogAxes[0].samples[analogSample] = adcResults[0];
 		analogAxes[1].samples[analogSample] = adcResults[1];
 		analogAxes[2].samples[analogSample] = adcResults[2];
@@ -887,7 +937,7 @@ void analogEvent(unsigned int inputs)
 #endif
 		analogLatchUpdate(ANALOG_HIGH(adcResults[6]));
 	}
-#else
+#elif !BOARD_DOL1001
 	if (inputs & 0x0001)
 		;	/* Sony's tests bit 0 and does nothing */
 #endif
@@ -908,7 +958,7 @@ void analogEvent(unsigned int inputs)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogLatchUpdate(unsigned char value)
 {
 	analogLatch.value = value;
@@ -925,7 +975,7 @@ void analogLatchUpdate(unsigned char value)
 #endif
 
 #if FW_SINCE(0x00090206)
-#if BOARD_USS1001
+#if SOURCE_SLIM
 /* axis 0: the median of its samples; one within the limits widens the calibration and is
    scaled into its sets, one outside them is recorded */
 void analogFilter0(void)
@@ -969,7 +1019,7 @@ void analogFilter0(void)
 			analogScale01(median);
 #if ANALOG_LIMITS
 	} else
-		analogFault(analogAxes[0].median, analogAxes[0].limitMin, analogAxes[0].limitMax, &analogAxes[0].medianFault);
+		ANALOG_FAULT(analogAxes[0].median, 0, medianFault, &analogAxes[0].medianSnapshot);
 #else
 	}
 #endif
@@ -1076,7 +1126,7 @@ void analogFilter1(void)
 			analogScale11(median);
 #if ANALOG_LIMITS
 	} else
-		analogFault(analogAxes[1].median, analogAxes[1].limitMin, analogAxes[1].limitMax, &analogAxes[1].medianFault);
+		ANALOG_FAULT(analogAxes[1].median, 1, medianFault, &analogAxes[1].medianSnapshot);
 #else
 	}
 #endif
@@ -1183,7 +1233,7 @@ void analogFilter2(void)
 			analogScale21(median);
 #if ANALOG_LIMITS
 	} else
-		analogFault(analogAxes[2].median, analogAxes[2].limitMin, analogAxes[2].limitMax, &analogAxes[2].medianFault);
+		ANALOG_FAULT(analogAxes[2].median, 2, medianFault, &analogAxes[2].medianSnapshot);
 #else
 	}
 #endif
@@ -1290,7 +1340,7 @@ void analogFilter3(void)
 			analogScale31(median);
 #if ANALOG_LIMITS
 	} else
-		analogFault(analogAxes[3].median, analogAxes[3].limitMin, analogAxes[3].limitMax, &analogAxes[3].medianFault);
+		ANALOG_FAULT(analogAxes[3].median, 3, medianFault, &analogAxes[3].medianSnapshot);
 #else
 	}
 #endif
@@ -1298,6 +1348,40 @@ void analogFilter3(void)
 
 #if ANALOG_LIMITS
 /* a reading outside an axis's limits recorded */
+#if ANALOG_SNAPSHOT
+static void analogFault(unsigned int sample, struct AnalogAxis *axis, struct AnalogFault *fault,
+			struct AnalogSnapshot *snapshot)
+{
+	if (sample & 0x003f)
+		fault->noise = sample;
+	if (axis->limitMin >= sample) {
+		if (fault->below != 0xff)
+			fault->below++;
+		if (sample < fault->low) {
+			fault->low = sample;
+			if (snapshot)
+				analogSnapshotTake(axis, snapshot);
+		}
+	} else if (sample >= axis->limitMax) {
+		if (fault->above != 0xff)
+			fault->above++;
+		if (fault->high < sample) {
+			fault->high = sample;
+			if (snapshot)
+				analogSnapshotTake(axis, snapshot);
+		}
+	}
+}
+
+static void analogSnapshotTake(struct AnalogAxis *axis, struct AnalogSnapshot *snapshot)
+{
+	snapshot->samples[0] = axis->samples[0];
+	snapshot->samples[1] = axis->samples[1];
+	snapshot->samples[2] = axis->samples[2];
+	snapshot->check = 0xffff - (snapshot->samples[0] + snapshot->samples[1] +
+				    snapshot->samples[2]);
+}
+#else
 static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			struct AnalogFault *fault)
 {
@@ -1315,6 +1399,7 @@ static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			fault->high = sample;
 	}
 }
+#endif
 #endif
 
 /* axis 3 in set 0: the position held between the calibration's ends less the set's margin,
@@ -2223,7 +2308,7 @@ unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *lev
 	return 0xff;
 }
 
-#if BOARD_USS1001
+#if BOARD_USS1001 || BOARD_DOL1001
 /* the same by a whole result */
 static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogLevelWide *levels,
 					unsigned char count)
@@ -2239,7 +2324,7 @@ static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogL
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_USS1001 || BOARD_DOL1001
 /* the sticks on, computing set 0 (mode 1), set 1 (2) or both (3), within their limits; the set
    not computed centred */
 void analogSetMode(unsigned char mode)
@@ -2332,14 +2417,18 @@ void analogSetMode(unsigned char mode)
 }
 #endif
 
-#if BOARD_USS1001
-/* the sticks off, P10.2 high */
+#if BOARD_USS1001 || BOARD_DOL1001
+/* the sticks off, P10.2 high (DOL-1001: their power off) */
 void analogStop(void)
 {
 	DI();
 	inputKeys.state &= ~0x0002;
 	EI();
+#if BOARD_DOL1001
+	ANALOG_POWER = 0;
+#else
 	P10.2 = 1;
+#endif
 	analogFlags = 0;
 	analogInit();
 }
@@ -2354,7 +2443,7 @@ void analogStop(void)
 #endif
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogStart80(void)
 {
 	inputKeys.state |= 0x0080;
@@ -2362,7 +2451,7 @@ void analogStart80(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogStop80(void)
 {
 	inputKeys.state &= ~0x0080;
@@ -2377,7 +2466,13 @@ void analogMultiCnStart(void)
 #else
 void analogMultiCnStart(void)
 {
+#if BOARD_DOL1001
+	DI();
 	inputKeys.state |= 0x0020;
+	EI();
+#else
+	inputKeys.state |= 0x0020;
+#endif
 	analogMultiCnInit();
 #if FW_SINCE(0x0100010B)
 	adcOpenForBoard();
@@ -2408,7 +2503,13 @@ void analogStop10(void)
 #else
 void analogMultiCnStop(void)
 {
+#if BOARD_DOL1001
+	DI();
 	inputKeys.state &= ~0x0020;
+	EI();
+#else
+	inputKeys.state &= ~0x0020;
+#endif
 #if FW_SINCE(0x0100010B)
 	adcCloseForBoard();
 #endif
@@ -2486,7 +2587,7 @@ void analogGetSampleFaults(unsigned char *out)
 #endif
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogLatchInit(void)
 {
 	analogLatch.value = 0;
@@ -2496,7 +2597,7 @@ void analogLatchInit(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 /* 0x00080504's controlsReadButtons only */
 unsigned char analogLatchIsSet(void)
 {
@@ -2506,7 +2607,7 @@ unsigned char analogLatchIsSet(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001
 void analogLatchOn(void)
 {
 #if BOARD_102603

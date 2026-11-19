@@ -82,7 +82,7 @@ struct Bbmc {
 	unsigned char		state;		/* 1 off, 2 on, 3 on in mode 1, 4 on in mode 6 or 7 */
 	struct BbmcPacket	rx;
 	struct BbmcAnswer	tx;
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* USS-1001's keeps bbmc.c's counters here (one ES for all); the others' are its statics */
 	unsigned int		savedMode;	/* the mode as NVS holds it */
 	unsigned char		reserved;	/* nothing reads it */

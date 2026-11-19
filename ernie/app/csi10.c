@@ -23,8 +23,12 @@ static __sreg struct Csi10Transfer csi10;
 #if BOARD_USS1001
 /* USS-1001's panel: SAU0's channel 1 (CSI01) */
 #define CSI10_SIO	SIO01
+#define CSI10_SSR	SSR01L
+#define CSI10_SIR	SIR01L
 #else
 #define CSI10_SIO	SIO10
+#define CSI10_SSR	SSR02L
+#define CSI10_SIR	SIR02L
 #endif
 
 #if BOARD_USS1001
@@ -51,6 +55,40 @@ int csi10Open(void)
 	SS0L.1 = 1;
 	CSIIF01 = 0;
 	CSIMK01 = 0;
+	csi10.state = CSI10_OPEN;
+	return 0;
+}
+#elif BOARD_DOL1001
+/* DOL-1001: the fat board's channel, its lines' writes (P0.2, PM0.2, PM0.3, P0.4, PM0.4, then
+   each panel's select and its mode) going to the dummy byte */
+int csi10Open(void)
+{
+	if (!SAU0EN) {
+		SAU0EN = 1;
+		NOP();
+		NOP();
+		NOP();
+		NOP();
+		SPS0 &= 0xfff0;
+	}
+	ST0L.2 = 1;
+	SMR02 = 0x0020;
+	SCR02 = 0xc007;
+	SDR02 = 0x0200;
+	SO0 |= 0x0404;
+	SOE0L.2 = 1;
+	boardDummyPin = 1;
+	boardDummyPin = 0;
+	boardDummyPin = 1;
+	boardDummyPin = 1;
+	boardDummyPin = 0;
+	boardDummyPin = 1;
+	boardDummyPin = 0;
+	boardDummyPin = 1;
+	boardDummyPin = 0;
+	SS0L.2 = 1;
+	CSIIF10 = 0;
+	CSIMK10 = 0;
 	csi10.state = CSI10_OPEN;
 	return 0;
 }
@@ -103,7 +141,7 @@ int csi10Transfer(struct Csi10Transfer *transfer)
 		csi10.send = transfer->send;
 		csi10.sendCount = transfer->sendCount;
 		csi10.receiveCount = transfer->receiveCount;
-#if BOARD_USS1001
+#if SOURCE_0103
 		csi10.delay = transfer->delay;
 #endif
 		if (csi10.sendCount != 0) {
@@ -127,7 +165,7 @@ int csi10TransferNoLock(struct Csi10Transfer *transfer)
 		csi10.send = transfer->send;
 		csi10.sendCount = transfer->sendCount;
 		csi10.receiveCount = transfer->receiveCount;
-#if BOARD_USS1001
+#if SOURCE_0103
 		csi10.delay = transfer->delay;
 #endif
 		if (csi10.sendCount != 0) {
@@ -177,10 +215,17 @@ void csi10Close(void)
 	CSIMK10 = 1;
 	CSIIF10 = 0;
 	SOE0L.2 = 0;
+#if BOARD_DOL1001
+	boardDummyPin = 0;
+	boardDummyPin = 0;
+	boardDummyPin = 0;
+	boardDummyPin = 0;
+#else
 	P0.4 = 0;
 	P0.2 = 0;
 	P0.1 = 0;
 	P0.0 = 0;
+#endif
 	csi10.state = 0;
 }
 #endif
@@ -204,16 +249,17 @@ void csi10Release(void)
 
 /* a byte went both ways: store the one received, send the next; at a transfer's end, start
    the next phase */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* USS-1001: panel 0 alone on the link (the rear panel is on IICA1); its report ends the frame,
-   whose report carries one byte more (its status) for family 0x82 variant 0x2b */
+   whose report carries one byte more (its status) for family 0x82 variant 0x2b. DOL-1001 (on the
+   fat board's channel) keeps panel 1's phases */
 void csi10Interrupt(void)
 {
 	unsigned char data;
 	unsigned char i;
 
-	if (SSR01L & 0x01) {
-		SIR01L = 0x01;
+	if (CSI10_SSR & 0x01) {
+		CSI10_SIR = 0x01;
 		data = 0;
 	} else
 		data = CSI10_SIO;
@@ -230,19 +276,33 @@ void csi10Interrupt(void)
 		csi10.sendCount--;
 	} else if (csi10.receiveCount != 0)
 		CSI10_SIO = 0;
-	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(SSR01L & 0x40)) {
+	if (csi10.receiveCount == 0 && csi10.sendCount == 0 && !(CSI10_SSR & 0x40)) {
 		csi10.state &= ~CSI10_BUSY;
 		switch (csi10.state & CSI10_PHASE) {
 		case CSI10_TRANSFER:
 			csi10.state = CSI10_DONE;
 			break;
+#if BOARD_DOL1001
+		case CSI10_COMMAND1:
+			csi10.state = CSI10_REPORT1;
+			break;
+		case CSI10_REPORT1:
+			for (i = 0; i < touchDelays.deselect; i++)
+				NOP();
+			TOUCH_SELECT1 = 1;
+			if (touch.flags & TOUCH_PANEL0)
+				csi10.state = CSI10_COMMAND0;
+			else
+				csi10.state = CSI10_FRAME;
+			break;
+#endif
 		case CSI10_COMMAND0:
 			csi10.state = CSI10_REPORT0;
 			break;
 		case CSI10_REPORT0:
 			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
-			P12.6 = 1;
+			TOUCH_SELECT0 = 1;
 			csi10.state = CSI10_FRAME;
 			break;
 		}
@@ -258,7 +318,7 @@ void csi10Interrupt(void)
 			CSI10_SIO = 0;
 			break;
 		case CSI10_COMMAND0:
-			P12.6 = 0;
+			TOUCH_SELECT0 = 0;
 			touchFrames[touch.frame].time0 = TCR02;
 			touchFrames[touch.frame].panel[0][TOUCH_PANEL_STATE] = touch.state.value;
 			for (i = 0; i < touchDelays.select; i++)

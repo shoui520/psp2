@@ -36,7 +36,9 @@ extern unsigned char input1Bit7Active(void);
 #endif
 
 /* the timer of chargeUpdateSoon, below the RTC's */
-#if BOARD_USS1001
+#if BOARD_DOL1001
+#define CHARGE_SOON_TIMER	0x14
+#elif SOURCE_0103
 #define CHARGE_SOON_TIMER	0x13
 #else
 #define CHARGE_SOON_TIMER	0x16
@@ -44,12 +46,12 @@ extern unsigned char input1Bit7Active(void);
 
 __sreg union CookieStatus1 cookieStatus1;
 __sreg union CookieStatus2 cookieStatus2;
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg union CookieStatus1 chargeStatus1Last;
 __sreg union CookieStatus2 chargeStatus2Last;
 #endif
 __sreg union PowerStatus powerStatus;
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg union ChargeFactors chargeFactors;
 #else
 __sreg unsigned char chargeFactors;
@@ -65,7 +67,7 @@ __sreg unsigned char chargeControl;
 #endif
 __sreg struct ChargeTemp chargeTemp;
 __sreg unsigned char chargeCurrent;
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg volatile unsigned char chargeUsbMode;
 #else
 __sreg unsigned char chargeUsbMode;
@@ -87,20 +89,20 @@ static __sreg unsigned char chargeReserved;
 __sreg unsigned char chargeLedBlinking;
 __sreg unsigned char chargeLedBlinkOn;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg unsigned int chargeBoostTicks;
 __sreg union ChargeBoost chargeBoost;
 #endif
 #if FW_SINCE(0x00090903)
 __sreg unsigned char chargeCookieSetting;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg unsigned char chargeTempSetting;
 #endif
 #if FW_SINCE(0x01000107)
 __sreg unsigned char chargeCookieHeld;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 __sreg unsigned char chargeManualMode;
 __sreg unsigned char chargeUsbState;
 __sreg unsigned char chargeUsbWait;
@@ -151,7 +153,61 @@ void chargeInit(void)
 {
 	struct TimerHandler handler;
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+	/* DOL-1001's: the slim's, with no battery to ask: the settings' readings while the Cookie
+	   has not answered 0x80, and the AC in */
+	cookieStatus1.word = 0;
+	cookieStatus2.word = 0;
+	chargeStatus1Last.word = 0;
+	chargeStatus2Last.word = 0;
+	powerStatus.word[0] = 0;
+	powerStatus.word[1] = 0;
+	chargeTemp.setting1 = 0x50;
+	chargeTemp.setting2 = 0;
+	chargeTemp.level = 0xff;
+	chargeTemp.readLast = 0xff;
+	chargeTemp.read = 0xff;
+	chargeTemp.temp = 0;
+	chargeCurrent = 0x10;
+	chargeUsbMode = 0;
+	chargeUsbHold = 0;
+	chargeVbus |= 3;
+	chargeBbmcVersion = 0;
+	chargeControl.0 = 0;
+	chargeControl.1 = 1;
+	CHARGE_FACTOR_STATUS3 = 0;
+	chargeCookieSetting = 0xc0;
+	chargeTempSetting = 0xc0;
+	chargeCookieHeld = 0;
+	chargeManualMode = 0;
+	chargeUsbState = 0;
+	chargeUsbWait = 0;
+	chargeUsbTicks = 0;
+	chargeAlarmInit();
+	if (deviceVersions.cookie[0] != 0x80) {
+		charge.batteryVolt = configGet()->batteryVolt;
+		charge.batteryRemainCap = configGet()->batteryRemainCap;
+		charge.batteryLifePercent = configGet()->batteryLifePercent;
+		charge.batteryTemp = configGet()->batteryTemp;
+		charge.batteryBicTemp = configGet()->batteryBicTemp;
+		powerStatus.bits.battery = 1;
+		powerStatus.bits.ac = 1;
+		charge.flagsLast = 0;
+		charge.flagsRead = 0;
+		charge.flags = 0;
+		sleepFactorSetStatus3(1);
+		sleepFactorSetStatus4(0);
+	}
+	charge.timer1fPending = 0;
+	handler.handler = chargeTimer;
+	timerSetHandler(TIMER_RTC(0x17), &handler);
+	handler.handler = chargeCookieTimer;
+	timerSetHandler(TIMER_RTC(0x1e), &handler);
+	handler.handler = chargeTimer1f;
+	timerSetHandler(TIMER_RTC(0x1f), &handler);
+	handler.handler = chargeUpdateSoon;
+	timerSetHandler(CHARGE_SOON_TIMER, &handler);
+#elif SOURCE_0103
 	/* the slim's: the last status registers, the bytes more, and no AC supply setting */
 	cookieStatus1.word = 0;
 	cookieStatus2.word = 0;
@@ -203,9 +259,11 @@ void chargeInit(void)
 			batteryReadRemainCap(&charge.batteryRemainCap);
 			batteryReadVolt(&charge.batteryVolt);
 			charge.flagsRead = charge.flags = charge.flagsLast = chargeReadFlags();
+#if BOARD_EVENT_LOG
 			eventLogCharge.word[0] = charge.flags;
 			eventLogCharge.word[1] = charge.batteryRemainCap;
 			eventLogRecord(5, 1, eventLogCharge.byte, 4);
+#endif
 			CHARGE_FACTOR_19 = (charge.flags & 0x0200) ? 1 : 0;
 			sleepFactorSet19(CHARGE_FACTOR_19);
 			CHARGE_FACTOR_16 = (charge.flags & 0x0010) ? 1 : 0;
@@ -381,7 +439,7 @@ void chargeInit(void)
 #if BOARD_USS1001 && FW_SINCE(0x01030511)
 /* the slim's calls stateTransition itself */
 #define chargeTransition(transition)	stateTransition(transition)
-#elif BOARD_USS1001
+#elif SOURCE_0103	/* and the PS TV's */
 /* 0x01030505's: stateTransition with the transition's low byte */
 void chargeTransition(int transition)
 {
@@ -396,7 +454,14 @@ void chargeTransition(int transition)
 #endif
 
 /* task 5's event 0x20 */
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* DOL-1001's, which task 5 does not call: the last status registers kept */
+void chargeUpdate(void)
+{
+	chargeStatus1Last = cookieStatus1;
+	chargeStatus2Last = cookieStatus2;
+}
+#elif SOURCE_0103
 /* the slim's: the USB's settling checks, the power LED's causes, the battery's boost and its
    faults record, the last status registers kept */
 void chargeUpdate(void)
@@ -510,9 +575,11 @@ void chargeUpdate(void)
 			dis_dsp();
 			charge.flags ^= changed;
 			ena_dsp();
+#if BOARD_EVENT_LOG
 			eventLogCharge.word[0] = charge.flags;
 			eventLogCharge.word[1] = charge.batteryRemainCap;
 			eventLogRecord(5, 1, eventLogCharge.byte, 4);
+#endif
 			if (changed & 0x0200) {
 				if ((charge.flags & 0x0200) && (state & 0x0008)) {
 					powerOffWlan();
@@ -579,7 +646,9 @@ void chargeUpdate(void)
 			charge.tempTicks = ticks;
 		if (!chargeStatus1Last.bits.battery) {
 			batteryFaults.byte[0] |= 0x10;
+#if BOARD_EVENT_LOG
 			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 			if (cookieStatus1.bits.charging && cookieStatus2.bits.boost) {
 				chargeBoostTicks = ticks;
 				chargeBoost.bits.running = 1;
@@ -590,7 +659,9 @@ void chargeUpdate(void)
 			    charge.batteryVolt >= configGet()->chargeBoostVolt) {
 				cookieCtrlReg3Bit12(1);
 				batteryFaults.byte[0] |= 0x20;
+#if BOARD_EVENT_LOG
 				eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 				chargeBoost.bits.running = 0;
 				chargeBoost.bits.done = 1;
 			}
@@ -602,7 +673,9 @@ void chargeUpdate(void)
 		chargeBoost.bits.running = 0;
 		batteryFaults.byte[0] &= ~0x10;
 		batteryFaults.byte[0] &= ~0x20;
+#if BOARD_EVENT_LOG
 		eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 		logEvent(0x0e);
 	}
 #if FW_SINCE(0x01030511)
@@ -1142,7 +1215,9 @@ void chargeUpdate(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* DOL-1001 has no chargeSetPowerStatus, chargeReadFlags or chargeTempUpdate */
+#elif SOURCE_0103
 /* the slim's: the USB's three bits, the supply's and VBUS, the AC factor also from a USB charger,
    and a log record at each change */
 void chargeSetPowerStatus(void)
@@ -1184,8 +1259,10 @@ void chargeSetPowerStatus(void)
 		CHARGE_FACTOR_STATUS4 = 0;
 	sleepFactorSetStatus4(CHARGE_FACTOR_STATUS4);
 	ena_dsp();
+#if BOARD_EVENT_LOG
 	if (status.word[0] != powerStatus.word[0] || status.word[1] != powerStatus.word[1])
 		eventLogRecord(5, 0x1f, powerStatus.byte, 4);
+#endif
 }
 #elif FW_SINCE(0x00090903)
 /* the power status and the charge's sleep factors from the Cookie's status registers */
@@ -1233,6 +1310,7 @@ void chargeSetPowerStatus(void)
 }
 #endif
 
+#if !BOARD_DOL1001
 /* the battery's flags: bit n set when the battery is at or below level n */
 unsigned int chargeReadFlags(void)
 {
@@ -1267,7 +1345,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 {
 	unsigned char i;
 	unsigned char cooling;
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int setting;
 #endif
 	struct ChargeTempLevel *levels;
@@ -1298,14 +1376,14 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 		if (t->read != t->level) {
 			t->level = t->read;
 			t->temp = temp;
-#if BOARD_USS1001
+#if BOARD_EVENT_LOG
 			eventLogCharge.byte[0] = t->level;
 			eventLogCharge.byte[1] = cooling;
 			eventLogCharge.word[1] = temp;
 			eventLogRecord(5, 2, eventLogCharge.byte, 4);
 #endif
 		}
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* the slim's: the USB supply's setting the range allows */
 		setting = chargeTempSetting;
 		if (t->level >= 4)
@@ -1321,7 +1399,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 #if FW_SINCE(0x00090206)	/* 0x00090009 sets no Cookie locks */
 				if (t->level == 0) {
 					powerStatus.bits.cookieLock0 = 1;
-#if BOARD_USS1001
+#if SOURCE_0103
 					if (configGet()->charge.bits.manualOffCold)
 						chargeSetManualMode(0);
 #endif
@@ -1342,7 +1420,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 #endif
 					cookieCtrlCharge(1);
 				}
-#if BOARD_USS1001
+#if SOURCE_0103
 				cookieUpdateChargingCurrent(levels[t->level].setting1);
 #else
 				cookieCtrlChargingCurrent(levels[t->level].setting1);
@@ -1351,7 +1429,7 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 			t->setting1 = levels[t->level].setting1;
 		}
 		if (levels[t->level].setting2 != 0xff && t->setting2 != levels[t->level].setting2) {
-#if BOARD_USS1001
+#if SOURCE_0103
 			cookieUpdateReg8(levels[t->level].setting2);
 #else
 			cookieCtrlReg8(levels[t->level].setting2);
@@ -1361,6 +1439,8 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 	}
 	t->readLast = t->read;
 }
+
+#endif /* !BOARD_DOL1001 */
 
 #if FW_SINCE(0x00090903)
 /* the battery temperature's alarms: each one's handler runs when its temperature has stayed
@@ -1398,10 +1478,14 @@ void chargeAlarmUpdate(void)
 #define limits	(configGet()->chargeAlarmLimits)
 #endif
 	for (i = 0; i < 4; i++) {
+#if BOARD_DOL1001
+		temp = charge.thermalTemp;	/* DOL-1001: the temperature sensor's */
+#else
 		if (limits[i].bicTemp == 0)
 			temp = charge.batteryTemp;
 		else
 			temp = charge.batteryBicTemp;
+#endif
 #if FW_SINCE(0x0100060B)
 		adjust = configGet()->chargeAlarmAdjust[level][i];
 		if (temp >= limits[i].high + adjust)
@@ -1414,7 +1498,7 @@ void chargeAlarmUpdate(void)
 		else if (limits[i].low >= temp)
 			charge.alarms[i].flags.bits.over = 0;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 		else if (charge.alarms[i].flags.bits.on)
 			charge.alarms[i].flags.bits.over = 1;
 		else
@@ -1441,13 +1525,21 @@ void chargeAlarmUpdate(void)
 }
 #undef limits
 
+#if BOARD_DOL1001
+/* DOL-1001's alarms 0 and 2: an event in the log while on */
+static void chargeAlarm0(void)
+{
+	if (charge.alarms[0].flags.bits.on)
+		logEvent(0x0b);
+}
+#else
 /* alarm 0's: sleep factor 23, and timer 0x1d */
 static void chargeAlarm0(void)
 {
 	if (charge.alarms[0].flags.bits.on) {
 		charge.alarmsOn.bits.alarm0 = 1;
 		timerStart(TIMER_RTC(0x1d), configGet()->chargeAlarm0Delay);
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* the slim's: the manual charge mode off with it */
 		if (configGet()->charge.bits.manualOffCold)
 			chargeSetManualMode(0);
@@ -1458,6 +1550,7 @@ static void chargeAlarm0(void)
 	CHARGE_FACTOR_23 = charge.alarms[0].flags.bits.on;
 	sleepFactorSet23(CHARGE_FACTOR_23);
 }
+#endif
 
 /* timer 0x1d */
 static void chargeAlarm0Timer(void)
@@ -1477,6 +1570,13 @@ static void chargeAlarm1(void)
 	sleepFactorSet22(CHARGE_FACTOR_22);
 }
 
+#if BOARD_DOL1001
+static void chargeAlarm2(void)
+{
+	if (charge.alarms[2].flags.bits.on)
+		logEvent(0x0a);
+}
+#else
 /* alarm 2's: the Cookie's setting cookieCtrlSupplyCurrentAc */
 static void chargeAlarm2(void)
 {
@@ -1485,19 +1585,20 @@ static void chargeAlarm2(void)
 		chargeCookieSetting = configGet()->chargeAlarm2Setting;
 	} else {
 		charge.alarmsOn.bits.alarm2 = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 		chargeCookieSetting = 0x70;
 #else
 		chargeCookieSetting = 0xc0;
 #endif
 	}
 	chargeSetCurrent();
-#if BOARD_USS1001
+#if SOURCE_0103
 	cookieUpdateSupplyCurrent(chargeCookieSetting);
 #else
 	cookieCtrlSupplyCurrentAc(chargeCookieSetting);
 #endif
 }
+#endif
 
 static void chargeAlarm3(void)
 {
@@ -1514,7 +1615,11 @@ void chargeAlarmInit(void)
 	charge.alarms[0].handler = chargeAlarm0;
 	charge.alarms[1].flags.byte = 0;
 	charge.alarms[1].since = 0;
+#if BOARD_DOL1001
+	charge.alarms[1].handler = chargeAlarm3;	/* DOL-1001: alarm 1 does nothing */
+#else
 	charge.alarms[1].handler = chargeAlarm1;
+#endif
 	charge.alarms[2].flags.byte = 0;
 	charge.alarms[2].since = 0;
 	charge.alarms[2].handler = chargeAlarm2;
@@ -1526,7 +1631,7 @@ void chargeAlarmInit(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: an update, unless the USB is settling */
 int chargeUsbRequestUpdate(void)
 {
@@ -1550,7 +1655,7 @@ void chargeTimer(void)
 /* timer 0x1e (powerCookieHold): task 5 runs powerCookieRelease (the slim's: nothing) */
 void chargeCookieTimer(void)
 {
-#if !BOARD_USS1001
+#if !BOARD_USS1001	/* the slim's: nothing */
 	task5SetFlag(4, 0x0400);
 #endif
 }
@@ -1568,7 +1673,7 @@ void chargeTimer1f(void)
 /* the charge input's handler: chargeUpdateSoon after 5 ticks of timer 0x16 */
 void chargeUpdateLater(void)
 {
-#if !BOARD_USS1001	/* the slim's: nothing */
+#if !SOURCE_0103	/* the slim's: nothing */
 	timerStart(CHARGE_SOON_TIMER, 5);
 #endif
 }
@@ -1585,14 +1690,20 @@ void chargeUpdateSoon(void)
 		chargeUsbMode = 0;
 #endif
 	task5SetFlag(4, 0x0020);
-#if FW_SINCE(0x00090206)	/* 0x00090009 has no flag 0x1000 */
+#if FW_SINCE(0x00090206) && !BOARD_DOL1001	/* 0x00090009 and the PS TV have no flag 0x1000 */
 	task5SetFlag(4, 0x1000);
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* task 5's event 0x0400 on the slim: the USB connected or not (P7.5 low), the status
    registers taken as the USB's, and its checks started */
+#if BOARD_DOL1001
+void chargeUsbChanged(void)
+{
+	/* DOL-1001: nothing */
+}
+#else
 void chargeUsbChanged(void)
 {
 	chargeUsbState.0 = !P7.5 ? 1 : 0;
@@ -1617,12 +1728,13 @@ void chargeUsbChanged(void)
 	}
 	timerStart(CHARGE_SOON_TIMER, (chargeUsbTicks >> 2) + ((chargeUsbTicks & 3) ? 1 : 0));
 }
+#endif
 
 /* the slim's USB supply setting: the multi-connector's, or the USB status's and
    chargeUsbMode's */
 unsigned char chargeSetCurrent(void)
 {
-#if FW_SINCE(0x01030511)
+#if FW_SINCE(0x01030511) && !BOARD_DOL1001
 	unsigned char current;
 	unsigned char result;
 #else
@@ -1630,12 +1742,28 @@ unsigned char chargeSetCurrent(void)
 	unsigned char current;
 #endif
 
-#if !FW_SINCE(0x01030511)
+#if !FW_SINCE(0x01030511) || BOARD_DOL1001
 	unsigned char adjust;
 #endif
 
 	current = 0x10;
-#if FW_SINCE(0x01030511)
+#if BOARD_DOL1001
+	/* DOL-1001's: as 0x01030505's, from the older table (chargeCurrents), its dongle's and debug
+	   board's settings fixed */
+	if (chargeUsbDongle()) {
+		current = 0x50;
+	} else if (chargeUsbDebug()) {
+		current = 0xc0;
+	} else if (powerStatus.bits.usb < 4 && chargeUsbMode < 6) {
+		current = configGet()->chargeCurrents[powerStatus.bits.usb][chargeUsbMode];
+		if (current == 0xff || (chargeUsbIs1() && !chargeVbus.1) || !chargeVbus.0) {
+			current = 0xff;
+		} else if (chargeBbmcVersion == 0 && chargeUsbPower() && current >= 0x11) {
+			paramGetAdjust(&adjust);
+			current -= adjust;
+		}
+	}
+#elif FW_SINCE(0x01030511)
 	if (chargeUsbDongle() || chargeUsbDebug())
 		current = configGet()->chargeDongleCurrent;
 	else if (chargeUsbMultiCn2())
@@ -1663,13 +1791,17 @@ unsigned char chargeSetCurrent(void)
 		result = powerCookieSet();
 	} else {
 		result = cookieUpdateSupplyCurrentUsb(current);
+#if BOARD_DOL1001
+		if (result == 0 && (cookieRegs[0].byte[0] & 0x80))
+#else
 		if (result == 0 && (cookieRegs[3].byte[0] & 0x08))
+#endif
 			result = powerCookieClear();
 	}
 	return result;
 }
 
-#if FW_SINCE(0x01030511)
+#if FW_SINCE(0x01030511) && !BOARD_DOL1001
 unsigned char chargeUsbCurrent(void)
 {
 	unsigned char current;
@@ -1881,7 +2013,7 @@ char chargeBatteryLevel1(void)
 	return (charge.flags & 0x0002) ? 1 : 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 char chargeBatteryLevel3(void)
 {
 	return (charge.flags & 0x0008) ? 1 : 0;
@@ -1924,7 +2056,7 @@ char chargeBatteryLevel9(void)
 /* the Cookie's battery setting for the battery's version */
 void chargeSetBattery(void)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* the slim's: none with no battery answered */
 	if (deviceVersions.battery.id == 0xffff)
 		return;
@@ -1984,7 +2116,7 @@ void chargeTimerStart(unsigned int ticks)
 
 void chargeTimerStop(void)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	/* the slim's stops the timer first */
 	timerStop(TIMER_RTC(0x17));
 	clr_flg(4, ~0x0020);
@@ -2050,7 +2182,7 @@ void chargeSetAcDelay(void)
 		break;
 	case 0x0004:
 	case 0x0008:
-#if BOARD_CHARGE_TIMER1F || BOARD_IS(0x00411000)
+#if (BOARD_CHARGE_TIMER1F && !BOARD_DOL1001) || BOARD_IS(0x00411000)
 		charge.acDelay = 60;
 #else
 		charge.acDelay = 10;
@@ -2060,7 +2192,30 @@ void chargeSetAcDelay(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* DOL-1001's USB sources: a charger (2 or 3); it has no multi-connector */
+unsigned char chargeUsbPower(void)
+{
+	return cookieStatus2.bits.vbus && (powerStatus.bits.usb == 2 || powerStatus.bits.usb == 3);
+}
+
+unsigned char chargeUsbDongle(void)
+{
+	return 0;
+}
+
+unsigned char chargeUsbDebug(void)
+{
+	return 0;
+}
+
+/* the AC, or a USB charger (2 or 3) */
+unsigned char chargeExternalPower(void)
+{
+	return powerStatus.bits.ac ||
+	       (cookieStatus2.bits.vbus && (powerStatus.bits.usb == 2 || powerStatus.bits.usb == 3));
+}
+#elif SOURCE_0103
 /* the slim's USB sources: a charger (2, 3, 5 or 6) or the multi-connector's level 2 */
 unsigned char chargeUsbPower(void)
 {
@@ -2102,7 +2257,14 @@ unsigned char chargeExternalPower(void)
 #endif
 
 #if FW_SINCE(0x01000109)
-#if BOARD_USS1001
+#if BOARD_DOL1001
+/* a USB host: status 1 with no dongle or debug board */
+unsigned char chargeUsbIs1(void)
+{
+	return cookieStatus2.bits.vbus && powerStatus.bits.usb == 1 && !chargeUsbDongle() &&
+	       !chargeUsbDebug();
+}
+#elif SOURCE_0103
 /* a USB host: status 1 with none of the multi-connector's, and its level read */
 unsigned char chargeUsbIs1(void)
 {
@@ -2119,7 +2281,7 @@ int chargeUsbIs1(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 unsigned char chargeUsbIs2(void)
 #else
 int chargeUsbIs2(void)
@@ -2129,7 +2291,7 @@ int chargeUsbIs2(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the USB connected, with VBUS (input.c) */
 unsigned char chargeVbusActive(void)
 {
@@ -2237,6 +2399,22 @@ unsigned char chargeGetManualMode(void)
 {
 	return chargeManualMode;
 }
+
+#if BOARD_DOL1001
+/* DOL-1001 has no battery: the temperature sensor's reading (thermalPoll, in 0.1 K) takes the
+   battery's place in the charge alarms, at most each chargeTempInterval RTC ticks */
+void chargeSetTemp(unsigned int temperature)
+{
+	unsigned int ticks;
+
+	timerGetRtcTicks(&ticks);
+	if (ticks - charge.checkTicks > configGet()->chargeTempInterval) {
+		charge.thermalTemp = temperature;
+		charge.checkTicks = ticks;
+		chargeAlarmUpdate();
+	}
+}
+#endif
 
 /* the USB's modes 1-3 to 1 or 4 by the battery's level 9 */
 void chargeUsbModeUpdate(void)

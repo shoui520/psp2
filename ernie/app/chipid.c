@@ -5,7 +5,7 @@
  */
 #include "board.h"
 
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "chipid.h"
 #include "kernel.h"
 

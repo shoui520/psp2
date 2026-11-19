@@ -12,7 +12,7 @@
 /* the battery's identity, which batteryReadInfo reads */
 struct BatteryInfo {
 	unsigned int	id;
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int	version[5];	/* the slim's: two words more (batteryReadInfo) */
 #else
 	unsigned int	version[3];	/* 0xffff: no battery answered */
@@ -31,6 +31,10 @@ struct DeviceVersions {
 						   answered */
 	unsigned char		cookie[2];	/* the Cookie's */
 	struct BatteryInfo	battery;	/* the battery's identity */
+#if BOARD_DOL1001
+	unsigned char		thermal[2];	/* DOL-1001: the temperature sensor's (THERMAL_ID, 0xff
+						   none) */
+#endif
 };
 
 extern struct DeviceVersions deviceVersions;
@@ -77,7 +81,7 @@ extern void powerCookieCycle(void);
 #endif
 extern unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13);
 extern unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char powerElmoA0Set2(void);
 extern unsigned char powerElmoA0Clear2(void);
 #else
@@ -97,10 +101,17 @@ extern unsigned char powerNone3Off(void);
 extern unsigned char powerHpremoteOn(void);
 extern unsigned char powerHpremoteOff(void);
 extern unsigned char powerBbmcStart(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char powerBbmcStop(void);
 #endif
 extern unsigned char powerLedSet(unsigned char on);
+#if BOARD_DOL1001
+extern unsigned char powerUsbOn(void);
+extern unsigned char powerUsbOff(void);
+extern unsigned char powerP80On(void);
+extern unsigned char powerP80Off(void);
+extern void powerSleepFactor21(void);
+#endif
 #if FW_SINCE(0x0100060B)
 extern void powerGetCutRegs(unsigned char *regs);
 #endif

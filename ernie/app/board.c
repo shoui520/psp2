@@ -13,9 +13,13 @@
 extern unsigned char input1Bit5Active(void);
 #endif
 
+#if BOARD_DOL1001 && !defined(ERNIE_UPDATER)
+unsigned char boardDummyPin;
+#endif
+
 /* the updater has these in its own board.c */
 #ifndef ERNIE_UPDATER
-#if !BOARD_USS1001	/* not in the slim's */
+#if !SOURCE_0103	/* not in the slim's */
 /* nothing on this board */
 void boardNone(int value)
 {
@@ -37,6 +41,14 @@ unsigned char boardSuspendSteps(void)
 {
 	return BOARD_POWER_STEPS;
 }
+#endif
+
+#if BOARD_DOL1001
+/* DOL-1001: the fat board's switch, under multicn.c's outputs (which take the names) */
+#define boardMultiCnOutputOff	boardMultiCnSwitchOff
+#define boardGetMultiCnOutput	boardMultiCnGetSwitch
+#define boardSetMultiCnOutput	boardMultiCnSetSwitch
+#define boardMultiCnStop	boardMultiCnSwitchStop
 #endif
 
 #if BOARD_USS1001
@@ -184,8 +196,14 @@ unsigned char boardMultiCnStop(void)
 }
 
 #endif
+#if BOARD_DOL1001
+#undef boardMultiCnOutputOff
+#undef boardGetMultiCnOutput
+#undef boardSetMultiCnOutput
+#undef boardMultiCnStop
+#endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's in multicn.c */
 #elif defined(ERNIE_UPDATER) || (HW_IS(0x00102603) && !FW_SINCE(0x00090804))
 /* the updater's (and 0x00102603's 0x00090206): something on the multi-connector, as its
@@ -202,7 +220,7 @@ unsigned char boardMultiCnIsDongle(void)
 }
 #endif
 
-#if FW_SINCE(0x00090804) && !BOARD_USS1001	/* 0x00090206 has no debug board */
+#if FW_SINCE(0x00090804) && !SOURCE_0103	/* 0x00090206 has no debug board */
 /* a debug board on the multi-connector (UART3 in its debug mode): never on this board */
 unsigned char boardMultiCnIsDebug(void)
 {
@@ -376,5 +394,15 @@ void boardPortInit(void)
 	P15 = 0x00;
 	PM15 = BOARD_PM15;
 }
+#if BOARD_DOL1001
+/* DOL-1001's keys are not read (input.c's on the others) */
+void inputKeysOpen(void)
+{
+}
+
+void inputKeysClose(void)
+{
+}
+#endif
 #endif	/* !BOARD_USS1001 */
 #endif

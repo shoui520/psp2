@@ -554,7 +554,7 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !BOARD_USS1001 && !BOARD_DOL1001	/* DOL-1001's: flash.c */
 /* erases the bank at address and writes the open copy there, three times at most */
 unsigned char configFlashWrite(unsigned long address)
 {
@@ -646,7 +646,7 @@ close:
 	return result;
 #endif
 }
-#endif	/* !BOARD_USS1001 */
+#endif	/* !BOARD_USS1001 && !BOARD_DOL1001 */
 
 #if FW_SINCE(0x00090804)	/* none in 0x00090206 */
 /* the open copy set to the defaults and committed */

@@ -16,7 +16,7 @@
 #include "config.h"
 #include "csi10.h"
 #include "host.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "iica1.h"
 #endif
 #include "inputreq.h"
@@ -32,7 +32,7 @@ extern unsigned char input1Bit7Active(void);
 
 /* the link is taken by a frame: USS-1001's frame runs from touchStartFrame to its last
    transfer's interrupt */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define TOUCH_LINK_BUSY()	(touch.flags & TOUCH_RUNNING)
 #else
 #define TOUCH_LINK_BUSY()	(csi10GetState() != CSI10_OPEN)
@@ -45,7 +45,7 @@ extern unsigned char input1Bit7Active(void);
 #define TOUCH_OBJECT_ADDRESS(o)	((unsigned int)(o).addressHigh << 8 | (o).addressLow)
 
 static unsigned char touchBufferData[TOUCH_BUFFER_SIZE];
-#if BOARD_USS1001
+#if SOURCE_0103
 unsigned char touchRearStatus;
 #endif
 struct TouchFrame touchFrames[TOUCH_FRAMES];
@@ -72,7 +72,7 @@ void touchClearPanels(void)
 	touch.panel[0].gripEdges[0] = 0;
 	touch.panel[0].gripEdges[1] = 0;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	touch.panel[0].objectsUnread = 0;
 	touch.panel[0].modesUnread = 0;
 #endif
@@ -98,7 +98,7 @@ void touchClearPanels(void)
 	touch.panel[1].gripEdges[0] = 0;
 	touch.panel[1].gripEdges[1] = 0;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	touch.panel[1].objectsUnread = 0;
 	touch.panel[1].modesUnread = 0;
 #endif
@@ -123,7 +123,7 @@ void touchClearPanels(void)
 void touchOpen(void)
 {
 	csi10Open();
-#if BOARD_USS1001
+#if TOUCH_PANEL1_IICA1
 	iica1Init();
 #endif
 	touchClearFrames0();
@@ -133,7 +133,7 @@ void touchOpen(void)
 	touch.setting[0] = 8;
 	touch.setting[1] = 8;
 	touch.rate = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 	touchClearMode();
 #else
 	memset(&touch.panel[0], 0, 4);
@@ -157,7 +157,7 @@ void touchOpen(void)
 	memset(&touchCommand, 0, sizeof(touchCommand));
 #if FW_SINCE(0x01000306)
 	touchDelays.select = configGet()->touchDelaySelect;
-#if BOARD_USS1001
+#if SOURCE_0103
 	touchDelays.byte = configGet()->touchDelayReadByte;
 	touchDelays.writeByte = configGet()->touchDelayWriteByte;
 	touchDelays.deselect = configGet()->touchDelayDeselect;
@@ -173,8 +173,8 @@ void touchClose(void)
 {
 	touchDisable0();
 	touchDisable1();
-#if BOARD_USS1001
-	P3.2 = 0;
+#if TOUCH_PANEL1_IICA1
+	TOUCH_MODE_PIN = 0;
 	csi10Close();
 	iica1Close();
 #else
@@ -217,21 +217,29 @@ void touchClearFrames1(void)
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* starts a frame, into a frame no stream is sending: the rear panel's report first, on IICA1,
    when it is enabled (INTIICA1 goes on from there), else panel 0's on CSI10 */
 void touchStartFrame(void)
 {
 	unsigned char next;
 	struct Csi10Transfer transfer;
+#if TOUCH_PANEL1_IICA1
 	struct Iica1Request request;
+#endif
 
 	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
 		touch.flags |= TOUCH_RUNNING;
 		if (touch.flags & TOUCH_PANEL1) {
+#if TOUCH_PANEL1_IICA1
 			touchCommand.address = touch.panel[1].objects.report;
+#else
+			TOUCH_SELECT1 = 0;
+			transfer.state = CSI10_COMMAND1;
+			touchCommand.address = touch.panel[1].objects.report | TOUCH_READ;
+#endif
 		} else if (touch.flags & TOUCH_PANEL0) {
-			P12.6 = 0;
+			TOUCH_SELECT0 = 0;
 			transfer.state = CSI10_COMMAND0;
 			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
 		}
@@ -247,6 +255,7 @@ void touchStartFrame(void)
 			touchFrames[touch.frame].time0 = TCR02;
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
+#if TOUCH_PANEL1_IICA1
 		if (touch.flags & TOUCH_PANEL1) {
 			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
 				request.rxCount = TOUCH_REAR_LENGTH_OLD;
@@ -259,14 +268,17 @@ void touchStartFrame(void)
 			request.status = &touchRearStatus;
 			iica1Start(&request);
 		} else {
-			touchDelaySelect();
-			transfer.receive = (unsigned char *)&touchReply;
-			transfer.receiveCount = 0;
-			transfer.send = (unsigned char *)&touchCommand;
-			transfer.sendCount = 2;
-			transfer.delay = touchDelays.byte;
-			csi10Transfer(&transfer);
+#endif
+		touchDelaySelect();
+		transfer.receive = (unsigned char *)&touchReply;
+		transfer.receiveCount = 0;
+		transfer.send = (unsigned char *)&touchCommand;
+		transfer.sendCount = 2;
+		transfer.delay = touchDelays.byte;
+		csi10Transfer(&transfer);
+#if TOUCH_PANEL1_IICA1
 		}
+#endif
 	}
 }
 #else
@@ -319,19 +331,27 @@ void touchStartFrame(void)
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no NoLock forms */
 /* touchStartFrame, for a caller that has disabled the interrupts */
-#if BOARD_USS1001
+#if SOURCE_0103
 void touchStartFrameNoLock(void)
 {
 	unsigned char next;
 	struct Csi10Transfer transfer;
+#if TOUCH_PANEL1_IICA1
 	struct Iica1Request request;
+#endif
 
 	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
 		touch.flags |= TOUCH_RUNNING;
 		if (touch.flags & TOUCH_PANEL1) {
+#if TOUCH_PANEL1_IICA1
 			touchCommand.address = touch.panel[1].objects.report;
+#else
+			TOUCH_SELECT1 = 0;
+			transfer.state = CSI10_COMMAND1;
+			touchCommand.address = touch.panel[1].objects.report | TOUCH_READ;
+#endif
 		} else if (touch.flags & TOUCH_PANEL0) {
-			P12.6 = 0;
+			TOUCH_SELECT0 = 0;
 			transfer.state = CSI10_COMMAND0;
 			touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
 		}
@@ -347,6 +367,7 @@ void touchStartFrameNoLock(void)
 			touchFrames[touch.frame].time0 = TCR02;
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
+#if TOUCH_PANEL1_IICA1
 		if (touch.flags & TOUCH_PANEL1) {
 			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
 				request.rxCount = TOUCH_REAR_LENGTH_OLD;
@@ -359,14 +380,17 @@ void touchStartFrameNoLock(void)
 			request.status = &touchRearStatus;
 			iica1Start(&request);
 		} else {
-			touchDelaySelect();
-			transfer.receive = (unsigned char *)&touchReply;
-			transfer.receiveCount = 0;
-			transfer.send = (unsigned char *)&touchCommand;
-			transfer.sendCount = 2;
-			transfer.delay = touchDelays.byte;
-			csi10TransferNoLock(&transfer);
+#endif
+		touchDelaySelect();
+		transfer.receive = (unsigned char *)&touchReply;
+		transfer.receiveCount = 0;
+		transfer.send = (unsigned char *)&touchCommand;
+		transfer.sendCount = 2;
+		transfer.delay = touchDelays.byte;
+		csi10TransferNoLock(&transfer);
+#if TOUCH_PANEL1_IICA1
 		}
+#endif
 	}
 }
 #else
@@ -416,11 +440,11 @@ void touchStartFrameNoLock(void)
 #endif
 #endif
 
-#if BOARD_USS1001
-/* enables panel 0 when it is present (P4.1; inputKeys.state's bit 0x0004) */
+#if SOURCE_0103
+/* enables panel 0 when it is present (TOUCH_PRESENT0, the slim's P4.1; inputKeys.state's bit 0x0004) */
 void touchEnable0(void)
 {
-	if (P4.1 && !(inputKeys.state & 0x0004)) {
+	if (TOUCH_PRESENT0 && !(inputKeys.state & 0x0004)) {
 		DI();
 		inputKeys.state |= 0x0004;
 		EI();
@@ -438,10 +462,10 @@ void touchDisable0(void)
 	touchClearFrames0();
 }
 
-/* the rear panel's presence is P4.2 */
+/* the rear panel's presence is TOUCH_PRESENT1 (the slim's P4.2) */
 void touchEnable1(void)
 {
-	if (P4.2 && !(inputKeys.state & 0x0008)) {
+	if (TOUCH_PRESENT1 && !(inputKeys.state & 0x0008)) {
 		DI();
 		inputKeys.state |= 0x0008;
 		EI();
@@ -496,17 +520,20 @@ void touchDisable1(void)
    no such panel, 2 if the transfer does not end */
 unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned int length,
 			    unsigned char panel)
-#if BOARD_USS1001
+#if SOURCE_0103
 {
 	struct Csi10Transfer transfer;
 	unsigned char retry;
 	unsigned char i;
+#if TOUCH_PANEL1_IICA1
 	struct Iica1Request request;
 	unsigned char status;
 	unsigned char tries;
+#endif
 
 	if (length > sizeof(touchCommand.data))
 		return 1;
+#if TOUCH_PANEL1_IICA1
 	if (panel == 1) {
 		/* the rear panel, on IICA1: three tries */
 		tries = 3;
@@ -526,12 +553,20 @@ unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned 
 			status += 0x10;
 		return status;
 	}
+#endif
 	touchCommand.address = address * 2;
 	memcpy(touchCommand.data, data, length);
 	if (panel == 0)
-		P12.6 = 0;
+		TOUCH_SELECT0 = 0;
+#if TOUCH_PANEL1_IICA1
 	else if (panel != 1)
 		return 1;
+#else
+	else if (panel == 1)
+		TOUCH_SELECT1 = 0;
+	else
+		return 1;
+#endif
 	touchDelaySelect();
 	transfer.receive = (unsigned char *)&touchReply;
 	transfer.receiveCount = 0;
@@ -546,9 +581,13 @@ unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned 
 			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			if (panel == 0)
-				P12.6 = 1;
+				TOUCH_SELECT0 = 1;
 			else if (panel == 1)
+#if TOUCH_PANEL1_IICA1
 				;
+#else
+				TOUCH_SELECT1 = 1;
+#endif
 			for (i = 0; i < touchDelays.release; i++)
 				NOP();
 			return 0;
@@ -596,17 +635,20 @@ unsigned char touchSpiWrite(unsigned int address, unsigned char *data, unsigned 
 /* reads length bytes at a controller's address, as touchSpiWrite */
 unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned int length,
 			   unsigned char panel)
-#if BOARD_USS1001
+#if SOURCE_0103
 {
 	struct Csi10Transfer transfer;
 	unsigned char retry;
 	unsigned char i;
+#if TOUCH_PANEL1_IICA1
 	struct Iica1Request request;
 	unsigned char status;
 	unsigned char tries;
+#endif
 
 	if (length > sizeof(touchCommand.data))
 		return 1;
+#if TOUCH_PANEL1_IICA1
 	if (panel == 1) {
 		tries = 3;
 		touchCommand.address = address;
@@ -624,11 +666,19 @@ unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned i
 			status += 0x10;
 		return status;
 	}
+#endif
 	touchCommand.address = address * 2 | TOUCH_READ;
 	if (panel == 0)
-		P12.6 = 0;
+		TOUCH_SELECT0 = 0;
+#if TOUCH_PANEL1_IICA1
 	else if (panel != 1)
 		return 1;
+#else
+	else if (panel == 1)
+		TOUCH_SELECT1 = 0;
+	else
+		return 1;
+#endif
 	touchDelaySelect();
 	transfer.receive = (unsigned char *)&touchReply;
 	transfer.receiveCount = length + 2;
@@ -643,9 +693,13 @@ unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned i
 			for (i = 0; i < touchDelays.deselect; i++)
 				NOP();
 			if (panel == 0)
-				P12.6 = 1;
+				TOUCH_SELECT0 = 1;
 			else if (panel == 1)
+#if TOUCH_PANEL1_IICA1
 				;
+#else
+				TOUCH_SELECT1 = 1;
+#endif
 			memcpy(data, touchReply.data, length);
 			for (i = 0; i < touchDelays.release; i++)
 				NOP();
@@ -691,7 +745,7 @@ unsigned char touchSpiRead(unsigned int address, unsigned char *data, unsigned i
 }
 #endif
 
-#if BOARD_USS1001
+#if TOUCH_PANEL1_IICA1
 /* writes length bytes to the rear panel's bootloader, on IICA1 (panel 1 only): 0, 1 for no
    such panel or too long, 2 if the link stays busy, else 0x10 + the transfer's status */
 unsigned char touchBootloaderWrite(unsigned char *data, unsigned int length, unsigned char panel)
@@ -984,7 +1038,7 @@ busy:
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* reads panel 0's information block, and its object table when its firmware changed or the
    last read failed: 0, the read's error, or 4 for a table too long */
 unsigned char touchIdentify0(void)
@@ -992,16 +1046,18 @@ unsigned char touchIdentify0(void)
 	unsigned char result;
 	unsigned char info[TOUCH_INFO_SIZE];
 
-	if (P4.1) {
+	if (TOUCH_PRESENT0) {
 		result = touchRead(0x0000, info, sizeof(info), 0);
 		if (result != 0) {
 			memset(&touch.panel[0], 0xff, 4);
 		} else if (info[TOUCH_INFO_VERSION] != touch.panel[0].version ||
 			   info[TOUCH_INFO_BUILD] != touch.panel[0].build ||
 			   touch.panel[0].objectsUnread) {
+#if !BOARD_DOL1001	/* DOL-1001 keeps the version as read */
 			/* version 0x10 is 9 unless its build is 0xaa */
 			if (info[TOUCH_INFO_VERSION] == 0x10 && info[TOUCH_INFO_BUILD] != 0xaa)
 				info[TOUCH_INFO_VERSION] = 9;
+#endif
 			memcpy(&touch.panel[0], info, 4);
 			if ((info[0] & 0xc0) == 0xc0) {
 				touch.panel[0].objectsUnread = 0;
@@ -1032,9 +1088,10 @@ unsigned char touchIdentify1(void)
 	unsigned char result;
 	unsigned char info[TOUCH_INFO_SIZE];
 
-	if (P4.2) {
+	if (TOUCH_PRESENT1) {
 		result = touchRead(0x0000, info, sizeof(info), 1);
 		if (result != 0) {
+#if TOUCH_PANEL1_IICA1
 			/* 0x11: no answer at the controller's address; its bootloader's status
 			   fills the panel's information */
 			if (result == 0x11) {
@@ -1045,12 +1102,17 @@ unsigned char touchIdentify1(void)
 					memset(&touch.panel[1], info[0], 4);
 			} else
 				memset(&touch.panel[1], 0xff, 4);
+#else
+			memset(&touch.panel[1], 0xff, 4);
+#endif
 		} else if (info[TOUCH_INFO_VERSION] != touch.panel[1].version ||
 			   info[TOUCH_INFO_BUILD] != touch.panel[1].build ||
 			   touch.panel[1].objectsUnread) {
+#if !BOARD_DOL1001	/* DOL-1001 keeps the version as read */
 			/* version 0x10 is 9 unless its build is 0xaa */
 			if (info[TOUCH_INFO_VERSION] == 0x10 && info[TOUCH_INFO_BUILD] != 0xaa)
 				info[TOUCH_INFO_VERSION] = 9;
+#endif
 			memcpy(&touch.panel[1], info, 4);
 			if ((info[0] & 0xc0) == 0xc0) {
 				touch.panel[1].objectsUnread = 0;
@@ -1084,12 +1146,16 @@ unsigned char touchBootloaderStatus0(unsigned char *status)
 	return result;
 }
 
-/* the rear panel's bootloader is on IICA1 */
+/* the rear panel's bootloader is on IICA1 (DOL-1001's panel 1 on the SPI link) */
 unsigned char touchBootloaderStatus1(unsigned char *status)
 {
 	unsigned char result;
 
+#if TOUCH_PANEL1_IICA1
 	result = touchBootloaderRead(status, 1, 1);
+#else
+	result = touchRead(TOUCH_BOOTLOADER, status, 1, 1);
+#endif
 	if (result == 0 && (*status & 0xc0) != 0)
 		*status &= 0xc0;
 	return result;
@@ -1201,7 +1267,7 @@ void touchIdentify1(void)
 }
 #endif
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 unsigned char touchBootloaderStatus0(unsigned char *status)
 {
 	return touchRead(TOUCH_BOOTLOADER, status, 1, 0);
@@ -1245,7 +1311,7 @@ unsigned char touchBootloaderUnlock1(void)
 
 	command[0] = 0xdc;
 	command[1] = 0xaa;
-#if BOARD_USS1001
+#if TOUCH_PANEL1_IICA1
 	return touchBootloaderWrite(command, 2, 1);
 #else
 	return touchWrite(TOUCH_BOOTLOADER, command, 2, 1);
@@ -1343,7 +1409,7 @@ unsigned char touchSetPower1(unsigned char interval)
 /* PDEL's 0x01000104 and 0x01000107 read the modes of a changed configuration before it keeps the version */
 #define TOUCH_MODES_BEFORE_VERSION	(BOARD_IS(0x00416000) && !FW_SINCE(0x01000109))
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* reads the user data's configuration version into data (2 bytes), and the modes when it
    changed or their last read failed; a controller in its bootloader gives its version as
    bytes 4-5 of its 6-byte answer */
@@ -1385,7 +1451,9 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 			touch.panel[1].configVersion = version;
 			result = touchReadModes1();
 		}
-	} else if (result == 0x11) {
+	}
+#if TOUCH_PANEL1_IICA1
+	else if (result == 0x11) {
 		result = touchBootloaderStatus1(&status);
 		if (result == 0) {
 			result = touchBootloaderRead(touchBufferData, 6, 1);
@@ -1398,6 +1466,7 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 			}
 		}
 	}
+#endif
 	return result;
 }
 #else
@@ -1462,7 +1531,7 @@ unsigned char touchReadConfigVersion1(unsigned char *data)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the user data's bytes 12-19 */
 unsigned char touchReadUserData0(unsigned char *data)
 {
@@ -1791,7 +1860,7 @@ void touchDelaySelect(void)
 		NOP();
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* reads a controller's object table: the addresses of the objects the module uses; 4 when the
    table lacks one the controller's family and variant should have */
 unsigned char touchReadObjects(struct TouchObjects *objects, unsigned char count,
@@ -1968,13 +2037,17 @@ void touchReadObjects(struct TouchObjects *objects, unsigned char count, unsigne
 #endif
 
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no modes, user data or self tests */
-#if !BOARD_USS1001	/* USS-1001's modes follow touchSetModePin */
-/* writes mode's settings to both controllers */
+#if !SOURCE_0103 || BOARD_DOL1001	/* USS-1001's modes follow touchSetModePin */
+/* writes mode's settings to both controllers (DOL-1001: to each of family 0x80 variant 0x0a) */
 void touchSetMode(unsigned char mode)
 {
 	unsigned int address;
 
+#if BOARD_DOL1001
+	if (touch.panel[0].family == 0x80 && touch.panel[0].variant == 0x0a) {
+#else
 	if (touch.panel[0].version >= 0x24) {
+#endif
 		address = touch.panel[0].objects.t51 + 3;
 		touchWriteVerified(address, &touch.panel[0].modes[mode].t51, 1, 0);
 		address = touch.panel[0].objects.touchScreen + 7;
@@ -1996,7 +2069,10 @@ void touchSetMode(unsigned char mode)
 		}
 #endif
 	}
-#if FW_SINCE(0x01000109)
+#if BOARD_DOL1001
+	if (touch.panel[1].family == 0x80 && touch.panel[1].variant == 0x0a) {
+		address = touch.panel[1].objects.t51 + 3;
+#elif FW_SINCE(0x01000109)
 	if (touch.panel[1].version >= 0x24) {
 		address = touch.panel[1].objects.t51 + 3;
 #else
@@ -2027,25 +2103,25 @@ void touchSetMode(unsigned char mode)
 }
 #endif
 
-#if BOARD_USS1001
-/* P3.2 low in modes 1 and 2, high in mode 0 */
+#if SOURCE_0103 && !BOARD_DOL1001
+/* the mode pin (the slim's P3.2) low in modes 1 and 2, high in mode 0 */
 void touchSetModePin(unsigned char mode)
 {
 	switch (mode) {
 	case 1:
 	case 2:
-		P3.2 = 0;
+		TOUCH_MODE_PIN = 0;
 		break;
 	case 0:
 	default:
-		P3.2 = 1;
+		TOUCH_MODE_PIN = 1;
 		break;
 	}
 }
 
 #endif
 /* modes 1 and 2 from panel 0's user data, mode 0 from its objects */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* reads the controller's modes, family 0x80 variant 0x0a only: the last error */
 unsigned char touchReadModes0(void)
 {
@@ -2285,22 +2361,26 @@ void touchReadModes1(void)
 #endif
 
 /* the state the frames carry; mode 1 from now on */
-#if BOARD_USS1001
+#if SOURCE_0103
 void touchClearMode(void)
 {
 	touch.state.bits.mode = 0;
+#if BOARD_DOL1001
+	touchSetMode(0);
+#else
 	touchSetModePin(0);
+#endif
 }
 
 #endif
 void touchUpdateState(void)
 {
-#if BOARD_TOUCH_CHARGE || BOARD_USS1001 || FW_SINCE(0x01000109)
+#if BOARD_TOUCH_CHARGE || SOURCE_0103 || FW_SINCE(0x01000109)
 	unsigned char mode;
 #endif
 
 	if (touch.flags & (TOUCH_PANEL0 | TOUCH_PANEL1)) {
-#if BOARD_TOUCH_CHARGE || BOARD_USS1001
+#if BOARD_TOUCH_CHARGE || SOURCE_0103
 		touch.state.bits.power = chargeGetAc() | chargeGetCharging();
 #elif FW_SINCE(0x01000104)
 		touch.state.bits.power = 1;
@@ -2310,7 +2390,7 @@ void touchUpdateState(void)
 		touch.state.bits.input3 = input1Bit3Active();
 		touch.state.bits.input5 = input1Bit5Active();
 		touch.state.bits.input0 = input1Bit0Active();
-#if BOARD_TOUCH_CHARGE || BOARD_USS1001
+#if BOARD_TOUCH_CHARGE || SOURCE_0103
 		if (touch.state.value & 0xf0) {
 			if (chargeUsbIs1() || chargeUsbIs2())
 				mode = 2;
@@ -2323,7 +2403,7 @@ void touchUpdateState(void)
 #endif
 #if FW_SINCE(0x01000109)
 		if (touch.state.bits.mode != mode) {
-#if BOARD_USS1001
+#if SOURCE_0103 && !BOARD_DOL1001
 			touchSetModePin(mode);	/* the controllers' modes follow the pin */
 #else
 			touchSetMode(mode);
@@ -2346,7 +2426,7 @@ void touchUpdateState(void)
 }
 #endif
 
-#if FW_SINCE(0x00090903) && !BOARD_USS1001	/* USS-1001 reads no grip status */
+#if FW_SINCE(0x00090903) && !SOURCE_0103	/* USS-1001 reads no grip status */
 /* enables panel 0's grip status (T20), which each frame then reads */
 unsigned char touchStatusOn0(void)
 {
@@ -2430,7 +2510,7 @@ unsigned char touchSetGrip1(unsigned char *data)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the grip edges (4 bytes), kept in the panel's gripEdges: T20's bytes 1-4 for family 0x80
    variant 0x0a before version 0x30, else the user data's bytes 20-23; a controller in its
    bootloader gives them as bytes 6-9 of its 10-byte answer */
@@ -2478,6 +2558,7 @@ unsigned char touchReadGripEdges1(unsigned char *data)
 	result = touchRead(address, data, 4, 1);
 	if (result == 0)
 		memcpy(touch.panel[1].gripEdges, data, 4);
+#if TOUCH_PANEL1_IICA1
 	else if (result == 0x11) {
 		result = touchBootloaderStatus1(&status);
 		if (result == 0) {
@@ -2488,6 +2569,7 @@ unsigned char touchReadGripEdges1(unsigned char *data)
 			}
 		}
 	}
+#endif
 	return result;
 }
 #elif FW_SINCE(0x0100060B)
@@ -2560,7 +2642,7 @@ void touchGetReportIds(unsigned char *ids)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /*
  * Request 0x038a: whether the mode pin (P3.2) switches each panel's touch threshold (T9's byte 7):
  * with the pin high it is not T38's byte 4, with it low it is, and high again it is back. *out
@@ -2569,6 +2651,10 @@ void touchGetReportIds(unsigned char *ids)
  */
 unsigned char touchTestModePin(unsigned char *out)
 {
+#if BOARD_DOL1001	/* no mode pin */
+	*out = 0;
+	return 0;
+#else
 	unsigned int address;
 	unsigned char high0;
 	unsigned char low0;
@@ -2579,8 +2665,8 @@ unsigned char touchTestModePin(unsigned char *out)
 	unsigned char result = 0;
 
 	*out = 0;
-	pin = P3.2;
-	P3.2 = 1;
+	pin = TOUCH_MODE_PIN;
+	TOUCH_MODE_PIN = 1;
 	dly_tsk(8);
 	address = touch.panel[0].objects.touchScreen + 7;
 	result = touchRead(address, &high0, 1, 0);
@@ -2607,7 +2693,7 @@ unsigned char touchTestModePin(unsigned char *out)
 		goto done;
 	}
 
-	P3.2 = 0;
+	TOUCH_MODE_PIN = 0;
 	dly_tsk(8);
 	address = touch.panel[0].objects.touchScreen + 7;
 	result = touchRead(address, &value, 1, 0);
@@ -2626,7 +2712,7 @@ unsigned char touchTestModePin(unsigned char *out)
 		goto done;
 	}
 
-	P3.2 = 1;
+	TOUCH_MODE_PIN = 1;
 	dly_tsk(8);
 	address = touch.panel[0].objects.touchScreen + 7;
 	result = touchRead(address, &value, 1, 0);
@@ -2643,7 +2729,8 @@ unsigned char touchTestModePin(unsigned char *out)
 	if (value != high1)
 		*out = 0xfc;
 done:
-	P3.2 = pin;
+	TOUCH_MODE_PIN = pin;
 	return result;
+#endif
 }
 #endif

@@ -6,7 +6,7 @@
  */
 #include "board.h"
 
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "charge.h"
 #include "config.h"
 #include "cookie.h"
@@ -18,6 +18,303 @@
 #include "task.h"
 #include "timer.h"
 
+#if BOARD_DOL1001
+/*
+ * DOL-1001's power LED: the mode asked for (powerLedStartMode), kept or refused by the system
+ * state and the mode shown, ended by powerLedEndMode; the blinks run on timer 0x16
+ * (powerLedFlagsStep, from task 5's flag 0x2000).
+ */
+#define POWER_LED_TIMER		0x16
+#define POWER_LED_FOREVER	0xff	/* powerLedFlags.count: no end */
+
+#define POWER_LED_TICKS(time)	((time) / 4 + (((time) % 4) ? 1 : 0))
+
+struct PowerLedFlags powerLedFlags;
+
+static void powerLedShowMode(void);
+static void powerLedFlagsTimer(void);
+
+void powerLedFlagsInit(unsigned char resumed)
+{
+	struct TimerHandler handler;
+
+	if (resumed == 0) {
+		powerLedSet(0);
+		powerLedFlags.next = POWER_LED_MODE_OFF;
+		powerLedFlags.mode = POWER_LED_MODE_OFF;
+	}
+	powerLedFlags.onTime = 0;
+	powerLedFlags.offTime = 0;
+	powerLedFlags.count = 0;
+	powerLedFlags.phase = 0;
+	powerLedFlags.blinkOn = 0;
+	powerLedFlags.blinkOff = 0;
+	powerLedFlags.blinkCount = 0;
+	powerLedFlags.hostPattern = 0xff;
+	powerLedFlags.hostOn = 0;
+	powerLedFlags.hostOff = 0;
+	handler.handler = powerLedFlagsTimer;
+	timerSetHandler(POWER_LED_TIMER, &handler);
+}
+
+/* task 5's (flag 0x2000, timer 0x16): the blink's next phase */
+void powerLedFlagsStep(void)
+{
+	unsigned int time;
+
+	if (powerLedFlags.count != POWER_LED_FOREVER && powerLedFlags.phase == 0 && powerLedFlags.count != 0)
+		powerLedFlags.count--;
+	switch (powerLedFlags.mode) {
+	case POWER_LED_MODE_BLINK:
+	case POWER_LED_MODE_HOST_BLINK:
+		if (powerLedFlags.phase == 1) {
+			powerLedSet(0);
+			powerLedFlags.phase = 0;
+			time = powerLedFlags.offTime;
+		} else {
+			powerLedSet(1);
+			powerLedFlags.phase = 1;
+			time = powerLedFlags.onTime;
+		}
+		break;
+	case POWER_LED_MODE_HOST:
+		if (powerLedFlags.phase == 1) {
+			if (powerLedFlags.offTime != 0) {
+				powerLedSet(0);
+				powerLedFlags.phase = 0;
+				time = powerLedFlags.offTime;
+			} else {
+				time = powerLedFlags.onTime;
+			}
+		} else {
+			if (powerLedFlags.onTime != 0) {
+				powerLedSet(1);
+				powerLedFlags.phase = 1;
+				time = powerLedFlags.onTime;
+			} else {
+				time = powerLedFlags.offTime;
+			}
+		}
+		break;
+	case POWER_LED_MODE_OFF:
+	case POWER_LED_MODE_ON:
+	default:
+		powerLedFlags.count = 0;
+		break;
+	}
+	if (powerLedFlags.count != 0)
+		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(time));
+	else if (stateGet() == STATE_RESUME && powerLedFlags.mode == POWER_LED_MODE_BLINK)
+		powerLedFlags.mode = POWER_LED_MODE_ON;
+}
+
+/* the mode asked for, shown when the system state and the mode shown allow it; a host
+   pattern's request while the host pattern is shown is its mode to return to */
+void powerLedStartMode(unsigned char mode)
+{
+	unsigned int state;
+
+	state = stateGet();
+	switch (mode) {
+	case POWER_LED_MODE_OFF:
+		break;
+	case POWER_LED_MODE_ON:
+		if (!(((state == 0x8004 || state == 0x8008) &&
+		       (powerLedFlags.mode == POWER_LED_MODE_BLINK ||
+			powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK ||
+			powerLedFlags.mode == POWER_LED_MODE_HOST)) ||
+		      ((state & 0x20) == 0x20 &&
+		       (powerLedFlags.mode == POWER_LED_MODE_OFF ||
+			powerLedFlags.mode == POWER_LED_MODE_BLINK ||
+			powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK)))) {
+			return;
+		}
+		break;
+	case POWER_LED_MODE_BLINK:
+		if (!(state == 0x8020 && powerLedFlags.mode == POWER_LED_MODE_OFF)) {
+			if (powerLedFlags.mode == POWER_LED_MODE_HOST)
+				powerLedFlags.next = mode;
+			return;
+		}
+		break;
+	case POWER_LED_MODE_HOST_BLINK:
+		if (!(state == STATE_RESUME &&
+		      (powerLedFlags.mode == POWER_LED_MODE_ON ||
+		       powerLedFlags.mode == POWER_LED_MODE_BLINK ||
+		       powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK))) {
+			if (powerLedFlags.mode == POWER_LED_MODE_HOST)
+				powerLedFlags.next = mode;
+			return;
+		}
+		break;
+	case POWER_LED_MODE_HOST:
+		if ((state & 0x20) == 0x20) {
+			if ((powerLedFlags.mode == POWER_LED_MODE_ON ||
+			     powerLedFlags.mode == POWER_LED_MODE_BLINK ||
+			     powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK ||
+			     powerLedFlags.mode == POWER_LED_MODE_HOST) &&
+			    powerLedFlags.hostPattern == 0 &&
+			    (powerLedFlags.hostOn != 0 || powerLedFlags.hostOff != 0)) {
+				/* the host's pattern shown */
+			} else {
+				return;
+			}
+		} else {
+			return;
+		}
+		if (powerLedFlags.mode != POWER_LED_MODE_HOST)
+			powerLedFlags.next = powerLedFlags.mode;
+		break;
+	default:
+		return;
+	}
+	powerLedFlags.mode = mode;
+	powerLedShowMode();
+}
+
+/* the mode's end: the host blink back to on (in state 0x20) or off, the host pattern back to
+   the mode it replaced */
+void powerLedEndMode(unsigned char mode)
+{
+	unsigned int state;
+
+	state = stateGet();
+	switch (mode) {
+	case POWER_LED_MODE_HOST:
+		if (powerLedFlags.mode == POWER_LED_MODE_HOST) {
+			if ((state & 0x20) != 0x20) {
+				powerLedFlags.mode = POWER_LED_MODE_OFF;
+				powerLedFlags.next = POWER_LED_MODE_OFF;
+			} else
+				powerLedFlags.mode = powerLedFlags.next;
+		} else
+			return;
+		break;
+	case POWER_LED_MODE_HOST_BLINK:
+		if (powerLedFlags.mode == POWER_LED_MODE_HOST_BLINK) {
+			if ((state & 0x20) != 0x20) {
+				powerLedFlags.mode = POWER_LED_MODE_OFF;
+				powerLedFlags.next = POWER_LED_MODE_OFF;
+			} else {
+				powerLedFlags.mode = POWER_LED_MODE_ON;
+				powerLedFlags.next = POWER_LED_MODE_ON;
+			}
+		} else {
+			if (powerLedFlags.mode == POWER_LED_MODE_HOST)
+				powerLedFlags.next = POWER_LED_MODE_ON;
+			return;
+		}
+		break;
+	case POWER_LED_MODE_OFF:
+	case POWER_LED_MODE_ON:
+	case POWER_LED_MODE_BLINK:
+	default:
+		return;
+	}
+	powerLedShowMode();
+}
+
+static void powerLedShowMode(void)
+{
+	unsigned int time;
+
+	time = 0;
+	switch (powerLedFlags.mode) {
+	case POWER_LED_MODE_OFF:
+		timerStop(POWER_LED_TIMER);
+		powerLedSet(0);
+		break;
+	case POWER_LED_MODE_ON:
+		timerStop(POWER_LED_TIMER);
+		powerLedSet(1);
+		break;
+	case POWER_LED_MODE_BLINK:
+		powerLedFlags.onTime = powerLedFlags.blinkOn;
+		powerLedFlags.offTime = powerLedFlags.blinkOff;
+		powerLedFlags.count = powerLedFlags.blinkCount;
+		powerLedSet(1);
+		powerLedFlags.phase = 1;
+		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
+		break;
+	case POWER_LED_MODE_HOST_BLINK:
+		powerLedFlags.onTime = powerLedFlags.blinkOn;
+		powerLedFlags.offTime = powerLedFlags.blinkOff;
+		powerLedFlags.count = POWER_LED_FOREVER;
+		powerLedSet(1);
+		powerLedFlags.phase = 1;
+		timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
+		break;
+	case POWER_LED_MODE_HOST:
+		timerStop(POWER_LED_TIMER);
+		powerLedFlags.onTime = powerLedFlags.hostOn;
+		powerLedFlags.offTime = powerLedFlags.hostOff;
+		powerLedFlags.count = POWER_LED_FOREVER;
+		if (powerLedFlags.onTime != 0) {
+			powerLedSet(1);
+			powerLedFlags.phase = 1;
+			time = powerLedFlags.onTime;
+		} else if (powerLedFlags.offTime != 0) {
+			powerLedSet(0);
+			powerLedFlags.phase = 0;
+			time = powerLedFlags.offTime;
+		} else {
+			powerLedSet(1);
+			powerLedFlags.phase = 1;
+			time = 0xffff;
+		}
+		if (time != 0xffff)
+			timerStart(POWER_LED_TIMER, POWER_LED_TICKS(time));
+		break;
+	}
+}
+
+static void powerLedFlagsTimer(void)
+{
+	task5SetFlag(4, 0x2000);
+}
+
+/* powerSeqResume's blink: count blinks of on and off ms */
+void powerLedSetBlink(unsigned char count, unsigned int on, unsigned int off)
+{
+	powerLedFlags.blinkCount = count;
+	powerLedFlags.blinkOn = on;
+	powerLedFlags.blinkOff = off;
+}
+
+/* host command 0x0821's (index 0) or 0x0822's (1) blink times: the parameter block's on and off
+   times (0x7a-0x7d), in 16 ms, at least one */
+void powerLedLoadBlink(unsigned char index)
+{
+	unsigned char on;
+	unsigned char off;
+
+	on = 0;
+	off = 0;
+	if (index < 2) {
+		if (index == 0) {
+			paramRead(0x7a, 1, &on);
+			paramRead(0x7b, 1, &off);
+		} else if (index == 1) {
+			paramRead(0x7c, 1, &on);
+			paramRead(0x7d, 1, &off);
+		}
+		if (on == 0)
+			on = 1;
+		if (off == 0)
+			off = 1;
+		powerLedFlags.blinkOn = (unsigned int)on << 4;
+		powerLedFlags.blinkOff = (unsigned int)off << 4;
+	}
+}
+
+/* host request 0x089f's: the pattern (0 the power LED; others none) and its times, in ms */
+void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off)
+{
+	powerLedFlags.hostPattern = pattern;
+	powerLedFlags.hostOn = on;
+	powerLedFlags.hostOff = off;
+}
+#else
 #define POWER_LED_TIMER		0x14
 
 /* the modes (powerLedFlags.mode) */
@@ -410,4 +707,5 @@ static void powerLedFlagsStart(unsigned char pattern, unsigned int on, unsigned 
 		break;
 	}
 }
+#endif
 #endif

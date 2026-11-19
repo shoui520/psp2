@@ -17,19 +17,30 @@
 #include "touch.h"
 
 
-#if BOARD_USS1001
+#if SOURCE_0103
 void task3(VP_INT exinf)
 {
 	ER ercd;
 	FLGPTN ptn;
 
 	for (;;) {
+#if BOARD_DOL1001
+		ercd = wai_flg(2, 0x861c, TWF_ORW, &ptn);
+#else
 		ercd = wai_flg(2, 0x851c, TWF_ORW, &ptn);
+#endif
 		if (ercd == E_OK) {
 			if (ptn & 0x0400) {
 				clr_flg(2, ~0x0400);
 				inputStateRun();
 			}
+#if BOARD_DOL1001
+			if (ptn & 0x0200) {	/* sre0Interrupt: P11.5 high */
+				clr_flg(2, ~0x0200);
+				stateTransition(0x1e);
+				inputLogTransition(0x1e);
+			}
+#endif
 			if (ptn & 0x0008) {
 				clr_flg(2, ~0x0008);
 				inputProcess();

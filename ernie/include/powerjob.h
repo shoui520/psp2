@@ -24,7 +24,7 @@ struct PowerJobState {
 };
 
 /* the registers a power cut reads (powerJobCut): 0xb0 on */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define POWER_CUT_REGS	4
 #else
 #define POWER_CUT_REGS	3

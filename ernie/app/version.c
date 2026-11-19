@@ -19,7 +19,7 @@ struct VersionFlags {
 						   report the downloader's version (0x00090804 always
 						   does) */
 #endif
-#if !defined(ERNIE_UPDATER) && BOARD_USS1001
+#if !defined(ERNIE_UPDATER) && SOURCE_0103
 	unsigned char	hardwareInfo2[16];	/* the slim's: the bits of hardwareInfo2 flipped */
 #endif
 };
@@ -104,12 +104,17 @@ const struct AppVersionInfo appVersionInfo = {
 };
 static const char timeStamp[] = APP_TIME_STAMP;
 const char * const appTimeStamp = timeStamp;
-#if !defined(ERNIE_UPDATER) && BOARD_USS1001
-/* the slim's hardware info 2 (command 0x0006): 128 bits, each this default flipped by its bit
+#if !defined(ERNIE_UPDATER) && SOURCE_0103
+/* the hardware info 2 (command 0x0006): 128 bits, each this default flipped by its bit
    in versionFlags.hardwareInfo2 */
-static const unsigned char hardwareInfo2[16] = { 0x07 };
+#if BOARD_DOL1001
+static const unsigned char hardwareInfo2[16] = { 0x00 };
 /* the layout of the log's records (app/log.c) */
+const unsigned int logVersion = 0x10;
+#else
+static const unsigned char hardwareInfo2[16] = { 0x07 };
 const unsigned int logVersion = 9;
+#endif
 #endif
 
 struct VersionFlags versionFlags;
@@ -152,7 +157,7 @@ void getErnieDlVersion(unsigned char *buf)
 #else
 void versionInit(void)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	versionFlags.dlFlags = 0xff;
 	versionFlags.hardwareInfoFlags = 0;
 	memset(versionFlags.hardwareInfo2, 0, sizeof(versionFlags.hardwareInfo2));
@@ -175,7 +180,7 @@ void getHardwareInfo(unsigned char *buf)
 	buf[0] |= versionFlags.hardwareInfoFlags;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 void getHardwareInfo2(unsigned char *buf)
 {
 	unsigned char i;
@@ -192,14 +197,24 @@ unsigned char getHardwareInfoFlags(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* one bit of the hardware info 2 (0-127; 0 for any other) */
 char getHardwareInfo2Bit(unsigned char number)
 {
+#if BOARD_DOL1001
+	unsigned char byte;
+#endif
+
 	if (number >= 0x80)
 		return 0;
+#if BOARD_DOL1001
+	byte = number >> 3;
+	return ((hardwareInfo2[byte] ^ versionFlags.hardwareInfo2[byte]) &
+		(1 << (number & 7))) ? 1 : 0;
+#else
 	return ((hardwareInfo2[number >> 3] ^ versionFlags.hardwareInfo2[number >> 3]) &
 		(1 << (number & 7))) ? 1 : 0;
+#endif
 }
 #endif
 
@@ -221,7 +236,7 @@ void clearHardwareInfoFlags(unsigned char flags)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* sets one bit of the hardware info 2 to on (bits past 127 are left alone) */
 void setHardwareInfo2Bit(unsigned char number, unsigned char on)
 {
@@ -258,7 +273,7 @@ void getErnieDlVersion(unsigned char *buf)
 		memcpy(buf, &none, 4);
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 static int copyTimeStamp(unsigned char *out, const char *stamp);
 
 /* the slim's: the time stamp's digits (command 0x0002, serial 0x0107) */

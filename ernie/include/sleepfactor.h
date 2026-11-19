@@ -59,7 +59,7 @@ extern void sleepFactorSet22(unsigned char on);
 extern void sleepFactorSet23(unsigned char on);
 extern void sleepFactorSet20(unsigned char on);
 extern void sleepFactorSet14(unsigned char on);	/* the slim's: analog input 0x0010 reported 0 or not */
-extern void sleepFactorSet21(unsigned char on);	/* the slim's, never called */
+extern void sleepFactorSet21(unsigned char on);	/* the slim's never called; DOL-1001's powerSleepFactor21 */
 #if FW_SINCE(0x0100060B)
 extern void sleepFactorGetOffInfo(unsigned char *info);
 #endif

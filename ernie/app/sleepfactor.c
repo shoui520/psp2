@@ -104,7 +104,7 @@ void sleepFactorSet8(unsigned char on)
 	if (sleepFactor.bits[1].b0 ^ on) {
 		dis_dsp();
 		sleepFactor.bits[1].b0 = on;
-#if BOARD_USS1001
+#if SOURCE_0103
 		sleepFactorStatus.bits.changed = 1;	/* both ways on USS-1001 */
 #else
 		if (on)
@@ -290,7 +290,7 @@ void sleepFactorSet20(unsigned char on)
 	}
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: analog input 0x0010 (analog.c) */
 void sleepFactorSet14(unsigned char on)
 {

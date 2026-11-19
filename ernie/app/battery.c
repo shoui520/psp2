@@ -20,22 +20,23 @@
 #include "powerseq.h"
 #include "powerwait.h"
 
-/* the battery's address on the I2C bus: the Cookie's where the settings move it */
-#if BOARD_COOKIE_REG_HIGH
+/* the battery's address on the I2C bus: the Cookie's where the settings move it (DOL-1001 moves
+   the battery only, its Cookie stays at 0xa8) */
+#if BOARD_COOKIE_REG_HIGH || BOARD_DOL1001
 #define BATTERY_ADDRESS		(configGet()->cookieRegHigh ? 0xa4 : 0xaa)
 #else
 #define BATTERY_ADDRESS		0xaa
 #endif
 
 /* the charge stopped while the bootloader runs: on the slim out of the manual charge mode */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define BATTERY_CHARGE(on)	cookieUpdateBatteryCharge(on)
 #else
 #define BATTERY_CHARGE(on)	cookieCtrlBatteryCharge(on)
 #endif
 
 /* the battery's id when none answered at the power-on */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define BATTERY_NONE		0xffff
 #else
 #define BATTERY_NONE		0x00ff
@@ -44,7 +45,7 @@
 static struct IicaRequest batteryIica;
 static unsigned char batteryBLBuffer[BATTERY_BL_SIZE - 1];
 struct BatteryBLCommand batteryBLCommand;
-#if BOARD_USS1001
+#if SOURCE_0103
 union BatteryFaults batteryFaults;
 #endif
 
@@ -53,12 +54,12 @@ void batteryInit(void)
 	batteryBLCommand.command = 0;
 	batteryBLCommand.length = 0;
 	batteryBLCommand.buffer = batteryBLBuffer;
-#if BOARD_USS1001
+#if SOURCE_0103
 	memset(batteryFaults.byte, 0, sizeof(batteryFaults));
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* after batteryReadInfo answered (charge.c): nothing */
 void batteryInfoRead(void)
 {
@@ -214,7 +215,7 @@ unsigned char batteryReadAt(unsigned char *packet, unsigned char *data, unsigned
 
 /* the battery's identity (struct BatteryInfo's four words): 0xfffe for each where a battery
    without a gauge answered */
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the id, the type twice (the second word from 0x0416 on: 0xa8 for a 0x0802
    battery of type 0xa7 or 0xa8), the version, then the bootloader's (0xfffd before 0x0416); with
    none answered all 0xffff */
@@ -372,7 +373,7 @@ unsigned char batteryReadBicTemp(unsigned int *value)
 {
 	unsigned char reg;
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	reg = 0x20;					/* the slim's: whatever the version */
 	return batteryRead(&reg, (unsigned char *)value, 2);
 #else
@@ -564,20 +565,28 @@ unsigned char batterySWReset(void)
 	return batteryWrite(elmoCommand, 3);
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x08b0: the battery's bootloader line, P6.4 on the slim, recorded in the faults */
 void batteryBLLineOn(void)
 {
+#if !BOARD_DOL1001	/* DOL-1001 has no bootloader line */
 	P6.4 = 1;
 	batteryFaults.byte[1] |= 0x01;
+#if BOARD_EVENT_LOG
 	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
+#endif
 }
 
 void batteryBLLineOff(void)
 {
+#if !BOARD_DOL1001
 	P6.4 = 0;
 	batteryFaults.byte[1] &= ~0x01;
+#if BOARD_EVENT_LOG
 	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
+#endif
 }
 
 /* at the power-off: the manual charge mode left, the faults recorded and cleared, then the
@@ -586,7 +595,9 @@ unsigned char batteryHibernate(void)
 {
 	chargeSetManualMode(0);
 	batteryFaults.byte[1] |= 0x02;
+#if BOARD_EVENT_LOG
 	eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+#endif
 	batteryFaults.byte[0] = 0;
 	batteryFaults.word[2] = 0;
 	batteryFaults.word[3] = 0;
@@ -636,7 +647,7 @@ unsigned char batteryControl0015(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the faults record's eight bytes */
 void batteryGetFaults(unsigned char *faults)
 {

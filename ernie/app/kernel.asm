@@ -112,7 +112,7 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
-$_IF (ERNIE_HW>=0x00800000)	; USS-1001 (its own short data before them)
+$_IF (ERNIE_HW>=0x00700000)	; USS-1001 and DOL-1001 (their own short data before them)
 kResult		EQU	0FFE78H
 kTemp		EQU	0FFE7AH
 kTimeout	EQU	0FFE7CH
@@ -350,8 +350,8 @@ _get_mpf:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFB7H
 	BR	$?getMpf
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _pget_mpf:
 	PUSH	PSW
@@ -363,8 +363,8 @@ _pget_mpf:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFB6H
 	BR	$?getMpf
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _tget_mpf:
 	PUSH	PSW
@@ -824,8 +824,8 @@ _rcv_mbx:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFBFH
 	BR	$?rcvMbx
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _prcv_mbx:
 	PUSH	PSW
@@ -837,8 +837,8 @@ _prcv_mbx:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFBEH
 	BR	$?rcvMbx
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _trcv_mbx:
 	PUSH	PSW
@@ -3131,8 +3131,8 @@ _wai_flg:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFD3H
 	BR	$?waiFlg
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _pol_flg:
 	PUSH	PSW
@@ -3144,8 +3144,8 @@ _pol_flg:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFD2H
 	BR	$?waiFlg
-$_IF (ERNIE_HW>=0x00800000)
-	NOP			; USS-1001: its next service call at an even address
+$_IF (ERNIE_HW>=0x00700000)
+	NOP			; USS-1001 and DOL-1001: their next service call at an even address
 $ENDIF
 _twai_flg:
 	PUSH	PSW

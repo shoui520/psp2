@@ -16,7 +16,7 @@
 #include "chip.h"
 #include "config.h"
 #include "csi.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "analog.h"
 #include "bstore.h"
 #include "chipid.h"
@@ -45,7 +45,7 @@
 #include "task.h"
 #include "task5.h"
 #include "touch.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "updatereq.h"
 #endif
 #include "version.h"
@@ -115,7 +115,7 @@ static union {
 		unsigned char	dlVersion[4];
 #if FW_SINCE(0x00090206)
 		unsigned char	flags;		/* getResetFlags's */
-#if BOARD_USS1001
+#if SOURCE_0103
 		unsigned char	resetCause;	/* getResetCause's */
 		unsigned char	powerCause;	/* stateGetCause's */
 		unsigned char	wakeupFactor;	/* stateGetWakeupFactor's first byte */
@@ -137,7 +137,7 @@ static union {
 		struct NvsMap	map;
 	} nvsInfo;				/* command 0x0170's */
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	struct {
 		unsigned char	timeStamp[12];	/* getTimeStamp's */
 		unsigned char	hardwareInfo2[16];
@@ -204,7 +204,7 @@ unsigned char serialCommand1(unsigned int command, struct SerialBuffer *request,
 			}
 			if ((flags & SERIAL1_KEY) && serial1KeyOpen() == 0) {
 				serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 				return 0xff;
 #else
 				return 1;
@@ -267,9 +267,11 @@ unsigned int serial1SleepFactor(void)
 #if FW_SINCE(0x01000104)
 unsigned char serialCommands1Count(void)
 {
-#if BOARD_USS1001 && FW_SINCE(0x01030511)
+#if BOARD_DOL1001
+	return 0x4e;
+#elif SOURCE_0103 && FW_SINCE(0x01030511)
 	return 0x5e;
-#elif BOARD_USS1001
+#elif SOURCE_0103
 	return 0x59;	/* 0x01030505: no 0x0961-0x0965 */
 #elif FW_SINCE(0x0100060B)
 	return 0x37;
@@ -323,14 +325,14 @@ static unsigned char serial1Command0100(struct SerialBuffer *request, struct Ser
 /* 0x0101: the hardware, the versions and getResetFlags's flags */
 static unsigned char serial1Command0101(struct SerialBuffer *request, struct SerialBuffer *response)
 {
-#if BOARD_USS1001
+#if SOURCE_0103
 	union PowerRequest factor;
 
 #endif
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
 	getErnieDlVersion(serial1Data.version.dlVersion);
-#if BOARD_USS1001
+#if SOURCE_0103
 	serial1Data.version.flags = getResetFlags();
 	serial1Data.version.resetCause = getResetCause();
 	serial1Data.version.powerCause = stateGetCause();
@@ -383,7 +385,7 @@ static unsigned char serial1Command0102(struct SerialBuffer *request, struct Ser
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the link's result (serialLock, serialUnlock, serialReopen) as an answer's: 0x20-0x25, 0xff
    for any other */
 static unsigned char serial1SerialResult(unsigned char result)
@@ -419,7 +421,7 @@ static unsigned char serial1StateResult(unsigned char result)
 		return 0x54;
 	case 2:
 		return 0x55;
-#if FW_SINCE(0x01030511)	/* 0x01030505's stateTransition has no result 3 */
+#if BOARD_USS1001 && FW_SINCE(0x01030511)	/* 0x01030505's and the PS TV's stateTransition have no result 3 */
 	case 3:
 		return 0x56;
 #endif
@@ -467,7 +469,7 @@ static unsigned char serial1Command0103(struct SerialBuffer *request, struct Ser
 	response->length = 0;
 	result = serialUnlock(1);
 	serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 	return serial1SerialResult(result);
 #else
 	return result;
@@ -482,14 +484,14 @@ static unsigned char serial1Command0104(struct SerialBuffer *request, struct Ser
 	response->length = 0;
 	result = serialLock(1);
 	serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 	return serial1SerialResult(result);
 #else
 	return result;
 #endif
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0105: a state change (0: 0x53 from state 0x20, 0x200 or 0x400; 2: 9 from 4 or 8; 3: 0x11
    from 4; 0x10 and 0x11 are refused), answered when it is made */
 static unsigned char serial1Command0105(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -653,7 +655,7 @@ static unsigned char serial1Command0106(struct SerialBuffer *request, struct Ser
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0107: the build's time stamp and the hardware info 2 */
 static unsigned char serial1Command0107(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -681,7 +683,7 @@ static unsigned char serial1Command0110(struct SerialBuffer *request, struct Ser
 	}
 	memcpy(serial1Data.byte, request->data, sizeof(serial1Data));
 	result = serialAuthCommand(serial1Data.byte);
-#if BOARD_USS1001
+#if SOURCE_0103
 	result = serial1AuthResult(result);
 #endif
 	response->data = serial1Data.byte;
@@ -713,7 +715,7 @@ static unsigned char serial1Command0120(struct SerialBuffer *request, struct Ser
 	send[2] = 0x20;
 	P90 = 0;
 	result = (unsigned char)csiTransfer(serial1Data.byte, 3 + 0x20, send, sizeof(send));
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (result != 0)
 		result = 0xff;
 #endif
@@ -756,7 +758,7 @@ static unsigned char serial1Command0121(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the flash library's result as an answer's: 0xc0-0xc9, 0xff for any other */
 static unsigned char serial1FlashResult(unsigned char result)
 {
@@ -851,7 +853,7 @@ static unsigned char serial1Command0131(struct SerialBuffer *request, struct Ser
 	response->length = size;
 	result = nvsRead(offset.value, size, serial1Data.byte, 0);
 	serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 	return serial1NvsResult(result);
 #else
 	return result;
@@ -879,7 +881,7 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 	size = request->data[2];
 	result = nvsWrite(offset.value, size, &request->data[3], 0);
 	serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 	return serial1NvsResult(result);
 #else
 	return result;
@@ -913,7 +915,7 @@ static unsigned char serial1Command0170(struct SerialBuffer *request, struct Ser
 	serial1Data.byte[3] = info.byte[0];
 	serial1Data.byte[4] = info.byte[1];
 	serialSetAnswer(SERIAL_ANSWER);
-#if BOARD_USS1001
+#if SOURCE_0103
 	return serial1NvsResult(result);	/* 0x01030505 */
 #else
 	return result == 0 ? 0 : result;
@@ -929,7 +931,7 @@ static unsigned char serial1Command0300(struct SerialBuffer *request, struct Ser
 
 	response->length = 0;
 	result = serial1BufferWrite(0, (unsigned char)request->length, request->data);
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (result != 0)
 		result = 0x99;
 	else
@@ -951,7 +953,7 @@ static unsigned char serial1Command0301(struct SerialBuffer *request, struct Ser
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Buffer);
 	result = serial1BufferRead(0, sizeof(serial1Buffer), serial1Data.byte);
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (result != 0)
 		result = 0x99;
 #endif
@@ -959,7 +961,7 @@ static unsigned char serial1Command0301(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the settings' result (config.c) as an answer's: 0xd0-0xda, else the flash library's */
 static unsigned char serial1ConfigResult(unsigned char result)
 {
@@ -1048,7 +1050,7 @@ static unsigned char serial1Command0168(struct SerialBuffer *request, struct Ser
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x01d2: updaterGetStatus's 8 bytes */
 static unsigned char serial1Command01d2(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1314,7 +1316,7 @@ static unsigned char serial1Command0151(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	result = (unsigned char)logSetMode(LOG_MODE_STARTED, 2);
 #else
 	result = (unsigned char)logStart();
@@ -1330,7 +1332,7 @@ static unsigned char serial1Command0152(struct SerialBuffer *request, struct Ser
 {
 	unsigned char result = 0;
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 2);
 #else
 	result = (unsigned char)logStop();
@@ -1407,7 +1409,7 @@ static unsigned char serial1Command0156(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0157: the log halted (logSetMode) */
 static unsigned char serial1Command0157(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -1456,7 +1458,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 #else
 		{
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 			logSetMode(LOG_MODE_STOPPED, 2);
 #else
 			logStop();
@@ -1487,7 +1489,7 @@ static unsigned char serial1Command0160(struct SerialBuffer *request, struct Ser
 				goto done;
 			}
 		}
-#if BOARD_USS1001
+#if BOARD_BSTORE
 		if (mask & 0x04) {
 			result = bstoreMigrate();
 			if (result != 0) {
@@ -1657,7 +1659,7 @@ static unsigned char serial1Command0190(struct SerialBuffer *request, struct Ser
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0183-0x0189 (a byte) and 0x018a-0x018e: task 4's operations 0x0e-0x19, answered when they
    are done; status 0x61 while one runs */
 static unsigned char serial1Command0183(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -1909,7 +1911,7 @@ static unsigned char serial1Command01b0(struct SerialBuffer *request, struct Ser
 	unsigned char result = 0;
 
 	response->data = serial1Data.byte;
-#if BOARD_USS1001
+#if SOURCE_0103
 	response->length = 8;			/* powerGetCutRegs gives 8 bytes on the slim */
 #else
 	response->length = 6;
@@ -1919,7 +1921,7 @@ static unsigned char serial1Command01b0(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if BOARD_USS1001
+#if BOARD_EVENT_LOG
 /* 0x01c0: the event log's version, mode and count (eventLogGetInfo) */
 static unsigned char serial1Command01c0(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -2011,7 +2013,10 @@ static unsigned char serial1Command01c4(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-/* 0x01d0 and 0x01d1: not on USS-1001 */
+#endif	/* BOARD_EVENT_LOG */
+
+#if SOURCE_0103
+/* 0x01d0 and 0x01d1: not on USS-1001 or DOL-1001 */
 static unsigned char serial1Command01d0(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	response->length = 0;
@@ -2061,7 +2066,7 @@ static unsigned char serial1Command01d1(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
-#endif	/* BOARD_USS1001 */
+#endif	/* SOURCE_0103 */
 #endif
 #endif
 
@@ -2246,7 +2251,8 @@ static unsigned char serial1Command0916(struct SerialBuffer *request, struct Ser
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
+#if BOARD_KERNEL_COMMANDS
 /* 0x0917: the chip ID (chipIdGet); status 0x97 when it cannot be read */
 static unsigned char serial1Command0917(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -2262,6 +2268,7 @@ static unsigned char serial1Command0917(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 
 /* 0x0930-0x0932: task 4's operations 0x0a-0x0c */
 static unsigned char serial1Command0930(struct SerialBuffer *request, struct SerialBuffer *response)
@@ -2363,7 +2370,7 @@ static unsigned char serial1Command0952(struct SerialBuffer *request, struct Ser
 		result = 0x50;
 	} else {
 		result = STATE_TRANSITION(0x43);
-#if BOARD_USS1001
+#if SOURCE_0103
 		result = serial1StateResult(result);
 #endif
 		response->length = 0;
@@ -2372,7 +2379,7 @@ static unsigned char serial1Command0952(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x0953: task 4's operation 0x0d */
 static unsigned char serial1Command0953(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -2390,7 +2397,45 @@ static unsigned char serial1Command0953(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
-#if FW_SINCE(0x01030511)	/* 0x01030505 has none of 0x0961-0x0965 */
+#if BOARD_DOL1001
+/* 0x01e0: the temperature statistics (thermalStatsGet), answered by task 4's operation 0x1b;
+   status 0x61 while one runs */
+static unsigned char serial1Command01e0(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+
+	if (serial1State == 0) {
+		serial1State = 0x1b;
+	} else {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x61;
+	}
+	serialSetAnswer(SERIAL_ANSWER_LATER);
+	task5SetFlag(4, 0x4000);
+	return result;
+}
+
+/* 0x01e1: data[0] the statistics to clear (thermalStatsClear), by task 4's operation 0x1c */
+static unsigned char serial1Command01e1(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result = 0;
+
+	if (serial1State == 0) {
+		serial1State = 0x1c;
+	} else {
+		response->length = 0;
+		serialSetAnswer(SERIAL_ANSWER);
+		return 0x61;
+	}
+	serial1Args.byte[0] = request->data[0];
+	serialSetAnswer(SERIAL_ANSWER_LATER);
+	task5SetFlag(4, 0x4000);
+	return result;
+}
+#endif
+
+#if ANALOG_LIMITS	/* 0x01030505 and DOL-1001 have none of 0x0961-0x0965 */
 /* 0x0961: both sets of the analog sticks */
 static unsigned char serial1Command0961(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -2561,7 +2606,7 @@ done:
 #endif
 
 /* the commands, by number */
-#if BOARD_USS1001
+#if SOURCE_0103
 const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0100, serial1Command0100, 0 },
 	{ 0x0101, serial1Command0101, 0 },
@@ -2621,18 +2666,25 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x01a0, serial1Command01a0, SERIAL1_UNLOCKED },
 	{ 0x01a1, serial1Command01a1, SERIAL1_UNLOCKED },
 	{ 0x01b0, serial1Command01b0, SERIAL1_UNLOCKED },
+#if BOARD_EVENT_LOG
 	{ 0x01c0, serial1Command01c0, SERIAL1_UNLOCKED },
 	{ 0x01c1, serial1Command01c1, SERIAL1_UNLOCKED },
 	{ 0x01c2, serial1Command01c2, SERIAL1_UNLOCKED },
 	{ 0x01c3, serial1Command01c3, SERIAL1_UNLOCKED },
 	{ 0x01c4, serial1Command01c4, SERIAL1_UNLOCKED },
+#endif
 	{ 0x01d0, serial1Command01d0, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x01d1, serial1Command01d1, SERIAL1_UNLOCKED | SERIAL1_NVS_KEY3 },
 	{ 0x01d2, serial1Command01d2, SERIAL1_UNLOCKED },
+#if BOARD_DOL1001
+	{ 0x01e0, serial1Command01e0, SERIAL1_UNLOCKED },
+	{ 0x01e1, serial1Command01e1, SERIAL1_UNLOCKED },
+#endif
 	{ 0x0300, serial1Command0300, 0 },
 	{ 0x0301, serial1Command0301, 0 },
 	{ 0x0900, serial1Command0900, SERIAL1_NVS_KEY3 },
 	{ 0x0901, serial1Command0901, SERIAL1_NVS_KEY3 },
+#if BOARD_KERNEL_COMMANDS
 	{ 0x0910, serial1Command0910, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0911, serial1Command0911, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0912, serial1Command0912, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
@@ -2641,6 +2693,7 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0915, serial1Command0915, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0916, serial1Command0916, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0917, serial1Command0917, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#endif
 	{ 0x0930, serial1Command0930, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0931, serial1Command0930, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0932, serial1Command0930, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
@@ -2652,7 +2705,7 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0945, serial1Command0941, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0952, serial1Command0952, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0953, serial1Command0953, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
-#if FW_SINCE(0x01030511)
+#if ANALOG_LIMITS
 	{ 0x0961, serial1Command0961, SERIAL1_KEY },
 	{ 0x0962, serial1Command0962, SERIAL1_KEY },
 	{ 0x0963, serial1Command0963, SERIAL1_KEY },

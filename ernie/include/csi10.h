@@ -16,7 +16,7 @@ struct Csi10Transfer {
 	unsigned int	sendCount;
 	unsigned int	receiveCount;
 	unsigned char	state;
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char	delay;		/* NOPs after each byte */
 #endif
 };
@@ -34,7 +34,7 @@ struct Csi10Transfer {
 #define CSI10_REPORT0		0x30	/* panel 0's report */
 #define CSI10_COMMAND1		0x40	/* panel 1's report command */
 #define CSI10_REPORT1		0x50	/* panel 1's report */
-#if BOARD_USS1001
+#if SOURCE_0103
 #define CSI10_FRAME		0x60	/* panel 0's report is read: the frame is complete */
 #elif FW_SINCE(0x00090903)
 #define CSI10_STATUS1		0x60	/* panel 1's status */

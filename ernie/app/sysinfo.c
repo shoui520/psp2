@@ -30,7 +30,7 @@ int hangDetected(void)
 {
 	return !P11.5 && !P4.6;
 }
-#elif BOARD_HANG_PINS && BOARD_USS1001
+#elif BOARD_HANG_PINS && SOURCE_0103
 /* the slim's four pins: P7.4, P7.6, P7.0 and P7.3 all low */
 int hangDetected(void)
 {

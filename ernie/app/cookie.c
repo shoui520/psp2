@@ -18,7 +18,7 @@
 #include "powerseq.h"
 #include "task.h"
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /*
  * The slim's Cookie: with no Cookie (its version 0xff) nothing goes on the bus. Its registers
  * are written once from a table, the controls write without comparing (the update wrappers,
@@ -28,7 +28,8 @@
 static struct IicaRequest cookieIica;
 union CookieReg cookieRegs[6];
 
-/* the slim's COOKIE_REG and COOKIE_ADDRESS, which nothing calls */
+/* the slim's COOKIE_REG and COOKIE_ADDRESS: DOL-1001 calls them, the slim has the
+   constants */
 unsigned char cookieReg(unsigned char reg)
 {
 	return (unsigned char)(configGet()->cookieRegHigh ? reg + 0xa0 : reg);
@@ -38,6 +39,14 @@ unsigned int cookieAddress(void)
 {
 	return configGet()->cookieRegHigh ? 0xa4 : 0xa8;
 }
+
+#if BOARD_DOL1001
+#define COOKIE_SLIM_REG(reg)	cookieReg(reg)
+#define COOKIE_SLIM_ADDRESS	cookieAddress()
+#else
+#define COOKIE_SLIM_REG(reg)	(reg)
+#define COOKIE_SLIM_ADDRESS	0xa8
+#endif
 
 void cookieInit(void)
 {
@@ -55,19 +64,24 @@ void cookieInitRegs(void)
 	unsigned char i;
 	struct CookieRegInit regs[6] = {
 		{ 0, &cookieRegs[0], 0x0014 },
+#if BOARD_DOL1001
+		{ 0, &cookieRegs[1], 0x0050 },
+		{ 0, &cookieRegs[2], 0x00c0 },
+#else
 		{ 0, &cookieRegs[1], 0x0060 },
 		{ 0, &cookieRegs[2], 0x0000 },
+#endif
 		{ 0, &cookieRegs[3], 0x0010 },
 		{ 0, &cookieRegs[4], 0x0020 },
 		{ 0, &cookieRegs[5], 0x0010 },
 	};
 
-	regs[0].reg = 3;
-	regs[1].reg = 4;
-	regs[2].reg = 5;
-	regs[3].reg = 6;
-	regs[4].reg = 7;
-	regs[5].reg = 8;
+	regs[0].reg = COOKIE_SLIM_REG(3);
+	regs[1].reg = COOKIE_SLIM_REG(4);
+	regs[2].reg = COOKIE_SLIM_REG(5);
+	regs[3].reg = COOKIE_SLIM_REG(6);
+	regs[4].reg = COOKIE_SLIM_REG(7);
+	regs[5].reg = COOKIE_SLIM_REG(8);
 
 	for (i = 0; i < 6; i++) {
 		elmoCommand[0] = regs[i].reg;
@@ -92,7 +106,7 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	cookieIica.rxCount = 0;
 	cookieIica.txData = data;
 	cookieIica.txCount = length;
-	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.address = COOKIE_SLIM_ADDRESS;
 	cookieIica.status = &status;
 	for (i = 1; i < length; i++)
 		;
@@ -124,7 +138,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	cookieIica.rxCount = 2;
 	cookieIica.txData = reg;
 	cookieIica.txCount = 1;
-	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.address = COOKIE_SLIM_ADDRESS;
 	cookieIica.status = &status;
 	clr_flg(4, ~0x10);
 	iicaStart(&cookieIica);
@@ -154,7 +168,7 @@ unsigned char cookieReadVersion(unsigned char *version)
 		COOKIE_VERSION(version)->low = COOKIE_VERSION(version)->high = 0xff;
 		return 0;
 	}
-	reg = 0;
+	reg = COOKIE_SLIM_REG(0);
 	return cookieRead(&reg, version);
 }
 
@@ -173,7 +187,7 @@ unsigned char cookieCtrlChargingCurrent(unsigned char current)
 {
 	unsigned char result;
 
-	elmoCommand[0] = 4;
+	elmoCommand[0] = COOKIE_SLIM_REG(4);
 	elmoCommand[1] = current;
 	elmoCommand[2] = cookieRegs[1].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -197,7 +211,7 @@ unsigned char cookieCtrlReg8(unsigned char value)
 {
 	unsigned char result;
 
-	elmoCommand[0] = 8;
+	elmoCommand[0] = COOKIE_SLIM_REG(8);
 	elmoCommand[1] = value;
 	elmoCommand[2] = cookieRegs[5].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -222,12 +236,15 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 	unsigned char result;
 	unsigned char value;
 
+#if BOARD_DOL1001
+	cookieReadReg3();
+#endif
 	if (on)
 		value = cookieRegs[0].byte[1] & 0x7f;
 	else
 		value = cookieRegs[0].byte[1] | 0x80;
 	if (value != cookieRegs[0].byte[1]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = cookieRegs[0].byte[0];
 		elmoCommand[2] = value;
 		result = cookieWrite(elmoCommand, 3);
@@ -238,6 +255,7 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 	return result;
 }
 
+#if !BOARD_DOL1001
 /* register 3's bit 13 set while on */
 unsigned char cookieCtrlReg3Bit13(unsigned char on)
 {
@@ -249,7 +267,7 @@ unsigned char cookieCtrlReg3Bit13(unsigned char on)
 	else
 		value = cookieRegs[0].byte[1] & 0xdf;
 	if (value != cookieRegs[0].byte[1]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = cookieRegs[0].byte[0];
 		elmoCommand[2] = value;
 		result = cookieWrite(elmoCommand, 3);
@@ -271,7 +289,7 @@ unsigned char cookieCtrlReg3Bit12(unsigned char on)
 	else
 		value = cookieRegs[0].byte[1] & 0xef;
 	if (value != cookieRegs[0].byte[1]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = cookieRegs[0].byte[0];
 		elmoCommand[2] = value;
 		result = cookieWrite(elmoCommand, 3);
@@ -284,6 +302,7 @@ unsigned char cookieCtrlReg3Bit12(unsigned char on)
 		result = 0;
 	return result;
 }
+#endif
 
 /* the Cookie held (powerCookieClear, powerCookieSet), then the AC's charge */
 unsigned char cookieCtrlCharge(unsigned char on)
@@ -319,9 +338,11 @@ unsigned char cookieCtrlSupplyCurrentUsb(unsigned char current)
 {
 	unsigned char result;
 
+#if !BOARD_DOL1001
 	cookieReadReg3();
 	current = (cookieRegs[3].byte[0] & 0x0f) | current;
-	elmoCommand[0] = 6;
+#endif
+	elmoCommand[0] = COOKIE_SLIM_REG(6);
 	elmoCommand[1] = current;
 	elmoCommand[2] = cookieRegs[3].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -345,12 +366,28 @@ unsigned char cookieUpdateSupplyCurrent(unsigned char current)
 	return result;
 }
 
+#if BOARD_DOL1001
+/* DOL-1001's register 5's bits 4-7: 0x08c3 (sceSysconCtrlSupplyCurrentAc) */
+unsigned char cookieCtrlSupplyCurrent(unsigned char current)
+{
+	unsigned char result;
+
+	elmoCommand[0] = COOKIE_SLIM_REG(5);
+	elmoCommand[1] = current;
+	elmoCommand[2] = cookieRegs[2].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[2].byte[0] = current;
+	return result;
+}
+#else
 unsigned char cookieCtrlSupplyCurrent(unsigned char current)
 {
 	unsigned char result = 0;
 
 	return result;
 }
+#endif
 
 /* register 7's low byte, its bits 5-7 */
 unsigned char cookieCtrlReg7(unsigned char value)
@@ -358,7 +395,7 @@ unsigned char cookieCtrlReg7(unsigned char value)
 	unsigned char result;
 
 	value &= 0xe0;
-	elmoCommand[0] = 7;
+	elmoCommand[0] = COOKIE_SLIM_REG(7);
 	elmoCommand[1] = value;
 	elmoCommand[2] = cookieRegs[4].byte[1];
 	result = cookieWrite(elmoCommand, 3);
@@ -378,6 +415,73 @@ unsigned char cookieGetSupplyCurrentUsb(void)
 	return cookieRegs[3].byte[0] & 0xf0;
 }
 
+#if BOARD_DOL1001
+/* DOL-1001's AC supply current: register 5 */
+unsigned char cookieGetSupplyCurrent(void)
+{
+	return cookieRegs[2].byte[0] & 0xf0;
+}
+
+/* DOL-1001's currents: the host's value is the register's bits 4-7 */
+unsigned char cookieChargingCurrentEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+
+	result = 0;
+	*reg = value << 4;
+	return result;
+}
+
+unsigned char cookieSupplyCurrentUsbEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+	unsigned char bits;
+
+	result = 0;
+	bits = 0;
+	bits = value << 4;
+	if (result == 0)
+		*reg = bits;
+	return result;
+}
+
+unsigned char cookieSupplyCurrentEncode(unsigned char *reg, unsigned char value)
+{
+	unsigned char result;
+
+	result = 0;
+	*reg = value << 4;
+	return result;
+}
+
+unsigned char cookieChargingCurrentDecode(unsigned char *out, unsigned char reg)
+{
+	*out = reg >> 4;
+	return 0;
+}
+
+unsigned char cookieSupplyCurrentUsbDecode(unsigned char *out, unsigned char reg)
+{
+	unsigned char result;
+	unsigned char value;
+
+	result = 0;
+	value = 0;
+	value = reg >> 4;
+	if (result == 0)
+		*out = value;
+	return result;
+}
+
+unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg)
+{
+	unsigned char result;
+
+	result = 0;
+	*out = reg >> 4;
+	return result;
+}
+#else
 unsigned char cookieGetSupplyCurrent(void)
 {
 	return 0;
@@ -541,12 +645,13 @@ unsigned char cookieSupplyCurrentDecode(unsigned char *out, unsigned char reg)
 	*out = value;
 	return result;
 }
+#endif
 
 unsigned char cookieReadStatus1(unsigned char *status)
 {
 	unsigned char reg;
 
-	reg = 1;
+	reg = COOKIE_SLIM_REG(1);
 	return cookieRead(&reg, status);
 }
 
@@ -554,7 +659,7 @@ unsigned char cookieReadStatus2(unsigned char *status)
 {
 	unsigned char reg;
 
-	reg = 2;
+	reg = COOKIE_SLIM_REG(2);
 	return cookieRead(&reg, status);
 }
 
@@ -567,11 +672,11 @@ unsigned char cookieReadReg1(unsigned char *out)
 	union CookieStatus2 status2;
 	union PowerStatus status;
 
-	reg = 1;
+	reg = COOKIE_SLIM_REG(1);
 	result = cookieRead(&reg, status1.byte);
 	if (result != 0)
 		goto done;
-	reg = 2;
+	reg = COOKIE_SLIM_REG(2);
 	result = cookieRead(&reg, status2.byte);
 	if (result != 0)
 		goto done;
@@ -583,9 +688,16 @@ unsigned char cookieReadReg1(unsigned char *out)
 	status.bits.status2 = status1.bits.status2;
 	status.bits.status1 = status1.bits.status1;
 	status.bits.level = status1.bits.level;
+#if BOARD_DOL1001
+	status.bits.usb = status2.bits.usb;
+	status.bits.supply = status1.bits.state;
+	status.bits.vbus1 = status2.bits.vbus;
+	status.bits.vbus2 = status2.bits.vbusCharge;
+#else
 	status.bits.usb = status2.bits.usb;
 	status.bits.supply = status2.bits.supply;
 	status.bits.vbus1 = status.bits.vbus2 = status2.bits.vbus;
+#endif
 	out[0] = status.byte[0];
 	out[1] = status.byte[1];
 	out[2] = status.byte[2];
@@ -594,14 +706,16 @@ done:
 	return result;
 }
 
+#if !BOARD_DOL1001
 /* register 3 */
 unsigned char cookieReadReg3Value(unsigned char *value)
 {
 	unsigned char reg;
 
-	reg = 3;
+	reg = COOKIE_SLIM_REG(3);
 	return cookieRead(&reg, value);
 }
+#endif
 
 /* register 6 read back: the Cookie cleared bit 3, so the USB's mode is new */
 void cookieReadReg3(void)
@@ -609,10 +723,17 @@ void cookieReadReg3(void)
 	unsigned char reg;
 	unsigned char was;
 
+#if BOARD_DOL1001
+	was = cookieRegs[0].byte[0] & 0x80;
+	reg = COOKIE_SLIM_REG(3);
+	cookieRead(&reg, cookieRegs[0].byte);
+	if (!(cookieRegs[0].byte[0] & 0x80) && was) {
+#else
 	was = cookieRegs[3].byte[0] & 0x08;
-	reg = 6;
+	reg = COOKIE_SLIM_REG(6);
 	cookieRead(&reg, cookieRegs[3].byte);
 	if (!(cookieRegs[3].byte[0] & 0x08) && was) {
+#endif
 		chargeUsbMode = 0;
 		chargeUsbHold = 0;
 	}
@@ -634,6 +755,32 @@ unsigned char cookieCtrlChargeAc(unsigned char on)
 	return result;
 }
 
+#if BOARD_DOL1001
+/* DOL-1001's: register 3's bit 6 clear while on (Sony's compares the new low byte with the
+   high byte) */
+unsigned char cookieSetChargeAc(unsigned char on)
+{
+	unsigned char result;
+	unsigned char value;
+
+	value = 0;
+	cookieReadReg3();
+	if (on)
+		value = cookieRegs[0].byte[0] & 0xbf;
+	else
+		value = cookieRegs[0].byte[0] | 0x40;
+	if (value != cookieRegs[0].byte[1]) {
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
+		elmoCommand[1] = value;
+		elmoCommand[2] = cookieRegs[0].byte[1];
+		result = cookieWrite(elmoCommand, 3);
+		if (result == 0)
+			cookieRegs[0].byte[0] = value;
+	} else
+		result = 0;
+	return result;
+}
+#else
 /* the slim has no AC charge to set */
 unsigned char cookieSetChargeAc(unsigned char on)
 {
@@ -644,6 +791,7 @@ unsigned char cookieSetChargeAc(unsigned char on)
 	result = 0;
 	return result;
 }
+#endif
 
 /* register 6's bit 3, out of the manual charge mode, while on only when nothing holds the
    Cookie */
@@ -666,16 +814,29 @@ unsigned char cookieCtrlReg6Bit3(unsigned char clear)
 	unsigned char value;
 
 	cookieReadReg3();
+#if BOARD_DOL1001
+	if (clear)
+		value = cookieRegs[0].byte[0] & 0x7f;
+	else
+		value = cookieRegs[0].byte[0] | 0x80;
+	elmoCommand[0] = COOKIE_SLIM_REG(3);
+	elmoCommand[1] = value;
+	elmoCommand[2] = cookieRegs[0].byte[1];
+	result = cookieWrite(elmoCommand, 3);
+	if (result == 0)
+		cookieRegs[0].byte[0] = elmoCommand[1];
+#else
 	if (clear)
 		value = cookieRegs[3].byte[0] & 0xf7;
 	else
 		value = cookieRegs[3].byte[0] | 0x08;
-	elmoCommand[0] = 6;
+	elmoCommand[0] = COOKIE_SLIM_REG(6);
 	elmoCommand[1] = value;
 	elmoCommand[2] = cookieRegs[3].byte[1];
 	result = cookieWrite(elmoCommand, 3);
 	if (result == 0)
 		cookieRegs[3].byte[0] = elmoCommand[1];
+#endif
 	return result;
 }
 
@@ -685,12 +846,15 @@ unsigned char cookieCtrlReg3Mode(unsigned char mode)
 	unsigned char result;
 	unsigned char value;
 
+#if BOARD_DOL1001
+	cookieReadReg3();
+#endif
 	if (mode == 1)
 		value = cookieRegs[0].byte[0] & 0xfb;
 	else
 		value = cookieRegs[0].byte[0] | 0x04;
 	if (value != cookieRegs[0].byte[0]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = value;
 		elmoCommand[2] = cookieRegs[0].byte[1];
 		result = cookieWrite(elmoCommand, 3);
@@ -707,13 +871,22 @@ unsigned char cookieCtrlReg3Bit2(unsigned char on)
 	unsigned char result;
 	unsigned char value;
 
+#if BOARD_DOL1001
+	cookieReadReg3();
+#endif
+#if BOARD_DOL1001
+	if (on)
+		value = cookieRegs[0].byte[0] | 0x04;	/* DOL-1001: bit 2 set */
+	else
+#else
 	if (on) {
 		value = cookieRegs[0].byte[0] & 0xfb;
 		value |= 0x01;
 	} else
+#endif
 		value = cookieRegs[0].byte[0] & 0xfa;
 	if (value != cookieRegs[0].byte[0]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = value;
 		elmoCommand[2] = cookieRegs[0].byte[1];
 		result = cookieWrite(elmoCommand, 3);
@@ -730,9 +903,12 @@ unsigned char cookieCtrlReg3Bit0(void)
 	unsigned char value;
 	unsigned char result;
 
+#if BOARD_DOL1001
+	cookieReadReg3();
+#endif
 	value = (cookieRegs[0].byte[0] & 0xfb) | 0x01;
 	if (value != cookieRegs[0].byte[0]) {
-		elmoCommand[0] = 3;
+		elmoCommand[0] = COOKIE_SLIM_REG(3);
 		elmoCommand[1] = value;
 		elmoCommand[2] = cookieRegs[0].byte[1];
 		result = cookieWrite(elmoCommand, 3);
@@ -1228,4 +1404,4 @@ unsigned char cookieCtrlReg3Bit0(void)
 }
 #endif
 
-#endif	/* BOARD_USS1001 */
+#endif	/* SOURCE_0103 */

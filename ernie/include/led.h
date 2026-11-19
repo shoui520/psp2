@@ -203,7 +203,7 @@ extern void chargeLedSetReleased(unsigned char on);
 extern void chargeLedSetCharging(unsigned char on);
 #endif
 extern void powerLedSetAlarm(unsigned char on);
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's power LED module: the causes it shows, set and cleared */
 /* the causes (powerLedSetFlags' masks) */
 #define POWER_LED_FLAG_ON	0x0001
@@ -234,6 +234,38 @@ union PowerLedCauses {
 	} bits;
 };
 /* the module's state */
+#if BOARD_DOL1001
+/* DOL-1001's power LED: one mode at a time (POWER_LED_MODE_*), the host pattern's mode
+   returning to the one it replaced */
+#define POWER_LED_MODE_OFF	1
+#define POWER_LED_MODE_ON	2
+#define POWER_LED_MODE_BLINK	3	/* powerLedSetBlink's count of blinks */
+#define POWER_LED_MODE_HOST_BLINK 4	/* host commands 0x0821 and 0x0822: no end */
+#define POWER_LED_MODE_HOST	5	/* the host's pattern (powerLedSetPattern) */
+
+struct PowerLedFlags {
+	unsigned char	mode;		/* POWER_LED_MODE_* */
+	unsigned char	next;		/* the mode the host's pattern returns to */
+	unsigned char	phase;		/* 1 while the blink is on */
+	unsigned char	count;		/* the blinks left, 0xff no end */
+	unsigned int	onTime;		/* the blink's times, in ms */
+	unsigned int	offTime;
+	unsigned int	blinkOn;	/* powerLedSetBlink's and powerLedLoadBlink's */
+	unsigned int	blinkOff;
+	unsigned char	blinkCount;
+	unsigned int	hostOn;		/* powerLedSetPattern's */
+	unsigned int	hostOff;
+	unsigned char	hostPattern;
+};
+extern struct PowerLedFlags powerLedFlags;
+extern void powerLedFlagsInit(unsigned char resumed);
+extern void powerLedFlagsStep(void);
+extern void powerLedStartMode(unsigned char mode);
+extern void powerLedEndMode(unsigned char mode);
+extern void powerLedSetBlink(unsigned char count, unsigned int on, unsigned int off);
+extern void powerLedLoadBlink(unsigned char index);
+extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);
+#else
 struct PowerLedFlags {
 	unsigned char	mode;		/* the mode shown (powerLedFlagsUpdate's) */
 	union PowerLedCauses causes;	/* the causes the LEDs show */
@@ -258,6 +290,7 @@ extern void powerLedSetFlagsNow(unsigned int flags);
 extern void powerLedClearFlagsNow(unsigned int flags);
 extern void powerLedLoadBlink(unsigned char index);
 extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);
+#endif
 #endif
 extern void powerLedFadeOff(void);
 extern void powerLedFadeOn(void);

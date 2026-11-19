@@ -13,21 +13,26 @@
 	PUBLIC	_vector_INTP7, _vector_INTP8, _vector_INTP10, _vector_INTSRE4, _vector_INTTM10
 	PUBLIC	_vector_INTTM11, _vector_INTSRE2, _vector_INTST4, _vector_INTSR4, _option_bytes
 	PUBLIC	_security_id
-	EXTRN	_cstart, _intp0Interrupt, _intp1Interrupt, _intp2Interrupt, _intp3Interrupt
-	EXTRN	_intp4Interrupt, _hostInterrupt, _uart3SendInterrupt, _uart3ReceiveInterrupt
+	EXTRN	_cstart, _intp0Interrupt, _intp1Interrupt, _intp3Interrupt
+	EXTRN	_hostInterrupt, _uart3SendInterrupt, _uart3ReceiveInterrupt
 	EXTRN	_uart3ErrorInterrupt, _dma0Interrupt, _csiInterrupt
 	EXTRN	_sre0Interrupt, _csi10Interrupt, _iicaInterrupt
 	EXTRN	_tm03Interrupt, _adcInterrupt, _rtcInterrupt
-	EXTRN	_uart2SendInterrupt, _tm04Interrupt, _uart2ReceiveInterrupt, _intp7Interrupt
-	EXTRN	_intp8Interrupt, _intp10Interrupt, _intp11Interrupt, _tickInterrupt
+	EXTRN	_uart2SendInterrupt, _tm04Interrupt, _uart2ReceiveInterrupt
+	EXTRN	_intp8Interrupt, _tickInterrupt
 	EXTRN	_uart2ErrorInterrupt
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	EXTRN	_intp9Interrupt
+$ELSE
+	EXTRN	_intp2Interrupt, _intp4Interrupt, _intp7Interrupt, _intp10Interrupt, _intp11Interrupt
+$ENDIF
 $_IF (ERNIE_FW<0x0100060B)	; BOARD_MOTION
 	EXTRN	_csi01Interrupt, _tm01Interrupt
 $ENDIF
 $_IF (ERNIE_FW<0x0100060B&&ERNIE_FW>=0x00090206)	; HANG_TIMER
 	EXTRN	_tm11Interrupt
 $ENDIF
-$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000)	; BOARD_SERIAL4: PCH-1000 has no UART4 (0x00601000 has)
+$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000||ERNIE_HW>=0x00700000)	; BOARD_SERIAL4: PCH-1000 has no UART4 (0x00601000 and DOL-1001 have)
 	EXTRN	_uart4ErrorInterrupt, _uart4SendInterrupt, _uart4ReceiveInterrupt
 $ENDIF
 
@@ -42,11 +47,19 @@ _vector_INTP0:
 _vector_INTP1:
 	DW	LOWW(_intp1Interrupt)	; 0AH
 _vector_INTP2:
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	0			; 0CH
+$ELSE
 	DW	LOWW(_intp2Interrupt)	; 0CH
+$ENDIF
 _vector_INTP3:
 	DW	LOWW(_intp3Interrupt)	; 0EH
 _vector_INTP4:
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	0			; 10H
+$ELSE
 	DW	LOWW(_intp4Interrupt)	; 10H
+$ENDIF
 _vector_INTP5:
 	DW	LOWW(_hostInterrupt)	; 12H
 _vector_INTST3:
@@ -72,7 +85,7 @@ _vector_INTST1:
 	DW	LOWW(_csi10Interrupt)	; 24H
 	DW	0			; 26H
 _vector_INTSRE1:
-$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000)
+$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000||ERNIE_HW>=0x00700000)
 	DW	LOWW(_uart4ErrorInterrupt)	; 28H
 $ELSE
 	DW	0			; 28H
@@ -107,14 +120,30 @@ _vector_INTTM04:
 _vector_INTSR2:
 	DW	LOWW(_uart2ReceiveInterrupt)	; 4AH
 _vector_INTP7:
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	0			; 4CH
+$ELSE
 	DW	LOWW(_intp7Interrupt)	; 4CH
+$ENDIF
 _vector_INTP8:
 	DW	LOWW(_intp8Interrupt)	; 4EH
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	LOWW(_intp9Interrupt)	; 50H
+$ELSE
 	DW	0			; 50H
+$ENDIF
 _vector_INTP10:
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	0			; 52H
+$ELSE
 	DW	LOWW(_intp10Interrupt)	; 52H
+$ENDIF
 _vector_INTSRE4:
+$_IF (ERNIE_HW>=0x00700000)	; BOARD_DOL1001
+	DW	0			; 54H
+$ELSE
 	DW	LOWW(_intp11Interrupt)	; 54H
+$ENDIF
 _vector_INTTM10:
 	DW	LOWW(_tickInterrupt)	; 56H
 _vector_INTTM11:
@@ -128,13 +157,13 @@ _vector_INTSRE2:
 	DW	LOWW(_uart2ErrorInterrupt)	; 5CH
 	DW	0			; 5EH
 _vector_INTST4:
-$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000)
+$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000||ERNIE_HW>=0x00700000)
 	DW	LOWW(_uart4SendInterrupt)	; 60H
 $ELSE
 	DW	0			; 60H
 $ENDIF
 _vector_INTSR4:
-$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000)
+$_IF (ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000||ERNIE_HW>=0x00700000)
 	DW	LOWW(_uart4ReceiveInterrupt)	; 62H
 $ELSE
 	DW	0			; 62H

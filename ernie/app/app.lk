@@ -20,7 +20,7 @@ OBJECT	sleepfactor.c
 OBJECT	spidev.c
 OBJECT	command.c
 OBJECT	uart.c
-OBJECT	clockout.c
+OBJECT	clockout.c	IF ERNIE_HW<0x00700000	# DOL-1001: in main.c
 OBJECT	csi10.c
 OBJECT	dma.c		IF ERNIE_HW!=0x00805038	# the slim has the DTC (dtc.c)
 OBJECT	touch.c
@@ -55,10 +55,15 @@ OBJECT	elmo.c
 OBJECT	serial2.c
 OBJECT	uart4.c		IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000	# BOARD_SERIAL4
 OBJECT	interrupt.c
+OBJECT	uart4.c		IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: its interrupts after interrupt.c's
+OBJECT	multicn.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: the slim's outputs on the fat board's switch
+OBJECT	powerled.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: the slim's power LED flags
+OBJECT	flash.c		IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: configFlashWrite and updaterFlashPrepare
+OBJECT	thermal.c	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: the temperature sensor
 OBJECT	serial4.c
 OBJECT	task6.c
 OBJECT	bbmc.c
-OBJECT	trace.c
+OBJECT	trace.c		IF ERNIE_HW<0x00700000||ERNIE_HW>=0x00800000	# DOL-1001 has none
 OBJECT	board.c
 OBJECT	powerseq.c
 OBJECT	battery.c
@@ -79,7 +84,7 @@ OBJECT	log.c		IF ERNIE_FW>=0x00090804
 # param.c's constants follow log.c's in Sony's link (its code is placed before config.c's)
 OBJECT	param.c
 # 0x00090206 has no power LED fade: its LED is powerseq.c's powerLedSet
-OBJECT	led.c		IF ERNIE_FW>=0x00090804
+OBJECT	led.c		IF ERNIE_FW>=0x00090804&&ERNIE_HW<0x00700000||ERNIE_FW>=0x00090804&&ERNIE_HW>=0x00800000	# DOL-1001 has none: its LED is powerled.c's
 OBJECT	authkeys.c	IF ERNIE_FW>=0x0100060B
 OBJECT	serialreq.c	IF ERNIE_FW>=0x00090903
 OBJECT	snvs.c		IF ERNIE_FW>=0x00090903
@@ -97,11 +102,14 @@ OBJECT	../lib/iumul.asm
 OBJECT	../lib/lumul.asm
 OBJECT	../lib/cudiv.asm
 OBJECT	../lib/iudiv.asm	IF ERNIE_FW>=0x00090903
+OBJECT	../lib/lsdiv.asm	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: thermal.c's
+OBJECT	../lib/ludiv.asm	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
 OBJECT	../lib/curem.asm
 OBJECT	../lib/luadd.asm
 OBJECT	../lib/lulsh.asm
 OBJECT	../lib/lursh.asm
-OBJECT	../lib/iscmp.asm
+OBJECT	../lib/cscmp.asm	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# BOARD_DOL1001: thermal.c's
+OBJECT	../lib/iscmp.asm	IF ERNIE_FW<0x01040000	# bbmcTrace's, an int loop before 0x0104
 OBJECT	../lib/lscmp.asm	IF ERNIE_FW<0x01000306
 OBJECT	../lib/luband.asm
 OBJECT	../lib/lubor.asm
@@ -166,7 +174,10 @@ SEG	@@CNSTL		version.c
 # the kernel and its configuration
 AT	0x0c000
 # kernel.asm's modules, in its order
-SEG	@@KACT|@@KCHG|@@KCLRF|@@KDISD|@@KDLY|@@KENAD|@@KEXT|@@KGETM|@@KICYC|@@KIFLG|@@KIMBX|@@KIMPF|@@KINT|@@KRDYD|@@KMKRDY|@@KQINS|@@KTMINS|@@KWAIT|@@KRCV|@@KRCYC|@@KRFLG|@@KRMBX|@@KRMPF|@@KRTSK|@@KRVER|@@KREL|@@KRETI|@@KSTART|@@KHOOK|@@KDISP|@@KSETF|@@KSND|@@KSTAC|@@KSVCE|@@KSVCX|@@KTACT|@@KTSTA|@@KTINI|@@KTICK|@@KTRSE|@@KTRSX|@@KTRIE|@@KTRIX|@@KTRTS|@@KTRD|@@KWREL|@@KWTAB|@@KWFLG|@@KWMBX|@@KWMPF|@@KRDYR|@@KQREM|@@KWSEM|@@KTMREM|@@KWAIF
+SEG	@@KACT|@@KCHG|@@KCLRF|@@KDISD|@@KDLY|@@KENAD|@@KEXT|@@KGETM|@@KICYC|@@KIFLG|@@KIMBX|@@KIMPF|@@KINT|@@KRDYD|@@KMKRDY|@@KQINS|@@KTMINS|@@KWAIT|@@KRCV|@@KRCYC|@@KRFLG|@@KRMBX|@@KRMPF|@@KRTSK|@@KRVER|@@KREL|@@KRETI|@@KSTART|@@KHOOK|@@KDISP|@@KSETF|@@KSND|@@KSTAC|@@KSVCE|@@KSVCX|@@KTACT|@@KTSTA|@@KTINI|@@KTICK|@@KTRSE|@@KTRSX|@@KTRIE|@@KTRIX|@@KTRTS|@@KTRD|@@KWREL|@@KWTAB|@@KWFLG|@@KWMBX|@@KWMPF|@@KRDYR|@@KQREM|@@KWSEM|@@KTMREM|@@KWAIF	IF ERNIE_HW<0x00700000||ERNIE_HW>=0x00800000
+# DOL-1001: each of the kernel's modules at an even address, the gaps 0x00
+FILL	0x00		IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
+SEG	@@KACT|@@KCHG|@@KCLRF|@@KDISD|@@KDLY|@@KENAD|@@KEXT|@@KGETM|@@KICYC|@@KIFLG|@@KIMBX|@@KIMPF|@@KINT|@@KRDYD|@@KMKRDY|@@KQINS|@@KTMINS|@@KWAIT|@@KRCV|@@KRCYC|@@KRFLG|@@KRMBX|@@KRMPF|@@KRTSK|@@KRVER|@@KREL|@@KRETI|@@KSTART|@@KHOOK|@@KDISP|@@KSETF|@@KSND|@@KSTAC|@@KSVCE|@@KSVCX|@@KTACT|@@KTSTA|@@KTINI|@@KTICK|@@KTRSE|@@KTRSX|@@KTRIE|@@KTRIX|@@KTRTS|@@KTRD|@@KWREL|@@KWTAB|@@KWFLG|@@KWMBX|@@KWMPF|@@KRDYR|@@KQREM|@@KWSEM|@@KTMREM|@@KWAIF ALIGN 2	IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
 AT	0x0d5fe		IF ERNIE_FW>=0x00090903&&ERNIE_KERNEL!=0x00411000	# where kernel.asm reads it (CONFIG)
 AT	0x0d878		IF ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000	# 0x00411000 keeps 0x00090804's kernel
 SEG	@@KCFG
@@ -174,6 +185,7 @@ SEG	@@KCFG
 # the startup, the runtime, the interrupts, the flash library and the C library's functions,
 # then the constants
 AT	0x0e000
+FILL	none		IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000	# (the gaps up to 0xe000 0x00 too)
 SEG	@@CSTART
 SEG	@@RTCODE
 SEG	@@BASE
@@ -252,14 +264,19 @@ SEG	@@RLINIT
 # the code, to 0x353ff (the updater's from 0x35400)
 SEG	@@CODEL		IF ERNIE_FW!=0x01000306
 SEG	@@CODEL		main.c tau.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c
-SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c clockout.c csi10.c dma.c
+SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c
+SEG	@@CODEL		clockout.c IF ERNIE_HW<0x00700000
+SEG	@@CODEL		csi10.c dma.c
 SEG	@@CODEL		touch.c inputreq.c
 SEG	@@CODEL		csi01.c motion.c IF ERNIE_FW<0x0100060B
 SEG	@@CODEL		util.c inputbits.c serial.c adc.c analog.c scratchpad.c
 SEG	@@CODEL		nvsreq.c serial1.c updatereq.c sha1.c powerreq.c task5.c serialauth.c nvs.c power.c timer.c
 SEG	@@CODEL		iica.c powerjob.c elmo.c serial2.c
-SEG	@@CODEL		uart4.c IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000
-SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c trace.c board.c powerseq.c battery.c charge.c cookie.c powerwait.c state.c
+SEG	@@CODEL		uart4.c IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000||ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
+SEG	@@CODEL		interrupt.c serial4.c task6.c bbmc.c
+SEG	@@CODEL		trace.c IF ERNIE_HW<0x00700000||ERNIE_HW>=0x00800000
+SEG	@@CODEL		board.c powerseq.c battery.c charge.c cookie.c powerwait.c state.c
+SEG	@@CODEL		flash.c thermal.c multicn.c powerled.c IF ERNIE_HW>=0x00700000&&ERNIE_HW<0x00800000
 # The original initialization leaves a return-address byte on the stack that the
 # host handshake passes to rel_mpf when its first allocation fails. Preserve it.
 AT	0x2b48d		IF ERNIE_BOARD==0x00415000||ERNIE_BOARD==0x00411000&&ERNIE_FW!=0x01000306&&ERNIE_HW!=0x00102603
@@ -306,7 +323,8 @@ SEG	@@FSLDAT
 SEG	@@INIS
 # the kernel's own RAM (kernel.asm's @@KRAM): its state, its tables, the fixed-size pools'
 # blocks
-AT	0xfdd46		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200
+AT	0xfdd46		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200&&ERNIE_HW<0x00700000
+AT	0xfdd50		IF ERNIE_HW>=0x00700000	# DOL-1001
 AT	0xfdd4a		IF ERNIE_FW>=0x01000306&&ERNIE_HW==0x00315200
 AT	0xfdd4c		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL==0x00411000
 AT	0xfdd3c		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200
@@ -321,7 +339,8 @@ AT	0xfdcfa		IF ERNIE_FW<=0x00090804&&ERNIE_KERNEL==0x00411000
 SEG	@@KRAM
 # after the kernel's: the flash library's buffer, the initialised data, then what cstart
 # clears, from its start label to cstartend's
-AT	0xfe06c		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200
+AT	0xfe06c		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200&&ERNIE_HW<0x00700000
+AT	0xfe076		IF ERNIE_HW>=0x00700000	# DOL-1001
 AT	0xfe070		IF ERNIE_FW>=0x01000306&&ERNIE_HW==0x00315200
 AT	0xfe072		IF ERNIE_FW>=0x01000306&&ERNIE_KERNEL==0x00411000
 AT	0xfe062		IF ERNIE_FW<0x01000306&&ERNIE_FW>=0x01000107&&ERNIE_KERNEL!=0x00411000&&ERNIE_HW!=0x00315200

@@ -12,14 +12,22 @@
 #include "elmo.h"
 #include "serial.h"
 #include "serial1.h"
-#if BOARD_USS1001
+#if SOURCE_0103
 #include "powerseq.h"
+#include "thermal.h"
+
+/* the charge cases answer only in the manual charge mode; DOL-1001 always answers */
+#if BOARD_DOL1001
+#define SERIAL1_MANUAL_MODE	1
+#else
+#define SERIAL1_MANUAL_MODE	(chargeGetManualMode() == 1)
+#endif
 #endif
 
 /* a battery temperature in 0.1 K less this is in 0.1 degrees C */
 #define SERIAL1_KELVIN		0x0aac
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the answers, when the command is still waiting: with status 0x60 when result is not 0, ... */
 #define SERIAL1_ANSWER_RESULT(answerCommand, answer, length)					\
 	if (serial.state == SERIAL_ANSWER_LATER) {					\
@@ -66,13 +74,13 @@ void serial1Operation(void)
 #if FW_SINCE(0x00090903)
 	unsigned char reg;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned char current;		/* a current's Cookie setting (0x0185, 0x0187) */
 	struct BatteryInfo info;
 #endif
 
 	switch (serial1State) {
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x0a:	/* 0x0930: the Elmo's version */
 		result = elmoReadVersion(serial1Args.byte);
 		SERIAL1_ANSWER_RESULT(0x8930, serial1Args.byte, 2);
@@ -245,7 +253,7 @@ void serial1Operation(void)
 		}
 		break;
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	case 0x0d:	/* 0x0953: the battery's faults */
 		if (serial.state == SERIAL_ANSWER_LATER) {
 			serial.command = 0x8953;
@@ -269,7 +277,7 @@ void serial1Operation(void)
 		SERIAL1_ANSWER_STATUS(0x8183);
 		break;
 	case 0x0f:	/* 0x0184: in the manual charge mode, the charge on or off */
-		if (chargeGetManualMode() == 1) {
+		if (SERIAL1_MANUAL_MODE) {
 			result = cookieCtrlBatteryCharge(serial1Args.byte[0] ? 1 : 0);
 			if (result)
 				result = 0x60;
@@ -281,7 +289,7 @@ void serial1Operation(void)
 		SERIAL1_ANSWER_STATUS(0x8184);
 		break;
 	case 0x10:	/* 0x0185: and the charging current; 0x33 a current it has no setting for */
-		if (chargeGetManualMode() == 1) {
+		if (SERIAL1_MANUAL_MODE) {
 			result = cookieChargingCurrentEncode(&current, serial1Args.byte[0]);
 			if (result) {
 				result = 0x33;
@@ -297,15 +305,35 @@ void serial1Operation(void)
 		}
 		SERIAL1_ANSWER_STATUS(0x8185);
 		break;
+#if BOARD_DOL1001
+	case 0x11:	/* 0x0186: the AC supply's current */
+		if (SERIAL1_MANUAL_MODE) {
+			result = cookieSupplyCurrentEncode(&current, serial1Args.byte[0]);
+			if (result) {
+				result = 0x33;
+			} else {
+				result = cookieCtrlSupplyCurrent(current);
+				if (result)
+					result = 0x60;
+				else
+					result = 0;
+			}
+		} else {
+			result = 0xff;
+		}
+		SERIAL1_ANSWER_STATUS(0x8186);
+		break;
+#else
 	case 0x11:	/* 0x0186: nothing, in the manual charge mode */
-		if (chargeGetManualMode() == 1)
+		if (SERIAL1_MANUAL_MODE)
 			result = 0;
 		else
 			result = 0xff;
 		SERIAL1_ANSWER_STATUS(0x8186);
 		break;
+#endif
 	case 0x12:	/* 0x0187: the USB supply's current */
-		if (chargeGetManualMode() == 1) {
+		if (SERIAL1_MANUAL_MODE) {
 			result = cookieSupplyCurrentUsbEncode(&current, serial1Args.byte[0]);
 			if (result) {
 				result = 0x33;
@@ -322,7 +350,7 @@ void serial1Operation(void)
 		SERIAL1_ANSWER_STATUS(0x8187);
 		break;
 	case 0x13:	/* 0x0188: the AC's charge */
-		if (chargeGetManualMode() == 1) {
+		if (SERIAL1_MANUAL_MODE) {
 			result = cookieSetChargeAc(serial1Args.byte[0] ? 1 : 0);
 			if (result)
 				result = 0x60;
@@ -334,7 +362,7 @@ void serial1Operation(void)
 		SERIAL1_ANSWER_STATUS(0x8188);
 		break;
 	case 0x14:	/* 0x0189: the Cookie's register 6 bit 3 */
-		if (chargeGetManualMode() == 1) {
+		if (SERIAL1_MANUAL_MODE) {
 			result = cookieCtrlReg6Bit3(serial1Args.byte[0] ? 1 : 0);
 			if (result)
 				result = 0x60;
@@ -407,8 +435,16 @@ void serial1Operation(void)
 		if (deviceVersions.battery.id == 0xffff)
 			serial1Args.device[2].result = serial1Args.device[3].result = 0xff;
 		serial1Args.device[4].type = 0x40;
+#if BOARD_DOL1001
+		serial1Args.device[4].result =
+			thermalReadManufacturer((unsigned char *)serial1Args.device[4].data);
+		serial1Args.device[4].result |=
+			thermalReadDevice((unsigned char *)serial1Args.device[4].data + 1);
+		result |= serial1Args.device[4].result;
+#else
 		serial1Args.device[4].result = 0xff;
 		memset(serial1Args.device[4].data, 0xff, 2);
+#endif
 		if (serial.state == SERIAL_ANSWER_LATER) {
 			serial.command = 0x8108;
 			if (result)
@@ -417,6 +453,32 @@ void serial1Operation(void)
 				serial.status = 0;
 			serial.data = serial1Args.byte;
 			serial.dataLength = sizeof(serial1Args.byte);
+			serial1State = 0;
+			serialSetAnswer(SERIAL_ANSWER);
+			serialPostAnswer();
+		}
+		break;
+#endif
+#if BOARD_DOL1001
+	case 0x1b:	/* 0x01e0: the temperature statistics */
+		thermalStatsGet(&serial1Args.thermal);
+		if (serial.state == SERIAL_ANSWER_LATER) {
+			serial.command = 0x81e0;
+			serial.status = 0;
+			serial.data = serial1Args.byte;
+			serial.dataLength = 0x10;
+			serial1State = 0;
+			serialSetAnswer(SERIAL_ANSWER);
+			serialPostAnswer();
+		}
+		break;
+	case 0x1c:	/* 0x01e1: the statistics cleared */
+		thermalStatsClear(serial1Args.byte[0]);
+		if (serial.state == SERIAL_ANSWER_LATER) {
+			serial.command = 0x81e1;
+			serial.status = 0;
+			serial.data = NULL;
+			serial.dataLength = 0;
 			serial1State = 0;
 			serialSetAnswer(SERIAL_ANSWER);
 			serialPostAnswer();

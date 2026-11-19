@@ -100,7 +100,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0003, hostCommandSleepFactor, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, hostCommandHardwareInfo, 0 },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0006, hostCommand0006, 0 },
 #endif
 	{ 0x0010, hostCommandWakeupFactor, 0 },
@@ -126,7 +126,7 @@ static const struct HostCommand hostCommands[] = {
 #if FW_SINCE(0x0100060B)
 	{ 0x0120, hostCommand0120, 0 },
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0130, hostCommand0130, 0 },
 #endif
 	{ 0x0300, (HostCommandHandler)&hostStream0300, 1 },
@@ -141,7 +141,7 @@ static const struct HostCommand hostCommands[] = {
 	{ 0x0802, hostCommandBatteryRemainCapOld, 0 },
 	{ 0x0803, hostCommandBatteryVoltOld, 0 },
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0804, hostCommand0804, 0 },
 	{ 0x0805, hostCommand0805, 0 },
 	{ 0x0806, hostCommand0806, 0 },
@@ -166,7 +166,7 @@ static const struct HostCommand hostCommands[] = {
 #endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
 	{ 0x1300, hostCommandConfigVersions, 0 },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x1310, hostCommand1310, 0 },
 #endif
 };
@@ -177,14 +177,14 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x0002, hostCommandTimeStamp, 0 },
 	{ 0x0004, hostCommandRequests, 0 },
 	{ 0x0005, hostCommandHardwareInfo, 0 },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0006, hostCommand0006, 0 },
 #endif
 	{ 0x0010, hostCommandWakeupFactor, 0 },
 #if HOST_WATCHDOG
 	{ 0x0013, hostCommand0013, 0 },
 #endif
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x0806, hostCommand0806, 0 },
 #endif
 	{ 0x1100, hostCommandErnieDlVersion, 0 },
@@ -269,7 +269,7 @@ int hostInit(void)
 	hostLink.frameMax = 0x80;
 	hostLink.state = HOST_IDLE;
 	hostLink.flags.value = 0;
-#if BOARD_USS1001
+#if SOURCE_0103
 	hostLink.closing = 0;
 #endif
 	hostThrottle.frameEnd = 0;
@@ -413,7 +413,7 @@ int hostStep(FLGPTN flgptn)
 	return 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: a command's request answers at once unless it is busy (an error with status 0x39,
    any other state with status 1); the others take the state, a busy or failed one goes back to
    taking commands */
@@ -547,7 +547,7 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 	}
 }
 
-#if !BOARD_USS1001
+#if !SOURCE_0103
 /* a request's answer is ready (state: the request's state) */
 void hostRequestAnswerReady(unsigned char *state)
 {
@@ -764,7 +764,7 @@ int hostFrameFinish(void)
 			}
 			if (notify && request->notify != NULL) {
 				request->notify();
-#if BOARD_USS1001
+#if SOURCE_0103
 				if (hostLink.closing) {
 					/* hostCloseRequests closed the link: the request takes no more */
 					request->event = HOST_EVENT_CLOSE;
@@ -988,7 +988,7 @@ unsigned char hostPollRequests(void)
 			notify = 1;
 			break;
 		}
-#if BOARD_USS1001
+#if SOURCE_0103
 		/* the slim's: the event is cleared, and the answers checked once all are polled */
 		if (notify && (*p)->notify != NULL)
 			(*p)->notify();
@@ -1009,7 +1009,7 @@ unsigned char hostPollRequests(void)
 	return busy;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's, as the link comes up (powerResume): every request takes commands again
    (HOST_EVENT_OPEN, told through its notify handler) */
 int hostOpenRequests(void)
@@ -1032,7 +1032,7 @@ int hostOpenRequests(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the slim's: the requests waiting for a command take none any more (HOST_EVENT_CLOSE, told
    through their notify handlers); then, every 13 ticks and up to tries times more, whether an
    answer to a command is still to go out. Nonzero while one is */

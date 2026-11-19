@@ -20,6 +20,15 @@
    above drivers of their own, on an RL78/G13 (CHIP_RL78) */
 #define BOARD_USS1001		(HW_FAMILY == 0x008)
 
+/* the PS TV's DOL-1001 board (0x007xxxxx): PCH-1000's code (its ERNIE_BOARD) on the fat models'
+   78K0R/KG3-L, with UART4, no touch panels' or motion sensor's lines, INTP8 and INTP9 waking
+   task 5 */
+#define BOARD_DOL1001		(HW_FAMILY == 0x007)
+
+/* the slim's code line: USS-1001's, and from 0x0104 the PS TV's (DOL-1002, 0x00723030), on the
+   fat models' chip */
+#define SOURCE_SLIM		(BOARD_USS1001 || BOARD_DOL1001 && FW_SINCE(0x01040000))
+
 /* 0x00102603: 0x00411000's code (its ERNIE_BOARD) for a board with another Elmo wiring, ports
    and multi-connector switch; 0x00315200 (DEM-3000H) has most of it, its own differences by
    HW_IS */
@@ -33,6 +42,9 @@
 #elif BOARD_USS1001
 #define BOARD_INPUT1_BIT7_PIN	P14.5
 #define BOARD_TOUCH_CHG_PIN	P12.5	/* the slim's panel 0 */
+#elif BOARD_DOL1001
+#define BOARD_INPUT1_BIT7_PIN	P14.5
+#define BOARD_TOUCH_CHG_PIN	1	/* no touch panels: the line never falls */
 #else
 #define BOARD_INPUT1_BIT7_PIN	P14.5
 #define BOARD_TOUCH_CHG_PIN	P7.5
@@ -40,6 +52,19 @@
 
 /* the pins behind INTP1 (button 2, low: the scan held long), SRE0 (low: input 1's bit 0) and
    INTP0 (low: transition 0x41) */
+/* the block store (bstore.c): USS-1001's alone; DOL-1001 has no regions */
+#define BOARD_BSTORE		BOARD_USS1001
+
+/* the event log (eventlog.c): USS-1001's alone, DOL-1001's records compiled out */
+#define BOARD_EVENT_LOG		BOARD_USS1001
+
+/* the line powerCut pulses and powerJobOn drops */
+#if BOARD_USS1001
+#define BOARD_POWER_CUT_PIN	P3.4
+#else
+#define BOARD_POWER_CUT_PIN	P6.2
+#endif
+
 #if BOARD_USS1001
 #define BOARD_INTP1_PIN		P7.6
 #define BOARD_SRE0_PIN		P7.4
@@ -53,6 +78,8 @@
 /* the rear panel's (panel 1's) CHG line */
 #if BOARD_USS1001
 #define BOARD_TOUCH_CHG1_PIN	P6.7
+#elif BOARD_DOL1001
+#define BOARD_TOUCH_CHG1_PIN	1
 #else
 #define BOARD_TOUCH_CHG1_PIN	P6.4
 #endif
@@ -62,9 +89,9 @@
 #define BOARD_POWER_P92_P15	(!HW_IS(0x00603000) && !HW_IS(0x00603200))
 
 /* sleepFactorGetOffInfo's bits 0 and 1 from the settings' offInfoBit0 and offInfoBit1, and bit 2
-   always: not on 0x00603200 and USS-1001, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2
+   always: not on 0x00603200, USS-1001 and DOL-1001, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2
    never */
-#define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200) && !BOARD_USS1001)
+#define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200) && !BOARD_USS1001 && !BOARD_DOL1001)
 
 /* the off and suspend states wake by INTP1 and INTP13 (and INTP11), the inputs scanned in mode 2:
    not on 0x00601000, whose inputs keep scanning in mode 1 */
@@ -76,14 +103,14 @@
 #define BOARD_DEBUG_PINS_POWER	HW_IS(0x00601000)
 
 /* the Elmo mask steps of each power sequence (app/powerseq.c's tables) */
-#define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 || BOARD_USS1001 ? 4 : 3)
+#define BOARD_POWER_STEPS	(BOARD_IRS1001 || BOARD_102603 || BOARD_USS1001 || BOARD_DOL1001 ? 4 : 3)
 
 /* the multi-connector's switch: the output's bits 0 and 1 are P13.0 and P2.2, set at once
    (0x00102603); the others' a mode, with a wait between the two pins */
 #define BOARD_MULTICN_BITS	BOARD_102603
 
 /* the multi-connector's level that is a dongle (analogGetMultiCn) */
-#define BOARD_MULTICN_DONGLE_ID	(BOARD_102603 ? 0x51 : 2)
+#define BOARD_MULTICN_DONGLE_ID	(BOARD_102603 ? 0x51 : BOARD_USS1001 ? 4 : 2)
 
 /* the host's output to the multi-connector (P2.2): not on DEM-3000K and 0x00411000, which
    switch only the dongle's (P13.0) */
@@ -115,9 +142,10 @@
 				 (!BOARD_102603 || FW_SINCE(0x00090206)))
 
 /* the settings stand in for a battery that does not answer (its temperature, capacities, ...);
-   PCH-1000 always asks the battery, and so do 0x00411000 after 0x00090206, 0x00315200 and
+   PCH-1000 always asks the battery (DOL-1001, on its code, does not), and so do 0x00411000
+   after 0x00090206, 0x00315200 and
    0x00102603 before 0x00090206 */
-#define BOARD_BATTERY_STANDIN	(ERNIE_BOARD != 0x00406000 && !HW_IS(0x00315200) && \
+#define BOARD_BATTERY_STANDIN	((ERNIE_BOARD != 0x00406000 || BOARD_DOL1001) && !HW_IS(0x00315200) && \
 				 (!BOARD_IS(0x00411000) || !FW_SINCE(0x00090804)) && \
 				 (!BOARD_102603 || FW_SINCE(0x00090206)))
 
@@ -246,8 +274,8 @@
 #define BOARD_PM15		(BOARD_PORTS_102603 ? 0xff : 0xf8)
 
 /* the 3G modem (bbmc.c's events, task 6's): not on 0x00315200, whose bbmcEvent only refuses
-   request 0x0a's commands (status 4) and which task 6 never calls, nor on USS-1001 */
-#define BOARD_BBMC		(!HW_IS(0x00315200) && !BOARD_USS1001)
+   request 0x0a's commands (status 4) and which task 6 never calls, nor on USS-1001 or DOL-1001 */
+#define BOARD_BBMC		(!HW_IS(0x00315200) && !BOARD_USS1001 && !BOARD_DOL1001)
 
 /* bbmcInit starts with the 3G modem's P3.3 pulse (0x39d ticks); PCH-1000's only drives it low */
 #define BOARD_BBMC_INIT_PULSE	(ERNIE_BOARD != 0x00406000 && BOARD_BBMC)
@@ -256,8 +284,9 @@
    with neither power nor an input active, 2 on USB, else 1; the others set power and mode 1 */
 #define BOARD_TOUCH_CHARGE	(ERNIE_BOARD == 0x00406000)
 
-/* a hang detected by P11.5, P4.6, P5.0 and P5.3 low (hangDetected); the others detect none */
-#define BOARD_HANG_PINS		(ERNIE_BOARD == 0x00406000)
+/* a hang detected by P11.5, P4.6, P5.0 and P5.3 low (hangDetected); the others, DOL-1001 too,
+   detect none */
+#define BOARD_HANG_PINS		(ERNIE_BOARD == 0x00406000 && !BOARD_DOL1001)
 
 /* standby may stop the clock when nothing needs it (taskStandbyHalt); the others always halt */
 #define BOARD_STANDBY_STOP	(ERNIE_BOARD == 0x00406000 && !HW_IS(0x00601000))
@@ -280,11 +309,18 @@ extern unsigned char boardGetMultiCnOutput(void);
 extern unsigned char boardSetMultiCnOutput(unsigned char output);
 extern unsigned char boardMultiCnStop(void);
 extern unsigned char boardMultiCnIsDongle(void);
-#if BOARD_USS1001
+#if SOURCE_0103
 extern unsigned char boardMultiCnPower(unsigned char on);
 extern unsigned char boardMultiCnSetSwitch(unsigned char value);
-extern unsigned char boardMultiCnSetSerial(unsigned char on);
 extern void boardMultiCnUpdate(void);
+#endif
+#if BOARD_USS1001
+extern unsigned char boardMultiCnSetSerial(unsigned char on);
+#elif BOARD_DOL1001
+/* the fat board's switch under multicn.c (board.c) */
+extern unsigned char boardMultiCnSwitchOff(void);
+extern unsigned char boardMultiCnGetSwitch(void);
+extern unsigned char boardMultiCnSwitchStop(void);
 #endif
 #if FW_SINCE(0x00090804)
 extern unsigned char boardMultiCnIsDebug(void);
@@ -293,6 +329,11 @@ extern unsigned char boardMultiCnIsDebug(void);
 extern void boardInit(void);
 #endif
 extern void boardPortInit(void);
+#if BOARD_DOL1001
+/* DOL-1001's stand-in for the lines it does not have (the touch panels' selects, presence and
+   mode, the sticks' power): written and read as a pin would be */
+extern unsigned char boardDummyPin;
+#endif
 #if !FW_SINCE(0x00090206)
 extern void boardPortInitA(void);
 extern void boardPortInitB(void);

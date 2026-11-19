@@ -12,8 +12,20 @@
 #include "nvs.h"
 #include "nvsreq.h"
 
+#if BOARD_DOL1001
+static int logQueuePush(unsigned int event, long value);
+static int logQueuePop(unsigned int *event, long *value);
+#else
 static int logQueuePush(unsigned int event);
 static int logQueuePop(unsigned int *event);
+#endif
+
+#if BOARD_DOL1001
+/* a read that does not ask for the record's kind */
+#define LOG_READ(id, data, size)	logRead((id), (data), (size), NULL)
+#else
+#define LOG_READ(id, data, size)	logRead((id), (data), (size))
+#endif
 
 /* a record's counter, or the header */
 union LogValue {
@@ -23,7 +35,33 @@ union LogValue {
 };
 
 static TABLE_CONST struct LogRecord logRecords[] = {
-#if FW_SINCE(0x00090903)
+#if BOARD_DOL1001
+	{ 0x00, 0x00, 4, LOG_KIND_SET },	/* the header */
+	{ 0x01, 0x1c, 4, LOG_KIND_COUNT },
+	{ 0x02, 0x20, 4, LOG_KIND_COUNT },
+	{ 0x04, 0x09, 1, LOG_KIND_COUNT },
+	{ 0x05, 0x0e, 2, LOG_KIND_COUNT },
+	{ 0x07, 0x0c, 1, LOG_KIND_COUNT },
+	{ 0x08, 0x0d, 1, LOG_KIND_COUNT },
+	{ 0x09, 0x24, 2, LOG_KIND_COUNT },
+	{ 0x0a, 0x26, 2, LOG_KIND_COUNT },
+	{ 0x0b, 0x04, 2, LOG_KIND_COUNT },
+	{ 0x0c, 0x11, 1, LOG_KIND_COUNT },
+	{ 0x0f, 0x14, 1, LOG_KIND_COUNT },
+	{ 0x10, 0x15, 1, LOG_KIND_COUNT },
+	{ 0x11, 0x16, 1, LOG_KIND_COUNT },
+	{ 0x12, 0x17, 1, LOG_KIND_COUNT },
+	{ 0x13, 0x18, 1, LOG_KIND_COUNT },
+	{ 0x14, 0x19, 1, LOG_KIND_COUNT },
+	{ 0x15, 0x1a, 1, LOG_KIND_COUNT },
+	{ 0x16, 0x1b, 1, LOG_KIND_COUNT },
+	{ 0x17, 0x06, 2, LOG_KIND_COUNT },
+	{ 0x18, 0x10, 1, LOG_KIND_COUNT },
+	{ 0x19, 0x28, 1, LOG_KIND_COUNT },
+	{ 0x1b, 0x12, 2, LOG_KIND_COUNT },
+	{ 0x1c, 0x0a, 1, LOG_KIND_SET },	/* the temperature's peak (app/thermal.c) */
+	{ 0x1d, 0x2a, 1, LOG_KIND_COUNT },
+#elif FW_SINCE(0x00090903)
 	{ 0x00, 0x00, 4 },	/* the header */
 	{ 0x01, 0x1c, 4 },
 	{ 0x02, 0x20, 4 },
@@ -49,7 +87,7 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 	{ 0x16, 0x1b, 1 },
 	{ 0x17, 0x06, 2 },
 	{ 0x18, 0x10, 1 },
-#if BOARD_USS1001
+#if SOURCE_0103
 	{ 0x19, 0x28, 1 },
 	{ 0x1a, 0x29, 1 },
 	{ 0x1d, 0x2a, 1 },
@@ -82,8 +120,20 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 };
 
 static struct LogHeader logHeader;
+#if BOARD_DOL1001
+/* DOL-1001's event: a record and the value it is given */
+struct LogEvent {
+	unsigned int	id;
+	long		value;
+};
+#endif
+
 static struct {
+#if BOARD_DOL1001
+	struct LogEvent	events[LOG_EVENTS];
+#else
 	unsigned int	events[LOG_EVENTS];
+#endif
 	unsigned char	head;		/* the first event's */
 	unsigned char	count;
 } logQueue;
@@ -93,7 +143,14 @@ void logQueueInit(void)
 	unsigned char i;
 
 	for (i = 0; i < LOG_EVENTS; i++)
+#if BOARD_DOL1001
+	{
+		logQueue.events[i].id = 0xffff;
+		logQueue.events[i].value = 0;
+	}
+#else
 		logQueue.events[i] = 0xffff;
+#endif
 	logQueue.head = 0;
 	logQueue.count = 0;
 }
@@ -105,7 +162,7 @@ void logInit(void)
 	logHeader.version = 0;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* the header taken in (at the first call, first, which then starts the log), and the records
    of an older layout moved to this one's */
 static void logLoad(unsigned char first)
@@ -122,7 +179,7 @@ static void logLoad(unsigned char first)
 		logHeader.version = 0;
 	}
 	if (logHeader.state == LOG_STATE_UNLOADED) {
-		result = logRead(LOG_HEADER, &record, &size);
+		result = LOG_READ(LOG_HEADER, &record, &size);
 		if (result != 0)
 			return;
 		memcpy(&logHeader, &record, sizeof(logHeader));
@@ -141,6 +198,20 @@ static void logLoad(unsigned char first)
 		if (result != 0)
 			return;
 		switch (logHeader.version) {
+#if BOARD_DOL1001
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+			logClear(0x19);
+			logClear(0x1b);
+			logClear(0x1c);
+			break;
+		case 8:
+			logClear(0x1d);
+			break;
+#else
 		case 0:
 		case 1:
 			old.value = 0;
@@ -183,6 +254,7 @@ static void logLoad(unsigned char first)
 		case 8:
 			logClear(0x1d);
 			break;
+#endif
 		}
 		result = logWriteHeader(&record.header);
 		if (result != 0)
@@ -197,9 +269,15 @@ static void logLoad(unsigned char first)
 void logUpdate(void)
 {
 	union LogValue record;
+#if BOARD_DOL1001
+	long value;		/* the event's */
+#endif
 	int result;
 	unsigned int id;
 	unsigned char size;
+#if BOARD_DOL1001
+	unsigned char kind;
+#endif
 
 	if (logHeader.state == LOG_STATE_UNLOADED)
 		logLoad(1);
@@ -230,6 +308,38 @@ void logUpdate(void)
 	case LOG_MODE_STARTED:
 		switch (logHeader.state) {
 		case LOG_STATE_RUNNING:
+#if BOARD_DOL1001
+			if (logQueuePop(&id, &value) == 0) {
+				result = logRead(id, &record, &size, &kind);
+				if (result != 0)
+					result = 2;
+				else {
+					if (kind == LOG_KIND_COUNT)
+						record.value++;
+					else if (kind == LOG_KIND_SET)
+						record.value = value;
+					else if (kind == LOG_KIND_OR)
+						record.value |= value;
+					else {
+						result = 2;
+						goto done;
+					}
+					if (size == 1)
+						record.value &= 0xff;
+					else if (size == 2)
+						record.value &= 0xffff;
+					if (record.value == 0 && kind == LOG_KIND_COUNT)
+						result = 4;	/* the counter is full */
+					else {
+						result = logWrite(id, &record);
+						if (result != 0)
+							result = 2;
+					}
+				}
+			done:
+				;
+			}
+#else
 			if (logQueuePop(&id) == 0) {
 				result = logRead(id, &record, &size);
 				if (result != 0)
@@ -249,6 +359,7 @@ void logUpdate(void)
 					}
 				}
 			}
+#endif
 			break;
 		case LOG_STATE_ERASED:
 		case LOG_STATE_IDLE:
@@ -288,7 +399,7 @@ void logUpdate(void)
 	unsigned char size;
 
 	if (logHeader.state == LOG_STATE_UNLOADED) {
-		result = logRead(LOG_HEADER, &record, &size);
+		result = LOG_READ(LOG_HEADER, &record, &size);
 		if (result != 0)
 			return;
 		memcpy(&logHeader, &record, sizeof(logHeader));
@@ -398,6 +509,49 @@ void logUpdate(void)
 }
 #endif
 
+#if BOARD_DOL1001
+static int logQueuePush(unsigned int event, long value)
+{
+	int result;
+	unsigned char i;
+
+	dis_dsp();
+	if (logHeader.mode != LOG_MODE_STARTED && logHeader.mode != LOG_MODE_NONE)
+		result = 5;
+	else if (logQueue.head + logQueue.count < LOG_EVENTS) {
+		i = (unsigned char)(logQueue.head + logQueue.count) % LOG_EVENTS;
+		logQueue.events[i].id = event;
+		logQueue.events[i].value = value;
+		logQueue.count++;
+		result = 0;
+	} else
+		result = 5;
+	ena_dsp();
+	return result;
+}
+
+static int logQueuePop(unsigned int *event, long *value)
+{
+	int result;
+
+	dis_dsp();
+	if (logQueue.count != 0) {
+		*event = logQueue.events[logQueue.head].id;
+		*value = logQueue.events[logQueue.head].value;
+		logQueue.head = (unsigned char)(logQueue.head + 1) % LOG_EVENTS;
+		logQueue.count--;
+		result = 0;
+	} else
+		result = 6;
+	ena_dsp();
+	return result;
+}
+
+void logEventValue(unsigned int event, long value)
+{
+	logQueuePush(event, value);
+}
+#else
 static int logQueuePush(unsigned int event)
 {
 	int result;
@@ -435,6 +589,7 @@ void logEvent(unsigned int event)
 {
 	logQueuePush(event);
 }
+#endif
 
 /* 0x0086 (sceSysconGetLogInfo) */
 int logGetInfo(struct LogInfo *info)
@@ -443,7 +598,7 @@ int logGetInfo(struct LogInfo *info)
 	struct LogHeader header;
 	unsigned char size;
 
-	result = logRead(LOG_HEADER, &header, &size);
+	result = LOG_READ(LOG_HEADER, &header, &size);
 	if (result != 0)
 		result = 2;
 	else {
@@ -456,7 +611,7 @@ int logGetInfo(struct LogInfo *info)
 	return result;
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 int logStart(void)
 {
 	int result;
@@ -509,7 +664,7 @@ int logSetMode(unsigned char mode, unsigned char source)
 	unsigned char size;
 
 	result = 0;
-	result = logRead(LOG_HEADER, &header, &size);
+	result = LOG_READ(LOG_HEADER, &header, &size);
 	if (result != 0)
 		result = 2;
 	else {
@@ -571,7 +726,7 @@ int logStart(void)
 		result = 3;
 	else if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
 		logQueueInit();
-		result = logRead(LOG_HEADER, &header, &size);
+		result = LOG_READ(LOG_HEADER, &header, &size);
 		if (result != 0)
 			result = 2;
 		else {
@@ -590,7 +745,7 @@ int logStop(void)
 	struct LogHeader header;
 	unsigned char size;
 
-	result = logRead(LOG_HEADER, &header, &size);
+	result = LOG_READ(LOG_HEADER, &header, &size);
 	if (result != 0)
 		result = 2;
 	else {
@@ -604,7 +759,7 @@ int logStop(void)
 /* 0x0088 (sceSysconLogReadData) */
 int logReadData(unsigned int id, void *data, unsigned char *size)
 {
-	return logRead(id, data, size);
+	return LOG_READ(id, data, size);
 }
 
 int logReadOffset(unsigned int offset, unsigned char size, void *data)
@@ -645,7 +800,7 @@ int logSetVersion(unsigned int version)
 	struct LogHeader header;
 	unsigned char size;
 
-	result = logRead(LOG_HEADER, &header, &size);
+	result = LOG_READ(LOG_HEADER, &header, &size);
 	if (result != 0)
 		result = 2;
 	else {
@@ -677,10 +832,14 @@ int logWriteHeader(struct LogHeader *header)
 	return result;
 }
 
+#if BOARD_DOL1001
+int logRead(unsigned int id, void *data, unsigned char *size, unsigned char *kind)
+#else
 int logRead(unsigned int id, void *data, unsigned char *size)
+#endif
 {
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int i;
 #else
 	int i;
@@ -690,17 +849,25 @@ int logRead(unsigned int id, void *data, unsigned char *size)
 	for (i = 0; i < logRecordCount(); i++) {
 		if (logRecords[i].id == id) {
 			*size = logRecords[i].size;
+#if BOARD_DOL1001
+			if (kind != NULL)
+				*kind = logRecords[i].kind;
+#endif
 			result = nvsRead(logRecords[i].offset, *size, data, NVS_AREA_SYSCON);
 			if (result != 0) {
 			}
 			return result;
 		}
 	}
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (id < LOG_IDS) {
 		/* a record this layout does not keep reads as 0 */
 		*size = 1;
+#if BOARD_DOL1001
+		memset(data, 0, *size);
+#else
 		*(unsigned char *)data = 0;
+#endif
 		return 0;
 	}
 #endif
@@ -710,7 +877,7 @@ int logRead(unsigned int id, void *data, unsigned char *size)
 int logWrite(unsigned int id, void *data)
 {
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int i;
 #else
 	int i;
@@ -726,7 +893,7 @@ int logWrite(unsigned int id, void *data)
 			return result;
 		}
 	}
-#if BOARD_USS1001
+#if SOURCE_0103
 	if (id < LOG_IDS)
 		return 0;
 #endif
@@ -748,7 +915,7 @@ int logNvsWrite(unsigned int offset, unsigned char size, void *data)
 int logClearAll(void)
 {
 
-#if BOARD_USS1001
+#if SOURCE_0103
 	unsigned int i;
 #else
 	int i;

@@ -19,6 +19,8 @@
 #include "util.h"
 #if BOARD_USS1001
 #include "uart4.h"
+#endif
+#if SOURCE_0103
 #include "version.h"
 #endif
 
@@ -27,7 +29,7 @@ struct Serial serial;
 unsigned char serialText[0x80];
 unsigned char serialFrame[SERIAL_FRAME_SIZE];
 
-#if !BOARD_USS1001	/* not in the slim's */
+#if !SOURCE_0103	/* not in the slim's */
 /* the events of event flag 3 (never called) */
 unsigned char serialEvent(FLGPTN ptn)
 {
@@ -189,7 +191,7 @@ void serialReset(unsigned char mode)
 
 void serialStop(int port)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001	/* the slim's UART4 */
 	uart4Close();
 #else
 	uartStopTx(port);
@@ -371,7 +373,7 @@ unsigned char serialSendAnswer(void)
 
 unsigned char serialRead(int port, unsigned char *buf, int size)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001	/* the slim's UART4 */
 	return uart4Read(buf, size);
 #else
 	return uartRead(port, buf, size);
@@ -380,7 +382,7 @@ unsigned char serialRead(int port, unsigned char *buf, int size)
 
 unsigned char serialWrite(int port, unsigned char *buf, int size)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001	/* the slim's UART4 */
 	return uart4Write(buf, size);
 #else
 	return uartWrite(port, buf, size);
@@ -392,7 +394,7 @@ void serialFlush(int port)
 	uartReset(port);
 }
 
-#if BOARD_USS1001
+#if BOARD_USS1001	/* the slim's UART4 */
 #define serialUartOpen(baud)	((unsigned char)uart4Open(baud))
 #else
 #define serialUartOpen(baud)	uart3Open(baud)
@@ -405,7 +407,7 @@ unsigned char serialReopen(int baud)
 	return serialUartOpen(baud);
 }
 
-#if BOARD_USS1001
+#if SOURCE_0103
 /* 0x55s, which the other end's receiver takes its speed from */
 static const unsigned char serialSync[3] = { 0x55, 0x55, 0x55 };
 
@@ -414,7 +416,7 @@ unsigned char serialOpen1(int baud)
 {
 	unsigned char info[4];
 
-	uart4Open(baud);
+	serialUartOpen(baud);
 	serialStart(1);
 	serial.link = 1;
 	getHardwareInfo(info);
@@ -450,7 +452,7 @@ unsigned char serialOpen2(int baud)
 {
 	serialUartOpen(baud);
 	serialStart(2);
-#if !BOARD_USS1001
+#if !SOURCE_0103
 	serial2SetLink(1);
 	serial2SetP71(0);
 #endif
@@ -460,7 +462,7 @@ unsigned char serialOpen2(int baud)
 
 unsigned char serialClose2(void)
 {
-#if !BOARD_USS1001
+#if !SOURCE_0103
 	serial2SetP71(1);
 #endif
 	serialReset(0);
@@ -506,7 +508,7 @@ unsigned char serialLock(unsigned char link)
 	return 0;
 }
 
-#if !BOARD_USS1001	/* not in the slim's */
+#if !SOURCE_0103	/* not in the slim's */
 /* never called */
 unsigned char serialSetP41(unsigned char level)
 {

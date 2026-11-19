@@ -11,7 +11,7 @@
 #include "sysinfo.h"
 #include "tau.h"
 
-#if !BOARD_USS1001	/* USS-1001 has them after the timers' */
+#if !SOURCE_0103	/* USS-1001 has them after the timers' */
 void tickStart(void)
 {
 	tau1PowerOn();
@@ -117,7 +117,7 @@ void tm11Stop(void)
 }
 #endif
 
-#if BOARD_USS1001
+#if SOURCE_0103
 void tickStart(void)
 {
 	tau1PowerOn();

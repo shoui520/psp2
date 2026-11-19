@@ -7,6 +7,7 @@
 #define ERNIE_POWERWAIT_H
 
 #include "ernie.h"
+#include "board.h"
 #include "kernel.h"
 
 /* a power timer's number 4-0xb: since 0x0100060B bits 0 and 3 (timers 4 and 7) have none, and
@@ -42,5 +43,9 @@ extern void powerWaitInput(unsigned char edges, unsigned int timeout);
 extern void powerWaitTimers(unsigned int bits);
 extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks);
 extern void powerTimersInit(void);
+#if BOARD_DOL1001
+extern void intp9Enable(unsigned char enable);
+extern void intp9Event(void);
+#endif
 
 #endif

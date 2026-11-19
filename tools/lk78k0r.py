@@ -21,7 +21,7 @@ a comment; paths are relative to the link file's folder:
 			assembler aligns, a P attribute, else 1); the location moves past them
   RESERVE address size	memory no segment may take (what code uses by absolute address)
   FILL byte		the byte the gaps between a SEG's segments and an AT's are filled with
-			(default none: only what is assembled is written)
+			(default none: only what is assembled is written; FILL none stops it)
 
 Any directive may end in `IF NAME==VALUE` or `IF NAME!=VALUE`: it applies only when the -D
 definition NAME has (or has not) that value (numbers compared as numbers), as a board's own
@@ -159,7 +159,8 @@ class LinkFile:
 				elif op == 'AT' and len(args) == 1:
 					self.steps.append(('AT', number(args[0])))
 				elif op == 'FILL' and len(args) == 1:
-					self.steps.append(('FILL', number(args[0])))
+					self.steps.append(('FILL', None if args[0].lower() == 'none'
+							   else number(args[0])))
 				elif op == 'SEG' and args:
 					align = None
 					if len(args) > 2 and args[1].upper() == 'ALIGN':
