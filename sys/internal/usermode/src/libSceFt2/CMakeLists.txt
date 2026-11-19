@@ -2,6 +2,7 @@
 # The module's registration list is include/freetype/config/ftmodule.h.
 set(FT2 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/freetype-7f316f22d)
 psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
+	libc.c
 	${FT2}/src/base/ftbase.c
 	${FT2}/src/base/ftbitmap.c
 	${FT2}/src/base/ftglyph.c
