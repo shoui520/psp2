@@ -89,6 +89,156 @@ size_t strlen(const char *s)
 	return len;
 }
 
+/* the lowercase of a mode character (the library's ctype table is the C locale's) */
+static int toLower(int c)
+{
+	if (c >= 'A' && c <= 'Z')
+		return c + ('a' - 'A');
+	return c;
+}
+
+FILE *fopen(const char *path, const char *mode)
+{
+	Ft2File *f;
+	const char *p;
+	unsigned int c;
+	int i, access, flags, openFlags;
+	SceInt32 whence;
+	SceUInt8 param[0x20];
+
+	if (mode == NULL || path == NULL)
+		return NULL;
+	sceKernelLockLwMutex(&g_ioMutex, 1, NULL);
+	for (i = 0; g_files[i].mode != 0; i++) {
+		if (i + 1 == FT2_NUM_FILES)
+			goto fail;
+	}
+	if (*mode == 0)
+		goto fail;
+	p = mode;
+	do {
+		c = (unsigned char)*p++;
+	} while (toLower(c) == 'b');
+	p--;
+	switch (toLower(c)) {
+	case 'a':
+		access = 2;
+		flags = 0x6000;
+		openFlags = 768;
+		break;
+	case 'r':
+		access = 1;
+		flags = 0x8000;
+		openFlags = 0;
+		break;
+	case 'w':
+		access = 2;
+		flags = 0x4000;
+		openFlags = 1536;
+		break;
+	default:
+		goto fail;
+	}
+	do {
+		c = (unsigned char)*++p;
+	} while (toLower(c) == 'b');
+	if (c == '+') {
+		flags |= 0xC000;
+		openFlags |= 3;
+	} else if (access == 2) {
+		openFlags |= 2;
+	} else {
+		openFlags |= 1;
+	}
+	f = &g_files[i];
+	f->mode = flags | 1;
+	sceKernelUnlockLwMutex(&g_ioMutex, 1);
+	f->state = 0;
+	f->fd = sceIoOpen(path, openFlags, 0606);
+	f->pushback = -1;
+	whence = (f->mode & 0x2000) != 0 ? SCE_SEEK_END : SCE_SEEK_SET;
+	if (f->mode != 0 && f->fd >= 0) {
+		int pos;
+
+		f->pushback = -1;
+		pos = sceIoLseek(f->fd, 0, whence);
+		if (pos >= 0) {
+			f->position = pos;
+			f->state &= ~2;
+		}
+	}
+	if (f->fd < 0) {
+		f->mode = 0;
+		return NULL;
+	}
+	if (path[0] == 's' && path[1] == 'a' && path[2] == '0' && path[3] == ':')
+		f->deviceType = 0x800;
+	else
+		f->deviceType = 0x8000;
+	memset(param, 0, sizeof(param));
+	*(SceUInt32 *)&param[0xc] = f->deviceType;
+	*(SceUInt32 *)&param[0x14] = 8;
+	sceIoIoctl(f->fd, 0x1001, param, sizeof(param), NULL, 0);
+	return (FILE *)f;
+fail:
+	sceKernelUnlockLwMutex(&g_ioMutex, 1);
+	return NULL;
+}
+
+size_t fread(void *buf, size_t size, size_t count, FILE *stream)
+{
+	Ft2File *f = (Ft2File *)stream;
+	unsigned char *dst = buf;
+	int remaining, done, n;
+
+	if (f == NULL || f->mode == 0)
+		return 0;
+	if ((f->mode & 0x8000) == 0) {
+		f->state |= 1;
+		return 0;
+	}
+	if (f->fd < 0 || f->state != 0)
+		return 0;
+	remaining = size * count;
+	if (remaining == 0)
+		return 0;
+	if (f->pushback == -1) {
+		done = f->state;
+	} else {
+		*dst = f->pushback;
+		remaining--;
+		f->pushback = -1;
+		if (remaining == 0)
+			return 1 / size;
+		if (f->state != 0)
+			return 1 / size;
+		dst++;
+		done = 1;
+	}
+	while (remaining > 0) {
+		int pos;
+
+		n = sceIoRead(f->fd, dst, remaining);
+		remaining -= n;
+		pos = sceIoLseek(f->fd, 0, done);
+		dst += n;
+		if (pos >= 0)
+			f->position = pos;
+		if (n < 0) {
+			f->state |= 1;
+			return 0;
+		}
+		if (n == 0) {
+			f->state |= 2;
+			return done / size;
+		}
+		done += n;
+		if (f->state != 0)
+			break;
+	}
+	return done / size;
+}
+
 int fseek(FILE *stream, long offset, int whence)
 {
 	Ft2File *f = (Ft2File *)stream;
