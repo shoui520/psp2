@@ -24,6 +24,8 @@ struct GamePluginInterface {
 /* the plugin's functions its own files call through its interface (PLACEHOLDER names) */
 enum {
 	GAME_PLUGIN_FUNC_GET_STORAGE	= 1,	/* gamePluginGetStorage (0x8102B5D8) */
+	GAME_PLUGIN_FUNC_GET_POOL	= 2,	/* gamePluginGetPool (0x8102B5F6) */
+	GAME_PLUGIN_FUNC_RELEASE_POOL	= 3,	/* gamePluginReleasePool (0x8102B6CC) */
 	GAME_PLUGIN_FUNC_APP_DIR_MOUNT	= 4,	/* gameAppDirMount (0x8102B736) */
 	GAME_PLUGIN_FUNC_APP_DIR_UNMOUNT = 5,	/* gameAppDirUnmount (0x8102B7FC) */
 	GAME_PLUGIN_FUNC_SET_DIALOG_HOLD = 10,	/* gamePluginSetDialogHold (0x8102B8E2) */

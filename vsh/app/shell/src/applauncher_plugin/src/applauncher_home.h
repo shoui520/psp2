@@ -1070,10 +1070,22 @@ void applauncherIconInfoClose(void);
 void applauncherIconInfoEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon,
 			      void *context);
 
+/* PLACEHOLDER: a version's change information: its app_ver as a number (1.23 is 123), and its
+   text */
+struct ApplauncherChangeInfoEntry {
+	ApplauncherChangeInfoEntry(SceUInt32 version, const paf::string &text)
+		: version(version), text(text)
+	{
+	}
+
+	SceUInt32 version;
+	paf::string text;
+};
+
 /*
  * PLACEHOLDER: an application's change information (its sce_sys/changeinfo XML), read in a job
- * and given as the RichText's marked-up text; its file (0x810C9E26-) is not converted yet. The
- * constructor is the vector's.
+ * and given as the RichText's marked-up text (applauncher_changeinfo.cpp, 0x810C9E24-0x810CAC4A).
+ * The constructor is the vector's.
  */
 class ApplauncherChangeInfo {
 public:
@@ -1083,14 +1095,24 @@ public:
 	}
 
 	~ApplauncherChangeInfo();				/* 0x810C9E26 */
-	/* the XML of the language (else the default one) in the directory read: 0, or a negative
-	   error (0x810C9F82) */
+	/* the XML read in the buffer, the versions after since kept, newest first: 0, or a
+	   negative error (0x810C9EB6) */
+	int Parse(const char *buf, int size, SceUInt32 since);
+	/* the XML of the language (else the default one) in the directory read, the versions after
+	   the one arg gives kept: 0, or a negative error (0x810C9F82) */
 	int Load(paf::job::JobItem *job, const char *dir, int language, void *arg);
+	/* a version's text kept (0x810CA79C) */
+	int AddEntry(SceUInt32 version, const paf::string &text);
+	/* the version ("1.23") as the plugin's heading over its text shows it (0x810CA80A) */
+	paf::string FormatVersion(const paf::string &version);
 	/* each version's heading and text, one after the other (0x810CA930) */
 	void GetText(paf::string *text);
 
-	paf::vector<void *> m_entries;
+	paf::vector<ApplauncherChangeInfoEntry *> m_entries;
 };
+
+/* PLACEHOLDER: the version as "1.23" (or "12.34"), a version over 99.99 an error (0x810CAE92) */
+int applauncherChangeInfoVersionToString(SceUInt32 version, paf::string *text);
 
 /*
  * PLACEHOLDER: a dialog's handler that calls the function with the dialog's value, the button and
@@ -1390,7 +1412,7 @@ enum {
 	LIVEAREA_PLUGIN_FUNC_APP_ADDED		= 20,
 };
 
-/* PLACEHOLDER: livearea_plugin did not come (0x80103301), a job could not be made
+/* PLACEHOLDER: livearea_plugin (or the game plugin) did not come (0x80103301), a job could not be made
    (0x80103302), and without a title in focus or the theme's titles (0x80103303) */
 #define APPLAUNCHER_ERROR_NO_LIVEAREA		((int)0x80103301)
 #define APPLAUNCHER_ERROR_NO_MEMORY		((int)0x80103302)
@@ -1403,5 +1425,7 @@ enum {
 #define APPLAUNCHER_ERROR_CHANGE_INFO_READ	((int)0x80103321)
 #define APPLAUNCHER_ERROR_NO_CHANGE_INFO	((int)0x80103322)
 #define APPLAUNCHER_ERROR_CHANGE_INFO_PARSE	((int)0x80103323)
+/* PLACEHOLDER name: a file not there, as paf's LocalFile gives it (value only) */
+#define APPLAUNCHER_ERROR_NOT_FOUND		((int)0x80AF5022)
 
 #endif
