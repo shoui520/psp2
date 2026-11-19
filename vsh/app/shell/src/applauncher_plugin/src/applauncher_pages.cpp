@@ -40,10 +40,8 @@ using namespace paf;
 /* the pages read once (0x81555208) */
 static bool s_pagesLoaded;
 
-/* PLACEHOLDER: the pages laid out for the IDU (0x810C0626), and whether the console's page
-   colour is already applied (0x810C6DA0), both in the IDU layout's file */
+/* PLACEHOLDER: the pages laid out for the IDU (0x810C0626) */
 int applauncherIduLayout(bool reset);
-bool applauncherIduLayoutColorApplied(void);
 
 /* the files of a folder deleted, but for those the pages still use */
 class FileDeleteJob : public job::JobItem {
@@ -365,7 +363,7 @@ void applauncherPagesOnPageTheme(ApplauncherLsdbJob *job, void *arg)
 			if ((*info)->m_homeProperty.m_bgParam[i].m_waveType >= 0) {
 				if ((*info)->m_homeProperty.m_bgParam[i].m_waveType ==
 					    APPLAUNCHER_PAGES_CONSOLE_WAVE &&
-				    !applauncherIduLayoutColorApplied())
+				    !applauncherWaveColorsSet())
 					shellStartupGetPageColor();
 				theme->m_pages[i]->bgColor =
 					(*info)->m_homeProperty.m_bgParam[i].m_waveType;

@@ -125,7 +125,6 @@ void applauncherHomeOnShellEvent(int code, const void *data, SceSize size, void 
 void applauncherHomeOnAppInfoEvent(int event, void *info, void *arg);
 int applauncherInterfaceInstallApp(const ApplauncherInstallRequest *req, bool *async);
 void applauncherInterfaceFunc20(void);
-void applauncherInterfaceFunc27(void);
 
 /*
  * The pages put one under the other from the top, a spacing apart. Mode 1 moves only the pages
@@ -323,7 +322,7 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 	g_applauncherInterface->func[25] = (void (*)(void))applauncherThemeRefresh;
 	g_applauncherInterface->func[26] = (void (*)(void))applauncherInterfaceSetRequest;
 	g_applauncherInterface->func[20] = applauncherInterfaceFunc20;
-	g_applauncherInterface->func[27] = applauncherInterfaceFunc27;
+	g_applauncherInterface->func[27] = (void (*)(void))applauncherWaveGetColors;
 
 	m_ready = true;
 	((void (*)(int, void (*)(void *), void *))

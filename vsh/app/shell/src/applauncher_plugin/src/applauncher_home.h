@@ -32,7 +32,7 @@
 #include "../../livespace_db/livespace_db_internal.h"
 #include "applauncher_mode.h"
 
-namespace paf { namespace ui { class CompositeDrawer; class TextBox; } }
+namespace paf { namespace ui { class CompositeDrawer; class ListView; class TextBox; } }
 
 class ApplauncherPage;
 struct ApplauncherIconView;
@@ -452,6 +452,35 @@ public:
    given back to it (0x810C4A3A, 0x810C4E74) */
 ApplauncherPageView *applauncherPageViewGet(ApplauncherPage *page, bool fast);
 void applauncherPageViewRelease(ApplauncherPageView *view);
+
+/*
+ * PLACEHOLDER: the theme chooser AppTabSetThemeMode shows (0x810C6498, 44 bytes, one at a
+ * time): a list of chips, the photo to pick, the page's image, the user's own wave and the 31
+ * waves, with a cursor on the page's. The chips are made by the list's item factory.
+ */
+class ApplauncherThemeSelector {
+public:
+	ApplauncherThemeSelector();
+	~ApplauncherThemeSelector();
+
+	paf::ui::Widget *m_root;		/* PLACEHOLDER: the plane topmenu made for it */
+	paf::ui::Widget *m_frame;		/* PLACEHOLDER: the template's widgets: its frame, */
+	paf::ui::Widget *m_box;			/* the box, the cursor on the chosen chip */
+	paf::ui::Widget *m_cursor;
+	paf::ui::ListView *m_list;		/* and the list of chips */
+	int m_waitDialog;			/* PLACEHOLDER: the dialog while a photo converts */
+	int m_wallpaperIndex;			/* PLACEHOLDER: the wallpaper a pick started from */
+	bool reserved;				/* 0 at construction; not read */
+	bool m_photoPicking;			/* PLACEHOLDER: a photo pick open, */
+	bool m_wallpaperPicking;		/* and a wallpaper pick */
+	paf::common::SharedPtr<paf::job::JobItem> m_loadJob;	/* the page's image loaded */
+	paf::intrusive_ptr<paf::graph::Surface> m_image;	/* and the image */
+};
+/* PLACEHOLDER: the chooser made, taken down and the page it chose, once (0x810C6CD0,
+   0x810C6D84, 0x810C6DAC) */
+ApplauncherThemeSelector *applauncherThemeSelectorCreate(void);
+void applauncherThemeSelectorDestroy(void);
+bool applauncherThemeSelectorGetPage(LsdbPage *page);
 
 /*
  * PLACEHOLDER: a page of the home (its code in the file after this one, 0x810B297C on): its

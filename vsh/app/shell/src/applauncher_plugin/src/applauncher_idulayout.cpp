@@ -55,29 +55,6 @@ using namespace paf;
 #define APPLAUNCHER_IDU_REMOVED_ID_MIN	-20000000
 #define APPLAUNCHER_IDU_REMOVED_ID_END	-10000000
 
-/* PLACEHOLDER: the photo export library's conversion of an image file into a page's texture
-   (0x8136D050): what it reads and writes, and the sizes of what it wrote */
-#define PHOTO_EXPORT_CONVERT_JPEG	1
-#define PHOTO_EXPORT_CONVERT_PNG	2
-
-struct PhotoExportConvertParam {
-	const char *srcPath;
-	const char *dstPath;
-	int reserved;
-	int type;			/* PHOTO_EXPORT_CONVERT_* */
-};
-
-struct PhotoExportConvertResult {
-	int imageWidth;
-	int imageHeight;
-	int texWidth;
-	int texHeight;
-};
-
-int photoExportConvertFile(const PhotoExportConvertParam *param, void *workMemory,
-			   SceBool (*cancelFunc)(void *), void *userdata,
-			   PhotoExportConvertResult *result);
-
 /* PLACEHOLDER name: the path of the page's background in the old system's lines, when it is an
    image of photo0: (0x810BD534) */
 string bgimageFindPath(const string &key, const vector<string> &lines)
