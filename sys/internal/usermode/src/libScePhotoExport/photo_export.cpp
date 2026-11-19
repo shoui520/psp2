@@ -972,6 +972,7 @@ extern "C" SceInt32 ScePhotoExport_2EFB7250(PhotoExportBatchItem *pItems, SceUIn
 	PhotoExportStartItem *pStart;
 	SceInt32 result;
 	SceUInt32 i;
+	SceInt32 j;
 	char extension[6];
 
 	if (pItems == NULL)
@@ -987,10 +988,14 @@ extern "C" SceInt32 ScePhotoExport_2EFB7250(PhotoExportBatchItem *pItems, SceUIn
 		if (result != 0)
 			return result;
 		length = sceClibStrnlen(pItems[i].path, SCE_PHOTO_EXPORT_MAX_FS_PATH);
-		if (length >= SCE_PHOTO_EXPORT_MAX_FS_PATH
-		    || sceClibStrncmp(pItems[i].path, photoExportForbiddenPrefixes[3],
-				      sceClibStrnlen(photoExportForbiddenPrefixes[3], 7)) == 0)
+		if (length >= SCE_PHOTO_EXPORT_MAX_FS_PATH)
 			return PHOTO_ERROR_INVALID_PATH;
+		for (j = 3; j < 4; j++) {
+			const char *pPrefix = photoExportForbiddenPrefixes[j];
+
+			if (sceClibStrncmp(pItems[i].path, pPrefix, sceClibStrnlen(pPrefix, 7)) != 0)
+				return PHOTO_ERROR_INVALID_PATH;
+		}
 	}
 	if (pResults == NULL)
 		return PHOTO_ERROR_PARAM;
@@ -1062,7 +1067,7 @@ extern "C" SceInt32 ScePhotoExport_2EFB7250(PhotoExportBatchItem *pItems, SceUIn
 
 						sceClibSnprintf(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH,
 								"photo0:/temp/thumb/%016llx_%02d.bin", time, i);
-						fd = sceIoOpen(pPath, SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC, 6);
+						fd = sceIoOpen(pPath, SCE_O_RDWR | SCE_O_CREAT | SCE_O_TRUNC, 6);
 						if (fd >= 0) {
 							SceInt32 written = sceIoWrite(fd, pItem->pThumbnail,
 										      pItem->thumbnailSize);
@@ -1115,12 +1120,20 @@ extern "C" SceInt32 ScePhotoExport_05D5A482(const char *pPath, void *workMemory,
 	SceInt32 request[2], contentId[2];
 	char *pItem;
 
-	if (pPath == NULL || workMemory == NULL || size < 0x10000)
+	if (pPath == NULL)
 		return PHOTO_ERROR_PARAM;
-	if (sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH) >= SCE_PHOTO_EXPORT_MAX_FS_PATH
-	    || sceClibStrncmp(pPath, photoExportForbiddenPrefixes[3],
-			      sceClibStrnlen(photoExportForbiddenPrefixes[3], 7)) == 0)
+	if (workMemory == NULL)
+		return PHOTO_ERROR_PARAM;
+	if (size < 0x10000)
+		return PHOTO_ERROR_PARAM;
+	if (sceClibStrnlen(pPath, SCE_PHOTO_EXPORT_MAX_FS_PATH) >= SCE_PHOTO_EXPORT_MAX_FS_PATH)
 		return PHOTO_ERROR_INVALID_PATH;
+	for (i = 3; i < 4; i++) {
+		const char *pPrefix = photoExportForbiddenPrefixes[i];
+
+		if (sceClibStrncmp(pPath, pPrefix, sceClibStrnlen(pPrefix, 7)) != 0)
+			return PHOTO_ERROR_INVALID_PATH;
+	}
 	sceClibMemset(extension, 0, 6);
 	photoExportCheckExtension(pPath, extension);
 	if (sceClibStrncasecmp(extension, ".mp4", 4) != 0)
