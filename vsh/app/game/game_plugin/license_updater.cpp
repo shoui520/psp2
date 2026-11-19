@@ -50,9 +50,7 @@ int SceNpCommerce2_5953F48D(GameStoreEpw *result, const void *data, SceSize size
 #define GAME_PSP_GAME_DIR		"ux0:pspemu/PSP/GAME"
 #define GAME_PSP_LICENSE_DIR		"ux0:pspemu/PSP/LICENSE/"
 
-/* what the license server answers for an additional content without a license, and the store
-   for one it does not give again (values only) */
-#define GAME_LICENSE_SERVER_ERROR_NO_LICENSE	-2146416473	/* 0x801048A7 */
+/* what the store answers for a license it does not give again (value only) */
 #define GAME_STORE_ERROR_REJECTED		-2141879518	/* 0x80558322 */
 
 /* an additional content's license fetched again a day past its time at the latest */

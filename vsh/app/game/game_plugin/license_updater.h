@@ -13,6 +13,7 @@
 #include <appmgr/appmgr_license.h>
 #include <std/string>
 #include <std/vector>
+#include <thread/thread.h>
 
 /* what the license server is asked to update an application's license with (0x8109FFB6) */
 struct GameLicenseUpdateArgs {
@@ -43,10 +44,16 @@ struct GameLicenseDownloadArgs {
 	const char *rifName;
 };
 
+/* what the license server answers for an additional content's license past its period */
+#define GAME_LICENSE_SERVER_ERROR_NO_LICENSE	-2146416473	/* 0x801048A7 */
+
+/* the folder a license is downloaded into before it is moved to its place */
+#define GAME_LICENSE_SERVER_TEMP_DIR		"ux0:temp/license"
+
 /*
- * PLACEHOLDER: the license server, defined in another file of the plugin (constructor 0x8109FEA4,
- * 72 bytes): NpKdc loaded and given its work memory (0x8109FF30), unloaded (0x8109FF84), and each
- * request run on a thread of its own, joined, under its mutex.
+ * The license server (license_server.cpp, 72 bytes): NpKdc loaded and given its work memory, and
+ * each request run on a thread of its own and joined, under its mutex. A license is downloaded
+ * into the temp folder, then moved to its place. The names are ours (no record names them).
  */
 class GameLicenseServer {
 public:
@@ -54,19 +61,40 @@ public:
 	~GameLicenseServer();
 
 	int Init(void);
-	void Term(void);
+	int Term(void);
 
-	/* PLACEHOLDER names: 0x8109FFB6, 0x810A0040, 0x810A00C6 */
 	int UpdateLicense(const GameLicenseUpdateArgs *args);
 	int UpdateAddcontLicense(GameAddcontLicenseUpdateArgs *args);
 	int DownloadLicense(const GameLicenseDownloadArgs *args);
 
-	/* PLACEHOLDER names: where the download was written, its folder (0x810A016C) and its
-	   license file (0x810A0154) */
-	paf::string GetDownloadDir(void);
+	/* the downloaded license file, and the folder it is in */
 	paf::string GetDownloadPath(void);
+	paf::string GetDownloadDir(void);
 
-	SceUInt8 otherFields[72];
+private:
+	friend class GameLicenseUpdateThread;
+	friend class GameAddcontLicenseUpdateThread;
+	friend class GameLicenseDownloadThread;
+
+	int ClearTempDir(void);
+	int CommitLicense(void);
+	int WriteTempLicense(const void *license, SceSize size);
+	int CreateTempLicense(const char *rifName, SceSize size);
+	int DoUpdateLicense(const GameLicenseUpdateArgs *args);
+	int ClearDriveTempDir(const char *drive);
+	int RemoveDriveTempDir(const char *drive);
+	int GetLicensePeriod(void *license, SceSize size, bool *expired,
+			     SceUInt64 *startTime, SceUInt64 *expireTime);
+	int CreateDriveTempLicense(const char *drive, const char *rifName, SceSize size);
+	int DoUpdateAddcontLicense(GameAddcontLicenseUpdateArgs *args);
+	int DoDownloadLicense(const GameLicenseDownloadArgs *args);
+
+	paf::thread::Mutex m_mutex;
+	paf::string m_licensePath;		/* where the license goes */
+	paf::string m_tempPath;			/* where it is downloaded */
+	void *m_kdcWork;			/* NpKdc's work memory */
+	SceBool m_isPsp;			/* the request's: a PSP application's license */
+	bool m_started;				/* Init done */
 };
 
 typedef char GameLicenseServerSize[sizeof(GameLicenseServer) == 72 ? 1 : -1];
