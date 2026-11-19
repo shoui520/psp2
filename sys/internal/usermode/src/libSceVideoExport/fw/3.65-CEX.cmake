@@ -87,8 +87,8 @@ set(MODULE_IMPORT_FUNCS
 	sceKernelCreateCallback
 	sceKernelDeleteCallback
 	sceKernelCheckCallback
-	SceIpmi_4E255C31
-	SceIpmi_B282B430
+	_ZN4IPMI6Client13getBufferSizeEPKNS0_6ConfigE
+	_ZN4IPMI6Client6createEPPS0_PKNS0_6ConfigEPvS6_
 	sceRegMgrSystemParamGetInt
 )
 set(MODULE_IMPORT_VARS
