@@ -1415,7 +1415,7 @@ static void onPageLayoutDone(ApplauncherLsdbJob *job, void *arg)
 
 /* PLACEHOLDER: the applauncher's request kept, outside the IDU mode and without one
    (0x810B8830) */
-void applauncherPagesHoldRequest(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
+void applauncherPagesHoldRequest(void *arg)
 {
 	ApplauncherModeManager *state;
 

@@ -70,9 +70,10 @@ void applauncherIconCaptureDestroy(void);
 /* the page made and taken down (0x810A96EE, 0x810A9706) */
 void applauncherPageCreate(paf::Plugin *plugin);
 void applauncherPageDestroy(void);
-/* the folders' widgets (three and one) made and taken down (0x810C480E, 0x810C49B4) */
-void applauncherFolderCreate(void);
-void applauncherFolderDestroy(void);
+/* PLACEHOLDER: the pool of page views (three, and one for a folder) made and taken down
+   (0x810C480E, 0x810C49B4) */
+void applauncherPageViewPoolCreate(void);
+void applauncherPageViewPoolDestroy(void);
 /* the icons' pool of 42 made and taken down (0x810BBBC8, 0x810BBCD4) */
 void applauncherIconPoolCreate(void);
 void applauncherIconPoolDestroy(void);

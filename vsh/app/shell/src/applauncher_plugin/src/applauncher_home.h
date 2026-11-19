@@ -19,6 +19,7 @@
 #include <versatileparam/idparam.h>
 #include <common/shared_ptr.h>
 #include <graphics/surface/surface.h>
+#include <graphics/drawobj/draw_obj.h>
 #include <widget/core/widget.h>
 #include <widget/w_appicon_base.h>
 #include <widget/w_scroll_view_base.h>
@@ -30,6 +31,8 @@
 #include "../../../plugins.h"
 #include "../../livespace_db/livespace_db_internal.h"
 #include "applauncher_mode.h"
+
+namespace paf { namespace ui { class CompositeDrawer; class TextBox; } }
 
 class ApplauncherPage;
 struct ApplauncherIconView;
@@ -386,19 +389,44 @@ public:
 };
 
 
+/* PLACEHOLDER: the frame drawn behind a folder page's name while it is edited (176 bytes; its
+   constructor at 0x810D8310, in a file not written yet) */
+class ApplauncherFolderNameFrame : public paf::graph::DrawObj {
+public:
+	ApplauncherFolderNameFrame();
+
+	SceUInt32 reserved[24];
+};
+
 /*
- * PLACEHOLDER: a page of the home (its code in the file after this one, 0x810B297C on): its
- * icons' slots, its state and its place in the scroller. The virtual functions the home calls
- * are named; the others are placeholders.
+ * PLACEHOLDER: a page's widgets, from the pool of three for the home's pages and one for a
+ * folder's (applauncher_pageview.cpp, 0x810C3B3C-0x810C61DC): the page's widget opened from its
+ * template, the frames of its ten slots, the widget its icons go on, the edit's buttons and a
+ * folder's name.
  */
-/* PLACEHOLDER: a page's widgets, taken from the page pool (0x810C4A3A) and given back to it
-   (0x810C4E74), the pool's file */
-/* PLACEHOLDER: a page's widgets from the page pool (its class at 0x810C4xxx, not written yet;
-   fields read here only) */
 class ApplauncherPageView {
 public:
-	/* PLACEHOLDER names: the view's empty mark shown or hidden (0x810C5156), and its widgets
-	   brought up to the home's page count (0x810C5A0E) */
+	ApplauncherPageView()
+		: m_widget(NULL), m_root(NULL), m_deleteButton(NULL), m_themeButton(NULL),
+		  m_addButton(NULL), m_name(NULL), m_nameHeld(false), m_isFolder(false),
+		  m_page(NULL)
+	{
+		for (int i = 0; i < 10; i++)
+			m_slotShown[i] = true;
+	}
+	~ApplauncherPageView()
+	{
+		if (m_widget != NULL) {
+			m_widget->DestroyWidget();
+			m_widget = NULL;
+		}
+	}
+
+	/* PLACEHOLDER name: the widgets opened from the template, a folder's or a page's
+	   (0x810C3B3C) */
+	void Init(bool folder);
+	/* PLACEHOLDER names: the view's delete button shown or hidden (0x810C5156), and its add
+	   button with the home's page count (0x810C5A0E) */
 	void SetEmpty(bool empty);
 	void Refresh();
 	/* PLACEHOLDER names: the edit begun on the view, empty or not (0x810C5688), and ended
@@ -408,13 +436,28 @@ public:
 	void ShowSlotFrame(int slot, bool animate);
 	void HideSlotFrame(int slot, bool animate);
 
-	SceUInt32 reserved[2];
-	paf::ui::Widget *m_root;		/* PLACEHOLDER: the widget its icons go on */
+	paf::ui::Widget *m_widget;		/* PLACEHOLDER: the page's widget, named after the view */
+	paf::ui::CompositeDrawer *m_slotFrames;	/* PLACEHOLDER: a plane for each slot's frame */
+	paf::ui::Widget *m_root;		/* PLACEHOLDER: the widget its icons go on, a button */
+	paf::ui::Widget *m_deleteButton;	/* PLACEHOLDER: the edit's buttons: the empty page */
+	paf::ui::Widget *m_themeButton;		/* deleted, the theme chosen and a page added */
+	paf::ui::Widget *m_addButton;
+	paf::ui::TextBox *m_name;		/* PLACEHOLDER: a folder's name, edited in the edit */
+	bool m_nameHeld;			/* PLACEHOLDER: the name's show hold taken */
+	bool m_isFolder;			/* PLACEHOLDER: a folder's view */
+	bool m_slotShown[10];			/* PLACEHOLDER: each slot's frame shown */
+	ApplauncherPage *m_page;		/* PLACEHOLDER: the page it is taken for */
 };
-void applauncherPageViewRelease(ApplauncherPageView *view);
-class ApplauncherPage;
+/* PLACEHOLDER: a view taken from the pool for the page (the folder's for a folder's page), and
+   given back to it (0x810C4A3A, 0x810C4E74) */
 ApplauncherPageView *applauncherPageViewGet(ApplauncherPage *page, bool fast);
+void applauncherPageViewRelease(ApplauncherPageView *view);
 
+/*
+ * PLACEHOLDER: a page of the home (its code in the file after this one, 0x810B297C on): its
+ * icons' slots, its state and its place in the scroller. The virtual functions the home calls
+ * are named; the others are placeholders.
+ */
 /* the slots of a page */
 #define APPLAUNCHER_PAGE_SLOTS		10
 
@@ -605,8 +648,12 @@ public:
 	paf::math::v4 m_iconPos;		/* where the folder's icon stood */
 };
 
-/* PLACEHOLDER: where the slot's icon stands on a folder page, without one (0x810BB24A) */
+/* PLACEHOLDER: where the slot's icon stands on a folder page, without one (0x810BB24A), and on
+   a page of the home, at the home's scale (0x810D3B90, in a file not written yet) */
 paf::math::v2 applauncherFolderPageGetSlotPos(int slot);
+paf::math::v2 applauncherPageGetSlotPos(int slot);
+/* PLACEHOLDER: the folder renamed (0x810D00CE, in a file not written yet) */
+void applauncherFolderRename(ApplauncherIcon *folder, paf::wstring &name);
 /* PLACEHOLDER: the timer's widget destroyed (its DestroyWidget), in a file not written yet
    (0x810D40BC) */
 void applauncherDestroyWidgetCB(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
@@ -760,9 +807,9 @@ void applauncherIconCancelDrag(void);
 bool applauncherPagesLoaded(void);
 void applauncherPagesSetStarted(void);
 /* PLACEHOLDER: the applauncher's request kept, outside the IDU mode and without one
-   (0x810B8830, applauncher_page.cpp) */
-void applauncherPagesHoldRequest(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
-				 void *data);
+   (0x810B8830, applauncher_page.cpp). Its one argument is not read: an icon's view gives it as
+   an event callback (the event's type), the page views their page */
+void applauncherPagesHoldRequest(void *arg);
 /* PLACEHOLDER: the IconCacheManager, its manager first (0x815553B0, the icon cache's file) */
 class ApplauncherIconCache {
 public:

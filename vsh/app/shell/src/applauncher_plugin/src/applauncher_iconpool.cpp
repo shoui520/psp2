@@ -95,7 +95,7 @@ ApplauncherIconView::ApplauncherIconView()
 	m_widget->SetUpdateCB(onUpdate, this);
 	m_widget->SetIconCB(onIcon, this);
 	m_widget->AddEventCallback(0x10000001, onPressed, this);
-	m_widget->AddEventCallback(0x10000002, applauncherPagesHoldRequest, this);
+	m_widget->AddEventCallback(0x10000002, (ui::HandlerCB)applauncherPagesHoldRequest, this);
 	m_widget->AddEventCallback(0x10001, onFocus, this);
 	m_widget->AddEventCallback(0x10003, onFocus, this);
 	m_widget->AddEventCallback(0x40001, onHold, this);

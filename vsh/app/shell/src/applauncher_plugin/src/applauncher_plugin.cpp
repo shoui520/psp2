@@ -75,7 +75,7 @@ void applauncherPluginStart(Plugin *plugin)
 			(g_applauncherInterface);
 	applauncherIconCaptureCreate(shellIconCacheGetSurfacePool());
 	applauncherPageCreate(plugin);
-	applauncherFolderCreate();
+	applauncherPageViewPoolCreate();
 	applauncherIconPoolCreate();
 	applauncherModeManagerCreate();
 	if ((int)plugin->GetArg("theme_apply", NULL))
@@ -93,7 +93,7 @@ void applauncherPluginStop(Plugin *plugin)
 			(NULL);
 	applauncherModeManagerDestroy();
 	applauncherIconPoolDestroy();
-	applauncherFolderDestroy();
+	applauncherPageViewPoolDestroy();
 	applauncherPageDestroy();
 	applauncherIconCaptureDestroy();
 }
