@@ -7,6 +7,7 @@
 #include <sysmem/cpu.h>
 #include <syscon/syscon.h>
 #include <ctrl/ctrl.h>
+#include <ctrl/ctrl_remap.h>
 #include <threadmgr/threadmgr.h>
 #include <sysmem/suspend.h>
 
@@ -66,12 +67,6 @@ struct ctrlUserBuffer {
 
 struct ctrlNativeSample;
 
-
-struct ctrlButtonRemappingInfo {
-	uint8_t buttons[14];
-	uint8_t reserved;
-	uint8_t swapAnalogSticks;
-};
 
 struct ctrlButtonChangeCallback {
 	uint32_t mask;

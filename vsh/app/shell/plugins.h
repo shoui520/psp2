@@ -25,7 +25,10 @@ enum {
 	TOPMENU_PLUGIN_FUNC_GAME_RELEASE	= 32,	/* and done; what topmenu does is not read yet */
 	TOPMENU_PLUGIN_FUNC_BUSY_BEGIN		= 35,	/* the first of the game plugin's busy calls, */
 	TOPMENU_PLUGIN_FUNC_BUSY_END		= 36,	/* and the last */
+	TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER	= 60,	/* PLACEHOLDER names: applauncher's table given */
+	TOPMENU_PLUGIN_FUNC_APPLAUNCHER_INIT	= 68,	/* (NULL: taken back), and its init done */
 	TOPMENU_PLUGIN_FUNC_UP_STATUS		= 66,	/* PLACEHOLDER name: an application's #_up_status changed */
+	TOPMENU_PLUGIN_FUNC_GET_APP_INFO	= 69,	/* PLACEHOLDER name: an application's LsdbAppInfoPtr, by title ID */
 	TOPMENU_PLUGIN_FUNC_BOOT_DONE		= 88,
 };
 
@@ -202,6 +205,17 @@ struct ImposePluginInterface {
 	void (*showNotice)(ImposeNotice *notice);
 	void (*removeNotice)(const char *name);	/* PLACEHOLDER name: the notice of that name taken down */
 	const wchar_t *(*getString)(const paf::IDParam &id);
+	void (*reserved0[4])(void);		/* PLACEHOLDER: no shell file calls them */
+	/* PLACEHOLDER names, after the accessibility zoom's calls: the zoom refused (a game holds it
+	   off, or the PlayStation TV shows 1080 lines) */
+	void (*zoomRefuse)(void);
+	void (*reserved1[5])(void);		/* PLACEHOLDER: no shell file calls them */
+	void (*zoomBegin)(void);		/* before the zoom starts */
+	void (*zoomEnd)(void);			/* after it ended */
+	void (*zoomPrepare)(void);		/* first, on either way */
+	void (*zoomShow)(int x, int y);		/* the zoom on, at the viewport's offset */
+	void (*zoomHide)(int x, int y);		/* the zoom off, from the offset it had */
+	int (*zoomIsBlocked)(void);		/* nonzero: the zoom is not toggled */
 };
 
 /*

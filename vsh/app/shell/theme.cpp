@@ -54,9 +54,6 @@ using namespace paf;
 #define SHELL_THEME_ERROR_NO_THEME	0x801091FF
 /* a theme deleted that is not an installed one (value only) */
 #define SHELL_THEME_ERROR_NOT_INSTALLED	0x80109122
-/* no memory for the default theme (value only) */
-#define SHELL_THEME_ERROR_NO_MEMORY	0x80AF0022
-
 /* livespace_db's error that says the default theme is pending (value only) */
 #define SHELL_LSDB_THEME_DEFAULT	0x801010F5
 
@@ -177,7 +174,7 @@ static int shellThemeApply(const char *path, bool isDefault, bool resetWallpaper
 	if (s_theme.get() != NULL) {
 		ret = SceLsdb_6F73E332(g_shellLsdbClient->client, &s_theme, flags);
 	} else {
-		ret = SHELL_THEME_ERROR_NO_MEMORY;
+		ret = SHELL_ERROR_NO_MEMORY;
 
 		common::SharedPtr<LsdbThemeInfo> theme(new LsdbThemeInfo);
 

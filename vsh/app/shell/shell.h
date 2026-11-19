@@ -16,11 +16,16 @@ enum {
 	SHELL_EVENT_MODEL	= 3,
 };
 
+/* what the singletons' Create functions give back (values only) */
+#define SHELL_ERROR_ALREADY_CREATED	-2136014816	/* 0x80AF0020 */
+#define SHELL_ERROR_NO_MEMORY		-2136014814	/* 0x80AF0022 */
+
 /* the application events (SceShell_83D16CA8's), names ours from their listeners */
 enum {
 	SHELL_APP_EVENT_ENDED		= 0,
 	SHELL_APP_EVENT_STARTED		= 3,
 	SHELL_APP_EVENT_ACTIVATED	= 5,	/* sent by the shell: ShellAppActivatedEvent */
+	SHELL_APP_EVENT_DEACTIVATED	= 6,	/* PLACEHOLDER name: the zoom's listener, after 5 */
 };
 
 /* an application event's data (the fields the boot reads) */
@@ -110,7 +115,7 @@ int shellStartAppDataUmount(void);			/* (0x81004C3C) */
 int shellStartupInit(void);				/* the startup settings read (0x81004EC6) */
 int shellSvcServerCreate(void);				/* SceShellSvc's IPMI server (0x811B7538) */
 int shellSvcServerStart(void);				/* its thread (0x811B7550) */
-int shellClosedCaptionMigrate(void);			/* (0x810A7760) */
+void shellClosedCaptionMigrate(void);			/* (0x810A7760) */
 int shellTriggerMgrStart(void);				/* (0x81006C60) */
 int shellNpStart(void);					/* SceNpSystem, /CONFIG/NP env (0x81003F90) */
 int shellNpServicesStart(void);				/* (0x8100463C) */
@@ -122,7 +127,7 @@ int shellRtcUtilSync(bool fromCallback);		/* /CONFIG/DATE, summer time (0x813658
 int shellErrorDialogInit(void);				/* (0x810FB5D4) */
 int shellAppEventInit(void);				/* (0x81241238) */
 int shellNetworkMgrCreate(bool enable);			/* (0x811C9070) */
-int shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */
+void shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */
 int shellNoticeServiceStart(void);			/* (0x81005204) */
 int shellNoticeServiceInit(void);			/* made and started (0x8139AB6C) */
 int shellIncomingDialogServerCreate(void);		/* (0x8115B1CA) */
@@ -186,6 +191,9 @@ int shellTriggerMgrSvcCtrl(int command, int arg);
    /CONFIG/SECURITY/PARENTAL, 0x81232F64) and the accessibility zoom (0x810A7D5A) */
 int shellParentalControlMgrCreate(void);
 int shellZoomMgrCreate(void);
+void shellZoomDisable(void);			/* held off, and ended (0x810A832A) */
+void shellZoomEnable(void);			/* let back (0x810A8344) */
+void shellZoomReset(void);			/* ended (0x810A835C) */
 
 /* the services the boot job starts (ShellBootJob::Run) */
 int shellCloudDataGetMcId(int type, void *mcId);	/* vshAppMgrCloudDataGetMcId (0x81417DB4) */

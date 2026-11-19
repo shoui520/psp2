@@ -38,6 +38,14 @@ SceUInt32 vshRtcIsSecureAlarmed(void);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);
+SceUInt32 vshDisplaySetInvertColors(int head, int enable);
+
+/* the display's viewport, through the stub library's wrappers (they pass the conf's size) */
+struct SceDisplayViewportConf;
+int vshDisplaySetViewportConf(SceUInt32 head, SceUInt32 plane,
+			      const struct SceDisplayViewportConf *conf);
+int vshDisplayGetActualViewportConf(SceUInt32 head, SceUInt32 plane,
+				    struct SceDisplayViewportConf *conf);
 
 /* sceIoMount's data and its 64-bit reserved word, in two halves, and the path's size */
 typedef struct VshIoMountArgs {
