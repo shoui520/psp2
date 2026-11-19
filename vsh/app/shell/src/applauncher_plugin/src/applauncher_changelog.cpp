@@ -417,10 +417,10 @@ static void applauncherChangeLogOnClose(SceInt32 value, SceInt32 button, void *a
 		else if (log->m_callback != NULL)
 			log->m_callback(&log->m_titleId, log->m_value, log->m_arg, 1);
 	} else {
-		ApplauncherState *state = g_applauncherState;
+		ApplauncherModeManager *state = g_applauncherModeManager;
 
-		if (state->m_requestId != -1)
-			state->m_requestState = 1;
+		if (state->m_currentMode != -1)
+			state->m_nextMode = 1;
 	}
 }
 

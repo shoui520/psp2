@@ -183,7 +183,7 @@ ShellSnapList::iterator applauncherHomeDeletePage(ApplauncherPage *page)
 		}
 		delete page;
 		if (g_applauncherHome->m_mode == 1 &&
-		    g_applauncherState->m_settings->m_sortEnabled != 0) {
+		    g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0) {
 			for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
 			     it != g_applauncherHome->m_scroller.m_items.end(); ++it)
 				static_cast<ApplauncherPage &>(**it).Refresh();
@@ -470,7 +470,7 @@ ApplauncherPage *applauncherHomeAddPage(const LsdbPage *param, ApplauncherPage *
 	g_applauncherHome->m_scroller.Insert(page, 1, after);
 	if (focus)
 		g_applauncherHome->m_scroller.JumpTo(page);
-	if (g_applauncherHome->m_ready && g_applauncherState->m_settings->m_sortEnabled != 0) {
+	if (g_applauncherHome->m_ready && g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0) {
 		if (g_applauncherHome->m_scroller.GetNext(page) != NULL)
 			g_applauncherHome->m_scroller.GetNext(page)->m_widget->SetMetaAlpha(
 				0.0f, NULL, ui::Widget::ANIM_META_ALPHA);
@@ -1365,7 +1365,7 @@ static int applauncherHomeInstallApp(const ApplauncherInstallRequest *req, bool 
 
 	for (;;) {
 		thread::RMutex::main_thread_mutex.Lock();
-		if (g_applauncherState->m_settings->m_sortEnabled == 0)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0)
 			break;
 		thread::RMutex::main_thread_mutex.Unlock();
 	}
@@ -1413,7 +1413,7 @@ static int applauncherHomeInstallApp(const ApplauncherInstallRequest *req, bool 
 		if (ret == 0) {
 			thread::RMutex::main_thread_mutex.Lock();
 			g_applauncherHome->m_waitingAppCount++;
-			if (g_applauncherState->m_settings->m_sortEnabled == 0)
+			if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0)
 				g_applauncherHome->ShowNotice();
 			thread::RMutex::main_thread_mutex.Unlock();
 		}
@@ -1511,7 +1511,7 @@ static int applauncherHomeInstallApp(const ApplauncherInstallRequest *req, bool 
 			SceCommonGuiDialog_BC311DC0(g_applauncherHome->m_waitDialog);
 			g_applauncherHome->m_waitDialog = -1;
 		}
-		if (g_applauncherState->m_settings->m_sortEnabled == 0)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0)
 			g_applauncherHome->UpdateNoticeText();
 		g_applauncherHome->UpdateSnaps();
 		thread::RMutex::main_thread_mutex.Unlock();
@@ -1655,7 +1655,7 @@ int ApplauncherHome::RemoveApp(const string &titleId)
 				folder->Update(true);
 			}
 		}
-		if (g_applauncherState->m_settings->m_sortEnabled == 0) {
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0) {
 			g_applauncherHome->UpdateNoticeText();
 			for (ShellSnapList::iterator it = g_applauncherHome->m_scroller.m_items.begin();
 			     it != g_applauncherHome->m_scroller.m_items.end();) {
@@ -1927,7 +1927,7 @@ ApplauncherPage *applauncherHomeOpenAppPage(const common::SharedPtr<ApplauncherI
 			if (icon->m_page->m_type == 0)
 				icon->m_page->MoveIconsAside(icon);
 			g_applauncherHome->CreateOverlay();
-			if (g_applauncherState->m_settings->m_sortEnabled != 0)
+			if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 				g_applauncherHome->m_appPage->BeginEdit();
 		}
 	}
@@ -2405,8 +2405,8 @@ void applauncherInterfaceReloadIcons(void)
 /* the interface's func15: the kept request's state cleared (0x810B1026) */
 void applauncherInterfaceClearRequest(void)
 {
-	if (g_applauncherState->m_requestId != -1)
-		g_applauncherState->m_requestState = 0;
+	if (g_applauncherModeManager->m_currentMode != -1)
+		g_applauncherModeManager->m_nextMode = 0;
 }
 
 /* the interface's func17: the wave hidden, the view shown again and, but on a PS TV, the icons'
@@ -2590,8 +2590,8 @@ int applauncherThemeRefresh(void)
 /* the interface's func26: the kept request marked (0x810B17D8) */
 int applauncherInterfaceSetRequest(void)
 {
-	if (g_applauncherState->m_requestId != -1)
-		g_applauncherState->m_requestState = 1;
+	if (g_applauncherModeManager->m_currentMode != -1)
+		g_applauncherModeManager->m_nextMode = 1;
 	return 0;
 }
 
@@ -2662,10 +2662,10 @@ void applauncherHomeOnOverlayEvent(int32_t type, ui::Handler *self, ui::Event *e
 		    g_applauncherDragItem->m_icon->m_widget->m_icon_mode == 2)
 			applauncherIconWidgetLeaveDrag(g_applauncherDragItem->m_icon);
 		applauncherHomeCloseAppPage(true);
-	} else if (g_applauncherState->m_requestId == 1) {
-		g_applauncherState->m_requestState = 0;
-	} else if (g_applauncherState->m_requestId != -1) {
-		g_applauncherState->m_requestState = 1;
+	} else if (g_applauncherModeManager->m_currentMode == 1) {
+		g_applauncherModeManager->m_nextMode = 0;
+	} else if (g_applauncherModeManager->m_currentMode != -1) {
+		g_applauncherModeManager->m_nextMode = 1;
 	}
 }
 
@@ -2678,18 +2678,18 @@ void applauncherHomeOnScrollTouch(int32_t type, ui::Handler *self, ui::Event *e,
 	if (detail == 1 || detail == 2 || detail == 3 || detail == 4)
 		g_applauncherHome->m_dropIndex = -1;
 	if (e->GetType() == 17 && shellStartupGetIduMode() != 1 && detail == 29 &&
-	    g_applauncherState->m_settings->m_sortEnabled == 0 &&
+	    g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0 &&
 	    ((bool (*)(int))g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_IS_LAYER_ACTIVE])
 		    (g_applauncherHome->m_layer) &&
-	    g_applauncherState->m_requestId != -1)
-		g_applauncherState->m_requestState = 1;
+	    g_applauncherModeManager->m_currentMode != -1)
+		g_applauncherModeManager->m_nextMode = 1;
 }
 
 /* the overlay touched while the first request is kept: the edit's state 5 asked for
    (0x810B1AB0) */
 void applauncherHomeOnOverlayTouch(int32_t type, ui::Handler *self, ui::Event *e, void *data)
 {
-	if (g_applauncherState->m_requestId == 1)
+	if (g_applauncherModeManager->m_currentMode == 1)
 		g_applauncherHome->RequestEditState(5);
 }
 

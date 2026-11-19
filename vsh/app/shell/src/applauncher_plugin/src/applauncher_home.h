@@ -27,6 +27,7 @@
 #include <common_gui_dialog/common_gui_dialog.h>
 #include "../../../plugins.h"
 #include "../../livespace_db/livespace_db_internal.h"
+#include "applauncher_mode.h"
 
 class ApplauncherPage;
 struct ApplauncherIconView;
@@ -1056,19 +1057,6 @@ extern "C" SceInt64 SceLsdb_45B38A03(const LsdbAppInfoPtr *app);
 extern "C" SceInt64 sceLsdbGetMetaContentsPath(const LsdbAppInfoPtr *app);
 extern "C" SceInt64 SceLsdb_0B16523B(const LsdbAppInfoPtr *app);
 
-/* PLACEHOLDER: the applauncher's state another file keeps (0x81555408) */
-struct ApplauncherSettings {
-	SceUInt32 reserved;
-	int m_sortEnabled;
-};
-struct ApplauncherState {
-	SceUInt32 reserved[3];
-	ApplauncherSettings *m_settings;
-	SceUInt32 reserved1[3];
-	int m_requestState;			/* PLACEHOLDER: cleared while a request is kept */
-	int m_requestId;			/* PLACEHOLDER: -1 without a request */
-};
-extern ApplauncherState *g_applauncherState;
 
 /* PLACEHOLDER: an icon's type for the power button (a PlayStation TV's) */
 #define APPLAUNCHER_ICON_TYPE_POWER	6

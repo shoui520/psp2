@@ -119,7 +119,7 @@ ApplauncherFolderPage::ApplauncherFolderPage(const common::SharedPtr<Applauncher
 		   new Timer(275.0f, Timer::FUNC_QUAD_OUT));
 	m_widget->SetForward(g_applauncherHome->m_scroller.m_scrollView);
 	AsPage()->Load(true);
-	if (g_applauncherState->m_settings->m_sortEnabled != 0)
+	if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 		AsPage()->BeginEdit();
 }
 
@@ -228,7 +228,7 @@ void ApplauncherFolderPage::SetIcons(const LsdbIconListPtr *icons)
 			if (dragTitle != data->titleId) {
 				common::SharedPtr<ApplauncherIcon> icon = AsPage()->AddIcon(data);
 
-				if (g_applauncherState->m_settings->m_sortEnabled != 0)
+				if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 					icon->BeginEdit(false);
 				if (m_focusTitle == data->titleId) {
 					icon->Focus();

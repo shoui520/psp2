@@ -76,9 +76,10 @@ void applauncherFolderDestroy(void);
 /* the icons' pool of 42 made and taken down (0x810BBBC8, 0x810BBCD4) */
 void applauncherIconPoolCreate(void);
 void applauncherIconPoolDestroy(void);
-/* the nine slots updated on the main thread made and taken down (0x810C1FE6, 0x810C2024) */
-void applauncherSlotsCreate(void);
-void applauncherSlotsDestroy(void);
+/* the applauncher's mode manager made, started in its launcher mode, and deleted (0x810C1FE6,
+   0x810C2024; applauncher_modemanager.cpp) */
+void applauncherModeManagerCreate(void);
+void applauncherModeManagerDestroy(void);
 
 /* a theme applied: the icons reloaded at the plugin's init (0x810AF256), and refreshed at its
    start (0x810B17CE) */

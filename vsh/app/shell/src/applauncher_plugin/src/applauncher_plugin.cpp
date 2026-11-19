@@ -77,7 +77,7 @@ void applauncherPluginStart(Plugin *plugin)
 	applauncherPageCreate(plugin);
 	applauncherFolderCreate();
 	applauncherIconPoolCreate();
-	applauncherSlotsCreate();
+	applauncherModeManagerCreate();
 	if ((int)plugin->GetArg("theme_apply", NULL))
 		applauncherThemeRefresh();
 }
@@ -91,7 +91,7 @@ void applauncherPluginStop(Plugin *plugin)
 	if (topmenu != NULL)
 		((void (*)(ApplauncherInterface *))topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER])
 			(NULL);
-	applauncherSlotsDestroy();
+	applauncherModeManagerDestroy();
 	applauncherIconPoolDestroy();
 	applauncherFolderDestroy();
 	applauncherPageDestroy();

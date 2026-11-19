@@ -206,7 +206,7 @@ void applauncherIconWidgetUpdateMark(ApplauncherIconView *view)
 {
 	if (view->m_widget->m_focus_shape == NULL)
 		return;
-	if (g_applauncherState->m_settings->m_sortEnabled != 0)
+	if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 		updateEditFocusSize(view);
 	else
 		updateFocusSize(view);
@@ -276,7 +276,7 @@ ApplauncherIconView *applauncherIconPoolAlloc(const common::SharedPtr<Applaunche
 					 math::v4(1.0f, 1.0f, 1.0f, 1.0f));
 	}
 	if (view->m_widget->m_focus_shape != NULL) {
-		if (g_applauncherState->m_settings->m_sortEnabled != 0)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 			updateEditFocusSize(view);
 		else
 			updateFocusSize(view);
@@ -317,7 +317,7 @@ ApplauncherIconView *applauncherIconPoolAlloc(const common::SharedPtr<Applaunche
 		ScePafGraphics_5E94DC78((graph::BubbleObj *)view->m_widget->GetDrawObj(0), 1);
 		((graph::BubbleObj *)view->m_widget->GetDrawObj(0))->m_opaque = false;
 	}
-	if (g_applauncherState->m_settings->m_sortEnabled != 0) {
+	if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0) {
 		view->m_widget->SetIconMode(1);
 		if (icon->m_data->icon0Type != APPLAUNCHER_ICON_FRAME_WIDE) {
 			view->m_widget->SetInfoTexture(g_applauncherPlugin->GetTexture(
@@ -444,7 +444,7 @@ void applauncherIconWidgetBeginDrag(ApplauncherIconView *view)
 	scene->m_focus_direction_off = false;
 	scene->m_focus_target = false;
 	if (view->m_widget->m_focus_shape != NULL) {
-		if (g_applauncherState->m_settings->m_sortEnabled != 0)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 			updateEditFocusSize(view);
 		else
 			updateFocusSize(view);
@@ -522,7 +522,7 @@ static void onPressed(SceInt32 type, ui::Handler *self, ui::Event *e, void *data
 {
 	ApplauncherIconView *view = (ApplauncherIconView *)data;
 
-	if (g_applauncherState->m_settings->m_sortEnabled == 0 || (SceUInt8)e->GetDetail() != 27) {
+	if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] == 0 || (SceUInt8)e->GetDetail() != 27) {
 		view->m_owner->OnPressed();
 		return;
 	}
@@ -594,31 +594,31 @@ static void onFocus(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 	if (kind == 17) {
 		if (key == 29) {
 			if (shown) {
-				if (g_applauncherState->m_requestId == 0) {
+				if (g_applauncherModeManager->m_currentMode == 0) {
 					if (((bool (*)(int))g_applauncherHome->m_topmenu
 						     ->func[TOPMENU_PLUGIN_FUNC_IS_LAYER_ACTIVE])(
 						    g_applauncherHome->m_layer) &&
-					    g_applauncherState->m_requestId != -1)
-						g_applauncherState->m_requestState = 1;
+					    g_applauncherModeManager->m_currentMode != -1)
+						g_applauncherModeManager->m_nextMode = 1;
 				} else if (view->m_widget->m_icon_mode != 2 &&
 					   view->m_owner.get() != NULL && !view->m_owner->IsFolder()) {
 					view->m_owner->OnPressed();
 				}
 			}
 		} else if (key == 30) {
-			if (g_applauncherState->m_requestState == 1 && shown) {
+			if (g_applauncherModeManager->m_nextMode == 1 && shown) {
 				if (view->m_widget->m_icon_mode != 2)
 					applauncherIconWidgetBeginDrag(view);
 				else
 					applauncherIconWidgetLeaveDrag(view);
 			}
 		} else if (key == 27) {
-			if (g_applauncherState->m_settings->m_sortEnabled != 0)
+			if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 				applauncherIconWidgetLeaveDrag(view);
 		}
 	}
 	if (key == 1 || key == 2 || key == 3 || key == 4) {
-		if (g_applauncherState->m_settings->m_sortEnabled != 0 &&
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0 &&
 		    view->m_widget->m_icon_mode == 2)
 			view->m_owner->MoveDrag(key);
 	}
@@ -652,7 +652,7 @@ static void onIcon(int32_t mode, int32_t prev, void *data)
 	if (view->m_owner.get() != NULL)
 		view->m_owner->UpdateDrag(2, view->m_widget, 0);
 	if (view->m_widget->m_focus_shape != NULL) {
-		if (g_applauncherState->m_settings->m_sortEnabled != 0)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
 			updateEditFocusSize(view);
 		else
 			updateFocusSize(view);
@@ -664,7 +664,7 @@ static void onHold(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
 	ApplauncherIconView *view = (ApplauncherIconView *)data;
 
-	if (view->m_owner.get() == NULL || g_applauncherState->m_requestId != 1)
+	if (view->m_owner.get() == NULL || g_applauncherModeManager->m_currentMode != 1)
 		return;
 	if (view->m_owner->IsFolder())
 		g_applauncherHome->RequestEditState(2);

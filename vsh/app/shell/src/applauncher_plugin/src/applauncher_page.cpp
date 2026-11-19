@@ -197,7 +197,7 @@ void applauncherIconRemove(common::SharedPtr<ApplauncherIcon> icon, bool fromFol
 		icon->m_page->m_slots[i].reset();
 		icon->m_page = NULL;
 		icon->m_slot = -1;
-		if (g_applauncherState->m_settings->m_sortEnabled)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT])
 			page->SetEmpty(page->IsEmpty());
 		page->UpdateFocusLinks();
 		return;
@@ -356,7 +356,7 @@ void applauncherIconDetach(ApplauncherIcon *icon)
 		page->m_slots[i].reset();
 		icon->m_page = NULL;
 		icon->m_slot = -1;
-		if (g_applauncherState->m_settings->m_sortEnabled)
+		if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT])
 			page->SetEmpty(page->IsEmpty());
 		return;
 	}
@@ -1417,11 +1417,11 @@ static void onPageLayoutDone(ApplauncherLsdbJob *job, void *arg)
    (0x810B8830) */
 void applauncherPagesHoldRequest(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
-	ApplauncherState *state;
+	ApplauncherModeManager *state;
 
 	if (shellStartupGetIduMode() == 1)
 		return;
-	state = g_applauncherState;
-	if (state->m_requestId == 0 && state->m_requestId != -1)
-		state->m_requestState = 1;
+	state = g_applauncherModeManager;
+	if (state->m_currentMode == 0 && state->m_currentMode != -1)
+		state->m_nextMode = 1;
 }
