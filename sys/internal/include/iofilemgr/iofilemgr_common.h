@@ -25,3 +25,19 @@ typedef struct SceIoDevInfo {
 	void *reserved;				/* NULL */
 } SceIoDevInfo;
 _Static_assert(sizeof(SceIoDevInfo) == 0x18, "SceIoDevInfo size");
+
+/* Buffer-cache settings passed to ioctl 0x1001. */
+typedef struct VfsBuffCtlIoctlArg {
+	SceSize dataCacheSize;
+	SceSize lineSize;
+	SceUInt32 wayNum;
+	SceSize ioCacheSize;
+	int mode;
+	SceUInt32 mask;
+	SceUInt32 reserved[2];
+} VfsBuffCtlIoctlArg;
+
+_Static_assert(sizeof(VfsBuffCtlIoctlArg) == 0x20, "VfsBuffCtlIoctlArg size");
+_Static_assert(__builtin_offsetof(VfsBuffCtlIoctlArg, ioCacheSize) == 0xc &&
+	       __builtin_offsetof(VfsBuffCtlIoctlArg, reserved) == 0x18,
+	       "VfsBuffCtlIoctlArg layout");

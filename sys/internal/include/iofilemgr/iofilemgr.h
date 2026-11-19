@@ -24,22 +24,6 @@ _Static_assert(sizeof(SceIoFdInfo) == 8, "SceIoFdInfo size");
 typedef int (*IoPathMappingFunction)(const char *path, SceUID pid,
 				     char *mapped, SceSize size);
 
-/* Buffer-cache settings passed to ioctl 0x1001. */
-typedef struct VfsBuffCtlIoctlArg {
-	SceSize dataCacheSize;
-	SceSize lineSize;
-	SceUInt32 wayNum;
-	SceSize ioCacheSize;
-	int mode;
-	SceUInt32 mask;
-	SceUInt32 reserved[2];
-} VfsBuffCtlIoctlArg;
-
-_Static_assert(sizeof(VfsBuffCtlIoctlArg) == 0x20, "VfsBuffCtlIoctlArg size");
-_Static_assert(__builtin_offsetof(VfsBuffCtlIoctlArg, ioCacheSize) == 0xc &&
-	       __builtin_offsetof(VfsBuffCtlIoctlArg, reserved) == 0x18,
-	       "VfsBuffCtlIoctlArg layout");
-
 typedef struct SceIofileInfo {
 	char resolvedOpenPath[0x400];
 	char openPath[0x400];
