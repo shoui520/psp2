@@ -1131,7 +1131,7 @@ public:
 typedef char GameGdInstallerSize[sizeof(GameGdInstaller) == 156 ? 1 : -1];
 
 /* the content types an install information names (values from the switch at 0x810468E2) */
-#define GAME_CONTENT_TYPE_17		17	/* PLACEHOLDER: what it is is not read */
+#define GAME_CONTENT_TYPE_17		17	/* PLACEHOLDER name: a PSP game's saved data (ux0:pspemu/PSP/SAVEDATA) */
 #define GAME_CONTENT_TYPE_GD		21
 #define GAME_CONTENT_TYPE_PSM		24
 #define GAME_CONTENT_TYPE_PSM_UNITY	29
@@ -1495,21 +1495,36 @@ public:
 typedef char GamePspInstallerSize[sizeof(GamePspInstaller) == 156 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a PSP game's package folder with PBOOT.PBP, defined in another file
- * of the plugin (constructor 0x8109367C), 40 bytes. The name is ours.
+ * The source of a PSP game's update package with PBOOT.PBP (pboot_install_source.cpp, constructor
+ * 0x8109367C, vtable 0x8152F050), 40 bytes: the games in titleIds moved to
+ * ux0:pspemu/temp/promote/pspemu/PSP/GAME, the package's content moved into the game's folder
+ * there, then all of them moved back to ux0:pspemu/PSP/GAME by Complete. The names are ours.
  */
 class GamePspPbootInstallSource : public GameInstallSource {
 public:
+	GamePspPbootInstallSource(const SceNpDrmInstallInfo *info, const paf::string &titleId,
+				  const paf::vector<paf::string> &titleIds, paf::string *errorTitleId);
+	virtual ~GamePspPbootInstallSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
 	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
 			     int reserved2, int reserved3, float scale);
-	GamePspPbootInstallSource(const SceNpDrmInstallInfo *info, const paf::string &titleId,
-				  const paf::vector<paf::string> &titleIds, paf::string *errorTitleId);
 
-	SceUInt8 m_body[36];
+private:
+	int MoveContent(const paf::string *content, const paf::string *gameDir,
+			const paf::string *titleId, paf::string *detail);
+
+	const SceNpDrmInstallInfo *m_info;
+	LsdbAppInfoPtr m_appInfo;			/* empty, not read */
+	const paf::string &m_titleId;			/* not read */
+	paf::string m_workDir;				/* the pspemu work folder mounted by Install */
+	const paf::vector<paf::string> &m_titleIds;	/* the games the update moves */
+	paf::string *m_errorTitleId;			/* where a failed step's drive goes */
 };
+
+typedef char GamePspPbootInstallSourceSize[sizeof(GamePspPbootInstallSource) == 40 ? 1 : -1];
 
 /* a game's promotion by GamePspPbootInstaller::Run, until the records are updated */
 struct GamePspPbootTitle {
@@ -1627,20 +1642,32 @@ private:
 typedef char GamePspAppInstallSourceSize[sizeof(GamePspAppInstallSource) == 32 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of a type 17 package folder, defined in another file of the plugin
- * (constructor 0x810948D8), 12 bytes. The name is ours.
+ * The source of a package of content type 17 (type17_install_source.cpp, constructor 0x810948D8,
+ * vtable 0x8152F068), 12 bytes: a PSP game's saved data folder put in ux0:pspemu/PSP/SAVEDATA, the
+ * old one moved aside to ux0:pspemu/temp/promote. The names are ours.
  */
 class GameType17InstallSource : public GameInstallSource {
 public:
+	GameType17InstallSource(const SceNpDrmInstallInfo *info, paf::string *errorTitleId);
+	virtual ~GameType17InstallSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
-	GameType17InstallSource(const SceNpDrmInstallInfo *info, paf::string *errorTitleId);
 
-	SceUInt8 m_body[8];
+	/* nothing to complete: Install put the folder in place */
+	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
+			     int reserved2, int reserved3, float scale)
+	{
+		return 0;
+	}
+
+private:
+	const SceNpDrmInstallInfo *m_info;
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
 };
+
+typedef char GameType17InstallSourceSize[sizeof(GameType17InstallSource) == 12 ? 1 : -1];
 
 /*
  * A package of content type 17 installed (type17_installer.cpp, constructor 0x81073D34, vtable
