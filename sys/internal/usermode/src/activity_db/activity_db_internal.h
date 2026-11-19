@@ -13,6 +13,7 @@
 #ifndef ACTIVITY_DB_INTERNAL_H
 #define ACTIVITY_DB_INTERNAL_H
 
+#include <fw.h>
 #include <stddef.h>
 #include <scetypes.h>
 #include <kernel/iofilemgr.h>
@@ -20,6 +21,7 @@
 #include <std/string>
 #include <std/vector>
 #include <std/list>
+#include <std/map>
 #include <common/shared_ptr.h>
 #include <file/localfile.h>
 #include <rtc/rtc.h>
@@ -30,6 +32,8 @@
 #include <dbutil/function.h>
 #include <np/np_manager/np_manager.h>
 #include <np/activity/np_activity.h>
+#include <np/np_community/np_community.h>
+#include <np/np_utility/np_utility_internal.h>
 #include "activity_db.h"
 
 /* SceActivityDb's errors (no SDK header names them) */
@@ -49,12 +53,14 @@
 #define ACTIVITY_DB_ERROR_NO_THREAD		((int)0x80101044)	/* the network daemon's queue */
 #define ACTIVITY_DB_ERROR_WAIT			((int)0x80101045)	/* a job's result never came */
 #define ACTIVITY_DB_ERROR_NOT_LOCAL		((int)0x80101046)	/* offline, a status of the network */
+#define ACTIVITY_DB_ERROR_SYNC_DETAIL		((int)0x80101048)	/* posted, but not read back */
+#define ACTIVITY_DB_ERROR_POST_FAILED		((int)0x80101049)	/* the network refused a status */
 
 /* SQLite's constraint error, as dbutil reports it: a row the database already has */
 #define ACTIVITY_DB_SQLITE_CONSTRAINT	((int)(DBUTIL_ERROR_SQLITE | SQLITE_CONSTRAINT))
 
 /* the database's user_version: what it was built for */
-#define ACTIVITY_DB_VERSION_FORMAT	1	/* the layout of user_version itself */
+#define ACTIVITY_DB_VERSION_FORMAT	FW_DEVKIT	/* the kit builds' databases hold 1, retail's 0 */
 
 /* Sony inlines the end callbacks' vector destructor */
 PAF_VECTOR_INLINE_DTOR(ActivityDbEndCallback)
@@ -244,20 +250,32 @@ vector<SceInt64, allocator<SceInt64> >::vector(const vector<SceInt64, allocator<
 
 /* a status as the network gives it, with what it added since the database's copy */
 struct ActivityDbNetStatus {
-	ActivityDbNetStatus() : syncKey(), isSynced(false), addedComments(0), addedVotes(0)
+	ActivityDbNetStatus() : subjectId(), isGetAnnounce(false), addedComments(0), addedVotes(0)
 	{
 	}
 
 	ActivityDbStatus status;
-	paf::string syncKey;
-	bool isSynced;
+	paf::string subjectId;		/* the user a status of that type is about (its actionURL) */
+	bool isGetAnnounce;		/* the owner's avatar and panel were looked up */
 	int addedComments;		/* the comments the database does not have yet */
 	int addedVotes;			/* the good jobs the database does not have yet */
 };
 PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbNetStatus, paf::allocator<ActivityDbNetStatus>)
+PAF_VECTOR_NOINLINE_CLEAR(ActivityDbNetStatus, paf::allocator<ActivityDbNetStatus>)
 
-/* Sony calls vector<ActivityDbNetStatus>'s destructor out of line */
+/* Sony calls vector<ActivityDbNetStatus>'s destructor and pop_back out of line */
 namespace paf {
+template<> inline __attribute__((noinline))
+void vector<ActivityDbNetStatus, allocator<ActivityDbNetStatus> >::pop_back()
+{
+	if (count != 0) {
+		ptr[count - 1].~ActivityDbNetStatus();
+		--count;
+		if (count < limit - 20)
+			reserve(limit - 10);
+	}
+}
+
 template<> inline __attribute__((noinline))
 vector<ActivityDbNetStatus, allocator<ActivityDbNetStatus> >::~vector()
 {
@@ -270,7 +288,7 @@ vector<ActivityDbNetStatus, allocator<ActivityDbNetStatus> >::~vector()
 struct ActivityDbComment {
 	ActivityDbComment()
 		: rowid(0), commentId(-1), ownerType(ACTIVITY_DB_OWNER_UNKNOWN), creationTime(0),
-		  reserved(false), announcePanelBgColor(0)
+		  isGetAnnounce(false), announcePanelBgColor(0)
 	{
 	}
 
@@ -280,14 +298,25 @@ struct ActivityDbComment {
 	int ownerType;			/* ACTIVITY_DB_OWNER_* */
 	SceInt64 creationTime;
 	paf::string message;
-	bool reserved;
+	bool isGetAnnounce;		/* its author's avatar and panel were read */
 	paf::string announceAvatarUrl;
 	SceUInt32 announcePanelBgColor;
 	paf::string announcePanelUrl;
 };
 
-PAF_VECTOR_NOINLINE_CLEAR(ActivityDbComment, paf::allocator<ActivityDbComment>)
 PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbComment, paf::allocator<ActivityDbComment>)
+
+/*
+ * a comment as a query reads it: the same record, but Sony's query keeps its own copies of
+ * the vector's methods (0x8101a650 clear, 0x8101a6f4 reserve and 0x8101a8a0 push_back in
+ * 3.650.011-TOOL, beside the network daemon's 0x8101d494 and 0x8101d640), so its element is
+ * a type of its own
+ */
+struct ActivityDbQueryComment : ActivityDbComment {
+};
+
+PAF_VECTOR_NOINLINE_CLEAR(ActivityDbQueryComment, paf::allocator<ActivityDbQueryComment>)
+PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbQueryComment, paf::allocator<ActivityDbQueryComment>)
 
 /* who wrote a status, a comment or a good job: a user, or a title */
 struct ActivityDbOwner {
@@ -298,6 +327,19 @@ struct ActivityDbOwner {
 	paf::string ownerId;		/* the user's online ID, or the title's ID */
 	int ownerType;			/* ACTIVITY_DB_OWNER_* */
 	paf::string titleId;		/* the title it was written from */
+};
+
+/* an owner's avatar and announce panel, as their profile gives them */
+struct ActivityDbAnnounceInfo {
+	ActivityDbAnnounceInfo() : ownerType(ACTIVITY_DB_OWNER_UNKNOWN), announcePanelBgColor(0)
+	{
+	}
+
+	paf::string ownerId;
+	int ownerType;			/* ACTIVITY_DB_OWNER_* */
+	paf::string announceAvatarUrl;
+	SceUInt32 announcePanelBgColor;
+	paf::string announcePanelUrl;
 };
 
 /* what names a status on the network: its owner and its ID */
@@ -329,9 +371,14 @@ struct ActivityDbCommentKey {
 
 /* Sony calls this vector's clear */
 PAF_VECTOR_NOINLINE_CLEAR(ActivityDbCommentKey, paf::allocator<ActivityDbCommentKey>)
+PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbCommentKey, paf::allocator<ActivityDbCommentKey>)
 
 /* how far a status was read from the network */
 struct ActivityDbStatusState {
+	ActivityDbStatusState() : rowid(0), updateTime(0), isGetInfo(false), isGetDetail(false)
+	{
+	}
+
 	SceInt64 rowid;
 	paf::string titleId;
 	SceInt64 updateTime;
@@ -386,7 +433,7 @@ struct ActivityDbGoodJobKey {
 	bool isVoted;			/* the user gave one */
 };
 
-/* the daemon's databases: the activity feed's and the news's (ActivityDbQueryDatabase) */
+/* the daemon's databases: the activity feed's and the news's (ActivityDbGetQueryDatabase) */
 #define ACTIVITY_DB_DATABASE_ACTIVITY	0
 #define ACTIVITY_DB_DATABASE_NEWS	1
 #define ACTIVITY_DB_DATABASE_COUNT	2
@@ -521,7 +568,7 @@ struct ActivityDbDaemon {
 	int ClearWaitStatuses(paf::vector<SceInt64> *rowids);
 	int SyncActivity(int type, const paf::string *titleId, const SceInt64 *syncedTime,
 		paf::vector<ActivityDbNetStatus> *added, paf::vector<ActivityDbNetStatus> *updated,
-		paf::vector<SceInt64> *deleted, SceInt64 *waitTime);
+		paf::vector<SceInt64> *deleted, SceInt64 *waitTime, int database);
 	int SyncStatusDetail(const ActivityDbNetStatus *status,
 		const paf::vector<ActivityDbComment> *comments,
 		const paf::vector<ActivityDbCommentKey> *deletedComments,
@@ -531,7 +578,9 @@ struct ActivityDbDaemon {
 	int Notify();
 	int DeleteTitles(int database, paf::vector<paf::string> *titleIds,
 		ActivityDbJobWait *wait);
+#if FW_DEVKIT
 	int TrimStatuses(int database, const char *titleId, int keep);
+#endif
 	int UpdateBaseTime(ActivityDbAccess *access, const paf::string *titleId,
 		const SceInt64 *baseTime, int scope);
 	int SetBaseTime(int database, const paf::string *titleId, const SceInt64 *baseTime,
@@ -791,7 +840,8 @@ struct ActivityDbQuery {
 	int GetStatuses(paf::vector<SceInt64> *rowids, paf::vector<ActivityDbStatus> *statuses);
 	int GetCommentRowids(const SceInt64 *mainRowid, int offset, int count,
 			     paf::vector<SceInt64> *rowids);
-	int GetComments(paf::vector<SceInt64> *rowids, paf::vector<ActivityDbComment> *comments);
+	int GetComments(paf::vector<SceInt64> *rowids,
+		paf::vector<ActivityDbQueryComment> *comments);
 	int GetGoodJob(const SceInt64 *mainRowid, ActivityDbGoodJob *goodJob);
 	bool IsChanged();
 	int ClearChanged();
@@ -819,17 +869,14 @@ struct ActivityDbQueryHandle {
 	int GetStatuses(paf::vector<SceInt64> *rowids, paf::vector<ActivityDbStatus> *statuses);
 	int GetCommentRowids(const SceInt64 *mainRowid, int offset, int count,
 			     paf::vector<SceInt64> *rowids);
-	int GetComments(paf::vector<SceInt64> *rowids, paf::vector<ActivityDbComment> *comments);
+	int GetComments(paf::vector<SceInt64> *rowids,
+		paf::vector<ActivityDbQueryComment> *comments);
 	int GetGoodJob(const SceInt64 *mainRowid, ActivityDbGoodJob *goodJob);
 	bool IsChanged();
 	int ClearChanged();
 
 	ActivityDbQuery *m_query;
 };
-
-/* the database a query of type reads, and the one that keeps rowid */
-int ActivityDbQueryDatabase(int type);
-int ActivityDbDatabaseOfRowid(SceInt64 rowid);
 
 /*
  * the first database's recent statuses of titleId (or of every title, by scope) since since,
@@ -847,6 +894,12 @@ int ActivityDbSetBaseTime(int database, const paf::string *titleId, const SceInt
 int ActivityDbUpdateCounts(int database, int keepNewComments,
 	paf::vector<ActivityDbNetStatus> *statuses);
 
+/* the database a query type's statuses are kept in */
+int ActivityDbGetQueryDatabase(int type);
+/* the database a status's rowid is in, and a comment's */
+int ActivityDbGetRowidDatabase(SceInt64 rowid);
+int ActivityDbGetCommentRowidDatabase(SceInt64 rowid);
+
 
 /* the connection to the NP activity service (Sony's object name SceLsdbActNpAcc) */
 struct ActivityDbNpAccess {
@@ -862,6 +915,21 @@ struct ActivityDbNpAccess {
 	int m_connection;		/* 0 while closed */
 	paf::thread::Mutex m_lock;	/* "SceLsdbActNpAcc" */
 	bool m_busy;			/* a request is running on the connection */
+};
+
+/*
+ * the network daemon's access object while none is open: Sony's is of a class built on
+ * ActivityDbNpAccess, whose constructor and destructor only call the base's (0x8101e4dc and
+ * 0x8101e4a8 in 3.650.011-TOOL, beside the base's own complete ones)
+ */
+struct ActivityDbNoNpAccess : ActivityDbNpAccess {
+	__attribute__((noinline)) ActivityDbNoNpAccess()
+	{
+	}
+
+	__attribute__((noinline)) ~ActivityDbNoNpAccess()
+	{
+	}
 };
 
 /* a request of the network daemon's queue, run on its thread */
@@ -951,8 +1019,8 @@ typedef void (*ActivityDbSyncCallback)(int result, bool changed, const paf::stri
 /* what a sync of the activity feed reads */
 struct ActivityDbSyncParam {
 	ActivityDbQueryCondition condition;
-	SceInt64 since;			/* the oldest status it reads; 0: the database's base time */
-	int reserved;			/* copied, never read */
+	SceUInt64 since;		/* the oldest status it reads; 0: the database's base time */
+	int keepNewComments;		/* the updated statuses keep their new comments */
 	ActivityDbSyncCallback callback;
 	void *arg;
 	bool reload;			/* read from the start, not from since */
@@ -981,14 +1049,30 @@ struct ActivityDbNetDaemon {
 	int GetAvatarInfo(SceInt64 id, int database, int mode,
 		const ActivityDbQueryCondition *condition, const ActivityDbNetCallback *callback);
 	int Cancel(SceInt64 id);
-	int RemoveTitleStatuses(SceInt64 id, const ActivityDbOwner *owner, int scope,
-		ActivityDbJobWait *wait);
+	int GetAnnounceInfo(SceInt64 id, const ActivityDbOwner *owner,
+		ActivityDbAnnounceInfo *info, ActivityDbJobWait *wait);
 	ActivityDbOwner GetUser();
 	int RemoveAllMyStatuses(SceInt64 id, ActivityDbJobWait *wait);
+	int FetchActivity(const ActivityDbSyncParam *param, const paf::string *titleId,
+		paf::vector<ActivityDbNetStatus> *added, paf::vector<ActivityDbNetStatus> *updated,
+		paf::vector<SceInt64> *deleted, SceUInt64 *netTime);
 	int SendWaitStatuses();
+	int RunSyncDetail(SceInt64 mainRowid, const ActivityDbNetCallback *callback,
+		bool *updated);
+	int RunPostStatus(const ActivityDbStatus *status);
+	int RunSendWaitStatuses();
+	int RunDeleteStatus(const int *statusId);
+	int RunPostComment(const SceInt64 *mainRowid, const ActivityDbComment *comment);
+	int RunDeleteComment(const ActivityDbCommentKey *key);
+	int RunVoteGoodJob(const ActivityDbStatusKey *key);
+	int RunCancelGoodJob(const ActivityDbStatusKey *key);
+	int RunRemoveAllMyStatuses(const ActivityDbOwner *user);
+	int RunGetAvatarInfo(const ActivityDbQueryCondition *condition, bool *found,
+		const ActivityDbNetCallback *callback);
+	int RunGetAnnounceInfo(const ActivityDbOwner *owner, ActivityDbAnnounceInfo *info);
 	void Abort();
 
-	static ActivityDbNpAccess s_noNpAccess;	/* the connection while none is open */
+	static ActivityDbNoNpAccess s_noNpAccess;	/* the connection while none is open */
 
 	ActivityDbNpAccess *m_npAccess;
 	ActivityDbNetQueue *m_queue;
@@ -998,6 +1082,9 @@ struct ActivityDbNetDaemon {
 };
 
 extern "C" ActivityDbNetDaemon *SceActivityDb_7B68F69D(void);
+
+/* paf's next sequence number (its src/common/sequence.c; no paf header declares it yet) */
+extern "C" SceUInt64 ScePafCommon_AC2F3710(void);
 
 /* the titles whose statuses stay on the system: never sent to the network (Sony reads them
    from arrays, not literals) */
@@ -1181,11 +1268,11 @@ public:
 	ActivityDbJobWait *m_wait;
 };
 
-class ActivityDbNetRemoveTitleStatusesJob : public ActivityDbNetJob {
+class ActivityDbNetGetAnnounceInfoJob : public ActivityDbNetJob {
 public:
-	ActivityDbNetRemoveTitleStatusesJob(const ActivityDbOwner *owner, int scope,
+	ActivityDbNetGetAnnounceInfoJob(const ActivityDbOwner *owner, ActivityDbAnnounceInfo *info,
 		ActivityDbJobWait *wait)
-		: m_owner(*owner), m_scope(scope), m_wait(wait)
+		: m_owner(*owner), m_info(info), m_wait(wait)
 	{
 	}
 
@@ -1193,7 +1280,7 @@ public:
 	virtual void Done(int result);
 
 	ActivityDbOwner m_owner;
-	int m_scope;
+	ActivityDbAnnounceInfo *m_info;		/* where the owner's avatar and panel go */
 	ActivityDbJobWait *m_wait;
 };
 
@@ -1205,9 +1292,71 @@ int ActivityDbUpgradeNews(dbutil::Connection *connection, int version);
  * The library's exports on the daemon's databases: open the activity feed's (at path) and
  * the news's, close them (the daemon stops with the last), and tell the listeners
  */
-extern "C" int SceActivityDb_7B0C84A3(const char *path);
+extern "C" int SceActivityDb_7B0C84A3(const char *path, int flags);
 extern "C" int SceActivityDb_AD7BFF8F(void);
 extern "C" int SceActivityDb_36B8046C(void);
 extern "C" int SceActivityDb_738D4B49(void);
+
+/*
+ * Posts a status of type for titleId to the shell (its activity service, through ShellSvc):
+ * message is at most 256 characters on 8 lines; contentId, actionUrl and iconUrl may be NULL.
+ */
+int ActivityDbPostStatus(int type, const char *titleId, const char *contentId,
+	const char *message, const char *actionUrl, const char *iconUrl);
+
+/* a caller's requests to the network, under one ID it can cancel them by */
+struct ActivityDbSync {
+	ActivityDbSync();
+
+	int SyncActivity(const ActivityDbSyncParam *param);
+	int GetAvatarInfo(const ActivityDbQueryCondition *condition,
+		const ActivityDbNetCallback *callback);
+	int SyncDetail(const SceInt64 *mainRowid, const paf::string *titleId,
+		const ActivityDbNetCallback *callback);
+	int PostStatus(const ActivityDbStatus *status);
+	int DeleteStatus(const SceInt64 *rowid);
+	int PostComment(const SceInt64 *mainRowid, const ActivityDbComment *comment,
+		bool syncDetail);
+	int DeleteComment(const SceInt64 *rowid, bool syncDetail);
+	int VoteGoodJob(const SceInt64 *mainRowid, bool syncDetail);
+	int CancelGoodJob(const SceInt64 *mainRowid, bool syncDetail);
+	int RemoveTitles(paf::vector<paf::string> *titleIds);
+	int Cancel();
+	int GetAnnounceInfo(ActivityDbAnnounceInfo *info, const char *ownerId);
+	int ClearWaitStatus();
+	int RemoveAllMyStatuses();
+
+	SceInt64 m_id;			/* never ACTIVITY_DB_NET_ID_NONE */
+};
+
+/* the exported handle of an ActivityDbSync (Sony's objects "SceActDbSyncObj<request>") */
+struct ActivityDbSyncHandle {
+	ActivityDbSyncHandle();
+	~ActivityDbSyncHandle();
+
+	/* a status of type for titleId with message, and a comment with message */
+	static void MakeStatus(ActivityDbStatus *status, const paf::string &titleId, int type,
+		const paf::string &message);
+	static void MakeComment(ActivityDbComment *comment, const paf::string &message);
+
+	int PostStatus(const ActivityDbStatus *status);
+	int DeleteStatus(const SceInt64 *rowid);
+	int PostComment(const SceInt64 *mainRowid, const ActivityDbComment *comment);
+	int DeleteComment(const SceInt64 *rowid);
+	int VoteGoodJob(const SceInt64 *mainRowid);
+	int CancelGoodJob(const SceInt64 *mainRowid);
+	int SyncActivity(const ActivityDbSyncParam *param);
+	int SyncDetail(const SceInt64 *mainRowid, const paf::string *titleId,
+		const ActivityDbNetCallback *callback);
+	int GetAvatarInfo(const ActivityDbQueryCondition *condition,
+		const ActivityDbNetCallback *callback);
+	int Cancel();
+	int RemoveAllMyStatuses();
+	int RemoveTitles(paf::vector<paf::string> *titleIds);
+	int GetAnnounceInfo(ActivityDbAnnounceInfo *info, const char *ownerId);
+	int ClearWaitStatus();
+
+	ActivityDbSync *m_sync;
+};
 
 #endif

@@ -769,7 +769,7 @@ __attribute__((noinline)) int NeDaemon::ClearPopups()
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -794,7 +794,7 @@ __attribute__((noinline)) int NeDaemon::ClearPopups()
 		result = 0;
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -806,15 +806,15 @@ __attribute__((noinline)) int NeDaemon::Open(ActivityDbAccess *access)
 	{
 		NeFunction increment("increment_popup_num", IncrementPopupNum);
 
-		SceActivityDb_76F10DA7(m_access, &increment);
+		m_access->RegisterFunction(&increment);
 
 		NeFunction decrement("decrement_popup_num", DecrementPopupNum);
 
-		SceActivityDb_76F10DA7(m_access, &decrement);
+		m_access->RegisterFunction(&decrement);
 
 		NeFunction next("get_next_popup_no", GetNextPopupNo);
 
-		SceActivityDb_76F10DA7(m_access, &next);
+		m_access->RegisterFunction(&next);
 	}
 	ClearPopups();
 	return 0;
@@ -825,15 +825,15 @@ __attribute__((noinline)) void NeDaemon::Close()
 	if (m_access != NULL) {
 		NeFunction increment("increment_popup_num", IncrementPopupNum);
 
-		SceActivityDb_94516607(m_access, &increment);
+		m_access->UnregisterFunction(&increment);
 
 		NeFunction decrement("decrement_popup_num", DecrementPopupNum);
 
-		SceActivityDb_94516607(m_access, &decrement);
+		m_access->UnregisterFunction(&decrement);
 
 		NeFunction next("get_next_popup_no", GetNextPopupNo);
 
-		SceActivityDb_94516607(m_access, &next);
+		m_access->UnregisterFunction(&next);
 		m_access = NULL;
 	}
 	m_listeners.clear();
@@ -844,7 +844,7 @@ __attribute__((noinline)) ActivityDbConnection *NeDaemon::BeginTransaction()
 	if (m_access == NULL)
 		return NULL;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return NULL;
@@ -853,7 +853,7 @@ __attribute__((noinline)) ActivityDbConnection *NeDaemon::BeginTransaction()
 
 __attribute__((noinline)) int NeDaemon::EndTransaction(int result)
 {
-	return SceActivityDb_11D77056(m_access, result);
+	return m_access->EndTransaction(result);
 }
 
 __attribute__((noinline)) int NeDaemon::AddListener(NeDaemonListener listener, void *userData)
@@ -885,7 +885,7 @@ __attribute__((noinline)) int NeDaemon::DeleteEvents(bool all)
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -922,7 +922,7 @@ __attribute__((noinline)) int NeDaemon::DeleteEvents(bool all)
 	if (connection->GetChanges() != 0)
 		NotifyListeners();
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1250,7 +1250,7 @@ __attribute__((noinline)) int NeDaemon::Insert(LsdbNewEvent *event, bool replace
 		return LSDB_ERROR_NOT_READY;
 
 	SceUInt64 changes = 0;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1349,7 +1349,7 @@ inserted:
 		NotifyListeners();
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1598,7 +1598,7 @@ __attribute__((noinline)) int NeDaemon::Update(LsdbNewEventPtr *events, int coun
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1633,7 +1633,7 @@ __attribute__((noinline)) int NeDaemon::Update(LsdbNewEventPtr *events, int coun
 	else
 		result = LSDB_ERROR_NOT_FOUND;
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1643,7 +1643,7 @@ inline int NeDaemon::DeleteKeys(const LsdbNewEventKey *keys, int count)
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1655,7 +1655,7 @@ inline int NeDaemon::DeleteKeys(const LsdbNewEventKey *keys, int count)
 		m_eventCount -= deleted;
 		NotifyListeners();
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1670,7 +1670,7 @@ __attribute__((noinline)) int NeDaemon::ClearNewFlags()
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1693,7 +1693,7 @@ __attribute__((noinline)) int NeDaemon::ClearNewFlags()
 		result = 0;
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1708,7 +1708,7 @@ __attribute__((noinline)) int NeDaemon::DeleteTitleEvents(const char *titleId)
 	paf::vector<LsdbNewEventKey> keys;
 	ActivityDbConnection *connection;
 
-	if (m_access == NULL || (connection = SceActivityDb_82B45E74(m_access)) == NULL)
+	if (m_access == NULL || (connection = m_access->BeginTransaction()) == NULL)
 		return LSDB_ERROR_NOT_READY;
 
 	int result;
@@ -1745,7 +1745,7 @@ __attribute__((noinline)) int NeDaemon::DeleteTitleEvents(const char *titleId)
 			result = 0;
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 

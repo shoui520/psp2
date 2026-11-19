@@ -33,7 +33,7 @@ void ActivityDbNpAccess::Close()
 {
 	m_lock.Lock();
 	if (m_connection != 0) {
-		SceNpActivityNet_72346DA7();
+		SceNpActivityNet_72346DA7(m_connection);
 		m_busy = false;
 		m_connection = 0;
 	}
@@ -79,7 +79,7 @@ int ActivityDbNpAccess::End()
 		m_lock.Unlock();
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	}
-	result = SceNpActivityNet_F3586055();
+	result = SceNpActivityNet_F3586055(m_connection);
 	m_busy = false;
 	m_lock.Unlock();
 	return result;

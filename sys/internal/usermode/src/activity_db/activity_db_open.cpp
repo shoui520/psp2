@@ -24,8 +24,16 @@ static inline ActivityDbDatabases **ActivityDbGetDatabases(void)
 	return &holder.databases;
 }
 
-/* opens database at path, starting the daemons with the first one */
-static int ActivityDbOpen(ActivityDbDatabases **databases, const char *path, int database)
+/* the devkit build keeps the open out of line (its title cleanup makes it large) */
+#if FW_DEVKIT
+#define ACTIVITY_DB_OPEN_INLINE	__attribute__((noinline))
+#else
+#define ACTIVITY_DB_OPEN_INLINE
+#endif
+
+/* opens database at path, starting the daemons with the first one; flags are unused */
+static ACTIVITY_DB_OPEN_INLINE int ActivityDbOpen(ActivityDbDatabases **databases,
+	const char *path, int database, int flags)
 {
 	int result = 0;
 
@@ -47,6 +55,8 @@ static int ActivityDbOpen(ActivityDbDatabases **databases, const char *path, int
 		if (result != 0)
 			return result;
 	}
+#if FW_DEVKIT
+	/* the devkit build starts without the local titles' statuses of the last session */
 	if (database == ACTIVITY_DB_DATABASE_ACTIVITY) {
 		paf::vector<paf::string> titleIds;
 
@@ -55,12 +65,14 @@ static int ActivityDbOpen(ActivityDbDatabases **databases, const char *path, int
 		result = SceActivityDb_FBB82B37()->DeleteTitles(ACTIVITY_DB_DATABASE_ACTIVITY,
 			&titleIds, NULL);
 	}
+#endif
 	return result;
 }
 
 int SceActivityDb_B5012F40(const char *path, int flags)
 {
-	return ActivityDbOpen(ActivityDbGetDatabases(), path, ACTIVITY_DB_DATABASE_ACTIVITY);
+	return ActivityDbOpen(ActivityDbGetDatabases(), path, ACTIVITY_DB_DATABASE_ACTIVITY,
+		flags);
 }
 
 int SceActivityDb_AD7BFF8F(void)
@@ -82,9 +94,9 @@ int SceActivityDb_AD7BFF8F(void)
 	return 0;
 }
 
-int SceActivityDb_7B0C84A3(const char *path)
+int SceActivityDb_7B0C84A3(const char *path, int flags)
 {
-	return ActivityDbOpen(ActivityDbGetDatabases(), path, ACTIVITY_DB_DATABASE_NEWS);
+	return ActivityDbOpen(ActivityDbGetDatabases(), path, ACTIVITY_DB_DATABASE_NEWS, flags);
 }
 
 int SceActivityDb_36B8046C(void)

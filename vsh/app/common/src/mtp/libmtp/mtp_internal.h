@@ -1808,9 +1808,6 @@ void mtpCmdMarlinFreeBuffers(void);
 /* the utilities' heap, which the task queue allocates its events from */
 extern "C" paf::memory::HeapAllocator *g_mtpUtilHeap;
 
-/* paf's allocation from a heap (ScePafStdc D00387E7), NULL when it has no memory */
-void *operator new(size_t size, paf::memory::HeapAllocator *heap) throw();
-
 /* forget the host's capabilityInfo; a connection that ended keeps it unless forced */
 void mtpCapabilityInfoClear(bool force);
 

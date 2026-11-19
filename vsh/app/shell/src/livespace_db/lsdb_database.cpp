@@ -28,7 +28,6 @@ int LsdbDatabase::Open(int state, bool inMemory)
 	int rebuilt = 0;
 	ActivityDbRebuildParam param;
 	ActivityDbAccess *access;
-	void *memory;
 	int result;
 
 	if (!inMemory) {
@@ -36,18 +35,16 @@ int LsdbDatabase::Open(int state, bool inMemory)
 		if (!paf::Dir::IsExist(LSDB_DB_DIR))
 			paf::Dir::CreateRecursive(LSDB_DB_DIR, 6);
 		if (state < 0)
-			SceActivityDb_1281238F(path, 1);
+			SceActivityDb_1281238F(path, true);
 	}
 	param.state = sce_paf_abs(state);
 	param.language = SceLsdb_68059E87();
 	param.region = LsdbGetRegion();
 	access = NULL;
 	param.version = LSDB_DB_VERSION;
-	memory = operator new(ACTIVITY_DB_ACCESS_SIZE);
-	if (memory != NULL)
-		access = SceActivityDb_B2EF1EE0((ActivityDbAccess *)memory);
+	access = new ActivityDbAccess;
 	m_access = access;
-	result = SceActivityDb_AFB99B8D(access, path, ACTIVITY_DB_OPEN_FLAGS, &param, 0,
+	result = access->Open(path, ACTIVITY_DB_OPEN_FLAGS, &param, 0,
 		LsdbDatabase::Upgrade);
 	if (LsdbDbRebuilt(result))
 		rebuilt = result;
@@ -74,9 +71,9 @@ int LsdbDatabase::Close()
 	NeDaemon::GetInstance()->Close();
 	AppInfoDaemon::GetInstance()->Close();
 	if (m_access != NULL) {
-		SceActivityDb_3D89266C(m_access);
+		m_access->Close();
 		if (m_access != NULL)
-			operator delete(SceActivityDb_6107381D(m_access));
+			delete m_access;
 		m_access = NULL;
 	}
 	return 0;
@@ -96,7 +93,7 @@ int LsdbDatabase::SetLanguage(int language)
 	int liveAreaResult;
 	ActivityDbRebuildParam param;
 
-	if (SceActivityDb_82B45E74(m_access) == NULL)
+	if (m_access->BeginTransaction() == NULL)
 		return LSDB_ERROR_NOT_READY;
 	appInfoResult = AppInfoDaemon::GetInstance()->UpdateIconTitles(language);
 	liveAreaResult = LiDaemon::GetInstance()->UpdateTitles(paf::string((const char *)NULL, 0),
@@ -106,9 +103,9 @@ int LsdbDatabase::SetLanguage(int language)
 		param.version = -1;
 		param.language = language;
 		param.region = -1;
-		SceActivityDb_7A345D77(m_access, &param);
+		m_access->UpdateParam(&param);
 	}
-	SceActivityDb_11D77056(m_access, 0);
+	m_access->EndTransaction(0);
 	return 0;
 }
 
@@ -122,7 +119,7 @@ int LsdbDatabase::GetLanguage()
 	param.version = -1;
 	param.language = -1;
 	param.region = -1;
-	result = SceActivityDb_EA953F36(m_access, &param);
+	result = m_access->GetParam(&param);
 	if (result == 0)
 		result = param.language;
 	return result;

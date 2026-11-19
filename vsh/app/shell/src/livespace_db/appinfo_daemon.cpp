@@ -139,11 +139,11 @@ paf::string AppInfoDaemon::GetConfigString(int key, const char *defaultValue)
 
 	if (m_access == NULL)
 		return paf::string(defaultValue);
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return paf::string(defaultValue);
 	value = AppDbGetConfigString(connection, key, defaultValue);
-	SceActivityDb_11D77056(m_access, 0);
+	m_access->EndTransaction(0);
 	return paf::string(value);
 }
 
@@ -151,11 +151,11 @@ int AppInfoDaemon::SetConfigString(int key, const char *value)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbSetConfigString(connection, key, value);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -163,11 +163,11 @@ SceInt64 AppInfoDaemon::GetConfigInt64(int key, SceInt64 defaultValue)
 {
 	if (m_access == NULL)
 		return defaultValue;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return defaultValue;
 	SceInt64 value = AppDbGetConfigInt64(connection, key, defaultValue);
-	SceActivityDb_11D77056(m_access, 0);
+	m_access->EndTransaction(0);
 	return value;
 }
 
@@ -175,11 +175,11 @@ int AppInfoDaemon::UpdateConfigBits(int key, SceInt64 bits, SceInt64 mask)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbUpdateConfigBits(connection, key, bits, mask);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -188,7 +188,7 @@ ActivityDbConnection *AppInfoDaemon::BeginTransaction()
 	ActivityDbConnection *connection = NULL;
 
 	if (m_access != NULL)
-		connection = SceActivityDb_82B45E74(m_access);
+		connection = m_access->BeginTransaction();
 	return connection;
 }
 
@@ -206,13 +206,13 @@ int AppInfoDaemon::EndTransaction(int state)
 		param.version = LSDB_APPDB_VERSION;
 		param.language = SceLsdb_68059E87();
 		param.region = LsdbGetRegion();
-		result = SceActivityDb_BF4343E0(m_access, &param);
+		result = m_access->SetParam(&param);
 		if (result != 0) {
-			SceActivityDb_11D77056(m_access, -1);
+			m_access->EndTransaction(-1);
 			return result;
 		}
 	}
-	result = SceActivityDb_11D77056(m_access, state >= 0 ? 0 : -1);
+	result = m_access->EndTransaction(state >= 0 ? 0 : -1);
 	if (result == 0 && state >= 0) {
 		s_openResult = 0;
 		SceActivityDb_B9A3FDCC(g_lsdbAppDbPath);
@@ -225,11 +225,11 @@ int AppInfoDaemon::GetIcons(int pageNo, unsigned int count, LsdbPageIconLists *p
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetIcons(connection, pageNo, count, pages);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -237,11 +237,11 @@ int AppInfoDaemon::GetPage(int pageNo, unsigned int flags, LsdbPageList *pages)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetPage(connection, pageNo, flags, pages);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -249,11 +249,11 @@ int AppInfoDaemon::ReplacePageIcons(paf::vector<int> *pageNos, LsdbPageIconLists
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbReplacePageIcons(connection, pageNos, lists);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -264,7 +264,7 @@ int AppInfoDaemon::UpdateIcon(int pageNo, const LsdbIconPtr *icon, unsigned int 
 		return LSDB_ERROR_NOT_READY;
 	if (fields == 0)
 		return LSDB_ERROR_INVALID_ARGUMENT;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbUpdateIcon(connection, pageNo, icon, fields, image, imageSize);
@@ -276,7 +276,7 @@ int AppInfoDaemon::UpdateIcon(int pageNo, const LsdbIconPtr *icon, unsigned int 
 			SceLsdb_6E4B6EBF(current.folder->id, &pageNo, &current.pos,
 				current.title.c_str());
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -319,7 +319,7 @@ int AppInfoDaemon::AddIcon(int pageNo, const LsdbIconPtr *icon)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbAddIcon(connection, pageNo, icon, NULL, 0);
@@ -331,7 +331,7 @@ int AppInfoDaemon::AddIcon(int pageNo, const LsdbIconPtr *icon)
 
 		SceLsdb_2AB5A403(titleId, &location);
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -339,13 +339,13 @@ int AppInfoDaemon::DeleteTitleIcons(const paf::string *titleId)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbDeleteTitleIcons(connection, titleId);
 	if (result == 0 && AppInfoDaemonIsOnMemoryCard(connection, titleId))
 		SceLsdb_2DF6EA05(titleId->c_str());
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -358,7 +358,7 @@ int AppInfoDaemon::MoveIcons(paf::vector<int> *fromPages, paf::vector<int> *from
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbMoveIcons(connection, fromPages, fromPositions, toPages, toPositions);
@@ -410,7 +410,7 @@ int AppInfoDaemon::MoveIcons(paf::vector<int> *fromPages, paf::vector<int> *from
 	}
 	SceLsdb_E05F71CB();
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -429,11 +429,11 @@ int AppInfoDaemon::UpdatePage(paf::vector<int> *pageNos, LsdbPageList *pages)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbUpdatePage(connection, pageNos, pages);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -441,13 +441,13 @@ int AppInfoDaemon::AddPage(int pageNo, LsdbIconList *icons, LsdbPage *page)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbAddPage(connection, pageNo, icons, page, 0);
 	if (result == 0)
 		SceLsdb_A92420DA(1, pageNo);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -455,13 +455,13 @@ int AppInfoDaemon::DeletePage(int pageNo)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbDeletePage(connection, pageNo);
 	if (result == 0)
 		SceLsdb_A92420DA(0, pageNo);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -476,7 +476,7 @@ int AppInfoDaemon::CreateFolder(int pageNo, const LsdbIconPtr *icon,
 		return LSDB_ERROR_NOT_READY;
 	if (pageNo < 0)
 		return LSDB_ERROR_INVALID_ARGUMENT;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 
@@ -541,7 +541,7 @@ int AppInfoDaemon::CreateFolder(int pageNo, const LsdbIconPtr *icon,
 		SceLsdb_2AB5A403(titleId, &location);
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -550,11 +550,11 @@ int AppInfoDaemon::GetPageCount()
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int count = 0;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetPageCount(connection, &count);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	if (result == 0)
 		result = count;
 	return result;
@@ -565,11 +565,11 @@ int AppInfoDaemon::CountIcons(int pageNo, unsigned int pageCount)
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int count = 0;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbCountIcons(connection, pageNo, pageCount, &count);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	if (result == 0)
 		result = count;
 	return result;
@@ -580,11 +580,11 @@ int AppInfoDaemon::CountUserIcons()
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int count = 0;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbCountUserIcons(connection, &count);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	if (result == 0)
 		result = count;
 	return result;
@@ -594,11 +594,11 @@ int AppInfoDaemon::FindFolders(const paf::string *title, paf::vector<int> *folde
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbFindFolders(connection, title, folderIds);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -606,11 +606,11 @@ int AppInfoDaemon::GetAppInfo(const paf::string *titleId, LsdbAppInfoPtr *info)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetAppInfo(connection, titleId, info);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -618,11 +618,11 @@ int AppInfoDaemon::GetAppInfoValue(const paf::string *titleId, unsigned int key,
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetAppInfoValue(connection, titleId, key, value);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -631,11 +631,11 @@ int AppInfoDaemon::HasAppInfo(const paf::string *titleId)
 {
 	if (m_access == NULL)
 		return 0;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return 0;
 	int result = AppDbHasAppInfo(connection, titleId);
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return result;
 }
 
@@ -644,11 +644,11 @@ int AppInfoDaemon::FindTitleIcon(const paf::string *titleId, LsdbIconPtr *icon, 
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbFindTitleIcon(connection, titleId, icon, pageNo, theme);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -656,11 +656,11 @@ int AppInfoDaemon::GetFolderIcon(const int *folderId, int *pageNo, const LsdbIco
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetFolderIcon(connection, *folderId, pageNo, icon->get());
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -679,7 +679,7 @@ int AppInfoDaemon::RegisterApp(LsdbAppInfoPtr *app, int pageNo, const LsdbIconPt
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbAddIcon(connection, pageNo, icon, NULL, 0);
@@ -716,7 +716,7 @@ int AppInfoDaemon::RegisterApp(LsdbAppInfoPtr *app, int pageNo, const LsdbIconPt
 	}
 	NotifyListeners(0, app);
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -729,7 +729,7 @@ int AppInfoDaemon::UnregisterApp(const paf::string *titleId, bool removeFolder, 
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int iconPageNo = -1;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	if (removeFolder || pageNo != NULL) {
@@ -788,7 +788,7 @@ int AppInfoDaemon::UnregisterApp(const paf::string *titleId, bool removeFolder, 
 		NotifyListeners(1, &info);
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -797,7 +797,7 @@ int AppInfoDaemon::UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 
@@ -843,7 +843,7 @@ int AppInfoDaemon::UpdateApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon,
 			NotifyListeners(2, app);
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -852,7 +852,7 @@ int AppInfoDaemon::RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, unsi
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbSetAppInfo(connection, app, true);
@@ -885,7 +885,7 @@ int AppInfoDaemon::RefreshApp(LsdbAppInfoPtr *app, const LsdbIconPtr *icon, unsi
 	if (result == 0 && notify)
 		NotifyListeners(3, app);
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -898,7 +898,7 @@ int AppInfoDaemon::UpdateAppInfoBits(const paf::string *titleId, unsigned int ke
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbUpdateAppInfoBits(connection, titleId, key, bits, mask);
@@ -924,7 +924,7 @@ int AppInfoDaemon::UpdateAppInfoBits(const paf::string *titleId, unsigned int ke
 			NotifyListeners(3, &info);
 		}
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -935,11 +935,11 @@ int AppInfoDaemon::ForEachAppInfo(LsdbAppInfoVisitor visitor, void *arg)
 		return LSDB_ERROR_NOT_READY;
 	if (visitor == NULL)
 		return LSDB_ERROR_INVALID_ARGUMENT;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbForEachAppInfo(connection, visitor, arg);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -948,11 +948,11 @@ int AppInfoDaemon::UpdateIconTitles(int language)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbUpdateIconTitles(connection, SceLsdb_63C29E70(language));
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -961,11 +961,11 @@ int AppInfoDaemon::FindTitles(LsdbQueryCondition *conditions, paf::vector<paf::s
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int ret = AppDbFindTitles(connection, conditions, titleIds, flags);
-	SceActivityDb_11D77056(m_access, ret);
+	m_access->EndTransaction(ret);
 	return ret;
 }
 
@@ -973,11 +973,11 @@ int AppInfoDaemon::FindTitles(LsdbQueryCondition *conditions, paf::vector<paf::s
 int AppInfoDaemon::GetTitlesByCategory(const char **categories, unsigned int count, int limit,
 	paf::vector<paf::string> *titleIds)
 {
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int ret = AppDbGetTitlesByCategory(connection, categories, count, limit, titleIds);
-	SceActivityDb_11D77056(m_access, ret);
+	m_access->EndTransaction(ret);
 	return ret;
 }
 
@@ -985,11 +985,11 @@ int AppInfoDaemon::GetUriTitle(const char *uri, paf::string *titleId, unsigned i
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetUriTitle(connection, uri, flags, titleId);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -998,11 +998,11 @@ int AppInfoDaemon::GetSchemeUris(const char **schemes, unsigned int count,
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int ret = AppDbGetSchemeUris(connection, schemes, count, uris);
-	SceActivityDb_11D77056(m_access, ret);
+	m_access->EndTransaction(ret);
 	return ret;
 }
 
@@ -1025,7 +1025,7 @@ int AppInfoDaemon::SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *the
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = 0;
@@ -1097,7 +1097,7 @@ int AppInfoDaemon::SetPageTheme(const paf::common::SharedPtr<LsdbThemeInfo> *the
 		}
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1107,7 +1107,7 @@ int AppInfoDaemon::SetTheme(const LsdbTheme *theme, const LsdbThemeText *title,
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbSetTheme(connection, &theme->id, theme->type,
@@ -1115,7 +1115,7 @@ int AppInfoDaemon::SetTheme(const LsdbTheme *theme, const LsdbThemeText *title,
 		&theme->startPreviewFilePath, &theme->titleDefault, &theme->providerDefault,
 		theme->contentVer, &theme->lastModifiedTime, theme->size, title->m_language,
 		LSDB_THEME_LANGUAGES, provider->m_language, LSDB_THEME_LANGUAGES);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1123,11 +1123,11 @@ int AppInfoDaemon::DeleteTheme(const paf::string *id)
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbDeleteTheme(connection, id);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1135,11 +1135,11 @@ int AppInfoDaemon::DeleteAllThemes()
 {
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbDeleteAllThemes(connection);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1149,11 +1149,11 @@ int AppInfoDaemon::GetThemeCount()
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int count = -1;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	int result = AppDbGetThemeCount(connection, &count);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	if (count >= 0)
 		result = count;
 	return result;
@@ -1168,12 +1168,12 @@ static int AppInfoDaemonTransaction(int op, bool readOnly, void *arg,
 	if (daemon->m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 	if (op == DB_BLOB_TRANSACTION_BEGIN) {
-		*connection = SceActivityDb_82B45E74(daemon->m_access);
+		*connection = daemon->m_access->BeginTransaction();
 		if (*connection == NULL)
 			return LSDB_ERROR_NOT_READY;
 		return 0;
 	}
 	if (op == DB_BLOB_TRANSACTION_END)
-		return SceActivityDb_11D77056(daemon->m_access, 0);
+		return daemon->m_access->EndTransaction(0);
 	return 0;
 }

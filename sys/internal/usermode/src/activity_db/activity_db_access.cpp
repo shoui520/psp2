@@ -243,7 +243,7 @@ void SceActivityDb_B9A3FDCC(const char *path)
 	}
 }
 
-void SceActivityDb_1281238F(const char *path, SceBool errorMark)
+void SceActivityDb_1281238F(const char *path, bool errorMark)
 {
 	if (ActivityDbIsFile(path)) {
 		if (errorMark)
@@ -351,7 +351,7 @@ mark:
 	SceActivityDb_17420D1D(path, result);
 rebuild:
 	m_connection->Close();
-	SceActivityDb_1281238F(path, 0);
+	SceActivityDb_1281238F(path, false);
 reopen:
 	if (OpenConnection(path, flags) != 0) {
 		result = ACTIVITY_DB_ERROR_DATABASE;

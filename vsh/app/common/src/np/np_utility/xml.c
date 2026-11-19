@@ -822,27 +822,29 @@ check:
 			state->flags |= 0x100;
 	}
 	if (event == NP_XML_EVENT_TEXT && depth == 1 && index == 8)
-		state->profile->color.ucbgp = SceNpCommon_CF843378(name, NULL, 16);
+		state->profile->panel.color.ucbgp = SceNpCommon_CF843378(name, NULL, 16);
 	if (depth == 1 && index == 9) {
 		if (event == NP_XML_EVENT_START)
-			state->profile->color.panel.type = 2;
+			state->profile->panel.color.panel.type = 2;
 		if (event == NP_XML_EVENT_TEXT) {
-			if (sceClibStrnlen(name, 0x7FFFFFFF) > sizeof(state->profile->panelUrl))
+			if (sceClibStrnlen(name, 0x7FFFFFFF) >
+			    sizeof(state->profile->panel.panelUrl))
 				return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-			sceClibStrncpy(state->profile->panelUrl, name, sizeof(state->profile->panelUrl));
+			sceClibStrncpy(state->profile->panel.panelUrl, name,
+				sizeof(state->profile->panel.panelUrl));
 		}
 		if (event == NP_XML_EVENT_ATTRIBUTE) {
 			if (sceClibStrncmp("id", name, 0x80) != 0) {
 				if (sceClibStrncmp("bgc", name, 0x80) == 0) {
 					if (value == NULL)
 						return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-					state->profile->color.panel.bgColor =
+					state->profile->panel.color.panel.bgColor =
 						SceNpCommon_CF843378(value, NULL, 16);
 				}
 			} else {
 				if (value == NULL)
 					return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-				state->profile->panelId = SceNpCommon_CC8E6AC6(value);
+				state->profile->panel.panelId = SceNpCommon_CC8E6AC6(value);
 			}
 		}
 	}
@@ -871,8 +873,8 @@ int SceNpUtility_839F805E(NpLookupXmlParser *parser, int mode, NpLookupProfilePa
 	state->mode = mode;
 	state->flags = 0;
 	sceClibMemset(state->profile, 0, sizeof(*state->profile));
-	state->profile->color.panel.bgColor = 0;
-	state->profile->color.panel.type = 0;
+	state->profile->panel.color.panel.bgColor = 0;
+	state->profile->panel.color.panel.type = 0;
 	state->profile->plusIcon = 0;
 	state->profile->languages.language2 = -1;
 	state->profile->languages.language3 = -1;
@@ -1024,30 +1026,30 @@ static int profilesHandler(NpLookupXmlParser *parser, int event, SceUInt32 depth
 	if (event == NP_XML_EVENT_TEXT && depth == 3 && index == 8) {
 		if (profile == NULL)
 			return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-		profile->color.ucbgp = SceNpCommon_CF843378(name, NULL, 16);
+		profile->panel.color.ucbgp = SceNpCommon_CF843378(name, NULL, 16);
 	}
 	if (depth == 3 && index == 9) {
 		if (profile == NULL)
 			return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
 		if (event == NP_XML_EVENT_START)
-			profile->color.panel.type = 2;
+			profile->panel.color.panel.type = 2;
 		if (event == NP_XML_EVENT_TEXT) {
-			if (sceClibStrnlen(name, 0x7FFFFFFF) > sizeof(profile->panelUrl))
+			if (sceClibStrnlen(name, 0x7FFFFFFF) > sizeof(profile->panel.panelUrl))
 				return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-			sceClibStrncpy(profile->panelUrl, name, sizeof(profile->panelUrl));
+			sceClibStrncpy(profile->panel.panelUrl, name, sizeof(profile->panel.panelUrl));
 		}
 		if (event == NP_XML_EVENT_ATTRIBUTE) {
 			if (sceClibStrncmp("id", name, 0x80) != 0) {
 				if (sceClibStrncmp("bgc", name, 0x80) == 0) {
 					if (value == NULL)
 						return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-					profile->color.panel.bgColor =
+					profile->panel.color.panel.bgColor =
 						SceNpCommon_CF843378(value, NULL, 16);
 				}
 			} else {
 				if (value == NULL)
 					return SCE_NP_COMMUNITY_ERROR_BAD_RESPONSE;
-				profile->panelId = SceNpCommon_CC8E6AC6(value);
+				profile->panel.panelId = SceNpCommon_CC8E6AC6(value);
 			}
 		}
 	}

@@ -16,6 +16,13 @@
 #define PAF_VECTOR_NOINLINE
 #endif
 
+/* the fill constructor: out of line unless the module's build inlines it */
+#ifdef PAF_VECTOR_FILL_INLINE
+#define PAF_VECTOR_FILL_ATTR
+#else
+#define PAF_VECTOR_FILL_ATTR	__attribute__((noinline))
+#endif
+
 namespace paf {
 
 template<class _Ty, class _Ax = allocator<_Ty> >
@@ -138,8 +145,9 @@ public:
 		}
 	}
 
-	/* Sony's build calls it out of line */
-	__attribute__((noinline)) vector(size_type size, const _Ty &val, const _Ax &al = _Ax())
+	/* libpaf's build calls it out of line; a module whose build inlines it defines
+	   PAF_VECTOR_FILL_INLINE */
+	PAF_VECTOR_FILL_ATTR vector(size_type size, const _Ty &val, const _Ax &al = _Ax())
 		: alloc(al)
 	{
 		count = 0;

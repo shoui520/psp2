@@ -99,7 +99,7 @@ dbutil::Connection *ActivityDbDaemon::BeginTransaction(int database)
 	access = m_databases->Get(database);
 	if (access == NULL)
 		return NULL;
-	return SceActivityDb_82B45E74(access);
+	return access->BeginTransaction();
 }
 
 int ActivityDbDaemon::EndTransaction(int database, int result)
@@ -111,7 +111,7 @@ int ActivityDbDaemon::EndTransaction(int database, int result)
 	access = m_databases->Get(database);
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	return SceActivityDb_11D77056(access, result);
+	return access->EndTransaction(result);
 }
 
 int ActivityDbDaemon::AddListener(ActivityDbListener listener, void *arg)
@@ -176,10 +176,8 @@ int ActivityDbDaemon::StoreStatuses(paf::vector<ActivityDbNetStatus> *statuses)
 	}
 	for (status = statuses->begin(); status != statuses->end(); ++status) {
 		result = ActivityDbCheckNetStatus(&*status);
-		if (result != 0) {
-			m_lock.Unlock();
-			return result;
-		}
+		if (result != 0)
+			goto out;
 	}
 	job = new ActivityDbStoreStatusesJob(statuses);
 	if (job == NULL)
@@ -187,6 +185,7 @@ int ActivityDbDaemon::StoreStatuses(paf::vector<ActivityDbNetStatus> *statuses)
 	else
 		result = m_queue->Push(m_databases->GetByRowid(statuses->at(0).status.rowid), job,
 			true);
+out:
 	m_lock.Unlock();
 	return result;
 }
@@ -453,7 +452,7 @@ int ActivityDbDaemon::ClearWaitStatuses(paf::vector<SceInt64> *rowids)
 int ActivityDbDaemon::SyncActivity(int type, const paf::string *titleId,
 	const SceInt64 *syncedTime, paf::vector<ActivityDbNetStatus> *added,
 	paf::vector<ActivityDbNetStatus> *updated, paf::vector<SceInt64> *deleted,
-	SceInt64 *waitTime)
+	SceInt64 *waitTime, int database)
 {
 	int result;
 
@@ -553,6 +552,8 @@ int ActivityDbDaemon::DeleteTitles(int database, paf::vector<paf::string> *title
 	return result;
 }
 
+#if FW_DEVKIT
+/* devkit builds only: the retail build posts no local titles to trim */
 int ActivityDbDaemon::TrimStatuses(int database, const char *titleId, int keep)
 {
 	int count;
@@ -587,6 +588,7 @@ int ActivityDbDaemon::TrimStatuses(int database, const char *titleId, int keep)
 	}
 	return result;
 }
+#endif
 
 /* clears the new comments' count of titleId's statuses (or of every title's, by scope) */
 static __attribute__((noinline)) int ActivityDbClearNewComments(dbutil::Connection *connection,
@@ -632,7 +634,7 @@ int ActivityDbDaemon::UpdateBaseTime(ActivityDbAccess *access, const paf::string
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	{
@@ -661,7 +663,7 @@ int ActivityDbDaemon::UpdateBaseTime(ActivityDbAccess *access, const paf::string
 	}
 	if (result == 0)
 		result = ActivityDbClearNewComments(connection, titleId, scope);
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -752,7 +754,7 @@ static int ActivityDbUpdateStatusRow(dbutil::Connection *connection,
 	if (status->status.iconUrl.size() != 0)
 		sql += ", iconURL=?10 ";
 	sql += ", contentID=?11 ";
-	if (status->isSynced)
+	if (status->isGetAnnounce)
 		sql += ", announceAvatarURL=?12, announcePanelBgColor=?13, announcePanelURL=?14 ";
 	sql += ", titleID=?15, titleName=?16 ";
 	sql += "WHERE rowid=?17";
@@ -797,7 +799,7 @@ static int ActivityDbUpdateStatusRow(dbutil::Connection *connection,
 	result = ActivityDbBindString(&statement, 11, status->status.contentId);
 	if (result != 0)
 		return result;
-	if (status->isSynced) {
+	if (status->isGetAnnounce) {
 		result = ActivityDbBindString(&statement, 12, status->status.announceAvatarUrl);
 		if (result != 0)
 			return result;
@@ -1003,13 +1005,13 @@ int ActivityDbDaemon::RunStoreStatuses(ActivityDbAccess *access,
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbInsertStatuses(connection, statuses);
 	if (result != 0 && result == ACTIVITY_DB_SQLITE_CONSTRAINT)
 		result = ACTIVITY_DB_ERROR_CONFLICT;
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1058,13 +1060,13 @@ int ActivityDbDaemon::RunDeleteStatuses(ActivityDbAccess *access, paf::vector<Sc
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbDeleteStatusRows(connection, rowids);
 	if (result != 0 && result == ACTIVITY_DB_SQLITE_CONSTRAINT)
 		result = ACTIVITY_DB_ERROR_CONFLICT;
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1077,7 +1079,7 @@ int ActivityDbDaemon::RunUpdateStatuses(ActivityDbAccess *access,
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = 0;
@@ -1086,7 +1088,7 @@ int ActivityDbDaemon::RunUpdateStatuses(ActivityDbAccess *access,
 		if (result != 0)
 			break;
 	}
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1151,13 +1153,13 @@ int ActivityDbDaemon::RunPostComments(ActivityDbAccess *access, const SceInt64 *
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbInsertComments(connection, mainRowid, comments);
 	if (result != 0 && result == ACTIVITY_DB_SQLITE_CONSTRAINT)
 		result = ACTIVITY_DB_ERROR_CONFLICT;
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1195,13 +1197,13 @@ int ActivityDbDaemon::RunDeleteComments(ActivityDbAccess *access,
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbDeleteCommentRows(connection, keys);
 	if (result != 0 && result == ACTIVITY_DB_SQLITE_CONSTRAINT)
 		result = ACTIVITY_DB_ERROR_CONFLICT;
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1249,11 +1251,11 @@ int ActivityDbDaemon::RunVoteGoodJob(ActivityDbAccess *access, ActivityDbGoodJob
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbInsertGoodJobs(connection, &key->status.rowid, &key->owners);
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1323,7 +1325,7 @@ int ActivityDbDaemon::RunCancelGoodJob(ActivityDbAccess *access, ActivityDbGoodJ
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbDeleteGoodJobs(connection, &key->status.rowid, &key->owners);
@@ -1336,7 +1338,7 @@ int ActivityDbDaemon::RunCancelGoodJob(ActivityDbAccess *access, ActivityDbGoodJ
 			}
 		}
 	}
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1401,7 +1403,7 @@ int ActivityDbDaemon::RunAddWaitStatus(ActivityDbAccess *access, const ActivityD
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbInsertWaitStatus(connection, status);
@@ -1425,7 +1427,7 @@ int ActivityDbDaemon::RunAddWaitStatus(ActivityDbAccess *access, const ActivityD
 			}
 		}
 	}
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1436,7 +1438,7 @@ int ActivityDbDaemon::RunClearWaitStatus(ActivityDbAccess *access)
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	{
@@ -1452,7 +1454,7 @@ int ActivityDbDaemon::RunClearWaitStatus(ActivityDbAccess *access)
 				result = 0;
 		}
 	}
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1465,7 +1467,7 @@ int ActivityDbDaemon::RunClearWaitStatuses(ActivityDbAccess *access,
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 
@@ -1489,7 +1491,7 @@ int ActivityDbDaemon::RunClearWaitStatuses(ActivityDbAccess *access,
 	statement->Finalize();
 	result = 0;
 end:
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1581,7 +1583,7 @@ int ActivityDbDaemon::RunSyncActivity(ActivityDbAccess *access, paf::vector<SceI
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	if (deleted->size() != 0 &&
@@ -1603,7 +1605,7 @@ int ActivityDbDaemon::RunSyncActivity(ActivityDbAccess *access, paf::vector<SceI
 		result = ActivityDbUpdateSyncTimes(connection, titleId, syncedTime);
 	}
 end:
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1650,7 +1652,7 @@ int ActivityDbDaemon::RunSyncStatusDetail(ActivityDbAccess *access, ActivityDbNe
 
 	if (access == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbDeleteCommentRows(connection, deletedComments);
@@ -1668,7 +1670,7 @@ int ActivityDbDaemon::RunSyncStatusDetail(ActivityDbAccess *access, ActivityDbNe
 		result = ActivityDbUpdateStatusRow(connection, status);
 	if (result == 0)
 		result = ActivityDbUpdateModifiedTime(connection, &status->status.titleId);
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 
@@ -1734,13 +1736,13 @@ int ActivityDbDaemon::RunDeleteTitles(ActivityDbAccess *access,
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	if (titleIds->size() == 0)
 		return ACTIVITY_DB_ERROR_INVALID_ARGUMENT;
-	connection = SceActivityDb_82B45E74(access);
+	connection = access->BeginTransaction();
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
 	result = ActivityDbDeleteTitleRows(connection, "tbl_statusMainTable", titleIds);
 	if (result == 0)
 		result = ActivityDbDeleteTitleRows(connection, "tbl_lastSyncedTimeTable", titleIds);
-	SceActivityDb_11D77056(access, result);
+	access->EndTransaction(result);
 	return result;
 }
 

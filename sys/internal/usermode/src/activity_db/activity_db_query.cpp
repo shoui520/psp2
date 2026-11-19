@@ -10,8 +10,8 @@
 #define ACTIVITY_DB_QUERY_LIMIT		100
 #define ACTIVITY_DB_QUERY_NEWS_LIMIT	3000
 
-/* the owner type a query of every title's statuses leaves out */
-#define ACTIVITY_DB_QUERY_OWNER_TYPE_HIDDEN	0x100000000LL
+/* the owner type a query of every title's statuses leaves out: the titles' own */
+#define ACTIVITY_DB_QUERY_OWNER_TYPE_HIDDEN	((SceInt64)ACTIVITY_DB_OWNER_TITLE)
 
 /* the statuses a read of the recent ones reaches */
 #define ACTIVITY_DB_RECENT_LIMIT	20
@@ -142,7 +142,7 @@ int ActivityDbQueryHandle::GetCommentRowids(const SceInt64 *mainRowid, int offse
 }
 
 int ActivityDbQueryHandle::GetComments(paf::vector<SceInt64> *rowids,
-	paf::vector<ActivityDbComment> *comments)
+	paf::vector<ActivityDbQueryComment> *comments)
 {
 	if (m_query == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
@@ -276,7 +276,7 @@ int ActivityDbQuery::Setup(const ActivityDbQueryCondition *condition, const int 
 	if (database != NULL)
 		m_database = *database;
 	else
-		m_database = ActivityDbQueryDatabase(condition->type);
+		m_database = ActivityDbGetQueryDatabase(condition->type);
 	result = SceActivityDb_FBB82B37()->AddListener(ActivityDbQueryOnChange, this);
 	if (result == 0)
 		m_registered = true;
@@ -339,67 +339,69 @@ int ActivityDbQuery::GetSyncTimes(SceInt64 *baseTime, SceInt64 *lastSyncedTime,
 	connection = SceActivityDb_FBB82B37()->BeginTransaction(m_database);
 	if (connection == NULL)
 		return ACTIVITY_DB_ERROR_NOT_READY;
-	{
-		paf::string sql;
 
-		switch (m_condition.type) {
-		case ACTIVITY_DB_QUERY_TITLE:
-			sql = "SELECT title.lastSyncedTime, MAX(read_max.baseTime), "
-			      "MAX(read_max.lastModifiedTime) FROM tbl_lastSyncedTimeTable title, "
-			      "(SELECT baseTime ,lastModifiedTime FROM tbl_lastSyncedTimeTable "
-			      "WHERE titleID=?1 OR titleID=?2) read_max WHERE titleID=?3";
-			break;
-		case ACTIVITY_DB_QUERY_ALL:
-			sql = "SELECT title.lastSyncedTime, title.baseTime, "
-			      "MAX(read_max.lastModifiedTime) FROM tbl_lastSyncedTimeTable title, "
-			      "(SELECT lastModifiedTime FROM tbl_lastSyncedTimeTable) read_max "
-			      "WHERE titleID=?1";
-			break;
-		default:
-			sql = "SELECT lastSyncedTime, baseTime, lastModifiedTime "
-			      "FROM tbl_lastSyncedTimeTable WHERE titleID=?1";
+	/* the statement and its SQL outlive the transaction */
+	paf::string sql;
+
+	switch (m_condition.type) {
+	case ACTIVITY_DB_QUERY_TITLE:
+		sql = "SELECT title.lastSyncedTime, MAX(read_max.baseTime), "
+		      "MAX(read_max.lastModifiedTime) FROM tbl_lastSyncedTimeTable title, "
+		      "(SELECT baseTime ,lastModifiedTime FROM tbl_lastSyncedTimeTable "
+		      "WHERE titleID=?1 OR titleID=?2) read_max WHERE titleID=?3";
+		break;
+	case ACTIVITY_DB_QUERY_ALL:
+		sql = "SELECT title.lastSyncedTime, title.baseTime, "
+		      "MAX(read_max.lastModifiedTime) FROM tbl_lastSyncedTimeTable title, "
+		      "(SELECT lastModifiedTime FROM tbl_lastSyncedTimeTable) read_max "
+		      "WHERE titleID=?1";
+		break;
+	default:
+		sql = "SELECT lastSyncedTime, baseTime, lastModifiedTime "
+		      "FROM tbl_lastSyncedTimeTable WHERE titleID=?1";
+		break;
+	}
+
+	dbutil::RefPtr<dbutil::Statement> statement;
+
+	result = connection->Prepare(sql, &statement);
+	if (result == 0) {
+		if (m_condition.type == ACTIVITY_DB_QUERY_TITLE) {
+			result = ActivityDbBindText(&statement, 1, ACTIVITY_DB_FRIENDS_TITLE_ID, -1);
+			if (result == 0)
+				result = ActivityDbBindString(&statement, 2, m_titleId);
+			if (result == 0)
+				result = ActivityDbBindString(&statement, 3, m_titleId);
+		} else {
+			result = ActivityDbBindString(&statement, 1, m_titleId);
+		}
+	}
+	while (result == 0) {
+		dbutil::Value value;
+		int step = statement->Step(1);
+
+		if (step == (int)DBUTIL_ERROR_NOT_FOUND) {
+			result = ACTIVITY_DB_ERROR_NOT_FOUND;
 			break;
 		}
-
-		dbutil::RefPtr<dbutil::Statement> statement;
-
-		result = connection->Prepare(sql, &statement);
-		if (result == 0) {
-			if (m_condition.type == ACTIVITY_DB_QUERY_TITLE) {
-				result = ActivityDbBindText(&statement, 1, ACTIVITY_DB_FRIENDS_TITLE_ID,
-							    -1);
-				if (result == 0)
-					result = ActivityDbBindString(&statement, 2, m_titleId);
-				if (result == 0)
-					result = ActivityDbBindString(&statement, 3, m_titleId);
-			} else {
-				result = ActivityDbBindString(&statement, 1, m_titleId);
-			}
+		if (step != 0) {
+			result = step == 1 ? 0 : step;
+			break;
 		}
-		if (result == 0) {
-			while ((result = statement->Step(1)) == 0) {
-				dbutil::Value value;
-
-				result = statement->GetValue(0, &value);
-				if (result != 0)
-					break;
-				*lastSyncedTime = ActivityDbValueTime(&value);
-				result = statement->GetValue(1, &value);
-				if (result != 0)
-					break;
-				*baseTime = ActivityDbValueInt64(&value);
-				result = statement->GetValue(2, &value);
-				if (result != 0)
-					break;
-				*lastModifiedTime = ActivityDbValueTime(&value);
-				if (*lastModifiedTime == 0)
-					*lastModifiedTime = *lastSyncedTime;
-			}
-			if (result == (int)DBUTIL_ERROR_NOT_FOUND)
-				result = ACTIVITY_DB_ERROR_NOT_FOUND;
-			else if (result == 1)
-				result = 0;
-		}
+		result = statement->GetValue(0, &value);
+		if (result != 0)
+			break;
+		*lastSyncedTime = ActivityDbValueTime(&value);
+		result = statement->GetValue(1, &value);
+		if (result != 0)
+			break;
+		*baseTime = ActivityDbValueInt64(&value);
+		result = statement->GetValue(2, &value);
+		if (result != 0)
+			break;
+		*lastModifiedTime = ActivityDbValueTime(&value);
+		if (*lastModifiedTime == 0)
+			*lastModifiedTime = *lastSyncedTime;
 	}
 	SceActivityDb_FBB82B37()->EndTransaction(m_database, -1);
 	return result;
@@ -676,7 +678,7 @@ static int ActivityDbReadComment(dbutil::Connection *connection, const SceInt64 
 }
 
 int ActivityDbQuery::GetComments(paf::vector<SceInt64> *rowids,
-	paf::vector<ActivityDbComment> *comments)
+	paf::vector<ActivityDbQueryComment> *comments)
 {
 	dbutil::Connection *connection;
 	int result;
@@ -692,7 +694,7 @@ int ActivityDbQuery::GetComments(paf::vector<SceInt64> *rowids,
 	comments->clear();
 	result = 0;
 	for (i = 0; i < rowids->size(); i++) {
-		ActivityDbComment comment;
+		ActivityDbQueryComment comment;
 
 		result = ActivityDbReadComment(connection, &(*rowids)[i], &comment);
 		if (result == ACTIVITY_DB_ERROR_NOT_FOUND)
@@ -1063,47 +1065,51 @@ int ActivityDbQuery::GetStatusKey(const SceInt64 *rowid, ActivityDbStatusKey *ke
 static __attribute__((noinline)) int ActivityDbReadCommentKey(dbutil::Connection *connection,
 	const SceInt64 *rowid, ActivityDbCommentKey *key)
 {
-	paf::string sql("SELECT mainRowID, commentID, ownerID, ownerType FROM tbl_commentTable "
-			"WHERE rowid=?");
-	dbutil::RefPtr<dbutil::Statement> statement;
 	SceInt64 mainRowid;
-	bool found;
 	int result;
 
-	result = connection->Prepare(sql, &statement);
-	if (result != 0)
-		return result;
-	result = ActivityDbBindInt64(&statement, 1, *rowid);
-	if (result != 0)
-		return result;
-	found = false;
-	while ((result = statement->Step(1)) == 0) {
-		int count;
-		int i;
+	/* Sony releases the statement before it reads the status key */
+	{
+		paf::string sql("SELECT mainRowID, commentID, ownerID, ownerType "
+				"FROM tbl_commentTable WHERE rowid=?");
+		dbutil::RefPtr<dbutil::Statement> statement;
+		bool found;
 
-		found = true;
-		key->rowid = *rowid;
-		count = statement->m_columnCount;
-		for (i = 0; i < count; i++) {
-			dbutil::Value value;
+		result = connection->Prepare(sql, &statement);
+		if (result != 0)
+			return result;
+		result = ActivityDbBindInt64(&statement, 1, *rowid);
+		if (result != 0)
+			return result;
+		found = false;
+		while ((result = statement->Step(1)) == 0) {
+			int count;
+			int i;
 
-			result = statement->GetValue(i, &value);
-			if (result != 0)
-				return result;
-			if (sce_paf_strcmp("mainRowID", value.name) == 0)
-				mainRowid = ActivityDbValueInt64(&value);
-			else if (sce_paf_strcmp("commentID", value.name) == 0)
-				key->commentId = ActivityDbValueInt(&value);
-			else if (sce_paf_strcmp("ownerID", value.name) == 0)
-				key->owner.ownerId = ActivityDbValueText(&value);
-			else if (sce_paf_strcmp("ownerType", value.name) == 0)
-				key->owner.ownerType = ActivityDbValueInt(&value);
+			found = true;
+			key->rowid = *rowid;
+			count = statement->m_columnCount;
+			for (i = 0; i < count; i++) {
+				dbutil::Value value;
+
+				result = statement->GetValue(i, &value);
+				if (result != 0)
+					return result;
+				if (sce_paf_strcmp("mainRowID", value.name) == 0)
+					mainRowid = ActivityDbValueInt64(&value);
+				else if (sce_paf_strcmp("commentID", value.name) == 0)
+					key->commentId = ActivityDbValueInt(&value);
+				else if (sce_paf_strcmp("ownerID", value.name) == 0)
+					key->owner.ownerId = ActivityDbValueText(&value);
+				else if (sce_paf_strcmp("ownerType", value.name) == 0)
+					key->owner.ownerType = ActivityDbValueInt(&value);
+			}
 		}
+		if (result != 1)
+			return result;
+		if (!found)
+			return ACTIVITY_DB_ERROR_NOT_FOUND;
 	}
-	if (result != 1)
-		return result;
-	if (!found)
-		return ACTIVITY_DB_ERROR_NOT_FOUND;
 
 	ActivityDbStatusKey status;
 

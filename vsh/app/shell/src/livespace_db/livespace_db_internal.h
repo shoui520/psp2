@@ -26,6 +26,7 @@
 #include "lsdb_keys.h"
 #include "livearea.h"
 #include <activity_db/activity_db.h>
+#include <activity_db/activity_db_internal.h>
 
 /* SceLsdb's errors (no SDK header names them) */
 #define LSDB_ERROR_INVALID_ARGUMENT	0x80101001

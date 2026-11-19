@@ -105,6 +105,20 @@ typedef struct NpLookupDownload {
 #define NP_LOOKUP_DOWNLOAD_DONE		2
 #define NP_LOOKUP_DOWNLOAD_FAILED	3
 
+/* a profile's panel: its colour, and the image it names */
+typedef struct NpLookupPanel {
+	union {
+		SceUInt64 ucbgp;		/* 0x00 */
+		struct {
+			SceUInt32 bgColor;	/* 0x00 */
+			SceInt32 type;		/* 0x04: 2 when the panel is named */
+		} panel;
+	} color;
+	SceUInt32 panelId;			/* 0x08 */
+	char panelUrl[128];			/* 0x0C */
+	SceUInt8 reserved[4];			/* 0x8C: the padding of the 8-byte colour */
+} NpLookupPanel;				/* 0x90 */
+
 /* a user's profile as the getprof server describes it */
 typedef struct NpLookupProfile {
 	SceNpId npId;				/* 0x000 */
@@ -115,16 +129,7 @@ typedef struct NpLookupProfile {
 	SceNpMyLanguages languages;		/* 0x0DC */
 	int iconId;				/* 0x0EC */
 	SceNpAboutMe aboutMe;			/* 0x0F0 */
-	union {
-		SceUInt64 ucbgp;		/* 0x130 */
-		struct {
-			SceUInt32 bgColor;	/* 0x130 */
-			SceInt32 type;		/* 0x134: 2 when the panel is named */
-		} panel;
-	} color;
-	SceUInt32 panelId;			/* 0x138 */
-	char panelUrl[128];			/* 0x13C */
-	SceUInt8 reserved2[4];			/* 0x1BC */
+	NpLookupPanel panel;			/* 0x130 */
 	SceInt32 plusIcon;			/* 0x1C0 */
 	SceUInt8 reserved3[4];			/* 0x1C4 */
 } NpLookupProfile;

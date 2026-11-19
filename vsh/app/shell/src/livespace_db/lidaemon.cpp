@@ -194,7 +194,7 @@ __attribute__((noinline)) int LiDaemon::Open(ActivityDbAccess *access)
 
 	LiDbFunction addRmList("add_rm_list", 1, AddRmList);
 
-	SceActivityDb_76F10DA7(access, &addRmList);
+	access->RegisterFunction(&addRmList);
 #if LI_SYSTEM_TITLES
 	s_npxs10999Path.clear();
 	s_npxs10998Path.clear();
@@ -210,7 +210,7 @@ __attribute__((noinline)) int LiDaemon::Close()
 	if (m_access != NULL) {
 		LiDbFunction addRmList("add_rm_list", 1, AddRmList);
 
-		SceActivityDb_94516607(m_access, &addRmList);
+		m_access->UnregisterFunction(&addRmList);
 	}
 	m_access = NULL;
 	return 0;
@@ -644,12 +644,12 @@ __attribute__((noinline)) int LiDaemon::Register(const paf::string *titleId, con
 	if (result != 0)
 		return result;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
 	result = LiWriteFrames(connection, titleId, &tmpl, dir, false, system);
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -675,7 +675,7 @@ __attribute__((noinline)) int LiDaemon::DeleteTitle(ActivityDbConnection *connec
 		if (connection->GetChanges() == 0)
 			return LSDB_ERROR_NOT_FOUND;
 	}
-	SceActivityDb_14DE3B37(m_access, RemoveFiles);
+	m_access->AddEndCallback(RemoveFiles);
 	return 0;
 }
 
@@ -685,7 +685,7 @@ __attribute__((noinline)) int LiDaemon::Delete(const paf::string *titleId)
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -695,9 +695,9 @@ __attribute__((noinline)) int LiDaemon::Delete(const paf::string *titleId)
 	if (result == 0 || result == (int)LSDB_ERROR_NOT_FOUND) {
 		paf::vector<paf::string> titleIds(1, *titleId);
 
-		SceActivityDb_D67DF90F(SceActivityDb_FBB82B37(), 0, &titleIds, NULL);
+		SceActivityDb_FBB82B37()->DeleteTitles(0, &titleIds, NULL);
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -789,7 +789,7 @@ __attribute__((noinline)) int LiDaemon::UpdateTitles(const paf::string &titleId,
 	paf::vector<LiTitlePath> titles;
 	ActivityDbConnection *connection;
 
-	if (m_access == NULL || (connection = SceActivityDb_82B45E74(m_access)) == NULL)
+	if (m_access == NULL || (connection = m_access->BeginTransaction()) == NULL)
 		return LSDB_ERROR_NOT_READY;
 
 	int result = LiSelectTitles(connection, &titleId, &titles);
@@ -815,7 +815,7 @@ __attribute__((noinline)) int LiDaemon::UpdateTitles(const paf::string &titleId,
 				*path = it->orgPath;
 		}
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1116,7 +1116,7 @@ __attribute__((noinline)) int LiDaemon::GetTemplate(paf::common::SharedPtr<LiTem
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1142,7 +1142,7 @@ __attribute__((noinline)) int LiDaemon::GetTemplate(paf::common::SharedPtr<LiTem
 				result = LiDeleteFrames(connection, titleId, true);
 		}
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1200,7 +1200,7 @@ __attribute__((noinline)) int LiDaemon::GetUr0TitleToRemove(
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1226,7 +1226,7 @@ __attribute__((noinline)) int LiDaemon::GetUr0TitleToRemove(
 counted:
 	if (count >= LI_UR0_TITLE_MAX)
 		LiSelectUr0Title(connection, excluded, titleId);
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return titleId->size() == 0 ? LSDB_ERROR_NOT_FOUND : 0;
 }
 
@@ -1266,7 +1266,7 @@ __attribute__((noinline)) int LiDaemon::GetUserdata(const paf::string *titleId,
 	}
 #endif
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1302,7 +1302,7 @@ __attribute__((noinline)) int LiDaemon::GetUserdata(const paf::string *titleId,
 			userdata->erase(LI_USERDATA_MAX, paf::string::npos);
 	}
 end:
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return result;
 }
 
@@ -1543,7 +1543,7 @@ __attribute__((noinline)) int LiDaemon::StoreContents(const paf::string *titleId
 {
 	paf::common::SharedPtr<LiTemplate> tmpl;
 	paf::string dir;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1563,12 +1563,12 @@ __attribute__((noinline)) int LiDaemon::StoreContents(const paf::string *titleId
 				result = LiSetContentsPath(titleId, &dir);
 				if (result == 0) {
 					*path = dir;
-					SceActivityDb_14DE3B37(m_access, RemoveFiles);
+					m_access->AddEndCallback(RemoveFiles);
 				}
 			}
 		}
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1627,7 +1627,7 @@ __attribute__((noinline)) int LiDaemon::Update(const paf::string *titleId,
 		parts |= (*part)->GetMask();
 	*mask = parts;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1674,14 +1674,14 @@ __attribute__((noinline)) int LiDaemon::Update(const paf::string *titleId,
 						      tmpl, true)) == 0) {
 			result = LiWriteFrames(connection, titleId, tmpl, NULL, keepStyle, system);
 			if (result == 0) {
-				SceActivityDb_14DE3B37(m_access, RemoveFiles);
+				m_access->AddEndCallback(RemoveFiles);
 				if (storedPath != NULL)
 					*storedPath = *path;
 			}
 		}
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1786,7 +1786,7 @@ __attribute__((noinline)) int LiDaemon::HasFunction(const paf::string *titleId, 
 		return found;
 
 	paf::common::SharedPtr<LiTemplate> tmpl;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return found;
@@ -1796,7 +1796,7 @@ __attribute__((noinline)) int LiDaemon::HasFunction(const paf::string *titleId, 
 		if (zone != NULL && zone->GetFunction(func) != NULL)
 			found = 1;
 	}
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return found;
 }
 
@@ -1806,7 +1806,7 @@ __attribute__((noinline)) int LiDaemon::GetPcc(const paf::string *titleId, LiPcc
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1834,7 +1834,7 @@ __attribute__((noinline)) int LiDaemon::GetPcc(const paf::string *titleId, LiPcc
 		pcc->signOff = AppDbColumnInt(&statement, 2);
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1849,7 +1849,7 @@ __attribute__((noinline)) int LiDaemon::SetPcc(const paf::string *titleId, bool 
 		return LSDB_ERROR_NOT_READY;
 
 	paf::common::SharedPtr<LiTemplate> tmpl;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1885,7 +1885,7 @@ __attribute__((noinline)) int LiDaemon::SetPcc(const paf::string *titleId, bool 
 		}
 		result = LiWriteTemplate(connection, titleId, &tmpl, NULL, true, pcc, pccFlags);
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1897,7 +1897,7 @@ __attribute__((noinline)) int LiDaemon::SetFunction(const paf::string *titleId,
 		return LSDB_ERROR_NOT_READY;
 
 	paf::common::SharedPtr<LiTemplate> tmpl;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1925,7 +1925,7 @@ __attribute__((noinline)) int LiDaemon::SetFunction(const paf::string *titleId,
 		}
 		result = LiWriteTemplate(connection, titleId, &tmpl, NULL, true, NULL, 0);
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1936,7 +1936,7 @@ __attribute__((noinline)) int LiDaemon::RemoveFunction(const paf::string *titleI
 		return LSDB_ERROR_NOT_READY;
 
 	paf::common::SharedPtr<LiTemplate> tmpl;
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -1961,7 +1961,7 @@ __attribute__((noinline)) int LiDaemon::RemoveFunction(const paf::string *titleI
 			}
 		}
 	}
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -1972,7 +1972,7 @@ __attribute__((noinline)) int LiDaemon::GetModifiedDate(const paf::string *title
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -2004,7 +2004,7 @@ __attribute__((noinline)) int LiDaemon::GetModifiedDate(const paf::string *title
 		*date = value.type == SQLITE_TEXT ? SceActivityDb_ADFC2C4C(value.data.text) : 0;
 	}
 end:
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return result;
 }
 
@@ -2015,7 +2015,7 @@ __attribute__((noinline)) int LiDaemon::SetModifiedDate(const paf::string *title
 	if (m_access == NULL)
 		return LSDB_ERROR_NOT_READY;
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -2051,7 +2051,7 @@ __attribute__((noinline)) int LiDaemon::SetModifiedDate(const paf::string *title
 			result = LSDB_ERROR_NOT_FOUND;
 	}
 end:
-	SceActivityDb_11D77056(m_access, result);
+	m_access->EndTransaction(result);
 	return result;
 }
 
@@ -2075,7 +2075,7 @@ __attribute__((noinline)) int LiDaemon::GetRevision(const paf::string *titleId,
 	}
 #endif
 
-	ActivityDbConnection *connection = SceActivityDb_82B45E74(m_access);
+	ActivityDbConnection *connection = m_access->BeginTransaction();
 
 	if (connection == NULL)
 		return LSDB_ERROR_NOT_READY;
@@ -2123,7 +2123,7 @@ __attribute__((noinline)) int LiDaemon::GetRevision(const paf::string *titleId,
 		}
 	}
 end:
-	SceActivityDb_11D77056(m_access, -1);
+	m_access->EndTransaction(-1);
 	return result;
 }
 
