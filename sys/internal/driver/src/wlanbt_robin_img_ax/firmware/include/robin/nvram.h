@@ -19,7 +19,7 @@
 #define OTP_BYTES		32
 #define OTP_CONTROL		REG16(0x90000604)	/* bits 7..6: the bank strobes */
 #define OTP_COMMAND		REG16(0x90000608)
-#define OTP_DATA(n)		REG16(0x90000400 + 4 * (n))
+#define OTP_DATA(offset)	REG16(0x90000400 + 2 * (offset))	/* the register of the even byte offset's halfword */
 
 /* The serial bus as a controller: chip select, transfer control and data. */
 #define SERIAL_SELECT		REG8(0x90000810)	/* 2: start a transfer, 1: end it */

@@ -98,8 +98,8 @@ OsaBuffer *macMgmtSetupTable(void)
 		while (created < 3) {
 			OsaBuffer *memory = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);
 
-			if (memory != NULL)
-				memory->packetClass = 16;
+			/* Sony's: stored before the NULL test */
+			memory->packetClass = 16;
 			wlanVendorIeBlocks[created] = memory;
 			if (memory == NULL)
 				break;

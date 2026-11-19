@@ -36,7 +36,8 @@ void wlanIrqRegisterAll(void)
 /* Unmasks lines 5, 8 and 22. */
 void wlanIrqEnableHostLines(void)
 {
-	SOC_IRQ_ENABLE_SET = 0x400120;
+	SOC_IRQ_ENABLE_SET = 0x420;
+	SOC_IRQ_ENABLE_SET |= 0x400000;
 }
 
 void wlanIrqUnregisterAll(void)

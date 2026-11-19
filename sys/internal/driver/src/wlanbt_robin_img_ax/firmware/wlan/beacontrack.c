@@ -356,11 +356,11 @@ void wlanPsPrepareHeader(uint64_t *next)
 	uint64_t now = romGetTimerTimestamp();
 	unsigned int beacons;
 
-	if (now < t->beaconTime || now > t->beaconTime + ((uint64_t)t->interval << 6)) {
+	if (now < t->beaconTime || now > t->beaconTime + (uint32_t)(t->interval << 6)) {
 		t->beaconTime = romGetTimerTimestamp();
 		t->dtimCount = 1;
 	}
-	*next = (int64_t)(int)wlanPsUpdateHeader() + (t->beaconTime % t->interval);
+	*next = (int64_t)(int)wlanPsUpdateHeader() + (t->beaconTime - t->beaconTime % t->interval);
 	beacons = t->dtimCount;
 	if (beacons == 0) {
 		beacons = t->dtimPeriod;

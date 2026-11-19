@@ -395,7 +395,8 @@ int wlanRxDecryptWep(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key
  */
 int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key)
 {
-	struct WlanConnection *connection = (*buffer)->context;
+	OsaBuffer *rxBuffer = *buffer;
+	struct WlanConnection *connection = rxBuffer->context;
 	WlanWirelessFrame *frame = rxFrame(status);
 	uint8_t *iv = (uint8_t *)frame + 36;
 	uint32_t mic[2];
@@ -416,9 +417,10 @@ int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_ke
 	if (wlanIsFragment(frame)) {
 		OsaBuffer *assembled;
 
-		if (!wlanRxTkipTrailer(errors, (uint8_t *)frame, iv, *buffer, &tkip, mic))
+		tkip = 0;
+		if (!wlanRxTkipTrailer(errors, (uint8_t *)frame, iv, rxBuffer, &tkip, mic))
 			return 0;
-		assembled = wlanDefragment(*buffer, frame, &wlanDefragReassembly, &wlanDefragContext,
+		assembled = wlanDefragment(rxBuffer, frame, &wlanDefragReassembly, &wlanDefragContext,
 					   &wlanDefragDiscarding);
 		if (assembled == NULL) {
 			*buffer = NULL;
@@ -438,7 +440,7 @@ int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_ke
 			return 0;
 		}
 		rxSubBodyLength(frame, 20);
-		(*buffer)->length -= 20;
+		rxBuffer->length -= 20;
 	}
 	wlanRxKeySetReplayCounter(key, low, high);
 	return 1;
@@ -488,7 +490,7 @@ void wlanRxHostSleepFilter(OsaBuffer *buffer, struct WlanRxStatus *status)
 	WlanWirelessFrame *header;
 	const uint8_t *destination;
 	OsaBuffer *event = NULL;
-	uint32_t wake = 0;
+	uint32_t wake;			/* Sony's: set by wlanMefProcessFrame() */
 	uint8_t securityDrop = 0;
 	int wakeHost = 0;
 	int dropped = 0;

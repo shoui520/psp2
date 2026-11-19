@@ -537,18 +537,12 @@ int sysPendingEventIsArmed(void)
 	return sysPendingEventTimer != 0;
 }
 
-int sysProcessPendingEvent(void)
+void sysProcessPendingEvent(void)
 {
-	int result = wlanCoexActive();
-
-	if (result != 0) {
-		result = sysPendingEventIsArmed();
-		if (result != 0) {
-			SOC_PENDING_EVENT_CONTROL &= ~BIT(1);
-			return sysDispatchPendingEventMode(sysPendingEventFlags & BIT(31));
-		}
+	if (wlanCoexActive() != 0 && sysPendingEventIsArmed() != 0) {
+		SOC_PENDING_EVENT_CONTROL &= ~BIT(1);
+		sysDispatchPendingEventMode(sysPendingEventFlags & BIT(31));
 	}
-	return result;
 }
 
 void sysPendingEventExpired(uint32_t timer, uint32_t unusedArgument)

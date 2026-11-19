@@ -144,7 +144,7 @@ int16_t calDataInterpolate(int low, int high, int lowPoint, int highPoint, int p
 		return low;
 	if (point == highPoint)
 		return high;
-	return (int16_t)(low + ((int16_t)((int16_t)((high - low) * 8 * (point - lowPoint)) /
+	return (int16_t)(low + ((int16_t)((int16_t)(((high - low) << 3) * (point - lowPoint)) /
 					  (int16_t)(highPoint - lowPoint) + 4) >> 3));
 }
 
@@ -395,7 +395,7 @@ int calDataLoadAnnex42(int fromHost, unsigned int offset)
 	if (!calDataChecksumOk((const uint8_t *)&annex, length))
 		return 0;
 	remaining = (uint16_t)(length - sizeof(annex.header));
-	for (i = 0; remaining >= sizeof(struct CalDataAnnex42Entry) && i < 5; ) {
+	for (i = 0; remaining >= sizeof(struct CalDataAnnex42Entry); ) {
 		const uint8_t *entry = annex.entries[i].bytes;
 
 		block[0] = entry[0];
@@ -414,6 +414,8 @@ int calDataLoadAnnex42(int fromHost, unsigned int offset)
 		}
 		remaining = (uint16_t)(remaining - sizeof(struct CalDataAnnex42Entry));
 		i = (uint8_t)(i + 1);
+		if (i >= 5)
+			break;
 	}
 	return 1;
 }

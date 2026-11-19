@@ -1174,9 +1174,9 @@ int wlanConnectionsInit(void)
 }
 
 /* The connections of the BSS, this one included, counting the one that is not set up yet. */
-int wlanConnectionBssCount(struct WlanConnection *connection)
+unsigned int wlanConnectionBssCount(struct WlanConnection *connection)
 {
-	int count = 0;
+	unsigned int count = 0;
 
 	if (connection->peerAddress[0] != 0 || connection->peerAddress[1] != 0 ||
 	    connection->peerAddress[2] != 0 || connection->peerAddress[3] != 0 ||
@@ -1208,7 +1208,7 @@ struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, i
 			return NULL;
 		if (first == NULL)
 			return NULL;
-		if ((unsigned int)wlanConnectionBssCount(first) >= 17)
+		if (wlanConnectionBssCount(first) >= 17)
 			return NULL;
 		buffer = wlanTxBufferAlloc(&wlanBlockPool28, 0, 0, 3);
 		if (buffer == NULL)

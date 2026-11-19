@@ -188,6 +188,7 @@ uint16_t keyApiSta_GetKeyMaterial(cipher_key_t *pwkey, cipher_key_t *gwkey,
 				  key_MgtMaterial_t *keyMgtData_p, BOOLEAN pairwise)
 {
 	cipher_key_t *key;
+	unsigned int keyType;
 
 	if (keyMgtData_p == NULL)
 		return 0;
@@ -195,7 +196,8 @@ uint16_t keyApiSta_GetKeyMaterial(cipher_key_t *pwkey, cipher_key_t *gwkey,
 		if (pwkey == NULL)
 			return 0;
 		key = pwkey;
-		keyMgtData_p->keyType = key->hdr.keyType;
+		keyType = key->hdr.keyType;
+		keyMgtData_p->keyType = keyType;
 		keyMgtData_p->keyInfo = KEY_INFO_UNICAST;
 		if (IS_KEY_STATE_ENABLED(key))
 			keyMgtData_p->keyInfo = KEY_INFO_UNICAST | KEY_INFO_ENABLED;
@@ -203,12 +205,13 @@ uint16_t keyApiSta_GetKeyMaterial(cipher_key_t *pwkey, cipher_key_t *gwkey,
 		if (gwkey == NULL)
 			return 0;
 		key = gwkey;
-		keyMgtData_p->keyType = key->hdr.keyType;
+		keyType = key->hdr.keyType;
+		keyMgtData_p->keyType = keyType;
 		keyMgtData_p->keyInfo = KEY_INFO_MULTICAST;
 		if (IS_KEY_STATE_ENABLED(key))
 			keyMgtData_p->keyInfo = KEY_INFO_MULTICAST | KEY_INFO_ENABLED;
 	}
-	if (key->hdr.keyType == KEY_TYPE_TKIP) {
+	if (keyType == KEY_TYPE_TKIP) {
 		keyMgtData_p->keyLen = WPA_TKIP_KEY_LEN;
 		__aeabi_memcpy(keyMgtData_p->keyEncypt.TKIP.key, key->ckd.aes.key, TK_SIZE);
 		__aeabi_memcpy(keyMgtData_p->keyEncypt.TKIP.txMicKey, key->ckd.aes.txMicKey, 8);

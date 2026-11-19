@@ -1192,10 +1192,11 @@ told:
 		if (mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_SLEEPING, 0) == 0 &&
 		    wlanPsLastHostEvent != WLAN_EVENT_HOST_PS_AWAKE)
 			goto hostDone;
-		if ((machine->confirmBits & WLAN_STA_PS_NULL_DONE) || wlanPsListenBeacons == 0) {
-			wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
-			wlanStaPsRestartTimer(&machine->confirmTimer, WLAN_STA_PS_CONFIRM_TICKS);
-		}
+		/* Sony reads the listen interval only when the null frame is not done */
+		if (!(machine->confirmBits & WLAN_STA_PS_NULL_DONE) && wlanPsListenBeacons != 0)
+			goto check;
+		wlanStaPsTellHost(connection, WLAN_EVENT_HOST_PS_SLEEP, 0);
+		wlanStaPsRestartTimer(&machine->confirmTimer, WLAN_STA_PS_CONFIRM_TICKS);
 		goto check;
 hostDone:
 		machine->confirmBits |= WLAN_STA_PS_HOST_DONE;

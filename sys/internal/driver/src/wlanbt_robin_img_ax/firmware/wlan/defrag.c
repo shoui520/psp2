@@ -47,8 +47,8 @@ static inline void releaseRxBuffer(OsaBuffer *rxBuffer)
 	wlanRomServices.releaseDmaSpan(rxBuffer->ringStart, rxBuffer->ringEnd, 3);
 }
 
-/* Waits for a reassembly buffer. */
-static void allocReassemblyBuffer(OsaBuffer **reassembly, uint32_t size)
+/* Waits for a reassembly buffer (Sony inlines it into both callers). */
+static inline __attribute__((always_inline)) void allocReassemblyBuffer(OsaBuffer **reassembly, uint32_t size)
 {
 	while ((*reassembly = osa_BufferAlloc(wlanRomServices.packetPool, size, 0)) == NULL)
 		tx_thread_sleep(1);

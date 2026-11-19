@@ -770,16 +770,19 @@ void macMgmtAdjustBuffer(OsaBuffer *buffer, uintptr_t argument)
 
 	macMgmtFilterBuffer(connection);
 	if (frame->frameControl[1] & 0x40) {
-		const struct WlanKeyBuffer *key = connection->keyBlocks[0];
+		const cipher_key_t *key = NULL;
 		uint8_t *length;
 
+		if (connection->keyBlocks[0] != NULL)
+			key = &connection->keyBlocks[0]->key;
 		if (key == NULL)
 			return;
-		if (!(key->key.hdr.keyState & 1))
+		if (!(key->hdr.keyState & 1))
 			return;
 		length = (uint8_t *)__aeabi_uread4(status->frame);
 		PUT_U16(length, U16(length) + 96);
-		if (wlanRxDecryptWep(&buffer, status, (cipher_key_t *)&key->key, 0) == 0)
+		/* Sony reads the key block again after the store */
+		if (wlanRxDecryptWep(&buffer, status, &connection->keyBlocks[0]->key, 0) == 0)
 			result = 15;
 		frame = (WlanWirelessFrame *)BUFFER_DATA(buffer);
 	}

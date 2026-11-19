@@ -52,21 +52,21 @@ int otpRead(unsigned int offset, uint8_t *buffer, unsigned int count)
 		sysDelayUs(1);
 	}
 	if (offset & 1) {
-		*buffer++ = OTP_DATA(offset >> 1) >> 8;
+		*buffer++ = OTP_DATA(offset - 1) >> 8;
 		offset++;
 		count--;
 	}
 	if (count > OTP_BYTES - offset)
 		count = OTP_BYTES - offset;
 	while (count >= 2) {
-		word = OTP_DATA(offset >> 1);
+		word = OTP_DATA(offset);
 		*buffer++ = word;
 		*buffer++ = word >> 8;
 		offset += 2;
 		count -= 2;
 	}
 	if (count == 1)
-		*buffer = OTP_DATA(offset >> 1);
+		*buffer = OTP_DATA(offset);
 	otpClockClose();
 	sysIrqRestore(posture);
 	return 0;

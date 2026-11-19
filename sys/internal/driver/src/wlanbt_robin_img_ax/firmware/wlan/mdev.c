@@ -68,9 +68,12 @@ __attribute__((noinline)) int wlanInitializationHook(void)
 int wlanForwardSdioEvent(void *device, OsaBuffer *buffer,
 			 uintptr_t argument, unsigned int event)
 {
+	void *sdioDev = wlanSdioDev;
+	void *target = wlanDevice;
+
 	if (event == 4 || event == 1) {
-		buffer->context = wlanSdioDev;
-		mdevForwardEvent(wlanDevice, buffer, argument, event);
+		buffer->context = sdioDev;
+		mdevForwardEvent(target, buffer, argument, event);
 	}
 	return 0;
 }
@@ -197,7 +200,7 @@ int wlanPrepareAmsduFrame(OsaBuffer *buffer, WlanPacketHeader *header)
 		((unsigned int)header->wire.packetOffset[1] << 8));
 	packetOffset += 36;
 	header->wire.packetOffset[0] = packetOffset;
-	header->wire.packetOffset[1] = (uint16_t)packetOffset >> 8;
+	header->wire.packetOffset[1] = packetOffset >> 8;
 	header->wire.packetType[0] = 0xe6;
 	header->wire.packetType[1] = 0;
 	return 1;

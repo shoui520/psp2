@@ -67,9 +67,12 @@ int wlanConvertWirelessToEthernet(OsaBuffer *buffer, struct ether_header **outpu
 	if (packetType == 2) {
 		buffer->length -= sizeof(snap);
 	} else {
+		unsigned int length = buffer->length;
+		unsigned int swapped = (length >> 8) | (length << 8);
+
 		protocol = (uint8_t *)&ethernet->ether_type;
-		protocol[0] = buffer->length >> 8;
-		protocol[1] = buffer->length;
+		protocol[0] = swapped;
+		protocol[1] = swapped >> 8;
 	}
 	address = (header.frameControl[1] & 1) ? header.address3 : header.address1;
 	__aeabi_memcpy(ethernet->ether_dhost, address, sizeof(ethernet->ether_dhost));

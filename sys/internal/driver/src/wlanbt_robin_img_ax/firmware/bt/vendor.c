@@ -271,7 +271,7 @@ void btSbcInspectContext(unsigned int opcode, unsigned int length, const uint8_t
 		*status = btAudioPathModesSet(length, parameters);
 		return;
 	case 61:
-		btSbcFilterState(BT_CONFIG_ITEM_KEY, returnParameters);
+		btSbcFilterState(BT_CONFIG_ITEM_KEY, returnParameters, 16);
 		*returnLength = 16;
 		return;
 	case 62:

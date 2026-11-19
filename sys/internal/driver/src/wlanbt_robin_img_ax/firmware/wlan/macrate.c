@@ -289,9 +289,10 @@ void wlanRateResponseTableBuild(uint32_t rateSet, int count)
 void wlanTxRequestRateSet(struct WlanMacTxRequest *request, unsigned int rate, int flag,
 			  int extra, int fixed)
 {
-	uint8_t low = request->rate & 0xff;
+	/* Sony updates the rate's two bytes and the parameter byte in place, step by step. */
+	uint8_t *rateBytes = (uint8_t *)&request->rate;
+	uint8_t low = rateBytes[0];
 	uint8_t high;
-	unsigned int code;
 	uint8_t parameter;
 
 	if (rate < 14)
@@ -299,22 +300,24 @@ void wlanTxRequestRateSet(struct WlanMacTxRequest *request, unsigned int rate, i
 	else
 		low |= 1;
 	low = (low & 0xfd) | ((flag & 1) << 1);
+	rateBytes[0] = low;
 	if (rate < 22)
 		low &= ~4u;
 	else
 		low |= 4;
-	code = romLibHandleState(rate);
-	request->rate = (request->rate & 0xfc07) | (low & 7) | ((code & 0x7f) << 3);
-	high = ((request->rate >> 8) & 0xe3) + 8;
-	high &= 0x9f;
+	rateBytes[0] = low;
+	request->rate = (request->rate & ~MAC_TX_RATE_MASK) | ((romLibHandleState(rate) & 0x7f) << 3);
+	high = (((rateBytes[1] & 0xe3) + 8) & 0x9f);
+	rateBytes[1] = high;
 	if (!fixed && ((request->rate >> 3) & 0x7f) != 0)
 		high |= 0x80;
 	else
 		high &= 0x7f;
-	request->rate = (request->rate & 0xff) | (high << 8);
-	parameter = (request->reserved42[0] & 0xa0) | (wlanRateParameterHook(rate) & 0xf);
+	rateBytes[1] = high;
+	parameter = ((request->reserved42[0] & 0xf0) | (wlanRateParameterHook(rate) & 0xf)) & 0xaf;
+	request->reserved42[0] = parameter;
 	parameter &= 0x7f;
-	if (request->rate & 1)
-		parameter |= (extra & 1) << 7;
+	if (rateBytes[0] & 1)
+		parameter |= extra << 7;
 	request->reserved42[0] = parameter;
 }

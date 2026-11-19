@@ -45,7 +45,7 @@ uint64_t wlanSignalTimeNow(void);					/* 0x2a4fc */
 int wlanStaSmLinked(const struct WlanConnection *connection);		/* 0x35faa */
 unsigned int wlanPsDiscountMissed(uint8_t *missed);			/* 0x3dfc4 */
 int wlanLinkCheckPost(struct WlanConnection *connection);		/* 0x347be */
-extern uint8_t wlanSignalSnapshot[8];					/* 0x0400d288 */
+extern uint8_t wlanSignalSnapshot[8];					/* 0x040088d2 */
 
 /* Link timers that expired after the check had moved to a new one. */
 uint32_t wlanLinkStaleTimers __attribute__((section(".itcm.rw")));	/* 0x54b88 */

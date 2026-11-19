@@ -280,9 +280,10 @@ int wlanCoexUpdateEstimate(uint64_t start, uint64_t now, uint32_t maxSample, int
 }
 
 /* Pending-event mode: a window event for the control task, or the poll timer starts. */
-int sysDispatchPendingEventMode(uint32_t mode)
+void sysDispatchPendingEventMode(uint32_t mode)
 {
 	if (mode != 0)
-		return wlanRaiseEvent(WLAN_EVENT_COEX_WINDOW);
-	return wlanCoexStartPoll();
+		wlanRaiseEvent(WLAN_EVENT_COEX_WINDOW);
+	else
+		wlanCoexStartPoll();
 }

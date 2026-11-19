@@ -379,6 +379,7 @@ _Static_assert(sizeof(struct WlanMacDescriptor) == 64, "MAC descriptor");
 
 extern struct WlanMacDescriptor wlanMacDescriptor;	/* DTCM 0x040089ac */
 extern struct WlanLocalArea wlanLocalArea;		/* DTCM 0x040089ec */
+extern struct WlanMacDescriptor *macTxNotifyState;	/* 0x54bd4 */
 uint32_t wlanMacAcceptAllActive(void);
 struct WlanMacDescriptor *wlanMacDescriptorInit(uint32_t descriptor);
 extern struct WlanDeviceConfig *wlanDeviceAddress;		/* 0x54a7c */

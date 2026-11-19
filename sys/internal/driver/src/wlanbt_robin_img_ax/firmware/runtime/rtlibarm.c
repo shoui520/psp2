@@ -18,7 +18,12 @@ void __rt_clear_errno(void)
 	*__rt_get_errno_addr() = 0;
 }
 
+/* ARM's clz gives 32 for 0; GCC's builtin leaves 0 undefined. */
 int16_t robinClz16(uint32_t value)
 {
+#ifdef __CC_ARM
+	return (int16_t)__clz(value);
+#else
 	return (int16_t)(value != 0 ? __builtin_clz(value) : 32);
+#endif
 }

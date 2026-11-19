@@ -513,7 +513,8 @@ wlanDmaRingSetup(unsigned int number, uint8_t *buffers, uint32_t bufferSize, uin
 	descriptors[i].control = (lastControl << 4) | WLAN_DMA_DESCRIPTOR_ARMED;
 }
 
-void wlanDmaRingsInit(void)
+/* dmaContext: the MAC descriptor's DMA context, which Sony's callers pass; unused. */
+void wlanDmaRingsInit(uint32_t dmaContext)
 {
 	wlanDmaRingSetup(WLAN_DMA_RING_RX_A, wlanDmaRxABuffers[0], WLAN_DMA_RX_A_BUFFER,
 			 WLAN_DMA_RX_A_BUFFER, WLAN_DMA_RX_SMALL_SIZE, wlanDmaRxADescriptors, 0);

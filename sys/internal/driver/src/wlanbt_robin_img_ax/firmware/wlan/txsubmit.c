@@ -66,13 +66,13 @@ int wlanTxRatesInit(struct WlanConnection *connection, uint8_t *data, struct Wla
 /* Whether a frame of this length is long enough to be sent behind an RTS. */
 int wlanTxUsesRts(struct WlanConnection *connection, unsigned int length, const uint8_t *peer)
 {
-	int qos;
+	uint8_t qos;
 
 	if (connection->interfaceType == WLAN_IF_IBSS || connection->mode == 2)
 		qos = wlanPeerQosEnabled(connection, peer);
 	else
 		qos = wlanWmmEnabled();
-	return length + (qos != 0 ? 30 : 28) > (unsigned int)(connection->rtsThreshold[1] << 8 | connection->rtsThreshold[0]);
+	return length + (qos != 0 ? 30 : 28) > connection->rtsThresholdValue;
 }
 
 /* Completes the request of a frame that already has one (a management frame or a retry). */
@@ -285,14 +285,16 @@ OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status)
 {
 	OsaBuffer *buffer = NULL;
 	unsigned int posture;
-	uint32_t tail;
+	uint32_t region, head, tail;
 
 	status->result = 1;
 	status->data = NULL;
 	posture = sysIrqDisable();
+	region = MAC_000_REGION_A;
+	head = MAC_010_QUEUE_HEAD;
 	tail = MAC_014_QUEUE_TAIL;
-	if ((MAC_010_QUEUE_HEAD & 0x1ff) != (tail & 0x1ff)) {
-		struct WlanMacTxRequest *done = *(struct WlanMacTxRequest **)((uint8_t)tail | MAC_000_REGION_A | 0xd00);
+	if ((head & 0x1ff) != (tail & 0x1ff)) {
+		struct WlanMacTxRequest *done = *(struct WlanMacTxRequest **)((uint8_t)tail | region | 0xd00);
 
 		if (done != NULL) {
 			uint8_t *data = (uint8_t *)__aeabi_uread4(done->buffer);
@@ -324,12 +326,13 @@ OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status)
 				}
 				status->rateInfo = rateInfo;
 				if (done->reserved1[1] & MAC_TX_DONE_FAILED) {
-					macMgmtUpdateDescriptor();
+					macMgmtUpdateDescriptor(0, status->data);
 				} else {
-					const uint8_t *sent = (const uint8_t *)TX_DATA_FRAME((uint8_t *)__aeabi_uread4(done->buffer));
+					const uint8_t *sent;
 
 					status->result = 0;
-					macMgmtUpdateDescriptor();
+					macMgmtUpdateDescriptor(1, status->data);
+					sent = (const uint8_t *)TX_DATA_FRAME(status->data);
 					if (((sent[2] >> 2) & 3) == 2) {
 						uint64_t start = __aeabi_uread4(&done->expiry[0]) |
 								 (uint64_t)__aeabi_uread4(&done->expiry[4]) << 32;

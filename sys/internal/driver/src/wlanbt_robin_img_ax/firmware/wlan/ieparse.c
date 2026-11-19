@@ -201,6 +201,7 @@ int wlanTimCheck(const uint8_t *tim, uint16_t aid, int *groupTraffic, int *unica
 	unsigned int id = aid & 0x3fff;
 	unsigned int octet;
 	unsigned int start;
+	unsigned int end;
 	unsigned int index;
 
 	if (tim == NULL || id == 0 || id > WLAN_AID_MAX)
@@ -209,7 +210,8 @@ int wlanTimCheck(const uint8_t *tim, uint16_t aid, int *groupTraffic, int *unica
 		*groupTraffic = tim[4] & 1;
 	octet = id >> 3;
 	start = 2 * (tim[4] >> 1);
-	if (octet >= start && octet <= (uint8_t)(tim[1] + start - 4)) {
+	end = (uint8_t)(tim[1] + start - 4);
+	if (octet >= start && octet <= end) {
 		index = octet - start;
 		if (index < 251 && (tim[5 + index] >> (id & 7)) & 1)
 			*unicastTraffic = 1;

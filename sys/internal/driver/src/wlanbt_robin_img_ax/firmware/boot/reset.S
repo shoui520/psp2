@@ -1,6 +1,7 @@
 /*
  * Marvell 88W8787 ("Robin") start-up, exit, exception entry, CP15 and ThreadX low-level code
- * (0x000524e0 .. 0x00052b54), instruction for instruction as the original has it.
+ * (0x000524e0 .. 0x00052b54), and __aeabi_memmove (0x0005228c), which branches into
+ * __aeabi_memmove4: instruction for instruction as the original has it.
  *
  * Most of it is the ARM C library's start-up (RVCT): __rt_entry, the stack and heap set-up and
  * the library initialisation, whose functions return their results in r0-r3 (__value_in_regs)
@@ -73,6 +74,75 @@ __rt_exit_hook:
 	bx	lr
 
 /*
+ * __aeabi_memmove (0x0005228c): memmove (r0=dst, r1=src, r2=len). A destination below the
+ * source, or one the copy does not overlap, goes to memcpy; otherwise it copies from the end:
+ * bytes until the destination is aligned, then an aligned source in __aeabi_memmove4's word
+ * copy (the original branches into it), an unaligned one a word at a time from two source
+ * words, and the last bytes.
+ */
+	.global __aeabi_memmove
+	.type	__aeabi_memmove, %function
+__aeabi_memmove:
+	subs	r3, r0, r1
+	cmpcs	r2, r3
+	bls	__aeabi_memcpy
+	cmp	r2, #3
+	add	r0, r0, r2
+	add	r1, r1, r2
+	bls	.Lmemmove_bytes
+	tst	r0, #3
+1:
+	ldrbne	r3, [r1, #-1]!
+	subne	r2, r2, #1
+	strbne	r3, [r0, #-1]!
+	tst	r0, #3
+	bne	1b
+	ands	r3, r1, #3
+	beq	.Lmemmove4_words
+	subs	r2, r2, #4
+	bcc	.Lmemmove_bytes
+	ldr	ip, [r1, -r3]!
+	cmp	r3, #2
+	bcc	3f
+	bhi	4f
+2:
+	lsl	r3, ip, #16
+	ldr	ip, [r1, #-4]!
+	subs	r2, r2, #4
+	orr	r3, r3, ip, lsr #16
+	str	r3, [r0, #-4]!
+	bcs	2b
+	add	r1, r1, #2
+	b	.Lmemmove_bytes
+3:
+	lsl	r3, ip, #24
+	ldr	ip, [r1, #-4]!
+	subs	r2, r2, #4
+	orr	r3, r3, ip, lsr #8
+	str	r3, [r0, #-4]!
+	bcs	3b
+	add	r1, r1, #1
+	b	.Lmemmove_bytes
+4:
+	lsl	r3, ip, #8
+	ldr	ip, [r1, #-4]!
+	subs	r2, r2, #4
+	orr	r3, r3, ip, lsr #24
+	str	r3, [r0, #-4]!
+	bcs	4b
+	add	r1, r1, #3
+	mov	r0, r0
+.Lmemmove_bytes:
+	movs	r2, r2, lsl #31
+	ldrbcs	r3, [r1, #-1]!
+	ldrbcs	ip, [r1, #-1]!
+	ldrbmi	r2, [r1, #-1]
+	strbcs	r3, [r0, #-1]!
+	strbcs	ip, [r0, #-1]!
+	strbmi	r2, [r0, #-1]
+	bx	lr
+
+/*
  * __aeabi_memmove4 (0x0005254c): memmove of word-aligned buffers (r0=dst, r1=src, r2=len).
  */
 	.global __aeabi_memmove4
@@ -89,6 +159,7 @@ __aeabi_memmove4:
 	strbne	r3, [r0, #-1]!
 	tst	r0, #3
 	bne	1b
+.Lmemmove4_words:
 	subs	r2, r2, #16
 	bcc	3f
 	push	{r4, lr}
@@ -338,10 +409,18 @@ __rt_locale_desc_hook:
 	.word	__libspace_start + 0x20
 
 /*
- * __user_initial_stackheap (0x00052826): heap base 0x5f800 in the original, 0x63800 here (the
- * initial stack's top; GCC's code is 0x3df0 bytes larger than RVCT's), heap
- * limit from robinQueryHeapLimit(); returned in r0-r3 (__value_in_regs).
+ * __user_initial_stackheap (0x00052826): heap base 0x5f800, the original's (the initial
+ * stack's top), and 0x63800 in the GCC build (its code is 0x3df0 bytes larger than RVCT's);
+ * heap limit from robinQueryHeapLimit(); returned in r0-r3 (__value_in_regs).
  */
+/* The heap base, for robin.ld's check of the room left for the initial stack. */
+	.global __robin_heap_base
+#ifdef ROBIN_RVCT
+	.set	__robin_heap_base, 0x0005f800
+#else
+	.set	__robin_heap_base, 0x00063800
+#endif
+
 	.thumb
 	.thumb_func
 	.global __user_initial_stackheap
@@ -353,8 +432,13 @@ __user_initial_stackheap:
 	movs	r4, r1
 	mov	r0, sp
 	stmia	r0!, {r1-r4}
+#ifdef ROBIN_RVCT
+	movs	r0, #0xbf
+	lsls	r0, r0, #11		/* 0x0005f800 */
+#else
 	movs	r0, #0xc7
 	lsls	r0, r0, #11		/* 0x00063800: the original's 0x5f800 moved up by the larger code */
+#endif
 	str	r0, [sp]
 	bl	robinQueryHeapLimit
 	str	r0, [sp, #4]

@@ -15,6 +15,7 @@
 #include "robin/gpio.h"
 #include "robin/mac.h"
 #include "robin/macrate.h"
+#include "robin/mactx.h"
 #include "robin/pspoll.h"
 #include "robin/rom.h"
 #include "robin/runtime.h"
@@ -163,7 +164,7 @@ uint16_t wlanFrameDurationMacCall(int a, int b, int c, int d, int e)
 /* Sets the contention windows of the four queues when the BSS has no WMM (31 slots for a station, else 15). */
 void wlanContentionWindowUpdate(unsigned int interfaceType, unsigned int lowRate)
 {
-	unsigned int queue;
+	int queue;
 	unsigned int minimum;
 
 	if (wlanContentionWindowSet == lowRate)
@@ -301,7 +302,7 @@ int wlanMacBringUp(uint32_t descriptor, const struct MacRegionProvider *provider
 	MAC_REG(0x928) &= ~0x05000000u;
 	MAC_REG(0x500) = (MAC_REG(0x500) >> 2) << 2;
 	MAC_REG(0x468) = 30;
-	wlanDmaRingsInit();
+	wlanDmaRingsInit(dmaContext);
 	wlanMacMode300Reset();
 	wlanMacTimersProgram(15, 1023, 63);
 	wlanBaEntriesInit();
@@ -329,5 +330,5 @@ void wlanMacDmaRestart(void)
 {
 	MAC_REG(0x800) = 4;
 	sysDelayUs(6);
-	wlanDmaRingsInit();
+	wlanDmaRingsInit(macTxNotifyState->dmaContext);
 }

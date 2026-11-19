@@ -428,7 +428,7 @@ int macMgmtFormatState(struct WlanConnection *connection, const uint8_t *event)
 }
 
 /* Records what ended the connection (the code and, with a peer, its reason and address) and tells the SME. */
-int macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_t reason,
+void macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_t reason,
 			const uint8_t *peer)
 {
 	if (peer != NULL) {
@@ -440,7 +440,7 @@ int macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_
 	}
 	wlanMgmtReport.code = code;
 	macMgmtScheduleState(connection);
-	return wlanRaiseEvent(WLAN_EVENT_MGMT_REPORT);
+	wlanRaiseEvent(WLAN_EVENT_MGMT_REPORT);
 }
 
 /* The IBSS's BSSID is the local address, and the channel is the one the radio is on. */

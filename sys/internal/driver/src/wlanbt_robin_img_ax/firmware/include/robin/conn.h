@@ -882,7 +882,7 @@ void wlanConnectionSetupType1(struct WlanConnection *connection);		/* 0x1d486 */
 int wlanConnectionIdle(struct WlanConnection *connection);			/* 0x1d4d0 */
 int wlanConnectionFreeListClean(void);						/* 0x1d4e2 */
 int wlanConnectionsInit(void);							/* 0x1d52e */
-int wlanConnectionBssCount(struct WlanConnection *connection);		/* 0x1d5ba */
+unsigned int wlanConnectionBssCount(struct WlanConnection *connection);		/* 0x1d5ba */
 struct WlanConnection *wlanConnectionConfigure(int interfaceType, int bssType, int bssNumber,
 					       const uint8_t *local, const uint8_t *peer,
 					       int channel, void *driver);		/* 0x1d604 */
@@ -987,7 +987,7 @@ int wlanRoleIbssOnly(void);
 int wlanPsEnabled(void);
 int wlanIbssPsEnabled(void);
 int wlanApPsEnabled(void);
-unsigned int wlanRaiseEvent(unsigned int bit);
+void wlanRaiseEvent(unsigned int bit);
 
 /* wlan/mgmtinfo.c: the ERP and HT state of an access point; erpInfo points to WlanConnectionInfo.erpInfo. */
 void wlanApRateFlagsUpdate(unsigned int phyMode, uint8_t *erpInfo);			/* 0x2a50e */

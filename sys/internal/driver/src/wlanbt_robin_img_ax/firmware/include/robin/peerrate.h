@@ -21,7 +21,7 @@ struct WlanTxStatus;
 int macTxNotifyFilterPacket(struct WlanConnection *connection);			/* 0x332ec */
 int macTxNotifyHandleFrame(struct WlanConnection *connection);				/* 0x33320 */
 int macTxNotifyProcessFrame(struct WlanConnection *connection);			/* 0x3333c */
-int macTxNotifyUpdateFrame(struct WlanConnection *connection);				/* 0x3337c */
+void macTxNotifyUpdateFrame(struct WlanConnection *connection);				/* 0x3337c */
 void macTxNotifyConfigureFrame(struct WlanConnection *connection);			/* 0x333ce */
 void wlanBaNotifyAdded(struct WlanConnection *connection, int hardwareSlot);		/* 0x333f6 */
 void wlanBaNotifyDeleted(struct WlanConnection *connection, int hardwareSlot);		/* 0x33420 */

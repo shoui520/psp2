@@ -59,14 +59,11 @@ static inline void wlanPsPollWaitBluetooth(void)
 {
 	unsigned int state = BT_LINK_STATE & 0xf;
 
-	do {
-		if ((SOC_PENDING_EVENT_CONTROL & SOC_PENDING_EVENT_ARMED) == 0)
-			break;
-		if (sysPendingEventPolicyIsEnabled() == 0)
-			break;
-		if ((SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) == 0)
-			break;
-	} while (btLinkBusy(state));
+	while ((SOC_PENDING_EVENT_CONTROL & SOC_PENDING_EVENT_ARMED) != 0 &&
+	       sysPendingEventPolicyIsEnabled() != 0 &&
+	       (SOC_PENDING_EVENT_STATUS & SOC_PENDING_EVENT_BT) != 0 &&
+	       (state == BT_STATE_BUSY_A || state == BT_STATE_BUSY_B))
+		;
 }
 
 /* Lets the trigger timer poll once; 1 if it already has. */

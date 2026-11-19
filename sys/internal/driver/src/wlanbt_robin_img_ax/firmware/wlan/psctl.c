@@ -241,31 +241,19 @@ int wlanPsPostEvent(uint32_t event)
  * 0x16abe: raises event bit 0 to 47 for the control task. The task is woken
  * only when no event was pending.
  */
-unsigned int wlanRaiseEvent(unsigned int bit)
+void wlanRaiseEvent(unsigned int bit)
 {
-	UINT posture;
-	uint32_t low;
-	uint32_t high;
-	uint32_t oldLow;
-	uint32_t oldHigh;
+	UINT posture = sysIrqDisable();
+	uint32_t oldHigh = wlanPendingEvents[1];
+	uint32_t oldLow = wlanPendingEvents[0];
+	uint64_t mask = 1ull << bit;
 
-	if (bit < 32) {
-		low = 1u << bit;
-		high = 0;
-	} else {
-		low = 0;
-		high = 1u << (bit - 32);
-	}
-	posture = sysIrqDisable();
-	oldLow = wlanPendingEvents[0];
-	oldHigh = wlanPendingEvents[1];
-	wlanPendingEvents[0] = oldLow | low;
-	wlanPendingEvents[1] = oldHigh | high;
+	wlanPendingEvents[1] = oldHigh | (uint32_t)(mask >> 32);
+	wlanPendingEvents[0] = oldLow | (uint32_t)mask;
 	sysIrqRestore(posture);
-	if ((oldLow | oldHigh) == 0)
+	if ((((uint64_t)oldHigh << 32) | oldLow) == 0)
 		wlanPostConnectionEvent(wlanConnectionByRole(wlanHasApRole() ? 2 : 0),
 					WLAN_CB_EVENT_PENDING_BITS);
-	return oldLow | oldHigh;
 }
 
 /* 0x16b0a: "NullPktDoneTmr". */
@@ -408,7 +396,7 @@ void wlanPsBeaconTraffic(struct WlanConnection *connection, int unicast, int gro
 		} else {
 			event = WLAN_PS_EVENT_WAKE;
 			if (wake) {
-				classes = (unicast ? 9 : 1) | (group ? 2 : 0);
+				classes = (unicast ? 9 : 0) | (group ? 2 : 0);
 				if (wlanHostSleepArmed() &&
 				    !wlanHostSleepWakeMatch(classes,
 							    __aeabi_uread4(wlanHostSleepActive->conditions) | 2) &&

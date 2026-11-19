@@ -95,9 +95,9 @@ extern uint8_t btLinkKeyLastItem;			/* DTCM 0x400f79f */
 int btSbcVerifyState(unsigned int type, struct BtConfigHeader *record, unsigned int length,
 		     uint32_t *offset);						/* 0x4e1c0 */
 void btSbcSelectState(struct BtConfigHeader *record, unsigned int length, uint32_t offset);	/* 0x4e272 */
-void btSbcAdjustState(uint32_t low, uint16_t high);				/* 0x4e2bc */
+void btSbcAdjustState(uint32_t low, uint32_t high);				/* 0x4e2bc */
 void btSbcRecordState(void);							/* 0x4e2e4 */
-int btSbcFilterState(int item, uint8_t *value);					/* 0x4e35e */
+int btSbcFilterState(int item, uint8_t *value, unsigned int length);					/* 0x4e35e */
 int btSbcHandleContext(unsigned int item, const uint8_t *value, int set);	/* 0x4e422 */
 int btSbcProcessContext(unsigned int item);					/* 0x4e562 */
 int btSbcUpdateContext(const uint8_t *records);					/* 0x4e582 */

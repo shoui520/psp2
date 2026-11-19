@@ -192,9 +192,10 @@ uint8_t *(*btLmpLcQueryEntry(void))(int index)
 /* The packet pool's config names the owner whose state byte (offset 8) the coexistence code reads. */
 unsigned int btLmpLcResetEntry(void)
 {
-	const uint8_t *owner = (const uint8_t *)(uintptr_t)btPacketPoolConfig.reserved;
+	const uint32_t *owner = (const uint32_t *)(uintptr_t)btPacketPoolConfig.reserved;
 
-	return owner != NULL ? owner[8] : 0;
+	/* the owner's word at offset 8, its low byte */
+	return owner != NULL ? (uint8_t)owner[2] : 0;
 }
 
 /*

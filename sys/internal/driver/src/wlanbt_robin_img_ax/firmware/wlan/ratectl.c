@@ -274,7 +274,7 @@ void wlanRateBlockBuild(const uint8_t *items, int count, uint8_t *blocks, uint32
 			__aeabi_uwrite4(word, blocks + 36 * rate40);
 		}
 	}
-	for (i = 0; i < 8; i = (uint8_t)(i + 1), count--) {
+	for (i = 0; i < 8; i++, count--) {
 		const uint8_t *item = &items[4 * i];
 		unsigned int itemClass = item[0];
 		unsigned int itemIndex = item[1];
@@ -479,7 +479,7 @@ uint32_t wlanRateConfigPack(const uint8_t *config)
 	uint8_t flags = __aeabi_uread4(config + 8);
 	uint32_t word;
 
-	word = (flags << 14) | (config[4] & 0xf) |
+	word = (flags << 14) | (((config[5] << 8) | config[4]) & 0xf) |
 	       ((32 * ((config[7] << 8) | config[6])) & 0x1fff) | (flags << 23);
 	return ((__aeabi_uread4(config + 12) << 22) & 0x7fffff) | word;
 }

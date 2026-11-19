@@ -187,20 +187,14 @@ void wlanPsPhaseSuspend(void)
 void wlanPsPhaseArm(struct WlanConnection *connection)
 {
 	UINT posture = sysIrqDisable();
+	unsigned int phase = wlanConnectionPhase;
 
-	switch (wlanConnectionPhase) {
-	case WLAN_PHASE_OFF:
-	case WLAN_PHASE_REPLY_DUE:
-	case WLAN_PHASE_SUSPENDED:
-	case WLAN_PHASE_ANNOUNCED:
-	case WLAN_PHASE_REPLY_COUNTDOWN:
-	case WLAN_PHASE_HOST_ASLEEP:
-		break;
-	default:
+	if (phase != WLAN_PHASE_OFF && phase != WLAN_PHASE_REPLY_DUE && phase != WLAN_PHASE_SUSPENDED &&
+	    phase != WLAN_PHASE_ANNOUNCED && phase != WLAN_PHASE_REPLY_COUNTDOWN &&
+	    phase != WLAN_PHASE_HOST_ASLEEP) {
 		wlanPsCancelPendingTimer();
 		osaCreateTimer(wlanPsPhaseTimerExpired, (uintptr_t)connection, wlanPsPhaseDelay * 1000,
 			       &wlanPendingTimer, 0);
-		break;
 	}
 	sysIrqRestore(posture);
 }

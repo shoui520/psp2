@@ -143,10 +143,12 @@ void btAudioPathEnable(int enable, unsigned int kind)
 	case 1:
 	case 2:
 		if (mode == 1) {
-			if (enable)
+			if (enable) {
 				BT_AUDIO_PATH_OUTPUT &= ~0x2000;
-			else
+				BT_AUDIO_PATH_SELECT &= ~1;
+			} else {
 				BT_AUDIO_PATH_OUTPUT |= 0x2000;
+			}
 		} else if (mode == 2) {
 			BT_AUDIO_PATH_SELECT |= 1;
 			if (enable)
@@ -162,10 +164,12 @@ void btAudioPathEnable(int enable, unsigned int kind)
 		break;
 	case 3:
 		if (mode == 1) {
-			if (enable)
+			if (enable) {
 				BT_AUDIO_PATH_OUTPUT &= ~0x2000;
-			else
+				BT_AUDIO_PATH_SELECT &= ~1;
+			} else {
 				BT_AUDIO_PATH_OUTPUT |= 0x2000;
+			}
 		} else if (mode == 2) {
 			BT_AUDIO_PATH_SELECT |= 1;
 			if (enable)

@@ -80,6 +80,6 @@ int wlanDmaRingTakeC(struct WlanRxStatus *status);
 int wlanDmaRingRxDataWindowOpen(void);
 int wlanDmaRingRxDataSettled(void);
 OsaBuffer *wlanDmaRingTakeData(struct WlanRxStatus *status, uint16_t *length);
-void wlanDmaRingsInit(void);
+void wlanDmaRingsInit(uint32_t dmaContext);
 
 #endif /* ROBIN_DMARING_H */

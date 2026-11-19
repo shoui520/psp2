@@ -55,8 +55,7 @@ void btSbcUpdatePacket(const uint8_t *message)
 /* The configuration store's hooks (btSbcPreparePacket()). */
 int btSbcConfigurePacket(unsigned int item, unsigned int length, uint8_t *value)
 {
-	(void)length;
-	return btSbcFilterState(item, value);
+	return btSbcFilterState(item, value, length);
 }
 
 int btSbcCheckPacket(unsigned int item, unsigned int length, const uint8_t *value)

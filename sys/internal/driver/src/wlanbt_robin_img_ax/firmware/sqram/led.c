@@ -38,8 +38,12 @@ void ledFirmwareStateSet(unsigned int state)
 		const struct LedBehavior *behavior = &ledConfig[led].behavior[state];
 
 		if (behavior->gpio < LED_GPIO_NONE) {
+			unsigned int gpio = behavior->gpio;
+			unsigned int pinState = behavior->state;
+			unsigned int argument = behavior->argument;
+
 			ledFirmwareState = state;
-			fmCoexScheduleEntry(ledActive, behavior->gpio, behavior->state, behavior->argument);
+			fmCoexScheduleEntry(ledActive, gpio, pinState, argument);
 		}
 	}
 	if (state == LED_STATE_DISCONNECTED || state == LED_STATE_LINK_6 || state == LED_STATE_LINK_7)

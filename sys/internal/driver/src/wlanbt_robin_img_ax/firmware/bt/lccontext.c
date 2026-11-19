@@ -205,7 +205,7 @@ int btHctInit(void)
 	btLmpLcValidateContext();
 	btSbcRecordState();
 	romHctCoexMode = 115200;
-	btSbcFilterState(BT_CONFIG_ITEM_BAUD_RATE, (uint8_t *)&romHctCoexMode);
+	btSbcFilterState(BT_CONFIG_ITEM_BAUD_RATE, (uint8_t *)&romHctCoexMode, 4);
 	__aeabi_memclr(btHctTaskControl, sizeof(btHctTaskControl));
 	btBdhRomHandleState(btTaskStacks, BT_TASK_STACK_SIZE, btHctTaskControl, (const char *)btTaskTable);
 	btSbcSetupState();

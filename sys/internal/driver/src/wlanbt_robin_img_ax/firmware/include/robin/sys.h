@@ -63,7 +63,7 @@ uint32_t sysReadInterruptStatus(void);
 uint32_t sysEnableInterruptSources(uint32_t sources);
 uint32_t sysDisableInterruptSources(uint32_t sources);
 uint32_t sysAcknowledgeInterruptSources(uint32_t sources);
-int sysProcessPendingEvent(void);
+void sysProcessPendingEvent(void);
 void sysPendingEventExpired(uint32_t timer, uint32_t unusedArgument);
 int sysArmPendingEvent(uint32_t flags, uint32_t delay);
 int sysDeferPendingEvent(int dispatchMode);
@@ -87,7 +87,7 @@ int osaCreateTimer(OsaTimerCallback callback, uint32_t argument, uint32_t delay,
 uint32_t sysPendingEventPolicyIsEnabled(void);
 int sysCompletePendingEvent(void);
 int sysPendingEventIsArmed(void);
-int sysDispatchPendingEventMode(uint32_t mode);
+void sysDispatchPendingEventMode(uint32_t mode);
 int osaCancelTimer(uint32_t timer);
 uint32_t sysServiceEventInterrupts(void);
 int sysDisableEventSources(uint32_t sources);

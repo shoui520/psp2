@@ -985,7 +985,7 @@ int wlanPsUpdateFrame(unsigned int rate, uint8_t *wide, uint8_t *index)
 }
 
 /* How the rate in use fares: 0 well, 1 so-so (3 or 4 dropped), 2 badly. */
-__attribute__((noinline)) int wlanPsConfigureFrame(const struct WlanRateLevel *level)
+__attribute__((noinline)) unsigned int wlanPsConfigureFrame(const struct WlanRateLevel *level)
 {
 	unsigned int dropped = level->dropped;
 
@@ -1046,7 +1046,7 @@ void wlanPsDispatchFrame(const struct WlanRateWindow *window, unsigned int *exch
 /* Reads the window: *percent is the share of the transmissions that were acknowledged (0 to 100). */
 int wlanPsParseFrame(struct WlanRateWindow *window, int *percent, uint8_t *level, int ampdu)
 {
-	int status = wlanPsConfigureFrame((const struct WlanRateLevel *)((uint8_t *)window + 32));
+	unsigned int status = wlanPsConfigureFrame((const struct WlanRateLevel *)((uint8_t *)window + 32));
 
 	*level = status;
 	if (status != 0) {

@@ -308,7 +308,7 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 	case WLAN_AP_EVENT_CHECK:
 		macMgmtCheckFrame(connection);
 		return NULL;
-	case 38: case 39: case 42: case 43: case 44: case 45: case 48:
+	case 38: case 39: case 42: case 43: case 44: case 45:
 		return (const int32_t *)event;
 	case 40: case 41: case 46: case 47:
 		return NULL;
@@ -371,7 +371,7 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtValidateFrame(connection);
 		romHsmTransition(machine, &apStates(machine)->compute);
 		return NULL;
-	case 42: case 43: case 44: case 45: case 48:
+	case 42: case 43: case 44: case 45:
 		return (const int32_t *)event;
 	case 46:
 		if (macMgmtResetPacket(connection, 1) != 0)

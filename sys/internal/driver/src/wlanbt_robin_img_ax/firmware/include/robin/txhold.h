@@ -112,7 +112,7 @@ void macMgmtRecordHeader(void);							/* 0x3b944 */
 void macMgmtFilterHeader(void);							/* 0x3b99e */
 int macMgmtHandleDescriptor(OsaBuffer *frame);					/* 0x3b9b2 */
 void macMgmtProcessDescriptor(void);						/* 0x3ba74 */
-int macMgmtUpdateDescriptor(void);						/* 0x3bae4 */
+int macMgmtUpdateDescriptor(int sent, uint8_t *data);						/* 0x3bae4 */
 int wlanIbssTxFrame(OsaBuffer *buffer, int transmit);				/* 0x3baec */
 void macMgmtCheckDescriptor(void);						/* 0x3bc28 */
 void macMgmtValidateDescriptor(uint8_t enabled);				/* 0x3bc52 */

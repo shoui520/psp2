@@ -87,7 +87,7 @@ void btSbcSelectState(struct BtConfigHeader *record, unsigned int length, uint32
 }
 
 /* Makes the BD_ADDR from two values, unless one was stored. */
-void btSbcAdjustState(uint32_t low, uint16_t high)
+void btSbcAdjustState(uint32_t low, uint32_t high)
 {
 	uint8_t *address = btConfigStore.address.address;
 
@@ -107,13 +107,15 @@ void btSbcRecordState(void)
 {
 	uint8_t *address = btConfigStore.address.address;
 	uint32_t saved[2];
+	int found;
 
 	btSbcCheckContext();
 	saved[1] = ((uint32_t *)address)[1];
 	saved[0] = ((uint32_t *)address)[0];
-	btConfigStore.addressFound = btSbcVerifyState(BT_CONFIG_ADDRESS_RECORD, &btConfigStore.address.header,
-						      sizeof(btConfigStore.address), &btConfigStore.addressOffset);
-	if (btConfigStore.addressFound != 0) {
+	found = btSbcVerifyState(BT_CONFIG_ADDRESS_RECORD, &btConfigStore.address.header,
+				 sizeof(btConfigStore.address), &btConfigStore.addressOffset);
+	btConfigStore.addressFound = found;
+	if (found != 0) {
 		btConfigOrigin = BT_CONFIG_FROM_EEPROM;
 		if (address[0] == 0 && address[1] == 0 && address[2] == 0 && address[3] == 0 &&
 		    address[4] == 0 && address[5] == 0)
@@ -126,11 +128,12 @@ void btSbcRecordState(void)
 }
 
 /* Answers an item: its length in *value, or 0 when there is none. */
-int btSbcFilterState(int item, uint8_t *value)
+int btSbcFilterState(int item, uint8_t *value, unsigned int length)
 {
 	struct BtConfigAddressRecord *record = &btConfigStore.address;
 	unsigned int slot;
 
+	(void)length;		/* the callers' buffer size; not checked */
 	switch (item) {
 	case 1:
 		*value = record->item1;

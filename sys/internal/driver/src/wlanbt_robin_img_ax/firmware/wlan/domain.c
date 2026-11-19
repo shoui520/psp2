@@ -43,7 +43,7 @@ int wlanDomainApplies(const struct WlanConnection *connection)
 }
 
 /* The distance between two channels of the same sub-band triplet. */
-static unsigned int wlanChannelSpacing(unsigned int channel, unsigned int band)
+static __attribute__((noinline)) unsigned int wlanChannelSpacing(unsigned int channel, unsigned int band)
 {
 	if (channel >= 34 || (channel >= 8 && band != 0))
 		return 4;
@@ -81,19 +81,19 @@ unsigned int wlanDomainBuildIe(struct WlanConnection *connection, uint8_t *ie)
 		band = 1;
 	}
 	for (i = 0; wlanChannelPowerTable.count > i; i = (uint8_t)(i + 1)) {
-		uint8_t channel = wlanChannelPowerTable.channels[i];
+		unsigned int channel;
 
 		if (wlanChannelPowerTable.power[i] == last) {
 			triplet[1]++;
 		} else {
 			triplet += 3 * open;
-			triplet[0] = channel;
-			triplet[2] = wlanChannelPowerTable.power[i];
+			triplet[0] = wlanChannelPowerTable.channels[i];
+			last = triplet[2] = wlanChannelPowerTable.power[i];
 			triplet[1] = 1;
-			last = triplet[2];
 			open = 1;
 			runs = (uint8_t)(runs + 1);
 		}
+		channel = wlanChannelPowerTable.channels[i];
 		if (wlanChannelPowerTable.channels[i + 1] != (uint8_t)(wlanChannelSpacing(channel, band) + channel))
 			last = 0;
 	}
@@ -109,16 +109,18 @@ unsigned int wlanDomainBuildIe(struct WlanConnection *connection, uint8_t *ie)
 int wlanDomainParseIe(const uint8_t *ie)
 {
 	unsigned int index = 0;
+	unsigned int length;
 	unsigned int remaining;
 
 	if (ie[0] != WLAN_IE_COUNTRY)
 		return 0;
 	wlanDomainClear();
-	if (ie[1] == 0)
+	length = ie[1];
+	if (length == 0)
 		return 0;
 	__aeabi_memcpy(wlanChannelPowerTable.country, ie + 2, 3);
 	ie += 5;
-	for (remaining = (uint8_t)(ie[-4] - 3); remaining > 1; remaining = (uint8_t)(remaining - 3), ie += 3) {
+	for (remaining = (uint8_t)(length - 3); remaining > 1; remaining = (uint8_t)(remaining - 3), ie += 3) {
 		if (ie[0] < 201 && ie[0] != 0) {
 			unsigned int i;
 

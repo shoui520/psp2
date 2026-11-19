@@ -70,6 +70,7 @@ unsigned int btLmpLcAcquireEntry(struct BtSourceRing *ring)
 	unsigned int sampleSum = 0;
 	unsigned int weightSum = 0;
 	unsigned int tickSum = 0;
+	unsigned int average;
 
 	do {
 		if (ring->count[slot] != 0) {
@@ -81,8 +82,9 @@ unsigned int btLmpLcAcquireEntry(struct BtSourceRing *ring)
 		slot = (uint8_t)(slot + 1);
 	} while (slot < BT_SOURCE_SAMPLES);
 	ring->ratio = tickSum != 0 ? weightSum / tickSum : 0;
-	ring->average = used != 0 ? sampleSum / used : 0;
-	return ring->average;
+	average = used != 0 ? sampleSum / used : 0;
+	ring->average = average;
+	return average;
 }
 
 /*

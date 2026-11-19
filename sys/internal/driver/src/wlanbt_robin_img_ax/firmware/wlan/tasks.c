@@ -7,6 +7,7 @@
 #include "robin/mgmt.h"
 #include "robin/conn.h"
 #include "robin/autotx.h"
+#include "robin/coex.h"
 #include "robin/joinframe.h"
 #include "robin/psctl.h"
 #include "robin/wlantask.h"
@@ -109,9 +110,9 @@ int wlanInitStageRegister(struct WlanInitStage *stage)
 int macMgmtFlushQueues(void)
 {
 	void *buffer;
-	uintptr_t message = 0;
+	uintptr_t message;
 
-	osaEventFlagsSet(*wlanTaskHandles.mgmtEventFlags, 0, 5);
+	osaEventFlagsSet(macMgmtEventFlags, 0, 5);
 	while (osaMsgQueueReceive(*wlanTaskHandles.mgmtSmeQueue, (uintptr_t *)&buffer, 4, 0) != 15)
 		osa_BufferFree(buffer);
 	while (osaMsgQueueReceive(*wlanTaskHandles.timerQueue, &message, 4, 0) != 15)
@@ -149,6 +150,7 @@ int macMgmtProcessState(OsaBuffer *message)
 int wlanTaskHandlesInit(const struct WlanTaskHandles *handles)
 {
 	wlanTaskHandles = *handles;
+	wlanPsHostMode = 0;
 	macMgmtRecordContext();
 	macTxNotifyVerifyFrame();
 	macMgmtFlushStage.run = macMgmtFlushQueues;
@@ -181,29 +183,36 @@ int cbProcStartTask(void)
 	return osaSemaphoreInit(&cbProcSemaphore, 1, WLAN_QUEUE_CLASS);
 }
 
-/* Queues of the transmit task: the management frame queue and the group rekey queue. */
-void macTxSelectState(void)
+/* Queues of the transmit task: the management frame queue and the group rekey queue; 1 when one fails. */
+int macTxSelectState(void)
 {
-	/* The caller tests the result of the first creation. */
 	if (osaMsgQueueCreate(&macTxMgmtQueue, "TxMgmt80211MsgQ", WLAN_QUEUE_MESSAGE, 6,
-			      WLAN_QUEUE_CLASS) == 0)
-		osaMsgQueueCreate(&uapGroupRekeyQueue, "UapGrpRekeyTimeOutMsgQ", WLAN_QUEUE_MESSAGE,
-				  6, WLAN_QUEUE_CLASS);
+			      WLAN_QUEUE_CLASS) != 0 ||
+	    osaMsgQueueCreate(&uapGroupRekeyQueue, "UapGrpRekeyTimeOutMsgQ", WLAN_QUEUE_MESSAGE,
+			      6, WLAN_QUEUE_CLASS) != 0)
+		return 1;
+	return 0;
 }
 
+/*
+ * Sony's: without the queues the task is not created, and the reset stage is
+ * registered all the same.
+ */
 int macTxCreateTask(void)
 {
+	wlanHostSleepPending = 0;
 	macTxMgmtQueue = (struct OsaMessageQueue *)&macTxMgmtQueueObject;
 	uapGroupRekeyQueue = (struct OsaMessageQueue *)&uapGroupRekeyQueueObject;
-	macTxSelectState();
-	macTxEventFlags = (struct OsaEventFlags *)&macTxEventFlagsObject;
-	osaEventFlagsInit(&macTxEventFlags);
-	wlanAutoTxInit();
-	__aeabi_memset4(macTxStack, sizeof(macTxStack), 0xc1);
-	macTxTask = &macTxTaskObject;
-	if (osaCreateTask(&macTxTask, macTxStack, sizeof(macTxStack), WLAN_TASK_PRIORITY_TX,
-			  "MAC Tx", macTxTaskMain, 0) != 0)
-		return 1;
+	if (macTxSelectState() == 0) {
+		macTxEventFlags = (struct OsaEventFlags *)&macTxEventFlagsObject;
+		osaEventFlagsInit(&macTxEventFlags);
+		wlanAutoTxInit();
+		__aeabi_memset4(macTxStack, sizeof(macTxStack), 0xc1);
+		macTxTask = &macTxTaskObject;
+		if (osaCreateTask(&macTxTask, macTxStack, sizeof(macTxStack), WLAN_TASK_PRIORITY_TX,
+				  "MAC Tx", macTxTaskMain, 0) != 0)
+			return 1;
+	}
 	macTxStage.run = macTxResetStage;
 	wlanInitStageRegister(&macTxStage);
 	return 0;

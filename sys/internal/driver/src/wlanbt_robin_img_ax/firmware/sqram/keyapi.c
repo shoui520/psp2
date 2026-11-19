@@ -20,12 +20,6 @@
 
 #define IS_KEY_STATE_ENABLED(key)	((key)->hdr.keyState & KEY_STATE_ENABLE)
 
-/* The packet number a WAPI key starts from when the host gives none (0x5c365c36...5c36, least significant byte first). */
-static const uint8_t wapiInitialPn[16] = {
-	0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c,
-	0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c,
-};
-
 /* The hooks keyApiSta_RomInit() installs. */
 void keyApi_PalladiumHook1(struct WlanConnection *connPtr)
 {
@@ -72,6 +66,12 @@ void keyApiSta_setConnWapiEnabled(struct WlanConnection *connPtr, BOOLEAN enable
 		connPtr->flags = (connPtr->flags & ~WLAN_CONN_WAPI) | ((enable & 1) << 4);
 }
 
+/* A key buffer's key: an address Sony's code tests for NULL once more, after adding the offset. */
+static inline __attribute__((always_inline)) cipher_key_t *keyApiBufferKey(struct WlanKeyBuffer *buffer)
+{
+	return (cipher_key_t *)((uintptr_t)buffer + offsetof(struct WlanKeyBuffer, key));
+}
+
 /* The connection's pairwise and group keys are disabled (keyApiSta_DisableKeys()). */
 void keyApi_DisableKeys(struct WlanConnection *connPtr, BOOLEAN pairwise, BOOLEAN group)
 {
@@ -105,19 +105,23 @@ void keyApi_FreeKey(struct WlanKeyBuffer **keyBuffer)
  * buffer; a unicast key takes the peer's address (an access point's starts
  * one packet number further), a group key none. The packet numbers start
  * from the host's receive packet number, byte-reversed, or from
- * wapiInitialPn. Returns 1 without a key, else 0.
+ * 0x5c365c36...5c36 (least significant byte first). Returns 1 without a key, else 0.
  */
 static __attribute__((noinline)) uint32_t keyApi_UpdateWapiKey(struct WlanConnection *connPtr, BOOLEAN isAp,
 							      const uint8_t *peerAddress, cipher_key_t *pwkey,
 							      cipher_key_t *gwkey, key_MgtMaterial_t *keyMgtData_p)
 {
-	uint8_t initialPn[16];
-	uint8_t noPn[16];
+	static const uint8_t pnStart[16] __attribute__((aligned(4))) = {
+		0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c,
+		0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c, 0x36, 0x5c,
+	};
+	uint8_t initialPn[16] __attribute__((aligned(4)));
+	uint8_t noPn[16] __attribute__((aligned(4)));
 	cipher_key_t *key = pwkey;
 	struct WlanKeyBuffer *lastKey;
 	uint8_t keyInfo = 0;
 
-	__builtin_memcpy(initialPn, wapiInitialPn, sizeof(initialPn));
+	__builtin_memcpy(initialPn, pnStart, sizeof(initialPn));
 	__builtin_memset(noPn, 0, sizeof(noPn));
 	if (gwkey == NULL && pwkey == NULL)
 		return 1;
@@ -174,7 +178,7 @@ static __attribute__((noinline)) uint32_t keyApi_UpdateWapiKey(struct WlanConnec
 static __attribute__((noinline)) uint32_t keyApi_UpdateKeys(struct WlanConnection *connPtr, cipher_key_t *pwkey,
 							   cipher_key_t *gwkey, key_MgtMaterial_t *keyMgtData_p)
 {
-	MIB_WEP_DEFAULT_KEYS *wepKey;
+	MIB_WEP_DEFAULT_KEYS *wepKeys;
 	uint32_t result = 0;
 	uint8_t keyIndex;
 
@@ -188,10 +192,14 @@ static __attribute__((noinline)) uint32_t keyApi_UpdateKeys(struct WlanConnectio
 	switch (keyMgtData_p->keyType) {
 	case KEY_TYPE_WEP:
 		keyIndex = keyMgtData_p->keyEncypt.WEP.keyIndex;
-		wepKey = &((MIB_WEP_DEFAULT_KEYS *)connPtr->radioParams)[keyIndex];
-		wepKey->WepDefaultKeyType = keyMgtData_p->keyLen == WPA_WEP104_KEY_LEN;
-		__aeabi_memcpy(wepKey->WepDefaultKeyValue, keyMgtData_p->keyEncypt.WEP.key, WPA_WEP104_KEY_LEN);
-		wepKey->WepDefaultKeyIdx = keyIndex;
+		/* Sony reads the connection's block again for each store. */
+		wepKeys = (MIB_WEP_DEFAULT_KEYS *)connPtr->radioParams;
+		wepKeys[keyIndex].WepDefaultKeyType = keyMgtData_p->keyLen == WPA_WEP104_KEY_LEN;
+		wepKeys = (MIB_WEP_DEFAULT_KEYS *)connPtr->radioParams;
+		__aeabi_memcpy(wepKeys[keyIndex].WepDefaultKeyValue, keyMgtData_p->keyEncypt.WEP.key,
+			       WPA_WEP104_KEY_LEN);
+		wepKeys = (MIB_WEP_DEFAULT_KEYS *)connPtr->radioParams;
+		wepKeys[keyIndex].WepDefaultKeyIdx = keyIndex;
 		break;
 	case KEY_TYPE_TKIP:
 	case KEY_TYPE_AES:
@@ -261,14 +269,14 @@ uint16_t keyApi_GetKeyMaterial(struct WlanConnection *connPtr, key_MgtMaterial_t
 	if (connPtr == NULL)
 		return 0;
 	if (pairwise) {
-		if (connPtr->keyBlocks[1] == NULL)
-			return 0;
-		pwkey = &connPtr->keyBlocks[1]->key;
+		if (connPtr->keyBlocks[1] != NULL)
+			pwkey = keyApiBufferKey(connPtr->keyBlocks[1]);
 	} else {
-		if (connPtr->keyBlocks[0] == NULL)
-			return 0;
-		gwkey = &connPtr->keyBlocks[0]->key;
+		if (connPtr->keyBlocks[0] != NULL)
+			gwkey = keyApiBufferKey(connPtr->keyBlocks[0]);
 	}
+	if (pwkey == NULL && gwkey == NULL)
+		return 0;
 	return keyApiSta_GetKeyMaterial(pwkey, gwkey, keyMgtData_p, pairwise);
 }
 

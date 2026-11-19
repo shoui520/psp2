@@ -269,8 +269,11 @@ void macMgmtProcessDescriptor(void)
 	}
 }
 
-int macMgmtUpdateDescriptor(void)
+/* Called when a frame's transmission ends (sent 1, failed 0), with the frame's data; neither is used. */
+int macMgmtUpdateDescriptor(int sent, uint8_t *data)
 {
+	(void)sent;
+	(void)data;
 	return wlanRoleOtherOnly();
 }
 

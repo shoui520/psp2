@@ -81,7 +81,7 @@ int cbProcCreateTask(void);
 int cbProcStartTask(void);
 int macTxCreateTask(void);
 int macTxStartTask(void);
-void macTxSelectState(void);
+int macTxSelectState(void);
 int macTxNotifyCreateTask(void);
 int macTxNotifyStartTask(void);
 int macMgmtCreateTask(void);

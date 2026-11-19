@@ -440,6 +440,7 @@ OsaBuffer *wlanApPsCopyMgmtFrame(struct WlanConnection *connection, OsaBuffer *b
 	__aeabi_memcpy4(copy->data, data, 116);
 	copy->dataOffset = 176;
 	__aeabi_uwrite4((uint32_t)(uintptr_t)((uint8_t *)copy + 176), copy->data + 96);	/* TX_DATA_FRAME */
+	frame = wlanApPsFrame(data);
 	__aeabi_memcpy((uint8_t *)copy + 176, frame, LE16(frame->bodyLength) + 32);
 	copy->dataOffset = 28;
 	return copy;

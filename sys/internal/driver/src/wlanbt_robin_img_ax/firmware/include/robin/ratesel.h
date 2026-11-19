@@ -134,7 +134,7 @@ unsigned int wlanPsHandleFrame(struct WlanConnection *connection, unsigned int m
 unsigned int wlanPsProcessFrame(struct WlanConnection *connection, unsigned int mode,
 				int broadcast);					/* 0x3d3f0 */
 int wlanPsUpdateFrame(unsigned int rate, uint8_t *wide, uint8_t *index);		/* 0x3d402 */
-int wlanPsConfigureFrame(const struct WlanRateLevel *level);				/* 0x3d45c */
+unsigned int wlanPsConfigureFrame(const struct WlanRateLevel *level);				/* 0x3d45c */
 int wlanPsCheckFrame(const uint8_t *level);						/* 0x3d472 */
 void wlanPsValidateFrame(struct WlanRateWindow *window);				/* 0x3d480 */
 int wlanPsPrepareFrame(const struct WlanRateWindow *window);				/* 0x3d490 */

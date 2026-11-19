@@ -18,7 +18,7 @@
 
 #define LE16(bytes)	((uint16_t)((bytes)[0] | ((bytes)[1] << 8)))
 #define PUT16(bytes, value) \
-	do { (bytes)[0] = (uint8_t)(value); (bytes)[1] = (uint8_t)((value) >> 8); } while (0)
+	do { unsigned int put16_ = (value); (bytes)[0] = (uint8_t)put16_; (bytes)[1] = (uint8_t)(put16_ >> 8); } while (0)
 
 #define HostCmd_CMD_GET_HW_SPEC			0x0003
 #define HostCmd_CMD_802_11_RF_CHANNEL		0x001d
@@ -168,11 +168,11 @@ void hostCmd000a(uint8_t *body, unsigned int channel, int psState, unsigned int 
 	*(uint32_t *)(body + 12) = MAC_REG(0x534);
 	body[0] = 2;
 	body[1] = 0;
-	*(uint16_t *)(body + 6) = channel;
+	PUT16(body + 6, channel);
 	body[2] = 3;
 	body[3] = 0;
 	__aeabi_uwrite4(psState, body + 16);
-	*(uint16_t *)(body + 4) = radioOn;
+	PUT16(body + 4, radioOn);
 }
 
 /*
@@ -294,17 +294,19 @@ void hostCmd008a(uint8_t *body, uint16_t *beaconInterval, uint16_t *wakeBeacons,
 		 uint16_t *wakeDtims, uint16_t *listenBeacons)
 {
 	if (LE16(body) == HostCmd_ACT_GEN_SET) {
-		*beaconInterval = LE16(body + 2);
-		if (*beaconInterval == 0)
+		unsigned int interval = LE16(body + 2);
+
+		*beaconInterval = interval;
+		if (interval == 0)
 			*beaconInterval = 1000;
 		*wakeBeacons = LE16(body + 4);
 		*wakeDtims = LE16(body + 6);
 		*listenBeacons = LE16(body + 8);
 	}
-	*(uint16_t *)(body + 2) = *beaconInterval;
-	*(uint16_t *)(body + 4) = *wakeBeacons;
-	*(uint16_t *)(body + 6) = *wakeDtims;
-	*(uint16_t *)(body + 8) = *listenBeacons;
+	PUT16(body + 2, *beaconInterval);
+	PUT16(body + 4, *wakeBeacons);
+	PUT16(body + 6, *wakeDtims);
+	PUT16(body + 8, *listenBeacons);
 }
 
 /*

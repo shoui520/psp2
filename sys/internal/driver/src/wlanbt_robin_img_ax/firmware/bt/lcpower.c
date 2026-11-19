@@ -201,7 +201,7 @@ unsigned int btLmpLcUpdateState(void)
 {
 	uint8_t mode;
 
-	btSbcFilterState(4, &mode);
+	btSbcFilterState(4, &mode, 1);
 	if (btPower.frame == 0) {
 		btThresholdPayload = (mode & 1) ? 5 : 2;
 		btPower.header = (mode & 2) != 0;
@@ -220,10 +220,10 @@ uint8_t *btLmpLcConfigureState(uint8_t *first, uint8_t *channel)
 	int sum;
 	unsigned int index;
 
-	btSbcFilterState(2, (uint8_t *)&btModeState);
-	btSbcFilterState(3, (uint8_t *)&reading);
-	btSbcFilterState(5, &btMaskFrame);
-	btSbcFilterState(6, &btMaskPacket);
+	btSbcFilterState(2, (uint8_t *)&btModeState, 1);
+	btSbcFilterState(3, (uint8_t *)&reading, 1);
+	btSbcFilterState(5, &btMaskFrame, 1);
+	btSbcFilterState(6, &btMaskPacket, 1);
 	btModeContext = btPower.packet;
 	sum = (int8_t)(2 * (btModeState + reading)) + 40;
 	*channel = sum / btPower.packet + 1;
@@ -335,12 +335,16 @@ int8_t btLmpLcQueryState(uint8_t a1)
 static inline uint16_t *btPowerFillValue(int link, int index)
 {
 	struct BtPowerValue *value;
+	unsigned int header;
+	uint16_t range;
 
 	btLinkValues[link].index = btPowerIndexRegister[index];
+	header = btPowerLevelHeader;
+	range = (unsigned int)index <= header + 48u ? 0 : 3;
 	value = &btLinkValues[link];	/* Sony reads the pointer again after the first store */
-	value->range = (unsigned int)index <= btPowerLevelHeader + 48u ? 0 : 3;
+	value->range = range;
 	value->record = btPowerIndexRecord[index];
-	value->mode = btPower.entry + btPowerLevelHeader + 47 >= index ? 6 : 7;
+	value->mode = btPower.entry + (int)header + 47 >= index ? 6 : 7;
 	return &value->range;
 }
 
@@ -367,9 +371,10 @@ uint16_t *btLmpLcApplyState(int link, uint8_t channel)
 unsigned int btLmpLcResolveState(uint8_t channel)
 {
 	unsigned int index = btLmpLcSelectState(channel);
-	uint16_t range = index <= btPowerLevelHeader + 48u ? 0 : 3;
+	uint16_t range;
 
 	LINK_U16(382) = btPowerIndexRegister[index];
+	range = index <= btPowerLevelHeader + 48u ? 0 : 3;
 	LINK_U16(384) = range;
 	LINK_U16(522) = btPowerIndexRegister[index];
 	LINK_U16(524) = range;

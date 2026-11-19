@@ -23,6 +23,7 @@ wlanTxRateFlags		= wlanDtcmState + 0xba;		/* 0x040088a6 */
 wlanHwInfo		= wlanDtcmState + 0xc0;		/* 0x040088ac */
 wlanAntennaProfile	= wlanDtcmState + 0xde;		/* 0x040088ca */
 wlanIbssJoinState	= wlanDtcmState + 0xe2;		/* 0x040088ce */
+wlanSignalSnapshot	= wlanDtcmState + 0xe6;		/* 0x040088d2 */
 wlanSavedMgmtPriority	= wlanDtcmState + 0xee;		/* 0x040088da */
 wlanDataEnd		= wlanCommandScanWindow + 0x2bc;	/* 0x00057e9a */
 
@@ -121,10 +122,10 @@ SECTIONS
 	} > sqram1
 
 	/*
- * The initial stack sits between the BSS and the heap base (0x63800): the
- * original leaves 0xa65 bytes there.
+ * The initial stack sits between the BSS and the heap base (__robin_heap_base, boot/reset.S):
+ * the original leaves 0xa65 bytes there.
  */
-	ASSERT(__itcm_end + 0xa65 <= 0x63800, "ITCM image runs into the initial stack and the heap base")
+	ASSERT(__itcm_end + 0xa65 <= __robin_heap_base, "ITCM image runs into the initial stack and the heap base")
 
 	/DISCARD/ : {
 		*(.ARM.exidx* .ARM.extab* .ARM.attributes .comment .note*)

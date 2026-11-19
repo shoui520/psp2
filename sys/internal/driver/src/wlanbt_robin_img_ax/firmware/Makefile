@@ -69,7 +69,7 @@ OSA_SRCS := $(wildcard osa/*.c)
 WLAN_SRCS := $(wildcard wlan/*.c)
 BT_SRCS := $(wildcard bt/*.c)
 AMP_SRCS := $(wildcard amp/*.c)
-RUNTIME_SRCS := $(wildcard runtime/*.c)
+RUNTIME_SRCS := $(wildcard runtime/*.c runtime/*.S)
 SQRAM_SRCS := $(wildcard sqram/*.c)
 ESA_SRCS := $(wildcard esa/*.c)
 
@@ -102,12 +102,8 @@ $(O)/runtime/unaligned.o: runtime/unaligned.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 
-# The library's memmove, strncpy, strcmp and errno code are ARM too.
+# The library's errno and leading-zero code are ARM too.
 $(O)/runtime/rtlibarm.o: runtime/rtlibarm.c $(HEADERS)
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
-
-$(O)/runtime/stringarm.o: runtime/stringarm.c $(HEADERS)
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(ARM) -c $< -o $@
 

@@ -34,9 +34,7 @@
 #define TLV_TYPE_CHANRPT_NOISE_HIST	0x015a
 #define TLV_TYPE_CHANRPT_11H_BASIC	0x015b
 
-/* MeasRptBasicMap_t's bits (IEEE 802.11h basic report). */
-#define MEAS_RPT_BSS			0x01
-#define MEAS_RPT_OFDM_PREAMBLE		0x02
+/* The radar bit of MeasRptBasicMap_t, in a request's basic report TLV. */
 #define MEAS_RPT_RADAR			0x08
 
 /* Slot events other than slot.h's; 6 is the code chanRptFinish() aborts the slot with. */
@@ -69,7 +67,17 @@ struct ChanRptReport {
 	uint64_t duration;		/* microseconds */
 	uint8_t band;			/* bits 0-1: band, bits 2-3: band configuration */
 	uint8_t channel;
-	uint8_t basicMap;		/* MeasRptBasicMap_t */
+	union {
+		uint8_t basicMap;
+		struct {			/* MeasRptBasicMap_t (IEEE 802.11h basic report) */
+			uint8_t bss : 1;
+			uint8_t ofdmPreamble : 1;
+			uint8_t unidentified : 1;
+			uint8_t radar : 1;
+			uint8_t unmeasured : 1;
+			uint8_t reserved : 3;
+		} basic;
+	};
 	uint8_t channelLoad;		/* busy time, in 255ths of the dwell */
 	uint16_t noiseAverage;
 	uint8_t histogramBins;
@@ -112,14 +120,16 @@ static void __attribute__((noinline)) chanRptFinish(int expired)
 	struct ChanRptReport *report;
 	uint8_t histogram[12];
 	uint16_t average;
+	uint64_t now;
 	uint32_t busy;
 	uint8_t bins;
 
 	romMacEventMaskSet(state->savedEventMask);
 	state->expired = expired;
 	busy = wlanMacRead5f8();
+	now = romGetTimerTimestamp();
 	report = state->report;
-	report->duration = romGetTimerTimestamp() - report->startTsf;
+	report->duration = now - report->startTsf;
 	report->channelLoad = (uint64_t)(busy * 255) / report->duration;
 	__builtin_memset(histogram, 0, sizeof(histogram));
 	bins = bbpNoiseHistogramRead(histogram, &average);
@@ -127,7 +137,7 @@ static void __attribute__((noinline)) chanRptFinish(int expired)
 	report->histogramBins = bins;
 	report->noiseAverage = average;
 	__aeabi_memcpy(report->histogram, histogram, CHAN_RPT_HISTOGRAM_BINS);
-	state->report->basicMap &= ~MEAS_RPT_RADAR;
+	state->report->basic.radar = 0;
 	wlanSlotAbort(state->slot, CHAN_RPT_EVENT_FINISHED);
 }
 
@@ -205,8 +215,8 @@ static int chanRptFrameReceived(uint32_t handle, int unused, OsaBuffer *frame, c
 		data = (const uint8_t *)frame + frame->dataOffset;
 	if (info != NULL || data != NULL) {
 		rfGetBand();
-		chanRptState.report->basicMap |= MEAS_RPT_OFDM_PREAMBLE;
-		chanRptState.report->basicMap |= MEAS_RPT_BSS;
+		chanRptState.report->basic.ofdmPreamble = 1;
+		chanRptState.report->basic.bss = 1;
 	}
 	return 0;
 }

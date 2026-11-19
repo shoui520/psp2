@@ -353,11 +353,8 @@ int calDataImageLoadNvram(void)
 		nvramRead(base + i, &size);
 		*(CalDataWord *)&calDataBuffer[i] = util_Swap32(size);
 	}
-	next = base;
-	for (;;) {
-		nvramRead(next + 4, &next);
-		if (next == CAL_DATA_END)
-			break;
+	nvramRead(base + 4, &next);
+	while (next != CAL_DATA_END) {
 		nvramRead(next, &size);
 		size >>= 16;
 		if (length + size > CAL_DATA_BUFFER_SIZE)
@@ -367,6 +364,7 @@ int calDataImageLoadNvram(void)
 			*(CalDataWord *)&calDataBuffer[length + i] = util_Swap32(word);
 		}
 		length += size;
+		nvramRead(next + 4, &next);
 	}
 	calDataHeader.length[0] = length;
 	calDataHeader.length[1] = length >> 8;

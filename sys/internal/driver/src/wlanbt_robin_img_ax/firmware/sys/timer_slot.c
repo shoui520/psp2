@@ -25,6 +25,7 @@ int sysTimerSlotInit(void)
 	struct SysTimerSlotNode *node;
 
 	sysTimerSlotList[0].prev = SYS_TIMER_SLOT_HEAD;
+	sysTimerSlotList[0].index = 0;
 	sysTimerSlotList[0].next = &sysTimerSlotList[1];
 	for (i = 1; i < 4; i++) {
 		node = &sysTimerSlotList[i];

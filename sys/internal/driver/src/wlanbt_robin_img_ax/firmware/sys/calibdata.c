@@ -195,14 +195,22 @@ void wlanCalibPowerClear(void)
 	__aeabi_memclr(&wlanCalibPower, sizeof(wlanCalibPower));
 }
 
+/*
+ * An adjustment is copied as a structure: the caller's is an aligned halfword, the
+ * table's two bytes are not aligned.
+ */
+#define CALIB_ADJUST_PUT(bytes, adjust) \
+	do { unsigned int put_ = *(const uint16_t *)(adjust); (bytes)[0] = put_; (bytes)[1] = put_ >> 8; } while (0)
+#define CALIB_ADJUST_GET(adjust, bytes) \
+	(*(uint16_t *)(adjust) = (uint8_t)(bytes)[0] | (uint8_t)(bytes)[1] << 8)
+
 /* The adjustment of a secondary channel's levels, for a band index. */
 int wlanCalibSecondarySet(unsigned int index, unsigned int secondary, const struct WlanCalibAdjust *adjust)
 {
 	if (index >= WLAN_CALIB_BANDS || secondary >= WLAN_CALIB_BANDS)
 		return 0;
 	wlanCalibSecondary.valid[index] |= 1 << secondary;
-	wlanCalibSecondary.adjust[index][secondary][0] = adjust->value[0];
-	wlanCalibSecondary.adjust[index][secondary][1] = adjust->value[1];
+	CALIB_ADJUST_PUT(wlanCalibSecondary.adjust[index][secondary], adjust);
 	return 1;
 }
 
@@ -211,8 +219,7 @@ int wlanCalibSecondaryGet(unsigned int index, unsigned int secondary, struct Wla
 	if (index >= WLAN_CALIB_BANDS || secondary >= WLAN_CALIB_BANDS ||
 	    !(wlanCalibSecondary.valid[index] & (1 << secondary)))
 		return 0;
-	adjust->value[0] = wlanCalibSecondary.adjust[index][secondary][0];
-	adjust->value[1] = wlanCalibSecondary.adjust[index][secondary][1];
+	CALIB_ADJUST_GET(adjust, wlanCalibSecondary.adjust[index][secondary]);
 	return 1;
 }
 
@@ -287,8 +294,7 @@ int wlanCalibRangeAdjustSet(unsigned int index, int mode, unsigned int range, un
 		return 0;
 	}
 	table->valid[index][range] |= 1 << channel;
-	table->value[index][range][channel][0] = adjust->value[0];
-	table->value[index][range][channel][1] = adjust->value[1];
+	CALIB_ADJUST_PUT(table->value[index][range][channel], adjust);
 	return 1;
 }
 
@@ -310,8 +316,7 @@ int wlanCalibRangeAdjustGet(unsigned int index, int mode, unsigned int range, un
 	}
 	if (!(table->valid[index][range] & (1 << channel)))
 		return 0;
-	adjust->value[0] = table->value[index][range][channel][0];
-	adjust->value[1] = table->value[index][range][channel][1];
+	CALIB_ADJUST_GET(adjust, table->value[index][range][channel]);
 	return 1;
 }
 

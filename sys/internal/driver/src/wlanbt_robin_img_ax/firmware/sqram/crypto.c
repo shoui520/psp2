@@ -335,12 +335,12 @@ static int wlanWapiRunEngine(int decrypt, int qos, const uint8_t *packetNumber, 
 	volatile uint8_t *aad2Registers = CCM_BLOCK2(0);
 	volatile uint8_t *aad3Registers = CCM_BLOCK3(0);
 	uint32_t mode = 0x40;
-	int result;
 	int i;
 
+	/* the hook's result and the loop's index are one variable (Sony's frame slot) */
 	if (wlanWapiRunEngineOverride(decrypt, qos, packetNumber, aad, source, length, dataKey, micKey,
-				      destination, &result) != 0)
-		return result;
+				      destination, &i) != 0)
+		return i;
 	for (i = 0; i < 16; i++) {
 		micKeyRegisters[i] = micKey[i];
 		dataKeyRegisters[i] = dataKey[i];

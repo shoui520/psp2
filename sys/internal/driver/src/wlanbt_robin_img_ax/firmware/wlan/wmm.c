@@ -731,16 +731,15 @@ void wlanWmmSetupQueue(unsigned int queue)
 	*(uint32_t *)&record->edca = 0;
 	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
 		unsigned int tid = wlanWmmRings[2 * queue + i];
-		struct WlanWmmSlot *slot = &wlanWmm.slots[tid];
 
-		record->slots[i] = slot;
-		slot->ownQueue = queue;
-		slot->activeQueue = queue;
-		slot->nextSequence = 0;
-		slot->lastSequence = 0;
-		slot->activeRing = tid;
-		slot->fallbackQueue = queue;
-		slot->statsRing = 0;
+		record->slots[i] = &wlanWmm.slots[tid];
+		record->slots[i]->ownQueue = queue;
+		record->slots[i]->activeQueue = queue;
+		record->slots[i]->nextSequence = 0;
+		record->slots[i]->lastSequence = 0;
+		record->slots[i]->activeRing = tid;
+		record->slots[i]->fallbackQueue = queue;
+		record->slots[i]->statsRing = 0;
 	}
 }
 

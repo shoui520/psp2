@@ -270,6 +270,8 @@ void hostCmdSuspendMacTasks(void)
 	osaTaskSuspend(macTxNotifyTask);
 }
 
+#define PUT16(p, v)	do { unsigned int put16_ = (v); (p)[0] = (uint8_t)put16_; (p)[1] = (uint8_t)(put16_ >> 8); } while (0)
+
 /* The first rate step at or above value / 1000, if there is one. */
 #define HOSTCMD_RATE_STEP(field, value)						\
 	do {									\
@@ -278,8 +280,7 @@ void hostCmdSuspendMacTasks(void)
 										\
 		for (i = 0; i < HOSTCMD_RATE_STEPS; i++) {			\
 			if (hostCmdRateSteps[i] >= limit) {			\
-				(field)[0] = hostCmdRateSteps[i];		\
-				(field)[1] = hostCmdRateSteps[i] >> 8;		\
+				PUT16(field, hostCmdRateSteps[i]);		\
 				break;						\
 			}							\
 		}								\
@@ -295,26 +296,20 @@ void hostCmdRateStepsGet(uint8_t *body, uint16_t *size)
 	unsigned int current = clockCurrentRate() / 1000;
 	unsigned int i;
 
-	body[2] = hostCmdRateDefault;
-	body[3] = hostCmdRateDefault >> 8;
+	PUT16(body + 2, hostCmdRateDefault);
 	for (i = 0; i < HOSTCMD_RATE_STEPS; i++) {
 		if (hostCmdRateSteps[i] >= current) {
-			body[2] = hostCmdRateSteps[i];
-			body[3] = hostCmdRateSteps[i] >> 8;
+			PUT16(body + 2, hostCmdRateSteps[i]);
 			break;
 		}
 	}
 	if (HOSTCMD_U16(body + 4) == 0) {
 		body[6] = 8;
 		body[7] = 0;
-		body[8] = hostCmdRateDefault;
-		body[9] = hostCmdRateDefault >> 8;
-		body[10] = hostCmdRateDefault;
-		body[11] = hostCmdRateDefault >> 8;
-		body[12] = hostCmdRateDefault;
-		body[13] = hostCmdRateDefault >> 8;
-		body[14] = hostCmdRateDefault;
-		body[15] = hostCmdRateDefault >> 8;
+		PUT16(body + 8, hostCmdRateDefault);
+		PUT16(body + 10, hostCmdRateDefault);
+		PUT16(body + 12, hostCmdRateDefault);
+		PUT16(body + 14, hostCmdRateDefault);
 		HOSTCMD_RATE_STEP(body + 8, wlanMacDescriptor.hostClockPreset[0]);
 		HOSTCMD_RATE_STEP(body + 10, wlanMacDescriptor.hostClockPreset[1]);
 		HOSTCMD_RATE_STEP(body + 12, wlanMacDescriptor.hostClockPreset[2]);
@@ -515,7 +510,6 @@ unsigned int hostCmdCurrentCode(void)
 	return 0;
 }
 
-#define PUT16(p, v)	do { unsigned int put16_ = (v); (p)[0] = (uint8_t)put16_; (p)[1] = (uint8_t)(put16_ >> 8); } while (0)
 #define MAC_644_STATE	MAC_REG(0x644)
 
 #define SDIO_IOCTL_SLEEP_STATS		9

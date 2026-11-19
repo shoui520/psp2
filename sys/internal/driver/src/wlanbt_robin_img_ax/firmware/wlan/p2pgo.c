@@ -134,7 +134,7 @@ void p2pDirectReleaseState(uint8_t *suffix)
 {
 	unsigned int upper = 26;
 	unsigned int lower = 26;
-	unsigned int count = 62;	/* letters of both cases and the digits */
+	int count = 62;			/* letters of both cases and the digits */
 	unsigned int i;
 
 	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
@@ -144,7 +144,7 @@ void p2pDirectReleaseState(uint8_t *suffix)
 			suffix[i] = value + 'A';
 		else if (value < upper + lower)
 			suffix[i] = value - upper + 'a';
-		else if (value < count)
+		else if (value < (unsigned int)count)
 			suffix[i] = value - (upper + lower) + '0';
 	}
 }

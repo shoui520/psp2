@@ -145,8 +145,7 @@ static __attribute__((noinline)) void ccmBlock0(uint8_t *block, const WlanWirele
  */
 static __attribute__((noinline)) void ccmAad1(uint8_t *block, const WlanWirelessFrame *frame, uint8_t aadLength)
 {
-	uint16_t control = frame->frameControl[0] | (frame->frameControl[1] << 8);
-	uint16_t mask;
+	unsigned int mask;
 
 	block[0] = 0;
 	block[1] = aadLength;
@@ -154,9 +153,8 @@ static __attribute__((noinline)) void ccmAad1(uint8_t *block, const WlanWireless
 		mask = 0xc78f;
 	else
 		mask = 0xc7ff;
-	control &= mask;
-	block[2] = control;
-	block[3] = control >> 8;
+	/* the frame control, as one halfword (the header is aligned here) */
+	*(uint16_t *)(block + 2) = *(const uint16_t *)frame->frameControl & mask;
 	ccmCopy6(block + 4, frame->address1);
 	ccmCopy6(block + 10, frame->address2);
 }

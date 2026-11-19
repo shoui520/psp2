@@ -61,16 +61,14 @@ int macTxNotifyProcessFrame(struct WlanConnection *connection)
 	return 1;
 }
 
-int macTxNotifyUpdateFrame(struct WlanConnection *connection)
+void macTxNotifyUpdateFrame(struct WlanConnection *connection)
 {
 	struct WlanRateControl *rc = &connection->peerLink.rateControl;
 	unsigned int status = rc->peerStatus;
-	int result;
 
 	wlanPsValidateFrame(&rc->window);
-	result = macTxNotifyProcessFrame(connection);
-	if (result != 0)
-		return result;
+	if (macTxNotifyProcessFrame(connection) != 0)
+		return;
 	if (status == 0 || status == 2) {
 		status = antDivRecord(connection);
 		if (status == 0) {
@@ -83,7 +81,6 @@ int macTxNotifyUpdateFrame(struct WlanConnection *connection)
 		status = wlanPsHandlePacket(connection);
 	}
 	rc->peerStatus = status;
-	return result;
 }
 
 /* An IBSS peer or a station starts without block acknowledgement agreements and without a rate table slot. */

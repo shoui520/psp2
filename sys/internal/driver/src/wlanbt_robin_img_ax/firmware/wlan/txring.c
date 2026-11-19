@@ -234,6 +234,7 @@ void wlanTxRingFlush(unsigned int ring, uintptr_t owner)
 void wlanTxRingMoveFilled(unsigned int ring, unsigned int target)
 {
 	unsigned int posture = sysIrqDisable();
+	uint32_t index;
 
 	if (wlanTxRingPending[ring] != 0) {
 		while (wlanTxRingPublished[ring] != wlanTxRingFilled[ring]) {
@@ -245,8 +246,9 @@ void wlanTxRingMoveFilled(unsigned int ring, unsigned int target)
 		if (wlanTxRingPending[ring] != 0)
 			for (;;)
 				;
-		wlanTxRingFilled[ring] = *wlanTxRingWriteIndex[ring];
-		wlanTxRingPublished[ring] = *wlanTxRingWriteIndex[ring];
+		index = *wlanTxRingWriteIndex[ring];
+		wlanTxRingFilled[ring] = index;
+		wlanTxRingPublished[ring] = index;
 	}
 	sysIrqRestore(posture);
 }
@@ -258,6 +260,7 @@ void wlanTxRingMoveFilled(unsigned int ring, unsigned int target)
 void wlanTxRingRequeueFilled(unsigned int ring, uintptr_t owner)
 {
 	unsigned int posture = sysIrqDisable();
+	uint32_t index;
 
 	if (wlanTxRingPending[ring] != 0) {
 		while (wlanTxRingPublished[ring] != wlanTxRingFilled[ring]) {
@@ -275,8 +278,9 @@ void wlanTxRingRequeueFilled(unsigned int ring, uintptr_t owner)
 		if (owner == 0 && wlanTxRingPending[ring] != 0)
 			for (;;)
 				;
-		wlanTxRingFilled[ring] = *wlanTxRingWriteIndex[ring];
-		wlanTxRingPublished[ring] = *wlanTxRingWriteIndex[ring];
+		index = *wlanTxRingWriteIndex[ring];
+		wlanTxRingFilled[ring] = index;
+		wlanTxRingPublished[ring] = index;
 	}
 	sysIrqRestore(posture);
 }
@@ -611,7 +615,7 @@ int wlanTxSubmit(OsaBuffer *buffer)
 void wlanTxRingClearCounters(void)
 {
 	unsigned int posture = sysIrqDisable();
-	unsigned int ring;
+	int ring;
 
 	for (ring = 0; ring < WLAN_TX_RING_SHADOWED; ring++) {
 		wlanTxRingPending[ring] = 0;

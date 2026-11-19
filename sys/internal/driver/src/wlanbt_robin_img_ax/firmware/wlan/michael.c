@@ -7,7 +7,7 @@
 #include "robin/wlanrx.h"
 
 /* The message's end: 0x5a, then at least four zero bytes up to a word boundary. Returns the padded length. */
-static unsigned int wlanMichaelPad(uint8_t *data, unsigned int length)
+static __attribute__((noinline)) unsigned int wlanMichaelPad(uint8_t *data, unsigned int length)
 {
 	data[length++] = 0x5a;
 	data[length++] = 0;
@@ -56,8 +56,8 @@ void wlanMichaelMic(const uint8_t *frame, const uint8_t *key, const uint8_t *dat
 	const uint16_t *source;
 	const uint32_t *keyWords = (const uint32_t *)key;
 	const uint32_t *dataWords = (const uint32_t *)data;
-	uint16_t addresses[6];
 	uint32_t header[4];
+	uint16_t *addresses = (uint16_t *)header;
 	uint32_t left;
 	uint32_t right;
 	unsigned int words;
@@ -78,7 +78,6 @@ void wlanMichaelMic(const uint8_t *frame, const uint8_t *key, const uint8_t *dat
 	addresses[3] = source[0];
 	addresses[4] = source[1];
 	addresses[5] = source[2];
-	__builtin_memcpy(header, addresses, 12);
 	header[3] = 0;				/* the priority, and three reserved zero bytes */
 
 	length = (wireless->bodyLength[1] << 8 | wireless->bodyLength[0]) - 96;

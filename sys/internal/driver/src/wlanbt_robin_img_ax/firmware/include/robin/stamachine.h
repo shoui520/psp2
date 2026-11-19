@@ -103,7 +103,7 @@ int macMgmtResolveState(struct WlanConnection *connection, unsigned int security
 void macMgmtScheduleState(struct WlanConnection *connection);		/* 0x34d18 */
 int wlanHostMessagePost(OsaBuffer *message);				/* 0x34d80 */
 int macMgmtFormatState(struct WlanConnection *connection, const uint8_t *event);	/* 0x34dae */
-int macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_t reason,
+void macMgmtInspectState(struct WlanConnection *connection, uint8_t code, uint16_t reason,
 			const uint8_t *peer);				/* 0x34e06 */
 void macMgmtTrackState(struct WlanConnection *connection);		/* 0x34e3a */
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body);	/* 0x34e58 */

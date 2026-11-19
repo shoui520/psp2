@@ -207,6 +207,8 @@ PROVIDE(romMacStatCheck    = 0x03f3accf);
 PROVIDE(romMacWakeRequest  = 0x03f3a917);
 PROVIDE(romMacSleepNotify  = 0x03f3a907);
 PROVIDE(__aeabi_uldivmod   = 0x03f3ec30);
+/* 64-bit shift left (ARM), reached through the veneer at 0x52e44. */
+PROVIDE(__aeabi_llsl       = 0x03f3ebc4);
 PROVIDE(romMacEntryCheck   = 0x03f3ac3d);
 PROVIDE(romMacEntryWrite   = 0x03f3ac8b);
 PROVIDE(romMacConfigureEntry = 0x03f3a865);
@@ -982,7 +984,6 @@ PROVIDE(btHccRomHandleState          = 0x03f0d0a9);	/* veneer 0x52c54 */
 /* ROM data, and RAM the ROM's own zero-initialised areas hold (DTCM 0x0400a700.., SQRAM 0xc0033000..). */
 PROVIDE(romRfChannelTable            = 0x03f42130);	/* 2.4 GHz frequencies */
 PROVIDE(romRfChannelTable5G          = 0x03f4214c);	/* 5 GHz frequencies */
-PROVIDE(wlanSignalSnapshot           = 0x0400d288);
 PROVIDE(sbcPcmEvents                 = 0xc0033164);
 PROVIDE(fmRdsBlocks                  = 0xc00334f8);
 
