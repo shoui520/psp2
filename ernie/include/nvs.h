@@ -29,7 +29,11 @@ extern unsigned char nvsGetState(void);
 extern unsigned char nvsFormat(void);
 extern unsigned char nvsMove(void);
 extern unsigned char nvsClean(unsigned char count);
-#if BOARD_USS1001
+/* the slim's nvsGetInfo with the map of the records written (0x01030505: without, as the
+   others') */
+#define NVS_INFO_MAP	(BOARD_USS1001 && FW_SINCE(0x01030511))
+
+#if NVS_INFO_MAP
 /* nvsGetInfo's map of the records written */
 struct NvsMap {
 	unsigned char	count;

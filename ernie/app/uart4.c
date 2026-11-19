@@ -249,7 +249,11 @@ UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 		if (serial.mode == 3) {
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
+#if FW_SINCE(0x01030511)
 		} else if (serial.mode == 1)
+#else
+		} else	/* 0x01030505: in any other mode */
+#endif
 			timerStart(TIMER(0x10), 2);
 	}
 }
@@ -261,7 +265,11 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 	if (p->txWrite - p->txRead & p->txMask) {
 		SDR20 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
+#if FW_SINCE(0x01030511)
 	} else if (serial.mode == 1)
+#else
+	} else	/* 0x01030505: in any mode */
+#endif
 		task2SetFlag(3, 2);
 }
 #else

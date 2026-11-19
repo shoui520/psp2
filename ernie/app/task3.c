@@ -49,10 +49,12 @@ void task3(VP_INT exinf)
 				clr_flg(2, ~0x0100);
 				touchUpdateState();
 			}
+#if CONTROLS_MODE_DELAYED
 			if (ptn & 0x0800) {
 				clr_flg(2, ~0x0800);
 				controlsRequest0180Done();
 			}
+#endif
 			if (ptn & 0x8000)
 				clr_flg(2, ~0x8000);
 		}

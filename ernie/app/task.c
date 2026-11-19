@@ -246,8 +246,8 @@ unsigned int taskPending1(void)
 #endif
 
 #if BOARD_USS1001
-/* hooks: a state's change and a transition handled go into the event log (kind 2, codes 1
-   and 2), a standby and the tick do nothing */
+/* hooks: a state's change and (from 0x01030511) a transition handled go into the event log
+   (kind 2, codes 1 and 2), a standby and the tick do nothing */
 void taskHookState(void)
 {
 	eventLogTask1.word[0] = powerState;
@@ -258,10 +258,12 @@ void taskHookState(void)
 
 void taskHookEvent(void *event)
 {
+#if FW_SINCE(0x01030511)	/* 0x01030505's is empty */
 	eventLogTask1.word[0] = powerState;
 	eventLogTask1.byte[2] = ((struct StateEvent *)event)->type;
 	eventLogTask1.byte[3] = ((struct StateEvent *)event)->transition;
 	eventLogRecord(2, 2, eventLogTask1.byte, 4);
+#endif
 }
 #else
 /* hooks, empty in this build: a state's change, a transition handled, a standby, the tick */

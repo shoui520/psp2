@@ -13,8 +13,10 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if BOARD_USS1001
+#if BOARD_USS1001 && FW_SINCE(0x01030511)
 #define CONFIG_VERSION		0x58	/* the slim's layout */
+#elif BOARD_USS1001
+#define CONFIG_VERSION		0x4d	/* the slim's 0x01030505 layout */
 #elif FW_SINCE(0x0100060B)
 #define CONFIG_VERSION		0x38	/* this build's layout */
 #elif FW_SINCE(0x01000306)

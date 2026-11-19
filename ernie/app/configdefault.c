@@ -17,7 +17,11 @@ const struct ConfigBank configDefault = {
 		/* the slim's (layout 0x58): PCH-1000's 0x0100060B defaults with its own charge
 		   levels and wake masks, and its fields from 0x1e0 */
 		{ { { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 }, { 0x8000, 0x8000 } } },	/* analogCalibration */
+#if FW_SINCE(0x01030511)
 		0xbe, 0x74,	/* analogScale0, analogScale1 */
+#else
+		0xaa, 0x60,	/* analogScale0, analogScale1 */
+#endif
 		{ 0x0010 },	/* start: wakeUnmask15 */
 		{ 0x0001 },	/* board: bbmcDetect */
 		{ 0x0000 },	/* watchdog: off */
@@ -150,8 +154,13 @@ const struct ConfigBank configDefault = {
 		0x00b4, 0x0dac,	/* chargeBoostTime, chargeBoostVolt */
 		0x13, 0x08,	/* touchDelayWriteByte, touchDelayRelease */
 		{ 0 },	/* reserved43 */
+#if FW_SINCE(0x01030511)
 		0x30, 0x07,	/* chargeDongleCurrent, analogLimitScale */
 		0x0440, 0x0000, 0xffc0,	/* analogLimitMargin, analogLimitMin, analogLimitMax */
+#else
+		0x00, 0x00,	/* 0x01030505 sets none: chargeDongleCurrent, analogLimitScale */
+		0x0000, 0x0000, 0x0000,	/* analogLimitMargin, analogLimitMin, analogLimitMax */
+#endif
 		{ 0 },	/* reserved46 */
 		0x00, 0x00,	/* offInfoBit0, offInfoBit1 */
 		{ 0 }	/* reserved30 */

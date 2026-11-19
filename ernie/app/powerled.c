@@ -314,7 +314,11 @@ static unsigned int powerLedFlagsCharging(void)
 	state = stateGet();
 	usbPower = chargeUsbPower();
 	usbIs1 = chargeUsbIs1();
+#if FW_SINCE(0x01030511)
 	usbAdapter = chargeUsbDongle() || chargeUsbDebug();
+#else
+	usbAdapter = chargeUsbDongle();
+#endif
 	return !powerLedFlags.causes.bits.off &&
 	       !(powerLedFlags.causes.bits.stateOff && powerLedFlags.causes.bits.on) &&
 	       powerLedFlags.causes.bits.charging && !powerLedFlags.causes.bits.full &&

@@ -13,6 +13,10 @@
 #define ANALOG_SAMPLES		3	/* an axis's median is of its last three */
 #define ANALOG_SETS		2
 
+/* the slim's limits of each axis's readings and its records of those outside them: not in
+   0x01030505 */
+#define ANALOG_LIMITS		(BOARD_USS1001 && FW_SINCE(0x01030511))
+
 #define ANALOG_SAMPLE_CENTER	0x8000
 #define ANALOG_VALUE_CENTER	0x80
 
@@ -40,7 +44,7 @@ struct AnalogOutput {
 	unsigned char	value;
 };
 
-#if BOARD_USS1001
+#if ANALOG_LIMITS
 /* the slim's record of an axis's readings outside its limits: the lowest at or below limitMin,
    the highest at or above limitMax, the last with its low six bits set, and how many were below
    and above (up to 0xff) */
@@ -142,7 +146,7 @@ extern void analogGetSamples(unsigned int *out);
 extern void analogGetSamples(unsigned int __far *out);
 #endif
 /* the slim's analog input 0x0010 (inputKeys' bit) */
-#if BOARD_USS1001
+#if ANALOG_LIMITS
 extern void analogLimitsSet(void);
 extern void analogLimitsGet(unsigned int *out);
 extern void analogGetMedianFaults(unsigned char *out);

@@ -154,7 +154,11 @@ unsigned char boardSetMultiCnOutput(unsigned char output)
 		boardMultiCnPower(0);
 		break;
 	case 3:
+#if FW_SINCE(0x01030511)
 		if (boardGetMultiCnOutput() != 3 || (serialGetMode() & SERIAL_MODE) != 1) {
+#else
+		if (boardGetMultiCnOutput() != 3) {	/* 0x01030505: the serial mode not checked */
+#endif
 			serialClose();
 			serial1Reset();
 			boardMultiCnSetSwitch(1);

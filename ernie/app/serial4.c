@@ -465,7 +465,7 @@ unsigned char serial4Event(FLGPTN ptn)
 				break;
 			}
 		}
-#if BOARD_USS1001
+#if BOARD_USS1001 && FW_SINCE(0x01030511)
 		else {
 			/* USS-1001: the events are dropped when the line is not in mode 1 */
 			clr_flg(3, ~0x001e);

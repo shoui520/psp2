@@ -127,7 +127,7 @@ static union {
 #endif
 	} version;				/* command 0x0101's */
 	struct ConfigVersions versions;		/* command 0x0140's */
-#if BOARD_USS1001
+#if NVS_INFO_MAP
 	struct {
 		unsigned char	state;
 		unsigned char	mark;
@@ -136,6 +136,8 @@ static union {
 		unsigned long	moves;
 		struct NvsMap	map;
 	} nvsInfo;				/* command 0x0170's */
+#endif
+#if BOARD_USS1001
 	struct {
 		unsigned char	timeStamp[12];	/* getTimeStamp's */
 		unsigned char	hardwareInfo2[16];
@@ -265,8 +267,10 @@ unsigned int serial1SleepFactor(void)
 #if FW_SINCE(0x01000104)
 unsigned char serialCommands1Count(void)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001 && FW_SINCE(0x01030511)
 	return 0x5e;
+#elif BOARD_USS1001
+	return 0x59;	/* 0x01030505: no 0x0961-0x0965 */
 #elif FW_SINCE(0x0100060B)
 	return 0x37;
 #elif BOARD_KERNEL_COMMANDS
@@ -404,7 +408,8 @@ static unsigned char serial1SerialResult(unsigned char result)
 	}
 }
 
-/* stateTransition's result as an answer's: 0x54-0x56, 0xff for any other */
+/* stateTransition's result as an answer's: 0x54-0x56 (0x01030505: 0x54 and 0x55), 0xff for any
+   other */
 static unsigned char serial1StateResult(unsigned char result)
 {
 	switch (result) {
@@ -414,8 +419,10 @@ static unsigned char serial1StateResult(unsigned char result)
 		return 0x54;
 	case 2:
 		return 0x55;
+#if FW_SINCE(0x01030511)	/* 0x01030505's stateTransition has no result 3 */
 	case 3:
 		return 0x56;
+#endif
 	default:
 		return 0xff;
 	}
@@ -884,11 +891,11 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 static unsigned char serial1Command0170(struct SerialBuffer *request, struct SerialBuffer *response)
 {
 	unsigned char result;
-#if !BOARD_USS1001
+#if !NVS_INFO_MAP
 	union Serial1Word info;
 #endif
 
-#if BOARD_USS1001
+#if NVS_INFO_MAP
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data.nvsInfo);
 	memset(serial1Data.byte, 0, response->length);
@@ -906,7 +913,11 @@ static unsigned char serial1Command0170(struct SerialBuffer *request, struct Ser
 	serial1Data.byte[3] = info.byte[0];
 	serial1Data.byte[4] = info.byte[1];
 	serialSetAnswer(SERIAL_ANSWER);
+#if BOARD_USS1001
+	return serial1NvsResult(result);	/* 0x01030505 */
+#else
 	return result == 0 ? 0 : result;
+#endif
 #endif
 }
 #endif
@@ -2379,6 +2390,7 @@ static unsigned char serial1Command0953(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if FW_SINCE(0x01030511)	/* 0x01030505 has none of 0x0961-0x0965 */
 /* 0x0961: both sets of the analog sticks */
 static unsigned char serial1Command0961(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -2457,6 +2469,7 @@ static unsigned char serial1Command0965(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+#endif
 #endif
 #else
 /* 0x0950: a channel's level, as 1400 less 10 for each step above paramGetBase's base, most
@@ -2639,11 +2652,13 @@ const struct SerialCommand1 serialCommands1[] = {
 	{ 0x0945, serial1Command0941, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0952, serial1Command0952, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
 	{ 0x0953, serial1Command0953, SERIAL1_KEY | SERIAL1_NVS_KEY3 },
+#if FW_SINCE(0x01030511)
 	{ 0x0961, serial1Command0961, SERIAL1_KEY },
 	{ 0x0962, serial1Command0962, SERIAL1_KEY },
 	{ 0x0963, serial1Command0963, SERIAL1_KEY },
 	{ 0x0964, serial1Command0964, SERIAL1_KEY },
 	{ 0x0965, serial1Command0965, SERIAL1_KEY },
+#endif
 };
 #elif !FW_SINCE(0x00090804)
 const struct SerialCommand serialCommands1[] = {

@@ -104,8 +104,10 @@ static struct {
 	unsigned char	reported;
 } analogInput10;
 
+#if ANALOG_LIMITS
 static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			struct AnalogFault *fault);
+#endif
 static unsigned int analogLevelFindWide(unsigned int input, const struct AnalogLevelWide *levels,
 					unsigned char count);
 #endif
@@ -161,7 +163,7 @@ void analogInit(void)
 	analogAxes[1].calibrated = 0;
 	analogAxes[2].calibrated = 0;
 	analogAxes[3].calibrated = 0;
-#if BOARD_USS1001
+#if ANALOG_LIMITS
 	analogAxes[0].limitMin = analogAxes[1].limitMin = analogAxes[2].limitMin =
 		analogAxes[3].limitMin = configGet()->analogLimitMin;
 	analogAxes[0].limitMax = analogAxes[1].limitMax = analogAxes[2].limitMax =
@@ -259,7 +261,7 @@ void analogResetSet1(void)
 	analogAxes[3].output[1].low = 0;
 }
 
-#if BOARD_USS1001
+#if ANALOG_LIMITS
 /* the slim's: the fault records cleared */
 void analogAxesReset(void)
 {
@@ -333,7 +335,7 @@ void analogCalibrationReset(void)
 	analogAxes[3].calibrated = 0;
 }
 
-#if BOARD_USS1001
+#if ANALOG_LIMITS
 /* the slim's: each axis's limits from the settings' calibration, widened by its range *
    analogLimitScale / 100 + analogLimitMargin within analogLimitMin and analogLimitMax; a
    calibration's range below 0x7ac0 takes those two */
@@ -671,6 +673,9 @@ unsigned char analogStart(unsigned int inputs)
 	skip = 1;
 	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
 		mask |= 0x0f;
+#if !FW_SINCE(0x01030511)
+		P10.2 = 0;	/* 0x01030505: low here, high again in analogEvent */
+#endif
 		skip = 4;
 	}
 	if ((inputs & 0x0010) && (inputKeys.state & 0x0010))
@@ -740,6 +745,7 @@ unsigned char analogStart(unsigned int inputs)
 void analogEvent(unsigned int inputs)
 {
 	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
+#if ANALOG_LIMITS
 		analogAxes[0].samples[analogSample] = adcResults[0];
 		if ((analogAxes[0].samples[analogSample] & 0x003f) || analogAxes[0].limitMin >= analogAxes[0].samples[analogSample] ||
 		    analogAxes[0].samples[analogSample] >= analogAxes[0].limitMax)
@@ -760,6 +766,13 @@ void analogEvent(unsigned int inputs)
 		    analogAxes[3].samples[analogSample] >= analogAxes[3].limitMax)
 			analogFault(analogAxes[3].samples[analogSample], analogAxes[3].limitMin,
 				    analogAxes[3].limitMax, &analogAxes[3].sampleFault);
+#else
+		P10.2 = 1;	/* 0x01030505 */
+		analogAxes[0].samples[analogSample] = adcResults[0];
+		analogAxes[1].samples[analogSample] = adcResults[1];
+		analogAxes[2].samples[analogSample] = adcResults[2];
+		analogAxes[3].samples[analogSample] = adcResults[3];
+#endif
 		if (++analogSample >= ANALOG_SAMPLES)
 			analogSample = 0;
 		analogFilter0();
@@ -934,8 +947,12 @@ void analogFilter0(void)
 		else
 			analogAxes[0].median = analogAxes[0].samples[0];
 	}
+#if ANALOG_LIMITS
 	if (!(analogAxes[0].median & 0x003f) && analogAxes[0].limitMin < analogAxes[0].median &&
 	    analogAxes[0].median < analogAxes[0].limitMax) {
+#else
+	if (analogAxes[0].median >= 0 && analogAxes[0].median <= ADC_RESULT_MASK) {
+#endif
 		median = analogAxes[0].median;
 		if (ANALOG_HIGH(analogCalibration.axis[0].max) < ANALOG_HIGH(median))
 			analogCalibration.axis[0].max = median;
@@ -950,8 +967,12 @@ void analogFilter0(void)
 			analogScale00(median);
 		if (analogFlags & 0x02)
 			analogScale01(median);
+#if ANALOG_LIMITS
 	} else
 		analogFault(analogAxes[0].median, analogAxes[0].limitMin, analogAxes[0].limitMax, &analogAxes[0].medianFault);
+#else
+	}
+#endif
 }
 
 /* axis 0 in set 0: the position held between the calibration's ends less the set's margin,
@@ -1033,8 +1054,12 @@ void analogFilter1(void)
 		else
 			analogAxes[1].median = analogAxes[1].samples[0];
 	}
+#if ANALOG_LIMITS
 	if (!(analogAxes[1].median & 0x003f) && analogAxes[1].limitMin < analogAxes[1].median &&
 	    analogAxes[1].median < analogAxes[1].limitMax) {
+#else
+	if (analogAxes[1].median >= 0 && analogAxes[1].median <= ADC_RESULT_MASK) {
+#endif
 		median = analogAxes[1].median;
 		if (ANALOG_HIGH(analogCalibration.axis[1].max) < ANALOG_HIGH(median))
 			analogCalibration.axis[1].max = median;
@@ -1049,8 +1074,12 @@ void analogFilter1(void)
 			analogScale10(median);
 		if (analogFlags & 0x02)
 			analogScale11(median);
+#if ANALOG_LIMITS
 	} else
 		analogFault(analogAxes[1].median, analogAxes[1].limitMin, analogAxes[1].limitMax, &analogAxes[1].medianFault);
+#else
+	}
+#endif
 }
 
 /* axis 1 in set 0: the position held between the calibration's ends less the set's margin,
@@ -1132,8 +1161,12 @@ void analogFilter2(void)
 		else
 			analogAxes[2].median = analogAxes[2].samples[0];
 	}
+#if ANALOG_LIMITS
 	if (!(analogAxes[2].median & 0x003f) && analogAxes[2].limitMin < analogAxes[2].median &&
 	    analogAxes[2].median < analogAxes[2].limitMax) {
+#else
+	if (analogAxes[2].median >= 0 && analogAxes[2].median <= ADC_RESULT_MASK) {
+#endif
 		median = analogAxes[2].median;
 		if (ANALOG_HIGH(analogCalibration.axis[2].max) < ANALOG_HIGH(median))
 			analogCalibration.axis[2].max = median;
@@ -1148,8 +1181,12 @@ void analogFilter2(void)
 			analogScale20(median);
 		if (analogFlags & 0x02)
 			analogScale21(median);
+#if ANALOG_LIMITS
 	} else
 		analogFault(analogAxes[2].median, analogAxes[2].limitMin, analogAxes[2].limitMax, &analogAxes[2].medianFault);
+#else
+	}
+#endif
 }
 
 /* axis 2 in set 0: the position held between the calibration's ends less the set's margin,
@@ -1231,8 +1268,12 @@ void analogFilter3(void)
 		else
 			analogAxes[3].median = analogAxes[3].samples[0];
 	}
+#if ANALOG_LIMITS
 	if (!(analogAxes[3].median & 0x003f) && analogAxes[3].limitMin < analogAxes[3].median &&
 	    analogAxes[3].median < analogAxes[3].limitMax) {
+#else
+	if (analogAxes[3].median >= 0 && analogAxes[3].median <= ADC_RESULT_MASK) {
+#endif
 		median = analogAxes[3].median;
 		if (ANALOG_HIGH(analogCalibration.axis[3].max) < ANALOG_HIGH(median))
 			analogCalibration.axis[3].max = median;
@@ -1247,10 +1288,15 @@ void analogFilter3(void)
 			analogScale30(median);
 		if (analogFlags & 0x02)
 			analogScale31(median);
+#if ANALOG_LIMITS
 	} else
 		analogFault(analogAxes[3].median, analogAxes[3].limitMin, analogAxes[3].limitMax, &analogAxes[3].medianFault);
+#else
+	}
+#endif
 }
 
+#if ANALOG_LIMITS
 /* a reading outside an axis's limits recorded */
 static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			struct AnalogFault *fault)
@@ -1269,6 +1315,7 @@ static void analogFault(unsigned int sample, unsigned int min, unsigned int max,
 			fault->high = sample;
 	}
 }
+#endif
 
 /* axis 3 in set 0: the position held between the calibration's ends less the set's margin,
    and its value 0-0xff between them */
@@ -2206,7 +2253,9 @@ void analogSetMode(unsigned char mode)
 		analogFlags = ANALOG_SET0;
 		analogCenterSet1();
 		analogResetSet1();
+#if ANALOG_LIMITS
 		analogLimitsSet();
+#endif
 		break;
 	case 2:
 		DI();
@@ -2215,14 +2264,18 @@ void analogSetMode(unsigned char mode)
 		analogFlags = ANALOG_SET1;
 		analogCenterSet0();
 		analogResetSet0();
+#if ANALOG_LIMITS
 		analogLimitsSet();
+#endif
 		break;
 	case 3:
 		DI();
 		inputKeys.state |= 0x0002;
 		EI();
 		analogFlags = ANALOG_SET0 | ANALOG_SET1;
+#if ANALOG_LIMITS
 		analogLimitsSet();
+#endif
 		break;
 	}
 	ena_dsp();
@@ -2412,6 +2465,7 @@ void controlsReadAnalog1(unsigned char *out)
 	out[3] = analogSticks1[3];
 }
 
+#if ANALOG_LIMITS
 /* the slim's: each axis's record of its medians outside the limits (serial 0x0964, mode 1) */
 void analogGetMedianFaults(unsigned char *out)
 {
@@ -2429,6 +2483,7 @@ void analogGetSampleFaults(unsigned char *out)
 	memcpy(&out[0x10], &analogAxes[2].sampleFault, sizeof(struct AnalogFault));
 	memcpy(&out[0x18], &analogAxes[3].sampleFault, sizeof(struct AnalogFault));
 }
+#endif
 #endif
 
 #if !BOARD_USS1001

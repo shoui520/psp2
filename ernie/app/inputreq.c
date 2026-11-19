@@ -109,7 +109,7 @@ void touchStream0300Prepare(void);
 void motionStreamPrepare(void);
 #endif
 static void controlsRequest0180(void);
-#if BOARD_USS1001
+#if CONTROLS_MODE_DELAYED
 static void controlsRequest0180Expire(void);
 #endif
 static void controlsRequest0181(void);
@@ -310,7 +310,7 @@ static void (* const motionCommands[])(void) = {
 
 void inputRequestInit(void)
 {
-#if BOARD_USS1001
+#if CONTROLS_MODE_DELAYED
 	struct TimerHandler handler;
 
 #endif
@@ -379,7 +379,7 @@ void inputRequestInit(void)
 	hostStream0302.blocks[0] = touchFrames[0].panel[1];
 	hostStream0302.blocks[1] = touchFrames[1].panel[1];
 	hostStream0302.prepare = touchStream0302Prepare;
-#if BOARD_USS1001
+#if CONTROLS_MODE_DELAYED
 	handler.handler = controlsRequest0180Expire;
 	timerSetHandler(CONTROLS_MODE_TIMER, &handler);
 #endif
@@ -779,6 +779,7 @@ static void controlsRequest0180(void)
 	unsigned char status;
 
 	if (controlsRequest.length == 1) {
+#if CONTROLS_MODE_DELAYED
 		if (controlsRequest.data[0] != 0) {
 			/* answered by controlsRequest0180Done */
 			P10.2 = 0;
@@ -786,11 +787,19 @@ static void controlsRequest0180(void)
 			return;
 		}
 		analogStop();
+#else
+		if (controlsRequest.data[0] != 0)
+			analogSetMode(controlsRequest.data[0]);
+		else
+			analogStop();
+#endif
 		status = 0;
 	} else
 		status = 0x3b;
 	hostRequestAnswer(&controlsRequest, HOST_REQUEST_ANSWER, status, 0);
 }
+
+#if CONTROLS_MODE_DELAYED
 
 static void controlsRequest0180Expire(void)
 {
@@ -803,6 +812,7 @@ void controlsRequest0180Done(void)
 	analogSetMode(controlsRequest.data[0]);
 	hostRequestAnswer(&controlsRequest, HOST_REQUEST_ANSWER, 0, 0);
 }
+#endif
 #else
 static void controlsRequest0180(void)
 {
@@ -1603,12 +1613,19 @@ static void touchRequestPanelInfo(void)
 	result = touchIdentify0();
 	if (result == 0) {
 		memcpy(inputRequests.touchAnswer, &touch.panel[0].family, 4);
+#if FW_SINCE(0x01030511)
 		result = touchReadConfigVersion0(&inputRequests.touchAnswer[4]);
 		if (result != 0)
 			status0 = 3;
 		result = touchReadGripEdges0(&inputRequests.touchAnswer[6]);
 		if (result != 0)
 			status0 = 3;
+#else
+		if (touchReadConfigVersion0(&inputRequests.touchAnswer[4]) != 0)
+			status0 = 3;
+		if (touchReadGripEdges0(&inputRequests.touchAnswer[6]) != 0)
+			status0 = 3;
+#endif
 	} else if (result == 4)
 		status0 = 5;
 	else
@@ -1616,12 +1633,19 @@ static void touchRequestPanelInfo(void)
 	result = touchIdentify1();
 	if (result == 0) {
 		memcpy(&inputRequests.touchAnswer[10], &touch.panel[1].family, 4);
+#if FW_SINCE(0x01030511)
 		result = touchReadConfigVersion1(&inputRequests.touchAnswer[14]);
 		if (result != 0)
 			status1 = 4;
 		result = touchReadGripEdges1(&inputRequests.touchAnswer[16]);
 		if (result != 0)
 			status1 = 4;
+#else
+		if (touchReadConfigVersion1(&inputRequests.touchAnswer[14]) != 0)
+			status1 = 4;
+		if (touchReadGripEdges1(&inputRequests.touchAnswer[16]) != 0)
+			status1 = 4;
+#endif
 	} else if (result == 4)
 		status1 = 6;
 	else

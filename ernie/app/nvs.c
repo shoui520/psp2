@@ -36,7 +36,11 @@
 #define NVS_FREE_MIN		3	/* the free blocks kept */
 #define NVS_COLLECT_MIN		5	/* the data blocks a collection needs */
 #define NVS_ENTRY_VALID		0xaa
+#if FW_SINCE(0x01030511)
 #define NVS_HEADER_MARK		0x42
+#else
+#define NVS_HEADER_MARK		0x41	/* 0x01030505 */
+#endif
 
 /* nvs.state: also 1 ready, 2 busy, 3 full, 0x20 collecting */
 #define NVS_STATE_COLLECTING	0x20
@@ -2092,7 +2096,9 @@ unsigned char nvsClean(unsigned char count)
 			/* cleaned all the same */
 		}
 	}
+#if FW_SINCE(0x01030511)
 	nvs.state = 2;
+#endif
 	retry = 3;
 	info = nvs.freeList.head;
 	while (info != NULL && count != 0) {
@@ -2113,8 +2119,10 @@ unsigned char nvsClean(unsigned char count)
 	}
 	if (nvs.freeList.count != 0)
 		nvs.state = 1;
+#if FW_SINCE(0x01030511)
 	else
 		nvs.state = 3;
+#endif
 	return result;
 }
 
@@ -2161,10 +2169,14 @@ unsigned char nvsMount(unsigned char mode)
 			info->role = NVS_BLOCK_ERASED;
 			break;
 		default:
+#if FW_SINCE(0x01030511)
 			if (header->status.bytes[0] == 0xff && header->status.bytes[3] == 0xff)
 				info->role = NVS_BLOCK_USED;
 			else
 				info->role = NVS_BLOCK_BAD;
+#else
+			info->role = NVS_BLOCK_BAD;	/* 0x01030505: any other status */
+#endif
 			break;
 		}
 	}
@@ -2192,6 +2204,7 @@ unsigned char nvsMount(unsigned char mode)
 	return 0;
 }
 
+#if NVS_INFO_MAP
 /* the newest block's mark and sequence (moves) and, into map, which records are written */
 unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned long *moves,
 			 struct NvsMap *map)
@@ -2260,6 +2273,33 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned l
 	nvs.state = state;
 	return result;
 }
+#else
+/* 0x01030505: the newest block's mark and sequence (moves), the bad blocks (missing) */
+unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned int *moves)
+{
+	struct NvsBlockInfo *info;
+	struct NvsBlock *block;
+	struct NvsHeader *header;
+	unsigned char result;
+
+	info = nvs.dataList.tail;
+	if (info == NULL) {
+		*mark = 0;
+		*missing = 0;
+		*moves = 0;
+		return 8;
+	}
+	header = &nvs.header;
+	block = NVS_BLOCK(info->block);
+	result = flashRead(header, (unsigned char *)&block->header, sizeof(struct NvsHeader));
+	if (result == 0) {
+		*mark = header->mark;
+		*missing = nvs.badList.count;
+		*moves = (unsigned int)(header->sequence / 8 & 0xffff);
+	}
+	return result;
+}
+#endif
 
 /* the state and the blocks, to the trace: their prints are left out */
 void nvsPrintStatus(void)
@@ -2271,6 +2311,49 @@ void nvsPrintBlock(unsigned int block)
 }
 
 /* erases a block and makes it the newest data block */
+#if !FW_SINCE(0x01030511)
+/* 0x01030505: the block erased (three tries), then its whole header written at once */
+unsigned char nvsMarkData(unsigned char block)
+{
+	unsigned char result;
+	unsigned char retry;
+	struct NvsBlockInfo *info;
+	struct NvsBlock *flashBlock;
+	struct NvsHeader *header;
+	unsigned long sequence;
+
+	header = &nvs.header;
+	info = &nvs.blocks[block];
+	flashBlock = NVS_BLOCK(block);
+	retry = 3;
+	while (retry-- != 0) {
+		result = nvsErase(block);
+		if (result == 0)
+			break;
+		if (result == 0x1a)
+			return result;
+	}
+	if (nvs.dataList.tail != NULL) {
+		sequence = nvs.dataList.tail->sequence + 1;
+		if (sequence == 0)
+			return 0x21;
+	} else {
+		sequence = 0;
+	}
+	memset(header, 0xff, sizeof(*header));
+	header->status.value = NVS_STATUS_DATA;
+	header->sequence = sequence;
+	header->mark = NVS_HEADER_MARK;
+	result = flashWrite((unsigned char *)&flashBlock->header, header, sizeof(*header), 1);
+	if (result == 0) {
+		info->role = NVS_BLOCK_DATA;
+		info->sequence = sequence;
+		info->block = block;
+		nvsListAppend(&nvs.dataList, info);
+	}
+	return result;
+}
+#else
 unsigned char nvsMarkData(unsigned char block)
 {
 	unsigned char result;
@@ -2316,6 +2399,7 @@ unsigned char nvsMarkData(unsigned char block)
 	}
 	return result;
 }
+#endif
 
 /* marks a free block bad (its header's bytes 0 and 3 cleared) */
 unsigned char nvsMarkBad(unsigned char block)

@@ -109,8 +109,9 @@ static int stateModeAtLevel9(union PowerRequest *request);
 #define STATE_WAKE_TRANSITIONS	0x20
 #endif
 
-/* a message sent to task 1: on the slim 3 when the mailbox refuses it */
-#if BOARD_USS1001
+/* a message sent to task 1: on the slim (from 0x01030511) 3 when the mailbox refuses it */
+#define STATE_SLIM_MSG	(BOARD_USS1001 && FW_SINCE(0x01030511))
+#if STATE_SLIM_MSG
 #define STATE_SEND(send)	do { ercd = send; if (ercd != E_OK) return 3; } while (0)
 #else
 #define STATE_SEND(send)	send
@@ -162,7 +163,7 @@ static unsigned char stateReserved[6];
 #endif
 union PowerRequest stateWakeupFactor;
 union PowerRequest stateRequest;
-#if BOARD_USS1001
+#if BOARD_USS1001 && FW_SINCE(0x01030511)
 static struct StateMsg stateEnterMsg;		/* stateEnter's */
 #endif
 static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume */
@@ -382,7 +383,7 @@ int stateEnter(void)
 	ER ercd;
 	struct StateEvent event;
 
-#if BOARD_USS1001
+#if STATE_SLIM_MSG
 	msg = &stateEnterMsg;			/* the slim's: its own message, not the pool's */
 	ercd = E_OK;
 #else
@@ -709,8 +710,10 @@ static int stateOffHandle(struct StateEvent *event)
 		   power LED shows it */
 		if (!(unsigned char)chargeMayStart() || (unsigned char)chargeAlarm0On())
 			stateNext = 0;
+#if FW_SINCE(0x01030511)
 		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
 			stateNext = 0;
+#endif
 		if (chargeBatteryLevel9() && !(unsigned char)chargeAlarm0On() &&
 		    stateModeAtLevel9(&stateRequest) != 0)
 			powerLedSetFlags(0x80);
@@ -830,8 +833,10 @@ static int stateSuspendHandle(struct StateEvent *event)
 #endif
 			stateNext = 0;
 #if BOARD_USS1001
+#if FW_SINCE(0x01030511)
 		if (chargeBatteryLevel9() && stateModeAtLevel9(&stateRequest) == 0)
 			stateNext = 0;
+#endif
 		if (chargeBatteryLevel9() && !(unsigned char)chargeAlarm0On() &&
 		    stateModeAtLevel9(&stateRequest) != 0)
 			powerLedSetFlags(0x80);

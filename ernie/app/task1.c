@@ -52,8 +52,8 @@ void task1(VP_INT exinf)
 	for (;;) {
 		ercd = rcv_mbx(1, (T_MSG **)&msg);
 		memcpy(&event, &msg->event, sizeof(event));
-#if BOARD_USS1001
-		/* USS-1001's enter message is not the pool's */
+#if BOARD_USS1001 && FW_SINCE(0x01030511)
+		/* USS-1001's enter message is not the pool's (from 0x01030511, state.c) */
 		if (event.type != STATE_EVENT_ENTER)
 			ercd = rel_mpf(1, msg);
 #else

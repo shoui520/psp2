@@ -348,7 +348,9 @@ extern void chargeSetAcDelay(void);
 #if BOARD_USS1001
 extern unsigned char chargeUsbPower(void);
 extern unsigned char chargeUsbDongle(void);
+#if FW_SINCE(0x01030511)
 extern unsigned char chargeUsbDebug(void);
+#endif
 extern unsigned char chargeUsbMultiCn2(void);
 extern unsigned char chargeExternalPower(void);
 extern unsigned char chargeUsbIs1(void);
@@ -362,7 +364,9 @@ extern unsigned char chargeManualOff(void);
 extern void chargeUsbModeUpdate(void);
 extern int chargeUsbRequestUpdate(void);
 extern void chargeUsbChanged(void);
+#if FW_SINCE(0x01030511)
 extern unsigned char chargeUsbCurrent(void);
+#endif
 extern char chargeBatteryLevel3(void);
 /* bit 0: the USB connected (P7.5 low); bit 7: set as it changes, task 5 not asked to update */
 extern __sreg unsigned char chargeUsbState;

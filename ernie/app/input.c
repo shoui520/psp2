@@ -66,12 +66,8 @@ extern unsigned char getResetCause(void);
 #define INPUT_SET_FLAG(flag, pattern)	set_flg(flag, pattern)
 #endif
 
-/* the scan's RTC timer: the slim's RTC timers are numbered otherwise (its inputreq.c's 0x15) */
-#if BOARD_USS1001
-#define INPUT_SCAN_RTC_TIMER	0x17
-#else
+/* the scan's RTC timer */
 #define INPUT_SCAN_RTC_TIMER	TIMER_RTC(0x16)
-#endif
 
 void intp1Enable(unsigned char enable);
 void intp2Enable(unsigned char enable);
@@ -387,7 +383,9 @@ void inputInit(void)
 	levelMonitor1.enable = 0;
 	levelMonitor2.enable = 0;
 	touchClearPanels();
+#if ANALOG_LIMITS
 	analogAxesReset();
+#endif
 	scanCount = 0;
 	analogInput10Ticks = 0;
 	inputScan.mode = 0;

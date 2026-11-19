@@ -38,7 +38,11 @@ PFDLRUN	EQU	0EF004H			; the data flash firmware's handler
 PFDLEND	EQU	0EF008H			; and its close
 RAMA	EQU	0A80H			; where FSL_PrepareFunctions copies ?blockA
 RAMB	EQU	0B80H			; and FSL_PrepareExtFunctions ?blockB
+$_IF (ERNIE_FW>=0x01030511)
 RAMCMD	EQU	0D090H			; where _rcopy copies the commands (0xfd090)
+$ELSE
+RAMCMD	EQU	0D038H			; 0x01030505's (0xfd038)
+$ENDIF
 ; the jump tables' RAM addresses (word[C] takes no relocated operand): RAMA + ?tableA -
 ; ?blockA, RAMB + ?tableB - ?blockB
 TABLEA	EQU	RAMA + 0F4H
