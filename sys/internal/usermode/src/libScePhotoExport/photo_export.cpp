@@ -1232,7 +1232,9 @@ static __attribute__((noinline)) SceInt32 photoExportJpegMarker(const SceUInt16 
 				      SceUInt32 *pLength, SceInt32 *pScan, PhotoExportImageInfo *pInfo)
 {
 	SceInt64 position, next;
-	SceUInt32 marker, length;
+	SceInt32 marker;
+	SceInt32 result = 0;
+	SceUInt32 length;
 	const SceUInt16 *pNext;
 
 	position = *pPosition;
@@ -1251,7 +1253,7 @@ static __attribute__((noinline)) SceInt32 photoExportJpegMarker(const SceUInt16 
 		if (length < 2)
 			return PHOTO_ERROR_INVALID_DATA;
 	}
-	if (marker > 0xFFBF && marker <= 0xFFDA) {
+	{
 		switch (marker) {
 		case 0xFFC0:
 		case 0xFFC2:
@@ -1300,7 +1302,7 @@ static __attribute__((noinline)) SceInt32 photoExportJpegMarker(const SceUInt16 
 			break;
 		}
 	}
-	return 0;
+	return result;
 }
 
 /* the entries of a TIFF directory: the width, the height and the photometric interpretation */
