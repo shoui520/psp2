@@ -610,7 +610,11 @@ void applauncherPagesSetStarted(void);
 void applauncherPagesHoldRequest(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
 				 void *data);
 /* PLACEHOLDER: the IconCacheManager, its manager first (0x815553B0, the icon cache's file) */
-struct ApplauncherIconCache {
+class ApplauncherIconCache {
+public:
+	/* (0x810BD248) */
+	ApplauncherIconCache(paf::Plugin *plugin);
+
 	paf::cache::CacheManager *m_manager;
 };
 extern ApplauncherIconCache *g_applauncherIconCache;
@@ -860,7 +864,8 @@ ApplauncherPage *applauncherIconPoolOpenAppPage(const paf::common::SharedPtr<App
    (0x810BD482) */
 int applauncherIconCacheLoad(const paf::string &path,
 			     paf::intrusive_ptr<paf::cache::CacheImageInterface> *image,
-			     const void *option, int priority, bool reload);
+			     const paf::cache::CacheImage::Option *option, paf::job::JobQueue *queue,
+			     bool noSurface);
 void applauncherIconCacheClear(paf::intrusive_ptr<paf::cache::CacheImageInterface> &image);
 
 /* the overlay faded in (0x810AF160), and out (0x810AF184) */
