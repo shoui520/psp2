@@ -390,3 +390,66 @@ void *memmove(void *dst, const void *src, size_t n)
 	}
 	return dst;
 }
+
+/* the memory object FreeType's callers pass (FT_MemoryRec: user, alloc, free) */
+typedef struct Ft2Memory {
+	void *user;
+	void *(*alloc)(struct Ft2Memory *pMemory, long size);
+	void (*free)(struct Ft2Memory *pMemory, void *pBlock);
+} Ft2Memory;
+
+typedef int (*Ft2CompareFunc)(const void *pA, const void *pB);
+
+static void copyBytes(char *pDst, const char *pSrc, size_t size)
+{
+	size_t i;
+
+	for (i = 0; i < size; i++)
+		pDst[i] = pSrc[i];
+}
+
+/* Hoare's partition of elements lo..hi of the array; the swap and pivot buffers come from the caller's allocator */
+static void qsortRange(char *pBase, size_t size, Ft2CompareFunc compare, int lo, int hi, Ft2Memory *pMemory)
+{
+	char *pTemp = pMemory->alloc(pMemory, size);
+	char *pPivot = pMemory->alloc(pMemory, size);
+	char *pLow, *pHigh;
+	int i = lo, j = hi;
+
+	copyBytes(pPivot, pBase + size * ((lo + hi) / 2), size);
+	pLow = pBase + size * i;
+	for (;;) {
+		if (compare(pLow, pPivot) < 0) {
+			pLow += size;
+			i++;
+			continue;
+		}
+		pHigh = pBase + size * j;
+		while (compare(pPivot, pHigh) < 0) {
+			j--;
+			pHigh -= size;
+		}
+		if (j < i)
+			break;
+		copyBytes(pTemp, pLow, size);
+		copyBytes(pLow, pHigh, size);
+		copyBytes(pHigh, pTemp, size);
+		i++;
+		j--;
+		if (i > j)
+			break;
+		pLow += size;
+	}
+	if (lo < j)
+		qsortRange(pBase, size, compare, lo, j, pMemory);
+	if (i < hi)
+		qsortRange(pBase, size, compare, i, hi, pMemory);
+	pMemory->free(pMemory, pTemp);
+	pMemory->free(pMemory, pPivot);
+}
+
+void ftQsort(void *pBase, int count, size_t size, Ft2CompareFunc compare, Ft2Memory *pMemory)
+{
+	if (compare != NULL && pBase != NULL && size != 0 && count != 0 && pMemory != NULL)
+		qsortRange(pBase, size, compare, 0, count - 1, pMemory);
+}
