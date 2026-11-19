@@ -141,12 +141,12 @@ typedef struct PhotoExportSendHeader {
 
 static inline SceUInt32 photoExportSwap32(SceUInt32 value)
 {
-	return (value << 24) | ((value & 0xFF00) << 8) | ((value >> 8) & 0xFF00) | (value >> 24);
+	return (((value >> 8) & 0xFF) << 16) | (value << 24) | (value >> 24) | (((value >> 16) & 0xFF) << 8);
 }
 
 static inline SceUInt32 photoExportSwap16(SceUInt32 value)
 {
-	return ((value & 0xFF) << 8) | ((value >> 8) & 0xFF);
+	return ((value >> 8) & 0xFF) | ((value & 0xFF) << 8);
 }
 
 /* the length of a string with its NUL terminator, as the requests send it */
@@ -1520,12 +1520,9 @@ static __attribute__((noinline)) SceInt32 photoExportTiffInfoFromFile(SceUID fd,
 	SceInt32 littleEndian;
 	SceInt64 position;
 	SceUInt16 entries;
-	SceUInt8 buffer[0x400];
-	SceInt32 read;
 
-	read = sceIoRead(fd, header, 8);
-	photoExportTiffHeader(header, read, &littleEndian, &position);
-	if (sceIoLseek(fd, position, SCE_SEEK_SET) >= 0) {
+	photoExportTiffHeader(header, sceIoRead(fd, header, 8), &littleEndian, &position);
+	if ((SceInt32)sceIoLseek(fd, position, SCE_SEEK_SET) >= 0) {
 		entries = 0;
 		if (sceIoRead(fd, &entries, 2) > 0) {
 			SceUInt32 count = entries;
@@ -1534,9 +1531,12 @@ static __attribute__((noinline)) SceInt32 photoExportTiffInfoFromFile(SceUID fd,
 				count = photoExportSwap16(count);
 				entries = count;
 			}
-			if (12 * count + 4 == (SceUInt32)sceIoRead(fd, buffer, 12 * count + 4))
-				return photoExportTiffEntries((const SceUInt16 *)buffer, littleEndian, count,
+			SceUInt8 buffer[12 * count + 4];
+
+			if (12 * count + 4 == sceIoRead(fd, buffer, 12 * count + 4))
+				return photoExportTiffEntries((const SceUInt16 *)buffer, littleEndian, entries,
 							      pInfo);
+			return PHOTO_ERROR_INTERNAL;
 		}
 	}
 	return PHOTO_ERROR_INTERNAL;
