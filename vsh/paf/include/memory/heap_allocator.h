@@ -94,4 +94,7 @@ private:
 }
 }
 
+/* ScePafStdc's placement form that allocates from a heap (_ZnwjPN3paf6memory13HeapAllocatorE) */
+void *operator new(size_t size, paf::memory::HeapAllocator *heap) throw();
+
 #endif
