@@ -8,6 +8,7 @@
 
 #include <scetypes.h>
 #include <plugin.h>
+#include <versatileparam/idparam.h>
 #include <graphics/surface/surface.h>
 #include <math/ngp/v4.h>
 
@@ -18,8 +19,15 @@ void *applauncherPluginGetInterface(const char *name, int id);
 void applauncherInterfaceRegister(paf::Plugin *plugin);
 /* the plugin's resource kept for the other files (0x810C9BF0) */
 void applauncherInterfaceSetResource(void);
-/* the plugin's function table, once registered (0x81555B40) */
-extern void *g_applauncherInterface;
+/* the plugin's function table, once registered (0x81555B40); the home fills it */
+struct ApplauncherInterface {
+	void (*func[28])(void);
+};
+extern ApplauncherInterface *g_applauncherInterface;
+/* the plugin, as registered (0x81555B44) */
+extern paf::Plugin *g_applauncherPlugin;
+/* the plugin's string of the ID (0x810C9D9C) */
+const wchar_t *applauncherGetString(const paf::IDParam &id);
 
 /* the DataCacheManager made and taken down (0x810BA558, 0x810BA56E) */
 void applauncherDataCacheCreate(paf::Plugin *plugin);

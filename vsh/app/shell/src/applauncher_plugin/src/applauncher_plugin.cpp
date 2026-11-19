@@ -71,7 +71,7 @@ void applauncherPluginStart(Plugin *plugin)
 		applauncherPluginGetInterface("topmenu_plugin", 1);
 
 	if (topmenu != NULL)
-		((void (*)(void *))topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER])
+		((void (*)(ApplauncherInterface *))topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER])
 			(g_applauncherInterface);
 	applauncherIconCaptureCreate(shellIconCacheGetSurfacePool());
 	applauncherPageCreate(plugin);
@@ -89,7 +89,8 @@ void applauncherPluginStop(Plugin *plugin)
 		applauncherPluginGetInterface("topmenu_plugin", 1);
 
 	if (topmenu != NULL)
-		((void (*)(void *))topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER])(NULL);
+		((void (*)(ApplauncherInterface *))topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER])
+			(NULL);
 	applauncherSlotsDestroy();
 	applauncherIconPoolDestroy();
 	applauncherFolderDestroy();
