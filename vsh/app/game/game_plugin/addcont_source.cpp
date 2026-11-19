@@ -477,9 +477,7 @@ int GameAddcontSource::Complete(string *dir, string *installPath, int reserved1,
 
 		sce_paf_memset(&info, 0, sizeof(info));
 		sce_paf_memcpy(info.contentId, m_contentId.c_str(), sizeof(info.contentId));
-		/* Sony stores the start time over the two flag words */
-		info.licenseFlags = (int)m_startTime;
-		info.skuFlags = (int)(m_startTime >> 32);
+		info.startTime = m_startTime;
 		info.expireTime = m_expireTime;
 		gameAddcontInfoWrite(m_infoDir.c_str(), &info);
 	}

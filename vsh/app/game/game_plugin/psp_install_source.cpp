@@ -532,9 +532,7 @@ int GamePspInstallSource::Complete(string *dir, string *installPath, int reserve
 					sce_paf_memset(&info, 0, sizeof(info));
 					sce_paf_memcpy(info.contentId, cid.c_str(),
 						       sizeof(info.contentId));
-					/* Sony stores the start time over the two flag words */
-					info.licenseFlags = (int)startTime;
-					info.skuFlags = (int)(startTime >> 32);
+					info.startTime = startTime;
 					info.expireTime = expireTime;
 					gamePspAddcontInfoWrite(m_addcontInfoDir.c_str(), &info);
 				}

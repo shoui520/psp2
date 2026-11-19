@@ -32,8 +32,7 @@ struct GameAddcontLicenseUpdateArgs {
 	SceBool isPsp;
 	const char *drive;
 	const char *addcontId;
-	int licenseFlags;			/* the license's, given back */
-	int skuFlags;
+	SceUInt64 startTime;			/* the license's period, given back */
 	SceUInt64 expireTime;
 };
 
@@ -75,8 +74,7 @@ typedef char GameLicenseServerSize[sizeof(GameLicenseServer) == 72 ? 1 : -1];
 /* an additional content's license as addcont/info keeps it, 128 bytes */
 struct GameAddcontLicenseInfo {
 	char contentId[48];
-	int licenseFlags;
-	int skuFlags;
+	SceUInt64 startTime;			/* the license's period */
 	SceUInt64 expireTime;			/* the license fetched again once this is past */
 	SceUInt8 reserved[64];
 };

@@ -536,7 +536,7 @@ int GameLicenseUpdater::UpdateAddcont(const char *titleId)
 
 		GameAddcontLicenseUpdateArgs args = {
 			contentId.c_str(), m_epw.epw, addcontTitleId.c_str(), rifName.c_str(), isPsp,
-			drive.c_str(), label.c_str(), 0, 0, 0
+			drive.c_str(), label.c_str(), 0, 0
 		};
 
 		ret = s_server->UpdateAddcontLicense(&args);
@@ -587,8 +587,7 @@ int GameLicenseUpdater::UpdateAddcont(const char *titleId)
 
 			sce_paf_memset(&updated, 0, sizeof(updated));
 			sce_paf_memcpy(updated.contentId, contentId.c_str(), sizeof(updated.contentId));
-			updated.licenseFlags = args.licenseFlags;
-			updated.skuFlags = args.skuFlags;
+			updated.startTime = args.startTime;
 			updated.expireTime = args.expireTime;
 
 			if (isPsp)
