@@ -1,7 +1,7 @@
 /*
  * applauncher_idulayout.cpp: the home's pages laid out again from the database, with the
  * backgrounds an older system kept in ux0:shell/bgimage.bgd carried over (0x810BD534-
- * 0x810C1BF4). The file's name and the names here are ours (PLACEHOLDER): no record of the 3.6x
+ * 0x810C1FE6). The file's name and the names here are ours (PLACEHOLDER): no record of the 3.6x
  * shell names them.
  */
 #include <stddef.h>
@@ -20,6 +20,7 @@
 #include <common/shared_ptr.h>
 #include <common/string_util.h>
 #include <buffer/buffer.h>
+#include <dir/dir.h>
 #include <file/localfile.h>
 #include <rtc/rtc.h>
 #include "../../../shell.h"
@@ -36,6 +37,7 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(LsdbIconListPtr, paf::allocator<LsdbIconListPtr>)
 using namespace paf;
 
 /* the old system's backgrounds: a line "<page key>,<path>" per page */
+#define APPLAUNCHER_SHELL_DIR		"ux0:shell"		/* PLACEHOLDER name */
 #define APPLAUNCHER_BGIMAGE_FILE	"ux0:shell/bgimage.bgd"
 #define APPLAUNCHER_LAYOUT_FILE		"ux0:shell/applayout.ald"	/* PLACEHOLDER name */
 #define APPLAUNCHER_BGIMAGE_SIZE_MIN	3
@@ -1133,4 +1135,45 @@ int applauncherIduLayout(bool reset)
 	if (reset)
 		bgimageMigrate(&bgimages, &pages, layoutPages);
 	return 1;
+}
+
+/* PLACEHOLDER name: a page's background added to ux0:shell/bgimage.bgd as "key,path", the key
+   cut after its last '/' or ':' (0x810C1BF4) */
+int bgimageWrite(const char *key, const char *path)
+{
+	if (!Dir::IsDirectory(APPLAUNCHER_SHELL_DIR))
+		Dir::CreateRecursive(APPLAUNCHER_SHELL_DIR, 6);
+
+	int err;
+	common::SharedPtr<File> file = LocalFile::Open(APPLAUNCHER_BGIMAGE_FILE,
+						      SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 6,
+						      &err);
+
+	if (err != 0)
+		return err;
+
+	{
+		string name(key);
+		string::size_type pos = name.rfind("/", string::npos, sce_paf_strlen("/"));
+
+		if (pos != string::npos)
+			name.erase(0, pos);
+		pos = name.rfind(":", string::npos, sce_paf_strlen(":"));
+		if (pos != string::npos)
+			name.erase(0, pos);
+		err = file->Write(name.c_str(), name.length());
+		if (err < 0)
+			return err;
+	}
+	err = file->Write(",", sce_paf_strlen(","));
+	if (err < 0)
+		return err;
+	err = file->Write(path, sce_paf_strlen(path));
+	if (err < 0)
+		return err;
+	err = file->Write("\n", sce_paf_strlen("\n"));
+	if (err < 0)
+		return err;
+	file->Close();
+	return 0;
 }
