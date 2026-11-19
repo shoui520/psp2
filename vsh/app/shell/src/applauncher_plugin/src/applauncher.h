@@ -32,6 +32,8 @@ const wchar_t *applauncherGetString(const paf::IDParam &id);
 /* the DataCacheManager made and taken down (0x810BA558, 0x810BA56E) */
 void applauncherDataCacheCreate(paf::Plugin *plugin);
 void applauncherDataCacheDestroy(void);
+/* PLACEHOLDER: room made in the DataCacheManager's surface pool (0x810BA678) */
+void applauncherDataCacheMakeSpace(void);
 /* the IconCacheManager made and taken down (0x810BD35C, 0x810BD372) */
 void applauncherIconCacheCreate(paf::Plugin *plugin);
 void applauncherIconCacheDestroy(void);
