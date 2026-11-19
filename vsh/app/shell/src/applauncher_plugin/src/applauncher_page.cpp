@@ -278,31 +278,31 @@ bool ApplauncherPage::PutIcon(const common::SharedPtr<ApplauncherIcon> &icon, in
 		float edge;
 
 		if (attach)
-			(*icon->m_icon)->SetParent(GetRoot(), NULL, 0);
+			icon->m_icon->m_widget->SetParent(GetRoot(), NULL, 0);
 		if (icon->m_page->m_type != 0)
 			edge = applauncherIconWidgetFolderSize();
 		else
 			edge = applauncherIconWidgetSize();
 		size = math::v4(edge, edge, 0.0f, 0.0f);
 		applauncherIconWidgetUpdateLabel(icon->m_icon);
-		(*icon->m_icon)->SetSize(size, NULL, ui::Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
+		icon->m_icon->m_widget->SetSize(size, NULL, ui::Widget::ANIM_SIZE, 0, 0.0f, NULL, NULL);
 		applauncherIconWidgetUpdateMark(icon->m_icon);
 
 		if (icon.get() == g_applauncherDragItem.get()) {
-			ui::AppIconBase *widget = *icon->m_icon;
+			ui::AppIconBase *widget = icon->m_icon->m_widget;
 
 			if (widget->m_touch_captures.size() != 0 ||
 			    widget->m_icon_mode == APPLAUNCHER_PAGE_ICON_MODE_DRAG) {
 				math::v4 held;
 
 				widget->KillObjAnim(0, APPLAUNCHER_PAGE_ANIM_ICON_SIZE);
-				widget = *icon->m_icon;
+				widget = icon->m_icon->m_widget;
 				held = size * 1.2f;
 				widget->SetObjAnim(0, APPLAUNCHER_PAGE_ANIM_ICON_SIZE, held,
 					new Timer(100.0f, Timer::FUNC_QUAD_OUT), 0);
 			} else {
 				widget->KillObjAnim(0, APPLAUNCHER_PAGE_ANIM_ICON_SIZE);
-				(*icon->m_icon)->SetObjAnim(0, APPLAUNCHER_PAGE_ANIM_ICON_SIZE, size,
+				icon->m_icon->m_widget->SetObjAnim(0, APPLAUNCHER_PAGE_ANIM_ICON_SIZE, size,
 					new Timer(100.0f, Timer::FUNC_QUAD_OUT), 0);
 			}
 		}
@@ -421,7 +421,7 @@ static bool setMovedIcon(const common::SharedPtr<ApplauncherIcon> &icon)
 	if (s_moveIcon.get() != NULL) {
 		if (s_moveIcon->m_slot != s_moveIcon->m_homeSlot ||
 		    s_moveIcon->m_page != s_moveIcon->m_movePage) {
-			ui::Widget *widget = *s_moveIcon->m_icon;
+			ui::Widget *widget = s_moveIcon->m_icon->m_widget;
 
 			if (s_moveIcon->m_page != NULL)
 				applauncherIconRemove(s_moveIcon, true);
@@ -452,7 +452,7 @@ static bool setDropTarget(const common::SharedPtr<ApplauncherIcon> &icon)
 		return false;
 
 	if (g_applauncherDropTarget.get() != NULL) {
-		ui::Widget *widget = *g_applauncherDropTarget->m_icon;
+		ui::Widget *widget = g_applauncherDropTarget->m_icon->m_widget;
 
 		widget->KillAnim(ui::Widget::ANIM_COLOR);
 		widget->SetColor(math::v4(1.0f, 1.0f, 1.0f, 1.0f),
@@ -461,7 +461,7 @@ static bool setDropTarget(const common::SharedPtr<ApplauncherIcon> &icon)
 				 new Timer(200.0f, Timer::FUNC_QUAD_OUT), ui::Widget::ANIM_SCALE, 0);
 	}
 	if (icon.get() != NULL) {
-		ui::Widget *widget = *icon->m_icon;
+		ui::Widget *widget = icon->m_icon->m_widget;
 
 		widget->KillAnim(ui::Widget::ANIM_COLOR);
 		widget->SetColor(math::v4(1.0f, 1.0f, 1.0f, 0.2f),
@@ -512,7 +512,7 @@ ApplauncherPage *ApplauncherPage::iconMove(const common::SharedPtr<ApplauncherIc
 	SceUInt32 i;
 
 	if (icon.get() != NULL) {
-		widget = *icon->m_icon;
+		widget = icon->m_icon->m_widget;
 		ui::Widget *layer = g_applauncherHome->m_scroller.m_scrollView->m_parent;
 
 		if (layer != icon->GetWidget()->m_parent)
@@ -610,7 +610,7 @@ ApplauncherPage *ApplauncherPage::iconMove(const common::SharedPtr<ApplauncherIc
 	} else if (target.get() == icon.get()) {
 		setDropTarget(common::SharedPtr<ApplauncherIcon>());
 	} else {
-		ui::Widget *targetWidget = *target->m_icon;
+		ui::Widget *targetWidget = target->m_icon->m_widget;
 
 		if (target->IsFolder() && !icon->IsFolder()) {
 			/* over a folder: it opens after the icon has waited over it */
@@ -764,7 +764,7 @@ static void placeIcon(ApplauncherPage *page, const common::SharedPtr<Applauncher
 		slot = dest->GetEmptySlot();
 
 place:
-	ui::Widget *widget = *icon->m_icon;
+	ui::Widget *widget = icon->m_icon->m_widget;
 	math::v4 screen = widget->GetWorldMatrix().w();
 
 	if (slot == -1) {
@@ -865,12 +865,12 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 		if (m_slots[i].get() == NULL)
 			continue;
 
-		ui::AppIconBase **view = m_slots[i]->m_icon;
+		ApplauncherIconView *view = m_slots[i]->m_icon;
 
 		m_slots[i]->m_movePage = m_slots[i]->m_page;
 		m_slots[i]->m_homeSlot = m_slots[i]->m_slot;
 		if (view != NULL) {
-			ui::Widget *widget = *view;
+			ui::Widget *widget = view->m_widget;
 
 			widget->KillAnim(ui::Widget::ANIM_MOVE);
 			widget->KillAnim(ui::Widget::ANIM_COLOR);
@@ -880,7 +880,7 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 	}
 
 	if (icon.get() != NULL) {
-		ui::Widget *widget = *icon->m_icon;
+		ui::Widget *widget = icon->m_icon->m_widget;
 
 		if (m_moveSlot == -1) {
 			ApplauncherPage *focused = static_cast<ApplauncherPage *>(
@@ -1415,7 +1415,7 @@ static void onPageLayoutDone(ApplauncherLsdbJob *job, void *arg)
 
 /* PLACEHOLDER: the applauncher's request kept, outside the IDU mode and without one
    (0x810B8830) */
-void applauncherPagesHoldRequest(void)
+void applauncherPagesHoldRequest(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
 	ApplauncherState *state;
 

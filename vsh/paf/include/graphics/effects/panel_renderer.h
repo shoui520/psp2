@@ -12,6 +12,7 @@
 #include <common/shared_ptr.h>
 #include <graphics/camera.h>
 #include <graphics/drawobj/bubble_param.h>
+#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/bubble_obj.h>
 #include <graphics/drawobj/panel_obj.h>
 #include <graphics/drawobj/draw_env.h>

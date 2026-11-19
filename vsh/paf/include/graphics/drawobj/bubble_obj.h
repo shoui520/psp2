@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <arm_neon.h>
 #include <common/shared_ptr.h>
-#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/draw_obj.h>
 #include <math/ngp/v3.h>
 #include <math/ngp/v4.h>

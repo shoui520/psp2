@@ -5,6 +5,7 @@
  */
 #include <stdint.h>
 #include <graphics/drawobj/effect_path.h>
+#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/bubble_obj.h>
 #include <graphics/drawobj/draw_env.h>
 #include <graphics/effects/panel_renderer.h>

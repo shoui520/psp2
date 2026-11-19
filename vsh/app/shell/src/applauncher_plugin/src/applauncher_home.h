@@ -13,6 +13,7 @@
 #include <std/vector>
 #include <std/memory>
 #include <math/ngp/v2.h>
+#include <math/ngp/v3.h>
 #include <versatileparam/idparam.h>
 #include <common/shared_ptr.h>
 #include <graphics/surface/surface.h>
@@ -28,6 +29,7 @@
 #include "../../livespace_db/livespace_db_internal.h"
 
 class ApplauncherPage;
+struct ApplauncherIconView;
 
 /* an icon's data is livespace_db's LsdbIcon (its folder's LsdbFolder), as the data cache gives
    it */
@@ -83,9 +85,17 @@ public:
 	   deleted alone without a folder (0x810D1A06) */
 	bool CanAddChild(const char *titleId);
 	void PutInFolder(const paf::common::SharedPtr<ApplauncherIcon> &folder);
+	/* PLACEHOLDER names: the icon's widget pressed (0x810D076C), and the drag events
+	   0x2000D-0x2000F of its widget (0x810D1110) */
+	void OnPressed();
+	void OnDragEvent(paf::ui::Event *e, paf::ui::AppIconBase *widget);
+	/* PLACEHOLDER name: a step of the icon's drag over the pages (0 begun, 1 moved, 2 ended)
+	   with its widget, the page turned at an edge (0x810D0AB0) */
+	void UpdateDrag(int phase, paf::ui::AppIconBase *widget, int edge);
 
-	SceUInt32 reserved0[4];
-	paf::ui::AppIconBase **m_icon;		/* PLACEHOLDER: the icon's widget, first of its view */
+	SceUInt32 reserved0;
+	paf::wstring m_label;			/* PLACEHOLDER: the label its widget shows */
+	ApplauncherIconView *m_icon;		/* PLACEHOLDER: its view from the icon pool */
 	ApplauncherPage *m_page;		/* PLACEHOLDER: the page it is on */
 	SceUInt8 reserved1[4];
 	bool m_selected;			/* PLACEHOLDER: marked selected (Select, Unselect) */
@@ -98,6 +108,41 @@ public:
 	int m_homeSlot;				/* PLACEHOLDER: the slot it goes back to when moved aside */
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_image;	/* PLACEHOLDER: its image */
 	LsdbIconPtr m_data;			/* PLACEHOLDER: its data */
+	SceUInt32 reserved3;
+	int m_effectOn;				/* PLACEHOLDER: its view's effect played */
+};
+
+/* PLACEHOLDER: the effect an icon's view plays (160 bytes; its class at 0x810CC8D0 on, not
+   written yet) */
+class ApplauncherIconEffect {
+public:
+	/* PLACEHOLDER names: made (0x810CC914), cleared (0x810CDD04), played
+	   each frame (0x810CDA62), and begun for the view (0x810CDCFA) */
+	ApplauncherIconEffect();
+	void Reset();
+	void Update();
+	void Begin(ApplauncherIconView *view);
+	/* PLACEHOLDER names: the view's widget's pose taken as the edit's start (0x810CDB28), and
+	   the widget dropped in from above its place (0x810CDCB2) */
+	void Capture(ApplauncherIconView *view);
+	void DropIn(ApplauncherIconView *view);
+
+	SceUInt32 reserved[40];
+};
+
+/*
+ * PLACEHOLDER: an icon's widgets, taken from the icon pool while the icon is shown (176
+ * bytes, 42 made by applauncherIconPoolCreate)
+ */
+struct ApplauncherIconView {
+	/* (0x810BB748, 0x810BBC6E) */
+	ApplauncherIconView();
+	~ApplauncherIconView();
+
+	paf::ui::AppIconBase *m_widget;
+	paf::common::SharedPtr<ApplauncherIcon> m_owner;	/* the icon it shows */
+	SceUInt32 reserved;
+	ApplauncherIconEffect m_effect;
 };
 
 
@@ -546,6 +591,12 @@ extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDragItem;
 extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDropTarget;
 /* PLACEHOLDER: the icons' move time, 275 ms (0x81507820, the page's file, beside 375 and 325) */
 extern const float g_applauncherIconMoveTime;
+/* PLACEHOLDER: the time a view is held for before its hold event, 1000 ms (0x81507DE8, the
+   icon pool's file) */
+extern float g_applauncherIconHoldTime;
+/* PLACEHOLDER: the time an icon moves to its slot in the edit, 750 ms (0x81507478, in a file
+   of shared times beside 0x8150746C-0x81507474, not written yet) */
+extern const float g_applauncherEditMoveTime;
 /* PLACEHOLDER: the icons' tilt effect moved on a frame (0x810CF2AA), and the drag left
    when the dragged widget is in its drag mode (0x810D1DE6) */
 void applauncherIconEffectUpdate(void);
@@ -556,7 +607,8 @@ bool applauncherPagesLoaded(void);
 void applauncherPagesSetStarted(void);
 /* PLACEHOLDER: the applauncher's request kept, outside the IDU mode and without one
    (0x810B8830, applauncher_page.cpp) */
-void applauncherPagesHoldRequest(void);
+void applauncherPagesHoldRequest(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
+				 void *data);
 /* PLACEHOLDER: the IconCacheManager, its manager first (0x815553B0, the icon cache's file) */
 struct ApplauncherIconCache {
 	paf::cache::CacheManager *m_manager;
@@ -564,7 +616,7 @@ struct ApplauncherIconCache {
 extern ApplauncherIconCache *g_applauncherIconCache;
 /* PLACEHOLDER: the dragged icon's widget put back in its icon mode and the home told whether a
    folder or an icon was let go (0x810BCB44) */
-void applauncherIconWidgetLeaveDrag(paf::ui::AppIconBase **icon);
+void applauncherIconWidgetLeaveDrag(ApplauncherIconView *view);
 /* PLACEHOLDER: an icon made for the data, on the plugin (0x810CFD82, the icon's file) */
 paf::common::SharedPtr<ApplauncherIcon> applauncherIconCreate(paf::Plugin *plugin,
 							 const LsdbIconPtr &data);
@@ -573,8 +625,21 @@ paf::common::SharedPtr<ApplauncherIcon> applauncherIconCreate(paf::Plugin *plugi
    (0x810BBE66) (the icon widget's file) */
 float applauncherIconWidgetFolderSize(void);
 float applauncherIconWidgetSize(void);
-void applauncherIconWidgetUpdateLabel(paf::ui::AppIconBase **icon);
-void applauncherIconWidgetUpdateMark(paf::ui::AppIconBase **icon);
+void applauncherIconWidgetUpdateLabel(ApplauncherIconView *view);
+void applauncherIconWidgetUpdateMark(ApplauncherIconView *view);
+/* PLACEHOLDER: a free view taken for the icon (0x810BBED0), and given back, shrunk away first
+   when animated (0x810BC560) (the icon pool's file) */
+ApplauncherIconView *applauncherIconPoolAlloc(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+void applauncherIconPoolFree(ApplauncherIconView *view, bool animate);
+/* PLACEHOLDER: a view put in the edit, its pose taken when animated (0x810BC8D0), and out
+   (0x810BCA36); its label set (0x810BCA56); dropped in (0x810BCA64); its icon's position
+   (0x810BCA72); and its drag begun (0x810BCABA) (the icon pool's file) */
+void applauncherIconWidgetBeginEdit(ApplauncherIconView *view, bool animate);
+void applauncherIconWidgetEndEdit(ApplauncherIconView *view);
+void applauncherIconWidgetSetLabel(ApplauncherIconView *view, const paf::wstring &label);
+void applauncherIconWidgetDropIn(ApplauncherIconView *view);
+void applauncherIconWidgetSetIconPos(ApplauncherIconView *view, const paf::math::v3 &pos);
+void applauncherIconWidgetBeginDrag(ApplauncherIconView *view);
 
 /* the home, while the plugin runs (0x81555154) */
 extern ApplauncherHome *g_applauncherHome;

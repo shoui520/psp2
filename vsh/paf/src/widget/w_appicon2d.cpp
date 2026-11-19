@@ -2,6 +2,7 @@
  * paf::ui::AppIcon2d (DEBUGGER 0x810d8b10..0x810d8cc4): an application icon whose icon is a
  * bubble object, lit, in place of the base's first draw object.
  */
+#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/bubble_obj.h>
 #include <graphics/drawobj/plane_obj.h>
 #include <widget/w_appicon2d.h>

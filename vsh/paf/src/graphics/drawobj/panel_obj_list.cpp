@@ -10,6 +10,7 @@
 #include <graphics/drawobj/effect_path.h>
 #include <graphics/color.h>
 #include <graphics/arl/arl_defines.h>
+#include <graphics/arl/gxm/gxm_framebuffer_copy.h>
 #include <graphics/drawobj/bubble_obj.h>
 #include <graphics/drawobj/draw_env_flush.h>
 #include <graphics/drawobj/draw_obj.h>

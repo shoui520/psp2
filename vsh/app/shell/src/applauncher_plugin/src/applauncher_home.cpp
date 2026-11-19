@@ -1070,7 +1070,7 @@ void ApplauncherHome::ExitEditMode()
 	Framework::Instance()->PlayCommonSE(42, 1.0f, false);
 	if (g_applauncherDragItem.get() != NULL) {
 		if (g_applauncherDragItem->m_icon != NULL)
-			ScePafWidget_931AD41E(*g_applauncherDragItem->m_icon, true);
+			ScePafWidget_931AD41E(g_applauncherDragItem->m_icon->m_widget, true);
 		g_applauncherDragItem->Drop();
 	}
 	ScePafWidget_21125870(g_applauncherHome->m_scroller.m_scrollView, 64);
@@ -2658,8 +2658,8 @@ void applauncherHomeOnOverlayEvent(int32_t type, ui::Handler *self, ui::Event *e
 {
 	if (g_applauncherHome->m_appPage != NULL) {
 		if (g_applauncherDragItem.get() != NULL && g_applauncherDragItem->m_icon != NULL &&
-		    *g_applauncherDragItem->m_icon != NULL &&
-		    (*g_applauncherDragItem->m_icon)->m_icon_mode == 2)
+		    g_applauncherDragItem->m_icon->m_widget != NULL &&
+		    g_applauncherDragItem->m_icon->m_widget->m_icon_mode == 2)
 			applauncherIconWidgetLeaveDrag(g_applauncherDragItem->m_icon);
 		applauncherHomeCloseAppPage(true);
 	} else if (g_applauncherState->m_requestId == 1) {
@@ -2928,8 +2928,8 @@ fade:
 
 	ApplauncherIcon *item = g_applauncherDragItem.get();
 
-	if (item != NULL && item->m_icon != NULL && *item->m_icon != NULL &&
-	    (*item->m_icon)->m_icon_mode == 2) {
+	if (item != NULL && item->m_icon != NULL && item->m_icon->m_widget != NULL &&
+	    item->m_icon->m_widget->m_icon_mode == 2) {
 		if (g_applauncherDropTarget.get() != NULL) {
 			item->MoveDrag(0);
 		} else if (item->m_page == NULL) {
