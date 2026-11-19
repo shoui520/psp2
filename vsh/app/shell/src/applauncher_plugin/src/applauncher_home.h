@@ -704,10 +704,11 @@ void applauncherFolderRename(ApplauncherIcon *folder, paf::wstring &name);
 void applauncherDestroyWidgetCB(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
 				void *data);
 
-/* the listener of the home's touches (its methods out of line, 0x810C9B58) */
+/* the listener of the home's input (its methods out of line, 0x810C9B58; applauncher_input.cpp) */
 class ApplauncherInputListener : public paf::inputdevice::InputListener {
 public:
 	ApplauncherInputListener();
+	virtual void OnUpdate(const paf::inputdevice::Data *data);
 };
 
 /* the home screen (272 bytes, made by applauncherPageCreate) */

@@ -135,6 +135,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/applauncher_plugin/src/applauncher_iconinfomode.cpp
 	src/applauncher_plugin/src/applauncher_setthememode.cpp
 	src/applauncher_plugin/src/applauncher_launchermode.cpp
+	src/applauncher_plugin/src/applauncher_defaultlayout.cpp
+	src/applauncher_plugin/src/applauncher_input.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
