@@ -25,13 +25,13 @@ typedef struct SceJpegArmEncoderContext {
 	SceUInt32 bitBuffer;		/* +0x08 */
 	SceInt8 bitCount;		/* +0x0C */
 	SceUInt8 ratio;			/* +0x0D compression ratio, 0x40 after Init */
-	SceUInt8 reserved0E[6];		/* +0x0E */
+	SceUInt16 reserved0E[3];		/* +0x0E */
 	SceUInt16 validWidth;		/* +0x14 */
 	SceUInt16 validHeight;		/* +0x16 */
 	SceUInt16 width;		/* +0x18 */
 	SceUInt16 height;		/* +0x1A */
 	SceUInt8 format;		/* +0x1C */
-	SceUInt8 headerMode;		/* +0x1D */
+	SceInt8 headerMode;		/* +0x1D */
 	SceUInt8 headerRatio;		/* +0x1E ratio the tables were built for */
 	SceUInt8 chromaPad;		/* +0x1F */
 	SceUInt8 reserved20[0x160];	/* +0x20 */
