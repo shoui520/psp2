@@ -15,6 +15,7 @@ extern "C" {
 #include <np/np_auth_oauth.h>
 #include <np/np_manager.h>
 #include <np/np_error.h>
+#include "np_manager.h"
 #include "../../../../../lowlayer/src/ipmi/client.h"
 #include "../../../../../lowlayer/src/ipmi_wrapper/ipmi_wrapper_client.h"
 #include "../../../../../lowlayer/src/blocking_ipc/blocking_ipc_client.h"
@@ -185,14 +186,6 @@ typedef struct NpAllocator {
 	void (*free)(void *ptr);
 } NpAllocator;
 
-/* the account information the NP service keeps (sceNpManagerGetCachedParam's source) */
-typedef struct NpManagerAccountInfo {
-	SceNpId npId;			/* 0x000 */
-	SceUInt8 reserved1[20];		/* 0x024 */
-	SceNpAvatarUrl avatarUrl;	/* 0x038 */
-	SceUInt8 reserved2[144];	/* 0x0B8 */
-} NpManagerAccountInfo;
-
 extern "C" {
 
 /* the SceIpmi library's IpmiWrapper::Client and BlockingIpc::Client methods (libshellsvc) */
@@ -240,7 +233,6 @@ int SceNpCommon_BA6310A1(void);
 int SceNpManager_4110B787(SceNpAuthOAuthRequestId *reqId);
 int SceNpManager_3907F96A(SceNpAuthOAuthRequestId reqId);
 int SceNpManager_737B2820(SceNpAuthOAuthRequestId reqId);
-int SceNpManager_E45E4003(NpManagerAccountInfo *info);
 int SceNpManager_2EA038D8(void *ticket, SceSize *ticketSize);
 int npAuthGetAuthorizationCode(SceNpAuthOAuthRequestId reqId,
 			       const SceNpAuthGetAuthorizationCodeParameter *param,

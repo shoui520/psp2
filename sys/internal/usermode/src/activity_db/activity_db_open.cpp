@@ -8,10 +8,6 @@
 /* the queue thread's priority, for the daemon's and the network daemon's */
 #define ACTIVITY_DB_DAEMON_PRIORITY	0x1000010A
 
-/* the titles whose statuses the activity feed's database drops when it opens */
-#define ACTIVITY_DB_DROPPED_TITLE_0	"NPXS10998"
-#define ACTIVITY_DB_DROPPED_TITLE_1	"NPXS10999"
-
 /* the databases the library's exports opened, made at their first use */
 struct ActivityDbDatabasesHolder {
 	ActivityDbDatabasesHolder() : databases(NULL)
@@ -54,8 +50,8 @@ static int ActivityDbOpen(ActivityDbDatabases **databases, const char *path, int
 	if (database == ACTIVITY_DB_DATABASE_ACTIVITY) {
 		paf::vector<paf::string> titleIds;
 
-		titleIds.push_back(paf::string(ACTIVITY_DB_DROPPED_TITLE_0));
-		titleIds.push_back(paf::string(ACTIVITY_DB_DROPPED_TITLE_1));
+		titleIds.push_back(paf::string(ACTIVITY_DB_LOCAL_TITLE_0));
+		titleIds.push_back(paf::string(ACTIVITY_DB_LOCAL_TITLE_1));
 		result = SceActivityDb_FBB82B37()->DeleteTitles(ACTIVITY_DB_DATABASE_ACTIVITY,
 			&titleIds, NULL);
 	}

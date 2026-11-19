@@ -733,7 +733,7 @@ static int ActivityDbReadGoodJobOwners(dbutil::Connection *connection, SceInt64 
 	goodJob->mainRowid = mainRowid;
 	found = false;
 	while ((result = statement->Step(1)) == 0) {
-		ActivityDbGoodJobOwner owner;
+		ActivityDbOwner owner;
 		int count;
 		int i;
 
@@ -1022,13 +1022,13 @@ static __attribute__((noinline)) int ActivityDbReadStatusKey(dbutil::Connection 
 			if (result != 0)
 				return result;
 			if (sce_paf_strcmp("ownerID", value.name) == 0) {
-				key->ownerId = ActivityDbValueText(&value);
+				key->owner.ownerId = ActivityDbValueText(&value);
 			} else if (sce_paf_strcmp("ownerType", value.name) == 0) {
-				key->ownerType = ActivityDbValueInt(&value);
+				key->owner.ownerType = ActivityDbValueInt(&value);
 			} else if (sce_paf_strcmp("statusID", value.name) == 0) {
 				key->statusId = ActivityDbValueInt(&value);
 			} else if (sce_paf_strcmp("titleID", value.name) == 0) {
-				key->titleId = ActivityDbValueText(&value);
+				key->owner.titleId = ActivityDbValueText(&value);
 				if (titleId != NULL)
 					*titleId = ActivityDbValueText(&value);
 			}
@@ -1095,9 +1095,9 @@ static __attribute__((noinline)) int ActivityDbReadCommentKey(dbutil::Connection
 			else if (sce_paf_strcmp("commentID", value.name) == 0)
 				key->commentId = ActivityDbValueInt(&value);
 			else if (sce_paf_strcmp("ownerID", value.name) == 0)
-				key->ownerId = ActivityDbValueText(&value);
+				key->owner.ownerId = ActivityDbValueText(&value);
 			else if (sce_paf_strcmp("ownerType", value.name) == 0)
-				key->ownerType = ActivityDbValueInt(&value);
+				key->owner.ownerType = ActivityDbValueInt(&value);
 		}
 	}
 	if (result != 1)
@@ -1699,9 +1699,9 @@ static inline int ActivityDbReadCommentKeys(dbutil::Connection *connection,
 			else if (sce_paf_strcmp("commentID", value.name) == 0)
 				key->commentId = ActivityDbValueInt(&value);
 			else if (sce_paf_strcmp("ownerID", value.name) == 0)
-				key->ownerId = ActivityDbValueText(&value);
+				key->owner.ownerId = ActivityDbValueText(&value);
 			else if (sce_paf_strcmp("ownerType", value.name) == 0)
-				key->ownerType = ActivityDbValueInt(&value);
+				key->owner.ownerType = ActivityDbValueInt(&value);
 		}
 		key->status = *status;
 		++key;
@@ -1734,7 +1734,7 @@ int ActivityDbQuery::GetCommentKeys(const SceInt64 *mainRowid,
 
 /* reads who gave the status at mainRowid good jobs; found tells whether anyone did */
 static inline int ActivityDbReadGoodJobOwnerList(dbutil::Connection *connection,
-	SceInt64 mainRowid, paf::vector<ActivityDbGoodJobOwner> *owners, bool *found)
+	SceInt64 mainRowid, paf::vector<ActivityDbOwner> *owners, bool *found)
 {
 	paf::string sql("SELECT ownerID, ownerType FROM tbl_goodJobTable WHERE mainRowID=?");
 	dbutil::RefPtr<dbutil::Statement> statement;
@@ -1747,7 +1747,7 @@ static inline int ActivityDbReadGoodJobOwnerList(dbutil::Connection *connection,
 	if (result != 0)
 		return result;
 	while ((result = statement->Step(1)) == 0) {
-		ActivityDbGoodJobOwner owner;
+		ActivityDbOwner owner;
 		int count;
 		int i;
 
@@ -1970,10 +1970,10 @@ static inline int ActivityDbReadUnreadStatusKeys(dbutil::Connection *connection,
 		ActivityDbStatusKey key;
 
 		key.rowid = ActivityDbValueInt64(&rowid);
-		key.ownerId = ActivityDbValueText(&ownerId);
-		key.ownerType = ActivityDbValueInt(&ownerType);
+		key.owner.ownerId = ActivityDbValueText(&ownerId);
+		key.owner.ownerType = ActivityDbValueInt(&ownerType);
 		key.statusId = ActivityDbValueInt(&statusId);
-		key.titleId = ActivityDbValueText(&titleId);
+		key.owner.titleId = ActivityDbValueText(&titleId);
 		keys->push_back(key);
 	}
 	if (result != 1)

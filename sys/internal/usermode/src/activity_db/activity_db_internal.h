@@ -29,6 +29,7 @@
 #include <dbutil/statement.h>
 #include <dbutil/function.h>
 #include <np/np_manager/np_manager.h>
+#include <np/activity/np_activity.h>
 #include "activity_db.h"
 
 /* SceActivityDb's errors (no SDK header names them) */
@@ -42,8 +43,12 @@
 #define ACTIVITY_DB_ERROR_INVALID_TYPE		((int)0x8010100A)
 #define ACTIVITY_DB_ERROR_NO_ROWID		((int)0x8010100D)
 #define ACTIVITY_DB_ERROR_NO_TIME		((int)0x80101010)	/* a status without its times */
+#define ACTIVITY_DB_ERROR_CANCELLED		((int)0x80101014)	/* a network request cancelled */
 #define ACTIVITY_DB_ERROR_OUT_OF_RANGE		((int)0x80101040)	/* more rows than counted */
+#define ACTIVITY_DB_ERROR_NO_ID		((int)0x80101041)	/* a request without the ID it names */
+#define ACTIVITY_DB_ERROR_NO_THREAD		((int)0x80101044)	/* the network daemon's queue */
 #define ACTIVITY_DB_ERROR_WAIT			((int)0x80101045)	/* a job's result never came */
+#define ACTIVITY_DB_ERROR_NOT_LOCAL		((int)0x80101046)	/* offline, a status of the network */
 
 /* SQLite's constraint error, as dbutil reports it: a row the database already has */
 #define ACTIVITY_DB_SQLITE_CONSTRAINT	((int)(DBUTIL_ERROR_SQLITE | SQLITE_CONSTRAINT))
@@ -156,6 +161,7 @@ typedef void (*ActivityDbListener)(void *arg);
 #define ACTIVITY_DB_QUERY_TITLE_ONLY	3	/* a title's statuses alone */
 
 /* a status's owner (ActivityDbStatus::ownerType) */
+#define ACTIVITY_DB_OWNER_USER		0	/* another user, named by online ID */
 #define ACTIVITY_DB_OWNER_TITLE		1	/* a title, named by titleID */
 #define ACTIVITY_DB_OWNER_SELF		2	/* the signed-in user */
 #define ACTIVITY_DB_OWNER_UNKNOWN	3
@@ -283,16 +289,25 @@ struct ActivityDbComment {
 PAF_VECTOR_NOINLINE_CLEAR(ActivityDbComment, paf::allocator<ActivityDbComment>)
 PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbComment, paf::allocator<ActivityDbComment>)
 
-/* what names a status on the network: its owner, its title and its ID */
+/* who wrote a status, a comment or a good job: a user, or a title */
+struct ActivityDbOwner {
+	ActivityDbOwner() : ownerType(ACTIVITY_DB_OWNER_UNKNOWN)
+	{
+	}
+
+	paf::string ownerId;		/* the user's online ID, or the title's ID */
+	int ownerType;			/* ACTIVITY_DB_OWNER_* */
+	paf::string titleId;		/* the title it was written from */
+};
+
+/* what names a status on the network: its owner and its ID */
 struct ActivityDbStatusKey {
-	ActivityDbStatusKey() : rowid(0), ownerType(ACTIVITY_DB_OWNER_UNKNOWN), statusId(-1)
+	ActivityDbStatusKey() : rowid(0), statusId(-1)
 	{
 	}
 
 	SceInt64 rowid;
-	paf::string ownerId;
-	int ownerType;			/* ACTIVITY_DB_OWNER_* */
-	paf::string titleId;
+	ActivityDbOwner owner;
 	int statusId;
 };
 
@@ -302,17 +317,14 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbStatusKey, paf::allocator<ActivityDbStat
 
 /* what names a comment on the network: its status's key, and its own */
 struct ActivityDbCommentKey {
-	ActivityDbCommentKey()
-		: rowid(0), commentId(-1), ownerType(ACTIVITY_DB_OWNER_UNKNOWN)
+	ActivityDbCommentKey() : rowid(0), commentId(-1)
 	{
 	}
 
 	ActivityDbStatusKey status;
 	SceInt64 rowid;
 	int commentId;
-	paf::string ownerId;
-	int ownerType;			/* ACTIVITY_DB_OWNER_* */
-	paf::string reserved;		/* constructed and destroyed, never read or written */
+	ActivityDbOwner owner;
 };
 
 /* Sony calls this vector's clear */
@@ -363,24 +375,14 @@ struct ActivityDbGoodJob {
 	int numOfVotes;
 };
 
-/* a good job's giver */
-struct ActivityDbGoodJobOwner {
-	ActivityDbGoodJobOwner() : ownerType(ACTIVITY_DB_OWNER_UNKNOWN)
-	{
-	}
-
-	paf::string ownerId;
-	int ownerType;
-	paf::string reserved;
-};
-
-PAF_VECTOR_NOINLINE_CLEAR(ActivityDbGoodJobOwner, paf::allocator<ActivityDbGoodJobOwner>)
-PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbGoodJobOwner, paf::allocator<ActivityDbGoodJobOwner>)
+/* a good job's givers */
+PAF_VECTOR_NOINLINE_CLEAR(ActivityDbOwner, paf::allocator<ActivityDbOwner>)
+PAF_VECTOR_NOINLINE_PUSH_BACK(ActivityDbOwner, paf::allocator<ActivityDbOwner>)
 
 /* what names a status's good jobs on the network: its key, who gave them, and the user's */
 struct ActivityDbGoodJobKey {
 	ActivityDbStatusKey status;
-	paf::vector<ActivityDbGoodJobOwner> owners;
+	paf::vector<ActivityDbOwner> owners;
 	bool isVoted;			/* the user gave one */
 };
 
@@ -825,8 +827,9 @@ struct ActivityDbQueryHandle {
 	ActivityDbQuery *m_query;
 };
 
-/* the database a query of type reads */
+/* the database a query of type reads, and the one that keeps rowid */
 int ActivityDbQueryDatabase(int type);
+int ActivityDbDatabaseOfRowid(SceInt64 rowid);
 
 /*
  * the first database's recent statuses of titleId (or of every title, by scope) since since,
@@ -845,13 +848,354 @@ int ActivityDbUpdateCounts(int database, int keepNewComments,
 	paf::vector<ActivityDbNetStatus> *statuses);
 
 
+/* the connection to the NP activity service (Sony's object name SceLsdbActNpAcc) */
+struct ActivityDbNpAccess {
+	ActivityDbNpAccess();
+	~ActivityDbNpAccess();
+
+	int Open();
+	void Close();
+	int Begin(int mode, int *connection);
+	int End();
+	void Abort();
+
+	int m_connection;		/* 0 while closed */
+	paf::thread::Mutex m_lock;	/* "SceLsdbActNpAcc" */
+	bool m_busy;			/* a request is running on the connection */
+};
+
+/* a request of the network daemon's queue, run on its thread */
+class ActivityDbNetJob {
+public:
+	virtual ~ActivityDbNetJob()
+	{
+	}
+
+	virtual int Run() = 0;
+
+	/* told the result of Run, or ACTIVITY_DB_ERROR_CANCELLED */
+	virtual void Done(int result)
+	{
+	}
+};
+
+/* the network daemon's requests and the thread that runs them */
+class ActivityDbNetQueue : public paf::thread::Thread {
+public:
+	struct Entry {
+		Entry(ActivityDbNetJob *job, SceInt64 id) : job(job), id(id), cancelled(false)
+		{
+		}
+
+		~Entry()
+		{
+			if (job != NULL)
+				delete job;
+		}
+
+		ActivityDbNetJob *job;
+		SceInt64 id;		/* the caller's, to cancel it by */
+		bool cancelled;
+	};
+
+	ActivityDbNetQueue(int priority);
+
+	virtual ~ActivityDbNetQueue()
+	{
+	}
+
+	virtual void EntryFunction();
+
+	int Push(ActivityDbNetJob *job, SceInt64 id);
+	void Stop();
+	int Cancel(SceInt64 id);
+
+	paf::list<Entry *> m_entries;
+	SceInt64 m_current;			/* the running request's ID; INT64_MAX: none */
+	paf::thread::Mutex m_lock;		/* "SceLsdbActNetQueue" */
+	paf::thread::Cond m_emptyCond;		/* "SceLsdbActNetQueueEmpty": the thread waits on it */
+	paf::thread::Cond m_notEmptyCond;	/* "SceLsdbActNetQueueNotEmpty": Stop waits on it */
+};
+
+/* the ID of a request nobody cancels */
+#define ACTIVITY_DB_NET_ID_NONE		0x7FFFFFFFFFFFFFFFLL
+
+/* told that a network request ended, with the request's arg */
+struct ActivityDbNetCallback {
+	void (*func)(int result, bool found, void *arg);
+	void *arg;
+};
+
+/* the newest news a sync brought: the status with comments or good jobs the user has not seen */
+struct ActivityDbSyncSummary {
+	ActivityDbSyncSummary()
+		: ownerType(ACTIVITY_DB_OWNER_UNKNOWN), rowid(0), hasNewComments(false),
+		  hasNewVotes(false), addedComments(0), addedVotes(0)
+	{
+	}
+
+	paf::string ownerId;
+	int ownerType;			/* ACTIVITY_DB_OWNER_* */
+	SceInt64 rowid;
+	paf::string titleId;
+	bool hasNewComments;
+	bool hasNewVotes;
+	int addedComments;		/* on the user's own statuses */
+	int addedVotes;
+};
+
+/* told that a sync of the activity feed ended */
+typedef void (*ActivityDbSyncCallback)(int result, bool changed, const paf::string *titleId,
+	const SceInt64 *syncedTime, const ActivityDbSyncSummary *summary, void *arg);
+
+/* what a sync of the activity feed reads */
+struct ActivityDbSyncParam {
+	ActivityDbQueryCondition condition;
+	SceInt64 since;			/* the oldest status it reads; 0: the database's base time */
+	int reserved;			/* copied, never read */
+	ActivityDbSyncCallback callback;
+	void *arg;
+	bool reload;			/* read from the start, not from since */
+};
+
 /* the network daemon (Sony's object name SceLsdbActNetDaemon), made at its first use */
 struct ActivityDbNetDaemon {
+	ActivityDbNetDaemon()
+		: m_queue(NULL), m_lock("SceLsdbActNetDaemon", 0), m_started(false)
+	{
+		m_npAccess = &s_noNpAccess;
+	}
+
 	int Start(int priority, SceUID *threadId);
-	int Stop();
+	void Stop();
+	int PostStatus(const ActivityDbStatus *status, SceInt64 id);
+	int DeleteStatus(const int *statusId, SceInt64 id, ActivityDbJobWait *wait);
+	int PostComment(SceInt64 id, const SceInt64 *mainRowid, const ActivityDbComment *comment,
+		ActivityDbJobWait *wait);
+	int DeleteComment(SceInt64 id, const ActivityDbCommentKey *key, ActivityDbJobWait *wait);
+	int VoteGoodJob(SceInt64 id, const ActivityDbStatusKey *key, ActivityDbJobWait *wait);
+	int CancelGoodJob(SceInt64 id, const ActivityDbStatusKey *key, ActivityDbJobWait *wait);
+	int SyncActivity(SceInt64 id, const ActivityDbSyncParam *param, const paf::string *titleId);
+	int SyncDetail(SceInt64 id, const paf::string *titleId, const SceInt64 *mainRowid,
+		const ActivityDbNetCallback *callback, ActivityDbJobWait *wait);
+	int GetAvatarInfo(SceInt64 id, int database, int mode,
+		const ActivityDbQueryCondition *condition, const ActivityDbNetCallback *callback);
+	int Cancel(SceInt64 id);
+	int RemoveTitleStatuses(SceInt64 id, const ActivityDbOwner *owner, int scope,
+		ActivityDbJobWait *wait);
+	ActivityDbOwner GetUser();
+	int RemoveAllMyStatuses(SceInt64 id, ActivityDbJobWait *wait);
+	int SendWaitStatuses();
+	void Abort();
+
+	static ActivityDbNpAccess s_noNpAccess;	/* the connection while none is open */
+
+	ActivityDbNpAccess *m_npAccess;
+	ActivityDbNetQueue *m_queue;
+	paf::thread::Mutex m_lock;		/* "SceLsdbActNetDaemon" */
+	ActivityDbOwner m_user;			/* the signed-in user, read at its first use */
+	bool m_started;
 };
 
 extern "C" ActivityDbNetDaemon *SceActivityDb_7B68F69D(void);
+
+/* the titles whose statuses stay on the system: never sent to the network (Sony reads them
+   from arrays, not literals) */
+#define ACTIVITY_DB_LOCAL_TITLE_0	"NPXS10998"
+#define ACTIVITY_DB_LOCAL_TITLE_1	"NPXS10999"
+extern const char g_activityDbLocalTitle0[];
+extern const char g_activityDbLocalTitle1[];
+
+/* whether two strings are equal, telling by their first characters before comparing */
+static inline bool ActivityDbStrEqual(const char *s1, const char *s2)
+{
+	return s1[0] == s2[0] && sce_paf_strcmp(s1, s2) == 0;
+}
+
+static inline bool ActivityDbIsLocalTitle(const paf::string *titleId)
+{
+	return ActivityDbStrEqual(g_activityDbLocalTitle0, titleId->c_str()) ||
+	       ActivityDbStrEqual(g_activityDbLocalTitle1, titleId->c_str());
+}
+
+/* the network daemon's requests (Sony's mutexes name them "SceActDbSyncObj<request>") */
+class ActivityDbNetSyncActivityJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetSyncActivityJob(const ActivityDbSyncParam *param, const paf::string *titleId)
+		: m_param(*param), m_titleId(*titleId), m_syncedTime(0), m_netTime(0),
+		  m_changed(false)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbSyncParam m_param;
+	paf::string m_titleId;
+	SceInt64 m_syncedTime;		/* the database's last sync of the title */
+	SceInt64 m_netTime;		/* the network's time of the statuses read */
+	bool m_changed;
+	paf::vector<ActivityDbNetStatus> m_added;
+	paf::vector<ActivityDbNetStatus> m_updated;
+	paf::vector<SceInt64> m_deleted;
+	ActivityDbSyncSummary m_summary;
+};
+
+class ActivityDbNetSyncDetailJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetSyncDetailJob(const paf::string *titleId, const SceInt64 *mainRowid,
+		const ActivityDbNetCallback *callback, ActivityDbJobWait *wait)
+		: m_titleId(*titleId), m_mainRowid(*mainRowid), m_callback(*callback), m_wait(wait),
+		  m_changed(false)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	paf::string m_titleId;
+	SceInt64 m_mainRowid;
+	ActivityDbNetCallback m_callback;
+	ActivityDbJobWait *m_wait;
+	bool m_changed;
+};
+
+class ActivityDbNetGetAvatarInfoJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetGetAvatarInfoJob(int database, int mode,
+		const ActivityDbQueryCondition *condition, const ActivityDbNetCallback *callback)
+		: m_database(database), m_mode(mode), m_condition(*condition),
+		  m_callback(*callback), m_found(false)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	int m_database;
+	int m_mode;
+	ActivityDbQueryCondition m_condition;
+	ActivityDbNetCallback m_callback;
+	bool m_found;
+};
+
+class ActivityDbNetPostStatusJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetPostStatusJob(const ActivityDbStatus *status) : m_status(*status)
+	{
+	}
+
+	virtual int Run();
+
+	ActivityDbStatus m_status;
+};
+
+class ActivityDbNetSendWaitStatusesJob : public ActivityDbNetJob {
+public:
+	virtual int Run();
+};
+
+class ActivityDbNetDeleteStatusJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetDeleteStatusJob(const int *statusId, ActivityDbJobWait *wait)
+		: m_statusId(*statusId), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	int m_statusId;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetPostCommentJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetPostCommentJob(const SceInt64 *mainRowid, const ActivityDbComment *comment,
+		ActivityDbJobWait *wait)
+		: m_mainRowid(*mainRowid), m_comment(*comment), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	SceInt64 m_mainRowid;
+	ActivityDbComment m_comment;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetDeleteCommentJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetDeleteCommentJob(const ActivityDbCommentKey *key, ActivityDbJobWait *wait)
+		: m_key(*key), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbCommentKey m_key;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetVoteGoodJobJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetVoteGoodJobJob(const ActivityDbStatusKey *key, ActivityDbJobWait *wait)
+		: m_key(*key), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbStatusKey m_key;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetCancelGoodJobJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetCancelGoodJobJob(const ActivityDbStatusKey *key, ActivityDbJobWait *wait)
+		: m_key(*key), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbStatusKey m_key;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetRemoveAllMyStatusesJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetRemoveAllMyStatusesJob(const ActivityDbOwner &user, ActivityDbJobWait *wait)
+		: m_user(user), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbOwner m_user;
+	ActivityDbJobWait *m_wait;
+};
+
+class ActivityDbNetRemoveTitleStatusesJob : public ActivityDbNetJob {
+public:
+	ActivityDbNetRemoveTitleStatusesJob(const ActivityDbOwner *owner, int scope,
+		ActivityDbJobWait *wait)
+		: m_owner(*owner), m_scope(scope), m_wait(wait)
+	{
+	}
+
+	virtual int Run();
+	virtual void Done(int result);
+
+	ActivityDbOwner m_owner;
+	int m_scope;
+	ActivityDbJobWait *m_wait;
+};
 
 /* the schema a database is brought up to: the activity feed's, and the news's */
 int ActivityDbUpgradeActivity(dbutil::Connection *connection, int version);

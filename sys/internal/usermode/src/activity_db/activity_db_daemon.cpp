@@ -1207,9 +1207,9 @@ int ActivityDbDaemon::RunDeleteComments(ActivityDbAccess *access,
 
 /* adds a status's good jobs from owners */
 static int ActivityDbInsertGoodJobs(dbutil::Connection *connection, const SceInt64 *mainRowid,
-	paf::vector<ActivityDbGoodJobOwner> *owners)
+	paf::vector<ActivityDbOwner> *owners)
 {
-	paf::vector<ActivityDbGoodJobOwner>::iterator owner;
+	paf::vector<ActivityDbOwner>::iterator owner;
 
 	if (owners->size() == 0)
 		return 0;
@@ -1259,9 +1259,9 @@ int ActivityDbDaemon::RunVoteGoodJob(ActivityDbAccess *access, ActivityDbGoodJob
 
 /* removes a status's good jobs from owners */
 static int ActivityDbDeleteGoodJobs(dbutil::Connection *connection, const SceInt64 *mainRowid,
-	paf::vector<ActivityDbGoodJobOwner> *owners)
+	paf::vector<ActivityDbOwner> *owners)
 {
-	paf::vector<ActivityDbGoodJobOwner>::iterator owner;
+	paf::vector<ActivityDbOwner>::iterator owner;
 
 	if (owners->size() == 0)
 		return 0;
@@ -1317,7 +1317,7 @@ static int ActivityDbSetVoted(dbutil::Connection *connection, const SceInt64 *ma
 
 int ActivityDbDaemon::RunCancelGoodJob(ActivityDbAccess *access, ActivityDbGoodJobKey *key)
 {
-	paf::vector<ActivityDbGoodJobOwner>::iterator owner;
+	paf::vector<ActivityDbOwner>::iterator owner;
 	dbutil::Connection *connection;
 	int result;
 

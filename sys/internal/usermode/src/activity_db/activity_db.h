@@ -129,6 +129,10 @@ int SceActivityDb_D67DF90F(ActivityDbDaemon *daemon, int queue, const void *titl
 /* opens (or makes) the activity database at path with flags, through the library's one instance */
 int SceActivityDb_B5012F40(const char *path, int flags);
 
+/* the system's title ID of an NP title ID (the title itself when it has none) */
+const char *SceActivityDb_F138D4E5(const char *npTitleId);
+const char *SceActivityDb_575DA6A6(const char *titleId);
+
 #ifdef __cplusplus
 }
 #endif
