@@ -82,7 +82,7 @@ void applauncherSlotsDestroy(void);
 
 /* a theme applied: the icons reloaded at the plugin's init (0x810AF256), and refreshed at its
    start (0x810B17CE) */
-void applauncherThemeReload(void);
+int applauncherThemeReload(void);
 int applauncherThemeRefresh(void);
 
 #endif

@@ -110,6 +110,9 @@ int shellAppEventSend(int event, const void *data, int flags);
    error the start ended with (0x81004AE4) */
 int main(int argc, char *argv[]);			/* the process main (0x81004AE4) */
 SceUInt64 shellStartGetTime(void);			/* (0x81004C4C) */
+/* SceThreadmgr's system time, low word (the user library's export; vitasdk:
+   sceKernelGetSystemTimeLow) */
+extern "C" SceUInt32 SceThreadmgr_47F6DE49(void);
 int shellStartAppDataMount(void);			/* ux0 application data, id 105 (0x81004C1E) */
 int shellStartAppDataUmount(void);			/* (0x81004C3C) */
 int shellStartupInit(void);				/* the startup settings read (0x81004EC6) */

@@ -17,32 +17,19 @@
 #include <common/shared_ptr.h>
 #include <graphics/surface/surface.h>
 #include <widget/core/widget.h>
+#include <widget/w_appicon_base.h>
 #include <widget/w_scroll_view_base.h>
 #include <inputdevice/inputlistener.h>
 #include <job/job.h>
 #include <cache/cache_image.h>
+#include <cache/cache_manager.h>
 #include "../../../plugins.h"
 #include "../../livespace_db/livespace_db_internal.h"
 
 class ApplauncherPage;
 
-/* PLACEHOLDER: an application's state that its icon shows (its class not read) */
-struct ApplauncherAppState {
-	SceUInt32 reserved[4];
-	int m_state;				/* 1: being deleted with its whole folder */
-	int m_id;				/* what the page's saved order keeps of it */
-};
-
-/* PLACEHOLDER: an icon's data (the data cache's entry, its class not read) */
-struct ApplauncherAppData {
-	SceUInt64 m_appId;			/* PLACEHOLDER: what the pages' icons are found by */
-	SceUInt32 reserved0[4];
-	paf::string m_iconPath;			/* PLACEHOLDER: the icon's image */
-	SceUInt32 reserved2;
-	paf::string m_titleId;
-	SceUInt32 reserved1[6];
-	ApplauncherAppState *m_state;
-};
+/* an icon's data is livespace_db's LsdbIcon (its folder's LsdbFolder), as the data cache gives
+   it */
 
 /* PLACEHOLDER: an icon of a page (its class at 0x810D0xxx, not written yet; fields read here
    only) */
@@ -57,7 +44,7 @@ public:
 	void Update(bool animate);
 	/* PLACEHOLDER names: the icon given its application's new data (0x810D1502), and a
 	   folder's children's data taken in (0x810D1C90) */
-	void SetData(const paf::common::SharedPtr<ApplauncherAppData> &data);
+	void SetData(const LsdbIconPtr &data);
 	void UpdateFolder();
 	/* PLACEHOLDER names: the icon marked selected (0x810D0326), and its widget given the
 	   focus, 1 without a widget (0x810D0332) */
@@ -69,26 +56,26 @@ public:
 	   data asked for again (0x810D22A2) */
 	void MarkUpdate();
 	void RequestData();
+	/* PLACEHOLDER name: the dragged icon moved over the slot under it (0x810D1138) */
+	void MoveDrag(int option);
 	/* the icon's widget, NULL without one (0x810D0006) */
 	paf::ui::Widget *GetWidget();
 	/* PLACEHOLDER name: the icon's widget faded in (0x810D1D38) */
 	void Show();
 
 	SceUInt32 reserved0[4];
-	paf::ui::Widget **m_icon;		/* PLACEHOLDER: the icon's widget */
+	paf::ui::AppIconBase **m_icon;		/* PLACEHOLDER: the icon's widget, first of its view */
 	ApplauncherPage *m_page;		/* PLACEHOLDER: the page it is on */
 	SceUInt8 reserved1[5];
 	bool m_hidden;				/* PLACEHOLDER: not shown (left out of the snaps) */
-	SceUInt8 reserved2[2];
+	SceUInt8 reserved2;
+	bool m_added;				/* PLACEHOLDER: just put on the home by func0 */
 	int m_slot;				/* PLACEHOLDER: its slot on the page */
 	SceUInt32 reserved3[3];
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_image;	/* PLACEHOLDER: its image */
-	ApplauncherAppData *m_data;		/* PLACEHOLDER: its data */
+	LsdbIconPtr m_data;			/* PLACEHOLDER: its data */
 };
 
-typedef paf::common::SharedPtr<ApplauncherAppData> ApplauncherAppDataPtr;
-/* PLACEHOLDER: the data of a page's icons, as the data cache gives them */
-typedef paf::vector<ApplauncherAppDataPtr> ApplauncherAppDataList;
 
 /* PLACEHOLDER: an icon taken off a page, as the page's saved order is told of it */
 struct ApplauncherRemovedIcon {
@@ -174,21 +161,6 @@ public:
 	virtual void Layout(int mode);
 };
 
-/* what a page is made from: its background, wave and the sizes of its image */
-struct ApplauncherPageParam {
-	paf::string m_imagePath;		/* PLACEHOLDER: the background shown, its image */
-	int m_waveType;				/* PLACEHOLDER: and its wave */
-	int m_imageWidth;
-	int m_imageHeight;
-	int m_thumbnailWidth;
-	int m_thumbnailHeight;
-	SceUInt32 m_fontColor;
-
-	ApplauncherPageParam() : m_imageWidth(0), m_imageHeight(0), m_thumbnailWidth(0),
-		m_thumbnailHeight(0), m_fontColor(0x1FFFFFF)
-	{
-	}
-};
 
 /*
  * PLACEHOLDER: a page of the home (its code in the file after this one, 0x810B297C on): its
@@ -205,6 +177,9 @@ public:
 	virtual void reserved6(void);
 	virtual int GetIndex(void);		/* PLACEHOLDER name */
 	virtual paf::ui::Widget *GetWidget(void);
+	virtual bool IsOpened(void);		/* PLACEHOLDER name: the application page's opening done */
+	virtual void reserved10(void);
+	virtual void UpdateFade(void);		/* PLACEHOLDER name: the wave's fade applied each frame */
 
 	int m_type;				/* 1: the last, empty page */
 	paf::common::SharedPtr<ApplauncherIcon> m_slots[10];
@@ -215,11 +190,11 @@ public:
 class ApplauncherPage : public ApplauncherPageBase, public ShellSnapListItem {
 public:
 	/* the page made on the plugin, from the parameters (0x810D3BB8) */
-	ApplauncherPage(paf::Plugin *plugin, const ApplauncherPageParam *param, int type);
+	ApplauncherPage(paf::Plugin *plugin, const LsdbPage *param, int type);
 	/* the page saved to the database (0x810B86B4) */
 	void Save();
 
-	ApplauncherPageParam m_param;		/* what it was made from */
+	LsdbPage m_param;		/* what it was made from */
 	paf::ui::Widget *m_noticeText;		/* PLACEHOLDER: the notice page's text */
 	SceUInt32 reserved3[27];		/* PLACEHOLDER: the rest of the page (320 bytes) */
 
@@ -235,15 +210,15 @@ public:
 	void Load(bool fast);
 	/* PLACEHOLDER names: the page's parameters copied out (0x810D2716), and set
 	   (0x810D274C) */
-	void GetParam(ApplauncherPageParam *param);
-	void SetParam(const ApplauncherPageParam *param, bool save);
+	void GetParam(LsdbPage *param);
+	void SetParam(const LsdbPage *param, bool save);
 	/* PLACEHOLDER name: the icons put back in their slots, the focused one from its drag
 	   (0x810D364E) */
 	void RestoreIcons(const paf::common::SharedPtr<ApplauncherIcon> &focus);
 	/* PLACEHOLDER: 1 when the application's page goes with its focus (0x810B5506) */
 	int IsAppRemoved();
 	/* PLACEHOLDER name: the icons given their new data (0x810D2B40) */
-	void UpdateIcons(ApplauncherAppDataList *list);
+	void UpdateIcons(LsdbIconList *list);
 	/* PLACEHOLDER names: the icon of the title in a slot (0x810B7DEE), or in a slot or a
 	   folder of one, the folder given back (0x810D3A64) */
 	paf::common::SharedPtr<ApplauncherIcon> FindIcon(const paf::string &titleId);
@@ -252,13 +227,31 @@ public:
 	/* PLACEHOLDER names: the icon of the application in a slot (0x810D3996), and the icons
 	   moved aside from the one opened (0x810D319A) */
 	paf::common::SharedPtr<ApplauncherIcon> FindIcon(SceUInt64 appId);
+	/* PLACEHOLDER name: the icon whose data's state has the id (0x810D39EE) */
+	paf::common::SharedPtr<ApplauncherIcon> FindIconById(int id);
 	void MoveIconsAside(const paf::common::SharedPtr<ApplauncherIcon> &icon);
 	/* PLACEHOLDER name: the selected marks of its icons cleared (0x810B7EF2) */
 	void UnselectAll();
+	/* PLACEHOLDER names: the slot whose icon has the cursor, -1 without one or unloaded
+	   (0x810B7F08), and the slot's icon given the focus (0x810B7F48) */
+	int GetCursorSlot();
+	void FocusSlot(int slot);
 	/* PLACEHOLDER names: each icon's effect resumed (0x810B7F7A), and each icon's image
 	   reloaded (0x810D2C3E) */
 	void ResumeIcons();
 	void ReloadIcons();
+	/* PLACEHOLDER names: whether an icon fits after the last one (not the last, empty page,
+	   and its last slot free; 0x810B7F94), and the icon in the last slot used (0x810B7FA8) */
+	bool CanAddIcon();
+	paf::common::SharedPtr<ApplauncherIcon> GetLastIcon();
+	/* PLACEHOLDER name: the slot after the last one used, -1 when the last is (0x810B6ACC) */
+	int GetFreeSlot();
+	/* PLACEHOLDER names: an icon made for the data and put in the slot after the last one used
+	   (0x810B4B24), the icons' focus moves to each other set (0x810B3BF0), and what the page
+	   does once an icon is added: nothing (an empty function, 0x814098DC) */
+	paf::common::SharedPtr<ApplauncherIcon> AddIcon(const LsdbIconPtr &data);
+	void UpdateFocusLinks();
+	void OnIconAdded();
 };
 
 /* the home's page indicator: the dots under the pages (0x810C24D8; names ours) */
@@ -279,34 +272,6 @@ public:
 class ApplauncherInputListener : public paf::inputdevice::InputListener {
 public:
 	ApplauncherInputListener();
-};
-
-/* PLACEHOLDER: the home's task, ended when the home goes (its class not read) */
-class ApplauncherHomeTask {
-public:
-	virtual void reserved0(void);
-	virtual void reserved1(void);
-	virtual void reserved2(void);
-	virtual void reserved3(void);
-	virtual void reserved4(void);
-	virtual void reserved5(void);
-	virtual void reserved6(void);
-	virtual void Finish(void);
-};
-
-class ApplauncherHomeTaskRef {
-public:
-	ApplauncherHomeTaskRef() : m_task(NULL)
-	{
-	}
-
-	~ApplauncherHomeTaskRef()
-	{
-		if (m_task != NULL)
-			m_task->Finish();
-	}
-
-	ApplauncherHomeTask *m_task;
 };
 
 /* the home screen (272 bytes, made by applauncherPageCreate) */
@@ -353,7 +318,7 @@ public:
 	int RemoveApp(const paf::string &titleId);
 	/* each page's icons given their data, the notice updated (0x810AF1CA) */
 	void UpdatePageIcons(
-		const paf::vector<paf::common::SharedPtr<ApplauncherAppDataList> > &pages);
+		const paf::vector<paf::common::SharedPtr<LsdbIconList> > &pages);
 	/* the view's shows held, once (0x810AF220), and let go of (0x810AF23A) */
 	void HoldView();
 	void ReleaseView();
@@ -367,6 +332,12 @@ public:
 	bool LoadBackground(ApplauncherPage *page);
 	/* the application's icon on any page (0x810AFE82) */
 	paf::common::SharedPtr<ApplauncherIcon> FindIcon(SceUInt64 appId);
+	/* PLACEHOLDER name: the icon of a page whose data's state has the id (0x810B17F2) */
+	paf::common::SharedPtr<ApplauncherIcon> FindIconById(int id);
+	/* the snaps of the pages set: in idu mode only pages with a shown icon, else all (0x810AD1D2) */
+	void UpdateSnaps();
+	/* PLACEHOLDER name: the home updated each frame on the main thread (0x810B1D32) */
+	void Update();
 	/* the application's page opened from its icon, unless it is in view (0x810B04F8) */
 	void OpenApp(const paf::common::SharedPtr<ApplauncherIcon> &icon, const paf::string &name,
 		     bool animate);
@@ -385,7 +356,7 @@ public:
 	int m_layer;				/* topmenu's layer the home is drawn in */
 	int m_snapId;				/* PLACEHOLDER: the snap ID of the page in view */
 	int m_backgroundState;			/* PLACEHOLDER: 2 while the background changes */
-	ApplauncherHomeTaskRef m_task;
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> m_task;	/* the background image's cache entry */
 	paf::string m_imagePath;
 	int m_waveType;
 	float m_texU;				/* PLACEHOLDER: the image's area in its texture */
@@ -401,8 +372,8 @@ public:
 	ApplauncherPageIndicator *m_indicator;
 	bool m_ready;
 	int m_mode;
-	float m_folderScale[2];
-	int m_reserved7;
+	float m_fade[2];			/* PLACEHOLDER: the wave's fade, and eased (quad out) */
+	float m_fadeTime;			/* PLACEHOLDER: seconds since the fade began (m_mode 0 in, 1 out) */
 	paf::ui::Widget *m_overlay;
 	bool m_flags0[3];
 	int m_waitDialog;			/* the waiting dialog's ID, -1 without one */
@@ -420,31 +391,49 @@ public:
 	paf::string m_appName;
 	ApplauncherPage *m_appPage;		/* PLACEHOLDER: the page of the application named */
 	paf::common::SharedPtr<ApplauncherIcon> m_appIcon;	/* PLACEHOLDER: the closed page's focus */
-	int m_reserved13;
+	float m_appIconTime;			/* PLACEHOLDER: seconds it has waited for its widget */
 	LsdbEventListener *m_lsdbListener;
 };
 
 /* the icon being dragged, while one is (0x81555254) */
 extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDragItem;
+/* PLACEHOLDER: the icon the dragged one is over (0x81555264, the page's file) */
+extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDropTarget;
+/* PLACEHOLDER: the icons' move time, 275 ms (0x81507820, the page's file, beside 375 and 325) */
+extern const float g_applauncherIconMoveTime;
+/* PLACEHOLDER: the icons' tilt effect moved on a frame (0x810CF2AA), and the drag left
+   when the dragged widget is in its drag mode (0x810D1DE6) */
+void applauncherIconEffectUpdate(void);
+void applauncherIconCancelDrag(void);
+/* PLACEHOLDER: the pages' first load done (0x810B3502), and the home's start marked done
+   once (0x810B3B36), both in the page's file */
+bool applauncherPagesLoaded(void);
+void applauncherPagesSetStarted(void);
+/* PLACEHOLDER: the IconCacheManager, its manager first (0x815553B0, the icon cache's file) */
+struct ApplauncherIconCache {
+	paf::cache::CacheManager *m_manager;
+};
+extern ApplauncherIconCache *g_applauncherIconCache;
+/* PLACEHOLDER: the dragged icon's widget put back in its icon mode and the home told whether a
+   folder or an icon was let go (0x810BCB44) */
+void applauncherIconWidgetLeaveDrag(paf::ui::AppIconBase **icon);
 
 /* the home, while the plugin runs (0x81555154) */
 extern ApplauncherHome *g_applauncherHome;
 
 /* a page made from the parameters (or the theme's) and put in after the other (0x810A9812) */
-ApplauncherPage *applauncherHomeAddPage(const ApplauncherPageParam *param, ApplauncherPage *after,
+ApplauncherPage *applauncherHomeAddPage(const LsdbPage *param, ApplauncherPage *after,
 					bool focus, bool save);
 
 /* the page after it, the page itself at the end (0x810ACF7C) */
 ApplauncherPage *applauncherHomeGetNextPage(ApplauncherPage *page);
 /* the parameters of the page in view copied out (0x810ACFAA), and set (0x810AD192) */
-void applauncherHomeGetPageParam(ApplauncherPageParam *param);
-void applauncherHomeSetPageParam(const ApplauncherPageParam *param);
+void applauncherHomeGetPageParam(LsdbPage *param);
+void applauncherHomeSetPageParam(const LsdbPage *param);
 /* PLACEHOLDER: the background's change timed out: the page in view's background shown
    (0x810B1964) */
 void applauncherHomeOnBackgroundTimeout(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
 					void *data);
-/* the snaps of the pages set: in idu mode only pages with a shown icon, else all (0x810AD1D2) */
-void applauncherHomeUpdateSnaps(void);
 /* the application's page closed: the dots shown, its icons put back, the view shown, its focus
    kept when asked, and the overlay faded out outside the edit (0x810AD2CC) */
 void applauncherHomeCloseAppPage(bool keepFocus);
@@ -454,7 +443,8 @@ void applauncherHomeJumpTo(ApplauncherPage *page);
 void applauncherIconPoolCloseAppPage(ApplauncherPage *page);
 /* PLACEHOLDER: the image of the path loaded by the DataCacheManager, its task kept
    (0x810BA5A2, the data cache's file) */
-int applauncherDataCacheLoad(const paf::string &path, ApplauncherHomeTaskRef *task,
+int applauncherDataCacheLoad(const paf::string &path,
+			     paf::intrusive_ptr<paf::cache::CacheImageInterface> *image,
 			     const void *option, int priority, bool reload);
 /* the background of the page in view loaded again (0x810B0CF6) */
 void applauncherHomeReloadBackground(void);
@@ -462,7 +452,7 @@ void applauncherHomeReloadBackground(void);
 void applauncherHomeSetWaitingAppCount(int count);
 /* the title's icon given its new data, else its image loaded and given to topmenu
    (0x810AFA24) */
-void applauncherHomeUpdateApp(const paf::string &titleId, const ApplauncherAppDataPtr &data);
+void applauncherHomeUpdateApp(const paf::string &titleId, const LsdbIconPtr &data);
 /* the pages' background images listed (0x810AFC08) */
 void applauncherHomeGetPageImages(paf::vector<paf::string> *paths);
 /* the empty pages deleted, the last kept (0x810AFCA0) */
@@ -520,6 +510,46 @@ void applauncherInterfaceReloadIcons(void);
 void applauncherInterfaceClearRequest(void);
 void applauncherHomeHideWave(void);
 
+/* PLACEHOLDER names: the interface's func18, the index of the page in focus, -1 without one
+   (0x810B10E2); func19, the application's page closed (0x810B1110); func21, whether the title
+   is on the home, as an icon or in a folder (0x810B1126); func22, the title's change log opened
+   (0x810B12B4); func23, the theme reloaded and its UI refreshed on the main thread
+   (0x810B12C6); func24, the theme reloaded (0x810B12FA) */
+int applauncherInterfaceGetFocusedPage(void);
+void applauncherInterfaceCloseAppPage(void);
+bool applauncherInterfaceHasApp(const paf::string &titleId);
+int applauncherInterfaceOpenChangeLog(const char *titleId, void *arg1, void *arg2, void *arg3,
+				      void *arg4);
+int applauncherInterfaceRefreshTheme(void);
+int applauncherInterfaceReloadTheme(void);
+/* PLACEHOLDER name: the interface's func26, the kept request marked (0x810B17D8) */
+int applauncherInterfaceSetRequest(void);
+/* PLACEHOLDER: what a theme read by applauncherThemeReload gives the home: each page's
+   background and each of its icons' data, in the order of shellThemeGetIconTitles */
+struct ApplauncherThemeData {
+	paf::vector<paf::common::SharedPtr<LsdbPage> > m_pages;
+	paf::vector<LsdbIconPtr > m_apps;
+};
+
+/* PLACEHOLDER: the theme read last applied to the pages and icons, and let go of
+   (0x810B1302) */
+void applauncherHomeApplyTheme(void);
+/* PLACEHOLDER names: the titles a theme gives icons for (twenty), their count given
+   (0x813BC2DC); the IconCacheManager's image of the path cleared (0x810BD498), and room made in
+   its surface pool (0x810BD4AE) */
+const char **shellThemeGetIconTitles(SceUInt32 *count);
+void applauncherIconCacheClearPath(const paf::string &path);
+void applauncherIconCacheMakeSpace(void);
+
+/* PLACEHOLDER: the title's change log ("AppLauncherChangeLog") made and opened, its id given
+   back (0x810B965A) */
+int applauncherChangeLogOpen(const char *titleId, void *arg1, void *arg2, void *arg3,
+			     void *arg4);
+/* PLACEHOLDER: the theme's UI refreshed, on the main thread (0x810B28B0) */
+void applauncherHomeOnRefreshThemeUI(void *data);
+/* PLACEHOLDER: a job's end, the semaphore given released (0x810B28B8) */
+void applauncherHomeOnJobDone(int result, void *data);
+
 /* PLACEHOLDER: the interface's func2: livearea_plugin waited for and its LiveArea opened, the
    icon of the title in focus faded in once its image is ready (0x810AFF96) */
 int applauncherInterfaceOpenLiveArea(const LsdbAppInfoPtr *app, bool animate);
@@ -552,6 +582,13 @@ void applauncherIconDelete(const paf::common::SharedPtr<ApplauncherIcon> &icon, 
 void applauncherPagesRemoveIcons(paf::vector<ApplauncherRemovedIcon> *icons);
 /* PLACEHOLDER: livespace_db's export, not declared there yet: the title's application taken
    off, whole with its folder or not */
+extern "C" int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *titleId,
+	LsdbIconPtr *icon, int *pageNo, bool theme);
+/* PLACEHOLDER: livespace_db's exports, not declared there yet: the pages counted, and the pages'
+   rows read from the page given */
+extern "C" int SceLsdb_94128795(AppInfoSClient *client);
+extern "C" int SceLsdb_8FAD093B(AppInfoSClient *client, int pageNo, unsigned int flags,
+	LsdbPageList *pages);
 extern "C" int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string &titleId, bool whole, int flags);
 
 /* PLACEHOLDER: the 42 icons of the pool dimmed or not (0x810BCC60, the icon pool's file) */
@@ -565,7 +602,56 @@ paf::common::SharedPtr<paf::job::JobItem> applauncherDeletePageJobStart(paf::job
 /* a CreateNewPageJob for the page, its icons and parameters, put on the queue (0x811C5848) */
 paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewPageJobStart(
 	paf::job::JobQueue *queue, int page, const paf::vector<LsdbAppInfoPtr> &icons,
-	const ApplauncherPageParam &param, void *arg1, void *arg2);
+	const LsdbPage &param, void *arg1, void *arg2);
+
+/* PLACEHOLDER: what the database jobs (0x811C5xxx) keep after paf's JobItem: the function
+   called when done with its argument, and what the database returned */
+class ApplauncherLsdbJob : public paf::job::JobItem {
+public:
+	void (*m_callback)(int result, void *arg);
+	void *m_callbackArg;
+	int m_ret;
+	bool m_done;
+};
+
+/* the database jobs that put an application's row in (InsertAppInfoJob, 0x811C6110), rewrite
+   it (UpdateAppInfoJob, 0x811C6340), rewrite what changed of it (UpdateAppInfoDiffJob,
+   0x811C6568), or put it in on a new page (CreateNewPageAndInsertAppJob, 0x811C67E2), put on
+   the queue */
+paf::common::SharedPtr<paf::job::JobItem> applauncherInsertAppInfoJobStart(
+	paf::job::JobQueue *queue, const LsdbAppInfoPtr &app,
+	const paf::vector<LsdbAppInfoPtr> &icons, int page, const LsdbIconPtr &icon,
+	void (*callback)(int result, void *arg), void *arg);
+paf::common::SharedPtr<paf::job::JobItem> applauncherUpdateAppInfoJobStart(
+	paf::job::JobQueue *queue, const LsdbAppInfoPtr &app,
+	const paf::vector<LsdbAppInfoPtr> &icons, const LsdbIconPtr &icon,
+	void (*callback)(int result, void *arg), void *arg);
+paf::common::SharedPtr<paf::job::JobItem> applauncherUpdateAppInfoDiffJobStart(
+	paf::job::JobQueue *queue, const LsdbAppInfoPtr &app,
+	const paf::vector<LsdbAppInfoPtr> &icons, const LsdbIconPtr &icon, int diff,
+	void (*callback)(int result, void *arg), void *arg);
+paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewPageAndInsertAppJobStart(
+	paf::job::JobQueue *queue, int page, const LsdbPage &param, const LsdbAppInfoPtr &app,
+	const paf::vector<LsdbAppInfoPtr> &icons, const LsdbIconPtr &icon,
+	void (*callback)(int result, void *arg), void *arg);
+
+/* PLACEHOLDER: what the interface's func0 is given: an application to put on the home or to
+   rewrite there */
+struct ApplauncherInstallRequest {
+	LsdbIconPtr icon;			/* its icon's row */
+	LsdbAppInfoPtr app;			/* its parameters */
+	paf::vector<LsdbAppInfoPtr> icons;	/* PLACEHOLDER: the rows written with it */
+	int diff;				/* PLACEHOLDER: what changed, for mode 1 */
+	bool focus;				/* its page shown and its icon given the focus */
+	int mode;				/* PLACEHOLDER: 0 put in, 1 what changed rewritten,
+						   2 rewritten */
+};
+
+/* PLACEHOLDER: livespace_db's exports, not declared there yet: an application's _eboot_attr,
+   LAREA_TYPE and #_promote_attr */
+extern "C" SceInt64 SceLsdb_45B38A03(const LsdbAppInfoPtr *app);
+extern "C" SceInt64 sceLsdbGetMetaContentsPath(const LsdbAppInfoPtr *app);
+extern "C" SceInt64 SceLsdb_0B16523B(const LsdbAppInfoPtr *app);
 
 /* PLACEHOLDER: the applauncher's state another file keeps (0x81555408) */
 struct ApplauncherSettings {
@@ -598,19 +684,24 @@ enum {
 	TOPMENU_PLUGIN_FUNC_SHOW_HOME		= 27,
 	TOPMENU_PLUGIN_FUNC_EDIT_MODE_ENTERED	= 29,
 	TOPMENU_PLUGIN_FUNC_EDIT_MODE_LEFT	= 30,
+	TOPMENU_PLUGIN_FUNC_HOME_STARTED	= 32,
 	TOPMENU_PLUGIN_FUNC_SET_SCROLL_VIEW	= 38,
+	TOPMENU_PLUGIN_FUNC_IS_LAYER_ACTIVE	= 41,
+	TOPMENU_PLUGIN_FUNC_HOME_READY	= 50,
 	TOPMENU_PLUGIN_FUNC_IS_WAVE_SHOWN	= 57,
 	TOPMENU_PLUGIN_FUNC_LIVEAREA_OPENED	= 85,
 };
 
 /* livearea_plugin's functions the home calls (indexes in its PLACEHOLDER table) */
 enum {
-	LIVEAREA_PLUGIN_FUNC_OPEN		= 19,	/* PLACEHOLDER name */
+	LIVEAREA_PLUGIN_FUNC_OPEN		= 19,	/* PLACEHOLDER names */
+	LIVEAREA_PLUGIN_FUNC_APP_ADDED		= 20,
 };
 
-/* PLACEHOLDER: the interface's func2 when livearea_plugin does not come (0x80103301), and
-   without a title in focus (0x80103303) */
+/* PLACEHOLDER: livearea_plugin did not come (0x80103301), a job could not be made
+   (0x80103302), and without a title in focus or the theme's titles (0x80103303) */
 #define APPLAUNCHER_ERROR_NO_LIVEAREA		((int)0x80103301)
+#define APPLAUNCHER_ERROR_NO_MEMORY		((int)0x80103302)
 #define APPLAUNCHER_ERROR_NO_TITLE		((int)0x80103303)
 
 #endif

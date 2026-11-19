@@ -33,10 +33,6 @@
 
 using namespace paf;
 
-/* SceThreadmgr's system time, low word (the user library's export; vitasdk:
-   sceKernelGetSystemTimeLow) */
-extern "C" SceUInt32 SceThreadmgr_47F6DE49(void);
-
 /* the application data mounted at start */
 #define SHELL_APPDATA_MOUNT_ID		105
 
