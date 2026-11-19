@@ -190,7 +190,6 @@ int shellZoomMgrCreate(void);
 /* the services the boot job starts (ShellBootJob::Run) */
 int shellCloudDataGetMcId(int type, void *mcId);	/* vshAppMgrCloudDataGetMcId (0x81417DB4) */
 int shellCloudDataSetMcId(int type, const void *mcId);	/* vshAppMgrCloudDataSetMcId (0x81417DBC) */
-int shellLaunchListUpdate(void);		/* ur0:game/launch from version_launch.dat (0x810A258C) */
 int shellLiblocationStart(void);		/* SceLiblocationPrivateHeap, ur0:liblocation (0x81002D8C) */
 void shellCalibrationUpdateStart(void);		/* thread SceCalibrationUpdate (0x81002570) */
 int shellCalibrationUpdateThreadCreate(void);	/* (0x810E181C) */

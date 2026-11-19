@@ -31,6 +31,7 @@
 #include "alarm.h"
 #include "promoter.h"
 #include "license_updater.h"
+#include "white_list.h"
 
 using namespace paf;
 
@@ -137,11 +138,6 @@ static bool s_topmenuHeld;
 static bool s_powerManageHeld;
 static string s_pspemuWorkMountPoint;
 bool g_gameRepromoting;
-
-/* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
-int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */
-int gameLaunchEmuListCheck(const string &titleId, bool *listed);	/* 0x810A4AA2: list_launch_emu.dat */
-bool gameLaunchCheckIsOn(void);		/* 0x810A4B20: /CONFIG/SYSTEM/launch_check, on without it */
 
 /* topmenu_plugin's interface, found once */
 static inline ShellPluginInterface *gameTopmenuInterface(void)
@@ -1334,7 +1330,7 @@ int gamePluginAppIsAllowed(const string &titleId, bool *allowed, int *model)
 		if (sceSblPmMgrGetCurrentMode(&mode) == 0 && mode == 1) {
 			*allowed = true;
 		} else {
-			ret = gameDolceAppCheck(titleId, allowed);
+			ret = gameWhiteListVitaCheck(titleId, allowed);
 			if (ret < 0)
 				return ret;
 		}
@@ -1360,7 +1356,7 @@ int gamePluginEmuAppIsAllowed(const string &titleId, bool *allowed, int *model)
 		return 0;
 	}
 
-	int ret = gameLaunchEmuListCheck(titleId, allowed);
+	int ret = gameWhiteListEmuCheck(titleId, allowed);
 
 	if (ret < 0)
 		return ret;
@@ -1422,7 +1418,7 @@ int gamePluginPsmAppIsAllowed(const string &titleId, bool *allowed, int *model)
 	} else if (dolce) {
 		SceUInt8 mode = 0;
 		bool pmMode = sceSblPmMgrGetCurrentMode(&mode) == 0 && mode == 1;
-		bool launchCheck = gameLaunchCheckIsOn();
+		bool launchCheck = gameWhiteListCheckIsOn();
 
 		if (!pmMode && launchCheck) {
 			string end(GAME_DOLCE_PSM_APPS_END);

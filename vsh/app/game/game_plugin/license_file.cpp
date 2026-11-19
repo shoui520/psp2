@@ -27,12 +27,6 @@ using namespace paf;
 #define GAME_LICENSE_FLAG_ACTIVATED	1
 
 /*
- * PLACEHOLDER: a flag set in a 128-byte license file, at its offset 124, under the license
- * files' lock (0x810A53CC, in another file of the shell).
- */
-int gameLicenseFileSetFlag(common::SharedPtr<File> file, SceUInt32 flag);
-
-/*
  * buf written as the file name in the folder dir, made first if it is not there; path is left
  * the file's path. On a failure detail is left the drive of dir or path; on a failed write the
  * file is removed (0x8103E944).
@@ -141,7 +135,7 @@ int gameLicenseActivate(const string *path)
 	if (ret < 0)
 		return ret;
 
-	ret = gameLicenseFileSetFlag(file, GAME_LICENSE_FLAG_ACTIVATED);
+	ret = gameFttLicenseSetFlag(file, GAME_LICENSE_FLAG_ACTIVATED);
 	if (ret < 0)
 		return ret;
 

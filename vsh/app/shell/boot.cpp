@@ -37,6 +37,7 @@
 #include "src/livespace_db/livespace_db.h"
 #include "src/livespace_db/lsdb_keys.h"
 #include <graphics/drawobj/effect_path.h>
+#include "../game/game_plugin/white_list.h"
 
 using namespace paf;
 
@@ -132,7 +133,7 @@ public:
 		if (shellCloudDataGetMcId(0, mcId) != 0)
 			shellCloudDataSetMcId(0, NULL);
 		if (system::Model::GetType() == 1)
-			shellLaunchListUpdate();
+			gameWhiteListUpdate();
 		shellLiblocationStart();
 		if (system::Model::GetType() != 1)
 			shellCalibrationUpdateStart();

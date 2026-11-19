@@ -10,6 +10,7 @@
 #include <file/file.h>
 
 #include "../../shell/src/livespace_db/livespace_db_internal.h"
+#include "ftt_license.h"
 
 /* an application's information from livespace_db (0x81018666) */
 int gameAppGetInfo(const char *titleId, LsdbAppInfoPtr *info);
@@ -963,26 +964,6 @@ int gamePresetGetDataSize(const char *titleId, GameCancelFunc cancel, void *arg,
 
 /* the name of the user's free-trial license file (game_lsdb.cpp, 0x8101D49E) */
 int gameNpDrmGetFttName(paf::string *fttName);
-
-/*
- * PLACEHOLDER: what 0x810A4EC4 reads from a free-trial license file, 0x50 bytes: its content ID
- * and two times it converts to dates.
- */
-struct GameFttLicense {
-	SceUInt8 header[8];
-	char contentId[48];
-	SceUInt64 time1;
-	SceUInt64 time2;
-	int otherField;
-	SceUInt32 flags;	/* bit 0: GameFttInfo's flag */
-};
-
-/*
- * PLACEHOLDER names: a free-trial license read from file (0x810A4EC4), and the size of the data
- * that follows it (0x810A5148)
- */
-int gameFttLicenseRead(paf::common::SharedPtr<paf::File> file, GameFttLicense *license);
-int gameFttLicenseGetDataSize(paf::common::SharedPtr<paf::File> file, SceSize *size);
 
 /* what gamePluginFttRead gives of an application's free-trial license */
 struct GameFttInfo {
