@@ -2334,7 +2334,7 @@ bool ApplauncherHome::LoadBackground(ApplauncherPage *page)
 	string path(m_imagePath);
 
 	m_flags0[2] = true;
-	applauncherDataCacheLoad(path, &m_task, NULL, 0, false);
+	applauncherDataCacheLoad(path, &m_task, NULL, NULL, false);
 	return true;
 }
 
@@ -2824,7 +2824,7 @@ void ApplauncherHome::Update()
 			} else {
 				if (m_flags0[2]) {
 					m_flags0[2] = false;
-					applauncherDataCacheLoad(m_imagePath, &m_task, NULL, 0, true);
+					applauncherDataCacheLoad(m_imagePath, &m_task, NULL, NULL, true);
 					goto fade;
 				}
 				view->SetTexture(g_applauncherPlugin->GetTexture(

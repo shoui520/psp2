@@ -550,11 +550,13 @@ void applauncherHomeCloseAppPage(bool keepFocus);
 void applauncherHomeJumpTo(ApplauncherPage *page);
 /* PLACEHOLDER: the application page's icons put back (0x810BAEFC, the icon pool's file) */
 void applauncherIconPoolCloseAppPage(ApplauncherPage *page);
-/* PLACEHOLDER: the image of the path loaded by the DataCacheManager, its task kept
-   (0x810BA5A2, the data cache's file) */
+/* PLACEHOLDER: the image of the path loaded by the DataCacheManager into the image's cache, on
+   the queue (NULL: the manager's), read straight from the file when directLoad is set
+   (0x810BA5A2, applauncher_datacache.cpp) */
 int applauncherDataCacheLoad(const paf::string &path,
 			     paf::intrusive_ptr<paf::cache::CacheImageInterface> *image,
-			     const void *option, int priority, bool reload);
+			     const paf::cache::CacheImage::Option *option, paf::job::JobQueue *queue,
+			     bool directLoad);
 /* the background of the page in view loaded again (0x810B0CF6) */
 void applauncherHomeReloadBackground(void);
 /* the applications with no room yet set, the notice shown for them (0x810AFA08) */
@@ -704,6 +706,18 @@ public:
 
 	CommonGuiDialogFunction m_func;
 	void *m_arg;
+};
+
+/*
+ * PLACEHOLDER: a message dialog's open handler: the dialog shows the text of the error its type
+ * holds, with no default or cancel button, when the error has one of its own (0x810BA724,
+ * 0x810BA76A)
+ */
+class ApplauncherErrorOpenHandler : public CommonGuiMessageDialogOpenHandler {
+public:
+	ApplauncherErrorOpenHandler();
+
+	virtual void operator()(CommonGuiMessageDialogParam *param);
 };
 
 /* PLACEHOLDER: the resource ID of an error's text, the generic one for the others (0x810BA734) */

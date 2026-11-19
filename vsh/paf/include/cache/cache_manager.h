@@ -14,6 +14,7 @@
 #include <std/memory>
 #include <cache/cache_base.h>
 #include <cache/cache_image.h>
+#include <thread/thread.h>
 
 namespace paf {
 
@@ -60,6 +61,25 @@ public:
 
 	class Params {
 	public:
+		/* the defaults (inline in Sony's callers): no heaps or surface pool, 4-byte
+		   alignment, the long-life heap cached, paf's normal thread priority for the jobs */
+		Params()
+			: longlife_heap(NULL), instant_heap(NULL), cache_instance_heap(NULL),
+			  longlife_heap_align_size(4), instant_heap_align_size(4), surface_pool(NULL),
+			  cancel_func(NULL), cancel_userdata(NULL), finish_func(NULL),
+			  finish_userdata(NULL), finalizer(NULL), cache_longlife_heap(true),
+			  local_file_nobuf(false), image_cache_divide_thread(false),
+			  http_file_open_flag(0), https_flag(0),
+			  local_job_prio(thread::GetPriority()->normal),
+			  net_job_prio(thread::GetPriority()->normal),
+			  operating_job_prio(thread::GetPriority()->normal)
+		{
+		}
+
+		~Params()
+		{
+		}
+
 		string name;
 		memory::HeapAllocator *longlife_heap;
 		memory::HeapAllocator *instant_heap;
@@ -109,8 +129,10 @@ public:
 
 	int32_t CreateCache(const string &path, intrusive_ptr<CacheBase> &ptr,
 			    const CacheBase::Option *option, job::JobQueue *q);
-	int32_t CreateCache(const string &path, intrusive_ptr<CacheImageInterface> &ptr,
-			    const CacheImage::Option *option, job::JobQueue *q0, job::JobQueue *q1);
+	/* the manager's third virtual function (vtable 0x812E1114) */
+	virtual int32_t CreateCache(const string &path, intrusive_ptr<CacheImageInterface> &ptr,
+				    const CacheImage::Option *option, job::JobQueue *q0,
+				    job::JobQueue *q1);
 	int32_t CreateCache(Plugin *plugin, IDParam &id, intrusive_ptr<CacheImageInterface> &ptr,
 			    const CacheImage::Option *option, job::JobQueue *q);
 	int32_t FindCache(const string &path, intrusive_ptr<CacheBase> &ptr);
