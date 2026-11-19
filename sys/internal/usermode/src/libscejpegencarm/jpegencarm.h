@@ -37,4 +37,20 @@ typedef struct SceJpegArmEncoderContext {
 	SceUInt8 reserved20[0x160];	/* +0x20 */
 } SceJpegArmEncoderContext;
 
+/* one image component of a strip (10 words): blocks of 8x8 taken in the order advance[] steps */
+typedef struct JpegEncArmComponent {
+	SceInt32 tableId;		/* quantisation and Huffman table set */
+	SceInt32 blockCount;		/* blocks per MCU, 0 ends the list */
+	const SceUInt8 *pBlock;		/* current block */
+	SceInt32 stride;		/* bytes per row of the plane */
+	SceInt32 advance[4];		/* step to the next block, per block of the MCU */
+	const SceUInt8 *pBase;		/* first block of the strip row */
+	SceInt32 rowStep;		/* step to the next strip row */
+} JpegEncArmComponent;
+
+extern SceUInt8 *jpegEncArmWriteHeader(SceJpegArmEncoderContext *context);
+extern SceInt32 jpegEncArmFlushBits(SceJpegArmEncoderContext *context);
+extern void jpegEncArmEncodeStrip(SceJpegArmEncoderContext *context, SceInt32 mcuCount,
+				  JpegEncArmComponent *components);
+
 #endif /* JPEGENCARM_H */
