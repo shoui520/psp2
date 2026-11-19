@@ -122,3 +122,44 @@ int sceJpegArmEncoderSetHeaderMode(SceJpegArmEncoderContext *context, SceUInt32 
 	context->headerMode = mode;
 	return 0;
 }
+
+extern void *sceClibMemcpy_safe(void *dst, const void *src, SceSize len);
+
+/* writes the bit buffer out as four bytes, each 0xFF followed by a stuffed 0 */
+int jpegEncArmFlushBits(SceJpegArmEncoderContext *context)
+{
+	SceUInt8 *p;
+	SceUInt32 bits;
+	int ret;
+
+	p = context->pOut;
+	bits = context->bitBuffer;
+	if (context->pOut >= context->pOutLimit)
+		return SCE_JPEG_ARM_ENCODER_ERROR_OUTPUT_FULL;
+	*p = bits >> 24;
+	if ((bits >> 24) == 0xFF)
+		*++p = 0;
+	p[1] = bits >> 16;
+	if ((SceUInt8)(bits >> 16) == 0xFF) {
+		p[2] = 0;
+		p++;
+	}
+	p[2] = bits >> 8;
+	if ((SceUInt8)(bits >> 8) == 0xFF) {
+		p[3] = 0;
+		p++;
+	}
+	p[3] = bits;
+	ret = 0;
+	if ((SceUInt8)bits == 0xFF) {
+		p[4] = 0;
+		p++;
+	}
+	context->pOut = &p[(context->bitCount + 39) >> 3];
+	return ret;
+}
+
+void *jpegEncArmMemcpy(void *dst, const void *src, SceSize len)
+{
+	return sceClibMemcpy_safe(dst, src, len);
+}
