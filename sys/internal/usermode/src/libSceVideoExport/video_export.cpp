@@ -319,30 +319,42 @@ extern "C" SceInt32 sceVideoExportFromFile(const VideoExportInputParam *pItems, 
 {
 	VideoExportSession session;
 	const VideoExportInputParam *pItem;
-	const SceUInt8 *pByte;
+	const char *pByte;
 	VideoExportOutputParam *pResult;
 	SceUInt32 i;
 	int j;
 	int ret;
 
-	if (pItems == NULL)
-		return VIDEO_EXPORT_ERROR_PARAM;
-	if (count == 0 || (SceUInt32)count > VIDEO_EXPORT_MAX_ITEMS)
-		return VIDEO_EXPORT_ERROR_PARAM;
+	if (pItems == NULL) {
+		ret = VIDEO_EXPORT_ERROR_PARAM;
+		goto end;
+	}
+	if (count == 0 || (SceUInt32)count > VIDEO_EXPORT_MAX_ITEMS) {
+		ret = VIDEO_EXPORT_ERROR_PARAM;
+		goto end;
+	}
 	if (mode <= 1) {
-		if (mode < 0)
-			return VIDEO_EXPORT_ERROR_PARAM;
+		if (mode < 0) {
+			ret = VIDEO_EXPORT_ERROR_PARAM;
+			goto end;
+		}
 	} else if (mode > 2) {
-		return VIDEO_EXPORT_ERROR_PARAM;
+		ret = VIDEO_EXPORT_ERROR_PARAM;
+		goto end;
 	}
 	pItem = pItems;
 	for (i = 0; i < (SceUInt32)count; i++) {
-		if (pItem->mode >= 2)
-			return VIDEO_EXPORT_ERROR_PARAM;
-		pByte = pItem->reserved;
+		if (pItem->mode != 0 && pItem->mode != 1) {
+			ret = VIDEO_EXPORT_ERROR_PARAM;
+			goto end;
+		}
+		pByte = (const char *)pItem;
 		for (j = 0; j < 60; j++) {
-			if (*pByte++ != 0)
-				return VIDEO_EXPORT_ERROR_PARAM;
+			if (pByte[offsetof(VideoExportInputParam, reserved)] != 0) {
+				ret = VIDEO_EXPORT_ERROR_PARAM;
+				goto end;
+			}
+			pByte++;
 		}
 		pItem++;
 	}
@@ -370,6 +382,7 @@ extern "C" SceInt32 sceVideoExportFromFile(const VideoExportInputParam *pItems, 
 		videoExportCloseSession(&session);
 		ret = result;
 	}
+end:
 	return ret;
 }
 
@@ -379,7 +392,7 @@ extern "C" SceInt32 SceVideoExportEmpr_8493BF31(const VideoExportEmprInput *pInp
 	VideoExportSession session;
 	VideoExportInputParam *pItem;
 	VideoExportOutputParam *pResult;
-	const SceUInt8 *pByte;
+	const char *pByte;
 	int i;
 	int ret;
 	int result;
@@ -390,19 +403,21 @@ extern "C" SceInt32 SceVideoExportEmpr_8493BF31(const VideoExportEmprInput *pInp
 		return VIDEO_EXPORT_ERROR_PARAM;
 	if (sceClibStrnlen(pInput->path, VIDEO_EXPORT_MAX_FS_PATH) >= VIDEO_EXPORT_MAX_FS_PATH)
 		return VIDEO_EXPORT_ERROR_PARAM;
-	pByte = pInput->reserved0;
+	pByte = (const char *)pInput;
 	for (i = 0; i < 64; i++) {
-		if (*pByte++ != 0)
+		if (pByte[offsetof(VideoExportEmprInput, reserved0)] != 0)
 			return VIDEO_EXPORT_ERROR_PARAM;
+		pByte++;
 	}
 	if (pInput->mode > 1 || pInput->workMemory == NULL)
 		return VIDEO_EXPORT_ERROR_PARAM;
 	if (pInput->workMemorySize < VIDEO_EXPORT_HEAP_SIZE)
 		return VIDEO_EXPORT_ERROR_PARAM;
-	pByte = pInput->reserved1;
+	pByte = (const char *)pInput;
 	for (i = 0; i < 64; i++) {
-		if (*pByte++ != 0)
+		if (pByte[offsetof(VideoExportEmprInput, reserved1)] != 0)
 			return VIDEO_EXPORT_ERROR_PARAM;
+		pByte++;
 	}
 	sceClibMemset(pOutput, 0, sizeof(*pOutput));
 	session.pClient = NULL;
