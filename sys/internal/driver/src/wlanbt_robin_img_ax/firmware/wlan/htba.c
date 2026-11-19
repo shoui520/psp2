@@ -13,6 +13,7 @@
 #include "robin/conn.h"
 #include "robin/htba.h"
 #include "robin/ie.h"
+#include "robin/joinframe.h"
 #include "robin/mac.h"
 #include "robin/mactx.h"
 #include "robin/mef.h"
@@ -49,7 +50,6 @@ struct WlanSoftTimer wlanAddbaTimer __attribute__((section(".sqram1.bss")));		/*
 struct WlanAddbaPending wlanAddbaPending __attribute__((section(".sqram1.bss")));	/* 0xc00321a4 */
 struct WlanSoftTimer wlanDelbaTimer __attribute__((section(".sqram1.bss")));		/* 0xc00321b8 */
 struct WlanDelbaPending wlanDelbaPending __attribute__((section(".sqram1.bss")));	/* 0xc00321d0 */
-uint8_t wlanHtCapabilityCache[28] __attribute__((section(".sqram1.bss")));		/* 0xc0032170 */
 
 #define U16(bytes)		((uint16_t)((bytes)[0] | (bytes)[1] << 8))
 
@@ -526,7 +526,7 @@ void wlanBaSessionsDelete(struct WlanConnection *connection, const uint8_t *peer
 void wlanHtElementsReset(struct WlanConnection *connection)
 {
 	connection->flags &= 0x3f;
-	wlanHtElementsClear(wlanHtCapabilityCache, NULL, NULL, NULL, NULL);
+	wlanHtElementsClear(wlanAssocHtCapability, NULL, NULL, NULL, NULL);
 	wlanHtElementsClear(connection->htCapability, wlanHtOperationIe, wlanHtCoexIe, NULL,
 			    wlanHtOverlapScanIe);
 	wlanBaSessionsDelete(connection, connection->peerAddress);

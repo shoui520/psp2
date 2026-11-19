@@ -46,8 +46,8 @@ void (*wlanHtOperationHook)(struct WlanConnection *connection) __attribute__((se
 void (*wlanApErpUpdateHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x54e80 */
 void (*wlanApTemplateHook)(struct WlanConnection *connection) __attribute__((section(".itcm.bss")));	/* 0x54e84 */
 void (*wlanSqramFrameHook)(struct WlanConnection *connection) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb0 */
-void *(*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb8 */
-void *(*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bbc */
+void (*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bb8 */
+void (*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in) __attribute__((section(".sqram1.bss")));	/* SQRAM 0xc0011bbc */
 
 /* The MAC filter of a connection: whether a station's frames are refused (1) or not (0). */
 int macMgmtCheckHeader(struct WlanConnection *connection, const uint8_t *address)
@@ -79,20 +79,18 @@ void macMgmtProcessHeader(struct WlanConnectionInfo *info)
 	info->macFilterCount = 0;
 }
 
-void *macMgmtUpdateHeader(char code, int count, const void *list, uint8_t *out)
+void macMgmtUpdateHeader(char code, int count, const void *list, uint8_t *out)
 {
 	out[0] = code;
 	out[1] = count;
 	__aeabi_memcpy(out + 2, list, 6 * count);
-	return out;
 }
 
-void *macMgmtConfigureHeader(uint8_t *code, uint8_t *count, void *list, const uint8_t *in)
+void macMgmtConfigureHeader(uint8_t *code, uint8_t *count, void *list, const uint8_t *in)
 {
 	*code = in[0];
 	*count = in[1];
 	__aeabi_memcpy(list, in + 2, 6 * in[1]);
-	return list;
 }
 
 void macMgmtValidateHeader(void)
@@ -160,10 +158,11 @@ int macMgmtParseHeader(uint8_t *tlvs, uint16_t *length)
 	for (i = 0; i < WLAN_TX_POWER_CHANNELS; ++i) {
 		unsigned int index = 0;
 		int pairs = 0;
+		uint8_t channel = wlanTxPower.table[i][0];
 
 		tlvs[0] = 0x89;
 		tlvs[1] = 1;
-		wlanChannelDescriptor(tlvs + 4, 0, wlanTxPower.table[i][0], 0);
+		wlanChannelDescriptor(tlvs + 4, 0, channel, 0);
 		do {
 			tlvs[2 * pairs + 8] = index;
 			tlvs[2 * pairs + 9] = wlanTxPower.table[i][1 + index];
@@ -201,6 +200,7 @@ void macMgmtComputeHeader(void)
 /* Clamps what the host asked for to what the channel allows; *changed says a limit moved. */
 int macMgmtQueryHeader(unsigned int channel, int force, int *changed)
 {
+	int result = 1;
 	uint8_t flags[4];
 	uint8_t band;
 	uint8_t bandwidth;
@@ -250,7 +250,7 @@ int macMgmtQueryHeader(unsigned int channel, int force, int *changed)
 		if (i == 5 && (flags[0] & 3) == 0)
 			channel = (uint8_t)(wlanHt40CenterChannel(band, channel, bandwidth) + 1);
 	}
-	return 1;
+	return result;
 }
 
 int macMgmtResetHeader(int unused, unsigned int channel, int force)
@@ -313,7 +313,7 @@ void hostCmd0016Oid17(void)
 		int power;
 		struct WlanTxPowerLimit *limit;
 
-		if (i == 1) {
+		if (i <= 1 && i > 0) {	/* class 1, tested as Sony does: i > 1, then i <= 0 */
 			power = channel == 14 ? 12 : 16;
 		} else if (channel == 1) {
 			power = 15;
@@ -342,14 +342,16 @@ int hostCmd00d1Set(struct WlanConnection *connection, uint8_t *body)
 	unsigned int count;
 	unsigned int i;
 	unsigned int j;
+	uint32_t action;
 
 	if (body == NULL)
 		return 0;
 	count = ((body[11] << 8) | body[10]) >> 3;
 	if (count > 8)
 		return 0;
+	action = __aeabi_uread4(body + 4);
 	wlanTxPowerIncludeFirst = 0;
-	if (__aeabi_uread4(body + 4) == 1) {
+	if (action == 1) {
 		for (i = 0; i < count; ++i) {
 			const uint8_t *record = body + 12 + 8 * i;
 
@@ -380,20 +382,23 @@ unsigned int hostCmd00d1Get(uint8_t *body)
 	int i;
 
 	__aeabi_uwrite4(1, body + 4);
-	for (i = wlanTxPowerIncludeFirst == 0; i < 11; ++i) {
+	i = wlanTxPowerIncludeFirst == 0;
+	do {
 		const uint8_t *rate = wlanTxPower.rates[i];
 		struct WlanTxPowerLimit *limit;
 		unsigned int index;
+		uint8_t first;
+		uint8_t second;
 
-		record[0] = rate[0];
-		record[1] = rate[1];
+		record[0] = first = rate[0];	/* the rate as read, before the record's stores */
+		record[1] = second = rate[1];
 		record[2] = rate[2];
 		if (i < 8) {
 			record[6] = 0;
-			index = wlanRateIndexOf(rate[0], rate[1]);
+			index = wlanRateIndexOf(first, second);
 		} else {
 			record[6] = 1;
-			index = wlanRateIndexHt40(rate[0], rate[1]);
+			index = wlanRateIndexHt40(first, second);
 		}
 		limit = &wlanTxPower.limit[wlanTxPowerRateClass(index)];
 		record[5] = __aeabi_uread4(&limit->maximum);
@@ -401,7 +406,7 @@ unsigned int hostCmd00d1Get(uint8_t *body)
 		record[3] = __aeabi_uread4(&limit->spread);
 		record += 8;
 		count = (uint8_t)(count + 1);
-	}
+	} while (++i < 11);
 	body[8] = 0x54;
 	body[9] = 1;
 	body[10] = 8 * count;

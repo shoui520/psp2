@@ -147,7 +147,8 @@ void macMgmtTrackContext(const uint8_t *capability, unsigned int rates, const ui
 			 unsigned int now);					/* 0x359a6 */
 void macMgmtHandleContext(const WlanAdHocBssDesc *join, uint8_t *bssid, uint8_t *ssid,
 			  uint8_t *ssidLength);					/* 0x35558 */
-void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame);	/* 0x359fa */
+void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame,
+			  uintptr_t argument);					/* 0x359fa */
 void macMgmtReleaseContext(struct WlanConnection *connection, const uint8_t *frame,
 			   uintptr_t argument);					/* 0x35ac6 */
 int macMgmtSetupContext(struct WlanConnection *connection);			/* 0x35da6 */

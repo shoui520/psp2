@@ -971,7 +971,7 @@ void macMgmtRecordPacket(struct WlanConnection *connection, OsaBuffer *buffer, u
 
 		if (connection->interfaceType == 3) {
 			if (connection->mode == 1 || connection->mode == 2) {
-				p2pProbeRequestAnswer(connection, frame);
+				p2pProbeRequestAnswer(connection, frame, argument);
 				return;
 			}
 		} else if (connection->interfaceType == 2 && macMgmtVerifyPacket(connection, frame) == 1) {

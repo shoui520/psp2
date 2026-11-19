@@ -238,16 +238,18 @@ void macMgmtApplyContext(struct WlanConnection *connection, uint8_t *htInformati
 {
 	uint8_t *htOperation = (uint8_t *)wlanConnectionHtOperation(connection);
 	uint8_t flags;			/* Sony leaves it uninitialised (its band is read) */
-	uint8_t index;
 	int widened = 0;
+	uint8_t index;
 	unsigned int offset;
+	uint8_t operation;
 
 	wlanSetSecondaryChannel(&flags, htInformation[2], htInformation,
 				wlanDomainChannelIndex(12, &index));
 	if ((htOperation[3] & 3) == (htInformation[3] & 3))
 		return;
-	htOperation[3] = (htOperation[3] & ~3) | (htInformation[3] & 3);
-	if (htOperation[3] & 3) {
+	operation = (htOperation[3] & ~3) | (htInformation[3] & 3);
+	htOperation[3] = operation;
+	if (operation & 3) {
 		wlanHtTxCapability[0] |= 2;
 		widened = 1;
 	} else {
@@ -256,10 +258,15 @@ void macMgmtApplyContext(struct WlanConnection *connection, uint8_t *htInformati
 	}
 	wlanRateChannelWidthSet(connection, 0, wlanHtChannelWidth(connection));
 	offset = htOperation[3] & 3;
-	if (offset != 3 && offset == 1)
-		flags = (flags & 0xc0) | (wlanChannelContext.flags & 0x0f) | WLAN_CHANNEL_OFFSET_ABOVE;
-	else if (offset == 3)
-		flags = (flags & 0xf0) | (wlanChannelContext.flags & 0x0f) | WLAN_CHANNEL_OFFSET_BELOW;
+	if (offset == 3) {
+		flags = (flags & ~WLAN_CHANNEL_BAND_MASK) | (wlanChannelContext.flags & WLAN_CHANNEL_BAND_MASK);
+		flags = (flags & ~WLAN_CHANNEL_WIDTH_MASK) | (wlanChannelContext.flags & WLAN_CHANNEL_WIDTH_MASK);
+		flags = flags | WLAN_CHANNEL_OFFSET_BELOW;
+	} else if (offset == 1) {
+		flags = (flags & ~WLAN_CHANNEL_BAND_MASK) | (wlanChannelContext.flags & WLAN_CHANNEL_BAND_MASK);
+		flags = (flags & ~WLAN_CHANNEL_WIDTH_MASK) | (wlanChannelContext.flags & WLAN_CHANNEL_WIDTH_MASK);
+		flags = (flags & ~WLAN_CHANNEL_OFFSET_MASK) | WLAN_CHANNEL_OFFSET_ABOVE;
+	}
 	if (offset == 1 || offset == 3)
 		wlanSetChannel(htInformation[2], &flags, 1);
 	macMgmtCheckContext();
@@ -337,7 +344,7 @@ void macMgmtTrackContext(const uint8_t *capability, unsigned int rates, const ui
 }
 
 /* 0x359fa: a beacon of the P2P group's owner, or of the IBSS, the state machine was handed. */
-void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame)
+void macMgmtManageContext(struct WlanConnection *connection, const uint8_t *frame, uintptr_t argument)
 {
 	WlanIePointers elements;
 	unsigned int rates;

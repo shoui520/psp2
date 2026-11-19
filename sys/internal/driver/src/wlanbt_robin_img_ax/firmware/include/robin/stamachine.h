@@ -32,7 +32,7 @@ extern uint8_t wlanProbeRates[14];
 enum {
 	WLAN_STA_EVENT_FRAME = 2,		/* a frame for the P2P context */
 	WLAN_STA_EVENT_RELEASE = 3,		/* macMgmtReleaseContext(): a frame and its argument */
-	WLAN_STA_EVENT_MANAGE = 6,		/* macMgmtManageContext(): a frame */
+	WLAN_STA_EVENT_MANAGE = 6,		/* macMgmtManageContext(): a frame (and its argument, unread) */
 	WLAN_STA_EVENT_LOST = 7,		/* the IBSS ended: reported with code 3 */
 	WLAN_STA_EVENT_DISASSOCIATION = 8,	/* a disassociation frame: reported with code 8 */
 	WLAN_STA_EVENT_DEAUTHENTICATION = 9,	/* a deauthentication frame: reported with code 9 */

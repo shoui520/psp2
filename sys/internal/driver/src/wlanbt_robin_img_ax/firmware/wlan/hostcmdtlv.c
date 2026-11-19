@@ -58,12 +58,15 @@ static ROBIN_PATCH_SLOT(wlanTlvPowerCapabilityOverride);	/* 0x55c00 */
 /* The ad-hoc start response carries the station's own address as the BSSID. */
 void wlanAdHocResponseBssid(uint8_t *response, const uint8_t *command)
 {
-	uint32_t address[2];
+	struct {
+		uint32_t low;
+		uint16_t high;
+	} address;
 
 	if (LE16(command) == HostCmd_RET_802_11_AD_HOC_START) {
-		address[0] = MAC_ADDRESS_LOW;
-		address[1] = MAC_ADDRESS_HIGH;
-		__aeabi_memcpy(response + 11, address, 6);
+		address.low = MAC_ADDRESS_LOW;
+		address.high = MAC_ADDRESS_HIGH;
+		__aeabi_memcpy(response + 11, &address, 6);
 	}
 }
 
@@ -100,7 +103,7 @@ void wlanHostResponseBuild(OsaBuffer *buffer, unsigned int command, unsigned int
 unsigned int wlanAdHocStartParse(WlanAdHocStart *start, uint8_t *command, const uint8_t *defaultRates,
 				 uint16_t *tlvLength, uint16_t defaultBeaconPeriod)
 {
-	unsigned int i;
+	int i;
 	unsigned int length;
 
 	__aeabi_memclr(start, sizeof(*start));
@@ -163,9 +166,9 @@ int wlanHtTlvApply(struct WlanHtTlvElements *elements, struct WlanIeBuffer *ies,
 		tlv[1] = 0;
 		/* fall through */
 	case TLV_TYPE_HT_CAPABILITY_IE:
+		elements->capability[0] = IE_HT_CAPABILITY;
+		elements->capability[1] = 26;
 		element = elements->capability;
-		element[0] = IE_HT_CAPABILITY;
-		element[1] = 26;
 		length = 26;
 		break;
 	case TLV_TYPE_HT_INFORMATION:
@@ -173,9 +176,9 @@ int wlanHtTlvApply(struct WlanHtTlvElements *elements, struct WlanIeBuffer *ies,
 		tlv[1] = 0;
 		/* fall through */
 	case TLV_TYPE_HT_INFORMATION_IE:
+		elements->information[0] = IE_HT_INFORMATION;
+		elements->information[1] = 22;
 		element = elements->information;
-		element[0] = IE_HT_INFORMATION;
-		element[1] = 22;
 		length = 22;
 		break;
 	case TLV_TYPE_2040BSS_COEX:
@@ -185,7 +188,7 @@ int wlanHtTlvApply(struct WlanHtTlvElements *elements, struct WlanIeBuffer *ies,
 	case TLV_TYPE_2040BSS_COEX_IE:
 		element = elements->coexistence;
 		element[0] = IE_20_40_BSS_COEXISTENCE;
-		element[1] = 1;
+		elements->coexistence[1] = 1;
 		length = 1;
 		break;
 	case TLV_TYPE_OBSS_SCAN_PARAM:
@@ -193,9 +196,9 @@ int wlanHtTlvApply(struct WlanHtTlvElements *elements, struct WlanIeBuffer *ies,
 		tlv[1] = 0;
 		/* fall through */
 	case TLV_TYPE_OBSS_SCAN_PARAM_IE:
+		elements->obssScan[0] = IE_OBSS_SCAN_PARAMETERS;
+		elements->obssScan[1] = 14;
 		element = elements->obssScan;
-		element[0] = IE_OBSS_SCAN_PARAMETERS;
-		element[1] = 14;
 		length = 14;
 		break;
 	default:
@@ -371,9 +374,7 @@ unsigned int wlanTlvPowerCapabilityParse(const uint8_t *tlv, struct WlanPowerCap
 	if (LE16(tlv) != TLV_TYPE_POWER_CAPABILITY_IE)
 		return 0;
 	if (LE16(tlv + 2) == 0) {
-		capability->present = 0;
-		capability->minimum = 0;
-		capability->maximum = 0;
+		memset(capability, 0, sizeof(*capability));
 		capability->present = 0;
 		return 4;
 	}

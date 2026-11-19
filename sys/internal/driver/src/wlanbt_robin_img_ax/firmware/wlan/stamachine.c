@@ -69,9 +69,6 @@
 /* The address the IBSS code compares with when it has none (wlan/chanctx.c). */
 extern uint8_t wlanNullAddress[8];
 
-/* The SQRAM's HT capability element of the association (wlan/joinframe.c). */
-extern uint8_t wlanAssocHtCapability[28];
-
 __attribute__((noinline)) const void *p2pDirectFormatTable(uint8_t *length);					/* 0x42374 */
 int p2pDirectFormatEntry(struct WlanConnection *connection, const uint8_t *body,
 			 const uint8_t *frame);						/* 0x41894 */
@@ -217,39 +214,44 @@ int macMgmtBuildState(struct WlanConnection *connection, const uint8_t *peer, co
 	vendor = p2pDirectFormatTable(&vendorLength);
 	if (vendorLength != 0)
 		wlanAppendIe(frame, 0xdd, vendor, vendorLength);
-	if (connection->interfaceType == 3 &&
-	    (connection->p2pState == 1 || connection->p2pState == 3 || connection->mode == 3)) {
+	if (connection->interfaceType == 3) {
 		struct WlanPsPeerState *ps = wlanConnectionPsState(connection);
-		/* The context the attributes are put into; the selection leaves it empty. */
-		struct WlanDirectContext *volatile context = NULL;
-		unsigned int exclude = 0;
-		unsigned int include;
-		uint8_t deviceId[9];
-		unsigned int added;
 
-		p2pDirectSelectState(connection, frame);
-		if (ps->p2pFlags & 2) {
-			deviceId[0] = 3;
-			deviceId[1] = 6;
-			deviceId[2] = 0;
-			__aeabi_memcpy(&deviceId[3], ps->p2pDeviceAddress, 6);
-			context->attributes[P2P_SLOT_DEVICE_ID] = deviceId;
-			exclude = 8;
-		} else if (GET_U16(ps->p2pAttribute.length) != 0) {
-			context->attributes[P2P_SLOT_DEVICE_ID] = (uint8_t *)&ps->p2pAttribute;
-			exclude = 8;
-		}
-		include = (connection->mode == 2 ? 0x20000 : 0) | 0x144;
-		if (connection->mode == 1) {
-			uint8_t options = ps->p2pOptions;
+		if (connection->p2pState == 1 || connection->p2pState == 3 || connection->mode == 3) {
+			/* The context the attributes are put into; the selection leaves it empty. */
+			struct WlanDirectContext *volatile context = NULL;
+			unsigned int exclude = 0;
+			unsigned int include;
+			uint8_t deviceId[9];
+			uint16_t added;
+			unsigned int bodyLength;
 
-			ps->p2pOptions = 0;
-			added = p2pDirectCheckContext(connection, frame, NULL, include, exclude);
-			ps->p2pOptions = options;
-		} else {
-			added = p2pDirectCheckContext(connection, frame, context, include, exclude);
+			p2pDirectSelectState(connection, frame);
+			if (ps->p2pFlags & 2) {
+				deviceId[0] = 3;
+				deviceId[1] = 6;
+				deviceId[2] = 0;
+				__aeabi_memcpy(&deviceId[3], ps->p2pDeviceAddress, 6);
+				context->attributes[P2P_SLOT_DEVICE_ID] = deviceId;
+				exclude = 8;
+			} else if (*(const uint16_t *)ps->p2pAttribute.length != 0) {	/* aligned: Sony reads a halfword */
+				context->attributes[P2P_SLOT_DEVICE_ID] = (uint8_t *)&ps->p2pAttribute;
+				exclude = 8;
+			}
+			include = (connection->mode == 2 ? 0x20000 : 0) | 0x144;
+			if (connection->mode == 1) {
+				/* Sony saves the word the options byte starts (it is word aligned) and puts the byte back. */
+				uint32_t options = *(const uint32_t *)&ps->p2pOptions;
+
+				ps->p2pOptions = 0;
+				added = p2pDirectCheckContext(connection, frame, NULL, include, exclude);
+				ps->p2pOptions = options;
+			} else {
+				added = p2pDirectCheckContext(connection, frame, context, include, exclude);
+			}
+			bodyLength = GET_U16(frame->bodyLength) + added;
+			PUT_U16(frame->bodyLength, bodyLength);
 		}
-		PUT_U16(frame->bodyLength, GET_U16(frame->bodyLength) + added);
 	}
 	macMgmtFilterTable(frame, frame->address2);
 	if (length != 0 && elements != NULL)
@@ -456,8 +458,8 @@ void macMgmtTrackState(struct WlanConnection *connection)
 unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body)
 {
 	uint8_t *cursor = body + 16;
-	uint32_t band;
 	uint32_t channel;
+	uint8_t band;
 	uint8_t *tlv;
 	union {
 		SecurityMode_t mode;
@@ -483,7 +485,7 @@ unsigned int hostCmd00c7(struct WlanConnection *connection, uint8_t *body)
 		tlv[1] = 1;
 		tlv[2] = 2;
 		tlv[3] = 0;
-		macMgmtPrepareContext((uint8_t *)&band, &channel);
+		macMgmtPrepareContext(&band, &channel);
 		tlv[4] = band;
 		tlv[5] = channel;
 		tlv += 4 + GET_U16(&tlv[2]);
@@ -596,24 +598,26 @@ static inline __attribute__((always_inline)) void macMgmtDirectResume(struct Wla
 static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *machine,
 						     const struct WlanStaEvent *event)
 {
-	struct WlanConnection *connection = machine->connection;
 	const struct WlanStaEventData *data = event->data;
+	struct WlanConnection *connection = machine->connection;
+	const uint8_t *message = data->message;
+	const uint8_t *request = data->request;
 	struct RomHsmState *target;
 
 	switch (event->id) {
 	case WLAN_STA_EVENT_START:
-		wlanIbssStart(connection, (const WlanAdHocStart *)data->request);
+		wlanIbssStart(connection, (const WlanAdHocStart *)request);
 		return NULL;
 	case WLAN_STA_EVENT_JOIN:
-		wlanIbssJoin(connection, (const WlanAdHocBssDesc *)data->request);
+		wlanIbssJoin(connection, (const WlanAdHocBssDesc *)request);
 		return NULL;
 	case WLAN_STA_EVENT_RESET_ENTRY:
-		if (macMgmtResetEntry(connection, (const struct WlanHostCompletion *)data->message) != 0)
+		if (macMgmtResetEntry(connection, (const struct WlanHostCompletion *)message) != 0)
 			return NULL;
 		target = &states(machine)->adjust;
 		break;
 	case WLAN_STA_EVENT_QUERY_ENTRY:
-		if (macMgmtQueryEntry(connection, (const struct WlanHostCompletion *)data->message) != 0)
+		if (macMgmtQueryEntry(connection, (const struct WlanHostCompletion *)message) != 0)
 			return NULL;
 		target = &states(machine)->adjust;
 		break;
@@ -645,7 +649,7 @@ static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *mac
 		break;
 	case WLAN_STA_EVENT_DIRECT_SSID:
 		if (connection != NULL && connection->interfaceType == 3 && connection->mode == 1) {
-			p2pProbeRequestAnswer(connection, data->frame);
+			p2pProbeRequestAnswer(connection, data->frame, data->argument);
 			return NULL;
 		}
 		return event;
@@ -660,9 +664,9 @@ static const struct WlanStaEvent *macMgmtVerifyState(struct WlanIbssMachine *mac
 static const struct WlanStaEvent *macMgmtSelectState(struct WlanIbssMachine *machine,
 						     const struct WlanStaEvent *event)
 {
-	struct WlanConnection *connection = machine->connection;
 	const struct WlanStaEventData *data = event->data;
-	const struct WlanStaEventMessage *message;
+	const struct WlanStaEventMessage *message = (const struct WlanStaEventMessage *)data->message;
+	struct WlanConnection *connection = machine->connection;
 	const uint8_t *peer;
 	uint16_t reason;
 	uint8_t code;
@@ -689,7 +693,7 @@ static const struct WlanStaEvent *macMgmtSelectState(struct WlanIbssMachine *mac
 		macMgmtReleaseContext(connection, data->frame, data->argument);
 		return NULL;
 	case WLAN_STA_EVENT_MANAGE:
-		macMgmtManageContext(connection, data->frame);
+		macMgmtManageContext(connection, data->frame, data->argument);
 		return NULL;
 	case WLAN_STA_EVENT_LOST:
 		code = 3;
@@ -698,7 +702,6 @@ static const struct WlanStaEvent *macMgmtSelectState(struct WlanIbssMachine *mac
 		break;
 	case WLAN_STA_EVENT_DISASSOCIATION:
 	case WLAN_STA_EVENT_DEAUTHENTICATION:
-		message = (const struct WlanStaEventMessage *)data->message;
 		if (!wlanConnectionHasLocalAddress(connection, message->address))
 			return NULL;
 		code = event->id;
@@ -715,7 +718,7 @@ static const struct WlanStaEvent *macMgmtSelectState(struct WlanIbssMachine *mac
 		return NULL;
 	case WLAN_STA_EVENT_DIRECT_SSID:
 		if (connection != NULL && connection->interfaceType == 3 && connection->mode == 1) {
-			p2pProbeRequestAnswer(connection, data->frame);
+			p2pProbeRequestAnswer(connection, data->frame, data->argument);
 			return NULL;
 		}
 		return event;
@@ -759,7 +762,7 @@ static const struct WlanStaEvent *macMgmtAdjustState(struct WlanIbssMachine *mac
 		macMgmtReleaseContext(connection, data->frame, data->argument);
 		return NULL;
 	case WLAN_STA_EVENT_MANAGE:
-		macMgmtManageContext(connection, data->frame);
+		macMgmtManageContext(connection, data->frame, data->argument);
 		return NULL;
 	case WLAN_STA_EVENT_LOST:
 		wlanConnectionCommandCheck(1, 1);
@@ -807,7 +810,7 @@ static const struct WlanStaEvent *macMgmtRecordState(struct WlanIbssMachine *mac
 	case WLAN_STA_EVENT_DEAUTHENTICATION:
 		if (wlanConnectionHasLocalAddress(connection, message->address)) {
 			machine->reportCode = event->id;
-			machine->reportReason = GET_U16((const uint8_t *)&message->reason);
+			machine->reportReason = message->reason;
 		}
 		return NULL;
 	case WLAN_STA_EVENT_HOLD:
@@ -839,7 +842,7 @@ static inline const struct WlanStaEvent *macMgmtHoldState(struct WlanIbssMachine
 	case WLAN_STA_EVENT_DEAUTHENTICATION:
 		if (wlanConnectionHasLocalAddress(connection, message->address)) {
 			machine->reportCode = event->id;
-			machine->reportReason = GET_U16((const uint8_t *)&message->reason);
+			machine->reportReason = message->reason;
 		}
 		return NULL;
 	case WLAN_STA_EVENT_RESUME:

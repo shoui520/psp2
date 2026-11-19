@@ -317,7 +317,8 @@ int wlanPsSelectDescriptor(struct WlanConnection *connection, unsigned int actio
 			if (item == NULL)
 				break;
 			tlv = data + size;
-			*(uint16_t *)tlv = TLV_VENDOR_ELEMENT;
+			tlv[0] = (uint8_t)TLV_VENDOR_ELEMENT;	/* a byte at a time: the reply may be unaligned */
+			tlv[1] = TLV_VENDOR_ELEMENT >> 8;
 			tlv[2] = 6;
 			tlv[3] = 0;
 			__aeabi_memcpy(data + size + 4, item + 28, 6);

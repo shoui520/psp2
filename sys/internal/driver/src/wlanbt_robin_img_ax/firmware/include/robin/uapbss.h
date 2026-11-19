@@ -56,7 +56,8 @@ void p2pProvisionDiscoveryBuild(struct WlanConnection *connection, uint8_t *fram
 int p2pProvisionDiscoveryRequestSend(struct WlanConnection *connection, const uint8_t *destination,
 				     uint8_t *groupId);				/* SQRAM 0xc000b864 */
 void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsigned int pending);	/* SQRAM 0xc000b8e0 */
-void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *frame);	/* SQRAM 0xc000ba1a */
+void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *frame,
+			   uintptr_t argument);				/* SQRAM 0xc000ba1a */
 int p2pListenSlotStart(struct WlanConnection *connection, uint32_t slot);	/* SQRAM 0xc000bce4, veneer 0x53284 */
 int p2pChannelShared(struct WlanConnection *connection);		/* SQRAM 0xc000bdaa, veneer 0x53294 */
 void p2pDiscoverabilityResponseBuild(struct WlanConnection *connection, uint8_t *frame);	/* SQRAM 0xc000bdb6 */

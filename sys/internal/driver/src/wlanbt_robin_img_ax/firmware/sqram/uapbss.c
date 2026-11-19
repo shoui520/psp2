@@ -1155,7 +1155,7 @@ void p2pPeerFound(struct WlanConnection *connection, const uint8_t *frame, unsig
  * negotiation or an invitation waits for starts it. The answer is the probe
  * response template.
  */
-void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *frame)
+void p2pProbeRequestAnswer(struct WlanConnection *connection, const uint8_t *frame, uintptr_t argument)
 {
 	struct WlanPsPeerState *ps;
 	struct WlanDirectContext attributes;

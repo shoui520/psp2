@@ -29,6 +29,7 @@
 #include "robin/wlantask.h"
 
 #define SCAN_LE16(p)	((p)[0] | ((p)[1] << 8))
+#define SCAN_PUT16(p, v)	((p)[0] = (v), (p)[1] = (v) >> 8)	/* a TLV may be unaligned */
 
 /* The ROM's. */
 void romLibSyncContext(unsigned int mask);
@@ -358,11 +359,11 @@ int macMgmtConvertEntry(int unused, uint8_t *command, int16_t length, struct Wla
 		case 330:
 			tlv[2] = 26;
 			tlv[3] = 0;
-			*(uint16_t *)tlv = 45;
+			SCAN_PUT16(tlv, 45);
 			wlanIeBufferAppendTlv(ies, tlv);
 			break;
 		case 335:
-			*(uint16_t *)tlv = 127;
+			SCAN_PUT16(tlv, 127);
 			wlanIeBufferAppendTlv(ies, tlv);
 			break;
 		default:

@@ -91,7 +91,7 @@ typedef struct __attribute__((packed)) WlanWepHostKeys {
 	uint8_t defaultKey;		/* the index of the key frames are sent with */
 } WlanWepHostKeys;
 
-typedef struct __attribute__((packed)) WlanWepHostConfig {
+typedef struct WlanWepHostConfig {
 	uint8_t reserved0[8];
 	uint16_t keyLength;		/* 5 or 13: the length of the last key set */
 	uint8_t flags;			/* bit 0: keys were set */

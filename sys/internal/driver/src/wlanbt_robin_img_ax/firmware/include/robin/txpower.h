@@ -43,8 +43,8 @@ extern void (*wlanSqramFrameHook)(struct WlanConnection *connection);		/* SQRAM 
 extern void (*wlanHtOperationHook)(struct WlanConnection *connection);		/* 0x54e64 */
 extern void (*wlanApErpUpdateHook)(struct WlanConnection *connection);		/* 0x54e80 */
 extern void (*wlanApTemplateHook)(struct WlanConnection *connection);		/* 0x54e84 */
-extern void *(*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out); /* SQRAM 0xc0011bb8 */
-extern void *(*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in); /* SQRAM 0xc0011bbc */
+extern void (*wlanSqramMacFilterGetHook)(char code, int count, const void *list, uint8_t *out); /* SQRAM 0xc0011bb8 */
+extern void (*wlanSqramMacFilterSetHook)(uint8_t *code, uint8_t *count, void *list, const uint8_t *in); /* SQRAM 0xc0011bbc */
 
 
 void macMgmtAdjustFrame(struct WlanConnection *connection);			/* 0x3b0ea */
@@ -52,8 +52,8 @@ void macMgmtRecordFrame(struct WlanConnection *connection);			/* 0x3b0fa */
 void macMgmtFilterFrame(struct WlanConnection *connection);			/* 0x3b110 */
 void macMgmtHandleHeader(void);							/* 0x3b120 */
 void macMgmtProcessHeader(struct WlanConnectionInfo *info);			/* 0x3b14c */
-void *macMgmtUpdateHeader(char code, int count, const void *list, uint8_t *out);	/* 0x3b156 */
-void *macMgmtConfigureHeader(uint8_t *code, uint8_t *count, void *list, const uint8_t *in);	/* 0x3b16e */
+void macMgmtUpdateHeader(char code, int count, const void *list, uint8_t *out);	/* 0x3b156 */
+void macMgmtConfigureHeader(uint8_t *code, uint8_t *count, void *list, const uint8_t *in);	/* 0x3b16e */
 int macMgmtCheckHeader(struct WlanConnection *connection, const uint8_t *address);	/* 0x3b18c */
 void macMgmtValidateHeader(void);						/* 0x3b1e2 */
 int macMgmtPrepareHeader(uint8_t channel, int band, unsigned int index, uint8_t power);	/* 0x3b200 */

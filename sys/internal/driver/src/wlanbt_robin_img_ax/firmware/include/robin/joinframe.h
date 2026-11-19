@@ -11,6 +11,7 @@
 #include "robin/wlan.h"
 
 extern uint8_t wlanJoinHtCapability[28];		/* SQRAM 0xc0032154: the HT capability element the host gave */
+extern uint8_t wlanAssocHtCapability[28];		/* SQRAM 0xc0032170: the copy of it for the association */
 
 struct WlanConnection;
 struct WlanJoinAssocRequest;
