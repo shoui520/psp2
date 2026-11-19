@@ -57,6 +57,7 @@ __attribute__((noinline)) int GamePsmAppInstallSource::WriteLicense(const string
 								    string *detail)
 {
 	int ret = 0;
+	common::SharedPtr<File> file;
 	common::SharedPtr<memory::PoolAllocator> pool;
 
 	ret = gamePluginGetPool("PSMobileRifWrite", &pool);
@@ -66,7 +67,6 @@ __attribute__((noinline)) int GamePsmAppInstallSource::WriteLicense(const string
 
 	SceSize poolSize = pool->GetFreeSize();
 	void *buf = pool->Alloc();
-	common::SharedPtr<File> file;
 	char rifName[GAME_RIF_NAME_SIZE];
 
 	if (buf == NULL) {
@@ -76,9 +76,14 @@ __attribute__((noinline)) int GamePsmAppInstallSource::WriteLicense(const string
 		if (ret >= 0) {
 			SceInt64 size = file->GetFileSize();
 
-			if ((SceInt64)poolSize >= size) {
+			if ((SceInt64)poolSize < size) {
+				file->Close();
+				ret = (int)size;
+			} else {
 				ret = file->Read(buf, (SceSize)size);
-				if (ret >= 0) {
+				if (ret < 0) {
+					file->Close();
+				} else {
 					file->Close();
 					sce_paf_memset(rifName, 0, sizeof(rifName));
 					ret = sceNpDrmGetRifNameForInstall(rifName, buf, 1);
@@ -88,12 +93,7 @@ __attribute__((noinline)) int GamePsmAppInstallSource::WriteLicense(const string
 						if (ret >= 0)
 							ret = 0;
 					}
-				} else {
-					file->Close();
 				}
-			} else {
-				file->Close();
-				ret = (int)size;
 			}
 		}
 	}

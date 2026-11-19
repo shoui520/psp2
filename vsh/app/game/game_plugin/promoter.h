@@ -946,21 +946,45 @@ private:
 typedef char GamePsmAppInstallSourceSize[sizeof(GamePsmAppInstallSource) == 12 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the source of an additional content's package folder, defined in another file of
- * the plugin (constructor 0x810875F0), 64 bytes.
+ * The source of an additional content's package folder (addcont_source.cpp, constructor
+ * 0x810875F0, vtable 0x8152EFD8), 64 bytes: the package moved or copied to <drive>temp/promote,
+ * its content put in <drive>addcont/<title ID>/<entitlement ID> and its license written; a
+ * license with a period is noted in addcont/info by Complete. The names are ours.
  */
 class GameAddcontSource : public GameInstallSource {
 public:
-	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
 	GameAddcontSource(const char *path, const SceNpDrmInstallInfo *info, LsdbAppInfoPtr *appInfo,
 			  paf::string *errorTitleId);
+	virtual ~GameAddcontSource();
 
-	SceUInt8 m_body[60];
+	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
+			     int reserved2, int reserved3, float scale);
+
+private:
+	int MoveToTemp(const paf::string *from, const paf::string *to, paf::string *detail);
+	int MovePackage(const paf::string *path, const paf::string *promoteDir,
+			paf::string *detail);
+	int CleanupCardPackage(const paf::string *path, int cancel, int cancelArg,
+			       GameJobProgress *progress, paf::string *detail);
+	int RemovePackage(const paf::string *path, int cancel, int cancelArg,
+			  GameJobProgress *progress, paf::string *detail);
+	int CopyPackage(const paf::string *path, const paf::string *promoteDir, int cancel,
+			int cancelArg, GameJobProgress *progress, paf::string *detail);
+
+	const char *m_path;			/* the package folder, at the head of its GameInstallExParam */
+	const SceNpDrmInstallInfo *m_info;
+	LsdbAppInfoPtr *m_appInfo;		/* the content's application */
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
+	paf::string m_infoDir;			/* the addcont/info a license with a period goes to */
+	paf::string m_contentId;		/* that license's */
+	SceUInt64 m_startTime;
+	SceUInt64 m_expireTime;
 };
+
+typedef char GameAddcontSourceSize[sizeof(GameAddcontSource) == 64 ? 1 : -1];
 
 /*
  * An additional content installed (ac_installer.cpp, constructor 0x8106D0B0, vtable 0x8152ECC4),
@@ -983,35 +1007,69 @@ public:
 typedef char GameAcInstallerSize[sizeof(GameAcInstaller) == 132 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the sources of an application's package folder, defined in other files of the
- * plugin: an update's (constructor 0x8108A81C, 36 bytes) and an application's (constructor
- * 0x8108A0FC, 40 bytes).
+ * The sources of an application's package folder: an update's (gd_update_source.cpp,
+ * constructor 0x8108A81C, vtable 0x8152F008, 36 bytes) and an application's (gd_app_source.cpp,
+ * constructor 0x8108A0FC, vtable 0x8152EFF0, 40 bytes).
  */
 class GameGdUpdateSource : public GameInstallSource {
 public:
-	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
-			    paf::string *installPath, GameJobProgress *progress, int reserved1,
-			    int reserved2, float scale);
-	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
-			     int reserved2, int reserved3, float scale);
 	GameGdUpdateSource(const SceNpDrmInstallInfo *info, const LsdbAppInfoPtr *appInfo,
 			   paf::string *errorTitleId);
+	virtual ~GameGdUpdateSource();
 
-	SceUInt8 m_body[32];
+	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
+			    paf::string *installPath, GameJobProgress *progress, int cancel,
+			    int cancelArg, float scale);
+	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
+			     int reserved2, int reserved3, float scale);
+
+private:
+	int MergePatch(const paf::string *appDir, const paf::string *patchDir,
+		       const paf::string *path, paf::string *dir);
+	int MovePatch(const paf::string *appDir, const paf::string *patchDir,
+		      const paf::string *path, const paf::string &promoteDir, int kind,
+		      int cancel, int cancelArg);
+	int CopyCardPatch(const paf::string *appDir, const paf::string *patchDir,
+			  const paf::string *path, const paf::string &promoteDir, int kind,
+			  GameJobProgress *progress, int cancel, int cancelArg, float scale);
+
+	const SceNpDrmInstallInfo *m_info;
+	LsdbAppInfoPtr m_appInfo;		/* the application's record */
+	int m_mode;				/* PLACEHOLDER: 1 from the constructor, read by nothing here */
+	paf::string m_installDir;		/* the folder Install leaves for the install */
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
 };
+
+typedef char GameGdUpdateSourceSize[sizeof(GameGdUpdateSource) == 36 ? 1 : -1];
 
 class GameGdAppSource : public GameInstallSource {
 public:
+	GameGdAppSource(const SceNpDrmInstallInfo *info, bool noLicense, const paf::string &mountPoint,
+			paf::string *errorTitleId);
+	virtual ~GameGdAppSource();
+
 	virtual int Install(const paf::string *path, const paf::string *titleId, paf::string *dir,
 			    paf::string *installPath, GameJobProgress *progress, int reserved1,
 			    int reserved2, float scale);
 	virtual int Complete(paf::string *dir, paf::string *installPath, int reserved1,
 			     int reserved2, int reserved3, float scale);
-	GameGdAppSource(const SceNpDrmInstallInfo *info, bool noLicense, const paf::string &mountPoint,
-			paf::string *errorTitleId);
 
-	SceUInt8 m_body[36];
+private:
+	const SceNpDrmInstallInfo *m_info;
+	bool m_noLicense;			/* a free application: its FTT installed, no license */
+	paf::string m_mountPoint;		/* what the FTT is installed from */
+	paf::string *m_errorTitleId;		/* where a failed step's drive goes */
+	paf::string m_titleId;			/* the application's, kept by Install */
 };
+
+typedef char GameGdAppSourceSize[sizeof(GameGdAppSource) == 40 ? 1 : -1];
+
+/*
+ * The patch at patchPath checked against the application at appPath and the patch it applies on
+ * at basePath (gd_patch_check.cpp, 0x8108A680): 1 or 2, step the package read last.
+ */
+int gamePatchCheck(const char *appPath, const char *basePath, const char *patchPath,
+		   int reserved, void *buf, SceSize bufSize, int *step);
 
 /*
  * An application installed (gd_installer.cpp, constructor 0x8106D3EC, vtable 0x8152ECF8), 156

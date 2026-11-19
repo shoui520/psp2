@@ -336,9 +336,12 @@ __attribute__((noinline)) int GamePs1SavedataCopier::WriteParam(const string *di
 								       SCE_O_TRUNC, 6, &ret);
 						if (ret >= 0) {
 							ret = file->Write(buf, size);
-							file->Close();
-							if (ret >= 0)
+							if (ret < 0) {
+								file->Close();
+							} else {
+								file->Close();
 								ret = 0;
+							}
 						}
 					}
 				}
@@ -494,9 +497,10 @@ int GamePs1SavedataCopier::Run(const string *pbpPath, GameAppRegistration *reg)
 			SceSSize written = sceIoWrite(fd, card, GAME_VMP_SIZE);
 
 			sceIoClose(fd);
-			if (written == GAME_VMP_SIZE)
-				continue;
-			ret = SCE_ERROR_ERRNO_EIO;
+			if (written != GAME_VMP_SIZE)
+				ret = SCE_ERROR_ERRNO_EIO;
+			else
+				ret = 0;
 		}
 
 		if (ret != 0) {

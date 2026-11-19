@@ -90,6 +90,10 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	${PSP2_SRC}/vsh/app/game/game_plugin/license_install_source.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psm_app_install_source.cpp
 	${PSP2_SRC}/vsh/app/game/game_plugin/psp_app_install_source.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/addcont_source.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/gd_app_source.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/gd_patch_check.cpp
+	${PSP2_SRC}/vsh/app/game/game_plugin/gd_update_source.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

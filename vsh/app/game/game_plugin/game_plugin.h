@@ -220,6 +220,7 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 #define GAME_ERROR_FTT_MISMATCH	-2146430654	/* 0x80101142: a free-trial license of another content */
 #define GAME_ERROR_NO_FTT		-2146430576	/* 0x80101190: no free-trial license file */
 #define GAME_ERROR_NO_DRIVE		-2146430682	/* 0x80101126: a path without a drive */
+#define GAME_ERROR_NOT_CARD_PACKAGE	-2146430698	/* 0x80101116: a game card content's package without its card flag */
 #define GAME_ERROR_UNREGISTER		-2146430679	/* 0x80101129: applauncher_plugin kept an application */
 #define GAME_ERROR_GC_QUIET		-2146430680	/* 0x80101128: nothing to show (an update already in place) */
 #define GAME_ERROR_GC_REPLACED		-2146430647	/* 0x80101149: likewise, the record replaced (PLACEHOLDER name) */
@@ -288,13 +289,16 @@ struct GamePackageInfo {
 	SceUInt32 bodyBlocks;
 	SceUInt32 otherFields[6];
 	char contentId[48];			/* "XX0000-XXXXNNNNN_00-XXXXXXXXXXXXXXXX" */
-	char titleId[32];
+	char titleId[12];
+	char entitlementId[20];		/* an additional content's folder under its title's */
 };
 
 typedef char GamePackageInfoSize[sizeof(GamePackageInfo) == 0x78 ? 1 : -1];
 
 /* PLACEHOLDER name: a package of an update, promoted through temp/promote (bit 4 of flags) */
 #define GAME_PACKAGE_FLAG_UPDATE	0x10
+/* PLACEHOLDER name: a package for a game card's additional content (bit 31 of flags) */
+#define GAME_PACKAGE_FLAG_CARD		0x80000000
 
 /*
  * What NpDrm keeps of an installation, 936 bytes: Sony's name and the names of the three fields
@@ -459,6 +463,31 @@ int gamePackageReadInfo(GamePackageInfo *info, const char *path, void *buf, SceS
  */
 int gameNpDrmGetInstallInfo(SceNpDrmInstallInfo *info, SceSize size, const char *path, void *buf,
 			    SceSize bufSize);
+
+/*
+ * PLACEHOLDER: a package's header as the NpDrm package code the shell links reads it, 256 bytes:
+ * its GamePackageInfo, then what gamePatchCheck compares (names from that; the tail it does not
+ * read left reserved).
+ */
+struct GamePackageHeadInfo {
+	GamePackageInfo info;
+	SceUInt16 version;			/* a patch's */
+	SceUInt16 baseVersion;			/* the patch an update applies on, 0 for the first */
+	SceUInt8 digest[32];
+	SceUInt8 appDigest[32];			/* the application's digest a patch is made for */
+	SceUInt8 baseDigest[32];		/* the patch's an update applies on */
+	SceUInt8 keyDigest[32];			/* the same in an application and its patches */
+	SceUInt8 reserved[4];
+};
+
+typedef char GamePackageHeadInfoSize[sizeof(GamePackageHeadInfo) == 256 ? 1 : -1];
+
+/*
+ * PLACEHOLDER name: the header of the package folder at path, which ends in '/', with buf as work
+ * memory, cleared when it cannot be read (0x8136DA48, in the NpDrm package code the shell links)
+ */
+int gameNpDrmGetPackageHeader(GamePackageHeadInfo *header, SceSize size, const char *path,
+			      void *buf, SceSize bufSize);
 
 /*
  * PLACEHOLDER name: whether the record of the application appName names titleId (its first ten

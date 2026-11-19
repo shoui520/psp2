@@ -96,6 +96,8 @@ int gameAddcontInfoRead(const char *path, const paf::vector<paf::string> *dirs,
 			paf::vector<GameAddcontLicenseInfo> *infos);
 int gameAddcontInfoRemove(const char *path, const char *contentId);
 int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info);
+/* PLACEHOLDER name: the addcont/info folder at path made ready, its instv.dat checked (0x8109879C) */
+int gameAddcontInfoPrepare(const char *path);
 
 /* the store's result of an EPW request, as SceNpCommerce2's text result fills it (96 bytes) */
 struct GameStoreEpw {

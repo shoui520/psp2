@@ -27,6 +27,7 @@ SceUInt32 vshIoMount(int id, const char *path, int permission, void *data,
 SceUInt32 vshIoUmount(int id, int force, SceUInt32 reservedLow, SceUInt32 reservedHigh);
 SceUInt32 vshKernelSendSysEvent(int event);
 SceUInt32 vshSblQafMgrIsAllowKeepCoreFile(void);
+SceUInt32 vshSblQafMgrIsAllowFakeACInstall(void);
 SceUInt32 vshSblUtMgrHasComTestFlag(void);
 SceUInt32 vshPowerSetPowerSwMode(int mode);
 SceUInt32 vshPowerSetStandbyButtonPushTime(int time);

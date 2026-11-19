@@ -64,6 +64,7 @@ int appmgrReleaseBtrmSyscall(void);
 int appmgrSetBgmSubPriorityForSystemChatSyscall(int enabled);
 int appmgrSetBgmSubPrioritySyscall(int enabled, int priority);
 int appmgrSetDisplayMergeConfSyscall(SceUInt32 setting, SceUInt32 alpha);
+int sceAppMgrAcidDirSet(const char *mountPoint, const char *dir);
 int sceAppMgrAcquireBgmPort(void);
 int sceAppMgrAcquireBgmPortForMusicPlayer(void);
 int sceAppMgrAcquireBgmPortWithPriority(int priority);
