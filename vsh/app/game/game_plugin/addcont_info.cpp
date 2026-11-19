@@ -26,15 +26,18 @@ using namespace paf;
 #define GAME_ADDCONT_INFO_ERROR_IO		-2146416479	/* 0x8010A1A1 */
 #define GAME_ADDCONT_INFO_ERROR_BAD_DATA	-2146416478	/* 0x8010A1A2: an instv.dat without its magic */
 #define GAME_ADDCONT_INFO_ERROR_NO_INSTV	-2146416477	/* 0x8010A1A3: a folder without instv.dat */
-#define GAME_ADDCONT_INFO_ERROR_OLD_INSTV	-2146416474	/* 0x8010A1A6: an instv.dat of version 0 */
+#define GAME_ADDCONT_INFO_ERROR_NOT_FOUND	-2146416475	/* 0x8010A1A5: no license of the content ID */
+#define GAME_ADDCONT_INFO_ERROR_OLD_INSTV	-2146416474	/* 0x8010A1A6: an instv.dat of an older version */
 
 /* what instv.dat starts with */
 #define GAME_ADDCONT_INSTV_MAGIC	"ACIV"
+/* the version this code writes; an older one is not read */
+#define GAME_ADDCONT_INSTV_VERSION	1
 
 /* instv.dat's header, 76 bytes, followed by count GameAddcontLicenseInfo */
 struct GameAddcontInstv {
 	char magic[4];		/* GAME_ADDCONT_INSTV_MAGIC */
-	int version;		/* 1 */
+	SceUInt32 version;	/* GAME_ADDCONT_INSTV_VERSION */
 	SceUInt32 count;	/* the licenses after the header */
 	SceUInt8 padding[64];
 };
@@ -66,8 +69,8 @@ static __attribute__((noinline)) string gameAddcontInfoTempDir(const string &pat
 }
 
 /*
- * The addcont/info folder at path made ready: an instv.dat of version 1 kept, any other replaced
- * by a new one of version 1, written in the temp folder and moved in (0x8109879C).
+ * The addcont/info folder at path made ready: an instv.dat of the current version kept, any other
+ * replaced by a new one, written in the temp folder and moved in (0x8109879C).
  */
 int gameAddcontInfoPrepare(const char *path)
 {
@@ -111,7 +114,7 @@ int gameAddcontInfoPrepare(const char *path)
 			file->Close();
 
 		if (sce_paf_strncmp(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4) == 0) {
-			if (instv.version == 1)
+			if (instv.version == GAME_ADDCONT_INSTV_VERSION)
 				return 0;
 
 			ret = LocalFile::RemoveFile(instvPath.c_str());
@@ -141,7 +144,7 @@ int gameAddcontInfoPrepare(const char *path)
 
 	sce_paf_memset(&instv, 0, sizeof(instv));
 	sce_paf_memcpy(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4);
-	instv.version = 1;
+	instv.version = GAME_ADDCONT_INSTV_VERSION;
 	instv.count = 0;
 	if (file->Write(&instv, sizeof(instv)) != sizeof(instv)) {
 		if (file.get() != NULL)
@@ -208,7 +211,7 @@ int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
 		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
 	}
 
-	if (instv.version == 0) {
+	if (instv.version < GAME_ADDCONT_INSTV_VERSION) {
 		if (file.get() != NULL)
 			file->Close();
 		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
@@ -246,7 +249,7 @@ int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
 
 	sce_paf_memset(&header, 0, sizeof(header));
 	sce_paf_memcpy(header.magic, GAME_ADDCONT_INSTV_MAGIC, 4);
-	header.version = 1;
+	header.version = GAME_ADDCONT_INSTV_VERSION;
 	header.count = instv.count + 1;
 	if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
 		if (file.get() != NULL)
@@ -331,4 +334,345 @@ int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
 	if (ret < 0)
 		return ret;
 	return 0;
+}
+
+/*
+ * The license of contentId removed from the addcont/info folder at path: its instv.dat copied to
+ * the temp folder without it and moved back. With wholeId clear only the entitlement part of each
+ * content ID (its 9 characters from the 7th) is compared (0x8109A558).
+ */
+static __attribute__((noinline)) int gameAddcontInfoRemoveEntry(const char *path,
+								 const char *contentId,
+								 bool wholeId)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	if (path == NULL || contentId == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	bool grw0 = sce_paf_strncmp(path, "grw0:addcont/info", 18) == 0;
+
+	if (sce_paf_strncmp(path, "ux0:addcont/info", 17) == 0 || grw0)
+		ret = 0;
+	else
+		ret = GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+	if (ret < 0)
+		return ret;
+
+	string instvPath(path);
+
+	instvPath += "/";
+	instvPath += "instv.dat";
+
+	if (!LocalFile::Exists(instvPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instv;
+
+	sce_paf_memset(&instv, 0, sizeof(instv));
+	if (file->Read(&instv, sizeof(instv)) != sizeof(instv)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instv.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	string tempDir = gameAddcontInfoTempDir(instvPath);
+
+	if (!LocalFile::Exists(tempDir.c_str())) {
+		ret = Dir::CreateRecursive(tempDir.c_str());
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	string tempPath(tempDir);
+
+	tempPath += "/";
+	tempPath += "addcont_instv.dat";
+
+	if (LocalFile::Exists(tempPath.c_str())) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		if (ret < 0) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	}
+
+	common::SharedPtr<File> temp = LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	GameAddcontInstv header;
+
+	sce_paf_memset(&header, 0, sizeof(header));
+	sce_paf_memcpy(header.magic, GAME_ADDCONT_INSTV_MAGIC, 4);
+	header.version = GAME_ADDCONT_INSTV_VERSION;
+	header.count = 0;
+	if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+		if (file.get() != NULL)
+			file->Close();
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	bool found = false;
+	SceUInt32 count = 0;
+
+	for (SceUInt32 i = 0; i < instv.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(entry);
+		bool match;
+
+		if (wholeId)
+			match = entryId == string(contentId);
+		else
+			match = entryId.substr(7, 9) == string(contentId);
+
+		if (match) {
+			found = true;
+		} else {
+			if (temp->Write(entry, sizeof(entry)) != sizeof(entry)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+			count++;
+		}
+	}
+
+	if (file.get() != NULL) {
+		file->Close();
+		file.reset();
+	}
+
+	if (!found) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_NOT_FOUND;
+	}
+
+	if (temp->Seek(0, SCE_SEEK_SET) < 0) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+	instv.count = count;
+	if (temp->Write(&instv, sizeof(instv)) != sizeof(instv)) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (temp.get() != NULL)
+		temp->Close();
+
+	ret = LocalFile::RemoveFile(instvPath.c_str());
+	if (ret < 0) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	ret = LocalFile::RenameFile(tempPath.c_str(), instvPath.c_str());
+	return 0;
+}
+
+/*
+ * Whether the addcont/info folder at path has a license of one of dirs, the additional contents'
+ * folders, matched with the entitlement part of each content ID (0x8109B7A6).
+ */
+int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+
+	*found = false;
+
+	int ret = 0;
+
+	if (path == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	string instvPath(path);
+
+	instvPath += "/";
+	instvPath += "instv.dat";
+
+	if (!LocalFile::Exists(instvPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instv;
+
+	sce_paf_memset(&instv, 0, sizeof(instv));
+	if (file->Read(&instv, sizeof(instv)) != sizeof(instv)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instv.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	for (SceUInt32 i = 0; i < instv.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(entry);
+		string id = entryId.substr(7, 9);
+
+		for (SceUInt32 j = 0; j < dirs->size(); j++) {
+			if ((*dirs)[j] == id) {
+				*found = true;
+				break;
+			}
+		}
+		if (*found)
+			break;
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+	return 0;
+}
+
+/*
+ * The licenses in the addcont/info folder at path of the additional contents in dirs, matched
+ * with the entitlement part of each content ID, into infos (0x8109BD1C).
+ */
+int gameAddcontInfoRead(const char *path, const vector<string> *dirs,
+			vector<GameAddcontLicenseInfo> *infos)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	infos->clear();
+
+	if (path == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	string instvPath(path);
+
+	instvPath += "/";
+	instvPath += "instv.dat";
+
+	if (!LocalFile::Exists(instvPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
+						       &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instv;
+
+	sce_paf_memset(&instv, 0, sizeof(instv));
+	if (file->Read(&instv, sizeof(instv)) != sizeof(instv)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instv.magic, GAME_ADDCONT_INSTV_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instv.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	for (SceUInt32 i = 0; i < instv.count; i++) {
+		GameAddcontLicenseInfo info;
+
+		sce_paf_memset(&info, 0, sizeof(info));
+		if (file->Read(&info, sizeof(info)) != sizeof(info)) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(info.contentId);
+		string id = entryId.substr(7, 9);
+
+		for (SceUInt32 j = 0; j < dirs->size(); j++) {
+			if ((*dirs)[j] == id)
+				infos->push_back(info);
+		}
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+	return 0;
+}
+
+/* the license of contentId removed from the addcont/info folder at path (0x8109C328) */
+int gameAddcontInfoRemove(const char *path, const char *contentId)
+{
+	return gameAddcontInfoRemoveEntry(path, contentId, true);
 }

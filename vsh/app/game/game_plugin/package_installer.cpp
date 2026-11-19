@@ -111,11 +111,13 @@ int GamePackageInstaller::Run(GameAppRegistration *reg, bool registerApp, GameCa
 			return ret;
 
 		if (other == GAME_ERROR_GC_QUIET) {
-			if (m_source != NULL) {
+			GameInstallSource *source = m_source;
+
+			if (source != NULL) {
 				string none1((const char *)NULL);
 				string none2((const char *)NULL);
 
-				ret = m_source->Complete(&none1, &none2, 0, 0, 0, 1.0f);
+				ret = source->Complete(&none1, &none2, 0, 0, 0, 1.0f);
 				if (ret < 0)
 					return ret;
 			}
@@ -128,9 +130,8 @@ int GamePackageInstaller::Run(GameAppRegistration *reg, bool registerApp, GameCa
 		return GAME_ERROR_ABORTED;
 	}
 
-	const GameInstallExParam *param = (const GameInstallExParam *)m_path;
 	bool replace = false;
-	bool notifyTopmenu = !param->imported;
+	bool notifyTopmenu = !((const GameInstallExParam *)m_path)->imported;
 	bool registered = false;
 
 	if (m_infoSource != NULL) {
@@ -163,7 +164,7 @@ int GamePackageInstaller::Run(GameAppRegistration *reg, bool registerApp, GameCa
 			if (m_flag && gameCategoryIsPatch(category))
 				mode = 2;
 
-			reg->otherFlag = !param->noOtherFlag;
+			reg->otherFlag = !((const GameInstallExParam *)m_path)->noOtherFlag;
 
 			ret = gameAppRegister(reg, mode, m_otherFlag, notifyTopmenu, &replace);
 			if (ret < 0) {
