@@ -230,6 +230,9 @@ void applauncherPageViewRelease(ApplauncherPageView *view);
 class ApplauncherPage;
 ApplauncherPageView *applauncherPageViewGet(ApplauncherPage *page, bool fast);
 
+/* the slots of a page */
+#define APPLAUNCHER_PAGE_SLOTS		10
+
 class ApplauncherPageBase {
 public:
 	/* the page of the type, its slots empty (0x810B8516) */
@@ -249,7 +252,7 @@ public:
 	virtual void UpdateFade(void);		/* PLACEHOLDER name: the wave's fade applied each frame */
 
 	int m_type;				/* 1: the last, empty page */
-	paf::common::SharedPtr<ApplauncherIcon> m_slots[10];
+	paf::common::SharedPtr<ApplauncherIcon> m_slots[APPLAUNCHER_PAGE_SLOTS];
 	int m_state;				/* 1: shown in place */
 	int m_moveSlot;				/* PLACEHOLDER: the slot an icon's move began in */
 	ApplauncherPageView *m_view;		/* PLACEHOLDER: its widgets, from the page pool */
@@ -363,6 +366,52 @@ public:
 
 	SceUInt32 reserved[5];
 };
+
+/*
+ * PLACEHOLDER: the page a folder's icon opens over the home, its icons read from the folder's
+ * page in the database (160 bytes, vtable 0x8152F2D4). The home keeps it as its ApplauncherPage
+ * (m_appPage), whose m_focus is this page's m_icon: in Sony's build both are made on
+ * ApplauncherPageBase, and the page methods it calls (AddIcon, UpdateFocusLinks, Load,
+ * BeginEdit) read only that base.
+ */
+class ApplauncherFolderPage : public ApplauncherPageBase {
+public:
+	/* the page opened from the icon, the icon of the title given the focus (0x810BA824) */
+	ApplauncherFolderPage(const paf::common::SharedPtr<ApplauncherIcon> &icon, const char *name,
+			      bool select);
+	virtual ~ApplauncherFolderPage();
+	virtual int GetIndex(void)
+	{
+		return m_index;
+	}
+	virtual paf::ui::Widget *GetWidget(void);
+	virtual bool IsOpened(void);
+	virtual paf::math::v2 GetSlotPos(int slot);
+
+	/* PLACEHOLDER name: the folder's icons put on the page (0x810BB428) */
+	void SetIcons(const LsdbIconListPtr *icons);
+
+	ApplauncherPage *AsPage()
+	{
+		return static_cast<ApplauncherPage *>(static_cast<ApplauncherPageBase *>(this));
+	}
+
+	paf::common::SharedPtr<ApplauncherIcon> m_icon;	/* the folder's icon it opened from */
+	int m_index;				/* the folder's page */
+	paf::string m_focusTitle;		/* PLACEHOLDER: the title given the focus */
+	bool m_select;				/* PLACEHOLDER: that icon selected too */
+	bool m_opened;				/* PLACEHOLDER: its icons put on it */
+	paf::ui::Widget *m_widget;
+	paf::common::SharedPtr<paf::job::JobItem> m_job;	/* its icons read */
+	paf::math::v4 m_iconPos;		/* where the folder's icon stood */
+};
+
+/* PLACEHOLDER: where the slot's icon stands on a folder page, without one (0x810BB24A) */
+paf::math::v2 applauncherFolderPageGetSlotPos(int slot);
+/* PLACEHOLDER: the timer's widget destroyed (its DestroyWidget), in a file not written yet
+   (0x810D40BC) */
+void applauncherDestroyWidgetCB(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
+				void *data);
 
 /* the listener of the home's touches (its methods out of line, 0x810C9B58) */
 class ApplauncherInputListener : public paf::inputdevice::InputListener {
@@ -548,7 +597,8 @@ void applauncherHomeOnBackgroundTimeout(SceInt32 type, paf::ui::Handler *self, p
 void applauncherHomeCloseAppPage(bool keepFocus);
 /* the view moved to the page at once, unless it is the application's page (0x810AD466) */
 void applauncherHomeJumpTo(ApplauncherPage *page);
-/* PLACEHOLDER: the application page's icons put back (0x810BAEFC, the icon pool's file) */
+/* PLACEHOLDER: the folder page closed, back into its icon (0x810BAEFC, ApplauncherFolderPage's
+   file) */
 void applauncherIconPoolCloseAppPage(ApplauncherPage *page);
 /* PLACEHOLDER: the image of the path loaded by the DataCacheManager into the image's cache, on
    the queue (NULL: the manager's), read straight from the file when directLoad is set
@@ -737,7 +787,8 @@ void applauncherHomeOnIconImage(SceInt32 type, paf::ui::Handler *self, paf::ui::
 				void *data);
 /* livearea_plugin's GetInterface(1), fetched once (0x810A971E) */
 ShellPluginInterface *applauncherHomeGetLivearea(void);
-/* PLACEHOLDER: the application's page made from its icon (0x810BAEBE, the icon pool's file) */
+/* PLACEHOLDER: the folder page made from its icon, the one open closed first (0x810BAEBE,
+   ApplauncherFolderPage's file) */
 ApplauncherPage *applauncherIconPoolOpenAppPage(const paf::common::SharedPtr<ApplauncherIcon> &icon,
 						const char *name, bool animate);
 /* PLACEHOLDER: the IconCacheManager's image of the path, loaded (0x810BD3A6) and cleared

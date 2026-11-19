@@ -35,7 +35,6 @@ PAF_VECTOR_NOINLINE_PUSH_BACK(ApplauncherFolderImage, paf::allocator<Applauncher
 PAF_VECTOR_NOINLINE_PUSH_BACK(ApplauncherFolderSurface, paf::allocator<ApplauncherFolderSurface>)
 
 /* the slots of a page: the top row, the middle row and the bottom row */
-#define APPLAUNCHER_PAGE_SLOTS		10
 #define APPLAUNCHER_PAGE_TOP_FIRST	0
 #define APPLAUNCHER_PAGE_TOP_LAST	2
 #define APPLAUNCHER_PAGE_MIDDLE_FIRST	3
