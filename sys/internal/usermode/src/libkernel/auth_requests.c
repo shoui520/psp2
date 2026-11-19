@@ -1,49 +1,6 @@
 #include "libkernel_backends.h"
 #include <scetypes.h>
 
-struct PackageVerifyRequest {
-	SceSize firstSize;
-	SceSize secondSize;
-	SceUInt reserved[2];
-};
-
-struct SecureClockRequest {
-	SceSize size;
-	SceUInt reserved;
-};
-
-struct PcActivationChallengeRequest {
-	SceSize inputSize;
-	SceSize outputSize;
-	SceUInt reserved[2];
-};
-
-struct PsmActivationRequest {
-	SceSize responseSize;
-	SceUInt reserved;
-};
-
-struct AdhocBB224Context;
-struct AdhocBB160Context;
-
-struct AdhocAuthRequest {
-	SceSize dataSize;
-	SceUInt reserved;
-};
-
-struct AdhocAuthExchangeRequest {
-	SceSize inputSize;
-	SceSize outputSize;
-	SceUInt reserved[2];
-};
-
-struct AdhocKeysRequest {
-	void *thirdKey;
-	SceSize firstKeySize;
-	SceSize secondKeySize;
-	SceSize thirdKeySize;
-	SceUInt reserved[2];
-};
 
 
 /* GcAuthMgr copies the complete requests; reserved words remain unwritten. */

@@ -133,6 +133,7 @@ extern "C" {
 int mtpContextNpDrmGetRtc(MtpContext *context, const void *request, SceSize size)
 {
 	MtpNpDrmBase *base = NULL;
+	MtpNpDrmBase *allocated;
 	MtpEvent event;
 	int ret;
 
@@ -153,10 +154,11 @@ int mtpContextNpDrmGetRtc(MtpContext *context, const void *request, SceSize size
 	ret = mtpTaskQueuePush(context, &event);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_NDRM, 176, "mtpTaskQueuePush failed: 0x%x\n", ret);
-		if (base != NULL) {
-			mtpUtilFree(base->request);
-			mtpUtilFree(base->reply);
-			mtpUtilFree(base);
+		allocated = base;
+		if (allocated != NULL) {
+			mtpUtilFree(allocated->request);
+			mtpUtilFree(allocated->reply);
+			mtpUtilFree(allocated);
 		}
 		return ret;
 	}
@@ -167,13 +169,14 @@ int mtpContextNpDrmExecAuthentication(MtpContext *context, SceUInt32 arg, int ac
 	const void *request, SceSize size)
 {
 	MtpNpDrmBase *base = NULL;
+	MtpNpDrmBase *allocated;
 	MtpEvent event;
 	int ret;
 
 	mtpUtilMemset(&event, 0, sizeof(event));
 	if (size != MTP_NPDRM_AUTH_REQUEST_SIZE)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
-	ret = mtpContextCreateNpDrmBase(request, MTP_NPDRM_AUTH_REQUEST_SIZE,
+	ret = mtpContextCreateNpDrmBase(request, size,
 		activate == 1 ? MTP_NPDRM_ACTIVATION_REPLY_SIZE : 0, &base);
 	if (ret < 0)
 		return ret;
@@ -189,10 +192,11 @@ int mtpContextNpDrmExecAuthentication(MtpContext *context, SceUInt32 arg, int ac
 	ret = mtpTaskQueuePush(context, &event);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_NDRM, 219, "mtpTaskQueuePush failed: 0x%x\n", ret);
-		if (base != NULL) {
-			mtpUtilFree(base->request);
-			mtpUtilFree(base->reply);
-			mtpUtilFree(base);
+		allocated = base;
+		if (allocated != NULL) {
+			mtpUtilFree(allocated->request);
+			mtpUtilFree(allocated->reply);
+			mtpUtilFree(allocated);
 		}
 		return ret;
 	}
@@ -203,6 +207,7 @@ int mtpContextNpDrmGetLicense(MtpContext *context, const void *rtc, const void *
 	SceSize size)
 {
 	MtpNpDrmBase *base = NULL;
+	MtpNpDrmBase *allocated;
 	MtpNpDrmLicenseRequest *request;
 	MtpEvent event;
 	int ret;
@@ -232,10 +237,11 @@ int mtpContextNpDrmGetLicense(MtpContext *context, const void *rtc, const void *
 	ret = mtpTaskQueuePush(context, &event);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_NDRM, 264, "mtpTaskQueuePush failed: 0x%x\n", ret);
-		if (base != NULL) {
-			mtpUtilFree(base->request);
-			mtpUtilFree(base->reply);
-			mtpUtilFree(base);
+		allocated = base;
+		if (allocated != NULL) {
+			mtpUtilFree(allocated->request);
+			mtpUtilFree(allocated->reply);
+			mtpUtilFree(allocated);
 		}
 		return ret;
 	}

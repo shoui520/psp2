@@ -301,6 +301,10 @@ static void httpGetPropertyResult(MtpContext *context, void *result)
 	request = (MtpHttpRequest *)context->data;
 	if (property == NULL)
 		return;
-	*property->size = request->size;
-	mtpUtilMemcpy(property->mtime, &request->mtime, sizeof(request->mtime));
+	/* both of the caller's pointers are read before the size is stored */
+	SceUInt64 *size = property->size;
+	SceDateTime *mtime = property->mtime;
+
+	*size = request->size;
+	mtpUtilMemcpy(mtime, &request->mtime, sizeof(request->mtime));
 }

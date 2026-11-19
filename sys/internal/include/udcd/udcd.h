@@ -23,6 +23,18 @@
 #define SCE_UDCD_ERROR_USBDRIVER_INVALID_NAME	0x80243201
 #define SCE_UDCD_ERROR_USBDRIVER_INVALID_FUNCS	0x80243202
 
+/*
+ * SceUdcd's codes after vitasdk's SCE_UDCD_ERROR_* (names unknown), which user callers
+ * test too
+ */
+#define UDCD_ERROR_INVALID_ARGUMENT	0x8024300a
+#define UDCD_ERROR_TIMEOUT		0x8024300c	/* a state wait or the controller timed out */
+#define UDCD_ERROR_INTERRUPTED		0x8024300d	/* the wait was cancelled or the thread stopped */
+#define UDCD_ERROR_SUSPENDED		0x8024300e	/* the system is suspended */
+#define UDCD_ERROR_TOO_MANY_INTERFACES	0x80243203
+#define UDCD_ERROR_DRIVER_NOT_REGISTERED	0x80243204
+#define UDCD_ERROR_NO_THREAD		0x80243fff
+
 /* the state event flag's bits, one group per SceUdcdWaitParam word */
 typedef enum SceUdcdStatus {
 	SCE_UDCD_STATUS_CONNECTION_NEW		= 0x0001,
@@ -326,7 +338,9 @@ int sceUdcdReqRecv(SceUdcdDeviceRequest *request);
 int SceUdcdForDriver_D01CFD22(void);
 int sceUdcdWaitState(SceUdcdWaitParam *parameter, unsigned int timeout);
 int SceUdcdForDriver_DB7EF7AB(int bus);
+#ifndef SCE_UDCD_USER	/* user mode's takes the state (udcd/udcd_user.h) */
 int sceUdcdGetDeviceState(void);
+#endif
 int SceUdcdForDriver_E4F32EDA(const SceUdcdDeviceInfo *information, int bus);
 int sceUdcdInit(int bus);
 int SceUdcdForDriver_EBB1E86B(void);
@@ -338,4 +352,4 @@ int sceUdcdActivate(unsigned int productId);
 int sceUdcdGetDrvState(const char *driverName);
 int sceUdcdRegisterCallback(SceUID callback, unsigned int mask);
 int sceUdcdStart(const char *name, int args, void *argp);
-int sceUdcdUnregisterCallback(SceUID callback);
+int sceUdcdUnregisterCallback(void);	/* unregisters the calling thread's callback */

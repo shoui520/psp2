@@ -13,15 +13,6 @@
 #include <threadmgr/threadmgr.h>
 #include <sysmem/sblaimgr.h>
 
-/* SceUdcd codes after vitasdk's SCE_UDCD_ERROR_* (names unknown) */
-#define UDCD_ERROR_INVALID_ARGUMENT	0x8024300a
-#define UDCD_ERROR_TIMEOUT		0x8024300c	/* a state wait or the controller timed out */
-#define UDCD_ERROR_INTERRUPTED		0x8024300d	/* the wait was cancelled or the thread stopped */
-#define UDCD_ERROR_SUSPENDED		0x8024300e	/* the system is suspended */
-#define UDCD_ERROR_TOO_MANY_INTERFACES	0x80243203
-#define UDCD_ERROR_DRIVER_NOT_REGISTERED	0x80243204
-#define UDCD_ERROR_NO_THREAD		0x80243fff
-
 /* udcdBusState.controllerDriverState: "USBDeviceControllerDriver" */
 #define UDCD_CONTROLLER_DRIVER_STOPPED	0
 #define UDCD_CONTROLLER_DRIVER_STARTED	1

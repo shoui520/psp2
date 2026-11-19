@@ -382,7 +382,8 @@ static int _getObjectHandles(const MtpOperation *operation, MtpOperation *respon
 		goto error;
 	}
 	if (!countOnly) {
-		ret = mtpCoreSendData(&num, sizeof(num), sizeof(num));
+		/* the count, announcing the whole transfer: it and the handles */
+		ret = mtpCoreSendData(&num, sizeof(num), num * 4 + 4);
 		if (ret < 0) {
 			MTP_ERR(MTP_TAG_CMD, 143, "unable to send data=0x%x\n", ret);
 			send = 0;
@@ -556,8 +557,8 @@ static int _getObject(const MtpOperation *operation, MtpOperation *response, int
 	pfsPath = &path[nameLength + 1023];
 	ret = mtpStrgVTConvertMtpHandleToUniqueId(handle, &uniqueId);
 	if (ret < 0) {
-		ret = -2;
 		MTP_ERR(MTP_TAG_CMD, 258, "unable to convert MTP handle to UniquId=0x%x\n", ret);
+		ret = -2;
 		code = MTP_RESPONSE_INVALID_OBJECT_HANDLE;
 		goto free;
 	}
@@ -565,8 +566,8 @@ static int _getObject(const MtpOperation *operation, MtpOperation *response, int
 	ret = mtpCacheGetObjectProperty(storage->cache, uniqueId, MTP_DB_QUERY_FULL_PATH_NAME,
 		&path[nameLength], 1023);
 	if (ret < 0) {
-		ret = -2;
 		MTP_ERR(MTP_TAG_CMD, 270, "unable to get full path name from cache=0x%x\n", ret);
+		ret = -2;
 		goto free;
 	}
 	ret = mtpStrgCreatePfsPath(storage, &path[nameLength], pfsPath, nameLength + 1023, 1);
@@ -1694,7 +1695,7 @@ int mtpCmdGetObjectPropList(const MtpOperation *operation, MtpOperation *respons
 			for (j = 0; j < physical->numLogicalStorages; j++) {
 				storage = &physical->logicalStorages[j];
 				n = mtpStrgVTConvertMtpHandleToUniqueId(
-					MTP_OBJECT_ROOT_HANDLE(physical->index << 16 | storage->index),
+					MTP_OBJECT_ROOT_HANDLE_OF(physical->index, storage->index),
 					&uniqueId);
 				if (n < 0) {
 					MTP_ERR(MTP_TAG_CMD, 2666,
@@ -1775,8 +1776,8 @@ int mtpCmdGetObjectPropList(const MtpOperation *operation, MtpOperation *respons
 				for (j = 0; j < physical->numLogicalStorages; j++) {
 					storage = &physical->logicalStorages[j];
 					n = mtpStrgVTConvertMtpHandleToUniqueId(
-						MTP_OBJECT_ROOT_HANDLE(physical->index << 16 |
-							storage->index), &uniqueId);
+						MTP_OBJECT_ROOT_HANDLE_OF(physical->index, storage->index),
+						&uniqueId);
 					if (n < 0) {
 						MTP_ERR(MTP_TAG_CMD, 2751,
 							"unable to convert MTP handle to uniqueId=0x%x\n",

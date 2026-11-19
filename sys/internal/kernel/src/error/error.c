@@ -21,6 +21,7 @@
 #include <modulemgr/modulemgr.h>
 #include <sysmem/sysevent.h>
 #include <intrmgr/syscall.h>
+#include <error/error.h>
 
 #define HISTORY_ENTRIES		10
 #define HISTORY_PATH		"vd0:history/data.bin"
@@ -46,18 +47,6 @@ typedef struct ErrorTable {
 	SceUInt32 *codes;
 	SceUID heap;
 } ErrorTable;
-
-typedef struct ErrorRecord {
-	SceUInt8 data[0x140];
-	SceUInt32 code;
-	SceUInt32 id;
-	SceUInt32 swVersion;			/* SceKernelSystemSwVersion.version */
-	SceUInt32 format;			/* the default format, when set */
-	SceUInt8 key[10];
-	SceUInt8 padding[2];
-	SceUInt32 swVersionExtra;		/* the word after it */
-	SceUInt8 reserved[0x20];
-} ErrorRecord;
 
 typedef struct ErrorEntry {
 	SceUInt8 reserved0;

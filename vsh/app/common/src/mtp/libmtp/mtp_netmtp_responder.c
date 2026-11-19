@@ -425,7 +425,7 @@ int netMtpResponderSendData(MtpIfTransfer *transfer)
 		if (isPs3Host()) {
 			/* a PS3 waits for the data it asked for: end it with one packet */
 			size = (int)transfer->size;
-			if ((SceUInt32)size > NET_MTP_DATA_MAX_PS3)
+			if (size > NET_MTP_DATA_MAX_PS3)
 				size = NET_MTP_DATA_MAX_PS3;
 			res = mtp_ip_send_data(s_responder.commandSocket, transfer->transactionId,
 					       transfer->buffer, size, 0);
@@ -528,7 +528,7 @@ int netMtpResponderRecvData(MtpIfTransfer *transfer)
 	SceUInt32 transactionId = 0;
 	SceUInt32 length = 0;
 	SceUInt32 size;
-	SceUInt64 remaining;
+	SceUInt32 remaining;
 	SceUInt64 total;
 	SceUInt8 *buffer;
 	MtpIpHeader header;
@@ -548,9 +548,9 @@ int netMtpResponderRecvData(MtpIfTransfer *transfer)
 		ret = MTP_ERROR_DISCONNECTED;
 		goto fail;
 	}
-	remaining = transfer->size;
+	remaining = (SceUInt32)transfer->size;
 	if (s_responder.received == 0) {
-		if (remaining == 0) {
+		if (transfer->size == 0) {
 			sceClibPrintf("[MTP %s%s] Data size is zero.\n", MTP_TAG_NET_MTP_RESPONDER,
 				      __FUNCTION__);
 			goto done;
@@ -589,7 +589,7 @@ int netMtpResponderRecvData(MtpIfTransfer *transfer)
 		s_responder.recvTotal = total;
 		s_responder.recvPacketSize = 0;
 		s_responder.recvPacketDone = 0;
-		remaining = transfer->size;
+		remaining = (SceUInt32)transfer->size;
 	}
 	buffer = transfer->buffer;
 	while (remaining != 0) {

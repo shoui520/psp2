@@ -230,6 +230,7 @@ int mtpCmdGetVitaInformation(const MtpOperation *operation, MtpOperation *respon
 {
 	int length = 0;
 	int responseCode = MTP_RESPONSE_GENERAL_ERROR;
+	SceUInt32 total;
 	char *buf;
 	int ret;
 	int n;
@@ -248,12 +249,13 @@ int mtpCmdGetVitaInformation(const MtpOperation *operation, MtpOperation *respon
 		goto error;
 	}
 	length = n + 1;
-	ret = mtpCoreSendData(&length, sizeof(length), sizeof(length) + length);
+	total = sizeof(length) + length;
+	ret = mtpCoreSendData(&length, sizeof(length), total);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CMD, 384, "sceMtpIfSendData failed: 0x%x\n", ret);
 		goto error;
 	}
-	ret = mtpCoreSendData(buf, length, sizeof(length) + length);
+	ret = mtpCoreSendData(buf, length, total);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CMD, 389, "sceMtpIfSendData failed: 0x%x\n", ret);
 		goto error;
@@ -272,14 +274,16 @@ int mtpCmdGetCapabilityInfo(const MtpOperation *operation, MtpOperation *respons
 {
 	int length = 0;
 	const char *xml = NULL;
+	SceUInt32 total;
 	int ret;
 
 	mtpSpecGetCapabilityInfo(&xml, &length);
-	ret = mtpCoreSendData(&length, sizeof(length), sizeof(length) + length);
+	total = sizeof(length) + length;
+	ret = mtpCoreSendData(&length, sizeof(length), total);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CMD, 427, "sceMtpIfSendData failed: 0x%x\n", ret);
 	} else {
-		ret = mtpCoreSendData(xml, length, sizeof(length) + length);
+		ret = mtpCoreSendData(xml, length, total);
 		if (ret >= 0) {
 			mtpUtilSetMtpResponse(MTP_RESPONSE_OK, NULL, 0, operation, response);
 			return 0;

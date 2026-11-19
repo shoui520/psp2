@@ -12,21 +12,13 @@
 #include <sysmem/sysmem.h>
 #include <acmgr/acmgr.h>
 #include <udcd/udcd.h>
+#define SCE_UDCD_KERNEL
+#include <udcd/udcd_user.h>
 
 
 #define UDCD_ERROR_BUSY			SCE_UDCD_ERROR_WAIT_TIMEOUT
 
 #define UDCD_THREADMGR_CLASS_CALLBACK	8
-
-/* the device state as user mode sees it */
-typedef struct UdcdUserDeviceState {
-	unsigned int controller;		/* CONTROLLER_STOPPED/STARTED */
-	unsigned int activation;		/* DEACTIVATED, ACTIVATED, IS_CHARGING */
-	unsigned int cable;			/* CABLE_DISCONNECTED/CONNECTED */
-	unsigned int connection;		/* CONNECTION_*, 1 while suspended */
-	unsigned int charging;			/* USE_USB_CHARGING */
-	unsigned int reserved;			/* not set */
-} UdcdUserDeviceState;
 
 /* Original name unknown. Register the bus 2 state callback (one thread at a time). */
 int udcdRegisterCallback(SceUID callback, SceUID process, unsigned int mask)
@@ -125,7 +117,7 @@ int sceUdcdRegisterCallback(SceUID callback, unsigned int mask)
 	return result;
 }
 
-int sceUdcdUnregisterCallback(SceUID callback)
+int sceUdcdUnregisterCallback(void)
 {
 	SceUInt32 t = sceSyscallEnter();
 	SceUID process, thread;

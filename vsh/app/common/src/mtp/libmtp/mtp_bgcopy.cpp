@@ -218,6 +218,7 @@ int mtpBgCopyRestartIdleTimer(void)
 {
 	MtpBgCopyIdleTimerJob *job;
 	SceUInt64 time;
+	SceUID timer;
 	int ret;
 
 	if (s_idleTimer == NULL)
@@ -225,11 +226,13 @@ int mtpBgCopyRestartIdleTimer(void)
 	job = static_cast<MtpBgCopyIdleTimerJob *>(s_idleTimer->m_job.get());
 	ret = 0;
 	if (job != NULL) {
+		timer = job->m_timer;
 		job->m_expired = false;
-		sceKernelStopTimer(job->m_timer);
+		sceKernelStopTimer(timer);
 		time = sceKernelGetTimerTimeWide(job->m_timer);
-		ret = (int)sceKernelSetTimerTimeWide(job->m_timer,
-			time / MTP_BGCOPY_IDLE_TIME * MTP_BGCOPY_IDLE_TIME);
+		/* back to the last whole idle period */
+		time = time / MTP_BGCOPY_IDLE_TIME * MTP_BGCOPY_IDLE_TIME;
+		ret = (int)sceKernelSetTimerTimeWide(job->m_timer, time);
 		if (ret >= 0)
 			sceKernelStartTimer(job->m_timer);
 	}

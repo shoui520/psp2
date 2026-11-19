@@ -7,16 +7,9 @@
 #include <kernel/modulemgr.h>
 #include <kernel/iofilemgr.h>
 #include <kernel/openpsid.h>
+#include <gcauthmgr/gcauthmgr_user.h>
 
 /* Native syscall boundaries. Request layouts remain with their producers. */
-struct AdhocAuthExchangeRequest;
-struct AdhocAuthRequest;
-struct AdhocBB160Context;
-struct AdhocBB224Context;
-struct AdhocBroadcastEncryptRequest;
-struct AdhocDecryptRequest;
-struct AdhocKeysRequest;
-struct AdhocUnicastEncryptRequest;
 struct BacktraceOptions;
 struct EventCancelOptions;
 struct EventFlagWaitOptions;
@@ -38,22 +31,14 @@ struct LwCondCreateOptions;
 struct LwInfoRequest;
 struct LwMutexCreateOptions;
 struct ModuleCallOptions;
-struct MsSaveBBCipherContext;
-struct MsSaveBBCipherRequest;
-struct MsSaveBBMacContext;
-struct MsSaveBBMacRequest;
 struct MsgPipeCreateOptions;
 struct MsgPipeInfoRequest;
 struct MsgPipeTryOptions;
 struct MsgPipeWaitOptions;
 struct MultipleEventWaitOptions;
 struct ObjectInfoRequest;
-struct PackageVerifyRequest;
-struct PcActivationChallengeRequest;
 struct ProcessParamHeader;
-struct PsmActivationRequest;
 struct RandomNumberRequest;
-struct SecureClockRequest;
 struct SemaCreateOptions;
 struct ThreadContextRequest;
 struct ThreadEventHandlerOptions;
@@ -63,69 +48,6 @@ struct TimerInfoRequest;
 
 typedef struct SceKernelCallFrame SceKernelCallFrame;
 
-extern int _sceSblGcAuthMgrAdhocBB160UniCastEncrypt(
-		struct AdhocBB160Context *context, void *data, SceSize size,
-		const struct AdhocUnicastEncryptRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160UniCastDecrypt(
-		struct AdhocBB160Context *context, void *data, SceSize size,
-		const struct AdhocDecryptRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160BroadCastEncrypt(void *data, SceSize size,
-		void *authentication,
-		const struct AdhocBroadcastEncryptRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160BroadCastDecrypt(
-		struct AdhocBB160Context *context, void *data, SceSize size,
-		const struct AdhocDecryptRequest *request);
-extern int _sceSblGcAuthMgrPkgVry(const void *first, const void *second,
-		const struct PackageVerifyRequest *request);
-extern int _sceSblGcAuthMgrSclkGetData1(void *data,
-		const struct SecureClockRequest *request);
-extern int _sceSblGcAuthMgrSclkSetData2(const void *data,
-		const struct SecureClockRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Init(void);
-extern int _sceSblGcAuthMgrAdhocBB160Init(void);
-extern int _sceSblGcAuthMgrPcactGetChallenge(SceUInt mode, const void *input,
-		void *output, const struct PcActivationChallengeRequest *request);
-extern int _sceSblGcAuthMgrPcactActivation(const void *activation,
-		SceUInt unknownArgument);
-extern int _sceSblGcAuthMgrPsmactCreateC1(SceUInt mode, void *activation,
-		void *response, const struct PsmActivationRequest *request);
-extern int _sceSblGcAuthMgrPsmactVerifyR1(const void *activation,
-		const void *response, void *output,
-		const struct PsmActivationRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Auth1(struct AdhocBB224Context *context,
-		void *output, const struct AdhocAuthRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Auth1(struct AdhocBB160Context *context,
-		void *output, const struct AdhocAuthRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Auth5(struct AdhocBB160Context *context,
-		const void *input, const struct AdhocAuthRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Auth2(struct AdhocBB224Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Auth3(struct AdhocBB224Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Auth4(struct AdhocBB224Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224Auth5(struct AdhocBB224Context *context,
-		const void *input, const struct AdhocAuthRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Auth2(struct AdhocBB160Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Auth3(struct AdhocBB160Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Auth4(struct AdhocBB160Context *context,
-		const void *input, void *output,
-		const struct AdhocAuthExchangeRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB224GetKeys(
-		const struct AdhocBB224Context *context, void *firstKey,
-		void *secondKey, const struct AdhocKeysRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160GetKeys(
-		const struct AdhocBB160Context *context, void *firstKey,
-		void *secondKey, const struct AdhocKeysRequest *request);
-extern int _sceSblGcAuthMgrGetMediaIdType01(void *mediaId,
-		const struct AdhocAuthRequest *request);
 extern int _sceKernelBacktrace(SceUID threadId, SceKernelCallFrame *frames,
 		SceSize size, const struct BacktraceOptions *options);
 extern int _sceKernelWaitEvent(SceUID id, SceUInt32 pattern,
@@ -273,21 +195,6 @@ extern int _sceKernelGetMsgPipeInfo(SceUID id, SceKernelMsgPipeInfo *info,
 extern SceUInt32 sceKernelGetProcessTimeLowCore(void);
 extern SceUInt64 sceKernelGetProcessTimeWideCore(void);
 extern int sceKernelGetProcessTimeCore(SceKernelSysClock *clock);
-extern int _sceSblGcAuthMgrMsSaveBBMacInit(struct MsSaveBBMacContext *context,
-		SceUInt mode);
-extern int _sceSblGcAuthMgrMsSaveBBMacUpdate(struct MsSaveBBMacContext *context,
-		const void *data, SceSize size);
-extern int _sceSblGcAuthMgrMsSaveBBCipherUpdate(
-		struct MsSaveBBCipherContext *context, void *data, SceSize size);
-extern int _sceSblGcAuthMgrMsSaveBBCipherFinal(
-		struct MsSaveBBCipherContext *context);
-extern int _sceSblGcAuthMgrMsSaveBBMacFinal(struct MsSaveBBMacContext *context,
-		void *mac, const void *key, const struct MsSaveBBMacRequest *request);
-extern int _sceSblGcAuthMgrMsSaveBBCipherInit(
-		struct MsSaveBBCipherContext *context, SceUInt mode,
-		SceUInt generationMode, const struct MsSaveBBCipherRequest *request);
-extern int _sceSblGcAuthMgrAdhocBB160Shutdown(void);
-extern int _sceSblGcAuthMgrAdhocBB224Shutdown(void);
 extern int _sceKernelGetOpenPsId(SceKernelOpenPsId *id);
 extern SceInt32 _sceSblACMgrIsGameProgram(SceBool *result);
 extern int _sceKernelGetRandomNumber(void *output, SceSize size,

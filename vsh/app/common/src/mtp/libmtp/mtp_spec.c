@@ -503,7 +503,7 @@ int mtpSpecGetVitaInformation(char *buf, SceSize size, int withOnlineId)
 
 	if (withOnlineId) {
 		getSystemParamUserName(userName, 0);
-		mtpUserNameCopy(onlineId, sizeof(onlineId), userName);
+		netMtpNameToString(onlineId, sizeof(onlineId), userName);
 		ret = sceClibSnprintf(buf, size, "<%s responderVersion=\"%s\" protocolVersion=\"%08u\""
 				      " comVersion=\"%u\" onlineId=\"%s\" %s %s>", "VITAInformation",
 				      version.versionString, MTP_SPEC_PROTOCOL_VERSION,

@@ -186,7 +186,7 @@ int mtpObjPackObjectPropValue(MtpLogicalStorage *storage, SceUInt32 uniqueId,
 		type = mtpDBObjectPropCode2QueryType(code);
 		if (type < 0) {
 			MTP_ERR(MTP_TAG_OBJ, 2115, "this property is not handled in DB\n");
-			return type;
+			return ret;
 		}
 		ret = mtpDBGetObjectPropertyOffset(type, &offset, &valueSize);
 		if (ret < 0) {
@@ -378,8 +378,8 @@ int mtpObjAddDirectoryObject(MtpLogicalStorage *storage, const char *name, SceUI
 			goto end;
 		}
 	} else {
-		ret = mtpStrgVTConvertMtpHandleToUniqueId(MTP_OBJECT_ROOT_HANDLE(storageId),
-			&parent);
+		ret = mtpStrgVTConvertMtpHandleToUniqueId(
+			MTP_OBJECT_ROOT_HANDLE_OF(storage->info->index, storage->index), &parent);
 		if (ret < 0) {
 			MTP_ERR(MTP_TAG_OBJ, 665, "couldn't get root unique id: 0x%x\n", ret);
 			goto end;
@@ -617,9 +617,9 @@ int mtpObjAddObjectData(MtpLogicalStorage *storage, SceUInt32 parent, const MtpO
 		format = MTP_FORMAT_UNDEFINED;
 	object->uid = 0;
 	object->parentUid = parent;
+	object->objectSize = data->objectSize;
 	object->objectFormat = format;
 	object->protectionStatus = 0;
-	object->objectSize = data->objectSize;
 	mtpUtilMemcpy(&object->dateCreated, &data->dateCreated, sizeof(object->dateCreated));
 	mtpUtilMemcpy(&object->dateModified, &data->dateModified, sizeof(object->dateModified));
 	mtpUtilStrcpy(object->fullPathName, relative);
@@ -773,7 +773,7 @@ int mtpObjRemoveObject(MtpLogicalStorage *storage, SceUInt32 uniqueId)
 	if (format == MTP_FORMAT_ABSTRACT_AUDIO_ALBUM) {
 		mtpUtilStrrchr(pfsPath, '.')[1] = '\0';
 		mtpUtilStrcat(pfsPath, MTP_OBJ_JPEG_EXTENSION);
-		if (mtpFileExists(pfsPath)) {
+		if (mtpFileExists(pfsPath) == 1) {
 			ret = mtpFileDelete(pfsPath, format);
 			if (ret < 0) {
 				MTP_ERR(MTP_TAG_OBJ, 1363, "unable to delete album art(%s)=0x%x\n",

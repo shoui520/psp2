@@ -12,6 +12,9 @@
 #include <libkernel/libkernel.h>
 #include <usbmtp/usbmtp.h>		/* SceMtpIf's errors, MtpIfTransfer */
 #include <rtc.h>
+#include <fsutil/fs_util.h>		/* sceFsUtilGetDevInfo */
+#include <console_info/console_info.h>
+#include <host_collabo/util/wake_on_lan.h>
 #include "libmtp.h"
 
 #ifdef __cplusplus
@@ -64,6 +67,10 @@ extern "C" {
 #define SCE_MTP_ERROR_UNSUPPORTED_PROPERTY	((int)0x8054000C)
 /* the cache and the database have no such object */
 #define SCE_MTP_ERROR_NO_SUCH_OBJECT	((int)0x8054000E)
+/* a database file SQLite cannot read (mtpSqlConvertError) */
+#define SCE_MTP_ERROR_DATABASE_BROKEN	((int)0x80540032)
+/* any other SQLite error, its primary result code in the low byte */
+#define SCE_MTP_ERROR_SQLITE(err)	((int)(0x80541000 | (SceUInt8)(err)))
 
 /* the network device's errors (the names are ours) */
 #define SCE_MTP_ERROR_NET_UNKNOWN_HOST_TYPE	((int)0x8054001E)
@@ -580,6 +587,15 @@ int mutexUnlock(SceUID mutex);
 int netMtpIdToString(char *dst, SceSize size, const SceUInt8 *id);
 int netMtpMacAddressToString(char *dst, SceSize size, const SceUInt8 *mac);
 int netMtpNameToString(char *dst, SceSize size, const char *name);
+
+/* paf's strtok (ScePafStdc 766D2A69), which paf's std/string.h does not declare yet */
+char *sce_paf_strtok(char *str, const char *delimiters);
+
+/*
+ * SceThreadmgrCoredumpTime's sceKernelExitThread, the one the USB monitor imports (as libc
+ * does; its link name has the library's prefix, the SDK's threadmgr.h has the plain name)
+ */
+int SceThreadmgrCoredumpTime_sceKernelExitThread(int exitStatus);
 int netMtpPinToString(char *dst, SceSize size, const char *pin);
 int netMtpUuidToString(char *dst, SceSize size, const SceUInt8 *id);
 int netMtpStringToMacAddress(SceUInt8 *mac, const char *str);
@@ -596,8 +612,6 @@ int parse_response(int *status, int *result, const char *buf);
 int parse_register_cancel_request(int *errorCode, const char *buf);
 int parse_host_discovery_responce(MtpNetHost *host, const char *buf);
 /* ScePafStdc's strtok (name unknown) */
-char *ScePafStdc_766D2A69(char *str, const char *delimiters);
-int sceHostCollaboUtilSendWakeOnLanRequestTo(const SceUInt8 *mac);
 /* mtp_registry.c: the registered hosts, kept in the registry */
 #define NETMTP_MAX_REGISTERED_HOSTS	8	/* of each kind */
 int loadAllHostsData(void);
@@ -624,8 +638,6 @@ int mtpRegistryUnregisterNetMtpHost(const MtpNetHost *host);
 int mtpMarlinIsWaiting(void);
 int mtpMarlinCancelWaitResult(void);
 int mtpBgCopyCancelAll(void);
-int mtpUserNameCopy(char *dst, SceSize size, const char *src);
-int mtpBgCopyServiceNotify(int arg0, int kind, int arg2);
 int mtpQueueKick(void);
 
 /*
@@ -881,7 +893,6 @@ int mtpStatusSetArg(int arg);
 int sceMtpTerminateExecution(void);
 int mtpQueueInit(MtpCommandHandler handler);
 int mtpQueueTerminate(void);
-void mtpQueueCancelAll(int arg);
 int mtpQueuePushCommand(MtpOperation *operation, int flags);
 int mtpBgCopyIdleTimerInitialize(void);
 void mtpBgCopyIdleTimerTerminate(void);
@@ -985,8 +996,6 @@ SceOff mtpFileSeek(SceUID fd, SceOff offset, int whence);
 int mtpFileRead(SceUID fd, void *buf, SceSize size);
 int mtpFileWrite(SceUID fd, const void *buf, SceSize size);
 int mtpFileGetStorageInfo(const char *path, SceUInt64 *maxCapacity, SceUInt64 *freeSpace);
-/* fsutil's (libmtp links it) */
-int sceFsUtilGetDevInfo(const char *path, SceUInt64 *maxCapacity, SceUInt64 *freeSpace);
 
 /* mtp_context.cpp */
 int mtpContextInitialize(void);
@@ -1078,11 +1087,9 @@ int mtpTaskQueueCancelAll(void);
 int mtpTaskQueueCancelAllForDoCancelAndPause(void);
 int mtpTaskQueueGetContext(SceUInt32 contextId, MtpContext **context);
 int mtpBgCopyRestartIdleTimer(void);
-int mtpCmdIsNetworkUnavailable(void);
 int mtpIfEndCommon(SceUInt32 contextId, void *result, const char *name);
 int mtpXmlAllocatorInitialize(void);
 int mtpXmlAllocatorUninitialize(void);
-void mtpCmdAbortOperation(MtpOperation *operation, MtpOperation *response);
 /* the application's callbacks (mtp_callback.c) */
 typedef void (*MtpCallbackFunc)(int event, void *arg);
 typedef int (*MtpEventHandler)(int event, void *arg);
@@ -1092,7 +1099,6 @@ int mtpCallbackNotify(int event);
 void mtpCallbackSetEventHandler(MtpEventHandler handler, void *arg);
 void mtpCallbackClearEventHandler(void);
 int mtpCallbackInvokeEvent(int event);
-int netMtpDeviceIsWaking(void);
 
 /*
  * The API (mtp_base.c) and what it calls in the files that are not C yet; each prototype
@@ -1155,7 +1161,7 @@ typedef struct MtpStorageInfo {
 
 typedef struct MtpStorage MtpStorage;
 struct MtpStorage {
-	void *owner;
+	SceUInt32 flags;		/* MTP_STORAGE_FLAG_* */
 	MtpStorageInfo *info;
 	void *reserved[3];
 	int (*start)(MtpStorage *storage);
@@ -1163,6 +1169,8 @@ struct MtpStorage {
 	int (*activate)(MtpStorageInfo *info);		/* opens its databases */
 	int (*deactivate)(MtpStorageInfo *info, int arg);
 };
+/* it is not started (its start has not run, or its stop has) */
+#define MTP_STORAGE_FLAG_STOPPED	0x1000
 
 typedef struct MtpCache MtpCache;
 
@@ -1188,30 +1196,36 @@ struct MtpLogicalStorage {
 	const char **rootDirs;		/* the folders the host may make at its root, or NULL */
 	SceUInt16 index;		/* its number in its physical storage, from 1 */
 	SceUInt16 largeObjectSupported;	/* it takes objects of 4 GiB and more */
-	SceUInt8 reserved1[8];
+	SceUInt32 writeProtected;	/* 1: the host may only read and delete */
+	SceUInt32 failed;		/* bit 0: mtpDBInitGenericWay could not set it up */
 	SceUInt32 maxObjects;		/* the objects its database has room for */
 	SceUInt32 numObjects;		/* mtpDBGetUniqueIdInfo's */
-	SceUInt8 reserved2[4];
+	int dbType;			/* MTP_DB_TYPE_* of its database */
 	MtpDB *db;
 	const MtpStorageInfo *info;	/* info->name: the mount point */
 	MtpCache *cache;
 	int (*getStorageInfo)(MtpLogicalStorage *storage);
-	SceUInt8 reserved3[4];
+	/* the folder, under its root, that keeps objects of an object format */
+	int (*getContentRoot)(MtpLogicalStorage *storage, SceUInt16 format, char *path);
 	/* the path a storage path names on the device, and the path the PFS layer opens */
-	int (*convertNormalPath)(MtpLogicalStorage *storage, const char *path, char *normal,
+	char *(*convertNormalPath)(MtpLogicalStorage *storage, const char *path, char *normal,
 		SceSize size);
-	int (*createPfsPath)(MtpLogicalStorage *storage, const char *path, char *pfsPath,
+	char *(*createPfsPath)(MtpLogicalStorage *storage, const char *path, char *pfsPath,
 		SceSize size, int create);
 	SceUInt8 reserved4[4];
 	MtpStorageDataset dataset;	/* what GetStorageInfo sends */
 };
 
 /* a logical storage's database (DB) */
+#define MTP_DB_TYPE_NORMAL	0	/* obsolete */
+#define MTP_DB_TYPE_SQLITE	1
+#define MTP_DB_NOT_OPEN		((struct sqlite3 *)-1)
 struct MtpDB {
 	int type;			/* MTP_DB_TYPE_* */
-	int handle;			/* -1 until it is open */
-	SceUInt8 reserved[256];
+	struct sqlite3 *sqlite;		/* MTP_DB_NOT_OPEN until it is open */
+	char path[256];			/* the database file */
 	SceUID mutex;
+	MtpDB *opened;			/* itself while it is open */
 };
 int mtpDBGetUniqueIdInfo(MtpDB *db, SceUInt32 *numObjects);
 
@@ -1226,7 +1240,8 @@ typedef struct MtpObjmap {
 #define MTP_OBJMAP_MAGIC		0xDEADBEEF
 int mtpObjmapCreate(MtpObjmap *objmap, SceUInt32 storageId);
 int mtpObjmapDestroy(MtpObjmap *objmap);
-int mtpObjmapSetupHandles(MtpObjmap *objmap);
+/* a handle for each object of db */
+int mtpObjmapSetupHandles(MtpObjmap *objmap, MtpDB *db);
 int mtpObjmapUnsetupHandles(MtpObjmap *objmap);
 int mtpObjmapDeallocate(MtpObjmap *objmap, SceUInt32 uniqueId);
 int mtpObjmapAllocate(MtpObjmap *objmap, SceUInt32 flags, SceUInt32 uniqueId, SceUInt32 parent,
@@ -1330,7 +1345,7 @@ int mtpContextImportObjectData(MtpContext *context, SceUInt32 source, const char
 	const char *name, int import);
 int mtpContextSetResumeContextId(SceUInt32 contextId);
 /* object: the unique ID, then the handle's storage bits (an MtpObjectId) */
-int mtpContextExportObjectWithCheck(MtpContext *context, SceUInt64 object, SceUInt64 target);
+int mtpContextExportObjectWithCheck(MtpContext *context, SceInt64 object, SceInt64 target);
 int mtpContextRequestFsOperation(MtpContext *context, int operation, SceUInt32 param1,
 	SceUInt32 param2, const char *path, SceSize size);
 int mtpContextGetObjectStatus(MtpContext *context, SceUInt32 type, const char *path,
@@ -1345,7 +1360,7 @@ int mtpContextGetPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 o
 int mtpContextSendPartOfObject(MtpContext *context, SceUInt32 handle, SceUInt64 offset,
 	SceUInt64 size);
 int mtpContextGetHostStorageSize(MtpContext *context, SceUInt32 storageId);
-int mtpContextCompareObjectData(MtpContext *context, SceUInt64 object);
+int mtpContextCompareObjectData(MtpContext *context, SceInt64 object);
 int mtpContextGetTotalObjectSize(MtpContext *context, SceUInt32 numHandles);
 int mtpContextGetSpecifiedObjectMetadata(MtpContext *context, SceUInt32 type,
 	const SceUInt32 *items, SceUInt32 numItems);
@@ -1357,7 +1372,7 @@ int mtpContextNpDrmGetLicense(MtpContext *context, const void *rtc, const void *
 	SceSize size);
 
 /* SceSblGcAuthMgr's user library */
-int sceSblGcAuthMgrPcactGetChallenge(int type, void *challenge, const void *data);
+#include <libSceSblGcAuthMgr_stub/gc_auth_mgr_stub.h>
 
 /* Marlin (MRLN) */
 int mtpMarlinGetInfo(int type, SceSize size, SceUInt32 offset, void *data, SceSize *outSize);
@@ -1433,8 +1448,10 @@ int mtpStrgVTSetupMtpHandles(SceUInt32 storageId);
 int mtpStrgVTUnsetupMtpHandles(SceUInt32 storageId);
 int mtpStrgUpdateLogicalInfo(MtpLogicalStorage *storage);
 /* the handle of a storage's root ("association") */
+#define MTP_OBJECT_ROOT_HANDLE_OF(physical, logical) \
+	((((SceUInt8)(logical) - 1) & 3) << 27 | (((SceUInt8)(physical) - 1) & 3) << 29 | 0x7FFFFFF)
 #define MTP_OBJECT_ROOT_HANDLE(storageId) \
-	((((storageId) - 1) & 3) << 27 | ((((storageId) >> 16) - 1) & 3) << 29 | 0x7FFFFFF)
+	MTP_OBJECT_ROOT_HANDLE_OF((storageId) >> 16, storageId)
 int mtpObjRemoveObject(MtpLogicalStorage *storage, SceUInt32 uniqueId);
 /* counts (buf NULL) or packs an ObjectPropList: count elements, size bytes */
 int mtpObjPackObjectPropList(MtpLogicalStorage *storage, SceUInt32 uniqueId, SceUInt16 format,
@@ -1521,9 +1538,8 @@ typedef struct ObjectDataBasic {
 } ObjectDataBasic;
 #define MTP_OBJ_NO_PARENT		0xFFFFFFFF
 
-/* the whole row of tbl_mtpObject (MTP_DB_QUERY_OBJECT_DATA), what the cache keeps */
-typedef struct ObjectData {
-	ObjectDataBasic basic;
+/* the columns of tbl_mtpObject after ObjectDataBasic's (MTP_DB_QUERY_OBJECT_DATA_EXTENSION) */
+typedef struct ObjectDataExtension {
 	char artist[256];
 	char genre[256];
 	char album[256];
@@ -1545,6 +1561,12 @@ typedef struct ObjectData {
 	SceUInt8 reserved[4];
 	SceUInt32 width;
 	SceUInt32 height;
+} ObjectDataExtension;
+
+/* the whole row of tbl_mtpObject (MTP_DB_QUERY_OBJECT_DATA), what the cache keeps */
+typedef struct ObjectData {
+	ObjectDataBasic basic;
+	ObjectDataExtension extension;
 } ObjectData;
 
 /* the object mtpObjAddObjectData adds and mtpObjGetObjectData reads */
@@ -1581,8 +1603,58 @@ int mtpDBGetObjectUniqueIdsByType(MtpDB *db, int type, const void *value, SceUIn
 	SceUInt32 count, SceUInt32 *ids);
 /* where a property sits in an ObjectDataBasic, and its size */
 int mtpDBGetObjectPropertyOffset(int type, SceUInt32 *offset, SceUInt32 *size);
+int mtpDBOpen(MtpDB *db, int create);
+int mtpDBClose(MtpDB *db);
+int mtpDBFormat(MtpDB *db, SceUInt32 maxObjects);
+int mtpDBSetupMtpHandlesList(MtpDB *db, MtpObjmap *objmap);
+int mtpDBInitGenericWay(MtpStorageInfo *info, SceUInt32 cacheSize);
+int mtpDBUninitGenericWay(MtpStorageInfo *info);
+int mtpDBLock(MtpDB *db);
+int mtpDBUnlock(MtpDB *db);
+
+/* what a database type does (the SQLite database's: dbSqliteOperation) */
+typedef struct MtpDBOperation {
+	int (*open)(MtpDB *db, int create);
+	int (*close)(MtpDB *db);
+	int (*format)(MtpDB *db, SceUInt32 maxObjects);
+	int (*getUniqueIdInfo)(MtpDB *db, SceUInt32 *numObjects);
+	int (*registerObject)(MtpDB *db, ObjectDataBasic *object);
+	int (*unregisterObject)(MtpDB *db, SceUInt32 uniqueId);
+	int (*getObjectProperty)(MtpDB *db, SceUInt32 uniqueId, int type, void *buf,
+		SceSize size);
+	int (*setObjectProperty)(MtpDB *db, SceUInt32 uniqueId, int type, const void *buf,
+		SceSize size);
+	void *reserved;
+	int (*getNumObjects)(MtpDB *db, SceUInt32 parent, SceUInt32 *num);
+	int (*getNumObjectsByType)(MtpDB *db, int type, const void *value, SceUInt32 *num);
+	int (*getObjectUniqueIds)(MtpDB *db, SceUInt32 parent, SceUInt32 offset, SceUInt32 count,
+		SceUInt32 *ids);
+	int (*getObjectUniqueIdsByType)(MtpDB *db, int type, const void *value, SceUInt32 offset,
+		SceUInt32 count, SceUInt32 *ids);
+	int (*setupMtpHandlesList)(MtpDB *db, MtpObjmap *objmap);
+} MtpDBOperation;
+extern const MtpDBOperation dbSqliteOperation;
+
+/* the SQLite calls (SQL): a value bound to a statement's parameter */
+#define MTP_SQL_BIND_INTEGER	1
+#define MTP_SQL_BIND_TEXT	2
+typedef struct MtpSqlBind {
+	int type;			/* MTP_SQL_BIND_* */
+	union {
+		SceInt64 integer;
+		const void *data;	/* a text's bytes, copied when it is bound */
+	} value;
+	SceSize size;
+} MtpSqlBind;
+struct sqlite3_stmt;
+/* an SQLite result code as an SCE_MTP_ERROR_*, 0 for SQLITE_OK */
+int mtpSqlConvertError(int err);
+int mtpSqlCreateStatement(struct sqlite3 *db, const char *sql, struct sqlite3_stmt **stmt);
+int mtpSqlBindStatement(struct sqlite3_stmt *stmt, const MtpSqlBind *bind, int num);
+/* sqls: the statements to run in turn, ending with NULL */
+int mtpSqlExec(struct sqlite3 *db, const char *const *sqls);
 /* a property's column value as the MTP value the host reads */
-int mtpDBFixToObjectPropValue(int type, void *dst, const void *src, SceSize size);
+void mtpDBFixToObjectPropValue(int type, const void *src, void *dst, SceSize size);
 /* an MTP value the host sent as the property's column value */
 void mtpDBFixFromObjectPropValue(int type, const void *src, void *dst, SceSize size);
 /* an object property code's MTP_DB_QUERY_* */
@@ -1599,6 +1671,37 @@ int mtpStrgVTGetParentMtpHandleFromUniqueId(SceUInt32 storageId, SceUInt32 uniqu
 
 #define MTP_OBJECT_PROP_STORAGE_ID	0xDC01
 #define MTP_OBJECT_PROP_PARENT_OBJECT	0xDC0B
+/* the object property codes the database keeps (MTP 1.1, and Sony's 0xD901) */
+#define MTP_OBJECT_PROP_OBJECT_FORMAT			0xDC02
+#define MTP_OBJECT_PROP_PROTECTION_STATUS		0xDC03
+#define MTP_OBJECT_PROP_OBJECT_FILE_NAME		0xDC07
+#define MTP_OBJECT_PROP_DATE_CREATED			0xDC08
+#define MTP_OBJECT_PROP_DATE_MODIFIED			0xDC09
+#define MTP_OBJECT_PROP_PERSISTENT_UID			0xDC41
+#define MTP_OBJECT_PROP_NAME				0xDC44
+#define MTP_OBJECT_PROP_ARTIST				0xDC46
+#define MTP_OBJECT_PROP_NON_CONSUMABLE			0xDC4F
+#define MTP_OBJECT_PROP_REPRESENTATIVE_SAMPLE_FORMAT	0xDC81
+#define MTP_OBJECT_PROP_REPRESENTATIVE_SAMPLE_HEIGHT	0xDC83
+#define MTP_OBJECT_PROP_REPRESENTATIVE_SAMPLE_WIDTH	0xDC84
+#define MTP_OBJECT_PROP_WIDTH				0xDC87
+#define MTP_OBJECT_PROP_HEIGHT				0xDC88
+#define MTP_OBJECT_PROP_DURATION			0xDC89
+#define MTP_OBJECT_PROP_RATING				0xDC8A
+#define MTP_OBJECT_PROP_TRACK				0xDC8B
+#define MTP_OBJECT_PROP_GENRE				0xDC8C
+#define MTP_OBJECT_PROP_USE_COUNT			0xDC91
+#define MTP_OBJECT_PROP_ORIGINAL_RELEASE_DATE		0xDC99
+#define MTP_OBJECT_PROP_ALBUM_NAME			0xDC9A
+#define MTP_OBJECT_PROP_ALBUM_ARTIST			0xDC9B
+#define MTP_OBJECT_PROP_DRM_STATUS			0xDC9D
+#define MTP_OBJECT_PROP_BITRATE_TYPE			0xDE92
+#define MTP_OBJECT_PROP_SAMPLE_RATE			0xDE93
+#define MTP_OBJECT_PROP_NUMBER_OF_CHANNELS		0xDE94
+#define MTP_OBJECT_PROP_AUDIO_BIT_DEPTH			0xDE95
+#define MTP_OBJECT_PROP_AUDIO_WAVE_CODEC		0xDE99
+#define MTP_OBJECT_PROP_AUDIO_BITRATE			0xDE9A
+#define MTP_OBJECT_PROP_SCE_BUYFLAG			0xD901
 #define MTP_FORMAT_UNDEFINED		0x3000
 #define MTP_FORMAT_ABSTRACT_AUDIO_ALBUM		0xBA03
 #define MTP_FORMAT_ABSTRACT_AV_PLAYLIST		0xBA05
@@ -1705,12 +1808,11 @@ void mtpCmdMarlinFreeBuffers(void);
 /* the utilities' heap, which the task queue allocates its events from */
 extern "C" paf::memory::HeapAllocator *g_mtpUtilHeap;
 
-/* vitasdk: none; paf's allocation from a heap, NULL when it has no memory */
-extern "C" void *ScePafStdc_D00387E7(SceSize size, void *heap);
+/* paf's allocation from a heap (ScePafStdc D00387E7), NULL when it has no memory */
+void *operator new(size_t size, paf::memory::HeapAllocator *heap) throw();
 
-/* an object from that heap: the same import */
-void *operator new(size_t size, paf::memory::HeapAllocator *heap) throw()
-	__asm__("ScePafStdc_D00387E7");
+/* forget the host's capabilityInfo; a connection that ended keeps it unless forced */
+void mtpCapabilityInfoClear(bool force);
 
 namespace bXCe {
 namespace Sax {

@@ -1384,8 +1384,8 @@ static __attribute__((noinline)) void _mtpMarlinGetResult(SceUInt32 type, SceUIn
 	s_marlinContext.eventCode = (event);					\
 } while (0)
 
-/* tells the host about a request and waits for its results */
-static inline __attribute__((always_inline)) void _mtpMarlinSendRequest(SceUInt16 code,
+/* tells the host about a request and waits for its results: 0, or the error (also in ret) */
+static inline __attribute__((always_inline)) int _mtpMarlinSendRequest(SceUInt16 code,
 	int line, const char *func, int ifEvent, int *ret)
 {
 	SceUInt32 outBits;
@@ -1408,17 +1408,18 @@ static inline __attribute__((always_inline)) void _mtpMarlinSendRequest(SceUInt1
 		err = 0;
 	}
 	*ret = err;
-	if (*ret != 0)
-		return;
-	*ret = mtpCoreSendResponse(&event, MTP_MARLIN_CONTEXT_ID(code));
-	if (*ret < 0) {
+	if (err != 0)
+		return err;
+	err = mtpCoreSendResponse(&event, MTP_MARLIN_CONTEXT_ID(code));
+	*ret = err;
+	if (err < 0) {
 		if (ifEvent)
 			sceClibPrintf("[MTP %s%s(%d)err] MtpIfSendEvent failed: 0x%x\n",
-				MTP_TAG_MRLN, func, line, *ret);
+				MTP_TAG_MRLN, func, line, err);
 		else
 			sceClibPrintf("[MTP %s%s(%d)err] mtpCoreSendEvent failed: 0x%x\n",
-				MTP_TAG_MRLN, func, line, *ret);
-		return;
+				MTP_TAG_MRLN, func, line, err);
+		return err;
 	}
 	outBits = 0;
 	timeout = MTP_MARLIN_RESULT_TIMEOUT;
@@ -1428,6 +1429,7 @@ static inline __attribute__((always_inline)) void _mtpMarlinSendRequest(SceUInt1
 			&timeout);
 	} while (err >= 0 && (outBits & MTP_MARLIN_EVF_RESULT) == 0);
 	*ret = err;
+	return err;
 }
 
 /* ends a request: its event flag and its context go */
@@ -1464,9 +1466,8 @@ int mtpExecMarlinActivation(int reserved, SceUInt32 arg, SceUInt32 *result2, Sce
 		MTP_MARLIN_CONTEXT_ARG, sizeof(arg), &arg);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_ACTIVATION, 1910, "mtpExecMarlinActivation",
-		0, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_ACTIVATION, 1910, "mtpExecMarlinActivation",
+		0, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ACTIVATION_2, result2);
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ACTIVATION_3, result3);
@@ -1495,9 +1496,8 @@ int mtpExecMarlinDeactivation(int reserved, SceUInt32 arg, SceUInt32 *result2,
 		MTP_MARLIN_CONTEXT_ARG, sizeof(arg), &arg);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_DEACTIVATION, 1960,
-		"mtpExecMarlinDeactivation", 0, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_DEACTIVATION, 1960, "mtpExecMarlinDeactivation",
+		0, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ACTIVATION_2, result2);
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ACTIVATION_3, result3);
@@ -1527,9 +1527,8 @@ int mtpExecMarlinLicenseMove(int reserved, const char *licenseId, SceSize length
 			MTP_MARLIN_CONTEXT_LICENSE_ARG, sizeof(arg), &arg);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_MOVE, 2007,
-		"mtpExecMarlinLicenseMove", 1, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_MOVE, 2007, "mtpExecMarlinLicenseMove",
+		1, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ERROR, (SceUInt32 *)&ret);
 end:
@@ -1557,9 +1556,8 @@ int mtpExecMarlinLicenseCopy(int reserved, const char *licenseId, SceSize length
 			MTP_MARLIN_CONTEXT_LICENSE_ARG, sizeof(arg), &arg);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_COPY, 2051,
-		"mtpExecMarlinLicenseCopy", 1, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_COPY, 2051, "mtpExecMarlinLicenseCopy",
+		1, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ERROR, (SceUInt32 *)&ret);
 end:
@@ -1587,9 +1585,8 @@ int mtpExecMarlinLicenseCheck(int reserved, const char *licenseId, SceSize lengt
 			MTP_MARLIN_CONTEXT_LICENSE_ARG, sizeof(arg), &arg);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_CHECK, 2096,
-		"mtpExecMarlinLicenseCheck", 1, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_LICENSE_CHECK, 2096, "mtpExecMarlinLicenseCheck",
+		1, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ERROR, (SceUInt32 *)&ret);
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_LICENSE_STATE, state);
@@ -1628,9 +1625,8 @@ int mtpExecMarlinSharedInfoAcq(int reserved, const char *licenseId, SceSize leng
 		MTP_MARLIN_CONTEXT_LICENSE_ID, length, licenseId);
 	if (ret != 0)
 		goto end;
-	_mtpMarlinSendRequest(MTP_EVENT_MARLIN_SHARED_INFO_ACQ, 2158,
-		"mtpExecMarlinSharedInfoAcq", 1, &ret);
-	if (ret != 0)
+	if (_mtpMarlinSendRequest(MTP_EVENT_MARLIN_SHARED_INFO_ACQ, 2158,
+		"mtpExecMarlinSharedInfoAcq", 1, &ret) != 0)
 		goto end;
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_ERROR, (SceUInt32 *)&ret);
 	_mtpMarlinGetResult(MTP_MARLIN_RESULT_SHARED_INFO, info);

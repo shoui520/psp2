@@ -15,8 +15,18 @@ extern "C" {
 #include <appmgr/appmgr.h>
 }
 
+/* the build Sony's trace path names: one per firmware */
+#if defined(FW_TYPE_CEX)
+#define BGCOPY_SERVICE_MANAGER_BUILD	"J01509657"
+#elif FW_VERSION == 0x03630011
+#define BGCOPY_SERVICE_MANAGER_BUILD	"J01508051"
+#else
+#define BGCOPY_SERVICE_MANAGER_BUILD	"J01509658"
+#endif
+
 #define BGCOPY_SERVICE_MANAGER_SOURCE_FILE \
-	"W:\\Build\\J01509658\\vsh\\app\\common\\src\\mtp\\libmtp\\bgcopy_service_manager.cpp"
+	"W:\\Build\\" BGCOPY_SERVICE_MANAGER_BUILD \
+	"\\vsh\\app\\common\\src\\mtp\\libmtp\\bgcopy_service_manager.cpp"
 
 /* the background copy service */
 #define BGCOPY_SERVICE_NAME		"NPXS10100"
@@ -207,10 +217,11 @@ int BgCopySrvMgr::clearStatus()
 /* func is called for every import not to be started again; those it accepts are removed */
 int BgCopySrvMgr::forEachRestart(int (*func)(SceUInt32 id))
 {
-	BgCopyContextIterator it = m_contexts.begin();
-
 	if (func == NULL)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
+
+	BgCopyContextIterator it = m_contexts.begin();
+
 	while (it != m_contexts.end()) {
 		if (it->second->restart != 0) {
 			++it;

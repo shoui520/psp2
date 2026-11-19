@@ -251,7 +251,7 @@ int mtpContextSetResumeContextId(SceUInt32 contextId)
 	return 0;
 }
 
-int mtpContextExportObjectWithCheck(MtpContext *context, SceUInt64 object, SceUInt64 target)
+int mtpContextExportObjectWithCheck(MtpContext *context, SceInt64 object, SceInt64 target)
 {
 	SceUInt32 uniqueId = (SceUInt32)object;
 	SceUInt32 storageId = MTP_OBJECT_STORAGE_ID((SceUInt32)(object >> 32));
@@ -544,7 +544,7 @@ int mtpContextGetHostStorageSize(MtpContext *context, SceUInt32 storageId)
 	return 0;
 }
 
-int mtpContextCompareObjectData(MtpContext *context, SceUInt64 object)
+int mtpContextCompareObjectData(MtpContext *context, SceInt64 object)
 {
 	SceUInt32 uniqueId = (SceUInt32)object;
 	SceUInt32 storageId = MTP_OBJECT_STORAGE_ID((SceUInt32)(object >> 32));
@@ -955,13 +955,13 @@ error:
 int mtpCmdSendObjectMetadata(const MtpOperation *operation, MtpOperation *response)
 {
 	SceUInt32 contextId = operation->param[0];
-	MtpContext *context = NULL;
 	SceUInt32 code;
+	MtpContext *context = NULL;
 	SceUInt32 param;
 	int ret;
 	int n;
 
-	if (operation->numParams == 0) {
+	if (operation->numParams < 1) {
 		code = MTP_RESPONSE_INVALID_PARAMETER;
 		MTP_ERR(MTP_TAG_CMDE, 1456, "wrong param\n");
 		ret = -2;
@@ -1495,7 +1495,7 @@ int mtpCmdCheckObjectExistence(const MtpOperation *operation, MtpOperation *resp
 	int n;
 
 	mtpContextGetContextByEvent(MTP_OPERATION_REQUEST_RESUME_IMPORT_OBJECT, &context);
-	if (operation->numParams != 0)
+	if (operation->numParams >= 1)
 		storageId = operation->param[0];
 	handle = mtpCoreGetObjectImportHandle();
 	if (handle == 0) {
@@ -1559,7 +1559,7 @@ int mtpCmdCheckObjectExistence(const MtpOperation *operation, MtpOperation *resp
 	if (context != NULL)
 		mtpContextPutContext(context, 1);
 	param[0] = handle;
-	param[1] = (SceUInt32)(stat.st_size >> 32);
+	param[1] = (SceUInt32)((SceUInt64)stat.st_size >> 32);
 	param[2] = (SceUInt32)stat.st_size;
 	mtpUtilSetMtpResponse(MTP_RESPONSE_VENDOR_OBJECT_EXISTENCE, param, 3, operation,
 		response);

@@ -67,17 +67,17 @@ int parse_response(int *status, int *result, const char *buf)
 		MTP_ERR(MTP_TAG_HTTP_PARSER, 47, "invalid line\n");
 		return HTTP_PARSER_ERROR_LINE;
 	}
-	token = ScePafStdc_766D2A69(line, " ");
+	token = sce_paf_strtok(line, " ");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (sce_paf_strcmp("HTTP/1.1", token) != 0)
 		return HTTP_PARSER_ERROR_FORMAT;
-	token = ScePafStdc_766D2A69(NULL, " ");
+	token = sce_paf_strtok(NULL, " ");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (status != NULL)
 		*status = sce_paf_atoi(token);
-	token = ScePafStdc_766D2A69(NULL, " ");
+	token = sce_paf_strtok(NULL, " ");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (sce_paf_strcasecmp("OK", token) == 0) {
@@ -110,12 +110,12 @@ int parse_register_cancel_request(int *errorCode, const char *buf)
 	next = buf + length;
 	while (*next == '\r' || *next == '\n')
 		next++;
-	token = ScePafStdc_766D2A69(line, " * ");
+	token = sce_paf_strtok(line, " * ");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (sce_paf_strcmp("REGISTERCANCEL", token) != 0)
 		return HTTP_PARSER_ERROR_FORMAT;
-	token = ScePafStdc_766D2A69(NULL, " * ");
+	token = sce_paf_strtok(NULL, " * ");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (sce_paf_strcmp("HTTP/1.1", token) != 0)
@@ -124,12 +124,12 @@ int parse_register_cancel_request(int *errorCode, const char *buf)
 		MTP_ERR(MTP_TAG_HTTP_PARSER, 131, "invalid line\n");
 		return HTTP_PARSER_ERROR_LINE;
 	}
-	token = ScePafStdc_766D2A69(line, ":");
+	token = sce_paf_strtok(line, ":");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (sce_paf_strcmp("errorcode", token) != 0)
 		return HTTP_PARSER_ERROR_FORMAT;
-	token = ScePafStdc_766D2A69(NULL, ":");
+	token = sce_paf_strtok(NULL, ":");
 	if (token == NULL)
 		return HTTP_PARSER_ERROR_FORMAT;
 	if (errorCode != NULL)

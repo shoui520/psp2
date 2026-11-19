@@ -1,31 +1,6 @@
 #include "libkernel_backends.h"
 #include <scetypes.h>
 
-struct AdhocBB160Context;
-
-struct AdhocUnicastEncryptRequest {
-	void *authentication;
-	SceUInt unknownArgument;
-	SceSize dataSize;
-	SceSize authenticationSize;
-	SceUInt reserved[2];
-};
-
-struct AdhocDecryptRequest {
-	const void *authentication;
-	SceUInt unknownFirstArgument;
-	SceUInt unknownSecondArgument;
-	SceSize dataSize;
-	SceSize authenticationSize;
-	SceUInt reserved;
-};
-
-struct AdhocBroadcastEncryptRequest {
-	SceUInt unknownArgument;
-	SceSize dataSize;
-	SceSize authenticationSize;
-	SceUInt reserved;
-};
 
 
 /* GcAuthMgr owns the cryptographic operations and copies the full requests. */

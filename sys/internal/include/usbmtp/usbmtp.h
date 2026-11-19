@@ -25,7 +25,7 @@
 
 /* USB MTP data phase: a buffer and its progress */
 typedef struct MtpIfTransfer {
-	SceUInt32 reserved;
+	SceUInt32 transactionId;		/* SceLibMtp passes its operation's */
 	void *buffer;
 	SceUInt64 size;
 	SceUInt64 totalSize;		/* of the data phase, -1 when unknown */

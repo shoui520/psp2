@@ -27,3 +27,22 @@ int sceMtpIfStartPort(const void *port);	/* start the driver */
 int SceMtpIfForDriver_E6453F21(const void *port);	/* stop the driver */
 int SceMtpIfForDriver_CB685AC0(int port);
 int SceMtpIfForDriver_FDF8C3C0(int port);
+
+/*
+ * The syscalls user mode calls (trans.c; sceMtpIfStartPortForUser is sceMtpIfStartPort to
+ * user mode, declared above)
+ */
+int sceMtpIfReset(const void *port);
+int sceMtpIfCancelTransfer(const void *port);
+int sceMtpIfIsConnected(const void *port);
+int sceMtpIfStopPort(const void *port);
+int sceMtpIfWaitConnect(const void *port, SceUInt32 timeout);
+int sceMtpIfChangePhase(const void *port, int phase);
+int sceMtpIfStartDriver(int port);
+int sceMtpIfStopDriver(int port);
+const void *sceMtpIfGetPort(int port);
+int sceMtpIfRecvCommand(const void *port, void *command);
+int sceMtpIfSendResponse(const void *port, const void *response);
+int sceMtpIfSendDataWithParam(const void *port, MtpIfTransfer *params);
+int sceMtpIfRecvDataWithParam(const void *port, MtpIfTransfer *params);
+int sceMtpIfSendEvent(const void *port, const void *command, const void *event);

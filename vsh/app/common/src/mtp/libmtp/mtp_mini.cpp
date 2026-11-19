@@ -44,13 +44,13 @@ int mtpIfEndCommon(SceUInt32 contextId, void *result, const char *name)
 int sceMtpBeginHttpGetDataWithUrl(const char *url, int arg, SceUInt64 offset,
 	SceUInt32 *contextId)
 {
-	char titleId[32] = { 0 };
 	MtpContext *context;
 	int checkVersion;
 	int ret;
 
 	if (contextId == NULL)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
+	char titleId[32] = { 0 };
 	context = NULL;
 	ret = mtpTaskQueueGetTitleId(titleId, sizeof(titleId));
 	if (ret < 0)
@@ -186,7 +186,7 @@ int SceLibMtp_F82B75F5(MtpStatus *status)
 		if (status->reason != 9)
 			mtpCoreWake(0);
 	}
-	if (status->state == 0 && !mtpCmdIsNetworkUnavailable())
+	if (status->state == 0 && !netMtpIsWlanAvailable())
 		status->reason = 3;
 	return 0;
 }
@@ -255,7 +255,7 @@ int sceMtpTerminateExecution(void)
 		MTP_ERR("MINI:", 455, "MtpIfSendEvent failed: 0x%x\n", ret);
 	mtpContextRegister(held);
 	mtpCoreSetPublicStatus(2, -1);
-	if (mtpCoreHasPendingOperation()) {
+	if (mtpCoreHasPendingOperation() == 1) {
 		mtpCoreClearPendingOperation();
 		mtpContextCancelAll();
 	}

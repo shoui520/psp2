@@ -98,22 +98,20 @@ static __attribute__((noinline)) int _findLogicalStorageByPath(const char *path,
 	for (i = 0; i < s_storageManager->numStorages; i++) {
 		info = s_storageManager->storages[i]->info;
 		length = mtpUtilStrlen(info->name);
-		if (mtpUtilStrncmp(mount, info->name, length) == 0)
-			break;
+		if (mtpUtilStrncmp(mount, info->name, length) != 0)
+			continue;
+		logical = info->logicalStorages;
+		if (mount == path && (rootLength = mtpUtilStrlen(logical->rootFolder)) != 0 &&
+		    mtpUtilStrncmp(&mount[length], logical->rootFolder, rootLength) != 0) {
+			MTP_ERR(MTP_TAG_STRG, 92, "wrong path [%s] root dir [%s]\n", path,
+				logical->rootFolder);
+			return SCE_MTP_ERROR_INVALID_ARGUMENT;
+		}
+		*storage = logical;
+		return 0;
 	}
-	if (i >= s_storageManager->numStorages) {
-		MTP_ERR(MTP_TAG_STRG, 101, "couldn't find storage for [%s]\n", path);
-		return SCE_MTP_ERROR_STORAGE_NOT_FOUND;
-	}
-	logical = info->logicalStorages;
-	if (mount == path && (rootLength = mtpUtilStrlen(logical->rootFolder)) != 0 &&
-	    mtpUtilStrncmp(&path[length], logical->rootFolder, rootLength) != 0) {
-		MTP_ERR(MTP_TAG_STRG, 92, "wrong path [%s] root dir [%s]\n", path,
-			logical->rootFolder);
-		return SCE_MTP_ERROR_INVALID_ARGUMENT;
-	}
-	*storage = logical;
-	return 0;
+	MTP_ERR(MTP_TAG_STRG, 101, "couldn't find storage for [%s]\n", path);
+	return SCE_MTP_ERROR_STORAGE_NOT_FOUND;
 }
 
 /* adds a directory's object, and the objects of the parents it does not have yet */
@@ -123,8 +121,8 @@ static inline int _registerDirectory(MtpLogicalStorage *storage, const char *pat
 	SceUInt32 length;
 	SceUInt32 end;
 	char *dir;
-	char *p;
-	char c;
+	SceUInt8 *p;
+	SceUInt8 c;
 	int ret;
 
 	length = mtpUtilStrlen(path);
@@ -144,7 +142,7 @@ static inline int _registerDirectory(MtpLogicalStorage *storage, const char *pat
 		ret = mtpObjAddDirectoryObject(storage, dir, uniqueId);
 		if (ret != SCE_MTP_ERROR_NOT_FOUND)
 			break;
-		p = &dir[end];
+		p = (SceUInt8 *)&dir[end];
 		if (*p != '/') {
 			do {
 				if (end == 0)
@@ -168,8 +166,12 @@ static inline int _registerDirectory(MtpLogicalStorage *storage, const char *pat
 	/* then down again, one folder at a time */
 	while (length > end) {
 		dir[end] = '/';
-		while (dir[end] != '\0')
-			end++;
+		p = (SceUInt8 *)&dir[end];
+		do {
+			if (*p == '\0')
+				break;
+			p++;
+		} while (end++ != 0);
 		ret = mtpObjAddDirectoryObject(storage, dir, uniqueId);
 		if (ret < 0) {
 			MTP_ERR(MTP_TAG_STRG, 2206, "AddDirectory %s failed: 0x%x\n", dir, ret);
@@ -186,6 +188,7 @@ int mtpStrgRegisterDirectory(const char *path, SceUInt32 *handle)
 	SceUInt32 storageId;
 	SceUInt32 uniqueId;
 	char *normal;
+	char *dir;
 	int ret;
 
 	ret = _findLogicalStorageByPath(path, &storage);
@@ -202,8 +205,9 @@ int mtpStrgRegisterDirectory(const char *path, SceUInt32 *handle)
 		return SCE_MTP_ERROR_NOT_INITIALIZED;
 	}
 	storage->convertNormalPath(storage, path, normal, MTP_STRG_PATH_SIZE);
+	dir = mtpUtilStrchr(normal, ':') + 1;
 	storageId = MTP_LOGICAL_STORAGE_ID(storage);
-	ret = _registerDirectory(storage, mtpUtilStrchr(normal, ':') + 1, &uniqueId);
+	ret = _registerDirectory(storage, dir, &uniqueId);
 	if (ret < 0) {
 		mtpUtilFree(normal);
 		return ret;
@@ -222,6 +226,7 @@ int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle)
 	SceUInt32 storageId;
 	SceUInt32 uniqueId;
 	char *normal;
+	char *name;
 	int ret;
 
 	ret = _findLogicalStorageByPath(path, &storage);
@@ -241,8 +246,9 @@ int mtpStrgGetMtpHandleByPath(const char *path, SceUInt32 *handle)
 	}
 	storage->convertNormalPath(storage, path, normal, MTP_STRG_PATH_SIZE);
 	storageId = MTP_LOGICAL_STORAGE_ID(storage);
-	ret = mtpDBGetObjectUniqueIdsByType(storage->db, MTP_DB_QUERY_FULL_PATH_NAME,
-		mtpUtilStrchr(normal, ':') + 1, 0, 1, &uniqueId);
+	name = mtpUtilStrchr(normal, ':') + 1;
+	ret = mtpDBGetObjectUniqueIdsByType(storage->db, MTP_DB_QUERY_FULL_PATH_NAME, name, 0,
+		1, &uniqueId);
 	if (ret < 0) {
 		if (ret != SCE_MTP_ERROR_NOT_FOUND)
 			MTP_ERR(MTP_TAG_STRG, 2366, "couldn't get db unique id for %s: 0x%x\n",
@@ -346,8 +352,8 @@ int mtpStrgSetupMtpRootFolder(MtpLogicalStorage *storage)
 {
 	const MtpStorageInfo *info;
 	char *path;
-	char *p;
-	char c;
+	SceUInt8 *p;
+	SceUInt8 c;
 	int ret = 0;
 
 	if (storage == NULL || (info = storage->info) == NULL) {
@@ -363,33 +369,32 @@ int mtpStrgSetupMtpRootFolder(MtpLogicalStorage *storage)
 	if (storage->rootFolder != NULL && mtpUtilStrlen(storage->rootFolder) != 0)
 		mtpUtilStrcat(path, storage->rootFolder);
 	if (!mtpFileExists(path)) {
-		p = path;
+		p = (SceUInt8 *)path;
 		c = *p;
 		for (;;) {
-			/* to the end of the next folder (a device name is passed whole) */
-			while (c != '/' && c != '\0') {
-				if (c == ':') {
-					p += 2;
-					c = *p;
-				} else {
-					p++;
-					c = *p;
+			/* at the end of each folder (a device name is passed whole) */
+			if (c == '/' || c == '\0') {
+				*p = '\0';
+				if (!mtpFileExists(path)) {
+					ret = mtpFileCreate(path, MTP_FORMAT_ASSOCIATION);
+					if (ret < 0) {
+						MTP_ERR(MTP_TAG_STRG, 450, "unable to create %s=0x%x\n",
+							path, ret);
+						break;
+					}
 				}
-			}
-			*p = '\0';
-			if (!mtpFileExists(path)) {
-				ret = mtpFileCreate(path, MTP_FORMAT_ASSOCIATION);
-				if (ret < 0) {
-					MTP_ERR(MTP_TAG_STRG, 450, "unable to create %s=0x%x\n", path,
-						ret);
+				*p = c;
+				if (c == '\0')
 					break;
-				}
+				c = p[1];
+				p++;
+			} else if (c == ':') {
+				c = p[2];
+				p += 2;
+			} else {
+				c = p[1];
+				p++;
 			}
-			*p = c;
-			if (c == '\0')
-				break;
-			p++;
-			c = *p;
 		}
 	}
 	mtpUtilFree(path);
@@ -413,17 +418,18 @@ static inline int mtpStrgIsStorageStartable(const MtpStorage *storage)
 {
 	const char *name = storage->info->name;
 
-	if (mtpSpecFindStorage(name) != NULL)
-		return 1;
-	MTP_ERR(MTP_TAG_STRG, 292, "storage(%s) is not startable\n", name);
-	return 0;
+	if (mtpSpecFindStorage(name) == NULL) {
+		MTP_ERR(MTP_TAG_STRG, 292, "storage(%s) is not startable\n", name);
+		return 0;
+	}
+	return 1;
 }
 
 MtpStorage *mtpStrgFindStorageByName(const char *name)
 {
 	MtpStorage *storage;
 	SceUInt32 length;
-	SceUInt32 i;
+	int i;
 
 	length = mtpUtilStrlen(name);
 	for (i = 0; i < MTP_STRG_MAX_STORAGES; i++) {
@@ -494,7 +500,8 @@ int mtpStrgRegister(MtpStorage *storage)
 	SceUInt32 num;
 	SceUInt32 i;
 
-	if (s_storageManager == NULL || storage == NULL || (info = storage->info)->numLogicalStorages == 0 ||
+	if (s_storageManager == NULL || storage == NULL ||
+	    (info = storage->info)->numLogicalStorages == 0 ||
 	    info->logicalStorages == NULL || storage->start == NULL || storage->stop == NULL) {
 		MTP_ERR(MTP_TAG_STRG, 615, "invalid parameter\n");
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
@@ -529,20 +536,16 @@ int mtpStrgUnregister(MtpStorage *storage)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
 	}
 	num = manager->numStorages;
-	for (i = 0; i < num; i++) {
-		if (manager->storages[i] == storage)
-			break;
-	}
-	if (i >= num)
+	if (num == 0)
 		return 0;
-	last = num - 1;
-	if (i < last) {
-		storages = manager->storages;
-		do {
-			storages[i] = storages[i + 1];
-			i++;
-			last = manager->numStorages - 1;
-		} while (i < last);
+	for (i = 0; manager->storages[i] != storage; ) {
+		if (++i >= num)
+			return 0;
+	}
+	storages = manager->storages;
+	for (last = num - 1; i < last; last = manager->numStorages - 1) {
+		storages[i] = storages[i + 1];
+		i++;
 	}
 	manager->numStorages = last;
 	storage->info->index = 0;
@@ -613,6 +616,7 @@ int mtpStrgDeactivate(MtpStorage *storage, int arg)
 	return ret;
 }
 
+__attribute__((noinline))
 int mtpStrgGetLogicalStorage(SceUInt32 storageId, MtpLogicalStorage **storage)
 {
 	SceUInt32 physical = MTP_STRG_PHYSICAL_INDEX(storageId);
@@ -761,8 +765,7 @@ int mtpStrgGetNumObjects(SceUInt32 storageId, SceUInt32 parent, SceUInt32 *num)
 			storage = &info->logicalStorages[logical - 1];
 			handle = parent;
 			if (parent == 0xFFFFFFFF)
-				handle = MTP_OBJECT_ROOT_HANDLE(storage->index |
-					(SceUInt32)info->index << 16);
+				handle = MTP_OBJECT_ROOT_HANDLE_OF(info->index, storage->index);
 			ret = mtpStrgVTConvertMtpHandleToUniqueId(handle, &uniqueId);
 			if (ret < 0) {
 				MTP_ERR(MTP_TAG_STRG, 1169,
@@ -806,6 +809,7 @@ int mtpStrgGetMtpHandles(SceUInt32 storageId, SceUInt32 parent, SceUInt32 num, i
 	SceUInt32 physical;
 	SceUInt32 logical;
 	SceUInt32 uniqueId;
+	SceUInt32 id;
 	SceUInt32 handle;
 	SceUInt32 target;
 	SceUInt32 *ids;
@@ -844,8 +848,7 @@ int mtpStrgGetMtpHandles(SceUInt32 storageId, SceUInt32 parent, SceUInt32 num, i
 			storage = &info->logicalStorages[logical - 1];
 			target = parent;
 			if (parent == 0xFFFFFFFF)
-				target = MTP_OBJECT_ROOT_HANDLE(storage->index |
-					(SceUInt32)info->index << 16);
+				target = MTP_OBJECT_ROOT_HANDLE_OF(info->index, storage->index);
 			ret = mtpStrgVTConvertMtpHandleToUniqueId(target, &uniqueId);
 			if (ret < 0) {
 				MTP_ERR(MTP_TAG_STRG, 1256,
@@ -866,9 +869,8 @@ int mtpStrgGetMtpHandles(SceUInt32 storageId, SceUInt32 parent, SceUInt32 num, i
 				if (n <= 0)
 					break;
 				for (i = 0; i < (SceUInt32)n >> 2; i++) {
-					mtpUtilMemcpy(&uniqueId, &ids[i], sizeof(uniqueId));
-					ret = mtpStrgVTConvertUniqueIdToMtpHandle(storageId, uniqueId,
-						&handle);
+					mtpUtilMemcpy(&id, &ids[i], sizeof(id));
+					ret = mtpStrgVTConvertUniqueIdToMtpHandle(storageId, id, &handle);
 					if (ret < 0) {
 						MTP_ERR(MTP_TAG_STRG, 1279,
 							"unable to convert uniqueId to MTP handle=0x%x\n",
@@ -898,6 +900,7 @@ int mtpStrgVTCreateMtpHandles(MtpStorage *storage)
 {
 	MtpObjmap *objmap;
 	MtpStorageInfo *info;
+	SceUInt32 storageId;
 
 	if (s_storageManager == NULL || storage == NULL) {
 		MTP_ERR(MTP_TAG_STRG, 1328, "invalid parameter\n");
@@ -905,10 +908,10 @@ int mtpStrgVTCreateMtpHandles(MtpStorage *storage)
 	}
 	info = storage->info;
 	objmap = &s_storageManager->objmaps[info->index - 1];
+	storageId = info->logicalStorages[0].index | (SceUInt32)info->index << 16;
 	objmap->magic = MTP_OBJMAP_MAGIC;
 	objmap->nextIndex = 0;
-	return mtpObjmapCreate(objmap,
-		info->logicalStorages[0].index | (SceUInt32)info->index << 16);
+	return mtpObjmapCreate(objmap, storageId);
 }
 
 int mtpStrgVTDestroyMtpHandles(MtpStorage *storage)
@@ -938,11 +941,11 @@ int mtpStrgVTSetupMtpHandles(SceUInt32 storageId)
 		return SCE_MTP_ERROR_INVALID_ARGUMENT;
 	}
 	db = s_storageManager->storages[physical - 1]->info->logicalStorages[0].db;
-	if (db == NULL || db->handle == -1) {
+	if (db == NULL || db->sqlite == MTP_DB_NOT_OPEN) {
 		MTP_ERR(MTP_TAG_STRG, 1449, "DB has not been prepared yet\n");
 		return SCE_MTP_ERROR_NOT_INITIALIZED;
 	}
-	return mtpObjmapSetupHandles(&s_storageManager->objmaps[physical - 1]);
+	return mtpObjmapSetupHandles(&s_storageManager->objmaps[physical - 1], db);
 }
 
 int mtpStrgVTUnsetupMtpHandles(SceUInt32 storageId)

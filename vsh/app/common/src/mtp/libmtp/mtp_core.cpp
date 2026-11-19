@@ -182,7 +182,7 @@ int mtpCoreStop(void)
 		mtpUsbMonitorDelete();
 	}
 	s_devThreadRun = 0;
-	mtpQueueCancelAll(0);
+	mtpCapabilityInfoClear(false);
 	mtpCoreSetPublicStatus(0, -1);
 	if (mtpDevGetIfType() == MTP_IF_TYPE_NET) {
 		ret = sceMtpTerminateExecution();
@@ -676,10 +676,10 @@ static int waitingForRun(SceSize argSize, void *argp)
 		    mtpUsbMonitorHasBeenDisconnected() != 0) || retry != 0) {
 			mtpCoreSetPublicStatus(2, -1);
 			if (s_pendingOperation > 0) {
-				mtpCmdAbortOperation(&s_operation, &s_response);
+				mtpCmdCloseSession(&s_operation, &s_response);
 				mtpContextCancelAll();
 			}
-			mtpQueueCancelAll(0);
+			mtpCapabilityInfoClear(false);
 			if (mtpDevGetIfType() == MTP_IF_TYPE_NET) {
 				wait = sceKernelClearEventFlag(s_devEventFlag, ~MTP_CORE_EVF_CONNECTED);
 				if (wait < 0) {
@@ -688,7 +688,7 @@ static int waitingForRun(SceSize argSize, void *argp)
 				}
 				outBits = 0;
 				do {
-					if (netMtpDeviceIsWaking() == 0)
+					if (netMtpIsWlanAvailable() == 0)
 						mtpStatusSetState(0, 3, 0);
 					timeout = 500000;
 					wait = sceKernelWaitEventFlag(s_devEventFlag,

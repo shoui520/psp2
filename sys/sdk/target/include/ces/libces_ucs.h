@@ -54,6 +54,10 @@ int sceCesUtf8StrToUtf16Str(SceCesUcsContext *uctx,
 			    const uint8_t *utf8str, uint32_t utf8max, uint32_t *utf8Len,
 			    uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16Len);
 
+int sceCesUtf8StrToCopyStr(SceCesUcsContext *uctx,
+			   const uint8_t *utf8str, uint32_t utf8max, uint32_t *utf8Len,
+			   uint8_t *copyStr, uint32_t copyMax, uint32_t *copyLen);
+
 /* ===================== */
 /* for other CESs */
 /* ===================== */

@@ -223,20 +223,18 @@ int mtp_ip_is_data_received(int s, int *received)
 	int ret;
 
 	ret = sceNetRecv(s, peek, sizeof(peek), SCE_NET_MSG_PEEK | SCE_NET_MSG_DONTWAIT);
-	if (ret <= 0) {
-		if (ret != SCE_NET_ERROR_EAGAIN) {
-			if (ret == SCE_NET_ERROR_EINTR)
-				return MTP_IP_ERROR_ABORTED;
-			if (ret < 0) {
-				MTP_ERR(MTP_TAG_MTPIP, 189, "failed to receive 0x%x\n", ret);
-				return MTP_IP_ERROR_SOCKET;
-			}
-			MTP_ERR(MTP_TAG_MTPIP, 192, "disconected\n");
-			return MTP_IP_ERROR_DISCONNECTED;
-		}
-		*received = 0;
-	} else {
+	if (ret > 0) {
 		*received = 1;
+	} else if (ret == SCE_NET_ERROR_EAGAIN) {
+		*received = 0;
+	} else if (ret == SCE_NET_ERROR_EINTR) {
+		return MTP_IP_ERROR_ABORTED;
+	} else if (ret < 0) {
+		MTP_ERR(MTP_TAG_MTPIP, 189, "failed to receive 0x%x\n", ret);
+		return MTP_IP_ERROR_SOCKET;
+	} else if (ret == 0) {
+		MTP_ERR(MTP_TAG_MTPIP, 192, "disconected\n");
+		return MTP_IP_ERROR_DISCONNECTED;
 	}
 	return 0;
 }

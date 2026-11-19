@@ -199,7 +199,7 @@ static inline int _cacheSetObjectPropertyData(MtpCacheData *data, int prop, cons
 }
 
 static __attribute__((noinline)) int _cacheLookupAndSet(MtpCache *cache, SceUInt32 uniqueId,
-	int prop, const void *buf)
+	int prop, const void *buf, SceSize size)
 {
 	MtpCacheData *data;
 	int ret;
@@ -370,7 +370,7 @@ int mtpCacheSetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, con
 	}
 	mtpCacheLock(cache);
 	if (cache->numEntries != 0) {
-		ret = _cacheLookupAndSet(cache, uniqueId, prop, buf);
+		ret = _cacheLookupAndSet(cache, uniqueId, prop, buf, size);
 		if (ret < 0) {
 			if (ret != SCE_MTP_ERROR_NOT_FOUND) {
 				MTP_ERR(MTP_TAG_CACH, 688,
@@ -408,7 +408,7 @@ int mtpCacheSetObjectProperty(MtpCache *cache, SceUInt32 uniqueId, int prop, con
 		mtpCacheUnlock(cache);
 		goto free;
 	}
-	ret = _cacheLookupAndSet(cache, uniqueId, prop, buf);
+	ret = _cacheLookupAndSet(cache, uniqueId, prop, buf, size);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_CACH, 728, "unable to lookup data in cache=0x%x", ret);
 		mtpCacheUnlock(cache);

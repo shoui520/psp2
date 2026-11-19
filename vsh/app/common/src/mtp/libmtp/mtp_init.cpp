@@ -198,7 +198,7 @@ void mtpStatusSetState(int state, int reason, int quiet)
 		kind = mtpStatusHostKind(s_status.platformType);
 		if (kind < 0)
 			return;
-		mtpBgCopyServiceNotify(0, kind, 0);
+		consoleInfoWrite1(0, kind, CONSOLE_INFO_WRITE_ONCE);
 		break;
 	case 4:
 		setConnected();
@@ -206,7 +206,7 @@ void mtpStatusSetState(int state, int reason, int quiet)
 		kind = mtpStatusHostKind(s_status.platformType);
 		if (kind < 0)
 			return;
-		mtpBgCopyServiceNotify(0, kind, 0);
+		consoleInfoWrite1(0, kind, CONSOLE_INFO_WRITE_ONCE);
 		break;
 	case 1:
 		mtpCallbackNotify(2);

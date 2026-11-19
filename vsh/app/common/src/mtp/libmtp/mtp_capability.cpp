@@ -464,7 +464,7 @@ CapabilityInfoParser::~CapabilityInfoParser()
 }
 
 /* forget the host's capabilityInfo; a connection that ended keeps it unless forced */
-static void mtpCapabilityInfoClear(bool force)
+void mtpCapabilityInfoClear(bool force)
 {
 	MtpStatus status;
 	paf::vector<MtpCapabilityFunction>::iterator it;

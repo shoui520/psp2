@@ -1,23 +1,6 @@
 #include "libkernel_backends.h"
 #include <scetypes.h>
 
-/* The opaque context records are copied and interpreted by GcAuthMgr. */
-struct MsSaveBBMacContext;
-struct MsSaveBBCipherContext;
-
-struct MsSaveBBMacRequest {
-	SceSize macSize;
-	SceSize keySize;
-	SceUInt reserved[2];
-};
-
-struct MsSaveBBCipherRequest {
-	void *data;
-	const void *key;
-	SceSize dataSize;
-	SceSize keySize;
-	SceUInt reserved[2];
-};
 
 
 int SceLibKernel_1693032E(struct MsSaveBBMacContext *context, SceUInt mode)

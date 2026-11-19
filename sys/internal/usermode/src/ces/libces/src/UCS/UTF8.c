@@ -168,6 +168,32 @@ int sceCesUtf8CheckCode(const uint8_t *utf8buf, uint32_t bufsize, uint32_t *code
 	return cesUtf8ToUcs4(utf8buf, bufsize, codeSize, NULL);
 }
 
+/* one character, copied as it is once it is valid UTF-8, and its code point */
+int sceCesUtf8ToCopyAndUcs(const uint8_t *utf8, uint32_t utf8max, uint32_t *utf8Len,
+			   uint8_t *copyBuf, uint32_t copyMax, uint32_t *copyLen, uint32_t *ucs)
+{
+	uint32_t utf8N;
+	uint32_t n;
+	int ret;
+
+	ret = cesUtf8ToUcs4(utf8, utf8max, &utf8N, ucs);
+	if (utf8N != 0) {
+		if (copyBuf == NULL) {
+			ret = SCE_CES_ERROR_INVALID_DST_BUFFER;
+		} else if (utf8N > copyMax) {
+			ret = SCE_CES_ERROR_DST_BUFFER_END;
+		} else {
+			for (n = utf8N; n != 0; n--)
+				copyBuf[n - 1] = utf8[n - 1];
+		}
+	}
+	if (utf8Len != NULL)
+		*utf8Len = utf8N;
+	if (copyLen != NULL)
+		*copyLen = utf8N;
+	return ret;
+}
+
 int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *ucs4)
 {
 	int ret;

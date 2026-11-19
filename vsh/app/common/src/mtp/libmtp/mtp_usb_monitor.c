@@ -246,14 +246,14 @@ static int udcdMonitoringThread(SceSize args, void *argp)
 	if (callback < 0) {
 		MTP_ERR(MTP_TAG_UDCD_MON, 298, "sceKernelCreateCallback(); res = 0x%08x\n",
 			callback);
-		sceKernelExitThread(-1);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(-1);
 		return 0;
 	}
 	ret = sceUdcdRegisterCallback(callback,
 				      SCE_UDCD_STATUS_DEACTIVATED | SCE_UDCD_STATUS_ACTIVATED);
 	if (ret < 0) {
 		MTP_ERR(MTP_TAG_UDCD_MON, 306, "sceUdcdRegisterCallback(); res = 0x%08x\n", ret);
-		sceKernelExitThread(-1);
+		SceThreadmgrCoredumpTime_sceKernelExitThread(-1);
 		return 0;
 	}
 	ret = sceKernelWaitSemaCB(s_connectSema, 1, NULL);
@@ -267,6 +267,6 @@ static int udcdMonitoringThread(SceSize args, void *argp)
 	if (ret < 0)
 		MTP_ERR(MTP_TAG_UDCD_MON, 325, "sceKernelDeleteCallback(); res = 0x%08x\n", ret);
 	s_disconnected = 0;
-	sceKernelExitThread(0);
+	SceThreadmgrCoredumpTime_sceKernelExitThread(0);
 	return 0;
 }

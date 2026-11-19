@@ -100,6 +100,14 @@ static inline void *cesErrorCallbackToUtf8(uint32_t operation)
 #define CES_ERR_ILLEGAL_CODE(operation)		(((operation) >> 4) & 0xf)
 #define CES_ERR_OUT_OF_CODE_RANGE(operation)	(((operation) >> 8) & 0xf)
 
+const SceCesUtf8ToCopyErrorCallbacks *_sceCesSetupUtf8ToCopyErrorCallbacks(uint32_t operation,
+	SceCesUtf8ToCopyErrorCallbacks *callbacks)
+{
+	callbacks->InvalidEncode = (SceCesUtf8ToCopyErrorCallback *)cesErrorCallbackToUtf8(CES_ERR_INVALID_ENCODE(operation));
+	callbacks->IllegalCode = (SceCesUtf8ToCopyErrorCallback *)cesErrorCallbackToUtf8(CES_ERR_ILLEGAL_CODE(operation));
+	return callbacks;
+}
+
 const SceCesUtf8ToUtf16ErrorCallbacks *_sceCesSetupUtf8ToUtf16ErrorCallbacks(uint32_t operation,
 	SceCesUtf8ToUtf16ErrorCallbacks *callbacks)
 {

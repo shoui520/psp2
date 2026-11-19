@@ -293,4 +293,7 @@ typedef struct CesUcsCallbacks {
 	void *reserved[11];
 } CesUcsCallbacks;
 
+const SceCesUtf8ToCopyErrorCallbacks *_sceCesSetupUtf8ToCopyErrorCallbacks(uint32_t operation,
+	SceCesUtf8ToCopyErrorCallbacks *callbacks);
+
 #endif /* _CES_UCS_CALLBACK_H */

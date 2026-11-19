@@ -19,6 +19,8 @@ typedef int CesUtf16ToUcsUtf8Func(const uint16_t *utf16buf, uint32_t utf16max, u
 /* UTF-8 */
 int sceCesUtf8ToUcs4(const uint8_t *utf8buf, uint32_t utf8max, uint32_t *convSize, uint32_t *ucs4);
 int sceCesUcs4ToUtf8(uint32_t ucs4, uint8_t *utf8buf, uint32_t bufSize, uint32_t *utf8Size);
+int sceCesUtf8ToCopyAndUcs(const uint8_t *utf8, uint32_t utf8max, uint32_t *utf8Len,
+			   uint8_t *copyBuf, uint32_t copyMax, uint32_t *copyLen, uint32_t *ucs);
 
 /* UTF-16 */
 int sceCesUtf16ToUcs4(const uint16_t *utf16buf, uint32_t utf16max, uint32_t *utf16size,
