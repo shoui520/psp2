@@ -23,6 +23,8 @@ struct ShellPluginInterface {
 enum {
 	TOPMENU_PLUGIN_FUNC_GAME_HOLD		= 31,	/* PLACEHOLDER names: the game plugin at work, */
 	TOPMENU_PLUGIN_FUNC_GAME_RELEASE	= 32,	/* and done; what topmenu does is not read yet */
+	TOPMENU_PLUGIN_FUNC_HOLD_BEGIN		= 33,	/* PLACEHOLDER names: taken inside the game hold by */
+	TOPMENU_PLUGIN_FUNC_HOLD_END		= 34,	/* the icon deletion, and given back */
 	TOPMENU_PLUGIN_FUNC_BUSY_BEGIN		= 35,	/* the first of the game plugin's busy calls, */
 	TOPMENU_PLUGIN_FUNC_BUSY_END		= 36,	/* and the last */
 	TOPMENU_PLUGIN_FUNC_CREATE_PLANE	= 51,	/* PLACEHOLDER name: a plane made in its layer (0: the first) */

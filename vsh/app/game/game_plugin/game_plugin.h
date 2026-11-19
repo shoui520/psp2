@@ -26,6 +26,7 @@ enum {
 	GAME_PLUGIN_FUNC_GET_STORAGE	= 1,	/* gamePluginGetStorage (0x8102B5D8) */
 	GAME_PLUGIN_FUNC_APP_DIR_MOUNT	= 4,	/* gameAppDirMount (0x8102B736) */
 	GAME_PLUGIN_FUNC_APP_DIR_UNMOUNT = 5,	/* gameAppDirUnmount (0x8102B7FC) */
+	GAME_PLUGIN_FUNC_SET_DIALOG_HOLD = 10,	/* gamePluginSetDialogHold (0x8102B8E2) */
 	GAME_PLUGIN_FUNC_INSTALL_EX	= 13,	/* gamePluginInstallEx (0x8102C228) */
 	GAME_PLUGIN_FUNC_DIALOG_OPEN	= 34,	/* gc_promote's promote dialog, opened (0x810214CC) */
 	GAME_PLUGIN_FUNC_DIALOG_CLOSE	= 36,	/* and closed (0x810218A6) */

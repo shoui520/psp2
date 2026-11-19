@@ -480,7 +480,23 @@ public:
    0x810C6D84, 0x810C6DAC) */
 ApplauncherThemeSelector *applauncherThemeSelectorCreate(void);
 void applauncherThemeSelectorDestroy(void);
-bool applauncherThemeSelectorGetPage(LsdbPage *page);
+/* PLACEHOLDER: the page the chooser chose, as it keeps it (its fields LsdbPage's, without
+   its constructor) */
+struct ApplauncherThemePage {
+	paf::string themeFile;
+	int bgColor;
+	int texWidth;
+	int texHeight;
+	int imageWidth;
+	int imageHeight;
+	int reserved01;
+};
+
+bool applauncherThemeSelectorGetPage(ApplauncherThemePage *page);
+/* PLACEHOLDER names: a pick of the chooser under way, the theme's mode kept on a power event
+   while one is (0x810C96A0, 0x810C96B0; the theme mode's file) */
+void applauncherBusyBegin(void);
+void applauncherBusyEnd(void);
 
 /*
  * PLACEHOLDER: a page of the home (its code in the file after this one, 0x810B297C on): its
@@ -1016,6 +1032,42 @@ int applauncherChangeLogOpen(const paf::string *titleId, void *loadArg,
 class ApplauncherChangeLog *applauncherChangeLogOpenIcon(
 	const paf::common::SharedPtr<ApplauncherIcon> &icon);
 void applauncherChangeLogClose(void);
+/* PLACEHOLDER names: the icon's "about this game" opened over the home, made with the icon
+   (0x810CB864), and the open one closed (0x810CBAB4) */
+class ApplauncherAboutThisGame *applauncherAboutThisGameOpen(
+	const paf::common::SharedPtr<ApplauncherIcon> &icon);
+void applauncherAboutThisGameClose(void);
+/* PLACEHOLDER names: the modes of an icon's "about this game" (0x810C876C) and change log
+   (0x810C8934) asked for, the icon kept for the mode */
+void applauncherAboutThisGameEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+void applauncherChangeLogEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+/* PLACEHOLDER names: the icon's context menu opened over the home (0x810D4568), and closed
+   (0x810D474A); its mode asked for, the icon kept for the mode (0x810C8C3E); and whether the
+   game plugin's dialog hold is kept when the mode ends (0x810C8CF8) */
+void applauncherContextMenuOpen(paf::common::SharedPtr<ApplauncherIcon> icon);
+void applauncherContextMenuClose(void);
+void applauncherContextMenuEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon);
+void applauncherContextMenuKeepHold(bool keep);
+/* PLACEHOLDER names: an icon's deletion begun and ended, the edit kept on a power event while
+   one is under way (0x810C8EF4, 0x810C8F04) */
+void applauncherEditModeHold(void);
+void applauncherEditModeRelease(void);
+/* PLACEHOLDER names: the icon's delete dialog ("DeleteDialog") opened over the home, with what
+   the context menu gave (a pointer it keeps, and a value) (0x810D61D0), and closed
+   (0x810D62EA); its mode asked for, the three kept for the mode (0x810C9114) */
+class ApplauncherDeleteDialog *applauncherDeleteDialogOpen(
+	const paf::common::SharedPtr<ApplauncherIcon> &icon, void *context, int value);
+void applauncherDeleteDialogClose(void);
+void applauncherIconDelEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon, void *context,
+			     int value);
+/* PLACEHOLDER names: the icon's information opened over the home, with the context menu's
+   pointer (0x810D9C70), and closed (0x810D9E84); its mode asked for, the two kept for the mode
+   (0x810C937C) */
+class ApplauncherIconInfo *applauncherIconInfoOpen(
+	const paf::common::SharedPtr<ApplauncherIcon> &icon, void *context);
+void applauncherIconInfoClose(void);
+void applauncherIconInfoEnter(const paf::common::SharedPtr<ApplauncherIcon> &icon,
+			      void *context);
 
 /*
  * PLACEHOLDER: an application's change information (its sce_sys/changeinfo XML), read in a job
@@ -1325,6 +1377,8 @@ enum {
 	TOPMENU_PLUGIN_FUNC_SET_SCROLL_VIEW	= 38,
 	TOPMENU_PLUGIN_FUNC_IS_LAYER_ACTIVE	= 41,
 	TOPMENU_PLUGIN_FUNC_HOME_READY	= 50,
+	TOPMENU_PLUGIN_FUNC_MODE_ENTER		= 52,	/* PLACEHOLDER names: an applauncher mode */
+	TOPMENU_PLUGIN_FUNC_MODE_LEAVE		= 53,	/* given to topmenu, and taken back */
 	TOPMENU_PLUGIN_FUNC_IS_WAVE_SHOWN	= 57,
 	TOPMENU_PLUGIN_FUNC_LIVEAREA_OPENED	= 85,
 };

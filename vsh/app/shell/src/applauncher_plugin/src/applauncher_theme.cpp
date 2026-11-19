@@ -97,10 +97,6 @@ int applauncherPhotoPickClose(void);
 int applauncherWallpaperPickOpen(int index, int reserved, void (*func)(int index),
 				 void *arg);
 int applauncherWallpaperPickClose(void);
-/* PLACEHOLDER: the home's busy count taken and given back (0x810C96A0, 0x810C96B0) */
-void applauncherBusyBegin(void);
-void applauncherBusyEnd(void);
-
 /* PLACEHOLDER: a chip chosen; the chips of the photo pick, the page's image, the user's own
    wave and the first wave, as the chooser counted them (0x815442A0-0x815442AC) */
 static bool s_pageChosen = false;
@@ -431,7 +427,7 @@ bool applauncherWaveColorsSet(void)
 }
 
 /* the page chosen, once (0x810C6DAC) */
-bool applauncherThemeSelectorGetPage(LsdbPage *page)
+bool applauncherThemeSelectorGetPage(ApplauncherThemePage *page)
 {
 	if (!s_pageChosen)
 		return false;

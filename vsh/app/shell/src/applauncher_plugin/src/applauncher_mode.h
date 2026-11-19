@@ -147,7 +147,7 @@ public:
 
 	static const char *s_className;
 
-	SceUInt32 reserved;
+	SceUInt32 reserved;		/* PLACEHOLDER: 0 from the constructor; nothing reads it */
 };
 
 class AppTabIntellectualProperty : public ModeBase {
@@ -186,7 +186,7 @@ public:
 
 	static const char *s_className;
 
-	SceUInt32 reserved;
+	SceUInt32 reserved;		/* PLACEHOLDER: 0 from the constructor; nothing reads it */
 };
 
 /* PLACEHOLDER: the applauncher's manager (0x810C1FE6-0x810C2100, applauncher_modemanager.cpp) */
