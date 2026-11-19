@@ -21,3 +21,6 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
 target_include_directories(${PSP2_TARGET} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/include ${FT2}/include ${FT2}/src)
 target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
+# -O3 matches more functions than -O2 under similarity pairing (293 vs 230 exact+proven, 3.65-CEX,
+# 2026-11-19); to be re-measured per unit once the pairs are written
+target_compile_options(${PSP2_TARGET} PRIVATE -O3)
