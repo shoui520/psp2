@@ -352,3 +352,41 @@ void *memchr(const void *s, int c, size_t n)
 	}
 	return NULL;
 }
+
+void *memcpy(void *dst, const void *src, size_t n)
+{
+	unsigned char *d = dst;
+	const unsigned char *s = src;
+	size_t i;
+
+	for (i = 0; i < n; i++)
+		d[i] = s[i];
+	return dst;
+}
+
+void *memmove(void *dst, const void *src, size_t n)
+{
+	unsigned char *d = dst;
+	const unsigned char *s = src;
+	int distance;
+	int i;
+
+	if (d == s)
+		return dst;
+	distance = s - d;
+	if (distance < 0)
+		distance = -distance;
+	if ((int)n > distance) {
+		if (d >= s) {
+			for (i = n - 1; i >= 0; i--)
+				d[i] = s[i];
+		} else {
+			for (i = 0; i < (int)n; i++)
+				d[i] = s[i];
+		}
+	} else {
+		for (i = 0; i < (int)n; i++)
+			d[i] = s[i];
+	}
+	return dst;
+}
