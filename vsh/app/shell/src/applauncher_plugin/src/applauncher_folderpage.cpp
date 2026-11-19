@@ -34,9 +34,6 @@ using namespace paf;
 #define APPLAUNCHER_FOLDER_PAGE_CLOSE_TIME	325.0f
 #define APPLAUNCHER_FOLDER_PAGE_DESTROY_TIME	40.0f
 
-/* PLACEHOLDER: an icon type whose title ID the page reads as "power" */
-#define APPLAUNCHER_FOLDER_PAGE_ICON_POWER	6
-
 /* the folder's icon's size on the page: the page stands at it before it opens */
 #define APPLAUNCHER_FOLDER_PAGE_ICON_SCALE	0.16586539f
 
@@ -226,7 +223,7 @@ void ApplauncherFolderPage::SetIcons(const LsdbIconListPtr *icons)
 		do {
 			const LsdbIconPtr &data = (**icons)[i];
 
-			if (data->type == APPLAUNCHER_FOLDER_PAGE_ICON_POWER)
+			if (data->type == APPLAUNCHER_ICON_TYPE_POWER)
 				data->titleId = "power";
 			if (dragTitle != data->titleId) {
 				common::SharedPtr<ApplauncherIcon> icon = AsPage()->AddIcon(data);

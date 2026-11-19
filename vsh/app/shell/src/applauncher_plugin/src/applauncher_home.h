@@ -895,9 +895,22 @@ extern "C" int SceLsdb_8FAD093B(AppInfoSClient *client, int pageNo, unsigned int
    a folder, by its id) from the page given, and an icon's fields written, its image given */
 extern "C" int SceLsdb_D74AC354(AppInfoSClient *client, int pageNo, unsigned int count,
 	LsdbPageIconLists *pages);
+/* PLACEHOLDER: livespace_db's export, not declared there yet: the pages' rows written */
+extern "C" int SceLsdb_6769DBC4(AppInfoSClient *client, paf::vector<int> *pageNos,
+	LsdbPageList *pages);
+/* PLACEHOLDER: livespace_db's export, not declared there yet: icons moved */
+extern "C" int SceLsdb_BF7AFB42(AppInfoSClient *client, paf::vector<int> *fromPages,
+	paf::vector<int> *fromPositions, paf::vector<int> *toPages, paf::vector<int> *toPositions);
 extern "C" int SceLsdb_C1A82AC8(AppInfoSClient *client, int pageNo, const LsdbIconPtr *icon,
 	unsigned int fields, const void *image, int imageSize);
 extern "C" int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string &titleId, bool whole, int flags);
+
+/* PLACEHOLDER: an icon's type for the power icon, whose title ID the home reads as "power" */
+#define APPLAUNCHER_ICON_TYPE_POWER	6
+
+/* PLACEHOLDER: a system application's icon (NPXS10xxx below 150, PCSI90016, PS4 Link on a
+   demo unit; any icon not an application's) (0x810CF650) */
+int applauncherIconIsSystem(const LsdbIconPtr *icon);
 
 /* PLACEHOLDER: the 42 icons of the pool dimmed or not (0x810BCC60, the icon pool's file) */
 void applauncherIconPoolSetDim(bool dim);
