@@ -683,11 +683,13 @@ extern "C" SceInt32 scePhotoExportFromData(const void *photodata, SceInt32 photo
 {
 	PhotoExportSession session;
 	PhotoExportNotification notification;
+	SceUInt8 *pClear;
 	SceInt32 result, i, pieces, tail;
 	const char *pName;
 	const char *pData;
 
-	memset(&notification, 0, sizeof(notification));
+	for (pClear = (SceUInt8 *)&notification; pClear < (SceUInt8 *)(&notification + 1); pClear++)
+		*pClear = 0;
 	sceClibStrncpy((char *)notification.text, PHOTO_EXPORT_TRC_FROM_DATA, 0x3C);
 	notification.text[59] = 0;
 	sceAppMgrSendNotificationRequest(&notification, 1);
@@ -877,9 +879,11 @@ extern "C" SceInt32 scePhotoExportFromFile(const SceChar8 *photodataPath, const 
 				void *userdata, SceChar8 *exportedPath, SceInt32 exportedPathLength)
 {
 	PhotoExportNotification notification;
+	SceUInt8 *pClear;
 	SceInt32 result;
 
-	memset(&notification, 0, sizeof(notification));
+	for (pClear = (SceUInt8 *)&notification; pClear < (SceUInt8 *)(&notification + 1); pClear++)
+		*pClear = 0;
 	sceClibStrncpy(notification.text, PHOTO_EXPORT_TRC_FROM_FILE, 0x3C);
 	notification.text[59] = 0;
 	sceAppMgrSendNotificationRequest(&notification, 1);
