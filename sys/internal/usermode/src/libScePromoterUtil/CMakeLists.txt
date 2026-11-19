@@ -1,4 +1,8 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_libScePromoterUtil KIND user SKELETON SOURCES
-	libScePromoterUtil.c
+enable_language(CXX)
+# ScePromoterUtil (vs0:sys/external/libScePromoterUtil.suprx), built by Sony with SNC in C++. No
+# record names its files; the file is named by what it holds (ours).
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
+	promoter_util.cpp
 )
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
