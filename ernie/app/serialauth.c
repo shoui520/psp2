@@ -11,6 +11,7 @@
 
 #include "aes.h"
 #include "authkeys.h"
+#include "board.h"
 #include "chip.h"
 #include "ernie.h"
 #include "kernel.h"
@@ -432,9 +433,11 @@ unsigned char serialAuthUnlocked14(void)
 }
 #endif
 
+#if !BOARD_USS1001	/* not in the slim's */
 void serialAuthInput(void)
 {
 }
+#endif
 
 #if FW_SINCE(0x00090804)
 static unsigned char serialAuthUnlock0(void)

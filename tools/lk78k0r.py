@@ -236,7 +236,10 @@ def dummy_bases(obj):
 		elif seg.kind == 'BSEG':
 			out[id(seg)], saddr = saddr, saddr + bits(seg) + 2
 		elif seg.kind == 'CSEG' and NEAR.search(seg.attr):
-			out[id(seg)], near = near, near + 0x1000
+			# apart by more than its size can be (an instruction a line at most 4 bytes on
+			# average), and close enough that an object's many near segments (the kernel's
+			# modules) still reach each other by $!addr20
+			out[id(seg)], near = near, near + (max(0x100, 4 * len(seg.lines)) + 0xff & ~0xff)
 		elif seg.kind == 'CSEG':
 			out[id(seg)], code = code, code + 0x10000
 		elif SADDR.search(seg.attr):

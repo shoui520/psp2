@@ -1,14 +1,23 @@
 /*
  * USS-1001's ports: their levels, pull-ups, input and output modes and digital/analog modes at
  * the start (hdwinit, through boardPortInit), and the keys' pins (P5.0-1, P7.1-2, P8) made
- * inputs with their pull-ups and back.
+ * inputs with their pull-ups and back; INTP9, the USB supply's line, wakes task 5
+ * (chargeUsbChanged).
  */
+#pragma rtos_interrupt INTP9 intp9Interrupt
 #pragma sfr
 
 #include "ernie.h"
 #include "board.h"
+#include "task.h"
 
 void boardPortInitUss1001(void);
+
+/* the USB supply's line changed: task 5's event 0x0400 */
+void intp9Interrupt(void)
+{
+	task5SetFlag(4, 0x0400);
+}
 
 /* the ports at the start (hdwinit) */
 void boardPortInit(void)

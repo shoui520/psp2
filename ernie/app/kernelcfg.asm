@@ -39,6 +39,11 @@ $ELSE
 	DW	LOWW(_task6), 8C02H
 $ENDIF
 	DW	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; their extended information
+$_IF (ERNIE_HW>=0x00800000)
+; USS-1001: the stacks below its DTC's vectors
+	DW	0B41CH, 0B5B8H, 0B6D4H, 0B7F0H, 0B90CH, 0BA28H	; their stacks' tops
+	DW	0BAEAH			; the kernel's stack
+$ELSE
 $_IF (ERNIE_FW>=0x00090206)
 	DW	0D3DCH, 0D4F8H, 0D59CH, 0D678H, 0D74CH, 0D828H	; their stacks' tops
 	DW	0D8EAH			; the kernel's stack
@@ -46,6 +51,7 @@ $ELSE
 ; 0x00090009: task 4's stack 0x38 bytes smaller, the kernel's 8 bytes higher
 	DW	0D41CH, 0D538H, 0D5DCH, 0D680H, 0D754H, 0D830H
 	DW	0D8F2H
+$ENDIF
 $ENDIF
 	DW	LOWW(kHooks)		; the trace hooks
 	DW	HIGHW(kHooks)

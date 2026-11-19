@@ -18,7 +18,7 @@
 	SHRW	AX, 8
 	MOVW	DE, AX
 	MOV	X, @RTARG0
-	DIVHU
+	DB	0CEH, 0FBH, 03H	; DIVHU, written out: RA78K0R puts a NOP after its DIVHU, Sony's library has none
 	MOV	A, E
 	MOV	B, A
 	MOVW	AX, BC

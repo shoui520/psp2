@@ -144,8 +144,8 @@ static const struct StateEntry stateTable[] = {
 
 #if BOARD_USS1001
 __sreg struct StateRecord stateRecord;
-static struct StateRecord stateHistory[2];	/* the last two states entered, the last at
-						   stateRecord.count & 1 */
+struct StateRecord stateHistory[2];	/* the last two states entered, the last at
+					   stateRecord.count & 1 */
 #define stateRecordSave()	memcpy(&stateHistory[stateRecord.count & 1], &stateRecord, \
 				       sizeof(stateRecord))
 #else
@@ -176,6 +176,7 @@ static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume 
 					 stateTransition(&transitionEvent))
 #endif
 
+#if !BOARD_USS1001	/* not in the slim's */
 void stateHostStop(void)
 {
 	hostIntDisable();
@@ -189,6 +190,7 @@ void stateHostStart(void)
 	hostInit();
 	hostIntEnable();
 }
+#endif
 
 /* task 1's, for each event of mailbox 1 */
 void stateEvent(struct StateEvent *event)
@@ -298,6 +300,20 @@ void stateInit(void)
 	stateSetWakeMask(mask);
 #endif
 }
+
+#if BOARD_USS1001
+/* the slim's: the state record (serial 0x0109, mode 0) */
+void stateGetRecord(unsigned char *out)
+{
+	memcpy(out, &stateRecord, sizeof(stateRecord));
+}
+
+/* the slim's: the last two states' records (serial 0x0109, mode 1) */
+void stateGetHistory(unsigned char *out)
+{
+	memcpy(out, stateHistory, sizeof(stateHistory));
+}
+#endif
 
 /* host command 0x0010 (sceSysconGetWakeupFactor) */
 union PowerRequest *stateGetWakeupFactor(void)

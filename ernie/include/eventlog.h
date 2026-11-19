@@ -36,7 +36,7 @@ union EventLogData {
 };
 
 extern union EventLogData eventLogCharge;
-extern unsigned char eventLogTask1[4];
+extern union EventLogData eventLogTask1;
 extern unsigned char eventLogInput[4];
 extern unsigned char eventLogCommand[4];
 extern unsigned char eventLogData5[4];

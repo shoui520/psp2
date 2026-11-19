@@ -55,14 +55,6 @@ extern unsigned char input2Bit1Get(void);
 extern void inputMotionInfoLater(void);
 extern void inputFlag40Later(void);
 extern void inputFlag80Later(void);
-#if BOARD_USS1001
-/* the slim's power LED (the module after multicn.c): the reasons it shows, set or cleared for
-   task 5 (event flag 4's 0x0800) or at once, and the blink times of host command 0x0821/0x0822 */
-extern void powerLedSetFlags(unsigned int flags);
-extern void powerLedClearFlags(unsigned int flags);
-extern void powerLedLoadBlink(unsigned char index);
-extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);
-#endif
 
 /* the power status (0x0800) and the USB state (0x0804, 0x089a), the power module's */
 

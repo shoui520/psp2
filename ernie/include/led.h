@@ -205,11 +205,59 @@ extern void chargeLedSetCharging(unsigned char on);
 extern void powerLedSetAlarm(unsigned char on);
 #if BOARD_USS1001
 /* the slim's power LED module: the causes it shows, set and cleared */
-extern void powerLedFlagsInit(unsigned char unused);
+/* the causes (powerLedSetFlags' masks) */
+#define POWER_LED_FLAG_ON	0x0001
+#define POWER_LED_FLAG_LOW	0x0002
+#define POWER_LED_FLAG_HOST	0x0004
+#define POWER_LED_FLAG_HOST_BLINK 0x0008
+#define POWER_LED_FLAG_CHARGING	0x0010
+#define POWER_LED_FLAG_FULL	0x0020
+#define POWER_LED_FLAG_RESUMED	0x0040
+#define POWER_LED_FLAG_ALARM	0x0080
+#define POWER_LED_FLAG_OFF	0x0100
+#define POWER_LED_FLAG_STATE_OFF 0x0200
+union PowerLedCauses {
+	unsigned int	value;
+	struct {
+		unsigned int	on:1;		/* the power LED on */
+		unsigned int	low:1;		/* the battery low (chargeBatteryLevel3): it blinks */
+		unsigned int	host:1;		/* host request 0x089f's pattern (powerLedSetPattern) */
+		unsigned int	hostBlink:1;	/* host command 0x0821/0x0822's blink */
+		unsigned int	charging:1;	/* the Cookie's status 1: charging */
+		unsigned int	full:1;		/* cleared below the battery's low voltage */
+		unsigned int	resumed:1;	/* a power-on by wake factor 0x0f without notify */
+		unsigned int	alarm:1;	/* the charge LED blinks five times */
+		unsigned int	off:1;		/* the config's chargeLedOff */
+		unsigned int	stateOff:1;	/* the config's chargeLedStateOff, with the power
+						   LED on */
+		unsigned int	reserved:6;
+	} bits;
+};
+/* the module's state */
+struct PowerLedFlags {
+	unsigned char	mode;		/* the mode shown (powerLedFlagsUpdate's) */
+	union PowerLedCauses causes;	/* the causes the LEDs show */
+	unsigned char	phase;		/* 1 while the blink is on */
+	unsigned char	count;		/* the blinks left, 0xff no end */
+	unsigned int	onTime;		/* the blink's times, in ms */
+	unsigned int	offTime;
+	unsigned int	blinkOn;	/* powerLedLoadBlink's, for the parameter block's blink */
+	unsigned int	blinkOff;
+	unsigned char	pattern;	/* the host pattern shown */
+	unsigned char	hostPattern;	/* powerLedSetPattern's */
+	unsigned int	hostOn;
+	unsigned int	hostOff;
+};
+extern struct PowerLedFlags powerLedFlags;
+extern void powerLedFlagsInit(unsigned char resumed);
+extern void powerLedFlagsUpdate(void);
+extern void powerLedFlagsStep(void);
 extern void powerLedSetFlags(unsigned int flags);
 extern void powerLedClearFlags(unsigned int flags);
 extern void powerLedSetFlagsNow(unsigned int flags);
 extern void powerLedClearFlagsNow(unsigned int flags);
+extern void powerLedLoadBlink(unsigned char index);
+extern void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off);
 #endif
 extern void powerLedFadeOff(void);
 extern void powerLedFadeOn(void);

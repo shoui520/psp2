@@ -145,6 +145,8 @@ extern void analogGetSamples(unsigned int __far *out);
 #if BOARD_USS1001
 extern void analogLimitsSet(void);
 extern void analogLimitsGet(unsigned int *out);
+extern void analogGetMedianFaults(unsigned char *out);
+extern void analogGetSampleFaults(unsigned char *out);
 #endif
 extern void analogInput10Init(void);
 extern void analogStart10(void);

@@ -34,10 +34,14 @@ $ENDIF
 
 ; the configuration (page 0), where the link puts kernelcfg.asm's: first the kernel's version
 ; (ref_ver's T_RVER), then the objects' tables
+$_IF (ERNIE_HW>=0x00800000)	; USS-1001: after waitEnter, which its link puts last
+CONFIG		EQU	0D882H
+$ELSE
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 CONFIG		EQU	0D878H
 $ELSE
 CONFIG		EQU	0D5FEH
+$ENDIF
 $ENDIF
 CYC_HANDLER	EQU	CONFIG+00CH		; a cyclic handler's address and its CS
 CYC_SEG		EQU	CONFIG+00EH
@@ -108,6 +112,11 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
+$_IF (ERNIE_HW>=0x00800000)	; USS-1001 (its own short data before them)
+kResult		EQU	0FFE78H
+kTemp		EQU	0FFE7AH
+kTimeout	EQU	0FFE7CH
+$ELSE
 $_IF (ERNIE_FW<0x00090206)	; (no charge LED blink bytes)
 kResult		EQU	0FFE6EH		; a service's result, or an index it keeps
 kTemp		EQU	0FFE70H
@@ -129,6 +138,7 @@ kTimeout	EQU	0FFE78H
 $ENDIF
 $ENDIF
 $ENDIF
+$ENDIF
 regVar		EQU	0FFEB4H		; the compiler's register variables (16 bytes)
 SEGAX		EQU	0FFED4H
 
@@ -143,8 +153,8 @@ CPU_LOCK	MACRO
 	MOV	PSW, A
 	ENDM
 
-@@KERNEL	CSEG	BASE
 
+@@KACT	CSEG	BASE
 ; ER act_tsk(ID tskid)
 _iact_tsk:
 	MOVW	BC, #0FF8FH
@@ -167,6 +177,7 @@ _act_tsk:
 	CALL	$!_taskActivate
 	BR	$!_dispatch
 
+@@KCHG	CSEG	BASE
 ; ER chg_pri(ID tskid, PRI tskpri)
 _ichg_pri:
 	MOVW	BC, #0FFF3H
@@ -225,6 +236,7 @@ _chg_pri:
 	MOVW	HL, #0FFD7H		; E_OBJ
 	BR	$!_serviceExit
 
+@@KCLRF	CSEG	BASE
 ; ER clr_flg(ID flgid, FLGPTN clrptn)
 _clr_flg:
 	PUSH	PSW
@@ -247,6 +259,7 @@ _clr_flg:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KDISD	CSEG	BASE
 ; ER dis_dsp(void)
 _dis_dsp:
 	PUSH	PSW
@@ -260,6 +273,7 @@ _dis_dsp:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KDLY	CSEG	BASE
 ; ER dly_tsk(RELTIM dlytim)
 _dly_tsk:
 	PUSH	PSW
@@ -282,6 +296,7 @@ _dly_tsk:
 	MOVW	kResult, #0FFFFH
 	BR	$!_dispatch
 
+@@KENAD	CSEG	BASE
 ; ER ena_dsp(void)
 _ena_dsp:
 	PUSH	PSW
@@ -295,6 +310,7 @@ _ena_dsp:
 	MOVW	kResult, #0
 	BR	$!_dispatch
 
+@@KEXT	CSEG	BASE
 ; void ext_tsk(void): dormant, or started again for a queued activation
 _ext_tsk:
 	PUSH	PSW
@@ -322,6 +338,7 @@ _ext_tsk:
 	MOVW	kResult, #0
 	BR	$!_dispatch
 
+@@KGETM	CSEG	BASE
 ; ER get_mpf(ID mpfid, VP *p_blk), pget_mpf, tget_mpf(..., TMO tmout)
 _get_mpf:
 	PUSH	PSW
@@ -333,6 +350,9 @@ _get_mpf:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFB7H
 	BR	$?getMpf
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _pget_mpf:
 	PUSH	PSW
 	PUSH	HL
@@ -343,6 +363,9 @@ _pget_mpf:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFB6H
 	BR	$?getMpf
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _tget_mpf:
 	PUSH	PSW
 	PUSH	HL
@@ -438,6 +461,7 @@ _tget_mpf:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KICYC	CSEG	BASE
 ; the cyclic handlers' control blocks: TA_STA ones started
 _cycInit:
 	MOV	ES, #0
@@ -484,6 +508,7 @@ _cycInit:
 	BNZ	$?cyc
 	RET
 
+@@KIFLG	CSEG	BASE
 ; the event flags: no task waiting, the patterns 0
 _flgInit:
 	MOV	ES, #0
@@ -502,6 +527,7 @@ _flgInit:
 	BNZ	$?flg
 	RET
 
+@@KIMBX	CSEG	BASE
 ; the mailboxes: empty, nothing waiting
 _mbxInit:
 	CLRW	AX
@@ -530,6 +556,7 @@ _mbxInit:
 ?mbxEnd:
 	RET
 
+@@KIMPF	CSEG	BASE
 ; the fixed-size pools: each pool's blocks linked into its free list
 _mpfInit:
 	CLRW	AX
@@ -602,6 +629,7 @@ _mpfInit:
 	MOV	ES, #0FH
 	RET
 
+@@KINT	CSEG	BASE
 ; an interrupt handler's entry (#pragma rtos_interrupt): its registers saved under the
 ; return address, the kernel stack taken for the outermost interrupt, the trace hook told
 __kernel_int_entry:
@@ -662,6 +690,7 @@ __kernel_int_entry:
 	MOV	PSW, A
 	RET
 
+@@KRDYD	CSEG	BASE
 ; A, the task's state: readied (its priority's queue, kReadyMap), then the dispatcher
 _readyAndDispatch:
 	MOV	D, A
@@ -671,6 +700,7 @@ _readyAndDispatch:
 	PUSH	AX
 	MOV	A, D
 
+@@KMKRDY	CSEG	BASE
 ; A, the task's state, C the task: on its ready queue, unless released by another wait
 _makeReady:
 	AND	A, #40H
@@ -683,6 +713,7 @@ _makeReady:
 	ADDW	AX, #LOWW(kReadyHead)
 	MOVW	DE, AX
 
+@@KQINS	CSEG	BASE
 ; C on the queue whose first task DE points to, at its end; HL 1: a ready queue
 _queueInsert:
 	MOV	A, ES:[DE]
@@ -734,6 +765,7 @@ _queueInsert:
 ?queueRet:
 	RET
 
+@@KTMINS	CSEG	BASE
 ; task BC on the timeout queue, kTimeout ticks from now
 _timerInsert:
 	MOV	A, ES:taskWait[BC]
@@ -773,12 +805,14 @@ _timerInsert:
 	MOV	ES:!kTimerHead, A
 	RET
 
+@@KWAIT	CSEG	BASE
 ; the running task, C, on the wait queue DE points to
 _waitEnter:
 	MOVW	HL, #0
 	CALL	$!_queueInsert
 	BR	$!_dispatch
 
+@@KRCV	CSEG	BASE
 ; ER rcv_mbx(ID mbxid, T_MSG **ppk_msg), prcv_mbx, trcv_mbx(..., TMO tmout)
 _rcv_mbx:
 	PUSH	PSW
@@ -790,6 +824,9 @@ _rcv_mbx:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFBFH
 	BR	$?rcvMbx
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _prcv_mbx:
 	PUSH	PSW
 	PUSH	HL
@@ -800,6 +837,9 @@ _prcv_mbx:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFBEH
 	BR	$?rcvMbx
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _trcv_mbx:
 	PUSH	PSW
 	PUSH	HL
@@ -911,6 +951,7 @@ _trcv_mbx:
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 ; ER ref_cyc(ID cycid, T_RCYC *pk_rcyc): its state, and the ticks to its next start (the
 ; counts of the timeout queue up to it, when it is on the queue)
+@@KRCYC	CSEG	BASE
 _ref_cyc:
 	PUSH	PSW
 	PUSH	HL
@@ -979,6 +1020,7 @@ _ref_cyc:
 	BR	$!_serviceExit
 $ENDIF
 
+@@KRFLG	CSEG	BASE
 ; ER ref_flg(ID flgid, T_RFLG *pk_rflg)
 _ref_flg:
 	PUSH	PSW
@@ -1009,6 +1051,7 @@ _ref_flg:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KRMBX	CSEG	BASE
 ; ER ref_mbx(ID mbxid, T_RMBX *pk_rmbx)
 _ref_mbx:
 	PUSH	PSW
@@ -1054,6 +1097,7 @@ _ref_mbx:
 
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 ; ER ref_mpf(ID mpfid, T_RMPF *pk_rmpf): the task waiting first, or the free blocks' count
+@@KRMPF	CSEG	BASE
 _ref_mpf:
 	PUSH	PSW
 	PUSH	HL
@@ -1107,6 +1151,7 @@ _ref_mpf:
 	CLRW	AX
 	BR	$?refMpfEnd
 
+@@KRTSK	CSEG	BASE
 ; ER ref_tsk(ID tskid, T_RTSK *pk_rtsk): TSK_SELF (0) the running task
 _ref_tsk:
 	PUSH	PSW
@@ -1230,6 +1275,7 @@ _ref_tsk:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KRVER	CSEG	BASE
 ; ER ref_ver(T_RVER *pk_rver): the configuration's first 16 bytes
 _ref_ver:
 	PUSH	PSW
@@ -1288,6 +1334,7 @@ _ref_ver:
 	BR	$!_serviceExit
 $ENDIF
 
+@@KREL	CSEG	BASE
 ; ER rel_mpf(ID mpfid, VP blk): to a waiting task, else to the free list
 _rel_mpf:
 	PUSH	PSW
@@ -1360,6 +1407,7 @@ _rel_mpf:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KRETI	CSEG	BASE
 ; an interrupt handler's end (#pragma rtos_interrupt): leaving the outermost interrupt, the
 ; dispatcher runs when a task of higher priority became ready
 _ret_int:
@@ -1472,6 +1520,7 @@ _retIntIdle:
 	MOVW	SP, AX
 	BR	$!?idle
 
+@@KSTART	CSEG	BASE
 ; the kernel's start (after main): the control blocks, the tasks with TA_ACT activated, the
 ; objects' initialisers, the trace hooks, kernelInitHook, then the first dispatch
 _kernelStart:
@@ -1548,6 +1597,7 @@ _kernelUnused:				; never reached: the configuration kept linked
 	MOVW	AX, #LOWW(_kernelConfig)
 	NOP
 
+@@KHOOK	CSEG	BASE
 ; the trace hooks in kHooks
 _hookInit:
 	MOV	ES, #0
@@ -1584,6 +1634,7 @@ _hookInit:
 	MOV	ES, #0FH
 	RET
 
+@@KDISP	CSEG	BASE
 ; the end of a service that may have readied a task: dispatching, if this is the outermost
 ; service, dispatching is enabled and one is pending
 _dispatch:
@@ -1837,6 +1888,7 @@ _dispatch:
 	CALL	!!_standby
 	BR	$?idle
 
+@@KSETF	CSEG	BASE
 ; ER set_flg(ID flgid, FLGPTN setptn): the waiting task released when its pattern matches
 _iset_flg:
 	MOVW	BC, #0FF8AH
@@ -1927,6 +1979,7 @@ _set_flg:
 	MOVW	kResult, #0
 	BR	$!_readyAndDispatch
 
+@@KSND	CSEG	BASE
 ; ER snd_mbx(ID mbxid, T_MSG *pk_msg): to a waiting task, else queued (by priority in a
 ; prioritised mailbox)
 _snd_mbx:
@@ -2153,6 +2206,7 @@ _snd_mbx:
 	MOV	ES, #0FH
 	BR	$!_dispatch
 
+@@KSTAC	CSEG	BASE
 ; ER sta_cyc(ID cycid)
 _sta_cyc:
 	PUSH	PSW
@@ -2180,6 +2234,7 @@ _sta_cyc:
 	MOVW	HL, #0
 	BR	$!_serviceExit
 
+@@KSVCE	CSEG	BASE
 ; a service's start: AX its object; the caller's stack (HL) with its arguments, the trace
 ; hook told, kResult the caller's packet of stack arguments
 _serviceEnter:
@@ -2220,6 +2275,7 @@ _serviceEnter:
 	POP	AX
 	RET
 
+@@KSVCX	CSEG	BASE
 ; a service's end: HL the error code, back to the caller's stack
 _serviceExit:
 	MOVW	AX, #LOWW(kHooks)
@@ -2247,6 +2303,7 @@ _serviceExit:
 	POP	PSW
 	RET
 
+@@KTACT	CSEG	BASE
 ; task C activated: readied when dormant, else its activation queued (E_QOVR past 0x7f)
 _taskActivate:
 	MOV	A, ES:taskNext[C]
@@ -2267,6 +2324,7 @@ _taskActivate:
 	MOVW	kResult, #0FFD5H	; E_QOVR
 	RET
 
+@@KTSTA	CSEG	BASE
 ; task C's first run: its stack from the configuration, its exinf in AX:BC, interrupts
 ; enabled unless its attributes say so
 _taskStart:
@@ -2318,6 +2376,7 @@ _taskStart:
 	POP	AX
 	RET
 
+@@KTINI	CSEG	BASE
 ; task BC's control block made dormant, its first frame (exinf, entry and PSW) laid on its
 ; stack; AX its attributes
 _taskInit:
@@ -2363,6 +2422,7 @@ _taskInit:
 	MOV	ES, #0FH
 	RET
 
+@@KTICK	CSEG	BASE
 ; ER isig_tim(void): the tick. The tasks whose timeouts ran out are released, the cyclic
 ; handlers due are run and requeued; a tick that comes while one is handled is counted
 _isig_tim:
@@ -2458,6 +2518,11 @@ _isig_tim:
 	SHL	C, 1
 	MOVW	ES:taskWaitObj[C], AX
 	MOVW	BC, kResult
+$_IF (ERNIE_HW>=0x00800000)	; USS-1001: no longer timed
+	MOV	A, ES:taskWait[C]
+	AND	A, #0FEH
+	MOV	ES:taskWait[C], A
+$ENDIF
 	MOV	A, kTemp
 	AND	A, #0E0H
 	MOV	ES:taskState[C], A
@@ -2739,6 +2804,7 @@ _isig_tim:
 	MOV	ES:!kFlags, A
 	BR	$!?tickQueue
 
+@@KTRSE	CSEG	BASE
 ; the trace hooks: each writes its event (and the service's caller) to kTrace
 _traceServiceEnter:
 	PUSH	AX
@@ -2768,6 +2834,7 @@ _traceServiceEnter:
 	MOVW	ES:!kTrace, AX
 	RET
 
+@@KTRSX	CSEG	BASE
 _traceServiceExit:
 	MOV	A, #5
 	XCH	A, X
@@ -2779,6 +2846,7 @@ _traceServiceExit:
 	MOVW	ES:!kTrace, AX
 	RET
 
+@@KTRIE	CSEG	BASE
 _traceInterruptEnter:
 	CLRW	AX
 	MOV	A, #9
@@ -2794,6 +2862,7 @@ _traceInterruptEnter:
 	MOVW	ES:!kTrace, AX
 	RET
 
+@@KTRIX	CSEG	BASE
 _traceInterruptExit:
 	CLRW	AX
 	MOV	A, #0BH
@@ -2801,6 +2870,7 @@ _traceInterruptExit:
 	MOVW	ES:!kTrace, AX
 	RET
 
+@@KTRTS	CSEG	BASE
 _traceTaskStart:
 	PUSH	AX
 	MOVW	BC, AX
@@ -2828,12 +2898,14 @@ _traceTaskStart:
 	POP	AX
 	RET
 
+@@KTRD	CSEG	BASE
 _traceDispatch:
 	MOV	A, #0FH
 	XCH	A, X
 	MOVW	ES:!kTrace, AX
 	RET
 
+@@KWREL	CSEG	BASE
 ; task BC's wait (A, its state) ended by its timeout: off its object's wait queue
 _waitRelease:
 	AND	A, #1FH
@@ -2850,6 +2922,7 @@ _waitRelease:
 	MOV	ES, #0FH
 	BR	AX
 
+@@KWTAB	CSEG	BASE
 ; by wait state, from 1: what takes a task off that state's wait queue
 _waitReleaseTable:
 	DW	LOWW(?waitNone), 0	; 1 sleep
@@ -2870,6 +2943,7 @@ _waitReleaseTable:
 ?waitNone:
 	RET
 
+@@KWFLG	CSEG	BASE
 _flgWaitCancel:
 	SHL	C, 1
 	MOVW	AX, ES:taskWaitObj[C]
@@ -2880,6 +2954,7 @@ _flgWaitCancel:
 	MOV	ES:[DE+0], A
 	RET
 
+@@KWMBX	CSEG	BASE
 _mbxWaitCancel:
 	PUSH	BC
 	SHL	C, 1
@@ -2891,6 +2966,7 @@ _mbxWaitCancel:
 	POP	BC
 	BR	$!_queueRemove
 
+@@KWMPF	CSEG	BASE
 _mpfWaitCancel:
 	PUSH	BC
 	SHL	C, 1
@@ -2902,6 +2978,7 @@ _mpfWaitCancel:
 	POP	BC
 	BR	$!_queueRemove
 
+@@KRDYR	CSEG	BASE
 ; task C off its ready queue (its priority's bit cleared when the queue empties)
 _readyRemove:
 	CLRW	AX
@@ -2945,6 +3022,7 @@ _readyRemove:
 ?readyRemoveEnd:
 	RET
 
+@@KQREM	CSEG	BASE
 ; task C off the queue whose first task DE points to; A 0 when the queue emptied
 _queueRemove:
 	MOV	A, ES:taskNext[C]
@@ -2969,6 +3047,7 @@ _queueRemove:
 	CLRB	A
 	RET
 
+@@KWSEM	CSEG	BASE
 _semWaitCancel:
 	PUSH	BC
 	SHL	C, 1
@@ -2979,6 +3058,7 @@ _semWaitCancel:
 	POP	BC
 	BR	$!_queueRemove
 
+@@KTMREM	CSEG	BASE
 ; task C off the timeout queue (A, its taskWait: 0x20 the next tick's queue), its count
 ; given to the entry after it
 _timerRemove:
@@ -3038,6 +3118,7 @@ _timerRemove:
 	MOV	ES:kTimerHead[B], #0FFH
 	RET
 
+@@KWAIF	CSEG	BASE
 ; ER wai_flg(ID flgid, FLGPTN waiptn, MODE wfmode, FLGPTN *p_flgptn), pol_flg,
 ; twai_flg(..., TMO tmout)
 _wai_flg:
@@ -3050,6 +3131,9 @@ _wai_flg:
 	MOVW	kTimeout+2, #0FFFFH
 	MOVW	BC, #0FFD3H
 	BR	$?waiFlg
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _pol_flg:
 	PUSH	PSW
 	PUSH	HL
@@ -3060,6 +3144,9 @@ _pol_flg:
 	MOVW	kTimeout+2, #0
 	MOVW	BC, #0FFD2H
 	BR	$?waiFlg
+$_IF (ERNIE_HW>=0x00800000)
+	NOP			; USS-1001: its next service call at an even address
+$ENDIF
 _twai_flg:
 	PUSH	PSW
 	PUSH	HL

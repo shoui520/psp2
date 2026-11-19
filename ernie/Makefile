@@ -42,7 +42,8 @@ CAFLAGS := -qx2 -ml
 
 PYTHON ?= python3
 O ?= build/$(HW)/$(FW)
-LINKFILE := $(PROGRAM)/$(PROGRAM).lk
+# the link file: hw/<id>.mk's LINKFILE_<program> for a board linked its own way, else the program's
+LINKFILE := $(or $(LINKFILE_$(PROGRAM)),$(PROGRAM)/$(PROGRAM).lk)
 
 all: $(O)/$(PROGRAM).hex
 

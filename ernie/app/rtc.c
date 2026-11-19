@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 
+#include "board.h"
 #include "ernie.h"
 #include "input.h"
 #include "keepram.h"
@@ -76,11 +77,17 @@ void rtcStart(void)
 	case 0xf1:
 	case 0x10:
 	case 0x11:
+#if BOARD_USS1001
+	case 0x51:
+#endif
 		setAlarm(RTC_ALARM_NONE);
 		sleepFactorSet3(0);
 		setAlarmMode(0);
 		break;
 	case 0x40:
+#if BOARD_USS1001
+	case 0x61:
+#endif
 		break;
 	default:
 		setClock(0);
@@ -209,7 +216,7 @@ void rtcInterrupt(void)
 #endif
 	}
 #if FW_SINCE(0x01000306)
-	if (!P4.6) {
+	if (!BOARD_INTP1_PIN) {
 		if (button2Keys() == 1) {
 			holdTicks++;
 			if (button2HoldReached(holdTicks) != 0)

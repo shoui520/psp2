@@ -11,6 +11,9 @@
 
 #include "board.h"
 #include "ernie.h"
+#if BOARD_USS1001
+#include "eventlog.h"
+#endif
 #include "iica.h"
 #include "kernel.h"
 #include "state.h"
@@ -223,11 +226,44 @@ int taskStandbyHalt(void)
 }
 #endif
 
+#if BOARD_USS1001
+/* USS-1001: 1 while a state's sequence runs or the state is none of 0x0004, 0x0008, 0x0010 and
+   0x0800 */
+unsigned int taskPending1(void)
+{
+	unsigned int state;
+
+	state = stateGet();
+	if ((state & 0x8000) || !(state & 0x081c))
+		return 1;
+	return 0;
+}
+#else
 unsigned int taskPending1(void)
 {
 	return taskGetPending() & TASK_PENDING_1;
 }
+#endif
 
+#if BOARD_USS1001
+/* hooks: a state's change and a transition handled go into the event log (kind 2, codes 1
+   and 2), a standby and the tick do nothing */
+void taskHookState(void)
+{
+	eventLogTask1.word[0] = powerState;
+	eventLogTask1.byte[2] = stateCause;
+	eventLogTask1.byte[3] = stateWakeupFactor.byte[0];
+	eventLogRecord(2, 1, eventLogTask1.byte, 4);
+}
+
+void taskHookEvent(void *event)
+{
+	eventLogTask1.word[0] = powerState;
+	eventLogTask1.byte[2] = ((struct StateEvent *)event)->type;
+	eventLogTask1.byte[3] = ((struct StateEvent *)event)->transition;
+	eventLogRecord(2, 2, eventLogTask1.byte, 4);
+}
+#else
 /* hooks, empty in this build: a state's change, a transition handled, a standby, the tick */
 void taskHookState(void)
 {
@@ -236,6 +272,7 @@ void taskHookState(void)
 void taskHookEvent(void *event)
 {
 }
+#endif
 
 void taskHookStandby(void)
 {

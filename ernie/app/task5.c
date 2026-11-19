@@ -78,6 +78,16 @@ void task5(VP_INT exinf)
 				ledUpdate();
 #endif
 			}
+#if BOARD_USS1001
+			if (ptn & 0x0008) {
+				clr_flg(4, ~0x0008);
+				task5LedOff();
+			}
+			if (ptn & 0x0400) {
+				clr_flg(4, ~0x0400);
+				chargeUsbChanged();
+			}
+#else
 #if FW_SINCE(0x00090903)
 			if (ptn & 0x0400) {
 				clr_flg(4, ~0x0400);
@@ -94,10 +104,22 @@ void task5(VP_INT exinf)
 				task5LedOff();
 			}
 #endif
+#endif
 			if (ptn & 0x1000) {
 				clr_flg(4, ~0x1000);
 				task5ChargeLed();
 			}
+#if BOARD_USS1001
+			if (ptn & 0x0800) {
+				clr_flg(4, ~0x0800);
+				powerLedFlagsUpdate();
+				ledUpdate();
+			}
+			if (ptn & 0x2000) {
+				clr_flg(4, ~0x2000);
+				powerLedFlagsStep();
+			}
+#else
 #if LED_REQUESTS
 			if (ptn & 0x0800) {
 				clr_flg(4, ~0x0800);
@@ -108,6 +130,7 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x2000);
 				chargeLedBlinkUpdate();
 			}
+#endif
 #if FW_SINCE(0x00090804)
 			if (ptn & 0x0200) {
 				clr_flg(4, ~0x0200);
@@ -207,12 +230,35 @@ unsigned char elmoVersion0(void)
 
 void powerDeviceSetPending(unsigned int bits)
 {
+#if BOARD_USS1001
+	dis_dsp();
 	powerDevicePending |= bits;
+	ena_dsp();
+#else
+	powerDevicePending |= bits;
+#endif
 	task5SetFlag(4, 0x0080);
 	return;
 }
 
-#if LED_REQUESTS
+#if BOARD_USS1001
+/* the slim's: the power LED module's causes (the charge LED off, its full charge) */
+static void task5ChargeLed(void)
+{
+	if (input1Bit7Active()) {
+		if (configGet()->state.bits.chargeLedOff) {
+			powerLedSetFlags(POWER_LED_FLAG_OFF);
+			return;
+		}
+		powerLedClearFlags(POWER_LED_FLAG_OFF);
+		if (chargeBatteryLevel9() && stateGet() != STATE_RESUME)
+			;
+	} else {
+		powerLedClearFlags(POWER_LED_FLAG_FULL);
+	}
+	return;
+}
+#elif LED_REQUESTS
 static void task5ChargeLed(void)
 {
 	if (input1Bit7Active()) {
@@ -269,7 +315,12 @@ static void chargeLedBlinkUpdate(void)
 }
 #endif
 
-#if FW_SINCE(0x01000306)
+#if BOARD_USS1001
+/* the slim's: nothing */
+static void task5LedOff(void)
+{
+}
+#elif FW_SINCE(0x01000306)
 static void task5LedOff(void)
 {
 	ledSetOff(1);

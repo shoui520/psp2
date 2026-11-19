@@ -12,15 +12,28 @@
 #pragma NOP
 
 #include "chip.h"
+#include "board.h"
 #include "csi.h"
+#if BOARD_USS1001
+#include "dtc.h"
+#else
 #include "dma.h"
+#endif
 #include "kernel.h"
 
 /* SDR00's low byte, as DMA's SFR address */
 #define CSI_SFR_SDR00		0x10
 
+#if BOARD_USS1001
+/* SDR00's address, for the DTC */
+#define CSI_DTC_SDR00		0xff10
+
+/* USS-1001's DTC transfer: the bytes received, then the bytes sent after the first */
+static struct DtcControl csiDtc[2];
+#else
 static struct DmaRequest csiDmaReceive;
 static struct DmaRequest csiDmaSend;
+#endif
 
 struct Csi csi;
 
@@ -113,6 +126,49 @@ int csiTransferWait(unsigned char *receive, unsigned int receiveLength,
 	return 0;
 }
 
+#if BOARD_USS1001
+/* USS-1001's: a transfer by the DTC (channel 0, started by CSI00), the first byte sent here; the
+   caller waits for the last byte. 1 if it cannot start */
+int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int length)
+{
+	unsigned char result;
+
+	DI();
+	if (csi.state & CSI_BUSY) {
+		EI();
+		return 1;
+	}
+	csi.state |= CSI_BUSY;
+	EI();
+	csi.receiveCount = length;
+	csi.sendCount = length;
+	csi.receive = receive;
+	csi.send = send;
+	if (length < 0x101 && length != 0) {
+		csiDtc[0].mode = 0x18;
+		csiDtc[0].blockSize = 1;
+		csiDtc[0].count = (unsigned char)length - 1;
+		csiDtc[0].reload = 0;
+		csiDtc[0].source = CSI_DTC_SDR00;
+		csiDtc[0].destination = (unsigned int)receive;
+		csiDtc[1].mode = 4;
+		csiDtc[1].blockSize = 1;
+		csiDtc[1].count = (unsigned char)length - 1;
+		csiDtc[1].reload = 0;
+		csiDtc[1].source = (unsigned int)send + 1;
+		csiDtc[1].destination = CSI_DTC_SDR00;
+		result = dtcStart(0, csiDtc);
+		if (result == 0) {
+			CSIMK00 = 1;
+			CSIIF00 = 0;
+			SIO00 = *send;
+			return 0;
+		}
+	}
+	csi.state &= ~CSI_BUSY;
+	return 1;
+}
+#else
 /* a transfer by DMA, with channel 0's interrupt at the end; 1 if it cannot start */
 int csiTransferDma(unsigned char *receive, unsigned char *send, unsigned int length)
 {
@@ -185,6 +241,8 @@ int csiTransferDmaWait(unsigned char *receive, unsigned char *send, unsigned int
 	return 1;
 }
 
+#endif
+
 /* ends the running transfer; 1 if none runs */
 int csiCancel(void)
 {
@@ -232,6 +290,17 @@ void csiOpenMsb(void)
 	SDR00 = 0x0600;
 	SO0 = 0x0e0e;
 	SOE0L.0 = 1;
+#if BOARD_USS1001
+	/* USS-1001's: each line's mode after it, the device's power on P1.5 */
+	P1.0 = 1;
+	PM1.0 = 0;
+	P1.1 = 1;
+	PM1.1 = 1;
+	P1.2 = 1;
+	PM1.2 = 0;
+	P1.5 = 0;
+	PM1.5 = 0;
+#else
 	P1.0 = 1;
 	P1.1 = 1;
 	P1.2 = 1;
@@ -240,6 +309,7 @@ void csiOpenMsb(void)
 	PM1.2 = 0;
 	P5.7 = 0;
 	PM5.7 = 0;
+#endif
 	P1.6 = 0;
 	PM1.6 = 1;
 	P90 = 1;

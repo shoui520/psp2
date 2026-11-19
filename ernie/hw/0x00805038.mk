@@ -6,3 +6,7 @@ HW_ID := 0x00805038
 # Its code above the drivers is PCH-1000's (0x00406000)
 BOARD := 0x00406000
 CHIP := f1zcrk
+# its kernel: 0x00411000's full RI78V4 set (ref_cyc, ref_mpf, ref_tsk, ref_ver), in its own order
+KERNEL := 0x00411000
+# its application's link: the RL78's objects in Sony's order (app/uss1001.lk)
+LINKFILE_app := app/uss1001.lk

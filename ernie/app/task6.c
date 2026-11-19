@@ -28,7 +28,7 @@ void task6(VP_INT exinf)
 			continue;
 		if (ptn & BBMC_EVENTS) {
 			clr_flg(6, ~(ptn & BBMC_EVENTS));
-#if BOARD_BBMC
+#if BOARD_BBMC || BOARD_USS1001
 			bbmcEvent(ptn);
 #endif
 		}

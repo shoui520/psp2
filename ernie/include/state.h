@@ -75,6 +75,7 @@ struct StateRecord {
 	unsigned char	cause;		/* the transition that started the state */
 };
 extern __sreg struct StateRecord stateRecord;
+extern struct StateRecord stateHistory[2];	/* the last two (systemInit clears them) */
 #define statePhase	stateRecord.phase
 #define powerState	stateRecord.state
 #define stateNext	stateRecord.next
@@ -98,6 +99,10 @@ extern union PowerRequest stateRequest;
 extern void stateHostStop(void);
 extern void stateHostStart(void);
 extern void stateEvent(struct StateEvent *event);
+#if BOARD_USS1001
+extern void stateGetRecord(unsigned char *out);
+extern void stateGetHistory(unsigned char *out);
+#endif
 extern void stateSetWakeMask(unsigned long mask);
 extern unsigned long stateGetWakeMask(void);
 extern void stateInit(void);

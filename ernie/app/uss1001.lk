@@ -1,0 +1,301 @@
+# USS-1001's (PCH-2000, the slim) application link (tools/lk78k0r.py), its own: the RL78's
+# objects, Sony's order for them and its places. Boot cluster 0 (the vectors, the RAM copy
+# helper and the flash library's RAM commands, aes.c's tables at 0x200, the configuration's
+# defaults at 0x800, the version block at 0xf00), the kernel from 0xc000 with the flash
+# library after its configuration, the rest from 0xe000; the RAM from 0xfaf00.
+
+OBJECT	main.c
+OBJECT	tau.c
+OBJECT	standby.c
+OBJECT	task1.c
+OBJECT	task2.c
+OBJECT	version.c
+OBJECT	rtc.c
+OBJECT	task3.c
+OBJECT	input.c
+OBJECT	aes.c
+OBJECT	host.c
+OBJECT	request.c
+OBJECT	csi.c
+OBJECT	sleepfactor.c
+OBJECT	spidev.c
+OBJECT	command.c
+OBJECT	uart.c
+OBJECT	clockout.c
+OBJECT	csi10.c
+OBJECT	touch.c
+OBJECT	inputreq.c
+OBJECT	util.c
+OBJECT	inputbits.c
+OBJECT	serial.c
+OBJECT	adc.c
+OBJECT	analog.c
+OBJECT	scratchpad.c
+OBJECT	nvsreq.c
+OBJECT	serial1.c
+OBJECT	updatereq.c
+OBJECT	sha1.c
+OBJECT	powerreq.c
+OBJECT	task5.c
+OBJECT	serialauth.c
+OBJECT	power.c
+OBJECT	timer.c
+OBJECT	iica.c
+OBJECT	powerjob.c
+OBJECT	elmo.c
+OBJECT	serial2.c
+OBJECT	uart4.c
+OBJECT	interrupt.c
+OBJECT	serial4.c
+OBJECT	task6.c
+OBJECT	bbmc.c
+OBJECT	board.c
+OBJECT	powerseq.c
+OBJECT	battery.c
+OBJECT	charge.c
+OBJECT	cookie.c
+OBJECT	powerwait.c
+OBJECT	state.c
+OBJECT	handshake.c
+OBJECT	serial1op.c
+OBJECT	task.c
+OBJECT	config.c
+OBJECT	configreq.c
+OBJECT	watchdog.c
+OBJECT	sysinfo.c
+OBJECT	log.c
+OBJECT	param.c
+OBJECT	led.c
+OBJECT	authkeys.c
+OBJECT	serialreq.c
+OBJECT	snvs.c
+OBJECT	debugpin.c
+OBJECT	eventlog.c
+OBJECT	clock.c
+OBJECT	flash.c
+OBJECT	bstore.c
+OBJECT	uss1001.c
+OBJECT	dtc.c
+OBJECT	serialline.c
+OBJECT	iica1.c
+OBJECT	multicn.c
+OBJECT	chipid.c
+OBJECT	powerled.c
+OBJECT	nvs.c
+OBJECT	gf.c
+OBJECT	flashextra.asm
+OBJECT	aestable.c
+OBJECT	configdefault.c
+OBJECT	kernel.asm
+OBJECT	kernelcfg.asm
+OBJECT	cstart.asm
+OBJECT	vectors_rl78.asm
+# the CA78K0R libraries' modules it uses (the RL78 library's where they differ)
+OBJECT	../lib/rl78/rcopy.asm
+OBJECT	../lib/rl78/fsl.asm
+OBJECT	../lib/lucom.asm
+OBJECT	../lib/rl78/lmul.asm
+OBJECT	../lib/rl78/cudiv.asm
+OBJECT	../lib/rl78/ludiv.asm
+OBJECT	../lib/rl78/curem.asm
+OBJECT	../lib/luadd.asm
+OBJECT	../lib/rl78/lusub.asm
+OBJECT	../lib/lulsh.asm
+OBJECT	../lib/lursh.asm
+OBJECT	../lib/iscmp.asm
+OBJECT	../lib/luband.asm
+OBJECT	../lib/lubor.asm
+OBJECT	../lib/lubxor.asm
+OBJECT	../lib/rl78/divuw.asm
+OBJECT	../lib/memcpy.asm
+OBJECT	../lib/memcpy_n.asm
+OBJECT	../lib/memmove.asm
+OBJECT	../lib/memcmp.asm
+OBJECT	../lib/memset.asm
+OBJECT	../lib/memset_n.asm
+# the ends of the startup's segments, after everything
+OBJECT	cstartend.asm
+
+# the compiler's runtime registers
+SYMBOL	_@SEGAX		0xffed4
+SYMBOL	_@SEGBC		0xffed5
+SYMBOL	_@SEGDE		0xffed6
+SYMBOL	_@SEGHL		0xffed7
+SYMBOL	_@RTARG0	0xffed8
+SYMBOL	_@RTARG1	0xffed9
+SYMBOL	_@RTARG2	0xffeda
+SYMBOL	_@RTARG3	0xffedb
+SYMBOL	_@RTARG4	0xffedc
+SYMBOL	_@RTARG5	0xffedd
+SYMBOL	_@RTARG6	0xffede
+SYMBOL	_@RTARG7	0xffedf
+# and as the libraries' and the kernel's modules name them
+SYMBOL	@SEGAX		0xffed4
+SYMBOL	@SEGBC		0xffed5
+SYMBOL	@SEGDE		0xffed6
+SYMBOL	@SEGHL		0xffed7
+SYMBOL	@RTARG0		0xffed8
+SYMBOL	@RTARG2		0xffeda
+SYMBOL	@RTARG4		0xffedc
+SYMBOL	@RTARG6		0xffede
+RESERVE	0xffed4		12
+# the settings' two banks, at the end of its 384 KiB of flash
+SYMBOL	_configBanks	0x5f800
+# where _rcopy puts the flash library's RAM commands (fsl.asm's @@FSLRAM)
+RESERVE	0xfd090		0x8c
+# and the commands there the program calls (fsl.asm's EQUs)
+SYMBOL	_FSL_BlankCheck		0xfd090
+SYMBOL	_FSL_Erase		0xfd094
+SYMBOL	_FSL_IVerify		0xfd098
+SYMBOL	_FSL_Write		0xfd09c
+SYMBOL	_FSL_InvertBootFlag	0xfd0d2
+SYMBOL	_FSL_SwapBootCluster	0xfd0da
+
+# the interrupts' vectors are vectors_rl78.asm's table, not the compiler's
+DROP	@@VECT??
+
+# boot cluster 0: the vectors, the CALLT table, the option bytes and the security ID, the RAM
+# copy helper and its table with the RAM commands, aes.c's round tables, the configuration's
+# defaults ("ConfZZ"), the version block
+AT	0x00000
+SEG	@@VECT
+SEG	@@RCOPY
+SEG	@@FSLRAM
+AT	0x00200
+SEG	@@CNSTL		aestable.c
+AT	0x00800
+SEG	@@CNSTL		configdefault.c
+AT	0x00f00
+SEG	@@CNSTL		version.c
+
+# the kernel, its configuration (where kernel.asm reads it: CONFIG), the flash library
+AT	0x0c000
+# kernel.asm's modules in Sony's order, each at an even address (the gaps a 00, a NOP)
+FILL	0x00
+SEG	@@KSND	ALIGN 2
+SEG	@@KSTAC	ALIGN 2
+SEG	@@KRETI	ALIGN 2
+SEG	@@KSETF	ALIGN 2
+SEG	@@KSTART	ALIGN 2
+SEG	@@KDISP	ALIGN 2
+SEG	@@KRDYR	ALIGN 2
+SEG	@@KQREM	ALIGN 2
+SEG	@@KWAIF	ALIGN 2
+SEG	@@KTACT	ALIGN 2
+SEG	@@KTSTA	ALIGN 2
+SEG	@@KTINI	ALIGN 2
+SEG	@@KSVCE	ALIGN 2
+SEG	@@KSVCX	ALIGN 2
+SEG	@@KTICK	ALIGN 2
+SEG	@@KWREL	ALIGN 2
+SEG	@@KWTAB	ALIGN 2
+SEG	@@KWSEM	ALIGN 2
+SEG	@@KWMBX	ALIGN 2
+SEG	@@KWMPF	ALIGN 2
+SEG	@@KWFLG	ALIGN 2
+SEG	@@KGETM	ALIGN 2
+SEG	@@KEXT	ALIGN 2
+SEG	@@KIMBX	ALIGN 2
+SEG	@@KIMPF	ALIGN 2
+SEG	@@KICYC	ALIGN 2
+SEG	@@KIFLG	ALIGN 2
+SEG	@@KENAD	ALIGN 2
+SEG	@@KACT	ALIGN 2
+SEG	@@KDISD	ALIGN 2
+SEG	@@KDLY	ALIGN 2
+SEG	@@KCHG	ALIGN 2
+SEG	@@KCLRF	ALIGN 2
+SEG	@@KRMBX	ALIGN 2
+SEG	@@KRMPF	ALIGN 2
+SEG	@@KRCYC	ALIGN 2
+SEG	@@KRFLG	ALIGN 2
+SEG	@@KRVER	ALIGN 2
+SEG	@@KREL	ALIGN 2
+SEG	@@KRTSK	ALIGN 2
+SEG	@@KRCV	ALIGN 2
+SEG	@@KINT	ALIGN 2
+SEG	@@KRDYD	ALIGN 2
+SEG	@@KMKRDY	ALIGN 2
+SEG	@@KQINS	ALIGN 2
+SEG	@@KHOOK	ALIGN 2
+SEG	@@KTRSE	ALIGN 2
+SEG	@@KTRSX	ALIGN 2
+SEG	@@KTRIE	ALIGN 2
+SEG	@@KTRIX	ALIGN 2
+SEG	@@KTRTS	ALIGN 2
+SEG	@@KTRD	ALIGN 2
+SEG	@@KTMINS	ALIGN 2
+SEG	@@KTMREM	ALIGN 2
+SEG	@@KWAIT	ALIGN 2
+AT	0x0d882
+SEG	@@KCFG
+AT	0x0d910
+SEG	@@FSLCOD
+SEG	@@PFDLCOD
+
+# the startup, the runtime, the interrupts, the C library's functions, then the constants
+AT	0x0e000
+SEG	@@CSTART
+SEG	@@RTCODE	../lib/lucom.asm
+SEG	@@LCODE		../lib/rl78/lmul.asm ../lib/rl78/cudiv.asm ../lib/rl78/ludiv.asm ../lib/rl78/curem.asm
+SEG	@@RTCODE	../lib/luadd.asm
+SEG	@@LCODE		../lib/rl78/lusub.asm
+SEG	@@RTCODE	../lib/lulsh.asm ../lib/lursh.asm ../lib/iscmp.asm ../lib/luband.asm ../lib/lubor.asm ../lib/lubxor.asm
+SEG	@@LCODE		../lib/rl78/divuw.asm
+SEG	@@BASE		tau.c rtc.c host.c csi.c uart.c adc.c iica.c interrupt.c csi10.c uss1001.c uart4.c
+SEG	@@BASE		iica1.c
+SEG	@@BASE
+SEG	@@LCODE
+SEG	@@R_INIT
+SEG	@@R_INIS
+SEG	@@CNSTL		command.c aes.c host.c request.c uart.c inputreq.c util.c inputbits.c serial.c
+SEG	@@CNSTL		analog.c nvsreq.c serial1.c updatereq.c sha1.c powerreq.c serialauth.c power.c
+SEG	@@CNSTL		elmo.c bbmc.c cookie.c config.c flash.c bstore.c dtc.c
+SEG	@@RLINIT	cstart.asm
+SEG	@@CNSTL		powerseq.c powerwait.c state.c handshake.c log.c param.c led.c uart4.c authkeys.c
+SEG	@@CNSTL
+SEG	@@RLINIT
+# the code
+SEG	@@CODEL		main.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c
+SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c touch.c inputreq.c
+SEG	@@CODEL		util.c inputbits.c serial.c adc.c analog.c scratchpad.c nvsreq.c serial1.c
+SEG	@@CODEL		updatereq.c sha1.c powerreq.c task5.c serialauth.c power.c timer.c iica.c
+SEG	@@CODEL		powerjob.c elmo.c serial2.c serial4.c task6.c bbmc.c board.c powerseq.c
+SEG	@@CODEL		battery.c charge.c cookie.c powerwait.c state.c handshake.c serial1op.c param.c
+SEG	@@CODEL		task.c config.c configreq.c watchdog.c sysinfo.c log.c led.c serialreq.c snvs.c
+SEG	@@CODEL		debugpin.c eventlog.c clock.c clockout.c csi10.c flash.c bstore.c uss1001.c
+SEG	@@CODEL		tau.c dtc.c uart4.c serialline.c iica1.c multicn.c chipid.c powerled.c nvs.c
+SEG	@@CODEL		gf.c flashextra.asm
+SEG	@@CODEL
+
+# the RAM: the startup's initialised data, the DTC's vectors (on a 256-byte boundary), the
+# event log, what the updater keeps, the heap, the near data, the kernel's
+AT	0xfaf00
+SEG	@@INIT
+AT	0xfbb00
+SEG	@@DATAL		dtc.c
+AT	0xfbc00
+SEG	@@ELOG
+AT	0xfcc00
+SEG	@@DATAL		main.c param.c watchdog.c
+SEG	@@HEAP
+SEG	@@DATA		cstart.asm input.c util.c adc.c analog.c serialauth.c power.c timer.c
+SEG	@@DATA		handshake.c sysinfo.c chipid.c
+SEG	@@INIS
+AT	0xfd11c
+SEG	@@KRAM
+SEG	@@INITL
+SEG	@@DATAL		cstart.asm version.c rtc.c input.c host.c csi.c command.c uart.c touch.c
+SEG	@@DATAL		inputreq.c serial.c analog.c nvsreq.c serial1.c updatereq.c powerreq.c
+SEG	@@DATAL		powerseq.c task5.c serialauth.c iica.c powerjob.c elmo.c bbmc.c battery.c
+SEG	@@DATAL		charge.c cookie.c state.c handshake.c configreq.c log.c led.c serialreq.c snvs.c
+SEG	@@DATA		snvs.c
+SEG	@@DATAL		config.c bstore.c uart4.c serialline.c iica1.c chipid.c powerled.c nvs.c
+SEG	@@DATAL		eventlog.c
+SEG	@@DATA
+SEG	@@DATAL
+# the short direct area
+AT	0xffe20
+SEG	@@DATS		cstart.asm
+SEG	@@DATS
+SEG	@@BITS

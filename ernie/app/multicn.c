@@ -17,7 +17,6 @@
 #include "state.h"
 #include "task5.h"
 
-extern unsigned char serialOpen4(int baud);
 
 unsigned char boardMultiCnSerialInit(void)
 {
@@ -160,7 +159,7 @@ unsigned char boardSetMultiCnOutput(unsigned char output)
 			serial1Reset();
 			boardMultiCnSetSwitch(1);
 			boardMultiCnSetSerial(0);
-			serialOpen4(2);
+			serialOpen1(2);
 		}
 		boardMultiCnPower(1);
 		break;

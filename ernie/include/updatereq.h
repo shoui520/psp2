@@ -11,13 +11,25 @@
 #define ERNIE_UPDATEREQ_H
 
 #include "aes.h"
+#include "board.h"
 #include "host.h"
 #include "kernel.h"
 #include "sha1.h"
 
 #define UPDATER_BLOCK_SIZE	0x80	/* the decrypt works eight AES blocks at a time */
 #define UPDATER_SEGMENT_SIZE	0x400	/* a segment, a flash block: 1 KiB */
+#if BOARD_USS1001
+#define UPDATER_SEGMENTS	0x180	/* the segments of the slim's 384 KiB of flash */
+#else
 #define UPDATER_SEGMENTS	0x100	/* the segments of the 256 KiB of flash */
+#endif
+
+/* a segment's number: a word on the slim, whose segments go past 0xff */
+#if BOARD_USS1001
+typedef unsigned int	UpdaterSegment;
+#else
+typedef unsigned char	UpdaterSegment;
+#endif
 
 /*
  * The update's state. The states: 0 none, 1 the signature checked (0x1185), 0x10 and 0x20 the
@@ -27,7 +39,7 @@
  */
 struct Updater {
 	unsigned char	state;
-	unsigned char	segment;		/* the segment written, then the one hashed */
+	UpdaterSegment	segment;		/* the segment written, then the one hashed */
 	unsigned char	segmentCount;		/* the segments received, counted at 0x1184 */
 	unsigned char	segmentDone;		/* the segments hashed */
 	unsigned char	progress;		/* segmentDone in percent of segmentCount */
@@ -57,6 +69,10 @@ extern unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char
 extern unsigned char hostCommandUpdaterProgress(unsigned char *out, unsigned char *length);
 #endif
 extern void updaterRequestNotify(void);
+#if BOARD_USS1001
+/* the slim's: the updater's state, its segment count and the request's (serial 0x01d2) */
+extern void updaterGetStatus(unsigned char *out);
+#endif
 extern void updaterStartDownloader(void);
 #if FW_SINCE(0x00090903)
 extern void updaterRequestAnswerOk(void);

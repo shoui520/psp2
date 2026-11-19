@@ -14,6 +14,9 @@
 #include "config.h"
 #include "csi.h"
 #include "debugpin.h"
+#if BOARD_USS1001
+#include "dtc.h"
+#endif
 #include "host.h"
 #include "keepram.h"
 #include "kernel.h"
@@ -50,6 +53,9 @@ struct PowerPart {
 };
 
 extern void inputInit(void);
+#if BOARD_USS1001
+extern void inputStateRequest(unsigned char state);
+#endif
 extern void inputResumePrepare(void);
 extern void inputResumeOpen(void);
 extern void inputPowerOff(void);
@@ -60,7 +66,9 @@ extern void inputReset(void);
 extern unsigned char input2Bit0Get(void);
 extern unsigned char input3Bit5High(void);
 
+#if !BOARD_USS1001
 static unsigned char powerError;
+#endif
 
 static __near unsigned char powerPending;
 
@@ -148,16 +156,29 @@ void powerSequence(void)
 #endif
 		stateEnter();
 		task2SetFlag(3, 0x1000);
+#if BOARD_USS1001
+		/* USS-1001: the power LED told of an off or a suspend */
+		switch (powerState) {
+		case STATE_OFF:
+		case STATE_SUSPEND:
+			task5SetFlag(4, 0x0800);
+			break;
+		}
+#endif
 #if FW_SINCE(0x01000104)
 		task6SetFlag(6, 0x80);
 #endif
 	} else {
 		powerState &= 0x7fff;
 		statePhase = 3;
+#if BOARD_USS1001
+		stateEnter();
+#endif
 	}
 	taskHookState();
 }
 
+#if !BOARD_USS1001	/* the slim has no power-on test */
 void powerErrorClear(void)
 {
 	powerError = 0;
@@ -233,6 +254,7 @@ unsigned char powerFaulty(void)
 	return 0;
 }
 #endif
+#endif	/* !BOARD_USS1001 */
 
 /* a part reports itself: its bit in event flag 5 */
 unsigned char powerReady(unsigned char id)
@@ -319,6 +341,22 @@ unsigned char powerOn(void)
 #endif
 	powerPendingReset();
 	sleepFactorInit();
+#if BOARD_USS1001
+	/* USS-1001: longer waits, and the input started by its state request */
+	spiDevInit();
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x177);
+	powerPendingClear(2);
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(0);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	POWER_WAIT_CLEAR(5);
+	powerJobPostOn();
+	POWER_WAIT(5, 0x4e2);
+#else
 	powerErrorClear();
 	spiDevInit();
 	powerPendingClear(1);
@@ -331,6 +369,7 @@ unsigned char powerOn(void)
 	POWER_WAIT_CLEAR(5);
 	powerJobPostOn();
 	POWER_WAIT(5, 0x19);
+#endif
 	powerPendingClear(5);
 	powerPendingClear(4);
 #if FW_SINCE(0x0100060B)
@@ -370,6 +409,57 @@ unsigned char powerResume(union PowerRequest *request)
 	sleepFactorSet20(0);
 #endif
 	stateWakeupFactor.word = request->word;
+#if BOARD_USS1001
+	/* USS-1001: the input's two state requests around the parts, the DTC and the host's
+	   requests opened with the link */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(5);
+	POWER_WAIT_KEEP(3, 3);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT_KEEP(2, 0x19);
+	powerPendingClear(2);
+	task6SetFlag(6, 0x80);
+	POWER_WAIT_KEEP(6, 5);
+	powerPendingClear(6);
+	if (request->bits.mode != 0x54) {
+		POWER_WAIT_CLEAR(5);
+		powerJobPostResume();
+		POWER_WAIT_KEEP(5, 0x19);
+	}
+	powerPendingClear(5);
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(6);
+	POWER_WAIT_KEEP(3, 3);
+	powerPendingClear(3);
+	dtcOpen();
+	csiOpenLsb();
+	hostInit();
+	hostOpenRequests();
+	hostIntInit();
+	hostIntEnable();
+	set_flg(1, 0x40);
+	dly_tsk(3);
+	powerPendingClear(4);
+	switch (request->bits.mode) {
+	case 0x0c:
+		spiDevInit();
+		result = spiDevAuthenticate();
+		break;
+	case 0x11:
+		result = spiDevPowerOn();
+		break;
+	default:
+		P91 = 0;
+		dly_tsk(1);
+		SPIDEV_POWER2 = 1;
+		if (request->bits.notify)
+			set_flg(4, 0x08);
+		dly_tsk(1);
+		result = 0;
+		break;
+	}
+#else
 #if BOARD_DEBUG_PINS_POWER
 	debugPinCode(stateWakeupFactor.bits.mode);
 #endif
@@ -428,6 +518,7 @@ unsigned char powerResume(union PowerRequest *request)
 		result = 0;
 		break;
 	}
+#endif
 	powerPendingClear(1);
 	if (powerPendingGet() != 0)
 		result = 1;
@@ -476,19 +567,42 @@ unsigned char powerOff(void)
 	if (configTakeChanged() != 0)
 		powerParamLoad();
 #endif
+#if BOARD_USS1001
+	/* USS-1001: the input stopped by its state request, the DTC closed with the CSI */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(1);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	hostIntDisable();
+	dly_tsk(1);
+	csiClose();
+	dtcClose();
+	HOST_FRAME = 0;
+	HOST_READY = 0;
+	powerPendingClear(4);
+	P91 = 0;
+	dly_tsk(1);
+	SPIDEV_POWER2 = 0;
+	dly_tsk(1);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x177);
+	powerPendingClear(2);
+#else
 	inputPowerOff();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
-	P5.7 = 0;
-	P5.6 = 0;
+	HOST_FRAME = 0;
+	HOST_READY = 0;
 	powerPendingClear(4);
 	P91 = 0;
 	P92 = 0;
 	P1.5 = 0;
 	dly_tsk(1);
-	P1.7 = 0;
+	SPIDEV_POWER2 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
@@ -496,6 +610,7 @@ unsigned char powerOff(void)
 	task2SetFlag(3, 0x1000);
 	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
+#endif
 #endif
 	POWER_WAIT_CLEAR(5);
 	powerJobPostOff();
@@ -560,19 +675,42 @@ unsigned char powerSuspend(void)
 #if FW_SINCE(0x01000104)
 	sleepFactorSet20(0);
 #endif
+#if BOARD_USS1001
+	/* USS-1001: as its off, with P9.1 high */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(3);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	hostIntDisable();
+	dly_tsk(1);
+	csiClose();
+	dtcClose();
+	HOST_FRAME = 0;
+	HOST_READY = 0;
+	powerPendingClear(4);
+	P91 = 1;
+	dly_tsk(1);
+	SPIDEV_POWER2 = 0;
+	dly_tsk(1);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x177);
+	powerPendingClear(2);
+#else
 	inputSuspend();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
-	P5.7 = 0;
-	P5.6 = 0;
+	HOST_FRAME = 0;
+	HOST_READY = 0;
 	powerPendingClear(4);
 	P91 = 1;
 	P92 = 1;
 	P1.5 = 1;
 	dly_tsk(1);
-	P1.7 = 0;
+	SPIDEV_POWER2 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
@@ -580,6 +718,7 @@ unsigned char powerSuspend(void)
 	task2SetFlag(3, 0x1000);
 	POWER_WAIT(2, 0x19);
 	powerPendingClear(2);
+#endif
 #endif
 	POWER_WAIT_CLEAR(5);
 	powerJobPostSuspend();
@@ -616,13 +755,42 @@ unsigned char powerShutdown(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
+#if BOARD_USS1001
+	/* USS-1001: as its off, the timers' clock stopped at the end */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(9);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	hostIntDisable();
+	dly_tsk(1);
+	csiClose();
+	dtcClose();
+	HOST_FRAME = 0;
+	HOST_READY = 0;
+	powerPendingClear(4);
+	P91 = 0;
+	dly_tsk(1);
+	SPIDEV_POWER2 = 0;
+	dly_tsk(1);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x19);
+	powerPendingClear(2);
+	POWER_WAIT_CLEAR(5);
+	powerJobPostShutdown();
+	POWER_WAIT(5, 0x8ca);
+	powerPendingClear(5);
+	powerPendingClear(6);
+	PER0.2 = 0;
+#else
 	inputShutdown();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
-	P5.7 = 0;
-	P5.6 = 0;
+	HOST_FRAME = 0;
+	HOST_READY = 0;
 	powerPendingClear(4);
 	P91 = 0;
 #if BOARD_POWER_P92_P15
@@ -630,7 +798,7 @@ unsigned char powerShutdown(void)
 	P1.5 = 0;
 #endif
 	dly_tsk(1);
-	P1.7 = 0;
+	SPIDEV_POWER2 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
@@ -644,6 +812,7 @@ unsigned char powerShutdown(void)
 	POWER_WAIT_KEEP(5, 0x8ca);
 	powerPendingClear(5);
 	powerPendingClear(6);
+#endif
 #if !FW_SINCE(0x01000104)
 	/* before 0x01000104 the host link stops last */
 	task2SetFlag(3, 0x1000);
@@ -655,7 +824,7 @@ unsigned char powerShutdown(void)
 	return result;
 }
 
-/* 0x8800: stops the clock output first, pulses P6.2 at the end */
+/* 0x8800: stops the clock output first, pulses P6.2 (USS-1001: P3.4) at the end */
 unsigned char powerCut(void)
 {
 	unsigned char result;
@@ -667,6 +836,42 @@ unsigned char powerCut(void)
 #if FW_SINCE(0x0100060B)
 	waitResult = 0;
 #endif
+#if BOARD_USS1001
+	/* USS-1001: P3.4 in place of P6.2, the input stopped by its state request */
+	clockOutputStop();
+	POWER_WAIT_CLEAR(5);
+	powerJobPostCut();
+	POWER_WAIT(5, 0x19);
+	powerPendingClear(5);
+	P3.4 = 0;
+	hostIntDisable();
+	dly_tsk(1);
+	csiClose();
+	dtcClose();
+	HOST_FRAME = 0;
+	HOST_READY = 0;
+	powerPendingClear(4);
+	P91 = 0;
+	dly_tsk(1);
+	SPIDEV_POWER2 = 0;
+	dly_tsk(1);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(7);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	powerPendingClear(6);
+	PER0.2 = 0;
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x32);
+	powerPendingClear(2);
+	if (powerPendingGet() != 0)
+		result = 1;
+	dly_tsk(3);
+	P3.4 = 1;
+	return result;
+#else
 #if FW_SINCE(0x00090206)
 	clockOutputStop();
 #endif
@@ -685,8 +890,8 @@ unsigned char powerCut(void)
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
-	P5.7 = 0;
-	P5.6 = 0;
+	HOST_FRAME = 0;
+	HOST_READY = 0;
 	powerPendingClear(4);
 	P91 = 0;
 #if BOARD_POWER_P92_P15
@@ -694,7 +899,7 @@ unsigned char powerCut(void)
 	P1.5 = 0;
 #endif
 	dly_tsk(1);
-	P1.7 = 0;
+	SPIDEV_POWER2 = 0;
 	dly_tsk(1);
 	powerPendingClear(1);
 	inputCut();
@@ -715,9 +920,10 @@ unsigned char powerCut(void)
 	}
 #endif
 	return result;
+#endif
 }
 
-/* 0x8040: pulses P1.7 low */
+/* 0x8040: pulses SPIDEV_POWER2 (P1.7, USS-1001 P9.7) low */
 unsigned char powerReset(void)
 {
 	unsigned char result;
@@ -730,12 +936,35 @@ unsigned char powerReset(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
+#if BOARD_USS1001
+	/* USS-1001: the input reset by its state request, P9.7 pulsed */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(0x0b);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	hostIntDisable();
+	dly_tsk(1);
+	csiClose();
+	dtcClose();
+	HOST_FRAME = 0;
+	powerPendingClear(4);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(5);
+	powerJobPostReset();
+	POWER_WAIT(5, 0x19);
+	powerPendingClear(5);
+	powerPendingClear(6);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x19);
+	powerPendingClear(2);
+#else
 	inputReset();
 	powerPendingClear(3);
 	hostIntDisable();
 	dly_tsk(1);
 	csiClose();
-	P5.7 = 0;
+	HOST_FRAME = 0;
 	powerPendingClear(4);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000107)
@@ -751,9 +980,10 @@ unsigned char powerReset(void)
 	task2SetFlag(3, 0x1000);
 	POWER_WAIT_KEEP(2, 0x19);
 	powerPendingClear(2);
-	P1.7 = 0;
+#endif
+	SPIDEV_POWER2 = 0;
 	dly_tsk(3);
-	P1.7 = 1;
+	SPIDEV_POWER2 = 1;
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;
@@ -764,10 +994,31 @@ unsigned char powerReset(void)
 unsigned char powerUpdateAnswer(void)
 {
 	unsigned char result;
+#if BOARD_USS1001
+	unsigned char waitResult;
 
+	/* USS-1001: the parts ended, the host link given its time first */
+	result = 0;
+	waitResult = 0;
+	powerPendingReset();
+	powerPendingClear(3);
+	powerPendingClear(1);
+	powerPendingClear(5);
+	powerPendingClear(6);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT_KEEP(2, 0x1f4);
+	powerPendingClear(2);
+	updaterRequestAnswerOk();
+	powerPendingClear(4);
+	if (powerPendingGet() != 0)
+		;
+	return result;
+#else
 	result = 0;
 	updaterRequestAnswerOk();
 	return result;
+#endif
 }
 
 /* 0x8400 */
@@ -783,6 +1034,32 @@ unsigned char powerUpdate(void)
 	waitResult = 0;
 #endif
 	powerPendingReset();
+#if BOARD_USS1001
+	/* USS-1001: the input and the host's requests closed, the host link given its time */
+	POWER_WAIT_CLEAR(3);
+	inputStateRequest(0x0c);
+	POWER_WAIT(3, 3);
+	powerPendingClear(3);
+	powerPendingClear(1);
+	POWER_WAIT_CLEAR(5);
+	powerJobPostUpdate();
+	POWER_WAIT(5, 0xfa);
+	powerPendingClear(5);
+	powerPendingClear(6);
+	POWER_WAIT_CLEAR(2);
+	task2SetFlag(3, 0x1000);
+	POWER_WAIT(2, 0x1f4);
+	powerPendingClear(2);
+	POWER_WAIT_CLEAR(4);
+	if (hostCloseRequests(5) != 0)
+		;
+	updaterRequestAnswerOk();
+	POWER_WAIT(4, 0x32);
+	powerPendingClear(4);
+	if (powerPendingGet() != 0)
+		;
+	return waitResult;
+#else
 	powerPendingClear(3);
 	powerPendingClear(1);
 #if FW_SINCE(0x01000104)
@@ -800,6 +1077,7 @@ unsigned char powerUpdate(void)
 	if (powerPendingGet() != 0)
 		result = 1;
 	return result;
+#endif
 }
 #endif
 

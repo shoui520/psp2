@@ -6,6 +6,7 @@
 #define ERNIE_NVS_H
 
 #include "ernie.h"
+#include "board.h"
 
 /* nvsGetState: the NVS has failed (no data blocks found), its spares are full (a move is due),
    the data was moved (the old blocks are still to be erased) */
@@ -28,6 +29,18 @@ extern unsigned char nvsGetState(void);
 extern unsigned char nvsFormat(void);
 extern unsigned char nvsMove(void);
 extern unsigned char nvsClean(unsigned char count);
+#if BOARD_USS1001
+/* nvsGetInfo's map of the records written */
+struct NvsMap {
+	unsigned char	count;
+	unsigned char	size;			/* of bits */
+	unsigned char	bits[12];		/* record n: bits[n >> 3] & 0x80 >> (n & 7) */
+};
+
+extern unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned long *moves,
+				struct NvsMap *map);
+#else
 extern unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned int *moves);
+#endif
 
 #endif

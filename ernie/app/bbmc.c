@@ -58,11 +58,18 @@ extern unsigned char input2Bit1Get(void);
 extern void intp8Enable(int);
 
 struct Bbmc bbmc;			/* the link */
+#if BOARD_USS1001
+#define bbmcSavedMode	(bbmc.savedMode)
+#define bbmcPackets	(bbmc.packets)
+#define bbmcStatusSeen	(bbmc.statusSeen)
+#define bbmcEventsSeen	(bbmc.eventsSeen)
+#else
 static unsigned int bbmcSavedMode;	/* the mode as NVS holds it */
 #if FW_SINCE(0x0100060B)
 static unsigned char bbmcPackets;	/* the packets answered since the start */
 static unsigned long bbmcStatusSeen;	/* the status bits set since the start */
 static unsigned long bbmcEventsSeen;	/* and the events */
+#endif
 #endif
 union BbmcRegs bbmcRegs;
 struct HostRequest bbmcRequest;
@@ -408,6 +415,24 @@ unsigned char bbmcEvent(FLGPTN ptn)
 		}
 	}
 	return 0;
+#elif BOARD_USS1001
+	/* USS-1001: no modem; the state's change still makes the modem's device ready */
+	if (ptn & BBMC_EVENT_STATE) {
+		switch (stateGet()) {
+		case 0x8002:
+			bbmcInit();
+			powerReady(6);
+			break;
+		case 0x8004:
+		case 0x8008:
+		case 0x8020:
+			powerReady(6);
+			break;
+		}
+	}
+	if (ptn & BBMC_EVENT_REQUEST)
+		bbmcRequestRun();
+	return 0;
 #elif !BOARD_BBMC
 	if (ptn & BBMC_EVENT_REQUEST)
 		bbmcRequestRun();
@@ -639,12 +664,17 @@ unsigned char bbmcEvent(FLGPTN ptn)
 }
 
 #if FW_SINCE(0x0100060B)
-/* host command 0x0a00: bbmcGetInfo's */
+/* host command 0x0a00: bbmcGetInfo's; USS-1001's answers nothing, status 2 */
 unsigned char hostCommand0a00(unsigned char *out, unsigned char *length)
 {
+#if BOARD_USS1001
+	*length = 0;
+	return 2;
+#else
 	bbmcGetInfo(out);
 	*length = sizeof(struct BbmcInfo);
 	return 0;
+#endif
 }
 #endif
 
@@ -872,8 +902,8 @@ void bbmcNvsDone(unsigned char command, unsigned char result)
 	}
 }
 
-#if FW_SINCE(0x0100060B)
-/* host command 0x0a00 and serial command 0x01d0: the link's state, the modem's lines (P12.6,
+#if FW_SINCE(0x0100060B) && !BOARD_USS1001
+/* host command 0x0a00 and serial command 0x01d0 (not on USS-1001): the link's state, the modem's lines (P12.6,
    P3.4, P3.2, P7.4, P3.6, P14.3), the packets answered, the registers' mode and version, the
    status and events seen */
 void bbmcGetInfo(unsigned char *out)
@@ -1053,7 +1083,11 @@ void bbmcSetEvents(unsigned long bits)
 void bbmcSetModeActive(unsigned int mode)
 {
 	mode |= 0x8000;
+#if BOARD_USS1001
+	bbmcWriteRegs(6, 2, (unsigned char *)&mode, BBMC_WRITE_RESET);
+#else
 	bbmcWriteRegs(6, 2, (unsigned char *)&mode, BBMC_WRITE_SET);
+#endif
 }
 
 unsigned char bbmcGetPending(void)
@@ -1084,6 +1118,22 @@ void bbmcDelay(void)
 void bbmcRequestNotify(void)
 {
 	switch (bbmcRequest.event) {
+#if BOARD_USS1001
+	/* USS-1001's: the link's opening leaves the request idle too */
+	case HOST_EVENT_COMMAND:
+		hostRequestSetState(&bbmcRequest, HOST_REQUEST_BUSY);
+		task6SetFlag(6, BBMC_EVENT_REQUEST);
+		break;
+	case HOST_EVENT_ANSWERED:
+		hostRequestSetState(&bbmcRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&bbmcRequest, HOST_REQUEST_IDLE);
+		break;
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&bbmcRequest, HOST_REQUEST_IDLE);
+		break;
+#else
 	case HOST_EVENT_COMMAND:
 		bbmcRequest.state = HOST_REQUEST_BUSY;
 		task6SetFlag(6, BBMC_EVENT_REQUEST);
@@ -1091,13 +1141,17 @@ void bbmcRequestNotify(void)
 	case HOST_EVENT_ANSWERED:
 		bbmcRequest.state = HOST_REQUEST_RECEIVE;
 		break;
+#endif
 	}
 }
 
 /* request 0x0a's commands: 0x0a80 reads registers, 0x0a81 writes them, 0x0a82 sets P3.7 */
 void bbmcRequestRun(void)
 {
-#if !BOARD_BBMC
+#if BOARD_USS1001
+	/* no modem: every command answers status 2 */
+	hostRequestAnswer(&bbmcRequest, HOST_REQUEST_ANSWER, 2, 0);
+#elif !BOARD_BBMC
 	/* no modem: every command fails */
 	bbmcRequest.answerLength = 0;
 	bbmcRequest.status = 4;

@@ -104,8 +104,12 @@ void sleepFactorSet8(unsigned char on)
 	if (sleepFactor.bits[1].b0 ^ on) {
 		dis_dsp();
 		sleepFactor.bits[1].b0 = on;
+#if BOARD_USS1001
+		sleepFactorStatus.bits.changed = 1;	/* both ways on USS-1001 */
+#else
 		if (on)
 			sleepFactorStatus.bits.changed = 1;
+#endif
 		ena_dsp();
 	}
 }
@@ -285,6 +289,30 @@ void sleepFactorSet20(unsigned char on)
 		ena_dsp();
 	}
 }
+
+#if BOARD_USS1001
+/* the slim's: analog input 0x0010 (analog.c) */
+void sleepFactorSet14(unsigned char on)
+{
+	if (sleepFactor.bits[1].b6 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[1].b6 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+
+/* the slim's: nothing sets it */
+void sleepFactorSet21(unsigned char on)
+{
+	if (sleepFactor.bits[2].b5 ^ on) {
+		dis_dsp();
+		sleepFactor.bits[2].b5 = on;
+		sleepFactorStatus.bits.changed = 1;
+		ena_dsp();
+	}
+}
+#endif
 #endif
 #endif
 

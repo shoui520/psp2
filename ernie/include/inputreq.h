@@ -24,6 +24,8 @@ extern void devicesRequestRun(void);
 #endif
 extern void controlsRequestRun(void);
 extern void controlsReadButtons(unsigned char *out);
+extern void controlsReadAnalog0(unsigned char *out);
+extern void controlsReadAnalog1(unsigned char *out);
 extern unsigned char hostCommandControlsInfo(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandAnalog(unsigned char *out, unsigned char *length);
 extern unsigned char hostCommandAnalogBoth(unsigned char *out, unsigned char *length);

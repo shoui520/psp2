@@ -6,6 +6,17 @@
 #define ERNIE_HOST_H
 
 #include "ernie.h"
+#include "board.h"
+
+/* the link's lines to the host (in a file with #pragma sfr): HOST_READY high while the link
+   takes frames, HOST_FRAME low during a frame (the slim's P9.6 and P1.5) */
+#if BOARD_USS1001
+#define HOST_READY		P9.6
+#define HOST_FRAME		P1.5
+#else
+#define HOST_READY		P5.6
+#define HOST_FRAME		P5.7
+#endif
 
 /* the link's settings, set by the host */
 #if FW_SINCE(0x01000104)

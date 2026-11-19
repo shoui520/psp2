@@ -9,8 +9,15 @@
 #include <string.h>
 #include "ernie.h"
 #include "board.h"
+#if BOARD_USS1001
+#include "bstore.h"
+#include "chipid.h"
+#endif
 #include "config.h"
 #include "debugpin.h"
+#if BOARD_USS1001
+#include "eventlog.h"
+#endif
 #include "kernel.h"
 #include "log.h"
 #include "param.h"
@@ -25,6 +32,11 @@
 /* the reset control flags (RESF) the chip had at the start: TRAP, WDRF, LVIRF */
 #define RESF_TRAP	0x80
 #define RESF_WDRF	0x10
+#if BOARD_USS1001
+#define RESF_RPERF	0x04	/* the RAM's parity */
+#define RESF_IAWRF	0x02	/* an illegal memory access */
+#define RESF_LVIRF	0x01	/* the voltage detector */
+#endif
 
 extern unsigned char getResetCause(void);
 
@@ -40,7 +52,13 @@ void task1(VP_INT exinf)
 	for (;;) {
 		ercd = rcv_mbx(1, (T_MSG **)&msg);
 		memcpy(&event, &msg->event, sizeof(event));
+#if BOARD_USS1001
+		/* USS-1001's enter message is not the pool's */
+		if (event.type != STATE_EVENT_ENTER)
+			ercd = rel_mpf(1, msg);
+#else
 		rel_mpf(1, msg);
+#endif
 		if (ercd == E_OK) {
 			stateEvent(&event);
 			powerSequence();
@@ -62,6 +80,69 @@ void systemInit(void)
 	} dlVersion;
 #endif
 
+#if BOARD_USS1001
+	WDTE = 0xac;
+	memset(stateHistory, 0, sizeof(stateHistory));
+	powerState = 1;
+	stateRecord.count = 0;
+	statePhase = 2;
+	stateNext = 0;
+	stateEvents = 0;
+	stateCause = 0x7f;
+	chipIdInit();
+	eventLogInit();
+	eventLogStart();
+	debugPinInit();
+	resetFlags = RESF;
+	configInit();
+	timerInit();
+	paramInit();
+	taskClearPending(-1);
+	taskSetPending(1);
+	timer.handler = stateCheck;
+	timerSetHandler(TIMER_RTC(0x1a), &timer);
+	versionInit();
+	cause = getResetCause() & 0xf0;
+	/* the reset's cause and flags, in the event log */
+	eventLogTask1.byte[0] = cause;
+	eventLogTask1.byte[1] = resetFlags;
+	eventLogTask1.byte[2] = 0;
+	eventLogTask1.byte[3] = 0;
+	eventLogRecord(2, 0xff, eventLogTask1.byte, 4);
+	logInit();
+	logQueueInit();
+	bstoreInit();
+	if (cause == 0) {
+		if (resetFlags & RESF_TRAP) {
+			scratchPadClear();
+			logEvent(0x19);
+		}
+		if (resetFlags & RESF_WDRF) {
+			scratchPadClear();
+			logEvent(7);
+		}
+		if (resetFlags & RESF_RPERF)
+			scratchPadClear();
+		if (resetFlags & RESF_IAWRF) {
+			scratchPadClear();
+			logEvent(0x1a);
+		}
+		if (resetFlags & RESF_LVIRF)
+			scratchPadClear();
+	} else if (cause == 0x30) {
+		if (resetFlags & RESF_TRAP) {
+			scratchPadClear();
+			logEvent(6);
+		}
+	} else if (cause == 0x50) {
+		scratchPadClear();
+	} else if (cause == 0x60) {
+		logEvent(5);
+		logEvent(0x1d);
+	}
+	stateEnter();
+	taskHookState();
+#else
 #if BOARD_WDT
 	WDTE = 0xac;
 #endif
@@ -131,5 +212,6 @@ void systemInit(void)
 #if FW_SINCE(0x0100060B)
 	taskHookState();
 #endif
+#endif	/* BOARD_USS1001 */
 	return;
 }

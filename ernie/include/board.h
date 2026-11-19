@@ -38,6 +38,18 @@
 #define BOARD_TOUCH_CHG_PIN	P7.5
 #endif
 
+/* the pins behind INTP1 (button 2, low: the scan held long), SRE0 (low: input 1's bit 0) and
+   INTP0 (low: transition 0x41) */
+#if BOARD_USS1001
+#define BOARD_INTP1_PIN		P7.6
+#define BOARD_SRE0_PIN		P7.4
+#define BOARD_INTP0_PIN		P3.1
+#else
+#define BOARD_INTP1_PIN		P4.6
+#define BOARD_SRE0_PIN		P11.5
+#define BOARD_INTP0_PIN		P12.0
+#endif
+
 /* the rear panel's (panel 1's) CHG line */
 #if BOARD_USS1001
 #define BOARD_TOUCH_CHG1_PIN	P6.7
@@ -50,8 +62,9 @@
 #define BOARD_POWER_P92_P15	(!HW_IS(0x00603000) && !HW_IS(0x00603200))
 
 /* sleepFactorGetOffInfo's bits 0 and 1 from the settings' offInfoBit0 and offInfoBit1, and bit 2
-   always: not on 0x00603200, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2 never */
-#define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200))
+   always: not on 0x00603200 and USS-1001, whose bits 0 and 1 are offInfo2's and offInfo3's, bit 2
+   never */
+#define BOARD_OFF_INFO_BITS	(!HW_IS(0x00603200) && !BOARD_USS1001)
 
 /* the off and suspend states wake by INTP1 and INTP13 (and INTP11), the inputs scanned in mode 2:
    not on 0x00601000, whose inputs keep scanning in mode 1 */
@@ -82,8 +95,9 @@
 #define BOARD_POWER_LED_ELMO	(ERNIE_BOARD == 0x00414000 || BOARD_IS(0x00411000))
 
 /* the serial commands 0x0910-0x0916 on the kernel's objects: 0x00090804's, kept by 0x00411000,
-   which keeps that kernel (0x00315200 runs 0x00411000's code on DEM-3000L's kernel) */
-#define BOARD_KERNEL_COMMANDS	(!FW_SINCE(0x00090903) || ERNIE_KERNEL == 0x00411000)
+   which keeps that kernel (0x00315200 runs 0x00411000's code on DEM-3000L's kernel), and by
+   USS-1001 */
+#define BOARD_KERNEL_COMMANDS	(!FW_SINCE(0x00090903) || ERNIE_KERNEL == 0x00411000 || BOARD_USS1001)
 
 /* the power-on test (resume mode 0x0d, powerErrorGet) steps P2.4-P2.7 and P1.7 (not on
    0x00315200) */

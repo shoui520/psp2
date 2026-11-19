@@ -1519,6 +1519,7 @@ void inputFlag80Later(void)
 }
 #endif
 
+#if !BOARD_USS1001	/* not in the slim's */
 /* the external interrupts: on (an edge chosen per pin) or off */
 void intp2Enable(unsigned char enable)
 {
@@ -1537,6 +1538,7 @@ void intp2Enable(unsigned char enable)
 	}
 #endif
 }
+#endif
 
 void intp1Enable(unsigned char enable)
 {

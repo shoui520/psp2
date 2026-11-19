@@ -15,10 +15,12 @@ extern unsigned char input1Bit5Active(void);
 
 /* the updater has these in its own board.c */
 #ifndef ERNIE_UPDATER
+#if !BOARD_USS1001	/* not in the slim's */
 /* nothing on this board */
 void boardNone(int value)
 {
 }
+#endif
 
 /* the Elmo mask steps of the resume (powerJob's), off and suspend sequences */
 unsigned char boardResumeSteps(void)

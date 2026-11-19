@@ -426,43 +426,51 @@ unsigned char serial4Event(FLGPTN ptn)
 		}
 	}
 #endif
-	if ((ptn & 0x001e) && (serialGetMode() & SERIAL_MODE) == 1) {
-		if (ptn & 0x0010) {
-			clr_flg(3, ~0x0010);
-			serial.state = SERIAL_SEND;
-		} else if (ptn & 0x0004) {
-			clr_flg(3, ~0x0004);
-			if (serial.state == SERIAL_RECEIVE)
-				serial.state = SERIAL_RECEIVED;
-			else
-				serial.state = SERIAL_RESTART;
-		} else if (ptn & 0x0002) {
-			clr_flg(3, ~0x0002);
-			serial.state = SERIAL_NOTIFY;
-		} else if (ptn & 0x0008) {
-			clr_flg(3, ~0x0008);
+	if (ptn & 0x001e) {
+		if ((serialGetMode() & SERIAL_MODE) == 1) {
+			if (ptn & 0x0010) {
+				clr_flg(3, ~0x0010);
+				serial.state = SERIAL_SEND;
+			} else if (ptn & 0x0004) {
+				clr_flg(3, ~0x0004);
+				if (serial.state == SERIAL_RECEIVE)
+					serial.state = SERIAL_RECEIVED;
+				else
+					serial.state = SERIAL_RESTART;
+			} else if (ptn & 0x0002) {
+				clr_flg(3, ~0x0002);
+				serial.state = SERIAL_NOTIFY;
+			} else if (ptn & 0x0008) {
+				clr_flg(3, ~0x0008);
+			}
+			switch (serial.state) {
+			case 0:
+			case SERIAL_RECEIVE:
+			case SERIAL_RECEIVED:
+				timerStop(TIMER(0x10));
+				serial.status = serialReceive();
+				serialDispatch();
+				break;
+			case SERIAL_ANSWER:
+				serialSendAnswer();
+				break;
+			case SERIAL_NOTIFY:
+				serialNotify();
+				break;
+			case SERIAL_SEND:
+				serialSend(&serial);
+				break;
+			case SERIAL_RESTART:
+				serial.state = SERIAL_RECEIVE;
+				break;
+			}
 		}
-		switch (serial.state) {
-		case 0:
-		case SERIAL_RECEIVE:
-		case SERIAL_RECEIVED:
-			timerStop(TIMER(0x10));
-			serial.status = serialReceive();
-			serialDispatch();
-			break;
-		case SERIAL_ANSWER:
-			serialSendAnswer();
-			break;
-		case SERIAL_NOTIFY:
-			serialNotify();
-			break;
-		case SERIAL_SEND:
-			serialSend(&serial);
-			break;
-		case SERIAL_RESTART:
-			serial.state = SERIAL_RECEIVE;
-			break;
+#if BOARD_USS1001
+		else {
+			/* USS-1001: the events are dropped when the line is not in mode 1 */
+			clr_flg(3, ~0x001e);
 		}
+#endif
 	}
 	return result;
 }

@@ -7,6 +7,7 @@
 #ifndef ERNIE_BBMC_H
 #define ERNIE_BBMC_H
 
+#include "board.h"
 #include "host.h"
 #include "input.h"
 #include "kernel.h"
@@ -81,6 +82,14 @@ struct Bbmc {
 	unsigned char		state;		/* 1 off, 2 on, 3 on in mode 1, 4 on in mode 6 or 7 */
 	struct BbmcPacket	rx;
 	struct BbmcAnswer	tx;
+#if BOARD_USS1001
+	/* USS-1001's keeps bbmc.c's counters here (one ES for all); the others' are its statics */
+	unsigned int		savedMode;	/* the mode as NVS holds it */
+	unsigned char		reserved;	/* nothing reads it */
+	unsigned char		packets;	/* the packets answered since the start */
+	unsigned long		statusSeen;	/* the status bits set since the start */
+	unsigned long		eventsSeen;	/* and the events */
+#endif
 };
 
 #if FW_SINCE(0x0100060B)

@@ -1,9 +1,9 @@
 /*
  * The device on the SPI bus: CSI00 opened most significant bit first (csiOpenMsb) while
  * the host link is paused (event flag 1, bit 0x0080; bit 0x0040 resumes it). The device is
- * powered by P5.7 and P1.7, tells it is ready on P1.6, and is selected by P9.0 for a
- * transfer: a command byte and a register's number, most significant byte first, then the
- * register's data either way.
+ * powered by P5.7 and P1.7 (USS-1001: P1.5 and P9.7), tells it is ready on P1.6, and is
+ * selected by P9.0 for a transfer: a command byte and a register's number, most significant
+ * byte first, then the register's data either way.
  */
 #pragma sfr
 
@@ -65,8 +65,8 @@ unsigned char spiDevAuthenticate(void)
 
 	set_flg(1, 0x0080);
 	dly_tsk(3);
-	P5.7 = 1;
-	P1.7 = 1;
+	SPIDEV_POWER = 1;
+	SPIDEV_POWER2 = 1;
 	retries = 60;
 	while (!P1.6) {
 #if BOARD_WDT
@@ -95,7 +95,7 @@ unsigned char spiDevAuthenticate(void)
 	block.words[1] = SWAP32(block.words[1]);
 	result = spiDevWrite(SPIDEV_WRITE, 0x84, block.bytes + 4);
 	memset(block.bytes, 0, sizeof(block.bytes));
-	P5.7 = 0;
+	SPIDEV_POWER = 0;
 	retries = 60;
 	while (P1.6) {
 #if BOARD_WDT
@@ -184,7 +184,7 @@ unsigned char spiDevPowerOn(void)
 	result = 0;
 	set_flg(1, 0x0080);
 	dly_tsk(3);
-	P5.7 = 1;
-	P1.7 = 1;
+	SPIDEV_POWER = 1;
+	SPIDEV_POWER2 = 1;
 	return result;
 }

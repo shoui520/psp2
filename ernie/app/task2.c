@@ -34,6 +34,9 @@
 
 extern unsigned char input1Bit5Active(void);
 extern unsigned char intp11Low(void);
+#if BOARD_USS1001
+#include "sysinfo.h"
+#endif
 
 void task2MultiCnEvent(FLGPTN ptn);
 unsigned char task2StateEvent(void);
@@ -44,6 +47,10 @@ unsigned char task2Suspend(void);
 unsigned char task2Shutdown(void);
 unsigned char task2Cut(void);
 unsigned char task2Reset(void);
+#if BOARD_USS1001
+unsigned char task2UpdateAnswer(void);
+unsigned char task2Update(void);
+#endif
 unsigned char task2Tick(void);
 
 /* the NVS request's events (0x00090804: 0x0040 too, the job service's, which task2On and the
@@ -100,6 +107,19 @@ void task2(VP_INT exinf)
 	}
 }
 
+#if BOARD_USS1001
+/* the slim's multi-connector follows its own state; INTP11 is read and not used */
+void task2MultiCnEvent(FLGPTN ptn)
+{
+	if (ptn & 0x0001)
+		boardMultiCnUpdate();
+	if (ptn & 0x0100) {
+		if (intp11Low())
+			;
+	}
+	return;
+}
+#else
 void task2MultiCnEvent(FLGPTN ptn)
 {
 	unsigned char state;
@@ -152,6 +172,7 @@ void task2MultiCnEvent(FLGPTN ptn)
 	}
 	return;
 }
+#endif
 
 unsigned char task2StateEvent(void)
 {
@@ -183,6 +204,14 @@ unsigned char task2StateEvent(void)
 		case 0x8000 | STATE_RESET:
 			ret = task2Reset();
 			break;
+#if BOARD_USS1001
+		case 0x8000 | STATE_UPDATE_ANSWER:
+			ret = task2UpdateAnswer();
+			break;
+		case 0x8000 | STATE_UPDATE:
+			ret = task2Update();
+			break;
+#endif
 		}
 		powerReady(2);
 	} else {
@@ -194,6 +223,10 @@ unsigned char task2StateEvent(void)
 		case STATE_RESUME:
 		case STATE_RESET:
 		case STATE_CUT:
+#if BOARD_USS1001
+		case STATE_UPDATE_ANSWER:
+		case STATE_UPDATE:
+#endif
 			break;
 		}
 	}
@@ -202,6 +235,28 @@ unsigned char task2StateEvent(void)
 
 /* the end of the power-on sequence: the clock started after a cold start (cause 0x60), the
    links opened, the NVS loaded, and the host's watchdog set as configured */
+#if BOARD_USS1001
+/* the slim's: no serial 4 or 2 here, and the log started again after a cause 0x60 */
+unsigned char task2On(void)
+{
+	unsigned char ret;
+	unsigned char cause;
+
+	ret = 0;
+	cause = stateGetCause();
+	if (cause == 0x60)
+		rtcStart();
+	serialReset(3);
+	if (nvsInit() != 0)
+		nvsJobService();
+	if (cause == 0x60)
+		logInit();
+	boardMultiCnOutputOff();
+	watchdogSet(&configGet()->watchdog);
+	watchdogStop();
+	return ret;
+}
+#else
 unsigned char task2On(void)
 {
 	unsigned char ret;
@@ -240,12 +295,17 @@ unsigned char task2On(void)
 #endif
 	return ret;
 }
+#endif
 
 unsigned char task2Off(void)
 {
 	unsigned char ret;
 #if FW_SINCE(0x00090903)
 	unsigned char value;
+#endif
+#if BOARD_USS1001
+	unsigned char length;
+	unsigned char size;
 #endif
 
 	ret = 0;
@@ -254,7 +314,9 @@ unsigned char task2Off(void)
 	serialAuthInit();
 	serialRequestInit();
 	serial4StartTimers();
-#if FW_SINCE(0x00090804)
+#if BOARD_USS1001
+	boardMultiCnUpdate();
+#elif FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
@@ -274,6 +336,17 @@ unsigned char task2Off(void)
 #if FW_SINCE(0x01000104)
 	if (getAlarmMode() == 1)
 		setAlarm(RTC_ALARM_NONE);
+#endif
+#if BOARD_USS1001	/* the fat ones read them in stateOffEnter */
+	logReadData(1, (unsigned char *)&idRecord1, &length);
+	logReadData(0x0f, &size, &length);
+	idRecordsLength = size;
+	logReadData(0x10, &size, &length);
+	idRecordsLength += size;
+	logReadData(0x12, &size, &length);
+	idRecordsLength += size;
+	logReadData(0x16, &size, &length);
+	idRecordsLength += size;
 #endif
 	return ret;
 }
@@ -318,7 +391,9 @@ unsigned char task2Suspend(void)
 
 	ret = 0;
 	serialAuthInit();
-#if FW_SINCE(0x00090804)
+#if BOARD_USS1001
+	boardMultiCnUpdate();
+#elif FW_SINCE(0x00090804)
 	if (boardMultiCnIsDongle() || boardMultiCnIsDebug())
 		boardSetMultiCnOutput(0);
 	else
@@ -337,6 +412,9 @@ unsigned char task2Shutdown(void)
 	unsigned char ret;
 
 	ret = 0;
+#if BOARD_USS1001
+	boardMultiCnOutputOff();
+#else
 	serial4Close2();
 #if FW_SINCE(0x00090804)
 	boardMultiCnStop();
@@ -345,6 +423,7 @@ unsigned char task2Shutdown(void)
 #endif
 	serialClose1();
 	serial1Reset();
+#endif
 #if HOST_WATCHDOG
 	watchdogStop();
 #endif
@@ -356,6 +435,9 @@ unsigned char task2Cut(void)
 	unsigned char ret;
 
 	ret = 0;
+#if BOARD_USS1001
+	boardMultiCnOutputOff();
+#else
 	serial4Close2();
 #if FW_SINCE(0x00090804)
 	boardMultiCnStop();
@@ -364,6 +446,7 @@ unsigned char task2Cut(void)
 #endif
 	serialClose1();
 	serial1Reset();
+#endif
 #if HOST_WATCHDOG
 	watchdogStop();
 #endif
@@ -381,6 +464,24 @@ unsigned char task2Reset(void)
 #endif
 	return ret;
 }
+
+#if BOARD_USS1001
+unsigned char task2UpdateAnswer(void)
+{
+	return 0;
+}
+
+/* the settings readied for the update; the result is not used */
+unsigned char task2Update(void)
+{
+	unsigned char ret;
+
+	ret = 0;
+	if (configPrepareUpdate() != 0)
+		;
+	return ret;
+}
+#endif
 
 /* every second (the RTC's interrupt sets flag 0x8000): the alarm checked against the clock */
 unsigned char task2Tick(void)

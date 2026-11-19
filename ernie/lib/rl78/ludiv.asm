@@ -24,7 +24,7 @@
 	MOVW	DE, @RTARG4
 	MOVW	BC, @RTARG2
 	MOVW	AX, @RTARG0
-	DIVWU
+	DB	0CEH, 0FBH, 0BH	; DIVWU, written out: RA78K0R puts a NOP after its DIVWU, Sony's library has none
 	MOVW	@RTARG0, AX
 	MOVW	AX, BC
 	MOVW	@RTARG2, AX

@@ -50,16 +50,6 @@
 #define HOST_END		0x0a
 #define HOST_ABORT		0x80
 
-/* the link's lines to the host: HOST_READY high while the link takes frames, HOST_FRAME low
-   during a frame (the slim's P9.6 and P1.5) */
-#if BOARD_USS1001
-#define HOST_READY		P9.6
-#define HOST_FRAME		P1.5
-#else
-#define HOST_READY		P5.6
-#define HOST_FRAME		P5.7
-#endif
-
 /* a command handler: the answer's data to out, its length to *length; returns the result */
 typedef unsigned char (*HostCommandHandler)(unsigned char *out, unsigned char *length);
 

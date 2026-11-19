@@ -16,7 +16,7 @@
 	PUSH	BC
 	POP	DE
 	MOV	D, #0
-	DIVHU
+	DB	0CEH, 0FBH, 03H	; DIVHU, written out: RA78K0R puts a NOP after its DIVHU, Sony's library has none
 	XCH	A, E
 	MOV	C, A
 	XCH	A, E

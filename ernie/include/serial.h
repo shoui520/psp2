@@ -9,8 +9,13 @@
 
 #include "ernie.h"
 #include "kernel.h"
+#include "board.h"
 
+#if BOARD_USS1001
+#define SERIAL_PORT		4	/* the slim's: UART4 */
+#else
 #define SERIAL_PORT		3	/* the UART */
+#endif
 #define SERIAL_DATA_SIZE	0x39	/* the most data a frame carries */
 /* the most a received frame carries: 0x00090804 takes less than it sends */
 #if FW_SINCE(0x00090903)

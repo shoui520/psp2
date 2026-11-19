@@ -20,6 +20,7 @@
 #include "chip.h"
 #include "config.h"
 #include "input.h"
+#include "inputreq.h"
 #include "kernel.h"
 #include "nvsreq.h"
 #include "sleepfactor.h"
@@ -2391,6 +2392,44 @@ void analogGetSamples(unsigned int __far *out)
 	out[2] = analogAxes[2].samples[i];
 	out[3] = analogAxes[3].samples[i];
 }
+
+#if BOARD_USS1001
+/* the analog sticks of each set, as host command 0x0100's read them: inputreq.c's on the other
+   boards, here in Sony's link */
+void controlsReadAnalog0(unsigned char *out)
+{
+	out[0] = analogSticks0[0];
+	out[1] = analogSticks0[1];
+	out[2] = analogSticks0[2];
+	out[3] = analogSticks0[3];
+}
+
+void controlsReadAnalog1(unsigned char *out)
+{
+	out[0] = analogSticks1[0];
+	out[1] = analogSticks1[1];
+	out[2] = analogSticks1[2];
+	out[3] = analogSticks1[3];
+}
+
+/* the slim's: each axis's record of its medians outside the limits (serial 0x0964, mode 1) */
+void analogGetMedianFaults(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].medianFault, sizeof(struct AnalogFault));
+	memcpy(&out[8], &analogAxes[1].medianFault, sizeof(struct AnalogFault));
+	memcpy(&out[0x10], &analogAxes[2].medianFault, sizeof(struct AnalogFault));
+	memcpy(&out[0x18], &analogAxes[3].medianFault, sizeof(struct AnalogFault));
+}
+
+/* and of its samples (mode 0) */
+void analogGetSampleFaults(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].sampleFault, sizeof(struct AnalogFault));
+	memcpy(&out[8], &analogAxes[1].sampleFault, sizeof(struct AnalogFault));
+	memcpy(&out[0x10], &analogAxes[2].sampleFault, sizeof(struct AnalogFault));
+	memcpy(&out[0x18], &analogAxes[3].sampleFault, sizeof(struct AnalogFault));
+}
+#endif
 
 #if !BOARD_USS1001
 void analogLatchInit(void)

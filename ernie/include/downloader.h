@@ -14,6 +14,8 @@ typedef unsigned int DownloaderLinkConfig;
 typedef struct HostLinkConfig DownloaderLinkConfig;
 #endif
 
+#include "board.h"
+
 #define DOWNLOADER_ENTRY	0x2000
 
 /* the app's state, for the downloader to carry on the host link with */
@@ -25,9 +27,18 @@ struct DownloaderStart {
 		unsigned int		size;	/* downloaders to 1.02.ff: the config's size only */
 		DownloaderLinkConfig	config;	/* later ones: hostLink.config */
 	} link;
+#if BOARD_USS1001
+	unsigned char	multiCn;	/* analogGetMultiCn's */
+	unsigned int	ledFlags;	/* powerLedFlags.causes */
+	unsigned char	usbState;	/* chargeUsbState */
+#endif
 };
 
+#if BOARD_USS1001
+#define DOWNLOADER_START	((struct DownloaderStart __near *)0xb310)
+#else
 #define DOWNLOADER_START	((struct DownloaderStart __near *)0xd500)
+#endif
 
 /*
  * the downloader versions (their last three bytes, the first byte's most significant) that

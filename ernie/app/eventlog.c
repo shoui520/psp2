@@ -22,7 +22,7 @@ static unsigned int eventLogCount;
 
 /* the data of the events the modules record, four bytes each */
 union EventLogData eventLogCharge;
-unsigned char eventLogTask1[4];
+union EventLogData eventLogTask1;	/* task 1's: the reset, the states and their events */
 unsigned char eventLogInput[4];
 unsigned char eventLogCommand[4];
 unsigned char eventLogData5[4];

@@ -102,8 +102,6 @@ void controlsRequestNotify(void);
 void touchRequestNotify(void);
 void motionRequestNotify(void);
 void controlsReadAnalog(unsigned char *out);
-void controlsReadAnalog0(unsigned char *out);
-void controlsReadAnalog1(unsigned char *out);
 void touchStream0301Prepare(void);
 void touchStream0302Prepare(void);
 void touchStream0300Prepare(void);
@@ -664,6 +662,7 @@ void controlsReadAnalog(unsigned char *out)
 }
 #endif
 
+#if !BOARD_USS1001	/* the slim's are analog.c's */
 void controlsReadAnalog0(unsigned char *out)
 {
 	out[0] = analogSticks0[0];
@@ -680,6 +679,7 @@ void controlsReadAnalog1(unsigned char *out)
 	out[2] = analogSticks1[2];
 	out[3] = analogSticks1[3];
 }
+#endif
 #endif
 
 /* 0x0100 (sceSysconGetControlsInfo) */

@@ -16,13 +16,16 @@
 
 #include "ernie.h"
 #include "aes.h"
+#include "analog.h"
 #include "board.h"
+#include "charge.h"
 #include "command.h"
 #include "config.h"
 #include "downloader.h"
 #include "handshake.h"
 #include "host.h"
 #include "kernel.h"
+#include "led.h"
 #include "nvs.h"
 #include "serial.h"
 #include "sha1.h"
@@ -46,11 +49,15 @@ extern unsigned char fslDataBuffer[];		/* the library's descriptor */
 #define UPDATER_NVS_DL_FLAGS	0x2d
 #define UPDATER_NVS_AREA	1
 
+#if BOARD_USS1001
+#include "flash.h"		/* updaterFlashPrepare: flash.c's on the slim */
+#else
 static unsigned char updaterFlashPrepare(void);
+#endif
 #if FW_SINCE(0x00090903)
 static char updaterSegmentAllowed(unsigned char segment);
-static char updaterSegmentReceived(unsigned char segment);
-static void updaterSegmentSetReceived(unsigned char segment);
+static char updaterSegmentReceived(UpdaterSegment segment);
+static void updaterSegmentSetReceived(UpdaterSegment segment);
 static unsigned char updaterCheckSignature(unsigned char *data);
 static unsigned char updaterSetRunMode(unsigned int mode);
 static unsigned char updaterSetSegment(unsigned char segment);
@@ -59,8 +66,18 @@ static unsigned char updaterExecFinalize(unsigned char *data);
 static unsigned char updaterWriteDlFlags(unsigned char flags);
 
 /* the updater key and IV (the PS Dev Wiki's "Ernie Updater AES128CBC Key"; the IRS-1001 boards
-   have the 0x60 one) */
-#if BOARD_IRS1001
+   have the 0x60 one, USS-1001 the 0x80/0x82 one) */
+#if BOARD_USS1001
+const unsigned char updaterCryptoKey[16] = {
+	0xdb, 0xd9, 0x45, 0x0a, 0xcc, 0xa8, 0x54, 0x48,
+	0x95, 0x66, 0x3a, 0x6f, 0x47, 0x2b, 0xde, 0x7f,
+};
+
+const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
+	0xf9, 0x27, 0xc6, 0xa1, 0x15, 0x3d, 0xb2, 0xd6,
+	0x5f, 0x73, 0x6c, 0x3a, 0xd9, 0xe1, 0xce, 0x76,
+};
+#elif BOARD_IRS1001
 const unsigned char updaterCryptoKey[16] = {
 	0x70, 0x14, 0xbe, 0xe6, 0x13, 0x67, 0x25, 0xb9,
 	0xff, 0xbe, 0x9a, 0x86, 0x14, 0xdd, 0x5c, 0x2a,
@@ -89,6 +106,23 @@ const unsigned char updaterSignatureMask[24] = {
 	0x05, 0x02, 0x27, 0x9c, 0x0a, 0x91, 0xda, 0x21,
 };
 
+#if BOARD_USS1001
+/* the segments run mode 0xc5e7 may program, by the number the host sends (updaterSetSegment
+   maps them to the flash's): 4-47 and 85-245 */
+const unsigned char updaterSegments[0x100 / 8] = {
+	0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
+	0x00, 0x00, 0xe0, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x3f, 0x00,
+};
+
+/* the slim's own copy of timeStampDigits (command.c's), for the signature */
+static const unsigned char updaterTimeStampDigits[12] = {
+	8, 9, 10, 11, 13, 14, 16, 17, 19, 20, 22, 23,
+};
+#define UPDATER_STAMP_DIGITS	updaterTimeStampDigits
+#else
+#define UPDATER_STAMP_DIGITS	timeStampDigits
 /* the segments run mode 0xc5e7 may program: 4-47 (0x1000-0xbfff) and 213-237 (0x35400-0x3b7ff) */
 const unsigned char updaterSegments[UPDATER_SEGMENTS / 8] = {
 	0xf0, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
@@ -96,6 +130,7 @@ const unsigned char updaterSegments[UPDATER_SEGMENTS / 8] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0xe0, 0xff, 0xff, 0x3f, 0x00, 0x00,
 };
+#endif
 
 #endif
 
@@ -189,6 +224,22 @@ void updaterRequestInit(void)
 	updaterDownloader = (void (*)(void))DOWNLOADER_ENTRY;
 }
 
+#if BOARD_USS1001
+/* the slim's: the update's state, its segment and the request's command, event, state and
+   status (serial 0x01d2) */
+void updaterGetStatus(unsigned char *out)
+{
+	out[0] = updater.state;
+	out[1] = (unsigned char)(updater.segment & 0xff);
+	out[2] = (unsigned char)(updater.segment >> 8);
+	out[3] = (unsigned char)(updaterRequest.command & 0xff);
+	out[4] = updaterRequest.event;
+	out[5] = updaterRequest.state;
+	out[6] = updaterRequest.status;
+	out[7] = 0;
+}
+#endif
+
 /* 0x1100 (sceSysconGetErnieDLVersion) */
 unsigned char hostCommandErnieDlVersion(unsigned char *out, unsigned char *length)
 {
@@ -220,10 +271,25 @@ void updaterRequestNotify(void)
 		task2SetFlag(3, 0x0040);
 		break;
 	case HOST_EVENT_ANSWERED:
+#if BOARD_USS1001
+		hostRequestSetState(&updaterRequest, HOST_REQUEST_RECEIVE);
+		if (updaterRequest.command == 0x1183 && updater.state == 0x13 &&
+		    updaterRequest.status == 0)
+			hostIntCancel();
+#else
 		updaterRequest.state = HOST_REQUEST_RECEIVE;
 		if (updaterRequest.command == 0x1183 && updater.state == 0x13)
 			hostIntCancel();
+#endif
 		break;
+#if BOARD_USS1001
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&updaterRequest, HOST_REQUEST_RECEIVE);
+		break;
+	case HOST_EVENT_CLOSE:
+		hostRequestSetState(&updaterRequest, HOST_REQUEST_IDLE);
+		break;
+#endif
 	}
 }
 #endif
@@ -244,11 +310,13 @@ void updaterStartDownloader(void)
 	unsigned char board;
 #endif
 
+#if !BOARD_USS1001
 	serialClose1();
 	serialClose2();
 	serialOpen3(3);
 	if (configPrepareUpdate())
 		;
+#endif
 	snapshot = sleepFactorSnapshot();
 	sleepFactor = sleepFactorGet();
 #if FW_SINCE(0x00090009)	/* 0x00080504 clears nothing for the downloader */
@@ -279,9 +347,19 @@ void updaterStartDownloader(void)
 #endif
 #if FW_SINCE(0x01000104)
 		if (version <= 0x000102ff)
+#if BOARD_USS1001
+			/* the config's first byte, masked: size */
+			DOWNLOADER_START->link.size = 0x0f & *(unsigned char *)&hostLink.config;
+#else
 			DOWNLOADER_START->link.size = hostLink.config.size;
+#endif
 		else
 			DOWNLOADER_START->link.config = hostLink.config;
+#if BOARD_USS1001
+		DOWNLOADER_START->multiCn = analogGetMultiCn();
+		DOWNLOADER_START->ledFlags = powerLedFlags.causes.value;
+		DOWNLOADER_START->usbState = chargeUsbState;
+#endif
 		if (version >= 0x00002000 && version <= 0x00002600)
 			memset(DOWNLOADER_RAM_20, 0, DOWNLOADER_RAM_20_SIZE);
 #else
@@ -320,6 +398,7 @@ void updaterRequestAnswerOk(void)
 }
 #endif
 
+#if !BOARD_USS1001
 /* opens the flash library for the downloader; 0 when it may start */
 static unsigned char updaterFlashPrepare(void)
 {
@@ -339,6 +418,7 @@ static unsigned char updaterFlashPrepare(void)
 	FSL_Close();
 	return result;
 }
+#endif
 
 #if FW_SINCE(0x00090903)
 
@@ -402,7 +482,11 @@ void updaterRequestEvent(FLGPTN ptn)
 		hostRequestAnswer(&updaterRequest, HOST_REQUEST_ANSWER, result, 0);
 		break;
 	default:
+#if BOARD_USS1001
+		hostRequestAnswer(&updaterRequest, HOST_REQUEST_UNKNOWN, 0, 0);
+#else
 		updaterRequest.state = HOST_REQUEST_ERROR;
+#endif
 		break;
 	}
 }
@@ -448,6 +532,10 @@ unsigned char updaterDecryptReset(void)
 	result = (unsigned char)SHA1Reset((SHA1Context __near *)&updater.sha,
 					  (unsigned char __near *)updater.shaBlock,
 					  (unsigned long __near *)updater.shaW);
+#if BOARD_USS1001
+	if (result != 0) {
+	}
+#endif
 	return result;
 }
 
@@ -458,12 +546,12 @@ static char updaterSegmentAllowed(unsigned char segment)
 }
 
 /* whether the segment was programmed */
-static char updaterSegmentReceived(unsigned char segment)
+static char updaterSegmentReceived(UpdaterSegment segment)
 {
 	return (updater.received[segment >> 3] & (1 << (segment & 7))) != 0 ? 1 : 0;
 }
 
-static void updaterSegmentSetReceived(unsigned char segment)
+static void updaterSegmentSetReceived(UpdaterSegment segment)
 {
 	updater.received[segment >> 3] |= (unsigned char)1 << (segment & 7);
 }
@@ -489,8 +577,8 @@ static unsigned char updaterCheckSignature(unsigned char *data)
 	signature[4] = 0xff;
 	for (i = 0; i < 12; i += 2)
 		signature[(i >> 1) + 8] =
-			(unsigned char)((appTimeStamp[timeStampDigits[i]] - '0') << 4) |
-			((appTimeStamp[timeStampDigits[i + 1]] - '0') & 0x0f);
+			(unsigned char)((appTimeStamp[UPDATER_STAMP_DIGITS[i]] - '0') << 4) |
+			((appTimeStamp[UPDATER_STAMP_DIGITS[i + 1]] - '0') & 0x0f);
 	memset(&signature[14], 0, 10);
 	for (i = 0; i < 24; i++)
 		signature[i] = signature[i] ^ updaterSignatureMask[i];
@@ -619,7 +707,15 @@ static unsigned char updaterSetSegment(unsigned char segment)
 	default:
 		return 1;
 	}
+#if BOARD_USS1001
+	/* the host's segments from 0x40 are the flash's from 0xc0, in a byte */
+	if (segment >= 0x40)
+		updater.segment = (unsigned char)(segment + 0x80);
+	else
+		updater.segment = segment;
+#else
 	updater.segment = segment;
+#endif
 	updater.fill = 0;
 	updater.sum = 0;
 	memset(updater.block, 0, UPDATER_BLOCK_SIZE);
@@ -701,18 +797,31 @@ static unsigned char updaterExecProgramming(unsigned long sum)
  */
 static unsigned char updaterExecFinalize(unsigned char *data)
 {
+#if BOARD_USS1001
+	UpdaterSegment segment;
+	unsigned char result;
+	unsigned char flags;
+	unsigned int i;
+#else
 	unsigned char segment;
 	unsigned char result;
 	unsigned char flags;		/* first counts the segments (one slot in Sony's frame) */
+#endif
 
 	switch (updater.state) {
 	case 0x10:
 	case 0x20:
 		updater.segment = 0;
 		updater.state++;
+#if BOARD_USS1001
+		for (i = 0; i < UPDATER_SEGMENTS - 1; i++)
+			if (updaterSegmentReceived(i))
+				updater.segmentCount++;
+#else
 		for (flags = 0; flags < 0xff; flags++)
 			if (updaterSegmentReceived(flags))
 				updater.segmentCount++;
+#endif
 		break;
 	case 0x11:
 		break;
@@ -722,7 +831,7 @@ static unsigned char updaterExecFinalize(unsigned char *data)
 	default:
 		return 1;
 	}
-	while (updater.segment < 0xff) {
+	while (updater.segment < UPDATER_SEGMENTS - 1) {
 		segment = updater.segment++;
 		if (updaterSegmentReceived(segment)) {
 			result = (unsigned char)SHA1Input((SHA1Context __near *)&updater.sha,

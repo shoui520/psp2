@@ -12,7 +12,11 @@
 #include "snvs.h"
 
 static struct Snvs snvs;
+#if BOARD_USS1001
+static __near unsigned char snvsBuffer[0x30];	/* near on USS-1001 */
+#else
 static unsigned char snvsBuffer[0x30];
+#endif
 
 static unsigned int snvsChecksum(unsigned char *data, unsigned int length);
 static int snvsCheck(struct SnvsPacket *packet, unsigned int length);

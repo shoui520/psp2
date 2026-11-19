@@ -29,7 +29,7 @@
 extern unsigned char intp11Low(void);
 
 /* level less trim, or 0 when that is 0x40 or more; on IRS-1001 level plus trim, held to its
-   regulators' 0x48-0x87 */
+   regulators' 0x48-0x87, on USS-1001 0x7b less level plus trim held to 0x3c-0x7b */
 unsigned char levelTrim(unsigned char level, unsigned char trim)
 {
 	unsigned char result;
@@ -40,6 +40,15 @@ unsigned char levelTrim(unsigned char level, unsigned char trim)
 		result = 0x48;
 	if (result >= 0x88)
 		result = 0x87;
+	return result;
+#elif BOARD_USS1001
+	/* USS-1001: level plus trim held to 0x3c-0x7b, counted down from 0x7b */
+	result = level + trim;
+	if (result < 0x3c)
+		result = 0x3c;
+	if (result >= 0x7c)
+		result = 0x7b;
+	result = 0x7b - result;
 	return result;
 #else
 #if FW_SINCE(0x0100060B)

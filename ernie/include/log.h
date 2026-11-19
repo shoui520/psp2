@@ -68,7 +68,7 @@ extern int logStop(void);
 #if BOARD_USS1001
 extern int logHalt(void);
 /* the slim's: the log to mode (LOG_MODE_*), asked by source (0: logUpdate, 1: the host's
-   commands) */
+   commands, 2: serial1's 0x0151 and 0x0152) */
 extern int logSetMode(unsigned char mode, unsigned char source);
 #endif
 extern int logReadData(unsigned int id, void *data, unsigned char *size);

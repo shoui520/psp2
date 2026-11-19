@@ -6,6 +6,7 @@
 #define ERNIE_SERIAL1_H
 
 #include "ernie.h"
+#include "board.h"
 #include "serial.h"
 
 /* a command's flags: what it needs */
@@ -25,8 +26,22 @@ struct SerialCommand1 {
 
 /* the operation task 5 runs (serial1Operation, flag 4's 0x4000: 0x0180-0x0182 and
    0x0940-0x0945), 0 when none, and its arguments, which its answer's data replace */
+#if BOARD_USS1001
+/* operation 0x1a's (0x0108): a device's versions */
+struct Serial1Device {
+	unsigned char	type;		/* 0x10 the Elmo, 0x20 the Cookie, 0x30 and 0x31 the battery,
+					   0x40 none */
+	unsigned char	result;		/* the read's, 0xff when none answered at the power-on */
+	unsigned int	data[3];
+};
+#endif
+
 union Serial1Args {
-#if FW_SINCE(0x00090903)
+#if BOARD_USS1001
+	unsigned char	byte[0x28];	/* the slim's: operation 0x1a's five devices */
+	unsigned int	word[0x14];
+	struct Serial1Device device[5];
+#elif FW_SINCE(0x00090903)
 	unsigned char	byte[12];
 	unsigned int	word[6];
 #else

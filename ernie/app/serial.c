@@ -17,12 +17,17 @@
 #include "timer.h"
 #include "uart.h"
 #include "util.h"
+#if BOARD_USS1001
+#include "uart4.h"
+#include "version.h"
+#endif
 
 
 struct Serial serial;
 unsigned char serialText[0x80];
 unsigned char serialFrame[SERIAL_FRAME_SIZE];
 
+#if !BOARD_USS1001	/* not in the slim's */
 /* the events of event flag 3 (never called) */
 unsigned char serialEvent(FLGPTN ptn)
 {
@@ -104,6 +109,7 @@ unsigned char serialEvent(FLGPTN ptn)
 	}
 	return result;
 }
+#endif
 
 unsigned char serialGetLink(void)
 {
@@ -183,8 +189,12 @@ void serialReset(unsigned char mode)
 
 void serialStop(int port)
 {
+#if BOARD_USS1001
+	uart4Close();
+#else
 	uartStopTx(port);
 	uartStopRx(port);
+#endif
 }
 
 /* starts receiving in mode */
@@ -361,12 +371,20 @@ unsigned char serialSendAnswer(void)
 
 unsigned char serialRead(int port, unsigned char *buf, int size)
 {
+#if BOARD_USS1001
+	return uart4Read(buf, size);
+#else
 	return uartRead(port, buf, size);
+#endif
 }
 
 unsigned char serialWrite(int port, unsigned char *buf, int size)
 {
+#if BOARD_USS1001
+	return uart4Write(buf, size);
+#else
 	return uartWrite(port, buf, size);
+#endif
 }
 
 void serialFlush(int port)
@@ -374,13 +392,43 @@ void serialFlush(int port)
 	uartReset(port);
 }
 
-/* opens UART3 again at baud, 13 ticks on */
+#if BOARD_USS1001
+#define serialUartOpen(baud)	((unsigned char)uart4Open(baud))
+#else
+#define serialUartOpen(baud)	uart3Open(baud)
+#endif
+
+/* opens the UART again at baud, 13 ticks on */
 unsigned char serialReopen(int baud)
 {
 	dly_tsk(13);
-	return uart3Open(baud);
+	return serialUartOpen(baud);
 }
 
+#if BOARD_USS1001
+/* 0x55s, which the other end's receiver takes its speed from */
+static const unsigned char serialSync[3] = { 0x55, 0x55, 0x55 };
+
+/* with the hardware info's bit 3, the sync bytes go out at once, 300 ticks before a command */
+unsigned char serialOpen1(int baud)
+{
+	unsigned char info[4];
+
+	uart4Open(baud);
+	serialStart(1);
+	serial.link = 1;
+	getHardwareInfo(info);
+	if (info[0] & 0x08) {
+		serialWrite(SERIAL_PORT, (unsigned char *)serialSync, 3);
+		WDTE = 0xac;
+		dly_tsk(250);
+		WDTE = 0xac;
+		dly_tsk(50);
+		WDTE = 0xac;
+	}
+	return 0;
+}
+#else
 unsigned char serialOpen1(int baud)
 {
 	serial2SetLink(0);
@@ -389,6 +437,7 @@ unsigned char serialOpen1(int baud)
 	serial.link = 1;
 	return 0;
 }
+#endif
 
 unsigned char serialClose1(void)
 {
@@ -399,17 +448,21 @@ unsigned char serialClose1(void)
 
 unsigned char serialOpen2(int baud)
 {
-	uart3Open(baud);
+	serialUartOpen(baud);
 	serialStart(2);
+#if !BOARD_USS1001
 	serial2SetLink(1);
 	serial2SetP71(0);
+#endif
 	serial.link = 2;
 	return 0;
 }
 
 unsigned char serialClose2(void)
 {
+#if !BOARD_USS1001
 	serial2SetP71(1);
+#endif
 	serialReset(0);
 	serial.link = 0;
 	return 0;
@@ -417,7 +470,7 @@ unsigned char serialClose2(void)
 
 unsigned char serialOpen3(int baud)
 {
-	uart3Open(baud);
+	serialUartOpen(baud);
 	serialStart(3);
 	serial.link = 3;
 	return 0;
@@ -453,12 +506,14 @@ unsigned char serialLock(unsigned char link)
 	return 0;
 }
 
+#if !BOARD_USS1001	/* not in the slim's */
 /* never called */
 unsigned char serialSetP41(unsigned char level)
 {
 	P4.1 = level;
 	return level & 1;
 }
+#endif
 
 /* sends a frame of s's command, status and data (mode 1's event 0x0010: the frame received
    back) */
