@@ -24,17 +24,19 @@ using namespace paf;
 /* the addcont/info functions' errors (values only) */
 #define GAME_ADDCONT_INFO_ERROR_INVALID_ARG	-2146416480	/* 0x8010A1A0 */
 #define GAME_ADDCONT_INFO_ERROR_IO		-2146416479	/* 0x8010A1A1 */
-#define GAME_ADDCONT_INFO_ERROR_BAD_DATA	-2146416478	/* 0x8010A1A2: an instv.dat without its magic */
-#define GAME_ADDCONT_INFO_ERROR_NO_INSTV	-2146416477	/* 0x8010A1A3: a folder without instv.dat */
-#define GAME_ADDCONT_INFO_ERROR_NOT_FOUND	-2146416475	/* 0x8010A1A5: no license of the content ID */
-#define GAME_ADDCONT_INFO_ERROR_OLD_INSTV	-2146416474	/* 0x8010A1A6: an instv.dat of an older version */
+#define GAME_ADDCONT_INFO_ERROR_BAD_DATA	-2146416478	/* 0x8010A1A2: no magic */
+#define GAME_ADDCONT_INFO_ERROR_NO_INSTV	-2146416477	/* 0x8010A1A3: no instv.dat */
+#define GAME_ADDCONT_INFO_ERROR_NOT_FOUND	-2146416475	/* 0x8010A1A5: no such license */
+#define GAME_ADDCONT_INFO_ERROR_OLD_INSTV	-2146416474	/* 0x8010A1A6: an older version */
 
 /* what instv.dat starts with */
 #define GAME_ADDCONT_INSTV_MAGIC	"ACIV"
+/* what a PSP application's instp.dat starts with */
+#define GAME_ADDCONT_INSTP_MAGIC	"ACIP"
 /* the version this code writes; an older one is not read */
 #define GAME_ADDCONT_INSTV_VERSION	1
 
-/* instv.dat's header, 76 bytes, followed by count GameAddcontLicenseInfo */
+/* instv.dat's (and instp.dat's) header, 76 bytes, followed by count GameAddcontLicenseInfo */
 struct GameAddcontInstv {
 	char magic[4];		/* GAME_ADDCONT_INSTV_MAGIC */
 	SceUInt32 version;	/* GAME_ADDCONT_INSTV_VERSION */
@@ -136,8 +138,8 @@ int gameAddcontInfoPrepare(const char *path)
 	tempPath += "/";
 	tempPath += "addcont_instv.dat";
 
-	common::SharedPtr<File> file = LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> file =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -190,8 +192,8 @@ int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
 	if (!LocalFile::Exists(instvPath.c_str()))
 		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
 
-	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> file =
+		LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -239,8 +241,8 @@ int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
 		}
 	}
 
-	common::SharedPtr<File> temp = LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> temp =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -368,8 +370,8 @@ static __attribute__((noinline)) int gameAddcontInfoRemoveEntry(const char *path
 	if (!LocalFile::Exists(instvPath.c_str()))
 		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
 
-	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> file =
+		LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -417,8 +419,8 @@ static __attribute__((noinline)) int gameAddcontInfoRemoveEntry(const char *path
 		}
 	}
 
-	common::SharedPtr<File> temp = LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> temp =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0) {
 		if (file.get() != NULL)
@@ -542,8 +544,8 @@ int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found)
 	if (!LocalFile::Exists(instvPath.c_str()))
 		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
 
-	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> file =
+		LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -620,8 +622,8 @@ int gameAddcontInfoRead(const char *path, const vector<string> *dirs,
 	if (!LocalFile::Exists(instvPath.c_str()))
 		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
 
-	common::SharedPtr<File> file = LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6,
-						       &ret);
+	common::SharedPtr<File> file =
+		LocalFile::Open(instvPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
 
 	if (ret < 0)
 		return GAME_ADDCONT_INFO_ERROR_IO;
@@ -675,4 +677,605 @@ int gameAddcontInfoRead(const char *path, const vector<string> *dirs,
 int gameAddcontInfoRemove(const char *path, const char *contentId)
 {
 	return gameAddcontInfoRemoveEntry(path, contentId, true);
+}
+
+/*
+ * A PSP application's addcont/info folder at path made ready, as gameAddcontInfoPrepare does
+ * with instp.dat (0x8109C332).
+ */
+int gamePspAddcontInfoPrepare(const char *path)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	if (path == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	if (sce_paf_strncmp(path, "ux0:addcont/info", 17) == 0)
+		ret = 0;
+	else
+		ret = GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+	if (ret < 0)
+		return ret;
+
+	string instpPath(path);
+
+	instpPath += "/";
+	instpPath += "instp.dat";
+
+	string tempDir = gameAddcontInfoTempDir(instpPath);
+	GameAddcontInstv instp;
+
+	if (LocalFile::Exists(instpPath.c_str())) {
+		common::SharedPtr<File> file = LocalFile::Open(instpPath.c_str(),
+							       SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+
+		sce_paf_memset(&instp, 0, sizeof(instp));
+		if (file->Read(&instp, sizeof(instp)) != sizeof(instp)) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+		if (file.get() != NULL)
+			file->Close();
+
+		if (sce_paf_strncmp(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4) == 0) {
+			if (instp.version == GAME_ADDCONT_INSTV_VERSION)
+				return 0;
+
+			ret = LocalFile::RemoveFile(instpPath.c_str());
+			if (ret < 0)
+				return GAME_ADDCONT_INFO_ERROR_IO;
+		} else {
+			return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+		}
+	}
+
+	if (!LocalFile::Exists(tempDir.c_str())) {
+		ret = Dir::CreateRecursive(tempDir.c_str());
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	string tempPath(tempDir);
+
+	tempPath += "/";
+	tempPath += "addcont_instp.dat";
+
+	common::SharedPtr<File> file =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	sce_paf_memset(&instp, 0, sizeof(instp));
+	sce_paf_memcpy(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4);
+	instp.version = GAME_ADDCONT_INSTV_VERSION;
+	instp.count = 0;
+	if (file->Write(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+	if (file.get() != NULL)
+		file->Close();
+
+	ret = LocalFile::RenameFile(tempPath.c_str(), instpPath.c_str());
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	return 0;
+}
+
+/*
+ * info written into a PSP application's addcont/info folder at path, as gameAddcontInfoWrite
+ * does with instp.dat (0x8109CCEC).
+ */
+int gamePspAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	if (path == NULL || info == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	if (sce_paf_strncmp(path, "ux0:addcont/info", 17) == 0)
+		ret = 0;
+	else
+		ret = GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+	if (ret < 0)
+		return ret;
+
+	string instpPath(path);
+
+	instpPath += "/";
+	instpPath += "instp.dat";
+
+	if (!LocalFile::Exists(instpPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file =
+		LocalFile::Open(instpPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instp;
+
+	sce_paf_memset(&instp, 0, sizeof(instp));
+	if (file->Read(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instp.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	string tempDir = gameAddcontInfoTempDir(instpPath);
+
+	if (!LocalFile::Exists(tempDir.c_str())) {
+		ret = Dir::CreateRecursive(tempDir.c_str());
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	string tempPath(tempDir);
+
+	tempPath += "/";
+	tempPath += "addcont_instp.dat";
+
+	if (LocalFile::Exists(tempPath.c_str())) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		if (ret < 0) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	}
+
+	common::SharedPtr<File> temp =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv header;
+
+	sce_paf_memset(&header, 0, sizeof(header));
+	sce_paf_memcpy(header.magic, GAME_ADDCONT_INSTP_MAGIC, 4);
+	header.version = GAME_ADDCONT_INSTV_VERSION;
+	header.count = instp.count + 1;
+	if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+		if (file.get() != NULL)
+			file->Close();
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	bool found = false;
+
+	for (SceUInt32 i = 0; i < instp.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		if (sce_paf_strncmp(entry, info->contentId, sizeof(info->contentId)) != 0) {
+			if (temp->Write(entry, sizeof(entry)) != sizeof(entry)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+		} else {
+			found = true;
+			if (temp->Write(info, sizeof(*info)) != sizeof(*info)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+		}
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+
+	if (found) {
+		if (temp->Seek(0, SCE_SEEK_SET) < 0) {
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+		header.count--;
+		if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	} else if (temp->Write(info, sizeof(*info)) != sizeof(*info)) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (temp.get() != NULL)
+		temp->Close();
+
+	ret = LocalFile::RemoveFile(instpPath.c_str());
+	if (ret < 0) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	ret = LocalFile::RenameFile(tempPath.c_str(), instpPath.c_str());
+	if (ret < 0)
+		return ret;
+	return 0;
+}
+
+/*
+ * The license of contentId removed from a PSP application's addcont/info folder at path, as
+ * gameAddcontInfoRemoveEntry does with instp.dat (0x8109E0B2).
+ */
+static __attribute__((noinline)) int gamePspAddcontInfoRemoveEntry(const char *path,
+								    const char *contentId,
+								    bool wholeId)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	if (path == NULL || contentId == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	if (sce_paf_strncmp(path, "ux0:addcont/info", 17) == 0)
+		ret = 0;
+	else
+		ret = GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+	if (ret < 0)
+		return ret;
+
+	string instpPath(path);
+
+	instpPath += "/";
+	instpPath += "instp.dat";
+
+	if (!LocalFile::Exists(instpPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file =
+		LocalFile::Open(instpPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instp;
+
+	sce_paf_memset(&instp, 0, sizeof(instp));
+	if (file->Read(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instp.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	string tempDir = gameAddcontInfoTempDir(instpPath);
+
+	if (!LocalFile::Exists(tempDir.c_str())) {
+		ret = Dir::CreateRecursive(tempDir.c_str());
+		if (ret < 0)
+			return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	string tempPath(tempDir);
+
+	tempPath += "/";
+	tempPath += "addcont_instp.dat";
+
+	if (LocalFile::Exists(tempPath.c_str())) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		if (ret < 0) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+	}
+
+	common::SharedPtr<File> temp =
+		LocalFile::Open(tempPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	GameAddcontInstv header;
+
+	sce_paf_memset(&header, 0, sizeof(header));
+	sce_paf_memcpy(header.magic, GAME_ADDCONT_INSTP_MAGIC, 4);
+	header.version = GAME_ADDCONT_INSTV_VERSION;
+	header.count = 0;
+	if (temp->Write(&header, sizeof(header)) != sizeof(header)) {
+		if (file.get() != NULL)
+			file->Close();
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	bool found = false;
+	SceUInt32 count = 0;
+
+	for (SceUInt32 i = 0; i < instp.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			if (temp.get() != NULL)
+				temp->Close();
+			ret = LocalFile::RemoveFile(tempPath.c_str());
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(entry);
+		bool match;
+
+		if (wholeId)
+			match = entryId == string(contentId);
+		else
+			match = entryId.substr(7, 9) == string(contentId);
+
+		if (match) {
+			found = true;
+		} else {
+			if (temp->Write(entry, sizeof(entry)) != sizeof(entry)) {
+				if (file.get() != NULL)
+					file->Close();
+				if (temp.get() != NULL)
+					temp->Close();
+				ret = LocalFile::RemoveFile(tempPath.c_str());
+				return GAME_ADDCONT_INFO_ERROR_IO;
+			}
+			count++;
+		}
+	}
+
+	if (file.get() != NULL) {
+		file->Close();
+		file.reset();
+	}
+
+	if (!found) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_NOT_FOUND;
+	}
+
+	if (temp->Seek(0, SCE_SEEK_SET) < 0) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+	instp.count = count;
+	if (temp->Write(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (temp.get() != NULL)
+			temp->Close();
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (temp.get() != NULL)
+		temp->Close();
+
+	ret = LocalFile::RemoveFile(instpPath.c_str());
+	if (ret < 0) {
+		ret = LocalFile::RemoveFile(tempPath.c_str());
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	ret = LocalFile::RenameFile(tempPath.c_str(), instpPath.c_str());
+	return 0;
+}
+
+/*
+ * Whether a PSP application's addcont/info folder at path has a license of one of dirs, as
+ * gameAddcontInfoCheck does with instp.dat (0x8109F2E4).
+ */
+int gamePspAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+
+	*found = false;
+
+	int ret = 0;
+
+	if (path == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	string instpPath(path);
+
+	instpPath += "/";
+	instpPath += "instp.dat";
+
+	if (!LocalFile::Exists(instpPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file =
+		LocalFile::Open(instpPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instp;
+
+	sce_paf_memset(&instp, 0, sizeof(instp));
+	if (file->Read(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instp.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	for (SceUInt32 i = 0; i < instp.count; i++) {
+		char entry[sizeof(GameAddcontLicenseInfo)];
+
+		sce_paf_memset(entry, 0, sizeof(entry));
+		if (file->Read(entry, sizeof(entry)) != sizeof(entry)) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(entry);
+		string id = entryId.substr(7, 9);
+
+		for (SceUInt32 j = 0; j < dirs->size(); j++) {
+			if ((*dirs)[j] == id) {
+				*found = true;
+				break;
+			}
+		}
+		if (*found)
+			break;
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+	return 0;
+}
+
+/*
+ * The licenses in a PSP application's addcont/info folder at path of the additional contents in
+ * dirs, as gameAddcontInfoRead does with instp.dat (0x8109F85A).
+ */
+int gamePspAddcontInfoRead(const char *path, const vector<string> *dirs,
+			   vector<GameAddcontLicenseInfo> *infos)
+{
+	thread::RMutexLock lock(&s_addcontInfoMutex);
+	int ret = 0;
+
+	infos->clear();
+
+	if (path == NULL)
+		return GAME_ADDCONT_INFO_ERROR_INVALID_ARG;
+
+	string instpPath(path);
+
+	instpPath += "/";
+	instpPath += "instp.dat";
+
+	if (!LocalFile::Exists(instpPath.c_str()))
+		return GAME_ADDCONT_INFO_ERROR_NO_INSTV;
+
+	common::SharedPtr<File> file =
+		LocalFile::Open(instpPath.c_str(), SCE_O_RDWR | SCE_O_CREAT, 6, &ret);
+
+	if (ret < 0)
+		return GAME_ADDCONT_INFO_ERROR_IO;
+
+	GameAddcontInstv instp;
+
+	sce_paf_memset(&instp, 0, sizeof(instp));
+	if (file->Read(&instp, sizeof(instp)) != sizeof(instp)) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_IO;
+	}
+
+	if (sce_paf_strncmp(instp.magic, GAME_ADDCONT_INSTP_MAGIC, 4) != 0) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_BAD_DATA;
+	}
+
+	if (instp.version < GAME_ADDCONT_INSTV_VERSION) {
+		if (file.get() != NULL)
+			file->Close();
+		return GAME_ADDCONT_INFO_ERROR_OLD_INSTV;
+	}
+
+	for (SceUInt32 i = 0; i < instp.count; i++) {
+		GameAddcontLicenseInfo info;
+
+		sce_paf_memset(&info, 0, sizeof(info));
+		if (file->Read(&info, sizeof(info)) != sizeof(info)) {
+			if (file.get() != NULL)
+				file->Close();
+			return GAME_ADDCONT_INFO_ERROR_IO;
+		}
+
+		string entryId(info.contentId);
+		string id = entryId.substr(7, 9);
+
+		for (SceUInt32 j = 0; j < dirs->size(); j++) {
+			if ((*dirs)[j] == id)
+				infos->push_back(info);
+		}
+	}
+
+	if (file.get() != NULL)
+		file->Close();
+	return 0;
+}
+
+/* the license of contentId removed from a PSP application's addcont/info folder (0x8109FE66) */
+int gamePspAddcontInfoRemove(const char *path, const char *contentId)
+{
+	return gamePspAddcontInfoRemoveEntry(path, contentId, true);
 }

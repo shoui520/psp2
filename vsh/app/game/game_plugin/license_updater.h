@@ -84,22 +84,21 @@ struct GameAddcontLicenseInfo {
 typedef char GameAddcontLicenseInfoSize[sizeof(GameAddcontLicenseInfo) == 128 ? 1 : -1];
 
 /*
- * PLACEHOLDER names: addcont/info of a PSP application (0x8109F85A, 0x8109FE66, 0x8109CCEC) and of
- * a Vita one (0x8109BD1C, 0x8109C328, 0x81099174), in another file of the plugin: the licenses of
- * the additional contents in dirs read, one removed, one written.
+ * The licenses of an application's additional contents in its addcont/info folder, of a Vita
+ * application and of a PSP one (addcont_info.cpp; the names are ours, no record gives Sony's).
  */
-int gamePspAddcontInfoRead(const char *path, const paf::vector<paf::string> *dirs,
-			   paf::vector<GameAddcontLicenseInfo> *infos);
-int gamePspAddcontInfoRemove(const char *path, const char *contentId);
-int gamePspAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info);
+int gameAddcontInfoPrepare(const char *path);
+int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info);
+int gameAddcontInfoCheck(const char *path, paf::vector<paf::string> *dirs, bool *found);
 int gameAddcontInfoRead(const char *path, const paf::vector<paf::string> *dirs,
 			paf::vector<GameAddcontLicenseInfo> *infos);
 int gameAddcontInfoRemove(const char *path, const char *contentId);
-int gameAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info);
-/* PLACEHOLDER name: the addcont/info folder at path made ready, its instv.dat checked (0x8109879C) */
-int gameAddcontInfoPrepare(const char *path);
-/* PLACEHOLDER name: likewise, a PSP application's addcont/info folder (0x8109C332) */
 int gamePspAddcontInfoPrepare(const char *path);
+int gamePspAddcontInfoWrite(const char *path, const GameAddcontLicenseInfo *info);
+int gamePspAddcontInfoCheck(const char *path, paf::vector<paf::string> *dirs, bool *found);
+int gamePspAddcontInfoRead(const char *path, const paf::vector<paf::string> *dirs,
+			   paf::vector<GameAddcontLicenseInfo> *infos);
+int gamePspAddcontInfoRemove(const char *path, const char *contentId);
 
 /* the store's result of an EPW request, as SceNpCommerce2's text result fills it (96 bytes) */
 struct GameStoreEpw {

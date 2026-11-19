@@ -139,8 +139,6 @@ static string s_pspemuWorkMountPoint;
 bool g_gameRepromoting;
 
 /* PLACEHOLDER: defined in another file of the shell, what it does is not read yet */
-int gamePspAddcontInfoCheck(const char *path, vector<string> *titleIds, bool *found);	/* 0x8109F2E4 */
-int gameAddcontInfoCheck(const char *path, vector<string> *dirs, bool *found);
 int gameDolceAppCheck(const string &titleId, bool *allowed);	/* 0x810A4A24 */
 int gameLaunchEmuListCheck(const string &titleId, bool *listed);	/* 0x810A4AA2: list_launch_emu.dat */
 bool gameLaunchCheckIsOn(void);		/* 0x810A4B20: /CONFIG/SYSTEM/launch_check, on without it */
