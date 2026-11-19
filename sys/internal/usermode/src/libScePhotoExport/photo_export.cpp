@@ -84,7 +84,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcSendData(IPMI::Client *p
 				       const char *pGameTitle, const char *pGameComment,
 				       const char *pFilePath);
 static __attribute__((noinline)) SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
-				    SceInt32 reserved, SceInt32 count, void *pData);
+				    const IPMI::EventFlagInfo *pEventFlag, SceInt32 count, void *pData);
 static __attribute__((noinline)) SceInt32 photoExportIpcGetResult(IPMI::Client *pClient, SceInt32 requestId,
 					SceInt32 *pCount, void *pData);
 static __attribute__((noinline)) SceInt32 photoExportIpcCancel(IPMI::Client *pClient);
@@ -93,7 +93,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcGetProgress(IPMI::Client
 static __attribute__((noinline)) SceInt32 photoExportIpcSetThumbnail(IPMI::Client *pClient, SceInt32 index,
 					   const char *pPath);
 static __attribute__((noinline)) SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
-					 SceInt32 reserved, SceInt32 kind, SceInt32 count,
+					 const IPMI::EventFlagInfo *pEventFlag, SceInt32 kind, SceInt32 count,
 					 void *pData);
 static __attribute__((noinline)) SceInt32 photoExportIpcGetVideoResult(IPMI::Client *pClient, SceInt32 requestId,
 					     SceInt32 *pCount, void *pData);
@@ -522,7 +522,7 @@ static __attribute__((noinline)) SceInt32 photoExportSendData(PhotoExportSession
 
 static __attribute__((noinline)) SceInt32 photoExportStart(PhotoExportSession *pSession, SceInt32 count, void *pData)
 {
-	return photoExportIpcStart(pSession->pClient, &pSession->requestId, 0, count, pData);
+	return photoExportIpcStart(pSession->pClient, &pSession->requestId, NULL, count, pData);
 }
 
 static __attribute__((noinline)) SceInt32 photoExportGetResult(PhotoExportSession *pSession, SceInt32 *pCount, void *pData)
@@ -545,7 +545,7 @@ static __attribute__((noinline)) SceInt32 photoExportAbort(PhotoExportSession *p
 static __attribute__((noinline)) SceInt32 photoExportStartVideo(PhotoExportSession *pSession, SceInt32 kind,
 				      SceInt32 count, void *pData)
 {
-	return photoExportIpcStartVideo(pSession->pClient, &pSession->requestId, 0, kind, count,
+	return photoExportIpcStartVideo(pSession->pClient, &pSession->requestId, NULL, kind, count,
 					pData);
 }
 
@@ -1660,7 +1660,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcSendData(IPMI::Client *p
 }
 
 static __attribute__((noinline)) SceInt32 photoExportIpcStart(IPMI::Client *pClient, SceInt32 *pRequestId,
-				    SceInt32 reserved, SceInt32 count, void *pData)
+				    const IPMI::EventFlagInfo *pEventFlag, SceInt32 count, void *pData)
 {
 	SceInt32 result;
 	SceInt32 number;
@@ -1672,7 +1672,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcStart(IPMI::Client *pCli
 	buffers[1].pData = pData;
 	buffers[1].dataSize = 2064 * count;
 	result = pClient->invokeAsyncMethod(PHOTO_EXPORT_METHOD_START, buffers, 2,
-						  pRequestId, NULL);
+						  pRequestId, pEventFlag);
 	if (result == 0)
 		result = 0;
 	return result;
@@ -1758,7 +1758,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcSetThumbnail(IPMI::Clien
 }
 
 static __attribute__((noinline)) SceInt32 photoExportIpcStartVideo(IPMI::Client *pClient, SceInt32 *pRequestId,
-					 SceInt32 reserved, SceInt32 kind, SceInt32 count,
+					 const IPMI::EventFlagInfo *pEventFlag, SceInt32 kind, SceInt32 count,
 					 void *pData)
 {
 	SceInt32 result;
@@ -1772,7 +1772,7 @@ static __attribute__((noinline)) SceInt32 photoExportIpcStartVideo(IPMI::Client 
 	buffers[1].pData = pData;
 	buffers[1].dataSize = 2052 * count;
 	result = pClient->invokeAsyncMethod(PHOTO_EXPORT_METHOD_START_VIDEO, buffers, 2,
-						  pRequestId, NULL);
+						  pRequestId, pEventFlag);
 	if (result == 0)
 		result = 0;
 	return result;
