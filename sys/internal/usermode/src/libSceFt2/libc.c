@@ -236,7 +236,7 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 	}
 	if (f->fd < 0 || f->state != 0)
 		return 0;
-	remaining = size * count;
+	remaining = (int)size * (int)count;
 	if (remaining == 0)
 		return 0;
 	if (f->pushback == -1) {
@@ -246,9 +246,9 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 		remaining--;
 		f->pushback = -1;
 		if (remaining == 0)
-			return 1 / size;
+			return 1 / (int)size;
 		if (f->state != 0)
-			return 1 / size;
+			return 1 / (int)size;
 		dst++;
 		done = 1;
 	}
@@ -257,7 +257,7 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 
 		n = sceIoRead(f->fd, dst, remaining);
 		remaining -= n;
-		pos = sceIoLseek(f->fd, 0, done);
+		pos = sceIoLseek(f->fd, 0, SCE_SEEK_CUR);
 		dst += n;
 		if (pos >= 0)
 			f->position = pos;
@@ -267,13 +267,13 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 		}
 		if (n == 0) {
 			f->state |= 2;
-			return done / size;
+			return done / (int)size;
 		}
 		done += n;
 		if (f->state != 0)
 			break;
 	}
-	return done / size;
+	return done / (int)size;
 }
 
 int fseek(FILE *stream, long offset, int whence)
