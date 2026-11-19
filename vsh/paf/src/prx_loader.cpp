@@ -50,6 +50,19 @@ __attribute__((noinline)) inline int pafPrxLoaderLoadModule(SceUInt32 id, SceSiz
 	return sceSysmoduleLoadModuleInternalWithArg(id, args, argp, &opt);
 }
 
+#ifdef PAF_PRX_LOADER_KEEP_UNLOAD
+/* the unload call beside it, which a module whose build keeps unused functions carries */
+__attribute__((noinline)) int pafPrxLoaderUnloadModule(SceUInt32 id, SceSize args, void *argp,
+							     SceUInt32 flags, int *status)
+{
+	SysmoduleUserOpt opt;
+
+	opt.flags = flags;
+	opt.status = status;
+	return sceSysmoduleUnloadModuleInternalWithArg(id, args, argp, &opt);
+}
+#endif
+
 class PafPrxLoader {
 public:
 	PafPrxLoader()
