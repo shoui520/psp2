@@ -904,6 +904,12 @@ extern "C" int SceLsdb_BF7AFB42(AppInfoSClient *client, paf::vector<int> *fromPa
 extern "C" int SceLsdb_C1A82AC8(AppInfoSClient *client, int pageNo, const LsdbIconPtr *icon,
 	unsigned int fields, const void *image, int imageSize);
 extern "C" int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string &titleId, bool whole, int flags);
+/* PLACEHOLDER: livespace_db's exports, not declared there yet: a page added at a number, and a
+   folder made of an icon */
+extern "C" int SceLsdb_3387B5A3(AppInfoSClient *client, int pageNo, LsdbIconList *icons,
+	LsdbPage *page);
+extern "C" int SceLsdb_E786531F(AppInfoSClient *client, int pageNo, const LsdbIconPtr *icon,
+	const LsdbIconPtr *folderIcon, const void *image, int imageSize);
 
 /* PLACEHOLDER: an icon's type for the power icon, whose title ID the home reads as "power" */
 #define APPLAUNCHER_ICON_TYPE_POWER	6
@@ -911,6 +917,8 @@ extern "C" int SceLsdb_B33FE18E(AppInfoSClient *client, const paf::string &title
 /* PLACEHOLDER: a system application's icon (NPXS10xxx below 150, PCSI90016, PS4 Link on a
    demo unit; any icon not an application's) (0x810CF650) */
 int applauncherIconIsSystem(const LsdbIconPtr *icon);
+/* PLACEHOLDER: the home's titles in their default order, ten to a page (0x810C996C) */
+int applauncherDefaultLayout(paf::vector<paf::string> *titles);
 
 /* PLACEHOLDER: the 42 icons of the pool dimmed or not (0x810BCC60, the icon pool's file) */
 void applauncherIconPoolSetDim(bool dim);

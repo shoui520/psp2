@@ -47,6 +47,7 @@ using namespace paf;
 
 /* PLACEHOLDER: an icon's type for an application (livespace_db names only the folder's) */
 #define APPLAUNCHER_IDU_ICON_APP	0
+#define APPLAUNCHER_IDU_ICON0_SYSTEM	7	/* the "System" folder's icon, PLACEHOLDER name */
 
 /* PLACEHOLDER: the folder ids of folders taken off (as applauncherPagesRemoveIcons takes them) */
 #define APPLAUNCHER_IDU_REMOVED_ID_MIN	-20000000
@@ -444,7 +445,7 @@ int iduLayoutRemoveFolderIcon(int *index, int fromPage, const LsdbIconPtr *folde
 
 /* PLACEHOLDER name: whether the list holds a system application's icon or the power icon
    (0x810BEE32) */
-int iduLayoutHasSystemIcon(const LsdbIconListPtr *icons)
+__attribute__((noinline)) int iduLayoutHasSystemIcon(const LsdbIconListPtr *icons)
 {
 	int found = 0;
 
@@ -797,5 +798,339 @@ int iduLayoutRead(vector<string> *titles, vector<string> *bgimages)
 	}
 	if (titles->size() > 100)
 		titles->resize(100, string());
+	return 1;
+}
+
+/* PLACEHOLDER name: the first slot no icon of the list holds, -1 when there is none */
+static int iduLayoutFreePos(const LsdbIconList *icons)
+{
+	bool used[LSDB_PAGE_ICONS];
+
+	memset(used, 0, sizeof(used));
+	for (unsigned int k = 0; k < icons->size(); k++)
+		used[(*icons)[k]->pos] = true;
+	for (int j = 0; j < LSDB_PAGE_ICONS; j++) {
+		if (!used[j])
+			return j;
+	}
+	return -1;
+}
+
+/* PLACEHOLDER name: a system application put in the "System" folder being filled, which is let
+   go once it is full */
+static void iduLayoutAddToSystemFolder(int *index, unsigned int pageNo, const LsdbIconPtr *icon,
+				       LsdbIconList *icons, LsdbPageIconLists *pages,
+				       LsdbIconPtr *sysFolder, LsdbIconListPtr *sysIcons)
+{
+	LsdbIconList *list = sysIcons->get();
+	int slot = iduLayoutFreePos(list);
+
+	if (slot >= 0) {
+		LsdbIconPtr folder;
+		int pos = (*icon)->pos;
+
+		iduLayoutMoveToList(index, slot, icon, icons, pageNo, &folder, pages, -1, list,
+				    sysFolder);
+		iduLayoutMoveIcon(pageNo, pos, (*sysFolder)->folder->id, slot, icon);
+		if ((*sysIcons)->size() >= LSDB_PAGE_ICONS) {
+			sysIcons->reset();
+			sysFolder->reset();
+		}
+	}
+}
+
+/* PLACEHOLDER name: a "System" folder made in a system application's slot, the application in
+   it; off the first page, the folder goes to the first free slot before */
+static inline __attribute__((always_inline))
+void iduLayoutCreateSystemFolder(int *index, unsigned int pageNo, const LsdbIconPtr *icon,
+			LsdbIconList *icons, LsdbPageIconLists *pages, LsdbIconPtr *sysFolder,
+			LsdbIconListPtr *sysIcons)
+{
+	*sysFolder = LsdbIconPtr(new LsdbIcon);
+	(*sysFolder)->pos = (*icon)->pos;
+	(*sysFolder)->icon0Type = APPLAUNCHER_IDU_ICON0_SYSTEM;
+	(*sysFolder)->type = LSDB_ICON_TYPE_FOLDER;
+	{
+		wstring name(L"System");
+		string title;
+
+		common::Utf16ToUtf8(name, &title);
+		(*sysFolder)->title = title;
+	}
+
+	LsdbIconList::iterator it = icons->begin() + *index;
+
+	icons->erase(it, it + 1);
+	(*index)--;
+	(*icon)->pos = 0;
+	SceLsdb_E786531F(g_shellLsdbClient->client, pageNo, icon, sysFolder, NULL, 0);
+	icons->push_back(*sysFolder);
+	sce_paf_printf_dummy();
+	if (pageNo != 0) {
+		int folderIndex = -1;
+
+		for (unsigned int k = 0; k < icons->size(); k++) {
+			if ((*sysFolder)->pos == (*icons)[k]->pos) {
+				folderIndex = k;
+				break;
+			}
+		}
+		iduLayoutMoveToFreeSlot(icons, sysFolder, pageNo, pages, &folderIndex);
+	}
+	iduLayoutGetFolderIcons(sysIcons, (*sysFolder)->folder->id);
+}
+
+/* PLACEHOLDER name: a folder holding system applications: the first becomes the "System"
+   folder being filled; another gives its system applications to it while it has room, and is
+   taken off when that leaves it empty */
+static inline __attribute__((always_inline))
+void iduLayoutMergeFolder(int *index, unsigned int pageNo, const LsdbIconPtr *icon,
+			LsdbPageIconLists *pages, LsdbIconPtr *sysFolder,
+			LsdbIconListPtr *sysIcons)
+{
+	LsdbIconListPtr folderIcons;
+
+	if (iduLayoutGetFolderIcons(&folderIcons, (*icon)->folder->id) == 0 &&
+	    iduLayoutHasSystemIcon(&folderIcons)) {
+		if (sysFolder->get()) {
+			if ((*sysFolder)->folder->id != (*icon)->folder->id) {
+				while ((*sysIcons)->size() < LSDB_PAGE_ICONS) {
+					sce_paf_printf_dummy();
+					if (folderIcons->size() == 0)
+						break;
+					for (int k = 0; k < folderIcons->size(); k++) {
+						LsdbIconPtr child = folderIcons->at(k);
+
+						if (child.get() &&
+						    ((child->type == APPLAUNCHER_IDU_ICON_APP &&
+						      applauncherIconIsSystem(&child)) ||
+						     child->type == APPLAUNCHER_ICON_TYPE_POWER)) {
+							int pos = child->pos;
+							LsdbIconList *list = sysIcons->get();
+							int slot = iduLayoutFreePos(list);
+
+							iduLayoutMoveToList(&k, slot, &child,
+								folderIcons.get(),
+								(*icon)->folder->id, icon,
+								pages, pageNo, list,
+								sysFolder);
+							iduLayoutMoveIcon((*icon)->folder->id,
+								pos,
+								(*sysFolder)->folder->id,
+								slot, &child);
+							if ((*sysIcons)->size() >= LSDB_PAGE_ICONS)
+								break;
+						}
+					}
+				}
+				if ((*sysIcons)->size() >= LSDB_PAGE_ICONS) {
+					if (folderIcons->size() != 0) {
+						*sysIcons = folderIcons;
+						*sysFolder = *icon;
+					} else {
+						sysIcons->reset();
+						sysFolder->reset();
+					}
+				}
+				iduLayoutRemoveFolderIcon(index, pageNo, icon, pages, pageNo);
+			}
+		} else {
+			*sysFolder = *icon;
+			*sysIcons = folderIcons;
+		}
+	}
+}
+
+/* PLACEHOLDER name: an application no layout names moved to the first free slot of the pages
+   after the layout's, a page added when there is none and the home has room */
+static inline __attribute__((always_inline))
+void iduLayoutMoveUnlisted(int *index, unsigned int pageNo, const LsdbIconPtr *icon,
+			LsdbIconList *icons, LsdbPageIconLists *pages, int layoutPages)
+{
+	unsigned int count = pages->size();
+	unsigned int last = count;
+
+	if (layoutPages < pageNo)
+		last = pageNo;
+
+	int toPage = -1;
+	int slot = -1;
+
+	for (int q = layoutPages; q < last; q++) {
+		int free = iduLayoutFreePos((*pages)[q].get());
+
+		if (free >= 0) {
+			toPage = q;
+			slot = free;
+			break;
+		}
+	}
+	if (toPage < 0 && !(layoutPages < pageNo)) {
+		if (count < LSDB_PAGE_ICONS) {
+			LsdbIconList list;
+			LsdbPage page;
+
+			page.bgColor = shellStartupGetPageColor();
+			SceLsdb_3387B5A3(g_shellLsdbClient->client, pages->size(), &list, &page);
+
+			LsdbIconListPtr newIcons;
+
+			toPage = pages->size();
+			if (iduLayoutGetFolderIcons(&newIcons, pages->size()) == 0)
+				pages->push_back(newIcons);
+			slot = 0;
+		} else {
+			int freePage = -1;
+			int freeSlot = -1;
+
+			if (iduLayoutFindFreeSlot(&freePage, &freeSlot, pages)) {
+				slot = freeSlot;
+				toPage = freePage;
+			}
+		}
+	}
+	if (toPage >= 0 && pageNo < toPage) {
+		LsdbIconPtr folder;
+		LsdbIconPtr newFolder;
+		int pos = (*icon)->pos;
+
+		iduLayoutMoveToList(index, slot, icon, icons, pageNo, &folder, pages, -1,
+				    (*pages)[toPage].get(), &newFolder);
+		iduLayoutMoveIcon(pageNo, pos, toPage, slot, icon);
+	}
+}
+
+/* the home laid out again: from ux0:shell/applayout.ald (reset), with the system applications
+   gathered in a "System" folder and the pages' backgrounds carried over, or in the default
+   order; the applications no layout names go to the pages after it, and folders that lost their
+   icons are taken off (0x810C0626) */
+int applauncherIduLayout(bool reset)
+{
+	vector<string> titles;
+	vector<string> bgimages;
+
+	if (reset) {
+		if (!iduLayoutRead(&titles, &bgimages))
+			return 0;
+	} else {
+		if (!applauncherDefaultLayout(&titles))
+			return 0;
+	}
+	sce_paf_printf_dummy();
+
+	LsdbPageIconLists pages;
+	int layoutPages = (titles.size() + LSDB_PAGE_ICONS - 1) / LSDB_PAGE_ICONS;
+	int pageCount = SceLsdb_94128795(g_shellLsdbClient->client);
+
+	for (int i = 0; i < layoutPages - pageCount; i++) {
+		LsdbIconList icons;
+		LsdbPage page;
+
+		page.bgColor = shellStartupGetPageColor();
+		SceLsdb_3387B5A3(g_shellLsdbClient->client, 0, &icons, &page);
+	}
+
+	int count = layoutPages;
+
+	if (count < pageCount)
+		count = pageCount;
+	if (count > 0) {
+		pages.reserve(count);
+		for (int i = 0; i < count; i++)
+			pages.push_back(LsdbIconListPtr(new LsdbIconList));
+		SceLsdb_D74AC354(g_shellLsdbClient->client, 0, count, &pages);
+		sce_paf_printf_dummy();
+	}
+
+	int moved = 0;
+
+	for (unsigned int i = 0; i < titles.size(); i++) {
+		if (iduLayoutMoveTitle(&titles[i], i / LSDB_PAGE_ICONS, i % LSDB_PAGE_ICONS,
+				       &pages))
+			moved = 1;
+	}
+	if (moved) {
+		if (reset) {
+			/* folders holding system applications go to the first free slot before */
+			for (unsigned int p = 1; p < pages.size(); p++) {
+				LsdbIconList *icons = pages[p].get();
+
+				for (int index = 0; index < (int)icons->size(); index++) {
+					LsdbIconPtr icon = (*icons)[index];
+
+					if (icon->type == LSDB_ICON_TYPE_FOLDER) {
+						LsdbIconListPtr folderIcons;
+
+						if (iduLayoutGetFolderIcons(&folderIcons,
+								icon->folder->id) == 0 &&
+						    iduLayoutHasSystemIcon(&folderIcons))
+							iduLayoutMoveToFreeSlot(icons, &icon, p,
+								&pages, &index);
+					}
+				}
+			}
+
+			/* the system applications gathered in "System" folders, ten to a folder */
+			LsdbIconPtr sysFolder;
+			LsdbIconListPtr sysIcons;
+
+			for (unsigned int p = 0; p < pages.size(); p++) {
+				LsdbIconList *icons = pages[p].get();
+
+				for (int index = 0; index < (int)icons->size(); index++) {
+					LsdbIconPtr icon = (*icons)[index];
+
+					if ((icon->type == APPLAUNCHER_IDU_ICON_APP &&
+					     applauncherIconIsSystem(&icon)) ||
+					    icon->type == APPLAUNCHER_ICON_TYPE_POWER) {
+						if (!sysFolder.get())
+							iduLayoutCreateSystemFolder(&index, p,
+								&icon, icons, &pages, &sysFolder,
+								&sysIcons);
+						else
+							iduLayoutAddToSystemFolder(&index, p,
+								&icon, icons, &pages, &sysFolder,
+								&sysIcons);
+					} else if (icon->type == LSDB_ICON_TYPE_FOLDER) {
+						iduLayoutMergeFolder(&index, p, &icon, &pages,
+								     &sysFolder, &sysIcons);
+					}
+				}
+			}
+		}
+
+		/* applications no layout names go to a free slot of the pages after it */
+		for (unsigned int p = 0; p < pages.size(); p++) {
+			LsdbIconList *icons = pages[p].get();
+
+			if (layoutPages != p) {
+				for (int index = 0; index < (int)icons->size(); index++) {
+					LsdbIconPtr icon = (*icons)[index];
+
+					if (icon->type == APPLAUNCHER_IDU_ICON_APP &&
+					    !applauncherIconIsSystem(&icon) &&
+					    find(titles.begin(), titles.end(), icon->titleId) ==
+					    titles.end())
+						iduLayoutMoveUnlisted(&index, p, &icon, icons,
+							&pages, layoutPages);
+				}
+			}
+		}
+	}
+
+	for (unsigned int p = 0; p < pages.size(); p++) {
+		LsdbIconList *icons = pages[p].get();
+
+		for (int index = 0; index < (int)icons->size(); index++) {
+			LsdbIconPtr icon = (*icons)[index];
+
+			if (icon->type == LSDB_ICON_TYPE_FOLDER)
+				iduLayoutRemoveFolder(&icon, p);
+		}
+	}
+
+	iduLayoutCompare(&pages);
+	if (reset)
+		bgimageMigrate(&bgimages, &pages, layoutPages);
 	return 1;
 }

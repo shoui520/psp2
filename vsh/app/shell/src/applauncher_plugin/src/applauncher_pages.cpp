@@ -42,7 +42,7 @@ static bool s_pagesLoaded;
 
 /* PLACEHOLDER: the pages laid out for the IDU (0x810C0626), and whether the console's page
    colour is already applied (0x810C6DA0), both in the IDU layout's file */
-void applauncherIduLayout(bool reset);
+int applauncherIduLayout(bool reset);
 bool applauncherIduLayoutColorApplied(void);
 
 /* the files of a folder deleted, but for those the pages still use */
