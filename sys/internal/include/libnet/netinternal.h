@@ -17,6 +17,8 @@ int SceNetInternal_DF815D48(SceNetEmulationParam *param, int flags);
 int SceNetInternal_EE1985D9(int policy);
 /* a process's policy (SceNetPsSleepCount.policy's bits) */
 int SceNetInternal_EE94BF52(int processId, int *policy, int flags);
+/* sets a thread's mode */
+int SceNetInternal_9DBD2F60(int threadId, int mode, int flags);
 /* a thread's mode */
 int SceNetInternal_EF421A65(int threadId, int *mode, int flags);
 /* the stack's sleep counts: up to COUNT SceNetPsSleepCount */

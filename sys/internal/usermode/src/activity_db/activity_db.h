@@ -35,7 +35,10 @@ ActivityDbAccess *SceActivityDb_6107381D(ActivityDbAccess *access);
 /* takes the connection for a transaction (nested calls count); NULL when none is open */
 ActivityDbConnection *SceActivityDb_82B45E74(ActivityDbAccess *access);
 
-/* ends the transaction taken by SceActivityDb_82B45E74: commits when result is 0, else rolls back */
+/*
+ * ends the transaction taken by SceActivityDb_82B45E74: commits when result is 0, else
+ * rolls back
+ */
 int SceActivityDb_11D77056(ActivityDbAccess *access, int result);
 
 /* a decimal text's value (a time the database keeps as text) */
@@ -75,10 +78,10 @@ int SceActivityDb_AFB99B8D(ActivityDbAccess *access, const char *path, int flags
 	ActivityDbUpgradeCallback upgrade);
 
 /* closes the database */
-int SceActivityDb_3D89266C(ActivityDbAccess *access);
+void SceActivityDb_3D89266C(ActivityDbAccess *access);
 
-/* deletes the database files at path (and its journal); marks it rebuilt first when rebuilt */
-void SceActivityDb_1281238F(const char *path, SceBool rebuilt);
+/* deletes the database at path and its journal, and its error mark ("-err") when errorMark */
+void SceActivityDb_1281238F(const char *path, SceBool errorMark);
 
 /* rebuilds the database inside the transaction taken by SceActivityDb_82B45E74 */
 int SceActivityDb_BF4343E0(ActivityDbAccess *access, const ActivityDbRebuildParam *param);
@@ -89,8 +92,17 @@ int SceActivityDb_EA953F36(ActivityDbAccess *access, ActivityDbRebuildParam *par
 /* sets the database's parameters that param gives (those not negative) */
 int SceActivityDb_7A345D77(ActivityDbAccess *access, ActivityDbRebuildParam *param);
 
-/* marks the database at path rebuilt */
-int SceActivityDb_B9A3FDCC(const char *path);
+/* removes the file at path; one that cannot be removed is renamed aside */
+void SceActivityDb_8EE00DC5(const char *path);
+
+/* marks the database at path damaged ("-err" holds result) when result says so */
+int SceActivityDb_17420D1D(const char *path, int result);
+
+/* the result the database at path was marked damaged with, else 0 (and the mark removed) */
+int SceActivityDb_C3CAF7DA(const char *path);
+
+/* deletes the error mark ("-err") of the database at path */
+void SceActivityDb_B9A3FDCC(const char *path);
 
 /* registers an SQL function on the database, and unregisters it */
 int SceActivityDb_76F10DA7(ActivityDbAccess *access, const ActivityDbFunction *function);
@@ -99,8 +111,9 @@ int SceActivityDb_94516607(ActivityDbAccess *access, const ActivityDbFunction *f
 /* runs count SQL statements on the connection */
 int SceActivityDb_D3277649(ActivityDbConnection *connection, const char *const *sql, int count);
 
-/* calls callback when the current transaction ends: with 1 when it was rolled back, else 0 */
-int SceActivityDb_14DE3B37(ActivityDbAccess *access, void (*callback)(int rolledBack));
+/* calls callback when the current transaction ends, with its result (0: committed) */
+typedef void (*ActivityDbEndCallback)(int result);
+void SceActivityDb_14DE3B37(ActivityDbAccess *access, ActivityDbEndCallback callback);
 
 /* the activity daemon (its mutex "SceLsdbActDaemon"), made at its first use */
 typedef struct ActivityDbDaemon ActivityDbDaemon;
