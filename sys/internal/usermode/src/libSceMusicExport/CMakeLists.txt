@@ -7,6 +7,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	music_export_ipc_client.cpp
 	../../../../sdk/target/src/libsnc/unwind_pr0.c
 	../../../../sdk/target/src/libsnc/unwind_pr1.c
+	../../../../sdk/target/src/libsnc/i64mod.c
 	../../../../sdk/target/src/libsnc/i64ops.c
 	../../../../sdk/target/src/libsnc/i64shr.c
 	../../../../sdk/target/src/libsnc/i32ops.c

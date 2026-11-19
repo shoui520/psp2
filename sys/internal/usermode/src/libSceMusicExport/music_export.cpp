@@ -55,7 +55,7 @@ extern "C" int sceRegMgrSystemParamGetInt(int id, int *pValue);
 /* the notification request the library sends (SceAppMgr): the text the system shows */
 typedef struct MusicExportNotification {
 	SceUInt32 type;
-	SceUInt8 payload[0x100];
+	SceUInt8 payload[60];
 } MusicExportNotification;
 
 /* the paths the library refuses */
@@ -108,7 +108,6 @@ static SceInt32 musicExportGetParamCallback(SceUID notifyId, SceInt32 notifyCoun
 static int musicExportOpenSession(MusicExportSession *session, SceMusicExportCancelFunc cancelFunc,
 				  void *userdata)
 {
-	IPMI::Client::Config config;
 	void *pBase;
 	SceUID memblockId;
 	void *mspace;
@@ -144,27 +143,29 @@ static int musicExportOpenSession(MusicExportSession *session, SceMusicExportCan
 	}
 	session->mspace = mspace;
 	session->memblockId = memblockId;
+	IPMI::Client::Config config;
+
 	sceClibStrncpy(config.serviceName, "SceAvMediaSrv", sizeof(config.serviceName));
 	config.maxAsyncCallInSize = 11944;
 	config.maxAsyncCallOutSize = 11344;
 	config.maxSyncCallInSize = 18432;
 	config.maxSyncCallOutSize = 4096;
 	config.budget = IPMI::USER_BUDGET;
-	pBuffer = musicExportAlloc(session, IPMI::Client::getBufferSize(&config));
+	pBuffer = sceClibMspaceMalloc(session->mspace, IPMI::Client::getBufferSize(&config));
 	if (pBuffer == NULL) {
 		musicExportDestroyHeap(session);
 		return SCE_MUSIC_EXPORT_ERROR_NO_MEMORY;
 	}
-	session->pClientBuffer = musicExportAlloc(session, 11944);
+	session->pClientBuffer = sceClibMspaceMalloc(session->mspace, 11944);
 	if (session->pClientBuffer == NULL) {
-		musicExportFree(session, pBuffer);
+		sceClibMspaceFree(session->mspace, pBuffer);
 		musicExportDestroyHeap(session);
 		return SCE_MUSIC_EXPORT_ERROR_NO_MEMORY;
 	}
 	ret = IPMI::Client::create(&session->pClient, &config, session, pBuffer);
 	if (ret != 0) {
-		musicExportFree(session, pBuffer);
-		musicExportFree(session, session->pClientBuffer);
+		sceClibMspaceFree(session->mspace, pBuffer);
+		sceClibMspaceFree(session->mspace, session->pClientBuffer);
 		session->pClientBuffer = NULL;
 		session->pClient = NULL;
 		musicExportDestroyHeap(session);
@@ -226,8 +227,8 @@ static int musicExportOpenSession(MusicExportSession *session, SceMusicExportCan
 			break;
 		}
 		session->pClient->destroy();
-		musicExportFree(session, pBuffer);
-		musicExportFree(session, session->pClientBuffer);
+		sceClibMspaceFree(session->mspace, pBuffer);
+		sceClibMspaceFree(session->mspace, session->pClientBuffer);
 		session->pClientBuffer = NULL;
 		session->pClient = NULL;
 		musicExportDestroyHeap(session);
@@ -240,14 +241,17 @@ static int musicExportOpenSession(MusicExportSession *session, SceMusicExportCan
 /* disconnects and frees what the session took */
 static int musicExportCloseSession(MusicExportSession *session)
 {
+	void *pClientBuffer;
+
 	if (session->pClient == NULL)
 		return SCE_MUSIC_EXPORT_ERROR_INTERNAL;
 	session->pClient->disconnect();
 	session->pClient->destroy();
-	musicExportFree(session, session->pClient);
+	sceClibMspaceFree(session->mspace, session->pClient);
+	pClientBuffer = session->pClientBuffer;
 	session->pClient = NULL;
-	if (session->pClientBuffer != NULL) {
-		musicExportFree(session, session->pClientBuffer);
+	if (pClientBuffer != NULL) {
+		sceClibMspaceFree(session->mspace, pClientBuffer);
 		session->pClientBuffer = NULL;
 	}
 	musicExportDestroyHeap(session);
@@ -298,7 +302,7 @@ static __attribute__((noinline)) int musicExportSetPath(MusicExportSession *sess
 }
 
 /* starts the export of the items and waits for its end, reporting its progress */
-static int musicExportRun(MusicExportSession *session, SceUInt32 count,
+static int musicExportRun(MusicExportSession *session, SceInt32 count,
 			  const MusicExportItem *pItems, SceUInt32 mode,
 			  SceMusicExportCancelFunc cancelFunc,
 			  SceMusicExportProgressInfoFunc progressFunc, void *userdata,
@@ -319,14 +323,13 @@ static int musicExportRun(MusicExportSession *session, SceUInt32 count,
 	if (ret == 0) {
 		canceled = 0;
 		lastProgress = 0;
-		resultCount = count;
-		progress = 0;
 		do {
 			if (cancelFunc != NULL && canceled == 0 && cancelFunc(userdata) != 0) {
 				musicExportCancel(session);
 				canceled = 1;
 			}
 			if (pItems->mode != 1 && progressFunc != NULL) {
+				progress = 0;
 				if (musicExportGetProgress(session, &progress) == 0 &&
 				    lastProgress != progress) {
 					progressFunc(userdata,
@@ -335,6 +338,7 @@ static int musicExportRun(MusicExportSession *session, SceUInt32 count,
 				}
 			}
 			sceKernelDelayThread(MUSIC_EXPORT_POLL_USEC);
+			resultCount = count;
 			ret = musicExportGetResult(session, &resultCount, pResults);
 		} while (ret == IPMI_ERROR_WOULD_BLOCK);
 		if (ret == 0)
@@ -362,8 +366,12 @@ extern "C" SceInt32 SceMusicExport_D1011570(const MusicExportItem *pItems, SceUI
 		return SCE_MUSIC_EXPORT_ERROR_PARAM;
 	if (count == 0 || count > MUSIC_EXPORT_MAX_ITEMS)
 		return SCE_MUSIC_EXPORT_ERROR_PARAM;
-	if (mode < 0 || mode > 2)
+	if (mode <= 1) {
+		if (mode < 0)
+			return SCE_MUSIC_EXPORT_ERROR_PARAM;
+	} else if (mode > 2) {
 		return SCE_MUSIC_EXPORT_ERROR_PARAM;
+	}
 	if (pResults != NULL) {
 		pResult = pResults;
 		for (i = count; i != 0; i--) {
@@ -375,7 +383,9 @@ extern "C" SceInt32 SceMusicExport_D1011570(const MusicExportItem *pItems, SceUI
 	}
 	session.pClient = NULL;
 	session.requestId = -1;
-	sceClibMemset(&session.mspace, 0, 12);
+	session.mspace = NULL;
+	session.memblockId = 0;
+	session.pClientBuffer = NULL;
 	session.pWorkMemory = workMemory;
 	ret = musicExportOpenSession(&session, cancelFunc, userdata);
 	if (ret == 0) {
@@ -397,7 +407,7 @@ extern "C" SceInt32 sceMusicExportFromFile(const SceChar8 *musicfilePath,
 {
 	const char *path = (const char *)musicfilePath;
 	char *outPath = (char *)exportedPath;
-	MusicExportNotification notice;
+	MusicExportNotification notice = { 0 };
 	MusicExportSession session;
 	MusicExportItem item;
 	SceIoStat stat;
@@ -408,7 +418,6 @@ extern "C" SceInt32 sceMusicExportFromFile(const SceChar8 *musicfilePath,
 	int value;
 	int ret;
 
-	sceClibMemset(&notice, 0, sizeof(notice));
 	sceClibStrncpy((char *)notice.payload,
 		       "Music:\nRequire TRC R3146 test\nsceMusicExportFromFile()",
 		       sizeof(notice.payload));
@@ -488,7 +497,9 @@ noExtension:
 
 		session.pClient = NULL;
 		session.requestId = -1;
-		sceClibMemset(&session.mspace, 0, 12);
+		session.mspace = NULL;
+	session.memblockId = 0;
+	session.pClientBuffer = NULL;
 		session.pWorkMemory = workMemory;
 		ret = musicExportOpenSession(&session, cancelFunc, userdata);
 		if (ret != 0)
@@ -509,8 +520,8 @@ noExtension:
 				sceIoLseek(fd, 0, SCE_SEEK_SET);
 				buf = musicExportAlloc(&session, MUSIC_EXPORT_PIECE_SIZE);
 				if (buf != NULL) {
-					pieces = (SceInt32)(size >> 14);
-					if ((size & (MUSIC_EXPORT_PIECE_SIZE - 1)) != 0)
+					pieces = (SceInt32)(size / MUSIC_EXPORT_PIECE_SIZE);
+					if (size % MUSIC_EXPORT_PIECE_SIZE != 0)
 						pieces++;
 					lastPiece = pieces - 1;
 					piece = 0;

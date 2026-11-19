@@ -16,15 +16,15 @@ int musicExportIpcStart(IPMI::Client *client, int *pRequestId,
 	int ret;
 
 	head[0] = count;
-	head[1] = mode;
 	in[0].pData = head;
 	in[0].dataSize = sizeof(head);
 	in[1].pData = pItems;
 	in[1].dataSize = sizeof(MusicExportItem) * count;
+	head[1] = mode;
 	ret = client->invokeAsyncMethod(MUSIC_EXPORT_METHOD_START, in, 2, pRequestId, pEventFlag);
-	if (ret == 0)
-		ret = 0;
-	return ret;
+	if (ret != 0)
+		return ret;
+	return 0;
 }
 
 int musicExportIpcGetResult(IPMI::Client *client, int requestId, SceUInt32 *pCount,
