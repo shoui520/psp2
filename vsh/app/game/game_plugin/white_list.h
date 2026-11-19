@@ -17,7 +17,9 @@
 
 /* what the white list functions give back (values only) */
 #define GAME_WHITE_LIST_ERROR_NO_MEMORY		-2146430608	/* 0x80101170 */
+#define GAME_WHITE_LIST_ERROR_TOO_LARGE		-2146430607	/* 0x80101171 */
 #define GAME_WHITE_LIST_ERROR_NOT_FOUND		-2146430606	/* 0x80101172 */
+#define GAME_WHITE_LIST_ERROR_NO_FILE		-2146430605	/* 0x80101173 */
 #define GAME_WHITE_LIST_ERROR_BAD_FORMAT	-2146430604	/* 0x80101174 */
 #define GAME_WHITE_LIST_ERROR_OLD_VERSION	-2146430602	/* 0x80101176 */
 #define GAME_WHITE_LIST_ERROR_BAD_FILE		-2146430601	/* 0x80101177 */
@@ -25,6 +27,7 @@
 #define GAME_WHITE_LIST_ERROR_NOT_FORCED	-2146430599	/* 0x80101179 */
 #define GAME_WHITE_LIST_ERROR_SHORT_READ	-2146430598	/* 0x8010117A */
 #define GAME_WHITE_LIST_ERROR_SHORT_WRITE	-2146430597	/* 0x8010117B */
+#define GAME_WHITE_LIST_ERROR_MAC_RANGE		-2146430596	/* 0x8010117C */
 #define GAME_WHITE_LIST_ERROR_BAD_MAC		-2146430595	/* 0x8010117D */
 #define GAME_WHITE_LIST_ERROR_BAD_FTT		-2146430594	/* 0x8010117E */
 #define GAME_WHITE_LIST_ERROR_BLACK_LIST	-2146430593	/* 0x8010117F */
@@ -67,10 +70,11 @@ int gameWhiteListParseTeleportHeader(const char *buf, SceSize size,
 				     GameWhiteListTeleportHeader *header);
 int gameWhiteListRequestTeleportUpdate(void);
 
-/*
- * PLACEHOLDER: the file helpers, in the file after ftt_license.cpp (0x810A5744..), not
- * written yet; the prototypes are taken from the calls
- */
+/* white_list_util.cpp */
+int gameWhiteListFileSign(paf::common::SharedPtr<paf::File> file, const char *key,
+			  SceUInt32 macOffset);
+int gameWhiteListFileVerify(paf::common::SharedPtr<paf::File> file, const char *key,
+			    SceUInt32 macOffset);
 int gameWhiteListDownloadFile(const char *url, const char *path, const SceUInt64 *maxSize);
 int gameWhiteListFileUnwrap(const char *src, const char *dst, SceSize *maxSize,
 			    bool removeSource);
@@ -83,7 +87,5 @@ bool gameWhiteListUx0Exists(void);
 int gameWhiteListDirRecreate(const char *dir);
 int gameWhiteListDirRemove(const char *dir);
 int gameWhiteListFileCopy(const char *src, const char *dst);
-int gameWhiteListFileSign(paf::common::SharedPtr<paf::File> file, const char *key, int kind);
-int gameWhiteListFileVerify(paf::common::SharedPtr<paf::File> file, const char *key, int kind);
 
 #endif /* _WHITE_LIST_H */

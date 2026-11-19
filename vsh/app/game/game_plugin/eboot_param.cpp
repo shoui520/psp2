@@ -13,6 +13,7 @@
 #include <std/vector>
 #include <common/shared_ptr.h>
 #include <file/localfile.h>
+#include <libhmac.h>
 #include <ss_mgr/ss_mgr.h>
 
 #include "../../shell/src/livespace_db/livespace_db_internal.h"
@@ -21,10 +22,6 @@
 #include "game_appinfo.h"
 
 using namespace paf;
-
-/* the SDK's libhmac, linked in (target/include/libhmac.h; 0x8137E058) */
-extern "C" SceInt32 sceHmacSha256Digest(const void *secretkey, SceUInt32 keylen,
-					const void *plain, SceUInt32 datalen, SceUChar8 *digest);
 
 /* the SDK's glue over SceVshBridge's import (0x81417D20) */
 extern "C" int vshSblSsDecryptWithPortability(SceUInt32 keyType, void *iv,

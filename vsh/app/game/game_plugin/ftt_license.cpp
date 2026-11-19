@@ -1,8 +1,8 @@
 /*
- * The free-trial license files: a 48-byte header ("RFTT", where the data after the license
- * starts and its size), the 80-byte license, the data, and a MAC whose key is made from the
- * license's seed. The files are read and changed under Sony's "SceGameUpdateWhiteListFtt" lock;
- * the file and function names are ours.
+ * The free-trial license files: a 48-byte header ("RFTT", the file's MAC, where the data after
+ * the license starts and its size), the 80-byte license and the data; the MAC's key is made
+ * from the license's seed. The files are read and changed under Sony's
+ * "SceGameUpdateWhiteListFtt" lock; the file and function names are ours.
  */
 #include <stddef.h>
 #include <scetypes.h>
@@ -20,12 +20,12 @@
 using namespace paf;
 
 #define GAME_FTT_MAGIC		"RFTT"
-#define GAME_FTT_MAC_KIND	4	/* PLACEHOLDER: what the file MAC functions do with it */
 
 /* a free-trial license file's first 128 bytes */
 typedef struct GameFttFile {
 	char magic[4];
-	SceUInt8 reserved[36];
+	char mac[32];		/* HMAC-SHA256 of the file, taken with these bytes zero */
+	SceUInt8 reserved[4];
 	SceUInt32 dataOffset;	/* where the data after the license starts */
 	SceUInt32 dataSize;
 	GameFttLicense license;
@@ -44,7 +44,7 @@ static __attribute__((noinline)) int gameFttSign(common::SharedPtr<File> file, S
 	sce_paf_memset(key, 0, sizeof(key));
 	sce_paf_memcpy(key, text, sizeof(key));
 
-	int ret = gameWhiteListFileSign(file, key, GAME_FTT_MAC_KIND);
+	int ret = gameWhiteListFileSign(file, key, offsetof(GameFttFile, mac));
 
 	if (ret < 0)
 		return ret;
@@ -61,7 +61,7 @@ static inline int gameFttVerify(common::SharedPtr<File> file, SceUInt64 seed)
 	sce_paf_snprintf(text, sizeof(text), "%016llx", seed);
 	sce_paf_memset(key, 0, sizeof(key));
 	sce_paf_memcpy(key, text, sizeof(key));
-	return gameWhiteListFileVerify(file, key, GAME_FTT_MAC_KIND);
+	return gameWhiteListFileVerify(file, key, offsetof(GameFttFile, mac));
 }
 
 /* a header read from file checked: its magic and the file's MAC (0x810A4D3A) */
