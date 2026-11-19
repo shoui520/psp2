@@ -150,7 +150,6 @@ extern "C" int sceErrorGetExternalString(char *buf, SceUInt32 code);
  */
 #define GAME_ERROR_GC_APP_UPDATE	-2146430687	/* 0x80101121 */
 #define GAME_ERROR_GC_STOPPED		-2144206822	/* 0x8032001A */
-#define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */
 #define GAME_ERROR_GC_LICENSE_EXPIRED	-2146430649	/* 0x80101147 */
 
 /* the install-title notice's button that migrates the title, and the error shown when the

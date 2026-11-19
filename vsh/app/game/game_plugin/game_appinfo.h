@@ -80,6 +80,12 @@ int gameAppGetStorage(const LsdbAppInfoPtr *info, int *storage);
 #define LSDB_KEY_VERSION	0xD3BBB9B7u	/* "VERSION" */
 #endif
 
+/*
+ * PLACEHOLDER name: where a PlayStation Mobile application's record keeps its runtime's APP_VER;
+ * no string of the firmware hashes to it
+ */
+#define LSDB_KEY_PSM_RUNTIME_APP_VER	0xE84B97C1u
+
 /* a PSP application's param.sfo keys */
 #define LSDB_KEY_PSP_SYSTEM_VER	0x16A32D32u	/* "PSP_SYSTEM_VER" */
 #define LSDB_KEY_UPDATER_VER	0x8F1D7630u	/* "UPDATER_VER" */

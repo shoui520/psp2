@@ -137,7 +137,7 @@ typedef char GameInstallParamSize[sizeof(GameInstallParam) == 176 ? 1 : -1];
 
 struct GameInstallExParam {
 	char path[128];			/* the package folder's path */
-	SceUInt8 reserved;
+	bool noOtherFlag;		/* PLACEHOLDER name: the registration's otherFlag cleared */
 	bool imported;			/* PLACEHOLDER name: set by the content import */
 	bool checkContentId;		/* a PSP game's content ID checked before its install */
 	bool copySavedata;		/* a PlayStation game's saved data installed with it */
@@ -145,7 +145,8 @@ struct GameInstallExParam {
 	void (*progressFunc)(void *arg, float percent);	/* the install's progress, when set */
 	void *progressArg;
 	char errorTitleId[16];
-	SceUInt8 moreFields[128];
+	char mountPoint[16];		/* PLACEHOLDER name: where the caller mounted the application, if it did */
+	SceUInt8 moreFields[112];
 };
 
 typedef char GameInstallExParamSize[sizeof(GameInstallExParam) == 288 ? 1 : -1];
@@ -274,6 +275,8 @@ int gamePluginPsmAppIsAllowed(const paf::string &titleId, bool *allowed, int *mo
 
 /* the license errors gameLicenseGetStatus reports, also from the mounts (values only) */
 #define GAME_LICENSE_ERROR_NOT_FOUND	-2139095036	/* 0x80800004 */
+/* what sceNpDrmGetRifInfo returns for a license outside its period (value only) */
+#define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */
 #define GAME_LICENSE_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
 /* paf's error for a device that is not there (value only; PLACEHOLDER name) */
 #define GAME_PAF_ERROR_NO_DEVICE	-2135994332	/* 0x80AF5024 */

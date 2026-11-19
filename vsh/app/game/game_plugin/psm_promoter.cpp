@@ -20,7 +20,7 @@ using namespace paf;
 
 GamePsmPromoter::GamePsmPromoter(const char *path, bool flag, const GameJobProgress *progress,
 				 int userData, float scale)
-	: GamePromoter(path, progress, userData, scale), m_reader(userData), m_flag(flag)
+	: GamePromoter(path, progress, userData, scale), m_reader((string *)userData), m_flag(flag)
 {
 	m_checkVersion = false;
 }

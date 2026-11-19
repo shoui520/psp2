@@ -21,7 +21,7 @@ using namespace paf;
 GamePsmInstaller::GamePsmInstaller(const char *path, const SceNpDrmInstallInfo *info,
 				   GameJobProgress *progress, string *errorTitleId, float scale)
 	: GamePackageInstaller(path, info, progress, errorTitleId, scale),
-	  m_reader(m_titleId, (int)errorTitleId), m_appInfo(new LsdbAppInfo), m_reserved(0)
+	  m_reader(m_titleId, errorTitleId), m_appInfo(new LsdbAppInfo), m_reserved(0)
 {
 	m_prepareFlag = false;
 	m_weights[0] = 0.1f;

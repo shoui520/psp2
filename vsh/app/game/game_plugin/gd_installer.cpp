@@ -113,7 +113,7 @@ GameInstallSource *GameGdInstaller::CreateSource(int *ret)
 
 	const GameInstallExParam *param = (const GameInstallExParam *)m_path;
 
-	return new GameGdAppSource(m_info, m_noLicense, string((const char *)param->moreFields),
+	return new GameGdAppSource(m_info, m_noLicense, string(param->mountPoint),
 				   m_errorTitleId);
 }
 
@@ -529,7 +529,7 @@ int GameGdInstaller::Finish(GameAppRegistration *reg, GameCancelFunc cancel, voi
 	} else {
 		const GameInstallExParam *param = (const GameInstallExParam *)m_path;
 
-		writer = new GameLiveAreaCopier(m_noLicense, string((const char *)param->moreFields),
+		writer = new GameLiveAreaCopier(m_noLicense, string(param->mountPoint),
 						cancel, arg, &m_progress, NULL, 0.45f);
 	}
 

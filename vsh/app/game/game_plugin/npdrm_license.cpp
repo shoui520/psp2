@@ -24,7 +24,6 @@
 using namespace paf;
 
 /* what sceNpDrmGetRifInfo returns for a license outside its period, and without an account */
-#define GAME_NPDRM_ERROR_EXPIRED	-2138636282	/* 0x80870006 */
 #define GAME_NPDRM_ERROR_NOT_STARTED	-2138636281	/* 0x80870007 */
 #define GAME_NPDRM_ERROR_NO_ACCOUNT	-2138636280	/* 0x80870008 */
 

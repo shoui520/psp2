@@ -534,10 +534,9 @@ class GameInstallSource;
 #define GAME_INSTALL_STAGES	6
 
 /*
- * PLACEHOLDER: the installers' base for a package of GameInstallParam, defined in another file of
- * the plugin (constructor 0x81095EB8, destructor 0x8109610C, vtable 0x8152F0B8), 128 bytes: like
- * GamePackageInstaller's, the package installed by its source, its record built and registered,
- * by stages. The names are ours.
+ * The installers' base for a package of GameInstallParam (installer.cpp, constructor 0x81095EB8,
+ * vtable 0x8152F0B8), 128 bytes: like GamePackageInstaller's, the package installed by its
+ * source, its record built and registered, by stages. The names are ours.
  */
 class GameInstaller : public GamePromoterIf {
 public:
@@ -574,6 +573,21 @@ public:
 
 	/* the record built from the source (0x810967B8) */
 	virtual int SetInfo(bool registerApp, GameAppRegistration *reg);
+
+	/* the progress after stage, of GAME_INSTALL_STAGES */
+	void SetProgress(int stage)
+	{
+		float percent = gameSumPercent(stage, m_weights, GAME_INSTALL_STAGES);
+
+		if (m_progress.percent == NULL || percent < *m_progress.percent ||
+		    percent > 100.0f)
+			return;
+
+		*m_progress.percent = percent;
+		if (m_progress.func != NULL)
+			m_progress.func(m_progress.arg, *m_progress.percent);
+		m_progress.added = 0;
+	}
 
 	const GameInstallParam *m_param;
 	LsdbAppInfoPtr m_appInfo;		/* the installed application's record (Prepare) */
@@ -758,9 +772,9 @@ private:
 typedef char GameGdUpdateAppmetaWriterSize[sizeof(GameGdUpdateAppmetaWriter) == 48 ? 1 : -1];
 
 /*
- * PLACEHOLDER: the installers' base, defined in another file of the plugin (constructor
- * 0x81095248, destructor 0x8109541A, vtable 0x8152F090), 124 bytes: the package folder's source
- * made, its record built and registered, by stages. The names are ours.
+ * The installers' base of a package folder (package_installer.cpp, constructor 0x81095248,
+ * vtable 0x8152F090), 124 bytes: the package folder's source made, its record built and
+ * registered, by stages. The names are ours.
  */
 class GamePackageInstaller : public GamePromoterIf {
 public:
@@ -810,6 +824,21 @@ public:
 	virtual int Finish(GameAppRegistration *reg, GameCancelFunc cancel, void *arg)
 	{
 		return 0;
+	}
+
+	/* the progress after stage, of GAME_INSTALL_STAGES */
+	void SetProgress(int stage)
+	{
+		float percent = gameSumPercent(stage, m_weights, GAME_INSTALL_STAGES);
+
+		if (m_progress.percent == NULL || percent < *m_progress.percent ||
+		    percent > 100.0f)
+			return;
+
+		*m_progress.percent = percent;
+		if (m_progress.func != NULL)
+			m_progress.func(m_progress.arg, *m_progress.percent);
+		m_progress.added = 0;
 	}
 
 	const char *m_path;			/* the package folder, at the head of its GameInstallExParam */
@@ -1255,43 +1284,66 @@ public:
 typedef char GameAppmetaPromoterSize[sizeof(GameAppmetaPromoter) == 164 ? 1 : -1];
 
 /*
- * PLACEHOLDER: what a PlayStation Mobile game's promotion reads its app.info with, defined in
- * another file of the plugin (constructor 0x81094CF8, destructor 0x81094D58, vtable 0x8152F080),
- * 36 bytes. The names are ours.
+ * The promotion source of a PlayStation Mobile application, from its folders and its runtime's
+ * param.sfo, in psm_appinfo_source.cpp (constructor 0x81096D8C, vtable 0x8152F0EC), 112 bytes.
+ * The names are ours.
+ */
+class GamePsmAppInfoSource : public GamePromoteSource {
+public:
+	GamePsmAppInfoSource(const GameAppSourceParam &param);
+	virtual ~GamePsmAppInfoSource();
+
+	virtual int Load(GameAppRegistration *reg);
+
+private:
+	int LoadRuntime(const LsdbAppInfoPtr *sfo, GameAppRegistration *reg);
+	int LoadApp(GameAppRegistration *reg);
+
+public:
+	paf::string m_appInfoPath;	/* param.sysDir */
+	paf::string m_reserved;		/* empty; nothing reads it */
+};
+
+typedef char GamePsmAppInfoSourceSize[sizeof(GamePsmAppInfoSource) == 112 ? 1 : -1];
+
+/*
+ * What a PlayStation Mobile game's promotion reads its app.info with (psm_app_reader.cpp,
+ * constructor 0x81094CF8, destructor 0x81094D58, vtable 0x8152F080), 36 bytes. The names are
+ * ours.
  */
 class GamePsmAppReader {
 public:
-	GamePsmAppReader(int userData);
+	GamePsmAppReader(paf::string *errorTitleId);
 
-	/* the reader of the application name (0x81094D20) */
-	GamePsmAppReader(const paf::string &name, int userData);
+	/* the reader of the application name */
+	GamePsmAppReader(const paf::string &name, paf::string *errorTitleId);
 
 	virtual ~GamePsmAppReader();
 
-	/* the app.info made, and whether info is installed already (0x81094E02) */
+	/* the app.info made, and whether info is installed already */
 	int Prepare(bool flag, LsdbAppInfoPtr *info, bool *installed);
 
-	/* the source of the application at path, from its app.info (0x81094E80) */
+	/* the source of the application at path, from its app.info */
 	int CreateSource(const paf::string &appInfoPath, const paf::string &dir,
 			 const paf::string &path, GamePromoteSource **source);
 
-	/* the app.info's information set into reg (0x81095056) */
+	/* the app.info and *source deleted */
+	int Cleanup(GamePromoteSource **source);
+
+	/* the app.info's information set into reg */
 	int SetInfo(bool registerApp, const LsdbAppInfoPtr *info, GameAppRegistration *reg);
 
-	/* the content ID read from the file at path into info (0x8109506C) */
+	/* the content ID read from the file at path into info */
 	int ReadContentId(const paf::string &path, LsdbAppInfoPtr *info);
 
-	/* the LiveArea written from the app.info, scale of progress (0x8109510E) */
+	/* the LiveArea written from the app.info, scale of progress */
 	int Finish(GameAppRegistration *reg, const GameJobProgress *progress,
 		   GameCancelFunc cancel, void *arg, float scale);
 
-	/* the app.info and *source deleted (0x8109502E) */
-	int Cleanup(GamePromoteSource **source);
-
 	GamePsmAppInfo *m_appInfo;
-	paf::string m_path;
+	paf::string m_path;		/* the app.info promoted from */
 	paf::string m_name;		/* the application's folder name */
-	int m_userData;
+	paf::string *m_errorTitleId;	/* where a failed read's drive goes */
 };
 
 typedef char GamePsmAppReaderSize[sizeof(GamePsmAppReader) == 36 ? 1 : -1];

@@ -22,7 +22,7 @@ GamePsmAppInstaller::GamePsmAppInstaller(const GameInstallParam *param,
 					 GameJobProgress *progress, string *errorTitleId,
 					 float scale)
 	: GameInstaller(param, progress, errorTitleId, scale),
-	  m_reader(string(param->titleId), (int)errorTitleId), m_info(new LsdbAppInfo)
+	  m_reader(string(param->titleId), errorTitleId), m_info(new LsdbAppInfo)
 {
 	m_prepareFlag = true;
 	m_weights[0] = 0.1f;
