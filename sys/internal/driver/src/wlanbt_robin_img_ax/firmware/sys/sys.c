@@ -74,7 +74,7 @@ uint32_t sysEventPolicyInitialized __attribute__((section(".itcm.rw"))) = 0;
 uint32_t sysForceEventDispatch __attribute__((section(".itcm.rw"))) = 1;
 
 /* Arms the fatal line: indirect registers 0 and 1 (0x000003aa). */
-static void sysFatalIrqArm(void)
+static __attribute__((noinline)) void sysFatalIrqArm(void)
 {
 	SOC_INDIRECT_INDEX = SOC_INDIRECT_WRITE | 0;
 	SOC_INDIRECT_DATA = 0xff000007;
@@ -104,8 +104,9 @@ int sysFatalHandler(void)
 	}
 
 	while (sysFatalDumpAck == 0)
-		for (; i < 300; i++)
-			;
+		do
+			i++;
+		while (i < 300);
 
 	SOC_INDIRECT_INDEX = SOC_INDIRECT_WRITE | 15;
 	SOC_INDIRECT_DATA = 0xcff;
@@ -213,9 +214,10 @@ UINT sysTimerStart(uint32_t index, ULONG initial_ticks, ULONG reschedule_ticks)
 	timer = sysTimerTable[index];
 
 	if (slot->created) {
-		tx_timer_deactivate(timer);
-		tx_timer_change(timer, initial_ticks, reschedule_ticks);
-		return tx_timer_activate(timer);
+		/* the table read again for each call, as Sony does */
+		tx_timer_deactivate(sysTimerTable[index]);
+		tx_timer_change(sysTimerTable[index], initial_ticks, reschedule_ticks);
+		return tx_timer_activate(sysTimerTable[index]);
 	}
 
 	status = tx_timer_create(timer, NULL,
@@ -361,11 +363,11 @@ int irq30Handler(int line, uint32_t pending)
 /* Init table entry (0x000006ba): installs and unmasks every line. */
 int sysIrqEnableAll(void)
 {
-	struct SysIrqLine *entry;
+	int i;
 
-	for (entry = sysIrqLineTable; entry->handler != NULL; entry++) {
-		sysIrqRegister(entry->line, entry->handler);
-		SOC_IRQ_ENABLE_SET = BIT(entry->line);
+	for (i = 0; sysIrqLineTable[i].handler != NULL; i++) {
+		sysIrqRegister(sysIrqLineTable[i].line, sysIrqLineTable[i].handler);
+		SOC_IRQ_ENABLE_SET = BIT(sysIrqLineTable[i].line);
 	}
 
 	sysIrqRegister(SOC_IRQ_LINE_FATAL, (SysIrqHandler)sysFatalHandler);
@@ -654,17 +656,17 @@ int sysEventPathIsEnabled(uint32_t path)
 	if (!macGetEventPolicy(&policy))
 		return path == 0;
 	if (path == 0)
-		return (policy.flags & MAC_EVENT_PRIMARY_FLAGS) ==
-			MAC_EVENT_PRIMARY_FLAGS && (policy.pathStates & 0xf) == 1;
+		return (policy.flags & MAC_EVENT_PRIMARY_PRESENT) && (policy.flags & MAC_EVENT_PRIMARY_ENABLED) &&
+		       (policy.pathStates & 0xf) == 1;
 	if (path == 1)
-		return (policy.flags & MAC_EVENT_SECONDARY_FLAGS) ==
-			MAC_EVENT_SECONDARY_FLAGS && (policy.pathStates >> 4) == 1;
+		return (policy.flags & MAC_EVENT_SECONDARY_PRESENT) && (policy.flags & MAC_EVENT_SECONDARY_ENABLED) &&
+		       (policy.pathStates >> 4) == 1;
 	return 0;
 }
 
 uint32_t sysApplyEventPolicy(uint32_t path, struct MacEventPolicy policy)
 {
-	int enabled;
+	uint8_t enabled;	/* Sony passes it as a byte */
 
 	if ((policy.flags & 4) && !sysEventPolicyInitialized) {
 		macApplyEventRegisterDefaults((volatile void *)SOC_MAC_REGISTER_BASE);
@@ -750,6 +752,10 @@ int sysInitializeEventPath(uint32_t path)
 {
 	struct MacEventPathConfiguration configuration;
 	struct MacEventPolicy policy;
+	int toggleEnabled = 0;
+	int toggleActive = 0;
+	uint32_t pathStates = 0;
+	int mode = 0;
 
 	policy.mode = 0;
 	if (path == 0) {
@@ -768,7 +774,8 @@ int sysInitializeEventPath(uint32_t path)
 	/* The original only initializes the remaining fields for path zero. */
 	sysApplyEventPolicy(path, policy);
 	sysSetEventPathPattern(path, policy);
-	sysConfigureEventPath(&configuration, 0, 0, 0, 0);
+	sysConfigureEventPath(&configuration, toggleEnabled, toggleActive, pathStates,
+			      mode & 0xf);
 	return 1;
 }
 

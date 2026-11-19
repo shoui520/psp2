@@ -326,7 +326,7 @@ uint8_t *btLmpLcComputeState(void)
 	return (uint8_t *)&btPower;
 }
 
-int btLmpLcQueryState(uint8_t a1)
+int8_t btLmpLcQueryState(uint8_t a1)
 {
 	return -a1;
 }
@@ -334,9 +334,10 @@ int btLmpLcQueryState(uint8_t a1)
 /* The device's record of the level at the index. */
 static inline uint16_t *btPowerFillValue(int link, int index)
 {
-	struct BtPowerValue *value = &btLinkValues[link];
+	struct BtPowerValue *value;
 
-	value->index = btPowerIndexRegister[index];
+	btLinkValues[link].index = btPowerIndexRegister[index];
+	value = &btLinkValues[link];	/* Sony reads the pointer again after the first store */
 	value->range = (unsigned int)index <= btPowerLevelHeader + 48u ? 0 : 3;
 	value->record = btPowerIndexRecord[index];
 	value->mode = btPower.entry + btPowerLevelHeader + 47 >= index ? 6 : 7;

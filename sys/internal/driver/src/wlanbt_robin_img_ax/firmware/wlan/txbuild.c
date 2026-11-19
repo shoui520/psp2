@@ -65,11 +65,13 @@ int wlanTxEncryptWepFragment(uint8_t *fragment, uint32_t length, const WlanWepHo
 	const WlanWepHostKey *key = &config->keys.key[keyIndex];
 	unsigned int size = 8;
 	unsigned int is104 = 0;
+	uint32_t timer;
 	unsigned int i;
 
-	seed[0] = SOC_MAC_TIMER >> 16;
-	seed[1] = SOC_MAC_TIMER >> 8;
-	seed[2] = SOC_MAC_TIMER;
+	timer = SOC_MAC_TIMER;
+	seed[0] = timer >> 16;
+	seed[1] = timer >> 8;
+	seed[2] = timer;
 	if (key->isWep104) {
 		size = 16;
 		is104 = 1;
@@ -180,7 +182,6 @@ unsigned int wlanTxFragmentCount(uint16_t *threshold, int qos, unsigned int ciph
 	unsigned int size;
 	unsigned int first;
 	unsigned int count;
-	unsigned int rest;
 
 	if (qos != 0)
 		*threshold -= 30;
@@ -190,12 +191,10 @@ unsigned int wlanTxFragmentCount(uint16_t *threshold, int qos, unsigned int ciph
 	*threshold = size;
 	count = 1;
 	first = size - snapLength;
-	if (first < payloadLength) {
-		rest = payloadLength - first;
-		count = rest / size + 1;
-		if (rest % size != 0)
-			++count;
-	}
+	if (first < payloadLength)
+		count = (payloadLength - first) / size + 1;
+	if (first < payloadLength && (payloadLength - first) % size != 0)
+		count++;
 	return count;
 }
 
@@ -233,8 +232,8 @@ void wlanTxFragmentLayout(unsigned int count, struct WlanTxFragment *fragments, 
 			size = *remaining;
 		fragments[i].length = size;
 		*payload += size;
-		lengths[i] += size;
-		*cursor = 4 * ((size + *cursor + 3) >> 2);
+		lengths[i] += fragments[i].length;
+		*cursor = 4 * ((fragments[i].length + *cursor + 3) >> 2);
 		*cursor += overhead->trailer;
 		lengths[i] += overhead->trailer;
 		*remaining -= fragments[i].length;
@@ -297,11 +296,11 @@ uint8_t *wlanTxBuildFrame(struct MacTxFrameBuild *build, OsaBuffer *buffer, int 
 	struct WlanTxCipherOverhead overhead;
 	struct WlanTxFragmentHeader header;
 	uint8_t snap[8] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	const uint8_t *payload = build->payload;
 	uint8_t *data = (uint8_t *)buffer + buffer->dataOffset;
 	struct WlanConnection *connection = buffer->context;
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
 	struct WlanMacTxRequest *request = TX_DATA_REQUEST(build->data);
-	const uint8_t *payload = build->payload;
 	uint8_t *frame;
 	uintptr_t cursor;
 	uint8_t *result = NULL;

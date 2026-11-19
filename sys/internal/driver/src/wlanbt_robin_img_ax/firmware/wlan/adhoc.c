@@ -110,7 +110,8 @@ uint8_t *wlanSetBeaconPeriod(WlanBeaconDescriptor *const *beacon, uint16_t perio
 {
 	uint8_t *body = (*beacon)->frame->body;
 
-	*(uint16_t *)(body + 8) = period;
+	body[8] = period;
+	body[9] = period >> 8;
 	return body;
 }
 
@@ -120,8 +121,10 @@ uint8_t *wlanSetAtimWindow(WlanBeaconDescriptor *const *beacon, uint16_t window)
 	uint8_t *ie;
 
 	ie = wlanFindIe((*beacon)->frame, IE_IBSS_PARAMETER, WLAN_FRAME_BEACON, NULL, 0);
-	if (ie)
-		*(uint16_t *)(ie + 2) = window;
+	if (ie) {
+		ie[2] = window;
+		ie[3] = window >> 8;
+	}
 	return ie;
 }
 

@@ -495,7 +495,7 @@ extern uint32_t wlanPsWakeAdvance;						/* 0x56260 */
 extern uint16_t sleepHostWakeCount;						/* 0x5622e */
 extern uint32_t sleepHostWakeMargin;						/* 0x56234 */
 extern uint32_t sleepHostClockParameter;					/* 0x5623c */
-extern uint16_t wlanPsAltModeActive;						/* 0x562a0 */
+extern volatile uint16_t wlanPsAltModeActive;						/* 0x562a0 */
 extern uint16_t wlanPsAltModeRequest;						/* 0x562a2 */
 
 

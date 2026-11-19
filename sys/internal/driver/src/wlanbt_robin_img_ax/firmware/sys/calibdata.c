@@ -33,7 +33,7 @@ uint8_t wlanCalibBlock[17] __attribute__((section(".itcm.bss")));		/* 0x5ee95 */
 
 /* Transmit power record of each band index, and a bit per record that was loaded. */
 struct {
-	uint8_t record[WLAN_CALIB_BANDS][sizeof(struct WlanTxPowerRecord)];
+	uint8_t record[WLAN_CALIB_BANDS][WLAN_TX_POWER_RECORD_BYTES];
 	uint8_t valid;
 } wlanCalibPower __attribute__((section(".itcm.bss")));			/* 0x5eea6 */
 
@@ -178,7 +178,7 @@ int wlanCalibPowerSet(unsigned int index, const struct WlanTxPowerRecord *record
 	if (index >= WLAN_CALIB_BANDS)
 		return 0;
 	wlanCalibPower.valid |= 1 << index;
-	__aeabi_memcpy(wlanCalibPower.record[index], record, sizeof(struct WlanTxPowerRecord));
+	__aeabi_memcpy(wlanCalibPower.record[index], record, WLAN_TX_POWER_RECORD_BYTES);
 	return 1;
 }
 
@@ -186,7 +186,7 @@ int wlanCalibPowerGet(unsigned int index, struct WlanTxPowerRecord *record)
 {
 	if (index >= WLAN_CALIB_BANDS || !(wlanCalibPower.valid & (1 << index)))
 		return 0;
-	__aeabi_memcpy(record, wlanCalibPower.record[index], sizeof(struct WlanTxPowerRecord));
+	__aeabi_memcpy(record, wlanCalibPower.record[index], WLAN_TX_POWER_RECORD_BYTES);
 	return 1;
 }
 

@@ -85,14 +85,14 @@ typedef struct __attribute__((packed)) WlanHtCapabilityIe {
 } WlanHtCapabilityIe;
 
 /* one access category of the WMM parameter element */
-typedef struct __attribute__((packed)) WlanWmmAcParameter {
+typedef struct WlanWmmAcParameter {
 	uint8_t aciAifsn;		/* AIFSN 0-3, ACM 4, ACI 5-6 */
 	uint8_t ecw;			/* ECWmin 0-3, ECWmax 4-7 */
 	uint16_t txopLimit;
 } WlanWmmAcParameter;
 
 /* WMM Parameter element (WMM 2.2.2), from its id byte */
-typedef struct __attribute__((packed)) WlanWmmParameterIe {
+typedef struct WlanWmmParameterIe {
 	uint8_t id;
 	uint8_t length;
 	uint8_t oui[3];

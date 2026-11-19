@@ -45,7 +45,7 @@ int wlanTxSetProtection(struct WlanMacTxRequest *request, int protect, int prefe
 {
 	uint32_t flags;
 
-	if (((request->rate << 22) >> 25) <= 3)
+	if ((((unsigned int)request->rate << 22) >> 25) <= 3)
 		return 0;
 	if (protect) {
 		flags = __aeabi_uread4(request->flags);
@@ -190,50 +190,32 @@ int wlanRxReplayCheck(const uint8_t *iv, const cipher_key_t *key, uint16_t *low,
 }
 
 /* Keeps only frames sent to the distribution system; drops the others. */
-int wlanRxFilterToDs(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame)
+void wlanRxFilterToDs(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame)
 {
-	unsigned int flags = frame->frameControl[1];
-
-	if (!enabled || (flags & IEEE80211_FC1_FROMDS) || !(flags & IEEE80211_FC1_TODS)) {
+	if (!enabled || (frame->frameControl[1] & IEEE80211_FC1_FROMDS) ||
+	    !(frame->frameControl[1] & IEEE80211_FC1_TODS))
 		buffer->length = 0;
-		return 0;
-	}
-	return flags & IEEE80211_FC1_TODS;
 }
 
 /* IBSS filter: neither DS bit set and the BSSID (address 3) must match. */
-int wlanRxFilterIbss(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
-		     const uint8_t *bssid)
+void wlanRxFilterIbss(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
+		      const uint8_t *bssid)
 {
-	unsigned int flags = frame->frameControl[1];
-	unsigned int i;
-
-	if (enabled && !(flags & IEEE80211_FC1_FROMDS) && !(flags & IEEE80211_FC1_TODS)) {
-		for (i = 0; i < 6; i++) {
-			if (frame->address3[i] != bssid[i])
-				goto drop;
-		}
-		return frame->address3[5];
-	}
-drop:
-	buffer->length = 0;
-	return 0;
+	if (!enabled || (frame->frameControl[1] & IEEE80211_FC1_FROMDS) ||
+	    (frame->frameControl[1] & IEEE80211_FC1_TODS) ||
+	    frame->address3[0] != bssid[0] || frame->address3[1] != bssid[1] ||
+	    frame->address3[2] != bssid[2] || frame->address3[3] != bssid[3] ||
+	    frame->address3[4] != bssid[4] || frame->address3[5] != bssid[5])
+		buffer->length = 0;
 }
 
 /* Station filter: from the distribution system with the transmitter equal to the BSSID. */
-int wlanRxFilterStation(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
-			const uint8_t *bssid)
+void wlanRxFilterStation(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
+			 const uint8_t *bssid)
 {
-	unsigned int flags = frame->frameControl[1];
-	int result;
-
-	if (enabled && (flags & IEEE80211_FC1_FROMDS) && !(flags & IEEE80211_FC1_TODS)) {
-		result = memcmp(frame->address2, bssid, 6);
-		if (result == 0)
-			return result;
-	}
-	buffer->length = 0;
-	return 0;
+	if (!enabled || !(frame->frameControl[1] & IEEE80211_FC1_FROMDS) ||
+	    (frame->frameControl[1] & IEEE80211_FC1_TODS) || memcmp(frame->address2, bssid, 6) != 0)
+		buffer->length = 0;
 }
 
 /* Null frames are never protected; returns 1 when the frame is not protected, 0 when it is. */
@@ -302,7 +284,7 @@ void wlanRxDecodeRate(const struct WlanRxStatus *status, uint8_t *htInfo, uint8_
 
 	if (phyMode == 2 || phyMode == 3) {
 		info = 1;
-		if (status->flags & 0x80)
+		if (__aeabi_uread4(&status->flags) & 0x80)	/* Sony reads the word */
 			info = 5;
 		if (status->mcs & 0x80)
 			info |= 2;

@@ -68,9 +68,12 @@ struct WlanTxPowerRecord {
 	uint8_t channelList[6];		/* the channels the data was measured on */
 	uint8_t rangeHigh[4];
 	uint8_t rangeLow[4];
-};
+} __attribute__((aligned(4)));	/* Sony clears a record's 24 bytes and copies its words */
 
-_Static_assert(sizeof(struct WlanTxPowerRecord) == 22, "transmit power record");
+/* The bytes of a record the calibration table keeps (wlanCalibPowerSet()). */
+#define WLAN_TX_POWER_RECORD_BYTES	22
+
+_Static_assert(sizeof(struct WlanTxPowerRecord) == 24, "transmit power record");
 
 /* The power levels of a transmit power lookup. */
 struct WlanTxPowerLevels {

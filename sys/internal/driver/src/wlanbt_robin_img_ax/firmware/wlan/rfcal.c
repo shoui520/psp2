@@ -32,6 +32,7 @@ extern uint8_t wlanPrimaryEvents;			/* 0x04008828, bit 5: no rate below index 5 
 #define SERIAL_CONFIGURATION	REG16(0x90000804)
 #define SERIAL_BUSY		REG8(0x9000081c)	/* bit 0 */
 #define SERIAL_DATA		REG16(0x90000824)
+#define SERIAL_DATA_LOW		REG8(0x90000824)	/* a read takes the byte */
 #define SERIAL_ADDRESS		REG16(0x90000828)
 #define SERIAL_MODE		REG16(0x90000830)
 #define SERIAL_BUSY_BIT		0x01
@@ -282,7 +283,7 @@ static void macTxNotifyComputePacket(uint8_t *result)
 {
 	uint8_t rf258, rf341, rf342, rf344, rf433;
 	unsigned int bbp971;
-	uint8_t value;
+	unsigned int value;
 
 	rf258 = rfBusRead(258);
 	rf341 = rfBusRead(341);
@@ -370,7 +371,7 @@ void macTxNotifySyncPacket(uint16_t reg, uint16_t value)
 	SERIAL_DATA = value;
 }
 
-void macTxNotifyApplyPacket(uint16_t reg, uint16_t value)
+void macTxNotifyApplyPacket(uint16_t reg, unsigned int value)
 {
 	while (SERIAL_BUSY & SERIAL_BUSY_BIT)
 		;
@@ -383,7 +384,7 @@ uint8_t macTxNotifyResolvePacket(uint16_t reg)
 	while (SERIAL_BUSY & SERIAL_BUSY_BIT)
 		;
 	SERIAL_ADDRESS = reg;
-	return SERIAL_DATA;
+	return SERIAL_DATA_LOW;
 }
 
 /* Puts a two-bit mode in bits 6 and 7 of register 7. */
@@ -523,7 +524,7 @@ void macTxNotifySetupPacket(void)
 }
 
 /* The value for a level (its top bits select the entry) and a scale. */
-unsigned int macTxNotifyClearPacket(unsigned int level, int scale)
+unsigned int macTxNotifyClearPacket(unsigned int level, unsigned int scale)
 {
 	return (20 * wlanRfCalibration.levelTable[level >> 6] + 6165 * scale) >> 7;
 }

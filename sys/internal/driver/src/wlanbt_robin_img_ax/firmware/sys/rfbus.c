@@ -101,7 +101,7 @@ uint8_t rfBusRead(uint16_t reg)
 	return RFBUS_DATA;
 }
 
-void rfBusWrite(uint16_t reg, uint8_t value)
+void rfBusWrite(uint16_t reg, unsigned int value)
 {
 	if (!rfBusEnabled)
 		return;

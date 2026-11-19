@@ -86,7 +86,8 @@ void btRfTestMessageSend(uint8_t channelSelect)
 /* Sets the link's power index from the power level; EDR types start 7 higher. */
 void btRfTestPowerSet(void)
 {
-	unsigned int bit = 1u << btRfTest.linkId;
+	unsigned int link = btRfTest.linkId;
+	unsigned int bit = 1u << link;
 	unsigned int index;
 	int level;
 
@@ -104,7 +105,7 @@ void btRfTestPowerSet(void)
 	index = (uint8_t)(index + btPowerLevelHeader + 2 * level + 40);
 	if (index >= 67)
 		index = 66;
-	btLmpLcSyncState(btRfTest.linkId, index);
+	btLmpLcSyncState(link, index);
 }
 
 /* Sets the channels the test sends on. */
@@ -146,6 +147,7 @@ void btRfTestLinkSetup(void)
 	uint8_t record[12];
 	uint8_t *slot;
 	uint8_t *event;
+	unsigned int offset;
 
 	btLinkHostSlotAllocHook(&btRfTest.hostSlot);
 	slot = romHctHostSlot[btRfTest.hostSlot];
@@ -157,9 +159,10 @@ void btRfTestLinkSetup(void)
 	btLdaRomParseState(clock);
 	btLdaRomBuildState(record, clock);
 	btLdaRomConfigureState(btVendorP2pRecords + 76 + 12 * btRfTest.group, record, sizeof(record));
-	event = btLinkEvent + 32 * btRfTest.group;
-	LINK_REG(event, 0) = 0;
-	LINK_REG(event, 2) = 0;
+	offset = 32 * btRfTest.group;
+	LINK_REG(btLinkEvent, offset) = 0;
+	LINK_REG(btLinkEvent, offset + 2) = 0;
+	event = btLinkEvent + offset;
 	LINK_REG(event, 14) = 0;
 	LINK_REG(event, 4) = 10;
 }
@@ -194,7 +197,7 @@ void btRfTestSessionsReset(void)
 	int i;
 
 	btLtsRomPrepareState();
-	btLinkModeControl->header = 0;
+	btLinkModeControl->current = 0;
 	btLinkModeControl->sessions = 1;
 	for (i = 0; i < BT_RF_TEST_SESSIONS_MAX; i++) {
 		btLinkSessions[i].active = 1;
@@ -340,7 +343,7 @@ void btRfTestSessionsSet(void)
 	int i;
 
 	btLtsRomPrepareState();
-	btLinkModeControl->header = 0;
+	btLinkModeControl->current = 0;
 	btLinkModeControl->sessions = btRfTestParams.sessionCount;
 	first = (btRfTest.channelMode << 8) + 19;
 	other = (btRfTest.channelMode << 8) + 17;

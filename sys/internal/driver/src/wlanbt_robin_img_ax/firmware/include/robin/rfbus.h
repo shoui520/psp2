@@ -18,7 +18,7 @@ void rfBusUnlock(void);
 void rfBusAcquire(void);
 void rfBusRelease(void);
 uint8_t rfBusRead(uint16_t reg);
-void rfBusWrite(uint16_t reg, uint8_t value);
+void rfBusWrite(uint16_t reg, unsigned int value);
 void rfBusWriteTable(const struct PhyRegisterEntry *table);
 void rfBusSetBits(uint16_t reg, uint8_t mask);
 void rfBusClearBits(uint16_t reg, uint8_t mask);

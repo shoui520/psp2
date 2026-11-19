@@ -98,8 +98,12 @@ static inline __attribute__((always_inline)) void wlanApPsUpdateQuota(unsigned i
 }
 
 /* 0x12918 */
-int wlanApPsHasBuffered(const struct WlanConnectionRole *role)
+/* Sony passes the role's power-save part, from its listen interval on. */
+int wlanApPsHasBuffered(const uint32_t *listenInterval)
 {
+	const struct WlanConnectionRole *role = (const struct WlanConnectionRole *)
+		((const uint8_t *)listenInterval - offsetof(struct WlanConnectionRole, listenInterval));
+
 	return role->psQueue.count != 0 ||
 	       ((~role->uapsd.deliveryEnabled & 0x0f) == 0 && role->uapsdQueue.count != 0);
 }
@@ -326,7 +330,7 @@ int wlanApPsSendNext(struct WlanConnection *connection, struct WlanApPsQueue *qu
 			result = wlanTxResubmit(buffer);
 		else
 			result = wlanTxReleaseFrame(buffer);
-		if (!wlanApPsHasBuffered(role))
+		if (!wlanApPsHasBuffered(&role->listenInterval))
 			macMgmtInspectPacket(connection, connection->associationId, 0);
 	}
 	if (result == 0)

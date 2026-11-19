@@ -46,12 +46,17 @@ struct WlanTxStatus;
 #define TLV_TYPE_BCN_SNR_HIGH		0x0129
 #define TLV_TYPE_PRE_BEACON_LOST	0x0149
 
-/* A threshold TLV: the value and how often the event may repeat. */
+/* A threshold: the value and how often the event may repeat. */
+struct WlanThreshold {
+	uint8_t value;
+	uint8_t frequency;
+};
+
+/* A threshold TLV, as the host sends it. */
 struct __attribute__((packed)) WlanThresholdTlv {
 	uint16_t type;
 	uint16_t length;
-	uint8_t value;
-	uint8_t frequency;
+	struct WlanThreshold threshold;
 };
 
 /* The link quality TLV: thresholds, each with the periods it must hold for. */
@@ -130,7 +135,7 @@ void wlanSubscribeEventsConfigure(struct WlanConnection *connection, const uint8
 				  unsigned int length, unsigned int action);
 int wlanSubscribeEventsGet(const struct WlanConnection *connection, uint8_t *response);
 int wlanSubscribeThresholdMet(struct WlanConnection *connection, int clear,
-			      const struct WlanThresholdTlv *threshold, uint8_t *count,
+			      const struct WlanThreshold *threshold, uint8_t *count,
 			      unsigned int bit, unsigned int slot);
 void wlanSubscribeCheckData(struct WlanConnection *connection);
 void wlanSubscribeCheckBeacon(struct WlanConnection *connection);

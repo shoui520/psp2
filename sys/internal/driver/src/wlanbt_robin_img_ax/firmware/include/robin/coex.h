@@ -209,7 +209,7 @@ void wlanPsSetPollEnabled(uint8_t mode);		/* 0x2eab0 */
 int wlanPsBtHoldWanted(void);				/* 0x2ea18 */
 int wlanPsSleepBlocked(void);				/* 0x2ea5c */
 int wlanPsCoexWindowEnd(void);				/* 0x2ea96 */
-int wlanPsBtShareAllowed(void);				/* 0x2eab6 */
+uint8_t wlanPsBtShareAllowed(void);			/* 0x2eab6 */
 int wlanPsIdle(void);					/* 0x2eaf6 */
 int wlanPsTriggerWanted(void);				/* 0x2ea82 */
 void wlanPsTriggerSent(void);				/* 0x2eade */

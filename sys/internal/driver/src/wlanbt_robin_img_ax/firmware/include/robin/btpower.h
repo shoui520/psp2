@@ -117,7 +117,7 @@ struct BtPowerHooks {
 	uint8_t *(*profile)(void);			/* 0x400ebc4 */
 	uint8_t *(*event)(void);			/* 0x400ebc8 */
 	int (*command)(uint32_t a1, uint32_t a2);	/* 0x400ebcc */
-	int (*payload)(uint8_t a1);			/* 0x400ebd0 */
+	int8_t (*payload)(uint8_t a1);			/* 0x400ebd0 */
 	int (*reg)(uint8_t a1);				/* 0x400ebd4 */
 	int (*record)(void);				/* 0x400ebd8 */
 	int (*state)(uint8_t *a1);			/* 0x400ebdc */
@@ -140,7 +140,7 @@ void btLmpLcDispatchState(uint32_t a1, uint32_t a2);		/* 0x4268c */
 int btLmpLcParseState(uint32_t a1, uint32_t a2);		/* 0x4269a */
 uint8_t *btLmpLcBuildState(void);				/* 0x426fc */
 uint8_t *btLmpLcComputeState(void);				/* 0x4270a */
-int btLmpLcQueryState(uint8_t a1);				/* 0x42718 */
+int8_t btLmpLcQueryState(uint8_t a1);				/* 0x42718 */
 int btLmpLcResetState(int link);				/* 0x42720 */
 uint16_t *btLmpLcSyncState(int link, int index);		/* 0x42782 */
 uint16_t *btLmpLcApplyState(int link, uint8_t channel);		/* 0x427da */

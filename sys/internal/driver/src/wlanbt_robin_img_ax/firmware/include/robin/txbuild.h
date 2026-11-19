@@ -26,8 +26,9 @@ struct WlanTxCipherOverhead {
 	uint8_t trailer;
 };
 
-/* Where one fragment's payload comes from and goes to (the buffer is made over in place). */
-struct WlanTxFragment {
+/* Where one fragment's payload comes from and goes to (the buffer is made over in place);
+ * packed: Sony reads and writes its fields with __aeabi_uread4 and __aeabi_uwrite4. */
+struct __attribute__((packed)) WlanTxFragment {
 	uint32_t length;
 	const uint8_t *source;
 	uint8_t *destination;

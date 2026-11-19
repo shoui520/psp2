@@ -29,7 +29,7 @@ struct WlanSubscribeEvents wlanSubscribeEventsDefault __attribute__((section(".d
 	.rssiLow = WLAN_THRESHOLD(TLV_TYPE_RSSI_LOW),
 	.snrLow = WLAN_THRESHOLD(TLV_TYPE_SNR_LOW),
 	.failCount = WLAN_THRESHOLD(TLV_TYPE_FAILCOUNT),
-	.beaconMissed = { .type = TLV_TYPE_BCNMISS, .length = 2, .value = 60 },
+	.beaconMissed = { .type = TLV_TYPE_BCNMISS, .length = 2, .threshold.value = 60 },
 	.rssiHigh = WLAN_THRESHOLD(TLV_TYPE_RSSI_HIGH),
 	.snrHigh = WLAN_THRESHOLD(TLV_TYPE_SNR_HIGH),
 	.beaconRssiLow = WLAN_THRESHOLD(TLV_TYPE_BCN_RSSI_LOW),
@@ -37,7 +37,7 @@ struct WlanSubscribeEvents wlanSubscribeEventsDefault __attribute__((section(".d
 	.beaconRssiHigh = WLAN_THRESHOLD(TLV_TYPE_BCN_RSSI_HIGH),
 	.beaconSnrHigh = WLAN_THRESHOLD(TLV_TYPE_BCN_SNR_HIGH),
 	.linkQuality = { .type = TLV_TYPE_LINK_QUALITY, .length = 16 },
-	.preBeaconLost = { .type = TLV_TYPE_PRE_BEACON_LOST, .length = 2, .value = 50 },
+	.preBeaconLost = { .type = TLV_TYPE_PRE_BEACON_LOST, .length = 2, .threshold.value = 50 },
 };
 
 void wlanSubscribeEventsInit(struct WlanSubscribeEvents *events)
@@ -54,7 +54,7 @@ void wlanSubscribeEventsInit(struct WlanSubscribeEvents *events)
 	events->failCount.length = 2;
 	events->beaconMissed.type = TLV_TYPE_BCNMISS;
 	events->beaconMissed.length = 2;
-	events->beaconMissed.value = 60;
+	events->beaconMissed.threshold.value = 60;
 	events->rssiHigh.type = TLV_TYPE_RSSI_HIGH;
 	events->rssiHigh.length = 2;
 	events->snrHigh.type = TLV_TYPE_SNR_HIGH;
@@ -71,7 +71,7 @@ void wlanSubscribeEventsInit(struct WlanSubscribeEvents *events)
 	events->linkQuality.length = 16;
 	events->preBeaconLost.type = TLV_TYPE_PRE_BEACON_LOST;
 	events->preBeaconLost.length = 2;
-	events->preBeaconLost.value = 50;
+	events->preBeaconLost.threshold.value = 50;
 }
 
 /* Events met and not yet reported to the host. */
@@ -121,33 +121,33 @@ void wlanSubscribeEventsConfigure(struct WlanConnection *connection, const uint8
 		switch (LE16(tlv)) {
 		case TLV_TYPE_RSSI_LOW:
 			if (WANTED(BITMASK_RSSI_LOW))
-				used = wlanTlvParseThreshold(tlv, &events->rssiLow.value,
+				used = wlanTlvParseThreshold(tlv, &events->rssiLow.threshold.value,
 							     &events->rssiLowCount);
 			break;
 		case TLV_TYPE_SNR_LOW:
 			if (WANTED(BITMASK_SNR_LOW))
-				used = wlanTlvParseThreshold(tlv, &events->snrLow.value,
+				used = wlanTlvParseThreshold(tlv, &events->snrLow.threshold.value,
 							     &events->snrLowCount);
 			break;
 		case TLV_TYPE_FAILCOUNT:
 			if (WANTED(BITMASK_FAILCOUNT))
-				used = wlanTlvParseThreshold(tlv, &events->failCount.value,
+				used = wlanTlvParseThreshold(tlv, &events->failCount.threshold.value,
 							     &events->failCountCount);
 			break;
 		case TLV_TYPE_BCNMISS:
 			if (WANTED(BITMASK_BCNMISS)) {
-				used = wlanTlvParseThreshold(tlv, &events->beaconMissed.value, NULL);
-				connection->beaconMissThreshold = events->beaconMissed.value;
+				used = wlanTlvParseThreshold(tlv, &events->beaconMissed.threshold.value, NULL);
+				connection->beaconMissThreshold = events->beaconMissed.threshold.value;
 			}
 			break;
 		case TLV_TYPE_RSSI_HIGH:
 			if (WANTED(BITMASK_RSSI_HIGH))
-				used = wlanTlvParseThreshold(tlv, &events->rssiHigh.value,
+				used = wlanTlvParseThreshold(tlv, &events->rssiHigh.threshold.value,
 							     &events->rssiHighCount);
 			break;
 		case TLV_TYPE_SNR_HIGH:
 			if (WANTED(BITMASK_SNR_HIGH))
-				used = wlanTlvParseThreshold(tlv, &events->snrHigh.value,
+				used = wlanTlvParseThreshold(tlv, &events->snrHigh.threshold.value,
 							     &events->snrHighCount);
 			break;
 		case TLV_TYPE_LINK_QUALITY:
@@ -156,28 +156,28 @@ void wlanSubscribeEventsConfigure(struct WlanConnection *connection, const uint8
 			break;
 		case TLV_TYPE_BCN_RSSI_LOW:
 			if (WANTED(BITMASK_BCN_RSSI_LOW))
-				used = wlanTlvParseThreshold(tlv, &events->beaconRssiLow.value,
+				used = wlanTlvParseThreshold(tlv, &events->beaconRssiLow.threshold.value,
 							     &events->beaconRssiLowCount);
 			break;
 		case TLV_TYPE_BCN_SNR_LOW:
 			if (WANTED(BITMASK_BCN_SNR_LOW))
-				used = wlanTlvParseThreshold(tlv, &events->beaconSnrLow.value,
+				used = wlanTlvParseThreshold(tlv, &events->beaconSnrLow.threshold.value,
 							     &events->beaconSnrLowCount);
 			break;
 		case TLV_TYPE_BCN_RSSI_HIGH:
 			if (WANTED(BITMASK_BCN_RSSI_HIGH))
-				used = wlanTlvParseThreshold(tlv, &events->beaconRssiHigh.value,
+				used = wlanTlvParseThreshold(tlv, &events->beaconRssiHigh.threshold.value,
 							     &events->beaconRssiHighCount);
 			break;
 		case TLV_TYPE_BCN_SNR_HIGH:
 			if (WANTED(BITMASK_BCN_SNR_HIGH))
-				used = wlanTlvParseThreshold(tlv, &events->beaconSnrHigh.value,
+				used = wlanTlvParseThreshold(tlv, &events->beaconSnrHigh.threshold.value,
 							     &events->beaconSnrHighCount);
 			break;
 		case TLV_TYPE_PRE_BEACON_LOST:
 			if (WANTED(BITMASK_PRE_BEACON_LOST)) {
-				used = wlanTlvParseThreshold(tlv, &events->preBeaconLost.value, NULL);
-				connection->preBeaconLostThreshold = events->preBeaconLost.value;
+				used = wlanTlvParseThreshold(tlv, &events->preBeaconLost.threshold.value, NULL);
+				connection->preBeaconLostThreshold = events->preBeaconLost.threshold.value;
 			}
 			break;
 		default:
@@ -209,7 +209,7 @@ int wlanSubscribeEventsGet(const struct WlanConnection *connection, uint8_t *res
  * is reported once and unsubscribed.
  */
 int wlanSubscribeThresholdMet(struct WlanConnection *connection, int clear,
-			      const struct WlanThresholdTlv *threshold, uint8_t *count,
+			      const struct WlanThreshold *threshold, uint8_t *count,
 			      unsigned int bit, unsigned int slot)
 {
 	struct WlanSubscribeEvents *events;
@@ -250,20 +250,20 @@ void wlanSubscribeCheckData(struct WlanConnection *connection)
 		if (events == NULL)
 			continue;
 		if ((events->events & BITMASK_SNR_LOW) &&
-		    wlanSubscribeThresholdMet(connection, events->snrLow.value <= snr, &events->snrLow,
+		    wlanSubscribeThresholdMet(connection, events->snrLow.threshold.value <= snr, &events->snrLow.threshold,
 					      &events->snrLowCount, BITMASK_SNR_LOW, slot))
 			met = BITMASK_SNR_LOW;
 		if ((events->events & BITMASK_SNR_HIGH) &&
-		    wlanSubscribeThresholdMet(connection, events->snrHigh.value >= snr, &events->snrHigh,
+		    wlanSubscribeThresholdMet(connection, events->snrHigh.threshold.value >= snr, &events->snrHigh.threshold,
 					      &events->snrHighCount, BITMASK_SNR_HIGH, slot))
 			met |= BITMASK_SNR_HIGH;
 		if ((events->events & BITMASK_RSSI_LOW) &&
-		    wlanSubscribeThresholdMet(connection, -events->rssiLow.value <= rssi, &events->rssiLow,
+		    wlanSubscribeThresholdMet(connection, -events->rssiLow.threshold.value <= rssi, &events->rssiLow.threshold,
 					      &events->rssiLowCount, BITMASK_RSSI_LOW, slot))
 			met |= BITMASK_RSSI_LOW;
 		if ((events->events & BITMASK_RSSI_HIGH) &&
-		    wlanSubscribeThresholdMet(connection, -events->rssiHigh.value >= rssi,
-					      &events->rssiHigh, &events->rssiHighCount,
+		    wlanSubscribeThresholdMet(connection, -events->rssiHigh.threshold.value >= rssi,
+					      &events->rssiHigh.threshold, &events->rssiHighCount,
 					      BITMASK_RSSI_HIGH, slot))
 			met |= BITMASK_RSSI_HIGH;
 		if (met != 0)
@@ -293,23 +293,23 @@ void wlanSubscribeCheckBeacon(struct WlanConnection *connection)
 		if ((wanted & (BITMASK_BCN_RSSI_LOW | BITMASK_BCN_RSSI_HIGH)) && rssi == WLAN_SIGNAL_UNKNOWN)
 			rssi = (int16_t)wlanBeaconRssi(connection);
 		if ((wanted & BITMASK_BCN_SNR_LOW) &&
-		    wlanSubscribeThresholdMet(connection, events->beaconSnrLow.value <= snr,
-					      &events->beaconSnrLow, &events->beaconSnrLowCount,
+		    wlanSubscribeThresholdMet(connection, events->beaconSnrLow.threshold.value <= snr,
+					      &events->beaconSnrLow.threshold, &events->beaconSnrLowCount,
 					      BITMASK_BCN_SNR_LOW, slot))
 			met = BITMASK_BCN_SNR_LOW;
 		if ((wanted & BITMASK_BCN_SNR_HIGH) &&
-		    wlanSubscribeThresholdMet(connection, events->beaconSnrHigh.value >= snr,
-					      &events->beaconSnrHigh, &events->beaconSnrHighCount,
+		    wlanSubscribeThresholdMet(connection, events->beaconSnrHigh.threshold.value >= snr,
+					      &events->beaconSnrHigh.threshold, &events->beaconSnrHighCount,
 					      BITMASK_BCN_SNR_HIGH, slot))
 			met |= BITMASK_BCN_SNR_HIGH;
 		if ((wanted & BITMASK_BCN_RSSI_LOW) &&
-		    wlanSubscribeThresholdMet(connection, -events->beaconRssiLow.value <= rssi,
-					      &events->beaconRssiLow, &events->beaconRssiLowCount,
+		    wlanSubscribeThresholdMet(connection, -events->beaconRssiLow.threshold.value <= rssi,
+					      &events->beaconRssiLow.threshold, &events->beaconRssiLowCount,
 					      BITMASK_BCN_RSSI_LOW, slot))
 			met |= BITMASK_BCN_RSSI_LOW;
 		if ((wanted & BITMASK_BCN_RSSI_HIGH) &&
-		    wlanSubscribeThresholdMet(connection, -events->beaconRssiHigh.value >= rssi,
-					      &events->beaconRssiHigh, &events->beaconRssiHighCount,
+		    wlanSubscribeThresholdMet(connection, -events->beaconRssiHigh.threshold.value >= rssi,
+					      &events->beaconRssiHigh.threshold, &events->beaconRssiHighCount,
 					      BITMASK_BCN_RSSI_HIGH, slot))
 			met |= BITMASK_BCN_RSSI_HIGH;
 		if (met != 0)
@@ -331,19 +331,19 @@ void wlanSubscribeCheckFailures(struct WlanConnection *connection, const struct 
 			continue;
 		if (status->result == 0) {
 			events->failures = 0;
-			events->failCountCount = events->failCount.frequency != 0 ?
-						 events->failCount.frequency : 1;
+			events->failCountCount = events->failCount.threshold.frequency != 0 ?
+						 events->failCount.threshold.frequency : 1;
 			continue;
 		}
 		failures = (uint16_t)(events->failures + 1);
 		events->failures = failures;
-		if (events->failCountCount == 0 || failures < events->failCount.value)
+		if (events->failCountCount == 0 || failures < events->failCount.threshold.value)
 			continue;
 		if (--events->failCountCount != 0)
 			continue;
 		events->failures = 0;
-		if (events->failCount.frequency != 0)
-			events->failCountCount = events->failCount.frequency;
+		if (events->failCount.threshold.frequency != 0)
+			events->failCountCount = events->failCount.threshold.frequency;
 		else
 			events->events &= ~BITMASK_FAILCOUNT;
 		wlanSubscribeReport(connection, BITMASK_FAILCOUNT);
@@ -524,8 +524,8 @@ void wlanSubscribeApplyThresholds(struct WlanConnection *connection)
 		events = &wlanSubscribeEventsDefault;
 		connection->subscribeEvents[0] = &wlanSubscribeEventsDefault;
 	}
-	connection->beaconMissThreshold = events->beaconMissed.value;
-	connection->preBeaconLostThreshold = events->preBeaconLost.value;
+	connection->beaconMissThreshold = events->beaconMissed.threshold.value;
+	connection->preBeaconLostThreshold = events->preBeaconLost.threshold.value;
 }
 
 /* The host event of each subscribed event that was met. */

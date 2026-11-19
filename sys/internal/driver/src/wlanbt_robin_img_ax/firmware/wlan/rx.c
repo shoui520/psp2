@@ -399,8 +399,8 @@ int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_ke
 	WlanWirelessFrame *frame = rxFrame(status);
 	uint8_t *iv = (uint8_t *)frame + 36;
 	uint32_t mic[2];
-	uint32_t high = 0;
-	uint16_t low = 0;	/* only set when the replay check ran */
+	uint32_t high;		/* Sony's: only set when the replay check ran */
+	uint16_t low;
 	int tkip = 0;
 	unsigned int errors;
 
@@ -455,14 +455,17 @@ int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_ke
 int wlanRxDecrypt(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key)
 {
 	OsaBuffer *own = *buffer;
+	OsaBuffer *received = own;
 	const WlanWirelessFrame *frame = rxFrame(status);
+	struct WlanConnection *connection = received->context;
 	int result = 0;
 
-	if (!(frame->frameControl[1] & IEEE80211_FC1_PROTECTED))
-		return !(((struct WlanConnection *)own->context)->txOptions & 4);
-	if (key == NULL)
+	if (!(frame->frameControl[1] & IEEE80211_FC1_PROTECTED)) {
+		if (!(connection->txOptions & 4))
+			result = 1;
+	} else if (key == NULL) {
 		return 0;
-	if (key->hdr.keyState & KEY_STATE_ENABLE) {
+	} else if (key->hdr.keyState & KEY_STATE_ENABLE) {
 		if (key->hdr.keyType == KEY_TYPE_TKIP)
 			result = wlanRxDecryptTkip(&own, status, key);
 		else

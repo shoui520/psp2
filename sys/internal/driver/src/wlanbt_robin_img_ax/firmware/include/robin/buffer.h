@@ -19,7 +19,8 @@ struct OsaBufferPool {
 struct OsaPoolConfig {
 	uint32_t reserved;
 	uint16_t blockSize;
-	uint16_t blockCount;
+	uint8_t blockCount;	/* written as a byte (wlanTxBufSizeSet) */
+	uint8_t reserved7;
 };
 typedef struct OsaBuffer OsaBuffer;
 

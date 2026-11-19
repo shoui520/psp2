@@ -102,10 +102,14 @@ int macMgmtProcessFrame(struct WlanConnection *connection)
 	struct ChanRptRequest request;
 
 	__aeabi_memclr4(&request, sizeof(request));
-	request.band = entry->channelFlags & 3;
-	request.channel = entry->channel;
-	request.dwell = (uint32_t)(entry->measureTime[0] | entry->measureTime[1] << 8) << 10;
+	request.band &= 0xf3;
 	request.histogramWideRange = 1;
+	request.channel = entry->channel;
+	request.band = (request.band & ~3) | (entry->channelFlags & 3);
+	request.delay = 0;
+	request.reserved8[0] = 0;
+	request.reserved8[1] = 0;
+	request.dwell = (uint32_t)(entry->measureTime[0] | entry->measureTime[1] << 8) << 10;
 	return chanRptStart(connection, &request, macMgmtUpdateFrame);
 }
 
@@ -193,7 +197,7 @@ int macMgmtValidateFrame(struct WlanConnection *connection)
 		if (wlanSessionId != 0)
 			wlanPsCancelHostModeTimer();
 		romLibResolveState();
-		uapSqramUpdateState(0);
+		uapSqramUpdateState();
 		macTxNotifySetupBuffer();
 		wlanMacOperationModeSet(0);
 		wlanConnectionCommandCheck(3, 1);
@@ -213,7 +217,8 @@ void macMgmtPrepareFrame(struct WlanConnection *connection)
 
 	if ((uint32_t)wlanConnectionGetCount() == wlanConnectionDtimHoldCount()) {
 		romLibResolveState();
-		uapSqramUpdateState(wlanConnectionCommandPrepare(2, 0));
+		wlanConnectionCommandPrepare(2, 0);
+		uapSqramUpdateState();
 		macTxNotifyReleaseBuffer();
 		wlanMacOperationModeSet(1);
 		romLibNotifyContext();
@@ -235,12 +240,13 @@ void macMgmtPrepareFrame(struct WlanConnection *connection)
 	peer = connection;
 	do {
 		struct WlanConnectionRole *role = wlanConnectionInfoSlot(peer);
-		unsigned int hskState = role->keyMgmt.keyMgmtState;
+		unsigned int hskState;
 		uint32_t timeout = 0;
 
 		if (peer->authSequence == 3)
 			osaCreateTimer((OsaTimerCallback)macMgmtFormatBuffer, (uint32_t)peer,
 				       WLAN_AP_SCAN_TIMEOUT, &info->challengeTimer, 0);
+		hskState = role->keyMgmt.keyMgmtState;
 		if (hskState == 1 || hskState == 2)
 			timeout = info->apRsn.PwsHskTimeOut;
 		else if (hskState == 3 || hskState == 4)
@@ -269,6 +275,7 @@ const int32_t *macMgmtDispatchFrame(struct WlanApMachine *machine, const int32_t
 const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct WlanApEvent *event)
 {
 	struct WlanConnection *connection = machine->connection;
+	uint32_t argument = event->data->argument;
 	int result;
 
 	if (machine == NULL || event == NULL || connection == NULL)
@@ -282,7 +289,7 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 		macMgmtParsePacket(connection, result, WLAN_AP_EVENT_STARTED);
 		return NULL;
 	case WLAN_AP_EVENT_STARTED:
-		if (macMgmtSyncBuffer(connection, (const uint8_t *)event->data->argument, 1) == 0)
+		if (macMgmtSyncBuffer(connection, (const uint8_t *)argument, 1) == 0)
 			romHsmTransition(machine, &apStates(machine)->build);
 		return NULL;
 	case WLAN_AP_EVENT_STOP:
@@ -293,7 +300,7 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 		return NULL;
 	case WLAN_AP_EVENT_STOPPED:
 		macMgmtApplyPacket(connection);
-		macMgmtResetBuffer(connection, event->data->argument, WLAN_AP_EVENT_STOPPED, 1);
+		macMgmtResetBuffer(connection, argument, WLAN_AP_EVENT_STOPPED, 1);
 		return NULL;
 	case WLAN_AP_EVENT_CONFIGURE:
 		macMgmtConfigureFrame(connection);
@@ -323,6 +330,7 @@ const int32_t *macMgmtParseFrame(struct WlanApMachine *machine, const struct Wla
 const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct WlanApEvent *event)
 {
 	struct WlanConnection *connection = machine->connection;
+	uint32_t argument = event->data->argument;
 	int result;
 
 	if (machine == NULL || event == NULL)
@@ -333,7 +341,7 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		return NULL;
 	case 32:
 		macMgmtQueryPacket(connection);
-		if (macMgmtResetBuffer(connection, event->data->argument, 32, 1) != 0)
+		if (macMgmtResetBuffer(connection, argument, 32, 1) != 0)
 			return NULL;
 		romHsmTransition(machine, &apStates(machine)->parse);
 		return NULL;
@@ -345,7 +353,7 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		return NULL;
 	case WLAN_AP_EVENT_STOPPED:
 		macMgmtApplyPacket(connection);
-		if (macMgmtResetBuffer(connection, event->data->argument, 34, 1) != 0)
+		if (macMgmtResetBuffer(connection, argument, 34, 1) != 0)
 			return NULL;
 		romHsmTransition(machine, &apStates(machine)->parse);
 		return NULL;
@@ -369,7 +377,7 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 		if (macMgmtResetPacket(connection, 1) != 0)
 			return NULL;
 		macMgmtQueryPacket(connection);
-		macMgmtResetBuffer(connection, event->data->argument, 32, 0);
+		macMgmtResetBuffer(connection, argument, 32, 0);
 		romHsmTransition(machine, &apStates(machine)->compute);
 		return NULL;
 	case WLAN_AP_EVENT_FAILURE:
@@ -382,10 +390,11 @@ const int32_t *macMgmtBuildFrame(struct WlanApMachine *machine, const struct Wla
 /* 0x3ab68: the BSS running. */
 const int32_t *macMgmtComputeFrame(struct WlanApMachine *machine, const struct WlanApEvent *event)
 {
-	struct WlanConnection *connection = machine->connection;
+	struct WlanConnection *connection;
 
 	if (machine == NULL || event == NULL)
 		return NULL;
+	connection = machine->connection;
 	switch (event->id) {
 	case ROM_HSM_EXIT:
 	case ROM_HSM_ENTRY:

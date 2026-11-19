@@ -205,18 +205,19 @@ extern struct OsaBufferPool wlanPacketBufferPool;
  */
 int wlanDecodeDataFrame(OsaBuffer *buffer, WlanPacketHeader *header, const void *wirelessHeader)
 {
-	int16_t offset = (int16_t)(header->wire.packetOffset[0] |
-				   (header->wire.packetOffset[1] << 8));
+	int16_t offset = (int16_t)(header->wire.packetOffset[1] << 8 |
+				   header->wire.packetOffset[0]);
 	uint8_t *payload = (uint8_t *)header + offset + 36;
 	struct ether_header *output;
 	uint32_t length = buffer->length;
+	const struct WlanConnection *connection = buffer->context;
 	uint16_t type;
 
 	if (length <= 0x60)
 		return 0;
 	buffer->length = length - 0x60;
 	type = wlanConvertWirelessToEthernet(buffer, &output, wirelessHeader, payload,
-					     wlanContextUsesEthernetFrames(buffer->context));
+					     (connection->hostFlags >> 4) & 1);
 	header->wire.packetType[0] = type;
 	header->wire.packetType[1] = type >> 8;
 	offset = (uint8_t *)output - (uint8_t *)header;
@@ -287,8 +288,8 @@ int wlanBuildHostRxPacket(OsaBuffer *buffer, struct WlanHostRxPacket *packet,
 		packet->descriptor.reserved = WLAN_HOST_RX_FRAME_QOS;
 	else
 		packet->descriptor.reserved = WLAN_HOST_RX_FRAME_PLAIN;
-	data = (uint8_t *)packet + (int16_t)(header->wire.packetOffset[0] |
-					     (header->wire.packetOffset[1] << 8)) + 36;
+	data = (uint8_t *)packet + (int16_t)(header->wire.packetOffset[1] << 8 |
+					     header->wire.packetOffset[0]) + 36;
 	if (fourAddresses)
 		headerLength = 30;
 	if (packet->descriptor.reserved == WLAN_HOST_RX_FRAME_QOS)

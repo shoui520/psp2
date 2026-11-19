@@ -73,7 +73,7 @@ uint16_t wlanPsListenBeacons __attribute__((section(".itcm.bss")));		/* 0x56292 
 uint8_t wlanPsWakeOnDtim __attribute__((section(".itcm.bss")));		/* 0x56294 */
 uint32_t wlanPsWakeWindow __attribute__((section(".itcm.bss")));		/* 0x56298 */
 uint32_t wlanPsCalibrationInterval __attribute__((section(".itcm.bss")));	/* 0x5629c */
-uint16_t wlanPsAltModeActive __attribute__((section(".itcm.bss")));		/* 0x562a0 */
+volatile uint16_t wlanPsAltModeActive __attribute__((section(".itcm.bss")));		/* 0x562a0 */
 uint16_t wlanPsAltModeRequest __attribute__((section(".itcm.bss")));		/* 0x562a2 */
 uint32_t wlanPsParameter __attribute__((section(".itcm.bss")));		/* 0x562a4 */
 

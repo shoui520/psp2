@@ -204,7 +204,20 @@ void wlanBaTimeoutExpired(struct WlanConnection *connection, const uint8_t *reco
 			  struct WlanRxBaSession *rxSessions,
 			  void (*callback)(uint32_t));				/* 0x4acbc */
 int wlanBaTimeoutCancel(const uint8_t *peer, unsigned int tid, unsigned int initiator);	/* 0x4ad3a */
-void wlanBaDelbaBuild(OsaBuffer *frame, uint16_t paramSet, uint16_t reason);	/* 0x4ad9a */
+/* A Block Ack parameter set (802.11 ADDBA and DELBA), passed by value. */
+struct WlanBaParamSet {
+	uint16_t amsdu : 1;
+	uint16_t policy : 1;
+	uint16_t tid : 4;
+	uint16_t bufferSize : 10;
+};
+
+/* The same where a frame or command carries it, unaligned. */
+struct WlanBaParamSetUnaligned {
+	struct WlanBaParamSet value;
+} __attribute__((packed));
+
+void wlanBaDelbaBuild(OsaBuffer *frame, struct WlanBaParamSet paramSet, uint16_t reason);	/* 0x4ad9a */
 void wlanBaAddbaDeclineBuild(OsaBuffer *frame, const uint8_t *request);		/* 0x4adc4 */
 void wlanBaAddbaEventPost(const uint8_t *peer, const uint8_t *request,
 			  struct WlanConnection *connection);			/* 0x4adfe */
@@ -212,12 +225,12 @@ void wlanBaDelbaReceived(struct WlanConnection *connection, const uint8_t *peer,
 			 const uint8_t *body);					/* 0x4ae48 */
 void wlanHostAddbaReplyBuild(OsaBuffer *message, int result, const uint8_t *peer,
 			     const uint8_t *body, uint16_t status);		/* 0x4aecc */
-void wlanBaAddbaAccepted(struct WlanConnection *connection, uint16_t startSequence,
-			 unsigned int timeout, uint16_t paramSet, const uint8_t *peer,
+void wlanBaAddbaAccepted(struct WlanConnection *connection, unsigned int startSequence,
+			 unsigned int timeout, struct WlanBaParamSet paramSet, const uint8_t *peer,
 			 struct WlanTxBaSession *txSessions, void (*callback)(uint32_t)); /* 0x4af2a */
 void wlanHostDelbaReplyBuild(OsaBuffer *message, struct WlanConnection *connection, const uint8_t *body, int success,
 			     const uint8_t *peer);				/* 0x4afb0 */
-void wlanBaAddbaRequestBuild(OsaBuffer *frame, uint16_t startSequence,
+void wlanBaAddbaRequestBuild(OsaBuffer *frame, unsigned int startSequence,
 			     const struct HostCmdAddbaRequest *request);	/* 0x4b002 */
 int wlanBaAddbaRequestCheck(const uint8_t *request, struct WlanTxBaSession *txSessions,
 			    unsigned int tid);					/* 0x4b064 */

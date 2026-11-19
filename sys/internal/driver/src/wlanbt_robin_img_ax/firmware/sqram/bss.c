@@ -116,8 +116,8 @@ void uapSqramProcessState(void)
 	macTxNotifyConvertBuffer(wlanConnectionCount - 1);
 }
 
-/* 0xc000738e: before a slot's connection goes; the value its callers pass is not read. */
-int uapSqramUpdateState(int value)
+/* 0xc000738e: before a slot's connection goes. */
+int uapSqramUpdateState(void)
 {
 	macTxNotifyAdjustBuffer();
 	return 0;

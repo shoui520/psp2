@@ -65,8 +65,10 @@ _Static_assert(sizeof(struct MacEventState) == 64, "event engine state");
 #define MAC_EVENT_LEVEL_DEFAULT		0x51
 
 enum {
-	MAC_EVENT_PRIMARY_FLAGS = 0x41,
-	MAC_EVENT_SECONDARY_FLAGS = 0x82,
+	MAC_EVENT_PRIMARY_PRESENT = 0x01,	/* MacEventPolicy.flags: each path's two bits */
+	MAC_EVENT_SECONDARY_PRESENT = 0x02,
+	MAC_EVENT_PRIMARY_ENABLED = 0x40,
+	MAC_EVENT_SECONDARY_ENABLED = 0x80,
 };
 
 extern struct MacEventState macEventState;

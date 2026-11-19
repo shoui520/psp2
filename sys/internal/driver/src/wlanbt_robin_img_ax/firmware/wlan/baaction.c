@@ -186,12 +186,12 @@ int wlanBaTimeoutCancel(const uint8_t *peer, unsigned int tid, unsigned int init
 }
 
 /* The DELBA action frame: the parameter set (initiator and TID) and the reason. */
-void wlanBaDelbaBuild(OsaBuffer *frame, uint16_t paramSet, uint16_t reason)
+void wlanBaDelbaBuild(OsaBuffer *frame, struct WlanBaParamSet paramSet, uint16_t reason)
 {
 	WlanWirelessFrame *wireless = wlanActionFrame(frame);
 
 	wireless->body[1] = WLAN_BA_ACTION_DELBA;
-	put16(&wireless->body[2], paramSet);
+	((struct WlanBaParamSetUnaligned *)&wireless->body[2])->value = paramSet;
 	put16(&wireless->body[4], reason);
 	put16(wireless->bodyLength, 6);
 }
@@ -273,18 +273,18 @@ void wlanHostAddbaReplyBuild(OsaBuffer *message, int result, const uint8_t *peer
  * The peer's ADDBA response was accepted: the transmit session is added
  * (unless one exists) and its timeout started.
  */
-void wlanBaAddbaAccepted(struct WlanConnection *connection, uint16_t startSequence, unsigned int timeout,
-			 uint16_t paramSet, const uint8_t *peer, struct WlanTxBaSession *txSessions,
+void wlanBaAddbaAccepted(struct WlanConnection *connection, unsigned int startSequence, unsigned int timeout,
+			 struct WlanBaParamSet paramSet, const uint8_t *peer, struct WlanTxBaSession *txSessions,
 			 void (*callback)(uint32_t))
 {
 	struct WlanBaRequest request;
 
-	request.tid = (paramSet >> 2) & 0xf;
+	request.tid = paramSet.tid;
 	__aeabi_memcpy(request.peer, peer, 6);
 	if (wlanTxBaProbe(request.tid, request.peer, txSessions) == 0) {
 		request.direction = 0;
-		request.timeout = paramSet >> 6;
-		request.windowSize = paramSet >> 6;
+		request.timeout = paramSet.bufferSize;
+		request.windowSize = paramSet.bufferSize;
 		request.startSequence.number = startSequence;
 		request.startSequence.fragment = 0;
 		if (wlanTxBaAddHook(connection, &request) == 0)
@@ -319,7 +319,7 @@ void wlanHostDelbaReplyBuild(OsaBuffer *message, struct WlanConnection *connecti
 }
 
 /* The ADDBA request action frame of the host's HostCmd 0xce (the starting sequence number goes in bits 4-15). */
-void wlanBaAddbaRequestBuild(OsaBuffer *frame, uint16_t startSequence, const struct HostCmdAddbaRequest *request)
+void wlanBaAddbaRequestBuild(OsaBuffer *frame, unsigned int startSequence, const struct HostCmdAddbaRequest *request)
 {
 	WlanWirelessFrame *wireless = wlanActionFrame(frame);
 

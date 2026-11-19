@@ -153,7 +153,7 @@ void btRxTestSessionsReset(void)
 	int i;
 
 	btLtsRomPrepareState();
-	btLinkModeControl->header = 0;
+	btLinkModeControl->current = 0;
 	btLinkModeControl->sessions = 1;
 	for (i = 0; i < BT_RX_TEST_SESSIONS; i++) {
 		btLinkSessions[i].active = 1;
@@ -193,11 +193,12 @@ uint8_t btRxTestCommand(unsigned int length, const uint8_t *parameters)
 	unsigned int i;
 	unsigned int value;
 	uint8_t *pattern;
+	unsigned int command = parameters[0];
 
-	if (btRxTest.active && parameters[0] != BT_RX_TEST_STOP)
+	if (btRxTest.active && command != BT_RX_TEST_STOP)
 		return BT_STATUS_BUSY;
-	btRxTest.patternType = parameters[0];
-	if (parameters[0] == BT_RX_TEST_STOP) {
+	btRxTest.patternType = command;
+	if (command == BT_RX_TEST_STOP) {
 		if (btRxTest.active)
 			btRxTestStop();
 		btRxTestReport(0);
@@ -375,7 +376,7 @@ void btRxTestSessionsSet(void)
 	int i;
 
 	btLtsRomPrepareState();
-	btLinkModeControl->header = 0;
+	btLinkModeControl->current = 0;
 	btLinkModeControl->sessions = BT_RX_TEST_SESSIONS;
 	btRxTest.packetsReceived = 0;
 	active = (btRxTest.ltAddress << 4) + 0x6003;

@@ -102,7 +102,7 @@ void macMgmtResolveFrame(struct WlanConnectionInfo *info);				/* 0x3ac50 */
 void macMgmtValidateTable(int reason);							/* 0x3726c */
 void macMgmtProcessContext(struct WlanConnection *connection, uint8_t *channel,
 			   unsigned int number);					/* 0x355b0 */
-int uapSqramUpdateState(int value);							/* SQRAM 0xc000738e */
+int uapSqramUpdateState(void);							/* SQRAM 0xc000738e */
 int uapSqramConfigureState(int value);							/* SQRAM 0xc0007398 */
 void romLibNotifyContext(void);								/* ROM veneer 0x532e4 */
 void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtype);	/* 0x3ac6c */

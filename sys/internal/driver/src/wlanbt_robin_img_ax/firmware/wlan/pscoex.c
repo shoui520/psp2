@@ -131,7 +131,7 @@ void wlanPsSetPollEnabled(uint8_t mode)
 }
 
 /* Bluetooth is off, or it is not in a mode that takes the medium. */
-int wlanPsBtShareAllowed(void)
+uint8_t wlanPsBtShareAllowed(void)
 {
 	return wlanCoexActive() == 0 || wlanCoexBtMode() == 0;
 }

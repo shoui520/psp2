@@ -219,7 +219,7 @@ int wlanStaPsBusy(void)
 	int busy;
 
 	if ((wlanPsListenBeacons != 0 && wlanStaPs.dataPendingAtConfirm != wlanPsDataPending) ||
-	    wlanStaPs.beaconWait != 0 || mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0 ||
+	    wlanStaPs.triggerSent != 0 || mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_BUSY, 0) != 0 ||
 	    mdevIoctl(wlanSdioDev, SDIO_IOCTL_HOST_PENDING, 0) != 0 || wlanSlotHasCurrent() != 0 ||
 	    wlanCryptoCount(0) != 0 || wlanCryptoCount(0) != 0)
 		busy = 1;
@@ -875,7 +875,7 @@ entered:
 		wlanPsCancelWakeTimer();
 		wlanPsPollStop();
 		if (macTxGetPowerSave() == 1 && (wlanPsIeeeFlag | wlanPsDataPending) != 0)
-			machine->powerSaveChanged = romGetTimerTimestamp();
+			wlanStaPs.powerSaveChanged = romGetTimerTimestamp();
 		return NULL;
 	case 3:
 		if (machine->hostState == 2) {
@@ -915,7 +915,7 @@ resendNull:
 						wlanStaPsRestartTimer(&machine->nullTimer,
 								      WLAN_STA_PS_NULL_TICKS);
 					} else {
-						machine->beaconsSeen |= 1;
+						machine->confirmBits |= WLAN_STA_PS_NULL_DONE;
 					}
 				}
 			}
@@ -945,7 +945,7 @@ resendNull:
 			return NULL;
 		if (wlanMefConfig.queuedEvents != 0)
 			macTxPostEvent(1);
-		machine->beaconsSeen |= 1;
+		machine->confirmBits |= WLAN_STA_PS_NULL_DONE;
 		tx_timer_deactivate(&machine->nullTimer);
 		return NULL;
 	case 14:

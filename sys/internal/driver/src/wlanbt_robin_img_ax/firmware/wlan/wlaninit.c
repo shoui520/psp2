@@ -263,9 +263,7 @@ static int wlanInitStageRadio(void)
 /* The tables and queues of the MAC and the management layer. */
 static int wlanTablesInit(void)
 {
-	struct WlanTaskHandles handles = {
-		&macMgmtEventFlags, &macMgmtSmeQueue, &cbProcSmeQueue, &timerCbQueue,
-	};
+	struct WlanTaskHandles handles;
 	uint32_t actual;
 	int result;
 
@@ -279,6 +277,10 @@ static int wlanTablesInit(void)
 	antDivStart();
 	wlanWmmClear();
 	macMgmtAdjustHeader();
+	handles.mgmtEventFlags = &macMgmtEventFlags;
+	handles.mgmtSmeQueue = &macMgmtSmeQueue;
+	handles.cbSmeQueue = &cbProcSmeQueue;
+	handles.timerQueue = &timerCbQueue;
 	wlanTaskHandlesInit(&handles);
 	wlanMefConfigClear();
 	wlanAutoTxInit();

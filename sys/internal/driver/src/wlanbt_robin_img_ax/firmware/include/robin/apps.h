@@ -43,7 +43,7 @@ struct WlanApPsBufferConfig {
 
 extern struct WlanApPsLimits wlanApPsLimits;
 
-int wlanApPsHasBuffered(const struct WlanConnectionRole *role);
+int wlanApPsHasBuffered(const uint32_t *listenInterval);
 int wlanApPsBufferCommand(struct WlanConnection *connection, struct WlanApPsBufferConfig *config);
 void wlanApPsResetGroup(struct WlanConnectionInfo *info);
 void wlanApPsFreeEntry(struct WlanApPsEntry *entry);

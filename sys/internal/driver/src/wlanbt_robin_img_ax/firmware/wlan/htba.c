@@ -216,10 +216,11 @@ int wlanHtElementGet(struct WlanConnection *connection, int elementId, void *des
 void wlanBaTimeoutCallback(uint32_t entry)
 {
 	struct WlanBaTimeout *timeout = (struct WlanBaTimeout *)entry;
+	struct WlanConnection *connection = timeout->connection;
 
 	if (timeout->active == 1) {
 		timeout->active = 0;
-		wlanBaTimeoutExpired(timeout->connection, timeout->peer, wlanTxBaSessions,
+		wlanBaTimeoutExpired(connection, timeout->peer, wlanTxBaSessions,
 				     wlanRxBaSessions, wlanBaTimeoutCallback);
 	}
 }
@@ -276,7 +277,8 @@ void wlanBaAddbaResponseReceived(struct WlanConnection *connection, int result,
 		else
 			sequence = wlanWmmLastSequence((response[5] >> 2) & 0xf);
 		wlanBaAddbaAccepted(connection, sequence, U16(wlanAddbaPending.request.timeout),
-				    U16(response + 5), peer, wlanTxBaSessions, wlanBaTimeoutCallback);
+				    ((const struct WlanBaParamSetUnaligned *)(response + 5))->value, peer,
+				    wlanTxBaSessions, wlanBaTimeoutCallback);
 	}
 	message = wlanHostMessageAlloc(connection);
 	response[5] = (response[5] & 0xc3) | (wlanAddbaPending.request.paramSet[0] & 0x3c);
@@ -418,7 +420,7 @@ int hostCmd00d0(uint8_t *body, unsigned int length)
 	struct HostCmdDelba *delba = (struct HostCmdDelba *)body;
 	struct WlanConnection *connection = wlanConnectionFindByPeer(delba->peer);
 	OsaBuffer *frame;
-	unsigned int paramSet;
+	struct WlanBaParamSet paramSet;
 	unsigned int reason;
 	int result;
 
@@ -426,7 +428,7 @@ int hostCmd00d0(uint8_t *body, unsigned int length)
 		return -1;
 	if (connection->mode == 3 || connection->mode == 1)
 		body[8] = (body[8] & 0xf) | (wlanWmmTid(body[8] >> 4) << 4);
-	paramSet = U16(delba->paramSet);
+	paramSet = ((const struct WlanBaParamSetUnaligned *)delba->paramSet)->value;
 	reason = U16(delba->reason);
 	wlanBaActionFrameAlloc(connection, &frame, delba->peer);
 	if (frame != NULL) {

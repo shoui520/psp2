@@ -125,24 +125,27 @@ unsigned int p2pDirectManageState(struct WlanConnection *connection)
 	connection->networkSsidLength = info->ssidLength;
 	connection->dtimPeriod = info->dtimPeriod;
 	ps->groupChannel = role->channel;
-	info->htOperation[2] = role->channel;	/* the primary channel of the HT operation element */
-	return role->channel;
+	/* the primary channel of the HT operation element */
+	return info->htOperation[2] = role->channel;
 }
 
 /* A character of the random part of the SSID: a letter or a digit. */
 void p2pDirectReleaseState(uint8_t *suffix)
 {
+	unsigned int upper = 26;
+	unsigned int lower = 26;
+	unsigned int count = 62;	/* letters of both cases and the digits */
 	unsigned int i;
 
 	for (i = 0; i < 2; i = (uint8_t)(i + 1)) {
-		unsigned int value = rand() % 62;
+		unsigned int value = rand() % count;
 
-		if (value < 26)
+		if (value < upper)
 			suffix[i] = value + 'A';
-		else if (value < 52)
-			suffix[i] = value + 71;
-		else if (value < 62)
-			suffix[i] = value - 4;
+		else if (value < upper + lower)
+			suffix[i] = value - upper + 'a';
+		else if (value < count)
+			suffix[i] = value - (upper + lower) + '0';
 	}
 }
 
@@ -262,7 +265,7 @@ convert:
 				goto made;
 			}
 			if (info->updatePassPhrase == 0)
-				__aeabi_memcpy(info->apRsn.PSKValue, selected + 51, sizeof(info->apRsn.PSKValue));
+				__aeabi_memcpy(info->apRsn.PSKValue, selected->psk, sizeof(info->apRsn.PSKValue));
 			ps->ssidPending = 0;
 			goto made;
 		}
@@ -327,19 +330,26 @@ unsigned int p2pDirectSetupState(struct WlanConnection *connection)
 	return 0;
 }
 
-/* Copies an attribute (two bytes of id, two of length, big endian, and the body); its body length. */
+/* A WPS attribute: its type and body length (big endian), unaligned, then the body. */
+struct WlanWpsAttribute {
+	uint16_t type;
+	uint16_t length;
+	uint8_t body[];
+} __attribute__((packed));
+
+/* Copies an attribute; its body length. */
 unsigned int p2pDirectClearState(uint8_t *out, const uint8_t *attribute)
 {
+	struct WlanWpsAttribute *to = (struct WlanWpsAttribute *)out;
+	const struct WlanWpsAttribute *from = (const struct WlanWpsAttribute *)attribute;
 	unsigned int length;
 
 	if (attribute == NULL)
 		return 0;
-	out[0] = attribute[0];
-	out[1] = attribute[1];
-	out[2] = attribute[2];
-	out[3] = attribute[3];
-	length = (uint16_t)((attribute[2] << 8) | attribute[3]);
-	__aeabi_memcpy(out + 4, attribute + 4, length);
+	to->type = from->type;
+	to->length = from->length;
+	length = (uint16_t)(from->length << 8 | from->length >> 8);
+	__aeabi_memcpy(to->body, from->body, length);
 	return length;
 }
 
@@ -373,7 +383,7 @@ unsigned int p2pDirectConvertState(struct WlanConnection *connection, WlanWirele
 	total = ((buffer[1] << 8) | buffer[0]) + *length + 2;
 	buffer[0] = total;
 	buffer[1] = total >> 8;
-	return buffer[1];
+	return total >> 8;
 }
 
 unsigned int p2pDirectVerifyState(struct WlanConnection *connection, WlanWirelessFrame *frame)
@@ -408,7 +418,11 @@ uint8_t *p2pDirectFilterState(uint8_t *buffer)
 {
 	uint8_t *element = &buffer[((buffer[1] << 8) | buffer[0]) + 32];
 
+	unsigned int length;
+
 	p2pDirectRecordState(element);
-	*(uint16_t *)buffer = ((buffer[1] << 8) | buffer[0]) + element[1] + 2;
+	length = ((buffer[1] << 8) | buffer[0]) + element[1] + 2;
+	buffer[0] = length;	/* the length may be unaligned */
+	buffer[1] = length >> 8;
 	return element;
 }

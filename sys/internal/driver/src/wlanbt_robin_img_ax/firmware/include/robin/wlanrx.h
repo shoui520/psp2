@@ -81,11 +81,11 @@ void wlanSetHeaderAddresses(WlanWirelessFrame *frame, const uint8_t *address1,
 void wlanInitMgmtHeader(WlanWirelessFrame *frame, unsigned int type, unsigned int subtype,
 			const uint8_t *address1, const uint8_t *address2, const uint8_t *address3);
 unsigned int wlanDataFrameControl(int qos, int nullData, int moreData);
-int wlanRxFilterToDs(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame);
-int wlanRxFilterIbss(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
-		     const uint8_t *bssid);
-int wlanRxFilterStation(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
-			const uint8_t *bssid);
+void wlanRxFilterToDs(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame);
+void wlanRxFilterIbss(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
+		      const uint8_t *bssid);
+void wlanRxFilterStation(int enabled, OsaBuffer *buffer, const WlanWirelessFrame *frame,
+			 const uint8_t *bssid);
 int wlanRxClearProtectedOnNull(WlanWirelessFrame *frame);
 void wlanRxDropLoopback(OsaBuffer *buffer, const WlanWirelessFrame *frame, const uint8_t *own);
 void wlanRxCheckFragment(OsaBuffer *buffer, const WlanWirelessFrame *frame,

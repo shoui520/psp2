@@ -448,7 +448,8 @@ void macMgmtQueryPacket(struct WlanConnection *connection)
 	connection->probeResponseBuffer->allocatorTag = 0;
 	wlanBaTablesChangedHandler();
 	romLibResolveState();
-	uapSqramUpdateState(wlanConnectionCommandPrepare(2, 0));
+	wlanConnectionCommandPrepare(2, 0);
+	uapSqramUpdateState();
 	wlanConnectionDecrement();
 	macMgmtComputePacket(info, info->htOperation, info->htCapability, &role->band, connection->beaconPeriod);
 	if (wlanConnectionSlotDetach(connection) != 0) {
@@ -648,7 +649,8 @@ int macMgmtFormatPacket(struct WlanConnection *connection)
 		wlanPsHostModeExit();
 	}
 	romLibResolveState();
-	uapSqramUpdateState(wlanConnectionCommandPrepare(2, 0));
+	wlanConnectionCommandPrepare(2, 0);
+	uapSqramUpdateState();
 	MAC_REG(0x824) |= 4;
 	wlanTxPowerUpdateConnection(connection, channelOut.channel, 1);
 	if (info->securityMode.wpa || info->securityMode.wpa2)

@@ -303,10 +303,14 @@ int wlanTspecApplyBits(int action, uint8_t *uplink, uint8_t *downlink, const uin
 				*uplink &= ~mask;
 		}
 	} else if (action == 0) {
-		if (*directions & WLAN_TSPEC_DOWNLINK)
-			*downlink = (*downlink & ~mask) | (*reference & mask);
-		if (*directions & WLAN_TSPEC_UPLINK)
-			*uplink = (*uplink & ~mask) | (*reference & mask);
+		if (*directions & WLAN_TSPEC_DOWNLINK) {
+			*downlink &= ~mask;
+			*downlink |= *reference & mask;
+		}
+		if (*directions & WLAN_TSPEC_UPLINK) {
+			*uplink &= ~mask;
+			*uplink |= *reference & mask;
+		}
 	}
 	return action;
 }

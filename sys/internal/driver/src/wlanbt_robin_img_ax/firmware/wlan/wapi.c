@@ -181,6 +181,13 @@ int wlanWapiLoadEngine(int decrypt, int qos, const uint8_t *packetNumber, const 
 	return 0;
 }
 
+/* A halfword of the AAD, which is packed: read and written a byte at a time. */
+struct WlanWapiAadHalfword {
+	uint16_t value;
+} __attribute__((packed));
+
+#define WAPI_AAD16(p)	(((struct WlanWapiAadHalfword *)(p))->value)
+
 /*
  * The additional data of WAPI's MIC: the frame control with the retry,
  * power management and more data bits and the subtype's low bits cleared and
@@ -199,26 +206,23 @@ void wlanWapiBuildAad(int qos, unsigned int priority, unsigned int length, uint8
 		__aeabi_memclr(aad, 0x20);
 	aad[0] = frame[2];
 	aad[1] = frame[3];
-	aad[1] = (aad[1] & 0xc7) | 0x40;
-	aad[0] &= 0x8f;
+	WAPI_AAD16(aad) = (WAPI_AAD16(aad) & 0xc78f) | 0x4000;
 	__aeabi_memcpy(aad + 2, frame + 6, 12);
 	__aeabi_memcpy(aad + 16, frame + 18, 6);
 	__aeabi_memcpy(aad + 22, frame + 26, 6);
 	aad[14] = frame[24];
 	aad[15] = frame[25];
 	if (qos) {
-		aad[28] |= (uint8_t)priority;
-		aad[29] = (uint8_t)(priority >> 8);
-		aad[14] &= 0xf;
-		aad[15] = 0;
+		WAPI_AAD16(aad + 28) |= priority;
+		WAPI_AAD16(aad + 14) &= 0xf;
 		aad[30] = keyIndex;
 		aad[31] = 0;
-		*(uint16_t *)(aad + 32) = lengthBe;
+		WAPI_AAD16(aad + 32) = lengthBe;
 	} else {
-		*(uint16_t *)(aad + 14) = aad[14] & 0xf;
+		WAPI_AAD16(aad + 14) &= 0xf;
 		aad[28] = keyIndex;
 		aad[29] = 0;
-		*(uint16_t *)(aad + 30) = lengthBe;
+		WAPI_AAD16(aad + 30) = lengthBe;
 	}
 }
 

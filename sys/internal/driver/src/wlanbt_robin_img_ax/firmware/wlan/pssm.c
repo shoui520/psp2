@@ -383,6 +383,8 @@ void wlanPsAnnounceSleep(struct WlanConnection *connection)
 	WlanWirelessFrame *frame;
 	OsaBuffer *buffer;
 	uint8_t *data;
+	uint32_t *txControl;
+	unsigned int duration;
 	unsigned int ring;
 	int result;
 
@@ -395,15 +397,16 @@ void wlanPsAnnounceSleep(struct WlanConnection *connection)
 	buffer->dataOffset = 28;
 	__aeabi_memclr4(data, offsetof(struct WlanReplyFrame, frameLength));
 	request->descriptor.header.wire.packetLength[0] = wlanTxControlRate(connection);
-	request->descriptor.priority = (request->descriptor.priority & ~0x1f) |
-				       request->descriptor.header.wire.packetLength[0] | 0x10;
+	txControl = (uint32_t *)&request->descriptor.priority;	/* bytes 12-15: the transmit control word */
+	*txControl = (*txControl & ~0x1fu) | request->descriptor.header.wire.packetLength[0] | 0x10;
 	request->frame = frame->bodyLength;
 	request->descriptor.control = 0x1500;
 	TX_DATA_TAG(data) = 20;
 	wlanInitMgmtHeader(frame, 2, 4, wlanPsBroadcast, wlanDeviceAddress->address, wlanDeviceAddress->address);
 	frame->frameControl[1] |= 2;
-	frame->duration[0] = (uint8_t)info->sleep.sleepDuration;
-	frame->duration[1] = (uint8_t)(info->sleep.sleepDuration >> 8);
+	duration = info->sleep.sleepDuration;
+	frame->duration[0] = (uint8_t)duration;
+	frame->duration[1] = (uint8_t)(duration >> 8);
 	if (info->sleep.mode == WLAN_PS_SLEEP_DTIM) {
 		TX_DATA_RING(data) = 12;
 		wlanTxRequestBuild(connection, data);
@@ -433,27 +436,28 @@ int wlanPsDtimTooClose(struct WlanPsSleep *sleep, uint64_t now)
 
 	if (!wlanPsAssociated(first))
 		return 0;
-	interval = (uint64_t)first->beaconPeriod << 10;
+	interval = (int)(first->beaconPeriod << 10);
 	if (now >= sleep->tbttReference)
 		elapsed = now - sleep->tbttReference;
 	else
 		elapsed = ~(sleep->tbttReference - now);
 	position = sleep->tsfReference + elapsed;
+	beacons = (uint32_t)(elapsed / interval);
 	dtimPeriod = first->dtimPeriod;
-	beacons = (int)sleep->dtimCount - (int)((uint32_t)(elapsed / interval) % dtimPeriod);
+	beacons = (int)sleep->dtimCount - (int)((uint32_t)beacons % dtimPeriod);
 	if (beacons <= 0)
 		beacons += dtimPeriod;
 	left = (uint64_t)((int64_t)beacons * (int64_t)interval) - position % interval;
 	dtimInterval = (uint32_t)(interval * dtimPeriod);
-	if (left <= WLAN_PS_GUARD)
-		return 1;
-	if (left >= dtimInterval - WLAN_PS_GUARD)
+	if (left <= WLAN_PS_GUARD || left >= dtimInterval - WLAN_PS_GUARD)
 		return 1;
 	left -= WLAN_PS_GUARD;
 	if (left >= sleep->sleepDuration)
 		return 0;
 	sleep->sleepDuration = (uint32_t)left;
-	return (uint32_t)left <= sleepWakeLatency + WLAN_PS_MIN_SLEEP;
+	if ((uint32_t)left <= sleepWakeLatency + WLAN_PS_MIN_SLEEP)
+		return 1;
+	return 0;
 }
 
 /* 0x13b4c: may the device sleep now; the sleep is shortened to end before the next beacon. */
@@ -651,14 +655,16 @@ const int32_t *wlanPsMachineAwake(struct WlanPsMachine *machine, const int32_t *
 /* 0x13ffc */
 const int32_t *wlanPsMachineIeee(struct WlanPsMachine *machine, const int32_t *event)
 {
+	struct WlanConnection *connection = machine->connection;
+
 	switch (*event) {
 	case 1:
 		machine->resume = &machine->on;
-		wlanPsHostCmdRespond(machine->connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case 2:
 		machine->resume = &machine->off;
-		wlanPsHostCmdRespond(machine->connection);
+		wlanPsHostCmdRespond(connection);
 		return NULL;
 	case ROM_HSM_EXIT:
 		wlanPsSetIeeeActive(0);

@@ -25,7 +25,7 @@ extern uint16_t wlanPsListenBeacons;
 extern uint8_t wlanPsWakeOnDtim;		/* the wake timer waits for a DTIM */
 extern uint32_t wlanPsWakeWindow;		/* ms */
 extern uint32_t wlanPsCalibrationInterval;	/* ms */
-extern uint16_t wlanPsAltModeActive;		/* the period in TU */
+extern volatile uint16_t wlanPsAltModeActive;		/* the period in TU */
 extern uint16_t wlanPsAltModeRequest;
 extern uint32_t wlanPsParameter;
 
