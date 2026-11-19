@@ -59,17 +59,6 @@ extern "C" int SceLsdb_298134FE(const LsdbAppInfoPtr *app);
 /* the size of a mount point the game plugin gives */
 #define APPLAUNCHER_CHANGE_LOG_MOUNT_POINT_SIZE	17
 
-/* PLACEHOLDER: topmenu_plugin's function that gives the object held while the change log is open
-   (its 28th virtual function lets it go) */
-#define TOPMENU_PLUGIN_FUNC_HOLD		51
-
-/* PLACEHOLDER: what topmenu gives while the change log is open */
-struct ApplauncherTopmenuHold {
-	void (**vtable)(ApplauncherTopmenuHold *hold);
-};
-
-#define APPLAUNCHER_TOPMENU_HOLD_RELEASE	27
-
 /* the change log's dialog page (resource IDs) */
 static const CommonGuiDialogPage s_changeLogPage = {
 	{ 0x3A918C2C, 0x438C7285, 0xB505C20A }

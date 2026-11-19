@@ -1025,6 +1025,16 @@ const char **shellThemeGetIconTitles(SceUInt32 *count);
 void applauncherIconCacheClearPath(const paf::string &path);
 void applauncherIconCacheMakeSpace(void);
 
+/* PLACEHOLDER: topmenu_plugin's function that gives the object held while a dialog of the home
+   (the change log, "about this game") is open; its 28th virtual function lets it go */
+#define TOPMENU_PLUGIN_FUNC_HOLD		51
+
+struct ApplauncherTopmenuHold {
+	void (**vtable)(ApplauncherTopmenuHold *hold);
+};
+
+#define APPLAUNCHER_TOPMENU_HOLD_RELEASE	27
+
 /* PLACEHOLDER names: a title's change log opened over another application, the dialog's ID
    given back (0x810B965A); the icon's opened over the home (0x810B95CA); the open one closed
    (0x810B9882) */
