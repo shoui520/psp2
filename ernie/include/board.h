@@ -28,6 +28,8 @@
 /* the slim's code line: USS-1001's, and from 0x0104 the PS TV's (DOL-1002, 0x00723030), on the
    fat models' chip */
 #define SOURCE_SLIM		(BOARD_USS1001 || BOARD_DOL1001 && FW_SINCE(0x01040000))
+/* that line from the slim's 0x01030511 */
+#define SOURCE_0511		(BOARD_USS1001 && FW_SINCE(0x01030511) || BOARD_DOL1001 && FW_SINCE(0x01040000))
 
 /* 0x00102603: 0x00411000's code (its ERNIE_BOARD) for a board with another Elmo wiring, ports
    and multi-connector switch; 0x00315200 (DEM-3000H) has most of it, its own differences by

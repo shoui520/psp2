@@ -37,10 +37,14 @@ $ENDIF
 $_IF (ERNIE_HW>=0x00800000)	; USS-1001: after waitEnter, which its link puts last
 CONFIG		EQU	0D882H
 $ELSE
+$_IF (ERNIE_HW==0x00723030)	; DOL-1002: after waitEnter too
+CONFIG		EQU	0D608H
+$ELSE
 $_IF (ERNIE_FW<=0x00090804||ERNIE_KERNEL==0x00411000)
 CONFIG		EQU	0D878H
 $ELSE
 CONFIG		EQU	0D5FEH
+$ENDIF
 $ENDIF
 $ENDIF
 CYC_HANDLER	EQU	CONFIG+00CH		; a cyclic handler's address and its CS
@@ -112,6 +116,11 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
+$_IF (ERNIE_HW==0x00723030)	; DOL-1002
+kResult		EQU	0FFE7CH
+kTemp		EQU	0FFE7EH
+kTimeout	EQU	0FFE80H
+$ELSE
 $_IF (ERNIE_HW>=0x00700000)	; USS-1001 and DOL-1001 (their own short data before them)
 kResult		EQU	0FFE78H
 kTemp		EQU	0FFE7AH
@@ -135,6 +144,7 @@ $ELSE
 kResult		EQU	0FFE74H
 kTemp		EQU	0FFE76H
 kTimeout	EQU	0FFE78H
+$ENDIF
 $ENDIF
 $ENDIF
 $ENDIF
@@ -2518,7 +2528,7 @@ _isig_tim:
 	SHL	C, 1
 	MOVW	ES:taskWaitObj[C], AX
 	MOVW	BC, kResult
-$_IF (ERNIE_HW>=0x00800000)	; USS-1001: no longer timed
+$_IF (ERNIE_HW>=0x00800000||ERNIE_HW==0x00723030)	; USS-1001 and DOL-1002: no longer timed
 	MOV	A, ES:taskWait[C]
 	AND	A, #0FEH
 	MOV	ES:taskWait[C], A

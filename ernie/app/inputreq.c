@@ -670,7 +670,7 @@ void controlsReadAnalog(unsigned char *out)
 }
 #endif
 
-#if !BOARD_USS1001	/* the slim's are analog.c's */
+#if !SOURCE_SLIM	/* the slim's (and DOL-1002's) are analog.c's */
 void controlsReadAnalog0(unsigned char *out)
 {
 	out[0] = analogSticks0[0];

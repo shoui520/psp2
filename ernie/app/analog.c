@@ -2547,7 +2547,7 @@ void analogGetSamples(unsigned int __far *out)
 	out[3] = analogAxes[3].samples[i];
 }
 
-#if BOARD_USS1001
+#if SOURCE_SLIM
 /* the analog sticks of each set, as host command 0x0100's read them: inputreq.c's on the other
    boards, here in Sony's link */
 void controlsReadAnalog0(unsigned char *out)

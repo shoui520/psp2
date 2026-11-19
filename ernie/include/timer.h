@@ -37,6 +37,10 @@ struct Timer {
    on the others, is 0x13) */
 #define TIMER_RTC_FIRST		0x16
 #define TIMER_RTC(id)		((id) + 1)
+#elif !defined(ERNIE_UPDATER) && BOARD_DOL1001 && FW_SINCE(0x01040000)
+/* DOL-1002's: the RTC's at 0x18-0x24, three above their numbers, with two more (0x20, 0x21) */
+#define TIMER_RTC_FIRST		0x18
+#define TIMER_RTC(id)		((id) + 3)
 #elif !defined(ERNIE_UPDATER) && BOARD_USS1001
 /* 0x01030505: the RTC's at 0x15-0x1f, at their numbers */
 #define TIMER_RTC_FIRST		0x15
@@ -69,6 +73,8 @@ struct Timer {
 #endif
 #ifdef ERNIE_UPDATER
 #define TIMER_COUNT		0x1e
+#elif BOARD_DOL1001 && FW_SINCE(0x01040000)
+#define TIMER_COUNT		(TIMER_RTC(0x21) + 1)
 #elif FW_SINCE(0x01000104)
 #define TIMER_COUNT		(TIMER_RTC(0x1f) + 1)
 #elif FW_SINCE(0x00090903)

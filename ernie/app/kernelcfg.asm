@@ -12,8 +12,14 @@
 
 @@KCFG	CSEG	BASE
 _kernelConfig:
+$_IF (ERNIE_HW>=0x00800000||ERNIE_HW==0x00723030)
+; USS-1001 and DOL-1002: the slim's kernel build
+	DB	1BH, 01H, 06H, 00H, 03H, 54H, 02H, 01H	; nothing reads these
+	DW	1, 1, 0, 0
+$ELSE
 	DB	17H, 01H, 10H, 12H, 02H, 54H, 30H, 04H	; nothing reads these
 	DW	0, 1, 0, 0
+$ENDIF
 ; the cyclic handler: its address, its CS (and TA_STA in the high byte), its period
 	DW	LOWW(_timerTick), HIGHW(_timerTick)
 	DW	1, 0
@@ -44,6 +50,11 @@ $_IF (ERNIE_HW>=0x00800000)
 	DW	0B41CH, 0B5B8H, 0B6D4H, 0B7F0H, 0B90CH, 0BA28H	; their stacks' tops
 	DW	0BAEAH			; the kernel's stack
 $ELSE
+$_IF (ERNIE_HW==0x00723030)
+; DOL-1002: tasks 2-6 and the kernel with larger stacks
+	DW	0D3DCH, 0D516H, 0D5BAH, 0D696H, 0D76AH, 0D83EH	; their stacks' tops
+	DW	0D900H			; the kernel's stack
+$ELSE
 $_IF (ERNIE_FW>=0x00090206)
 	DW	0D3DCH, 0D4F8H, 0D59CH, 0D678H, 0D74CH, 0D828H	; their stacks' tops
 	DW	0D8EAH			; the kernel's stack
@@ -51,6 +62,7 @@ $ELSE
 ; 0x00090009: task 4's stack 0x38 bytes smaller, the kernel's 8 bytes higher
 	DW	0D41CH, 0D538H, 0D5DCH, 0D680H, 0D754H, 0D830H
 	DW	0D8F2H
+$ENDIF
 $ENDIF
 $ENDIF
 	DW	LOWW(kHooks)		; the trace hooks

@@ -15,7 +15,7 @@
 
 /* the slim's limits of each axis's readings and its records of those outside them: not in
    0x01030505; the PS TV from 0x0104 (DOL-1002) */
-#define ANALOG_LIMITS		(BOARD_USS1001 && FW_SINCE(0x01030511) || FW_SINCE(0x01040000))
+#define ANALOG_LIMITS		(SOURCE_0511)
 /* 0x0104: a median's fault keeps the samples it came from (struct AnalogSnapshot) */
 #define ANALOG_SNAPSHOT		FW_SINCE(0x01040000)
 

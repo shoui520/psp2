@@ -112,7 +112,7 @@ static int stateModeAtLevel9(union PowerRequest *request);
 #endif
 
 /* a message sent to task 1: on the slim (from 0x01030511) 3 when the mailbox refuses it */
-#define STATE_SLIM_MSG	(BOARD_USS1001 && FW_SINCE(0x01030511))
+#define STATE_SLIM_MSG	(SOURCE_0511)
 #if STATE_SLIM_MSG
 #define STATE_SEND(send)	do { ercd = send; if (ercd != E_OK) return 3; } while (0)
 #else
