@@ -37,12 +37,12 @@ public:
 		ComponentXmlGenerator *xmlGenerator, ComponentUtility *utility);
 	virtual ~AbstractCommand();
 
-	/* begins the reply's parse */
-	virtual int Initialize()
+	virtual int SendRequest()
 	{
 		return -1;
 	}
-	virtual int SendRequest()
+	/* begins the reply's parse */
+	virtual int BeginParse()
 	{
 		return -1;
 	}

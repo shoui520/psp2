@@ -56,7 +56,8 @@ public:
 		SceSize ticketSize, const SceRtcTick *since,
 		const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count, char *buffer,
 		SceSize bufferSize, SceSize *size);
-	virtual SceSize GetGetFriendStatusTimelineRequestSize(SceSize ticketSize);
+	virtual SceSize GetGetFriendStatusTimelineRequestSize(SceSize ticketSize,
+		const NpActivityRange *range);
 	virtual int CreateGetFriendStatusTimelineRequest(const SceNpId *npId, const char *ticket,
 		SceSize ticketSize, const NpActivityRange *range, char *buffer, SceSize bufferSize,
 		SceSize *size);

@@ -34,6 +34,12 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	component/xml_parser/handler/xml_parser_status_timeline_handler.cpp
 	common/activity_xml_writer.cpp
 	common/activity_hmac.cpp
+	command/command_add_comment.cpp
+	command/command_add_status_list.cpp
+	command/command_add_vote_good_job.cpp
+	command/command_check_status_update.cpp
+	command/command_get_account_information.cpp
+	command/command_get_friend_status_timeline.cpp
 	common/activity_debug.cpp
 	component/xml_parser/handler/abstract_xml_parser_handler.cpp
 	command/abstract_command.cpp

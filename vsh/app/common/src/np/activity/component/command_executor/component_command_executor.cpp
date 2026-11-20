@@ -62,14 +62,14 @@ int ComponentCommandExecutor::Execute()
 	ret = CheckAbort(0);
 	if (ret == NP_ACTIVITY_ERROR_ABORTED)
 		return ret;
-	ret = m_command->Initialize();
+	ret = m_command->SendRequest();
 	if (ACTIVITY_FAILED(ret))
 		return ret;
 	if (CheckAbort(ret) == NP_ACTIVITY_ERROR_ABORTED) {
 		m_command->EndRequest();
 		return NP_ACTIVITY_ERROR_ABORTED;
 	}
-	ret = m_command->SendRequest();
+	ret = m_command->BeginParse();
 	if (ACTIVITY_FAILED(ret)) {
 		m_command->EndRequest();
 		return ret;

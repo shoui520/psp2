@@ -82,9 +82,9 @@ typedef struct NpActivityRange {
 	int count;
 } NpActivityRange;
 
-/* a request's handle on the network */
+/* what the network gives a good job or a removal: its status's update time */
 typedef struct NpActivityRequest {
-	SceUInt8 reserved[8];
+	SceUInt64 updateTime;
 } NpActivityRequest;
 
 #ifdef __cplusplus
@@ -276,9 +276,11 @@ typedef struct NpActivityCommentPost {
 	SceSize infoSize;		/* 0: no info */
 } NpActivityCommentPost;
 
-/* a posted comment's request handle */
+/* what the network gives a posted comment */
 typedef struct NpActivityCommentRequest {
-	SceUInt8 reserved[24];
+	int commentId;
+	SceUInt64 creationTime;
+	SceUInt64 updateTime;		/* its status's */
 } NpActivityCommentRequest;
 
 /* posts a comment on a status */

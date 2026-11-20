@@ -418,7 +418,8 @@ int ComponentXmlGenerator::CreateCheckStatusRequest(const SceNpId *npId, const c
 	return writeFooter(size);
 }
 
-SceSize ComponentXmlGenerator::GetGetFriendStatusTimelineRequestSize(SceSize ticketSize)
+SceSize ComponentXmlGenerator::GetGetFriendStatusTimelineRequestSize(SceSize ticketSize,
+	const NpActivityRange *range)
 {
 	return ticketSize + 640;
 }
