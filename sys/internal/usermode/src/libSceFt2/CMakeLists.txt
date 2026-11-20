@@ -68,8 +68,11 @@ target_include_directories(${PSP2_TARGET} PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/include ${FT2_SCE}/include ${FT2}/include ${FT2}/src ${FT2}/src/base)
 target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 # -O3 matches more functions than -O2 under similarity pairing (293 vs 230 exact+proven, 3.65-CEX,
-# 2026-11-19). Sony built FreeType hosted: its fixed-size memset and memcpy calls are expanded inline.
-target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fno-stack-protector -fhosted -fbuiltin)
+# 2026-11-19). Sony built FreeType hosted (its fixed-size memset and memcpy calls are expanded inline) and
+# without -fno-delete-null-pointer-checks (a pointer once dereferenced is not tested for NULL again:
+# tt_face_goto_table's table).
+target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fno-stack-protector -fhosted -fbuiltin
+	-fdelete-null-pointer-checks)
 include(../../../../../toolchains/libgcc/lib1funcs.cmake)
 gcc48_use_lib1funcs(${PSP2_TARGET})
 # Sony's C library (libc.c) was built freestanding, with plain char signed (the ldrsb loads of the mode
