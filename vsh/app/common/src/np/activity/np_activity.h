@@ -43,7 +43,7 @@ typedef struct NpActivityCommentKey {
 typedef struct NpActivityStatus {
 	NpActivityOwner owner;
 	int statusId;
-	int reserved[2];
+	char platform[8];		/* the reply's pf: the platform the status was posted from */
 	int type;
 	SceUInt64 creationTime;
 	SceUInt64 updateTime;
@@ -51,22 +51,30 @@ typedef struct NpActivityStatus {
 
 /* the statuses the network lists for one owner */
 typedef struct NpActivityStatusList {
-	int reserved;
+	int result;			/* 0, or why the network did not list the owner's statuses */
 	int count;			/* the statuses it filled */
 	NpActivityStatus *statuses;
 	int max;			/* the statuses there is room for */
 } NpActivityStatusList;
 
-/* a comment as the network lists it */
-#define NP_ACTIVITY_COMMENT_MESSAGE_SIZE	824
+/* a comment's text, at most this many bytes with its NUL */
+#define NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE	561
+
+/* a comment as the network lists it: who posted it and what (its size and text as posted) */
+typedef struct NpActivityCommentBody {
+	char platform[8];		/* the reply's pf */
+	NpActivityOwner owner;
+	SceUInt64 creationTime;
+	char message[NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE];
+	SceUInt8 info[256];
+	SceSize infoSize;		/* 0: no info */
+} NpActivityCommentBody;
 
 typedef struct NpActivityComment {
 	int commentId;
-	int reserved[3];
-	NpActivityOwner owner;
-	SceUInt64 creationTime;
-	char message[NP_ACTIVITY_COMMENT_MESSAGE_SIZE];
-} NpActivityComment;
+	int reserved;
+	NpActivityCommentBody body;
+} NpActivityComment;		/* 888 bytes */
 
 /* which of a list's statuses a request reads: count of them from start (1: the newest) */
 typedef struct NpActivityRange {
@@ -195,7 +203,7 @@ typedef struct NpActivityDetailState {
  * avatar-url, panel-url); each is NUL-terminated.
  */
 typedef struct NpActivityStatusInfo {
-	int reserved[2];
+	char platform[8];		/* the reply's pf */
 	int type;
 	char titleId[12];		/* the NP title ID */
 	SceUInt64 creationTime;
@@ -257,8 +265,6 @@ int SceNpActivityNet_7E3116FB(int connection, const SceNpId *npId, const NpActiv
 	SceNpId *voters, int maxVoters, SceUInt32 *numVoters);
 
 /* a comment as it is posted */
-#define NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE	561
-
 typedef struct NpActivityCommentPost {
 	SceUInt64 creationTime;
 	char message[NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE];
@@ -280,7 +286,8 @@ int SceNpActivityNet_747FBB53(int connection, const SceNpId *npId, const NpActiv
 
 typedef struct NpActivityPostResult {
 	int result;			/* 0, or why the network did not take the status */
-	int reserved[3];
+	int statusId;			/* the status the network made */
+	SceUInt64 updateTime;
 } NpActivityPostResult;
 
 /* posts count statuses of the signed-in user */

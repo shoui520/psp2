@@ -1205,10 +1205,10 @@ __attribute__((noinline)) int ActivityDbSortNetComments(const SceInt64 *mainRowi
 		ActivityDbComment comment;
 		const NpActivityComment *net = it->second;
 
-		result = ActivityDbFromNpOwner(&net->owner, &comment.ownerId, &comment.ownerType);
+		result = ActivityDbFromNpOwner(&net->body.owner, &comment.ownerId, &comment.ownerType);
 		if (result == 0) {
-			comment.creationTime = net->creationTime;
-			comment.message = net->message;
+			comment.creationTime = net->body.creationTime;
+			comment.message = net->body.message;
 		}
 		if (result != 0)
 			return result;
@@ -1694,10 +1694,10 @@ __attribute__((noinline)) int ActivityDbToNpStatusInfo(const ActivityDbStatus *s
 	info->numOfVotes = status->numOfVotes;
 	sce_paf_memset(info->iconUrl, 0, sizeof(info->iconUrl));
 	sce_paf_memset(info->actionUrl, 0, sizeof(info->actionUrl));
-	sce_paf_memset(info->reserved2, 0, sizeof(info->reserved2));
+	sce_paf_memset(info->info, 0, sizeof(info->info));
 	sce_paf_strncpy(info->iconUrl, status->iconUrl.c_str(), sizeof(info->iconUrl));
 	sce_paf_strncpy(info->actionUrl, status->actionUrl.c_str(), sizeof(info->actionUrl));
-	info->reserved3 = 0;
+	info->infoSize = 0;
 	return 0;
 }
 
@@ -1927,7 +1927,7 @@ int ActivityDbNetDaemon::RunPostComment(const SceInt64 *mainRowid,
 			post.creationTime = comment->creationTime;
 			sce_paf_strncpy(post.message, comment->message.c_str(),
 				NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE);
-			post.reserved = 0;
+			post.infoSize = 0;
 			result = SceNpActivityNet_747FBB53(connection, 0, &npKey, &post, &request);
 		}
 		if (result != 0)
