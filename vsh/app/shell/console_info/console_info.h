@@ -113,7 +113,7 @@ int consoleInfoFormatLineCount(const ConsoleInfoRecord::Field *field, char *buf,
 /* PLACEHOLDER names: the console's platform, 2 on a PS TV (0x810F3910), and the telephony
    plugin's state (0x810E83C8) */
 int consoleInfoGetPlatform(void);
-int consoleInfoGetTelephony(int *active);
+int consoleInfoGetTelephony(int *restriction);
 
 /* PLACEHOLDER: a kind's record kept in the console only (no NP account; 0x810E74FC) */
 class ConsoleInfoEntries : public ConsoleInfoRecord {
@@ -133,6 +133,8 @@ public:
 
 	virtual int Write(void *data);
 	virtual int Commit();
+	virtual const Field *GetFields();
+	virtual unsigned int GetFieldCount();
 };
 
 /* a 64-bit value's bytes reversed (NP's and the kernel's IDs are big-endian) */
