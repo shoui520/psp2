@@ -37,96 +37,86 @@ typedef struct XmlParserStatusIdComment {
 	SceUInt64 creationTime;
 } XmlParserStatusIdComment;
 
-class StaticResourceObserver {
+class StaticResourceObserver : public ActivityObject {
 public:
-	virtual ~StaticResourceObserver()
+	virtual void UpdateStaticResource(StaticResource *resource)
 	{
 	}
-	virtual void UpdateStaticResource(StaticResource *resource) = 0;
 };
 
-class ResultObserver {
+class ResultObserver : public ActivityObject {
 public:
-	virtual ~ResultObserver()
+	/* no result returned: the commands override it */
+	virtual int UpdateResult(XmlParserResult *result)
 	{
 	}
-	virtual void UpdateResult(XmlParserResult *result) = 0;
 };
 
-class StatusListObserver {
+class StatusListObserver : public ActivityObject {
 public:
-	virtual ~StatusListObserver()
+	virtual void UpdateStatusList(NpActivityPostResult *results)
 	{
 	}
-	virtual void UpdateStatusList(NpActivityPostResult *results) = 0;
 };
 
-class AccountInformationObserver {
+class AccountInformationObserver : public ActivityObject {
 public:
-	virtual ~AccountInformationObserver()
-	{
-	}
 	/* setting: the public and editable values */
-	virtual void UpdateAccountInformation(int *setting) = 0;
-};
-
-class CheckStatusObserver {
-public:
-	virtual ~CheckStatusObserver()
+	virtual void UpdateAccountInformation(int *setting)
 	{
 	}
-	virtual void UpdateCheckStatus(NpActivityUpdates *updates) = 0;
 };
 
-class StatusDetailObserver {
+class CheckStatusObserver : public ActivityObject {
 public:
-	virtual ~StatusDetailObserver()
+	virtual void UpdateCheckStatus(NpActivityUpdates *updates)
 	{
 	}
+};
+
+class StatusDetailObserver : public ActivityObject {
+public:
 	virtual void UpdateStatusDetail(NpActivityStatusKey *key, NpActivityStatusInfo *info,
 		NpActivityComment *comments, int *numComments, int *isVoted, SceNpId *voters,
-		SceUInt32 *numVoters) = 0;
-};
-
-class StatusIdObserver {
-public:
-	virtual ~StatusIdObserver()
+		SceUInt32 *numVoters)
 	{
 	}
-	virtual void UpdateStatusId(XmlParserStatusId *status) = 0;
 };
 
-class StatusIdCommentObserver {
+class StatusIdObserver : public ActivityObject {
 public:
-	virtual ~StatusIdCommentObserver()
+	virtual void UpdateStatusId(XmlParserStatusId *status)
 	{
 	}
-	virtual void UpdateStatusIdComment(XmlParserStatusIdComment *comment) = 0;
 };
 
-class StatusInfoObserver {
+class StatusIdCommentObserver : public ActivityObject {
 public:
-	virtual ~StatusInfoObserver()
+	virtual void UpdateStatusIdComment(XmlParserStatusIdComment *comment)
 	{
 	}
+};
+
+class StatusInfoObserver : public ActivityObject {
+public:
 	/* one status's detail, as the reply lists it (the callback request) */
-	virtual void UpdateStatusInfo(NpActivityStatusDetail *detail) = 0;
-};
-
-class StatusInfoListObserver {
-public:
-	virtual ~StatusInfoListObserver()
+	virtual void UpdateStatusInfo(NpActivityStatusDetail *detail)
 	{
 	}
-	virtual void UpdateStatusInfoList(NpActivityStatusDetail *details, int *count) = 0;
 };
 
-class StatusTimelineObserver {
+class StatusInfoListObserver : public ActivityObject {
 public:
-	virtual ~StatusTimelineObserver()
+	virtual void UpdateStatusInfoList(NpActivityStatusDetail *details, int *count)
 	{
 	}
-	virtual void UpdateStatusTimeline(NpActivityStatusList *lists) = 0;
+};
+
+class StatusTimelineObserver : public ActivityObject {
+public:
+	virtual void UpdateStatusTimeline(NpActivityStatusList *lists)
+	{
+	}
 };
 
 class AbstractXmlParserSubject : public ActivityObject {

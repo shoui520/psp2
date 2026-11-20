@@ -31,7 +31,7 @@ __attribute__((noinline)) int ComponentCommandExecutor::receive()
 	int done;
 	int ret = 0;
 
-	m_command->BeginReceive();
+	m_command->GetContentLength();
 	do {
 		ret = CheckAbort(ret);
 		if (ret == NP_ACTIVITY_ERROR_ABORTED)

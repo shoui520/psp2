@@ -29,10 +29,16 @@ _Static_assert(sizeof(SceSha1Context) == 0x78, "SceSha1Context size");
 
 /* the SDK's user library; the kernel declares its own in sysmem/utils.h */
 #ifndef PSP2_KERNEL
+#ifdef __cplusplus
+extern "C" {
+#endif
 SceInt32 sceSha1Digest(const void *plain, SceUInt32 len, SceUChar8 *digest);
 SceInt32 sceSha1BlockInit(SceSha1Context *pContext);
 SceInt32 sceSha1BlockUpdate(SceSha1Context *pContext, const void *plain, SceUInt32 len);
 SceInt32 sceSha1BlockResult(SceSha1Context *pContext, SceUChar8 *digest);
+#ifdef __cplusplus
+}
+#endif
 #endif
 
 #endif /* SCE_LIBSHA1_H */

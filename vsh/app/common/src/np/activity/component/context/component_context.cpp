@@ -176,7 +176,7 @@ inline void ComponentContext::destroyComponents()
 	m_auth = NULL;
 	m_manager->DestroyComponent(m_http);
 	m_http = NULL;
-	m_manager->DestroyComponent(m_xmlParser);
+	m_manager->DestroyComponent(static_cast<Component *>(m_xmlParser));
 	m_xmlParser = NULL;
 	m_manager->DestroyComponent(m_xmlGenerator);
 	m_xmlGenerator = NULL;

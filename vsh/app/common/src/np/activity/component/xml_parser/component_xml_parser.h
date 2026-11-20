@@ -73,7 +73,7 @@ public:
 	{
 		return 0;
 	}
-	virtual int Parse(const char *data, int size)
+	virtual int Parse(const char *data, int size, int *done)
 	{
 		return 0;
 	}
@@ -109,7 +109,7 @@ public:
 	virtual int BeginStatusInfo(int *count, NpActivityStatusDetail *details, SceSize max,
 		int withCallback, NpActivityStatusDetail *detail);
 	virtual int BeginStatusTimeline(NpActivityStatusList *lists, SceSize count);
-	virtual int Parse(const char *data, int size);
+	virtual int Parse(const char *data, int size, int *done);
 	virtual int EndParse();
 	virtual void SetAbort();
 	virtual void ClearAbort();

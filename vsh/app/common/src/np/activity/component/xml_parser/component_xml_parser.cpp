@@ -545,7 +545,7 @@ int ComponentXmlParser::BeginStatusTimeline(NpActivityStatusList *lists, SceSize
 	return SceNpCommon_650D111B(m_parser, &statusTimelineSchema, Callback, this);
 }
 
-int ComponentXmlParser::Parse(const char *data, int size)
+int ComponentXmlParser::Parse(const char *data, int size, int *done)
 {
 	int ret;
 

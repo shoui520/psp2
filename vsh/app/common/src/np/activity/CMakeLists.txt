@@ -33,9 +33,20 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	component/xml_parser/handler/xml_parser_status_info_handler.cpp
 	component/xml_parser/handler/xml_parser_status_timeline_handler.cpp
 	common/activity_xml_writer.cpp
+	common/activity_hmac.cpp
 	common/activity_debug.cpp
 	component/xml_parser/handler/abstract_xml_parser_handler.cpp
+	command/abstract_command.cpp
+	../../../../../../sys/sdk/target/src/sha1/libsha1.c
+	../../../../../../sys/sdk/target/src/libsnc/weak_calls.c
+	../../../../../../sys/internal/kernel/src/sysmem/sha1_transform.S
 )
 # the XML parser SceNpCommon exports, built here from its source with a 1025-byte value buffer
 set_source_files_properties(../np_common/xml.c PROPERTIES COMPILE_DEFINITIONS NP_XML_PARSER_ONLY)
 target_compile_definitions(${PSP2_TARGET} PRIVATE NP_XML_VALUE_SIZE=1025)
+# the SDK's libSceSha1, which Sony built with GCC and without stack guards
+set_source_files_properties(../../../../../../sys/sdk/target/src/sha1/libsha1.c
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48
+	COMPILE_OPTIONS "-fno-stack-protector;-ffunction-sections")
+set_source_files_properties(../../../../../../sys/internal/kernel/src/sysmem/sha1_transform.S
+	PROPERTIES COMPILE_DEFINITIONS PSP2_COMPILER_GCC48)
