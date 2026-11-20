@@ -89,11 +89,16 @@ int iica1Start(struct Iica1Request *request)
 	STT1 = 1;
 	iica1Request.state = IICA_ADDRESS;
 	*iica1Request.status = IICA_BUSY;
+#if SOURCE_0104	/* USS-1002's: a read only addresses the device to read */
+	if (iica1Request.txCount == 0)
+		iica1Request.address |= 1;
+#endif
 	IICA1 = iica1Request.address;
 	return 0;
 }
 
-/* runs a transfer, polling, with the interrupt masked; 1 or 2 when an interrupt did not come */
+/* runs a transfer, polling, with the interrupt masked; 1 or 2 when an interrupt did not come
+   (USS-1002: in the status, the answer 0) */
 unsigned char iica1Transfer(struct Iica1Request *request)
 {
 	unsigned int wait;
@@ -185,10 +190,20 @@ done:
 	return 0;
 noAddressAck:
 	iica1Request.state = IICA_DONE;
+#if SOURCE_0104	/* USS-1002's answers the timeouts in the status */
+	*iica1Request.status = 1;
+	return 0;
+#else
 	return 1;
+#endif
 noStop:
 	iica1Request.state = IICA_DONE;
+#if SOURCE_0104
+	*iica1Request.status = 2;
+	return 0;
+#else
 	return 2;
+#endif
 }
 
 void iica1Close(void)
@@ -203,9 +218,16 @@ void iica1Close(void)
  */
 __rtos_interrupt void iica1Interrupt(void)
 {
+#if TOUCH_0105
+	unsigned char i;
+	unsigned char packed;
+	struct Csi10Transfer transfer;
+	unsigned char frame;
+#else
 	unsigned char i;
 	unsigned char report;
 	struct Csi10Transfer transfer;
+#endif
 
 	switch (iica1Request.state) {
 	case IICA_ADDRESS:
@@ -265,6 +287,83 @@ __rtos_interrupt void iica1Interrupt(void)
 		break;
 	}
 	return;
+#if TOUCH_0105
+/* the rear report's byte n, in the frame being read */
+#define REAR(n)		touchFrames[frame].panel[1][n]
+#define REAR_AT(n)	(touchFrames[frame].panel[1] + (n))
+stop:
+	SPT1 = 1;
+	iica1Request.state = IICA_DONE;
+	frame = touch.frame;
+	if (*iica1Request.status == 0) {
+		if (touch.panel[1].controller == 0) {
+			/* controller 0: the touch and status after the report */
+			memcpy(REAR_AT(TOUCH_REAR_TOUCH), REAR_AT(TOUCH_REAR_REPORT), TOUCH_REAR_TOUCH_SIZE);
+			REAR(TOUCH_PANEL_STATUS) = REAR(TOUCH_REAR_REPORT + TOUCH_REAR_TOUCH_SIZE);
+			memset(REAR_AT(TOUCH_REAR_REPORT), 0x80, TOUCH_REAR_TOUCH_SIZE + 1);
+		} else if (touch.panel[1].controller == 2) {
+			if (touch.rearShort == 0) {
+				/* controller 2's 0x20 bytes: three bytes before the report */
+				memmove(REAR_AT(0), REAR_AT(3), 0x18);
+				memcpy(REAR_AT(TOUCH_REAR_TOUCH), REAR_AT(0x1b), TOUCH_REAR_TOUCH_SIZE);
+				REAR(TOUCH_PANEL_STATUS) = REAR(0x1f);
+				memset(REAR_AT(TOUCH_REAR_REPORT), 0x80, 8);
+			} else {
+				/* its 0x18 bytes: the touches packed, two 3-bit fields to a byte */
+				REAR(TOUCH_REAR_TOUCH) = 0;
+				REAR(TOUCH_REAR_TOUCH + 1) = 0;
+				REAR(TOUCH_REAR_TOUCH + 2) = 0;
+				REAR(TOUCH_REAR_TOUCH + 3) = REAR(0x17);
+				REAR(TOUCH_PANEL_STATUS) = 0;
+				REAR(0) = REAR(3);
+				REAR(1) = REAR(4);
+				packed = REAR(5);
+				REAR(2) = packed & 7;
+				REAR(3) = REAR(6);
+				REAR(4) = packed >> 3 & 7;
+				REAR(5) = REAR(7);
+				REAR(6) = REAR(8);
+				REAR(7) = REAR(9);
+				packed = REAR(10);
+				REAR(8) = packed & 7;
+				REAR(9) = REAR(11);
+				REAR(10) = packed >> 3 & 7;
+				REAR(11) = REAR(12);
+				REAR(12) = REAR(13);
+				REAR(13) = REAR(14);
+				packed = REAR(15);
+				REAR(14) = packed & 7;
+				REAR(15) = REAR(16);
+				REAR(16) = packed >> 3 & 7;
+				REAR(0x17) = REAR(0x16);
+				packed = REAR(0x14);
+				REAR(0x16) = packed >> 3 & 7;
+				REAR(0x14) = packed & 7;
+			}
+		}
+	}
+	if (touch.flags & TOUCH_PANEL0) {
+		P12.6 = 0;
+		touchFrames[frame].time0 = TCR02;
+		TOUCH_FRAME_STATE(frame, 0) = touch.state.value;
+		for (i = 0; i < TOUCH_DELAY_SELECT; i++)
+			NOP();
+		touchCommand.address = touch.panel[0].objects.report | TOUCH_READ;
+		transfer.receive = (unsigned char *)&touchReply;
+		transfer.receiveCount = 0;
+		transfer.send = (unsigned char *)&touchCommand;
+		transfer.sendCount = 2;
+		transfer.state = CSI10_COMMAND0;
+		transfer.delay = TOUCH_DELAY_BYTE;
+		csi10TransferNoLock(&transfer);
+	} else {
+		hostStream0300.first = hostStream0301.first = hostStream0302.first = frame;
+		touch.flags |= TOUCH_FRAME;
+		touch.flags &= ~TOUCH_RUNNING;
+	}
+#undef REAR
+#undef REAR_AT
+#else
 stop:
 	SPT1 = 1;
 	iica1Request.state = IICA_DONE;
@@ -298,4 +397,5 @@ stop:
 		touch.flags |= TOUCH_FRAME;
 		touch.flags &= ~TOUCH_RUNNING;
 	}
+#endif
 }
