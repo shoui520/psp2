@@ -55,6 +55,12 @@ struct BgdlTaskCopy {
 	int reserved;
 };
 
+/* a task's copy as GetTaskCopy gives it (PLACEHOLDER names) */
+struct BgdlTaskCopyStatus {
+	int result;			/* the task's copyResult */
+	BgdlTaskCopy copy;
+};
+
 /*
  * libmtp's background copy (SceLibMtp_BF311CC8), as the shell gives it: libmtp's own
  * mtp_internal.h has the strings at +0x14 and +0x2C as reserved words
@@ -107,6 +113,16 @@ struct EseParamCache {
 
 /* what the manager's listeners are told */
 struct BgdlEvent {
+	BgdlEvent()
+	{
+	}
+
+	/* (0x81415638) */
+	__attribute__((noinline)) BgdlEvent(int type, SceUInt32 id, int result, int reserved)
+		: type(type), id(id), result(result), reserved(reserved), value(0)
+	{
+	}
+
 	int type;			/* 0 added, 3 state, 4 run status (PLACEHOLDER: others) */
 	SceUInt32 id;
 	EseParamCache param;
@@ -117,8 +133,9 @@ struct BgdlEvent {
 
 /* what a task says of its package (PLACEHOLDER names), copied under "SceBgdlRMutexPackage" */
 struct BgdlTaskPackage {
-	BgdlTaskPackage() : key220((const char *)NULL), reserved2(0), reserved3(0)
+	BgdlTaskPackage() : reserved2(0), reserved3(0)
 	{
+		key220.clear();
 	}
 
 	BgdlTaskPackage &operator=(const BgdlTaskPackage &src)
@@ -132,8 +149,8 @@ struct BgdlTaskPackage {
 
 	paf::string key220;		/* the title id (13 characters kept) */
 	paf::string key217;		/* the content id */
-	int reserved2;			/* PLACEHOLDER: copied, not read yet */
-	int reserved3;
+	int reserved2;			/* PLACEHOLDER: the server's category, not read yet */
+	int reserved3;			/* and its attributes */
 };
 
 class EseTask {
@@ -153,6 +170,31 @@ public:
 	int Load(void);			/* (0x810FF6F4) PLACEHOLDER name: the task read from its param file */
 	int setResult(int status, int taskResult);	/* (0x81103722) PLACEHOLDER name */
 	int execute(int *runStatus);					/* (0x8111FEBC) esehttp.cpp */
+	/* PLACEHOLDER names: Sony's calls these out of line (0x814154EC on) */
+	__attribute__((noinline)) void setKey107(int value)
+	{
+		m_ParamCache.key107 = value;
+	}
+
+	__attribute__((noinline)) void setKey102(bool value)
+	{
+		m_ParamCache.key102 = value;
+	}
+
+	__attribute__((noinline)) void setKey113(bool value)
+	{
+		m_ParamCache.key113 = value;
+	}
+
+	__attribute__((noinline)) void setKey110(bool value)
+	{
+		m_ParamCache.key110 = value;
+	}
+
+	/* (0x8141550C) the transfer started over, shown when report is set */
+	__attribute__((noinline)) void setProgress(bool report, SceUInt64 total, SceUInt64 current);
+	/* (0x8141559C) the package copied in under "SceBgdlRMutexPackage" */
+	__attribute__((noinline)) void setPackage(const struct BgdlTaskPackage *src);
 
 	SceUInt32 id;			/* the task's number, its folder's name */
 	int result;			/* key 104; 0x80103A1A until it is read */
@@ -234,7 +276,7 @@ struct BgdlPackageRequest {
 
 /* a download task's request (PLACEHOLDER names; the keys are the param file's) */
 struct BgdlDownloadRequest {
-	int reserved0;
+	SceUInt32 type;			/* key 111 */
 	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_*; 0x02: not started at once */
 	int installMode;		/* PLACEHOLDER: from 0 up, grw0: needs QAF's fake AC install */
 	char reserved1[20];
@@ -252,10 +294,17 @@ struct BgdlDownloadRequest {
 	char key222[52];
 	char key230[128];		/* a file copied into the task's folder */
 	char key221[1];			/* PLACEHOLDER: its length is not known yet */
-	char reserved3[129];
-	int reserved4;			/* PLACEHOLDER: only cleared so far */
+	char reserved3[63];
+	char key234[62];
+	SceUInt32 version;		/* PLACEHOLDER: from 0x01800000 to 0x01FFFFFF with platform 2 */
+	int platform;			/* PLACEHOLDER: the content's package keeps its id when 2 */
 	char reserved5[16];
 };
+
+/* the request's flags (PLACEHOLDER names) */
+#define BGDL_REQUEST_FLAG_SERVER4	0x04	/* passed to the server request */
+#define BGDL_REQUEST_FLAG_KEY239	0x20	/* key 239 set, and passed to the server request */
+#define BGDL_REQUEST_FLAG_STOP_ALL	0x40	/* the waiting tasks given up first */
 
 #define BGDL_REQUEST_FLAG_NO_START	0x02
 
@@ -389,8 +438,16 @@ public:
 	/* (0x8110671E) PLACEHOLDER name: the PSM runtime's download task made, or its patch looked
 	 * for when it is installed; *iconPath its icon */
 	int AddPsmRuntimeTask(paf::string *iconPath, int reserved0, int reserved1, SceUInt64 *needed);
-	/* (0x81107BDE) PLACEHOLDER name */
-	int Bgdl_81107BDE(BgdlDownloadRequest *request, BgdlContentInfo *info, SceUInt32 *id);
+	/* (0x81107BDE) PLACEHOLDER name: a download the server describes made a task; *id its id */
+	int Bgdl_81107BDE(const BgdlDownloadRequest *request, BgdlContentInfo *info, SceUInt32 *id);
+	/* (0x81109CAC) PLACEHOLDER name: a list's package files added to the package task id */
+	int AddPackageFiles(SceUInt32 id, const BgdlPackageRequest *request);
+	int GetTaskStatus(SceUInt32 id, BgdlTaskStatus *status);	/* (0x8110AA8E) PLACEHOLDER name */
+	int GetTaskCopy(SceUInt32 id, BgdlTaskCopyStatus *copy);	/* (0x8110AB42) PLACEHOLDER name */
+	int GetTaskParam(SceUInt32 id, EseParamCache *param);		/* (0x8110AC20) PLACEHOLDER name */
+	int CancelTask(SceUInt32 id);					/* (0x8110ADB0) PLACEHOLDER name */
+	int ReloadTasks(void);						/* (0x8110AEE6) PLACEHOLDER name */
+	int RemoveTasks(bool doneOnly);					/* (0x8110B068) PLACEHOLDER name */
 	int CancelWaitingTask(SceUInt32 id);	/* (0x811078DC) PLACEHOLDER name */
 	/* (0x81107986) PLACEHOLDER name: the tasks of a type (-1: all), *count of them */
 	int GetTaskList(BgdlTaskEntry *list, int *count, int type);
