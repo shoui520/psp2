@@ -13,6 +13,8 @@
 #include <std/string>
 #include <thread/thread.h>
 #include <job/job.h>
+#include <file/file.h>
+#include <common/shared_ptr.h>
 
 #include "esebase.hpp"
 #include "shell.h"
@@ -207,6 +209,88 @@ struct BgdlQueueItem {
 	char contentId[48];
 };
 
+/*
+ * A package download's request: a list file of its package files, the title it is for
+ * (AddPackageTask, 0x81100E8C). PLACEHOLDER names; the offsets are the original's.
+ */
+#define BGDL_REQUEST_FLAG_KEY116	0x08
+#define BGDL_REQUEST_FLAG_KEY115	0x10
+
+struct BgdlPackageRequest {
+	SceUInt32 type;			/* key 111: 0, 1: ux0:; 2: ur0:; 3 */
+	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_* */
+	int kind;			/* 1: an application (key 114 set) */
+	SceUInt32 fileCount;		/* key 500: the files the list must hold */
+	SceUInt16 key503;
+	SceUInt16 key504;
+	char titleId[14];		/* key 220 */
+	char contentId[52];		/* key 217 */
+	char name[257];			/* key 105 */
+	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
+	char listPath[256];		/* the list file, removed when done */
+	char key235[41];
+};
+
+/* what AddPackageTask gives back (PLACEHOLDER names) */
+struct BgdlPackageResult {
+	SceUInt32 id;			/* the task made */
+	int reserved;
+	SceUInt64 needed;		/* the space the files need, when the device is too full */
+};
+
+/* an entry of a package list file (PLACEHOLDER names) */
+struct BgdlPackageEntry {
+	SceUInt64 reserved;
+	SceUInt64 size;			/* key 5002 + 32 * n */
+	char digest[20];		/* key 5001 + 32 * n */
+	char name[260];			/* key 5000 + 32 * n */
+};
+
+/* a device's space (Bgdl_8111234C; constructor 0x8141523C) PLACEHOLDER names */
+struct BgdlStorageInfo {
+	BgdlStorageInfo() : reserved0(0), reserved1(0), free(0), clusterSize(0), reserved2(0)
+	{
+	}
+
+	int reserved0;
+	int reserved1;
+	SceUInt64 free;
+	SceUInt32 clusterSize;
+	int reserved2;
+};
+
+/* a file closed when it goes (constructor 0x814152A0, destructor 0x814152C8) PLACEHOLDER */
+class BgdlFileCloser {
+public:
+	BgdlFileCloser(paf::common::SharedPtr<paf::File> file) : m_file(file), m_result(0)
+	{
+	}
+
+	~BgdlFileCloser()
+	{
+		if (m_file.get() != NULL)
+			m_result = m_file->Close();
+	}
+
+	paf::common::SharedPtr<paf::File> m_file;
+	int m_result;
+};
+
+/* the id of a task's work folder, for a request's type (0x81415250) PLACEHOLDER name */
+inline SceUInt32 bgdlWorkId(SceUInt32 type, bool flag)
+{
+	if (type <= 1)
+		return (SceUInt32)-1;
+	if (type == 2)
+		return (SceUInt32)-2;
+	if (type == 3) {
+		if (flag == true)
+			return (SceUInt32)-1;
+		return (SceUInt32)-2;
+	}
+	return (SceUInt32)-1;
+}
+
 class BgdlManager {
 public:
 	BgdlManager();							/* (0x8110401E) */
@@ -231,6 +315,8 @@ public:
 	int AddTask(SceUInt32 *id, int type, SceUInt32 key111, const char *key105, bool key115, bool key116);
 	/* (0x8110088A) PLACEHOLDER name: the title's storage is there; *grw0 when it is grw0: */
 	int CheckStorage(const char *titleId, bool *grw0);
+	/* (0x81100E8C) PLACEHOLDER name: a package download made a task */
+	int AddPackageTask(const BgdlPackageRequest *request, BgdlPackageResult *result);
 
 	int reserved0;			/* PLACEHOLDER: only cleared so far */
 	BgdlTaskList m_tasks;

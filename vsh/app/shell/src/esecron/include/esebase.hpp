@@ -15,12 +15,17 @@
 
 /* the library's errors (PLACEHOLDER names) */
 #define BGDL_ERROR_NOT_STARTED		0x80103A00	/* the manager is not made */
+#define BGDL_ERROR_UX0_FULL		0x80103A01	/* ux0: has not the room */
 #define BGDL_ERROR_NO_UX0		0x80103A02	/* the task needs ux0: */
 #define BGDL_ERROR_NO_STORAGE		0x80103A03	/* neither ux0: nor grw0: is there */
+#define BGDL_ERROR_GRW0_FULL		0x80103A04	/* grw0: has not the room */
+#define BGDL_ERROR_NO_GAME_FOLDER	0x80103A06	/* the game's folder is not known */
 #define BGDL_ERROR_NO_APP		0x80103A07	/* the title has no livespace_db row */
 #define BGDL_ERROR_NO_MEMORY		0x80103A08
 #define BGDL_ERROR_NULL_TITLE		0x80103A09
 #define BGDL_ERROR_INVALID_ARGUMENT	0x80103A0E
+#define BGDL_ERROR_NO_LIST		0x80103A0B	/* the list file is empty or not there */
+#define BGDL_ERROR_LIST_SHORT		0x80103A0D	/* the list has fewer files than the request */
 #define BGDL_ERROR_NO_KEY		0x80103A0F	/* the param file has no such key */
 #define BGDL_ERROR_QUEUE_FULL		0x80103A19	/* 32 tasks listed (30 for a task of key 116) */
 #define BGDL_ERROR_NO_TASK		0x80103A14	/* no task has the id */
@@ -104,6 +109,9 @@ public:
 #define BGDL_ERROR_ALREADY_EXISTS	0x80103A17
 #define BGDL_ERROR_BUSY			0x80103A3C	/* the job dispatcher is not idle */
 #define BGDL_ERROR_GAME_PLUGIN		0x80103A47	/* the game plugin returned 0x80010010 */
+#define BGDL_ERROR_NO_TITLE_ID		0x80103A32	/* the request names no title */
+#define BGDL_ERROR_PATCH_STATE4		0x80103A51	/* the update check's state 4 */
+#define BGDL_ERROR_PATCH_STATE3		0x80103A52	/* and its state 3 */
 #define BGDL_ERROR_BAD_STORAGE		0x80103A38	/* the title's storage kind is not one a task can use */
 
 /* a transfer's progress; times in microseconds (paf::get_time_internal) */

@@ -27,6 +27,7 @@
 #include "console_info/console_info.h"
 #include "src/livespace_db/lsdb_keys.h"
 #include "src/livespace_db/livespace_db_internal.h"
+#include <modulemgr/module_info.h>
 #include "../../../../game/game_plugin/game_plugin.h"
 
 using namespace paf;
@@ -44,7 +45,95 @@ int Bgdl_811120A0(BgdlTaskPath *path, bool recursive);	/* removes a folder (PLAC
 int Bgdl_81112112(string *path, bool recursive);
 int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info);	/* PLACEHOLDER: the title's row */
 int Bgdl_81113898(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: its storage kind */
-int Bgdl_811121FE(const char *path, int mode);		/* makes a folder (PLACEHOLDER) */
+int Bgdl_811121FE(const char *path, int mode);
+SceUInt64 Bgdl_81112310(SceUInt64 size, SceUInt32 cluster);	/* size in whole clusters (PLACEHOLDER) */
+int Bgdl_8111234C(const char *device, BgdlStorageInfo *info);	/* the device's space (PLACEHOLDER) */
+int Bgdl_8111240E(const char *path, SceUInt64 size);		/* a file made that size (PLACEHOLDER) */
+int Bgdl_81111724(const char *path, int flag, SceUInt64 reserved);	/* PLACEHOLDER: removes a file */
+int Bgdl_81111CDC(const char *url, const char *folder, string *out, bool flag);	/* PLACEHOLDER */
+string Bgdl_81113C72(SceUInt32 id, bool flag);			/* PLACEHOLDER: a game's folder */
+int Bgdl_811137F6(bool mount);					/* PLACEHOLDER: grw0: */
+void Bgdl_81113890(int value);					/* PLACEHOLDER */
+
+/* the PSP emulator's system software version (sceCompatGetPspSystemSoftwareVersion) */
+extern "C" int SceCompatForVsh_9C107CC9(void);
+extern "C" int sceKernelGetSystemSwVersion(SceKernelSystemSwVersion *info);
+
+/*
+ * Another file's (0x812A99AE on): the game update check as the shell links it, its context,
+ * its parameters and what it finds (PLACEHOLDER names).
+ */
+struct BgdlUpdateParam {
+	void *(*malloc)(size_t size);
+	void (*free)(void *ptr);
+	int mode;			/* 0; 1: a background patch; 2: an internal one */
+	char titleId[16];
+	char appVer[8];
+	char contentId[48];
+	SceUInt32 systemVersion;
+	SceUInt32 pspVersion;
+	char key235[13];		/* set by the check */
+	char padding[7];
+};
+
+struct BgdlUpdateCore {
+	void *work[3];
+};
+
+struct BgdlUpdateState {
+	SceSize size;
+	int state;			/* 2: a patch to get */
+	char appVer[8];
+};
+
+struct BgdlUpdateInfo {
+	char reserved[20];
+	char name[384];
+	SceUInt32 count;		/* the patch's files */
+	SceUInt32 flags;		/* 0x80: not to get */
+};
+
+struct BgdlUpdateEntry {
+	SceUInt64 size;
+	char digest[20];
+	char name[276];
+};
+
+int Bgdl_812A99AE(BgdlUpdateCore *core, int option, const BgdlUpdateParam *param);
+int Bgdl_812A9BB0(BgdlUpdateCore *core, BgdlUpdateState *state, BgdlUpdateInfo *info);
+int Bgdl_812A985C(BgdlUpdateCore *core, SceUInt32 index, BgdlUpdateEntry *entry);
+int Bgdl_812A9708(BgdlUpdateCore *core);
+
+/* a title a patch is looked for (PLACEHOLDER names) */
+struct BgdlPatchTitle {
+	const char *titleId;
+	void *reserved0;
+	int reserved1;
+	const char *contentId;
+};
+
+/* another file's (constructor 0x81114642): a package file's check (PLACEHOLDER) */
+class BgdlPackageCheck {
+public:
+	BgdlPackageCheck();
+	void Bgdl_81114AFC(int mode, int kind, const char *name, int arg3, int arg4, int arg5,
+			   int arg6, int arg7);
+	int Bgdl_8118FD0C(void);
+	void Bgdl_81115C22(char *digest);
+
+	int reserved0;
+	int reserved1;
+	string reserved2;
+	string reserved3;
+	string reserved4;
+	int reserved5;
+	int reserved6;
+	char reserved7[32];
+	string reserved8;
+	bool reserved9;
+	bool reserved10;
+	string reserved11;
+};		/* makes a folder (PLACEHOLDER) */
 
 /* the next file's (0x8113A434): the object whose job queue runs the library's jobs */
 /* the dispatcher's state, as Bgdl_8113A47C copies it (PLACEHOLDER) */
@@ -67,6 +156,7 @@ class BgdlGamePluginLock {
 public:
 	BgdlGamePluginLock(bool lock);
 	~BgdlGamePluginLock();
+	void Lock(void);		/* (0x8111072E) */
 
 	bool m_locked;
 };
@@ -1839,6 +1929,666 @@ int bgdlGamePluginCheck(void)
 	}
 	if (ret == (int)0x80010010)
 		return BGDL_ERROR_GAME_PLUGIN;
+	return ret;
+}
+
+/* (0x81100B98) PLACEHOLDER name: the space the request's package files take on the device */
+int bgdlPackageSize(const BgdlPackageRequest *request, const BgdlStorageInfo *info,
+		    SceUInt64 *size)
+{
+	common::SharedPtr<File> list;
+	int ret = 0;
+
+	*size = 0;
+	list = LocalFile::Open(request->listPath, SCE_O_RDONLY | 0x10000, 6, &ret);
+	if (ret == 0) {
+		BgdlFileCloser closer(list);
+		BgdlPackageEntry entry;
+		SceUInt32 i;
+
+		for (i = 0; ; i++) {
+			sce_paf_memset(&entry, 0, sizeof(entry));
+			if (list->Read(&entry, sizeof(entry)) <= 0)
+				break;
+			*size += Bgdl_81112310(entry.size, info->clusterSize) + info->clusterSize;
+		}
+		if (request->fileCount > i)
+			ret = BGDL_ERROR_LIST_SHORT;
+		else
+			ret = 0;
+	}
+	return ret;
+}
+
+/* (0x81100E8C) */
+int BgdlManager::AddPackageTask(const BgdlPackageRequest *request, BgdlPackageResult *result)
+{
+	bool grw0 = false;
+	bool key102 = false;
+	int ret = 0;
+	BgdlTaskPath folder;
+	SceUInt64 needed = 0;
+	SceUInt64 firstSize = 0;
+	BgdlTaskPackage package;
+	int check = 0;
+	SceUInt32 id = (SceUInt32)-1;
+	const char *device;
+
+	Bgdl_81113890(1);
+	if (request == NULL || result == NULL) {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto out;
+	}
+	if (request->titleId[0] == '\0' || sce_paf_strlen(request->titleId) == 0) {
+		ret = BGDL_ERROR_NO_TITLE_ID;
+		goto out;
+	}
+	if (request->listPath[0] == '\0') {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto out;
+	}
+	if (LocalFile::GetFileSize(request->listPath) <= 0) {
+		ret = BGDL_ERROR_NO_LIST;
+		goto out;
+	}
+	ret = CheckStorage(request->titleId, &grw0);
+	if (ret == (int)BGDL_ERROR_NO_APP) {
+		if (m_ux0Ready != true)
+			goto out;
+		ret = 0;
+		grw0 = false;
+	} else if (ret != 0) {
+		goto out;
+	}
+	{
+		BgdlStorageInfo info;
+
+		if (grw0 == true) {
+			ret = bgdlDispatcherIdle();
+			if (ret != 0)
+				goto out;
+			device = "grw0:";
+		} else {
+			device = "ux0:";
+		}
+		if (grw0 == true) {
+			Bgdl_811137F6(false);
+			ret = bgdlGamePluginCheck();
+			if (ret != 0)
+				goto out;
+		}
+		ret = Bgdl_8111234C(device, &info);
+		if (ret != 0)
+			goto out;
+		ret = bgdlPackageSize(request, &info, &needed);
+		if (ret != 0)
+			goto out;
+		if (info.free < needed) {
+			ret = BGDL_ERROR_UX0_FULL;
+			if (grw0 == true)
+				ret = BGDL_ERROR_GRW0_FULL;
+			result->needed = needed;
+			goto out;
+		}
+		id = bgdlWorkId(request->type, true);
+		if (grw0 == true) {
+			if (id == (SceUInt32)-1)
+				id = (SceUInt32)-2;
+			if (!Bgdl_81112284("grw0:")) {
+				ret = BGDL_ERROR_NO_STORAGE;
+				goto out;
+			}
+			ret = Bgdl_811137F6(true);
+			if (ret != 0)
+				goto out;
+		}
+		{
+			string name("");
+
+			if (request->name[0] != '\0')
+				name = request->name;
+			ret = AddTask(&id, 0, request->type, name.c_str(),
+				      (request->flags & BGDL_REQUEST_FLAG_KEY115) != 0,
+				      (request->flags & BGDL_REQUEST_FLAG_KEY116) != 0);
+			if (ret != 0)
+				goto done;
+			ret = folder.initialize(id, 20);
+			if (ret != 0)
+				goto done;
+
+			EseParam file(id);
+			bool sized, key218, key205;
+			int key501, key502, key114;
+
+			ret = file.openWrite();
+			if (ret != 0)
+				goto done;
+			sized = grw0 != true;
+			ret = file.write(112, &sized, 1);
+			if (ret != 0)
+				goto done;
+			key218 = request->type == 0;
+			ret = file.write(218, &key218, 1);
+			if (ret != 0)
+				goto done;
+			ret = file.write(102, &key102, 1);
+			if (ret != 0)
+				goto done;
+			key205 = false;
+			ret = file.write(205, &key205, 1);
+			if (ret != 0)
+				goto done;
+			package.reserved2 = 0;
+			package.reserved3 = 0;
+			if (request->titleId[0] != '\0' && sce_paf_strlen(request->titleId) != 0) {
+				ret = file.write(220, request->titleId, sce_paf_strlen(request->titleId) + 1);
+				if (ret != 0)
+					goto done;
+				package.key220 = request->titleId;
+			}
+			if (request->contentId[0] != '\0' && sce_paf_strlen(request->contentId) != 0) {
+				ret = file.write(217, request->contentId,
+						 sce_paf_strlen(request->contentId) + 1);
+				if (ret != 0)
+					goto done;
+				package.key217 = request->contentId;
+			}
+			if (request->key235[0] != '\0' && sce_paf_strlen(request->key235) != 0) {
+				ret = file.write(235, request->key235, sce_paf_strlen(request->key235) + 1);
+				if (ret != 0)
+					goto done;
+			}
+
+			string icon;
+
+			if (request->iconPath[0] != '\0') {
+				ret = Bgdl_81111CDC(request->iconPath, folder.m_begin, &icon, true);
+				if (ret != 0)
+					icon.assign((const char *)NULL, 0);
+			}
+			if (icon.length() != 0) {
+				ret = file.write(106, icon.c_str(), icon.length() + 1);
+				if (ret != 0)
+					goto done;
+			}
+			ret = file.write(503, &request->key503, 2);
+			if (ret != 0)
+				goto done;
+			ret = file.write(504, &request->key504, 2);
+			if (ret != 0)
+				goto done;
+			ret = file.write(500, &request->fileCount, 4);
+			if (ret != 0)
+				goto done;
+			key501 = -1;
+			ret = file.write(501, &key501, 4);
+			if (ret != 0)
+				goto done;
+			key502 = 0;
+			ret = file.write(502, &key502, 4);
+			if (ret != 0)
+				goto done;
+			key114 = request->kind == 1;
+			ret = file.write(114, &key114, 4);
+			if (ret != 0)
+				goto done;
+
+			common::SharedPtr<File> list;
+
+			list = LocalFile::Open(request->listPath, SCE_O_RDONLY | 0x10000, 6, &ret);
+			if (ret != 0)
+				goto done;
+
+			BgdlFileCloser closer(list);
+			char fileName[32] = { 0 };
+			char number[8] = { 0 };
+			string dest("");
+			string gameFolder("");
+			SceUInt64 extra = 0;
+			SceUInt64 total = 0;
+			BgdlGamePluginLock lock(false);
+			BgdlPackageEntry entry;
+			SceUInt32 i;
+			int k;
+
+			if (grw0 == true) {
+				dest = "grw0:fgdl";
+			} else {
+				dest = folder.m_begin;
+				extra = 0x2000000;
+				if (request->kind == 1) {
+					lock.Lock();
+					gameFolder = Bgdl_81113C72(id, true);
+					if (gameFolder.length() != 0)
+						dest = gameFolder.c_str();
+					else
+						dest = "";
+					if (dest.length() == 0) {
+						ret = BGDL_ERROR_NO_GAME_FOLDER;
+						goto done;
+					}
+				}
+			}
+			dest += "/";
+			dest += "p";
+			k = 0;
+			for (i = 0; ; i++) {
+				sce_paf_memset(&entry, 0, sizeof(entry));
+				if (list->Read(&entry, sizeof(entry)) <= 0)
+					break;
+				total += entry.size;
+				needed += Bgdl_81112310(entry.size + extra, info.clusterSize) +
+					  info.clusterSize;
+				ret = file.write(5002 + k, &entry.size, 8);
+				if (ret != 0)
+					break;
+				ret = file.write(5000 + k, entry.name, sce_paf_strlen(entry.name) + 1);
+				if (ret != 0)
+					break;
+				ret = file.write(5001 + k, entry.digest, 20);
+				if (ret != 0)
+					break;
+				{
+					BgdlPackageCheck packageCheck;
+					char digest[32];
+
+					packageCheck.Bgdl_81114AFC(grw0 ? 5 : 6, 2, entry.name, 0, 0, 0, 1, 0);
+					check = packageCheck.Bgdl_8118FD0C();
+					packageCheck.Bgdl_81115C22(digest);
+					ret = file.write(5004 + k, &check, 4);
+					if (ret == 0)
+						ret = file.write(5005 + k, digest, 32);
+					if (ret != 0)
+						break;
+				}
+				sce_paf_snprintf(fileName, 31, "f_%04d_%02d.pkg", i, 0);
+				ret = file.write(5003 + k, fileName, sce_paf_strlen(fileName) + 1);
+				if (ret != 0)
+					break;
+				sce_paf_snprintf(number, 7, "%04d", i);
+				{
+					string path;
+
+					path = dest;
+					path += "/";
+					path += number;
+					if (Dir::IsExist(path.c_str()) == 1)
+						Dir::RemoveRecursive(path.c_str());
+					ret = Bgdl_811121FE(path.c_str(), 6);
+					if (ret != 0)
+						break;
+					if (sized) {
+						path += "/";
+						path += fileName;
+						Bgdl_8111240E(path.c_str(), entry.size + extra);
+					}
+					if (i == 0)
+						firstSize = entry.size;
+				}
+				k += 32;
+			}
+			if (request->fileCount > i) {
+				ret = BGDL_ERROR_LIST_SHORT;
+				goto done;
+			}
+			ret = 0;
+			if (gameFolder.length() != 0) {
+				ret = file.write(229, gameFolder.c_str(),
+						 sce_paf_strlen(gameFolder.c_str()) + 1);
+				if (ret != 0)
+					goto done;
+			}
+			ret = file.write(206, &firstSize, 8);
+			if (ret != 0)
+				goto done;
+
+			SceUInt64 current = 0;
+
+			ret = file.write(208, &current, 8);
+			if (ret != 0)
+				goto done;
+			ret = file.write(505, &total, 8);
+			if (ret != 0)
+				goto done;
+			if (grw0 == true) {
+				int key108;
+
+				ret = file.write(110, &grw0, 1);
+				if (ret != 0)
+					goto done;
+				key108 = 0;
+				ret = file.write(108, &key108, 4);
+				if (ret != 0)
+					goto done;
+
+				string fgdl("grw0:fgdl");
+
+				ret = file.write(229, fgdl.c_str(), sce_paf_strlen(fgdl.c_str()) + 1);
+				if (ret != 0)
+					goto done;
+			}
+
+			int key107 = 8;
+
+			ret = file.write(107, &key107, 4);
+			if (ret != 0)
+				goto done;
+
+			EseTask *task = FindTask(id);
+
+			if (task == NULL) {
+				ret = BGDL_ERROR_NO_TASK;
+				goto done;
+			}
+			task->m_ParamCache.key107 = key107;
+			task->m_ParamCache.key102 = key102;
+			task->status.id = task->id;
+			task->status.current = current;
+			task->status.total = firstSize;
+			task->transfer.Start(firstSize, current, 0, 512000);
+			s_packageMutex.Lock();
+			task->package = package;
+			s_packageMutex.Unlock();
+			if (grw0 == true)
+				task->m_ParamCache.key110 = 1;
+			ret = file.commit();
+		}
+done:
+		;
+	}
+	if (ret == 0 && grw0 == false)
+		ret = ReloadTask(id);
+	if (ret == 0 && result != NULL)
+		result->id = id;
+out:
+	if (ret != 0) {
+		RemoveTask(id);
+	} else {
+		UpdateQueueStatus();
+		if (package.key220.length() != 0)
+			Bgdl_812A9954(package.key220.c_str(), 0);
+	}
+	if (grw0 == true) {
+		if (ret != 0)
+			Bgdl_811137F6(false);
+		else
+			ret = 1;
+	}
+	if (request != NULL && request->listPath[0] != '\0')
+		Bgdl_81111724(request->listPath, 0, 29600);
+	return ret;
+}
+
+/* (0x8110255E) PLACEHOLDER name */
+int bgdlAddPackageTask(const BgdlPackageRequest *request, BgdlPackageResult *result)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->AddPackageTask(request, result);
+}
+
+/* (0x81102582) PLACEHOLDER name: the work folder of a device's tasks, "ux0:bgdl/w" or "ur0:bgdl/w" */
+int bgdlWorkFolder(string *path, int device)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	if (device > 0 && device <= 2)
+		*path = "ux0:bgdl";
+	else
+		*path = "ur0:bgdl";
+	*path += "/";
+	*path += "w";
+	return 0;
+}
+
+/* (0x811026A0) PLACEHOLDER name: a device's patch list in its work folder */
+int bgdlPatchFile(string *path, int device)
+{
+	int ret;
+
+	ret = bgdlWorkFolder(path, device);
+	if (ret != 0)
+		return ret;
+	*path += "/";
+	switch (device) {
+	case 1:
+		*path += "patch_internal.bin";
+		break;
+	case 2:
+		*path += "patch_bg.bin";
+		break;
+	default:
+		*path += "patch.bin";
+		break;
+	}
+	return ret;
+}
+
+/* (0x81102868) PLACEHOLDER name: the update check's parameters for a title */
+int bgdlUpdateParamInit(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPtr *app,
+			int mode, BgdlUpdateParam *param)
+{
+	SceKernelSystemSwVersion version = { 0 };
+	const char *appVer;
+	const char *titleId;
+	const char *contentId;
+	int pspVersion;
+	int ret;
+
+	if (param == NULL)
+		return -1;
+	sce_paf_memset(param, 0, sizeof(*param));
+	pspVersion = SceCompatForVsh_9C107CC9();
+	sce_paf_memset(&version, 0, sizeof(version));
+	version.size = sizeof(version);
+	ret = sceKernelGetSystemSwVersion(&version);
+	if (ret < 0)
+		return ret;
+	appVer = "01.00";
+	titleId = title->titleId;
+	contentId = title->contentId;
+	if (*disc != true) {
+		LsdbAppInfo *info = app->get();
+
+		if (info != NULL) {
+			LsdbAppInfo::iterator it = info->find(LSDB_KEY_APP_VER);
+
+			if (it != info->end()) {
+				if (it->second.type == LSDB_VALUE_TEXT && it->second.text != NULL)
+					appVer = it->second.text->c_str();
+				else
+					appVer = "";
+			}
+		}
+	}
+	if (titleId != NULL)
+		sce_paf_strncpy(param->titleId, titleId, 13);
+	if (appVer != NULL)
+		sce_paf_strncpy(param->appVer, appVer, 6);
+	if (contentId != NULL)
+		sce_paf_strncpy(param->contentId, contentId, 48);
+	switch (mode) {
+	case 1:
+		param->mode = 2;
+		break;
+	case 2:
+		param->mode = 1;
+		break;
+	default:
+		param->mode = 0;
+		break;
+	}
+	param->systemVersion = version.version;
+	param->pspVersion = pspVersion;
+	param->malloc = sce_paf_malloc;
+	param->free = sce_paf_free;
+	return 0;
+}
+
+/* (0x811029E6) PLACEHOLDER name: a title's patch looked for, and a task made to get it */
+int bgdlRegistPatch(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPtr *app, int mode)
+{
+	int ret = 0;
+	BgdlPackageRequest request;
+	BgdlPackageResult result;
+	BgdlUpdateParam param;
+	BgdlUpdateCore core;
+	BgdlUpdateState state;
+	BgdlUpdateInfo info;
+
+	sce_paf_memset(&request, 0, sizeof(request));
+	sce_paf_memset(&result, 0, sizeof(result));
+	ret = bgdlUpdateParamInit(title, disc, app, mode, &param);
+	if (ret != 0)
+		return ret;
+	ret = 0;
+	{
+		int err = Bgdl_812A99AE(&core, 0, &param);
+
+		if (err != 0)
+			return err;
+	}
+	sce_paf_memset(&state, 0, sizeof(state));
+	sce_paf_memset(&info, 0, sizeof(info));
+	state.size = sizeof(state);
+	ret = Bgdl_812A9BB0(&core, &state, &info);
+	if (ret >= 0) {
+		if (state.state != 2 || (info.flags & 0x80) != 0) {
+			if (state.state > 3) {
+				if (state.state > 4)
+					ret = 1;
+				else
+					ret = BGDL_ERROR_PATCH_STATE4;
+			} else if (state.state <= 2) {
+				ret = 1;
+			} else {
+				ret = BGDL_ERROR_PATCH_STATE3;
+			}
+		} else {
+			string path;
+			char listPath[256];
+
+			ret = bgdlPatchFile(&path, 1);
+			if (ret != 0)
+				return ret;
+			sce_paf_memset(listPath, 0, sizeof(listPath));
+			sce_paf_strncpy(listPath, path.c_str(), sizeof(listPath));
+
+			common::SharedPtr<File> list = LocalFile::Open(listPath,
+				SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC | 0x10000, 6, &ret);
+
+			if (ret == 0) {
+				BgdlFileCloser closer(list);
+				SceUInt32 i = 0;
+
+				if (info.count != 0) {
+					for (i = 0; ; ) {
+						BgdlUpdateEntry update;
+						BgdlPackageEntry entry;
+						int written;
+
+						sce_paf_memset(&update, 0, sizeof(update));
+						ret = Bgdl_812A985C(&core, i, &update);
+						sce_paf_memset(&entry, 0, sizeof(entry));
+						entry.size = update.size;
+						sce_paf_memcpy(entry.digest, update.digest, sizeof(entry.digest));
+						sce_paf_snprintf(entry.name, 255, "%s", update.name);
+						written = list->Write(&entry, sizeof(entry));
+						if (written != sizeof(entry)) {
+							ret = written;
+							break;
+						}
+						if (++i >= info.count)
+							break;
+					}
+				}
+				if (ret == 0) {
+					int major = 0;
+					int minor = 0;
+					int scale;
+					int n;
+					const char *p;
+
+					request.fileCount = i;
+					request.type = 3;
+					request.key503 = 0;
+					request.key504 = 0;
+					p = state.appVer;
+					scale = 1;
+					n = 0;
+					do {
+						if (*p == '\0')
+							break;
+						n++;
+						if (*p == '.')
+							break;
+						major = *p - '0' + major * scale;
+						scale *= 10;
+						p++;
+						request.key503 = major;
+					} while (n < 6);
+					scale = 1;
+					if (n < 6) {
+						p = &state.appVer[n];
+						do {
+							if (*p == '\0' || *p == '.')
+								break;
+							minor = *p - '0' + minor * scale;
+							n++;
+							scale *= 10;
+							p++;
+							request.key504 = minor;
+						} while (n < 6);
+					}
+					request.kind = mode == 2;
+					request.flags &= ~(BGDL_REQUEST_FLAG_KEY115 | BGDL_REQUEST_FLAG_KEY116);
+					sce_paf_memcpy(request.listPath, listPath, sizeof(request.listPath));
+					if (param.titleId[0] != '\0')
+						sce_paf_snprintf(request.titleId, 13, "%s", param.titleId);
+					if (param.key235[0] != '\0')
+						sce_paf_snprintf(request.key235, 13, "%s", param.key235);
+					if (param.contentId[0] != '\0')
+						sce_paf_snprintf(request.contentId, 51, "%s", param.contentId);
+					if (sce_paf_strncmp(title->titleId, "PCSI00011", 10) == 0)
+						sce_paf_snprintf(request.iconPath, 255, "%s",
+								 "vs0:vsh/game/psm/runtime_icon.png");
+					if (info.name[0] != '\0') {
+						char *q = request.name;
+
+						sce_paf_snprintf(request.name, 256, "%s", info.name);
+						if (*q != '\0') {
+							do {
+								if (*q == '\n')
+									*q = ' ';
+							} while (*++q != '\0');
+						}
+					}
+				}
+			}
+		}
+	}
+	Bgdl_812A9708(&core);
+	if (ret == 0 && state.state == 2)
+		return bgdlAddPackageTask(&request, &result);
+	return ret;
+}
+
+/* (0x81102FFE) PLACEHOLDER name: an installed title's patch looked for in the background */
+int bgdlRegistTitlePatch(const BgdlPatchTitle *title, const bool *disc)
+{
+	int ret;
+
+	if (!Bgdl_81112284("ux0:"))
+		return BGDL_ERROR_NO_UX0;
+	if (title->reserved0 == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+	ret = 0;
+
+	LsdbAppInfoPtr info(new LsdbAppInfo());
+
+	sce_paf_strncmp(title->titleId, "PCSI00011", 10);
+	Bgdl_81123BC0(title->titleId, &info);
+	bgdlRegistPatch(title, disc, &info, 1);
 	return ret;
 }
 
