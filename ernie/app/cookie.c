@@ -41,9 +41,14 @@ unsigned int cookieAddress(void)
 	return configGet()->cookieRegHigh ? 0xa4 : 0xa8;
 }
 
-#if BOARD_DOL1002
 /* DOL-1002 has no Cookie to talk to: cookieWrite and cookieRead do nothing, and only
-   cookieInitRegs goes on the bus */
+   cookieInitRegs goes on the bus; USS-1002's 0x0105 transfers while the Cookie's version is
+   read (not 0, 0xfd or 0xff), its version and register setup going to the bus directly; both
+   log a failed transfer (events 0x23 and 0x24) */
+#define COOKIE_GATED		(BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104)
+#if COOKIE_GATED
+#define COOKIE_NO_TRANSFER	(deviceVersions.cookie[0] == 0 || deviceVersions.cookie[0] == 0xfd || \
+				 deviceVersions.cookie[0] == 0xff)
 static unsigned char cookieBusWrite(unsigned char *data, unsigned char length);
 static unsigned char cookieBusRead(unsigned char *reg, unsigned char *data);
 #define COOKIE_INIT_WRITE	cookieBusWrite
@@ -72,6 +77,9 @@ struct CookieRegInit {
 
 void cookieInitRegs(void)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char result;
+#endif
 	unsigned char i;
 	struct CookieRegInit regs[6] = {
 		{ 0, &cookieRegs[0], 0x0014 },
@@ -98,21 +106,32 @@ void cookieInitRegs(void)
 		elmoCommand[0] = regs[i].reg;
 		elmoCommand[1] = (unsigned char)regs[i].value;
 		elmoCommand[2] = (unsigned char)(regs[i].value >> 8);
+#if BOARD_USS1001 && SOURCE_0104
+		result = COOKIE_INIT_WRITE(elmoCommand, 3);
+		if (result == 0)
+#else
 		if (COOKIE_INIT_WRITE(elmoCommand, 3) == 0)
+#endif
 			regs[i].last->word = regs[i].value;
 	}
-#if BOARD_DOL1002
-	/* DOL-1002 tests register 3's bit 15 and does nothing with it */
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
+	/* DOL-1002 (and USS-1002's 0x0105) tests register 3's bit 15 and does nothing with it */
 	if (cookieRegs[0].byte[1] & 0x80)
 		;
 #endif
 }
 
 /* data[0] is the register */
-#if BOARD_DOL1002
+#if COOKIE_GATED
 unsigned char cookieWrite(unsigned char *data, unsigned char length)
 {
+#if BOARD_USS1001
+	if (COOKIE_NO_TRANSFER)
+		return 0;
+	return cookieBusWrite(data, length);
+#else
 	return 0;
+#endif
 }
 
 static unsigned char cookieBusWrite(unsigned char *data, unsigned char length)
@@ -125,7 +144,7 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	FLGPTN ptn;
 	unsigned char i;
 
-#if !BOARD_DOL1002
+#if !COOKIE_GATED
 	if (deviceVersions.cookie[0] == 0xff)
 		return 0;
 #endif
@@ -146,7 +165,7 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
-#if BOARD_DOL1002
+#if COOKIE_GATED
 	if (status) {
 		logEvent(0x23);
 		logEventValue(0x24, status);
@@ -156,12 +175,21 @@ unsigned char cookieWrite(unsigned char *data, unsigned char length)
 }
 
 /* a register's two bytes; with no Cookie 0 */
-#if BOARD_DOL1002
+#if COOKIE_GATED
 unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 {
+#if BOARD_USS1001
+	if (COOKIE_NO_TRANSFER) {
+		*data++ = 0;
+		*data = 0;
+		return 0;
+	}
+	return cookieBusRead(reg, data);
+#else
 	*data++ = 0;
 	*data = 0;
 	return 0;
+#endif
 }
 
 static unsigned char cookieBusRead(unsigned char *reg, unsigned char *data)
@@ -173,7 +201,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	ER ercd;
 	FLGPTN ptn;
 
-#if !BOARD_DOL1002
+#if !COOKIE_GATED
 	if (deviceVersions.cookie[0] == 0xff) {
 		*data++ = 0;
 		*data = 0;
@@ -195,7 +223,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	} else if (ercd == E_TMOUT) {
 		status = 0x10;
 	}
-#if BOARD_DOL1002
+#if COOKIE_GATED
 	if (status) {
 		logEvent(0x23);
 		logEventValue(0x24, status);
@@ -218,6 +246,15 @@ unsigned char cookieReadVersion(unsigned char *version)
 {
 	COOKIE_VERSION(version)->low = COOKIE_VERSION(version)->high = 0xfd;
 	return 0;
+}
+#elif BOARD_USS1001 && SOURCE_0104
+/* USS-1002's 0x0105: from the bus */
+unsigned char cookieReadVersion(unsigned char *version)
+{
+	unsigned char reg;
+
+	reg = COOKIE_SLIM_REG(0);
+	return cookieBusRead(&reg, version);
 }
 #else
 unsigned char cookieReadVersion(unsigned char *version)
@@ -310,8 +347,8 @@ unsigned char cookieCtrlBatteryCharge(unsigned char on)
 		elmoCommand[2] = value;
 		result = cookieWrite(elmoCommand, 3);
 		if (result == 0) {
-#if BOARD_DOL1002
-			/* DOL-1002 tests on again and does nothing with it */
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
+			/* DOL-1002 (and USS-1002's 0x0105) tests on again and does nothing with it */
 			if (on)
 				;
 #endif
@@ -391,7 +428,7 @@ unsigned char cookieUpdateSupplyCurrentUsb(unsigned char current)
 	unsigned char result = 0;
 
 	if (chargeGetManualMode() == 0) {
-#if BOARD_DOL1002
+#if CHARGE_0104
 		result = cookieCtrlSupplyCurrentUsb(chargeLimitCurrent(current));
 #else
 		if (chargeCookieSetting < current)
@@ -428,7 +465,7 @@ unsigned char cookieUpdateSupplyCurrent(unsigned char current)
 	unsigned char result = 0;
 
 	if (chargeGetManualMode() == 0) {
-#if BOARD_DOL1002
+#if CHARGE_0104
 		result = cookieCtrlSupplyCurrent(chargeLimitCurrent(current));
 #else
 		if (chargeCookieSetting < current)

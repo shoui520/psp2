@@ -12,10 +12,13 @@
 #include "iica.h"
 #include "kernel.h"
 #include "log.h"
+#include "keepram.h"
 #include "powerseq.h"
 #include "powerwait.h"
 #include "state.h"
 
+/* DOL-1002's and USS-1002's 0x0105: the transfers gated on the version read, failures logged */
+#define ELMO_GATED	(BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104)
 #define ELMO_TRIES	3		/* a transfer's tries */
 #if BOARD_DOL1001
 #define ELMO_TIMEOUT	1		/* the wait for a transfer's end, in ticks */
@@ -67,7 +70,7 @@ static const struct ElmoRegInit elmoRegInit[] = {
 };
 #endif
 
-#if BOARD_DOL1002
+#if ELMO_GATED
 /* DOL-1002's: elmoWrite and elmoRead do nothing while the Elmo's version is unread (0), 0xfd or
    absent (0xff); the register setup and the version read go to the bus directly */
 #define ELMO_NO_TRANSFER	(deviceVersions.elmo[0] == 0 || deviceVersions.elmo[0] == 0xfd || \
@@ -93,16 +96,30 @@ void elmoInit(void)
    answered (powerSeqOn); the copy keeps the value only when the write went through */
 void elmoInitRegs(void)
 {
-#if BOARD_DOL1002
+#if ELMO_GATED
 	unsigned char i;
 #else
 	unsigned int i;
 #endif
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char cause;
+#endif
 
 	for (i = 0; i < ELMO_TABLE_COUNT; i++) {
+#if BOARD_USS1001 && SOURCE_0104
+		/* USS-1002's 0x0105: register 0xaa kept (read back) over the resets of the 0x00,
+		   0x10, 0x50 and 0x60 kinds */
+		cause = getResetCause() & 0xf0;
+		if ((cause == 0x00 || cause == 0x10 || cause == 0x50 || cause == 0x60) &&
+		    elmoRegInit[i].reg == 0xaa) {
+			elmoReadBus((unsigned char *)&elmoRegInit[i].reg,
+				    (unsigned char *)elmoRegInit[i].value);
+			continue;
+		}
+#endif
 		elmoCommand[0] = elmoRegInit[i].reg;
 		elmoCommand[1] = elmoRegInit[i].initial >> 8;
-#if BOARD_DOL1002
+#if ELMO_GATED
 		elmoCommand[2] = *(const unsigned char __far *)&elmoRegInit[i].initial;
 #else
 		elmoCommand[2] = elmoRegInit[i].initial;
@@ -149,7 +166,7 @@ void elmoInitRegs(void)
 }
 #endif /* SOURCE_0103 */
 
-#if BOARD_DOL1002
+#if ELMO_GATED
 unsigned char elmoWrite(unsigned char *data, unsigned char length)
 {
 	if (ELMO_NO_TRANSFER)
@@ -172,7 +189,7 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
-#if !BOARD_DOL1002
+#if !ELMO_GATED
 	if (deviceVersions.elmo[0] == 0xff)
 		return 0;
 #endif
@@ -196,7 +213,7 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 		} else if (ercd == E_TMOUT)
 			status = ELMO_NO_ANSWER;
 	} while (tries-- != 0);
-#if BOARD_DOL1002
+#if ELMO_GATED
 	if (status != 0) {
 		logEvent(0x21);
 		logEventValue(0x22, status);
@@ -205,7 +222,7 @@ unsigned char elmoWrite(unsigned char *data, unsigned char length)
 	return status;
 }
 
-#if BOARD_DOL1002
+#if ELMO_GATED
 unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 {
 	if (ELMO_NO_TRANSFER) {
@@ -230,7 +247,7 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 	unsigned char tries;
 
 	tries = ELMO_TRIES - 1;
-#if !BOARD_DOL1002
+#if !ELMO_GATED
 	if (deviceVersions.elmo[0] == 0xff) {
 		*value++ = 0;
 		*value = 0;
@@ -257,7 +274,7 @@ unsigned char elmoRead(unsigned char *reg, unsigned char *value)
 		} else if (ercd == E_TMOUT)
 			status = ELMO_NO_ANSWER;
 	} while (tries-- != 0);
-#if BOARD_DOL1002
+#if ELMO_GATED
 	if (status != 0) {
 		logEvent(0x21);
 		logEventValue(0x22, status);
@@ -279,7 +296,7 @@ unsigned char elmoReadVersion(unsigned char *version)
 {
 	unsigned char reg;
 
-#if SOURCE_0103 && !BOARD_DOL1002
+#if SOURCE_0103 && !ELMO_GATED
 	/* the slim's: not again once the Elmo did not answer */
 	if (deviceVersions.elmo[0] == 0xff) {
 		ELMO_VERSION_OF(version)->low = ELMO_VERSION_OF(version)->high = 0xff;
@@ -298,18 +315,24 @@ unsigned char elmoReadVersion(unsigned char *version)
 #define ELMO_STATUS	((struct ElmoMasks *)&elmoStatusMask)
 
 /* value[]'s entry of register 0xa7 (DOL-1002: its 0xaa's after it) */
-#if BOARD_DOL1002
+#if ELMO_GATED
 #define ELMO_VALUE_A7	4
 #define ELMO_VALUE_AA	5
 #else
 #define ELMO_VALUE_A7	5
+#endif
+/* USS-1002's 0x0105: no 0xa4 nor 0xaa, five entries */
+#if BOARD_USS1001 && SOURCE_0104
+#define ELMO_VALUES	5
+#else
+#define ELMO_VALUES	6
 #endif
 
 unsigned char elmoUpdateMasks(struct ElmoMasks *masks, unsigned char set)
 {
 	unsigned char length;
 	unsigned char result;
-	unsigned int value[6];
+	unsigned int value[ELMO_VALUES];
 
 	length = 0;
 	result = 0;
