@@ -167,7 +167,7 @@ int GuiMessageDialog::Open(const GuiDialogParam &param)
 	messageParam.defaultButton = GuiDialogButton(param.defaultButton);
 	messageParam.cancelButton = GuiDialogButton(param.cancelButton);
 	if (param.text.length() != 0)
-		messageParam.title = param.text;
+		messageParam.title.format = param.text;
 	messageParam.handler = new GuiDialogHandler(ResultCB, this);
 	messageParam.modal = param.modal;
 	messageParam.buttonCount = GuiDialogButton(param.buttonCount);

@@ -92,7 +92,8 @@ public:
 		return v4(_impl * rhs);
 	}
 
-	v4 operator/(float rhs) const
+	/* inlined wherever Sony's modules divide (no module keeps a copy) */
+	__attribute__((always_inline)) v4 operator/(float rhs) const
 	{
 		return v4(_impl / rhs);
 	}

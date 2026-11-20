@@ -59,6 +59,74 @@ typedef SceInt32 (*SceImeTextFilter)(
 	SceWChar16 *outText, SceUInt32 *outTextLength,
 	const SceWChar16 *srcText, SceUInt32 srcTextLength);
 
+typedef struct SceImeRect {
+	SceUInt32 x;
+	SceUInt32 y;
+	SceUInt32 width;
+	SceUInt32 height;
+} SceImeRect;
+
+typedef struct SceImeEditText {
+	SceUInt32 preeditIndex;
+	SceUInt32 preeditLength;
+	SceUInt32 caretIndex;
+	SceWChar16 *str;
+	SceUInt32 editIndex;
+	SceInt32 editLengthChange;
+} SceImeEditText;
+
+typedef union SceImeEventParam {
+	SceImeRect rect;
+	SceImeEditText text;
+	SceUInt32 caretIndex;
+	SceUChar8 reserved[40];
+} SceImeEventParam;
+
+typedef struct SceImeEvent {
+	SceUInt32 id;
+	SceImeEventParam param;
+} SceImeEvent;
+
+typedef struct SceImeCaret {
+	SceUInt32 x;
+	SceUInt32 y;
+	SceUInt32 height;
+	SceUInt32 index;
+} SceImeCaret;
+
+typedef struct SceImePreeditGeometry {
+	SceUInt32 x;
+	SceUInt32 y;
+	SceUInt32 height;
+} SceImePreeditGeometry;
+
+typedef void (*SceImeEventHandler)(void *arg, const SceImeEvent *e);
+
+typedef struct SceImeParam {
+	SceUInt32 sdkVersion;
+	SceUInt32 inputMethod;
+	SceUInt64 supportedLanguages;
+	SceBool languagesForced;
+	SceUInt32 type;
+	SceUInt32 option;
+	void *work;
+	void *arg;
+	SceImeEventHandler handler;
+	SceImeTextFilter filter;
+	SceWChar16 *initialText;
+	SceUInt32 maxTextLength;
+	SceWChar16 *inputTextBuffer;
+	SceUChar8 enterLabel;
+	SceUChar8 reserved[7];
+} SceImeParam;
+
+SceInt32 sceImeOpen(const SceImeParam *param);
+SceInt32 sceImeUpdate(void);
+SceInt32 sceImeSetText(const SceWChar16 *text, SceUInt32 length);
+SceInt32 sceImeSetCaret(const SceImeCaret *caret);
+SceInt32 sceImeSetPreeditGeometry(const SceImePreeditGeometry *preedit);
+SceInt32 sceImeClose(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

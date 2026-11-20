@@ -570,9 +570,9 @@ void MsgDialogMessageOpenHandler::operator()(CommonGuiMessageDialogParam *param)
 	if (param != NULL && g_msgDialogPlugin != NULL) {
 		switch (param->type) {
 		case (SceInt32)SCE_PHOTO_EXPORT_ERROR_CONTENT_FULL:
-			param->title = g_msgDialogPlugin->GetString(
+			param->title.format = g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_CONTENT_FULL));
-			param->titleLines.push_back(g_msgDialogPlugin->GetString(
+			param->title.args.push_back(g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_CONTENT_FULL_DETAIL)));
 			param->buttonCount = 0;
 			param->defaultButton = 1;
@@ -581,26 +581,26 @@ void MsgDialogMessageOpenHandler::operator()(CommonGuiMessageDialogParam *param)
 		case SCE_APPUTIL_INTERNAL_ERROR_DEVICE_NOT_FOUND:
 		case SCE_APPUTIL_ERROR_MUSIC_DEVICE_NOT_FOUND:
 		case (SceInt32)SCE_PHOTO_EXPORT_ERROR_MEDIA_NOT_EXIST:
-			param->title = g_msgDialogPlugin->GetString(
+			param->title.format = g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_NO_MEDIA));
 			param->buttonCount = 0;
 			param->defaultButton = 1;
 			break;
 		case (SceInt32)SCE_SCREENSHOT_ERROR_MEDIA_FULL:
 		case (SceInt32)SCE_PHOTO_EXPORT_ERROR_MEDIA_FULL:
-			param->title = g_msgDialogPlugin->GetString(
+			param->title.format = g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_MEDIA_FULL));
 			param->buttonCount = 0;
 			param->defaultButton = 1;
 			break;
 		case SCE_NP_TROPHY_ERROR_UNLOCK_DENIED:
-			param->title = g_msgDialogPlugin->GetString(
+			param->title.format = g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_UNLOCK_DENIED));
 			param->buttonCount = 0;
 			param->defaultButton = 1;
 			break;
 		case SCE_NP_WEBAPI_ERROR_TITLE_IS_BANNED:
-			param->title = g_msgDialogPlugin->GetString(
+			param->title.format = g_msgDialogPlugin->GetString(
 				IDParam(s_empty_name, MSG_DIALOG_MSG_TITLE_BANNED));
 			param->buttonCount = 0;
 			param->defaultButton = 0;
@@ -613,9 +613,9 @@ void MsgDialogMessageOpenHandler::operator()(CommonGuiMessageDialogParam *param)
 					SceRtcTick local;
 					int ret;
 
-					param->title = g_msgDialogPlugin->GetString(
+					param->title.format = g_msgDialogPlugin->GetString(
 						IDParam(s_empty_name, MSG_DIALOG_MSG_TITLE_BANNED_UNTIL));
-					param->title += L"\n\n";
+					param->title.format += L"\n\n";
 					local = utc;
 					/* the ban's end as a local date (Sony's code tests the result twice:
 					   the date's own check, then this one) */
@@ -629,9 +629,9 @@ void MsgDialogMessageOpenHandler::operator()(CommonGuiMessageDialogParam *param)
 						date = buf;
 					}
 					if (ret >= 0)
-						param->title.append(date);
+						param->title.format.append(date);
 					else
-						param->title = g_msgDialogPlugin->GetString(
+						param->title.format = g_msgDialogPlugin->GetString(
 							IDParam(s_empty_name, MSG_DIALOG_MSG_TITLE_BANNED));
 				}
 			}

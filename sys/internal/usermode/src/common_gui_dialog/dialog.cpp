@@ -43,9 +43,9 @@ static const char s_plusTrialUri[] = "psts:browse?target=plus&exp=true";
 #define LIST_DIALOG_PART_ENLARGED	12
 
 /* a list dialog's line template and its parts, and its button's */
-#define LIST_DIALOG_LINE		0xDD8302BA
-#define LIST_DIALOG_LINE_MARK		0x0A1F2AE1
-#define LIST_DIALOG_LINE_TEXT		0x57C8E2C6
+#define LIST_DIALOG_LINE		0xDD85173A
+#define LIST_DIALOG_LINE_MARK		0x0A1F21E1
+#define LIST_DIALOG_LINE_TEXT		0x57C79AC6
 #define LIST_DIALOG_BUTTON		0x3B8CD3EA
 #define LIST_DIALOG_BUTTON_WIDGET	0xE5D9C984
 #define LIST_DIALOG_BUTTON_STYLE	0x20413274
@@ -160,7 +160,6 @@ static inline int32_t FitButtonLabel(Widget *button)
 {
 	graph::DrawObj *obj = button->GetDrawObj(1);
 	graph::TextObj *text;
-	math::v4 color;
 	float point;
 	uint32_t lines;
 
@@ -169,7 +168,8 @@ static inline int32_t FitButtonLabel(Widget *button)
 	text = (graph::TextObj *)obj;
 	text->GetStyleAttribute(graph::TextStyleAttribute_Point, 0, point);
 	if (point == 22.0f) {
-		color = text->GetColor();
+		math::v4 color = text->GetColor();
+
 		color.set_w(1.0f);
 		text->SetColor(color);
 		return 0;
@@ -179,7 +179,8 @@ static inline int32_t FitButtonLabel(Widget *button)
 	if (lines > 1) {
 		text->SetStyleAttribute(graph::TextStyleAttribute_Point, 0, 0, 22.0f);
 	} else {
-		color = text->GetColor();
+		math::v4 color = text->GetColor();
+
 		color.set_w(1.0f);
 		text->SetColor(color);
 	}
@@ -210,7 +211,7 @@ static void AddListButton(int32_t id, Plugin *plugin, Widget *line,
 	button = line->FindChild(IDParam((uint32_t)LIST_DIALOG_BUTTON_WIDGET), 0);
 	if (button == NULL)
 		return;
-	if (!(item->buttonColor == SceCommonGuiDialog_EF2C5382)) {
+	if (!(SceCommonGuiDialog_EF2C5382 == item->buttonColor)) {
 		graph::DrawObj *obj = button->GetDrawObj(1);
 
 		if (obj != NULL)
@@ -334,14 +335,15 @@ public:
 		} else if (size.extract_y() == LIST_DIALOG_FIT_HEIGHT_MAX) {
 			float height = view->m_view_box_size.extract_y();
 
-			if (viewSize.extract_y() <= contentSize.extract_y()) {
+			if (viewSize.extract_y() > contentSize.extract_y()) {
+				box->SetAdjust(box->m_adjust_x, 2, box->m_adjust_z);
+				SetDialogAdjustY(box, 2);
+				viewSize.set_y((float)(((int32_t)sce_paf_ceilf(height) + 1) / 2 * 2));
+				view->SetSize(viewSize);
+			} else {
 				ShowWidget(box, NULL);
 				return 0;
 			}
-			box->SetAdjust(box->m_adjust_x, 2, box->m_adjust_z);
-			SetDialogAdjustY(box, 2);
-			viewSize.set_y((float)(((int32_t)sce_paf_ceilf(height) + 1) / 2 * 2));
-			view->SetSize(viewSize);
 		} else {
 			ShowWidget(box, NULL);
 		}
@@ -522,8 +524,8 @@ void CommonGuiDialog::Close()
 void CommonGuiDialog::PlaySound()
 {
 	const char *buffer1;
-	const char *buffer2;
 	uint32_t size1;
+	const char *buffer2;
 	uint32_t size2;
 	int32_t samplerate;
 	uint32_t type;
@@ -555,7 +557,7 @@ CommonGuiDialog::CommonGuiDialog()
 	  m_dimmer(NULL), m_open(false), m_waiting(false), m_inHandler(false),
 	  m_notifyClose(false), m_done(NULL), m_waitVblank(0), m_result(0), m_id(-1), m_soundId(0)
 {
-	for (uint32_t i = 0; i < s_dialogs.size() + 1; i++) {
+	for (int32_t i = 0; i < (int32_t)s_dialogs.size() + 1; i++) {
 		int32_t id = s_nextId;
 
 		if (id < 0)
@@ -566,7 +568,7 @@ CommonGuiDialog::CommonGuiDialog()
 			break;
 		}
 	}
-	s_dialogs.push_back(this);
+	s_dialogs.push_front(this);
 	m_pageName[0] = '\0';
 }
 
@@ -618,11 +620,11 @@ void CommonGuiDialog::AddReadyListener(CommonGuiLayoutDialogOpenHandler *functor
 #define DIALOG_WIDGET			0x438C7285
 
 /* the parts a layout dialog's frame is shown without (dimmer type above 0) */
-#define DIALOG_FRAME			0x5066AB1C
-#define DIALOG_BACKGROUND		0x2C5BA918
-#define DIALOG_BACKGROUND_TEXTURE	0xE880B27A
-#define DIALOG_DIVIDER_TOP		0x1BCD9EA1
-#define DIALOG_DIVIDER_BOTTOM		0x85A6C82E
+#define DIALOG_FRAME			0x5066F91C
+#define DIALOG_BACKGROUND		0x2C5B8B18
+#define DIALOG_BACKGROUND_TEXTURE	0xE880BF7A
+#define DIALOG_DIVIDER_TOP		0x1BCD9CA1
+#define DIALOG_DIVIDER_BOTTOM		0x85A75B2E
 
 /* the width from which the dialog covers the screen */
 #define DIALOG_WIDTH_FULL		960.0f
@@ -693,16 +695,16 @@ int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransit
 	if (newDimmer) {
 		if (m_dialog->GetSize(0)->extract_x() >= DIALOG_WIDTH_FULL) {
 			m_dimmer->SetColor(s_dimmerColorFull);
-		} else if (m_dimmerType != 0) {
-			m_dimmer->SetColor(s_dimmerColorOpaque);
-			m_dimmer->GetDrawObj(0)->m_draw_style.blend = 0;
-		} else {
+		} else if (m_dimmerType == 0) {
 			Framework *framework = Framework::Instance();
 			int32_t mode = framework->GetMode();
 
 			if (mode == 4)
 				mode = framework->GetMode_ApplicationC();
 			m_dimmer->SetColor(math::v4(0.0f, 0.0f, 0.0f, mode == 3 ? 0.0f : 0.3f));
+		} else {
+			m_dimmer->SetColor(s_dimmerColorOpaque);
+			m_dimmer->GetDrawObj(0)->m_draw_style.blend = 0;
 		}
 		if (m_dimmerType == 0)
 			ScePafCommon_6CF3A3C8(0.0f, m_dimmer, common::transition::Type_FadeinSlow, false,
@@ -747,9 +749,9 @@ int32_t CommonGuiDialog::Open(Plugin *plugin, int32_t priority, bool waitTransit
 		*transitionTime = time + 150.0f;
 
 	static const Dialog::PartsList s_parts[] = {
-		{ 6, IDParam((uint32_t)0x34B39E56) },
-		{ 7, IDParam((uint32_t)0x5B21B90A) },
-		{ 10, IDParam((uint32_t)0x019BC65D) },
+		{ 6, IDParam((uint32_t)0x34B37956) },
+		{ 7, IDParam((uint32_t)0x5B219F0A) },
+		{ 10, IDParam((uint32_t)0x019BC95D) },
 		{ 0, IDParam() },
 	};
 
@@ -982,7 +984,7 @@ int32_t IntervalListener::Do(int32_t type, Handler *self, Event *e)
 	CommonGuiDialog *dialog = CommonGuiDialog::Find(m_id);
 
 	if (dialog != NULL && dialog->m_open && m_functor != NULL)
-		(*m_functor)(dialog->m_id);
+		(*m_functor)(m_id);
 	return 0;
 }
 

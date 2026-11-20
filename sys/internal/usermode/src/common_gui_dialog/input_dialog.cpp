@@ -5,7 +5,6 @@
  */
 #include <stdint.h>
 #include <std/new>
-#include <common/encoded_string.h>
 #include <widget/w_text.h>
 #include <widget/w_text_box.h>
 #include "dialog.h"
@@ -170,27 +169,6 @@ public:
 		}
 		return 0;
 	}
-};
-
-/* a wide string as UTF-8, for as long as it lives */
-class Utf8String {
-public:
-	Utf8String(const wstring &text)
-	{
-		ScePafMisc_7709D1B2(&m_string, text, common::EncodedString::Encoding_Utf16);
-	}
-
-	~Utf8String()
-	{
-		ScePafMisc_B45A7521(&m_string);
-	}
-
-	const char *c_str()
-	{
-		return ScePafMisc_A7C6AF5C(&m_string);
-	}
-
-	common::EncodedString m_string;
 };
 
 string SceCommonGuiDialog_1D4E3C83(int dialogId)

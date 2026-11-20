@@ -23,6 +23,9 @@
 #include <common/transition.h>
 #include <inputdevice/touchscreen/touchscreen.h>
 #include <framework.h>
+#include <common/encoded_string.h>
+/* the text formatter Sony linked from the message dialog's common functions */
+#include "msg_dialog_util.h"
 #include <common_gui_dialog/common_gui_dialog.h>
 
 /* the dialog's scroll view, when its layout has no part for it */
@@ -167,11 +170,33 @@ static inline const paf::math::v4 &ColorV4(const float (&color)[4])
 	return *(const paf::math::v4 *)color;
 }
 
-/* the dialog parameters copied, all but the field nothing reads */
+/* the dialog parameters copied member by member (the implicit assignment's code) */
 CommonGuiDialogParam *CopyDialogParam(CommonGuiDialogParam *dst, const CommonGuiDialogParam *src);
 
 /* whether the dialog's check box (part 15, whatever the index) is checked: 0, or
    COMMON_GUI_DIALOG_ERROR_NO_DIALOG */
 int32_t GetPartChecked(int32_t id, int32_t index, bool *checked);
+
+/* a wide string as UTF-8, for as long as it lives */
+class Utf8String {
+public:
+	Utf8String(const paf::wstring &text)
+	{
+		ScePafMisc_7709D1B2(&m_string, text, paf::common::EncodedString::Encoding_Utf16);
+	}
+
+	~Utf8String()
+	{
+		ScePafMisc_B45A7521(&m_string);
+	}
+
+	const char *c_str()
+	{
+		return ScePafMisc_A7C6AF5C(&m_string);
+	}
+
+	paf::common::EncodedString m_string;
+};
+
 
 #endif

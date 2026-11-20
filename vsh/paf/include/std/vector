@@ -614,6 +614,28 @@ vector<_Ty, _Ax>::push_back(const _Ty &val)
 	} \
 	}
 
+/* vector<T>'s copy constructor out of line, at namespace scope after T and before its first use:
+   for the modules that call it where SNC would inline it */
+#define PAF_VECTOR_NOINLINE_COPY(T) \
+	namespace paf { \
+	template<> inline __attribute__((noinline)) \
+	vector<T, allocator<T> >::vector(const vector<T, allocator<T> > &src) : alloc(src.alloc) \
+	{ \
+		count = 0; \
+		limit = 0; \
+		T *data = alloc.allocate(src.limit); \
+		if (data == NULL) \
+			alloc.report_failure(); \
+		ptr = data; \
+		if (data != NULL) { \
+			count = src.count; \
+			limit = src.limit; \
+			for (size_type i = 0; i < count; ++i) \
+				new (&ptr[i]) T(src.ptr[i]); \
+		} \
+	} \
+	}
+
 /* element types Sony's code inlines the destructor of everywhere */
 namespace paf {
 namespace ui { class Widget; class RearTap; }

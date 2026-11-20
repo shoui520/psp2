@@ -87,8 +87,16 @@ public:
 	void *m_arg;
 };
 
+/* the bases of the two function forms of an open handler: no members of their own (Sony's module
+   has their vtables and destructors, which nothing calls) */
+class DialogIntervalHandler : public CommonGuiLayoutDialogOpenHandler {
+};
+
+class DialogOpenHandler : public CommonGuiLayoutDialogOpenHandler {
+};
+
 /* the function form of an open handler, for an interval */
-class DialogIntervalFunction : public CommonGuiLayoutDialogOpenHandler {
+class DialogIntervalFunction : public DialogIntervalHandler {
 public:
 	DialogIntervalFunction(CommonGuiDialogOpenFunction func, void *arg) : m_func(func), m_arg(arg)
 	{
@@ -102,7 +110,7 @@ public:
 };
 
 /* the function form of an open handler */
-class DialogOpenFunction : public CommonGuiLayoutDialogOpenHandler {
+class DialogOpenFunction : public DialogOpenHandler {
 public:
 	DialogOpenFunction(CommonGuiDialogOpenFunction func, void *arg) : m_func(func), m_arg(arg)
 	{

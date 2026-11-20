@@ -248,7 +248,7 @@ static int crossControllerDialogShowError(CommonDialogCrossControllerParam *work
 			common::Utf8ToUtf16(name, &peerName, 0);
 			text.append(L"\n\n" + peerName);
 		}
-		param.title = text;
+		param.title.format = text;
 		break;
 	}
 	default:

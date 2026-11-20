@@ -1,17 +1,16 @@
 /*
- * SceMsgDialogPlugin's common functions: the check of the caller's SDK version, the size and
- * %1..%11 formatters, and the countries' number formats. Sony linked the same code into safemode
- * and most of the system software's applications; no Sony record names the file or its
- * functions (the names are ours).
+ * The common functions (msg_dialog_util.h): the check of the caller's SDK version, the size and
+ * %1..%11 formatters, and the countries' number formats.
  */
 #include <stddef.h>
 #include <scetypes.h>
+#include <sceerror.h>
 #include <libkernel/libkernel.h>
 #include <modulemgr/modulemgr_syscall.h>
 #include <std/string.h>
 #include <std/string>
 #include <std/stdio.h>
-#include "msg_dialog_plugin.h"
+#include "msg_dialog_util.h"
 
 using namespace paf;
 
@@ -118,7 +117,6 @@ static MsgDialogNumberFormat s_numberFormats[] = {
 	{ "KR", 9, ".", "," },
 };
 
-/* what Format puts for %A..%Z and %a..%z: nothing while it is not set */
 const wchar_t *(*g_msgDialogFormatLetter)(wchar_t letter);
 
 /* checks the caller's SDK version against the system's, and keeps its level */

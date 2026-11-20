@@ -8,7 +8,11 @@
 #include <scetypes.h>
 
 typedef struct ErrorRecord {
-	SceUInt8 data[0x140];
+	char text[0x100];			/* the error's text, UTF-8 */
+	SceUInt32 messageIds[15];		/* the resource IDs of its details */
+	SceUInt8 reserved0[2];
+	SceUInt8 messageIdCount;
+	SceUInt8 reserved1;
 	SceUInt32 code;
 	SceUInt32 id;
 	SceUInt32 swVersion;			/* SceKernelSystemSwVersion.version */
@@ -24,6 +28,8 @@ extern "C" {
 #endif
 
 int sceErrorHistoryPostError(const void *record);
+/* the error's code as the user sees it ("C1-2345-6"), into a buffer of at least 18 bytes */
+int sceErrorGetExternalString(char *buf, SceUInt32 code);
 
 #ifdef __cplusplus
 }

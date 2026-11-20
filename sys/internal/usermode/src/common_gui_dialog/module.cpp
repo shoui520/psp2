@@ -42,6 +42,10 @@ extern "C" void (*__stop__Zpreinit_array[])(void);
 extern "C" void (*__start__Zinit_array[])(void);
 extern "C" void (*__stop__Zinit_array[])(void);
 
+/* the empty name of the module's resource IDs: paf's headers declare it weak, so each module that
+   builds an IDParam from it keeps its own copy */
+const char paf::s_empty_name[] = "";
+
 static __attribute__((noinline)) void commonGuiDialogInit(void)
 {
 	void (**init)(void);

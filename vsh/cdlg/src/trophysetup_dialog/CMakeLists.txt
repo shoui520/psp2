@@ -9,7 +9,10 @@ psp2_module(vs0_sys_external_libcdlg_np_trophy_setup KIND user COMPILER snc SOUR
 	setup.cpp
 	setup_job.cpp
 	dialog_controller.cpp
-	dialogs.cpp
+	error_dialog.cpp
+	processing_dialog.cpp
+	exit_notice_dialog.cpp
+	removal_question_dialog.cpp
 	../../../../sys/sdk/target/src/libsnc/unwind_pr0.c
 )
 target_include_directories(vs0_sys_external_libcdlg_np_trophy_setup PRIVATE "${PSP2_SRC}/vsh/paf/include"

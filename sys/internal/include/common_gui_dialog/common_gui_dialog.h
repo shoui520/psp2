@@ -129,12 +129,28 @@ class CommonGuiDialogParam {
 public:
 	CommonGuiDialogParam();
 
+	/* copied member by member, as the library's copies are */
+	CommonGuiDialogParam(const CommonGuiDialogParam &src)
+		: resourcePlugin(src.resourcePlugin)
+	{
+		*(paf::math::v4 *)bgColor = *(const paf::math::v4 *)src.bgColor;
+		*(paf::math::v4 *)dimmerColor = *(const paf::math::v4 *)src.dimmerColor;
+		soundId = src.soundId;
+		dimmer = src.dimmer;
+		priority = src.priority;
+		waitTransition = src.waitTransition;
+		notifyClose = src.notifyClose;
+		dialogId = src.dialogId;
+		outId = src.outId;
+		pageOption = src.pageOption;
+	}
+
 	paf::Plugin *resourcePlugin;
-	/* neither filled nor copied by the library */
-	SceUInt32 reserved;
 	/* the background's and the dimmer's colours, RGBA from 0 to 1; SceCommonGuiDialog_EF2C5382 by
-	   default (the dialog's own) */
-	float bgColor[4];
+	   default (the dialog's own). Eight-byte aligned, as the library copies them: the parameters
+	   are, so the error dialog's handler holds them at +8 in 72 bytes, while a derived class's
+	   first member follows at +68 */
+	float bgColor[4] __attribute__((aligned(8)));
 	float dimmerColor[4];
 	/* the resource ID of the sound the dialog plays as it closes; 0 for none */
 	SceUInt32 soundId;
@@ -154,27 +170,46 @@ public:
 	SceInt32 pageOption;
 };
 
-typedef char CommonGuiDialogParamSize[sizeof(CommonGuiDialogParam) == 68 ? 1 : -1];
+typedef char CommonGuiDialogParamSize[sizeof(CommonGuiDialogParam) == 72 ? 1 : -1];
 
-/* a button or line of a message dialog */
-struct CommonGuiMessageDialogItem {
-	paf::wstring label;
-	paf::vector<paf::wstring> lines;
-	paf::wstring text;
-	SceUInt32 value;
+/*
+ * A message dialog's text: a format, whose %1 to %9 the library replaces with its arguments in
+ * order (%(10) and %(11) with nothing, %% with %), and the arguments
+ */
+struct CommonGuiMessageDialogText {
+	paf::wstring format;
+	paf::vector<paf::wstring> args;
 };
 
-/* the 4-byte option word after the dialog's type, in bit fields (Sony's copies it field by field):
-   flags in its first byte (the trophy setup dialog sets 8 for its error dialog; what the bits
-   mean is not known) */
+/* a line of an error dialog's details, with a button when its label is not empty, whose value
+   the details dialog closes with */
+struct CommonGuiMessageDialogItem {
+	/* the line; the resource ID at its index in the parameters' item IDs when empty */
+	CommonGuiMessageDialogText text;
+	paf::wstring buttonLabel;
+	SceUInt32 buttonValue;
+};
+
+/* the 4-byte option word after the dialog's error code, in bit fields (Sony's copies it field by
+   field): flags in its first byte (the trophy setup dialog sets 8 for its error dialog; what the
+   bits mean is not known). The error history keeps the word turned by a byte (flags on top). */
 struct CommonGuiMessageDialogOption {
 	SceUInt32 flags : 8;
 	SceUInt32 reserved : 24;
 
 	CommonGuiMessageDialogOption() : flags(0), reserved(0) {}
+
+	CommonGuiMessageDialogOption(const CommonGuiMessageDialogOption &src)
+		: flags(src.flags), reserved(src.reserved)
+	{
+	}
 };
 
-/* the parameters of a message dialog (SceCommonGuiDialog_20B141F1) */
+/*
+ * The parameters of an error dialog (SceCommonGuiDialog_20B141F1): the error's text, from the
+ * library's table of error codes unless given, with the error's code after it, its details, and
+ * whether it goes to the error history. A value of 2 leaves the choice to the table.
+ */
 class CommonGuiMessageDialogParam : public CommonGuiDialogParam {
 public:
 	CommonGuiMessageDialogParam()
@@ -184,27 +219,60 @@ public:
 	{
 	}
 
+	/* the error code */
 	SceInt32 type;
 	CommonGuiMessageDialogOption option;
+	/* the application whose title ID the error history keeps; -2 for the caller */
 	SceInt32 buttonType;
+	/* the error goes to the error history: 0, 1, or 2 as the table says */
 	SceInt32 buttonCount;
+	/* the error's code (as sceErrorGetExternalString writes it) follows the text: 0, 1, or 2 as
+	   the table says; always when the text is the default text */
 	SceInt32 defaultButton;
+	/* the error code in hexadecimal follows the text: 0 or 1 (2 is 0) */
 	SceInt32 cancelButton;
-	SceUInt32 messageId;		/* the text's resource ID */
-	paf::wstring title;
-	paf::vector<paf::wstring> titleLines;
+	/* the text's resource ID when the text is empty; the table's when 0 */
+	SceUInt32 messageId;
+	CommonGuiMessageDialogText title;
+	/* the text when there is no other; the library's own when empty */
 	paf::wstring message;
+	/* the details' resource IDs, by item, for the items without text; the table adds its own */
 	paf::vector<SceUInt32> messageIds;
+	/* the details: a button opens them when there are any */
 	paf::vector<CommonGuiMessageDialogItem> items;
+	/* the call waits until the dialog closes, and returns its result */
 	bool closeOnSelect;
+	/* the dialog has an OK button */
 	bool modal;
+	/* the dialog takes the layout below */
 	bool useLayout;
-	const void *layout[3];		/* read when useLayout is set */
+	CommonGuiDialogLayout layout;
 	CommonGuiDialogHandler *handler;
+	/* called with the parameters once the table has filled them, then deleted */
 	CommonGuiMessageDialogOpenHandler *openHandler;
 };
 
 typedef char CommonGuiMessageDialogParamSize[sizeof(CommonGuiMessageDialogParam) == 192 ? 1 : -1];
+
+/*
+ * The parameters of an error dialog's details (SceCommonGuiDialog_5F13DF1F): a list dialog of its
+ * lines under the library's heading, each line's text the resource ID at its index when empty.
+ * The library takes the handler over.
+ */
+class CommonGuiMessageDetailsParam : public CommonGuiDialogParam {
+public:
+	CommonGuiMessageDetailsParam() : wait(false), showOkButton(true), handler(NULL)
+	{
+	}
+
+	paf::vector<SceUInt32> itemIds;
+	paf::vector<CommonGuiMessageDialogItem> items;
+	/* the call waits until the dialog closes, and returns its result */
+	bool wait;
+	/* the list dialog has an OK button */
+	bool showOkButton;
+	CommonGuiDialogHandler *handler;
+};
 
 /*
  * The parameters of a dialog with its own layout and buttons (SceCommonGuiDialog_CCFCD9A6):
@@ -281,6 +349,9 @@ public:
 	/* the list dialog's defaults (SceCommonGuiDialog_BAC27433 and SceCommonGuiDialog_149B7ABB) */
 	CommonGuiListDialogParam();
 
+	/* the fields' defaults alone, without the list dialog's colours (the library's own use) */
+	explicit CommonGuiListDialogParam(bool);
+
 	/* the layout: 1 with an OK button, 2 without buttons, 3 with no and yes; else the panel's */
 	SceInt32 type;
 	/* the dialog is fitted to its lines */
@@ -344,7 +415,7 @@ public:
 	CommonGuiDialogHandler *handler;
 };
 
-typedef char CommonGuiVideoDialogParamSize[sizeof(CommonGuiVideoDialogParam) == 164 ? 1 : -1];
+typedef char CommonGuiVideoDialogParamSize[sizeof(CommonGuiVideoDialogParam) == 168 ? 1 : -1];
 
 extern "C" {
 /* the parameters' defaults: both NIDs are the one constructor (C2 and C1) */
@@ -425,13 +496,22 @@ int SceCommonGuiDialog_EB559AFE(paf::Plugin *plugin, const paf::wstring &heading
 /* adds the widget the factory makes beside the dialog's part, and deletes the factory: 0, or
    -1 */
 int SceCommonGuiDialog_061DD12B(int dialogId, int index, CommonGuiDialogWidgetFactory *factory);
-/* shows a message dialog: returns when it is closed */
-int SceCommonGuiDialog_20B141F1(CommonGuiMessageDialogParam *param);
-/* shows a message dialog with the plugin's resources and the two handlers, which the library
+/* shows an error dialog's details: as SceCommonGuiDialog_F3D37CAE */
+int SceCommonGuiDialog_5F13DF1F(const CommonGuiMessageDetailsParam *param);
+/* shows an error dialog: its ID (its result when it waits), or a negative error */
+int SceCommonGuiDialog_20B141F1(const CommonGuiMessageDialogParam *param);
+/* shows an error dialog with the plugin's resources and the two handlers, which the library
    takes over: its ID, or a negative error */
-int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, CommonGuiMessageDialogParam *param,
+int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, const CommonGuiMessageDialogParam *param,
 				CommonGuiDialogHandler *handler,
 				CommonGuiMessageDialogOpenHandler *openHandler);
+/* the same, and waits until it closes: its result, or a negative error */
+int SceCommonGuiDialog_518ABE78(paf::Plugin *plugin, const CommonGuiMessageDialogParam *param,
+				CommonGuiMessageDialogOpenHandler *openHandler);
+/* the error dialog's text and the error's code as SceCommonGuiDialog_20B141F1 would show them
+   (either may be NULL) */
+void SceCommonGuiDialog_6FF8219B(const CommonGuiMessageDialogParam *param, paf::wstring *text,
+				 paf::wstring *code);
 /* shows the PlayStation Plus dialog: its ID, or a negative error */
 int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param);
 /* shows a list dialog: its ID (its result when it waits), or a negative error */
@@ -504,6 +584,12 @@ extern const paf::math::v4 SceCommonGuiDialog_EF2C5382;
 inline CommonGuiDialogParam::CommonGuiDialogParam()
 {
 	SceCommonGuiDialog_696DB9C9(this);
+}
+
+inline CommonGuiListDialogParam::CommonGuiListDialogParam(bool)
+	: type(0), fit(false), headingColor(SceCommonGuiDialog_EF2C5382), wait(false), outId(NULL),
+	  handler(NULL)
+{
 }
 
 inline CommonGuiListDialogItem::CommonGuiListDialogItem()
