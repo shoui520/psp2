@@ -12,6 +12,8 @@
 #include <std/string>
 #include <common/shared_ptr.h>
 #include <file/file.h>
+#include <file/localfile.h>
+#include <std/string.h>
 
 /* the kinds of content information, each in its own folder ("ns", "ci", "mi", "uc") */
 #define CONSOLE_INFO_TYPE_NS		0
@@ -133,6 +135,149 @@ public:
 	virtual int Commit();
 };
 
+/* a 64-bit value's bytes reversed (NP's and the kernel's IDs are big-endian) */
+static inline SceUInt64 consoleInfoSwap64(SceUInt64 v)
+{
+	return ((v & 0x00000000000000FFULL) << 56) | ((v & 0x000000000000FF00ULL) << 40) |
+	       ((v & 0x0000000000FF0000ULL) << 24) | ((v & 0x00000000FF000000ULL) << 8) |
+	       ((v & 0x000000FF00000000ULL) >> 8) | ((v & 0x0000FF0000000000ULL) >> 24) |
+	       ((v & 0x00FF000000000000ULL) >> 40) | ((v & 0xFF00000000000000ULL) >> 56);
+}
+
+/* the size of a record file's path */
+#define CONSOLE_INFO_FILE_PATH_SIZE	64
+
+/*
+ * PLACEHOLDER: a file of fixed-size records under ur0:ci (the console information files'
+ * library, 0x813770FC-0x813777B0): its file, its name, the size of its records and its state.
+ */
+class ConsoleInfoFile {
+public:
+	ConsoleInfoFile(const char *name, SceUInt8 recordSize);	/* (0x813770FC, 0x8137711A) */
+	virtual ~ConsoleInfoFile();				/* (0x813771A4, 0x81377214) */
+	virtual void GetPath(char *path);			/* (0x813777B0) */
+
+	/* a record written or read: mode 1 opens and keeps the file, 2 closes it after */
+	int Write(int index, const void *record, int mode);	/* (0x813774FC) */
+	int Read(int index, void *record, int mode);		/* (0x81377634) */
+
+	/* the file's size */
+	SceInt64 GetFileSize()
+	{
+		char path[CONSOLE_INFO_FILE_PATH_SIZE];
+
+		GetPath(path);
+		return paf::LocalFile::GetFileSize(path);
+	}
+
+	paf::common::SharedPtr<paf::File> m_file;
+	const char *m_name;
+	SceUInt8 m_recordSize;
+	bool m_created;
+	int m_opened;
+};
+
+/* PLACEHOLDER: a flag of ur0:ci/file read (0x81376CDE) */
+int consoleInfoFileReadFlag(int index, SceUInt8 *value, int mode);
+
+/* the "mi" record's process folder */
+#define CONSOLE_INFO_MI_PROC_DIR	"ur0:ci/mi/proc"
+
+/* PLACEHOLDER: a process event of the log (64 bytes): what happened to which title, when */
+struct ConsoleInfoMiEvent {
+	signed char state;		/* CONSOLE_INFO_MI_STATE_* */
+	signed char reserved;
+	signed char flag;
+	signed char kind;
+	signed char subkind;
+	char titleId[10];
+	SceUInt8 accountId[32];
+	SceUInt8 padding;
+	SceUInt64 tick;			/* the process time */
+	SceUInt64 rtcTick;		/* the network time */
+};
+
+/* PLACEHOLDER: a title's record in its process file (96 bytes): the event that started it, its
+   state, when it changed, and the time it was active and suspended */
+struct ConsoleInfoMiRecord {
+	ConsoleInfoMiEvent event;
+	signed char state;
+	SceUInt8 padding[7];
+	SceUInt64 time;
+	SceUInt64 activeTime;
+	SceUInt64 suspendTime;
+};
+
+/* PLACEHOLDER: a title's process file, ur0:ci/mi/proc/<title> (136 bytes, 0x810E7D54) */
+class ConsoleInfoProcFile : public ConsoleInfoFile {
+public:
+	ConsoleInfoProcFile(const char *titleId);
+
+	virtual ~ConsoleInfoProcFile();
+
+	virtual void GetPath(char *path);
+	virtual int Start(const ConsoleInfoMiEvent *event);
+	virtual int Update(const ConsoleInfoMiEvent *event);
+
+	bool Matches(const ConsoleInfoMiEvent *event);
+	bool IsIdle();
+
+	/* the time since the record's state last changed */
+	SceUInt64 Elapsed(const ConsoleInfoMiEvent *event)
+	{
+		SceUInt64 elapsed = 0;
+
+		if (m_record.time != 0)
+			elapsed = event->tick - m_record.time;
+		return elapsed;
+	}
+
+	/* the record written and the next one begun */
+	void Next()
+	{
+		ConsoleInfoFile::Write(m_last, &m_record, 1);
+		m_last++;
+		sce_paf_memset(&m_record, 0, sizeof(m_record));
+	}
+
+	ConsoleInfoMiRecord m_record;
+	int m_last;
+	char m_titleId[10];
+};
+
+/* PLACEHOLDER: an application's process file (0x810E804A) */
+class ConsoleInfoAppProcFile : public ConsoleInfoProcFile {
+public:
+	ConsoleInfoAppProcFile(const char *titleId)
+		: ConsoleInfoProcFile(titleId)
+	{
+	}
+
+	virtual int Start(const ConsoleInfoMiEvent *event);
+	virtual int Update(const ConsoleInfoMiEvent *event);
+};
+
+/* PLACEHOLDER: an application's event (0x810E8204) */
+bool consoleInfoIsAppEvent(const ConsoleInfoMiEvent *event);
+
+class ConsoleInfoMi;
+
+/* PLACEHOLDER: the process log written into the "mi" record (12 bytes, 0x810E76A0) */
+class ConsoleInfoMiProc {
+public:
+	ConsoleInfoMiProc(ConsoleInfoMi *owner);
+	virtual ~ConsoleInfoMiProc();
+
+	int WriteRecord(const ConsoleInfoMiRecord *record);	/* (0x810E7722) */
+	int UpdateTimes(ConsoleInfoMiRecord *record);		/* (0x810E7AB8) */
+	int WriteAll();						/* (0x810E7B72) */
+	int Write();						/* (0x810E7C6A) */
+	int OnEvent(const ConsoleInfoMiEvent *event);		/* (0x810E7CA2) */
+
+	ConsoleInfoMi *m_owner;
+	ConsoleInfoProcFile *m_current;
+};
+
 /* PLACEHOLDER: the "mi" record with an NP account (1068 bytes, 0x810E7554) */
 class ConsoleInfoMi : public ConsoleInfoRecord {
 public:
@@ -141,9 +286,19 @@ public:
 
 	virtual int Write(void *data);
 	virtual int Commit();
+	virtual const Field *GetFields();
+	virtual unsigned int GetFieldCount();
 
-	int m_list[3];		/* PLACEHOLDER: the object at +0x420 (0x810E76A0) */
+	ConsoleInfoMiProc m_proc;
 };
+
+/* PLACEHOLDER names: the process event log (0x810F3452), cleared (0x810F321E), each event given
+   to a function (0x810F334E), and the boot's events added (0x810F3688) */
+ConsoleInfoFile *consoleInfoGetProcLog(void);
+int consoleInfoProcLogClear(ConsoleInfoFile *log);
+int consoleInfoProcLogForEach(ConsoleInfoFile *log,
+			      int (*func)(const ConsoleInfoMiEvent *event, void *arg), void *arg);
+void consoleInfoProcLogAddBoot(void);
 
 /* PLACEHOLDER: the "ci" record with an NP account (1080 bytes, 0x810F394C) */
 class ConsoleInfoCi : public ConsoleInfoRecord {

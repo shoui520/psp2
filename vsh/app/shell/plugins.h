@@ -50,6 +50,7 @@ enum {
 	POWER_MANAGE_PLUGIN_FUNC_GAME_RELEASE	= 6,	/* and done */
 	POWER_MANAGE_PLUGIN_FUNC_POWER_EVENT	= 15,
 	POWER_MANAGE_PLUGIN_FUNC_BOOT_DONE	= 16,
+	POWER_MANAGE_PLUGIN_FUNC_IS_BUSY	= 25,	/* PLACEHOLDER: the console info is not written while it is not 0 */
 };
 
 /* coldboot_plugin's GetInterface(1) */
