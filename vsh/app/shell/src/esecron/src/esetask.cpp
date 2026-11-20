@@ -23,6 +23,7 @@ using namespace paf;
 /* the task's param file (eseparam.cpp; PLACEHOLDER names: not written yet) */
 int Bgdl_8112260C(SceUInt32 id, int key, void *value, SceSize size);		/* read */
 int Bgdl_811233A4(SceUInt32 id, int key, const void *value, SceSize size);	/* write */
+int Bgdl_8112278A(SceUInt32 id, int key, string *value);			/* read a string */
 
 static BgdlManager *s_manager = NULL;		/* (0x81544788) */
 static const char *s_np = "np";			/* (0x8154478C) PLACEHOLDER: read later */
@@ -489,4 +490,75 @@ int EseTask::setState(int state, int *current, bool force)
 		s_manager->NotifyListeners(&event);
 	}
 	return ret;
+}
+
+/* (0x810FDAEC) the task's folder: the one its param file names (key 229), or its own */
+int EseTask::GetFolder(BgdlTaskPath *path, bool fromParam)
+{
+	BgdlTaskPath folder;
+	int ret;
+
+	if (fromParam == true) {
+		string name;
+
+		ret = Bgdl_8112278A(id, 229, &name);
+		if (ret == 0 && name.length() != 0) {
+			const char *src = name.c_str();
+			SceSize len = sce_paf_strlen(src);
+
+			if (path->Reserve(len + 1) == 0) {
+				sce_paf_memcpy(path->m_begin, src, len);
+				path->m_begin[len] = '\0';
+			}
+			return 0;
+		}
+	}
+	ret = folder.initialize(id, 52);
+	if (ret != 0)
+		return ret;
+	path->Swap(folder);
+	return 0;
+}
+
+/* (0x810FDC1C) */
+EseTask *BgdlManager::FindTask(SceUInt32 id)
+{
+	EseTask **first = m_tasks.m_begin;
+	EseTask **last = m_tasks.m_end;
+	int count = last - first;
+
+	while (count > 0) {
+		int half = count / 2;
+		EseTask **mid = first + half;
+
+		if ((*mid)->id < id) {
+			first = ++mid;
+			count -= half + 1;
+		} else {
+			count = half;
+		}
+	}
+	if (first != last && id < (*first)->id)
+		first = last;
+	if (first == last)
+		return NULL;
+	return *first;
+}
+
+/* (0x810FDC72) */
+string bgdlTaskFolder(SceUInt32 id, bool fromParam)
+{
+	string folder("");
+
+	if (s_manager != NULL) {
+		EseTask *task = s_manager->FindTask(id);
+
+		if (task != NULL) {
+			BgdlTaskPath path;
+
+			if (task->GetFolder(&path, fromParam) == 0)
+				folder = path.m_begin;
+		}
+	}
+	return folder;
 }

@@ -70,6 +70,7 @@ class EseTask {
 public:
 	int setRunStatus(int status);					/* (0x810FD94C) */
 	int setState(int state, int *current, bool force);		/* (0x810FDA08) */
+	int GetFolder(BgdlTaskPath *path, bool fromParam);		/* (0x810FDAEC) */
 
 	SceUInt32 id;			/* the task's number, its folder's name */
 	int result;			/* key 104; 0x80103A1A until it is read */
@@ -106,6 +107,7 @@ public:
 	__attribute__((noinline)) void UpdateFlags(SceUInt32 value, SceUInt32 mask);	/* (0x810FD758) */
 	bool IsCancelled(void);						/* (0x810FD8EC) */
 	void NotifyListeners(BgdlEvent *event);				/* (0x810FD90C) */
+	EseTask *FindTask(SceUInt32 id);				/* (0x810FDC1C) */
 
 	int reserved0;			/* PLACEHOLDER: only cleared so far */
 	BgdlTaskList m_tasks;
@@ -162,5 +164,6 @@ public:
 };
 
 BgdlManager *bgdlManagerGet(void);				/* (0x810FD8E0) */
+paf::string bgdlTaskFolder(SceUInt32 id, bool fromParam);	/* (0x810FDC72) */
 
 #endif

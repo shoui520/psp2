@@ -290,7 +290,7 @@ int shellMtpHostFunc1(int arg);
 int shellMtpHostFunc2(int arg);
 int shellMtpHostFunc3(int arg);
 int shellMtpHostFunc4(int arg);
-int shellMtpHostFunc5(int arg0, int arg1);	/* libmtp passes it two arguments */
+paf::string shellMtpHostFunc5(int taskId);	/* a task's folder, returned in libmtp's string */
 
 /* the MTP Marlin service (SceMtpMlnSvc, 0x812BC4F0) started at boot (0x81003250) */
 int shellMtpMarlinServiceStart(void);

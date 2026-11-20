@@ -8,6 +8,7 @@
 #include <scetypes.h>
 
 #include "shell.h"
+#include "src/esecron/include/esetask.hpp"
 #include "src/livespace_db/lsdb_keys.h"
 
 /* libmtp's background copy (mtp_bgcopy_if.cpp); libmtp.h does not declare them yet */
@@ -26,7 +27,6 @@ int Bgdl_811103CA(int arg);
 int Bgdl_8110AD6C(int arg);
 int Bgdl_8110AD8E(int arg);
 int Bgdl_8110FB28(int arg);
-int Bgdl_810FDC72(int arg0, int arg1, int arg2);
 
 /* (0x810FCC30) */
 int shellMtpHostFunc0(int arg)
@@ -59,9 +59,9 @@ int shellMtpHostFunc4(int arg)
 }
 
 /* (0x810FCC5A) */
-int shellMtpHostFunc5(int arg0, int arg1)
+paf::string shellMtpHostFunc5(int taskId)
 {
-	return Bgdl_810FDC72(arg0, arg1, 0);
+	return bgdlTaskFolder(taskId, false);
 }
 
 /* (0x810FCC64) */
