@@ -327,6 +327,93 @@ out:
 	return result;
 }
 #else
+#if BATTERY_GAUGE
+/* USS-1002's 0x0105: the versions (0xff and 0xffff where the third try failed), the gauge on;
+   the battery's information read once, its faults logged (event log kind 5, codes 0x10 and
+   0x11) */
+void powerSeqOn(void)
+{
+	unsigned char i;
+	unsigned char unused;
+	union CookieStatus1 status;
+	union CookieStatus2 status2;
+
+	deviceVersions.cookie[1] = 0;
+	deviceVersions.cookie[0] = 0;
+	deviceVersions.elmo[1] = 0;
+	deviceVersions.elmo[0] = 0;
+	deviceVersions.battery.version[4] = 0;
+	deviceVersions.battery.version[3] = 0;
+	deviceVersions.battery.version[2] = 0;
+	deviceVersions.battery.version[1] = 0;
+	deviceVersions.battery.version[0] = 0;
+	deviceVersions.battery.id = 0;
+	elmoInit();
+	cookieInit();
+	batteryInit();
+	if (iicaInit()) {
+		deviceVersions.elmo[1] = 0xff;
+		deviceVersions.elmo[0] = 0xff;
+		deviceVersions.cookie[1] = 0xff;
+		deviceVersions.cookie[0] = 0xff;
+		deviceVersions.battery.id = deviceVersions.battery.version[0] =
+			deviceVersions.battery.version[1] = deviceVersions.battery.version[2] =
+			deviceVersions.battery.version[3] = deviceVersions.battery.version[4] = 0xffff;
+	} else {
+		for (i = 0; i < 3; i++) {
+			if (!elmoReadVersion(deviceVersions.elmo)) {
+				elmoInitRegs();
+				break;
+			}
+			if (i == 2) {
+				deviceVersions.elmo[1] = 0xff;
+				deviceVersions.elmo[0] = 0xff;
+			}
+		}
+		for (i = 0; i < 3; i++) {
+			if (!cookieReadVersion(deviceVersions.cookie)) {
+				cookieInitRegs();
+				cookieCtrlReg3Bit2(0);
+				break;
+			}
+			if (i == 2) {
+				deviceVersions.cookie[1] = 0xff;
+				deviceVersions.cookie[0] = 0xff;
+				deviceVersions.battery.id = deviceVersions.battery.version[0] =
+					deviceVersions.battery.version[1] =
+					deviceVersions.battery.version[2] =
+					deviceVersions.battery.version[3] =
+					deviceVersions.battery.version[4] = 0xffff;
+			}
+		}
+		batteryPowerOn();
+	}
+	if (deviceVersions.cookie[0] == 0x80) {
+		cookieReadStatus1(status.byte);
+		cookieReadStatus2(status2.byte);
+		if (!status.bits.battery) {
+			batteryFaults.byte[0] |= 0x01;
+			if ((status2.byte[0] & 0x0e) == 0x0a) {
+				cookieUpdateBatteryCharge(0);
+				batteryFaults.byte[0] |= 0x02;
+			}
+			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+		}
+		batteryReadInfo(&deviceVersions.battery.id);
+		batteryFaults.byte[0] |= 0x04;
+		eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+		if (!batteryReadBicTemp(&batteryFaults.word[2]) &&
+		    !batteryReadTemp(&batteryFaults.word[3])) {
+			batteryFaults.byte[0] |= 0x08;
+			eventLogRecord(5, 0x11, (unsigned char *)&batteryFaults.word[2], 4);
+			eventLogRecord(5, 0x10, batteryFaults.byte, 4);
+		}
+	} else if (deviceVersions.cookie[0] == 0) {
+		batteryReadInfo(&deviceVersions.battery.id);
+	}
+	cookieUpdateBatteryCharge(1);
+}
+#else
 /* the versions and the battery's identity (0xff and 0xffff where none answered); the battery's
    faults logged (event log kind 5, codes 0x10 and 0x11) */
 void powerSeqOn(void)
@@ -429,6 +516,7 @@ void powerSeqOn(void)
 	cookieUpdateBatteryCharge(1);
 	chargeInit();
 }
+#endif
 
 /* the regulators' levels, P0.6 and the 0xa1 device on, then the resume's Elmo steps; 0 or
    elmoWrite's error */
@@ -524,6 +612,9 @@ void powerSeqLevels(void)
 	elmoCommand[6] = 0x83;
 	elmoCommand[7] = levelTrim(level, trim);
 	elmoCommand[8] = 0x00;
+#if BOARD_USS1001 && SOURCE_0104
+	trim = configGet()->voltageTrim + 1;	/* USS-1002's 0x0105: 0x84 a step above (0x088e) */
+#endif
 	level = configGet()->voltage84;
 	elmoCommand[9] = 0x84;
 	elmoCommand[10] = levelTrim(level, trim);
@@ -634,7 +725,9 @@ unsigned char powerSeqOff(void)
 		chargeSetManualMode(0);
 	P4.1 = 0;
 	P4.2 = 0;
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105 has no P6.5 line */
 	P6.5 = 0;
+#endif
 	P0.5 = 0;
 	P1.7 = 0;
 	clockOutputStop();
@@ -763,7 +856,7 @@ unsigned char powerOffWlan(void)
 	unsigned int mask0;
 	unsigned int mask2;
 
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	if (elmoStatusMask.reg[0] & 0x0010 || elmoStatusMask.reg[2] & 0x1000) {
 #else
 	if (elmoStatusMask.reg[0] & 0x0010) {
@@ -783,7 +876,7 @@ unsigned char powerOffWlan(void)
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask0;
 			elmoStatusMask.reg[2] = mask2;
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 		}
 		if (result == 0) {
 #endif
@@ -816,7 +909,7 @@ unsigned char powerSetVoltage(unsigned char regulator, unsigned char level)
 /* the Cookie's register 6's bit 3 cleared, and set */
 unsigned char powerCookieSet(void)
 {
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	unsigned char result;
 
 	result = cookieUpdateReg6Bit3(0);
@@ -1206,8 +1299,10 @@ unsigned char powerBbmcOn(void)
 	unsigned char result;
 
 	result = 4;
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105 wakes no BBMC */
 	if (result)
 		bbmcWake();
+#endif
 	return result;
 }
 
@@ -1424,7 +1519,7 @@ unsigned char powerElmoA0Set(unsigned char bit14, unsigned char bit13)
 	unsigned char result;
 	unsigned int mask;
 
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	mask = elmoStatusMask.reg[0];
 #endif
 	powerWaitTimers(0x40);
@@ -1449,7 +1544,7 @@ unsigned char powerElmoA0Clear(unsigned char bit14, unsigned char bit13)
 	unsigned char result;
 	unsigned int mask;
 
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	mask = elmoStatusMask.reg[0];
 #elif BOARD_DOL1001
 	powerWaitTimers(0x40);
@@ -1553,7 +1648,9 @@ unsigned char powerMotionOff(void)
 	unsigned int mask;
 
 	if (elmoStatusMask.reg[2] & 0x0080) {
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105 has no P6.5 line */
 		P6.5 = 0;
+#endif
 		mask = elmoStatusMask.reg[2] &= 0xff7f;
 		elmoCommand[0] = 0xa2;
 		elmoCommand[1] = ((unsigned char *)&mask)[1];
