@@ -162,6 +162,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	exclusive_func_mgr.cpp
 	exclusive_func_mtp.cpp
 	exclusive_func_net.cpp
+	exclusive_func_photo_import.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
@@ -170,6 +171,7 @@ target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/incl
 # SNC's inlining budget: map::operator[] (0x814096ac) stays out of line in Sony's callers
 set_source_files_properties(boot.cpp lsdb_start.cpp net.cpp event_server.cpp app_event_server.cpp
 	exclusive_func_net.cpp
+	exclusive_func_photo_import.cpp
 	PROPERTIES COMPILE_OPTIONS -Xautoinlinesize=28)
 # the application's row's find (0x8140cc54) stays out of line in the game factory's CreateItem
 set_source_files_properties(src/applauncher_plugin/src/applauncher_iconinfo_game.cpp

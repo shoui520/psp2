@@ -101,4 +101,27 @@ public:
 /* the event bits of ExclusiveFuncMgr::m_events (PLACEHOLDER name) */
 #define EXCLUSIVE_FUNC_EVENT_POWER	0x01
 
+/* PLACEHOLDER: what the photo import gives its caller (1040 bytes) */
+struct ExclusiveFuncPhotoImportResult {
+	int result;				/* EXCLUSIVE_FUNC_PHOTO_IMPORT_* */
+	int error;				/* the dialog's error with ..._ERROR */
+	char path[1024];			/* the photo's file */
+	int orientation;			/* its ScePhotoImportDialogOrientation */
+	int format;				/* its ScePhotoImportDialogFormatType */
+};
+
+/* the photo import's results (PLACEHOLDER names) */
+#define EXCLUSIVE_FUNC_PHOTO_IMPORT_OK		0
+#define EXCLUSIVE_FUNC_PHOTO_IMPORT_CANCELED	1
+#define EXCLUSIVE_FUNC_PHOTO_IMPORT_ABORTED	2
+#define EXCLUSIVE_FUNC_PHOTO_IMPORT_ERROR	3
+
+typedef void (*ExclusiveFuncPhotoImportCallback)(ExclusiveFuncPhotoImportResult *result,
+						 void *arg);
+
+/* the photo import requested with the function to call with the photo, and given up
+   (0x810E2F4E, 0x810E3174) */
+int StartExclusiveFuncPhotoImport(ExclusiveFuncPhotoImportCallback callback, void *arg);
+int AbortExclusiveFuncPhotoImport(void);
+
 #endif /* _SHELL_EXCLUSIVE_FUNC_H */

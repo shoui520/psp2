@@ -34,6 +34,7 @@
 #include "../../../shell.h"
 #include "../../../plugins.h"
 #include "../../../theme.h"
+#include "../../../exclusive_func.h"
 #include "applauncher.h"
 #include "applauncher_home.h"
 #include "applauncher_mode.h"
@@ -80,20 +81,7 @@ using namespace paf;
 /* the folder the picked photos are converted into */
 #define APPLAUNCHER_THEME_TABPAPER_DIR		"ur0:shell/tabpaper/"
 
-/* PLACEHOLDER: what the photo picker gives its function (0x810E2F4E) */
-struct ApplauncherPhotoPickResult {
-	int result;
-	int reserved;
-	char path[1024];
-	int width;
-	int height;
-};
-
-/* PLACEHOLDER: the photo picker opened with the function to call with the photo, and closed
-   (0x810E2F4E, 0x810E3174); the wallpaper picker opened on a wallpaper, and closed (0x810E439E,
-   0x810E45E0) */
-int applauncherPhotoPickOpen(void (*func)(ApplauncherPhotoPickResult *result), void *arg);
-int applauncherPhotoPickClose(void);
+/* PLACEHOLDER: the wallpaper picker opened on a wallpaper, and closed (0x810E439E, 0x810E45E0) */
 int applauncherWallpaperPickOpen(int index, int reserved, void (*func)(int index),
 				 void *arg);
 int applauncherWallpaperPickClose(void);
@@ -203,7 +191,7 @@ static const int s_wavePresets[APPLAUNCHER_THEME_WAVES] = {
 	17, 18, 19, 20, 21, 22, 24, 25, 26, 23, 7, 27, 28, 29, 30,
 };
 
-static void onPhotoPicked(ApplauncherPhotoPickResult *result);
+static void onPhotoPicked(ExclusiveFuncPhotoImportResult *result, void *arg);
 static void onPowerEvent(void *arg);
 static void onWallpaperPicked(int index);
 static void onClose(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
@@ -408,7 +396,7 @@ ApplauncherThemeSelector::~ApplauncherThemeSelector()
 		m_loadJob->Cancel();
 	s_selector = NULL;
 	if (m_photoPicking)
-		applauncherPhotoPickClose();
+		AbortExclusiveFuncPhotoImport();
 	if (m_wallpaperPicking)
 		applauncherWallpaperPickClose();
 }
@@ -504,7 +492,7 @@ static void onPhotoChip(SceInt32 type, ui::Handler *self, ui::Event *e, void *da
 
 	((int (*)(void (*)(void *), void *))power->func[POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK])(
 		onPowerEvent, NULL);
-	applauncherPhotoPickOpen(onPhotoPicked, NULL);
+	StartExclusiveFuncPhotoImport(onPhotoPicked, NULL);
 	s_selector->m_photoPicking = true;
 	applauncherThemeSelectorClose();
 }
@@ -575,7 +563,7 @@ __attribute__((noinline)) DxtConvertJob::DxtConvertJob(const char *path, int wid
 }
 
 /* a photo picked: converted with a dialog up (0x810C723C) */
-static void onPhotoPicked(ApplauncherPhotoPickResult *result)
+static void onPhotoPicked(ExclusiveFuncPhotoImportResult *result, void *arg)
 {
 	ShellPluginInterface *power =
 		(ShellPluginInterface *)applauncherPluginGetInterface("power_manage_plugin", 1);
@@ -607,7 +595,7 @@ static void onPhotoPicked(ApplauncherPhotoPickResult *result)
 		&SceCommonGuiDialog_2A68B4A4, NULL, NULL);
 
 	common::SharedPtr<job::JobItem> job(
-		new DxtConvertJob(result->path, result->width, result->height));
+		new DxtConvertJob(result->path, result->orientation, result->format));
 
 	job::JobQueue::default_queue->Enqueue(job);
 }
@@ -624,7 +612,7 @@ static void onPowerEvent(void *arg)
 
 	((int (*)(void (*)(void *), void *))power->func[POWER_MANAGE_PLUGIN_FUNC_REMOVE_CALLBACK])(
 		onPowerEvent, NULL);
-	applauncherPhotoPickClose();
+	AbortExclusiveFuncPhotoImport();
 	if (s_selector != NULL)
 		s_selector->m_photoPicking = false;
 }
