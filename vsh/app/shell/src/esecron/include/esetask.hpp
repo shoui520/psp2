@@ -151,6 +151,7 @@ public:
 	int copyMtp(int *runStatus);					/* (0x810FE06C) PLACEHOLDER name */
 	int invoke(void);						/* (0x810FE448) */
 	int Load(void);			/* (0x810FF6F4) PLACEHOLDER name: the task read from its param file */
+	int setResult(int status, int taskResult);	/* (0x81103722) PLACEHOLDER name */
 	int execute(int *runStatus);					/* (0x8111FEBC) esehttp.cpp */
 
 	SceUInt32 id;			/* the task's number, its folder's name */
@@ -350,7 +351,7 @@ public:
 	int m_listenerCount;
 	char reserved9[0x40];		/* PLACEHOLDER: cleared by the constructor, not read yet */
 	char reserved10[0x40];
-	int reserved11;
+	SceUID m_drmHeap;		/* "SceNpDrmInstallHeap", or -1 */
 	BgdlQueueItem m_queue[BGDL_QUEUE_MAX];
 	char reserved13[0x400];		/* PLACEHOLDER: not even cleared so far */
 };

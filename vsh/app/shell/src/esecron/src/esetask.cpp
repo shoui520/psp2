@@ -10,8 +10,10 @@
 #include <scetypes.h>
 #include <std/stdio.h>
 #include <std/stdlib.h>
+#include <std/ctype.h>
 #include <std/string.h>
 #include <std/string>
+#include <std/vector>
 #include <dir/dir.h>
 #include <file/localfile.h>
 #include <timer/timer.h>
@@ -28,6 +30,7 @@
 #include "src/livespace_db/lsdb_keys.h"
 #include "src/livespace_db/livespace_db_internal.h"
 #include <modulemgr/module_info.h>
+#include <kernel/sysmem/memblock.h>
 #include "../../../../game/game_plugin/game_plugin.h"
 
 using namespace paf;
@@ -46,6 +49,7 @@ int Bgdl_81112112(string *path, bool recursive);
 int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info);	/* PLACEHOLDER: the title's row */
 int Bgdl_81113898(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: its storage kind */
 int Bgdl_811121FE(const char *path, int mode);
+int Bgdl_8111212C(const char *folder, const char *name);	/* PLACEHOLDER: folder/name removed */
 SceUInt64 Bgdl_81112310(SceUInt64 size, SceUInt32 cluster);	/* size in whole clusters (PLACEHOLDER) */
 int Bgdl_8111234C(const char *device, BgdlStorageInfo *info);	/* the device's space (PLACEHOLDER) */
 int Bgdl_8111240E(const char *path, SceUInt64 size);		/* a file made that size (PLACEHOLDER) */
@@ -53,6 +57,8 @@ int Bgdl_81111724(const char *path, int flag, SceUInt64 reserved);	/* PLACEHOLDE
 int Bgdl_81111CDC(const char *url, const char *folder, string *out, bool flag);	/* PLACEHOLDER */
 string Bgdl_81113C72(SceUInt32 id, bool flag);			/* PLACEHOLDER: a game's folder */
 int Bgdl_811137F6(bool mount);					/* PLACEHOLDER: grw0: */
+void Bgdl_81122168(bool clean);					/* PLACEHOLDER */
+extern "C" int sceNpCommonGetNpEnviroment(char *environment);
 void Bgdl_81113890(int value);					/* PLACEHOLDER */
 
 /* the PSP emulator's system software version (sceCompatGetPspSystemSoftwareVersion) */
@@ -105,13 +111,6 @@ int Bgdl_812A985C(BgdlUpdateCore *core, SceUInt32 index, BgdlUpdateEntry *entry)
 int Bgdl_812A9708(BgdlUpdateCore *core);
 
 /* a title a patch is looked for (PLACEHOLDER names) */
-struct BgdlPatchTitle {
-	const char *titleId;
-	void *reserved0;
-	int reserved1;
-	const char *contentId;
-};
-
 /* another file's (constructor 0x81114642): a package file's check (PLACEHOLDER) */
 class BgdlPackageCheck {
 public:
@@ -179,7 +178,50 @@ public:
 #define BGDL_ERROR_NO_FILE		0x80103A1F
 
 static BgdlManager *s_manager = NULL;		/* (0x81544788) */
-static const char *s_np = "np";			/* (0x8154478C) PLACEHOLDER: read later */
+/* the next file's (0x81110708): the time a block of code took (PLACEHOLDER names) */
+class BgdlScopeTimer {
+public:
+	BgdlScopeTimer(const char *name) : m_name(name)
+	{
+		m_start = get_time_internal();
+	}
+
+	~BgdlScopeTimer()
+	{
+		m_end = get_time_internal();
+		Report();
+	}
+
+	void Report(void);		/* (0x81110708) the time taken, in milliseconds */
+
+	string m_name;
+	SceUInt64 m_start;
+	SceUInt64 m_end;
+	SceUInt64 m_elapsed;
+};
+
+/* PLACEHOLDER name: a task found still running when its device was prepared */
+#define BGDL_ERROR_INTERRUPTED		0x80103A44
+
+/* an NP environment's PSM runtime server (PLACEHOLDER names) */
+struct BgdlPsmServer {
+	char env[17];			/* sceNpCommonGetNpEnviroment's name */
+	char url[256];
+};
+
+#define BGDL_PSM_SERVER_MAX	7
+
+/* (0x815099F8) PLACEHOLDER names: the PSM runtime's server for each NP environment */
+static const BgdlPsmServer s_psmServers[BGDL_PSM_SERVER_MAX] = {
+	{ "np", "http://psm-runtime.np.dl.playstation.net/psm-runtime/" },
+	{ "mgmt", "http://psm-runtime.mgmt.dl.playstation.net/psm-runtime/" },
+	{ "e1-np", "http://psm-runtime.e1-np.dl.playstation.net/psm-runtime/" },
+	{ "sp-int", "http://psm-runtime.np.dl.playstation.net/psm-runtime/" },
+	{ "prod-qa", "http://psm-runtime.np.dl.playstation.net/psm-runtime/" },
+	{ "kurokawa", "http://192.168.92.250/download/psm/" },
+	{ "", "" },
+};
+static const BgdlPsmServer *s_psmServer = &s_psmServers[0];	/* (0x8154478C) the console's */
 static SceUInt64 s_handled = 0;			/* (0x81544790) the requests the thread took */
 static SceUInt64 s_wakeupsHandled = 0;		/* (0x81544798) the wakeups the thread took */
 static SceUInt64 s_requested = 0;		/* (0x815447A0) the requests made */
@@ -2365,7 +2407,7 @@ int bgdlPatchFile(string *path, int device)
 }
 
 /* (0x81102868) PLACEHOLDER name: the update check's parameters for a title */
-int bgdlUpdateParamInit(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPtr *app,
+int bgdlUpdateParamInit(const BgdlTaskPackage *title, const bool *disc, LsdbAppInfoPtr *app,
 			int mode, BgdlUpdateParam *param)
 {
 	SceKernelSystemSwVersion version = { 0 };
@@ -2385,8 +2427,8 @@ int bgdlUpdateParamInit(const BgdlPatchTitle *title, const bool *disc, LsdbAppIn
 	if (ret < 0)
 		return ret;
 	appVer = "01.00";
-	titleId = title->titleId;
-	contentId = title->contentId;
+	titleId = title->key220.c_str();
+	contentId = title->key217.c_str();
 	if (*disc != true) {
 		LsdbAppInfo *info = app->get();
 
@@ -2426,7 +2468,7 @@ int bgdlUpdateParamInit(const BgdlPatchTitle *title, const bool *disc, LsdbAppIn
 }
 
 /* (0x811029E6) PLACEHOLDER name: a title's patch looked for, and a task made to get it */
-int bgdlRegistPatch(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPtr *app, int mode)
+int bgdlRegistPatch(const BgdlTaskPackage *title, const bool *disc, LsdbAppInfoPtr *app, int mode)
 {
 	int ret = 0;
 	BgdlPackageRequest request;
@@ -2549,7 +2591,7 @@ int bgdlRegistPatch(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPt
 						sce_paf_snprintf(request.key235, 13, "%s", param.key235);
 					if (param.contentId[0] != '\0')
 						sce_paf_snprintf(request.contentId, 51, "%s", param.contentId);
-					if (sce_paf_strncmp(title->titleId, "PCSI00011", 10) == 0)
+					if (sce_paf_strncmp(title->key220.c_str(), "PCSI00011", 10) == 0)
 						sce_paf_snprintf(request.iconPath, 255, "%s",
 								 "vs0:vsh/game/psm/runtime_icon.png");
 					if (info.name[0] != '\0') {
@@ -2574,22 +2616,291 @@ int bgdlRegistPatch(const BgdlPatchTitle *title, const bool *disc, LsdbAppInfoPt
 }
 
 /* (0x81102FFE) PLACEHOLDER name: an installed title's patch looked for in the background */
-int bgdlRegistTitlePatch(const BgdlPatchTitle *title, const bool *disc)
+int bgdlRegistTitlePatch(const BgdlTaskPackage *title, const bool *disc)
 {
 	int ret;
 
 	if (!Bgdl_81112284("ux0:"))
 		return BGDL_ERROR_NO_UX0;
-	if (title->reserved0 == NULL)
+	if (title->key220.empty())
 		return BGDL_ERROR_NULL_TITLE;
 	ret = 0;
 
 	LsdbAppInfoPtr info(new LsdbAppInfo());
 
-	sce_paf_strncmp(title->titleId, "PCSI00011", 10);
-	Bgdl_81123BC0(title->titleId, &info);
+	sce_paf_strncmp(title->key220.c_str(), "PCSI00011", 10);
+	Bgdl_81123BC0(title->key220.c_str(), &info);
 	bgdlRegistPatch(title, disc, &info, 1);
 	return ret;
+}
+
+/* (0x8110313E) */
+int Job_EseRegistPatchByTitleID::Run()
+{
+	bgdlRegistTitlePatch(&m_package, &m_flag);
+	return 0;
+}
+
+/* (0x81103154) PLACEHOLDER name: bgdlRegistTitlePatch run by the job queue */
+int bgdlRegistPatchByTitleID(const BgdlTaskPackage *package, const bool *disc)
+{
+	Job_EseRegistPatchByTitleID *item = new Job_EseRegistPatchByTitleID(*package, disc);
+	common::SharedPtr<job::JobItem> job(item);
+
+	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A4FC(job);
+	return 0;
+}
+
+/*
+ * (0x81103224) PLACEHOLDER name: the patch lists made, the PSM runtime's server chosen for the
+ * console's NP environment and the DRM install heap allocated
+ */
+void BgdlManager::Bgdl_81103224(bool clean)
+{
+	char env[17];
+	SceKernelAllocMemBlockOpt opt;
+	int i;
+
+	Bgdl_811137F6(false);
+
+	paf::string path("ur0:bgdl/w/patch.bin");
+
+	Bgdl_8111240E(path.c_str(), 29600);
+	if (m_ux0Ready == true) {
+		paf::string ux0Path("ux0:bgdl/w/patch_internal.bin");
+
+		Bgdl_8111240E(ux0Path.c_str(), 29600);
+		ux0Path = "ux0:bgdl/w/patch_bg.bin";
+		Bgdl_8111240E(ux0Path.c_str(), 29600);
+	}
+	Bgdl_81122168(clean);
+	sce_paf_memset(env, 0, sizeof(env));
+	s_psmServer = &s_psmServers[0];
+	if (sceNpCommonGetNpEnviroment(env) == 0) {
+		/* Sony's test reads the i-th character of the i-th name */
+		for (i = 0; i < BGDL_PSM_SERVER_MAX && s_psmServers[i].env[i] != '\0'; i++) {
+			if (sce_paf_strncmp(env, s_psmServers[i].env, sizeof(env)) == 0) {
+				s_psmServer = &s_psmServers[i];
+				break;
+			}
+		}
+	}
+	opt.size = sizeof(opt);
+	opt.attr = SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_PHYCONT | SCE_KERNEL_ALLOC_MEMBLOCK_ATTR_HAS_ALIGNMENT;
+	opt.alignment = 0x1000;
+	opt.reserved = 0;
+	opt.strBaseBlockName = NULL;
+	m_drmHeap = sceKernelAllocMemBlock("SceNpDrmInstallHeap", SCE_KERNEL_MEMBLOCK_TYPE_USER_RW,
+					   0x28000, &opt);
+	if (m_drmHeap < 0)
+		m_drmHeap = -1;
+}
+
+/* (0x811033C4) PLACEHOLDER name: the folders of ux0:pspemu/bgdl no task names (key 229) removed */
+void BgdlManager::Bgdl_811033C4(void)
+{
+	paf::Dir dir;
+	SceUInt32 i;
+
+	if (dir.Open("ux0:pspemu/bgdl") != 0)
+		return;
+
+	paf::vector<paf::string> orphans;
+
+	for (;;) {
+		paf::DirEnt ent;
+
+		if (dir.Read(&ent) != 0 || ent.name.length() == 0)
+			break;
+		if (sce_paf_strcmp(ent.name.c_str(), ".") == 0 ||
+		    sce_paf_strcmp(ent.name.c_str(), "..") == 0)
+			continue;
+
+		paf::string path("ux0:pspemu/bgdl");
+		bool found = false;
+
+		path.append("/" + ent.name);
+		for (EseTask **pos = m_tasks.m_begin; pos != m_tasks.m_end; pos++) {
+			paf::string folder("");
+
+			if (*pos != NULL && Bgdl_8112278A((*pos)->id, 229, &folder) == 0 &&
+			    path == folder) {
+				found = true;
+				break;
+			}
+		}
+		if (!found)
+			orphans.push_back(paf::string(path.c_str()));
+	}
+	if (orphans.size() != 0) {
+		BgdlGamePluginLock lock(true);
+
+		for (i = 0; i < orphans.size(); i++)
+			Bgdl_81112112(&orphans[i], true);
+	}
+}
+
+/* (0x81103722) the run status and the result kept and written (keys 101 and 104) */
+int EseTask::setResult(int status, int taskResult)
+{
+	BgdlEvent event;
+	int ret;
+
+	m_ParamCache.runStatus = status;
+	result = taskResult;
+	{
+		EseParam param(id);
+
+		ret = param.openWrite();
+		if (ret != 0)
+			return ret;
+		ret = param.write(101, &status, sizeof(status));
+		if (ret != 0)
+			return ret;
+		ret = param.write(104, &taskResult, sizeof(taskResult));
+		if (ret != 0)
+			return ret;
+		ret = param.commit();
+		if (ret != 0)
+			return ret;
+	}
+	event.type = 4;
+	event.id = id;
+	event.param = m_ParamCache;
+	event.result = result;
+	event.reserved = 0;
+	event.value = value;
+	s_manager->NotifyListeners(&event);
+	return 0;
+}
+
+/*
+ * (0x81103834) a device's folders made ("bgdl/w", "bgdl/t"; all removed first when clean), its
+ * tasks loaded (32 at most) and its next task id set
+ */
+int BgdlManager::prepare_device(const char *device, bool clean, int quota)
+{
+	SceUInt32 maxId;
+	int workId;
+	int ret;
+	int i;
+
+	if (device == NULL)
+		return BGDL_ERROR_INVALID_ARGUMENT;
+
+	BgdlTaskPath taskPath;
+	string path;
+
+	{
+		BgdlScopeTimer timer("prepare_device");
+
+		workId = -1;
+		if (sce_paf_strcmp(device, "ur0:") == 0)
+			workId = -2;
+		path = device;
+		path += "bgdl";
+		if (clean == true) {
+			ret = Dir::RemoveRecursive(path.c_str());
+			if (ret != 0)
+				return ret;
+		}
+		path = device;
+		path += "bgdl/w";
+		if (BgdlTaskPath::Exists(path.c_str())) {
+			if (taskPath.initialize(device, workId, true) == 0 && taskPath.Exists())
+				Bgdl_811120A0(&taskPath, true);
+		} else {
+			ret = Bgdl_811121FE(path.c_str(), 6);
+			if (ret != 0)
+				return ret;
+		}
+		path = device;
+		path += "bgdl/t";
+		if (BgdlTaskPath::Exists(path.c_str())) {
+			if (taskPath.initialize(device, workId, false) == 0 && taskPath.Exists())
+				Bgdl_811120A0(&taskPath, true);
+		} else {
+			ret = Bgdl_811121FE(path.c_str(), 6);
+			if (ret != 0)
+				return ret;
+		}
+	}
+	{
+		BgdlScopeTimer timer("prepare_device");
+		const char *folder;
+		Dir dir;
+
+		maxId = 0;
+		if (workId == -2)
+			maxId = 0x80000000;
+		folder = path.c_str();
+		if (dir.Open(folder) == 0) {
+			for (;;) {
+				DirEnt ent;
+				const char *name;
+				SceUInt32 id;
+				EseTask *task;
+
+				if (dir.Read(&ent) != 0 || ent.name.length() == 0)
+					break;
+				if (sce_paf_strcmp(ent.name.c_str(), ".") == 0 ||
+				    sce_paf_strcmp(ent.name.c_str(), "..") == 0)
+					continue;
+				/* a task's folder is its id, 8 hex digits */
+				name = ent.name.c_str();
+				if (name == NULL || sce_paf_strlen(name) != 8)
+					continue;
+				for (i = 0; i < 8; i++) {
+					if ((sce_paf_look_ctype_table(name[i]) & 0x44) == 0)
+						break;
+				}
+				if (i < 8)
+					continue;
+				id = sce_paf_strtoul(name, NULL, 16);
+				if (maxId < id)
+					maxId = id;
+				task = new EseTask(id);
+				if (task == NULL)
+					break;
+				if (task->Load() != 0) {
+					delete task;
+					Bgdl_8111212C(folder, ent.name.c_str());
+					continue;
+				}
+				if (task->m_ParamCache.runStatus == 2 &&
+				    task->setResult(0, BGDL_ERROR_INTERRUPTED) != 0) {
+					delete task;
+					continue;
+				}
+				if (task->m_ParamCache.key110) {
+					delete task;
+					Bgdl_8111212C(folder, ent.name.c_str());
+					Bgdl_811137F6(false);
+					continue;
+				}
+				if (m_tasks.insert(task) != 0) {
+					delete task;
+					Bgdl_8111212C(folder, ent.name.c_str());
+					continue;
+				}
+				if ((SceSize)(m_tasks.m_end - m_tasks.m_begin) >= 32)
+					break;
+			}
+		}
+	}
+	if (workId == -2)
+		m_nextInternalId = maxId;
+	else
+		m_nextId = maxId;
+	if (!clean) {
+		if (workId == -2) {
+			if (quota != 0 && quota != -2 && m_nextInternalId < (SceUInt32)quota)
+				m_nextInternalId = quota;
+		} else if (quota != 0 && quota != -1 && m_nextId < (SceUInt32)quota) {
+			m_nextId = quota;
+		}
+	}
+	return 0;
 }
 
 /* (0x8110401E) */
