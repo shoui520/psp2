@@ -79,3 +79,9 @@ SECTIONS
 	.sce_vstub 0 : { *(.sce_vstub) }
 	/DISCARD/ : { *(.note.GNU-stack) }
 }
+
+/*
+ * SNC's .eh_frame names this personality routine for some C++ thunks. Sony's linker leaves
+ * .eh_frame out of the module and never resolves it; it is defined only where referenced.
+ */
+PROVIDE(__dummy_personality_v0 = 0);

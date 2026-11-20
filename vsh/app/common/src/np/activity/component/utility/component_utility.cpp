@@ -91,14 +91,14 @@ found:
 	if (buffer == NULL)
 		return 0;
 	sceClibMemset(buffer, 0, bufferSize);
-	sceClibMemcpy(buffer, body, bodySize);
+	sceClibMemcpy_safe(buffer, body, bodySize);
 	activityHmacSha1(key, sizeof(key), buffer, bufferSize, hmac);
 	activityFree(buffer);
 
 	if (digestSize < 2 * ACTIVITY_SHA1_DIGEST_SIZE)
 		return 0;
 	for (j = 0; j < ACTIVITY_SHA1_DIGEST_SIZE; j++) {
-		sceClibMemcpy(hex, digest, 2);
+		sceClibMemcpy_safe(hex, digest, 2);
 		hex[2] = '\0';
 		value = SceNpCommon_4C4AA451(hex, NULL, 16);
 		if (value >= 0x100)

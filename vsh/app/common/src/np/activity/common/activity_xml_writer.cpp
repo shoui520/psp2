@@ -131,7 +131,7 @@ int ActivityXmlWriter::WriteText(const char *text)
 	length = sceClibStrnlen(text, ACTIVITY_XML_TEXT_MAX);
 	if (m_remaining < length + 1)
 		return NP_ACTIVITY_ERROR_OUT_OF_MEMORY;
-	sceClibMemcpy(m_cursor, text, length);
+	sceClibMemcpy_safe(m_cursor, text, length);
 	m_cursor += length;
 	m_remaining -= length;
 	return 0;

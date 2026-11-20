@@ -2,7 +2,8 @@ enable_language(CXX)
 # SceNpActivityNet (vs0:sys/external/np_activity.suprx), built by Sony with SNC 3.57 in C++: the
 # activity feed's network requests. Its files are Sony's where the library's checks name them
 # (W:\Build\J01509657\vsh\app\common\src\np\activity\...).
-psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+set(MODULE_IMPORT_NAMES vsh/app/common/src/np/np_manager/exports.yml)
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	np_activity.cpp
 	abstract_context_manager.cpp
 	context_manager.cpp
