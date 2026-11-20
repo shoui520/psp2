@@ -140,7 +140,7 @@ public:
 		_Elem *dst = alloc.allocate(count + len + 1);
 
 		if (dst == NULL)
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		if (dst != NULL) {
 			size_type size = count + len;
 
@@ -433,7 +433,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Elem *src, size_type len)
 				_Traits::copy(dst, src, len);
 				ptr[len] = 0;
 			} else {
-				ScePafStdc_D608246A();
+				alloc.report_failure();
 				ptr = &empty_string;
 				count = 0;
 			}
@@ -460,7 +460,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src)
 				count = src.count;
 				_Traits::copy(dst, src.ptr, src.count + 1);
 			} else {
-				ScePafStdc_D608246A();
+				alloc.report_failure();
 				ptr = &empty_string;
 				count = 0;
 			}
@@ -499,7 +499,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(const _Myt &src, size_type pos, size_t
 			_Traits::copy(dst, src.ptr + pos, size);
 			ptr[size] = 0;
 		} else {
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 			count = 0;
 			ptr = &empty_string;
 		}
@@ -525,7 +525,7 @@ basic_string<_Elem, _Traits, _Ax>::assign(_Elem ch)
 			dst[0] = ch;
 			ptr[1] = 0;
 		} else {
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 			ptr = &empty_string;
 			count = 0;
 		}
@@ -554,7 +554,7 @@ basic_string<_Elem, _Traits, _Ax>::append(size_type len, _Elem ch)
 		ptr = dst;
 		count = size;
 	} else {
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 	}
 	return *this;
 }
@@ -571,7 +571,7 @@ basic_string<_Elem, _Traits, _Ax>::erase(size_type pos, size_type len)
 	_Elem *dst = alloc.allocate(count - len + 1);
 
 	if (dst == NULL)
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 	if (dst != NULL) {
 		size_type size = count;
 		size_type tail = size - pos - len;
@@ -608,7 +608,7 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, const _Elem *src, size_
 		ptr = dst;
 		count = size;
 	} else {
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 	}
 	return *this;
 }
@@ -639,7 +639,7 @@ basic_string<_Elem, _Traits, _Ax>::insert(size_type pos, size_type len, _Elem ch
 		ptr = dst;
 		count = size;
 	} else {
-		ScePafStdc_D608246A();
+		alloc.report_failure();
 	}
 	return *this;
 }
@@ -696,7 +696,7 @@ basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, _Elem ch, size_type le
 			ptr = dst;
 			count = size;
 		} else {
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		}
 	}
 	return *this;
@@ -725,7 +725,7 @@ basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, const _Elem *src, size
 			ptr = dst;
 			count = size;
 		} else {
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		}
 	}
 	return *this;
@@ -770,7 +770,7 @@ basic_string<_Elem, _Traits, _Ax>::replace(size_type pos, size_type len, const _
 			ptr = dst;
 			count = size;
 		} else {
-			ScePafStdc_D608246A();
+			alloc.report_failure();
 		}
 	}
 	return *this;

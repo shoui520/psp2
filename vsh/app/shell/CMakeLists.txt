@@ -188,6 +188,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	console_info/console_info_ci_files.cpp
 	console_info/console_info_uc.cpp
 	np_friend.cpp
+	np_friend_storage.cpp
+	np_friend_storage_heap.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
