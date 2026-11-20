@@ -12,5 +12,31 @@ const struct UpdaterVersionInfo updaterVersionInfo = {
 	"$Date:: 2011-05-13 13:11:31 +0900#$"
 };
 
-/* RESF at the start of the main loop, reported with the version (serial1.c) */
+/* RESF at the start of the main loop, reported with the version (serial1.c); near since
+   0x0100060D, with the id records (as the application's since 0x01000107) */
+#if FW_SINCE(0x0100060D)
+__near unsigned char resetFlags;
+#else
 unsigned char resetFlags;
+#endif
+
+#if FW_SINCE(0x0100060D)
+/* since 0x0100060D the application's id records and their accessors too (sysinfo.c's) */
+__near unsigned int idRecordsLength;
+__near unsigned long idRecord1;
+
+unsigned char getResetFlags(void)
+{
+	return resetFlags;
+}
+
+unsigned long getIdRecord1(void)
+{
+	return idRecord1;
+}
+
+unsigned int getIdRecordsLength(void)
+{
+	return idRecordsLength;
+}
+#endif

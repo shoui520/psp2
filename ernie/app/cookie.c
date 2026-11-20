@@ -1052,6 +1052,36 @@ void cookieInit(void)
 #endif
 }
 
+#ifdef ERNIE_UPDATER
+/* the updater's (0x0100060D), with no kernel: the transfer waited for in iicaTransfer */
+unsigned char cookieWrite(unsigned char *data, unsigned char length)
+{
+	unsigned char status;
+
+	cookieIica.rxData = NULL;
+	cookieIica.rxCount = 0;
+	cookieIica.txData = data;
+	cookieIica.txCount = length;
+	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.status = &status;
+	iicaTransfer(&cookieIica);
+	return status;
+}
+
+unsigned char cookieRead(unsigned char *reg, unsigned char *data)
+{
+	unsigned char status;
+
+	cookieIica.rxData = data;
+	cookieIica.rxCount = 2;
+	cookieIica.txData = reg;
+	cookieIica.txCount = 1;
+	cookieIica.address = COOKIE_ADDRESS;
+	cookieIica.status = &status;
+	iicaTransfer(&cookieIica);
+	return status;
+}
+#else
 /* data[0] is the register */
 unsigned char cookieWrite(unsigned char *data, unsigned char length)
 {
@@ -1108,6 +1138,7 @@ unsigned char cookieRead(unsigned char *reg, unsigned char *data)
 	}
 	return status;
 }
+#endif
 
 /* register 0 */
 unsigned char cookieReadVersion(unsigned char *version)
@@ -1495,7 +1526,13 @@ unsigned char cookieReadStatus2(unsigned char *status)
 #endif
 
 #if FW_SINCE(0x00090804)	/* led.c's */
-/* register 3's bit 0 set and bit 2 clear */
+/* register 3's bit 0 set and bit 2 clear (the updater's: nothing, and nothing calls it) */
+#ifdef ERNIE_UPDATER
+unsigned char cookieCtrlReg3Bit0(void)
+{
+	return 0;
+}
+#else
 unsigned char cookieCtrlReg3Bit0(void)
 {
 	unsigned char value;
@@ -1514,6 +1551,7 @@ unsigned char cookieCtrlReg3Bit0(void)
 		result = 0;
 	return result;
 }
+#endif
 #endif
 
 #endif	/* SOURCE_0103 */

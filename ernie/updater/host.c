@@ -85,13 +85,13 @@ unsigned char hostPoll(void)
 			watchdogKick();
 	} else if ((slow = hostSlowFind(hostRx.command)) != NULL) {
 		if (slow->state == HOST_SLOW_QUEUED) {
-			logPrintf(" SlowCmd %04X exe resume\r\n", slow->command);
+			UPD_LOG((" SlowCmd %04X exe resume\r\n", slow->command));
 			hostTx.length = 2;
 			hostTx.result = HOST_RESULT_RUNNING;
 		} else {
 			if (slow->command != 0x1181)
-				logPrintf(" SlowCmd %04X exesta=%d tag=%x\r\n", slow->command,
-					  slow->state, slow->answer.result);
+				UPD_LOG((" SlowCmd %04X exesta=%d tag=%x\r\n", slow->command,
+					  slow->state, slow->answer.result));
 			memcpy(&hostTx.length, &slow->answer.length, sizeof(slow->answer) - 2);
 			hostSlowFree(slow);
 		}
@@ -101,7 +101,7 @@ unsigned char hostPoll(void)
 		hostTx.result = HOST_RESULT_QUEUED;
 		queued = 1;
 	} else {
-		logPrintf(" Slowcmd no free queue %04X\r\n", slow->command);
+		UPD_LOG((" Slowcmd no free queue %04X\r\n", slow->command));
 		hostTx.length = 2;
 		hostTx.result = HOST_RESULT_FULL;
 	}
@@ -119,8 +119,13 @@ unsigned char hostPoll(void)
 	P5.7 = 1;
 	while (P1.6 && timeout--)
 		;
+#if FW_SINCE(0x0100060D)
+	hostLink.statusBit1 = hostChecksum((unsigned char *)&hostRx.command, hostRx.length + 2) ==
+			      hostRx.data[hostRx.length - 1] ? 0 : 1;
+#else
 	hostLink.statusBit1 = hostChecksum((unsigned char *)&hostRx.command, hostRx.length + 2) !=
 			      hostRx.data[hostRx.length - 1] ? 1 : 0;
+#endif
 	if (queued) {
 		result = hostCommandSlow(hostRx.command, slow);
 		if (result != 0x14)

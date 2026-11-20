@@ -12,7 +12,7 @@
 #include "snvs.h"
 
 static struct Snvs snvs;
-#if BOARD_USS1001 || BOARD_DOL1002
+#if BOARD_USS1001 || BOARD_DOL1002 || defined(ERNIE_UPDATER)
 static __near unsigned char snvsBuffer[0x30];	/* near on the slim source's boards */
 #else
 static unsigned char snvsBuffer[0x30];
@@ -20,6 +20,17 @@ static unsigned char snvsBuffer[0x30];
 
 static unsigned int snvsChecksum(unsigned char *data, unsigned int length);
 static int snvsCheck(struct SnvsPacket *packet, unsigned int length);
+
+#ifdef ERNIE_UPDATER
+/* the updater has no memory pool: the round keys have a buffer of their own */
+static __near unsigned long snvsRoundKeys[44];
+static int snvsGetRoundKeys(unsigned long __far * __far *w);
+#define SNVS_GET_BLOCK(block)	snvsGetRoundKeys((unsigned long __far * __far *)&(block))
+#define SNVS_RELEASE_BLOCK(block)
+#else
+#define SNVS_GET_BLOCK(block)	pget_mpf(2, &(block))
+#define SNVS_RELEASE_BLOCK(block)	rel_mpf(2, block)
+#endif
 
 void snvsReset(void)
 {
@@ -66,7 +77,7 @@ int snvsRead(unsigned char *data, unsigned char *answer)
 	struct SnvsPacket *packet = (struct SnvsPacket *)snvsBuffer;
 	unsigned int checksum;
 
-	poolResult = pget_mpf(2, &block);
+	poolResult = SNVS_GET_BLOCK(block);
 	if (poolResult != E_OK) {
 		result = 0x13;
 	} else {
@@ -86,7 +97,7 @@ int snvsRead(unsigned char *data, unsigned char *answer)
 				      (struct AesKey __near *)&key, handshakeIv, 0x30);
 		}
 	}
-	rel_mpf(2, block);
+	SNVS_RELEASE_BLOCK(block);
 	return result;
 }
 
@@ -100,7 +111,7 @@ int snvsWrite(unsigned char *data, unsigned char *answer)
 	struct SnvsPacket *packet = (struct SnvsPacket *)snvsBuffer;
 	unsigned int checksum;
 
-	poolResult = pget_mpf(2, &block);
+	poolResult = SNVS_GET_BLOCK(block);
 	if (poolResult != E_OK) {
 		result = 0x13;
 	} else {
@@ -120,7 +131,7 @@ int snvsWrite(unsigned char *data, unsigned char *answer)
 				      (struct AesKey __near *)&key, handshakeIv, 0x10);
 		}
 	}
-	rel_mpf(2, block);
+	SNVS_RELEASE_BLOCK(block);
 	return result;
 }
 
@@ -174,3 +185,11 @@ int snvsReserved1(unsigned char *data)
 {
 	return 0;
 }
+
+#ifdef ERNIE_UPDATER
+static int snvsGetRoundKeys(unsigned long __far * __far *w)
+{
+	*w = (unsigned long __far *)snvsRoundKeys;
+	return 0;
+}
+#endif

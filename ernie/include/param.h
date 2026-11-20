@@ -62,10 +62,10 @@ extern struct Param param;
 extern int paramInit(void);
 #if !FW_SINCE(0x01000104)
 /* none: before 0x01000104 paramInit loads the block itself */
-#elif FW_SINCE(0x0100010B)
+#elif FW_SINCE(0x0100010B) && !defined(ERNIE_UPDATER)
 extern int paramLoad(void);
 #else
-extern void paramLoad(void);	/* returns nothing before 0x0100010B */
+extern void paramLoad(void);	/* returns nothing before 0x0100010B, nor the updater's */
 #endif
 extern unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf);
 extern unsigned char paramWrite(unsigned int offset, unsigned int size, unsigned char *buf);

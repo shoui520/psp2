@@ -9,7 +9,9 @@
 #define HOST_WATCHDOG		FW_SINCE(0x00090009)
 
 /* an RTC timer: its ticks are 0.5 s */
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D) && !FW_SINCE(0x01030000)
+#define WATCHDOG_TIMER		0x1a	/* the 0x0100060D updater's */
+#elif defined(ERNIE_UPDATER)
 #define WATCHDOG_TIMER		0x1c
 #else
 #define WATCHDOG_TIMER		TIMER_RTC(0x1b)

@@ -42,12 +42,10 @@ unsigned char serialNotifies2Count(void)
 /* an input's rising edge: transition 0x52, when input3Bit0High allows it */
 void serial2InputRequest(void)
 {
-	struct StateEvent event;
+	UPD_STATE_EVENT_LOCAL
 
 	if ((unsigned char)input3Bit0High()) {
-		event.transition = 0x52;
-		event.wakeMask = stateGetWakeMask();
-		updStateEvent(&event);
+		UPD_STATE_EVENT(0x52);
 	}
 }
 
@@ -143,7 +141,7 @@ static unsigned char serial2Command0204(struct SerialBuffer *request, struct Ser
    8 */
 static unsigned char serial2Command0205(struct SerialBuffer *request, struct SerialBuffer *response)
 {
-	struct StateEvent event;
+	UPD_STATE_EVENT_LOCAL
 	unsigned char mode;
 	unsigned char result;
 	unsigned int state;
@@ -157,9 +155,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		event.transition = 0x52;
-		event.wakeMask = stateGetWakeMask();
-		result = updStateEvent(&event);
+		result = UPD_STATE_EVENT(0x52);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
@@ -170,9 +166,7 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
-		event.transition = 0x0e;
-		event.wakeMask = stateGetWakeMask();
-		result = updStateEvent(&event);
+		result = UPD_STATE_EVENT(0x0e);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serial4SetAnswer(SERIAL_ANSWER);

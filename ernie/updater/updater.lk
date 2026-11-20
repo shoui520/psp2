@@ -9,12 +9,14 @@ OBJECT	updater.c
 OBJECT	host.c
 OBJECT	command.c
 OBJECT	spidev.c
+OBJECT	analog.c	IF ERNIE_FW>=0x0100060D
 OBJECT	../app/sha1.c
 OBJECT	../app/aes.c
 OBJECT	../app/authkeys.c
 OBJECT	../app/iica.c
 OBJECT	stub.c
-OBJECT	util.c
+OBJECT	util.c		IF ERNIE_FW<0x0100060D
+OBJECT	../app/util.c	IF ERNIE_FW>=0x0100060D
 OBJECT	nvs.c
 OBJECT	elmo.c
 OBJECT	power.c
@@ -23,8 +25,10 @@ OBJECT	board.c
 OBJECT	powerwait.c
 OBJECT	hostint.c
 OBJECT	battery.c
-OBJECT	charge.c
-OBJECT	cookie.c
+OBJECT	charge.c	IF ERNIE_FW<0x0100060D
+OBJECT	../app/charge.c	IF ERNIE_FW>=0x0100060D
+OBJECT	cookie.c	IF ERNIE_FW<0x0100060D
+OBJECT	../app/cookie.c	IF ERNIE_FW>=0x0100060D
 OBJECT	param.c
 OBJECT	uart.c
 OBJECT	uart4.c
@@ -34,14 +38,17 @@ OBJECT	scratchpad.c
 OBJECT	serial1.c
 OBJECT	serial.c
 OBJECT	serialevent.c
-OBJECT	serial2.c
-OBJECT	serial4.c
-OBJECT	serialauth.c
+OBJECT	serial2.c	IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000
+OBJECT	serial4.c	IF ERNIE_BOARD!=0x00406000||ERNIE_HW==0x00601000
+OBJECT	serialauth.c	IF ERNIE_FW<0x0100060D
+OBJECT	../app/serialauth.c	IF ERNIE_FW>=0x0100060D
 OBJECT	../app/sleepfactor.c
 OBJECT	timer.c
 OBJECT	../app/board.c
-OBJECT	handshake.c
+OBJECT	handshake.c	IF ERNIE_FW<0x0100060D
+OBJECT	../app/handshake.c	IF ERNIE_FW>=0x0100060D
 OBJECT	config.c
+OBJECT	../app/snvs.c	IF ERNIE_FW>=0x0100060D
 OBJECT	../app/gf.c
 OBJECT	../app/watchdog.c
 OBJECT	version.c
@@ -62,6 +69,7 @@ OBJECT	../lib/lubor.asm
 OBJECT	../lib/lubxor.asm
 OBJECT	../lib/divuw.asm
 OBJECT	../lib/memcpy.asm
+OBJECT	../lib/memcpy_n.asm	IF ERNIE_FW>=0x0100060D
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
 OBJECT	../lib/memset_n.asm
@@ -119,10 +127,14 @@ SEG	@@FSLOPN
 SEG	@@R_INIT
 SEG	@@R_INIS
 SEG	@@RLINIT
-SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c
+SEG	@@CNSTL		main.c updater.c host.c command.c ../app/sha1.c ../app/aes.c util.c	IF ERNIE_FW<0x0100060D
+SEG	@@CNSTL		main.c updater.c host.c command.c analog.c ../app/sha1.c ../app/aes.c ../app/util.c	IF ERNIE_FW>=0x0100060D
 SEG	@@FSLCNS
 SEG	@@CNSTL
-SEG	@@CODEL		main.c tau.c updater.c host.c stub.c util.c nvs.c elmo.c power.c board.c powerwait.c hostint.c battery.c charge.c cookie.c param.c uart.c uart4.c scratchpad.c serial1.c serial.c serialevent.c serial2.c serial4.c serialauth.c config.c ../app/gf.c
+SEG	@@CODEL		main.c tau.c updater.c host.c stub.c util.c nvs.c elmo.c power.c board.c powerwait.c hostint.c battery.c charge.c cookie.c param.c uart.c uart4.c scratchpad.c serial1.c serial.c serialevent.c serial2.c serial4.c serialauth.c config.c ../app/gf.c	IF ERNIE_FW<0x0100060D
+# 0x0100060D's: iica.c, sleepfactor.c and timer.c below 0xc000, powerwait.c, hostint.c, uart.c,
+# uart4.c and serialevent.c above
+SEG	@@CODEL		main.c tau.c updater.c host.c stub.c ../app/util.c nvs.c elmo.c power.c ../app/iica.c board.c battery.c ../app/charge.c ../app/cookie.c param.c scratchpad.c ../app/sleepfactor.c timer.c ../app/board.c serial1.c serial.c ../app/serialauth.c config.c ../app/snvs.c ../app/gf.c	IF ERNIE_FW>=0x0100060D
 
 # the code from 0x35400: the libraries, then the rest
 AT	0x35400
@@ -133,17 +145,19 @@ SEG	@@CODEL
 AT	0xfd510
 SEG	@@HEAP
 SEG	@@INIT
-SEG	@@DATA		cstart.asm timer.c serialauth.c handshake.c ../app/cstartend.asm
+SEG	@@DATA		cstart.asm timer.c serialauth.c handshake.c ../app/cstartend.asm	IF ERNIE_FW<0x0100060D
 SEG	@@FSLDAT
 # the startup's (empty) saddr initialised data, where Sony's link has it
 SEG	@@INIS
-SEG	@@DATA
+SEG	@@DATA		IF ERNIE_FW<0x0100060D
 SEG	@@INITL
 # kept over a warm start
 AT	0xfd900
 SEG	@@DATAL		main.c param.c ../app/watchdog.c
 # what cstart clears, from its start label to cstartend's
 SEG	@@DATAL		cstart.asm
+# 0x0100060D's near data (its round keys' buffers) follows the kept block
+SEG	@@DATA		IF ERNIE_FW>=0x0100060D
 # Keep serial1 and the following serial state at their original RAM addresses.
 SEG	@@DATAL		host.c command.c ../app/iica.c stub.c nvs.c elmo.c power.c powerseq.c powerwait.c battery.c charge.c cookie.c uart.c uart4.c ../app/version.c IF ERNIE_HW==0x00415000
 AT	0xfee56		IF ERNIE_HW==0x00415000

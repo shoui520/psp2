@@ -18,6 +18,7 @@
 #include "board.h"
 #include "charge.h"
 #include "config.h"
+#include "cookie.h"
 #include "elmo.h"
 #include "keepram.h"
 #include "nvs.h"
@@ -26,6 +27,7 @@
 #include "serial.h"
 #include "serial1.h"
 #include "sleepfactor.h"
+#include "snvs.h"
 #include "watchdog.h"
 #include "aes.h"
 #include "sha1.h"
@@ -52,14 +54,24 @@ struct ScratchPadRange {
 	unsigned char	data;		/* 0x0091's first byte */
 };
 
-int kermitCmdNoImprement(struct HostSlowCommand *slow);
+/* the handlers' parameters: since 0x0100060D each slow command's handler is called from
+   hostSlowCommands with the frame and the queued command */
+#if FW_SINCE(0x0100060D)
+#define UPD_SLOW_PARAMS	struct HostCommandFrame *rx, struct HostSlowCommand *slow
+#define UPD_RX		rx
+#else
+#define UPD_SLOW_PARAMS	struct HostSlowCommand *slow
+#define UPD_RX		(&hostRx)
+#endif
+
+int kermitCmdNoImprement(UPD_SLOW_PARAMS);
 int kermitCmdNoService(struct HostSlowCommand *slow);
 int kermitCmdChecksumError(struct HostSlowCommand *slow);
-int updaterSetSegment(struct HostSlowCommand *slow);
-int updaterWriteData(struct HostSlowCommand *slow);
-int updaterExecProgramming(struct HostSlowCommand *slow);
-int updaterExecFinalize(struct HostSlowCommand *slow);
-int updaterReboot(struct HostSlowCommand *slow);
+int updaterSetSegment(UPD_SLOW_PARAMS);
+int updaterWriteData(UPD_SLOW_PARAMS);
+int updaterExecProgramming(UPD_SLOW_PARAMS);
+int updaterExecFinalize(UPD_SLOW_PARAMS);
+int updaterReboot(UPD_SLOW_PARAMS);
 int hostCommandErnieDlVersion(void);
 int hostCommandUpdaterProgress(void);
 int hostCommandNull(void);
@@ -72,7 +84,7 @@ int hostCommandWakeupFactor(void);
 int hostCommandClock(void);
 int hostCommand0013(void);
 int hostCommandControlsInfo(void);
-int hostCommandSetLinkConfig(struct HostSlowCommand *slow);
+int hostCommandSetLinkConfig(UPD_SLOW_PARAMS);
 int hostCommandReadScratchPad(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandWriteScratchPad(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandWatchdogStart(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
@@ -81,7 +93,13 @@ int hostCommandWatchdogKick(struct HostCommandFrame *rx, struct HostSlowCommand 
 int hostCommandHandshake(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandCtrlHostOutputViaDongle(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandTransition(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
-int hostCommandErnieShutdown(struct HostSlowCommand *slow);
+int hostCommandErnieShutdown(UPD_SLOW_PARAMS);
+#if FW_SINCE(0x0100060D)
+int hostCommandSnvsHandshake(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
+int hostCommandSnvs00D1(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
+int hostCommandSnvsRead(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
+int hostCommandSnvsWrite(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
+#endif
 int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandCtrlWirelessPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
@@ -97,16 +115,20 @@ int hostCommandBatteryVolt(void);
 int hostCommandBatteryLifePercent(void);
 int hostCommandBatteryGetFullCap(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandBatteryGetFullCap2(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
-int hostCommandNvs1080(struct HostSlowCommand *slow);
-int hostCommandNvsFormat(struct HostSlowCommand *slow);
-int hostCommandNvsReadData(struct HostSlowCommand *slow);
-int hostCommandNvsWriteData(struct HostSlowCommand *slow);
+int hostCommandNvs1080(UPD_SLOW_PARAMS);
+int hostCommandNvsFormat(UPD_SLOW_PARAMS);
+int hostCommandNvsReadData(UPD_SLOW_PARAMS);
+int hostCommandNvsWriteData(UPD_SLOW_PARAMS);
 int hostCommandSerialUnlock(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandSerialLock(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandSerialRestart(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandSerialRead(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandSerialWrite(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
 int hostCommandSerialWriteOrSend(struct HostCommandFrame *rx, struct HostSlowCommand *slow);
+#if FW_SINCE(0x0100060D)
+int updaterCheckSignature(UPD_SLOW_PARAMS);
+int hostCommandMultiCnInfo(void);
+#endif
 unsigned char powerResult(unsigned char result);
 unsigned char batteryResult(unsigned char result);
 int flSetSegment(unsigned char segment);
@@ -116,7 +138,11 @@ int flHashCheck(unsigned char *digest);
 int flDecrypt(void);
 int flProg(void);
 void flReboot(void);
+#if FW_SINCE(0x0100060D)
+unsigned char flBootClusterSwap(void);
+#else
 int flBootClusterSwap(void);
+#endif
 
 /* the PS Dev Wiki's "Ernie Update AES128CBC Key 0x10/0x30/0x31/0x40/0x41 (PHAT)" */
 const unsigned char updaterCryptoKey[16] = {
@@ -128,6 +154,90 @@ const unsigned char updaterCryptoIv[AES_BLOCK_SIZE] = {
 	0x82, 0xd6, 0x52, 0x8a, 0x87, 0xbc, 0x55, 0xb3,
 	0x8e, 0xf2, 0x9a, 0x45, 0x73, 0x0e, 0xf1, 0x30,
 };
+
+#if FW_SINCE(0x0100060D)
+/* the lowest NVS offset the host may read or write (0x1082, 0x1083), as the application's */
+const unsigned int nvsHostOffsetMin = BOARD_NVS_HOST_OFFSET_MIN;
+
+/* the commands' handlers; unlocked: taken only once handshakeUnlocked11 (0: in any mode) */
+struct HostFastEntry {
+	unsigned int	command;
+	unsigned char	unlocked;
+	int		(*handler)(void);
+};
+
+struct HostSlowEntry {
+	unsigned int	command;
+	unsigned char	unlocked;
+	int		(*handler)(UPD_SLOW_PARAMS);
+};
+
+#define HOST_FAST_TABLE	17
+#define HOST_SLOW_TABLE	40
+
+const struct HostFastEntry hostFastTable[HOST_FAST_TABLE] = {
+	{ 0x0000, 0, hostCommandNull },
+	{ 0x0001, 0, hostCommandErnieVersion },
+	{ 0x0002, 0, hostCommandTimeStamp },
+	{ 0x0003, 1, hostCommandSleepFactor },
+	{ 0x0004, 0, hostCommandRequests },
+	{ 0x0005, 0, hostCommandHardwareInfo },
+	{ 0x0010, 0, hostCommandWakeupFactor },
+	{ 0x0011, 1, hostCommandClock },
+	{ 0x0013, 0, hostCommand0013 },
+	{ 0x0800, 1, hostCommandPowerStatus },
+	{ 0x0900, 1, hostCommandBatteryRemainCap },
+	{ 0x0901, 1, hostCommandBatteryVolt },
+	{ 0x0902, 1, hostCommandBatteryLifePercent },
+	{ 0x1100, 0, hostCommandErnieDlVersion },
+	{ 0x1101, 1, hostCommandUpdaterProgress },
+	{ 0x0100, 1, hostCommandControlsInfo },
+	{ 0x0103, 1, hostCommandMultiCnInfo },
+};
+
+const struct HostSlowEntry hostSlowTable[HOST_SLOW_TABLE] = {
+	{ 0x0080, 0, hostCommandSetLinkConfig },
+	{ 0x0083, 0, hostCommandWatchdogStart },
+	{ 0x0084, 0, hostCommandWatchdogStop },
+	{ 0x0085, 0, hostCommandWatchdogKick },
+	{ 0x00c1, 1, hostCommandErnieShutdown },
+	{ 0x0090, 1, hostCommandReadScratchPad },
+	{ 0x0091, 1, hostCommandWriteScratchPad },
+	{ 0x00a0, 0, hostCommandHandshake },
+	{ 0x00b2, 1, hostCommandCtrlHostOutputViaDongle },
+	{ 0x00c0, 0, hostCommandTransition },
+	{ 0x00d0, 1, hostCommandSnvsHandshake },
+	{ 0x00d1, 1, hostCommandSnvs00D1 },
+	{ 0x00d2, 1, hostCommandSnvsRead },
+	{ 0x00d3, 1, hostCommandSnvsWrite },
+	{ 0x0190, 1, UiSetMultiCnPort },
+	{ 0x0888, 1, hostCommandCtrlSdPower },
+	{ 0x0889, 1, hostCommandCtrlAccPower },
+	{ 0x0891, 1, powerCtrlLED },
+	{ 0x088f, 1, powerCtrlDeviceReset },
+	{ 0x088e, 1, ctrlVoltage },
+	{ 0x089b, 1, hostCommandCtrlRMRPower },
+	{ 0x089c, 1, hostCommandCtrlMultiCnPower },
+	{ 0x0982, 1, hostCommandBatteryGetFullCap },
+	{ 0x098a, 1, hostCommandBatteryGetFullCap2 },
+	{ 0x1080, 1, hostCommandNvs1080 },
+	{ 0x1081, 1, hostCommandNvsFormat },
+	{ 0x1082, 1, hostCommandNvsReadData },
+	{ 0x1083, 1, hostCommandNvsWriteData },
+	{ 0x1180, 1, updaterSetSegment },
+	{ 0x1181, 1, updaterWriteData },
+	{ 0x1182, 1, updaterExecProgramming },
+	{ 0x1183, 1, updaterReboot },
+	{ 0x1184, 1, updaterExecFinalize },
+	{ 0x1185, 1, updaterCheckSignature },
+	{ 0x2080, 1, hostCommandSerialUnlock },
+	{ 0x2081, 1, hostCommandSerialLock },
+	{ 0x2082, 1, hostCommandSerialRestart },
+	{ 0x2083, 1, hostCommandSerialRead },
+	{ 0x2084, 1, hostCommandSerialWrite },
+	{ 0x2085, 1, hostCommandSerialWriteOrSend },
+};
+#endif
 
 /* the updater's state, in one block as Sony's image has it (updater.lk) */
 unsigned char updMode;		/* updModeChange's */
@@ -157,6 +267,9 @@ unsigned int buttonHoldTime2;
 struct AesKey updKey;
 union UpdInput updInput;
 unsigned char updProgress;
+#if FW_SINCE(0x0100060D)
+unsigned char updMultiCn;
+#endif
 char logBuffer[0x80];		/* logPrintf's */
 
 unsigned char updaterInit(void)
@@ -169,6 +282,9 @@ unsigned char updaterInit(void)
 	updEvents.value = 0;
 	updSegment = 4;
 	updLoops = 0;
+#if FW_SINCE(0x0100060D)
+	updMultiCn = 0xff;
+#endif
 	return 0;
 }
 
@@ -194,6 +310,67 @@ int updaterDecryptInit(void)
 	updProgress = 0;
 }
 
+#if FW_SINCE(0x0100060D)
+/* the fast commands (bit 7 clear), answered in the same frame */
+unsigned int hostCommandFast(unsigned int command)
+{
+	unsigned char result;
+	unsigned char i;
+	unsigned char unlocked = 1;
+
+	unlocked = handshakeUnlocked11();
+	for (i = 0; i < HOST_FAST_TABLE; i++) {
+		if (hostFastTable[i].command == command) {
+			if (hostFastTable[i].unlocked == 0)
+				unlocked = 1;
+			break;
+		}
+	}
+	if (unlocked) {
+		if (i < HOST_FAST_TABLE)
+			result = hostFastTable[i].handler();
+		else
+			result = 0x3f;
+	} else {
+		result = 0x3e;
+		updEventSet(0x16);
+	}
+	return result;
+}
+
+/* a queued command (bit 7 set), from its frame; 0x14 when its handler runs from the main loop */
+unsigned int hostCommandSlow(unsigned int command, struct HostSlowCommand *slow)
+{
+	unsigned char result;
+	unsigned char i;
+	unsigned char unlocked = 1;
+	struct HostCommandFrame *rx;
+
+	if (slow == NULL)
+		return 10;
+	if (hostLink.statusBit1)
+		return (unsigned char)kermitCmdChecksumError(slow);
+	rx = &hostRx;
+	unlocked = handshakeUnlocked11();
+	for (i = 0; i < HOST_SLOW_TABLE; i++) {
+		if (hostSlowTable[i].command == command) {
+			if (hostSlowTable[i].unlocked == 0)
+				unlocked = 1;
+			break;
+		}
+	}
+	if (unlocked) {
+		if (i < HOST_SLOW_TABLE)
+			result = hostSlowTable[i].handler(rx, slow);
+		else
+			result = kermitCmdNoImprement(rx, slow);
+	} else {
+		result = kermitCmdNoService(slow);
+		updEventSet(0x16);
+	}
+	return result;
+}
+#else
 /* the fast commands (bit 7 clear), answered in the same frame */
 unsigned char hostCommandFast(unsigned int command)
 {
@@ -438,12 +615,13 @@ unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow
 	}
 	return result;
 }
+#endif
 
-int kermitCmdNoImprement(struct HostSlowCommand *slow)
+int kermitCmdNoImprement(UPD_SLOW_PARAMS)
 {
 	slow->answer.length = 2;
 	slow->answer.result = 0x3f;
-	logPrintf("kermitCmdNoImprement: %04Xh\r\n", slow->command);
+	UPD_LOG(("kermitCmdNoImprement: %04Xh\r\n", slow->command));
 	return 1;
 }
 
@@ -451,7 +629,7 @@ int kermitCmdNoService(struct HostSlowCommand *slow)
 {
 	slow->answer.length = 2;
 	slow->answer.result = 0x3e;
-	logPrintf("kermitCmdNoService: %04Xh\r\n", slow->command);
+	UPD_LOG(("kermitCmdNoService: %04Xh\r\n", slow->command));
 	return 5;
 }
 
@@ -464,28 +642,38 @@ int kermitCmdChecksumError(struct HostSlowCommand *slow)
 }
 
 /* 0x1180: the segment whose data comes next */
-int updaterSetSegment(struct HostSlowCommand *slow)
+int updaterSetSegment(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned char error;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	error = flSetSegment(data[0]);
 	slow->answer.length = 2;
+#if FW_SINCE(0x0100060D)
+	slow->answer.result = error;
+#else
 	slow->answer.result = error == 0 ? 0 : 4;
+#endif
 	return 0;
 }
 
 /* 0x1181: a piece of the segment's data, at its offset */
-int updaterWriteData(struct HostSlowCommand *slow)
+int updaterWriteData(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned int offset;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	((unsigned char __near *)&offset)[0] = data[0];
 	((unsigned char __near *)&offset)[1] = data[1];
+#if FW_SINCE(0x0100060D)
+	if (updImageChecked)	/* no data once 0x1184 found the image right */
+		slow->answer.result = 6;
+	else if (hostLink.frameSize - 5 < data[2])
+#else
 	if (hostLink.frameSize - 5 < data[2])
+#endif
 		slow->answer.result = 0x3c;
 	else if (offset + data[2] > 0x400)
 		slow->answer.result = 0x3c;
@@ -498,24 +686,30 @@ int updaterWriteData(struct HostSlowCommand *slow)
 }
 
 /* 0x1182: programs the segment, when sum is the complement of its data's sum */
-int updaterExecProgramming(struct HostSlowCommand *slow)
+int updaterExecProgramming(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned long sum;
 	unsigned char result;
 	unsigned char error;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	((unsigned char __near *)&sum)[0] = data[0];
 	((unsigned char __near *)&sum)[1] = data[1];
 	((unsigned char __near *)&sum)[2] = data[2];
 	((unsigned char __near *)&sum)[3] = data[3];
-	logPrintf("FlProg: block=%03d,sum=%08lX ", updSegment, sum);
-	logPrintf("[S");
+	UPD_LOG(("FlProg: block=%03d,sum=%08lX ", updSegment, sum));
+	UPD_LOG(("[S"));
+#if FW_SINCE(0x0100060D)
+	if (updImageChecked)	/* nothing programmed once 0x1184 found the image right */
+		result = 6;
+	else if (sum == flChecksum()) {
+#else
 	if (sum == flChecksum()) {
-		logPrintf("D");
+#endif
+		UPD_LOG(("D"));
 		error = flDecrypt();
-		logPrintf("P");
+		UPD_LOG(("P"));
 		if (error)
 			result = 2;
 		else {
@@ -549,17 +743,17 @@ int updaterExecProgramming(struct HostSlowCommand *slow)
 			}
 		}
 	} else {
-		logPrintf("FlChksum: Error %08X Block=%02d\r\n", sum, updSegment);
+		UPD_LOG(("FlChksum: Error %08X Block=%02d\r\n", sum, updSegment));
 		result = 3;
 	}
 	slow->answer.length = 2;
 	slow->answer.result = result;
-	logPrintf("]\r\n");
+	UPD_LOG(("]\r\n"));
 	return 0;
 }
 
 /* 0x1184: the image's digest, checked from the main loop (flImageCheck) */
-int updaterExecFinalize(struct HostSlowCommand *slow)
+int updaterExecFinalize(UPD_SLOW_PARAMS)
 {
 	unsigned int i;
 	unsigned int count;
@@ -574,6 +768,13 @@ int updaterExecFinalize(struct HostSlowCommand *slow)
 		for (i = 0; i < 0x100; i++)
 			if (updReceived[i])
 				count++;
+#if FW_SINCE(0x0100060D)
+		if (count == 0) {	/* no segment programmed */
+			slow->answer.length = 2;
+			slow->answer.result = 0x24;
+			return 0;
+		}
+#endif
 		slow->hash.segment = 0;
 		slow->hash.segmentDone = 0;
 		slow->hash.segmentCount = count;
@@ -586,22 +787,36 @@ int updaterExecFinalize(struct HostSlowCommand *slow)
 }
 
 /* 0x1183: run mode 0x72ba reboots, 0x9a54 is taken */
-int updaterReboot(struct HostSlowCommand *slow)
+int updaterReboot(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	slow->answer.result = 9;
 	if (data[0] == 0xba && data[1] == 0x72) {
 		powerOff();
 		flReboot();
 	} else if (data[0] == 0x54 && data[1] == 0x9a)
 		slow->answer.result = 0;
+#if FW_SINCE(0x0100060D)
+	else if (data[0] == 0x2e && data[1] == 0x15)
+		slow->answer.result = 0;
+#endif
 	else
 		slow->answer.result = 0x3c;
 	slow->answer.length = 2;
 	return 0;
 }
+
+#if FW_SINCE(0x0100060D)
+/* 0x1185: the image's signature, taken without a check */
+int updaterCheckSignature(UPD_SLOW_PARAMS)
+{
+	slow->answer.result = 0;
+	slow->answer.length = 2;
+	return 0;
+}
+#endif
 
 /* 0x1100 (sceSysconGetErnieDLVersion) */
 int hostCommandErnieDlVersion(void)
@@ -789,7 +1004,63 @@ int hostCommandControlsInfo(void)
 	return 0;
 }
 
+#if FW_SINCE(0x0100060D)
+/* 0x0103: the multi connector, what is there (updMultiCn) and its output */
+int hostCommandMultiCnInfo(void)
+{
+	struct HostAnswerFrame *answer;
+
+	answer = &hostTx;
+	answer->length = 6;
+	answer->data[0] = (unsigned char)(input1Bit5Active() ? 0x80 : 0);
+	answer->data[1] = updMultiCn;
+	answer->data[2] = boardGetMultiCnOutput();
+	answer->data[3] = 0;
+	answer->result = 0;
+	return 0;
+}
+#endif
+
 /* 0x0080: the link's settings, the frame size by the first byte */
+#if FW_SINCE(0x0100060D)
+int hostCommandSetLinkConfig(UPD_SLOW_PARAMS)
+{
+	union {
+		unsigned int	value;
+		struct UpdHostLinkConfig config;
+	} word;
+	unsigned char *data;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	data = rx->data;
+	word.value = (unsigned int)data[1] << 8 | data[0];
+	answer->result = 0x20;
+	answer->length = 2;
+	if (hostRx.length == 3) {
+		if (word.config.level >= 2)
+			return 0;
+		switch (word.config.size) {
+		case 0:
+			answer->result = 0;
+			hostLink.config = word.config;
+			hostLink.frameSize = 0x20;
+			break;
+		case 1:
+			answer->result = 0;
+			hostLink.config = word.config;
+			hostLink.frameSize = 0x40;
+			break;
+		case 2:
+			answer->result = 0;
+			hostLink.config = word.config;
+			hostLink.frameSize = 0x80;
+			break;
+		}
+	}
+	return 0;
+}
+#else
 int hostCommandSetLinkConfig(struct HostSlowCommand *slow)
 {
 	unsigned int value;
@@ -819,6 +1090,7 @@ int hostCommandSetLinkConfig(struct HostSlowCommand *slow)
 	}
 	return 0;
 }
+#endif
 
 /* 0x0090 (sceSysconReadScratchPad) */
 int hostCommandReadScratchPad(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
@@ -966,13 +1238,13 @@ int hostCommandTransition(struct HostCommandFrame *rx, struct HostSlowCommand *s
 }
 
 /* 0x00c1 (sceSysconErnieShutdown): 0 events 0x1f, 1 event 0x20 */
-int hostCommandErnieShutdown(struct HostSlowCommand *slow)
+int hostCommandErnieShutdown(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	struct HostAnswerFrame *answer;
 
 	answer = &slow->answer;
-	data = hostRx.data;
+	data = UPD_RX->data;
 	answer->result = 6;
 	answer->length = 2;
 	if (hostRx.length == 2) {
@@ -988,6 +1260,77 @@ int hostCommandErnieShutdown(struct HostSlowCommand *slow)
 	return 0;
 }
 
+#if FW_SINCE(0x0100060D)
+/* 0x00d0: the handshake before the SNVS; its 0x28 bytes are answered back */
+int hostCommandSnvsHandshake(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char result;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	if (hostRx.length == 0x29) {
+		memcpy(answer->data, rx->data, 0x28);
+		result = snvsHandshake(answer->data);
+		if (result != 0)
+			result = 0x12;
+		answer->result = result;
+		answer->length = 0x2a;
+	} else {
+		answer->result = 2;
+		answer->length = 2;
+	}
+	return 0;
+}
+
+int hostCommandSnvs00D1(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char result;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	result = snvsLock(answer->data);
+	answer->result = result;
+	answer->length = 2;
+	return 0;
+}
+
+/* 0x00d2 (sceSysconSnvsReadData) */
+int hostCommandSnvsRead(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char result;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	if (snvsUnlocked() == 0) {
+		answer->result = 0x11;
+		answer->length = 2;
+	} else {
+		result = snvsRead(rx->data, answer->data);
+		answer->result = result;
+		answer->length = 0x32;
+	}
+	return 0;
+}
+
+/* 0x00d3 (sceSysconSnvsWriteData) */
+int hostCommandSnvsWrite(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char result;
+	struct HostAnswerFrame *answer;
+
+	answer = &slow->answer;
+	if (snvsUnlocked() == 0) {
+		answer->result = 0x11;
+		answer->length = 2;
+	} else {
+		result = snvsWrite(rx->data, answer->data);
+		answer->result = result;
+		answer->length = 0x12;
+	}
+	return 0;
+}
+#endif
+
 /* 0x0190: the multi connector's output */
 int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
@@ -1001,7 +1344,7 @@ int UiSetMultiCnPort(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 			slow->answer.result = 0;
 	} else
 		slow->answer.result = 0x3b;
-	logPrintf(" UiSetMultiCnPort(%02X): %x\r\n", rx->data[0], error);
+	UPD_LOG((" UiSetMultiCnPort(%02X): %x\r\n", rx->data[0], error));
 	slow->answer.length = 2;
 	return 0;
 }
@@ -1014,10 +1357,10 @@ int hostCommandCtrlWirelessPower(struct HostCommandFrame *rx, struct HostSlowCom
 	if (rx->length == 2) {
 		if (rx->data[0]) {
 			error = powerOnWlan();
-			logPrintf(" powerOnWlan:%d\r\n", error);
+			UPD_LOG((" powerOnWlan:%d\r\n", error));
 		} else {
 			error = powerOffWlan();
-			logPrintf(" powerOffWlan:%d\r\n", error);
+			UPD_LOG((" powerOffWlan:%d\r\n", error));
 		}
 		slow->answer.result = error == 0 ? 0 : 1;
 	} else
@@ -1030,7 +1373,7 @@ int hostCommandCtrlWirelessPower(struct HostCommandFrame *rx, struct HostSlowCom
 int powerCtrlDeviceReset(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	if (rx->length == 3) {
-		logPrintf(" powerCtrlDeviceReset(%02X,%02X)\r\n", rx->data[0], rx->data[1]);
+		UPD_LOG((" powerCtrlDeviceReset(%02X,%02X)\r\n", rx->data[0], rx->data[1]));
 		if (rx->data[1] & 0x02)
 			P6.3 = rx->data[0];
 		if (rx->data[1] & 0x04)
@@ -1058,19 +1401,19 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 		switch (rx->data[0]) {
 		case 1:
 			regulator = 0x81;
-			logPrintf("[pwr] Kr->Er CtrlVoltage DD1:%02x\r\n", rx->data[1]);
+			UPD_LOG(("[pwr] Kr->Er CtrlVoltage DD1:%02x\r\n", rx->data[1]));
 			break;
 		case 2:
 			regulator = 0x82;
-			logPrintf("[pwr] Kr->Er CtrlVoltage DD2:%02x\r\n", rx->data[1]);
+			UPD_LOG(("[pwr] Kr->Er CtrlVoltage DD2:%02x\r\n", rx->data[1]));
 			break;
 		case 3:
 			regulator = 0x83;
-			logPrintf("[pwr] Kr->Er CtrlVoltage DD3:%02x\r\n", rx->data[1]);
+			UPD_LOG(("[pwr] Kr->Er CtrlVoltage DD3:%02x\r\n", rx->data[1]));
 			break;
 		case 4:
 			regulator = 0x84;
-			logPrintf("[pwr] Kr->Er CtrlVoltage DD4:%02x\r\n", rx->data[1]);
+			UPD_LOG(("[pwr] Kr->Er CtrlVoltage DD4:%02x\r\n", rx->data[1]));
 			break;
 		default:
 			/* the result is not answered: the answer's stays */
@@ -1078,12 +1421,12 @@ int ctrlVoltage(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 			goto done;
 		}
 		if (rx->data[1] >= 0x40) {
-			logPrintf("[pwr] ctrlVoltage: error %02x,%02x\r\n", rx->data[0], rx->data[1]);
+			UPD_LOG(("[pwr] ctrlVoltage: error %02x,%02x\r\n", rx->data[0], rx->data[1]));
 			slow->answer.result = 3;
 		} else {
 			trim = configGet()->voltageTrim;
 			level = levelTrim(rx->data[1], trim);
-			logPrintf("[pwr] Er->El %02x\r\n", level);
+			UPD_LOG(("[pwr] Er->El %02x\r\n", level));
 			result = powerSetVoltage(regulator, level);
 			slow->answer.result = result == 0 ? 0 : 1;
 		}
@@ -1095,6 +1438,58 @@ done:
 }
 
 /* 0x0891 (sceSysconCtrlLED): data[0] 0x40-0x08 the LEDs, 0x80 on */
+#if FW_SINCE(0x0100060D)
+int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+
+	if (rx->length == 2) {
+		/* 0x40: register 0xa6's bit 15 alone, register 0x60 cleared before it is set */
+		if (rx->data[0] & 0x40) {
+			if (rx->data[0] & 0x80) {
+				elmoCommand[0] = 0x60;
+				elmoCommand[1] = 0;
+				elmoCommand[2] = 0;
+				elmoWrite(elmoCommand, 3);
+				elmoRegA6 |= 0x8000;
+			} else
+				elmoRegA6 &= ~0x8000;
+			elmoCommand[0] = 0xa6;
+			elmoCommand[1] = ((unsigned char *)&elmoRegA6)[1];
+			elmoCommand[2] = (unsigned char)elmoRegA6;
+			error = elmoWrite(elmoCommand, 3);
+			slow->answer.result = powerResult(error);
+		} else {
+			if (rx->data[0] & 0x20) {
+				if (rx->data[0] & 0x80)
+					elmoLed |= 0x4000;
+				else
+					elmoLed &= ~0x4000;
+			}
+			if (rx->data[0] & 0x10) {
+				if (rx->data[0] & 0x80)
+					elmoLed |= 0x2000;
+				else
+					elmoLed &= ~0x2000;
+			}
+			if (rx->data[0] & 0x08) {
+				if (rx->data[0] & 0x80)
+					elmoLed |= 0x1000;
+				else
+					elmoLed &= ~0x1000;
+			}
+			elmoCommand[0] = 0xa5;
+			elmoCommand[1] = ((unsigned char *)&elmoLed)[1];
+			elmoCommand[2] = (unsigned char)elmoLed;
+			error = elmoWrite(elmoCommand, 3);
+			slow->answer.result = powerResult(error);
+		}
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+#else
 int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 {
 	unsigned char error;
@@ -1129,12 +1524,13 @@ int powerCtrlLED(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
 		elmoCommand[2] = (unsigned char)elmoLed;
 		error = elmoWrite(elmoCommand, 3);
 		slow->answer.result = powerResult(error);
-		logPrintf(" powerCtrlLED(%02X) : %x\r\n", rx->data[0], error);
+		UPD_LOG((" powerCtrlLED(%02X) : %x\r\n", rx->data[0], error));
 	} else
 		slow->answer.result = 0x3b;
 	slow->answer.length = 2;
 	return 0;
 }
+#endif
 
 /* 0x0888 (sceSysconCtrlSdPower): data[0] on or off */
 int hostCommandCtrlSdPower(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
@@ -1203,6 +1599,31 @@ int hostCommandCtrlMultiCnPower(struct HostCommandFrame *rx, struct HostSlowComm
 	slow->answer.length = 2;
 	return 0;
 }
+
+#if FW_SINCE(0x0100060D)
+/* the charge LED through the Cookie's register 3: data[0] 0 off, 1 the Cookie's, 2 on (no
+   command of the table runs it) */
+int hostCommandCtrlChargeLed(struct HostCommandFrame *rx, struct HostSlowCommand *slow)
+{
+	unsigned char error;
+
+	if (rx->length == 2) {
+		if (rx->data[0] == 0) {
+			cookieCtrlReg3Mode(1);
+			error = cookieCtrlReg3Bit2(0);
+		} else if (rx->data[0] == 1) {
+			error = cookieCtrlReg3Mode(0);
+		} else if (rx->data[0] == 2) {
+			cookieCtrlReg3Mode(1);
+			error = cookieCtrlReg3Bit2(1);
+		}
+		slow->answer.result = powerResult(error);
+	} else
+		slow->answer.result = 0x3b;
+	slow->answer.length = 2;
+	return 0;
+}
+#endif
 
 /* 0x0800 (sceSysconGetPowerStatus) */
 int hostCommandPowerStatus(void)
@@ -1287,23 +1708,23 @@ int hostCommandBatteryGetFullCap2(struct HostCommandFrame *rx, struct HostSlowCo
 }
 
 /* 0x1080: the NVS's */
-int hostCommandNvs1080(struct HostSlowCommand *slow)
+int hostCommandNvs1080(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	slow->answer.length = 2;
 	slow->answer.result = 0;
 	return 0;
 }
 
 /* 0x1081: formats the NVS, data[0] 0x55 */
-int hostCommandNvsFormat(struct HostSlowCommand *slow)
+int hostCommandNvsFormat(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned char result;
 
-	data = hostRx.data;
+	data = UPD_RX->data;
 	if (data[0] == 0x55) {
 		result = nvsFormat();
 		slow->answer.result = result;
@@ -1314,7 +1735,7 @@ int hostCommandNvsFormat(struct HostSlowCommand *slow)
 }
 
 /* 0x1082 (sceSysconNvsReadData): the offset, the size */
-int hostCommandNvsReadData(struct HostSlowCommand *slow)
+int hostCommandNvsReadData(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned int offset;
@@ -1325,9 +1746,16 @@ int hostCommandNvsReadData(struct HostSlowCommand *slow)
 		slow->answer.result = 0x3b;
 		return 0;
 	}
-	data = hostRx.data;
+	data = UPD_RX->data;
 	offset = (unsigned int)data[1] << 8 | data[0];
+#if FW_SINCE(0x0100060D)
+	if (offset >= nvsHostOffsetMin)
+		result = nvsRead(offset, data[2], slow->answer.data, 0);
+	else
+		result = 0x3c;
+#else
 	result = nvsRead(offset, data[2], slow->answer.data, 0);
+#endif
 	if (result == 0) {
 		slow->answer.length = data[2] + 2;
 		slow->answer.result = 0;
@@ -1339,7 +1767,7 @@ int hostCommandNvsReadData(struct HostSlowCommand *slow)
 }
 
 /* 0x1083 (sceSysconNvsWriteData): the offset, the size, the data */
-int hostCommandNvsWriteData(struct HostSlowCommand *slow)
+int hostCommandNvsWriteData(UPD_SLOW_PARAMS)
 {
 	unsigned char *data;
 	unsigned int offset;
@@ -1350,9 +1778,16 @@ int hostCommandNvsWriteData(struct HostSlowCommand *slow)
 		slow->answer.result = 0x3b;
 		return 0;
 	}
-	data = hostRx.data;
+	data = UPD_RX->data;
 	offset = (unsigned int)data[1] << 8 | data[0];
+#if FW_SINCE(0x0100060D)
+	if (offset >= nvsHostOffsetMin)
+		result = nvsWrite(offset, data[2], &data[3], 0);
+	else
+		result = 0x3c;
+#else
 	result = nvsWrite(offset, data[2], &data[3], 0);
+#endif
 	slow->answer.length = 2;
 	slow->answer.result = result;
 	return 0;
@@ -1462,7 +1897,11 @@ int hostCommandSerialWrite(struct HostCommandFrame *rx, struct HostSlowCommand *
 	}
 	result = serial1BufferWrite(data[0], data[1], &data[2]);
 	if (serialGetState() == SERIAL_RECEIVE) {
+#if FW_SINCE(0x0100060D)
+		result = serial1BufferRead(data[0], data[1], serial.buffer);
+#else
 		memcpy(serial.buffer, &serial1Buffer[data[0]], data[1]);
+#endif
 		serial.command = SERIAL_REQUEST_FRAME;
 		serial.status = 0;
 		serial.length = data[1];
@@ -1496,7 +1935,11 @@ int hostCommandSerialWriteOrSend(struct HostCommandFrame *rx, struct HostSlowCom
 		slow->answer.result = result;
 	} else if (data[0] == 1) {
 		if (serialGetState() == SERIAL_RECEIVE) {
+#if FW_SINCE(0x0100060D)
+			result = serial1BufferRead(data[1], data[2], serial.buffer);
+#else
 			memcpy(serial.buffer, &serial1Buffer[data[1]], data[2]);
+#endif
 			serial.command = SERIAL_REQUEST_FRAME;
 			serial.status = 0;
 			serial.length = data[2];
@@ -1568,21 +2011,31 @@ unsigned char batteryResult(unsigned char result)
  * (boot cluster 1), which the boot cluster swap then puts in their place; 0xe0 is written
  * to 0xd4, and 0xe1-0xed (the updater's own) are refused.
  */
+#if FW_SINCE(0x0100060D)
+#define FL_SEGMENT_ERROR	4
+#else
+#define FL_SEGMENT_ERROR	1
+#endif
+
 int flSetSegment(unsigned char segment)
 {
+#if FW_SINCE(0x0100060D)
+	if (updImageChecked)
+		return 6;
+#endif
 	if (segment >= 0x100)
-		return 1;
+		return FL_SEGMENT_ERROR;
 	if (segment == 0xe0)
 		segment = 0xd4;
 	else if (segment > 0xe0 && segment < 0xee)
-		return 1;
+		return FL_SEGMENT_ERROR;
 	if (segment < 4)
 		segment += 4;
 	updSegment = segment;
 	updReceived[segment] = 1;
 	memset(updPlain, 0, sizeof(updPlain));
 	memset(updCipher, 0, sizeof(updCipher));
-	logPrintf("Segment: %d\r\n", segment);
+	UPD_LOG(("Segment: %d\r\n", segment));
 	return 0;
 }
 
@@ -1598,7 +2051,7 @@ unsigned long flChecksum(void)
 	for (i = 0; i < sizeof(updCipher); i++)
 		sum += *data++;
 	if (0)
-		logPrintf("\r\nImgChksum=%08ld\r\n", sum);
+		UPD_LOG(("\r\nImgChksum=%08ld\r\n", sum));
 	return ~sum;
 }
 
@@ -1613,6 +2066,9 @@ void flImageCheck(struct HostSlowCommand *slow)
 	unsigned int segment;
 	unsigned char count;
 	unsigned char result;
+#if FW_SINCE(0x0100060D)
+	unsigned char updateCount;
+#endif
 
 	count = 2;
 	hash = &slow->hash;
@@ -1622,11 +2078,14 @@ void flImageCheck(struct HostSlowCommand *slow)
 				hash->segment = segment;
 				return;
 			}
-			logPrintf("SHA1 digesting(%d)\r", segment);
+			UPD_LOG(("SHA1 digesting(%d)\r", segment));
+#if FW_SINCE(0x0100060D)
+			WDTE = 0xac;
+#endif
 			result = SHA1Input((SHA1Context __near *)&updSha,
 					   (const unsigned char *)((unsigned long)segment << 10), 0x400);
 			if (result != 0) {
-				logPrintf("\nsha1update error%d\r\n", result);
+				UPD_LOG(("\nsha1update error%d\r\n", result));
 				slow->answer.result = 8;
 				goto done;
 			}
@@ -1641,6 +2100,14 @@ void flImageCheck(struct HostSlowCommand *slow)
 		timeStampDigits(updBuild, (const char __far *)(IMAGE_VERSION_INFO + 1));
 		if (flBootClusterSwap() == 0) {
 			updImageChecked = 1;
+#if FW_SINCE(0x0100060D)
+			/* the syscon log's record 4 (NVS 0x09, one byte) counts the updates, to 0xff */
+			result = nvsRead(0x09, 1, &updateCount, 1);
+			if (result == 0 && updateCount != 0xff) {
+				updateCount++;
+				nvsWrite(0x09, 1, &updateCount, 1);
+			}
+#endif
 			slow->answer.result = 0;
 		} else {
 			slow->answer.result = 7;
@@ -1662,12 +2129,12 @@ int flHashCheck(unsigned char *digest)
 	result = 0;
 	result = SHA1Result((SHA1Context __near *)&updSha, (unsigned char __near *)hash);
 	if (result != 0) {
-		logPrintf("\nsha1result error\r\n");
+		UPD_LOG(("\nsha1result error\r\n"));
 		return 2;
 	}
 	result = memcmp(hash, digest, SHA1HashSize);
-	logPrintf("\nImage HashCheck %02X %02X %02X %02X... %s\n\r", digest[0], digest[1],
-		  digest[2], digest[3], result == 0 ? "OK" : "NG");
+	UPD_LOG(("\nImage HashCheck %02X %02X %02X %02X... %s\n\r", digest[0], digest[1],
+		  digest[2], digest[3], result == 0 ? "OK" : "NG"));
 	return result;
 }
 
@@ -1706,9 +2173,9 @@ int flProg(void)
 				for (i = 0; i < 0x100; i += 0x40) {
 					memcpy(fslDataBuffer, &updPlain[i << 2], 0x100);
 					if (0)
-						logPrintf("\r\nFP FADR=%06lX SADR=%06lX\r\n",
+						UPD_LOG(("\r\nFP FADR=%06lX SADR=%06lX\r\n",
 							  ((unsigned long)updSegment << 10) + (i << 2),
-							  (unsigned long)&updPlain[i << 2]);
+							  (unsigned long)&updPlain[i << 2]));
 					do
 						result = FSL_Write(((unsigned long)updSegment << 10) +
 								   (i << 2), 0x40);
@@ -1727,14 +2194,14 @@ int flProg(void)
 close:
 	FSL_Close();
 	if (result != 0)
-		logPrintf("FlProg: Error=%02Xh Block=%02d\r\n", result, updSegment);
+		UPD_LOG(("FlProg: Error=%02Xh Block=%02d\r\n", result, updSegment));
 	return result;
 }
 
 /* 0x1183's reboot: an illegal instruction resets the chip */
 void flReboot(void)
 {
-	logPrintf("ErnieRebooting\r\n");
+	UPD_LOG(("ErnieRebooting\r\n"));
 #asm
 	EXTRN	_cstart
 	DB	0FFH
@@ -1745,7 +2212,11 @@ void flReboot(void)
 }
 
 /* swaps the boot clusters, so the image's cluster 1 boots */
+#if FW_SINCE(0x0100060D)
+unsigned char flBootClusterSwap(void)
+#else
 int flBootClusterSwap(void)
+#endif
 {
 	unsigned char result;
 
@@ -1757,6 +2228,6 @@ int flBootClusterSwap(void)
 			result = fslSetSecurityFlagSwap();
 	}
 	FSL_Close();
-	logPrintf("Boot Cluster Swap %d %s\r\n", result, result == 0 ? "OK" : "NG");
+	UPD_LOG(("Boot Cluster Swap %d %s\r\n", result, result == 0 ? "OK" : "NG"));
 	return result;
 }

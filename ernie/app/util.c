@@ -16,6 +16,10 @@
 static const char hexDigits[] = "0123456789ABCDEF";
 
 #if !RANDOM_SEEDED
+#ifdef ERNIE_UPDATER
+/* the updater's (0x0100060D): the key schedule in place of a block of memory pool 2 */
+__near unsigned long randomRoundKeys[44];
+#endif
 __near unsigned long randomCounter;		/* counts the generator's blocks */
 __near unsigned char randomBlock[16];		/* the generator's last block */
 #endif
@@ -111,7 +115,11 @@ void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length
 		}
 		key.nk = 4;
 		key.nb = 4;
+#ifdef ERNIE_UPDATER
+		if (randomGetRoundKeys((unsigned long __far * __far *)&block) == 0) {
+#else
 		if (pget_mpf(2, &block) == E_OK) {
+#endif
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			aesKeyExpansion(randomKey, (struct AesKey __near *)&key);
 		} else {
@@ -119,7 +127,9 @@ void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length
 		}
 		aesEncrypt((unsigned char __near *)input, randomBlock,
 			   (struct AesKey __near *)&key);
+#ifndef ERNIE_UPDATER
 		rel_mpf(2, block);
+#endif
 		randomCounter++;
 		memcpy_n((unsigned char __near *)out + offset, randomBlock,
 			 length < 16 ? length : 16);
@@ -129,4 +139,13 @@ void randomGenerate(unsigned long seed, unsigned char *out, unsigned char length
 		length -= 16;
 	}
 }
+
+#ifdef ERNIE_UPDATER
+/* the generator's key schedule, as handshakeGetRoundKeys gives the handshake's */
+int randomGetRoundKeys(unsigned long __far * __far *w)
+{
+	*w = (unsigned long __far *)randomRoundKeys;
+	return 0;
+}
+#endif
 #endif

@@ -5,6 +5,10 @@
 #ifndef ERNIE_UPDATER_H
 #define ERNIE_UPDATER_H
 
+/* PCH-1000's 0x0100060D forms (and the later updaters'): PDEL 0x00416000's 0x0100060D, the same
+   version, keeps the earlier ones where its board differs (stub.c's pins, mainLoop's start) */
+#define UPD_060D_FORMS	(FW_SINCE(0x0100060D) && !HW_IS(0x00416000))
+
 /*
  * the version blocks as the updater reads them: each with the other's layout, the
  * application's at 0xf00 as the updater's (its version at 8, its time stamp at 0xc) and the
@@ -92,13 +96,31 @@ extern unsigned char updEventSet(unsigned char event);
 extern void buttonInit(void);
 extern unsigned char buttonPoll(void);
 extern int inputPoll(void);
+#if FW_SINCE(0x0100060D)
+extern unsigned char updMultiCn;	/* what is on the multi connector (analogReadMultiCn's) */
+extern int multiCnCheck(void);
+#endif
+extern int multiCnChanged(void);
+extern int p77Changed(void);
 
 /* the host link (host.c) */
+#if FW_SINCE(0x0100060D)
+/* since 0x0100060D the application's HostLinkConfig */
+struct UpdHostLinkConfig {
+	unsigned int	size:4;
+	unsigned int	level:12;
+};
+#endif
+
 struct UpdHostLink {
 	unsigned char	statusBit1;	/* the answers' status bit 1 (0x02): the last command's
 					   checksum was wrong */
 	unsigned char	statusBit5;	/* and bit 5 (0x20): slow commands queued */
+#if FW_SINCE(0x0100060D)
+	struct UpdHostLinkConfig config;
+#else
 	unsigned int	config;		/* HostLinkConfig's */
+#endif
 	unsigned char	frameSize;
 	unsigned char	reserved;
 	unsigned int	resetWait;	/* the rounds a reset waits for the slow commands */
@@ -149,12 +171,21 @@ extern struct UpdHostLink hostLink;
 extern struct HostCommandFrame hostRx;
 extern struct HostAnswerFrame hostTx;
 extern struct HostSlowCommand hostSlowCommands[HOST_SLOW_COMMANDS];
+#if FW_SINCE(0x0100060D)
+extern int hostInit(void);
+#endif
 extern int hostOpen(void);
 extern int hostClose(void);
 extern unsigned char hostPoll(void);
 extern int csiTransferPoll(unsigned char *rx, unsigned char *tx, unsigned char count);
 extern int uart3WritePoll(unsigned char *data, unsigned char count);
 extern void logPrintf(const char *format, ...);
+/* a log line, as UPD_LOG((format, ...)); 0x0100060D's updater logs nothing */
+#if FW_SINCE(0x0100060D)
+#define UPD_LOG(args)
+#else
+#define UPD_LOG(args)	logPrintf args
+#endif
 extern unsigned char hostChecksum(unsigned char *data, unsigned char length);
 extern int timeStampDigits(char *digits, const char *stamp);
 extern struct HostSlowCommand *hostSlowFind(unsigned int command);
@@ -164,13 +195,31 @@ extern unsigned char hostSlowPending(void);
 extern void hostSlowRun(void);
 
 /* stub.c */
+#if FW_SINCE(0x0100060D)
+/* since 0x0100060D the updater's events take the transition alone, as the slim's stateTransition */
+extern int updStateEvent(unsigned char transition);
+#define UPD_STATE_EVENT_LOCAL
+#define UPD_STATE_EVENT(t)	updStateEvent(t)
+#else
 struct StateEvent;
 extern int updStateEvent(struct StateEvent *event);
+#define UPD_STATE_EVENT_LOCAL	struct StateEvent event;
+#define UPD_STATE_EVENT(t)	(event.transition = (t), event.wakeMask = stateGetWakeMask(), \
+				 updStateEvent(&event))
+#endif
 extern int input2Bit0Get(void);
 extern int input2Bit1Get(void);
 extern int input3Bit0High(void);
+#if FW_SINCE(0x0100060D)
+extern unsigned char input1Bit5Active(void);
+#else
 extern int input1Bit5Active(void);
+#endif
+#if UPD_060D_FORMS
+extern int intp11Low(void);
+#else
 extern unsigned char intp11Low(void);
+#endif
 extern int chargeVbusCharging(void);
 extern void powerWaitLong(unsigned int ms);
 extern int bbmcStart(void);
@@ -202,14 +251,25 @@ extern void powerWaitInput(unsigned char edges, unsigned int timeout);
 extern void powerWaitTimers(unsigned int bits);
 extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks);
 
+#if FW_SINCE(0x0100060D)
+extern __near unsigned char resetFlags;
+extern __near unsigned long idRecord1;
+extern __near unsigned int idRecordsLength;
+
+/* analog.c: the multi connector's level, from the A/D converter */
+extern unsigned char analogReadMultiCn(void);
+#else
 extern unsigned char resetFlags;
+#endif
 extern void rtcInit(void);
 extern unsigned char configStorageInit(void);
 
 /* handshake.c: the host's handshake, mode 0x0b only */
 #define HANDSHAKE_LOCKED	0x5a5a
 #define HANDSHAKE_UNLOCKED	0xa5a5
+#if !FW_SINCE(0x0100060D)
 extern int handshakeInit(void);
+#endif
 extern unsigned char handshakeSetMode(unsigned char state, unsigned char mode);
 extern unsigned char handshakeCommand(unsigned char *data);
 extern unsigned char handshakeState(void);
@@ -224,8 +284,13 @@ extern unsigned char updReceived[0x100];	/* the segments programmed */
 extern unsigned char updProgress;	/* the image check's, in percent */
 extern unsigned char updaterInit(void);
 extern int updaterDecryptInit(void);
+#if FW_SINCE(0x0100060D)
+extern unsigned int hostCommandFast(unsigned int command);
+extern unsigned int hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
+#else
 extern unsigned char hostCommandFast(unsigned int command);
 extern unsigned char hostCommandSlow(unsigned int command, struct HostSlowCommand *slow);
+#endif
 extern unsigned char serialSetLevel(unsigned char level);
 
 #endif

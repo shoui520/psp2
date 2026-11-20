@@ -60,6 +60,20 @@ static unsigned char serialAuthUnlock14(void);
 static unsigned char serialAuthLock14(void);
 int serialAuthGetRoundKeys(unsigned long **w);
 
+/* each mode's keys: the first and second exchange's AES-128 keys and the check sent back */
+struct SerialAuthKeys {
+	unsigned char	mode;
+	const unsigned char	*first;
+	const unsigned char	*second;
+	const unsigned char	*check;
+};
+
+static const struct SerialAuthKeys __far serialAuthKeys[SERIAL_AUTH_MODES] = {
+	{ 0x00, serialKey0First, serialKey0Second, serialKey0Check },
+	{ 0x01, serialKey1First, serialKey1Second, serialKey1Check },
+	{ 0x0e, serialKey2First, serialKey2Second, serialKey2Check },
+};
+
 static const struct SerialAuthMode __far serialAuthModes[SERIAL_AUTH_MODES] = {
 	{ 0x00, &serialAuthUnlocked[0], serialAuthUnlock0, serialAuthLock0 },
 	{ 0x01, &serialAuthUnlocked[1], serialAuthUnlock1, serialAuthLock1 },
@@ -109,9 +123,6 @@ unsigned char serialAuthSetMode(unsigned char state, unsigned char mode)
 /* Process the updater's serial authenticated exchange. */
 unsigned char serialAuthCommand(unsigned char *data)
 {
-	static const unsigned char * const firstKeys[] = { serialKey0First, serialKey1First, serialKey2First };
-	static const unsigned char * const secondKeys[] = { serialKey0Second, serialKey1Second, serialKey2Second };
-	static const unsigned char * const checks[] = { serialKey0Check, serialKey1Check, serialKey2Check };
 	struct AesKey key;
 	/* The original passes these stack bytes without initializing them first. */
 	unsigned char nonce[16];
@@ -134,7 +145,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		/* fall through */
 	case 1:
-		randomGenerate((const unsigned char __near *)seed, (unsigned char *)nonce);
+		randomGenerate(seed, nonce);
 		memcpy(serialAuth.nonce, nonce, 8);
 		serialAuthPacket.magic = 0x30;
 		serialAuthPacket.step = 0;
@@ -154,7 +165,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
-			if (serialAuthModes[index].mode == serialAuth.mode)
+			if (serialAuthKeys[index].mode == serialAuth.mode)
 				break;
 		}
 		memcpy(serialAuth.challenge, serialAuthPacket.challenge, 8);
@@ -164,13 +175,13 @@ unsigned char serialAuthCommand(unsigned char *data)
 		memcpy(serialAuthPacket.header, serialHeader, 4);
 		memcpy(serialAuthPacket.challenge, serialAuth.nonce, 8);
 		memcpy(serialAuthPacket.response, serialAuth.challenge, 8);
-		memcpy(serialAuthPacket.key, checks[index], 16);
+		memcpy(serialAuthPacket.key, serialAuthKeys[index].check, 16);
 		keyResult = serialAuthGetRoundKeys(&roundKeys);
 		if (keyResult == 0) {
 			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)firstKeys[index], (struct AesKey __near *)&key);
+			aesKeyExpansion((const unsigned long *)serialAuthKeys[index].first, (struct AesKey __near *)&key);
 			aesCbcEncrypt(serialAuthPacket.challenge, serialAuthPacket.challenge,
 				      (struct AesKey __near *)&key, serialIv, 0x20);
 		} else {
@@ -186,7 +197,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		}
 		index = SERIAL_AUTH_MODES;
 		while (index-- != 0) {
-			if (serialAuthModes[index].mode == serialAuth.mode)
+			if (serialAuthKeys[index].mode == serialAuth.mode)
 				break;
 		}
 		keyResult = serialAuthGetRoundKeys(&roundKeys);
@@ -194,7 +205,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)secondKeys[index], (struct AesKey __near *)&key);
+			aesKeyExpansion((const unsigned long *)serialAuthKeys[index].second, (struct AesKey __near *)&key);
 			aesCbcDecrypt(serialAuthPacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, serialIv, 0x20);
 		} else {
@@ -220,8 +231,14 @@ unsigned char serialAuthCommand(unsigned char *data)
 	default:
 		break;
 	}
-	if (serialAuth.state == 0xff || serialAuth.state == 0)
+	if (serialAuth.state == 0xff) {
 		result = serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return result;
+	}
+	if (serialAuth.state == 0) {
+		result = serialAuthSetMode(serialAuth.state, serialAuth.mode);
+		return result;
+	}
 	return result;
 }
 

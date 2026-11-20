@@ -67,6 +67,17 @@ static struct {
 static unsigned int serialAuthUnlocked[SERIAL_AUTH_MODES];
 
 static __near struct SerialAuthPacket serialAuthPacket;
+#ifdef ERNIE_UPDATER
+/* the updater's (0x0100060D): the key schedule in place of a block of memory pool 2,
+   serialAuthGetRoundKeys's */
+static __near unsigned long serialAuthRoundKeys[44];
+static int serialAuthGetRoundKeys(unsigned long __far * __far *w);
+#define SERIAL_AUTH_GET_BLOCK(block)	serialAuthGetRoundKeys((unsigned long __far * __far *)&(block))
+#define SERIAL_AUTH_RELEASE_BLOCK(block)
+#else
+#define SERIAL_AUTH_GET_BLOCK(block)	pget_mpf(2, &(block))
+#define SERIAL_AUTH_RELEASE_BLOCK(block)	rel_mpf(2, block)
+#endif
 
 
 #if FW_SINCE(0x00090804)
@@ -327,7 +338,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		memcpy(serialAuthPacket.challenge, serialAuth.nonce, 8);
 		memcpy(serialAuthPacket.response, serialAuth.challenge, 8);
 		memcpy(serialAuthPacket.key, SERIAL_AUTH_KEY.check, 16);
-		poolResult = pget_mpf(2, &block);
+		poolResult = SERIAL_AUTH_GET_BLOCK(block);
 		if (poolResult == E_OK) {
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
@@ -339,7 +350,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		} else {
 			serialAuth.state = 0xff;
 		}
-		rel_mpf(2, block);
+		SERIAL_AUTH_RELEASE_BLOCK(block);
 		memcpy(data, &serialAuthPacket, sizeof(serialAuthPacket));
 		break;
 	case 3:
@@ -355,7 +366,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 				break;
 		}
 #endif
-		poolResult = pget_mpf(2, &block);
+		poolResult = SERIAL_AUTH_GET_BLOCK(block);
 		if (poolResult == E_OK) {
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
@@ -367,7 +378,7 @@ unsigned char serialAuthCommand(unsigned char *data)
 		} else {
 			serialAuth.state = 0xff;
 		}
-		rel_mpf(2, block);
+		SERIAL_AUTH_RELEASE_BLOCK(block);
 		memcpy(serialAuthPacket.challenge, data + 8, 0x20);
 		if (serialAuth.state != 0xff) {
 			if (memcmp(serialAuthPacket.challenge, serialAuth.challenge, 8) != 0 ||
@@ -441,6 +452,14 @@ void serialAuthInput(void)
 }
 #endif
 
+#ifdef ERNIE_UPDATER
+static int serialAuthGetRoundKeys(unsigned long __far * __far *w)
+{
+	*w = (unsigned long __far *)serialAuthRoundKeys;
+	return 0;
+}
+#endif
+
 #if FW_SINCE(0x00090804)
 static unsigned char serialAuthUnlock0(void)
 {
@@ -456,31 +475,41 @@ static unsigned char serialAuthUnlock0(void)
 static unsigned char serialAuthLock0(void)
 {
 	stateSerialLock();
+#ifndef ERNIE_UPDATER
 	logEvent(0x0f);
+#endif
 	return 0;
 }
 
 static unsigned char serialAuthUnlock1(void)
 {
+#ifndef ERNIE_UPDATER
 	logEvent(0x11);
+#endif
 	return 0;
 }
 
 static unsigned char serialAuthLock1(void)
 {
+#ifndef ERNIE_UPDATER
 	logEvent(0x10);
+#endif
 	return 0;
 }
 
 static unsigned char serialAuthUnlock14(void)
 {
+#ifndef ERNIE_UPDATER
 	logEvent(0x13);
+#endif
 	return 0;
 }
 
 static unsigned char serialAuthLock14(void)
 {
+#ifndef ERNIE_UPDATER
 	logEvent(0x12);
+#endif
 	return 0;
 }
 #endif

@@ -1,6 +1,7 @@
 /*
  * The updater's software timers: the application's, polled from the main loop, with 30
- * timers and the clock (getClock) in place of timerRtcTicks.
+ * timers and the clock (getClock) in place of timerRtcTicks. Since 0x0100060D the RTC's
+ * timers count timerRtcTicks, as the application's do, and there are 31.
  */
 #pragma DI
 #pragma EI
@@ -13,6 +14,9 @@
 
 __near struct Timer timers[TIMER_COUNT];
 __sreg unsigned int timerTicks;
+#if FW_SINCE(0x0100060D)
+__sreg unsigned int timerRtcTicks;
+#endif
 
 int timerInit(void)
 {
@@ -26,6 +30,9 @@ int timerInit(void)
 	}
 	ticks = 0;
 	timerSetTicks(&ticks);
+#if FW_SINCE(0x0100060D)
+	timerSetRtcTicks(&ticks);
+#endif
 	return 0;
 }
 
@@ -50,7 +57,11 @@ int timerStart(unsigned char id, unsigned int ticks)
 	}
 	if (id < TIMER_COUNT) {
 		DI();
+#if FW_SINCE(0x0100060D)
+		timers[id].time = ticks + timerRtcTicks + 1;
+#else
 		timers[id].time = (unsigned int)getClock().value + ticks + 1;
+#endif
 		timers[id].state = 1;
 		EI();
 		return 0;
@@ -102,6 +113,23 @@ int timerArmed(void)
 	return result;
 }
 
+#if FW_SINCE(0x0100060D)
+/* the interrupts left disabled, as timerSetTicks leaves them */
+int timerSetRtcTicks(unsigned int *ticks)
+{
+	DI();
+	timerRtcTicks = *ticks;
+	return 0;
+}
+
+int timerGetRtcTicks(unsigned int *ticks)
+{
+	DI();
+	*ticks = timerRtcTicks;
+	EI();
+	return 0;
+}
+#else
 int timerGetRtcTicks(unsigned int *ticks)
 {
 	DI();
@@ -109,6 +137,7 @@ int timerGetRtcTicks(unsigned int *ticks)
 	EI();
 	return 0;
 }
+#endif
 
 /* a tick, from the main loop */
 void timerTick(void)

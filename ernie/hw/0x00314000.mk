@@ -1,3 +1,7 @@
 # Board 0x00314000: supports FW 0.931.010
 # Firmware versions with an update patch: 0x00080003
 HW_ID := 0x00314000
+# NEC D79F0109, as 0x00315200's: 0x00411000's code on DEM-3000L's kernel, the differences by HW_IS
+BOARD := 0x00411000
+KERNEL := 0x00415000
+CHIP := f1030a0

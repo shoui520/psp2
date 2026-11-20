@@ -11,7 +11,11 @@ void tau0PowerOn(void)
 {
 	if (!TAU0EN) {
 		TAU0EN = 1;
+#if CHIP_RL78
+		TPS0 = 0x80;	/* the RL78's 16-bit register */
+#else
 		TPS0L = 0x80;
+#endif
 	}
 }
 
@@ -24,7 +28,11 @@ void tau1PowerOn(void)
 {
 	if (!TAU1EN) {
 		TAU1EN = 1;
+#if CHIP_RL78
+		TPS1 = 0x80;	/* the RL78's 16-bit register */
+#else
 		TPS1L = 0x80;
+#endif
 	}
 }
 

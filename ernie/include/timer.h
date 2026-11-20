@@ -54,6 +54,10 @@ struct Timer {
 #elif !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #define TIMER_RTC_FIRST		0x17
 #define TIMER_RTC(id)		((id) + 2)
+#elif defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
+/* the updater's since 0x0100060D: the RTC's at 0x14-0x1e */
+#define TIMER_RTC_FIRST		0x14
+#define TIMER_RTC(id)		((id) - 1)
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000306)
 #define TIMER_RTC_FIRST		0x15
 #define TIMER_RTC(id)		(id)
@@ -73,14 +77,17 @@ struct Timer {
 #if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
 /* five below, and six above the modem's 0x13 */
 #define TIMER(id)		((id) < 0x13 ? (id) - 5 : (id) - 6)
-#elif !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#elif FW_SINCE(0x0100060B) && (!defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D))
+/* the application's since 0x0100060B, the updater's since 0x0100060D */
 #define TIMER(id)		((id) - 2)
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090009)
 #define TIMER(id)		(id)
 #else
 #define TIMER(id)		((id) + 2)
 #endif
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
+#define TIMER_COUNT		0x1f
+#elif defined(ERNIE_UPDATER)
 #define TIMER_COUNT		0x1e
 #elif BOARD_DOL1001 && FW_SINCE(0x01040000)
 #define TIMER_COUNT		(TIMER_RTC(0x21) + 1)

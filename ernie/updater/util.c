@@ -2,6 +2,7 @@
  * The updater's helpers: bytes as hex text, two digits each, most significant first, and
  * back; the nonce generator of the serial link's handshake.
  */
+#define ERNIE_RANDOM_DEFINE
 #include "util.h"
 #include "updater.h"
 #include "aes.h"

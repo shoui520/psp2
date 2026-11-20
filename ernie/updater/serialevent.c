@@ -9,12 +9,14 @@
 #include "timer.h"
 #include "updater.h"
 
-/* the events of event flag 3: UART4's in mode 2, UART3's in mode 1 */
+/* the events of event flag 3: UART4's in mode 2 (where the board has that link), UART3's in
+   mode 1 */
 unsigned char serial4Event(FLGPTN ptn)
 {
 	unsigned char result;
 
 	result = 0;
+#if BOARD_SERIAL4
 	if ((ptn & 0x0e00) && (serial4GetMode() & SERIAL_MODE) == 2) {
 		if (ptn & 0x0400) {
 			if (serial4.state == SERIAL_RECEIVE)
@@ -29,7 +31,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x11);
+			timerStop(TIMER(0x11));
 			serial4.status = serial4Receive();
 			serial4Dispatch();
 			break;
@@ -44,6 +46,7 @@ unsigned char serial4Event(FLGPTN ptn)
 			break;
 		}
 	}
+#endif
 	if ((ptn & 0x001e) && (serialGetMode() & SERIAL_MODE) == 1) {
 		if (ptn & 0x0010) {
 			serial.state = SERIAL_SEND;
@@ -60,7 +63,7 @@ unsigned char serial4Event(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x12);
+			timerStop(TIMER(0x12));
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -99,7 +102,7 @@ void serial4StartTimers(void)
 	struct TimerHandler handler;
 
 	handler.handler = serial4PostTimeout;
-	timerSetHandler(0x11, &handler);
+	timerSetHandler(TIMER(0x11), &handler);
 	handler.handler = serial4PostTimeout3;
-	timerSetHandler(0x12, &handler);
+	timerSetHandler(TIMER(0x12), &handler);
 }

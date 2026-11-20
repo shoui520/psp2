@@ -7,7 +7,9 @@
 #define ERNIE_DOWNLOADER_H
 
 /* the host link's config: the application's HostLinkConfig, a word to the updater (UpdHostLink) */
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
+typedef struct UpdHostLinkConfig DownloaderLinkConfig;
+#elif defined(ERNIE_UPDATER)
 typedef unsigned int DownloaderLinkConfig;
 #else
 #include "host.h"

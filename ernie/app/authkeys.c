@@ -1,36 +1,32 @@
 /*
  * The keys: the serial authentication's (the packet header, the IV and each mode's keys), in
- * both programs; the updater's own copies of the factory handshake key, the random generator's
- * key and the handshake's IV (the application keeps those in spidev.c and handshake.c, except
+ * both programs; the updater's own copies of the handshake's keys and IV (its factory key is in
+ * its handshake.c; the application keeps those in spidev.c and handshake.c, except
  * since 0x0100060B, whose keys object holds the application's too: the handshake's header, IV
  * and keys (handshakekeys.h; on the slim after the serial authentication's), the serial
- * authentication's, then the factory key)
+ * authentication's, then the factory key); the updater's since 0x0100060D is the same
  */
 #include "ernie.h"
 #include "authkeys.h"
 #include "board.h"
 
-/* the factory handshake key, expanded: AES-256's 15 round keys */
-#define FACTORY_ROUND_KEYS \
-	0xe61677f4UL, 0xd69f64c5UL, 0xd98f5348UL, 0xd1123d77UL, \
-	0x87119e22UL, 0x82d7b137UL, 0xdb0ca8d6UL, 0xc3b9e472UL, \
-	0xa638219cUL, 0x70a74559UL, 0xa9281611UL, 0x783a2b66UL, \
-	0x3b916f11UL, 0xb946de26UL, 0x624a76f0UL, 0xa1f39282UL, \
-	0xb50a2cd1UL, 0xc5ad6988UL, 0x6c857f99UL, 0x14bf54ffUL, \
-	0xc1994f07UL, 0x78df9121UL, 0x1a95e7d1UL, 0xbb667553UL, \
-	0x58e01f48UL, 0x9d4d76c0UL, 0xf1c80959UL, 0xe5775da6UL, \
-	0x186c0323UL, 0x60b39202UL, 0x7a2675d3UL, 0xc1400080UL, \
-	0x95981623UL, 0x08d560e3UL, 0xf91d69baUL, 0x1c6a341cUL, \
-	0x846e1bbfUL, 0xe4dd89bdUL, 0x9efbfc6eUL, 0x5fbbfceeUL, \
-	0xbd57fc83UL, 0xb5829c60UL, 0x4c9ff5daUL, 0x50f5c1c6UL, \
-	0xd788630bUL, 0x3355eab6UL, 0xadae16d8UL, 0xf215ea36UL, \
-	0xb8dea524UL, 0x0d5c3944UL, 0x41c3cc9eUL, 0x11360d58UL, \
-	0x558db461UL, 0x66d85ed7UL, 0xcb76480fUL, 0x3963a239UL, \
-	0xaacc5e5eUL, 0xa790671aUL, 0xe653ab84UL, 0xf765a6dcUL,
+/* the keys object with the handshake's keys: the application's since 0x0100060B, the updater's
+   since 0x0100060D (the same object) */
+#if !defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D)
+#define AUTHKEYS_HANDSHAKE	FW_SINCE(0x0100060B)
+#else
+#define AUTHKEYS_HANDSHAKE	0
+#endif
 
-#ifdef ERNIE_UPDATER
-const unsigned long factoryRoundKeys[60] = {
-	FACTORY_ROUND_KEYS
+#if defined(ERNIE_UPDATER) && !FW_SINCE(0x0100060D)
+/* the updater's copies of the handshake's mode 0x0b check and keys (the second the random
+   generator's key) and its IV; its factory key is in handshake.c */
+const unsigned char mode11Check[16] = {
+	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
+};
+
+const unsigned char mode11Key1[16] = {
+	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
 };
 
 const unsigned long randomKey[4] = {
@@ -42,7 +38,7 @@ const unsigned char handshakeIv[16] = {
 };
 #endif
 
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && (!SOURCE_0103 || BOARD_DOL1001)
+#if AUTHKEYS_HANDSHAKE && (!SOURCE_0103 || BOARD_DOL1001)
 #include "handshakekeys.h"
 #endif
 
@@ -169,12 +165,13 @@ const unsigned char serialKey2Second[16] = {
 };
 #endif
 
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B) && SOURCE_0103 && !BOARD_DOL1001
+#if AUTHKEYS_HANDSHAKE && SOURCE_0103 && !BOARD_DOL1001
 #include "handshakekeys.h"
 #endif
 
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
-/* since 0x0100060B the application's factory key is here too, after the serial keys */
+#if AUTHKEYS_HANDSHAKE
+/* since 0x0100060B the application's factory key is here too, after the serial keys (the
+   0x0100060D updater's after serialauth.c's tables) */
 const unsigned long factoryRoundKeys[60] = {
 	FACTORY_ROUND_KEYS
 };

@@ -125,7 +125,14 @@ extern union PowerRequest *stateGetWakeupFactor(void);
 extern unsigned char stateGetCause(void);
 #endif
 extern unsigned int stateGet(void);
-#if SOURCE_0103
+#if defined(ERNIE_UPDATER) && FW_SINCE(0x0100060D)
+/* the updater's app code posts its transitions as the updater's events (updater.h) */
+extern int updStateEvent(unsigned char transition);
+extern unsigned char updEventSet(unsigned char event);
+#define STATE_TRANSITION_EVENT
+#define STATE_TRANSITION(t)	updStateEvent(t)
+#define STATE_TRANSITION_NOMASK(t)	updStateEvent(t)
+#elif SOURCE_0103
 extern int stateTransition(unsigned int transition);	/* the slim's takes a word */
 #define STATE_TRANSITION_EVENT
 #define STATE_TRANSITION(t)	stateTransition(t)

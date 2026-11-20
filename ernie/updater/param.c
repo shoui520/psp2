@@ -11,6 +11,35 @@
 
 struct Param param;
 
+#if FW_SINCE(0x0100060D)
+/* 0x0100060D's: the application's 0x0100010A revision, the settings block's part loaded by
+   paramLoad */
+int paramInit(void)
+{
+	memset(&param, 0, sizeof(param));
+	param.levels[0] = 0x23;
+	param.levels[1] = 0x23;
+	param.levels[2] = 0x23;
+	param.levels[3] = 0x23;
+	param.base = 7;
+	param.adjust = 0;
+	paramLoad();
+	return 0;
+}
+
+void paramLoad(void)
+{
+	if (configGet()->board.bits.bbmcDetect)
+		memcpy(param.chargeLevels, configGet()->chargeLevels, sizeof(param.chargeLevels));
+	else
+		memcpy(param.chargeLevels, configGet()->chargeLevelsNoDetect,
+		       sizeof(param.chargeLevels));
+	param.pressTime1 = configGet()->pressTime1;
+	param.pressTime2 = configGet()->pressTime2;
+	param.setting1 = configGet()->paramSetting1;
+	param.setting2 = configGet()->paramSetting2;
+}
+#else
 int paramInit(void)
 {
 	memset(&param, 0, sizeof(param));
@@ -29,6 +58,7 @@ int paramInit(void)
 	param.pressTime2 = configGet()->pressTime2;
 	return 0;
 }
+#endif
 
 /* host command 0x0092: 1 when the range is past the block or longer than PARAM_ACCESS_MAX */
 unsigned char paramRead(unsigned int offset, unsigned int size, unsigned char *buf)

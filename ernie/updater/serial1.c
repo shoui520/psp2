@@ -17,6 +17,9 @@
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
+#if FW_SINCE(0x0100060D)
+#include "sysinfo.h"
+#endif
 #include "state.h"
 #include "updater.h"
 #include "version.h"
@@ -59,7 +62,11 @@ void serial1Reset(void)
 {
 	serialLock(1);
 	sleepFactorSet25(0);
+#if FW_SINCE(0x0100060D)
+	serial1BufferClear();
+#else
 	memset(serial1Buffer, 0, sizeof(serial1Buffer));
+#endif
 	memset(&serial1Data, 0, sizeof(serial1Data));
 	serialAuthInit();
 	serial1State = 0;
@@ -124,6 +131,14 @@ unsigned char serial1BufferWrite(unsigned char offset, unsigned char size, unsig
 	return 0;
 }
 
+#if FW_SINCE(0x0100060D)
+unsigned char serial1BufferClear(void)
+{
+	memset(serial1Buffer, 0, sizeof(serial1Buffer));
+	return 0;
+}
+#endif
+
 /* an input bit's handler: nothing in the updater */
 void serial1InputHandler(void)
 {
@@ -160,7 +175,11 @@ static unsigned char serial1Command0101(struct SerialBuffer *request, struct Ser
 	getHardwareInfo(serial1Data.version.hardwareInfo);
 	getErnieVersion(serial1Data.version.version);
 	getErnieDlVersion(serial1Data.version.dlVersion);
+#if FW_SINCE(0x0100060D)
+	serial1Data.version.flags = getResetFlags();
+#else
 	serial1Data.version.flags = resetFlags;
+#endif
 	memset(serial1Data.version.reserved, 0, sizeof(serial1Data.version.reserved));
 	response->data = serial1Data.byte;
 	response->length = sizeof(serial1Data.version);
@@ -233,7 +252,7 @@ static unsigned char serial1Command0104(struct SerialBuffer *request, struct Ser
    answered when it is made */
 static unsigned char serial1Command0105(struct SerialBuffer *request, struct SerialBuffer *response)
 {
-	struct StateEvent event;
+	UPD_STATE_EVENT_LOCAL
 	unsigned char mode;
 	unsigned char result;
 	unsigned int state;
@@ -247,31 +266,36 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		event.transition = 0x53;
-		event.wakeMask = stateGetWakeMask();
-		result = updStateEvent(&event);
+		result = UPD_STATE_EVENT(0x53);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 2) {
 		if (state != 0x0004 && state != 0x0008) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
+#if FW_SINCE(0x0100060D)
+		if (!(unsigned char)chargeMayStart()) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x51;
+		}
+		if ((unsigned char)chargeAlarm0On()) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x53;
+		}
+#else
 		if (!chargeMayStart()) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
-		event.transition = 9;
-		event.wakeMask = stateGetWakeMask();
-		result = updStateEvent(&event);
+#endif
+		result = UPD_STATE_EVENT(9);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else if (mode == 3) {
 		if (state != 0x0004) {
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
-		event.transition = 0x11;
-		event.wakeMask = stateGetWakeMask();
-		result = updStateEvent(&event);
+		result = UPD_STATE_EVENT(0x11);
 		serialSetAnswer(SERIAL_ANSWER_LATER);
 	} else {
 		serialSetAnswer(SERIAL_ANSWER);
@@ -402,6 +426,25 @@ static unsigned char serial1Command0132(struct SerialBuffer *request, struct Ser
 	serialSetAnswer(SERIAL_ANSWER);
 	return result;
 }
+
+#if FW_SINCE(0x0100060D)
+/* 0x0170: the NVS's state and info, as the application's; not in the updater's table */
+unsigned char serial1Command0170(struct SerialBuffer *request, struct SerialBuffer *response)
+{
+	unsigned char result;
+	union Serial1Word info;
+
+	response->data = serial1Data.byte;
+	response->length = 5;
+	memset(serial1Data.byte, 0, 5);
+	serial1Data.byte[0] = nvsGetState();
+	result = nvsGetInfo(&serial1Data.byte[1], &serial1Data.byte[2], &info.value);
+	serial1Data.byte[3] = info.byte[0];
+	serial1Data.byte[4] = info.byte[1];
+	serialSetAnswer(SERIAL_ANSWER);
+	return result == 0 ? 0 : result;
+}
+#endif
 
 /* 0x0300: the request's data into serial1Buffer; sets sleep factor 25 */
 static unsigned char serial1Command0300(struct SerialBuffer *request, struct SerialBuffer *response)

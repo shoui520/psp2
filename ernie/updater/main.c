@@ -138,8 +138,10 @@ int uartsOpen(void)
 	return 0;
 }
 
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D carries none */
 /* the updater's banner, printed nowhere */
 const char __far updaterBanner[] = "\r\n\n\nWelcome to Ernie Downloader. (0x01.0x00.0x33.0x00)\r\n";
+#endif
 
 /* every interrupt masked and at the lowest priority */
 void intInit(void)
@@ -213,6 +215,22 @@ void resetChip(void)
 }
 
 /* every 0.5 s: the kept clock counts, and timers 0x15-0x1d whose time came run */
+#if FW_SINCE(0x0100060D)
+/* since 0x0100060D the RTC's timers count timerRtcTicks, as the application's do */
+void rtcInterrupt(void)
+{
+	unsigned char i;
+
+	keepRam.clock++;
+	timerRtcTicks++;
+	for (i = TIMER_RTC_FIRST; i < TIMER_COUNT; i++) {
+		if (timers[i].state == 1 && timers[i].time == timerRtcTicks) {
+			timers[i].state = 0;
+			timers[i].handler();
+		}
+	}
+}
+#else
 void rtcInterrupt(void)
 {
 	unsigned int clock;
@@ -227,3 +245,4 @@ void rtcInterrupt(void)
 		}
 	}
 }
+#endif

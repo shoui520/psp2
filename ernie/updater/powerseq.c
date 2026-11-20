@@ -21,20 +21,34 @@
 #include "timer.h"
 #include "updater.h"
 
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D has none */
 unsigned char powerSeqOnState;		/* 7 once powerSeqOn ran; read nowhere */
+#endif
 
 static const struct PowerStep __far powerResumeSteps[3] = {
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 6 },
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 4 },
+#if FW_SINCE(0x0100060D)
+	{ { 0x7102, 0x0000, 0x0140, 0x0000, 0x0000, 0x0000 }, 8 },
+#else
 	{ { 0x7102, 0x0000, 0x0340, 0x0000, 0x0000, 0x0000 }, 8 },
+#endif
 };
 static const struct PowerStep __far powerOffSteps[3] = {
+#if FW_SINCE(0x0100060D)
+	{ { 0x7113, 0x0000, 0x19c0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+#else
 	{ { 0x7113, 0x8000, 0x1bc0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+#endif
 	{ { 0x8880, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0x0000 }, 0x70 },
 };
 static const struct PowerStep __far powerSuspendSteps[3] = {
+#if FW_SINCE(0x0100060D)
+	{ { 0x7103, 0x0000, 0x09c0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+#else
 	{ { 0x7103, 0x8000, 0x0bc0, 0x0000, 0x8000, 0x0000 }, 0x5c },
+#endif
 	{ { 0x8000, 0x0000, 0x0000, 0x1400, 0x0000, 0x0000 }, 0x5c },
 	{ { 0x0004, 0x4000, 0x0000, 0x0000, 0x0000, 0xa000 }, 0x70 },
 };
@@ -85,11 +99,13 @@ void powerSeqOn(void)
 		for (i = 0; i < 6; i++) {
 			if (!batteryReadInfo(&deviceVersions.battery.id)) {
 				cookieReadStatus1(&status);
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D reads the status and does not test it */
 				if (status & 0x02) {
 					if (deviceVersions.battery.version[1] >= 0x408 && deviceVersions.battery.version[1] < 0x412)
 						powerSleep2(0x2a8);
 					break;
 				}
+#endif
 			}
 			if (configGet()->start.bits.batteryNoRetry)
 				break;
@@ -102,7 +118,9 @@ void powerSeqOn(void)
 		}
 	}
 	cookieCtrlBatteryCharge(1);
+#if !FW_SINCE(0x0100060D)
 	powerSeqOnState = 7;
+#endif
 	chargeInit();
 }
 
@@ -128,8 +146,10 @@ unsigned char powerSeqResume(void)
 	mode = *stateGetWakeupFactor();
 	if (mode.bits.mode == 0x0c)
 		powerSdOn();
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D does not wait for P6.7 */
 	if (elmoStatusMask.reg[0] & 0x10)
 		powerSeqWaitP67();
+#endif
 out:
 	TT0L = 0x08;
 	TMMK03 = 1;
@@ -143,12 +163,15 @@ void powerSeqLevels(void)
 	unsigned char trim;
 	unsigned char level;
 
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D sets up only an Elmo 0x90 */
 	if (deviceVersions.elmo[1] == 0x80) {
 		elmoCommand[0] = 0x38;
 		elmoCommand[1] = 0x01;
 		elmoCommand[2] = 0x00;
 		elmoWrite(elmoCommand, 3);
-	} else if (deviceVersions.elmo[1] == 0x90) {
+	} else
+#endif
+	if (deviceVersions.elmo[1] == 0x90) {
 		elmoCommand[0] = 0x50;
 		elmoCommand[1] = 0xff;
 		elmoCommand[2] = 0xc2;
@@ -184,6 +207,7 @@ void powerSeqLevels(void)
 /* where the WLAN's line is driven: P3.1 low until P6.7 goes low, at most six waits */
 void powerSeqWaitP67(void)
 {
+#if !FW_SINCE(0x0100060D)	/* 0x0100060D's is empty */
 	unsigned char i;
 
 	if (configGet()->wlanLine) {
@@ -195,6 +219,7 @@ void powerSeqWaitP67(void)
 		}
 		P31 = 1;
 	}
+#endif
 }
 
 /* the lines low, the devices off, then the off sequence's Elmo steps */
@@ -208,8 +233,13 @@ unsigned char powerSeqOff(void)
 	P0.5 = 0;
 	P6.3 = 0;
 	P13.1 = 0;
+#if FW_SINCE(0x0100060D)
+	P31 = 0;
+	P37 = 0;
+#else
 	if (configGet()->wlanLine)
 		P31 = 0;
+#endif
 	clockOutputStop();
 	powerMultiCnOff();
 	powerRmrOff();
@@ -297,7 +327,7 @@ unsigned char powerAccOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[4] = mask;
-			timerStart(0x13, 0);
+			timerStart(TIMER(0x13), 0);
 		}
 	}
 	return result;
@@ -316,7 +346,7 @@ unsigned char powerAccOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[4] = mask;
-			timerStop(0x13);
+			timerStop(TIMER(0x13));
 			sleepFactorSet2(0);
 			powerStartTimer(0x10, 8, 0x4b);
 		}
@@ -352,8 +382,12 @@ unsigned char powerOnWlan(void)
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(1);
 			powerSleep2(2);
+#if FW_SINCE(0x0100060D)
+			P31 = 1;
+#else
 			if (configGet()->wlanLine)
 				P31 = 1;
+#endif
 		}
 	}
 	return result;
@@ -368,8 +402,12 @@ unsigned char powerOffWlan(void)
 	if (elmoStatusMask.reg[0] & 0x0010) {
 		P13.1 = 0;
 		clockOutputStop();
+#if FW_SINCE(0x0100060D)
+		P31 = 0;
+#else
 		if (configGet()->wlanLine)
 			P31 = 0;
+#endif
 		mask0 = elmoStatusMask.reg[0] & 0xffef;
 		mask2 = elmoStatusMask.reg[2] & 0xefff;
 		elmoCommand[0] = 0xa0;
@@ -384,6 +422,10 @@ unsigned char powerOffWlan(void)
 			elmoStatusMask.reg[2] = mask2;
 			sleepFactorSet0(0);
 			powerStartTimer(0x20, 9, 0x64);
+#if FW_SINCE(0x0100060D)
+			if (stateGet() & 0x080c)
+				P95 = 0;
+#endif
 		}
 	} else {
 		result = 0;
@@ -391,6 +433,7 @@ unsigned char powerOffWlan(void)
 	return result;
 }
 
+#if !FW_SINCE(0x0100060D)
 /* the 3G modem's power, as the application's powerBbmcOff and powerBbmcOn before they were
    two */
 unsigned char powerBbmcOn(void)
@@ -454,6 +497,7 @@ unsigned char powerBbmcCycle(void)
 	}
 	return result;
 }
+#endif
 
 /* a regulator's level (0x81-0x84); the result is not set for another register */
 unsigned char powerSetVoltage(unsigned char regulator, unsigned char level)
@@ -475,6 +519,9 @@ unsigned char powerCookieSet(void)
 {
 	unsigned char result;
 
+#if FW_SINCE(0x0100060D)
+	cookieReadReg3();
+#endif
 	elmoCommand[0] = 0x03;
 	elmoCommand[1] = cookieRegs[0].byte[0] | 0x80;
 	elmoCommand[2] = cookieRegs[0].byte[1];
@@ -490,7 +537,12 @@ unsigned char powerCookieClear(void)
 	unsigned char result;
 
 	result = 0;
+#if FW_SINCE(0x0100060D)	/* 0x0100060D: only while powerCookieHold holds nothing, register 3 read back first */
+	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && !chargeCookieHeld) {
+		cookieReadReg3();
+#else
 	if (!powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1 && chargeVbus) {
+#endif
 		elmoCommand[0] = 0x03;
 		elmoCommand[1] = cookieRegs[0].byte[0] & 0x7f;
 		elmoCommand[2] = cookieRegs[0].byte[1];
@@ -536,7 +588,11 @@ unsigned char powerRmrOff(void)
 	result = elmoWrite(elmoCommand, 3);
 	if (result == 0) {
 		elmoRegAA = mask;
+#if FW_SINCE(0x0100060D)	/* the application's timer numbers, two lower since 0x0100060B */
+		powerStartTimer(0x1000, 0x0d, 0x4b);
+#else
 		powerStartTimer(0x1000, 0x0f, 0x4b);
+#endif
 	}
 	return result;
 }
@@ -557,7 +613,7 @@ unsigned char powerSdOn(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
-			timerStart(0x14, 1);
+			timerStart(TIMER(0x14), 1);
 		}
 	}
 	return result;
@@ -576,9 +632,13 @@ unsigned char powerSdOff(void)
 		result = elmoWrite(elmoCommand, 3);
 		if (result == 0) {
 			elmoStatusMask.reg[0] = mask;
-			timerStop(0x14);
+			timerStop(TIMER(0x14));
 			sleepFactorSet10(0);
+#if FW_SINCE(0x0100060D)
+			powerStartTimer(0x2000, 0x0e, 0x11f);
+#else
 			powerStartTimer(0x2000, 0x10, 0x11f);
+#endif
 		}
 	} else {
 		result = 0;
@@ -641,7 +701,80 @@ void powerSeqInit(void)
 	struct TimerHandler handler;
 
 	handler.handler = powerAccTimer;
-	timerSetHandler(0x13, &handler);
+	timerSetHandler(TIMER(0x13), &handler);
 	handler.handler = powerSdTimer;
-	timerSetHandler(0x14, &handler);
+	timerSetHandler(TIMER(0x14), &handler);
 }
+#if FW_SINCE(0x0100060D)
+
+/* the application's Cookie hold and release, empty here */
+void powerCookieHold(void)
+{
+}
+
+void powerCookieRelease(void)
+{
+}
+
+/* the 3G modem's power: at the suspend, both */
+unsigned char powerBbmcCycle(void)
+{
+	powerBbmcOff();
+	return powerBbmcOn();
+}
+
+unsigned char powerBbmcOff(void)
+{
+	unsigned char result;
+
+	result = 0;
+	P37 = 0;
+	P125 = 0;
+	bbmcSetOff();
+	if ((unsigned char)input2Bit0Get() == 1 && (unsigned char)bbmcGetMode() == 0) {
+		P6.5 = 1;
+		powerSleep2(0x14);
+		P6.5 = 0;
+	}
+	return result;
+}
+
+unsigned char powerBbmcOn(void)
+{
+	unsigned char result;
+
+	if ((unsigned char)bbmcGetMode()) {
+		P33 = 1;
+		powerWaitInput(1, 0x4e2);
+		P33 = 0;
+		if ((unsigned char)input2Bit0Get() == 0)
+			return 0;
+		return 2;
+	}
+	if ((unsigned char)input2Bit0Get() == 1) {
+		powerWaitInput(1, configGet()->bbmcPowerDelay);
+		if ((unsigned char)input2Bit0Get())
+			powerBbmcPulse();
+		powerSleep2(0x20);
+		if ((unsigned char)input2Bit1Get() == 0) {
+			sleepFactorSet9(0);
+			result = 0;
+		} else {
+			result = 2;
+		}
+	} else {
+		result = 0;
+	}
+	if (result)
+		bbmcWake();
+	return result;
+}
+
+/* the 3G modem's P3.3 pulse, 0x0e74 long */
+void powerBbmcPulse(void)
+{
+	P33 = 1;
+	powerSleep2(0x0e74);
+	P33 = 0;
+}
+#endif

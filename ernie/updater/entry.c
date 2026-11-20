@@ -8,11 +8,11 @@
 #include <string.h>
 #include "chip.h"
 #include "ernie.h"
-#include "downloader.h"
 #include "rtc.h"
 #include "sleepfactor.h"
 #include "version.h"
 #include "updater.h"
+#include "downloader.h"
 
 void mainLoop(void);
 

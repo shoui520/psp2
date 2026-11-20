@@ -35,6 +35,10 @@
 #include "watchdog.h"
 #include "powerseq.h"
 #include "updater.h"
+#if FW_SINCE(0x0100060D)
+#include "handshake.h"
+#include "snvs.h"
+#endif
 
 
 
@@ -44,8 +48,12 @@ void main(void)
 {
 	rtcInit();
 	sleepFactorInit();
+#if FW_SINCE(0x0100060D)
+	hostInit();
+#else
 	hostLink.frameSize = 0x20;
 	hostLink.config = 0;
+#endif
 	updReset = 1;
 	memcpy(updVersion, APP_VERSION_INFO->version, 4);
 	timeStampDigits(updBuild, APP_VERSION_INFO->timeStamp);
@@ -66,6 +74,10 @@ int updaterInitErnieUpdMode(void)
 		updMode = 3;
 		hostOpen();
 		updaterDecryptInit();
+#if FW_SINCE(0x0100060D)
+		handshakeInit(0);
+		snvsReset();
+#endif
 		handshakeSetUnlocked(HANDSHAKE_UNLOCKED);
 		updInput.bits.multiCnReported = updInput.bits.multiCn = updInput.bits.multiCnLast =
 			!P2.0;
@@ -95,6 +107,18 @@ unsigned char updModeChange(unsigned char mode)
 			refused = 0;
 			break;
 		case 3:
+#if FW_SINCE(0x0100060D)
+			if ((unsigned char)chargeMayStart() && !(unsigned char)chargeAlarm0On()) {
+				handshakeInit(0);
+				watchdogSetup();
+				snvsReset();
+				updaterDecryptInit();
+				powerResume();
+				hostOpen();
+				hostInit();
+				refused = 0;
+			}
+#else
 			if (chargeMayStart()) {
 				handshakeInit();
 				watchdogSetup();
@@ -103,6 +127,7 @@ unsigned char updModeChange(unsigned char mode)
 				hostOpen();
 				refused = 0;
 			}
+#endif
 			break;
 		case 5:
 			refused = 0;
@@ -134,6 +159,21 @@ unsigned char updModeChange(unsigned char mode)
 			DI();
 			refused = 0;
 			break;
+#if FW_SINCE(0x0100060D)
+		case 2:
+			boardMultiCnOutputOff();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+			break;
+		case 1:
+			hostClose();
+			boardMultiCnOutputOff();
+			powerOff();
+			watchdogStop();
+			refused = 0;
+			break;
+#else
 		case 2:
 			powerOff();
 			boardMultiCnOutputOff();
@@ -147,6 +187,7 @@ unsigned char updModeChange(unsigned char mode)
 			watchdogStop();
 			refused = 0;
 			break;
+#endif
 		case 5:
 			if (hostSlowPending() && hostLink.resetWait--) {
 				updEventSet(0x1f);
@@ -191,7 +232,7 @@ unsigned char updModeChange(unsigned char mode)
 		break;
 	}
 	if (!refused) {
-		logPrintf("[UPDMOD] change %x to %x\r\n", updMode, mode);
+		UPD_LOG(("[UPDMOD] change %x to %x\r\n", updMode, mode));
 		updMode = mode;
 		updEventTake(0x66);
 		updEventTake(0x69);
@@ -199,7 +240,9 @@ unsigned char updModeChange(unsigned char mode)
 		updEventTake(0x67);
 		updEventTake(0x14);
 		updEventTake(0x15);
+#if BOARD_SERIAL4
 		serial4Answer0205();
+#endif
 		serialAnswer0105();
 	}
 	return refused;
@@ -439,6 +482,72 @@ unsigned char buttonPoll(void)
 	return event;
 }
 
+#if FW_SINCE(0x0100060D)
+/* the multi connector (P2.0) followed: event 0x78, which reads what is there */
+int inputPoll(void)
+{
+	updInput.bits.multiCnLast = updInput.bits.multiCn;
+	updInput.bits.multiCn = !P2.0;
+	if (updInput.bits.multiCn == updInput.bits.multiCnLast &&
+	    updInput.bits.multiCn ^ updInput.bits.multiCnReported) {
+		updInput.bits.multiCnReported = updInput.bits.multiCn;
+		updEventSet(0x78);
+	}
+#if BOARD_SERIAL4
+	updInput.bits.p77Last = updInput.bits.p77;
+	updInput.bits.p77 = P7.7;
+	if (updInput.bits.p77Last != updInput.bits.p77)
+		updEventSet(4);
+	updInput.bits.p73Last = updInput.bits.p73;
+	updInput.bits.p73 = P7.3;
+	if (updInput.bits.p73Last != updInput.bits.p73 && updInput.bits.p73)
+		updEventSet(5);
+#endif
+	return 0;
+}
+
+/* event 0x78: what is on the multi connector (its level, 6 for nothing), then event 0x7a */
+int multiCnCheck(void)
+{
+	if (input1Bit5Active())
+		updMultiCn = analogReadMultiCn();
+	else
+		updMultiCn = 6;
+	updEventSet(0x7a);
+	return 0;
+}
+
+/* event 0x7a: the multi connector's output and link set for what is there */
+int multiCnChanged(void)
+{
+	switch (updMultiCn) {
+	case 2:
+		powerMultiCnOff();
+		boardSetMultiCnOutput(BOARD_MULTICN_HOST);
+		serial1Reset();
+		serialOpen1(2);
+		break;
+	case 1:
+		serialClose1();
+		serialOpen3(3);
+		boardSetMultiCnOutput(BOARD_MULTICN_HOST);
+		break;
+	case 0xff:
+	case 0:
+	case 3:
+	case 4:
+	case 5:
+	case 6:
+	default:
+		serialClose3();
+		serialClose1();
+		boardMultiCnStop();
+		powerMultiCnOff();
+		break;
+	}
+	return 0;
+}
+#else
 /* the multi connector (P2.0), P7.7 and P7.3 followed: events 0x7a, 4 and 5 */
 int inputPoll(void)
 {
@@ -477,16 +586,25 @@ int multiCnChanged(void)
 	}
 	return 0;
 }
+#endif
 
 /* event 4: P7.7 changed */
 int p77Changed(void)
 {
+#if BOARD_SERIAL4
 	if (intp11Low())
 		serial4Open2(2);
 	else
 		serial4Close2();
+#endif
 	return 0;
 }
+
+#if FW_SINCE(0x0100060D)
+#define UPD_MULTICN_CHECK()	multiCnCheck()
+#else
+#define UPD_MULTICN_CHECK()	updEventSet(0x79)
+#endif
 
 void mainLoop(void)
 {
@@ -498,16 +616,23 @@ void mainLoop(void)
 	resetFlags = RESF;
 	result = configStorageInit();
 	if (result)
-		logPrintf("configStorageInit() =%d\r\n", result);
+		UPD_LOG(("configStorageInit() =%d\r\n", result));
 	result = updaterInit();
 	if (result)
-		logPrintf("updaterInit() =%d\r\n", result);
+		UPD_LOG(("updaterInit() =%d\r\n", result));
 	result = updaterInitErnieUpdMode();
 	if (result)
-		logPrintf("updaterInitErnieUpdMode() =%d", result);
+		UPD_LOG(("updaterInitErnieUpdMode() =%d", result));
+#if FW_SINCE(0x0100060D)
+	if (updReset)
+		;	/* Sony's tests updReset for a log line it does not keep */
+#endif
 	result = nvsInit();
 	if (result)
-		logPrintf("nvsInit() error%d!\r\n", result);
+		UPD_LOG(("nvsInit() error%d!\r\n", result));
+#if FW_SINCE(0x0100060D)
+	result = nvsRead(0x1c, 4, (unsigned char *)&idRecord1, 1);
+#endif
 	if (updReset) {
 		result = nvsRead(0x11, 1, &count, 1);
 		if (!result && count != 0xff) {
@@ -521,9 +646,13 @@ void mainLoop(void)
 	timerInit();
 	serial1Reset();
 	serial4StartTimers();
+#if !UPD_060D_FORMS
+#if BOARD_SERIAL2
 	serial2Init();
+#endif
 	updEventSet(4);
 	serialStartTimer();
+#endif
 	powerInit();
 	powerOn();
 	EI();
@@ -532,7 +661,7 @@ void mainLoop(void)
 		case 0:
 			updModeChange(1);
 			if (updEventTake(0x78))
-				updEventSet(0x79);
+				UPD_MULTICN_CHECK();
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			break;
@@ -564,7 +693,7 @@ void mainLoop(void)
 			if (updEventTake(5))
 				updModeChange(5);
 			if (updEventTake(0x78))
-				updEventSet(0x79);
+				UPD_MULTICN_CHECK();
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
@@ -612,7 +741,7 @@ void mainLoop(void)
 			if (updEventTake(5))
 				updModeChange(5);
 			if (updEventTake(0x78))
-				updEventSet(0x79);
+				UPD_MULTICN_CHECK();
 			if (updEventTake(0x7a))
 				multiCnChanged();
 			if (updEventTake(0x82))
@@ -641,6 +770,9 @@ void mainLoop(void)
 				hostSlowRun();
 			break;
 		}
+#if FW_SINCE(0x0100060D)
+		WDTE = 0xac;	/* the watchdog kept back */
+#endif
 		updLoops++;
 	}
 }

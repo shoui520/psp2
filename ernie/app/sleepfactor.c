@@ -183,8 +183,9 @@ void sleepFactorSet10(unsigned char on)
 }
 #endif
 
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x01000104)
-/* the updater's, and before 0x01000104 the application's, which nothing calls */
+#if (defined(ERNIE_UPDATER) && !FW_SINCE(0x0100060D)) || !FW_SINCE(0x01000104)
+/* the updater's before 0x0100060D, and before 0x01000104 the application's, which nothing
+   calls */
 void sleepFactorSet24(unsigned char on)
 {
 	if (sleepFactor.bits[3].b0 ^ on) {
@@ -256,8 +257,8 @@ void sleepFactorSet19(unsigned char on)
 }
 #endif
 
-/* the updater has not the last three, 0x00090804 not 22 and 23 */
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x00090903)
+/* the updater before 0x0100060D has not the last three, 0x00090804 not 22 and 23 */
+#if (!defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D)) && FW_SINCE(0x00090903)
 void sleepFactorSet22(unsigned char on)
 {
 	if (sleepFactor.bits[2].b6 ^ on) {
@@ -349,7 +350,7 @@ void sleepFactorSet28(unsigned char on)
 #endif
 #endif
 
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !defined(ERNIE_UPDATER)	/* the updater has none */
 /* host command 0x0015 and serial command 0x0168: what the settings say of the off state, a
    code for its flags, the flags (bit 3 transition 0x18 blocked, bits 0 and 1 the settings'
    offInfoBit0 and offInfoBit1, bit 2 always) and the settings' offInfo2 and offInfo3 */

@@ -32,5 +32,9 @@ extern int handshakeUnlocked15(void);
 extern int handshakeLock15(void);
 #endif
 extern unsigned char handshakeRefuse(void);
+#ifdef ERNIE_UPDATER
+extern int handshakeGetRoundKeys(unsigned long __far * __far *w);
+extern void handshakeSetUnlocked(unsigned int unlocked);
+#endif
 
 #endif

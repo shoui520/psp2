@@ -125,8 +125,9 @@ struct ChargeLevel {
 	unsigned int	volt;
 };
 
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x00090903)
-/* the updater's and 0x00090804's, an older revision: no alarms and no timer 0x1f */
+#if (defined(ERNIE_UPDATER) && !FW_SINCE(0x0100060D)) || !FW_SINCE(0x00090903)
+/* the updater's before 0x0100060D and 0x00090804's, an older revision: no alarms and no timer
+   0x1f */
 struct Charge {
 	unsigned int	flags;			/* as the application's */
 	unsigned int	flagsRead;
@@ -152,8 +153,9 @@ struct Charge {
 #endif
 };
 #else
+/* the application's, and since 0x0100060D the updater's, which has no timer 0x1f */
 struct Charge {
-#if FW_SINCE(0x01000104)
+#if FW_SINCE(0x01000104) && !defined(ERNIE_UPDATER)
 	unsigned char	timer1fPending;		/* cleared when timer 0x1f runs */
 #endif
 #if BOARD_DOL1001
@@ -355,7 +357,7 @@ extern unsigned char chargeSetCurrent(void);
 #else
 extern int chargeSetCurrent(void);
 #endif
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && !FW_SINCE(0x0100060D)
 extern unsigned char chargeMayStart(void);
 #else
 extern int chargeMayStart(void);
@@ -374,7 +376,7 @@ struct ChargeBatteryBars {
 extern void chargeGetBatteryBars(struct ChargeBatteryBars *out);
 #endif
 extern void chargeSetBattery(void);
-#ifdef ERNIE_UPDATER
+#if defined(ERNIE_UPDATER) && !FW_SINCE(0x0100060D)
 extern unsigned char chargeBbmcChanged(void);
 #else
 extern int chargeBbmcChanged(void);

@@ -7,17 +7,34 @@
 
 #include "ernie.h"
 #include "config.h"
+#include "sha1.h"
 #include "updater.h"
 
 struct Config {
 	unsigned char	ready;
 	unsigned char	bank;			/* the bank used */
+#if FW_SINCE(0x0100060D)
+	unsigned char	state;			/* the application's; never set here */
+	unsigned char	changed;		/* cleared at the start; nothing sets it */
+#endif
 };
+
+#if FW_SINCE(0x0100060D)
+/* the application's records buffer (app/config.c), only cleared here */
+struct ConfigRecords {
+	unsigned char	buffer[SHA1BlockSize];
+	unsigned char	count;
+	unsigned char	reserved[3];
+};
+#endif
 
 /* the banks, in the updater's part of the flash */
 static const struct ConfigBank *const __far configBanks = (const struct ConfigBank *)0x3b800;
 
 static struct Config config;
+#if FW_SINCE(0x0100060D)
+static struct ConfigRecords configRecords;
+#endif
 
 static unsigned char configCheck(unsigned char bank);
 static unsigned char configNewerVersion(void);
@@ -30,6 +47,9 @@ unsigned char configStorageInit(void)
 	unsigned char result0;
 	unsigned char result1;
 
+#if FW_SINCE(0x0100060D)
+	memset(&configRecords, 0, sizeof(configRecords));
+#endif
 	result0 = configCheck(0);
 	result1 = configCheck(1);
 	if (result0 == 0 && result1 == 0) {
@@ -42,6 +62,9 @@ unsigned char configStorageInit(void)
 		config.bank = result0 == 0 ? 0 : 1;
 	}
 	config.ready = 1;
+#if FW_SINCE(0x0100060D)
+	config.changed = 0;
+#endif
 	return 0;
 }
 

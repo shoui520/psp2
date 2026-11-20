@@ -26,8 +26,16 @@ __sreg unsigned char chargeControl;
 __sreg struct ChargeTemp chargeTemp;
 __sreg unsigned char chargeCurrent;
 __sreg unsigned char chargeUsbMode;
+#if FW_SINCE(0x0100060D)	/* 0x0100060D's are the application's */
+__sreg unsigned char chargeUsbHold;
+#endif
 __sreg unsigned char chargeVbus;
 __sreg unsigned char chargeBbmcVersion;
+#if FW_SINCE(0x0100060D)
+static __sreg unsigned char chargeReserved;
+__sreg unsigned char chargeCookieSetting;
+__sreg unsigned char chargeCookieHeld;
+#endif
 
 /* cookieCtrlSupplyCurrentUsb's charge settings by the USB status and chargeUsbMode */
 static const unsigned char __far chargeCurrents[4][5] = {
@@ -55,11 +63,20 @@ void chargeInit(void)
 	chargeTemp.temp = 0;
 	chargeCurrent = 0x10;
 	chargeUsbMode = 0;
+#if FW_SINCE(0x0100060D)
+	chargeUsbHold = 0;
+	chargeVbus |= 3;
+#else
 	chargeVbus = 1;
+#endif
 	chargeBbmcVersion = 0;
 	chargeControl.0 = 0;
 	chargeControl.1 = 1;
 	chargeFactors.0 = 0;
+#if FW_SINCE(0x0100060D)
+	chargeCookieSetting = 0xc0;
+	chargeCookieHeld = 0;
+#endif
 	if (deviceVersions.cookie[0] != 0x80) {
 		charge.batteryVolt = configGet()->batteryVolt;
 		charge.batteryRemainCap = configGet()->batteryRemainCap;
@@ -87,17 +104,15 @@ void chargeInit(void)
 			chargeSetBattery();
 	}
 	handler.handler = chargeTimer;
-	timerSetHandler(0x18, &handler);
+	timerSetHandler(TIMER(0x18), &handler);
 }
 
 /* the transition goes to the updater's events */
 void chargeTransition(int transition)
 {
-	struct StateEvent event;
+	UPD_STATE_EVENT_LOCAL
 
-	event.transition = transition;
-	event.wakeMask = stateGetWakeMask();
-	updStateEvent(&event);
+	UPD_STATE_EVENT(transition);
 }
 
 /* the updater's event 0x82 (chargeTimer) */
@@ -140,7 +155,7 @@ void chargeUpdate(void)
 				chargeControl.0 = 0;
 				charge.acDelay = 0x3c;
 			}
-			timerStart(0x18, charge.acDelay);
+			timerStart(TIMER(0x18), charge.acDelay);
 		}
 		if ((cookieStatus2.byte[1] & 0x0c) == 0x04 && (cookieStatus1.byte[1] & 0xc0) == 0x80)
 			chargeFactors.1 = 1;
@@ -303,9 +318,9 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 void chargeTimer(void)
 {
 	if (charge.flags & 0x8000)
-		timerStart(0x18, 1);
+		timerStart(TIMER(0x18), 1);
 	else
-		timerStart(0x18, charge.acDelay);
+		timerStart(TIMER(0x18), charge.acDelay);
 	updEventSet(0x82);
 }
 
@@ -363,6 +378,15 @@ unsigned char chargeMayStart(void)
 	return 1;
 }
 
+#if FW_SINCE(0x0100060D)
+int chargeAlarm0On(void)
+{
+	if (charge.alarmsOn.byte & 0x01)
+		return 1;
+	return 0;
+}
+
+#endif
 char chargeBatteryLevel9(void)
 {
 	return (charge.flags & 0x0200) ? 1 : 0;
@@ -407,10 +431,18 @@ void chargeResetBattery(void)
 /* the next update after ticks */
 void chargeTimerStart(unsigned int ticks)
 {
-	timerStart(0x18, ticks);
+	timerStart(TIMER(0x18), ticks);
 }
 
 void chargeTimerStop(void)
 {
-	timerStop(0x18);
+	timerStop(TIMER(0x18));
 }
+
+#if FW_SINCE(0x0100060D)
+/* randomGenerate's: the battery's temperature and voltage summed */
+void chargeReadTempVolt(unsigned int *value)
+{
+	*value = charge.batteryTemp + charge.batteryVolt;
+}
+#endif

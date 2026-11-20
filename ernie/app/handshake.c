@@ -82,6 +82,16 @@ static unsigned int handshakeUnlocked[HANDSHAKE_MODES];
 #else
 static __near unsigned int handshakeUnlocked[HANDSHAKE_MODES];
 #endif
+#ifdef ERNIE_UPDATER
+/* the updater's (0x0100060D): the exchange's key schedule in place of a block of memory pool
+   2, handshakeGetRoundKeys's */
+static __near unsigned long handshakeRoundKeys[44];
+#define HANDSHAKE_GET_BLOCK(block)	handshakeGetRoundKeys((unsigned long __far * __far *)&(block))
+#define HANDSHAKE_RELEASE_BLOCK(block)
+#else
+#define HANDSHAKE_GET_BLOCK(block)	pget_mpf(2, &(block))
+#define HANDSHAKE_RELEASE_BLOCK(block)	rel_mpf(2, block)
+#endif
 
 
 static int handshakeUnlock11(void);
@@ -210,7 +220,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshake.state = 0xff;
 			handshakePacket.error = 1;
 		}
-		poolResult = pget_mpf(2, &block);
+		poolResult = HANDSHAKE_GET_BLOCK(block);
 		if (poolResult == E_OK) {
 			key.w = (unsigned long *)(unsigned long __near *)block;
 			key.nk = 4;
@@ -255,7 +265,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		}
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
 		HANDSHAKE_DUMP("response");
-		rel_mpf(2, block);
+		HANDSHAKE_RELEASE_BLOCK(block);
 		if (handshakePacket.error == 0)
 			handshake.state = 0;
 		break;
@@ -384,7 +394,7 @@ unsigned char handshakeCommand(unsigned char *data)
 			handshake.state = 0xff;
 			handshakePacket.error = 1;
 		}
-		poolResult = pget_mpf(2, &block);
+		poolResult = HANDSHAKE_GET_BLOCK(block);
 		modeIndex = HANDSHAKE_MODES;
 		while (modeIndex-- != 0) {
 			if (handshakeCrypto[modeIndex].mode == handshake.mode)
@@ -434,7 +444,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		}
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
 		HANDSHAKE_DUMP("response");
-		rel_mpf(2, block);
+		HANDSHAKE_RELEASE_BLOCK(block);
 		if (handshakePacket.error == 0) {
 			if (handshake.mode == 0x0f)
 				handshake.state = 3;
@@ -452,7 +462,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		}
 		memcpy(handshake.session, handshake.challenge, 8);
 		memcpy(handshake.session + 8, handshake.response, 8);
-		poolResult = pget_mpf(2, &block);
+		poolResult = HANDSHAKE_GET_BLOCK(block);
 		modeIndex = HANDSHAKE_MODES;
 		while (modeIndex-- != 0) {
 			if (handshakeCrypto[modeIndex].mode == handshake.mode)
@@ -496,7 +506,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		if (poolResult == E_OK)
 			aesCbcEncrypt(handshakePacket.challenge, handshakePacket.challenge,
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
-		rel_mpf(2, block);
+		HANDSHAKE_RELEASE_BLOCK(block);
 		memcpy(data, &handshakePacket, sizeof(handshakePacket));
 		HANDSHAKE_DUMP("result_e");
 		if (handshakePacket.error == 0)
@@ -543,7 +553,7 @@ static int handshakeUnlock11(void)
 
 static int handshakeLockHandler11(void)
 {
-#if FW_SINCE(0x00090804)
+#if FW_SINCE(0x00090804) && !defined(ERNIE_UPDATER)
 	logEvent(0x16);
 #endif
 	return 0;
@@ -640,4 +650,18 @@ static const unsigned char mode15Key3[16] = {
 	0xeb, 0xe3, 0x46, 0x0d, 0x84, 0xa4, 0x17, 0x54, 0xac, 0x44, 0x13, 0x68, 0xcf, 0x02, 0x00, 0xd8
 };
 #endif
+#endif
+
+#ifdef ERNIE_UPDATER
+int handshakeGetRoundKeys(unsigned long __far * __far *w)
+{
+	*w = (unsigned long __far *)handshakeRoundKeys;
+	return 0;
+}
+
+/* the application starting the updater unlocks mode 0x0b */
+void handshakeSetUnlocked(unsigned int unlocked)
+{
+	handshakeUnlocked[0] = unlocked;
+}
 #endif

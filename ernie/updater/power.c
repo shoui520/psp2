@@ -8,6 +8,7 @@
 
 #include "ernie.h"
 #include "chip.h"
+#include "charge.h"
 #include "elmo.h"
 #include "powerseq.h"
 #include "timer.h"
@@ -69,7 +70,7 @@ void powerOn(void)
 	powerSeqInit();
 	for (i = 0; i < 10; i++)
 		result = elmoRead(&elmoRegRead[i].reg, (unsigned char *)elmoRegRead[i].value);
-	timerStart(0x18, 1);
+	timerStart(TIMER(0x18), 1);
 }
 
 /* the resume's steps, then the host powered (P1.7) and the keys' ports inputs */
@@ -93,7 +94,17 @@ void powerResume(void)
 void powerOff(void)
 {
 	P1.7 = 0;
+#if FW_SINCE(0x0100060D)
+	powerBbmcOff();
 	powerSeqOff();
+	powerBbmcOn();
+	if (chargeUsbMode == 3) {	/* the USB charging's mode 3 back to 1 */
+		chargeUsbMode = 1;
+		chargeSetCurrent();
+	}
+#else
+	powerSeqOff();
+#endif
 	keyPortsDisable();
 }
 
@@ -106,6 +117,12 @@ void powerSuspend(void)
 	powerDelayMs(1);
 	P1.7 = 0;
 	powerSeqSuspend();
+#if FW_SINCE(0x0100060D)
+	if (chargeUsbMode == 3) {	/* the USB charging's mode 3 back to 1 */
+		chargeUsbMode = 1;
+		chargeSetCurrent();
+	}
+#endif
 	keyPortsDisable();
 	powerWaitStop();
 }

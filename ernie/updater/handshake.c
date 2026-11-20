@@ -53,14 +53,25 @@ __near struct Handshake handshake;
 __near unsigned int handshakeUnlocked;
 __near unsigned long handshakeRoundKeys[44];	/* the exchange's AES-128 key schedule */
 
-static const unsigned char handshakeFirstKey[16] = {
-	0xbb, 0x64, 0x47, 0x21, 0xcb, 0x4c, 0x55, 0x07, 0x2e, 0x83, 0x17, 0x7b, 0xeb, 0x3b, 0xbe, 0xe9
+/* in the keys object, authkeys.c */
+extern const unsigned char mode11Check[16];
+extern const unsigned char mode11Key1[16];
+
+/* the factory handshake key, expanded (the updater keeps it here, before the modes' tables) */
+const unsigned long factoryRoundKeys[60] = {
+	FACTORY_ROUND_KEYS
 };
-static const unsigned char handshakeSecondKey[16] = {
-	0xdc, 0x6b, 0x6e, 0xe0, 0xf4, 0x57, 0xdf, 0x0e, 0x7b, 0xad, 0x1c, 0x5e, 0xa3, 0x38, 0x02, 0x7f
+
+/* a mode's keys: the challenge's, the response's, and the check of the challenge's key */
+struct HandshakeCrypto {
+	unsigned char mode;
+	const unsigned char *firstKey;
+	const unsigned char *secondKey;
+	const unsigned char *firstCheck;
 };
-static const unsigned char handshakeCheck[16] = {
-	0xcf, 0x2e, 0x93, 0xe9, 0xf9, 0x4e, 0x28, 0xcc, 0xa4, 0x80, 0x26, 0x13, 0x4c, 0x7c, 0x77, 0xce
+
+static const struct HandshakeCrypto handshakeCrypto[HANDSHAKE_MODES] = {
+	{ 0x0b, mode11Key1, (const unsigned char *)randomKey, mode11Check },
 };
 
 static const struct HandshakeMode handshakeModes[HANDSHAKE_MODES] = {
@@ -114,7 +125,7 @@ unsigned char handshakeCommand(unsigned char *data)
 	switch (handshake.state) {
 	case 0:
 		handshake.mode = 0x0b;
-		randomGenerate((const unsigned char __near *)seed, (unsigned char *)nonce);
+		randomGenerate(seed, nonce);
 		memcpy(handshake.challenge, nonce, 8);
 		handshakeDump("reqhello", data);
 		/* fall through */
@@ -139,7 +150,7 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshakeDump("challenge", data);
 		handshakePacket.error = 0;
 		if (handshakePacket.magic != 0x30 || handshakePacket.step != 2 ||
-		    handshakePacket.mode != handshake.mode) {
+		    handshakePacket.error != 0 || handshakePacket.mode != handshake.mode) {
 			handshake.state = 0xff;
 			handshakePacket.error = 1;
 		}
@@ -148,20 +159,20 @@ unsigned char handshakeCommand(unsigned char *data)
 			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
 			key.nk = 4;
 			key.nb = 4;
-			aesKeyExpansion((const unsigned long *)handshakeFirstKey, (struct AesKey __near *)&key);
+			aesKeyExpansion((const unsigned long *)handshakeCrypto[0].firstKey, (struct AesKey __near *)&key);
 			aesCbcDecrypt(handshakePacket.challenge, (unsigned char __near *)(data + 8),
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
 		} else {
 			handshake.state = 0xff;
 		}
-		memcpy(handshakePacket.challenge, data + 8, 0x20);
+		memcpy(handshakePacket.challenge, (unsigned char __near *)(data + 8), 0x20);
 		handshakeDump("challenge_d", data);
 		if (memcmp(handshakePacket.response, handshake.challenge, 8) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
 			handshakePacket.error = 2;
 		}
-		if (memcmp(handshakePacket.key, handshakeCheck, 16) != 0 &&
+		if (memcmp(handshakePacket.key, mode11Check, 16) != 0 &&
 		    handshakePacket.error == 0) {
 			handshake.state = 0xff;
 			handshakePacket.error = 3;
@@ -171,11 +182,14 @@ unsigned char handshakeCommand(unsigned char *data)
 		handshakePacket.step = 3;
 		handshakePacket.mode = handshake.mode;
 		memset(handshakePacket.header, 0, 4);
-		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memcpy(handshakePacket.response, handshake.response, 8);
+		memcpy(handshakePacket.challenge, handshake.challenge, 8);
 		memset(handshakePacket.key, 0, 16);
 		if (keyResult == 0) {
-			aesKeyExpansion((const unsigned long *)handshakeSecondKey, (struct AesKey __near *)&key);
+			key.w = (unsigned long *)(unsigned long __near *)roundKeys;
+			key.nk = 4;
+			key.nb = 4;
+			aesKeyExpansion((const unsigned long *)handshakeCrypto[0].secondKey, (struct AesKey __near *)&key);
 			aesCbcEncrypt(handshakePacket.challenge, handshakePacket.challenge,
 				      (struct AesKey __near *)&key, handshakeIv, 0x20);
 		} else {
@@ -189,8 +203,14 @@ unsigned char handshakeCommand(unsigned char *data)
 	default:
 		break;
 	}
-	if (handshake.state == 0xff || handshake.state == 0)
+	if (handshake.state == 0xff) {
 		handshakeSetMode(handshake.state, handshake.mode);
+		return 0;
+	}
+	if (handshake.state == 0) {
+		handshakeSetMode(handshake.state, handshake.mode);
+		return 0;
+	}
 	return 0;
 }
 

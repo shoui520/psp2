@@ -37,7 +37,7 @@ int watchdogSetup(void)
 		setting = &watchdog;
 	else if (factor->bits.notify && keep->bits.keepNotify)
 		setting = &watchdog;
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && !(defined(ERNIE_UPDATER) && !FW_SINCE(0x01030000))
 	else {
 		/* a kept setting is not copied over itself */
 		setting = &configGet()->watchdog;
@@ -88,9 +88,20 @@ int watchdogKick(void)
 }
 
 #ifdef ERNIE_UPDATER
-/* the updater's: transition 0x32 */
+/* the updater's: transition 0x32 (0x0100060D's 0x35) */
 static void watchdogExpire(void)
 {
+#if FW_SINCE(0x0100060D)
+	switch (watchdog.bytes.mode) {
+	case 0:
+#if !FW_SINCE(0x01030000)
+		updStateEvent(0x35);	/* the 0x0100060D updater's */
+#else
+		updStateEvent(0x32);
+#endif
+		break;
+	}
+#else
 	struct StateEvent event;
 
 	switch (watchdog.bytes.mode) {
@@ -99,6 +110,7 @@ static void watchdogExpire(void)
 		updStateEvent(&event);
 		break;
 	}
+#endif
 }
 #else
 static void watchdogExpire(void)

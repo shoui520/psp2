@@ -5,16 +5,17 @@
 #include <string.h>
 #include "ernie.h"
 #include "board.h"
-#include "command.h"
 #include "kernel.h"
 #include "version.h"
 #ifdef ERNIE_UPDATER
 #include "../updater/updater.h"
+#else
+#include "command.h"	/* timeStampDigits: the updater has a function of that name */
 #endif
 
 struct VersionFlags {
 	unsigned char	hardwareInfoFlags;	/* ORed into the hardware info's low byte */
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x00090903)
+#if FW_SINCE(0x00090903) && (!defined(ERNIE_UPDATER) || FW_SINCE(0x0100060D))
 	unsigned char	dlFlags;		/* byte 0x2d of NVS area 1 (task 2 reads it); bit 0:
 						   report the downloader's version (0x00090804 always
 						   does) */
@@ -131,6 +132,9 @@ struct VersionFlags versionFlags;
 void versionInit(void)
 {
 	versionFlags.hardwareInfoFlags = 0;
+#if FW_SINCE(0x0100060D)
+	versionFlags.dlFlags = 0xff;
+#endif
 }
 
 void getErnieVersion(unsigned char *buf)
@@ -153,6 +157,19 @@ void setHardwareInfoFlags(unsigned char flags)
 {
 	versionFlags.hardwareInfoFlags |= flags;
 }
+
+#if FW_SINCE(0x0100060D)
+void clearHardwareInfoFlags(unsigned char flags)
+{
+	versionFlags.hardwareInfoFlags &= ~flags;
+}
+
+/* kept, not read: the updater always reports the downloader's version */
+void setDlFlags(unsigned char flags)
+{
+	versionFlags.dlFlags = flags;
+}
+#endif
 
 void getErnieDlVersion(unsigned char *buf)
 {

@@ -169,8 +169,8 @@ extern void bbmcSetStatus(unsigned long bits);
 extern void bbmcSetEvents(unsigned long bits);
 extern void bbmcSetModeActive(unsigned int mode);
 extern unsigned char bbmcGetPending(void);
-#if BOARD_USS1001 && SOURCE_0104
-/* the slim's 0x0105 keeps no version: none */
+#if (BOARD_USS1001 && SOURCE_0104) || defined(ERNIE_UPDATER)
+/* the slim's 0x0105 keeps no version, and the updater has no modem: none */
 #define bbmcGetVersion()	0
 #else
 extern unsigned char bbmcGetVersion(void);

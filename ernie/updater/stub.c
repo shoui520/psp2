@@ -67,6 +67,17 @@ union PowerRequest *stateGetWakeupFactor(void)
 	return &stateWakeupFactor;
 }
 
+#if FW_SINCE(0x0100060D)
+unsigned char stateSerialUnlock(void)
+{
+	return (unsigned char)updStateEvent(0x0c);
+}
+
+int stateSerialLock(void)
+{
+	return (unsigned char)updStateEvent(0x34);
+}
+#else
 unsigned char stateSerialUnlock(void)
 {
 	struct StateEvent event;
@@ -82,6 +93,7 @@ int stateSerialLock(void)
 	event.transition = 0x32;
 	return (unsigned char)updStateEvent(&event);
 }
+#endif
 
 int input2Bit0Get(void)
 {
@@ -97,27 +109,84 @@ int input2Bit1Get(void)
 	return 0;
 }
 
+/* PDEL 0x00416000's 0x0100060D keeps the earlier pins, P7.3 and P7.7, and intp11Low before
+   chargeVbusCharging (UPD_060D_FORMS) */
+#if UPD_060D_FORMS
+/* nothing calls it in 0x0100060D */
+int input3Bit0High(void)
+{
+	return 0;
+}
+#else
 int input3Bit0High(void)
 {
 	return P7.3 != 0;
 }
+#endif
 
+#if FW_SINCE(0x0100060D)
+unsigned char input1Bit5Active(void)
+#else
 int input1Bit5Active(void)
+#endif
 {
 	return updInput.bits.multiCnReported;
 }
 
+#if UPD_060D_FORMS
+/* nothing calls it in 0x0100060D, nor intp11Low */
+int chargeVbusCharging(void)
+{
+	return 0;
+}
+
+int intp11Low(void)
+{
+	return P14.5 == 0;
+}
+#else
 unsigned char intp11Low(void)
 {
 	return P7.7 == 0;
 }
+#endif
 
+#if !UPD_060D_FORMS
 int chargeVbusCharging(void)
 {
 	return 1;
 }
+#endif
 
 /* a transition: the updater's event for it */
+#if FW_SINCE(0x0100060D)
+int updStateEvent(unsigned char transition)
+{
+	switch (transition) {
+	case 0x52:
+		updEventSet(0x14);
+		break;
+	case 0x0e:
+		updEventSet(0x15);
+		break;
+	case 0x53:
+		updEventSet(0x14);
+		break;
+	case 0x09:
+		updEventSet(0x15);
+		break;
+	case 0x34:
+		updEventSet(0x16);
+		break;
+	case 0x00:
+		updEventSet(0x67);
+		break;
+	case 0x0c:
+		break;
+	}
+	return 0;
+}
+#else
 int updStateEvent(struct StateEvent *event)
 {
 	switch (event->transition) {
@@ -141,6 +210,7 @@ int updStateEvent(struct StateEvent *event)
 	}
 	return 0;
 }
+#endif
 
 /* waits ms milliseconds on timer channel 3, at most 500 at a time */
 void powerWaitLong(unsigned int ms)
@@ -184,3 +254,14 @@ int bbmcGetMode(void)
 {
 	return 0;
 }
+
+#if FW_SINCE(0x0100060D)
+/* the application's hostInit, to its config: the frame's size and the config's */
+int hostInit(void)
+{
+	hostLink.frameSize = 0x20;
+	hostLink.config.size = 0;
+	hostLink.config.level = 0;
+	return 0;
+}
+#endif

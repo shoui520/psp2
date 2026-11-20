@@ -86,7 +86,11 @@ _vector_INTSR4:
 	DW	0			; 7EH
 	DS	40H			; the CALLT table, unused
 _option_bytes:
+$_IF (ERNIE_BOARD==0x00406000)	; BOARD_WDT: PCH-1000's watchdog runs
+	DB	7FH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging
+$ELSE
 	DB	6EH, 0FFH, 0FFH, 04H	; the watchdog, the LVI, the clock, on-chip debugging
+$ENDIF
 _security_id:
 	DB	0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; the on-chip debug security ID
 

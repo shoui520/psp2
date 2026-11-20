@@ -29,6 +29,7 @@ unsigned char serialEvent(FLGPTN ptn)
 
 	result = 0;
 	if ((serial.mode & SERIAL_MODE) == 2) {
+#if BOARD_SERIAL2
 		if (ptn & 0x0004) {
 			if (serial.state == SERIAL_RECEIVE)
 				serial.state = SERIAL_RECEIVED;
@@ -42,7 +43,7 @@ unsigned char serialEvent(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x12);
+			timerStop(TIMER(0x12));
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -56,6 +57,7 @@ unsigned char serialEvent(FLGPTN ptn)
 			serial.state = SERIAL_RECEIVE;
 			break;
 		}
+#endif
 	} else if ((serial.mode & SERIAL_MODE) == 1) {
 		if (ptn & 0x0010) {
 			serial.state = SERIAL_SEND;
@@ -72,7 +74,7 @@ unsigned char serialEvent(FLGPTN ptn)
 		case 0:
 		case SERIAL_RECEIVE:
 		case SERIAL_RECEIVED:
-			timerStop(0x12);
+			timerStop(TIMER(0x12));
 			serial.status = serialReceive();
 			serialDispatch();
 			break;
@@ -232,7 +234,11 @@ unsigned char serialReceive(void)
 			return SERIAL_BAD_LENGTH;
 		serial.length >>= 1;
 	}
+#if FW_SINCE(0x0100060D)
+	if (serial.length > SERIAL_RECEIVE_SIZE || size - 7 != serial.length)
+#else
 	if (serial.length > 0x31 || size - 7 != serial.length)	/* less than an answer carries */
+#endif
 		return SERIAL_BAD_LENGTH;
 	return SERIAL_OK;
 }
@@ -251,11 +257,14 @@ unsigned int serialChecksum(unsigned char *data, unsigned int length)
 /* runs the command received (unless its status is not 0) and answers it */
 unsigned char serialDispatch(void)
 {
-	unsigned int i;
+#if BOARD_SERIAL2 || FW_SINCE(0x0100060D)
+	unsigned int i;		/* 0x0100060D keeps it where it is unused */
+#endif
 	struct SerialBuffer request;
 	struct SerialBuffer response;
 
 	if ((serial.mode & SERIAL_MODE) == 2) {
+#if BOARD_SERIAL2
 		if (serial.status != 0)
 			goto answer;
 		i = serialCommands2Count();
@@ -272,6 +281,7 @@ unsigned char serialDispatch(void)
 			}
 		}
 		serial.status = SERIAL_UNKNOWN;
+#endif
 	} else if ((serial.mode & SERIAL_MODE) == 1) {
 		if (serial.status != 0)
 			goto answer;
@@ -349,7 +359,9 @@ unsigned char serialReopen(int baud)
 
 unsigned char serialOpen1(int baud)
 {
+#if BOARD_SERIAL2
 	serialSetLevel(0);
+#endif
 	uart3Open(baud);
 	serialStart(1);
 	serial.link = 1;
@@ -367,15 +379,19 @@ unsigned char serialOpen2(int baud)
 {
 	uart3Open(baud);
 	serialStart(2);
+#if BOARD_SERIAL2
 	serialSetLevel(1);
 	serial2SetP71(0);
+#endif
 	serial.link = 2;
 	return 0;
 }
 
 unsigned char serialClose2(void)
 {
+#if BOARD_SERIAL2
 	serial2SetP71(1);
+#endif
 	serialReset(0);
 	serial.link = 0;
 	return 0;
@@ -466,6 +482,7 @@ unsigned char serialNotify(void)
 	unsigned char result;
 
 	if ((serial.mode & SERIAL_MODE) == 2) {
+#if BOARD_SERIAL2
 		i = serialNotifies2Count();
 		while (i--) {
 			if ((serial.command & 0x7fff) == serialNotifies2[i].command) {
@@ -474,6 +491,7 @@ unsigned char serialNotify(void)
 				return result;
 			}
 		}
+	#endif
 	} else if ((serial.mode & SERIAL_MODE) == 1) {
 		i = serialNotifies1Count();
 		while (i--) {
@@ -518,7 +536,7 @@ void serialStartTimer(void)
 	struct TimerHandler handler;
 
 	handler.handler = serialPostTimeout;
-	timerSetHandler(0x12, &handler);
+	timerSetHandler(TIMER(0x12), &handler);
 }
 
 /* answers command 0x0105, if it waits to (status 0, no data) */
