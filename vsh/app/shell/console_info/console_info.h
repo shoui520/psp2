@@ -13,6 +13,7 @@
 #include <common/shared_ptr.h>
 #include <file/file.h>
 #include <file/localfile.h>
+#include <job/job.h>
 #include <std/string.h>
 
 /* the kinds of content information, each in its own folder ("ns", "ci", "mi", "uc") */
@@ -181,6 +182,8 @@ public:
 
 /* PLACEHOLDER: a flag of ur0:ci/file read (0x81376CDE) */
 int consoleInfoFileReadFlag(int index, SceUInt8 *value, int mode);
+/* PLACEHOLDER: a flag of ur0:ci/file written (0x81376B04) */
+int consoleInfoFileWriteFlag(int index, SceUInt8 value, int mode);
 /* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file read (0x81376CF8, 0x81376D16) */
 int consoleInfoFileReadInt(int index, SceUInt32 *value, int mode);
 int consoleInfoFileReadInt64(int index, SceUInt64 *value, int mode);
@@ -543,6 +546,22 @@ int shellConsoleInfoInit(void);
    queue ("SceConsoleInfoSendJobQueue") and its callbacks (0x810F2470) */
 int consoleInfoSenderReset(void);
 int consoleInfoSenderInit(void);
+/* PLACEHOLDER: the job sending the records: its function, the function run when it is done and
+   the function's argument (0x810F2FA4-0x810F302C) */
+class ConsoleInfoSendDataJob : public paf::job::JobItem {
+public:
+	ConsoleInfoSendDataJob(int (*run)(int), int (*finish)(void), int arg);
+	virtual ~ConsoleInfoSendDataJob();
+	virtual int Run();
+	virtual void Finish(int result);
+
+	int (*m_run)(int);
+	int (*m_finish)(void);
+	int m_arg;
+};
+
+/* PLACEHOLDER: the sender's queue, and whether it is busy (0x810F2F4E) */
+paf::job::JobQueue *consoleInfoSenderGetQueue(bool *busy);
 
 /* a kind's record made, opened into the table, written, read, closed (0x810E59A8-0x810E5C30) */
 ConsoleInfoRecord *consoleInfoCreate(int type, int entrySize, int *error);

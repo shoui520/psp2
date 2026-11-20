@@ -245,6 +245,16 @@ int shellMtpServerNotifyApp6(int a, int b, int c);
 int shellMtpServerNotifyAppActivated(int a, int b, int c);
 int shellMtpServerNotifyAppEnded(int a, int b, const char *c);
 int shellMtpServerNotifyShellEvent(const void *data);
+/* PLACEHOLDER: the function the server calls to have the console info sent (0x812B1B64), and an
+   HTTP request the PC's host sends for the console (0x812B1B7A; an empty one ends the requests) */
+struct ShellMtpHttpRequest {
+	const char *host;
+	const char *scheme;
+	const char *uri;
+	SceSize uriLength;
+};
+int shellMtpServerSetConsoleInfoCallback(int (*callback)(void), int arg);
+int shellMtpServerHttpRequest(const ShellMtpHttpRequest *request, int timeout);
 /* MTP over Wi-Fi: made at start (0x811C99E4), ended (0x812B1C7A) */
 int shellMtpWiFiCreate(void);
 int shellMtpWiFiTerminate(void);
@@ -297,6 +307,9 @@ int shellNetCtlProcessEnded(SceUID processId);
 
 /* the shell's NetCtl functions libnetctl calls in place of its requests (0x8120EA6C...) */
 int shellNetCtlInetGetInfo(int code, SceNetCtlInfo *info);
+/* PLACEHOLDER: a function called on the network's events (0x8120E87C) */
+int shellNetCtlInetRegisterCallback(void (*callback)(int code, int event, int state), void *arg,
+				    int *id);
 int shellNetCtlInetGetState(int *state);
 int shellNetCtlHandle_E8E8DF18(int *out);
 int shellNetCtlHandle_CDEBA500(int code, void *info);
