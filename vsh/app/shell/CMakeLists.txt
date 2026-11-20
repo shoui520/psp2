@@ -193,6 +193,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	shell_error_dialog.cpp
 	shell_cron.cpp
 	shell_cron_impl.cpp
+	bgdl_api.cpp
+	bgdl_mtp.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

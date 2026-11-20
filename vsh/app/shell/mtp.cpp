@@ -86,7 +86,7 @@ void shellMtpStart(void)
 	funcs.func[2] = shellMtpHostFunc2;
 	funcs.func[3] = shellMtpHostFunc3;
 	funcs.func[4] = shellMtpHostFunc4;
-	funcs.func[5] = shellMtpHostFunc5;
+	funcs.func[5] = (int (*)(int))shellMtpHostFunc5;
 	SceLibMtp_67DB4C13(&funcs);
 
 	int ret;
