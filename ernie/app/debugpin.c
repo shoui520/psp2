@@ -7,10 +7,18 @@
 #include "board.h"
 #include "debugpin.h"
 
+/* USS-1002 keeps four of the probe pins, P15.6-P15.3 */
+#define DEBUG_PINS_FOUR		(BOARD_USS1001 && SOURCE_0104)
+
 void debugPinInit(void)
 {
 	P4.0 = 0;
-#if BOARD_USS1001
+#if DEBUG_PINS_FOUR
+	P15.6 = 0;
+	P15.5 = 0;
+	P15.4 = 0;
+	P15.3 = 0;
+#elif BOARD_USS1001
 	/* USS-1001's probe pins, P15.0-P15.6 */
 	P15.0 = 0;
 	P15.1 = 0;
@@ -65,7 +73,13 @@ void debugPinSet(unsigned int level)
 /* bits 4-0 of code to P15.4-P15.0 */
 void debugPinCode(unsigned int code)
 {
-#if BOARD_USS1001
+#if DEBUG_PINS_FOUR
+	/* bits 3-0 to P15.6-P15.3 */
+	P15.6 = ((unsigned char)code & 0x08) ? 1 : 0;
+	P15.5 = ((unsigned char)code & 0x04) ? 1 : 0;
+	P15.4 = ((unsigned char)code & 0x02) ? 1 : 0;
+	P15.3 = ((unsigned char)code & 0x01) ? 1 : 0;
+#elif BOARD_USS1001
 	P15.4 = ((unsigned char)code & 0x10) ? 1 : 0;
 	P15.3 = ((unsigned char)code & 0x08) ? 1 : 0;
 	P15.2 = ((unsigned char)code & 0x04) ? 1 : 0;
@@ -77,7 +91,7 @@ void debugPinCode(unsigned int code)
 /* bits 6-0 of value to P15.6-P15.0 */
 void debugPinWrite(unsigned int value)
 {
-#if BOARD_USS1001
+#if BOARD_USS1001 && !DEBUG_PINS_FOUR	/* USS-1002's does nothing */
 	P15.6 = ((unsigned char)value & 0x40) ? 1 : 0;
 	P15.5 = ((unsigned char)value & 0x20) ? 1 : 0;
 	P15.4 = ((unsigned char)value & 0x10) ? 1 : 0;
@@ -94,7 +108,9 @@ unsigned int debugPinRead(void)
 	unsigned char value;
 
 	value = 0;
-#if BOARD_USS1001
+#if DEBUG_PINS_FOUR
+	value = P15.6 << 3 | P15.5 << 2 | P15.4 << 1 | P15.3;
+#elif BOARD_USS1001
 	value = P15.6 << 6 | P15.5 << 5 | P15.4 << 4 | P15.3 << 3 | P15.2 << 2 | P15.1 << 1 | P15.0;
 #endif
 	return value;
@@ -103,7 +119,23 @@ unsigned int debugPinRead(void)
 /* P15.<pin> (0-6) to level */
 void debugPinWriteBit(unsigned char pin, unsigned char level)
 {
-#if BOARD_USS1001
+#if DEBUG_PINS_FOUR
+	/* P15.<pin + 3> */
+	switch (pin) {
+	case 3:
+		P15.6 = level ? 1 : 0;
+		break;
+	case 2:
+		P15.5 = level ? 1 : 0;
+		break;
+	case 1:
+		P15.4 = level ? 1 : 0;
+		break;
+	case 0:
+		P15.3 = level ? 1 : 0;
+		break;
+	}
+#elif BOARD_USS1001
 	switch (pin) {
 	case 6:
 		P15.6 = level ? 1 : 0;
