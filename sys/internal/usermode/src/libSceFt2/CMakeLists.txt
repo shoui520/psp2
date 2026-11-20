@@ -33,7 +33,7 @@ if(NOT ft2_stamp STREQUAL ft2_patch_md5)
 endif()
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/freetype-sce.patch
 	${CMAKE_CURRENT_SOURCE_DIR}/freetype-inline.patch)
-psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 PARTIAL SOURCES
+psp2_module(${PSP2_TARGET} KIND user COMPILER gcc48 SOURCES
 	setjmp.S
 	../../../../../toolchains/libgcc/udiv.S
 	../../../../../toolchains/libgcc/idiv.S
@@ -72,7 +72,10 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 # without -fno-delete-null-pointer-checks (a pointer once dereferenced is not tested for NULL again:
 # tt_face_goto_table's table).
 target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fno-stack-protector -fhosted -fbuiltin
-	-fdelete-null-pointer-checks)
+	-fdelete-null-pointer-checks -ffunction-sections)
+# Sony's link dropped the functions nothing calls (FreeType's debug and little-endian stream readers).
+# Export 04DCBE87 is FT_New_Memory as freetype-sce.patch changes it; Sony's name for it is not known.
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections -Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory)
 include(../../../../../toolchains/libgcc/lib1funcs.cmake)
 gcc48_use_lib1funcs(${PSP2_TARGET})
 # Sony's C library (libc.c) was built freestanding, with plain char signed (the ldrsb loads of the mode
