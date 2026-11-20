@@ -239,7 +239,8 @@ extern __sreg union CookieStatus1 cookieStatus1;
 extern __sreg union CookieStatus2 cookieStatus2;
 extern __sreg union PowerStatus powerStatus;
 #if CHARGE_0104
-/* DOL-1002's: a word, factor 22 in its high byte's bit 0 (bits 6 and 7 unused) */
+/* DOL-1002's: a word, factor 22 in its high byte's bit 0 (bits 6 and 7 unused on DOL-1002,
+   USS-1002's factors 29 and 28) */
 union ChargeFactors {
 	unsigned int	word;
 	struct {
@@ -249,7 +250,8 @@ union ChargeFactors {
 		unsigned int	factor17:1;
 		unsigned int	factor18:1;
 		unsigned int	factor19:1;
-		unsigned int	unused:2;
+		unsigned int	factor29:1;
+		unsigned int	factor28:1;
 		unsigned int	factor22:1;
 		unsigned int	factor23:1;
 	} bits;

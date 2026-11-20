@@ -313,8 +313,8 @@ void sleepFactorSet21(unsigned char on)
 	}
 }
 
-#if BOARD_DOL1002
-/* DOL-1002's three more */
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
+/* DOL-1002's three more (USS-1002's 29 and 28: the battery too low to start) */
 void sleepFactorSet27(unsigned char on)
 {
 	if (sleepFactor.bits[3].b3 ^ on) {

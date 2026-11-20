@@ -487,7 +487,7 @@ void chargeUpdate(void)
 	unsigned int changed;
 	unsigned int state;
 	unsigned int ticks;
-#if FW_SINCE(0x01030511)
+#if FW_SINCE(0x01030511) && !BATTERY_GAUGE	/* USS-1002 leaves the LED's flag 0x10 */
 	union CookieStatus1 status1;
 #endif
 
@@ -562,9 +562,15 @@ void chargeUpdate(void)
 	} else if (chargeCurrent != 0xff && (cookieRegs[3].byte[0] & 0x08)) {
 		powerCookieClear();
 	}
+#if BATTERY_GAUGE
+	if ((cookieRegs[0].byte[1] & 0x80) == 0x80)	/* USS-1002: register 3's bit 15 */
+		cookieUpdateBatteryCharge(1);
+#endif
 	if (deviceVersions.battery.id == 0) {
 		if (batteryReadInfo(&deviceVersions.battery.id) == 0) {
+#if !BATTERY_GAUGE
 			batteryInfoRead();
+#endif
 			chargeSetBattery();
 		} else {
 			deviceVersions.battery.id = deviceVersions.battery.version[0] =
@@ -572,7 +578,11 @@ void chargeUpdate(void)
 				deviceVersions.battery.version[3] = deviceVersions.battery.version[4] = 0;
 			goto done;
 		}
+#if BATTERY_GAUGE
+	} else if (deviceVersions.battery.id == 0x0520 || deviceVersions.battery.id == 0xffe2) {
+#else
 	} else if (deviceVersions.battery.id == 0x0520) {
+#endif
 		batteryReadTemp(&charge.batteryTemp);
 		batteryReadBicTemp(&charge.batteryBicTemp);
 		chargeTempUpdate(charge.batteryTemp, &chargeTemp);
@@ -626,13 +636,27 @@ void chargeUpdate(void)
 				powerLedSetAlarm(0);
 			}
 			if (charge.flags & 0x0020) {
+#if BATTERY_GAUGE
+				if (!(unsigned char)stateGetWakeBit(6) && !(state & 0x8000) &&
+				    (state & 0x0008))
+#else
 				if (!(stateGetWakeMask() & 0x40) && !(state & 0x8000) && (state & 0x0008))
+#endif
 					chargeTransition(0x06);
 				else if (!(state & 0x8000) && (state & 0x0028))
 					chargeTransition(0x37);
 			}
 		}
 		charge.flagsLast = charge.flagsRead;
+#if BATTERY_GAUGE
+		/* USS-1002: sleep factors 29 and 28 for a battery too low to start (with a USB charger:
+		   either), and the battery's bars for host command 0x0903 */
+		chargeFactors.bits.factor29 = (chargeBatteryReady() == 0);
+		sleepFactorSet29(chargeFactors.bits.factor29);
+		chargeFactors.bits.factor28 = (chargeBatteryReadyUsb() == 0);
+		sleepFactorSet28(chargeFactors.bits.factor28);
+		chargeGetBatteryBars((struct ChargeBatteryBars *)chargeCommand0903);
+#endif
 		if ((charge.flags & 0x0040) && P7.5 && !P13.7)
 			chargeTransition(0x40);
 		if (state & 0x000c) {
@@ -642,8 +666,13 @@ void chargeUpdate(void)
 				chargeControl.0 = 0;
 				chargeTimer1fStop();
 			}
+#if BATTERY_GAUGE
+			if (!configGet()->state.bits.chargeHold && chargeUsbIs1() &&
+			    !(unsigned char)stateGetWakeBit(0x0f) && chargeUsbHold == 0 &&
+#else
 			if (!configGet()->state.bits.chargeHold && chargeUsbIs1() &&
 			    !(stateGetWakeMask() & 0x8000) && chargeUsbHold == 0 &&
+#endif
 			    (!chargeGetManualMode() || configGet()->charge.bits.manualCharge) &&
 			    (!(charge.flags & 0x0004) || CHARGE_TEST(chargeMayStart())) &&
 			    !powerStatus.bits.cookieLock0 && !powerStatus.bits.cookieLock1)
@@ -696,7 +725,7 @@ void chargeUpdate(void)
 #endif
 		logEvent(0x0e);
 	}
-#if FW_SINCE(0x01030511)
+#if FW_SINCE(0x01030511) && !BATTERY_GAUGE
 	cookieReadStatus1(status1.byte);
 	if (cookieStatus1.bits.status1 ^ status1.bits.status1) {
 		if (status1.bits.status1)
@@ -1268,7 +1297,9 @@ void chargeSetPowerStatus(void)
 	sleepFactorSetStatus3(CHARGE_FACTOR_STATUS3);
 	if (ac != CHARGE_FACTOR_STATUS3) {
 		if (CHARGE_FACTOR_STATUS3) {
-#if STATE_WAKE_BITS
+#if BOARD_USS1001 && SOURCE_0104
+			if (!(unsigned char)stateGetWakeBit(0x16))	/* its low byte, as state.c's */
+#elif STATE_WAKE_BITS
 			if (!stateGetWakeBit(0x16))
 #else
 			if (!(stateGetWakeMask() & 0x00400000))
@@ -1445,7 +1476,12 @@ void chargeTempUpdate(unsigned int temp, struct ChargeTemp *t)
 #if FW_SINCE(0x00090206)
 					powerStatus.byte[1] &= 0xcf;
 #endif
+#if BATTERY_GAUGE
+					if (chargeCurrent != 0xff)	/* USS-1002: not with no current */
+						cookieCtrlCharge(1);
+#else
 					cookieCtrlCharge(1);
+#endif
 				}
 #if SOURCE_0103
 				cookieUpdateChargingCurrent(levels[t->level].setting1);
@@ -1751,6 +1787,9 @@ void chargeUsbChanged(void)
 #else
 void chargeUsbChanged(void)
 {
+#if BATTERY_GAUGE
+	batteryClearFull();
+#endif
 	chargeUsbState.0 = !P7.5 ? 1 : 0;
 	chargeTimerStop();
 	chargeUsbState.7 = 1;
@@ -2051,6 +2090,10 @@ int chargeMayStart(void)
 		return 1;
 	if (deviceVersions.battery.id == 0xfffe)
 		return 1;
+#if BATTERY_GAUGE
+	if (!batteryOffsetsValid())	/* USS-1002: not before the gauge is calibrated */
+		return 0;
+#endif
 	if (charge.flags & 0x8000)
 		return 0;
 	if (state & 0x0004) {
@@ -2065,7 +2108,8 @@ int chargeMayStart(void)
 			return 0;
 		return 1;
 	}
-	/* Sony's returns nothing here: BC still holds configGet's pointer */
+	/* Sony's returns nothing here: BC still holds configGet's pointer (USS-1002's:
+	   batteryOffsetsValid's answer) */
 }
 
 int chargeAlarm0On(void)
@@ -2135,8 +2179,8 @@ char chargeBatteryLevel9(void)
 #endif
 
 #if CHARGE_0104
-/* DOL-1002's, which nothing calls: the battery charged enough, its remaining capacity 400 and its
-   voltage 3500 (with a USB charger: any) */
+/* the battery charged enough, its remaining capacity 400 and its voltage 3500 (with a USB
+   charger: any); nothing calls DOL-1002's, USS-1002's chargeUpdate does */
 int chargeBatteryReady(void)
 {
 	int ready;
