@@ -75,8 +75,9 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 # array call __stack_chk_fail: FT_Raccess_Get_HeaderInfo and tt_face_init) and a signed char (ft_mem_strcpyn
 # loads *src with ldrsb).
 target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fstack-protector -fhosted -fbuiltin
-	-fdelete-null-pointer-checks -ffunction-sections -fsigned-char)
-# Sony's link dropped the functions nothing calls (FreeType's debug and little-endian stream readers).
+	-fdelete-null-pointer-checks -ffunction-sections -fdata-sections -fsigned-char)
+# Sony's link dropped the functions and data nothing uses (FreeType's debug and little-endian stream
+# readers, the smooth-lcd and smooth-lcdv renderer classes with their render functions).
 # Export 04DCBE87 is FT_New_Memory as freetype-sce.patch changes it; Sony's name for it is not known.
 target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections -Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory)
 include(../../../../../toolchains/libgcc/lib1funcs.cmake)
