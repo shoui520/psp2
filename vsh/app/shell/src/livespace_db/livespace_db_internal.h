@@ -1165,6 +1165,8 @@ public:
 extern "C" {
 AppInfoSClient *SceLsdb_D322A870(AppInfoSClient *client);
 AppInfoSClient *SceLsdb_56D8DCF0(AppInfoSClient *client);
+int SceLsdb_DB73BD7E(AppInfoSClient *client, const paf::string *titleId, unsigned int key,
+	LsdbValue *value);
 int SceLsdb_6F73E332(AppInfoSClient *client, const paf::common::SharedPtr<LsdbThemeInfo> *theme,
 	unsigned int flags);
 int SceLsdb_01790EDE(AppInfoSClient *client, const LsdbTheme *theme, const LsdbThemeText *title,

@@ -33,11 +33,13 @@ enum {
 	GAME_PLUGIN_FUNC_SET_DIALOG_HOLD = 10,	/* gamePluginSetDialogHold (0x8102B8E2) */
 	GAME_PLUGIN_FUNC_INSTALL_EX	= 13,	/* gamePluginInstallEx (0x8102C228) */
 	GAME_PLUGIN_FUNC_APP_DELETE_PART = 19,	/* gamePluginAppDeletePart (0x8102CF30) */
+	GAME_PLUGIN_FUNC_LICENSE_GET_STATUS = 23, /* gamePluginLicenseGetStatus (0x8102D654) */
 	GAME_PLUGIN_FUNC_DIALOG_OPEN	= 34,	/* gc_promote's promote dialog, opened (0x810214CC) */
 	GAME_PLUGIN_FUNC_DIALOG_CLOSE	= 36,	/* and closed (0x810218A6) */
 	GAME_PLUGIN_FUNC_PLUS_SD_DELETE	= 42,	/* plusSdListDeleteAllUsers (0x8102AF02) */
 	GAME_PLUGIN_FUNC_PLUS_APP_STATUS = 44,	/* plusAppListSetStatusAllUsers (0x8102A9AC) */
 	GAME_PLUGIN_FUNC_UMASS_CHECK	= 53,	/* gamePluginUmassCheck (0x8102ED72) */
+	GAME_PLUGIN_FUNC_FTT_READ	= 58,	/* gamePluginFttRead (0x8102F198) */
 };
 extern GamePluginInterface gamePluginInterface;
 
