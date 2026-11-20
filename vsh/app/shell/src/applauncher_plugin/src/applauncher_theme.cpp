@@ -81,10 +81,6 @@ using namespace paf;
 /* the folder the picked photos are converted into */
 #define APPLAUNCHER_THEME_TABPAPER_DIR		"ur0:shell/tabpaper/"
 
-/* PLACEHOLDER: the wallpaper picker opened on a wallpaper, and closed (0x810E439E, 0x810E45E0) */
-int applauncherWallpaperPickOpen(int index, int reserved, void (*func)(int index),
-				 void *arg);
-int applauncherWallpaperPickClose(void);
 /* PLACEHOLDER: a chip chosen; the chips of the photo pick, the page's image, the user's own
    wave and the first wave, as the chooser counted them (0x815442A0-0x815442AC) */
 static bool s_pageChosen = false;
@@ -193,7 +189,7 @@ static const int s_wavePresets[APPLAUNCHER_THEME_WAVES] = {
 
 static void onPhotoPicked(ExclusiveFuncPhotoImportResult *result, void *arg);
 static void onPowerEvent(void *arg);
-static void onWallpaperPicked(int index);
+static void onWallpaperPicked(int index, void *arg);
 static void onClose(SceInt32 type, ui::Handler *self, ui::Event *e, void *data);
 static ui::Widget *onCursorKeep(ui::Widget *cursor, void *arg);
 
@@ -398,7 +394,7 @@ ApplauncherThemeSelector::~ApplauncherThemeSelector()
 	if (m_photoPicking)
 		AbortExclusiveFuncPhotoImport();
 	if (m_wallpaperPicking)
-		applauncherWallpaperPickClose();
+		AbortExclusiveFuncWallpaperPick();
 }
 
 /* (0x810C6D84) */
@@ -505,7 +501,8 @@ static void onImageChip(SceInt32 type, ui::Handler *self, ui::Event *e, void *da
 
 	((int (*)(void (*)(void *), void *))power->func[POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK])(
 		onPowerEvent, NULL);
-	applauncherWallpaperPickOpen(s_selector->m_wallpaperIndex, 0, onWallpaperPicked, NULL);
+	StartExclusiveFuncWallpaperPick(s_selector->m_wallpaperIndex, NULL,
+					onWallpaperPicked, NULL);
 	s_selector->m_wallpaperPicking = true;
 	applauncherThemeSelectorClose();
 }
@@ -618,7 +615,7 @@ static void onPowerEvent(void *arg)
 }
 
 /* a wallpaper picked: the page given it (0x810C751C) */
-static void onWallpaperPicked(int index)
+static void onWallpaperPicked(int index, void *arg)
 {
 	ShellPluginInterface *power =
 		(ShellPluginInterface *)applauncherPluginGetInterface("power_manage_plugin", 1);

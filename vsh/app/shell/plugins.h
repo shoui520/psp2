@@ -126,6 +126,13 @@ void liveareaPluginStart(paf::Plugin *plugin);
 void liveareaPluginStop(paf::Plugin *plugin);
 void liveareaPluginExit(paf::Plugin *plugin);
 
+/* theme_plugin, the wallpaper picker (0x8126E4EC-0x8126E578) */
+void themePluginSetParam(paf::Plugin::InitParam2 *param);
+void themePluginInit(paf::Plugin *plugin);
+void themePluginStart(paf::Plugin *plugin);
+void themePluginStop(paf::Plugin *plugin);
+void themePluginExit(paf::Plugin *plugin);
+
 void mailResidentPluginInit(paf::Plugin *plugin);
 void mailResidentPluginStart(paf::Plugin *plugin);
 void mailResidentPluginStop(paf::Plugin *plugin);

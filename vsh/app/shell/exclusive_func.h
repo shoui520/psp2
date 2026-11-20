@@ -124,4 +124,16 @@ typedef void (*ExclusiveFuncPhotoImportCallback)(ExclusiveFuncPhotoImportResult 
 int StartExclusiveFuncPhotoImport(ExclusiveFuncPhotoImportCallback callback, void *arg);
 int AbortExclusiveFuncPhotoImport(void);
 
+namespace paf { class Plugin; }
+
+/* the wallpaper picker's callbacks: theme_plugin loaded, and the wallpaper picked (-1: none) */
+typedef void (*ExclusiveFuncWallpaperPickLoadedCallback)(paf::Plugin *plugin, void *arg);
+typedef void (*ExclusiveFuncWallpaperPickCallback)(int index, void *arg);
+
+/* PLACEHOLDER names: the wallpaper picker (theme_plugin) requested, opened on a wallpaper, and
+   given up (0x810E439E, 0x810E45E0) */
+int StartExclusiveFuncWallpaperPick(int index, ExclusiveFuncWallpaperPickLoadedCallback loaded,
+				    ExclusiveFuncWallpaperPickCallback callback, void *arg);
+int AbortExclusiveFuncWallpaperPick(void);
+
 #endif /* _SHELL_EXCLUSIVE_FUNC_H */
