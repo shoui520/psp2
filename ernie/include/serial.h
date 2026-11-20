@@ -36,8 +36,9 @@
 #define SERIAL_MODE		0x7f	/* 1, 2 or 3 */
 #define SERIAL_BINARY		0x80	/* frames as they are, not as hex text */
 
-/* DOL-1002 keeps the mode byte as bit fields, the mode and the binary bit */
-#define SERIAL_MODE_BITS	BOARD_DOL1002
+/* 0x0104 (DOL-1002, and the slim's 0x0105) keeps the mode byte as bit fields, the mode and the
+   binary bit */
+#define SERIAL_MODE_BITS	SOURCE_0104
 #if SERIAL_MODE_BITS
 #define SERIAL_MODE_OF(s)	((s).mode.bits.mode)
 #define SERIAL_IS_BINARY(s)	((s).mode.bits.binary)

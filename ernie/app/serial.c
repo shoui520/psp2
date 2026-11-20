@@ -24,6 +24,12 @@
 #include "version.h"
 #endif
 
+/* the slim's 0x0105 logs the mode 1 commands and their answers */
+#define SERIAL_LOG		(BOARD_EVENT_LOG && SOURCE_0104)
+#if SERIAL_LOG
+#include "eventlog.h"
+#endif
+
 
 struct Serial serial;
 unsigned char serialText[0x80];
@@ -318,6 +324,15 @@ unsigned char serialDispatch(void)
 #if FW_SINCE(0x00090804)
 		request.data = &serialFrame[SERIAL_FRAME_DATA];
 		request.length = serial.length;
+#if SERIAL_LOG
+		/* kind 0x11, the command's high byte: its low byte, its length and its first two
+		   bytes */
+		eventLogCommand[0] = serial.command & 0xff;
+		eventLogCommand[1] = request.length;
+		eventLogCommand[2] = request.data[0];
+		eventLogCommand[3] = request.data[1];
+		eventLogRecord(0x11, serial.command >> 8, eventLogCommand, 4);
+#endif
 		serial.status = serialCommand1(serial.command, &request, &response);
 		serial.data = response.data;
 		serial.dataLength = response.length;
@@ -361,6 +376,18 @@ unsigned char serialSendAnswer(void)
 	serialFrame[SERIAL_FRAME_STATUS] = serial.status;
 	if (serial.dataLength >= SERIAL_DATA_SIZE)
 		serial.dataLength = 0;
+#if SERIAL_LOG
+	/* kind 0x11, the command's high byte (with bit 7): its low byte, the data's length, the
+	   status and the data's first byte */
+	eventLogCommand[0] = serial.command & 0xff;
+	eventLogCommand[1] = serial.dataLength;
+	eventLogCommand[2] = serial.status;
+	if (serial.dataLength != 0 && serial.data != NULL)
+		eventLogCommand[3] = serial.data[0];
+	else
+		eventLogCommand[3] = 0;
+	eventLogRecord(0x11, serial.command >> 8, eventLogCommand, 4);
+#endif
 	if SERIAL_IS_BINARY(serial) {
 		memcpy(&serialFrame[SERIAL_FRAME_LENGTH], &serial.dataLength, 2);
 		if (serial.dataLength != 0 && serial.data != NULL)
@@ -617,7 +644,7 @@ void serialPostAnswer(void)
 
 void serialPostTimeout(void)
 {
-	task2SetFlag(3, 0x0004);
+	task2ISetFlag(0x0004);
 }
 
 /* never called */
@@ -632,8 +659,8 @@ void serialStartTimer(void)
 /* answers command 0x0105, if it waits to (status 0, no data) */
 unsigned char serialAnswer0105(void)
 {
-#if BOARD_DOL1002
-	/* DOL-1002: command 0x01d5's too */
+#if SOURCE_0104
+	/* 0x0104 (DOL-1002, the slim's 0x0105): command 0x01d5's too */
 	if (serial.state != SERIAL_ANSWER_LATER ||
 	    (serial.command != 0x0105 && serial.command != 0x01d5))
 		return 0;

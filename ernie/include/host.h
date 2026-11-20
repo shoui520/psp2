@@ -154,6 +154,7 @@ extern int hostGetLinkSize(unsigned char *size);
 extern int hostGetLinkLevel(unsigned int *level);
 #endif
 extern void hostRequestSetState(struct HostRequest *request, unsigned char state);
+extern void hostRequestSetStateChecked(struct HostRequest *request, unsigned char state);
 extern void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 			      unsigned char status, unsigned char length);
 extern void hostRequestAnswerReady(unsigned char *state);

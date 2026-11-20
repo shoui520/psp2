@@ -333,6 +333,6 @@ void iicaInterrupt(void)
 stop:
 	SPT = 1;
 	iicaRequest.state = IICA_DONE;
-	task5SetFlag(4, 0x0010);
+	task5ISetFlag(0x0010);
 }
 #endif

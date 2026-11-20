@@ -62,14 +62,23 @@ def run(prog, args, cwd):
 	return messages
 
 
+# the RL78's DIVWU: RA78K0R puts a NOP after it, Sony's assembler put none (lib/rl78/ludiv.asm)
+DIVWU = re.compile(r'^(\s+)divwu(\s*;.*)?$', re.I | re.M)
+
+
 def cc(src, asm, chip, options=(), includes=(), defines=()):
-	"""Compile src to the assembly source asm (no object, no debug information)."""
+	"""Compile src to the assembly source asm (no object, no debug information); a DIVWU is
+	written out as its bytes."""
 	tc, asm = toolchain(), Path(asm)
 	asm.parent.mkdir(parents=True, exist_ok=True)
 	args = [f'-c{chip}', f'-y{win(tc / "Dev78k0r")}', f'-i{win(tc / "Inc78k0r")}',
 		*(f'-i{win(i)}' for i in includes), *(f'-d{d}' for d in defines),
 		'-no', '-ng', f'-a{win(asm)}', f'-t{win(asm.parent)}', *options, win(src)]
-	return run('cc78k0r', args, asm.parent)
+	messages = run('cc78k0r', args, asm.parent)
+	text = asm.read_text(encoding='latin-1')
+	if DIVWU.search(text):
+		asm.write_text(DIVWU.sub(r'\1DB\t0CEH, 0FBH, 0BH\t; DIVWU', text), encoding='latin-1')
+	return messages
 
 
 SEGMENT = re.compile(r'^([A-Za-z_?@][\w?@]*)\s+(CSEG|DSEG|BSEG)\b\s*([^;]*?)\s*(;.*)?$', re.I)

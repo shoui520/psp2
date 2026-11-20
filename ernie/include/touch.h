@@ -420,6 +420,41 @@ struct TouchRearCheckedCommand {
 	unsigned char	end;		/* 0x17 */
 };
 
+/* the checked form's page write (command 0x39), touchBuffer's: the page's 0x80 bytes after a
+   zero and its address, which the host gives (0x03c3) */
+struct TouchRearPageCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	prefix;		/* 0x40 */
+	unsigned char	zero;
+	unsigned char	mode;
+	unsigned char	code;		/* 0x39 */
+	unsigned int	value;
+	unsigned char	pageZero;	/* 0 */
+	unsigned char	pageLow;	/* the page's address */
+	unsigned char	pageHigh;
+	unsigned char	data[0x80];
+};
+
+/* and the keyed write (command 0x48, page 0x01ff): touchRearWriteKey, then the 0x80 bytes */
+struct TouchRearKeyCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	prefix;		/* 0x40 */
+	unsigned char	zero;
+	unsigned char	mode;
+	unsigned char	code;		/* 0x48 */
+	unsigned int	value;
+	unsigned char	key[8];
+	unsigned char	data[0x80];
+};
+
+/* touchBuffer's checked writes */
+union TouchRearBufferCommand {
+	struct TouchRearPageCommand	page;
+	struct TouchRearKeyCommand	key;
+};
+
 /* the rear's controller 2: a register written alone */
 struct TouchRearShortCommand {
 	unsigned int	address;
@@ -434,7 +469,12 @@ struct TouchRearShortCommand {
 #define TOUCH_REAR_GRIP		3	/* the grip edges */
 #define TOUCH_REAR_EXTRA	4	/* the 8 bytes after the grip edges */
 
+/* panel n's family and variant as one word (family low) */
+#define TOUCH_PANEL_ID(n)	(*(unsigned int *)&touch.panel[n].family)
+
 extern void touchProbeController(char panel);
+extern unsigned char touchWriteRead(unsigned char *tx, unsigned int txCount, unsigned char *rx,
+				    unsigned int rxCount, char panel, unsigned int delay);
 extern unsigned char touchRearReadInfo(unsigned char *data, char panel);
 extern unsigned char touchRearIdentify(unsigned char *out, unsigned char mode, char panel);
 extern unsigned char touchRearSetStatus(unsigned char mode, unsigned char *out, char panel);

@@ -62,14 +62,14 @@ void tm01Interrupt(void)
 /* the power sequence's wait: event 0x0004 of flag 4 */
 void tm03Interrupt(void)
 {
-	task5SetFlag(4, 0x0004);
+	task5ISetFlag(0x0004);
 }
 
 #if BOARD_DOL1001
 /* DOL-1001's INTP9: event 0x1000 of flag 4 */
 void intp9Interrupt(void)
 {
-	task5SetFlag(4, 0x1000);
+	task5ISetFlag(0x1000);
 }
 #endif
 
@@ -112,7 +112,7 @@ void intp2Interrupt(void)
 void sre0Interrupt(void)
 {
 	if (P11.5)
-		task3SetFlag(2, 0x0200);
+		task3ISetFlag(0x0200);
 }
 #endif
 #else

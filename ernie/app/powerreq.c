@@ -2830,7 +2830,7 @@ unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *l
 }
 #endif
 
-#if BOARD_DOL1002
+#if SOURCE_0104
 /* 0x0903: the battery temperature's settings in force */
 unsigned char hostCommand0903(unsigned char *out, unsigned char *length)
 {

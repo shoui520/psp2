@@ -184,7 +184,7 @@ void rtcInterrupt(void)
 #if !FW_SINCE(0x00090903)
 	/* 0x00090804: task 2's flag 0x0040 every 2 s, outside state 0x0010 */
 	if (state != 0x0010 && (rtcClockLow & 0x0003) == 0)
-		task2SetFlag(3, 0x0040);
+		task2ISetFlag(0x0040);
 #endif
 #if FW_SINCE(0x00090804)
 	if (state == 0x0010) {
@@ -198,7 +198,7 @@ void rtcInterrupt(void)
 		levelMonitor1Poll();
 #endif
 	if (rtcClockLow & 0x0001) {
-		task2SetFlag(3, 0x8000);
+		task2ISetFlag(0x8000);
 #if FW_SINCE(0x01000107)
 		if (hangDetected() != 0) {
 			hangCount++;
