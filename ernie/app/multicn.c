@@ -118,6 +118,9 @@ void boardMultiCnUpdate(void)
 		break;
 	}
 	powerDeviceSetPending(0x40);
+#if SOURCE_0104	/* USS-1002's returns after it (call, not br) */
+	return;
+#endif
 }
 
 unsigned char boardGetMultiCnOutput(void)
@@ -161,7 +164,9 @@ unsigned char boardSetMultiCnOutput(unsigned char output)
 		boardMultiCnPower(0);
 		break;
 	case 3:
-#if FW_SINCE(0x01030511)
+#if SOURCE_0104	/* USS-1002's mode has no flag bit */
+		if (boardGetMultiCnOutput() != 3 || serialGetMode() != 1) {
+#elif FW_SINCE(0x01030511)
 		if (boardGetMultiCnOutput() != 3 || (serialGetMode() & SERIAL_MODE) != 1) {
 #else
 		if (boardGetMultiCnOutput() != 3) {	/* 0x01030505: the serial mode not checked */
