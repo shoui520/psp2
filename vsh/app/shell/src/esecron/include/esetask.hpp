@@ -232,6 +232,27 @@ struct BgdlPackageRequest {
 	char key235[41];
 };
 
+/* a download task's request (PLACEHOLDER names; the keys are the param file's) */
+struct BgdlDownloadRequest {
+	int reserved0;
+	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_*; 0x02: not started at once */
+	char reserved1[24];
+	SceUInt64 key208;
+	SceUInt64 key206;
+	char reserved2[64];
+	char url[2048];			/* key 202 */
+	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
+	char name[257];			/* key 105 */
+	char key203[193];		/* ur0:'s tasks only */
+	char key229[272];
+	char contentId[52];		/* key 217 */
+	char key222[52];
+	char key230[128];		/* a file copied into the task's folder */
+	char key221[1];			/* PLACEHOLDER: its length is not known yet */
+};
+
+#define BGDL_REQUEST_FLAG_NO_START	0x02
+
 /* what AddPackageTask gives back (PLACEHOLDER names) */
 struct BgdlPackageResult {
 	SceUInt32 id;			/* the task made */
@@ -292,9 +313,19 @@ inline SceUInt32 bgdlWorkId(SceUInt32 type, bool flag)
 	return (SceUInt32)-1;
 }
 
+class BgdlManagerThread;
+struct BgdlServerQuery;
+struct BgdlServerIds;
+struct BgdlContentInfo;
+
 class BgdlManager {
 public:
 	BgdlManager();							/* (0x8110401E) */
+	~BgdlManager();							/* (0x81104374) */
+	int Stop(void);			/* (0x811043F4) PLACEHOLDER name: the thread ended */
+	/* (0x811047E4) PLACEHOLDER name: a content asked of the server */
+	int Bgdl_811047E4(const BgdlServerQuery *query, const BgdlServerIds *ids, BgdlContentInfo *info,
+			  const bool *cancel);
 	int prepare_device(const char *device, bool clean, int quota);	/* (0x81103834) probable Sony name */
 	void Bgdl_811033C4(void);
 	void Bgdl_81103224(bool clean);
@@ -318,8 +349,10 @@ public:
 	int CheckStorage(const char *titleId, bool *grw0);
 	/* (0x81100E8C) PLACEHOLDER name: a package download made a task */
 	int AddPackageTask(const BgdlPackageRequest *request, BgdlPackageResult *result);
+	/* (0x811049D4) PLACEHOLDER name: a download made a task; *id its id */
+	int AddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request, SceUInt32 *id);
 
-	int reserved0;			/* PLACEHOLDER: only cleared so far */
+	BgdlManagerThread *m_thread;	/* "SceBgdlManagerThread", made by startMng */
 	BgdlTaskList m_tasks;
 	BgdlTaskSummaryList m_summaries;
 	paf::thread::Mutex m_taskListMutex;	/* "SceBgdlMutexEseTaskList" */
@@ -359,6 +392,11 @@ public:
 /* UpdateFlags run by the job queue (0.990's name; made in 0x81104574) */
 class Job_EseSetPermission : public paf::job::JobItem {
 public:
+	Job_EseSetPermission(SceUInt32 value, SceUInt32 mask)
+		: paf::job::JobItem("Job_EseSetPermission", NULL), m_value(value), m_mask(mask)
+	{
+	}
+
 	virtual ~Job_EseSetPermission()
 	{
 	}
@@ -442,6 +480,11 @@ public:
 /* the manager's thread, "SceBgdlManagerThread" (PLACEHOLDER class name) */
 class BgdlManagerThread : public paf::thread::Thread {
 public:
+	BgdlManagerThread()
+		: paf::thread::Thread(248, 0x5000, "SceBgdlManagerThread", NULL), m_manager(NULL)
+	{
+	}
+
 	virtual void EntryFunction();					/* (0x810FF214) */
 
 	BgdlManager *m_manager;
@@ -471,5 +514,12 @@ paf::string bgdlTaskFolder(SceUInt32 id, bool fromParam);	/* (0x810FDC72) */
 void bgdlCountFinished(const EseTask *task);			/* (0x810FEA80) PLACEHOLDER name */
 void bgdlUnsetAutoDownload(const EseTask *task);		/* (0x810FEB22) PLACEHOLDER name */
 void bgdlManagerCreate(bool clean, const int *quota);		/* (0x811041EC) */
+void startMng(void);						/* (0x811042C0) 0.990's name */
+bool bgdlRemoveFolders(void);					/* (0x81104346) PLACEHOLDER name */
+void bgdlManagerDestroy(void);					/* (0x81104474) PLACEHOLDER name */
+void bgdlManagerWakeup(SceUInt64 *request);			/* (0x811044BC) PLACEHOLDER name */
+void bgdlSetPermission(SceUInt32 value, SceUInt32 mask);		/* (0x81104574) PLACEHOLDER name */
+int bgdlServerQuery(const BgdlServerQuery *query, const BgdlServerIds *ids, BgdlContentInfo *info,
+		    const bool *cancel);					/* (0x811049A4) PLACEHOLDER name */
 
 #endif

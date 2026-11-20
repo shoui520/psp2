@@ -178,6 +178,103 @@ public:
 #define BGDL_ERROR_NO_FILE		0x80103A1F
 
 static BgdlManager *s_manager = NULL;		/* (0x81544788) */
+/* the next file's (0x81123E48): a second job queue (PLACEHOLDER names) */
+class BgdlJobQueue {
+public:
+	static BgdlJobQueue *Bgdl_81123E48(void);
+	int Bgdl_81123E3C(common::SharedPtr<job::JobItem> job);
+
+	job::JobQueue *m_queue;
+};
+
+/* PLACEHOLDER names: a content server's request, as 0x811049A4 is given it */
+struct BgdlServerParam {
+	SceUInt32 value[5];
+};
+
+struct BgdlServerQuery {
+	int handle;			/* the first argument of 0x8111B72A */
+	BgdlServerParam param;		/* passed as a copy */
+	char url[1];			/* PLACEHOLDER: its length is not known yet */
+};
+
+struct BgdlServerIds {
+	char reserved;
+	char id0[32];
+	char id1[32];
+	char id2[1];			/* PLACEHOLDER: its length is not known yet */
+};
+
+/* the next file's (0x81115C58): what the content server answered (PLACEHOLDER names) */
+struct BgdlServerInfo {
+	BgdlServerInfo()
+	{
+		Clear();
+	}
+
+	void Clear(void);		/* (0x81115C58) */
+
+	bool flag;
+	int status;
+	int httpStatus;
+	int reserved0;
+	SceUInt64 size;
+	string url;
+	string titleId;
+	string contentId;
+	string message;			/* the server's, with an HTTP 401 */
+	SceUInt64 value0;
+	SceUInt64 value1;
+	SceUInt64 value2;
+	SceUInt64 value3;
+	SceUInt64 value4;
+	int kind;
+	int reserved1;
+	char data[120];
+};
+
+/* the answer as 0x811049A4's caller is given it, 0x2E0 bytes (PLACEHOLDER names) */
+struct BgdlContentInfo {
+	bool flag;
+	int status;
+	int httpStatus;
+	int kind;
+	SceUInt64 value0;
+	SceUInt64 value1;
+	SceUInt64 value2;
+	SceUInt64 value3;
+	SceUInt64 value4;
+	SceUInt64 size;
+	char url[193];
+	char titleId[32];
+	char contentId[64];
+	char message[127];
+	char data[256];
+};
+
+/* PLACEHOLDER name: the server answered with an HTTP error */
+#define BGDL_ERROR_SERVER		0x80103A23
+
+/* PLACEHOLDER name: the request names no URL */
+#define BGDL_ERROR_NO_URL		0x80103A0A
+
+int Bgdl_8111B72A(int handle, int reserved0, const char *device, const char *url,
+		  const char *id0, const char *id1, const char *id2, int reserved1,
+		  BgdlServerInfo *info, BgdlServerParam *param, MtpBgCopyHost *host, int reserved2,
+		  int reserved3);
+
+/* the server's kinds as the caller's (PLACEHOLDER names) */
+struct BgdlKindMap {
+	int server;
+	int kind;
+};
+
+/* (0x8150A170) */
+static const BgdlKindMap s_kindMap[] = {
+	{ 1, 1 }, { 2, 2 }, { 3, 3 }, { 4, 4 }, { 5, 5 }, { 6, 6 },
+	{ 7, 7 }, { 8, 8 }, { 9, 9 }, { 12, 12 }, { 0, 0 },
+};
+
 /* the next file's (0x81110708): the time a block of code took (PLACEHOLDER names) */
 class BgdlScopeTimer {
 public:
@@ -837,6 +934,21 @@ public:
 	}
 
 	EseTask *m_task;
+};
+
+/* the server request stopped when *cancel is set (PLACEHOLDER name) */
+class BgdlCancelHost : public MtpBgCopyHost {
+public:
+	BgdlCancelHost(const bool *cancel) : m_cancel(cancel)
+	{
+	}
+
+	virtual int isRequested()
+	{
+		return *m_cancel;
+	}
+
+	const bool *m_cancel;
 };
 
 /* (0x810FE06C) an MTP task: libmtp copies its file, and the result goes to its param file */
@@ -2905,7 +3017,7 @@ int BgdlManager::prepare_device(const char *device, bool clean, int quota)
 
 /* (0x8110401E) */
 BgdlManager::BgdlManager()
-	: reserved0(0),
+	: m_thread(NULL),
 	  m_taskListMutex("SceBgdlMutexEseTaskList", 0),
 	  m_taskListCond(m_taskListMutex, "SceBgdlCondEseTaskList", 0),
 	  m_cancelMutex("SceBgdlMutexEseCancel", 0),
@@ -2965,6 +3077,336 @@ void bgdlManagerCreate(bool clean, const int *quota)
 		manager->Bgdl_81103224(clean);
 	}
 	s_updateMutex.Unlock();
+}
+
+/* (0x811042C0) the manager's thread started */
+void startMng(void)
+{
+	BgdlManager *manager;
+
+	s_updateMutex.Lock();
+	manager = s_manager;
+	if (manager != NULL && manager->m_thread == NULL) {
+		BgdlManagerThread *thread = new BgdlManagerThread;
+
+		manager->m_thread = thread;
+		if (thread != NULL) {
+			thread->m_manager = manager;
+			thread->Start();
+			manager->m_error = 0;
+		} else {
+			manager->m_error = BGDL_ERROR_NOT_STARTED;
+		}
+	}
+	s_updateMutex.Unlock();
+}
+
+/* (0x81104346) every task's folders removed, while no manager is made */
+bool bgdlRemoveFolders(void)
+{
+	if (s_manager != NULL)
+		return false;
+	Dir::RemoveRecursive("ux0:bgdl");
+	Dir::RemoveRecursive("ur0:bgdl");
+	return true;
+}
+
+/* (0x81104374) */
+BgdlManager::~BgdlManager()
+{
+	SceShell_D4C7D2B7(SHELL_EVENT_POWER, bgdlManagerOnResume, this);
+	m_tasks.Clear();
+}
+
+/* (0x811043F4) the running task cancelled, the thread told to end and waited for */
+int BgdlManager::Stop(void)
+{
+	if (m_error != 0)
+		return m_error;
+	if (m_thread == NULL)
+		return 0;
+	m_taskListMutex.Lock();
+	if (m_runningTask != NULL) {
+		m_cancelMutex.Lock();
+		if (!m_cancelled) {
+			m_cancelled = true;
+			if (m_cancelHandler != NULL)
+				m_cancelHandler(m_cancelHandlerArg);
+		}
+		m_cancelMutex.Unlock();
+	}
+	m_stopping = true;
+	m_taskListCond.Notify();
+	m_taskListMutex.Unlock();
+	m_thread->Join();
+	delete m_thread;
+	m_thread = NULL;
+	m_error = BGDL_ERROR_NOT_STARTED;
+	return BGDL_ERROR_NOT_STARTED;
+}
+
+/* (0x81104474) */
+void bgdlManagerDestroy(void)
+{
+	s_updateMutex.Lock();
+	if (s_manager != NULL) {
+		s_manager->Stop();
+		delete s_manager;
+		s_manager = NULL;
+	}
+	s_updateMutex.Unlock();
+}
+
+/* (0x811044BC) the thread woken; *request the request it is to take */
+void bgdlManagerWakeup(SceUInt64 *request)
+{
+	BgdlManager *manager;
+	SceUInt64 count;
+
+	s_updateMutex.Lock();
+	manager = s_manager;
+	if (manager != NULL) {
+		manager->m_taskListMutex.Lock();
+		count = ++s_requested;
+		if (request != NULL)
+			*request = count;
+		if (manager->m_runningTask != NULL) {
+			manager->m_cancelMutex.Lock();
+			if (!manager->m_cancelled) {
+				manager->m_cancelled = true;
+				if (manager->m_cancelHandler != NULL)
+					manager->m_cancelHandler(manager->m_cancelHandlerArg);
+			}
+			manager->m_cancelMutex.Unlock();
+		}
+		manager->m_taskListCond.Notify();
+		manager->m_taskListMutex.Unlock();
+	} else {
+		count = ++s_requested;
+		if (request != NULL)
+			*request = count;
+	}
+	s_updateMutex.Unlock();
+}
+
+/* (0x81104574) UpdateFlags run by the job queue */
+void bgdlSetPermission(SceUInt32 value, SceUInt32 mask)
+{
+	common::SharedPtr<job::JobItem> job(new Job_EseSetPermission(value, mask));
+
+	BgdlJobQueue::Bgdl_81123E48()->Bgdl_81123E3C(job);
+}
+
+/* (0x811046BE) PLACEHOLDER name: the server's answer copied for the caller */
+static __attribute__((noinline)) int bgdlCopyServerInfo(int result, const BgdlServerInfo *server,
+							BgdlContentInfo *info)
+{
+	const BgdlKindMap *map;
+
+	if (server == NULL || info == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+	info->value1 = server->value1;
+	info->value0 = server->value0;
+	info->status = server->status;
+	info->httpStatus = server->httpStatus;
+	info->value2 = server->value2;
+	info->value3 = server->value3;
+	if (result == 0) {
+		info->size = server->size;
+		if (server->url.length() != 0)
+			sce_paf_snprintf(info->url, sizeof(info->url) - 1, "%s", server->url.c_str());
+		if (server->titleId.length() != 0)
+			sce_paf_snprintf(info->titleId, sizeof(info->titleId) - 1, "%s",
+					 server->titleId.c_str());
+		if (server->contentId.length() != 0)
+			sce_paf_snprintf(info->contentId, sizeof(info->contentId) - 1, "%s",
+					 server->contentId.c_str());
+		info->value4 = server->value4;
+		info->value3 = server->value3;
+		info->flag = server->flag;
+		info->kind = 0;
+		for (map = s_kindMap; map->server != 0; map++) {
+			if (server->kind == map->server) {
+				info->kind = map->kind;
+				break;
+			}
+		}
+		sce_paf_memset(info->data, 0, sizeof(info->data));
+		sce_paf_memcpy(info->data, server->data, sizeof(server->data));
+	} else if (result == BGDL_ERROR_SERVER && server->httpStatus == 401 &&
+		   server->message.length() != 0) {
+		sce_paf_snprintf(info->message, sizeof(info->message) - 1, "%s",
+				 server->message.c_str());
+	}
+	return result;
+}
+
+/* (0x811047E4) PLACEHOLDER name: a content asked of the server */
+int BgdlManager::Bgdl_811047E4(const BgdlServerQuery *query, const BgdlServerIds *ids,
+			       BgdlContentInfo *info, const bool *cancel)
+{
+	int ret;
+
+	if (query == NULL || ids == NULL || info == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+
+	BgdlServerParam param = query->param;
+	BgdlServerInfo server;
+	BgdlCancelHost host(cancel);
+
+	ret = Bgdl_8111B72A(query->handle, 0, "ux0:", query->url, ids->id0, ids->id1, ids->id2, 0,
+			    &server, &param, &host, 0, 0);
+	return bgdlCopyServerInfo(ret, &server, info);
+}
+
+/* (0x811049A4) PLACEHOLDER name */
+int bgdlServerQuery(const BgdlServerQuery *query, const BgdlServerIds *ids, BgdlContentInfo *info,
+		    const bool *cancel)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->Bgdl_811047E4(query, ids, info, cancel);
+}
+
+/* (0x811049D4) a task made from a download request, its keys written, and started */
+int BgdlManager::AddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request,
+				 SceUInt32 *id)
+{
+	BgdlTaskPath folder;
+	SceUInt32 taskId;
+	int ret;
+
+	Bgdl_81113890(1);
+	taskId = (SceUInt32)-1;
+	if (device > 1 && device == 2)
+		taskId = (SceUInt32)-2;
+	if (taskId == (SceUInt32)-1 && m_ux0Ready != true) {
+		ret = BGDL_ERROR_NO_UX0;
+		goto out;
+	}
+	if (request == NULL) {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto out;
+	}
+	if (request->url[0] == '\0') {
+		ret = BGDL_ERROR_NO_URL;
+		goto out;
+	}
+	{
+		string url(request->url);
+
+		if (url.length() == 0) {
+			ret = BGDL_ERROR_NO_URL;
+			goto out;
+		}
+
+		string name("");
+
+		if (request->name[0] != '\0')
+			name = request->name;
+		ret = AddTask(&taskId, 0, device, name.c_str(),
+			      (request->flags & BGDL_REQUEST_FLAG_KEY115) != 0,
+			      (request->flags & BGDL_REQUEST_FLAG_KEY116) != 0);
+		if (ret != 0)
+			goto out;
+		ret = folder.initialize(taskId, 20);
+		if (ret != 0)
+			goto out;
+		{
+			EseParam param(taskId);
+			bool flag;
+
+			ret = param.openWrite();
+			if (ret != 0)
+				goto out;
+			ret = param.write(202, url.c_str(), url.length() + 1);
+			if (ret != 0)
+				goto out;
+			if (request->iconPath[0] != '\0') {
+				string icon("");
+
+				if (Bgdl_81111CDC(request->iconPath, folder.m_begin, &icon, true) == 0) {
+					ret = param.write(106, icon.c_str(), icon.length() + 1);
+					if (ret != 0)
+						goto out;
+				}
+			}
+			if (request->key230[0] != '\0' && sce_paf_strlen(request->key230) != 0) {
+				string file("");
+
+				ret = Bgdl_81111CDC(request->key230, folder.m_begin, &file, true);
+				if (ret != 0)
+					goto out;
+				ret = param.write(230, file.c_str(), file.length() + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (request->contentId[0] != '\0' && sce_paf_strlen(request->contentId) != 0) {
+				ret = param.write(217, request->contentId,
+						  sce_paf_strlen(request->contentId) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (request->key222[0] != '\0' && sce_paf_strlen(request->key222) != 0) {
+				ret = param.write(222, request->key222, sce_paf_strlen(request->key222) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (request->key221[0] != '\0' && sce_paf_strlen(request->key221) != 0) {
+				ret = param.write(221, request->key221, sce_paf_strlen(request->key221) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			flag = device == 0;
+			ret = param.write(218, &flag, sizeof(flag));
+			if (ret != 0)
+				goto out;
+			flag = false;
+			ret = param.write(102, &flag, sizeof(flag));
+			if (ret != 0)
+				goto out;
+			if (request->key229[0] != '\0' && sce_paf_strlen(request->key229) != 0) {
+				ret = param.write(229, request->key229, sce_paf_strlen(request->key229) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (request->key203[0] != '\0' && sce_paf_strlen(request->key203) != 0 &&
+			    device == 2) {
+				ret = param.write(203, request->key203, sce_paf_strlen(request->key203) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			ret = param.write(206, &request->key206, sizeof(request->key206));
+			if (ret != 0)
+				goto out;
+			ret = param.write(208, &request->key208, sizeof(request->key208));
+			if (ret != 0)
+				goto out;
+			if (device == 2) {
+				BgdlPackageCheck check;
+				char digest[32];
+				int result = 0;
+
+				check.Bgdl_81114AFC(6, 2, request->url, 0, 0, 0, 1, 0);
+				result = check.Bgdl_8118FD0C();
+				check.Bgdl_81115C22(digest);
+				param.write(236, &result, sizeof(result));
+				param.write(237, digest, sizeof(digest));
+			}
+			ret = param.commit();
+			if (ret != 0)
+				goto out;
+		}
+		if ((request->flags & BGDL_REQUEST_FLAG_NO_START) == 0)
+			ret = ReloadTask(taskId);
+		if (ret == 0)
+			*id = taskId;
+	}
+out:
+	if (ret != 0)
+		RemoveTask(taskId);
+	UpdateQueueStatus();
+	return ret;
 }
 
 /* (0x81110524) */
