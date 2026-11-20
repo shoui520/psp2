@@ -28,6 +28,7 @@ enum {
 	TOPMENU_PLUGIN_FUNC_BUSY_BEGIN		= 35,	/* the first of the game plugin's busy calls, */
 	TOPMENU_PLUGIN_FUNC_BUSY_END		= 36,	/* and the last */
 	TOPMENU_PLUGIN_FUNC_CREATE_PLANE	= 51,	/* PLACEHOLDER name: a plane made in its layer (0: the first) */
+	TOPMENU_PLUGIN_FUNC_GET_RUNNING		= 59,	/* PLACEHOLDER name: the titles running, into a vector */
 	TOPMENU_PLUGIN_FUNC_SET_APPLAUNCHER	= 60,	/* PLACEHOLDER names: applauncher's table given */
 	TOPMENU_PLUGIN_FUNC_APPLAUNCHER_INIT	= 68,	/* (NULL: taken back), and its init done */
 	TOPMENU_PLUGIN_FUNC_UP_STATUS		= 66,	/* PLACEHOLDER name: an application's #_up_status changed */

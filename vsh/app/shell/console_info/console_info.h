@@ -138,6 +138,19 @@ public:
 	virtual unsigned int GetFieldCount();
 };
 
+/* PLACEHOLDER: the "uc" record (1056 bytes, 0x810F5DE8) */
+class ConsoleInfoUc : public ConsoleInfoRecord {
+public:
+	ConsoleInfoUc();
+	virtual ~ConsoleInfoUc();
+
+	virtual int Write(void *data);
+	virtual int Commit();
+	virtual paf::string GetEntryPath(int index);
+	virtual const Field *GetFields();
+	virtual unsigned int GetFieldCount();
+};
+
 /* a 64-bit value's bytes reversed (NP's and the kernel's IDs are big-endian) */
 static inline SceUInt64 consoleInfoSwap64(SceUInt64 v)
 {
@@ -163,6 +176,8 @@ public:
 	/* a record written or read: mode 1 opens and keeps the file, 2 closes it after */
 	int Write(int index, const void *record, int mode);	/* (0x813774FC) */
 	int Read(int index, void *record, int mode);		/* (0x81377634) */
+	/* the file removed (0x8137776A) */
+	int Remove();
 
 	/* the file's size */
 	SceInt64 GetFileSize()
@@ -196,7 +211,7 @@ bool consoleInfoRegKeyIsSet(const char *category, const char *name);
 /* PLACEHOLDER: a process event of the log (64 bytes): what happened to which title, when */
 struct ConsoleInfoMiEvent {
 	signed char state;		/* CONSOLE_INFO_MI_STATE_* */
-	signed char reserved;
+	signed char type;		/* the request's first attribute; 1 for the shell's own */
 	signed char flag;
 	signed char kind;
 	signed char subkind;
@@ -302,13 +317,53 @@ public:
 	ConsoleInfoMiProc m_proc;
 };
 
-/* PLACEHOLDER names: the process event log (0x810F3452), cleared (0x810F321E), each event given
-   to a function (0x810F334E), and the boot's events added (0x810F3688) */
-ConsoleInfoFile *consoleInfoGetProcLog(void);
-int consoleInfoProcLogClear(ConsoleInfoFile *log);
-int consoleInfoProcLogForEach(ConsoleInfoFile *log,
+/* the process event log's file, and its count's (ur0:ci/m.log, ur0:ci/m.cnt) */
+#define CONSOLE_INFO_PROC_LOG		"m.log"
+#define CONSOLE_INFO_PROC_LOG_COUNT	"m.cnt"
+
+/* PLACEHOLDER: the process event log, ur0:ci/m.log (28 bytes, 0x810F31F8): a ring of events, the
+   next one written at m_next */
+class ConsoleInfoProcLog : public ConsoleInfoFile {
+public:
+	ConsoleInfoProcLog();
+
+	virtual ~ConsoleInfoProcLog()				/* (0x81414C34, 0x81414C50) */
+	{
+	}
+
+	int m_next;
+};
+
+/* PLACEHOLDER names: a media information request checked (0x810F302C); the process event log
+   (0x810F3452), cleared (0x810F321E), an event added (0x810F3248), each event given to a function
+   (0x810F334E), the running titles' events added (0x810F3596) and the boot's (0x810F3688) */
+struct ShellMediaInfoRequest;
+int consoleInfoMediaInfoCheck(const ShellMediaInfoRequest *request);
+ConsoleInfoProcLog *consoleInfoGetProcLog(void);
+int consoleInfoProcLogClear(ConsoleInfoProcLog *log);
+void consoleInfoProcLogAdd(ConsoleInfoProcLog *log, const ConsoleInfoMiEvent *event, int mode);
+int consoleInfoProcLogForEach(ConsoleInfoProcLog *log,
 			      int (*func)(const ConsoleInfoMiEvent *event, void *arg), void *arg);
+void consoleInfoProcLogAddRunning(bool end, const ConsoleInfoMiEvent *base);
 void consoleInfoProcLogAddBoot(void);
+
+/* the job writing a media information request's event (96 bytes, 0x810F34B2): when a caller
+   waits, the job waits in turn for it to have seen the job run */
+class MediaInfoWriterJob : public paf::job::JobItem {
+public:
+	MediaInfoWriterJob(const ShellMediaInfoRequest *request, bool wait);
+	virtual ~MediaInfoWriterJob();
+	virtual int Run();
+	virtual void Finish(int result);
+
+	int Wait();
+	void CountUsage();
+
+	bool m_wait;
+	volatile bool m_running;
+	volatile bool m_done;
+	ConsoleInfoMiEvent m_event;
+};
 
 /* PLACEHOLDER: the "ci" record with an NP account (1080 bytes, 0x810F394C) */
 class ConsoleInfoCi : public ConsoleInfoRecord {
