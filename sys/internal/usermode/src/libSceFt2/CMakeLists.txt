@@ -72,9 +72,10 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 # 2026-11-19). Sony built FreeType hosted (its fixed-size memset and memcpy calls are expanded inline) and
 # without -fno-delete-null-pointer-checks (a pointer once dereferenced is not tested for NULL again:
 # tt_face_goto_table's table), with -fstack-protector (only the two functions with a character
-# array call __stack_chk_fail: FT_Raccess_Get_HeaderInfo and tt_face_init).
+# array call __stack_chk_fail: FT_Raccess_Get_HeaderInfo and tt_face_init) and a signed char (ft_mem_strcpyn
+# loads *src with ldrsb).
 target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fstack-protector -fhosted -fbuiltin
-	-fdelete-null-pointer-checks -ffunction-sections)
+	-fdelete-null-pointer-checks -ffunction-sections -fsigned-char)
 # Sony's link dropped the functions nothing calls (FreeType's debug and little-endian stream readers).
 # Export 04DCBE87 is FT_New_Memory as freetype-sce.patch changes it; Sony's name for it is not known.
 target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections -Wl,--defsym=SceFt2_04DCBE87=FT_New_Memory)
