@@ -20,6 +20,10 @@
 
 using namespace paf;
 
+/* the task's param file (eseparam.cpp; PLACEHOLDER names: not written yet) */
+int Bgdl_8112260C(SceUInt32 id, int key, void *value, SceSize size);		/* read */
+int Bgdl_811233A4(SceUInt32 id, int key, const void *value, SceSize size);	/* write */
+
 static BgdlManager *s_manager = NULL;		/* (0x81544788) */
 static const char *s_np = "np";			/* (0x8154478C) PLACEHOLDER: read later */
 static SceUInt64 s_handled = 0;			/* (0x81544790) the requests the thread took */
@@ -388,4 +392,101 @@ int bgdlManagerNotify(int value, int mask)
 	}
 	s_updateMutex.Unlock();
 	return BGDL_ERROR_NOT_STARTED;
+}
+
+/* (0x810FD8A4) */
+int Job_EseSetPermission::Run()
+{
+	SceUInt32 mask = m_mask;
+	SceUInt32 value = m_value;
+
+	s_updateMutex.Lock();
+	if (s_manager != NULL)
+		s_manager->UpdateFlags(value, mask);
+	s_updateMutex.Unlock();
+	return 0;
+}
+
+/* (0x810FD8E0) */
+BgdlManager *bgdlManagerGet(void)
+{
+	return s_manager;
+}
+
+/* (0x810FD8EC) */
+bool BgdlManager::IsCancelled(void)
+{
+	bool cancelled;
+
+	m_cancelMutex.Lock();
+	cancelled = m_cancelled;
+	m_cancelMutex.Unlock();
+	return cancelled;
+}
+
+/* (0x810FD90C) */
+void BgdlManager::NotifyListeners(BgdlEvent *event)
+{
+	BgdlListener *listener;
+
+	m_listenersMutex.Lock();
+	if (m_listenerCount != 0) {
+		for (listener = m_listeners; listener != m_listeners + BGDL_LISTENER_MAX; listener++) {
+			if (listener->func != NULL)
+				listener->func(event, listener->arg);
+		}
+	}
+	m_listenersMutex.Unlock();
+}
+
+/* (0x810FD94C) */
+int EseTask::setRunStatus(int status)
+{
+	BgdlEvent event;
+	int ret;
+
+	if (m_ParamCache.runStatus == status)
+		return 0;
+	m_ParamCache.runStatus = status;
+	ret = Bgdl_811233A4(id, 101, &status, sizeof(status));
+	event.type = 4;
+	event.id = id;
+	event.param = m_ParamCache;
+	event.result = result;
+	event.reserved = 0;
+	event.value = value;
+	s_manager->NotifyListeners(&event);
+	if (ret != 0)
+		return ret;
+	return 0;
+}
+
+/* (0x810FDA08) */
+int EseTask::setState(int state, int *current, bool force)
+{
+	BgdlEvent event;
+	int saved = 0;
+	int ret;
+
+	ret = Bgdl_8112260C(id, 109, &saved, sizeof(saved));
+	if (ret != 0)
+		return ret;
+	if (current != NULL)
+		*current = saved;
+	if (state > saved || force == true) {
+		m_ParamCache.state = state;
+		if (current != NULL)
+			*current = state;
+		ret = Bgdl_811233A4(id, 109, &state, sizeof(state));
+		event.type = 3;
+		event.id = id;
+		event.result = 0;
+		event.reserved = 0;
+		event.value = 0;
+		event.param = m_ParamCache;
+		if (m_ParamCache.state == 4)
+			event.value = value;
+		s_manager->NotifyListeners(&event);
+	}
+	return ret;
 }

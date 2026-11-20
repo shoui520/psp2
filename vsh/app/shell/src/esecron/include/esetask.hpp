@@ -12,6 +12,7 @@
 #include <scetypes.h>
 #include <std/string>
 #include <thread/thread.h>
+#include <job/job.h>
 
 #include "esebase.hpp"
 
@@ -36,21 +37,15 @@ struct BgdlTaskCopy {
 	int state[5];			/* PLACEHOLDER: copied from libmtp's progress, not read yet */
 };
 
-class EseTask {
-public:
-	SceUInt32 id;			/* the task's number, its folder's name */
-	int result;			/* key 104; 0x80103A1A until it is read */
-	SceUInt64 reserved0;		/* PLACEHOLDER: only cleared so far */
-	BgdlProgress transfer;		/* keys 206 and 208 */
-	BgdlProgress files;		/* keys 505 and 5002 on */
-	bool reserved1;			/* PLACEHOLDER: only cleared so far */
+/* a task's flags from its param file (Sony's m_ParamCache, with its "type"; the rest ours) */
+struct EseParamCache {
 	SceUInt32 type : 4;		/* key 100 */
 	SceUInt32 key107 : 4;
-	SceUInt32 key101 : 2;
+	SceUInt32 runStatus : 2;	/* key 101 (setRunStatus) */
 	SceUInt32 key102 : 1;
 	SceUInt32 ready : 1;		/* key 104 and key 113 both 0 */
 	SceUInt32 key108 : 2;
-	SceUInt32 key109 : 3;
+	SceUInt32 state : 3;		/* key 109 (setState) */
 	SceUInt32 key112 : 1;
 	SceUInt32 key113 : 1;
 	SceUInt32 key110 : 1;
@@ -58,7 +53,31 @@ public:
 	SceUInt32 kind : 3;		/* key 114 (BgdlTaskInfo::kind) */
 	SceUInt32 key115 : 1;
 	SceUInt32 key116 : 1;
-	SceUInt32 flagsReserved : 4;	/* PLACEHOLDER: kept as they are */
+	SceUInt32 reserved : 4;		/* PLACEHOLDER: kept as they are */
+};
+
+/* what the manager's listeners are told */
+struct BgdlEvent {
+	int type;			/* 0 added, 3 state, 4 run status (PLACEHOLDER: others) */
+	SceUInt32 id;
+	EseParamCache param;
+	int result;
+	int reserved;			/* PLACEHOLDER: always 0 so far */
+	SceUInt64 value;
+};
+
+class EseTask {
+public:
+	int setRunStatus(int status);					/* (0x810FD94C) */
+	int setState(int state, int *current, bool force);		/* (0x810FDA08) */
+
+	SceUInt32 id;			/* the task's number, its folder's name */
+	int result;			/* key 104; 0x80103A1A until it is read */
+	SceUInt64 value;		/* PLACEHOLDER: passed in the task's events */
+	BgdlProgress transfer;		/* keys 206 and 208 */
+	BgdlProgress files;		/* keys 505 and 5002 on */
+	bool reserved1;			/* PLACEHOLDER: only cleared so far */
+	EseParamCache m_ParamCache;
 	paf::string key220;
 	paf::string key217;
 	int reserved2;			/* PLACEHOLDER: only cleared so far */
@@ -70,7 +89,7 @@ public:
 
 /* a function told of the manager's events */
 struct BgdlListener {
-	void (*func)(void *event, void *arg);
+	void (*func)(BgdlEvent *event, void *arg);
 	void *arg;
 };
 
@@ -85,6 +104,8 @@ struct BgdlListener {
 class BgdlManager {
 public:
 	__attribute__((noinline)) void UpdateFlags(SceUInt32 value, SceUInt32 mask);	/* (0x810FD758) */
+	bool IsCancelled(void);						/* (0x810FD8EC) */
+	void NotifyListeners(BgdlEvent *event);				/* (0x810FD90C) */
 
 	int reserved0;			/* PLACEHOLDER: only cleared so far */
 	BgdlTaskList m_tasks;
@@ -122,5 +143,24 @@ public:
 	char reserved12[0x700];
 	char reserved13[0x400];		/* PLACEHOLDER: not even cleared so far */
 };
+
+/* UpdateFlags run by the job queue (0.990's name; made in 0x81104574) */
+class Job_EseSetPermission : public paf::job::JobItem {
+public:
+	virtual ~Job_EseSetPermission()
+	{
+	}
+
+	virtual int Run();					/* (0x810FD8A4) */
+
+	virtual void Finish(int result)
+	{
+	}
+
+	SceUInt32 m_value;
+	SceUInt32 m_mask;
+};
+
+BgdlManager *bgdlManagerGet(void);				/* (0x810FD8E0) */
 
 #endif
