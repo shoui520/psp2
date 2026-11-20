@@ -4,6 +4,7 @@ enable_language(CXX)
 # link names.
 set(MODULE_IMPORT_NAMES vsh/paf/fw/3.65-CEX.exports.yml)
 psp2_module(vs0_sys_external_common_gui_dialog KIND user COMPILER snc PARTIAL SOURCES
+	module.cpp
 	layouts.cpp
 	list_dialog_param.cpp
 	common_gui_dialog.cpp

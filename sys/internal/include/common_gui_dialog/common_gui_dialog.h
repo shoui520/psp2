@@ -317,6 +317,35 @@ public:
 	SceInt32 imeType;
 };
 
+/* an image of the video dialog: its picture (or its cached picture) and the image beside it */
+struct CommonGuiVideoDialogImage {
+	paf::intrusive_ptr<paf::graph::Surface> image;
+	paf::intrusive_ptr<paf::cache::CacheImageInterface> cachedImage;
+	paf::intrusive_ptr<paf::graph::Surface> icon;
+};
+
+/*
+ * The parameters of the video player's dialog (SceCommonGuiDialog_5B9511E9): its heading and
+ * text, two images with their titles, its check box, and its buttons.
+ */
+class CommonGuiVideoDialogParam : public CommonGuiDialogParam {
+public:
+	CommonGuiVideoDialogImage firstImage;
+	paf::wstring heading;
+	paf::wstring firstTitle;
+	CommonGuiVideoDialogImage secondImage;
+	paf::wstring secondTitle;
+	paf::wstring secondDetail;
+	paf::wstring text;
+	/* the check box (SceCommonGuiDialog_ED620EF1 reads it) is shown */
+	bool checkBox;
+	/* the buttons: 0 the first pair, 1 the second pair, 2 all three; else the panel's */
+	SceInt32 type;
+	CommonGuiDialogHandler *handler;
+};
+
+typedef char CommonGuiVideoDialogParamSize[sizeof(CommonGuiVideoDialogParam) == 164 ? 1 : -1];
+
 extern "C" {
 /* the parameters' defaults: both NIDs are the one constructor (C2 and C1) */
 CommonGuiDialogParam *SceCommonGuiDialog_3EA370C9(CommonGuiDialogParam *param);
@@ -430,6 +459,12 @@ paf::string SceCommonGuiDialog_1D4E3C83(int dialogId);
 int SceCommonGuiDialog_7C019CF0(const CommonGuiInputDialogParam *param);
 /* the same as SceCommonGuiDialog_BC311DC0 */
 void SceCommonGuiDialog_11D35CB5(int dialogId);
+/* whether the video dialog's check box is checked: 0, or an error */
+int SceCommonGuiDialog_ED620EF1(int dialogId, bool *checked);
+/* shows the video player's dialog: its ID, or a negative error */
+int SceCommonGuiDialog_5B9511E9(const CommonGuiVideoDialogParam *param);
+/* the same as SceCommonGuiDialog_BC311DC0 */
+void SceCommonGuiDialog_C4601FBE(int dialogId);
 
 /*
  * The library's layouts, by their parts (1: the text, 2: a second text, 12 to 14: the buttons,
