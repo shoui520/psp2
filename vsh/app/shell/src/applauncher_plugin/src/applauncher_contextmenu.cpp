@@ -26,11 +26,10 @@
 
 using namespace paf;
 
-/* livespace_db's exports, not declared in its headers yet: a title's database row through the
-   shell's client, and the application's subtype */
+/* livespace_db's export, not declared in its headers yet: a title's database row through the
+   shell's client */
 extern "C" int SceLsdb_87EE0526(AppInfoSClient *client, const string *titleId,
 				LsdbAppInfoPtr *info);
-extern "C" int SceLsdb_298134FE(const LsdbAppInfoPtr *app);
 
 /* PLACEHOLDER: the menu's items, the indexes of its label table */
 enum {

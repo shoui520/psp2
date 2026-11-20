@@ -586,6 +586,9 @@ unsigned int SceLsdb_63C29E70(int language);
 
 /* an application's values: its title ID, its SUPPORT_URI text, whether it is a "gda" title */
 const char *sceLsdbGetName(const LsdbAppInfoPtr *app);
+/* an application's _bg_title_id text, and its subtype through the game plugin */
+const char *SceLsdb_457F369E(const LsdbAppInfoPtr *app);
+int SceLsdb_298134FE(const LsdbAppInfoPtr *app);
 const char *SceLsdb_AE60C3A5(const LsdbAppInfoPtr *app);
 bool SceLsdb_41019D89(const LsdbAppInfoPtr *app);
 int sceLsdbGetSystemVersion(const LsdbAppInfoPtr *app);

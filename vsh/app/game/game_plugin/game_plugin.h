@@ -23,15 +23,21 @@ struct GamePluginInterface {
 
 /* the plugin's functions its own files call through its interface (PLACEHOLDER names) */
 enum {
+	GAME_PLUGIN_FUNC_GET_CATEGORY_KIND = 0,	/* gamePluginGetCategoryKind (0x8102B5BA) */
 	GAME_PLUGIN_FUNC_GET_STORAGE	= 1,	/* gamePluginGetStorage (0x8102B5D8) */
 	GAME_PLUGIN_FUNC_GET_POOL	= 2,	/* gamePluginGetPool (0x8102B5F6) */
 	GAME_PLUGIN_FUNC_RELEASE_POOL	= 3,	/* gamePluginReleasePool (0x8102B6CC) */
 	GAME_PLUGIN_FUNC_APP_DIR_MOUNT	= 4,	/* gameAppDirMount (0x8102B736) */
 	GAME_PLUGIN_FUNC_APP_DIR_UNMOUNT = 5,	/* gameAppDirUnmount (0x8102B7FC) */
+	GAME_PLUGIN_FUNC_GET_JOB_QUEUE	= 8,	/* gamePluginGetJobQueue (0x8102B8AC) */
 	GAME_PLUGIN_FUNC_SET_DIALOG_HOLD = 10,	/* gamePluginSetDialogHold (0x8102B8E2) */
 	GAME_PLUGIN_FUNC_INSTALL_EX	= 13,	/* gamePluginInstallEx (0x8102C228) */
+	GAME_PLUGIN_FUNC_APP_DELETE_PART = 19,	/* gamePluginAppDeletePart (0x8102CF30) */
 	GAME_PLUGIN_FUNC_DIALOG_OPEN	= 34,	/* gc_promote's promote dialog, opened (0x810214CC) */
 	GAME_PLUGIN_FUNC_DIALOG_CLOSE	= 36,	/* and closed (0x810218A6) */
+	GAME_PLUGIN_FUNC_PLUS_SD_DELETE	= 42,	/* plusSdListDeleteAllUsers (0x8102AF02) */
+	GAME_PLUGIN_FUNC_PLUS_APP_STATUS = 44,	/* plusAppListSetStatusAllUsers (0x8102A9AC) */
+	GAME_PLUGIN_FUNC_UMASS_CHECK	= 53,	/* gamePluginUmassCheck (0x8102ED72) */
 };
 extern GamePluginInterface gamePluginInterface;
 

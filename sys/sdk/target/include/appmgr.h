@@ -75,6 +75,12 @@ int sceAppMgrIsPidShellAndCrashed(SceUID pid);
 int sceAppMgrQuitApp(int appId);
 
 /*
+ * not in the SDK: the save data of an application (its path, its save data directory, the
+ * application's ATTRIBUTE), as a 28-byte block the shell reads one word of (SceAppMgrUser)
+ */
+int sceAppMgrGetSaveDataInfo(const char *path, const char *dir, int attr, void *info);
+
+/*
  * not in the SDK: a process's application parameter (pid 0: the caller's own; id 3 its version,
  * 12 its title ID), and an application started by its URI (SceAppMgrUser, driver_us)
  */

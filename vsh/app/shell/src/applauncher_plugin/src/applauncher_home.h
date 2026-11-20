@@ -1620,6 +1620,8 @@ enum {
 	TOPMENU_PLUGIN_FUNC_ADD_LAYER		= 0,	/* PLACEHOLDER names */
 	TOPMENU_PLUGIN_FUNC_SET_APP_IMAGE	= 2,
 	TOPMENU_PLUGIN_FUNC_GET_LAYER_ROOT	= 4,
+	TOPMENU_PLUGIN_FUNC_GET_ICON_FRAME	= 8,	/* PLACEHOLDER name: an icon image's frame (a
+							   const intrusive_ptr<graph::Surface> *) */
 	TOPMENU_PLUGIN_FUNC_SET_LAUNCH_TITLE	= 12,
 	TOPMENU_PLUGIN_FUNC_GET_JOB_QUEUE	= 13,
 	TOPMENU_PLUGIN_FUNC_LAUNCH_BEGIN	= 20,	/* PLACEHOLDER names: the launch effect's */
@@ -1638,6 +1640,8 @@ enum {
 	TOPMENU_PLUGIN_FUNC_MODE_ENTER		= 52,	/* PLACEHOLDER names: an applauncher mode */
 	TOPMENU_PLUGIN_FUNC_MODE_LEAVE		= 53,	/* given to topmenu, and taken back */
 	TOPMENU_PLUGIN_FUNC_IS_WAVE_SHOWN	= 57,
+	TOPMENU_PLUGIN_FUNC_APP_DELETING	= 62,	/* PLACEHOLDER name: a title about to be
+							   deleted, its application closed */
 	TOPMENU_PLUGIN_FUNC_LIVEAREA_OPENED	= 85,
 };
 
