@@ -262,8 +262,14 @@ void *applauncherIconCaptureFolder(const paf::vector<ApplauncherFolderSurface> *
  * PLACEHOLDER: an item of a ShellSnapList, its widget snapped to by the list's scroll view
  * (the class is the shell's code at 0x8128xxxx, not written yet; fields read here only).
  */
+class ShellSnapList;
+
 class ShellSnapListItem {
 public:
+	/* the item made on the list: the template opened on its view, the widget found in it and
+	   named after the item, the list's next key taken (0x8128471E) */
+	ShellSnapListItem(paf::Plugin *plugin, ShellSnapList *list, const paf::IDParam &templateId,
+			  const paf::IDParam &widgetId);
 	/* its listeners told and freed, its widget destroyed (0x81284A4C) */
 	virtual ~ShellSnapListItem();
 	/* PLACEHOLDER names: the item snapped to by the list, and left (both empty here: the
@@ -275,11 +281,17 @@ public:
 	{
 	}
 
+	/* PLACEHOLDER name: a box of the size about its widget (or the other widget) seen on the
+	   screen, by the list's camera (0x8128472E) */
+	bool IsInView(const paf::math::v4 &size, paf::ui::Widget *other);
+
 	SceUInt32 reserved0[3];
 	paf::ui::Widget *m_widget;		/* what the view snaps to */
 	SceUInt32 reserved1[7];
 	int m_index;				/* its place in the list */
-	SceUInt32 reserved2[3];
+	SceUInt32 reserved2;
+	paf::math::v2 m_spacing;		/* PLACEHOLDER: 20,20 on an application page, 0
+						   from the list (not read yet) */
 	int m_key;				/* the key of its listeners */
 };
 
@@ -597,6 +609,8 @@ void applauncherBusyEnd(void);
  */
 /* the slots of a page */
 #define APPLAUNCHER_PAGE_SLOTS		10
+/* PLACEHOLDER: the home's pages at most */
+#define APPLAUNCHER_PAGES_MAX		10
 
 class ApplauncherPageBase {
 public:
@@ -606,15 +620,21 @@ public:
 	/* PLACEHOLDER name: the page's view shown empty, or not (0x810B7DD4) */
 	virtual void SetEmpty(bool empty);
 	virtual void Refresh(void);		/* PLACEHOLDER name */
-	virtual void reserved4(void);
-	virtual void reserved5(void);
-	virtual void reserved6(void);
-	virtual int GetIndex(void);		/* PLACEHOLDER name */
-	virtual paf::ui::Widget *GetWidget(void);
+	/* PLACEHOLDER names: the edit's page buttons: the page deleted, its theme set, and a page
+	   added after it */
+	virtual void Delete(void) = 0;
+	virtual void SetTheme(void) = 0;
+	virtual void AddPage(void) = 0;
+	virtual int GetIndex(void) = 0;		/* PLACEHOLDER name */
+	virtual paf::ui::Widget *GetWidget(void) = 0;
 	virtual bool IsOpened(void);		/* PLACEHOLDER name: the application page's opening done */
 	/* PLACEHOLDER name: where the slot's icon stands on the page */
-	virtual paf::math::v2 GetSlotPos(int slot);
-	virtual void UpdateFade(void);		/* PLACEHOLDER name: the wave's fade applied each frame */
+	virtual paf::math::v2 GetSlotPos(int slot) = 0;
+	/* PLACEHOLDER name: the wave's fade applied each frame (nothing in the base: the shell's
+	   empty function 0x814098DC) */
+	virtual void UpdateFade(void)
+	{
+	}
 
 	int m_type;				/* 1: the last, empty page */
 	paf::common::SharedPtr<ApplauncherIcon> m_slots[APPLAUNCHER_PAGE_SLOTS];
@@ -661,6 +681,15 @@ public:
 	virtual int GetIndex(void);
 	virtual paf::ui::Widget *GetWidget(void);
 	virtual paf::math::v2 GetSlotPos(int slot);
+	/* the edit's page buttons: the page deleted (0x810D4040), the theme mode entered on it
+	   from the edit (0x810D406A), and a page added after it while fewer than ten
+	   (0x810D408C) */
+	virtual void Delete(void);
+	virtual void SetTheme(void);
+	virtual void AddPage(void);
+	/* PLACEHOLDER name: the sway moved on, its place kept, the page shown while it is in
+	   view and hidden out of it, the slots' frames set in the edit (0x810D3EBE) */
+	virtual void UpdateFade(void);
 	/* PLACEHOLDER name: each icon's view pushed from below by a random sideways kick, but on a
 	   page shown in place (0x810D29D6) */
 	void KickIcons();
@@ -794,6 +823,16 @@ public:
 	ApplauncherFolderPage(const paf::common::SharedPtr<ApplauncherIcon> &icon, const char *name,
 			      bool select);
 	virtual ~ApplauncherFolderPage();
+	/* no page buttons on a folder's page (the shell's empty function 0x814098DC) */
+	virtual void Delete(void)
+	{
+	}
+	virtual void SetTheme(void)
+	{
+	}
+	virtual void AddPage(void)
+	{
+	}
 	virtual int GetIndex(void)
 	{
 		return m_index;
@@ -832,8 +871,8 @@ paf::math::v2 applauncherFolderPageGetSlotPos(int slot);
 paf::math::v2 applauncherPageGetSlotPos(int slot);
 /* PLACEHOLDER: the folder renamed (0x810D00CE, in a file not written yet) */
 void applauncherFolderRename(ApplauncherIcon *folder, paf::wstring &name);
-/* PLACEHOLDER: the timer's widget destroyed (its DestroyWidget), in a file not written yet
-   (0x810D40BC) */
+/* PLACEHOLDER name: the timer's widget destroyed (its DestroyWidget; 0x810D40BC, the home
+   page's file) */
 void applauncherDestroyWidgetCB(SceInt32 type, paf::ui::Handler *self, paf::ui::Event *e,
 				void *data);
 
@@ -1040,6 +1079,8 @@ void applauncherIconWidgetBeginDrag(ApplauncherIconView *view);
 /* the home, while the plugin runs (0x81555154) */
 extern ApplauncherHome *g_applauncherHome;
 
+/* the page taken off the home, unless it is the last; the page after it (0x810A8ABE) */
+ShellSnapList::iterator applauncherHomeDeletePage(ApplauncherPage *page);
 /* a page made from the parameters (or the theme's) and put in after the other (0x810A9812) */
 ApplauncherPage *applauncherHomeAddPage(const LsdbPage *param, ApplauncherPage *after,
 					bool focus, bool save);

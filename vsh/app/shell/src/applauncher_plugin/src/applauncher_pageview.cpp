@@ -54,8 +54,6 @@ using namespace paf;
 
 /* PLACEHOLDER: a folder's page, by its type */
 #define APPLAUNCHER_PAGE_TYPE_FOLDER		2
-/* PLACEHOLDER: the home's pages at most */
-#define APPLAUNCHER_PAGES_MAX			10
 /* PLACEHOLDER: the frames' draw object animation: their color */
 #define APPLAUNCHER_PAGE_VIEW_OBJ_COLOR		0x20300
 /* PLACEHOLDER: a folder's name's place in the edit and out of it */
@@ -508,17 +506,17 @@ static void onPageLongPress(SceInt32 type, ui::Handler *self, ui::Event *e, void
 /* the edit's buttons, the page's (0x810C5E26, 0x810C5E32, 0x810C5E3E) */
 static void onDelete(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
-	((ApplauncherPageView *)data)->m_page->reserved4();
+	((ApplauncherPageView *)data)->m_page->Delete();
 }
 
 static void onTheme(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
-	((ApplauncherPageView *)data)->m_page->reserved5();
+	((ApplauncherPageView *)data)->m_page->SetTheme();
 }
 
 static void onAdd(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
 {
-	((ApplauncherPageView *)data)->m_page->reserved6();
+	((ApplauncherPageView *)data)->m_page->AddPage();
 }
 
 /* a folder's name's edit begun: the name kept, the page's show held, its focus taken in and

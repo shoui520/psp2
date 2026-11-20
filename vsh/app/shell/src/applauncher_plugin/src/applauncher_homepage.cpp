@@ -22,6 +22,7 @@
 #include "../../../theme.h"
 #include "applauncher.h"
 #include "applauncher_home.h"
+#include "applauncher_mode.h"
 
 using namespace paf;
 
@@ -34,6 +35,14 @@ PAF_VECTOR_INLINE_DTOR(int)
 /* PLACEHOLDER: the page widget's timer that destroys it, and its time */
 #define APPLAUNCHER_HOME_PAGE_TIMER		0x0100FF00
 #define APPLAUNCHER_HOME_PAGE_DESTROY_TIME	200.0f
+/* PLACEHOLDER: the page's template and its widget in it (the folder page's), and the notice
+   page's template opened in it and its text */
+#define APPLAUNCHER_HOME_PAGE_TEMPLATE		0x795B9E68
+#define APPLAUNCHER_HOME_PAGE			0xC691233F
+#define APPLAUNCHER_HOME_PAGE_NOTICE_TEMPLATE	0xBD5B6252
+#define APPLAUNCHER_HOME_PAGE_NOTICE_TEXT	0xFDB187BB
+/* PLACEHOLDER: the spacing a page gives the list */
+#define APPLAUNCHER_HOME_PAGE_SPACING		20.0f
 /* PLACEHOLDER: the plugin's string a new folder is named with */
 #define APPLAUNCHER_HOME_PAGE_MSG_NEW_FOLDER	0xEC7F98D1
 
@@ -395,4 +404,78 @@ math::v2 ApplauncherPage::GetSlotPos(int slot)
 math::v2 applauncherPageGetSlotPos(int slot)
 {
 	return s_slotPos[slot] * g_applauncherHome->m_scale;
+}
+
+/* (0x810D3BB8) */
+ApplauncherPage::ApplauncherPage(Plugin *plugin, const LsdbPage *param, int type)
+	: ApplauncherPageBase(type),
+	  ShellSnapListItem(plugin, &g_applauncherHome->m_scroller,
+			    IDParam(APPLAUNCHER_HOME_PAGE_TEMPLATE), IDParam(APPLAUNCHER_HOME_PAGE)),
+	  m_param(*param), m_noticeText(NULL), m_prevPos(0.0f, 0.0f, 0.0f, 0.0f),
+	  m_pos(0.0f, 0.0f, 0.0f, 0.0f)
+{
+	ui::Widget *widget = m_widget;
+	math::v4 color = widget->GetColor();
+
+	m_spacing = math::v2(APPLAUNCHER_HOME_PAGE_SPACING, APPLAUNCHER_HOME_PAGE_SPACING);
+	color.set_w(0.0f);
+	widget->SetColor(color, NULL, ui::Widget::ANIM_COLOR, 0);
+
+	char id[64];
+
+	sce_paf_snprintf(id, sizeof(id), "%p", this);
+	widget->m_name.SetID(string(id));
+	if (m_type != 0) {
+		plugin->TemplateOpen(widget, IDParam(APPLAUNCHER_HOME_PAGE_NOTICE_TEMPLATE),
+				     Plugin::TemplateOpenParam());
+		m_noticeText = widget->FindChild(IDParam(APPLAUNCHER_HOME_PAGE_NOTICE_TEXT), 0);
+	}
+}
+
+/* (0x810D3EBE) */
+void ApplauncherPage::UpdateFade(void)
+{
+	m_sway.Update(this);
+	m_prevPos = m_pos;
+	m_pos = GetWidget()->GetWorldMatrix().w();
+
+	math::v4 size = *GetWidget()->GetSize(0) - math::v4(0.0f, 2.0f, 0.0f, 0.0f);
+
+	if (IsInView(size, NULL)) {
+		if (GetWidget()->m_show_alpha < 1.0f)
+			ShowWidget(GetWidget(), NULL);
+	} else if (GetWidget()->m_show_alpha > 0.0f) {
+		HideWidget(GetWidget(), NULL);
+	}
+	if (g_applauncherModeManager->m_modes[APPLAUNCHER_MODE_EDIT] != 0)
+		UpdateSlotFrames(true);
+}
+
+/* (0x810D4040) */
+void ApplauncherPage::Delete(void)
+{
+	applauncherHomeDeletePage(this);
+}
+
+/* (0x810D406A) */
+void ApplauncherPage::SetTheme(void)
+{
+	if (g_applauncherModeManager->m_currentMode == APPLAUNCHER_MODE_EDIT) {
+		g_applauncherModeManager->ChangeMode(APPLAUNCHER_MODE_SET_THEME);
+		applauncherHomeJumpTo(this);
+	}
+}
+
+/* (0x810D408C) */
+void ApplauncherPage::AddPage(void)
+{
+	if (g_applauncherHome->m_scroller.m_items.size() < APPLAUNCHER_PAGES_MAX &&
+	    g_applauncherModeManager->m_currentMode == APPLAUNCHER_MODE_EDIT)
+		applauncherHomeAddPage(NULL, this, true, true);
+}
+
+/* (0x810D40BC) */
+void applauncherDestroyWidgetCB(SceInt32 type, ui::Handler *self, ui::Event *e, void *data)
+{
+	static_cast<ui::Widget *>(self)->DestroyWidget();
 }
