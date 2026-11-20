@@ -90,7 +90,7 @@ static void chargeLedBlinkExpire(void)
 			chargeLedBlink.on = 1;
 			timerStart(CHARGE_LED_TIMER, chargeLedBlink.onTime - 1);
 		}
-		task5SetFlag(4, 0x2000);
+		task5ISetFlag(0x2000);
 		break;
 	}
 }
@@ -397,6 +397,13 @@ void chargeLedUpdate(void)
 	leds.charge.shown = leds.charge.request;
 }
 #else
+/* USS-1002 asks for the USB power where the others read status 3's factor */
+#if BOARD_USS1001 && SOURCE_0104
+#define CHARGE_LED_POWERED	chargeUsbPower()
+#else
+#define CHARGE_LED_POWERED	CHARGE_FACTOR_STATUS3
+#endif
+
 void chargeLedUpdate(void)
 {
 	unsigned char mode;
@@ -434,7 +441,7 @@ void chargeLedUpdate(void)
 			if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)
 				mode = CHARGE_LED_BLINK;
 			else if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				 (!charging && !CHARGE_FACTOR_STATUS3))
+				 (!charging && !CHARGE_LED_POWERED))
 				mode = CHARGE_LED_OFF;
 			else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 				mode = CHARGE_LED_HOST;
@@ -445,7 +452,7 @@ void chargeLedUpdate(void)
 			if (leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)
 				mode = CHARGE_LED_BLINK;
 			else if (!(leds.charge.request.value & CHARGE_LED_OFFS) &&
-				 (charging || CHARGE_FACTOR_STATUS3))
+				 (charging || CHARGE_LED_POWERED))
 				mode = CHARGE_LED_AUTO;
 			else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 				mode = CHARGE_LED_HOST;
@@ -457,7 +464,7 @@ void chargeLedUpdate(void)
 				mode = CHARGE_LED_BLINK;
 			else if (!(leds.charge.request.value & CHARGE_LED_REQUEST_HOST)) {
 				if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				    (!charging && !CHARGE_FACTOR_STATUS3))
+				    (!charging && !CHARGE_LED_POWERED))
 					mode = CHARGE_LED_OFF;
 				else
 					mode = CHARGE_LED_AUTO;
@@ -467,7 +474,7 @@ void chargeLedUpdate(void)
 		case CHARGE_LED_BLINK:
 			if (!(leds.charge.request.value & CHARGE_LED_REQUEST_BLINK)) {
 				if ((leds.charge.request.value & CHARGE_LED_OFFS) ||
-				    (!charging && !CHARGE_FACTOR_STATUS3))
+				    (!charging && !CHARGE_LED_POWERED))
 					mode = CHARGE_LED_OFF;
 				else if (leds.charge.request.value & CHARGE_LED_REQUEST_HOST)
 					mode = CHARGE_LED_HOST;
@@ -566,13 +573,13 @@ void ledUpdate(void)
 
 static void powerLedFadeHoldExpire(void)
 {
-	task5SetFlag(4, 0x0200);
+	task5ISetFlag(0x0200);
 }
 
 #if FW_SINCE(0x01000306)
 static void powerLedFadeStepExpire(void)
 {
-	task5SetFlag(4, 0x0200);
+	task5ISetFlag(0x0200);
 }
 #endif
 
