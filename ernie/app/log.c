@@ -12,18 +12,20 @@
 #include "nvs.h"
 #include "nvsreq.h"
 
-#if BOARD_DOL1001
+#if LOG_VALUES
+#if !BOARD_USS1001
 static int logQueuePush(unsigned int event, long value);
+#endif
 static int logQueuePop(unsigned int *event, long *value);
 #else
 static int logQueuePush(unsigned int event);
 static int logQueuePop(unsigned int *event);
 #endif
 
-#if BOARD_DOL1001
+#if LOG_VALUES
 /* a read that does not ask for the record's kind */
 #define LOG_READ(id, data, size)	logRead((id), (data), (size), NULL)
-#if BOARD_DOL1002
+#if LOG_0104
 static void logMigrate(unsigned int version);
 /* the header written, and taken in when written */
 #define LOG_WRITE_HEADER(result, header)				\
@@ -45,7 +47,47 @@ union LogValue {
 };
 
 static TABLE_CONST struct LogRecord logRecords[] = {
-#if BOARD_DOL1001
+#if LOG_VALUES && BOARD_USS1001
+	/* the slim's 0x0105: the slim's records, with kinds, and 0x1e to 0x26 and 0x2b */
+	{ 0x00, 0x00, 4, LOG_KIND_SET },	/* the header */
+	{ 0x01, 0x1c, 4, LOG_KIND_COUNT },
+	{ 0x02, 0x20, 4, LOG_KIND_COUNT },
+	{ 0x03, 0x08, 1, LOG_KIND_COUNT },
+	{ 0x04, 0x09, 1, LOG_KIND_COUNT },
+	{ 0x05, 0x0e, 2, LOG_KIND_COUNT },
+	{ 0x06, 0x0b, 1, LOG_KIND_COUNT },
+	{ 0x07, 0x0c, 1, LOG_KIND_COUNT },
+	{ 0x08, 0x0d, 1, LOG_KIND_COUNT },
+	{ 0x09, 0x24, 2, LOG_KIND_COUNT },
+	{ 0x0a, 0x26, 2, LOG_KIND_COUNT },
+	{ 0x0b, 0x04, 2, LOG_KIND_COUNT },
+	{ 0x0c, 0x11, 1, LOG_KIND_COUNT },
+	{ 0x0d, 0x12, 1, LOG_KIND_COUNT },
+	{ 0x0e, 0x13, 1, LOG_KIND_COUNT },
+	{ 0x0f, 0x14, 1, LOG_KIND_COUNT },
+	{ 0x10, 0x15, 1, LOG_KIND_COUNT },
+	{ 0x11, 0x16, 1, LOG_KIND_COUNT },
+	{ 0x12, 0x17, 1, LOG_KIND_COUNT },
+	{ 0x13, 0x18, 1, LOG_KIND_COUNT },
+	{ 0x14, 0x19, 1, LOG_KIND_COUNT },
+	{ 0x15, 0x1a, 1, LOG_KIND_COUNT },
+	{ 0x16, 0x1b, 1, LOG_KIND_COUNT },
+	{ 0x17, 0x06, 2, LOG_KIND_COUNT },
+	{ 0x18, 0x10, 1, LOG_KIND_COUNT },
+	{ 0x19, 0x28, 1, LOG_KIND_COUNT },
+	{ 0x1a, 0x29, 1, LOG_KIND_COUNT },
+	{ 0x1d, 0x2a, 1, LOG_KIND_COUNT },
+	{ 0x1e, 0x40, 4, LOG_KIND_OR },
+	{ 0x1f, 0x44, 2, LOG_KIND_OR },
+	{ 0x20, 0x46, 2, LOG_KIND_SET },
+	{ 0x21, 0x48, 1, LOG_KIND_COUNT },
+	{ 0x22, 0x49, 1, LOG_KIND_SET },
+	{ 0x23, 0x4a, 1, LOG_KIND_COUNT },
+	{ 0x24, 0x4b, 1, LOG_KIND_SET },
+	{ 0x25, 0x4c, 1, LOG_KIND_COUNT },
+	{ 0x26, 0x4d, 1, LOG_KIND_SET },
+	{ 0x2b, 0x52, 2, LOG_KIND_COUNT },
+#elif LOG_VALUES
 	{ 0x00, 0x00, 4, LOG_KIND_SET },	/* the header */
 	{ 0x01, 0x1c, 4, LOG_KIND_COUNT },
 	{ 0x02, 0x20, 4, LOG_KIND_COUNT },
@@ -71,7 +113,7 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 	{ 0x1b, 0x12, 2, LOG_KIND_COUNT },
 	{ 0x1c, 0x0a, 1, LOG_KIND_SET },	/* the temperature's peak (app/thermal.c) */
 	{ 0x1d, 0x2a, 1, LOG_KIND_COUNT },
-#if BOARD_DOL1002
+#if LOG_0104
 	{ 0x1e, 0x40, 4, LOG_KIND_OR },
 	{ 0x1f, 0x44, 2, LOG_KIND_OR },
 	{ 0x20, 0x46, 2, LOG_KIND_SET },
@@ -141,7 +183,7 @@ static TABLE_CONST struct LogRecord logRecords[] = {
 };
 
 static struct LogHeader logHeader;
-#if BOARD_DOL1001
+#if LOG_VALUES
 /* DOL-1001's event: a record and the value it is given */
 struct LogEvent {
 	unsigned int	id;
@@ -150,7 +192,7 @@ struct LogEvent {
 #endif
 
 static struct {
-#if BOARD_DOL1001
+#if LOG_VALUES
 	struct LogEvent	events[LOG_EVENTS];
 #else
 	unsigned int	events[LOG_EVENTS];
@@ -164,7 +206,7 @@ void logQueueInit(void)
 	unsigned char i;
 
 	for (i = 0; i < LOG_EVENTS; i++)
-#if BOARD_DOL1001
+#if LOG_VALUES
 	{
 		logQueue.events[i].id = 0xffff;
 		logQueue.events[i].value = 0;
@@ -189,11 +231,11 @@ void logInit(void)
 static void logLoad(unsigned char first)
 {
 	union LogValue record;
-#if !BOARD_DOL1002
+#if !LOG_0104
 	union LogValue old;
 #endif
 	int result;
-#if !BOARD_DOL1002
+#if !LOG_0104
 	unsigned int id;
 #endif
 	unsigned char size;
@@ -222,7 +264,7 @@ static void logLoad(unsigned char first)
 		result = (unsigned char)logSetMode(LOG_MODE_STOPPED, 0);
 		if (result != 0)
 			return;
-#if BOARD_DOL1002
+#if LOG_0104
 		logMigrate(logHeader.version);
 		record.header.version = LOG_VERSION;
 		result = logNvsWrite(LOG_HEADER, sizeof(struct LogHeader), &record);
@@ -231,7 +273,7 @@ static void logLoad(unsigned char first)
 		memmove(&logHeader, &record, sizeof(logHeader));
 #else
 		switch (logHeader.version) {
-#if BOARD_DOL1001
+#if LOG_VALUES
 		case 3:
 		case 4:
 		case 5:
@@ -303,16 +345,16 @@ static void logLoad(unsigned char first)
 void logUpdate(void)
 {
 	union LogValue record;
-#if BOARD_DOL1001
+#if LOG_VALUES
 	long value;		/* the event's */
 #endif
 	int result;
 	unsigned int id;
 	unsigned char size;
-#if BOARD_DOL1001
+#if LOG_VALUES
 	unsigned char kind;
 #endif
-#if BOARD_DOL1002
+#if LOG_0104
 	unsigned char n;
 #endif
 
@@ -345,7 +387,7 @@ void logUpdate(void)
 	case LOG_MODE_STARTED:
 		switch (logHeader.state) {
 		case LOG_STATE_RUNNING:
-#if BOARD_DOL1002
+#if LOG_0104
 			/* the queue's events, all of them at each tick */
 			for (n = 0; n < LOG_EVENTS; n++) {
 				if (logQueuePop(&id, &value) != 0)
@@ -379,7 +421,7 @@ void logUpdate(void)
 					break;
 				}
 			}
-#elif BOARD_DOL1001
+#elif LOG_VALUES
 			if (logQueuePop(&id, &value) == 0) {
 				result = logRead(id, &record, &size, &kind);
 				if (result != 0)
@@ -580,14 +622,18 @@ void logUpdate(void)
 }
 #endif
 
-#if BOARD_DOL1001
+#if LOG_VALUES
+#if BOARD_USS1001
+int logQueuePush(unsigned int event, long value)
+#else
 static int logQueuePush(unsigned int event, long value)
+#endif
 {
 	int result;
 	unsigned char i;
 
 	dis_dsp();
-#if BOARD_DOL1002
+#if LOG_0104
 	if (logHeader.mode == LOG_MODE_STOPPED)
 		result = 5;
 	else if (logQueue.count < LOG_EVENTS) {
@@ -624,10 +670,12 @@ static int logQueuePop(unsigned int *event, long *value)
 	return result;
 }
 
+#if !BOARD_USS1001
 void logEventValue(unsigned int event, long value)
 {
 	logQueuePush(event, value);
 }
+#endif
 #else
 static int logQueuePush(unsigned int event)
 {
@@ -695,7 +743,7 @@ int logStart(void)
 	struct LogHeader header;
 
 	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
-#if BOARD_DOL1002
+#if LOG_0104
 		if (logHeader.mode == LOG_MODE_STOPPED)
 			logQueueInit();
 		header.state = LOG_STATE_RUNNING;
@@ -720,7 +768,7 @@ int logHalt(void)
 	struct LogHeader header;
 
 	if (logHeader.state == LOG_STATE_IDLE || logHeader.state == LOG_STATE_RUNNING) {
-#if BOARD_DOL1002
+#if LOG_0104
 		if (logHeader.mode == LOG_MODE_STOPPED)
 			logQueueInit();
 		header.state = logHeader.state;
@@ -747,7 +795,7 @@ int logStop(void)
 	header.state = logHeader.state;
 	header.mode = LOG_MODE_STOPPED;
 	header.version = logHeader.version;
-#if BOARD_DOL1002
+#if LOG_0104
 	LOG_WRITE_HEADER(result, &header);
 #else
 	result = logWriteHeader(&header);
@@ -893,7 +941,7 @@ int logClearIfStopped(void)
 	return result;
 }
 
-#if BOARD_DOL1002
+#if LOG_0104
 int logReset(void)
 {
 	int result;
@@ -948,7 +996,7 @@ int logWriteHeader(struct LogHeader *header)
 }
 #endif
 
-#if BOARD_DOL1001
+#if LOG_VALUES
 int logRead(unsigned int id, void *data, unsigned char *size, unsigned char *kind)
 #else
 int logRead(unsigned int id, void *data, unsigned char *size)
@@ -965,7 +1013,7 @@ int logRead(unsigned int id, void *data, unsigned char *size)
 	for (i = 0; i < logRecordCount(); i++) {
 		if (logRecords[i].id == id) {
 			*size = logRecords[i].size;
-#if BOARD_DOL1001
+#if LOG_VALUES
 			if (kind != NULL)
 				*kind = logRecords[i].kind;
 #endif
@@ -979,7 +1027,7 @@ int logRead(unsigned int id, void *data, unsigned char *size)
 	if (id < LOG_IDS) {
 		/* a record this layout does not keep reads as 0 */
 		*size = 1;
-#if BOARD_DOL1001
+#if LOG_VALUES
 		memset(data, 0, *size);
 #else
 		*(unsigned char *)data = 0;
@@ -1054,7 +1102,7 @@ unsigned int logRecordCount(void)
 	return sizeof(logRecords) / sizeof(logRecords[0]);
 }
 
-#if BOARD_DOL1002
+#if LOG_0104
 /* the records a layout older than version did not keep cleared: from the first new one on */
 #define LOG_CLEAR_FROM(first)						\
 	do {								\
@@ -1063,6 +1111,77 @@ unsigned int logRecordCount(void)
 			logWrite(id, &zero);				\
 	} while (0)
 
+#if BOARD_USS1001
+/* the slim's 0x0105: the counters 1 and 2 widened to 4 bytes at their new places (layouts 0 to
+   2), layout 2's other records moved or cleared, then the records it did not have cleared */
+#define LOG_MOVE(from, fromSize, to, toSize)				\
+	do {								\
+		logNvsRead((from), (fromSize), &zero);			\
+		logNvsWrite((to), (toSize), &zero);			\
+	} while (0)
+#undef LOG_CLEAR_FROM
+#define LOG_CLEAR_FROM(first)						\
+	do {								\
+		zero.value = 0;						\
+		for (id = (first); id < LOG_IDS; id++)			\
+			logWrite(id, &zero);				\
+	} while (0)
+
+static void logMigrate(unsigned int version)
+{
+	union LogValue zero;
+	unsigned int id;
+
+	switch (version) {
+	case 0:
+	case 1:
+		zero.value = 0;
+		LOG_MOVE(0x04, 2, 0x1c, 4);
+		zero.value = 0;
+		LOG_MOVE(0x06, 2, 0x20, 4);
+		LOG_CLEAR_FROM(3);
+		break;
+	case 2:
+		zero.value = 0;
+		LOG_MOVE(0x04, 2, 0x1c, 4);
+		zero.value = 0;
+		LOG_MOVE(0x06, 2, 0x20, 4);
+		zero.value = 0;
+		logWrite(0x0b, &zero);
+		logWrite(0x17, &zero);
+		logWrite(0x18, &zero);
+		LOG_MOVE(0x0e, 1, 0x24, 2);
+		LOG_MOVE(0x0f, 1, 0x26, 2);
+		zero.word = 0;
+		LOG_MOVE(0x0a, 1, 0x0e, 2);
+		LOG_CLEAR_FROM(0x19);
+		break;
+	case 3:
+	case 4:
+	case 5:
+		LOG_CLEAR_FROM(0x19);
+		break;
+	case 6:
+	case 7:
+		LOG_CLEAR_FROM(0x1b);
+		break;
+	case 8:
+	case 9:
+		LOG_CLEAR_FROM(0x1d);
+		break;
+	case 0x10:
+	case 0x11:
+		LOG_CLEAR_FROM(0x1e);
+		break;
+	case 0x12:
+		LOG_CLEAR_FROM(0x21);
+		break;
+	case 0x20:
+		LOG_CLEAR_FROM(0x2b);
+		break;
+	}
+}
+#else
 static void logMigrate(unsigned int version)
 {
 	unsigned long zero;
@@ -1094,4 +1213,5 @@ static void logMigrate(unsigned int version)
 		break;
 	}
 }
+#endif
 #endif

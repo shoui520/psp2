@@ -6,6 +6,7 @@
 #ifndef ERNIE_TASK_H
 #define ERNIE_TASK_H
 
+#include "board.h"
 #include "kernel.h"
 
 #define TASK_PENDING_1		0x0001	/* mailbox 1 */
@@ -17,20 +18,54 @@
 
 extern __sreg unsigned int taskPending;
 
+/* the slim's 0x0105 (USS-1002): each task's setter knows its flag and takes only the pattern
+   (task<n>SetPattern), marks the task pending itself, and has a twin by iset_flg for the
+   interrupts and the timers' handlers (task<n>ISetFlag) */
+#define TASK_FLAG_SETTERS	(BOARD_USS1001 && SOURCE_0104)
+
 extern ER task1SendMessage(ID mbxid, T_MSG *msg);
+#if TASK_FLAG_SETTERS
+extern ER task2SetPattern(FLGPTN setptn);
+extern ER task2ISetFlag(FLGPTN setptn);
+extern ER task5SetPattern(FLGPTN setptn);
+extern ER task5ISetFlag(FLGPTN setptn);
+extern ER task3SetPattern(FLGPTN setptn);
+extern ER task3ISetFlag(FLGPTN setptn);
+extern ER task4SetPattern(FLGPTN setptn);
+extern ER task4ISetFlag(FLGPTN setptn);
+extern ER task6SetPattern(FLGPTN setptn);
+extern ER task6ISetFlag(FLGPTN setptn);
+/* the callers name the flag as the other builds' do */
+#define task2SetFlag(flgid, setptn)	task2SetPattern(setptn)
+#define task5SetFlag(flgid, setptn)	task5SetPattern(setptn)
+#define task3SetFlag(flgid, setptn)	task3SetPattern(setptn)
+#define task4SetFlag(flgid, setptn)	task4SetPattern(setptn)
+#define task6SetFlag(flgid, setptn)	task6SetPattern(setptn)
+#else
 extern ER task2SetFlag(ID flgid, FLGPTN setptn);
 extern ER task5SetFlag(ID flgid, FLGPTN setptn);
 extern ER task3SetFlag(ID flgid, FLGPTN setptn);
 extern ER task4SetFlag(ID flgid, FLGPTN setptn);
 extern ER task6SetFlag(ID flgid, FLGPTN setptn);
+/* the other builds' interrupts set the flags as the tasks do */
+#define task2ISetFlag(setptn)	task2SetFlag(3, setptn)
+#define task5ISetFlag(setptn)	task5SetFlag(4, setptn)
+#define task3ISetFlag(setptn)	task3SetFlag(2, setptn)
+#define task4ISetFlag(setptn)	task4SetFlag(1, setptn)
+#define task6ISetFlag(setptn)	task6SetFlag(6, setptn)
+#endif
 extern void task1Idle(void);
 extern void task2Idle(void);
 extern void task5Idle(void);
 extern void task3Idle(void);
 extern void task4Idle(void);
 extern void task6Idle(void);
+#if TASK_FLAG_SETTERS
+extern void taskPendingReset(void);
+#else
 extern void taskSetPending(unsigned int pending);
 extern void taskClearPending(unsigned int pending);
+#endif
 extern unsigned int taskGetPending(void);
 extern int taskStandbyHalt(void);
 extern unsigned int taskPending1(void);

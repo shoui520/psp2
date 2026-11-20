@@ -38,6 +38,8 @@ extern unsigned char input1Bit7Active(void);
 /* the timer of chargeUpdateSoon, below the RTC's */
 #if BOARD_DOL1001
 #define CHARGE_SOON_TIMER	0x14
+#elif BOARD_USS1001 && SOURCE_0104
+#define CHARGE_SOON_TIMER	0x0f	/* the slim's 0x0105 */
 #elif SOURCE_0103
 #define CHARGE_SOON_TIMER	0x13
 #else
@@ -56,7 +58,7 @@ __sreg union ChargeFactors chargeFactors;
 #else
 __sreg unsigned char chargeFactors;
 #endif
-#if BOARD_DOL1002
+#if CHARGE_0104
 __sreg unsigned char chargeCommand0903[2];
 #endif
 #if FW_SINCE(0x00090009)
@@ -107,7 +109,7 @@ __sreg unsigned char chargeCookieHeld;
 #endif
 #if SOURCE_0103
 __sreg unsigned char chargeManualMode;
-#if BOARD_DOL1002
+#if CHARGE_0104
 __sreg unsigned char chargeSerialMode;
 #endif
 __sreg unsigned char chargeUsbState;
@@ -186,7 +188,7 @@ void chargeInit(void)
 	chargeTempSetting = 0xc0;
 	chargeCookieHeld = 0;
 	chargeManualMode = 0;
-#if BOARD_DOL1002
+#if CHARGE_0104
 	chargeSerialMode = 0;
 #endif
 	chargeUsbState = 0;
@@ -235,6 +237,10 @@ void chargeInit(void)
 	chargeUsbHold = 0;
 	chargeVbus |= 3;
 	chargeBbmcVersion = 0;
+#if BOARD_USS1001 && SOURCE_0104
+	chargeBoostTicks = 0;
+	chargeBoost.byte = 0;
+#endif
 	chargeControl.0 = 0;
 	chargeControl.1 = 1;
 	CHARGE_FACTOR_STATUS3 = 0;
@@ -242,6 +248,9 @@ void chargeInit(void)
 	chargeTempSetting = 0x70;
 	chargeCookieHeld = 0;
 	chargeManualMode = 0;
+#if CHARGE_0104
+	chargeSerialMode = 0;
+#endif
 	chargeUsbState = 0;
 	chargeUsbWait = 0;
 	chargeUsbTicks = 0;
@@ -445,7 +454,7 @@ void chargeInit(void)
 #endif
 }
 
-#if (BOARD_USS1001 && FW_SINCE(0x01030511)) || BOARD_DOL1002
+#if (BOARD_USS1001 && FW_SINCE(0x01030511)) || CHARGE_0104
 /* the slim's (0x01030511 on) and DOL-1002 call stateTransition themselves */
 #define chargeTransition(transition)	stateTransition(transition)
 #elif SOURCE_0103	/* and the PS TV's */
@@ -1246,6 +1255,11 @@ void chargeSetPowerStatus(void)
 	powerStatus.bits.status1 = cookieStatus1.bits.status1;
 	powerStatus.bits.level = cookieStatus1.bits.level;
 	powerStatus.bits.usb = cookieStatus2.bits.usb;
+#if CHARGE_0104
+	/* the slim's 0x0105: a USB host in the serial operation's mode is a charger */
+	if (chargeSerialMode != 0 && powerStatus.bits.usb == 1)
+		powerStatus.bits.usb = 3;
+#endif
 	powerStatus.bits.supply = cookieStatus2.bits.supply;
 	powerStatus.bits.vbus1 = powerStatus.bits.vbus2 = cookieStatus2.bits.vbus;
 	if (powerStatus.bits.usb)
@@ -1254,7 +1268,11 @@ void chargeSetPowerStatus(void)
 	sleepFactorSetStatus3(CHARGE_FACTOR_STATUS3);
 	if (ac != CHARGE_FACTOR_STATUS3) {
 		if (CHARGE_FACTOR_STATUS3) {
+#if STATE_WAKE_BITS
+			if (!stateGetWakeBit(0x16))
+#else
 			if (!(stateGetWakeMask() & 0x00400000))
+#endif
 				chargeControl.0 = 1;
 		} else {
 			chargeControl.0 = 0;
@@ -1609,9 +1627,24 @@ static void chargeAlarm2(void)
 }
 #endif
 
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105: alarm 3, held on from the start, off once its temperature is reached; on, it
+   moves state 0x20 on (transition 0x3b) */
+static void chargeAlarm3(void)
+{
+	if (charge.alarms[3].flags.bits.on) {
+		charge.alarmsOn.bits.alarm3 = 0;
+	} else {
+		charge.alarmsOn.bits.alarm3 = 1;
+		if (stateGet() == 0x20)
+			stateTransition(0x3b);
+	}
+}
+#else
 static void chargeAlarm3(void)
 {
 }
+#endif
 
 void chargeAlarmInit(void)
 {
@@ -1635,6 +1668,9 @@ void chargeAlarmInit(void)
 	charge.alarms[3].flags.byte = 0;
 	charge.alarms[3].since = 0;
 	charge.alarms[3].handler = chargeAlarm3;
+#if BOARD_USS1001 && SOURCE_0104
+	charge.alarms[3].flags.byte |= 0x07;	/* on, and over at the last checks */
+#endif
 	handler.handler = chargeAlarm0Timer;
 	timerSetHandler(TIMER_RTC(0x1d), &handler);
 }
@@ -1657,7 +1693,7 @@ void chargeTimer(void)
 		timerStart(TIMER_RTC(0x17), 1);
 	else
 		timerStart(TIMER_RTC(0x17), charge.acDelay);
-	task5SetFlag(4, 0x0020);
+	task5ISetFlag(0x0020);
 }
 
 #if FW_SINCE(0x01000104)
@@ -1698,9 +1734,9 @@ void chargeUpdateSoon(void)
 	if (!input1Bit7Active())
 		chargeUsbMode = 0;
 #endif
-	task5SetFlag(4, 0x0020);
+	task5ISetFlag(0x0020);
 #if FW_SINCE(0x00090206) && !BOARD_DOL1001	/* 0x00090009 and the PS TV have no flag 0x1000 */
-	task5SetFlag(4, 0x1000);
+	task5ISetFlag(0x1000);
 #endif
 }
 
@@ -1726,16 +1762,29 @@ void chargeUsbChanged(void)
 	inputChanged();
 	if (chargeUsbState.0) {
 		stateTransition(0x62);
+#if BOARD_USS1001 && SOURCE_0104
+		chargeUsbWait = 0x13;	/* the slim's 0x0105: the timer in ticks */
+#else
 		chargeUsbWait = 0x14;
+#endif
 		chargeUsbTicks = 0x19;
 	} else {
 		chargeUsbMode = 0;
 		chargeUsbHold = 0;
 		chargeBoost.bits.running = 0;
+#if CHARGE_0104
+		chargeSerialMode = 0;
+		chargeUsbWait = 3;
+#else
 		chargeUsbWait = 4;
+#endif
 		chargeUsbTicks = 3;
 	}
+#if BOARD_USS1001 && SOURCE_0104
+	timerStart(CHARGE_SOON_TIMER, chargeUsbTicks);
+#else
 	timerStart(CHARGE_SOON_TIMER, (chargeUsbTicks >> 2) + ((chargeUsbTicks & 3) ? 1 : 0));
+#endif
 }
 #endif
 
@@ -1743,7 +1792,7 @@ void chargeUsbChanged(void)
    chargeUsbMode's */
 unsigned char chargeSetCurrent(void)
 {
-#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || BOARD_DOL1002
+#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || CHARGE_0104
 	unsigned char current;
 	unsigned char result;
 #else
@@ -1751,12 +1800,12 @@ unsigned char chargeSetCurrent(void)
 	unsigned char current;
 #endif
 
-#if (!FW_SINCE(0x01030511) || BOARD_DOL1001) && !BOARD_DOL1002
+#if (!FW_SINCE(0x01030511) || BOARD_DOL1001) && !CHARGE_0104
 	unsigned char adjust;
 #endif
 
 	current = 0x10;
-#if BOARD_DOL1002
+#if CHARGE_0104
 	/* DOL-1002's: the dongle's and debug board's setting from the settings unless the serial
 	   mode is set, a level 2 multi-connector's fixed, the USB status's in chargeUsbCurrent */
 	if (chargeUsbDongle() || chargeUsbDebug()) {
@@ -1765,7 +1814,7 @@ unsigned char chargeSetCurrent(void)
 		else
 			current = configGet()->chargeDongleCurrent;
 	} else if (chargeUsbMultiCn2()) {
-		current = 0xc0;
+		current = BOARD_DOL1001 ? 0xc0 : 0x70;	/* the slim's 0x0105: 0x70 */
 	} else {
 		current = chargeUsbCurrent();
 	}
@@ -1823,7 +1872,7 @@ unsigned char chargeSetCurrent(void)
 	return result;
 }
 
-#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || BOARD_DOL1002
+#if (FW_SINCE(0x01030511) && !BOARD_DOL1001) || CHARGE_0104
 unsigned char chargeUsbCurrent(void)
 {
 	unsigned char current;
@@ -2021,7 +2070,11 @@ int chargeMayStart(void)
 
 int chargeAlarm0On(void)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	if (charge.alarmsOn.byte & 0x09)	/* the slim's 0x0105: or alarm 3 */
+#else
 	if (charge.alarmsOn.byte & 0x01)
+#endif
 		return 1;
 	return 0;
 }
@@ -2081,7 +2134,7 @@ char chargeBatteryLevel9(void)
 #endif
 #endif
 
-#if BOARD_DOL1002
+#if CHARGE_0104
 /* DOL-1002's, which nothing calls: the battery charged enough, its remaining capacity 400 and its
    voltage 3500 (with a USB charger: any) */
 int chargeBatteryReady(void)
@@ -2141,6 +2194,14 @@ void chargeSetBattery(void)
 
 	setting = configGet()->batterySetting;
 	if (deviceVersions.battery.id != 0xffff) {
+#if BOARD_USS1001
+		/* the slim's 0x0105: 0x60 for a battery version below 0x100, else the setting's */
+		switch (deviceVersions.battery.version[2] & 0xff00) {
+		case 0x0000:
+			setting = 0x60;
+			break;
+		}
+#else
 		switch (deviceVersions.battery.version[2] & 0xfff0) {
 		case 0x00:
 		case 0x10:
@@ -2158,6 +2219,7 @@ void chargeSetBattery(void)
 			setting = 0xc0;
 			break;
 		}
+#endif
 		cookieCtrlReg7(setting);
 	}
 }
@@ -2224,7 +2286,7 @@ void chargeTimerStart(unsigned int ticks)
 	timerStart(TIMER_RTC(0x17), ticks);
 }
 
-#if BOARD_DOL1002
+#if CHARGE_0104
 /* DOL-1002's: off, or (on) the update restarted after its period and run */
 void chargeTimerSet(unsigned char on)
 {
@@ -2333,7 +2395,7 @@ unsigned char chargeUsbDebug(void)
 	return 0;
 }
 
-#if BOARD_DOL1002
+#if CHARGE_0104
 unsigned char chargeUsbMultiCn2(void)
 {
 	return 0;
@@ -2352,7 +2414,11 @@ unsigned char chargeUsbPower(void)
 {
 	return cookieStatus2.bits.vbus &&
 	       (powerStatus.bits.usb == 2 || powerStatus.bits.usb == 3 || powerStatus.bits.usb == 5 ||
+#if BOARD_MULTICN_LEVELS
+		powerStatus.bits.usb == 6 || chargeUsbMultiCn2() || chargeUsbDongle());
+#else
 		powerStatus.bits.usb == 6 || chargeUsbMultiCn2());
+#endif
 }
 
 /* the USB connected, and the multi-connector's dongle, its debug board, its level 2 */
@@ -2374,7 +2440,11 @@ unsigned char chargeUsbDebug(void)
 
 unsigned char chargeUsbMultiCn2(void)
 {
+#if BOARD_MULTICN_LEVELS
+	if (chargeUsbState.0 && boardMultiCnIsLevel2())
+#else
 	if (chargeUsbState.0 && analogGetMultiCn() == 2)
+#endif
 		return 1;
 	return 0;
 }
@@ -2409,7 +2479,11 @@ unsigned char chargeUsbIs1(void)
 #if FW_SINCE(0x01030511)
 	       !chargeUsbDebug() &&
 #endif
+#if BOARD_MULTICN_LEVELS
+	       !chargeUsbMultiCn2() && !boardMultiCnIsUnread();
+#else
 	       !chargeUsbMultiCn2() && analogGetMultiCn() != 0xfe;
+#endif
 }
 #else
 int chargeUsbIs1(void)
@@ -2464,7 +2538,7 @@ unsigned char chargeSetManualMode(unsigned char on)
 	return result;
 }
 
-#if BOARD_DOL1002
+#if CHARGE_0104
 /* DOL-1002's serial operation: a new mode drops the last status registers and has task 5 read
    the charge again (event 0x20); 0 */
 unsigned char chargeSetSerialMode(unsigned char mode)
@@ -2589,7 +2663,7 @@ void chargeUsbModeUpdate(void)
 	}
 }
 
-#if BOARD_DOL1002
+#if CHARGE_0104
 /* a supply current at most chargeCookieSetting and chargeTempSetting */
 unsigned char chargeLimitCurrent(unsigned char current)
 {

@@ -473,6 +473,8 @@ void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off
 	powerLedFlags.hostOn = on;
 	powerLedFlags.hostOff = off;
 }
+#elif BOARD_USS1001 && SOURCE_0104
+#define POWER_LED_TIMER		0x11	/* the slim's 0x0105 */
 #else
 #define POWER_LED_TIMER		0x14
 

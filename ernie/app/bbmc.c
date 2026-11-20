@@ -1100,7 +1100,7 @@ unsigned char bbmcGetPending(void)
 	return bbmc.pending;
 }
 
-#if FW_SINCE(0x00090009) /* not in 0x00080504 */
+#if FW_SINCE(0x00090009) && !(BOARD_USS1001 && SOURCE_0104) /* not in 0x00080504 */
 /* 0 without a version, 1 for versions 0-2, else 2 */
 unsigned char bbmcGetVersion(void)
 {

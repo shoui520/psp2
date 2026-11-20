@@ -314,6 +314,14 @@ extern unsigned char boardGetMultiCnOutput(void);
 extern unsigned char boardSetMultiCnOutput(unsigned char output);
 extern unsigned char boardMultiCnStop(void);
 extern unsigned char boardMultiCnIsDongle(void);
+/* the slim's 0x0105 (USS-1002) tests the multi-connector's levels in multicn.c */
+#define BOARD_MULTICN_LEVELS	(BOARD_USS1001 && SOURCE_0104)
+#if BOARD_MULTICN_LEVELS
+extern unsigned char boardMultiCnIsLevel2(void);
+extern unsigned char boardMultiCnIsNone(void);
+extern unsigned char boardMultiCnIsLevel0(void);
+extern unsigned char boardMultiCnIsUnread(void);
+#endif
 #if SOURCE_0103
 extern unsigned char boardMultiCnPower(unsigned char on);
 extern unsigned char boardMultiCnSetSwitch(unsigned char value);

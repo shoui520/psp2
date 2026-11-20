@@ -10,6 +10,11 @@
 #include "ernie.h"
 #include "board.h"
 
+/* the log of 0x0104 (DOL-1002's, also the slim's 0x0105: USS-1002) */
+#define LOG_0104		(SOURCE_0104 && (BOARD_DOL1001 || BOARD_USS1001))
+/* events with a value, and records with a kind (DOL-1001's, and the 0x0104 log) */
+#define LOG_VALUES		(BOARD_DOL1001 || LOG_0104)
+
 #if SOURCE_0103
 /* the slim's, a constant of the version block (0xf40, app/version.c) */
 extern const unsigned int logVersion;
@@ -20,7 +25,10 @@ extern const unsigned int logVersion;
 #define LOG_VERSION		2
 #endif
 #define LOG_HEADER		0	/* the header's record */
-#if BOARD_DOL1002
+#if LOG_0104 && BOARD_USS1001
+#define LOG_IDS			0x2c	/* the slim's 0x0105: the records' ids are below it */
+#define LOG_EVENTS		5	/* the events queued */
+#elif LOG_0104
 #define LOG_IDS			0x2b	/* DOL-1002's: the records' ids are below it */
 #define LOG_EVENTS		5	/* the events queued */
 #else
@@ -61,12 +69,12 @@ struct LogRecord {
 	unsigned int	id;
 	unsigned int	offset;
 	unsigned char	size;
-#if BOARD_DOL1001
+#if LOG_VALUES
 	unsigned char	kind;		/* LOG_KIND_*: what an event does to it */
 #endif
 };
 
-#if BOARD_DOL1001
+#if LOG_VALUES
 /* DOL-1001's record kinds */
 #define LOG_KIND_COUNT		1	/* a counter: an event adds one */
 #define LOG_KIND_SET		2	/* an event's value replaces it */
@@ -76,7 +84,12 @@ struct LogRecord {
 extern void logQueueInit(void);
 extern void logInit(void);
 extern void logUpdate(void);
-#if BOARD_DOL1001
+#if LOG_VALUES && BOARD_USS1001
+/* the slim's 0x0105 queues the events itself (5: the log is stopped or the queue full) */
+extern int logQueuePush(unsigned int event, long value);
+#define logEventValue(event, value)	logQueuePush((event), (value))
+#define logEvent(event)		logQueuePush((event), 0)
+#elif LOG_VALUES
 /* DOL-1001's events give their record a value: counted (0), set or or'ed by the record's kind */
 extern void logEventValue(unsigned int event, long value);
 #define logEvent(event)		logEventValue((event), 0)
@@ -96,14 +109,14 @@ extern int logReadData(unsigned int id, void *data, unsigned char *size);
 extern int logReadOffset(unsigned int offset, unsigned char size, void *data);
 extern int logClear(unsigned int id);
 extern int logClearIfStopped(void);
-#if !BOARD_DOL1002
+#if !LOG_0104
 extern int logSetVersion(unsigned int version);
 #endif
 extern int logReset(void);
-#if !BOARD_DOL1002
+#if !LOG_0104
 extern int logWriteHeader(struct LogHeader *header);
 #endif
-#if BOARD_DOL1001
+#if LOG_VALUES
 extern int logRead(unsigned int id, void *data, unsigned char *size, unsigned char *kind);
 #else
 extern int logRead(unsigned int id, void *data, unsigned char *size);

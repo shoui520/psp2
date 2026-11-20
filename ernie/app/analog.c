@@ -26,6 +26,7 @@
 #include "nvsreq.h"
 #include "sleepfactor.h"
 #include "task.h"
+#include "timer.h"
 
 #define LENGTH(list)	(sizeof(list) / sizeof((list)[0]))
 
@@ -392,6 +393,64 @@ void analogAxesReset(void)
 	analogAxes[2].medianSnapshot.check = 0x7fff;
 	analogAxes[3].medianSnapshot.check = 0x7fff;
 #endif
+#if ANALOG_OUTPUT_LIMITS
+	analogAxes[0].outputFault[0].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].fault.noise = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].fault.low = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].fault.high = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[0].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[0].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[0].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[1].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[1].outputFault[1].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[2].outputFault[1].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].snapshot.samples[0] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].snapshot.samples[1] = ANALOG_SAMPLE_CENTER;
+	analogAxes[3].outputFault[1].snapshot.samples[2] = ANALOG_SAMPLE_CENTER;
+	analogAxes[0].outputFault[0].snapshot.check = 0x7fff;
+	analogAxes[1].outputFault[0].snapshot.check = 0x7fff;
+	analogAxes[2].outputFault[0].snapshot.check = 0x7fff;
+	analogAxes[3].outputFault[0].snapshot.check = 0x7fff;
+	analogAxes[0].outputFault[1].snapshot.check = 0x7fff;
+	analogAxes[1].outputFault[1].snapshot.check = 0x7fff;
+	analogAxes[2].outputFault[1].snapshot.check = 0x7fff;
+	analogAxes[3].outputFault[1].snapshot.check = 0x7fff;
+#endif
 }
 #endif
 
@@ -749,6 +808,55 @@ void analogInput10Init(void)
 #if BOARD_USS1001 || BOARD_DOL1001
 /* converts the inputs (inputKeys' bits) asked and on: the sticks (0x0002), the multi
    connector (0x0010; DOL-1001's 0x0020); 1 if the converter is busy */
+#if ADC_AVERAGE
+/* the slim's 0x0105: the sticks once each, the multi connector once, input 0x0080's channels
+   eight times each with P7.7 high */
+unsigned char analogStart(unsigned int inputs)
+{
+	struct AdcRequest request;
+	unsigned char busy;
+	unsigned char step;
+
+	busy = 0;
+	request.mask = 0;
+	request.skip = 1;
+	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
+		request.mask |= 0x000f;
+		request.conversions[0] = 1;
+		request.conversions[1] = 1;
+		request.conversions[2] = 1;
+		request.conversions[3] = 1;
+		request.skip = 0;
+	}
+	if ((inputs & 0x0010) && (inputKeys.state & 0x0010)) {
+		request.mask |= 0x0010;
+		request.conversions[4] = 1;
+	}
+	if ((inputs & 0x0080) && (inputKeys.state & 0x0080)) {
+		DI();
+		step = inputMeasure.step;
+		EI();
+		switch (step) {
+		case 1:
+			request.mask |= 0x0060;
+			request.conversions[5] = 8;
+			request.conversions[6] = 8;
+			break;
+		case 0:
+			request.mask |= 0x0080;
+			request.conversions[7] = 8;
+			break;
+		}
+		P7.7 = 1;
+		if (request.skip < 2)
+			request.skip = 2;
+	}
+	busy = adcStart(&request);
+	if (busy)
+		return 1;
+	return 0;
+}
+#else
 unsigned char analogStart(unsigned int inputs)
 {
 	unsigned char mask;
@@ -786,6 +894,7 @@ unsigned char analogStart(unsigned int inputs)
 		return 1;
 	return 0;
 }
+#endif
 #else
 /* converts the inputs (inputKeys' bits) asked: the sticks (0x0002, powered by P9.7), the multi
    connector (0x0020); 1 if the converter is busy */
@@ -845,6 +954,10 @@ unsigned char analogStart(unsigned int inputs)
    a new one */
 void analogEvent(unsigned int inputs)
 {
+#if INPUT_MEASURE
+	unsigned char step;
+
+#endif
 	if ((inputs & 0x0002) && (inputKeys.state & 0x0002)) {
 #if ANALOG_LIMITS
 		analogAxes[0].samples[analogSample] = adcResults[0];
@@ -897,6 +1010,44 @@ void analogEvent(unsigned int inputs)
 			inputScanHold(5);
 		analogInput10.previous = analogInput10.level;
 	}
+#if INPUT_MEASURE
+	if ((inputs & 0x0080) && (inputKeys.state & 0x0080)) {
+		P7.7 = 0;
+		analogStop80();
+		DI();
+		step = inputMeasure.step;
+		EI();
+		switch (step) {
+		case 1:
+			if (adcCounts[5] == 8) {
+				inputMeasure.sum[0] += (unsigned int)adcResults[5];
+				inputMeasure.count[0]++;
+			}
+			if (adcCounts[6] == 8) {
+				inputMeasure.sum[1] += (unsigned int)adcResults[6];
+				inputMeasure.count[1]++;
+			}
+			break;
+		case 0:
+			if (adcCounts[7] == 8) {
+				inputMeasure.sum[2] += (unsigned int)adcResults[7];
+				inputMeasure.count[2]++;
+			}
+			break;
+		}
+		if (inputMeasure.done && step == 0) {
+			timerGetRtcTicks(&inputMeasure.ticks);
+			if (inputMeasure.count[0] != 0)
+				inputMeasure.average[0] = inputMeasure.sum[0] / inputMeasure.count[0];
+			if (inputMeasure.count[1] != 0)
+				inputMeasure.average[1] = inputMeasure.sum[1] / inputMeasure.count[1];
+			if (inputMeasure.count[2] != 0)
+				inputMeasure.average[2] = inputMeasure.sum[2] / inputMeasure.count[2];
+			task5SetFlag(4, 0x0040);
+			inputMeasure.done = 0;
+		}
+	}
+#endif
 }
 #else
 /* the conversions of the inputs asked ended: the sticks' samples taken and scaled, the multi
@@ -1155,6 +1306,13 @@ void analogScale00(unsigned int position)
 	if (position < analogAxes[0].output[0].low)
 		position = analogAxes[0].output[0].low;
 	analogAxes[0].output[0].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[0].output[0].position & 0x003f) || analogAxes[0].limitMin >= analogAxes[0].output[0].position ||
+	    analogAxes[0].output[0].position >= analogAxes[0].limitMax)
+		analogFault(analogAxes[0].output[0].position, &analogAxes[0], &analogAxes[0].outputFault[0].fault,
+			    &analogAxes[0].outputFault[0].snapshot);
+	else
+#endif
 	if (analogAxes[0].output[0].position != analogAxes[0].output[0].last && analogAxes[0].calibrated == 1) {
 		analogAxes[0].output[0].last = analogAxes[0].output[0].position;
 		analogWorkLow = analogAxes[0].output[0].last - analogAxes[0].output[0].low;
@@ -1203,6 +1361,13 @@ void analogScale01(unsigned int position)
 	if (position < analogAxes[0].output[1].low)
 		position = analogAxes[0].output[1].low;
 	analogAxes[0].output[1].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[0].output[1].position & 0x003f) || analogAxes[0].limitMin >= analogAxes[0].output[1].position ||
+	    analogAxes[0].output[1].position >= analogAxes[0].limitMax)
+		analogFault(analogAxes[0].output[1].position, &analogAxes[0], &analogAxes[0].outputFault[1].fault,
+			    &analogAxes[0].outputFault[1].snapshot);
+	else
+#endif
 	if (analogAxes[0].output[1].position != analogAxes[0].output[1].last && analogAxes[0].calibrated == 1) {
 		analogAxes[0].output[1].last = analogAxes[0].output[1].position;
 		analogWorkLow = analogAxes[0].output[1].last - analogAxes[0].output[1].low;
@@ -1300,6 +1465,13 @@ void analogScale10(unsigned int position)
 	if (position < analogAxes[1].output[0].low)
 		position = analogAxes[1].output[0].low;
 	analogAxes[1].output[0].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[1].output[0].position & 0x003f) || analogAxes[1].limitMin >= analogAxes[1].output[0].position ||
+	    analogAxes[1].output[0].position >= analogAxes[1].limitMax)
+		analogFault(analogAxes[1].output[0].position, &analogAxes[1], &analogAxes[1].outputFault[0].fault,
+			    &analogAxes[1].outputFault[0].snapshot);
+	else
+#endif
 	if (analogAxes[1].output[0].position != analogAxes[1].output[0].last && analogAxes[1].calibrated == 1) {
 		analogAxes[1].output[0].last = analogAxes[1].output[0].position;
 		analogWorkLow = analogAxes[1].output[0].last - analogAxes[1].output[0].low;
@@ -1348,6 +1520,13 @@ void analogScale11(unsigned int position)
 	if (position < analogAxes[1].output[1].low)
 		position = analogAxes[1].output[1].low;
 	analogAxes[1].output[1].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[1].output[1].position & 0x003f) || analogAxes[1].limitMin >= analogAxes[1].output[1].position ||
+	    analogAxes[1].output[1].position >= analogAxes[1].limitMax)
+		analogFault(analogAxes[1].output[1].position, &analogAxes[1], &analogAxes[1].outputFault[1].fault,
+			    &analogAxes[1].outputFault[1].snapshot);
+	else
+#endif
 	if (analogAxes[1].output[1].position != analogAxes[1].output[1].last && analogAxes[1].calibrated == 1) {
 		analogAxes[1].output[1].last = analogAxes[1].output[1].position;
 		analogWorkLow = analogAxes[1].output[1].last - analogAxes[1].output[1].low;
@@ -1445,6 +1624,13 @@ void analogScale20(unsigned int position)
 	if (position < analogAxes[2].output[0].low)
 		position = analogAxes[2].output[0].low;
 	analogAxes[2].output[0].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[2].output[0].position & 0x003f) || analogAxes[2].limitMin >= analogAxes[2].output[0].position ||
+	    analogAxes[2].output[0].position >= analogAxes[2].limitMax)
+		analogFault(analogAxes[2].output[0].position, &analogAxes[2], &analogAxes[2].outputFault[0].fault,
+			    &analogAxes[2].outputFault[0].snapshot);
+	else
+#endif
 	if (analogAxes[2].output[0].position != analogAxes[2].output[0].last && analogAxes[2].calibrated == 1) {
 		analogAxes[2].output[0].last = analogAxes[2].output[0].position;
 		analogWorkLow = analogAxes[2].output[0].last - analogAxes[2].output[0].low;
@@ -1493,6 +1679,13 @@ void analogScale21(unsigned int position)
 	if (position < analogAxes[2].output[1].low)
 		position = analogAxes[2].output[1].low;
 	analogAxes[2].output[1].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[2].output[1].position & 0x003f) || analogAxes[2].limitMin >= analogAxes[2].output[1].position ||
+	    analogAxes[2].output[1].position >= analogAxes[2].limitMax)
+		analogFault(analogAxes[2].output[1].position, &analogAxes[2], &analogAxes[2].outputFault[1].fault,
+			    &analogAxes[2].outputFault[1].snapshot);
+	else
+#endif
 	if (analogAxes[2].output[1].position != analogAxes[2].output[1].last && analogAxes[2].calibrated == 1) {
 		analogAxes[2].output[1].last = analogAxes[2].output[1].position;
 		analogWorkLow = analogAxes[2].output[1].last - analogAxes[2].output[1].low;
@@ -1646,6 +1839,13 @@ void analogScale30(unsigned int position)
 	if (position < analogAxes[3].output[0].low)
 		position = analogAxes[3].output[0].low;
 	analogAxes[3].output[0].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[3].output[0].position & 0x003f) || analogAxes[3].limitMin >= analogAxes[3].output[0].position ||
+	    analogAxes[3].output[0].position >= analogAxes[3].limitMax)
+		analogFault(analogAxes[3].output[0].position, &analogAxes[3], &analogAxes[3].outputFault[0].fault,
+			    &analogAxes[3].outputFault[0].snapshot);
+	else
+#endif
 	if (analogAxes[3].output[0].position != analogAxes[3].output[0].last && analogAxes[3].calibrated == 1) {
 		analogAxes[3].output[0].last = analogAxes[3].output[0].position;
 		analogWorkLow = analogAxes[3].output[0].last - analogAxes[3].output[0].low;
@@ -1694,6 +1894,13 @@ void analogScale31(unsigned int position)
 	if (position < analogAxes[3].output[1].low)
 		position = analogAxes[3].output[1].low;
 	analogAxes[3].output[1].position = position;
+#if ANALOG_OUTPUT_LIMITS
+	if ((analogAxes[3].output[1].position & 0x003f) || analogAxes[3].limitMin >= analogAxes[3].output[1].position ||
+	    analogAxes[3].output[1].position >= analogAxes[3].limitMax)
+		analogFault(analogAxes[3].output[1].position, &analogAxes[3], &analogAxes[3].outputFault[1].fault,
+			    &analogAxes[3].outputFault[1].snapshot);
+	else
+#endif
 	if (analogAxes[3].output[1].position != analogAxes[3].output[1].last && analogAxes[3].calibrated == 1) {
 		analogAxes[3].output[1].last = analogAxes[3].output[1].position;
 		analogWorkLow = analogAxes[3].output[1].last - analogAxes[3].output[1].low;
@@ -2514,7 +2721,8 @@ void analogFilter3(void)
 }
 #endif
 
-/* the median of three samples (never called) */
+/* the median of three samples (never called; the slim's 0x0105 has none) */
+#if !ADC_AVERAGE
 #if FW_SINCE(0x00090206)
 unsigned int analogMedian(unsigned int *samples)
 #else
@@ -2540,6 +2748,7 @@ unsigned int analogMedian(unsigned int __far *samples)
 	}
 	return median;
 }
+#endif
 
 /* the level of the first of count levels whose limit the input reaches; 0xff if none */
 unsigned char analogLevelFind(unsigned char input, const struct AnalogLevel *levels,
@@ -2747,6 +2956,35 @@ void analogStop10(void)
 	EI();
 	adcCloseForBoard();
 }
+
+#if INPUT_MEASURE
+void analogStart80(void)
+{
+	DI();
+	inputKeys.state |= 0x0080;
+	EI();
+	adcOpenForBoard();
+}
+
+void analogStop80(void)
+{
+	DI();
+	inputKeys.state &= ~0x0080;
+	EI();
+	adcCloseForBoard();
+}
+
+/* the averages and their RTC ticks */
+void analogGetMeasure(struct AnalogMeasure *out)
+{
+	dis_dsp();
+	out->ani7 = inputMeasure.average[0];
+	out->ani8 = inputMeasure.average[1];
+	out->ani9 = inputMeasure.average[2];
+	out->ticks = inputMeasure.ticks;
+	ena_dsp();
+}
+#endif
 #else
 void analogMultiCnStop(void)
 {
@@ -2925,6 +3163,44 @@ void analogGetSampleFaults(unsigned char *out)
 	memcpy(&out[0x10], &analogAxes[2].sampleFault, sizeof(struct AnalogFault));
 	memcpy(&out[0x18], &analogAxes[3].sampleFault, sizeof(struct AnalogFault));
 }
+
+#if ANALOG_OUTPUT_LIMITS
+/* each axis's set 0 positions outside the limits */
+void analogGetSet0Faults(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].outputFault[0].fault, sizeof(struct AnalogFault));
+	memcpy(&out[8], &analogAxes[1].outputFault[0].fault, sizeof(struct AnalogFault));
+	memcpy(&out[0x10], &analogAxes[2].outputFault[0].fault, sizeof(struct AnalogFault));
+	memcpy(&out[0x18], &analogAxes[3].outputFault[0].fault, sizeof(struct AnalogFault));
+}
+
+/* the samples of each axis's set 0 fault */
+void analogGetSet0Snapshots(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].outputFault[0].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[8], &analogAxes[1].outputFault[0].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x10], &analogAxes[2].outputFault[0].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x18], &analogAxes[3].outputFault[0].snapshot, sizeof(struct AnalogSnapshot));
+}
+
+/* each axis's set 1 positions outside the limits */
+void analogGetSet1Faults(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].outputFault[1].fault, sizeof(struct AnalogFault));
+	memcpy(&out[8], &analogAxes[1].outputFault[1].fault, sizeof(struct AnalogFault));
+	memcpy(&out[0x10], &analogAxes[2].outputFault[1].fault, sizeof(struct AnalogFault));
+	memcpy(&out[0x18], &analogAxes[3].outputFault[1].fault, sizeof(struct AnalogFault));
+}
+
+/* the samples of each axis's set 1 fault */
+void analogGetSet1Snapshots(unsigned char *out)
+{
+	memcpy(&out[0], &analogAxes[0].outputFault[1].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[8], &analogAxes[1].outputFault[1].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x10], &analogAxes[2].outputFault[1].snapshot, sizeof(struct AnalogSnapshot));
+	memcpy(&out[0x18], &analogAxes[3].outputFault[1].snapshot, sizeof(struct AnalogSnapshot));
+}
+#endif
 #endif
 #endif
 

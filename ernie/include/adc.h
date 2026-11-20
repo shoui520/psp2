@@ -21,7 +21,12 @@
 #else
 #define ADC_FIRST_CHANNEL	0x0b
 #endif
-#if BOARD_USS1001
+/* the slim's 0x0105 (USS-1002): ANI2-ANI9, each converted a request's number of times and
+   averaged (struct AdcRequest) */
+#define ADC_AVERAGE		(BOARD_USS1001 && SOURCE_0104)
+#if ADC_AVERAGE
+#define ADC_CHANNELS		8
+#elif BOARD_USS1001
 #define ADC_CHANNELS		5
 #define ADC_START_END		0x07	/* adcStart's search stops there, adcInterrupt's at 0x10 */
 #else
@@ -38,11 +43,28 @@
 #define ADC_CHANNEL_BIT(channel)	(1 << ((channel) - 8))
 #endif
 
+#if ADC_AVERAGE
+/* what adcStart converts: the channels of mask (bit 0 for channel 2), each conversions[] times
+   (0 as 1), after skip conversions thrown away */
+struct AdcRequest {
+	unsigned int	mask;
+	unsigned char	conversions[ADC_CHANNELS];
+	unsigned char	skip;
+};
+
+extern __near unsigned long adcResults[ADC_CHANNELS];	/* the sums, then the averages */
+extern __near unsigned char adcCounts[ADC_CHANNELS];	/* the conversions added */
+#else
 extern __near unsigned int adcResults[ADC_CHANNELS];	/* channel 15 first (the slim's: 2) */
+#endif
 
 extern void adcOpen(void);
 extern void adcClose(void);
+#if ADC_AVERAGE
+extern unsigned char adcStart(const struct AdcRequest *request);
+#else
 extern unsigned char adcStart(unsigned char mask, int skip);
+#endif
 extern void adcOpenForBoard(void);
 extern void adcCloseForBoard(void);
 

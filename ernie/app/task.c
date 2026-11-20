@@ -29,11 +29,205 @@ ER task1SendMessage(ID mbxid, T_MSG *msg)
 
 	dis_dsp();
 	ercd = snd_mbx((unsigned char)mbxid, msg);
+#if TASK_FLAG_SETTERS
+	taskPending |= TASK_PENDING_1;
+#else
 	taskSetPending(TASK_PENDING_1);
+#endif
 	ena_dsp();
 	return ercd;
 }
 
+#if TASK_FLAG_SETTERS
+ER task2SetPattern(FLGPTN setptn)
+{
+	ER ercd;
+
+	dis_dsp();
+	ercd = set_flg(3, setptn);
+	taskPending |= TASK_PENDING_2;
+	ena_dsp();
+	return ercd;
+}
+
+ER task2ISetFlag(FLGPTN setptn)
+{
+	taskPending |= TASK_PENDING_2;
+	return iset_flg(3, setptn);
+}
+
+ER task5SetPattern(FLGPTN setptn)
+{
+	ER ercd;
+
+	dis_dsp();
+	ercd = set_flg(4, setptn);
+	iicaInit();
+	taskPending |= TASK_PENDING_5;
+	ena_dsp();
+	return ercd;
+}
+
+ER task5ISetFlag(FLGPTN setptn)
+{
+	iicaInit();
+	taskPending |= TASK_PENDING_5;
+	return iset_flg(4, setptn);
+}
+
+ER task3SetPattern(FLGPTN setptn)
+{
+	ER ercd;
+
+	dis_dsp();
+	ercd = set_flg(2, setptn);
+	taskPending |= TASK_PENDING_3;
+	ena_dsp();
+	return ercd;
+}
+
+/* by set_flg, not iset_flg */
+ER task3ISetFlag(FLGPTN setptn)
+{
+	taskPending |= TASK_PENDING_3;
+	return set_flg(2, setptn);
+}
+
+ER task4SetPattern(FLGPTN setptn)
+{
+	ER ercd;
+
+	dis_dsp();
+	ercd = set_flg(1, setptn);
+	taskPending |= TASK_PENDING_4;
+	ena_dsp();
+	return ercd;
+}
+
+ER task4ISetFlag(FLGPTN setptn)
+{
+	taskPending |= TASK_PENDING_4;
+	return iset_flg(1, setptn);
+}
+
+ER task6SetPattern(FLGPTN setptn)
+{
+	ER ercd;
+
+	dis_dsp();
+	ercd = set_flg(6, setptn);
+	taskPending |= TASK_PENDING_6;
+	ena_dsp();
+	return ercd;
+}
+
+ER task6ISetFlag(FLGPTN setptn)
+{
+	taskPending |= TASK_PENDING_6;
+	return iset_flg(6, setptn);
+}
+
+/* task 1 stays pending outside the off, suspend, shutdown and cut states */
+void task1Idle(void)
+{
+	T_RMBX rmbx;
+	unsigned int state;
+
+	dis_dsp();
+	DI();
+	ref_mbx(1, &rmbx);
+	state = stateGet();
+	if (rmbx.pk_msg == NULL &&
+	    (state == STATE_OFF || state == STATE_SUSPEND || state == STATE_SHUTDOWN ||
+	     state == STATE_CUT))
+		taskPending &= ~TASK_PENDING_1;
+	EI();
+	ena_dsp();
+}
+
+/* the others only once task 1 is idle */
+void task2Idle(void)
+{
+	T_RFLG rflg;
+
+	if (taskPending1() == 0) {
+		dis_dsp();
+		DI();
+		ref_flg(3, &rflg);
+		if (rflg.flgptn == 0)
+			taskPending &= ~TASK_PENDING_2;
+		EI();
+		ena_dsp();
+	}
+}
+
+void task5Idle(void)
+{
+	T_RFLG rflg;
+
+	if (taskPending1() == 0) {
+		dis_dsp();
+		DI();
+		ref_flg(4, &rflg);
+		if (rflg.flgptn == 0) {
+			iicaClose();
+			taskPending &= ~TASK_PENDING_5;
+		}
+		EI();
+		ena_dsp();
+	}
+}
+
+void task3Idle(void)
+{
+	T_RFLG rflg;
+
+	if (taskPending1() == 0) {
+		dis_dsp();
+		DI();
+		ref_flg(2, &rflg);
+		if (rflg.flgptn == 0)
+			taskPending &= ~TASK_PENDING_3;
+		EI();
+		ena_dsp();
+	}
+}
+
+void task4Idle(void)
+{
+	T_RFLG rflg;
+
+	if (taskPending1() == 0) {
+		dis_dsp();
+		DI();
+		ref_flg(1, &rflg);
+		if (rflg.flgptn == 0)
+			taskPending &= ~TASK_PENDING_4;
+		EI();
+		ena_dsp();
+	}
+}
+
+void task6Idle(void)
+{
+	T_RFLG rflg;
+
+	if (taskPending1() == 0) {
+		dis_dsp();
+		DI();
+		ref_flg(6, &rflg);
+		if (rflg.flgptn == 0)
+			taskPending &= ~TASK_PENDING_6;
+		EI();
+		ena_dsp();
+	}
+}
+
+void taskPendingReset(void)
+{
+	taskPending = TASK_PENDING_1;
+}
+#else
 ER task2SetFlag(ID flgid, FLGPTN setptn)
 {
 	ER ercd;
@@ -199,6 +393,8 @@ void taskClearPending(unsigned int pending)
 	taskPending &= ~pending;
 	EI();
 }
+
+#endif
 
 unsigned int taskGetPending(void)
 {

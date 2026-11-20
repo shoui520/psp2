@@ -11,6 +11,10 @@
 
 /* DOL-1002: a second wake mask, for the wake factors 0x20-0x3f */
 #define STATE_WAKE_HIGH		BOARD_DOL1002
+/* the second mask's functions: DOL-1002's, and the slim's 0x0105 (USS-1002) */
+#define STATE_WAKE_BITS		(STATE_WAKE_HIGH || BOARD_USS1001 && SOURCE_0104)
+/* transition 0x3b: the slim's 0x0105 fourth charge alarm (chargeAlarm3), taken like 0x3a */
+#define STATE_CHARGE_ALARM3	(BOARD_USS1001 && SOURCE_0104)
 
 /* the request powerResume runs (stateRequest), and the wakeup factor it leaves: the mode picks
    its last step */
@@ -108,7 +112,7 @@ extern void stateGetHistory(unsigned char *out);
 #endif
 extern void stateSetWakeMask(unsigned long mask);
 extern unsigned long stateGetWakeMask(void);
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 extern void stateSetWakeMaskHigh(unsigned long mask);
 extern unsigned long stateGetWakeMaskHigh(void);
 extern void stateSetWakeBit(unsigned char factor, unsigned char set);

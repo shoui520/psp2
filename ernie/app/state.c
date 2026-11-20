@@ -93,10 +93,10 @@ static int stateModeAtLevel9(union PowerRequest *request);
 
 /* the input's part of a state: on the slim task 3 runs it (inputStateRun) */
 #if SOURCE_0103
-#define stateInputOff()		inputStateRequest(2)
-#define stateInputSuspend()	inputStateRequest(4)
-#define stateInputCut()		inputStateRequest(8)
-#define stateInputShutdown()	inputStateRequest(10)
+#define stateInputOff()		inputStateRequest(INPUT_STATE(2))
+#define stateInputSuspend()	inputStateRequest(INPUT_STATE(4))
+#define stateInputCut()		inputStateRequest(INPUT_STATE(8))
+#define stateInputShutdown()	inputStateRequest(INPUT_STATE(10))
 #else
 #define stateInputOff()		inputStateOff()
 #define stateInputSuspend()	inputStateSuspend()
@@ -105,7 +105,7 @@ static int stateModeAtLevel9(union PowerRequest *request);
 #endif
 
 /* the transitions below it are wakes, a resume's mode (the slim's has two more) */
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 #define STATE_WAKE_TRANSITIONS	0x23	/* DOL-1002: and 0x22 */
 #elif SOURCE_0103
 #define STATE_WAKE_TRANSITIONS	0x22
@@ -171,7 +171,7 @@ union PowerRequest stateRequest;
 static struct StateMsg stateEnterMsg;		/* stateEnter's */
 #endif
 static unsigned long stateWakeMask;		/* a mode whose bit is set does not resume */
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 static unsigned long stateWakeMaskHigh;		/* DOL-1002: wake factors 0x20-0x3f's */
 #endif
 
@@ -275,7 +275,7 @@ unsigned long stateGetWakeMask(void)
 	return stateWakeMask;
 }
 
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 /* DOL-1002: the wake factors 0x20-0x3f, in a second mask */
 void stateSetWakeMaskHigh(unsigned long mask)
 {
@@ -323,7 +323,7 @@ void stateInit(void)
 	stateRequest.byte[0] = 0x7f;
 	stateRequest.byte[1] = 0xff;
 	stateWakeupFactor.word = stateRequest.word;
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 	/* DOL-1002: both masks from the configuration, then the start bits one by one */
 	mask = 0xffffffff;
 	mask |= configGet()->BOARD_WAKE_MASKS.on;
@@ -337,8 +337,10 @@ void stateInit(void)
 		stateSetWakeBit(0x16, 0);
 	if (configGet()->start.bits.wakeUnmask15)
 		stateSetWakeBit(0x0f, 0);
+#if BOARD_DOL1002	/* the slim's 0x0105 has no cold start */
 	if (configGet()->start.bits.coldStartOn)
 		stateSetWakeBit(0x1c, 0);
+#endif
 #elif FW_SINCE(0x00090804)
 	mask = 0xffffffff;
 	mask |= configGet()->BOARD_WAKE_MASKS.on;
@@ -355,15 +357,15 @@ void stateInit(void)
 	else
 		mask = 0xffffffff;
 #endif
-#if FW_SINCE(0x01000104) && !STATE_WAKE_HIGH
+#if FW_SINCE(0x01000104) && !STATE_WAKE_BITS
 	if (configGet()->start.bits.wakeUnmask15)
 		mask &= ~0x00008000UL;
 #endif
-#if BOARD_DOL1001 && !STATE_WAKE_HIGH
+#if BOARD_DOL1001 && !STATE_WAKE_BITS
 	if (configGet()->start.bits.coldStartOn)	/* and wake factor 20 unmasked */
 		mask &= ~0x00100000UL;
 #endif
-#if FW_SINCE(0x00090009) && !STATE_WAKE_HIGH
+#if FW_SINCE(0x00090009) && !STATE_WAKE_BITS
 	stateSetWakeMask(mask);
 #endif
 }
@@ -500,6 +502,9 @@ static int stateStartEnter(void)
 
 static int stateOnEnter(void)
 {
+#if INPUT_MEASURE
+	inputStateRequest(INPUT_STATE_ON);
+#endif
 	STATE_TRANSITION_EVENT
 	stateInit();
 #if !FW_SINCE(0x00090903)
@@ -535,6 +540,11 @@ static int stateOffEnter(void)
 	case 0x39:
 		logEvent(0x17);
 		break;
+#if STATE_CHARGE_ALARM3
+	case 0x3b:
+		logEvent(0x2b);
+		break;
+#endif
 	case 0x35:
 		logEvent(0x18);
 		break;
@@ -757,7 +767,7 @@ static int stateOffHandle(struct StateEvent *event)
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = 0x0b;
 			stateRequest.bits.data = event->arg.data = 0;
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 		} else if (event->transition == 0x21) {
 			stateNext = STATE_RESUME;
 			stateRequest.bits.mode = 0x21;
@@ -776,7 +786,7 @@ static int stateOffHandle(struct StateEvent *event)
 		stateWakeMask |= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? 0xffa0057cUL : 0xffa0257cUL;
 		stateWakeMask &= BOARD_IS(0x00411000) && !HW_IS(0x00315200) ? ~0x001e7a01UL : ~0x001e5a01UL;
 #endif
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 		stateWakeMaskHigh |= configGet()->wakeMasksHigh.on;
 		stateWakeMaskHigh &= ~configGet()->wakeMasksHigh.off;
 		if (configGet()->state.bits.offWakeUnmask22)
@@ -844,6 +854,9 @@ static int stateResumeHandle(struct StateEvent *event)
 #if FW_SINCE(0x01000104)
 	case 0x3a:
 #endif
+#if STATE_CHARGE_ALARM3
+	case 0x3b:
+#endif
 	case 0x50:
 	case 0x52: case 0x53:
 #if FW_SINCE(0x00090009)
@@ -902,6 +915,9 @@ static int stateSuspendHandle(struct StateEvent *event)
 #endif
 #if FW_SINCE(0x01000104)
 	case 0x3a:
+#if STATE_CHARGE_ALARM3
+	case 0x3b:
+#endif
 	case 0x52:
 	case 0x57:
 #endif
@@ -918,7 +934,7 @@ static int stateSuspendHandle(struct StateEvent *event)
 #if FW_SINCE(0x00090804)
 		stateWakeMask |= configGet()->BOARD_WAKE_MASKS.suspendOn;
 		stateWakeMask &= ~configGet()->BOARD_WAKE_MASKS.suspendOff;
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 		stateWakeMaskHigh |= configGet()->wakeMasksHigh.suspendOn;
 		stateWakeMaskHigh &= ~configGet()->wakeMasksHigh.suspendOff;
 		if ((unsigned char)stateGetWakeBit(stateRequest.bits.mode))
@@ -1030,6 +1046,9 @@ static int stateUpdateAnswerHandle(struct StateEvent *event)
 #if FW_SINCE(0x01000104)
 	case 0x3a:
 #endif
+#if STATE_CHARGE_ALARM3
+	case 0x3b:
+#endif
 	case 0x50:
 	case 0x52: case 0x53:
 	case 0x56:
@@ -1062,6 +1081,9 @@ static int stateUpdateHandle(struct StateEvent *event)
 	case 0x31:
 	case 0x33: case 0x34: case 0x35:
 	case 0x37: case 0x38: case 0x39: case 0x3a:
+#if STATE_CHARGE_ALARM3
+	case 0x3b:
+#endif
 	case 0x50:
 	case 0x52: case 0x53:
 	case 0x56: case 0x57: case 0x58:

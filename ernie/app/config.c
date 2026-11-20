@@ -117,7 +117,7 @@ static unsigned char configNewerVersion(void);
 static unsigned char configNewerCount(void);
 
 /* configNewerVersion's answer when both banks have the same layout */
-#if BOARD_DOL1002
+#if SOURCE_0104
 #define CONFIG_SAME_VERSION	9
 #else
 #define CONFIG_SAME_VERSION	2
@@ -235,7 +235,7 @@ unsigned char configOpen(void)
 /* writes the open copy to the other bank, which becomes the one used */
 unsigned char configCommit(void)
 {
-#if BOARD_DOL1002	/* the magic a constant of its own, not copied to the stack */
+#if SOURCE_0104	/* the magic a constant of its own, not copied to the stack */
 	static const unsigned char magic[4] = "Conf";
 #else
 	unsigned char magic[4] = "Conf";
@@ -345,7 +345,7 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 	left = length;
 	while (left > 0) {
 		if (record->length != 0) {
-#if BOARD_DOL1002	/* every record is hashed, not only the writes */
+#if SOURCE_0104	/* every record is hashed, not only the writes */
 			configHash.unhashed = 1;
 #endif
 			switch (record->type) {
@@ -364,7 +364,7 @@ static char configApplyRecords(unsigned char *records, unsigned int length,
 						memcpy((unsigned char *)&bank->block + offset,
 						       record->body.write.data, size);
 					}
-#if !BOARD_DOL1002
+#if !SOURCE_0104
 					configHash.unhashed = 1;
 #endif
 				}
@@ -564,6 +564,10 @@ static unsigned char configMerge(unsigned char from, unsigned char to)
 	copy->block.offInfo2 = kept->block.offInfo2;
 	copy->block.offInfo3 = kept->block.offInfo3;
 #endif
+#if BOARD_USS1001 && SOURCE_0104
+	copy->block.batteryCalibration0 = kept->block.batteryCalibration0;
+	copy->block.batteryCalibration1 = kept->block.batteryCalibration1;
+#endif
 	config.bank = to;
 	result = configCommit();
 	return result;
@@ -696,7 +700,7 @@ unsigned char configRestoreDefaults(void)
    checksum (but for the defaults, count 1) */
 static unsigned char configCheck(unsigned char bank)
 {
-#if !BOARD_DOL1002
+#if !SOURCE_0104
 	unsigned char magic[4] = "Conf";
 #endif
 	const struct ConfigBank *b;
@@ -708,7 +712,7 @@ static unsigned char configCheck(unsigned char bank)
 	if (bank >= 2)
 		return 1;
 	b = &configBanks[bank];
-#if BOARD_DOL1002	/* the magic compared with the string itself */
+#if SOURCE_0104	/* the magic compared with the string itself */
 	if (memcmp(b->magic + 0, "Conf", 4) != 0)
 		return 2;
 #else

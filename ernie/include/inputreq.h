@@ -48,7 +48,7 @@ extern unsigned char hostCommand0131(unsigned char *out, unsigned char *length);
 #endif
 #endif
 /* the slim's 0x0180 sets the sticks' mode on a timer (0x01030505: at once) */
-#define CONTROLS_MODE_DELAYED	(BOARD_USS1001 && FW_SINCE(0x01030511))
+#define CONTROLS_MODE_DELAYED	(BOARD_USS1001 && FW_SINCE(0x01030511) && !SOURCE_0104)
 #if CONTROLS_MODE_DELAYED
 extern void controlsRequest0180Done(void);
 #endif

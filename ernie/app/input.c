@@ -9,6 +9,7 @@
 #pragma EI
 
 #include <stddef.h>
+#include <string.h>
 
 #include "ernie.h"
 #include "adc.h"
@@ -25,6 +26,7 @@
 #include "motion.h"
 #include "param.h"
 #include "powerreq.h"
+#include "serial.h"
 #include "serial1.h"
 #include "serial2.h"
 #include "serialauth.h"
@@ -66,7 +68,12 @@ extern unsigned char getResetCause(void);
 #define INPUT_SET_FLAG(flag, pattern)	set_flg(flag, pattern)
 #endif
 
-/* the scan's RTC timer */
+/* the scan's timers: the ticks' (the slim's 0x0105 has no timers 0-2) and the RTC's */
+#if BOARD_USS1001 && SOURCE_0104
+#define INPUT_SCAN_TIMER	0
+#else
+#define INPUT_SCAN_TIMER	3
+#endif
 #define INPUT_SCAN_RTC_TIMER	TIMER_RTC(0x16)
 #if ANALOG_THERMISTOR
 /* DOL-1002's thermistor's: a reading every two ticks */
@@ -167,7 +174,7 @@ void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
 void input1Bit7Changed(void);
 void inputNone(void);
-#if BOARD_DOL1002
+#if INPUT_0104
 unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout);
 #endif
 #if ANALOG_THERMISTOR
@@ -182,6 +189,9 @@ unsigned int inputReserved;
 unsigned int analogInput10Ticks;		/* the RTC's ticks at analog input 0x0010's last start */
 #endif
 unsigned char scanCount;			/* the scan's ticks */
+#if INPUT_MEASURE
+struct InputMeasure inputMeasure;
+#endif
 #if ANALOG_THERMISTOR
 unsigned char inputThermistorRequest;		/* inputThermistorTimer's: the next scan starts the
 						   thermistor's conversions */
@@ -191,9 +201,14 @@ unsigned char inputShutdownMarked;			/* set by inputShutdownMark */
 #if SOURCE_0103
 unsigned char inputStateNext;			/* the transition inputStateRun runs (task 3) */
 #endif
-#if BOARD_DOL1002
+#if INPUT_0104
 unsigned char inputTouchPending;		/* inputTouchRequest's: bit 0 a panel opened, bit 1
 						   closed (inputTouchRun) */
+#endif
+#if INPUT_MEASURE
+unsigned char inputCalibrationCommand;		/* inputCalibrationRequest's, run by task 3 */
+unsigned char inputCalibrationData[0x21];
+unsigned int inputCalibrationLength;
 #endif
 struct InputKeys inputKeys;
 struct LevelMonitor levelMonitor1;		/* P11.4 (the slim's P13.7), reports 0x61 */
@@ -222,7 +237,7 @@ struct InputHandler inputHandler1Bit3;
 #if FW_SINCE(0x00090009)	/* 0x00080504 has no input 1 bit 0 handler */
 struct InputHandler inputHandler1Bit0;
 #endif
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && INPUT_BITS2_HANDLERS
 struct InputHandler powerInputHandler;		/* group 2's bit 0, with the BBMC's */
 #endif
 #if !SOURCE_0103
@@ -274,40 +289,45 @@ void inputStateRun(void)
 	case 0:
 		inputInit();
 		break;
-	case 1:
+#if INPUT_MEASURE
+	case INPUT_STATE_ON:
+		inputStateOn();
+		break;
+#endif
+	case INPUT_STATE(1):
 		inputPowerOff();
 		break;
-	case 2:
+	case INPUT_STATE(2):
 		inputStateOff();
 		break;
-	case 3:
+	case INPUT_STATE(3):
 		inputSuspend();
 		break;
-	case 4:
+	case INPUT_STATE(4):
 		inputStateSuspend();
 		break;
-	case 5:
+	case INPUT_STATE(5):
 		inputResumePrepare();
 		break;
-	case 6:
+	case INPUT_STATE(6):
 		inputResumeOpen();
 		break;
-	case 7:
+	case INPUT_STATE(7):
 		inputCut();
 		break;
-	case 8:
+	case INPUT_STATE(8):
 		inputStateCut();
 		break;
-	case 9:
+	case INPUT_STATE(9):
 		inputShutdown();
 		break;
-	case 10:
+	case INPUT_STATE(10):
 		inputStateShutdown();
 		break;
-	case 11:
+	case INPUT_STATE(11):
 		inputReset();
 		break;
-	case 12:
+	case INPUT_STATE(12):
 		inputStateReset();
 		break;
 	}
@@ -315,7 +335,7 @@ void inputStateRun(void)
 		powerReady(3);
 }
 
-#if BOARD_DOL1002
+#if INPUT_0104
 /* a panel opened (mask bit 0) or closed (bit 1) by task 3 (inputTouchRun), waited for up to
    timeout ticks (in steps of four): 0x80 when it was not done in time. Nothing calls it */
 unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout)
@@ -353,12 +373,122 @@ void inputTouchRun(void)
 }
 #endif
 
+#if INPUT_MEASURE
+/* the analog sticks' calibration asked by serial1's commands: run by task 3 (event 0x2000,
+   inputCalibrationRun), answered on the serial link. 0x81 while one is running */
+unsigned char inputCalibrationRequest(unsigned char command, unsigned char *data,
+				      unsigned int length)
+{
+	dis_dsp();
+	if (inputCalibrationCommand != 0) {
+		ena_dsp();
+		return 0x81;
+	}
+	inputCalibrationCommand = command;
+	inputCalibrationLength = length;
+	memcpy(inputCalibrationData, data, length);
+	ena_dsp();
+	task3SetFlag(2, 0x2000);
+	return 0;
+}
+
+/* task 3's event 0x2000 */
+void inputCalibrationRun(void)
+{
+	unsigned char status = 0;
+	unsigned char length = 0;
+	unsigned char *data = NULL;
+
+	switch (inputCalibrationCommand) {
+	case INPUT_CALIBRATION_SET:
+		if (inputCalibrationLength == 1) {
+			switch (inputCalibrationData[0]) {
+			case 0:
+				analogCalibrationReset();
+				break;
+			case 1:
+				analogCalibrationReset();
+				analogCalibrationSave();
+				break;
+			case 3:
+				analogCalibrationDefault();
+				break;
+			case 2:
+				analogCalibrationDefault();
+				analogCalibrationSave();
+				break;
+			default:
+				status = 0x33;
+				break;
+			}
+		} else {
+			status = 0x32;
+		}
+		break;
+	case INPUT_CALIBRATION_READ:
+		if (inputCalibrationLength == 0) {
+			analogStoreRead(inputCalibrationData, 0, inputCalibrationLoaded);
+			return;
+		}
+		status = 0x32;
+		break;
+	case INPUT_CALIBRATION_WRITE:
+		if (inputCalibrationLength == 0x10) {
+			analogStoreWrite(inputCalibrationData, 0, inputCalibrationStored);
+			return;
+		}
+		status = 0x32;
+		break;
+	}
+	inputCalibrationAnswer(status, data, length);
+}
+
+/* the request's answer: the serial link's, and the next request may come */
+void inputCalibrationAnswer(unsigned char status, unsigned char *data, unsigned char length)
+{
+	serial.command |= 0x8000;
+	serial.status = status;
+	serial.data = data;
+	serial.dataLength = length;
+	serialSetAnswer(SERIAL_ANSWER);
+	serialPostAnswer();
+	dis_dsp();
+	inputCalibrationCommand = 0;
+	ena_dsp();
+}
+
+/* analogStoreRead's: the calibration read into the request's data, 0xe2 when it failed */
+void inputCalibrationLoaded(unsigned char command, unsigned char result)
+{
+	unsigned char status = 0;
+	unsigned char length = 0x10;
+	unsigned char *data = inputCalibrationData;
+
+	if (result) {
+		status = 0xe2;
+		data = NULL;
+		length = 0;
+	}
+	inputCalibrationAnswer(status, data, length);
+}
+
+/* analogStoreWrite's */
+void inputCalibrationStored(unsigned char command, unsigned char result)
+{
+	unsigned char status = 0;
+
+	if (result)
+		status = 0xe2;
+	inputCalibrationAnswer(status, NULL, 0);
+}
+#endif
+
 void inputInit(void)
 {
 	struct TimerHandler timer;
 	struct PinConfig config;
 
-#if !BOARD_DOL1002
+#if !INPUT_0104
 	inputReserved = 0;
 #endif
 	if ((getResetCause() & 0xf0) == 0)
@@ -398,7 +528,7 @@ void inputInit(void)
 	inputGroup2.enable = 0x0f;
 	inputGroup2.bits = inputBits2;
 	inputGroup2.count = inputBits2Count;
-#if BOARD_DOL1002
+#if INPUT_0104
 	inputRaw3 = 0;
 	inputState3 = 0;
 	inputGroup3.prev = 0;
@@ -440,9 +570,11 @@ void inputInit(void)
 	inputHandler1Bit0.type = 1;
 	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit0.handler = input1Bit0Changed;
+#if INPUT_BITS2_HANDLERS
 	powerInputHandler.type = 0;
 	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	powerInputHandler.handler = powerInputChanged;
+#endif
 	config.reload = 0x40;
 	config.handler = button1Held;
 	pinMonitor0Set(&config);
@@ -476,7 +608,7 @@ void inputInit(void)
 	inputScan.interval = 0;
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
-	timerSetHandler(3, &timer);
+	timerSetHandler(INPUT_SCAN_TIMER, &timer);
 	timer.handler = inputScanRtcTimer;
 	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
 #if ANALOG_THERMISTOR
@@ -484,7 +616,13 @@ void inputInit(void)
 	timerSetHandler(INPUT_THERMISTOR_TIMER, &timer);
 	timerStart(INPUT_THERMISTOR_TIMER, 2);
 #endif
-#if BOARD_DOL1002
+#if INPUT_MEASURE
+	memset(&inputMeasure, 0, sizeof(inputMeasure));
+	inputMeasure.only5 = 0;
+	inputScanMode1(1);
+	adcOpenForBoard();
+#endif
+#if INPUT_0104
 	inputTouchPending = 0;
 #endif
 }
@@ -648,7 +786,7 @@ void inputInit(void)
 	inputHandler1Bit0.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandler1Bit0.handler = input1Bit0Changed;
 #endif
-#if FW_SINCE(0x0100060B)
+#if FW_SINCE(0x0100060B) && INPUT_BITS2_HANDLERS
 	powerInputHandler.type = 0;
 	powerInputHandler.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	powerInputHandler.handler = powerInputChanged;
@@ -703,8 +841,19 @@ void inputInit(void)
 	inputScan.interval = 0;
 	inputScan.hold = 0;
 	timer.handler = inputScanTimer;
-	timerSetHandler(3, &timer);
+	timerSetHandler(INPUT_SCAN_TIMER, &timer);
 	timerSetHandler(INPUT_SCAN_RTC_TIMER, &timer);
+}
+#endif
+
+#if INPUT_MEASURE
+/* the slim's 0x0105, state 1 (stateOnEnter): the ADC closed, the scan in mode 2, and the next
+   measure of five runs only */
+void inputStateOn(void)
+{
+	adcCloseForBoard();
+	inputScanMode2(1);
+	inputMeasure.only5 = 1;
 }
 #endif
 
@@ -801,7 +950,7 @@ void inputPowerOff(void)
 #if STATE_WAKE_HIGH
 	/* DOL-1002: the wake factor's bit from the state */
 	if (!(unsigned char)stateGetWakeBit(2)) {
-#else
+#elif !INPUT_MEASURE	/* the slim's 0x0105 reads no mask */
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
@@ -969,7 +1118,7 @@ void inputStateShutdown(void)
 #if FW_SINCE(0x00090804)	/* 0x00090206 has no mark */
 	inputShutdownMark();
 #endif
-	timerStop(3);
+	timerStop(INPUT_SCAN_TIMER);
 	timerStop(INPUT_SCAN_RTC_TIMER);
 }
 
@@ -1005,8 +1154,8 @@ void inputStateCut(void)
 
 void inputSuspend(void)
 {
-#if STATE_WAKE_HIGH
-	/* DOL-1002: the wake factors' bits from the state */
+#if STATE_WAKE_BITS
+	/* DOL-1002 and the slim's 0x0105: the wake factors' bits from the state */
 	if (!(unsigned char)stateGetWakeBit(2)) {
 		intp7Enable(1);
 		if (!P3.0) {
@@ -1015,15 +1164,17 @@ void inputSuspend(void)
 			inputScanHold(0x1a);
 		}
 	}
+#if STATE_WAKE_HIGH
 	if (!(unsigned char)stateGetWakeBit(0x1e))
 		intp8Enable(1);
+#endif
 #else
 	unsigned long flags;
 
 	flags = stateGetWakeMask();
 #endif
 #if SOURCE_0103
-#if !STATE_WAKE_HIGH
+#if !STATE_WAKE_BITS
 	if ((flags & 0x00000004) == 0) {
 		intp7Enable(1);
 		if (!P3.0) {
@@ -1152,7 +1303,7 @@ void inputSuspend(void)
 #endif
 #endif
 #endif
-#if !STATE_WAKE_HIGH	/* DOL-1002's ends in a jump to adcCloseForBoard */
+#if !STATE_WAKE_BITS	/* DOL-1002's and the slim's 0x0105 end in a jump to adcCloseForBoard */
 	return;
 #endif
 }
@@ -1261,7 +1412,10 @@ void inputProcess(void)
 		}
 #endif
 		pinMonitorPoll();
-#if BOARD_DOL1002
+#if INPUT_MEASURE
+	case 0x0002:
+		keys = events & 0x00f2;	/* the slim's 0x0105: and key 0x0080 */
+#elif INPUT_0104
 		keys = events & 0x0072;	/* DOL-1002: and key 0x0040 */
 #else
 		keys = events & 0x0032;
@@ -1344,6 +1498,11 @@ void sampleInputs1(void)
 	if (stateGet() == 0x0020)
 		inputRaw1.0 = P11.0;
 #endif
+#if INPUT_MEASURE
+	/* the slim's 0x0105: bit 3 rising from low is not an edge */
+	if (inputRaw1.3 && !(inputGroup1.prev & 0x08))
+		inputGroup1.prev |= 0x08;
+#endif
 	inputGroupUpdate(&inputRaw1, &inputState1, &inputGroup1);
 	if (inputGroup1.changed) {
 	}
@@ -1366,7 +1525,7 @@ void sampleInputs2(void)
 
 void sampleInputs3(void)
 {
-#if !BOARD_DOL1002	/* DOL-1002's samples nothing */
+#if !INPUT_0104	/* DOL-1002's samples nothing */
 #if BOARD_INPUTS_102603 && !HW_IS(0x00315200)
 	inputRaw3.0 = P7.3;
 	inputRaw3.1 = P7.2;
@@ -1675,7 +1834,7 @@ unsigned char input3Bit2Active(void)
 }
 #endif
 
-#if !BOARD_DOL1002	/* not in DOL-1002 */
+#if !INPUT_0104	/* not in DOL-1002 */
 unsigned char input3Bit5High(void)
 {
 	return inputState3.5 != 0;
@@ -2596,6 +2755,9 @@ void inputMultiCnChanged(void)
 #if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
 	INPUT_SET_FLAG(2, 0x0100);
 #endif
+#if INPUT_MEASURE	/* the slim's 0x0105 calls the setter and returns */
+	return;
+#endif
 }
 
 #if FW_SINCE(0x00090009)
@@ -2629,7 +2791,7 @@ void inputScanHold(unsigned int ticks)
 #if SOURCE_0103
 		scanCount = 0;
 #endif
-		timerStart(3, 1);
+		timerStart(INPUT_SCAN_TIMER, 1);
 	}
 	EI();
 }
@@ -2644,6 +2806,11 @@ void inputScanTimer(void)
 {
 	unsigned char count;
 	unsigned char toggled;
+#if INPUT_MEASURE
+	unsigned char ask5;
+	unsigned char ask1;
+	unsigned char ask3;
+#endif
 #if BOARD_USS1001
 	unsigned int ticks;
 #endif
@@ -2667,6 +2834,8 @@ void inputScanTimer(void)
 		analogThermistorStart();
 	}
 	inputKeys.events |= inputKeys.state & 0x0042;
+#elif INPUT_MEASURE
+	inputKeys.events |= inputKeys.state & 0x0042;
 #else
 	inputKeys.events |= inputKeys.state & 0x0002;
 #endif
@@ -2674,14 +2843,57 @@ void inputScanTimer(void)
 		inputKeys.events |= inputKeys.state & 0x000c;
 	if (toggled & 0x04)
 		inputKeys.events |= inputKeys.state & 0x0030;
-	task3SetFlag(2, 0x0008);
+#if INPUT_MEASURE
+	/* the runs asked since the last tick: each starts ANI7-ANI9 (analogStart80) for two
+	   ticks, every 25 ticks */
+	DI();
+	ask5 = inputMeasure.ask5;
+	inputMeasure.ask5 = 0;
+	EI();
+	ask1 = inputMeasure.ask1;
+	inputMeasure.ask1 = 0;
+	ask3 = inputMeasure.ask3;
+	inputMeasure.ask3 = 0;
+	if (inputMeasure.only5 && ask5 == 1 || !inputMeasure.only5 && ask3 == 1 ||
+	    !inputMeasure.only5 && ask1 == 1) {
+		if (ask5 == 1)
+			inputMeasure.runs = 5;
+		else if (ask3 == 1)
+			inputMeasure.runs = 3;
+		else
+			inputMeasure.runs = 1;
+		inputMeasure.wait = 0;
+		inputMeasure.count[0] = 0;
+		inputMeasure.count[1] = 0;
+		inputMeasure.count[2] = 0;
+		inputMeasure.sum[0] = 0;
+		inputMeasure.sum[1] = 0;
+		inputMeasure.sum[2] = 0;
+	}
+	if (inputMeasure.runs != 0) {
+		if (inputMeasure.wait == 0) {
+			inputMeasure.runs--;
+			inputMeasure.step = 2;
+			inputMeasure.wait = 0x19;
+			if (inputMeasure.runs == 0)
+				inputMeasure.done = 1;
+		}
+		inputMeasure.wait--;
+	}
+	if (inputMeasure.step != 0) {
+		inputMeasure.step--;
+		analogStart80();
+		inputKeys.events |= inputKeys.state & 0x0080;
+	}
+#endif
+	task3ISetFlag(0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
-		timerStart(3, 1);
+		timerStart(INPUT_SCAN_TIMER, 1);
 	} else if (inputScan.mode == 2) {
 		timerStart(INPUT_SCAN_RTC_TIMER, 0);
 	} else {
-		timerStart(3, inputScan.interval);
+		timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 	}
 }
 
@@ -2703,12 +2915,12 @@ void inputScanRtcTimer(void)
 	} else
 		analogStart10();
 #endif
-#if BOARD_DOL1002
+#if INPUT_0104
 	inputKeys.events |= inputKeys.state & 0x007e;
 #else
 	inputKeys.events |= inputKeys.state & 0x003e;
 #endif
-	task3SetFlag(2, 0x0008);
+	task3ISetFlag(0x0008);
 	timerStart(INPUT_SCAN_RTC_TIMER, 0);
 }
 #elif !FW_SINCE(0x00090009)
@@ -2744,11 +2956,11 @@ void inputScanTimer(void)
 	task3SetFlag(2, 0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
-		timerStart(3, 1);
+		timerStart(INPUT_SCAN_TIMER, 1);
 	} else if (inputScan.mode == 2) {
 		timerStart(INPUT_SCAN_RTC_TIMER, inputScan.interval);
 	} else {
-		timerStart(3, inputScan.interval);
+		timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 	}
 }
 #else
@@ -2770,11 +2982,11 @@ void inputScanTimer(void)
 	task3SetFlag(2, 0x0008);
 	if (inputScan.hold != 0) {
 		inputScan.hold--;
-		timerStart(3, 1);
+		timerStart(INPUT_SCAN_TIMER, 1);
 	} else if (inputScan.mode == 2) {
 		timerStart(INPUT_SCAN_RTC_TIMER, inputScan.interval);
 	} else {
-		timerStart(3, inputScan.interval);
+		timerStart(INPUT_SCAN_TIMER, inputScan.interval);
 	}
 #if BOARD_ANALOG_CHANNEL8
 	if (inputDelays.analog80 != 0) {
@@ -2907,6 +3119,9 @@ void input1Bit3Changed(void)
 #if FW_SINCE(0x00090804)	/* 0x00090206 wakes no task */
 	INPUT_SET_FLAG(2, 0x0100);
 #endif
+#if INPUT_MEASURE	/* the slim's 0x0105 calls the setter and returns */
+	return;
+#endif
 }
 
 void inputNone(void)
@@ -2959,7 +3174,7 @@ void inputScanMode1(unsigned int interval)
 #if SOURCE_0103
 		scanCount = 0;
 #endif
-		timerStart(3, interval);
+		timerStart(INPUT_SCAN_TIMER, interval);
 	}
 	EI();
 	return;
@@ -2970,7 +3185,7 @@ void inputScanMode2(unsigned int interval)
 {
 	DI();
 	if (inputScan.mode != 2) {
-		timerStop(3);
+		timerStop(INPUT_SCAN_TIMER);
 		inputScan.mode = 2;
 		inputScan.interval = interval;
 		timerStart(INPUT_SCAN_RTC_TIMER, interval);
@@ -2991,7 +3206,9 @@ void input1Bit7Changed(void)
 void inputChanged(void)
 {
 	INPUT_SET_FLAG(2, 0x0100);
+#if !INPUT_MEASURE	/* the slim's 0x0105 jumps to the setter */
 	return;
+#endif
 }
 #endif
 

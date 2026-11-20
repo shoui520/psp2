@@ -90,7 +90,9 @@ void systemInit(void)
 	stateEvents = 0;
 	stateCause = 0x7f;
 #if BOARD_USS1001
+#if !SOURCE_0104	/* the slim's 0x0105 reads no chip id here */
 	chipIdInit();
+#endif
 	eventLogInit();
 	eventLogStart();
 #endif
@@ -99,8 +101,12 @@ void systemInit(void)
 	configInit();
 	timerInit();
 	paramInit();
+#if TASK_FLAG_SETTERS
+	taskPendingReset();
+#else
 	taskClearPending(-1);
 	taskSetPending(1);
+#endif
 	timer.handler = stateCheck;
 	timerSetHandler(TIMER_RTC(0x1a), &timer);
 	versionInit();

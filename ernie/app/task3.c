@@ -52,6 +52,8 @@ void task3(VP_INT exinf)
 				clr_flg(2, ~0x0004);
 #if BOARD_DOL1002
 				analogEvent(inputKeys.events & 0x72);
+#elif INPUT_MEASURE
+				analogEvent(inputKeys.events & 0xf2);
 #else
 				analogEvent(inputKeys.events & 0x32);
 #endif
@@ -72,10 +74,16 @@ void task3(VP_INT exinf)
 #endif
 			if (ptn & 0x8000)
 				clr_flg(2, ~0x8000);
-#if BOARD_DOL1002
+#if INPUT_0104
 			if (ptn & 0x1000) {	/* not waited for: inputTouchRequest */
 				clr_flg(2, ~0x1000);
 				inputTouchRun();
+			}
+#endif
+#if INPUT_MEASURE
+			if (ptn & 0x2000) {	/* not waited for: inputCalibrationRequest */
+				clr_flg(2, ~0x2000);
+				inputCalibrationRun();
 			}
 #endif
 		}

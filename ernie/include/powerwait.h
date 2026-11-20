@@ -12,7 +12,10 @@
 
 /* a power timer's number 4-0xb: since 0x0100060B bits 0 and 3 (timers 4 and 7) have none, and
    the others are one or two earlier */
-#if FW_SINCE(0x0100060B)
+#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105: three earlier still (no timers 0-2) */
+#define POWER_TIMER(id)		((id) < 7 ? (id) - 4 : (id) - 5)
+#elif FW_SINCE(0x0100060B)
 #define POWER_TIMER(id)		((id) < 7 ? (id) - 1 : (id) - 2)
 #else
 #define POWER_TIMER(id)		(id)

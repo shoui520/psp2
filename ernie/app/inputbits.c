@@ -44,10 +44,12 @@ static struct InputHandler * const inputHandlers3Bit1[] = { &inputHandlerSerial2
 #if !SOURCE_0103
 static struct InputHandler * const inputHandlers3Bit2[] = { &inputHandler3Bit2 };
 #endif
+#if INPUT_BITS2_HANDLERS
 static struct InputHandler * const inputHandlers2Bit0[] = {
 	&powerInputHandler, &bbmcInputHandlerPower
 };
 static struct InputHandler * const inputHandlers2Bit1[] = { &bbmcInputHandlerWake };
+#endif
 #if FW_SINCE(0x00090009)	/* 0x00080504 has no input 1 bit 0 handler */
 static struct InputHandler * const inputHandlers1Bit0[] = { &inputHandler1Bit0 };
 #endif
@@ -68,8 +70,10 @@ static unsigned char inputHandlers3Bit1Count(void);
 #if !SOURCE_0103
 static unsigned char inputHandlers3Bit2Count(void);
 #endif
+#if INPUT_BITS2_HANDLERS
 static unsigned char inputHandlers2Bit0Count(void);
 static unsigned char inputHandlers2Bit1Count(void);
+#endif
 #if FW_SINCE(0x00090009)
 static unsigned char inputHandlers1Bit0Count(void);
 #endif
@@ -98,13 +102,20 @@ const struct InputBit inputBits1[8] = {
 	{ inputHandlers1Bit7, inputHandlers1Bit7Count },
 };
 
-const struct InputBit inputBits2[6] = {
+const struct InputBit inputBits2[INPUT_BITS2] = {
+#if INPUT_BITS2_HANDLERS
 	{ inputHandlers2Bit0, inputHandlers2Bit0Count },
 	{ inputHandlers2Bit1, inputHandlers2Bit1Count },
+#else
 	{ NULL, NULL },
 	{ NULL, NULL },
+#endif
 	{ NULL, NULL },
 	{ NULL, NULL },
+#if INPUT_BITS2 == 6
+	{ NULL, NULL },
+	{ NULL, NULL },
+#endif
 };
 
 const struct InputBit inputBits3[INPUT_BITS3] = {
@@ -195,6 +206,7 @@ static unsigned char inputHandlers3Bit2Count(void)
 }
 #endif
 
+#if INPUT_BITS2_HANDLERS
 static unsigned char inputHandlers2Bit0Count(void)
 {
 	return LENGTH(inputHandlers2Bit0);
@@ -204,6 +216,7 @@ static unsigned char inputHandlers2Bit1Count(void)
 {
 	return LENGTH(inputHandlers2Bit1);
 }
+#endif
 
 #if FW_SINCE(0x00090009)
 static unsigned char inputHandlers1Bit0Count(void)

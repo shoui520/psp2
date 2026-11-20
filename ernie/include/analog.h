@@ -18,6 +18,9 @@
 #define ANALOG_LIMITS		(SOURCE_0511)
 /* 0x0104: a median's fault keeps the samples it came from (struct AnalogSnapshot) */
 #define ANALOG_SNAPSHOT		FW_SINCE(0x01040000)
+/* the slim's 0x0105 (USS-1002): each set's positions checked against the limits too, with a
+   record and the samples of those outside them */
+#define ANALOG_OUTPUT_LIMITS	(BOARD_USS1001 && SOURCE_0104)
 /* DOL-1002: the temperature from a thermistor on ANI10 (adcResults[5], inputKeys' bit 0x0040),
    in place of DOL-1001's sensor on the I2C bus (thermal.c) */
 #define ANALOG_THERMISTOR	BOARD_DOL1002
@@ -70,6 +73,15 @@ struct AnalogSnapshot {
 };
 #endif
 
+#if ANALOG_OUTPUT_LIMITS
+/* the slim's 0x0105: a set's positions outside the axis's limits, and the samples of the lowest
+   or the highest */
+struct AnalogOutputFault {
+	struct AnalogFault	fault;
+	struct AnalogSnapshot	snapshot;
+};
+#endif
+
 struct AnalogAxis {
 	unsigned int		samples[ANALOG_SAMPLES];
 	unsigned int		median;
@@ -82,6 +94,9 @@ struct AnalogAxis {
 	struct AnalogFault	medianFault;	/* and the medians */
 #if ANALOG_SNAPSHOT
 	struct AnalogSnapshot	medianSnapshot;	/* the samples of medianFault's low or high */
+#endif
+#if ANALOG_OUTPUT_LIMITS
+	struct AnalogOutputFault outputFault[ANALOG_SETS];
 #endif
 };
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x00090206)
@@ -178,6 +193,23 @@ extern void analogGetSampleFaults(unsigned char *out);
 #if ANALOG_SNAPSHOT
 extern void analogGetMedianSnapshots(unsigned char *out);
 #endif
+#if ANALOG_OUTPUT_LIMITS
+extern void analogGetSet0Faults(unsigned char *out);
+extern void analogGetSet0Snapshots(unsigned char *out);
+extern void analogGetSet1Faults(unsigned char *out);
+extern void analogGetSet1Snapshots(unsigned char *out);
+#endif
+#endif
+#if BOARD_USS1001 && SOURCE_0104	/* input.h's INPUT_MEASURE */
+/* analogGetMeasure's: input 0x0080's averages and their RTC ticks */
+struct AnalogMeasure {
+	unsigned int	ani7;
+	unsigned int	ani8;
+	unsigned int	ani9;
+	unsigned int	ticks;
+};
+
+extern void analogGetMeasure(struct AnalogMeasure *out);
 #endif
 extern void analogInput10Init(void);
 extern void analogStart10(void);

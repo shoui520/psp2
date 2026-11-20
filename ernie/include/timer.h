@@ -32,7 +32,13 @@ struct Timer {
    0x16) put the RTC's at 0x17-0x21.
    0x00090206 counts the clock from timer 0x13 (TIMER(0x11)) on, and has no power LED
    timer 0x1c: its RTC timers 0x14-0x1b are 0x13-0x1a, each one below its number */
-#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && FW_SINCE(0x01030511)
+#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105 (USS-1002): no modem (bbmc.c's timers 1, 0x11, 0x16 and 0x1a of 0x0103)
+   and no timers 0-2, so the RTC's are at 0x12-0x1b, four below their numbers, and five from
+   0x19 (the modem's) on */
+#define TIMER_RTC_FIRST		0x12
+#define TIMER_RTC(id)		((id) < 0x19 ? (id) - 4 : (id) - 5)
+#elif !defined(ERNIE_UPDATER) && BOARD_USS1001 && FW_SINCE(0x01030511)
 /* the slim's: the RTC's at 0x16-0x20, one above their numbers (the charge's soon update, 0x16
    on the others, is 0x13) */
 #define TIMER_RTC_FIRST		0x16
@@ -64,7 +70,10 @@ struct Timer {
 #define TIMER_RTC_FIRST		0x11
 #define TIMER_RTC(id)		((id) - 3)
 #endif
-#if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
+#if !defined(ERNIE_UPDATER) && BOARD_USS1001 && SOURCE_0104
+/* five below, and six above the modem's 0x13 */
+#define TIMER(id)		((id) < 0x13 ? (id) - 5 : (id) - 6)
+#elif !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #define TIMER(id)		((id) - 2)
 #elif defined(ERNIE_UPDATER) || FW_SINCE(0x01000104) || !FW_SINCE(0x00090009)
 #define TIMER(id)		(id)
@@ -75,6 +84,8 @@ struct Timer {
 #define TIMER_COUNT		0x1e
 #elif BOARD_DOL1001 && FW_SINCE(0x01040000)
 #define TIMER_COUNT		(TIMER_RTC(0x21) + 1)
+#elif BOARD_USS1001 && SOURCE_0104
+#define TIMER_COUNT		(TIMER_RTC(0x20) + 1)
 #elif FW_SINCE(0x01000104)
 #define TIMER_COUNT		(TIMER_RTC(0x1f) + 1)
 #elif FW_SINCE(0x00090903)

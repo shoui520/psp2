@@ -265,7 +265,9 @@ SEG	@@CNSTL
 SEG	@@RLINIT
 # the code
 SEG	@@CODEL		main.c standby.c task1.c task2.c version.c rtc.c task3.c input.c aes.c
-SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c touch.c inputreq.c
+SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c	IF ERNIE_FW>=0x01050000
+SEG	@@CODEL		host.c request.c csi.c sleepfactor.c spidev.c command.c uart.c touch.c	IF ERNIE_FW<0x01050000
+SEG	@@CODEL		inputreq.c
 SEG	@@CODEL		util.c inputbits.c serial.c adc.c analog.c scratchpad.c nvsreq.c serial1.c
 SEG	@@CODEL		updatereq.c sha1.c powerreq.c task5.c serialauth.c power.c timer.c iica.c
 SEG	@@CODEL		powerjob.c elmo.c serial2.c serial4.c task6.c bbmc.c board.c powerseq.c
@@ -273,7 +275,11 @@ SEG	@@CODEL		battery.c charge.c cookie.c powerwait.c state.c handshake.c serial1
 SEG	@@CODEL		task.c config.c configreq.c watchdog.c sysinfo.c log.c led.c serialreq.c snvs.c
 SEG	@@CODEL		debugpin.c eventlog.c clock.c clockout.c csi10.c flash.c bstore.c uss1001.c
 SEG	@@CODEL		tau.c dtc.c uart4.c serialline.c iica1.c multicn.c chipid.c powerled.c nvs.c
-SEG	@@CODEL		gf.c flashextra.asm
+SEG	@@CODEL		gf.c	IF ERNIE_FW>=0x01050000
+SEG	@@CODEL		gf.c flashextra.asm	IF ERNIE_FW<0x01050000
+# 0x0105 (USS-1002): touch.c and the flash library's extras above the second flash bank's start
+AT	0x55400	IF ERNIE_FW>=0x01050000
+SEG	@@CODEL		touch.c flashextra.asm	IF ERNIE_FW>=0x01050000
 SEG	@@CODEL
 
 # the RAM: the startup's initialised data, the DTC's vectors (on a 256-byte boundary), the

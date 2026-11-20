@@ -15,6 +15,32 @@ struct InputKeys {
 
 extern struct InputKeys inputKeys;
 
+/* the slim's 0x0105 (USS-1002): analog input 0x0080, runs of two scan ticks with P7.7 high,
+   ANI7 and ANI8 converted eight times on the first, ANI9 on the second; the sums of the runs
+   the scan asks for, averaged when the last is in */
+/* the input of 0x0104 (DOL-1002's, also the slim's 0x0105: USS-1002) */
+#define INPUT_0104		(SOURCE_0104 && (BOARD_DOL1001 || BOARD_USS1001))
+#define INPUT_MEASURE		(BOARD_USS1001 && SOURCE_0104)
+#if INPUT_MEASURE
+struct InputMeasure {
+	unsigned int	average[3];	/* ANI7's, ANI8's, ANI9's */
+	unsigned int	ticks;		/* the RTC's ticks at the averages */
+	unsigned long	sum[3];
+	unsigned char	count[3];	/* the runs summed */
+	unsigned char	ask5:1;		/* the RTC's: five runs */
+	unsigned char	only5:1;	/* only ask5 is heard */
+	unsigned char	ask1:1;		/* one run */
+	unsigned char	ask3:1;		/* three runs */
+	unsigned char	done:1;		/* the last run is in: average */
+	unsigned char	runs;		/* left to start */
+	unsigned char	step;		/* the run's ticks left: 1 ANI7 and ANI8, 0 ANI9 */
+	unsigned char	wait;		/* scan ticks to the next run */
+	unsigned char	holdOff;	/* RTC ticks before the RTC asks for runs again */
+};
+
+extern struct InputMeasure inputMeasure;
+#endif
+
 /* ticks of the scan left before each request */
 struct InputDelays {
 	unsigned char	flag40;		/* sets bit 0x0040 of event flag 2 */
@@ -105,10 +131,33 @@ extern __near unsigned char holdReached;
 extern void inputProcess(void);
 #if SOURCE_0103
 extern void inputStateRequest(unsigned char state);
+/* inputStateRequest's states; the slim's 0x0105 adds state 1 (inputStateOn), the others one up */
+#if INPUT_MEASURE
+/* the analog sticks' calibration asked on the serial link (inputCalibrationRequest) */
+#define INPUT_CALIBRATION_SET	1	/* data[0]: 0 reset, 1 reset and save, 2 default and
+					   save, 3 default */
+#define INPUT_CALIBRATION_READ	2	/* answers the 16 bytes stored */
+#define INPUT_CALIBRATION_WRITE	3	/* stores 16 bytes */
+extern unsigned char inputCalibrationCommand;	/* INPUT_CALIBRATION_*, 0 when none runs */
+extern unsigned char inputCalibrationData[0x21];
+extern unsigned int inputCalibrationLength;
+extern unsigned char inputCalibrationRequest(unsigned char command, unsigned char *data,
+					     unsigned int length);
+extern void inputCalibrationRun(void);
+extern void inputCalibrationAnswer(unsigned char status, unsigned char *data,
+				   unsigned char length);
+extern void inputCalibrationLoaded(unsigned char command, unsigned char result);
+extern void inputCalibrationStored(unsigned char command, unsigned char result);
+#define INPUT_STATE(n)		((n) + ((n) != 0))
+#define INPUT_STATE_ON		1
+extern void inputStateOn(void);
+#else
+#define INPUT_STATE(n)		(n)
+#endif
 extern void inputStateRun(void);
 extern void inputLogTransition(unsigned char transition);
 #endif
-#if BOARD_DOL1002
+#if INPUT_0104
 extern void inputTouchRun(void);
 #endif
 extern unsigned char button2Keys(void);

@@ -13,7 +13,9 @@
 #include "watchdog.h"
 
 #define CONFIG_SIZE		0x3f0	/* a bank's block */
-#if BOARD_DOL1001 && SOURCE_SLIM
+#if BOARD_USS1001 && SOURCE_0104
+#define CONFIG_VERSION		0x74	/* the slim's 0x0105 layout */
+#elif BOARD_DOL1001 && SOURCE_SLIM
 #define CONFIG_VERSION		0x67	/* DOL-1002's layout */
 #elif BOARD_DOL1001
 #define CONFIG_VERSION		0x50	/* DOL-1001's layout */
@@ -329,7 +331,7 @@ struct ConfigBlock {
 	unsigned char	touchDelayWriteByte;	/* USS-1001: the delay after each byte panel 0 is
 						   written */
 	unsigned char	touchDelayRelease;	/* and after its deselect */
-#if BOARD_DOL1001
+#if BOARD_DOL1001 || SOURCE_0104
 	unsigned char	thermalPeriod;		/* DOL-1001: the temperature statistics' ticks
 						   between samples (thermalStatsInit) */
 	unsigned char	reserved49;
@@ -345,11 +347,11 @@ struct ConfigBlock {
 #endif
 	unsigned char	chargeDongleCurrent;	/* USS-1001: the USB supply's setting with the
 						   multi-connector's dongle or debug board */
-#if BOARD_DOL1002
+#if SOURCE_0104
 	unsigned char	batterySetting;		/* DOL-1002: cookieCtrlReg7's for a battery version
 						   it does not know */
 	unsigned char	reserved51[0x25c - 0x23a];
-	struct ConfigWakeMasks wakeMasksHigh;	/* DOL-1002: wake factors 0x20-0x3f's */
+	struct ConfigWakeMasks wakeMasksHigh;	/* 0x0104: wake factors 0x20-0x3f's */
 	unsigned char	reserved52;
 #endif
 	unsigned char	analogLimitScale;	/* USS-1001: a calibrated axis's limits are its
@@ -357,7 +359,14 @@ struct ConfigBlock {
 	unsigned int	analogLimitMargin;	/* plus this (analogLimitsSet) */
 	unsigned int	analogLimitMin;		/* and kept within these, an axis's limits */
 	unsigned int	analogLimitMax;		/* before it is calibrated */
-#if BOARD_DOL1001 && SOURCE_SLIM
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char	reserved53[0x276 - 0x274];
+	unsigned int	batteryCalibration0;	/* the slim's 0x0105: the battery's two
+						   calibration words, 0x7fff none (kept across a
+						   new layout) */
+	unsigned int	batteryCalibration1;
+	unsigned char	reserved46[0x3e0 - 0x27a];
+#elif SOURCE_0104
 	unsigned char	reserved46[0x3e0 - 0x274];
 #else
 	unsigned char	reserved46[0x3e0 - 0x240];

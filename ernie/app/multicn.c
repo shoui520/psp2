@@ -298,6 +298,30 @@ unsigned char boardMultiCnIsDebug(void)
 	return 0;
 }
 
+#if BOARD_MULTICN_LEVELS
+/* the slim's 0x0105: the multi-connector's level (analogGetMultiCn) tested here */
+unsigned char boardMultiCnIsLevel2(void)
+{
+	return analogGetMultiCn() == 2;
+}
+
+unsigned char boardMultiCnIsNone(void)
+{
+	return analogGetMultiCn() == 0xff;
+}
+
+unsigned char boardMultiCnIsLevel0(void)
+{
+	return analogGetMultiCn() < 1;
+}
+
+/* not read yet */
+unsigned char boardMultiCnIsUnread(void)
+{
+	return analogGetMultiCn() == 0xfe;
+}
+#endif
+
 /* power device job 0x20 (on) or 0x10 (off), then 25 or 10 ticks */
 unsigned char boardMultiCnPower(unsigned char on)
 {

@@ -19,6 +19,7 @@
 #endif
 #include "host.h"
 #include "keepram.h"
+#include "input.h"
 #include "kernel.h"
 #include "param.h"
 #include "power.h"
@@ -54,7 +55,6 @@ struct PowerPart {
 
 extern void inputInit(void);
 #if SOURCE_0103
-extern void inputStateRequest(unsigned char state);
 #endif
 extern void inputResumePrepare(void);
 extern void inputResumeOpen(void);
@@ -417,7 +417,7 @@ unsigned char powerResume(union PowerRequest *request)
 	/* USS-1001: the input's two state requests around the parts, the DTC and the host's
 	   requests opened with the link */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(5);
+	inputStateRequest(INPUT_STATE(5));
 	POWER_WAIT_KEEP(3, 3);
 	POWER_WAIT_CLEAR(2);
 	task2SetFlag(3, 0x1000);
@@ -442,7 +442,7 @@ unsigned char powerResume(union PowerRequest *request)
 #endif
 	powerPendingClear(5);
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(6);
+	inputStateRequest(INPUT_STATE(6));
 	POWER_WAIT_KEEP(3, 3);
 	powerPendingClear(3);
 #if BOARD_USS1001
@@ -587,7 +587,7 @@ unsigned char powerOff(void)
 #if SOURCE_0103
 	/* USS-1001: the input stopped by its state request, the DTC closed with the CSI */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(1);
+	inputStateRequest(INPUT_STATE(1));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	hostIntDisable();
@@ -697,7 +697,7 @@ unsigned char powerSuspend(void)
 #if SOURCE_0103
 	/* USS-1001: as its off, with P9.1 high */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(3);
+	inputStateRequest(INPUT_STATE(3));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	hostIntDisable();
@@ -779,7 +779,7 @@ unsigned char powerShutdown(void)
 #if SOURCE_0103
 	/* USS-1001: as its off, the timers' clock stopped at the end */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(9);
+	inputStateRequest(INPUT_STATE(9));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	hostIntDisable();
@@ -882,7 +882,7 @@ unsigned char powerCut(void)
 	dly_tsk(1);
 	powerPendingClear(1);
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(7);
+	inputStateRequest(INPUT_STATE(7));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	powerPendingClear(6);
@@ -964,7 +964,7 @@ unsigned char powerReset(void)
 #if SOURCE_0103
 	/* USS-1001: the input reset by its state request, P9.7 pulsed */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(0x0b);
+	inputStateRequest(INPUT_STATE(0x0b));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	hostIntDisable();
@@ -1066,7 +1066,7 @@ unsigned char powerUpdate(void)
 #if SOURCE_0103
 	/* USS-1001: the input and the host's requests closed, the host link given its time */
 	POWER_WAIT_CLEAR(3);
-	inputStateRequest(0x0c);
+	inputStateRequest(INPUT_STATE(0x0c));
 	POWER_WAIT(3, 3);
 	powerPendingClear(3);
 	powerPendingClear(1);
