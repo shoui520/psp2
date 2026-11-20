@@ -19,6 +19,9 @@
 #include <timer/timer.h>
 #include <job/job.h>
 #include <common/shared_ptr.h>
+#include <common/char_encoding.h>
+#include <plugin.h>
+#include <versatileparam/idparam.h>
 #include <vshbridge/vshbridge.h>
 
 #include "../include/esebase.hpp"
@@ -55,6 +58,7 @@ int Bgdl_8111234C(const char *device, BgdlStorageInfo *info);	/* the device's sp
 int Bgdl_8111240E(const char *path, SceUInt64 size);		/* a file made that size (PLACEHOLDER) */
 int Bgdl_81111724(const char *path, int flag, SceUInt64 reserved);	/* PLACEHOLDER: removes a file */
 int Bgdl_81111CDC(const char *url, const char *folder, string *out, bool flag);	/* PLACEHOLDER */
+int Bgdl_811221E0(const char *src, int max, string *out);	/* a secret stored scrambled (PLACEHOLDER) */
 string Bgdl_81113C72(SceUInt32 id, bool flag);			/* PLACEHOLDER: a game's folder */
 int Bgdl_811137F6(bool mount);					/* PLACEHOLDER: grw0: */
 void Bgdl_81122168(bool clean);					/* PLACEHOLDER */
@@ -79,7 +83,8 @@ struct BgdlUpdateParam {
 	SceUInt32 systemVersion;
 	SceUInt32 pspVersion;
 	char key235[13];		/* set by the check */
-	char padding[7];
+	char padding[3];
+	int option;			/* PLACEHOLDER name: 1 for bgdlCheckPatchSpace's check */
 };
 
 struct BgdlUpdateCore {
@@ -173,6 +178,7 @@ public:
 
 /* PLACEHOLDER name: the copy did not complete (libmtp's errors other than its 0x80546600 group) */
 #define BGDL_ERROR_COPY_FAILED		0x80103A24
+#define BGDL_ERROR_CANCELLED		0x80103A1C	/* PLACEHOLDER name */
 
 /* PLACEHOLDER name: the task's param file names no file (key 203 empty) */
 #define BGDL_ERROR_NO_FILE		0x80103A1F
@@ -257,6 +263,24 @@ struct BgdlContentInfo {
 
 /* PLACEHOLDER name: the request names no URL */
 #define BGDL_ERROR_NO_URL		0x80103A0A
+
+/* PLACEHOLDER names: what AddContentTask finds wrong in the server's description */
+#define BGDL_ERROR_BAD_KIND		0x80103A21
+#define BGDL_ERROR_NO_SIZE		0x80103A2A
+
+/* PLACEHOLDER name: QAF does not allow a fake AC install on grw0: */
+#define BGDL_ERROR_NO_FAKE_AC		0x80103A43
+
+/* game_plugin's (PLACEHOLDER names: game_plugin.h does not name them yet) */
+int Bgdl_81114092(paf::vector<string> *titles);		/* the game card's titles */
+int Bgdl_81371C70(const char *titleId, int *found);	/* 1: the title has a row */
+
+/* download_plugin's name for the PSM runtime's package (PLACEHOLDER name) */
+#define DOWNLOAD_PLUGIN_STR_PSM_RUNTIME	0xC398A7A7
+
+int Bgdl_8111FEF8(const char *device, const char *url, int flags, int reserved0, MtpBgCopyHost *host,
+		  int reserved1, const char *folder, int reserved2, int *status, BgdlServerInfo *server,
+		  string *path);		/* esehttp.cpp: a file got into folder (PLACEHOLDER) */
 
 int Bgdl_8111B72A(int handle, int reserved0, const char *device, const char *url,
 		  const char *id0, const char *id1, const char *id2, int reserved1,
@@ -3095,7 +3119,7 @@ void startMng(void)
 			thread->Start();
 			manager->m_error = 0;
 		} else {
-			manager->m_error = BGDL_ERROR_NOT_STARTED;
+			manager->m_error = BGDL_ERROR_STOPPED;
 		}
 	}
 	s_updateMutex.Unlock();
@@ -3141,8 +3165,8 @@ int BgdlManager::Stop(void)
 	m_thread->Join();
 	delete m_thread;
 	m_thread = NULL;
-	m_error = BGDL_ERROR_NOT_STARTED;
-	return BGDL_ERROR_NOT_STARTED;
+	m_error = BGDL_ERROR_STOPPED;
+	return BGDL_ERROR_STOPPED;
 }
 
 /* (0x81104474) */
@@ -3406,6 +3430,731 @@ out:
 	if (ret != 0)
 		RemoveTask(taskId);
 	UpdateQueueStatus();
+	return ret;
+}
+
+/* (0x81105306) PLACEHOLDER name */
+int bgdlAddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request, SceUInt32 *id)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->AddDownloadTask(device, request, id);
+}
+
+/* (0x8110532E) a task made for a content the server described: its files made their sizes, its
+ * keys written, and started */
+int BgdlManager::AddContentTask(const BgdlContentRequest *request, const BgdlContentAccount *account,
+				const BgdlContentInfo *info, SceUInt32 *id)
+{
+	BgdlTaskPath folder;
+	SceUInt32 taskId;
+	int ret;
+
+	Bgdl_81113890(1);
+	if (request == NULL || account == NULL || info == NULL) {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto out;
+	}
+	taskId = (SceUInt32)-1;
+	if (request->device != 0 && request->device != 1 && request->device == 2)
+		taskId = (SceUInt32)-2;
+	if (taskId == (SceUInt32)-1 && m_ux0Ready != true) {
+		ret = BGDL_ERROR_NO_UX0;
+		goto out;
+	}
+	if (request->url[0] == '\0') {
+		ret = BGDL_ERROR_NO_URL;
+		goto out;
+	}
+	{
+		string url(request->url);
+
+		if (url.length() == 0) {
+			ret = BGDL_ERROR_NO_URL;
+			goto out;
+		}
+		if (info->flag != true) {
+			ret = info->status;
+			goto out;
+		}
+		if (info->value2 < info->value3) {
+			ret = BGDL_ERROR_UX0_FULL;
+			goto out;
+		}
+
+		string name("");
+
+		if (request->name[0] != '\0')
+			name = request->name;
+		ret = AddTask(&taskId, 0, request->device, name.c_str(),
+			      (request->flags & BGDL_REQUEST_FLAG_KEY115) != 0,
+			      (request->flags & BGDL_REQUEST_FLAG_KEY116) != 0);
+		if (ret != 0)
+			goto out;
+		ret = folder.initialize(taskId, 20);
+		if (ret != 0)
+			goto out;
+		if (info->url[0] == '\0' || sce_paf_strlen(info->url) == 0) {
+			ret = BGDL_ERROR_NO_FILE;
+			goto out;
+		}
+		if (folder.m_begin == NULL) {
+			ret = BGDL_ERROR_NO_GAME_FOLDER;
+			goto out;
+		}
+		{
+			string file(folder.m_begin);
+
+			file += "/";
+			file += info->url;
+			if (Bgdl_8111240E(file.c_str(), info->size) != 0) {
+				ret = BGDL_ERROR_NO_GAME_FOLDER;
+				goto out;
+			}
+
+			string contents(folder.m_begin);
+
+			contents += "/";
+			contents += "av_contents.bin";
+			if (Bgdl_8111240E(contents.c_str(), 0x200000) != 0) {
+				ret = BGDL_ERROR_NO_GAME_FOLDER;
+				goto out;
+			}
+		}
+		{
+			EseParam param(taskId);
+			const BgdlKindMap *map;
+			bool key112, key218, key205, key102;
+			SceUInt64 current;
+			int kind;
+
+			ret = param.openWrite();
+			if (ret != 0)
+				goto out;
+			key112 = true;
+			ret = param.write(112, &key112, sizeof(key112));
+			if (ret != 0)
+				goto out;
+			ret = param.write(202, url.c_str(), url.length() + 1);
+			if (ret != 0)
+				goto out;
+			if (account->user[0] != '\0' && sce_paf_strlen(account->user) != 0) {
+				string user("");
+
+				ret = Bgdl_811221E0(account->user, 31, &user);
+				if (ret != 0)
+					goto out;
+				ret = param.write(200, user.c_str(), user.length() + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (account->password[0] != '\0' && sce_paf_strlen(account->password) != 0) {
+				string password("");
+
+				ret = Bgdl_811221E0(account->password, 31, &password);
+				if (ret != 0)
+					goto out;
+				ret = param.write(201, password.c_str(), password.length() + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (account->key209[0] != '\0' && sce_paf_strlen(account->key209) != 0) {
+				ret = param.write(209, account->key209, sce_paf_strlen(account->key209) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			if (request->iconPath[0] != '\0') {
+				string icon("");
+
+				if (Bgdl_81111CDC(request->iconPath, folder.m_begin, &icon, true) == 0) {
+					ret = param.write(106, icon.c_str(), icon.length() + 1);
+					if (ret != 0)
+						goto out;
+				}
+			}
+			key218 = request->device == 0;
+			ret = param.write(218, &key218, sizeof(key218));
+			if (ret != 0)
+				goto out;
+			if (info->url[0] == '\0' || sce_paf_strlen(info->url) == 0) {
+				ret = BGDL_ERROR_NO_FILE;
+				goto out;
+			}
+			ret = param.write(203, info->url, sce_paf_strlen(info->url) + 1);
+			if (ret != 0)
+				goto out;
+			if (info->size == 0 || info->size == (SceUInt64)-1) {
+				ret = BGDL_ERROR_NO_SIZE;
+				goto out;
+			}
+			ret = param.write(206, &info->size, sizeof(info->size));
+			if (ret != 0)
+				goto out;
+			current = 0;
+			ret = param.write(208, &current, sizeof(current));
+			if (ret != 0)
+				goto out;
+			if (info->contentId[0] != '\0' && sce_paf_strlen(info->contentId) != 0) {
+				ret = param.write(204, info->contentId, sce_paf_strlen(info->contentId) + 1);
+				if (ret != 0)
+					goto out;
+			}
+			kind = 0;
+			for (map = s_kindMap; map->kind != 0; map++) {
+				if (info->kind == map->kind) {
+					kind = map->server;
+					break;
+				}
+			}
+			if (kind < 1 || kind > 3)
+				ret = BGDL_ERROR_BAD_KIND;
+			if (ret != 0)
+				goto out;
+			key205 = true;
+			ret = param.write(205, &key205, sizeof(key205));
+			if (ret != 0)
+				goto out;
+			key102 = true;
+			ret = param.write(102, &key102, sizeof(key102));
+			if (ret != 0)
+				goto out;
+			ret = param.write(107, &kind, sizeof(kind));
+			if (ret != 0)
+				goto out;
+
+			EseTask *task = FindTask(taskId);
+
+			if (task == NULL) {
+				ret = BGDL_ERROR_NO_TASK;
+				goto out;
+			}
+			task->m_ParamCache.key107 = kind;
+			task->m_ParamCache.key102 = key102;
+			task->status.id = task->id;
+			task->status.current = current;
+			task->status.total = info->size;
+			task->transfer.Start(info->size, current, 0, 512000);
+			ret = param.commit();
+			if (ret != 0)
+				goto out;
+		}
+		if ((request->flags & BGDL_REQUEST_FLAG_NO_START) == 0)
+			ret = ReloadTask(taskId);
+		if (ret == 0)
+			*id = taskId;
+	}
+out:
+	if (ret != 0 && (taskId != (SceUInt32)-1 || taskId != (SceUInt32)-2))
+		RemoveTask(taskId);
+	return ret;
+}
+
+/* (0x81106316) PLACEHOLDER name */
+int bgdlAddContentTask(const BgdlContentRequest *request, const BgdlContentAccount *account,
+		       const BgdlContentInfo *info, SceUInt32 *id)
+{
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	return s_manager->AddContentTask(request, account, info, id);
+}
+
+/* (0x81106346) PLACEHOLDER name: 0 while the list has room for another task */
+int bgdlCheckQueue(void)
+{
+	BgdlManager *manager;
+
+	if (s_manager == NULL)
+		return BGDL_ERROR_NOT_STARTED;
+	manager = s_manager;
+	manager->m_taskListMutex.Lock();
+	if ((SceSize)((char *)manager->m_tasks.m_end - (char *)manager->m_tasks.m_begin) /
+	    sizeof(EseTask *) >= 32) {
+		manager->m_taskListMutex.Unlock();
+		return BGDL_ERROR_QUEUE_FULL;
+	}
+	manager->m_taskListMutex.Unlock();
+	return 0;
+}
+
+/* (0x81106390) PLACEHOLDER name: the state of PCSI00011's task of kind 6, *id its id; 0x8000
+ * when there is none */
+int BgdlManager::Bgdl_81106390(SceUInt32 *id)
+{
+	BgdlTaskPackage package;
+	EseTask **it;
+	int ret = 0x8000;
+
+	for (it = m_tasks.m_begin; it != m_tasks.m_end; it++) {
+		EseTask *task = *it;
+
+		s_packageMutex.Lock();
+		package = task->package;
+		s_packageMutex.Unlock();
+		if (package.key220.length() != 0 &&
+		    sce_paf_strncmp(package.key220.c_str(), "PCSI00011", 10) == 0 && *it != NULL &&
+		    (*it)->m_ParamCache.key107 == 6) {
+			int runStatus = (*it)->m_ParamCache.runStatus;
+			int result;
+
+			*id = (*it)->id;
+			result = (*it)->result;
+			if (runStatus == 2)
+				ret = 3;
+			else if (runStatus == 1)
+				ret = 2;
+			else if ((*it)->m_ParamCache.runStatus == 0 && (*it)->m_ParamCache.key113 &&
+				 result == 0)
+				ret = 4;
+			else
+				ret = result == 0 || result == BGDL_ERROR_COPY_FAILED ||
+				      result == BGDL_ERROR_CANCELLED;
+			break;
+		}
+	}
+	return ret;
+}
+
+/* (0x8110652E) PLACEHOLDER name: 0 when ux0: has the room for the title's patch, 1 when there is
+ * no patch to get */
+int bgdlCheckPatchSpace(const BgdlTaskPackage *title, const bool *disc, LsdbAppInfoPtr *app,
+			int mode)
+{
+	BgdlStorageInfo storage;
+	BgdlUpdateParam param;
+	BgdlUpdateCore core;
+	BgdlUpdateState state;
+	BgdlUpdateInfo info;
+	SceUInt64 needed;
+	int ret;
+
+	if (!Bgdl_81112284("ux0:"))
+		return BGDL_ERROR_NO_UX0;
+	ret = bgdlCheckQueue();
+	if (ret != 0)
+		return ret;
+	ret = Bgdl_8111234C("ux0:", &storage);
+	if (ret != 0)
+		return ret;
+	needed = 6 * storage.clusterSize;
+	if (storage.free < needed)
+		return BGDL_ERROR_UX0_FULL;
+	ret = bgdlUpdateParamInit(title, disc, app, mode, &param);
+	if (ret != 0)
+		return ret;
+	param.option = 1;
+	ret = Bgdl_812A99AE(&core, 0, &param);
+	if (ret != 0)
+		return ret;
+	sce_paf_memset(&state, 0, sizeof(state));
+	sce_paf_memset(&info, 0, sizeof(info));
+	state.size = sizeof(state);
+	ret = Bgdl_812A9BB0(&core, &state, &info);
+	if (ret >= 0) {
+		if (state.state != 2 || (info.flags & 0x80) != 0) {
+			if (state.state > 3) {
+				if (state.state > 4)
+					ret = 1;
+				else
+					ret = BGDL_ERROR_PATCH_STATE4;
+			} else if (state.state <= 2) {
+				ret = 1;
+			} else {
+				ret = BGDL_ERROR_PATCH_STATE3;
+			}
+		} else {
+			SceUInt32 i;
+
+			for (i = 0; i < info.count; i++) {
+				BgdlUpdateEntry entry;
+
+				sce_paf_memset(&entry, 0, sizeof(entry));
+				ret = Bgdl_812A985C(&core, i, &entry);
+				if (ret != 0)
+					break;
+				needed += Bgdl_81112310(entry.size, storage.clusterSize) + storage.clusterSize;
+			}
+		}
+	}
+	Bgdl_812A9708(&core);
+	if (ret == 0) {
+		if (storage.free < needed)
+			return BGDL_ERROR_UX0_FULL;
+		if (state.state == 2)
+			return 0;
+	}
+	return ret;
+}
+
+/* (0x8110671E) the PSM runtime (PCSI00011): its patch looked for when it is installed, else its
+ * package's download task made, with the signature and the icon got from the console's PSM
+ * server first */
+int BgdlManager::AddPsmRuntimeTask(string *iconPath, int reserved0, int reserved1,
+				   SceUInt64 *needed)
+{
+	SceUInt64 size;
+	SceUInt32 taskId;
+	int ret;
+
+	if (m_ux0Ready != true)
+		return BGDL_ERROR_NO_UX0;
+	size = 0;
+	taskId = (SceUInt32)-1;
+	{
+		LsdbAppInfoPtr app(new LsdbAppInfo());
+		int state;
+
+		if (Bgdl_81123BC0("PCSI00011", &app) == 0)
+			goto patch;
+		state = Bgdl_81106390(&taskId);
+		if (state != 0x8000) {
+			if (state != 0)
+				goto patch;
+			RemoveTask(taskId);
+		}
+
+		BgdlDownloadRequest request;
+		BgdlContentInfo info;
+
+		sce_paf_memset(&request, 0, sizeof(request));
+
+		string dir("ux0:");
+
+		dir += "bgdl/w";
+		if (!Dir::IsExist(dir.c_str())) {
+			ret = Dir::CreateRecursive(dir.c_str(), 6);
+			if (ret != 0)
+				goto done;
+		}
+		{
+			string url(s_psmServer->url);
+
+			url += "IP9100-PCSI00011_00-PSMRUNTIME000000.sig";
+
+			string folder(dir);
+			string path;
+			BgdlServerInfo server;
+			bool cancel = false;
+			int status = 0;
+			BgdlCancelHost host(&cancel);
+
+			ret = Bgdl_8111FEF8("ux0:", url.c_str(), 0x1000000, 0, &host, 0, folder.c_str(), 0,
+					    &status, &server, &path);
+			if (ret != 0)
+				goto done;
+			request.key230[0] = '\0';
+			sce_paf_snprintf(request.key230, 127, "%s", path.c_str());
+		}
+		request.iconPath[0] = '\0';
+		sce_paf_snprintf(request.iconPath, 255, "%s", "vs0:vsh/game/psm/runtime_icon.png");
+		{
+			string url(s_psmServer->url);
+
+			url += "IP9100-PCSI00011_00-PSMRUNTIME000000.png";
+
+			string path;
+			string folder(dir);
+			BgdlServerInfo server;
+			bool cancel = false;
+			int status = 0;
+			BgdlCancelHost host(&cancel);
+
+			if (Bgdl_8111FEF8("ux0:", url.c_str(), 0x1000000, 0, &host, 0, folder.c_str(), 0,
+					  &status, &server, &path) == 0) {
+				request.iconPath[0] = '\0';
+				sce_paf_snprintf(request.iconPath, 255, "%s", path.c_str());
+			}
+		}
+
+		string url(s_psmServer->url);
+
+		url += "IP9100-PCSI00011_00-PSMRUNTIME000000.pkg";
+		request.url[0] = '\0';
+		sce_paf_snprintf(request.url, 2047, "%s", url.c_str());
+
+		wstring title(L"");
+		string name("");
+		Plugin *plugin = Plugin::Find("download_plugin");
+
+		if (plugin != NULL) {
+			title = plugin->GetString(IDParam(DOWNLOAD_PLUGIN_STR_PSM_RUNTIME));
+			if (title.length() != 0) {
+				string utf8;
+
+				common::Utf16ToUtf8(title, &utf8);
+				name = utf8;
+			}
+		}
+		request.name[0] = '\0';
+		if (name.length() != 0)
+			sce_paf_snprintf(request.name, 256, "%s", name.c_str());
+		else
+			sce_paf_snprintf(request.name, 256, "%s", "PSM Runtime Package");
+		request.titleId[0] = '\0';
+		sce_paf_snprintf(request.titleId, 16, "%s", "PCSI00011");
+		request.contentId[0] = '\0';
+		sce_paf_snprintf(request.contentId, 51, "%s", "IP9100-PCSI00011_00-PSMRUNTIME000000");
+		request.reserved0 = 0;
+		sce_paf_memset(&info, 0, sizeof(info));
+		request.reserved4 = 0;
+		ret = Bgdl_81107BDE(&request, &info, &taskId);
+		if (ret == BGDL_ERROR_UX0_FULL && needed != NULL)
+			*needed = size;
+		if (request.key230[0] != '\0')
+			LocalFile::RemoveFile(request.key230);
+		if (request.iconPath[0] != '\0' &&
+		    sce_paf_strcmp(request.iconPath, "vs0:vsh/game/psm/runtime_icon.png") != 0)
+			LocalFile::RemoveFile(request.iconPath);
+	}
+	goto done;
+patch:
+	{
+		BgdlTaskPackage title;
+		bool disc;
+
+		title.key220 = "PCSI00011";
+		title.key217 = "IP9100-PCSI00011_00-PSMRUNTIME000000";
+
+		LsdbAppInfoPtr app(new LsdbAppInfo());
+
+		disc = false;
+		ret = bgdlCheckPatchSpace(&title, &disc, &app, 1);
+		if (ret == 0)
+			ret = bgdlRegistPatchByTitleID(&title, NULL);
+		else if (ret == BGDL_ERROR_UX0_FULL && needed != NULL)
+			*needed = size;
+	}
+done:
+	if (ret == 0)
+		*iconPath = "vs0:vsh/game/psm/runtime_icon.png";
+	return ret;
+}
+
+/* (0x81107512) the storage a game's additional content goes to: the game card's own titles, or
+ * the title's row when there is no game card; *grw0 when it is grw0: */
+int BgdlManager::CheckContentStorage(const BgdlDownloadRequest *request, bool *grw0)
+{
+	int ret = 0;
+
+	*grw0 = false;
+
+	paf::vector<string> titles;
+
+	if (request == NULL) {
+		ret = BGDL_ERROR_NULL_TITLE;
+		goto out;
+	}
+	if (request->gameTitleId[0] == '\0' || sce_paf_strlen(request->gameTitleId) == 0) {
+		ret = BGDL_ERROR_NO_TITLE_ID;
+		goto out;
+	}
+	if (m_ux0Ready == true)
+		goto out;
+	if (!Bgdl_81112284("gro0:")) {
+		int found;
+
+		if (Bgdl_81371C70(request->gameTitleId, &found) == 1) {
+			if (found > 0) {
+				if (found <= 1) {
+					ret = BGDL_ERROR_NO_APP;
+					goto out;
+				}
+			} else if (found >= 0) {
+				ret = BGDL_ERROR_NO_STORAGE;
+				goto out;
+			}
+			ret = BGDL_ERROR_NO_APP;
+		} else {
+			ret = BGDL_ERROR_NO_APP;
+		}
+		goto out;
+	}
+	ret = Bgdl_81114092(&titles);
+	if (ret != 0)
+		goto out;
+	{
+		SceUInt32 i;
+		int kind;
+
+		for (i = 0; i < (SceUInt32)titles.size(); i++) {
+			if (titles[i].length() != 0 &&
+			    gameAppRecordNamesTitle(request->gameTitleId, titles[i].c_str()) == 1)
+				break;
+		}
+		if (i >= (SceUInt32)titles.size()) {
+			ret = BGDL_ERROR_NO_APP;
+			if (titles.size() != 0)
+				ret = BGDL_ERROR_NO_STORAGE;
+			goto out;
+		}
+
+		const char *titleId = titles[i].c_str();
+		LsdbAppInfoPtr app(new LsdbAppInfo());
+
+		if (Bgdl_81123BC0(titleId, &app) != 0) {
+			ret = BGDL_ERROR_NO_APP;
+			goto out;
+		}
+		ret = Bgdl_81113898(&app, &kind);
+		if (ret != 0)
+			goto out;
+		ret = 0;
+		if (kind > 1) {
+			if (kind <= 4) {
+				ret = BGDL_ERROR_NO_APP;
+				goto out;
+			}
+		} else if (kind > 0) {
+			if (Bgdl_81112284("grw0:")) {
+				*grw0 = true;
+				if (vshSblQafMgrIsAllowFakeACInstall() == 0 && request->installMode >= 0)
+					ret = BGDL_ERROR_NO_FAKE_AC;
+			} else {
+				ret = BGDL_ERROR_NO_STORAGE;
+			}
+			goto out;
+		}
+		ret = BGDL_ERROR_BAD_STORAGE;
+	}
+out:
+	return ret;
+}
+
+/* PLACEHOLDER name: the task is not waiting to run */
+#define BGDL_ERROR_NOT_WAITING		0x80103A1D
+
+/* (0x811078DC) a task waiting to run given up */
+int BgdlManager::CancelWaitingTask(SceUInt32 id)
+{
+	EseTask **first;
+	EseTask **last;
+	int count;
+
+	m_taskListMutex.Lock();
+	first = m_tasks.m_begin;
+	last = m_tasks.m_end;
+	count = last - first;
+	while (count > 0) {
+		int half = count / 2;
+		EseTask **mid = first + half;
+
+		if ((*mid)->id < id) {
+			first = ++mid;
+			count -= half + 1;
+		} else {
+			count = half;
+		}
+	}
+	if (first != last && id < (*first)->id)
+		first = m_tasks.m_end;
+	if (first == last) {
+		m_taskListMutex.Unlock();
+		return BGDL_ERROR_NO_TASK;
+	}
+	if ((*first)->m_ParamCache.runStatus != 1) {
+		m_taskListMutex.Unlock();
+		return BGDL_ERROR_NOT_WAITING;
+	}
+	(*first)->setResult(0, BGDL_ERROR_CANCELLED);
+	m_taskListMutex.Unlock();
+	return 0;
+}
+
+/* (0x81107986) */
+int BgdlManager::GetTaskList(BgdlTaskEntry *list, int *count, int type)
+{
+	BgdlTaskEntry *end;
+	EseTask **it;
+	int max = 0;
+	int n = 0;
+
+	m_taskListMutex.Lock();
+	if (list != NULL)
+		max = *count;
+	end = list + max;
+	*count = 0;
+	for (it = m_tasks.m_begin; it != m_tasks.m_end; it++) {
+		if (type == -1 || type == (int)(*it)->m_ParamCache.type) {
+			*count = ++n;
+			if (list != end) {
+				const EseParamCache *cache = &(*it)->m_ParamCache;
+
+				list->id = (*it)->id;
+				list->param.type = cache->type;
+				list->param.key107 = cache->key107;
+				list->param.runStatus = cache->runStatus;
+				list->param.key102 = cache->key102;
+				list->param.ready = cache->ready;
+				list->param.key108 = cache->key108;
+				list->param.state = cache->state;
+				list->param.key112 = cache->key112;
+				list->param.key113 = cache->key113;
+				list->param.key110 = cache->key110;
+				list->param.key111 = cache->key111;
+				list->param.kind = cache->kind;
+				list->param.key115 = cache->key115;
+				list->param.key116 = cache->key116;
+				list->param.reserved = cache->reserved;
+				list->result = (*it)->result;
+				list++;
+				n = *count;
+			}
+		}
+	}
+	m_taskListMutex.Unlock();
+	return 0;
+}
+
+/* (0x81107A9E) the thread woken and waited for, then every task waiting to run given up */
+int BgdlManager::CancelWaitingTasks(void)
+{
+	BgdlTaskEntry list[32];
+	SceUInt64 request;
+	int count;
+	int ret;
+
+	bgdlManagerWakeup(&request);
+	for (;;) {
+		SceUInt64 wanted = request;
+		bool handled;
+
+		s_updateMutex.Lock();
+		if (s_manager != NULL) {
+			BgdlManager *manager = s_manager;
+
+			manager->m_taskListMutex.Lock();
+			handled = s_handled >= wanted;
+			manager->m_taskListMutex.Unlock();
+			s_updateMutex.Unlock();
+		} else {
+			s_updateMutex.Unlock();
+			handled = true;
+		}
+		if (handled)
+			break;
+		thread::Sleep(16);
+	}
+	count = 32;
+	ret = GetTaskList(list, &count, -1);
+	if (ret == 0) {
+		int i;
+
+		for (i = 0; (SceUInt32)i < (SceUInt32)count; i++) {
+			if (list[i].param.runStatus == 1)
+				CancelWaitingTask(list[i].id);
+		}
+	}
+	s_updateMutex.Lock();
+	if (s_manager != NULL) {
+		BgdlManager *manager = s_manager;
+
+		manager->m_taskListMutex.Lock();
+		request = ++s_wakeups;
+		manager->m_taskListCond.Notify();
+		manager->m_taskListMutex.Unlock();
+	} else {
+		request = ++s_wakeups;
+	}
+	s_updateMutex.Unlock();
 	return ret;
 }
 

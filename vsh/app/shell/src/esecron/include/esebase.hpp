@@ -30,6 +30,7 @@
 #define BGDL_ERROR_QUEUE_FULL		0x80103A19	/* 32 tasks listed (30 for a task of key 116) */
 #define BGDL_ERROR_NO_TASK		0x80103A14	/* no task has the id */
 #define BGDL_ERROR_NOT_LOADED		0x80103A1A	/* a task's result until its param file is read */
+#define BGDL_ERROR_STOPPED		0x80103A15	/* the manager's thread is stopped or was not made */
 
 /* the length of a task's folder, "ux0:bgdl/t/%08x" */
 #define BGDL_PATH_FOLDER_LENGTH		19
@@ -144,8 +145,11 @@ public:
 
 	~BgdlArray()
 	{
-		if (m_begin != NULL)
+		if (m_begin != NULL) {
 			delete[] (char *)m_begin;
+			m_begin = NULL;
+			m_end = NULL;
+		}
 	}
 
 	/* the buffer made size bytes, the old contents kept */

@@ -236,22 +236,46 @@ struct BgdlPackageRequest {
 struct BgdlDownloadRequest {
 	int reserved0;
 	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_*; 0x02: not started at once */
-	char reserved1[24];
+	int installMode;		/* PLACEHOLDER: from 0 up, grw0: needs QAF's fake AC install */
+	char reserved1[20];
 	SceUInt64 key208;
 	SceUInt64 key206;
-	char reserved2[64];
+	char reserved2[40];
+	char gameTitleId[24];		/* PLACEHOLDER: the game the content is for */
 	char url[2048];			/* key 202 */
 	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
 	char name[257];			/* key 105 */
 	char key203[193];		/* ur0:'s tasks only */
-	char key229[272];
+	char key229[256];
+	char titleId[16];
 	char contentId[52];		/* key 217 */
 	char key222[52];
 	char key230[128];		/* a file copied into the task's folder */
 	char key221[1];			/* PLACEHOLDER: its length is not known yet */
+	char reserved3[129];
+	int reserved4;			/* PLACEHOLDER: only cleared so far */
+	char reserved5[16];
 };
 
 #define BGDL_REQUEST_FLAG_NO_START	0x02
+
+/* a download of a content the server described, as AddContentTask takes it (PLACEHOLDER names) */
+struct BgdlContentRequest {
+	SceUInt32 device;		/* 0: ux0:, 2: ur0: */
+	SceUInt32 flags;		/* BGDL_REQUEST_FLAG_* */
+	char reserved[20];
+	char url[2048];			/* key 202 */
+	char iconPath[256];		/* key 106: the icon, copied into the task's folder */
+	char name[257];			/* key 105 */
+};
+
+/* the account a content download signs in with (PLACEHOLDER names) */
+struct BgdlContentAccount {
+	char reserved;
+	char user[32];			/* key 200, stored scrambled */
+	char password[32];		/* key 201, stored scrambled */
+	char key209[64];		/* PLACEHOLDER: its length is not known yet */
+};
 
 /* what AddPackageTask gives back (PLACEHOLDER names) */
 struct BgdlPackageResult {
@@ -314,6 +338,13 @@ inline SceUInt32 bgdlWorkId(SceUInt32 type, bool flag)
 }
 
 class BgdlManagerThread;
+
+/* a task as GetTaskList lists it (PLACEHOLDER names) */
+struct BgdlTaskEntry {
+	SceUInt32 id;
+	EseParamCache param;
+	int result;
+};
 struct BgdlServerQuery;
 struct BgdlServerIds;
 struct BgdlContentInfo;
@@ -351,6 +382,21 @@ public:
 	int AddPackageTask(const BgdlPackageRequest *request, BgdlPackageResult *result);
 	/* (0x811049D4) PLACEHOLDER name: a download made a task; *id its id */
 	int AddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request, SceUInt32 *id);
+	/* (0x8110532E) PLACEHOLDER name: a content the server described made a task; *id its id */
+	int AddContentTask(const BgdlContentRequest *request, const BgdlContentAccount *account,
+			   const BgdlContentInfo *info, SceUInt32 *id);
+	int Bgdl_81106390(SceUInt32 *id);	/* (0x81106390) PLACEHOLDER name */
+	/* (0x8110671E) PLACEHOLDER name: the PSM runtime's download task made, or its patch looked
+	 * for when it is installed; *iconPath its icon */
+	int AddPsmRuntimeTask(paf::string *iconPath, int reserved0, int reserved1, SceUInt64 *needed);
+	/* (0x81107BDE) PLACEHOLDER name */
+	int Bgdl_81107BDE(BgdlDownloadRequest *request, BgdlContentInfo *info, SceUInt32 *id);
+	int CancelWaitingTask(SceUInt32 id);	/* (0x811078DC) PLACEHOLDER name */
+	/* (0x81107986) PLACEHOLDER name: the tasks of a type (-1: all), *count of them */
+	int GetTaskList(BgdlTaskEntry *list, int *count, int type);
+	int CancelWaitingTasks(void);		/* (0x81107A9E) PLACEHOLDER name */
+	/* (0x81107512) PLACEHOLDER name: the storage a game's content goes to; *grw0 when grw0: */
+	int CheckContentStorage(const BgdlDownloadRequest *request, bool *grw0);
 
 	BgdlManagerThread *m_thread;	/* "SceBgdlManagerThread", made by startMng */
 	BgdlTaskList m_tasks;
@@ -521,5 +567,10 @@ void bgdlManagerWakeup(SceUInt64 *request);			/* (0x811044BC) PLACEHOLDER name *
 void bgdlSetPermission(SceUInt32 value, SceUInt32 mask);		/* (0x81104574) PLACEHOLDER name */
 int bgdlServerQuery(const BgdlServerQuery *query, const BgdlServerIds *ids, BgdlContentInfo *info,
 		    const bool *cancel);					/* (0x811049A4) PLACEHOLDER name */
+int bgdlAddDownloadTask(SceUInt32 device, const BgdlDownloadRequest *request,
+			SceUInt32 *id);						/* (0x81105306) PLACEHOLDER name */
+int bgdlAddContentTask(const BgdlContentRequest *request, const BgdlContentAccount *account,
+		       const BgdlContentInfo *info, SceUInt32 *id);	/* (0x81106316) PLACEHOLDER name */
+int bgdlCheckQueue(void);					/* (0x81106346) PLACEHOLDER name */
 
 #endif
