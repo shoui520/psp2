@@ -652,6 +652,21 @@ public:
 	/* its widget hidden and destroyed after 200 ms, the wallpapers no page uses deleted
 	   (0x810D2578) */
 	virtual ~ApplauncherPage();
+	/* PLACEHOLDER names: its icons kicked when the list snaps to it (0x810D2B30), and their
+	   selected marks cleared when it leaves (0x810D2B38) */
+	virtual void OnSnapped(void);
+	virtual void OnUnsnapped(void);
+	/* its index in the list (0x810D3B5E), its widget (0x810D3B64), and where the slot's
+	   icon stands on it, at the home's scale (0x810D3B68) */
+	virtual int GetIndex(void);
+	virtual paf::ui::Widget *GetWidget(void);
+	virtual paf::math::v2 GetSlotPos(int slot);
+	/* PLACEHOLDER name: each icon's view pushed from below by a random sideways kick, but on a
+	   page shown in place (0x810D29D6) */
+	void KickIcons();
+	/* PLACEHOLDER name: a folder made in the icon's slot, the icon put in it (the context
+	   menu's "make a folder"; 0x810D2C58) */
+	int MakeFolder(paf::common::SharedPtr<ApplauncherIcon> &icon);
 	/* PLACEHOLDER name: the edit begun on the page: its view refreshed below ten pages, its
 	   icons and view put in the edit, its slots' frames set (0x810B86B4) */
 	void BeginEdit();
@@ -956,8 +971,13 @@ extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDragItem;
 extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherMoveIcon;
 /* PLACEHOLDER: the icon the dragged one is over (0x81555264, the page's file) */
 extern paf::common::SharedPtr<ApplauncherIcon> g_applauncherDropTarget;
-/* PLACEHOLDER: the icons' move time, 275 ms (0x81507820, the page's file, beside 375 and 325) */
+/* PLACEHOLDER names: the time the icons move aside from an opened one in, 375 ms
+   (0x8150781C), the icons' move time, 275 ms (0x81507820), and the time they come back in,
+   325 ms (0x81507824); read here and in the page's file, defined in a file of times not
+   written yet */
+extern const float g_applauncherIconAsideTime;
 extern const float g_applauncherIconMoveTime;
+extern const float g_applauncherIconRestoreTime;
 /* PLACEHOLDER: the time a view is held for before its hold event, 1000 ms (0x81507DE8, the
    icon pool's file) */
 extern float g_applauncherIconHoldTime;
@@ -1432,14 +1452,17 @@ class CreateNewFolderJob : public ApplauncherLsdbJob {
 public:
 	int m_page;
 	LsdbIconPtr m_icon;
-	SceUInt32 m_images[4];		/* PLACEHOLDER: the folder's images (8-byte entries holding
-					   a Surface), not read here */
+	paf::vector<ApplauncherFolderSurface> m_images;	/* the folder icon's images */
 	LsdbIconPtr m_folder;		/* the folder's icon the database made */
 	LsdbIconPtr m_data;		/* the folder's icon given, filled when done */
 };
 /* PLACEHOLDER: a CreateNewFolderJob done: its folder's icon copied into the one given, and the
    icon of the same row updated (0x810D1FF6) */
 void applauncherIconFolderCreated(ApplauncherLsdbJob *job, void *arg);
+paf::common::SharedPtr<paf::job::JobItem> applauncherCreateNewFolderJobStart(
+	paf::job::JobQueue *queue, int page, const LsdbIconPtr &icon, const LsdbIconPtr &folder,
+	const paf::vector<ApplauncherFolderSurface> &images, ApplauncherLsdbJobCallback callback,
+	void *arg);
 
 /* PLACEHOLDER: those jobs put on the queue (0x811C5A3C, 0x811C4E4C, 0x811C5172, 0x811C4F52,
    0x811C5D92) */
@@ -1482,6 +1505,11 @@ paf::common::SharedPtr<paf::job::JobItem> applauncherSetPageLayoutJobStart(
 	const paf::vector<int> &fromPositions, const paf::vector<int> &toPages,
 	const paf::vector<int> &toPositions, const paf::vector<ApplauncherRemovedIcon> &removed,
 	ApplauncherLsdbJobCallback onRun, ApplauncherLsdbJobCallback callback, void *arg);
+/* the pages' parameters saved (Sony's job name, SetPageThemeJob; 0x811C5278 puts it on the
+   queue) */
+paf::common::SharedPtr<paf::job::JobItem> applauncherSetPageThemeJobStart(
+	paf::job::JobQueue *queue, const paf::vector<int> &pages, const LsdbPageList &params,
+	ApplauncherLsdbJobCallback callback, void *arg);
 
 /* the database jobs that put an application's row in (InsertAppInfoJob, 0x811C6110), rewrite
    it (UpdateAppInfoJob, 0x811C6340), rewrite what changed of it (UpdateAppInfoDiffJob,
