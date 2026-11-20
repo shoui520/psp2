@@ -59,6 +59,9 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc SOURCES
 	../../../../../../sys/sdk/target/src/libsnc/weak_calls.c
 	../../../../../../sys/internal/kernel/src/sysmem/sha1_transform.S
 )
+# Sony linked with psp2ld --strip-unused
+target_compile_definitions(${PSP2_TARGET} PRIVATE PSP2_STRIP_UNUSED)
+target_link_options(${PSP2_TARGET} PRIVATE -Wl,--gc-sections)
 # the XML parser SceNpCommon exports, built here from its source with a 1025-byte value buffer
 set_source_files_properties(../np_common/xml.c PROPERTIES COMPILE_DEFINITIONS NP_XML_PARSER_ONLY)
 target_compile_definitions(${PSP2_TARGET} PRIVATE NP_XML_VALUE_SIZE=1025)
