@@ -40,6 +40,7 @@ typedef struct ShellAppEvent {
 typedef void (*ShellEventCallback)(int code, const void *data, SceSize size, void *arg);
 
 #ifdef __cplusplus
+#include <std/string>
 namespace paf { class Framework; namespace graph { class SurfacePool; }
 	namespace memory { class HeapAllocator; } }
 
@@ -144,7 +145,7 @@ int shellAccessibilityMgrCreate(void);			/* (0x810A7616) */
 int shellHandlerTableCreate(void);			/* (0x81248BB4) */
 int shellUtilServerMgrCreate(void);			/* (0x8124BB02) */
 int shellMainThreadPollerCreate(void);			/* (0x8121CFE2) */
-int shellErrorDialogShow(int type, int error, const void *message, int flags);	/* (0x810FB45E) */
+void shellErrorDialogShow(int type, int error, const paf::wstring *message, bool loadModule);	/* (0x810FB45E) */
 
 /* a notice request: an ux0 theme whose activation has expired sends (0, -1, NULL)
    (0x8124B4DA) */
