@@ -34,6 +34,7 @@
 #include "../../../plugins.h"
 #include "../../livespace_db/livespace_db_internal.h"
 #include "applauncher_mode.h"
+#include "applauncher_folderframe.h"
 
 namespace paf { namespace ui { class CompositeDrawer; class ListView; class TextBox; } }
 
@@ -492,15 +493,6 @@ public:
 	virtual void Layout(int mode);
 };
 
-
-/* PLACEHOLDER: the frame drawn behind a folder page's name while it is edited (176 bytes; its
-   constructor at 0x810D8310, in a file not written yet) */
-class ApplauncherFolderNameFrame : public paf::graph::DrawObj {
-public:
-	ApplauncherFolderNameFrame();
-
-	SceUInt32 reserved[24];
-};
 
 /*
  * PLACEHOLDER: a page's widgets, from the pool of three for the home's pages and one for a

@@ -233,7 +233,7 @@ void ApplauncherPageView::Init(bool folder)
 
 	ui::CompositeDrawer *frame = (ui::CompositeDrawer *)m_widget->FindChild(
 		IDParam(s_empty_name, APPLAUNCHER_PAGE_VIEW_NAME_FRAME), 0);
-	common::SharedPtr<graph::DrawObj> obj((graph::DrawObj *)new ApplauncherFolderNameFrame());
+	common::SharedPtr<graph::DrawObj> obj((graph::DrawObj *)new FolderFrameDrawObj());
 
 	frame->InsertDrawObj(obj, 0, true);
 	frame->SetTexture(g_applauncherPlugin->GetTexture(
