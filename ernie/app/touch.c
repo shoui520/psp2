@@ -57,10 +57,13 @@ struct TouchBuffer touchBuffer;
 struct TouchDelays touchDelays;
 #endif
 #if TOUCH_0105
-const struct TouchRearController touchRearControllers[3] = {
-	{ 0x96, 0, 1, 0 },
-	{ 0x48, 0, 2, 1 },
-	{ 0xc8, 0, 3, 0 },
+/* the 8 bytes a memory write carries after its data, under its CRC */
+const unsigned char touchRearWriteKey[8] = { 0xa5, 0x01, 0x02, 0x03, 0xff, 0xfe, 0xfd, 0x5a };
+const struct TouchRearController touchRearControllers[4] = {
+	{ 0, 1, 0x96, 0 },
+	{ 1, 0, 0x48, 0 },
+	{ 2, 1, 0xc8, 0 },
+	{ 3, 0, 0xc8, 0 },
 };
 #endif
 
@@ -116,10 +119,10 @@ void touchOpen(unsigned char link)
 	touch.panel[1].controller = 0xff;
 	touch.panel[0].controllerStatus = 0;
 	touch.panel[1].controllerStatus = 0;
-	touch.panel[0].controllerData[0] = 0;
-	touch.panel[0].controllerData[1] = 0;
-	touch.panel[1].controllerData[0] = 0;
-	touch.panel[1].controllerData[1] = 0;
+	touch.panel[0].controllerActive = 0;
+	touch.panel[0].controllerWasActive = 0;
+	touch.panel[1].controllerActive = 0;
+	touch.panel[1].controllerWasActive = 0;
 #endif
 	touchClearMode();
 	touchBuffer.frame = 0;
@@ -1104,6 +1107,63 @@ unlock:
 /* reads a panel's information block, and its object table when its firmware changed or the
    last read failed: 0, the read's error, or 0x40 for a table too long; a controller in its
    bootloader has its status as its information */
+#if TOUCH_0105
+unsigned char touchIdentify(char panel)
+{
+	unsigned char result;
+	unsigned char info[TOUCH_INFO_SIZE + 2];
+
+	switch (panel) {
+	case 0:
+		if (!TOUCH_PRESENT0) {
+			memset(&touch.panel[panel], 0xff, 4);
+			return 0;
+		}
+		break;
+	case 1:
+		if (!TOUCH_PRESENT1) {
+			memset(&touch.panel[panel], 0xff, 4);
+			return 0;
+		}
+		break;
+	}
+	touchProbeController(panel);
+	if (touch.panel[panel].controller == 2) {
+		result = touchRearReadInfo(touchBufferData, panel);
+		if (result == 0 && touchBufferData[0] == 0xff)
+			touch.panel[panel].controller = 3;
+	}
+	if (touch.panel[panel].controller == 0) {
+		result = touchRead(0x0000, info, TOUCH_INFO_SIZE, panel);
+		if (result != 0) {
+			memset(&touch.panel[panel], 0xff, 4);
+		} else if (touch.panel[panel].version != info[TOUCH_INFO_VERSION] ||
+			   touch.panel[panel].build != info[TOUCH_INFO_BUILD] ||
+			   touch.panel[panel].objectsUnread) {
+			memcpy(&touch.panel[panel], info, 4);
+			if (info[TOUCH_INFO_OBJECTS] < TOUCH_OBJECTS_MAX) {
+				touch.panel[panel].objectsUnread = 0;
+				result = touchReadObjects(&touch.panel[panel].objects,
+							  info[TOUCH_INFO_OBJECTS], panel);
+				if (result != 0)
+					touch.panel[panel].objectsUnread = 1;
+			} else {
+				touch.panel[panel].objectsUnread = 1;
+				result = 0x40;
+			}
+		}
+	} else if (touch.panel[panel].controller == 1) {
+		memset(&touch.panel[panel], info[0], 4);
+		touch.panel[panel].objectsUnread = 0;
+		result = 0;
+	} else if (touch.panel[panel].controller == 2 || touch.panel[panel].controller == 3)
+		result = touchRearIdentify(info, TOUCH_REAR_INFO, panel);
+	else
+		result = 0x3e;
+	touchSetFeatures(panel);
+	return result;
+}
+#else
 unsigned char touchIdentify(char panel)
 {
 	unsigned char result;
@@ -1150,6 +1210,7 @@ unsigned char touchIdentify(char panel)
 	}
 	return result;
 }
+#endif
 
 /* what the controller has, by its family and variant (and version) */
 void touchSetFeatures(char panel)
@@ -1177,6 +1238,14 @@ void touchSetFeatures(char panel)
 		touch.panel[panel].features.bits.t51Settings = 1;
 		touch.panel[panel].features.bits.gripInUserData = 1;
 		break;
+#if TOUCH_0105
+	case TOUCH_ID(0x44, 0x28):
+		touch.panel[panel].features.bits.noModes = 0;
+		touch.panel[panel].features.bits.family82 = 1;
+		touch.panel[panel].features.bits.t51Settings = 0;
+		touch.panel[panel].features.bits.gripInUserData = 0;
+		break;
+#endif
 	default:
 		touch.panel[panel].features.bits.noModes = 0;
 		touch.panel[panel].features.bits.family82 = 0;
@@ -1191,6 +1260,10 @@ unsigned char touchBootloaderStatus(unsigned char *status, char panel)
 {
 	unsigned char result;
 
+#if TOUCH_0105
+	if (panel == 1 && touch.panel[1].controller >= 2)
+		return 0x11;
+#endif
 	result = touchRead(TOUCH_BOOTLOADER, status, 1, panel);
 	if (result == 0 && (*status & 0xc0) != 0)
 		*status &= 0xc0;
@@ -1239,6 +1312,10 @@ unsigned char touchSetPower(unsigned char interval, char panel)
 
 	data[0] = interval;
 	data[1] = interval;
+#if TOUCH_0105
+	if (panel == 1 && touch.panel[1].controller >= 2)
+		return 0;
+#endif
 	return touchWriteVerified(touch.panel[panel].objects.power, data, 2, panel);
 }
 #else
@@ -2222,6 +2299,17 @@ unsigned char touchReadConfigVersion(unsigned char *data, char panel)
 	unsigned char status;
 	unsigned int version;
 
+#if TOUCH_0105
+	/* the rear's controllers 2 and 3 give it little-endian */
+	if (panel == 1 &&
+	    (touch.panel[1].controller == 2 || touch.panel[1].controller == 3)) {
+		result = touchRearIdentify(data, TOUCH_REAR_VERSION, panel);
+		version = data[0];
+		data[0] = data[1];
+		data[1] = version;
+		return 0;
+	}
+#endif
 	if ((touch.panel[panel].family & 0xc0) == 0xc0) {
 		result = touchRead(TOUCH_BOOTLOADER, touchBufferData, 6, panel);
 		if (result == 0) {
@@ -2247,6 +2335,11 @@ unsigned char touchReadUserData(unsigned char *data, char panel)
 {
 	unsigned int address;
 
+#if TOUCH_0105
+	if (panel == 1 &&
+	    (touch.panel[1].controller == 2 || touch.panel[1].controller == 3))
+		return touchRearIdentify(data, TOUCH_REAR_EXTRA, panel);
+#endif
 	if (touch.panel[panel].objects.t60 != 0)
 		address = touch.panel[panel].objects.t60;
 	else
@@ -2367,6 +2460,20 @@ unsigned char touchReadT34Bit3(unsigned char *set, char panel)
 {
 	unsigned char result = 0;
 	unsigned char value;
+#if TOUCH_0105
+	unsigned char values[6];
+
+	if (panel == 1 && touch.panel[1].controller == 2) {
+		result = touchRearRead(0, values, 1);
+		if (result == 0)
+			*set = values[0];
+		return result;
+	}
+	if (touch.panel[1].controller == 3) {
+		*set = 1;
+		return 0;
+	}
+#endif
 
 	*set = 1;
 	if ((touch.panel[panel].family & 0xc0) != 0xc0) {
@@ -2378,6 +2485,26 @@ unsigned char touchReadT34Bit3(unsigned char *set, char panel)
 }
 
 /* T34's bytes 8-10 */
+#if TOUCH_0105
+unsigned char touchReadT34Bytes8(unsigned char *data, char panel)
+{
+	unsigned char result = 0;
+	unsigned char values[7];
+
+	if (touch.panel[panel].controller == 0)
+		result = touchRead(touch.panel[panel].objects.t34 + 8, data, 3, panel);
+	else if (touch.panel[panel].controller == 2) {
+		result = touchRearRead(0, values, panel);
+		if (values[0] == 0) {
+			memcpy(data, &values[3], 2);
+			data[2] = 0;
+		} else
+			result = 0x0b;
+	} else
+		result = 0x3e;
+	return result;
+}
+#else
 unsigned char touchReadT34Bytes8(unsigned char *data, char panel)
 {
 	unsigned char result = 0;
@@ -2385,6 +2512,7 @@ unsigned char touchReadT34Bytes8(unsigned char *data, char panel)
 	result = touchRead(touch.panel[panel].objects.t34 + 8, data, 3, panel);
 	return result;
 }
+#endif
 
 /* T6's byte 4 */
 unsigned char touchSetT6Byte4(unsigned char *data, char panel)
@@ -3243,7 +3371,13 @@ void touchSetModePin(unsigned char mode)
 
 #endif
 /* modes 1 and 2 from panel 0's user data, mode 0 from its objects */
-#if SOURCE_0104
+#if TOUCH_0105
+/* the slim's 0x0105 reads no modes */
+unsigned char touchReadModes(char panel)
+{
+	return 0;
+}
+#elif SOURCE_0104
 /* reads a controller's modes, but for one without modes: the last error */
 unsigned char touchReadModes(char panel)
 {
@@ -3709,6 +3843,13 @@ unsigned char touchReadGripEdges(unsigned char *data, char panel)
 	unsigned char status;
 	unsigned int address;
 
+#if TOUCH_0105
+	if (panel == 1 &&
+	    (touch.panel[1].controller == 2 || touch.panel[1].controller == 3)) {
+		result = touchRearIdentify(data, TOUCH_REAR_GRIP, panel);
+		return 0;
+	}
+#endif
 	if ((touch.panel[panel].family & 0xc0) == 0xc0) {
 		result = touchRead(TOUCH_BOOTLOADER, touchBufferData, 10, panel);
 		if (result == 0) {
@@ -3880,6 +4021,85 @@ unsigned char touchTestModePin(unsigned char *out)
 	unsigned char pin;
 	unsigned char result = 0;
 
+#if TOUCH_0105
+	/* only the panels whose features say so (the rear's controllers 2 and 3 have none) */
+	*out = 0;
+	pin = TOUCH_MODE_PIN;
+	TOUCH_MODE_PIN = 1;
+	dly_tsk(8);
+	if (touch.panel[0].features.bits.noModes) {
+		address = touch.panel[0].objects.threshold;
+		result = touchRead(address, &high0, 1, 0);
+		if (result != 0)
+			goto done;
+		address = touch.panel[0].objects.userData + 4;
+		result = touchRead(address, &low0, 1, 0);
+		if (result != 0)
+			goto done;
+		if (high0 == low0) {
+			*out = 0xfd;
+			goto done;
+		}
+	}
+	if (touch.panel[1].features.bits.noModes) {
+		address = touch.panel[1].objects.threshold;
+		result = touchRead(address, &high1, 1, 1);
+		if (result != 0)
+			goto done;
+		address = touch.panel[1].objects.userData + 4;
+		result = touchRead(address, &low1, 1, 1);
+		if (result != 0)
+			goto done;
+		if (high1 == low1) {
+			*out = 0xfc;
+			goto done;
+		}
+	}
+
+	TOUCH_MODE_PIN = 0;
+	dly_tsk(8);
+	if (touch.panel[0].features.bits.noModes) {
+		address = touch.panel[0].objects.threshold;
+		result = touchRead(address, &value, 1, 0);
+		if (result != 0)
+			goto done;
+		if (value != low0) {
+			*out = 0xff;
+			goto done;
+		}
+	}
+	if (touch.panel[1].features.bits.noModes) {
+		address = touch.panel[1].objects.threshold;
+		result = touchRead(address, &value, 1, 1);
+		if (result != 0)
+			goto done;
+		if (value != low1) {
+			*out = 0xfe;
+			goto done;
+		}
+	}
+
+	TOUCH_MODE_PIN = 1;
+	dly_tsk(8);
+	if (touch.panel[0].features.bits.noModes) {
+		address = touch.panel[0].objects.threshold;
+		result = touchRead(address, &value, 1, 0);
+		if (result != 0)
+			goto done;
+		if (value != high0) {
+			*out = 0xfd;
+			goto done;
+		}
+	}
+	if (touch.panel[1].features.bits.noModes) {
+		address = touch.panel[1].objects.threshold;
+		result = touchRead(address, &value, 1, 1);
+		if (result != 0)
+			goto done;
+		if (value != high1)
+			*out = 0xfc;
+	}
+#else
 	*out = 0;
 	pin = TOUCH_MODE_PIN;
 	TOUCH_MODE_PIN = 1;
@@ -3944,9 +4164,897 @@ unsigned char touchTestModePin(unsigned char *out)
 		goto done;
 	if (value != high1)
 		*out = 0xfc;
+#endif
 done:
 	TOUCH_MODE_PIN = pin;
 	return result;
 #endif
+}
+#endif
+
+#if TOUCH_0105
+/* the rear's controllers 2 and 3: writes register 1 and reads 0x20 bytes into data, moving the
+   0x1e after the first two to its start */
+unsigned char touchRearReadInfo(unsigned char *data, char panel)
+{
+	unsigned int command;
+	unsigned char (*reply)[0x20];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	reply = (unsigned char (*)[0x20])data;
+	command = 1;
+	result = touchWriteRead((unsigned char *)&command, 2, *reply, 0x20, panel, 0);
+	if (result == 0)
+		memmove(data, &(*reply)[2], 0x1e);
+	return result;
+}
+
+/* the rear's controller 2: writes register 5 with mode (its low two bits) and reads its
+   status back into out and the panel's controllerStatus (3 when the read fails); mode 0
+   waits 8 ticks */
+unsigned char touchRearSetStatus(unsigned char mode, unsigned char *out, char panel)
+{
+	struct TouchRearShortCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 5;
+	command.data[0] = mode & 3;
+	command.data[1] = 8;
+	result = touchWriteRead((unsigned char *)&command, 4, reply, 5, panel, 0);
+	if (mode == 0)
+		dly_tsk(8);
+	if (result == 0) {
+		*out = reply[3] & 3;
+		touch.panel[panel].controllerStatus = *out;
+	} else
+		touch.panel[panel].controllerStatus = 3;
+	return result;
+}
+
+/* probes the panel's controller and answers its touchRearControllers value, 0xff for none */
+unsigned char touchGetController(unsigned char *out, char panel)
+{
+	unsigned char info[0x20];
+	unsigned char result;
+	unsigned char controller;
+
+	result = 0;
+	touchProbeController(panel);
+	if (touch.panel[panel].controller == 2) {
+		result = touchRearReadInfo(info, panel);
+		if (result == 0 && info[0] == 0xff)
+			touch.panel[panel].controller = 3;
+	}
+	controller = touch.panel[panel].controller;
+	if (controller < 5)
+		*out = touchRearControllers[controller].value;
+	else
+		*out = 0xff;
+	return result;
+}
+
+/* the rear's controllers 2 and 3: reads the identity (controller 2, when mode needs it or
+   none is known yet; controller 3 has 0xc0c0 for none), then copies the part mode names to
+   out: TOUCH_REAR_ALL the identity and 8 more bytes, TOUCH_REAR_INFO the information block,
+   TOUCH_REAR_VERSION the configuration version, TOUCH_REAR_GRIP the grip edges,
+   TOUCH_REAR_EXTRA the 8 bytes; 0x3e for another controller, or a mode controller 3 cannot
+   read */
+unsigned char touchRearIdentify(unsigned char *out, unsigned char mode, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[0x18];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	if (touch.panel[panel].controller == 2) {
+		if (mode == TOUCH_REAR_ALL || mode == TOUCH_REAR_EXTRA || mode == TOUCH_REAR_VERSION ||
+		    TOUCH_PANEL_ID(panel) == 0)
+			goto read;
+		goto copy;
+	} else if (touch.panel[panel].controller == 3) {
+		if (TOUCH_PANEL_ID(panel) == 0) {
+			TOUCH_PANEL_ID(panel) = 0xc0c0;
+			goto copy;
+		} else if (mode == TOUCH_REAR_ALL || mode == TOUCH_REAR_EXTRA) {
+			result = 0x3e;
+			goto out;
+		}
+		goto copy;
+	} else {
+		result = 0x3e;
+		goto out;
+	}
+read:
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x70;
+	command.data[3] = 1;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 0x17, panel, 0);
+	if (result == 0) {
+		touch.panel[1].family = reply[5];
+		touch.panel[1].variant = reply[6];
+		touch.panel[1].version = reply[7];
+		touch.panel[1].build = reply[8];
+		touch.panel[1].configVersion = (unsigned int)reply[9] | (unsigned int)reply[10] << 8;
+		memcpy(touch.panel[1].gripEdges, &reply[11], 4);
+	} else
+		goto out;
+copy:
+	if (result != 0)
+		goto out;
+	if (out == NULL)
+		goto out;
+	switch (mode) {
+	case TOUCH_REAR_ALL:
+		memcpy(out, &touch.panel[1], 10);
+		memcpy(out + 10, &reply[15], 8);
+		break;
+	case TOUCH_REAR_INFO:
+		memcpy(out, &touch.panel[1], 4);
+		break;
+	case TOUCH_REAR_VERSION:
+		memcpy(out, &touch.panel[1].configVersion, 2);
+		break;
+	case TOUCH_REAR_GRIP:
+		memcpy(out, touch.panel[1].gripEdges, 4);
+		break;
+	case TOUCH_REAR_EXTRA:
+		memcpy(out, &reply[15], 8);
+		break;
+	}
+out:
+	return result;
+}
+/* the rear's controller 2: command 1, after which it reads as controller 3 */
+unsigned char touchRearEnterBootloader(char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 5;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 1;
+	result = touchWriteRead((unsigned char *)&command, 7, reply, 2, panel, 0);
+	if (result == 0)
+		touch.panel[panel].controller = 3;
+	return result;
+}
+
+/* the rear's controller 2: command 3, active */
+unsigned char touchRearSetActive(char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 5;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 3;
+	result = touchWriteRead((unsigned char *)&command, 7, reply, 5, panel, 0);
+	if (result == 0)
+		touch.panel[panel].controllerActive = 1;
+	else
+		touch.panel[panel].controllerActive = 0xff;
+	return result;
+}
+
+/* the rear's controller 2: command 4, idle */
+unsigned char touchRearSetIdle(char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 5;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 4;
+	result = touchWriteRead((unsigned char *)&command, 7, reply, 5, panel, 0);
+	if (result == 0)
+		touch.panel[panel].controllerActive = 0;
+	else
+		touch.panel[panel].controllerActive = 0xff;
+	return result;
+}
+
+/* the rear's controller 2: command 5 with index, its 8 bytes into out */
+unsigned char touchRearReadBlock(unsigned char index, unsigned char *out, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[0xc];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 5;
+	command.data[3] = index;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 0xb, panel, 0);
+	if (result == 0)
+		memcpy(out, &reply[5], 8);
+	return result;
+}
+
+/* the rear's controller 2: command 6 with index, writes length (< 7) bytes of data and its
+   two bytes back into out; 0x3c for a longer length */
+unsigned char touchRearWriteBlock(unsigned char index, unsigned char length, unsigned char *data,
+				  unsigned char *out, char panel)
+{
+	struct TouchRearLongCommand command;
+	unsigned char reply[8];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 7 + length;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 6;
+	command.data[3] = index;
+	command.data[4] = length;
+	if (length < 7) {
+		memcpy(&command.data[5], data, length);
+		result = touchWriteRead((unsigned char *)&command, 7 + length + 2, reply, 7,
+					panel, 0);
+		if (result == 0)
+			memcpy(out, &reply[5], 2);
+	} else
+		result = 0x3c;
+	return result;
+}
+
+/* the rear's controller 2: command 0x20 with index, active around it, its 5 bytes into out */
+unsigned char touchRearRead(unsigned char index, unsigned char *out, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[10];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x20;
+	command.data[3] = index;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 10, panel, 0);
+	if (result == 0)
+		memcpy(out, &reply[5], 5);
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x22, reads length bytes of its memory at address (page
+   address >> 7, offset address & 0x7f, the range within one page; 0x3c otherwise) into data
+   from its byte 2, with the length read in data[0] and 0 in data[1]; 0x0a when the controller
+   answers an error */
+unsigned char touchRearReadMemory(unsigned char index, unsigned int address, unsigned char length,
+				  unsigned char *data, char panel)
+{
+	struct TouchRearMemoryCommand command;
+	unsigned char (*reply)[0x80];
+	unsigned int page;
+	unsigned char offset;
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	page = address >> 7;
+	offset = address & 0x7f;
+	if ((unsigned char)(offset + length) > 0x80)
+		return 0x3c;
+	touchRearBegin(panel);
+	reply = (unsigned char (*)[0x80])data;
+	command.address = 4;
+	command.length = 10;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x22;
+	command.data[3] = page;
+	command.data[4] = ((unsigned char *)&page)[1];
+	command.data[5] = offset + length;
+	command.data[6] = 0;
+	command.data[7] = index;
+	result = touchWriteRead((unsigned char *)&command, 0x0c, *reply, 10 + offset + length + 2,
+				panel, 0);
+	if (result == 0) {
+		if ((*reply)[5] == 0) {
+			(*reply)[0] = (*reply)[7] - offset;
+			(*reply)[1] = 0;
+			memmove(&(*reply)[2], &(*reply)[10 + offset], length);
+		} else
+			result = 0x0a;
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* a command's bytes in a buffer */
+#define TOUCH_REAR_BYTES(command)	(*(unsigned char (*)[0x80])(command))
+
+/* the rear's controller 2: command 0x23, writes length bytes of data to its memory at address
+   (in one page, 0x3c otherwise): reads the page's bytes before the offset first (0x0a when
+   that fails), then writes them with data, touchRearWriteKey and their CRC; out[0] the
+   length written, out[1] 0 */
+unsigned char touchRearWriteMemory(unsigned char index, unsigned int address, unsigned char length,
+				   unsigned char *data, unsigned char *out, char panel)
+{
+	struct TouchRearMemoryCommand read;
+	unsigned char reply[10];
+	struct TouchRearWriteCommand *command;
+	unsigned int page;
+	unsigned char offset;
+	unsigned char result;
+	unsigned int crc;
+	unsigned char total;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	page = address >> 7;
+	offset = address & 0x7f;
+	if ((unsigned char)(offset + length) > 0x80)
+		return 0x3c;
+	touchRearBegin(panel);
+	read.address = 4;
+	read.length = 10;
+	read.data[0] = 0x2f;
+	read.data[1] = 0;
+	read.data[2] = 0x22;
+	read.data[3] = ((unsigned char *)&page)[0];
+	read.data[4] = ((unsigned char *)&page)[1];
+	read.data[5] = offset;
+	read.data[6] = 0;
+	read.data[7] = index;
+	result = touchWriteRead((unsigned char *)&read, 0x0c, touchBufferData,
+				10 + offset + (offset != 0 ? 2 : 0), panel, 0);
+	if (result != 0) {
+		touchRearEnd(panel);
+		return 0x0a;
+	}
+	memmove(&touchBufferData[12], &touchBufferData[10], offset);
+	memcpy(&touchBufferData[12 + offset], data, length);
+	total = offset + length;
+	command = (struct TouchRearWriteCommand *)touchBufferData;
+	command->address = 4;
+	command->length = 10 + total + 8 + (total != 0 ? 2 : 0);
+	command->prefix = 0x2f;
+	command->zero = 0;
+	command->command = 0x23;
+	TOUCH_REAR_BYTES(command)[7] = ((unsigned char *)&page)[0];
+	TOUCH_REAR_BYTES(command)[8] = ((unsigned char *)&page)[1];
+	TOUCH_REAR_BYTES(command)[9] = total;
+	TOUCH_REAR_BYTES(command)[10] = 0;
+	TOUCH_REAR_BYTES(command)[11] = index;
+	memcpy(&TOUCH_REAR_BYTES(command)[12 + total], touchRearWriteKey, 8);
+	crc = touchRearCrc(total, &TOUCH_REAR_BYTES(command)[12]);
+	TOUCH_REAR_BYTES(command)[12 + total + 8] = ((unsigned char *)&crc)[0];
+	TOUCH_REAR_BYTES(command)[12 + total + 8 + 1] = ((unsigned char *)&crc)[1];
+	result = touchWriteRead(TOUCH_REAR_BYTES(command), 10 + total + 8 + (total != 0 ? 2 : 0) + 2,
+				reply, 9, panel, 0);
+	if (result == 0) {
+		if (reply[5] == 0) {
+			out[0] = reply[7] - offset;
+			out[1] = 0;
+		} else
+			result = 0x0a;
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x24, reads length bytes at address into data: its two
+   bytes from byte 7 first, then the bytes */
+unsigned char touchRearReadRange(unsigned char index, unsigned int address, unsigned int length,
+				 unsigned char *data, char panel)
+{
+	struct TouchRearMemoryCommand command;
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 10;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x24;
+	command.data[3] = address;
+	command.data[4] = address >> 8;
+	command.data[5] = length;
+	command.data[6] = length >> 8;
+	command.data[7] = index;
+	result = touchWriteRead((unsigned char *)&command, 0x0c, data, length + 10, panel, 0);
+	if (result == 0 && data[5] == 0) {
+		memmove(data, &data[7], 2);
+		memmove(&data[2], &data[10], length);
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x26 with index, *out its state: 0x10 when it answers
+   0xff, 0 when 0, 0xfe when the command fails with 0xff, 0xff otherwise */
+unsigned char touchRearGetState(unsigned char index, unsigned char *out, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[8];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x26;
+	command.data[3] = index;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 7, panel, 0);
+	if (result == 0) {
+		if (reply[5] == 0) {
+			switch (reply[6]) {
+			case 0:
+				*out = 0;
+				break;
+			case 0xff:
+				*out = 0x10;
+				break;
+			default:
+				*out = 0xff;
+				break;
+			}
+		} else if (reply[5] == 0xff)
+			*out = 0xfe;
+		else
+			*out = 0xff;
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x27, touchRearReadRange's read of another range */
+unsigned char touchRearReadRange2(unsigned char index, unsigned int address, unsigned int length,
+				  unsigned char *data, char panel)
+{
+	struct TouchRearMemoryCommand command;
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 10;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x27;
+	command.data[3] = address;
+	command.data[4] = address >> 8;
+	command.data[5] = length;
+	command.data[6] = length >> 8;
+	command.data[7] = index;
+	result = touchWriteRead((unsigned char *)&command, 0x0c, data, length + 10, panel, 0);
+	if (result == 0 && data[5] == 0) {
+		memmove(data, &data[7], 2);
+		memmove(&data[2], &data[10], length);
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x28 with index; 0x0a when it answers an error */
+unsigned char touchRearCommand28(unsigned char index, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x28;
+	command.data[3] = index;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 6, panel, 0);
+	if (result == 0 && reply[5] != 0)
+		result = 0x0a;
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x29 with index; 0x0a when it answers an error */
+unsigned char touchRearCommand29(unsigned char index, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x29;
+	command.data[3] = index;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 6, panel, 0);
+	if (result == 0 && reply[5] != 0)
+		result = 0x0a;
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x2a; 0x0a when it answers an error */
+unsigned char touchRearCommand2a(char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 5;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x2a;
+	result = touchWriteRead((unsigned char *)&command, 7, reply, 6, panel, 0);
+	if (result == 0 && reply[5] != 0)
+		result = 0x0a;
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x2b, reads count words at address into data: its two
+   bytes from byte 7 first, then the words */
+unsigned char touchRearReadWords(unsigned char index, unsigned int address, unsigned int count,
+				 unsigned char *data, char panel)
+{
+	struct TouchRearMemoryCommand command;
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	touchRearBegin(panel);
+	command.address = 4;
+	command.length = 10;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x2b;
+	command.data[3] = address;
+	command.data[4] = address >> 8;
+	command.data[5] = count;
+	command.data[6] = count >> 8;
+	command.data[7] = index;
+	result = touchWriteRead((unsigned char *)&command, 0x0c, data, count * 2 + 10, panel, 0);
+	if (result == 0 && data[5] == 0) {
+		memmove(data, &data[7], 2);
+		memmove(&data[2], &data[10], count * 2);
+	}
+	touchRearEnd(panel);
+	return result;
+}
+
+/* the rear's controller 2: command 0x71, its report format: 1 the short report, 0 the full;
+   kept in touch.rearShort when the controller takes it */
+unsigned char touchRearSetReportShort(unsigned char rearShort, char panel)
+{
+	struct TouchRearCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 6;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x71;
+	command.data[3] = rearShort;
+	result = touchWriteRead((unsigned char *)&command, 8, reply, 6, panel, 0);
+	if (result == 0 && (rearShort == 0 || rearShort == 1))
+		touch.rearShort = rearShort;
+	return result;
+}
+
+/* the rear's controller 2: command 0x72 with the four bytes of data */
+unsigned char touchRearCommand72(unsigned char *data, char panel)
+{
+	struct TouchRearMemoryCommand command;
+	unsigned char reply[6];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 9;
+	command.data[0] = 0x2f;
+	command.data[1] = 0;
+	command.data[2] = 0x72;
+	command.data[3] = data[0];
+	command.data[4] = data[1];
+	command.data[5] = data[2];
+	command.data[6] = data[3];
+	result = touchWriteRead((unsigned char *)&command, 0x0b, reply, 5, panel, 0);
+	return result;
+}
+
+/* the rear's controller 2: command 0x31 in the checked form; *out 0 when it answers 1, 1
+   otherwise */
+unsigned char touchRearCommand31(unsigned char *out, char panel)
+{
+	struct TouchRearCheckedCommand command;
+	unsigned int crc;
+	unsigned char reply[12];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 0x0b;
+	command.prefix = 0x40;
+	command.zero = 0;
+	command.mode = 1;
+	command.code = 0x31;
+	command.value = 0;
+	crc = touchRearCrc(4, &command.mode);
+	command.crc[0] = ((unsigned char *)&crc)[0];
+	command.crc[1] = ((unsigned char *)&crc)[1];
+	command.end = 0x17;
+	result = touchWriteRead((unsigned char *)&command, 0x0d, reply, 0x0c, panel, 0);
+	if (result == 0) {
+		if (reply[5] == 0)
+			*out = reply[8] == 1 ? 0 : 1;
+		else
+			result = 0x0a;
+	}
+	return result;
+}
+
+/* the rear's controller 2: command 0x38 in the checked form, its 8 bytes into out */
+unsigned char touchRearCommand38(unsigned char *out, char panel)
+{
+	struct TouchRearCheckedCommand command;
+	unsigned int crc;
+	unsigned char reply[20];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 0x0b;
+	command.prefix = 0x40;
+	command.zero = 0;
+	command.mode = 1;
+	command.code = 0x38;
+	command.value = 0;
+	crc = touchRearCrc(4, &command.mode);
+	command.crc[0] = ((unsigned char *)&crc)[0];
+	command.crc[1] = ((unsigned char *)&crc)[1];
+	command.end = 0x17;
+	result = touchWriteRead((unsigned char *)&command, 0x0d, reply, 0x13, panel, 0);
+	if (result == 0) {
+		if (reply[5] == 0)
+			memcpy(out, &reply[8], 8);
+		else
+			result = 0x0a;
+	}
+	return result;
+}
+
+/* the rear's controller 2: command 0x39 in the checked form, with the 0x83 bytes the host
+   gathered in touchBuffer; out its bytes 0x0b and 0x0c back and the answer's status */
+unsigned char touchRearCommand39(unsigned char *out, char panel)
+{
+	struct TouchRearCheckedCommand *command;
+	unsigned int crc;
+	unsigned char reply[12];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command = (struct TouchRearCheckedCommand *)touchBuffer.data;
+	command->address = 4;
+	command->length = 0x8e;
+	command->prefix = 0x40;
+	command->zero = 0;
+	command->mode = 1;
+	command->code = 0x39;
+	command->value = 0x83;
+	crc = touchRearCrc(0x87, &TOUCH_REAR_BYTES(command)[6]);
+	TOUCH_REAR_BYTES(command)[0x8d] = ((unsigned char *)&crc)[0];
+	TOUCH_REAR_BYTES(command)[0x8e] = ((unsigned char *)&crc)[1];
+	TOUCH_REAR_BYTES(command)[0x8f] = 0x17;
+	result = touchWriteRead(TOUCH_REAR_BYTES(command), 0x90, reply, 0x0b, panel, 0);
+	if (result == 0) {
+		out[0] = TOUCH_REAR_BYTES(command)[0x0b];
+		out[1] = TOUCH_REAR_BYTES(command)[0x0c];
+		out[2] = reply[5];
+	}
+	return result;
+}
+
+/* the rear's controller 2: command 0x3b in the checked form, then its information block into
+   out: when it starts with 0xf7 the panel is controller 2 again, active state cleared, and
+   identified (out[0] 0); out[0] 1 otherwise */
+unsigned char touchRearCommand3b(unsigned char *out, char panel)
+{
+	struct TouchRearCheckedCommand command;
+	unsigned int crc;
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	command.address = 4;
+	command.length = 0x0b;
+	command.prefix = 0x40;
+	command.zero = 0;
+	command.mode = 1;
+	command.code = 0x3b;
+	command.value = 0;
+	crc = touchRearCrc(4, &command.mode);
+	command.crc[0] = ((unsigned char *)&crc)[0];
+	command.crc[1] = ((unsigned char *)&crc)[1];
+	command.end = 0x17;
+	result = touchWriteRead((unsigned char *)&command, 0x0d, 0, 0, panel, 0x82);
+	if (result != 0)
+		goto done;
+	result = touchRearReadInfo(out, panel);
+	if (result != 0)
+		goto done;
+	if (out[0] == 0xf7) {
+		touch.panel[panel].controller = 2;
+		touch.panel[panel].controllerStatus = 0;
+		touch.panel[panel].controllerActive = 0;
+		touch.panel[panel].controllerWasActive = 0;
+		result = touchRearIdentify(0, TOUCH_REAR_ALL, panel);
+		out[0] = 0;
+	} else
+		out[0] = 1;
+done:
+	return result;
+}
+
+/* CRC-16/CCITT (polynomial 0x1021, 0xffff first, most significant bit first) of length bytes */
+unsigned int touchRearCrc(unsigned char length, unsigned char *data)
+{
+	unsigned char i;
+	unsigned char shift;
+	unsigned int crc;
+
+	crc = 0xffff;
+	for (i = 0; i < length; i++) {
+		crc ^= (unsigned int)data[i] << 8;
+		for (shift = 0; shift < 8; shift++) {
+			if (crc & 0x8000)
+				crc = crc << 1 ^ 0x1021;
+			else
+				crc <<= 1;
+		}
+	}
+	return crc;
+}
+
+/* the rear's controller 2: command 0x48 in the checked form, address 0x1ff alone (0x3c
+   otherwise): touchRearWriteKey and the 0x80 bytes the host gathered in touchBuffer after it;
+   out the address back and the answer's status */
+unsigned char touchRearCommand48(unsigned int address, unsigned char *out, char panel)
+{
+	struct TouchRearCheckedCommand *command;
+	unsigned int crc;
+	unsigned char reply[12];
+	unsigned char result;
+
+	result = 0;
+	if (panel == 0)
+		return result;
+	if (address != 0x1ff)
+		return 0x3c;
+	command = (struct TouchRearCheckedCommand *)touchBuffer.data;
+	command->address = 4;
+	command->length = 0x93;
+	command->prefix = 0x40;
+	command->zero = 0;
+	command->mode = 1;
+	command->code = 0x48;
+	command->value = 0x88;
+	memcpy(&TOUCH_REAR_BYTES(command)[0x0a], touchRearWriteKey, 8);
+	crc = touchRearCrc(0x8c, &TOUCH_REAR_BYTES(command)[6]);
+	TOUCH_REAR_BYTES(command)[0x92] = ((unsigned char *)&crc)[0];
+	TOUCH_REAR_BYTES(command)[0x93] = ((unsigned char *)&crc)[1];
+	TOUCH_REAR_BYTES(command)[0x94] = 0x17;
+	result = touchWriteRead(TOUCH_REAR_BYTES(command), 0x95, reply, 0x0b, panel, 0x2ee0);
+	if (result == 0) {
+		out[0] = ((unsigned char *)&address)[0];
+		out[1] = ((unsigned char *)&address)[1];
+		out[2] = reply[5];
+	}
+	return result;
+}
+
+/* makes the rear's controller 2 active for a command, keeping its state for touchRearEnd */
+unsigned char touchRearBegin(char panel)
+{
+	unsigned char result;
+	unsigned char p;
+
+	result = 0;
+	p = panel;
+	touch.panel[p].controllerWasActive = touch.panel[p].controllerActive;
+	if (touch.panel[p].controllerActive != 1)
+		result = touchRearSetActive(p);
+	return result;
+}
+
+/* puts the rear's controller 2 back in the state touchRearBegin kept: idle again when it was
+   idle */
+unsigned char touchRearEnd(char panel)
+{
+	unsigned char result;
+	unsigned char p;
+
+	result = 0;
+	p = panel;
+	if (touch.panel[p].controllerWasActive != 1) {
+		if (touch.panel[p].controllerWasActive == 0)
+			result = touchRearSetIdle(p);
+		else
+			touch.panel[p].controllerActive = touch.panel[p].controllerWasActive;
+	}
+	return result;
 }
 #endif

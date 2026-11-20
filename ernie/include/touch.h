@@ -20,14 +20,16 @@
 #if TOUCH_0105
 /* a frame reads the rear panel: while its controller reports */
 #define TOUCH_REAR_READ		(touch.flags & TOUCH_PANEL1 && touch.panel[1].controllerStatus == 0)
-/* the rear controllers touchProbeController looks for, by their IICA1 address */
+/* the controllers a panel's controller field indexes: 0 a maXTouch, 1 a maXTouch in its
+   bootloader, 2 and 3 the other controller (3 when its information block reads 0xff); the
+   rear's are probed in this order at their IICA1 addresses */
 struct TouchRearController {
+	unsigned char	id;
+	unsigned char	value;		/* touchGetController's answer */
 	unsigned char	address;
 	unsigned char	reserved;
-	unsigned char	id;
-	unsigned char	variant;
 };
-extern const struct TouchRearController touchRearControllers[3];
+extern const struct TouchRearController touchRearControllers[4];
 #else
 #define TOUCH_REAR_READ		(touch.flags & TOUCH_PANEL1)
 #endif
@@ -257,7 +259,9 @@ struct TouchPanel {
 					   touchRearControllers entry; 0xff none */
 	unsigned char	controllerStatus;	/* 0: its reports are read; reported for
 						   controller 2 */
-	unsigned char	controllerData[2];
+	unsigned char	controllerActive;	/* the rear's controller 2: 1 active, 0 idle,
+						   0xff when the last command failed */
+	unsigned char	controllerWasActive;	/* controllerActive when touchRearBegin ran */
 #endif
 };
 
@@ -373,7 +377,100 @@ extern struct TouchDelays touchDelays;
 #endif
 
 #if TOUCH_0105
+/* the rear's controllers 2 and 3: a command, the register's address and the bytes written */
+struct TouchRearCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	data[4];
+};
+
+struct TouchRearLongCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	data[10];
+};
+
+struct TouchRearMemoryCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	data[8];
+};
+
+/* a memory write: the command's header, then the page, length, 0, index, the bytes,
+   touchRearWriteKey and the CRC */
+struct TouchRearWriteCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	prefix;		/* 0x2f */
+	unsigned char	zero;
+	unsigned char	command;	/* 0x23 */
+	unsigned char	data[0x79];
+};
+
+/* the checked form: 0x40, the command's four bytes, their CRC (touchRearCrc) and 0x17 */
+struct TouchRearCheckedCommand {
+	unsigned int	address;
+	unsigned int	length;
+	unsigned char	prefix;		/* 0x40 */
+	unsigned char	zero;
+	unsigned char	mode;		/* 1: where the CRC starts */
+	unsigned char	code;		/* the command */
+	unsigned int	value;
+	unsigned char	crc[2];
+	unsigned char	end;		/* 0x17 */
+};
+
+/* the rear's controller 2: a register written alone */
+struct TouchRearShortCommand {
+	unsigned int	address;
+	unsigned char	data[2];
+};
+
+/* touchRearIdentify's modes: what it copies */
+#define TOUCH_REAR_ALL		0	/* the identity, configuration version, grip edges and 8
+					   bytes more */
+#define TOUCH_REAR_INFO		1	/* family, variant, version and build */
+#define TOUCH_REAR_VERSION	2	/* the configuration version */
+#define TOUCH_REAR_GRIP		3	/* the grip edges */
+#define TOUCH_REAR_EXTRA	4	/* the 8 bytes after the grip edges */
+
 extern void touchProbeController(char panel);
+extern unsigned char touchRearReadInfo(unsigned char *data, char panel);
+extern unsigned char touchRearIdentify(unsigned char *out, unsigned char mode, char panel);
+extern unsigned char touchRearSetStatus(unsigned char mode, unsigned char *out, char panel);
+extern unsigned char touchGetController(unsigned char *out, char panel);
+extern unsigned char touchRearEnterBootloader(char panel);
+extern unsigned char touchRearSetActive(char panel);
+extern unsigned char touchRearSetIdle(char panel);
+extern unsigned char touchRearReadBlock(unsigned char index, unsigned char *out, char panel);
+extern unsigned char touchRearWriteBlock(unsigned char index, unsigned char length,
+					 unsigned char *data, unsigned char *out, char panel);
+extern unsigned char touchRearRead(unsigned char index, unsigned char *out, char panel);
+extern unsigned char touchRearReadMemory(unsigned char index, unsigned int address,
+					 unsigned char length, unsigned char *data, char panel);
+extern unsigned char touchRearWriteMemory(unsigned char index, unsigned int address,
+					  unsigned char length, unsigned char *data,
+					  unsigned char *out, char panel);
+extern unsigned char touchRearReadRange(unsigned char index, unsigned int address,
+					unsigned int length, unsigned char *data, char panel);
+extern unsigned char touchRearGetState(unsigned char index, unsigned char *out, char panel);
+extern unsigned char touchRearReadRange2(unsigned char index, unsigned int address,
+					 unsigned int length, unsigned char *data, char panel);
+extern unsigned char touchRearCommand28(unsigned char index, char panel);
+extern unsigned char touchRearCommand29(unsigned char index, char panel);
+extern unsigned char touchRearCommand2a(char panel);
+extern unsigned char touchRearReadWords(unsigned char index, unsigned int address,
+					unsigned int count, unsigned char *data, char panel);
+extern unsigned char touchRearSetReportShort(unsigned char rearShort, char panel);
+extern unsigned char touchRearCommand72(unsigned char *data, char panel);
+extern unsigned char touchRearCommand31(unsigned char *out, char panel);
+extern unsigned char touchRearCommand38(unsigned char *out, char panel);
+extern unsigned char touchRearCommand39(unsigned char *out, char panel);
+extern unsigned char touchRearCommand3b(unsigned char *out, char panel);
+extern unsigned int touchRearCrc(unsigned char length, unsigned char *data);
+extern unsigned char touchRearCommand48(unsigned int address, unsigned char *out, char panel);
+extern unsigned char touchRearBegin(char panel);
+extern unsigned char touchRearEnd(char panel);
 #endif
 extern void touchClearPanels(void);
 #if SOURCE_0104
