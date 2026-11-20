@@ -98,14 +98,17 @@ int macMgmtHandleFrame(struct WlanConnection *connection)
 int macMgmtProcessFrame(struct WlanConnection *connection)
 {
 	struct WlanConnectionInfo *info = wlanConnectionInfo(connection);
-	const struct WlanApChannel *entry = &info->channels[wlanApSurveyed];
+	const struct WlanApChannel *entry;
 	struct ChanRptRequest request;
+	unsigned int band;
 
 	__aeabi_memclr4(&request, sizeof(request));
-	request.band &= 0xf3;
+	band = request.band & 0xf3;
+	request.band = band;
 	request.histogramWideRange = 1;
+	entry = &info->channels[wlanApSurveyed];
 	request.channel = entry->channel;
-	request.band = (request.band & ~3) | (entry->channelFlags & 3);
+	request.band = (band & ~3) | (entry->channelFlags & 3);
 	request.delay = 0;
 	request.reserved8[0] = 0;
 	request.reserved8[1] = 0;

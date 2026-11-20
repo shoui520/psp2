@@ -182,7 +182,8 @@ void macMgmtScheduleFrame(struct WlanConnection *connection, unsigned int subtyp
 		buffer->dataOffset = WLAN_TEMPLATE_FRAME_OFFSET;
 	cursor = fmCoexSelectEntry(buffer, connection->localAddress, connection->localAddress, subtype,
 				   (info->protectionFlags >> 1) & 1, connection->networkSsid);
-	PUT_U16(frame->body + 8, connection->beaconPeriod);
+	word = connection->beaconPeriod;
+	PUT_U16(frame->body + 8, word);
 	frame->body[10] = info->capability[0];
 	frame->body[11] = info->capability[1];
 	cursor = fmCoexAdjustEntry(cursor, info->rates, info->phyMode != 2, connection->channel);

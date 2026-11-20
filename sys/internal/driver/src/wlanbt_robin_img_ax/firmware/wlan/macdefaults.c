@@ -229,7 +229,6 @@ __attribute__((noinline)) uint32_t fmCoexResolveBuffer(void)
 int fmCoexScheduleBuffer(struct WlanLocalState *state)
 {
 	struct WlanDeviceConfig *device = &state->device;
-	unsigned int i;
 
 	wlanDeviceAddress = device;
 	wlanLocalState = state;
@@ -264,14 +263,14 @@ int fmCoexScheduleBuffer(struct WlanLocalState *state)
 	state->enabled = 1;
 	device->parameters[1] = 96;
 	device->parameters[0] = 512;
-	for (i = 0; i < 4; i++)
-		device->timeouts[i] = 500;
-	device->rtsThreshold[0] = 2347 & 0xff;
-	device->rtsThreshold[1] = 2347 >> 8;
+	device->timeouts[0] = 500;
+	device->timeouts[1] = 500;
+	device->timeouts[2] = 500;
+	device->timeouts[3] = 500;
+	device->rtsThresholdValue = 2347;
 	device->shortRetryLimit = 9;
 	device->longRetryLimit = 4;
-	device->fragThreshold[0] = 2346 & 0xff;
-	device->fragThreshold[1] = 2346 >> 8;
+	device->fragThresholdValue = 2346;
 	btSbcAcquireBuffer(state);
 	return 1;
 }

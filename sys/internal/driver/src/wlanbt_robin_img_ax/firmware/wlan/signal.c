@@ -140,7 +140,7 @@ int wlanSignalBeacon(struct WlanConnection *connection, const struct WlanRxStatu
 /* A data frame: the peer is heard; its signal against the subscribed thresholds. */
 void wlanSignalData(struct WlanConnection *connection, const struct WlanRxStatus *status)
 {
-	int snr, noise, rssi;
+	int rssi, noise, snr;
 	int measured = wlanSignalMeasure(connection, status, &snr, &noise, &rssi);
 
 	connection->link.frameSeen = 1;

@@ -133,8 +133,6 @@ static inline __attribute__((always_inline)) void wlanRxPowerSaveAccount(struct 
 				   const WlanWirelessFrame *header, const uint8_t *destination,
 				   unsigned int priority, int moreData, int result)
 {
-	unsigned int eosp = (status->qosControl[0] >> 4) & 1;
-
 	if (wlanPsAcLegacy(priority)) {
 		if (moreData)
 			macTxSendPsPoll(connection, 0);
@@ -143,9 +141,11 @@ static inline __attribute__((always_inline)) void wlanRxPowerSaveAccount(struct 
 	}
 	if (!(destination[0] & 1)) {
 		if (wlanCoexActive())
-			result = wlanCoexTxCompleted(connection, moreData, result, eosp);
+			result = wlanCoexTxCompleted(connection, moreData, result,
+						     (status->qosControl[0] >> 4) & 1);
 		else
-			result = wlanPsPollHostQueued(connection, moreData, result, eosp);
+			result = wlanPsPollHostQueued(connection, moreData, result,
+						      (status->qosControl[0] >> 4) & 1);
 	}
 	wlanPsPollFrameReceived(connection, moreData, header->frameControl[0] >> 4);
 	if (result == 1) {
@@ -175,6 +175,9 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 	unsigned int session = WLAN_RX_BA_MAX;
 	unsigned int posture;
 	unsigned int ampdu;
+	unsigned int offset;
+	unsigned int sequence;
+	unsigned int length;
 	int moreData = 0;
 	int result = 0;
 	int qos;
@@ -199,10 +202,14 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 		sysIrqRestore(posture);
 	}
 	wlanUpdateAntennaDiversity(status);
-	packet->descriptor.header.wire.packetOffset[0] = buffer->dataOffset - 32;
-	packet->descriptor.header.wire.packetOffset[1] = (buffer->dataOffset - 32) >> 8;
+	offset = buffer->dataOffset - 32;
 	buffer->dataOffset = 32;
-	packet->descriptor.sequence = (header.sequenceControl[1] << 8 | header.sequenceControl[0]) >> 4;
+	packet->descriptor.header.wire.packetOffset[0] = offset;
+	packet->descriptor.header.wire.packetOffset[1] = offset >> 8;
+	/* Sony reads the frame's sequence control whole and writes the descriptor's byte by byte */
+	sequence = *(const uint16_t *)header.sequenceControl >> 4;
+	((uint8_t *)&packet->descriptor.sequence)[0] = sequence;
+	((uint8_t *)&packet->descriptor.sequence)[1] = sequence >> 8;
 	packet->descriptor.header.wire.bssType = connection->bssType;
 	packet->descriptor.header.wire.bssNumber = connection->bssNumber;
 	if (buffer->length != 0 || buffer->packetClass == 32) {
@@ -254,7 +261,9 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 		wlanReleasePacket(buffer);
 		goto restoreAndReturn;
 	}
-	packet->descriptor.header.packetLength = buffer->length;
+	length = buffer->length;
+	packet->descriptor.header.wire.packetLength[0] = length;
+	packet->descriptor.header.wire.packetLength[1] = length >> 8;
 	wlanRxDecodeRate(status, &packet->descriptor.htInfo, &packet->descriptor.rate);
 	if (connection->mode == 2) {
 		uint8_t forwarding;
@@ -269,7 +278,8 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 				relay = 1;
 		} else {
 			peer = wlanConnectionFindByPeer(source);
-			if (peer != NULL && (peer->flags2 & WLAN_CONN2_ASSOCIATED)) {
+			/* Sony reads the connection's mode again here */
+			if (peer != NULL && connection->mode == 2 && (peer->flags2 & WLAN_CONN2_ASSOCIATED)) {
 				if (connection->bssNumber == peer->bssNumber) {
 					if (session >= WLAN_RX_BA_MAX) {
 						if (forwarding & WLAN_PKT_FWD_DROP_INTRA_BSS) {
@@ -290,6 +300,7 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 
 			if (copy != NULL) {
 				WlanTxDescriptor *descriptor;
+				unsigned int type;
 
 				copy->length = buffer->length;
 				copy->dataOffset = (uint16_t)wlanPacketHeadroom();
@@ -298,18 +309,22 @@ int wlanRxIndicate(OsaBuffer *buffer, struct WlanRxStatus *status)
 				__aeabi_memclr(descriptor, 15);
 				descriptor->header.wire.packetOffset[0] = 16;
 				descriptor->header.wire.packetOffset[1] = 0;
-				descriptor->header.wire.packetType[0] = packet->descriptor.header.wire.packetType[0];
-				descriptor->header.wire.packetType[1] = packet->descriptor.header.wire.packetType[1];
+				type = packet->descriptor.header.wire.packetType[1] << 8 |
+				       packet->descriptor.header.wire.packetType[0];
+				descriptor->header.wire.packetType[0] = type;
+				descriptor->header.wire.packetType[1] = type >> 8;
 				if (info->qosEnabled == 1 && peer != NULL && (connection->flags2 & WLAN_CONN2_QOS))
 					descriptor->priority = packet->descriptor.priority;
 				__aeabi_memcpy((uint8_t *)descriptor + 16,
-					       (uint8_t *)packet + (int16_t)(packet->descriptor.header.wire.packetOffset[1] << 8 |
-									      packet->descriptor.header.wire.packetOffset[0]),
+					       (uint8_t *)packet + ((int8_t)packet->descriptor.header.wire.packetOffset[1] << 8 |
+								      packet->descriptor.header.wire.packetOffset[0]),
 					       buffer->length);
 				copy->context = connection->device;
 				descriptor->header.wire.bssNumber = connection->bssNumber;
 				descriptor->header.wire.bssType = connection->bssType;
-				descriptor->header.packetLength = buffer->length;
+				length = buffer->length;
+				descriptor->header.wire.packetLength[0] = length;
+				descriptor->header.wire.packetLength[1] = length >> 8;
 				wlanForwardEventPacket(copy);
 			}
 		}
@@ -346,8 +361,8 @@ int wlanRxDecryptWep(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key
 	WlanWirelessFrame *frame;
 	const uint8_t *iv;
 	uint8_t seed[16];
-	uint8_t isWep104 = 0;
 	uint8_t keyIndex;
+	uint8_t isWep104 = 0;
 	int result;
 
 	if (key == NULL)
@@ -396,15 +411,18 @@ int wlanRxDecryptWep(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key
 int wlanRxDecryptTkip(OsaBuffer **buffer, struct WlanRxStatus *status, cipher_key_t *key)
 {
 	OsaBuffer *rxBuffer = *buffer;
-	struct WlanConnection *connection = rxBuffer->context;
-	WlanWirelessFrame *frame = rxFrame(status);
-	uint8_t *iv = (uint8_t *)frame + 36;
+	WlanWirelessFrame *frame;
 	uint32_t mic[2];
-	uint32_t high;		/* Sony's: only set when the replay check ran */
-	uint16_t low;
 	int tkip = 0;
+	uint8_t *iv;
+	struct WlanConnection *connection;
+	uint16_t low;
+	uint32_t high;		/* Sony's: only set when the replay check ran */
 	unsigned int errors;
 
+	connection = rxBuffer->context;
+	frame = rxFrame(status);
+	iv = (uint8_t *)frame + 36;
 	if (wlanConnectionIsReady(connection) && wlanRxReplayCheck(iv, key, &low, &high))
 		return 0;
 	if (rxBodyLength(frame) <= 0x68)
@@ -490,10 +508,9 @@ void wlanRxHostSleepFilter(OsaBuffer *buffer, struct WlanRxStatus *status)
 	WlanWirelessFrame *header;
 	const uint8_t *destination;
 	OsaBuffer *event = NULL;
-	uint32_t wake;			/* Sony's: set by wlanMefProcessFrame() */
 	uint8_t securityDrop = 0;
+	uint32_t wake;			/* Sony's: set by wlanMefProcessFrame() */
 	int wakeHost = 0;
-	int dropped = 0;
 
 	if (buffer->length != 0) {
 		if (wlanHostSleepArmed()) {
@@ -534,10 +551,9 @@ void wlanRxHostSleepFilter(OsaBuffer *buffer, struct WlanRxStatus *status)
 			} else if (securityDrop == 0) {
 				buffer->length = 0;
 				buffer->packetClass = 32;
-				dropped = 1;
 			}
 		}
-		if (!dropped && buffer->length != 0 && !wlanHostSleepArmed())
+		if (buffer->length != 0 && !wlanHostSleepArmed())
 			wlanMefProcessFrame(buffer, &wake, 2);
 	}
 	if (wlanPsEnabled() && buffer->length != 0 && !wlanCoexUseP2pMode() && !wlanCoexUseStationMode()) {
@@ -575,7 +591,7 @@ int wlanRxProcessFrames(void)
 		uint8_t *header;
 		const uint8_t *destination;
 		struct WlanKeyBuffer **holder;
-		int ampdu = (status.flags >> 3) & 1;
+		uint32_t ampdu = *(const uint32_t *)&status.flags & 8;	/* Sony reads the word */
 
 		if (wlanConnectionHasPrimary()) {
 			buffer->context = wlanConnectionGetPrimary();

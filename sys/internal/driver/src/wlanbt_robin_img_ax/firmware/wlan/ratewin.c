@@ -126,7 +126,6 @@ void fmCoexConvertTable(struct WlanTxStatus *status)
 {
 	unsigned int count = status->info;
 	unsigned int flags = status->flags & 0xffff;
-	const uint32_t *chain;
 	unsigned int i;
 
 	status->retryBlocked = status->type - count;
@@ -146,7 +145,7 @@ void fmCoexConvertTable(struct WlanTxStatus *status)
 				status->exchanges = 1;
 			}
 			status->retries = status->rtsRetries;
-			status->reserved31 = 0;
+			status->rtsDataRetries = 0;
 		} else {
 			if (count == 0 || (status->result & 1)) {
 				status->acknowledged = 0;
@@ -157,7 +156,7 @@ void fmCoexConvertTable(struct WlanTxStatus *status)
 			}
 			status->rtsRetries = 0;
 			status->rtsAcknowledged = count;
-			status->reserved31 = 0;
+			status->rtsDataRetries = 0;
 			status->exchanges = count;
 			status->dataRetries = count - status->acknowledged;
 		}
@@ -165,7 +164,7 @@ void fmCoexConvertTable(struct WlanTxStatus *status)
 		status->rtsAcknowledged = 0;
 		status->rtsRetries = 0;
 		status->rtsTries = 0;
-		status->reserved31 = 0;
+		status->rtsDataRetries = 0;
 		if (flags & 0x100) {
 			status->dataRetries = 0;
 			status->exchanges = 1;
@@ -186,11 +185,11 @@ void fmCoexConvertTable(struct WlanTxStatus *status)
 			status->ctsToSelf = 0;
 	}
 	__aeabi_memclr(status->attempts, sizeof(status->attempts));
-	chain = (const uint32_t *)(uintptr_t)status->rateInfo;
-	if (chain != NULL) {
-		status->rate = wlanRateEntryIndex(chain[0]);
+	if (status->rateInfo != 0) {
+		status->rate = wlanRateEntryIndex(*(const uint32_t *)(uintptr_t)status->rateInfo);
 		for (i = 0; count != 0 && i < 8; i = (uint8_t)(i + 1)) {
-			uint32_t word = chain[i];
+			/* read again for each rate: the counts written below may alias it */
+			uint32_t word = ((const uint32_t *)(uintptr_t)status->rateInfo)[i];
 			unsigned int index = wlanRateEntryIndex(word);
 			unsigned int tries = (uint8_t)wlanRateEntryRetryGet(word);
 

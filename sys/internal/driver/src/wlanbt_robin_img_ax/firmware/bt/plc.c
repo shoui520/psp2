@@ -41,12 +41,13 @@ int16_t btSbcSetupBuffer(const struct SbcPlcState *state)
 	uint32_t peak = 0, block, energy, product, bestProduct = 0, bestEnergy = 0;
 	int32_t correlation;
 	int i, lag, scale, bestScale = 0, bestLag = 0;
-	const int16_t *signal;
+	const int16_t *signal = state->history;
 
 	for (i = 0; i < 5; i++) {
-		block = btSbcResetPacket(&state->history[i * SBC_PLC_TEMPLATE]);
+		block = btSbcResetPacket(signal);
 		if (block > peak)
 			peak = block;
+		signal += SBC_PLC_TEMPLATE;
 	}
 	btSbcComputePacket(state->history, scaled, 4 - ((unsigned int)(robinClz16(peak) + 1) >> 1),
 			   SBC_PLC_HISTORY);

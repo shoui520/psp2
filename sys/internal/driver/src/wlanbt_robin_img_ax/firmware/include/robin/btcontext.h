@@ -79,7 +79,7 @@ void btLmpLcResolveContext(void);				/* 0x431ee */
 int btLmpLcScheduleContext(void) __attribute__((noinline));	/* 0x43208 */
 int btLmpLcNotifyContext(int link, int type, const void *data, unsigned int length);	/* 0x4324c */
 void btLmpLcInspectContext(int link, int notify);		/* 0x432ea */
-int btLmpLcTrackContext(int link);				/* 0x43348 */
+void btLmpLcTrackContext(int link);			/* 0x43348 */
 int btLmpLcManageContext(int link);				/* 0x433f0 */
 void btLmpLcAcquireContext(int link);				/* 0x43436 */
 void btLmpLcReleaseContext(int link, int event, int argument);	/* 0x4347c */

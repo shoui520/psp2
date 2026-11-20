@@ -231,10 +231,12 @@ uint8_t *btLmpLcConfigureState(uint8_t *first, uint8_t *channel)
 	if (btThresholdPayload == 5) {
 		index = btPower.descriptor;
 		if (index == 0) {
-			for (index = 0; index < 0x3b; index++)
-				btPowerIndexRecord[index] = btPowerIndexRecord[index + 8];
-			for (; index < 0x43; index++)
-				btPowerIndexRecord[index] = btPowerIndexRecord[BT_POWER_LEVELS - 1];
+			for (index = 0; index < 0x43; index++) {
+				if (index < 0x3b)
+					btPowerIndexRecord[index] = btPowerIndexRecord[index + 8];
+				else
+					btPowerIndexRecord[index] = btPowerIndexRecord[BT_POWER_LEVELS - 1];
+			}
 			btPower.descriptor = 1;
 			btPower.entry = -8;
 		}
@@ -345,7 +347,7 @@ static inline uint16_t *btPowerFillValue(int link, int index)
 	value->range = range;
 	value->record = btPowerIndexRecord[index];
 	value->mode = btPower.entry + (int)header + 47 >= index ? 6 : 7;
-	return &value->range;
+	return (uint16_t *)value;		/* the record's start, as Sony's */
 }
 
 /* The device's record of the level of the channel in use. */

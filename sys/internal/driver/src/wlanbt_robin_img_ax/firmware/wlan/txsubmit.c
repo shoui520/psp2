@@ -332,10 +332,10 @@ OsaBuffer *wlanTxCompletionFetch(struct WlanTxStatus *status)
 
 					status->result = 0;
 					macMgmtUpdateDescriptor(1, status->data);
-					sent = (const uint8_t *)TX_DATA_FRAME(status->data);
+					sent = *(const uint8_t *const *)(status->data + 96);
 					if (((sent[2] >> 2) & 3) == 2) {
-						uint64_t start = __aeabi_uread4(&done->expiry[0]) |
-								 (uint64_t)__aeabi_uread4(&done->expiry[4]) << 32;
+						uint32_t high = __aeabi_uread4(&done->expiry[4]);	/* Sony reads it first */
+						uint64_t start = __aeabi_uread4(&done->expiry[0]) | (uint64_t)high << 32;
 
 						wlanSubscribeCheckLinkLatency(connection, start);
 					}

@@ -18,8 +18,6 @@
 
 /* The route's device index of the target: 3 for the AMP (link 1), else 0. */
 #define TARGET_DEVICE(link)	((link) == 1 ? 3 : 0)
-/* The SDIO device that belongs to the target. */
-#define TARGET_HANDLE(link)	((link) == 1 ? ampSdioDev : btSdioActiveHandle)
 
 /* Whether the release is due: 1 when the target waits in the released state, else 0. */
 int btLmpLcManageContext(int link)
@@ -112,12 +110,18 @@ void btLmpLcReleaseContext(int link, int event, int argument)
 		return;
 	case 8:
 		if (target->flag == 0 || target->mode == 0xff) {
-			mdevIoctl(TARGET_HANDLE(link), 0x19, 0);
+			if (link == 1)
+				mdevIoctl(ampSdioDev, 0x19, 0);
+			else
+				mdevIoctl(btSdioActiveHandle, 0x19, 0);
 			btLmpLcInspectContext(link, 1);
 		}
 		return;
 	case 9:
-		mdevIoctl(TARGET_HANDLE(link), 9, 0);
+		if (link == 1)
+			mdevIoctl(ampSdioDev, 9, 0);
+		else
+			mdevIoctl(btSdioActiveHandle, 9, 0);
 		if (target->mode != 0xff)
 			mdevIoctl(btSdioActiveHandle, 0x61, 0);
 		btLmpLcInspectContext(link, 1);

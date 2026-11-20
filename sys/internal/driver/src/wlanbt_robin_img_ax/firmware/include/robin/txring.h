@@ -107,7 +107,7 @@ struct WlanTxStatus {
 	uint8_t rtsTries;		/* the same, counted for the RTS exchange */
 	uint8_t rtsAcknowledged;
 	uint8_t rtsRetries;
-	uint8_t reserved31;
+	uint8_t rtsDataRetries;		/* the RTS counterpart of dataRetries; the firmware only clears it */
 	uint8_t ctsToSelf;		/* exchanges when the CTS-to-self protection was used */
 	uint8_t attempts[31];		/* the transmissions at each rate index */
 };

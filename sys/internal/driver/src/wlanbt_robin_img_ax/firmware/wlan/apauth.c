@@ -628,13 +628,16 @@ int fmCoexDispatchTable(const WlanWirelessFrame *request)
 /* The peer's MCS set and channel width are cut down to what the BSS has (in the request's element). */
 void fmCoexParseTable(const WlanIePointers *ies, const uint8_t *htCapability)
 {
-	WlanHtCapabilityIe *peer = (WlanHtCapabilityIe *)ies->pHtCap;
-	uint8_t *capabilities = (uint8_t *)&peer->capabilities;
+	WlanHtCapabilityIe *peer;
 	int i;
 
-	for (i = 0; i < 16; i++)
+	/* the element is found again for each byte: the stores may alias ies */
+	for (i = 0; i < 16; i++) {
+		peer = (WlanHtCapabilityIe *)ies->pHtCap;
 		peer->mcsSet[i] &= htCapability[5 + i];
-	capabilities[0] &= (uint8_t)(((htCapability[2] & WLAN_HT_CAP_40MHZ) != 0) << 1) | 0xfd;
+	}
+	peer = (WlanHtCapabilityIe *)ies->pHtCap;
+	((uint8_t *)&peer->capabilities)[0] &= (uint8_t)(((htCapability[2] & WLAN_HT_CAP_40MHZ) != 0) << 1) | 0xfd;
 }
 
 /* The peer has an OFDM rate (in either rates element). */

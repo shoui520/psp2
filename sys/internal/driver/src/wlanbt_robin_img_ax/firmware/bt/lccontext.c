@@ -498,7 +498,7 @@ void btLmpLcInspectContext(int link, int notify)
  * Releases a target: waits out the delay it asked for (mode 0xff: after the event clock's elapsed
  * time), then hands the device over through mdevIoctl() 0xb, or 0x61 with the Bluetooth device.
  */
-int btLmpLcTrackContext(int link)
+void btLmpLcTrackContext(int link)
 {
 	struct BtLcTarget *target = &btLmpLcTarget[link];
 
@@ -510,17 +510,24 @@ int btLmpLcTrackContext(int link)
 			if (elapsed < limit && limit - elapsed > 1)
 				sysDelayUs(limit - elapsed);
 		}
-		mdevIoctl(link == 1 ? ampSdioDev : btSdioActiveHandle, 0xb, 0);
+		if (link == 1)
+			mdevIoctl(ampSdioDev, 0xb, 0);
+		else
+			mdevIoctl(btSdioActiveHandle, 0xb, 0);
 		btLmpLcInspectContext(link, 1);
 		target->flag = 0;
-		return 0;
+		return;
 	}
 	mdevIoctl(btSdioActiveHandle, 0x61, 1);
-	if (target->delay == 0xff)
-		return mdevIoctl(link == 1 ? ampSdioDev : btSdioActiveHandle, 0xb, 0);
+	if (target->delay == 0xff) {
+		if (link == 1)
+			mdevIoctl(ampSdioDev, 0xb, 0);
+		else
+			mdevIoctl(btSdioActiveHandle, 0xb, 0);
+		return;
+	}
 	if (target->delay != 0)
 		sysDelayUs(1000 * target->delay);
 	mdevIoctl(btSdioActiveHandle, 0x61, 0);
 	btLmpLcInspectContext(link, 1);
-	return 0;
 }

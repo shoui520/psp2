@@ -303,7 +303,8 @@ void fmCoexSetupEntry(WlanWirelessFrame *frame, uintptr_t argument, struct WlanS
 		fmCoexNotifyEntry(results, worst);
 	}
 	descriptor = (uint8_t *)__aeabi_uread4(&results->data) + __aeabi_uread4(&results->length);
-	*(uint16_t *)descriptor = size - 2;
+	descriptor[0] = (uint8_t)(size - 2);		/* the records are packed: any alignment */
+	descriptor[1] = (uint8_t)((size - 2) >> 8);
 	__aeabi_memcpy(descriptor + 2, frame->address3, 6);
 	descriptor[8] = rssi;
 	__aeabi_memcpy(descriptor + 9, frame->body, length);

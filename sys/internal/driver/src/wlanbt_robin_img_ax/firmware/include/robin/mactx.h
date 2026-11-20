@@ -365,7 +365,7 @@ _Static_assert(offsetof(struct WlanLocalArea, provider) == 232, "local area prov
 /* What the MAC is brought up with (DTCM 0x040089ac), set by wlanMacDescriptorInit(). */
 struct WlanMacDescriptor {
 	uint32_t descriptor;		/* wlanMacBringUp()'s first argument */
-	uint32_t hostClockPreset[4];	/* the rates a host command chooses between: 80000, 32000, 32000, 32000 */
+	uint32_t hostClockPreset[4];	/* the rates a host command chooses between: 80000, 128000, 128000, 128000 */
 	uint32_t hostClockApplied;	/* the rate set for the host (client 3); 0 */
 	uint32_t hostClockTarget;	/* the rate it is to be set to; 80000 */
 	struct WlanLocalArea *localArea;
