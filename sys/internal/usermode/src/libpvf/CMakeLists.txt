@@ -17,7 +17,7 @@ set_source_files_properties(../../../kernel/src/sysmem/sha1_transform.S
 set_source_files_properties(libpvf.c pvf_gsub.c pvf_rasterizer.c
 	PROPERTIES COMPILE_OPTIONS "-mfloat-abi=hard")
 # libSceFt2's FreeType, whose headers libpvf's rasterizer is written on
-target_include_directories(${PSP2_TARGET} PRIVATE ../../../../../contrib/freetype-7f316f22d/include)
+target_include_directories(${PSP2_TARGET} PRIVATE ../../../../../contrib/freetype-2.4.9/include)
 # psp2ld does not compare the objects' float ABI attributes (libsha1 is soft-float), GNU ld
 # does unless told not to
 target_link_options(${PSP2_TARGET} PRIVATE -Wl,--no-warn-mismatch)

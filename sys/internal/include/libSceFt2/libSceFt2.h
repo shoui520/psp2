@@ -1,6 +1,6 @@
 /*
  * libSceFt2's exports beyond FreeType's own API (vs0:sys/external/libSceFt2.suprx). The FreeType
- * functions are declared by FreeType's headers (contrib/freetype-7f316f22d/include).
+ * functions are declared by FreeType's headers (contrib/freetype-2.4.9/include).
  */
 #ifndef LIBSCEFT2_LIBSCEFT2_H
 #define LIBSCEFT2_LIBSCEFT2_H

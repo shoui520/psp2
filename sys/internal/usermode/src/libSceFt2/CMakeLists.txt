@@ -1,10 +1,11 @@
-# SceLibft2 (vs0:sys/external/libSceFt2.suprx): FreeType 2 (git 7f316f22d), built by Sony with GCC.
+# SceLibft2 (vs0:sys/external/libSceFt2.suprx): FreeType 2.4.9 (FT_New_Library sets 2.4.9), built by Sony with GCC.
 # The module's registration list is include/freetype/config/ftmodule.h.
-set(FT2 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/freetype-7f316f22d)
+set(FT2 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/freetype-2.4.9)
 # Sony's changes to FreeType (freetype-sce.patch: the memory object takes the caller's allocator, no
 # FT_Init_FreeType) are applied to a copy of the files they touch (src/psaux is copied whole: psaux.c includes its parts) in the build tree.
 set(FT2_SCE ${CMAKE_CURRENT_BINARY_DIR}/freetype-sce)
 file(MD5 ${CMAKE_CURRENT_SOURCE_DIR}/freetype-sce.patch ft2_patch_md5)
+string(MD5 ft2_patch_md5 "${ft2_patch_md5} ${FT2}")
 set(ft2_stamp "")
 if(EXISTS ${FT2_SCE}/.patched)
 	file(READ ${FT2_SCE}/.patched ft2_stamp)
