@@ -427,7 +427,7 @@ unsigned char serial4Event(FLGPTN ptn)
 	}
 #endif
 	if (ptn & 0x001e) {
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 		if (serialGetMode() == 1) {
 #else
 		if ((serialGetMode() & SERIAL_MODE) == 1) {
@@ -479,15 +479,24 @@ unsigned char serial4Event(FLGPTN ptn)
 	return result;
 }
 
+/* the timer handlers: USS-1002's set the flag the interrupts' way */
 void serial4PostTimeout(void)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	task2ISetFlag(0x0400);
+#else
 	task2SetFlag(3, 0x0400);
+#endif
 }
 
 /* UART3's timeout (as serialPostTimeout) */
 void serial4PostTimeout3(void)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	task2ISetFlag(0x0004);
+#else
 	task2SetFlag(3, 0x0004);
+#endif
 }
 
 /* the timers of the two links' timeouts: 0x0f UART4's, 0x10 UART3's */

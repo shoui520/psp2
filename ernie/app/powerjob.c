@@ -279,6 +279,9 @@ static void powerJobOn(void)
 	PMK9 = 0;
 	task5SetFlag(4, 0x400);
 	powerSeqOn();
+#if BATTERY_GAUGE
+	chargeInit();	/* USS-1002: here, not in powerSeqOn */
+#endif
 	if (stateGetCause() != 0x42)
 		powerCutRegs[0] = powerCutRegs[1] = powerCutRegs[2] = powerCutRegs[3] = 0;
 	powerTimersInit();
@@ -299,6 +302,9 @@ static void powerJobResume(void)
 	mode = stateGetWakeupFactor();
 	if (mode->bits.mode == 0x0f && !mode->bits.notify)
 		powerLedSetFlags(0x40);
+#if BATTERY_GAUGE
+	powerRegAA15On();
+#endif
 	powerSeqResume();
 	powerRequestInit();
 	chargeSetAcDelay();
@@ -314,6 +320,18 @@ static void powerJobOff(void)
 	powerBbmcOn();
 	cookieUpdateBatteryCharge(1);
 	if (powerResumed) {
+#if BATTERY_GAUGE
+		/* USS-1002: the gauge off for the battery's own off causes, else register 0xaa's bit */
+		switch (stateGetCause()) {
+		case 0x5d:
+		case 0x68:
+			batteryPowerOff();
+			break;
+		default:
+			powerRegAA15Off();
+			break;
+		}
+#endif
 		powerCookieHold();
 		chargeUsbModeUpdate();
 	}
@@ -335,6 +353,9 @@ static void powerJobOff(void)
 		powerLedClearFlags(0x200);
 	powerLedClearFlags(0x40);
 	chargeTimer1fStop();
+#if BATTERY_GAUGE
+	batterySaveRecord();
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -346,6 +367,9 @@ static void powerJobShutdown(void)
 	chargeTimerStop();
 	powerLedSetMode(POWER_LED_SET_ON);
 	powerLedClearFlags(0x40);
+#if BATTERY_GAUGE
+	batterySaveRecord();
+#endif
 	powerReady(POWER_JOB_PART);
 }
 
@@ -358,6 +382,9 @@ static void powerJobSuspend(void)
 		if (!bbmcModeIsNone() || configGet()->suspendCheck)
 			powerBbmcCycle();
 	}
+#if BATTERY_GAUGE
+	powerRegAA15Off();
+#endif
 	chargeUsbModeUpdate();
 	if (!powerLedGetKeep())
 		powerLedSetMode(POWER_LED_SET_ON);
@@ -380,10 +407,18 @@ static void powerJobCut(void)
 {
 	unsigned char reg;
 	unsigned char result;
+#if BATTERY_GAUGE
+	union {
+		long		value;
+		unsigned int	word[2];
+	} event;		/* the registers logged, as DOL-1002 does */
+#endif
 
 	P4.1 = 0;
 	P4.2 = 0;
+#if !BATTERY_GAUGE	/* USS-1002 has no P6.5 line */
 	P6.5 = 0;
+#endif
 	P0.5 = 0;
 	reg = 0xb0;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[0]);
@@ -391,14 +426,27 @@ static void powerJobCut(void)
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[1]);
 	reg = 0xb2;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[2]);
+#if BATTERY_GAUGE
+	event.word[0] = powerCutRegs[0];
+	event.word[1] = powerCutRegs[1];
+	logEventValue(0x1e, event.value);
+	event.word[0] = powerCutRegs[2];
+	logEventValue(0x1f, event.value);
+#endif
 	reg = 0xb3;
 	result = elmoRead(&reg, (unsigned char *)&powerCutRegs[3]);
+#if BATTERY_GAUGE
+	event.word[0] = powerCutRegs[3];
+	logEventValue(0x20, event.value);
+#endif
 #if BOARD_EVENT_LOG
 	eventLogRecord(5, 0x20, (unsigned char *)&powerCutRegs[0], 4);
 	eventLogRecord(5, 0x21, (unsigned char *)&powerCutRegs[2], 4);
 #endif
 	powerLedFlagsInit(0);
+#if !BATTERY_GAUGE
 	powerLedClearFlags(0x04);
+#endif
 	chargeUsbModeUpdate();
 	chargeTimerStop();
 	powerReady(POWER_JOB_PART);
@@ -407,6 +455,9 @@ static void powerJobCut(void)
 static void powerJobOffEnd(void)
 {
 	powerLedFlagsInit(0);
+#if BATTERY_GAUGE
+	batterySaveRecord();
+#endif
 	batteryHibernate();
 	chargeTimerStop();
 }
@@ -417,6 +468,9 @@ static void powerJobUpdate(void)
 	if (powerLedGetState() & POWER_LED_REQUEST_PATTERNS)
 		powerLedSetMode(POWER_LED_SET_OFF);
 	ledUpdate();
+#if BATTERY_GAUGE
+	batterySaveRecord();
+#endif
 	powerReady(POWER_JOB_PART);
 }
 

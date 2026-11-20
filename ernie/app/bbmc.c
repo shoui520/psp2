@@ -32,6 +32,9 @@
 #include "version.h"
 
 #define BBMC_PORT		2	/* the UART */
+/* USS-1002: no modem at all, only request 0x0a, which answers nothing */
+#define BBMC_NONE		(BOARD_USS1001 && SOURCE_0104)
+
 #define BBMC_START		0x5a	/* a packet's first byte */
 #define BBMC_ANSWER_START	0xa5	/* an answer's */
 #define BBMC_NVS_MODE		0x2e	/* bbmcRegs.r.mode in NVS area 1 */
@@ -57,6 +60,7 @@ extern unsigned char input2Bit0Get(void);
 extern unsigned char input2Bit1Get(void);
 extern void intp8Enable(int);
 
+#if !BBMC_NONE
 struct Bbmc bbmc;			/* the link */
 #if SOURCE_0103
 #define bbmcSavedMode	(bbmc.savedMode)
@@ -72,7 +76,9 @@ static unsigned long bbmcEventsSeen;	/* and the events */
 #endif
 #endif
 union BbmcRegs bbmcRegs;
+#endif
 struct HostRequest bbmcRequest;
+#if !BBMC_NONE
 static unsigned char bbmcRequestAnswer[0x20];
 static unsigned char bbmcRequestData[0x20];
 struct InputHandler bbmcInputHandlerPower;
@@ -105,11 +111,20 @@ static const unsigned char bbmcZero4[4] = { 0 };
 static const unsigned char bbmcZero16[14] = { 0 };
 #endif
 #endif	/* BOARD_BBMC */
+#endif	/* !BBMC_NONE */
 
 /* the link's timeouts and handlers, the registers, request 0x0a and the inputs; the hardware
    info's flag 0x02 when P3.2 stays low */
 void bbmcInit(void)
 {
+#if BBMC_NONE
+	bbmcRequest.id = 0x0a;
+	bbmcRequest.data = NULL;
+	bbmcRequest.answer = NULL;
+	bbmcRequest.size = 0x20;
+	bbmcRequest.notify = bbmcRequestNotify;
+	bbmcRequest.state = HOST_REQUEST_RECEIVE;
+#else
 	struct UartTimeout timeout;
 	struct TimerHandler handler;
 	unsigned char result;
@@ -173,6 +188,7 @@ void bbmcInit(void)
 			setHardwareInfoFlags(0x02);
 	}
 #endif
+#endif	/* BBMC_NONE */
 }
 
 unsigned char bbmcPowerOn(void)
@@ -322,6 +338,7 @@ unsigned char bbmcStart(void)
 #endif
 }
 
+#if !BBMC_NONE
 unsigned char bbmcSetOff(void)
 {
 	bbmc.state = 1;
@@ -383,10 +400,16 @@ unsigned char bbmcIsOn(void)
 }
 #endif
 
+#endif	/* !BBMC_NONE */
+
 #if FW_SINCE(0x01000104)
 unsigned char bbmcModeIsNone(void)
 {
+#if BBMC_NONE
+	return 0;
+#else
 	return bbmcRegs.r.modeActive == 0;
+#endif
 }
 #endif
 
@@ -678,6 +701,7 @@ unsigned char hostCommand0a00(unsigned char *out, unsigned char *length)
 }
 #endif
 
+#if !BBMC_NONE
 /* a packet in or out (prints nothing) */
 void bbmcTrace(const char *name, unsigned char *packet)
 {
@@ -1120,10 +1144,17 @@ void bbmcDelay(void)
 	dly_tsk(0x19);
 }
 
+#endif	/* !BBMC_NONE */
+
 void bbmcRequestNotify(void)
 {
 	switch (bbmcRequest.event) {
-#if SOURCE_0103
+#if BBMC_NONE
+	/* USS-1002: idle once the link is up */
+	case HOST_EVENT_OPEN:
+		hostRequestSetState(&bbmcRequest, HOST_REQUEST_IDLE);
+		break;
+#elif SOURCE_0103
 	/* USS-1001's: the link's opening leaves the request idle too */
 	case HOST_EVENT_COMMAND:
 		hostRequestSetState(&bbmcRequest, HOST_REQUEST_BUSY);
@@ -1236,6 +1267,7 @@ void bbmcRequestRun(void)
 #endif
 }
 
+#if !BBMC_NONE
 void bbmcPostRxTimeout(void)
 {
 	task6SetFlag(6, BBMC_EVENT_RX_TIMEOUT);
@@ -1265,3 +1297,4 @@ void bbmcPostWake(void)
 {
 	task6SetFlag(6, BBMC_EVENT_WAKE);
 }
+#endif	/* !BBMC_NONE */
