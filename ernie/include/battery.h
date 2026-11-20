@@ -124,6 +124,7 @@ struct BatteryCalibration {
 extern void batteryPowerOn(void);
 extern unsigned char batteryCalibrate(unsigned char mode, struct BatteryOffsets *offsets);
 extern void batteryLoadOffsets(void);
+extern void batteryChargeFromLoad(void);
 extern void batteryPowerOff(void);
 extern void batteryUpdate(void);
 extern unsigned char batterySaveRecord(void);

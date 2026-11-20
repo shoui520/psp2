@@ -147,7 +147,6 @@ static unsigned int batteryTemperature(unsigned int raw);
 static unsigned char batteryBand(void);
 static void batteryCount(void);
 static void batteryChargeFromRest(void);
-static void batteryChargeFromLoad(void);
 static void batteryEstimate(void);
 static void batteryCapacityUpdate(void);
 static void batterySocVoltUpdate(void);
@@ -532,7 +531,7 @@ static void batteryChargeFromRest(void)
 }
 
 /* the charge from the open circuit's voltage */
-static void batteryChargeFromLoad(void)
+void batteryChargeFromLoad(void)
 {
 	batteryGauge.socVolt = batteryOcvPercent(batteryGauge.ocv, batteryOcvRest);
 	batterySetCharge(-(int)((unsigned long)batteryGauge.capacity * (10000 - batteryGauge.socVolt) /

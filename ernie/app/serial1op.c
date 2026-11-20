@@ -68,7 +68,15 @@
 	}
 #endif
 
-#if BOARD_DOL1002
+/* DOL-1002's operation, and USS-1002's from it */
+#define SERIAL1_OP_0104		(BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104)
+
+/* USS-1002 (the slim's 0x0105): the switch runs whether or not the command waits, the gauge's
+   calibration operations 0x21-0x23, no thermal statistics, the charge cases only in the manual
+   charge mode */
+#define SERIAL1_OP_USS		(BOARD_USS1001 && SOURCE_0104)
+
+#if SERIAL1_OP_0104
 /* DOL-1002 answers only while the command waits, through serial1Answer, and reads 0x0180's and
    0x0181's registers in functions of their own, which 0x0954 reads again */
 #define SERIAL1_STATUS(result)	((result) ? 0x60 : 0)
@@ -129,7 +137,12 @@ void serial1Operation(void)
 	unsigned char current;		/* a current's Cookie setting (0x0185-0x0187) */
 	struct BatteryInfo info;
 
+#if SERIAL1_OP_USS
+	result = 0xff;
+	{
+#else
 	if (serial.state == SERIAL_ANSWER_LATER) {
+#endif
 		switch (serial1State) {
 		case 0x0a:	/* 0x0930: the Elmo's version */
 			result = elmoReadVersion(serial1Args.byte);
@@ -159,6 +172,14 @@ void serial1Operation(void)
 			result = cookieWrite(serial1Args.byte, 3);
 			serial1Answer(0x0943, SERIAL1_STATUS(result), NULL, 0);
 			break;
+#if SERIAL1_OP_USS
+		case 5:		/* 0x0944, 0x0945: no battery on the bus */
+			serial1Answer(0x0944, 0x60, &serial1Args.byte[1], 0);
+			break;
+		case 6:
+			serial1Answer(0x0944, 0x60, &serial1Args.byte[1], 0);
+			break;
+#else
 		case 5:		/* 0x0944: the battery's register */
 			result = batteryRead(&serial1Args.byte[0], &serial1Args.byte[1], 2);
 			serial1Answer(0x0944, SERIAL1_STATUS(result), &serial1Args.byte[1], 2);
@@ -167,16 +188,42 @@ void serial1Operation(void)
 			result = batteryWrite(serial1Args.byte, 3);
 			serial1Answer(0x0945, SERIAL1_STATUS(result), NULL, 0);
 			break;
+#endif
 		case 7:		/* 0x0180: the battery's readings and registers */
 			result = serial1Read0180((struct Serial1Battery *)serial1Args.word);
 			serial1Answer(0x0180, SERIAL1_STATUS(result), serial1Args.byte, 12);
 			break;
+#if SERIAL1_OP_USS
+		case 0x21:	/* 0x0191: the gauge's offsets, used and saved */
+			batteryGetCalibration((struct BatteryCalibration *)serial1Args.word);
+			serial1Answer(0x0191, 0, serial1Args.byte, 8);
+			break;
+		case 0x23:	/* 0x0192: the offsets loaded again, the charge from the load's
+				   voltage first when byte[0] is 0 */
+			if (serial1Args.byte[0] == 0)
+				batteryChargeFromLoad();
+			batteryLoadOffsets();
+			batteryUpdate();
+			chargeUpdate();
+			serial1Answer(0x0192, 0, serial1Args.byte, 0);
+			break;
+		case 0x22:	/* 0x018f: the gauge calibrated in mode byte[0] */
+			result = batteryCalibrate(serial1Args.byte[0],
+						  (struct BatteryOffsets *)serial1Args.word);
+			serial1Answer(0x018f, result, serial1Args.byte, 4);
+			break;
+#endif
 		case 8:		/* 0x0181: the gauge's */
 			result = serial1Read0181((struct Serial1Gauge *)serial1Args.word);
 			serial1Answer(0x0181, SERIAL1_STATUS(result), serial1Args.byte, 12);
 			break;
-		case 9:		/* 0x0182: the gauge's control 0x0015 */
+		case 9:		/* 0x0182: the gauge's control 0x0015 (USS-1002: the bootloader
+				   mode stopped) */
+#if SERIAL1_OP_USS
+			result = batteryStopBLMode();
+#else
 			result = batteryControl0015();
+#endif
 			serial1Answer(0x0182, SERIAL1_STATUS(result), NULL, 0);
 			break;
 		case 0x0d:	/* 0x0953: the battery's faults */
@@ -194,27 +241,49 @@ void serial1Operation(void)
 			serial1Answer(0x0183, result, NULL, 0);
 			break;
 		case 0x0f:	/* 0x0184: the charge on or off */
-			result = cookieCtrlBatteryCharge(serial1Args.byte[0] ? 1 : 0);
-			if (result)
-				result = 0x60;
-			else
-				result = 0;
-			serial1Answer(0x0184, result, NULL, 0);
-			break;
-		case 0x10:	/* 0x0185: the charging current; 0x33 a current it has no setting for */
-			result = cookieChargingCurrentEncode(&current, serial1Args.byte[0]);
-			if (result) {
-				result = 0x33;
-			} else {
-				result = cookieCtrlChargingCurrent(current);
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1) {
+#endif
+				result = cookieCtrlBatteryCharge(serial1Args.byte[0] ? 1 : 0);
 				if (result)
 					result = 0x60;
 				else
 					result = 0;
+#if SERIAL1_OP_USS
+			} else {
+				result = 0xff;
 			}
+#endif
+			serial1Answer(0x0184, result, NULL, 0);
+			break;
+		case 0x10:	/* 0x0185: the charging current; 0x33 a current it has no setting for */
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1) {
+#endif
+				result = cookieChargingCurrentEncode(&current, serial1Args.byte[0]);
+				if (result) {
+					result = 0x33;
+				} else {
+					result = cookieCtrlChargingCurrent(current);
+					if (result)
+						result = 0x60;
+					else
+						result = 0;
+				}
+#if SERIAL1_OP_USS
+			} else {
+				result = 0xff;
+			}
+#endif
 			serial1Answer(0x0185, result, NULL, 0);
 			break;
-		case 0x11:	/* 0x0186: the AC supply's current */
+		case 0x11:	/* 0x0186: the AC supply's current (USS-1002: nothing to set) */
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1)
+				result = 0;
+			else
+				result = 0xff;
+#else
 			result = cookieSupplyCurrentEncode(&current, serial1Args.byte[0]);
 			if (result) {
 				result = 0x33;
@@ -225,35 +294,60 @@ void serial1Operation(void)
 				else
 					result = 0;
 			}
+#endif
 			serial1Answer(0x0186, result, NULL, 0);
 			break;
 		case 0x12:	/* 0x0187: the USB supply's current */
-			result = cookieSupplyCurrentUsbEncode(&current, serial1Args.byte[0]);
-			if (result) {
-				result = 0x33;
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1) {
+#endif
+				result = cookieSupplyCurrentUsbEncode(&current, serial1Args.byte[0]);
+				if (result) {
+					result = 0x33;
+				} else {
+					result = cookieCtrlSupplyCurrentUsb(current);
+					if (result)
+						result = 0x60;
+					else
+						result = 0;
+				}
+#if SERIAL1_OP_USS
 			} else {
-				result = cookieCtrlSupplyCurrentUsb(current);
+				result = 0xff;
+			}
+#endif
+			serial1Answer(0x0187, result, NULL, 0);
+			break;
+		case 0x13:	/* 0x0188: the AC's charge */
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1) {
+#endif
+				result = cookieSetChargeAc(serial1Args.byte[0] ? 1 : 0);
 				if (result)
 					result = 0x60;
 				else
 					result = 0;
+#if SERIAL1_OP_USS
+			} else {
+				result = 0xff;
 			}
-			serial1Answer(0x0187, result, NULL, 0);
-			break;
-		case 0x13:	/* 0x0188: the AC's charge */
-			result = cookieSetChargeAc(serial1Args.byte[0] ? 1 : 0);
-			if (result)
-				result = 0x60;
-			else
-				result = 0;
+#endif
 			serial1Answer(0x0188, result, NULL, 0);
 			break;
 		case 0x14:	/* 0x0189: the Cookie's register 6 bit 3 */
-			result = cookieCtrlReg6Bit3(serial1Args.byte[0] ? 1 : 0);
-			if (result)
-				result = 0x60;
-			else
-				result = 0;
+#if SERIAL1_OP_USS
+			if (chargeGetManualMode() == 1) {
+#endif
+				result = cookieCtrlReg6Bit3(serial1Args.byte[0] ? 1 : 0);
+				if (result)
+					result = 0x60;
+				else
+					result = 0;
+#if SERIAL1_OP_USS
+			} else {
+				result = 0xff;
+			}
+#endif
 			serial1Answer(0x0189, result, NULL, 0);
 			break;
 		case 0x15:	/* 0x018a: the Cookie's register 1 */
@@ -296,7 +390,11 @@ void serial1Operation(void)
 			if (serial1Args.device[1].result)
 				((unsigned char *)serial1Args.device[1].data)[0] =
 					((unsigned char *)serial1Args.device[1].data)[1] = 0xff;
+#if SERIAL1_OP_USS
+			result |= serial1Args.device[1].result;
+#else
 			serial1Args.device[1].result = 0xff;
+#endif
 			serial1Args.device[2].type = 0x30;
 			serial1Args.device[3].type = 0x31;
 			serial1Args.device[2].result = serial1Args.device[3].result =
@@ -320,6 +418,7 @@ void serial1Operation(void)
 				((unsigned char *)serial1Args.device[4].data)[1] = 0xfd;
 			serial1Answer(0x0108, result ? (unsigned char)0x98 : (unsigned char)0, serial1Args.byte, 0x28);
 			break;
+#if !SERIAL1_OP_USS
 		case 0x1b:	/* 0x01e0: the temperature statistics */
 			thermalStatsGet(&serial1Args.thermal);
 			serial1Answer(0x01e0, 0, serial1Args.byte, 0x10);
@@ -328,9 +427,14 @@ void serial1Operation(void)
 			thermalStatsClear(serial1Args.byte[0]);
 			serial1Answer(0x01e1, 0, NULL, 0);
 			break;
-		case 0x1d:	/* 0x01e2: the temperature, after a zero byte */
+#endif
+		case 0x1d:	/* 0x01e2: the temperature, after a zero byte (USS-1002: none) */
 			serial1Args.byte[0] = 0;
+#if SERIAL1_OP_USS
+			serial1Args.byte[1] = 0;
+#else
 			result = thermalReadTemp((signed char *)&serial1Args.byte[1]);
+#endif
 			serial1Answer(0x01e2, SERIAL1_STATUS(result), serial1Args.byte, 2);
 			break;
 		case 0x1e:	/* 0x0955: the charge's serial mode */
@@ -348,7 +452,11 @@ void serial1Operation(void)
 			serial1Answer(0x01b2, 0, NULL, 0);
 			break;
 		default:
+#if SERIAL1_OP_USS
+			serial1Answer(serial.command, result, NULL, 0);
+#else
 			serial1Answer(serial.command, 0x60, NULL, 0);
+#endif
 			break;
 		}
 	}
@@ -365,12 +473,20 @@ static unsigned char serial1Read0180(struct Serial1Battery *out)
 	out->volt = charge.batteryVolt;
 	out->temp = charge.batteryTemp - SERIAL1_KELVIN;
 	out->bicTemp = charge.batteryBicTemp - SERIAL1_KELVIN;
+#if SERIAL1_OP_USS
+	/* the gauge's percent and current in place of the registers */
+	if (batteryReadLifePercent(&out->reg2c))
+		result = 0x60;
+	if (batteryReadElec(&out->reg14))
+		result = 0x60;
+#else
 	reg = 0x2c;
 	if (batteryRead(&reg, (unsigned char *)&out->reg2c, 2))
 		result = 0x60;
 	reg = 0x14;
 	if (batteryRead(&reg, (unsigned char *)&out->reg14, 2))
 		result = 0x60;
+#endif
 	return result;
 }
 
@@ -381,6 +497,21 @@ static unsigned char serial1Read0181(struct Serial1Gauge *out)
 	unsigned char reg;
 
 	memset(out, 0, sizeof(*out));
+#if SERIAL1_OP_USS
+	/* the gauge's flags, life and capacities in place of the registers */
+	if (batteryReadFlags(&out->control))
+		result = 0x60;
+	if (batteryReadInfo6C(&out->reg0a))
+		result = 0x60;
+	if (batteryReadSOH(&out->reg28))
+		result = 0x60;
+	if (batteryReadCycleCount(&out->reg2a))
+		result = 0x60;
+	if (batteryReadInfo1A(&out->reg22))
+		result = 0x60;
+	if (batteryReadFullCap2(&out->reg12))
+		result = 0x60;
+#else
 	if (batteryControl(0, (unsigned char *)&out->control, 2))
 		result = 0x60;
 	reg = 0x0a;
@@ -398,8 +529,16 @@ static unsigned char serial1Read0181(struct Serial1Gauge *out)
 	reg = 0x12;
 	if (batteryRead(&reg, (unsigned char *)&out->reg12, 2))
 		result = 0x60;
+#endif
 	return result;
 }
+
+/* USS-1002 reads the Cookie's registers at their own numbers */
+#if SERIAL1_OP_USS
+#define SERIAL1_COOKIE_REG(reg)	(reg)
+#else
+#define SERIAL1_COOKIE_REG(reg)	cookieReg(reg)
+#endif
 
 /* 0x0954's: 0x0180's, then by parts: 2 the battery's readings read again, 1 0x0181's (at word
    6), 4 the Cookie's status and its registers 4, 6, 7 and 8 (at bytes 0x18-0x1f) */
@@ -441,22 +580,22 @@ static unsigned char serial1Read0954(struct Serial1Status *out, unsigned char pa
 			result = 0x60;
 		if (cookieReadStatus2(&out->cookieStatus2[0]))
 			result = 0x60;
-		reg = cookieReg(4);
+		reg = SERIAL1_COOKIE_REG(4);
 		if (cookieRead(&reg, value))
 			result = 0x60;
 		else
 			out->cookieReg4 = value[0];
-		reg = cookieReg(6);
+		reg = SERIAL1_COOKIE_REG(6);
 		if (cookieRead(&reg, value))
 			result = 0x60;
 		else
 			out->cookieReg6 = value[0];
-		reg = cookieReg(7);
+		reg = SERIAL1_COOKIE_REG(7);
 		if (cookieRead(&reg, value))
 			result = 0x60;
 		else
 			out->cookieReg7 = value[0];
-		reg = cookieReg(8);
+		reg = SERIAL1_COOKIE_REG(8);
 		if (cookieRead(&reg, value))
 			result = 0x60;
 		else
@@ -898,4 +1037,4 @@ void serial1Operation(void)
 		break;
 	}
 }
-#endif	/* BOARD_DOL1002 */
+#endif	/* SERIAL1_OP_0104 */
