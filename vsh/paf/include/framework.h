@@ -256,6 +256,12 @@ public:
 	ui::Environment *GetEnvironmentInstance();
 	sound::Output *GetSoundInstance();
 
+	/* the plugin of the common resource (inline in its callers; name ours) */
+	Plugin *GetCommonResourcePlugin() const
+	{
+		return m_common_resource_plugin;
+	}
+
 	/* the common resource's load finish: its sounds, and the common hooks */
 	static void CRLoadFinishCallback(Plugin *plugin);
 

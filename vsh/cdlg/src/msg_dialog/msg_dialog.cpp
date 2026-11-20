@@ -167,7 +167,7 @@ public:
 	{
 	}
 
-	virtual void operator()();
+	virtual void operator()(SceInt32 id);
 
 	MsgDialog *m_dialog;
 	void *m_userdata;
@@ -554,7 +554,7 @@ void MsgDialogMessageHandler::operator()(SceInt32 value, SceInt32 button)
 	}
 }
 
-void MsgDialogLayoutOpenHandler::operator()()
+void MsgDialogLayoutOpenHandler::operator()(SceInt32 id)
 {
 	if (s_dialog != NULL) {
 		m_dialog->m_opened = 1;

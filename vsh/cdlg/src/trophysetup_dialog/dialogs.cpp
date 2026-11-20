@@ -119,7 +119,7 @@ int OpenErrorDialog(SceInt32 error, CommonGuiDialogFunction func, void *arg)
 	if (dialogId >= 0) {
 		math::v4 block(0.0f, 0.0f, 0.0f, 0.0f);
 
-		SceCommonGuiDialog_206623FF(dialogId, &block, &block);
+		SceCommonGuiDialog_206623FF(dialogId, block, block);
 	}
 	return dialogId;
 }

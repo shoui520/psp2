@@ -7,6 +7,7 @@
 #define _SCE_PHOTOIMPORT_DIALOG_H
 
 #include <scetypes.h>
+#include <common_dialog.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,6 +78,24 @@ typedef struct ScePhotoImportDialogItemData {
 	ScePhotoImportDialogFileDataSub dataSub;
 	SceChar8 reserved[32];
 } ScePhotoImportDialogItemData;
+
+/* structure for receiving the result of calling the function */
+typedef struct ScePhotoImportDialogResult {
+	SceInt32 result;
+	SceUInt32 importedItemNum;
+	SceChar8 reserved[32];
+} ScePhotoImportDialogResult;
+
+/* structure for calling scePhotoImportDialogInit() */
+typedef struct ScePhotoImportDialogParam {
+	SceUInt32 sdkVersion;
+	SceCommonDialogParam commonParam;
+	ScePhotoImportDialogMode mode;
+	SceUInt32 visibleCategory;
+	SceUInt32 itemCount;
+	ScePhotoImportDialogItemData *itemData;
+	SceChar8 reserved[32];
+} ScePhotoImportDialogParam;
 
 #ifdef __cplusplus
 }

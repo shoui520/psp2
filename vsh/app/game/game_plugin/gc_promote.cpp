@@ -222,9 +222,6 @@ public:
    done (0: not yet) */
 typedef map<string, int> GameGcPromoteTitles;
 
-/* the dialog's update handler; PLACEHOLDER: not declared in the library's header yet */
-extern "C" int SceCommonGuiDialog_17091699(int dialogId, CommonGuiDialogHandler *handler);
-
 /* the widget of the parent with the ID, when it is of the type */
 #define GAME_GC_PROMOTE_FIND(parent, type, id)						\
 	((parent)->FindChild(IDParam(s_empty_name, (id)), 0) != NULL &&			\
@@ -260,13 +257,13 @@ static inline void HideWidget(ui::Widget *widget, Timer *timer)
 static float s_shownProgress;
 
 /* A dialog's progress bar kept at the promoter's progress while the dialog is open. */
-class GameGcPromoteProgressHandler : public CommonGuiDialogHandler {
+class GameGcPromoteProgressHandler : public CommonGuiLayoutDialogOpenHandler {
 public:
 	GameGcPromoteProgressHandler(const float *progress) : m_progress(progress)
 	{
 	}
 
-	virtual void operator()(SceInt32 dialogId, SceInt32 button)
+	virtual void operator()(SceInt32 dialogId)
 	{
 		if (m_progress == NULL || s_shownProgress == *m_progress)
 			return;
@@ -914,7 +911,8 @@ static __attribute__((noinline)) int gameGcPromoteDialogOpen(const string &title
 		return dialogId;
 
 	if (SceCommonGuiDialog_8947FC23(dialogId, GAME_GC_PROMOTE_INDEX_PROGRESS) != NULL)
-		SceCommonGuiDialog_17091699(dialogId, new GameGcPromoteProgressHandler(progress));
+		SceCommonGuiDialog_17091699(dialogId, new GameGcPromoteProgressHandler(progress),
+					    1.0f);
 
 	gameGcPromoteDialogSet(dialogId, title, icon, text, frame, true);
 
@@ -952,7 +950,8 @@ static __attribute__((noinline)) int gameGcPromoteDialogOpenInstall(const string
 		return dialogId;
 
 	if (SceCommonGuiDialog_8947FC23(dialogId, GAME_GC_PROMOTE_INDEX_PROGRESS) != NULL)
-		SceCommonGuiDialog_17091699(dialogId, new GameGcPromoteProgressHandler(progress));
+		SceCommonGuiDialog_17091699(dialogId, new GameGcPromoteProgressHandler(progress),
+					    1.0f);
 
 	gameGcPromoteDialogSet(dialogId, title, icon, text, frame, true);
 

@@ -25,6 +25,9 @@
 #include <framework.h>
 #include <common_gui_dialog/common_gui_dialog.h>
 
+/* the dialog's scroll view, when its layout has no part for it */
+#define DIALOG_VIEW			0xE9C61C2C
+
 /* the errors the library returns */
 #define COMMON_GUI_DIALOG_ERROR_NO_MEMORY	((int32_t)0x80AF0022)
 #define COMMON_GUI_DIALOG_ERROR_NO_DIALOG	((int32_t)0x80AF0025)
@@ -133,7 +136,42 @@ public:
 	Method m_method;
 };
 
+/* shows a widget over the timer's time (inline in paf's callers) */
+static inline void ShowWidget(paf::ui::Widget *widget, paf::Timer *timer)
+{
+	if (!widget->m_transition_complete) {
+		widget->m_transition = 0xff;
+		widget->m_transition_complete = true;
+		widget->DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(widget, timer, 2, 0.0f, NULL);
+}
+
+/* hides a widget over the timer's time (inline in paf's callers) */
+static inline void HideWidget(paf::ui::Widget *widget, paf::Timer *timer)
+{
+	widget->m_transition_complete = false;
+	widget->m_transition = 0xff;
+	widget->DoTransitionReverse_core(0.0f, true);
+	ScePafWidget_4588699E(widget, timer, 2, 0.0f, NULL);
+}
+
+/* a parameter's colour as the vector it is copied and compared as */
+static inline paf::math::v4 &ColorV4(float (&color)[4])
+{
+	return *(paf::math::v4 *)color;
+}
+
+static inline const paf::math::v4 &ColorV4(const float (&color)[4])
+{
+	return *(const paf::math::v4 *)color;
+}
+
 /* the dialog parameters copied, all but the field nothing reads */
 CommonGuiDialogParam *CopyDialogParam(CommonGuiDialogParam *dst, const CommonGuiDialogParam *src);
+
+/* whether the dialog's check box (part 15, whatever the index) is checked: 0, or
+   COMMON_GUI_DIALOG_ERROR_NO_DIALOG */
+int32_t GetPartChecked(int32_t id, int32_t index, bool *checked);
 
 #endif

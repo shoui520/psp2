@@ -82,6 +82,11 @@ public:
 		return v4(_impl - rhs._impl);
 	}
 
+	__attribute__((always_inline)) v4 operator-() const
+	{
+		return v4(-_impl);
+	}
+
 	v4 operator*(float rhs) const
 	{
 		return v4(_impl * rhs);

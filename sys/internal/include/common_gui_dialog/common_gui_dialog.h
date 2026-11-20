@@ -48,18 +48,49 @@ public:
 	virtual void operator()(CommonGuiMessageDialogParam *param) = 0;
 };
 
-/* what a dialog with its own layout calls as it opens, kept and deleted like its handler */
+/*
+ * What a dialog with its own layout calls with its ID as it opens, or every interval while it is
+ * open: kept and deleted like its handler.
+ */
 class CommonGuiLayoutDialogOpenHandler {
 public:
 	virtual ~CommonGuiLayoutDialogOpenHandler()
 	{
 	}
 
-	virtual void operator()() = 0;
+	virtual void operator()(SceInt32 id) = 0;
+};
+
+/* what makes a widget for SceCommonGuiDialog_061DD12B, which deletes it */
+class CommonGuiDialogWidgetFactory {
+public:
+	virtual ~CommonGuiDialogWidgetFactory()
+	{
+	}
+
+	/* the widget made under the parent, or NULL */
+	virtual paf::ui::Widget *Create(paf::ui::Widget *parent) = 0;
+};
+
+/* the factory of a plugin's template's widget */
+class CommonGuiDialogTemplateFactory : public CommonGuiDialogWidgetFactory {
+public:
+	CommonGuiDialogTemplateFactory(paf::Plugin *plugin, const paf::IDParam &id)
+		: m_plugin(plugin), m_template(id)
+	{
+	}
+
+	virtual paf::ui::Widget *Create(paf::ui::Widget *parent);
+
+	paf::Plugin *m_plugin;
+	paf::IDParam m_template;
 };
 
 /* the function form of a handler, which SceCommonGuiDialog_6CE14F66 wraps in one itself */
 typedef void (*CommonGuiDialogFunction)(SceInt32 value, SceInt32 button, void *arg);
+
+/* the function form of an open handler (SceCommonGuiDialog_B1BA8D9E, SceCommonGuiDialog_F1A40838) */
+typedef int (*CommonGuiDialogOpenFunction)(SceInt32 id, void *arg);
 
 /*
  * An entry of a dialog's button table: the button's widget (by its index in the layout, as
@@ -196,13 +227,15 @@ public:
 	paf::wstring text;
 	/* the text's colour; SceCommonGuiDialog_EF2C5382 by default */
 	paf::math::v4 textColor;
-	float scale;
+	/* the milliseconds between the update handler's calls */
+	float interval;
 	paf::intrusive_ptr<paf::graph::Surface> image;
 	paf::intrusive_ptr<paf::cache::CacheImageInterface> cachedImage;
 	paf::intrusive_ptr<paf::graph::Surface> secondImage;
 	CommonGuiDialogHandler *handler;
 	CommonGuiLayoutDialogOpenHandler *openHandler;
-	CommonGuiDialogHandler *updateHandler;
+	/* called every interval milliseconds while the dialog is open */
+	CommonGuiLayoutDialogOpenHandler *updateHandler;
 };
 
 typedef char CommonGuiLayoutDialogParamSize[sizeof(CommonGuiLayoutDialogParam) == 160 ? 1 : -1];
@@ -227,6 +260,8 @@ public:
  * with.
  */
 struct CommonGuiListDialogItem {
+	CommonGuiListDialogItem();
+
 	/* the line has its mark; both texts are drawn with a shadow */
 	bool mark : 1;
 	bool shadow : 1;
@@ -243,6 +278,9 @@ typedef char CommonGuiListDialogItemSize[sizeof(CommonGuiListDialogItem) == 96 ?
 /* the parameters of a list dialog (SceCommonGuiDialog_F3D37CAE) */
 class CommonGuiListDialogParam : public CommonGuiDialogParam {
 public:
+	/* the list dialog's defaults (SceCommonGuiDialog_BAC27433 and SceCommonGuiDialog_149B7ABB) */
+	CommonGuiListDialogParam();
+
 	/* the layout: 1 with an OK button, 2 without buttons, 3 with no and yes; else the panel's */
 	SceInt32 type;
 	/* the dialog is fitted to its lines */
@@ -256,8 +294,108 @@ public:
 	CommonGuiDialogHandler *handler;
 };
 
+/*
+ * The parameters of a text input dialog (SceCommonGuiDialog_7C019CF0): its text and a second
+ * text, the text box's length and IME type, where the text typed is written when OK closes it,
+ * and its handler.
+ */
+class CommonGuiInputDialogParam : public CommonGuiDialogParam {
+public:
+	/* the call waits until the dialog closes, and returns its result */
+	bool wait;
+	paf::wstring text;
+	paf::wstring subText;
+	CommonGuiDialogHandler *handler;
+	/* the text box's maximum length */
+	SceUInt32 maxLength;
+	/* where the text typed is written (UTF-8) when OK closes the dialog, or NULL */
+	paf::string *outText;
+	/* the layout with a third button, which the text box and the other buttons move down to */
+	bool thirdButton;
+	/* the text box's IME: 1 numbers (SCE_IME_TYPE_NUMBER), 2 extended numbers
+	   (SCE_IME_TYPE_EXTENDED_NUMBER), 3 the IME's type 9; else the text box's own */
+	SceInt32 imeType;
+};
+
 extern "C" {
+/* the parameters' defaults: both NIDs are the one constructor (C2 and C1) */
+CommonGuiDialogParam *SceCommonGuiDialog_3EA370C9(CommonGuiDialogParam *param);
 CommonGuiDialogParam *SceCommonGuiDialog_696DB9C9(CommonGuiDialogParam *param);
+/* lets a dialog go: once nothing holds it, it closes */
+void SceCommonGuiDialog_BC311DC0(int dialogId);
+/* sets the result a call waiting for the dialog returns: 0, or -1 without the dialog */
+int SceCommonGuiDialog_2CA16BBF(int dialogId, int result);
+/* the page priority of the dialogs opened without one */
+int SceCommonGuiDialog_694696F3(void);
+void SceCommonGuiDialog_5057376C(int priority);
+/* waits until the dialog has closed: its result, or -1 without the dialog */
+int SceCommonGuiDialog_D2381B88(int dialogId);
+/* has the handler called with the dialog's ID every interval milliseconds while it is open */
+void SceCommonGuiDialog_17091699(int dialogId, CommonGuiLayoutDialogOpenHandler *handler,
+				 float interval);
+/* has the handler called with the dialog's ID once it has opened: 0, or -1 without the dialog */
+int SceCommonGuiDialog_0BA67FE0(int dialogId, CommonGuiLayoutDialogOpenHandler *handler);
+/* the resource ID of the sound the dialog plays as it closes */
+int SceCommonGuiDialog_D3F78BA5(int dialogId, SceUInt32 id);
+/* a dialog's widget by its index in the layout (1: its text, 4: its waiting animation, 10: its
+   contents, 12: a part the processing dialog removes, as the trophy setup dialog uses them) */
+paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
+/* the colour of the dialog's dimmer (part 3) and of its heading (part 6); the trophy setup
+   dialog passes a third argument the library does not read */
+void SceCommonGuiDialog_206623FF(int dialogId, const paf::math::v4 &color,
+				 const paf::math::v4 &unused);
+void SceCommonGuiDialog_2BBC4734(int dialogId, const paf::math::v4 &color);
+/* the colour of the dialog's background and dividers */
+void SceCommonGuiDialog_0C2B57DC(int dialogId, const paf::math::v4 &color);
+/* the image of the dialog's part */
+void SceCommonGuiDialog_52AB228A(int dialogId, int index,
+				 paf::intrusive_ptr<paf::graph::Surface> image);
+/* shows a dialog with its own layout: its ID, or a negative error */
+int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param);
+/* shows a dialog with the heading, text and layout, which calls the handler (the library takes
+   it over): its ID, or a negative error */
+int SceCommonGuiDialog_FA31832E(paf::Plugin *plugin, const paf::wstring &heading,
+				const paf::wstring &text, const CommonGuiDialogLayout *layout,
+				CommonGuiDialogHandler *handler);
+/* the same with the function form of the handler */
+int SceCommonGuiDialog_6CE14F66(paf::Plugin *plugin, const paf::wstring &heading,
+				const paf::wstring &text, const CommonGuiDialogLayout *layout,
+				CommonGuiDialogFunction func, void *arg);
+/* holds a dialog: one more SceCommonGuiDialog_BC311DC0 before it closes */
+void SceCommonGuiDialog_D0B729B2(int dialogId);
+/* the same as SceCommonGuiDialog_BC311DC0 */
+void SceCommonGuiDialog_D222DCE5(int dialogId);
+/* has func(id, arg) called once the dialog has opened: 0, or -1 without the dialog */
+int SceCommonGuiDialog_B1BA8D9E(int dialogId, CommonGuiDialogOpenFunction func, void *arg);
+/* has func(id, arg) called every interval milliseconds while the dialog is open */
+void SceCommonGuiDialog_F1A40838(int dialogId, CommonGuiDialogOpenFunction func, void *arg,
+				 float interval);
+/* stops the interval's calls */
+void SceCommonGuiDialog_47BEE7F8(int dialogId);
+/* the page's debug mode */
+void SceCommonGuiDialog_F9903161(int dialogId, bool on);
+/* sets an open dialog's heading, text, or the text part at the index: 0, or an error */
+int SceCommonGuiDialog_7775C6B6(int dialogId, const paf::wstring &heading);
+int SceCommonGuiDialog_273A476A(int dialogId, const paf::wstring &text);
+int SceCommonGuiDialog_22475C30(int dialogId, int index, const paf::wstring &text);
+/* the colour of the dialog's background: 0, or an error */
+int SceCommonGuiDialog_6A6F5DEE(int dialogId, paf::math::v4 *color);
+/* shows or hides the dialog's dividers */
+void SceCommonGuiDialog_052D0230(int dialogId, bool show);
+/* closes a dialog with a result: 0, or -1 without the dialog */
+int SceCommonGuiDialog_01702008(int dialogId, int result);
+/* shows a dialog, calls the handler once it has opened (the library takes it over) and waits
+   until it closes: its result, or a negative error */
+int SceCommonGuiDialog_B59AE4AD(paf::Plugin *plugin, const paf::wstring &heading,
+				const paf::wstring &text, const CommonGuiDialogLayout *layout,
+				CommonGuiLayoutDialogOpenHandler *handler);
+/* the same with func(id, arg) for the handler */
+int SceCommonGuiDialog_EB559AFE(paf::Plugin *plugin, const paf::wstring &heading,
+				const paf::wstring &text, const CommonGuiDialogLayout *layout,
+				CommonGuiDialogOpenFunction func, void *arg);
+/* adds the widget the factory makes beside the dialog's part, and deletes the factory: 0, or
+   -1 */
+int SceCommonGuiDialog_061DD12B(int dialogId, int index, CommonGuiDialogWidgetFactory *factory);
 /* shows a message dialog: returns when it is closed */
 int SceCommonGuiDialog_20B141F1(CommonGuiMessageDialogParam *param);
 /* shows a message dialog with the plugin's resources and the two handlers, which the library
@@ -265,37 +403,33 @@ int SceCommonGuiDialog_20B141F1(CommonGuiMessageDialogParam *param);
 int SceCommonGuiDialog_A6422883(paf::Plugin *plugin, CommonGuiMessageDialogParam *param,
 				CommonGuiDialogHandler *handler,
 				CommonGuiMessageDialogOpenHandler *openHandler);
-/* called on a message dialog just opened with a 16-byte block twice, zeroed by its caller */
-int SceCommonGuiDialog_206623FF(int dialogId, void *arg1, void *arg2);
-/* shows a dialog with its own layout: its ID, or a negative error */
-int SceCommonGuiDialog_CCFCD9A6(CommonGuiLayoutDialogParam *param);
 /* shows the PlayStation Plus dialog: its ID, or a negative error */
 int SceCommonGuiDialog_D6B6809B(const CommonGuiPlusDialogParam *param);
 /* shows a list dialog: its ID (its result when it waits), or a negative error */
 int SceCommonGuiDialog_F3D37CAE(const CommonGuiListDialogParam *param);
-/* shows a waiting dialog with the given heading, text and layout: its ID, or a negative error */
-int SceCommonGuiDialog_6CE14F66(paf::Plugin *plugin, const paf::wstring &heading,
-				const paf::wstring &text, const CommonGuiDialogLayout *layout,
-				CommonGuiDialogFunction func, void *arg);
-/* has func(value, arg) called every interval milliseconds while the dialog is open */
-int SceCommonGuiDialog_F1A40838(int dialogId, int (*func)(int value, void *arg), void *arg, float interval);
-/* closes a dialog with a result: 0, or -1 without the dialog */
-int SceCommonGuiDialog_01702008(int dialogId, int result);
-/* lets a dialog go */
-int SceCommonGuiDialog_BC311DC0(int dialogId);
-/* sets the result a call waiting for the dialog returns: 0, or -1 without the dialog */
-int SceCommonGuiDialog_2CA16BBF(int dialogId, int result);
-/* waits until the dialog has closed: its result, or -1 without the dialog */
-int SceCommonGuiDialog_D2381B88(int dialogId);
-/* sets an open dialog's text */
-int SceCommonGuiDialog_273A476A(int dialogId, const paf::wstring &text);
-/* a dialog's widget by its index in the layout (1: its text, 4: its waiting animation, 10: its
-   contents, 12: a part the processing dialog removes, as the trophy setup dialog uses them) */
-paf::ui::Widget *SceCommonGuiDialog_8947FC23(int dialogId, int index);
-/* called on a dialog just opened with a resource ID (the trophy setup dialog's 0xE0D9F918) */
-int SceCommonGuiDialog_D3F78BA5(int dialogId, SceUInt32 id);
-/* called by the shell once its start job is done, with 38 (not written in C yet) */
-int SceCommonGuiDialog_5057376C(int value);
+/* sets a line: its text, with its mark unless plain, in the list dialog's colour, without a
+   button */
+void SceCommonGuiDialog_96B9C9F6(CommonGuiListDialogItem *item, SceInt32 plain,
+				const paf::wstring &text);
+/* sets a line with a button: its label and the value the dialog closes with */
+void SceCommonGuiDialog_2FA91F45(CommonGuiListDialogItem *item, SceInt32 plain,
+				const paf::wstring &text, const paf::wstring &buttonLabel,
+				SceInt32 buttonValue);
+/* the same on the parameters' line, which is added (with the lines before it) if missing */
+void SceCommonGuiDialog_D44D1EFB(CommonGuiListDialogParam *param, SceUInt32 index,
+				SceInt32 plain, const paf::wstring &text);
+void SceCommonGuiDialog_6A0E7F14(CommonGuiListDialogParam *param, SceUInt32 index,
+				SceInt32 plain, const paf::wstring &text,
+				const paf::wstring &buttonLabel, SceInt32 buttonValue);
+/* shows a list dialog whose cancel button takes the focus within its group: as
+   SceCommonGuiDialog_F3D37CAE */
+int SceCommonGuiDialog_BACBA7F2(const CommonGuiListDialogParam *param);
+/* the text typed into a text input dialog, as UTF-8 */
+paf::string SceCommonGuiDialog_1D4E3C83(int dialogId);
+/* shows a text input dialog: its ID (its result when it waits), or a negative error */
+int SceCommonGuiDialog_7C019CF0(const CommonGuiInputDialogParam *param);
+/* the same as SceCommonGuiDialog_BC311DC0 */
+void SceCommonGuiDialog_11D35CB5(int dialogId);
 
 /*
  * The library's layouts, by their parts (1: the text, 2: a second text, 12 to 14: the buttons,
@@ -337,6 +471,12 @@ inline CommonGuiDialogParam::CommonGuiDialogParam()
 	SceCommonGuiDialog_696DB9C9(this);
 }
 
+inline CommonGuiListDialogItem::CommonGuiListDialogItem()
+	: mark(true), shadow(false), markColor(SceCommonGuiDialog_EF2C5382),
+	  textColor(SceCommonGuiDialog_EF2C5382), buttonColor(SceCommonGuiDialog_EF2C5382)
+{
+}
+
 /* the layout a layout dialog takes by default; the library's own code takes its parts as
    constants (layouts.h) */
 #ifndef COMMON_GUI_DIALOG_DEFAULT_LAYOUT
@@ -345,7 +485,7 @@ inline CommonGuiDialogParam::CommonGuiDialogParam()
 
 inline CommonGuiLayoutDialogParam::CommonGuiLayoutDialogParam()
 	: wait(false), layout(COMMON_GUI_DIALOG_DEFAULT_LAYOUT), textColor(SceCommonGuiDialog_EF2C5382),
-	  scale(1.0f), handler(NULL), openHandler(NULL), updateHandler(NULL)
+	  interval(1.0f), handler(NULL), openHandler(NULL), updateHandler(NULL)
 {
 }
 

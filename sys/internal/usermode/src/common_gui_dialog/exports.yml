@@ -18,7 +18,7 @@ SceCommonGuiDialog:
         - SceCommonGuiDialog_0BA67FE0: 0x0BA67FE0
         - SceCommonGuiDialog_0C2B57DC: 0x0C2B57DC
         - SceCommonGuiDialog_11D35CB5: 0x11D35CB5
-        - SceCommonGuiDialog_149B7ABB: 0x149B7ABB
+        - _ZN24CommonGuiListDialogParamC1Ev: 0x149B7ABB
         - SceCommonGuiDialog_17091699: 0x17091699
         - SceCommonGuiDialog_1D4E3C83: 0x1D4E3C83
         - SceCommonGuiDialog_206623FF: 0x206623FF
@@ -41,7 +41,7 @@ SceCommonGuiDialog:
         - SceCommonGuiDialog_6A6F5DEE: 0x6A6F5DEE
         - SceCommonGuiDialog_6CE14F66: 0x6CE14F66
         - SceCommonGuiDialog_6FF8219B: 0x6FF8219B
-        - SceCommonGuiDialog_705BEC49: 0x705BEC49
+        - _ZN30CommonGuiDialogTemplateFactory6CreateEPN3paf2ui6WidgetE: 0x705BEC49
         - SceCommonGuiDialog_7775C6B6: 0x7775C6B6
         - SceCommonGuiDialog_7C019CF0: 0x7C019CF0
         - SceCommonGuiDialog_8947FC23: 0x8947FC23
@@ -49,7 +49,7 @@ SceCommonGuiDialog:
         - SceCommonGuiDialog_A6422883: 0xA6422883
         - SceCommonGuiDialog_B1BA8D9E: 0xB1BA8D9E
         - SceCommonGuiDialog_B59AE4AD: 0xB59AE4AD
-        - SceCommonGuiDialog_BAC27433: 0xBAC27433
+        - _ZN24CommonGuiListDialogParamC2Ev: 0xBAC27433
         - SceCommonGuiDialog_BACBA7F2: 0xBACBA7F2
         - SceCommonGuiDialog_BC311DC0: 0xBC311DC0
         - SceCommonGuiDialog_C4601FBE: 0xC4601FBE

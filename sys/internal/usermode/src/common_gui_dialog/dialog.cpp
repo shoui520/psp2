@@ -53,7 +53,6 @@ static const char s_plusTrialUri[] = "psts:browse?target=plus&exp=true";
 /* the dialog's texts whose adjustment the fitted list dialog changes */
 #define DIALOG_HEADING			0x768E69AA
 #define DIALOG_CONTENTS			0x918215F3
-#define DIALOG_VIEW			0xE9C61C2C
 
 /* the event a button sends when it is pressed */
 #define DIALOG_BUTTON_EVENT		0x10000008
@@ -61,17 +60,6 @@ static const char s_plusTrialUri[] = "psts:browse?target=plus&exp=true";
 /* the height a fitted list dialog opens with, and the most it grows to */
 #define LIST_DIALOG_FIT_HEIGHT		240.0f
 #define LIST_DIALOG_FIT_HEIGHT_MAX	440.0f
-
-/* shows a widget over the timer's time (inline in paf's callers) */
-static inline void ShowWidget(Widget *widget, Timer *timer)
-{
-	if (!widget->m_transition_complete) {
-		widget->m_transition = 0xff;
-		widget->m_transition_complete = true;
-		widget->DoTransition_core(0.0f, true);
-	}
-	ScePafWidget_FF5BC957(widget, timer, 2, 0.0f, NULL);
-}
 
 /*
  * The PlayStation Plus dialog's handler: its join and try buttons open the store's page once the
@@ -830,12 +818,8 @@ void CommonGuiDialog::HidePart(int32_t index)
 {
 	Widget *part = GetPart(index);
 
-	if (part == NULL)
-		return;
-	part->m_transition_complete = false;
-	part->m_transition = 0xff;
-	part->DoTransitionReverse_core(0.0f, true);
-	ScePafWidget_4588699E(part, NULL, 2, 0.0f, NULL);
+	if (part != NULL)
+		HideWidget(part, NULL);
 }
 
 /* a functor called every interval */
@@ -998,7 +982,7 @@ int32_t IntervalListener::Do(int32_t type, Handler *self, Event *e)
 	CommonGuiDialog *dialog = CommonGuiDialog::Find(m_id);
 
 	if (dialog != NULL && dialog->m_open && m_functor != NULL)
-		(*m_functor)();
+		(*m_functor)(dialog->m_id);
 	return 0;
 }
 
@@ -1017,7 +1001,7 @@ int32_t ReadyListener::Do(int32_t type, Handler *self, Event *e)
 		return 0;
 	dialog->m_inHandler = true;
 	if (m_functor != NULL)
-		(*m_functor)();
+		(*m_functor)(dialog->m_id);
 	dialog->m_dialog->DeleteEventListener(Handler::CB_STATE_READY, this);
 	dialog->PlaySound();
 	dialog->m_inHandler = false;

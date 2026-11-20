@@ -104,7 +104,7 @@ public:
 	{
 	}
 
-	virtual void operator()();
+	virtual void operator()(SceInt32 id);
 
 	NearDialog *m_dialog;
 	void *m_userdata;
@@ -380,7 +380,7 @@ void NearDialogMessageHandler::operator()(SceInt32 value, SceInt32 button)
 	}
 }
 
-void NearDialogLayoutOpenHandler::operator()()
+void NearDialogLayoutOpenHandler::operator()(SceInt32 id)
 {
 	if (s_dialog != NULL) {
 		m_dialog->m_opened = 1;
