@@ -207,8 +207,8 @@ typedef struct NpActivityStatusInfo {
 	char contentId[48];
 	char iconUrl[257];
 	char actionUrl[1025];
-	char reserved2[256];		/* cleared when a status is posted, never read */
-	int reserved3;
+	SceUInt8 info[256];		/* the request carries it in base64 */
+	SceSize infoSize;		/* 0: no info */
 	char fromName[257];		/* who a title's status is from */
 	char avatarUrl[259];
 	SceUInt32 panelBgColor;		/* 0: none given */
@@ -261,8 +261,9 @@ int SceNpActivityNet_7E3116FB(int connection, const SceNpId *npId, const NpActiv
 
 typedef struct NpActivityCommentPost {
 	SceUInt64 creationTime;
-	char message[820];		/* at most NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE bytes */
-	int reserved;
+	char message[NP_ACTIVITY_COMMENT_POST_MESSAGE_SIZE];
+	SceUInt8 info[256];		/* the request carries it in base64 */
+	SceSize infoSize;		/* 0: no info */
 } NpActivityCommentPost;
 
 /* a posted comment's request handle */

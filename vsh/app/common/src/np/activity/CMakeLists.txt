@@ -17,6 +17,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	component/http/component_http.cpp
 	component/command_executor/component_command_executor.cpp
 	component/utility/component_utility.cpp
+	component/xml_generator/component_xml_generator.cpp
 	common/activity_xml_writer.cpp
 	common/activity_debug.cpp
 )
