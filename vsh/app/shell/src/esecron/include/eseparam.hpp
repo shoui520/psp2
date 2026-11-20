@@ -10,12 +10,16 @@
 #include <scetypes.h>
 #include <std/string>
 
+class BgdlTaskPath;
+
 class EseParam {
 public:
 	EseParam(SceUInt32 id);					/* (0x811222B6) */
 	~EseParam();						/* (0x811222E4) */
 	int open(void);						/* (0x81122304) for reading */
 	int openWrite(void);					/* (0x81122844) PLACEHOLDER name */
+	int read(int key, void *value, SceSize size);		/* (0x81122476) a number */
+	int read(int key, BgdlTaskPath *value);			/* (0x811224F2) a string */
 	int read(int key, paf::string *value);			/* (0x811225B6) */
 	int commit(void);					/* (0x81122F8E) */
 	int write(int key, const void *value, SceSize size);	/* (0x811231E8) */

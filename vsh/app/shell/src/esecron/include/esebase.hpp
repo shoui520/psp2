@@ -15,8 +15,16 @@
 
 /* the library's errors (PLACEHOLDER names) */
 #define BGDL_ERROR_NOT_STARTED		0x80103A00	/* the manager is not made */
+#define BGDL_ERROR_NO_UX0		0x80103A02	/* the task needs ux0: */
+#define BGDL_ERROR_NO_STORAGE		0x80103A03	/* neither ux0: nor grw0: is there */
+#define BGDL_ERROR_NO_APP		0x80103A07	/* the title has no livespace_db row */
 #define BGDL_ERROR_NO_MEMORY		0x80103A08
+#define BGDL_ERROR_NULL_TITLE		0x80103A09
 #define BGDL_ERROR_INVALID_ARGUMENT	0x80103A0E
+#define BGDL_ERROR_NO_KEY		0x80103A0F	/* the param file has no such key */
+#define BGDL_ERROR_QUEUE_FULL		0x80103A19	/* 32 tasks listed (30 for a task of key 116) */
+#define BGDL_ERROR_NO_TASK		0x80103A14	/* no task has the id */
+#define BGDL_ERROR_NOT_LOADED		0x80103A1A	/* a task's result until its param file is read */
 
 /* the length of a task's folder, "ux0:bgdl/t/%08x" */
 #define BGDL_PATH_FOLDER_LENGTH		19
@@ -94,6 +102,9 @@ public:
 
 /* an entry already in the list with the same key */
 #define BGDL_ERROR_ALREADY_EXISTS	0x80103A17
+#define BGDL_ERROR_BUSY			0x80103A3C	/* the job dispatcher is not idle */
+#define BGDL_ERROR_GAME_PLUGIN		0x80103A47	/* the game plugin returned 0x80010010 */
+#define BGDL_ERROR_BAD_STORAGE		0x80103A38	/* the title's storage kind is not one a task can use */
 
 /* a transfer's progress; times in microseconds (paf::get_time_internal) */
 class BgdlProgress {

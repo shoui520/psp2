@@ -136,12 +136,19 @@ struct BgdlTaskPackage {
 
 class EseTask {
 public:
+	EseTask(SceUInt32 taskId)
+		: id(taskId), result(BGDL_ERROR_NOT_LOADED), value(0), transfer(), files(),
+		  m_removing(false), copyResult(0)
+	{
+	}
+
 	int setRunStatus(int status);					/* (0x810FD94C) */
 	int setState(int state, int *current, bool force);		/* (0x810FDA08) */
 	int GetFolder(BgdlTaskPath *path, bool fromParam);		/* (0x810FDAEC) */
 	int getFilePath(BgdlTaskPath *path, bool fromParam);		/* (0x810FDD12) */
 	int copyMtp(int *runStatus);					/* (0x810FE06C) PLACEHOLDER name */
 	int invoke(void);						/* (0x810FE448) */
+	int Load(void);			/* (0x810FF6F4) PLACEHOLDER name: the task read from its param file */
 	int execute(int *runStatus);					/* (0x8111FEBC) esehttp.cpp */
 
 	SceUInt32 id;			/* the task's number, its folder's name */
@@ -219,6 +226,11 @@ public:
 	bool NextTask(EseTask **next);					/* (0x810FF108) PLACEHOLDER name */
 	int RemoveTask(SceUInt32 id);					/* (0x810FF37C) PLACEHOLDER name */
 	void SetStatus(const BgdlTaskStatus *status);			/* (0x810FF6CC) PLACEHOLDER name */
+	int ReloadTask(SceUInt32 id);					/* (0x810FFF22) PLACEHOLDER name */
+	/* (0x811000D4) PLACEHOLDER name: a task made from its first keys; *id its new id */
+	int AddTask(SceUInt32 *id, int type, SceUInt32 key111, const char *key105, bool key115, bool key116);
+	/* (0x8110088A) PLACEHOLDER name: the title's storage is there; *grw0 when it is grw0: */
+	int CheckStorage(const char *titleId, bool *grw0);
 
 	int reserved0;			/* PLACEHOLDER: only cleared so far */
 	BgdlTaskList m_tasks;

@@ -13,6 +13,7 @@
 #include <std/string.h>
 #include <std/string>
 #include <dir/dir.h>
+#include <file/localfile.h>
 #include <timer/timer.h>
 #include <job/job.h>
 #include <common/shared_ptr.h>
@@ -25,6 +26,8 @@
 #include "shell.h"
 #include "console_info/console_info.h"
 #include "src/livespace_db/lsdb_keys.h"
+#include "src/livespace_db/livespace_db_internal.h"
+#include "../../../../game/game_plugin/game_plugin.h"
 
 using namespace paf;
 
@@ -36,13 +39,24 @@ int Bgdl_81122700(SceUInt32 id, int key, BgdlTaskPath *value);		/* read a string
 
 int bgdlMtpRunCopy(const MtpBgCopyRunParam *param);	/* bgdl_mtp.cpp */
 int bgdlMtpCancelCopy(SceUInt32 id);			/* bgdl_mtp.cpp */
+int bgdlMtpGetCopyProgress(SceUInt32 id, MtpBgCopyProgress *progress);	/* bgdl_mtp.cpp */
 int Bgdl_811120A0(BgdlTaskPath *path, bool recursive);	/* removes a folder (PLACEHOLDER) */
 int Bgdl_81112112(string *path, bool recursive);
+int Bgdl_81123BC0(const char *titleId, LsdbAppInfoPtr *info);	/* PLACEHOLDER: the title's row */
+int Bgdl_81113898(const LsdbAppInfoPtr *info, int *kind);	/* PLACEHOLDER: its storage kind */
+int Bgdl_811121FE(const char *path, int mode);		/* makes a folder (PLACEHOLDER) */
 
 /* the next file's (0x8113A434): the object whose job queue runs the library's jobs */
+/* the dispatcher's state, as Bgdl_8113A47C copies it (PLACEHOLDER) */
+struct BgdlDispatcherState {
+	int state;			/* 0: idle */
+	int reserved[3];
+};
+
 class BgdlJobDispatcher {	/* PLACEHOLDER names */
 public:
 	static BgdlJobDispatcher *Bgdl_8113A434(void);
+	void Bgdl_8113A47C(BgdlDispatcherState *state, bool second);
 	int Bgdl_8113A4FC(common::SharedPtr<job::JobItem> &job);
 };
 
@@ -937,13 +951,14 @@ int BgdlManager::deleteTask(SceUInt32 id, const EseParamCache *param)
 		EseParam file(id);
 
 		if (file.open() == 0) {
-			if (file.read(229, &path) != 0 || path.length() == 0) {
-				if (param->type == 1)
-					bgdlMtpCancelCopy(id);
-			} else if (sce_paf_strncmp(path.c_str(), "ux0:pspemu/bgdl", 15) == 0) {
-				BgdlGamePluginLock lock(true);
+			if (file.read(229, &path) == 0 && path.length() != 0) {
+				if (sce_paf_strncmp(path.c_str(), "ux0:pspemu/bgdl", 15) == 0) {
+					BgdlGamePluginLock lock(true);
 
-				Bgdl_81112112(&path, true);
+					Bgdl_81112112(&path, true);
+				}
+			} else if (param->type == 1) {
+				bgdlMtpCancelCopy(id);
 			}
 		}
 	}
@@ -1317,6 +1332,514 @@ void BgdlManager::SetStatus(const BgdlTaskStatus *status)
 	m_progressMutex.Lock();
 	memcpy(&m_status, status, 60);
 	m_progressMutex.Unlock();
+}
+
+/* a key the param file may leave out */
+static inline bool bgdlKeyOptional(int ret)
+{
+	return ret == 0 || ret == (int)BGDL_ERROR_NO_KEY;
+}
+
+/* a key the param file may leave out or have empty */
+static inline bool bgdlKeyOptionalOrEmpty(int ret)
+{
+	return ret == 0 || ret == (int)BGDL_ERROR_NO_KEY || ret == (int)BGDL_ERROR_INVALID_ARGUMENT;
+}
+
+/* (0x810FF6F4) the task's state read from its param file, its progress made from it */
+int EseTask::Load(void)
+{
+	bool key102, key110, key112, key113, key115, key116;
+	int type, key107, runStatus, taskResult, key108, state, key111, kind;
+	int fileNumber, fileCount;
+	int ret;
+
+	result = BGDL_ERROR_NOT_LOADED;
+	m_ParamCache.type = 15;
+	m_ParamCache.key107 = 0;
+	m_ParamCache.runStatus = 0;
+	m_ParamCache.key102 = 0;
+	m_ParamCache.ready = 0;
+	m_ParamCache.key108 = 1;
+	m_ParamCache.state = 0;
+	m_ParamCache.key112 = 0;
+	m_ParamCache.key113 = 0;
+	m_ParamCache.key110 = 0;
+	m_ParamCache.kind = 0;
+	m_ParamCache.reserved = 0;
+
+	EseParam file(id);
+
+	ret = file.open();
+	if (ret != 0)
+		return ret;
+	ret = file.read(100, &type, 4);
+	if (ret != 0)
+		return ret;
+	ret = file.read(107, &key107, 4);
+	if (ret != 0)
+		return ret;
+	ret = file.read(101, &runStatus, 4);
+	if (ret != 0)
+		return ret;
+	ret = file.read(102, &key102, 1);
+	if (ret != 0)
+		return ret;
+	ret = file.read(104, &taskResult, 4);
+	if (ret != 0)
+		return ret;
+	key108 = 1;
+	file.read(108, &key108, 4);
+	state = 0;
+	ret = file.read(109, &state, 4);
+	if (!bgdlKeyOptional(ret))
+		return ret;
+	key110 = false;
+	ret = file.read(110, &key110, 1);
+	if (!bgdlKeyOptional(ret))
+		return ret;
+	key112 = false;
+	ret = file.read(112, &key112, 1);
+	if (!bgdlKeyOptional(ret))
+		return ret;
+	key113 = false;
+	ret = file.read(113, &key113, 1);
+	if (!bgdlKeyOptionalOrEmpty(ret))
+		return ret;
+	key111 = 7;
+	ret = file.read(111, &key111, 4);
+	if (!bgdlKeyOptional(ret))
+		return ret;
+	kind = 0;
+	ret = file.read(114, &kind, 4);
+	if (!bgdlKeyOptionalOrEmpty(ret))
+		return ret;
+	key115 = false;
+	ret = file.read(115, &key115, 1);
+	if (!bgdlKeyOptionalOrEmpty(ret))
+		return ret;
+	key116 = false;
+	ret = file.read(116, &key116, 1);
+	if (!bgdlKeyOptionalOrEmpty(ret))
+		return ret;
+
+	BgdlTaskPath key220;
+
+	ret = file.read(220, &key220);
+	if (ret == 0) {
+		if (key220.m_end != key220.m_begin)
+			package.key220 = key220.m_begin;
+	} else if (ret != (int)BGDL_ERROR_NO_KEY && ret != (int)BGDL_ERROR_INVALID_ARGUMENT) {
+		return ret;
+	}
+	{
+		BgdlTaskPath key217;
+
+		ret = file.read(217, &key217);
+		if (ret == 0) {
+			if (key217.m_end != key217.m_begin)
+				package.key217 = key217.m_begin;
+		} else if (ret != (int)BGDL_ERROR_NO_KEY && ret != (int)BGDL_ERROR_INVALID_ARGUMENT) {
+			return ret;
+		}
+	}
+
+	result = taskResult;
+	m_ParamCache.type = type;
+	m_ParamCache.key107 = key107;
+	m_ParamCache.runStatus = runStatus;
+	m_ParamCache.key102 = key102;
+	m_ParamCache.key108 = key108;
+	m_ParamCache.state = state;
+	m_ParamCache.key110 = key110;
+	m_ParamCache.key112 = key112;
+	m_ParamCache.kind = kind;
+	m_ParamCache.key115 = key115;
+	m_ParamCache.key116 = key116;
+	m_ParamCache.key113 = key113;
+	m_ParamCache.ready = (taskResult | key113) == 0;
+	m_ParamCache.key111 = key111;
+
+	if (m_ParamCache.type == 0) {
+		SceUInt64 size = 0;
+		SceUInt64 current = 0;
+		SceUInt64 filesTotal;
+		SceUInt64 filesBase;
+		int i;
+
+		file.read(208, &current, 8);
+		file.read(206, &size, 8);
+		status.current = current;
+		status.total = size;
+		status.id = id;
+		transfer.Start(size, current, 0, 512000);
+
+		fileNumber = 0;
+		file.read(500, &fileNumber, 4);
+		fileCount = -1;
+		file.read(501, &fileCount, 4);
+		if (fileNumber == 0 || fileCount == -1)
+			return 0;
+		filesTotal = 0;
+		ret = file.read(505, &filesTotal, 8);
+		if (ret != 0)
+			return ret;
+		filesBase = 0;
+		for (i = 0; i < fileCount; i++) {
+			ret = file.read(5002 + 32 * i, &size, 8);
+			if (ret != 0)
+				return ret;
+			filesBase += size;
+		}
+		status.fileCount = fileCount + 1;
+		status.fileNumber = fileNumber;
+		status.filesBase = filesBase;
+		status.filesCurrent = filesBase;
+		status.filesTotal = filesTotal;
+		status.filesRemaining = 0;
+		s_manager->SetStatus(&status);
+
+		files.Start(filesTotal, filesBase, 0, 512000);
+		status.id = id;
+		status.current = current;
+		if (transfer.Update(current))
+			status.remaining = transfer.GetRemaining();
+		if (status.fileNumber >= 2) {
+			status.filesCurrent = status.filesBase + current;
+			if (files.Update(status.filesCurrent))
+				status.filesRemaining = files.GetRemaining();
+		}
+		s_manager->SetStatus(&status);
+	} else if (m_ParamCache.type == 1) {
+		MtpBgCopyProgress progress;
+
+		if (bgdlMtpGetCopyProgress(id, &progress) == 0) {
+			BgdlTaskCopy current;
+
+			current.name = progress.name;
+			current.progress = progress.progress;
+			current.number = progress.number;
+			current.total = progress.total;
+			current.remaining = progress.remaining;
+			current.reserved = progress.reserved;
+			copyResult = 0;
+			copy = current;
+		}
+	}
+	return 0;
+}
+
+/* (0x810FFF22) a task read again from its param file; a task more urgent than the running one stops it */
+int BgdlManager::ReloadTask(SceUInt32 id)
+{
+	EseTask **pos;
+	EseTask *task;
+	int ret;
+
+	m_taskListMutex.Lock();
+	pos = bgdlLowerBoundId(m_tasks.m_begin, m_tasks.m_end, id);
+	if (pos != m_tasks.m_end && id < (*pos)->id)
+		pos = m_tasks.m_end;
+	if (pos == m_tasks.m_end) {
+		m_taskListMutex.Unlock();
+		return BGDL_ERROR_NO_TASK;
+	}
+	task = *pos;
+	if (m_runningTask == task ||
+	    (task->m_ParamCache.runStatus == 0 && task->m_ParamCache.key113)) {
+		m_taskListMutex.Unlock();
+		return 0;
+	}
+	ret = task->Load();
+	if (ret != 0) {
+		m_taskListMutex.Unlock();
+		return ret;
+	}
+	if (task->m_ParamCache.runStatus != 0 || task->result != 0) {
+		ret = task->setRunStatus(1);
+		if (ret != 0) {
+			m_taskListMutex.Unlock();
+			return ret;
+		}
+		if (m_runningTask != NULL &&
+		    m_runningTask->m_ParamCache.key108 > task->m_ParamCache.key108) {
+			m_cancelMutex.Lock();
+			if (m_cancelled == false) {
+				void (*handler)(void *arg) = m_cancelHandler;
+
+				m_cancelled = true;
+				if (handler != NULL)
+					handler(m_cancelHandlerArg);
+			}
+			m_cancelMutex.Unlock();
+		}
+	} else {
+		BgdlEvent event;
+
+		event.type = 3;
+		event.id = id;
+		event.param = task->m_ParamCache;
+		event.result = 0;
+		event.reserved = 0;
+		event.value = 0;
+		NotifyListeners(&event);
+	}
+	m_taskListCond.Notify();
+	m_taskListMutex.Unlock();
+	return 0;
+}
+
+/* (0x811000D4) */
+int BgdlManager::AddTask(SceUInt32 *id, int type, SceUInt32 key111, const char *key105,
+			 bool key115, bool key116)
+{
+	SceUInt32 count;
+	SceUInt32 temp;
+	SceUInt32 *next;
+	int ret;
+	int i;
+
+	m_taskListMutex.Lock();
+	count = m_tasks.m_end - m_tasks.m_begin;
+	if ((key116 == true && count >= BGDL_QUEUE_MAX - 2) || count >= BGDL_QUEUE_MAX) {
+		m_taskListMutex.Unlock();
+		return BGDL_ERROR_QUEUE_FULL;
+	}
+	m_taskListMutex.Unlock();
+
+	/* the keys are written in a work folder first */
+	if (key111 > 1) {
+		temp = (SceUInt32)-1;
+		if (key111 == 2)
+			temp = (SceUInt32)-2;
+	} else {
+		temp = (SceUInt32)-1;
+	}
+	if (*id >= (SceUInt32)-2 && temp != *id)
+		temp = *id;
+	{
+		BgdlTaskPath work;
+
+		ret = work.initialize(temp, 20);
+		if (ret != 0)
+			return ret;
+		if (work.Exists())
+			Bgdl_811120A0(&work, true);
+		ret = Bgdl_811121FE(work.m_begin, 6);
+		if (ret != 0)
+			return ret;
+	}
+	{
+		EseParam file(temp);
+		int runStatus, key107, result, key108, state, kind;
+		bool key102, key110, key112, key113;
+
+		ret = file.openWrite();
+		if (ret != 0)
+			return ret;
+		ret = file.write(100, &type, 4);
+		if (ret != 0)
+			return ret;
+		runStatus = 0;
+		ret = file.write(101, &runStatus, 4);
+		if (ret != 0)
+			return ret;
+		key102 = false;
+		ret = file.write(102, &key102, 1);
+		if (ret != 0)
+			return ret;
+		key107 = 0;
+		ret = file.write(107, &key107, 4);
+		if (ret != 0)
+			return ret;
+		result = BGDL_ERROR_NOT_LOADED;
+		ret = file.write(104, &result, 4);
+		if (ret != 0)
+			return ret;
+		key108 = 1;
+		ret = file.write(108, &key108, 4);
+		if (ret != 0)
+			return ret;
+		state = 0;
+		ret = file.write(109, &state, 4);
+		if (ret != 0)
+			return ret;
+		key110 = false;
+		ret = file.write(110, &key110, 1);
+		if (ret != 0)
+			return ret;
+		key112 = false;
+		ret = file.write(112, &key112, 1);
+		if (ret != 0)
+			return ret;
+		key113 = false;
+		ret = file.write(113, &key113, 1);
+		if (ret != 0)
+			return ret;
+		kind = 0;
+		ret = file.write(114, &kind, 4);
+		if (ret != 0)
+			return ret;
+		ret = file.write(115, &key115, 1);
+		if (ret != 0)
+			return ret;
+		ret = file.write(116, &key116, 1);
+		if (ret != 0)
+			return ret;
+		ret = file.write(111, &key111, 4);
+		if (ret != 0)
+			return ret;
+		if (key105 != NULL && sce_paf_strlen(key105) != 0) {
+			ret = file.write(105, key105, sce_paf_strlen(key105) + 1);
+			if (ret != 0)
+				return ret;
+		}
+		ret = file.commit();
+		if (ret != 0)
+			return ret;
+	}
+
+	/* then the folder takes the next free id */
+	next = &m_nextId;
+	if (temp == (SceUInt32)-2)
+		next = &m_nextInternalId;
+	++*next;
+
+	BgdlTaskPath folder;
+
+	{
+		BgdlTaskPath work;
+
+		ret = work.initialize(temp, 20);
+		if (ret != 0)
+			return ret;
+		for (i = 0; i < 16; i++) {
+			char *from;
+			char *to;
+
+			ret = folder.initialize(*next, 20);
+			if (ret != 0)
+				return ret;
+			if (folder.Exists())
+				Bgdl_811120A0(&folder, true);
+			from = work.ClearName();
+			to = folder.ClearName();
+			ret = LocalFile::RenameFile(from, to);
+			if (ret == 0)
+				break;
+			++*next;
+			thread::Sleep(10);
+		}
+		if (ret != 0)
+			return ret;
+	}
+
+	EseTask *task = new EseTask(*next);
+
+	if (task == NULL) {
+		if (folder.Exists())
+			Bgdl_811120A0(&folder, true);
+		return BGDL_ERROR_NO_MEMORY;
+	}
+	ret = task->Load();
+	if (ret != 0) {
+		if (folder.Exists())
+			Bgdl_811120A0(&folder, true);
+		delete task;
+		return ret;
+	}
+
+	BgdlEvent event;
+
+	event.type = 0;
+	event.id = *next;
+	event.param = task->m_ParamCache;
+	event.result = 0;
+	event.reserved = 0;
+	event.value = 0;
+	m_taskListMutex.Lock();
+	ret = m_tasks.insert(task);
+	if (ret == 0)
+		m_taskListCond.Notify();
+	m_taskListMutex.Unlock();
+	if (ret != 0) {
+		if (folder.Exists())
+			Bgdl_811120A0(&folder, true);
+		delete task;
+		return ret;
+	}
+	NotifyListeners(&event);
+	*id = *next;
+	return 0;
+}
+
+/* (0x8110088A) */
+int BgdlManager::CheckStorage(const char *titleId, bool *grw0)
+{
+	int kind;
+	int ret;
+
+	*grw0 = false;
+	if (titleId == NULL)
+		return BGDL_ERROR_NULL_TITLE;
+
+	LsdbAppInfoPtr info(new LsdbAppInfo());
+
+	if (Bgdl_81123BC0(titleId, &info) != 0)
+		return BGDL_ERROR_NO_APP;
+	ret = Bgdl_81113898(&info, &kind);
+	if (ret != 0)
+		return ret;
+	if (kind <= 1) {
+		if (kind <= 0)
+			return BGDL_ERROR_BAD_STORAGE;
+		if (m_ux0Ready == true)
+			return 0;
+		if (Bgdl_81112284("grw0:")) {
+			*grw0 = true;
+			return 0;
+		}
+		return BGDL_ERROR_NO_STORAGE;
+	}
+	if (kind > 4)
+		return BGDL_ERROR_BAD_STORAGE;
+	if (m_ux0Ready != true)
+		return BGDL_ERROR_NO_UX0;
+	return 0;
+}
+
+/* the game plugin's function 38 (0x8100A00C; PLACEHOLDER: game_plugin.h does not name it yet) */
+#define BGDL_GAME_PLUGIN_FUNC_38	38
+
+/* (0x81100B0A) PLACEHOLDER name: 0, or BGDL_ERROR_BUSY while the dispatcher is not idle */
+int bgdlDispatcherIdle(void)
+{
+	BgdlDispatcherState state;
+
+	BgdlJobDispatcher::Bgdl_8113A434()->Bgdl_8113A47C(&state, false);
+	if (state.state != 0 || state.state == 3)
+		return BGDL_ERROR_BUSY;
+	return 0;
+}
+
+/* (0x81100B4C) PLACEHOLDER name: the game plugin's function 38 */
+int bgdlGamePluginCheck(void)
+{
+	Plugin *plugin = Plugin::Find("game_plugin");
+	int ret;
+
+	if (plugin == NULL) {
+		ret = BGDL_ERROR_NO_MEMORY;
+	} else {
+		GamePluginInterface *game = (GamePluginInterface *)plugin->GetInterface(1);
+
+		ret = BGDL_ERROR_NO_MEMORY;
+		if (game != NULL)
+			ret = ((int (*)(void))game->func[BGDL_GAME_PLUGIN_FUNC_38])();
+	}
+	if (ret == (int)0x80010010)
+		return BGDL_ERROR_GAME_PLUGIN;
+	return ret;
 }
 
 /* (0x8110401E) */
