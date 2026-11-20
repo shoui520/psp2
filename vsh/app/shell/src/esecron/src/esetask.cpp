@@ -16,8 +16,19 @@
 
 #include "../include/esebase.hpp"
 #include "../include/esetask.hpp"
+#include "src/livespace_db/lsdb_keys.h"
 
 using namespace paf;
+
+static BgdlManager *s_manager = NULL;		/* (0x81544788) */
+static const char *s_np = "np";			/* (0x8154478C) PLACEHOLDER: read later */
+static SceUInt64 s_handled = 0;			/* (0x81544790) the requests the thread took */
+static SceUInt64 s_reserved0 = 0;		/* (0x81544798) PLACEHOLDER: read later */
+static SceUInt64 s_requested = 0;		/* (0x815447A0) the requests made */
+static SceUInt64 s_wakeups = 0;			/* (0x815447A8) */
+static thread::RMutex s_packageMutex("SceBgdlRMutexPackage", 0);	/* (0x81563150) */
+static thread::RMutex s_progressMutex("SceBgdlRMutexProgress", 0);	/* (0x81563170) */
+static thread::RMutex s_updateMutex("SceBgdlRMutexUpdate", 0);		/* (0x81563190) guards s_manager */
 
 /* (0x810FCD10) the task's folder on a device: its download folder, or its work folder */
 int BgdlTaskPath::initialize(const char *device, int taskId, bool work)
@@ -322,4 +333,59 @@ void BgdlTaskList::Clear(void)
 		}
 	}
 	Reserve(0);
+}
+
+/* (0x810FD758) the flags in mask made value's, once the thread has seen the request */
+void BgdlManager::UpdateFlags(SceUInt32 value, SceUInt32 mask)
+{
+	SceUInt32 flags;
+	SceUInt64 request;
+	bool done;
+
+	if (m_error != 0)
+		return;
+	flags = (m_flags & ~mask) | (value & mask);
+	if (m_flags == flags)
+		return;
+	m_taskListMutex.Lock();
+	request = ++s_requested;
+	if (m_running != 0) {
+		m_cancelMutex.Lock();
+		if (!m_cancelled) {
+			m_cancelled = true;
+			if (m_cancelHandler != NULL)
+				m_cancelHandler(m_cancelHandlerArg);
+		}
+		m_cancelMutex.Unlock();
+	}
+	m_taskListCond.Notify();
+	m_taskListMutex.Unlock();
+	for (;;) {
+		m_taskListMutex.Lock();
+		done = s_handled >= request;
+		m_taskListMutex.Unlock();
+		if (done)
+			break;
+		thread::Sleep(16);
+	}
+	m_taskListMutex.Lock();
+	m_taskListMutex.Unlock();
+	m_flags = flags;
+	m_taskListMutex.Lock();
+	s_wakeups++;
+	m_taskListCond.Notify();
+	m_taskListMutex.Unlock();
+}
+
+/* (0x810FD862) */
+int bgdlManagerNotify(int value, int mask)
+{
+	s_updateMutex.Lock();
+	if (s_manager != NULL) {
+		s_manager->UpdateFlags(value, mask);
+		s_updateMutex.Unlock();
+		return 0;
+	}
+	s_updateMutex.Unlock();
+	return BGDL_ERROR_NOT_STARTED;
 }
