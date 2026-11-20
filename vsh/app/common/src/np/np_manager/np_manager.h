@@ -37,6 +37,14 @@ int SceNpManager_E45E4003(NpManagerAccountInfo *info);
 int SceNpManagerTicket_37F7F258(void);
 int SceNpManagerTicket_877251F3(int reqId, void *buf);
 int SceNpManagerTicket_2B813EC7(int reqId);
+/* aborts the request's blocking call */
+int SceNpManagerTicket_A30BF29A(int reqId);
+/* the signed-in user's NP ID (a SceNpId in buf) */
+int SceNpManager_2841C20F(int reqId, void *buf);
+/* the signed-in user's ticket: its size in *pSize, and the ticket when ticket is not NULL */
+int SceNpManager_E2FAC2CA(int reqId, void *ticket, SceSize *pSize);
+/* the signed-in user's account data (464 bytes in data1) and restrictions (16 bytes in data2) */
+int SceNpManager_2FE3625C(int reqId, void *data1, void *data2);
 
 #ifdef __cplusplus
 }

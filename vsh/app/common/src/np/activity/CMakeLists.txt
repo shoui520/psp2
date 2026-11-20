@@ -12,4 +12,7 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	common/activity_mutex.cpp
 	common/activity_simple_lock.cpp
 	component/abstract_component.cpp
+	component/auth/component_auth.cpp
+	component/context/component_context.cpp
+	common/activity_debug.cpp
 )

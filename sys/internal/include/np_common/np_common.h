@@ -98,6 +98,9 @@ int SceNpCommon_389F8C14(char *dst, SceSize dstSize, const SceUInt8 *src, SceSiz
 			 SceSize *required);
 
 /* base64.c */
+/* the mini ticket made from a ticket: its size in *miniSize, and the mini ticket when miniTicket
+   is not NULL */
+int SceNpCommon_85503FA6(const void *ticket, SceSize size, void *miniTicket, SceSize *miniSize);
 SceSize sceNpCommonBase64Encode(const SceUInt8 *src, char *dst, SceSize size);
 
 /* util.c: the system time in microseconds, always 0 */

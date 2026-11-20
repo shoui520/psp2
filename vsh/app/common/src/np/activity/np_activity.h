@@ -84,12 +84,23 @@ extern "C" {
 #endif
 
 /* the library's own errors (no SDK header names them; the names are ours) */
+/* a result with its sign bit set: an error (the library's own test) */
+#define ACTIVITY_FAILED(result)	(((result) & 0x80000000) != 0)
+
+#define NP_ACTIVITY_ERROR_INTERNAL		((int)0x80558900)	/* no NP ID to send a request for */
 #define NP_ACTIVITY_ERROR_INVALID_ARGUMENT	((int)0x80558901)
 #define NP_ACTIVITY_ERROR_INVALID_STATE		((int)0x80558902)
 #define NP_ACTIVITY_ERROR_ABORTED		((int)0x80558903)
 #define NP_ACTIVITY_ERROR_OUT_OF_MEMORY		((int)0x80558904)
 #define NP_ACTIVITY_ERROR_NOT_INITIALIZED	((int)0x80558907)
 #define NP_ACTIVITY_ERROR_ALREADY_INITIALIZED	((int)0x80558908)
+#define NP_ACTIVITY_ERROR_NOT_SUPPORTED		((int)0x80558909)	/* the request needs the other protocol */
+#define NP_ACTIVITY_ERROR_INVALID_STATIC_RESOURCE ((int)0x8055890A)	/* its signature does not match */
+#define NP_ACTIVITY_ERROR_CHAT_RESTRICTED	((int)0x8055890C)
+/* the static resource's service status */
+#define NP_ACTIVITY_ERROR_SERVICE_MAINTENANCE	((int)0x80558920)
+#define NP_ACTIVITY_ERROR_SERVICE_END		((int)0x80558921)
+#define NP_ACTIVITY_ERROR_SERVICE_BEFORE	((int)0x80558922)
 #define NP_ACTIVITY_ERROR_INVALID_PARAMETER	((int)0x80558923)	/* a component's argument */
 
 /* sets up the library: its heap from the caller's functions, or in the caller's memory block */
@@ -117,7 +128,7 @@ int SceNpActivityNet_319CB4F4(const SceNpId *npId, char *onlineId, SceSize size)
 int SceNpActivityNet_C35984F3(const char *onlineId, SceNpId *npId);
 
 /* deletes a comment; gives and takes back a good job on a status */
-int SceNpActivityNet_92CF4044(int connection, int flags, const NpActivityCommentKey *key,
+int SceNpActivityNet_92CF4044(int connection, const SceNpId *npId, const NpActivityCommentKey *key,
 	NpActivityRequest *request);
 /* what a request on a status the network no longer has returns */
 #define NP_ACTIVITY_ERROR_STATUS_NOT_FOUND	((int)0x80558A65)
@@ -131,26 +142,26 @@ int SceNpActivityNet_92CF4044(int connection, int flags, const NpActivityComment
 #define NP_ACTIVITY_ERROR_CONFLICT_2	((int)0x80558A70)
 #define NP_ACTIVITY_ERROR_CONFLICT_3	((int)0x80558A71)
 
-int SceNpActivityNet_75F6CD31(int connection, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_75F6CD31(int connection, const SceNpId *npId, const NpActivityStatusKey *key,
 	NpActivityRequest *request);
-int SceNpActivityNet_690808DA(int connection, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_690808DA(int connection, const SceNpId *npId, const NpActivityStatusKey *key,
 	NpActivityRequest *request);
 
 /* deletes one of the signed-in user's statuses */
-int SceNpActivityNet_DA59D2CF(int connection, int flags, int statusId);
+int SceNpActivityNet_DA59D2CF(int connection, const SceNpId *npId, int statusId);
 
 /* lists the statuses of count titles (NP title IDs), and every title's */
-int SceNpActivityNet_40475264(int connection, int flags,
+int SceNpActivityNet_40475264(int connection, const SceNpId *npId,
 	const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 	const NpActivityRange *range, NpActivityStatusList *lists);
-int SceNpActivityNet_99C86ADA(int connection, int flags, const NpActivityRange *range,
+int SceNpActivityNet_99C86ADA(int connection, const SceNpId *npId, const NpActivityRange *range,
 	NpActivityStatus *statuses, int max, int *count);
 
 /* lists the statuses of count owners, at most *max each */
-int SceNpActivityNet_2000C248(int connection, int flags, const NpActivityOwner *owners,
+int SceNpActivityNet_2000C248(int connection, const SceNpId *npId, const NpActivityOwner *owners,
 	SceSize count, int *max, NpActivityStatusList *lists);
 /* the same, only the statuses of count titles */
-int SceNpActivityNet_363CB63A(int connection, int flags, const NpActivityOwner *owners,
+int SceNpActivityNet_363CB63A(int connection, const SceNpId *npId, const NpActivityOwner *owners,
 	SceSize count, const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], int *max,
 	NpActivityStatusList *lists);
 
@@ -160,7 +171,7 @@ typedef struct NpActivityUpdates {
 } NpActivityUpdates;
 
 /* what changed since *since, for count titles (NP title IDs; 0: every title) */
-int SceNpActivityNet_C55B9299(int connection, int flags, const SceUInt64 *since,
+int SceNpActivityNet_C55B9299(int connection, const SceNpId *npId, const SceUInt64 *since,
 	const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 	NpActivityUpdates *updates);
 
@@ -205,7 +216,7 @@ typedef struct NpActivityStatusInfo {
 #define NP_ACTIVITY_STATUS_TYPE_USER	5
 
 /* reads the details of count statuses into infos */
-int SceNpActivityNet_AD0B8FDD(int connection, int flags, const NpActivityStatusKey *keys,
+int SceNpActivityNet_AD0B8FDD(int connection, const SceNpId *npId, const NpActivityStatusKey *keys,
 	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
 	NpActivityStatusInfo *infos);
 
@@ -222,7 +233,7 @@ typedef void (*NpActivityStatusDetailCallback)(const struct NpActivityStatusDeta
 	void *arg);
 
 /* reads the details of count statuses (at most 50), in the locale, one callback each */
-int SceNpActivityNet_7E58E9B9(int connection, int flags, const NpActivityStatusKey *keys,
+int SceNpActivityNet_7E58E9B9(int connection, const SceNpId *npId, const NpActivityStatusKey *keys,
 	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
 	NpActivityStatusDetailCallback callback, void *arg);
 
@@ -237,7 +248,7 @@ typedef struct NpActivityDetailParam {
  * Reads one status's details, its comments (at most maxComments), the users who gave it a
  * good job (at most maxVoters), and whether the signed-in user gave one (*isVoted 1).
  */
-int SceNpActivityNet_7E3116FB(int connection, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_7E3116FB(int connection, const SceNpId *npId, const NpActivityStatusKey *key,
 	const NpActivityDetailParam *param, NpActivityStatusInfo *info,
 	NpActivityComment *comments, int maxComments, int *numComments, int *isVoted,
 	SceNpId *voters, int maxVoters, SceUInt32 *numVoters);
@@ -257,7 +268,7 @@ typedef struct NpActivityCommentRequest {
 } NpActivityCommentRequest;
 
 /* posts a comment on a status */
-int SceNpActivityNet_747FBB53(int connection, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_747FBB53(int connection, const SceNpId *npId, const NpActivityStatusKey *key,
 	const NpActivityCommentPost *comment, NpActivityCommentRequest *request);
 
 /* what a posted status's request returns for it */
@@ -269,7 +280,7 @@ typedef struct NpActivityPostResult {
 } NpActivityPostResult;
 
 /* posts count statuses of the signed-in user */
-int SceNpActivityNet_5A0524AD(int connection, int flags, const NpActivityStatusInfo *infos,
+int SceNpActivityNet_5A0524AD(int connection, const SceNpId *npId, const NpActivityStatusInfo *infos,
 	SceSize count, NpActivityPostResult *results);
 
 /* what a request's error means: 0 the request can be sent again later, else it failed for

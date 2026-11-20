@@ -32,7 +32,7 @@ protected:
 /* a component that shares its context's component mutex */
 class Component : public AbstractComponent {
 public:
-	Component() : m_mutex(NULL), m_context(NULL)
+	Component() : m_mutex(NULL), m_utility(NULL)
 	{
 	}
 	virtual ~Component()
@@ -44,8 +44,8 @@ public:
 		return m_mutex;
 	}
 
-	ActivityMutex *m_mutex;
-	class ComponentContext *m_context;
+	ActivityMutex *m_mutex;		/* the context's component mutex */
+	class ComponentUtility *m_utility;	/* the context's utility */
 };
 
 #endif

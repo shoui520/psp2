@@ -49,12 +49,12 @@ public:
 	virtual int IsHostExpired();
 	virtual int IsValidStaticResource(const char *data, SceSize size, const char *digest,
 		SceSize digestSize);
-	virtual int SetHost(const char *host, int valid);
+	virtual int SetHost(const char *host, SceSize length);
 	virtual int SetTrophyIconUrls(const char *base, const char *bronze, const char *silver,
 		const char *gold, const char *hidden, const char *platinum);
 	virtual int GetProtocol(int api);
 	virtual int GetSecureProtocol(int api);
-	virtual const char *GetUserAgent();
+	virtual const char *GetUserAgent(int api);
 	virtual const char *GetScheme(int api);
 	virtual const char *GetHost(int api);
 	virtual const char *GetPath(int api);
@@ -86,7 +86,7 @@ public:
 	}
 	virtual const char *GetXmlDeclaration();
 	virtual const char *GetPlatform();
-	virtual const void *GetConsoleId();
+	virtual const char *GetNpVersion();
 	virtual SceSize GetBase64EncodedSize(SceSize size);
 	virtual int Base64Encode(const void *src, SceSize size, char *dst, SceSize dstSize);
 	virtual SceSize GetBase64DecodedSize(SceSize size);
@@ -104,8 +104,8 @@ public:
 	static int IsFunctionServer();
 
 	char m_host[UTILITY_HOST_SIZE];			/* GetHost's static resource host */
-	int m_consoleIdValid;
-	SceUInt8 m_consoleId[8];
+	int m_npVersionValid;
+	char m_npVersion[8];				/* SceNpCommon_0624AE44's text */
 	char m_npEnvironment[UTILITY_NP_ENVIRONMENT_SIZE];
 
 	static char s_host[UTILITY_HOST_SIZE];

@@ -14,9 +14,6 @@
 #include "component/context/component_context.h"
 #include "component/utility/component_utility.h"
 
-/* a result with its sign bit set: an error */
-#define ACTIVITY_FAILED(result)	(((result) & 0x80000000) != 0)
-
 /* the list's head: a context's fields up to its links */
 #define CONTEXT_LIST_HEAD_SIZE	offsetof(ComponentContext, m_state)
 
@@ -247,7 +244,7 @@ int SceNpActivityNet_42CFC0DE(int context, const SceNpId *npId, const void *sett
 	CONTEXT_REQUEST(SetAccountInformation(npId, setting));
 }
 
-int SceNpActivityNet_C55B9299(int context, int flags, const SceUInt64 *since,
+int SceNpActivityNet_C55B9299(int context, const SceNpId *npId, const SceUInt64 *since,
 	const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 	NpActivityUpdates *updates)
 {
@@ -261,53 +258,53 @@ int SceNpActivityNet_C55B9299(int context, int flags, const SceUInt64 *since,
 	ctx = findContext(context);
 	ret = NP_ACTIVITY_ERROR_INVALID_ARGUMENT;
 	if (ctx != NULL)
-		ret = ctx->CheckStatusUpdate(flags, since, titleIds, count, updates);
+		ret = ctx->CheckStatusUpdate(npId, since, titleIds, count, updates);
 	return ret;
 }
 
-int SceNpActivityNet_99C86ADA(int context, int flags, const NpActivityRange *range,
+int SceNpActivityNet_99C86ADA(int context, const SceNpId *npId, const NpActivityRange *range,
 	NpActivityStatus *statuses, int max, int *count)
 {
-	CONTEXT_REQUEST(GetFriendStatusTimeline(flags, range, statuses, max, count));
+	CONTEXT_REQUEST(GetFriendStatusTimeline(npId, range, statuses, max, count));
 }
 
-int SceNpActivityNet_40475264(int context, int flags,
+int SceNpActivityNet_40475264(int context, const SceNpId *npId,
 	const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], SceSize count,
 	const NpActivityRange *range, NpActivityStatusList *lists)
 {
-	CONTEXT_REQUEST(GetFriendStatusTimelineByTitle(flags, titleIds, count, range, lists));
+	CONTEXT_REQUEST(GetFriendStatusTimelineByTitle(npId, titleIds, count, range, lists));
 }
 
-int SceNpActivityNet_2000C248(int context, int flags, const NpActivityOwner *owners,
+int SceNpActivityNet_2000C248(int context, const SceNpId *npId, const NpActivityOwner *owners,
 	SceSize count, int *max, NpActivityStatusList *lists)
 {
-	CONTEXT_REQUEST(GetStatusTimelineByAccount(flags, owners, count, max, lists));
+	CONTEXT_REQUEST(GetStatusTimelineByAccount(npId, owners, count, max, lists));
 }
 
-int SceNpActivityNet_363CB63A(int context, int flags, const NpActivityOwner *owners,
+int SceNpActivityNet_363CB63A(int context, const SceNpId *npId, const NpActivityOwner *owners,
 	SceSize count, const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], int *max,
 	NpActivityStatusList *lists)
 {
-	CONTEXT_REQUEST(GetStatusTimelineByAccountAndTitle(flags, owners, count, titleIds, max,
+	CONTEXT_REQUEST(GetStatusTimelineByAccountAndTitle(npId, owners, count, titleIds, max,
 		lists));
 }
 
-int SceNpActivityNet_AD0B8FDD(int context, int flags, const NpActivityStatusKey *keys,
+int SceNpActivityNet_AD0B8FDD(int context, const SceNpId *npId, const NpActivityStatusKey *keys,
 	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
 	NpActivityStatusInfo *infos)
 {
-	CONTEXT_REQUEST(GetStatusInfo(flags, keys, count, locale, work, state, infos));
+	CONTEXT_REQUEST(GetStatusInfo(npId, keys, count, locale, work, state, infos));
 }
 
-int SceNpActivityNet_7E58E9B9(int context, int flags, const NpActivityStatusKey *keys,
+int SceNpActivityNet_7E58E9B9(int context, const SceNpId *npId, const NpActivityStatusKey *keys,
 	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
 	NpActivityStatusDetailCallback callback, void *arg)
 {
-	CONTEXT_REQUEST(GetStatusInfoWithCallback(flags, keys, count, locale, work, state,
+	CONTEXT_REQUEST(GetStatusInfoWithCallback(npId, keys, count, locale, work, state,
 		callback, arg));
 }
 
-int SceNpActivityNet_7E3116FB(int context, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_7E3116FB(int context, const SceNpId *npId, const NpActivityStatusKey *key,
 	const NpActivityDetailParam *param, NpActivityStatusInfo *info,
 	NpActivityComment *comments, int maxComments, int *numComments, int *isVoted,
 	SceNpId *voters, int maxVoters, SceUInt32 *numVoters)
@@ -323,44 +320,44 @@ int SceNpActivityNet_7E3116FB(int context, int flags, const NpActivityStatusKey 
 	ctx = findContext(context);
 	ret = NP_ACTIVITY_ERROR_INVALID_ARGUMENT;
 	if (ctx != NULL)
-		ret = ctx->GetStatusDetail(flags, key, param, info, comments, maxComments,
+		ret = ctx->GetStatusDetail(npId, key, param, info, comments, maxComments,
 			numComments, isVoted, voters, maxVoters, numVoters);
 	return ret;
 }
 
-int SceNpActivityNet_5A0524AD(int context, int flags, const NpActivityStatusInfo *infos,
+int SceNpActivityNet_5A0524AD(int context, const SceNpId *npId, const NpActivityStatusInfo *infos,
 	SceSize count, NpActivityPostResult *results)
 {
-	CONTEXT_REQUEST(AddStatusList(flags, infos, count, results));
+	CONTEXT_REQUEST(AddStatusList(npId, infos, count, results));
 }
 
-int SceNpActivityNet_DA59D2CF(int context, int flags, int statusId)
+int SceNpActivityNet_DA59D2CF(int context, const SceNpId *npId, int statusId)
 {
-	CONTEXT_REQUEST(RemoveStatus(flags, statusId));
+	CONTEXT_REQUEST(RemoveStatus(npId, statusId));
 }
 
-int SceNpActivityNet_747FBB53(int context, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_747FBB53(int context, const SceNpId *npId, const NpActivityStatusKey *key,
 	const NpActivityCommentPost *comment, NpActivityCommentRequest *request)
 {
-	CONTEXT_REQUEST(AddComment(flags, key, comment, request));
+	CONTEXT_REQUEST(AddComment(npId, key, comment, request));
 }
 
-int SceNpActivityNet_92CF4044(int context, int flags, const NpActivityCommentKey *key,
+int SceNpActivityNet_92CF4044(int context, const SceNpId *npId, const NpActivityCommentKey *key,
 	NpActivityRequest *request)
 {
-	CONTEXT_REQUEST(RemoveComment(flags, key, request));
+	CONTEXT_REQUEST(RemoveComment(npId, key, request));
 }
 
-int SceNpActivityNet_75F6CD31(int context, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_75F6CD31(int context, const SceNpId *npId, const NpActivityStatusKey *key,
 	NpActivityRequest *request)
 {
-	CONTEXT_REQUEST(AddVoteGoodJob(flags, key, request));
+	CONTEXT_REQUEST(AddVoteGoodJob(npId, key, request));
 }
 
-int SceNpActivityNet_690808DA(int context, int flags, const NpActivityStatusKey *key,
+int SceNpActivityNet_690808DA(int context, const SceNpId *npId, const NpActivityStatusKey *key,
 	NpActivityRequest *request)
 {
-	CONTEXT_REQUEST(RemoveVoteGoodJob(flags, key, request));
+	CONTEXT_REQUEST(RemoveVoteGoodJob(npId, key, request));
 }
 
 int SceNpActivityNet_319CB4F4(const SceNpId *npId, char *onlineId, SceSize size)
@@ -519,9 +516,9 @@ int ComponentUtility::IsHostExpired()
 	return 0;
 }
 
-int ComponentUtility::SetHost(const char *host, int valid)
+int ComponentUtility::SetHost(const char *host, SceSize length)
 {
-	if (host == NULL || valid == 0)
+	if (host == NULL || length == 0)
 		return NP_ACTIVITY_ERROR_INVALID_PARAMETER;
 	sceClibSnprintf(s_host, sizeof(s_host), "%s", host);
 	SceNpCommon_55F7FCF7(&s_hostTime);

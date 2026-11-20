@@ -10,6 +10,10 @@ void activityDebugPrint(int level, int line, const char *function, const char *f
 /* Sony's build tree: the file names its checks print */
 #define ACTIVITY_SRC_DIR	"W:\\Build\\J01509657\\vsh\\app\\common\\src\\np\\activity\\"
 
+/* a condition the release build only passes on (1: it holds) */
+#define ACTIVITY_ASSERT(condition, function) \
+	activityDebugPrint((condition), __LINE__, function, ACTIVITY_FILE)
+
 #define ACTIVITY_CHECK(function)	activityDebugPrint(0, __LINE__, function, ACTIVITY_FILE)
 
 #endif
