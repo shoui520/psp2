@@ -556,7 +556,7 @@ void inputInit(void)
 	inputHandlerSerial2Link.handler = inputNone;
 	inputHandlerSerial1.type = 1;
 	inputHandlerSerial1.edges = INPUT_EDGE_HIGH;
-	inputHandlerSerial1.handler = serial1InputHandler;
+	inputHandlerSerial1.handler = SERIAL1_INPUT_HANDLER;
 	inputHandlerMultiCn.type = 1;
 	inputHandlerMultiCn.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerMultiCn.handler = inputMultiCnChanged;
@@ -756,7 +756,7 @@ void inputInit(void)
 #else
 	inputHandlerSerial1.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 #endif
-	inputHandlerSerial1.handler = serial1InputHandler;
+	inputHandlerSerial1.handler = SERIAL1_INPUT_HANDLER;
 	inputHandlerMultiCn.type = 1;
 	inputHandlerMultiCn.edges = INPUT_EDGE_LOW | INPUT_EDGE_HIGH;
 	inputHandlerMultiCn.handler = inputMultiCnChanged;

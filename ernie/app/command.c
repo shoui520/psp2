@@ -370,11 +370,20 @@ void commandRequestReceive(void)
 				 ((unsigned long)(data)[3] << 16 & 0xff0000) |		\
 				 COMMAND_PARAMETER_WINDOW)
 /* the slim's 9-byte 0x00c0: four bytes of it in the window */
-#define COMMAND_PARAMETER4(data)	(((unsigned long)(data)[1] & 0xff) |			\
+#define COMMAND_BYTES4(data)	(((unsigned long)(data)[1] & 0xff) |			\
 				 ((unsigned long)(data)[2] << 8 & 0xff00) |		\
 				 ((unsigned long)(data)[3] << 16 & 0xff0000) |		\
-				 ((unsigned long)(data)[4] << 24 & 0xff000000) |	\
-				 COMMAND_PARAMETER_WINDOW)
+				 ((unsigned long)(data)[4] << 24 & 0xff000000))
+#define COMMAND_PARAMETER4(data)	(COMMAND_BYTES4(data) | COMMAND_PARAMETER_WINDOW)
+/* the 0x00c0's high wake mask: bit 0 open (DOL-1002), bits 0 and 1 (USS-1002's 0x0105, whose
+   second word is the four bytes alone) */
+#if BOARD_USS1001 && SOURCE_0104
+#define COMMAND_WAKE_HIGH		0xfffffffc
+#define COMMAND_PARAMETER_HIGH(data)	COMMAND_BYTES4(data)
+#else
+#define COMMAND_WAKE_HIGH		0xfffffffe
+#define COMMAND_PARAMETER_HIGH(data)	COMMAND_PARAMETER4(data)
+#endif
 
 /* the slim logs 0x0081, 0x0082 and 0x00c0-0x00c2 and their answers (eventlog.c); DOL-1001
    keeps the calls, to functions that do nothing (at the file's end) */
@@ -706,7 +715,7 @@ allowed:
 				hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3b, 0);
 			break;
 #endif
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 		case 0x00b6:		/* DOL-1002: refused */
 			hostRequestAnswer(&commandRequest, HOST_REQUEST_ANSWER, 0x3e, 0);
 			break;
@@ -715,7 +724,7 @@ allowed:
 			break;
 #endif
 		case 0x00c0:		/* a transition with its parameter */
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 			/* DOL-1002: the masks set once for either form (the 9-byte one's second
 			   word in the high mask), then the transition's own wake factor masked */
 			COMMAND_LOG_REQUEST();
@@ -731,12 +740,12 @@ allowed:
 					if (commandRequest.length == 4) {
 						parameter = COMMAND_PARAMETER(commandRequestData);
 						stateSetWakeMask(parameter);
-						stateSetWakeMaskHigh(0xfffffffe);
+						stateSetWakeMaskHigh(COMMAND_WAKE_HIGH);
 					} else if (commandRequest.length == 9) {
 						parameter = COMMAND_PARAMETER4(commandRequestData);
 						stateSetWakeMask(parameter);
-						parameter = COMMAND_PARAMETER4(commandRequestData + 4) |
-							    0xfffffffe;
+						parameter = COMMAND_PARAMETER_HIGH(commandRequestData + 4) |
+							    COMMAND_WAKE_HIGH;
 						stateSetWakeMaskHigh(parameter);
 					}
 					break;

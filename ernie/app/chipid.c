@@ -1,18 +1,36 @@
 /*
  * USS-1001's chip ID: four bytes of the eight the flash's extra area holds at 0x850-0x857
- * (flashReadExtra), read once at the start and kept with their checksum. Serial command 0x0917
- * reads them back.
+ * (flashReadExtra), read once at the start and kept with their checksum (USS-1002's 0x0105:
+ * read at each call). Serial command 0x0917 reads them back.
  */
 #include "board.h"
 
 #if SOURCE_0103
 #include "chipid.h"
+#include <string.h>
+
 #include "kernel.h"
 
 #define CHIP_ID_VALID		0xaa
 #define CHIP_ID_BAD		0x55	/* the checksum failed */
 
 __near unsigned char chipIdExtra[8];		/* the extra area's bytes, near */
+
+#if CHIP_ID_ON_DEMAND
+/* the four bytes, read from the extra area at each call; the copy cleared after */
+unsigned char chipIdGet(unsigned char *out)
+{
+	unsigned char result = 0;
+
+	flashReadExtra(chipIdExtra);
+	out[0] = chipIdExtra[0];
+	out[1] = chipIdExtra[1];
+	out[2] = chipIdExtra[2];
+	out[3] = chipIdExtra[6];
+	memset(chipIdExtra, 0, sizeof(chipIdExtra));
+	return result;
+}
+#else
 
 static struct {
 	unsigned char	id[4];		/* the extra area's bytes 0-2 and 6 */
@@ -76,4 +94,5 @@ static unsigned char chipIdSum(void)
 	sum += chipId.id[3];
 	return sum;
 }
+#endif
 #endif

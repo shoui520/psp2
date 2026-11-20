@@ -581,7 +581,7 @@ UART1_INTERRUPT void uart1SendInterrupt(void)
 		SDR02 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
 	} else
-		task2SetFlag(3, 0x0200);
+		task2ISetFlag(0x0200);
 }
 #else
 /* a reception error: cleared, and on an overrun the channel restarts */

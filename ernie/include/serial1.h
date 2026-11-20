@@ -8,6 +8,7 @@
 #include "ernie.h"
 #include "board.h"
 #include "serial.h"
+#include "task.h"
 #if BOARD_DOL1001
 #include "thermal.h"
 #endif
@@ -68,7 +69,13 @@ extern unsigned char serial1BufferWrite(unsigned char offset, unsigned char size
 #if FW_SINCE(0x00090903)
 extern unsigned char serial1BufferClear(void);
 #endif
+#if TASK_FLAG_SETTERS
+extern ER serial1InputHandler(void);	/* the setter's result, unused */
+#define SERIAL1_INPUT_HANDLER	((void (*)(void))serial1InputHandler)
+#else
 extern void serial1InputHandler(void);
+#define SERIAL1_INPUT_HANDLER	serial1InputHandler
+#endif
 extern unsigned int serial1SleepFactor(void);
 extern unsigned char serialCommands1Count(void);
 extern int serial1KeyOpen(void);
