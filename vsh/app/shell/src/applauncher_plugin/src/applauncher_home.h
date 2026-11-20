@@ -63,7 +63,7 @@ public:
 	   the folder's look updated (0x810CF7DE) */
 	void RemoveChild(const char *titleId);
 	/* PLACEHOLDER name: the child of the title put in the folder (0x810D17C0) */
-	void AddChild(const char *titleId);
+	bool AddChild(const char *titleId);
 	void Update(bool animate);
 	/* PLACEHOLDER names: the icon given its application's new data (0x810D1502), and a
 	   folder's children's data taken in (0x810D1C90) */
@@ -109,6 +109,8 @@ public:
 	   not in it yet; 0x810D1738), and the icon put in the folder and deleted from its page,
 	   deleted alone without a folder (0x810D1A06) */
 	bool CanAddChild(const char *titleId);
+	/* PLACEHOLDER name: the title is in the folder (0x810D1C24) */
+	bool HasChild(const paf::string &titleId);
 	void PutInFolder(const paf::common::SharedPtr<ApplauncherIcon> &folder);
 	/* PLACEHOLDER names: the icon's widget pressed (0x810D076C), and the drag events
 	   0x2000D-0x2000F of its widget (0x810D1110) */
@@ -946,6 +948,9 @@ extern float g_applauncherIconHoldTime;
 extern const float g_applauncherEditMoveTime;
 /* PLACEHOLDER: the depth the icons stand at in the edit, -200 (0x81507474, the same file) */
 extern const float g_applauncherEditDepth;
+/* PLACEHOLDER: the time an icon moves into a folder in, 250 ms (0x8150746C, the same file;
+   PutInFolder and 0x810D2C58) */
+extern const float g_applauncherFolderMoveTime;
 /* PLACEHOLDER: the icons' tilt effect moved on a frame (0x810CF2AA), and the drag left
    when the dragged widget is in its drag mode (0x810D1DE6) */
 void applauncherIconEffectUpdate(void);
@@ -1305,6 +1310,10 @@ void applauncherPagesRemoveIcons(paf::vector<ApplauncherRemovedIcon> *icons);
    off, whole with its folder or not */
 extern "C" int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *titleId,
 	LsdbIconPtr *icon, int *pageNo, bool theme);
+/* PLACEHOLDER: livespace_db's export, not declared there yet: the icon image of the row, as a
+   shared blob, the result in *pResult */
+extern "C" paf::common::SharedPtr<DbBlob> SceLsdb_41185388(AppInfoSClient *client,
+	const SceInt64 *rowid, int *pResult);
 /* PLACEHOLDER: livespace_db's exports, not declared there yet: the pages counted, and the pages'
    rows read from the page given */
 extern "C" int SceLsdb_94128795(AppInfoSClient *client);
@@ -1398,6 +1407,21 @@ public:
 	paf::string m_titleId;
 	LsdbIconPtr m_icon;
 };
+
+/* PLACEHOLDER: Sony's job name (0x811C6A18 makes it, 0x811C6BF2 puts it on the queue): a
+   folder made in the database, its icon the database gives back copied into the one given */
+class CreateNewFolderJob : public ApplauncherLsdbJob {
+public:
+	int m_page;
+	LsdbIconPtr m_icon;
+	SceUInt32 m_images[4];		/* PLACEHOLDER: the folder's images (8-byte entries holding
+					   a Surface), not read here */
+	LsdbIconPtr m_folder;		/* the folder's icon the database made */
+	LsdbIconPtr m_data;		/* the folder's icon given, filled when done */
+};
+/* PLACEHOLDER: a CreateNewFolderJob done: its folder's icon copied into the one given, and the
+   icon of the same row updated (0x810D1FF6) */
+void applauncherIconFolderCreated(ApplauncherLsdbJob *job, void *arg);
 
 /* PLACEHOLDER: those jobs put on the queue (0x811C5A3C, 0x811C4E4C, 0x811C5172, 0x811C4F52,
    0x811C5D92) */

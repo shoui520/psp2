@@ -11,6 +11,7 @@
 #include <std/string>
 #include <std/stdlib.h>
 #include <std/memory>
+#include <std/vector>
 #include <versatileparam/idparam.h>
 #include <common/shared_ptr.h>
 #include <common/char_encoding.h>
@@ -44,6 +45,9 @@ using namespace paf;
 /* PLACEHOLDER: the error and the text of the dialog a press of an unavailable icon shows */
 #define APPLAUNCHER_ICON_UNAVAILABLE_ERROR	0x8010330C
 #define APPLAUNCHER_ICON_MSG_UNAVAILABLE	0x78D452F9
+
+/* the icons a folder holds */
+#define APPLAUNCHER_FOLDER_ICONS	10
 
 /* the image of an icon its parental lock keeps from starting */
 #define APPLAUNCHER_ICON_LOCKED_PATH	"vs0:data/internal/icon/parental_lock.png"
@@ -808,4 +812,293 @@ void ApplauncherIcon::MoveDrag(int direction)
 
 	widget->SetPos(to, new Timer(time, Timer::FUNC_QUART_OUT), ui::Widget::ANIM_MOVE, 2);
 	UpdateDrag(1, widget, edge);
+}
+
+/* (0x810D14D6) */
+void ApplauncherIcon::LoadView()
+{
+	if (m_icon == NULL) {
+		m_icon = applauncherIconPoolAlloc(m_self);
+		if (m_icon != NULL && m_focusPending) {
+			m_icon->m_widget->SetFocus(NULL);
+			m_focusPending = false;
+		}
+	}
+}
+
+/* the icon given its application's new data: its label, its image loaded again (the old one
+   dropped from the cache) and given to topmenu (0x810D1502) */
+void ApplauncherIcon::SetData(const LsdbIconPtr &data)
+{
+	m_unavailable = false;
+	m_data = data;
+	if (m_data->type == APPLAUNCHER_ICON_TYPE_POWER) {
+		m_data->title = applauncherIconUtf8(
+			wstring(g_applauncherPlugin->GetString(IDParam(APPLAUNCHER_ICON_MSG_POWER))));
+		m_data->titleId = "power";
+	}
+	{
+		wstring label;
+
+		common::Utf8ToUtf16(m_data->title, &label, 0);
+		m_label = label;
+		if (m_icon != NULL)
+			applauncherIconWidgetSetLabel(m_icon, m_label);
+	}
+	Update(true);
+	((void (*)(const string &, intrusive_ptr<cache::CacheImageInterface> *))
+		g_applauncherHome->m_topmenu->func[TOPMENU_PLUGIN_FUNC_SET_APP_IMAGE])(
+		m_data->titleId, &m_image);
+}
+
+/* the folder takes the title: it has room and the title is not in it yet; the titles are
+   walked also when it is full */
+static inline bool applauncherFolderCanAdd(LsdbFolder *folder, const char *titleId)
+{
+	vector<string>::iterator it;
+
+	/* the count compared unsigned, as in Sony's */
+	if ((SceUInt32)folder->iconCount >= APPLAUNCHER_FOLDER_ICONS) {
+		for (it = folder->titleIds.begin(); it != folder->titleIds.end(); ++it)
+			;
+		return false;
+	}
+	for (it = folder->titleIds.begin(); it != folder->titleIds.end(); ++it) {
+		if (*it == titleId)
+			return false;
+	}
+	return true;
+}
+
+/* (0x810D1738) */
+bool ApplauncherIcon::CanAddChild(const char *titleId)
+{
+	if (m_data.get() == NULL || m_data->type != LSDB_ICON_TYPE_FOLDER)
+		return false;
+
+	LsdbFolder *folder = m_data->folder.get();
+
+	if (folder == NULL)
+		return false;
+	return applauncherFolderCanAdd(folder, titleId);
+}
+
+/* the title put in the folder, the power icon counted only; false when the folder does not
+   take it (0x810D17C0) */
+bool ApplauncherIcon::AddChild(const char *titleId)
+{
+	if (m_data.get() == NULL || m_data->type != LSDB_ICON_TYPE_FOLDER)
+		return false;
+	if (m_data->folder.get() == NULL)
+		return false;
+	if (sce_paf_strcmp("power", titleId) == 0) {
+		++m_data->folder->iconCount;
+		return true;
+	}
+	if (!applauncherFolderCanAdd(m_data->folder.get(), titleId))
+		return false;
+	m_data->folder->titleIds.push_back(string(titleId));
+	++m_data->folder->iconCount;
+	return true;
+}
+
+/* the title taken out of the folder, the power icon uncounted only (0x810D192E) */
+void ApplauncherIcon::RemoveChild(const char *titleId)
+{
+	if (m_data.get() == NULL || m_data->type != LSDB_ICON_TYPE_FOLDER ||
+	    m_data->folder.get() == NULL)
+		return;
+	if (sce_paf_strcmp("power", titleId) == 0) {
+		--m_data->folder->iconCount;
+		return;
+	}
+
+	LsdbFolder *folder = m_data->folder.get();
+
+	for (vector<string>::iterator it = folder->titleIds.begin(); it != folder->titleIds.end();
+	     ++it) {
+		if (*it == titleId) {
+			m_data->folder->titleIds.erase(it);
+			--m_data->folder->iconCount;
+			return;
+		}
+	}
+}
+
+/* (0x810D19F6) */
+void ApplauncherIcon::Resume()
+{
+	if (m_icon != NULL)
+		applauncherIconWidgetDropIn(m_icon);
+}
+
+/* the icon put in the folder and deleted from its page, its widget flying to the folder's (or
+   below the screen); deleted alone without a widget or a folder (0x810D1A06) */
+void ApplauncherIcon::PutInFolder(const common::SharedPtr<ApplauncherIcon> &folder)
+{
+	ui::Widget *widget = NULL;
+
+	if (m_icon != NULL)
+		widget = m_icon->m_widget;
+	applauncherIconRemove(m_self, true);
+	if (widget == NULL || folder.get() == NULL) {
+		applauncherIconDelete(m_self, false, false);
+		return;
+	}
+
+	ui::Widget *target = NULL;
+	math::v4 pos(0.0f, 544.0f, 0.0f, 0.0f);
+
+	if (folder->m_icon != NULL)
+		target = folder->m_icon->m_widget;
+	if (target != NULL)
+		pos = target->GetWorldMatrix().w() - widget->m_parent->GetWorldMatrix().w();
+	else if (folder->m_page != NULL)
+		pos = folder->m_page->GetWidget()->GetWorldMatrix().w() -
+		      widget->m_parent->GetWorldMatrix().w();
+	folder->AddChild(m_data->titleId.c_str());
+	widget->KillAnim(ui::Widget::ANIM_MOVE);
+	widget->SetPos(pos, new Timer(g_applauncherFolderMoveTime, Timer::FUNC_QUAD_OUT), ui::Widget::ANIM_MOVE, 0);
+	applauncherIconDelete(m_self, false, true);
+}
+
+/* (0x810D1C24) */
+bool ApplauncherIcon::HasChild(const string &titleId)
+{
+	if (m_data.get() == NULL || m_data->type != LSDB_ICON_TYPE_FOLDER)
+		return false;
+
+	LsdbFolder *folder = m_data->folder.get();
+
+	if (folder == NULL)
+		return false;
+	for (vector<string>::iterator it = folder->titleIds.begin(); it != folder->titleIds.end();
+	     ++it) {
+		if (*it == titleId)
+			return true;
+	}
+	return false;
+}
+
+/* the folder's image made again from its children's (0x810D1C90) */
+void ApplauncherIcon::UpdateFolder()
+{
+	if (m_data.get() == NULL || m_data->type != LSDB_ICON_TYPE_FOLDER || m_page == NULL ||
+	    m_data->folder.get() == NULL)
+		return;
+
+	vector<ApplauncherRemovedIcon> icons;
+	ApplauncherRemovedIcon item;
+
+	item.m_id = m_data->folder->id;
+	item.m_pageIndex = m_page->GetIndex();
+	item.m_slot = m_slot;
+	icons.push_back(item);
+	applauncherPagesReloadFolderIconCapture(icons, m_data->rowid);
+}
+
+/* the widget faded in over the timer, made visible first */
+static inline void ShowWidget(ui::Widget *widget, Timer *timer)
+{
+	if (!widget->m_transition_complete) {
+		widget->m_transition = 0xff;
+		widget->m_transition_complete = true;
+		widget->DoTransition_core(0.0f, true);
+	}
+	ScePafWidget_FF5BC957(widget, timer, 2, 0.0f, NULL);
+}
+
+/* (0x810D1D38) */
+void ApplauncherIcon::Show()
+{
+	ui::Widget *widget = NULL;
+
+	if (m_icon != NULL)
+		widget = m_icon->m_widget;
+	m_added = false;
+	if (widget != NULL)
+		ShowWidget(widget, new Timer(420.0f, Timer::FUNC_LINEAR));
+}
+
+/* (0x810D1DE6) */
+void applauncherIconCancelDrag(void)
+{
+	if (g_applauncherDragItem.get() != NULL && g_applauncherDragItem->m_icon != NULL &&
+	    g_applauncherDragItem->m_icon->m_widget != NULL &&
+	    g_applauncherDragItem->m_icon->m_widget->m_icon_mode == 2)
+		applauncherIconWidgetLeaveDrag(g_applauncherDragItem->m_icon);
+}
+
+/* (0x810D1E0A) */
+ApplauncherIcon::~ApplauncherIcon()
+{
+	if (m_icon != NULL) {
+		applauncherIconPoolFree(m_icon, false);
+		m_icon = NULL;
+	}
+
+	int index = ((int (*)(const char *))((ShellPluginInterface *)applauncherPluginGetInterface(
+		"topmenu_plugin", 1))->func[TOPMENU_PLUGIN_FUNC_SET_LAUNCH_TITLE])(
+		m_data->titleId.c_str());
+
+	if (index != -1 && m_removeEntry)
+		((void (*)(int))((ShellPluginInterface *)applauncherPluginGetInterface(
+			"topmenu_plugin", 1))->func[3])(index);
+	if (m_page != NULL)
+		applauncherIconDetach(this);
+}
+
+/* (0x810D1F44) */
+void applauncherIconLoadImage(const char *dir, intrusive_ptr<cache::CacheImageInterface> *image)
+{
+	char path[2048];
+	char base[2048];	/* copied, never read */
+
+	sce_paf_strncpy(path, dir, sizeof(path));
+	sce_paf_strncpy(base, dir, sizeof(base));
+	sce_paf_strncat(path, "sce_sys/icon0.png", sizeof(path) - sce_paf_strlen(dir));
+	applauncherIconCacheLoad(string(path), image, NULL, NULL, false);
+}
+
+/* (0x810D1FF6) */
+void applauncherIconFolderCreated(ApplauncherLsdbJob *job, void *arg)
+{
+	CreateNewFolderJob *folderJob = (CreateNewFolderJob *)job;
+
+	*folderJob->m_data = *folderJob->m_folder;
+
+	common::SharedPtr<ApplauncherIcon> icon = g_applauncherHome->FindIcon(folderJob->m_data->rowid);
+
+	if (icon.get() != NULL)
+		icon->Update(true);
+}
+
+/* the image of a folder's icon from the database: the row after the key's ':' (0x810D2160) */
+static common::SharedPtr<File> applauncherFolderImageOpen(const char *path, void *userdata,
+							   int32_t *error)
+{
+	char *rowidText = sce_paf_private_strtok(path, ":");
+	common::SharedPtr<File> file;
+
+	if (rowidText != NULL) {
+		SceInt64 rowid = sce_paf_atoll(rowidText + 1);
+		int result = 0;
+
+		file = SceLsdb_41185388(g_shellLsdbClient->client, &rowid, &result);
+		if (error != NULL)
+			*error = result;
+	}
+	return file;
+}
+
+/* (0x810D229A) */
+void ApplauncherIcon::MarkUpdate()
+{
+	m_unavailable = true;
+}
+
+/* (0x810D22A2) */
+void ApplauncherIcon::RequestData()
+{
+	applauncherPagesRequestData(m_data->titleId);
 }
