@@ -151,7 +151,10 @@ struct TelephonyModem;
 struct TelephonyModemVtable {
 	void *reserved0[7];
 	int (*getNetworkName)(TelephonyModem *self, char *name);			/* +0x1C */
-	void *reserved1[6];
+	/* PLACEHOLDER name: 0 when the initial check is not to be run (the shell's
+	   telephony setup) */
+	int (*needsInitialCheck)(TelephonyModem *self);				/* +0x20 */
+	void *reserved1[5];
 	int (*getState)(TelephonyModem *self, int *query);				/* +0x38 */
 	int (*getCountryCode)(TelephonyModem *self, paf::string *country);		/* +0x3C */
 };

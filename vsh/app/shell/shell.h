@@ -100,8 +100,9 @@ int shellLsdbCallback(int *flag, int *value);	/* given to livespace_db (0x81326F
 int shellMusicStart(int mode);
 int shellMusicSetBgm(bool on);
 
-/* the telephony setup (coldboot's telephony job) */
-int shellTelephonyStartSetup(int type, const char *param);
+/* the telephony setup: ime_plugin and tel_initial_check_plugin run as an exclusive function, the
+   callback called with its argument once the check is over (exclusive_func_tel_init.cpp) */
+int shellTelephonyStartSetup(void (*callback)(void *arg), void *arg);
 
 /* the application events: sends one to its listeners (0x81241230) */
 int shellAppEventSend(int event, const void *data, int flags);

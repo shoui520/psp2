@@ -608,7 +608,7 @@ static void shellBootOnPowerEvent(int code, const void *data, SceSize size, void
 static void shellBootOnModelEvent(int code, const void *data, SceSize size, void *arg)
 {
 	if (system::Model::GetType() != 1)
-		shellTelephonyStartSetup(0, NULL);
+		shellTelephonyStartSetup(NULL, NULL);
 	SceShell_D4C7D2B7(SHELL_EVENT_MODEL, shellBootOnModelEvent, NULL);
 }
 
