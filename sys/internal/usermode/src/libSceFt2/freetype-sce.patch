@@ -241,6 +241,17 @@ diff -ru a/src/truetype/ttdriver.c b/src/truetype/ttdriver.c
          advances[nn] = aw;
        }
      }
+@@ -246,10 +248,7 @@
+     FT_Request_Metrics( size->face, req );
+
+     if ( FT_IS_SCALABLE( size->face ) )
+-    {
+       error = tt_size_reset( ttsize );
+-      ttsize->root.metrics = ttsize->metrics;
+-    }
+
+     return error;
+   }
 diff -ru a/src/truetype/ttgload.c b/src/truetype/ttgload.c
 --- a/src/truetype/ttgload.c
 +++ b/src/truetype/ttgload.c

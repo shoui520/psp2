@@ -3,7 +3,8 @@
 set(FT2 ${CMAKE_CURRENT_SOURCE_DIR}/../../../../../contrib/freetype-2.4.9)
 # Sony's changes to FreeType (freetype-sce.patch: the memory object takes the caller's allocator, no
 # FT_Init_FreeType; the TrueType driver keeps the global advance width of fixed-pitch fonts unless
-# FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH is set, the reverse of upstream's 8c82ec5b of 2.4.5) are applied to a
+# FT_LOAD_IGNORE_GLOBAL_ADVANCE_WIDTH is set, the reverse of upstream's 8c82ec5b of 2.4.5; tt_size_request
+# does not copy the scaled metrics back to the FT_Size, the reverse of b0962ac3 of 2.4.6) are applied to a
 # copy of the files they touch (src/psaux and src/truetype are copied whole: psaux.c and truetype.c include
 # their parts) in the build tree.
 # freetype-inline.patch is not Sony's: it marks the TrueType instructions Sony's GCC kept out of TT_RunIns
