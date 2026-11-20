@@ -70,8 +70,9 @@ target_compile_definitions(${PSP2_TARGET} PRIVATE FT2_BUILD_LIBRARY)
 # -O3 matches more functions than -O2 under similarity pairing (293 vs 230 exact+proven, 3.65-CEX,
 # 2026-11-19). Sony built FreeType hosted (its fixed-size memset and memcpy calls are expanded inline) and
 # without -fno-delete-null-pointer-checks (a pointer once dereferenced is not tested for NULL again:
-# tt_face_goto_table's table).
-target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fno-stack-protector -fhosted -fbuiltin
+# tt_face_goto_table's table), with -fstack-protector (only the two functions with a character
+# array call __stack_chk_fail: FT_Raccess_Get_HeaderInfo and tt_face_init).
+target_compile_options(${PSP2_TARGET} PRIVATE -O3 -fstack-protector -fhosted -fbuiltin
 	-fdelete-null-pointer-checks -ffunction-sections)
 # Sony's link dropped the functions nothing calls (FreeType's debug and little-endian stream readers).
 # Export 04DCBE87 is FT_New_Memory as freetype-sce.patch changes it; Sony's name for it is not known.
