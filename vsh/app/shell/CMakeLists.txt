@@ -158,6 +158,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/applauncher_plugin/src/applauncher_iconinfo_basic.cpp
 	src/applauncher_plugin/src/applauncher_iconinfo_game.cpp
 	app_event_server.cpp
+	calibration.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

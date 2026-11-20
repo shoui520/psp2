@@ -1,7 +1,7 @@
 /*
  * display.h: the display's error codes, frame buffer record and constants, under Sony's names and
  * with Sony's definitions (SDK Release 03.570.011, target/include/display.h). The kernel takes
- * these; the user library's functions come with the user-mode SDK headers.
+ * these; the user library's functions are declared as user code needs them.
  */
 #ifndef _SCE_DISPLAY_DISPLAY_H
 #define _SCE_DISPLAY_DISPLAY_H
@@ -39,6 +39,17 @@ typedef struct SceDisplayFrameBuf {
 /* when sceDisplaySetFrameBuf takes effect */
 #define SCE_DISPLAY_UPDATETIMING_NEXTHSYNC	0
 #define SCE_DISPLAY_UPDATETIMING_NEXTVSYNC	1
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* waits for the start of the VBLANK the given V periods after the previous call */
+SceInt32 sceDisplayWaitVblankStartMulti(SceUInt32 vcount);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* !_LANGUAGE_ASSEMBLY */
 
