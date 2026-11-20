@@ -5,14 +5,6 @@
 #include <appmgr/appmgr_savedata.h>
 #include <stddef.h>
 
-typedef struct AppmgrSaveDataSlotInitParam {
-	SceSize size;
-	SceUInt32 slotCount;
-	SceUInt32 flags;
-	SceUInt8 unused[32];
-	SceAppUtilMountPoint mountPoint;
-} AppmgrSaveDataSlotInitParam;
-
 typedef struct AppmgrSaveDataSlotFileHeader {
 	char magic[4];
 	SceUInt32 version;
@@ -40,13 +32,6 @@ typedef struct AppmgrSaveDataSlotCache {
 	AppmgrSaveDataSlotFileHeader *header;
 	void *readWindow;
 } AppmgrSaveDataSlotCache;
-
-typedef struct AppmgrSaveDataSlotFileInfo {
-	SceUInt32 version;
-	SceUInt32 slotCount;
-	SceUInt8 unused[32];
-	SceUInt8 occupied[512];
-} AppmgrSaveDataSlotFileInfo;
 
 typedef struct AppmgrSaveDataSlotStatusParam {
 	SceSize size;
@@ -123,21 +108,6 @@ _Static_assert(offsetof(SceAppMgrAppInfoCache, totalWrittenKiB) == 744,
 _Static_assert(offsetof(SceAppMgrAppInfoCache, unused) == 748,
 	       "unused application information cache range");
 
-_Static_assert(sizeof(AppmgrSaveDataSlotFileInfo) == 552,
-	       "save-data slot file information");
-_Static_assert(offsetof(AppmgrSaveDataSlotFileInfo, slotCount) == 4,
-	       "save-data file information slot count");
-_Static_assert(offsetof(AppmgrSaveDataSlotFileInfo, occupied) == 40,
-	       "save-data file information occupancy table");
-
-_Static_assert(sizeof(AppmgrSaveDataSlotInitParam) == 60,
-	       "save-data slot initialization parameters");
-_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, slotCount) == 4,
-	       "save-data initialization slot count");
-_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, flags) == 8,
-	       "save-data initialization flags");
-_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, mountPoint) == 44,
-	       "save-data initialization mount point");
 _Static_assert(sizeof(AppmgrSaveDataSlotFileHeader) == 1024,
 	       "save-data slot file header");
 _Static_assert(offsetof(AppmgrSaveDataSlotFileHeader, version) == 4,
@@ -169,35 +139,6 @@ void *appmgrAllocSaveDataHeapMemory(SceSize size);
 int appmgrFreeSaveDataHeapMemory(void *memory);
 
 extern int g_appmgrAppInfoCacheKey;
-
-/* _sceAppMgrPspSaveDataGetParams' buffer: SceAppUtilPspSaveDataParamSfo with a longer directory */
-typedef struct AppmgrPspSaveDataParamSfo {
-	char saveDataDirectory[64];
-	char title[128];
-	char saveDataTitle[128];
-	char detail[1024];
-	SceUInt8 parentalLev;
-	char reserved[3];
-} AppmgrPspSaveDataParamSfo;
-
-_Static_assert(sizeof(AppmgrPspSaveDataParamSfo) == 1348, "PSP save data PARAM.SFO parameters");
-
-/* _sceAppMgrPspSaveDataRead's parameters: SceAppUtilPspSaveDataParams, the file ID copied in */
-typedef struct AppmgrPspSaveDataParams {
-	char dirName[128];
-	char fileName[13];
-	char reserved[3];
-	SceUInt32 fileType;
-	SceUInt32 dataVersion;
-	SceUInt8 secureFileId[16];
-	AppmgrPspSaveDataParamSfo *paramSfo;
-	void *dataBuf;
-	SceSize dataBufSize;
-} AppmgrPspSaveDataParams;
-
-_Static_assert(sizeof(AppmgrPspSaveDataParams) == 180, "PSP save data read parameters");
-_Static_assert(offsetof(AppmgrPspSaveDataParams, fileType) == 144, "PSP save data file type");
-_Static_assert(offsetof(AppmgrPspSaveDataParams, paramSfo) == 168, "PSP save data PARAM.SFO buffer");
 
 int sceAppMgrPspSaveDataGetParams(AppmgrPspSaveDataParamSfo *paramSfo);
 int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params);

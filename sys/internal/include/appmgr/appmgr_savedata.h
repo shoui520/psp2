@@ -7,8 +7,10 @@
 #ifndef _SCE_APPMGR_SAVEDATA_H
 #define _SCE_APPMGR_SAVEDATA_H
 
+#include <stddef.h>
 #include <scetypes.h>
 #include <apputil.h>
+#include <pfsmgr/pfsmgr.h>
 
 /*
  * A slot's parameters as SceAppMgr keeps them: the SDK's SceAppUtilSaveDataSlotParam, its
@@ -103,6 +105,99 @@ typedef struct SceAppMgrSaveDataUmountParam {
 
 _Static_assert(sizeof(SceAppMgrSaveDataUmountParam) == 0x14, "SceAppMgrSaveDataUmountParam");
 
+/* sceAppMgrSaveDataSlotInit's record: the slots a process's save data has */
+typedef struct AppmgrSaveDataSlotInitParam {
+	SceSize size;
+	SceUInt32 slotCount;
+	SceUInt32 flags;
+	SceUInt8 unused[32];
+	SceAppUtilMountPoint mountPoint;
+} AppmgrSaveDataSlotInitParam;
+
+/* sceAppMgrSaveDataSlotFileOpen's view of the slot file */
+typedef struct AppmgrSaveDataSlotFileInfo {
+	SceUInt32 version;
+	SceUInt32 slotCount;
+	SceUInt8 unused[32];
+	SceUInt8 occupied[512];
+} AppmgrSaveDataSlotFileInfo;
+
+_Static_assert(sizeof(AppmgrSaveDataSlotFileInfo) == 552,
+	       "save-data slot file information");
+_Static_assert(offsetof(AppmgrSaveDataSlotFileInfo, slotCount) == 4,
+	       "save-data file information slot count");
+_Static_assert(offsetof(AppmgrSaveDataSlotFileInfo, occupied) == 40,
+	       "save-data file information occupancy table");
+_Static_assert(sizeof(AppmgrSaveDataSlotInitParam) == 60,
+	       "save-data slot initialization parameters");
+_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, slotCount) == 4,
+	       "save-data initialization slot count");
+_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, flags) == 8,
+	       "save-data initialization flags");
+_Static_assert(offsetof(AppmgrSaveDataSlotInitParam, mountPoint) == 44,
+	       "save-data initialization mount point");
+
+/* _sceAppMgrPspSaveDataGetParams' buffer: SceAppUtilPspSaveDataParamSfo with a longer directory */
+typedef struct AppmgrPspSaveDataParamSfo {
+	char saveDataDirectory[64];
+	char title[128];
+	char saveDataTitle[128];
+	char detail[1024];
+	SceUInt8 parentalLev;
+	char reserved[3];
+} AppmgrPspSaveDataParamSfo;
+
+_Static_assert(sizeof(AppmgrPspSaveDataParamSfo) == 1348, "PSP save data PARAM.SFO parameters");
+
+/* _sceAppMgrPspSaveDataRead's parameters: SceAppUtilPspSaveDataParams, the file ID copied in */
+typedef struct AppmgrPspSaveDataParams {
+	char dirName[128];
+	char fileName[13];
+	char reserved[3];
+	SceUInt32 fileType;
+	SceUInt32 dataVersion;
+	SceUInt8 secureFileId[16];
+	AppmgrPspSaveDataParamSfo *paramSfo;
+	void *dataBuf;
+	SceSize dataBufSize;
+} AppmgrPspSaveDataParams;
+
+_Static_assert(sizeof(AppmgrPspSaveDataParams) == 180, "PSP save data read parameters");
+_Static_assert(offsetof(AppmgrPspSaveDataParams, fileType) == 144, "PSP save data file type");
+_Static_assert(offsetof(AppmgrPspSaveDataParams, paramSfo) == 168, "PSP save data PARAM.SFO buffer");
+
+/* the parameters of the add mounts (add-on content, save data): the title, its passcode and the drive to use */
+typedef struct AppmgrAddMountParam {
+	char titleId[16];
+	char passcode[32];
+	ScePfsRndDriveId mountPoint;
+} AppmgrAddMountParam;
+
+_Static_assert(sizeof(AppmgrAddMountParam) == 64 &&
+	       offsetof(AppmgrAddMountParam, passcode) == 16 &&
+	       offsetof(AppmgrAddMountParam, mountPoint) == 48,
+	       "add mount parameters");
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* SceAppMgrUser's save data calls (driver_us), which SceAppUtil makes */
+#if !defined(PSP2_KERNEL)
+int sceAppMgrSaveDataSlotInit(AppmgrSaveDataSlotInitParam *param);
+int sceAppMgrSaveDataSlotCreate(SceAppMgrSaveDataSlot *slot);
+int sceAppMgrSaveDataSlotDelete(SceAppMgrSaveDataSlotDelete *slot);
+int sceAppMgrSaveDataSlotSetParam(SceAppMgrSaveDataSlot *slot);
+int sceAppMgrSaveDataSlotGetParam(SceAppMgrSaveDataSlot *slot);
+int sceAppMgrSaveDataGetQuota(SceAppMgrSaveDataQuota *quota);
+int sceAppMgrSaveDataSlotFileOpen(const char *mountPoint, AppmgrSaveDataSlotFileInfo *info);
+int sceAppMgrSaveDataSlotFileGetParam(SceUInt32 slotId, SceAppMgrSaveDataSlotParam *param);
+int sceAppMgrSaveDataSlotFileClose(const char *mountPoint);
+int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param);
+int sceAppMgrPspSaveDataRootMount(char *mountPoint);
+int sceAppMgrPspSaveDataRead(AppmgrPspSaveDataParams *params);
+#endif
+
 int sceAppMgrSaveDataDataSave(SceAppMgrSaveDataData *data);
 int sceAppMgrSaveDataDataRemove(SceAppMgrSaveDataDataDelete *data);
 /* their second forms (SceDriverUser), which SceAppUtilExt calls */
@@ -122,5 +217,9 @@ int SceAppMgrForDriver_E73C9516(const SceAppMgrSaveDataMountParam *param);
 int SceAppMgrForDriver_2B080268(const SceAppMgrSaveDataUmountParam *param);
 /* not written in C yet: the prototype is its caller's (appmgr's system call) */
 int SceAppMgrForDriver_D137D486(SceAppMgrSaveDataSlot *slot);	/* vitasdk: ksceAppMgrSaveDataSlotGetParam */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _SCE_APPMGR_SAVEDATA_H */

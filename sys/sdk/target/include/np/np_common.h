@@ -139,6 +139,17 @@ typedef struct SceNpSessionId {
 	char padding[2];
 } SceNpSessionId;
 
+/* NP Invitation ID */
+#define SCE_NP_INVITATION_ID_MAX_SIZE		(60)
+typedef struct SceNpInvitationId {
+	char data[SCE_NP_INVITATION_ID_MAX_SIZE];
+	char term;
+	char padding[3];
+} SceNpInvitationId;
+
+/* GameCustomData */
+typedef SceUInt64 SceNpGameCustomDataId;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

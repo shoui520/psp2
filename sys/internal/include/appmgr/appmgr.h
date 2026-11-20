@@ -17,13 +17,23 @@ extern "C" {
 
 /* SceAppMgr's errors no SDK header names (SceAppUtilExt translates them, SQLite's work
  * directory mount accepts ALREADY_MOUNTED) */
+#define APPMGR_ERROR_INVALID_ARGUMENT	(-2139095039)	/* 0x80800001 */
 #define APPMGR_ERROR_NOT_MOUNTED		(-2139095038)	/* 0x80800002 */
 #define APPMGR_ERROR_ALREADY_MOUNTED		(-2139095037)	/* 0x80800003 */
+#define APPMGR_ERROR_PASSCODE_MISMATCH		(-2139095034)	/* 0x80800006: a save data add-mount passcode that does not match */
 #define APPMGR_ERROR_NO_PERMISSION		(-2139095031)	/* 0x80800009 */
+#define APPMGR_ERROR_INVALID_TITLE_ID		(-2139095029)	/* 0x8080000b */
 #define APPMGR_ERROR_MOUNT_LIMIT_OVER		(-2139094968)	/* 0x80800048 */
+#define APPMGR_ERROR_SAFEMEMORY_INITIALIZED	(-2139094966)	/* 0x8080004a: the safe memory is already set up */
+#define APPMGR_ERROR_OUT_OF_RANGE		(-2139090944)	/* 0x80801000: an offset or size past the buffer */
+#define APPMGR_ERROR_INVALID_BUFFER		(-2139090943)	/* 0x80801001: no buffer, or one too large */
+#define APPMGR_ERROR_SAVEDATA_SLOT_FILE	(-2139090809)	/* 0x80801087: the slot file cannot be opened */
+#define APPMGR_ERROR_SAVEDATA_SLOT_EXISTS	(-2139090806)	/* 0x8080108a */
+#define APPMGR_ERROR_SAVEDATA_SLOT_NOT_FOUND	(-2139090805)	/* 0x8080108b */
 #define APPMGR_ERROR_SAVEDATA_NO_SPACE_QUOTA	(-2139090804)	/* 0x8080108c */
 #define APPMGR_ERROR_SAVEDATA_NO_SPACE_FS	(-2139090803)	/* 0x8080108d */
 #define APPMGR_ERROR_SAVEDATA_PARAMETER		(-2139090802)	/* 0x8080108e */
+#define APPMGR_ERROR_PHOTO_NOT_MOUNTED		(-2139090751)	/* 0x808010c1 */
 #define APPMGR_ERROR_PLAYREADY_NO_DATA		(-2139090701)	/* 0x808010f3 */
 #define APPMGR_ERROR_MARLIN_IPTV_DIRTY		(-2139090699)	/* 0x808010f5 */
 
@@ -118,6 +128,7 @@ typedef struct AppmgrBootParam {
 	SceSize size;
 	SceUInt32 attribute;
 	SceUInt32 appVersion;
+	SceUInt8 reserved[32];			/* SceAppUtil's record runs to 44 bytes */
 } AppmgrBootParam;
 
 /* vitasdk: ksceAppMgrGetBootParam */
@@ -222,6 +233,30 @@ int sceAppMgrLaunchAppByPath4(const char *path, const char *name, SceUInt32 budg
 			      const AppmgrLaunchAppOption *option);
 int sceAppMgrGetStatusByAppId(int appId, void *status);
 int sceAppMgrActivateApp(int appId);
+int sceAppMgrGetBootParam(SceUID pid, AppmgrBootParam *bootParam);
+/* whether the application runs as a PS Now client (larger save data allowed) */
+int sceAppMgrIsPsNowClient(void);
+
+/* sceAppMgrSystemParamDateTimeGetConf's record: the date and time settings */
+typedef struct SceAppMgrDateTimeConf {
+	SceInt32 dateFormat;			/* SCE_SYSTEM_PARAM_DATE_FORMAT_* */
+	SceInt32 timeFormat;			/* SCE_SYSTEM_PARAM_TIME_FORMAT_* */
+	SceInt32 reserved;
+	SceInt32 timeZone;			/* minutes from UTC */
+	SceInt32 summertime;
+} SceAppMgrDateTimeConf;
+
+/* the system parameters SceAppMgr gives to system applications only, by their registry keys */
+#define APPMGR_SYSTEM_PARAM_NP_COUNTRY			1	/* /CONFIG/NP/country */
+#define APPMGR_SYSTEM_PARAM_IMPOSE_AUDIO_BALANCE	2	/* /CONFIG/MUSIC/MUSIC_APP/impose_audio_balance */
+#define APPMGR_SYSTEM_PARAM_NP_ENV			3	/* /CONFIG/NP/env */
+#define APPMGR_SYSTEM_PARAM_VOICE_PRIORITY		4	/* /CONFIG/SHELL/voice_priority */
+#define APPMGR_SYSTEM_PARAM_HDMI_OUT_SCALING_RATIO	5	/* /CONFIG/DISPLAY/hdmi_out_scaling_ratio */
+#define APPMGR_SYSTEM_PARAM_PSNOW_APP_CACHED_URL	6	/* /CONFIG/PSNOW/app_cached_url */
+
+int sceAppMgrSystemParamDateTimeGetConf(SceAppMgrDateTimeConf *conf);
+int sceAppMgrSystemParamGetInt(int parameter, int *value);
+int sceAppMgrSystemParamGetString(int parameter, char *value, SceSize size);
 #endif
 
 /* not written in C yet: the prototypes are their callers' (vshbridge, deci4p_loadp, appmgr's
@@ -244,6 +279,9 @@ struct ScePfsRndDriveId;
 /* vitasdk: ksceAppMgrGameDataMount */
 int SceAppMgrForDriver_CE356B2D(const char *appPath, const char *patchPath,
 				const char *rifPath, struct ScePfsRndDriveId *mountPoint);
+/* the mount ID of the media drive photo0: */
+#define APPMGR_MOUNT_ID_PHOTO	100
+
 int sceAppMgrAppDataMount(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 int sceAppMgrWorkDirMount(unsigned int mountId, struct ScePfsRndDriveId *mountPoint);
 
@@ -263,6 +301,7 @@ typedef struct SceAppMgrPhotoUmountParam {
 /* vitasdk: ksceAppMgrPhotoMount */
 int SceAppMgrForDriver_43A35729(const SceAppMgrPhotoMountParam *param);
 int SceAppMgrForDriver_DCADB9FE(const SceAppMgrPhotoUmountParam *param);
+int sceAppMgrPhotoUmount(const SceAppMgrPhotoUmountParam *param);
 /* vitasdk: ksceAppMgrTrophyMount */
 int SceAppMgrForDriver_E977A833(unsigned int mountId, SceUID pid,
 				struct ScePfsRndDriveId *mountPoint);

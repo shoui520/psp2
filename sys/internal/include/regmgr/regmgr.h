@@ -86,6 +86,12 @@ int sceRegMgrSystemParamSetInt(int id, int value);
 int sceRegMgrSystemParamSetStr(int id, const char *buf, SceSize size);
 int sceRegMgrUnregisterCallback(SceUID cbid);
 int sceRegMgrUnregisterDrvErrCallback(SceUID cbid);
+/* the keys of the registry entries the utility calls read */
+#define REGMGR_LANGUAGE		0x37502		/* /CONFIG/SYSTEM/language */
+#define REGMGR_ENTER_BUTTON	0x229142	/* /CONFIG/SYSTEM/button_assign */
+#define REGMGR_SYSTEM_USERNAME	0x598438	/* /CONFIG/SYSTEM/username */
+#define REGMGR_NP_ACCOUNT_ID	0x450F32	/* /CONFIG/NP/account_id */
+
 int sceRegMgrUtilityGetBin(int id, void *buf, SceSize size);
 int sceRegMgrUtilityGetInt(int id, int *value);
 int sceRegMgrUtilityGetStr(int id, char *buf, SceSize size);

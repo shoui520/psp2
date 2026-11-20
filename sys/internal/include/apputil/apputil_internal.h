@@ -35,11 +35,30 @@ int SceAppUtil_E8CADCA9(const SceAppUtilSaveDataDataSlot *slot,
 int SceAppUtil_1CFFE892(const SceAppUtilSaveDataDataSlot *slot,
 			const SceAppUtilSaveDataDataRemoveItem *data, SceUInt32 dataNum,
 			const SceAppUtilMountPoint *mountPoint);
+/* nonzero when str (at most size bytes, up to its NUL) is not valid UTF-8 */
+/*
+ * System parameters past the SDK's: the enter button (Sony's later SDKs name it, with
+ * SCE_SYSTEM_PARAM_ENTER_BUTTON_ASSIGN_CIRCLE and _CROSS) and the ones system applications read,
+ * named by their registry keys
+ */
+#define SCE_SYSTEM_PARAM_ID_ENTER_BUTTON		(2)
+#define SYSTEM_PARAM_ID_NP_COUNTRY			(8)	/* string, 3 bytes */
+#define SYSTEM_PARAM_ID_IMPOSE_AUDIO_BALANCE		(9)
+#define SYSTEM_PARAM_ID_NP_ENV				(10)	/* string, 17 bytes */
+#define SYSTEM_PARAM_ID_VOICE_PRIORITY			(11)
+#define SYSTEM_PARAM_ID_HDMI_OUT_SCALING_RATIO		(12)
+#define SYSTEM_PARAM_ID_PSNOW_APP_CACHED_URL		(100)	/* string, 256 bytes */
+
+int SceAppUtil_7DA34311(const SceChar8 *str, SceSize size);
 int SceAppUtil_A3E0694F(SceAppUtilInternalState *state);
 /* passes the event to the callback the library was given, if any */
 int SceAppUtil_F93C691C(int event, SceAppUtilSaveDataSlotId id);
 /* two values of the application's: SceMsgDialogPlugin takes a first one above 0 as a patch found
    for it */
+/* mount and unmount a drive SceAppUtil keeps for the system (202: the PSP save data root);
+   SCE_APPUTIL_ERROR_BUSY when it is mounted already, mountPoint still filled in */
+int SceAppUtil_C3CB128B(int type, char *mountPoint);
+int SceAppUtil_C0418B1C(int type);
 int SceAppUtil_B2FE3BB1(SceInt32 *value, SceInt32 *value2);
 
 #ifdef __cplusplus

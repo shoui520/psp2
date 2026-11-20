@@ -16,8 +16,6 @@
 #include "mtp_internal.h"
 
 /* the registry's account and its sign-in name */
-#define REGMGR_NP_ACCOUNT_ID		0x450F32
-#define REGMGR_SYSTEM_USERNAME		0x598438
 #define MTP_USER_NAME_MAX		255
 
 /* the network interface list's entry (SceNetInternal_235DE96C) */

@@ -61,18 +61,6 @@ _Static_assert(sizeof(AppmgrAddContMountParam) == 64 &&
 
 int sceAppMgrAddContMount(SceUID pid, const AppmgrAddContMountParam *param);
 
-/* the parameters of the add mounts (add-on content, save data): the title, its passcode and the drive to use */
-typedef struct AppmgrAddMountParam {
-	char titleId[16];
-	char passcode[32];
-	ScePfsRndDriveId mountPoint;
-} AppmgrAddMountParam;
-
-_Static_assert(sizeof(AppmgrAddMountParam) == 64 &&
-	       offsetof(AppmgrAddMountParam, passcode) == 16 &&
-	       offsetof(AppmgrAddMountParam, mountPoint) == 48,
-	       "add mount parameters");
-
 int sceAppMgrAddContAddMount(const AppmgrAddMountParam *param, int add);
 int sceAppMgrSaveDataAddMount(const AppmgrAddMountParam *param);
 int sceAppMgrThemeDataMount(const char *contentId, const char *themePath,

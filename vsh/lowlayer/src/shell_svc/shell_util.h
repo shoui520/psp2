@@ -71,6 +71,8 @@ int SceShellUtil_0E7EAD89(int value);
 int SceShellUtil_F75C684D(int value);
 int SceShellUtil_4A234ABB(void);
 int sceShellUtilLaunchAppRequestLaunchApp(const SceShellUtilLaunchAppParam *param);
+/* the same request through SceShellUtil (FD521712), which SceAppUtil imports */
+int sceShellUtilRequestLaunchApp(const SceShellUtilLaunchAppParam *param);
 int SceShellUtil_6F730976(void);
 int SceShellUtil_8CAAB23B(void);
 int SceShellUtil_48C7E8F8(const char *pString);
