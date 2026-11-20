@@ -40,7 +40,8 @@ typedef struct ShellAppEvent {
 typedef void (*ShellEventCallback)(int code, const void *data, SceSize size, void *arg);
 
 #ifdef __cplusplus
-namespace paf { class Framework; namespace graph { class SurfacePool; } }
+namespace paf { class Framework; namespace graph { class SurfacePool; }
+	namespace memory { class HeapAllocator; } }
 
 /* the framework: made at start (0x81002C1C), then run until the shell ends (0x81002CBA) */
 extern paf::Framework *g_shellFramework;
@@ -211,6 +212,25 @@ int shellLiveAreaDailyCronStart(void);		/* SceLiveAreaDailyCronJob (0x8119A072) 
 int shellRemoteDownloadStart(void);		/* SceRemoteDownloadLibJob, events 13 and 14 (0x81004610) */
 int shellConsoleInfoStart(void);		/* ur0:ci, SceConsoleInfoSendJobQueue (0x810E5954) */
 void shellNpFriendInit(void);			/* SceNpFriendVshModelAlloc, ...ImporterAlloc (0x810F5F4A) */
+
+/* the NP friend libraries' memory block (SceNpFriendVshMemBlock, an mspace; np_friend.cpp) */
+int shellNpFriendMemInit(SceSize size);		/* (0x810F5E88) */
+void *shellNpFriendMalloc(SceSize size);	/* (0x810F5F18) */
+void shellNpFriendFree(void *ptr);		/* (0x810F5F34) */
+
+/* PLACEHOLDER names: the NP friend libraries' starts: the friend storage on its heap and its end
+   (0x810F60FC, 0x810F6104), the importer on its heap and its end (0x813C541C, 0x813C5426), and the
+   allocator the friend list uses (0x812BCEDC) */
+struct NpFriendAllocator {
+	void *(*malloc)(size_t size);
+	void (*free)(void *ptr);
+};
+
+int npFriendStorageInit(paf::memory::HeapAllocator *heap);
+int npFriendStorageTerm(void);
+int npFriendImporterInit(paf::memory::HeapAllocator *heap);
+int npFriendImporterTerm(void);
+int npFriendListSetAllocator(const NpFriendAllocator *allocator);
 int shellAppStateMarkForeground(void);		/* flags the foreground application's slot (0x81244B62) */
 int shellThemeApplyPending(void);		/* the theme left to apply, /CONFIG/THEME (0x81005834) */
 
