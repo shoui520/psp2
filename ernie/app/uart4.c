@@ -233,6 +233,13 @@ UART4_INTERRUPT void uart4ErrorInterrupt(void)
 }
 
 #if CHIP_RL78
+/* USS-1002 asks serialGetMode for the mode (its mode byte holds bit fields) */
+#if SOURCE_0104
+#define UART4_MODE	serialGetMode()
+#else
+#define UART4_MODE	serial.mode
+#endif
+
 /*
  * The slim models' UART4 is the serial port (the fat models' UART3): a byte received restarts
  * the frame's timeout, and the end of a send is event 0x0002 of flag 3.
@@ -253,11 +260,11 @@ UART4_INTERRUPT void uart4ReceiveInterrupt(void)
 	if ((uart4.rxWrite + 1 & uart4.rxMask) != uart4.rxRead) {
 		uart4.rxBuffer[uart4.rxWrite] = data;
 		uart4.rxWrite = uart4.rxWrite + 1 & uart4.rxMask;
-		if (serial.mode == 3) {
+		if (UART4_MODE == 3) {
 			if (p->timeout.flgid != 0)
 				timerStart(p->timeout.timer, p->timeout.timeout);
 #if FW_SINCE(0x01030511)
-		} else if (serial.mode == 1)
+		} else if (UART4_MODE == 1)
 #else
 		} else	/* 0x01030505: in any other mode */
 #endif
@@ -273,11 +280,11 @@ UART4_INTERRUPT void uart4SendInterrupt(void)
 		SDR20 = p->txBuffer[p->txRead];
 		p->txRead = p->txRead + 1 & p->txMask;
 #if FW_SINCE(0x01030511)
-	} else if (serial.mode == 1)
+	} else if (UART4_MODE == 1)
 #else
 	} else	/* 0x01030505: in any mode */
 #endif
-		task2SetFlag(3, 2);
+		task2ISetFlag(2);
 }
 #else
 UART4_INTERRUPT void uart4ReceiveInterrupt(void)
