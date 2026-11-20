@@ -64,6 +64,11 @@ extern unsigned char powerSdOn(void);
 extern unsigned char powerSdOff(void);
 extern unsigned char powerMultiCnOn(void);
 extern unsigned char powerMultiCnOff(void);
+#if BOARD_USS1001 && SOURCE_0104	/* battery.h's BATTERY_GAUGE */
+/* the slim's 0x0105: the Elmo's register 0xaa bit 15, which the battery's gauge switches */
+extern unsigned char powerRegAA15On(void);
+extern unsigned char powerRegAA15Off(void);
+#endif
 extern void powerAccTimer(void);
 extern void powerSdTimer(void);
 extern void powerSeqInit(void);

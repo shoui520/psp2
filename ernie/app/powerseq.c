@@ -971,6 +971,38 @@ unsigned char powerMultiCnOff(void)
 	return result;
 }
 
+#if BATTERY_GAUGE
+unsigned char powerRegAA15On(void)
+{
+	unsigned char result;
+	unsigned int mask;
+
+	mask = elmoRegAA | 0x8000;
+	elmoCommand[0] = 0xaa;
+	elmoCommand[1] = ((unsigned char *)&mask)[1];
+	elmoCommand[2] = (unsigned char)mask;
+	result = elmoWrite(elmoCommand, 3);
+	if (result == 0)
+		elmoRegAA = mask;
+	return result;
+}
+
+unsigned char powerRegAA15Off(void)
+{
+	unsigned char result;
+	unsigned int mask;
+
+	mask = elmoRegAA & 0x7fff;
+	elmoCommand[0] = 0xaa;
+	elmoCommand[1] = ((unsigned char *)&mask)[1];
+	elmoCommand[2] = (unsigned char)mask;
+	result = elmoWrite(elmoCommand, 3);
+	if (result == 0)
+		elmoRegAA = mask;
+	return result;
+}
+#endif
+
 #if BOARD_DOL1001
 /* none on the PS TV */
 static unsigned char powerA1On(void)

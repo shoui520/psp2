@@ -39,6 +39,9 @@ struct InputMeasure {
 };
 
 extern struct InputMeasure inputMeasure;
+/* the battery's calibration scans on timer 3 (batteryCalibrate) */
+extern void inputScanMode1(unsigned int interval);
+extern void inputScanMode2(unsigned int interval);
 #endif
 
 /* ticks of the scan left before each request */

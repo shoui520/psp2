@@ -62,13 +62,15 @@ def run(prog, args, cwd):
 	return messages
 
 
-# the RL78's DIVWU: RA78K0R puts a NOP after it, Sony's assembler put none (lib/rl78/ludiv.asm)
-DIVWU = re.compile(r'^(\s+)divwu(\s*;.*)?$', re.I | re.M)
+# the RL78's DIVHU and DIVWU: RA78K0R puts a NOP after each, Sony's assembler put none
+# (lib/rl78/cudiv.asm, ludiv.asm)
+DIVIDE = re.compile(r'^(\s+)div(h|w)u(\s*;.*)?$', re.I | re.M)
+DIVIDE_BYTES = {'h': '03H', 'w': '0BH'}
 
 
 def cc(src, asm, chip, options=(), includes=(), defines=()):
 	"""Compile src to the assembly source asm (no object, no debug information); a DIVWU is
-	written out as its bytes."""
+	written out as its bytes, and so is a DIVHU."""
 	tc, asm = toolchain(), Path(asm)
 	asm.parent.mkdir(parents=True, exist_ok=True)
 	args = [f'-c{chip}', f'-y{win(tc / "Dev78k0r")}', f'-i{win(tc / "Inc78k0r")}',
@@ -76,8 +78,10 @@ def cc(src, asm, chip, options=(), includes=(), defines=()):
 		'-no', '-ng', f'-a{win(asm)}', f'-t{win(asm.parent)}', *options, win(src)]
 	messages = run('cc78k0r', args, asm.parent)
 	text = asm.read_text(encoding='latin-1')
-	if DIVWU.search(text):
-		asm.write_text(DIVWU.sub(r'\1DB\t0CEH, 0FBH, 0BH\t; DIVWU', text), encoding='latin-1')
+	if DIVIDE.search(text):
+		text = DIVIDE.sub(lambda m: f'{m.group(1)}DB\t0CEH, 0FBH, '
+				  f'{DIVIDE_BYTES[m.group(2).lower()]}\t; DIV{m.group(2).upper()}U', text)
+		asm.write_text(text, encoding='latin-1')
 	return messages
 
 
