@@ -18,6 +18,7 @@
 #if BOARD_USS1001
 #include "pfdl.h"
 #include "fsl.h"
+#include "kernel.h"
 #endif
 
 #define FLASH_BLOCKS		8
@@ -25,20 +26,52 @@
 #define FLASH_BASE		0x1000		/* the data flash's near address */
 
 #if BOARD_USS1001
+/* USS-1002 opens the library once, at the first request, and the NVS closes it at the end of
+   each of its operations (flashClose) */
+#define FLASH_KEEP_OPEN		(SOURCE_0104)
+
+#if FLASH_KEEP_OPEN
+/* opens the library unless it is open (DFLEN set) */
+static unsigned char flashOpen(void)
+{
+	pfdl_descriptor_t descriptor;
+	unsigned char result;
+
+	result = PFDL_OK;
+	if (!DFLCTL.0) {	/* DFLEN */
+		descriptor.fx_MHz_u08 = 8;
+		descriptor.wide_voltage_mode_u08 = 1;
+		result = PFDL_Open(&descriptor);
+	}
+	return result;
+}
+
+void flashClose(void)
+{
+	PFDL_Close();
+}
+#endif
+
 /* erases a block of the NVS when its blank check fails: tried 5 more times while the erase fails */
 unsigned char nvsErase(unsigned char block)
 {
 	unsigned char result;
 	pfdl_request_t request;
+#if !FLASH_KEEP_OPEN
 	pfdl_descriptor_t descriptor;
+#endif
 	unsigned char retry;
 
 	retry = 5;
 	if (block >= FLASH_BLOCKS)
 		return 0x23;
+#if FLASH_KEEP_OPEN
+	result = flashOpen();
+#else
 	descriptor.fx_MHz_u08 = 8;
 	descriptor.wide_voltage_mode_u08 = 1;
 	result = PFDL_Open(&descriptor);
+#endif
 	if (result != PFDL_OK)
 		return result;
 	do {
@@ -57,12 +90,18 @@ unsigned char nvsErase(unsigned char block)
 			request.index_u16 = block;
 			result = PFDL_Execute(&request);
 			while (result == PFDL_BUSY) {
+#if FLASH_KEEP_OPEN
+				dly_tsk(1);
+#else
 				NOP();
+#endif
 				result = PFDL_Handler();
 			}
 		}
 	} while (retry-- != 0 && result == PFDL_ERR_ERASE);
+#if !FLASH_KEEP_OPEN
 	PFDL_Close();
+#endif
 	return result;
 }
 
@@ -77,11 +116,17 @@ unsigned char flashWrite(unsigned char *address, void *data, unsigned char size,
 {
 	unsigned char result;
 	pfdl_request_t request;
+#if !FLASH_KEEP_OPEN
 	pfdl_descriptor_t descriptor;
+#endif
 
+#if FLASH_KEEP_OPEN
+	result = flashOpen();
+#else
 	descriptor.fx_MHz_u08 = 8;
 	descriptor.wide_voltage_mode_u08 = 1;
 	result = PFDL_Open(&descriptor);
+#endif
 	if (result != PFDL_OK)
 		return result;
 	request.index_u16 = (unsigned int)address - FLASH_BASE;
@@ -101,7 +146,9 @@ unsigned char flashWrite(unsigned char *address, void *data, unsigned char size,
 			result = PFDL_Handler();
 		}
 	}
+#if !FLASH_KEEP_OPEN
 	PFDL_Close();
+#endif
 	return result;
 }
 
@@ -110,11 +157,17 @@ unsigned char flashRead(void *buffer, unsigned char *address, unsigned char size
 {
 	unsigned char result;
 	pfdl_request_t request;
+#if !FLASH_KEEP_OPEN
 	pfdl_descriptor_t descriptor;
+#endif
 
+#if FLASH_KEEP_OPEN
+	result = flashOpen();
+#else
 	descriptor.fx_MHz_u08 = 8;
 	descriptor.wide_voltage_mode_u08 = 1;
 	result = PFDL_Open(&descriptor);
+#endif
 	if (result != PFDL_OK)
 		return result;
 	request.data_pu08 = (unsigned char __near *)buffer;
@@ -122,7 +175,9 @@ unsigned char flashRead(void *buffer, unsigned char *address, unsigned char size
 	request.index_u16 = (unsigned int)address - FLASH_BASE;
 	request.bytecount_u16 = size;
 	result = PFDL_Execute(&request);
+#if !FLASH_KEEP_OPEN
 	PFDL_Close();
+#endif
 	return result;
 }
 

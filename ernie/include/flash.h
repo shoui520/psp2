@@ -6,6 +6,7 @@
 #ifndef ERNIE_FLASH_H
 #define ERNIE_FLASH_H
 
+extern void flashClose(void);	/* USS-1002's */
 extern unsigned char nvsErase(unsigned char block);
 extern unsigned char nvsFlashWrite(unsigned char *address, void *data, unsigned char words,
 				   char verify);
