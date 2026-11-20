@@ -149,7 +149,7 @@ int ComponentAuth::GetMiniTicketBase64Str(char **ticket, SceSize *size)
 	}
 
 	miniSize = 0;
-	ret = SceNpCommon_85503FA6(data, dataSize, NULL, &miniSize);
+	ret = SceNpCommon_85503FA6((const unsigned char *)data, dataSize, NULL, &miniSize);
 	if (ret < 0) {
 		activityFree(data);
 		return convertError(ret);
@@ -159,7 +159,7 @@ int ComponentAuth::GetMiniTicketBase64Str(char **ticket, SceSize *size)
 		activityFree(data);
 		return NP_ACTIVITY_ERROR_OUT_OF_MEMORY;
 	}
-	ret = SceNpCommon_85503FA6(data, dataSize, mini, &miniSize);
+	ret = SceNpCommon_85503FA6((const unsigned char *)data, dataSize, mini, &miniSize);
 	if (ret < 0) {
 		activityFree(data);
 		activityFree(mini);

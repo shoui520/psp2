@@ -34,12 +34,20 @@ struct NpXmlParser;
 typedef int (*NpXmlCallback)(struct NpXmlParser *parser, int event, SceUInt32 depth,
 			     SceUInt32 index, const char *name, const char *value, void *arg);
 
-/* a streaming XML parser, its state kept between the pieces of a document */
+/*
+ * The parser's value buffer. SceNpCommon's holds 256 bytes; a module that builds the parser
+ * itself from xml.c (SceNpActivityNet: 1025) defines its own size for all its files.
+ */
+#ifndef NP_XML_VALUE_SIZE
+#define NP_XML_VALUE_SIZE	256
+#endif
+
+/* a streaming XML parser, its state kept between the pieces of a document (offsets: SceNpCommon's) */
 typedef struct NpXmlParser {
 	const NpXmlSchema *schema;	/* 0x000 */
 	char name[256];			/* 0x004: the element or attribute name */
-	char value[256];		/* 0x104: the attribute value or element text */
-	char pending[8];		/* 0x204: a character split between two pieces */
+	char value[NP_XML_VALUE_SIZE];	/* 0x104: the attribute value or element text */
+	char pending[6];		/* 0x204: a character split between two pieces */
 	SceSize pendingLength;		/* 0x20C */
 	SceSize pendingNeeded;		/* 0x210: the bytes it still needs */
 	SceUInt32 depth;		/* 0x214 */
@@ -97,10 +105,12 @@ int SceNpCommon_C2BF5C1F(char *dst, SceSize dstSize, const SceUInt8 *src, SceSiz
 int SceNpCommon_389F8C14(char *dst, SceSize dstSize, const SceUInt8 *src, SceSize srcSize,
 			 SceSize *required);
 
+/* ticket.c: a ticket's 4.0 field of type 0x3012 (the mini ticket), copied out with its size;
+   without data only *dataSize */
+int SceNpCommon_85503FA6(const unsigned char *ticket, SceSize ticketSize, void *data,
+			 SceSize *dataSize);
+
 /* base64.c */
-/* the mini ticket made from a ticket: its size in *miniSize, and the mini ticket when miniTicket
-   is not NULL */
-int SceNpCommon_85503FA6(const void *ticket, SceSize size, void *miniTicket, SceSize *miniSize);
 SceSize sceNpCommonBase64Encode(const SceUInt8 *src, char *dst, SceSize size);
 /* base64.c: decodes size bytes of base64 text into dst; the decoded size, or an error */
 int SceNpCommon_FB1F70F3(const char *src, SceSize size, SceUInt8 *dst, SceSize dstSize);

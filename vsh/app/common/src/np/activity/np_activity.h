@@ -106,6 +106,10 @@ extern "C" {
 #define NP_ACTIVITY_ERROR_NOT_SUPPORTED		((int)0x80558909)	/* the request needs the other protocol */
 #define NP_ACTIVITY_ERROR_INVALID_STATIC_RESOURCE ((int)0x8055890A)	/* its signature does not match */
 #define NP_ACTIVITY_ERROR_CHAT_RESTRICTED	((int)0x8055890C)
+/* an account status list's owner, whose statuses the user may not see (permission-code 1, or a
+ * code the reply does not know), or whose permission the network does not give (99) */
+#define NP_ACTIVITY_ERROR_PERMISSION_DENIED	((int)0x8055890D)
+#define NP_ACTIVITY_ERROR_PERMISSION_NOT_AVAILABLE ((int)0x8055890E)
 #define NP_ACTIVITY_ERROR_SERVER_ERROR		((int)0x8055890F)	/* HTTP status not 200, or an
 								   authentication the library cannot answer */
 /* the static resource's service status */

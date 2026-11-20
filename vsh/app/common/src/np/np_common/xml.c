@@ -6,6 +6,12 @@
 
 #include "np_common_internal.h"
 
+/*
+ * SceNpActivityNet builds the parser alone from this file (NP_XML_PARSER_ONLY), with its own
+ * value buffer; the character it unescapes comes from SceNpCommon's export.
+ */
+#ifndef NP_XML_PARSER_ONLY
+
 /* 5: a control character, 6: a C1 or other character XML does not allow; 0: allowed */
 static const SceUInt8 s_xmlInvalidCharacter[256] = {
 	5, 5, 5, 5, 5, 5, 5, 5, 5, 0, 0, 5, 5, 0, 5, 5,
@@ -432,6 +438,8 @@ out:
 		*used = consumed;
 	return ret;
 }
+
+#endif /* !NP_XML_PARSER_ONLY */
 
 int SceNpCommon_650D111B(NpXmlParser *parser, const NpXmlSchema *schema,
 			 NpXmlCallback callback, void *arg)
