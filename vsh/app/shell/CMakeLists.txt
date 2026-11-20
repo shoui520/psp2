@@ -196,6 +196,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	bgdl_api.cpp
 	bgdl_mtp.cpp
 	bgdl_path.cpp
+	bgdl_util.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
