@@ -477,6 +477,37 @@ public:
 	Getter m_getter;
 };
 
+/* a network setting's field: its key, and the registry key giving its value in each network
+   setting (a category with the setting's number, and a name) and the value's type (0x814148AC) */
+struct ConsoleInfoCiNetField {
+	ConsoleInfoCiNetField(ConsoleInfoCiKey key, const char *category, const char *name,
+			      const char *type)
+		: m_key(key), m_category(category), m_name(name), m_type(type)
+	{
+	}
+
+	ConsoleInfoCiKey m_key;
+	const char *m_category;
+	const char *m_name;
+	const char *m_type;
+};
+
+/* PLACEHOLDER names: the "ci" record's fields by kind, each kind's lookup by index and the
+   values taken before the record is written (console_info_ci_fields.cpp) */
+ConsoleInfoCiField *consoleInfoCiGetIntField(unsigned int index);
+ConsoleInfoCiField *consoleInfoCiGetInt64Field(unsigned int index);
+ConsoleInfoCiField *consoleInfoCiGetStringField(unsigned int index);
+void consoleInfoCiUpdateCounts(void);
+void consoleInfoCiUpdateStrings(void);
+void consoleInfoCiUpdateHdmiMonitor(void);
+
+/* PLACEHOLDER names: the Int fields the live area's and the media databases give (0x810F1924,
+   0x810F1BDC, 0x810F1E28, 0x810F1E44) */
+int consoleInfoCiGetLsdbCount(ConsoleInfoCiIntField *field, int *value);
+int consoleInfoCiGetVideoCount(ConsoleInfoCiIntField *field, int *value);
+int consoleInfoCiGetMusicCount(ConsoleInfoCiIntField *field, int *value);
+int consoleInfoCiGetPhotoCount(ConsoleInfoCiIntField *field, int *value);
+
 /* PLACEHOLDER: the console's activation data (an ini file's MID, DID, AID, OID, SVR and DIG
    entries), read by 0x81361B3E; the struct's and its fields' names are ours */
 struct ShellActivationInfo {
