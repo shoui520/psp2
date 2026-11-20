@@ -5,6 +5,7 @@
 #pragma rtos_task task5
 
 #include "ernie.h"
+#include "battery.h"
 #include "charge.h"
 #include "config.h"
 #include "cookie.h"
@@ -21,7 +22,6 @@
 #if BOARD_DOL1001
 #include "thermal.h"
 #endif
-
 
 unsigned int powerDevicePending;
 #if !FW_SINCE(0x00090206)
@@ -69,6 +69,12 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x0100);
 				batteryRequestEvent();
 			}
+#if BATTERY_GAUGE
+			if (ptn & 0x0040) {
+				clr_flg(4, ~0x0040);
+				batteryUpdate();
+			}
+#endif
 			if (ptn & 0x0020) {
 				clr_flg(4, ~0x0020);
 				thermalPoll();
@@ -96,7 +102,9 @@ void task5(VP_INT exinf)
 	}
 #else
 	for (;;) {
-#if FW_SINCE(0x01000306)
+#if BATTERY_GAUGE
+		ercd = wai_flg(4, 0xffeb, TWF_ORW, &ptn);	/* the gauge's update (0x0040) */
+#elif FW_SINCE(0x01000306)
 		ercd = wai_flg(4, 0xffab, TWF_ORW, &ptn);
 #elif LED_REQUESTS
 		ercd = wai_flg(4, 0xffa3, TWF_ORW, &ptn);
@@ -125,6 +133,12 @@ void task5(VP_INT exinf)
 				clr_flg(4, ~0x0100);
 				batteryRequestEvent();
 			}
+#if BATTERY_GAUGE
+			if (ptn & 0x0040) {
+				clr_flg(4, ~0x0040);
+				batteryUpdate();
+			}
+#endif
 			if (ptn & 0x0020) {
 				clr_flg(4, ~0x0020);
 				chargeUpdate();
@@ -203,46 +217,62 @@ void task5(VP_INT exinf)
 #endif
 }
 
+/* the posts end in an explicit return, which keeps the call a call; USS-1002's fall off it, so
+   it becomes a branch */
+#define POST_RETURN		(!(BOARD_USS1001 && SOURCE_0104))
+
 void powerJobPostOn(void)
 {
 	powerJobState.id = POWER_JOB_ON;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 void powerJobPostResume(void)
 {
 	powerJobState.id = POWER_JOB_RESUME;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 void powerJobPostOff(void)
 {
 	powerJobState.id = POWER_JOB_OFF;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 void powerJobPostSuspend(void)
 {
 	powerJobState.id = POWER_JOB_SUSPEND;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 void powerJobPostShutdown(void)
 {
 	powerJobState.id = POWER_JOB_SHUTDOWN;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 void powerJobPostCut(void)
 {
 	powerJobState.id = POWER_JOB_CUT;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 
 #if FW_SINCE(0x00090009)	/* not in 0x00080504 */
@@ -250,7 +280,9 @@ void powerJobPostOffEnd(void)
 {
 	powerJobState.id = POWER_JOB_OFF_END;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 #endif
 
@@ -262,7 +294,9 @@ void powerJobPostReset(void)
 #if FW_SINCE(0x01000306)
 	powerJobState.id = POWER_JOB_RESET;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 #else
 	chargeLedSetCharging(0);
 #endif
@@ -274,14 +308,18 @@ void powerJobPostUpdate(void)
 {
 	powerJobState.id = POWER_JOB_UPDATE;
 	task5SetFlag(4, 0x0002);
+#if POST_RETURN
 	return;
+#endif
 }
 #endif
 
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002 has no caller */
 unsigned char elmoVersion0(void)
 {
 	return deviceVersions.elmo[0];
 }
+#endif
 
 void powerDeviceSetPending(unsigned int bits)
 {

@@ -466,7 +466,8 @@ void batteryResume(int woken)
 	}
 }
 
-void batterySuspend(void)
+/* a state other than the resume entered (powerSequence): the rest ends at the next current */
+void batteryStateDone(void)
 {
 	batteryGauge.flags.bits.resumed = 1;
 }

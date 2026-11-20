@@ -109,6 +109,7 @@ extern void stateEvent(struct StateEvent *event);
 #if SOURCE_0103
 extern void stateGetRecord(unsigned char *out);
 extern void stateGetHistory(unsigned char *out);
+extern int stateModeAtLevel9(union PowerRequest *request);
 #endif
 extern void stateSetWakeMask(unsigned long mask);
 extern unsigned long stateGetWakeMask(void);

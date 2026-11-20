@@ -9,6 +9,7 @@
 
 #include "ernie.h"
 #include "board.h"
+#include "battery.h"
 #include "chip.h"
 #include "clockout.h"
 #include "config.h"
@@ -153,13 +154,22 @@ void powerSequence(void)
 		if ((powerState & STATE_OFF) || (powerState & STATE_SUSPEND) ||
 		    (powerState & STATE_RESUME))
 			;
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BATTERY_GAUGE
 		if (powerState & STATE_OFF)	/* DOL-1002: and the off once more, also for nothing */
 			;
 #endif
 #endif
 		stateEnter();
 		task2SetFlag(3, 0x1000);
+#if BATTERY_GAUGE
+		switch (powerState) {
+		case STATE_RESUME:
+			break;
+		default:
+			batteryStateDone();
+			break;
+		}
+#endif
 #if SOURCE_0103 && !BOARD_DOL1001
 		/* USS-1001: the power LED told of an off or a suspend */
 		switch (powerState) {
@@ -413,6 +423,9 @@ unsigned char powerResume(union PowerRequest *request)
 	sleepFactorSet20(0);
 #endif
 	stateWakeupFactor.word = request->word;
+#if BATTERY_GAUGE
+	batteryResume(stateModeAtLevel9(&stateWakeupFactor));
+#endif
 #if SOURCE_0103
 	/* USS-1001: the input's two state requests around the parts, the DTC and the host's
 	   requests opened with the link */
@@ -426,7 +439,12 @@ unsigned char powerResume(union PowerRequest *request)
 	task6SetFlag(6, 0x80);
 	POWER_WAIT_KEEP(6, 5);
 	powerPendingClear(6);
-#if BOARD_DOL1002
+#if BOARD_USS1001 && SOURCE_0104
+	/* USS-1002: on every mode, a longer wait */
+	POWER_WAIT_CLEAR(5);
+	powerJobPostResume();
+	POWER_WAIT_KEEP(5, 0x4b);
+#elif BOARD_DOL1002
 	/* DOL-1002: not on mode 4, and a longer wait */
 	if (request->bits.mode != 0x04) {
 		POWER_WAIT_CLEAR(5);
@@ -1010,7 +1028,7 @@ unsigned char powerReset(void)
 #endif
 	SPIDEV_POWER2 = 0;
 	dly_tsk(3);
-#if !BOARD_DOL1002	/* DOL-1002 leaves it low */
+#if !BOARD_DOL1002 && !BATTERY_GAUGE	/* DOL-1002 and USS-1002 leave it low */
 	SPIDEV_POWER2 = 1;
 #endif
 	if (powerPendingGet() != 0)
@@ -1080,7 +1098,7 @@ unsigned char powerUpdate(void)
 	POWER_WAIT(2, 0x1f4);
 	powerPendingClear(2);
 	POWER_WAIT_CLEAR(4);
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BATTERY_GAUGE
 	hostCloseRequests(5);
 #else
 	if (hostCloseRequests(5) != 0)
@@ -1091,7 +1109,7 @@ unsigned char powerUpdate(void)
 	powerPendingClear(4);
 	if (powerPendingGet() != 0)
 		;
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BATTERY_GAUGE
 	return result;
 #else
 	return waitResult;

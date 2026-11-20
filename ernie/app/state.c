@@ -87,9 +87,6 @@ static int stateUpdateHandle(struct StateEvent *event);
 #endif
 static unsigned int stateEventsOf(unsigned int state);
 static unsigned int stateNextOf(void);
-#if SOURCE_0103
-static int stateModeAtLevel9(union PowerRequest *request);
-#endif
 
 /* the input's part of a state: on the slim task 3 runs it (inputStateRun) */
 #if SOURCE_0103
@@ -1276,8 +1273,9 @@ int stateSerialLock(void)
 }
 
 #if SOURCE_0103
-/* the slim's: the modes a resume keeps at battery level 9 */
-static int stateModeAtLevel9(union PowerRequest *request)
+/* the slim's: the modes a resume keeps at battery level 9 (USS-1002's powerResume tells the
+   gauge) */
+int stateModeAtLevel9(union PowerRequest *request)
 {
 #if STATE_WAKE_HIGH
 	/* DOL-1002's */

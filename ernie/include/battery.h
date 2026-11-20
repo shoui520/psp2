@@ -130,7 +130,7 @@ extern unsigned char batterySaveRecord(void);
 extern unsigned char batteryIsCharging(void);
 extern unsigned char batteryOffsetsValid(void);
 extern void batteryResume(int woken);
-extern void batterySuspend(void);
+extern void batteryStateDone(void);
 extern void batteryGetOffsets(struct BatteryOffsets *offsets);
 extern void batteryGetCalibration(struct BatteryCalibration *calibration);
 extern void batteryClearFull(void);

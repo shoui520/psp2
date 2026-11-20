@@ -411,10 +411,12 @@ unsigned char serialAuthCommand(unsigned char *data)
 }
 #endif
 
+#if !(BOARD_USS1001 && SOURCE_0104)	/* not in USS-1002 */
 unsigned char serialAuthState(void)
 {
 	return serialAuth.state;
 }
+#endif
 
 unsigned char serialAuthUnlocked0(void)
 {
