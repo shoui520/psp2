@@ -12,8 +12,6 @@
 #include "src/livespace_db/lsdb_keys.h"
 
 /* libmtp's background copy (mtp_bgcopy_if.cpp); libmtp.h does not declare them yet */
-struct MtpBgCopyProgress;
-struct MtpBgCopyRunParam;
 extern "C" {
 int SceLibMtp_E3EBABB4(SceUInt32 id, MtpBgCopyProgress *progress);
 int SceLibMtp_981E220E(SceUInt32 id);

@@ -211,6 +211,8 @@ int consoleInfoFileWriteFlag(int index, SceUInt8 value, int mode);
 /* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file read (0x81376CF8, 0x81376D16) */
 int consoleInfoFileReadInt(int index, SceUInt32 *value, int mode);
 int consoleInfoFileReadInt64(int index, SceUInt64 *value, int mode);
+/* PLACEHOLDER: a 32-bit value of ur0:ci/file added to (0x81376D36; the mode is not used) */
+int consoleInfoFileAddInt(int index, SceUInt32 value, int mode);
 /* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file written (0x81376B3C, 0x81376B74) */
 int consoleInfoFileWriteInt(int index, SceUInt32 value, int mode);
 int consoleInfoFileWriteInt64(int index, SceUInt64 value, int mode);

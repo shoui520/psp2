@@ -1,0 +1,28 @@
+/*
+ * eseparam.hpp: a task's param file (eseparam.cpp; 0.990's records name its open, read, write
+ * and commit). Made, it holds the param files' lock until it is destroyed. The class name is
+ * ours (PLACEHOLDER); its functions are not written yet.
+ */
+#ifndef _ESECRON_ESEPARAM_HPP
+#define _ESECRON_ESEPARAM_HPP
+
+#include <stddef.h>
+#include <scetypes.h>
+#include <std/string>
+
+class EseParam {
+public:
+	EseParam(SceUInt32 id);					/* (0x811222B6) */
+	~EseParam();						/* (0x811222E4) */
+	int open(void);						/* (0x81122304) for reading */
+	int openWrite(void);					/* (0x81122844) PLACEHOLDER name */
+	int read(int key, paf::string *value);			/* (0x811225B6) */
+	int commit(void);					/* (0x81122F8E) */
+	int write(int key, const void *value, SceSize size);	/* (0x811231E8) */
+
+	SceUInt32 id;
+	int result;			/* 0x80103A11 until it is opened */
+	int reserved[4];		/* PLACEHOLDER: named with eseparam.cpp */
+};
+
+#endif

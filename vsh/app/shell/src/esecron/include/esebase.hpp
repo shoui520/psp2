@@ -69,6 +69,17 @@ public:
 		other.m_end = buf;
 	}
 
+	/* the path set to a copy of src; left as it was when no memory is left */
+	void assign(const char *src)
+	{
+		SceSize len = sce_paf_strlen(src);
+
+		if (Reserve(len + 1) == 0) {
+			sce_paf_memcpy(m_begin, src, len);
+			m_begin[len] = '\0';
+		}
+	}
+
 	int initialize(const char *device, int taskId, bool work);	/* (0x810FCD10) */
 	int initialize(int taskId, SceSize size);			/* (0x810FCF36) */
 	char *SetName(const char *name);				/* (0x810FCFEE) */

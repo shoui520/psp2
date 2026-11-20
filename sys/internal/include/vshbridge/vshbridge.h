@@ -52,6 +52,8 @@ SceUInt32 vshRtcSetAlarmTick(const struct SceRtcTick *tick, int flag);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);
+/* through the stub library's wrapper (0x81417D9C in SceShell): the 0x700-byte bgdl queue */
+SceUInt32 vshAppMgrBgdlSetQueueStatus(const void *status);
 SceUInt32 vshDisplaySetInvertColors(int head, int enable);
 
 /* the display's viewport, through the stub library's wrappers (they pass the conf's size) */
