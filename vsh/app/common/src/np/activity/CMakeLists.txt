@@ -1,4 +1,15 @@
-# generated skeleton (T2): stub bodies, original module/export/import tables
-psp2_module(vs0_sys_external_np_activity KIND user SKELETON SOURCES
-	np_activity.c
+enable_language(CXX)
+# SceNpActivityNet (vs0:sys/external/np_activity.suprx), built by Sony with SNC 3.57 in C++: the
+# activity feed's network requests. Its files are Sony's where the library's checks name them
+# (W:\Build\J01509657\vsh\app\common\src\np\activity\...).
+psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
+	np_activity.cpp
+	abstract_context_manager.cpp
+	context_manager.cpp
+	common/activity_object.cpp
+	common/activity_lock_manager.cpp
+	common/activity_memory.cpp
+	common/activity_mutex.cpp
+	common/activity_simple_lock.cpp
+	component/abstract_component.cpp
 )

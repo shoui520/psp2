@@ -83,6 +83,22 @@ typedef struct NpActivityRequest {
 extern "C" {
 #endif
 
+/* the library's own errors (no SDK header names them; the names are ours) */
+#define NP_ACTIVITY_ERROR_INVALID_ARGUMENT	((int)0x80558901)
+#define NP_ACTIVITY_ERROR_INVALID_STATE		((int)0x80558902)
+#define NP_ACTIVITY_ERROR_ABORTED		((int)0x80558903)
+#define NP_ACTIVITY_ERROR_OUT_OF_MEMORY		((int)0x80558904)
+#define NP_ACTIVITY_ERROR_NOT_INITIALIZED	((int)0x80558907)
+#define NP_ACTIVITY_ERROR_ALREADY_INITIALIZED	((int)0x80558908)
+#define NP_ACTIVITY_ERROR_INVALID_PARAMETER	((int)0x80558923)	/* a component's argument */
+
+/* sets up the library: its heap from the caller's functions, or in the caller's memory block */
+int SceNpActivityNet_348268A0(void *(*mallocFunc)(SceSize size), void (*freeFunc)(void *ptr));
+int SceNpActivityNet_5C07C7E5(SceSize size, void *memblock);
+int SceNpActivityNet_2351D75A(void);
+/* *initialized 1 while the library is set up */
+int SceNpActivityNet_26B9D4A3(int *initialized);
+
 /* opens and closes the connection to the activity service */
 int SceNpActivityNet_F8049E41(int *connection);
 int SceNpActivityNet_72346DA7(int connection);
@@ -91,6 +107,10 @@ int SceNpActivityNet_72346DA7(int connection);
 int SceNpActivityNet_BE4CC2D1(int connection, int mode);
 int SceNpActivityNet_F3586055(int connection);
 int SceNpActivityNet_35B49CA4(int connection);
+
+/* the signed-in user's account setting, or the setting of the user with the NP ID */
+int SceNpActivityNet_48B5F8B3(int connection, const SceNpId *npId, void *setting);
+int SceNpActivityNet_42CFC0DE(int connection, const SceNpId *npId, const void *setting);
 
 /* a user's online ID (size bytes, with its NUL) from their NP ID, and the reverse */
 int SceNpActivityNet_319CB4F4(const SceNpId *npId, char *onlineId, SceSize size);
@@ -129,6 +149,10 @@ int SceNpActivityNet_99C86ADA(int connection, int flags, const NpActivityRange *
 /* lists the statuses of count owners, at most *max each */
 int SceNpActivityNet_2000C248(int connection, int flags, const NpActivityOwner *owners,
 	SceSize count, int *max, NpActivityStatusList *lists);
+/* the same, only the statuses of count titles */
+int SceNpActivityNet_363CB63A(int connection, int flags, const NpActivityOwner *owners,
+	SceSize count, const char (*titleIds)[NP_ACTIVITY_TITLE_ID_SIZE], int *max,
+	NpActivityStatusList *lists);
 
 /* what the network added since a time: all 0 when nothing changed */
 typedef struct NpActivityUpdates {
@@ -176,6 +200,17 @@ typedef struct NpActivityStatusInfo {
 	SceUInt32 panelBgColor;		/* 0: none given */
 	char panelUrl[257];
 } NpActivityStatusInfo;			/* 3576 bytes */
+
+/* NpActivityStatusInfo::type of a status whose action URL names a user (pspr:show?jid=...) */
+#define NP_ACTIVITY_STATUS_TYPE_USER	5
+
+/* reads the details of count statuses into infos */
+int SceNpActivityNet_AD0B8FDD(int connection, int flags, const NpActivityStatusKey *keys,
+	SceSize count, const int *locale, void *work, NpActivityDetailState *state,
+	NpActivityStatusInfo *infos);
+
+/* the online ID of the user a status's action URL names, as SceNpActivityNet_C27E99D3 */
+int SceNpActivityNet_FE7F0822(const NpActivityStatusInfo *info, char *onlineId, SceSize size);
 
 typedef struct NpActivityStatusDetail {
 	NpActivityStatusKey key;
