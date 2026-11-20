@@ -216,9 +216,11 @@ int shellThemeApplyPending(void);		/* the theme left to apply, /CONFIG/THEME (0x
 /* the modules loaded at start: libshellsvc, libcdlg and the system modules (0x81002E0C) */
 int shellModulesLoad(void);
 
-/* the application event server's listeners added (0x810E17DE) and removed (0x810E17E6) */
+/* the application event server's listeners added (0x810E17DE) and removed (0x810E17E6), and an
+   event sent to them (0x810E17EE) */
 int shellAppEventServerAddListener(int event, ShellEventCallback callback, void *arg);
 int shellAppEventServerRemoveListener(int event, ShellEventCallback callback, void *arg);
+int shellAppEventServerSend(int event, const void *data, SceSize size);
 
 /* the exclusive function manager's MTP mode (0x810E22CA, 0x810E2392) and the memory it lends
    (0x810E239C, 0x810E23D8, 0x810E2458, 0x810E2414) */
