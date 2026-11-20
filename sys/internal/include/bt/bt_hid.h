@@ -17,7 +17,7 @@ typedef struct _SceBtHidRequest {
 } SceBtHidRequest;
 
 _Static_assert(sizeof(SceBtHidRequest) == 24, "SceBtHidRequest");
-_Static_assert(_Alignof(SceBtHidRequest) == 4, "SceBtHidRequest alignment");
+_Static_assert(__alignof__(SceBtHidRequest) == 4, "SceBtHidRequest alignment");
 _Static_assert(offsetof(SceBtHidRequest, next) == 0, "SceBtHidRequest.next");
 _Static_assert(offsetof(SceBtHidRequest, prev) == 4, "SceBtHidRequest.prev");
 _Static_assert(offsetof(SceBtHidRequest, type) == 8, "SceBtHidRequest.type");

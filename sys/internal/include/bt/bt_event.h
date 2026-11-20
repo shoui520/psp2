@@ -19,7 +19,7 @@ typedef struct SceBtEvent {
 } SceBtEvent;
 
 _Static_assert(sizeof(SceBtEvent) == 16, "SceBtEvent");
-_Static_assert(_Alignof(SceBtEvent) == 4, "SceBtEvent alignment");
+_Static_assert(__alignof__(SceBtEvent) == 4, "SceBtEvent alignment");
 _Static_assert(offsetof(SceBtEvent, data) == 0, "SceBtEvent.data");
 _Static_assert(offsetof(SceBtEvent, id) == 0, "SceBtEvent.id");
 _Static_assert(offsetof(SceBtEvent, status) == 1, "SceBtEvent.status");

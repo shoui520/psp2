@@ -181,6 +181,11 @@ public:
 
 /* PLACEHOLDER: a flag of ur0:ci/file read (0x81376CDE) */
 int consoleInfoFileReadFlag(int index, SceUInt8 *value, int mode);
+/* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file read (0x81376CF8, 0x81376D16) */
+int consoleInfoFileReadInt(int index, SceUInt32 *value, int mode);
+int consoleInfoFileReadInt64(int index, SceUInt64 *value, int mode);
+/* PLACEHOLDER: a registry key's text set and not empty (0x810F4B26) */
+bool consoleInfoRegKeyIsSet(const char *category, const char *name);
 
 /* the "mi" record's process folder */
 #define CONSOLE_INFO_MI_PROC_DIR	"ur0:ci/mi/proc"
@@ -314,6 +319,187 @@ public:
 	int m_list[5];		/* PLACEHOLDER: the object at +0x420 (0x810F588C) */
 	bool m_changed;		/* PLACEHOLDER: +0x434 */
 };
+
+/*
+ * PLACEHOLDER names: the "ci" record's fields. Each field has a key (its number in the record's
+ * "d<n>=" lines, the size and kind of its value, whether it is written even when unchanged and
+ * the line's mode) and a reader that gets its value now; its value is kept in a values file
+ * between records, and a line is written when it changed.
+ */
+
+/* the key (0x810F444C); its number is 0 where the platform does not report the field */
+class ConsoleInfoCiKey {
+public:
+	ConsoleInfoCiKey(SceUInt16 id, char type, SceUInt16 size, bool force, SceUInt8 lineMode,
+			 SceUInt8 platforms);
+	~ConsoleInfoCiKey();	/* (0x814098DC: an empty function the build shares) */
+
+	/* the field's "d<n>=" format, the value printed in decimal or hexadecimal (0x810F4490) */
+	paf::string GetFormat(const char *decimal, const char *hex) const;
+
+	SceUInt16 m_id;
+	SceUInt16 m_size;
+	char m_type;		/* CONSOLE_INFO_CI_TYPE_* */
+	bool m_force;
+	SceUInt8 m_lineMode;
+};
+
+/* the kinds of value a key gives: a time is printed as a date */
+#define CONSOLE_INFO_CI_TYPE_TIME	'T'
+
+/* the number of the field whose empty value is not written */
+#define CONSOLE_INFO_CI_ID_EMPTY_SKIPPED	436
+
+/* a values file of the "ci" record: one record per field */
+class ConsoleInfoCiValueFile {
+public:
+	int Write(const void *value);	/* (0x810F4416) */
+	int Read(void *value);		/* (0x810F442C) */
+};
+
+/* a text value: its length and its text */
+struct ConsoleInfoCiString {
+	SceUInt16 length;
+	char text[1020];
+};
+
+class ConsoleInfoCiField {
+public:
+	ConsoleInfoCiField(ConsoleInfoCiKey key)
+		: m_key(key)
+	{
+	}
+	virtual ~ConsoleInfoCiField();	/* (0x81414890, 0x81414954) */
+
+	/* the value now, into the values file */
+	virtual int Read(ConsoleInfoCiValueFile *file) = 0;
+	/* the field's line, when its value changed since the previous values */
+	virtual int Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiValueFile *cur,
+			  ConsoleInfoCi *ci) = 0;
+
+	ConsoleInfoCiKey m_key;
+};
+
+class ConsoleInfoCiIntField : public ConsoleInfoCiField {
+public:
+	typedef int (*Getter)(ConsoleInfoCiIntField *field, int *value);
+
+	ConsoleInfoCiIntField(int index, Getter getter, ConsoleInfoCiKey key)	/* (0x814148D0) */
+		: ConsoleInfoCiField(key), m_index(index), m_getter(getter)
+	{
+	}
+
+	virtual int Read(ConsoleInfoCiValueFile *file);			/* (0x810E8440) */
+	virtual int Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiValueFile *cur,
+			  ConsoleInfoCi *ci);				/* (0x810E8482) */
+
+	int m_index;
+	Getter m_getter;
+};
+
+/* a value of ur0:ci/file a field gives: its size, its unit, its index and the most it is
+   given as (0: no limit) */
+struct ConsoleInfoCiFileValue {
+	ConsoleInfoCiFileValue(int kind, int unit, int index, SceUInt32 max, SceUInt8 flags)	/* (0x81414A7C) */
+		: kind(kind), unit(unit), index(index), max(max), flags(flags)
+	{
+	}
+
+	int kind;		/* CONSOLE_INFO_CI_FILE_* */
+	int unit;		/* CONSOLE_INFO_CI_UNIT_* */
+	int index;
+	SceUInt32 max;
+	SceUInt8 flags;
+};
+
+#define CONSOLE_INFO_CI_FILE_FLAG	0
+#define CONSOLE_INFO_CI_FILE_INT	1
+#define CONSOLE_INFO_CI_FILE_INT64	2
+
+/* a time kept in microseconds and given in seconds */
+#define CONSOLE_INFO_CI_UNIT_USEC	2
+
+class ConsoleInfoCiFileIntField : public ConsoleInfoCiIntField {
+public:
+	ConsoleInfoCiFileIntField(int index, ConsoleInfoCiKey key, ConsoleInfoCiFileValue value)	/* (0x81414A90) */
+		: ConsoleInfoCiIntField(index, Get, key), m_value(value)
+	{
+	}
+
+	static int Get(ConsoleInfoCiIntField *field, int *value);	/* (0x810E9AFA) */
+
+	ConsoleInfoCiFileValue m_value;
+};
+
+class ConsoleInfoCiInt64Field : public ConsoleInfoCiField {
+public:
+	typedef int (*Getter)(ConsoleInfoCiInt64Field *field, SceInt64 *value);
+
+	ConsoleInfoCiInt64Field(int index, Getter getter, ConsoleInfoCiKey key)	/* (0x81414974) */
+		: ConsoleInfoCiField(key), m_index(index), m_getter(getter)
+	{
+	}
+
+	virtual int Read(ConsoleInfoCiValueFile *file);			/* (0x810E8544) */
+	virtual int Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiValueFile *cur,
+			  ConsoleInfoCi *ci);				/* (0x810E858A) */
+
+	int m_index;
+	Getter m_getter;
+};
+
+class ConsoleInfoCiFileInt64Field : public ConsoleInfoCiInt64Field {
+public:
+	ConsoleInfoCiFileInt64Field(int index, ConsoleInfoCiKey key, ConsoleInfoCiFileValue value)	/* (0x81414B60) */
+		: ConsoleInfoCiInt64Field(index, Get, key), m_value(value)
+	{
+	}
+
+	static int Get(ConsoleInfoCiInt64Field *field, SceInt64 *value);	/* (0x810E9BA6) */
+
+	ConsoleInfoCiFileValue m_value;
+};
+
+class ConsoleInfoCiStringField : public ConsoleInfoCiField {
+public:
+	typedef int (*Getter)(ConsoleInfoCiStringField *field, ConsoleInfoCiString *value);
+
+	ConsoleInfoCiStringField(int index, Getter getter, ConsoleInfoCiKey key)	/* (0x814149F8) */
+		: ConsoleInfoCiField(key), m_index(index), m_getter(getter)
+	{
+	}
+
+	virtual int Read(ConsoleInfoCiValueFile *file);			/* (0x810E8762) */
+	virtual int Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiValueFile *cur,
+			  ConsoleInfoCi *ci);				/* (0x810E87BC) */
+
+	int m_index;
+	Getter m_getter;
+};
+
+/* PLACEHOLDER: the console's activation data (an ini file's MID, DID, AID, OID, SVR and DIG
+   entries), read by 0x81361B3E; the struct's and its fields' names are ours */
+struct ShellActivationInfo {
+	ShellActivationInfo()
+		: aid(0), svr(0), hasDigest(false)
+	{
+	}
+	__attribute__((always_inline)) ~ShellActivationInfo()
+	{
+	}
+
+	paf::string mid;
+	paf::string did;
+	SceUInt64 aid;
+	paf::string oid;
+	int svr;
+	bool hasDigest;
+};
+
+int shellActivationRead(ShellActivationInfo *info, int mode);
+
+/* a device's size and free space (0x8137E308) */
+int gameIoGetDeviceSpace(const char *device, SceUInt64 *maxSize, SceUInt64 *freeSize);
 
 /* PLACEHOLDER: an NP account ID is in the registry (/CONFIG/NP account_id; 0x81329E20) */
 int shellNpHasAccountId(int *has);

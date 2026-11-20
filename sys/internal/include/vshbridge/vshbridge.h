@@ -35,6 +35,11 @@ SceUInt32 vshPowerSetPowerSwMode(int mode);
 SceUInt32 vshPowerSetStandbyButtonPushTime(int time);
 SceUInt32 vshPowerGetWakeupFactor(void);
 SceUInt32 vshSysconIsIduMode(void);
+int vshSysconClearTemperatureLog(int kind);
+/* through the stub library's wrapper, which passes the size's word (0x81417CF8 in SceShell) */
+SceUInt32 vshSblSsGetNvsData(int area, void *buf, SceSize size);
+struct SceMsInfo;
+SceUInt32 vshMsifGetMsInfo(struct SceMsInfo *info);
 SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len);
 SceUInt32 vshRtcIsSecureAlarmed(void);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);

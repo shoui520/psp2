@@ -8,6 +8,10 @@
 #include <stdint.h>
 #include <sysmem/suspend.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef void (*PowerWirelessCallback)(int enabled, void *argument);
 typedef void (*PowerProcessFlagsCallback)(SceUID pid, uint32_t flags, void *argument);
 /* name unknown: told when a process goes idle (elapsed ticks) or wakes (0) */
@@ -157,3 +161,7 @@ int scePowerUnregisterCallback(SceUID callback);
 
 uint32_t scePowerGetArmClockFrequency(void);
 uint32_t scePowerGetBusClockFrequency(void);
+
+#ifdef __cplusplus
+}
+#endif

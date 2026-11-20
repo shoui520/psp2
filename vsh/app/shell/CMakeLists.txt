@@ -177,6 +177,7 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	console_info/console_info_mi_proc.cpp
 	console_info/console_info_proc_file.cpp
 	console_info/console_info_ns.cpp
+	console_info/console_info_ci_fields.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"

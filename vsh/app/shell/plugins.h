@@ -155,6 +155,42 @@ private:
 	int m_code;
 };
 
+/* PLACEHOLDER: the network's country (MCC) and operator (MNC) codes, each with its number of
+   digits, and its name (methods out of line: 0x8124E28C, 0x8124E2B4, 0x813DD154, 0x813DD158) */
+class TelephonyPlmn {
+public:
+	TelephonyPlmn();
+	virtual ~TelephonyPlmn();
+
+	int GetMcc();
+	int GetMnc();
+
+private:
+	SceUInt16 m_mcc;
+	SceUInt16 m_mccDigits;
+	SceUInt8 m_reserved0[6];
+	SceUInt16 m_mnc;
+	SceUInt16 m_mncDigits;
+	SceUInt8 m_reserved1[6];
+	paf::string m_name;
+};
+
+/* PLACEHOLDER: the network operator's names (methods out of line: 0x8124E070, 0x8124E094,
+   0x811FE00C, an accessor the build shares) */
+class TelephonyOperator {
+public:
+	TelephonyOperator();
+	~TelephonyOperator();
+
+	const paf::string &GetName();
+
+private:
+	const void *m_vtable;
+	paf::string m_name;
+	paf::string m_shortName;
+	paf::string m_reserved;
+};
+
 struct TelephonyModem;
 struct TelephonyModemVtable {
 	void *reserved0[7];
@@ -174,7 +210,12 @@ struct TelephonyService;
 struct TelephonyServiceVtable {
 	void *reserved0[7];
 	TelephonyResult (*getDataEnabled)(TelephonyService *self, SceUInt8 *enabled);	/* +0x1C */
-	void *reserved1[41];
+	void *reserved1[16];
+	TelephonyResult (*getPlmn)(TelephonyService *self, TelephonyPlmn *plmn);	/* +0x60 */
+	void *reserved4[7];
+	/* PLACEHOLDER name */
+	TelephonyResult (*getOperator)(TelephonyService *self, TelephonyOperator *op);	/* +0x80 */
+	void *reserved3[16];
 	TelephonyResult (*getRestriction)(TelephonyService *self, int *restriction);	/* +0xC4 */
 	void *reserved2[27];
 	TelephonyResult (*getStatus)(TelephonyService *self, int type, int *status);	/* +0x134 */

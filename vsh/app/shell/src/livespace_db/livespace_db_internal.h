@@ -1165,6 +1165,11 @@ public:
 extern "C" {
 AppInfoSClient *SceLsdb_D322A870(AppInfoSClient *client);
 AppInfoSClient *SceLsdb_56D8DCF0(AppInfoSClient *client);
+/* the pages counted, and the icons of the pages (or of a folder, by its id) from the page
+   given (PLACEHOLDER descriptions) */
+int SceLsdb_94128795(AppInfoSClient *client);
+int SceLsdb_D74AC354(AppInfoSClient *client, int pageNo, unsigned int count,
+	LsdbPageIconLists *pages);
 int SceLsdb_DB73BD7E(AppInfoSClient *client, const paf::string *titleId, unsigned int key,
 	LsdbValue *value);
 /* the bits of mask in an application's integer parameter set to value's */

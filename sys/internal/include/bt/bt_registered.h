@@ -21,7 +21,7 @@ typedef struct SceBtRegisteredInfo {
 } SceBtRegisteredInfo;
 
 _Static_assert(sizeof(SceBtRegisteredInfo) == 256, "SceBtRegisteredInfo");
-_Static_assert(_Alignof(SceBtRegisteredInfo) == 4,
+_Static_assert(__alignof__(SceBtRegisteredInfo) == 4,
 	       "SceBtRegisteredInfo alignment");
 _Static_assert(offsetof(SceBtRegisteredInfo, mac) == 0, "registered MAC");
 _Static_assert(offsetof(SceBtRegisteredInfo, macUpper) == 6,

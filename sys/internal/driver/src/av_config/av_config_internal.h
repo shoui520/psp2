@@ -1,5 +1,6 @@
 #pragma once
 #include <hdmi/hdmi.h>
+#include <av_config/av_config.h>
 
 #include <scetypes.h>
 #include <sysmem/spinlock.h>
@@ -10,23 +11,6 @@ typedef struct AvConfigScalingRatio {
 } AvConfigScalingRatio;
 
 _Static_assert(sizeof(AvConfigScalingRatio) == 8, "HDMI scaling ratio size");
-
-typedef struct AvConfigMonitorInfo {
-	SceSize size;
-	SceUInt8 productId[10];
-	SceUInt8 blockCount;
-	char monitorName[13];
-	SceUInt8 reserved[3];
-	SceUInt8 padding;
-	struct {
-		SceUInt32 supported;
-		SceUInt32 reserved;
-	} videoFormats[4];
-} AvConfigMonitorInfo;
-
-_Static_assert(sizeof(AvConfigMonitorInfo) == 64, "monitor information size");
-_Static_assert(__builtin_offsetof(AvConfigMonitorInfo, videoFormats) == 32,
-	       "monitor video formats");
 
 typedef struct AvConfigAvlsTimer {
 	SceKernelSpinlock lock;

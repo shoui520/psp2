@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <bt/bt_hid.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int sceBtAvrcpReadVolume(uint64_t deviceAddress);
 int sceBtAvrcpSendButton(uint64_t deviceAddress, int button);
 int sceBtAvrcpSendVolume(uint64_t deviceAddress, int volume);
@@ -57,3 +61,7 @@ int sceBtStartInquiry(void);
 int sceBtStopAudio(uint64_t deviceAddress, int profile);
 int sceBtStopInquiry(void);
 int sceBtUnregisterCallback(SceUID callback);
+
+#ifdef __cplusplus
+}
+#endif

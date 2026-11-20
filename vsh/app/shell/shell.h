@@ -318,6 +318,8 @@ int shellNetCtlHandle_C15740E9(int *out);
 int shellNetCtlHandle_CCF30B92(int a0);
 /* also the table's 0x54 entry (one function for both) */
 int shellNetCtlGetIfStat(int device, SceNetCtlIfStat *ifstat);
+/* PLACEHOLDER name: shellNetCtlGetIfStat's body, the service started or not (0x8120EFAA) */
+int shellNetGetIfStat(int device, SceNetCtlIfStat *ifstat);
 int shellNetCtlHandle_777FE4C2(int a0, int a1);
 int shellNetCtlHandle_8B2FEFAA(int a0, int a1);
 

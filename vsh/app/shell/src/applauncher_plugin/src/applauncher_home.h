@@ -1385,15 +1385,12 @@ extern "C" int SceLsdb_DE0DA538(AppInfoSClient *client, const paf::string *title
    shared blob, the result in *pResult */
 extern "C" paf::common::SharedPtr<DbBlob> SceLsdb_41185388(AppInfoSClient *client,
 	const SceInt64 *rowid, int *pResult);
-/* PLACEHOLDER: livespace_db's exports, not declared there yet: the pages counted, and the pages'
-   rows read from the page given */
-extern "C" int SceLsdb_94128795(AppInfoSClient *client);
+/* PLACEHOLDER: livespace_db's export, not declared there yet: the pages' rows read from the
+   page given */
 extern "C" int SceLsdb_8FAD093B(AppInfoSClient *client, int pageNo, unsigned int flags,
 	LsdbPageList *pages);
-/* PLACEHOLDER: livespace_db's exports, not declared there yet: the icons of the pages (or of
-   a folder, by its id) from the page given, and an icon's fields written, its image given */
-extern "C" int SceLsdb_D74AC354(AppInfoSClient *client, int pageNo, unsigned int count,
-	LsdbPageIconLists *pages);
+/* PLACEHOLDER: livespace_db's export, not declared there yet: an icon's fields written, its
+   image given */
 /* PLACEHOLDER: livespace_db's export, not declared there yet: the pages' rows written */
 extern "C" int SceLsdb_6769DBC4(AppInfoSClient *client, paf::vector<int> *pageNos,
 	LsdbPageList *pages);
