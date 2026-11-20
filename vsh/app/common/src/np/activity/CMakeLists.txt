@@ -14,5 +14,8 @@ psp2_module(${PSP2_TARGET} KIND user COMPILER snc PARTIAL SOURCES
 	component/abstract_component.cpp
 	component/auth/component_auth.cpp
 	component/context/component_context.cpp
+	component/http/component_http.cpp
+	component/command_executor/component_command_executor.cpp
+	component/utility/component_utility.cpp
 	common/activity_debug.cpp
 )

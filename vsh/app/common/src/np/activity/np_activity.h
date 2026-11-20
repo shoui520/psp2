@@ -92,11 +92,14 @@ extern "C" {
 #define NP_ACTIVITY_ERROR_INVALID_STATE		((int)0x80558902)
 #define NP_ACTIVITY_ERROR_ABORTED		((int)0x80558903)
 #define NP_ACTIVITY_ERROR_OUT_OF_MEMORY		((int)0x80558904)
+#define NP_ACTIVITY_ERROR_INVALID_TIME		((int)0x80558906)	/* a time the RTC cannot convert */
 #define NP_ACTIVITY_ERROR_NOT_INITIALIZED	((int)0x80558907)
 #define NP_ACTIVITY_ERROR_ALREADY_INITIALIZED	((int)0x80558908)
 #define NP_ACTIVITY_ERROR_NOT_SUPPORTED		((int)0x80558909)	/* the request needs the other protocol */
 #define NP_ACTIVITY_ERROR_INVALID_STATIC_RESOURCE ((int)0x8055890A)	/* its signature does not match */
 #define NP_ACTIVITY_ERROR_CHAT_RESTRICTED	((int)0x8055890C)
+#define NP_ACTIVITY_ERROR_SERVER_ERROR		((int)0x8055890F)	/* HTTP status not 200, or an
+								   authentication the library cannot answer */
 /* the static resource's service status */
 #define NP_ACTIVITY_ERROR_SERVICE_MAINTENANCE	((int)0x80558920)
 #define NP_ACTIVITY_ERROR_SERVICE_END		((int)0x80558921)

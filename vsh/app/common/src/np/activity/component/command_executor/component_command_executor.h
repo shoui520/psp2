@@ -18,6 +18,9 @@ public:
 	virtual int Execute();
 	virtual int ClearCommand();
 
+private:
+	int receive();
+
 	AbstractCommand *m_command;
 };
 

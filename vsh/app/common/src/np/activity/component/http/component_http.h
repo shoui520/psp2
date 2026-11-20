@@ -29,20 +29,25 @@ public:
 		m_secureProtocol = protocol;
 	}
 	virtual int Open(int protocol, const char *userAgent, const char *host,
-		int port, int keepAlive);
+		SceUShort16 port, int keepAlive);
 	virtual int Close();
-	virtual int SendRequest(int method, const char *url, int reserved, const void *postData,
-		SceSize size);
-	virtual int ReadData(void *buffer, SceSize size, SceSize *read);
+	virtual int SendRequest(int method, const char *url, SceSize urlLength,
+		const void *postData, SceSize size);
+	virtual int ReadData(void **data, SceSize *size, int *done);
 	virtual int EndRequest();
 	virtual SceUInt64 GetContentLength()
 	{
 		return m_contentLength;
 	}
 
-	void *m_buffer;			/* SetBuffer's */
+private:
+	int getRequestId();
+	void setRequestId(int requestId);
+
+public:
+	void *m_buffer;			/* SetBuffer's: the response is read into it */
 	SceSize m_bufferSize;
-	int m_protocol;			/* Open's: UTILITY_PROTOCOL_* */
+	int m_protocol;			/* Open's: UTILITY_PROTOCOL_*, NONE when closed */
 	int m_secureProtocol;		/* the context's OpenConnection mode */
 	int m_templateId;
 	int m_connectionId;

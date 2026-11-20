@@ -102,6 +102,8 @@ int SceNpCommon_389F8C14(char *dst, SceSize dstSize, const SceUInt8 *src, SceSiz
    is not NULL */
 int SceNpCommon_85503FA6(const void *ticket, SceSize size, void *miniTicket, SceSize *miniSize);
 SceSize sceNpCommonBase64Encode(const SceUInt8 *src, char *dst, SceSize size);
+/* base64.c: decodes size bytes of base64 text into dst; the decoded size, or an error */
+int SceNpCommon_FB1F70F3(const char *src, SceSize size, SceUInt8 *dst, SceSize dstSize);
 
 /* util.c: the system time in microseconds, always 0 */
 int SceNpCommon_55F7FCF7(SceUInt64 *time);

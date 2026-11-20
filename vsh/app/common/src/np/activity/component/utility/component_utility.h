@@ -33,6 +33,7 @@
 /* GetProtocol's results */
 #define UTILITY_PROTOCOL_HTTP		0
 #define UTILITY_PROTOCOL_HTTPS		1
+#define UTILITY_PROTOCOL_NONE		2	/* the HTTP component's, while closed */
 
 /* the cached host's lifetime: 10 minutes, in microseconds */
 #define UTILITY_HOST_LIFETIME		600000000ULL
@@ -59,7 +60,7 @@ public:
 	virtual const char *GetHost(int api);
 	virtual const char *GetPath(int api);
 	virtual const char *GetNpEnvironment();
-	virtual int GetPort(int protocol);
+	virtual SceUShort16 GetPort(int protocol);
 	virtual const char *GetTrophyIconBaseUrl()
 	{
 		return s_trophyIconBaseUrl;
