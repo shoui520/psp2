@@ -224,7 +224,7 @@ int shellAppEventServerSend(int event, const void *data, SceSize size);
 
 /* the exclusive function manager's MTP mode (0x810E22CA, 0x810E2392) and the memory it lends
    (0x810E239C, 0x810E23D8, 0x810E2458, 0x810E2414) */
-int shellExclusiveFuncMtpBegin(SceUID thread);
+int shellExclusiveFuncMtpBegin(void (*callback)(int event));
 int shellExclusiveFuncMtpEnd(void);
 void *shellExclusiveFuncMtpMalloc(SceSize size);
 void *shellExclusiveFuncMtpMemalign(SceSize alignment, SceSize size);

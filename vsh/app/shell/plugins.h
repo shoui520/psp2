@@ -43,6 +43,7 @@ enum {
 
 /* power_manage_plugin's functions */
 enum {
+	POWER_MANAGE_PLUGIN_FUNC_ADD_EXCLUSIVE_CALLBACK = 0,	/* PLACEHOLDER: the exclusive function manager's power callback */
 	POWER_MANAGE_PLUGIN_FUNC_ADD_CALLBACK	= 2,	/* PLACEHOLDER names: a function called on */
 	POWER_MANAGE_PLUGIN_FUNC_REMOVE_CALLBACK = 3,	/* the power events, and no longer */
 	POWER_MANAGE_PLUGIN_FUNC_GAME_HOLD	= 5,	/* PLACEHOLDER names: the game plugin at work, */

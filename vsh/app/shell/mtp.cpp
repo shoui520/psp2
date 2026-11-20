@@ -32,7 +32,7 @@ using namespace paf;
 /* the exclusive functions the MTP server works under: the mode entered and left, and the
    memory it takes from the exclusive function manager's block */
 struct ShellExclusiveFuncMtp {
-	int (*begin)(SceUID thread);
+	int (*begin)(void (*callback)(int event));
 	int (*end)(void);
 	void *(*malloc)(SceSize size);
 	void *(*memalign)(SceSize alignment, SceSize size);
