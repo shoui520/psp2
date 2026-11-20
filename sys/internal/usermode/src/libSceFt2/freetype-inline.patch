@@ -1,0 +1,257 @@
+--- a/src/truetype/ttinterp.c
++++ b/src/truetype/ttinterp.c
+@@ -21,6 +21,11 @@
+ 
+ 
+ #include <ft2build.h>
++
++  /* build, not Sony's: the instructions Sony's GCC kept out of TT_RunIns, and those it */
++  /* put in, where ours decides otherwise                                                */
++#define FT_NOINLINE        __attribute__(( noinline ))
++#define FT_ALWAYS_INLINE   inline __attribute__(( always_inline ))
+ #include FT_INTERNAL_DEBUG_H
+ #include FT_INTERNAL_CALC_H
+ #include FT_TRIGONOMETRY_H
+@@ -784,7 +789,7 @@
+ 
+   /* documentation is in ttinterp.h */
+ 
+-  FT_EXPORT_DEF( TT_ExecContext )
++  FT_EXPORT_DEF( TT_ExecContext ) __attribute__(( always_inline ))
+   TT_New_Context( TT_Driver  driver )
+   {
+     TT_ExecContext  exec;
+@@ -2820,7 +2825,7 @@
+   /*************************************************************************/
+ 
+ 
+-  static FT_Bool
++  static FT_NOINLINE FT_Bool
+   Ins_SxVTL( EXEC_OP_ FT_UShort       aIdx1,
+                       FT_UShort       aIdx2,
+                       FT_Int          aOpc,
+@@ -4406,7 +4411,7 @@
+   /* Opcode range: 0x26                                                    */
+   /* Stack:        int32? --> StkElt                                       */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_MINDEX( INS_ARG )
+   {
+     FT_Long  L, K;
+@@ -4498,7 +4503,7 @@
+   /* Opcode range: 0x58                                                    */
+   /* Stack:        StkElt -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_IF( INS_ARG )
+   {
+     FT_Int   nIfs;
+@@ -4541,7 +4546,7 @@
+   /* Opcode range: 0x1B                                                    */
+   /* Stack:        -->                                                     */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_ELSE( INS_ARG )
+   {
+     FT_Int  nIfs;
+@@ -4585,7 +4590,7 @@
+   /* Opcode range: 0x2C                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_FDEF( INS_ARG )
+   {
+     FT_ULong       n;
+@@ -4659,7 +4664,7 @@
+   /* Opcode range: 0x2D                                                    */
+   /* Stack:        -->                                                     */
+   /*                                                                       */
+-  static void
++  static FT_ALWAYS_INLINE void
+   Ins_ENDF( INS_ARG )
+   {
+     TT_CallRec*  pRec;
+@@ -4707,7 +4712,7 @@
+   /* Opcode range: 0x2B                                                    */
+   /* Stack:        uint32? -->                                             */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_CALL( INS_ARG )
+   {
+     FT_ULong       F;
+@@ -4785,7 +4790,7 @@
+   /* Opcode range: 0x2A                                                    */
+   /* Stack:        uint32? Eint16? -->                                     */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_LOOPCALL( INS_ARG )
+   {
+     FT_ULong       F;
+@@ -4864,7 +4869,7 @@
+   /* Opcode range: 0x89                                                    */
+   /* Stack:        Eint8 -->                                               */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_IDEF( INS_ARG )
+   {
+     TT_DefRecord*  def;
+@@ -5062,7 +5067,7 @@
+   /* XXX: UNDOCUMENTED: Measures from the original glyph must be taken     */
+   /*      along the dual projection vector!                                */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_GC( INS_ARG )
+   {
+     FT_ULong    L;
+@@ -5288,7 +5293,7 @@
+   /* Opcode range: 0x13                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SZP0( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5317,7 +5322,7 @@
+   /* Opcode range: 0x14                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SZP1( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5346,7 +5351,7 @@
+   /* Opcode range: 0x15                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SZP2( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5375,7 +5380,7 @@
+   /* Opcode range: 0x16                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SZPS( INS_ARG )
+   {
+     switch ( (FT_Int)args[0] )
+@@ -5716,7 +5721,7 @@
+   /* Opcode range: 0x32-0x33                                               */
+   /* Stack:        uint32... -->                                           */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SHP( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -5774,7 +5779,7 @@
+   /*               contour in the twilight zone, namely contour number     */
+   /*               zero.                                                   */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SHC( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -5825,7 +5830,7 @@
+   /* Opcode range: 0x36-37                                                 */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_SHZ( INS_ARG )
+   {
+     TT_GlyphZoneRec  zp;
+@@ -6098,7 +6103,7 @@
+   /* Opcode range: 0xC0-0xDF                                               */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_ALWAYS_INLINE void
+   Ins_MDRP( INS_ARG )
+   {
+     FT_UShort   point;
+@@ -6212,7 +6217,7 @@
+   /* Opcode range: 0xE0-0xFF                                               */
+   /* Stack:        int32? uint32 -->                                       */
+   /*                                                                       */
+-  static void
++  static FT_ALWAYS_INLINE void
+   Ins_MIRP( INS_ARG )
+   {
+     FT_UShort   point;
+@@ -6348,7 +6353,7 @@
+   /* Opcode range: 0x3C                                                    */
+   /* Stack:        uint32 uint32... -->                                    */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_ALIGNRP( INS_ARG )
+   {
+     FT_UShort   point;
+@@ -6402,7 +6407,7 @@
+   /* Opcode range: 0x0F                                                    */
+   /* Stack:        5 * uint32 -->                                          */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_ISECT( INS_ARG )
+   {
+     FT_UShort   point,
+@@ -6484,7 +6489,7 @@
+   /* Opcode range: 0x27                                                    */
+   /* Stack:        uint32 uint32 -->                                       */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_ALIGNPTS( INS_ARG )
+   {
+     FT_UShort   p1, p2;
+@@ -6650,7 +6655,7 @@
+   /* Opcode range: 0x29                                                    */
+   /* Stack:        uint32 -->                                              */
+   /*                                                                       */
+-  static void
++  static FT_ALWAYS_INLINE void
+   Ins_UTP( INS_ARG )
+   {
+     FT_UShort  point;
+@@ -6913,7 +6918,7 @@
+   /* Opcode range: 0x5D,0x71,0x72                                          */
+   /* Stack:        uint32 (2 * uint32)... -->                              */
+   /*                                                                       */
+-  static void
++  static FT_NOINLINE void
+   Ins_DELTAP( INS_ARG )
+   {
+     FT_ULong   k, nump;
+@@ -7115,7 +7120,7 @@
+   /* Opcode range: 0x88                                                    */
+   /* Stack:        uint32 --> uint32                                       */
+   /*                                                                       */
+-  static void
++  static FT_ALWAYS_INLINE void
+   Ins_GETINFO( INS_ARG )
+   {
+     FT_Long  K;
+@@ -7143,7 +7148,7 @@
+   }
+ 
+ 
+-  static void
++  static FT_NOINLINE void
+   Ins_UNKNOWN( INS_ARG )
+   {
+     TT_DefRecord*  def   = CUR.IDefs;

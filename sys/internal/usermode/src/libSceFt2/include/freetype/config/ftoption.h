@@ -11,3 +11,10 @@
  */
 #undef FT_CONFIG_OPTION_MAC_FONTS
 #undef FT_CONFIG_OPTION_GUESSING_EMBEDDED_RFORK
+
+/*
+ * SCE: the latin2 auto-hinter is built in. Sony's af_script_classes has five entries
+ * (dummy, latin2, latin, cjk, indic), and af_autofitter_load_glyph takes load flag bit 20
+ * as the request for it.
+ */
+#define FT_OPTION_AUTOFIT2

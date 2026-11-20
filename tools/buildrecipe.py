@@ -7,6 +7,15 @@ DEFAULT_F = ('-fstack-protector-strong', '-ffreestanding', '-fno-builtin', '-fno
              '-fno-optimize-sibling-calls', '-fno-delete-null-pointer-checks',
              '-fno-section-anchors', '-fno-shrink-wrap')
 # FPU options a source sets over the target's -mfpu=neon -mfloat-abi=softfp (half floats: neon-fp16, ieee; libsas: -mfloat-abi=hard)
+# a default option and the options it undoes, where they are not -fX and -fno-X
+UNDONE_BY = {'-ffreestanding': ('-fhosted',),
+             '-fstack-protector-strong': ('-fno-stack-protector', '-fstack-protector', '-fstack-protector-all')}
+
+
+def _negation(option):
+    return '-f' + option[5:] if option.startswith('-fno-') else '-fno-' + option[2:]
+
+
 FPU_OPTIONS = ('-mfpu=', '-mfp16-format=', '-mfloat-abi=')
 DEFAULT_FPU = ('-mfpu=neon', '-mfloat-abi=softfp')
 
@@ -49,12 +58,21 @@ def compile_options(argv):
             includes.append(x)
         elif x in ('-isystem', '-include') and i + 1 < len(argv):
             includes += argv[i:i + 2]
+    # SNC's own options (MODULE_COMPILE_OPTIONS) and the -f options that differ from the
+    # defaults; a default -f option that undoes an earlier one (a source's -fno-builtin
+    # after its module's -fbuiltin) is kept, so the configured order decides
+    def undoes(x):
+        return any(e in UNDONE_BY.get(x, (_negation(x),)) for e in extra)
+    extra = []
+    for x in argv:
+        if (x.startswith('-f') and (x not in DEFAULT_F or undoes(x)) or
+                x.startswith(FPU_OPTIONS) and x not in DEFAULT_FPU or
+                x.startswith('-X') or x == '-Tp'):
+            extra.append(x)
     return dict(defines=[x for x in argv if x.startswith('-D')],
                 includes=includes,
                 opt=opts[-1] if opts else '-O2',
-                extra=[x for x in argv if x.startswith('-f') and x not in DEFAULT_F or
-                       x.startswith(FPU_OPTIONS) and x not in DEFAULT_FPU or
-                       x.startswith('-X') or x == '-Tp'],  # SNC's own options (MODULE_COMPILE_OPTIONS)
+                extra=extra,
                 mode=instruction_mode(argv))
 
 

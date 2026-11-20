@@ -27,13 +27,12 @@ static SceKernelLwMutexWork g_ioMutex;
 static SceInt32 g_ioMutexCreated;
 static Ft2File g_files[FT2_NUM_FILES];
 
-int __sceLibFt2SetLibCHook(void)
+void __sceLibFt2SetLibCHook(void)
 {
 	if (g_ioMutexCreated == 0) {
 		g_ioMutexCreated = 1;
-		return sceKernelCreateLwMutex(&g_ioMutex, "SceLibFt2IoMutex", 0x2000, 0, NULL);
+		sceKernelCreateLwMutex(&g_ioMutex, "SceLibFt2IoMutex", 0x2000, 0, NULL);
 	}
-	return 0;
 }
 
 int __sceLibFt2DoneLibCHook(void)
@@ -124,19 +123,36 @@ static int toLower(int c)
 	return c;
 }
 
+/* fseek without the stream check (fopen's own seek has a stream) */
+static int seekFile(Ft2File *f, long offset, int whence)
+{
+	int pos;
+
+	if (f->mode == 0 || f->fd < 0)
+		return -1;
+	f->pushback = -1;
+	pos = sceIoLseek(f->fd, (SceOff)offset, whence);
+	if (pos < 0)
+		return -1;
+	f->position = pos;
+	f->state &= ~2;
+	return 0;
+}
+
 FILE *fopen(const char *path, const char *mode)
 {
 	Ft2File *f;
 	const char *p;
 	char c;
 	int i, access, flags, openFlags;
-	SceUInt8 param[0x20];
+	SceUInt32 param[8];
 
-	if (mode == NULL || path == NULL)
+	if (path == NULL || mode == NULL)
 		return NULL;
 	sceKernelLockLwMutex(&g_ioMutex, 1, NULL);
-	for (i = 0; g_files[i].mode != 0; i++) {
-		if (i + 1 == FT2_NUM_FILES)
+	/* a free slot: Sony tests the low byte of its mode */
+	for (i = 0; (SceUInt8)g_files[i].mode != 0; ) {
+		if (++i == FT2_NUM_FILES)
 			goto fail;
 	}
 	if (*mode == 0)
@@ -182,27 +198,8 @@ FILE *fopen(const char *path, const char *mode)
 	f->state = 0;
 	f->fd = sceIoOpen(path, openFlags, 0606);
 	f->pushback = -1;
-	if (f->mode & 0x2000) {
-		if (f->mode != 0 && f->fd >= 0) {
-			int pos;
-
-			f->pushback = -1;
-			pos = sceIoLseek(f->fd, 0, SCE_SEEK_END);
-			if (pos >= 0) {
-				f->position = pos;
-				f->state &= ~2;
-			}
-		}
-	} else if (f->mode != 0 && f->fd >= 0) {
-		int pos;
-
-		f->pushback = -1;
-		pos = sceIoLseek(f->fd, 0, SCE_SEEK_SET);
-		if (pos >= 0) {
-			f->position = pos;
-			f->state &= ~2;
-		}
-	}
+	/* append opens at the end */
+	seekFile(f, 0, (f->mode & 0x2000) ? SCE_SEEK_END : SCE_SEEK_SET);
 	if (g_files[i].fd < 0) {
 		g_files[i].mode = 0;
 		return NULL;
@@ -213,8 +210,8 @@ FILE *fopen(const char *path, const char *mode)
 	else
 		f->deviceType = 0x8000;
 	sceClibMemset(param, 0, sizeof(param));
-	*(SceUInt32 *)&param[0xc] = f->deviceType;
-	*(SceUInt32 *)&param[0x14] = 8;
+	param[3] = f->deviceType;
+	param[5] = 8;
 	sceIoIoctl(f->fd, 0x1001, param, sizeof(param), NULL, 0);
 	return (FILE *)f;
 fail:
@@ -278,18 +275,9 @@ size_t fread(void *buf, size_t size, size_t count, FILE *stream)
 
 int fseek(FILE *stream, long offset, int whence)
 {
-	Ft2File *f = (Ft2File *)stream;
-	int pos;
-
-	if (f == NULL || f->mode == 0 || f->fd < 0)
+	if (stream == NULL)
 		return -1;
-	f->pushback = -1;
-	pos = sceIoLseek(f->fd, (SceOff)offset, SCE_SEEK_SET);
-	if (pos < 0)
-		return -1;
-	f->position = pos;
-	f->state &= ~2;
-	return 0;
+	return seekFile((Ft2File *)stream, offset, whence);
 }
 
 int fclose(FILE *stream)
@@ -376,6 +364,29 @@ int strcmp(const char *s1, const char *s2)
 	return c1 - c2;
 }
 
+char *strstr(const char *s1, const char *s2)
+{
+	const char *p1, *p2;
+
+	if (*s2 == '\0')
+		return (char *)s1;
+	for (; *s1 != '\0'; s1++) {
+		if (*s1 != *s2)
+			continue;
+		p1 = s1;
+		p2 = s2;
+		for (;;) {
+			if (*++p2 == '\0')
+				return (char *)s1;
+			if (*++p1 == '\0')
+				return NULL;
+			if (*p1 != *p2)
+				break;
+		}
+	}
+	return NULL;
+}
+
 void *memchr(const void *s, int c, size_t n)
 {
 	const unsigned char *p = s;
@@ -422,8 +433,10 @@ void *memmove(void *dst, const void *src, size_t n)
 				d[i] = s[i];
 		}
 	} else {
-		for (i = 0; i < (int)n; i++)
-			d[i] = s[i];
+		size_t j;
+
+		for (j = 0; j < n; j++)
+			d[j] = s[j];
 	}
 	return dst;
 }
