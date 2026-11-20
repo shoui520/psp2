@@ -169,6 +169,8 @@ psp2_module(vs0_vsh_shell_shell KIND user COMPILER snc PARTIAL SOURCES
 	src/coldboot_plugin/src/coldboot_plugin.cpp
 	src/coldboot_plugin/src/coldboot_interface.cpp
 	src/coldboot_plugin/src/coldboot.cpp
+	console_info/console_info_init.cpp
+	console_info/console_info.cpp
 	shell.c
 )
 target_include_directories(vs0_vsh_shell_shell PRIVATE "${PSP2_SRC}/vsh/paf/include"
