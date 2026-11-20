@@ -19,11 +19,11 @@ int bgdlManagerRemoveFolders(void);				/* 0x81104346 */
 int bgdlManagerDestroy(void);					/* 0x81104474 */
 int bgdlManagerSetPermission(int arg0, int arg1);		/* 0x81104574 */
 int bgdlManagerNotify(int arg0, int arg1);			/* 0x810FD862 */
-int bgdlCountTitleTasks(const char *titleId, int *count);	/* 0x8110B7E2 */
+int bgdlCountTitleTasks(const char *titleId, SceUInt32 *count);	/* 0x8110B7E2 */
 int Bgdl_8110BD6E(void);
 int Bgdl_8110BDC0(void);
 int Bgdl_8110BEC2(void);
-int bgdlCountAppTasks(const char *titleId, int *count);		/* 0x8110BFE4 */
+int bgdlCountAppTasks(const char *titleId, SceUInt32 *count);		/* 0x8110BFE4 */
 int bgdlDeletePrepare(const char *titleId);			/* 0x8110CD86 */
 int Bgdl_8110E400(void);
 int bgdlGetTaskInfo(const char *titleId, BgdlTaskInfo *info);	/* 0x8110E430 */
@@ -52,7 +52,7 @@ BgdlTaskInfo::BgdlTaskInfo()
 	category = 0;
 	reserved0 = false;
 	reserved1 = false;
-	reserved2 = 0;
+	progress = 0;
 	reserved3 = 0;
 	reserved4 = 0;
 	reserved5 = false;
@@ -104,7 +104,7 @@ int gameAppDeletePrepare(const char *titleId)
 /* (0x810FCA78) */
 int shellBgdlCountTitleTasks(const char *titleId)
 {
-	int count = 0;
+	SceUInt32 count = 0;
 
 	bgdlCountTitleTasks(titleId, &count);
 	return count;
@@ -157,7 +157,7 @@ int shellBgdlAddTask(const char *url, int type, int arg2, bool arg3, int arg4, i
 /* (0x810FCB02) */
 int shellBgdlCountAppTasks(const char *titleId)
 {
-	int count = 0;
+	SceUInt32 count = 0;
 
 	bgdlCountAppTasks(titleId, &count);
 	return count;

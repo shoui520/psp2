@@ -11,6 +11,8 @@
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string>
+#include <std/vector>
+#include <std/map>
 #include <thread/thread.h>
 #include <job/job.h>
 #include <file/file.h>
@@ -395,6 +397,7 @@ struct BgdlTaskEntry {
 	int result;
 };
 struct BgdlServerQuery;
+struct LsdbValue;		/* livespace_db_internal.h */
 struct BgdlServerIds;
 struct BgdlContentInfo;
 
@@ -448,6 +451,27 @@ public:
 	int CancelTask(SceUInt32 id);					/* (0x8110ADB0) PLACEHOLDER name */
 	int ReloadTasks(void);						/* (0x8110AEE6) PLACEHOLDER name */
 	int RemoveTasks(bool doneOnly);					/* (0x8110B068) PLACEHOLDER name */
+	/* (0x8110B202) PLACEHOLDER name: the title's waiting tasks of a kind */
+	int FindTitleTasks(paf::vector<BgdlTaskEntry> *list, const paf::string *titleId, int kind);
+	/* (0x8110B8BC) PLACEHOLDER name: the listed tasks of a title counted */
+	int CountTitleSummaries(const paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > *record,
+				const char *titleId, int kind, SceUInt32 flags,
+				paf::vector<BgdlTaskEntry> *list, int *count);
+	/* (0x8110BB9C) PLACEHOLDER name: the listed tasks of a record's title counted */
+	int CountRecordTasks(const paf::common::SharedPtr<paf::map<unsigned int, LsdbValue> > *record,
+			     SceUInt32 flags, paf::vector<BgdlTaskEntry> *list, int *count);
+	/* (0x8110C0C0) PLACEHOLDER name: the tasks of a type (-1: all) listed */
+	int ListTasks(paf::vector<BgdlTaskEntry> *list, int type);
+	int RemoveGameDataTasks(const char *titleId);	/* (0x8110C1EC) PLACEHOLDER name */
+	void FinishInstall(SceUInt32 id, EseTask *task, int *result, class BgdlTaskMark *mark);	/* (0x8110D34E) */
+	int InstallTask(const SceUInt32 *id);	/* (0x8110D722) PLACEHOLDER name */
+	/* (0x8110D7E2) PLACEHOLDER name: the title's waiting tasks described */
+	int GetTitleTaskInfos(const char *titleId, paf::vector<struct BgdlTaskInfo> *infos, SceUInt32 flags,
+			      int type);
+	/* (0x8110E19C) PLACEHOLDER name: the title's waiting tasks installed */
+	int InstallTitleTasks(const char *titleId, int type, struct BgdlTaskInfo *failed, bool *patched);
+	int RemoveTitleTasks(const char *titleId);	/* (0x8110C8B4) PLACEHOLDER name */
+	int RemoveInstalledTitleTasks(const char *titleId);	/* (0x8110CB90) PLACEHOLDER name */
 	int CancelWaitingTask(SceUInt32 id);	/* (0x811078DC) PLACEHOLDER name */
 	/* (0x81107986) PLACEHOLDER name: the tasks of a type (-1: all), *count of them */
 	int GetTaskList(BgdlTaskEntry *list, int *count, int type);

@@ -24,7 +24,7 @@ struct BgdlTaskInfo {
 	int category;			/* 8 or 16, from the task's type */
 	bool reserved0;			/* PLACEHOLDER: only cleared here */
 	bool reserved1;
-	int reserved2;
+	float progress;			/* what the promote dialog's bar shows */
 	int reserved3;
 	int reserved4;
 	bool reserved5;
