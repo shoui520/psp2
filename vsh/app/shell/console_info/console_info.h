@@ -163,6 +163,10 @@ static inline SceUInt64 consoleInfoSwap64(SceUInt64 v)
 /* the size of a record file's path */
 #define CONSOLE_INFO_FILE_PATH_SIZE	64
 
+/* the record files' mode, and how one is opened to be written (SCE_O_*) */
+#define CONSOLE_INFO_FILE_MODE		6
+#define CONSOLE_INFO_FILE_WRITE		(SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC)
+
 /*
  * PLACEHOLDER: a file of fixed-size records under ur0:ci (the console information files'
  * library, 0x813770FC-0x813777B0): its file, its name, the size of its records and its state.
@@ -202,6 +206,9 @@ int consoleInfoFileWriteFlag(int index, SceUInt8 value, int mode);
 /* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file read (0x81376CF8, 0x81376D16) */
 int consoleInfoFileReadInt(int index, SceUInt32 *value, int mode);
 int consoleInfoFileReadInt64(int index, SceUInt64 *value, int mode);
+/* PLACEHOLDER: a 32-bit and a 64-bit value of ur0:ci/file written (0x81376B3C, 0x81376B74) */
+int consoleInfoFileWriteInt(int index, SceUInt32 value, int mode);
+int consoleInfoFileWriteInt64(int index, SceUInt64 value, int mode);
 /* PLACEHOLDER: a registry key's text set and not empty (0x810F4B26) */
 bool consoleInfoRegKeyIsSet(const char *category, const char *name);
 
@@ -365,7 +372,51 @@ public:
 	ConsoleInfoMiEvent m_event;
 };
 
-/* PLACEHOLDER: the "ci" record with an NP account (1080 bytes, 0x810F394C) */
+class ConsoleInfoCi;
+
+/*
+ * PLACEHOLDER: a values file of the "ci" record (16 bytes, 0x810F3AF0): one value of m_size bytes
+ * per field, ur0:temp/ci/ci<size>.dat while the record is made and ur0:ci/prev/ci/ci<size>.dat
+ * once it is committed. Store writes the values now, Compare writes the lines of those changed.
+ */
+class ConsoleInfoCiValueFile {
+public:
+	ConsoleInfoCiValueFile(int size);
+	virtual ~ConsoleInfoCiValueFile();
+
+	virtual int Store() = 0;
+	virtual int Compare(ConsoleInfoCi *ci) = 0;
+
+	int Close();
+	paf::string GetTempPath();
+	int Open(uint32_t flags);
+	int Save();
+	int Load(ConsoleInfoCi *ci);
+	paf::string GetPrevPath();
+	int OpenPrev();
+	int Write(const void *value);	/* (0x810F4416) */
+	int Read(void *value);		/* (0x810F442C) */
+
+	paf::common::SharedPtr<paf::File> m_file;
+	int m_size;
+};
+
+/* PLACEHOLDER: the "ci" record's four values files: 32-bit, 64-bit and text values and the
+   network settings (20 bytes, 0x810F588C) */
+class ConsoleInfoCiFiles {
+public:
+	ConsoleInfoCiFiles();				/* (0x810F588C) */
+	virtual ~ConsoleInfoCiFiles();			/* (0x810F5944) */
+
+	int Store();					/* (0x810F59B8) */
+	int Compare(ConsoleInfoCi *ci);			/* (0x810F59E0) */
+	int Commit();					/* (0x810F5A10) */
+
+	ConsoleInfoCiValueFile *m_files[4];
+};
+
+/* PLACEHOLDER: the "ci" record with an NP account (1080 bytes, 0x810F394C): its values files,
+   and whether the system software changed since the record was last committed */
 class ConsoleInfoCi : public ConsoleInfoRecord {
 public:
 	ConsoleInfoCi(int entrySize);
@@ -373,9 +424,11 @@ public:
 
 	virtual int Write(void *data);
 	virtual int Commit();
+	virtual const Field *GetFields();
+	virtual unsigned int GetFieldCount();
 
-	int m_list[5];		/* PLACEHOLDER: the object at +0x420 (0x810F588C) */
-	bool m_changed;		/* PLACEHOLDER: +0x434 */
+	ConsoleInfoCiFiles m_files;
+	bool m_updated;
 };
 
 /*
@@ -407,13 +460,6 @@ public:
 
 /* the number of the field whose empty value is not written */
 #define CONSOLE_INFO_CI_ID_EMPTY_SKIPPED	436
-
-/* a values file of the "ci" record: one record per field */
-class ConsoleInfoCiValueFile {
-public:
-	int Write(const void *value);	/* (0x810F4416) */
-	int Read(void *value);		/* (0x810F442C) */
-};
 
 /* a text value: its length and its text */
 struct ConsoleInfoCiString {

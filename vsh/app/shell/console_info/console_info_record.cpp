@@ -30,10 +30,6 @@ extern "C" int sceKernelGetOpenPsId(SceKernelOpenPsId *openPsId);
 /* the package whose version the header gives (PLACEHOLDER name) */
 #define CONSOLE_INFO_SPKG_TYPE_SYSTEM	1
 
-/* the entry files' and the time stamp's open mode */
-#define CONSOLE_INFO_FILE_MODE		6
-#define CONSOLE_INFO_FILE_WRITE		(SCE_O_WRONLY | SCE_O_CREAT | SCE_O_TRUNC)
-
 /* the NP account's IDs (0x81555F38), the header line being written (0x81555F58) */
 static char s_header[CONSOLE_INFO_BUFFER_SIZE];
 static SceUInt64 s_accountId[4];

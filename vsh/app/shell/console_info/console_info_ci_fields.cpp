@@ -239,7 +239,7 @@ int ConsoleInfoCiIntField::Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiValu
 
 	if (ret != 0)
 		return ret;
-	if (prev->Read(&prevValue) == 0 && prevValue == value && !ci->m_changed &&
+	if (prev->Read(&prevValue) == 0 && prevValue == value && !ci->m_updated &&
 	    !m_key.m_force)
 		return 0;
 
@@ -276,7 +276,7 @@ int ConsoleInfoCiInt64Field::Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiVa
 
 	if (ret != 0)
 		return ret;
-	if (prev->Read(&prevValue) == 0 && prevValue == value && !ci->m_changed &&
+	if (prev->Read(&prevValue) == 0 && prevValue == value && !ci->m_updated &&
 	    !m_key.m_force)
 		return 0;
 
@@ -331,7 +331,7 @@ int ConsoleInfoCiStringField::Write(ConsoleInfoCiValueFile *prev, ConsoleInfoCiV
 	int force = 0;
 	int prevRet = prev->Read(&s_prevString);
 
-	if (ci->m_changed || m_key.m_force)
+	if (ci->m_updated || m_key.m_force)
 		force = 1;
 	if ((prevRet | force) == 0 &&
 	    sce_paf_memcmp(&s_prevString, &s_curString, sizeof(s_curString)) == 0)
