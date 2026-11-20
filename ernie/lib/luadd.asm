@@ -5,10 +5,11 @@
 
 	NAME	luadd
 
-	PUBLIC	@@luadd
+	PUBLIC	@@luadd, @@lsadd	; the signed one the same
 	EXTRN	@RTARG0, @RTARG2, @RTARG4
 
 @@RTCODE	CSEG	BASE
+@@lsadd:
 @@luadd:
 	ADDW	AX, @RTARG2
 	MOVW	@RTARG2, AX

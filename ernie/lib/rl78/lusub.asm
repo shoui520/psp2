@@ -5,10 +5,11 @@
 
 	NAME	lusub
 
-	PUBLIC	@@lusub
+	PUBLIC	@@lusub, @@lssub	; the signed one the same
 	EXTRN	@RTARG0, @RTARG2, @RTARG4
 
 @@LCODE	CSEG	BASE
+@@lssub:
 @@lusub:
 	PUSH	BC
 	MOVW	BC, AX

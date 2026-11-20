@@ -7,7 +7,7 @@
 	NAME	cstart
 
 	PUBLIC	_cstart, _cstartHalt
-	PUBLIC	_heapUsed, _heapBreak, _heapArea
+	PUBLIC	_errno, _@BRKADR, _@MEMTOP
 	EXTRN	_?R_INIT, _?R_INIS, _?RLINIT, _?DATA, _?DATAL, _?DATS
 	EXTRN	_hdwinit, _main, _kernelStart, _keepRam
 
@@ -51,11 +51,11 @@ _@DATAL:
 @@DATS	DSEG	SADDRP
 _@DATS:
 
-; the C library's memory pool: what is used and the next free byte
+; the C library's errno, and its memory pool's break value and area (the library's names)
 @@HEAP	DSEG	UNITP
-_heapUsed:	DS	2
-_heapBreak:	DS	2
-_heapArea:	DS	32
+_errno:	DS	2
+_@BRKADR:	DS	2
+_@MEMTOP:	DS	32
 
 @@CSTART	CSEG	BASE
 _cstart:
@@ -147,9 +147,9 @@ $ENDIF
 	BNZ	$?coldNext
 ?data:
 	CLRW	AX
-	MOVW	!_heapUsed, AX
-	MOVW	AX, #LOWW(_heapArea)
-	MOVW	!_heapBreak, AX
+	MOVW	!_errno, AX
+	MOVW	AX, #LOWW(_@MEMTOP)
+	MOVW	!_@BRKADR, AX
 	; the initialised data
 	MOV	ES, #HIGHW(_@R_INIT)
 	MOVW	HL, #LOWW(_@R_INIT)

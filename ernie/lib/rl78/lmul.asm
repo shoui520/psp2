@@ -5,10 +5,11 @@
 
 	NAME	lmul
 
-	PUBLIC	@@lumul
+	PUBLIC	@@lumul, @@lsmul	; the signed one the same
 	EXTRN	@RTARG0, @RTARG2, @RTARG4
 
 @@LCODE	CSEG	BASE
+@@lsmul:
 @@lumul:
 	PUSH	DE
 	PUSH	BC

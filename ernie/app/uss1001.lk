@@ -113,6 +113,29 @@ OBJECT	../lib/memmove.asm
 OBJECT	../lib/memcmp.asm
 OBJECT	../lib/memset.asm
 OBJECT	../lib/memset_n.asm
+# 0x0105 (USS-1002): the signed long division and comparison, the float routines (the RL78's
+# forms) and log() with its helpers
+OBJECT	../lib/lsdiv.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/lscmp.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fadd.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fcom1.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom5.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom6.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fmul.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fdiv.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fcmp.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/ftols.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/ftolu.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/lutof.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fmulx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/fdivx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/rl78/lstof.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/log.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom4.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/flog.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fsubx.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom2.asm	IF ERNIE_FW>=0x01050000
+OBJECT	../lib/fcom3.asm	IF ERNIE_FW>=0x01050000
 # the ends of the startup's segments, after everything
 OBJECT	cstartend.asm
 
@@ -250,25 +273,39 @@ SEG	@@FSLCOD
 SEG	@@PFDLCOD
 
 # the startup, the runtime, the interrupts, the C library's functions, then the constants
-AT	0x0e000
+# (0x0105: from 0xdc00, with the signed division and comparison and the float routines)
+AT	0x0dc00	IF ERNIE_FW>=0x01050000
+AT	0x0e000	IF ERNIE_FW<0x01050000
 SEG	@@CSTART
 SEG	@@RTCODE	../lib/lucom.asm
-SEG	@@LCODE		../lib/rl78/lmul.asm ../lib/rl78/cudiv.asm ../lib/rl78/ludiv.asm ../lib/rl78/curem.asm
+SEG	@@LCODE		../lib/rl78/lmul.asm ../lib/rl78/cudiv.asm
+SEG	@@RTCODE	../lib/lsdiv.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODE		../lib/rl78/ludiv.asm ../lib/rl78/curem.asm
 SEG	@@RTCODE	../lib/luadd.asm
 SEG	@@LCODE		../lib/rl78/lusub.asm
-SEG	@@RTCODE	../lib/lulsh.asm ../lib/lursh.asm ../lib/iscmp.asm ../lib/luband.asm ../lib/lubor.asm ../lib/lubxor.asm
+SEG	@@RTCODE	../lib/lulsh.asm ../lib/lursh.asm ../lib/iscmp.asm
+SEG	@@RTCODE	../lib/lscmp.asm	IF ERNIE_FW>=0x01050000
+SEG	@@RTCODE	../lib/luband.asm ../lib/lubor.asm ../lib/lubxor.asm
 SEG	@@LCODE		../lib/rl78/divuw.asm
+SEG	@@LCODE		../lib/rl78/fadd.asm ../lib/rl78/fcom1.asm ../lib/fcom5.asm ../lib/fcom6.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODE		../lib/rl78/fmul.asm ../lib/rl78/fdiv.asm ../lib/rl78/fcmp.asm ../lib/rl78/ftols.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODE		../lib/rl78/ftolu.asm ../lib/rl78/lutof.asm ../lib/rl78/fmulx.asm ../lib/rl78/fdivx.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODE		../lib/rl78/lstof.asm	IF ERNIE_FW>=0x01050000
 SEG	@@BASE		tau.c rtc.c host.c csi.c uart.c adc.c iica.c interrupt.c csi10.c uss1001.c uart4.c
 SEG	@@BASE		iica1.c
 SEG	@@BASE
 SEG	@@LCODE
+SEG	@@LCODEL	../lib/log.asm ../lib/fcom4.asm ../lib/flog.asm ../lib/fsubx.asm	IF ERNIE_FW>=0x01050000
+SEG	@@LCODEL	../lib/fcom2.asm ../lib/fcom3.asm	IF ERNIE_FW>=0x01050000
 SEG	@@R_INIT
 SEG	@@R_INIS
 SEG	@@CNSTL		command.c aes.c host.c request.c uart.c inputreq.c util.c inputbits.c serial.c
 SEG	@@CNSTL		analog.c nvsreq.c serial1.c updatereq.c sha1.c powerreq.c serialauth.c power.c
 SEG	@@CNSTL		elmo.c bbmc.c cookie.c config.c flash.c bstore.c dtc.c
 SEG	@@RLINIT	cstart.asm
-SEG	@@CNSTL		powerseq.c powerwait.c state.c handshake.c log.c param.c led.c uart4.c authkeys.c
+SEG	@@CNSTL		powerseq.c powerwait.c state.c handshake.c log.c param.c led.c uart4.c
+SEG	@@CNSTL		../lib/fcom5.asm ../lib/flog.asm	IF ERNIE_FW>=0x01050000
+SEG	@@CNSTL		authkeys.c
 SEG	@@CNSTL
 SEG	@@RLINIT
 # the code
