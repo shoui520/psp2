@@ -16,7 +16,7 @@ void boardPortInitUss1001(void);
 /* the USB supply's line changed: task 5's event 0x0400 */
 void intp9Interrupt(void)
 {
-	task5SetFlag(4, 0x0400);
+	task5ISetFlag(0x0400);
 }
 
 /* the ports at the start (hdwinit) */
@@ -24,6 +24,20 @@ void boardPortInit(void)
 {
 	boardPortInitUss1001();
 }
+
+/* USS-1002's: the analog inputs up to ANI10 (the gauge's), P2.7 and P15.0-1 inputs, P3.3 an
+   output */
+#if SOURCE_0104
+#define PORT_ADPC		0x0b
+#define PORT_PM2		0xff
+#define PORT_PM3		0x03
+#define PORT_PM15		0x83
+#else
+#define PORT_ADPC		0x08
+#define PORT_PM2		0x7f
+#define PORT_PM3		0x0b
+#define PORT_PM15		0x80
+#endif
 
 void boardPortInitUss1001(void)
 {
@@ -38,12 +52,12 @@ void boardPortInitUss1001(void)
 	PIM1 = 0x00;
 	POM1 = 0x00;
 	PM1 = 0x52;
-	ADPC = 0x08;
+	ADPC = PORT_ADPC;
 	P2 = 0x00;
-	PM2 = 0x7f;
+	PM2 = PORT_PM2;
 	P3 = 0x10;
 	PU3 = 0x00;
-	PM3 = 0x0b;
+	PM3 = PORT_PM3;
 	P4 = 0x00;
 	PU4 = 0x00;
 	PIM4 = 0x00;
@@ -89,7 +103,7 @@ void boardPortInitUss1001(void)
 	PMC14 = 0x7f;
 	PM14 = 0x00;
 	P15 = 0x00;
-	PM15 = 0x80;
+	PM15 = PORT_PM15;
 }
 
 /* P5.0-1, P7.1-2 and P8 inputs with their pull-ups (the keys button1Keys reads) */
