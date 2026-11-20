@@ -40,12 +40,14 @@ extern void powerDeviceRun(void);
 extern void powerDeviceInit(void);
 extern void powerWaitInit(void);
 extern void powerWaitMs(unsigned int ms);
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 extern void powerWaitMsPolled(unsigned int ms);
 #endif
 extern void powerSleep(unsigned int ms);
 extern void powerSleep2(unsigned int ms);
+#if !(BOARD_USS1001 && SOURCE_0104)
 extern void powerWaitInput(unsigned char edges, unsigned int timeout);
+#endif
 extern void powerWaitTimers(unsigned int bits);
 extern void powerStartTimer(unsigned int bits, unsigned char id, unsigned int ticks);
 extern void powerTimersInit(void);

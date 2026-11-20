@@ -115,8 +115,8 @@ void powerWaitMs(unsigned int ms)
 	}
 }
 
-#if BOARD_DOL1002
-/* DOL-1002's: powerWaitMs polling TM03's interrupt request, its interrupt masked (dispatching is
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
+/* DOL-1002's (and USS-1002's): powerWaitMs polling TM03's interrupt request, its interrupt masked (dispatching is
    disabled where elmoUpdateMasks calls it) */
 void powerWaitMsPolled(unsigned int ms)
 {
@@ -140,6 +140,7 @@ void powerSleep2(unsigned int ms)
 	dly_tsk(ms / 4 + (ms % 4 ? 1 : 0));
 }
 
+#if !(BOARD_USS1001 && SOURCE_0104)	/* not in USS-1002 */
 /* until the power input's edges, or the timeout */
 void powerWaitInput(unsigned char edges, unsigned int timeout)
 {
@@ -163,6 +164,7 @@ void powerWaitInput(unsigned char edges, unsigned int timeout)
 	clr_flg(4, ~0x40);
 #endif
 }
+#endif
 
 /* until the timers of the bits ran out */
 #if SOURCE_0103
@@ -241,7 +243,8 @@ static void powerTimerEnd7(void)
 	powerTimers &= ~0x0080;
 }
 
-/* bits 9 and 10's have no timer since 0x01000104 */
+/* bits 9 and 10's have no timer since 0x01000104 (USS-1002 drops the functions too) */
+#if !(BOARD_USS1001 && SOURCE_0104)
 static void powerTimerEnd9(void)
 {
 	powerTimers &= ~0x0200;
@@ -251,6 +254,7 @@ static void powerTimerEnd10(void)
 {
 	powerTimers &= ~0x0400;
 }
+#endif
 
 static void powerTimerEnd11(void)
 {
@@ -316,8 +320,10 @@ void powerTimersInit(void)
 	handler.handler = powerTimerEnd0;
 	timerSetHandler(0x04, &handler);
 #endif
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002 leaves bit 1's timer unset */
 	handler.handler = powerTimerEnd1;
 	timerSetHandler(POWER_TIMER(0x05), &handler);
+#endif
 	handler.handler = powerTimerEnd2;
 	timerSetHandler(POWER_TIMER(0x06), &handler);
 #if !FW_SINCE(0x0100060B)
