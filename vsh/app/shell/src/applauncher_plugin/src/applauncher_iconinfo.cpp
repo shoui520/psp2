@@ -60,7 +60,6 @@ using namespace paf;
 
 /* PLACEHOLDER: the application's database value whose bit 0x400 the game's factory is told of
    (a gd or gp application's) */
-#define APPLAUNCHER_INFO_KEY_FLAGS		0x5142196Bu
 #define APPLAUNCHER_INFO_FLAG			0x400
 
 /* the "#_promote_attr" bit of an application with a free trial's license */
@@ -85,7 +84,7 @@ public:
 	bool m_hasRight;		/* the application has a sce_sys/about/right.suprx */
 	GameFttInfo m_ftt;
 	GameLicenseStatus m_license;
-	bool m_flag;			/* APPLAUNCHER_INFO_KEY_FLAGS has APPLAUNCHER_INFO_FLAG */
+	bool m_flag;			/* LSDB_KEY_APPCONF has APPLAUNCHER_INFO_FLAG */
 	bool m_reserved;
 	bool m_hasFtt;			/* the free trial's license was read */
 };
@@ -490,7 +489,7 @@ int ApplauncherIconInfoJob::Run()
 
 			string titleId(LsdbValueText(it->second));
 
-			if (SceLsdb_DB73BD7E(&client.client, &titleId, APPLAUNCHER_INFO_KEY_FLAGS,
+			if (SceLsdb_DB73BD7E(&client.client, &titleId, LSDB_KEY_APPCONF,
 					     &value) == 0 &&
 			    value.type == APPLAUNCHER_INFO_VALUE_INTEGER &&
 			    (value.integer & APPLAUNCHER_INFO_FLAG) != 0)

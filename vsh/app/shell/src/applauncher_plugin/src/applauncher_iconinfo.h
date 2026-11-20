@@ -11,11 +11,26 @@
 #include <plugin.h>
 #include <inputdevice/inputlistener.h>
 #include <widget/w_list_view.h>
+#include <widget/w_list_item.h>
 #include <common/shared_ptr.h>
 #include "../../livespace_db/livespace_db_internal.h"
+#include "../../../../game/game_plugin/game_plugin.h"
 #include "../../../../game/game_plugin/game_appinfo.h"
 
 class ApplauncherIcon;
+
+/*
+ * PLACEHOLDER: an item of the information's list (720 bytes, constructor 0x810DB96C): a label
+ * and its value, set by Set (0x810DB984), the value's own text when the value is empty.
+ */
+class ApplauncherIconInfoItem : public paf::ui::ListItem {
+public:
+	ApplauncherIconInfoItem(paf::ui::Widget *parent, paf::ui::ListItem::CreateParam *param);
+
+	void Set(unsigned int label, const paf::wstring &value);
+
+	SceUInt8 m_fields[720 - sizeof(paf::ui::ListItem)];	/* PLACEHOLDER: with its file */
+};
 
 /*
  * PLACEHOLDER: a pad listener calling back once its keys are pressed in order (36 bytes,
@@ -48,6 +63,7 @@ public:
 	ApplauncherIconInfoFactory(paf::Plugin *plugin,
 				   const paf::common::SharedPtr<ApplauncherIcon> &icon,
 				   LsdbAppInfoPtr *appInfo);
+	virtual ~ApplauncherIconInfoFactory();
 
 	paf::Plugin *m_plugin;
 	paf::common::SharedPtr<ApplauncherIcon> m_icon;
@@ -65,6 +81,12 @@ public:
 	ApplauncherIconInfoPowerFactory(paf::Plugin *plugin, paf::ui::Widget *view,
 					const paf::common::SharedPtr<ApplauncherIcon> &icon,
 					LsdbAppInfoPtr *appInfo);
+	virtual ~ApplauncherIconInfoPowerFactory();
+
+	virtual paf::ui::ListItem *Create(CreateParam &param);
+
+	/* PLACEHOLDER: the one item, the icon's title */
+	paf::ui::ListItem *CreateItem(CreateParam &param);
 
 	paf::ui::Widget *m_view;		/* the information's view */
 };
@@ -83,7 +105,7 @@ public:
 /*
  * PLACEHOLDER: the factory of a game's information (_apptype 1; 360 bytes, constructor
  * 0x810E005C), with the license's status and the free trial's license the job read, whether the
- * application's database value 0x5142196B has bit 0x400, and whether the free trial was read.
+ * application's #appconf has bit 0x400, and whether the free trial was read.
  */
 class ApplauncherIconInfoGameFactory : public ApplauncherIconInfoFactory {
 public:
