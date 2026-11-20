@@ -30,6 +30,9 @@ struct MspaceStats {
 
 void sceClibAbort(void);
 
+/* the kernel's random number generator (ss_mgr), size bytes at most 64 */
+int sceKernelGetRandomNumber(void *output, SceSize size);
+
 /* sceClibLookCtypeTable's class bits: the BSD ctype bits of SceSysclib's table (sysmem/ctype.h) */
 #define SCE_CLIB_CTYPE_UPPER	0x01
 #define SCE_CLIB_CTYPE_LOWER	0x02

@@ -21,9 +21,6 @@ using namespace paf;
 #define SHELL_ERROR_NVS_AREA		4
 #define SHELL_ERROR_NVS_NONE		0xFF
 
-/* (0x81417D0C) the stub library's wrapper over vshSblSsSetNvsData */
-extern "C" SceUInt32 vshSblSsSetNvsData(int area, const void *buf, SceSize size);
-
 /* (0x8124D646) opens an error dialog; PLACEHOLDER name */
 int shellErrorDialogOpenParam(CommonGuiMessageDialogParam *param, bool wait, int flags);
 

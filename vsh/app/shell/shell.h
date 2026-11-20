@@ -128,9 +128,9 @@ int shellNpServicesStart(void);				/* (0x8100463C) */
 int shellNpNotifyStart(void);				/* (0x81004608) */
 int shellShutterSoundInit(void);			/* (0x81004D38) */
 int shellShutterSoundStart(void);			/* (0x812443E8) */
-int shellRtcSetAlarmTick(const void *tick, int flag);	/* vshRtcSetAlarmTick (0x81417C78) */
 int shellRtcUtilSync(bool fromCallback);		/* /CONFIG/DATE, summer time (0x81365888) */
-int shellErrorDialogInit(void);				/* (0x810FB5D4) */
+int shellCronStart(void);				/* the cron and its thread (0x810FB5D4) */
+int shellCronStop(void);					/* (0x810FB612) */
 int shellAppEventInit(void);				/* (0x81241238) */
 int shellNetworkMgrCreate(bool enable);			/* (0x811C9070) */
 void shellAccessibilityApply(void);			/* invert colours, key remap (0x810A76AA) */

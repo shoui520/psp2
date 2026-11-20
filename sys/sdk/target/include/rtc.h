@@ -80,6 +80,8 @@ int sceRtcTickAddHours(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddDays(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddMonths(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
 int sceRtcTickAddYears(SceRtcTick *pTick0, const SceRtcTick *pTick1, int lAdd);
+int sceRtcFormatRFC2822(char *pszDateTime, const SceRtcTick *pUtc, int iTimeZoneMinutes);
+int sceRtcFormatRFC2822LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
 int sceRtcFormatRFC3339(char *pszDateTime, const SceRtcTick *pUtc, int iTimeZoneMinutes);
 int sceRtcFormatRFC3339LocalTime(char *pszDateTime, const SceRtcTick *pUtc);
 int sceRtcParseRFC3339(SceRtcTick *pUtc, const char *pszDateTime);

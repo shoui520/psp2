@@ -170,7 +170,7 @@ int shellStartupInit(void)
 	sceKernelPowerTick(SCE_KERNEL_POWER_TICK_DEFAULT);
 	thread::Sleep(33);
 	vshPowerSetPowerSwMode(SHELL_POWER_SW_MODE_DEFAULT);
-	shellRtcSetAlarmTick(NULL, 1);
+	vshRtcSetAlarmTick(NULL, 1);
 	if ((vshPowerGetWakeupFactor() & SHELL_WAKEUP_FACTOR_MASK) == SHELL_WAKEUP_FACTOR_STANDBY) {
 		scePowerRequestStandby();
 		sceKernelPowerUnlock(SCE_KERNEL_POWER_TICK_DEFAULT);
@@ -209,7 +209,7 @@ int shellStartupInit(void)
 			s_hasPresetTheme = true;
 	}
 
-	shellErrorDialogInit();
+	shellCronStart();
 	shellAppEventInit();
 	shellNetworkMgrCreate(!s_isPmMode);
 	sceAppMgrDeclareShellProcess2("NPXS19999");

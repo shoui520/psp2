@@ -38,10 +38,17 @@ SceUInt32 vshSysconIsIduMode(void);
 int vshSysconClearTemperatureLog(int kind);
 /* through the stub library's wrapper, which passes the size's word (0x81417CF8 in SceShell) */
 SceUInt32 vshSblSsGetNvsData(int area, void *buf, SceSize size);
+/* through the stub library's wrapper, which passes the size's word (0x81417D0C in SceShell) */
+SceUInt32 vshSblSsSetNvsData(int area, const void *buf, SceSize size);
 struct SceMsInfo;
 SceUInt32 vshMsifGetMsInfo(struct SceMsInfo *info);
 SceUInt32 vshIdStorageLookup(SceSize key, SceSize offset, void *buf, SceSize len);
 SceUInt32 vshRtcIsSecureAlarmed(void);
+SceUInt32 vshRtcRegisterCallback(SceUID cb);
+SceUInt32 vshRtcUnregisterCallback(SceUID cb);
+/* through the stub library's wrapper (0x81417C78 in SceShell); NULL clears the alarm */
+struct SceRtcTick;
+SceUInt32 vshRtcSetAlarmTick(const struct SceRtcTick *tick, int flag);
 SceUInt32 vshRtcRegisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshRtcUnregisterSecureAlarmCallback(SceUID cb);
 SceUInt32 vshAppMgrCheckContentInstallPeriod(SceUID pid);

@@ -26,6 +26,7 @@ unsigned long sce_paf_strtoul(const char *str, char **endptr, int base);
 long long sce_paf_strtoll(const char *str, char **endptr, int base);
 double sce_paf_atof(const char *str);
 int sce_paf_rand(void);
+void sce_paf_srand(unsigned int seed);
 /* exit(): the module's exit, the atexit handlers, then the process's */
 void sce_paf_private_exit(int status);
 /* name unknown: reports a failed allocation in the paf templates and breaks */
