@@ -234,6 +234,8 @@ int sceAppMgrLaunchAppByPath4(const char *path, const char *name, SceUInt32 budg
 int sceAppMgrGetStatusByAppId(int appId, void *status);
 int sceAppMgrActivateApp(int appId);
 int sceAppMgrGetBootParam(SceUID pid, AppmgrBootParam *bootParam);
+/* the text the application was last sent (an app event), SCE_APPUTIL_APPEVENT_PARAM_MAXSIZE */
+int sceAppMgrGetAppParam(char *param);
 /* whether the application runs as a PS Now client (larger save data allowed) */
 int sceAppMgrIsPsNowClient(void);
 

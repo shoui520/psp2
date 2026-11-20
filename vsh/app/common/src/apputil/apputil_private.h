@@ -85,12 +85,67 @@ int checkSearch(const SceAppUtilWorkBuffer *workBuf, const SceAppUtilSaveDataSlo
 int checkPspSaveDataParams(const SceAppUtilPspSaveDataParams *params);
 int checkPspSaveDataDirName(const char *dirName);
 
-/* the parameters of the app events the SDK does not document (laid out in their parsers) */
-typedef struct SceAppUtilNpBasicJoinablePresenceParam SceAppUtilNpBasicJoinablePresenceParam;
-typedef struct SceAppUtilNearGiftParam SceAppUtilNearGiftParam;
-typedef struct SceAppUtilUserDefinedParam SceAppUtilUserDefinedParam;
-typedef struct SceAppUtilWebBrowserEventParam SceAppUtilWebBrowserEventParam;
-typedef struct SceAppUtilLaunchAppParam SceAppUtilLaunchAppParam;
+/* the app event types the SDK header does not name */
+#define SCE_APPUTIL_APPEVENT_TYPE_NP_BASIC_JOINABLE_PRESENCE	(3)
+#define SCE_APPUTIL_APPEVENT_TYPE_NEAR_GIFT		(4)
+#define SCE_APPUTIL_APPEVENT_TYPE_TRIGGER_UTIL		(6)	/* and USER_DEFINED before SDK 1.80 */
+#define SCE_APPUTIL_APPEVENT_TYPE_INCOMING_DIALOG	(7)
+#define SCE_APPUTIL_APPEVENT_TYPE_LAUNCH_APP		(9)
+#define SCE_APPUTIL_APPEVENT_TYPE_USER_DEFINED		(10)
+#define SCE_APPUTIL_APPEVENT_TYPE_WEBBROWSER		(15)
+
+/* the parameters of the app events the SDK does not document (laid out from their parsers) */
+typedef struct SceAppUtilNpBasicJoinablePresenceParam {
+	SceNpCommunicationId commId;
+	SceNpId npId;				/* from jid= */
+} SceAppUtilNpBasicJoinablePresenceParam;
+
+typedef struct SceAppUtilNearGiftParam {
+	SceNpCommunicationId commId;
+	SceUInt32 giftId;
+	SceNpId npId;				/* the sender, from jid= */
+	SceUInt32 version;
+	SceUChar8 param[256];
+} SceAppUtilNearGiftParam;
+
+typedef struct SceAppUtilUserDefinedParam {
+	SceChar8 arg[1000];
+} SceAppUtilUserDefinedParam;
+
+#define SCE_APPUTIL_WEBBROWSER_EVENT_TYPE_CALLBACK	1
+
+typedef struct SceAppUtilWebBrowserEventParam {
+	SceUInt32 type;				/* SCE_APPUTIL_WEBBROWSER_EVENT_TYPE_* */
+	SceChar8 param[SCE_APPUTIL_LIVEAREA_PARAM_MAX_SIZE];
+	SceChar8 reserved[32];
+} SceAppUtilWebBrowserEventParam;
+
+typedef struct SceAppUtilLaunchAppParam {
+	SceChar8 uri[960];
+	SceInt32 isTeleport;			/* from SDK 2.50: factor=TELEPORT */
+} SceAppUtilLaunchAppParam;
+
+typedef struct SceAppUtilIncomingDialogParam {
+	SceInt32 isFromStartScreen;		/* from_start_screen=true */
+	SceChar8 reserved[64];
+	SceChar8 param[960];			/* from SDK 3.00 */
+} SceAppUtilIncomingDialogParam;
+
+#define SCE_APPUTIL_TRIGGER_UTIL_TYPE_PERIODIC_TIMER	1
+#define SCE_APPUTIL_TRIGGER_UTIL_TYPE_TIME_OF_DAY_TIMER	2
+#define SCE_APPUTIL_TRIGGER_UTIL_TYPE_DAILY_TIMER	3
+
+typedef struct SceAppUtilTriggerUtilParam {
+	SceUInt32 type;				/* SCE_APPUTIL_TRIGGER_UTIL_TYPE_* */
+	SceUInt32 slot;
+	SceChar8 reserved[64];
+} SceAppUtilTriggerUtilParam;
+
+/* app events the SDK header does not declare (its stubs name them) */
+extern "C" SceInt32 sceAppUtilAppEventParseIncomingDialog(const SceAppUtilAppEventParam *eventParam,
+							 SceAppUtilIncomingDialogParam *param);
+extern "C" SceInt32 sceAppUtilAppEventParseTriggerUtil(const SceAppUtilAppEventParam *eventParam,
+						      SceAppUtilTriggerUtilParam *param);
 
 /* the functions behind the exports */
 int launchAppRequest(const SceShellUtilLaunchAppParam *param);
