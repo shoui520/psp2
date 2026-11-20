@@ -116,7 +116,7 @@ kMpfBlocks1:	DS	60H		; the first pool's 8 blocks of 0xc bytes
 kMpfBlocks2:	DS	1E0H		; the second pool's 2 blocks of 0xf0
 
 ; the kernel's short direct work registers, and the compiler's
-$_IF (ERNIE_HW==0x00723030)	; DOL-1002
+$_IF (ERNIE_HW==0x00723030||ERNIE_FW>=0x01050000)	; DOL-1002, USS-1002
 kResult		EQU	0FFE7CH
 kTemp		EQU	0FFE7EH
 kTimeout	EQU	0FFE80H

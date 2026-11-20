@@ -47,7 +47,12 @@ $ENDIF
 	DW	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0	; their extended information
 $_IF (ERNIE_HW>=0x00800000)
 ; USS-1001: the stacks below its DTC's vectors
+$_IF (ERNIE_FW>=0x01050000)
+; USS-1002: tasks 2 and 4 0x40 bytes more, task 5 0x80 less
+	DW	0B41CH, 0B5B8H, 0B714H, 0B830H, 0B98CH, 0BA28H	; their stacks' tops
+$ELSE
 	DW	0B41CH, 0B5B8H, 0B6D4H, 0B7F0H, 0B90CH, 0BA28H	; their stacks' tops
+$ENDIF
 	DW	0BAEAH			; the kernel's stack
 $ELSE
 $_IF (ERNIE_HW==0x00723030)

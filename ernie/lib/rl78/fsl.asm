@@ -38,10 +38,14 @@ PFDLRUN	EQU	0EF004H			; the data flash firmware's handler
 PFDLEND	EQU	0EF008H			; and its close
 RAMA	EQU	0A80H			; where FSL_PrepareFunctions copies ?blockA
 RAMB	EQU	0B80H			; and FSL_PrepareExtFunctions ?blockB
+$_IF (ERNIE_FW>=0x01050000)
+RAMCMD	EQU	0D136H			; USS-1002's (0xfd136: more near data before them)
+$ELSE
 $_IF (ERNIE_FW>=0x01030511)
 RAMCMD	EQU	0D090H			; where _rcopy copies the commands (0xfd090)
 $ELSE
 RAMCMD	EQU	0D038H			; 0x01030505's (0xfd038)
+$ENDIF
 $ENDIF
 ; the jump tables' RAM addresses (word[C] takes no relocated operand): RAMA + ?tableA -
 ; ?blockA, RAMB + ?tableB - ?blockB
@@ -50,12 +54,12 @@ TABLEB	EQU	RAMB + 78H
 ; the commands the program calls, at their RAM addresses (RAMCMD + their place after
 ; _fslRamCommands: the link places code where it is stored, not where it runs); the program
 ; gets them from the link file's SYMBOLs (app/uss1001.lk), the link taking no absolute publics
-_FSL_BlankCheck	EQU	0FD090H
-_FSL_Erase	EQU	0FD094H
-_FSL_IVerify	EQU	0FD098H
-_FSL_Write	EQU	0FD09CH
-_FSL_InvertBootFlag EQU	0FD0D2H
-_FSL_SwapBootCluster EQU 0FD0DAH
+_FSL_BlankCheck	EQU	0F0000H + RAMCMD
+_FSL_Erase	EQU	0F0000H + RAMCMD + 4
+_FSL_IVerify	EQU	0F0000H + RAMCMD + 8
+_FSL_Write	EQU	0F0000H + RAMCMD + 0CH
+_FSL_InvertBootFlag EQU	0F0000H + RAMCMD + 42H
+_FSL_SwapBootCluster EQU 0F0000H + RAMCMD + 4AH
 
 ; the library's ROM part
 @@FSLCOD	CSEG	BASE

@@ -473,10 +473,15 @@ void powerLedSetPattern(unsigned char pattern, unsigned int on, unsigned int off
 	powerLedFlags.hostOn = on;
 	powerLedFlags.hostOff = off;
 }
-#elif BOARD_USS1001 && SOURCE_0104
-#define POWER_LED_TIMER		0x11	/* the slim's 0x0105 */
+#else
+/* the slim's 0x0105 (USS-1002) */
+#define POWER_LED_0105		(BOARD_USS1001 && SOURCE_0104)
+
+#if POWER_LED_0105
+#define POWER_LED_TIMER		0x11
 #else
 #define POWER_LED_TIMER		0x14
+#endif
 
 /* the modes (powerLedFlags.mode) */
 #define POWER_LED_MODE_OFF	1
@@ -540,6 +545,10 @@ void powerLedFlagsUpdate(void)
 	if (powerLedFlags.causes.bits.alarm && !powerLedFlags.causes.bits.off &&
 	    !(powerLedFlags.causes.bits.stateOff && powerLedFlags.causes.bits.on))
 		mode = POWER_LED_MODE_ALARM;
+#if POWER_LED_0105
+	else if (powerLedFlags.mode == POWER_LED_MODE_ALARM && powerLedFlags.causes.bits.alarm)
+		mode = POWER_LED_MODE_ALARM;	/* the alarm's blinks run to their end */
+#endif
 	else if (powerLedFlags.causes.bits.host)
 		mode = POWER_LED_MODE_HOST;
 	else if (powerLedFlagsCharging() != 0)
@@ -573,12 +582,25 @@ void powerLedFlagsUpdate(void)
 			timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
 			break;
 		case POWER_LED_MODE_BLINK:
+#if POWER_LED_0105
+			/* restarted only when its times changed */
+			if (mode != powerLedFlags.mode || powerLedFlags.onTime != powerLedFlags.blinkOn ||
+			    powerLedFlags.offTime != powerLedFlags.blinkOff) {
+				powerLedFlags.onTime = powerLedFlags.blinkOn;
+				powerLedFlags.offTime = powerLedFlags.blinkOff;
+				powerLedFlags.count = POWER_LED_FOREVER;
+				powerLedFlagsShow(POWER_LED_SHOW_POWER);
+				powerLedFlags.phase = 1;
+				timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
+			}
+#else
 			powerLedFlags.onTime = powerLedFlags.blinkOn;
 			powerLedFlags.offTime = powerLedFlags.blinkOff;
 			powerLedFlags.count = POWER_LED_FOREVER;
 			powerLedFlagsShow(POWER_LED_SHOW_POWER);
 			powerLedFlags.phase = 1;
 			timerStart(POWER_LED_TIMER, POWER_LED_TICKS(powerLedFlags.onTime));
+#endif
 			break;
 		case POWER_LED_MODE_ALARM:
 			powerLedFlags.onTime = powerLedFlags.offTime = 200;
@@ -757,7 +779,11 @@ void powerLedLoadBlink(unsigned char index)
 
 static void powerLedFlagsTimer(void)
 {
+#if POWER_LED_0105
+	task5ISetFlag(0x2000);
+#else
 	task5SetFlag(4, 0x2000);
+#endif
 }
 
 /* the charge LED on: charging, not full, and the USB powered, a resume, or the dongle or
@@ -767,21 +793,36 @@ static unsigned int powerLedFlagsCharging(void)
 	unsigned int state;
 	unsigned char usbPower;
 	unsigned char usbIs1;
+#if POWER_LED_0105
+	unsigned char usbDongle;
+	unsigned char usbDebug;
+#else
 	unsigned char usbAdapter;
+#endif
 
 	state = stateGet();
 	usbPower = chargeUsbPower();
 	usbIs1 = chargeUsbIs1();
-#if FW_SINCE(0x01030511)
+#if POWER_LED_0105
+	usbDongle = chargeUsbDongle();
+	usbDebug = chargeUsbDebug();
+	return !powerLedFlags.causes.bits.off &&
+	       !(powerLedFlags.causes.bits.stateOff && powerLedFlags.causes.bits.on) &&
+	       powerLedFlags.causes.bits.charging && !powerLedFlags.causes.bits.full &&
+	       (usbPower != 0 || powerLedFlags.causes.bits.resumed ||
+		((usbIs1 != 0 || usbDongle != 0 || usbDebug != 0) && (state == 8 || state == 4)));
+#elif FW_SINCE(0x01030511)
 	usbAdapter = chargeUsbDongle() || chargeUsbDebug();
 #else
 	usbAdapter = chargeUsbDongle();
 #endif
+#if !POWER_LED_0105
 	return !powerLedFlags.causes.bits.off &&
 	       !(powerLedFlags.causes.bits.stateOff && powerLedFlags.causes.bits.on) &&
 	       powerLedFlags.causes.bits.charging && !powerLedFlags.causes.bits.full &&
 	       (usbPower != 0 || powerLedFlags.causes.bits.resumed ||
 		((usbIs1 != 0 || usbAdapter != 0) && (state == 8 || state == 4)));
+#endif
 }
 
 static void powerLedFlagsShow(unsigned char led)
