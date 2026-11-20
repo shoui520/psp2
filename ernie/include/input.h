@@ -203,5 +203,8 @@ extern void pinMonitor1Enable(unsigned char enable);
 extern void pinMonitor4Enable(unsigned char enable);
 extern void pinMonitor5Enable(unsigned char enable);
 extern void pinMonitor6Enable(unsigned char enable);
+#if INPUT_0104
+extern unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout);
+#endif
 
 #endif

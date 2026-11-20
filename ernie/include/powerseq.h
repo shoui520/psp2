@@ -55,6 +55,10 @@ extern unsigned char powerAccOn(void);
 extern unsigned char powerAccOff(void);
 extern unsigned char powerOnWlan(void);
 extern unsigned char powerOffWlan(void);
+#if BOARD_USS1001 && SOURCE_0104
+extern unsigned char powerOnTouch(void);
+extern unsigned char powerOffTouch(void);
+#endif
 extern unsigned char powerSetVoltage(unsigned char regulator, unsigned char level);
 extern unsigned char powerCookieSet(void);
 extern unsigned char powerCookieClear(void);

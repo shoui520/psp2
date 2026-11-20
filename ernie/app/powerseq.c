@@ -1063,6 +1063,64 @@ static unsigned char powerA1Off(void)
 }
 #endif
 
+#if BOARD_USS1001 && SOURCE_0104
+/* USS-1002's 0x0105: the touch panels' power, the Elmo's register 0xa0 bit 4 and 0xa2 bit 6
+   (request 8's 0x08d0) */
+unsigned char powerOnTouch(void)
+{
+	unsigned char result;
+	unsigned int mask0;
+	unsigned int mask2;
+
+	if (elmoStatusMask.reg[0] & 0x0010 && elmoStatusMask.reg[2] & 0x0040) {
+		result = 0;
+	} else {
+		mask0 = elmoStatusMask.reg[0] | 0x0010;
+		mask2 = elmoStatusMask.reg[2] | 0x0040;
+		elmoCommand[0] = 0xa0;
+		elmoCommand[1] = ((unsigned char *)&mask0)[1];
+		elmoCommand[2] = (unsigned char)mask0;
+		elmoCommand[3] = 0xa2;
+		elmoCommand[4] = ((unsigned char *)&mask2)[1];
+		elmoCommand[5] = (unsigned char)mask2;
+		result = elmoWrite(elmoCommand, 6);
+		if (result == 0) {
+			elmoStatusMask.reg[0] = mask0;
+			elmoStatusMask.reg[2] = mask2;
+			powerSleep(3);
+		}
+	}
+	return result;
+}
+
+unsigned char powerOffTouch(void)
+{
+	unsigned char result;
+	unsigned int mask0;
+	unsigned int mask2;
+
+	if (elmoStatusMask.reg[0] & 0x0010 || elmoStatusMask.reg[2] & 0x0040) {
+		mask0 = elmoStatusMask.reg[0] & 0xffef;
+		mask2 = elmoStatusMask.reg[2] & 0xffbf;
+		elmoCommand[0] = 0xa0;
+		elmoCommand[1] = ((unsigned char *)&mask0)[1];
+		elmoCommand[2] = (unsigned char)mask0;
+		elmoCommand[3] = 0xa2;
+		elmoCommand[4] = ((unsigned char *)&mask2)[1];
+		elmoCommand[5] = (unsigned char)mask2;
+		result = elmoWrite(elmoCommand, 6);
+		if (result == 0) {
+			elmoStatusMask.reg[0] = mask0;
+			elmoStatusMask.reg[2] = mask2;
+			powerSleep(300);
+		}
+	} else {
+		result = 0;
+	}
+	return result;
+}
+#endif
+
 /* timer 0x11 (powerAccOn) */
 void powerAccTimer(void)
 {
@@ -1543,7 +1601,7 @@ void powerGetCutRegs(unsigned char *regs)
 	memcpy(regs, powerCutRegs, 8);
 }
 
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 /* 0x088f's work (powerRequestCtrlDeviceReset's before 0x0104): devices' lines held in reset
    (hold 1) or let go; DOL-1001's: the dummy byte, then P13.1 */
 void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)
@@ -1551,6 +1609,17 @@ void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)
 	if (hold < 2) {
 		if (devices & 0x01)
 			;
+#if BOARD_USS1001
+		/* USS-1002's 0x0105: the slim's lines but P6.5 */
+		if (devices & 0x02)
+			;
+		if (devices & 0x04)
+			P4.2 = hold;
+		if (devices & 0x08)
+			P4.1 = hold;
+		if (devices & 0x10)
+			P0.5 = hold;
+#else
 		if (devices & 0x02)
 			boardDummyPin = hold;
 		if (devices & 0x04)
@@ -1559,6 +1628,7 @@ void powerCtrlDeviceReset(unsigned char hold, unsigned char devices)
 			boardDummyPin = hold;
 		if (devices & 0x10)
 			P13.1 = hold;
+#endif
 	}
 }
 #endif

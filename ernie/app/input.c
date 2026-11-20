@@ -174,9 +174,6 @@ void inputScanMode1(unsigned int interval);
 void inputScanMode2(unsigned int interval);
 void input1Bit7Changed(void);
 void inputNone(void);
-#if INPUT_0104
-unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout);
-#endif
 #if ANALOG_THERMISTOR
 void inputThermistorTimer(void);
 #endif
@@ -337,7 +334,8 @@ void inputStateRun(void)
 
 #if INPUT_0104
 /* a panel opened (mask bit 0) or closed (bit 1) by task 3 (inputTouchRun), waited for up to
-   timeout ticks (in steps of four): 0x80 when it was not done in time. Nothing calls it */
+   timeout ticks (in steps of four): 0x80 when it was not done in time. Only USS-1002's 0x0105
+   calls it (request 8's 0x08d0) */
 unsigned char inputTouchRequest(unsigned char mask, unsigned char timeout)
 {
 	unsigned char steps;

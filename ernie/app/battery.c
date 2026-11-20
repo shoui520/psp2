@@ -964,7 +964,7 @@ unsigned char batteryHibernate(void)
 	return result;
 }
 
-/* 0x09b1: the cycles counted from 0 */
+/* 0x098d: the cycles counted from 0 */
 unsigned char batteryStopBLMode(void)
 {
 	batteryGauge.record.percent = 0;

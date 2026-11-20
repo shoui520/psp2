@@ -25,6 +25,7 @@
 #include "handshake.h"
 #include "host.h"
 #include "input.h"
+#include "inputbits.h"
 #include "kernel.h"
 #include "led.h"
 #include "motion.h"
@@ -188,11 +189,11 @@ static void powerRequest08CB(void);
 static void powerRequest08CC(void);
 static void powerRequest08CD(void);
 #endif
-#if BOARD_DOL1001
+#if BOARD_DOL1001 || BOARD_USS1001 && SOURCE_0104
 static void powerRequest08CE(void);
 static void powerRequest08CF(void);
 #endif
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 static void powerRequest08D0(void);
 #endif
 
@@ -282,11 +283,11 @@ static const struct PowerCommand powerCommands[] = {
 	{ 0x08cc, powerRequest08CC },
 	{ 0x08cd, powerRequest08CD },
 #endif
-#if BOARD_DOL1001
+#if BOARD_DOL1001 || BOARD_USS1001 && SOURCE_0104
 	{ 0x08ce, powerRequest08CE },
 	{ 0x08cf, powerRequest08CF },
 #endif
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	{ 0x08d0, powerRequest08D0 },
 #endif
 };
@@ -344,18 +345,22 @@ void powerRequestInit(void)
 #endif
 }
 
+#if !FW_SINCE(0x0100060B) || INPUT_BITS2_HANDLERS
 /* the power input bit changed: event flag 4's 0x0040 */
 void powerInputChanged(void)
 {
 	task5SetFlag(4, 0x0040);
 }
+#endif
 
 #if SOURCE_0103
 void powerRequestNotify(void)
 {
 	switch (powerRequest.event) {
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105: no case for it */
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	case HOST_EVENT_COMMAND:
 		hostRequestSetState(&powerRequest, HOST_REQUEST_BUSY);
 		powerCommand = powerRequest.command;
@@ -376,8 +381,10 @@ void powerRequestNotify(void)
 void batteryRequestNotify(void)
 {
 	switch (batteryRequest.event) {
+#if !(BOARD_USS1001 && SOURCE_0104)	/* USS-1002's 0x0105: no case for it */
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	case HOST_EVENT_COMMAND:
 		hostRequestSetState(&batteryRequest, HOST_REQUEST_BUSY);
 		task5SetFlag(4, 0x0100);
@@ -697,6 +704,16 @@ unsigned char hostCommandBatteryVoltOld(unsigned char *out, unsigned char *lengt
 /* 0x0804: the USB state 4, while the USB is in state 1 */
 unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
 {
+#if BOARD_USS1001 && SOURCE_0104
+	/* USS-1002's 0x0105 logs it as request 8's commands are (codes 0x08 and 0x88) */
+	unsigned char result = 0;
+
+	eventLogCharge.byte[0] = 4;
+	eventLogCharge.byte[1] = 0;
+	eventLogCharge.byte[2] = 0;
+	eventLogCharge.byte[3] = 0;
+	eventLogRecord(0x10, 0x08, eventLogCharge.byte, 4);
+#endif
 	if (chargeUsbIs1()) {
 		if (chargeCurrent != 0xff) {
 			chargeCurrent = 0xff;
@@ -708,7 +725,16 @@ unsigned char hostCommand0804(unsigned char *out, unsigned char *length)
 		}
 	}
 	*length = 0;
+#if BOARD_USS1001 && SOURCE_0104
+	eventLogCharge.byte[0] = 4;
+	eventLogCharge.byte[1] = *length;
+	eventLogCharge.byte[2] = result;
+	eventLogCharge.byte[3] = *out;
+	eventLogRecord(0x10, 0x88, eventLogCharge.byte, 4);
+	return result;
+#else
 	return 0;
+#endif
 }
 
 #if BOARD_DOL1001
@@ -1206,12 +1232,15 @@ static void powerRequestCtrlHpremote(void)
 static void powerRequestCtrlUsbStatus(void)
 {
 	unsigned char result = 0;
-#if SOURCE_0104
+#if SOURCE_0104 && !BOARD_USS1001
 	unsigned char mode;	/* unused: the mode compared with itself, as set, so the
 				   current is never set again here */
-#define POWER_USB_MODE	powerRequestData[0]
 #else
 	unsigned char mode = chargeUsbMode;
+#endif
+#if SOURCE_0104
+#define POWER_USB_MODE	powerRequestData[0]
+#else
 #define POWER_USB_MODE	chargeUsbMode
 #endif
 	unsigned char status[2];
@@ -1244,10 +1273,10 @@ static void powerRequestCtrlUsbStatus(void)
 #endif
 			ena_dsp();
 		}
-#if SOURCE_0104
+#if SOURCE_0104 && !BOARD_USS1001
 		if (chargeUsbMode != powerRequestData[0]) {
 #else
-		if (mode != chargeUsbMode) {
+		if (mode != chargeUsbMode) {	/* USS-1002's 0x0105 as 0x0103 */
 #endif
 #undef POWER_USB_MODE
 			result = powerResult(chargeSetCurrent());
@@ -1676,6 +1705,11 @@ static void powerRequestCtrlVoltage(void)
 				trim = configGet()->resumeTrim84;
 			else
 				trim = configGet()->resumeTrim;
+#elif BOARD_USS1001 && SOURCE_0104
+			/* USS-1002's 0x0105: regulator 0x84 one step above the others */
+			trim = configGet()->voltageTrim;
+			if (regulator == 0x84)
+				trim++;
 #elif FW_SINCE(0x00090206)
 			trim = configGet()->voltageTrim;
 #else
@@ -1695,7 +1729,7 @@ static void powerRequestCtrlDeviceReset(void)
 {
 	unsigned char result;
 
-#if BOARD_DOL1002
+#if BOARD_DOL1002 || BOARD_USS1001 && SOURCE_0104
 	if (powerRequest.length == 2) {
 		powerCtrlDeviceReset(powerRequestData[0], powerRequestData[1]);
 		result = 0;
@@ -2639,6 +2673,53 @@ static void powerRequest08CD(void)
 #endif
 #endif
 
+#if BOARD_USS1001 && SOURCE_0104
+/* USS-1002's 0x0105: no temperature statistics (0x08ce, 0x08cf answer 0x3f) */
+static void powerRequest08CE(void)
+{
+	unsigned char result = 0x3f;
+
+	powerRequestReply(result, 0x10);
+}
+
+static void powerRequest08CF(void)
+{
+	unsigned char result = 0x3f;
+
+	powerRequestReply(result, 0);
+}
+
+/* 0x08d0: the touch panels on (data[0] not 0) or off, opened or closed by task 3 */
+static void powerRequest08D0(void)
+{
+	unsigned char result;
+
+	if (powerRequest.length == 1) {
+		if (powerRequestData[0] != 0) {
+			result = powerOnTouch();
+			if (result != 0) {
+				result = powerResult(result);
+			} else {
+				result = inputTouchRequest(1, 0x0c);
+				if (result != 0)
+					result = 2;
+			}
+		} else {
+			P4.2 = 0;
+			result = inputTouchRequest(2, 0x0c);
+			if (result != 0) {
+				result = 2;
+			} else {
+				result = powerOffTouch();
+				if (result != 0)
+					result = powerResult(result);
+			}
+		}
+	} else
+		result = 0x3b;
+	powerRequestReply(result, 0);
+}
+#else
 #if BOARD_DOL1001
 /* 0x08ce: the temperature statistics (struct ThermalReport, 16 bytes) */
 static void powerRequest08CE(void)
@@ -2675,6 +2756,8 @@ static void powerRequest08D0(void)
 
 	powerRequestReply(result, 0);
 }
+#endif
+
 #endif
 
 /* the Elmo's status registers 0xa0-0xa3 and 0xa4's high byte, high byte first */
@@ -2930,6 +3013,18 @@ static void batteryRequestGetBicTemp(void)
 #endif
 
 /* 0x0982 (sceSysconGetBatteryFullCap): the battery's register 0x3c */
+#if BATTERY_GAUGE
+static void batteryRequestGetFullCap(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadFullCap(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetFullCap(void)
 {
 	unsigned char result;
@@ -2943,8 +3038,21 @@ static void batteryRequestGetFullCap(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x0983 (sceSysconGetBatteryElec): register 0x14 */
+#if BATTERY_GAUGE
+static void batteryRequestGetElec(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadElec(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetElec(void)
 {
 	unsigned char result;
@@ -2958,8 +3066,21 @@ static void batteryRequestGetElec(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x0984 (sceSysconGetBatteryTTE): register 0x16 */
+#if BATTERY_GAUGE
+static void batteryRequestGetTTE(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadTTE(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetTTE(void)
 {
 	unsigned char result;
@@ -2973,8 +3094,21 @@ static void batteryRequestGetTTE(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x0985 (sceSysconGetBatterySOH): register 0x28 */
+#if BATTERY_GAUGE
+static void batteryRequestGetSOH(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadSOH(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetSOH(void)
 {
 	unsigned char result;
@@ -2988,9 +3122,22 @@ static void batteryRequestGetSOH(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 #if FW_SINCE(0x00090009)	/* not in 0x00080504 */
 /* 0x098a (sceSysconGetBatteryFullCap, the second): register 0x12 */
+#if BATTERY_GAUGE
+static void batteryRequestGetFullCap2(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadFullCap2(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetFullCap2(void)
 {
 	unsigned char result;
@@ -3005,9 +3152,22 @@ static void batteryRequestGetFullCap2(void)
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
 #endif
+#endif
 
 #if FW_SINCE(0x00090903)
 /* 0x098c (sceSysconGetBatteryCycleCount): register 0x2a (0x00090804 has not it, nor 0x098d) */
+#if BATTERY_GAUGE
+static void batteryRequestGetCycleCount(void)
+{
+	unsigned char result;
+
+	if (batteryRequest.length == 0)
+		result = batteryResult(batteryReadCycleCount(batteryRequestAnswer.word));
+	else
+		result = 0x3b;
+	BATTERY_REQUEST_ANSWER(result, 2);
+}
+#else
 static void batteryRequestGetCycleCount(void)
 {
 	unsigned char result;
@@ -3021,8 +3181,18 @@ static void batteryRequestGetCycleCount(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x098d */
+#if BATTERY_GAUGE
+static void batteryRequest098D(void)
+{
+	unsigned char result;
+
+	result = batteryResult(batteryStopBLMode());	/* the gauge's cycles from 0 */
+	BATTERY_REQUEST_ANSWER(result, 0);
+}
+#else
 static void batteryRequest098D(void)
 {
 	unsigned char result;
@@ -3031,8 +3201,15 @@ static void batteryRequest098D(void)
 	BATTERY_REQUEST_ANSWER(result, 0);
 }
 #endif
+#endif
 
 /* 0x0986 (sceSysconReadBatteryReg): data[0] the register */
+#if BATTERY_GAUGE
+static void batteryRequestReadReg(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestReadReg(void)
 {
 	unsigned char result;
@@ -3044,8 +3221,15 @@ static void batteryRequestReadReg(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x0987 (sceSysconWriteBatteryReg): data[0] the register, data[2-3] the value */
+#if BATTERY_GAUGE
+static void batteryRequestWriteReg(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestWriteReg(void)
 {
 	unsigned char result;
@@ -3057,8 +3241,15 @@ static void batteryRequestWriteReg(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 0);
 }
+#endif
 
 /* 0x0988 (SceSysconForDriver_A5AB19B1) */
+#if BATTERY_GAUGE
+static void batteryRequest0988(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequest0988(void)
 {
 	unsigned char result;
@@ -3070,8 +3261,15 @@ static void batteryRequest0988(void)
 		result = 0x3b;
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x0989 (sceSysconBatterySWReset) */
+#if BATTERY_GAUGE
+static void batteryRequestSWReset(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestSWReset(void)
 {
 	unsigned char result;
@@ -3079,8 +3277,15 @@ static void batteryRequestSWReset(void)
 	result = batteryResult(batterySWReset());
 	BATTERY_REQUEST_ANSWER(result, 0);
 }
+#endif
 
 /* 0x09b0 (sceSysconBatteryStartBLMode) */
+#if BATTERY_GAUGE
+static void batteryRequestStartBLMode(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestStartBLMode(void)
 {
 	unsigned char result;
@@ -3088,8 +3293,15 @@ static void batteryRequestStartBLMode(void)
 	result = batteryResult(batteryStartBLMode());
 	BATTERY_REQUEST_ANSWER(result, 0);
 }
+#endif
 
 /* 0x09b1 (sceSysconBatteryStopBLMode) */
+#if BATTERY_GAUGE
+static void batteryRequestStopBLMode(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestStopBLMode(void)
 {
 	unsigned char result;
@@ -3097,11 +3309,18 @@ static void batteryRequestStopBLMode(void)
 	result = batteryResult(batteryStopBLMode());
 	BATTERY_REQUEST_ANSWER(result, 0);
 }
+#endif
 
 /*
  * 0x09b2 (sceSysconBatterySetBLCommand): data[0-1] the command, data[2] the length of the
  * data from data[4], data[3] its offset in the command's buffer
  */
+#if BATTERY_GAUGE
+static void batteryRequestSetBLCommand(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestSetBLCommand(void)
 {
 	unsigned char result;
@@ -3123,8 +3342,15 @@ static void batteryRequestSetBLCommand(void)
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /* 0x09b3 (sceSysconBatteryExecBLCommand): data[0-1] the command set by 0x09b2 */
+#if BATTERY_GAUGE
+static void batteryRequestExecBLCommand(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestExecBLCommand(void)
 {
 	unsigned char result;
@@ -3142,11 +3368,18 @@ static void batteryRequestExecBLCommand(void)
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
 	BATTERY_REQUEST_ANSWER(result, 2);
 }
+#endif
 
 /*
  * 0x09b4 (sceSysconBatteryReadBLCommand): data[0-1] the command, data[2] the length read,
  * data[3-4] what the read sends
  */
+#if BATTERY_GAUGE
+static void batteryRequestReadBLCommand(void)
+{
+	BATTERY_REQUEST_ANSWER(8, 0);	/* no battery on the bus */
+}
+#else
 static void batteryRequestReadBLCommand(void)
 {
 	unsigned char result;
@@ -3165,6 +3398,7 @@ static void batteryRequestReadBLCommand(void)
 	batteryRequestAnswer.word[0] = batteryRequestData.word[0];
 	BATTERY_REQUEST_ANSWER(result, batteryBLCommand.length + 2);
 }
+#endif
 
 /* a device's result as the host's status: 1, 2 and 4 give 0x22, 0x10 gives 0x21, the rest 1 */
 static unsigned char powerResult(unsigned char result)
