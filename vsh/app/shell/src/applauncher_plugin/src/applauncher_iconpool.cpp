@@ -544,7 +544,7 @@ static void onUpdate(ui::AppIconBase *icon, void *data)
 {
 	ApplauncherIconView *view = (ApplauncherIconView *)data;
 
-	if (view->m_owner.get() != NULL && view->m_owner->m_effectOn != 0)
+	if (view->m_owner.get() != NULL && view->m_owner->m_self.get() != NULL)
 		view->m_effect.Update(view);
 }
 

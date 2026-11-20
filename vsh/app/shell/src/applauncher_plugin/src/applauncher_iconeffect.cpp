@@ -852,6 +852,11 @@ bool applauncherLaunchEffectIsNotRising(void)
 	return false;
 }
 
+/* PLACEHOLDER name: empty and unreferenced in this build (0x810CF2DA) */
+void applauncherIconEffectReserved(void)
+{
+}
+
 /* (0x810CF2DC) */
 ApplauncherPageSway::ApplauncherPageSway()
 {

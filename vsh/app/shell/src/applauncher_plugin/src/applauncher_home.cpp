@@ -223,7 +223,7 @@ ApplauncherHome::ApplauncherHome(Plugin *plugin)
 	  m_editRequest(0), m_editState(0), m_indicator(NULL), m_ready(false), m_mode(0),
 	  m_fadeTime(0.0f), m_overlay(NULL), m_waitDialog(-1), m_imageCached(false),
 	  m_dragPos(-10000.0f, -10000.0f), m_waitingAppCount(0), m_noticePage(NULL), m_appCount(0),
-	  m_noticeKind(0), m_viewHeld(false), m_waveUpdated(false), m_dropIndex(-1),
+	  m_folderCount(0), m_viewHeld(false), m_waveUpdated(false), m_dropIndex(-1),
 	  m_dropPage(-1), m_appPage(NULL), m_appIconTime(0.0f), m_lsdbListener(NULL)
 {
 	m_texScale[0] = 1.0f;
@@ -653,7 +653,7 @@ void ApplauncherHome::UpdateNoticeText()
 		str = shellFormatText(applauncherGetString(IDParam(APPLAUNCHER_NOTICE_TOO_MANY)),
 				      total, limit, over);
 	} else if (full) {
-		if (m_noticeKind)
+		if (m_folderCount)
 			str = applauncherGetString(IDParam(APPLAUNCHER_NOTICE_FULL0));
 		else
 			str = applauncherGetString(IDParam(APPLAUNCHER_NOTICE_FULL1));

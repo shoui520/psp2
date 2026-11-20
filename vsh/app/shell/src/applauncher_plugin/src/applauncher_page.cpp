@@ -52,7 +52,7 @@ static bool s_leftFolder;
 static bool s_enteredFolder;
 static bool s_folderOpened;
 common::SharedPtr<ApplauncherIcon> g_applauncherDragItem;
-static common::SharedPtr<ApplauncherIcon> s_moveIcon;
+common::SharedPtr<ApplauncherIcon> g_applauncherMoveIcon;
 common::SharedPtr<ApplauncherIcon> g_applauncherDropTarget;
 static int s_moveStartPage;
 static int s_moveStartSlot;
@@ -418,27 +418,27 @@ static void moveIconWidget(ui::Widget *widget, const math::v4 &pos, const math::
  */
 static bool setMovedIcon(const common::SharedPtr<ApplauncherIcon> &icon)
 {
-	if (s_moveIcon.get() != NULL) {
-		if (s_moveIcon->m_slot != s_moveIcon->m_homeSlot ||
-		    s_moveIcon->m_page != s_moveIcon->m_movePage) {
-			ui::Widget *widget = s_moveIcon->m_icon->m_widget;
+	if (g_applauncherMoveIcon.get() != NULL) {
+		if (g_applauncherMoveIcon->m_slot != g_applauncherMoveIcon->m_homeSlot ||
+		    g_applauncherMoveIcon->m_page != g_applauncherMoveIcon->m_movePage) {
+			ui::Widget *widget = g_applauncherMoveIcon->m_icon->m_widget;
 
-			if (s_moveIcon->m_page != NULL)
-				applauncherIconRemove(s_moveIcon, true);
-			s_moveIcon->m_movePage->PutIcon(s_moveIcon, s_moveIcon->m_homeSlot, true,
+			if (g_applauncherMoveIcon->m_page != NULL)
+				applauncherIconRemove(g_applauncherMoveIcon, true);
+			g_applauncherMoveIcon->m_movePage->PutIcon(g_applauncherMoveIcon, g_applauncherMoveIcon->m_homeSlot, true,
 							true);
-			s_moveIcon->m_movePage->UpdateFocusLinks();
+			g_applauncherMoveIcon->m_movePage->UpdateFocusLinks();
 			widget->KillAnim(ui::Widget::ANIM_MOVE);
 			widget->KillAnim(ui::Widget::ANIM_COLOR);
-			moveIconWidget(widget, s_moveIcon->GetSlotPos(),
+			moveIconWidget(widget, g_applauncherMoveIcon->GetSlotPos(),
 				       math::v4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
-		if (s_moveIcon.get() == icon.get()) {
-			s_moveIcon.reset();
+		if (g_applauncherMoveIcon.get() == icon.get()) {
+			g_applauncherMoveIcon.reset();
 			return false;
 		}
 	}
-	s_moveIcon = icon;
+	g_applauncherMoveIcon = icon;
 	return true;
 }
 
@@ -855,9 +855,9 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 	if (icon.get() != NULL) {
 		startPage = s_moveStartPage;
 		startSlot = s_moveStartSlot;
-		if (s_moveIcon.get() != NULL) {
-			movedPage = s_moveIcon->m_movePage->GetIndex();
-			movedSlot = s_moveIcon->m_moveSlot;
+		if (g_applauncherMoveIcon.get() != NULL) {
+			movedPage = g_applauncherMoveIcon->m_movePage->GetIndex();
+			movedSlot = g_applauncherMoveIcon->m_moveSlot;
 		}
 	}
 
@@ -941,8 +941,8 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 		if (icon->m_page != NULL)
 			moveIconWidget(widget, icon->GetSlotPos());
 
-		if (s_moveIcon.get() != NULL && s_moveIcon->m_page == NULL && !full)
-			placeIcon(this, s_moveIcon, &startPage, &movedPage);
+		if (g_applauncherMoveIcon.get() != NULL && g_applauncherMoveIcon->m_page == NULL && !full)
+			placeIcon(this, g_applauncherMoveIcon, &startPage, &movedPage);
 		if (noRoom) {
 			ApplauncherPage *page = static_cast<ApplauncherPage *>(
 				g_applauncherHome->m_scroller.GetFocused());
@@ -952,17 +952,17 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 		}
 
 		/* the icon moved aside: its move saved, or back in its folder */
-		if (s_moveIcon.get() != NULL) {
-			if (s_moveIcon->m_page != NULL) {
-				if (s_moveIcon->m_page->GetIndex() != movedPage ||
-				    s_moveIcon->m_slot != movedSlot) {
+		if (g_applauncherMoveIcon.get() != NULL) {
+			if (g_applauncherMoveIcon->m_page != NULL) {
+				if (g_applauncherMoveIcon->m_page->GetIndex() != movedPage ||
+				    g_applauncherMoveIcon->m_slot != movedSlot) {
 					fromPages.push_back(movedPage);
 					fromPositions.push_back(movedSlot);
-					toPages.push_back(s_moveIcon->m_page->GetIndex());
-					toPositions.push_back(static_cast<int>(s_moveIcon->m_slot));
-					s_moveIcon->m_movePage = s_moveIcon->m_page;
-					s_moveIcon->m_moveSlot = s_moveIcon->m_slot;
-					s_moveIcon->m_homeSlot = s_moveIcon->m_moveSlot;
+					toPages.push_back(g_applauncherMoveIcon->m_page->GetIndex());
+					toPositions.push_back(static_cast<int>(g_applauncherMoveIcon->m_slot));
+					g_applauncherMoveIcon->m_movePage = g_applauncherMoveIcon->m_page;
+					g_applauncherMoveIcon->m_moveSlot = g_applauncherMoveIcon->m_slot;
+					g_applauncherMoveIcon->m_homeSlot = g_applauncherMoveIcon->m_moveSlot;
 				}
 			} else {
 				int slot = -1;
@@ -973,7 +973,7 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 				fromPositions.push_back(movedSlot);
 				toPages.push_back(startPage);
 				toPositions.push_back(slot);
-				s_moveIcon->PutInFolder(g_applauncherHome->FindIconById(startPage));
+				g_applauncherMoveIcon->PutInFolder(g_applauncherHome->FindIconById(startPage));
 			}
 		}
 
@@ -1083,7 +1083,7 @@ void ApplauncherPage::iconMoveEnd(const common::SharedPtr<ApplauncherIcon> &icon
 				fromPages, fromPositions, toPages, toPositions, removed,
 				onPageLayoutRun, onPageLayoutDone, NULL);
 		}
-		s_moveIcon.reset();
+		g_applauncherMoveIcon.reset();
 		if (icon->m_page != NULL && icon->m_page->m_type != 2)
 			applauncherHomeJumpTo(icon->m_page);
 	}
