@@ -11,6 +11,7 @@
 #include <timer/timer.h>
 
 #include "bgdl_util.h"
+#include "bgdl_task.h"
 
 using namespace paf;
 
@@ -128,40 +129,59 @@ int bgdlFormatUInt(SceUInt32 value, string *str)
 	return 0;
 }
 
-/* (0x810FD4EA) */
-int BgdlSortedList::Insert(BgdlKeyed *entry)
+/* the first of [first, last) whose id is not below the task's (Dinkumware's lower_bound) */
+static inline BgdlTask **bgdlLowerBound(BgdlTask **first, BgdlTask **last, BgdlTask *const &task)
 {
-	BgdlArray<BgdlKeyed *> list;
-	BgdlKeyed **first;
-	BgdlKeyed **last;
-	BgdlKeyed **dst;
-	BgdlKeyed **it;
+	int count = last - first;
+
+	while (count > 0) {
+		int half = count / 2;
+		BgdlTask **mid = first + half;
+
+		if ((*mid)->id < task->id) {
+			first = ++mid;
+			count -= half + 1;
+		} else {
+			count = half;
+		}
+	}
+	return first;
+}
+
+/* (0x810FD4EA) */
+int BgdlTaskList::Insert(BgdlTask *task)
+{
+	BgdlArray<BgdlTask *> list;
+	BgdlTask **first;
+	BgdlTask **last;
+	BgdlTask **dst;
+	BgdlTask **it;
 	int count;
 	int half;
 	int ret;
 
-	ret = list.Reserve((char *)m_end - (char *)m_begin + sizeof(BgdlKeyed *));
+	ret = list.Reserve((char *)m_end - (char *)m_begin + sizeof(BgdlTask *));
 	if (ret != 0)
 		return ret;
 	first = m_begin;
 	last = m_end;
 	it = first;
-	count = ((char *)last - (char *)first) / (int)sizeof(BgdlKeyed *);
+	count = ((char *)last - (char *)first) / (int)sizeof(BgdlTask *);
 	while (count > 0) {
 		half = count / 2;
-		if (it[half]->key < entry->key) {
+		if (it[half]->id < task->id) {
 			it += half + 1;
 			count = count - half - 1;
 		} else {
 			count = half;
 		}
 	}
-	if (it != last && !(entry->key < (*it)->key))
+	if (it != last && !(task->id < (*it)->id))
 		return BGDL_ERROR_ALREADY_EXISTS;
 	dst = list.m_begin;
 	while (first != it)
 		*dst++ = *first++;
-	*dst++ = entry;
+	*dst++ = task;
 	while (it != last)
 		*dst++ = *it++;
 	Swap(list);
@@ -169,13 +189,38 @@ int BgdlSortedList::Insert(BgdlKeyed *entry)
 }
 
 /* (0x810FD5E6) */
-void BgdlSortedList::Erase(BgdlKeyed **pos)
+void BgdlTaskList::Erase(BgdlTask **pos)
 {
-	BgdlKeyed **it;
+	BgdlTask **it;
 
 	if (pos >= m_end)
 		return;
 	for (it = pos + 1; it != m_end; it++)
 		it[-1] = *it;
-	Reserve((char *)m_end - (char *)m_begin - sizeof(BgdlKeyed *));
+	Reserve((char *)m_end - (char *)m_begin - sizeof(BgdlTask *));
+}
+
+/* (0x810FD64E) */
+BgdlTask **BgdlTaskList::Find(BgdlTask *task)
+{
+	BgdlTask **it;
+
+	it = bgdlLowerBound(m_begin, m_end, task);
+	if (it != m_end && task->id < (*it)->id)
+		return m_end;
+	return it;
+}
+
+/* (0x810FD6BA) */
+void BgdlTaskList::Clear(void)
+{
+	BgdlTask **it;
+
+	for (it = m_begin; it != m_end; it++) {
+		if (*it != NULL) {
+			delete *it;
+			*it = NULL;
+		}
+	}
+	Reserve(0);
 }

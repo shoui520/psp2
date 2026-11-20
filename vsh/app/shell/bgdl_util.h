@@ -1,7 +1,7 @@
 /*
  * The background download library's helpers (bgdl_util.cpp, 0x810FD14C on): a transfer's
  * progress (bytes done, speed, time left), number and string conversions for its param
- * files, and a growable array kept sorted by key. No record names the file, the types or
+ * files, and a the manager's task list. No record names the file, the types or
  * the functions: the names are ours (PLACEHOLDER).
  */
 #ifndef SHELL_BGDL_UTIL_H
@@ -91,16 +91,15 @@ public:
 	T *m_end;
 };
 
-/* what the sorted list holds: anything that starts with its key */
-struct BgdlKeyed {
-	SceUInt32 key;
-};
+class BgdlTask;
 
-/* pointers kept sorted by their key, each key once */
-class BgdlSortedList : public BgdlArray<BgdlKeyed *> {
+/* the manager's tasks, sorted by id, each id once (bgdl_task.h) */
+class BgdlTaskList : public BgdlArray<BgdlTask *> {
 public:
-	int Insert(BgdlKeyed *entry);			/* (0x810FD4EA) */
-	void Erase(BgdlKeyed **pos);			/* (0x810FD5E6) */
+	int Insert(BgdlTask *task);			/* (0x810FD4EA) */
+	void Erase(BgdlTask **pos);			/* (0x810FD5E6) */
+	BgdlTask **Find(BgdlTask *task);		/* (0x810FD64E) the task with its id, or m_end */
+	void Clear(void);				/* (0x810FD6BA) every task deleted */
 };
 
 int bgdlStringToInt(const paf::string &str);			/* (0x810FD328) */
