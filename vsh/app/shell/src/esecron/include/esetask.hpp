@@ -1,18 +1,18 @@
 /*
- * The background download library's task: what the manager keeps of each download (304
+ * esetask.hpp: the background download library's task (Sony's EseTask, "PAF_NEW EseTask" in
+ * the 0.990 prototype): what the manager keeps of each download (304
  * bytes, made in 0x811000D4, filled from the task's param file in 0x810FF6F4), kept in a
  * BgdlTaskList. The param file's keys are Sony's numbers (100-116, 206, 208, 217, 220, 500,
- * 501, 505, 5002 on); no record names the types or the fields: the names are ours
+ * 501, 505, 5002 on); no record names the other types or the fields: the names are ours
  * (PLACEHOLDER), and a field known only by the key it is read from is named by the key.
  */
-#ifndef SHELL_BGDL_TASK_H
-#define SHELL_BGDL_TASK_H
-
+#ifndef ESECRON_ESETASK_HPP
+#define ESECRON_ESETASK_HPP
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string>
 
-#include "bgdl_util.h"
+#include "esebase.hpp"
 
 /* a task's state as the manager shows it (the manager copies 60 bytes of it) */
 struct BgdlTaskStatus {
@@ -35,7 +35,7 @@ struct BgdlTaskCopy {
 	int state[5];			/* PLACEHOLDER: copied from libmtp's progress, not read yet */
 };
 
-class BgdlTask {
+class EseTask {
 public:
 	SceUInt32 id;			/* the task's number, its folder's name */
 	int result;			/* key 104; 0x80103A1A until it is read */

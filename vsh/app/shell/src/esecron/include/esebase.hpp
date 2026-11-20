@@ -1,18 +1,85 @@
 /*
- * The background download library's helpers (bgdl_util.cpp, 0x810FD14C on): a transfer's
- * progress (bytes done, speed, time left), number and string conversions for its param
- * files, and a the manager's task list. No record names the file, the types or
- * the functions: the names are ours (PLACEHOLDER).
+ * esebase.hpp: the background download library's (Sony's esecron, vsh/app/shell/src/esecron)
+ * base types: a task's paths, a growable array, a transfer's progress, the task list and the
+ * number conversions of its param files. Sony's 0.990 prototype names the header and some of
+ * the methods (initialize, format, insert); the types and the other names are ours
+ * (PLACEHOLDER).
  */
-#ifndef SHELL_BGDL_UTIL_H
-#define SHELL_BGDL_UTIL_H
+#ifndef ESECRON_ESEBASE_HPP
+#define ESECRON_ESEBASE_HPP
 
 #include <stddef.h>
 #include <scetypes.h>
 #include <std/string.h>
 #include <std/string>
 
-#include "bgdl_path.h"
+/* the library's errors (PLACEHOLDER names) */
+#define BGDL_ERROR_NOT_STARTED		0x80103A00	/* the manager is not made */
+#define BGDL_ERROR_NO_MEMORY		0x80103A08
+#define BGDL_ERROR_INVALID_ARGUMENT	0x80103A0E
+
+/* the length of a task's folder, "ux0:bgdl/t/%08x" */
+#define BGDL_PATH_FOLDER_LENGTH		19
+
+class BgdlTaskPath {
+public:
+	BgdlTaskPath() : m_begin(NULL), m_end(NULL)
+	{
+	}
+
+	~BgdlTaskPath()
+	{
+		if (m_begin != NULL)
+			delete[] m_begin;
+	}
+
+	/* the buffer made size bytes, the old contents kept */
+	int Reserve(SceSize size)
+	{
+		if (size != 0) {
+			char *buf = new char[size];
+
+			if (buf == NULL)
+				return BGDL_ERROR_NO_MEMORY;
+			if (m_begin != NULL) {
+				sce_paf_memset(buf, 0, size);
+				sce_paf_memcpy(buf, m_begin, size);
+				if (m_begin != NULL)
+					delete[] m_begin;
+			}
+			m_begin = buf;
+			m_end = buf + size;
+		} else if (m_begin != NULL) {
+			delete[] m_begin;
+			m_begin = NULL;
+			m_end = NULL;
+		}
+		return 0;
+	}
+
+	void Swap(BgdlTaskPath &other)
+	{
+		char *buf;
+
+		buf = m_begin;
+		m_begin = other.m_begin;
+		other.m_begin = buf;
+		buf = m_end;
+		m_end = other.m_end;
+		other.m_end = buf;
+	}
+
+	int initialize(const char *device, int taskId, bool work);	/* (0x810FCD10) */
+	int initialize(int taskId, SceSize size);			/* (0x810FCF36) */
+	char *SetName(const char *name);				/* (0x810FCFEE) */
+	int format(const char *format, ...);				/* (0x810FD00E) */
+	char *ClearName(void);						/* (0x810FD106) */
+	static bool Exists(const char *path);				/* (0x810FD12E) */
+	bool Exists(void);						/* (0x810FD13C) */
+
+	char *m_begin;
+	char *m_end;
+};
 
 /* an entry already in the list with the same key */
 #define BGDL_ERROR_ALREADY_EXISTS	0x80103A17
@@ -91,14 +158,14 @@ public:
 	T *m_end;
 };
 
-class BgdlTask;
+class EseTask;
 
-/* the manager's tasks, sorted by id, each id once (bgdl_task.h) */
-class BgdlTaskList : public BgdlArray<BgdlTask *> {
+/* the manager's tasks, sorted by id, each id once (esetask.hpp) */
+class BgdlTaskList : public BgdlArray<EseTask *> {
 public:
-	int Insert(BgdlTask *task);			/* (0x810FD4EA) */
-	void Erase(BgdlTask **pos);			/* (0x810FD5E6) */
-	BgdlTask **Find(BgdlTask *task);		/* (0x810FD64E) the task with its id, or m_end */
+	int insert(EseTask *task);			/* (0x810FD4EA) */
+	void Erase(EseTask **pos);			/* (0x810FD5E6) */
+	EseTask **Find(EseTask *task);		/* (0x810FD64E) the task with its id, or m_end */
 	void Clear(void);				/* (0x810FD6BA) every task deleted */
 };
 
