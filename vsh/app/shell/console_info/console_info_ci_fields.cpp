@@ -1968,20 +1968,20 @@ static int consoleInfoCiGetBtNames(ConsoleInfoCiStringField *field, ConsoleInfoC
 }
 
 /* (0x81558300) the network settings' fields */
-static ConsoleInfoCiNetField s_netFields[CONSOLE_INFO_CI_NET_FIELDS] = {
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(77, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
+static ConsoleInfoCiRegField s_netFields[CONSOLE_INFO_CI_NET_FIELDS] = {
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(77, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
 		"enable_auto_connect", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(78, 'D', 4, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(78, 'D', 4, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
 		"mtu", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(79, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(79, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
 		"device", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(80, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(80, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_COMMON,
 		"ether_mode", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(81, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_IP,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(81, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_IP,
 		"ip_config", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(82, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_IP,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(82, 'D', 1, false, 1, 3), CONSOLE_INFO_CI_NET_IP,
 		"dns_flag", "int"),
-	ConsoleInfoCiNetField(ConsoleInfoCiKey(83, 'D', 4, false, 1, 3), CONSOLE_INFO_CI_NET_APP,
+	ConsoleInfoCiRegField(ConsoleInfoCiKey(83, 'D', 4, false, 1, 3), CONSOLE_INFO_CI_NET_APP,
 		"http_proxy_flag", "int")
 };
 
@@ -2011,7 +2011,7 @@ static int consoleInfoCiGetNetSettings(ConsoleInfoCiStringField *field, ConsoleI
 
 	text += length;
 	for (unsigned int i = 0; i < CONSOLE_INFO_CI_NET_FIELDS; i++) {
-		ConsoleInfoCiNetField *net = &s_netFields[i];
+		ConsoleInfoCiRegField *net = &s_netFields[i];
 
 		sce_paf_snprintf(text, left, "&d%d=", net->m_key.m_id);
 		length = sce_paf_strlen(text);

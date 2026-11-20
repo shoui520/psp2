@@ -16,10 +16,6 @@
 
 using namespace paf;
 
-/* the platforms: a PS Vita, a PS TV */
-#define CONSOLE_INFO_PLATFORM_VITA	1
-#define CONSOLE_INFO_PLATFORM_DOLCE	2
-
 /* PLACEHOLDER: ur0:ci/file's 32-bit value keeping the system software's version the record was
    committed with, and its 64-bit value set when the record is committed */
 #define CONSOLE_INFO_CI_FILE_VERSION	178

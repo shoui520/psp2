@@ -30,11 +30,16 @@
 #define CONSOLE_INFO_ERROR_ALREADY_OPEN		-49
 #define CONSOLE_INFO_ERROR_INVALID_HANDLE		-50
 
+/* the platforms the records report: a PS Vita, a PS TV */
+#define CONSOLE_INFO_PLATFORM_VITA	1
+#define CONSOLE_INFO_PLATFORM_DOLCE	2
+
 /* the folders */
 #define CONSOLE_INFO_TEMP_DIR		"ur0:temp/ci"
 #define CONSOLE_INFO_PREV_DIR		"ur0:ci/prev"
 
 /* PLACEHOLDER: the file errors the records pass on (paf's) */
+#define CONSOLE_INFO_ERROR_END_OF_FILE	-43
 #define CONSOLE_INFO_ERROR_INVALID_INDEX	-44
 #define CONSOLE_INFO_ERROR_NOT_FOUND		-2135994334	/* 0x80AF5022 */
 
@@ -581,10 +586,10 @@ public:
 	Getter m_getter;
 };
 
-/* a network setting's field: its key, and the registry key giving its value in each network
-   setting (a category with the setting's number, and a name) and the value's type (0x814148AC) */
-struct ConsoleInfoCiNetField {
-	ConsoleInfoCiNetField(ConsoleInfoCiKey key, const char *category, const char *name,
+/* a registry key's field: its key, the registry key giving its value (for a network setting's
+   field, a category with the setting's number) and the value's type ("int", "str"; 0x814148AC) */
+struct ConsoleInfoCiRegField {
+	ConsoleInfoCiRegField(ConsoleInfoCiKey key, const char *category, const char *name,
 			      const char *type)
 		: m_key(key), m_category(category), m_name(name), m_type(type)
 	{
@@ -594,6 +599,46 @@ struct ConsoleInfoCiNetField {
 	const char *m_category;
 	const char *m_name;
 	const char *m_type;
+};
+
+/* PLACEHOLDER: a values file of the fields a lookup gives by index, until it gives NULL (28 bytes,
+   0x810F4294); the callbacks run before and after the values are stored */
+class ConsoleInfoCiFieldValueFile : public ConsoleInfoCiValueFile {
+public:
+	typedef ConsoleInfoCiField *(*GetField)(unsigned int index);
+	typedef void (*Callback)(void);
+
+	/* the previous values' file, read with its owner's fields */
+	ConsoleInfoCiFieldValueFile(int size)
+		: ConsoleInfoCiValueFile(size), m_getField(NULL), m_begin(NULL), m_end(NULL)
+	{
+	}
+	ConsoleInfoCiFieldValueFile(int size, GetField getField);
+	ConsoleInfoCiFieldValueFile(int size, GetField getField, Callback begin, Callback end);
+	virtual ~ConsoleInfoCiFieldValueFile();
+
+	virtual int Store();
+	virtual int Compare(ConsoleInfoCi *ci);
+
+	GetField m_getField;
+	Callback m_begin;
+	Callback m_end;
+};
+
+/* PLACEHOLDER: the values file of the registry keys' fields, a 32-bit value each (16 bytes,
+   0x810F4898) */
+class ConsoleInfoCiRegValueFile : public ConsoleInfoCiValueFile {
+public:
+	ConsoleInfoCiRegValueFile();
+	virtual ~ConsoleInfoCiRegValueFile();
+
+	virtual int Store();
+	virtual int Compare(ConsoleInfoCi *ci);
+
+	int StoreKey(const ConsoleInfoCiRegField *field);
+	int ReadKey(const ConsoleInfoCiRegField *field, int *value);
+	int CompareKey(ConsoleInfoCiRegValueFile *prev, ConsoleInfoCi *ci,
+		       const ConsoleInfoCiRegField *field);
 };
 
 /* PLACEHOLDER names: the "ci" record's fields by kind, each kind's lookup by index and the
