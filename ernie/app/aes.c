@@ -13,6 +13,7 @@
 
 #include "ernie.h"
 #include "aes.h"
+#include "board.h"
 #if !defined(ERNIE_UPDATER) && FW_SINCE(0x0100060B)
 #include "aestable.h"
 #else
@@ -99,7 +100,10 @@ static const unsigned char aesRcon[14] = {
 /* the updater's revision carries no revision string, and tests the near blocks against 0 */
 #define AES_NULL	0
 #else
-#if SOURCE_0104
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105 (USS-1002): its own repository's revision */
+static const char aesRevision[] = "$Rev: 4066 $";
+#elif SOURCE_0104
 static const char aesRevision[] = "$Rev: 9140 $";
 #elif FW_SINCE(0x01030505)
 static const char aesRevision[] = "$Rev: 6209 $";

@@ -18,6 +18,7 @@
 #include <string.h>
 
 #include "ernie.h"
+#include "battery.h"
 #include "bbmc.h"
 #include "board.h"
 #include "chip.h"
@@ -91,6 +92,11 @@ static struct {
 unsigned char hostCommandNull(unsigned char *out, unsigned char *length);
 unsigned char hostCommandSleepFactor(unsigned char *out, unsigned char *length);
 unsigned char hostCommandRequests(unsigned char *out, unsigned char *length);
+
+#if BOARD_USS1001 && SOURCE_0104
+/* the slim's 0x0105 (USS-1002): its revision first, ahead of the tables */
+static const char hostRevision[] = "$Rev: 10808 $";
+#endif
 
 /* the commands, in order: all of them, and those taken before handshakeUnlocked11 allows the rest */
 static const struct HostCommand hostCommands[] = {
@@ -170,6 +176,9 @@ static const struct HostCommand hostCommands[] = {
 #if SOURCE_0104
 	{ 0x0903, hostCommand0903, 0 },
 #endif
+#if BATTERY_GAUGE
+	{ 0x0904, hostCommand0904, 0 },
+#endif
 #if FW_SINCE(0x0100060B)
 	{ 0x0a00, hostCommand0a00, 0 },
 #endif
@@ -206,7 +215,8 @@ static const struct HostCommand hostBaseCommands[] = {
 	{ 0x1300, hostCommandConfigVersions, 0 },
 };
 
-#if FW_SINCE(0x0100060B)
+#if BOARD_USS1001 && SOURCE_0104
+#elif FW_SINCE(0x0100060B)
 static const char hostRevision[] = "$Rev: 4066 $";
 #elif FW_SINCE(0x00090903)
 static const char hostRevision[] = "$Rev: 2579 $";
@@ -523,6 +533,10 @@ void hostRequestAnswer(struct HostRequest *request, unsigned char state,
 	if (request != NULL) {
 		switch (state) {
 		case HOST_REQUEST_ANSWER:
+#if BOARD_USS1001 && SOURCE_0104
+			if (status != 0)	/* the slim's 0x0105: no answer data with an error */
+				length = 0;
+#endif
 			request->answerLength = length;
 			request->status = status;
 			break;

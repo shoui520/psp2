@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 
+#include "battery.h"
 #include "board.h"
 #include "ernie.h"
 #include "input.h"
@@ -212,6 +213,35 @@ void rtcInterrupt(void)
 		} else {
 			hangCount = 0;
 			hangState = HANG_NONE;
+		}
+#endif
+#if INPUT_MEASURE
+		/* the battery's measurement runs (ask5): while charging at one tick of four, else
+		   every tenth; outside states 0x0004, 0x0008 and 0x0010 at each */
+		switch (state) {
+		case 0x0004:
+		case 0x0008:
+			if (batteryIsCharging()) {
+				if ((rtcClockLow & 0x0003) == 1)
+					inputMeasure.ask5 = 1;
+				inputMeasure.holdOff = 0;
+			} else {
+				if (inputMeasure.holdOff != 0)
+					inputMeasure.holdOff--;
+				if (inputMeasure.holdOff == 0) {
+					inputMeasure.ask5 = 1;
+					inputMeasure.holdOff = 10;
+				}
+			}
+			if (inputMeasure.ask5)
+				inputScanHold(0x66);
+			break;
+		case 0x0010:
+			break;
+		default:
+			inputMeasure.ask5 = 1;
+			inputMeasure.holdOff = 0;
+			break;
 		}
 #endif
 	}

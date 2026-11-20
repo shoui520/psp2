@@ -379,9 +379,9 @@ unsigned char task2Resume(void)
 #if HOST_WATCHDOG
 	watchdogSetup();
 #endif
-#if BOARD_DOL1002
+#if SOURCE_0104
 	if (factor->bits.mode == 0x21) {
-		/* DOL-1002: mode 0x21 (stateOffHandle's transition 0x21) tested, nothing done */
+		/* the 0x0104 line: mode 0x21 (stateOffHandle's transition 0x21) tested, nothing done */
 	}
 #endif
 #if !FW_SINCE(0x01000104) && FW_SINCE(0x00090903)
@@ -514,7 +514,7 @@ unsigned char task2Tick(void)
 #endif
 	if (isAlarmReached()) {
 		sleepFactorSet3(1);
-#if STATE_WAKE_HIGH
+#if STATE_WAKE_BITS
 		if (!(unsigned char)stateGetWakeBit(1)) {
 #else
 		if ((stateGetWakeMask() & 2) == 0) {
@@ -541,6 +541,10 @@ unsigned char task2Tick(void)
 	taskHookTick();
 #if BOARD_DEBUG_PINS_POWER
 	debugPinSet((unsigned char)(P4.0 ^ 1));	/* toggled at each tick */
+#endif
+#if BOARD_USS1001 && SOURCE_0104
+	if (state == 0x0200)
+		dly_tsk(2);
 #endif
 	return ret;
 }

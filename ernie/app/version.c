@@ -205,13 +205,13 @@ unsigned char getHardwareInfoFlags(void)
 /* one bit of the hardware info 2 (0-127; 0 for any other) */
 char getHardwareInfo2Bit(unsigned char number)
 {
-#if BOARD_DOL1001
+#if BOARD_DOL1001 || SOURCE_0104
 	unsigned char byte;
 #endif
 
 	if (number >= 0x80)
 		return 0;
-#if BOARD_DOL1001
+#if BOARD_DOL1001 || SOURCE_0104
 	byte = number >> 3;
 	return ((hardwareInfo2[byte] ^ versionFlags.hardwareInfo2[byte]) &
 		(1 << (number & 7))) ? 1 : 0;

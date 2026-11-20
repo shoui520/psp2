@@ -39,6 +39,9 @@ extern unsigned char hostCommandBatteryVolt(unsigned char *out, unsigned char *l
 extern unsigned char hostCommandBatteryLifePercent(unsigned char *out, unsigned char *length);
 #if SOURCE_0104
 extern unsigned char hostCommand0903(unsigned char *out, unsigned char *length);
+#if BOARD_USS1001 && SOURCE_0104	/* battery.h's BATTERY_GAUGE */
+extern unsigned char hostCommand0904(unsigned char *out, unsigned char *length);
+#endif
 #endif
 extern void powerRequestLedDone(void);
 extern void powerInputChanged(void);

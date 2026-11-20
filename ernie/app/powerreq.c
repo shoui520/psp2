@@ -2841,6 +2841,16 @@ unsigned char hostCommand0903(unsigned char *out, unsigned char *length)
 }
 #endif
 
+#if BATTERY_GAUGE
+/* 0x0904: the slim's 0x0105 gauge's offsets, in use and the settings' (8 bytes) */
+unsigned char hostCommand0904(unsigned char *out, unsigned char *length)
+{
+	batteryGetCalibration((struct BatteryCalibration *)out);
+	*length = 8;
+	return 0;
+}
+#endif
+
 /* the battery's word for the host, or the setting's when no battery answered */
 #if BOARD_DOL1002
 /* DOL-1002: an id of 0, 0xfffc (powerSeqOn's for none) or 0xffff */
