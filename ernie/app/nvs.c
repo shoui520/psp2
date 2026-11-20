@@ -33,12 +33,24 @@
 #define NVS_BLOCKS		8
 #define NVS_ENTRIES		0x1c	/* a block's entries */
 #define NVS_RECORD_SIZE		0x20
-#define NVS_RECORDS		0x5d
+#define NVS_RECORDS		0x5d	/* kept in the blocks */
+#define NVS_AREA0_SIZE		0xb60	/* records 0-0x5a */
+#if SOURCE_0104
+/* USS-1002's area 1 is records 0x5b-0x60: 0x5d-0x60 are kept as 0x57-0x5a, which read blank
+   and refuse a write (nvsGetRecord, nvsPutRecord) */
+#define NVS_AREA1_SIZE		0xc0
+#define NVS_BLANK_FIRST		0x57
+#define NVS_MOVED_FIRST		0x5b	/* the first not remapped */
+#define NVS_REMAP_FIRST		0x5d
+#define NVS_REMAP_END		0x61
+#else
 #define NVS_AREA1_SIZE		0x40
-#define NVS_AREA0_SIZE		(NVS_RECORDS * NVS_RECORD_SIZE - NVS_AREA1_SIZE)
+#endif
 #define NVS_FREE_MIN		3	/* the free blocks kept */
 #define NVS_COLLECT_MIN		5	/* the data blocks a collection needs */
 #define NVS_ENTRY_VALID		0xaa
+/* USS-1002's operations close the data flash library at their end (flash.c's flashClose) */
+#define NVS_FLASH_CLOSE		(SOURCE_0104)
 #if FW_SINCE(0x01030511)
 #define NVS_HEADER_MARK		0x42
 #else
@@ -57,6 +69,13 @@
 #define NVS_STATUS_DATA		0xffff55ff
 #define NVS_STATUS_USED		0xff5555ff
 #define NVS_STATUS_ERASED	0xffffffff
+
+/* the list functions refuse a list and a block both missing; USS-1002's either */
+#if SOURCE_0104
+#define NVS_LIST_NULL(list, info)	((list) == NULL || (info) == NULL)
+#else
+#define NVS_LIST_NULL(list, info)	((list) == NULL && (info) == NULL)
+#endif
 
 /* a block's header: its status (bytes 0 and 3 cleared when it went bad), the sequence of the
    data blocks, oldest first */
@@ -300,6 +319,9 @@ unsigned char nvsRead(unsigned int offset, unsigned int size, unsigned char *dat
 	result = nvsReadRecords(nvsBuffer.bytes, index, (unsigned char)count);
 	if (result == 0)
 		memcpy(data, &nvsBuffer.bytes[start], size);
+#if NVS_FLASH_CLOSE
+	flashClose();
+#endif
 	return result;
 }
 
@@ -348,6 +370,9 @@ unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *da
 		} while ((result = nvsClean(0x10)) == 0);
 #endif
 	}
+#if BOARD_USS1001 && NVS_FLASH_CLOSE
+	flashClose();
+#endif
 	return result;
 }
 
@@ -1936,8 +1961,10 @@ static unsigned char nvsReadRecords(unsigned char *buffer, unsigned int index,
 	case 0x80:
 		break;
 	}
+#if !SOURCE_0104	/* USS-1002's nvsGetRecord checks the index */
 	if (index >= NVS_RECORDS)
 		return 6;
+#endif
 	while (count-- != 0) {
 		result = nvsGetRecord(buffer, index);
 		if (result != 0)
@@ -1971,8 +1998,10 @@ static unsigned char nvsWriteRecords(unsigned char *buffer, unsigned int index,
 	default:
 		return 9;
 	}
+#if !SOURCE_0104	/* USS-1002's nvsPutRecord checks the index */
 	if (index >= NVS_RECORDS)
 		return 6;
+#endif
 	if (nvs.freeList.count < NVS_FREE_MIN)
 		nvsCollect(NVS_FREE_MIN - nvs.freeList.count);
 	while (count-- != 0) {
@@ -2040,7 +2069,9 @@ unsigned char nvsMove(void)
    times */
 unsigned char nvsCollect(unsigned char count)
 {
+#if !SOURCE_0104	/* counted, never read: USS-1002 drops it */
 	unsigned char moved;
+#endif
 	unsigned char j;
 	unsigned char i;
 	unsigned char k;
@@ -2057,7 +2088,9 @@ unsigned char nvsCollect(unsigned char count)
 		return 0;
 	nvs.state = NVS_STATE_COLLECTING;
 	entry = &nvs.entry;
+#if !SOURCE_0104
 	moved = 0;
+#endif
 	for (; count != 0; count--) {
 		oldest = nvs.dataList.head;
 		if (oldest == NULL) {
@@ -2097,7 +2130,9 @@ unsigned char nvsCollect(unsigned char count)
 						result = flashWrite(&slot->valid, &entry->valid, 1, 1);
 						if (result != 0)
 							continue;
+#if !SOURCE_0104
 						moved++;
+#endif
 						goto seen;
 					}
 				}
@@ -2174,6 +2209,9 @@ unsigned char nvsClean(unsigned char count)
 	else
 		nvs.state = 3;
 #endif
+#if NVS_FLASH_CLOSE
+	flashClose();
+#endif
 	return result;
 }
 
@@ -2195,7 +2233,9 @@ unsigned char nvsMount(unsigned char mode)
 	memset(&nvs.freeList, 0, sizeof(nvs.freeList));
 	memset(&nvs.badList, 0, sizeof(nvs.badList));
 	oldest = 0xffffffff;
+#if !SOURCE_0104	/* USS-1002 leaves it to the first data block */
 	first = 0xff;
+#endif
 	for (i = 0; i < NVS_BLOCKS; i++) {
 		info = &nvs.blocks[i];
 		block = NVS_BLOCK(i);
@@ -2231,6 +2271,9 @@ unsigned char nvsMount(unsigned char mode)
 			break;
 		}
 	}
+#if NVS_FLASH_CLOSE
+	flashClose();
+#endif
 	if (oldest == 0xffffffff) {
 		nvs.state = 0xf0;
 		return 8;
@@ -2311,7 +2354,7 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned l
 						continue;
 					if (entry->index < NVS_RECORDS && entry->valid == NVS_ENTRY_VALID &&
 					    entry->erased == 0xff)
-						bits[entry->index >> 3] |= 0x80 >> (entry->index & 7);
+						bits[entry->index >> 3] |= (unsigned char)0x80 >> (entry->index & 7);
 				}
 			}
 			for (i = 0, map->count = 0; i < NVS_RECORDS; i++) {
@@ -2322,6 +2365,9 @@ unsigned char nvsGetInfo(unsigned char *mark, unsigned char *missing, unsigned l
 		}
 	}
 	nvs.state = state;
+#if NVS_FLASH_CLOSE
+	flashClose();
+#endif
 	return result;
 }
 #else
@@ -2511,6 +2557,50 @@ struct NvsBlockInfo *nvsAllocBlock(void)
 }
 
 /* a record from its newest entry, all ones when none was written */
+#if SOURCE_0104
+/* USS-1002's: the remapped records, read into nvs.entry */
+unsigned char nvsGetRecord(unsigned char *record, unsigned int index)
+{
+	struct NvsBlock *flashBlock;
+	struct NvsBlockInfo *info;
+	struct NvsEntry *entry;
+	unsigned char slot;
+	unsigned char result;
+
+	if (index >= NVS_BLANK_FIRST && index < NVS_MOVED_FIRST) {
+		memset(record, 0xff, NVS_RECORD_SIZE);
+		return 0;
+	}
+	if (index >= NVS_REMAP_FIRST && index < NVS_REMAP_END)
+		index -= NVS_REMAP_FIRST - NVS_BLANK_FIRST;
+	if (index >= NVS_RECORDS)
+		return 6;
+	nvs.state = 2;
+	info = nvs.dataList.tail;
+	entry = &nvs.entry;
+	for (; info != NULL; info = info->prev) {
+		flashBlock = NVS_BLOCK(info->block);
+		if (info->role != NVS_BLOCK_DATA)
+			continue;
+		slot = NVS_ENTRIES;
+		while (slot-- != 0) {
+			result = flashRead(entry, (unsigned char *)&flashBlock->entries[slot], 3);
+			if (result != 0)
+				continue;
+			if (entry->index == (index & 0xff) && entry->valid == NVS_ENTRY_VALID &&
+			    entry->erased == 0xff) {
+				result = flashRead(record, &flashBlock->entries[slot].data[0],
+						   NVS_RECORD_SIZE);
+				nvs.state = 1;
+				return result;
+			}
+		}
+	}
+	memset(record, 0xff, NVS_RECORD_SIZE);
+	nvs.state = 1;
+	return 0;
+}
+#else
 unsigned char nvsGetRecord(unsigned char *record, unsigned int index)
 {
 	struct NvsBlock *flashBlock;
@@ -2543,6 +2633,7 @@ unsigned char nvsGetRecord(unsigned char *record, unsigned int index)
 	nvs.state = 1;
 	return 0;
 }
+#endif
 
 /* a record to the first free entry of the newest block, a new block when it is full */
 unsigned char nvsPutRecord(unsigned char *record, unsigned int index)
@@ -2555,6 +2646,14 @@ unsigned char nvsPutRecord(unsigned char *record, unsigned int index)
 	unsigned char result;
 
 	result = 7;
+#if SOURCE_0104
+	if (index >= NVS_BLANK_FIRST && index < NVS_MOVED_FIRST)
+		return 0x32;
+	if (index >= NVS_REMAP_FIRST && index < NVS_REMAP_END)
+		index -= NVS_REMAP_FIRST - NVS_BLANK_FIRST;
+	if (index >= NVS_RECORDS)
+		return 6;
+#endif
 	nvs.state = 2;
 	info = nvs.dataList.tail;
 	entry = &nvs.entry;
@@ -2598,7 +2697,7 @@ unsigned char nvsListPushFront(struct NvsList *list, struct NvsBlockInfo *info)
 {
 	struct NvsBlockInfo *head;
 
-	if (list == NULL && info == NULL)
+	if (NVS_LIST_NULL(list, info))
 		return 1;
 	head = list->head;
 	list->head = info;
@@ -2616,7 +2715,7 @@ unsigned char nvsListAppend(struct NvsList *list, struct NvsBlockInfo *info)
 {
 	struct NvsBlockInfo *tail;
 
-	if (list == NULL && info == NULL)
+	if (NVS_LIST_NULL(list, info))
 		return 1;
 	tail = list->tail;
 	if (tail != NULL)
@@ -2634,7 +2733,7 @@ unsigned char nvsListRemove(struct NvsList *list, struct NvsBlockInfo *info)
 {
 	struct NvsBlockInfo *p;
 
-	if (list == NULL && info == NULL)
+	if (NVS_LIST_NULL(list, info))
 		return 1;
 	for (p = list->head; p != NULL; p = p->next) {
 		if (p != info)
