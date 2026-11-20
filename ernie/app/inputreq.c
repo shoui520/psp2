@@ -59,6 +59,9 @@
 #define REQUEST_SET_STATE(request, value)	((request).state = (value))
 #endif
 
+/* the slim's 0x0105 (USS-1002): the notifiers have no case for no event */
+#define INPUT_REQUEST_0105	(BOARD_USS1001 && SOURCE_0104)
+
 /* a request's command and its handler */
 struct InputCommand {
 	unsigned int	command;
@@ -69,10 +72,14 @@ struct InputCommand {
 struct InputRequests {
 	unsigned char	touchPending;		/* TOUCH_PENDING */
 	unsigned char	reserved;		/* cleared by inputRequestInit, otherwise unused */
+#if BOARD_USS1001 && SOURCE_0104
+	unsigned char	touchData[0x2a];	/* the slim's 0x0105 */
+	unsigned char	touchAnswer[0x2a];
+#elif FW_SINCE(0x0100060B)
 	unsigned char	touchData[0x20];
-#if FW_SINCE(0x0100060B)
 	unsigned char	touchAnswer[0x18];
 #else
+	unsigned char	touchData[0x20];
 	unsigned char	touchAnswer[0x10];
 #endif
 	unsigned char	touchPhase;		/* the step of a command that takes several runs */
@@ -403,8 +410,10 @@ void inputRequestInit(void)
 void touchRequestNotify(void)
 {
 	switch (touchRequest.event) {
+#if !INPUT_REQUEST_0105
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	case HOST_EVENT_COMMAND:
 		REQUEST_SET_STATE(touchRequest, HOST_REQUEST_BUSY);
 		inputRequests.touchPending = TOUCH_PENDING;
@@ -467,8 +476,10 @@ void motionRequestNotify(void)
 	case HOST_EVENT_ANSWERED:
 		hostRequestSetState(&motionRequest, HOST_REQUEST_RECEIVE);
 		break;
+#if !INPUT_REQUEST_0105
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	}
 }
 #else
@@ -509,8 +520,10 @@ void motionRequestNotify(void)
 		hostRequestSetState(&motionRequest, HOST_REQUEST_IDLE);
 		break;
 #endif
+#if !INPUT_REQUEST_0105
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	}
 }
 #endif
@@ -519,8 +532,10 @@ void motionRequestNotify(void)
 void controlsRequestNotify(void)
 {
 	switch (controlsRequest.event) {
+#if !INPUT_REQUEST_0105
 	case HOST_EVENT_NONE:
 		break;
+#endif
 	case HOST_EVENT_COMMAND:
 		REQUEST_SET_STATE(controlsRequest, HOST_REQUEST_BUSY);
 		task3SetFlag(2, 0x0010);

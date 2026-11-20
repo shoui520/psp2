@@ -14,6 +14,23 @@
 /* USS-1001's rear panel is on IICA1 (iica1.c), DOL-1001's panel 1 on the SPI link as the fat
    models' */
 #define TOUCH_PANEL1_IICA1	BOARD_USS1001
+/* the slim's 0x0105 (USS-1002): the rear panel may be one of several controllers on IICA1
+   (touchRearControllers), found by touchProbeController */
+#define TOUCH_0105		(BOARD_USS1001 && SOURCE_0104)
+#if TOUCH_0105
+/* a frame reads the rear panel: while its controller reports */
+#define TOUCH_REAR_READ		(touch.flags & TOUCH_PANEL1 && touch.panel[1].controllerStatus == 0)
+/* the rear controllers touchProbeController looks for, by their IICA1 address */
+struct TouchRearController {
+	unsigned char	address;
+	unsigned char	reserved;
+	unsigned char	id;
+	unsigned char	variant;
+};
+extern const struct TouchRearController touchRearControllers[3];
+#else
+#define TOUCH_REAR_READ		(touch.flags & TOUCH_PANEL1)
+#endif
 
 #if BOARD_DOL1001
 #define TOUCH_SELECT0		boardDummyPin
@@ -234,6 +251,14 @@ struct TouchPanel {
 #if SOURCE_0104
 	union TouchFeatures features;
 #endif
+#if TOUCH_0105
+	unsigned char	controller;	/* the controller found (touchProbeController): panel 0's
+					   0 or 1 in its bootloader, the rear's its
+					   touchRearControllers entry; 0xff none */
+	unsigned char	controllerStatus;	/* 0: its reports are read; reported for
+						   controller 2 */
+	unsigned char	controllerData[2];
+#endif
 };
 
 /* Touch.flags: which panels a frame reads, and its end */
@@ -269,6 +294,10 @@ struct Touch {
 	unsigned char	frame;			/* the frame being filled */
 	unsigned char	setting[2];		/* each panel's, 1-8, from the host (8 at start) */
 	unsigned char	rate;			/* the frame rate TDR04 runs (0: none) */
+#if TOUCH_0105
+	unsigned char	rearShort;		/* the rear controller 2's report is 0x18 bytes,
+						   not 0x20 */
+#endif
 	union TouchState state;
 	struct TouchPanel panel[2];
 };
@@ -343,6 +372,9 @@ extern struct TouchDelays touchDelays;
 #define TOUCH_DELAY_BYTE	3
 #endif
 
+#if TOUCH_0105
+extern void touchProbeController(char panel);
+#endif
 extern void touchClearPanels(void);
 #if SOURCE_0104
 /* 0x0104: one function for both panels (or links), the panel (or link) its last argument */

@@ -56,6 +56,13 @@ struct TouchBuffer touchBuffer;
 #if FW_SINCE(0x01000306)
 struct TouchDelays touchDelays;
 #endif
+#if TOUCH_0105
+const struct TouchRearController touchRearControllers[3] = {
+	{ 0x96, 0, 1, 0 },
+	{ 0x48, 0, 2, 1 },
+	{ 0xc8, 0, 3, 0 },
+};
+#endif
 
 #if SOURCE_0104
 /* forgets both controllers */
@@ -89,9 +96,12 @@ void touchClearPanels(void)
 /* opens a link (0: CSI10), with no panel enabled */
 void touchOpen(unsigned char link)
 {
-	if (link == 0)
+	if (link == 0) {
 		csi10Open();
-	else if (link == 1)
+#if TOUCH_0105
+		iica1Init();
+#endif
+	} else if (link == 1)
 		;
 	touchClearFrames(0);
 	touchClearFrames(1);
@@ -100,6 +110,17 @@ void touchOpen(unsigned char link)
 	touch.setting[0] = 8;
 	touch.setting[1] = 8;
 	touch.rate = 0;
+#if TOUCH_0105
+	touch.rearShort = 0;
+	touch.panel[0].controller = 0xff;
+	touch.panel[1].controller = 0xff;
+	touch.panel[0].controllerStatus = 0;
+	touch.panel[1].controllerStatus = 0;
+	touch.panel[0].controllerData[0] = 0;
+	touch.panel[0].controllerData[1] = 0;
+	touch.panel[1].controllerData[0] = 0;
+	touch.panel[1].controllerData[1] = 0;
+#endif
 	touchClearMode();
 	touchBuffer.frame = 0;
 	touchBuffer.end = 0;
@@ -116,10 +137,19 @@ void touchClose(unsigned char link)
 {
 	touchDisable(0);
 	touchDisable(1);
+#if TOUCH_0105
+	TOUCH_MODE_PIN = 0;
+	if (link == 0) {
+		csi10Close();
+		iica1Close();
+	} else if (link == 1)
+		;
+#else
 	if (link == 0)
 		csi10Close();
 	else if (link == 1)
 		;
+#endif
 }
 
 /* a panel's parts of both frames: no touch */
@@ -323,7 +353,7 @@ void touchStartFrame(void)
 
 	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
 		touch.flags |= TOUCH_RUNNING;
-		if (touch.flags & TOUCH_PANEL1) {
+		if (TOUCH_REAR_READ) {
 #if TOUCH_PANEL1_IICA1
 			touchCommand.address = touch.panel[1].objects.report;
 #else
@@ -341,7 +371,7 @@ void touchStartFrame(void)
 		    next == hostStream0302.block)
 			next = TOUCH_NEXT_FRAME(next);
 		touch.frame = next;
-		if (touch.flags & TOUCH_PANEL1) {
+		if (TOUCH_REAR_READ) {
 			touchFrames[touch.frame].time1 = TCR02;
 			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
 		} else if (touch.flags & TOUCH_PANEL0) {
@@ -349,6 +379,27 @@ void touchStartFrame(void)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
 #if TOUCH_PANEL1_IICA1
+#if TOUCH_0105
+		if (TOUCH_REAR_READ) {
+			/* by the controller found: 0's report after its address, 2's alone */
+			if (touch.panel[1].controller == 0) {
+				request.rxCount = 0x1d;
+				request.txCount = 2;
+				request.address = touchRearControllers[0].address;
+			} else if (touch.panel[1].controller == 2) {
+				if (touch.rearShort == 0)
+					request.rxCount = 0x20;
+				else
+					request.rxCount = 0x18;
+				request.txCount = 0;
+				request.address = touchRearControllers[2].address;
+			}
+			request.rxData = touchFrames[touch.frame].panel[1];
+			request.txData = (unsigned char *)&touchCommand;
+			request.status = &touchRearStatus;
+			iica1Start(&request);
+		} else {
+#else
 		if (touch.flags & TOUCH_PANEL1) {
 			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
 				request.rxCount = TOUCH_REAR_LENGTH_OLD;
@@ -361,6 +412,7 @@ void touchStartFrame(void)
 			request.status = &touchRearStatus;
 			iica1Start(&request);
 		} else {
+#endif
 #endif
 #if SOURCE_0104
 		touchDelay(TOUCH_DELAY_SELECT);
@@ -439,7 +491,7 @@ void touchStartFrameNoLock(void)
 
 	if (!(touch.flags & TOUCH_RUNNING) && !(touch.flags & TOUCH_BUSY)) {
 		touch.flags |= TOUCH_RUNNING;
-		if (touch.flags & TOUCH_PANEL1) {
+		if (TOUCH_REAR_READ) {
 #if TOUCH_PANEL1_IICA1
 			touchCommand.address = touch.panel[1].objects.report;
 #else
@@ -457,7 +509,7 @@ void touchStartFrameNoLock(void)
 		    next == hostStream0302.block)
 			next = TOUCH_NEXT_FRAME(next);
 		touch.frame = next;
-		if (touch.flags & TOUCH_PANEL1) {
+		if (TOUCH_REAR_READ) {
 			touchFrames[touch.frame].time1 = TCR02;
 			TOUCH_FRAME_STATE(touch.frame, 1) = touch.state.value;
 		} else if (touch.flags & TOUCH_PANEL0) {
@@ -465,6 +517,27 @@ void touchStartFrameNoLock(void)
 			TOUCH_FRAME_STATE(touch.frame, 0) = touch.state.value;
 		}
 #if TOUCH_PANEL1_IICA1
+#if TOUCH_0105
+		if (TOUCH_REAR_READ) {
+			/* by the controller found: 0's report after its address, 2's alone */
+			if (touch.panel[1].controller == 0) {
+				request.rxCount = 0x1d;
+				request.txCount = 2;
+				request.address = touchRearControllers[0].address;
+			} else if (touch.panel[1].controller == 2) {
+				if (touch.rearShort == 0)
+					request.rxCount = 0x20;
+				else
+					request.rxCount = 0x18;
+				request.txCount = 0;
+				request.address = touchRearControllers[2].address;
+			}
+			request.rxData = touchFrames[touch.frame].panel[1];
+			request.txData = (unsigned char *)&touchCommand;
+			request.status = &touchRearStatus;
+			iica1Start(&request);
+		} else {
+#else
 		if (touch.flags & TOUCH_PANEL1) {
 			if (touch.panel[1].version == 9 && touch.panel[1].build < 0x12)
 				request.rxCount = TOUCH_REAR_LENGTH_OLD;
@@ -477,6 +550,7 @@ void touchStartFrameNoLock(void)
 			request.status = &touchRearStatus;
 			iica1Start(&request);
 		} else {
+#endif
 #endif
 #if SOURCE_0104
 		touchDelay(TOUCH_DELAY_SELECT);
@@ -586,6 +660,39 @@ void touchDisable(char panel)
 	touchClearFrames(panel);
 }
 
+#if TOUCH_0105
+/* the slim's 0x0105: panel 0's select line; the link's result is the panel's own number */
+void touchSelectLink(char panel)
+{
+	if (panel == 0)
+		TOUCH_SELECT0 = 0;
+}
+
+void touchReleaseLink(char panel)
+{
+	if (panel == 0)
+		TOUCH_SELECT0 = 1;
+}
+
+unsigned char touchLinkTransfer(char panel)
+{
+	unsigned char result;
+
+	result = 0xff;
+	switch (panel) {
+	case 0:
+		result = 0;
+		break;
+	case 1:
+		result = 1;
+		break;
+	default:
+		result = 0xff;
+		break;
+	}
+	return result;
+}
+#else
 /* DOL-1002 has no touch panels: the link's select, release and transfer do nothing, and a
    transfer fails (0xff) */
 void touchSelectLink(char panel)
@@ -612,7 +719,208 @@ unsigned char touchLinkTransfer(char panel)
 	}
 	return result;
 }
+#endif
 
+#if TOUCH_0105
+/* takes the link and writes: 0, 8 if the link stays busy, 0x3c for a length the buffer cannot
+   hold or a panel without a link; panel 0 over CSI10, the rear's controller over the IICA
+   (its bootloader at its own address, the data without a register address), three tries more,
+   its failures 0x11 and 0x12 */
+unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
+			 char panel)
+{
+	unsigned char result;
+	unsigned char wait;
+	struct Iica1Request request;
+	unsigned char tries;
+
+	result = 0;
+	tries = 3;
+	if (length >= TOUCH_BUFFER_SIZE + 1)
+		return 0x3c;
+	touchSetFlags(TOUCH_BUSY);
+	wait = 10;
+	while (touch.flags & TOUCH_RUNNING) {
+		if (wait-- == 0) {
+			result = 8;
+			goto unlock;
+		}
+		dly_tsk(1);
+	}
+	switch (touchLinkTransfer(panel)) {
+	case 0:
+		touchCommand.address = address * 2;
+		memcpy(touchCommand.data, data, length);
+		touchSelectLink(panel);
+		touchDelay(touchDelays.select);
+		result = csi10TransferWait((unsigned char *)&touchReply, 0,
+					   (unsigned char *)&touchCommand, length + 2,
+					   touchDelays.writeByte);
+		touchDelay(touchDelays.deselect);
+		touchReleaseLink(panel);
+		touchDelay(touchDelays.release);
+		break;
+	case 1:
+		memcpy(touchCommand.data, data, length);
+		do {
+			switch (panel) {
+			case 1:
+				if (address == TOUCH_BOOTLOADER) {
+					request.address = 0x48;
+					request.txData = touchCommand.data;
+					request.txCount = length;
+				} else {
+					request.address = IICA1_TOUCH;
+					touchCommand.address = address;
+					request.txData = (unsigned char *)&touchCommand;
+					request.txCount = length + 2;
+				}
+				break;
+			case 0:
+			default:
+				return 0x3c;
+			}
+			request.rxData = NULL;
+			request.rxCount = 0;
+			request.status = &result;
+			iica1Transfer(&request);
+			if (result == 0)
+				break;
+		} while (tries-- != 0);
+		if (result != 0)
+			result += 0x10;
+		break;
+	default:
+		result = 0x3c;
+		break;
+	}
+unlock:
+	touchClearFlags(TOUCH_BUSY);
+	return result;
+}
+
+/* takes the link and reads: as touchWrite; a read over CSI10 that fails clears data; the
+   rear's tries after the first read its bootloader */
+unsigned char touchRead(unsigned int address, unsigned char *data, unsigned int length,
+			char panel)
+{
+	unsigned char result;
+	unsigned char wait;
+	struct Iica1Request request;
+	unsigned char tries;
+
+	result = 0;
+	tries = 3;
+	if (length >= TOUCH_BUFFER_SIZE + 1)
+		return 0x3c;
+	touchSetFlags(TOUCH_BUSY);
+	wait = 10;
+	while (touch.flags & TOUCH_RUNNING) {
+		if (wait-- == 0) {
+			result = 8;
+			goto unlock;
+		}
+		dly_tsk(1);
+	}
+	switch (touchLinkTransfer(panel)) {
+	case 0:
+		touchCommand.address = address * 2 | 1;
+		touchSelectLink(panel);
+		touchDelay(touchDelays.select);
+		result = csi10TransferWait((unsigned char *)&touchReply, length + 2,
+					   (unsigned char *)&touchCommand, 2, touchDelays.byte);
+		touchDelay(touchDelays.deselect);
+		touchReleaseLink(panel);
+		if (result != 0)
+			memset(data, 0, length);
+		else
+			memcpy(data, touchReply.data, length);
+		touchDelay(touchDelays.release);
+		break;
+	case 1:
+		do {
+			switch (panel) {
+			case 1:
+				if (address == TOUCH_BOOTLOADER) {
+					request.address = 0x48;
+					request.txData = NULL;
+					request.txCount = 0;
+				} else {
+					touchCommand.address = address;
+					request.address = IICA1_TOUCH;
+					request.txData = (unsigned char *)&touchCommand;
+					request.txCount = 2;
+				}
+				break;
+			case 0:
+			default:
+				return 0x3c;
+			}
+			request.rxData = data;
+			request.rxCount = length;
+			request.status = &result;
+			iica1Transfer(&request);
+			if (result == 0)
+				break;
+			address = TOUCH_BOOTLOADER;
+		} while (tries-- != 0);
+		if (result != 0)
+			result += 0x10;
+		break;
+	default:
+		result = 0x3c;
+		break;
+	}
+unlock:
+	touchClearFlags(TOUCH_BUSY);
+	return result;
+}
+
+/* finds a panel's controller: panel 0's is 1 when it answers in its bootloader, 0 when not,
+   0xff when it does not answer; the rear's is the first of touchRearControllers that answers
+   at its address, in three tries each */
+void touchProbeController(char panel)
+{
+	struct Iica1Request request;
+	unsigned char data[2];
+	unsigned char status;
+	unsigned char tries;
+	unsigned char i;
+
+	i = 0;
+	touchSetFlags(TOUCH_BUSY);
+	if (panel == 0) {
+		status = touchRead(0, data, 2, 0);
+		if (status != 0)
+			touch.panel[0].controller = 0xff;
+		else if ((data[0] & 0xc0) == 0xc0)
+			touch.panel[0].controller = 1;
+		else
+			touch.panel[0].controller = 0;
+	} else {
+		request.rxData = data;
+		request.txData = NULL;
+		request.txCount = 0;
+		request.rxCount = 2;
+		request.status = &status;
+		request.address = touchRearControllers[i].address;
+		while (i < 4) {
+			for (tries = 3; tries != 0; tries--) {
+				iica1Transfer(&request);
+				if (status == 0)
+					break;
+			}
+			if (status == 0) {
+				touch.panel[panel].controller = i;
+				break;
+			}
+			i++;
+			request.address = touchRearControllers[i].address;
+		}
+	}
+	touchClearFlags(TOUCH_BUSY);
+}
+#else
 /* takes the link and writes: 0, 8 if the link stays busy, 0x3c for a length the buffer cannot
    hold or a transfer that fails */
 unsigned char touchWrite(unsigned int address, unsigned char *data, unsigned int length,
@@ -665,6 +973,89 @@ unlock:
 	return result;
 }
 
+#endif
+
+#if TOUCH_0105
+/* the rear's controller (panel 1): writes txCount bytes of tx, waits, then reads rxCount bytes
+   into rx, three tries; between them it sleeps delay / 4 ticks (rounded up), or, when a read
+   follows and delay is 0, waits while P6.7 is high, up to 0x32 ticks for controller 3 and
+   0x226 for the others */
+unsigned char touchWriteRead(unsigned char *tx, unsigned int txCount, unsigned char *rx,
+			     unsigned int rxCount, char panel, unsigned int delay)
+{
+	unsigned char result;
+	unsigned int wait;
+	struct Iica1Request request;
+	unsigned char tries;
+
+	result = 0;
+	tries = 2;
+	if (txCount >= TOUCH_BUFFER_SIZE + 1 || rxCount >= TOUCH_BUFFER_SIZE + 1)
+		return 0x3c;
+	touchSetFlags(TOUCH_BUSY);
+	wait = 10;
+	while (touch.flags & TOUCH_RUNNING) {
+		if (wait-- == 0) {
+			result = 8;
+			goto unlock;
+		}
+		dly_tsk(1);
+	}
+	switch (touchLinkTransfer(panel)) {
+	case 1:
+		do {
+			switch (panel) {
+			case 1:
+				request.address =
+					touchRearControllers[touch.panel[1].controller].address;
+				break;
+			case 0:
+			default:
+				return 0x3c;
+			}
+			request.txData = tx;
+			request.txCount = txCount;
+			request.rxData = NULL;
+			request.rxCount = 0;
+			request.status = &result;
+			iica1Transfer(&request);
+			if (rxCount != 0) {
+				if (delay != 0)
+					wait = delay / 4 + (delay % 4 ? 1 : 0);
+				else if (touch.panel[panel].controller == 3)
+					wait = 0x32;
+				else
+					wait = 0x226;
+				while (P6.7) {
+					if (wait == 0)
+						break;
+					dly_tsk(0);
+					wait--;
+				}
+			} else
+				dly_tsk(delay / 4 + (delay % 4 ? 1 : 0));
+			request.txData = NULL;
+			request.txCount = 0;
+			request.rxData = rx;
+			request.rxCount = rxCount;
+			request.status = &result;
+			iica1Transfer(&request);
+			if (result == 0)
+				break;
+		} while (tries-- != 0);
+		if (result != 0)
+			result += 0x10;
+		break;
+	default:
+		result = 0x3c;
+		break;
+	}
+unlock:
+	touchClearFlags(TOUCH_BUSY);
+	return result;
+}
+#endif
+
 /* writes, and reads back to compare, as the settings block says: 0, 8 if the link stays busy,
    9 if no try compared */
 unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
@@ -675,6 +1066,10 @@ unsigned char touchWriteVerified(unsigned int address, unsigned char *data,
 	unsigned char matches;
 	unsigned char reads;
 
+#if TOUCH_0105
+	if (panel == 1 && touch.panel[1].controller >= 2)
+		return 0;
+#endif
 	touchSetFlags(TOUCH_BUSY);
 	count = 10;
 	while (touch.flags & TOUCH_RUNNING) {

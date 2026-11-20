@@ -47,6 +47,10 @@ struct Csi10Transfer {
 extern int csi10Open(void);
 extern int csi10Transfer(struct Csi10Transfer *transfer);
 extern int csi10TransferNoLock(struct Csi10Transfer *transfer);
+#if BOARD_USS1001 && SOURCE_0104	/* TOUCH_0105 */
+extern int csi10TransferWait(unsigned char __far *receive, unsigned int receiveCount,
+			     unsigned char __far *send, unsigned int sendCount, unsigned char delay);
+#endif
 extern int csi10Cancel(void);
 extern void csi10StopChannel(void);
 extern void csi10Close(void);

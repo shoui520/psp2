@@ -180,6 +180,49 @@ int csi10TransferNoLock(struct Csi10Transfer *transfer)
 }
 #endif
 
+#if TOUCH_0105
+/* the slim's 0x0105: a transfer run here, byte by byte with the interrupt masked; delay NOPs
+   after each byte; 1 if a transfer is running */
+int csi10TransferWait(unsigned char __far *receive, unsigned int receiveCount,
+		      unsigned char __far *send, unsigned int sendCount, unsigned char delay)
+{
+	unsigned int count;
+	unsigned char dummy;
+	unsigned char i;
+
+	DI();
+	if (csi10.state & CSI10_BUSY) {
+		EI();
+		return 1;
+	}
+	csi10.state |= CSI10_BUSY;
+	EI();
+	count = receiveCount < sendCount ? sendCount : receiveCount;
+	CSIMK01 = 1;
+	while (count-- != 0) {
+		if (sendCount != 0) {
+			sendCount--;
+			CSI10_SIO = *send++;
+		} else
+			CSI10_SIO = 0;
+		do
+			NOP();
+		while (SSR01 & 0x0040);
+		if (receiveCount != 0) {
+			receiveCount--;
+			*receive++ = CSI10_SIO;
+		} else
+			dummy = CSI10_SIO;
+		for (i = 0; i < delay; i++)
+			NOP();
+	}
+	CSIIF01 = 0;
+	CSIMK01 = 0;
+	csi10.state &= ~CSI10_BUSY;
+	return 0;
+}
+#endif
+
 int csi10Cancel(void)
 {
 	return 0;
