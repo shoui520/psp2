@@ -2079,7 +2079,7 @@ void flImageCheck(struct HostSlowCommand *slow)
 				return;
 			}
 			UPD_LOG(("SHA1 digesting(%d)\r", segment));
-#if FW_SINCE(0x0100060D)
+#if UPD_060D_FORMS
 			WDTE = 0xac;
 #endif
 			result = SHA1Input((SHA1Context __near *)&updSha,

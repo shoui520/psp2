@@ -14,6 +14,7 @@
 #include "nvs.h"
 #include "serial.h"
 #include "serial1.h"
+#include "serial2.h"
 #include "serialauth.h"
 #include "sleepfactor.h"
 #include "spidev.h"
@@ -282,6 +283,12 @@ static unsigned char serial1Command0105(struct SerialBuffer *request, struct Ser
 			serialSetAnswer(SERIAL_ANSWER);
 			return 0x53;
 		}
+#if SERIAL2_ARM
+		if (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff && serial2InTime() != 0) {
+			serialSetAnswer(SERIAL_ANSWER);
+			return 0x52;
+		}
+#endif
 #else
 		if (!chargeMayStart()) {
 			serialSetAnswer(SERIAL_ANSWER);

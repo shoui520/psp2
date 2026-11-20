@@ -157,7 +157,11 @@ unsigned char serial4Receive(void)
 			return SERIAL_BAD_LENGTH;
 		serial4.length >>= 1;
 	}
+#if FW_SINCE(0x0100060D)
+	if (serial4.length > SERIAL_DATA_SIZE || size - 7 != serial4.length)
+#else
 	if (serial4.length > 0x31 || size - 7 != serial4.length)	/* less than an answer carries */
+#endif
 		return SERIAL_BAD_LENGTH;
 	return SERIAL_OK;
 }
@@ -262,10 +266,17 @@ unsigned char serial4Reopen(int baud)
 
 unsigned char serial4Open2(int baud)
 {
+#if FW_SINCE(0x0100060D)
+	/* the application's since 0x01000104: an open link 2 closed first, no wait */
+	if (serial4GetMode())
+		serial4Close2();
+#endif
 	uart4Open(baud);
 	serial4Start(2);
 	serialSetLevel(1);
+#if !FW_SINCE(0x0100060D)
 	powerWaitLong(13);
+#endif
 	serial2SetP71(0);
 	serial4.link = 2;
 	return 0;
@@ -353,6 +364,24 @@ unsigned char serial4Answer0205(void)
 	serial4PostAnswer();
 	return 0;
 }
+
+#if FW_SINCE(0x0100060D)
+/* the application's, for serial1's command 0x0190; nothing calls them in the updater */
+unsigned int serial4GetCommand(void)
+{
+	return serial4.command;
+}
+
+unsigned char serial4GetStatus(void)
+{
+	return serial4.status;
+}
+
+unsigned char serial4GetP71(void)
+{
+	return (unsigned char)P7.1;
+}
+#endif
 
 /* a frame received or sent (does nothing) */
 void serial4Trace(unsigned char *buffer)

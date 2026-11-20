@@ -108,7 +108,13 @@ unsigned char updModeChange(unsigned char mode)
 			break;
 		case 3:
 #if FW_SINCE(0x0100060D)
+#if SERIAL2_ARM
+			if ((unsigned char)chargeMayStart() && !(unsigned char)chargeAlarm0On() &&
+			    !(serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff &&
+			      serial2InTime() != 0)) {
+#else
 			if ((unsigned char)chargeMayStart() && !(unsigned char)chargeAlarm0On()) {
+#endif
 				handshakeInit(0);
 				watchdogSetup();
 				snvsReset();
@@ -770,7 +776,7 @@ void mainLoop(void)
 				hostSlowRun();
 			break;
 		}
-#if FW_SINCE(0x0100060D)
+#if UPD_060D_FORMS
 		WDTE = 0xac;	/* the watchdog kept back */
 #endif
 		updLoops++;
@@ -791,6 +797,9 @@ void tm00Interrupt(void)
 		updEventSet(0x66);
 		break;
 	case 4:
+#if SERIAL2_ARM
+		serial2Arm();
+#endif
 		updEventSet(0x67);
 		break;
 	case 5:

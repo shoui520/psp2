@@ -24,9 +24,13 @@
 #define COOKIE_CTRL_REG(reg)	(reg)
 #endif
 
-/* the Cookie's address on the I2C bus */
+/* the Cookie's address on the I2C bus (the updater's: always 0xa8) */
 #if BOARD_COOKIE_REG_HIGH
+#ifdef ERNIE_UPDATER
+#define COOKIE_ADDRESS		0xa8
+#else
 #define COOKIE_ADDRESS		(configGet()->cookieRegHigh ? 0xa4 : 0xa8)
+#endif
 #else
 #define COOKIE_ADDRESS		0xa8
 #endif

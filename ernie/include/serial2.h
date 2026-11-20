@@ -19,8 +19,13 @@ extern unsigned char serial2SetLink(int link2);
 #endif
 #endif
 
-/* since 0x01000104 mode 2 keeps the test area's arming for notification 0x0211 */
+/* since 0x01000104 mode 2 keeps the test area's arming for notification 0x0211; the updater's
+   since 0x0100060D */
+#ifdef ERNIE_UPDATER
+#define SERIAL2_ARM	(BOARD_SERIAL2 && FW_SINCE(0x0100060D))
+#else
 #define SERIAL2_ARM	(BOARD_SERIAL2 && FW_SINCE(0x01000104))
+#endif
 
 #if SERIAL2_ARM
 extern int serial2TestAreaUsed(void);

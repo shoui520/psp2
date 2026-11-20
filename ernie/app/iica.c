@@ -38,7 +38,14 @@
 
 static struct IicaRequest iicaRequest;
 
-#if defined(ERNIE_UPDATER) || !FW_SINCE(0x0100010A)
+/* the updater has the application's iicaInit from before 0x0100010A, PDEL's the later one */
+#ifdef ERNIE_UPDATER
+#define IICA_INIT_STOP		(!HW_IS(0x00416000))
+#else
+#define IICA_INIT_STOP		(!FW_SINCE(0x0100010A))
+#endif
+
+#if IICA_INIT_STOP
 /* the updater's (and the application's before 0x0100010A): enables the IICA and sends a stop; 1
    when it did not go out */
 unsigned char iicaInit(void)
@@ -135,7 +142,9 @@ unsigned char iicaInit(void)
 	return 1;
 ready:
 	SPIE = 0;
+#ifndef ERNIE_UPDATER
 	IICAMK = 0;
+#endif
 	return 0;
 }
 #endif

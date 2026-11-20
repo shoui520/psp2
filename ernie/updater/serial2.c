@@ -10,6 +10,8 @@
 
 #include "ernie.h"
 #include "charge.h"
+#include "config.h"
+#include "rtc.h"
 #include "scratchpad.h"
 #include "serial.h"
 #include "serial2.h"
@@ -22,11 +24,18 @@
 #define SERIAL2_TEST_SIZE	0x20
 
 static unsigned char serial2Data[0x20];
+#if SERIAL2_ARM
+static unsigned char serial2Armed;	/* the test area was empty: notification 0x0211 may run */
+#endif
 
 void serial2Init(void)
 {
 	serial2SetP71(1);
 	memset(serial2Data, 0, sizeof(serial2Data));
+#if SERIAL2_ARM
+	serial2Disarm();
+	return;
+#endif
 }
 
 unsigned int serialCommands2Count(void)
@@ -36,9 +45,23 @@ unsigned int serialCommands2Count(void)
 
 unsigned char serialNotifies2Count(void)
 {
+#if SERIAL2_ARM
+	return 2;
+#else
 	return 1;
+#endif
 }
 
+#if SERIAL2_ARM
+/* an input's rising edge: transition 0x57 */
+void serial2InputRequest(void)
+{
+	UPD_STATE_EVENT_LOCAL
+
+	UPD_STATE_EVENT(0x57);
+	return;
+}
+#else
 /* an input's rising edge: transition 0x52, when input3Bit0High allows it */
 void serial2InputRequest(void)
 {
@@ -48,6 +71,7 @@ void serial2InputRequest(void)
 		UPD_STATE_EVENT(0x52);
 	}
 }
+#endif
 
 /* an input's edges: nothing in the updater */
 void serial2InputLink(void)
@@ -151,7 +175,12 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 	mode = request->data[0];
 	response->length = 0;
 	if (mode == 0) {
+#if SERIAL2_ARM
+		serial2Disarm();
+		if (state != 0x0020 && state != 0x0008) {
+#else
 		if (state != 0x0020) {
+#endif
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
@@ -162,10 +191,25 @@ static unsigned char serial2Command0205(struct SerialBuffer *request, struct Ser
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x50;
 		}
+#if SERIAL2_ARM
+		if (!(unsigned char)chargeMayStart()) {
+			serial4SetAnswer(SERIAL_ANSWER);
+			return 0x51;
+		}
+		if ((unsigned char)chargeAlarm0On()) {
+			serial4SetAnswer(SERIAL_ANSWER);
+			return 0x53;
+		}
+		if (serial2TestAreaUsed() == 0 && !configGet()->test.bits.startCheckOff) {
+			serial4SetAnswer(SERIAL_ANSWER);
+			return 0x52;
+		}
+#else
 		if (!chargeMayStart()) {
 			serial4SetAnswer(SERIAL_ANSWER);
 			return 0x51;
 		}
+#endif
 		result = UPD_STATE_EVENT(0x0e);
 		serial4SetAnswer(SERIAL_ANSWER_LATER);
 	} else {
@@ -205,6 +249,22 @@ static unsigned char serial2Command0211(struct SerialBuffer *request, struct Ser
 	return result;
 }
 
+#if SERIAL2_ARM
+/* runs transition 0 once when armed and the config allows it */
+static unsigned char serial2Notify0211(void)
+{
+	UPD_STATE_EVENT_LOCAL
+	unsigned char result;
+
+	result = 0;
+	if (serial2GetArmed() != 0 && configGet()->test.bits.testDisarm) {
+		serial2Disarm();
+		result = UPD_STATE_EVENT(0);
+	}
+	return result;
+}
+#endif
+
 /* 0x0210: reads the test area */
 static unsigned char serial2Command0210(struct SerialBuffer *request, struct SerialBuffer *response)
 {
@@ -235,6 +295,53 @@ unsigned char serialSetLevel(unsigned char level)
 	return 0;
 }
 
+#if SERIAL2_ARM
+/* 1 when a byte of the test area is not 0 */
+int serial2TestAreaUsed(void)
+{
+	unsigned char area[SERIAL2_TEST_SIZE];
+	unsigned char i;
+
+	if (scratchPadRead(SERIAL2_TEST_AREA, SERIAL2_TEST_SIZE, area))
+		return 0;
+	for (i = 0; i < SERIAL2_TEST_SIZE; i++) {
+		if (area[i] != 0)
+			return 1;
+	}
+	return 0;
+}
+
+int serial2GetArmed(void)
+{
+	return serial2Armed;
+}
+
+unsigned char serial2Disarm(void)
+{
+	serial2Armed = 0;
+	return 0;
+}
+
+/* arms notification 0x0211 when the test area is empty; 1 when it is not */
+unsigned char serial2Arm(void)
+{
+	unsigned char result;
+
+	if (serial2TestAreaUsed() == 0) {
+		serial2Armed = 1;
+		result = 0;
+	} else
+		result = 1;
+	return result;
+}
+
+/* 1 while the clock's low byte has not passed the config's limit */
+int serial2InTime(void)
+{
+	return getClock().byte[0] <= configGet()->startClockLimit;
+}
+#endif
+
 const struct SerialCommand __far serialCommands2[] = {
 	{ 0x0200, serial2Command0200 },
 	{ 0x0201, serial2Command0201 },
@@ -249,4 +356,7 @@ const struct SerialCommand __far serialCommands2[] = {
 
 const struct SerialNotify __far serialNotifies2[] = {
 	{ 0x0202, serial2Notify0202 },
+#if SERIAL2_ARM
+	{ 0x0211, serial2Notify0211 },
+#endif
 };

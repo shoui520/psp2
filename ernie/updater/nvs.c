@@ -188,7 +188,7 @@ unsigned char nvsWrite(unsigned int offset, unsigned int size, unsigned char *da
 /* erases a block of the NVS: tried 5 more times while the erase fails */
 #if FW_SINCE(0x0100060D)
 /* erases a block of the NVS: tried 3 more times while the erase fails, as the application's
-   0x01000104, the watchdog kicked before each try */
+   0x01000104, the watchdog kicked before each try (not on PDEL) */
 static unsigned char nvsErase(unsigned char block)
 {
 	unsigned char result;
@@ -201,7 +201,9 @@ static unsigned char nvsErase(unsigned char block)
 		result = FSL_Init_cont(fslDataBuffer);
 	if (result == FLASH_OK) {
 		do {
+#if UPD_060D_FORMS
 			WDTE = 0xac;
+#endif
 			result = FSL_ModeCheck();
 			if (result == FLASH_OK) {
 				do
@@ -460,7 +462,7 @@ unsigned char nvsMove(void)
 	if (header.generation != 0)
 		header.generation--;
 	for (i = 0; i < NVS_DATA_BLOCKS; i++) {
-#if FW_SINCE(0x0100060D)
+#if UPD_060D_FORMS
 		WDTE = 0xac;
 #endif
 		block = nvsCopyBlocks[i];

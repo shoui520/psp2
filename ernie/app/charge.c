@@ -30,9 +30,11 @@
 #ifdef ERNIE_UPDATER
 #define CHARGE_SINCE(version)	((version) <= 0x0100010B)
 #define CHARGE_RETAIL_10X	(BOARD_IS(0x00406000) || HW_IS(0x00416000))
+#define CHARGE_AC_DELAY_60	CHARGE_RETAIL_10X	/* the updater's on PDEL too */
 #else
 #define CHARGE_SINCE(version)	FW_SINCE(version)
 #define CHARGE_RETAIL_10X	FW_RETAIL_10X
+#define CHARGE_AC_DELAY_60	(CHARGE_RETAIL_10X && BOARD_IS(0x00406000))
 #endif
 
 extern void inputChanged(void);
@@ -1369,7 +1371,7 @@ void chargeSetPowerStatus(void)
 				chargeControl.0 = 1;
 		} else {
 			chargeControl.0 = 0;
-#if !CHARGE_SINCE(0x01000104) || CHARGE_RETAIL_10X && BOARD_IS(0x00406000)
+#if !CHARGE_SINCE(0x01000104) || CHARGE_AC_DELAY_60
 			if (stateGet() & 0x000c)
 				charge.acDelay = 60;
 #endif
